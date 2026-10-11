@@ -14,7 +14,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 틱마다 쓰는 이름 — 리터럴을 매번 intern 하지 않게 한 번만 만든다. */
+        /** @brief 틱마다 쓰는 이름입니다. 리터럴을 매번 intern 하지 않도록 한 번만 만듭니다. */
         struct WesternSurvivalInternal
         {
             static const hashed_string& getTemperatureName()
@@ -97,7 +97,7 @@ namespace sw
             return;
         ResourceGauge& deadEyeGauge = getGauge( WesternCore::DeadEye );
         if ( _bDeadEyeActive != SW_FALSE && deadEyeGauge.drain( deltaTime ) == false )
-            deactivateDeadEye(); // 바닥났다 — 표시한 대상은 게임이 이미 쐈거나 놓친다
+            deactivateDeadEye(); // 바닥났다. 표시한 대상은 게임이 이미 쐈거나 놓친 것이다
         for ( size_t index = 0; index < kCoreCount; ++index )
         {
             if ( index == static_cast<size_t>( WesternCore::DeadEye ) && _bDeadEyeActive != SW_FALSE )
@@ -156,7 +156,7 @@ namespace sw
     {
         if ( _bDeadEyeActive == SW_FALSE || static_cast<int32>( _listMark.size() ) >= getMarkLimit() )
             return false;
-        _listMark.push_back( targetID ); // 같은 대상에 여러 번 표시해도 된다(한 발씩)
+        _listMark.push_back( targetID ); // 같은 대상에 여러 번 표시해도 된다(한 발씩 쏜다)
         return true;
     }
 
@@ -205,7 +205,7 @@ namespace sw
 
     bool WesternSurvival::readState( Archive& archive )
     {
-        // 사본에 읽고 끝까지 맞으면 바꾼다 — 게이지 설정 · 카탈로그는 사본이 그대로 든다.
+        // 사본에 읽고 끝까지 맞으면 바꾼다. 게이지 설정과 카탈로그는 사본이 그대로 가지고 있다.
         WesternSurvival restored = *this;
         uint32          count    = 0;
         if ( StateArchiveUtil::readCount( archive, 4, count ) == false )
