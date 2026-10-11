@@ -63,6 +63,14 @@ namespace test
     ChildRunResult runThisExecutableAsChild( sw::string_view caseFullName, sw::vector_reference<const ChildEnvironmentVariable> listEnvironment,
                                              uint32 timeoutSeconds )
     {
+        sw::StringBuilder<sw::constant::kMaxPathSize> arguments;
+        arguments.append( "--test_filter=" ).append( caseFullName );
+        return runThisExecutableWithArguments( arguments.view(), listEnvironment, timeoutSeconds );
+    }
+
+    ChildRunResult runThisExecutableWithArguments( sw::string_view arguments, sw::vector_reference<const ChildEnvironmentVariable> listEnvironment,
+                                                   uint32 timeoutSeconds )
+    {
 #if defined( SW_SANITIZER_ADDRESS ) || defined( SW_SANITIZER_THREAD )
         timeoutSeconds *= 10;
 #endif
@@ -84,7 +92,7 @@ namespace test
         }
 
         sw::StringBuilder<sw::constant::kMaxPathSize> command;
-        command.append( '"' ).append( sw::FileUtil::getExecutablePath().c_str() ).append( "\" --test_filter=" ).append( caseFullName );
+        command.append( '"' ).append( sw::FileUtil::getExecutablePath().c_str() ).append( "\" " ).append( arguments );
 
         sw::ProcessOptions options;
         options._workingDirectory = sw::FileUtil::getCurrentPath();
