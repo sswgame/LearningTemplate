@@ -1,12 +1,12 @@
 /**
  * @file JoltPhysicsScene.h
- * @brief `IPhysicsScene3D` 의 Jolt 구현입니다. Jolt 헤더를 include 하므로 `Physics/Jolt` 밖에서는 보지 않습니다(`JoltPhysicsBackend::createScene` 으로만 만든다).
+ * @brief `IPhysicsScene3D` 의 Jolt 구현입니다. Jolt 헤더를 include 하므로 `Physics/Jolt` 밖에서는 보지 않습니다(`JoltPhysicsBackend::createScene` 으로만 만듭니다).
  * @details
- *  - **레이어.** 엔진 레이어 n 은 Jolt 오브젝트 레이어 2n(움직이지 않는 바디) · 2n+1(움직이는 바디)이고, 넓은 단계 레이어는 둘(정적 · 움직임)입니다.
- *    레이어끼리의 충돌은 `CollisionLayers` 행렬 하나가 정합니다. 바디 쌍의 예외는 `PhysicsPairFilter` 를 접촉 검증(`OnContactValidate`)에서 봅니다.
- *  - **재질.** 셰이프마다 Jolt 재질(마찰 · 반발)을 붙이고 접촉이 생길 때 서브 셰이프의 재질로 섞습니다(마찰 기하 평균 · 반발 큰 쪽). 밀도는 셰이프에 굽습니다.
- *  - **이벤트.** Jolt 의 접촉 콜백은 잡 스레드에서 옵니다 — 잠근 목록에 모았다가 스텝 뒤 정렬해 `PhysicsContactTracker` 에 넣습니다(결정적 순서).
- *    충격량은 접촉이 생길 때 `EstimateCollisionResponse` 로 어림합니다(유지 중에는 그 스텝의 어림값).
+ *  - **레이어.** 엔진 레이어 n 은 Jolt 오브젝트 레이어 2n(움직이지 않는 바디)과 2n+1(움직이는 바디)이고, 넓은 단계 레이어는 정적과 움직임 둘이다.
+ *    레이어끼리의 충돌은 `CollisionLayers` 행렬 하나가 정한다. 바디 쌍의 예외는 `PhysicsPairFilter` 를 접촉 검증(`OnContactValidate`)에서 확인한다.
+ *  - **재질.** 셰이프마다 Jolt 재질(마찰, 반발)을 붙이고, 접촉이 생길 때 서브 셰이프의 재질로 섞는다(마찰은 기하 평균, 반발은 큰 쪽). 밀도는 셰이프에 베이크한다.
+ *  - **이벤트.** Jolt 의 접촉 콜백은 잡 스레드에서 온다. 잠근 목록에 모았다가 스텝 뒤 정렬해 `PhysicsContactTracker` 에 넣는다(결정적 순서).
+ *    충격량은 접촉이 생길 때 `EstimateCollisionResponse` 로 어림하고, 접촉이 유지되는 동안에는 그 스텝의 어림값을 쓴다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -38,7 +38,7 @@
 
 namespace sw
 {
-    /** @brief 엔진 레이어 ↔ Jolt 레이어 변환입니다. */
+    /** @brief 엔진 레이어와 Jolt 레이어 사이의 변환입니다. */
     struct JoltLayerUtil
     {
         static constexpr JPH::uint kBroadPhaseLayerCount = 2;
@@ -52,7 +52,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 오브젝트 레이어 → 넓은 단계 레이어(정적 0 · 움직임 1)입니다. */
+    /** @brief 오브젝트 레이어를 넓은 단계 레이어(정적 0, 움직임 1)로 바꿉니다. */
     class JoltBroadPhaseLayers final : public JPH::BroadPhaseLayerInterface
     {
     public:
@@ -104,7 +104,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 엔진 재질(마찰 · 반발)을 든 Jolt 재질입니다. 셰이프가 들고, 접촉이 생길 때 섞습니다. */
+    /** @brief 엔진 재질(마찰, 반발)을 가진 Jolt 재질입니다. 셰이프가 보관하고, 접촉이 생길 때 섞습니다. */
     class JoltPhysicsMaterial final : public JPH::PhysicsMaterial
     {
     public:
@@ -209,7 +209,7 @@ namespace sw
         uint32 overlapShape( const PhysicsShapeDesc3D& shape, const float3& position, const quaternion& rotation, const PhysicsQueryFilter& filter,
                              vector<PhysicsBodyHandle>& outListBody ) const override;
 
-        // JPH::ContactListener — 잡 스레드에서 불린다
+        // JPH::ContactListener 이며, 잡 스레드에서 호출된다.
         JPH::ValidateResult OnContactValidate( const JPH::Body& bodyA, const JPH::Body& bodyB, JPH::RVec3Arg baseOffset,
                                                const JPH::CollideShapeResult& collisionResult ) override;
         void                OnContactAdded( const JPH::Body& bodyA, const JPH::Body& bodyB, const JPH::ContactManifold& manifold, JPH::ContactSettings& ioSettings ) override;
@@ -235,10 +235,10 @@ namespace sw
             JPH::Ref<JPH::TwoBodyConstraint> _pConstraint;
             PhysicsBodyHandle                _bodyA{};
             PhysicsBodyHandle                _bodyB{};
-            float3                           _anchorA{}; ///< Distance 의 현재 길이를 측정하는 A 쪽 로컬 점
+            float3                           _anchorA{}; ///< Distance 의 현재 길이를 측정하는 A 쪽 로컬 점이다.
             float3                           _anchorB{};
             PhysicsJointType                 _type{ PhysicsJointType::Fixed };
-            bool                             _bPairFilterSet{ false }; ///< 만들 때 두 바디 쌍의 충돌을 껐다 — 지울 때 되돌린다
+            bool                             _bPairFilterSet{ false }; ///< 만들 때 두 바디 쌍의 충돌을 껐다. 지울 때 되돌린다.
         };
 
         struct CharacterRecord
@@ -248,7 +248,7 @@ namespace sw
             PhysicsCharacterState3D         _state{};
         };
 
-        /** @brief 바퀴 차 하나 — 구속(스텝 리스너이기도 하다)과 바퀴 충돌 테스터, 차체 바디입니다. */
+        /** @brief 바퀴 차 하나입니다. 구속(스텝 리스너이기도 합니다)과 바퀴 충돌 테스터, 차체 바디를 담습니다. */
         struct VehicleRecord
         {
             JPH::Ref<JPH::VehicleConstraint>      _pConstraint;
@@ -279,12 +279,12 @@ namespace sw
             float32            _impulse{ 0.0f };
             JPH::uint32        _subShapeA{ 0 };
             JPH::uint32        _subShapeB{ 0 };
-            uint8              _kind{ 0 }; ///< 0 추가 · 1 유지 · 2 제거
+            uint8              _kind{ 0 }; ///< 0 은 추가, 1 은 유지, 2 는 제거다.
         };
 
-        /** @brief 셰이프 서술자 묶음을 Jolt 셰이프 하나로 짓습니다(둘 이상이면 정적 컴파운드). 실패하면 오류를 남기고 nullptr 입니다. */
+        /** @brief 셰이프 서술자 여럿을 Jolt 셰이프 하나로 만듭니다(둘 이상이면 정적 컴파운드). 실패하면 오류를 남기고 nullptr 를 반환합니다. */
         JPH::RefConst<JPH::Shape> createJoltShape( span<const PhysicsShapeDesc3D> listShape, const hashed_string& defaultMaterial, bool bAllowMesh ) const;
-        /** @brief 셰이프 하나를 로컬 자리 · 회전 없이 짓습니다. */
+        /** @brief 셰이프 하나를 로컬 위치와 회전 없이 만듭니다. */
         JPH::RefConst<JPH::Shape> createSingleJoltShape( const PhysicsShapeDesc3D& shape, const PhysicsMaterialDef& material, const JPH::PhysicsMaterial* pMaterial ) const;
         /** @brief 재질 이름을 풉니다. 없으면 오류를 남기고 첫 재질입니다. */
         const PhysicsMaterialDef&   resolveMaterial( const hashed_string& name, const hashed_string& fallback ) const;
@@ -295,12 +295,12 @@ namespace sw
         BodyRecord*       findBody( PhysicsBodyHandle body );
         PhysicsBodyHandle findHandle( const JPH::BodyID& bodyID ) const;
         void              setHandle( const JPH::BodyID& bodyID, PhysicsBodyHandle body );
-        /** @brief 바디들에 붙은 관절 · 바퀴 차를 지웁니다(바디를 지우기 전에). */
+        /** @brief 바디들에 붙은 관절과 바퀴 차를 지웁니다(바디를 지우기 전에 호출합니다). */
         void destroyJointsOf( span<const PhysicsBodyHandle> listBody );
-        /** @brief 구속을 시스템에서 내립니다(구속 · 스텝 리스너 둘 다). */
+        /** @brief 구속을 시스템에서 제거합니다(구속과 스텝 리스너 모두). */
         void removeVehicleConstraint( VehicleRecord& record );
         void recordContact( const JPH::Body& bodyA, const JPH::Body& bodyB, const JPH::ContactManifold& manifold, JPH::ContactSettings& ioSettings, uint8 kind );
-        /** @brief 알림의 결정적 순서입니다(바디 쌍 · 서브 셰이프 · 종류). */
+        /** @brief 알림의 결정적 순서입니다(바디 쌍, 서브 셰이프, 종류 순). */
         static bool isEarlierReport( const ContactReport& lhs, const ContactReport& rhs );
         /** @brief 스텝 동안 모은 알림을 정렬해 추적기에 넣고 이벤트를 냅니다. */
         void flushContactReports();

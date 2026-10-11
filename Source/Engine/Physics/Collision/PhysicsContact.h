@@ -1,13 +1,13 @@
 /**
  * @file PhysicsContact.h
- * @brief 접촉 · 트리거 이벤트(시작 · 유지 · 끝)와, 백엔드가 알리는 셰이프 쌍 단위 접촉을 바디 쌍 단위 이벤트로 바꾸는 추적기입니다.
- * @details 백엔드마다 알려 주는 것이 다릅니다 — Jolt 는 서브 셰이프 쌍마다 추가 · 유지 · 제거를 여러 잡 스레드에서, Box2D 는 셰이프 쌍마다 시작 · 끝만
- *          step 뒤에 줍니다. 추적기가 그 차이를 덮습니다: 바디 쌍마다 닿은 셰이프 쌍의 수를 세어 0 → 1 이면 시작, 1 → 0 이면 끝, 계속 닿아 있으면
- *          step 마다 유지를 냅니다(유니티 Enter · Stay · Exit). 한 step 안에 닿았다 떨어진 쌍은 시작과 끝을 둘 다 냅니다. 바디를 지우면
- *          그 바디의 쌍이 다음 이벤트 묶음에서 끝납니다(백엔드가 알리지 않아도).
+ * @brief 접촉과 트리거 이벤트(시작, 유지, 끝), 그리고 백엔드가 알리는 셰이프 쌍 단위 접촉을 바디 쌍 단위 이벤트로 바꾸는 추적기입니다.
+ * @details 백엔드마다 알려 주는 것이 다르다. Jolt 는 서브 셰이프 쌍마다 추가, 유지, 제거를 여러 잡 스레드에서 알리고, Box2D 는 셰이프 쌍마다 시작과 끝만
+ *          step 뒤에 준다. 추적기가 그 차이를 덮는다. 바디 쌍마다 닿은 셰이프 쌍의 수를 세어 0 에서 1 이 되면 시작, 1 에서 0 이 되면 끝, 계속 닿아 있으면
+ *          step 마다 유지를 낸다(유니티의 Enter, Stay, Exit). 한 step 안에 닿았다 떨어진 쌍은 시작과 끝을 둘 다 낸다. 바디를 지우면
+ *          그 바디의 쌍이 다음 이벤트 배치에서 끝난다(백엔드가 알리지 않아도 그렇다).
  *
- *          이벤트 순서는 결정적입니다 — 바디 쌍(작은 핸들이 A) 순, 한 쌍 안에서는 시작 · 유지 · 끝 순입니다. 해시 표를 도는 순서에 기대지 않습니다.
- *          추적기는 잠그지 않습니다. 여러 스레드에서 오는 백엔드 알림은 백엔드가 모아 두었다가 step 뒤에 한 스레드에서 넣습니다.
+ *          이벤트 순서는 결정적이다. 바디 쌍(작은 핸들이 A) 순이고, 한 쌍 안에서는 시작, 유지, 끝 순이다. 해시 테이블을 도는 순서에 의존하지 않는다.
+ *          추적기는 잠그지 않는다. 여러 스레드에서 오는 백엔드 알림은 백엔드가 모아 두었다가 step 뒤에 한 스레드에서 넣는다.
  */
 #pragma once
 #include "Core/Common/HashUtil.h"
@@ -25,10 +25,10 @@
 namespace sw
 {
     /**
-     * @brief 접촉 · 트리거 이벤트 하나입니다. A 의 핸들이 B 보다 작습니다. 법선은 A 에서 B 를 향합니다.
-     * @details `_impulse` 는 접촉 충격량의 크기(뉴턴초)입니다 — 시작은 부딪힌 충격(다가오던 상대 속도 × 유효 질량 × (1 + 반발), Jolt
-     *          `EstimateCollisionResponse` · Box2D 부딪힘 이벤트), 유지는 그 스텝의 접촉 충격량(가만히 쉬는 상자는 무게 × 스텝), 끝은 0 입니다.
-     *          트리거가 낀 쌍은 0 입니다. 파괴 · 피해 · 소리 세기가 이 값을 씁니다.
+     * @brief 접촉과 트리거 이벤트 하나입니다. A 의 핸들이 B 보다 작습니다. 법선은 A 에서 B 를 향합니다.
+     * @details `_impulse` 는 접촉 충격량의 크기(뉴턴초)다. 시작은 부딪힌 충격(다가오던 상대 속도 × 유효 질량 × (1 + 반발). Jolt 는
+     *          `EstimateCollisionResponse`, Box2D 는 부딪힘 이벤트)이고, 유지는 그 스텝의 접촉 충격량(가만히 쉬는 상자는 무게 × 스텝)이며, 끝은 0 이다.
+     *          트리거가 낀 쌍은 0 이다. 파괴, 피해, 소리 세기가 이 값을 쓴다.
      */
     template <typename TDimension>
     struct PhysicsContactEvent
@@ -46,7 +46,7 @@ namespace sw
         uint8               _bTriggerA{ SW_FALSE }; ///< A 가 트리거인지
         uint8               _bTriggerB{ SW_FALSE }; ///< B 가 트리거인지
 
-        /** @brief 어느 쪽이든 트리거면 true 입니다 — 막는 접촉이 아니라 감지입니다. */
+        /** @brief 어느 쪽이든 트리거면 true 를 반환합니다. 막는 접촉이 아니라 감지입니다. */
         bool involvesTrigger() const { return _bTriggerA == SW_TRUE || _bTriggerB == SW_TRUE; }
     };
 
@@ -67,7 +67,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 셰이프 쌍 단위 알림을 바디 쌍 단위 시작 · 유지 · 끝으로 바꿉니다. 파일 머리말 참고. */
+    /** @brief 셰이프 쌍 단위 알림을 바디 쌍 단위의 시작, 유지, 끝으로 바꿉니다. 파일 머리말을 참고하세요. */
     template <typename TDimension>
     class PhysicsContactTracker
     {
@@ -161,7 +161,7 @@ namespace sw
                 }
                 else if ( state._bTouchedThisStep )
                 {
-                    // 한 step 안에 닿았다 떨어졌다 — 시작과 끝을 둘 다 낸다(빠른 공이 트리거를 스치고 지나간 경우).
+                    // 한 step 안에 닿았다 떨어졌다. 시작과 끝을 둘 다 낸다(빠른 공이 트리거를 스치고 지나간 경우).
                     outListEvent.push_back( makeEvent( state, PhysicsContactPhase::Begin ) );
                     outListEvent.push_back( makeEvent( state, PhysicsContactPhase::End ) );
                 }

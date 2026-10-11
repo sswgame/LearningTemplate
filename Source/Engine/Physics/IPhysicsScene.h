@@ -1,16 +1,16 @@
 /**
  * @file IPhysicsScene.h
- * @brief 물리 씬 인터페이스 — 바디 · 셰이프 · 관절 · 캐릭터 · 질의 · 고정 스텝 · 접촉 이벤트를 핸들로 다룹니다(`IPhysicsScene3D` · `IPhysicsScene2D`).
- * @details 엔진 코드는 이 인터페이스만 봅니다. 구현(Jolt · Box2D)은 백엔드 폴더(`Physics/Jolt` · `Physics/Box2D`) 안에 있고 라이브러리 헤더는 거기서만
- *          include 합니다(`CheckThirdPartyIsolation.py`). 백엔드를 바꾸면 이 인터페이스를 구현하는 씬 하나와 `PhysicsSystem` 의 생성 한 줄을 바꿉니다
- *          (Godot PhysicsServer3D 와 같은 자리).
+ * @brief 물리 씬 인터페이스입니다. 바디, 셰이프, 관절, 캐릭터, 질의, 고정 스텝, 접촉 이벤트를 핸들로 다룹니다(`IPhysicsScene3D`, `IPhysicsScene2D`).
+ * @details 엔진 코드는 이 인터페이스만 본다. 구현(Jolt, Box2D)은 백엔드 폴더(`Physics/Jolt`, `Physics/Box2D`) 안에 있고, 라이브러리 헤더는 거기서만
+ *          include 한다(`CheckThirdPartyIsolation.py`). 백엔드를 바꾸려면 이 인터페이스를 구현한 씬 하나를 만들고 `PhysicsSystem` 의 생성 코드 한 줄을 바꾼다.
+ *          Godot 의 PhysicsServer3D 에 해당한다.
  *
- *          **스레드.** 씬 하나는 한 스레드(게임 스레드)에서 다룹니다. `step` 안에서만 백엔드가 잡을 나눠 돌립니다. step 중에 다른 스레드가 바디를
- *          만들거나 지우면 안 됩니다.
+ *          **스레드.** 씬 하나는 한 스레드(게임 스레드)에서 다룬다. `step` 안에서만 백엔드가 작업을 나눠 돌린다. step 중에 다른 스레드가 바디를
+ *          만들거나 지우면 안 된다.
  *
- *          **핸들.** 무효 · 지워진 핸들을 받은 함수는 아무것도 하지 않고 false · 0 · 기본값을 돌려줍니다(세대가 다르면 지워진 것이다).
+ *          **핸들.** 무효 핸들이나 지워진 핸들을 받은 함수는 아무것도 하지 않고 false, 0, 기본값을 반환한다(세대가 다르면 지워진 핸들이다).
  *
- *          **단위.** 미터 · 킬로그램 · 초 · 라디안. 3D 는 +Y 가 위, 2D 는 XY 평면에서 각은 Z 축 둘레(반시계가 +)입니다.
+ *          **단위.** 미터, 킬로그램, 초, 라디안을 쓴다. 3D 는 +Y 가 위이고, 2D 는 XY 평면에서 각이 Z 축 둘레(반시계가 +)다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -29,7 +29,7 @@ namespace sw
 {
     class IPhysicsDebugRenderer;
 
-    /** @brief 물리 씬 하나입니다. 차원 묶음(`PhysicsDimension3D` · `PhysicsDimension2D`)만 다르고 함수는 같습니다. */
+    /** @brief 물리 씬 하나입니다. 차원 트레이트(`PhysicsDimension3D`, `PhysicsDimension2D`)만 다르고 함수는 같습니다. */
     template <typename TDimension>
     class IPhysicsScene
     {
@@ -51,14 +51,14 @@ namespace sw
 
         /**
          * @brief 고정 스텝 하나를 진행합니다. 접촉 이벤트는 이 스텝의 것으로 바뀝니다(`getContactEvents`).
-         * @details 가변 프레임 시간은 부르는 쪽이 `FixedStepAccumulator` 로 고정 스텝 수로 바꿉니다 — 같은 스텝 크기 · 같은 입력이면 같은 결과입니다.
+         * @details 가변 프레임 시간은 호출하는 쪽이 `FixedStepAccumulator` 로 고정 스텝 수로 바꾼다. 같은 스텝 크기와 같은 입력이면 같은 결과가 나온다.
          */
         virtual void step( float32 fixedDeltaTime ) = 0;
-        /** @brief 마지막 `step` 이 낸 접촉 · 트리거 이벤트입니다(결정적 순서, `PhysicsContactTracker`). 다음 `step` 까지 그대로입니다. */
+        /** @brief 마지막 `step` 이 낸 접촉과 트리거 이벤트를 반환합니다(결정적 순서, `PhysicsContactTracker`). 다음 `step` 까지 그대로입니다. */
         virtual const vector<ContactEvent>& getContactEvents() const            = 0;
         virtual void                        setGravity( const Vector& gravity ) = 0;
         virtual Vector                      getGravity() const                  = 0;
-        /** @brief 레이어끼리의 충돌 행렬을 바꿉니다(`PhysicsSettings::makeCollisionLayers`). 이미 있는 바디에도 다음 스텝부터 듭니다. */
+        /** @brief 레이어끼리의 충돌 행렬을 바꿉니다(`PhysicsSettings::makeCollisionLayers`). 이미 있는 바디에도 다음 스텝부터 적용됩니다. */
         virtual void setLayerCollision( const CollisionLayers& layers ) = 0;
         /** @brief 바디마다 셰이프를 선으로 냅니다(`PhysicsDebugDrawUtil`). */
         virtual void drawDebug( IPhysicsDebugRenderer& renderer ) const = 0;
@@ -66,15 +66,15 @@ namespace sw
         // --- 셰이프 -----------------------------------------------------------------------------------------------------
 
         /**
-         * @brief 셰이프 묶음을 미리 지어 둡니다(둘 이상이면 컴파운드). 바디 서술자의 `_sharedShape` 로 여러 바디가 나눠 씁니다.
-         * @details 같은 모양의 바디를 대량으로 만들 때(파편 · 탄피) 볼록 껍질 · 메시를 바디마다 다시 짓지 않게 합니다. 지운 뒤에도 그것을 쓰는
-         *          바디는 그대로 삽니다(백엔드가 참조를 센다). @p material 은 셰이프가 재질을 적지 않았을 때의 재질 이름입니다.
+         * @brief 셰이프 여럿을 미리 만들어 둡니다(둘 이상이면 컴파운드). 바디 서술자의 `_sharedShape` 로 여러 바디가 나눠 씁니다.
+         * @details 같은 형태의 바디를 대량으로 만들 때(파편, 탄피) 볼록 껍질과 메시를 바디마다 다시 만들지 않게 한다. 셰이프를 지운 뒤에도 그것을 쓰는
+         *          바디는 그대로 살아 있다(백엔드가 참조를 센다). @p material 은 셰이프가 재질을 지정하지 않았을 때의 재질 이름이다.
          */
         virtual PhysicsShapeHandle createShape( span<const ShapeDesc> listShape, const hashed_string& material ) = 0;
         /**
-         * @brief 이미 지은 셰이프 여럿을 바디 원점에 그대로 묶은 컴파운드를 만듭니다(자식의 로컬 자리 · 재질은 자식 것).
-         * @details 자식의 볼록 껍질을 다시 짓지 않습니다 — 파괴 조각처럼 잎 셰이프를 미리 지어 두고 갈라지는 덩어리마다 묶을 때 씁니다.
-         *          무효 · 지운 자식이 있으면 오류를 남기고 무효 핸들입니다. 자식을 지워도 컴파운드는 그대로 삽니다.
+         * @brief 이미 만든 셰이프 여럿을 바디 원점에 그대로 묶은 컴파운드를 만듭니다(자식의 로컬 위치와 재질은 자식의 것을 씁니다).
+         * @details 자식의 볼록 껍질을 다시 만들지 않는다. 파괴 조각처럼 잎 셰이프를 미리 만들어 두고, 갈라지는 덩어리마다 묶을 때 쓴다.
+         *          무효이거나 지운 자식이 있으면 오류를 남기고 무효 핸들을 반환한다. 자식을 지워도 컴파운드는 그대로 살아 있다.
          */
         virtual PhysicsShapeHandle createCompoundShape( span<const PhysicsShapeHandle> listChild ) = 0;
         virtual void               destroyShape( PhysicsShapeHandle shape )                        = 0;
@@ -84,22 +84,22 @@ namespace sw
         /** @brief 바디 하나를 만들어 시뮬레이션에 넣습니다. 셰이프가 없거나 만들 수 없으면 오류를 남기고 무효 핸들입니다. */
         virtual PhysicsBodyHandle createBody( const BodyDesc& desc ) = 0;
         /**
-         * @brief 바디 여럿을 한 번에 만듭니다. @p outListBody 에 서술자 순서대로 핸들을 붙입니다(실패한 자리는 무효 핸들).
-         * @details 백엔드가 묶어서 넣습니다(Jolt `AddBodiesPrepare/Finalize` — 넓은 단계 트리를 한 번만 고친다). 파괴 · 래그돌처럼 수십 ~ 수천 개를 한
-         *          프레임에 만들 때 씁니다.
+         * @brief 바디 여럿을 한 번에 만듭니다. @p outListBody 에 서술자 순서대로 핸들을 붙입니다(실패한 항목은 무효 핸들).
+         * @details 백엔드가 묶어서 넣는다(Jolt `AddBodiesPrepare/Finalize`, 넓은 단계 트리를 한 번만 고친다). 파괴나 래그돌처럼 수십에서 수천 개를 한
+         *          프레임에 만들 때 쓴다.
          */
         virtual void createBodies( span<const BodyDesc> listDesc, vector<PhysicsBodyHandle>& outListBody ) = 0;
         virtual void destroyBody( PhysicsBodyHandle body )                                                 = 0;
-        /** @brief 바디 여럿을 한 번에 지웁니다. 그 바디들의 접촉은 다음 이벤트 묶음에서 끝납니다. 붙은 관절도 함께 지웁니다. */
+        /** @brief 바디 여럿을 한 번에 지웁니다. 그 바디들의 접촉은 다음 이벤트 배치에서 끝납니다. 붙은 관절도 함께 지웁니다. */
         virtual void   destroyBodies( span<const PhysicsBodyHandle> listBody ) = 0;
         virtual bool   isBodyValid( PhysicsBodyHandle body ) const             = 0;
         virtual uint32 getBodyCount() const                                    = 0;
-        /** @brief 바디를 시뮬레이션에서 빼거나 다시 넣습니다(지우지 않는다 — 풀에 넣어 둔 파편을 다시 쓸 때). 뺀 바디는 질의 · 접촉에 들지 않습니다. */
+        /** @brief 바디를 시뮬레이션에서 빼거나 다시 넣습니다. 지우지는 않으며, 풀에 넣어 둔 파편을 다시 쓸 때 씁니다. 뺀 바디는 질의와 접촉에서 제외됩니다. */
         virtual void setBodyEnabled( PhysicsBodyHandle body, bool bEnabled ) = 0;
         virtual bool isBodyEnabled( PhysicsBodyHandle body ) const           = 0;
 
         virtual bool getBodyTransform( PhysicsBodyHandle body, Vector& outPosition, Rotation& outRotation ) const = 0;
-        /** @brief 바디를 그 자리로 옮깁니다(순간이동 — 그 사이를 쓸지 않고 깨운다). */
+        /** @brief 바디를 그 위치로 옮깁니다(순간이동). 그 사이를 쓸지 않고 바디를 깨웁니다. */
         virtual void setBodyTransform( PhysicsBodyHandle body, const Vector& position, const Rotation& rotation ) = 0;
         /** @brief 키네마틱 바디가 @p deltaTime 뒤에 목표 자세에 닿도록 속도를 줍니다(밀린 동적 바디가 그 속도를 받는다). */
         virtual void moveKinematic( PhysicsBodyHandle body, const Vector& targetPosition, const Rotation& targetRotation, float32 deltaTime ) = 0;
@@ -125,7 +125,7 @@ namespace sw
         virtual bool            isBodySleeping( PhysicsBodyHandle body ) const              = 0;
         virtual void            wakeBody( PhysicsBodyHandle body )                          = 0;
         virtual uint64          getBodyUserData( PhysicsBodyHandle body ) const             = 0;
-        /** @brief 두 바디의 충돌을 켜거나 끕니다(`PhysicsPairFilter`). 레이어 표보다 좁은 예외입니다. */
+        /** @brief 두 바디의 충돌을 켜거나 끕니다(`PhysicsPairFilter`). 레이어 테이블보다 좁은 예외입니다. */
         virtual void setPairCollision( PhysicsBodyHandle bodyA, PhysicsBodyHandle bodyB, bool bCollide ) = 0;
 
         // --- 관절 -------------------------------------------------------------------------------------------------------
@@ -136,7 +136,7 @@ namespace sw
         virtual bool               isJointValid( PhysicsJointHandle joint ) const = 0;
         /** @brief 모터를 바꿉니다(Hinge · Slider · Distance). */
         virtual void setJointMotor( PhysicsJointHandle joint, const PhysicsJointMotor& motor ) = 0;
-        /** @brief Hinge 면 지금 각(라디안), Slider 면 지금 거리, Distance 면 지금 길이입니다. 나머지는 0 입니다. */
+        /** @brief Hinge 면 현재 각(라디안), Slider 면 현재 거리, Distance 면 현재 길이를 반환합니다. 나머지는 0 입니다. */
         virtual float32 getJointPosition( PhysicsJointHandle joint ) const = 0;
 
         // --- 캐릭터 -----------------------------------------------------------------------------------------------------
@@ -144,8 +144,8 @@ namespace sw
         virtual PhysicsCharacterHandle createCharacter( const CharacterDesc& desc )         = 0;
         virtual void                   destroyCharacter( PhysicsCharacterHandle character ) = 0;
         /**
-         * @brief 캐릭터를 @p velocity 로 @p deltaTime 만큼 움직입니다 — 벽에 미끄러지고, 턱(`_stepHeight`)을 오르고, 가파른 비탈(`_maxSlopeAngle`)은
-         *        벽처럼 막습니다. 중력은 넣지 않습니다(부르는 쪽이 속도에 더한다). 바로 움직입니다(스텝을 기다리지 않는다).
+         * @brief 캐릭터를 @p velocity 로 @p deltaTime 만큼 움직입니다. 벽에서 미끄러지고, 턱(`_stepHeight`)을 오르고, 가파른 비탈(`_maxSlopeAngle`)은
+         *        벽처럼 막습니다. 중력은 넣지 않으므로 호출하는 쪽이 속도에 더해야 합니다. 스텝을 기다리지 않고 바로 움직입니다.
          */
         virtual CharacterState moveCharacter( PhysicsCharacterHandle character, const Vector& velocity, float32 deltaTime ) = 0;
         virtual void           setCharacterPosition( PhysicsCharacterHandle character, const Vector& position )             = 0;
@@ -153,22 +153,22 @@ namespace sw
 
         // --- 질의 -------------------------------------------------------------------------------------------------------
 
-        // --- 바퀴 차(3D 만 — 2D 는 무효 핸들 · false) --------------------------------------------------------------------
+        // --- 바퀴 차(3D 만 지원하며, 2D 는 무효 핸들이나 false 를 반환한다) --------------------------------------------------------------------
 
         /**
-         * @brief 바퀴 차를 만듭니다 — 이미 만든 동적 차체 바디 @p chassis 에 바퀴 · 엔진 · 변속을 붙입니다. 차체 바디를 지우면 함께 지워집니다.
-         * @details 차는 스텝마다 바퀴 충돌 · 서스펜션 · 마찰을 푸는 구속입니다(Jolt 는 스텝 리스너). 만들지 못하면 무효 핸들입니다.
+         * @brief 바퀴 차를 만듭니다. 이미 만든 동적 차체 바디 @p chassis 에 바퀴, 엔진, 변속을 붙입니다. 차체 바디를 지우면 함께 지워집니다.
+         * @details 차는 스텝마다 바퀴 충돌, 서스펜션, 마찰을 푸는 구속이다(Jolt 는 스텝 리스너). 만들지 못하면 무효 핸들을 반환한다.
          */
         virtual PhysicsVehicleHandle createWheeledVehicle( PhysicsBodyHandle chassis, const PhysicsWheeledVehicleDesc& desc ) = 0;
         virtual void                 destroyVehicle( PhysicsVehicleHandle vehicle )                                           = 0;
         virtual bool                 isVehicleValid( PhysicsVehicleHandle vehicle ) const                                     = 0;
-        /** @brief 운전 입력입니다(앞 −1..1 · 오른쪽 −1..1 · 브레이크 0..1 · 핸드브레이크 0..1). 다음 스텝에 들고, 자는 차체를 깨웁니다. */
+        /** @brief 운전 입력입니다(앞 -1..1, 오른쪽 -1..1, 브레이크 0..1, 핸드브레이크 0..1). 다음 스텝에 적용하고, 자고 있는 차체를 깨웁니다. */
         virtual void setVehicleInput( PhysicsVehicleHandle vehicle, float32 forward, float32 right, float32 brake, float32 handBrake ) = 0;
         virtual bool getVehicleState( PhysicsVehicleHandle vehicle, PhysicsVehicleState& outState ) const                              = 0;
 
         /** @brief @p origin 에서 @p direction(정규화)으로 @p maxDistance 까지 처음 닿는 바디입니다. */
         virtual bool raycast( const Vector& origin, const Vector& direction, float32 maxDistance, const PhysicsQueryFilter& filter, CastHit& outHit ) const = 0;
-        /** @brief 셰이프를 @p position · @p rotation 에서 @p direction 으로 @p maxDistance 까지 쓸어 처음 닿는 바디입니다. */
+        /** @brief 셰이프를 @p position, @p rotation 에서 @p direction 으로 @p maxDistance 까지 쓸어 처음 닿는 바디를 찾습니다. */
         virtual bool shapeCast( const ShapeDesc& shape, const Vector& position, const Rotation& rotation, const Vector& direction, float32 maxDistance,
                                 const PhysicsQueryFilter& filter, CastHit& outHit ) const = 0;
         /** @brief 셰이프와 겹치는 바디들을 @p outListBody 에 붙이고 그 수를 돌려줍니다(같은 바디는 한 번). */

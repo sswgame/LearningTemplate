@@ -37,7 +37,7 @@ namespace sw
         }
         if ( _accumulated < 0.0 )
             _accumulated = 0.0;
-        // 상한에 걸렸으면 남은 것 가운데 한 스텝 미만만 남기고 버린다 — 다음 프레임이 또 상한까지 따라잡느라 늦어지지 않게.
+        // 상한에 걸렸으면 남은 시간 가운데 한 스텝 미만만 남기고 버린다. 다음 프레임이 또 상한까지 따라잡느라 늦어지지 않게 하려는 것이다.
         if ( _accumulated >= step )
         {
             const float64 kept = _accumulated - step * static_cast<float64>( static_cast<uint64>( _accumulated / step ) );

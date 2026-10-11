@@ -1,7 +1,7 @@
 /**
  * @file JoltUtil.h
- * @brief 엔진 수학 타입 ↔ Jolt 수학 타입 변환과, Jolt 참조 객체를 Jolt 할당자로 만드는 도우미입니다(`Physics/Jolt` 안에서만).
- * @details 쿼터니언은 두 쪽 모두 (x, y, z, w) 해밀턴 곱이라 성분을 그대로 옮깁니다. 행렬은 넘기지 않습니다(엔진은 행 벡터, Jolt 는 열 벡터).
+ * @brief 엔진 수학 타입과 Jolt 수학 타입 사이의 변환과, Jolt 참조 객체를 Jolt 할당자로 만드는 도우미입니다(`Physics/Jolt` 안에서만 씁니다).
+ * @details 쿼터니언은 두 쪽 모두 (x, y, z, w) 해밀턴 곱이라 성분을 그대로 옮긴다. 행렬은 넘기지 않는다(엔진은 행 벡터, Jolt 는 열 벡터를 쓴다).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -25,9 +25,9 @@ namespace sw
         static quaternion toEngine( JPH::QuatArg value ) { return quaternion{ value.GetX(), value.GetY(), value.GetZ(), value.GetW() }; }
 
         /**
-         * @brief Jolt 참조 객체(`RefTarget` — 마지막 참조가 `delete this` 한다)를 그 타입의 `operator new` 로 잡은 자리에 만듭니다.
-         * @details Jolt 타입은 `JPH_OVERRIDE_NEW_DELETE` 로 할당을 `JPH::Allocate`(엔진 할당자로 돌려 둔 것)로 보냅니다. 같은 짝으로 잡아야
-         *          `delete this` 가 맞는 해제를 부릅니다 — 정렬이 기본보다 크면 정렬 할당 짝입니다(컴파일러가 `delete` 에서 고르는 것과 같은 기준).
+         * @brief Jolt 참조 객체(`RefTarget`, 마지막 참조가 `delete this` 를 한다)를 그 타입의 `operator new` 로 잡은 메모리에 만듭니다.
+         * @details Jolt 타입은 `JPH_OVERRIDE_NEW_DELETE` 로 할당을 `JPH::Allocate`(엔진 할당자로 돌려 둔 것)로 보낸다. 같은 짝으로 잡아야
+         *          `delete this` 가 맞는 해제를 호출한다. 정렬이 기본보다 크면 정렬 할당 짝을 쓴다(컴파일러가 `delete` 에서 고르는 것과 같은 기준이다).
          */
         template <typename T, typename... Args>
         static T* createObject( Args&&... args )

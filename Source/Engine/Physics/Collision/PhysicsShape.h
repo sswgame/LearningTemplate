@@ -1,8 +1,8 @@
 /**
  * @file PhysicsShape.h
- * @brief 3D · 2D 셰이프 서술자입니다 — 데이터(컴포넌트 PROPERTY · 물리 에셋)와 런타임(바디 만들기)이 같은 타입을 씁니다.
- * @details 바디 하나에 셰이프가 둘 이상이면 컴파운드입니다(각 셰이프가 바디 기준 자리 · 회전을 든다). 차원마다 다른 것은 셰이프 종류와
- *          크기 칸뿐입니다.
+ * @brief 3D 와 2D 셰이프 서술자입니다. 데이터(컴포넌트 PROPERTY, 물리 에셋)와 런타임(바디 생성)이 같은 타입을 씁니다.
+ * @details 바디 하나에 셰이프가 둘 이상이면 컴파운드다(각 셰이프가 바디 기준 위치와 회전을 가진다). 차원마다 다른 것은 셰이프 종류와
+ *          크기 필드뿐이다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -15,26 +15,26 @@
 
 namespace sw
 {
-    /** @brief 3D 셰이프 종류입니다(Jolt Box · Sphere · Capsule · ConvexHull · Mesh). */
+    /** @brief 3D 셰이프 종류입니다(Jolt 의 Box, Sphere, Capsule, ConvexHull, Mesh). */
     ENUM()
     enum class PhysicsShapeType3D : uint8
     {
         Box = 0,
         Sphere,
-        Capsule,      ///< 로컬 Y 축으로 선 캡슐 — 원기둥 반 높이(`_halfHeight`) + 반지름
+        Capsule,      ///< 로컬 Y 축으로 선 캡슐이다. 원기둥 반 높이(`_halfHeight`)와 반지름으로 정한다.
         ConvexHull,   ///< `_listPoint` 를 감싸는 볼록 껍질
-        TriangleMesh, ///< `_listPoint` · `_listIndex` 삼각형 — Static · Kinematic 바디만(움직이는 메시 충돌은 백엔드가 막는다)
+        TriangleMesh, ///< `_listPoint` 와 `_listIndex` 의 삼각형이다. Static 과 Kinematic 바디만 쓸 수 있다(움직이는 메시 충돌은 백엔드가 막는다).
     };
 
-    /** @brief 2D 셰이프 종류입니다(Box2D polygon · circle · capsule · chain). */
+    /** @brief 2D 셰이프 종류입니다(Box2D 의 polygon, circle, capsule, chain). */
     ENUM()
     enum class PhysicsShapeType2D : uint8
     {
         Box = 0,
         Circle,
         Capsule, ///< 로컬 Y 축으로 선 캡슐
-        Polygon, ///< `_listPoint` 의 볼록 다각형(최대 8 점, 넘거나 오목하면 볼록 껍질)
-        Chain,   ///< `_listPoint` 를 잇는 선분 사슬(지형) — 한쪽 면만 막는다. `_bLoop` 면 닫는다
+        Polygon, ///< `_listPoint` 의 볼록 다각형이다(최대 8 점이며, 넘거나 오목하면 볼록 껍질을 쓴다).
+        Chain,   ///< `_listPoint` 를 이은 선분 체인이다(지형). 한쪽 면만 막고, `_bLoop` 면 닫는다.
     };
 } // namespace sw
 
