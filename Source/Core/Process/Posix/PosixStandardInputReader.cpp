@@ -1,8 +1,7 @@
 #include "pch.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
-
-#include "Server/ServerConsole.h"
+#include "Core/Process/StandardInputReader.h"
 
 #if !defined( SW_PLATFORM_WINDOWS )
     #include <poll.h>
@@ -10,7 +9,7 @@
 
 namespace sw
 {
-    bool ServerConsole::readLinePlatform( string& outLine )
+    bool StandardInputReader::readLinePlatform( string& outLine )
     {
         for ( ;; )
         {

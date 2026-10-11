@@ -12,6 +12,8 @@
 #include "App/UserSettingsHost.h"
 
 #include "Core/Common/Types.h"
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 
 #include "Engine/Config/FixedTimestep.h"
@@ -28,6 +30,7 @@ namespace sw
     class EditorModuleHost;
     class IWindow;
     class LiveReloadManager;
+    class StandardInputReader;
 } // namespace sw
 
 namespace sw
@@ -83,6 +86,12 @@ namespace sw
         void runPendingDevConsoleExec();
         /** @brief 셸 InputMap 의 이번 프레임 액션으로 개발 콘솔을 갱신합니다(에디터가 없을 때). `pollReloadHotkeys` 뒤에 부릅니다. Shipping 에서는 아무것도 하지 않습니다. */
         void updateDevConsole();
+        /**
+         * @brief `-gv_standardInputCommands=1` 로 띄웠으면 표준 입력에서 온 줄을 처리합니다 — `quit` · `stop` 은 종료, 나머지는 개발 콘솔 명령입니다.
+         * @return 종료를 요청받았으면 true. Shipping 에서는 늘 false 입니다.
+         * @details 부모 프로세스(에디터의 멀티 프로세스 재생)가 클라이언트를 정상 종료하는 통로다 — 창 닫기를 보낼 수 없는 부모도, 콘솔이 없는 부모도 쓴다.
+         */
+        bool pollStandardInputCommands();
 
         /** @brief 창 크기 변경 콜백입니다. */
         void onResize( const uint32 width, const uint32 height );
@@ -113,6 +122,8 @@ namespace sw
          *          이 콘솔로 돌립니다(에디터가 있어도).
          */
         unique_ptr<DevConsoleController> _devConsoleController;
+        unique_ptr<StandardInputReader>  _standardInput;            ///< `-gv_standardInputCommands=1` 일 때만 — 부모 프로세스의 명령 통로
+        vector<string>                   _listStandardInputCommand; ///< 표준 입력에서 꺼낸 줄(프레임마다 재사용)
 #endif
         unique_ptr<EditorModuleHost> _moduleHost;
         /** @brief 모듈 매니페스트(`Bin/Modules`)와 그 해석 — 무엇을 어떤 순서로 올릴지(Dev). */

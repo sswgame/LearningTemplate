@@ -16,11 +16,10 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Process/StandardInputReader.h"
 
 #include "Engine/EngineLoop.h"
 #include "Engine/Module/ModuleCatalog.h"
-
-#include "Server/ServerConsole.h"
 
 namespace sw
 {
@@ -83,7 +82,7 @@ namespace sw
 #endif
         ModuleCatalog                     _moduleCatalog;
         ModuleResolution                  _moduleResolution;
-        ServerConsole                     _console;
+        StandardInputReader               _console;
         unique_ptr<MetricRegistry>        _metricRegistry;
         unique_ptr<ServiceHealthRegistry> _healthRegistry;
         unique_ptr<IStreamTransport>      _opsTransport; ///< 운영 HTTP 의 스트림 전송(끝점이 빌려 쓴다 — 끝점을 내린 뒤 지운다)

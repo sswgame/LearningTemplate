@@ -11,6 +11,7 @@
 #include "Editor/Common/Asset/EditorAssetValidation.h"
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
+#include "Editor/Common/Commands/EditorNetPlaySession.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/GUI/EditorCommandGUI.h"
@@ -93,6 +94,7 @@ namespace sw::editor
         _pInspectorComponentManager = make_unique<InspectorComponentManager>();
         _pInspectorPropertyManager  = make_unique<InspectorPropertyManager>();
         _pDefaultObjects            = make_unique<EditorDefaultObjects>();
+        _pNetPlaySession            = make_unique<EditorNetPlaySession>();
 
         setActive( this );
         bindLocalService( this );
@@ -120,6 +122,7 @@ namespace sw::editor
             setActive( nullptr );
 
         _pModuleUnloadListener.reset(); // 매니저보다 먼저 — 언로드 훑기가 지워진 매니저를 밟지 않게
+        _pNetPlaySession.reset();       // 자식 프로세스를 정상 종료시킨다 — 로거가 아직 있을 때
         _pDefaultObjects.reset();
         _pInspectorPropertyManager.reset();
         _pInspectorComponentManager.reset();

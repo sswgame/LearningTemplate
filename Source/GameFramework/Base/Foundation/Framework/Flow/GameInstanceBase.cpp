@@ -24,6 +24,7 @@
 #include "GameFramework/Base/Foundation/Framework/Flow/LoadingScreenController.h"
 #include "GameFramework/Base/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
+#include "GameFramework/Base/Foundation/Framework/Net/GameNetSession.h"
 #include "GameFramework/Base/Foundation/Framework/Presentation/GameStrings.h"
 #include "GameFramework/Base/Foundation/Framework/Save/ComponentStateStore.h"
 
@@ -58,6 +59,7 @@ namespace sw
         , _pComponentStateStore{ make_unique<ComponentStateStore>() }
         , _screenTransition{}
         , _pLoadingScreen{ make_unique<LoadingScreenController>() }
+        , _pNetSession{ make_unique<GameNetSession>() }
         , _bResumingWorld{ SW_FALSE }
     {
     }
@@ -96,6 +98,11 @@ namespace sw
         _pLoadingScreen->setSettings( loadingSettings );
         UISystem* pUISystem = game::getService<UISystem>();
         _pLoadingScreen->bindUISystem( pUISystem != nullptr && pUISystem->isInitialized() ? pUISystem : nullptr );
+        // 네트워크 역할은 실행 인자가 정한다 — 파생의 onInitialize 가 역할을 보고 키트 처리기를 달 수 있게 그 앞에서 연다.
+        // 열지 못해도(포트 사용 중) 게임은 혼자 뜬다 — 실패는 세션이 로그에 남긴다.
+        GameNetSessionParams netParams;
+        if ( GameNetSession::makeParamsFromGlobalVariables( netParams ) )
+            (void)_pNetSession->initialize( netParams ); // 실패는 initialize 가 알린다
         const bool bInitialized = onInitialize();
 
         // 플레이어 설정을 다시 넣는다 — 언어 팩 · 입력 맵(키 바인딩 · 누르기/토글)은 위에서 막 생겼다. 엔진 기동 때의 적용은 그 대상이 없을 때였다.
@@ -109,6 +116,8 @@ namespace sw
     void GameInstanceBase::shutdown()
     {
         onShutdown();
+        // 키트 처리기는 onShutdown 에서 내려갔다 — 그 뒤에 연결을 끊는다(끊기 사건을 내린 처리기에 나눠 주지 않게).
+        _pNetSession->shutdown();
         // 다른 인스턴스(리로드가 먼저 만든 새 것)가 묶은 것은 건드리지 않는다.
         if ( game::getService<GameSettings>() == &_bootstrap._data )
             game::unbindLocalService<GameSettings>();
@@ -230,6 +239,7 @@ namespace sw
         _pLoadingScreen->update( realDeltaTime, bLoading, _screenTransition.fade() );
         if ( _listPendingSceneLoad.empty() == false )
             publishFinishedSceneLoads();
+        _pNetSession->update(); // 받은 사건 · 메시지를 처리기에 — 게임 프레임 앞에서(세션이 없으면 바로 돌아온다)
         onUpdate( deltaTime );
     }
 

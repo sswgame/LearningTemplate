@@ -20,6 +20,7 @@ namespace sw
 {
     struct TypeInfo;
 
+    class GameNetSession;
     class GameObjectManager;
     class LoadingScreenController;
     class Scene;
@@ -108,6 +109,15 @@ namespace sw
          *        로드가 끝나고 최소 표시 시간이 지나면 닫으며 페이드 인을 겁니다. UI 시스템이 없으면(전용 서버) 아무것도 띄우지 않는다.
          */
         LoadingScreenController& getLoadingScreen() { return *_pLoadingScreen; }
+
+        // --------------------------------------------------------------------------
+        // 네트워크 세션
+        // --------------------------------------------------------------------------
+        /**
+         * @brief 이 인스턴스의 네트워크 역할(서버 · 클라이언트 · 없음)입니다 — 실행 인자(`-gv_netListenPort` · `-gv_netConnectAddress`)가 정하고, `initialize` 가 `onInitialize` 앞에서 엽니다.
+         * @details 키트 · 게임은 `getNetSession().getRouter()` 에 메시지 처리기를 달고, `update` 가 프레임마다 `onUpdate` 앞에서 사건 · 메시지를 나눠 줍니다.
+         */
+        GameNetSession& getNetSession() { return *_pNetSession; }
 
     protected:
         /** @brief 파생 클래스가 팩 루트 · 부트스트랩을 설정합니다. */
@@ -265,6 +275,7 @@ namespace sw
         unique_ptr<ComponentStateStore>     _pComponentStateStore; ///< 스냅샷 봉투의 컴포넌트 상태 섹션
         ScreenTransitionManager             _screenTransition;     ///< 화면 페이드 · 전환 순서
         unique_ptr<LoadingScreenController> _pLoadingScreen;       ///< 로딩 화면 · 페이드 패널(UI 시스템에 화면을 띄운다)
+        unique_ptr<GameNetSession>          _pNetSession;          ///< 네트워크 역할 — 실행 인자가 없으면 열지 않는다
         uint8                               _bResumingWorld;       ///< `initialize` 때 이미 활성 씬이 있었다(다시 선 인스턴스) — 첫 씬을 요청하지 않는다
     };
 } // namespace sw

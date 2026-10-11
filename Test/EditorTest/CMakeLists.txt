@@ -28,6 +28,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorGlobalVariableCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorLogCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorModuleOverrides.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorNetPlaySession.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorMultiEdit.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorSceneCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorShortcutOverrides.cpp"
@@ -113,6 +114,14 @@ sw_addTestExecutable(EditorTest
 )
 
 target_include_directories(EditorTest PRIVATE "${CMAKE_SOURCE_DIR}/Source")
+
+# 멀티 프로세스 재생 시험(EditorNetPlaySessionTest)은 빌드한 Server 를 서버 · 헤드리스 클라이언트로 띄운다 — 시험보다 먼저 지어 둔다.
+if(TARGET Server)
+	add_dependencies(EditorTest Server)
+endif()
+if(TARGET SWGame)
+	add_dependencies(EditorTest SWGame)
+endif()
 
 # EditorConfig·EditorToolDefaults 는 REFLECT 타입이라 StaticType() 이 코드젠에서 나온다. EditorModule 을
 # 링크하지 않는 테스트도 그 심볼이 필요하므로 이 헤더들만 따로 코드젠한다.

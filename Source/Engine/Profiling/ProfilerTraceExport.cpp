@@ -26,6 +26,11 @@ namespace sw
      * @details 전용 서버가 부릅니다(`ServerApp::run`). Shipping 에는 없습니다 — 운영 캡처는 Dev 구성 서버로(결정 기록 "트레이스 내보내기").
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_traceSlowTickMs, 0, "틱 본문이 N ms 를 넘으면 앞뒤 프레임을 트레이스로 저장 (0=끄기)" );
+    /**
+     * @brief `-gv_traceSaveOnExit=<경로>`: 기동부터 타임라인 링 버퍼를 켜 두고, 종료할 때 최근 프레임을 그 경로에 트레이스로 저장합니다(비면 끄기).
+     * @details 에디터의 멀티 프로세스 재생이 서버 · 클라이언트마다 경로를 주고 Stop 뒤에 합친다(`EditorNetPlaySession`).
+     */
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_traceSaveOnExit, "", "종료할 때 최근 프레임의 타임라인을 이 경로에 트레이스로 저장 (비면 끄기)" );
 
     namespace
     {
@@ -539,6 +544,27 @@ namespace sw
         const ProfilerTraceMeta meta = makeCurrentMeta( processName );
         outSavedPath                 = path.empty() ? makeDefaultTracePath( "trace", meta._wallUnixMilliseconds ) : string( path );
         return saveRecentFramesWithMeta( profiler, frameCount, outSavedPath, meta, outReply );
+    }
+
+    void ProfilerTraceExport::startExitCapture( FrameProfiler& profiler )
+    {
+        if ( gv_traceSaveOnExit.empty() )
+            return;
+        profiler.setEnabled( true ); // 스코프가 시계를 읽어야 사건이 쌓인다
+        profiler.getTimeline().setRecording( true );
+        SW_LOG_INFO( "Timeline recording on - the trace is saved to %# on exit", gv_traceSaveOnExit );
+    }
+
+    void ProfilerTraceExport::finishExitCapture( const FrameProfiler& profiler, string_view processName )
+    {
+        if ( gv_traceSaveOnExit.empty() )
+            return;
+        string savedPath;
+        string reply;
+        if ( saveRecentFrames( profiler, ProfilerTimeline::kFrameCapacity - 1, gv_traceSaveOnExit, processName, savedPath, reply ) )
+            SW_LOG_INFO( "Exit trace saved %# (%#)", savedPath, reply );
+        else
+            SW_LOG_WARNING( "Exit trace not saved to %#: %#", savedPath, reply );
     }
 
     namespace
