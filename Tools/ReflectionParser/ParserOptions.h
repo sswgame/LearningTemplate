@@ -23,7 +23,7 @@ namespace sw
         bool           _bHelp{ false };      ///< --help: 사용법만 찍고 끝낸다
 
         /**
-         * @brief argv 를 읽고 모드별 필수 인자를 확인합니다.
+         * @brief argv 를 읽고 모드별 필수 인자를 확인합니다. `@파일` 은 그 파일의 줄마다 인자 하나로 펼칩니다(응답 파일).
          * @return 모르는 인자 · 값 없는 플래그 · 빠진 필수 인자가 있으면 이유를 알리고 false
          */
         [[nodiscard]] bool parse( int32 argc, utf8* argv[] );

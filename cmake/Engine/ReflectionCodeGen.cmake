@@ -142,12 +142,22 @@ function(sw_addReflectionStep TARGET_NAME)
 	# include 목록을 이 파일에 쓰고 ninja 가 읽는다. DEPENDS 가 반사된 헤더뿐이면 생성 코드가 낡은 타입 정보로 남는다.
 	set(swReflectDepfile "${ARG_OUTPUT_DIR}/ReflectionParser.d")
 
+	# 인자는 응답 파일(줄마다 하나)로 넘긴다 — 입력 헤더가 많고 경로가 길면 명령 줄이 Windows 한도(32767 자)를 넘는다.
+	# 내용이 같으면 COPYONLY 가 파일을 건드리지 않아 불필요하게 다시 돌지 않는다.
+	set(swReflectResponseFile "${ARG_OUTPUT_DIR}/ReflectionParser.rsp")
+	set(swReflectResponseArgs ${parserArgs} "--depfile" "${swReflectDepfile}")
+	string(REPLACE ";" "
+" swReflectResponseText "${swReflectResponseArgs}")
+	file(WRITE "${swReflectResponseFile}.in" "${swReflectResponseText}
+")
+	configure_file("${swReflectResponseFile}.in" "${swReflectResponseFile}" COPYONLY)
+
 	add_custom_command(
 		OUTPUT ${generatedFiles}
 		COMMAND ${CMAKE_COMMAND} -E make_directory "${ARG_OUTPUT_DIR}"
-		COMMAND "$<TARGET_FILE:ReflectionParser>" ${parserArgs} --depfile "${swReflectDepfile}"
+		COMMAND "$<TARGET_FILE:ReflectionParser>" "@${swReflectResponseFile}"
 		DEPFILE "${swReflectDepfile}"
-		DEPENDS ${ARG_HEADERS} "${swReflectInputList}" ReflectionParser "$<TARGET_FILE:ReflectionParser>"
+		DEPENDS ${ARG_HEADERS} "${swReflectInputList}" "${swReflectResponseFile}" ReflectionParser "$<TARGET_FILE:ReflectionParser>"
 		"${swReflectBuiltins}" "${swAnnotationMeta}" ${swEmitTpls}
 		${swParserConfigs}
 		COMMENT "[Reflection] Running ReflectionParser for target: ${TARGET_NAME}"
