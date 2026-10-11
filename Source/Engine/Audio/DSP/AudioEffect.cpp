@@ -451,6 +451,13 @@ namespace sw
             float32         _dampCoefficient; /**< 피드백 로우패스 계수입니다(0 이면 없음). */
         };
 
+        /** @brief 매개변수 표의 개수입니다. 클래스 안 멤버 템플릿이 클래스의 인라인 정적 초기값에서 불리면 리눅스 CI(clang 14)에서 링크가 미해결로 남았다 — 클래스 밖에 둔다. */
+        template <size_t TCount>
+        constexpr uint32 countOf( const AudioEffectParameterInfo ( & )[TCount] )
+        {
+            return static_cast<uint32>( TCount );
+        }
+
         struct AudioEffectInternal
         {
             static constexpr AudioEffectParameterInfo kArrLowPassParameter[] = {
@@ -507,12 +514,6 @@ namespace sw
             static unique_ptr<IAudioEffect> createEffect( const AudioEffectTypeInfo& typeInfo )
             {
                 return make_unique<TEffect>( typeInfo );
-            }
-
-            template <size_t TCount>
-            static constexpr uint32 countOf( const AudioEffectParameterInfo ( & )[TCount] )
-            {
-                return static_cast<uint32>( TCount );
             }
 
             /** @brief 이펙트 종류 표입니다. 이름은 데이터가 쓰는 철자입니다. */
