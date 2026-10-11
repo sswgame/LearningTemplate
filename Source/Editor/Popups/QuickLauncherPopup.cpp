@@ -19,6 +19,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Popups/QuickLauncherLayout.h"
 
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -177,7 +178,7 @@ namespace sw::editor
         }
 
         EditorWidgets::drawSearchField( "##qlSearch", _searchBuffer,
-                                        "Type to search assets, scenes, game objects (ESC to cancel)...", -1.0f, true );
+                                        SW_LOCTEXT( "EdCommon", "QuickOpenHint", "Type to search assets, scenes, game objects (ESC to cancel)..." ), -1.0f, true );
 
         vector<const QuickLauncherItem*> listFiltered;
         listFiltered.reserve( _listAllItem.size() );
@@ -272,9 +273,9 @@ namespace sw::editor
             if ( filteredCount == 0 )
             {
                 if ( _fileIndexJob.isPending() )
-                    EditorWidgets::drawEmptyHint( "Indexing assets..." );
+                    EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EdCommon", "QuickOpenIndexing", "Indexing assets..." ) );
                 else
-                    EditorWidgets::drawEmptyHint( "No matching assets or game objects found." );
+                    EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EdCommon", "QuickOpenNoMatches", "No matching assets or game objects found." ) );
             }
         }
         EditorChrome::endSection();

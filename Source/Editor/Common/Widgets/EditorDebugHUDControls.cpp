@@ -38,7 +38,7 @@ namespace sw::editor
         DebugHUD* pHUD = DebugHUD::findActive();
         if ( pHUD == nullptr )
         {
-            ImGui::TextDisabled( "Debug HUD is not running" );
+            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EdCommon", "DebugHUDNotRunning", "Debug HUD is not running" ) );
             return;
         }
         for ( const DebugHUDSectionRegistration* pSection : DebugHUDRegistry::get().getSections() )
@@ -86,13 +86,14 @@ namespace sw::editor
         DebugHUD* pHUD = DebugHUD::findActive();
         if ( pHUD == nullptr )
         {
-            EditorWidgets::drawEmptyHint( "Debug HUD is not running (Shipping or a test host)." );
+            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EdCommon", "DebugHUDNotRunningHost", "Debug HUD is not running (Shipping or a test host)." ) );
             return;
         }
-        ImGui::TextDisabled( "Saved in the engine user settings (debug.hud, debug.hudSections, debug.hudCorner, debug.hudOpacity)" );
+        ImGui::TextDisabled( "%s", SW_LOCTEXT( "EdCommon", "DebugHUDSavedIn", "Saved in the engine user settings (debug.hud, debug.hudSections, debug.hudCorner, debug.hudOpacity)" ) );
         bool bShown = pHUD->isShown();
         if ( ImGui::Checkbox( "Show Debug HUD (Ctrl+F3)", &bShown ) )
             pHUD->setShown( bShown );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "DebugHUDShow", "Show the in-game Debug HUD in the game view, with the sections chosen below (Ctrl+F3)" ) );
         EditorSelfTestMarks::note( "preferences.debugHUD.shown" );
         ImGui::SeparatorText( "Sections" );
         drawSectionChecklist();

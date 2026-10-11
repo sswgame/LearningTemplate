@@ -13,6 +13,7 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -199,7 +200,7 @@ namespace sw::editor
         if ( EditorChrome::beginSearchOverlay( overlayDesc ) )
         {
             EditorWidgets::drawSearchField( "##PaletteSearch", _searchBuffer,
-                                            "Type a command or search objects... (Esc to close)", -1.0f, false );
+                                            SW_LOCTEXT( "EdCommon", "CommandPaletteHint", "Type a command or search objects... (Esc to close)" ), -1.0f, false );
 
             ImGui::Separator();
 

@@ -13,6 +13,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionTypes.h"
@@ -30,14 +31,14 @@ namespace sw::editor
             listType = pObj->getManager()->getRegisteredComponentTypeNames();
         if ( listType.empty() )
         {
-            ImGui::TextDisabled( "No registered component types." );
+            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EdCommon", "NoComponentTypes", "No registered component types." ) );
             return false;
         }
 
         if ( bFocusSearch )
             ImGui::SetKeyboardFocusHere();
         ImGui::SetNextItemWidth( 180.0f * EditorThemeUtil::getDpiScale() );
-        const bool   bEnter = ImGui::InputTextWithHint( "##compSearch", "Search...", search.data(), search.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
+        const bool   bEnter = ImGui::InputTextWithHint( "##compSearch", SW_LOCTEXT( "EdCommon", "SearchHint", "Search..." ), search.data(), search.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
         const string markPrefix{ pMarkPrefix };
         EditorSelfTestMarks::note( ( markPrefix + ".search" ).c_str() );
         const EditorListFilter compFilter{ search.c_str() };
@@ -83,7 +84,7 @@ namespace sw::editor
                 ++matchCount;
             }
             if ( matchCount == 0 )
-                ImGui::TextDisabled( "No matching components." );
+                EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EdCommon", "NoMatchingComponents", "No matching components." ) );
             // Enter 는 맨 위 줄을 고른다(유니티 Add Component 검색 창과 같다).
             if ( bEnter && matchCount > 0 && bAdded == false )
                 addType( firstMatch );

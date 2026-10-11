@@ -14,6 +14,8 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Localization/LocText.h"
+
 #include <imgui.h>
 
 namespace sw::editor
@@ -630,7 +632,7 @@ namespace sw::editor
                     editorConfig = EditorThemeInternal::activeTheme();
                 }
             }
-            EditorWidgets::drawTooltip( "에디터 전체의 테마 프리셋(Modern Dark, Deep Charcoal, Midnight Blue 등)을 선택합니다" );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "ThemePreset", "Choose the theme preset for the whole editor (Modern Dark, Deep Charcoal, Midnight Blue and more)." ) );
 
             ImGui::Separator();
             ImGui::TextDisabled( "Color Palette Customization" );
@@ -643,7 +645,7 @@ namespace sw::editor
                 applyTheme( editorConfig );
                 saveToConfig();
             }
-            EditorWidgets::drawTooltip( "버튼, 선택 하이라이트, 폴더 및 활성 항목에 적용할 대표 액센트 색상" );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "ThemeAccentColor", "The accent color used for buttons, selection highlights, folders and active items." ) );
 
             // 3) 빠른 액센트 팔레트 스와치
             ImGui::Text( "Accent Swatches:" );
@@ -668,7 +670,7 @@ namespace sw::editor
                 }
                 if ( index == 2 )
                     EditorSelfTestMarks::note( "theme.swatch.violet" ); // 에디터 자체 시험(input.classicDarkSwatch)이 누른다
-                EditorWidgets::drawTooltip( "추천 액센트 색상 팔레트" );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "ThemeAccentSwatch", "A recommended accent color. Click to apply it." ) );
                 ImGui::PopID();
             }
 
@@ -678,11 +680,11 @@ namespace sw::editor
             // 4) 라운딩 슬라이더
             bool bMetricsChanged = false;
             bMetricsChanged |= ImGui::SliderFloat( "Window Rounding", &editorConfig._windowRounding, 0.0f, 12.0f, "%.0f px" );
-            EditorWidgets::drawTooltip( "에디터 창 및 팝업 대화상자 모서리의 둥글기(px)" );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "ThemeWindowRounding", "Corner rounding of editor windows and popup dialogs, in pixels (0 to 12)." ) );
             bMetricsChanged |= ImGui::SliderFloat( "Frame Rounding", &editorConfig._frameRounding, 0.0f, 8.0f, "%.0f px" );
-            EditorWidgets::drawTooltip( "버튼, 입력 필드 및 컨트롤 프레임의 모서리 둥글기(px)" );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "ThemeFrameRounding", "Corner rounding of buttons, input fields and control frames, in pixels (0 to 8)." ) );
             bMetricsChanged |= ImGui::SliderFloat( "Tab Rounding", &editorConfig._tabRounding, 0.0f, 8.0f, "%.0f px" );
-            EditorWidgets::drawTooltip( "도킹 탭 및 상단 패널 탭 모서리의 둥글기(px)" );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "ThemeTabRounding", "Corner rounding of dock tabs and panel tabs, in pixels (0 to 8)." ) );
 
             if ( bMetricsChanged )
             {
@@ -701,7 +703,7 @@ namespace sw::editor
                 applyPreset( EditorThemePreset::ModernDark );
                 saveToConfig();
             }
-            EditorWidgets::drawTooltip( "모든 테마 설정을 Modern Dark 기본값으로 복원합니다" );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "ThemeReset", "Restore every theme setting to the Modern Dark defaults." ) );
         }
         ImGui::End();
     }

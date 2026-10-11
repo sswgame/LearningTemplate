@@ -17,6 +17,8 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Renderer/Capture/RenderDocCapture.h"
 #include "Engine/Utility/GameAutoplay.h"
@@ -91,18 +93,18 @@ namespace sw::editor
                     if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlay, "Play" ) ) )
                         (void)session.start( session.getSettings() ); // 실패 이유는 세션이 로그에 남긴다
                     EditorSelfTestMarks::note( "toolbar.netPlay" );
-                    EditorWidgets::drawTooltip( "서버와 클라이언트를 따로 띄워 붙입니다 — 로그는 Output Log 에 [Server] · [Client1] 로 모이고, Stop 이 모두 끕니다" );
+                    EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "NetPlayStart", "Launch a separate server and clients and connect them. Logs gather in the Output Log as [Server] and [Client1], and Stop shuts them all down." ) );
                     return true;
                 }
                 fixed_string<constant::kMaxBuffer64> chip;
                 formatstring( chip.data(), chip.capacity(), "Net %d/%d", session.getConnectedClientCount(), session.getProcessCount() - 1 );
                 EditorWidgets::drawChip( chip.c_str(), editor::style::kOk );
-                EditorWidgets::drawTooltip( "붙은 클라이언트 / 띄운 클라이언트 — 프로세스 목록 · 서버 일시정지는 Window > Multiplayer" );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "NetPlayClients", "Connected clients / launched clients. The process list and server pause are in Window > Multiplayer." ) );
                 ImGui::SameLine();
                 if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kStop, "Stop" ) ) )
                     (void)session.stop(); // 합친 트레이스 경로는 로그에 남는다
                 EditorSelfTestMarks::note( "toolbar.netStop" );
-                EditorWidgets::drawTooltip( "모든 프로세스를 정상 종료시키고, 트레이스를 켰으면 한 파일로 합칩니다" );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "NetPlayStop", "Shut down every process cleanly and, if tracing is on, merge the traces into one file." ) );
                 return true;
             }
 
@@ -120,64 +122,64 @@ namespace sw::editor
                 if ( EditorPlaySession::isPlayQueued() )
                 {
                     EditorWidgets::drawChip( "Starting", editor::style::kWarn );
-                    EditorWidgets::drawTooltip( "씬을 여는 중 — 로드가 끝나면 플레이를 시작합니다 (Stop 으로 취소)" );
+                    EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "PlayStarting", "Opening the scene. Play starts when loading finishes (Stop cancels it)." ) );
                     ImGui::SameLine();
                 }
                 if ( currentState == PlaySessionState::Playing && bSimulating == false )
                 {
                     EditorWidgets::drawChip( "Playing", editor::style::kOk );
-                    EditorWidgets::drawTooltip( "현재 게임 실행 중 — 게임 뷰가 게임 카메라를 그리고, 씬 뷰는 에디터 카메라로 둘러볼 수 있습니다" );
+                    EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "PlayRunning", "The game is running. The game view draws the game camera, and the scene view lets you look around with the editor camera." ) );
                 }
                 else
                 {
                     if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlay, "Play" ) ) )
                         requestSession( PendingSession::Play, bSceneDirty );
                     EditorSelfTestMarks::note( "toolbar.play" );
-                    EditorWidgets::drawTooltip( "게임 플레이 모드를 시작합니다 (게임 뷰 입력 및 플레이어 컨트롤 활성화)" );
+                    EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "PlayStart", "Start play mode (enables game view input and player control)." ) );
                 }
 
                 ImGui::SameLine();
                 if ( currentState == PlaySessionState::Playing && bSimulating )
                 {
                     EditorWidgets::drawChip( "Simulating", editor::style::kOk );
-                    EditorWidgets::drawTooltip( "월드만 도는 중 — 게임 모듈 업데이트 · 게임 입력 없음" );
+                    EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "SimulateRunning", "Only the world is ticking: no game module update and no game input." ) );
                 }
                 else
                 {
                     if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kGlobe, "Simulate" ) ) )
                         requestSession( PendingSession::Simulate, bSceneDirty );
                     EditorSelfTestMarks::note( "toolbar.simulate" );
-                    EditorWidgets::drawTooltip( "시뮬레이션 모드를 시작합니다 (씬만 틱 — 게임 모듈 업데이트 · 게임 입력 없음)" );
+                    EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "SimulateStart", "Start simulate mode (ticks the scene only: no game module update and no game input)." ) );
                 }
 
                 ImGui::SameLine();
                 if ( currentState == PlaySessionState::Paused )
                 {
                     EditorWidgets::drawChip( "Paused", editor::style::kWarn );
-                    EditorWidgets::drawTooltip( "게임 일시 정지됨" );
+                    EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "PlayPaused", "The game is paused." ) );
                 }
                 else
                 {
                     if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPause, "Pause" ) ) )
                         EditorPlaySession::pause();
                     EditorSelfTestMarks::note( "toolbar.pause" );
-                    EditorWidgets::drawTooltip( "게임 실행을 일시 정지합니다" );
+                    EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "PlayPause", "Pause the game." ) );
                 }
 
                 ImGui::SameLine();
                 if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kStepForward, "Step" ) ) )
                     EditorPlaySession::stepOnce();
-                EditorWidgets::drawTooltip( "게임을 정확히 1프레임 전진시킵니다" );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "PlayStepOnce", "Advance the game by exactly one frame." ) );
 
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth( ImGui::GetFontSize() * 3.0f );
                 ImGui::InputInt( "##StepFrameCount", &_s_stepFrameCount, 0, 0 );
                 _s_stepFrameCount = MathUtil::clamp( _s_stepFrameCount, 1, static_cast<int32>( EditorPlaySession::kMaxStepFrameCount ) );
-                EditorWidgets::drawTooltip( "'Step N' 이 진행할 프레임 수" );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "PlayStepFrameCount", "Number of frames 'Step N' advances (1 or more)." ) );
                 ImGui::SameLine();
                 if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kStepForward, "Step N" ) ) )
                     EditorPlaySession::stepFrames( static_cast<uint32>( _s_stepFrameCount ) );
-                EditorWidgets::drawTooltip( "왼쪽 칸의 프레임 수만큼 진행한 뒤 일시 정지합니다" );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "PlayStepFrames", "Advance by the number of frames in the box on the left, then pause." ) );
 
                 ImGui::SameLine();
                 if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kStop, "Stop" ) ) )
@@ -188,14 +190,14 @@ namespace sw::editor
                         pContext->getWorkspace().remapSelectionByObjectName( pObjectManager );
                 }
                 EditorSelfTestMarks::note( "toolbar.stop" );
-                EditorWidgets::drawTooltip( "게임을 중지하고 초기 씬 상태로 복원합니다" );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "PlayStop", "Stop the game and restore the scene to its state before Play." ) );
             }
 
             /** @brief 카메라에서 시작 · 시간 배율을 그립니다. */
             static void drawSessionOptions()
             {
                 ImGui::Checkbox( "Cam", &_s_bStartAtCamera );
-                EditorWidgets::drawTooltip( "Play 를 에디터 카메라 위치에서 시작합니다 ('Player' 태그 오브젝트, 없으면 게임 카메라를 든 오브젝트를 옮깁니다)" );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "PlayStartAtCamera", "Start Play at the editor camera position (moves the object tagged 'Player', or else the object holding the game camera)." ) );
 
                 ImGui::SameLine();
                 float32 timeScale = GameTimeScale::get();
@@ -204,7 +206,7 @@ namespace sw::editor
                     GameTimeScale::set( timeScale );
                 if ( ImGui::IsItemClicked( ImGuiMouseButton_Right ) )
                     GameTimeScale::set( 1.0f );
-                EditorWidgets::drawTooltip( "게임 시간 배율 (gv_timeScale) — 끌어서 바꾸고, 오른쪽 클릭으로 x1.00 으로 되돌립니다" );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "PlayTimeScale", "Game time scale (gv_timeScale). Drag to change it; right-click to reset it to x1.00." ) );
             }
 
             /** @brief 게임이 자동 플레이를 등록했으면(`SW_GAME_AUTOPLAY`) 켜고 끄는 단추를 그립니다. */
@@ -218,9 +220,7 @@ namespace sw::editor
                 const bool bOn = GameAutoplay::isOn();
                 if ( EditorWidgets::drawToggleButton( "Auto", bOn, editor::style::kOk ) )
                     (void)GameAutoplay::setOn( bOn == false ); // 등록은 위에서 확인했다
-                fixed_string<constant::kMaxBuffer256> tooltip;
-                formatstring( tooltip.data(), tooltip.capacity(), "%s autoplay: %s (%s, console: autoplay on|off)", pActive->_pGameName, pActive->_pDescription,
-                              pActive->_pVariableName );
+                const string tooltip = SW_LOCFORMAT( "EdCommon", "AutoplayToggle", "{game} autoplay: {description} ({variable}, console: autoplay on|off)", TextArgumentList().addText( "game", pActive->_pGameName ).addText( "description", pActive->_pDescription ).addText( "variable", pActive->_pVariableName ) );
                 EditorWidgets::drawTooltip( tooltip.c_str() );
                 _s_bAutoplayDrawn = true;
             }
@@ -238,8 +238,12 @@ namespace sw::editor
                 ImGui::EndDisabled();
                 EditorSelfTestMarks::note( "toolbar.renderDoc" );
                 if ( ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_DelayShort ) )
-                    ImGui::SetTooltip( "%s", bAvailable ? "다음 프레임을 RenderDoc 으로 캡처합니다 (Saved/RenderDoc/, Ctrl+F12)"
-                                                        : "Start with -renderdoc or from RenderDoc — RenderDoc 이 이 프로세스에 붙어 있지 않습니다" );
+                {
+                    const utf8* pTooltip = SW_LOCTEXT( "EdCommon", "RenderDocCapture", "Capture the next frame with RenderDoc (Saved/RenderDoc/, Ctrl+F12)" );
+                    if ( bAvailable == false )
+                        pTooltip = SW_LOCTEXT( "EdCommon", "RenderDocUnavailable", "RenderDoc is not attached to this process. Start with -renderdoc or launch from RenderDoc." );
+                    ImGui::SetTooltip( "%s", pTooltip );
+                }
             }
 
             /** @brief 미저장 씬에서 Play 를 눌렀을 때의 확인 모달입니다. */
