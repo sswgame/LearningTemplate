@@ -9,14 +9,14 @@
 	<At frame="40"><Expect probe="Editor.PanelOpen" equals="0"/></At>
 	<At frame="60"><EditorKey key="Ctrl+P"/></At>
 	<At frame="75"><EditorText value="twod.tilemap"/></At>
-	<!-- 파일 목록(일 스레드)이 오기 전에 Enter 를 눌러도 목록이 오는 대로 연다 — 확인은 목록이 올 넉넉한 뒤에 한다 -->
+	<!-- 파일 목록(일 스레드)이 오기 전에 Enter 를 눌러도 목록이 오는 대로 연다 — 패널이 열릴 때까지 WaitUntil 로 기다린다 -->
 	<At frame="90"><EditorKey key="Enter"/></At>
-	<At frame="330"><Expect probe="Editor.PanelOpen" equals="1"/></At>
-	<At frame="335"><DevCommand line="panel.close tile_map"/></At>
-	<At frame="350"><Expect probe="Editor.PanelOpen" equals="0"/></At>
-	<At frame="360"><EditorKey key="Ctrl+P"/></At>
-	<At frame="375"><EditorText value="twod.tilemap"/></At>
-	<At frame="390"><EditorKey key="Enter"/></At>
-	<At frame="630"><Expect probe="Editor.PanelOpen" equals="1"/></At>
-	<At frame="635"><Pass/></At>
+	<At frame="100"><WaitUntil probe="Editor.PanelOpen" equals="1"/></At>
+	<At frame="105"><DevCommand line="panel.close tile_map"/></At>
+	<At frame="120"><Expect probe="Editor.PanelOpen" equals="0"/></At>
+	<At frame="130"><EditorKey key="Ctrl+P"/></At>
+	<At frame="145"><EditorText value="twod.tilemap"/></At>
+	<At frame="160"><EditorKey key="Enter"/></At>
+	<At frame="170"><WaitUntil probe="Editor.PanelOpen" equals="1"/></At>
+	<At frame="175"><Pass/></At>
 </Scenario>

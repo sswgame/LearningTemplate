@@ -59,7 +59,7 @@ namespace sw
     {
         static constexpr string_view kArrEngineStepKind[] = { "Press", "Release", "Tap", "MouseDelta", "MousePosition", "GamepadAxis", "Text",
                                                               "Variable", "Expect", "ExpectLog", "Screenshot", "ExpectImage", "CloseWindow",
-                                                              "Pass", "Fail", "Skip", "ExpectExitWithin" };
+                                                              "Pass", "Fail", "Skip", "ExpectExitWithin", "WaitUntil" };
         for ( const string_view engineKind : kArrEngineStepKind )
         {
             if ( engineKind == kind )

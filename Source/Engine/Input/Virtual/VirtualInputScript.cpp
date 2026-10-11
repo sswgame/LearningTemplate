@@ -97,6 +97,15 @@ namespace sw
         addEvent( frameIndex, RawInputEvent::makeGamepadAxis( axisIndex, value, padIndex ) );
     }
 
+    void VirtualInputScript::delayEventsFrom( uint32 firstFrameIndex, uint32 frameCount )
+    {
+        // 목록은 프레임 순이다 — 뒤에서부터 밀면 순서가 그대로이고, 커서 앞(이미 낸 사건)에는 닿지 않는다.
+        for ( size_t index = _listEntry.size(); index > 0 && _listEntry[index - 1]._frameIndex >= firstFrameIndex; --index )
+        {
+            _listEntry[index - 1]._frameIndex += frameCount;
+        }
+    }
+
     void VirtualInputScript::clear()
     {
         _listEntry.clear();
