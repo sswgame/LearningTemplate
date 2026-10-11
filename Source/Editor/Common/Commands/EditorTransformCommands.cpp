@@ -104,7 +104,7 @@ namespace sw::editor
 
         if ( bSuccess == false && xmlFallback.empty() == false )
             bSuccess = XMLSerializer::deserialize( pTargetComp, *pTargetComp->getTypeInfo(), string{ xmlFallback } );
-        // 이름표는 값이 아니라 정체다(컴포넌트 키) — 붙여 넣어도 대상의 것을 지킨다(언리얼의 속성 붙여넣기도 컴포넌트 이름을 옮기지 않는다).
+        // 이름은 값이 아니라 정체다(컴포넌트 키) — 붙여 넣어도 대상의 것을 지킨다(언리얼의 속성 붙여넣기도 컴포넌트 이름을 옮기지 않는다).
         pTargetComp->setComponentName( targetName );
 
         // 직렬화기는 값만 쓴다 — 컴포넌트가 그 값으로 다시 맞추게 알린다. 알리지 않으면 붙여 넣은 위치가 월드 행렬에 들지 않고
@@ -151,7 +151,7 @@ namespace sw::editor
 
             if ( bSuccess == false && xmlFallback.empty() == false )
                 bSuccess = XMLSerializer::deserialize( pNewComp, *pNewComp->getTypeInfo(), string{ xmlFallback } );
-            pNewComp->setComponentName( newName ); // 새 컴포넌트는 제 이름표(타입 이름)로 — 원본의 이름표를 옮기면 키가 겹친다
+            pNewComp->setComponentName( newName ); // 새 컴포넌트는 제 이름(타입 이름)로 — 원본의 이름을 옮기면 키가 겹친다
             // 읽지 못했어도 기본값이 그 상태다 — 어느 쪽이든 컴포넌트가 값을 자원으로 바꾸게 한다(`EditorSceneCommands::addComponent` 와 같다).
             pNewComp->notifyStateWritten();
 
@@ -239,7 +239,7 @@ namespace sw::editor
 
         const hashed_string targetName = pComp->getComponentName();
         const bool          bSuccess   = XMLSerializer::deserialize( pComp, *pComp->getTypeInfo(), xmlData );
-        pComp->setComponentName( targetName ); // 프리셋은 값이다 — 이름표(컴포넌트 키)는 대상의 것을 지킨다
+        pComp->setComponentName( targetName ); // 프리셋은 값이다 — 이름(컴포넌트 키)는 대상의 것을 지킨다
         if ( bSuccess )
             pComp->notifyStateWritten();
         if ( bSuccess && pOwner != nullptr )
@@ -276,7 +276,7 @@ namespace sw::editor
 
             const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pGo );
 
-            // 월드로 읽고 월드로 쓴다. 크기는 오브젝트의 월드 상자 하나로 잰다(`GameObject::getWorldBox`) — 종류마다 따로 셈하면("메시면 월드
+            // 월드로 읽고 월드로 쓴다. 크기는 오브젝트의 월드 상자 하나로 측정한다(`GameObject::getWorldBox`) — 종류마다 따로 셈하면("메시면 월드
             // 스케일 × 단위 상자") 단위 상자가 아닌 메시(구 · 캡슐 · 평면)와 키운 콜라이더가 떠 있거나 파묻힌다.
             float3  pos          = pSc->getWorldPosition();
             float32 bottomOffset = 0.0f;

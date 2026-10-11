@@ -32,7 +32,7 @@ namespace sw::editor
      * @brief 에디터의 게임 오브젝트 · 애셋 다중 선택 상태를 관리합니다.
      * @details 선택은 프레임을 넘겨 드는 참조라 핸들(`GameObjectHandle`)로 보관하고, 쓸 때마다 편집 중인 씬에서 풉니다
      *          (`editor::findGameObject`). 입력도 `GameObject*` 로 받고 반환하는 것도 푼 포인터입니다. 이번 호출 안에서만
-     *          쓰십시오. 되돌리기 · 플레이 세션 복원은 같은 id 로 오브젝트를 되살리므로 그 너머로도 선택이 이어집니다.
+     *          쓰십시오. 되돌리기 · 플레이 세션 복원은 같은 id 로 오브젝트를 복원하므로 그 너머로도 선택이 이어집니다.
      */
     class SW_EDITOR_API EditorSelection
     {

@@ -271,7 +271,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Done;
                 }
 
-                // 변경 번호가 바뀌면 패널이 캐시를 비우므로 처음부터 다시 잰다.
+                // 변경 번호가 바뀌면 패널이 캐시를 비우므로 처음부터 다시 측정한다.
                 const uint64 contentSerial = pContext->getAssetHotReload().getContentChangeSerial();
                 if ( stepIndex == 0 || contentSerial != probe._contentSerial )
                 {
@@ -553,7 +553,7 @@ namespace sw::editor
                 if ( stepIndex == 0 )
                 {
                     probe = ToolWindowProbe{};
-                    // 처음 열림은 등록부가 만드는 새 인스턴스로 본다 — 실행 중인 패널은 앞 테스트 · 사용자가 열었을 수 있다.
+                    // 처음 열림은 레지스트리가 만드는 새 인스턴스로 본다 — 실행 중인 패널은 앞 테스트 · 사용자가 열었을 수 있다.
                     for ( const utf8* pPanelID : kArrFloatingToolPanelID )
                     {
                         const EditorPanelRegistration* pRegistration = EditorRegistry<EditorPanelRegistration>::find( pPanelID );

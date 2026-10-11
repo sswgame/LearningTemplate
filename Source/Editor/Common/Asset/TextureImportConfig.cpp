@@ -102,7 +102,7 @@ namespace sw::editor
                 rule._name = name;
                 if ( applyInheritance( presetObj, rule ) == false )
                     return clearAndFail();
-                rule._name = name; // 상속이 부모 이름을 덮어썼을 수 있다. 이 프리셋의 이름이 정본이다.
+                rule._name = name; // 상속이 부모 이름을 덮어썼을 수 있다. 이 프리셋의 이름이 원본이다.
                 if ( parseRuleObject( presetObj, rule, "TextureImportConfig preset '" + name + "'" ) == false )
                     return clearAndFail();
                 _mapPreset[name] = rule;

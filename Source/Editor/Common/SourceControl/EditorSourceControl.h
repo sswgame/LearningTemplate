@@ -65,7 +65,7 @@ namespace sw::editor
 
         /**
          * @brief 파일 하나의 상태 글(도구 설명)입니다. 잠금 · 읽기 전용이 아니면 빈 문자열입니다.
-         * @param bReadOnly 파일이 읽기 전용인지(`FileUtil::isReadOnlyFile`) — 목록을 만들 때 잰 값을 넘깁니다.
+         * @param bReadOnly 파일이 읽기 전용인지(`FileUtil::isReadOnlyFile`) — 목록을 만들 때 측정한 값을 넘깁니다.
          */
         string describeStatus( string_view absolutePath, bool bReadOnly ) const;
 

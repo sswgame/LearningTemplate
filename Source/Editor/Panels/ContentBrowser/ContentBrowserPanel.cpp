@@ -83,7 +83,7 @@ namespace sw::editor
             /** @brief 참조 결과 표가 스크롤 없이 보이는 최대 줄 수입니다. */
             static constexpr size_t kReferenceVisibleRowCount = 12;
 
-            /** @brief 테스트가 켜졌을 때 바로 앞 위젯에 `<접두><이름>` 이름표를 남깁니다(꺼져 있으면 글을 만들지 않는다). */
+            /** @brief 테스트가 켜졌을 때 바로 앞 위젯에 `<접두><이름>` 이름을 남깁니다(꺼져 있으면 글을 만들지 않는다). */
             static void noteMark( const utf8* pPrefix, string_view name )
             {
                 if ( EditorSelfTestMarks::isEnabled() == false )

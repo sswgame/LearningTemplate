@@ -88,7 +88,7 @@ namespace sw::editor
      * @struct EditorSelfTestRunner
      * @brief 에디터 자체 테스트 실행기입니다. `ImGuiEditor::updateUI` 가 패널을 그린 뒤 프레임마다 `runFrame` 을 부릅니다.
      * @details 길은 둘이다 — 명령줄 `-gv_editorSelfTest=<패턴>`(끝나면 보고서를 쓰고 앱을 닫는다)과 Test Runner 창의 `requestRun`(그 자리에서 돌고 앱은 그대로).
-     *          한 번에 한 실행만 돈다. 실행하는 동안 위젯 이름표 기록을 켜고, 끝나면 시작 전 상태로 되돌린다(시나리오가 켠 기록을 끄지 않게).
+     *          한 번에 한 실행만 돈다. 실행하는 동안 위젯 레이블 기록을 켜고, 끝나면 시작 전 상태로 되돌린다(시나리오가 켠 기록을 끄지 않게).
      */
     struct SW_EDITOR_API EditorSelfTestRunner
     {

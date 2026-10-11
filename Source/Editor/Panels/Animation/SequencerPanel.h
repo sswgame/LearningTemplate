@@ -24,7 +24,7 @@ namespace sw::editor
      * @brief 구간 항목(클립 · 이벤트 · 카메라 컷) 타임라인과 키 트랙(트랜스폼 · 프로퍼티)을 편집하는 시퀀서입니다. SequenceAsset JSON 을 읽고 씁니다.
      * @details 시간 막대를 옮기면(끄는 동안에도) 그 프레임을 씬에 바로 적용합니다(뷰포트 미리보기). 키 트랙 채널 값을 고치면 지금 프레임에
      *          그 채널의 키가 생기고(언리얼 Sequencer 의 자동 키), Key 단추는 대상의 지금 상태를 모든 채널의 키로 찍습니다.
-     *          이름표: 시간 막대 `sequencer.scrub`, 트랙 줄 `sequencer.track.<n>`, `sequencer.addKey`, 채널 값 `sequencer.channel.<n>`,
+     *          이름: 시간 막대 `sequencer.scrub`, 트랙 줄 `sequencer.track.<n>`, `sequencer.addKey`, 채널 값 `sequencer.channel.<n>`,
      *          커브 단추 `sequencer.curve.<n>`, 트랙 더하기 `sequencer.addTransformTrack` · `sequencer.addPropertyTrack`.
      */
     class SequencerPanel : public EditorDocumentPanel

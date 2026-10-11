@@ -105,7 +105,7 @@ namespace sw::editor
                 value = bCounter ? static_cast<float32>( count ) : static_cast<float32>( static_cast<float64>( profiler.getLastFrameNanos( slot ) ) / 1000.0 );
             track._listValue[_writeIndex] = value;
         }
-        // 이번 프레임에 등록부에 없던 트랙(아직 이름이 안 실린 칸)도 한 칸 비워 둔다 — 고리의 칸 번호가 모든 트랙에서 같아야 한다.
+        // 이번 프레임에 레지스트리에 없던 트랙(아직 이름이 안 실린 칸)도 한 칸 비워 둔다 — 고리의 칸 번호가 모든 트랙에서 같아야 한다.
         for ( size_t slot = scopeCount; slot < _listTrack.size(); ++slot )
         {
             if ( _listTrack[slot]._listValue.empty() == false )

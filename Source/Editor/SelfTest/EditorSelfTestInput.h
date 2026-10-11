@@ -1,9 +1,9 @@
 /**
  * @file EditorSelfTestInput.h
- * @brief 에디터 자체 테스트가 마우스 · 키 · 글자 입력을 흉내 내는 창구와, 테스트가 누를 위젯의 이름표입니다.
+ * @brief 에디터 자체 테스트가 마우스 · 키 · 글자 입력을 흉내 내는 창구와, 테스트가 누를 위젯의 레이블입니다.
  * @details 테스트 단계가 이벤트를 큐에 넣으면 다음 프레임의 플랫폼 newFrame 뒤 · ImGui::NewFrame 앞에 ImGuiIO 로 넣습니다(`flushIntoImGui`) — 플랫폼 백엔드가
- *          넣은 실제 커서 위치보다 뒤라 이긴다. 위젯 위치는 패널이 그린 직후 `EditorSelfTestMarks::note` 로 남긴 이름표에서 읽습니다(테스트가 꺼져 있으면 아무것도 적지 않는다).
- *          주의: 플랫폼 백엔드는 프레임마다 실제 커서를 다시 넣을 수 있다 — 누르기 · 떼기 · 호버는 그 단계마다 이름표 위로 다시 옮긴 뒤 넣는다.
+ *          넣은 실제 커서 위치보다 뒤라 이긴다. 위젯 위치는 패널이 그린 직후 `EditorSelfTestMarks::note` 로 남긴 레이블에서 읽습니다(테스트가 꺼져 있으면 아무것도 적지 않는다).
+ *          주의: 플랫폼 백엔드는 프레임마다 실제 커서를 다시 넣을 수 있다 — 누르기 · 떼기 · 호버는 그 단계마다 레이블 위로 다시 옮긴 뒤 넣는다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -14,7 +14,7 @@
 
 namespace sw::editor
 {
-    /** @brief 이름표 하나 — 위젯이 그려진 프레임의 ID 와 화면 사각형(ImGui 좌표)입니다. */
+    /** @brief 레이블 하나 — 위젯이 그려진 프레임의 ID 와 화면 사각형(ImGui 좌표)입니다. */
     struct EditorSelfTestMark
     {
         float2 _min{};
@@ -29,7 +29,7 @@ namespace sw::editor
 {
     /**
      * @struct EditorSelfTestMarks
-     * @brief 패널이 위젯을 그린 직후 남기는 이름표입니다. 테스트가 켜졌을 때만 적습니다.
+     * @brief 패널이 위젯을 그린 직후 남기는 레이블입니다. 테스트가 켜졌을 때만 적습니다.
      */
     struct SW_EDITOR_API EditorSelfTestMarks
     {
@@ -37,11 +37,11 @@ namespace sw::editor
         static void note( const utf8* pKey );
         /** @brief 화면 픽셀 사각형(@p min ~ @p max)을 @p pKey 로 적습니다 — 좌표를 바꿔 그리는 캔버스(노드 그래프) 안의 위젯이 화면 좌표로 바꿔 넘깁니다. */
         static void noteRect( const utf8* pKey, const float2& min, const float2& max );
-        /** @brief 적힌 이름표를 찾습니다. 이번 프레임이나 지난 프레임에 적힌 것만 돌려줍니다. 없으면 false. */
+        /** @brief 적힌 레이블을 찾습니다. 이번 프레임이나 지난 프레임에 적힌 것만 돌려줍니다. 없으면 false. */
         static bool find( string_view key, EditorSelfTestMark& outMark );
-        /** @brief 실행기가 테스트를 켜고 끌 때 부릅니다. 끄면 이름표와 남은 입력을 비웁니다. */
+        /** @brief 실행기가 테스트를 켜고 끌 때 부릅니다. 끄면 레이블과 남은 입력을 비웁니다. */
         static void setEnabled( bool bEnabled );
-        /** @brief 이름표를 적는 중이면 true 입니다 — 이름표 글을 만드는 데 비용이 드는 자리(항목마다 다른 이름표)가 먼저 묻는다. */
+        /** @brief 레이블을 적는 중이면 true 입니다 — 레이블 글을 만드는 데 비용이 드는 자리(항목마다 다른 레이블)가 먼저 묻는다. */
         static bool isEnabled();
     };
 } // namespace sw::editor
@@ -71,11 +71,11 @@ namespace sw::editor
          * @return 없는 이름이면 false 입니다.
          */
         [[nodiscard]] static bool findKeyByName( string_view name, int32& outImguiKey );
-        /** @brief 이름표의 @p anchor 자리(0..1 — 가운데가 (0.5, 0.5))로 마우스를 옮깁니다. 이름표가 없으면 false. */
+        /** @brief 레이블의 @p anchor 자리(0..1 — 가운데가 (0.5, 0.5))로 마우스를 옮깁니다. 레이블이 없으면 false. */
         [[nodiscard]] static bool moveMouseToMark( string_view key, const float2& anchor = float2{ 0.5f, 0.5f } );
         /**
-         * @brief 이름표의 가운데에 커서를 붙잡아 둡니다. `releaseMouseHold` 까지 프레임마다 그 자리를 다시 넣습니다 — 단추를 누른 채 여러 프레임을 두는
-         *        단계(`EditorClick state="down"`, 뷰포트 비행)에서 플랫폼이 넣는 실제 커서가 호버를 풀지 않게 합니다. 이름표가 없으면 false.
+         * @brief 레이블의 가운데에 커서를 붙잡아 둡니다. `releaseMouseHold` 까지 프레임마다 그 자리를 다시 넣습니다 — 단추를 누른 채 여러 프레임을 두는
+         *        단계(`EditorClick state="down"`, 뷰포트 비행)에서 플랫폼이 넣는 실제 커서가 호버를 풀지 않게 합니다. 레이블이 없으면 false.
          */
         [[nodiscard]] static bool holdMouseAtMark( string_view key, const float2& anchor = float2{ 0.5f, 0.5f } );
         static void               releaseMouseHold();

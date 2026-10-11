@@ -27,7 +27,7 @@
 #include <imgui_internal.h>
 
 // 에디터 자체 테스트 중 입력(클릭 · 타이핑 · 호버)을 흉내 내는 것들 — EditorSelfTestInput 이 다음 프레임의 ImGui 입력 큐에 넣는다.
-// 주의: 플랫폼 백엔드가 프레임마다 실제 커서를 넣을 수 있어, 누르기 · 떼기 · 호버는 그 단계마다 이름표 위로 다시 옮긴 뒤 넣는다.
+// 주의: 플랫폼 백엔드가 프레임마다 실제 커서를 넣을 수 있어, 누르기 · 떼기 · 호버는 그 단계마다 레이블 위로 다시 옮긴 뒤 넣는다.
 
 namespace sw::editor
 {
@@ -38,7 +38,7 @@ namespace sw::editor
             /** @brief 툴팁 지연(ImGuiHoveredFlags_DelayShort)을 기다리는 단계의 상한입니다 — 실행기의 테스트당 상한(300)보다 작다. */
             static constexpr uint32 kMaxTooltipWaitStep = 240;
 
-            /** @brief 클릭 하나의 누르기 · 떼기를 이름표 위에서 넣습니다. 이름표가 없으면 false. */
+            /** @brief 클릭 하나의 누르기 · 떼기를 레이블 위에서 넣습니다. 레이블이 없으면 false. */
             static bool pressOnMark( const utf8* pKey, bool bDown )
             {
                 if ( EditorSelfTestInput::moveMouseToMark( pKey ) == false )
@@ -66,8 +66,8 @@ namespace sw::editor
             };
 
             /**
-             * @brief 글자가 어디로 가는지 가르는 상태 한 줄입니다 — 활성 위젯 · 이름표 위젯 · 호버 위젯 · 호버 창 · 글자 입력 요구.
-             * @details 활성 위젯이 이름표 위젯과 같은데 글자가 안 닿으면 글자 주입 경로가, 다르면 클릭이 칸을 잡지 못한 것이다(호버 창이 다른 창이면
+             * @brief 글자가 어디로 가는지 가르는 상태 한 줄입니다 — 활성 위젯 · 레이블 위젯 · 호버 위젯 · 호버 창 · 글자 입력 요구.
+             * @details 활성 위젯이 레이블 위젯과 같은데 글자가 안 닿으면 글자 주입 경로가, 다르면 클릭이 칸을 잡지 못한 것이다(호버 창이 다른 창이면
              *          그 창이 가로챘다 — 도킹 구분선(d077a5252) · 처음부터 열린 떠 있는 창).
              */
             static string describeInputTarget( const utf8* pMarkKey )
@@ -131,7 +131,7 @@ namespace sw::editor
                         probe._objectID = pObj->getObjectID();
                         pHierarchy->setFilterText( "" );
                         ++probe._phase;
-                        return EditorSelfTestStep::Continue; // 패널이 한 번 그려져 이름표가 생기게
+                        return EditorSelfTestStep::Continue; // 패널이 한 번 그려져 레이블이 생기게
                     }
                     case 1:
                     case 5:
@@ -260,7 +260,7 @@ namespace sw::editor
 
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
-                    return EditorSelfTestStep::Continue; // 이름표가 생기게 한 번 그린다
+                    return EditorSelfTestStep::Continue; // 레이블이 생기게 한 번 그린다
                 if ( bShown && stepIndex > 1 )
                 {
                     moveMouseAway();
@@ -318,7 +318,7 @@ namespace sw::editor
                     }
                     case 1:
                     {
-                        // 대화상자가 한 번 그려졌다(이름표가 생겼다). 떠 있는 창(자기 플랫폼 창)이어도 이름표의 뷰포트를 함께 넣으므로 클릭이 닿는다.
+                        // 대화상자가 한 번 그려졌다(레이블이 생겼다). 떠 있는 창(자기 플랫폼 창)이어도 레이블의 뷰포트를 함께 넣으므로 클릭이 닿는다.
                         (void)context.expect( findWindowByTitlePart( "Theme & Look and Feel" ) != nullptr, "the theme dialog did not open" );
                         return EditorSelfTestStep::Continue;
                     }
@@ -397,7 +397,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Continue;
                 }
 
-                // 앞 테스트가 연 창이 Hierarchy 를 가렸을 수 있다 — 몇 프레임은 이름표를 기다린다.
+                // 앞 테스트가 연 창이 Hierarchy 를 가렸을 수 있다 — 몇 프레임은 레이블을 기다린다.
                 constexpr uint32   kMaxMarkWaitStep = 10;
                 EditorSelfTestMark mark{};
                 const bool         bMarked = EditorSelfTestMarks::find( "hierarchy.activeToggle", mark );

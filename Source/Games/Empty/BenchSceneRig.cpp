@@ -112,7 +112,7 @@ namespace sw
 {
     /**
      * @brief `-gv_benchRig=N` — 후처리 리그를 건 기사 N 명(1 이면 데모 장면, 여럿이면 리그 비용 측정).
-     * @details 기사마다 무기(쇠뇌) · 망토 유닛이 자식으로 붙는다. 비용을 재려면 `-gv_benchRigEnabled=0` 과 짝으로 돌려
+     * @details 기사마다 무기(쇠뇌) · 망토 유닛이 자식으로 붙는다. 비용을 측정하려면 `-gv_benchRigEnabled=0` 과 짝으로 돌려
      *          `GT.Animation.evaluate` 차이를 기사 수로 나눈다.
      */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchRig, 0, "후처리 리그 데모 기사 수 (0=사용 안 함, 발 디딤 · 시선 · 왼손 IK · 망토 스프링)" );

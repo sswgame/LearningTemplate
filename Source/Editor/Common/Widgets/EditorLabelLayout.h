@@ -1,6 +1,6 @@
 /**
  * @file EditorLabelLayout.h
- * @brief 이름표를 폭 안의 줄로 나누는 판단입니다(ImGui 에 의존하지 않아 테스트를 붙일 수 있습니다).
+ * @brief 이름을 폭 안의 줄로 나누는 판단입니다(ImGui 에 의존하지 않아 테스트를 붙일 수 있습니다).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -11,13 +11,13 @@ namespace sw::editor
 {
     /**
      * @struct EditorLabelLayoutUtil
-     * @brief 이름표를 폭 안의 줄로 나눕니다. 끊는 자리는 공백 · '_' · '-' · '.' 뒤가 먼저이고, 없을 때만 글자 단위입니다.
+     * @brief 이름을 폭 안의 줄로 나눕니다. 끊는 자리는 공백 · '_' · '-' · '.' 뒤가 먼저이고, 없을 때만 글자 단위입니다.
      * @details ImGui 의 TextWrap 은 공백만 보므로 `nilecity` 같은 이름이 글자 가운데서 끊깁니다. 그리는 쪽은
      *          `EditorWidgets::drawClampedLabel` 이고(마지막 줄 말줄임 · 전체 이름 툴팁), 여기는 어디서 끊는지만 정합니다.
      */
     struct EditorLabelLayoutUtil
     {
-        /** @brief 글자열 너비를 재는 함수입니다(ImGui 는 CalcTextSize, 테스트는 글자 수 × 고정 폭). */
+        /** @brief 글자열 너비를 측정하는 함수입니다(ImGui 는 CalcTextSize, 테스트는 글자 수 × 고정 폭). */
         using MeasureFunc = float32 ( * )( string_view text, void* pUserData );
 
         /**

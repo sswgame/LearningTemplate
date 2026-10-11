@@ -30,7 +30,7 @@ namespace sw::editor
                 return s_pendingConflictCount;
             }
 
-            /** @brief 그 커맨드 줄의 이름표입니다(`shortcuts.<동작>.<커맨드 id>`). */
+            /** @brief 그 커맨드 줄의 이름입니다(`shortcuts.<동작>.<커맨드 id>`). */
             static fixed_string<constant::kMaxBuffer128> makeMark( const utf8* pAction, const string& commandID )
             {
                 fixed_string<constant::kMaxBuffer128> mark;

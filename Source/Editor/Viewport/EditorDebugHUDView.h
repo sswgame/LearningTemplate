@@ -1,6 +1,6 @@
 /**
  * @file EditorDebugHUDView.h
- * @brief 씬 뷰 오른쪽 위에 디버그 HUD 섹션을 그립니다 — 게임 HUD 와 같은 섹션 등록부 · 같은 섹션 켜짐을 쓰고, 그리기만 ImGui 입니다.
+ * @brief 씬 뷰 오른쪽 위에 디버그 HUD 섹션을 그립니다 — 게임 HUD 와 같은 섹션 레지스트리 · 같은 섹션 켜짐을 쓰고, 그리기만 ImGui 입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -38,7 +38,7 @@ namespace sw::editor
         uint32 getDrawnSectionCount() const { return _drawnSectionCount; }
 
     private:
-        /** @brief 섹션 하나의 적힌 줄입니다. 등록 포인터로 짝을 찾는다(모듈이 내려가면 등록부 판 번호가 바뀌어 다시 짓는다). */
+        /** @brief 섹션 하나의 적힌 줄입니다. 등록 포인터로 짝을 찾는다(모듈이 내려가면 레지스트리 판 번호가 바뀌어 다시 짓는다). */
         struct SectionSlot
         {
             const DebugHUDSectionRegistration* _pRegistration;

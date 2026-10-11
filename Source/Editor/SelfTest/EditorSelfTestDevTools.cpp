@@ -216,7 +216,7 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // console.devCommands — Output Log 의 입력 줄 콘솔이 개발 명령을 돌리고, 에디터가 등록한 명령이 등록부에 있으며, 답이 로그에 보인다
+            // console.devCommands — Output Log 의 입력 줄 콘솔이 개발 명령을 돌리고, 에디터가 등록한 명령이 레지스트리에 있으며, 답이 로그에 보인다
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runConsoleDevCommands( EditorSelfTestContext& context )
             {

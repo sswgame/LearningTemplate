@@ -54,12 +54,12 @@ namespace sw
         bool findTarget( VoxelCoord& outBlock ) const;
         /** @brief 몸 자리 · 핫바 · 부순/놓은 수를 씁니다 — `ComponentStateStore::capture` 가 부릅니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 되살립니다. 플레이 시작 전이면 들고 있다가 `onBeginPlay` 끝에 적용합니다. 읽지 못하면 처음 자리에서 시작합니다. */
+        /** @brief `writeState` 의 바이트로 복원합니다. 플레이 시작 전이면 들고 있다가 `onBeginPlay` 끝에 적용합니다. 읽지 못하면 처음 자리에서 시작합니다. */
         void    restoreState( vector<uint8>&& bytes );
         float32 getBreakProgress() const { return _breakProgress; }
         uint32  getBrokenCount() const { return _brokenCount; }
         uint32  getPlacedCount() const { return _placedCount; }
-        /** @brief 몸을 처음 둔 자리(테스트 · 탐침이 걸은 거리를 잰다)입니다. */
+        /** @brief 몸을 처음 둔 자리(테스트 · 탐침이 걸은 거리를 측정한다)입니다. */
         const float3&           getStartPosition() const { return _startPosition; }
         const GameObjectHandle& getDirector() const { return _director; }
 

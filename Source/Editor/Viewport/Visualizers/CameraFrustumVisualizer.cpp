@@ -22,7 +22,7 @@ namespace sw::editor
     {
         struct CameraFrustumVisualizerInternal
         {
-            /** @brief 활성 카메라를 제외한 CameraComponent 의 프러스텀을 그립니다. 카메라 등록부만 봅니다(씬 전체를 훑지 않습니다). */
+            /** @brief 활성 카메라를 제외한 CameraComponent 의 프러스텀을 그립니다. 카메라 레지스트리만 봅니다(씬 전체를 훑지 않습니다). */
             static void draw( const EditorViewportVisualizerArgs& args )
             {
                 static constexpr Color kCameraWire{ Color::fromBytes( 60, 200, 255, 200 ) };

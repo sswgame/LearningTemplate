@@ -34,7 +34,7 @@ namespace sw::editor
                 return s_count;
             }
 
-            /** @brief ImGui 글꼴로 글자열 너비를 잽니다(`EditorLabelLayoutUtil::MeasureFunc`). */
+            /** @brief ImGui 글꼴로 글자열 너비를 측정합니다(`EditorLabelLayoutUtil::MeasureFunc`). */
             static float32 measureImGuiText( string_view text, void* /*pUserData*/ )
             {
                 return ImGui::CalcTextSize( text.data(), text.data() + text.size() ).x;

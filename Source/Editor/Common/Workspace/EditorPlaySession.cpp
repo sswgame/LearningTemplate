@@ -134,7 +134,7 @@ namespace sw::editor
                 {
                     GameObject* pObj = pObjects->findGameObjectByID( snap._identity._objectID );
 
-                    // 플레이 중에 사라진 오브젝트는 원래 id 로 되살린다. 플레이 전에 들고 있던 핸들이 이어지게 하기 위해서다.
+                    // 플레이 중에 사라진 오브젝트는 원래 id 로 복원한다. 플레이 전에 들고 있던 핸들이 이어지게 하기 위해서다.
                     if ( pObj == nullptr )
                     {
                         pObj = pObjects->createGameObjectWithID( hashed_string( snap._name.c_str() ), snap._identity._objectID );

@@ -60,7 +60,7 @@ namespace sw::editor
     {
         /**
          * @brief 모듈이 올린 캐시라 에디터가 이름을 모르는 줄의 캐시 이름입니다(빈 글) — 그 경로를 든 캐시(`IAssetCache::isCached`)가 모두 다시 읽습니다.
-         * @details GameFramework 의 데이터 표 캐시(`GameDataCache` — 상호작용 · 원소 규칙 표)는 게임 서비스가 묶일 때 등록부에 오른다. 에디터는 GameFramework 를 모른다.
+         * @details GameFramework 의 데이터 표 캐시(`GameDataCache` — 상호작용 · 원소 규칙 표)는 게임 서비스가 묶일 때 레지스트리에 오른다. 에디터는 GameFramework 를 모른다.
          */
         static constexpr const utf8* kAnyCacheHoldingPath = "";
 
@@ -188,7 +188,7 @@ namespace sw::editor
          *          `AssetHotReload` 에는 종류별 코드가 없습니다 — 거기에 분기를 더하지 말 것.
          */
         static AssetReloadRoute findReloadRoute( string_view path );
-        /** @brief 표에 적힌 핫 리로드 캐시 이름을 전부 @p outListKindName 에 더합니다(엔진 등록부와 맞는지 보는 테스트용). */
+        /** @brief 표에 적힌 핫 리로드 캐시 이름을 전부 @p outListKindName 에 더합니다(엔진 레지스트리와 맞는지 보는 테스트용). */
         static void appendReloadCacheKindNames( vector<string_view>& outListKindName );
         /** @brief 엔진 캐시가 있는 종류(핫 리로드 대상)의 접미사를 @p outListSuffix 에 더합니다(중복은 건너뜁니다). */
         static void appendReloadableSuffixes( vector<string>& outListSuffix );

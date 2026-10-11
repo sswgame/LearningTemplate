@@ -135,7 +135,7 @@ namespace sw
         }
         _hitTimer -= step;
         AnimParameterSet& parameters = pAnimator->getParameters();
-        // 대각선 · 문턱 근처에서 상태가 오가면 클립이 매번 처음부터 다시 돈다 — 히스테리시스로 고르고 바뀐 것은 잠깐 이어져야 받아들인다.
+        // 대각선 · 임계값 근처에서 상태가 오가면 클립이 매번 처음부터 다시 돈다 — 히스테리시스로 고르고 바뀐 것은 잠깐 이어져야 받아들인다.
         const LocomotionDirection candidate = LocomotionMath::classifyFrom( _locomotion.getDirection(), pPlayer->getMoveVelocity(), _bodyYaw,
                                                                             pPlayer->isOnGround(), _walkThreshold );
         const LocomotionDirection direction = _locomotion.update( candidate, step );
