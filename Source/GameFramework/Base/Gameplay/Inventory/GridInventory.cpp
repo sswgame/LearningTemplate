@@ -326,7 +326,7 @@ namespace sw
             archive >> cell;
         }
         uint32 itemCount = 0;
-        // 아이템마다 이름(4) + 번호 · 개수 · 자리(16) + 돌림(1)
+        // 아이템마다 이름(4) + 번호, 개수, 위치(16) + 회전 여부(1)
         if ( StateArchiveUtil::readCount( archive, 21, itemCount ) == false )
             return false;
         vector<GridItem> listItem( itemCount );
