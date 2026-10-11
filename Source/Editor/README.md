@@ -174,7 +174,7 @@ Play 는 활성 씬을 스냅샷으로 찍고 월드를 시작합니다. Stop �
 툴바 Play 앞의 Net Mode 를 Dedicated Server 나 Listen Host 로 바꾸고 플레이어 수를 고르면, Play 가 에디터 안이 아니라 서버와 클라이언트를 자식 프로세스로 띄웁니다
 (언리얼 PIE 의 Net Mode + "Run Under One Process" 끔). 서버는 `Server`(전용) 또는 첫 `App`(리슨 호스트)이고 `-gv_netListenPort`, 클라이언트는 `App` 이고 `-gv_netConnectAddress` 를 받습니다 — 포트는 비어 있는 것을 고릅니다.
 
-- 로그: 프로세스마다 읽기 스레드가 줄을 모으고 툴바가 프레임마다 `[Server]` · `[Client1]` 꼬리표를 붙여 Output Log 에 다시 씁니다(자식의 오류 줄은 경고로). 하나가 먼저 끝나면 종료 코드 · 마지막 줄과 함께 경고합니다.
+- 로그: 프로세스마다 읽기 스레드가 줄을 모으고 툴바가 프레임마다 `[Server]` · `[Client1]` 꼬리표를 붙여 Output Log 에 다시 씁니다(자식의 오류 줄은 경고로). 전용 서버의 줄에는 서버가 붙인 `[tick=N]` 이 그대로 있어 클라이언트 줄과 틱으로 맞춰 봅니다. 하나가 먼저 끝나면 종료 코드 · 마지막 줄과 함께 경고합니다.
 - Window > Multiplayer 의 Session 탭: 구성(트레이스 기록 · 클라이언트 인자), 프로세스 목록(pid · 상태 · 접속 · 마지막 줄), 서버 Pause · Step N · Resume(서버 표준 입력의 Dev 명령), 출처별 로그 거르기.
 - Stop: 모든 자식의 표준 입력에 `quit` 를 보내 정상 종료시키고(15 초를 넘으면 강제 종료), Record traces 가 켜져 있으면 프로세스마다 `-gv_traceSaveOnExit` 로 쓴 파일을
   이름표를 달아 `Saved/Traces/netplay_<시각>/merged.trace.json` 으로 합칩니다 — Profiler 창 Load Trace · Perfetto 로 엽니다. 같은 PC 라 단조 시계로 정확히 맞습니다.

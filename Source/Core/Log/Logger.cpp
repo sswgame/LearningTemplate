@@ -56,6 +56,8 @@ namespace sw
 
         /// @brief 런타임 상세도입니다. 기본값은 Info 이고, 배포본은 컴파일 상한(Warning)이 더 낮아 자동으로 잘립니다.
         atomic<int32> s_runtimeVerbosity{ static_cast<int32>( LogLevel::Info ) };
+        /// @brief 줄 꼬리표의 틱 번호 + 1 입니다(0 = 정하지 않음 — 꼬리표 없음).
+        atomic<uint64> s_tickNumberPlusOne{ 0 };
     } // namespace
 } // namespace sw
 
@@ -116,6 +118,23 @@ namespace sw
     LogLevel Logger::getRuntimeVerbosity()
     {
         return static_cast<LogLevel>( s_runtimeVerbosity.load( std::memory_order_relaxed ) );
+    }
+
+    void Logger::setTickNumber( uint64 tickNumber )
+    {
+        s_tickNumberPlusOne.store( tickNumber + 1, std::memory_order_relaxed );
+    }
+
+    void Logger::clearTickNumber()
+    {
+        s_tickNumberPlusOne.store( 0, std::memory_order_relaxed );
+    }
+
+    bool Logger::getTickNumber( uint64& outTickNumber )
+    {
+        const uint64 tickNumberPlusOne = s_tickNumberPlusOne.load( std::memory_order_relaxed );
+        outTickNumber                  = tickNumberPlusOne != 0 ? tickNumberPlusOne - 1 : 0;
+        return tickNumberPlusOne != 0;
     }
 
     void Logger::setGlobalSink( ILogSink* pSink )

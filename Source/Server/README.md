@@ -60,6 +60,7 @@ curl -s http://127.0.0.1:9100/healthz   # ok
 Dev 빌드는 개발 콘솔과 같은 명령(개발 명령, `gv_*` 전역 변수)도 받습니다.
 
 Dev 빌드는 게임 틱을 멈추는 명령도 받습니다. `pause` 는 틱을 멈추고, `step 3` 은 세 틱만 돌린 뒤 다시 멈추고, `resume` 은 다시 돕니다(로그 `Server paused at tick N`, `Server stepped to tick N (paused)`).
+기동이 끝난 뒤의 모든 줄에는 `[tick=N]`(끝낸 틱 수)이 붙습니다. 에디터 멀티 프로세스 재생의 Output Log 에서 서버 줄을 틱으로 맞춰 보고, `pause` 한 틱 번호와 같은 줄을 찾습니다.
 디버거 없이 중단점처럼 서버를 세우는 길입니다. 멈춘 동안에도 콘솔, 종료 신호, 상태 확인 박동, 네트워크 스레드(`NetHostThread`)는 돌므로 클라이언트는 끊기지 않고 지연이 커진 것처럼 봅니다.
 디버거로 멈추면 네트워크 스레드도 서는데, 그때는 `NetHost` 의 디버거 대기가 연결을 지킵니다([Network README](../Core/Network/README.md) "디버거 대기").
 

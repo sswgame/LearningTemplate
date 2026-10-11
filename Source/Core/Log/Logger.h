@@ -122,6 +122,17 @@ namespace sw
         static LogLevel getRuntimeVerbosity();
         /** @brief 이 수준이 지금 기록되는지 확인합니다. 포맷 비용을 치르기 전에 물어봅니다. */
         static bool shouldLog( LogLevel level ) { return static_cast<int32>( level ) <= static_cast<int32>( getRuntimeVerbosity() ); }
+
+        /**
+         * @brief 이후 모든 줄(모든 스레드)에 `[tick=N] ` 꼬리표를 붙입니다 — 고정 틱을 도는 호스트(전용 서버)가 틱마다 부릅니다.
+         * @details 언리얼 로그 줄의 프레임 번호(`[123]LogNet:`)와 같은 자리입니다. 서버 · 클라이언트 로그를 모아 볼 때 한 사건이 몇 번째 틱인지 짚습니다.
+         *          프로세스 전역 값이라 틱 밖의 스레드(네트워크 · 로더) 줄에도 지금 틱이 붙습니다. 정하지 않으면(기본) 줄은 바이트 하나 다르지 않습니다.
+         */
+        static void setTickNumber( uint64 tickNumber );
+        /** @brief 틱 꼬리표를 뗍니다(기본 상태). */
+        static void clearTickNumber();
+        /** @brief 지금 틱 번호입니다. 정하지 않았으면 false 이고 @p outTickNumber 는 0 입니다. */
+        [[nodiscard]] static bool getTickNumber( uint64& outTickNumber );
     };
 } // namespace sw
 

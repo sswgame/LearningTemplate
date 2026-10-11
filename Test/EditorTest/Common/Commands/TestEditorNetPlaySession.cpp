@@ -99,6 +99,8 @@ SW_TEST_CASE( EditorNetPlaySessionTest, DedicatedServerAndTwoClientsConnectPause
     SW_EXPECT_TRUE_MSG( waitForLine( session, 0, "Server paused at tick" ), "pause did not reach the server" );
     SW_EXPECT_TRUE( session.sendServerCommand( "resume" ) );
     SW_EXPECT_TRUE_MSG( waitForLine( session, 0, "Server resumed at tick" ), "resume did not reach the server" );
+    // 모은 서버 줄에는 서버 틱 번호가 붙어 있다 — Output Log 에서 클라이언트 줄과 틱으로 맞춰 본다.
+    SW_EXPECT_TRUE_MSG( waitForLine( session, 0, "[tick=" ), "the server lines in the session log carry no tick number" );
 
     const string mergedPath = session.stop();
     SW_EXPECT_FALSE( session.isRunning() );
