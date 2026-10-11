@@ -11,7 +11,7 @@
 | 링크 | 23 s | 85 | 1 % 미만 |
 | 리플렉션 코드젠 | 40 s | 28 | 1 % |
 
-- 모듈별 컴파일: Engine 688 TU 805 s · GameFramework 833 TU 671 s · Editor 143 TU 123 s · Core 84 TU 72 s · **시험 614 TU 732 s(26 %)**.
+- 모듈별 컴파일: Engine 688 TU 805 s · GameFramework 833 TU 671 s · Editor 143 TU 123 s · Core 84 TU 72 s · **테스트 614 TU 732 s(26 %)**.
 - 16 스레드 기준 풀 빌드의 이론 하한은 약 170 ~ 180 초다.
 - `GameObjectManager.cpp` 를 PCH 없이 `-ftime-trace` 로 재면 전체 2.16 초 중 헤더 파싱(`Total Source`)이 1.22 초(57 %)다.
 - 가장 느린 TU: `EngineLoop.cpp` 6.5 초. `Physics/Jolt/*` 래퍼(5.3 ~ 6.7 초로 보였던 것)는 다른 빌드와 겹쳐 잰 값이었고, 조용할 때 각 1.9 ~ 2.5 초였다(6 단계).
@@ -31,7 +31,7 @@ PCH 없는 TU 넷의 구문 검사 합이 5.02 → 4.08 s(−19 %)다([검증과
 
 
 ### 3. PCH 공유 — 끝(킷 전부가 `sw_kit_pch` 하나)
-킷 약 60 개가 PCH 하나를 실제로 나눠 쓴다(`sw_useSharedPch`, 풀 빌드 135.8 → 115.2 s). 나머지 묶음(시험 9 · RHI 4 · App 3 · 에디터 확장 · `SWGame`)은
+킷 약 60 개가 PCH 하나를 실제로 나눠 쓴다(`sw_useSharedPch`, 풀 빌드 135.8 → 115.2 s). 나머지 묶음(테스트 9 · RHI 4 · App 3 · 에디터 확장 · `SWGame`)은
 합쳐도 PCH 컴파일 약 15 개(개당 약 2.7 CPU 초, 16 스레드에서 2 ~ 3 s)라 측정 편차 안이어서 하지 않는다([결정 기록](../09_Decisions.md) 3절).
 
 ### 4. sccache 와 PCH 의 충돌 — 끝(콜드 프리셋은 두지 않는다)

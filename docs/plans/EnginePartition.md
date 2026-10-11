@@ -33,7 +33,7 @@
 - `Utility` 루트 10 파일(`CommandStack` · `DebugOverlayState` · `GameAutoplay` · `GameTimeScale` · `KeyValueFile`)은 이름만 보고 두었다. 후보는 `CommandStack` → `Scene`(에디터 실행 취소),
   `KeyValueFile` → `Serialization/Format`, `GameTimeScale` · `GameAutoplay` → `Config`, `DebugOverlayState` → `Profiling` 이다.
 - `Character/AnimNotify`(처리기 · 표 · 컴포넌트)는 `CharacterHit` · `SocketSetComponent` 를 써서 `Object/Animation` 으로 내릴 수 없다 — 알림 계약만 `Animation/Notify` 로 모았다.
-- `Test/EngineTest/Graphics` 의 렌더러 시험(`TestGpuScene` · `TestRenderGraph` …)은 아직 `Graphics` 폴더에 있다(`Test/EngineTest/Renderer` 로 옮길 후보).
+- `Test/EngineTest/Graphics` 의 렌더러 테스트(`TestGpuScene` · `TestRenderGraph` …)은 아직 `Graphics` 폴더에 있다(`Test/EngineTest/Renderer` 로 옮길 후보).
 
 **Engine 에 남는 이유가 있는 폴더(2026-10-10 사용 현황 조사):** 에디터는 `GameFramework` 를 include 할 수 없다(`CheckEngineLayers`: Editor 금지 목록) — 그래서 에디터가 쓰는 폴더(`Dialogue` · `Sequencer` · `Destruction` · `Environment` · `Automation` · `UI` · `Animation` · `Scene` …)는 Engine 이 아니면 둘 곳이 없다. 서버 실행 파일도 `GameFramework` 를 모르므로 `Observability`(서버가 `MetricRegistry` · `OpsHTTPEndpoint` 를 쓴다)도 남는다.
 `Character` 는 `Destruction`(에디터가 씀)과 `Resource/AssetManager` 가 쓰고 `Spatial` 은 `Character/Fit` 이 쓰므로 남는다 — `Resource` 의 기능 캐시를 자기 폴더로 보낸 뒤에도 `Destruction` 이 `Character` 를 쓴다. `Telemetry` 는 `EngineLoop` · App · 게임이, `Compression` 은 Core 인터페이스의 코덱 공급자라 Core 가 서드파티를 몰라야 하는 규칙 때문에 남는다.
@@ -70,6 +70,6 @@
 | 2 코어 / 기능 가르기 | 중간 | 중간 | 코어 → 기능 화살표 0 · EngineTest · 씬 로드 · 에디터 시나리오 |
 | 3 링크 분할 | 중간 | 낮음(OBJECT) / 중간(DLL) | 네 백엔드 × Dev · Shipping · Server 빌드 |
 | 4 월드 | 큼 | 높음 | 프리팹 격리 · 서버 방 시나리오 |
-| 5 모듈 창구 | 중간 | 낮음 | 게이트 + 핫 리로드 시험 |
+| 5 모듈 창구 | 중간 | 낮음 | 게이트 + 핫 리로드 테스트 |
 
 각 단계는 독립 커밋 묶음이고, 단계가 끝날 때마다 전 프리셋 컴파일과 `ctest -L lint · nogpu` 를 돈다(검증 보류 지시가 풀린 뒤).
