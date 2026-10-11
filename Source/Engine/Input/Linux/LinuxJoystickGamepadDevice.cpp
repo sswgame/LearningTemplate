@@ -9,6 +9,29 @@
 
 #include "Engine/Input/GamepadButtonUtil.h"
 
+namespace sw
+{
+    bool LinuxJoystickGamepadDevice::isGamepadButtonMap( const uint16* pButtonCode, uint32 buttonCount )
+    {
+        // linux/input-event-codes.h 의 값이다. 판정을 Windows 에서도 시험하려고 헤더 없이 둔다.
+        constexpr uint16 kButtonJoystickFirst     = 0x120; // BTN_JOYSTICK(BTN_TRIGGER): 조이스틱 0x120..0x12f, 게임패드 0x130..0x13e
+        constexpr uint16 kButtonDigitizerFirst    = 0x140; // BTN_DIGI(BTN_TOOL_PEN): 여기부터는 태블릿 · 터치
+        constexpr uint16 kButtonTriggerHappyFirst = 0x2c0; // BTN_TRIGGER_HAPPY1
+        constexpr uint16 kButtonTriggerHappyLast  = 0x2e7; // BTN_TRIGGER_HAPPY40
+        if ( pButtonCode == nullptr )
+            return false;
+        for ( uint32 index = 0; index < buttonCount; ++index )
+        {
+            const uint16 code = pButtonCode[index];
+            if ( code >= kButtonJoystickFirst && code < kButtonDigitizerFirst )
+                return true;
+            if ( code >= kButtonTriggerHappyFirst && code <= kButtonTriggerHappyLast )
+                return true;
+        }
+        return false;
+    }
+} // namespace sw
+
 #if defined( SW_PLATFORM_LINUX )
     #include "Core/Common/PlatformOsHeaders.h"
 
@@ -136,6 +159,18 @@ namespace sw
         const int32 fd = open( pathBuilder.c_str(), O_RDONLY | O_NONBLOCK );
         if ( fd < 0 )
         {
+            _bConnected = SW_FALSE;
+            return;
+        }
+
+        // 마우스 · 태블릿에 joydev 가 만든 노드는 패드가 아니다(버튼 맵에 조이스틱 · 게임패드 버튼이 없다).
+        uint8 buttonCount = 0;
+        if ( ioctl( fd, JSIOCGBUTTONS, &buttonCount ) < 0 )
+            buttonCount = 0;
+        uint16 arrButtonCode[KEY_MAX - BTN_MISC + 1]{};
+        if ( buttonCount == 0 || ioctl( fd, JSIOCGBTNMAP, arrButtonCode ) < 0 || isGamepadButtonMap( arrButtonCode, buttonCount ) == false ) // 버튼 수(uint8) < 맵 크기
+        {
+            close( fd );
             _bConnected = SW_FALSE;
             return;
         }

@@ -36,6 +36,15 @@ namespace sw
         bool setVibration( float32 leftMotor, float32 rightMotor ) override;
         void stopVibration() override;
 
+        /**
+         * @brief joydev 버튼 맵(JSIOCGBTNMAP 의 커널 키 코드)이 게임패드 · 조이스틱인지 봅니다.
+         * @details 조이스틱 · 게임패드 버튼(BTN_JOYSTICK 부터 BTN_DIGI 앞까지, BTN_TRIGGER_HAPPY 대역)이 하나라도 있어야 참이다.
+         *          joydev 는 절대 좌표 축만 있으면 마우스 · 태블릿에도 jsN 을 만든다. 가상 머신의 절대 좌표 마우스(Hyper-V)는
+         *          (0, 0) 에서 축이 -32767 로 고여 왼쪽 스틱이 늘 (-1, 1) 로 기운 패드가 된다. 그런 장치는 열지 않는다.
+         *          플랫폼과 무관한 판정이라 모든 플랫폼에서 짓고 시험한다.
+         */
+        static bool isGamepadButtonMap( const uint16* pButtonCode, uint32 buttonCount );
+
     protected:
         bool isHardwareConnected() const override { return _bConnected == SW_TRUE; }
 

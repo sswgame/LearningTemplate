@@ -183,6 +183,23 @@ namespace
         return hash;
     }
 
+    /**
+     * @brief 텍스트 씨앗의 CRLF 를 LF 로 바꿉니다.
+     * @details Windows 체크아웃(core.autocrlf)은 저장소 텍스트를 CRLF 로, 리눅스는 LF 로 받는다. 씨앗 바이트가 다르면 같은 시드라도
+     *          변이 위치 · 결과가 달라 리눅스 CI 가 Windows 에서 본 적 없는 입력을 먹는다. 줄끝을 맞춰 두 플랫폼이 같은 입력을 돌게 한다.
+     */
+    void normalizeLineEnding( vector<uint8>& inoutBytes )
+    {
+        size_t writeIndex = 0;
+        for ( size_t readIndex = 0; readIndex < inoutBytes.size(); ++readIndex )
+        {
+            if ( inoutBytes[readIndex] == '\r' && readIndex + 1 < inoutBytes.size() && inoutBytes[readIndex + 1] == '\n' )
+                continue;
+            inoutBytes[writeIndex++] = inoutBytes[readIndex];
+        }
+        inoutBytes.resize( writeIndex );
+    }
+
     uint64 readEnvironmentNumber( const utf8* pName, uint64 fallback )
     {
         const utf8* pValue = std::getenv( pName );
@@ -215,6 +232,13 @@ SW_TEST_CASE( LoaderFuzzTest, EveryLoaderSurvivesMutatedInput )
         SW_EXPECT_TRUE_MSG( listSeed.empty() == false, ( string( "no seed for fuzz target " ) + target._pName ).c_str() );
         if ( listSeed.empty() )
             continue;
+        if ( target._bText )
+        {
+            for ( vector<uint8>& seed : listSeed )
+            {
+                normalizeLineEnding( seed );
+            }
+        }
 
         test::ScopedAssertCapture asserts;
         // 수열은 대상 이름에서 나온다 — `SW_FUZZ_TARGET` 으로 하나만 돌려도 같은 입력이 나온다(재현).

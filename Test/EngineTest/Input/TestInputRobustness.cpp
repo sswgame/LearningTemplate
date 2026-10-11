@@ -5,6 +5,7 @@
 
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/Linux/LinuxJoystickGamepadDevice.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Input/Virtual/InputReplay.h"
@@ -391,4 +392,27 @@ SW_TEST_CASE( InputEdgeCaseTest, GamepadResetDoesNotReportHeldButtonAsNewPress )
     pad.poll( 0.016f );
     pad.onPolled();
     SW_EXPECT_TRUE( pad.wasButtonPressed( sw::GamepadButton::A ) );
+}
+
+/**
+ * @brief [InputEdgeCaseTest] 리눅스 joydev 노드는 버튼 맵에 조이스틱 · 게임패드 버튼이 있을 때만 게임패드로 연다.
+ * @details joydev 는 절대 좌표 마우스(Hyper-V · VirtualBox 태블릿)에도 jsN 을 만든다. 그 노드를 패드로 열면 (0, 0) 의 축이 -32767 로 고여
+ *          왼쪽 스틱이 늘 (-0.707, 0.707) 로 기운다(리눅스 CI 의 UIOptionsMenuTest.RebindIgnoresUIActionsWhileListening).
+ *          변이: `isGamepadButtonMap` 이 버튼 하나라도 있으면 참을 돌려주면 마우스 맵에서 진다.
+ */
+SW_TEST_CASE( InputEdgeCaseTest, LinuxJoystickRejectsMouseAndTabletNodes )
+{
+    // linux/input-event-codes.h 의 키 코드
+    const uint16 arrMouse[]    = { 0x110, 0x111, 0x112 };                                           // BTN_LEFT · BTN_RIGHT · BTN_MIDDLE
+    const uint16 arrTablet[]   = { 0x140, 0x14a, 0x14b };                                           // BTN_TOOL_PEN · BTN_TOUCH · BTN_STYLUS
+    const uint16 arrXpad[]     = { 0x130, 0x131, 0x133, 0x134, 0x136, 0x137, 0x13a, 0x13b, 0x13c }; // BTN_A .. BTN_MODE
+    const uint16 arrJoystick[] = { 0x120, 0x121 };                                                  // BTN_TRIGGER · BTN_THUMB
+    const uint16 arrHappy[]    = { 0x110, 0x2c0 };                                                  // 마우스 버튼 + BTN_TRIGGER_HAPPY1
+    SW_EXPECT_FALSE( sw::LinuxJoystickGamepadDevice::isGamepadButtonMap( arrMouse, 3 ) );
+    SW_EXPECT_FALSE( sw::LinuxJoystickGamepadDevice::isGamepadButtonMap( arrTablet, 3 ) );
+    SW_EXPECT_FALSE( sw::LinuxJoystickGamepadDevice::isGamepadButtonMap( arrXpad, 0 ) ); // 버튼 없음(가속도계)
+    SW_EXPECT_FALSE( sw::LinuxJoystickGamepadDevice::isGamepadButtonMap( nullptr, 3 ) );
+    SW_EXPECT_TRUE( sw::LinuxJoystickGamepadDevice::isGamepadButtonMap( arrXpad, 9 ) );
+    SW_EXPECT_TRUE( sw::LinuxJoystickGamepadDevice::isGamepadButtonMap( arrJoystick, 2 ) );
+    SW_EXPECT_TRUE( sw::LinuxJoystickGamepadDevice::isGamepadButtonMap( arrHappy, 2 ) );
 }
