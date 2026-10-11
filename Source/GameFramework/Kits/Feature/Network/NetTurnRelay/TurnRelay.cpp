@@ -17,7 +17,7 @@ namespace sw
     {
         struct TurnRelayInternal
         {
-            /** @brief 운영체제 난수 64 비트(`UUID::generate`) — 실행마다 · 서버마다 다르고 미리 알 수 없다. */
+            /** @brief 운영체제 난수 64비트(`UUID::generate`)를 반환합니다. 실행마다, 서버마다 다르고 미리 알 수 없습니다. */
             static uint64 makeRandomSeed()
             {
                 const UUID uuid  = UUID::generate();
@@ -66,7 +66,7 @@ namespace sw
 
     uint32 TurnRelayServer::nextToken()
     {
-        // 비밀 키에 센 값을 섞는다 — 받은 표에서 다음 표를 셈할 수 없다(암호학적 MAC 은 아니다).
+        // 비밀 키에 카운터 값을 섞는다. 받은 토큰에서 다음 토큰을 계산할 수 없게 하려는 것이며 암호학적 MAC 은 아니다.
         ++_tokenCount;
         const uint32 token = static_cast<uint32>( HashUtil::mix64( _tokenSecret + _tokenCount * HashUtil::kGoldenRatio64 ) );
         return token != 0 ? token : 1u;
@@ -113,7 +113,7 @@ namespace sw
         if ( pendingCount == 0 && _messageWriter.send( *_pHost, connectionID, NetChannelType::ReliableOrdered ) )
             return;
         if ( _pHost->getConnectionState( connectionID ) != NetConnectionState::Connected )
-            return; // 닫힌 연결 — 돌아오면 표로 다시 받는다
+            return; // 닫힌 연결이다. 돌아오면 토큰으로 다시 받는다
         if ( pendingCount >= kMaxPendingPerConnection )
         {
             SW_LOG_WARNING( "connection %# does not acknowledge - %# messages are waiting, disconnecting it", connectionID, pendingCount );
@@ -125,7 +125,7 @@ namespace sw
 
     void TurnRelayServer::flushPending()
     {
-        // 연결마다 순서를 지킨다 — 한 번 막힌 연결의 뒤 알림은 이번에 보내지 않는다.
+        // 연결마다 순서를 지킨다. 한 번 막힌 연결의 뒤쪽 알림은 이번에 보내지 않는다.
         _listBlockedScratch.clear();
         size_t keepCount = 0;
         for ( size_t index = 0; index < _listPending.size(); ++index )
@@ -161,7 +161,7 @@ namespace sw
             writer.writeVarUint( static_cast<uint64>( action._seat ) );
             writer.writeBlob( action._buffer.data(), static_cast<int32>( action._buffer.size() ) );
             if ( _messageWriter.send( *_pHost, seat._connectionID, NetChannelType::ReliableOrdered ) == false )
-                return; // 창이 찼다 — `update` 가 이어 보낸다
+                return; // 창이 찼으므로 `update` 가 이어서 보낸다
             ++seat._sentActionCount;
         }
     }
@@ -202,10 +202,10 @@ namespace sw
         const uint32 roomID     = static_cast<uint32>( reader.readVarUint() );
         const int64  wantedSeat = reader.readVarInt();
         const uint32 token      = reader.readUint32();
-        const uint64 knownCount = reader.readVarUint(); // 이미 가진 행동 수
+        const uint64 knownCount = reader.readVarUint(); // 클라이언트가 이미 가진 행동 수
         if ( reader.hasOverflowed() )
             return false;
-        // 한 연결은 자리 하나 — 같은 방이면 가진 자리를 다시 알리고, 다른 방이면 거절한다.
+        // 한 연결은 자리를 하나만 가진다. 같은 방이면 가진 자리를 다시 알리고, 다른 방이면 거절한다.
         const TurnRoom* pHeldRoom = findRoomOfConnection( connectionID );
         if ( pHeldRoom != nullptr )
         {
@@ -230,7 +230,7 @@ namespace sw
             _listRoom.push_back( room );
             pRoom = &_listRoom.back();
         }
-        // 표가 맞는 자리면 돌아온 것 — 그 자리 연결이 아직 살아 있으면 빼앗지 않는다. 아니면 빈 자리.
+        // 토큰이 맞는 자리는 돌아온 것으로 본다. 그 자리의 연결이 아직 살아 있으면 빼앗지 않는다. 토큰이 없으면 빈 자리를 준다.
         int32 seatIndex = -1;
         for ( size_t index = 0; index < pRoom->_listSeat.size() && token != 0; ++index )
         {
@@ -274,7 +274,7 @@ namespace sw
         event._seat   = seatIndex;
         _eventBuffer.push( event );
 
-        // 시작했으면 들어온 사람에게 시작 알림과 놓친 행동을, 이제 다 찼으면 모두에게 시작을.
+        // 이미 시작했으면 들어온 사람에게 시작 알림과 놓친 행동을 보낸다. 이번 입장으로 자리가 다 찼으면 모두에게 시작을 알린다.
         bool bFull = true;
         for ( const TurnSeat& other : pRoom->_listSeat )
         {
@@ -367,7 +367,7 @@ namespace sw
     void TurnRelayServer::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
     {
         (void)reason;
-        // 연결 id 는 다음 연결이 다시 쓴다 — 그 연결에 줄 선 알림도 버린다.
+        // 연결 id 는 다음 연결이 다시 쓰므로 그 연결의 큐에 쌓인 알림도 버린다.
         size_t keepCount = 0;
         for ( size_t index = 0; index < _listPending.size(); ++index )
         {
@@ -385,7 +385,7 @@ namespace sw
                 TurnSeat& seat = room._listSeat[index];
                 if ( seat._connectionID != connectionID )
                     continue;
-                seat._connectionID = -1; // 자리 · 표는 남긴다
+                seat._connectionID = -1; // 자리와 토큰은 남긴다
                 TurnRelayEvent event;
                 event._kind   = TurnRelayEvent::Kind::SeatLeft;
                 event._roomID = room._roomID;
@@ -484,7 +484,7 @@ namespace sw
                 if ( reader.readBlob( event._buffer, NetTurnRelayMessage::kMaxActionBytes ) == false )
                     return NetHandleResult::Malformed;
                 if ( event._index != static_cast<int32>( _listAction.size() ) )
-                    return NetHandleResult::Handled; // 이미 가진 것(다시 들어올 때 겹친 것)
+                    return NetHandleResult::Handled; // 이미 가진 행동이다. 다시 들어올 때 겹친 것이다
                 _listAction.push_back( TurnAction{ event._buffer, event._seat } );
                 break;
             }

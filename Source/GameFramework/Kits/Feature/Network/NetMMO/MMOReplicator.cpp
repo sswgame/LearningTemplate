@@ -25,7 +25,8 @@ namespace sw
             }
 
             /**
-             * @brief 엔티티 id 를 공간 해시의 키로 바꿉니다. 격자는 키를 비교 · 해시만 하므로 세대는 늘 1 입니다(세대 0 은 무효 핸들이라 격자가 받지 않는다).
+             * @brief 엔티티 id 를 공간 해시의 키로 바꿉니다.
+             * @details 격자는 키를 비교하고 해시하기만 하므로 세대는 항상 1이다. 세대 0은 무효 핸들이라 격자가 받지 않는다.
              */
             static SlotHandle makeGridKey( uint32 entityID ) { return SlotHandle::make( entityID, 1u ); }
 
@@ -51,7 +52,7 @@ namespace sw
                 return reader.readBlob( outEntity._listState, NetMMOMessage::kMaxStateBytes ) && reader.hasOverflowed() == false;
             }
 
-            /** @brief 묶음에서 엔티티 하나가 쓰는 비트입니다 — `writeEntity( …, bWithType )` 와 같다(들어옴은 타입까지, 갱신은 없이). */
+            /** @brief 메시지에서 엔티티 하나가 쓰는 비트 수입니다. `writeEntity( …, bWithType )` 와 같으며, 새로 보임은 타입까지 쓰고 갱신은 타입 없이 씁니다. */
             static int32 computeEntityBits( const MMOEntity& entity, bool bWithType )
             {
                 const int32 typeBits = bWithType ? BitMath::computeVarUintBits( entity._typeID ) : 0;
@@ -143,7 +144,7 @@ namespace sw
 
     NetHandleResult MMOReplicator::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {
-        // 메시지 펌프(게임 스레드)에서 불린다 — `update` 의 나눈 본문과 겹치지 않는다(같은 스레드에서 차례로).
+        // 메시지 펌프(게임 스레드)에서 불린다. 같은 스레드에서 차례로 실행되므로 `update` 의 병렬 본문과 겹치지 않는다.
         if ( context._kind != NetMMOMessage::kUpdateAck || context._connectionID < 0 || context._connectionID >= static_cast<int32>( _listObserver.size() ) )
             return NetHandleResult::Handled;
         const uint32 newestTick = static_cast<uint32>( body.readVarUint() );
@@ -153,7 +154,7 @@ namespace sw
         Observer& observer = _listObserver[static_cast<size_t>( context._connectionID )];
         if ( observer._bActive == SW_FALSE )
             return NetHandleResult::Handled;
-        // 순서가 뒤바뀐 확인도 받은 틱은 받은 것이다 — 가장 새 틱은 앞으로만 가고, 그보다 표 크기 이상 옛 틱은 적지 않는다(고리의 새 틱 자리를 덮는다).
+        // 순서가 뒤바뀐 확인도 받은 틱은 받은 것으로 센다. 가장 새 틱은 앞으로만 가고, 테이블 크기 이상 오래된 틱은 적지 않는다. 적으면 링 버퍼에서 새 틱의 슬롯을 덮어쓰게 된다.
         if ( observer._bHasAck == SW_FALSE || newestTick > observer._newestAckTick )
             observer._newestAckTick = newestTick;
         observer._bHasAck       = SW_TRUE;
@@ -215,7 +216,7 @@ namespace sw
 
     const MMOEntity& MMOReplicator::getEntity( uint32 entityID ) const
     {
-        // 나눈 본문에서 부른다 — `operator[]` 는 없으면 넣으므로(쓰기) 쓰지 않는다. 보이는 엔티티는 나감 단계가 사라진 것을 이미 뺐다.
+        // 병렬 본문에서 부른다. `operator[]` 는 없으면 항목을 넣으므로(쓰기) 쓰지 않는다. 보이지 않게 된 단계가 사라진 엔티티를 이미 뺐으므로 보이는 엔티티는 항상 존재한다.
         const auto entityIter = _mapEntity.find( entityID );
         SW_ASSERT( entityIter != _mapEntity.end() );
         return entityIter->second;
@@ -223,7 +224,7 @@ namespace sw
 
     void MMOReplicator::updateObserver( int32 connectionID, Observer& observer, float32 deltaTime, ObserverScratch& scratch )
     {
-        // 관찰자의 자리는 엔티티 표에서 — 격자와 표는 setEntity · removeEntity 가 함께 바꾼다.
+        // 관찰자의 위치는 엔티티 테이블에서 읽는다. 격자와 테이블은 setEntity 와 removeEntity 가 함께 갱신한다.
         const auto observerIter = _mapEntity.find( observer._entityID );
         if ( observerIter == _mapEntity.end() )
             return;
@@ -231,7 +232,7 @@ namespace sw
 
         const bool bAlwaysPolicy = _pPolicy->hasAlwaysRelevant();
 
-        // 1) 나감 — 사라졌거나 나가는 반경 밖(늘 보이기는 빼고).
+        // 1) 보이지 않게 됨: 사라졌거나 나가는 반경 밖으로 간 엔티티이다. 항상 보이는 엔티티는 제외한다.
         vector<uint32>& listLeave = scratch._listLeave;
         listLeave.clear();
         for ( const auto& visible : observer._mapVisible )
@@ -249,7 +250,7 @@ namespace sw
         std::sort( listLeave.begin(), listLeave.end() );
         const size_t pendingLeaveIndex = sendLeaves( connectionID, observer, scratch );
 
-        // 2) 들어옴 — 들어오는 반경 안(가까운 것부터, 틱마다 상한).
+        // 2) 새로 보임: 들어오는 반경 안의 엔티티이다. 가까운 것부터 처리하고 틱마다 상한을 둔다.
         vector<SlotHandle>& listNear = scratch._listNear;
         _grid.queryCircle( center._x, center._z, _settings._enterRadius, listNear );
         if ( bAlwaysPolicy )
@@ -260,7 +261,7 @@ namespace sw
                     listNear.push_back( MMOReplicatorInternal::makeGridKey( entity.first ) );
             }
         }
-        // 거리는 한 번씩만 재고 (거리, id) 로 정렬한다(비교마다 해시를 찾지 않게). 이미 보이는 것은 뺀다.
+        // 거리는 한 번만 계산하고 (거리, id) 로 정렬한다. 비교마다 해시를 찾지 않으려는 것이다. 이미 보이는 엔티티는 뺀다.
         vector<std::pair<float32, uint32>>& listRank = scratch._listRank;
         listRank.clear();
         for ( const SlotHandle nearKey : listNear )
@@ -273,24 +274,24 @@ namespace sw
                 listRank.emplace_back( MMOReplicatorInternal::computeFlatDistance( center, entityIter->second._position ), entityID );
         }
         std::sort( listRank.begin(), listRank.end() );
-        listRank.erase( std::unique( listRank.begin(), listRank.end() ), listRank.end() ); // 반경 안 + 늘 보이기 겹침
-        // 한 신뢰 메시지에 묶는다 — 엔티티마다 창 한 칸 · 머리를 쓰지 않는다(Core 가 64 KB 까지 조각으로 나른다). 보내기가 받아들여야 보이는 목록에 넣는다.
+        listRank.erase( std::unique( listRank.begin(), listRank.end() ), listRank.end() ); // 반경 안의 엔티티와 항상 보이는 엔티티가 겹친 항목을 제거한다
+        // 신뢰 메시지 하나에 묶어 보낸다. 엔티티마다 신뢰 창 슬롯과 헤더를 쓰지 않으려는 것이며, Core 가 64 KB까지 조각으로 나눠 전송한다. 전송이 받아들여져야 보이는 목록에 넣는다.
         vector<uint32>& listEnter = scratch._listEnter;
         listEnter.clear();
         {
             BitWriter& writer = scratch._messageWriter.begin( NetMMOMessage::kEnter );
             writer.writeVarUint( _tick );
             NetSendBudget budget( NetConnection::kMaxReliableMessageSize, NetConnection::kMaxReliableMessageSize );
-            budget.reserveBits( writer.getBitCount() + 1 ); // 머리 + 끝 표시
+            budget.reserveBits( writer.getBitCount() + 1 ); // 헤더와 끝 표시
             for ( const auto& ranked : listRank )
             {
                 if ( static_cast<int32>( listEnter.size() ) >= _settings._maxEnterPerTick )
-                    break; // 가까운 것부터 — 나머지는 다음 틱에
+                    break; // 가까운 것부터 처리했으므로 나머지는 다음 틱에 보낸다
                 const auto entityIter = _mapEntity.find( ranked.second );
                 if ( entityIter == _mapEntity.end() )
                     continue;
                 if ( budget.tryReserveBits( 1 + MMOReplicatorInternal::computeEntityBits( entityIter->second, true ) ) == false )
-                    break; // 64 KB — 나머지는 다음 틱에
+                    break; // 64 KB에 도달했으므로 나머지는 다음 틱에 보낸다
                 writer.writeBool( true );
                 MMOReplicatorInternal::writeEntity( writer, entityIter->second, true );
                 listEnter.push_back( ranked.second );
@@ -301,14 +302,14 @@ namespace sw
                 for ( const uint32 entityID : listEnter )
                 {
                     VisibleEntry& entry  = observer._mapVisible[entityID];
-                    entry._listSentState = getEntity( entityID )._listState; // 신뢰 — 확인된 것으로 둔다
+                    entry._listSentState = getEntity( entityID )._listState; // 신뢰 전송이므로 확인된 것으로 둔다
                     entry._bInFlight     = SW_FALSE;
                 }
             }
-            // 보내기가 거절했으면(신뢰 창이 찼다) 아무것도 보이는 목록에 넣지 않는다 — 다음 틱에 다시 고른다.
+            // 전송이 거절됐으면(신뢰 창이 찼다) 아무것도 보이는 목록에 넣지 않고, 다음 틱에 다시 고른다.
         }
 
-        // 3) 갱신 — 우선도를 쌓고 예산 안에서 큰 것부터. 나감을 아직 못 보낸 것(신뢰 창이 찼다)은 건너뛴다 — 사라진 엔티티일 수 있다.
+        // 3) 갱신: 우선도를 쌓고 예산 안에서 큰 것부터 보낸다. 보이지 않게 됨을 아직 못 보낸 엔티티는 건너뛴다. 신뢰 창이 찼기 때문이며, 사라진 엔티티일 수 있다.
         resolveInFlightUpdates( observer );
         NetPrioritizer& prioritizer = observer._prioritizer;
         for ( const auto& visible : observer._mapVisible )
@@ -318,7 +319,7 @@ namespace sw
             const MMOEntity&    entity   = getEntity( visible.first );
             const float32       distance = MMOReplicatorInternal::computeFlatDistance( center, entity._position );
             const VisibleEntry& entry    = visible.second;
-            // 오가는 갱신이 있으면 그것과 견준다 — 확인을 기다리는 동안 같은 상태를 "바뀜" 으로 가속하지 않는다. 잃으면 확인된 상태(옛것)와 비교하게 된다.
+            // 전송 중인 갱신이 있으면 그것과 비교한다. 확인을 기다리는 동안 같은 상태를 "바뀜" 으로 가속하지 않으려는 것이다. 잃으면 확인된 상태(오래된 것)와 비교하게 된다.
             const vector<uint8>& reference = entry._bInFlight == SW_TRUE ? entry._listInFlightState : entry._listSentState;
             const bool           bChanged  = entity._listState != reference;
             prioritizer.accumulate( visible.first, _pPolicy->computePriority( connectionID, entity, distance ) * ( bChanged ? _settings._changedBoost : 1.0f ), deltaTime );
@@ -328,7 +329,7 @@ namespace sw
         BitWriter& writer = scratch._messageWriter.begin( NetMMOMessage::kUpdate );
         writer.writeVarUint( _tick );
         NetSendBudget budget( _tickUpdateBudgetBytes );
-        budget.reserveBits( writer.getBitCount() + 1 ); // 머리 + 끝 표시
+        budget.reserveBits( writer.getBitCount() + 1 ); // 헤더와 끝 표시
         vector<uint32>& listSent = scratch._listSent;
         listSent.clear();
         for ( const uint32 entityID : listOrder )
@@ -348,7 +349,7 @@ namespace sw
         (void)_pHost->sendMessage( connectionID, NetChannelType::Unreliable, writer.getBytes() );
         for ( const uint32 entityID : listSent )
         {
-            // 확인될 때까지는 보낸 상태를 따로 둔다 — 잃으면 확인된 상태(`_listSentState`)가 옛것이라 "바뀜" 가속이 다시 걸린다.
+            // 확인될 때까지 보낸 상태를 따로 보관한다. 잃으면 확인된 상태(`_listSentState`)가 오래된 것이므로 "바뀜" 가중치가 다시 적용된다.
             prioritizer.markSentUnconfirmed( entityID, _tick );
             VisibleEntry& entry      = observer._mapVisible[entityID];
             entry._listInFlightState = getEntity( entityID )._listState;
@@ -360,7 +361,7 @@ namespace sw
 
     void MMOReplicator::resolveInFlightUpdates( Observer& observer ) const
     {
-        // 엔티티마다 독립 판정이라 맵 순회 순서와 상관없이 결과(우선도 · 상태)가 같다.
+        // 엔티티마다 독립적으로 판정하므로 맵 순회 순서와 상관없이 결과(우선도와 상태)가 같다.
         for ( auto& visible : observer._mapVisible )
         {
             VisibleEntry& entry = visible.second;
@@ -369,7 +370,7 @@ namespace sw
             const bool bAckedPast = observer._bHasAck == SW_TRUE && observer._newestAckTick >= entry._inFlightTick;
             const bool bExpired   = _tick - entry._inFlightTick >= NetMMOMessage::kMaxUnconfirmedTicks;
             if ( bAckedPast == false && bExpired == false )
-                continue; // 아직 오가는 중
+                continue; // 아직 전송 중이다
             const bool bDelivered = bExpired == false && observer._ackedUpdate.find( entry._inFlightTick ) != nullptr;
             if ( bDelivered )
                 entry._listSentState.swap( entry._listInFlightState );
@@ -381,7 +382,8 @@ namespace sw
 
     size_t MMOReplicator::sendLeaves( int32 connectionID, Observer& observer, ObserverScratch& scratch )
     {
-        // 조각나지 않는 크기(1 KB)로 쪼갠다 — 묶어도 창 몫(조각 수)은 같고, 나눠 두면 창이 찼을 때 앞 묶음이라도 나간다. 보낸 것만 보이는 목록에서 뺀다(유령이 남지 않게).
+        // 조각나지 않는 크기(1 KB)로 쪼갠다. 하나로 묶어도 신뢰 창에서 차지하는 슬롯 수는 같고, 나눠 두면 창이 찼을 때도 앞쪽 메시지는 나가기 때문이다.
+        // 보낸 엔티티만 보이는 목록에서 뺀다. 그래야 클라이언트에 사라지지 않는 엔티티가 남지 않는다.
         const vector<uint32>& listLeave = scratch._listLeave;
         size_t                sentCount = 0;
         while ( sentCount < listLeave.size() )
@@ -400,7 +402,7 @@ namespace sw
                 writer.writeVarUint( listLeave[sentCount + index] );
             }
             if ( _pHost->sendMessage( connectionID, NetChannelType::ReliableOrdered, writer.getBytes() ) == false )
-                break; // 신뢰 창이 찼다 — 남은 것은 보이는 채로 두고 다음 틱에
+                break; // 신뢰 창이 찼다. 남은 엔티티는 보이는 채로 두고 다음 틱에 보낸다
             for ( size_t index = 0; index < count; ++index )
             {
                 observer._mapVisible.erase( listLeave[sentCount + index] );
@@ -434,17 +436,17 @@ namespace sw
         if ( tick > _newestUpdateTick )
         {
             const uint32 shift = tick - _newestUpdateTick;
-            // 앞의 가장 새 틱도 이제 비트 하나다(shift - 1 자리).
+            // 이전의 가장 새 틱도 이제 비트 하나로 표현한다(shift - 1 위치).
             if ( shift > NetMMOMessage::kAckWindowTicks )
                 _receivedBits = 0u;
             else if ( shift == NetMMOMessage::kAckWindowTicks )
-                _receivedBits = 1u << ( shift - 1u ); // 32 칸 밀기는 정의되지 않는다 — 앞 비트는 모두 창 밖이다
+                _receivedBits = 1u << ( shift - 1u ); // 32비트 시프트는 정의되지 않은 동작이다. 앞쪽 비트는 모두 창 밖이므로 이렇게 처리한다
             else
                 _receivedBits = ( _receivedBits << shift ) | ( 1u << ( shift - 1u ) );
             _newestUpdateTick = tick;
             return;
         }
-        const uint32 age = _newestUpdateTick - tick; // 0 = 같은 틱(중복)
+        const uint32 age = _newestUpdateTick - tick; // 0이면 같은 틱(중복)이다
         if ( 1u <= age && age <= NetMMOMessage::kAckWindowTicks )
             _receivedBits |= 1u << ( age - 1u );
     }
@@ -456,7 +458,7 @@ namespace sw
         BitWriter& writer = _ackWriter.begin( NetMMOMessage::kUpdateAck );
         writer.writeVarUint( _newestUpdateTick );
         writer.writeUint32( _receivedBits );
-        (void)_ackWriter.send( host, connectionID, NetChannelType::Unreliable ); // 잃어도 다음 틱 확인이 같은 창을 다시 싣는다
+        (void)_ackWriter.send( host, connectionID, NetChannelType::Unreliable ); // 잃어도 다음 틱의 확인이 같은 창을 다시 싣는다
     }
 
     NetHandleResult MMOClientView::handleNetMessage( const NetMessageContext& context, BitReader& body )
@@ -503,10 +505,10 @@ namespace sw
                     return NetHandleResult::Malformed;
                 const auto entityIter = _mapEntity.find( update._entityID );
                 if ( entityIter == _mapEntity.end() )
-                    continue; // 들어옴보다 먼저 왔거나 이미 나갔다 — 버린다
+                    continue; // 새로 보임보다 먼저 왔거나 이미 보이지 않게 된 엔티티이므로 버린다
                 if ( tick < entityIter->second._tick )
                 {
-                    ++_staleUpdateCount; // 순서가 뒤바뀐 옛 갱신 — 더 새 상태를 덮지 않는다
+                    ++_staleUpdateCount; // 순서가 뒤바뀐 오래된 갱신이다. 더 새로운 상태를 덮어쓰지 않게 버린다
                     continue;
                 }
                 entityIter->second._tick              = tick;

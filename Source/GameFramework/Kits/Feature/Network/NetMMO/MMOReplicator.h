@@ -1,16 +1,21 @@
 /**
  * @file MMOReplicator.h
- * @brief MMO 복제 — 엔티티가 수천이어도 관찰자(플레이어)마다 "근처만, 중요한 것 먼저, 정한 바이트 안에서" 보냅니다.
- * @details 1. 관심 영역 — 엔진 공간 해시(`SpatialHashGrid2D`, XZ 평면의 점)로 근처를 찾고, 들어오는 반경보다 나가는 반경을 크게 해 경계에서 들락날락하지 않게 합니다(히스테리시스).
- *          2. 들어옴은 틱마다 신뢰 메시지 하나에 묶고(전체 상태 — Core 가 64 KB 까지 조각으로 나른다), 갱신은 비신뢰 묶음입니다. 클라이언트가 받은 갱신 틱을
- *             확인(`kUpdateAck` — 가장 새 틱 + 앞 32 틱 비트)으로 돌려보내, 잃은 갱신의 엔티티는 우선도와 "바뀜" 가속을 되돌려 곧 다시 보냅니다.
- *             나감은 조각나지 않는 크기(1 KB)로 여러 메시지로 쪼개고 보낸 것만 보이는 목록에서 뺀다 — 창이 차도 앞 묶음은 나간다(남은 것은 다음 틱에).
- *             들어옴 · 갱신에는 서버 틱을 싣고, 클라이언트는 엔티티마다 마지막으로 적용한 틱보다
- *             옛것을 버린다(순서가 뒤바뀐 비신뢰 갱신이 새 상태를 덮지 않게).
- *          3. 우선도 누적(`NetPrioritizer`) — 보이는 엔티티마다 매 틱 우선도(정책: 거리 · 중요도)를 쌓고, 예산 안에서 쌓인 것이 큰 순서로 보낸 뒤 0 으로 돌리고
- *             (확인 기다림), 잃었으면 되돌립니다.
- *             멀거나 변하지 않는 것도 언젠가는 차례가 옵니다(굶지 않는다). 상태가 바뀐 것은 더 빨리 쌓입니다.
- *          엔티티 상태는 `NetMMOMessage::kMaxStateBytes` 까지입니다 — 서버 · 클라이언트가 같은 상한을 쓰고, 넘는 `setEntity` 는 받지 않는다.
+ * @brief 엔티티가 수천 개여도 관찰자(플레이어)마다 근처의 중요한 엔티티를 정해진 바이트 안에서 보냅니다.
+ * @details 동작은 세 부분으로 나뉜다.
+ *          1. 관심 영역: 엔진의 공간 해시(`SpatialHashGrid2D`, XZ 평면의 점)로 근처 엔티티를 찾는다.
+ *             나가는 반경을 들어오는 반경보다 크게 잡아서 경계에서 엔티티가 들락날락하지 않게 한다(히스테리시스).
+ *          2. 전송: 틱마다 새로 보이는 엔티티를 신뢰 메시지 하나에 묶어 전체 상태로 보낸다(Core 가 64 KB까지 조각으로 나눠 전송한다). 갱신은 비신뢰 메시지로 보낸다.
+ *             클라이언트는 받은 갱신 틱을 확인 메시지(`kUpdateAck`, 가장 새 틱과 그 앞 32틱의 비트)로 돌려보낸다.
+ *             갱신을 잃은 엔티티는 우선도와 "바뀜" 가중치를 되돌려서 곧 다시 보낸다.
+ *             보이지 않게 된 엔티티는 조각나지 않는 크기(1 KB)의 메시지 여러 개로 나눠 알리고, 보낸 것만 보이는 목록에서 뺀다.
+ *             그래서 신뢰 창이 차도 앞쪽 메시지는 나가고 남은 것은 다음 틱에 보낸다.
+ *             새로 보임과 갱신 메시지에는 서버 틱을 싣는다. 클라이언트는 엔티티마다 마지막으로 적용한 틱보다 오래된 메시지를 버린다.
+ *             순서가 뒤바뀐 비신뢰 갱신이 새 상태를 덮어쓰지 않게 하기 위해서이다.
+ *          3. 우선도 누적(`NetPrioritizer`): 보이는 엔티티마다 매 틱 우선도를 쌓는다. 우선도는 정책(거리, 중요도)이 정한다.
+ *             예산 안에서 우선도가 큰 순서로 보내고, 보낸 엔티티의 우선도는 0으로 되돌린 뒤 확인을 기다린다. 잃었으면 우선도를 되돌려 놓는다.
+ *             멀거나 변하지 않는 엔티티도 언젠가는 차례가 오므로 굶지 않는다. 상태가 바뀐 엔티티는 우선도가 더 빨리 쌓인다.
+ *
+ *          엔티티 상태의 크기는 `NetMMOMessage::kMaxStateBytes` 까지 허용한다. 서버와 클라이언트가 같은 상한을 쓰며, 이를 넘는 `setEntity` 는 받지 않는다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -35,18 +40,18 @@ namespace sw
 {
     class NetHost;
 
-    /** @brief 메시지 종류(첫 바이트)입니다. */
+    /** @brief 메시지 종류입니다. 메시지의 첫 바이트에 들어갑니다. */
     struct NetMMOMessage
     {
         static constexpr uint8 kEnter     = NetKitMessageRange::kMMO + 0;
         static constexpr uint8 kLeave     = NetKitMessageRange::kMMO + 1;
         static constexpr uint8 kUpdate    = NetKitMessageRange::kMMO + 2;
-        static constexpr uint8 kUpdateAck = NetKitMessageRange::kMMO + 3; ///< 클라이언트 → 서버(비신뢰): 받은 갱신 틱 — 가장 새 틱 + 그 앞 32 틱 비트
+        static constexpr uint8 kUpdateAck = NetKitMessageRange::kMMO + 3; ///< 클라이언트 → 서버(비신뢰). 받은 갱신 틱을 알린다. 가장 새 틱과 그 앞 32틱의 비트이다
         static_assert( NetMessageRange::isInRange( kUpdateAck, NetKitMessageRange::kMMO ), "message kinds must stay inside the kit's range" );
 
-        static constexpr int32  kMaxStateBytes       = 512; ///< 엔티티 상태 상한 — 서버는 넘는 엔티티를 받지 않고 클라이언트는 넘는 길이를 깨짐으로 본다
-        static constexpr uint32 kAckWindowTicks      = 32;  ///< 확인 비트가 덮는 앞 틱 수
-        static constexpr uint32 kMaxUnconfirmedTicks = 64;  ///< 이만큼 지나도 확인이 없으면 잃은 것으로 본다(서버 확인 표 크기)
+        static constexpr int32  kMaxStateBytes       = 512; ///< 엔티티 상태 상한. 서버는 넘는 엔티티를 받지 않고, 클라이언트는 넘는 길이를 손상된 메시지로 본다
+        static constexpr uint32 kAckWindowTicks      = 32;  ///< 확인 비트가 포함하는 앞쪽 틱 수
+        static constexpr uint32 kMaxUnconfirmedTicks = 64;  ///< 이만큼 지나도 확인이 없으면 잃은 것으로 본다. 서버 확인 테이블의 크기이기도 하다
     };
 } // namespace sw
 
@@ -59,7 +64,7 @@ namespace sw
         float3        _position{};
         uint32        _entityID{ 0 };
         uint32        _typeID{ 0 };
-        float32       _importance{ 1.0f }; ///< 보스 · 다른 플레이어는 크게
+        float32       _importance{ 1.0f }; ///< 보스와 다른 플레이어는 크게 잡는다
     };
 } // namespace sw
 
@@ -67,8 +72,9 @@ namespace sw
 {
     /**
      * @class IInterestPolicy
-     * @brief 누가 무엇을 얼마나 원하는가 — 게임마다 바꿉니다(파티원은 늘 보이기 · 길드전 지역은 반경 넓히기).
-     * @warning 복제기에 `setTaskManager` 를 주면 이 함수들이 **여러 스레드에서 동시에** 불린다 — 상태를 바꾸지 말고 읽기만.
+     * @brief 관찰자가 어떤 엔티티를 얼마나 원하는지 정하는 정책입니다. 게임마다 교체합니다.
+     * @details 예를 들어 파티원은 항상 보이게 하고, 길드전 지역은 반경을 넓힐 수 있다.
+     * @warning 복제기에 `setTaskManager` 를 주면 이 함수들이 **여러 스레드에서 동시에** 불린다. 상태를 바꾸지 말고 읽기만 해야 한다.
      */
     class SW_GF_API IInterestPolicy
     {
@@ -80,18 +86,19 @@ namespace sw
         IInterestPolicy& operator=( const IInterestPolicy& ) = default;
 
         /**
-         * @brief 반경 밖에서도 늘 보이는 엔티티가 있을 수 있는가입니다. 기본은 false — 그러면 들어옴 단계가 엔티티 전체를 훑지 않는다
-         *        (관찰자 × 엔티티 비용). `isAlwaysRelevant` 를 바꾸는 정책은 true 를 돌려준다.
+         * @brief 반경 밖에서도 항상 보이는 엔티티가 있을 수 있으면 true 를 반환합니다.
+         * @details 기본값은 false 이다. false 이면 새로 보임 단계가 엔티티 전체를 훑지 않으므로 관찰자 수 × 엔티티 수만큼의 비용을 아낀다.
+         *          `isAlwaysRelevant` 를 바꾼 정책은 true 를 반환해야 한다.
          */
         virtual bool hasAlwaysRelevant() const { return false; }
-        /** @brief 반경과 상관없이 늘 보이는가입니다(파티원 · 추적 중인 퀘스트 대상). `hasAlwaysRelevant` 가 true 일 때만 묻는다. */
+        /** @brief 반경과 상관없이 항상 보여야 하면 true 를 반환합니다. 파티원이나 추적 중인 퀘스트 대상이 해당합니다. `hasAlwaysRelevant` 가 true 일 때만 호출합니다. */
         virtual bool isAlwaysRelevant( int32 connectionID, const MMOEntity& entity ) const
         {
             (void)connectionID;
             (void)entity;
             return false;
         }
-        /** @brief 한 틱에 쌓을 우선도입니다. 기본은 중요도 / (1 + 거리 / 10). */
+        /** @brief 한 틱에 쌓을 우선도를 반환합니다. 기본값은 중요도 / (1 + 거리 / 10) 입니다. */
         virtual float32 computePriority( int32 connectionID, const MMOEntity& entity, float32 distance ) const
         {
             (void)connectionID;
@@ -109,16 +116,16 @@ namespace sw
         float32 _enterRadius{ 60.0f };
         float32 _leaveRadius{ 70.0f };
         float32 _changedBoost{ 4.0f };     ///< 상태가 바뀐 엔티티의 우선도 배율
-        int32   _updateBudgetBytes{ 600 }; ///< 관찰자 · 틱마다 갱신 메시지 바이트(종류 바이트 · 틱 포함, `NetConnection::kMaxSingleMessageSize` 로 잘린다). 연결 상한의 몫이 더 작으면 그것
-        int32   _maxEnterPerTick{ 32 };    ///< 한 틱에 새로 보이는 것 상한(텔레포트 직후 몰리지 않게) — 신뢰 메시지 하나에 묶는다(64 KB 를 넘는 나머지는 다음 틱)
+        int32   _updateBudgetBytes{ 600 }; ///< 관찰자 한 명당 틱마다 보내는 갱신 메시지 바이트. 종류 바이트와 틱을 포함하며 `NetConnection::kMaxSingleMessageSize` 로 잘린다. 연결 상한이 더 작으면 그 값을 쓴다
+        int32   _maxEnterPerTick{ 32 };    ///< 한 틱에 새로 보이게 하는 엔티티 수의 상한. 텔레포트 직후에 몰리지 않게 하며, 신뢰 메시지 하나에 묶고 64 KB를 넘는 나머지는 다음 틱에 보낸다
     };
 } // namespace sw
 
 namespace sw
 {
     /**
-     * @brief 서버 쪽입니다. 관찰자 = 연결 + 그 연결이 조종하는 엔티티(그 자리가 관심의 중심).
-     * @details 받는 메시지는 갱신 확인(`kUpdateAck`) 하나다. 라우터에 달면 연결이 닫힐 때 그 관찰자를 스스로 지운다(`onConnectionClosed`).
+     * @brief 서버 쪽 복제기입니다. 관찰자는 연결과 그 연결이 조종하는 엔티티이며, 그 엔티티의 위치가 관심의 중심입니다.
+     * @details 받는 메시지는 갱신 확인(`kUpdateAck`) 하나뿐이다. 라우터에 등록하면 연결이 닫힐 때 그 관찰자를 스스로 지운다(`onConnectionClosed`).
      */
     class SW_GF_API MMOReplicator : public INetMessageHandler
     {
@@ -131,31 +138,32 @@ namespace sw
         void            onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
 
         void initialize( NetHost* pHost, const MMOReplicatorSettings& settings, const IInterestPolicy* pPolicy = nullptr );
-        /** @brief 엔티티를 넣거나 바꿉니다. 상태가 `NetMMOMessage::kMaxStateBytes` 를 넘으면 받지 않는다(그 엔티티는 지난 값 그대로 — 처음 한 번 경고, 그 뒤로는 센다). */
+        /** @brief 엔티티를 추가하거나 갱신합니다. 상태가 `NetMMOMessage::kMaxStateBytes` 를 넘으면 받지 않고 그 엔티티는 지난 값을 유지합니다. 처음 한 번만 경고하고 그 뒤로는 횟수만 셉니다. */
         void setEntity( const MMOEntity& entity );
         void removeEntity( uint32 entityID );
         void setObserver( int32 connectionID, uint32 entityID );
-        /** @brief 관찰자를 지웁니다(연결이 닫히면 라우터를 통해 저절로 — 연결은 두고 관심만 끊을 때 직접 부른다). */
+        /** @brief 관찰자를 지웁니다. 연결이 닫히면 라우터를 통해 자동으로 지워지므로, 연결은 두고 관심만 끊을 때 직접 호출합니다. */
         void removeObserver( int32 connectionID );
         /**
-         * @brief 관찰자마다 들어옴 · 나감 · 갱신을 보냅니다. `setTaskManager` 를 줬으면 관찰자들을 작업 스레드에 나눠 계산한다(관찰자마다 독립 —
-         *        결과는 한 스레드로 돌 때와 같다). 도는 동안 엔티티 · 관찰자를 바꾸지 않는다(같은 스레드에서 차례로 부르면 그렇다).
+         * @brief 관찰자마다 새로 보임, 보이지 않게 됨, 갱신을 보냅니다.
+         * @details `setTaskManager` 를 지정했으면 관찰자를 작업 스레드에 나눠 계산한다. 관찰자마다 독립적이므로 결과는 한 스레드로 돌릴 때와 같다.
+         *          실행하는 동안 엔티티와 관찰자를 바꾸면 안 된다. 같은 스레드에서 차례로 호출하면 이 조건이 지켜진다.
          */
         void update( float32 deltaTime );
-        /** @brief 관심 영역 계산을 나눌 작업 스레드 풀입니다(게임은 `&engine::getTaskManager()`). nullptr 이면 지금 스레드가 돈다. */
+        /** @brief 관심 영역 계산을 나눠 처리할 작업 스레드 풀을 지정합니다. 게임은 `&engine::getTaskManager()` 를 넘깁니다. nullptr 이면 호출한 스레드에서 처리합니다. */
         void setTaskManager( TaskManager* pTaskManager, uint32 serialThreshold = NetParallelFor::kDefaultSerialThreshold );
 
-        /** @brief 그 관찰자에게 지금 보이는 엔티티 수입니다. */
+        /** @brief 그 관찰자에게 지금 보이는 엔티티 수를 반환합니다. */
         int32  getVisibleCount( int32 connectionID ) const;
         uint64 getSentUpdateCount() const { return _sentUpdateCount; }
-        /** @brief 상한을 넘어 받지 않은 `setEntity` 수입니다. */
+        /** @brief 상한을 넘어서 받지 않은 `setEntity` 호출 수를 반환합니다. */
         uint64 getOversizedEntityCount() const { return _oversizedEntityCount; }
 
     private:
         struct VisibleEntry
         {
-            vector<uint8> _listSentState{};     ///< 클라이언트가 가진 것으로 확인된 상태(들어옴 · 확인된 갱신)
-            vector<uint8> _listInFlightState{}; ///< 보냈지만 확인 안 된 갱신의 상태
+            vector<uint8> _listSentState{};     ///< 클라이언트가 가진 것으로 확인된 상태. 새로 보임과 확인된 갱신이 해당한다
+            vector<uint8> _listInFlightState{}; ///< 보냈지만 아직 확인되지 않은 갱신의 상태
             uint32        _inFlightTick{ 0 };
             uint8         _bInFlight{ SW_FALSE };
         };
@@ -164,37 +172,37 @@ namespace sw
         {
             unordered_map<uint32, VisibleEntry> _mapVisible{};
             NetPrioritizer                      _prioritizer{}; ///< 보이는 엔티티마다 쌓인 우선도
-            TickRingBuffer<uint8>               _ackedUpdate{}; ///< 클라이언트가 받았다고 확인한 갱신 틱(값은 쓰지 않는다 — 있으면 받음)
+            TickRingBuffer<uint8>               _ackedUpdate{}; ///< 클라이언트가 받았다고 확인한 갱신 틱. 값은 쓰지 않고 항목이 있으면 받은 것이다
             uint32                              _entityID{ 0 };
             uint32                              _newestAckTick{ 0 };
             uint8                               _bHasAck{ SW_FALSE };
             uint8                               _bActive{ SW_FALSE };
         };
 
-        /** @brief 작업 스레드 하나가 관찰자를 계산하는 데 쓰는 자리입니다(틱마다 다시 쓴다). */
+        /** @brief 작업 스레드 하나가 관찰자를 계산하는 데 쓰는 스크래치 버퍼입니다. 틱마다 다시 사용합니다. */
         struct ObserverScratch
         {
             vector<uint32>                     _listLeave{};
-            vector<SlotHandle>                 _listNear{};  ///< 들어오는 반경 안 + 늘 보이기 — 격자 키(엔티티 id 를 담은 SlotHandle)
+            vector<SlotHandle>                 _listNear{};  ///< 들어오는 반경 안의 엔티티와 항상 보이는 엔티티. 격자 키이며 엔티티 id 를 담은 SlotHandle 이다
             vector<std::pair<float32, uint32>> _listRank{};  ///< (거리, id)
             vector<uint32>                     _listOrder{}; ///< 쌓인 우선도 순서
             vector<uint32>                     _listSent{};
-            vector<uint32>                     _listEnter{}; ///< 이번 틱 들어옴 메시지에 실은 엔티티 — 보내기가 받아들여야 보이는 목록에 넣는다
+            vector<uint32>                     _listEnter{}; ///< 이번 틱의 새로 보임 메시지에 실은 엔티티. 전송이 받아들여져야 보이는 목록에 넣는다
             NetMessageWriter                   _messageWriter{};
-            uint64                             _sentUpdateCount{ 0 }; ///< 이번 update 에서 이 자리가 보낸 갱신 — 끝나고 합친다
+            uint64                             _sentUpdateCount{ 0 }; ///< 이번 update 에서 이 스크래치를 쓴 스레드가 보낸 갱신 수. update 가 끝나면 합산한다
         };
 
         void updateObserverRange( uint32 start, uint32 end );
         void updateObserver( int32 connectionID, Observer& observer, float32 deltaTime, ObserverScratch& scratch );
-        /** @brief 나감을 조각나지 않는 크기(`NetConnection::kMaxSingleMessageSize`)로 쪼개 보내고, 보낸 것만 보이는 목록에서 뺍니다. 못 보낸 것의 시작 자리(`_listLeave`)입니다. */
+        /** @brief 보이지 않게 된 엔티티를 조각나지 않는 크기(`NetConnection::kMaxSingleMessageSize`)로 쪼개 보내고, 보낸 것만 보이는 목록에서 뺍니다. 못 보낸 엔티티가 시작하는 `_listLeave` 의 인덱스를 반환합니다. */
         size_t sendLeaves( int32 connectionID, Observer& observer, ObserverScratch& scratch );
-        /** @brief 확인 기다리는 갱신을 판정합니다 — 받았으면 확인된 상태로 옮기고, 잃었으면 우선도를 되돌린다(`NetPrioritizer::resolveSend`). */
+        /** @brief 확인을 기다리는 갱신을 판정합니다. 받았으면 확인된 상태로 옮기고, 잃었으면 우선도를 되돌립니다(`NetPrioritizer::resolveSend`). */
         void             resolveInFlightUpdates( Observer& observer ) const;
         const MMOEntity& getEntity( uint32 entityID ) const;
 
         unordered_map<uint32, MMOEntity>    _mapEntity;
         vector<Observer>                    _listObserver;
-        SpatialHashGrid2D                   _grid; ///< 엔티티 자리(XZ 점) — 키는 `MMOReplicatorInternal::makeGridKey`
+        SpatialHashGrid2D                   _grid; ///< 엔티티 위치(XZ 평면의 점). 키는 `MMOReplicatorInternal::makeGridKey` 로 만든다
         MMOReplicatorSettings               _settings;
         IInterestPolicy                     _defaultPolicy;
         NetHost*                            _pHost;
@@ -202,17 +210,17 @@ namespace sw
         uint64                              _sentUpdateCount;
         uint64                              _oversizedEntityCount;
         NetParallelFor                      _parallel;
-        NetParallelScratch<ObserverScratch> _observerScratch;       ///< 스레드마다 하나
-        float32                             _tickDeltaTime;         ///< 이번 update 의 시간 — 나눈 본문이 읽는다
-        int32                               _tickUpdateBudgetBytes; ///< 이번 update 의 갱신 예산 — 설정과 연결 상한의 몫 중 작은 것(나눈 본문이 읽는다)
-        uint32                              _tick;                  ///< `update` 마다 하나씩 — 들어옴 · 갱신에 실어 받는 쪽이 옛것을 버린다
-        Observer*                           _pRangeObserver;        ///< 나눈 본문이 쓰는 `_listObserver.data()` — 워커는 컨테이너를 만지지 않는다
+        NetParallelScratch<ObserverScratch> _observerScratch;       ///< 스레드마다 하나씩 둔다
+        float32                             _tickDeltaTime;         ///< 이번 update 의 시간. 나눠 실행하는 본문이 읽는다
+        int32                               _tickUpdateBudgetBytes; ///< 이번 update 의 갱신 예산. 설정값과 연결 상한 중 작은 값이며 나눠 실행하는 본문이 읽는다
+        uint32                              _tick;                  ///< `update` 마다 하나씩 올린다. 새로 보임과 갱신 메시지에 실어서 받는 쪽이 오래된 메시지를 버리게 한다
+        Observer*                           _pRangeObserver;        ///< 나눠 실행하는 본문이 쓰는 `_listObserver.data()`. 워커는 컨테이너를 직접 만지지 않는다
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 클라이언트에서 생긴 일입니다. */
+    /** @brief 클라이언트에서 일어난 일을 알리는 이벤트입니다. */
     struct MMOClientEvent
     {
         enum class Kind : uint8
@@ -228,7 +236,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 클라이언트 쪽 — 보이는 엔티티의 마지막 상태입니다. */
+    /** @brief 클라이언트 쪽에서 보이는 엔티티의 마지막 상태입니다. */
     class SW_GF_API MMOClientView : public INetMessageHandler
     {
     public:
@@ -239,15 +247,15 @@ namespace sw
                                         ( 1u << ( NetMMOMessage::kUpdate - NetKitMessageRange::kMMO ) ) );
         }
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
-        /** @brief 서버에 (다시) 연결됐다 — 보이던 엔티티를 비운다(새 연결은 들어옴부터 다시 받는다). */
+        /** @brief 서버에 (다시) 연결되면 호출합니다. 보이던 엔티티를 비우며, 새 연결은 새로 보임부터 다시 받습니다. */
         void onConnectionOpened( int32 connectionID ) override;
         void drainEvents( vector<MMOClientEvent>& outListEvent );
-        /** @brief 받은 갱신 틱을 서버에 확인합니다(틱마다 한 번 — 받은 것이 없으면 보내지 않는다). @p connectionID 는 서버 연결입니다. */
+        /** @brief 받은 갱신 틱을 서버에 확인합니다. 틱마다 한 번 부르며, 받은 것이 없으면 보내지 않습니다. @p connectionID 는 서버 연결입니다. */
         void sendAck( NetHost& host, int32 connectionID );
 
         const MMOEntity* findEntity( uint32 entityID ) const;
         int32            getEntityCount() const { return static_cast<int32>( _mapEntity.size() ); }
-        /** @brief 순서가 뒤바뀌어 마지막으로 적용한 것보다 옛 틱이라 버린 갱신 수입니다. */
+        /** @brief 순서가 뒤바뀌어 마지막으로 적용한 틱보다 오래돼서 버린 갱신 수입니다. */
         uint64 getStaleUpdateCount() const { return _staleUpdateCount; }
 
     private:
@@ -257,7 +265,7 @@ namespace sw
             uint32    _tick{ 0 }; ///< 마지막으로 적용한 서버 틱
         };
 
-        /** @brief 받은 갱신 틱을 확인 창에 적습니다. */
+        /** @brief 받은 갱신 틱을 확인 창에 기록합니다. */
         void markUpdateReceived( uint32 tick );
 
         unordered_map<uint32, ClientEntity> _mapEntity{};
@@ -265,7 +273,7 @@ namespace sw
         NetMessageWriter                    _ackWriter{};
         uint64                              _staleUpdateCount{ 0 };
         uint32                              _newestUpdateTick{ 0 }; ///< 받은 가장 새 갱신 틱
-        uint32                              _receivedBits{ 0 };     ///< bit i = `_newestUpdateTick - 1 - i` 틱의 갱신을 받았다
+        uint32                              _receivedBits{ 0 };     ///< 비트 i 는 `_newestUpdateTick - 1 - i` 틱의 갱신을 받았다는 뜻이다
         uint8                               _bHasUpdate{ SW_FALSE };
     };
 } // namespace sw

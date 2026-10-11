@@ -76,14 +76,14 @@ namespace sw
     void ReplicationServer::beginTick( uint32 tick )
     {
         _world._tick      = tick;
-        _worldEntityCount = 0; // 자리는 지우지 않는다 — `setEntity` 가 덮어쓰고 `endTick` 이 남는 것을 자른다(버퍼 용량을 다시 쓴다)
+        _worldEntityCount = 0; // 항목은 지우지 않는다. `setEntity` 가 덮어쓰고 `endTick` 이 남는 항목을 자르므로 버퍼 용량을 재사용한다
     }
 
     void ReplicationServer::setEntity( uint32 entityID, uint32 typeID, const vector<uint8>& buffer )
     {
         if ( static_cast<int32>( buffer.size() ) > NetSnapshot::kMaxEntityBytes )
         {
-            // 월드에는 넣는다(빼면 클라이언트에서 사라진다) — 델타가 싣지 않아 클라이언트는 마지막으로 받은 상태에 머문다.
+            // 월드에는 넣는다. 빼면 클라이언트에서 엔티티가 사라지기 때문이다. 델타가 싣지 않으므로 클라이언트는 마지막으로 받은 상태를 유지한다.
             if ( _oversizedEntityCount == 0 )
                 SW_LOG_WARNING( "ReplicationServer: entity %# has %# state bytes, more than the snapshot limit %# - it is not replicated (further ones are only counted)",
                                 entityID, static_cast<int32>( buffer.size() ), NetSnapshot::kMaxEntityBytes );
@@ -94,7 +94,7 @@ namespace sw
         NetEntityState& entity = _world._listEntity[_worldEntityCount++];
         entity._entityID       = entityID;
         entity._typeID         = typeID;
-        entity._buffer         = buffer; // 복사 대입 — 자리의 용량을 다시 쓴다
+        entity._buffer         = buffer; // 복사 대입으로 항목의 용량을 재사용한다
     }
 
     void ReplicationServer::endTick()
@@ -109,9 +109,9 @@ namespace sw
     {
         if ( _pHost == nullptr )
             return;
-        // 이번 틱의 예산 — 설정과 연결 상한의 몫 중 작은 것(호스트 잠금은 여기서 한 번, 워커는 이 값만 읽는다).
+        // 이번 틱의 예산은 설정값과 연결 상한에서 나온 할당량 중 작은 값이다. 호스트 락은 여기서 한 번만 잡고, 워커는 이 값만 읽는다.
         _snapshotBudgetBytes = NetSendBudget::computeTickBudget( _settings._snapshotBudgetBytes, _pHost->getMaxBytesPerSecond(), static_cast<float64>( _settings._tickInterval ) );
-        // 클라이언트 상태는 나누기 전에 모두 잡는다 — `acquireClient` 는 목록을 키울 수 있다(나누는 중에는 아무도 목록을 건드리지 않는다).
+        // 클라이언트 상태는 나눠 실행하기 전에 모두 확보한다. `acquireClient` 는 목록을 키울 수 있기 때문이다. 나눠 실행하는 동안에는 아무도 목록을 건드리지 않는다.
         _pHost->collectConnected( _listConnectionScratch );
         _listClientScratch.resize( _listConnectionScratch.size() );
         for ( size_t index = 0; index < _listConnectionScratch.size(); ++index )
@@ -140,11 +140,11 @@ namespace sw
 
     void ReplicationServer::sendSnapshot( int32 connectionID, ClientState& client, SnapshotScratch& scratch )
     {
-        // 이 클라이언트에게 관련 있는 것만 — 엔티티 버퍼는 자리에 덮어써 용량을 남긴다.
+        // 이 클라이언트에 관련 있는 엔티티만 넣는다. 엔티티 버퍼는 제자리에 덮어써서 용량을 남긴다.
         NetSnapshot& filtered            = scratch._filtered;
         filtered._tick                   = _world._tick;
         filtered._lastProcessedInputTick = client._lastProcessedInputTick;
-        filtered._firstMissingInputTick  = client._input.getFirstMissingTick(); // 여러 워커가 읽기만 한다 — 입력은 보내기 전 게임 스레드가 넣었다
+        filtered._firstMissingInputTick  = client._input.getFirstMissingTick(); // 여러 워커가 읽기만 한다. 입력은 전송 전에 게임 스레드가 넣었다
         NetPrioritizer& prioritizer      = client._prioritizer;
         prioritizer.beginAccumulate();
         size_t relevantCount = 0;
@@ -157,12 +157,12 @@ namespace sw
             else
                 filtered._listEntity.push_back( entity );
             ++relevantCount;
-            prioritizer.accumulate( entity._entityID, _pPolicy->computePriority( connectionID, entity ), 1.0f ); // 스냅샷 하나 = 한 번
+            prioritizer.accumulate( entity._entityID, _pPolicy->computePriority( connectionID, entity ), 1.0f ); // 스냅샷 하나에 한 번 누적한다
         }
         filtered._listEntity.resize( relevantCount );
-        prioritizer.removeUntouched(); // 더는 관련 없는 엔티티는 잊는다(다시 관련되면 0 에서)
+        prioritizer.removeUntouched(); // 더는 관련 없는 엔티티는 잊는다. 다시 관련되면 0부터 쌓는다
         resolveUnconfirmedSends( client, filtered );
-        // 쌓인 것이 큰 것부터 — 관련 엔티티는 id 순이라 자리를 이분 탐색으로 찾는다.
+        // 쌓인 우선도가 큰 것부터 처리한다. 관련 엔티티는 id 순으로 정렬돼 있으므로 이분 탐색으로 찾는다.
         vector<uint32>& listOrderEntity = scratch._listOrderEntity;
         prioritizer.collectOrder( listOrderEntity );
         vector<int32>& listOrder = scratch._listOrder;
@@ -172,7 +172,7 @@ namespace sw
             listOrder[index] = static_cast<int32>( filtered.findEntity( listOrderEntity[index] ) - filtered._listEntity.data() );
         }
 
-        // 기준 — 클라이언트가 확인한 틱의 우리가 보낸 재구성. 너무 오래돼 덮였으면 기준 없이.
+        // 기준은 클라이언트가 확인한 틱에 우리가 보낸 복원 스냅샷이다. 너무 오래돼 덮어써졌으면 기준 없이 보낸다.
         const NetSnapshot* pBaseline = nullptr;
         if ( client._bHasAck )
         {
@@ -182,7 +182,7 @@ namespace sw
                 pBaseline = pCandidate;
         }
         BitWriter& writer = scratch._messageWriter.begin( NetClientServerMessage::kSnapshot );
-        // 보낸 재구성은 그 틱의 자리에 바로 쓴다(기준 자리와 겹치면 — 같은 틱을 두 번 보낸다 — 사본을 거친다). 자리의 옛 버퍼는 남는다.
+        // 보낸 복원 스냅샷은 그 틱의 슬롯에 바로 쓴다. 같은 틱을 두 번 보내서 기준 슬롯과 겹치면 사본을 거친다. 슬롯의 이전 버퍼는 남는다.
         NetSnapshot& slot = client._listSent.acquire( _world._tick );
         if ( &slot == pBaseline )
         {
@@ -194,7 +194,8 @@ namespace sw
         {
             filtered.writeDelta( writer, pBaseline, _snapshotBudgetBytes, slot, &listOrder, &scratch._listCurrent );
         }
-        // 받는 쪽이 이미 지금 상태인 것은 확정으로 0, 이번에 실은 것은 확인 기다리는 보냄으로 0 — 못 실은 것은 쌓인 채로 다음 스냅샷에서 앞선다.
+        // 받는 쪽이 이미 지금 상태인 엔티티는 확정으로 보고 우선도를 0으로 되돌린다. 이번에 실은 엔티티도 확인을 기다리는 전송으로 두고 0으로 되돌린다.
+        // 못 실은 엔티티는 우선도가 쌓인 채로 남아 다음 스냅샷에서 앞선다.
         for ( size_t index = 0; index < filtered._listEntity.size(); ++index )
         {
             const uint32 entityID = filtered._listEntity[index]._entityID;
@@ -203,12 +204,12 @@ namespace sw
             else if ( scratch._listCurrent[index] == NetSnapshot::kEntityWritten )
                 prioritizer.markSentUnconfirmed( entityID, _world._tick );
         }
-        (void)scratch._messageWriter.send( *_pHost, connectionID, NetChannelType::UnreliableSequenced ); // 여러 스레드가 동시에 — NetHost 가 지킨다
+        (void)scratch._messageWriter.send( *_pHost, connectionID, NetChannelType::UnreliableSequenced ); // 여러 스레드가 동시에 호출해도 NetHost 가 보호한다
     }
 
     void ReplicationServer::resolveUnconfirmedSends( ClientState& client, const NetSnapshot& filtered ) const
     {
-        // 여러 워커가 클라이언트마다 따로 부른다 — 이 클라이언트의 상태만 쓰고 월드는 읽기만 한다.
+        // 여러 워커가 클라이언트마다 따로 부른다. 이 클라이언트의 상태만 쓰고 월드는 읽기만 한다.
         NetPrioritizer&    prioritizer = client._prioritizer;
         const NetSnapshot* pAcked      = client._bHasAck == SW_TRUE ? client._listSent.find( client._ackedTick ) : nullptr;
         const uint32       capacity    = static_cast<uint32>( client._listSent.getCapacity() );
@@ -218,9 +219,9 @@ namespace sw
             if ( prioritizer.findUnconfirmedSendTick( entity._entityID, sentTick ) == false )
                 continue;
             const bool bAckedPast = client._bHasAck == SW_TRUE && client._ackedTick >= sentTick;
-            const bool bExpired   = _world._tick - sentTick >= capacity; // 보낸 재구성이 고리에서 밀렸다 — 더 기다리지 않는다
+            const bool bExpired   = _world._tick - sentTick >= capacity; // 보낸 복원 스냅샷이 링 버퍼에서 밀려났으므로 더 기다리지 않는다
             if ( bAckedPast == false && bExpired == false )
-                continue; // 아직 오가는 중
+                continue; // 아직 전송 중이다
             const NetSnapshot*    pSent      = bExpired ? nullptr : client._listSent.find( sentTick );
             const NetEntityState* pSentState = pSent != nullptr ? pSent->findEntity( entity._entityID ) : nullptr;
             const NetEntityState* pHave      = pAcked != nullptr ? pAcked->findEntity( entity._entityID ) : nullptr;
@@ -254,7 +255,7 @@ namespace sw
         const uint32 viewTick = static_cast<uint32>( reader.readVarUint() );
         if ( reader.hasOverflowed() )
             return false;
-        // 이미 꺼낸 틱 · 이미 가진 틱은 버퍼 없이 넘기고, 길이 · 개수 상한을 넘거나 모자라면 하나도 넣지 않고 깨짐으로 본다.
+        // 이미 꺼낸 틱과 이미 가진 틱은 버퍼에 넣지 않고 넘긴다. 길이나 개수가 상한을 넘거나 모자라면 하나도 넣지 않고 손상된 메시지로 본다.
         if ( client._input.read( reader ) == false )
             return false;
         client._viewTick = static_cast<float32>( viewTick ) / 256.0f;
@@ -267,7 +268,7 @@ namespace sw
         if ( connectionID < 0 || connectionID >= static_cast<int32>( _listClient.size() ) )
             return false;
         ClientState& client = _listClient[static_cast<size_t>( connectionID )];
-        // 그 틱 것이 있으면 그것, 없으면 지난번에 꺼낸 틱 뒤로 늦게 온 것 중 가장 새것(되풀이할 값을 새것으로 바꾼다).
+        // 그 틱의 입력이 있으면 그것을 쓴다. 없으면 지난번에 꺼낸 틱 뒤로 늦게 도착한 입력 중 가장 새로운 것을 쓴다. 반복할 값을 새 값으로 바꾸는 것이다.
         const NetInputEntry* pEntry = client._input.findLatestAtOrBefore( tick, client._input.getWindowFirst() );
         if ( pEntry != nullptr )
         {
@@ -275,7 +276,7 @@ namespace sw
             client._bHasInput = SW_TRUE;
             outbExact         = pEntry->_tick == tick;
         }
-        // 이 틱까지는 다 썼다 — 더 받지 않고, 확인이 넘어가 클라이언트가 다시 싣지 않는다.
+        // 이 틱까지는 다 썼다. 더 받지 않고, 확인 틱이 넘어가므로 클라이언트도 다시 싣지 않는다.
         client._input.setWindow( tick + 1u, NetInputReceiveBuffer::kNoWindowEnd );
         if ( client._bHasInput == SW_FALSE )
             return false;

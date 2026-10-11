@@ -18,9 +18,9 @@ namespace sw
         struct DestructionReplicationInternal
         {
             static constexpr float32 kQuaternionResolution = 1.0f / 32767.0f;
-            static constexpr int32   kPoseMessageBudget    = 900; ///< 자세 메시지 하나를 이만큼에서 끊는다(한도 1024)
-            static constexpr uint8   kRestRepeatCount      = 5;   ///< 멈춘 자세를 비신뢰로 되풀이하는 횟수(자세 주기마다)
-            static constexpr int32   kMaxPoseSample        = 32;  ///< 덩어리마다 드는 자세 표본 수
+            static constexpr int32   kPoseMessageBudget    = 900; ///< 자세 메시지 하나를 이 크기에서 끊는다(한도 1024)
+            static constexpr uint8   kRestRepeatCount      = 5;   ///< 멈춘 자세를 비신뢰로 되풀이해 보내는 횟수(자세 주기마다 한 번)
+            static constexpr int32   kMaxPoseSample        = 32;  ///< 덩어리마다 보관하는 자세 표본 수
 
             /** @brief 프로필의 자세 간격(초)입니다. */
             static float32 computePosePeriod( const FractureComponentBase& component ) { return 1.0f / MathUtil::max( 0.1f, component.getProfile()._networkPoseRate ); }
@@ -30,7 +30,7 @@ namespace sw
                 writer.writeBits( static_cast<uint32>( event._kind ), 2 );
                 writer.writeVarInt( event._leafHint );
                 writer.writeVarUint( event._groupID );
-                // 실수는 비트 그대로 — 받는 쪽 상태가 같아야 한다(양자화하면 다른 잎이 깨질 수 있다).
+                // 실수는 비트 그대로 보낸다. 받는 쪽 상태가 같아야 하고, 양자화하면 다른 리프가 깨질 수 있다.
                 writer.writeFloat( event._position._x );
                 writer.writeFloat( event._position._y );
                 writer.writeFloat( event._position._z );
@@ -208,7 +208,7 @@ namespace sw
         const int32 connectedCount = _pHost->getConnectedCount();
         const int32 sentCount      = _writer.broadcast( *_pHost, channel );
         _stats._sentBytes += static_cast<uint64>( _writer.getByteCount() ) * static_cast<uint64>( MathUtil::max( 0, sentCount ) );
-        // 신뢰 창이 찬 연결은 거절한다(`NetConnection::kReliableWindow`) — 그 클라이언트는 사건이 빠져 다음 해시 비교에서 스냅숏으로 바로잡힌다.
+        // 신뢰 창이 찬 연결은 거절한다(`NetConnection::kReliableWindow`). 그 클라이언트는 이벤트가 빠지지만 다음 해시 비교에서 스냅숏으로 바로잡힌다.
         if ( sentCount < connectedCount )
             _stats._sendRejectedCount += static_cast<uint32>( connectedCount - sentCount );
         return sentCount;
@@ -224,7 +224,8 @@ namespace sw
             if ( pComponent != nullptr )
                 sendEvents( entry, *pComponent, serverTick );
         }
-        // 스냅숏은 사건 뒤에 — 이번 틱 사건까지 사건 수에 든다. 사건(순서 없음)과 스냅숏(순서)은 받는 쪽에서 앞뒤가 바뀔 수 있다 — 클라이언트가 번호로 맞춘다.
+        // 스냅숏은 이벤트 뒤에 보낸다. 그래야 이번 틱 이벤트까지 이벤트 수에 포함된다.
+        // 이벤트(순서 없음)와 스냅숏(순서 있음)은 받는 쪽에서 도착 순서가 바뀔 수 있으므로 클라이언트가 번호로 맞춘다.
         vector<Request> listRequest;
         listRequest.swap( _listRequest );
         for ( const Request& request : listRequest )
@@ -232,7 +233,7 @@ namespace sw
             Entry*                 pEntry     = findEntry( request._netID );
             FractureComponentBase* pComponent = pEntry != nullptr ? resolve( *pEntry ) : nullptr;
             if ( pComponent != nullptr && sendSnapshot( *pEntry, *pComponent, request._connectionID ) == false )
-                _listRequest.push_back( request ); // 신뢰 창이 찼다 — 다음 틱에 다시(연결이 닫히면 onConnectionClosed 가 지운다)
+                _listRequest.push_back( request ); // 신뢰 창이 찼으므로 다음 틱에 다시 보낸다. 연결이 닫히면 onConnectionClosed 가 지운다
         }
         for ( Entry& entry : _listEntry )
         {
@@ -255,7 +256,7 @@ namespace sw
 
     void DestructionReplicationServer::sendEvents( Entry& entry, FractureComponentBase& component, uint32 serverTick )
     {
-        // 서버는 스냅숏을 받지 않으므로 기록의 자리가 곧 상태의 사건 번호다.
+        // 서버는 스냅숏을 받지 않으므로 기록의 인덱스가 곧 상태의 이벤트 번호이다.
         const vector<DestructionDamageEvent>& listEvent     = component.getEventLog()._listEvent;
         const vector<FractureGroupPose>&      listGroupPose = component.getEventGroupPoses();
         for ( uint32 index = entry._sentEventCount; index < static_cast<uint32>( listEvent.size() ); ++index )
@@ -265,12 +266,12 @@ namespace sw
             writer.writeVarUint( serverTick );
             writer.writeVarUint( index );
             DestructionReplicationInternal::writeEvent( writer, listEvent[index] );
-            // 떨어진 덩어리를 맞힌 사건이면 맞기 직전 그 덩어리 자세(비트 그대로) — 받는 쪽이 그 자리에서 가른다(신뢰 채널이 밀려 자세가 늦어도).
+            // 떨어진 덩어리를 맞힌 이벤트이면 맞기 직전의 그 덩어리 자세를 비트 그대로 싣는다. 신뢰 채널이 밀려 자세가 늦어도 받는 쪽이 그 위치에서 덩어리를 가를 수 있다.
             const bool bHasPose = index < listGroupPose.size() && listGroupPose[index]._groupID != 0;
             writer.writeBool( bHasPose );
             if ( bHasPose )
                 DestructionReplicationInternal::writeExactPose( writer, listGroupPose[index]._position, listGroupPose[index]._rotation );
-            (void)broadcast( NetChannelType::ReliableUnordered ); // 받는 쪽이 번호로 줄 세운다 — 앞 사건을 잃어도 뒤 사건이 기다리지 않는다
+            (void)broadcast( NetChannelType::ReliableUnordered ); // 받는 쪽이 번호로 순서를 맞춘다. 앞 이벤트를 잃어도 뒤 이벤트가 기다리지 않는다
             ++_stats._eventMessageCount;
         }
         entry._sentEventCount = static_cast<uint32>( listEvent.size() );
@@ -280,7 +281,7 @@ namespace sw
     {
         const uint32 eventCount = component.getState().getEventCount();
         if ( component.isStateReady() == false || eventCount == 0 )
-            return true; // 처음 상태 그대로 — 사건이 0 번부터 간다
+            return true; // 처음 상태 그대로이므로 이벤트는 0번부터 보낸다
         vector<uint8> bytes;
         component.makeNetworkSnapshot( bytes );
         BitWriter& writer = _writer.begin( NetDestructionMessage::kSnapshot );
@@ -289,7 +290,7 @@ namespace sw
         writer.writeBlob( bytes.data(), static_cast<int32>( bytes.size() ) );
         if ( _writer.getByteCount() > NetConnection::kMaxReliableMessageSize )
         {
-            // 다시 해도 같다 — 줄에 돌려놓지 않는다. 이 오브젝트는 늦은 참가 · 복구를 받지 못한다(해시 비교가 계속 어긋남을 알린다).
+            // 다시 만들어도 같은 결과이므로 큐에 되돌려 놓지 않는다. 이 오브젝트는 늦은 참가와 복구를 받지 못하며, 해시 비교가 계속 어긋남을 알린다.
             SW_LOG_ERROR( "DestructionReplication: the snapshot of object %# is %# bytes, over the reliable message limit %# - it cannot be sent",
                           entry._netID, _writer.getByteCount(), NetConnection::kMaxReliableMessageSize );
             ++_stats._sendRejectedCount;
@@ -341,7 +342,7 @@ namespace sw
                     state._restRepeatLeft = Internal::kRestRepeatCount;
                 }
                 state._bRestSent = SW_TRUE;
-                // 신뢰 채널은 손실이 크면 앞 메시지를 기다리느라 몇 초 밀린다 — 멈춘 자리를 비신뢰로도 몇 번 보내 그 사이 공중에 멈춰 있지 않게.
+                // 손실이 크면 신뢰 채널은 앞 메시지를 기다리느라 몇 초 밀린다. 멈춘 위치를 비신뢰로도 몇 번 보내서 그동안 덩어리가 공중에 멈춰 있지 않게 한다.
                 if ( bDue && state._restRepeatLeft > 0 )
                 {
                     listRestRepeat.push_back( &pose );
@@ -358,9 +359,9 @@ namespace sw
         }
         entry._listChunk.swap( listKeep );
 
-        // 셋 — 움직이는 덩어리(비신뢰, 양자화), 멈춤 확정(신뢰, 비트 그대로), 멈춤 되풀이(비신뢰, 비트 그대로). 메시지 하나가 예산을 넘으면 나눈다.
-        // 비신뢰를 쓰는 까닭: 받는 쪽이 틱으로 줄 세우므로 늦게 온 것도 보간에 쓰고, 순서만 채널은 같은 종류를 한 간격에 하나만 보내 오브젝트 · 조각
-        // 메시지가 서로 지운다.
+        // 자세는 세 종류로 보낸다. 움직이는 덩어리(비신뢰, 양자화), 멈춤 확정(신뢰, 비트 그대로), 멈춤 반복(비신뢰, 비트 그대로)이다. 메시지 하나가 예산을 넘으면 나눠 보낸다.
+        // 비신뢰를 쓰는 이유: 받는 쪽이 틱으로 순서를 맞추므로 늦게 온 자세도 보간에 쓸 수 있다.
+        // 반면 순서 전용 채널은 같은 종류의 메시지를 한 간격에 하나만 보내므로 오브젝트와 조각 메시지가 서로 지워 버린다.
         for ( uint32 pass = 0; pass < 3; ++pass )
         {
             const bool                              bRest     = pass != 0;
@@ -373,7 +374,7 @@ namespace sw
                 writer.writeBool( bRest );
                 writer.writeVarUint( entry._netID );
                 writer.writeVarUint( serverTick );
-                // 개수는 끝에서 알 수 있으므로 몇 개를 실을지 먼저 정한다(예산 안 · 최대 남은 것).
+                // 개수는 끝에서야 알 수 있으므로 몇 개를 실을지 먼저 정한다. 예산 안에서 남은 최대 개수로 정한다.
                 const int32  perPoseBytes = bRest ? 30 : 15;
                 const size_t room         = static_cast<size_t>( MathUtil::max( 1, ( Internal::kPoseMessageBudget - 16 ) / perPoseBytes ) );
                 const size_t count        = MathUtil::min( room, list.size() - start );
@@ -382,7 +383,7 @@ namespace sw
                 {
                     const FractureGroupPose& pose = *list[index];
                     writer.writeVarUint( pose._groupID );
-                    // 질량 중심 + 회전 — 원점은 덩어리에서 멀 수 있어 돌면 크게 움직인다(보간이 그것을 직선으로 잇게 된다).
+                    // 질량 중심과 회전을 보낸다. 원점은 덩어리에서 멀 수 있어 회전하면 크게 움직이고, 보간이 그 움직임을 직선으로 연결하게 되기 때문이다.
                     if ( bRest )
                         Internal::writeExactPose( writer, pose._center, pose._rotation );
                     else
@@ -399,7 +400,7 @@ namespace sw
     void DestructionReplicationServer::sendHash( const Entry& entry, const FractureComponentBase& component )
     {
         const uint32 eventCount = component.getState().getEventCount();
-        // 쌓였지만 아직 적용하지 않은 피해가 있어도 된다 — (사건 수, 해시)는 그 순간의 상태 그대로고, 쌓인 것은 뒤 번호로 간다.
+        // 쌓였지만 아직 적용하지 않은 피해가 있어도 된다. (이벤트 수, 해시)는 그 순간의 상태 그대로이고, 쌓인 피해는 뒤 번호로 보낸다.
         if ( component.isStateReady() == false || eventCount == 0 )
             return;
         BitWriter& writer = _writer.begin( NetDestructionMessage::kHash );
@@ -436,7 +437,7 @@ namespace sw
         NetClockSettings clockSettings;
         clockSettings._tickInterval       = settings._tickInterval;
         clockSettings._interpolationDelay = settings._interpolationDelay;
-        clockSettings._sampleInterval     = 0.0f; // 등록하는 오브젝트의 자세 간격으로 올린다(registerObject)
+        clockSettings._sampleInterval     = 0.0f; // 등록하는 오브젝트의 자세 간격으로 키운다(registerObject)
         _clock.initialize( clockSettings );
     }
 
@@ -492,7 +493,7 @@ namespace sw
             return NetHandleResult::Malformed;
         Entry* pEntry = findEntry( netID );
         if ( pEntry == nullptr )
-            return NetHandleResult::Handled; // 모르는 오브젝트(이 클라이언트에 없다) — 먹고 버린다
+            return NetHandleResult::Handled; // 이 클라이언트에 없는 오브젝트이므로 메시지를 소비하고 버린다
         if ( kind == NetDestructionMessage::kEvent )
         {
             const uint32 serverTick = static_cast<uint32>( reader.readVarUint() );
@@ -535,13 +536,14 @@ namespace sw
         const uint32 index = received._index;
         if ( index < entry._nextEventIndex )
         {
-            ++_stats._staleEventCount; // 스냅숏이 이미 담았다
+            ++_stats._staleEventCount; // 스냅숏이 이미 담은 이벤트이다
             return;
         }
         if ( entry._bAwaitingSnapshot == SW_TRUE || index > entry._nextEventIndex )
         {
-            // 앞 번호를 기다리거나(늦게 들어와 스냅숏이 아직 안 왔다 · 앞 사건을 잃었다), 청한 스냅숏을 기다린다 — 지금 적용하면 뒤에 온 스냅숏이 그 상태를 덮고
-            // 번호를 되돌려 이 사건이 영영 빠진다(사건은 순서 없음 채널이라 스냅숏보다 먼저 올 수 있다). 스냅숏이 번호로 잇는다.
+            // 앞 번호를 기다리는 중이거나 요청한 스냅숏을 기다리는 중이다. 앞 번호를 기다리는 경우는 늦게 들어와 스냅숏이 아직 안 왔거나 앞 이벤트를 잃은 때이다.
+            // 지금 적용하면 나중에 도착한 스냅숏이 그 상태를 덮고 번호를 되돌려서 이 이벤트가 영영 빠진다. 이벤트는 순서 없는 채널이라 스냅숏보다 먼저 올 수 있다.
+            // 그래서 쌓아 두었다가 스냅숏 뒤에 번호 순서로 적용한다.
             bufferEvent( entry, received );
             return;
         }
@@ -556,7 +558,7 @@ namespace sw
             applyToComponent( *pComponent, received );
         }
         ++entry._nextEventIndex;
-        // 기다리던 다음 번호들을 잇는다.
+        // 기다리던 다음 번호의 이벤트를 이어서 적용한다.
         bool bProgress = true;
         while ( bProgress )
         {
@@ -608,7 +610,7 @@ namespace sw
         entry._nextEventIndex    = eventCount;
         entry._skipCount         = 0;
         entry._listHashCheck.clear();
-        // 스냅숏보다 앞 번호는 버리고, 이어지는 것은 적용한다.
+        // 스냅숏보다 앞 번호는 버리고, 이어지는 번호는 적용한다.
         vector<BufferedEvent> listFuture;
         listFuture.swap( entry._listFutureEvent );
         std::sort( listFuture.begin(), listFuture.end(), []( const BufferedEvent& lhs, const BufferedEvent& rhs )
@@ -654,16 +656,16 @@ namespace sw
                 pTrack->_groupID = groupID;
                 pTrack->_poseBuffer.initialize( Internal::kMaxPoseSample );
             }
-            // 틱 순으로 끼운다(멈춤 확정은 다른 채널이라 앞질러 올 수 있다). 같은 틱이면 멈춤 쪽이 이긴다. 넘치면 가장 오래된 것을 버린다.
+            // 틱 순서로 끼워 넣는다. 멈춤 확정은 다른 채널로 오므로 앞질러 도착할 수 있다. 같은 틱이면 멈춤 쪽이 이기고, 넘치면 가장 오래된 표본을 버린다.
             pTrack->_poseBuffer.insert( tick, pose, bRest );
         }
     }
 
     void DestructionReplicationClient::update( float32 deltaTime )
     {
-        // 서버 틱 추정은 틱마다 흐르고 받은 틱보다 뒤처지지 않는다 — 자세가 오지 않는 동안(모두 멈춤)에도 렌더 틱이 서버 시각을 따른다(NetClock — 받은 가장 새 틱까지).
-        // 지연은 설정값과 가장 긴 자세 간격 × 2 중 큰 것 — 간격 하나뿐이면 자세 하나를 잃거나 흔들림으로 늦을 때마다 뒤 자세가 없어 덩어리가 멈춰 선다
-        // (빨리 떨어지는 덩어리는 미터 단위로 어긋난다).
+        // 서버 틱 추정값은 틱마다 흐르고 받은 틱보다 뒤처지지 않는다. 그래서 자세가 오지 않는 동안(모두 멈춘 상태)에도 렌더 틱이 서버 시각을 따라간다(NetClock, 받은 가장 새 틱까지).
+        // 지연은 설정값과 가장 긴 자세 간격 × 2 중 큰 값이다. 간격 하나만 두면 자세 하나를 잃거나 지터로 늦을 때마다 뒤 자세가 없어 덩어리가 멈춰 선다.
+        // 빨리 떨어지는 덩어리는 이때 미터 단위로 어긋난다.
         _clock.advance( deltaTime );
         for ( Entry& entry : _listEntry )
         {
@@ -686,15 +688,16 @@ namespace sw
             const HashCheck check = entry._listHashCheck[index];
             if ( entry._nextEventIndex < check._eventCount )
             {
-                ++index; // 그 번호까지의 사건이 아직 오는 중
+                ++index; // 그 번호까지의 이벤트가 아직 오는 중이다
                 continue;
             }
-            // 그 사건 수에 이르렀을 때의 해시(사건마다 적어 둔 것)와 비교한다. 다 넘겨받았는데(쌓인 것도 적용했는데) 상태가 그 수에 이르지 못했으면 사건이 빠졌다.
+            // 그 이벤트 수에 이르렀을 때의 해시와 비교한다. 해시는 이벤트마다 적어 둔 값이다.
+            // 이벤트를 모두 넘겨받고 쌓인 것까지 적용했는데도 상태가 그 이벤트 수에 이르지 못했다면 이벤트가 빠진 것이다.
             uint64     localHash = 0;
             const bool bFound    = component.findRecentStateHash( check._eventCount, localHash );
             if ( bFound == false && bPending )
             {
-                ++index; // 넘겨받은 사건이 다음 물리 프레임에 적용된다
+                ++index; // 넘겨받은 이벤트가 다음 물리 프레임에 적용된다
                 continue;
             }
             entry._listHashCheck.erase( entry._listHashCheck.begin() + static_cast<std::ptrdiff_t>( index ) );
@@ -708,7 +711,7 @@ namespace sw
             }
             else if ( stateCount >= check._eventCount )
             {
-                continue; // 너무 오래된 비교 — 다음 해시로 본다
+                continue; // 너무 오래된 비교이므로 다음 해시로 넘어간다
             }
             requestSnapshot( entry );
             return;
@@ -733,7 +736,7 @@ namespace sw
         const float32 renderTick = _clock.getRenderTick();
         if ( renderTick < 0.0f )
             return;
-        // 그룹 번호는 늘기만 한다 — 지금 가장 큰 번호보다 작은데 없는 그룹은 갈라져 사라진 것, 큰 것은 그 사건이 아직 오지 않은 것(자세를 먼저 받았다).
+        // 그룹 번호는 늘어나기만 한다. 지금 가장 큰 번호보다 작은데 없는 그룹은 갈라져 사라진 것이고, 큰 번호는 그 이벤트가 아직 오지 않은 것이다. 자세를 먼저 받은 경우이다.
         uint32 maxGroupID = 0;
         for ( const DestructionGroup& group : component.getState().getGroups() )
         {
@@ -752,12 +755,12 @@ namespace sw
             ++trackIndex;
             if ( bHasGroup == false )
                 continue;
-            // 렌더 틱을 사이에 둔 두 자세 — 뒤가 없으면 마지막 것(앞으로 내다보지 않는다).
+            // 렌더 틱을 사이에 둔 두 자세를 고른다. 뒤 자세가 없으면 마지막 것을 쓰고 미래를 예측하지 않는다.
             const InterpolationBuffer<ChunkPose>::Sample* pFrom = nullptr;
             const InterpolationBuffer<ChunkPose>::Sample* pTo   = nullptr;
             float32                                       alpha = 0.0f;
             const InterpolationBracketKind                kind  = track._poseBuffer.findBracket( renderTick, pFrom, pTo, alpha );
-            // 첫 자세보다 앞을 그리는 동안은 몰지 않는다 — 그 덩어리는 같은 사건 · 같은 씨앗으로 서버와 같은 속도로 태어나 혼자 날아간다.
+            // 첫 자세보다 이전 시점을 그리는 동안은 바디를 움직이지 않는다. 그 덩어리는 같은 이벤트와 같은 시드로 서버와 같은 속도로 생성되어 혼자 날아간다.
             const bool bBeforeFirst = kind == InterpolationBracketKind::Empty || kind == InterpolationBracketKind::BeforeFirst;
             if ( bBeforeFirst )
                 continue;
@@ -769,7 +772,7 @@ namespace sw
                 rotation = quaternion::lerp( pFrom->_value._rotation, pTo->_value._rotation, alpha );
             }
             component.driveGroup( track._groupID, position, rotation );
-            // 지난 것은 하나만 남긴다(보간의 앞).
+            // 지난 표본은 하나만 남긴다. 보간의 앞쪽 표본으로 쓴다.
             track._poseBuffer.removeConsumed( renderTick );
         }
     }

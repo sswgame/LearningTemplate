@@ -29,7 +29,7 @@ namespace sw
         NetClockSettings clockSettings;
         clockSettings._tickInterval       = settings._tickInterval;
         clockSettings._interpolationDelay = settings._interpolationDelay;
-        clockSettings._sampleInterval     = settings._tickInterval; // 스냅숏은 서버 틱마다 온다
+        clockSettings._sampleInterval     = settings._tickInterval; // 스냅샷은 서버 틱마다 온다
         _clock.initialize( clockSettings );
 
         _listSnapshot.initialize( MathUtil::max( 4, settings._historySize ) );
@@ -40,9 +40,9 @@ namespace sw
 
     void ReplicationClient::resetHistory()
     {
-        _listSnapshot.reset(); // 스냅숏 버퍼는 자리에 남아 다음 연결이 다시 쓴다
-        _inputWindow.reset();  // 새 서버 — 옛 확인은 이 연결의 것이 아니다
-        _clock.reset();        // 새 서버의 틱은 옛 것보다 작을 수 있다 — 첫 스냅숏에서 다시 선다
+        _listSnapshot.reset(); // 스냅샷 버퍼는 그대로 남아 다음 연결이 재사용한다
+        _inputWindow.reset();  // 새 서버이므로 이전 확인은 이 연결의 것이 아니다
+        _clock.reset();        // 새 서버의 틱은 이전 서버보다 작을 수 있으므로 첫 스냅샷에서 다시 맞춘다
     }
 
     void ReplicationClient::onConnectionOpened( int32 connectionID )
@@ -55,24 +55,24 @@ namespace sw
 
     NetHandleResult ReplicationClient::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {
-        (void)context; // 클라이언트 — 받는 쪽은 서버 하나
-        // 기준 틱을 먼저 엿보고 그 스냅샷을 찾는다.
+        (void)context; // 클라이언트가 받는 쪽이므로 상대는 서버 하나뿐이다
+        // 기준 틱을 먼저 읽어 보고 그 스냅샷을 찾는다.
         BitReader    peek         = body;
         const uint32 tick         = static_cast<uint32>( peek.readVarUint() );
         const uint32 baselineCode = static_cast<uint32>( peek.readVarUint() );
         if ( peek.hasOverflowed() )
             return NetHandleResult::Malformed;
         if ( _listSnapshot.hasNewest() && tick <= _listSnapshot.getNewestTick() )
-            return NetHandleResult::Handled; // 늦게 온 옛것
+            return NetHandleResult::Handled; // 늦게 도착한 오래된 스냅샷이다
         const NetSnapshot* pBaseline = baselineCode != 0 ? _listSnapshot.find( baselineCode - 1u ) : nullptr;
         if ( NetSnapshot::readDelta( body, pBaseline, _decodeScratch ) == false )
         {
-            ++_decodeFailureCount; // 기준을 이미 잃은 델타도 여기로 온다 — 형식은 맞으니 깨짐으로 세지 않는다
+            ++_decodeFailureCount; // 기준을 이미 잃은 델타도 여기로 온다. 형식은 맞으므로 손상된 메시지로 세지 않는다
             return NetHandleResult::Handled;
         }
-        _inputWindow.acknowledge( _decodeScratch._firstMissingInputTick ); // 서버가 빈틈없이 받은 다음 틱 — 그 앞은 다시 싣지 않는다
-        std::swap( _listSnapshot.acquire( tick ), _decodeScratch );        // 가장 새 틱도 이것이 된다. 밀려난 옛 스냅숏은 다음 해독 자리가 된다
-        _clock.observeServerTick( tick );                                  // 첫 스냅숏이면 렌더 틱을 바로 (그 틱 − 지연)에 둔다
+        _inputWindow.acknowledge( _decodeScratch._firstMissingInputTick ); // 서버가 빈틈없이 받은 다음 틱이다. 그 이전 입력은 다시 싣지 않는다
+        std::swap( _listSnapshot.acquire( tick ), _decodeScratch );        // 가장 새 틱도 이 스냅샷이 된다. 밀려난 이전 스냅샷의 버퍼는 다음 복원에 재사용한다
+        _clock.observeServerTick( tick );                                  // 첫 스냅샷이면 렌더 틱을 바로 (그 틱 − 지연)에 둔다
         if ( _pHost != nullptr )
         {
             BitWriter& writer = _messageWriter.begin( NetClientServerMessage::kSnapshotAck );
@@ -84,7 +84,8 @@ namespace sw
 
     void ReplicationClient::update( float32 deltaTime )
     {
-        // 렌더 틱 = 서버 틱 추정 − 지연. 추정은 받은 스냅숏 틱의 하한 + 흐른 시간(받은 가장 새 틱 + 지연까지)이라 끊겨도 되돌아가지 않고 받은 틱을 지나치지 않는다.
+        // 렌더 틱은 서버 틱 추정값에서 지연을 뺀 값이다.
+        // 추정값은 받은 스냅샷 틱의 하한에 흐른 시간을 더한 것이고 받은 가장 새 틱 + 지연까지만 간다. 그래서 통신이 끊겨도 되돌아가지 않고 받은 틱을 지나치지도 않는다.
         _clock.advance( deltaTime );
     }
 
@@ -96,7 +97,7 @@ namespace sw
         if ( _listSnapshot.hasNewest() == false )
             return;
         const float32 renderTick = getRenderTick();
-        // 렌더 틱 이하의 가장 새 것과 그보다 큰 가장 오래된 것(고리가 들 수 있는 틱 안에서).
+        // 렌더 틱 이하의 가장 새 스냅샷과, 렌더 틱보다 큰 가장 오래된 스냅샷을 찾는다. 링 버퍼가 보관하는 틱 범위 안에서만 찾는다.
         const uint32 oldestTick = _listSnapshot.computeOldestTick();
         for ( uint32 tick = _listSnapshot.getNewestTick() + 1u; tick-- > oldestTick; )
         {
@@ -112,12 +113,12 @@ namespace sw
         }
         if ( pOutFrom == nullptr )
         {
-            pOutFrom = pOutTo; // 렌더 시각이 가진 것보다 앞이다 — 가장 오래된 것
+            pOutFrom = pOutTo; // 렌더 시각이 가진 스냅샷보다 앞서 있으므로 가장 오래된 것을 쓴다
             return;
         }
         if ( pOutTo == nullptr )
         {
-            pOutTo = pOutFrom; // 새 스냅샷이 늦는다 — 마지막 것에 멈춘다(외삽하지 않는다)
+            pOutTo = pOutFrom; // 새 스냅샷이 늦으므로 마지막 것에서 멈춘다. 외삽하지 않는다
             return;
         }
         outAlpha = NetInterpolationUtil::computeAlpha( pOutFrom->_tick, pOutTo->_tick, renderTick );
@@ -134,12 +135,12 @@ namespace sw
             return false;
         if ( pOutFrom == nullptr )
         {
-            pOutFrom = pOutTo; // 새로 생겼다 — 다음 것부터
+            pOutFrom = pOutTo; // 새로 생긴 엔티티이므로 다음 스냅샷부터 쓴다
             outAlpha = 1.0f;
         }
         if ( pOutTo == nullptr )
         {
-            pOutTo   = pOutFrom; // 사라지는 중 — 마지막 모습
+            pOutTo   = pOutFrom; // 사라지는 중이므로 마지막 모습을 쓴다
             outAlpha = 0.0f;
         }
         return true;
@@ -168,16 +169,16 @@ namespace sw
                             NetClientServerMessage::kMaxInputBytes );
             return false;
         }
-        // 틱이 건너뛰면 그 틱부터, 줄면(새 판) 확인까지 비우고 다시 쌓는다. 같은 틱이면 처음 값이 남고 지금 창만 다시 보낸다.
+        // 틱이 건너뛰면 그 틱부터 다시 쌓고, 틱이 줄면(새 게임 판) 확인까지 비우고 다시 쌓는다. 같은 틱이면 처음 값이 남고 지금 창만 다시 보낸다.
         (void)_inputWindow.push( tick, listInput.data(), static_cast<int32>( listInput.size() ) );
         if ( _pHost == nullptr )
             return true;
         BitWriter& writer = _messageWriter.begin( NetClientServerMessage::kInput );
         writer.writeVarUint( static_cast<uint64>( MathUtil::max( 0.0f, getRenderTick() ) * 256.0f ) );
-        // 서버가 확인한 다음 틱부터, 메시지 상한 안에서 오래된 것부터 — 못 실은 새 것은 확인이 오른 뒤 다음 메시지가 싣는다.
+        // 서버가 확인한 다음 틱부터 메시지 상한 안에서 오래된 입력부터 싣는다. 못 실은 새 입력은 확인이 올라간 뒤 다음 메시지가 싣는다.
         NetSendBudget budget( NetConnection::kMaxSingleMessageSize );
         budget.reserveBits( writer.getBitCount() );
-        (void)_inputWindow.write( writer, budget ); // 실은 수는 쓰지 않는다 — 못 실은 것은 다음 메시지가 싣는다
+        (void)_inputWindow.write( writer, budget ); // 실은 수는 쓰지 않는다. 못 실은 입력은 다음 메시지가 싣는다
         (void)_pHost->sendMessage( 0, NetChannelType::Unreliable, writer.getBytes() );
         return true;
     }
