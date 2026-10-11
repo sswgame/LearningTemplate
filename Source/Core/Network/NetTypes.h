@@ -1,6 +1,6 @@
 /**
  * @file NetTypes.h
- * @brief 네트워크 공통 타입 — 주소, 패킷 크기 한도, 채널 종류, 연결 상태, 시퀀스 비교입니다.
+ * @brief 네트워크 공통 타입(주소, 패킷 크기 한도, 채널 종류, 연결 상태, 시퀀스 비교)을 정의합니다.
  */
 #pragma once
 #include "Core/Common/HashUtil.h"
@@ -12,18 +12,18 @@
 
 namespace sw
 {
-    /** @brief 한 UDP 패킷의 최대 바이트입니다(IPv4 · IPv6 MTU 안 — 조각나지 않게). */
+    /** @brief 한 UDP 패킷의 최대 바이트입니다. IPv4와 IPv6의 MTU 안에 들어가 IP 조각화가 일어나지 않게 합니다. */
     constexpr int32 kNetMaxPacketSize = 1200;
 
     /**
-     * @brief 메시지 첫 바이트(종류)의 영역입니다. 네트워크 키트끼리 · 게임 메시지와 섞이지 않게 나눕니다 — 한 게임이 키트 둘을 같이 써도 된다.
-     *        키트는 `handleMessage` 가 자기 영역의 메시지만 먹고 나머지는 false 를 돌려줍니다.
+     * @brief 메시지 첫 바이트(종류)의 영역입니다. 네트워크 키트끼리, 그리고 게임 메시지와 섞이지 않게 나눕니다. 한 게임이 키트 둘을 함께 써도 됩니다.
+     *        키트의 `handleMessage` 는 자기 영역의 메시지만 처리하고 나머지는 false 를 반환합니다.
      */
     struct NetMessageRange
     {
-        static constexpr uint8 kSize      = 0x10; ///< 영역 하나의 메시지 수
-        static constexpr uint8 kFramework = 0x10; ///< 프레임워크(네트워크 키트)의 몫 0x10..0x7F — 키트마다의 영역은 GameFramework 의 `NetKitMessageRange`
-        static constexpr uint8 kGame      = 0x80; ///< 게임이 쓰는 메시지 0x80..0xFF
+        static constexpr uint8 kSize      = 0x10; ///< 영역 하나의 메시지 수.
+        static constexpr uint8 kFramework = 0x10; ///< 프레임워크(네트워크 키트)가 쓰는 0x10..0x7F. 키트별 영역은 GameFramework 의 `NetKitMessageRange` 에 있다.
+        static constexpr uint8 kGame      = 0x80; ///< 게임이 쓰는 메시지 0x80..0xFF.
 
         static constexpr bool isInRange( uint8 kind, uint8 rangeBase ) { return kind >= rangeBase && kind < rangeBase + kSize; }
     };
@@ -33,15 +33,15 @@ namespace sw
 {
     /**
      * @struct NetWireVersion
-     * @brief 선(wire) 형식의 판입니다. 층마다 하나 — Core(핸드셰이크 · 패킷 · 채널 · 메시지 머리)는 `kCore`, 키트는 `NetKitWireVersion`, 게임은 자기 값입니다.
-     * @details 형식(필드 · 의미 · 종류 바이트)을 바꾸는 커밋은 그 층의 판을 올린다. 판이 다른 빌드끼리는 핸드셰이크에서 `VersionMismatch` 로 갈린다 —
-     *          옛 형식을 읽는 길은 두지 않는다. 게임 · 키트 판은 `combine` 으로 묶어 `NetHostSettings::_wireVersion` 에 둔다(Core 판은 저절로 섞인다).
+     * @brief 와이어 형식의 버전입니다. 계층마다 하나씩 있으며, Core(핸드셰이크, 패킷, 채널, 메시지 헤더)는 `kCore`, 키트는 `NetKitWireVersion`, 게임은 자기 값을 씁니다.
+     * @details 형식(필드, 의미, 종류 바이트)을 바꾸는 커밋은 그 계층의 버전을 올린다. 버전이 다른 빌드끼리는 핸드셰이크에서 `VersionMismatch` 로 갈리며,
+     *          옛 형식을 읽는 경로는 두지 않는다. 게임과 키트 버전은 `combine` 으로 묶어 `NetHostSettings::_wireVersion` 에 둔다(Core 버전은 자동으로 섞인다).
      */
     struct NetWireVersion
     {
-        static constexpr uint32 kCore = 6; ///< 6: 데이터 패킷 몸 첫머리에 디버거 대기 1 비트(`NetDebugHold`)
+        static constexpr uint32 kCore = 6; ///< 6: 데이터 패킷 본문 첫머리에 디버거 대기 1비트(`NetDebugHold`)가 추가됐다.
 
-        /** @brief 층들의 판을 값 하나로 섞습니다(FNV-1a — 순서도 섞인다). */
+        /** @brief 계층별 버전을 값 하나로 섞습니다. FNV-1a 이므로 순서도 결과에 반영됩니다. */
         static constexpr uint32 combine( std::initializer_list<uint32> listVersion )
         {
             uint32 hash = HashUtil::kFnvOffset32;
@@ -59,12 +59,12 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 프로토콜 id 에 섞는 기능입니다 — 한쪽만 켜면 프로토콜 id 가 달라 `SecurityMismatch` 로 거절된다(평문으로 내려가는 길이 없다). */
+    /** @brief 프로토콜 ID에 섞는 기능입니다. 한쪽만 켜면 프로토콜 ID가 달라 `SecurityMismatch` 로 거절되므로, 평문으로 내려가는 경로가 없습니다. */
     struct NetProtocolFeature
     {
-        static constexpr uint32 kEncrypted  = 1u << 0;                  ///< X25519 + 패킷 AEAD(`NetSecurityMode::Encrypted`)
-        static constexpr uint32 kTokenBound = 1u << 1;                  ///< 세션 토큰 결속(서버 인증기 · 클라이언트 자격)
-        static constexpr uint32 kAllMask    = kEncrypted | kTokenBound; ///< 거절 이유를 가릴 때 돌아보는 범위
+        static constexpr uint32 kEncrypted  = 1u << 0;                  ///< X25519와 패킷 AEAD(`NetSecurityMode::Encrypted`).
+        static constexpr uint32 kTokenBound = 1u << 1;                  ///< 세션 토큰 결속(서버 인증기, 클라이언트 자격).
+        static constexpr uint32 kAllMask    = kEncrypted | kTokenBound; ///< 거절 이유를 가릴 때 확인하는 범위.
     };
 } // namespace sw
 
@@ -72,15 +72,15 @@ namespace sw
 {
     /**
      * @struct NetProtocol
-     * @brief 프로토콜 id — 게임 id 와 와이어 판(Core 판 + 게임 · 키트 판)을 섞은 값입니다. 패킷 머리 · 체크섬에 들어가 다른 판 · 다른 게임의 패킷을 거른다.
+     * @brief 프로토콜 ID입니다. 게임 ID와 와이어 버전(Core 버전, 게임과 키트 버전)을 섞은 값이며, 패킷 헤더와 체크섬에 들어가 다른 버전이나 다른 게임의 패킷을 걸러 냅니다.
      */
     struct NetProtocol
     {
         static constexpr uint32 kDefaultGameID = 0x53574E31u;
-        /** @brief 연결 요청 · 거절 패킷의 머리 값 — 판을 넘어 읽혀야 하므로 프로토콜 id 대신 이 고정 값으로 싸고, 두 패킷의 배치는 판과 함께 바꾸지 않는다. */
+        /** @brief 연결 요청과 거절 패킷의 헤더 값입니다. 버전이 달라도 읽혀야 하므로 프로토콜 ID 대신 이 고정 값으로 싸며, 두 패킷의 배치는 버전과 함께 바꾸지 않습니다. */
         static constexpr uint32 kHandshakeID = 0x5357484Bu;
 
-        /** @brief @p featureMask 는 `NetProtocolFeature` — 양쪽이 같아야 연결된다(협상하지 않는다). */
+        /** @brief 프로토콜 ID를 만듭니다. @p featureMask 는 `NetProtocolFeature` 이며, 양쪽이 같아야 연결됩니다(협상하지 않습니다). */
         static constexpr uint32 makeProtocolID( uint32 gameID, uint32 wireVersion, uint32 featureMask = 0 )
         {
             const uint32 protocolID = NetWireVersion::combine( { gameID, NetWireVersion::kCore, wireVersion, featureMask } );
@@ -91,13 +91,13 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 채널 종류입니다. 메시지마다 고른다. 값은 선(wire) 형식이다 — 바꾸면 `NetWireVersion::kCore` 를 올린다. */
+    /** @brief 채널 종류입니다. 메시지마다 고르며, 값은 와이어 형식이므로 바꾸면 `NetWireVersion::kCore` 를 올려야 합니다. */
     enum class NetChannelType : uint8
     {
-        ReliableOrdered = 0, ///< 반드시 · 보낸 순서대로(채팅 · 거래 · 턴 행동 · 생성 · 파괴 스냅숏) — 64 KB 까지(조각으로)
-        ReliableUnordered,   ///< 반드시 · 받는 대로 — 앞 신뢰 메시지를 잃어도 기다리지 않는다(번호로 스스로 줄 세우는 파괴 사건). 1 KB 까지(조각나지 않는다)
-        UnreliableSequenced, ///< 잃어도 되지만 옛것은 버린다(위치 스냅샷 · 입력) — 메시지 첫 바이트(종류)마다 따로: 다른 종류끼리는 서로 지우지 않는다
-        Unreliable,          ///< 잃어도 되고 순서도 상관없다(소리 · 이펙트)
+        ReliableOrdered = 0, ///< 반드시 도착하고, 보낸 순서대로 처리한다(채팅, 거래, 턴 행동, 생성과 파괴 스냅샷). 64KB까지 보낼 수 있다(조각으로 나눈다).
+        ReliableUnordered,   ///< 반드시 도착하고, 받는 대로 처리한다. 앞 신뢰 메시지를 잃어도 기다리지 않는다(번호로 스스로 순서를 맞추는 파괴 사건 등). 1KB까지이며 조각나지 않는다.
+        UnreliableSequenced, ///< 잃어도 되지만 옛 메시지는 버린다(위치 스냅샷, 입력). 메시지 첫 바이트(종류)마다 따로 처리하므로 다른 종류끼리는 서로 지우지 않는다.
+        Unreliable,          ///< 잃어도 되고 순서도 상관없다(소리, 이펙트).
         Count
     };
 
@@ -105,7 +105,7 @@ namespace sw
     enum class NetConnectionState : uint8
     {
         Disconnected = 0,
-        Connecting, ///< 클라이언트 — 요청 · 도전 응답 중
+        Connecting, ///< 클라이언트가 요청과 챌린지 응답을 보내는 중이다.
         Connected,
         Disconnecting
     };
@@ -114,25 +114,25 @@ namespace sw
     enum class NetDisconnectReason : uint8
     {
         None = 0,
-        Requested, ///< 이쪽이 끊었다
-        Remote,    ///< 저쪽이 끊었다
+        Requested, ///< 이쪽이 끊었다.
+        Remote,    ///< 상대가 끊었다.
         Timeout,
         ServerFull,
-        Rejected,            ///< 다른 게임(게임 id 가 다르다) · 시작할 수 없는 연결
-        VersionMismatch,     ///< 같은 게임의 다른 와이어 판(`NetWireVersion`)
-        SecurityMismatch,    ///< 한쪽만 암호화 · 토큰 결속이다(협상하지 않는다 — 다운그레이드 없음)
-        AuthenticationFailed ///< 토큰을 모르거나 세션 비밀 증명 · 키 확인이 틀렸다
+        Rejected,            ///< 다른 게임(게임 ID가 다르다)이거나 시작할 수 없는 연결이다.
+        VersionMismatch,     ///< 같은 게임의 다른 와이어 버전(`NetWireVersion`).
+        SecurityMismatch,    ///< 한쪽만 암호화나 토큰 결속을 켰다(협상하지 않으므로 다운그레이드는 없다).
+        AuthenticationFailed ///< 토큰을 모르거나 세션 비밀 증명이나 키 확인이 틀렸다.
     };
 
     SW_API const utf8* toString( NetDisconnectReason reason );
 
     /**
      * @struct NetAddress
-     * @brief IPv4 주소와 포트입니다. 루프백 망(테스트 · 한 프로세스 안 서버)의 엔드포인트도 같은 타입으로 나타냅니다(`127.0.0.1` 아래 포트만 다르다).
+     * @brief IPv4 주소와 포트입니다. 루프백 네트워크(테스트나 한 프로세스 안의 서버)의 엔드포인트도 같은 타입으로 나타냅니다(`127.0.0.1` 에 포트만 다릅니다).
      */
     struct SW_API NetAddress
     {
-        uint32 _ipv4{ 0 }; ///< 호스트 바이트 순서(127.0.0.1 = 0x7F000001)
+        uint32 _ipv4{ 0 }; ///< 호스트 바이트 순서(127.0.0.1은 0x7F000001).
         uint16 _port{ 0 };
 
         static constexpr NetAddress make( uint8 a, uint8 b, uint8 c, uint8 d, uint16 port )
@@ -140,9 +140,9 @@ namespace sw
             return NetAddress{ ( static_cast<uint32>( a ) << 24 ) | ( static_cast<uint32>( b ) << 16 ) | ( static_cast<uint32>( c ) << 8 ) | d, port };
         }
         static constexpr NetAddress makeLoopback( uint16 port ) { return make( 127, 0, 0, 1, port ); }
-        /** @brief 모든 인터페이스(0.0.0.0)에 묶을 주소입니다 — 리슨 · 바인드에만 씁니다. */
+        /** @brief 모든 인터페이스(0.0.0.0)에 바인드할 주소입니다. 리슨과 바인드에만 씁니다. */
         static constexpr NetAddress makeAnyInterface( uint16 port ) { return NetAddress{ 0, port }; }
-        /** @brief "1.2.3.4:5678" 을 읽습니다. 포트가 없으면 @p defaultPort 입니다. */
+        /** @brief "1.2.3.4:5678" 형식을 읽습니다. 포트가 없으면 @p defaultPort 를 씁니다. */
         [[nodiscard]] static bool parse( string_view text, uint16 defaultPort, NetAddress& outAddress );
 
         string toString() const;
@@ -157,7 +157,7 @@ namespace sw
 {
     /**
      * @struct NetSequence
-     * @brief 16 비트 시퀀스 비교 — 65535 다음 0 으로 감겨도 "더 새 것" 을 맞게 고릅니다(반 바퀴 안의 차이를 앞으로 본다).
+     * @brief 16비트 시퀀스를 비교합니다. 65535 다음에 0으로 감겨도 "더 새 것"을 맞게 고릅니다(반 바퀴 안의 차이를 앞으로 봅니다).
      */
     struct NetSequence
     {
@@ -166,7 +166,7 @@ namespace sw
             return ( lhs > rhs && lhs - rhs <= 32768 ) || ( lhs < rhs && rhs - lhs > 32768 );
         }
         static constexpr bool isLess( uint16 lhs, uint16 rhs ) { return isGreater( rhs, lhs ); }
-        /** @brief @p lhs − @p rhs 를 감김을 고려해 부호 있는 차이로 돌려줍니다. */
+        /** @brief @p lhs - @p rhs 를 감김을 고려한 부호 있는 차이로 반환합니다. */
         static constexpr int32 computeDifference( uint16 lhs, uint16 rhs )
         {
             const int32 difference = static_cast<int32>( lhs ) - static_cast<int32>( rhs );
