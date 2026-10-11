@@ -27,7 +27,7 @@ namespace sw
         SystemShutdown, ///< Windows 로그오프 · 시스템 종료
         ServiceStop,    ///< Windows 서비스 정지 · 사전 종료
         ConsoleCommand, ///< 서버 콘솔의 quit · stop
-        TickLimit,      ///< 시험용 틱 상한(`-gv_serverExitAfterTicks`)
+        TickLimit,      ///< 테스트용 틱 상한(`-gv_serverExitAfterTicks`)
     };
 } // namespace sw
 
@@ -57,10 +57,10 @@ namespace sw
         /** @brief 까닭의 로그 이름입니다(플랫폼과 무관한 이름 — `"Terminate"`). */
         static const utf8* getCauseName( ShutdownCause cause );
 
-        /** @brief 시험용 — 요청 · 완료 · 두 번째 인터럽트 셈을 처음으로 되돌립니다. 설치한 처리기는 그대로입니다. */
+        /** @brief 테스트용 — 요청 · 완료 · 두 번째 인터럽트 셈을 처음으로 되돌립니다. 설치한 처리기는 그대로입니다. */
         static void resetForTest();
 #if defined( SW_PLATFORM_WINDOWS )
-        /** @brief 시험용 — 콘솔 제어 처리기 본문을 이 스레드에서 직접 부릅니다(`CTRL_*_EVENT` 값). 처리기의 반환값(TRUE = 처리함)입니다. */
+        /** @brief 테스트용 — 콘솔 제어 처리기 본문을 이 스레드에서 직접 부릅니다(`CTRL_*_EVENT` 값). 처리기의 반환값(TRUE = 처리함)입니다. */
         static bool dispatchConsoleControlForTest( uint32 controlType );
 #endif
 

@@ -39,7 +39,7 @@ namespace sw
         Client
     };
 
-    /** @brief TLS 판입니다. 서비스 스트림은 1.3 만 — 1.2 는 다운그레이드 거절 시험에만 쓴다. */
+    /** @brief TLS 판입니다. 서비스 스트림은 1.3 만 — 1.2 는 다운그레이드 거절 테스트에만 쓴다. */
     enum class TLSVersion : uint8
     {
         TLS12 = 0,
@@ -130,7 +130,7 @@ namespace sw
         string     _serverName{};                 ///< 클라이언트 — SNI + 이름 검사(비우면 이름 검사 없이 체인만)
         string     _pinnedCertificateSha256Hex{}; ///< 클라이언트 — 있으면 서버 끝 인증서의 SHA-256(소문자 16 진 64 자)이 같아야 한다
         TLSRole    _role{ TLSRole::Server };
-        TLSVersion _minVersion{ TLSVersion::TLS13 }; ///< 1.3 만 — 낮추는 것은 다운그레이드 시험뿐
+        TLSVersion _minVersion{ TLSVersion::TLS13 }; ///< 1.3 만 — 낮추는 것은 다운그레이드 테스트뿐
         TLSVersion _maxVersion{ TLSVersion::TLS13 };
     };
 } // namespace sw

@@ -1,6 +1,6 @@
 /**
  * @file IStreamTransport.h
- * @brief 스트림(TCP) 전송의 이벤트 루프 인터페이스 — 수락 · 연결 · 읽기 · 쓰기 완료를 처리기에 알립니다. 구현은 Windows IOCP · 리눅스 epoll · 루프백(시험).
+ * @brief 스트림(TCP) 전송의 이벤트 루프 인터페이스 — 수락 · 연결 · 읽기 · 쓰기 완료를 처리기에 알립니다. 구현은 Windows IOCP · 리눅스 epoll · 루프백(테스트).
  */
 #pragma once
 #include "Core/Common/Macros.h"

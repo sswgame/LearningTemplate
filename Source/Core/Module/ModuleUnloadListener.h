@@ -67,7 +67,7 @@ namespace sw
          */
         static void releaseAllWithin( const void* pBegin, const void* pEnd, vector<ReleaseResult>& outListResult );
 
-        /** @brief 지금 목록에 오른 리스너 수입니다(진단 · 시험). */
+        /** @brief 지금 목록에 오른 리스너 수입니다(진단 · 테스트). */
         static uint32 getListenerCount();
 
         /** @brief 주소 @p pCode 가 [@p pBegin, @p pEnd) 안인지 봅니다. nullptr 은 늘 밖입니다. */

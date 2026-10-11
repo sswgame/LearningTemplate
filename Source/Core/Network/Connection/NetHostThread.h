@@ -59,7 +59,7 @@ namespace sw
         void stop();
 
         bool isRunning() const { return _bRunning.load( std::memory_order_acquire ); }
-        /** @brief 스레드가 `update` 를 돈 수입니다(진단 · 시험). */
+        /** @brief 스레드가 `update` 를 돈 수입니다(진단 · 테스트). */
         uint64 getUpdateCount() const { return _updateCount.load( std::memory_order_relaxed ); }
         /** @brief 스레드가 `update` 에 넘기는 시각(초, 단조 증가 — 프로세스 안에서 공통)입니다. */
         static float64 getTime();

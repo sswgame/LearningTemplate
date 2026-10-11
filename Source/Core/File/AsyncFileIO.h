@@ -183,7 +183,7 @@ namespace sw
 {
     /**
      * @class AsyncFileIO
-     * @brief 비동기 파일 읽기 매니저입니다. 엔진은 하나를 서비스로 들고(`engine::getAsyncFileIO()`), 시험은 따로 만들어 씁니다.
+     * @brief 비동기 파일 읽기 매니저입니다. 엔진은 하나를 서비스로 들고(`engine::getAsyncFileIO()`), 테스트는 따로 만들어 씁니다.
      */
     class SW_API AsyncFileIO
     {
@@ -234,7 +234,7 @@ namespace sw
 
         /** @brief 백엔드 이름입니다(로그용). */
         static const utf8* getBackendName( AsyncIOBackendKind kind );
-        /** @brief 결과 이름입니다(로그 · 시험 메시지용). */
+        /** @brief 결과 이름입니다(로그 · 테스트 메시지용). */
         static const utf8* getStatusName( AsyncIOStatus status );
 
     private:

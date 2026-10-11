@@ -66,7 +66,7 @@ namespace sw
             _bHasConsole          = false;
         }
 #elif defined( SW_PLATFORM_LINUX )
-        // 터미널이 아니면(journald · 파일 · 시험 파이프) 색 이스케이프를 쓰지 않는다.
+        // 터미널이 아니면(journald · 파일 · 테스트 파이프) 색 이스케이프를 쓰지 않는다.
         _bHasConsole = isatty( STDOUT_FILENO ) != 0;
 #endif
         // 콘솔이 없어도 표준 출력에는 언제나 쓸 수 있다. 색만 포기한다.

@@ -58,9 +58,9 @@ namespace sw
      */
     enum class NetDebugHold : uint8
     {
-        Off = 0,              ///< 알리지 않는다(시간 초과 시험 · 디버거 아래에서도 원래 시간 초과를 보려는 쪽)
+        Off = 0,              ///< 알리지 않는다(시간 초과 테스트 · 디버거 아래에서도 원래 시간 초과를 보려는 쪽)
         WhenDebuggerAttached, ///< 이 프로세스에 디버거가 붙어 있을 때만(`Process::isDebuggerPresent`, 1 초마다 다시 묻는다)
-        Always                ///< 늘 — 시험, 디버거 없이 멈추는 도구
+        Always                ///< 늘 — 테스트, 디버거 없이 멈추는 도구
     };
 } // namespace sw
 
@@ -71,7 +71,7 @@ namespace sw
     {
         uint32              _gameID{ NetProtocol::kDefaultGameID }; ///< 게임마다 다르게 — 다르면 연결을 Rejected 로 거절한다
         uint32              _wireVersion{ 0 };                      ///< 게임 · 키트 층의 판(`NetWireVersion::combine`) — 다르면 VersionMismatch. Core 판은 저절로 섞인다
-        uint64              _saltSeed{ 0 };                         ///< 도전 값 씨앗 — 0 이면 운영체제 난수(위조 연결을 막는다). 시험은 고정해도 된다
+        uint64              _saltSeed{ 0 };                         ///< 도전 값 씨앗 — 0 이면 운영체제 난수(위조 연결을 막는다). 테스트는 고정해도 된다
         float64             _timeoutSeconds{ 5.0 };
         float64             _connectTimeout{ 5.0 };
         float64             _connectRetryInterval{ 0.2 };
@@ -214,7 +214,7 @@ namespace sw
         [[nodiscard]] bool getConnectionStats( int32 connectionID, NetConnectionStats& outStats ) const;
         /**
          * @brief 연결 객체를 그대로 빌려줍니다.
-         * @warning 잠금 밖으로 나가는 포인터입니다 — `update` 를 도는 다른 스레드가 없을 때만(한 스레드로 쓸 때 · 시험). 스레드가 돌면 `getConnectionStats`.
+         * @warning 잠금 밖으로 나가는 포인터입니다 — `update` 를 도는 다른 스레드가 없을 때만(한 스레드로 쓸 때 · 테스트). 스레드가 돌면 `getConnectionStats`.
          */
         const NetConnection* findConnection( int32 connectionID ) const;
         NetAddress           getConnectionAddress( int32 connectionID ) const;
@@ -227,7 +227,7 @@ namespace sw
         uint64 getRejectedPacketCount() const;
         /** @brief 서버 — 인증기가 이 연결에 준 주체(로그인 계정)입니다. 없으면 0 입니다. */
         uint64 getConnectionPrincipal( int32 connectionID ) const;
-        /** @brief 복호 · 증명 · 키 확인 실패로 버린 패킷 수입니다(진단 · 시험). */
+        /** @brief 복호 · 증명 · 키 확인 실패로 버린 패킷 수입니다(진단 · 테스트). */
         uint64 getAuthenticationFailureCount() const;
         /** @brief 재전송 방지 창이 버린 패킷 수입니다. */
         uint64 getReplayRejectedCount() const;
@@ -251,7 +251,7 @@ namespace sw
 
         /** @brief 데이터그램(머리 포함)의 패킷 종류를 엿봅니다 — 체크섬은 보지 않는다. 너무 짧으면 Count 입니다(흉내 거르개 · 진단). */
         static PacketType peekPacketType( const uint8* pData, int32 size );
-        /** @brief 패킷 체크섬(머리 값을 먼저 섞은 FNV-1a)입니다 — 시험 · 진단 도구가 고친 패킷의 체크섬을 다시 맞출 때. */
+        /** @brief 패킷 체크섬(머리 값을 먼저 섞은 FNV-1a)입니다 — 테스트 · 진단 도구가 고친 패킷의 체크섬을 다시 맞출 때. */
         static uint32 computePacketChecksum( uint32 headerID, const uint8* pBody, int32 size );
 
     private:

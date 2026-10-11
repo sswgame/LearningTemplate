@@ -336,7 +336,7 @@ namespace sw
     {
         if ( _pStdInWrite == nullptr )
             return false;
-        // 자식이 먼저 끝났으면 SIGPIPE 가 이 프로세스를 죽인다 — 시험 실행 파일은 신호 처리기를 두지 않으므로 여기서 한 번 무시로 건다(프로세스 전역).
+        // 자식이 먼저 끝났으면 SIGPIPE 가 이 프로세스를 죽인다 — 테스트 실행 파일은 신호 처리기를 두지 않으므로 여기서 한 번 무시로 건다(프로세스 전역).
         (void)signal( SIGPIPE, SIG_IGN );
         const int32 descriptor = static_cast<int32>( reinterpret_cast<intptr_t>( _pStdInWrite ) - 1 );
         size_t      written    = 0;

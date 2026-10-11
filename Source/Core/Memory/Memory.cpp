@@ -48,7 +48,7 @@ namespace sw
 
         struct MemoryInternal
         {
-            /** @brief 시험이 주입한 실패가 남았으면 하나를 쓰고 true 입니다(`injectAllocationFailures`). */
+            /** @brief 테스트가 주입한 실패가 남았으면 하나를 쓰고 true 입니다(`injectAllocationFailures`). */
             static bool consumeInjectedFailure()
             {
                 if ( t_injectedFailureCount == 0 )
