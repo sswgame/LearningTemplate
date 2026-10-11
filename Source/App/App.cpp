@@ -63,10 +63,10 @@ namespace sw
         struct AppAssertDialogInternal
         {
 #if defined( SW_DEBUG ) && defined( SW_PLATFORM_WINDOWS )
-            /** @brief 이 전역 변수가 0 이 아니거나 비어 있지 않으면 자동 실행이다(프로파일 · 에디터 자체 시험 — 이름으로 읽는다, App 은 모듈을 모른다). */
+            /** @brief 이 전역 변수가 0 이 아니거나 비어 있지 않으면 자동 실행이다(프로파일 · 에디터 자체 테스트 — 이름으로 읽는다, App 은 모듈을 모른다). */
             static constexpr const utf8* kArrAutomationVariable[] = { "gv_profileFrames", "gv_profileSeconds", "gv_editorSelfTest" };
 
-            /** @brief 사람이 지켜보지 않는 실행이면 true 입니다(-unattended · 시나리오 · 프로파일 · 자체 시험). */
+            /** @brief 사람이 지켜보지 않는 실행이면 true 입니다(-unattended · 시나리오 · 프로파일 · 자체 테스트). */
             static bool isAutomatedRun( const CommandLineManager& commandLine )
             {
                 if ( commandLine.isArgumentProvided( CommandLineArgument::UNATTENDED ) || commandLine.isArgumentProvided( CommandLineArgument::SCENARIO ) )
@@ -489,7 +489,7 @@ namespace sw
             // 에디터 창은 패널 배치가 겹치는 크기 밑으로 줄이지 않는다(언리얼 메인 프레임 · 유니티 에디터 창도 최소 크기를 둔다).
             _window->setMinimumClientSize( AppWindowInternal::kEditorMinClientWidth, AppWindowInternal::kEditorMinClientHeight );
 #if defined( SW_DEBUG ) && defined( SW_PLATFORM_WINDOWS )
-            // 대화형 에디터 실행에서만 단언을 묻는다 — 단언 한 번에 미저장 편집을 잃지 않게. 자동 실행 · 시험은 지금처럼 멈춘다.
+            // 대화형 에디터 실행에서만 단언을 묻는다 — 단언 한 번에 미저장 편집을 잃지 않게. 자동 실행 · 테스트는 지금처럼 멈춘다.
             const CommandLineManager* pCommandLine = _engineLoop.getCommandLineManager();
             if ( pCommandLine != nullptr && AppAssertDialogInternal::isAutomatedRun( *pCommandLine ) == false )
                 internal::setAssertDialog( &AppAssertDialogInternal::showAssertDialog );
@@ -626,7 +626,7 @@ namespace sw
 
     int32 App::getInitFailureExitCode() const
     {
-        // 환경 탓(백엔드가 이 빌드에 없다 · 드라이버가 기능을 안 준다)은 시험 · 스크립트가 건너뜀으로 읽는 코드로 끝낸다. 그 밖은 결함일 수 있다.
+        // 환경 탓(백엔드가 이 빌드에 없다 · 드라이버가 기능을 안 준다)은 테스트 · 스크립트가 건너뜀으로 읽는 코드로 끝낸다. 그 밖은 결함일 수 있다.
         return RHIInitResultUtil::isUnusableHere( _engineLoop.getRHIInitResult() ) ? kRHIUnusableHereExitCode : -1;
     }
 

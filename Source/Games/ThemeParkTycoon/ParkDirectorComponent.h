@@ -94,7 +94,7 @@ namespace sw
 
     private:
         /**
-         * @brief 배치의 코스터(트랙 · 열차)를 짓고 시험 운행 결과를 @p outStats 에 냅니다. 배치 · 설계가 없으면 nullptr 입니다.
+         * @brief 배치의 코스터(트랙 · 열차)를 짓고 테스트 운행 결과를 @p outStats 에 냅니다. 배치 · 설계가 없으면 nullptr 입니다.
          * @details 짓기(`buildPlacement`)와 복원이 같은 트랙을 짓습니다 — 열차는 트랙을 가리키므로 트랙째 힙에 있다.
          */
         unique_ptr<CoasterRuntime> createCoaster( int32 placementIndex, CoasterRideStats& outStats ) const;

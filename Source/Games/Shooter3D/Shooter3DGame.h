@@ -1,6 +1,6 @@
 /**
  * @file Shooter3DGame.h
- * @brief 기반의 무기 규칙(GameFramework/Base/Actor/Combat)을 실제로 쓰는 시험 게임 — 상자가 놓인 아레나에서 웨이브로 몰려오는 스켈레톤을 히트스캔 무기로 막는 슈터입니다.
+ * @brief 기반의 무기 규칙(GameFramework/Base/Actor/Combat)을 실제로 쓰는 테스트 게임 — 상자가 놓인 아레나에서 웨이브로 몰려오는 스켈레톤을 히트스캔 무기로 막는 슈터입니다.
  *
  * @details 빌드: `cmake --preset Ninja-Debug-Shooter3D`. 조작은 `Source/Games/Shooter3D/README.md`. `-gv_shooterAutoPlay=1` 이면 조준 · 사격도 AI 가 한다.
  *          아레나는 씬(`game/shooter3d/maps/arena.scene.xml` — 팩의 `data/gamesettings.xml` 시작 맵)과 그 안의 `ShooterDirectorComponent` ·

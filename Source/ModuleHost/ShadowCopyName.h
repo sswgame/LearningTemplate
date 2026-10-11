@@ -2,7 +2,7 @@
  * @file ShadowCopyName.h
  * @brief 섀도 복사본 파일 이름과, 남은 복사본 가운데 지워도 되는 것을 다룹니다.
  *
- * @note 핫 리로드(`LiveReloadManager`)와 그 시험만 쓰고, Shipping 빌드에서 함께 빠집니다(`Source/ModuleHost/CMakeLists.txt` 의 제외 목록).
+ * @note 핫 리로드(`LiveReloadManager`)와 그 테스트만 쓰고, Shipping 빌드에서 함께 빠집니다(`Source/ModuleHost/CMakeLists.txt` 의 제외 목록).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -13,7 +13,7 @@ namespace sw
     /**
      * @struct ShadowCopyName
      * @brief 섀도 복사본 파일 이름 `<모듈>_temp_p<프로세스 ID>_<번호>_<원본 시각>` 을 만들고 읽으며, 폴더에 남은 복사본을 치웁니다.
-     * @details 복사본은 실행 파일 폴더에 둡니다. 그 폴더는 같은 빌드의 프로세스 여럿(App · 시험 실행 파일)이 동시에 쓰므로, 이름에 만든
+     * @details 복사본은 실행 파일 폴더에 둡니다. 그 폴더는 같은 빌드의 프로세스 여럿(App · 테스트 실행 파일)이 동시에 쓰므로, 이름에 만든
      *          프로세스의 ID 를 넣어 서로 겹치지 않게 하고, 치울 때는 **다른 살아 있는 프로세스의 것**을 건드리지 않습니다 — 그 프로세스가
      *          막 써 두고 아직 올리지 않은 복사본일 수 있습니다.
      */

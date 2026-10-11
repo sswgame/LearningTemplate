@@ -59,7 +59,7 @@ namespace sw
         float32 getBreakProgress() const { return _breakProgress; }
         uint32  getBrokenCount() const { return _brokenCount; }
         uint32  getPlacedCount() const { return _placedCount; }
-        /** @brief 몸을 처음 둔 자리(시험 · 탐침이 걸은 거리를 잰다)입니다. */
+        /** @brief 몸을 처음 둔 자리(테스트 · 탐침이 걸은 거리를 잰다)입니다. */
         const float3&           getStartPosition() const { return _startPosition; }
         const GameObjectHandle& getDirector() const { return _director; }
 

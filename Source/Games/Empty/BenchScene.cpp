@@ -66,7 +66,7 @@ namespace sw
         constexpr const utf8* kArrBenchCharacterClip[] = { "Idle", "Walking_A" };
         /** @brief 캐릭터 사이 간격(미터)입니다. */
         constexpr float32 kBenchCharacterSpacing = 1.6f;
-        /// @brief 얼굴 벤치의 시험 머리(합성 — 모프 타깃 일곱 · 눈 본 둘)와 그 리그 · 클립 · 음성입니다.
+        /// @brief 얼굴 벤치의 테스트 머리(합성 — 모프 타깃 일곱 · 눈 본 둘)와 그 리그 · 클립 · 음성입니다.
         constexpr const utf8* kBenchFaceMesh     = "game/empty/models/testhead.mesh";
         constexpr const utf8* kBenchFaceSkeleton = "game/empty/models/testhead/testhead.skeleton.json";
         constexpr const utf8* kBenchFaceClips    = "game/empty/models/testhead/clips";
@@ -111,8 +111,8 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchCharacterStagger, 0, "벤치 캐릭터 시작 시각을 흩는다 (0=모두 0 초)" );
 
     /**
-     * @brief `-gv_benchFaces=N` — 시험 머리 N 개를 한 줄로 세웁니다(얼굴 애니메이션 확인). 모두 카메라를 보고(시선) 깜빡이며, 짝수는 Talk 클립
-     *        (모프 가중치 커브)을 재생하고 Happy 표정 0.6, 홀수는 시험 음성을 말합니다(비즘 트랙).
+     * @brief `-gv_benchFaces=N` — 테스트 머리 N 개를 한 줄로 세웁니다(얼굴 애니메이션 확인). 모두 카메라를 보고(시선) 깜빡이며, 짝수는 Talk 클립
+     *        (모프 가중치 커브)을 재생하고 Happy 표정 0.6, 홀수는 테스트 음성을 말합니다(비즘 트랙).
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchFaces, 0, "벤치 시험 머리 수 (0=사용 안 함, 모프 · 표정 · 립싱크 · 깜빡임 · 시선)" );
 
@@ -128,7 +128,7 @@ namespace sw
      * @details 배치 키가 인스턴스 포인터를 포함하므로 배치가 1개에서 N개로 갈라진다 — 배치·드로우
      *          경로에 실제 부하를 거는 유일한 방법이다.
      * @note 기본은 꺼 둔다 — 배치가 하나인 기본 측정과 부하 모양이 다르다. 프레임마다 구조버퍼 업로드가
-     *       여러 번 도는 경로라 DX12 업로드 얼로케이터의 펜스 구간 처리(`updateStructuredBuffer`)를 시험하기에 좋다.
+     *       여러 번 도는 경로라 DX12 업로드 얼로케이터의 펜스 구간 처리(`updateStructuredBuffer`)를 테스트하기에 좋다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchMaterialInstances, 0, "벤치 큐브마다 MaterialInstance 부여 (배치를 큐브 수만큼 가른다)" );
 

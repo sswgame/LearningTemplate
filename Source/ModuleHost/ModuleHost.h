@@ -186,8 +186,8 @@ namespace sw
 #if !defined( SW_SHIPPING )
         /**
          * @brief 이미 만든 게임 인스턴스와 그 API 표를 호스트에 붙입니다.
-         * @details 모듈 DLL · 디바이스 없이 가짜 API 표로 게임을 내리는 순서(상태 찍기 → shutdown → destroy)를 시험하려고 둡니다.
-         *          시험 전용 창구라 배포본에는 없다 — 배포본에서 호스트의 API 표를 바꿔 끼울 길을 남기지 않는다.
+         * @details 모듈 DLL · 디바이스 없이 가짜 API 표로 게임을 내리는 순서(상태 찍기 → shutdown → destroy)를 테스트하려고 둡니다.
+         *          테스트 전용 함수라 배포본에는 없다 — 배포본에서 호스트의 API 표를 바꿔 끼울 길을 남기지 않는다.
          */
         void attachGameInstance( const GameAPI& gameAPI, GameHandle game );
 #endif
