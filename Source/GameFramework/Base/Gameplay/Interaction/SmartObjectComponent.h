@@ -22,7 +22,7 @@ namespace sw
 {
     /**
      * @class SmartObjectSlots
-     * @brief 자리마다 차지한 이(오브젝트 id, 0 = 빔)입니다. 씬 없이 시험합니다.
+     * @brief 자리마다 차지한 이(오브젝트 id, 0 = 빔)입니다. 씬 없이 테스트합니다.
      */
     class SW_GF_API SmartObjectSlots
     {

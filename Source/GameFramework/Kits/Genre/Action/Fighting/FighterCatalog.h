@@ -54,7 +54,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 캐릭터 하나입니다. 길이 단위는 게임이 정한다(시험은 미터). */
+    /** @brief 캐릭터 하나입니다. 길이 단위는 게임이 정한다(테스트는 미터). */
     struct SW_GF_API FighterDef
     {
         hashed_string         _id{};

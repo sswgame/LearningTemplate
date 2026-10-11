@@ -199,9 +199,9 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive );
         void               drainEvents( vector<FightingEvent>& outListEvent );
 
-        /** @brief 연습 모드 · 시험용 — 위치를 옮깁니다(벽 안으로 자른다). */
+        /** @brief 연습 모드 · 테스트용 — 위치를 옮깁니다(벽 안으로 자른다). */
         void setFighterPosition( int32 player, float32 x, float32 z );
-        /** @brief 연습 모드 · 시험용 — 체력을 정합니다(레이지 판정은 다음 프레임). */
+        /** @brief 연습 모드 · 테스트용 — 체력을 정합니다(레이지 판정은 다음 프레임). */
         void setFighterHealth( int32 player, int32 health );
 
         const FighterRuntime&   getFighter( int32 player ) const { return _arrFighter[player]; }

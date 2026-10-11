@@ -1,6 +1,6 @@
 /**
  * @file LiveEventRules.h
- * @brief 이벤트가 지금 열렸나 — 기간 · 반복 회차 · 빌드 판 · 지역 · 출시 비율. 저장 · 전송을 모릅니다(시험이 시각을 넣는다).
+ * @brief 이벤트가 지금 열렸나 — 기간 · 반복 회차 · 빌드 판 · 지역 · 출시 비율. 저장 · 전송을 모릅니다(테스트가 시각을 넣는다).
  * @details 반복 회차는 기반 `ServiceScheduler::computeLatestOccurrence`(UTC 매일 · 매주), 출시 비율은 `RemoteConfig::computeRolloutBucket` — 원격 설정 플래그와 같은 해시라
  *          같은 계정은 늘 같은 쪽이고, 해시 이름이 이벤트 id 라 이벤트마다 다른 계정 집합이 고른다.
  */

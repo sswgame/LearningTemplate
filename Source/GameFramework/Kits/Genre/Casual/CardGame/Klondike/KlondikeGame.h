@@ -60,7 +60,7 @@ namespace sw
         void initialize( const KlondikeSettings& settings, uint32 seed );
         /** @brief 주어진 덱(맨 위부터)을 한 줄씩 나눕니다 — 열 c 에 c + 1 장, 맨 위만 앞면, 나머지는 스톡입니다. */
         void initializeWithDeck( const KlondikeSettings& settings, const CardPile& deck );
-        /** @brief 판 모양을 그대로 둡니다(시험 · 이어 하기). */
+        /** @brief 판 모양을 그대로 둡니다(테스트 · 이어 하기). */
         void initializeFromState( const KlondikeSettings& settings, const KlondikeState& state );
 
         /** @brief 스톡에서 뒤집습니다. 스톡이 비었으면 웨이스트를 되돌립니다. 둘 다 비었거나 되돌리기 횟수를 다 썼으면 false 입니다. */

@@ -235,7 +235,7 @@ namespace sw
         MechSwapResult requestMechSwap( int32 pilot, int32 deckIndex );
         /** @brief 게임 쪽 판정(지형 낙하 · 함정)의 피해를 줍니다. 무기와 같은 길(다운치 · 경직 · 격추 · 게이지)을 탑니다. */
         void applyDamage( int32 attacker, int32 victim, float32 damage, float32 downValue, float32 staggerTime );
-        /** @brief 조종사를 그 자리로 옮깁니다(스폰 지점 · 시험). */
+        /** @brief 조종사를 그 자리로 옮깁니다(스폰 지점 · 테스트). */
         void teleport( int32 pilot, const float3& position );
 
         /** @brief 지금 상태를 스냅샷으로 만듭니다. */

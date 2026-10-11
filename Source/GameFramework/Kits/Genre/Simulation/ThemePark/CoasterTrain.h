@@ -137,7 +137,7 @@ namespace sw
 {
     /**
      * @class CoasterRideAnalyzer
-     * @brief 열차를 스테이션에서 띄워 한 바퀴를 시뮬레이션하고 `CoasterRideStats` 를 냅니다(타이쿤의 "시험 운행").
+     * @brief 열차를 스테이션에서 띄워 한 바퀴를 시뮬레이션하고 `CoasterRideStats` 를 냅니다(타이쿤의 "테스트 운행").
      * @details 실시간 열차와 같은 물리를 씁니다. 시작점은 거리 0 이고 속도 0 에서 출발합니다(스테이션 · 체인이 끌어 준다). @p maxTime 안에
      *          한 바퀴를 못 돌거나 3 초 넘게 거의 멈춰 있으면(체인 · 스테이션 · 부스터 밖) 멈춤으로 보고 끝냅니다.
      */

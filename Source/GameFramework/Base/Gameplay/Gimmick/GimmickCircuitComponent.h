@@ -103,7 +103,7 @@ namespace sw
         void onTick( float32 deltaTime ) override;
         void onPropertyChanged( hashed_string propertyName ) override;
 
-        /** @brief 노드를 더합니다(코드로 짓는 회로 · 시험). @p target 이 비면 소유자입니다. 다음 `rebuild` 부터 반영됩니다. */
+        /** @brief 노드를 더합니다(코드로 짓는 회로 · 테스트). @p target 이 비면 소유자입니다. 다음 `rebuild` 부터 반영됩니다. */
         void addNode( const hashed_string& id, const hashed_string& kind, string_view params, GameObjectHandle target = GameObjectHandle{} );
         /** @brief 배선을 더합니다("node.Output", "node.Input"). */
         void addWire( string_view from, string_view to, bool bInvert = false );
@@ -113,7 +113,7 @@ namespace sw
         void makeDef( GimmickCircuitDef& outDef, vector<string>& outListError ) const;
         /** @brief 정의를 다시 검증 · 짓고 오류를 로그로 냅니다. 지었으면 true 입니다. 회로 상태는 처음으로 돌아갑니다. */
         bool rebuild();
-        /** @brief 센서를 읽고 한 걸음 돌리고 액추에이터를 겁니다(시험 · 일시정지 중 한 걸음). */
+        /** @brief 센서를 읽고 한 걸음 돌리고 액추에이터를 겁니다(테스트 · 일시정지 중 한 걸음). */
         void stepOnce();
 
         /** @brief 지금 상태를 체크포인트로 잡습니다. */

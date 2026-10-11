@@ -3,7 +3,7 @@
  * @brief 서버 프로세스끼리의 알림 — 주제(topic) 발행/구독, 최대 한 번 배달입니다.
  * @details 놓치면 안 되는 것은 영속 저장 + 다시 읽기(버스는 "빨리 알기" 용). 받은 메시지에 자기 서버가 보낸 것도 온다(`_originServerID` 로 거른다).
  *          주제는 `[0-9a-z_.]`(200 B 이하) — "account.revoke" · "config.changed" · "chat.channel.<이름>". 틀린 주제의 발행 · 구독은 경고를 남기고 버린다.
- *          구현: `EphemeralServerBus`(캐시 발행/구독 위 — 서버 여럿), `LocalServerBus`(프로세스 안 — 서버 한 대 · 시험).
+ *          구현: `EphemeralServerBus`(캐시 발행/구독 위 — 서버 여럿), `LocalServerBus`(프로세스 안 — 서버 한 대 · 테스트).
  */
 #pragma once
 #include "Core/Common/Types.h"

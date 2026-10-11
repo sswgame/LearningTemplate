@@ -1,6 +1,6 @@
 /**
  * @file FakePushProvider.h
- * @brief 가짜 푸시 제공자 — 보낸 것을 기록하고, 토큰마다 정해 둔 결과를 다음 `pollResults` 에 돌려줍니다(기본 Delivered). 시험 · 개발 서버용입니다.
+ * @brief 가짜 푸시 제공자 — 보낸 것을 기록하고, 토큰마다 정해 둔 결과를 다음 `pollResults` 에 돌려줍니다(기본 Delivered). 테스트 · 개발 서버용입니다.
  */
 #pragma once
 #include "Core/Container/unordered_map.h"

@@ -1,8 +1,8 @@
 /**
  * @file MemoryServiceStore.h
- * @brief 메모리 서비스 저장소 — 시험 · 한 프로세스 개발 서버용입니다. 데이터(`MemoryServiceDatabase` — 실패 주입 포함)와 앞(`MemoryServiceStore` — 완료 큐)이 나뉩니다.
- * @details - 일은 `submit` 한 스레드에서 바로 `run` 하고 완료는 큐에 쌓는다 — 결정적이다(SQL 구현은 풀 워커에서 돈다. 계약 시험은 둘을 같은 결과로 본다).
- *          - "서버 재시작" 시험은 데이터를 남기고 앞 · 서비스를 새로 만든다. "서버 둘" 시험은 앞 둘이 데이터 하나를 쓴다.
+ * @brief 메모리 서비스 저장소 — 테스트 · 한 프로세스 개발 서버용입니다. 데이터(`MemoryServiceDatabase` — 실패 주입 포함)와 앞(`MemoryServiceStore` — 완료 큐)이 나뉩니다.
+ * @details - 일은 `submit` 한 스레드에서 바로 `run` 하고 완료는 큐에 쌓는다 — 결정적이다(SQL 구현은 풀 워커에서 돈다. 계약 테스트는 둘을 같은 결과로 본다).
+ *          - "서버 재시작" 테스트는 데이터를 남기고 앞 · 서비스를 새로 만든다. "서버 둘" 테스트는 앞 둘이 데이터 하나를 쓴다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -42,7 +42,7 @@ namespace sw
                                                       vector<ServiceRecord>& outListRecord ) override;
         [[nodiscard]] ServiceStoreResult commit( const ServiceTransaction& transaction, ServiceCommitInfo* pOutInfo = nullptr ) override;
 
-        /** @brief 해당 종류의 호출을 @p skipCount 번 흘려보낸 뒤 한 번 @p fault 를 일으킵니다(시험). None 이면 걸어 둔 것을 풉니다. */
+        /** @brief 해당 종류의 호출을 @p skipCount 번 흘려보낸 뒤 한 번 @p fault 를 일으킵니다(테스트). None 이면 걸어 둔 것을 풉니다. */
         void   armFault( ServiceStoreFault fault, int32 skipCount = 0 );
         bool   isFaultArmed() const;
         uint64 getCommitCount() const;

@@ -1,6 +1,6 @@
 /**
  * @file MemoryLocalStore.h
- * @brief 메모리 로컬 저장 — 시험용입니다. 데이터(`MemoryLocalDatabase` — 슬롯 → 봉투 바이트, "쓰기 도중 꺼짐" 주입)와 앞(`MemoryLocalStore` — 맡기는 자리에서 실행)이 나뉩니다.
+ * @brief 메모리 로컬 저장 — 테스트용입니다. 데이터(`MemoryLocalDatabase` — 슬롯 → 봉투 바이트, "쓰기 도중 꺼짐" 주입)와 앞(`MemoryLocalStore` — 맡기는 자리에서 실행)이 나뉩니다.
  * @details 앞을 없애고 새 앞을 같은 데이터에 붙이면 "다시 켠 게임" 이다. 꺼짐 주입은 다음 쓰기를 적지 않고 IOError 로 끝낸다 — 다시 켜면 옛 내용이다(원자 쓰기의 약속).
  */
 #pragma once
@@ -31,9 +31,9 @@ namespace sw
 
         /** @brief 다음 쓰기 하나가 도중에 꺼진 것처럼 — 적지 않고 IOError 입니다. */
         void failNextWrite();
-        /** @brief 봉투 바이트를 직접 고칩니다(변조 시험). 없는 슬롯이면 false. */
+        /** @brief 봉투 바이트를 직접 고칩니다(변조 테스트). 없는 슬롯이면 false. */
         [[nodiscard]] bool modifyEnvelopeByte( const string& slot, size_t offset, uint8 xorMask );
-        /** @brief 봉투 바이트를 그대로 봅니다(평문이 보이지 않는지 시험). */
+        /** @brief 봉투 바이트를 그대로 봅니다(평문이 보이지 않는지 테스트). */
         [[nodiscard]] bool findEnvelope( const string& slot, vector<uint8>& outEnvelopeBytes ) const;
 
     private:

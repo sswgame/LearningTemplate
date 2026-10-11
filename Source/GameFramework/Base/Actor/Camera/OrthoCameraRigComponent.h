@@ -30,7 +30,7 @@ namespace sw
 {
     /**
      * @struct OrthoCameraRigMath
-     * @brief 리그의 계산입니다 — 씬 없이 시험합니다.
+     * @brief 리그의 계산입니다 — 씬 없이 테스트합니다.
      * @details 요는 +Z 에서 +X 쪽으로 도는 각, 피치는 아래로 내려다보는 각입니다(라디안). 오일러는 `CameraComponent::lookAt` 과 같은 배치(피치 · 요 · 0)입니다.
      */
     struct SW_GF_API OrthoCameraRigMath

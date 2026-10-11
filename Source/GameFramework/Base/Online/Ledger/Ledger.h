@@ -53,7 +53,7 @@ namespace sw
         [[nodiscard]] static ServiceStoreResult findJournal( IServiceStoreConnection& connection, string_view journalKey, LedgerJournalEntry& outEntry );
         /** @brief @p source 의 쓰기를 @p inoutTarget 뒤에 그대로 붙입니다 — 부분을 따로 만들어 상한을 본 뒤 합칠 때(우편 넣기 · 구매 한도). */
         static void appendWrites( const ServiceTransaction& source, ServiceTransaction& inoutTarget );
-        /** @brief 잔액 레코드 바이트를 읽습니다(검사 · 시험). */
+        /** @brief 잔액 레코드 바이트를 읽습니다(검사 · 테스트). */
         [[nodiscard]] static bool decodeBalanceRecord( const vector<uint8>& bytes, int64& outAmount );
     };
 } // namespace sw

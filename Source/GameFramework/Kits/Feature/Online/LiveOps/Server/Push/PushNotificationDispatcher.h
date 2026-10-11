@@ -33,7 +33,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 발송 수치입니다(관측 · 시험). */
+    /** @brief 발송 수치입니다(관측 · 테스트). */
     struct PushDispatcherStats
     {
         uint64 _sentCount{ 0 };

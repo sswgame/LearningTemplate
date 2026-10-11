@@ -67,7 +67,7 @@ namespace sw
         };
     } // namespace
 
-    /** @brief `-gv_aiDirectorTrace=1` — 감독이 낸 일(단계 · 스폰 · 조우 · 보상)을 낼 때마다 로그에 한 줄씩 남깁니다(시험용 — 배포본에는 없다). */
+    /** @brief `-gv_aiDirectorTrace=1` — 감독이 낸 일(단계 · 스폰 · 조우 · 보상)을 낼 때마다 로그에 한 줄씩 남깁니다(테스트용 — 배포본에는 없다). */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_aiDirectorTrace, 0, "AIDirector: log every phase change, spawn, encounter and reward (1=on)" );
 } // namespace sw
 

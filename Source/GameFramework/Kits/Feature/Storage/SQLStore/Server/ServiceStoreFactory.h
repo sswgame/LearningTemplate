@@ -1,7 +1,7 @@
 /**
  * @file ServiceStoreFactory.h
  * @brief 서버 설정의 저장소 항목(`ServerStoreEntry` — 드라이버 이름 · 접속 글 · 비밀) 하나 → 서비스 저장소입니다.
- * @details "memory" 는 기반의 메모리 구현(시험 · 개발 — 같은 프로세스의 앞들이 데이터 하나를 나눠 쓴다), 그 밖의 이름은 `SQLServiceStore`(드라이버 등록부에서 찾는다).
+ * @details "memory" 는 기반의 메모리 구현(테스트 · 개발 — 같은 프로세스의 앞들이 데이터 하나를 나눠 쓴다), 그 밖의 이름은 `SQLServiceStore`(드라이버 등록부에서 찾는다).
  *          이 빌드 타깃에 없는 드라이버면 분명한 오류로 기동을 멈춘다(다른 드라이버로 바꾸지 않는다).
  */
 #pragma once

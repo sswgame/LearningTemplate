@@ -24,7 +24,7 @@ namespace sw
     {
         /** @brief 리소스 경로의 XML 을 읽고 @p pRootName 루트를 찾습니다. 실패하면 경고하고 false 입니다. */
         [[nodiscard]] static bool loadRoot( XMLDocument& doc, string_view path, const utf8* pRootName, XMLNode& outRoot, string& outSourceName );
-        /** @brief XML 글을 읽고 루트를 찾습니다(시험 · 에디터 미리보기). 실패하면 경고하고 false 입니다. */
+        /** @brief XML 글을 읽고 루트를 찾습니다(테스트 · 에디터 미리보기). 실패하면 경고하고 false 입니다. */
         [[nodiscard]] static bool parseRoot( XMLDocument& doc, string_view xmlText, string_view sourceName, const utf8* pRootName, XMLNode& outRoot );
         /**
          * @brief 리소스 경로의 XML 을 열어 @p pRootName 루트를 카탈로그의 루트 읽기(@p pLoadRoot)에 넘깁니다. 문서 · 루트가 없거나 읽은 것이 없으면 false 입니다.
@@ -43,7 +43,7 @@ namespace sw
             string      sourceName;
             return loadRoot( doc, path, pRootName, root, sourceName ) && isLoaded( ( loader.*pLoadRoot )( root, sourceName ) );
         }
-        /** @brief `loadFile` 의 XML 글 판입니다(시험 · 에디터 미리보기 — `loadFromXMLText`). */
+        /** @brief `loadFile` 의 XML 글 판입니다(테스트 · 에디터 미리보기 — `loadFromXMLText`). */
         template <typename TLoader, typename TResult>
         [[nodiscard]] static bool loadText( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XMLNode&, string_view ), string_view xmlText, string_view sourceName,
                                             const utf8* pRootName )

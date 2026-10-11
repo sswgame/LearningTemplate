@@ -42,7 +42,7 @@ namespace sw
         virtual ~CrumblePlatformComponent() override = default;
 
         void onTick( float32 deltaTime ) override;
-        /** @brief 한 걸음(60 Hz)을 진행합니다(시험 · 롤백 재시뮬레이션). */
+        /** @brief 한 걸음(60 Hz)을 진행합니다(테스트 · 롤백 재시뮬레이션). */
         void stepOnce();
 
         CrumbleState getState() const { return _state; }
@@ -105,7 +105,7 @@ namespace sw
         virtual ~LaunchPadComponent() override = default;
 
         void onOverlapBegin( const OverlapInfo& overlap ) override;
-        /** @brief @p target 을 쏩니다(겹침이 부른다 — 시험 · 스크립트도 부를 수 있다). */
+        /** @brief @p target 을 쏩니다(겹침이 부른다 — 테스트 · 스크립트도 부를 수 있다). */
         void  launch( GameObject& target );
         int32 getLaunchCount() const { return _launchCount; }
 

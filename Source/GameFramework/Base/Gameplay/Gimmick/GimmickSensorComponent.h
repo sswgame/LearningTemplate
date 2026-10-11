@@ -63,7 +63,7 @@ namespace sw
 
         /** @brief 겹친 것으로 칠 오브젝트인가 — 필요한 태그를 모두 가졌는가입니다(태그가 없으면 모두). */
         bool acceptsOccupant( const GameObject& object ) const;
-        /** @brief 바깥(시험 · 게임 규칙)이 겹친 것을 직접 더하거나 뺍니다. 겹침 훅과 같은 목록입니다. */
+        /** @brief 바깥(테스트 · 게임 규칙)이 겹친 것을 직접 더하거나 뺍니다. 겹침 훅과 같은 목록입니다. */
         void addOccupant( const GameObject& object );
         void removeOccupant( GameObjectHandle handle );
 

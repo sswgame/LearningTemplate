@@ -111,7 +111,7 @@ namespace sw
     /**
      * @class ILocalStore
      * @brief 로컬 저장의 앞입니다 — 게임 스레드 하나가 맡기고 거둔다. 완료는 맡긴 순서대로 온다.
-     *        구현: `MemoryLocalStore`(시험 — 그 자리에서 실행) · `ThreadedLocalStore`(전용 스레드 하나 + 슬롯 저장소: 파일 · SQLite).
+     *        구현: `MemoryLocalStore`(테스트 — 그 자리에서 실행) · `ThreadedLocalStore`(전용 스레드 하나 + 슬롯 저장소: 파일 · SQLite).
      */
     class SW_GF_API ILocalStore
     {

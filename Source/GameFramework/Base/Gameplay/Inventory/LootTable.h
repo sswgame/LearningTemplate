@@ -51,7 +51,7 @@ namespace sw
      * @brief `<LootCatalog><Table id="wolf" rolls="1" rollsMax="2" none="10"><Entry item="pelt" weight="10" min="1" max="2"/><Entry table="gems" weight="1"/>
      *        <Always item="meat" chance="0.75"/></Table></LootCatalog>` 를 읽고 굴립니다.
      * @details 결과는 `ItemStackList` 에 더합니다(같은 아이템은 합친다). 표 안의 표는 8 단계까지만 따라갑니다(서로 부르는 표가 멈추게).
-     *          난수는 부르는 쪽이 넘깁니다 — 씨앗이 같으면 같은 전리품입니다(리플레이 · 시험).
+     *          난수는 부르는 쪽이 넘깁니다 — 씨앗이 같으면 같은 전리품입니다(리플레이 · 테스트).
      */
     class SW_GF_API LootCatalog : public XMLCatalog<LootCatalog>
     {

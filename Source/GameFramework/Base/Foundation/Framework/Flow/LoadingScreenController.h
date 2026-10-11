@@ -59,7 +59,7 @@ namespace sw
         LoadingScreenController( const LoadingScreenController& )            = delete;
         LoadingScreenController& operator=( const LoadingScreenController& ) = delete;
 
-        /** @brief 쓸 UI 시스템을 정합니다(옛 쪽의 화면은 닫는다). nullptr 이면 아무것도 띄우지 않습니다. 시험은 자기 것을 넘긴다. */
+        /** @brief 쓸 UI 시스템을 정합니다(옛 쪽의 화면은 닫는다). nullptr 이면 아무것도 띄우지 않습니다. 테스트는 자기 것을 넘긴다. */
         void      bindUISystem( UISystem* pUISystem );
         UISystem* getUISystem() const { return _pUISystem; }
 

@@ -140,11 +140,11 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 판의 시작 모양입니다(시험 · 리플레이). 더미는 맨 위(끝)부터 뒤집습니다. */
+    /** @brief 판의 시작 모양입니다(테스트 · 리플레이). 더미는 맨 위(끝)부터 뒤집습니다. */
     struct MatgoLayout
     {
         vector<CardPile> _listHand{};
-        vector<CardPile> _listCaptured{}; ///< 이미 먹은 패(비우면 없음 — 이어 하기 · 시험)
+        vector<CardPile> _listCaptured{}; ///< 이미 먹은 패(비우면 없음 — 이어 하기 · 테스트)
         CardPile         _floor{};
         CardPile         _drawPile{};
         int32            _firstPlayer{ 0 };

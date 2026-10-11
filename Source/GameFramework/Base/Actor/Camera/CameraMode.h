@@ -1,7 +1,7 @@
 /**
  * @file CameraMode.h
  * @brief 카메라 모드의 계산 — 입력을 상태로(`applyCameraInput`), 프리셋 · 대상 · 상태를 포즈로(`evaluateCameraMode`) 바꿉니다.
- * @details 컴포넌트 · 씬을 모르는 순수 계산이라 씬 없이 시험합니다. 모드는 `CameraPresetMode` 하나에 프리셋의 섹션(입력 · 제약 · 프레이밍 · 충돌 ·
+ * @details 컴포넌트 · 씬을 모르는 순수 계산이라 씬 없이 테스트합니다. 모드는 `CameraPresetMode` 하나에 프리셋의 섹션(입력 · 제약 · 프레이밍 · 충돌 ·
  *          훑기)이 얹히고, 프레임 사이에 남는 것(입력이 돌린 각 · 줌 · 팬, 스프링 암 길이, 조준, look-ahead)은 `CameraModeState` 에 있습니다.
  *          직교 리그(`OrthoCameraRigComponent`) · 1인칭(`FirstPersonCameraComponent`) · 디렉터(`CameraDirectorComponent`)가 같은 계산을 부릅니다.
  */
@@ -51,7 +51,7 @@ namespace sw
         float32 _aimPitch{ 0.0f };       ///< 프레이밍이 정한 조준 피치
         uint8   _bAimValid{ SW_FALSE };
         uint8   _bHasPreviousFocus{ SW_FALSE };
-        uint8   _bArmBlocked{ SW_FALSE }; ///< 지난 평가에서 암이 막혀 당겨졌다(진단 · 시험)
+        uint8   _bArmBlocked{ SW_FALSE }; ///< 지난 평가에서 암이 막혀 당겨졌다(진단 · 테스트)
 
         /** @brief 새로 시작합니다(프리셋을 켤 때). */
         void reset() { *this = CameraModeState{}; }

@@ -42,7 +42,7 @@ namespace sw
 
     /**
      * @brief `-gv_netListenPort=<포트>`: 게임 인스턴스가 이 UDP 포트를 열고 클라이언트를 받습니다(0=끄기). 전용 서버 · 리슨 호스트 모두.
-     * @details 언리얼 `?listen` · `-port=` 의 자리. 기본은 꺼짐 — 한 기계에서 서버를 여럿 띄우는 시험이 포트로 부딪히지 않게.
+     * @details 언리얼 `?listen` · `-port=` 의 자리. 기본은 꺼짐 — 한 기계에서 서버를 여럿 띄우는 테스트가 포트로 부딪히지 않게.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_netListenPort, 0, "게임 네트워크 서버로 열 UDP 포트 (0=끄기)" );
     /**
@@ -52,7 +52,7 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_netConnectAddress, "", "클라이언트로 붙을 게임 서버 주소 (주소:포트, 비면 끄기)" );
     /**
      * @brief `-gv_netLoopbackOnly=0`: 게임 UDP 소켓을 모든 인터페이스에 묶는다(기본 1 = 127.0.0.1 만).
-     * @details 모든 인터페이스에 묶으면 Windows 방화벽이 실행 파일 경로마다 "허용" 창을 띄운다 — 워크트리 · 시험 실행 파일이 많은 개발 환경에서는 매번 뜬다.
+     * @details 모든 인터페이스에 묶으면 Windows 방화벽이 실행 파일 경로마다 "허용" 창을 띄운다 — 워크트리 · 테스트 실행 파일이 많은 개발 환경에서는 매번 뜬다.
      *          다른 기계와 붙을 때만 0 으로 둔다. 클라이언트는 서버 주소가 루프백이 아닐 때 이 값과 상관없이 모든 인터페이스에 묶는다(답을 받아야 한다).
      */
     SW_TEST_GLOBAL_VARIABLE( bool, gv_netLoopbackOnly, true, "게임 UDP 소켓을 127.0.0.1 에만 묶는다 (0=모든 인터페이스, 다른 기계와 붙을 때)" );

@@ -20,7 +20,7 @@ namespace sw
     class Archive;
     class CropCatalog;
 
-    /** @brief 밭 한 칸에 무엇을 하려다 어떻게 됐는지입니다. UI 가 이유를 띄우고 시험이 읽습니다. */
+    /** @brief 밭 한 칸에 무엇을 하려다 어떻게 됐는지입니다. UI 가 이유를 띄우고 테스트가 읽습니다. */
     enum class FarmActionResult : uint8
     {
         Done = 0,       ///< 했다

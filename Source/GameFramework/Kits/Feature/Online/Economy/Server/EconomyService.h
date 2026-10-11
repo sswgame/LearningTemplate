@@ -1,7 +1,7 @@
 /**
  * @file EconomyService.h
  * @brief 경제 서비스(서버) — 지갑 · 내역 · 구매 · 영수증 지급 요청을 저장소 일로 맡기고, 완료에서 답합니다. 서비스 스레드 하나에서 씁니다.
- * @details - 입구 둘: 서비스 틀(`onServiceRequest` — 호스트가 인증 · 도배 제한 · 판 협상을 이미 했다)과 `submitCall`(같은 프로세스의 서버 코드 · 시험). 둘 다 같은 일로 간다.
+ * @details - 입구 둘: 서비스 틀(`onServiceRequest` — 호스트가 인증 · 도배 제한 · 판 협상을 이미 했다)과 `submitCall`(같은 프로세스의 서버 코드 · 테스트). 둘 다 같은 일로 간다.
  *          - 저장소 완료는 호스트(`OnlineServiceHost::tick`)가 서비스 틱 전에 거둔다 — 호스트 없이 쓰면 부르는 쪽이 `IServiceStore::pollCompletions` 뒤 `tick`.
  *          - 구매는 멱등 키 필수(분개 키 = `acct.<계정>/<키>`). 영수증은 등록부에 맡기고 `tick` 이 결과를 거둬 지급 일을 맡긴다.
  *          - 원격 설정 `feature.shop_enabled`(기본 켬)가 꺼지면 구매 · 지급이 `kFeatureDisabled`(조회는 된다). Shipping 은 개발 전용 영수증 제공자를 거절한다.

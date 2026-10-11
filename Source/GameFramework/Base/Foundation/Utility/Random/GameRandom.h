@@ -1,6 +1,6 @@
 /**
  * @file GameRandom.h
- * @brief 씨앗이 같으면 같은 수열을 내는 난수(xorshift32)와 좌표 해시 — 시험 · 리플레이 · 절차 생성이 되풀이되게 합니다.
+ * @brief 씨앗이 같으면 같은 수열을 내는 난수(xorshift32)와 좌표 해시 — 테스트 · 리플레이 · 절차 생성이 되풀이되게 합니다.
  */
 #pragma once
 #include "Core/Common/HashUtil.h"

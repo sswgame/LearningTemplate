@@ -104,9 +104,9 @@ namespace sw
          * @details 숨김 해제도 여기서 합니다(조건이 다시 맞으면).
          */
         EquipResult settleConditions( vector<EquipSlot>& inoutListSlot, bool bAllowRefuse, vector<InventorySlot>& outListRemoved ) const;
-        /** @brief 칸 @p slotIndex 에 @p item 을 둔 시험 상태를 만들고 판정합니다. */
+        /** @brief 칸 @p slotIndex 에 @p item 을 둔 테스트 상태를 만들고 판정합니다. */
         EquipResult makeTrialEquip( int32 slotIndex, const InventorySlot& item, vector<EquipSlot>& outListSlot, vector<InventorySlot>& outListRemoved ) const;
-        /** @brief 시험 상태를 들이고, 실제로 바뀌었으면 판을 올립니다. */
+        /** @brief 테스트 상태를 들이고, 실제로 바뀌었으면 판을 올립니다. */
         void commitSlots( vector<EquipSlot>&& listSlot );
 
         vector<EquipSlot>      _listSlot;

@@ -68,7 +68,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 보낸 · 받은 양과 일어난 일입니다(대역폭 · 시험). */
+    /** @brief 보낸 · 받은 양과 일어난 일입니다(대역폭 · 테스트). */
     struct DestructionReplicationStats
     {
         uint64 _eventMessageCount{ 0 };
@@ -185,7 +185,7 @@ namespace sw
         void registerObject( uint32 netID, FractureComponentBase& component );
         /** @brief 월드 틱 앞에 부릅니다 — 지난 틱에 적용된 상태로 해시를 비교하고, 렌더 틱을 흘려 덩어리 자세를 몬다. */
         void update( float32 deltaTime );
-        /** @brief 시험 · 결함 주입 — 그 오브젝트의 다음 사건 하나를 적용하지 않고 넘깁니다(해시 어긋남 → 스냅숏 복구를 본다). */
+        /** @brief 테스트 · 결함 주입 — 그 오브젝트의 다음 사건 하나를 적용하지 않고 넘깁니다(해시 어긋남 → 스냅숏 복구를 본다). */
         void skipNextEvent( uint32 netID );
 
         uint8 getMessageRangeBase() const override { return NetKitMessageRange::kDestruction; }

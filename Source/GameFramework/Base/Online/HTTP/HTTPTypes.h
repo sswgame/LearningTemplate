@@ -83,7 +83,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 서버가 받은 요청 하나입니다(루프백 리다이렉트 · 시험 서버). */
+    /** @brief 서버가 받은 요청 하나입니다(루프백 리다이렉트 · 테스트 서버). */
     struct SW_GF_API HTTPServerRequest
     {
         vector<HTTPHeader> _listHeader{};
@@ -106,7 +106,7 @@ namespace sw
         vector<HTTPHeader> _listHeader{}; ///< `Content-Length` · `Connection` 은 서버가 붙인다
         vector<uint8>      _bodyBytes{};
         int32              _statusCode{ HTTPConstant::kStatusOk };
-        uint8              _bChunked{ SW_FALSE }; ///< 몸을 chunked 로 보낸다(시험 — 받는 쪽 chunked 풀기)
+        uint8              _bChunked{ SW_FALSE }; ///< 몸을 chunked 로 보낸다(테스트 — 받는 쪽 chunked 풀기)
     };
 } // namespace sw
 

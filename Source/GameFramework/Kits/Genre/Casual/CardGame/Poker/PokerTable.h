@@ -135,7 +135,7 @@ namespace sw
         void initialize( const PokerSettings& settings, const vector<int32>& listStack );
         /** @brief 덱을 섞어 판을 엽니다. 칩이 있는 자리가 둘 미만이면 false 입니다. */
         [[nodiscard]] bool startHand( GameRandom& random );
-        /** @brief 주어진 덱(맨 위부터 나눈다)으로 판을 엽니다 — 시험 · 리플레이용입니다. */
+        /** @brief 주어진 덱(맨 위부터 나눈다)으로 판을 엽니다 — 테스트 · 리플레이용입니다. */
         [[nodiscard]] bool startHandWithDeck( const CardPile& deck );
 
         /** @brief 차례인 @p seat 의 행동입니다. 규칙에 어긋나면(차례 아님 · 체크 불가 · 최소 레이즈 미달 · 칩 부족) false 이고 아무것도 바뀌지 않습니다. */

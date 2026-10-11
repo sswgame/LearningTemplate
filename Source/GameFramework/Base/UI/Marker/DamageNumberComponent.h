@@ -77,7 +77,7 @@ namespace sw
 
         /** @brief 같은 오브젝트의 화면 마커 컴포넌트입니다(없으면 nullptr). */
         WidgetComponent* findWidgetComponent() const;
-        /** @brief 숫자 글 위젯입니다(아직 넣지 않았으면 nullptr — 시험이 글 · 색 · 불투명도를 읽는다). */
+        /** @brief 숫자 글 위젯입니다(아직 넣지 않았으면 nullptr — 테스트가 글 · 색 · 불투명도를 읽는다). */
         const TextWidget* findTextWidget() const;
 
     private:

@@ -42,7 +42,7 @@ namespace sw
         friend class XMLCatalog<CurrencyCatalog>;
 
     public:
-        /** @brief 정의를 더합니다(시험 · 코드로 만드는 게임). 같은 id 는 바꾼다. */
+        /** @brief 정의를 더합니다(테스트 · 코드로 만드는 게임). 같은 id 는 바꾼다. */
         void addCurrency( const CurrencyDef& def );
 
         const CurrencyDef*         findCurrency( string_view id ) const;

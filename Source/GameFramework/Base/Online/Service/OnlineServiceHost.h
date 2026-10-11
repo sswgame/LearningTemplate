@@ -105,7 +105,7 @@ namespace sw
     /** @brief 호스트 설정입니다. 저장소 · 캐시 · 버스 · 원격 설정은 빌려 쓴다(호스트보다 오래 산다). */
     struct OnlineServiceHostSettings
     {
-        StreamTransportSettings _transportSettings{}; ///< `_ioThreadCount == 0` 이면 호스트 `tick` 이 전송을 돈다(루프백 시험)
+        StreamTransportSettings _transportSettings{}; ///< `_ioThreadCount == 0` 이면 호스트 `tick` 이 전송을 돈다(루프백 테스트)
         StreamEndpointSettings  _endpointSettings{};
         NetAddress              _listenAddress{ NetAddress::makeAnyInterface( 7100 ) }; ///< 포트 0 = 아무 포트(`getListenPort`)
         IServiceStore*          _pServiceStore{ nullptr };

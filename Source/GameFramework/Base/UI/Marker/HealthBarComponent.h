@@ -78,7 +78,7 @@ namespace sw
 
         /** @brief 같은 오브젝트의 화면 마커 컴포넌트입니다(없으면 nullptr). */
         WidgetComponent* findWidgetComponent() const;
-        /** @brief 아래(흔적) 막대입니다(위젯을 아직 넣지 않았으면 nullptr — 시험이 값을 읽는다). */
+        /** @brief 아래(흔적) 막대입니다(위젯을 아직 넣지 않았으면 nullptr — 테스트가 값을 읽는다). */
         const ProgressBarWidget* findTrailBar() const { return findBar( kTrailBarIndex ); }
         /** @brief 위(채움) 막대입니다. */
         const ProgressBarWidget* findFillBar() const { return findBar( kFillBarIndex ); }

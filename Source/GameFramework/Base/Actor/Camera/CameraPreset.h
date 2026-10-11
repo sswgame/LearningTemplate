@@ -226,7 +226,7 @@ namespace sw
 {
     /**
      * @brief 손떨림 섹션(`<Noise>`)입니다(Cinemachine Basic Multi Channel Perlin). 채널마다 다른 위상의 1D 펄린 잡음이 자리 · 회전을 흔듭니다.
-     * @details 같은 시드 · 같은 시간이면 같은 값이다(시험 · 리플레이). 회전은 피치 · 요 · 롤(라디안, XML 에는 도)입니다.
+     * @details 같은 시드 · 같은 시간이면 같은 값이다(테스트 · 리플레이). 회전은 피치 · 요 · 롤(라디안, XML 에는 도)입니다.
      */
     REFLECT()
     struct SW_GF_API CameraNoiseDef

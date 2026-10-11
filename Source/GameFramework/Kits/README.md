@@ -164,7 +164,7 @@ DB 와 캐시 드라이버, 그리고 그 서드파티 라이브러리는 `["Ser
    `_listDependency` 에는 `EditorModule` 과 키트를 적습니다.
 2. `Editor/CMakeLists.txt` 에 `sw_addEditorExtension(GF_Editor_<키트>)` 한 줄을 씁니다. 키트 함수가 `Editor/` 를 키트 소스에서 빼고 이 폴더로 들어갑니다.
 3. 에디터 코드는 EditorModule 과 똑같이 `SW_EDITOR_PANEL` · `SW_EDITOR_VISUALIZER` · `SW_EDITOR_COMMAND` · `SW_EDITOR_SELF_TEST` 한 줄로 등록합니다.
-   본보기는 `Kits/Genre/Simulation/ThemePark/Editor/`(배치 시각화, Park Layout 패널, 커맨드, 자체 시험)입니다.
+   본보기는 `Kits/Genre/Simulation/ThemePark/Editor/`(배치 시각화, Park Layout 패널, 커맨드, 자체 테스트)입니다.
 
 ### 키트 안의 폴더
 

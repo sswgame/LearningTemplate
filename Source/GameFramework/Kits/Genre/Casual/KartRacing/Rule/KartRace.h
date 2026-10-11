@@ -199,17 +199,17 @@ namespace sw
         void step();
 
         /**
-         * @brief 차를 멈춰 세운 채 옮깁니다(코스 밖 · 낙사 구조, 시험). 옮김은 문을 지난 것으로 치지 않습니다.
+         * @brief 차를 멈춰 세운 채 옮깁니다(코스 밖 · 낙사 구조, 테스트). 옮김은 문을 지난 것으로 치지 않습니다.
          * @details 드리프트는 보상 없이 끊고 부스트 · 니트로는 남깁니다(`ArcadeVehicleMotor::reset` 은 니트로까지 비운다).
          */
         void placeRacer( int32 racer, const float3& position, float32 yaw );
         /** @brief 차 @p racer 의 입력을 @p pGhost 에(빌려 쓴다) 기록합니다. 출발 자리에서 기록을 시작하고 결승에서 멈춥니다. */
         void startGhostRecording( int32 racer, KartGhost* pGhost );
-        /** @brief 아이템을 쥐여 줍니다(시험 · 이벤트). 들고 있던 것은 바뀝니다. */
+        /** @brief 아이템을 쥐여 줍니다(테스트 · 이벤트). 들고 있던 것은 바뀝니다. */
         void giveItem( int32 racer, const hashed_string& itemID );
         /** @brief 들고 있는 아이템을 씁니다. 없으면 false 입니다. */
         [[nodiscard]] bool useItem( int32 racer );
-        /** @brief 아이템에 맞습니다(게임 쪽 함정 · 시험). 방어막이 막으면 false 입니다. */
+        /** @brief 아이템에 맞습니다(게임 쪽 함정 · 테스트). 방어막이 막으면 false 입니다. */
         [[nodiscard]] bool applyHit( int32 victim, int32 attacker, const KartItemDef& def );
         /** @brief 러버밴딩 최고 속도 배율입니다(사람 · 꺼짐 = 1). */
         float32 computeRubberBandScale( int32 racer ) const;

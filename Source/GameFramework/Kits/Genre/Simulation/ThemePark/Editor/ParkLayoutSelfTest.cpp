@@ -1,6 +1,6 @@
 /**
  * @file ParkLayoutSelfTest.cpp
- * @brief ThemePark 확장의 에디터 자체 시험 — 확장 패널이 에디터의 ImGui 컨텍스트에 그려지고(결속기), 배치 파일이 키트 로더로 읽힌다.
+ * @brief ThemePark 확장의 에디터 자체 테스트 — 확장 패널이 에디터의 ImGui 컨텍스트에 그려지고(결속기), 배치 파일이 키트 로더로 읽힌다.
  */
 #include "pch.h"
 

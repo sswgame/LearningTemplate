@@ -60,7 +60,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 흩뿌리기의 입력입니다(컴포넌트의 PROPERTY 를 모은 것 — 계산은 씬 없이 시험한다). */
+    /** @brief 흩뿌리기의 입력입니다(컴포넌트의 PROPERTY 를 모은 것 — 계산은 씬 없이 테스트한다). */
     struct PropScatterParams
     {
         vector<PropScatterModel>     _listModel{};

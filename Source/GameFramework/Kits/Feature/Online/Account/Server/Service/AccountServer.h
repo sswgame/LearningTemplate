@@ -65,7 +65,7 @@ namespace sw
         // IAccountSessionControl
         void revokeAccountSessions( AccountID accountID, string_view reasonCode, int64 nowMs ) override;
 
-        /** @brief 이 연결 계정의 지금 세션 id 입니다(시험 · 진단). 없으면 0. */
+        /** @brief 이 연결 계정의 지금 세션 id 입니다(테스트 · 진단). 없으면 0. */
         uint64 findSessionID( AccountID accountID ) const;
         /** @brief 접속 상태 창구입니다(거래 · 채팅이 빌려 쓴다 — 서버 한 대면 찾기는 "없음"). 이 객체와 같이 산다. */
         IAccountPresence* getPresence() { return &_presence; }

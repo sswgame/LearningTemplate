@@ -2,7 +2,7 @@
  * @file PlatformLoginClient.h
  * @brief 외부 로그인의 클라이언트 쪽 — "구글로 로그인" 을 누르면 제공자 표(ID 토큰 · 액세스 토큰)를 얻어 계정 서버의 외부 로그인(`kPlatformLogin`)에 넘깁니다.
  * @details - 모바일은 플랫폼 SDK(모바일 빌드가 생기면), PC 는 **시스템 브라우저 + 루프백 리다이렉트 + PKCE**(RFC 8252 — 임베드 웹뷰 금지): `LoopbackPkceLoginClient`.
- *          - 시스템 브라우저 열기는 `IExternalBrowser`(게임이 OS 로 구현 — ShellExecute · xdg-open, 시험은 가짜). 시험 · 개발은 `FakePlatformLoginClient`.
+ *          - 시스템 브라우저 열기는 `IExternalBrowser`(게임이 OS 로 구현 — ShellExecute · xdg-open, 테스트는 가짜). 테스트 · 개발은 `FakePlatformLoginClient`.
  *          - OIDC 제공자의 표는 `ID 토큰|nonce` — 서버의 `OidcLoginProvider` 가 nonce 를 맞춰 본다(재사용 막기).
  */
 #pragma once
@@ -71,7 +71,7 @@ namespace sw
 {
     /**
      * @class FakePlatformLoginClient
-     * @brief 시험 · 개발용 — `setTicket` 으로 정한 표를 다음 `tick` 에 돌려줍니다(정하지 않은 제공자는 실패).
+     * @brief 테스트 · 개발용 — `setTicket` 으로 정한 표를 다음 `tick` 에 돌려줍니다(정하지 않은 제공자는 실패).
      */
     class SW_GF_API FakePlatformLoginClient final : public IPlatformLoginClient
     {

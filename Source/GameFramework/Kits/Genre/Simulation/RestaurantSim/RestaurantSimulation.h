@@ -222,14 +222,14 @@ namespace sw
 
         /** @brief 시장에서 재료를 사서 신선도 묶음으로 넣습니다(단가는 그날 시세). */
         ShopResult buyIngredient( const hashed_string& shopID, const hashed_string& itemID, int32 count );
-        /** @brief 재료를 그냥 넣습니다(텃밭 · 선물 · 시험). */
+        /** @brief 재료를 그냥 넣습니다(텃밭 · 선물 · 테스트). */
         int32 addIngredient( const hashed_string& itemID, int32 count, int64 unitCost );
 
         /** @brief 문을 엽니다 — 그날 날씨 · 집계를 새로 둡니다. */
         void openDay( const hashed_string& weatherID );
         /** @brief 시간(게임 분)을 흘립니다. 닫는 시각이 지나도 안에 있는 손님은 계속 받습니다. */
         void update( float32 deltaMinutes );
-        /** @brief 손님 하나를 바로 들입니다(예약 · 시험). 손님 id 이고 모르는 성향이면 −1 입니다. */
+        /** @brief 손님 하나를 바로 들입니다(예약 · 테스트). 손님 id 이고 모르는 성향이면 −1 입니다. */
         int32 admitCustomer( const hashed_string& typeID );
         /** @brief 닫습니다 — 남은 손님을 정리하고 급여를 치른 뒤 결산을 @p outSummary 에 적습니다. */
         void closeDay( RestaurantDaySummary& outSummary );

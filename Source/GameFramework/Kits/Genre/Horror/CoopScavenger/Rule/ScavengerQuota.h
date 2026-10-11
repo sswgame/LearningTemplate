@@ -41,7 +41,7 @@ namespace sw
         void addFulfilled( int32 value );
         /** @brief 하루를 끝냅니다 — 마감 날이면 판정하고, 아니면 남은 날을 하나 줄입니다. @p outOvertimeBonus 는 넘긴 만큼의 보너스입니다. */
         ScavengerDeadlineResult endDay( GameRandom& random, int32& outOvertimeBonus );
-        /** @brief 주기 @p cycleIndex(0 부터) 를 채운 뒤의 늘어남입니다(무작위 r 을 넘긴다 — 시험 · 화면 예고). */
+        /** @brief 주기 @p cycleIndex(0 부터) 를 채운 뒤의 늘어남입니다(무작위 r 을 넘긴다 — 테스트 · 화면 예고). */
         int32 computeIncrease( int32 cycleIndex, float32 randomValue ) const;
 
         /** @brief 할당량 · 채운 양 · 남은 날 · 주기 · 게임 오버를 씁니다. 설정은 `initialize` 의 것이라 싣지 않습니다. */

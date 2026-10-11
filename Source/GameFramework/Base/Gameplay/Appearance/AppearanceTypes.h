@@ -82,9 +82,9 @@ namespace sw
 
         bool                  hasErrors() const { return _listError.empty() == false; }
         const vector<string>& getErrors() const { return _listError; }
-        /** @brief @p text 를 담은 오류 수입니다(시험). */
+        /** @brief @p text 를 담은 오류 수입니다(테스트). */
         uint32 countContaining( string_view text ) const;
-        /** @brief 오류를 줄바꿈으로 이은 것입니다(시험 메시지). */
+        /** @brief 오류를 줄바꿈으로 이은 것입니다(테스트 메시지). */
         string joined() const;
 
     private:

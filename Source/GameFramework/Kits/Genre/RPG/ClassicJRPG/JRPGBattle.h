@@ -58,7 +58,7 @@ namespace sw
 
     /**
      * @class IJRPGTimingInput
-     * @brief 전투가 타이밍 순간마다 "목표 시각에서 얼마나 어긋나게 눌렀는가" 를 묻습니다. 실제 게임은 연출을 멈추고 입력을 기다린 결과를, 시험 · AI 는 정해 둔 값을 줍니다.
+     * @brief 전투가 타이밍 순간마다 "목표 시각에서 얼마나 어긋나게 눌렀는가" 를 묻습니다. 실제 게임은 연출을 멈추고 입력을 기다린 결과를, 테스트 · AI 는 정해 둔 값을 줍니다.
      */
     class SW_GF_API IJRPGTimingInput
     {

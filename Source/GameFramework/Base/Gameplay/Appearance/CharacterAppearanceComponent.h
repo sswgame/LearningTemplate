@@ -98,7 +98,7 @@ namespace sw
         const ResolvedAppearance& getResolvedAppearance() const { return _resolved; }
         /** @brief 소켓 표입니다. */
         const AppearanceSocketRig& getSocketRig() const { return _rig; }
-        /** @brief 조립한 횟수입니다(진단 · 시험). */
+        /** @brief 조립한 횟수입니다(진단 · 테스트). */
         uint32 getAssembleCount() const { return _assembleCount; }
         /** @brief 지금 세워 둔 부품 오브젝트입니다. */
         void collectPartObjects( vector<GameObjectHandle>& outListObject ) const;

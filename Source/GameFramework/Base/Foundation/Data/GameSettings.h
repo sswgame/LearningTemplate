@@ -70,7 +70,7 @@ namespace sw
 
         /** @brief 리소스 경로(XML)에서 부트스트랩 테이블을 로드합니다. */
         [[nodiscard]] bool loadFromResource( string_view assetRelativePath = {} );
-        /** @brief `loadFromResource` 의 XML 글 판입니다(시험). 먼저 비우고 읽습니다. */
+        /** @brief `loadFromResource` 의 XML 글 판입니다(테스트). 먼저 비우고 읽습니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
 
     private:
