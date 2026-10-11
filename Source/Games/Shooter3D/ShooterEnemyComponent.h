@@ -30,16 +30,16 @@ namespace sw
 {
     /**
      * @class ShooterEnemyComponent
-     * @brief 스켈레톤 프리팹(`prefabs/skeleton.prefab.xml`)의 규칙 컴포넌트입니다. 디렉터가 틱 뒤에 세우고 `launch` 로 자리 · 체력 · 빠르기를 줍니다.
+     * @brief 스켈레톤 프리팹(`prefabs/skeleton.prefab.xml`)의 규칙 컴포넌트입니다. 디렉터가 틱 뒤에 스폰하고 `launch` 로 위치 · 체력 · 속도를 줍니다.
      * @details 몸(같은 오브젝트의 `SkeletalMeshComponent`) · 애니메이터 · 외형(`CharacterAppearanceComponent` — 디렉터가 프리셋 · 씨앗을 고른다) · 폰(`PawnComponent` —
      *          버튼 `Attack`, 자동 빙의 `AI` → `ShooterEnemyAIControllerComponent`) · 몸 이동(`ShooterBodyMovementComponent` — 플레이어와 같은 이동)과 같은 오브젝트입니다.
      *          판단(쫓기 · 멈추기 · 휘두를지)은 AI 조종자가 하고, 여기는 **폰의 의도만** 읽습니다: 쫓는 단계에서 몸 이동을 한 걸음 부르고, 몸 요를 조종 요 쪽으로 돌리고,
-     *          `Attack` 이 눌려 있으면 휘두르기 간격마다 휘두릅니다. 기본 틱 그룹(`DuringPhysics`)에서 디렉터가 적은 플레이어 자리 · 막는 상자를 읽고 **자기 오브젝트에만**
-     *          씁니다(자리 · 요 · 애니메이터 파라미터 · HP 바 — 체력 원천 알림 `notifyHealthChanged`). 내비메시 에이전트(`SteerOnly`)는 그 자리를 다음 갱신에서 받는다.
+     *          `Attack` 이 눌려 있으면 휘두르기 간격마다 휘두릅니다. 기본 틱 그룹(`DuringPhysics`)에서 디렉터가 적은 플레이어 위치 · 막는 상자를 읽고 **자기 오브젝트에만**
+     *          씁니다(위치 · 요 · 애니메이터 파라미터 · HP 바 — 체력 원천 알림 `notifyHealthChanged`). 내비메시 에이전트(`SteerOnly`)는 그 위치를 다음 갱신에서 받는다.
      *          애니메이터 그래프(`data/anim/skeleton.animgraph.json`)는 파라미터 `Move`(0 서기 · 1 걷기 · 2 달리기) ·
      *          `Attack` · `Hit`(트리거) · `Dead` 로 움직입니다. 플레이어를 때리는 것은 다른 오브젝트에 쓰는 일이라 틱 뒤로 미룹니다.
      *          맞음(`applyDamage`)은 플레이어의 사격이 틱 뒤에 겁니다. 히트박스는 발에서 `_height` 까지의 캡슐(반지름 `_radius`)입니다 —
-     *          물리 질의 · 부위 히트박스가 들어오면 그쪽으로 옮긴다(소켓 `Chest` 가 히트박스 중심 자리).
+     *          물리 질의 · 부위 히트박스가 들어오면 그쪽으로 옮긴다(소켓 `Chest` 가 히트박스 중심 위치).
      */
     REFLECT( Category = "Shooter3D", DisplayName = "Shooter Enemy", Tooltip = "Skeleton enemy that rises, walks to the player, swings, staggers when hit and collapses" )
     class ShooterEnemyComponent : public HealthSourceComponent
@@ -52,7 +52,7 @@ namespace sw
 
         void onTick( float32 deltaTime ) override;
 
-        /** @brief 세웁니다 — 디렉터 · 발 자리 · 요 · 체력 · 빠르기(게임 스레드). */
+        /** @brief 스폰합니다 — 디렉터 · 발 위치 · 요 · 체력 · 속도(게임 스레드). */
         void launch( GameObjectHandle director, const float3& position, float32 yaw, float32 health, float32 speed );
         /** @brief 맞았다 — 체력을 깎고 움찔하거나 쓰러진다(틱 밖 · 게임 스레드). */
         void applyDamage( float32 amount );
@@ -65,7 +65,7 @@ namespace sw
         /** @brief 쓰러진 뒤 시체 시간이 지나 걷어도 되면 true 입니다. */
         bool              isRemovable() const { return isDead() && _phaseTime >= _corpseTime; }
         ShooterEnemyPhase getPhase() const { return _phase; }
-        /** @brief 발 자리입니다(몸 이동의 자리 — 틱마다 옮겨 적는다). */
+        /** @brief 발 위치입니다(몸 이동의 위치 — 틱마다 옮겨 적는다). */
         const float3& getPosition() const { return _position; }
         float32       getRadius() const { return _radius; }
         float32       getHeight() const { return _height; }
