@@ -8,13 +8,13 @@
 #include "Editor/Common/Commands/EditorNetPlaySession.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Widgets/EditorNetModeCombo.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Panels/MultiplayerPanel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
@@ -82,14 +82,14 @@ namespace sw::editor
             static bool drawNetPlayControls( EditorContext& context )
             {
                 EditorNetPlaySession& session = context.getNetPlaySession();
-                (void)MultiplayerPanel::drawNetModeCombo( session ); // 바뀐 구성은 다음 Play 에 쓰인다
+                (void)EditorNetModeCombo::draw( session ); // 바뀐 구성은 다음 Play 에 쓰인다
                 if ( session.getSettings()._mode == EditorNetMode::Standalone && session.isRunning() == false )
                     return false;
                 ImGui::SameLine();
                 if ( session.isRunning() == false )
                 {
                     if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlay, "Play" ) ) )
-                        (void)MultiplayerPanel::startSession( session ); // 실패 이유는 세션이 로그에 남긴다
+                        (void)session.start( session.getSettings() ); // 실패 이유는 세션이 로그에 남긴다
                     EditorSelfTestMarks::note( "toolbar.netPlay" );
                     EditorWidgets::drawTooltip( "서버와 클라이언트를 따로 띄워 붙입니다 — 로그는 Output Log 에 [Server] · [Client1] 로 모이고, Stop 이 모두 끕니다" );
                     return true;

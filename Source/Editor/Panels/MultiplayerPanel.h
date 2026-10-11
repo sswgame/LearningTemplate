@@ -29,11 +29,6 @@ namespace sw::editor
         void        drawContent() override;
         float2      getInitialPanelSize() const override { return float2{ 760.0f, 560.0f }; }
 
-        /** @brief 툴바가 쓰는 Net Mode 고르기(Standalone · 전용 서버 · 리슨 호스트 + 플레이어 수)입니다. 바꿨으면 true 입니다. */
-        static bool drawNetModeCombo( EditorNetPlaySession& session );
-        /** @brief 지금 구성으로 세션을 시작합니다(로그에 결과). Play 단추 · `netplay.start` 가 부릅니다. */
-        static bool startSession( EditorNetPlaySession& session );
-
     private:
         void drawSessionTab( EditorNetPlaySession& session );
         void drawProcessTable( EditorNetPlaySession& session );

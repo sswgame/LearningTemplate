@@ -8,10 +8,11 @@
 
 #include "Editor/Common/Commands/EditorNetPlaySession.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
+#include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Widgets/EditorNetModeCombo.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/AutomationProbe.h"
@@ -29,8 +30,6 @@ namespace sw::editor
     {
         struct MultiplayerPanelInternal
         {
-            /** @brief 플레이어 수의 상한입니다(한 PC 에 클라이언트 창을 이보다 많이 띄우지 않는다 — 부하 시험은 `Tools/OnlineLoadBot`). */
-            static constexpr int32 kMaxPlayerCount = 8;
             /** @brief "Step" 이 한 번에 돌릴 수 있는 서버 틱 상한입니다. */
             static constexpr int32 kMaxStepTickCount = 600;
             /** @brief `netplay.wait` 의 기본 시한(초)입니다. */
@@ -78,12 +77,12 @@ namespace sw::editor
                         settings._mode = EditorNetMode::DedicatedServer;
                     else if ( argument == "listen" )
                         settings._mode = EditorNetMode::ListenHost;
-                    else if ( StringUtil::parseInt( argument, playerCount ) && 1 <= playerCount && playerCount <= kMaxPlayerCount )
+                    else if ( StringUtil::parseInt( argument, playerCount ) && 1 <= playerCount && playerCount <= EditorNetModeCombo::kMaxPlayerCount )
                         settings._clientCount = playerCount;
                     else
                         return false;
                 }
-                const bool bStarted = MultiplayerPanel::startSession( *pSession );
+                const bool bStarted = pSession->start( pSession->getSettings() );
                 outReply            = bStarted ? "multiplayer session started on UDP port " + to_string( pSession->getPort() ) : "multiplayer session did not start (see the log)";
                 return true;
             }
@@ -172,45 +171,6 @@ namespace sw::editor
     {
     }
 
-    bool MultiplayerPanel::drawNetModeCombo( EditorNetPlaySession& session )
-    {
-        EditorNetPlaySettings& settings = session.getSettings();
-        bool                   bChanged = false;
-        ImGui::BeginDisabled( session.isRunning() );
-        ImGui::SetNextItemWidth( ImGui::GetFontSize() * 9.0f );
-        if ( ImGui::BeginCombo( "##NetMode", toString( settings._mode ) ) )
-        {
-            constexpr EditorNetMode kArrMode[] = { EditorNetMode::Standalone, EditorNetMode::DedicatedServer, EditorNetMode::ListenHost };
-            for ( const EditorNetMode mode : kArrMode )
-            {
-                if ( ImGui::Selectable( toString( mode ), settings._mode == mode ) )
-                {
-                    settings._mode = mode;
-                    bChanged       = true;
-                }
-            }
-            ImGui::EndCombo();
-        }
-        EditorSelfTestMarks::note( "toolbar.netMode" );
-        EditorWidgets::drawTooltip( "Net Mode — Standalone 은 에디터 안에서 재생하고, 나머지는 서버와 클라이언트를 따로 띄운다 (Window > Multiplayer)" );
-        if ( settings._mode != EditorNetMode::Standalone )
-        {
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth( ImGui::GetFontSize() * 4.0f );
-            if ( ImGui::InputInt( "##PlayerCount", &settings._clientCount, 1, 1 ) )
-                bChanged = true;
-            settings._clientCount = MathUtil::clamp( settings._clientCount, 1, MultiplayerPanelInternal::kMaxPlayerCount );
-            EditorWidgets::drawTooltip( "플레이어 수 — 전용 서버면 클라이언트 수, 리슨 호스트면 호스트를 넣은 수" );
-        }
-        ImGui::EndDisabled();
-        return bChanged;
-    }
-
-    bool MultiplayerPanel::startSession( EditorNetPlaySession& session )
-    {
-        return session.start( session.getSettings() ); // 실패 이유는 세션이 로그에 남긴다
-    }
-
     void MultiplayerPanel::drawContent()
     {
         EditorNetPlaySession* pSession = MultiplayerPanelInternal::findSession();
@@ -230,7 +190,7 @@ namespace sw::editor
     void MultiplayerPanel::drawSessionTab( EditorNetPlaySession& session )
     {
         EditorNetPlaySettings& settings = session.getSettings();
-        (void)drawNetModeCombo( session ); // 바뀐 구성은 다음 Play 에 쓰인다
+        (void)EditorNetModeCombo::draw( session ); // 바뀐 구성은 다음 Play 에 쓰인다
         ImGui::SameLine();
         ImGui::BeginDisabled( session.isRunning() );
         ImGui::Checkbox( "Record traces", &settings._bRecordTraces );
@@ -244,7 +204,7 @@ namespace sw::editor
         {
             ImGui::BeginDisabled( settings._mode == EditorNetMode::Standalone );
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlay, "Play" ) ) )
-                (void)startSession( session ); // 실패는 로그에
+                (void)session.start( session.getSettings() ); // 실패 이유는 세션이 로그에 남긴다
             EditorSelfTestMarks::note( "multiplayer.play" );
             ImGui::EndDisabled();
         }
