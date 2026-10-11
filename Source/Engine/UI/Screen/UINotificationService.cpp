@@ -88,7 +88,7 @@ namespace sw
 
     void UINotificationService::update( float32 deltaSeconds )
     {
-        // 1) 보이는 것의 시간 — 끝난 것을 내린다.
+        // 1) 보이는 알림의 시간: 끝난 것을 내린다.
         UIScreen* pScreen = _ui.findScreen( _screen );
         for ( size_t index = _listVisible.size(); index > 0; --index )
         {
@@ -99,10 +99,10 @@ namespace sw
             Widget*      pWidget = pScreen != nullptr ? pScreen->getTree().findWidgetByID( entry._widget ) : nullptr;
             PanelWidget* pParent = pWidget != nullptr ? pWidget->getParent() : nullptr;
             if ( pParent != nullptr )
-                (void)pParent->removeChild( pWidget ); // 부모에서 찾은 위젯이라 늘 빠진다
+                (void)pParent->removeChild( pWidget ); // 부모에서 찾은 위젯이라 항상 제거된다
             _listVisible.erase( _listVisible.begin() + static_cast<ptrdiff_t>( index - 1 ) );
         }
-        // 2) 자리가 나면 기다리는 것을 올린다 — 우선순위가 큰 것, 같으면 먼저 온 것.
+        // 2) 자리가 나면 기다리는 알림을 올린다. 우선순위가 큰 것이 먼저이고, 같으면 먼저 온 것이 먼저다.
         while ( _listVisible.size() < kMaxVisible && _listQueued.empty() == false )
         {
             size_t best = 0;
@@ -120,7 +120,7 @@ namespace sw
             _listVisible.push_back( entry );
             showEntry( _listVisible.back() );
         }
-        // 3) 보일 것이 없으면 화면을 닫는다(오버레이라 입력과 무관 — 열고 닫는 비용은 알림 단위).
+        // 3) 보일 것이 없으면 화면을 닫는다(오버레이라 입력과 무관하며, 열고 닫는 비용은 알림 단위로 든다).
         if ( _listVisible.empty() && _screen != kInvalidUIScreenHandle )
         {
             _ui.closeScreen( _screen );
@@ -166,7 +166,7 @@ namespace sw
         using Internal    = UINotificationServiceInternal;
         UIScreen* pScreen = acquireScreen();
         if ( pScreen == nullptr )
-            return; // 문서를 짓지 못했다 — 오류는 짓기가 남겼다
+            return; // 문서를 만들지 못했다. 오류는 문서 생성 단계가 남겼다
         PanelWidget* pStack = pScreen->getTree().findWidget<PanelWidget>( Internal::kStackName );
         if ( pStack == nullptr )
         {
@@ -194,7 +194,7 @@ namespace sw
         UIScreen* pScreen = _ui.findScreen( _screen );
         Widget*   pEntry  = pScreen != nullptr ? pScreen->getTree().findWidgetByID( entry._widget ) : nullptr;
         if ( pEntry == nullptr )
-            return; // 아직 기다리는 중
+            return; // 아직 기다리는 중이다
         if ( TextWidget* pMessage = castTo<TextWidget>( Internal::findDescendant( *pEntry, Internal::kMessageName ) ); pMessage != nullptr )
             pMessage->setText( entry._desc._text );
         if ( TextWidget* pCount = castTo<TextWidget>( Internal::findDescendant( *pEntry, Internal::kCountName ) ); pCount != nullptr )

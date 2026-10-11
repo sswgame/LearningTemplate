@@ -1,8 +1,8 @@
 /**
  * @file FontSystem.h
- * @brief 글꼴 서비스입니다 — 카탈로그 · 면 열기 · 문화권 대체 사슬(이 단위), 아틀라스 · 셰이핑 · 배치는 뒤 단위가 더합니다.
- * @details 언리얼 `FCompositeFont`(서체 + 문자 범위별 대체) · 유니티 TextCore 폴백 목록의 자리입니다. 게임 스레드에서만 부릅니다.
- *          기동 단계 `Fonts`(Client 대상 — 전용 서버는 글자를 그리지 않아 열지 않는다)가 `initialize` 합니다.
+ * @brief 폰트 서비스를 정의합니다. 이 계층은 카탈로그, 면 열기, 문화권 대체 연쇄를 담당하고, 아틀라스, 셰이핑, 배치는 이후 계층이 추가합니다.
+ * @details 언리얼 `FCompositeFont`(서체 + 문자 범위별 대체)와 유니티 TextCore 폴백 목록에 해당한다. 게임 스레드에서만 부른다.
+ *          기동 단계 `Fonts`(Client 대상이며, 전용 서버는 글자를 그리지 않아 열지 않는다)가 `initialize` 한다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -26,7 +26,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 글꼴 하나를 고르는 값입니다 — 가족 이름 · 굵기 · 기울기. 크기는 배치 인자라 여기 없습니다. */
+    /** @brief 폰트 하나를 고르는 값입니다. 패밀리 이름, 굵기, 기울기를 가집니다. 크기는 배치 인자라 여기에 없습니다. */
     REFLECT()
     struct SW_API FontSpec
     {
@@ -43,17 +43,17 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 글꼴 하나를 찾는 순서입니다 — 고른 가족의 면 → 지금 문화권의 대체 가족들 → 카탈로그 기본 가족. 코드 포인트마다 앞에서부터 글리프가 있는 면을 씁니다.
-     * @details 사슬은 (가족 · 굵기 · 기울기 · 문화권)마다 한 번 만들어 캐시합니다. 값으로 주고받습니다(캐시 표가 자라면 원소 자리가 옮겨진다).
+     * @brief 폰트 하나를 찾는 순서입니다. 고른 패밀리의 면, 지금 문화권의 대체 패밀리들, 카탈로그 기본 패밀리 순서이며, 코드 포인트마다 앞에서부터 글리프가 있는 면을 씁니다.
+     * @details 연쇄는 (패밀리, 굵기, 기울기, 문화권)마다 한 번 만들어 캐시한다. 값으로 주고받는다(캐시 테이블이 늘어나면 원소 위치가 옮겨지기 때문이다).
      */
     struct FontFaceChain
     {
         static constexpr uint32 kMaxFaceCount = 8; ///< 사슬에 담는 면 수 상한(대체 목록이 더 길면 뒤를 버린다)
 
-        FontFaceID _arrFace[kMaxFaceCount]{}; ///< 앞이 먼저. 쓰지 않는 칸은 kInvalidFontFaceID
-        uint8      _faceCount{ 0 };           ///< 쓰는 칸 수
+        FontFaceID _arrFace[kMaxFaceCount]{}; ///< 앞이 먼저입니다. 쓰지 않는 슬롯은 kInvalidFontFaceID 입니다.
+        uint8      _faceCount{ 0 };           ///< 쓰는 슬롯 수입니다.
         uint8      _bFauxBold{ SW_FALSE };    ///< 고른 가족에 굵은 면이 없어 일반 면을 굵게 그린다(SDF 임계값 이동)
-        uint8      _bFauxItalic{ SW_FALSE };  ///< 기운 면이 없어 기울여 그린다
+        uint8      _bFauxItalic{ SW_FALSE };  ///< 기운 면이 없어 기울여 그립니다.
     };
 } // namespace sw
 
@@ -61,9 +61,9 @@ namespace sw
 {
     /**
      * @class FontSystem
-     * @brief 엔진 글꼴 서비스입니다(`engine::getFontSystem()`).
-     * @details 글꼴이 하나도 없는 기계(시스템 글꼴이 없는 리눅스 CI · 서버)에서도 저장소 글꼴(기본 가족)은 늘 열립니다 — 사슬 끝이 기본 가족이고,
-     *          시스템 가족을 못 찾으면 처음 한 번 경고하고 건너뜁니다. 그 문자는 두부(글리프 0)로 그려집니다.
+     * @brief 엔진 폰트 서비스입니다(`engine::getFontSystem()`).
+     * @details 폰트가 하나도 없는 기계(시스템 폰트가 없는 리눅스 CI, 서버)에서도 저장소 폰트(기본 패밀리)는 항상 열린다. 연쇄의 끝이 기본 패밀리이고,
+     *          시스템 패밀리를 찾지 못하면 처음 한 번 경고하고 건너뛴다. 그 문자는 두부(글리프 0)로 그려진다.
      */
     class SW_API FontSystem
     {
@@ -79,27 +79,27 @@ namespace sw
         FontSystem( const FontSystem& )            = delete;
         FontSystem& operator=( const FontSystem& ) = delete;
 
-        /** @brief 카탈로그 파일을 읽고 기본 가족을 엽니다. 기본 가족을 못 열면 false(글자를 그릴 수 없다 — 기동 오류). */
+        /** @brief 카탈로그 파일을 읽고 기본 패밀리를 엽니다. 기본 패밀리를 열지 못하면 false 입니다(글자를 그릴 수 없으므로 기동 오류입니다). */
         [[nodiscard]] bool initialize( string_view catalogPath );
-        /** @brief 이미 읽은 카탈로그로 시작합니다(테스트 · 도구). 검사 · 기본 가족 열기는 `initialize` 와 같습니다. */
+        /** @brief 이미 읽은 카탈로그로 시작합니다(테스트와 도구). 검사와 기본 패밀리 열기는 `initialize` 와 같습니다. */
         [[nodiscard]] bool initializeFromCatalog( FontCatalogDesc catalog );
-        /** @brief 연 면 · 사슬 · 경고 기록을 모두 놓습니다. 다시 `initialize` 할 수 있습니다. */
+        /** @brief 연 면, 연쇄, 경고 기록을 모두 해제합니다. 다시 `initialize` 할 수 있습니다. */
         void shutdown();
 
         /**
-         * @brief 파일 대신 메모리의 글꼴 바이트를 그 경로로 등록합니다(테스트 · 게임이 글꼴을 묶어 넣을 때). 카탈로그 면 경로가 같으면 이것을 먼저 씁니다.
-         * @details 이미 연 면에는 영향이 없습니다 — `initialize` 앞에 등록합니다.
+         * @brief 파일 대신 메모리의 폰트 바이트를 그 경로로 등록합니다(테스트나 게임이 폰트를 묶어 넣을 때). 카탈로그 면 경로가 같으면 이것을 먼저 씁니다.
+         * @details 이미 연 면에는 영향이 없으므로 `initialize` 앞에 등록한다.
          */
         void registerMemoryFontFile( string_view path, vector<uint8> bytes );
 
-        /** @brief 그 글꼴로 코드 포인트를 그릴 면 사슬입니다. 지금 문화권의 대체 목록을 씁니다. 시작 전이면 빈 사슬입니다. */
+        /** @brief 그 폰트로 코드 포인트를 그릴 면 연쇄입니다. 지금 문화권의 대체 목록을 씁니다. 시작 전이면 빈 연쇄입니다. */
         FontFaceChain getFaceChain( const FontSpec& spec );
         /**
          * @brief 사슬에서 코드 포인트의 글리프를 가진 첫 면입니다.
          * @details 어디에도 없으면 사슬 첫 면 + 글리프 0(두부)이고, 코드 포인트마다 처음 한 번 경고합니다. 빈 사슬이면 kInvalidFontFaceID.
          */
         FontFaceID findFaceForCodepoint( const FontFaceChain& chain, uint32 codepoint, uint32& outGlyphIndex );
-        /** @brief 문화권이 바뀌면 사슬 캐시를 비웁니다(UI 가 글 판 변경에서 부른다). 연 면은 그대로 둡니다. */
+        /** @brief 문화권이 바뀌면 연쇄 캐시를 비웁니다(UI 가 텍스트 버전 변경에서 부릅니다). 연 면은 그대로 둡니다. */
         void invalidateFaceChains();
 
         /** @brief 시작했는지(기본 가족이 열렸는지)입니다. */
@@ -110,13 +110,13 @@ namespace sw
         GlyphCache& getGlyphCache() { return *_glyphCache; }
         /** @brief 읽은 카탈로그입니다. */
         const FontCatalogDesc& getCatalog() const { return _catalog; }
-        /** @brief 한 번만 남긴 경고(못 찾은 가족 · 글리프 없는 코드 포인트)의 수입니다 — 경고가 되풀이되지 않는지 테스트가 봅니다. */
+        /** @brief 한 번만 남긴 경고(못 찾은 패밀리, 글리프 없는 코드 포인트)의 수입니다. 경고가 반복되지 않는지 테스트가 확인합니다. */
         uint32 getWarnedOnceCount() const { return static_cast<uint32>( _uniqueWarned.size() ); }
 
     private:
-        /** @brief 가족 이름으로 면을 엽니다 — 저장소 가족 → 시스템 가족. 못 찾으면 kInvalidFontFaceID(처음 한 번 경고). 결과(없음 포함)를 캐시합니다. */
+        /** @brief 패밀리 이름으로 면을 엽니다. 저장소 패밀리를 먼저, 시스템 패밀리를 다음으로 봅니다. 못 찾으면 kInvalidFontFaceID 를 반환하고 처음 한 번 경고합니다. 결과(없음 포함)를 캐시합니다. */
         FontFaceID openFamilyFace( string_view family, FontWeight weight, FontSlant slant, uint8& outFauxBold, uint8& outFauxItalic );
-        /** @brief 글꼴 파일 하나를 엽니다 — 등록한 메모리 파일 → 리소스 → 절대 경로. 같은 (경로 · 면 번호)는 한 번만 엽니다. */
+        /** @brief 폰트 파일 하나를 엽니다. 등록한 메모리 파일, 리소스, 절대 경로 순서로 찾습니다. 같은 (경로, 면 번호)는 한 번만 엽니다. */
         FontFaceID openFontFile( const string& path, uint32 faceIndex, bool bResourcePath );
         /** @brief 처음이면 경고를 남기고 true 입니다(키 하나에 한 번). */
         bool markWarnedOnce( uint64 key );
@@ -132,14 +132,14 @@ namespace sw
         };
 
         unique_ptr<IFontRasterizer>             _rasterizer;
-        unique_ptr<GlyphCache>                  _glyphCache; ///< 시작에서 만들고 종료에서 놓는다(래스터라이저를 빌린다)
+        unique_ptr<GlyphCache>                  _glyphCache; ///< 시작할 때 만들고 종료할 때 해제합니다(래스터라이저를 빌립니다).
         FontCatalogDesc                         _catalog;
-        unordered_map<uint64, OpenedFamilyFace> _mapOpenedFamilyFace; ///< (가족 · 굵기 · 기울기) → 연 면
-        unordered_map<uint64, FontFaceID>       _mapOpenedFile;       ///< (경로 · 면 번호) → 연 면
-        unordered_map<uint64, FontFaceChain>    _mapChain;            ///< (FontSpec · 문화권) → 사슬
-        unordered_map<string, vector<uint8>>    _mapMemoryFile;       ///< 등록한 메모리 글꼴(소문자 경로 → 바이트)
-        unordered_set<uint64>                   _uniqueWarned;        ///< 한 번 경고한 것(가족 · 코드 포인트)
+        unordered_map<uint64, OpenedFamilyFace> _mapOpenedFamilyFace; ///< (패밀리, 굵기, 기울기)에서 연 면을 찾는 맵입니다.
+        unordered_map<uint64, FontFaceID>       _mapOpenedFile;       ///< (경로, 면 번호)에서 연 면을 찾는 맵입니다.
+        unordered_map<uint64, FontFaceChain>    _mapChain;            ///< (FontSpec, 문화권)에서 연쇄를 찾는 맵입니다.
+        unordered_map<string, vector<uint8>>    _mapMemoryFile;       ///< 등록한 메모리 폰트입니다(소문자 경로에서 바이트를 찾습니다).
+        unordered_set<uint64>                   _uniqueWarned;        ///< 한 번 경고한 항목입니다(패밀리, 코드 포인트).
         const LocalizationManager*              _pLocalization;       ///< 주입한 문화권 출처(nullptr = 엔진 서비스)
-        bool                                    _bInitialized;        ///< 기본 가족이 열렸다
+        bool                                    _bInitialized;        ///< 기본 패밀리를 열었는지 나타냅니다.
     };
 } // namespace sw

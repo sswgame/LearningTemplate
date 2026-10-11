@@ -27,7 +27,7 @@ namespace sw
                 inoutListWidget.push_back( widget.getID() );
                 if ( bChildrenReachable && pPanel->hasCustomPaintOrder() )
                 {
-                    // z 순서를 둔 패널(캔버스) — 그리기 순서의 역순.
+                    // z 순서를 쓰는 패널(캔버스)은 그리기 순서의 역순으로 본다.
                     vector<uint32> listOrder;
                     pPanel->collectPaintOrder( listOrder );
                     for ( uint32 order = static_cast<uint32>( listOrder.size() ); order > 0; --order )
@@ -38,7 +38,7 @@ namespace sw
                 }
                 else if ( bChildrenReachable )
                 {
-                    for ( uint32 index = pPanel->getChildCount(); index > 0; --index ) // 나중에 그린 자식이 위다
+                    for ( uint32 index = pPanel->getChildCount(); index > 0; --index ) // 나중에 그린 자식이 위에 있다
                     {
                         if ( hitTestRecursive( *pPanel->getChild( index - 1 ), screenPoint, inoutListWidget ) )
                             return true;
@@ -51,12 +51,12 @@ namespace sw
                 return false;
             }
 
-            /** @brief 경로를 따라 터널링 → 버블링으로 사건을 보냅니다. @p Handler 는 그 사건을 받는 Widget 의 가상 함수입니다. */
+            /** @brief 경로를 따라 터널링 후 버블링 순서로 이벤트를 보냅니다. @p Handler 는 그 이벤트를 받는 Widget 의 가상 함수입니다. */
             template <typename EventType, UIReply ( Widget::*Handler )( const EventType&, UIRoutePhase )>
             static UIReply route( const WidgetTree& tree, const UIWidgetPath& path, const EventType& event, WidgetID& outHandler )
             {
                 outHandler = kInvalidWidgetID;
-                // 경로는 시작할 때 고정한다 — 처리 중에 위젯이 떨어지면(목록을 지우는 핸들러) 그 번호만 건너뛴다.
+                // 경로는 시작할 때 고정한다. 처리 중에 위젯이 떨어지면(목록을 지우는 핸들러) 그 번호만 건너뛴다.
                 const vector<WidgetID> listWidget = path._listWidget;
                 const uint32           count      = static_cast<uint32>( listWidget.size() );
                 for ( uint32 index = 0; index < count; ++index )
@@ -118,7 +118,7 @@ namespace sw
         {
             outPath._listWidget.push_back( pCurrent->getID() );
         }
-        // 잎 → 뿌리로 모았다 — 뒤집는다.
+        // 잎에서 루트로 모았으므로 뒤집는다.
         const uint32 count = static_cast<uint32>( outPath._listWidget.size() );
         for ( uint32 index = 0; index < count / 2; ++index )
         {

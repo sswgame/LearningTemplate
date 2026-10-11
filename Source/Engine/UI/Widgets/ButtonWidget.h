@@ -1,6 +1,6 @@
 /**
  * @file ButtonWidget.h
- * @brief 누르는 버튼입니다(UMG Button · 유니티 Button · Godot Button).
+ * @brief 누르는 버튼입니다(UMG 의 Button, 유니티의 Button, Godot 의 Button 에 해당).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -16,9 +16,9 @@ namespace sw
 {
     /**
      * @class ButtonWidget
-     * @brief 포커스를 받는 테두리 패널입니다 — 자식(글 · 그림)을 감싸고, 상태(보통 · 호버 · 누름 · 꺼짐)마다 배경 브러시를 바꿉니다.
-     * @details **클릭** = 왼쪽 버튼을 이 버튼 위에서 누르고 이 버튼 위에서 뗐다(누른 동안 포인터를 잡는다 — 밖에서 떼면 클릭이 아니다, Slate 와 같다) 또는
-     *          포커스를 쥔 채 `UI.Accept`. 클릭하면 `getOnClicked()` 를 부르고, `_command` 가 있으면 화면의 명령(`UIScreen::onCommand` — UI 문서가 쓰는 길)을 냅니다. 누르면 포커스가 이 버튼으로 옵니다. 포커스 표시는 포커스 테두리(탐색 방식)입니다.
+     * @brief 포커스를 받는 테두리 패널입니다. 자식(텍스트, 이미지)을 감싸고, 상태(보통, 호버, 누름, 꺼짐)마다 배경 브러시를 바꿉니다.
+     * @details **클릭**은 왼쪽 버튼을 이 버튼 위에서 누르고 이 버튼 위에서 떼는 것이다(누른 동안 포인터를 잡으며, 밖에서 떼면 클릭이 아니다. Slate 와 같다). 포커스를 가진 채 `UI.Accept` 를 눌러도 클릭이다.
+     *          클릭하면 `getOnClicked()` 를 부르고, `_command` 가 있으면 화면의 명령(`UIScreen::onCommand`, UI 문서가 쓰는 경로)을 낸다. 누르면 포커스가 이 버튼으로 온다. 포커스 표시는 포커스 테두리(탐색 방식)다.
      */
     REFLECT( Category = "UI", DisplayName = "Button", Tooltip = "Focusable bordered panel that fires a click" )
     class SW_API ButtonWidget : public BorderPanel
@@ -36,7 +36,7 @@ namespace sw
 
         bool             supportsFocus() const override { return true; }
         ClickedDelegate& getOnClicked() { return _onClicked; }
-        /** @brief 지금까지 클릭된 수입니다(테스트 · 디버그). */
+        /** @brief 지금까지 클릭된 횟수입니다(테스트와 디버그용). */
         uint32 getClickCount() const { return _clickCount; }
         bool   isPressed() const { return _bPressed; }
         /** @brief 클릭하면 화면에 보낼 명령입니다. 비면 명령을 내지 않습니다. */
@@ -53,7 +53,7 @@ namespace sw
 
     protected:
         const UIBrush& getBackgroundBrush() const override;
-        /** @brief 클릭됐다 — 기본은 알림을 부른다. 체크 상자는 값을 뒤집고 부른다. */
+        /** @brief 클릭됐을 때 부릅니다. 기본 구현은 알림을 부르고, 체크 상자는 값을 뒤집은 뒤 부릅니다. */
         virtual void handleClick();
 
     private:

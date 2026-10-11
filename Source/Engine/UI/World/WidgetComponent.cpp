@@ -30,10 +30,10 @@ namespace sw
         {
             /** @brief 가장자리에 붙인 마커가 화면 변에서 띄우는 거리(UI 단위)입니다. */
             static constexpr float32 kEdgeMargin = 24.0f;
-            /** @brief 거리 배율의 범위입니다(멀어도 읽을 수 있게 · 가까워도 화면을 덮지 않게). */
+            /** @brief 거리 배율의 범위입니다(멀어도 읽을 수 있고, 가까워도 화면을 덮지 않게 합니다). */
             static constexpr float32 kMinDistanceScale = 0.25f;
             static constexpr float32 kMaxDistanceScale = 2.0f;
-            /** @brief 원근 나누기의 w 가 이보다 작으면 카메라 뒤(또는 눈 위)로 본다. */
+            /** @brief 원근 나누기의 w 가 이보다 작으면 카메라 뒤(또는 눈 위치)로 봅니다. */
             static constexpr float32 kMinClipW = 1e-5f;
             /** @brief 그리기 크기를 정하지 않은 World 위젯의 렌더 텍스처 크기입니다. */
             static constexpr float32 kDefaultWorldWidth  = 256.0f;
@@ -154,7 +154,7 @@ namespace sw
             return;
         if ( _space == WidgetSpace::World )
         {
-            // World — 자기 트리(화면 스택 밖 — 포커스 · 포인터 없음, 입력은 백로그)에 놓고 렌더 텍스처로 칠한다.
+            // World: 자기 트리(화면 스택 밖이라 포커스와 포인터가 없으며, 입력은 백로그에 있다)에 배치하고 렌더 텍스처로 칠한다.
             if ( _worldTree == nullptr )
                 _worldTree = make_unique<WidgetTree>();
             _worldTree->setRoot( std::move( _pendingContent ) );
@@ -162,7 +162,7 @@ namespace sw
         }
         if ( _markerWidget != kInvalidWidgetID )
             return;
-        // 첫 자리가 정해지기 전에는 접어 둔다(왼쪽 위에 한 프레임 보이지 않게).
+        // 첫 위치가 정해지기 전에는 접어 둔다(왼쪽 위에 한 프레임 보이지 않게 하기 위해서다).
         _pendingContent->setVisibility( WidgetVisibility::Collapsed );
         _markerWidget = pUI->addScreenMarker( std::move( _pendingContent ) );
     }
@@ -214,8 +214,8 @@ namespace sw
             placement._bVisible = SW_FALSE;
             return placement;
         }
-        // 가장자리에 붙인다 — 화면 가운데에서 그 점 쪽으로 가다 안쪽 사각형 변에 닿는 자리. 카메라 뒤면 나누기 전 클립 좌표의 방향을 쓴다
-        // (오른쪽 뒤면 오른쪽 변 — 그쪽으로 도는 것이 가깝다).
+        // 가장자리에 붙인다. 화면 가운데에서 그 점 쪽으로 가다가 안쪽 사각형 변에 닿는 위치다. 카메라 뒤면 나누기 전 클립 좌표의 방향을 쓴다
+        // (오른쪽 뒤면 오른쪽 변에 붙이는데, 그쪽으로 도는 것이 가깝기 때문이다).
         float2 direction = bBehind ? float2{ clip._x, -clip._y } : float2{ screen._x - center._x, screen._y - center._y };
         if ( direction._x == 0.0f && direction._y == 0.0f )
             direction = float2{ 0.0f, 1.0f };
@@ -226,7 +226,7 @@ namespace sw
         const float32 reach      = MathUtil::min( scaleX, scaleY );
         placement._position      = float2{ center._x + direction._x * reach, center._y + direction._y * reach };
         placement._bClamped      = SW_TRUE;
-        // UI 는 y 아래가 + — 위(0, -1)가 0 도, 오른쪽(1, 0)이 90 도.
+        // UI 는 y 아래가 +이므로 위(0, -1)가 0 도, 오른쪽(1, 0)이 90 도다.
         placement._edgeAngle = MathUtil::atan2( direction._x, -direction._y );
         return placement;
     }
@@ -237,7 +237,7 @@ namespace sw
             return;
         GameObject* pOwner = getOwner();
         if ( pOwner == nullptr )
-            return; // 오브젝트 밖(테스트가 `applyPlacement` 로 직접 놓는다)
+            return; // 오브젝트 밖이다(테스트가 `applyPlacement` 로 직접 놓는다)
         const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const SceneComponent*    pScene   = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         const CameraComponent*   pCamera  = pManager != nullptr ? pManager->getCameraRegistry().selectCamera( CameraRole::Game ) : nullptr;
@@ -267,7 +267,7 @@ namespace sw
         }
         pMarker->setVisibility( WidgetVisibility::HitTestInvisible ); // 마커는 클릭을 막지 않는다
 
-        // 고정 크기면 그 크기(레이아웃 경계 — 자리가 바뀌어도 그 아래만 다시 놓는다), 아니면 지난 원하는 크기로 피벗을 맞춘다.
+        // 고정 크기면 그 크기를 쓴다(레이아웃 경계이므로 위치가 바뀌어도 그 아래만 다시 배치한다). 아니면 지난 원하는 크기로 피벗을 맞춘다.
         const bool       bFixed = _drawSize._x > 0.0f && _drawSize._y > 0.0f;
         const float2     size   = bFixed ? _drawSize : pMarker->getDesiredSize();
         WidgetLayoutSlot slot   = pMarker->getLayoutSlot();
@@ -311,7 +311,7 @@ namespace sw
     {
         if ( _space != WidgetSpace::World || _worldTree == nullptr )
             return;
-        // 텍스처 픽셀 = UI 단위(배율 1). 안전 영역 없음. 글자 배율 · 방향은 화면 UI 와 같다.
+        // 텍스처 픽셀은 UI 단위다(배율 1). 안전 영역은 없다. 글자 배율과 방향은 화면 UI 와 같다.
         const float2    size   = getWorldTextureSize();
         UILayoutContext layout = baseLayout;
         layout._viewportSize   = size;
@@ -349,13 +349,13 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr || _worldQuad.isValid() )
             return;
-        // 스프라이트 사각형(양면 · 단위 크기)에 렌더 텍스처를 읽는 머티리얼 인스턴스를 건다. 캔버스는 프리멀티플라이로 그리므로 셰이더가 곧은 알파로 되돌린다.
+        // 스프라이트 사각형(양면, 단위 크기)에 렌더 텍스처를 읽는 머티리얼 인스턴스를 붙인다. 캔버스는 프리멀티플라이로 그리므로 셰이더가 직선 알파로 되돌린다.
         GameObject*    pQuad = pManager->createGameObject( hashed_string( string( pOwner->getName().c_str() ) + "_WidgetQuad" ) );
         MeshComponent* pMesh = pQuad != nullptr ? pQuad->addComponent<MeshComponent>() : nullptr;
         if ( pMesh == nullptr )
             return;
-        (void)pQuad->attachToParent( pOwner ); // 방금 만든 같은 씬의 사각형이라 거부될 까닭이 없다(틱 중이면 미뤄진다)
-        // 렌더 텍스처 크기는 처음 만드는 쪽이 정한다 — 머티리얼 인스턴스(렌더 스레드)가 캔버스보다 먼저 빌려도 위젯 크기로 만들어지게 먼저 알린다.
+        (void)pQuad->attachToParent( pOwner ); // 방금 만든 같은 씬의 사각형이라 거부될 이유가 없다(틱 중이면 미뤄진다)
+        // 렌더 텍스처 크기는 처음 만드는 쪽이 정한다. 머티리얼 인스턴스(렌더 스레드)가 캔버스보다 먼저 빌려도 위젯 크기로 만들어지도록 먼저 알린다.
         const float2 textureSize = getWorldTextureSize();
         if ( engine::areEngineServicesBound() )
         {

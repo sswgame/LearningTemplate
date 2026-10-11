@@ -16,7 +16,7 @@ namespace sw
     {
         struct TextInputWidgetInternal
         {
-            /** @brief 글 색 · 힌트 색입니다. */
+            /** @brief 텍스트 색과 힌트 색입니다. */
             static float4 makeTextColor( bool bHint ) { return bHint ? float4{ 1.0f, 1.0f, 1.0f, 0.4f } : float4{ 1.0f, 1.0f, 1.0f, 1.0f }; }
 
             /** @brief UTF-8 글의 코드 포인트 수입니다. */
@@ -109,10 +109,10 @@ namespace sw
     void TextInputWidget::refreshDisplay()
     {
         const bool bHint = _text.empty() && _composition.empty();
-        _pDisplay->setLocalized( bHint ); // 힌트는 현지화 키일 수 있고, 친 글은 풀지 않는다
+        _pDisplay->setLocalized( bHint ); // 힌트는 현지화 키일 수 있고, 사용자가 입력한 텍스트는 해석하지 않는다
         _pDisplay->setText( bHint ? string_view{ _hintText } : string_view{ _text + _composition } );
         _pDisplay->setColor( TextInputWidgetInternal::makeTextColor( bHint ) );
-        invalidate( WidgetDirty::kPaint ); // 커서 자리
+        invalidate( WidgetDirty::kPaint ); // 커서 위치가 바뀐다
     }
 
     UIReply TextInputWidget::onPointerEvent( const UIPointerEvent& event, UIRoutePhase phase )
@@ -183,7 +183,7 @@ namespace sw
         (void)context;
         if ( hasFocus() == false )
             return;
-        // 커서 — 글 끝(왼쪽에서 오른쪽이면 글 오른쪽, 오른쪽에서 왼쪽이면 왼쪽). 글 너비는 안의 글 위젯이 측정한 원하는 크기다.
+        // 커서는 텍스트 끝에 둔다(왼쪽에서 오른쪽이면 텍스트 오른쪽, 오른쪽에서 왼쪽이면 왼쪽). 텍스트 너비는 안의 텍스트 위젯이 측정한 원하는 크기다.
         const WidgetGeometry& display   = _pDisplay->getGeometry();
         const WidgetGeometry& self      = getGeometry();
         const float32         textWidth = ( _text.empty() && _composition.empty() ) ? 0.0f : _pDisplay->getDesiredSize()._x;

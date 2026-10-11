@@ -42,7 +42,7 @@ namespace sw
 
     void DevCommandRegistry::unregisterCommand( const DevCommandRegistration* pRegistration )
     {
-        (void)_registration.remove( pRegistration ); // 올라 있지 않은 명령을 빼는 것은 할 일이 없는 것이다
+        (void)_registration.remove( pRegistration ); // 등록되어 있지 않은 명령을 빼는 것은 할 일이 없다
     }
 
     const DevCommandRegistration* DevCommandRegistry::findCommand( string_view name ) const

@@ -13,7 +13,7 @@ namespace sw
         const bool bHebrewArabicSyriacThaana = 0x0590u <= codepoint && codepoint <= 0x08FFu;
         const bool bPresentationFormsA       = 0xFB1Du <= codepoint && codepoint <= 0xFDFFu;
         const bool bPresentationFormsB       = 0xFE70u <= codepoint && codepoint <= 0xFEFFu;
-        // 아랍 숫자(U+0660..U+0669 · U+06F0..U+06F9)는 약한 문자다 — 방향을 바꾸지 않는다.
+        // 아랍 숫자(U+0660..U+0669, U+06F0..U+06F9)는 약한 문자다. 방향을 바꾸지 않는다.
         const bool bArabicDigit = ( 0x0660u <= codepoint && codepoint <= 0x0669u ) || ( 0x06F0u <= codepoint && codepoint <= 0x06F9u );
         return ( bHebrewArabicSyriacThaana || bPresentationFormsA || bPresentationFormsB ) && bArabicDigit == false;
     }
@@ -61,7 +61,7 @@ namespace sw
             const bool    bNeutral  = isNeutral( codepoint );
             if ( bNeutral && bHasRun )
             {
-                // 중립 문자는 지금 런을 잇는다 — 그 면에 글리프가 있거나 폭이 없으면 면도 그대로.
+                // 중립 문자는 지금 런을 이어 간다. 그 면에 글리프가 있거나 폭이 없으면 면도 그대로 둔다.
                 const bool bCurrentFaceHasIt = isZeroWidth( codepoint ) || rasterizer.findGlyphIndex( current._face, codepoint ) != 0;
                 if ( bCurrentFaceHasIt )
                     face = current._face;

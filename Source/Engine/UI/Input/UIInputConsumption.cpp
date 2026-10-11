@@ -13,7 +13,7 @@ namespace sw
     {
         struct UIInputConsumptionInternal
         {
-            /** @brief 바인딩 하나가 "누름" 으로 쓰는 슬롯 자리입니다(조합 키는 트리거 키만 — 수정 키를 먹으면 달리기 Shift 가 묶인다). */
+            /** @brief 바인딩 하나가 "누름" 으로 쓰는 슬롯입니다(조합 키는 트리거 키만 씁니다. 수정 키를 소비하면 달리기 Shift 가 묶이기 때문입니다). */
             static uint32 collectSlotIndices( const ActionBinding& binding, uint32 ( &outArrIndex )[4] )
             {
                 switch ( binding._kind )
@@ -102,7 +102,7 @@ namespace sw
 
     void UIInputConsumption::update( const InputManager& input )
     {
-        // 뗀 프레임은 남기고(뗌으로 발화하는 행동도 막는다) 그 다음 프레임에 뺀다. 그 사이 다시 눌렀으면 새 누름이다 — 뺀다.
+        // 뗀 프레임은 남기고(뗌으로 발화하는 액션도 막는다) 그 다음 프레임에 뺀다. 그 사이 다시 눌렀으면 새 누름이므로 뺀다.
         for ( size_t index = _listConsumedSlot.size(); index > 0; --index )
         {
             ConsumedSlot& entry = _listConsumedSlot[index - 1];
@@ -178,7 +178,7 @@ namespace sw
             for ( uint32 slotIndex = 0; slotIndex < slotCount; ++slotIndex )
             {
                 const InputSlot& slot = pBinding->_arrSlot[arrIndex[slotIndex]];
-                // 먹힌 슬롯은 뗀 프레임까지 "먹힌 쪽" 으로 센다. 먹히지 않은 슬롯은 눌려 있을 때만 "보이는 쪽".
+                // 소비된 슬롯은 뗀 프레임까지 "소비된 쪽" 으로 센다. 소비되지 않은 슬롯은 눌려 있을 때만 "보이는 쪽" 으로 센다.
                 if ( isSlotConsumed( slot ) )
                     bSawConsumed = true;
                 else if ( UIInputConsumptionInternal::isSlotDown( input, slot ) )

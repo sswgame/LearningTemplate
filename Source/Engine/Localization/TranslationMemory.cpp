@@ -133,7 +133,7 @@ namespace sw
         float32      bestScore{ 0.0f };
         for ( const auto& [candidateSource, text] : _mapSourceToText )
         {
-            // 길이가 크게 다르면 편집 거리를 측정하지 않는다 — 유사도의 위 한계가 짧은 쪽 / 긴 쪽이다.
+            // 길이가 크게 다르면 편집 거리를 계산하지 않는다. 유사도의 상한이 짧은 쪽 / 긴 쪽이다.
             const bool    bCandidateShorter = candidateSource.size() < source.size();
             const float32 shorter           = static_cast<float32>( bCandidateShorter ? candidateSource.size() : source.size() );
             const float32 longer            = static_cast<float32>( bCandidateShorter ? source.size() : candidateSource.size() );

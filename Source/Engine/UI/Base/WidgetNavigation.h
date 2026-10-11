@@ -1,6 +1,6 @@
 /**
  * @file WidgetNavigation.h
- * @brief 위젯 하나의 포커스 탐색 규칙입니다(방향마다 규칙 · 명시 이웃).
+ * @brief 위젯 하나의 포커스 탐색 규칙입니다. 방향마다 규칙과 명시 이웃을 가집니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -11,7 +11,7 @@
 
 namespace sw
 {
-    /** @brief 탐색 방향입니다. Next · Previous 는 탭 순서(문서 순서)입니다. */
+    /** @brief 탐색 방향입니다. Next 와 Previous 는 탭 순서(문서 순서)입니다. */
     ENUM()
     enum class UINavigationDirection : uint8
     {
@@ -30,10 +30,10 @@ namespace sw
     ENUM()
     enum class UINavigationRule : uint8
     {
-        Escape,  ///< 여기서 정하지 않는다 — 조상에게 넘긴다(기본)
-        Stop,    ///< 이 위젯(패널이면 그 안)에서만 찾고, 없으면 그 자리에 선다
-        Wrap,    ///< 이 패널 안에서 찾고, 없으면 반대쪽 끝으로 돈다
-        Explicit ///< 이름으로 정한 위젯으로 간다(Godot focus_neighbor). 받을 수 없으면 다음 규칙으로
+        Escape,  ///< 여기서 정하지 않고 조상에게 넘깁니다(기본).
+        Stop,    ///< 이 위젯(패널이면 그 안)에서만 찾고, 없으면 그 자리에 멈춥니다.
+        Wrap,    ///< 이 패널 안에서 찾고, 없으면 반대쪽 끝으로 돕니다.
+        Explicit ///< 이름으로 정한 위젯으로 갑니다(Godot 의 focus_neighbor). 받을 수 없으면 다음 규칙을 따릅니다.
     };
 } // namespace sw
 
@@ -56,7 +56,7 @@ namespace sw
 {
     /**
      * @struct WidgetNavigation
-     * @brief 이 위젯(패널이면 그 안)에서 방향마다 포커스가 어디로 가는지입니다. 모두 Escape 면 공간 탐색이 화면 전체에서 고릅니다.
+     * @brief 이 위젯(패널이면 그 안)에서 방향마다 포커스가 어디로 가는지를 정한 규칙입니다. 모두 Escape 면 공간 탐색이 화면 전체에서 고릅니다.
      */
     REFLECT()
     struct SW_API WidgetNavigation

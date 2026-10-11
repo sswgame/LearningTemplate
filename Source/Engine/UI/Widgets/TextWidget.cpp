@@ -145,7 +145,7 @@ namespace sw
             return;
         const bool  bResolve  = _bLocalized && pLocalization != nullptr && _text.empty() == false;
         const utf8* pResolved = bResolve ? pLocalization->getStringByText( _text, _text.c_str() ) : _text.c_str();
-        // 행동 태그는 풀린 글(번역)에서 바꾼다 — 번역가가 태그 자리를 옮길 수 있다.
+        // 액션 태그는 해석된 텍스트(번역)에서 바꾼다. 번역가가 태그 위치를 옮길 수 있기 때문이다.
         string expanded;
         _bHasActionTag = false;
         if ( pActionGlyphs != nullptr && string_view( pResolved ).find( "[action=" ) != string_view::npos )
@@ -229,8 +229,8 @@ namespace sw
         const UIComputedStyle* pStyle = getComputedStyle();
         if ( _bLayoutValid == false || _layoutWidth != width || _layoutFontSize != style._fontSize || _bLayoutRtl != bRtl || _pLayoutStyle != pStyle )
         {
-            // 픽셀 맞춤(UILayoutPass)은 양 끝을 반올림해 원하는 너비에 놓인 글을 물리 픽셀 하나까지 줄인다 — 그만큼은 넘쳐도 한 줄로 둔다
-            // (상자 줄의 단추 글이 끝 글자를 다음 줄로 넘기지 않게).
+            // 픽셀 맞춤(UILayoutPass)은 양 끝을 반올림해 원하는 너비에 놓인 텍스트를 물리 픽셀 하나까지 줄인다. 그만큼은 넘쳐도 한 줄로 둔다
+            // (상자 줄의 버튼 텍스트가 끝 글자를 다음 줄로 넘기지 않게 하기 위해서다).
             const float32 snapSlack = width > 0.0f && context._uiScale > 0.0f ? 1.0f / context._uiScale : 0.0f;
             context._pTextLayout->layout( getPlainText(), style, width + snapSlack, _layoutCache, getSpans() );
             _layoutWidth    = width;
@@ -240,7 +240,7 @@ namespace sw
             _bLayoutValid   = true;
         }
 
-        // 글 칸은 계산된 스타일이 정했으면(물려받은 것 포함) 그것, 아니면 자기 칸이다.
+        // 텍스트 필드는 계산된 스타일이 정했으면(물려받은 것 포함) 그 값을, 아니면 자기 필드 값을 쓴다.
         const bool       bHasStyle = pStyle != nullptr;
         const float4     color     = bHasStyle && pStyle->has( UIStyleField::TextColor ) ? pStyle->_value._textColor : _color;
         CanvasGlyphStyle glyphStyle{};

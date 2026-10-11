@@ -24,7 +24,7 @@ namespace sw
         {
             /** @brief 형식 바인딩이 메시지 패턴에 값을 넣는 인자 이름입니다(`{value}`). */
             static constexpr utf8 kFormatArgumentName[] = "value";
-            /** @brief 형식 키가 표에 없을 때의 패턴입니다(값 그대로). */
+            /** @brief 형식 키가 테이블에 없을 때의 패턴입니다(값 그대로). */
             static constexpr utf8 kFormatFallbackPattern[] = "{value}";
 
             /** @brief 값을 형식 인자로 담습니다. */
@@ -40,7 +40,7 @@ namespace sw
                 return arguments;
             }
 
-            /** @brief 설정 바인딩이 범위 · 선택지를 채우는 위젯 칸 이름입니다(슬라이더 · 콤보의 PROPERTY — 이름이 같은 위젯이면 모두). */
+            /** @brief 설정 바인딩이 범위와 선택지를 채우는 위젯 필드 이름입니다(슬라이더와 콤보의 PROPERTY 이며, 이름이 같은 위젯이면 모두 해당합니다). */
             static constexpr utf8 kValueProperty[]         = "_value";
             static constexpr utf8 kMinValueProperty[]      = "_minValue";
             static constexpr utf8 kMaxValueProperty[]      = "_maxValue";
@@ -48,7 +48,7 @@ namespace sw
             static constexpr utf8 kSelectedIndexProperty[] = "_selectedIndex";
             static constexpr utf8 kOptionListProperty[]    = "_listOption";
 
-            /** @brief 위젯 타입에 그 칸이 있으면 경로를 풉니다(없으면 무효 경로 — 오류 아님). */
+            /** @brief 위젯 타입에 그 필드가 있으면 경로를 해석합니다(없으면 무효 경로이며 오류가 아닙니다). */
             static UIPropertyPath findOptionalPath( const TypeInfo& type, const utf8* pName )
             {
                 UIPropertyPath path{};
@@ -58,17 +58,17 @@ namespace sw
                 return path;
             }
 
-            /** @brief 범위 칸 하나(있으면)에 설정 정의의 숫자를 쓰고, 바뀌었으면 위젯에 알립니다. */
+            /** @brief 범위 필드 하나(있으면)에 설정 정의의 숫자를 쓰고, 바뀌었으면 위젯에 알립니다. */
             static void writeRange( const UIPropertyPath& path, Widget& widget, float64 number, bool bInteger )
             {
                 if ( path.isValid() && UIBindingValueUtil::writeValue( path, &widget, UIBindingValue::makeNumber( number, bInteger ) ) )
                     widget.onBoundPropertyChanged( path.getRootProperty() );
             }
 
-            /** @brief 선택지의 보일 글입니다(글 키, 없으면 값 — 글 위젯이 키로 푼다). */
+            /** @brief 선택지에 보일 텍스트입니다(텍스트 키가 있으면 키, 없으면 값이며, 텍스트 위젯이 키로 해석합니다). */
             static const string& getOptionText( const UserSettingOption& option ) { return option._textKey.empty() ? option._value : option._textKey; }
 
-            /** @brief 소스 갈래 · 칸 갈래가 묶일 수 있는가 — 같은 Other 타입끼리, 아니면 갈래 변환. */
+            /** @brief 소스 종류와 필드 종류를 연결할 수 있는지 판정합니다. 같은 Other 타입끼리 연결하거나, 종류 변환이 가능해야 합니다. */
             static bool canBind( UIBindingValueKind sourceKind, const hashed_string& sourceTypeName, const UIPropertyPath& target )
             {
                 if ( sourceKind == UIBindingValueKind::Other && target._kind == UIBindingValueKind::Other )
@@ -117,7 +117,7 @@ namespace sw
 
     void UIBindingSet::onSettingEvent( const UserSettingEvent& event )
     {
-        (void)event; // 어느 설정이든 — 사용 가능(`enabledWhen`)은 다른 설정에 기대므로 설정 바인딩을 모두 다시 읽는다
+        (void)event; // 어느 설정이든 상관없이 처리한다. 사용 가능 여부(`enabledWhen`)는 다른 설정에 의존하므로 설정 바인딩을 모두 다시 읽는다
         _bSettingsChanged = true;
     }
 
@@ -155,7 +155,7 @@ namespace sw
             bind( listBinding, context );
             for ( ActiveBinding& binding : _listBinding )
             {
-                (void)apply( binding, context ); // 칸이 바뀌었는지는 쓴 수(`_writeCount`)가 센다
+                (void)apply( binding, context ); // 필드가 바뀌었는지는 쓴 횟수(`_writeCount`)로 센다
             }
             return;
         }
@@ -172,7 +172,7 @@ namespace sw
                         break;
                     const uint64 fieldSerial = _pViewModel->findFieldChangeSerial( binding._sourceField );
                     if ( bReformat || ( fieldSerial > _seenSerial && fieldSerial != binding._skipSerial ) )
-                        (void)apply( binding, context ); // 칸이 바뀌었는지는 쓴 수(`_writeCount`)가 센다
+                        (void)apply( binding, context ); // 필드가 바뀌었는지는 쓴 횟수(`_writeCount`)로 센다
                     break;
                 }
                 case UIBindingSource::Poll:
@@ -182,14 +182,14 @@ namespace sw
                     const bool   bReformat = context._bTextRevisionChanged && binding._expression._format.empty() == false;
                     if ( binding._bPollKnown && binding._lastPollText == text && bReformat == false )
                         break;
-                    (void)apply( binding, context ); // 칸이 바뀌었는지는 쓴 수(`_writeCount`)가 센다
+                    (void)apply( binding, context ); // 필드가 바뀌었는지는 쓴 횟수(`_writeCount`)로 센다
                     break;
                 }
                 case UIBindingSource::Setting:
                 {
                     const bool bReformat = context._bTextRevisionChanged && binding._expression._format.empty() == false;
                     if ( _bSettingsChanged || binding._bDirty || bReformat )
-                        (void)apply( binding, context ); // 칸이 바뀌었는지는 쓴 수(`_writeCount`)가 센다
+                        (void)apply( binding, context ); // 필드가 바뀌었는지는 쓴 횟수(`_writeCount`)로 센다
                     break;
                 }
             }
@@ -250,7 +250,7 @@ namespace sw
         }
         else
         {
-            // 뷰모델 소스 — 뷰모델이 없으면 쉰다(오류 아님 — `setViewModel` 이 다시 건다).
+            // 뷰모델 소스는 뷰모델이 없으면 쉰다(오류가 아니며, `setViewModel` 이 다시 연결한다).
             if ( _pViewModel == nullptr || _pViewModel->getTypeInfo() == nullptr )
                 return true;
             if ( UIBindingValueUtil::resolvePath( *_pViewModel->getTypeInfo(), binding._expression._path, binding._source, outError ) == false )
@@ -365,7 +365,7 @@ namespace sw
             }
             case UserSettingType::Enum:
             {
-                // 콤보의 고른 자리면 선택지 순번, 아니면 보일 글(글 키).
+                // 콤보에서 고른 항목이면 선택지 순번을, 아니면 보일 텍스트(텍스트 키)를 쓴다.
                 const bool bIndex = leafName == hashed_string( UIBindingSetInternal::kSelectedIndexProperty ) &&
                                     binding._target._kind == UIBindingValueKind::Number;
                 outSourceKind = bIndex ? UIBindingValueKind::Number : UIBindingValueKind::Text;
@@ -396,13 +396,13 @@ namespace sw
             case UserSettingType::Bool:
             {
                 bool bValue = false;
-                (void)StringUtil::tryParseBool( text, bValue ); // 값은 정규화되어 있다(true · false)
+                (void)StringUtil::tryParseBool( text, bValue ); // 값은 정규화되어 있다(true, false)
                 return UIBindingValue::makeBool( bValue );
             }
             case UserSettingType::Int:
             case UserSettingType::Float:
             {
-                // 범위를 값보다 먼저 쓴다 — 위젯이 값을 범위로 묶는다.
+                // 범위를 값보다 먼저 쓴다. 위젯이 값을 범위로 제한하기 때문이다.
                 const bool bInteger = pDef->_type == UserSettingType::Int;
                 UIBindingSetInternal::writeRange( binding._rangeMin, widget, pDef->_minValue, bInteger );
                 UIBindingSetInternal::writeRange( binding._rangeMax, widget, pDef->_maxValue, bInteger );
@@ -424,7 +424,7 @@ namespace sw
                     }
                     return UIBindingValue::makeText( text );
                 }
-                // 선택지 목록(글 키)을 고른 자리보다 먼저 쓴다.
+                // 선택지 목록(텍스트 키)을 고른 항목보다 먼저 쓴다.
                 if ( binding._optionList.isValid() && binding._optionList.getLeafProperty()._elementTypeName == hashed_string( "string" ) )
                 {
                     vector<string>* pList = binding._optionList.getLeafProperty().getValuePtr<vector<string>>( binding._optionList.findLeafOwner( &widget ) );
@@ -461,7 +461,7 @@ namespace sw
         if ( pDef == nullptr )
             return;
         const UIBindingValue value = UIBindingValueUtil::readValue( binding._target, &widget );
-        // 결과는 보지 않는다 — 고쳐 받았든(Clamped) 거절됐든(Rejected · Disabled) 다음 단계가 설정 값을 다시 읽어 위젯에 쓴다.
+        // 결과는 보지 않는다. 보정되었든(Clamped) 거절됐든(Rejected, Disabled) 다음 단계가 설정 값을 다시 읽어 위젯에 쓴다.
         binding._bDirty = true;
         switch ( pDef->_type )
         {
@@ -509,7 +509,7 @@ namespace sw
         const bool bSetting = binding._expression._source == UIBindingSource::Setting;
         if ( pWidget == nullptr || ( bSetting == false && _pViewModel == nullptr ) )
             return false;
-        _bApplying           = true; // 범위 · 선택지 · 사용 가능도 쓴다
+        _bApplying           = true; // 범위, 선택지, 사용 가능 여부도 쓴다
         binding._bDirty      = false;
         UIBindingValue value = bSetting ? readSetting( binding, *pWidget, context ) : UIBindingValueUtil::readValue( binding._source, _pViewModel );
         _bApplying           = false;

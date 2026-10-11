@@ -14,7 +14,7 @@ namespace sw
     {
         struct ButtonWidgetInternal
         {
-            /** @brief 기본 겉모습(스타일 시트 5-2 가 생기기 전 — 어두운 반투명 바탕 · 둥근 모서리)입니다. */
+            /** @brief 기본 겉모습입니다(스타일 시트 5-2 가 생기기 전의 어두운 반투명 바탕과 둥근 모서리입니다). */
             static constexpr float32 kCornerRadius = 6.0f;
 
             static UIBrush makeBrush( float32 shade, float32 alpha )
@@ -69,7 +69,7 @@ namespace sw
 
     UIReply ButtonWidget::onPointerEvent( const UIPointerEvent& event, UIRoutePhase phase )
     {
-        // 버블 — 안의 글 · 그림이 먼저 지나가고 버튼이 받는다. 누른 동안은 포인터를 잡아 경로의 잎이 버튼이다.
+        // 버블: 안의 텍스트와 이미지가 먼저 지나가고 버튼이 받는다. 누른 동안은 포인터를 잡아 경로의 잎이 버튼이다.
         if ( phase != UIRoutePhase::Bubble || event._button != MouseButton::Left )
             return UIReply::makeUnhandled();
         if ( event._kind == UIPointerEventKind::Down )
@@ -82,7 +82,7 @@ namespace sw
         {
             _bPressed = false;
             invalidate( WidgetDirty::kStyle | WidgetDirty::kPaint ); // :pressed
-            // 누른 위젯 = 뗀 위젯일 때만 클릭이다(밖으로 끌고 나가 떼면 취소).
+            // 누른 위젯과 뗀 위젯이 같을 때만 클릭이다(밖으로 끌고 나가 떼면 취소).
             float2 local{};
             if ( getGeometry().inverseTransformPoint( event._position, local ) && getGeometry().containsLocal( local ) )
                 handleClick();

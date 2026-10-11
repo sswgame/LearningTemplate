@@ -41,7 +41,7 @@ namespace sw
 
     void SafeZonePanel::arrangeChildren( const UILayoutContext& context, const float2& size )
     {
-        // 안전 사각형(화면 UI 단위)과 이 패널 사각형이 겹치는 만큼만 안쪽으로 민다 — 화면 가운데 패널은 그대로다.
+        // 안전 사각형(화면 UI 단위)과 이 패널 사각형이 겹치는 만큼만 안쪽으로 민다. 화면 가운데 패널은 그대로다.
         const float2& origin      = getGeometry()._position;
         const float32 safeLeft    = context._safeInsets._x;
         const float32 safeTop     = context._safeInsets._y;

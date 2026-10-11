@@ -21,13 +21,13 @@ namespace sw
 
     /**
      * @class MouseDevice
-     * @brief 마우스 버튼 · 좌표 · 센서 델타 · 커서 상태를 맡는 IInputDevice 구현입니다.
+     * @brief 마우스 버튼, 좌표, 센서 델타, 커서 상태를 맡는 IInputDevice 구현입니다.
      */
     class SW_API MouseDevice : public IInputDevice
     {
     public:
         /**
-         * @brief 스무딩 · 가속 설정값이 기준으로 삼는 시간(60 Hz 한 프레임)입니다.
+         * @brief 스무딩과 가속 설정값이 기준으로 삼는 시간(60 Hz 한 프레임)입니다.
          * @details 설정값의 뜻은 "이 시간 동안 남기는 비율" 입니다. 프레임이 길든 짧든 같은 시간이 지나면 같은 만큼 따라옵니다.
          */
         static constexpr float32 kSmoothingReferenceSeconds = 1.0f / 60.0f;
@@ -39,7 +39,7 @@ namespace sw
         MouseDevice& operator=( const MouseDevice& ) = delete;
 
         // ------------------------------------------------------------------------------
-        // 1) IInputDevice 수명주기
+        // 1) IInputDevice 수명 주기
         // ------------------------------------------------------------------------------
         InputDeviceKind getDeviceKind() const override { return InputDeviceKind::Mouse; }
         string_view     getDeviceName() const override { return "Mouse"; }
@@ -71,19 +71,19 @@ namespace sw
         int2   getDelta() const { return _delta; }
         float2 getRawDelta() const { return _rawDelta; }
         /**
-         * @brief 이번 프레임의 이동량입니다. 원시 델타가 있으면 그것(화면 경계에 막히지 않는다), 없으면 위치 차이입니다.
+         * @brief 이번 프레임의 이동량입니다. 원시 델타가 있으면 그 값(화면 경계에 막히지 않음)이고, 없으면 위치 차이입니다.
          * @details 스무딩과 InputMap 의 마우스 델타 바인딩이 같은 규칙으로 읽습니다.
          */
         float2 getMovementDelta() const;
-        /** @brief 가속 · 스무딩을 적용한 이번 프레임의 이동량입니다. 프레임당 한 번 갱신됩니다(`onEventsDispatched`). */
+        /** @brief 가속과 스무딩을 적용한 이번 프레임의 이동량입니다. 프레임당 한 번 갱신합니다(`onEventsDispatched`). */
         float2 getSmoothDelta() const { return _smoothDelta; }
 
         /**
          * @brief 스무딩 설정값 [0, 0.99] 입니다. 0 이면 스무딩하지 않습니다.
-         * @details 값은 `kSmoothingReferenceSeconds`(1/60 초) 동안 이전 속도를 남기는 비율입니다. 시간 상수로는
+         * @details 값은 `kSmoothingReferenceSeconds`(1/60 초) 동안 이전 속도를 남기는 비율이다. 시간 상수는
          *          τ = -kSmoothingReferenceSeconds / ln( factor ) 이고(0.5 → 24 ms, 0.9 → 158 ms), 한 프레임의 계수는
-         *          1 - exp( -dt / τ ) = 1 - factor^( dt / kSmoothingReferenceSeconds ) 입니다. 60 Hz 에서는 계수가 1 - factor 이고,
-         *          프레임 레이트 · 폴링 레이트와 무관합니다.
+         *          1 - exp( -dt / τ ) = 1 - factor^( dt / kSmoothingReferenceSeconds ) 이다. 60 Hz 에서는 계수가 1 - factor 이며,
+         *          프레임 레이트와 폴링 레이트에는 영향받지 않는다.
          */
         float32 getSmoothing() const { return _smoothingFactor; }
         void    setSmoothing( float32 factor ) { _smoothingFactor = factor < 0.0f ? 0.0f : ( factor > 0.99f ? 0.99f : factor ); }
@@ -91,8 +91,8 @@ namespace sw
         float32 getSmoothingTimeConstant() const;
         /**
          * @brief 가속 지수입니다. 1 이면 가속하지 않습니다.
-         * @details 속도를 `kSmoothingReferenceSeconds` 당 픽셀로 측정한 값 s 가 1 보다 크면 이동에 s^( power - 1 ) 을 곱합니다(시간 기준이라 프레임 ·
-         *          폴링 레이트와 무관).
+         * @details 속도를 `kSmoothingReferenceSeconds` 당 픽셀로 측정한 값 s 가 1 보다 크면 이동에 s^( power - 1 ) 을 곱한다.
+         *          시간 기준이라 프레임 레이트와 폴링 레이트에는 영향받지 않는다.
          */
         float32 getAcceleration() const { return _accelerationPower; }
         void    setAcceleration( float32 power ) { _accelerationPower = power < 1.0f ? 1.0f : power; }
@@ -142,8 +142,8 @@ namespace sw
         void setPosition( int32 x, int32 y );
         /**
          * @brief 이번 프레임의 델타를 바꾸지 않고 위치만 옮깁니다.
-         * @details 가운데 고정 잠금이 커서를 가운데로 되돌릴 때 씁니다. 되돌림은 사용자가 움직인 것이 아니므로 델타가 되면
-         *          안 됩니다. 다음 프레임의 델타는 이 위치에서부터 측정합니다.
+         * @details 가운데 고정 잠금이 커서를 가운데로 되돌릴 때 쓴다. 되돌림은 사용자가 움직인 것이 아니므로 델타가 되면
+         *          안 된다. 다음 프레임의 델타는 이 위치에서부터 측정한다.
          */
         void setPositionWithoutDelta( int32 x, int32 y );
         void addRawDelta( float32 dx, float32 dy );
@@ -154,30 +154,30 @@ namespace sw
     private:
         static constexpr size_t kButtonCount = static_cast<size_t>( MouseButton::Count );
 
-        int2                   _mouse;                     /**< 현재 프레임의 마우스 화면 좌표(창 클라이언트 기준). */
-        int2                   _prevMouse;                 /**< 직전 프레임의 마우스 좌표. 델타 계산에 씀. */
-        int2                   _delta;                     /**< 이번 프레임의 좌표 이동량(_mouse - _prevMouse). 화면 경계에 막히면 실제 이동보다 작음. */
-        float2                 _rawDelta;                  /**< OS 원시(Raw Input) 델타 누적값. 화면 경계에 막히지 않는 실제 이동량(FPS 카메라 룩에 알맞음). */
-        float2                 _smoothDelta;               /**< 가속 · 스무딩(EMA)을 적용한 이번 프레임 이동량. getSmoothDelta() 가 반환하는 값. */
-        float2                 _smoothVelocity;            /**< 스무딩한 속도(픽셀/초). EMA 는 속도에 걸어 프레임 길이가 달라도 단위가 섞이지 않는다. */
-        float32                _smoothingFactor;           /**< 스무딩 설정값 [0.0, 0.99] — 1/60 초 동안 남기는 비율. 0 이면 스무딩 없이 이동을 그대로 씀. */
-        float32                _accelerationPower;         /**< 마우스 가속 지수. 1.0 이면 가속 없음. 클수록 빠르게 움직일 때 델타가 더 커짐. */
+        int2                   _mouse;                     /**< 현재 프레임의 마우스 화면 좌표입니다(창 클라이언트 기준). */
+        int2                   _prevMouse;                 /**< 직전 프레임의 마우스 좌표입니다. 델타 계산에 씁니다. */
+        int2                   _delta;                     /**< 이번 프레임의 좌표 이동량(_mouse - _prevMouse)입니다. 화면 경계에 막히면 실제 이동보다 작습니다. */
+        float2                 _rawDelta;                  /**< OS 원시(Raw Input) 델타 누적값입니다. 화면 경계에 막히지 않는 실제 이동량이라 FPS 카메라 룩에 알맞습니다. */
+        float2                 _smoothDelta;               /**< 가속과 스무딩(EMA)을 적용한 이번 프레임 이동량입니다. getSmoothDelta() 가 반환하는 값입니다. */
+        float2                 _smoothVelocity;            /**< 스무딩한 속도(픽셀/초)입니다. EMA 를 속도에 걸기 때문에 프레임 길이가 달라도 단위가 섞이지 않습니다. */
+        float32                _smoothingFactor;           /**< 스무딩 설정값 [0.0, 0.99] 입니다. 1/60 초 동안 남기는 비율이며, 0 이면 스무딩 없이 이동을 그대로 씁니다. */
+        float32                _accelerationPower;         /**< 마우스 가속 지수입니다. 1.0 이면 가속이 없고, 클수록 빠르게 움직일 때 델타가 더 커집니다. */
         float32                _mouseWheelDelta;           /**< 이번 프레임 세로 휠 회전량. getMouseWheel() 이 반환하는 값. */
         float32                _mouseWheelHorizontalDelta; /**< 이번 프레임 가로 휠(틸트) 회전량. */
-        int32                  _clipSubRectLeft;           /**< 마우스 클리핑 서브 영역(클라이언트 좌표 기준, setClipSubRect 로 설정). */
+        int32                  _clipSubRectLeft;           /**< 마우스 클리핑 서브 영역입니다(클라이언트 좌표 기준, setClipSubRect 로 설정). */
         int32                  _clipSubRectTop;
         int32                  _clipSubRectRight;
         int32                  _clipSubRectBottom;
-        MouseLockMode          _lockMode;     /**< 커서 잠금 모드(None/ConfinedToWindow/LockedInCenter). 실제 OS 클리핑은 InputManager::syncMouseLock() 이 적용(조건은 isMouseLockActive). */
-        uint8                  _buttonMask;   /**< 이번 프레임의 버튼 눌림 비트마스크(MouseButton 인덱스로 비트 조회). */
-        uint8                  _pressedMask;  /**< 이번 프레임에 새로 눌린 버튼 비트마스크(엣지). onFrameBegin/onFrameEnd 에서 초기화. */
-        uint8                  _releasedMask; /**< 이번 프레임에 새로 떼어진 버튼 비트마스크(엣지). */
+        MouseLockMode          _lockMode;     /**< 커서 잠금 모드(None/ConfinedToWindow/LockedInCenter)입니다. 실제 OS 클리핑은 InputManager::syncMouseLock() 이 적용합니다(조건은 isMouseLockActive). */
+        uint8                  _buttonMask;   /**< 이번 프레임의 버튼 눌림 비트마스크입니다(MouseButton 인덱스로 비트를 조회). */
+        uint8                  _pressedMask;  /**< 이번 프레임에 새로 눌린 버튼 비트마스크(엣지)입니다. onFrameBegin/onFrameEnd 에서 초기화합니다. */
+        uint8                  _releasedMask; /**< 이번 프레임에 새로 떼어진 버튼 비트마스크(엣지)입니다. */
         uint8                  _bCursorVisible  : 1;
-        uint8                  _bPointerInside  : 1; /**< 마우스 포인터가 지금 창 클라이언트 영역 안에 있는지 여부. */
-        uint8                  _bPointerEntered : 1; /**< 이번 프레임에 포인터가 창 안으로 새로 들어왔는지 여부(엣지). */
-        uint8                  _bPointerLeft    : 1; /**< 이번 프레임에 포인터가 창 밖으로 새로 나갔는지 여부(엣지). */
-        uint8                  _bHasSubRect     : 1; /**< _clipSubRectXxx 로 지정한 서브 영역 클리핑이 켜져 있는지 여부. */
-        uint8                  _bHasPosition    : 1; /**< 위치를 한 번이라도 받았다 — 첫 위치는 기준점이 없어 이동량을 내지 않는다. */
+        uint8                  _bPointerInside  : 1; /**< 마우스 포인터가 지금 창 클라이언트 영역 안에 있는지 나타냅니다. */
+        uint8                  _bPointerEntered : 1; /**< 이번 프레임에 포인터가 창 안으로 새로 들어왔는지 나타냅니다(엣지). */
+        uint8                  _bPointerLeft    : 1; /**< 이번 프레임에 포인터가 창 밖으로 새로 나갔는지 나타냅니다(엣지). */
+        uint8                  _bHasSubRect     : 1; /**< _clipSubRectXxx 로 지정한 서브 영역 클리핑이 켜져 있는지 나타냅니다. */
+        uint8                  _bHasPosition    : 1; /**< 위치를 한 번이라도 받았는지 나타냅니다. 첫 위치는 기준점이 없어서 이동량을 내지 않습니다. */
         [[maybe_unused]] uint8 _reserved        : 2;
     };
 } // namespace sw

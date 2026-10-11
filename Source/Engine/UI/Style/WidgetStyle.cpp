@@ -12,7 +12,7 @@ namespace sw
         {
             using Table = UIStyleFieldTable;
 
-            /** @brief 칸 표 — `UIStyleField` 순서, `WidgetStyle` 선언 순서와 같다. */
+            /** @brief 필드 테이블입니다. `UIStyleField` 순서이며 `WidgetStyle` 선언 순서와 같습니다. */
             static constexpr Table::Entry kArrEntry[] = {
                 { "_backgroundColor",                                         0},
                 {    "_cornerRadius",                                         0},
@@ -35,7 +35,7 @@ namespace sw
 
             static bool isSameFont( const FontSpec& lhs, const FontSpec& rhs ) { return lhs._family == rhs._family && lhs._weight == rhs._weight && lhs._slant == rhs._slant; }
 
-            /** @brief 칸 하나의 값이 같은가입니다. */
+            /** @brief 필드 하나의 값이 같으면 true 입니다. */
             static bool isSameValue( const WidgetStyle& lhs, const WidgetStyle& rhs, UIStyleField field )
             {
                 switch ( field )
@@ -105,8 +105,8 @@ namespace sw
     {
         if ( pOld == pNew )
             return 0;
-        // 한쪽이 없으면 다른 쪽이 정한 칸이 모두 바뀐 칸이다. 빈 스타일 정적 객체를 두지 않는다 — 글 칸(글꼴 · 전환)이 힙을 잡아
-        // 처음 부른 프레임의 태그(UI)로 프로세스 끝까지 남는다(AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline).
+        // 한쪽이 없으면 다른 쪽이 정한 필드가 모두 바뀐 필드다. 빈 스타일 정적 객체는 두지 않는다. 텍스트 필드(폰트, 전환)가 힙을 잡아
+        // 처음 부른 프레임의 태그(UI)로 프로세스 끝까지 남기 때문이다(AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline).
         if ( pOld == nullptr || pNew == nullptr )
             return ( pOld != nullptr ? pOld->_setMask : 0u ) | ( pNew != nullptr ? pNew->_setMask : 0u );
         const UIComputedStyle& oldStyle = *pOld;

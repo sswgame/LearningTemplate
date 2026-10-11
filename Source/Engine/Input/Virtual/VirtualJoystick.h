@@ -1,6 +1,6 @@
 /**
  * @file VirtualJoystick.h
- * @brief 마우스 드래그 · 터치 스크린 기반 가상 조이스틱의 2D 축 계산 유틸리티입니다.
+ * @brief 마우스 드래그나 터치 스크린 기반 가상 조이스틱의 2D 축 계산 유틸리티입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -11,7 +11,7 @@ namespace sw
 {
     /**
      * @struct VirtualJoystick
-     * @brief 앵커 중심점, 현재 터치 · 마우스 위치, 반경, 데드존으로 정규화된 2D 벡터를 구합니다.
+     * @brief 앵커 중심점, 현재 터치나 마우스 위치, 반경, 데드존으로 정규화된 2D 벡터를 구합니다.
      */
     struct VirtualJoystick final
     {
@@ -29,7 +29,7 @@ namespace sw
         {
         }
 
-        /** @brief 현재 터치 · 마우스 위치(currentPos)를 받아 [-1.0, 1.0] 범위의 정규화된 2D 축 벡터를 구합니다. */
+        /** @brief 현재 터치나 마우스 위치(currentPos)를 받아 [-1.0, 1.0] 범위의 정규화된 2D 축 벡터를 구합니다. */
         float2 computeVector( const float2 currentPos ) const noexcept
         {
             return computeVector( _anchorPos, currentPos, _radius, _deadzone, _outerDeadzone );

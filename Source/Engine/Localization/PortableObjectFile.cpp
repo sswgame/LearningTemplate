@@ -8,7 +8,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 지금 읽고 있는 따옴표 글이 어느 칸에 이어지는지입니다. */
+        /** @brief 지금 읽고 있는 따옴표 텍스트가 어느 필드에 이어지는지 나타냅니다. */
         enum class PortableObjectField : uint8
         {
             None = 0,
@@ -20,9 +20,9 @@ namespace sw
 
         struct PortableObjectFileInternal
         {
-            static constexpr utf8 kDoubleQuote = 0x22; ///< `"` — 문자 리터럴로 적으면 린트의 글 토큰이 어긋난다
+            static constexpr utf8 kDoubleQuote = 0x22; ///< `"` 입니다. 문자 리터럴로 적으면 린트의 텍스트 토큰이 어긋납니다.
 
-            /** @brief `"…"` 하나를 풀어 @p outText 에 붙입니다. 따옴표로 시작 · 끝나지 않으면 false 입니다. */
+            /** @brief `"…"` 하나를 해석해 @p outText 에 붙입니다. 따옴표로 시작하거나 끝나지 않으면 false 입니다. */
             [[nodiscard]] static bool appendQuoted( string_view token, string& outText )
             {
                 token = StringUtil::trim( token );
@@ -76,7 +76,7 @@ namespace sw
             }
         };
 
-        /** @brief 읽는 동안의 상태 — 지금 항목과 다 읽은 항목들입니다. */
+        /** @brief 읽는 동안의 상태입니다. 지금 항목과 다 읽은 항목들을 가집니다. */
         struct PortableObjectParseState
         {
             vector<PortableObjectEntry> _listEntry;
@@ -87,7 +87,7 @@ namespace sw
             bool                        _bHasSource{ false };
             bool                        _bHasTranslation{ false };
 
-            /** @brief 항목 하나를 마칩니다 — 머리 항목(msgid "")은 Language · 프로젝트 이름만 읽습니다. */
+            /** @brief 항목 하나를 마칩니다. 머리 항목(msgid "")은 Language 와 프로젝트 이름만 읽습니다. */
             void flush()
             {
                 if ( _bHasSource && _current._source.empty() )

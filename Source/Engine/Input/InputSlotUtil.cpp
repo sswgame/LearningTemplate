@@ -14,7 +14,7 @@ namespace sw
             static constexpr string_view kMousePrefix   = "Mouse";
             static constexpr string_view kGamepadPrefix = "Gamepad";
 
-            /** @brief 열거자 이름으로 읽은 값이 실제로 그 이름인지 봅니다 — 리플렉션 조회는 모르는 이름에 기본값을 돌려줄 수 있다. */
+            /** @brief 열거자 이름으로 읽은 값이 실제로 그 이름인지 확인합니다. 리플렉션 조회는 모르는 이름에 기본값을 반환할 수 있기 때문입니다. */
             static bool isSameName( const utf8* pCanonical, string_view name ) { return pCanonical != nullptr && StringUtil::equals( string_view( pCanonical ), name, true ); }
         };
     } // namespace

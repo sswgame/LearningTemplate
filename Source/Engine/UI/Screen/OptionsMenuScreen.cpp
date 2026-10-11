@@ -52,7 +52,7 @@ namespace sw
                 }
             }
 
-            /** @brief 값 위젯에 거는 칸 — 형식마다 위젯의 값 칸(6-3 설정 바인딩의 규약)입니다. 키 바인딩은 단추라 칸이 없습니다. */
+            /** @brief 값 위젯에 연결하는 필드입니다. 형식마다 위젯의 값 필드가 다릅니다(6-3 설정 바인딩의 규약). 키 바인딩은 버튼이라 필드가 없습니다. */
             static const utf8* findValueProperty( UserSettingType type )
             {
                 switch ( type )
@@ -204,7 +204,7 @@ namespace sw
 
     void OptionsMenuScreen::onTreeRebuilt()
     {
-        // 문서가 다시 지어졌다 — 탭 · 행은 코드로 붙인 것이라 새 트리에 다시 짓는다.
+        // 문서를 다시 만들었다. 탭과 행은 코드로 붙인 것이라 새 트리에 다시 만든다.
         rebuild();
     }
 
@@ -221,7 +221,7 @@ namespace sw
                 pButton->setStyleClass( tabIndex == index ? OptionsMenuScreenInternal::kSelectedTabClass : OptionsMenuScreenInternal::kTabClass );
         }
         populateRows();
-        // 탐색 방식이면 첫 행으로 — 탭을 바꾼 패드 사용자가 바로 행을 고른다.
+        // 탐색 방식이면 첫 행으로 간다. 탭을 바꾼 패드 사용자가 바로 행을 고를 수 있다.
         UISystem* pUI = getUISystem();
         if ( pUI == nullptr || pUI->getInputMode() != UIInputMode::Navigation || _listRow.empty() || pUI->getActiveScreen() != this )
             return;
@@ -285,7 +285,7 @@ namespace sw
             listSetting.clear();
             _pSettings->collectSettings( category._id, listSetting );
             if ( listSetting.empty() )
-                continue; // 이 게임 · 플랫폼에 보일 설정이 없는 탭은 뺀다
+                continue; // 이 게임이나 플랫폼에 보일 설정이 없는 탭은 뺀다
             unique_ptr<ButtonWidget> button = make_unique<ButtonWidget>();
             button->setName( hashed_string( string( "Tab." ) + category._id.c_str() ) );
             button->setStyleClass( OptionsMenuScreenInternal::kTabClass );
@@ -310,14 +310,14 @@ namespace sw
         }
         pRows->clearChildren();
         _listRow.clear();
-        removeOrphanBindings(); // 지운 행의 설정 바인딩
+        removeOrphanBindings(); // 지운 행의 설정 바인딩을 정리한다
         if ( _selectedTab >= _listCategory.size() )
             return;
         vector<const UserSettingDef*> listSetting;
         _pSettings->collectSettings( _listCategory[_selectedTab], listSetting );
         for ( const UserSettingDef* pSetting : listSetting )
         {
-            (void)createRow( *pRows, *pSetting ); // 실패는 createRow 가 오류로 남기고, 남은 행은 계속 짓는다
+            (void)createRow( *pRows, *pSetting ); // 실패는 createRow 가 오류로 남기고, 남은 행은 계속 만든다
         }
     }
 
@@ -341,7 +341,7 @@ namespace sw
         Internal::prefixNames( *row, prefix );
         (void)rows.addChild( std::move( row ) );
         WidgetTree& tree = getTree();
-        // 견본에 적힌 바인딩(게임이 덮어쓴 행 견본)도 그대로 건다.
+        // 템플릿에 적힌 바인딩(게임이 덮어쓴 행 템플릿)도 그대로 연결한다.
         for ( const UIBindingDesc& binding : listBinding )
         {
             addBinding( binding );
@@ -404,7 +404,7 @@ namespace sw
         UIScreen* pPrompt = pUI->findScreen( _promptScreen );
         if ( pPrompt == nullptr )
             return;
-        // 창의 단추는 이 메뉴를 번호로 찾는다 — 메뉴가 먼저 닫혀도(핫 리로드) 매달린 포인터가 없다.
+        // 창의 버튼은 이 메뉴를 번호로 찾는다. 메뉴가 먼저 닫혀도(핫 리로드) 매달린 포인터가 없다.
         const UIScreenHandle menuHandle = getHandle();
         const auto           findMenu   = [pUI, menuHandle]()
         { return static_cast<OptionsMenuScreen*>( pUI->findScreen( menuHandle ) ); };

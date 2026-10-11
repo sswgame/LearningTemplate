@@ -70,7 +70,7 @@ namespace sw
         InputManager* pInput = pUI != nullptr ? pUI->getInputManager() : nullptr;
         if ( _bListening == false || pInput == nullptr || _pSettings == nullptr )
             return;
-        // 연 프레임의 입력(창을 연 확인 · 클릭)은 받지 않는다.
+        // 연 프레임의 입력(창을 연 확인이나 클릭)은 받지 않는다.
         if ( pInput->getBeginFrameCount() == _openFrame )
             return;
         const KeyboardDevice* pKeyboard = pInput->getKeyboard();
@@ -83,7 +83,7 @@ namespace sw
                     capture( InputSlot::fromKey( Key::Escape ) );
                 return;
             }
-            close(); // 1 초 전에 뗐다 — 취소
+            close(); // 1 초 전에 뗐으므로 취소한다
             return;
         }
         InputSlot slot{};
@@ -121,7 +121,7 @@ namespace sw
     void KeyRebindScreen::showConflict( const hashed_string& otherSettingID, const hashed_string& otherAction )
     {
         WidgetTree& tree = getTree();
-        // 상대 이름 — 설정이면 그 메뉴 이름(글 키 — 글 위젯이 푼다), 스키마 밖이면 액션 이름.
+        // 상대 이름: 설정이면 그 메뉴 이름(텍스트 키이며 텍스트 위젯이 해석한다), 스키마 밖이면 액션 이름이다.
         const UserSettingDef* pOther = otherSettingID.empty() ? nullptr : _pSettings->findSetting( otherSettingID );
         if ( TextWidget* pTarget = tree.findWidget<TextWidget>( "ConflictTarget" ); pTarget != nullptr )
             pTarget->setText( pOther != nullptr && pOther->_textKey.empty() == false ? string_view( pOther->_textKey ) : string_view( otherAction.c_str() ) );
@@ -131,7 +131,7 @@ namespace sw
             pButtons->setVisibility( WidgetVisibility::Visible );
         if ( Widget* pPrompt = tree.findWidgetByName( "Prompt" ); pPrompt != nullptr )
             pPrompt->setVisibility( WidgetVisibility::Collapsed );
-        // 스키마 밖 액션과 겹치면 맞바꿀 상대가 없다 — 바꾸기를 숨기고 취소만.
+        // 스키마 밖 액션과 겹치면 맞바꿀 상대가 없다. 바꾸기를 숨기고 취소만 남긴다.
         Widget* pSwap = tree.findWidgetByName( "Swap" );
         if ( pSwap != nullptr && pOther == nullptr )
             pSwap->setVisibility( WidgetVisibility::Collapsed );

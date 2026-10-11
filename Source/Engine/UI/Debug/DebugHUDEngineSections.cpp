@@ -1,8 +1,8 @@
 /**
  * @file DebugHUDEngineSections.cpp
- * @brief 엔진 기본 디버그 HUD 섹션입니다 — 이미 있는 서비스(프로파일러 · 씬 · 물리 · 오디오 · 입력 · 카메라 · 디버그 값)에서 읽기만 합니다.
+ * @brief 엔진 기본 디버그 HUD 섹션입니다. 이미 있는 서비스(프로파일러, 씬, 물리, 오디오, 입력, 카메라, 디버그 값)에서 읽기만 합니다.
  * @details 섹션 본문은 HUD 가 켜져 있고 그 섹션이 켜져 있을 때만 4 Hz 로 불린다. 꺼진 섹션은 아무것도 읽지 않는다.
- *          네트워크 핑은 엔진에 연결 서비스가 없어 여기 없다 — 온라인 키트가 자기 .cpp 에 `SW_DEBUG_HUD_SECTION` 으로 단다.
+ *          네트워크 핑은 엔진에 연결 서비스가 없어 여기에 없다. 온라인 키트가 자기 .cpp 에 `SW_DEBUG_HUD_SECTION` 으로 등록한다.
  */
 #include "pch.h"
 
@@ -37,7 +37,7 @@ namespace sw
     {
         struct DebugHUDEngineSectionsInternal
         {
-            /** @brief 그래프 막대 높이의 끝(밀리초) — 30 FPS 의 두 배. 넘는 프레임은 끝에 붙는다. */
+            /** @brief 그래프 막대 높이의 상한(밀리초)입니다. 30 FPS 의 두 배이며, 넘는 프레임은 상한에 붙입니다. */
             static constexpr float32 kGraphMaxMilliseconds = 66.7f;
             /** @brief 메모리 섹션이 보이는 태그 수입니다(살아 있는 바이트가 큰 순). */
             static constexpr uint32  kMemoryTagLineCount = 4;
@@ -138,7 +138,7 @@ namespace sw
                 const MemoryProfiler* pProfiler = MemoryProfiler::getActive();
                 if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
                 {
-                    // 태그 집계(Debug 의 MemoryProfiler)가 없는 구성 — 운영체제 힙만 본다.
+                    // 태그 집계(Debug 의 MemoryProfiler)가 없는 구성이다. 운영체제 힙만 본다.
                     writer.addLineFormat( "heap", "%.1f MB", static_cast<float64>( MemoryProfiler::getPlatformHeapBytes() ) / kBytesPerMegabyte );
                     return;
                 }
@@ -235,7 +235,7 @@ namespace sw
 
             static void writeOverlay( DebugHUDSectionWriter& writer )
             {
-                // 게임이 쓴 디버그 값(`DebugOverlayState`) — 에디터 게임 뷰의 줄과 같은 것이다.
+                // 게임이 쓴 디버그 값(`DebugOverlayState`)이다. 에디터 게임 뷰의 줄과 같은 것이다.
                 vector<DebugOverlayRow> listRow;
                 engine::getDebugOverlayState().collectRows( listRow );
                 if ( listRow.empty() )

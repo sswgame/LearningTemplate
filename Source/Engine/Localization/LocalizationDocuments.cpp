@@ -14,7 +14,7 @@ namespace sw
     {
         struct LocalizationDocumentsInternal
         {
-            /** @brief @p value 객체의 칸이 모두 @p arrKnown 안에 있는지 봅니다. 모르는 칸이면 이름을 적고 false 입니다. */
+            /** @brief @p value 객체의 필드가 모두 @p arrKnown 안에 있는지 확인합니다. 모르는 필드면 이름을 적고 false 를 반환합니다. */
             template <size_t N>
             static bool hasOnlyKnownFields( const JSONValue& value, const utf8* const ( &arrKnown )[N], string& outUnknown )
             {
@@ -61,7 +61,7 @@ namespace sw
                 }
             }
 
-            /** @brief 문서 머리(`culture` · `entries`)를 읽습니다. */
+            /** @brief 문서 머리(`culture`, `entries`)를 읽습니다. */
             [[nodiscard]] static bool readHeader( JSONDocument& document, string_view jsonText, string_view sourceName, string& outCulture, JSONValue& outEntries, string& outError )
             {
                 if ( document.parse( FileUtil::skipUtf8Bom( jsonText ), sourceName ) == false )
@@ -103,7 +103,7 @@ namespace sw
 
             [[nodiscard]] static bool writeTextFile( string_view absolutePath, const string& text )
             {
-                // 내용이 같으면 쓰지 않는다 — 파일 시간이 바뀌면 핫 리로드 · 빌드 스탬프가 헛돈다.
+                // 내용이 같으면 쓰지 않는다. 파일 시간이 바뀌면 핫 리로드와 빌드 스탬프가 헛돈다.
                 string existing;
                 if ( FileUtil::exists( absolutePath ) && FileUtil::readTextFile( absolutePath, existing ) && existing == text )
                     return true;

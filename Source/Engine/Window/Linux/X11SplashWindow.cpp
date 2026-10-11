@@ -53,7 +53,7 @@ namespace sw
         _status = StringUtil::isNullOrEmpty( pInitialStatus ) ? "Initializing..." : pInitialStatus;
         _width  = width;
         _height = height;
-        (void)loadSplashImage(); // 이미지가 없으면 빈 스플래시다 — 로드가 이유를 알린다
+        (void)loadSplashImage(); // 이미지가 없으면 빈 스플래시이며, 로드가 이유를 알린다
         createScaledImage();
 
         Display* pDisplay = XOpenDisplay( nullptr );
@@ -70,12 +70,12 @@ namespace sw
         const int32 posX    = ( screenW - static_cast<int32>( _width ) ) / 2;
         const int32 posY    = ( screenH - static_cast<int32>( _height ) ) / 2;
 
-        // **`override_redirect` 를 쓰지 않는다.** 그 깃발은 "창 관리자는 이 창에 손대지 말라" 는
-        // 뜻이고, 메뉴 · 툴팁처럼 **이미 떠 있는 창에 딸린 것**을 위한 것이다. 스플래시는 그 앱의
+        // **`override_redirect` 를 쓰지 않는다.** 그 플래그는 "창 관리자는 이 창에 손대지 말라" 는
+        // 뜻이고, 메뉴나 툴팁처럼 **이미 떠 있는 창에 딸린 것**을 위한 것이다. 스플래시는 그 앱의
         // 첫 창이라 딸릴 곳이 없다. XWayland(WSLg)에서는 그런 창이 화면에 나타나지 않는다
         // (서버 안에는 멀쩡히 있어 `XGetImage` 로 되읽으면 다 들어 있지만, 사용자 화면에는 아무것도 뜨지 않는다).
         //
-        // 표준 방법은 **창 종류를 스플래시라고 말해 주는 것**이다(EWMH `_NET_WM_WINDOW_TYPE_SPLASH`).
+        // 표준 방법은 **창 종류를 스플래시라고 알려 주는 것**이다(EWMH `_NET_WM_WINDOW_TYPE_SPLASH`).
         // 그러면 창 관리자가 장식 없이, 가운데에, 위로 띄운다. 우리가 하려던 바로 그 일을
         // 창 관리자와 **싸우지 않고** 얻는다.
         XSetWindowAttributes attrs{};
@@ -150,14 +150,14 @@ namespace sw
         const int32 screen = DefaultScreen( pDisplay );
         GC          gc     = DefaultGC( pDisplay, screen );
 
-        // **창에 직접 그리지 않고 픽스맵에 그려 그것을 창 배경으로 건다.**
+        // **창에 직접 그리지 않고 픽스맵에 그려 그것을 창 배경으로 설정한다.**
         //
         // 스플래시에는 이벤트 루프가 없다. `updateStatus` 가 불릴 때만 그린다. 그런데 X11 은
         // 창이 노출될 때마다(`Expose`) **배경색으로 지우고** 우리에게 다시 그리라고 알린다. 그 알림을
         // 받아 줄 루프가 없으니 창에 직접 그리면 그리는 족족 지워지고 `background_pixel` 만 남는다("뒷배경만 보인다").
         // 호출은 모두 정상이라(이미지도 읽히고 `XPutImage` 도 불린다) 로그로는 보이지 않는다.
         //
-        // 배경 픽스맵으로 걸어 두면 **다시 그리는 일을 서버가 한다.** 이벤트 루프 없이도 노출 · 가림 ·
+        // 배경 픽스맵으로 설정해 두면 **다시 그리는 일을 서버가 한다.** 이벤트 루프 없이도 노출, 가림,
         // 이동을 견딘다. Win32 가 `WM_PAINT` 로 하는 일을 여기서는 서버에게 맡기는 셈이다.
         Pixmap pixmap = static_cast<Pixmap>( _x11Pixmap );
         if ( pixmap == 0 )
@@ -172,7 +172,7 @@ namespace sw
         XFillRectangle( pDisplay, pixmap, gc, 0, 0, _width, _height );
 
         // 창 크기로 줄여 둔 것을 찍는다. `XPutImage` 는 늘리거나 줄이지 못하므로 원본을 그대로
-        // 넘기면 창보다 큰 이미지는 좌상단만 보인다(1376×768 원본 · 480×280 창).
+        // 넘기면 창보다 큰 이미지는 좌상단만 보인다(1376×768 원본, 480×280 창).
         if ( _listScaledPixel.empty() == false )
         {
             XImage* pImage = XCreateImage(
@@ -203,7 +203,7 @@ namespace sw
             XFillRectangle( pDisplay, pixmap, gc, 32, static_cast<int32>( _height ) - 30, static_cast<uint32>( fillWidth ), 4 );
         }
 
-        // 배경으로 걸고 창을 지우면 서버가 그 픽스맵으로 칠한다. 이후의 노출도 서버가 알아서 한다.
+        // 배경으로 설정하고 창을 지우면 서버가 그 픽스맵으로 칠한다. 이후의 노출도 서버가 알아서 처리한다.
         XSetWindowBackgroundPixmap( pDisplay, win, pixmap );
         XClearWindow( pDisplay, win );
         XFlush( pDisplay );

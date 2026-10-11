@@ -1,9 +1,9 @@
 /**
  * @file AutomationWindowSteps.cpp
- * @brief 자동화 시나리오의 창 단계 — 자기 창에 OS 창 메시지를 보내고(`PostWindowMessage`) OS 커서 클립(`ExpectCursorClip`) · 전경(`RequireForeground`)을 보고,
+ * @brief 자동화 시나리오의 창 단계를 구현합니다. 자기 창에 OS 창 메시지를 보내고(`PostWindowMessage`), OS 커서 클립(`ExpectCursorClip`)과 전경(`RequireForeground`)을 확인하고,
  *        화면에 합성된 창 내용을 PNG 로 찍습니다(`CaptureWindow`).
- * @details 사람 마우스 · 포그라운드와 무관하게 같은 창 처리기를 탑니다(바깥 스크립트의 `SendInput` 은 포그라운드 창에만 간다). Windows 만 구현이 있고,
- *          다른 플랫폼에서는 같은 이름의 단계가 시나리오를 건너뜀(13)으로 끝냅니다 — 이 기계에서 볼 수 없는 것을 초록으로 두지 않는다.
+ * @details 사람의 마우스나 포그라운드와 무관하게 같은 창 처리기를 탄다(바깥 스크립트의 `SendInput` 은 포그라운드 창에만 간다). Windows 에만 구현이 있고,
+ *          다른 플랫폼에서는 같은 이름의 단계가 시나리오를 건너뜀(13)으로 끝낸다. 이 기계에서 볼 수 없는 것을 초록으로 두지 않기 위해서다.
  */
 #include "pch.h"
 
@@ -106,7 +106,7 @@ namespace sw
                 RECT          client{};
                 GetClientRect( hwnd, &client );
                 const LPARAM center = MAKELPARAM( ( client.right - client.left ) / 2, ( client.bottom - client.top ) / 2 );
-                // 처리기가 돈 뒤 돌아오도록 보낸다(SendMessage). 창 닫기만 다른 창 메시지처럼 큐로(PostMessage) — 처리기 안에서 루프를 끝낸다.
+                // 처리기가 돈 뒤 돌아오도록 보낸다(SendMessage). 창 닫기만 다른 창 메시지처럼 큐로(PostMessage) 보내고, 처리기 안에서 루프를 끝낸다.
                 if ( message == "WM_ACTIVATE_INACTIVE" )
                     SendMessageW( hwnd, WM_ACTIVATE, WA_INACTIVE, 0 );
                 else if ( message == "WM_ACTIVATE_ACTIVE" )
@@ -163,9 +163,9 @@ namespace sw
             }
 
             /**
-             * @brief 클라이언트 영역을 데스크톱 화면에서 복사해 PNG 로 씁니다 — 에디터 UI 까지 든 실제 화면입니다(Present 캡처는 UI 를 그리기 전의 주 출력이다).
-             * @details DWM 이 합성한 화면을 읽으므로 네 백엔드 모두 같은 길이다. 주의: 창이 가려져 있으면 **가린 다른 창이 찍힌다**(사용자의 다른 프로그램 화면이
-             *          파일로 남는다). 그래서 창이 전경이 아니면 찍지 않고 경고만 남긴다 — 화면을 보려는 시나리오는 앞에 `RequireForeground` 를 둔다.
+             * @brief 클라이언트 영역을 데스크톱 화면에서 복사해 PNG 로 씁니다. 에디터 UI 까지 포함한 실제 화면입니다(Present 캡처는 UI 를 그리기 전의 주 출력입니다).
+             * @details DWM 이 합성한 화면을 읽으므로 네 백엔드 모두 같은 경로다. 주의: 창이 가려져 있으면 **가린 다른 창이 찍힌다**(사용자의 다른 프로그램 화면이
+             *          파일로 남는다). 그래서 창이 전경이 아니면 찍지 않고 경고만 남긴다. 화면을 보려는 시나리오는 앞에 `RequireForeground` 를 둔다.
              */
             static bool runCapture( AutomationRunner& runner, const AutomationStep& step )
             {
@@ -199,7 +199,7 @@ namespace sw
                 BITMAPINFO info{};
                 info.bmiHeader.biSize        = sizeof( BITMAPINFOHEADER );
                 info.bmiHeader.biWidth       = width;
-                info.bmiHeader.biHeight      = -height; // 위에서 아래로
+                info.bmiHeader.biHeight      = -height; // 위에서 아래 방향이다
                 info.bmiHeader.biPlanes      = 1;
                 info.bmiHeader.biBitCount    = 32;
                 info.bmiHeader.biCompression = BI_RGB;
@@ -234,7 +234,7 @@ namespace sw
                 return true;
             }
 #else
-            /** @brief 창 메시지 · 커서 클립을 볼 구현이 없는 플랫폼 — 시나리오를 건너뜀으로 끝낸다. */
+            /** @brief 창 메시지와 커서 클립을 볼 구현이 없는 플랫폼입니다. 시나리오를 건너뜀으로 끝냅니다. */
             static bool runUnsupported( AutomationRunner& runner, const AutomationStep& step )
             {
                 runner.finish( AutomationResult::Skipped, step.describe() + ": window steps are implemented for Windows only" );

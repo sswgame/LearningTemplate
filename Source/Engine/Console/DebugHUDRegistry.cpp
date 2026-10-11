@@ -40,7 +40,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 낱말 @p token 이 @p name 의 것이면 true 이고, 켬 · 끔을 @p outShown 에 씁니다. */
+            /** @brief 단어 @p token 이 @p name 의 것이면 true 이고, 켬과 끔을 @p outShown 에 씁니다. */
             static bool matchesToken( string_view token, string_view name, bool& outShown )
             {
                 const bool        bOff     = token.empty() == false && token[0] == '-';

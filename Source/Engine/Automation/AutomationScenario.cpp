@@ -92,7 +92,7 @@ namespace sw
             return false;
         }
 
-        // 루트 속성 — 모르는 속성은 읽기 오류다(오타가 기본값으로 조용히 바뀌지 않게).
+        // 루트 속성: 모르는 속성은 읽기 오류다(오타가 기본값으로 조용히 바뀌지 않게 한다).
         string reason;
         for ( XMLAttribute attribute = root.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
         {
@@ -205,7 +205,7 @@ namespace sw
                 _listStep.push_back( std::move( step ) );
             }
         }
-        // 프레임 순(같은 프레임은 파일 순 — 안정 정렬)
+        // 프레임 순이다(같은 프레임은 파일 순이며 안정 정렬이다).
         std::stable_sort( _listStep.begin(), _listStep.end(), []( const AutomationStep& lhs, const AutomationStep& rhs )
         {
             return lhs._frameIndex < rhs._frameIndex;

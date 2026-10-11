@@ -10,7 +10,7 @@ namespace sw
     {
         struct WidgetTypesInternal
         {
-            /** @brief 축이 퇴화했다고 보는 행렬식 크기입니다(UI 단위 제곱 — 1e-6 은 0.001 × 0.001 사각형). */
+            /** @brief 축이 퇴화했다고 보는 행렬식 크기입니다(UI 단위 제곱이며 1e-6 은 0.001 × 0.001 사각형입니다). */
             static constexpr float32 kDegenerateDeterminant = 1.0e-6f;
 
             static bool isNear( const float2& lhs, const float2& rhs ) { return MathUtil::nearEqual( lhs._x, rhs._x ) && MathUtil::nearEqual( lhs._y, rhs._y ); }
@@ -48,7 +48,7 @@ namespace sw
 
     bool WidgetGeometry::inverseTransformPoint( const float2& screen, float2& outLocal ) const
     {
-        // [axisX axisY] · local = screen - translation 을 2×2 역행렬로 푼다.
+        // [axisX axisY] · local = screen - translation 을 2×2 역행렬로 계산한다.
         const float32 determinant = _axisX._x * _axisY._y - _axisY._x * _axisX._y;
         if ( MathUtil::abs( determinant ) < WidgetTypesInternal::kDegenerateDeterminant )
             return false;
@@ -99,7 +99,7 @@ namespace sw
     {
         if ( isIdentity() )
             return geometry;
-        // 로컬 2×2 = 회전 · 기울임 · 배율(배율이 먼저). 열 벡터 a = 로컬 x 축, b = 로컬 y 축.
+        // 로컬 2×2 는 회전, 기울임, 배율이다(배율이 먼저). 열 벡터 a 는 로컬 x 축, b 는 로컬 y 축이다.
         const float32 cosine = MathUtil::cos( _angle );
         const float32 sine   = MathUtil::sin( _angle );
         // 기울임 [1 shearX; shearY 1] × 배율 diag(scaleX, scaleY)
@@ -111,7 +111,7 @@ namespace sw
         WidgetGeometry result = geometry;
         result._axisX         = float2{ geometry._axisX._x * localAxisX._x + geometry._axisY._x * localAxisX._y, geometry._axisX._y * localAxisX._x + geometry._axisY._y * localAxisX._y };
         result._axisY         = float2{ geometry._axisX._x * localAxisY._x + geometry._axisY._x * localAxisY._y, geometry._axisX._y * localAxisY._x + geometry._axisY._y * localAxisY._y };
-        // 피벗(로컬 점)이 제자리에 남도록: 새 원점 = 피벗 화면점 - 새 축 · 피벗 + 이동(부모 축으로).
+        // 피벗(로컬 점)이 제자리에 남도록 한다: 새 원점 = 피벗 화면점 - 새 축 · 피벗 + 이동(부모 축으로).
         const float2 pivotLocal{ _pivot._x * geometry._size._x, _pivot._y * geometry._size._y };
         const float2 pivotScreen = geometry.transformPoint( pivotLocal );
         const float2 offsetScreen{ geometry._axisX._x * _translation._x + geometry._axisY._x * _translation._y,

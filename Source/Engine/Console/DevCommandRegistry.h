@@ -1,6 +1,6 @@
 /**
  * @file DevCommandRegistry.h
- * @brief 개발 명령(치트 · 디버그 명령) 레지스트리와 `SW_DEV_COMMAND` 입니다. **Shipping 에서는 통째로 빠집니다.**
+ * @brief 개발 명령(치트, 디버그 명령) 레지스트리와 `SW_DEV_COMMAND` 를 정의합니다. **Shipping 에서는 통째로 빠집니다.**
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -9,7 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/RegistrationList.h"
 
-/** @brief 개발 명령이 컴파일되는 구성이면 1 입니다(Dev). Shipping 은 0 이고 레지스트리 · 콘솔 · 명령 본문이 모두 빠집니다. */
+/** @brief 개발 명령이 컴파일되는 구성이면 1 입니다(Dev). Shipping 은 0 이고 레지스트리, 콘솔, 명령 본문이 모두 빠집니다. */
 #if defined( SW_SHIPPING )
     #define SW_DEV_COMMANDS_ENABLED 0
 #else
@@ -21,17 +21,17 @@
 namespace sw
 {
     /**
-     * @brief 개발 명령 하나의 본문입니다. @p listArgument 는 명령 이름 뒤의 낱말(따옴표로 묶은 것은 한 낱말)입니다.
-     * @return 인자가 잘못됐으면 false — 콘솔이 사용법(`_pUsage`)을 함께 알립니다. 답은 @p outReply 에 적습니다.
+     * @brief 개발 명령 하나의 본문입니다. @p listArgument 는 명령 이름 뒤의 단어입니다(따옴표로 묶은 것은 한 단어입니다).
+     * @return 인자가 잘못됐으면 false 이며, 콘솔이 사용법(`_pUsage`)을 함께 알립니다. 답은 @p outReply 에 적습니다.
      */
     using DevCommandFunc = bool ( * )( const vector<string>& listArgument, string& outReply );
 
     /** @brief 개발 명령 하나의 등록 줄입니다. 문자열은 등록한 이미지(모듈)의 정적 저장소에 있습니다. */
     struct DevCommandRegistration
     {
-        const utf8*    _pName;  ///< 콘솔에 치는 이름(점으로 묶는다: `debugdraw.category`). 대소문자를 가리지 않는다
+        const utf8*    _pName;  ///< 콘솔에 치는 이름입니다(점으로 묶습니다. 예: `debugdraw.category`). 대소문자를 가리지 않습니다.
         const utf8*    _pUsage; ///< 사용법 한 줄(`teleport <object> <x> <y> <z>`)
-        const utf8*    _pHelp;  ///< 설명 한 줄
+        const utf8*    _pHelp;  ///< 설명 한 줄입니다.
         DevCommandFunc _pFunc;
     };
 } // namespace sw
@@ -40,9 +40,9 @@ namespace sw
 {
     /**
      * @class DevCommandRegistry
-     * @brief 개발 명령의 레지스트리입니다(Engine 하나 — 게임 · 키트 · 에디터 모듈이 등록하고, 모듈을 내리면 그 명령이 빠집니다).
-     * @details 명령은 자기 .cpp 에 `SW_DEV_COMMAND` 한 줄로 등록합니다. 정적 등록자가 이미지를 올릴 때 등록하고 내릴 때(핫 리로드) 뺍니다 —
-     *          레지스트리는 Engine 에 있어 모듈이 바뀌어도 살아 있습니다. 같은 이름의 둘째 등록은 경고와 함께 거절합니다. 게임 스레드에서만 씁니다.
+     * @brief 개발 명령의 레지스트리입니다(Engine 에 하나 있으며, 게임, 키트, 에디터 모듈이 등록하고 모듈을 언로드하면 그 명령이 빠집니다).
+     * @details 명령은 자기 .cpp 에 `SW_DEV_COMMAND` 한 줄로 등록한다. 정적 등록자가 이미지를 로드할 때 등록하고 언로드할 때(핫 리로드) 뺀다.
+     *          레지스트리는 Engine 에 있어 모듈이 바뀌어도 살아 있다. 같은 이름의 둘째 등록은 경고와 함께 거절한다. 게임 스레드에서만 쓴다.
      */
     class SW_API DevCommandRegistry
     {

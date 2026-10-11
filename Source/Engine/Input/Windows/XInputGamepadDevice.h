@@ -37,8 +37,8 @@ namespace sw
 
     private:
         /**
-         * @brief 연결이 끊긴 상태로 비웁니다(버튼 · 스틱 · 트리거). 이번에 끊겼으면(@p bWasConnected) 연결 콜백에 알립니다.
-         * @details `XInputGetState` 를 못 찾았을 때 · 호출이 실패했을 때 · 비 Windows 스텁이 함께 씁니다.
+         * @brief 연결이 끊긴 상태로 비웁니다(버튼, 스틱, 트리거). 이번에 끊겼으면(@p bWasConnected) 연결 콜백에 알립니다.
+         * @details `XInputGetState` 를 찾지 못했을 때, 호출이 실패했을 때, 비 Windows 스텁이 함께 쓴다.
          */
         void markDisconnected( uint32 userIndex, bool bWasConnected );
 

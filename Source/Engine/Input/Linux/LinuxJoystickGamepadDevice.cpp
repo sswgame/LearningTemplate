@@ -15,7 +15,7 @@ namespace sw
     {
         // linux/input-event-codes.h 의 값이다. 판정을 Windows 에서도 테스트하려고 헤더 없이 둔다.
         constexpr uint16 kButtonJoystickFirst     = 0x120; // BTN_JOYSTICK(BTN_TRIGGER): 조이스틱 0x120..0x12f, 게임패드 0x130..0x13e
-        constexpr uint16 kButtonDigitizerFirst    = 0x140; // BTN_DIGI(BTN_TOOL_PEN): 여기부터는 태블릿 · 터치
+        constexpr uint16 kButtonDigitizerFirst    = 0x140; // BTN_DIGI(BTN_TOOL_PEN): 여기부터는 태블릿과 터치
         constexpr uint16 kButtonTriggerHappyFirst = 0x2c0; // BTN_TRIGGER_HAPPY1
         constexpr uint16 kButtonTriggerHappyLast  = 0x2e7; // BTN_TRIGGER_HAPPY40
         if ( pButtonCode == nullptr )
@@ -46,9 +46,9 @@ namespace sw
     namespace
     {
         /**
-         * @brief Xbox 호환(xpad 드라이버) 조이스틱 축 · 버튼 인덱스 상수입니다.
+         * @brief Xbox 호환(xpad 드라이버) 조이스틱의 축과 버튼 인덱스 상수입니다.
          * @note 실제 하드웨어에 따라 인덱스가 다를 수 있습니다. SDL 의 게임패드 매핑 DB 같은
-         *       기기별 보정은 하지 않고, 가장 흔한 xpad 배치를 기준으로 한 최선 추정치입니다.
+         *       기기별 보정은 하지 않고, 가장 흔한 xpad 배치를 기준으로 한 최선의 추정치입니다.
          */
         struct LinuxJoystickGamepadDeviceInternal
         {
@@ -69,7 +69,7 @@ namespace sw
             static constexpr uint8                  kButtonRightShoulder = 5;
             static constexpr uint8                  kButtonBack          = 6;
             static constexpr uint8                  kButtonStart         = 7;
-            [[maybe_unused]] static constexpr uint8 kButtonGuide         = 8; ///< GamepadButton 에 대응값 없음(무시).
+            [[maybe_unused]] static constexpr uint8 kButtonGuide         = 8; ///< GamepadButton 에 대응하는 값이 없어 무시합니다.
             static constexpr uint8                  kButtonLeftThumb     = 9;
             static constexpr uint8                  kButtonRightThumb    = 10;
 
@@ -122,7 +122,7 @@ namespace sw
                     case kButtonRightThumb:
                         return GamepadButton::RightThumb;
                     default:
-                        return GamepadButton::Count; // Guide 등 대응 없음
+                        return GamepadButton::Count; // Guide 등 대응하는 값이 없다
                 }
             }
         };
@@ -163,7 +163,7 @@ namespace sw
             return;
         }
 
-        // 마우스 · 태블릿에 joydev 가 만든 노드는 패드가 아니다(버튼 맵에 조이스틱 · 게임패드 버튼이 없다).
+        // 마우스나 태블릿에 joydev 가 만든 노드는 패드가 아니다(버튼 맵에 조이스틱이나 게임패드 버튼이 없다).
         uint8 buttonCount = 0;
         if ( ioctl( fd, JSIOCGBUTTONS, &buttonCount ) < 0 )
             buttonCount = 0;
@@ -235,7 +235,7 @@ namespace sw
         }
 
         // 비트맵을 검사하지 않으면 럼블이 없는 노드도 통과해 setVibration 이 매번 EVIOCSFF 에서 실패한다.
-        // 지원 여부는 여기서 한 번에 가린다.
+        // 지원 여부는 여기서 한 번에 걸러 낸다.
         if ( LinuxJoystickGamepadDeviceInternal::testFeatureBit( arrFeatureBits, FF_RUMBLE ) == false )
         {
             close( fd );
@@ -377,8 +377,8 @@ namespace sw
         const uint16 strongMagnitude = static_cast<uint16>( MathUtil::clamp( leftMotor, 0.0f, 1.0f ) * 0xFFFFu );
         const uint16 weakMagnitude   = static_cast<uint16>( MathUtil::clamp( rightMotor, 0.0f, 1.0f ) * 0xFFFFu );
 
-        // 같은 세기를 다시 요청하면 할 일이 없다. 게임이 매 프레임 같은 값으로 부르는 것은 흔한데,
-        // 아래 경로는 호출마다 ioctl 두 번 + write 한 번이라 그대로 두면 프레임마다 그 값을 문다.
+        // 같은 세기를 다시 요청하면 할 일이 없다. 게임이 매 프레임 같은 값으로 부르는 경우가 흔한데,
+        // 아래 경로는 호출마다 ioctl 두 번과 write 한 번을 쓰므로 그대로 두면 프레임마다 그 비용을 낸다.
         // (XInput 의 XInputSetState 는 값싼 호출이라 Windows 에는 없던 문제다.)
         if ( _bHasForceFeedback == SW_TRUE && strongMagnitude == _ffStrongMagnitude && weakMagnitude == _ffWeakMagnitude )
             return true;

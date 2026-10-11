@@ -38,9 +38,9 @@ namespace sw
         void dismiss() override;
 #if defined( SW_PLATFORM_WINDOWS )
         /**
-         * @brief `WM_PAINT` 한 번을 그립니다. 창 프로시저가 `BeginPaint` · `EndPaint` 사이에서 부릅니다.
-         * @details 늘린 배경 그림은 **처음 한 번** 메모리 DC 에 그려 두고 무효 영역만 복사합니다 — 상태 줄이 바뀔 때마다 창 전체를
-         *          HALFTONE `StretchDIBits` 로 다시 늘리고 글꼴을 새로 만들면 시작 시간 게임 스레드의 13 % 가 그것이 됩니다.
+         * @brief `WM_PAINT` 한 번을 그립니다. 창 프로시저가 `BeginPaint` 와 `EndPaint` 사이에서 부릅니다.
+         * @details 늘린 배경 이미지는 **처음 한 번** 메모리 DC 에 그려 두고 무효 영역만 복사합니다. 상태 줄이 바뀔 때마다 창 전체를
+         *          HALFTONE `StretchDIBits` 로 다시 늘리고 폰트를 새로 만들면 시작 시간 게임 스레드의 13 % 가 그것이 됩니다.
          */
         void paintWindow( HDC hDC, const RECT& rcPaint );
 #endif
@@ -48,7 +48,7 @@ namespace sw
     private:
         static LRESULT CALLBACK splashWndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam );
 #if defined( SW_PLATFORM_WINDOWS )
-        /** @brief 배경 캐시(메모리 DC · 비트맵)와 상태 글꼴을 놓습니다. */
+        /** @brief 배경 캐시(메모리 DC, 비트맵)와 상태 폰트를 해제합니다. */
         void releasePaintCache();
 #endif
 
@@ -56,12 +56,12 @@ namespace sw
         [[maybe_unused]] HWND   _hWnd;
         [[maybe_unused]] uint64 _gdiplusToken;
 #if defined( SW_PLATFORM_WINDOWS )
-        HDC     _hBackgroundDC;             ///< 창 크기로 늘려 둔 배경 그림을 든 메모리 DC
-        HBITMAP _hBackgroundBitmap;         ///< `_hBackgroundDC` 에 골라 둔 비트맵
-        HGDIOBJ _hBackgroundPreviousBitmap; ///< 골라 넣기 전의 비트맵. 놓을 때 되돌림
-        HFONT   _hStatusFont;               ///< 상태 줄 글꼴(처음 그릴 때 한 번 만듦)
-        int32   _backgroundWidth;           ///< 캐시를 만든 창 너비
-        int32   _backgroundHeight;          ///< 캐시를 만든 창 높이
+        HDC     _hBackgroundDC;             ///< 창 크기로 늘려 둔 배경 이미지를 가진 메모리 DC 입니다.
+        HBITMAP _hBackgroundBitmap;         ///< `_hBackgroundDC` 에 선택해 둔 비트맵입니다.
+        HGDIOBJ _hBackgroundPreviousBitmap; ///< 선택하기 전의 비트맵입니다. 해제할 때 되돌립니다.
+        HFONT   _hStatusFont;               ///< 상태 줄 폰트입니다(처음 그릴 때 한 번 만듭니다).
+        int32   _backgroundWidth;           ///< 캐시를 만든 창 너비입니다.
+        int32   _backgroundHeight;          ///< 캐시를 만든 창 높이입니다.
 #endif
     };
 } // namespace sw

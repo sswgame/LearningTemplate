@@ -13,7 +13,7 @@ namespace sw
     {
         struct UIStyleSetInternal
         {
-            /** @brief 적용 순서 — 특정도가 낮은 것이 먼저(뒤가 이긴다), 같으면 앞 시트 · 앞 규칙이 먼저. */
+            /** @brief 적용 순서입니다. 특정도가 낮은 것이 먼저이고(뒤가 이깁니다), 같으면 앞 시트와 앞 규칙이 먼저입니다. */
             static bool isAppliedBefore( const UIStyleRule* pLhs, uint32 lhsOrder, const UIStyleRule* pRhs, uint32 rhsOrder )
             {
                 if ( pLhs->_selector._specificity != pRhs->_selector._specificity )
@@ -63,7 +63,7 @@ namespace sw
                 _listRule.push_back( RuleRef{ &rule, order++ } );
             }
         }
-        // 삽입 정렬 — 규칙 수십 개, 시트를 걸 때 한 번이다(같은 특정도의 순서를 지킨다).
+        // 삽입 정렬이다. 규칙은 수십 개이고 시트를 적용할 때 한 번만 한다(같은 특정도의 순서를 지킨다).
         for ( size_t index = 1; index < _listRule.size(); ++index )
         {
             const RuleRef current = _listRule[index];
@@ -110,7 +110,7 @@ namespace sw
         shared_ptr<UIComputedStyle> style = make_shared<UIComputedStyle>();
         if ( pParentStyle != nullptr )
         {
-            // 글 칸은 부모가 정한 값을 먼저 물려받는다(CSS 상속 속성).
+            // 텍스트 필드는 부모가 정한 값을 먼저 물려받는다(CSS 상속 속성).
             for ( uint32 index = 0; index < static_cast<uint32>( UIStyleField::Count ); ++index )
             {
                 const UIStyleField field = static_cast<UIStyleField>( index );

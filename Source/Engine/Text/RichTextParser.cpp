@@ -52,7 +52,7 @@ namespace sw
                 return TagKind::Unknown;
             }
 
-            /** @brief `#rrggbb` · `#rrggbbaa` 를 0xRRGGBBAA 로 읽습니다. */
+            /** @brief `#rrggbb` 와 `#rrggbbaa` 를 0xRRGGBBAA 로 읽습니다. */
             [[nodiscard]] static bool parseHexColor( string_view value, uint32& outRgba )
             {
                 if ( value.empty() || value.front() != '#' )
@@ -67,7 +67,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 색 이름(스타일 변수)인지 봅니다 — ASCII 글자로 시작, 글자 · 숫자 · `_` · `.` · `-`. */
+            /** @brief 색 이름(스타일 변수)인지 확인합니다. ASCII 글자로 시작하고, 글자, 숫자, `_`, `.`, `-` 로 이루어져야 합니다. */
             static bool isColorName( string_view value )
             {
                 if ( value.empty() )
@@ -85,7 +85,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 여는 태그의 값을 읽어 기여를 채웁니다. 값이 틀리면(필요한데 없음 · 있으면 안 되는데 있음 · 못 읽음) false. */
+            /** @brief 여는 태그의 값을 읽어 기여를 채웁니다. 값이 틀리면(필요한데 없거나, 있으면 안 되는데 있거나, 읽지 못하면) false 입니다. */
             [[nodiscard]] static bool readOpenTag( const MarkupToken& token, vector<string>& inoutListColorName, ActiveTag& outTag )
             {
                 outTag       = ActiveTag{};
@@ -130,7 +130,7 @@ namespace sw
                 return false;
             }
 
-            /** @brief 지금 열린 태그들의 합친 스타일로 구간 틀을 채웁니다(바이트 칸은 비운다). 기본 스타일이면 false. */
+            /** @brief 지금 열린 태그들의 합친 스타일로 구간의 틀을 채웁니다(바이트 필드는 비웁니다). 기본 스타일이면 false 입니다. */
             static bool makeStyle( const vector<ActiveTag>& listActive, RichTextSpan& outSpan )
             {
                 outSpan = RichTextSpan{};
@@ -209,7 +209,7 @@ namespace sw
         using Internal = RichTextParserInternal;
         outResult      = RichTextParseResult{};
 
-        // 1) 토큰을 읽고 짝을 맞춘다 — 아는 여는 태그(값이 맞는)와 같은 이름의 닫는 태그가 바르게 포개질 때만 표기다.
+        // 1) 토큰을 읽고 짝을 맞춘다. 아는 여는 태그(값이 맞는 것)와 같은 이름의 닫는 태그가 바르게 중첩될 때만 표기로 본다.
         vector<MarkupToken> listToken;
         size_t              offset = 0;
         MarkupToken         token{};
@@ -240,7 +240,7 @@ namespace sw
             }
         }
 
-        // 2) 평문과 구간 — 짝이 맞은 태그만 스타일을 바꾸고, 나머지 태그는 글자 그대로 남긴다.
+        // 2) 평문과 구간: 짝이 맞은 태그만 스타일을 바꾸고, 나머지 태그는 글자 그대로 남긴다.
         vector<Internal::ActiveTag> listActive;
         for ( size_t index = 0; index < listToken.size(); ++index )
         {
@@ -290,7 +290,7 @@ namespace sw
         size_t cursor        = 0;
         while ( cursor < markup.size() )
         {
-            // 글자 [ 는 [[ — 둘을 그대로 옮기고 넘는다(다음 파싱이 하나로 줄인다).
+            // 글자 [ 는 [[ 로 쓴다. 둘을 그대로 옮기고 넘어간다(다음 파싱이 하나로 줄인다).
             if ( markup.compare( cursor, 2, "[[" ) == 0 )
             {
                 outText.append( "[[" );

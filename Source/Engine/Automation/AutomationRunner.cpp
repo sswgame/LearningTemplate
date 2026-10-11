@@ -32,21 +32,21 @@ namespace sw
     {
         struct AutomationRunnerInternal
         {
-            /** @brief 시나리오 동안 모으는 로그 줄 상한 — 넘치면 더 모으지 않는다(`ExpectLog` 는 그때까지만 센다). */
+            /** @brief 시나리오 동안 모으는 로그 줄 상한입니다. 넘치면 더 모으지 않습니다(`ExpectLog` 는 그때까지만 셉니다). */
             static constexpr size_t kMaxLogLine = 20000;
-            /** @brief `<ExpectImage>` 가 스크린샷을 기다리는 최대 프레임 — 렌더 큐 깊이보다 넉넉히. */
+            /** @brief `<ExpectImage>` 가 스크린샷을 기다리는 최대 프레임입니다. 렌더 큐 깊이보다 넉넉하게 잡습니다. */
             static constexpr uint32 kMaxImageWaitFrames = 30;
             /** @brief `darkFraction` 의 기본 임계값(영역 중앙값에 곱한다)입니다. */
             static constexpr float32 kDefaultDarkRatio = 0.7f;
             /** @brief `CloseWindow` 의 기본 종료 시한(초)입니다. */
             static constexpr float32 kDefaultExitWithinSeconds = 10.0f;
-            /** @brief `WaitUntil` 의 기본 시한(프레임) — 부하 걸린 기계에서 에디터가 에셋을 여는 데 드는 시간보다 넉넉히. */
+            /** @brief `WaitUntil` 의 기본 시한(프레임)입니다. 부하가 걸린 기계에서 에디터가 에셋을 여는 데 드는 시간보다 넉넉하게 잡습니다. */
             static constexpr uint32 kDefaultWaitTimeoutFrames = 1200;
 
             /**
-             * @brief 이 구성에 없는 단계가 든 시나리오면 그 첫 단계를 돌려줍니다 — 개발 명령(`DevCommand`)은 Shipping 에서 빠진다.
-             * @details 그런 시나리오는 이 구성에서 돌 수 없는 것이지 틀린 것이 아니다 — 읽기 오류(11)가 아니라 건너뜀(13)이다
-             *          (언리얼 자동화 테스트가 구성에 없는 문맥의 테스트를 목록에서 빼는 것과 같은 자리).
+             * @brief 이 구성에 없는 단계가 들어 있는 시나리오면 그 첫 단계를 반환합니다. 개발 명령(`DevCommand`)은 Shipping 에서 빠집니다.
+             * @details 그런 시나리오는 이 구성에서 돌 수 없을 뿐 틀린 것이 아니다. 읽기 오류(11)가 아니라 건너뜀(13)으로 처리한다
+             *          (언리얼 자동화 테스트가 구성에 없는 문맥의 테스트를 목록에서 빼는 것과 같다).
              */
             static const AutomationStep* findStepMissingFromThisBuild( [[maybe_unused]] const AutomationScenario& scenario )
             {
@@ -140,7 +140,7 @@ namespace sw
             static string formatNumber( float64 value )
             {
                 string text = to_string( value );
-                // 끝의 0 을 걷는다(1.000000 → 1)
+                // 끝의 0 을 정리한다(1.000000 → 1)
                 while ( text.find( '.' ) != string::npos && ( text.back() == '0' || text.back() == '.' ) )
                 {
                     const bool bDot = text.back() == '.';
@@ -174,7 +174,7 @@ namespace sw
                 return escaped;
             }
 
-            /** @brief 탐침 `Input.OsDeviceInputBlocked` — 무인 자동화가 사람의 마우스 · 키보드를 창 메시지 단계에서 버리는 중이면 1 입니다. */
+            /** @brief 탐침 `Input.OsDeviceInputBlocked` 입니다. 무인 자동화가 사람의 마우스와 키보드를 창 메시지 단계에서 버리는 중이면 1 입니다. */
             [[nodiscard]] static bool readOsDeviceInputBlocked( const GameObjectManager* pManager, float64& outValue )
             {
                 (void)pManager;
@@ -185,7 +185,7 @@ namespace sw
             }
 
 #if SW_PROFILER_TRACE_ENABLED
-            /** @brief 탐침 `Profiler.TraceRecording` — 긴 캡처(`profile.trace record`)가 아직 모으는 중이면 1 입니다. */
+            /** @brief 탐침 `Profiler.TraceRecording` 입니다. 긴 캡처(`profile.trace record`)가 아직 모으는 중이면 1 입니다. */
             [[nodiscard]] static bool readTraceRecording( const GameObjectManager* pManager, float64& outValue )
             {
                 (void)pManager;
@@ -202,7 +202,7 @@ namespace sw
     SW_AUTOMATION_PROBE( inputOsDeviceInputBlocked, "Input.OsDeviceInputBlocked", "1 while unattended automation drops the person's mouse and keyboard window events",
                          &AutomationRunnerInternal::readOsDeviceInputBlocked );
 #if SW_PROFILER_TRACE_ENABLED
-    // 긴 캡처는 벽시계로 끝난다 — 시나리오는 고정 프레임이 아니라 이 탐침을 `WaitUntil` 로 기다린다(빠른 백엔드는 몇 백 프레임이 0.3 초 안에 돈다).
+    // 긴 캡처는 벽시계로 끝난다. 시나리오는 고정 프레임이 아니라 이 탐침을 `WaitUntil` 로 기다린다(빠른 백엔드는 몇 백 프레임이 0.3 초 안에 돈다).
     SW_AUTOMATION_PROBE( profilerTraceRecording, "Profiler.TraceRecording", "1 while a profile.trace record capture is still collecting",
                          &AutomationRunnerInternal::readTraceRecording );
 #endif
@@ -305,7 +305,7 @@ namespace sw
             return;
         if ( _bStarted == SW_FALSE )
         {
-            // 씬 플레이 중 = 활성 씬이 플레이를 시작했고 시작 차단 조건이 모두 풀렸다(UI 의 로딩 화면은 게임 입력을 막는다 — 그동안 넣은 입력은 폰에 닿지 않는다).
+            // 씬 플레이 중이란 활성 씬이 플레이를 시작했고 시작 차단 조건이 모두 풀렸다는 뜻이다(UI 의 로딩 화면은 게임 입력을 막으므로, 그동안 넣은 입력은 폰에 닿지 않는다).
             const GameObjectManager* pManager = findActiveObjectManager();
             const bool               bBlocked = AutomationStepRegistry::isStartBlocked();
             const bool               bReady   = _scenario.getStartCondition() == AutomationStartCondition::Immediately || ( pManager != nullptr && pManager->hasBegunPlay() && bBlocked == false );
@@ -323,12 +323,12 @@ namespace sw
             }
             _bStarted = SW_TRUE;
             input.attachVirtualInput( &_inputScript, _scenario.getInputMode() );
-            // 배타 시나리오는 무인 실행이다 — 사람이 같은 PC 에서 마우스를 움직여도 에디터 UI 까지 결과가 바뀌지 않게 장치 사건을 창 메시지 단계에서 버린다.
+            // 배타 시나리오는 무인 실행이다. 사람이 같은 PC 에서 마우스를 움직여도 에디터 UI 까지 결과가 바뀌지 않게 장치 이벤트를 창 메시지 단계에서 버린다.
             input.setOsDeviceInputBlocked( _scenario.getInputMode() == VirtualInputMode::Exclusive );
             SW_LOG_INFO( "[Scenario] %# started after %# frame(s)", _scenario.getName().c_str(), _waitFrameCount );
         }
         _logFrameIndex.store( _frameIndex, std::memory_order_relaxed );
-        // 행동 층 단계(등록표의 `_bBeforeInput`)는 그 프레임의 입력 재생 · 게임 틱 전에 넣는다.
+        // 액션 계층 단계(레지스트리의 `_bBeforeInput`)는 그 프레임의 입력 재생과 게임 틱 전에 넣는다.
         const vector<AutomationStep>& listStep = _scenario.getSteps();
         for ( size_t stepIndex = _nextStepIndex; stepIndex < listStep.size() && listStep[stepIndex]._frameIndex == _frameIndex; ++stepIndex )
         {
@@ -343,7 +343,7 @@ namespace sw
         if ( _result == AutomationResult::Running && _bStarted == SW_TRUE )
         {
             const vector<AutomationStep>& listStep = _scenario.getSteps();
-            // `<=` — 스크린샷을 기다리느라 밀린 단계는 다음 프레임에 이어 돈다.
+            // `<=` 이므로 스크린샷을 기다리느라 밀린 단계는 다음 프레임에 이어서 돈다.
             while ( _nextStepIndex < listStep.size() && listStep[_nextStepIndex]._frameIndex <= _frameIndex && _result == AutomationResult::Running )
             {
                 const AutomationStep& waitingStep = listStep[_nextStepIndex];
@@ -374,7 +374,7 @@ namespace sw
             if ( _result == AutomationResult::Running && _exitDeadlineSeconds > 0.0 &&
                  static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 > _exitDeadlineSeconds )
                 finish( AutomationResult::Failed, "the window was asked to close but the loop kept running past ExpectExitWithin" );
-            // 끝난 프레임은 세지 않는다 — 보고의 프레임 = 끝낸 단계의 프레임. `WaitUntil` 이 붙잡은 프레임도 세지 않는다(뒤 단계가 그만큼 밀린다).
+            // 끝난 프레임은 세지 않는다. 보고의 프레임은 끝낸 단계의 프레임이다. `WaitUntil` 이 붙잡은 프레임도 세지 않는다(뒤 단계가 그만큼 밀린다).
             if ( _result == AutomationResult::Running && _holdFrameCount == 0 )
                 ++_frameIndex;
             // 창 닫기를 기다리는 동안은 프레임 시한을 보지 않는다(벽시계 시한이 본다).
@@ -544,7 +544,7 @@ namespace sw
                 if ( Internal::checkAttributeNames( step, { "probe", "equals", "near", "tolerance", "atLeast", "atMost", "timeoutFrames" }, outError ) == false ||
                      Internal::readUint( step, "timeoutFrames", Internal::kDefaultWaitTimeoutFrames, count, outError ) == false )
                     return false;
-                // 붙잡는 동안 같은 프레임의 다른 단계가 몇 번이고(입력 전 단계) 또는 조건보다 먼저 돌지 않게 — 기다림은 그 프레임에 혼자 둔다.
+                // 붙잡는 동안 같은 프레임의 다른 단계가 여러 번 돌거나(입력 전 단계) 조건보다 먼저 돌지 않게, 기다림은 그 프레임에 혼자 둔다.
                 for ( const AutomationStep& otherStep : _scenario.getSteps() )
                 {
                     if ( &otherStep != &step && otherStep._frameIndex == step._frameIndex )
@@ -648,9 +648,9 @@ namespace sw
         if ( kind == "Press" || kind == "Release" || kind == "Tap" )
         {
             InputSlot slot{};
-            (void)InputSlotUtil::tryParse( *step.findAttribute( "slot" ), slot ); // validateEngineStep 이 이미 봤다
+            (void)InputSlotUtil::tryParse( *step.findAttribute( "slot" ), slot ); // validateEngineStep 이 이미 확인했다
             uint32 holdFrameCount = 1;
-            (void)AutomationRunnerInternal::readUint( step, "hold", 1, holdFrameCount, outError ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
+            (void)AutomationRunnerInternal::readUint( step, "hold", 1, holdFrameCount, outError ); // validateEngineStep 이 이미 읽어 봤으므로 실패할 수 없다
             const bool bAdded = kind == "Tap" ? _inputScript.addTap( frame, slot, holdFrameCount ) : _inputScript.addSlot( frame, slot, kind == "Press" );
             if ( bAdded == false )
                 outError = step.describe() + ": that slot cannot be pressed (an axis or an unknown device)";
@@ -658,22 +658,22 @@ namespace sw
         }
         if ( kind == "MouseDelta" )
         {
-            (void)AutomationRunnerInternal::readFloat( step, "x", 0.0f, valueX, outError ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
-            (void)AutomationRunnerInternal::readFloat( step, "y", 0.0f, valueY, outError ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
+            (void)AutomationRunnerInternal::readFloat( step, "x", 0.0f, valueX, outError ); // validateEngineStep 이 이미 읽어 봤으므로 실패할 수 없다
+            (void)AutomationRunnerInternal::readFloat( step, "y", 0.0f, valueY, outError ); // validateEngineStep 이 이미 읽어 봤으므로 실패할 수 없다
             _inputScript.addMouseDelta( frame, valueX, valueY );
             return true;
         }
         if ( kind == "MousePosition" )
         {
-            // 창 클라이언트 영역의 비율 → 픽셀(시작할 때의 창 크기). 창이 없으면(헤드리스) 그 자리를 낼 수 없다.
+            // 창 클라이언트 영역의 비율을 픽셀로 바꾼다(시작할 때의 창 크기). 창이 없으면(헤드리스) 그 위치를 낼 수 없다.
             const IWindow* pWindow = IWindow::getActiveWindow();
             if ( pWindow == nullptr || pWindow->getWidth() == 0 || pWindow->getHeight() == 0 )
             {
                 outError = step.describe() + ": no window to place the pointer in";
                 return false;
             }
-            (void)AutomationRunnerInternal::readFloat( step, "x", 0.0f, valueX, outError ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
-            (void)AutomationRunnerInternal::readFloat( step, "y", 0.0f, valueY, outError ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
+            (void)AutomationRunnerInternal::readFloat( step, "x", 0.0f, valueX, outError ); // validateEngineStep 이 이미 읽어 봤으므로 실패할 수 없다
+            (void)AutomationRunnerInternal::readFloat( step, "y", 0.0f, valueY, outError ); // validateEngineStep 이 이미 읽어 봤으므로 실패할 수 없다
             const float32 maxX = static_cast<float32>( pWindow->getWidth() - 1 );
             const float32 maxY = static_cast<float32>( pWindow->getHeight() - 1 );
             _inputScript.addMousePosition( frame, static_cast<int32>( MathUtil::round( valueX * maxX ) ), static_cast<int32>( MathUtil::round( valueY * maxY ) ) );
@@ -683,9 +683,9 @@ namespace sw
         {
             uint32 axisIndex = 0;
             uint32 padIndex  = 0;
-            (void)AutomationRunnerInternal::readUint( step, "axis", 0, axisIndex, outError );   // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
-            (void)AutomationRunnerInternal::readFloat( step, "value", 0.0f, valueX, outError ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
-            (void)AutomationRunnerInternal::readUint( step, "pad", 0, padIndex, outError );     // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
+            (void)AutomationRunnerInternal::readUint( step, "axis", 0, axisIndex, outError );   // validateEngineStep 이 이미 읽어 봤으므로 실패할 수 없다
+            (void)AutomationRunnerInternal::readFloat( step, "value", 0.0f, valueX, outError ); // validateEngineStep 이 이미 읽어 봤으므로 실패할 수 없다
+            (void)AutomationRunnerInternal::readUint( step, "pad", 0, padIndex, outError );     // validateEngineStep 이 이미 읽어 봤으므로 실패할 수 없다
             _inputScript.addGamepadAxis( frame, static_cast<uint16>( axisIndex ), valueX, static_cast<uint8>( padIndex ) );
             return true;
         }
@@ -722,7 +722,7 @@ namespace sw
             const string directory = FileUtil::getDirectoryPart( path );
             if ( directory.empty() == false )
                 (void)FileUtil::ensureDirectoryExists( directory );
-            (void)FileUtil::tryRemoveFile( path ); // 지난 실행의 그림을 읽지 않게
+            (void)FileUtil::tryRemoveFile( path ); // 지난 실행의 이미지를 읽지 않게 지운다
             _listPendingScreenshot.push_back( path );
             ++_screenshotRequestedCount;
             return true;
@@ -736,7 +736,7 @@ namespace sw
         {
             const bool bClose  = kind == "CloseWindow";
             float32    seconds = 0.0f;
-            // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
+            // validateEngineStep 이 이미 읽어 봤으므로 실패할 수 없다.
             (void)AutomationRunnerInternal::readFloat( step, bClose ? "withinSeconds" : "seconds", AutomationRunnerInternal::kDefaultExitWithinSeconds, seconds, error );
             _exitDeadlineSeconds = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 + static_cast<float64>( seconds );
             if ( bClose )
@@ -794,7 +794,7 @@ namespace sw
         string error;
         uint32 timeoutFrames = 0;
         (void)AutomationRunnerInternal::readUint( step, "timeoutFrames", AutomationRunnerInternal::kDefaultWaitTimeoutFrames, timeoutFrames,
-                                                  error ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
+                                                  error ); // validateEngineStep 이 이미 읽어 봤으므로 실패할 수 없다
         if ( _holdFrameCount >= timeoutFrames )
         {
             recordFailure( step, "WaitUntil gave up after " + to_string( _holdFrameCount ) + " frame(s): " + message );
@@ -802,7 +802,7 @@ namespace sw
             return false;
         }
         ++_holdFrameCount;
-        // 이 프레임은 시나리오 프레임으로 세지 않는다 — 다음 프레임에 낼 입력 사건부터 한 프레임씩 밀어 시나리오 프레임과 맞춘다.
+        // 이 프레임은 시나리오 프레임으로 세지 않는다. 다음 프레임에 낼 입력 이벤트부터 한 프레임씩 밀어 시나리오 프레임과 맞춘다.
         _inputScript.delayEventsFrom( input.getVirtualFrameIndex(), 1 );
         return true;
     }
@@ -813,7 +813,7 @@ namespace sw
         const AutomationProbeRegistration* pRegistration = AutomationProbes::find( probeName );
         float64                            value         = 0.0;
         outMatched                                       = false;
-        // 모듈을 내렸다 올리면 탐침이 빠질 수 있다 — 시작 때 있었어도 다시 찾는다.
+        // 모듈을 언로드했다 로드하면 탐침이 빠질 수 있다. 시작 때 있었어도 다시 찾는다.
         if ( pRegistration == nullptr || pRegistration->_pFunction( findActiveObjectManager(), value ) == false )
         {
             outMessage = pRegistration == nullptr ? probeName + " is no longer registered" : probeName + " has no value (no target in the scene)";
@@ -826,26 +826,26 @@ namespace sw
         string  rule;
         if ( step.findAttribute( "equals" ) != nullptr )
         {
-            (void)AutomationRunnerInternal::readFloat( step, "equals", 0.0f, expected, error ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
+            (void)AutomationRunnerInternal::readFloat( step, "equals", 0.0f, expected, error ); // validateEngineStep 이 이미 읽어 봤으므로 실패할 수 없다
             bOk  = value == static_cast<float64>( expected );
             rule = "== " + *step.findAttribute( "equals" );
         }
         else if ( step.findAttribute( "near" ) != nullptr )
         {
-            (void)AutomationRunnerInternal::readFloat( step, "near", 0.0f, expected, error );          // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
-            (void)AutomationRunnerInternal::readFloat( step, "tolerance", 1.0e-4f, tolerance, error ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
+            (void)AutomationRunnerInternal::readFloat( step, "near", 0.0f, expected, error );          // validateEngineStep 이 이미 읽어 봤으므로 실패할 수 없다
+            (void)AutomationRunnerInternal::readFloat( step, "tolerance", 1.0e-4f, tolerance, error ); // validateEngineStep 이 이미 읽어 봤으므로 실패할 수 없다
             bOk  = value >= static_cast<float64>( expected ) - static_cast<float64>( tolerance ) && value <= static_cast<float64>( expected ) + static_cast<float64>( tolerance );
             rule = "near " + *step.findAttribute( "near" );
         }
         else if ( step.findAttribute( "atLeast" ) != nullptr )
         {
-            (void)AutomationRunnerInternal::readFloat( step, "atLeast", 0.0f, expected, error ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
+            (void)AutomationRunnerInternal::readFloat( step, "atLeast", 0.0f, expected, error ); // validateEngineStep 이 이미 읽어 봤으므로 실패할 수 없다
             bOk  = value >= static_cast<float64>( expected );
             rule = ">= " + *step.findAttribute( "atLeast" );
         }
         else
         {
-            (void)AutomationRunnerInternal::readFloat( step, "atMost", 0.0f, expected, error ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
+            (void)AutomationRunnerInternal::readFloat( step, "atMost", 0.0f, expected, error ); // validateEngineStep 이 이미 읽어 봤으므로 실패할 수 없다
             bOk  = value <= static_cast<float64>( expected );
             rule = "<= " + *step.findAttribute( "atMost" );
         }
@@ -859,7 +859,7 @@ namespace sw
         const string& needle = *step.findAttribute( "contains" );
         string        error;
         uint32        since = 0;
-        (void)AutomationRunnerInternal::readUint( step, "since", 0, since, error ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
+        (void)AutomationRunnerInternal::readUint( step, "since", 0, since, error ); // validateEngineStep 이 이미 읽어 봤으므로 실패할 수 없다
         uint32 matchCount = 0;
         {
             std::scoped_lock<mutex> lock{ _logMutex };
@@ -872,12 +872,12 @@ namespace sw
         uint32 expected = 0;
         if ( step.findAttribute( "count" ) != nullptr )
         {
-            (void)AutomationRunnerInternal::readUint( step, "count", 0, expected, error ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
+            (void)AutomationRunnerInternal::readUint( step, "count", 0, expected, error ); // validateEngineStep 이 이미 읽어 봤으므로 실패할 수 없다
             if ( matchCount != expected )
                 recordFailure( step, "ExpectLog '" + needle + "' count == " + to_string( expected ) + ", got " + to_string( matchCount ) );
             return;
         }
-        (void)AutomationRunnerInternal::readUint( step, "atLeast", 0, expected, error ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
+        (void)AutomationRunnerInternal::readUint( step, "atLeast", 0, expected, error ); // validateEngineStep 이 이미 읽어 봤으므로 실패할 수 없다
         if ( matchCount < expected )
             recordFailure( step, "ExpectLog '" + needle + "' count >= " + to_string( expected ) + ", got " + to_string( matchCount ) );
     }
@@ -889,11 +889,11 @@ namespace sw
         AutomationImageMetricKind metric = AutomationImageMetricKind::MeanLuma;
         AutomationImageRegion     region{};
         float32                   ratio = Internal::kDefaultDarkRatio;
-        (void)AutomationImageMetric::tryParseKind( *step.findAttribute( "metric" ), metric ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
+        (void)AutomationImageMetric::tryParseKind( *step.findAttribute( "metric" ), metric ); // validateEngineStep 이 이미 읽어 봤으므로 실패할 수 없다
         const string* pRegion = step.findAttribute( "region" );
         if ( pRegion != nullptr )
-            (void)AutomationImageMetric::tryParseRegion( *pRegion, region );                   // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
-        (void)Internal::readFloat( step, "ratio", Internal::kDefaultDarkRatio, ratio, error ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
+            (void)AutomationImageMetric::tryParseRegion( *pRegion, region );                   // validateEngineStep 이 이미 읽어 봤으므로 실패할 수 없다
+        (void)Internal::readFloat( step, "ratio", Internal::kDefaultDarkRatio, ratio, error ); // validateEngineStep 이 이미 읽어 봤으므로 실패할 수 없다
 
         const string    path = resolveOutputPath( *step.findAttribute( "file" ) );
         AutomationImage image;
@@ -911,7 +911,7 @@ namespace sw
             recordFailure( step, error );
             return;
         }
-        // 값은 늘 적는다 — 임계값을 정할 때 숫자를 본다.
+        // 값은 항상 적는다. 임계값을 정할 때 숫자를 보기 위해서다.
         string line = *step.findAttribute( "metric" ) + "(" + ( pRegion != nullptr ? *pRegion : string( "0,0,1,1" ) ) + ") " + *step.findAttribute( "file" ) + " = " +
                       Internal::formatNumber( value );
         SW_LOG_INFO( "[Scenario] metric %#", line.c_str() );
@@ -923,26 +923,26 @@ namespace sw
         string  rule;
         if ( step.findAttribute( "equals" ) != nullptr )
         {
-            (void)Internal::readFloat( step, "equals", 0.0f, expected, error ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
+            (void)Internal::readFloat( step, "equals", 0.0f, expected, error ); // validateEngineStep 이 이미 읽어 봤으므로 실패할 수 없다
             bOk  = value == static_cast<float64>( expected );
             rule = "== " + *step.findAttribute( "equals" );
         }
         else if ( step.findAttribute( "near" ) != nullptr )
         {
-            (void)Internal::readFloat( step, "near", 0.0f, expected, error );          // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
-            (void)Internal::readFloat( step, "tolerance", 1.0e-3f, tolerance, error ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
+            (void)Internal::readFloat( step, "near", 0.0f, expected, error );          // validateEngineStep 이 이미 읽어 봤으므로 실패할 수 없다
+            (void)Internal::readFloat( step, "tolerance", 1.0e-3f, tolerance, error ); // validateEngineStep 이 이미 읽어 봤으므로 실패할 수 없다
             bOk  = MathUtil::abs( value - static_cast<float64>( expected ) ) <= static_cast<float64>( tolerance );
             rule = "near " + *step.findAttribute( "near" );
         }
         else if ( step.findAttribute( "atLeast" ) != nullptr )
         {
-            (void)Internal::readFloat( step, "atLeast", 0.0f, expected, error ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
+            (void)Internal::readFloat( step, "atLeast", 0.0f, expected, error ); // validateEngineStep 이 이미 읽어 봤으므로 실패할 수 없다
             bOk  = value >= static_cast<float64>( expected );
             rule = ">= " + *step.findAttribute( "atLeast" );
         }
         else
         {
-            (void)Internal::readFloat( step, "atMost", 0.0f, expected, error ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
+            (void)Internal::readFloat( step, "atMost", 0.0f, expected, error ); // validateEngineStep 이 이미 읽어 봤으므로 실패할 수 없다
             bOk  = value <= static_cast<float64>( expected );
             rule = "<= " + *step.findAttribute( "atMost" );
         }
@@ -967,7 +967,7 @@ namespace sw
 
     void AutomationRunner::onLogWritten( const LogEntry& entry )
     {
-        // 실행기 자신의 줄([Scenario])은 세지 않는다 — 실패 줄이 단언 문구를 되풀이해 ExpectLog 를 맞추지 않게.
+        // 실행기 자신의 줄([Scenario])은 세지 않는다. 실패 줄이 단언 문구를 반복해 ExpectLog 를 맞추지 않게 하기 위해서다.
         if ( StringUtil::startsWith( string_view{ entry._message }, "[Scenario]" ) )
             return;
         std::scoped_lock<mutex> lock{ _logMutex };

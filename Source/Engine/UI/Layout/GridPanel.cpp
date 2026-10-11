@@ -13,7 +13,7 @@ namespace sw
 
     namespace
     {
-        /** @brief 자식 하나가 덮는 칸입니다(트랙 범위로 묶은 뒤). */
+        /** @brief 자식 하나가 덮는 칸입니다(트랙 범위로 제한한 뒤). */
         struct GridPlacement
         {
             Widget* _pChild{ nullptr };
@@ -25,7 +25,7 @@ namespace sw
 
         struct GridPanelInternal
         {
-            /** @brief 트랙 정의가 없을 때 쓸 트랙 수 — 자식들의 최대 (행 · 열 + 넓이), 적어도 1 입니다. */
+            /** @brief 트랙 정의가 없을 때 쓸 트랙 수입니다. 자식들의 최대 (행 또는 열 + 넓이)이며 적어도 1 입니다. */
             static void countTracks( const PanelWidget& panel, uint32& outColumnCount, uint32& outRowCount )
             {
                 outColumnCount = 1;
@@ -38,7 +38,7 @@ namespace sw
                 }
             }
 
-            /** @brief 앞 @p count 개 트랙과 그 뒤 간격까지의 길이 — 트랙 @p count 의 시작 자리입니다. */
+            /** @brief 앞 @p count 개 트랙과 그 뒤 간격까지의 길이입니다. 트랙 @p count 의 시작 위치이기도 합니다. */
             static float32 computeTrackOffset( const vector<float32>& listSize, uint32 count, float32 spacing )
             {
                 float32 offset = spacing * static_cast<float32>( count );
@@ -60,7 +60,7 @@ namespace sw
                 outListTrack.assign( count, UIGridTrack{} );
             }
 
-            /** @brief 한 축의 칸 시작 · 넓이를 트랙 수 안으로 묶습니다. 밖이면 true(마지막 트랙으로 옮겼다). */
+            /** @brief 한 축의 칸 시작과 넓이를 트랙 수 안으로 제한합니다. 범위 밖이면 true 를 반환합니다(마지막 트랙으로 옮겼습니다). */
             static bool clampSpan( uint32 trackCount, uint32& inoutStart, uint32& inoutSpan )
             {
                 const bool bOutOfRange = trackCount <= inoutStart;
@@ -81,7 +81,7 @@ namespace sw
                 return total;
             }
 
-            /** @brief 덮은 트랙이 모두 Fixed 면 그 합(가용 길이로 쓴다), 아니면 무한입니다. */
+            /** @brief 덮은 트랙이 모두 Fixed 면 그 합(가용 길이로 씁니다)을, 아니면 무한을 반환합니다. */
             static float32 computeFixedSpan( const vector<UIGridTrack>& listTrack, uint32 start, uint32 span, float32 spacing )
             {
                 float32 total = spacing * static_cast<float32>( span - 1 );
@@ -96,8 +96,8 @@ namespace sw
 
             /**
              * @brief 한 축의 트랙 길이를 정합니다.
-             * @param listExtent 자리마다 그 축의 (원하는 크기 + 여백).
-             * @param bShareFill true 면 Fill 트랙이 남은 길이를 무게로 나눈다(가용 길이가 무한이면 내용 크기). false 면 Fill 도 내용 크기(원하는 크기 계산).
+             * @param listExtent 칸마다 그 축의 (원하는 크기 + 여백)입니다.
+             * @param bShareFill true 면 Fill 트랙이 남은 길이를 가중치로 나눕니다(가용 길이가 무한이면 내용 크기). false 면 Fill 도 내용 크기를 씁니다(원하는 크기 계산).
              */
             static void resolveTracks( const vector<UIGridTrack>& listTrack, float32 available, float32 spacing, const vector<GridPlacement>& listPlacement,
                                        const vector<float32>& listExtent, bool bColumn, bool bShareFill, vector<float32>& outListSize )
@@ -109,7 +109,7 @@ namespace sw
                     if ( listTrack[index]._kind == UIGridTrackKind::Fixed )
                         outListSize[index] = MathUtil::max( 0.0f, listTrack[index]._value );
                 }
-                // 1) 넓이 1 자식 — Auto · Fill 트랙의 내용 크기.
+                // 1) 넓이 1 자식: Auto 와 Fill 트랙의 내용 크기.
                 for ( uint32 index = 0; index < static_cast<uint32>( listPlacement.size() ); ++index )
                 {
                     const GridPlacement& placement = listPlacement[index];
@@ -119,7 +119,7 @@ namespace sw
                         continue;
                     outListSize[start] = MathUtil::max( outListSize[start], listExtent[index] );
                 }
-                // 2) 넓이 2 이상 — 모자란 만큼을 덮은 Auto 트랙들에 고르게.
+                // 2) 넓이 2 이상: 모자란 만큼을 덮은 Auto 트랙들에 고르게 더한다.
                 for ( uint32 index = 0; index < static_cast<uint32>( listPlacement.size() ); ++index )
                 {
                     const GridPlacement& placement = listPlacement[index];
@@ -143,7 +143,7 @@ namespace sw
                             outListSize[track] += share;
                     }
                 }
-                // 3) Fill — 남은 길이를 무게로.
+                // 3) Fill: 남은 길이를 가중치로 나눈다.
                 if ( bShareFill == false || UILayoutPass::isUnbounded( available ) )
                     return;
                 float32 used        = spacing * static_cast<float32>( trackCount > 0 ? trackCount - 1 : 0 );
@@ -262,7 +262,7 @@ namespace sw
         vector<float32> listColumnContent;
         GridPanelInternal::resolveTracks( listColumnTrack, availableSize._x, _cellSpacing._x, listPlacement, listExtent, true, false, listColumnContent );
 
-        // 2) 행: 정한 열 너비로 다시 측정한다(줄 바꿈 글의 높이).
+        // 2) 행: 정한 열 너비로 다시 측정한다(줄 바꿈 텍스트의 높이).
         for ( uint32 index = 0; index < static_cast<uint32>( listPlacement.size() ); ++index )
         {
             const GridPlacement& placement    = listPlacement[index];

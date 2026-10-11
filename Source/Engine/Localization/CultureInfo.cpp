@@ -123,7 +123,7 @@ namespace sw
                 return false;
             }
 
-            /** @brief 2 자리 이상으로 0 을 채운 ASCII 정수입니다. */
+            /** @brief 2 자리 이상이 되도록 0 을 채운 ASCII 정수입니다. */
             static string makePadded( int64 value, uint32 width )
             {
                 utf8         arrBuffer[constant::kMaxBuffer32]{};
@@ -136,7 +136,7 @@ namespace sw
                 return text;
             }
 
-            /** @brief 문자열 배열 칸을 읽습니다. 배열이 아니거나 원소가 문자열이 아니면 false 입니다. */
+            /** @brief 문자열 배열 필드를 읽습니다. 배열이 아니거나 원소가 문자열이 아니면 false 입니다. */
             [[nodiscard]] static bool readStringArray( const JSONValue& value, vector<string>& outList )
             {
                 if ( value.isArray() == false )
@@ -152,7 +152,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 패턴 묶음(`{ "short": …, "medium": … }`)을 읽습니다. 모르는 이름이면 false 입니다. */
+            /** @brief 패턴 모음(`{ "short": …, "medium": … }`)을 읽습니다. 모르는 이름이면 false 입니다. */
             [[nodiscard]] static bool readPatternGroup( const JSONValue& value, string* pShort, string* pMedium, string* pLong, string& outError )
             {
                 if ( value.isObject() == false )
@@ -180,7 +180,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 한 문화권 객체의 칸을 @p inoutInfo 에 덮어씁니다(적힌 칸만). */
+            /** @brief 한 문화권 객체의 필드를 @p inoutInfo 에 덮어씁니다(적힌 필드만). */
             [[nodiscard]] static bool applyFields( const JSONValue& entry, CultureInfo& inoutInfo, string& outError )
             {
                 for ( const string& fieldName : entry.getMemberNames() )
@@ -422,7 +422,7 @@ namespace sw
 
     uint32 CultureInfo::countVisibleFraction( float64 value, uint32 minFraction, uint32 maxFraction )
     {
-        // 고정 소수 표기는 정수부를 다 쓴다(1e308 은 309 자리) — 64 바이트로는 큰 값이 잘려 빈 글이 된다.
+        // 고정 소수 표기는 정수부를 모두 쓴다(1e308 은 309 자리). 64 바이트로는 큰 값이 잘려 빈 텍스트가 된다.
         utf8         arrBuffer[constant::kMaxBuffer512]{};
         const uint32 length = StringUtil::formatNumber( arrBuffer, constant::kMaxBuffer512, value < 0.0 ? -value : value, static_cast<int32>( maxFraction ) );
         string_view  text( arrBuffer, length );
@@ -447,7 +447,7 @@ namespace sw
         const size_t      dotPos      = digits.find( '.' );
         const string_view integerPart = dotPos == string_view::npos ? digits : digits.substr( 0, dotPos );
 
-        // 정수부는 정수로 되읽지 않고 글자 그대로 묶는다 — int64 를 넘는 값(≥ 9.2e18)도 자리가 그대로 남는다. inf · nan 은 숫자가 아니라 그대로 쓴다.
+        // 정수부는 정수로 되읽지 않고 글자 그대로 모은다. int64 를 넘는 값(≥ 9.2e18)도 자릿수가 그대로 남는다. inf 와 nan 은 숫자가 아니므로 그대로 쓴다.
         const bool bAllDigit = integerPart.empty() == false && integerPart.find_first_not_of( "0123456789" ) == string_view::npos;
         const bool bNonZero  = integerPart.find_first_not_of( '0' ) != string_view::npos;
         string     text;
@@ -636,7 +636,7 @@ namespace sw
             return false;
         }
 
-        // 부모가 먼저 풀리도록 몇 바퀴 돈다. 한 바퀴에 아무것도 못 풀면 남은 것은 없는 부모 · 순환이다.
+        // 부모가 먼저 해석되도록 몇 바퀴 돈다. 한 바퀴에 아무것도 해석하지 못하면 남은 것은 없는 부모이거나 순환이다.
         map<string, CultureInfo> mapResolved;
         vector<string>           listPending;
         for ( const string& rawCode : cultures.getMemberNames() )
@@ -687,7 +687,7 @@ namespace sw
                 info._parentCode = parentCode;
                 info._nativeName.clear();
                 if ( info._pseudoMode != PseudoLocaleMode::None && entry.has( "pseudo", false ) == false )
-                    info._pseudoMode = PseudoLocaleMode::None; // 의사 방식은 물려받지 않는다 — `qps_ploc` 을 부모로 둔 실제 문화권이 의사가 되면 안 된다
+                    info._pseudoMode = PseudoLocaleMode::None; // 의사 방식은 물려받지 않는다. `qps_ploc` 을 부모로 둔 실제 문화권이 의사 문화권이 되면 안 된다
                 string fieldError;
                 if ( CultureInfoInternal::applyFields( entry, info, fieldError ) == false )
                 {

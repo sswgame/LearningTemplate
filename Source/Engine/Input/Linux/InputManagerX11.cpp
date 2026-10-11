@@ -26,20 +26,20 @@ namespace sw
     namespace
     {
         /**
-         * @brief 텍스트 입력(XIM/XIC)과 접근성(XKB) 상태를 창 생명주기와 따로 지연 초기화해 들고 있습니다.
-         * @note XIM 은 "on-the-spot" · "root-window" 스타일 입력기의 커밋 문자열은 잡지만, 조합(preedit)
+         * @brief 텍스트 입력(XIM/XIC)과 접근성(XKB) 상태를 창 수명 주기와 따로 지연 초기화해 보관합니다.
+         * @note XIM 은 "on-the-spot", "root-window" 스타일 입력기의 커밋 문자열은 받지만, 조합(preedit)
          *       후보 창을 직접 그려 주는 완전한 프리에딧 렌더링은 구현하지 않았습니다.
          */
         struct X11InputInternal
         {
             static inline XIM    s_pInputMethod{ nullptr };
             static inline XIC    s_pInputContext{ nullptr };
-            static inline void*  s_pImDisplay{ nullptr };     ///< XIC 를 만들 때 쓴 Display*.
-            static inline Window s_imWindow{ 0 };             ///< XIC 의 XNClientWindow. **창이 바뀌면 반드시 다시 만들어야 함.**
-            static inline Cursor s_invisibleCursor{ 0 };      ///< X11 None(리소스 없음). X11MacroUndef.h 가 None 매크로를 지우므로 리터럴 0 을 씀.
-            static inline void*  s_pCursorDisplay{ nullptr }; ///< s_invisibleCursor 를 만든 Display*(다르면 다시 만듦).
+            static inline void*  s_pImDisplay{ nullptr };     ///< XIC 를 만들 때 쓴 Display* 입니다.
+            static inline Window s_imWindow{ 0 };             ///< XIC 의 XNClientWindow 입니다. 창이 바뀌면 반드시 XIC 를 다시 만들어야 합니다.
+            static inline Cursor s_invisibleCursor{ 0 };      ///< X11 None(리소스 없음)입니다. X11MacroUndef.h 가 None 매크로를 지우므로 리터럴 0 을 씁니다.
+            static inline void*  s_pCursorDisplay{ nullptr }; ///< s_invisibleCursor 를 만든 Display* 입니다(다르면 다시 만듭니다).
             static inline bool   s_bAccessibilityDisabled{ false };
-            /** @brief 창이 X11 포커스를 쥐고 있는지 여부입니다(FocusIn/FocusOut 으로 갱신). 보조 폴링을 건너뛸지 정하는 데 씁니다. */
+            /** @brief 창이 X11 포커스를 가지고 있는지 나타냅니다(FocusIn/FocusOut 으로 갱신). 보조 폴링을 건너뛸지 정하는 데 씁니다. */
             static inline bool   s_bWindowFocused{ false };
             static inline uint32 s_prevXkbEnabledControls{ 0 };
             /** @brief 감지 가능한 자동 반복을 켜 둔 Display* 입니다(Display 마다 한 번). */
@@ -68,8 +68,8 @@ namespace sw
                     return nullptr;
 
                 // Display 만 비교하면 안 된다. 같은 X 서버에서 창을 다시 만들면(에디터 창 재생성, 테스트가
-                // 창을 반복 생성 · 파괴) 캐시된 XIC 가 **이미 파괴된 Window** 를 XNClientWindow 로 물고 있어
-                // 텍스트 입력이 조용히 죽는다. 창까지 함께 봐야 한다.
+                // 창을 반복해서 생성하고 파괴할 때) 캐시된 XIC 가 이미 파괴된 Window 를 XNClientWindow 로 가리키고 있어
+                // 텍스트 입력이 조용히 죽는다. 창까지 함께 비교해야 한다.
                 if ( s_pInputContext != nullptr && s_pImDisplay == pDisplay && s_imWindow == x11Window )
                     return s_pInputContext;
 
@@ -152,15 +152,15 @@ namespace sw
     {
         // 키보드는 X11 이벤트(KeyPress/KeyRelease)로 빠짐없이 들어오므로 폴링 폴백이 필요 없다
         // (Win32 의 GetAsyncKeyState 폴백은 메시지 유실을 메우기 위한 것이고, X11 에는 같은 문제가 없다).
-        // 마우스는 창 밖에서 버튼을 뗀 경우처럼 이벤트를 놓칠 수 있는 경로가 있어 위치 · 버튼을 보조로 폴링한다.
+        // 마우스는 창 밖에서 버튼을 뗀 경우처럼 이벤트를 놓칠 수 있는 경로가 있어 위치와 버튼을 보조로 폴링한다.
         IWindow* pWindow = IWindow::getActiveWindow();
         if ( pWindow == nullptr || _pMouse == nullptr )
             return;
 
         // 포인터가 창 안에 있고 포커스도 있으면 MotionNotify/ButtonRelease 가 빠짐없이 들어오므로
-        // 보조 폴링이 필요 없다. XQueryPointer 는 **서버 동기 왕복**이라 프레임마다 물면 그대로 비용이다
-        // (Win32 의 GetAsyncKeyState/GetCursorPos 는 값싼 호출이라 그쪽엔 없던 문제다).
-        // 놓칠 수 있는 건 "창 밖에서 뗀 버튼" 이고 그건 포인터가 나갔거나 포커스를 잃은 경우다.
+        // 보조 폴링이 필요 없다. XQueryPointer 는 서버와 동기 왕복하는 호출이라 프레임마다 부르면 그만큼 비용이 든다
+        // (Win32 의 GetAsyncKeyState/GetCursorPos 는 값싼 호출이라 그쪽에는 없는 문제다).
+        // 놓칠 수 있는 이벤트는 "창 밖에서 뗀 버튼" 이고, 그것은 포인터가 나갔거나 포커스를 잃은 경우에만 생긴다.
         if ( _pMouse->isPointerInside() && X11InputInternal::s_bWindowFocused )
             return;
 
@@ -201,8 +201,8 @@ namespace sw
             case KeyPress:
             case KeyRelease:
             {
-                // 누르고 있으면 X 서버는 기본으로 Release/Press 쌍을 되풀이 보낸다(자동 반복). 그대로 받으면 누르고 있는 동안
-                // "눌림 · 뗌" 엣지가 계속 생긴다. 감지 가능한 자동 반복을 켜면 반복은 Press 만 온다.
+                // 누르고 있으면 X 서버는 기본으로 Release/Press 쌍을 반복해서 보낸다(자동 반복). 그대로 받으면 누르고 있는 동안
+                // 눌림과 뗌 엣지가 계속 생긴다. 감지 가능한 자동 반복을 켜면 반복 이벤트는 Press 만 온다.
                 X11InputInternal::enableDetectableAutoRepeat( pXev->xany.display );
 
                 const KeySym keySym = XLookupKeysym( const_cast<XKeyEvent*>( &pXev->xkey ), 0 );
@@ -242,7 +242,7 @@ namespace sw
                 const bool  bDown  = ( pXev->type == ButtonPress );
                 const int32 mouseX = static_cast<int32>( pXev->xbutton.x );
                 const int32 mouseY = static_cast<int32>( pXev->xbutton.y );
-                // 버튼 이벤트에도 좌표를 실어 보낸다 — 좌표 없이(0, 0) 보내면 클릭할 때마다 커서가 창 왼쪽 위로 튄다.
+                // 버튼 이벤트에도 좌표를 실어 보낸다. 좌표 없이(0, 0) 보내면 클릭할 때마다 커서가 창 왼쪽 위로 튄다.
                 MouseButton button = MouseButton::Count;
                 switch ( pXev->xbutton.button )
                 {
@@ -302,7 +302,7 @@ namespace sw
                 }
                 if ( button == MouseButton::Count )
                     break;
-                // 창 안 누름만 여기 온다(창 관리자의 제목 표시줄은 우리 창 밖) — 포커스를 잃었다 돌아온 뒤 잠금을 다시 잡는 자리다.
+                // 창 안의 누름만 여기로 온다(창 관리자의 제목 표시줄은 우리 창 밖이다). 포커스를 잃었다 돌아온 뒤 잠금을 다시 잡는 지점이다.
                 // 잠금을 건 그 누름과 짝인 뗌은 게임에 넘기지 않는다(Win32 와 같은 규칙).
                 if ( bDown ? onPlatformPointerPressed( button ) : onPlatformPointerReleased( button ) )
                     break;
@@ -326,8 +326,8 @@ namespace sw
                 postWindowStateEvent( RawInputEvent::makePointerCrossing( false ) );
                 break;
             }
-            // 포커스: OS 쪽 일(포인터 잡기 · 놓기)은 지금 하고, 장치 상태 리셋은 큐 순서 안에서 한다. 포커스를 얻어도 잠금은
-            // 다시 걸지 않는다 — 제목 표시줄 · 닫기 버튼을 눌러 돌아온 사용자가 그 버튼까지 포인터를 가져갈 수 있어야 한다.
+            // 포커스: OS 쪽 일(포인터 잡기와 놓기)은 지금 하고, 장치 상태 리셋은 큐 순서 안에서 한다. 포커스를 얻어도 잠금은
+            // 다시 걸지 않는다. 제목 표시줄이나 닫기 버튼을 눌러 돌아온 사용자가 그 버튼까지 포인터를 가져갈 수 있어야 하기 때문이다.
             case FocusIn:
             {
                 X11InputInternal::s_bWindowFocused = true;
@@ -356,7 +356,7 @@ namespace sw
 
     void InputManager::registerPlatformGamepads()
     {
-        // 슬롯 수 · 0번 캐시 · 연결 콜백은 엔진 정책이라 기반 클래스가 맡는다. 여기서 정하는 것은 `/dev/input/js*`
+        // 슬롯 수, 0번 캐시, 연결 콜백은 엔진 정책이라 기반 클래스가 맡는다. 여기서 정하는 것은 `/dev/input/js*`
         // 를 읽는 구현이라는 것뿐이다. 연결되지 않은 슬롯은 poll() 이 재시도 타이머로 넘어간다.
         registerGamepadSlots<LinuxJoystickGamepadDevice>();
     }
@@ -393,7 +393,7 @@ namespace sw
         if ( pDisplay == nullptr || x11Window == 0 )
             return;
 
-        // 포커스가 없는 창은 포인터를 잡지 않는다 — 잡으면 창 관리자의 장식(제목 표시줄)에도 못 간다.
+        // 포커스가 없는 창은 포인터를 잡지 않는다. 잡으면 창 관리자의 장식(제목 표시줄)에도 갈 수 없다.
         if ( X11InputInternal::s_bWindowFocused == false )
         {
             XUngrabPointer( pDisplay, CurrentTime );
@@ -402,7 +402,7 @@ namespace sw
         }
 
         // X11 XGrabPointer 는 창 전체에만 가둘 수 있다. 임의의 서브 사각형에 가두는 기능은 네이티브로
-        // 없어서, 포인터를 MotionNotify 마다 되돌리는 소프트웨어 클리핑이 필요하다(여기서는 구현하지 않음).
+        // 없어서, 포인터를 MotionNotify 마다 되돌리는 소프트웨어 클리핑이 필요하다(여기서는 구현하지 않는다).
         const uint32 mask = ButtonPressMask | ButtonReleaseMask | PointerMotionMask;
         // owner_events=1(True), confine_to/cursor 뒤 두 인자는 각각 x11Window/None(0). X11MacroUndef.h 가
         // True/None 매크로를 지우므로 리터럴 값을 쓴다.
@@ -455,7 +455,7 @@ namespace sw
 
     bool InputManager::isWindowFocusedPlatform() const
     {
-        // X11 포커스는 FocusIn/FocusOut 으로만 안다(서버에 묻는 XGetInputFocus 는 왕복이다). 창이 뜬 직후 FocusIn 전이면 거짓 — 첫 클릭에 잡는다.
+        // X11 포커스는 FocusIn/FocusOut 으로만 알 수 있다(서버에 묻는 XGetInputFocus 는 왕복 호출이다). 창이 뜬 직후 FocusIn 전이면 false 이므로 첫 클릭에 잡는다.
         return _bWindowFocused == SW_TRUE && ( IWindow::getActiveWindow() == nullptr || X11InputInternal::s_bWindowFocused );
     }
 
@@ -476,7 +476,7 @@ namespace sw
         if ( pXkb == nullptr )
             return;
 
-        // 반환값 0 == X11 Success. X11MacroUndef.h 가 Success 매크로를 지우므로 리터럴 0 을 쓴다.
+        // 반환값 0 은 X11 Success 이다. X11MacroUndef.h 가 Success 매크로를 지우므로 리터럴 0 을 쓴다.
         if ( XkbGetControls( pDisplay, XkbAllControlsMask, pXkb ) == 0 && pXkb->ctrls != nullptr )
         {
             X11InputInternal::s_prevXkbEnabledControls = pXkb->ctrls->enabled_ctrls;
@@ -489,8 +489,8 @@ namespace sw
 
     void InputManager::restoreWindowsAccessibilityShortcuts()
     {
-        // 이 함수가 InputManager::shutdown 이 부르는 유일한 플랫폼 훅이라, XIM/XIC · 커서 해제도 여기서 한다.
-        // Display 가 닫히기 전에 풀어야 X 리소스가 남지 않는다.
+        // 이 함수는 InputManager::shutdown 이 부르는 유일한 플랫폼 훅이라, XIM/XIC 와 커서 해제도 여기서 한다.
+        // Display 가 닫히기 전에 해제해야 X 리소스가 남지 않는다.
         X11InputInternal::releaseAll();
 
         IWindow* pWindow = IWindow::getActiveWindow();

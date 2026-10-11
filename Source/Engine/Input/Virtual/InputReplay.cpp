@@ -18,7 +18,7 @@ namespace sw
     {
         /**
          * @brief 리플레이 파일 머리말입니다.
-         * @details **버전은 읽는 쪽이 반드시 봅니다** — 매직만 보면 다른 판의 파일도 지금 판의 배치로 읽어 조용히 엉뚱한 프레임이 나옵니다.
+         * @details 읽는 쪽은 반드시 버전을 확인해야 한다. 매직 값만 보면 다른 버전의 파일도 지금 버전의 배치로 읽어 조용히 엉뚱한 프레임이 나온다.
          */
         struct ReplayHeader
         {
@@ -29,8 +29,8 @@ namespace sw
         };
 
         /**
-         * @brief 지금 쓰는 리플레이 파일 판입니다. 프레임마다 `deltaTime(float32) · eventCount(uint32) · RawInputEvent × n` 입니다.
-         * @details `RawInputEvent` 를 구조체째로 적으므로 그 배치가 바뀌면 판을 올립니다(다른 판은 읽지 않습니다).
+         * @brief 지금 쓰는 리플레이 파일 버전입니다. 프레임마다 `deltaTime(float32)`, `eventCount(uint32)`, `RawInputEvent` n 개가 이어집니다.
+         * @details `RawInputEvent` 를 구조체째로 쓰므로 그 배치가 바뀌면 버전을 올린다(다른 버전은 읽지 않는다).
          */
         constexpr uint32 kReplayVersion = 4;
 
@@ -81,7 +81,7 @@ namespace sw
         InputReplayFrame frame{};
         frame._deltaTime    = deltaTime;
         frame._listRawEvent = listEvent;
-        // 녹화한 사건은 재생 때 다시 가상 사건으로 표시된다 — 파일에는 원래 출처를 남기지 않는다.
+        // 녹화한 이벤트는 재생할 때 다시 가상 이벤트로 표시된다. 파일에는 원래 출처를 남기지 않는다.
         for ( RawInputEvent& event : frame._listRawEvent )
         {
             event._bSynthetic = SW_FALSE;
@@ -110,7 +110,7 @@ namespace sw
     void InputReplay::seekTo( InputManager& input, uint32 frameIndex )
     {
         const uint32 endIndex = MathUtil::min( frameIndex, getFrameCount() );
-        // 원시 사건은 누름 · 뗌처럼 방향이 있는 전이라 목표 프레임만 다시 넣으면 상태가 틀린다 — 처음부터 그 프레임 직전까지 다시 재생한다.
+        // 원시 이벤트는 누름과 뗌처럼 방향이 있는 전이라 목표 프레임만 다시 넣으면 상태가 틀린다. 처음부터 그 프레임 직전까지 다시 재생한다.
         input.detachVirtualInput();
         VirtualInputScript prefix;
         for ( uint32 index = 0; index < endIndex; ++index )
@@ -177,7 +177,7 @@ namespace sw
         if ( header._arrMagic[0] != 'S' || header._arrMagic[1] != 'W' || header._arrMagic[2] != 'R' || header._arrMagic[3] != 'P' )
             return false;
 
-        // 판이 다르면 프레임 배치도 다르다. 읽어 봐야 엉뚱한 값이 나오므로 여기서 멈춘다.
+        // 버전이 다르면 프레임 배치도 다르다. 읽어 봐야 엉뚱한 값이 나오므로 여기서 멈춘다.
         if ( header._version != kReplayVersion )
         {
             SW_LOG_WARNING( "Input replay version %# is not %# — refusing to load: %#", header._version, kReplayVersion, filePath );
@@ -199,7 +199,7 @@ namespace sw
         {
             InputReplayFrame frame{};
             uint32           eventCount = 0;
-            // 잘린 프레임에서 멈춘다 — 그 뒤를 읽으면 엉뚱한 입력이 재생된다.
+            // 잘린 프레임에서 멈춘다. 그 뒤를 읽으면 엉뚱한 입력이 재생된다.
             if ( InputReplayInternal::readBytes( pCursor, pEnd, frame._deltaTime ) == false || InputReplayInternal::readBytes( pCursor, pEnd, eventCount ) == false ||
                  static_cast<size_t>( pEnd - pCursor ) / sizeof( RawInputEvent ) < eventCount )
             {
@@ -209,7 +209,7 @@ namespace sw
             frame._listRawEvent.resize( eventCount );
             for ( RawInputEvent& event : frame._listRawEvent )
             {
-                (void)InputReplayInternal::readBytes( pCursor, pEnd, event ); // 남은 바이트가 eventCount 개 이상임을 위에서 확인했다 — 실패하지 않는다
+                (void)InputReplayInternal::readBytes( pCursor, pEnd, event ); // 남은 바이트가 eventCount 개 이상임을 위에서 확인했으므로 실패하지 않는다
             }
             listFrame.push_back( std::move( frame ) );
         }

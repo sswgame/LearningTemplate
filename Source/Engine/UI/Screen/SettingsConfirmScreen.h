@@ -1,6 +1,6 @@
 /**
  * @file SettingsConfirmScreen.h
- * @brief 설정 확인 카운트다운 창입니다 — "유지할까요? 0:15" (화면 방식 · 해상도처럼 `confirmSeconds` 가 있는 설정을 적용한 뒤).
+ * @brief 설정 확인 카운트다운 창입니다. 화면 방식이나 해상도처럼 `confirmSeconds` 가 있는 설정을 적용한 뒤 "유지할까요? 0:15" 를 보여 줍니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -15,7 +15,7 @@ namespace sw
 {
     class UserSettingsManager;
 
-    /** @class SettingsConfirmViewModel @brief 확인 창이 보이는 값 — 남은 초입니다(`{bind:_secondsLeft, converter=Seconds}`). */
+    /** @class SettingsConfirmViewModel @brief 확인 창이 보여 주는 값입니다. 남은 초를 가집니다(`{bind:_secondsLeft, converter=Seconds}`). */
     REFLECT()
     class SW_API SettingsConfirmViewModel : public UIViewModel
     {
@@ -38,8 +38,8 @@ namespace sw
 {
     /**
      * @class SettingsConfirmScreen
-     * @brief 확인 대기(`UserSettingsManager::isAwaitingConfirm`) 동안 뜨는 모달입니다. [유지] = `confirmChanges`, [되돌리기] · 뒤로 = 지금 되돌림.
-     * @details 시간이 다 되면 매니저가 스스로 되돌리고(호스트가 프레임마다 `update`), 이 창은 확인 대기가 끝난 것을 보고 스스로 닫습니다 — 창이 시간을 세지 않습니다.
+     * @brief 확인 대기(`UserSettingsManager::isAwaitingConfirm`) 동안 뜨는 모달입니다. [유지]는 `confirmChanges` 를, [되돌리기]와 뒤로 가기는 지금 되돌리기를 부릅니다.
+     * @details 시간이 다 되면 매니저가 스스로 되돌리고(호스트가 프레임마다 `update` 를 부른다), 이 창은 확인 대기가 끝난 것을 보고 스스로 닫는다. 창이 시간을 세지 않는다.
      */
     class SW_API SettingsConfirmScreen : public UIScreen
     {
@@ -60,6 +60,6 @@ namespace sw
 
     private:
         SettingsConfirmViewModel _viewModel;
-        UserSettingsManager*     _pSettings; ///< 카운트다운을 든 설정(창보다 오래 산다 — 엔진 서비스)
+        UserSettingsManager*     _pSettings; ///< 카운트다운을 가진 설정입니다(창보다 오래 사는 엔진 서비스).
     };
 } // namespace sw

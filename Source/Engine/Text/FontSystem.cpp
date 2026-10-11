@@ -19,7 +19,7 @@ namespace sw
     {
         struct FontSystemInternal
         {
-            /** @brief 경고 키를 나누는 씨앗입니다 — 가족 경고와 코드 포인트 경고가 같은 수로 겹치지 않게. */
+            /** @brief 경고 키를 나누는 시드입니다. 패밀리 경고와 코드 포인트 경고가 같은 수로 겹치지 않게 합니다. */
             static constexpr uint64 kFamilyWarningSeed    = 1;
             static constexpr uint64 kCodepointWarningSeed = 2;
 
@@ -33,14 +33,14 @@ namespace sw
                 return HashUtil::combine( hash, static_cast<uint64>( slant ) );
             }
 
-            /** @brief 굵기 차이입니다(무게 짝짓기 — 작은 쪽, 같으면 무거운 쪽이 이긴다). */
+            /** @brief 굵기 차이입니다(무게 짝짓기에서 작은 쪽이 이기고, 같으면 무거운 쪽이 이깁니다). */
             static uint32 computeWeightDistance( FontWeight requested, FontWeight candidate )
             {
                 const int32 difference = static_cast<int32>( requested ) - static_cast<int32>( candidate );
                 return static_cast<uint32>( difference < 0 ? -difference : difference );
             }
 
-            /** @brief 요청은 굵은데(SemiBold 이상) 고른 면은 그렇지 않은지(Medium 이하)입니다 — 가짜 굵게를 쓴다. */
+            /** @brief 요청은 굵은데(SemiBold 이상) 고른 면은 그렇지 않은지(Medium 이하) 판정합니다. 이 경우 가짜 굵게를 씁니다. */
             static bool needsFauxBold( FontWeight requested, FontWeight chosen )
             {
                 return static_cast<uint16>( requested ) >= static_cast<uint16>( FontWeight::SemiBold ) &&
@@ -155,7 +155,7 @@ namespace sw
         if ( iter != _mapChain.end() )
             return iter->second;
 
-        // 1) 고른 가족 — 가짜 굵게 · 기울임은 이 면에서 정한다.
+        // 1) 고른 패밀리: 가짜 굵게와 기울임은 이 면에서 정한다.
         uint8            bFauxBold   = SW_FALSE;
         uint8            bFauxItalic = SW_FALSE;
         const FontFaceID primaryFace = openFamilyFace( family, spec._weight, spec._slant, bFauxBold, bFauxItalic );
@@ -165,7 +165,7 @@ namespace sw
             chain._bFauxBold   = bFauxBold;
             chain._bFauxItalic = bFauxItalic;
         }
-        // 2) 지금 문화권의 대체 가족들(문화권 표 `fonts`).
+        // 2) 지금 문화권의 대체 패밀리들(문화권 테이블 `fonts`).
         if ( pLocalization != nullptr )
         {
             for ( const string& fallbackFamily : pLocalization->getFontFallback() )
@@ -175,7 +175,7 @@ namespace sw
                 FontSystemInternal::appendFace( chain, openFamilyFace( fallbackFamily, spec._weight, spec._slant, bUnusedBold, bUnusedItalic ) );
             }
         }
-        // 3) 카탈로그 기본 가족 — 늘 열린다(initialize 가 확인했다).
+        // 3) 카탈로그 기본 패밀리: 항상 열린다(initialize 가 확인했다).
         uint8            bDefaultBold   = SW_FALSE;
         uint8            bDefaultItalic = SW_FALSE;
         const FontFaceID defaultFace    = openFamilyFace( _catalog._defaultFamily, spec._weight, spec._slant, bDefaultBold, bDefaultItalic );
@@ -228,7 +228,7 @@ namespace sw
         const SystemFontFamilyDesc* pSystemFamily = pFamily == nullptr ? _catalog.findSystemFamily( family ) : nullptr;
         if ( pFamily != nullptr )
         {
-            // 같은 기울기를 먼저, 그 안에서 굵기가 가장 가까운 면(같으면 무거운 쪽) — CSS 글꼴 짝짓기의 단순판.
+            // 같은 기울기를 먼저 보고, 그 안에서 굵기가 가장 가까운 면(같으면 무거운 쪽)을 고른다. CSS 폰트 매칭의 단순 버전이다.
             const FontFaceDesc* pBest           = nullptr;
             bool                bBestSlantMatch = false;
             uint32              bestDistance    = invalid_index::kUint32;
@@ -279,8 +279,8 @@ namespace sw
         if ( opened._face == kInvalidFontFaceID )
         {
             opened = OpenedFamilyFace{};
-            // 카탈로그의 시스템 가족은 설치가 기계마다 다르다 — 없으면 대체 사슬의 다음 가족을 쓰는 것이 정상이라 Info 다.
-            // 카탈로그에 없거나 저장소 글꼴을 못 연 것은 데이터 잘못이라 Warning 으로 남긴다.
+            // 카탈로그의 시스템 패밀리는 설치가 기계마다 다르다. 없으면 대체 연쇄의 다음 패밀리를 쓰는 것이 정상이라 Info 로 남긴다.
+            // 카탈로그에 없거나 저장소 폰트를 열지 못한 것은 데이터 잘못이라 Warning 으로 남긴다.
             if ( markWarnedOnce( FontSystemInternal::hashName( family, FontSystemInternal::kFamilyWarningSeed ) ) )
             {
                 if ( pSystemFamily != nullptr )

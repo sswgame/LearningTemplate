@@ -9,13 +9,13 @@
 
 /**
  * @file InputMapEvaluate.cpp
- * @brief InputMap 의 매 프레임 평가 로직입니다. update() 가 매 틱 부르는 상태 머신입니다.
+ * @brief InputMap 의 매 프레임 평가 로직을 구현합니다. `update()` 가 매 틱 부르는 상태 머신입니다.
  *
- * 액션이 지금 눌려 있는지, 막 트리거됐는지가 어떻게 정해지는지 보려면 이 파일부터 보십시오.
- *  1) update() : 모든 액션을 돌며 아래 두 함수를 부르고, ActionPhase(Started/Ongoing/...)를 갱신합니다.
- *  2) evaluateBindingDown() : 바인딩 하나(키 · 스틱 · 조합 키 · 가상 조이스틱 등)가 지금 얼마나 눌려 있는지 원시 장치에서 읽습니다.
- *  3) evaluateTrigger() : ActionTrigger(Pressed/Released/Hold/Tap/...)가 이번 프레임에 발화했는지 판정합니다.
- *  4) isBindingLayerActive() : 그 바인딩이 속한 레이어가 지금 활성인지(LIFO 스택 · enabled) 확인합니다.
+ * 액션이 지금 눌려 있는지, 막 트리거됐는지가 어떻게 정해지는지 보려면 이 파일부터 읽으십시오.
+ *  1) `update()`: 모든 액션을 돌며 아래 함수를 부르고, ActionPhase(Started/Ongoing/...)를 갱신합니다.
+ *  2) `evaluateBindingDown()`: 바인딩 하나(키, 스틱, 조합 키, 가상 조이스틱 등)가 지금 얼마나 눌려 있는지 원시 장치에서 읽습니다.
+ *  3) `evaluateTrigger()`: ActionTrigger(Pressed/Released/Hold/Tap/...)가 이번 프레임에 발화했는지 판정합니다.
+ *  4) `isBindingLayerActive()`: 그 바인딩이 속한 레이어가 지금 활성인지(LIFO 스택, enabled) 확인합니다.
  */
 
 namespace sw
@@ -63,7 +63,7 @@ namespace sw
             bool    anyTriggered{ false };
             float32 maxHold{ 0.0f };
             float2  totalAccumValue{ 0.0f, 0.0f };
-            float2  relativeValue{ 0.0f, 0.0f }; ///< 마우스 이동량 — 묶지 않는다
+            float2  relativeValue{ 0.0f, 0.0f }; ///< 마우스 이동량입니다. 묶지 않습니다.
 
             for ( size_t bindIndex = 0; bindIndex < bindCount; ++bindIndex )
             {
@@ -286,7 +286,7 @@ namespace sw
         const IInputDevice* pDevice = _pInput != nullptr ? _pInput->getDevice( slot._deviceKind, slot._deviceIndex ) : nullptr;
         if ( pDevice == nullptr )
             return false;
-        // 키보드는 포커스를 따른다 — 개발 콘솔이 키보드를 쥔 동안 게임 맵의 키 바인딩은 "안 눌림" 이다.
+        // 키보드는 포커스를 따른다. 개발 콘솔이 키보드를 가진 동안 게임 맵의 키 바인딩은 "안 눌림" 으로 본다.
         if ( slot._deviceKind == InputDeviceKind::Keyboard && _bKeyboardFocusIgnored == SW_FALSE && _pInput->isKeyVisibleToGame( static_cast<Key>( slot._controlIndex ) ) == false )
             return false;
         return pDevice->isControlDown( slot._controlIndex );
@@ -307,8 +307,8 @@ namespace sw
         if ( _pInput == nullptr )
             return false;
 
-        // isControlDown() 만 보면 같은 프레임 안에서 Down 과 Up 이 모두 처리된 순간 탭(예: 매크로 주입, 초고속 입력, 가상 입력 hold=0)을
-        // 놓친다. wasControlPressed() 를 함께 확인해 그 프레임에는 "눌렸었다" 로 취급한다 — 단일 키 · 합성(axis1d · vector2d) 모두 같은 규칙이다.
+        // isControlDown() 만 보면 같은 프레임 안에서 Down 과 Up 이 모두 처리된 탭(예: 매크로 주입, 초고속 입력, 가상 입력 hold=0)을
+        // 놓친다. wasControlPressed() 를 함께 확인해 그 프레임에는 "눌렸었다" 로 취급한다. 단일 키와 합성(axis1d, vector2d) 모두 같은 규칙이다.
         const auto isSlotHeldThisFrame = [this]( const InputSlot& slot ) -> bool
         {
             return isSlotDown( slot ) || wasSlotPressed( slot );
@@ -459,7 +459,7 @@ namespace sw
                 const int2   curTilePos = _pInput->getMousePosition();
                 const float2 curPos     = curTilePos.toFloat2();
 
-                // 앵커는 고정 좌표가 아니라 활성화 버튼을 처음 누른 지점에 놓인다(모바일 온스크린 스틱의 흔한 UX).
+                // 앵커는 고정 좌표가 아니라 활성화 버튼을 처음 누른 지점에 놓는다(모바일 온스크린 스틱에서 흔한 방식).
                 if ( binding._bJoystickAnchored == false )
                 {
                     binding._joystickAnchor    = curPos;
@@ -500,11 +500,11 @@ namespace sw
             }
             case BindingKind::Count:
             {
-                // 이 저장소는 모든 switch 에 `default:` 를 요구한다(-Wswitch-default). 그래서 컴파일러가
-                // 이 switch 에서 빠진 종류를 짚어 주지 못한다. 컴파일 시점에 잡히는 것은 표에서 빠진 줄뿐이다
-                // (`kArrBindingKindInfo` 의 static_assert). 여기까지 왔다는 것은 종류를 늘리고
-                // 이 switch 를 빠뜨렸다는 뜻이고, 그 액션은 영원히 발동하지 않는다.
-                // 평가는 매 프레임 도는 자리라 로그는 남기지 않고, 개발 빌드에서 단언으로 멈춘다.
+                // 이 저장소는 모든 switch 에 `default:` 를 요구한다(-Wswitch-default). 그래서 컴파일러는
+                // 이 switch 에서 빠진 종류를 알려 주지 못한다. 컴파일 시점에 잡히는 것은 테이블에서 빠진 줄뿐이다
+                // (`kArrBindingKindInfo` 의 static_assert). 여기까지 왔다면 종류를 추가하고
+                // 이 switch 를 빠뜨린 것이고, 그 액션은 영원히 발동하지 않는다.
+                // 매 프레임 도는 경로라 로그는 남기지 않고, 개발 빌드에서 단언으로 멈춘다.
                 SW_ASSERT( false );
                 return false;
             }
@@ -546,9 +546,9 @@ namespace sw
             }
             case ActionTrigger::Pulse:
             {
-                // 누른 뒤 간격마다 한 번. `타이머 >= 간격` 만 보면 첫 간격이 지난 뒤 **매 프레임** 발화한다(연사 속도가 프레임률을
-                // 따라간다). 타이머는 뗄 때만 0 으로 돌아가므로, 이번 프레임에
-                // 간격 경계를 넘었는지로 판정한다(Repeat 과 같은 방식). 한 프레임이 간격보다 길어도 한 번만 발화한다.
+                // 누른 뒤 간격마다 한 번 발화한다. `타이머 >= 간격` 만 보면 첫 간격이 지난 뒤 매 프레임 발화해서 연사 속도가 프레임률을
+                // 따라간다. 타이머는 뗄 때만 0 으로 돌아가므로, 이번 프레임에 간격 경계를 넘었는지로 판정한다(Repeat 과 같은 방식).
+                // 한 프레임이 간격보다 길어도 한 번만 발화한다.
                 if ( state._bDown == SW_FALSE )
                     return false;
                 const int32 stepNow  = static_cast<int32>( state._pulseTimer / InputMapDefaults::kPulseInterval );

@@ -1,6 +1,6 @@
 /**
  * @file UIScale.h
- * @brief UI 배율 규칙(해상도 → 배율, UMG DPI 곡선 자리)과 뷰포트 계산입니다.
+ * @brief UI 배율 규칙(해상도에서 배율을 구하는 UMG DPI 곡선에 해당)과 뷰포트 계산을 정의합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -12,7 +12,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/Base/WidgetTypes.h"
 
-/** @brief 안전 영역 흉내(0..0.1) — 각 변을 물리 크기의 이 비율만큼 안쪽으로 민다(언리얼 r.DebugSafeZone.TitleRatio). 테스트 · 미리보기용. */
+/** @brief 안전 영역 흉내(0..0.1)입니다. 각 변을 물리 크기의 이 비율만큼 안쪽으로 밉니다(언리얼 r.DebugSafeZone.TitleRatio). 테스트와 미리보기용입니다. */
 SW_EXTERN_GLOBAL_VARIABLE( float32, gv_uiDebugSafeZone );
 
 namespace sw
@@ -21,10 +21,10 @@ namespace sw
     ENUM()
     enum class UIScaleRule : uint8
     {
-        ShortestSide, ///< 짧은 변 / 기준 짧은 변(가로 · 세로 화면 모두 같은 크기 — 기본)
-        Width,        ///< 너비 / 기준 너비
-        Height,       ///< 높이 / 기준 높이
-        Fixed         ///< 늘 1(픽셀 그대로)
+        ShortestSide, ///< 짧은 변 / 기준 짧은 변입니다(가로와 세로 화면 모두 같은 크기이며 기본값입니다).
+        Width,        ///< 너비 / 기준 너비입니다.
+        Height,       ///< 높이 / 기준 높이입니다.
+        Fixed         ///< 항상 1 입니다(픽셀 그대로).
     };
 } // namespace sw
 
@@ -32,9 +32,9 @@ namespace sw
 {
     /**
      * @struct UIScaleSettings
-     * @brief 해상도 → UI 배율 규칙입니다(`engine/ui/uiscale.xml`, 게임 프리셋 `_uiScaleSettings` 가 덮어쓴다).
-     * @details 레이아웃은 **UI 단위**(기준 해상도의 픽셀)로 하고 화면에 낼 때 배율을 곱합니다. 배율 = clamp( 규칙( 물리 크기 ), 최소, 최대 ) × gv_uiScale
-     *          (× 창 콘텐츠 배율 — `_bApplyContentScale` 일 때만). 게임 창은 해상도 규칙이 이미 창 크기를 따르므로 OS 배율까지 곱하면 두 번 곱한다(UMG 기본과 같다).
+     * @brief 해상도에서 UI 배율을 구하는 규칙입니다(`engine/ui/uiscale.xml`이며, 게임 프리셋 `_uiScaleSettings` 가 덮어씁니다).
+     * @details 레이아웃은 UI 단위(기준 해상도의 픽셀)로 하고, 화면에 낼 때 배율을 곱한다. 배율 = clamp( 규칙( 물리 크기 ), 최소, 최대 ) × gv_uiScale
+     *          (`_bApplyContentScale` 일 때만 × 창 콘텐츠 배율)이다. 게임 창은 해상도 규칙이 이미 창 크기를 따르므로 OS 배율까지 곱하면 두 번 곱하게 된다(UMG 기본과 같다).
      */
     REFLECT()
     struct SW_API UIScaleSettings
@@ -54,9 +54,9 @@ namespace sw
         PROPERTY( DisplayName = "Apply Content Scale", Tooltip = "Multiply by the OS window scale (desktop-style UI only)" )
         bool _bApplyContentScale{ false };
 
-        /** @brief 리소스 경로의 XML 을 읽습니다. 실패하면(파일 없음 · 모르는 키) 오류를 남기고 false 입니다(읽힌 값은 남는다). */
+        /** @brief 리소스 경로의 XML 을 읽습니다. 실패하면(파일이 없거나 모르는 키) 오류를 남기고 false 를 반환하며, 읽은 값은 남습니다. */
         [[nodiscard]] bool loadFromResource( string_view resourcePath );
-        /** @brief 규칙만의 배율입니다(사용자 배율 · 창 배율 전, 최소 · 최대로 묶음). */
+        /** @brief 규칙만 적용한 배율입니다(사용자 배율과 창 배율을 적용하기 전이며, 최소와 최대로 제한합니다). */
         float32 computeResolutionScale( const float2& physicalSize ) const;
     };
 } // namespace sw
@@ -65,25 +65,25 @@ namespace sw
 {
     /**
      * @struct UIScaleUtil
-     * @brief 물리 크기 · 사용자 배율 · 창 배율 · 안전 영역으로 UI 뷰포트를 만듭니다.
+     * @brief 물리 크기, 사용자 배율, 창 배율, 안전 영역으로 UI 뷰포트를 만듭니다.
      */
     struct SW_API UIScaleUtil
     {
-        /** @brief 글자 배율이 줄여도 글이 이 크기(UI 단위) 밑으로 내려가지 않습니다 — Xbox 접근성 지침(XAG 101)의 최소 글 크기. */
+        /** @brief 글자 배율을 줄여도 글이 이 크기(UI 단위) 밑으로 내려가지 않게 하는 하한입니다. Xbox 접근성 지침(XAG 101)의 최소 글 크기입니다. */
         static constexpr float32 kMinScaledFontSize = 12.0f;
 
         /**
-         * @brief 글자 배율 @p textScale(gv_uiTextScale)을 곱한 글 크기입니다.
-         * @details 배율이 줄여도 `kMinScaledFontSize` 밑으로는 내려가지 않습니다. 그보다 작게 적은 글(각주 · 아래 첨자)은 적은 크기가 하한입니다 —
-         *          배율이 글을 키우기만 하고 디자이너가 고른 크기를 억지로 키우지는 않습니다. 0 이하 배율은 1 입니다.
+         * @brief 글자 배율 @p textScale(gv_uiTextScale)을 곱한 글 크기를 반환합니다.
+         * @details 배율을 줄여도 `kMinScaledFontSize` 밑으로는 내려가지 않는다. 그보다 작게 적은 글(각주, 아래 첨자)은 적은 크기가 하한이다.
+         *          배율은 글을 키우기만 하고, 디자이너가 고른 크기를 억지로 키우지는 않는다. 0 이하 배율은 1 로 본다.
          */
         static float32 computeScaledFontSize( float32 fontSize, float32 textScale );
         /**
          * @brief 이번 프레임의 UI 뷰포트를 만듭니다.
-         * @param physicalSize 그릴 화면의 픽셀 크기.
-         * @param userScale 사용자 UI 배율(gv_uiScale).
-         * @param contentScale 창의 OS 배율(`IWindow::getContentScale`) — 설정이 켤 때만 곱한다.
-         * @param safeZoneRatio 각 변을 물리 크기의 이 비율만큼 안쪽으로(gv_uiDebugSafeZone · 플랫폼 안전 영역).
+         * @param physicalSize 그릴 화면의 픽셀 크기입니다.
+         * @param userScale 사용자 UI 배율입니다(gv_uiScale).
+         * @param contentScale 창의 OS 배율입니다(`IWindow::getContentScale`). 설정이 켜져 있을 때만 곱합니다.
+         * @param safeZoneRatio 각 변을 물리 크기의 이 비율만큼 안쪽으로 미는 값입니다(gv_uiDebugSafeZone, 플랫폼 안전 영역).
          */
         static UIViewport makeViewport( const UIScaleSettings& settings, const float2& physicalSize, float32 userScale, float32 contentScale,
                                         float32 safeZoneRatio );

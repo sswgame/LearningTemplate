@@ -30,7 +30,7 @@ namespace sw
                 return "unknown";
             }
 
-            /** @brief 소수 둘째 자리 — 반올림이 0 이면 부호를 떼어 `-0.00` 이 나오지 않게 합니다(부동소수 누적 부호가 덤프에 새지 않게). */
+            /** @brief 소수 둘째 자리로 씁니다. 반올림한 값이 0 이면 부호를 떼어 `-0.00` 이 나오지 않게 합니다(부동소수 누적 부호가 덤프에 새지 않게 하기 위해서입니다). */
             static void appendNumber( float32 value, string& inoutText )
             {
                 fixed_string<constant::kMaxBuffer32> number{};

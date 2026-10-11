@@ -76,7 +76,7 @@ namespace sw
 
     bool GlyphAtlas::allocateInPage( Page& page, uint32 width, uint32 height, uint16& outX, uint16& outY )
     {
-        // 1) 윗변(y + 높이)이 가장 낮은 자리, 같으면 마디가 좁은 자리(남는 틈이 작다).
+        // 1) 윗변(y + 높이)이 가장 낮은 위치를 고르고, 같으면 마디가 좁은 위치를 고른다(남는 틈이 작다).
         bool   bFound    = false;
         uint32 bestTop   = 0;
         uint32 bestWidth = 0;

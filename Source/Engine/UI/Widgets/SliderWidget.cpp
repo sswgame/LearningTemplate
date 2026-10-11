@@ -15,10 +15,10 @@ namespace sw
     {
         struct SliderWidgetInternal
         {
-            /** @brief 트랙 두께 · 엄지 지름(UI 단위)입니다. */
+            /** @brief 트랙 두께와 엄지 지름(UI 단위)입니다. */
             static constexpr float32 kTrackThickness = 4.0f;
             static constexpr float32 kThumbSize      = 16.0f;
-            /** @brief 한 칸을 정하지 않았을 때 범위의 비율입니다. */
+            /** @brief 한 단계를 정하지 않았을 때의 범위 비율입니다. */
             static constexpr float32 kDefaultStepFraction = 0.05f;
         };
     } // namespace
@@ -76,7 +76,7 @@ namespace sw
         const hashed_string& name = property._name;
         if ( name == hashed_string( "_value" ) || name == hashed_string( "_minValue" ) || name == hashed_string( "_maxValue" ) || name == hashed_string( "_step" ) )
         {
-            // 세터(`setRange` · `setValue`)와 같은 묶기 — 알림은 부르지 않는다(바인딩이 쓴 값이다).
+            // 세터(`setRange`, `setValue`)와 같은 제한을 적용한다. 알림은 부르지 않는다(바인딩이 쓴 값이다).
             _maxValue = MathUtil::max( _minValue, _maxValue );
             _step     = MathUtil::max( 0.0f, _step );
             _value    = MathUtil::clamp( _value, _minValue, _maxValue );
@@ -149,7 +149,7 @@ namespace sw
         if ( bLeft == false && bRight == false )
             return UIReply::makeUnhandled();
         const float32 step = _step > 0.0f ? _step : ( _maxValue - _minValue ) * SliderWidgetInternal::kDefaultStepFraction;
-        // 화면 왼쪽 = 최소(오른쪽에서 왼쪽이면 최대) — 행동 방향은 화면 기준이다.
+        // 화면 왼쪽이 최소다(오른쪽에서 왼쪽이면 최대). 액션 방향은 화면 기준이다.
         const bool bDecrease = bLeft != isRightToLeft();
         setValueFromUser( _value + ( bDecrease ? -step : step ) );
         return UIReply::makeHandled();

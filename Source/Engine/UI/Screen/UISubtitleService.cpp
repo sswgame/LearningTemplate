@@ -19,10 +19,10 @@ namespace sw
     {
         struct UISubtitleServiceInternal
         {
-            /** @brief 크기 설정 0 · 1 · 2 의 글 크기 배입니다(XAG 의 "작게 · 보통 · 크게"). */
+            /** @brief 크기 설정 0, 1, 2 에 해당하는 글 크기 배율입니다(XAG 의 "작게, 보통, 크게"). */
             static constexpr float32 kArrSizeScale[] = { 0.85f, 1.0f, 1.3f };
 
-            /** @brief 줄 자리 @p slot 의 위젯 이름 `<prefix><slot>` 입니다. */
+            /** @brief 줄 슬롯 @p slot 의 위젯 이름 `<prefix><slot>` 입니다. */
             static hashed_string makeSlotName( const utf8* pPrefix, uint32 slot ) { return hashed_string( string( pPrefix ) + to_string( slot ) ); }
         };
     } // namespace
@@ -66,7 +66,7 @@ namespace sw
 
     void UISubtitleService::update( float32 deltaSeconds )
     {
-        // 1) 시간 — 설정이 꺼져 있어도 흐른다(켜면 지금 줄부터 보인다).
+        // 1) 시간: 설정이 꺼져 있어도 흐른다(켜면 지금 줄부터 보인다).
         for ( UISubtitleLine& line : _listActive )
         {
             line._remainingSeconds -= deltaSeconds;
@@ -74,14 +74,14 @@ namespace sw
         _listActive.erase( std::remove_if( _listActive.begin(), _listActive.end(), []( const UISubtitleLine& line )
         { return line._remainingSeconds <= 0.0f; } ),
                            _listActive.end() );
-        // 2) 대기열 — 자리가 나면 먼저 온 줄부터. 시간은 보이기 시작한 이 프레임부터 센다.
+        // 2) 대기열: 자리가 나면 먼저 온 줄부터 올린다. 시간은 보이기 시작한 이 프레임부터 센다.
         while ( _listActive.size() < kMaxVisibleLineCount && _listQueued.empty() == false )
         {
             _listActive.push_back( std::move( _listQueued.front() ) );
             _listQueued.erase( _listQueued.begin() );
         }
 
-        // 3) 화면 — 켜져 있고 줄이 있을 때만 연다.
+        // 3) 화면: 켜져 있고 줄이 있을 때만 연다.
         const bool bShow = gv_subtitles && _listActive.empty() == false;
         if ( bShow == false )
         {
@@ -93,7 +93,7 @@ namespace sw
         UIScreen* pScreen = _uiSystem.findScreen( _screen );
         if ( pScreen == nullptr )
         {
-            _screen = kInvalidUIScreenHandle; // 누군가 닫았다 — 다음 프레임에 다시 연다
+            _screen = kInvalidUIScreenHandle; // 누군가 닫았으므로 다음 프레임에 다시 연다
             return;
         }
         const float32 sizeScale         = computeSizeScale( gv_subtitleSize );
@@ -135,7 +135,7 @@ namespace sw
             _bDocumentFailed = true;
             return false;
         }
-        // 문서에 적힌 크기 · 바탕이 기준이다(설정이 곱하고 알파를 바꾼다). 자리 0 의 것을 모든 자리에 쓴다.
+        // 문서에 적힌 크기와 바탕이 기준이다(설정이 곱하고 알파를 바꾼다). 슬롯 0 의 값을 모든 슬롯에 쓴다.
         const WidgetTree&  tree     = pScreen->getTree();
         const BorderPanel* pLine    = tree.findWidget<BorderPanel>( UISubtitleServiceInternal::makeSlotName( "Line", 0 ) );
         const TextWidget*  pSpeaker = tree.findWidget<TextWidget>( UISubtitleServiceInternal::makeSlotName( "Speaker", 0 ) );

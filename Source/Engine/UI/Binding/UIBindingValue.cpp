@@ -18,7 +18,7 @@ namespace sw
     {
         struct UIBindingValueInternal
         {
-            /** @brief 내장 숫자 타입 칸을 실수로 읽습니다. 숫자 타입이 아니면 false 입니다. */
+            /** @brief 내장 숫자 타입 필드를 실수로 읽습니다. 숫자 타입이 아니면 false 입니다. */
             [[nodiscard]] static bool tryReadNumber( int32 builtinIndex, const void* pValue, float64& outNumber )
             {
                 switch ( builtinIndex )
@@ -80,7 +80,7 @@ namespace sw
                 }
             }
 
-            /** @brief 정수 칸에 반올림해 씁니다. 바뀌었으면 true 입니다. */
+            /** @brief 정수 필드에 반올림해 씁니다. 바뀌었으면 true 입니다. */
             template <typename IntegerType>
             [[nodiscard]] static bool writeInteger( void* pValue, float64 number )
             {
@@ -92,7 +92,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 실수 칸에 씁니다. 바뀌었으면 true 입니다. */
+            /** @brief 실수 필드에 씁니다. 바뀌었으면 true 입니다. */
             template <typename FloatType>
             [[nodiscard]] static bool writeFloat( void* pValue, float64 number )
             {
@@ -104,7 +104,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 내장 숫자 타입 칸에 씁니다. 숫자 타입이 아니면 false(쓰지 않음)이고 @p outbChanged 는 그대로입니다. */
+            /** @brief 내장 숫자 타입 필드에 씁니다. 숫자 타입이 아니면 false(쓰지 않음)이고 @p outbChanged 는 그대로입니다. */
             [[nodiscard]] static bool tryWriteNumber( int32 builtinIndex, void* pValue, float64 number, bool& outbChanged )
             {
                 switch ( builtinIndex )
@@ -166,7 +166,7 @@ namespace sw
                 }
             }
 
-            /** @brief 정수 타입 칸인가입니다. */
+            /** @brief 정수 타입 필드이면 true 입니다. */
             static bool isIntegerBuiltin( int32 builtinIndex )
             {
                 return builtinIndex != ReflectBuiltinIndex::kfloat32 && builtinIndex != ReflectBuiltinIndex::kfloat64;
@@ -298,7 +298,7 @@ namespace sw
             return UIBindingValueKind::Bool;
         if ( builtinIndex == ReflectBuiltinIndex::kstring || builtinIndex == ReflectBuiltinIndex::khashed_string )
             return UIBindingValueKind::Text;
-        // 내장 표의 숫자 줄은 int8 .. float64 가 이어져 있다(ReflectBuiltins.xxx 의 줄 순서).
+        // 내장 타입 테이블의 숫자 줄은 int8 .. float64 가 이어져 있다(ReflectBuiltins.xxx 의 줄 순서).
         const bool bNumber = ReflectBuiltinIndex::kint8 <= builtinIndex && builtinIndex <= ReflectBuiltinIndex::kfloat64;
         return bNumber ? UIBindingValueKind::Number : UIBindingValueKind::Other;
     }
@@ -392,7 +392,7 @@ namespace sw
             case UIBindingValueKind::Number:
             {
                 float64 number = 0.0;
-                (void)UIBindingValueInternal::tryReadNumber( builtinIndex, pValue, number ); // Number 로 분류한 칸이라 실패하지 않는다(실패면 0)
+                (void)UIBindingValueInternal::tryReadNumber( builtinIndex, pValue, number ); // Number 로 분류한 필드라 실패하지 않는다(실패하면 0)
                 return UIBindingValue::makeNumber( number, UIBindingValueInternal::isIntegerBuiltin( builtinIndex ) );
             }
             case UIBindingValueKind::Text:
@@ -451,7 +451,7 @@ namespace sw
                 if ( value._kind != UIBindingValueKind::Bool && value._kind != UIBindingValueKind::Number )
                     return false;
                 bool bChanged = false;
-                // 숫자 칸이 아니면 쓰지 않고 bChanged 는 거짓으로 남는다
+                // 숫자 필드가 아니면 쓰지 않고 bChanged 는 false 로 남는다
                 (void)UIBindingValueInternal::tryWriteNumber( builtinIndex, pValue, value.toNumber(), bChanged );
                 return bChanged;
             }

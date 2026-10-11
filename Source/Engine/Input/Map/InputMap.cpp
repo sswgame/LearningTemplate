@@ -11,14 +11,14 @@
 
 /**
  * @file InputMap.cpp
- * @brief InputMap 의 핵심(수명주기 · 바인딩 등록 · 레이어 스택 · 리바인드 · 조회 API)입니다.
+ * @brief InputMap 의 핵심 로직(수명 주기, 바인딩 등록, 레이어 스택, 리바인드, 조회 API)을 구현합니다.
  *
- * InputMap 의 실제 로직은 여러 파일에 나뉘어 있습니다. 찾는 것에 따라 아래 파일을 보십시오.
- *  - InputMap.cpp (이 파일)     : 생성자, bind*() 등록 함수들, 레이어 스택(pushLayer/popLayer), 리바인드, is/wasActionXxx() 조회.
- *  - InputMapEvaluate.cpp      : update() 가 매 프레임 부르는 상태 머신(액션이 지금 눌렸는지 · 트리거됐는지 판정).
- *  - InputMapSerialization.cpp : InputMap XML 로드와 유저 키 리매핑 저장 · 로드.
- *  - InputMapCombo.cpp         : 선입력 버퍼링, 격투 게임식 커맨드 시퀀스 · 패턴 판정.
- *  - InputMapGlyph.cpp         : 액션을 UI 프롬프트 문자열("[ E ]" 등)로 바꾸는 글리프 조회.
+ * InputMap 의 로직은 여러 파일에 나뉘어 있습니다. 찾는 내용에 따라 아래 파일을 보십시오.
+ *  - InputMap.cpp (이 파일): 생성자, bind*() 등록 함수, 레이어 스택(pushLayer/popLayer), 리바인드, is/wasActionXxx() 조회.
+ *  - InputMapEvaluate.cpp: update() 가 매 프레임 부르는 상태 머신(액션이 눌렸는지, 트리거됐는지 판정).
+ *  - InputMapSerialization.cpp: InputMap XML 로드와 유저 키 리매핑의 저장, 로드.
+ *  - InputMapCombo.cpp: 선입력 버퍼링과 격투 게임식 커맨드 시퀀스, 패턴 판정.
+ *  - InputMapGlyph.cpp: 액션을 UI 프롬프트 문자열("[ E ]" 등)로 바꾸는 글리프 조회.
  */
 
 namespace sw
@@ -26,24 +26,24 @@ namespace sw
     namespace
     {
         /**
-         * @brief `BindingKind` 한 종류에 딸린 값들입니다.
-         * @details 여기 없는 값은 종류마다 **정말로 다른 것**(어떤 특성을 읽고 쓰는가, 어떻게 평가하는가)
-         *          뿐이고, 그것들은 각자의 switch 에 남습니다. 이 저장소는 모든 switch 에 `default:` 를
-         *          요구하므로(-Wswitch-default) 컴파일러가 그 switch 에서 빠진 종류를 짚어 주지는 못합니다.
-         *          대신 그 `default:` 가 소리를 냅니다(저장 · 로드는 오류 로그, 평가는 단언).
+         * @brief `BindingKind` 한 종류에 딸린 값입니다.
+         * @details 이 테이블에 없는 값은 종류마다 실제로 다른 것(어떤 특성을 읽고 쓰는가, 어떻게 평가하는가)이고,
+         *          그것들은 각자의 switch 에 남는다. 이 저장소는 모든 switch 에 `default:` 를
+         *          요구하므로(-Wswitch-default) 컴파일러가 그 switch 에서 빠진 종류를 알려 주지 못한다.
+         *          대신 `default:` 에서 알린다(저장과 로드는 오류 로그, 평가는 단언).
          */
         struct BindingKindInfo
         {
-            BindingKind _kind;              ///< 표의 자리와 열거자가 어긋나지 않게 들고 있는 자기 값.
-            const utf8* _pXMLName;          ///< XML `kind` 특성에 적히는 이름.
-            uint32      _conflictSlotCount; ///< 키 충돌 검사가 훑을 슬롯 수 (0 = 특정 키를 점유하지 않음).
-            uint32      _rebindSlotIndex;   ///< 키 하나로 다시 잡을 때 바뀌는 슬롯(`BindingKinds::kNoRebindSlot` = 키 하나로는 못 바꾼다).
-            bool        _bRelative;         ///< 이번 프레임 이동량이다(묶지 않고 액션 값 단계에서 반전하지 않는다 — `BindingKinds::isRelative`).
+            BindingKind _kind;              ///< 테이블 위치와 열거자가 어긋나지 않는지 확인하려고 가진 자기 값입니다.
+            const utf8* _pXMLName;          ///< XML `kind` 특성에 적는 이름입니다.
+            uint32      _conflictSlotCount; ///< 키 충돌 검사가 훑을 슬롯 수입니다(0 이면 특정 키를 점유하지 않음).
+            uint32      _rebindSlotIndex;   ///< 키 하나로 다시 잡을 때 바뀌는 슬롯입니다(`BindingKinds::kNoRebindSlot` 이면 키 하나로는 못 바꿈).
+            bool        _bRelative;         ///< 이번 프레임의 이동량인지 나타냅니다. 묶지 않고, 액션 값 단계에서 반전하지 않습니다(`BindingKinds::isRelative`).
         };
 
         constexpr uint32 kNoRebind = BindingKinds::kNoRebindSlot;
 
-        // 종류를 더하면 **여기 한 줄**이다. 빠뜨리면 아래 static_assert 가 컴파일을 세운다.
+        // 종류를 추가하면 이 테이블에 한 줄을 더한다. 빠뜨리면 아래 static_assert 가 컴파일을 막는다.
         constexpr BindingKindInfo kArrBindingKindInfo[] = {
             {       BindingKind::SingleSlot,          "single", 1,         0, false},
             {  BindingKind::Axis1DComposite,          "axis1d", 2, kNoRebind, false},
@@ -60,7 +60,7 @@ namespace sw
         static_assert( sizeof( kArrBindingKindInfo ) / sizeof( kArrBindingKindInfo[0] ) == static_cast<size_t>( BindingKind::Count ),
                        "BindingKind 를 늘렸으면 kArrBindingKindInfo 에도 줄을 더할 것 — 이름과 충돌 슬롯 수가 여기서 온다." );
 
-        /** @brief 표에서 종류의 줄을 찾습니다. 범위 밖이면 nullptr 입니다. */
+        /** @brief 테이블에서 종류에 해당하는 줄을 찾습니다. 범위 밖이면 nullptr 입니다. */
         const BindingKindInfo* findBindingKindInfo( BindingKind kind )
         {
             for ( const BindingKindInfo& info : kArrBindingKindInfo )
@@ -72,9 +72,9 @@ namespace sw
         }
 
         /**
-         * @brief 다시 잡으려는 슬롯과 **겹치는** 이 바인딩의 슬롯 번호입니다. 겹치지 않으면 `BindingKinds::kNoRebindSlot` 입니다.
-         * @details 키 하나로 다시 잡는 슬롯이 있는 종류(단일 · Chord 의 방아쇠 · Shortcut)는 그 슬롯만 본다 — Chord 의 수식 키(Ctrl)는 다른 액션이
-         *          단독으로 써도 겹침이 아니다. 그런 슬롯이 없는 합성 축 · 2D 합성은 키를 점유하는 모든 슬롯을 본다(그 부분이 맞바뀌거나 비워진다).
+         * @brief 다시 잡으려는 슬롯과 겹치는 이 바인딩의 슬롯 번호입니다. 겹치지 않으면 `BindingKinds::kNoRebindSlot` 입니다.
+         * @details 키 하나로 다시 잡는 슬롯이 있는 종류(단일 슬롯, Chord 의 방아쇠, Shortcut)는 그 슬롯만 본다. Chord 의 수식 키(Ctrl)는
+         *          다른 액션이 단독으로 써도 겹침이 아니다. 그런 슬롯이 없는 합성 축과 2D 합성은 키를 점유하는 모든 슬롯을 본다(그 부분이 맞바뀌거나 비워진다).
          */
         uint32 findConflictingSlot( const ActionBinding& binding, const InputSlot& slot )
         {
@@ -96,7 +96,7 @@ namespace sw
     const utf8* BindingKinds::toName( BindingKind kind )
     {
         const BindingKindInfo* pInfo = findBindingKindInfo( kind );
-        // 이름이 없으면 저장이 조용히 망가지므로, 모르는 종류는 빈 문자열로 **눈에 띄게** 둔다.
+        // 이름이 없으면 저장이 조용히 망가지므로, 모르는 종류는 빈 문자열로 눈에 띄게 둔다.
         return ( pInfo != nullptr ) ? pInfo->_pXMLName : "";
     }
 
@@ -566,7 +566,7 @@ namespace sw
         if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() )
             return false;
 
-        // 종류는 그대로 두고 그 종류에서 키가 들어가는 슬롯만 바꾼다(`rebindKey` 설명). 단일 키로 바꾸면 수식 키 · 축이 사라진다.
+        // 종류는 그대로 두고 그 종류에서 키가 들어가는 슬롯만 바꾼다(`rebindKey` 설명 참고). 단일 키로 바꾸면 수식 키와 축이 사라진다.
         ActionBinding& binding   = pEntry->_listBinding[bindIndex];
         const uint32   slotIndex = BindingKinds::getRebindSlotIndex( binding._kind );
         if ( slotIndex == BindingKinds::kNoRebindSlot )
@@ -585,8 +585,8 @@ namespace sw
         if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() )
             return false;
 
-        // 대상의 어느 슬롯을 바꾸는지는 `rebindSlot` 과 같은 규칙이다(Chord 는 방아쇠 · 키 하나로 못 바꾸는 종류는 거절). 늘 0 번에 쓰면
-        // Chord 의 수식 키를 덮고, 겹침도 남의 0 번 슬롯만 보면 Chord 의 방아쇠 · 축의 양의 키와 겹쳐도 모른다.
+        // 대상의 어느 슬롯을 바꾸는지는 `rebindSlot` 과 같은 규칙이다(Chord 는 방아쇠, 키 하나로 못 바꾸는 종류는 거절). 늘 0 번에 쓰면
+        // Chord 의 수식 키를 덮어쓰고, 겹침도 다른 액션의 0 번 슬롯만 보면 Chord 의 방아쇠나 축의 양의 키와 겹쳐도 알 수 없다.
         const uint32 targetSlot = BindingKinds::getRebindSlotIndex( pEntry->_listBinding[bindIndex]._kind );
         if ( targetSlot == BindingKinds::kNoRebindSlot )
         {
@@ -696,8 +696,8 @@ namespace sw
                 if ( binding._layer != targetLayer )
                     continue;
 
-                // 슬롯 수는 표에서 온다 — switch 의 `default:` 로 두면 새 종류를 더했을 때 충돌 검사가 그 바인딩을
-                // **못 본 채** 지나가고, 같은 키를 두 번 걸어도 조용하다.
+                // 슬롯 수는 테이블에서 가져온다. switch 의 `default:` 로 두면 새 종류를 추가했을 때 충돌 검사가 그 바인딩을
+                // 보지 못한 채 지나가고, 같은 키를 두 번 바인딩해도 조용하다.
                 const uint32 slotCount = BindingKinds::getConflictSlotCount( binding._kind );
 
                 for ( uint32 slotIndex = 0; slotIndex < slotCount; ++slotIndex )

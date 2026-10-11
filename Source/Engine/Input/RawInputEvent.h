@@ -1,6 +1,6 @@
 /**
  * @file RawInputEvent.h
- * @brief OS 창 스레드 · 백그라운드 입력 폴러에서 생기는 정밀 원시 입력 이벤트 패킷입니다.
+ * @brief OS 창 스레드와 백그라운드 입력 폴러에서 생기는 정밀 원시 입력 이벤트 패킷입니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -21,7 +21,7 @@ namespace sw
         inline constexpr uint8 Shift = SW_BIT( 1 );
         inline constexpr uint8 Alt   = SW_BIT( 2 );
         inline constexpr uint8 Super = SW_BIT( 3 );
-        /** @brief 아는 수정 키 비트 전부입니다. 이보다 큰 마스크는 모르는 비트를 든 것입니다(파일에서 읽은 마스크의 범위 검사). */
+        /** @brief 아는 수정 키 비트 전부입니다. 이보다 큰 마스크는 모르는 비트를 가진 것입니다(파일에서 읽은 마스크의 범위 검사). */
         inline constexpr uint8 All = Ctrl | Shift | Alt | Super;
     } // namespace ModifierKey
 
@@ -45,7 +45,7 @@ namespace sw
         TextComposition,
         FocusGained,
         FocusLost,
-        PointerEntered, ///< 포인터가 창 안으로 들어왔습니다. 값은 뒤에 덧붙입니다(리플레이 파일이 번호를 담습니다).
+        PointerEntered, ///< 포인터가 창 안으로 들어왔습니다. 값은 뒤에 덧붙입니다(리플레이 파일에 번호가 저장됩니다).
         PointerLeft,    ///< 포인터가 창 밖으로 나갔습니다.
         MouseRawDelta   ///< 위치 없이 장치가 보고한 이동량(Win32 WM_INPUT)만 담습니다. 위치를 건드리지 않습니다.
     };
@@ -61,7 +61,7 @@ namespace sw
         uint8                  _deviceIndex{ 0 };
         uint8                  _modifierMask{ 0 }; /**< ModifierKey::Ctrl | Shift | Alt | Super */
         uint8                  _bRepeat    : 1;
-        uint8                  _bSynthetic : 1; /**< 가상 입력 원천(`IVirtualInputSource`)이 낸 사건입니다. `InputManager::beginFrame` 이 켭니다. */
+        uint8                  _bSynthetic : 1; /**< 가상 입력 원천(`IVirtualInputSource`)이 낸 이벤트입니다. `InputManager::beginFrame` 이 켭니다. */
         [[maybe_unused]] uint8 _reserved   : 6;
 
         union
@@ -285,9 +285,9 @@ namespace sw
 
     private:
         /**
-         * @brief 글자를 페이로드에 담습니다. 넘치면 **UTF-8 글자 경계에서** 자릅니다.
-         * @details 바이트 수로만 자르면 한글 조합 문자열(글자당 3 바이트)이 길 때 마지막 글자의 앞 바이트만 남아 받는 쪽이 깨진
-         *          UTF-8 을 받습니다.
+         * @brief 글자를 페이로드에 담습니다. 넘치면 UTF-8 글자 경계에서 자릅니다.
+         * @details 바이트 수로만 자르면 한글 조합 문자열(글자당 3 바이트)이 길 때 마지막 글자의 앞 바이트만 남아서 받는 쪽이 깨진
+         *          UTF-8 을 받는다.
          */
         static void copyTextPayload( RawInputEvent& outEvent, string_view text )
         {
@@ -295,7 +295,7 @@ namespace sw
             size_t           len           = text.size() < kMaxTextBytes ? text.size() : kMaxTextBytes;
             if ( len < text.size() )
             {
-                // 잘리는 자리가 연속 바이트(10xxxxxx)면 그 글자의 선두 바이트 앞까지 물러난다.
+                // 잘리는 위치가 연속 바이트(10xxxxxx)면 그 글자의 선두 바이트 앞까지 물러난다.
                 while ( len > 0 && ( static_cast<uint8>( text[len] ) & 0xC0 ) == 0x80 )
                 {
                     --len;

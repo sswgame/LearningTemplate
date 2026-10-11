@@ -22,7 +22,7 @@ namespace sw
         {
             static constexpr utf8 kAllName[] = "all";
 
-            /** @brief 칸의 성분 수입니다(보간되지 않는 칸은 0). */
+            /** @brief 필드의 성분 수입니다(보간되지 않는 필드는 0). */
             static uint32 findComponentCount( UIStyleField field )
             {
                 switch ( field )
@@ -60,7 +60,7 @@ namespace sw
                 outArr[3] = value._w;
             }
 
-            /** @brief 칸의 값을 성분으로 읽습니다. */
+            /** @brief 필드의 값을 성분으로 읽습니다. */
             static void readField( const WidgetStyle& style, UIStyleField field, float32 ( &outArr )[4] )
             {
                 switch ( field )
@@ -145,7 +145,7 @@ namespace sw
                 }
             }
 
-            /** @brief 성분을 칸에 씁니다. */
+            /** @brief 성분을 필드에 씁니다. */
             static void writeField( WidgetStyle& style, UIStyleField field, const float32 ( &arr )[4] )
             {
                 const float4 value{ arr[0], arr[1], arr[2], arr[3] };
@@ -243,7 +243,7 @@ namespace sw
             /** @brief 항목 하나(`_field 0.2 EaseOut`)를 @p inoutSpec 에 더합니다. */
             [[nodiscard]] static bool parseEntry( string_view item, UIStyleTransitionSpec& inoutSpec, string& outError )
             {
-                // 빈 칸으로 나눈 낱말 셋까지 — 칸 · 길이 · 곡선.
+                // 공백으로 나눈 단어를 셋까지 읽는다. 필드, 길이, 곡선 순서다.
                 string_view arrToken[4]{};
                 uint32      tokenCount = 0;
                 size_t      position   = 0;
@@ -377,7 +377,7 @@ namespace sw
     void UIStyleTransition::onStyleChanged( Widget& widget, const UIComputedStyle* pOld, const UIComputedStyle* pNew, uint32 changedFields )
     {
         using Internal = UIStyleTransitionInternal;
-        // 처음 맞추는 위젯 · 스타일이 사라짐 · 움직임 줄이기 — 전환 없이 바로.
+        // 처음 맞추는 위젯, 스타일이 사라진 경우, 움직임 줄이기는 전환 없이 바로 바꾼다.
         if ( pOld == nullptr || pNew == nullptr || gv_uiReduceMotion )
         {
             widget._styleTransition.reset();
@@ -388,7 +388,7 @@ namespace sw
         {
             string error;
             if ( UIStyleTransitionSpec::parse( pNew->_value._transition, spec, error ) == false )
-                spec = UIStyleTransitionSpec{}; // 시트 로드가 이미 걸렀다 — 여기서는 조용히 전환 없음
+                spec = UIStyleTransitionSpec{}; // 시트 로드가 이미 걸렀으므로 여기서는 조용히 전환 없음으로 처리한다
         }
 
         unique_ptr<UIStyleTransitionState>& state = widget._styleTransition;
@@ -397,7 +397,7 @@ namespace sw
             const UIStyleField field = static_cast<UIStyleField>( index );
             if ( ( changedFields & UIStyleFieldTable::makeBit( field ) ) == 0 )
                 continue;
-            // 바뀐 칸 — 옛 채널은 지금 값을 넘겨주고 빠진다.
+            // 바뀐 필드: 기존 채널은 지금 값을 넘겨주고 빠진다.
             float32 arrFrom[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
             bool    bHaveFrom = false;
             if ( state != nullptr )
@@ -415,7 +415,7 @@ namespace sw
             }
             const UIStyleTransitionSpec::Entry* pEntry = spec.findEntry( field );
             if ( pEntry == nullptr || pEntry->_duration <= 0.0f || pOld->has( field ) == false || pNew->has( field ) == false )
-                continue; // 적지 않은 칸 · 한쪽만 정한 칸 — 바로
+                continue; // 적지 않은 필드나 한쪽만 정한 필드는 바로 바꾼다
             if ( bHaveFrom == false )
                 Internal::readField( pOld->_value, field, arrFrom );
             UIStyleTransitionState::Channel channel{};
@@ -443,7 +443,7 @@ namespace sw
             state.reset();
             return;
         }
-        // 보이는 값 = 새 목표 + 도는 칸의 지금 값. 새로 든 위젯이면 트리의 전환 목록에 올린다.
+        // 보이는 값은 새 목표에 도는 필드의 지금 값을 반영한 것이다. 새로 들어온 위젯이면 트리의 전환 목록에 올린다.
         state->_shown = *pNew;
         for ( const UIStyleTransitionState::Channel& channel : state->_listChannel )
         {
@@ -495,7 +495,7 @@ namespace sw
             pWidget->invalidate( UIStylePass::makeDirtyReason( changedFields ) );
             if ( state._listChannel.empty() )
             {
-                // 끝 — 보이는 값이 목표와 같으니 위젯은 다시 계산된 스타일(나눠 쓰는 것)을 읽는다.
+                // 끝: 보이는 값이 목표와 같으므로 위젯은 다시 (공유하는) 계산된 스타일을 읽는다.
                 pWidget->_styleTransition.reset();
                 tree._listStyleTransition.erase( tree._listStyleTransition.begin() + static_cast<ptrdiff_t>( index ) );
                 continue;

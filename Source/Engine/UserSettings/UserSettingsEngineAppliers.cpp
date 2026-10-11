@@ -22,7 +22,7 @@ namespace sw
             static constexpr utf8 kToggle[]     = "toggle";
             static constexpr utf8 kWindowed[]   = "windowed";
             static constexpr utf8 kBorderless[] = "borderless";
-            /** @brief 해상도 한 변의 범위입니다 — 0 · 터무니없는 값은 데이터 오타다. */
+            /** @brief 해상도 한 변의 범위입니다. 0 이나 터무니없는 값은 데이터 오타로 봅니다. */
             static constexpr uint32 kMinResolution = 320;
             static constexpr uint32 kMaxResolution = 16384;
 
@@ -173,7 +173,7 @@ namespace sw
     bool UserSettingsEngineAppliers::applyToggleMode( const UserSettingApplyContext& context )
     {
         const hashed_string action( context._param );
-        // 액션은 게임이 입력 맵을 세운 뒤에야 있다. 없으면 건너뛰고, 게임이 맵을 세운 뒤의 다시 적용(`reapplyAll`)에서 닿는다.
+        // 액션은 게임이 입력 맵을 만든 뒤에야 있다. 없으면 건너뛰고, 게임이 맵을 만든 뒤의 다시 적용(`reapplyAll`)에서 적용된다.
         if ( _targets._pInputMap == nullptr || _targets._pInputMap->hasAction( action ) == false )
             return true;
         _targets._pInputMap->setToggleMode( action, StringUtil::equals( context._value, UserSettingsEngineAppliersInternal::kToggle, true ) );
@@ -188,7 +188,7 @@ namespace sw
         if ( _targets._pInputMap->hasAction( def._action ) == false )
             return true;
 
-        // 빈 값은 "입력 맵의 기본 바인딩" 이다 — 기본으로 되돌린 설정이 지난번 리바인딩을 그대로 남기면 안 된다.
+        // 빈 값은 "입력 맵의 기본 바인딩" 이다. 기본으로 되돌린 설정이 지난번 리바인딩을 그대로 남기면 안 된다.
         InputSlot  slot;
         const bool bHasSlot = context._value.empty() ? _targets._pInputMap->findDefaultRebindSlot( def._action, def._bindIndex, slot )
                                                      : InputSlotUtil::tryParse( context._value, slot );
@@ -207,7 +207,7 @@ namespace sw
         LocalizationManager& localization = *_targets._pLocalizationManager;
         if ( localization.hasLanguage( context._value ) == false )
         {
-            // 기동 적용은 게임이 언어 팩을 읽기 전이다 — 게임이 읽은 뒤의 다시 적용에서 닿는다.
+            // 기동 적용은 게임이 언어 팩을 읽기 전이다. 게임이 읽은 뒤의 다시 적용에서 적용된다.
             if ( context._bStartup == false )
                 SW_LOG_WARNING( "language '%#' is not loaded", context._value );
             return context._bStartup;

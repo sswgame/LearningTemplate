@@ -1,6 +1,6 @@
 /**
  * @file SliderWidget.h
- * @brief 값을 끌어 고르는 슬라이더와 진행 막대입니다(UMG Slider · ProgressBar, 유니티 Slider · ProgressBar, Godot HSlider · ProgressBar).
+ * @brief 값을 끌어 고르는 슬라이더와 진행 막대를 정의합니다(UMG 의 Slider 와 ProgressBar, 유니티의 Slider 와 ProgressBar, Godot 의 HSlider 와 ProgressBar 에 해당).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -15,9 +15,9 @@ namespace sw
 {
     /**
      * @class SliderWidget
-     * @brief 가로 슬라이더입니다. 포커스를 쥐면 `UI.NavigateLeft` · `UI.NavigateRight` 를 **먹어** 값을 한 칸(`_step`)씩 바꿉니다(포커스가 옆으로 가지 않는다 —
-     *        위 · 아래 탐색으로 떠난다). 트랙을 누르면 그 자리로 가고 포인터를 잡아 끌기입니다.
-     * @details 오른쪽에서 왼쪽 배치에서는 최소값이 오른쪽입니다(왼쪽 행동은 값을 올린다). 값이 바뀌면 `getOnValueChanged()` 를 부릅니다.
+     * @brief 가로 슬라이더입니다. 포커스를 가지면 `UI.NavigateLeft` 와 `UI.NavigateRight` 를 소비해 값을 한 단계(`_step`)씩 바꿉니다(포커스가 옆으로 가지 않으며,
+     *        위나 아래 탐색으로 떠납니다). 트랙을 누르면 그 위치로 이동하고 포인터를 잡아 드래그합니다.
+     * @details 오른쪽에서 왼쪽 배치에서는 최소값이 오른쪽에 온다(왼쪽 액션이 값을 올린다). 값이 바뀌면 `getOnValueChanged()` 를 부른다.
      */
     REFLECT( Category = "UI", DisplayName = "Slider", Tooltip = "Horizontal value slider" )
     class SW_API SliderWidget : public Widget
@@ -25,10 +25,10 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        /** @brief 바뀐 값 알림입니다. */
+        /** @brief 값이 바뀌었을 때의 알림입니다. */
         using ValueChangedDelegate = MulticastDelegate<void( float32 )>;
 
-        /** @brief 기본 원하는 크기(UI 단위)입니다 — 슬롯 덮어쓰기로 바꾼다. */
+        /** @brief 기본 원하는 크기(UI 단위)입니다. 슬롯 덮어쓰기로 바꿀 수 있습니다. */
         static constexpr float32 kDefaultLength    = 200.0f;
         static constexpr float32 kDefaultThickness = 24.0f;
 
@@ -36,14 +36,14 @@ namespace sw
         ~SliderWidget() override;
 
         const TypeInfo* getTypeInfo() const override;
-        /** @brief 바인딩이 쓴 칸에 맞춰 무효화합니다(값 · 범위는 값을 범위로 묶고 그리기만). */
+        /** @brief 바인딩이 쓴 필드에 맞춰 무효화합니다(값과 범위는 값을 범위로 제한하고 그리기만 합니다). */
         void onBoundPropertyChanged( const PropertyInfo& property ) override;
 
         bool supportsFocus() const override { return true; }
 
-        /** @brief 범위 · 한 칸을 정합니다(값은 범위로 묶는다). */
+        /** @brief 범위와 단계를 정합니다(값은 범위로 제한합니다). */
         void setRange( float32 minValue, float32 maxValue, float32 step );
-        /** @brief 값을 바꿉니다(범위로 묶는다). 바뀌면 알림 · kPaint. */
+        /** @brief 값을 바꿉니다(범위로 제한). 바뀌면 알림을 보내고 kPaint 로 무효화합니다. */
         void                  setValue( float32 value );
         float32               getValue() const { return _value; }
         ValueChangedDelegate& getOnValueChanged() { return _onValueChanged; }
@@ -56,9 +56,9 @@ namespace sw
         void   paint( CanvasPainter& painter, const UIPaintContext& context ) const override;
 
     private:
-        /** @brief 사용자 입력(끌기 · 좌우 행동)으로 값을 바꿉니다 — 바뀌면 양방향 바인딩에 알린다(`notifyValueEdited`). */
+        /** @brief 사용자 입력(드래그, 좌우 액션)으로 값을 바꿉니다. 바뀌면 양방향 바인딩에 알립니다(`notifyValueEdited`). */
         void setValueFromUser( float32 value );
-        /** @brief 화면 점을 값으로 바꿉니다(트랙 위 비율 — 오른쪽에서 왼쪽이면 뒤집는다). */
+        /** @brief 화면 점을 값으로 바꿉니다(트랙 위 비율이며, 오른쪽에서 왼쪽이면 뒤집습니다). */
         float32 computeValueAt( const float2& screenPoint ) const;
         /** @brief 지금 값의 트랙 위 비율(0..1)입니다. */
         float32 computeFraction() const;
@@ -73,7 +73,7 @@ namespace sw
         float32 _maxValue;
         PROPERTY( DisplayName = "Step", Tooltip = "Change per left/right action; 0 = 5% of the range", Min = 0.0 )
         float32 _step;
-        bool    _bDragging; ///< 트랙을 눌러 끄는 중이다(포인터를 잡았다)
+        bool    _bDragging; ///< 트랙을 눌러 드래그하는 중인지 나타냅니다(포인터를 잡은 상태).
     };
 } // namespace sw
 
@@ -93,16 +93,16 @@ namespace sw
         ~ProgressBarWidget() override;
 
         const TypeInfo* getTypeInfo() const override;
-        /** @brief 바인딩이 쓴 칸에 맞춰 무효화합니다(비율은 0..1 로 묶고, 비율 · 색은 그리기만). */
+        /** @brief 바인딩이 쓴 필드에 맞춰 무효화합니다(비율은 0..1 로 제한하고, 비율과 색은 그리기만 합니다). */
         void onBoundPropertyChanged( const PropertyInfo& property ) override;
 
-        /** @brief 비율(0..1로 묶는다)을 바꿉니다. kPaint. */
+        /** @brief 비율을 바꿉니다(0..1 로 제한). kPaint 로 무효화합니다. */
         void    setPercent( float32 percent );
         float32 getPercent() const { return _percent; }
-        /** @brief 채움 색을 바꿉니다. kPaint. */
+        /** @brief 채움 색을 바꿉니다. kPaint 로 무효화합니다. */
         void          setFillColor( const float4& color );
         const float4& getFillColor() const { return _fillColor; }
-        /** @brief 바탕 색(채우지 않은 쪽)을 바꿉니다. 알파 0 이면 바탕을 칠하지 않는다(막대를 겹칠 때). kPaint. */
+        /** @brief 바탕 색(채우지 않은 쪽)을 바꿉니다. 알파가 0 이면 바탕을 칠하지 않습니다(막대를 겹칠 때). kPaint 로 무효화합니다. */
         void          setBackgroundColor( const float4& color );
         const float4& getBackgroundColor() const { return _backgroundColor; }
 

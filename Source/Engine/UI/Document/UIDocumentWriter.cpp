@@ -37,8 +37,8 @@ namespace sw
             }
 
             /**
-             * @brief 지금 값 원소 @p current 중 기본값 원소 @p defaults 와 다른 것만 @p destination 에 옮겨 적습니다. 무엇이든 적었으면 true 입니다.
-             * @details 속성은 하나씩, 구조체 칸 원소는 재귀로 칸마다, 컨테이너 칸 원소는 다르면 통째로 적습니다(원소 순서가 뜻이다).
+             * @brief 지금 값 요소 @p current 중 기본값 요소 @p defaults 와 다른 것만 @p destination 에 옮겨 적습니다. 무엇이든 적었으면 true 입니다.
+             * @details 속성은 하나씩, 구조체 필드 요소는 재귀로 필드마다, 컨테이너 필드 요소는 다르면 통째로 적는다(요소 순서가 의미를 가지기 때문이다).
              */
             [[nodiscard]] static bool writeDifference( const XMLNode& current, const XMLNode& defaults, const XMLNode& destination, const TypeInfo& type )
             {
@@ -65,7 +65,7 @@ namespace sw
                         bWritten = true;
                         continue;
                     }
-                    // 구조체 칸 — 다른 칸이 있을 때만 원소를 남긴다.
+                    // 구조체 필드: 다른 필드가 있을 때만 요소를 남긴다.
                     XMLDocument   scratch;
                     const XMLNode scratchElement = scratch.appendRoot( child.getName() );
                     if ( writeDifference( child, defaultChild, scratchElement, *pNestedType ) )
@@ -94,7 +94,7 @@ namespace sw
                 target.setAttribute( string( rest ).c_str(), value.c_str() );
             }
 
-            /** @brief @p source 를 @p destinationParent 아래로 옮겨 적되, 속성 · 자식 · 글이 없는 원소(빈 컨테이너 `<_listEvent />`)는 뺍니다 — 손으로 쓴 문서와 같은 모양. */
+            /** @brief @p source 를 @p destinationParent 아래로 옮겨 적되, 속성, 자식, 텍스트가 없는 요소(빈 컨테이너 `<_listEvent />`)는 뺍니다. 손으로 쓴 문서와 같은 형태로 만들기 위해서입니다. */
             static void copyWithoutEmptyElements( const XMLNode& source, const XMLNode& destinationParent )
             {
                 const XMLNode destination = destinationParent.appendChild( source.getName() );
@@ -124,7 +124,7 @@ namespace sw
                 {
                     const unique_ptr<Widget> defaults  = UIDocumentLoader::createWidget( *pType );
                     const bool               bDefaults = defaults != nullptr && defaultDocument.parse( XMLSerializer::serialize( defaults.get(), *pType ) );
-                    // 다른 칸이 없어도 위젯 원소는 남는다(타입이 곧 내용이다) — 적었는지는 쓰지 않는다
+                    // 다른 필드가 없어도 위젯 요소는 남긴다(타입이 곧 내용이다). 적었는지는 반환하지 않는다
                     (void)writeDifference( currentDocument.getRoot(), bDefaults ? defaultDocument.getRoot() : XMLNode{}, element, *pType );
                 }
                 for ( const UIBindingDesc& binding : listBinding )
@@ -133,7 +133,7 @@ namespace sw
                         writeAtPath( element, binding._propertyPath, binding._expression );
                 }
 
-                // 조각의 내용은 조각 문서의 것이다 — 원소만 쓴다.
+                // 조각의 내용은 조각 문서의 것이므로 요소만 쓴다.
                 const PanelWidget* pPanel = castTo<const PanelWidget>( &widget );
                 if ( pPanel == nullptr || castTo<const UserWidget>( &widget ) != nullptr )
                     return;
@@ -156,7 +156,7 @@ namespace sw
         const XMLNode documentRoot = document.appendRoot( UIDocumentAsset::kRootElementName );
         documentRoot.appendAttribute( kSchemaVersionKey, UIDocumentAsset::kVersion );
 
-        // 화면 서술 — 기본값과 다른 칸이 있을 때만.
+        // 화면 서술은 기본값과 다른 필드가 있을 때만 쓴다.
         XMLDocument        currentDesc;
         XMLDocument        defaultDesc;
         const UIScreenDesc defaults{};
@@ -178,7 +178,7 @@ namespace sw
             }
         }
 
-        // 애니메이션 — 그릇(UIAnimationList)으로 직렬화한 `_listAnimation` 원소를 그대로 옮긴다.
+        // 애니메이션은 컨테이너(UIAnimationList)로 직렬화한 `_listAnimation` 요소를 그대로 옮긴다.
         if ( listAnimation.empty() == false )
         {
             UIAnimationList holder{};

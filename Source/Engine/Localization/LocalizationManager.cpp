@@ -26,16 +26,16 @@ namespace sw
             /** @brief 리소스 경로 또는 절대 경로의 글을 읽습니다(팩 안이면 팩에서). */
             [[nodiscard]] static bool readLocalizationFile( string_view path, string& outText )
             {
-                // 디스크에 있는 경로(테스트 · 도구의 절대 경로)는 그대로 읽는다 — 리소스 조회는 못 찾으면 오류를 남긴다.
+                // 디스크에 있는 경로(테스트와 도구의 절대 경로)는 그대로 읽는다. 리소스 조회는 못 찾으면 오류를 남긴다.
                 if ( FileUtil::isRegularFile( path ) )
                     return FileUtil::readTextFile( path, outText );
                 return ResourceIO::readTextResource( path, outText );
             }
 
-            /** @brief 그 파일이 있는지 — 없는 번역 표를 읽어 "File not found" 오류를 남기지 않게 먼저 묻습니다. */
+            /** @brief 그 파일이 있는지 확인합니다. 없는 번역 테이블을 읽어 "File not found" 오류를 남기지 않게 먼저 묻습니다. */
             static bool hasLocalizationFile( string_view path ) { return ResourceIO::hasResource( path ) || FileUtil::exists( path ); }
 
-            /** @brief 두 경로가 같은 파일인지 — 구분자 · 대소문자를 무시하고, 한쪽이 절대 경로면 꼬리를 맞춰 봅니다. */
+            /** @brief 두 경로가 같은 파일인지 확인합니다. 구분자와 대소문자를 무시하고, 한쪽이 절대 경로면 뒤쪽을 맞춰 봅니다. */
             static bool isSamePath( string_view lhs, string_view rhs )
             {
                 const string left  = FileUtil::normalizeSeparators( lhs );
@@ -204,7 +204,7 @@ namespace sw
             const string translationPath = LocalizationProject::makeTranslationPath( projectPath, culture );
             outProject._listFilePath.push_back( translationPath );
             if ( LocalizationManagerInternal::hasLocalizationFile( translationPath ) == false )
-                continue; // 아직 번역이 없는 문화권 — 수집 · 가져오기가 만든다
+                continue; // 아직 번역이 없는 문화권이다. 수집과 가져오기가 만든다
             if ( LocalizationManagerInternal::readLocalizationFile( translationPath, text ) == false )
             {
                 SW_LOG_ERROR( "Translation table '%#' cannot be read", translationPath.c_str() );
@@ -336,7 +336,7 @@ namespace sw
         if ( projectPath.empty() )
             return false;
 
-        // 다시 읽다 실패하면 예전 내용을 지킨다 — 저장 도중의 반쯤 쓴 파일이 화면의 글을 다 지우면 안 된다.
+        // 다시 읽다 실패하면 기존 내용을 유지한다. 저장 도중의 반쯤 쓴 파일이 화면의 텍스트를 모두 지우면 안 된다.
         MountedProject reloaded;
         reloaded._scope = scope;
         if ( readProject( projectPath, reloaded ) == false )
@@ -470,7 +470,7 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 실행 표 다시 채우기
+    // 실행 테이블 다시 채우기
     // ------------------------------------------------------------------------------
     StringTable& LocalizationManager::getOrCreateTableLocked( const string& code )
     {
@@ -482,7 +482,7 @@ namespace sw
 
     void LocalizationManager::rebuildTablesLocked()
     {
-        // 표 객체는 지우지 않고 비운다 — `getLanguageTable` 이 돌려준 포인터를 든 쪽이 있다.
+        // 테이블 객체는 지우지 않고 비운다. `getLanguageTable` 이 돌려준 포인터를 가진 쪽이 있다.
         for ( auto& [code, pTable] : _mapLanguageTable )
         {
             pTable->clear();
@@ -537,7 +537,7 @@ namespace sw
             }
         }
 
-        // 의사 문화권 — 프로젝트 원문을 변환한다(길이 · 하드코딩 찾기의 기준은 원문이다).
+        // 의사 문화권: 프로젝트 원문을 변환한다(길이와 하드코딩 찾기의 기준은 원문이다).
         vector<string> listCultureCode;
         _cultureTable.collectCultureCodes( listCultureCode );
         for ( const string& code : listCultureCode )
@@ -555,7 +555,7 @@ namespace sw
             }
         }
 
-        // 낱개 표가 마지막 — 프로젝트 위에 덮인다.
+        // 낱개 테이블이 마지막이다. 프로젝트 위에 덮어쓴다.
         for ( const auto& [code, loose] : _mapLooseTable )
         {
             StringTable& table = getOrCreateTableLocked( code );
@@ -711,11 +711,11 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 4) 조회 · 포맷
+    // 4) 조회와 포맷
     // ------------------------------------------------------------------------------
     const utf8* LocalizationManager::getString( const hashed_string& key, const utf8* pDefaultText ) const
     {
-        // intern 된 키는 해시를 이미 들고 있다. 다시 계산하지 않는다.
+        // intern 된 키는 해시를 이미 가지고 있다. 다시 계산하지 않는다.
         const utf8* pFound = findByHash( key.getHash() );
         if ( pFound != nullptr )
             return pFound;
@@ -809,7 +809,7 @@ namespace sw
         {
             std::shared_lock<std::shared_mutex> lock( _mutex );
             if ( _listProject.empty() && _mapLooseTable.empty() )
-                return; // 글을 하나도 올리지 않은 실행(로컬라이제이션 없는 게임 · 테스트)은 모든 키가 빠진다 — 알릴 것이 아니다
+                return; // 텍스트를 하나도 로드하지 않은 실행(로컬라이제이션 없는 게임, 테스트)은 모든 키가 빠지므로 알릴 필요가 없다
             language = _currentLanguage;
         }
         bool bFirst{ false };

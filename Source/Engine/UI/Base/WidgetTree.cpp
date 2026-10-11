@@ -94,21 +94,21 @@ namespace sw
     {
         const uint32 previous = widget._dirtyFlags;
         widget._dirtyFlags |= dirtyReason;
-        _bPaintOutputStale = SW_TRUE; // 무엇이든 바뀌면 다음 그리기는 트리를 걷는다(자식을 떼기만 한 것도 — 레이아웃만 무효화한다)
+        _bPaintOutputStale = SW_TRUE; // 무엇이든 바뀌면 다음 그리기는 트리를 순회한다(자식을 떼기만 한 경우도 포함하며, 레이아웃만 무효화한다)
         if ( ( dirtyReason & WidgetDirty::kVisibility ) != 0 )
-            widget._dirtyFlags |= WidgetDirty::kLayout | WidgetDirty::kPaint; // Collapsed 를 오가면 자리가 바뀐다 — 보수적으로 레이아웃
+            widget._dirtyFlags |= WidgetDirty::kLayout | WidgetDirty::kPaint; // Collapsed 를 오가면 위치가 바뀌므로 보수적으로 레이아웃도 무효화한다
         const uint32 kPaintLike = WidgetDirty::kPaint | WidgetDirty::kTransform;
         if ( ( widget._dirtyFlags & kPaintLike ) != 0 && ( previous & kPaintLike ) == 0 )
             _listPaintDirty.push_back( widget._id );
         if ( ( dirtyReason & WidgetDirty::kStyle ) != 0 && ( previous & WidgetDirty::kStyle ) == 0 )
             _listStyleDirty.push_back( widget._id );
-        // 배치만: 크기는 그대로라 위로 번지지 않는다 — 이 위젯을 지난 자리에 다시 놓을 뿌리로 적는다(스크롤 오프셋).
+        // 배치만: 크기는 그대로라 위로 번지지 않는다. 이 위젯을 지난 위치에 다시 배치할 루트로 적는다(스크롤 오프셋).
         if ( ( dirtyReason & WidgetDirty::kArrange ) != 0 && ( previous & WidgetDirty::kArrange ) == 0 )
             addLayoutRoot( widget );
         if ( ( widget._dirtyFlags & WidgetDirty::kLayout ) == 0 || ( previous & WidgetDirty::kLayout ) != 0 )
             return;
-        // 레이아웃: 부모 쪽으로 kChildLayout 을 올린다. 부모의 크기가 자식에 기대지 않으면(레이아웃 경계) 거기서 멈추고
-        // 그 부모를 "다시 측정할 뿌리" 로 적는다. 이미 kChildLayout 인 조상을 만나면 그 위는 이미 표시됐다.
+        // 레이아웃: 부모 쪽으로 kChildLayout 을 올린다. 부모의 크기가 자식에 의존하지 않으면(레이아웃 경계) 거기서 멈추고
+        // 그 부모를 "다시 측정할 루트" 로 적는다. 이미 kChildLayout 인 조상을 만나면 그 위는 이미 표시된 것이다.
         Widget* pCurrent = &widget;
         while ( pCurrent->_pParent != nullptr )
         {

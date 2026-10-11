@@ -40,8 +40,8 @@ namespace sw
 
     float2 BoxPanel::computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const
     {
-        // 1) Auto 자식은 주축 무한으로 측정한다(원하는 만큼). 2) 남은 주축을 Fill 자식에게 비율대로 주고 그 크기로 측정한다 —
-        //    줄 바꿈 글이 Fill 칸에 들어가면 그 칸 너비로 높이를 정한다(한 프레임 늦지 않다).
+        // 1) Auto 자식은 주축 무한으로 측정한다(원하는 만큼). 2) 남은 주축을 Fill 자식에게 비율대로 주고 그 크기로 측정한다.
+        //    줄 바꿈 텍스트가 Fill 슬롯에 들어가면 그 슬롯 너비로 높이를 정한다(한 프레임 늦지 않는다).
         float32       mainUsed       = 0.0f;
         float32       crossMax       = 0.0f;
         float32       fillWeight     = 0.0f;

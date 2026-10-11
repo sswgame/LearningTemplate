@@ -15,7 +15,7 @@ namespace sw
     {
         struct ScrollPanelInternal
         {
-            /** @brief 한 축에서 [begin, end) 가 [margin, view − margin] 에 들도록 오프셋에 더할 길이입니다(0 이면 이미 보인다). */
+            /** @brief 한 축에서 [begin, end) 가 [margin, view − margin] 에 들어오도록 오프셋에 더할 길이입니다(0 이면 이미 보입니다). */
             static float32 computeRevealDelta( float32 begin, float32 end, float32 viewLength, float32 margin )
             {
                 if ( begin < margin )
@@ -25,7 +25,7 @@ namespace sw
                 return 0.0f;
             }
 
-            /** @brief 점이 로컬 사각형 안이면 true 입니다(왼쪽 · 위 변 포함). */
+            /** @brief 점이 로컬 사각형 안이면 true 입니다(왼쪽과 위쪽 변은 포함). */
             static bool isInside( const float2& point, const float2& position, const float2& size )
             {
                 return position._x <= point._x && point._x < position._x + size._x && position._y <= point._y && point._y < position._y + size._y;
@@ -78,7 +78,7 @@ namespace sw
         if ( clamped == _scrollOffset )
             return;
         _scrollOffset = clamped;
-        invalidate( WidgetDirty::kArrange | WidgetDirty::kPaint ); // 막대 엄지 자리
+        invalidate( WidgetDirty::kArrange | WidgetDirty::kPaint ); // 막대 엄지 위치가 바뀐다
     }
 
     void ScrollPanel::scrollBy( const float2& delta )
@@ -104,7 +104,7 @@ namespace sw
         }
         if ( bDescendant == false )
             return false;
-        // 지난 배치의 화면 사각형을 이 패널 기준으로 — 지금 오프셋은 이미 들어 있다.
+        // 지난 배치의 화면 사각형을 이 패널 기준으로 바꾼다. 지금 오프셋은 이미 반영되어 있다.
         const WidgetGeometry& view   = getGeometry();
         const WidgetGeometry& target = widget.getGeometry();
         const float32         left   = target._position._x - view._position._x;
@@ -159,7 +159,7 @@ namespace sw
         {
             case UIPointerEventKind::Wheel:
             {
-                // 버블 — 안쪽 위젯(콤보 목록 · 안쪽 스크롤)이 먼저. 휠 위(+)는 내용을 내린다(오프셋이 준다). 세로가 없으면 가로로.
+                // 버블: 안쪽 위젯(콤보 목록, 안쪽 스크롤)이 먼저 처리한다. 휠 위(+)는 내용을 내린다(오프셋이 줄어든다). 세로가 없으면 가로로 처리한다.
                 if ( phase != UIRoutePhase::Bubble )
                     return UIReply::makeUnhandled();
                 const float32 distance = -event._wheel * _wheelStep;
@@ -168,7 +168,7 @@ namespace sw
             }
             case UIPointerEventKind::Down:
             {
-                // 터널 — 막대는 내용 위에 겹쳐 그리므로 막대 위 누름은 내용(버튼)보다 먼저 받는다.
+                // 터널: 막대는 내용 위에 겹쳐 그리므로 막대 위 누름은 내용(버튼)보다 먼저 받는다.
                 if ( phase != UIRoutePhase::Tunnel || event._button != MouseButton::Left || _bDraggingBar )
                     return UIReply::makeUnhandled();
                 return beginScrollBarDrag( local );
@@ -194,7 +194,7 @@ namespace sw
                 if ( _bDraggingBar == false || event._button != MouseButton::Left )
                     return UIReply::makeUnhandled();
                 _bDraggingBar = false;
-                invalidate( WidgetDirty::kPaint ); // 막대 누름 상태
+                invalidate( WidgetDirty::kPaint ); // 막대 누름 상태가 바뀐다
                 return UIReply::makeHandled().releasePointer();
             }
         }
@@ -203,7 +203,7 @@ namespace sw
 
     UIReply ScrollPanel::onActionEvent( const UIActionEvent& event, UIRoutePhase phase )
     {
-        // 오른쪽 스틱(위 · 오른쪽이 +) — 버블이라 포커스 위젯이 먼저 쓸 수 있다(값 바꾸는 슬라이더 등). 위로 기울이면 내용이 내려온다.
+        // 오른쪽 스틱(위와 오른쪽이 +): 버블이라 포커스 위젯(값을 바꾸는 슬라이더 등)이 먼저 쓸 수 있다. 위로 기울이면 내용이 내려온다.
         if ( phase != UIRoutePhase::Bubble || event._action != hashed_string( UIActionName::kScroll ) )
             return UIReply::makeUnhandled();
         const float32 distance = _stickSpeed * event._deltaSeconds;
@@ -246,7 +246,7 @@ namespace sw
             const bool bVertical = axis == UIOrientation::Vertical;
             if ( ScrollPanelInternal::isInside( local, bar._thumbPosition, bar._thumbSize ) == false )
             {
-                // 트랙 — 누른 쪽으로 한 화면(Godot · 브라우저와 같다).
+                // 트랙: 누른 쪽으로 한 화면만큼 옮긴다(Godot 와 브라우저가 같다).
                 const float32 thumbStart = bVertical ? bar._thumbPosition._y : bar._thumbPosition._x;
                 const float32 point      = bVertical ? local._y : local._x;
                 const float32 page       = ( bVertical ? _viewportSize._y : _viewportSize._x ) * ( point < thumbStart ? -1.0f : 1.0f );
@@ -282,7 +282,7 @@ namespace sw
                                        _bScrollVertical ? kUIUnbounded : UILayoutPass::computeRemaining( availableSize._y, padY ) };
         const float2 desired = UILayoutPass::measure( content, context, contentAvailable );
         float2       result{ desired._x + padX, desired._y + padY };
-        // 스크롤 축은 가용 크기를 넘겨 원하지 않는다 — 넘치는 만큼이 스크롤 거리다.
+        // 스크롤 축은 가용 크기를 넘겨 원하지 않는다. 넘치는 만큼이 스크롤 거리다.
         if ( _bScrollHorizontal && UILayoutPass::isUnbounded( availableSize._x ) == false )
             result._x = MathUtil::min( result._x, availableSize._x );
         if ( _bScrollVertical && UILayoutPass::isUnbounded( availableSize._y ) == false )
@@ -307,9 +307,9 @@ namespace sw
         const float2  desired = content.getDesiredSize();
         _contentSize          = float2{ _bScrollHorizontal ? MathUtil::max( desired._x + padding._x + padding._z, size._x ) : size._x,
                                _bScrollVertical ? MathUtil::max( desired._y + padding._y + padding._w, size._y ) : size._y };
-        _scrollOffset = clampOffset( _scrollOffset ); // 내용이 줄었으면 끝에 붙는다(무효화 없이 — 지금 놓는 중이다)
+        _scrollOffset = clampOffset( _scrollOffset ); // 내용이 줄었으면 끝에 붙인다(지금 배치하는 중이라 무효화는 하지 않는다)
         arrangeChild( context, content, float2{ -_scrollOffset._x, -_scrollOffset._y }, _contentSize );
-        // 막대 엄지의 길이 · 자리는 내용 · 보이는 크기 · 오프셋에서 나온다 — 그리기만 다시(레이아웃 비트는 건드리지 않는다).
+        // 막대 엄지의 길이와 위치는 내용 크기, 보이는 크기, 오프셋에서 나온다. 그리기만 다시 하며 레이아웃 비트는 건드리지 않는다.
         if ( previousContent != _contentSize || previousViewport != _viewportSize || previousOffset != _scrollOffset )
             invalidate( WidgetDirty::kPaint );
     }

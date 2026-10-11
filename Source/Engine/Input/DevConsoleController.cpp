@@ -95,7 +95,7 @@ namespace sw
 
     void DevConsoleController::update( InputMap& shellMap )
     {
-        // 이번 프레임 글자는 여기서 붙이거나 버린다 — 남겨 두면 다음 프레임에 늦게 붙는다.
+        // 이번 프레임 글자는 여기서 붙이거나 버린다. 남겨 두면 다음 프레임에 늦게 붙는다.
         const string text = std::move( _pendingText );
         _pendingText.clear();
 
@@ -105,7 +105,7 @@ namespace sw
             const bool bClose  = isOpen() && DevConsoleControllerInternal::wasTriggered( shellMap, InputMapDefaults::kDevConsoleCloseAction );
             if ( bToggle || bClose )
             {
-                // 이 프레임의 글자는 여닫는 키가 낸 것이다(` · ~) — 입력 줄에 넣지 않는다.
+                // 이 프레임의 글자는 콘솔을 여닫는 키가 낸 것이다(` 와 ~). 입력 줄에 넣지 않는다.
                 setOpen( bToggle ? isOpen() == false : false );
             }
             else if ( isOpen() )
@@ -125,13 +125,13 @@ namespace sw
                     _inputLine.clear();
                 }
             }
-            // 편집 액션은 열려 있는 동안만 켠다 — 닫혀 있을 때 Enter · Esc · 화살표는 게임의 것이다.
+            // 편집 액션은 열려 있는 동안만 켠다. 닫혀 있을 때 Enter, Esc, 화살표는 게임이 쓴다.
             shellMap.setLayerEnabled( hashed_string( InputMapDefaults::kDevConsoleLayerName ), isOpen() );
         }
 
         if ( _bOpen == SW_FALSE || _pWindow == nullptr )
             return;
-        // 창 위치는 게임 창을 따라가야 해서(창을 옮기거나 크기를 바꾼다) 열려 있는 동안 프레임마다 넘긴다.
+        // 창 위치는 게임 창을 따라가야 하므로(창을 옮기거나 크기를 바꿀 수 있다) 열려 있는 동안 프레임마다 넘긴다.
         vector<string> listLine;
         vector<uint8>  listErrorFlag;
         collectVisibleLines( listLine, listErrorFlag );
@@ -160,7 +160,7 @@ namespace sw
         while ( offset < text.size() )
         {
             const uint32 codepoint = StringUtil::decodeUtf8( text, offset );
-            // Enter · Tab · Backspace 는 액션으로 받는다. 그 키가 함께 내는 제어 문자(\r · \t · DEL)는 글자가 아니다.
+            // Enter, Tab, Backspace 는 액션으로 받는다. 그 키가 함께 내는 제어 문자(\r, \t, DEL)는 글자가 아니다.
             if ( codepoint < 0x20 || codepoint == 0x7F )
                 continue;
             if ( _inputLine.size() >= kMaxInputLength )
