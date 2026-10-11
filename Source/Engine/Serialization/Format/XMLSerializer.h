@@ -1,6 +1,6 @@
 /**
  * @file XMLSerializer.h
- * @brief XML 백엔드 인터페이스와 TypeInfo 기반 XML 직렬화 · 역직렬화입니다.
+ * @brief XML 백엔드 인터페이스와 TypeInfo 기반 XML 직렬화, 역직렬화입니다.
  * @note 리플렉션이 아닌 콘텐츠(테이블, 타일맵, 툴)는 Serialization/XML/XMLDocument 를 씁니다.
  */
 #pragma once
@@ -12,7 +12,7 @@ namespace sw
 {
     struct TypeInfo;
 
-    /** @brief `XMLDocumentBackend::getDeserializationRoot` · `IXMLBackend::getCurrentNode` 가 반환하는 노드입니다. */
+    /** @brief `XMLDocumentBackend::getDeserializationRoot` 와 `IXMLBackend::getCurrentNode` 가 반환하는 노드입니다. */
     class XMLNode;
 
     /** @brief 자식 요소를 방문하는 콜백입니다. 불리는 동안 그 자식이 백엔드의 현재 노드가 됩니다. */
@@ -20,7 +20,7 @@ namespace sw
 
     /**
      * @class IXMLBackend
-     * @brief XML 직렬화 · 역직렬화 백엔드 인터페이스입니다.
+     * @brief XML 직렬화와 역직렬화를 맡는 백엔드 인터페이스입니다.
      */
     class SW_API IXMLBackend
     {
@@ -33,7 +33,7 @@ namespace sw
         IXMLBackend& operator=( IXMLBackend&& ) noexcept = default;
 
         // ------------------------------------------------------------------------------
-        // 1) 쓰기: 루트, 값/속성, 자식 요소
+        // 1) 쓰기: 루트, 값과 속성, 자식 요소
         // ------------------------------------------------------------------------------
         /** @brief XML 직렬화를 시작합니다. */
         virtual void initializeXMLSerialization( const utf8* pRootTagName ) = 0;
@@ -49,7 +49,7 @@ namespace sw
         virtual string endSerialize() = 0;
 
         // ------------------------------------------------------------------------------
-        // 2) 읽기: 루트, 값/속성, 자식 요소
+        // 2) 읽기: 루트, 값과 속성, 자식 요소
         // ------------------------------------------------------------------------------
         /**
          * @brief XML 역직렬화를 시작합니다.
@@ -85,13 +85,13 @@ namespace sw
             (void)outText;
             return false;
         }
-        /** @brief 현재 노드(그 서브트리)를 XML 원문으로 씁니다. 지원하지 않으면 false 입니다(모르는 원소를 맡길 때). */
+        /** @brief 현재 노드(그 서브트리)를 XML 원문 문자열로 가져옵니다. 지원하지 않으면 false 입니다. 알 수 없는 원소를 그대로 보관할 때 씁니다. */
         [[nodiscard]] virtual bool readCurrentNodeXML( string& outXML )
         {
             (void)outXML;
             return false;
         }
-        /** @brief XML 원문 원소 하나를 현재 부모의 자식으로 그대로 붙입니다(맡아 둔 원소를 다시 쓸 때). */
+        /** @brief XML 원문 원소 하나를 현재 부모의 자식으로 그대로 붙입니다. 보관해 둔 원소를 다시 쓸 때 씁니다. */
         virtual void writeRawElement( string_view xml ) { (void)xml; }
         /** @brief 현재 노드의 자식 요소를 이름과 상관없이 순서대로 방문합니다. */
         virtual bool iterateChildren( const XMLChildVisitDelegate& callback )
@@ -100,13 +100,13 @@ namespace sw
             return false;
         }
         /**
-         * @brief 읽는 중인 현재 노드입니다. 노드를 내줄 수 없는 백엔드는 무효 노드를 돌려줍니다.
-         * @details 안쪽 원소의 모르는 속성 · 자식을 orphan 으로 남길 때 씁니다. 무효 노드면 그 검사를 건너뜁니다.
+         * @brief 읽는 중인 현재 노드입니다. 노드를 내줄 수 없는 백엔드는 무효 노드를 반환합니다.
+         * @details 안쪽 원소의 모르는 속성과 자식을 orphan 으로 남길 때 쓴다. 무효 노드면 그 검사를 건너뛴다.
          */
         [[nodiscard]] virtual XMLNode getCurrentNode() const;
 
         // ------------------------------------------------------------------------------
-        // 3) 키 정책: 태그/속성 이름에만 적용하고 값에는 영향이 없다
+        // 3) 키 정책: 태그와 속성 이름에만 적용하며 값에는 영향이 없다
         // ------------------------------------------------------------------------------
         /** @brief 태그/속성 이름을 찾을 때 대소문자를 무시하는지 반환합니다(기본 true). */
         bool ignoresCaseKeys() const { return _bIgnoreCaseKeys == SW_TRUE; }
@@ -178,9 +178,9 @@ namespace sw
 
         /**
          * @brief 역직렬화 중인 문서의 **루트 노드**입니다. 초기화 전이면 무효 노드입니다.
-         * @details `XMLSerializer::deserializeSoft` 가 이것으로 버전 속성과 orphan 자식을 훑습니다 — 같은 문자열을 두 번
-         *          파싱하지 않게(형제 `JSONSerializer::deserializeSoft` 도 문서 하나로 셋을 다 합니다).
-         * @warning 반환된 노드는 **이 백엔드가 살아 있는 동안만** 유효합니다(문서를 이쪽이 쥡니다).
+         * @details `XMLSerializer::deserializeSoft` 가 이 노드로 버전 속성과 orphan 자식을 훑는다. 같은 문자열을 두 번
+         *          파싱하지 않게 하려는 것이다(형제 `JSONSerializer::deserializeSoft` 도 문서 하나로 세 가지를 모두 처리한다).
+         * @warning 반환된 노드는 **이 백엔드가 살아 있는 동안만** 유효합니다(문서를 이 백엔드가 소유합니다).
          */
         XMLNode getDeserializationRoot() const;
 
@@ -200,7 +200,7 @@ namespace sw
     {
     public:
         // ------------------------------------------------------------------------------
-        // 4) 백엔드 지정 / 기본 XMLDocumentBackend
+        // 4) 백엔드를 지정하는 경우와 기본 XMLDocumentBackend 를 쓰는 경우
         // ------------------------------------------------------------------------------
         /** @brief 지정한 백엔드로 객체를 XML 로 직렬화합니다. */
         static string serialize( const void* pInstance, const TypeInfo& typeInfo,
@@ -221,12 +221,12 @@ namespace sw
         /** @brief XML 을 절대 경로에 씁니다. */
         [[nodiscard]] static bool saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo,
                                             const SerializeContext& context = SerializeContext::getDefault() );
-        /** @brief 절대 · 리소스 경로에서 XML 을 읽어 역직렬화합니다. */
+        /** @brief 절대 경로나 리소스 경로에서 XML 을 읽어 역직렬화합니다. */
         [[nodiscard]] static bool loadFile( string_view path, void* pInstance, const TypeInfo& typeInfo,
                                             const SerializeContext& context = SerializeContext::getDefault() );
 
         // ------------------------------------------------------------------------------
-        // 5) Soft · 버전: orphan 수집, 루트 _schemaVersion
+        // 5) Soft 역직렬화와 버전: orphan 수집, 루트 _schemaVersion
         // ------------------------------------------------------------------------------
         /** @brief Soft 역직렬화입니다. 변환하지 못한 필드를 orphan 으로 모읍니다. */
         [[nodiscard]] static bool deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
