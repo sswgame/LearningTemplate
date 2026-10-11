@@ -25,8 +25,7 @@
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Audio/IAudioSystem.h"
 #include "Engine/Audio/LipSyncImport.h"
-#include "Engine/Automation/AutomationRunner.h"
-#include "Engine/Automation/AutomationScenarioChain.h"
+#include "Engine/Automation/AutomationSession.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Compression/EngineCompressionCodecUtil.h"
 #include "Engine/Config/ConfigManager.h"
@@ -929,11 +928,7 @@ namespace sw
         , _packetScratch{ nullptr }
         , _commandStack{ nullptr }
         , _gpuUploadQueue{ nullptr }
-        , _pAutomationRunner{ nullptr }
-        , _pScenarioChain{ nullptr }
-        , _scenarioReportPath{}
-        , _scenarioWorkingFolder{}
-        , _scenarioScreenshotBaseline{ 0 }
+        , _pAutomationSession{ nullptr }
         , _renderViewScheduler{ nullptr }
         , _renderViewClock{ 0.0 }
         , _listAnimationLODView{}
@@ -1053,12 +1048,13 @@ namespace sw
         string scenarioPath;
         if ( _owned._pCommandLineManager->getArgument( CommandLineArgument::SCENARIO, scenarioPath ) && scenarioPath.empty() == false )
         {
-            (void)_owned._pCommandLineManager->getArgument( CommandLineArgument::SCENARIO_REPORT, _scenarioReportPath );
-            _pScenarioChain        = make_unique<AutomationScenarioChain>();
-            _scenarioWorkingFolder = FileUtil::getCurrentPath();
-            _pScenarioChain->begin( AutomationScenarioChain::splitList( scenarioPath ), _owned._pCommandLineManager->isArgumentProvided( CommandLineArgument::SCENARIO_KEEP_GOING ) );
-            if ( _pScenarioChain->isActive() )
-                startScenarioStage();
+            string reportPath;
+            (void)_owned._pCommandLineManager->getArgument( CommandLineArgument::SCENARIO_REPORT, reportPath );
+            _pAutomationSession = make_unique<AutomationSession>();
+            if ( _pAutomationSession->begin( scenarioPath, reportPath, _owned._pCommandLineManager->isArgumentProvided( CommandLineArgument::SCENARIO_KEEP_GOING ),
+                                             _renderThread != nullptr ? _renderThread->getCompletedScenarioScreenshotCount() : 0u ) &&
+                 _renderThread != nullptr )
+                _renderThread->setScenarioCaptureEnabled( true );
         }
 
         _profileSession.begin();
@@ -1071,60 +1067,6 @@ namespace sw
         return true;
     }
 
-    void EngineLoop::startScenarioStage()
-    {
-        // 앞 단계가 프로세스의 작업 폴더를 옮겼으면(파일 대화상자 같은 것) 상대 경로를 쓰는 다음 단계가 엉뚱한 폴더에 쓴다 — 알리고 처음 폴더로 되돌린다.
-        if ( _pScenarioChain->getStageIndex() > 0 && _scenarioWorkingFolder.empty() == false )
-        {
-            const string currentFolder = FileUtil::getCurrentPath();
-            if ( currentFolder != _scenarioWorkingFolder )
-            {
-                SW_LOG_WARNING( "[Scenario] the working folder changed to '%#' during stage %# - restoring '%#'", currentFolder.c_str(),
-                                static_cast<uint32>( _pScenarioChain->getStageIndex() ), _scenarioWorkingFolder.c_str() );
-                (void)FileUtil::setCurrentPath( _scenarioWorkingFolder );
-            }
-        }
-        _pAutomationRunner = make_unique<AutomationRunner>();
-        _pAutomationRunner->startFromPath( _pScenarioChain->getCurrentPath(),
-                                           AutomationScenarioChain::makeStageReportPath( _scenarioReportPath, _pScenarioChain->getStageIndex(), _pScenarioChain->getStageCount() ) );
-        if ( _renderThread != nullptr )
-            _renderThread->setScenarioCaptureEnabled( true );
-        // 렌더 스레드의 완료 수는 프로세스 전체로 누적된다 — 이 단계의 실행기는 자기가 요청한 스크린샷만 기다리므로 시작 때의 값을 빼서 넘긴다.
-        _scenarioScreenshotBaseline = _renderThread != nullptr ? _renderThread->getCompletedScenarioScreenshotCount() : 0u;
-        if ( _pAutomationRunner->isActive() )
-        {
-            const string fixedDelta = to_string( _pAutomationRunner->getScenario().getFixedDelta() );
-            if ( engine::getGlobalVariableManager().setValueFromString( "gv_fixedFrameDelta", fixedDelta ) == false )
-                SW_LOG_WARNING( "[Scenario] this host has no gv_fixedFrameDelta - the scenario runs on the wall clock" );
-        }
-    }
-
-    void EngineLoop::onScenarioStageEnded( int32 resultCode )
-    {
-        const AutomationResult result     = static_cast<AutomationResult>( resultCode );
-        const size_t           stageIndex = _pScenarioChain->getStageIndex();
-        const string           stageName  = _pAutomationRunner->getScenario().getName().empty() ? _pScenarioChain->getCurrentPath() : _pAutomationRunner->getScenario().getName();
-        const bool             bNextStage = _pScenarioChain->onStageEnded( result );
-        if ( _pScenarioChain->isChain() )
-        {
-            const string line = _pScenarioChain->describeStageEnd( stageIndex, result, stageName );
-            if ( result == AutomationResult::Passed )
-                SW_LOG_INFO( "[Scenario] %#", line.c_str() );
-            else
-                SW_LOG_ERROR( "[Scenario] %#", line.c_str() );
-        }
-        if ( bNextStage )
-        {
-            startScenarioStage();
-            return;
-        }
-        if ( _pScenarioChain->isChain() )
-            SW_LOG_INFO( "[Scenario] chain %# (%# stage(s), %# failed, %# skipped, %# not run)", AutomationRunner::getResultName( _pScenarioChain->getFinalResult() ),
-                         static_cast<uint32>( _pScenarioChain->getStageCount() ), static_cast<uint32>( _pScenarioChain->getFailedStageCount() ),
-                         static_cast<uint32>( _pScenarioChain->getSkippedResultCount() ), static_cast<uint32>( _pScenarioChain->getSkippedStageCount() ) );
-        requestQuit( static_cast<int32>( _pScenarioChain->getFinalResult() ) );
-    }
-
     void EngineLoop::shutdown()
     {
 #if SW_PROFILER_TRACE_ENABLED
@@ -1133,8 +1075,7 @@ namespace sw
             ProfilerTraceExport::finishExitCapture( engine::getFrameProfiler(), _hostRole == EngineHostRole::DedicatedServer ? "Server" : "App" );
 #endif
         // 시나리오 실행기는 로그 리스너 · 입력을 빌려 쓴다 — 서비스보다 먼저 내린다.
-        _pAutomationRunner.reset();
-        _pScenarioChain.reset();
+        _pAutomationSession.reset();
         AssetLoadProfiler::get().reportIfRequested( "session" );
         // 단계 본문을 초기화한 것만 역순으로 내린다: 씬의 디바이스 → 렌더 스레드 → 렌더러 → RHI → 씬 → 입력 · 오디오 → 모듈 이미지 → 태스크 → 셰이더 캐시.
         _startup.shutdownAll();
@@ -1227,25 +1168,17 @@ namespace sw
 
     void EngineLoop::onWindowClosed()
     {
-        if ( _pAutomationRunner == nullptr )
+        if ( _pAutomationSession == nullptr )
             return;
-        AutomationResult result = _pAutomationRunner->onWindowClosed( _owned._pInputManager.get() );
-        // 창이 닫히면 루프가 끝난다 — 돌릴 단계가 남아 있으면 체인은 끝까지 가지 못했다(`CloseWindow` 는 마지막 단계에만 둔다).
-        if ( _pScenarioChain != nullptr && _pScenarioChain->onStageEnded( result ) )
-        {
-            SW_LOG_ERROR( "[Scenario] the window closed with %# stage(s) still to run (put <CloseWindow> in the last scenario of a chain)",
-                          static_cast<uint32>( _pScenarioChain->getStageCount() - _pScenarioChain->getStageIndex() ) );
-            result = AutomationResult::Failed;
-        }
+        _exitCode       = _pAutomationSession->onWindowClosed( _owned._pInputManager.get() );
         _bQuitRequested = true;
-        _exitCode       = static_cast<int32>( result );
     }
 
     void EngineLoop::beginFrame( float32 deltaSeconds )
     {
         // 시나리오의 시작 조건 · 가상 입력 붙이기 · 행동 층 단계는 이 프레임의 입력 재생 전이다.
-        if ( _pAutomationRunner != nullptr && _owned._pInputManager != nullptr )
-            _pAutomationRunner->onFrameBegin( *_owned._pInputManager );
+        if ( _pAutomationSession != nullptr && _owned._pInputManager != nullptr )
+            _pAutomationSession->onFrameBegin( *_owned._pInputManager );
         if ( _owned._pInputManager != nullptr )
             _owned._pInputManager->beginFrame( deltaSeconds );
         // UI 는 게임 틱보다 먼저 입력을 받는다 — UI 가 먹은 행동 · 마우스 버튼은 이번 프레임 폰의 의도에 들지 않는다(플레이어 조종자가 본다).
@@ -1423,8 +1356,8 @@ namespace sw
             packet.resetForFrame();
             packet._bValid = 1;
             // 시나리오 `<Screenshot>` 은 다음에 그리는 이 패킷에 싣는다.
-            if ( _pAutomationRunner != nullptr )
-                (void)_pAutomationRunner->takePendingScreenshotPath( packet._screenshotPath ); // 없으면 빈 채로 둔다
+            if ( _pAutomationSession != nullptr )
+                (void)_pAutomationSession->takePendingScreenshotPath( packet._screenshotPath ); // 없으면 빈 채로 둔다
 
             packet._outputRenderTarget = mainOutput._renderTarget;
             packet._viewportWidth      = vpWidth;
@@ -1583,14 +1516,11 @@ namespace sw
         _memoryBudgetMonitor.onFrameEnd();
 
         // 시나리오의 단언 · 환경 단계는 씬 틱 · 렌더 제출 뒤, 입력 프레임을 닫기 전이다(그 프레임의 눌림 엣지가 아직 보인다).
-        // `isActive` 가 아니라 `hasEnded` — 시작 프레임에서 진 시나리오(읽기 오류 · 시작 시한)도 여기서 끝맺고 그 코드로 끝난다.
-        if ( _pAutomationRunner != nullptr && _pAutomationRunner->hasEnded() == false && _owned._pInputManager != nullptr )
+        if ( _pAutomationSession != nullptr && _owned._pInputManager != nullptr )
         {
-            const uint32 completedCount = _renderThread != nullptr ? _renderThread->getCompletedScenarioScreenshotCount() : 0u;
-            _pAutomationRunner->setCompletedScreenshotCount( completedCount >= _scenarioScreenshotBaseline ? completedCount - _scenarioScreenshotBaseline : 0u );
-            const AutomationResult result = _pAutomationRunner->onFrameEnd( *_owned._pInputManager );
-            if ( result != AutomationResult::Running )
-                onScenarioStageEnded( static_cast<int32>( result ) );
+            const int32 sessionExitCode = _pAutomationSession->onFrameEnd( *_owned._pInputManager, _renderThread != nullptr ? _renderThread->getCompletedScenarioScreenshotCount() : 0u );
+            if ( sessionExitCode != AutomationSession::kRunning )
+                requestQuit( sessionExitCode );
         }
         if ( _owned._pInputManager != nullptr )
             _owned._pInputManager->endFrame();

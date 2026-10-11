@@ -29,8 +29,7 @@ namespace sw
 
     class AssetManager;
     class AssetStreamingQueue;
-    class AutomationRunner;
-    class AutomationScenarioChain;
+    class AutomationSession;
     class CameraComponent;
     class CommandLineManager;
     class CommandStack;
@@ -163,8 +162,6 @@ namespace sw
          *        (`ExpectExitWithin` 시한 안이면 통과, 아니면 실패 — 시나리오 결과가 프로파일 세션의 종료보다 이긴다).
          */
         void onWindowClosed();
-        /** @brief `-scenario` 로 돌고 있는 자동화 실행기입니다(없으면 nullptr). */
-        AutomationRunner* getAutomationRunner() const { return _pAutomationRunner.get(); }
 
         /**
          * @brief 셸 디버그 InputMap 에서 해당 액션이 이번 프레임에 발동했는지 반환합니다.
@@ -219,11 +216,6 @@ namespace sw
         friend struct EngineInitStepTable;
 
     private:
-        /** @brief 체인의 지금 단계 시나리오를 새 실행기로 시작합니다(렌더 캡처를 켜고 `gv_fixedFrameDelta` 를 그 시나리오의 값으로 맞춘다). */
-        void startScenarioStage();
-        /** @brief 단계 하나가 끝났을 때 부릅니다(`AutomationResult` 값). 통과했고 다음 단계가 있으면 그것을 시작하고, 아니면 체인의 결과로 종료를 요청합니다. */
-        void onScenarioStageEnded( int32 resultCode );
-
         /**
          * @brief 목록(`EngineServiceList.xxx`)의 `EngineCreated` 서비스 저장소입니다. 생성 · 바인딩이 여기서 나옵니다.
          * @details 목록에 줄을 더하면 이 저장소가 같이 자랍니다. 만드는 방법이 특별한 셋
@@ -266,13 +258,8 @@ namespace sw
         /** @brief 에디터 Undo/Redo 전용이라 배포본에는 만들지 않습니다(목록의 HostCreated). */
         unique_ptr<CommandStack>   _commandStack;
         unique_ptr<GPUUploadQueue> _gpuUploadQueue;
-        /** @brief `-scenario=<파일>` 의 자동화 실행기입니다. 프레임 앞(입력 전) · 뒤(씬 틱 뒤)에서 부르고, 끝나면 `requestQuit( 결과 )` 입니다. */
-        unique_ptr<AutomationRunner> _pAutomationRunner;
-        /** @brief `-scenario=a,b,c` 의 단계 순서입니다(시나리오가 하나여도 만든다). 한 단계가 통과하면 같은 프로세스에서 다음 단계의 실행기를 새로 만든다. */
-        unique_ptr<AutomationScenarioChain> _pScenarioChain;
-        string                              _scenarioReportPath;         ///< `-scenario-report` 원본입니다(단계마다 `AutomationScenarioChain::makeStageReportPath`).
-        string                              _scenarioWorkingFolder;      ///< 체인을 시작할 때의 작업 폴더입니다(단계마다 이 폴더에서 시작한다).
-        uint32                              _scenarioScreenshotBaseline; ///< 단계가 시작할 때 렌더 스레드가 이미 쓴 시나리오 스크린샷 수입니다(실행기는 이 단계가 요청한 것만 센다).
+        /** @brief `-scenario=<파일>[,<파일>…]` 의 자동화 구동기입니다. 프레임 앞(입력 전) · 뒤(씬 틱 뒤)에서 부르고, 끝나면 `requestQuit( 종료 코드 )` 입니다. */
+        unique_ptr<AutomationSession> _pAutomationSession;
         /** @brief 추가 뷰(CCTV · 백미러 · PiP) 중 이번 프레임에 그릴 것을 고르는 스케줄러(갱신 주기 · 예산)입니다. FrameRenderer 단계가 만들고 해제합니다. */
         unique_ptr<RenderViewScheduler> _renderViewScheduler;
         /** @brief 스케줄러의 시각(초) — 프레임 델타의 누적입니다. */
