@@ -8,5 +8,6 @@
 sw_addVcpkgPackage(
 	NAME zlib
 	PACKAGE ZLIB
-	CONFIG_TARGET ZLIB::ZLIB
+	# zlib 1.3.2 의 ZLIBConfig 는 정적 구성(리눅스)에서 ZLIB::ZLIB 없이 ZLIB::ZLIBSTATIC 만 낸다
+	CONFIG_TARGET ZLIB::ZLIB ZLIB::ZLIBSTATIC
 )
