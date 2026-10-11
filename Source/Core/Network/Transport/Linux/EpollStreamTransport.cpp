@@ -659,12 +659,8 @@ namespace sw
         State& state = *_state;
         if ( state._listLoop.empty() )
             return;
+        // 듣기 소켓은 루프를 다 멈춘 뒤에 닫는다 — 루프 0 이 acceptAvailable 에서 `_listenFd` 를 읽고 있다. 멈추는 동안 받은 연결은 acceptAvailable 이 바로 끊는다.
         state._bStopping.store( true, std::memory_order_release );
-        if ( state._listenFd >= 0 )
-        {
-            ::close( state._listenFd );
-            state._listenFd = -1;
-        }
         {
             std::scoped_lock<mutex> lock{ state._tableMutex };
             for ( uint32 index = 0; index < static_cast<uint32>( state._listConnection.size() ); ++index )
@@ -708,6 +704,11 @@ namespace sw
                 (void)state.runOnce( 0, 10, state._manualNextSweepNanoseconds );
             }
         }
+        if ( state._listenFd >= 0 )
+        {
+            ::close( state._listenFd );
+            state._listenFd = -1;
+        }
         for ( int32 index = 0; index < state._loopCount; ++index )
         {
             const EpollLoop& loop = state.getLoop( index );
@@ -734,14 +735,23 @@ namespace sw
         sockaddr_in local  = EpollStreamTransportInternal::makeNativeAddress( bindAddress );
         socklen_t   length = sizeof( local );
         if ( bind( fd, reinterpret_cast<const sockaddr*>( &local ), sizeof( local ) ) != 0 || ::listen( fd, state._settings._listenBacklog ) != 0 ||
-             getsockname( fd, reinterpret_cast<sockaddr*>( &local ), &length ) != 0 || state.registerFd( 0, fd, EpollStreamTransportInternal::kListenTag ) == false )
+             getsockname( fd, reinterpret_cast<sockaddr*>( &local ), &length ) != 0 )
         {
             SW_LOG_ERROR( "Could not listen on stream address %# (%#)", bindAddress.toString().c_str(), errno );
             ::close( fd );
             return false;
         }
+        // 등록 전에 적는다 — 등록하는 순간 루프 0 이 받기 사건으로 `_listenFd` 를 읽는다(epoll_ctl 이 그 순서를 넘겨준다).
         state._listenFd   = fd;
         state._listenPort = ntohs( local.sin_port );
+        if ( state.registerFd( 0, fd, EpollStreamTransportInternal::kListenTag ) == false )
+        {
+            SW_LOG_ERROR( "Could not listen on stream address %# (%#)", bindAddress.toString().c_str(), errno );
+            state._listenFd   = -1;
+            state._listenPort = 0;
+            ::close( fd );
+            return false;
+        }
         return true;
     }
 

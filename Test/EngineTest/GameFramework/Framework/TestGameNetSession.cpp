@@ -98,6 +98,7 @@ SW_TEST_CASE( GameNetSessionTest, ServerOnAPortInUseStaysInactive )
  * @brief [GameNetSessionTest] 서버가 update 로 거두지 못한 연결도 shutdown 이 로그에 남긴다(접속 직후 같은 틱에 종료 명령이 온 전용 서버)
  * @details 전용 서버는 틱 앞에서 콘솔 명령을 먼저 돌려 quit 이면 그 틱을 돌지 않는다. 그때 네트워크 스레드가 받아 둔 연결 사건을 shutdown 이 버리면
  *          `Net session client 0 connected` 줄이 없어 접속을 로그로 확인하는 쪽(ServerBootTest · 멀티 프로세스 재생)이 놓친다.
+ * @note 그 줄은 Info 라서, Info 를 컴파일하지 않는 배포본(Shipping)에서는 줄을 세지 않고 shutdown 이 닫히는 것만 본다.
  */
 SW_TEST_CASE( GameNetSessionTest, ShutdownLogsConnectionsTheServerDidNotUpdate )
 {
@@ -125,6 +126,7 @@ SW_TEST_CASE( GameNetSessionTest, ShutdownLogsConnectionsTheServerDidNotUpdate )
     }
     SW_ASSERT_EQUAL( 1, server.getConnectedCount() );
 
+#if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
     atomic<uint32>       connectedLineCount{ 0 };
     const DelegateHandle handle = Logger::addGlobalListener( SW_DELEGATE_LAMBDA( LogWrittenDelegate, [&connectedLineCount]( const LogEntry& entry )
     {
@@ -135,4 +137,9 @@ SW_TEST_CASE( GameNetSessionTest, ShutdownLogsConnectionsTheServerDidNotUpdate )
     Logger::removeGlobalListener( handle );
     client.shutdown();
     SW_EXPECT_EQUAL( 1u, connectedLineCount.load() );
+#else
+    server.shutdown();
+    client.shutdown();
+    SW_EXPECT_FALSE( server.isActive() );
+#endif
 }
