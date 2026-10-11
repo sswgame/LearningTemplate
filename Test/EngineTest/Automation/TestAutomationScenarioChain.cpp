@@ -102,7 +102,7 @@ SW_TEST_CASE( AutomationScenarioChainTest, SkippedStopsTheChainAndAnEmptyListIsD
 }
 
 /**
- * @brief [AutomationScenarioChainTest] keepGoing 이면 실패한 단계 뒤에도 다음 단계를 돌려 실패를 모은다 — 결과는 처음 통과하지 못한 단계의 것이고, 건너뜀은 늘 멈춘다
+ * @brief [AutomationScenarioChainTest] keepGoing 이면 실패한 단계 뒤에도 다음 단계를 돌려 실패를 모은다 — 결과는 처음 통과하지 못한 단계의 것이고, 건너뜀은 실패로 세지 않고 이어 간다(전부 건너뛰면 건너뜀)
  */
 SW_TEST_CASE( AutomationScenarioChainTest, KeepGoingCollectsEveryFailure )
 {
@@ -117,12 +117,27 @@ SW_TEST_CASE( AutomationScenarioChainTest, KeepGoingCollectsEveryFailure )
     SW_EXPECT_EQUAL( size_t{ 2 }, chain.getFailedStageCount() );
     SW_EXPECT_EQUAL( size_t{ 0 }, chain.getSkippedStageCount() );
 
+    // 건너뜀은 그 단계만의 일이다 — 실패로 세지 않고 뒤 단계를 돌린다. 실패가 없으면 체인은 통과이고, 전부 건너뛰었을 때만 건너뜀이다.
     sw::AutomationScenarioChain skipped;
     skipped.begin( { "a.xml", "b.xml", "c.xml" }, true );
     SW_EXPECT_TRUE( skipped.onStageEnded( sw::AutomationResult::LoadError ) );
-    SW_EXPECT_FALSE( skipped.onStageEnded( sw::AutomationResult::Skipped ) ); // 이 기계가 못 돈다 — 멈춘다
+    SW_EXPECT_TRUE( skipped.onStageEnded( sw::AutomationResult::Skipped ) );
+    SW_EXPECT_FALSE( skipped.onStageEnded( sw::AutomationResult::Passed ) );
     SW_EXPECT_TRUE( skipped.getFinalResult() == sw::AutomationResult::LoadError );
-    SW_EXPECT_EQUAL( size_t{ 1 }, skipped.getSkippedStageCount() );
+    SW_EXPECT_EQUAL( size_t{ 1 }, skipped.getFailedStageCount() );
+    SW_EXPECT_EQUAL( size_t{ 1 }, skipped.getSkippedResultCount() );
+
+    sw::AutomationScenarioChain someSkipped;
+    someSkipped.begin( { "a.xml", "b.xml" }, true );
+    SW_EXPECT_TRUE( someSkipped.onStageEnded( sw::AutomationResult::Skipped ) );
+    SW_EXPECT_FALSE( someSkipped.onStageEnded( sw::AutomationResult::Passed ) );
+    SW_EXPECT_TRUE( someSkipped.getFinalResult() == sw::AutomationResult::Passed );
+
+    sw::AutomationScenarioChain allSkipped;
+    allSkipped.begin( { "a.xml", "b.xml" }, true );
+    SW_EXPECT_TRUE( allSkipped.onStageEnded( sw::AutomationResult::Skipped ) );
+    SW_EXPECT_FALSE( allSkipped.onStageEnded( sw::AutomationResult::Skipped ) );
+    SW_EXPECT_TRUE( allSkipped.getFinalResult() == sw::AutomationResult::Skipped );
 
     sw::AutomationScenarioChain lastFails;
     lastFails.begin( { "a.xml", "b.xml" }, true );

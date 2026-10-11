@@ -96,6 +96,7 @@ echo $LASTEXITCODE
 | `timeoutFrames` | 3600 | 이 프레임 수 안에 `<Pass/>` 가 없으면 12 |
 | `startAfter` | `ScenePlaying` | 시작 조건. `ScenePlaying` 또는 `Immediately` |
 | `startTimeoutFrames` | 1200 | 시작 조건을 이만큼 기다려도 오지 않으면 12 |
+| `isolated` | `false` | `true` 면 새 프로세스에서만 돕니다. 시작 상태를 전제하거나 환경(창 크기 · 테마 · 네트워크 세션)을 크게 바꿔 체인(`-scenario=a,b,c`)에 넣을 수 없는 시나리오에 적습니다. 실행기는 이 값을 읽지 않고, 묶어 돌리는 쪽(`AppScenarioTest`)이 고릅니다 |
 | `input` | `exclusive` | `exclusive` 는 무인 실행입니다. 사람의 마우스 · 키보드를 창 메시지 단계에서 버려 게임 입력과 에디터 UI 어디에도 닿지 않습니다(창 닫기 · 크기 · 포커스는 지나감, 탐침 `Input.OsDeviceInputBlocked`). `mixed` 는 OS 입력도 받습니다 |
 
 `ScenePlaying` 은 활성 씬이 플레이를 시작했고 로딩 화면이 사라진 첫 프레임입니다. 로딩 화면이 게임 입력을 막기 때문에 그 뒤에 시작합니다.
@@ -195,8 +196,8 @@ echo $LASTEXITCODE
 ```
 
 - 단계마다 시나리오 프레임은 0 부터 다시 셉니다(시작 조건이 그 단계에서 다시 참이 되는 프레임이 0). 고정 프레임 시간도 단계의 `fixedDelta` 로 다시 맞춥니다.
-- 첫 실패에서 멈추고 나머지는 돌리지 않습니다. `-scenario-keep-going` 이면 실패해도 이어 돌려 실패를 한꺼번에 모읍니다(단계가 서로 독립일 때). 건너뜀(13)은 이 기계가 못 도는 것이라 늘 멈춥니다.
-- 종료 코드는 처음 통과하지 못한 단계의 코드이고, 로그에 `[Scenario] chain stage 2/3 FAIL (이름) - 1 later stage(s) skipped` 와 `[Scenario] chain PASS (3 stage(s), 0 failed, 0 not run)` 가 남습니다.
+- 첫 실패에서 멈추고 나머지는 돌리지 않습니다. `-scenario-keep-going` 이면 실패해도 이어 돌려 실패를 한꺼번에 모읍니다(단계가 서로 독립일 때). 건너뜀(13)은 기본에서는 이 기계가 못 도는 것이라 멈추지만, `-scenario-keep-going` 에서는 그 단계만의 일(전경 창을 못 얻음 등)로 보고 실패로 세지 않고 이어 갑니다(전부 건너뛰면 13).
+- 종료 코드는 처음 통과하지 못한 단계의 코드이고, 로그에 `[Scenario] chain stage 2/3 FAIL (이름) - 1 later stage(s) skipped` 와 `[Scenario] chain PASS (3 stage(s), 0 failed, 0 skipped, 0 not run)` 가 남습니다.
 - 보고 JSON 은 단계마다 `<이름>.<단계 번호>.json` 입니다(단계가 하나면 그대로).
 - `CloseWindow` 로 끝나는 시나리오는 마지막 단계에만 둡니다(창이 닫히면 루프가 끝나 남은 단계를 돌 수 없고, 그때는 실패로 끝납니다).
 - 상태를 이어받으므로 단계는 앞 단계가 남긴 것에 기대지 않게 씁니다. 리로드 횟수처럼 프로세스 전체로 세는 값은 상대값 탐침(`Module.ReloadPending`)으로 봅니다.
@@ -216,6 +217,26 @@ echo $LASTEXITCODE
 | `Scene.ObjectCount` | 탐침 | 활성 씬의 오브젝트 수(리로드 앞뒤로 씬이 사라지지 않았는지) |
 
 리로드는 벽시계 디바운스(300 ms)와 DLL 복사를 거치므로 `WaitUntil` 의 `timeoutFrames` 를 넉넉히 둡니다(빠른 백엔드는 프레임이 훨씬 빨리 돈다). 키트나 에디터 확장을 리로드하려면 게임 팩의 시나리오에서 그 모듈 이름을 줍니다.
+
+### 에디터 시나리오를 한 프로세스로 묶기
+
+`AppScenarioTest` 의 에디터 케이스(백엔드마다 하나)는 `engine/automation/editor/*.scenario.xml` 을 **한 프로세스**에서 이어 돌립니다(`-scenario-keep-going`). 시나리오마다 App 을 새로 띄우면
+기동 · 모듈 로드 · 셰이더 준비가 시나리오 수만큼 반복됩니다. DX12 에서 62 개를 프로세스 하나씩 돌리면 272 초, 묶으면 189 초입니다(같은 PC · 리로드 4 종 포함).
+
+체인은 시나리오마다 앞에 **초기화**(`editor/chain/reset.scenario.xml`)를 끼워 새 에디터 세션과 같은 출발점으로 되돌립니다. 플레이 중지, 시작 씬 다시 열기(되돌리기 스택 · 선택 · 변경 표시가
+씬 교체와 함께 비워진다), 창을 엔진 기본 크기(1280x720)로, UI 배율 1, 도구 · 확장 패널 닫기(`panel.closeOptional`), 도크 기본 배치입니다.
+6 개마다 **모듈 리로드**가 끼고 게임 모듈(`reloadgame`) → 키트와 서버 전용 키트 연쇄(`reloadkit`, `GF_Chat`) → 키트와 에디터 확장(`reloadkitext`, `GF_ThemePark`) → 에디터 모듈(`reloadeditor`) 순서로 돕니다.
+리로드 뒤에도 초기화가 먼저 도므로 다음 시나리오는 새 이미지 위에서 시작합니다 — 실제 개발에서 편집 중에 모듈을 다시 올리는 것과 같은 조건입니다.
+
+묶지 않는 시나리오는 별도 프로세스로 돕니다.
+- 파일 이름이 `<묶음>.<n>.scenario.xml` 인 것(앞 실행이 저장한 상태를 읽는다 — 같은 상태 폴더를 이어 쓴다).
+- 루트에 `isolated="true"` 를 적은 것. 시작 상태를 전제하거나(`editorstartup` · `defaultlayout` · `loadingscreen`), 환경을 크게 바꾸거나(`screen` 의 창 크기 · 테마, `netplay` 의 세션),
+  씬 교체로 비워지지 않는 패널 상태가 남는 것(그래프 노드 · 프로파일러 타임라인 · 타일맵 · 시퀀서 · 썸네일 캐시)입니다.
+
+새 에디터 시나리오를 더하면 먼저 체인에서 통과하는지 봅니다(`AppScenarioTest.EditorScenariosPassOn<백엔드>`). 앞 시나리오의 상태에 기대거나 뒤 시나리오에 상태를 남기면 그 시나리오만 지고,
+로그(`Bin/Saved/Automation/chain_editor_<백엔드>.log`)의 `[Scenario] chain stage n/m FAIL (이름)` 줄이 어느 단계인지 말해 줍니다. 단독으로는 통과하는데 체인에서 지면 상태가 남는 것이니
+초기화(`reset.scenario.xml`)가 되돌리게 하거나 `isolated="true"` 를 적습니다. 범인은 `[앞 시나리오, reset, 지는 시나리오]` 를 `-scenario=a,b,c` 로 줄여 가며 찾습니다.
+체인은 단계마다 프로세스의 **작업 폴더**가 처음과 같은지 보고(파일 대화상자가 옮긴다), 다르면 경고하고 되돌립니다.
 
 ### CTest — `AppScenarioTest`
 

@@ -103,7 +103,7 @@ SW_REGISTER_ARGUMENT( CRASH_REPORTER, "", false, "crash-reporter" )
 SW_REGISTER_ARGUMENT( SCENARIO, "", false, "scenario" )
 // 시나리오 결과 JSON 을 쓸 경로(비면 쓰지 않는다).
 SW_REGISTER_ARGUMENT( SCENARIO_REPORT, "", false, "scenario-report" )
-// 시나리오 여럿(`-scenario=a,b,c`)에서 한 단계가 실패해도 다음 단계를 돌려 실패를 한꺼번에 모은다(기본은 첫 실패에서 멈춘다). 건너뜀(13)은 늘 멈춘다.
+// 시나리오 여럿(`-scenario=a,b,c`)에서 한 단계가 실패해도 다음 단계를 돌려 실패를 한꺼번에 모은다(기본은 첫 실패에서 멈춘다). 건너뜀(13)은 실패로 세지 않고 이어 간다.
 SW_REGISTER_ARGUMENT( SCENARIO_KEEP_GOING, false, false, "scenario-keep-going" )
 
 // RenderDoc 을 RHI 디바이스보다 먼저 설치 경로에서 올린다(Dev 만 — `RenderDocCapture`). 없어도 RenderDoc UI 로 띄운 실행이면 캡처할 수 있다.

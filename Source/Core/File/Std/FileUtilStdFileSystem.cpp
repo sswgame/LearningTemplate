@@ -261,6 +261,20 @@ namespace sw
         return FileUtilStdInternal::toUtf8( current );
     }
 
+    bool FileUtil::setCurrentPath( string_view path )
+    {
+        if ( path.empty() )
+            return false;
+        std::error_code errorCode;
+        std::filesystem::current_path( FileUtilStdInternal::toPath( path ), errorCode );
+        if ( errorCode )
+        {
+            SW_LOG_WARNING( "Could not change the current directory to '%#': %#", path, FileUtilStdInternal::describe( errorCode ).c_str() );
+            return false;
+        }
+        return true;
+    }
+
     uint64 FileUtil::getFileTimestamp( string_view fileName )
     {
         if ( fileName.empty() )

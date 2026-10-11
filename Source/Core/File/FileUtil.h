@@ -180,6 +180,8 @@ namespace sw
         [[nodiscard]] static bool setWritable( string_view path, bool bWritable );
         /** @brief 현재 작업 디렉터리를 반환합니다. */
         static string getCurrentPath();
+        /** @brief 현재 작업 디렉터리를 바꿉니다. 바꾸지 못하면 false 입니다(경고를 남긴다). 프로세스 전체에 걸리므로 시나리오 체인처럼 "처음 폴더로 되돌린다" 가 필요한 곳에서만 씁니다. */
+        [[nodiscard]] static bool setCurrentPath( string_view path );
         /** @brief 실행 파일의 경로를 반환합니다. */
         static string getExecutablePath();
         /**

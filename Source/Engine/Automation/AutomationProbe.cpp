@@ -2,9 +2,8 @@
 
 #include "Engine/Automation/AutomationProbe.h"
 
-#include "Core/Container/vector.h"
 #include "Core/Log/Logger.h"
-#include "Core/Memory/Memory.h"
+#include "Core/String/RegistrationList.h"
 
 namespace sw
 {
@@ -14,11 +13,11 @@ namespace sw
     {
         struct AutomationProbeInternal
         {
-            /** @brief 등록된 탐침(등록 순서). Engine 이미지의 함수 정적이라 게임 모듈이 바뀌어도 남는다. 넣는 쪽과 관계없이 `EngineMisc` 로 센다(`RegistrationList` 와 같다). */
-            static vector<const AutomationProbeRegistration*>& getRegistrations()
+            /** @brief 등록된 탐침(등록 순서 · 이름은 대소문자를 가린다). Engine 이미지의 함수 정적이라 게임 모듈이 바뀌어도 남는다. 핫 리로드가 올리는 교체 이미지의 같은 이름은 대체한다(`RegistrationReloadScope`). */
+            static RegistrationList<const AutomationProbeRegistration>& getRegistrations()
             {
-                static vector<const AutomationProbeRegistration*> s_listRegistration;
-                return s_listRegistration;
+                static RegistrationList<const AutomationProbeRegistration> s_registration{ RegistrationOrder::Insertion, true };
+                return s_registration;
             }
         };
     } // namespace
@@ -30,52 +29,27 @@ namespace sw
     {
         if ( pRegistration == nullptr || pRegistration->_pName == nullptr || pRegistration->_pFunction == nullptr )
             return false;
-        if ( find( pRegistration->_pName ) != nullptr )
+        if ( AutomationProbeInternal::getRegistrations().add( pRegistration, pRegistration->_pName ) != RegistrationResult::Added )
         {
             SW_LOG_ERROR( "Automation probe '%#' is registered twice - the second one is ignored", pRegistration->_pName );
             return false;
         }
-        SW_MEMORY_SCOPE( EngineMisc );
-        AutomationProbeInternal::getRegistrations().push_back( pRegistration );
         return true;
     }
 
     void AutomationProbes::releaseUnusedStorage()
     {
-        SW_MEMORY_SCOPE( EngineMisc );
-        vector<const AutomationProbeRegistration*>& listRegistration = AutomationProbeInternal::getRegistrations();
-        vector<const AutomationProbeRegistration*>  listFitted;
-        if ( listRegistration.empty() == false )
-        {
-            listFitted.reserve( listRegistration.size() );
-            for ( const AutomationProbeRegistration* pRegistration : listRegistration )
-            {
-                listFitted.push_back( pRegistration );
-            }
-        }
-        listRegistration = std::move( listFitted );
+        AutomationProbeInternal::getRegistrations().shrinkToFit();
     }
 
     void AutomationProbes::unregisterProbe( const AutomationProbeRegistration* pRegistration )
     {
-        vector<const AutomationProbeRegistration*>& listRegistration = AutomationProbeInternal::getRegistrations();
-        for ( size_t index = 0; index < listRegistration.size(); ++index )
-        {
-            if ( listRegistration[index] != pRegistration )
-                continue;
-            listRegistration.erase( listRegistration.begin() + static_cast<ptrdiff_t>( index ) );
-            return;
-        }
+        (void)AutomationProbeInternal::getRegistrations().remove( pRegistration ); // 등록되어 있지 않은 탐침을 빼는 것은 할 일이 없다
     }
 
     const AutomationProbeRegistration* AutomationProbes::find( string_view name )
     {
-        for ( const AutomationProbeRegistration* pRegistration : AutomationProbeInternal::getRegistrations() )
-        {
-            if ( string_view{ pRegistration->_pName } == name )
-                return pRegistration;
-        }
-        return nullptr;
+        return AutomationProbeInternal::getRegistrations().findByName( name );
     }
 
     AutomationProbeRegistrar::AutomationProbeRegistrar( const AutomationProbeRegistration* pRegistration )

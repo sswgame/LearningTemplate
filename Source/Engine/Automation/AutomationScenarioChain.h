@@ -50,8 +50,10 @@ namespace sw
         AutomationResult getFinalResult() const { return _finalResult; }
         /** @brief 통과하지 못해 멈춰서 돌리지 않은 단계 수입니다. */
         size_t getSkippedStageCount() const { return _skippedStageCount; }
-        /** @brief 통과하지 못한 단계 수입니다(`keepGoing` 이 아니면 많아야 하나). */
+        /** @brief 통과하지 못한 단계 수입니다(`keepGoing` 이 아니면 많아야 하나). 건너뜀은 세지 않습니다(`keepGoing` 일 때). */
         size_t getFailedStageCount() const { return _failedStageCount; }
+        /** @brief `keepGoing` 이 건너뛰고 이어 간 단계(건너뜀으로 끝난 것) 수입니다. */
+        size_t getSkippedResultCount() const { return _skippedResultCount; }
         /**
          * @brief 단계 하나의 끝을 한 줄로 적습니다(`chain stage 2/3 FAIL (shooter3d.reload) — 1 later stage(s) skipped`). `[Scenario]` 로그 줄 뒤에 붙습니다.
          * @param stageIndex 방금 끝난 단계 번호
@@ -63,6 +65,7 @@ namespace sw
         size_t           _stageIndex{ 0 };
         size_t           _skippedStageCount{ 0 };
         size_t           _failedStageCount{ 0 };
+        size_t           _skippedResultCount{ 0 };
         AutomationResult _firstNonPassResult{ AutomationResult::Passed }; ///< 처음 통과하지 못한 단계의 결과(없으면 Passed)
         AutomationResult _finalResult{ AutomationResult::Running };
         bool             _bKeepGoing{ false };

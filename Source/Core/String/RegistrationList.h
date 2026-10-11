@@ -4,12 +4,35 @@
  *        `NameRegistry` 는 이름 → 값을 소유하는 표(중복 거절 또는 덮어쓰기 · 이름 찾기 · 등록 순서 훑기 · 조건 빼기)입니다.
  */
 #pragma once
+#include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
+
+namespace sw
+{
+    /**
+     * @struct RegistrationReloadScope
+     * @brief 핫 리로드가 **교체 이미지**를 올리는 동안 켜 두는 표지입니다(`LiveReloadManager` 가 새 이미지를 올리는 동안 잡는다). 켜진 동안 `RegistrationList::add` 는
+     *        같은 이름의 등록을 거절하지 않고 **대체**합니다.
+     * @details 새 이미지의 정적 등록자는 옛 이미지가 아직 도는 동안 돈다. 옛 등록이 이름을 쥐고 있어 새 등록이 거절되면, 옛 이미지가 내려간 뒤 그 이름이 아무것도 가리키지 않는다
+     *          (리로드한 개발 명령 · 탐침 · 시나리오 단계가 사라진다). 대체된 옛 등록은 목록이 그림자로 보관한다 — 옛 이미지가 내려가며 빼면 버리고, 새 이미지가 취소되면 되살린다.
+     *          표지는 프로세스에 하나이고 게임 스레드에서만 쓴다(정적 초기화가 로드하는 스레드에서 돈다). 중첩할 수 있다.
+     */
+    struct SW_API RegistrationReloadScope
+    {
+        RegistrationReloadScope();
+        ~RegistrationReloadScope();
+        RegistrationReloadScope( const RegistrationReloadScope& )            = delete;
+        RegistrationReloadScope& operator=( const RegistrationReloadScope& ) = delete;
+
+        /** @brief 교체 이미지를 올리는 중이면 true 입니다. */
+        static bool isActive();
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -75,6 +98,9 @@ namespace sw
             : _listItem{}
             , _listName{}
             , _listOrder{}
+            , _listShadowItem{}
+            , _listShadowName{}
+            , _listShadowOrder{}
             , _order{ order }
             , _nameCase{ nameCase }
             , _bRequireName{ bRequireName }
@@ -100,7 +126,10 @@ namespace sw
             }
             else if ( findByName( name ) != nullptr )
             {
-                return RegistrationResult::DuplicateName;
+                if ( RegistrationReloadScope::isActive() == false )
+                    return RegistrationResult::DuplicateName;
+                replaceByName( pItem, name, order );
+                return RegistrationResult::Added;
             }
 
             size_t insertIndex = _listItem.size();
@@ -123,19 +152,24 @@ namespace sw
         {
             const size_t index = findIndex( pItem );
             if ( index == kNotFound )
-                return false;
+                return dropShadow( pItem );
+            const string name = _listName[index];
             _listItem.erase( _listItem.begin() + static_cast<ptrdiff_t>( index ) );
             _listName.erase( _listName.begin() + static_cast<ptrdiff_t>( index ) );
             _listOrder.erase( _listOrder.begin() + static_cast<ptrdiff_t>( index ) );
+            restoreShadow( name );
             return true;
         }
 
-        /** @brief 모두 뺍니다. */
+        /** @brief 모두 뺍니다(그림자도). */
         void clear()
         {
             _listItem.clear();
             _listName.clear();
             _listOrder.clear();
+            _listShadowItem.clear();
+            _listShadowName.clear();
+            _listShadowOrder.clear();
         }
 
         /**
@@ -203,6 +237,69 @@ namespace sw
             return kNotFound;
         }
 
+        /** @brief 같은 이름의 올라 있는 항목을 @p pItem 으로 바꿉니다(제자리). 바뀐 옛 항목은 그림자로 보관합니다(`RegistrationReloadScope`). */
+        void replaceByName( T* pItem, string_view name, int32 order )
+        {
+            for ( size_t index = 0; index < _listItem.size(); ++index )
+            {
+                if ( StringUtil::equals( string_view{ _listName[index] }, name, _nameCase == NameCase::IgnoreCase ) == false )
+                    continue;
+                _listShadowItem.push_back( _listItem[index] );
+                _listShadowName.push_back( _listName[index] );
+                _listShadowOrder.push_back( _listOrder[index] );
+                _listItem[index]  = pItem;
+                _listOrder[index] = order;
+                return;
+            }
+        }
+
+        /** @brief 그림자에 있던 항목을 버립니다(옛 이미지가 내려가며 뺐다). 있었으면 true 입니다. */
+        bool dropShadow( const T* pItem )
+        {
+            for ( size_t index = _listShadowItem.size(); index > 0; --index )
+            {
+                if ( _listShadowItem[index - 1] != pItem )
+                    continue;
+                eraseShadow( index - 1 );
+                return true;
+            }
+            return false;
+        }
+
+        /** @brief 올라 있던 항목이 빠졌고 그 이름의 그림자가 있으면 가장 나중 것을 되살립니다(새 이미지가 취소돼 옛 등록이 돌아온다). */
+        void restoreShadow( const string& name )
+        {
+            for ( size_t index = _listShadowItem.size(); index > 0; --index )
+            {
+                if ( StringUtil::equals( string_view{ _listShadowName[index - 1] }, string_view{ name }, _nameCase == NameCase::IgnoreCase ) == false )
+                    continue;
+                T*           pItem       = _listShadowItem[index - 1];
+                const int32  shadowOrder = _listShadowOrder[index - 1];
+                const string shadowName  = _listShadowName[index - 1];
+                eraseShadow( index - 1 );
+                size_t insertIndex = _listItem.size();
+                if ( _order == RegistrationOrder::ByOrderThenName )
+                {
+                    insertIndex = 0;
+                    while ( insertIndex < _listItem.size() && isBefore( _listOrder[insertIndex], _listName[insertIndex], shadowOrder, shadowName ) )
+                    {
+                        ++insertIndex;
+                    }
+                }
+                _listItem.insert( _listItem.begin() + static_cast<ptrdiff_t>( insertIndex ), pItem );
+                _listName.insert( _listName.begin() + static_cast<ptrdiff_t>( insertIndex ), shadowName );
+                _listOrder.insert( _listOrder.begin() + static_cast<ptrdiff_t>( insertIndex ), shadowOrder );
+                return;
+            }
+        }
+
+        void eraseShadow( size_t index )
+        {
+            _listShadowItem.erase( _listShadowItem.begin() + static_cast<ptrdiff_t>( index ) );
+            _listShadowName.erase( _listShadowName.begin() + static_cast<ptrdiff_t>( index ) );
+            _listShadowOrder.erase( _listShadowOrder.begin() + static_cast<ptrdiff_t>( index ) );
+        }
+
         /** @brief (lhsOrder, lhsName) 가 (rhsOrder, rhsName) 보다 앞이면 true 입니다. */
         static bool isBefore( int32 lhsOrder, const string& lhsName, int32 rhsOrder, string_view rhsName )
         {
@@ -212,12 +309,15 @@ namespace sw
         }
 
     private:
-        vector<T*>        _listItem;     ///< 항목(순서대로). 훑기가 이것만 읽는다
-        vector<string>    _listName;     ///< 항목마다 올릴 때 복사한 이름(같은 자리)
-        vector<int32>     _listOrder;    ///< 항목마다 정렬 값(같은 자리)
-        RegistrationOrder _order;        ///< 늘어놓는 순서
-        NameCase          _nameCase;     ///< 이름 비교가 대소문자를 보는지
-        bool              _bRequireName; ///< 이름 없는 등록을 거절하는지
+        vector<T*>        _listItem;        ///< 항목(순서대로). 훑기가 이것만 읽는다
+        vector<string>    _listName;        ///< 항목마다 올릴 때 복사한 이름(같은 자리)
+        vector<int32>     _listOrder;       ///< 항목마다 정렬 값(같은 자리)
+        vector<T*>        _listShadowItem;  ///< 리로드의 교체 등록에 이름을 내준 옛 항목(옛 이미지가 내려갈 때까지 보관)
+        vector<string>    _listShadowName;  ///< 그림자 항목의 이름
+        vector<int32>     _listShadowOrder; ///< 그림자 항목의 정렬 값
+        RegistrationOrder _order;           ///< 늘어놓는 순서
+        NameCase          _nameCase;        ///< 이름 비교가 대소문자를 보는지
+        bool              _bRequireName;    ///< 이름 없는 등록을 거절하는지
     };
 } // namespace sw
 

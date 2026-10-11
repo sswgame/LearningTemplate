@@ -5,7 +5,7 @@
   스크린샷은 에디터 UI 가 아니라 주 출력 그림이다(Present 캡처가 주 출력 렌더 타깃을 복사한다). 기본 배치는 Scene 탭이 앞이라 씬 뷰 그림이다.
   실행: App.exe -EnableEditor -scenario=engine/automation/editor/screen.scenario.xml -dx12   (AppScenarioTest.EditorScenariosPassOn<Backend> 가 백엔드마다 돈다)
 -->
-<Scenario name="editor.screen" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.screen" isolated="true" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<!-- 1) 뷰 스크린샷 — 까만 빈 그림이 아니다 -->
 	<At frame="90"><Screenshot file="gameview.ppm"/></At>
 	<At frame="91"><ExpectImage file="gameview.ppm" metric="meanLuma" atLeast="0.02"/></At>

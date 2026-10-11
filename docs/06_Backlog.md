@@ -114,10 +114,13 @@
 - **`editor/materialpreview` 가 OpenGL 에서 한 번 졌다**(2026-10-11, `AppScenarioTest.EditorScenariosPassOnOpenGL` 샤드 안 — 단독 3/3 통과). `WaitUntil Editor.MaterialPreviewRedMinusBlue <= -40` 이
   1200 프레임을 기다리고도 +180(빨강)이었다 — 시간이 아니라 미리보기 렌더 타깃이 갱신되지 않은 상태에 머문 것이다. 재현되면 미리보기 재렌더 요청(속성 변경 → 렌더 타깃 갱신) 경로를 GL 에서 본다.
 
-- **에디터 시나리오를 한 프로세스로 묶는다**(사용자 제안 2026-10-12) — 체인(`-scenario=a,b,c -scenario-keep-going`)이 들어갔다. 58 개를 DX12 한 프로세스로 돌리면 160 초이고 31 개가 지는데,
-  전부 앞 시나리오가 남긴 상태 때문이다(되돌리기 스택 누적 `Editor.UndoCount`, `Editor.SceneDirty`, 선택, 열린 패널, 씬 내용, 출력 로그 행). 시나리오 사이에 "새 에디터 세션" 으로 되돌리는 개발 명령
-  (`editor.resetSession` — 플레이 중지 · 시작 씬 다시 열기 · 되돌리기 스택 비우기 · 선택 해제 · 레이아웃 초기화 · 패널 닫기)을 두고, 리셋 시나리오를 사이에 끼운 체인으로 `AppScenarioTest` 의 에디터 케이스를
-  바꾼다. 시작 상태를 전제하는 시나리오(`editorstartup` · `defaultlayout` · `savedstate.<n>` · `loadingscreen`)는 체인 밖에 두고, 리로드 단계(`module.reload`)를 사이에 끼워 "리로드 뒤에도 편집 상태가 산다" 도 같은 프로세스에서 본다.
+- **에디터 체인에 남은 것**(체인 · 초기화 · 리로드 4 종은 들어갔다 — [Automation README](../Source/Engine/Automation/README.md) "에디터 시나리오를 한 프로세스로 묶기"). ① **OpenGL 에디터는 체인 안의 모듈 리로드에서 죽는다** —
+  `ImGui_ImplOpenGL3_RenderDrawData`(imgui_impl_opengl3.cpp:463, `draw_data` 읽기)의 접근 위반이고, 어느 리로드에서 터지는지는 앞 상태에 따라 달라진다(`debughudcontrols` 직후 `reloadkit`, `propertyreset` 직후 `reloadgame` …;
+  DX12 · DX11 · Vulkan 은 통과, 리로드 시나리오 단독은 GL 도 통과). 그래서 `-gl` 케이스는 체인에서 리로드를 빼고 리로드 시나리오 넷을 따로 띄운다(`TestAppScenario.cpp` `bReloadsInSeparateProcesses` — 고치면 지운다).
+  재현: `App.exe -gl -EnableEditor -scenario-keep-going -scenario=<목록>` — 목록은 에디터 케이스의 `makeChain` 순서에 리로드를 6 개마다 끼운 것이다(`bReloadsInSeparateProcesses` 를 끄면 케이스가 그대로 재현한다). 의심: 리로드가 에디터를 서스펜드 · 재개하는 동안
+  렌더 스레드가 아직 이전 프레임의 ImGui 드로우 데이터를 그린다(DX12 는 타이밍이 달라 가려진다 — `drainWorkers` 의 `waitIdle` 이 GL 의 present 훅을 덮는지 본다). 크래시 스택이 렌더 스레드라 한 줄뿐이니 먼저 스레드 이름을 스택에 남긴다.
+  ② `isolated` 로 뺀 시나리오 중 **상태가 남는 것**(`graphaddnode` · `profilertimeline` · `tilemaptools` · `sequencerkeys` · `contentthumbnails`)은 씬 교체로 안 비워지는 패널 상태다 — 패널 쪽에 "문서 닫기 / 초기화" 를 두고
+  `panel.closeOptional` 이 그것을 부르게 하면 체인에 합칠 수 있다(지금은 프로세스 다섯 개가 더 뜬다). ③ 체인 사이의 초기화가 프레임 50 개(≈ 체인 시간의 20 %)다 — 씬이 다 열렸는지를 탐침으로 기다리면 줄일 수 있다.
 - **백엔드 교체 단계**(`<SwapBackend backend="vulkan"/>` 같은 것) — 체인이 한 프로세스에서 네 백엔드를 차례로 건너게 한다(지금은 백엔드마다 프로세스 하나). `gv_rhiSwapAtFrame` 의 경로(`RHI::requestBackendChange`)를 단계로 감싸고
   교체 뒤 `Module.*` · 씬 개수 탐침을 같이 본다.
 ### 1-5. 핫 리로드 · 모듈

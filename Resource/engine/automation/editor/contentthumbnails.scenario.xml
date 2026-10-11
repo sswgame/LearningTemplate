@@ -5,7 +5,7 @@
   CaptureWindow 의 PNG(Saved/Automation/editor.contentthumbnails/)로 두 화면을 본다.
   실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/contentthumbnails.scenario.xml -dx12
 -->
-<Scenario name="editor.contentthumbnails" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.contentthumbnails" isolated="true" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<At frame="20"><RequireForeground/><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
 	<At frame="35"><DevCommand line="panel.focus content_browser"/></At>
 	<At frame="40"><DevCommand line="content.open engine/textures"/></At>

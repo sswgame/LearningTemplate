@@ -65,13 +65,16 @@ namespace sw
         if ( isActive() == false )
             return false;
         const bool bHasNext = _stageIndex + 1 < _listPath.size();
-        if ( result != AutomationResult::Passed )
+        if ( _bKeepGoing && result == AutomationResult::Skipped )
+        {
+            ++_skippedResultCount; // 이 단계만 못 돈 것이다 — 실패가 아니고 뒤 단계는 돈다
+        }
+        else if ( result != AutomationResult::Passed )
         {
             ++_failedStageCount;
             if ( _firstNonPassResult == AutomationResult::Passed )
                 _firstNonPassResult = result;
-            // 건너뜀은 이 기계가 못 도는 것이다 — 뒤 단계도 같다. 그 밖의 실패는 `keepGoing` 이면 넘어간다.
-            if ( _bKeepGoing == false || result == AutomationResult::Skipped || bHasNext == false )
+            if ( _bKeepGoing == false || bHasNext == false )
             {
                 _bFinished         = true;
                 _finalResult       = _firstNonPassResult;
@@ -84,8 +87,11 @@ namespace sw
             ++_stageIndex;
             return true;
         }
-        _bFinished   = true;
-        _finalResult = _firstNonPassResult;
+        _bFinished = true;
+        // 실패가 없고 모든 단계가 건너뜀이면 체인도 건너뜀이다(돌린 것이 하나도 없다).
+        _finalResult = _firstNonPassResult != AutomationResult::Passed ? _firstNonPassResult
+                     : _skippedResultCount == _listPath.size()         ? AutomationResult::Skipped
+                                                                       : AutomationResult::Passed;
         return false;
     }
 

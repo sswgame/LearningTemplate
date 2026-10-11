@@ -270,7 +270,9 @@ namespace sw
         unique_ptr<AutomationRunner> _pAutomationRunner;
         /** @brief `-scenario=a,b,c` 의 단계 순서입니다(시나리오가 하나여도 만든다). 한 단계가 통과하면 같은 프로세스에서 다음 단계의 실행기를 새로 만든다. */
         unique_ptr<AutomationScenarioChain> _pScenarioChain;
-        string                              _scenarioReportPath; ///< `-scenario-report` 원본입니다(단계마다 `AutomationScenarioChain::makeStageReportPath`).
+        string                              _scenarioReportPath;         ///< `-scenario-report` 원본입니다(단계마다 `AutomationScenarioChain::makeStageReportPath`).
+        string                              _scenarioWorkingFolder;      ///< 체인을 시작할 때의 작업 폴더입니다(단계마다 이 폴더에서 시작한다).
+        uint32                              _scenarioScreenshotBaseline; ///< 단계가 시작할 때 렌더 스레드가 이미 쓴 시나리오 스크린샷 수입니다(실행기는 이 단계가 요청한 것만 센다).
         /** @brief 추가 뷰(CCTV · 백미러 · PiP) 중 이번 프레임에 그릴 것을 고르는 스케줄러(갱신 주기 · 예산)입니다. FrameRenderer 단계가 만들고 해제합니다. */
         unique_ptr<RenderViewScheduler> _renderViewScheduler;
         /** @brief 스케줄러의 시각(초) — 프레임 델타의 누적입니다. */

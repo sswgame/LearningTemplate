@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 체인 사이의 초기화 — 새 에디터 세션과 같은 출발점으로 되돌린다: 플레이 중지 · 시작 씬 다시 열기(되돌리기 스택 · 선택 · 변경 표시가 씬 교체와 함께 비워진다) · 창 크기(엔진 기본 1280x720 — 새 에디터의 시작 크기) · 배율 · 선택 패널(도구 · 확장)을 닫고 도크 레이아웃.
+  `engine/automation/editor/*.scenario.xml` 을 한 프로세스로 묶을 때(`-scenario=reset,a,reset,b…`) 시나리오 사이에 끼운다. 혼자 돌려도 통과한다.
+  실행: App.exe -EnableEditor -scenario=engine/automation/editor/chain/reset.scenario.xml -dx12
+-->
+<Scenario name="editor.chainreset" fixedDelta="0.0166667" timeoutFrames="200" startAfter="Immediately" input="exclusive">
+	<At frame="0"><DevCommand line="stop"/></At>
+	<At frame="3"><DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/></At>
+	<At frame="35">
+		<ResizeWindow width="1280" height="720"/>
+		<Variable name="gv_editorUiScale" value="1"/>
+		<DevCommand line="panel.closeOptional"/>
+		<DevCommand line="layout.reset"/>
+	</At>
+	<At frame="50">
+		<EditorExpectObject name="TestParent" count="1"/>
+		<Expect probe="Editor.UndoCount" equals="0"/>
+		<Expect probe="Editor.SceneDirty" equals="0"/>
+		<Expect probe="Editor.SelectionCount" equals="0"/>
+		<Expect probe="Editor.PlayState" equals="0"/>
+		<Pass/>
+	</At>
+</Scenario>

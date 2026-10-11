@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestFramework.h"
@@ -103,6 +104,9 @@ namespace
      */
     struct EditorScenarioRunInternal
     {
+        /** @brief 체인에서 시나리오 몇 개마다 모듈 리로드를 끼우는지입니다. */
+        static constexpr uint32 kReloadEvery = 6;
+
         /** @brief 시나리오 경로의 묶음 이름(파일 이름의 첫 `.` 앞)입니다. */
         static sw::string getGroupName( const sw::string& scenarioPath )
         {
@@ -150,12 +154,98 @@ namespace
             return ranCount;
         }
 
+        /** @brief 파일 이름이 `<묶음>.<n>.scenario.xml` 이면 true 입니다(앞 실행이 남긴 저장 상태를 이어 읽는 묶음 — 프로세스를 나눠 돌린다). */
+        static bool isNumberedGroupMember( const sw::string& scenarioPath )
+        {
+            const sw::string fileName = sw::FileUtil::getFileNamePart( scenarioPath );
+            size_t           dotCount = 0;
+            for ( const utf8 ch : fileName )
+            {
+                dotCount += ch == '.' ? 1 : 0;
+            }
+            return dotCount > 2;
+        }
+
+        /** @brief 시나리오가 루트에 `isolated="true"` 를 적었으면 true 입니다(새 프로세스에서만 돈다). 못 읽으면 격리로 봐 그 시나리오가 제 프로세스에서 읽기 오류를 내게 한다. */
+        static bool isIsolated( const sw::string& scenarioPath )
+        {
+            sw::AutomationScenario scenario;
+            sw::string             error;
+            return scenario.loadFromPath( scenarioPath, error ) == false || scenario.isIsolated();
+        }
+
+        /**
+         * @brief 한 프로세스로 묶을 시나리오 순서를 만듭니다 — 시나리오마다 앞에 상태 초기화를 두고, @p reloadEvery 개마다 모듈 리로드를 끼웁니다.
+         * @details 리로드는 게임 모듈 → 키트(서버 전용 키트 연쇄) → 키트 + 에디터 확장 → 에디터 모듈 순서로 돈다(`chain/reload*.scenario.xml`). 리로드 뒤에도 초기화가 먼저 도므로
+         *          다음 시나리오는 새 이미지 위에서 시작한다. 실제 개발에서 편집 중에 모듈을 다시 올리는 것과 같은 조건이다.
+         */
+        static sw::vector<sw::string> makeChain( const sw::vector<sw::string>& listScenario, uint32 reloadEvery )
+        {
+            // reloadEvery 가 0 이면 리로드를 끼우지 않는다.
+            constexpr const utf8*  kReset       = "engine/automation/editor/chain/reset.scenario.xml";
+            constexpr const utf8*  kArrReload[] = { "engine/automation/editor/chain/reloadgame.scenario.xml", "engine/automation/editor/chain/reloadkit.scenario.xml",
+                                                    "engine/automation/editor/chain/reloadkitext.scenario.xml", "engine/automation/editor/chain/reloadeditor.scenario.xml" };
+            sw::vector<sw::string> listChain;
+            uint32                 reloadIndex = 0;
+            for ( size_t index = 0; index < listScenario.size(); ++index )
+            {
+                if ( index > 0 && reloadEvery > 0 && index % reloadEvery == 0 )
+                {
+                    listChain.push_back( kArrReload[reloadIndex % SW_COUNT_OF( kArrReload )] );
+                    ++reloadIndex;
+                }
+                listChain.push_back( kReset );
+                listChain.push_back( listScenario[index] );
+            }
+            return listChain;
+        }
+
         /** @brief `engine/automation/editor` 의 시나리오를 백엔드 하나(@p pSwitch)로 돌립니다 — 케이스 본문입니다. */
         static void runEditorCase( const utf8* pSwitch )
         {
             const sw::vector<sw::string> listScenario = AppScenarioTestInternal::collectScenarioPaths( { "engine/automation/editor" } );
             SW_ASSERT_TRUE_MSG( listScenario.empty() == false, "engine/automation/editor 에 에디터 시나리오가 없습니다" );
-            if ( runEditorGroups( listScenario, pSwitch ) == 0 )
+
+            // 묶을 수 있는 시나리오는 한 프로세스(실행 시간의 대부분이던 기동 · 모듈 로드를 한 번만)로, 나머지(저장 상태 묶음 · 격리 표식)는 프로세스를 나눠 돈다.
+            sw::vector<sw::string> listChained;
+            sw::vector<sw::string> listSeparate;
+            for ( const sw::string& scenarioPath : listScenario )
+            {
+                if ( isNumberedGroupMember( scenarioPath ) || isIsolated( scenarioPath ) )
+                    listSeparate.push_back( scenarioPath );
+                else
+                    listChained.push_back( scenarioPath );
+            }
+
+            // OpenGL 에디터는 체인 안의 모듈 리로드에서 ImGui 렌더가 죽는다(백로그 1-5). 그 백엔드는 체인에서 리로드를 빼고, 리로드 시나리오는 프로세스를 따로 띄워 본다(단독으로는 통과한다).
+            const bool                   bReloadsInSeparateProcesses = sw::string( pSwitch ) == "-gl";
+            const sw::vector<sw::string> listReload                  = { "engine/automation/editor/chain/reloadgame.scenario.xml", "engine/automation/editor/chain/reloadkit.scenario.xml",
+                                                                         "engine/automation/editor/chain/reloadkitext.scenario.xml", "engine/automation/editor/chain/reloadeditor.scenario.xml" };
+
+            uint32 ranCount = 0;
+            if ( listChained.empty() == false )
+            {
+                const sw::string backend = pSwitch[0] == '-' ? sw::string( pSwitch + 1 ) : sw::string( "default" );
+                sw::string       stateFolder;
+                SW_EXPECT_TRUE( sw::FileUtil::makeAbsolutePath( "Saved/Automation/EditorState/chain_" + backend, stateFolder ) );
+                SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( stateFolder ) );
+                const sw::string arguments = "-EnableEditor -scenario-keep-going -gv_editorStateDir=" + stateFolder;
+                sw::string       scenarioLines;
+                const int32      exitCode = test::AppTestUtil::runScenarioChain( makeChain( listChained, bReloadsInSeparateProcesses ? 0u : kReloadEvery ), "editor", pSwitch, scenarioLines, arguments );
+                const sw::string label    = sw::string( "editor chain " ) + pSwitch + " -> exit " + sw::to_string( exitCode ) + " (log: Saved/Automation/chain_editor_" + backend + ".log)\n" + scenarioLines;
+                SW_EXPECT_TRUE_MSG( exitCode != test::AppTestUtil::kNotLaunchedExitCode, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)에 App 이 있습니까?" );
+                if ( test::AppTestUtil::isSkippedExitCode( exitCode ) )
+                    SW_LOG_INFO( "[AppScenarioTest] skipped %#", label.c_str() );
+                else
+                {
+                    SW_EXPECT_TRUE_MSG( exitCode == 0, label.c_str() );
+                    ++ranCount;
+                }
+            }
+            ranCount += runEditorGroups( listSeparate, pSwitch );
+            if ( bReloadsInSeparateProcesses )
+                ranCount += runEditorGroups( listReload, pSwitch );
+            if ( ranCount == 0 )
                 SW_TEST_SKIP( "no editor scenario could run on this machine" );
         }
     };
@@ -204,7 +294,7 @@ SW_TEST_CASE( AppScenarioTest, ChainedScenariosShareOneProcess )
         }
         SW_EXPECT_TRUE_MSG( exitCode == 0, label.c_str() );
         SW_EXPECT_TRUE_MSG( scenarioLines.find( "chain stage 3/3 PASS" ) != sw::string::npos, label.c_str() );
-        SW_EXPECT_TRUE_MSG( scenarioLines.find( "chain PASS (3 stage(s), 0 failed, 0 not run)" ) != sw::string::npos, label.c_str() );
+        SW_EXPECT_TRUE_MSG( scenarioLines.find( "chain PASS (3 stage(s), 0 failed, 0 skipped, 0 not run)" ) != sw::string::npos, label.c_str() );
         ++ranCount;
     }
     if ( ranCount == 0 )

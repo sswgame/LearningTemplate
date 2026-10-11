@@ -6,7 +6,7 @@
   Save Trace 단추(profiler.timeline.saveTrace)는 보이는 프레임을 Saved/Traces/trace_<시각>.trace.json(Chrome Trace Event)으로 저장하고 로그에 "Timeline trace: saved" 를 남긴다.
   실행: App.exe -EnableEditor -scenario=engine/automation/editor/profilertimeline.scenario.xml -gv_editorStateDir=<빈 폴더> -dx12
 -->
-<Scenario name="editor.profilertimeline" fixedDelta="0.0166667" timeoutFrames="700" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.profilertimeline" isolated="true" fixedDelta="0.0166667" timeoutFrames="700" startAfter="Immediately" input="exclusive">
 	<At frame="5"><DevCommand line="layout.reset"/></At>
 	<At frame="10"><ResizeWindow width="1600" height="900"/></At>
 	<At frame="30"><DevCommand line="panel.focus profiler"/></At>

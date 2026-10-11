@@ -35,7 +35,7 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 - 도우미의 빌드와 테스트는 낮은 우선순위로 돌립니다. Git Bash 에서 `cmd //c "start /belownormal /wait /b cmake --build --preset Ninja-Debug -j 4"`, ctest 는 `-j 2` 입니다. 끌 때는 자기 PID 만 끕니다.
   이 빌드는 테스트를 짓지 않습니다. 테스트를 돌릴 도우미는 `--target all AllTests` 를 붙여 낮은 우선순위로 먼저 짓습니다(ctest · `py -3 -m Scripts test` 가 대신 지으면 보통 우선순위로 돈다).
 - **게임별 프리셋(`Ninja-Debug-<Game>`) 빌드는 배치 끝에 적용 담당이 한 번 합니다.** 도우미는 게임 소스를 고쳤으면 "게임 빌드 미확인" 으로 보고합니다.
-- 파이썬 조각은 heredoc 이나 `python -` 로 넘기지 않고 파일로 써서 `py -3 <파일>` 로 돌립니다. 그 밖의 편집 함정은 [AGENTS.md](../AGENTS.md) "Editing traps" 에 있습니다.
+- 파이썬 조각은 heredoc 이나 `python -` 로 넘기지 않고 Write 도구로 파일을 만들어 `py -3 <파일>` 로 돌립니다(heredoc 은 파싱 실패 · 이스케이프 소실로 반복해서 깨졌습니다). 그 밖의 편집 함정은 [AGENTS.md](../AGENTS.md) "Editing traps" 에 있습니다.
 - 컴파일러 경고 전체 조사(`Scripts/lint/report/RunBuildWarnings.py`, 세 프리셋)는 사용자가 요청할 때만 돌립니다. 내 변경이 만든 경고는 그 빌드가 이미 보여 줍니다.
   빌드 로그의 경고가 이상하면(sccache 가 옛 경고를 재생한 경우) 조사를 돌릴지 사용자에게 묻습니다.
 

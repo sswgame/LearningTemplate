@@ -29,6 +29,11 @@ Engine 은 모듈 사이의 결속(어느 이미지가 어느 이미지에 묶�
 - **매니페스트 파일의 모양은 리플렉션 구조체 `ModuleManifestFile` 이 원본이다**(키 표를 손으로 들지 않는다 — 칸 표는 `docs/Config/ModuleManifest.md`). `parseManifest` 는
   `JSONSerializer::deserializeSoft` 로 읽어 모르는 키 · 읽지 못한 값(모르는 종류 · 플랫폼 낱말 포함)을 오류로 돌리고, 의미 검사만 직접 한다. 새 키를 더하면 CMake `ModuleManifest.cmake` 도 같이 고친다.
   리플렉션은 "적지 않음" 과 "빈 목록" 을 가르지 못해 `_kind` 는 센티널(`kModuleKindUnset`)로 필수를 검사하고, 게임이 아닌 모듈의 `_listModuleOverride` 는 **비어 있지 않을 때만** 거절한다.
+- **리로드한 이미지의 정적 등록은 같은 이름을 거절하지 않고 대체한다**(`RegistrationReloadScope`). 새 이미지의 정적 등록자(개발 명령 · 탐침 · 자동화 단계 · 에디터 등록)는 옛 이미지가 도는 동안 `LoadLibrary` 안에서 돈다.
+  이름이 겹쳐 거절되면 옛 이미지가 내려간 뒤 그 이름이 사라진다(에디터 모듈을 리로드하면 개발 명령 · 탐침이 전부 없어졌다 — 시나리오 `chain/reloadeditor` 가 잡았다). `LiveReloadManager::prepareShadowCopy` 가
+  교체 이미지를 올리는 동안만 표지를 잡고, `RegistrationList` 는 대체된 옛 항목을 그림자로 들고 있다가 옛 이미지가 빼면 버리고 새 이미지가 취소되면 되살린다. 첫 로드의 진짜 중복은 그대로 거절한다.
+  이름으로 등록하는 레지스트리는 손으로 벡터 + 중복 검사를 짜지 말고 `RegistrationList` 를 쓴다(탐침 레지스트리가 그렇게 짜여 있어 이 규칙이 안 닿았다).
+  리로드 종류(게임 · 키트 연쇄 · 키트 + 확장 · 에디터)별 확인은 시나리오 `editor/chain/reload*.scenario.xml` 이고, 에디터 시나리오 체인이 6 개마다 돌려 가며 끼운다([Automation README](../Automation/README.md)).
 - **모듈 켜기/끄기 · 의존 · 적재 순서는 매니페스트(`<모듈>.module.json`)가 원본이다**(CMake `ModuleManifest.cmake` 와 App `ModuleCatalog` 가 같은 규칙 — 둘의 답을
   `ModuleCatalogTest.BuildAndRuntimeAgree` 가 견준다). 새 동적 모듈은 매니페스트가 없으면 `sw_registerDynamicModule` 에서 구성이 선다. 게임 매니페스트는 활성 게임 것만
   빌드가 읽으므로 다른 게임 것은 `ModuleCatalogTest.EveryRepositoryManifestParses` 가 본다. 꺼진 모듈의 낡은 DLL 은 `Bin` 에 남아도 올리지 않는다.

@@ -59,6 +59,7 @@ namespace sw
         , _startTimeoutFrames{ AutomationScenarioInternal::kDefaultStartTimeoutFrames }
         , _startCondition{ AutomationStartCondition::ScenePlaying }
         , _inputMode{ VirtualInputMode::Exclusive }
+        , _bIsolated{ false }
     {
     }
 
@@ -133,6 +134,14 @@ namespace sw
                     bOk    = false;
                     reason = string( "unknown startAfter '" ) + pText + "' (ScenePlaying | Immediately)";
                 }
+            }
+            else if ( name == "isolated" )
+            {
+                const string_view value = pText;
+                bOk                     = value == "true" || value == "false";
+                _bIsolated              = value == "true";
+                if ( bOk == false )
+                    reason = string( "isolated must be true or false, got '" ) + pText + "'";
             }
             else if ( name == "input" )
             {

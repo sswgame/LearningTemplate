@@ -101,3 +101,62 @@ SW_TEST_CASE( RegistrationListTest, OrdersByOrderThenNameAndRequiresNames )
     SW_EXPECT_EQUAL( 0u, list.getCount() );
     SW_EXPECT_NULL( list.findByName( "A" ) );
 }
+
+/**
+ * @brief [RegistrationListTest] 리로드 중인 이미지의 등록은 같은 이름을 대체하고, 옛 이미지가 내려가며 빼도 새 등록이 남는다
+ * @details 새 이미지의 정적 등록자는 옛 이미지가 아직 도는 동안 돈다. 거절하면 옛 이미지가 내려간 뒤 그 이름(개발 명령 · 탐침 · 시나리오 단계)이 사라진다.
+ *          리로드 표지 밖의 중복은 지금처럼 거절한다.
+ */
+SW_TEST_CASE( RegistrationListTest, ReloadScopeReplacesTheNameAndTheOldImageRemovalKeepsTheNewOne )
+{
+    RegistrationProbe oldImage{ 1 };
+    RegistrationProbe newImage{ 2 };
+    RegistrationProbe stranger{ 3 };
+
+    RegistrationList<RegistrationProbe> list;
+    SW_EXPECT_TRUE( list.add( &oldImage, "play" ) == RegistrationResult::Added );
+    SW_EXPECT_TRUE( list.add( &stranger, "play" ) == RegistrationResult::DuplicateName ); // 리로드가 아니면 거절한다
+    {
+        RegistrationReloadScope scope;
+        SW_EXPECT_TRUE( list.add( &newImage, "play" ) == RegistrationResult::Added );
+    }
+    SW_ASSERT_EQUAL( 1u, list.getCount() );
+    SW_EXPECT_EQUAL( &newImage, list.findByName( "play" ) );
+
+    SW_EXPECT_TRUE( list.remove( &oldImage ) ); // 옛 이미지가 내려가며 뺀다
+    SW_EXPECT_FALSE( list.remove( &oldImage ) );
+    SW_ASSERT_EQUAL( 1u, list.getCount() );
+    SW_EXPECT_EQUAL( &newImage, list.findByName( "play" ) );
+}
+
+/**
+ * @brief [RegistrationListTest] 교체한 새 이미지가 취소되면(prepare 실패) 옛 등록이 이름을 되찾고, 연달은 리로드는 가장 나중 그림자부터 돌아온다
+ */
+SW_TEST_CASE( RegistrationListTest, CancelledReplacementRestoresTheOldRegistration )
+{
+    RegistrationProbe oldImage{ 1 };
+    RegistrationProbe firstNew{ 2 };
+    RegistrationProbe secondNew{ 3 };
+
+    RegistrationList<RegistrationProbe> list( RegistrationOrder::ByOrderThenName, true );
+    SW_EXPECT_TRUE( list.add( &oldImage, "probe", 5 ) == RegistrationResult::Added );
+    {
+        RegistrationReloadScope scope;
+        SW_EXPECT_TRUE( list.add( &firstNew, "probe", 5 ) == RegistrationResult::Added );
+    }
+    SW_EXPECT_TRUE( list.remove( &firstNew ) ); // 새 이미지를 버린다
+    SW_ASSERT_EQUAL( 1u, list.getCount() );
+    SW_EXPECT_EQUAL( &oldImage, list.findByName( "probe" ) ); // 옛 등록이 돌아왔다
+
+    // 연달은 리로드: 새 것이 새 것을 대체하고, 옛 이미지들이 내려갈 때는 그림자만 버린다.
+    {
+        RegistrationReloadScope scope;
+        SW_EXPECT_TRUE( list.add( &firstNew, "probe", 5 ) == RegistrationResult::Added );
+        SW_EXPECT_TRUE( list.add( &secondNew, "probe", 5 ) == RegistrationResult::Added );
+    }
+    SW_EXPECT_EQUAL( &secondNew, list.findByName( "probe" ) );
+    SW_EXPECT_TRUE( list.remove( &oldImage ) );
+    SW_EXPECT_TRUE( list.remove( &firstNew ) );
+    SW_ASSERT_EQUAL( 1u, list.getCount() );
+    SW_EXPECT_EQUAL( &secondNew, list.findByName( "probe" ) );
+}

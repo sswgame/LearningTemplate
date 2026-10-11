@@ -65,13 +65,15 @@ namespace sw
         /** @brief XML 글에서 읽습니다. */
         [[nodiscard]] bool parse( string_view xmlText, string_view sourceName, string& outError );
 
-        const string&                 getName() const { return _name; }
-        const string&                 getSourcePath() const { return _sourcePath; }
-        float32                       getFixedDelta() const { return _fixedDelta; }
-        uint32                        getTimeoutFrames() const { return _timeoutFrames; }
-        uint32                        getStartTimeoutFrames() const { return _startTimeoutFrames; }
-        AutomationStartCondition      getStartCondition() const { return _startCondition; }
-        VirtualInputMode              getInputMode() const { return _inputMode; }
+        const string&            getName() const { return _name; }
+        const string&            getSourcePath() const { return _sourcePath; }
+        float32                  getFixedDelta() const { return _fixedDelta; }
+        uint32                   getTimeoutFrames() const { return _timeoutFrames; }
+        uint32                   getStartTimeoutFrames() const { return _startTimeoutFrames; }
+        AutomationStartCondition getStartCondition() const { return _startCondition; }
+        VirtualInputMode         getInputMode() const { return _inputMode; }
+        /** @brief 새 프로세스에서만 도는 시나리오입니다(루트 `isolated="true"`). 시작 상태를 전제하거나 환경(창 크기 · 테마 · 세션)을 크게 바꿔 체인(`-scenario=a,b,c`)에 넣지 않는다. 실행기는 이 값을 쓰지 않고 테스트가 고른다. */
+        bool                          isIsolated() const { return _bIsolated; }
         const vector<AutomationStep>& getSteps() const { return _listStep; }
 
     private:
@@ -83,5 +85,6 @@ namespace sw
         uint32                   _startTimeoutFrames;
         AutomationStartCondition _startCondition;
         VirtualInputMode         _inputMode;
+        bool                     _bIsolated;
     };
 } // namespace sw

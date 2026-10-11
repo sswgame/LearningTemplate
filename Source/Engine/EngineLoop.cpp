@@ -932,6 +932,8 @@ namespace sw
         , _pAutomationRunner{ nullptr }
         , _pScenarioChain{ nullptr }
         , _scenarioReportPath{}
+        , _scenarioWorkingFolder{}
+        , _scenarioScreenshotBaseline{ 0 }
         , _renderViewScheduler{ nullptr }
         , _renderViewClock{ 0.0 }
         , _listAnimationLODView{}
@@ -1052,7 +1054,8 @@ namespace sw
         if ( _owned._pCommandLineManager->getArgument( CommandLineArgument::SCENARIO, scenarioPath ) && scenarioPath.empty() == false )
         {
             (void)_owned._pCommandLineManager->getArgument( CommandLineArgument::SCENARIO_REPORT, _scenarioReportPath );
-            _pScenarioChain = make_unique<AutomationScenarioChain>();
+            _pScenarioChain        = make_unique<AutomationScenarioChain>();
+            _scenarioWorkingFolder = FileUtil::getCurrentPath();
             _pScenarioChain->begin( AutomationScenarioChain::splitList( scenarioPath ), _owned._pCommandLineManager->isArgumentProvided( CommandLineArgument::SCENARIO_KEEP_GOING ) );
             if ( _pScenarioChain->isActive() )
                 startScenarioStage();
@@ -1070,11 +1073,24 @@ namespace sw
 
     void EngineLoop::startScenarioStage()
     {
+        // 앞 단계가 프로세스의 작업 폴더를 옮겼으면(파일 대화상자 같은 것) 상대 경로를 쓰는 다음 단계가 엉뚱한 폴더에 쓴다 — 알리고 처음 폴더로 되돌린다.
+        if ( _pScenarioChain->getStageIndex() > 0 && _scenarioWorkingFolder.empty() == false )
+        {
+            const string currentFolder = FileUtil::getCurrentPath();
+            if ( currentFolder != _scenarioWorkingFolder )
+            {
+                SW_LOG_WARNING( "[Scenario] the working folder changed to '%#' during stage %# - restoring '%#'", currentFolder.c_str(),
+                                static_cast<uint32>( _pScenarioChain->getStageIndex() ), _scenarioWorkingFolder.c_str() );
+                (void)FileUtil::setCurrentPath( _scenarioWorkingFolder );
+            }
+        }
         _pAutomationRunner = make_unique<AutomationRunner>();
         _pAutomationRunner->startFromPath( _pScenarioChain->getCurrentPath(),
                                            AutomationScenarioChain::makeStageReportPath( _scenarioReportPath, _pScenarioChain->getStageIndex(), _pScenarioChain->getStageCount() ) );
         if ( _renderThread != nullptr )
             _renderThread->setScenarioCaptureEnabled( true );
+        // 렌더 스레드의 완료 수는 프로세스 전체로 누적된다 — 이 단계의 실행기는 자기가 요청한 스크린샷만 기다리므로 시작 때의 값을 빼서 넘긴다.
+        _scenarioScreenshotBaseline = _renderThread != nullptr ? _renderThread->getCompletedScenarioScreenshotCount() : 0u;
         if ( _pAutomationRunner->isActive() )
         {
             const string fixedDelta = to_string( _pAutomationRunner->getScenario().getFixedDelta() );
@@ -1103,9 +1119,9 @@ namespace sw
             return;
         }
         if ( _pScenarioChain->isChain() )
-            SW_LOG_INFO( "[Scenario] chain %# (%# stage(s), %# failed, %# not run)", AutomationRunner::getResultName( _pScenarioChain->getFinalResult() ),
+            SW_LOG_INFO( "[Scenario] chain %# (%# stage(s), %# failed, %# skipped, %# not run)", AutomationRunner::getResultName( _pScenarioChain->getFinalResult() ),
                          static_cast<uint32>( _pScenarioChain->getStageCount() ), static_cast<uint32>( _pScenarioChain->getFailedStageCount() ),
-                         static_cast<uint32>( _pScenarioChain->getSkippedStageCount() ) );
+                         static_cast<uint32>( _pScenarioChain->getSkippedResultCount() ), static_cast<uint32>( _pScenarioChain->getSkippedStageCount() ) );
         requestQuit( static_cast<int32>( _pScenarioChain->getFinalResult() ) );
     }
 
@@ -1570,7 +1586,8 @@ namespace sw
         // `isActive` 가 아니라 `hasEnded` — 시작 프레임에서 진 시나리오(읽기 오류 · 시작 시한)도 여기서 끝맺고 그 코드로 끝난다.
         if ( _pAutomationRunner != nullptr && _pAutomationRunner->hasEnded() == false && _owned._pInputManager != nullptr )
         {
-            _pAutomationRunner->setCompletedScreenshotCount( _renderThread != nullptr ? _renderThread->getCompletedScenarioScreenshotCount() : 0u );
+            const uint32 completedCount = _renderThread != nullptr ? _renderThread->getCompletedScenarioScreenshotCount() : 0u;
+            _pAutomationRunner->setCompletedScreenshotCount( completedCount >= _scenarioScreenshotBaseline ? completedCount - _scenarioScreenshotBaseline : 0u );
             const AutomationResult result = _pAutomationRunner->onFrameEnd( *_owned._pInputManager );
             if ( result != AutomationResult::Running )
                 onScenarioStageEnded( static_cast<int32>( result ) );

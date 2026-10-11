@@ -9,6 +9,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Module/ModuleImageUtil.h"
 #include "Core/Process/Process.h"
+#include "Core/String/RegistrationList.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -735,7 +736,17 @@ namespace sw
             outShadow._pPreviousEnumHead     = EnumRegistrar::getHead();
             outShadow._pPreviousVariableHead = GlobalVariableRegistrar::getHead();
 
-            outShadow._pHandle = ModuleImageUtil::loadDynamicLibrary( outShadow._tempPath );
+            // 교체 이미지의 정적 등록자는 옛 이미지가 도는 동안 돈다 — 같은 이름의 등록(개발 명령 · 탐침 · 시나리오 단계 · 에디터 등록)을 거절하지 않고 대체하게 한다.
+            // 첫 로드는 진짜 중복(두 모듈이 같은 이름을 정의)이 있을 수 있으니 거절을 그대로 둔다.
+            if ( context._pLibraryModule != nullptr )
+            {
+                RegistrationReloadScope reloadScope;
+                outShadow._pHandle = ModuleImageUtil::loadDynamicLibrary( outShadow._tempPath );
+            }
+            else
+            {
+                outShadow._pHandle = ModuleImageUtil::loadDynamicLibrary( outShadow._tempPath );
+            }
             if ( outShadow._pHandle == nullptr )
             {
                 context._imageName._current = context._imageName._loaded;

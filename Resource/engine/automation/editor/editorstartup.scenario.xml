@@ -4,7 +4,7 @@
   등록 목록이 DLL 마다 갈라지면 패널 수가 줄어 이 시나리오가 진다. 패널을 더하거나 빼면 기대 수를 고친다(EditorModule 29 + 확장 GF_Editor_ThemePark 1). 뒤의 C 단계 시나리오가 이 파일을 바탕으로 쓴다.
   실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/editorstartup.scenario.xml -dx12
 -->
-<Scenario name="editor.editorstartup" fixedDelta="0.0166667" timeoutFrames="200" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.editorstartup" isolated="true" fixedDelta="0.0166667" timeoutFrames="200" startAfter="Immediately" input="exclusive">
 	<At frame="60">
 		<Expect probe="Editor.PanelCount" equals="30"/>
 		<ExpectLog contains="[Error]" count="0"/>
