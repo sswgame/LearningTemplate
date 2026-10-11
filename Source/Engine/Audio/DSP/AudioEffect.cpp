@@ -451,13 +451,6 @@ namespace sw
             float32         _dampCoefficient; /**< 피드백 로우패스 계수입니다(0 이면 없음). */
         };
 
-        /** @brief 매개변수 표의 개수입니다. 클래스 안 멤버 템플릿이 클래스의 인라인 정적 초기값에서 불리면 리눅스 CI(clang 14)에서 링크가 미해결로 남았다 — 클래스 밖에 둔다. */
-        template <size_t TCount>
-        constexpr uint32 countOf( const AudioEffectParameterInfo ( & )[TCount] )
-        {
-            return static_cast<uint32>( TCount );
-        }
-
         struct AudioEffectInternal
         {
             static constexpr AudioEffectParameterInfo kArrLowPassParameter[] = {
@@ -518,16 +511,16 @@ namespace sw
 
             /** @brief 이펙트 종류 표입니다. 이름은 데이터가 쓰는 철자입니다. */
             inline static const AudioEffectTypeInfo kArrEffectType[] = {
-                {   "LowPass",    kArrLowPassParameter,    countOf( kArrLowPassParameter ),   &createFilter<AudioBiquadType::LowPass>},
-                {  "HighPass",   kArrHighPassParameter,   countOf( kArrHighPassParameter ),  &createFilter<AudioBiquadType::HighPass>},
-                {  "BandPass",       kArrBandParameter,       countOf( kArrBandParameter ),  &createFilter<AudioBiquadType::BandPass>},
-                {   "Peaking",       kArrBandParameter,       countOf( kArrBandParameter ),   &createFilter<AudioBiquadType::Peaking>},
-                {  "LowShelf",       kArrBandParameter,       countOf( kArrBandParameter ),  &createFilter<AudioBiquadType::LowShelf>},
-                { "HighShelf",       kArrBandParameter,       countOf( kArrBandParameter ), &createFilter<AudioBiquadType::HighShelf>},
-                {"Compressor", kArrCompressorParameter, countOf( kArrCompressorParameter ),      &createEffect<AudioCompressorEffect>},
-                {   "Limiter",    kArrLimiterParameter,    countOf( kArrLimiterParameter ),         &createEffect<AudioLimiterEffect>},
-                {    "Reverb",     kArrReverbParameter,     countOf( kArrReverbParameter ),          &createEffect<AudioReverbEffect>},
-                {     "Delay",      kArrDelayParameter,      countOf( kArrDelayParameter ),           &createEffect<AudioDelayEffect>},
+                {   "LowPass",    kArrLowPassParameter,    SW_COUNT_OF( kArrLowPassParameter ),   &createFilter<AudioBiquadType::LowPass>},
+                {  "HighPass",   kArrHighPassParameter,   SW_COUNT_OF( kArrHighPassParameter ),  &createFilter<AudioBiquadType::HighPass>},
+                {  "BandPass",       kArrBandParameter,       SW_COUNT_OF( kArrBandParameter ),  &createFilter<AudioBiquadType::BandPass>},
+                {   "Peaking",       kArrBandParameter,       SW_COUNT_OF( kArrBandParameter ),   &createFilter<AudioBiquadType::Peaking>},
+                {  "LowShelf",       kArrBandParameter,       SW_COUNT_OF( kArrBandParameter ),  &createFilter<AudioBiquadType::LowShelf>},
+                { "HighShelf",       kArrBandParameter,       SW_COUNT_OF( kArrBandParameter ), &createFilter<AudioBiquadType::HighShelf>},
+                {"Compressor", kArrCompressorParameter, SW_COUNT_OF( kArrCompressorParameter ),      &createEffect<AudioCompressorEffect>},
+                {   "Limiter",    kArrLimiterParameter,    SW_COUNT_OF( kArrLimiterParameter ),         &createEffect<AudioLimiterEffect>},
+                {    "Reverb",     kArrReverbParameter,     SW_COUNT_OF( kArrReverbParameter ),          &createEffect<AudioReverbEffect>},
+                {     "Delay",      kArrDelayParameter,      SW_COUNT_OF( kArrDelayParameter ),           &createEffect<AudioDelayEffect>},
             };
         };
     } // namespace
