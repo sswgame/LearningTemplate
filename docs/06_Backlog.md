@@ -116,6 +116,8 @@
   있지 않다, X11 그리기는 `XDrawString`(Latin-1)이라 한글이 깨진다.
 
 - **입력 흉내 창구(`EditorSelfTestInput` · `EditorSelfTestMarks::note`)로 아직 안 덮은 것** — 그래프 패널 ↔ 저장 커맨드 배선, 인스펙터 콤보 직접 편집, 드래그 드롭.
+- **`editor/materialpreview` 가 OpenGL 에서 한 번 졌다**(2026-10-11, `AppScenarioTest.EditorScenariosPassOnOpenGL` 샤드 안 — 단독 3/3 통과). `WaitUntil Editor.MaterialPreviewRedMinusBlue <= -40` 이
+  1200 프레임을 기다리고도 +180(빨강)이었다 — 시간이 아니라 미리보기 렌더 타깃이 갱신되지 않은 상태에 머문 것이다. 재현되면 미리보기 재렌더 요청(속성 변경 → 렌더 타깃 갱신) 경로를 GL 에서 본다.
 
 ### 1-5. 핫 리로드 · 모듈
 
