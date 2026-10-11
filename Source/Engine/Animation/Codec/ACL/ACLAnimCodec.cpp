@@ -19,7 +19,7 @@ namespace sw
     {
         /**
          * @class ACLAllocator
-         * @brief ACL 의 할당을 sw 할당자로 돌립니다(메모리 태그 · 누수 검사에 보입니다).
+         * @brief ACL 의 할당을 sw 할당자로 돌립니다(메모리 태그와 누수 검사에 나타납니다).
          */
         class ACLAllocator final : public acl::iallocator
         {
@@ -47,7 +47,7 @@ namespace sw
             {
             }
 
-            // 본 LOD — 마스크가 0 인 트랙은 ACL 이 풀지 않는다(언리얼 본 LOD 가 쓰는 같은 자리).
+            // 본 LOD: 마스크가 0 인 트랙은 ACL 이 디코드하지 않는다(언리얼 본 LOD 와 같은 방식이다).
             bool skip_track_rotation( uint32_t trackIndex ) const { return _pTrackMask != nullptr && _pTrackMask[trackIndex] == 0; }
             bool skip_track_translation( uint32_t trackIndex ) const { return _pTrackMask != nullptr && _pTrackMask[trackIndex] == 0; }
             bool skip_track_scale( uint32_t trackIndex ) const { return _pTrackMask != nullptr && _pTrackMask[trackIndex] == 0; }

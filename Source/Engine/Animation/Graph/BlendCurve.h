@@ -1,8 +1,8 @@
 /**
  * @file BlendCurve.h
- * @brief 전환 하나의 곡선과 길이(`BlendCurveDef`)와, 시간 → 가중치 순수 함수(`evaluateBlendWeight`)입니다.
- * @details 컴포넌트를 모르는 함수라 카메라 디렉터 · 시퀀서 · 소켓 부착(`SocketBindingComponent` 의 되돌아가기)이 같은 곡선을 씁니다.
- *          참고: Cinemachine 의 Blend List · Custom Blends, 언리얼 `EViewTargetBlendFunction` · `EAlphaBlendOption`.
+ * @brief 전환 하나의 곡선과 길이(`BlendCurveDef`), 그리고 시간에서 가중치를 구하는 순수 함수(`evaluateBlendWeight`)입니다.
+ * @details 컴포넌트를 모르는 함수라서 카메라 디렉터, 시퀀서, 소켓 부착(`SocketBindingComponent` 의 되돌아가기)이 같은 곡선을 쓴다.
+ *          참고: Cinemachine 의 Blend List 와 Custom Blends, 언리얼의 `EViewTargetBlendFunction` 과 `EAlphaBlendOption`.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -17,22 +17,22 @@ namespace sw
     ENUM()
     enum class BlendCurve : uint8
     {
-        Cut = 0,     ///< 바로 바꾼다
+        Cut = 0,     ///< 바로 바꾼다.
         Linear,      ///< t
-        EaseIn,      ///< t^지수 — 천천히 출발
-        EaseOut,     ///< 1 − (1 − t)^지수 — 천천히 도착
-        EaseInOut,   ///< 앞 절반은 EaseIn, 뒤 절반은 EaseOut(지수)
-        SmoothStep,  ///< 3t² − 2t³(큐빅 에르미트, 끝 속도 0)
-        Cubic,       ///< 세제곱 ease-in-out(4t³ · 1 − (2 − 2t)³ / 2)
-        Exponential, ///< (1 − e^(−지수·t)) / (1 − e^(−지수)) — 빨리 다가가 천천히 붙는다
-        Spring,      ///< 임계 감쇠(넘치지 않는) 스프링이 1 로 다가가는 모양 — 길이(초)와 진동수로 정한다
-        Custom,      ///< 키(시간 · 값) 사이 직선 보간
+        EaseIn,      ///< t^지수이며 천천히 출발한다.
+        EaseOut,     ///< 1 - (1 - t)^지수이며 천천히 도착한다.
+        EaseInOut,   ///< 앞 절반은 EaseIn, 뒤 절반은 EaseOut(지수)이다.
+        SmoothStep,  ///< 3t² - 2t³(큐빅 에르미트, 끝 속도 0)이다.
+        Cubic,       ///< 세제곱 ease-in-out(4t³, 1 - (2 - 2t)³ / 2)이다.
+        Exponential, ///< (1 - e^(-지수·t)) / (1 - e^(-지수))이며 빨리 다가가 천천히 붙는다.
+        Spring,      ///< 임계 감쇠(넘치지 않는) 스프링이 1 로 다가가는 형태다. 길이(초)와 진동수로 정한다.
+        Custom,      ///< 키(시간, 값) 사이를 직선으로 보간한다.
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief `Custom` 곡선의 키 하나입니다. 시간 · 값 모두 [0, 1] 입니다. */
+    /** @brief `Custom` 곡선의 키 하나입니다. 시간과 값 모두 [0, 1] 입니다. */
     REFLECT()
     struct SW_API BlendCurveKey
     {
@@ -48,8 +48,8 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 전환 하나의 곡선과 길이입니다(카메라 프리셋의 들어오기 블렌드 · 프리셋 사이 덮어쓰기 · 시퀀서 컷 · 소켓으로 되돌아가기).
-     * @details 카메라 XML 은 `<BlendIn curve="EaseInOut" duration="0.8" exponent="2"/>`, `Custom` 은 안에 `<Key time="0.5" value="0.8"/>` 를 적습니다.
+     * @brief 전환 하나의 곡선과 길이입니다(카메라 프리셋의 들어오기 블렌드, 프리셋 사이 덮어쓰기, 시퀀서 컷, 소켓으로 되돌아가기).
+     * @details 카메라 XML 은 `<BlendIn curve="EaseInOut" duration="0.8" exponent="2"/>` 처럼 쓰고, `Custom` 은 안에 `<Key time="0.5" value="0.8"/>` 를 적는다.
      */
     REFLECT()
     struct SW_API BlendCurveDef
@@ -71,9 +71,9 @@ namespace sw
     };
 
     /**
-     * @brief 블렌드 진행(@p normalizedTime, 0..1 로 묶는다)의 가중치입니다. 시간 외의 상태가 없습니다.
-     * @details `Spring` 은 초 단위 시간(진행 × 길이)으로 스프링을 풀고 끝(길이)의 값으로 나눠 1 에서 1 이 되게 합니다. 감쇠비는 1 이상으로 묶어
-     *          넘치지 않습니다. `Custom` 의 키가 없으면 `Linear` 입니다.
+     * @brief 블렌드 진행(@p normalizedTime, 0..1 로 제한)의 가중치를 반환합니다. 시간 외의 상태가 없습니다.
+     * @details `Spring` 은 초 단위 시간(진행 × 길이)으로 스프링을 풀고, 끝(길이)의 값으로 나눠 1 에서 1 이 되게 한다. 감쇠비는 1 이상으로 제한해
+     *          넘치지 않게 한다. `Custom` 의 키가 없으면 `Linear` 와 같다.
      */
     SW_API float32 evaluateBlendWeight( const BlendCurveDef& spec, float32 normalizedTime );
 } // namespace sw

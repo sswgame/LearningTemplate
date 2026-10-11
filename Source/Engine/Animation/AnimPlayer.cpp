@@ -32,8 +32,8 @@ namespace sw
             play( pPlayable, bLoop );
             return;
         }
-        // 페이드 중에 또 넘어가면 지금 섞이던 다음 칸이 새 출발점이다(가중치가 더 큰 쪽을 남긴다). 버린 칸만큼 포즈가 튀므로 끊긴 수를 센다 —
-        // 포즈를 내는 쪽(스켈레탈 애니메이터)이 직전 포즈에서 이어 섞는다.
+        // 페이드 중에 또 넘어가면 지금 섞이던 다음 슬롯이 새 출발점이다(가중치가 더 큰 쪽을 남긴다). 버린 슬롯만큼 포즈가 튀므로 끊긴 횟수를 센다.
+        // 포즈를 내는 쪽(스켈레탈 애니메이터)이 직전 포즈에서 이어서 섞는다.
         if ( _arrSlot[1]._pPlayable != nullptr )
             ++_interruptCount;
         if ( _arrSlot[1]._pPlayable != nullptr && getBlendAlpha() >= 0.5f )

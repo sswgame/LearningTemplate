@@ -18,11 +18,11 @@ namespace sw
     struct AnimGraphNode
     {
         string _name;    /**< 노드 이름. 클립을 묶는 열쇠입니다. */
-        int32  _id{ 0 }; /**< 그래프 안에서 유일한 노드 id. 1 이상이어야 합니다. */
-        /** @brief 그래프 에디터에서의 노드 위치입니다. JSON 키는 그대로 "x"/"y" 라 파일 형식은 바뀌지 않습니다. */
+        int32  _id{ 0 }; /**< 그래프 안에서 유일한 노드 id 입니다. 1 이상이어야 합니다. */
+        /** @brief 그래프 에디터에서의 노드 위치입니다. JSON 키는 "x", "y" 그대로라 파일 형식은 바뀌지 않습니다. */
         float2 _position{ 40.0f, 40.0f };
         /**
-         * @brief 이 상태의 반복 여부입니다(JSON "loop", 선택). -1 은 적지 않음 — 직접 재생은 부른 쪽이, "끝나면 다음" 으로 들어오면 반복하지 않습니다.
+         * @brief 이 상태의 반복 여부입니다(JSON "loop", 선택). -1 은 적지 않았다는 뜻입니다. 직접 재생은 호출한 쪽이 정하고, "끝나면 다음"으로 들어오면 반복하지 않습니다.
          */
         int8 _loopOverride{ -1 };
     };
@@ -32,18 +32,18 @@ namespace sw
 {
     /**
      * @enum AnimConditionOp
-     * @brief 전이 조건의 비교입니다(JSON "op": ">" · "<" · ">=" · "<=" · "==" · "!=" · "trigger"). 모르는 표기는 로드 오류입니다.
+     * @brief 전이 조건의 비교입니다(JSON "op": ">", "<", ">=", "<=", "==", "!=", "trigger"). 모르는 표기는 로드 오류입니다.
      */
     enum class AnimConditionOp : uint8
     {
-        None = 0,     ///< 조건 없음 — 지금 상태가 반복 없이 끝나면 넘어갑니다("끝나면 다음").
+        None = 0,     ///< 조건이 없습니다. 현재 상태가 반복 없이 끝나면 넘어갑니다("끝나면 다음").
         Greater,      ///< 파라미터 > 값
         Less,         ///< 파라미터 < 값
         GreaterEqual, ///< 파라미터 >= 값
         LessEqual,    ///< 파라미터 <= 값
         Equal,        ///< 파라미터 == 값
         NotEqual,     ///< 파라미터 != 값
-        Trigger,      ///< 트리거가 켜져 있음 — 전이가 일어나면 끕니다
+        Trigger,      ///< 트리거가 켜져 있습니다. 전이가 일어나면 끕니다.
     };
 } // namespace sw
 
@@ -52,7 +52,7 @@ namespace sw
     /** @brief 애니메이션 그래프 링크(상태 전이)입니다. */
     struct SW_API AnimGraphLink
     {
-        int32           _id{ 0 };               /**< 그래프 안에서 유일한 링크 id. 1 이상이어야 합니다. */
+        int32           _id{ 0 };               /**< 그래프 안에서 유일한 링크 id 입니다. 1 이상이어야 합니다. */
         int32           _fromNode{ 0 };         /**< 출발 노드 id 입니다. */
         int32           _toNode{ 0 };           /**< 도착 노드 id 입니다. */
         float32         _blendSeconds{ -1.0f }; /**< 크로스페이드 길이(JSON "blend", 선택). 음수면 플레이어 기본값입니다. */
@@ -69,7 +69,7 @@ namespace sw
 {
     /**
      * @class AnimGraphAsset
-     * @brief BlendSpace · SpriteAnimator 와 노드 이름을 함께 쓰는 JSON 그래프입니다.
+     * @brief BlendSpace 와 SpriteAnimator 가 노드 이름을 함께 쓰는 JSON 그래프입니다.
      */
     class SW_API AnimGraphAsset
     {
@@ -106,7 +106,7 @@ namespace sw
         vector<AnimGraphLink> _listLink; /**< 링크 목록입니다. */
 
     private:
-        /** @brief 이미 파싱된 JSON 루트에서 노드 · 링크를 읽습니다. 모르는 조건 표기면 false 입니다. */
+        /** @brief 이미 파싱된 JSON 루트에서 노드와 링크를 읽습니다. 모르는 조건 표기면 false 를 반환합니다. */
         [[nodiscard]] bool parseRoot( const JSONValue& root );
     };
 } // namespace sw

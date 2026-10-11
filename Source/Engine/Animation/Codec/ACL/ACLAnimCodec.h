@@ -1,6 +1,6 @@
 /**
  * @file ACLAnimCodec.h
- * @brief ACL(Animation Compression Library 2.1) 백엔드입니다. ACL · RTM 헤더는 이 폴더의 .cpp 에서만 include 합니다.
+ * @brief ACL(Animation Compression Library 2.1) 백엔드입니다. ACL 과 RTM 헤더는 이 폴더의 .cpp 에서만 include 합니다.
  */
 #pragma once
 #include "Engine/Animation/Codec/AnimCodec.h"

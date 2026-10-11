@@ -1,6 +1,6 @@
 /**
  * @file AnimClip.h
- * @brief 스켈레탈 애니메이션 클립 에셋(`.animclip`) — 본 트랙(코덱 블롭) · 실수 커브 · 알림 · 루트 모션 트랙입니다.
+ * @brief 스켈레탈 애니메이션 클립 에셋(`.animclip`)입니다. 본 트랙(코덱 블롭), 실수 커브, 알림, 루트 모션 트랙을 담습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -19,7 +19,7 @@ namespace sw
 
     /**
      * @struct AnimCurveKey
-     * @brief 커브 키 하나(시각 · 값)입니다.
+     * @brief 커브 키 하나(시각, 값)입니다.
      */
     struct AnimCurveKey
     {
@@ -32,7 +32,7 @@ namespace sw
 {
     /**
      * @struct AnimCurve
-     * @brief 이름 붙은 실수 커브입니다(머티리얼 값 · 발 고정 가중치 · 속도 같은 게임 값). 키 사이는 선형, 바깥은 끝 키 값입니다.
+     * @brief 이름 붙은 실수 커브입니다(머티리얼 값, 발 고정 가중치, 속도 같은 게임 값). 키 사이는 선형이고, 바깥은 끝 키의 값을 씁니다.
      */
     struct SW_API AnimCurve
     {
@@ -48,10 +48,10 @@ namespace sw
 {
     /**
      * @class AnimClip
-     * @brief 클립 하나입니다. 트랙(본 이름 순서)은 코덱 블롭에 들어 있고, 샘플은 코덱이 트랙 순서의 포즈로 풀어 냅니다.
-     * @details 파일 형식(리틀 엔디언): 매직 `SWAC` · 버전 · 플래그(비트 0 = 반복) · 길이(초) · 이름 · 트랙 수와 트랙(본) 이름들 ·
-     *          루트 모션 트랙(-1 = 없음) · 코덱 번호 · 블롭 크기와 블롭 · 알림(이름 · 시각 · 구간) · 커브(이름 · 키). 문자열은 길이(uint32) + 바이트입니다.
-     *          읽기는 지금 형식만 받습니다(버전이 다르면 원본에서 다시 임포트합니다).
+     * @brief 클립 하나입니다. 트랙(본 이름 순서)은 코덱 블롭에 들어 있고, 샘플은 코덱이 트랙 순서의 포즈로 디코드합니다.
+     * @details 파일 형식(리틀 엔디언)은 다음 순서다. 매직 `SWAC`, 버전, 플래그(비트 0 = 반복), 길이(초), 이름, 트랙 수와 트랙(본) 이름들,
+     *          루트 모션 트랙(-1 = 없음), 코덱 번호, 블롭 크기와 블롭, 알림(이름, 시각, 구간), 커브(이름, 키)다. 문자열은 길이(uint32)와 바이트로 쓴다.
+     *          읽기는 현재 형식만 받는다(버전이 다르면 원본에서 다시 임포트한다).
      */
     class SW_API AnimClip final : public IAnimPlayable
     {
@@ -63,7 +63,7 @@ namespace sw
 
         AnimClip();
 
-        /** @brief (IAnimPlayable) 길이(초)입니다. */
+        /** @brief (IAnimPlayable) 길이(초)를 반환합니다. */
         float32 getPlayLength() const override { return _duration; }
         /** @brief (IAnimPlayable) 데이터가 정한 반복 여부입니다. */
         bool isLoopingByDefault() const override { return _bLoop == SW_TRUE; }
@@ -89,14 +89,14 @@ namespace sw
         void setName( const hashed_string& name ) { _name = name; }
         void setLooping( bool bLoop ) { _bLoop = bLoop ? SW_TRUE : SW_FALSE; }
         void setRootMotionTrack( int32 trackIndex ) { _rootMotionTrack = trackIndex; }
-        /** @brief 알림을 하나 더합니다(임포트 · 테스트). */
+        /** @brief 알림을 하나 추가합니다(임포트와 테스트용). */
         void addNotify( const AnimNotifyEvent& event ) { _notifyTrack.addEvent( event ); }
-        /** @brief 커브를 하나 더합니다(임포트 · 테스트). */
+        /** @brief 커브를 하나 추가합니다(임포트와 테스트용). */
         void addCurve( const AnimCurve& curve ) { _listCurve.push_back( curve ); }
 
         /**
-         * @brief 원본 표본을 @p codec 으로 압축해 이 클립의 트랙 · 길이 · 블롭으로 삼습니다(임포트 · 테스트). 이름 · 알림 · 커브는 그대로입니다.
-         * @param pOutStats 압축률 · 최대 오차를 받습니다(선택).
+         * @brief 원본 샘플을 @p codec 으로 압축해 이 클립의 트랙, 길이, 블롭으로 삼습니다(임포트와 테스트용). 이름, 알림, 커브는 그대로 둡니다.
+         * @param pOutStats 압축률과 최대 오차를 받습니다(선택).
          */
         [[nodiscard]] bool compressFrom( const AnimRawClip& rawClip, const IAnimCodec& codec, const AnimCodecSettings& settings, AnimCodecStats* pOutStats );
 
@@ -105,25 +105,25 @@ namespace sw
          * @param pTrackMask 트랙마다 0 이면 풀지 않습니다(본 LOD). nullptr 이면 모든 트랙입니다.
          */
         [[nodiscard]] bool sampleTracks( float32 time, Pose& outTrackPose, const uint8* pTrackMask = nullptr ) const;
-        /** @brief 트랙 → 스켈레톤 본 인덱스 표를 만듭니다(없는 본은 -1). 클립 · 스켈레톤 짝마다 한 번 만들어 둡니다. */
+        /** @brief 트랙에서 스켈레톤 본 인덱스로 가는 테이블을 만듭니다(없는 본은 -1). 클립과 스켈레톤 쌍마다 한 번 만들어 둡니다. */
         void makeTrackToBoneMap( const Skeleton& skeleton, vector<int32>& outListBone ) const;
         /**
-         * @brief 클립을 @p time 에 샘플해 본 포즈(레퍼런스 · 리더 포즈로 채워 둔 @p inoutPose)에 씁니다. 애니메이터 · 군중 공유 · VAT 굽기가 함께 쓰는 한 길입니다.
-         * @param listTrackToBone   `makeTrackToBoneMap` 의 표입니다.
-         * @param scratchTrackPose  트랙 순서 포즈를 담을 재사용 자리입니다.
-         * @param bAnchorRootMotion 루트 모션 트랙의 본을 클립 시작 자리에 묶습니다(움직임은 오브젝트가 맡는다).
-         * @param pTrackMask        트랙마다 0 이면 풀지도 옮기지도 않습니다(본 LOD).
+         * @brief 클립을 @p time 에 샘플해 본 포즈(레퍼런스나 리더 포즈로 채워 둔 @p inoutPose)에 씁니다. 애니메이터, 군중 공유, VAT 베이크가 함께 쓰는 하나의 경로입니다.
+         * @param listTrackToBone   `makeTrackToBoneMap` 의 테이블입니다.
+         * @param scratchTrackPose  트랙 순서 포즈를 담을 재사용 버퍼입니다.
+         * @param bAnchorRootMotion 루트 모션 트랙의 본을 클립 시작 위치에 고정합니다(움직임은 오브젝트가 맡습니다).
+         * @param pTrackMask        트랙마다 0 이면 디코드도 이동도 하지 않습니다(본 LOD).
          */
         [[nodiscard]] bool samplePose( float32 time, const vector<int32>& listTrackToBone, Pose& inoutPose, Pose& scratchTrackPose, bool bAnchorRootMotion,
                                        const uint8* pTrackMask = nullptr ) const;
-        /** @brief 트랙 포즈를 표대로 본 포즈에 옮깁니다. 표에 없는 본과 @p pTrackMask 가 0 인 트랙은 그대로 둡니다. */
+        /** @brief 트랙 포즈를 테이블대로 본 포즈에 옮깁니다. 테이블에 없는 본과 @p pTrackMask 가 0 인 트랙은 그대로 둡니다. */
         static void copyTracksToPose( const Pose& trackPose, const vector<int32>& listTrackToBone, Pose& inoutPose, const uint8* pTrackMask = nullptr );
         /**
-         * @brief 루트 모션 트랙이 @p step 동안 움직인 양입니다(부모 공간 이동 차이 · 회전 차이 `inverse( 이전 ) * 지금`).
-         * @details 반복을 넘으면 (끝 - 이전) + 온 바퀴 × (끝 - 시작) + (지금 - 시작) 입니다. 루트 모션 트랙이 없으면 단위 변환입니다.
+         * @brief 루트 모션 트랙이 @p step 동안 움직인 양을 반환합니다(부모 공간 이동 차이와 회전 차이 `inverse( 이전 ) * 현재`).
+         * @details 반복을 넘으면 (끝 - 이전) + 온 바퀴 × (끝 - 시작) + (현재 - 시작)이다. 루트 모션 트랙이 없으면 단위 변환이다.
          */
         BoneTransform computeRootMotionDelta( const AnimTimeStep& step ) const;
-        /** @brief 루트 모션 트랙의 시각 0 변환입니다(뽑아낸 뒤 루트를 이 자리에 묶습니다). */
+        /** @brief 루트 모션 트랙의 시각 0 변환을 반환합니다(추출한 뒤 루트를 이 위치에 고정합니다). */
         BoneTransform getRootMotionAnchor() const;
 
         /** @brief 파일 바이트로 만듭니다. */
