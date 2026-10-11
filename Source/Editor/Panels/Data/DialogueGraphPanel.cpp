@@ -250,7 +250,7 @@ namespace sw::editor
         }
 
         // 삭제 처리. 링크가 노드에 닿는지는 핀 번호를 풀어 본다. **핀을 푸는 정본은 `DialogueGraphAsset` 이다.**
-        // `decodePinNodeID` 는 자릿수 기준(`kPinScale`)이 다른 옛 핀도 함께 푼다. 여기서 손으로 풀면
+        // 핀을 푸는 기준(`kPinScale`)은 `decodePinNodeID` 한 곳에만 있다. 여기서 손으로 풀면
         // 기준이 바뀔 때 노드를 지워도 그 링크가 남는다.
         processCanvasDeletions(
             []( const DialogueLink& link, int32 nodeID )

@@ -35,10 +35,6 @@ namespace sw::editor
             /** @brief 이보다 작은 뷰포트(최소화한 창의 0×0)는 비율의 기준으로 삼지 않습니다. 비율이 0 이 되면 되돌릴 수 없습니다. */
             static constexpr float32 kMinScaledDockspaceSize = 64.0f;
 
-            /** @brief Scene 창이 없는 배치를 알아보는 창 줄입니다. 이 줄만 있고 Scene 창 줄이 없으면 지금 도크스페이스와 맞지 않는 배치입니다. */
-            static constexpr const utf8* kLegacyGameViewWindow = "[Window][Game View]";
-            static constexpr const utf8* kSceneViewWindow      = "[Window][Scene]";
-
             /** @brief 기본 배치에서 가운데 영역의 앞 탭이 될 창(씬 뷰 패널 제목)입니다. */
             static constexpr const utf8* kFrontTabWindowTitle = "Scene";
             /** @brief 기본 배치 뒤 앞 탭을 고르려 포커스를 주는 최대 프레임 수입니다 — 창이 도킹되고 탭 막대가 서는 데 한두 프레임이 든다. */
@@ -189,14 +185,9 @@ namespace sw::editor
         // 읽은 레이아웃은 저장할 때의 도크스페이스 크기와 그 크기의 SizeRef 를 든다. 다음 프레임이 그 크기를 기준으로 지금 창에 비율을 맞춘다.
         _lastDockspaceWidth  = 0.0f;
         _lastDockspaceHeight = 0.0f;
-        // 기본 배치를 다시 덮지 않게 한다(읽은 도킹 노드가 비어 보여도 그것이 사용자의 배치다). 단, Game View 창만 있고 Scene 창이 없는 배치는
-        // Scene · Game 창과 지금 도크스페이스를 모른다 — 기본 배치로 다시 짓는다.
-        const bool bLegacyLayout = _pendingLayoutIni.find( EditorDockLayoutInternal::kLegacyGameViewWindow ) != string::npos &&
-                                   _pendingLayoutIni.find( EditorDockLayoutInternal::kSceneViewWindow ) == string::npos;
-        if ( bLegacyLayout )
-            SW_LOG_WARNING( "The layout predates the Scene / Game view split - applying the default dock layout" );
-        _bApplied      = bLegacyLayout ? SW_FALSE : SW_TRUE;
-        _bResetDefault = bLegacyLayout ? SW_TRUE : SW_FALSE;
+        // 기본 배치를 다시 덮지 않게 한다(읽은 도킹 노드가 비어 보여도 그것이 사용자의 배치다). 배치가 맞지 않으면 메뉴의 레이아웃 초기화로 되돌린다.
+        _bApplied      = SW_TRUE;
+        _bResetDefault = SW_FALSE;
         // 다시 연 패널의 창은 처음 나타나며 포커스를 받아 그 탭이 앞에 선다(그대로 두면 씬 뷰 최대화를 풀 때 Prefab Editor 가 앞에 선다) — 기본 배치처럼 Scene 탭을 앞으로.
         _bFrontTabPending   = SW_TRUE;
         _frontTabFrameCount = 0;
