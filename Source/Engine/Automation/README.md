@@ -216,6 +216,7 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 | `Editor.PlayState` | 0 정지, 1 플레이, 2 일시 정지 |
 | `Editor.SceneDirty` | 저장하지 않은 변경이 있으면 1 |
 | `Input.OsDeviceInputBlocked` | 배타 시나리오가 사람의 마우스 · 키보드 창 사건을 버리는 중이면 1(혼합 시나리오 · 일반 실행은 0) |
+| `Profiler.TraceRecording` | 긴 캡처(`profile.trace record`)가 아직 모으는 중이면 1 — 벽시계로 끝나므로 `WaitUntil` 로 기다린다(Dev 전용) |
 | `App.AssertDialogInstalled` | App 이 대화형 단언 대화상자를 걸었으면 1 — 자동 실행(시나리오 · `-unattended`)에서는 늘 0 |
 | `Editor.RenderDocAvailable` | RenderDoc 이 이 프로세스에 붙어 있으면 1(`-renderdoc` 또는 RenderDoc 에서 실행) |
 | `Editor.WindowTitleDirty` | 창 제목이 미저장 표시(`*`)를 달고 있으면 1 — 셸이 실제로 창에 건 제목을 읽는다 |

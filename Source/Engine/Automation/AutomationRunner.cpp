@@ -19,6 +19,7 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Profiling/ProfilerTraceExport.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Window/IWindow.h"
@@ -182,6 +183,16 @@ namespace sw
                 outValue = engine::getInputManager().isOsDeviceInputBlocked() ? 1.0 : 0.0;
                 return true;
             }
+
+#if SW_PROFILER_TRACE_ENABLED
+            /** @brief 탐침 `Profiler.TraceRecording` — 긴 캡처(`profile.trace record`)가 아직 모으는 중이면 1 입니다. */
+            [[nodiscard]] static bool readTraceRecording( const GameObjectManager* pManager, float64& outValue )
+            {
+                (void)pManager;
+                outValue = ProfilerTraceExport::isRecording() ? 1.0 : 0.0;
+                return true;
+            }
+#endif
         };
     } // namespace
 } // namespace sw
@@ -190,6 +201,11 @@ namespace sw
 {
     SW_AUTOMATION_PROBE( inputOsDeviceInputBlocked, "Input.OsDeviceInputBlocked", "1 while unattended automation drops the person's mouse and keyboard window events",
                          &AutomationRunnerInternal::readOsDeviceInputBlocked );
+#if SW_PROFILER_TRACE_ENABLED
+    // 긴 캡처는 벽시계로 끝난다 — 시나리오는 고정 프레임이 아니라 이 탐침을 `WaitUntil` 로 기다린다(빠른 백엔드는 몇 백 프레임이 0.3 초 안에 돈다).
+    SW_AUTOMATION_PROBE( profilerTraceRecording, "Profiler.TraceRecording", "1 while a profile.trace record capture is still collecting",
+                         &AutomationRunnerInternal::readTraceRecording );
+#endif
 } // namespace sw
 
 namespace sw

@@ -7,9 +7,12 @@
 -->
 <Scenario name="engine.profiletrace" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<At frame="5"><DevCommand line="profile.trace record 0.3"/></At>
-	<At frame="200"><ExpectLog contains="Trace recording saved" atLeast="1"/></At>
-	<At frame="210"><DevCommand line="profile.trace record 0.3 50"/></At>
-	<At frame="420">
+	<!-- 캡처는 벽시계 0.3 초로 끝난다 — DX11 · OpenGL 은 그 안에 몇 백 프레임이 돌아 고정 프레임으로는 아직 모으는 중일 수 있다 -->
+	<At frame="10"><WaitUntil probe="Profiler.TraceRecording" equals="0"/></At>
+	<At frame="12"><ExpectLog contains="Trace recording saved" atLeast="1"/></At>
+	<At frame="20"><DevCommand line="profile.trace record 0.3 50"/></At>
+	<At frame="25"><WaitUntil probe="Profiler.TraceRecording" equals="0"/></At>
+	<At frame="27">
 		<ExpectLog contains="TRUNCATED" atLeast="1"/>
 		<Pass/>
 	</At>
