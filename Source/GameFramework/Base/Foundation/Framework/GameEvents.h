@@ -1,14 +1,15 @@
 /**
  * @file GameEvents.h
- * @brief EventDispatcher 채널 "game" 의 장르 공통 수명주기 이벤트입니다 — 프레임워크가 그 자리에서 냅니다.
+ * @brief EventDispatcher 채널 "game" 의 장르 공통 수명주기 이벤트를 정의합니다.
+ * @details 프레임워크가 정해진 자리에서 이 이벤트를 낸다.
+ *          모두 `GameEventUtil::send` 로 내며, 버스 스레드면 그 자리에서, 아니면 다음 `processEvents` 에서 전달된다.
+ *          - `SaveGameSavedEvent` 와 `SaveGameLoadedEvent`: `GameInstanceBase::saveStateToFile` 과 `loadStateFromFile` 이 끝난 자리에서 낸다. 성공과 실패 모두 낸다.
+ *          - `SceneLoadRequestedEvent`: `GameInstanceBase::requestFirstScene` 과 `requestEntranceScene` 이 씬 로드를 맡긴 자리에서 낸다.
+ *          - `SceneLoadCompletedEvent`: 그 로드가 활성 씬이 되었거나 실패한 뒤의 첫 `GameInstanceBase::update` 에서 낸다.
  *
- * @details 이벤트마다 내는 곳이 정해져 있습니다(모두 `GameEventUtil::send` — 버스 스레드면 그 자리에서, 아니면 다음 `processEvents`):
- *          - `SaveGameSavedEvent` · `SaveGameLoadedEvent` — `GameInstanceBase::saveStateToFile` · `loadStateFromFile` 이 끝난 자리(성공 · 실패 모두).
- *          - `SceneLoadRequestedEvent` — `GameInstanceBase::requestFirstScene` · `requestEntranceScene` 이 씬 로드를 맡긴 자리.
- *          - `SceneLoadCompletedEvent` — 그 로드가 활성 씬이 되었거나 실패한 뒤의 첫 `GameInstanceBase::update`.
- *          언리얼 `FCoreUObjectDelegates::PreLoadMap` · `PostLoadMapWithWorld` 와 같은 자리입니다. 낼 자리가 없는 이벤트(일시정지 등)는 두지 않습니다.
- *          다른 채널 이벤트는 킷이 자기 헤더에 둡니다(`ActionCombatEvents.h` 의 피해 · 룸 이벤트).
- *          `SceneManager` 를 직접 부른 씬 로드는 레벨 이벤트를 내지 않습니다 — 엔진은 GameFramework 를 모릅니다.
+ *          언리얼의 `FCoreUObjectDelegates::PreLoadMap` 과 `PostLoadMapWithWorld` 에 해당한다. 낼 자리가 없는 이벤트(일시정지 등)는 두지 않는다.
+ *          다른 채널 이벤트는 킷이 자기 헤더에 둔다(`ActionCombatEvents.h` 의 피해와 룸 이벤트).
+ *          `SceneManager` 를 직접 불러 한 씬 로드는 레벨 이벤트를 내지 않는다. 엔진은 GameFramework 를 모르기 때문이다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -59,7 +60,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 3) 레벨(씬) 로드 — GameInstanceBase
     // ------------------------------------------------------------------------------
-    /** @brief 프레임워크가 씬 로드를 맡겼음을 알립니다(알림이지 요청 명령이 아닙니다 — 받아서 로드하는 쪽은 없습니다). */
+    /** @brief 프레임워크가 씬 로드를 맡겼음을 알립니다. 알림일 뿐 요청 명령이 아니며, 받아서 로드하는 쪽은 없습니다. */
     struct SW_GF_API SceneLoadRequestedEvent final : IEvent
     {
         string _levelName; ///< 로드할 씬 경로
