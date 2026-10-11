@@ -8,13 +8,12 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/EditorPaths.h"
+#include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorLayoutStore.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Panels/EditorPanelManager.h"
-#include "Editor/SelfTest/EditorSelfTest.h"
 
 #include "Engine/Utility/KeyValueFile.h"
 
@@ -29,6 +28,9 @@ namespace sw::editor
         {
             /** @brief `-gv_editorOpenPanel` 이 이 값이면 등록된 패널을 전부 엽니다. 패널 id 는 `hierarchy` 같은 소문자 이름이라 겹치지 않습니다. */
             static constexpr const utf8* kOpenAllPanels = "all";
+
+            /** @brief 셸이 요청한 레이아웃 덮어쓰기(자체 시험 실행) — `setPanelOverrideRequested`. */
+            inline static bool _s_bPanelOverrideRequested = false;
 
             /** @brief 이보다 작은 뷰포트(최소화한 창의 0×0)는 비율의 기준으로 삼지 않습니다. 비율이 0 이 되면 되돌릴 수 없습니다. */
             static constexpr float32 kMinScaledDockspaceSize = 64.0f;
@@ -97,7 +99,12 @@ namespace sw::editor
 
     bool EditorDockLayout::isPanelOverrideActive()
     {
-        return gv_editorOpenPanel.empty() == false || EditorSelfTestRunner::isRequested();
+        return gv_editorOpenPanel.empty() == false || EditorDockLayoutInternal::_s_bPanelOverrideRequested;
+    }
+
+    void EditorDockLayout::setPanelOverrideRequested( bool bRequested )
+    {
+        EditorDockLayoutInternal::_s_bPanelOverrideRequested = bRequested;
     }
 
     bool EditorDockLayout::isOpeningAllPanels()

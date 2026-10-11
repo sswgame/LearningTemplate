@@ -9,21 +9,20 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Process/Process.h"
 
-#include "Editor/AssetActions/EditorAssetTypeActions.h"
 #include "Editor/Common/Asset/EditorAssetValidation.h"
 #include "Editor/Common/Commands/EditorInspectorCommands.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
-#include "Editor/Common/EditorUtil.h"
-#include "Editor/Common/GUI/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
+#include "Editor/Common/Workspace/EditorAssetTypeActions.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSceneGenerationSync.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Panels/EditorPanelManager.h"
+#include "Editor/Common/Workspace/IEditorPanelHost.h"
 
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/GameConfig.h"
@@ -31,6 +30,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourcePaths.h"
@@ -45,6 +45,44 @@ namespace sw::editor
     {
         struct EditorAssetCommandsInternal
         {
+            /** @brief 프리팹을 스폰합니다(부모가 있으면 그 아래에). 실패하면 로그를 남기고 nullptr 을 반환합니다. */
+            static GameObject* spawnPrefabFromAssetPath( GameObjectManager* pManager, const utf8* pPath, GameObject* pParent )
+            {
+                if ( pManager == nullptr || StringUtil::isNullOrEmpty( pPath ) )
+                    return nullptr;
+
+                if ( EditorAssetTypeRegistry::matches( EditorAssetType::Prefab, pPath ) == false )
+                {
+                    SW_LOG_TRACE( "Not a prefab path: %#", pPath );
+                    return nullptr;
+                }
+
+                // `getService<T>()` 는 nullptr 을 반환할 수 있다(문서에 그렇게 적혀 있다). 역참조하기 전에 확인한다.
+                AssetManager* pResources = editor::getService<AssetManager>();
+                if ( pResources == nullptr )
+                {
+                    SW_LOG_WARNING( "AssetManager 서비스가 없어 프리팹을 스폰할 수 없습니다: %#", pPath );
+                    return nullptr;
+                }
+
+                GameObject* pSpawned = pResources->getPrefabCache().spawn( pManager, pPath );
+                if ( pSpawned == nullptr )
+                {
+                    SW_LOG_WARNING( "Failed to spawn prefab: %#", pPath );
+                    return nullptr;
+                }
+
+                if ( pParent != nullptr && pSpawned->attachToParent( pParent ) == false )
+                    SW_LOG_WARNING( "Spawned prefab could not be put under '%#' - it stays at the root", pParent->getName().c_str() );
+
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext != nullptr )
+                    pContext->getWorkspace().setGameObjectPrefabPath( pSpawned->getObjectID(), pPath );
+
+                SW_LOG_TRACE( "Spawned prefab from %#", pPath );
+                return pSpawned;
+            }
+
             /** @brief `collectChildFolders` 가 디스크를 읽은 횟수입니다(`getChildFolderScanCount`). */
             static atomic<uint64>& getChildFolderScanCounter()
             {
@@ -317,7 +355,7 @@ namespace sw::editor
     void EditorAssetCommands::saveFocusedOrScene()
     {
         EditorContext* pContext = EditorContext::get();
-        if ( pContext != nullptr && pContext->getPanelManager().saveFocusedDirtyDocument() )
+        if ( pContext != nullptr && pContext->getPanelHost().saveFocusedDirtyDocument() )
             return;
         saveActiveSceneOrPrompt();
     }
@@ -333,7 +371,7 @@ namespace sw::editor
 
         if ( EditorSessionPolicy::shouldSaveBeforeAction( choice ) )
         {
-            if ( pContext->getPanelManager().saveAllDirtyDocuments() == false )
+            if ( pContext->getPanelHost().saveAllDirtyDocuments() == false )
             {
                 pContext->getNotificationManager().push( "Editor", "Document save failed", NotificationType::Error );
                 return;
@@ -360,7 +398,7 @@ namespace sw::editor
         if ( EditorSessionPolicy::shouldClearDirtyWithoutSave( choice ) )
         {
             ws.clearSceneDirty();
-            pContext->getPanelManager().discardAllDirtyDocuments();
+            pContext->getPanelHost().discardAllDirtyDocuments();
         }
 
         if ( EditorSessionPolicy::shouldProceedWithAction( choice ) )
@@ -389,7 +427,7 @@ namespace sw::editor
             return false;
 
         const bool   bSceneDirty = pContext->getWorkspace().isSceneDirty();
-        const uint32 dirtyDocs   = pContext->getPanelManager().countDirtyDocuments();
+        const uint32 dirtyDocs   = pContext->getPanelHost().countDirtyDocuments();
         if ( EditorSessionPolicy::needsQuitPrompt( bSceneDirty, dirtyDocs ) == false )
             return true;
 
@@ -415,9 +453,9 @@ namespace sw::editor
     GameObject* EditorAssetCommands::spawnPrefab( GameObjectManager* pManager, const utf8* pPath, GameObject* pParent,
                                                   const utf8* pUndoLabel )
     {
-        if ( EditorUtil::areSceneEditsAllowed() == false )
+        if ( EditorPlaySession::areSceneEditsAllowed() == false )
             return nullptr;
-        GameObject* pSpawned = EditorUtil::spawnPrefabFromAssetPath( pManager, pPath, pParent );
+        GameObject* pSpawned = EditorAssetCommandsInternal::spawnPrefabFromAssetPath( pManager, pPath, pParent );
         if ( pSpawned == nullptr )
             return nullptr;
 
@@ -429,7 +467,7 @@ namespace sw::editor
 
     GameObject* EditorAssetCommands::spawnSprite( GameObjectManager* pManager, const utf8* pPath, const float3& worldPos )
     {
-        if ( EditorUtil::areSceneEditsAllowed() == false )
+        if ( EditorPlaySession::areSceneEditsAllowed() == false )
             return nullptr;
         if ( pManager == nullptr || StringUtil::isNullOrEmpty( pPath ) )
             return nullptr;
@@ -700,7 +738,7 @@ namespace sw::editor
         uint8        bSpawnedRoot{ SW_FALSE };
         if ( pRoot == nullptr )
         {
-            pRoot = EditorUtil::spawnPrefabFromAssetPath( pManager, pathStr.c_str(), pUnderRoot );
+            pRoot = EditorAssetCommandsInternal::spawnPrefabFromAssetPath( pManager, pathStr.c_str(), pUnderRoot );
             if ( pRoot == nullptr )
                 return false;
             bSpawnedRoot = SW_TRUE;

@@ -1,17 +1,11 @@
 /**
  * @file EditorUtil.h
- * @brief EditorModule 유틸리티입니다(프리팹 스폰, 씬 편집 허용 여부, 파이썬 실행기 등). 경로는 EditorPaths. UI 에 의존하지 않습니다.
+ * @brief EditorModule 유틸리티입니다(파이썬 실행기, 계층 뱃지). 경로는 EditorPaths. UI 에 의존하지 않습니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-
-namespace sw
-{
-    class GameObject;
-    class GameObjectManager;
-} // namespace sw
 
 namespace sw::editor
 {
@@ -25,16 +19,6 @@ namespace sw::editor
 #else
         static constexpr const utf8* kPythonCommand = "python3";
 #endif
-
-        // ------------------------------------------------------------------------------
-        // 프리팹 스폰 · 편집 허용
-        //    애셋 종류 판별은 EditorAssetTypeRegistry::matches 가 정본입니다
-        // ------------------------------------------------------------------------------
-        /** @brief 프리팹을 스폰합니다(부모가 있으면 그 아래에). 실패하면 로그를 남기고 nullptr 을 반환합니다. */
-        static GameObject* spawnPrefabFromAssetPath( GameObjectManager* pManager, const utf8* pPath, GameObject* pParent = nullptr );
-
-        /** @brief 플레이 세션이 정지(Stop) 상태일 때만 씬 오브젝트를 편집할 수 있습니다. */
-        static bool areSceneEditsAllowed();
 
         /**
          * @brief 계층 라벨에 붙일 `[Category]` 뱃지를 덧붙입니다.

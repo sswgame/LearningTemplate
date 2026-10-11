@@ -9,18 +9,18 @@
 #include "Editor/Common/GUI/EditorCommandGUI.h"
 #include "Editor/Common/GUI/EditorDockLayout.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
-#include "Editor/Common/GUI/EditorNotificationManager.h"
+#include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/EditorStatusBar.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorLayoutStore.h"
+#include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Panels/EditorPanelManager.h"
-#include "Editor/Panels/MapCheckPanel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Common/EngineDefines.h"
@@ -41,44 +41,6 @@ namespace sw::editor
         {
             inline static bool    _s_bShowThemeSettings = false;
             inline static float32 _s_statusAreaWidth    = 0.0f; ///< 지난 프레임에 잰 상태 영역 너비(0 = 아직 모름)
-
-            /** @brief 상태줄 맵 검사 수 — 결과 번호가 바뀔 때만 다시 센다. */
-            inline static MapCheckCounts _s_mapCheckCounts{};
-            inline static uint32         _s_mapCheckRevision = 0;
-            inline static bool           _s_bMapCheckCounted = false;
-            /** @brief 씬을 열었을 때 한 번 띄우는 "Map Check: N errors" 토스트의 기준 씬입니다(이름이 바뀌면 새 씬이다). */
-            inline static uint64 _s_toastSceneGeneration = 0;
-
-            /** @brief 결과 번호가 바뀌었으면 무게별 수를 다시 셉니다. */
-            static const MapCheckCounts& syncMapCheckCounts()
-            {
-                const uint32 revision = ValidationIssueLog::get().getRevision();
-                if ( _s_bMapCheckCounted && revision == _s_mapCheckRevision )
-                    return _s_mapCheckCounts;
-                vector<ValidationIssue> listIssue;
-                ValidationIssueLog::get().collectIssues( listIssue );
-                _s_mapCheckCounts   = MapCheckRows::countIssues( listIssue );
-                _s_mapCheckRevision = revision;
-                _s_bMapCheckCounted = true;
-                return _s_mapCheckCounts;
-            }
-
-            /** @brief 활성 씬이 바뀐 첫 프레임에 오류가 있으면 토스트를 한 번 띄웁니다(언리얼은 맵을 열 때 Map Check 를 띄운다). */
-            static void notifyMapCheckOnSceneChange( EditorContext& context, const MapCheckCounts& counts )
-            {
-                SceneManager* pSceneManager = editor::getService<SceneManager>();
-                if ( pSceneManager == nullptr )
-                    return;
-                const uint64 generation = pSceneManager->getSceneGeneration();
-                if ( generation == _s_toastSceneGeneration )
-                    return;
-                _s_toastSceneGeneration = generation;
-                if ( counts._errorCount == 0 )
-                    return;
-                fixed_string<constant::kMaxBuffer128> message;
-                formatstring( message.data(), message.capacity(), "%# error(s), %# warning(s). Open Map Check from the status bar.", counts._errorCount, counts._warningCount );
-                context.getNotificationManager().push( "Map Check", message.c_str(), NotificationType::Warning, 6.0f );
-            }
         };
     } // namespace
 } // namespace sw::editor
@@ -299,24 +261,13 @@ namespace sw::editor
 
         EditorContext* pContext = EditorContext::get();
 
-        // 맵 검사 수 — 오류가 있으면 빨강, 경고만 있으면 주황, 없으면 흐리게. 누르면 Map Check 창.
-        const MapCheckCounts& mapCheckCounts = EditorMenuBarInternal::syncMapCheckCounts();
-        if ( pContext != nullptr )
-            EditorMenuBarInternal::notifyMapCheckOnSceneChange( *pContext, mapCheckCounts );
-        const Color4                         mapCheckColor = mapCheckCounts._errorCount > 0   ? EditorThemeUtil::getErrorColor()
-                                                           : mapCheckCounts._warningCount > 0 ? EditorThemeUtil::getWarningColor()
-                                                                                              : EditorThemeUtil::getTextMutedColor();
-        fixed_string<constant::kMaxBuffer64> mapCheckLabel;
-        formatstring( mapCheckLabel.data(), mapCheckLabel.capacity(), "%# %###statusMapCheck", editoricon::kWarning, mapCheckCounts._errorCount + mapCheckCounts._warningCount );
-        ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( mapCheckColor._r, mapCheckColor._g, mapCheckColor._b, mapCheckColor._a ) );
-        const bool bOpenMapCheck = ImGui::SmallButton( mapCheckLabel.c_str() );
-        ImGui::PopStyleColor();
-        EditorSelfTestMarks::note( "statusBar.mapCheck" );
-        if ( bOpenMapCheck && pContext != nullptr )
-            pContext->getWorkspace().requestOpenPanel( "Map Check" );
-        if ( ImGui::IsItemHovered() )
-            ImGui::SetTooltip( "Map Check: %u error(s), %u warning(s)", mapCheckCounts._errorCount, mapCheckCounts._warningCount );
-        ImGui::SameLine();
+        // 패널 · 확장이 더한 상태 항목(맵 검사 수 …) — 메뉴 막대는 무엇인지 모르고 순서대로 그린다.
+        const uint32 statusItemCount = EditorRegistry<EditorStatusBarItemRegistration>::getCount();
+        for ( uint32 itemIndex = 0; itemIndex < statusItemCount; ++itemIndex )
+        {
+            EditorRegistry<EditorStatusBarItemRegistration>::getAt( itemIndex )._pfnDraw();
+            ImGui::SameLine();
+        }
 
         IRHIDevice* pRHIDevice = ( pContext != nullptr ) ? pContext->getRHIDevice() : nullptr;
         const utf8* pBackend   = ( pRHIDevice != nullptr ) ? pRHIDevice->getBackendName() : "n/a";

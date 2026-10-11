@@ -18,10 +18,10 @@
 #include "Editor/Common/Commands/EditorTransformCommands.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorMenuBar.h"
-#include "Editor/Common/GUI/EditorNotificationManager.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -208,7 +208,7 @@ namespace sw::editor
                     warn( "Paste", "Clipboard is empty" );
                     return;
                 }
-                pContext->getWorkspace().pasteComponentValues( pComp );
+                (void)EditorTransformCommands::pasteCopiedComponentValues( pContext->getWorkspace(), pComp ); // 실패는 붙여넣기가 로그로 알린다
             }
 
             static void commandPasteComponentAsNew()
@@ -225,7 +225,7 @@ namespace sw::editor
                     warn( "Paste", "Clipboard is empty" );
                     return;
                 }
-                pContext->getWorkspace().pasteComponentAsNew( pObj );
+                (void)EditorTransformCommands::pasteCopiedComponentAsNew( pContext->getWorkspace(), pObj ); // 실패는 붙여넣기가 로그로 알린다
             }
 
             static void onLoadPresetDialogResult( const vector<string>& listPath )

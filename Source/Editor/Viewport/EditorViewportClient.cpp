@@ -12,23 +12,23 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
-#include "Editor/Common/Commands/EditorPlayCommands.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Commands/EditorViewportPick.h"
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/EditorProfile.h"
-#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/GUI/EditorDockLayout.h"
+#include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Panels/EditorPanelManager.h"
+#include "Editor/Common/Workspace/IEditorPanelHost.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
-#include "Editor/Viewport/EditorCamera.h"
 #include "Editor/Viewport/EditorGridUtil.h"
 #include "Editor/Viewport/EditorViewportBillboard.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
@@ -393,14 +393,17 @@ namespace sw::editor
 
     void EditorViewportClient::toggleMaximize()
     {
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
         if ( _bMaximized == SW_TRUE )
         {
             _bMaximized = SW_FALSE;
-            if ( EditorPlayCommands::restoreMaximizedLayout() == false )
+            if ( pContext->getPanelHost().restoreMaximizedLayout() == false )
                 SW_LOG_WARNING( "The layout before maximizing is gone - use Panel > Reset Layout" );
             return;
         }
-        if ( EditorPlayCommands::maximizePanel( "scene_view" ) )
+        if ( pContext->getPanelHost().maximizePanel( "scene_view" ) )
             _bMaximized = SW_TRUE;
     }
 
@@ -628,7 +631,7 @@ namespace sw::editor
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
             return;
-        if ( EditorUtil::areSceneEditsAllowed() == false )
+        if ( EditorPlaySession::areSceneEditsAllowed() == false )
         {
             endGizmoDrag();
             return;
@@ -736,7 +739,7 @@ namespace sw::editor
 
     void EditorViewportClient::endGizmoDrag()
     {
-        if ( _bGizmoTracking == SW_TRUE && EditorUtil::areSceneEditsAllowed() )
+        if ( _bGizmoTracking == SW_TRUE && EditorPlaySession::areSceneEditsAllowed() )
         {
             // 단일 드래그: 스냅숏을 찍은 **그 오브젝트**에만 커밋한다(핸들로 다시 찾는다 — 지워졌으면 버린다).
             GameObject* pTracked = editor::findGameObject( _gizmoObject );
@@ -1137,7 +1140,7 @@ namespace sw::editor
     {
         if ( pAssetPath == nullptr || pView == nullptr || pProj == nullptr )
             return;
-        if ( EditorUtil::areSceneEditsAllowed() == false )
+        if ( EditorPlaySession::areSceneEditsAllowed() == false )
             return;
 
         Scene* pScene = editor::getActiveScene();

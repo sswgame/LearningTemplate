@@ -4,8 +4,8 @@
 
 #include "Core/Log/Logger.h"
 
-#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -24,7 +24,7 @@ namespace sw::editor
 
     bool EditorInspectorCommands::applyToPrefab( GameObject* pObj, string_view prefabPath )
     {
-        if ( EditorUtil::areSceneEditsAllowed() == false )
+        if ( EditorPlaySession::areSceneEditsAllowed() == false )
             return false;
         if ( pObj == nullptr || prefabPath.empty() )
             return false;
@@ -45,7 +45,7 @@ namespace sw::editor
 
     bool EditorInspectorCommands::revertToPrefab( GameObject* pObj, string_view prefabPath )
     {
-        if ( EditorUtil::areSceneEditsAllowed() == false )
+        if ( EditorPlaySession::areSceneEditsAllowed() == false )
             return false;
         if ( pObj == nullptr || prefabPath.empty() )
             return false;
@@ -65,7 +65,7 @@ namespace sw::editor
 
     void EditorInspectorCommands::unlinkPrefab( GameObject* pObj )
     {
-        if ( EditorUtil::areSceneEditsAllowed() == false )
+        if ( EditorPlaySession::areSceneEditsAllowed() == false )
             return;
         if ( pObj == nullptr )
             return;

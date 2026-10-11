@@ -3,12 +3,12 @@
 #include "Editor/Common/Workspace/EditorModuleUnloadListener.h"
 
 #include "Editor/Common/GUI/EditorCommandGUI.h"
+#include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/EditorPopupManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorDefaultObjects.h"
-#include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Panels/Inspector/InspectorComponentManager.h"
 #include "Editor/Panels/Inspector/InspectorPropertyManager.h"
-#include "Editor/Popups/EditorPopupManager.h"
 
 namespace sw::editor
 {

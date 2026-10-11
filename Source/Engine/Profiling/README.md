@@ -166,7 +166,7 @@ p50은 같은 히스토그램 버킷(±9%) 안에 있습니다. 구간 하나의
 
 ### 에디터에서
 
-- **프로파일러 패널**(`Source/Editor/Panels/ProfilerPanel`)은 `FrameProfiler` 값만 읽어 CPU 구간, GPU 패스, 카운터를 최근 N 프레임(기본 240)의 마지막, 평균, p50, p99, 최대로 보여 줍니다.
+- **프로파일러 패널**(`Source/Editor/Panels/Profiler/ProfilerPanel`)은 `FrameProfiler` 값만 읽어 CPU 구간, GPU 패스, 카운터를 최근 N 프레임(기본 240)의 마지막, 평균, p50, p99, 최대로 보여 줍니다.
   머리줄로 정렬하고 검색할 수 있고, GT.Frame, RT.Frame, GPU.Frame 그래프를 그립니다. 집계는 ImGui 없는 `ProfilerScopeHistory` 가 하고 EditorTest가 테스트합니다. Tracy가 없는 빌드에서도 같습니다.
 - **Timeline 탭**은 Record 를 누르면 최근 1 · 4 · 16 프레임의 계측 구간을 스레드마다 겹으로 펼칩니다(휠 확대, 끌어 이동, Freeze, 프레임 경계선, 툴팁).
   기록은 `ProfilerTimeline` 이 스레드마다 잠금 없는 링에 하고, 배치는 ImGui 없는 `ProfilerTimelineLayout` 이 합니다. 시나리오 `editor/profilertimeline`.

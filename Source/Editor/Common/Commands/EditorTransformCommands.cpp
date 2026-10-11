@@ -10,6 +10,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -124,6 +125,11 @@ namespace sw::editor
         return pasteComponentValues( pTargetComp, vector<uint8>{}, xml );
     }
 
+    bool EditorTransformCommands::pasteCopiedComponentValues( const EditorWorkspace& workspace, Component* pTargetComp )
+    {
+        return pasteComponentValues( pTargetComp, workspace.getCopiedComponentBytes(), workspace.getCopiedComponentXML() );
+    }
+
     Component* EditorTransformCommands::pasteComponentAsNew( GameObject* pTargetObj, string_view typeName, const vector<uint8>& bytes, string_view xmlFallback )
     {
         if ( pTargetObj == nullptr || typeName.empty() )
@@ -167,6 +173,11 @@ namespace sw::editor
     Component* EditorTransformCommands::pasteComponentAsNew( GameObject* pTargetObj, string_view typeName, string_view xml )
     {
         return pasteComponentAsNew( pTargetObj, typeName, vector<uint8>{}, xml );
+    }
+
+    Component* EditorTransformCommands::pasteCopiedComponentAsNew( const EditorWorkspace& workspace, GameObject* pTargetObj )
+    {
+        return pasteComponentAsNew( pTargetObj, workspace.getCopiedComponentTypeName(), workspace.getCopiedComponentBytes(), workspace.getCopiedComponentXML() );
     }
 
     string EditorTransformCommands::makeComponentPresetFileName( const Component* pComp, string_view presetName )

@@ -193,5 +193,5 @@ const string_view difficulty = pSettings->getValue( "gameplay.difficulty" ); // 
 | `UserSettingsVariables.h` | 설정이 값을 넣는 전역 변수 |
 | `Source/App/UserSettingsHost.h` | 카운트다운 진행과 화면 변경 적용 |
 
-- 에디터 패널: `Source/Editor/Panels/UserSettingsPanel`
+- 에디터 패널: `Source/Editor/Panels/Settings/UserSettingsPanel`
 - 설정 전체 목록: [생성 문서 UserSettings](../../../docs/Config/UserSettings.md)

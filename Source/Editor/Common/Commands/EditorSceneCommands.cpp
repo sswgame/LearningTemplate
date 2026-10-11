@@ -7,8 +7,8 @@
 #include "Core/String/TagID.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
@@ -34,7 +34,7 @@ namespace sw::editor
         {
             static bool canMutateScene()
             {
-                return EditorUtil::areSceneEditsAllowed();
+                return EditorPlaySession::areSceneEditsAllowed();
             }
 
             /** @brief 서브트리를 **자식부터**(후위 순서) 모읍니다. 마지막이 pObj 입니다. */

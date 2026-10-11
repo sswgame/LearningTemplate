@@ -17,14 +17,6 @@ namespace sw::editor
     class EditorPlayCommands
     {
     public:
-        /** @brief Shift+Space 최대화와 플레이 때 최대화가 함께 쓰는 임시 레이아웃 이름입니다(에디터 상태 폴더의 `Temp`). */
-        static constexpr const utf8* kMaximizeLayoutName = "maximize-restore";
-
-        /** @brief 지금 배치를 임시 레이아웃으로 저장하고 @p keepPanelID 밖의 패널을 닫은 뒤 그 패널을 앞으로 둡니다. 저장하지 못했으면 false 입니다. */
-        [[nodiscard]] static bool maximizePanel( string_view keepPanelID );
-        /** @brief 최대화 전 배치(임시 레이아웃)를 다음 프레임에 되읽습니다. 그 파일이 없으면 false 입니다. */
-        [[nodiscard]] static bool restoreMaximizedLayout();
-
         /**
          * @brief 매 에디터 프레임에 부릅니다 — 세션이 시작된 첫 프레임에 "Maximize On Play" 면 게임 뷰를 최대화하고, 멈추면 되돌립니다.
          * @details 시작과 정지는 플레이 툴바 · 단축키 · 시나리오 어디서든 올 수 있어 상태 전이를 여기서 한 번에 본다.
