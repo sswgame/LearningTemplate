@@ -32,13 +32,18 @@
 4. **중복 정리 — 끝.** 결정적 난수 · 격자 사본 여섯 · 타이머(남은 7곳은 엔진 · 에디터라 그대로)는 끝났고, 키트 체력 직접 관리의 `Vitality` 이전은 하지 않기로 했다(결정 기록 5-8). 남은 격자 손셈(`Habitat` · `Overworld` 타일맵 · 게임 코드)은 파일 스키마가 얽혀 키트가 `getTopology()` 를 열 때 같이.
 5. **엔진 분할.** 계획 [엔진 분할](EnginePartition.md) 0 단계(기준 측정) · 2 ~ 5 단계(작은 고리의 남은 `Resource → Animation`, `Object` 코어 / 기능 가르기, `OBJECT` 라이브러리 → DLL 승격, 월드를 값으로, 모듈 창구).
 6. **서버 디버깅.** 계획 [서버 디버깅](ServerDebug.md) — S2(디버거 대기 · 서버 `pause`/`step`)는 들어갔다. 다음 S1 은 `Server` 에서 네트워크 서버를 여는 테스트 게임이 먼저 있어야 접속을 확인할 수 있다.
-7. **6 차(주석을 새 문체로) — 대부분 병합됨(2026-10-12 기록).** 워크트리 에이전트가 영역별로 `wt/c6*` 에서 문장 단위로 다시 썼다. 검증은 주석을 뺀 토큰열 비교(빌드 없음), 병합 뒤 전체 빌드 · 린트는 끝에 한 번.
-   - **main 에 병합 끝**: Genre 전부, GameFramework Base(Gameplay · 나머지 주석 많은 파일), Core · App · Games 일부, Engine 시뮬레이션류 전부, Graphics · Renderer 36개, Editor 75개.
-   - **병합할 것**: `wt/c6kfeat`(Kits/Feature), `wt/c6ui`(UI · Input · Window 등), `wt/c6obj`(Object · Reflection · Serialization 등), `wt/c6editor` 이어진 분. `git log --oneline main..wt/<이름>` 으로 확인하고 `git merge wt/<이름>` 뒤 `BASE=<병합 전 HEAD> py -3 <termpass.py 의 verify 도구> verify .` 로 bad 0 을 본다. 검증 스크립트는 `git log` 의 6차 커밋을 만든 세션 임시 폴더(`commentverify.py`)에 있고 없으면 `termpass.py verify` 와 같은 일(주석을 뺀 토큰열 비교)을 하는 것을 다시 만든다.
-   - **병합 전에 에이전트가 쓰던 워크트리**(`D:\w\c6*`)에 미커밋 변경이 있을 수 있다. 병합 전에 각 워크트리에서 `git status` 로 확인한다.
-   - **남긴 것**: 주석이 짧고 이미 좋은 파일(Base 헤더 약 230개, Core Math · File · Container 등, Editor 25줄 미만, Graphics 소형 약 220개)은 건드리지 않았다. Scripts · Test · docs/Config 의 '시험' 278곳과 셰이더 주석 2곳(`waterwaveprobe.hlsl` · `lighting2d.hlsli`, 재쿠킹 `App --cook-shaders` 필요)은 아직 '테스트' 로 바꾸지 않았다.
-   - **끝난 뒤**: Debug `all AllTests` 경고 0 · `ctest -L lint` · `-L nogpu`, Shipping 빌드와 `-L hostgpu`, 게임 프리셋을 돌리고 push 한다. 그 뒤 8번(빌드 속도) 이후를 잇는다.
-   - **지연 로드 제거**(`wt/delayroot`, 지연 import 57 → 0): 병합되었으면 이 줄은 지운다. 병합되지 않았다면 `git log main..wt/delayroot` 로 확인하고 `main` 을 받아 충돌을 푼 뒤 ArchitectureTest · lint · Debug 빌드를 확인하고 병합한다. 병합 뒤 Shipping · 네 백엔드 · 게임 프리셋 · hostgpu 는 통합 쪽이 돌린다.
+7. **6 차(주석을 새 문체로) — 병합 끝, 검증 · push 전(2026-10-12 기록).** 워크트리 에이전트가 영역별로 `wt/c6*` 에서 문장 단위로 다시 썼고 전부 main 에 병합했다. 지연 로드 제거(`wt/delayroot`)와 `wt/gomnav` · `wt/cireport` · `wt/c6res` 도 병합했다. **아직 push 하지 않았다.**
+   - **먼저 할 일**: ① `git log origin/main..main` 확인 ② Debug `all AllTests` 경고 0 — 6차 재작성이 만든 경고 하나가 남아 있다: `Source/Core/Network/Connection/NetHost.h` 의 `'/*' within block comment`(주석 안에 `/*` 가 든 줄을 찾아 고친다; 문자열 검색으로는 못 찾았으니 그 헤더만 컴파일해 위치를 본다) ③ `ctest --preset Ninja-Debug-lint`(재구성 뒤 63/63 이었다) · `-L nogpu` ④ Shipping 빌드와 `-L hostgpu` ⑤ 게임 프리셋과 네 백엔드(지연 로드 제거가 핫 리로드 · 모듈 적재를 바꿨다) ⑥ push. 6차 변경은 주석만 바꿨고 코드 파일 약 1,100개를 주석을 뺀 토큰열 비교로 확인했다(검증 도구: 세션 임시 폴더의 `commentverify.py`, 없으면 `termpass.py verify` 와 같은 일을 하는 것을 다시 만든다).
+   - **처리하지 못한 구역**(주석이 짧거나 시간이 모자라 건드리지 않은 곳; 같은 방식으로 `worktree-make c6<이름>` 후 이어서 하면 된다):
+     - Engine/Graphics · Renderer: `Graphics/Mesh/MeshUtil.*`, RHI 하위(`OpenGLRHICommandContext.cpp`, `VulkanRHISwapChain.h` 등), 소형 파일 약 220개.
+     - Engine/Object 등: `Scene.h`, `SceneManager.h/.cpp`, `ComponentDefaults.h`, `ResourcePackManager.h`, `SerializeContext.h`, `AssetDatabase.h`, `AnimationLOD.h`, `ContainerVisitor.h`, `ResourcePaths.cpp`, `SceneComponent.cpp`, `ReflectValue.h`, `MeshInstanceBatch.h`, 그리고 Spatial · Common 대부분. `SceneNavigation.h` · `GameObjectManager.h` 는 충돌 때문에 주석을 다시 쓰지 못했다.
+     - Engine/UI 등: `Console/DebugHUDRegistry.h`(범위 오류로 되돌림), Compression, Observability, Profiling, Telemetry 전부.
+     - Editor: 주석 25줄 이상 약 45개(`EditorPlayToolbar.cpp`, `EditorUIContext.h`, `EditorToolAssetCommands.cpp`, `SequencerPanel.*`, `AnimGraphPanel.cpp`, `TileMapPanel.cpp`, `EditorViewportOverlays.h` 등)와 그보다 짧은 파일. `EditorIconGlyphs.h` 는 생성 파일이라 제외.
+     - GameFramework Base: 짧은 헤더 약 230개와 .cpp · .inl. Kits/Feature: 끝낸 파일 안에 옛 어휘(꼬리표 · 그새 · 거두다 · 짓)가 남은 파일 약 35개(`NetSimHarness.h`, `TurnRelay.h`, `AccountTypes.h`, `LoginStoreLogic.h`, `SocialService.h`, `VoxelMesher.*`, `VoxelTerrain.*`, `LeaderboardService.cpp`, `RespConnection.*` 등), Kits/Feature/Online 중 Account 등을 뺀 나머지 폴더 확인.
+     - Core: Math, File, Process, Delegate, Memory, Diagnostics, CommandLine, Container, Task, Network 나머지(`NetHostSecurity.h`, `NetParallel.h`, `INetSecurityProvider.h`, `NetTransport.h`, `BitStream.h`), LogSink, String. RuntimeAPI 는 손대지 않았다. Games: `BenchScene.cpp` 일부, `BenchSceneRig.cpp`, VoxelCraft 전체, 나머지 컴포넌트.
+     - '시험' → '테스트': `Scripts/**` · `Test/**` · `docs/Config/**` 278곳, 셰이더 주석 2곳(`waterwaveprobe.hlsl` · `lighting2d.hlsli`, 바꾸면 `App --cook-shaders` 재쿠킹 필요).
+   - 병합 전 에이전트가 쓰던 워크트리(`D:\w\c6*`, `delayroot` 등)는 전부 병합됐으므로 `worktree-remove <이름>` 으로 지운다.
+   - 끝난 뒤 8번(빌드 속도) 이후를 잇는다.
 
 ### 알아 둘 함정
 
