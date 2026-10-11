@@ -44,7 +44,7 @@ namespace sw
 
     void TradeServer::shutdown()
     {
-        if ( _pPresence != nullptr ) // 맡긴 이름 찾기를 거둔다 — 접속 상태 창구가 이 객체보다 오래 살아도 부르지 않게
+        if ( _pPresence != nullptr ) // 맡긴 이름 찾기를 회수한다. 접속 상태 관리자가 이 객체보다 오래 살아도 이 객체를 부르지 않게 하려는 것이다
         {
             for ( const auto& [lookupID, call] : _mapLookupToCall )
             {
@@ -220,7 +220,7 @@ namespace sw
         for ( int32 sideIndex = 0; sideIndex < 2; ++sideIndex )
         {
             if ( kind == TradeMethod::kPushInvited && sideIndex == 0 )
-                continue; // 신청한 쪽은 응답으로 안다
+                continue; // 신청한 쪽은 응답으로 알게 된다
             const AccountID      accountID = snapshot._arrSide[sideIndex]._accountID;
             vector<TradeBalance> listBalance;
             if ( ledgerIt != _mapTradeToLedger.end() )
@@ -228,7 +228,7 @@ namespace sw
             BitWriter body;
             TradeReplyWire::writeReply( body, TradeResult::Ok, snapshot, listBalance );
             if ( host.sendPush( accountID, kind, body ) == false && _pPresence != nullptr )
-                (void)_pPresence->sendRemotePush( accountID, kind, body ); // 상대가 다른 서버에 붙어 있다
+                (void)_pPresence->sendRemotePush( accountID, kind, body ); // 상대가 다른 서버에 접속해 있다
         }
     }
 

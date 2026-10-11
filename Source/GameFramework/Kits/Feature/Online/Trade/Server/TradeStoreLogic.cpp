@@ -19,7 +19,7 @@ namespace sw
         struct TradeStoreLogicInternal
         {
             static constexpr uint8  kRecordFormat      = 1;
-            static constexpr uint64 kSettleAuditUnique = 0x5E771Eull; ///< 정산 감사 줄은 거래당 하나 — 재시도가 둘을 만들지 않게
+            static constexpr uint64 kSettleAuditUnique = 0x5E771Eull; ///< 정산 감사 기록은 거래당 하나이다. 재시도가 둘을 만들지 않게 한다
             static constexpr int32  kMaxRecoverCount   = 256;
 
             static uint64 mixSeed( uint64 value )
@@ -137,7 +137,7 @@ namespace sw
                     continue;
                 if ( linkRead != ServiceStoreResult::Ok )
                     return TradeResult::Unavailable;
-                // 남은 링크 — 그 거래가 닫혔거나 시한이 지났으면 정리하고 이어 간다(게으른 만료).
+                // 남은 링크가 있고 그 거래가 닫혔거나 시한이 지났으면 정리하고 이어 간다. 지연 만료이다.
                 SessionRead       stale;
                 const TradeResult staleRead = readSession( Internal::decodeID( linkRaw._bytes ), stale );
                 const bool        bOrphan   = staleRead == TradeResult::NotFound;
@@ -145,7 +145,7 @@ namespace sw
                 if ( bOrphan == false && bExpired == false )
                     return staleRead == TradeResult::Ok ? ( sideIndex == 0 ? TradeResult::AlreadyTrading : TradeResult::PeerBusy ) : TradeResult::Unavailable;
                 arrLinkVersion[sideIndex]     = linkRaw._version;
-                const bool bAlreadyClosedHere = closedTradeID != 0 && closedTradeID == stale._snapshot._tradeID; // 두 사람의 옛 거래가 같은 것
+                const bool bAlreadyClosedHere = closedTradeID != 0 && closedTradeID == stale._snapshot._tradeID; // 두 사람의 이전 거래가 같은 것이다
                 if ( bExpired && stale._snapshot.isClosed() == false && bAlreadyClosedHere == false )
                 {
                     closedTradeID        = stale._snapshot._tradeID;
@@ -163,7 +163,7 @@ namespace sw
             trade._state                 = TradeState::Invited;
             trade._arrSide[0]._accountID = fromID;
             trade._arrSide[1]._accountID = toID;
-            // 쓰기 번호 0 · 1 = 두 활성 링크(Conflict 번호로 누가 바쁜지 가린다)
+            // 쓰기 번호 0과 1이 두 활성 링크이다. Conflict 번호로 누가 바쁜지 구분한다
             transaction.put( getActiveTable(), ServiceKeyUtil::makeHex64( fromID ), Internal::encodeID( tradeID ), arrLinkVersion[0] );
             transaction.put( getActiveTable(), ServiceKeyUtil::makeHex64( toID ), Internal::encodeID( tradeID ), arrLinkVersion[1] );
             transaction.put( getSessionTable(), ServiceKeyUtil::makeHex64( tradeID ), TradeRecordUtil::encodeSession( trade, _serverID ), ServiceRecord::kAbsentVersion );
@@ -177,7 +177,7 @@ namespace sw
             }
             if ( committed != ServiceStoreResult::Conflict )
                 return TradeResult::Unavailable;
-            // 그새 다른 서버가 링크를 넣었거나(다시 읽으면 바쁘다) 거래 id 가 겹쳤다(다음 id) — 다시.
+            // 그사이 다른 서버가 링크를 넣었거나 거래 id 가 겹쳤다. 링크를 넣었으면 다시 읽을 때 바쁨으로 나오고, id 가 겹쳤으면 다음 id 를 쓴다. 어느 쪽이든 다시 시도한다.
         }
         return TradeResult::Unavailable;
     }
@@ -196,7 +196,7 @@ namespace sw
             if ( session._snapshot.findSideIndex( command._actorID ) < 0 )
                 return TradeResult::NotParty;
             if ( session._snapshot.isClosed() )
-                return command._kind == TradeCommandKind::Confirm ? Internal::toClosedResult( session._snapshot ) : TradeResult::WrongState; // 재시도 · 다른 서버가 먼저
+                return command._kind == TradeCommandKind::Confirm ? Internal::toClosedResult( session._snapshot ) : TradeResult::WrongState; // 재시도이거나 다른 서버가 먼저 처리한 경우이다
 
             ServiceTransaction transaction;
             if ( isIdleExpired( session._snapshot, _settings, nowMs ) )
@@ -235,7 +235,7 @@ namespace sw
                 request._pPolicy   = _pLedgerPolicy;
                 request._timeMs    = nowMs;
                 request._actorKind = LedgerActorKind::Player;
-                request._actorID   = command._actorID; // 마지막 확정 — 분개는 두 계정 모두의 내역에 든다
+                request._actorID   = command._actorID; // 마지막 확정이다. 분개는 두 계정 모두의 내역에 들어간다
                 for ( int32 sideIndex = 0; sideIndex < 2; ++sideIndex )
                 {
                     const TradeSide& giver    = next._arrSide[sideIndex];
@@ -248,14 +248,14 @@ namespace sw
                 }
                 if ( request._listPosting.empty() )
                 {
-                    TradeStateMachine::close( next, TradeState::Settled, TradeCloseReason::None, nowMs ); // 빈 거래도 닫힌다 — 원장은 건드리지 않는다
+                    TradeStateMachine::close( next, TradeState::Settled, TradeCloseReason::None, nowMs ); // 빈 거래도 닫는다. 원장은 건드리지 않는다
                 }
                 else
                 {
                     const LedgerResult staged = Ledger::stageTransfer( _connection, request, transaction, outLedger );
                     if ( staged == LedgerResult::InsufficientFunds || staged == LedgerResult::CapExceeded )
                     {
-                        transaction.clear(); // 원장 몫은 붙지 않았다 — 거래만 실패로 닫는다
+                        transaction.clear(); // 원장 부분은 붙지 않았으므로 거래만 실패로 닫는다
                         TradeStateMachine::close( next, TradeState::Failed,
                                                   staged == LedgerResult::InsufficientFunds ? TradeCloseReason::InsufficientFunds : TradeCloseReason::CapExceeded, nowMs );
                     }
@@ -266,7 +266,7 @@ namespace sw
                     else
                     {
                         bStaged = outLedger._bReplayed == SW_FALSE;
-                        TradeStateMachine::close( next, TradeState::Settled, TradeCloseReason::None, nowMs ); // 분개가 이미 있으면 정산은 끝났다
+                        TradeStateMachine::close( next, TradeState::Settled, TradeCloseReason::None, nowMs ); // 분개가 이미 있으면 정산은 끝난 것이다
                     }
                 }
             }
@@ -296,12 +296,12 @@ namespace sw
             }
             if ( committed == ServiceStoreResult::Conflict || committed == ServiceStoreResult::Unavailable )
             {
-                // 다른 서버 · 앞선 시도가 같은 분개로 이미 정산했나(응답 유실 포함) — 원장이 가린다. 분개가 있으면 다음 고리의 읽기가 Settled 다.
+                // 다른 서버나 앞선 시도가 같은 분개로 이미 정산했는지 원장이 가려 준다. 응답이 유실된 경우도 포함한다. 분개가 있으면 다음 반복의 읽기가 Settled 이다.
                 if ( bStaged && Ledger::resolveConflict( _connection, request, outLedger ) == LedgerResult::Ok )
                     continue;
                 if ( committed == ServiceStoreResult::Unavailable )
                     return TradeResult::Unavailable;
-                continue; // 상대가 그새 바꿨다 — 다시 읽고 다시
+                continue; // 상대가 그사이 바꿨으므로 다시 읽고 다시 시도한다
             }
             return TradeResult::Invalid;
         }

@@ -12,7 +12,7 @@ namespace sw
     {
         struct TradeServiceInternal
         {
-            /** @brief 거래 요청 하나를 저장소 스레드에서 돌립니다. 입력은 복사해 든다. */
+            /** @brief 거래 요청 하나를 저장소 스레드에서 실행합니다. 입력은 복사해 보관합니다. */
             class TradeWork final : public IServiceStoreWork
             {
             public:
@@ -217,7 +217,7 @@ namespace sw
                 make_unique<TradeServiceInternal::TradeWork>( this, _pPolicy, _pLedgerPolicy, _serverID, TradeOperation::Expire, uint64{ 0 }, nowMs );
             work->_tradeID = tradeIt->first;
             ++_pendingCount;
-            tradeIt = _mapTradeToDeadline.erase( tradeIt ); // 결과(닫힘 · 아직)가 다시 넣는다
+            tradeIt = _mapTradeToDeadline.erase( tradeIt ); // 결과가 닫힘이면 그대로 두고, 아직이면 다시 넣는다
             _pStore->submit( std::move( work ) );
         }
     }
@@ -231,7 +231,7 @@ namespace sw
             _updateBuffer.push( changed );
         }
         if ( completion._operation == TradeOperation::Expire && completion._result == TradeResult::WrongState )
-            trackTrade( completion._snapshot ); // 아직 시한 전(그새 바뀌었다) — 새 시한으로 다시 본다
+            trackTrade( completion._snapshot ); // 아직 시한 전이다. 그사이 바뀌었으므로 새 시한으로 다시 확인한다
         if ( completion._requestTag != 0 )
             _completionBuffer.push( std::move( completion ) );
     }
