@@ -1,8 +1,8 @@
 /**
  * @file FacialRig.h
- * @brief 얼굴 리그(`<얼굴>.facial.json`) — 표정 · 비즘을 모프 타깃 가중치로, 눈 깜빡임 · 시선(눈 본 · 사카드)의 수치를 데이터로 둡니다.
- * @details 코드는 이름으로 고를 뿐이고(표정 "Happy", 비즘 "AA"), 어느 타깃을 얼마나 움직일지는 이 표가 정합니다(언리얼 MetaHuman 의 포즈 에셋 ·
- *          Live Link Face 커브 → 컨트롤 매핑의 자리). 모르는 키는 오류이고, 메시에 없는 타깃 · 스켈레톤에 없는 본은 묶을 때 오류입니다(`validate`).
+ * @brief 얼굴 리그(`<얼굴>.facial.json`)입니다. 표정과 비즘을 모프 타깃 가중치로 바꾸고, 눈 깜빡임과 시선(눈 본, 사카드)의 수치를 데이터로 둡니다.
+ * @details 코드는 이름으로 고를 뿐이고(표정 "Happy", 비즘 "AA"), 어느 타깃을 얼마나 움직일지는 이 테이블이 정한다(언리얼 MetaHuman 의 포즈 에셋과
+ *          Live Link Face 의 커브 컨트롤 매핑에 해당한다). 모르는 키는 오류이고, 메시에 없는 타깃이나 스켈레톤에 없는 본은 바인딩할 때 오류다(`validate`).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -27,7 +27,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 이름 붙은 얼굴 포즈(표정 · 비즘) — 타깃 가중치 묶음입니다. 포즈 가중치를 곱해 더합니다. */
+    /** @brief 이름 붙은 얼굴 포즈(표정, 비즘)입니다. 타깃 가중치 묶음이며, 포즈 가중치를 곱해 더합니다. */
     struct FacialPose
     {
         hashed_string              _name;
@@ -37,7 +37,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 눈 깜빡임 — 타깃(눈꺼풀)과 간격 · 길이(초)입니다. 타깃이 없으면 깜빡이지 않습니다. */
+    /** @brief 눈 깜빡임입니다. 타깃(눈꺼풀)과 간격, 길이(초)를 담습니다. 타깃이 없으면 깜빡이지 않습니다. */
     struct FacialBlinkSettings
     {
         vector<hashed_string> _listTarget;
@@ -49,7 +49,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 시선 — 눈 본들이 목표를 봅니다(앞 축 · 최대 각), 사카드(작은 튐)는 간격 · 크기로 정합니다. 눈 본이 없으면 보지 않습니다. */
+    /** @brief 시선입니다. 눈 본들이 목표를 봅니다(앞 축과 최대 각). 사카드(작은 튐)는 간격과 크기로 정합니다. 눈 본이 없으면 보지 않습니다. */
     struct FacialGazeSettings
     {
         vector<hashed_string> _listEyeBone;
@@ -77,7 +77,7 @@ namespace sw
 
         [[nodiscard]] bool parseJSON( string_view json, string_view sourceLabel );
         [[nodiscard]] bool loadFromResource( string_view path );
-        /** @brief 메시의 모프 타깃 이름들에 없는 타깃 · 스켈레톤에 없는 눈 본 · 타깃과 같은 이름의 표정(커브가 둘 다 움직인다)이 있으면 오류를 남기고 false 입니다. */
+        /** @brief 메시의 모프 타깃 이름에 없는 타깃, 스켈레톤에 없는 눈 본, 타깃과 같은 이름의 표정(커브가 둘 다 움직임)이 있으면 오류를 남기고 false 를 반환합니다. */
         [[nodiscard]] bool validate( const vector<hashed_string>& listMorphTargetName, const Skeleton& skeleton, string_view sourceLabel ) const;
 
         const vector<FacialPose>&  getExpressions() const { return _listExpression; }

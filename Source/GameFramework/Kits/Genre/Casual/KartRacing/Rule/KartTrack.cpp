@@ -18,10 +18,10 @@ namespace sw
         {
             static constexpr float32 kMinSegmentLength = 1.0e-4f;
 
-            /** @brief 수평 길이입니다. */
+            /** @brief 수평 길이를 반환합니다. */
             static float32 computeFlatLength( float32 x, float32 z ) { return MathUtil::sqrt( x * x + z * z ); }
 
-            /** @brief 수평 단위 접선입니다(길이가 0 이면 +Z). */
+            /** @brief 수평 단위 접선을 반환합니다(길이가 0 이면 +Z). */
             static float3 makeFlatDirection( const float3& from, const float3& to )
             {
                 const float32 deltaX = to._x - from._x;
@@ -32,7 +32,7 @@ namespace sw
                 return float3{ deltaX / length, 0.0f, deltaZ / length };
             }
 
-            /** @brief 감긴 번호의 조절점입니다(닫힌 곡선). */
+            /** @brief 감긴 번호의 조절점을 반환합니다(닫힌 곡선). */
             static const float3& getWrapped( const vector<float3>& listPoint, int32 index )
             {
                 const int32 count = static_cast<int32>( listPoint.size() );
@@ -41,7 +41,7 @@ namespace sw
 
             static float3 makeRight( const float3& tangent ) { return float3{ tangent._z, 0.0f, -tangent._x }; }
 
-            /** @brief 수평 외적(z 성분 부호)입니다 — 선분 교차에 씁니다. */
+            /** @brief 수평 외적(z 성분의 부호)을 반환합니다. 선분 교차 검사에 씁니다. */
             static float32 computeFlatCross( float32 ax, float32 az, float32 bx, float32 bz ) { return ax * bz - az * bx; }
         };
     } // namespace
@@ -73,7 +73,7 @@ namespace sw
             return false;
         }
 
-        // 1) 닫힌 Catmull-Rom — 조절점 i 와 i+1 사이를 i−1, i+2 를 이웃으로 보간한다.
+        // 1) 닫힌 Catmull-Rom: 조절점 i 와 i+1 사이를 i-1, i+2 를 이웃으로 보간한다.
         const vector<float3>& listPoint   = def._listControlPoint;
         const int32           pointCount  = static_cast<int32>( listPoint.size() );
         const int32           sampleCount = MathUtil::max( 1, def._samplesPerSegment );
@@ -90,7 +90,7 @@ namespace sw
             }
         }
 
-        // 2) 누적 거리 표(수평 길이 — 차는 XZ 로 달린다).
+        // 2) 누적 거리 테이블(수평 길이이며, 차는 XZ 평면에서 달린다).
         const size_t count = _listSample.size();
         for ( size_t sampleIndex = 0; sampleIndex < count; ++sampleIndex )
         {
@@ -100,7 +100,7 @@ namespace sw
             _length += KartTrackInternal::computeFlatLength( to._x - from._x, to._z - from._z );
         }
 
-        // 3) 문 — 결승선(0) 다음 체크포인트를 거리 순으로.
+        // 3) 문: 결승선(0) 다음에 체크포인트를 거리 순으로 둔다.
         vector<float32> listCheckpoint = def._listCheckpoint;
         std::sort( listCheckpoint.begin(), listCheckpoint.end() );
         _def._listCheckpoint.clear();
@@ -116,7 +116,7 @@ namespace sw
             _listGate.push_back( makeGate( fraction * _length ) );
         }
 
-        // 4) 아이템 상자 · 부스트 패드를 거리로 푼다.
+        // 4) 아이템 상자와 부스트 패드를 거리로 바꾼다.
         for ( const KartItemBoxDef& box : def._listItemBox )
         {
             _listItemBoxPosition.push_back( makeSurfacePoint( box._at, box._offset ) );
@@ -180,7 +180,7 @@ namespace sw
     {
         if ( isValid() == false || searchRange <= 0.0f || searchRange * 2.0f >= _length )
             return project( position );
-        // 힌트 거리의 구간에서 앞뒤로 범위만큼 — 샘플 간격이 고르지 않아도 거리로 센다.
+        // 힌트 거리의 구간에서 앞뒤로 범위만큼 본다. 샘플 간격이 고르지 않아도 거리로 센다.
         const int32   count  = static_cast<int32>( _listSample.size() );
         const float32 hint   = wrapDistance( hintDistance );
         int32         center = 0;
@@ -217,7 +217,7 @@ namespace sw
             return frame;
         const float32 wrapped = wrapDistance( distance );
         const size_t  count   = _listSample.size();
-        // 이진 탐색 — 누적 거리 표는 오름차순이다.
+        // 이진 탐색이다. 누적 거리 테이블은 오름차순이다.
         size_t low  = 0;
         size_t high = count - 1;
         while ( low < high )
@@ -283,7 +283,7 @@ namespace sw
         const float32        denom = KartTrackInternal::computeFlatCross( moveX, moveZ, gateX, gateZ );
         if ( MathUtil::abs( denom ) < KartTrackInternal::kMinSegmentLength )
             return 0;
-        // from + move·s = left + gate·u, s ∈ (0, 1], u ∈ [0, 1] — 끝점에서 시작한 이동은 이미 지난 것이라 0 은 뺀다.
+        // from + move*s = left + gate*u, s ∈ (0, 1], u ∈ [0, 1] 이다. 엔드포인트에서 시작한 이동은 이미 지난 것이므로 0 은 뺀다.
         const float32 offsetX = gate._left._x - from._x;
         const float32 offsetZ = gate._left._z - from._z;
         const float32 moveT   = KartTrackInternal::computeFlatCross( offsetX, offsetZ, gateX, gateZ ) / denom;

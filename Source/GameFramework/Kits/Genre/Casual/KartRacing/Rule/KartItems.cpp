@@ -20,7 +20,7 @@ namespace sw
     {
         struct KartItemsInternal
         {
-            /** @brief 열거자 이름표 한 줄입니다. */
+            /** @brief 열거자 이름 한 줄을 반환합니다. */
             struct KindName
             {
                 KartItemKind _kind;
@@ -100,7 +100,7 @@ namespace sw
         int32 tablePlace = place;
         if ( _referencePlaceCount > 1 && racerCount > 1 && racerCount != _referencePlaceCount )
         {
-            // 인원을 표의 기준 인원으로 늘린다(꼴찌는 늘 꼴찌 표).
+            // 인원을 테이블의 기준 인원으로 늘린다(꼴찌는 항상 꼴찌 테이블을 쓴다).
             const float32 ratio = static_cast<float32>( place - 1 ) / static_cast<float32>( racerCount - 1 );
             tablePlace          = 1 + static_cast<int32>( MathUtil::round( ratio * static_cast<float32>( _referencePlaceCount - 1 ) ) );
         }

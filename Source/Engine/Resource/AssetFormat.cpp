@@ -84,7 +84,7 @@ namespace sw
         if ( path.empty() || isCookableSource( path, kind ) )
             return string( path );
 
-        // 정본 접미사는 그 종류의 첫 소스 줄이다(`.scene.xml` · `.prefab.xml`).
+        // 원본 접미사는 그 종류의 첫 소스 줄이다(`.scene.xml` · `.prefab.xml`).
         string_view canonical;
         for ( const AssetFormatInternal::CookSuffix& suffix : AssetFormatInternal::kArrCookSuffix )
         {
@@ -97,14 +97,14 @@ namespace sw
         if ( canonical.empty() )
             return string( path );
 
-        // 같은 종류의 쿠킹하지 않는 이름(쿠킹본 · 확장자 없는 이름)은 그 접미사를 정본으로 바꾼다.
+        // 같은 종류의 쿠킹하지 않는 이름(쿠킹본 · 확장자 없는 이름)은 그 접미사를 원본으로 바꾼다.
         for ( const AssetFormatInternal::CookSuffix& suffix : AssetFormatInternal::kArrCookSuffix )
         {
             if ( suffix._bSource == false && suffix._kind == kind && StringUtil::endsWith( path, suffix._source, true ) )
                 return string( path.substr( 0, path.size() - suffix._source.size() ) ) + string( canonical );
         }
 
-        // 끝의 확장자가 정본의 마지막 확장자(`.xml`)와 같으면 그 자리에 넣는다 — `level.xml` → `level.scene.xml`.
+        // 끝의 확장자가 원본의 마지막 확장자(`.xml`)와 같으면 그 자리에 넣는다 — `level.xml` → `level.scene.xml`.
         const string_view lastExtension = canonical.substr( canonical.rfind( '.' ) );
         if ( StringUtil::endsWith( path, lastExtension, true ) )
             return string( path.substr( 0, path.size() - lastExtension.size() ) ) + string( canonical );
@@ -214,7 +214,7 @@ namespace sw
         if ( engine::areEngineServicesBound() )
             return engine::getAssetManager().getAssetFormatRegistry().upgradeXML( kind, doc, root, currentVersion );
 
-        // 호출마다 새로 만든다 — 공유하는 정적 등록부는 여러 로더 스레드의 `ensureBuiltins` 가 겹쳐 쓴다.
+        // 호출마다 새로 만든다 — 공유하는 정적 레지스트리는 여러 로더 스레드의 `ensureBuiltins` 가 겹쳐 쓴다.
         AssetFormatRegistry builtinRegistry;
         return builtinRegistry.upgradeXML( kind, doc, root, currentVersion );
     }

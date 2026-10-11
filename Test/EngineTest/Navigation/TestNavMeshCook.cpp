@@ -44,7 +44,7 @@ SW_TEST_CASE( NavMeshCookTest, CookedTilesMatchTheRuntimeBakeAndStaleOnesAreReje
     // 런타임 베이크(쿠킹본 없음) — 같은 타일.
     sw::Scene runtimeScene{ "NavRuntime" };
     SW_ASSERT_TRUE( Internal::instantiate( runtimeScene ) );
-    sw::SceneNavigation& runtimeNavigation = runtimeScene.getObjectManager()->getSceneNavigation();
+    sw::SceneNavigation& runtimeNavigation = runtimeScene.getObjectManager()->getSceneService<sw::SceneNavigation>();
     // 쿠킹 팩(Shipping 의 Cooked)에는 이 씬의 `.navmesh` 가 있어 런타임이 그것을 끼운다 — 런타임 베이크를 보려면 찾을 경로를 비운다.
     runtimeNavigation.setSourcePath( {} );
     const sw::INavMesh* pRuntimeMesh = runtimeNavigation.ensureNavMesh( entry._agentType );
@@ -62,7 +62,7 @@ SW_TEST_CASE( NavMeshCookTest, CookedTilesMatchTheRuntimeBakeAndStaleOnesAreReje
     const sw::shared_ptr<const sw::NavMeshAsset> pCooked = sw::make_shared<sw::NavMeshAsset>( cooked );
     sw::Scene                                    cookedScene{ "NavCooked" };
     SW_ASSERT_TRUE( Internal::instantiate( cookedScene ) );
-    sw::SceneNavigation& cookedNavigation = cookedScene.getObjectManager()->getSceneNavigation();
+    sw::SceneNavigation& cookedNavigation = cookedScene.getObjectManager()->getSceneService<sw::SceneNavigation>();
     cookedNavigation.setCookedAsset( pCooked );
     const sw::INavMesh* pCookedMesh = cookedNavigation.ensureNavMesh( entry._agentType );
     SW_ASSERT_NOT_NULL( pCookedMesh );
@@ -78,7 +78,7 @@ SW_TEST_CASE( NavMeshCookTest, CookedTilesMatchTheRuntimeBakeAndStaleOnesAreReje
     SW_ASSERT_NOT_NULL( pGroundRoot );
     pGroundRoot->setLocalPosition( pGroundRoot->getLocalPosition() + sw::float3{ 0.5f, 0.0f, 0.0f } );
     staleScene.getObjectManager()->flushSceneTransforms();
-    sw::SceneNavigation& staleNavigation = staleScene.getObjectManager()->getSceneNavigation();
+    sw::SceneNavigation& staleNavigation = staleScene.getObjectManager()->getSceneService<sw::SceneNavigation>();
     staleNavigation.setCookedAsset( pCooked );
     {
         SW_TEST_DEFENSIVE_SCOPE( "a cooked navmesh whose scene moved is stale" );

@@ -200,7 +200,7 @@ namespace sw
                                                       BinaryWireVersion       wireVersion  = kCurrentBinaryWireVersion );
 
     /**
-     * @brief 바이너리 태그의 기록 타입 해시를 이름으로 돌려줍니다 — 등록된 타입(정본 이름), 아니면 enum(FQN). 모르면 빈 이름입니다.
+     * @brief 바이너리 태그의 기록 타입 해시를 이름으로 돌려줍니다 — 등록된 타입(원본 이름), 아니면 enum(FQN). 모르면 빈 이름입니다.
      * @details 타입 표(`canonicalTypeNameByHash`)는 enum 을 모르므로 enum 은 여기서 찾습니다. 기록 타입을 몰라 크기로 짐작하면 열거자 이름
      *          해시(4 바이트)가 int32 · float32 로 그대로 읽힌다.
      */

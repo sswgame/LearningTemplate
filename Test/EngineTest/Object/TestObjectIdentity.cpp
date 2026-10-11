@@ -1,6 +1,6 @@
 /**
  * @file TestObjectIdentity.cpp
- * @brief 같은 오브젝트를 되살릴 때 런타임 id 를 되살리는 장치 — `createGameObjectWithID` · `ObjectIdentity` · 프로세스 토큰.
+ * @brief 같은 오브젝트를 복원할 때 런타임 id 를 복원하는 장치 — `createGameObjectWithID` · `ObjectIdentity` · 프로세스 토큰.
  * @details 에디터 되돌리기 · 플레이 세션 복원 · 핫 리로드가 이것에 기대어 `GameObjectHandle` · `ComponentHandle` 을 이어 간다.
  *          각 경로의 배선(트랜잭션 · 선택)은 EditorTest 가 보고, 여기서는 그 아래 장치를 직접 본다.
  */
@@ -89,7 +89,7 @@ SW_TEST_CASE( ObjectIdentityTest, BinaryLoadRestoresComponentIDs )
     sw::vector<uint8> bytes;
     SW_ASSERT_TRUE( sw::ObjectStateSerializer::saveToBinaryBuffer( pSource, bytes ) );
 
-    // 같은 오브젝트를 되살리는 길 — 지우고, 같은 id 로 만들고, id 와 함께 읽는다(핫 리로드 · 되돌리기와 같은 순서).
+    // 같은 오브젝트를 복원하는 길 — 지우고, 같은 id 로 만들고, id 와 함께 읽는다(핫 리로드 · 되돌리기와 같은 순서).
     manager.destroyObject( pSource );
     manager.processDeferredDestruction();
     SW_EXPECT_TRUE( manager.resolveComponent( sceneHandle ) == nullptr );

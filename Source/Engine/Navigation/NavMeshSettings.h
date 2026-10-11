@@ -1,9 +1,9 @@
 /**
  * @file NavMeshSettings.h
- * @brief 사람이 고치는 내비게이션 표 — 에이전트 종류(몸 크기 · 경사 · 계단 · 셀 크기 · 타일) · 영역(이름 · 비용) · 군중 · 재베이크 예산입니다.
- * @details 기본 표는 `engine/navigation/navmeshsettings.xml` 입니다. 코드는 이름으로만 고릅니다(`findAgentType` · `findAreaIndex`).
- *          모르는 키 · 겹친 이름 · 범위를 벗어난 값은 읽을 때 오류이고, 영역이 하나도 없으면 `Default` 하나를 채웁니다.
- *          에이전트 종류마다 내비메시가 하나씩 따로 베이크해집니다(언리얼 `SupportedAgents` · 유니티 Agent Type).
+ * @brief 사람이 고치는 내비게이션 테이블입니다. 에이전트 종류(몸 크기, 경사, 계단, 셀 크기, 타일), 영역(이름, 비용), 군중, 재베이크 예산을 담습니다.
+ * @details 기본 테이블은 `engine/navigation/navmeshsettings.xml` 이다. 코드는 이름으로만 고른다(`findAgentType`, `findAreaIndex`).
+ *          모르는 키, 겹친 이름, 범위를 벗어난 값은 읽을 때 오류이고, 영역이 하나도 없으면 `Default` 하나를 채운다.
+ *          에이전트 종류마다 내비메시가 하나씩 따로 베이크된다(언리얼의 `SupportedAgents`, 유니티의 Agent Type 에 해당한다).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -19,7 +19,7 @@
 namespace sw
 {
     /**
-     * @brief 에이전트 종류 하나 — 이 몸이 걸을 내비메시를 베이크하는 값입니다.
+     * @brief 에이전트 종류 하나입니다. 이 몸이 걸을 내비메시를 베이크하는 값입니다.
      * @code
      *     <NavAgentTypeDef _name="Humanoid" _radius="0.4" _height="1.9" _maxClimb="0.45" _maxSlope="0.785398" _cellSize="0.2" _cellHeight="0.1" _tileSize="48" />
      * @endcode
@@ -65,7 +65,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 영역 하나 — 이름과 지날 때의 비용 배율입니다. 표의 순서가 영역 번호(0..15)이고 0 번이 보통 땅입니다.
+     * @brief 영역 하나입니다. 이름과 지날 때의 비용 배율을 담습니다. 테이블의 순서가 영역 번호(0..15)이고, 0 번이 보통 땅입니다.
      * @code
      *     <NavAreaDef _name="Mud" _cost="4" />
      * @endcode
@@ -85,15 +85,15 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 내비게이션 표 하나입니다. 씬의 내비게이션(`SceneNavigation`)이 처음 쓸 때 읽습니다.
-     * @details 쿠킹본(`.navmesh`)은 베이크에 들어간 값의 해시(`computeAgentTypeHash`)를 함께 적어 두고, 표가 바뀌면 런타임이 다시 베이크합니다.
+     * @brief 내비게이션 테이블 하나입니다. 씬의 내비게이션(`SceneNavigation`)이 처음 쓸 때 읽습니다.
+     * @details 쿠킹본(`.navmesh`)은 베이크에 들어간 값의 해시(`computeAgentTypeHash`)를 함께 적어 두고, 테이블이 바뀌면 런타임이 다시 베이크한다.
      */
     REFLECT()
     struct SW_API NavMeshSettings
     {
         REFLECT_BODY();
 
-        /** @brief 기본 표의 리소스 경로입니다. */
+        /** @brief 기본 테이블의 리소스 경로입니다. */
         static constexpr string_view kResourcePath = "engine/navigation/navmeshsettings.xml";
 
         PROPERTY( Tooltip = "Agent kinds; each bakes its own navmesh" )
@@ -107,20 +107,20 @@ namespace sw
         PROPERTY( Min = 0.0, Tooltip = "An obstacle has to move this far before the mesh around it rebakes", Units = m )
         float32 _obstacleMoveThreshold{ 0.25f };
 
-        /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면(파일 없음 · 모르는 이름 · 겹친 이름 · 범위 밖) 오류를 남기고 false 입니다. */
+        /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면(파일 없음, 모르는 이름, 겹친 이름, 범위 밖) 오류를 남기고 false 를 반환합니다. */
         [[nodiscard]] bool loadFromResource( string_view resourcePath );
         /** @brief XML 문자열을 읽고 검사합니다(테스트용). */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText );
-        /** @brief 이름이 겹치지 않고 · 영역이 16 개 이하이고 · 값이 범위 안이고 · 기본 종류가 있는 이름인지 봅니다. 어긋나면 오류를 남기고 false 입니다. */
+        /** @brief 이름이 겹치지 않는지, 영역이 16 개 이하인지, 값이 범위 안인지, 기본 종류가 있는 이름인지 검사합니다. 어긋나면 오류를 남기고 false 를 반환합니다. */
         [[nodiscard]] bool validate() const;
-        /** @brief 영역 · 에이전트 종류가 비어 있으면 `Default` 하나씩을 채웁니다. */
+        /** @brief 영역과 에이전트 종류가 비어 있으면 `Default` 하나씩을 채웁니다. */
         void ensureDefaults();
 
         /** @brief 이름의 에이전트 종류입니다. 이름이 비면 기본 종류입니다. 없으면 nullptr 입니다. */
         const NavAgentTypeDef* findAgentType( const hashed_string& name ) const;
         /** @brief 이름의 영역 번호입니다. 없으면 false 입니다. */
         [[nodiscard]] bool findAreaIndex( const hashed_string& name, uint8& outIndex ) const;
-        /** @brief 표의 영역 비용으로 채운 기본 거름입니다. */
+        /** @brief 테이블의 영역 비용으로 채운 기본 필터를 반환합니다. */
         NavQueryFilter makeDefaultFilter() const;
         /** @brief 에이전트 종류 하나를 베이크하는 값의 해시입니다(쿠킹본이 낡았는지 본다). */
         static uint64 computeAgentTypeHash( const NavAgentTypeDef& agentType );

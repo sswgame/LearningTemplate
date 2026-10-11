@@ -160,7 +160,7 @@ namespace sw
     {
         engine::getAssetStreamingQueue().clearCompletionRecord();
         // 캐시 자체는 참조가 0 이 되는 자리에서 스스로 지운다(`MaterialCache::release`).
-        // 여기서는 아직 할 일이 없다. 있게 되면 등록부를 훑는다.
+        // 여기서는 아직 할 일이 없다. 있게 되면 레지스트리를 훑는다.
     }
 
     void AssetManager::registerAssetCache( IAssetCache* pCache )

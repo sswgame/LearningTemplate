@@ -55,7 +55,7 @@ namespace sw
                 { outTags.addTag( TagID::request( token ) ); } );
             }
 
-            /** @brief 단계 속성(mode · prompt · duration · presses · decay · maxParticipants)을 읽습니다. 빠진 칸은 @p inoutStep 의 것입니다. */
+            /** @brief 단계 속성(mode, prompt, duration, presses, decay, maxParticipants)을 읽습니다. 빠진 속성은 @p inoutStep 의 값을 그대로 둡니다. */
             [[nodiscard]] static bool readStep( const XMLNode& node, InteractionStepDef& inoutStep, string_view sourceName )
             {
                 const bool  bValid  = readEnum( node, "mode", inoutStep._mode, sourceName );
@@ -70,7 +70,7 @@ namespace sw
             }
         };
 
-        /** @brief 경로마다 한 번 읽어 나눠 쓰는 표입니다(GameFramework 모듈 정적 — 등록부는 `GameDataCacheRegistry` 가 맞춘다). */
+        /** @brief 경로마다 한 번 읽어서 공유하는 테이블입니다. GameFramework 모듈의 정적 변수이고, 레지스트리는 `GameDataCacheRegistry` 가 맞춥니다. */
         GameDataCache<InteractionCatalog>& getSharedCatalogCache()
         {
             static GameDataCache<InteractionCatalog> s_cache{ "InteractionCatalog" };

@@ -59,7 +59,7 @@ SW_TEST_CASE( Render2DSettingsTest, LayerOrderWinsOverOrderInLayer )
 
 /**
  * @brief [Render2DSettingsTest] 투명 정렬 축 — Auto 는 직교에서만 시선 축, CustomAxis 는 데이터의 축(정규화)
- * @details 직교 2D 카메라에서 거리로 재면 같은 Z 의 두 스프라이트가 카메라 XY 에 따라 앞뒤가 바뀐다. 영벡터는 "거리" 를 뜻한다.
+ * @details 직교 2D 카메라에서 거리로 측정하면 같은 Z 의 두 스프라이트가 카메라 XY 에 따라 앞뒤가 바뀐다. 영벡터는 "거리" 를 뜻한다.
  */
 SW_TEST_CASE( Render2DSettingsTest, SortAxisFollowsModeAndProjection )
 {
@@ -119,4 +119,21 @@ SW_TEST_CASE( Render2DSettingsTest, EngineTableHasWorldUIAboveDefault )
     const int32 worldUI = settings.findSortingLayer( sw::hashed_string( "WorldUI" ) );
     SW_ASSERT_TRUE( worldUI >= 0 );
     SW_EXPECT_TRUE( static_cast<uint32>( worldUI ) > settings.getDefaultSortingLayer() );
+}
+
+/**
+ * @brief [Render2DSettingsTest] 엔진 종료가 활성 표를 놓아도(`releaseActive`) 다음 `getActive` 는 파일을 다시 읽는다
+ * @details 같은 프로세스에서 엔진이 다시 서면(테스트 호스트 · 앱 스모크) 놓은 뒤의 빈 표를 쓰면 안 된다.
+ */
+SW_TEST_CASE( Render2DSettingsTest, ReleasedActiveTableReloadsOnNextUse )
+{
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    const uint32 layerCount = sw::Render2DSettings::getActive().getSortingLayerCount();
+    SW_ASSERT_TRUE( layerCount > 1u );
+
+    sw::Render2DSettings::releaseActive();
+    const sw::Render2DSettings& reloaded = sw::Render2DSettings::getActive();
+    SW_EXPECT_EQUAL( layerCount, reloaded.getSortingLayerCount() );
+    SW_EXPECT_TRUE( reloaded.findSortingLayer( sw::hashed_string( "Default" ) ) >= 0 );
+    SW_EXPECT_EQUAL( static_cast<uint32>( reloaded.findSortingLayer( sw::hashed_string( "Default" ) ) ), reloaded.getDefaultSortingLayer() );
 }

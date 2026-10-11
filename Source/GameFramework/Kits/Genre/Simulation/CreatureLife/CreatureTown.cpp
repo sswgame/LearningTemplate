@@ -21,18 +21,18 @@ namespace sw
     {
         struct CreatureTownInternal
         {
-            /** @brief 종의 호감도 세력 id 입니다 — 공유 평판에서 키트 접두로 다른 키트의 세력과 갈린다(문자열 붙이기는 여기 한 곳). */
+            /** @brief 종의 호감도 세력 id 를 반환합니다. 공유 평판에서 키트 접두어로 다른 키트의 세력과 구분하며, 문자열 이어 붙이기는 여기 한 곳에서만 합니다. */
             static hashed_string makeFactionID( const hashed_string& speciesID ) { return hashed_string( string( "creature." ) + speciesID.c_str() ); }
 
             static constexpr int32 kRotationCount = 4;
 
-            /** @brief 회전한 패턴의 가로 · 세로입니다(홀수 회전은 뒤바뀐다). */
+            /** @brief 회전한 패턴의 가로와 세로를 반환합니다(홀수 회전이면 서로 바뀝니다). */
             static int2 computeRotatedSize( const HabitatDef& habitat, int32 rotation )
             {
                 return ( rotation & 1 ) != 0 ? int2{ habitat._height, habitat._width } : int2{ habitat._width, habitat._height };
             }
 
-            /** @brief 회전한 패턴의 (@p rotatedX, @p rotatedY) 칸이 원래 패턴의 어느 칸인지입니다. 90° 를 @p rotation 번 돌린 것입니다. */
+            /** @brief 회전한 패턴의 (@p rotatedX, @p rotatedY) 셀이 원래 패턴의 어느 셀인지 반환합니다. 90° 를 @p rotation 번 돌린 것입니다. */
             static const HabitatCell& sampleRotated( const HabitatDef& habitat, int32 rotation, int32 rotatedX, int32 rotatedY )
             {
                 const int32 width  = habitat._width;
@@ -176,7 +176,7 @@ namespace sw
     {
         LandBinding land;
         land.bind( pLand, origin, hashed_string( "CreatureLife" ) );
-        // 이미 놓인 칸을 먼저 모두 볼 수 있어야 얻는다(반쯤 얻고 실패하지 않게).
+        // 이미 놓인 셀을 먼저 모두 볼 수 있어야 얻는다(반쯤 얻고 실패하지 않게 하려는 것이다).
         for ( int32 index = 0; index < _topology.getCellCount(); ++index )
         {
             const int2 cell = _topology.toCell( index );
@@ -243,7 +243,7 @@ namespace sw
                 const CreatureSpeciesDef& species = listSpecies[static_cast<size_t>( speciesIndex )];
                 if ( findCreatureIndex( species._id ) >= 0 || species.likesHabitat( instance._habitatID ) == false || species.comesIn( phase, weatherID ) == false )
                     continue;
-                // 서식지 번호가 아니라 자리로 섞는다 — 같은 배치면 지어 온 순서와 상관없이 같은 답이다.
+                // 서식지 번호가 아니라 위치로 섞는다. 같은 배치면 지어 온 순서와 상관없이 같은 답이 나온다.
                 const uint32  placeKey = static_cast<uint32>( _topology.toIndex( instance._origin ) ) * 4u + static_cast<uint32>( instance._rotation );
                 const uint32  salt     = static_cast<uint32>( speciesIndex ) * 977u + placeKey * 31u;
                 const float32 roll     = GameHash::toUnitFloat( GameHash::hashCoord( attractKey, static_cast<int32>( salt ), _settings._randomSeed ) );
@@ -257,7 +257,7 @@ namespace sw
                 _listCreature.push_back( creature );
                 _eventBuffer.push( CreatureTownEvent{ species._id, {}, instance._id, CreatureTownEvent::Kind::CreatureArrived } );
                 if ( _pReputation != nullptr )
-                    (void)_pReputation->changeValue( CreatureTownInternal::makeFactionID( species._id ), 0 ); // 세력 자리를 만들어 둔다(시작값)
+                    (void)_pReputation->changeValue( CreatureTownInternal::makeFactionID( species._id ), 0 ); // 세력 항목을 만들어 둔다(시작값)
                 ++arrivedCount;
             }
         }
@@ -446,7 +446,7 @@ namespace sw
         {
             std::fill( creature._listAbilityUse.begin(), creature._listAbilityUse.end(), 0 );
         }
-        updateAppealTier(); // 공유 평판은 주인이 날 넘김에 식혔다 — 매력도만 다시 본다
+        updateAppealTier(); // 공유 평판의 감쇠는 주인이 날이 넘어갈 때 이미 처리했으므로, 매력도만 다시 본다
     }
 
     void CreatureTown::drainEvents( vector<CreatureTownEvent>& outListEvent )
@@ -580,13 +580,13 @@ namespace sw
                         instance._rotation  = rotation;
                         instance._id        = -1;
                         listMatch.push_back( instance );
-                        break; // 이 자리의 칸은 이제 차지됐다
+                        break; // 이 서식지의 셀은 이제 차지됐다
                     }
                 }
             }
         }
 
-        // 전과 같은 서식지는 번호를 잇는다.
+        // 전과 같은 서식지는 번호를 이어받는다.
         vector<uint8> listKept( _listHabitat.size(), SW_FALSE );
         for ( HabitatInstance& match : listMatch )
         {
@@ -720,7 +720,7 @@ namespace sw
                 ++keptCount;
                 continue;
             }
-            // 끝났다 — 완료면 그 부탁을 하는 생물에게 호감도를 준다. 실패 · 포기(NotStarted)는 보상 없이 뺀다.
+            // 끝났다. 완료이면 그 부탁을 하는 생물에게 호감도를 주고, 실패나 포기(NotStarted)는 보상 없이 뺀다.
             if ( status == QuestStatus::Completed )
                 (void)rewardRequest( questID );
         }
@@ -831,7 +831,7 @@ namespace sw
         archive >> height;
         if ( archive.isError() || width != _topology._width || height != _topology._height )
             return false;
-        // 사본에 읽고 끝까지 맞으면 바꾼다 — 카탈로그 · 설정 · 빌린 일지 · 시계 포인터는 사본이 그대로 든다.
+        // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 카탈로그, 설정, 빌린 일지와 시계 포인터는 사본도 그대로 가지고 있다.
         CreatureTown town      = *this;
         const int32  tileCount = width * height;
         for ( hashed_string& object : town._listObject )
@@ -841,7 +841,7 @@ namespace sw
         }
 
         uint32 habitatCount = 0;
-        // 서식지마다 이름(4) + 자리(8) + 번호(4) + 회전(4) + 칸 수(4) 이상
+        // 서식지마다 이름(4) + 위치(8) + 번호(4) + 회전(4) + 셀 수(4) 이상
         if ( StateArchiveUtil::readCount( archive, 24, habitatCount ) == false )
             return false;
         town._listHabitat.assign( habitatCount, HabitatInstance{} );
@@ -866,7 +866,7 @@ namespace sw
         }
 
         uint32 creatureCount = 0;
-        // 생물마다 이름(4) + 능력 수(4) + 서식지 · 집 · 대화 날 · 선물 날 · 온 날(20) 이상
+        // 생물마다 이름(4) + 능력 수(4) + 서식지, 집, 대화 날, 선물 날, 온 날(20) 이상
         if ( StateArchiveUtil::readCount( archive, 28, creatureCount ) == false )
             return false;
         town._listCreature.assign( creatureCount, TownCreature{} );
@@ -889,7 +889,7 @@ namespace sw
         }
 
         uint32 houseCount = 0;
-        // 집마다 사는 수(4) + 칸(8) + 정원(4) 이상
+        // 집마다 사는 수(4) + 셀(8) + 정원(4) 이상
         if ( StateArchiveUtil::readCount( archive, 16, houseCount ) == false )
             return false;
         town._listHouse.assign( houseCount, CreatureHouse{} );
@@ -922,7 +922,7 @@ namespace sw
         if ( archive.isError() )
             return false;
 
-        // 생물이 가리키는 서식지 번호 · 집 자리가 실제로 있어야 한다.
+        // 생물이 가리키는 서식지 번호와 집 index 가 실제로 있어야 한다.
         const int32 townHouseCount = static_cast<int32>( town._listHouse.size() );
         for ( const TownCreature& creature : town._listCreature )
         {
@@ -933,7 +933,7 @@ namespace sw
         }
         town._eventBuffer.clear();
         town.updateAppealTier();
-        town._eventBuffer.clear(); // 되살린 단계는 알리지 않는다
+        town._eventBuffer.clear(); // 복원한 단계는 알리지 않는다
         *this = std::move( town );
         return true;
     }

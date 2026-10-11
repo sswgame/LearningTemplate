@@ -136,7 +136,7 @@ namespace sw
 
         /** @brief 압축 포즈를 풉니다. 본 수가 다르면 @p outPose 를 맞춥니다. */
         static void decodePose( const AnimationRewindFrame& frame, Pose& outPose );
-        /** @brief 포즈를 압축합니다(테스트가 오차를 잰다). */
+        /** @brief 포즈를 압축합니다(테스트가 오차를 측정한다). */
         static void encodePose( const Pose& pose, AnimationRewindFrame& outFrame );
         /** @brief 풀어 낸 포즈의 모델 공간 위치(월드)를 구합니다 — 그리기용. */
         static void computeWorldBonePositions( const AnimationRewindTrack& track, const AnimationRewindFrame& frame, vector<float3>& outListPosition );

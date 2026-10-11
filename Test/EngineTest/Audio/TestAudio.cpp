@@ -406,7 +406,7 @@ SW_TEST_CASE( AudioSystemTest, ShutdownWhileDecodeTasksAreStillInFlight )
 /**
  * @brief [AudioSystemTest] 부동소수 · 확장형(24 비트 다채널) WAV 도 디코드된다
  * @details 파서가 `WAVE_FORMAT_PCM` 태그만 받으면 DAW 가 흔히 내보내는 부동소수 · 확장형 WAV 가 "디코드 실패" 경고 하나만 남기고 소리가
- *          나지 않는다. 재생은 비동기라 결과를 볼 수 없어 `preload`(동기 디코드)로 잰다. 소리를 내지 않는 구성(Null)은 파일이 있는지만 본다.
+ *          나지 않는다. 재생은 비동기라 결과를 볼 수 없어 `preload`(동기 디코드)로 측정한다. 소리를 내지 않는 구성(Null)은 파일이 있는지만 본다.
  */
 SW_TEST_CASE( AudioSystemTest, FloatAndExtensibleWavsDecode )
 {
@@ -483,7 +483,7 @@ SW_TEST_CASE( AudioSystemTest, OggVorbisDecodesToPcm )
     SW_EXPECT_TRUE( pcm._sampleRate >= 22050u && pcm._sampleRate <= 48000u );
     SW_EXPECT_EQUAL( 16u, static_cast<uint32>( pcm._bitsPerSample ) );
     SW_EXPECT_TRUE( pcm._bFloat == SW_FALSE );
-    // 클릭 하나도 수 ms 는 된다 — 프레임이 없으면 머리만 읽고 소리는 풀지 않은 것이다. (압축 크기와는 견주지 않는다: 짧은 소리는
+    // 클릭 하나도 수 ms 는 된다 — 프레임이 없으면 머리만 읽고 소리는 풀지 않은 것이다. (압축 크기와는 비교하지 않는다: 짧은 소리는
     // Vorbis 머리의 코드북이 파일 대부분이라 풀어도 더 작을 수 있다.)
     const size_t frameCount = pcm._listData.size() / pcm.getBlockAlign();
     SW_EXPECT_TRUE( frameCount * 1000u / pcm._sampleRate >= 5u );

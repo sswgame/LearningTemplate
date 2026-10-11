@@ -43,7 +43,7 @@ namespace sw
                 return false;
             }
 
-            /** @brief 부품 종류가 쓰는 에셋 속성 이름입니다(몸 수정은 없다). */
+            /** @brief 부품 종류가 쓰는 에셋 속성 이름입니다. 몸 수정에는 없습니다. */
             static const utf8* getAssetAttribute( AppearancePartKind kind )
             {
                 switch ( kind )
@@ -60,7 +60,7 @@ namespace sw
                 return nullptr;
             }
 
-            /** @brief 종류에 맞지 않는 에셋 속성이 있으면 오류입니다. */
+            /** @brief 종류에 맞지 않는 에셋 속성이 있으면 오류로 처리합니다. */
             static void reportMisplacedAssetAttributes( const XMLNode& node, AppearancePartKind kind, AppearanceLoadReport& report, string_view sourceName, const hashed_string& visualID )
             {
                 constexpr const utf8* kArrAssetAttribute[] = { "mesh", "prefab", "sprite" };
@@ -261,7 +261,7 @@ namespace sw
                 outVisual._customization = AppearanceXMLUtil::readName( node, "customization" );
                 outVisual._defaultState  = AppearanceXMLUtil::readName( node, "defaultState" );
                 AppearanceXMLUtil::readTags( node, "tags", outVisual._tags );
-                // 부품을 먼저 모두 읽는다 — 상태 · 피해 단계가 앞뒤 순서와 상관없이 부품을 가리킨다.
+                // 부품을 먼저 모두 읽는다. 상태와 피해 단계가 파일 안의 순서와 상관없이 부품을 가리킬 수 있게 하기 위해서다.
                 for ( XMLNode child = node.findChild( "Part" ); child; child = child.findNextSibling( "Part" ) )
                 {
                     readPart( child, outVisual, report, sourceName );

@@ -1,6 +1,6 @@
 /**
  * @file AppearanceDatabase.h
- * @brief 외형 데이터 한 벌 — 슬롯 표 · 장비 세트 · 아이템 외형 · 꾸미기 스키마 · 외형 규칙 · 캐릭터 프리셋을 읽고 서로의 이름을 대조합니다.
+ * @brief 외형 데이터 한 벌입니다. 슬롯 테이블, 장비 세트, 아이템 외형, 꾸미기 스키마, 외형 규칙, 캐릭터 프리셋을 읽고 서로의 이름을 대조합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -24,24 +24,24 @@ namespace sw
 
     /**
      * @class AppearanceDatabase
-     * @brief 외형 데이터 폴더 하나(`<게임>/data/appearance/`)를 읽습니다. 파일 하나가 한 종류이고 루트 원소 이름으로 종류를 압니다.
-     * @details 파일: `slots.xml`(`SlotTable`, 반드시) · `sets.xml`(`EquipSetCatalog`) · `itemvisuals.xml`(`ItemVisualCatalog`) · `customization.xml`
-     *          (`CustomizationSchemaCatalog`) · `rules.xml`(`AppearanceRuleTable`) · `presets.xml`(`CharacterAppearanceCatalog`). 다 읽은 뒤 `finishLoad` 가
-     *          모르는 이름(칸 · 세트 · 아이템 · 외형 · 스키마 · 매개변수 · 항목 · 변형 · 부품 · 부모)과 장착 조건 순환, 프리셋 부모 순환을 오류로 모읍니다.
-     *          파일을 고쳐 다시 읽으면 `getRevision` 이 올라 외형 상태(`CharacterAppearanceState`)가 다시 해석합니다.
+     * @brief 외형 데이터 폴더 하나(`<게임>/data/appearance/`)를 읽습니다. 파일 하나가 한 종류이고, 루트 원소 이름으로 종류를 구분합니다.
+     * @details 파일은 다음과 같다. `slots.xml`(`SlotTable`, 반드시 필요), `sets.xml`(`EquipSetCatalog`), `itemvisuals.xml`(`ItemVisualCatalog`),
+     *          `customization.xml`(`CustomizationSchemaCatalog`), `rules.xml`(`AppearanceRuleTable`), `presets.xml`(`CharacterAppearanceCatalog`).
+     *          모두 읽은 뒤 `finishLoad` 가 알 수 없는 이름(슬롯, 세트, 아이템, 외형, 스키마, 매개변수, 항목, 변형, 부품, 부모)과 장착 조건 순환, 프리셋 부모 순환을 오류로 모은다.
+     *          파일을 고쳐 다시 읽으면 `getRevision` 이 늘어나고, 외형 상태(`CharacterAppearanceState`)가 외형을 다시 해석한다.
      */
     class SW_GF_API AppearanceDatabase
     {
     public:
         AppearanceDatabase();
 
-        /** @brief 폴더의 데이터를 모두 읽고 검사합니다. 오류가 없으면 true 입니다. @p pItemCatalog 는 빌려 씁니다(데이터보다 오래 살아야 한다). */
+        /** @brief 폴더의 데이터를 모두 읽고 검사합니다. 오류가 없으면 true 입니다. @p pItemCatalog 는 소유하지 않고 참조만 하므로 데이터보다 오래 살아 있어야 합니다. */
         [[nodiscard]] bool loadFromFolder( string_view folder, const ItemCatalog* pItemCatalog );
-        /** @brief 데이터 한 덩이(루트 원소로 종류를 고른다)를 읽습니다(테스트 · 미리보기). 검사는 `finishLoad` 에서 합니다. */
+        /** @brief 데이터 한 덩어리를 읽습니다. 루트 원소로 종류를 정하며, 테스트와 미리보기에 씁니다. 검사는 `finishLoad` 에서 합니다. */
         [[nodiscard]] bool loadSectionFromXMLText( string_view xmlText, string_view sourceName );
         /**
          * @brief 읽은 데이터끼리 이름을 대조합니다. 오류가 없으면 true 입니다.
-         * @param pListKnownBodyRegion 몸 영역 표(피팅 데이터)의 이름 — 주면 숨김 영역 이름도 대조합니다.
+         * @param pListKnownBodyRegion 몸 영역 테이블(피팅 데이터)의 이름 목록입니다. 주면 숨김 영역 이름도 대조합니다.
          */
         [[nodiscard]] bool finishLoad( const ItemCatalog* pItemCatalog, const vector<hashed_string>* pListKnownBodyRegion = nullptr );
         void               clear();
@@ -56,9 +56,9 @@ namespace sw
         const AppearanceLoadReport&       getReport() const { return _report; }
         uint32                            getRevision() const { return _revision; }
 
-        /** @brief 아이템의 외형입니다(형상 변경이 없을 때). 없으면 nullptr 입니다. */
+        /** @brief 아이템의 외형입니다. 형상 변경이 없을 때의 외형이며, 없으면 nullptr 입니다. */
         const ItemVisualDef* findItemVisual( const hashed_string& itemID ) const;
-        /** @brief 이름이 외형 주인(칸 또는 어떤 스키마의 매개변수)인가입니다. */
+        /** @brief 이름이 외형 주인(슬롯 또는 어떤 스키마의 매개변수)이면 true 입니다. */
         bool isOwnerName( const hashed_string& name ) const;
 
     private:

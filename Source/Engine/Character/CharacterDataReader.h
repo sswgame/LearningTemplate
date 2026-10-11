@@ -1,8 +1,8 @@
 /**
  * @file CharacterDataReader.h
- * @brief 캐릭터 데이터 XML(소켓 · 레퍼런스 포즈 · 체형 · 피팅 표 · 표면 채널)을 읽는 공통 도우미입니다. 모르는 이름은 모두 **오류**로 모읍니다.
- * @details 데이터가 사람 손으로 고쳐지므로 틀린 이름이 조용히 기본값이 되지 않게 합니다 — 모르는 속성 · 원소 · 숫자가 아닌 숫자 칸이 오류이고,
- *          읽기가 끝나면 로더가 오류를 한꺼번에 로그로 내고 실패를 돌려줍니다.
+ * @brief 캐릭터 데이터 XML(소켓, 레퍼런스 포즈, 체형, 피팅 테이블, 표면 채널)을 읽는 공통 도우미입니다. 모르는 이름은 모두 **오류**로 모읍니다.
+ * @details 데이터를 사람이 직접 고치므로, 틀린 이름이 조용히 기본값이 되지 않게 한다. 모르는 속성이나 원소, 숫자가 아닌 값이 오류이고,
+ *          읽기가 끝나면 로더가 오류를 한꺼번에 로그로 내고 실패를 반환한다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -18,9 +18,9 @@
 namespace sw
 {
     /**
-     * @brief 파일 하나를 읽는 동안의 오류 모음과 칸 읽기 도우미입니다.
-     * @details 숫자 · 벡터 칸은 비어 있으면 @p fallback, 글이 숫자가 아니면 오류를 남기고 @p fallback 입니다. 벡터는 공백이나 쉼표로 나눈 세 수,
-     *          회전은 도 단위 오일러(피치 · 요 · 롤 — `quaternion::makeFromYawPitchRoll( float3 )` 과 같은 배치)입니다.
+     * @brief 파일 하나를 읽는 동안의 오류 모음과 필드 읽기 도우미입니다.
+     * @details 숫자와 벡터 필드는 비어 있으면 @p fallback 을 쓰고, 문자열이 숫자가 아니면 오류를 남기고 @p fallback 을 쓴다. 벡터는 공백이나 쉼표로 나눈 세 수이고,
+     *          회전은 도 단위 오일러(피치, 요, 롤)다. `quaternion::makeFromYawPitchRoll( float3 )` 과 같은 배치다.
      */
     class SW_API CharacterDataReader
     {
@@ -39,32 +39,32 @@ namespace sw
         void addError( const XMLNode& node, string_view message );
         /** @brief 원소와 상관없는 오류 하나를 남깁니다. */
         void addError( string_view message );
-        /** @brief 표에 없는 속성마다 오류를 남깁니다. */
+        /** @brief 테이블에 없는 속성마다 오류를 남깁니다. */
         template <size_t Count>
         void reportUnknownAttributes( const XMLNode& node, const utf8* const ( &arrKnown )[Count] )
         {
             reportUnknownAttributes( node, arrKnown, Count );
         }
-        /** @brief 속성이 하나라도 있으면 오류를 남깁니다(속성이 없는 원소 — 루트 등). */
+        /** @brief 속성이 하나라도 있으면 오류를 남깁니다(속성이 없어야 하는 원소, 예를 들어 루트). */
         void reportUnexpectedAttributes( const XMLNode& node ) { reportUnknownAttributes( node, nullptr, 0 ); }
         /** @brief 모르는 자식 원소 하나를 오류로 남깁니다. */
         void reportUnknownElement( const XMLNode& node );
 
-        /** @brief 실수 칸입니다. */
+        /** @brief 실수 필드를 읽습니다. */
         float32 readFloat( const XMLNode& node, const utf8* pName, float32 fallback );
-        /** @brief 정수 칸입니다. */
+        /** @brief 정수 필드를 읽습니다. */
         int32 readInt( const XMLNode& node, const utf8* pName, int32 fallback );
-        /** @brief 참거짓 칸입니다. */
+        /** @brief 불리언 필드를 읽습니다. */
         [[nodiscard]] bool readBool( const XMLNode& node, const utf8* pName, bool fallback );
-        /** @brief 세 수 칸입니다("x y z"). */
+        /** @brief 세 수 필드를 읽습니다("x y z"). */
         float3 readFloat3( const XMLNode& node, const utf8* pName, const float3& fallback );
-        /** @brief 회전 칸입니다(도 단위 "피치 요 롤"). */
+        /** @brief 회전 필드를 읽습니다(도 단위 "피치 요 롤"). */
         quaternion readRotation( const XMLNode& node, const utf8* pName, const quaternion& fallback );
-        /** @brief 이름 칸입니다. @p bRequired 인데 비었으면 오류입니다. */
+        /** @brief 이름 필드를 읽습니다. @p bRequired 인데 비어 있으면 오류입니다. */
         hashed_string readName( const XMLNode& node, const utf8* pName, bool bRequired );
-        /** @brief 공백 · 쉼표로 나눈 이름 목록 칸입니다(비우고 채움). */
+        /** @brief 공백이나 쉼표로 나눈 이름 목록 필드를 읽습니다(비우고 채웁니다). */
         void readNameList( const XMLNode& node, const utf8* pName, vector<hashed_string>& outListName );
-        /** @brief 칸이 있으면 true 입니다. */
+        /** @brief 필드가 있으면 true 를 반환합니다. */
         static bool hasAttribute( const XMLNode& node, const utf8* pName ) { return node.findAttribute( pName ) != nullptr; }
 
         /** @brief 오류가 하나라도 있으면 true 입니다. */
@@ -76,7 +76,7 @@ namespace sw
         /** @brief 읽는 파일 이름입니다. */
         const string& getSourceName() const { return _sourceName; }
 
-        /** @brief 공백 · 쉼표로 나눈 토큰 목록입니다(비우고 채움). */
+        /** @brief 공백이나 쉼표로 나눈 토큰 목록을 구합니다(비우고 채웁니다). */
         static void splitTokens( string_view text, vector<string_view>& outListToken );
         /** @brief 실수 하나를 가장 짧은 표현으로 씁니다. */
         static string formatFloat( float32 value );
@@ -84,7 +84,7 @@ namespace sw
         static string formatFloat3( const float3& value );
         /** @brief 회전을 도 단위 "피치 요 롤" 로 씁니다. */
         static string formatRotation( const quaternion& rotation );
-        /** @brief 이름 목록을 공백으로 이어 씁니다. */
+        /** @brief 이름 목록을 공백으로 이어서 씁니다. */
         static string formatNameList( const vector<hashed_string>& listName );
 
     private:

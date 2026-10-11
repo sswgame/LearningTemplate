@@ -16,7 +16,7 @@ namespace sw
     /**
      * @class PanelWidget
      * @brief 자식을 드는 위젯입니다. 자식 순서가 그리기 순서이고(뒤가 위 — z 순서를 둔 패널은 `collectPaintOrder`), 히트 테스트는 그 역순입니다.
-     * @details 자식을 붙이고 떼면 자기 kLayout 입니다. 트리에 붙어 있으면 자식도 함께 붙고 떨어집니다(번호 · 이름표).
+     * @details 자식을 붙이고 떼면 자기 kLayout 입니다. 트리에 붙어 있으면 자식도 함께 붙고 떨어집니다(번호 · 이름).
      */
     REFLECT( Abstract )
     class SW_API PanelWidget : public Widget
@@ -68,7 +68,7 @@ namespace sw
     protected:
         /**
          * @brief 자식을 배치합니다(레이아웃 — 패널마다 다르다). 각 자식에 `arrangeChild( context, child, 위치, 크기 )` 를 부릅니다. 기본은 아무것도 하지 않습니다.
-         * @details 자식의 원하는 크기(`getDesiredSize`)는 같은 걷기의 `computeDesiredSize` 가 이미 쟀습니다. @p size 는 이 패널 자기 크기입니다.
+         * @details 자식의 원하는 크기(`getDesiredSize`)는 같은 걷기의 `computeDesiredSize` 가 이미 측정했습니다. @p size 는 이 패널 자기 크기입니다.
          */
         virtual void arrangeChildren( const UILayoutContext& context, const float2& size );
         /**

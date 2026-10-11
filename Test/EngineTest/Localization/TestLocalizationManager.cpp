@@ -194,8 +194,8 @@ SW_TEST_CASE( LocalizationManagerTest, ReloadChangedFilePicksUpNewTextAndKeepsOl
 }
 
 /**
- * @brief [LocalizationManagerTest] 에디터 핫 리로드의 길 — 에셋 캐시 등록부의 "StringTable" 이 바뀐 번역 표를 엔진 매니저에 넘겨 다시 읽힌다
- * @details 에디터는 바뀐 파일의 종류로 캐시 이름을 찾아 `IAssetCache::reload` 를 부른다(`AssetHotReload`). 로컬라이제이션만 그 등록부 밖에 있으면
+ * @brief [LocalizationManagerTest] 에디터 핫 리로드의 길 — 에셋 캐시 레지스트리의 "StringTable" 이 바뀐 번역 표를 엔진 매니저에 넘겨 다시 읽힌다
+ * @details 에디터는 바뀐 파일의 종류로 캐시 이름을 찾아 `IAssetCache::reload` 를 부른다(`AssetHotReload`). 로컬라이제이션만 그 레지스트리 밖에 있으면
  *          번역가가 저장해도 실행 중인 게임의 글이 그대로다.
  */
 SW_TEST_CASE( LocalizationManagerTest, HotReloadGoesThroughTheAssetCacheRegistry )

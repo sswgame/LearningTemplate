@@ -15,9 +15,9 @@ namespace sw::editor
      */
     struct EditorDebugHUDControls
     {
-        /** @brief 게임 HUD 를 켜고 끄는 단추입니다(오른쪽 클릭 = 섹션 팝업). 이름표는 @p pMark 입니다. */
+        /** @brief 게임 HUD 를 켜고 끄는 단추입니다(오른쪽 클릭 = 섹션 팝업). 이름은 @p pMark 입니다. */
         static void drawMasterToggle( const utf8* pMark );
-        /** @brief 등록된 섹션마다 체크 상자입니다(이름표 `debugHUD.section.<이름>`). */
+        /** @brief 등록된 섹션마다 체크 상자입니다(이름 `debugHUD.section.<이름>`). */
         static void drawSectionChecklist();
         /** @brief 모서리 · 불투명도 · 게임 안 설정 창 열기입니다. */
         static void drawLayoutSettings();

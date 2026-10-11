@@ -132,7 +132,7 @@ SW_TEST_CASE( WorldTest, WeatherFollowsSeasonWeightsBlendsAndForecasts )
 
 /**
  * @brief [WorldTest] 공유 땅 — 얻기는 사각 전부이거나 아무것도(남의 칸이 하나라도 있으면 거절), 놓기는 내 칸만, 막힘은 남에게만,
- *        상태 바이트는 주인을 이름으로 실어 등록 순서가 다른 땅에도 같은 칸 주인으로 되살린다
+ *        상태 바이트는 주인을 이름으로 실어 등록 순서가 다른 땅에도 같은 칸 주인으로 복원한다
  */
 SW_TEST_CASE( WorldTest, LandClaimsAreAllOrNothingAndSurviveTheSnapshot )
 {

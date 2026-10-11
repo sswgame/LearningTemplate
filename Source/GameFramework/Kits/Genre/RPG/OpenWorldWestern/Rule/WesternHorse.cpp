@@ -56,7 +56,7 @@ namespace sw
         stamina._regenRate        = _pDef->_stamina * 0.1f;
         stamina._regenDelay       = 1.0f;
         stamina._drainPerSecond   = _pDef->_gallopDrain;
-        stamina._exhaustThreshold = _pDef->_stamina * 0.25f; // 바닥나면 4 분의 1 까지 쉬어야 다시 달린다
+        stamina._exhaustThreshold = _pDef->_stamina * 0.25f; // 바닥나면 4분의 1까지 쉬어야 다시 달릴 수 있다
         _stamina.initialize( stamina );
         _random.setSeed( seed );
         _eventBuffer.clear();
@@ -149,7 +149,7 @@ namespace sw
             return WesternHorseReaction::Calm;
         _fear = 0.0f;
         WesternHorseEvent event;
-        // 탄 사람이 있을 때만 떨어뜨릴 수 있다. 난수는 늘 하나 쓴다(탔는지와 상관없이 같은 수열).
+        // 탄 사람이 있을 때만 떨어뜨릴 수 있다. 난수는 항상 하나 쓴다(탔는지와 상관없이 같은 수열이 나온다).
         const bool bBuck = _random.nextChance( ( 1.0f - resist ) * _pDef->_buckChanceScale ) && _bRidden != SW_FALSE;
         event._kind      = bBuck ? WesternHorseEvent::Kind::ThrewRider : WesternHorseEvent::Kind::Spooked;
         _eventBuffer.push( event );
@@ -169,7 +169,7 @@ namespace sw
     {
         if ( _pCatalog == nullptr || amount <= 0.0f )
             return;
-        // 기반 레벨 진행은 정수 경험치다 — 소수(초당 타기)는 1 이 될 때까지 들고 있는다.
+        // 기반 레벨 진행은 정수 경험치를 쓴다. 소수(초당 타기)는 1이 될 때까지 따로 보관한다.
         const float32 total = _bondXpCarry + amount;
         const int64   whole = static_cast<int64>( MathUtil::floor( total ) );
         _bondXpCarry        = total - static_cast<float32>( whole );
@@ -224,7 +224,7 @@ namespace sw
         hashed_string horseID;
         if ( _pCatalog == nullptr || StateArchiveUtil::readName( archive, horseID ) == false )
             return false;
-        // 사본에 읽고 끝까지 맞으면 바꾼다. 품종이 다르면 사본을 그 품종으로 열어 게이지 설정을 맞춘다(값은 아래에서 덮는다).
+        // 사본에 읽고 끝까지 맞으면 바꾼다. 품종이 다르면 사본을 그 품종으로 열어 게이지 설정을 맞춘다(값은 아래에서 덮어쓴다).
         WesternHorse restored = *this;
         const bool   bSameDef = _pDef != nullptr && _pDef->_id == horseID;
         if ( bSameDef == false && restored.initialize( _pCatalog, horseID, 1 ) == false )

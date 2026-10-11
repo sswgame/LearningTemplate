@@ -239,7 +239,7 @@ namespace sw
                 ++standingCount;
             }
         }
-        // 게이지가 바닥난 팀이 생기면 늘 끝난다(기체 대전). 섬멸 규칙이면 하나 남을 때.
+        // 게이지가 바닥난 팀이 생기면 항상 끝난다(기체 대전). 섬멸 규칙이면 팀이 하나 남을 때 끝난다.
         bool bAnyCostLoss = false;
         for ( const MatchTeam& team : _listTeam )
         {
@@ -261,7 +261,7 @@ namespace sw
             const MatchTeam& team = _listTeam[index];
             if ( team._bEliminated )
                 continue;
-            // 코스트제는 남은 게이지가 점수다.
+            // 코스트제에서는 남은 게이지가 점수이다.
             const int32 score = team._bIgnoreCost ? team._score : team._costPool;
             if ( bestTeam < 0 || score > bestScore )
             {
@@ -362,7 +362,7 @@ namespace sw
     bool MatchState::readState( Archive& archive )
     {
         uint32 teamCount = 0;
-        // 팀마다 이름(4) + 정수 셋(12) + 표시 둘(2)
+        // 팀마다 이름(4) + 정수 세 개(12) + 플래그 두 개(2)
         if ( StateArchiveUtil::readCount( archive, 18, teamCount ) == false )
             return false;
         vector<MatchTeam> listTeam( teamCount );
@@ -379,7 +379,7 @@ namespace sw
                 return false;
         }
         uint32 participantCount = 0;
-        // 참가자마다 이름(4) + 피해 수(4) + 타이머(4) + 피해량(4) + 정수 여섯(24) + 표시 둘(2)
+        // 참가자마다 이름(4) + 피해 수(4) + 타이머(4) + 피해량(4) + 정수 여섯 개(24) + 플래그 두 개(2)
         if ( StateArchiveUtil::readCount( archive, 42, participantCount ) == false )
             return false;
         vector<MatchParticipant> listParticipant( participantCount );

@@ -1,6 +1,6 @@
 /**
  * @file DevCommandRegistry.h
- * @brief 개발 명령(치트 · 디버그 명령) 등록부와 `SW_DEV_COMMAND` 입니다. **Shipping 에서는 통째로 빠집니다.**
+ * @brief 개발 명령(치트 · 디버그 명령) 레지스트리와 `SW_DEV_COMMAND` 입니다. **Shipping 에서는 통째로 빠집니다.**
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -9,7 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/RegistrationList.h"
 
-/** @brief 개발 명령이 컴파일되는 구성이면 1 입니다(Dev). Shipping 은 0 이고 등록부 · 콘솔 · 명령 본문이 모두 빠집니다. */
+/** @brief 개발 명령이 컴파일되는 구성이면 1 입니다(Dev). Shipping 은 0 이고 레지스트리 · 콘솔 · 명령 본문이 모두 빠집니다. */
 #if defined( SW_SHIPPING )
     #define SW_DEV_COMMANDS_ENABLED 0
 #else
@@ -40,19 +40,19 @@ namespace sw
 {
     /**
      * @class DevCommandRegistry
-     * @brief 개발 명령의 등록부입니다(Engine 하나 — 게임 · 키트 · 에디터 모듈이 등록하고, 모듈을 내리면 그 명령이 빠집니다).
+     * @brief 개발 명령의 레지스트리입니다(Engine 하나 — 게임 · 키트 · 에디터 모듈이 등록하고, 모듈을 내리면 그 명령이 빠집니다).
      * @details 명령은 자기 .cpp 에 `SW_DEV_COMMAND` 한 줄로 등록합니다. 정적 등록자가 이미지를 올릴 때 등록하고 내릴 때(핫 리로드) 뺍니다 —
-     *          등록부는 Engine 에 있어 모듈이 바뀌어도 살아 있습니다. 같은 이름의 둘째 등록은 경고와 함께 거절합니다. 게임 스레드에서만 씁니다.
+     *          레지스트리는 Engine 에 있어 모듈이 바뀌어도 살아 있습니다. 같은 이름의 둘째 등록은 경고와 함께 거절합니다. 게임 스레드에서만 씁니다.
      */
     class SW_API DevCommandRegistry
     {
     public:
-        /** @brief 프로세스에 하나인 등록부입니다(Engine 이미지의 함수 정적). */
+        /** @brief 프로세스에 하나인 레지스트리입니다(Engine 이미지의 함수 정적). */
         static DevCommandRegistry& get();
 
         DevCommandRegistry();
         /**
-         * @brief 이 등록부가 이미지에 들어 있다는 표식 글입니다. Shipping 실행 파일에는 이 글이 없어야 합니다
+         * @brief 이 레지스트리가 이미지에 들어 있다는 표식 글입니다. Shipping 실행 파일에는 이 글이 없어야 합니다
          *        (`DevCommandShippingTest` 가 바이너리를 훑어 확인합니다).
          */
         static const utf8* getImageMarker();

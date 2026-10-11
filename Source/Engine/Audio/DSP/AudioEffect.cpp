@@ -12,8 +12,8 @@ namespace sw
     namespace
     {
         /**
-         * @brief 바이쿼드 하나짜리 이펙트입니다(LowPass · HighPass · BandPass · Peaking · LowShelf · HighShelf). 파라미터: frequencyHz · q · gainDb.
-         * @details LowPass 의 컷오프가 `audio::kFilterOpenHz` 이상이면 거르지 않습니다 — 스냅샷이 "물속" 에서만 내려 쓰는 필터를 평소엔 공짜로 둡니다.
+         * @brief 바이쿼드 필터 하나로 이루어진 이펙트입니다. LowPass, HighPass, BandPass, Peaking, LowShelf, HighShelf 를 지원합니다. 파라미터는 frequencyHz, q, gainDb 입니다.
+         * @details LowPass 의 컷오프가 `audio::kFilterOpenHz` 이상이면 거르지 않는다. 스냅샷이 "물속"에서만 내려 쓰는 필터를 평소에는 비용 없이 둘 수 있다.
          */
         class AudioFilterEffect final : public IAudioEffect
         {
@@ -47,13 +47,13 @@ namespace sw
 
         private:
             AudioBiquadStereo _filter;  /**< 필터 상태입니다. */
-            AudioBiquadType   _type;    /**< 모양입니다. */
+            AudioBiquadType   _type;    /**< 필터 형태입니다. */
             bool              _bBypass; /**< 걸러도 같은 신호라 건너뜁니다. */
         };
 
         /**
-         * @brief 피드 포워드 컴프레서(스테레오 링크, 피크 검출, 소프트 니) — Giannoulis · Massberg · Reiss(2012)의 "smooth decoupled peak" 검출기.
-         * @details 파라미터: thresholdDb · ratio · attackMs · releaseMs · kneeDb · makeupDb. 게인 감소(dB)는 정상 상태에서 (입력 − 문턱)·(1 − 1/비율)입니다.
+         * @brief 피드 포워드 컴프레서입니다(스테레오 링크, 피크 검출, 소프트 니). Giannoulis, Massberg, Reiss(2012)의 "smooth decoupled peak" 검출기를 씁니다.
+         * @details 파라미터는 thresholdDb, ratio, attackMs, releaseMs, kneeDb, makeupDb 입니다. 게인 감소(dB)는 정상 상태에서 (입력 - 임계값) × (1 - 1/비율)입니다.
          */
         class AudioCompressorEffect final : public IAudioEffect
         {
@@ -88,7 +88,7 @@ namespace sw
                         outDb = levelDb + slope * ( over + knee * 0.5f ) * ( over + knee * 0.5f ) / ( 2.0f * knee );
                     const float32 reductionDb = levelDb - outDb;
 
-                    // 감소량을 피크로 붙잡고(릴리스로 내려옴) 다시 어택으로 따라간다.
+                    // 감소량을 피크로 붙잡고(릴리스로 내려온다) 다시 어택으로 따라간다.
                     _peakReductionDb   = MathUtil::max( reductionDb, _releaseCoefficient * _peakReductionDb + ( 1.0f - _releaseCoefficient ) * reductionDb );
                     _smoothReductionDb = _attackCoefficient * _smoothReductionDb + ( 1.0f - _attackCoefficient ) * _peakReductionDb;
                     const float32 gain = AudioMath::dbToLinear( makeup - _smoothReductionDb );
@@ -111,7 +111,7 @@ namespace sw
             }
 
         private:
-            /** @brief 시간 상수(ms)의 한 극 계수입니다 — e^(−1 / (τ·fs)). */
+            /** @brief 시간 상수(ms)에 대한 한 극 계수를 반환합니다. e^(-1 / (τ·fs)) 입니다. */
             static float32 computeTimeCoefficient( float32 milliseconds )
             {
                 const float32 samples = MathUtil::max( 1.0f, milliseconds * 0.001f * static_cast<float32>( audio::kSampleRate ) );
@@ -126,8 +126,8 @@ namespace sw
 
         /**
          * @brief 미리 보기(lookahead) 브릭월 리미터입니다. 출력 피크가 천장을 넘지 않습니다.
-         * @details 파라미터: ceilingDb · releaseMs · lookaheadMs. 필요한 게인(천장 / |x|)의 창 최솟값을 같은 길이의 상자 평균으로 다듬고 소리는 그만큼
-         *          늦춥니다 — 창 안의 모든 최솟값이 그 샘플의 필요 게인 이하이므로 평균도 이하입니다(넘침 없음, 클릭 없음).
+         * @details 파라미터는 ceilingDb, releaseMs, lookaheadMs 입니다. 필요한 게인(천장 / |x|)의 창 최솟값을 같은 길이의 상자 평균으로 다듬고, 소리는 그만큼 늦춥니다.
+         *          창 안의 모든 최솟값이 그 샘플의 필요 게인 이하이므로 평균도 이하입니다(넘침 없음, 클릭 없음).
          */
         class AudioLimiterEffect final : public IAudioEffect
         {
@@ -160,7 +160,7 @@ namespace sw
                     const float32 peak     = MathUtil::max( MathUtil::abs( left ), MathUtil::abs( right ) );
                     const float32 required = peak > ceiling ? ceiling / peak : 1.0f;
 
-                    // 창(최근 window + 1 샘플)의 최솟값 — 단조 덱. 늦춘 샘플(window 전)까지 창에 들어야 평균이 그 샘플의 필요 게인 이하다.
+                    // 창(최근 window + 1 샘플)의 최솟값을 구한다(단조 덱). 늦춘 샘플(window 전)까지 창에 들어야 평균이 그 샘플의 필요 게인 이하가 된다.
                     const uint64 index = _sampleIndex;
                     while ( _minCount > 0 && _listMinValue[( _minHead + _minCount - 1 ) % _listMinValue.size()] >= required )
                     {
@@ -182,10 +182,10 @@ namespace sw
                     _listAverage[averageSlot] = windowMin;
                     const float32 smoothed    = MathUtil::min( 1.0f, static_cast<float32>( _averageSum / static_cast<float64>( window ) ) );
 
-                    // 내려가는 것은 바로, 올라가는 것은 릴리스로.
+                    // 내려갈 때는 바로 따라가고, 올라갈 때는 릴리스를 적용한다.
                     _gain = smoothed < _gain ? smoothed : _gain + ( smoothed - _gain ) * ( 1.0f - _releaseCoefficient );
 
-                    // window 샘플 늦춘 소리에 게인을 건다.
+                    // window 샘플 늦춘 소리에 게인을 적용한다.
                     const uint32  delaySlot          = static_cast<uint32>( index % window );
                     const float32 delayedLeft        = _listDelay[delaySlot * 2];
                     const float32 delayedRight       = _listDelay[delaySlot * 2 + 1];
@@ -240,8 +240,8 @@ namespace sw
         };
 
         /**
-         * @brief Freeverb(Jezar) 리버브 — 채널마다 병렬 콤 필터 8 개(감쇠 로우패스) + 직렬 올패스 4 개, 오른쪽은 23 샘플 벌림.
-         * @details 파라미터: roomSize · damping · wet · dry · width · preDelayMs. 지연 길이는 원본(44.1 kHz)을 48 kHz 로 늘렸습니다.
+         * @brief Freeverb(Jezar) 리버브입니다. 채널마다 병렬 콤 필터 8 개(감쇠 로우패스)와 직렬 올패스 4 개를 쓰고, 오른쪽 채널은 23 샘플 벌립니다.
+         * @details 파라미터는 roomSize, damping, wet, dry, width, preDelayMs 입니다. 지연 길이는 원본(44.1 kHz) 값을 출력 샘플레이트에 맞게 늘려 씁니다.
          */
         class AudioReverbEffect final : public IAudioEffect
         {
@@ -358,7 +358,7 @@ namespace sw
             static constexpr uint32 kCombCount    = 8;
             static constexpr uint32 kAllpassCount = 4;
 
-            /** @brief 원본 44.1 kHz 지연 길이를 출력 샘플레이트로 늘립니다. */
+            /** @brief 원본 44.1 kHz 지연 길이를 출력 샘플레이트에 맞게 늘립니다. */
             static size_t scaleLength( uint32 samplesAt44k ) { return static_cast<size_t>( samplesAt44k ) * audio::kSampleRate / 44100u; }
 
             struct Comb
@@ -377,7 +377,7 @@ namespace sw
             Comb            _arrComb[2][kCombCount];       /**< 채널마다 콤 필터입니다. */
             Allpass         _arrAllpass[2][kAllpassCount]; /**< 채널마다 올패스입니다. */
             vector<float32> _listPreDelay;                 /**< 프리딜레이(모노 입력, 0.2 초)입니다. */
-            size_t          _preDelayCursor;               /**< 프리딜레이 쓰기 자리입니다. */
+            size_t          _preDelayCursor;               /**< 프리딜레이 쓰기 위치입니다. */
             size_t          _preDelayLength;               /**< 프리딜레이 길이(샘플)입니다. */
             float32         _feedback;                     /**< 콤 피드백입니다. */
             float32         _damp;                         /**< 콤 안 로우패스 계수입니다. */
@@ -387,8 +387,8 @@ namespace sw
         };
 
         /**
-         * @brief 피드백 딜레이(에코)입니다. 파라미터: timeMs · feedback · wet · dry · dampingHz(피드백 경로의 한 극 로우패스, 20 kHz 이상이면 없음).
-         * @details 첫 에코는 timeMs 뒤에 wet 크기로, 다음은 2·timeMs 뒤에 wet·feedback 크기로 옵니다.
+         * @brief 피드백 딜레이(에코)입니다. 파라미터는 timeMs, feedback, wet, dry, dampingHz 입니다. dampingHz 는 피드백 경로의 한 극 로우패스이며, 20 kHz 이상이면 쓰지 않습니다.
+         * @details 첫 에코는 timeMs 뒤에 wet 크기로 오고, 다음 에코는 2·timeMs 뒤에 wet·feedback 크기로 온다.
          */
         class AudioDelayEffect final : public IAudioEffect
         {
@@ -445,7 +445,7 @@ namespace sw
 
         private:
             vector<float32> _listBuffer;      /**< 지연선(스테레오 교차, 2 초)입니다. */
-            uint32          _cursor;          /**< 쓰기 자리입니다. */
+            uint32          _cursor;          /**< 쓰기 위치입니다. */
             uint32          _delayFrames;     /**< 지연(프레임)입니다. */
             float32         _arrDampState[2]; /**< 피드백 로우패스 상태입니다. */
             float32         _dampCoefficient; /**< 피드백 로우패스 계수입니다(0 이면 없음). */

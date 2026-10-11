@@ -287,7 +287,7 @@ namespace sw::editor
 
     void MultiplayerPanel::drawLog( EditorNetPlaySession& session )
     {
-        // 이름표는 한 번만 — 줄마다 상태 사본을 만들지 않는다.
+        // 이름은 한 번만 — 줄마다 상태 사본을 만들지 않는다.
         const int32    processCount = session.getProcessCount();
         vector<string> listLabel;
         listLabel.reserve( static_cast<size_t>( processCount ) );

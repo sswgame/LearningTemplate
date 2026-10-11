@@ -42,7 +42,7 @@ namespace test
     {
         struct LoaderFuzzTargetsInternal
         {
-            /** @brief 같은 프로세스 · 같은 이름표의 임시 파일 경로입니다(파일 경로만 받는 로더용 — 팩 · 씬). */
+            /** @brief 같은 프로세스 · 같은 이름의 임시 파일 경로입니다(파일 경로만 받는 로더용 — 팩 · 씬). */
             static string makeScratchPath( string_view tag )
             {
                 const string tempDir = FileUtil::getTempDirectory();

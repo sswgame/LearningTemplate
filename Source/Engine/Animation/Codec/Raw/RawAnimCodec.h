@@ -1,6 +1,6 @@
 /**
  * @file RawAnimCodec.h
- * @brief 압축하지 않는 기준 코덱입니다 — 균일 표본을 float 그대로 싣고 두 표본 사이를 보간합니다.
+ * @brief 압축하지 않는 기준 코덱입니다. 균일 샘플을 float 그대로 저장하고 두 샘플 사이를 보간합니다.
  */
 #pragma once
 #include "Engine/Animation/Codec/AnimCodec.h"
@@ -9,8 +9,8 @@ namespace sw
 {
     /**
      * @class RawAnimCodec
-     * @brief 블롭 = 머리(표본 수 · 표본율 · 트랙 수) + 표본마다 트랙마다 이동 3 · 회전 4 · 스케일 3 의 float32(리틀 엔디언)입니다.
-     * @details 오차가 0 인 기준이라 다른 코덱의 오차를 잴 때와 디버그에 씁니다. 샘플링은 `AnimRawClip::sample` 과 같은 식입니다.
+     * @brief 블롭은 헤더(샘플 수, 샘플율, 트랙 수)와, 샘플마다 트랙마다 이동 3, 회전 4, 스케일 3 의 float32(리틀 엔디언)로 이루어집니다.
+     * @details 오차가 0 인 기준이라 다른 코덱의 오차를 측정할 때와 디버그에 씁니다. 샘플링은 `AnimRawClip::sample` 과 같은 식입니다.
      */
     class SW_API RawAnimCodec final : public IAnimCodec
     {

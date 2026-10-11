@@ -1,11 +1,14 @@
 /**
  * @file LocalStore.h
- * @brief 클라이언트 로컬 저장 계약 — 슬롯(이름 → 바이트) 하나씩 원자적으로 읽고 · 쓰고 · 지우고 · 나열합니다. 맡기고(`submit*`) 거둡니다(`pollCompletions`) — 게임 스레드는 디스크를 기다리지 않는다.
- * @details - 슬롯 이름은 ASCII `[0-9a-z_.-]`(64 자 이하, `/` 로 한 단계 묶음 하나까지 — `save/slot0`). 대소문자를 가리지 않는 파일 시스템에서도 같다.
- *          - 쓰기는 슬롯 하나 단위로 원자적이다 — 도중에 꺼져도 옛 내용 아니면 새 내용이다(파일: 임시 파일 → 이름 바꾸기, SQLite: 한 문).
- *          - 모든 저장소가 같은 봉투(`LocalSlotEnvelope` — 형식 판 · 코덱 · 봉인 · CRC/태그)를 쓴다 — 저장소를 바꿔도 같은 바이트다.
- *          - 서버 계약(`IServiceStore` — 64 KiB 레코드 · 여러 키 트랜잭션)을 쓰지 않는다: 파일 저장소가 지킬 수 없는 약속이다. 경쟁 데이터의 정본은 서버다.
- *          언리얼 `ISaveGameSystem`(슬롯 이름 + 바이트, 플랫폼별 저장) 자리이고, 그 위의 `SaveGame` 이 `USaveGame` 자리다.
+ * @brief 클라이언트 로컬 저장 계약을 정의합니다.
+ * @details 슬롯(이름에서 바이트로) 하나씩 원자적으로 읽고, 쓰고, 지우고, 나열한다.
+ *          일을 맡기고(`submit*`) 완료를 거두는(`pollCompletions`) 방식이라 게임 스레드는 디스크를 기다리지 않는다.
+ *          언리얼의 `ISaveGameSystem`(슬롯 이름과 바이트, 플랫폼별 저장)에 해당하고, 그 위의 `SaveGame` 이 `USaveGame` 에 해당한다.
+ *
+ *          - 슬롯 이름은 ASCII `[0-9a-z_.-]`(64 자 이하)이고, `/` 로 한 단계 묶음 하나까지 둘 수 있다(`save/slot0`). 대소문자를 가리지 않는 파일 시스템에서도 같다.
+ *          - 쓰기는 슬롯 하나 단위로 원자적이다. 도중에 꺼져도 옛 내용이나 새 내용 중 하나가 남는다. 파일은 임시 파일을 쓰고 이름을 바꾸며, SQLite 는 한 문으로 쓴다.
+ *          - 모든 저장소가 같은 봉투(`LocalSlotEnvelope`: 형식 버전, 코덱, 봉인, CRC/태그)를 쓴다. 저장소를 바꿔도 같은 바이트이다.
+ *          - 서버 계약(`IServiceStore`: 64 KiB 레코드, 여러 키 트랜잭션)은 쓰지 않는다. 파일 저장소가 지킬 수 없는 약속이기 때문이다. 경쟁 데이터의 원본은 서버이다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -40,7 +43,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 봉투의 봉인입니다. */
+    /** @brief 봉투의 봉인 방식입니다. */
     enum class LocalStoreSeal : uint8
     {
         None = 0,      ///< CRC32 만(사람이 열어 볼 세이브 · 개발)
@@ -51,7 +54,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 슬롯 하나의 쓰기 선택입니다. */
+    /** @brief 슬롯 하나를 쓸 때의 선택 사항입니다. */
     struct LocalStoreWriteOptions
     {
         uint32         _formatVersion{ 1 };    ///< 쓰는 쪽의 형식 판 — 읽을 때 그대로 돌려준다(옛 판 리더를 두지 않는다 — 다르면 부르는 쪽이 거절)
@@ -89,7 +92,8 @@ namespace sw
 {
     /**
      * @class ILocalStoreKeyProvider
-     * @brief 봉인 키(32 B)를 줍니다. 기본은 장치 키(`LocalDeviceKeyProvider`), 계정 단위 키(서버가 준 것)로 바꿀 수 있습니다. 저장소 스레드에서 불릴 수 있다.
+     * @brief 봉인 키(32 B)를 줍니다. 기본은 장치 키(`LocalDeviceKeyProvider`)이며, 계정 단위 키(서버가 준 것)로 바꿀 수 있습니다.
+     * @details 저장소 스레드에서 불릴 수 있다.
      */
     class SW_GF_API ILocalStoreKeyProvider
     {
@@ -110,8 +114,10 @@ namespace sw
 {
     /**
      * @class ILocalStore
-     * @brief 로컬 저장의 앞입니다 — 게임 스레드 하나가 맡기고 거둔다. 완료는 맡긴 순서대로 온다.
-     *        구현: `MemoryLocalStore`(테스트 — 그 자리에서 실행) · `ThreadedLocalStore`(전용 스레드 하나 + 슬롯 저장소: 파일 · SQLite).
+     * @brief 로컬 저장의 앞입니다. 게임 스레드 하나가 일을 맡기고 거두며, 완료는 맡긴 순서대로 옵니다.
+     * @details 구현은 두 가지가 있다.
+     *          `MemoryLocalStore` 는 테스트용이며 그 자리에서 실행한다.
+     *          `ThreadedLocalStore` 는 전용 스레드 하나와 슬롯 저장소(파일, SQLite)를 쓴다.
      */
     class SW_GF_API ILocalStore
     {
@@ -128,16 +134,16 @@ namespace sw
         virtual uint64 submitRead( string_view slot )                                                              = 0;
         virtual uint64 submitWrite( string_view slot, vector<uint8> bytes, const LocalStoreWriteOptions& options ) = 0;
         virtual uint64 submitErase( string_view slot )                                                             = 0;
-        /** @brief 묶음 접두(`save/` · 빈 글 = 모두)로 나열합니다. */
+        /** @brief 묶음 접두(`save/`)로 나열합니다. 빈 글이면 모두 나열합니다. */
         virtual uint64 submitList( string_view groupPrefix )                              = 0;
         virtual int32  pollCompletions( vector<LocalStoreCompletion>& outListCompletion ) = 0;
         virtual int32  getPendingCount() const                                            = 0;
-        /** @brief 남은 쓰기 · 지우기를 **끝까지 마치고** 내립니다(종료 때 세이브를 잃지 않는다 — 남은 읽기 · 나열은 IOError). 그 뒤 맡긴 것은 IOError. */
+        /** @brief 남은 쓰기와 지우기를 **끝까지 마치고** 내립니다. 종료할 때 세이브를 잃지 않게 하려는 것이며, 남은 읽기와 나열은 IOError 입니다. 그 뒤에 맡긴 일도 IOError 입니다. */
         virtual void shutdown() = 0;
 
-        /** @brief 슬롯 이름 규칙(`[0-9a-z_.-]`, 1..64 자, `/` 하나까지, 빈 마디 · `.` 으로 시작하는 마디 없음)을 지키는가입니다. */
+        /** @brief 슬롯 이름이 규칙을 지키면 true 입니다. 규칙은 `[0-9a-z_.-]` 1..64 자이고, `/` 는 하나까지이며, 빈 마디와 `.` 으로 시작하는 마디는 없어야 합니다. */
         static bool isValidSlotName( string_view slot );
-        /** @brief 나열 접두 규칙 — 빈 글이거나 `<묶음>/` 입니다. */
+        /** @brief 나열 접두가 규칙을 지키면 true 입니다. 규칙은 빈 글이거나 `<묶음>/` 입니다. */
         static bool isValidGroupPrefix( string_view groupPrefix );
     };
 } // namespace sw

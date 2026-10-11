@@ -1,6 +1,6 @@
 /**
  * @file HorseFollowAIController.h
- * @brief 주인을 따라오는 말 AI — 탄 사람이 없을 때 말을 쥐고, 주인이 멀어지면 다가오며, 휘파람(`whistle`)이면 어디서든 온다.
+ * @brief 주인을 따라오는 말 AI입니다. 탄 사람이 없을 때 말을 조종하고, 주인이 멀어지면 다가오며, 휘파람(`whistle`)을 불면 어디서든 옵니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -16,9 +16,9 @@ namespace sw
 {
     /**
      * @class HorseFollowAIController
-     * @brief `AIControllerComponent` 파생 — 판단만 적고 움직임은 말의 `MountMovementComponent` 가 합니다(플레이어가 몰 때와 같은 길).
-     * @details 말 폰의 자동 빙의를 `AI` 로 두고 이 조종자를 든 프리팹을 주면 시작 때 쥡니다. 누가 타면 빙의가 탄 사람의 조종자로 가고, 내리면
-     *          탈 때 쥐고 있던 이 조종자가 다시 쥡니다(`MountUtil`).
+     * @brief `AIControllerComponent` 를 상속합니다. 판단만 하고 움직임은 말의 `MountMovementComponent` 가 처리합니다(플레이어가 몰 때와 같은 경로입니다).
+     * @details 말 폰의 자동 빙의를 `AI` 로 두고 이 조종자를 가진 프리팹을 주면 시작할 때 말을 조종한다. 누가 타면 빙의가 탄 사람의 조종자로 넘어가고, 내리면
+     *          탈 때 말을 조종하던 이 조종자가 다시 조종한다(`MountUtil`).
      */
     REFLECT( Category = "Western", DisplayName = "Horse Follow AI", Tooltip = "Horse AI: follows its owner when nobody rides it, comes at a whistle" )
     class SW_GF_API HorseFollowAIController : public AIControllerComponent
@@ -32,7 +32,7 @@ namespace sw
         /** @brief 주인 오브젝트입니다(따라갈 대상). */
         void                    setOwnerObject( const GameObjectHandle& owner ) { _ownerObject = owner; }
         const GameObjectHandle& getOwnerObject() const { return _ownerObject; }
-        /** @brief 휘파람 — 거리와 상관없이 주인 곁으로 옵니다(닿으면 끝). */
+        /** @brief 휘파람을 붑니다. 거리와 상관없이 주인 곁으로 오며, 닿으면 끝납니다. */
         void whistle() { _bCalled = SW_TRUE; }
         bool isCalled() const { return _bCalled == SW_TRUE; }
 

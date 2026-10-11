@@ -3,7 +3,7 @@
  * @brief NileCity 의 땅과 자동 도시 계획 — 절차 지형(나일 강 · 범람원 · 사막 · 바위)과 `-gv_nileAutoPlay=1` 이 따라 짓는 순서표입니다.
  *
  * @details 화면 · 입력을 모르는 순수 규칙이라 엔진 밖 하네스에서 그대로 돌려 볼 수 있습니다(키트 `CitySimulation` 만 씁니다).
- *          순서표는 도로 고리 → 우물 → 범람원 농장 → 곡물 창고 → 바자 → 집 → 순회 서비스 → 다음 구역 순서이고, 단계마다 돈 · 인구 문턱이 있습니다.
+ *          순서표는 도로 고리 → 우물 → 범람원 농장 → 곡물 창고 → 바자 → 집 → 순회 서비스 → 다음 구역 순서이고, 단계마다 돈 · 인구 임계값이 있습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -39,7 +39,7 @@ namespace sw
         void reset();
         /**
          * @brief 돈 · 인구가 되는 데까지 순서표를 실행합니다. 이번에 지은(또는 깐) 단계 수입니다.
-         * @details 돈이 모자라거나 인구 문턱에 못 미치면 멈추고 다음 부름에 이어 갑니다. 놓을 수 없는 자리(겹침 · 땅)는 경고 없이 건너뜁니다.
+         * @details 돈이 모자라거나 인구 임계값에 못 미치면 멈추고 다음 부름에 이어 갑니다. 놓을 수 없는 자리(겹침 · 땅)는 경고 없이 건너뜁니다.
          */
         int32 advance( CitySimulation& city, const Wallet& wallet, int32 roadCost );
         bool  isFinished() const { return _nextStep >= static_cast<int32>( _listStep.size() ); }

@@ -85,7 +85,7 @@ namespace sw
          */
         DirectionalShadowProjection computeShadowProjectionForView( const float4x4& cameraViewProj, uint32 shadowMapResolution ) const;
 
-        /** @brief 볼륨을 카메라에 맞출 때 카메라에서 잰 그림자 거리입니다. 0 이면 고정 볼륨입니다. */
+        /** @brief 볼륨을 카메라에 맞출 때 카메라에서 측정한 그림자 거리입니다. 0 이면 고정 볼륨입니다. */
         float32 getShadowViewDistance() const { return _shadowViewDistance; }
         /** @brief 그림자 거리를 설정합니다(0 = 고정 볼륨). */
         void setShadowViewDistance( float32 distance );

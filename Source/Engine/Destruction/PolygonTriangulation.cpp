@@ -19,7 +19,7 @@ namespace sw
 
             static bool isSamePoint( const float2& lhs, const float2& rhs ) { return lhs._x == rhs._x && lhs._y == rhs._y; }
 
-            /** @brief 점이 삼각형(감은 방향 @p sign) 안 또는 변 위에 있는지입니다. */
+            /** @brief 점이 삼각형(감은 방향 @p sign) 안이나 변 위에 있는지 반환합니다. */
             static bool isPointInTriangle( const float2& point, const float2& a, const float2& b, const float2& c, float32 sign )
             {
                 const float32 edgeAb = cross2( a, b, point ) * sign;
@@ -28,7 +28,7 @@ namespace sw
                 return edgeAb >= 0.0f && edgeBc >= 0.0f && edgeCa >= 0.0f;
             }
 
-            /** @brief 두 선분이 끝점이 아닌 곳에서 엇갈리는지입니다. */
+            /** @brief 두 선분이 엔드포인트가 아닌 곳에서 교차하는지 반환합니다. */
             static bool doSegmentsCross( const float2& a0, const float2& a1, const float2& b0, const float2& b1 )
             {
                 const float32 side0 = cross2( a0, a1, b0 );
@@ -38,7 +38,7 @@ namespace sw
                 return ( ( side0 > 0.0f && side1 < 0.0f ) || ( side0 < 0.0f && side1 > 0.0f ) ) && ( ( side2 > 0.0f && side3 < 0.0f ) || ( side2 < 0.0f && side3 > 0.0f ) );
             }
 
-            /** @brief 고리 하나의 변 중 @p from → @p to 선분과 엇갈리는 것이 있는지입니다(그 두 점에 닿은 변은 뺀다). */
+            /** @brief 고리 하나의 변 중에서 @p from 에서 @p to 로 가는 선분과 교차하는 것이 있는지 반환합니다. 그 두 점에 닿은 변은 뺍니다. */
             static bool crossesLoop( vector_reference<const float2> listPoint, const vector<uint32>& listLoopIndex, const float2& from, const float2& to )
             {
                 const size_t count = listLoopIndex.size();
@@ -116,7 +116,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 귀 자르기입니다. 막히면 남은 부분을 부채꼴로 막고 false 입니다. */
+            /** @brief 귀 자르기를 합니다. 막히면 남은 부분을 부채꼴로 막고 false 를 반환합니다. */
             static bool clipEars( vector_reference<const float2> listPoint, vector<uint32> listPolygon, float32 sign, vector<uint32>& outListIndex )
             {
                 bool bComplete = true;
@@ -126,8 +126,8 @@ namespace sw
                     bool         bClip = false;
                     size_t       earAt = 0;
                     bool         bEmit = true;
-                    // 정점은 삼각형 없이 빼지 않는다 — 빼면 그 정점을 쓰는 이웃 면과 이음이 끊긴다(T 자 이음). 같은 번호가 이어진 것만 그냥 뺀다.
-                    // 평면에 투영해 같은 자리가 된 서로 다른 점(셋이 만나는 꼭짓점 둘레의 아주 짧은 변)은 넓이 0 인 삼각형으로 빼 이음을 지킨다.
+                    // 정점은 삼각형 없이 빼지 않는다. 빼면 그 정점을 쓰는 이웃 면과의 이음이 끊긴다(T 자 이음). 같은 번호가 이어진 것만 그냥 뺀다.
+                    // 평면에 투영해 같은 위치가 된 서로 다른 점(셋이 만나는 꼭짓점 둘레의 아주 짧은 변)은 넓이 0 인 삼각형으로 빼서 이음을 지킨다.
                     for ( size_t index = 0; index < count; ++index )
                     {
                         const uint32 cur  = listPolygon[index];
@@ -189,7 +189,7 @@ namespace sw
                     }
                     return bComplete;
                 }
-                // 막힌 나머지(자기 교차) — 부채꼴로 막는다.
+                // 막힌 나머지(자기 교차)는 부채꼴로 막는다.
                 for ( size_t index = 1; index + 1 < listPolygon.size(); ++index )
                 {
                     outListIndex.push_back( listPolygon[0] );
@@ -262,7 +262,7 @@ namespace sw
                 listHole.push_back( loopIndex );
         }
 
-        // 구멍마다 그것을 품은 가장 작은 바깥 고리를 고른다.
+        // 구멍마다 그 구멍을 포함한 가장 작은 바깥 고리를 고른다.
         vector<vector<vector<uint32>>> listHoleOfOuter( listShellLoop.size() );
         for ( const uint32 holeIndex : listHole )
         {
@@ -288,7 +288,7 @@ namespace sw
         {
             vector<uint32>          listPolygon = listLoop[listShellLoop[outer]];
             vector<vector<uint32>>& listOwnHole = listHoleOfOuter[outer];
-            // 오른쪽 구멍부터 잇는다 — 먼저 이은 다리가 뒤 구멍의 시야를 덜 막는다.
+            // 오른쪽 구멍부터 이어 붙인다. 먼저 이은 다리가 뒤 구멍의 시야를 덜 막는다.
             vector<size_t> listOrder( listOwnHole.size() );
             for ( size_t index = 0; index < listOrder.size(); ++index )
             {

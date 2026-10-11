@@ -1,6 +1,6 @@
 /**
  * @file AdventureGimmicks.h
- * @brief 어드벤처 기믹 — 미는 블록(칸 단위), 오브젝트 원소 상태(횃불 퍼즐 · 타는 상자)입니다. 스위치 · 열쇠 문은 상호작용 + 회로 프리팹입니다.
+ * @brief 어드벤처 기믹입니다. 미는 블록(격자 한 칸 단위)과 오브젝트의 원소 상태(횃불 퍼즐, 타는 상자)를 다룹니다. 스위치와 열쇠 문은 상호작용과 회로 프리팹으로 만듭니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -19,8 +19,8 @@ namespace sw
 {
     /**
      * @class PushBlockComponent
-     * @brief 칸 단위로 미는 블록(젤다 · 소코반) — `push( 방향 )` 은 가장 가까운 축으로 맞춘 한 칸 앞이 비었으면(`WorldQuery` 광선) `_moveTime` 동안 옮깁니다.
-     * @details 같은 오브젝트의 `InteractableComponent`(Push)를 끝내면 끝낸 이에게서 블록 쪽으로 밉니다(센서의 사용 알림을 읽는다). 2D 는 `_bPlanar2D`(XY 축).
+     * @brief 한 칸 단위로 미는 블록입니다(젤다, 소코반). `push( 방향 )` 은 방향을 가장 가까운 축으로 맞추고, 한 칸 앞이 비어 있으면(`WorldQuery` 광선으로 확인) `_moveTime` 동안 블록을 옮깁니다.
+     * @details 같은 오브젝트의 `InteractableComponent`(Push)를 끝내면 끝낸 쪽에서 블록 방향으로 민다. 센서의 사용 알림을 읽어서 처리한다. 2D 는 `_bPlanar2D`(XY 축)를 켠다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Push Block", Tooltip = "Grid-snapped block pushed one cell at a time if the cell ahead is free" )
     class SW_GF_API PushBlockComponent : public Component
@@ -32,9 +32,9 @@ namespace sw
         virtual ~PushBlockComponent() override = default;
 
         void onTick( float32 deltaTime ) override;
-        /** @brief 한 걸음(60 Hz)입니다. */
+        /** @brief 한 스텝(60 Hz)입니다. */
         void stepOnce();
-        /** @brief @p direction 의 가장 가까운 축으로 한 칸 밉니다. 움직이는 중이거나 막혔으면 false 입니다. */
+        /** @brief @p direction 에서 가장 가까운 축으로 한 칸 밉니다. 움직이는 중이거나 막혀 있으면 false 입니다. */
         [[nodiscard]] bool push( const float3& direction );
         bool               isMoving() const { return _stepsLeft > 0; }
 
@@ -62,9 +62,9 @@ namespace sw
 {
     /**
      * @class ElementStatusComponent
-     * @brief 오브젝트 하나의 원소 상태 — 공용 원소 규칙표의 1 × 1 격자입니다(횃불 · 타는 나무 상자 · 얼음 덩어리). `applyStimulus( "Fire" )` 처럼 이름으로 댑니다.
-     * @details 같은 오브젝트에 `GimmickSensorComponent` 가 있으면 `_signalStatus` 가 있는 동안 신호를 1 로 둡니다 — 횃불 넷을 Signal 센서 → And → 문으로
-     *          이으면 횃불 퍼즐입니다. 걸음은 표의 걸음 시간입니다(결정적).
+     * @brief 오브젝트 하나의 원소 상태입니다. 공용 원소 규칙 테이블을 따르는 1 × 1 격자이며 횃불, 타는 나무 상자, 얼음 덩어리에 씁니다. `applyStimulus( "Fire" )` 처럼 이름으로 자극을 가합니다.
+     * @details 같은 오브젝트에 `GimmickSensorComponent` 가 있으면 `_signalStatus` 상태가 있는 동안 신호를 1 로 둔다. 횃불 네 개를 Signal 센서, And, 문 순서로
+     *          연결하면 횃불 퍼즐이 된다. 스텝 간격은 테이블의 스텝 시간이며 결정적이다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Element Status", Tooltip = "One object's element state (torch, burning crate) from the shared element rule table" )
     class SW_GF_API ElementStatusComponent : public Component
@@ -79,11 +79,11 @@ namespace sw
         void onBeginPlay() override;
         void onTick( float32 deltaTime ) override;
 
-        /** @brief 자극을 이름으로 댑니다(Fire · Water · Ice · Electric). 바뀌었으면 true 입니다. 모르는 이름 · 표가 없으면 false 입니다. */
+        /** @brief 자극을 이름으로 가합니다(Fire, Water, Ice, Electric). 바뀌었으면 true 입니다. 알 수 없는 이름이거나 테이블이 없으면 false 입니다. */
         [[nodiscard]] bool applyStimulus( const hashed_string& stimulus );
-        /** @brief 상태가 있는가입니다(Burning · Charged). */
+        /** @brief 상태가 있으면 true 입니다(Burning, Charged). */
         bool hasStatus( const hashed_string& status ) const;
-        /** @brief 재질 이름을 바꿉니다(상태는 지운다). */
+        /** @brief 재질 이름을 바꿉니다. 상태는 지웁니다. */
         void setMaterial( const hashed_string& material );
 
     private:
@@ -101,6 +101,6 @@ namespace sw
         hashed_string _startStimulus;
 
         ElementGrid _grid;
-        uint32      _seenTableReloadCount; ///< 표를 찾을 때의 `ElementRuleTable::getSharedReloadCount` — 달라지면 다시 짓는다
+        uint32      _seenTableReloadCount; ///< 테이블을 찾았을 때의 `ElementRuleTable::getSharedReloadCount` 값. 달라지면 다시 만든다
     };
 } // namespace sw

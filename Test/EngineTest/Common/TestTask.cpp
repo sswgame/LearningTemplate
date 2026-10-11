@@ -1029,8 +1029,8 @@ SW_TEST_CASE( TaskTest, WaitStageLeavesNoActiveTaskBehind )
  * @brief [TaskTest] 스테이지 디스패치는 정상 상태에서 힙을 만지지 않는다
  * @details 상용 잡 시스템의 기준이다 — 프레임마다 도는 병렬 그룹이 힙을 두드리면 그 수가 곧 프레임당 할당 수다.
  *          스테이지 노드는 풀·침입형 참조, 그룹 콜러블은 락프리 풀, 이름은 fixed_string 이라 워밍업 뒤에는 0 이어야 한다.
- *          `MemoryProfiler` 의 할당 횟수 누계로 잰다(sw 할당자만 센다 — 이 경로의 할당은 전부 그것이다).
- *          누계는 프로세스 전체라 붐비는 기계에서는 잰 틈에 다른 것이 끼어든다. 그래서 50 회를 세 번까지 재어 **가장 작은 값**을
+ *          `MemoryProfiler` 의 할당 횟수 누계로 측정한다(sw 할당자만 센다 — 이 경로의 할당은 전부 그것이다).
+ *          누계는 프로세스 전체라 붐비는 기계에서는 측정한 틈에 다른 것이 끼어든다. 그래서 50 회를 세 번까지 측정해 **가장 작은 값**을
  *          본다. 콜러블을 힙으로 되돌리는 회귀는 매 회 할당하므로 세 번 모두 50 이상이라 그대로 잡힌다.
  */
 SW_TEST_CASE( TaskTest, StageDispatchDoesNotAllocate )
@@ -1064,7 +1064,7 @@ SW_TEST_CASE( TaskTest, StageDispatchDoesNotAllocate )
     // 스테이지 노드를 **여러 개** 미리 만들어 둔다. 하나만으로는 부하가 걸린 기계에서 진다:
     // `waitStage` 는 남은 태스크가 0 이 되면 돌아오지만, 그 0 을 만든 워커가 스테이지의 자기 참조를
     // 놓는 것은 그 다음이다. 그 틈에 다음 디스패치가 오면 풀에 남은 것이 없어 하나를 더 만든다
-    // (노드 하나 + 소유 목록이 늘며 두 번). 이 테스트가 재는 것은 그 경합이 아니라 정상 상태의
+    // (노드 하나 + 소유 목록이 늘며 두 번). 이 테스트가 측정하는 것은 그 경합이 아니라 정상 상태의
     // churn 이므로, 여유분을 미리 만들어 틈을 메운다 — CI 처럼 붐비는 기계에서만 지던 이유다.
     {
         constexpr uint32                kSpareStageCount = 8;
@@ -1076,7 +1076,7 @@ SW_TEST_CASE( TaskTest, StageDispatchDoesNotAllocate )
         }
     }
 
-    // 여러 번 재어 가장 작은 값을 본다. 한 번만 재면 CI 에서 다른 스레드의 할당이 섞여 가끔 진다.
+    // 여러 번 측정해 가장 작은 값을 본다. 한 번만 측정하면 CI 에서 다른 스레드의 할당이 섞여 가끔 진다.
     // 스테이지 여유분은 스테이지 노드의 틈만 메운다. 같은 틈에 다른 풀 · 다른 스레드가 할당하는 것은 막지 못한다.
     const bool       bWasTracking = pMemory->isTrackingEnabled();
     constexpr uint32 kRound       = 50;
@@ -1103,9 +1103,9 @@ SW_TEST_CASE( TaskTest, StageDispatchDoesNotAllocate )
 }
 
 /**
- * @brief [TaskTest] runParallel 은 문턱 아래에서는 나누지 않고, 위에서는 구간을 빠짐없이 한 번씩 덮는다
- * @details 디스패치 바닥(~50 us)보다 작은 일을 나누면 느려지므로 문턱 아래는 본문이 **한 번**, (0, count) 로 불려야 한다.
- *          문턱 위에서는 어떤 인덱스도 두 번 오거나 빠지면 안 된다 — 청크 경계 오류를 잡는다.
+ * @brief [TaskTest] runParallel 은 임계값 아래에서는 나누지 않고, 위에서는 구간을 빠짐없이 한 번씩 덮는다
+ * @details 디스패치 바닥(~50 us)보다 작은 일을 나누면 느려지므로 임계값 아래는 본문이 **한 번**, (0, count) 로 불려야 한다.
+ *          임계값 위에서는 어떤 인덱스도 두 번 오거나 빠지면 안 된다 — 청크 경계 오류를 잡는다.
  */
 SW_TEST_CASE( TaskTest, RunParallelSplitsOnlyAboveThreshold )
 {
@@ -1134,7 +1134,7 @@ SW_TEST_CASE( TaskTest, RunParallelSplitsOnlyAboveThreshold )
         }
     };
 
-    // 문턱 아래: 한 번에, 나누지 않는다.
+    // 임계값 아래: 한 번에, 나누지 않는다.
     resetHits( 10 );
     taskMgr.runParallel( 10, 16, SW_DELEGATE_FUNCTION( sw::ParallelBlockDelegate, RangeContext::countRange ) );
     SW_EXPECT_EQUAL( uint32( 1 ), s_callCount.load() );
@@ -1143,7 +1143,7 @@ SW_TEST_CASE( TaskTest, RunParallelSplitsOnlyAboveThreshold )
         SW_EXPECT_EQUAL( uint32( 1 ), s_arrHit[index].load() );
     }
 
-    // 문턱 위: 여러 청크로 나뉘되 인덱스는 한 번씩.
+    // 임계값 위: 여러 청크로 나뉘되 인덱스는 한 번씩.
     resetHits( 4096 );
     taskMgr.runParallel( 4096, 16, SW_DELEGATE_FUNCTION( sw::ParallelBlockDelegate, RangeContext::countRange ) );
     SW_EXPECT_TRUE( s_callCount.load() > 1 );

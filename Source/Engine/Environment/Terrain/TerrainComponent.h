@@ -1,6 +1,6 @@
 /**
  * @file TerrainComponent.h
- * @brief 높이장 지형 — 청크 LOD 메시 · 스플랫 레이어 머티리얼 · 구멍 · CPU 높이/노멀 질의입니다.
+ * @brief 높이장 지형입니다. 청크 LOD 메시, 스플랫 레이어 머티리얼, 구멍, CPU 높이와 노멀 질의를 제공합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -23,7 +23,7 @@ namespace sw
     class MeshInstanceBatch;
     class PrimitiveRegistry;
 
-    /** @brief 지형 레이어 하나(풀 · 흙 · 바위 · 모래 …) — 스플랫 맵의 한 채널입니다. 최대 넷입니다. */
+    /** @brief 지형 레이어 하나(풀, 흙, 바위, 모래 등)입니다. 스플랫 맵의 한 채널이며 최대 넷입니다. */
     REFLECT()
     struct SW_API TerrainLayer
     {
@@ -45,15 +45,15 @@ namespace sw
     /**
      * @class TerrainComponent
      * @brief 높이장(`.heightfield`)을 청크로 나눠 거리 LOD 메시로 그리고, 스플랫 맵(RGBA = 레이어 0..3 가중치)으로 레이어를 칠합니다.
-     * @details 지형은 오너의 월드 위치에서 x · z 로 `_size` 만큼 펼쳐집니다(회전 · 크기는 보지 않습니다). 청크마다 `MeshInstanceBatch`
-     *          하나(항목 하나)를 프리미티브 등록부에 넣어 메시 컴포넌트와 같은 길(GPUScene · GPU 컬링)로 그려집니다 — 청크를 오브젝트로
-     *          만들지 않으므로 씬에 저장되지 않고 계층 창에도 없습니다. 틱마다 카메라 거리로 청크 LOD 를 고르고, LOD 나 이웃 LOD 가 바뀐
-     *          청크만 메시를 다시 만들어 배치에 갈아 끼웁니다(`MeshInstanceBatch::setMesh`). 이웃이 더 거친 변은 접어 틈이 없습니다(`TerrainMeshBuilder`).
+     * @details 지형은 오너의 월드 위치에서 x 와 z 방향으로 `_size` 만큼 펼쳐진다(회전과 크기는 보지 않는다). 청크마다 `MeshInstanceBatch`
+     *          하나(항목 하나)를 프리미티브 레지스트리에 넣어, 메시 컴포넌트와 같은 경로(GPUScene, GPU 컬링)로 그린다. 청크를 오브젝트로
+     *          만들지 않으므로 씬에 저장되지 않고 계층 창에도 보이지 않는다. 틱마다 카메라 거리로 청크 LOD 를 고르고, LOD 나 이웃 LOD 가 바뀐
+     *          청크만 메시를 다시 만들어 배치에 교체한다(`MeshInstanceBatch::setMesh`). 이웃이 더 거친 변은 정점을 접어 틈이 없다(`TerrainMeshBuilder`).
      *
-     *          레이어 가중치 맵(`_splatTexturePath`, 비압축 RGBA8 DDS)은 GPU 텍스처로도 쓰고 CPU 로도 읽어 `computeLayerWeightsAt` 이 셰이더와
-     *          같은 값을 줍니다(배치 규칙의 레이어 필터 · 밀도 맵). 레이어 색 · 디테일 · 3 축 투영은 `_listLayer` 가 머티리얼 인스턴스에 싣습니다.
+     *          레이어 가중치 맵(`_splatTexturePath`, 비압축 RGBA8 DDS)은 GPU 텍스처로도 쓰고 CPU 에서도 읽는다. `computeLayerWeightsAt` 이 셰이더와
+     *          같은 값을 주므로 배치 규칙의 레이어 필터와 밀도 맵에 쓸 수 있다. 레이어 색, 디테일, 3 축 투영은 `_listLayer` 가 머티리얼 인스턴스에 싣는다.
      *
-     *          스레드: 질의(`findHeightAt` …)는 읽기만이라 병렬 틱 · 배치 계산이 동시에 불러도 됩니다. 다시 읽기(`reloadTerrain`)는 틱 밖에서만 부릅니다.
+     *          스레드: 질의(`findHeightAt` 등)는 읽기만 하므로 병렬 틱과 배치 계산이 동시에 호출해도 된다. 다시 읽기(`reloadTerrain`)는 틱 밖에서만 호출한다.
      */
     REFLECT( Category = "Environment", DisplayName = "Terrain", Tooltip = "Heightfield terrain with LOD chunks and splat-painted layers" )
     class SW_API TerrainComponent : public SceneComponent
@@ -71,15 +71,15 @@ namespace sw
         void onUnregister( GameObjectManager& manager ) override;
         void onPostLoad() override;
         void onPropertyChanged( hashed_string propertyName ) override;
-        /** @brief 소유 오브젝트를 켜고 끄면 청크 배치를 더티로 — 빌더가 다시 본다. */
+        /** @brief 소유 오브젝트를 켜고 끄면 청크 배치를 더티로 표시합니다. 빌더가 다시 확인합니다. */
         void onOwnerActiveInHierarchyChanged() override;
         void onTick( float32 deltaTime ) override;
         /** @brief 오너가 움직였다고 표시만 합니다(여러 스레드에서 불린다). 다음 틱이 틱 뒤로 다시 읽기를 미룹니다. */
         void onWorldTransformUpdated() override;
 
         /**
-         * @brief 높이장 · 스플랫을 다시 읽고 청크를 다시 만듭니다. 등록 전이면 데이터만 읽습니다.
-         * @return 높이장을 읽었으면 true 입니다(경로가 비었거나 읽지 못하면 false — 그리지 않습니다).
+         * @brief 높이장과 스플랫을 다시 읽고 청크를 다시 만듭니다. 등록 전이면 데이터만 읽습니다.
+         * @return 높이장을 읽었으면 true 를 반환합니다(경로가 비었거나 읽지 못하면 false 이며, 그리지 않습니다).
          */
         [[nodiscard]] bool reloadTerrain();
         /**
@@ -88,15 +88,15 @@ namespace sw
          */
         uint32 updateLODs( const float3& viewPosition );
 
-        /** @brief 월드 (x, z) 의 지형 높이입니다. 지형 밖 · 구멍이면 false 입니다. */
+        /** @brief 월드 (x, z) 의 지형 높이를 구합니다. 지형 밖이거나 구멍이면 false 를 반환합니다. */
         [[nodiscard]] bool findHeightAt( float32 worldX, float32 worldZ, float32& outHeight ) const { return _heightfield.findHeightAt( worldX, worldZ, outHeight ); }
         /** @brief 월드 (x, z) 의 지형 노멀입니다. 지형 밖이면 false 입니다. */
         [[nodiscard]] bool findNormalAt( float32 worldX, float32 worldZ, float3& outNormal ) const { return _heightfield.findNormalAt( worldX, worldZ, outNormal ); }
         /** @brief 월드 (x, z) 가 구멍이면 true 입니다. */
         bool isHoleAt( float32 worldX, float32 worldZ ) const { return _heightfield.isHoleAt( worldX, worldZ ); }
-        /** @brief 월드 (x, z) 의 레이어 가중치(합 1)입니다. */
+        /** @brief 월드 (x, z) 의 레이어 가중치(합 1)를 반환합니다. */
         float4 computeLayerWeightsAt( float32 worldX, float32 worldZ ) const { return _heightfield.computeLayerWeightsAt( worldX, worldZ ); }
-        /** @brief CPU 높이장입니다(물리 높이장 · 배치 표면이 읽습니다). */
+        /** @brief CPU 높이장을 반환합니다(물리 높이장과 배치 표면이 읽습니다). */
         const TerrainHeightfield& getHeightfield() const { return _heightfield; }
         /** @brief 청크 배치입니다. */
         const TerrainChunkLayout& getChunkLayout() const { return _layout; }
@@ -122,7 +122,7 @@ namespace sw
         void setLayers( const vector<TerrainLayer>& listLayer ) { _listLayer = listLayer; }
 
     private:
-        /** @brief 청크 하나 — 배치 하나와 지금 메시의 LOD · 이웃 LOD 입니다. */
+        /** @brief 청크 하나입니다. 배치 하나와 현재 메시의 LOD, 이웃 LOD 를 담습니다. */
         struct Chunk
         {
             unique_ptr<MeshInstanceBatch> _batch;
@@ -131,17 +131,17 @@ namespace sw
             uint32                        _vertexCount{ 0 };
         };
 
-        /** @brief 청크 배치 모두를 더티로 — 활성이 바뀌었을 때. */
+        /** @brief 청크 배치 모두를 더티로 표시합니다. 활성 상태가 바뀌었을 때 호출합니다. */
         void markChunksDirty();
-        /** @brief 청크 배치를 등록부에서 빼고 놓습니다. */
+        /** @brief 청크 배치를 레지스트리에서 빼고 놓습니다. */
         void releaseChunks();
         /** @brief 지금 LOD 로 청크 배치를 모두 만들어 등록합니다. */
         void createChunks();
-        /** @brief 청크 하나의 메시를 지금 LOD · 이웃 LOD 로 다시 만들어 배치에 겁니다. */
+        /** @brief 청크 하나의 메시를 현재 LOD 와 이웃 LOD 로 다시 만들어 배치에 적용합니다. */
         void rebuildChunkMesh( uint32 chunkIndex );
-        /** @brief 청크 (x, z) 의 이웃 LOD 를 `TerrainChunkSide` 순서로 채웁니다(가장자리는 자기 LOD). */
+        /** @brief 청크 (x, z) 의 이웃 LOD 를 `TerrainChunkSide` 순서로 채웁니다(가장자리는 자기 LOD 를 넣습니다). */
         void fillNeighborLODs( uint32 chunkX, uint32 chunkZ, const vector<uint32>& listLOD, uint32 ( &outArrLOD )[4] ) const;
-        /** @brief 머티리얼을 잡고 인스턴스에 레이어 · 텍스처 값을 싣습니다. 엔진 서비스가 없으면(CPU 테스트) 건너뜁니다. */
+        /** @brief 머티리얼을 만들고 인스턴스에 레이어와 텍스처 값을 싣습니다. 엔진 서비스가 없으면(CPU 테스트) 건너뜁니다. */
         void acquireMaterial();
         /** @brief 스플랫 DDS 를 CPU 로 읽어 높이장에 줍니다. 비압축 RGBA8/BGRA8 만 읽습니다. */
         void loadSplatWeights();
@@ -179,7 +179,7 @@ namespace sw
         vector<Chunk>       _listChunk;
         vector<uint32>      _listWantedLOD; ///< updateLODs 의 스크래치(청크마다 고른 LOD)
         EnvironmentMaterial _material;
-        PrimitiveRegistry*  _pPrimitiveRegistry; ///< 등록된 매니저의 등록부(구조 링크라 생포인터)
+        PrimitiveRegistry*  _pPrimitiveRegistry; ///< 등록된 매니저의 레지스트리(구조 링크라 생포인터)
         atomic<bool>        _bOriginDirty;       ///< 오너가 움직여 지형 원점이 낡았다
     };
 } // namespace sw

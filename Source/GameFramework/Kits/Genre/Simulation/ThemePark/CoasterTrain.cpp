@@ -10,10 +10,10 @@ namespace sw
     {
         struct CoasterTrainInternal
         {
-            static constexpr float32 kDropThreshold = 2.0f;  ///< 이만큼 넘게 내려가야 낙하다(m)
-            static constexpr float32 kDropRecovery  = 1.0f;  ///< 바닥에서 이만큼 올라오면 낙하가 끝났다(m)
-            static constexpr float32 kInversionUpY  = -0.2f; ///< 좌석 위의 y 가 이보다 작으면 뒤집혔다
-            static constexpr float32 kUprightUpY    = 0.2f;  ///< 이보다 크면 바로 섰다
+            static constexpr float32 kDropThreshold = 2.0f;  ///< 이만큼 넘게 내려가야 낙하로 센다(m)
+            static constexpr float32 kDropRecovery  = 1.0f;  ///< 바닥에서 이만큼 올라오면 낙하가 끝난 것이다(m)
+            static constexpr float32 kInversionUpY  = -0.2f; ///< 좌석 위의 y 가 이보다 작으면 뒤집힌 것이다
+            static constexpr float32 kUprightUpY    = 0.2f;  ///< 이보다 크면 바로 선 것이다
             static constexpr uint8   kDrivenFlags   = CoasterSegmentFlag::kLift | CoasterSegmentFlag::kStation | CoasterSegmentFlag::kBooster;
         };
     } // namespace
@@ -44,7 +44,7 @@ namespace sw
         _previousVelocity     = float3{};
         _speed                = 0.0f;
         _elapsedTime          = 0.0f;
-        _stepTimer            = FixedStepTimer( _params._fixedStep, 0.25f ); // 큰 프레임(디버거 정지)이 수천 번의 적분이 되지 않게
+        _stepTimer            = FixedStepTimer( _params._fixedStep, 0.25f ); // 큰 프레임(디버거 정지)이 수천 번의 적분이 되지 않게 한다
         _lapCount             = 0;
         _bHasPreviousVelocity = SW_FALSE;
         setDistance( startDistance );
@@ -82,7 +82,7 @@ namespace sw
         const CoasterTrackFrame frame   = _pTrack->sample( _distance );
         const float32           gravity = _params._gravity;
 
-        // 경사 방향의 중력 성분 + 저항. 멈춰 있고 경사가 마찰을 못 이기면 그대로 선다(정지 마찰).
+        // 경사 방향의 중력 성분과 저항을 구한다. 멈춰 있고 경사가 마찰을 못 이기면 그대로 선다(정지 마찰).
         const float32 slopeAcceleration = -gravity * frame._forward._y;
         const float32 friction          = _params._rollingResistance * gravity;
         float32       acceleration      = slopeAcceleration;
@@ -97,7 +97,7 @@ namespace sw
         }
         float32 speed = _speed + acceleration * deltaTime;
 
-        // 구간 장치 — 체인은 아래로 못 가게 끌고, 스테이션은 정한 속도로 맞추고, 부스터는 올리고, 브레이크는 내린다.
+        // 구간 장치: 체인은 아래로 못 가게 끌고, 스테이션은 정한 속도로 맞추고, 부스터는 올리고, 브레이크는 내린다.
         const uint8 flags = frame._flags;
         if ( ( flags & CoasterSegmentFlag::kLift ) != 0 && speed < _params._liftSpeed )
             speed = _params._liftSpeed;
@@ -113,7 +113,7 @@ namespace sw
         if ( ( flags & CoasterSegmentFlag::kBrake ) != 0 && speed > _params._brakeSpeed )
             speed = MathUtil::max( _params._brakeSpeed, speed - _params._brakeDeceleration * deltaTime );
 
-        // 거리 — 닫힌 회로는 감고 바퀴를 센다, 열린 트랙은 끝에서 선다.
+        // 거리: 닫힌 회로는 감고 바퀴를 세며, 열린 트랙은 끝에서 선다.
         const float32 length      = _pTrack->getLength();
         float32       newDistance = _distance + speed * deltaTime;
         if ( _pTrack->isClosed() && length > 0.0f )
@@ -138,7 +138,7 @@ namespace sw
         _speed    = speed;
         _elapsedTime += deltaTime;
 
-        // G — 속도 벡터의 변화(가속도)에 중력을 되돌려 더한 것이 탑승자가 느끼는 힘이다(서 있으면 위로 1G).
+        // G: 속도 벡터의 변화(가속도)에 중력을 되돌려 더한 것이 탑승자가 느끼는 힘이다(서 있으면 위로 1G).
         const CoasterTrackFrame newFrame = _pTrack->sample( _distance );
         const float3            velocity = newFrame._forward * _speed;
         if ( _bHasPreviousVelocity == SW_TRUE )
@@ -162,7 +162,7 @@ namespace sw
 
         CoasterTrain train;
         train.initialize( &track, params, 0.0f );
-        const float32 deltaTime = MathUtil::clamp( params._fixedStep, 1.0f / 2000.0f, 1.0f / 30.0f ); // `initialize` 와 같은 자름 — 한 번에 한 번 적분
+        const float32 deltaTime = MathUtil::clamp( params._fixedStep, 1.0f / 2000.0f, 1.0f / 30.0f ); // `initialize` 와 같은 값으로 자른다. 한 번에 한 번만 적분한다
 
         float32 travelled    = 0.0f;
         float32 stillTime    = 0.0f;
@@ -191,7 +191,7 @@ namespace sw
                     stats._airtime += deltaTime;
             }
 
-            // 뒤집힘 — 좌석 위가 땅을 향했다가(문턱 아래) 바로 서면(문턱 위) 하나.
+            // 뒤집힘: 좌석 위가 땅을 향했다가(임계값 아래) 바로 서면(임계값 위) 하나로 센다.
             if ( bInverted == false && frame._up._y < CoasterTrainInternal::kInversionUpY )
             {
                 bInverted = true;
@@ -202,7 +202,7 @@ namespace sw
                 bInverted = false;
             }
 
-            // 낙하 — 꼭대기에서 2 m 넘게 내려가기 시작해 바닥을 찍고 1 m 올라오면 하나.
+            // 낙하: 꼭대기에서 2 m 넘게 내려가기 시작해 바닥을 찍고 1 m 올라오면 하나로 센다.
             if ( bFalling == false )
             {
                 if ( height > peakHeight )
@@ -259,8 +259,8 @@ namespace sw
 
     void CoasterRideAnalyzer::computeRatings( CoasterRideStats& inoutStats )
     {
-        // 강도 — 누르는 G · 띄우는 G · 옆 G · 속도. 멀미 — 옆 G · 뒤집힘 · 강도. 흥분 — 속도 · 에어타임 · 뒤집힘 · 낙하 · 길이에서
-        // 너무 센 강도(8 넘음)를 깎는다(타이쿤처럼 "너무 무서우면 안 탄다").
+        // 강도는 누르는 G, 띄우는 G, 옆 G, 속도로 정한다. 멀미는 옆 G, 뒤집힘, 강도로 정한다. 흥분은 속도, 에어타임, 뒤집힘, 낙하, 길이로 정하고
+        // 너무 센 강도(8 넘음)는 깎는다(타이쿤처럼 "너무 무서우면 안 탄다").
         CoasterRideStats& stats      = inoutStats;
         const float32     positiveG  = MathUtil::max( 0.0f, stats._maxVerticalG - 1.0f );
         const float32     negativeG  = MathUtil::max( 0.0f, -stats._minVerticalG );

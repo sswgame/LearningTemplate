@@ -15,7 +15,7 @@
 // `#else` 안에만 두었을 때는 Windows 에서 한 번도 컴파일되지 않아 조용히 썩는다(FileWatcher 의
 // macOS 구현이 그랬다).
 
-// 전용 서버 빌드(SW_WITH_CLIENT_CODE 없음)에는 XAudio2 구현 · 링크가 없다 — 서버는 장치를 열지 않는다.
+// 전용 서버 빌드(SW_WITH_CLIENT_CODE 없음)에는 XAudio2 구현과 링크가 없다. 서버는 장치를 열지 않는다.
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_WITH_CLIENT_CODE )
     #include "Engine/Audio/Windows/XAudio2System.h"
 #endif
@@ -30,7 +30,7 @@ namespace sw
         {
             /** @brief 곡을 바꿀 때의 크로스페이드 길이(초)입니다. */
             static constexpr float32 kMusicCrossfadeSeconds = 0.25f;
-            /** @brief 장치 없이 한 번의 update 가 렌더할 최대 시간(초)입니다 — 멈춘 프레임 뒤에 몇 분을 몰아 렌더하지 않게. */
+            /** @brief 장치 없이 한 번의 update 가 렌더할 최대 시간(초)입니다. 멈춘 프레임 뒤에 몇 분을 몰아서 렌더하지 않게 합니다. */
             static constexpr float64 kMaxOfflineSecondsPerUpdate = 0.25;
         };
     } // namespace
@@ -81,7 +81,7 @@ namespace sw
         if ( _pEngine->initialize( mixerDesc ) == false && _pEngine->initialize( AudioMixerDesc::makeDefault() ) == false )
             return false;
 
-        // 설정 메뉴가 엔진보다 먼저 볼륨을 넣었을 수 있다 — 들고 있는 값을 다시 건다.
+        // 설정 메뉴가 엔진보다 먼저 볼륨을 넣었을 수 있다. 가지고 있던 값을 다시 적용한다.
         _pEngine->setBusUserVolume( hashed_string( AudioBusNames::kMaster ), _masterVolume );
         _pEngine->setBusUserVolume( hashed_string( AudioBusNames::kMusic ), _musicVolume );
         _pEngine->setBusUserVolume( hashed_string( AudioBusNames::kSfx ), _sfxVolume );
@@ -102,7 +102,7 @@ namespace sw
     {
         if ( _bInitialized == false )
             return;
-        // 장치를 먼저 닫는다 — 닫힌 뒤에는 장치 스레드가 render 를 부르지 않으므로 엔진을 내려도 된다.
+        // 장치를 먼저 닫는다. 닫힌 뒤에는 장치 스레드가 render 를 호출하지 않으므로 엔진을 해제해도 된다.
         [[maybe_unused]] const AudioEngineStats stats = _pEngine->getStats();
         SW_LOG_INFO( "Played %# events (%# dropped by cooldown / limits), peak %# mixed voices, %# s rendered.", stats._playedEventCount, stats._droppedEventCount,
                      stats._peakRealVoiceCount, stats._renderedFrameCount / audio::kSampleRate );
@@ -121,7 +121,7 @@ namespace sw
         SW_MEMORY_SCOPE( Audio );
         if ( _bInitialized == false || _bOutputOpen )
             return;
-        // 장치가 없으면 흐른 시간만큼 렌더해 버린다. 끝남 · 박자 · 가상 보이스가 장치가 있을 때와 같이 흐른다.
+        // 장치가 없으면 흐른 시간만큼 바로 렌더한다. 끝남, 박자, 가상 보이스가 장치가 있을 때와 같이 진행한다.
         const float64 seconds = MathUtil::clamp( static_cast<float64>( deltaSeconds ), 0.0, IAudioSystemInternal::kMaxOfflineSecondsPerUpdate );
         _offlineFrameDebt += seconds * static_cast<float64>( audio::kSampleRate );
         while ( _offlineFrameDebt >= static_cast<float64>( audio::kBlockFrameCount ) )
@@ -158,7 +158,7 @@ namespace sw
             return false;
         if ( _musicPath == path && _pEngine->isPlaying( _musicPlayingID ) )
             return true;
-        // 있는 곡인지 **멈추기 전에** 본다 — 없는 곡을 요청해 틀어져 있던 BGM 만 꺼지면 안 된다.
+        // 있는 곡인지 **멈추기 전에** 확인한다. 없는 곡을 요청했다가 재생 중이던 BGM 만 꺼지면 안 된다.
         if ( ResourceIO::hasResource( path ) == false )
         {
             SW_LOG_WARNING( "Audio resource not found: %#", path );

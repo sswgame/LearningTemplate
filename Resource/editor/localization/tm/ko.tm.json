@@ -311,7 +311,7 @@
         },
         {
             "source": "Debug HUD is not running (Shipping or a test host).",
-            "text": "디버그 HUD 가 실행 중이 아닙니다(Shipping 이거나 시험 호스트입니다)."
+            "text": "디버그 HUD 가 실행 중이 아닙니다(Shipping 이거나 테스트 호스트입니다)."
         },
         {
             "source": "Delete this saved layout.",

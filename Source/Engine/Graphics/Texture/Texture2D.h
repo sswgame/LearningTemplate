@@ -32,7 +32,7 @@ namespace sw
         /** @brief 리소스 상대 경로(전역 id, 예: engine/textures/random/grass.dds)의 DDS 를 GPU 에 올립니다. */
         [[nodiscard]] bool loadFromResource( IRHIDevice* pDevice, string_view relativePath );
         /**
-         * @brief 그리고 읽는 렌더 타깃으로 만듭니다(렌더 텍스처 — CCTV 모니터 · 백미러). 경로는 이름표입니다(`rendertarget/<이름>`, 파일이 아니다).
+         * @brief 그리고 읽는 렌더 타깃으로 만듭니다(렌더 텍스처 — CCTV 모니터 · 백미러). 경로는 이름입니다(`rendertarget/<이름>`, 파일이 아니다).
          * @details 렌더러가 카메라의 그림을 여기에 그리고, 머티리얼은 DDS 텍스처와 같은 SRV 로 읽습니다. 디바이스가 바뀌면 같은 크기로 다시 만듭니다(내용은 비어 있다).
          */
         [[nodiscard]] bool createRenderTarget( IRHIDevice* pDevice, string_view name, uint32 width, uint32 height, RHIFormat format );

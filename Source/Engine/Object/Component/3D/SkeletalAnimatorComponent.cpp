@@ -519,7 +519,7 @@ namespace sw
             }
         }
 
-        // 핫 리로드가 되살릴 상태 · 시각을 PROPERTY 에 비춘다(게임 스레드가 아니어도 이 컴포넌트만의 칸이다).
+        // 핫 리로드가 복원할 상태 · 시각을 PROPERTY 에 비춘다(게임 스레드가 아니어도 이 컴포넌트만의 칸이다).
         _stateTime = player.getCurrentTime();
     }
 

@@ -111,6 +111,8 @@ namespace sw
         void onDataRead( const string& pathStr, uint64 generation, bool bSuccess, vector<uint8>& bytes );
         /** @brief 완료 항목을 `update` 가 꺼내 갈 줄에 넣습니다. `_mutex` 를 쥔 채 불러도 됩니다(다른 잠금이다). */
         void pushCompleted( CompletedItem&& item );
+        /** @brief 진행 표에서 뺀 읽기 핸들을 `shutdown` 이 기다리도록 듭니다. 끝난 핸들은 이때 버립니다. `_mutex` 를 쥔 채 부릅니다. */
+        void retainDetachedIOLocked( const AsyncReadHandle& handle );
 
     private:
         mutable mutex _mutex;
@@ -141,6 +143,11 @@ namespace sw
         unordered_map<string, uint64> _mapRequestGeneration;
         /** @brief 진행 중인 바이트 읽기의 IO 핸들입니다(경로당 하나). 취소 · 종료가 OS 에 걸린 읽기를 멈추고 기다리는 데 씁니다. */
         unordered_map<string, AsyncReadHandle> _mapInFlightIO;
+        /**
+         * @brief 진행 표에서 빠졌지만 아직 끝나지 않았을 수 있는 읽기입니다(취소한 것 · 늦게 걸려 표에 못 적은 것).
+         * @details 그 완료 콜백도 이 큐를 부르므로 `shutdown` 이 이것까지 기다립니다. 빠뜨리면 큐가 사라진 뒤 완료가 도착합니다.
+         */
+        vector<AsyncReadHandle> _listDetachedIO;
         /**
          * @brief `update` 가 부를 완료입니다. **크기 상한이 없다** — 고정 용량 큐는 같은 경로에 콜백이 몰리면(편승 1024 개 초과) 넘친 완료를
          *        말없이 버린다.

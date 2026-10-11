@@ -140,7 +140,7 @@ echo $LASTEXITCODE
 | `ExpectUI` | `focus`, `screen`, `screens` 중 하나 이상 | `Engine/UI/Automation/UIAutomationSteps` | 런타임 UI의 포커스 위젯, 활성 화면, 화면 수를 확인합니다 |
 | `UILayoutDump` | `file` | `Engine/UI/Automation/UIAutomationSteps` | UI 화면마다 위젯 이름과 픽셀 사각형을 파일로 씁니다 |
 | `EditorDrag` | `mark`, `dx`, `dy`(픽셀), `button`, `mods` | 에디터 `EditorScenarioSteps` | `mark` 위젯 가운데를 누르고 (dx, dy) 만큼 끌어 놓습니다(누름 · 절반 · 끝 · 뗌을 네 프레임에 — 프레임마다 커서를 다시 넣는다). 커브 키 · 손잡이 끌기 |
-| `EditorHover` | `mark`, `anchor` 또는 `release="true"` | 에디터 `EditorScenarioSteps` | 단추를 누르지 않고 커서를 이름표 자리에 붙잡아 둡니다(호버). `release` 까지 프레임마다 그 자리를 넣는다 |
+| `EditorHover` | `mark`, `anchor` 또는 `release="true"` | 에디터 `EditorScenarioSteps` | 단추를 누르지 않고 커서를 레이블 자리에 붙잡아 둡니다(호버). `release` 까지 프레임마다 그 자리를 넣는다 |
 | `EditorClick` | `mark`, `button`(0..4), `mods`, `state`(`down`, `up`), `anchor`(`x,y` 0..1) | 에디터 `EditorScenarioSteps` | `mark` 이름이 붙은 위젯 가운데(`anchor` 를 주면 그 안의 자리 — 캔버스 빈 곳)를 클릭합니다. `state="down"` 은 누른 채 두고 `up` 까지 커서를 그 자리에 붙잡습니다(뷰포트 비행 · 끌기) |
 | `EditorText` | `value` | 에디터 `EditorScenarioSteps` | ImGui에 글자를 입력합니다 |
 | `EditorKey` | `key`(ImGui 키 이름, 수정자는 `+` — `Enter`, `Escape`, `Ctrl+Z`), `state`(`down`, `up`) | 에디터 `EditorScenarioSteps` | 수정자를 누르고 키를 눌렀다 뗍니다(단축키, 입력 칸 확정). `state` 를 주면 누르기만, 떼기만 합니다(`D` 를 누른 채 몇 프레임) |
@@ -263,11 +263,11 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 | `Editor.SceneViewMode`, `Editor.GameViewMode` | 씬 뷰 툴바의 보기 모드, 주 출력(게임 뷰)의 보기 모드(0 Lit · 1 Unlit · 2 Wireframe · 3 Normals · 4 Depth · 5 Overdraw) |
 | `Editor.ObjectPositionX`, `Editor.SequencerKeyFrameCount` | `gv_editorProbeObject` 오브젝트의 로컬 위치 X, Sequencer 패널이 고른 키 트랙의 키 프레임 수(패널이 닫혔거나 고른 트랙이 없으면 값이 없다) |
 
-`EditorClick` 이 누르는 위젯 이름표에는 `hierarchy.create`, `hierarchy.filter`, `hierarchy.selectedRow`, `hierarchy.activeToggle`, `hierarchy.addComponent`,
+`EditorClick` 이 누르는 위젯 레이블에는 `hierarchy.create`, `hierarchy.filter`, `hierarchy.selectedRow`, `hierarchy.activeToggle`, `hierarchy.addComponent`,
 `hierarchy.addComponent.search`, `hierarchy.addComponent.<타입>`, 눈 `hierarchy.toggle.<이름>` · 자물쇠 `hierarchy.lock.<이름>`, `inspector.name`, 씬 뷰 오버레이 손잡이 `overlay.grip.<바 id>` · 접기 `overlay.collapse.<바 id>` · 메뉴 `sceneView.overlays`, 인스펙터 Add Component 단추 `inspector.addComponent`(검색 칸 `inspector.addComponent.search`) · 자물쇠 `inspector.lock` · 에셋 고르기 `inspector.assetPicker.<프로퍼티>`, 기즈모 단추 `gizmo.translate` · `gizmo.rotate` · `gizmo.scale` · `gizmo.space`, 2D/3D 토글 `viewport.dimension`, 뷰포트 빌보드 `viewport.billboard.<오브젝트 이름>` · 시각화 체크박스 `viewport.visualizer.<id>`, 노드 그래프 캔버스 `graph.canvas`(빈 곳은 `anchor` 로) · 찾아 넣기 검색 칸 `graph.addNode.search`, 커브 미리보기 `inspector.curve.<프로퍼티>` · 편집기 캔버스 `curve.canvas` · 키 `curve.key.<n>` · 메뉴 `curve.menu.addKey`, `theme.swatch.violet`, 씬 뷰 캔버스 `sceneView.canvas` · 스크린샷 `sceneView.screenshot` · 보기 모드 콤보 `viewport.viewMode` · 그 항목 `viewport.viewMode.<모드>`(소문자), 프로파일러 Timeline 탭 `profiler.timeline.tab` · 녹화 단추 `profiler.timeline.record`, Test Runner 검색 칸 `testRunner.filter` · 자체 테스트 체크 `testRunner.select.<id>` · `testRunner.runSelected`(탭은 `state="down"` · `up` 을 다른 프레임에 나눠 눌러야 골라진다), 게임 뷰 `gameView.canvas` · `gameView.aspect` · 스크린샷 `gameView.screenshot`, 콘텐츠 브라우저 All packs `contentBrowser.allPacks` · 검색 칸 `contentBrowser.search` · 타일과 줄 `contentBrowser.asset.<파일 이름>` · 폴더 트리 `contentBrowser.folder.<리소스 id>` · 오른쪽 클릭 메뉴 `contentBrowser.menu.findReferences` · `contentBrowser.menu.showDependencies` · `contentBrowser.menu.rename` · `contentBrowser.menu.duplicate`, 상태줄 맵 검사 수 `statusBar.mapCheck`, Packaging 창 `packaging.skipBuild` · `packaging.skipCook` · `packaging.package`, Map Check 창의 줄 `mapCheck.row.<n>`(오류가 먼저) · `mapCheck.checkMap`, Add 단추 `contentBrowser.add` · 그 항목 `contentBrowser.add.folder` · `contentBrowser.add.material` · `contentBrowser.add.scene` · `contentBrowser.add.prefab`, 이름 입력 칸 `contentBrowser.rename`, 삭제 확인 `contentBrowser.delete.confirm`,
 상단 툴바 `toolbar.play` · `toolbar.simulate` · `toolbar.pause` · `toolbar.stop` · `toolbar.playAnyway`(미저장 확인 모달) · `toolbar.renderDoc` 이 있습니다. 씬 뷰와 게임 뷰는 같은 영역의 탭이라
-앞에 없는 쪽은 이름표를 남기지 않습니다 — 그쪽을 누르려면 먼저 `DevCommand line="panel.focus game_view"` 로 탭을 앞으로 가져옵니다.
-이름표가 없는 위젯을 누르려면 그 위젯 바로 뒤에 `EditorSelfTestMarks::note` 한 줄을 더합니다.
+앞에 없는 쪽은 레이블을 남기지 않습니다 — 그쪽을 누르려면 먼저 `DevCommand line="panel.focus game_view"` 로 탭을 앞으로 가져옵니다.
+레이블이 없는 위젯을 누르려면 그 위젯 바로 뒤에 `EditorSelfTestMarks::note` 한 줄을 더합니다.
 Output Log 툴바는 `console.clear` · `console.collapse` · `console.level.info` · 검색 칸 `console.filter` 를, 도구 문서 패널(Material · Tile Map · Sprite Clip · Sequencer)의 열기 단추는
 `<material|tileMap|spriteClip|sequencer>.open` · 그 팝업의 검색 칸 `<…>.open.search` · 줄 `<…>.open.<파일 이름>` 을 남깁니다.
 Sequencer 는 시간 막대 `sequencer.scrub`, 키 트랙 줄 `sequencer.track.<n>`, Key 단추 `sequencer.addKey`, 채널 값 칸 `sequencer.channel.<n>` · 커브 단추 `sequencer.curve.<n>`, 트랙 더하기 `sequencer.addTransformTrack` · `sequencer.addPropertyTrack` 을 남깁니다.
@@ -304,7 +304,7 @@ UI 의 로딩 화면 조건이 `UIAutomationSteps.cpp` 에 있습니다. 실행�
 - **확인하려는 상태가 다른 이유로 바뀌지 않게 전제를 같이 확인하세요.** `weaponswitch` 는 플레이어가 죽으면 라운드가 다시 시작해 무기 번호가 0으로 돌아갑니다. 그래서 마지막에 `Shooter3D.PlayerAlive` 를 확인합니다.
 - **비동기로 끝나는 일은 고정 프레임이 아니라 `<WaitUntil>` 로 기다리세요.** Quick Open 의 파일 목록, 참조 역색인, 머티리얼 미리보기, 패키징처럼 워커 스레드가 끝내는 일은 기계 부하에 따라 걸리는 프레임이 다릅니다.
   `<At frame="280"><Expect …/>` 처럼 넉넉히 잡은 프레임도 다른 빌드와 겹친 기계에서는 모자랍니다(`editor.sequencerkeys` 가 OpenGL 에서 이렇게 졌습니다). 조건이 오면 바로 진행하므로 빠른 기계에서는 시나리오도 짧아집니다.
-  기다림 바로 뒤에는 위젯이 한 번 그려지도록 10 프레임쯤 둡니다. 클릭할 이름표(`mark`)는 패널이 그린 다음 프레임부터 있습니다.
+  기다림 바로 뒤에는 위젯이 한 번 그려지도록 10 프레임쯤 둡니다. 클릭할 레이블(`mark`)는 패널이 그린 다음 프레임부터 있습니다.
 
 ## 더 볼 곳
 

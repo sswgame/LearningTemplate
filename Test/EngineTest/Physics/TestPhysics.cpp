@@ -727,7 +727,7 @@ SW_TEST_CASE( PhysicsTest, SweptOverlapsComeInTheOrderTheyWereTouched )
 
 /**
  * @brief [PhysicsTest] 연속 바디는 그 step 에 자기 길을 가로질러 건너편으로 간 바디와도 겹친다(상대 운동)
- * @details 쓸림이 상대를 이번 step 의 자리에 세워 두고 재면 총알이 x 로 가는 동안 y 로 길을 가로질러 건너간 적은 끝 자리가 길 밖이라 닿지
+ * @details 쓸림이 상대를 이번 step 의 자리에 세워 두고 측정하면 총알이 x 로 가는 동안 y 로 길을 가로질러 건너간 적은 끝 자리가 길 밖이라 닿지
  *          않는다. 그래서 둘 다 지난 step 의 자리에서 출발해 이동의 차이만큼 쓴다(Box2D 총알 TOI · 유니티 Continuous Dynamic). 적의 지금 자리는 총알이
  *          쓸린 범위의 그리드 셀 밖이라(바디가 많아 그리드로 후보를 모을 때), 후보 범위도 이번 step 에 가장 많이 움직인 거리만큼 넓혀야 찾는다.
  */

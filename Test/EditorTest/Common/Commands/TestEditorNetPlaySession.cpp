@@ -64,7 +64,7 @@ namespace
 
 /**
  * @brief [EditorNetPlaySessionTest] 전용 서버 + 클라이언트 둘을 띄우면 둘 다 붙고, 서버 일시정지가 표준 입력으로 닿고, Stop 이 모두를 정상 종료시키고
- *        프로세스마다의 트레이스를 이름표(Server · Client1 · Client2)를 단 한 파일로 합친다(서버 디버깅 S1)
+ *        프로세스마다의 트레이스를 이름(Server · Client1 · Client2)를 단 한 파일로 합친다(서버 디버깅 S1)
  * @details 창 · GPU 가 없는 테스트라 클라이언트도 `Server` 실행 파일로 띄운다(헤드리스 클라이언트 — 게임 인스턴스의 네트워크 역할은 실행 인자가 정한다).
  *          에디터가 `App` 클라이언트로 같은 일을 하는 것은 에디터 시나리오 `netplay_dedicated` 가 본다.
  */

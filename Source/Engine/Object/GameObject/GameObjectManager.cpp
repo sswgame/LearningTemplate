@@ -9,7 +9,6 @@
 #include "Core/Common/StdHeaders.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Object/Component/Navigation/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -47,7 +46,7 @@ namespace sw
             }
 
             /**
-             * @brief 스레드마다 둔 이름 → 타입 조회 캐시입니다. 타입 표의 **캐시**일 뿐 등록부가 아닙니다 — 표의 세대가 바뀌면 통째로 버립니다.
+             * @brief 스레드마다 둔 이름 → 타입 조회 캐시입니다. 타입 표의 **캐시**일 뿐 레지스트리가 아닙니다 — 표의 세대가 바뀌면 통째로 버립니다.
              * @details 씬 · 프리팹 로드는 컴포넌트마다 이름으로 찾는다. 표 조회는 공유 잠금 + 해시 두 번(짧은 이름 → FQN → 줄)이라
              *          컴포넌트 하나에 10 ns 남짓을 더했다(Release `GameObjectBenchTest.AddComponentByName`). `TypeInfo` 주소는 고정이고
              *          해제는 세대를 올리므로 포인터를 들고 있어도 된다. 생성 함수(`_addComponent`)는 부를 때마다 다시 읽는다.
@@ -107,14 +106,20 @@ namespace sw
         , _overlapWorld2D{}
         , _scenePhysics{}
         , _sceneAudio{}
-        , _pSceneNavigation{ make_unique<SceneNavigation>() }
+        , _listSceneService{}
         , _frameStepObserver{}
         , _listFrameSystem{}
         , _listRetiredFrameSystem{}
         , _bRunningFrameSystems{ false }
     {
         _animationSystem.setObjectManager( this );
-        _pSceneNavigation->setObjectManager( this );
+        // 기능 서비스는 기능 폴더가 정적 초기화에서 올린 줄로 만든다 — 코어는 그 타입을 모른다(`ISceneService.h`).
+        const vector<const SceneServiceRegistration*>& listRegistration = SceneServiceRegistry::getAll();
+        _listSceneService.reserve( listRegistration.size() );
+        for ( const SceneServiceRegistration* pRegistration : listRegistration )
+        {
+            _listSceneService.push_back( SceneServiceEntry{ pRegistration, pRegistration->_pCreate( *this ) } );
+        }
     }
 
     GameObjectManager::~GameObjectManager()
@@ -135,7 +140,21 @@ namespace sw
         markTickStagesDirty();
         // 컴포넌트가 바디를 놓았다 — 빈 물리 씬과 쌓인 시간을 버린다(다음 씬은 처음 쓸 때 새로 만든다).
         _scenePhysics.shutdown();
-        _pSceneNavigation->shutdown();
+        for ( SceneServiceEntry& entry : _listSceneService )
+        {
+            if ( entry._pService != nullptr )
+                entry._pService->shutdown();
+        }
+    }
+
+    ISceneService* GameObjectManager::findSceneService( const SceneServiceRegistration& registration ) const
+    {
+        for ( const SceneServiceEntry& entry : _listSceneService )
+        {
+            if ( entry._pRegistration == &registration )
+                return entry._pService.get();
+        }
+        return nullptr;
     }
 
     ISceneFrameSystem* GameObjectManager::findFrameSystem( const hashed_string& key ) const

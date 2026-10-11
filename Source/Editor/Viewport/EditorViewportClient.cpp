@@ -67,7 +67,7 @@ namespace sw::editor
             static constexpr Color kRulerAccent{ Color::fromBytes( 255, 230, 80, 255 ) };
             static constexpr Color kRulerLabelBg{ Color::fromBytes( 20, 24, 32, 220 ) };
 
-            // 축 색의 정본. 그리드 · 오리엔테이션 큐브가 같은 값을 본다. 기즈모(ImGuizmo)도 같은 관례(X 빨강 · Y 초록 · Z 파랑)를 쓴다.
+            // 축 색의 원본. 그리드 · 오리엔테이션 큐브가 같은 값을 본다. 기즈모(ImGuizmo)도 같은 관례(X 빨강 · Y 초록 · Z 파랑)를 쓴다.
             static constexpr Color kAxisX{ Color::fromBytes( 235, 65, 65 ) };
             static constexpr Color kAxisY{ Color::fromBytes( 65, 220, 95 ) };
             static constexpr Color kAxisZ{ Color::fromBytes( 65, 130, 245 ) };
@@ -462,7 +462,7 @@ namespace sw::editor
         else
             ImGui::Dummy( ImVec2{ canvasSize._x, canvasSize._y } );
         EditorSelfTestMarks::note( "sceneView.canvas" ); // 시나리오가 씬 뷰 가운데를 누른다(뷰포트 피킹 · 카메라 비행)
-        // 캔버스(이미지)의 호버 · 클릭은 지금 읽는다 — 뒤에서 시각화가 이름표 자리로 항목을 더하면(빌보드) "마지막 항목" 이 바뀐다.
+        // 캔버스(이미지)의 호버 · 클릭은 지금 읽는다 — 뒤에서 시각화가 레이블 자리로 항목을 더하면(빌보드) "마지막 항목" 이 바뀐다.
         const bool bCanvasHovered = ImGui::IsItemHovered();
         const bool bCanvasClicked = ImGui::IsItemClicked( ImGuiMouseButton_Left );
 
@@ -849,7 +849,7 @@ namespace sw::editor
 
         const float3 worldPos = pSceneComp->getWorldPosition();
 
-        // 크기는 오브젝트의 월드 상자로 잰다(`GameObject::getWorldBox`). 메시의 **로컬** 스케일 · 콜라이더 오프셋 크기로 따로 셈하면
+        // 크기는 오브젝트의 월드 상자로 측정한다(`GameObject::getWorldBox`). 메시의 **로컬** 스케일 · 콜라이더 오프셋 크기로 따로 셈하면
         // 부모가 키운 오브젝트 · 단위 상자가 아닌 메시를 너무 가깝거나 멀게 잡는다.
         float32 objectRadius = 2.0f;
         AABB    objectBox{};
@@ -1100,7 +1100,7 @@ namespace sw::editor
         float4x4 viewProj{};
         EditorViewportClientInternal::loadViewProj( pView, pProj, viewProj );
 
-        // 마우스 아래 바닥(Y = 0)의 점이 자의 끝점이다.
+        // 마우스 아래 바닥(Y = 0)의 점이 자의 엔드포인트이다.
         EditorPickRay mouseRay{};
         float3        groundPt{};
         if ( EditorViewportClientInternal::makeMouseRay( viewProj.invert(), canvasPos, canvasSize, mouseRay ) &&

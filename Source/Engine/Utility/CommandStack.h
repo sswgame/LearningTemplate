@@ -17,7 +17,7 @@ namespace sw
     enum class ObjectEditKind : uint8
     {
         Modified = 0, ///< 상태를 다시 읽었다
-        Recreated,    ///< 원래 id 로 되살렸다
+        Recreated,    ///< 원래 id 로 복원했다
         Destroyed     ///< 없앤다(지연 파괴 — 알림은 없애기 직전)
     };
 

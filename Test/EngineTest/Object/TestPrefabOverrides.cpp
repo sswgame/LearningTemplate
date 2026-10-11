@@ -91,7 +91,7 @@ SW_TEST_CASE( PrefabOverridesTest, OverridesHoldOnlyWhatDiffersAndRebuildTheInst
     SW_ASSERT_TRUE( sw::PrefabOverrides::computeOverrides( sw::ObjectStateSerializer::saveToXMLString( pInstance ), baseState, overrides ) );
     SW_EXPECT_TRUE_MSG( overrides.empty(), overrides.c_str() );
 
-    // 루트를 옮기고, 메시를 지우고, 이름표 단 컴포넌트를 더한다.
+    // 루트를 옮기고, 메시를 지우고, 이름 단 컴포넌트를 더한다.
     pInstance->getPrimarySceneComponent()->setLocalPosition( sw::float3( 5.0f, 5.0f, 5.0f ) );
     SW_ASSERT_TRUE( pInstance->removeComponent( pInstance->getComponent<sw::MeshComponent>() ) );
     sw::SceneComponent* pExtra = pInstance->addComponent<sw::SceneComponent>();
@@ -303,7 +303,7 @@ SW_TEST_CASE( PrefabOverridesTest, AddedComponentKeepsItsPlaceBetweenInheritedOn
     sw::string            baseState;
     SW_ASSERT_TRUE( sw::PrefabOverrides::makeBaseState( prefab, baseState ) );
 
-    // 원형은 [루트, Socket, 메시] — 메시를 떼고 이름표 단 씬 컴포넌트를 넣은 뒤 메시를 다시 붙여 [루트, Socket, Extra, 메시] 로 만든다.
+    // 원형은 [루트, Socket, 메시] — 메시를 떼고 이름 단 씬 컴포넌트를 넣은 뒤 메시를 다시 붙여 [루트, Socket, Extra, 메시] 로 만든다.
     sw::GameObjectManager world;
     sw::GameObject*       pInstance = world.createGameObject( sw::hashed_string( "CrateMid" ) );
     SW_ASSERT_TRUE( prefab.applyStateTo( pInstance ) );
@@ -352,7 +352,7 @@ SW_TEST_CASE( PrefabOverridesTest, OverrideOfVanishedComponentIsDroppedWithTheEn
 }
 
 /**
- * @brief [PrefabOverridesTest] 물려받은 컴포넌트의 이름표를 바꾸면 제거 + 추가로 기록된다 — 그 컴포넌트에 프리팹 수정이 더는 닿지 않는다(에디터가 막을 자리)
+ * @brief [PrefabOverridesTest] 물려받은 컴포넌트의 이름을 바꾸면 제거 + 추가로 기록된다 — 그 컴포넌트에 프리팹 수정이 더는 닿지 않는다(에디터가 막을 자리)
  */
 SW_TEST_CASE( PrefabOverridesTest, RenamedInheritedComponentIsRecordedAsRemoveAndAdd )
 {

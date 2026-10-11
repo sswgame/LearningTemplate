@@ -3,7 +3,7 @@
  * @brief FileUtil 의 파일 시스템 질의 — 호출당 시간과 sw 할당자 밖 할당 수.
  * @details 숫자를 **찍기만** 하고 판정하지 않는다(`TaskManagerBenchTest` 와 같은 규칙). 시간은 Release 로, 할당 수는 Debug 로 읽는다(Debug CRT 만
  *          할당 요청 번호를 준다 — 그 밖에서는 "n/a"). sw 할당자 밖 = CRT 요청 수 − sw 할당 수 − 탐침 하나.
- *          `std::filesystem` 이 sw 할당자 밖에서 얼마나 할당하는지를 같은 코드로 다시 재는 자리다.
+ *          `std::filesystem` 이 sw 할당자 밖에서 얼마나 할당하는지를 같은 코드로 다시 측정하는 자리다.
  */
 #include "pch.h"
 
@@ -35,7 +35,7 @@ namespace
             return {};
         }
 
-        /** @brief 지금까지의 (CRT 요청 수, sw 할당 수)입니다. CRT 를 잴 수 없으면 false 입니다. */
+        /** @brief 지금까지의 (CRT 요청 수, sw 할당 수)입니다. CRT 를 측정할 수 없으면 false 입니다. */
         [[nodiscard]] static bool readCounters( const sw::MemoryProfiler& profiler, uint64& outRequestCount, uint64& outSwCount )
         {
             uint64 totalBytes{ 0 };

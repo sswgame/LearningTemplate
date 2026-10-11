@@ -29,9 +29,9 @@ namespace sw
     {
         struct MountUtilInternal
         {
-            /** @brief 하차 자리가 막혔을 때 둘러보는 방향 수입니다(45° 간격). */
+            /** @brief 하차 위치가 막혔을 때 둘러보는 방향 수입니다. 45° 간격입니다. */
             static constexpr int32 kExitProbeCount = 8;
-            /** @brief 겹침을 잴 때 발을 바닥에서 띄우는 높이입니다(미터 — 바닥과 겹치지 않게). */
+            /** @brief 겹침을 측정할 때 발을 바닥에서 띄우는 높이입니다. 단위는 미터이며 바닥과 겹치지 않게 하기 위한 값입니다. */
             static constexpr float32 kGroundClearance = 0.05f;
 
             static GameObjectManager* findManager( const Component& component )
@@ -40,7 +40,7 @@ namespace sw
                 return pOwner != nullptr ? pOwner->getManager() : nullptr;
             }
 
-            /** @brief 탑승 자세 파라미터를 켜거나 끕니다(애니메이터가 없거나 이름이 비면 할 일이 없다). */
+            /** @brief 탑승 자세 파라미터를 켜거나 끕니다. 애니메이터가 없거나 이름이 비어 있으면 아무것도 하지 않습니다. */
             static void setRiderPose( GameObject& rider, const hashed_string& parameter, bool bSeated )
             {
                 if ( parameter.empty() )
@@ -50,7 +50,7 @@ namespace sw
                     pAnimator->getParameters().setFloat( parameter, bSeated ? 1.0f : 0.0f );
             }
 
-            /** @brief 탑승자의 걷기를 멈추거나 켭니다 — 폰 이동과 캐릭터 컨트롤러(꺼 두면 물리 캡슐이 사라져 탈것과 부딪치지 않는다). */
+            /** @brief 탑승자의 걷기를 멈추거나 켭니다. 폰 이동과 캐릭터 컨트롤러가 대상이며, 꺼 두면 물리 캡슐이 사라져서 탈것과 부딪치지 않습니다. */
             static void setRiderMovementSuspended( GameObject& rider, bool bSuspended )
             {
                 CharacterPawnMovementComponent* pMovement = rider.getComponent<CharacterPawnMovementComponent>();
@@ -61,7 +61,7 @@ namespace sw
                     pController->setActive( bSuspended == false );
             }
 
-            /** @brief 탑승자 캡슐을 @p feet 에 세우면 무엇과 겹치는지입니다. 물리 씬 · 컨트롤러가 없으면 비었다고 봅니다. */
+            /** @brief 탑승자 캡슐을 @p feet 에 두었을 때 무엇과 겹치는지 구합니다. 물리 씬이나 컨트롤러가 없으면 비어 있는 것으로 봅니다. */
             static bool isSpotFree( GameObjectManager& manager, const GameObject& rider, const float3& feet )
             {
                 const IPhysicsScene3D*              pScene      = manager.getScenePhysics().findScene3D();
@@ -78,7 +78,7 @@ namespace sw
                 return pScene->overlapShape( capsule, center, quaternion{}, filter, listBody ) == 0;
             }
 
-            /** @brief 내릴 자리 — 좌석의 하차 자리, 막혔으면 탈것 둘레 여덟 방향(같은 거리) 중 처음 빈 곳, 다 막혔으면 하차 자리 그대로. */
+            /** @brief 내릴 위치를 구합니다. 좌석의 하차 위치를 쓰고, 막혀 있으면 탈것 둘레 여덟 방향(같은 거리) 중 처음 빈 곳을 쓰고, 다 막혀 있으면 하차 위치를 그대로 씁니다. */
             static float3 findExitSpot( GameObjectManager& manager, const GameObject& rider, const VehicleSeatComponent& seat, const SceneComponent& vehicleRoot )
             {
                 const float4x4 vehicleWorld = vehicleRoot.getWorldMatrix();
@@ -124,7 +124,7 @@ namespace sw
         if ( MathUtil::sqrt( deltaX * deltaX + deltaZ * deltaZ ) > seat.getEnterDistance() )
             return MountResult::TooFar;
 
-        // 운전석은 빙의를 넘긴다 — 넘길 조종자와 받을 폰이 있어야 한다.
+        // 운전석은 빙의를 넘긴다. 넘길 조종자와 받을 폰이 있어야 한다.
         PawnComponent*       pVehiclePawn = seat.isDriverSeat() ? pVehicle->getComponent<PawnComponent>() : nullptr;
         ControllerComponent* pController  = static_cast<ControllerComponent*>( pManager->resolveComponent( riderPawn.getController() ) );
         if ( seat.isDriverSeat() && pVehiclePawn == nullptr )
@@ -132,7 +132,7 @@ namespace sw
         if ( seat.isDriverSeat() && pController == nullptr )
             return MountResult::NotPossessed;
 
-        // 소켓 변환 — 탈것 외형의 소켓, 이름이 비면 좌석 오프셋(탈것 루트 기준).
+        // 소켓 변환은 탈것 외형의 소켓을 쓴다. 이름이 비어 있으면 좌석 오프셋(탈것 루트 기준)을 쓴다.
         float4x4 socketInVehicle = float4x4::makeTranslation( seat.getSeatOffset() );
         if ( seat.getSocketName().empty() == false )
         {
@@ -150,7 +150,7 @@ namespace sw
             return MountResult::NoSocket;
         }
         Internal::setRiderPose( *pRider, seat.getRiderPoseParameter(), true );
-        // 탑승자가 쓰러지면 강제 하차 — 규칙이라 타는 순간 붙인다.
+        // 탑승자가 쓰러지면 강제로 하차시킨다. 규칙이므로 타는 순간 붙인다.
         if ( pRider->getComponent<RiderDownWatcherComponent>() == nullptr )
             (void)pRider->addComponent<RiderDownWatcherComponent>();
 
@@ -176,8 +176,8 @@ namespace sw
         SceneComponent* pVehicleRoot = pVehicle != nullptr ? pVehicle->getPrimarySceneComponent() : nullptr;
         SceneComponent* pRiderRoot   = pRider->getPrimarySceneComponent();
 
-        // 소켓에서 뗀다(지금 월드 자리를 지킨다). 강제(쓰러짐)면 물리 바디(래그돌)가 있으면 물리로 떨어지고 걷기를 켜지 않는다.
-        // 강제가 아니면 하차 자리로 옮긴다.
+        // 소켓에서 분리한다. 지금 월드 위치를 유지한다. 강제(쓰러짐)이고 물리 바디(래그돌)가 있으면 물리로 떨어지고 걷기를 켜지 않는다.
+        // 강제가 아니면 하차 위치로 옮긴다.
         SocketBindingComponent* pBinding           = pRider->getComponent<SocketBindingComponent>();
         const bool              bReleasedToPhysics = bForced && pBinding != nullptr && pBinding->release( SocketReleaseMode::Physics );
         if ( pBinding != nullptr && bReleasedToPhysics == false )
@@ -195,7 +195,7 @@ namespace sw
         if ( bReleasedToPhysics == false )
             Internal::setRiderMovementSuspended( *pRider, false );
 
-        // 운전석이면 탔을 때의 조종자가 탑승자를 다시 쥐고(탈것 폰은 놓여 의도 0 — 선다), 탈 때 탈것을 쥐고 있던 조종자(말 AI)가 탈것을 다시 쥔다.
+        // 운전석이면 탔을 때의 조종자가 탑승자를 다시 쥔다. 탈것 폰은 놓여서 의도가 0 이 되므로 멈춰 선다. 탈 때 탈것을 쥐고 있던 조종자(말 AI)는 탈것을 다시 쥔다.
         ControllerComponent* pController                = pSeat->_occupantController.isValid()
                                                             ? static_cast<ControllerComponent*>( pManager->resolveComponent( pSeat->_occupantController ) )
                                                             : nullptr;
@@ -251,7 +251,7 @@ namespace sw
             const float32 distance        = MathUtil::sqrt( deltaX * deltaX + deltaZ * deltaZ );
             if ( distance > pSeat->getEnterDistance() )
                 continue;
-            // 운전석 먼저, 같은 종류끼리는 가까운 것.
+            // 운전석을 먼저 보고, 같은 종류끼리는 가까운 것을 먼저 본다.
             const bool bBetter = ( pSeat->isDriverSeat() && bBestIsDriver == false ) || ( pSeat->isDriverSeat() == bBestIsDriver && distance < bestDistance );
             if ( pBest == nullptr || bBetter )
             {

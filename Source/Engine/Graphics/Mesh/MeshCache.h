@@ -1,6 +1,6 @@
 /**
  * @file MeshCache.h
- * @brief 메시 에셋(`.mesh`)을 경로로 나눠 주는 표와, 그 표를 에셋 캐시 등록부에 보이는 창구입니다.
+ * @brief 메시 에셋(`.mesh`)을 경로로 나눠 주는 표와, 그 표를 에셋 캐시 레지스트리에 보이는 창구입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -16,7 +16,7 @@ namespace sw
 
     /**
      * @class MeshCache
-     * @brief 메시 에셋을 경로로 나눠 주고, 에셋 캐시 등록부(`AssetManager`)에 보여 핫 리로드 · 종료 · 진단이 다른 캐시와 같은 길을 탑니다.
+     * @brief 메시 에셋을 경로로 나눠 주고, 에셋 캐시 레지스트리(`AssetManager`)에 보여 핫 리로드 · 종료 · 진단이 다른 캐시와 같은 길을 탑니다.
      * @details 표는 프로세스에 하나이고(Engine.dll 안) 약한 참조입니다 — `MeshUtil::acquirePrimitive` · `SpriteClipCache` 와 같은 모양이라
      *          마지막 사용자가 놓으면 메시도 사라지고, 디바이스가 내려갈 때 이 표가 붙든 GPU 자원이 없습니다. 같은 경로는 같은 `Mesh` 라서
      *          배치 키(메시 포인터)가 갈리지 않습니다. 씬 로드 워커에서 불려도 됩니다(잠급니다).
@@ -39,9 +39,9 @@ namespace sw
          */
         [[nodiscard]] static bool reloadShared( string_view path, IRHIDevice* pDevice );
 
-        /** @brief 등록부의 종류 이름 — `AssetManager::getAssetCache<T>()` 가 이것으로 찾습니다. */
+        /** @brief 레지스트리의 종류 이름 — `AssetManager::getAssetCache<T>()` 가 이것으로 찾습니다. */
         static constexpr const utf8* kAssetKindName = "Mesh";
-        /** @brief 등록부의 종류 이름("Mesh")입니다. 에디터 에셋 종류 표가 이 이름으로 핫 리로드를 보냅니다. */
+        /** @brief 레지스트리의 종류 이름("Mesh")입니다. 에디터 에셋 종류 표가 이 이름으로 핫 리로드를 보냅니다. */
         const utf8* getAssetKindName() const override { return kAssetKindName; }
         /** @brief 그 경로의 메시를 누가 쥐고 있는지 반환합니다. */
         bool isCached( string_view relativePath ) const override;

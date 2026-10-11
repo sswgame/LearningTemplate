@@ -32,7 +32,7 @@ namespace sw
                 return pOwner != nullptr && pOwner->isPendingDestroy() == false;
             }
 
-            /** @brief 지난 자리와 지금 자리로 속도를 잽니다(한계로 묶음). 첫 프레임은 0 입니다. */
+            /** @brief 지난 자리와 지금 자리로 속도를 측정합니다(한계로 묶음). 첫 프레임은 0 입니다. */
             static float3 computeVelocity( const float3& position, const float3& lastPosition, bool bHasLast, float32 deltaSeconds )
             {
                 if ( bHasLast == false || deltaSeconds <= 1e-5f )
@@ -188,7 +188,7 @@ namespace sw
             _listEmitterSnapshot.push_back( pEmitter );
         }
 
-        // 가림 — 프레임마다 몇 개씩 돌아가며 잰다(엔진이 부드럽게 따라간다).
+        // 가림 — 프레임마다 몇 개씩 돌아가며 측정한다(엔진이 부드럽게 따라간다).
         PhysicsAudioOcclusionQuery  physicsQuery;
         const IAudioOcclusionQuery* pQuery = _pOcclusionOverride;
         if ( pQuery == nullptr && pScene3D != nullptr )

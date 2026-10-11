@@ -14,10 +14,10 @@ namespace sw
     {
         struct NavMeshGeometryInternal
         {
-            /** @brief 색인 칸 수의 상한입니다. 넘으면 칸을 키운다. */
+            /** @brief 색인 셀 수의 상한입니다. 넘으면 셀을 키웁니다. */
             static constexpr int64 kMaxIndexCellCount = 1 << 20;
 
-            /** @brief 삼각형 하나가 덮는 색인 칸 범위(양 끝 포함)입니다. */
+            /** @brief 삼각형 하나가 덮는 색인 셀 범위입니다(양 끝 포함). */
             struct CellRange
             {
                 int32 _minX{ 0 };
@@ -33,7 +33,7 @@ namespace sw
                 return StringUtil::computeHash64( static_cast<const utf8*>( pData ), size, false, hash );
             }
 
-            /** @brief 셰이프 점들의 로컬 경계 상자 반 크기 · 가운데입니다. 점이 없으면 false 입니다. */
+            /** @brief 셰이프 점들의 로컬 경계 상자의 반 크기와 중심을 구합니다. 점이 없으면 false 를 반환합니다. */
             static bool computePointBox( const vector<float3>& listPoint, float3& outCenter, float3& outHalfExtents )
             {
                 if ( listPoint.empty() )
@@ -168,7 +168,7 @@ namespace sw
             float3{ halfExtents._x,  halfExtents._y,  halfExtents._z},
             float3{-halfExtents._x,  halfExtents._y,  halfExtents._z},
         };
-        // 바깥을 보는 면(위에서 보아 시계 반대 — 윗면의 법선이 +Y). 베이크하는 쪽은 법선으로 경사를 잰다.
+        // 바깥을 보는 면이다(위에서 보아 시계 반대 방향이며, 윗면의 법선이 +Y 다). 베이크하는 쪽은 법선으로 경사를 측정한다.
         const uint32 arrIndex[36] = {
             4, 7, 6, 4, 6, 5, // 위
             0, 1, 2, 0, 2, 3, // 아래
@@ -251,7 +251,7 @@ namespace sw
         _indexHeight           = static_cast<int32>( spanZ / size ) + 1;
         const size_t cellCount = static_cast<size_t>( _indexWidth ) * static_cast<size_t>( _indexHeight );
 
-        // 두 번 훑는다 — 칸마다 수를 세고(앞자리 합으로 시작), 다시 훑으며 채운다. 칸마다 vector 를 두지 않는다.
+        // 두 번 훑는다. 셀마다 수를 세고(앞 셀들의 합으로 시작), 다시 훑으며 채운다. 셀마다 vector 를 두지 않는다.
         _listCellStart.assign( cellCount + 1, 0 );
         const uint32                triangleCount = getTriangleCount();
         vector<Internal::CellRange> listCellRange( triangleCount );
@@ -327,7 +327,7 @@ namespace sw
                 }
             }
         }
-        // 여러 칸에 걸친 삼각형은 한 번만 — 정렬 뒤 겹친 것을 지운다.
+        // 여러 셀에 걸친 삼각형은 한 번만 남긴다. 정렬한 뒤 겹친 것을 지운다.
         std::sort( outListTriangle.begin(), outListTriangle.end() );
         outListTriangle.erase( std::unique( outListTriangle.begin(), outListTriangle.end() ), outListTriangle.end() );
     }

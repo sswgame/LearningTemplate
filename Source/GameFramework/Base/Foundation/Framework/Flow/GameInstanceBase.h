@@ -1,6 +1,6 @@
 /**
  * @file GameInstanceBase.h
- * @brief IGame 공통 수명주기 + BootstrapConfig 배선과 인스턴스 상태 스냅샷 직렬화입니다.
+ * @brief IGame 의 공통 수명주기와 BootstrapConfig 배선, 인스턴스 상태 스냅샷 직렬화를 담당합니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -39,17 +39,18 @@ namespace sw
         virtual ~GameInstanceBase() override;
 
         /**
-         * @brief configureBootstrap 으로 부트스트랩을 채우고(게임 프리셋 `Config/Game/<게임>.json` 의 팩 루트가 있으면 그것이 우선) gamesettings 를 읽은 뒤 onInitialize 를 부릅니다.
-         * @details 읽은 `GameSettings` 를 게임 서비스로 묶고(`game::getService<GameSettings>()`), 다국어(`_localizationProject`)와
-         *          게임플레이 입력 맵(`_inputMap`)을 여기서 적용합니다. 커스텀 칸을 읽는 킷 코드는
-         *          이 서비스로 읽습니다 — 서비스로 묶지 않으면 제품에서 늘 기본값을 씁니다.
+         * @brief configureBootstrap 으로 부트스트랩을 채우고 gamesettings 를 읽은 뒤 onInitialize 를 부릅니다.
+         * @details 게임 프리셋 `Config/Game/<게임>.json` 에 팩 루트가 있으면 그것이 우선한다.
+         *          읽은 `GameSettings` 는 게임 서비스(`game::getService<GameSettings>()`)로 등록하고, 다국어(`_localizationProject`)와
+         *          게임플레이 입력 맵(`_inputMap`)도 여기서 적용한다.
+         *          커스텀 칸을 읽는 킷 코드는 이 서비스로 읽는다. 서비스로 등록하지 않으면 제품에서 늘 기본값을 쓴다.
          */
         bool initialize( IWindow* pWindow, IRHIDevice* pRHIDevice ) final;
         /** @brief onShutdown 뒤에 `GameSettings` 서비스를 풀고 윈도우 · RHI 포인터를 끊습니다. */
         void shutdown() final;
         /**
          * @brief 끝난 씬 로드마다 `SceneLoadCompletedEvent` 를 낸 뒤 onUpdate 로 한 프레임을 넘깁니다.
-         * @details 그 앞에 화면 전환(페이드)을 넘기고 로딩 화면을 갱신합니다 — 씬 로드 요청이 남았거나 씬 매니저가 전환 중이면 로딩 중이다.
+         * @details 그 앞에 화면 전환(페이드)을 진행하고 로딩 화면을 갱신한다. 씬 로드 요청이 남았거나 씬 매니저가 전환 중이면 로딩 중으로 본다.
          */
         void update( float32 deltaTime ) final;
 
@@ -91,9 +92,9 @@ namespace sw
          * @brief `getFirstScene()` 의 로드를 요청합니다. 열 씬이 없거나 요청이 실패하면 false 입니다(실패는 알립니다).
          * @details 요청이 들어가면 `SceneLoadRequestedEvent` 를 내고, 그 로드가 끝난(활성 씬이 됐거나 실패한) 뒤의 첫 `update` 가
          *          `SceneLoadCompletedEvent` 를 냅니다.
-         *          인스턴스가 살아 있는 월드 위에 다시 섰으면(게임 모듈 핫 리로드 · 백엔드 교체 — `initialize` 때 이미 활성 씬이 있었다) 요청하지 않고
-         *          false 입니다. 그 씬은 곧 스냅샷으로 되살아나거나(핫 리로드) 에디터가 연 씬이다 — 언리얼 핫 리로드도 `GameInstance::Init` 을
-         *          다시 부르지 않는다.
+         *          인스턴스가 살아 있는 월드 위에 다시 섰으면 요청하지 않고 false 를 반환한다.
+         *          게임 모듈 핫 리로드나 백엔드 교체가 그 경우이며, `initialize` 때 이미 활성 씬이 있었다는 뜻이다.
+         *          그 씬은 곧 스냅샷으로 되살아나거나 에디터가 연 씬이다. 언리얼의 핫 리로드도 `GameInstance::Init` 을 다시 부르지 않는다.
          */
         [[nodiscard]] bool requestFirstScene();
         /** @brief `getEntranceScene()` 의 로드를 요청합니다. 타이틀 화면이 "시작" 에서 부릅니다. 레벨 이벤트는 `requestFirstScene` 과 같습니다. */
@@ -102,11 +103,12 @@ namespace sw
         // --------------------------------------------------------------------------
         // 화면 전환 · 로딩 화면
         // --------------------------------------------------------------------------
-        /** @brief 화면 페이드 · 전환 순서(FadeOut → 실행 → FadeIn)입니다. 페이드 알파는 로딩 화면 제어가 전체 화면 검은 패널로 그린다. */
+        /** @brief 화면 페이드 · 전환 순서(FadeOut → 실행 → FadeIn)를 맡습니다. 페이드 알파는 로딩 화면 제어가 전체 화면 검은 패널로 그립니다. */
         ScreenTransitionManager& getScreenTransition() { return _screenTransition; }
         /**
-         * @brief 로딩 화면 제어입니다 — 씬 로드를 요청하면(`requestFirstScene` · `requestEntranceScene`) gamesettings 의 `_loadingScreen` 문서를 Loading 층에 띄우고,
-         *        로드가 끝나고 최소 표시 시간이 지나면 닫으며 페이드 인을 겁니다. UI 시스템이 없으면(전용 서버) 아무것도 띄우지 않는다.
+         * @brief 로딩 화면을 제어합니다.
+         * @details `requestFirstScene` 이나 `requestEntranceScene` 으로 씬 로드를 요청하면 gamesettings 의 `_loadingScreen` 문서를 Loading 층에 띄운다.
+         *          로드가 끝나고 최소 표시 시간이 지나면 화면을 닫고 페이드 인을 건다. UI 시스템이 없으면(전용 서버) 아무것도 띄우지 않는다.
          */
         LoadingScreenController& getLoadingScreen() { return *_pLoadingScreen; }
 
@@ -114,8 +116,10 @@ namespace sw
         // 네트워크 세션
         // --------------------------------------------------------------------------
         /**
-         * @brief 이 인스턴스의 네트워크 역할(서버 · 클라이언트 · 없음)입니다 — 실행 인자(`-gv_netListenPort` · `-gv_netConnectAddress`)가 정하고, `initialize` 가 `onInitialize` 앞에서 엽니다.
-         * @details 키트 · 게임은 `getNetSession().getRouter()` 에 메시지 처리기를 달고, `update` 가 프레임마다 `onUpdate` 앞에서 사건 · 메시지를 나눠 줍니다.
+         * @brief 이 인스턴스의 네트워크 역할(서버, 클라이언트, 없음)을 맡는 세션입니다.
+         * @details 역할은 실행 인자 `-gv_netListenPort` 와 `-gv_netConnectAddress` 가 정하고, `initialize` 가 `onInitialize` 앞에서 세션을 연다.
+         *          키트와 게임은 `getNetSession().getRouter()` 에 메시지 처리기를 단다.
+         *          `update` 는 프레임마다 `onUpdate` 앞에서 이벤트와 메시지를 처리기에 나눠 준다.
          */
         GameNetSession& getNetSession() { return *_pNetSession; }
 
@@ -141,14 +145,15 @@ namespace sw
 
         /**
          * @brief 상태 스냅샷 직렬화 직전에 부르는 준비 훅입니다.
-         * @details 부르기 전에 `getComponentStateStore()` 를 비우고, `register*` 로 올린 타입의 상태를 싣고 세운 것을 걷습니다. 그 밖의 상태는 여기서
-         *          `getComponentStateStore().capture<T>( manager )` 로 싣습니다. 한 번의 캡처에 두 번 불릴 수 있습니다(크기 묻기 + 채우기).
+         * @details 부르기 전에 `getComponentStateStore()` 를 비우고, `register*` 로 올린 타입의 상태를 싣고 세운 것을 걷는다.
+         *          그 밖의 상태는 여기서 `getComponentStateStore().capture<T>( manager )` 로 싣는다.
+         *          한 번의 캡처에 두 번 불릴 수 있다(크기 묻기와 채우기).
          */
         virtual void onBeforeStateSerialize() {}
         /**
          * @brief 상태 스냅샷 역직렬화 직후에 부르는 복원 훅입니다.
-         * @details 씬 오브젝트가 다시 서고 `register*` 로 올린 타입이 상태를 돌려받은 뒤입니다. 그 밖에 실어 둔 상태는
-         *          `getComponentStateStore().restore<T>( manager )` 로 넘깁니다(이 훅이 끝나면 저장소를 비웁니다).
+         * @details 씬 오브젝트가 다시 서고 `register*` 로 올린 타입이 상태를 돌려받은 뒤에 불린다.
+         *          그 밖에 실어 둔 상태는 `getComponentStateStore().restore<T>( manager )` 로 넘긴다. 이 훅이 끝나면 저장소를 비운다.
          */
         virtual void onAfterStateDeserialize() {}
 
@@ -157,9 +162,9 @@ namespace sw
 
         /**
          * @brief PROPERTY 가 아닌 상태를 가진 컴포넌트 타입 하나를 상태 스냅샷에 올립니다 — 파생 생성자에서 한 줄로 부릅니다.
-         * @details 상태 저장 전에 그 타입마다 `writeState` 를 싣고(`ComponentStateStore::capture`), 복원 뒤 `restoreState` 로 돌려줍니다(`restore`).
-         *          등록은 함수 포인터라 게임 모듈과 수명이 같다 — 핫 리로드가 새 인스턴스를 만들면 새 생성자가 다시 등록한다.
-         *          부르는 .cpp 는 `GameObjectManager.h` 를 include 합니다(순회 템플릿이 그때 만들어진다).
+         * @details 상태를 저장하기 전에 그 타입마다 `writeState` 를 싣고(`ComponentStateStore::capture`), 복원한 뒤 `restoreState` 로 돌려준다(`restore`).
+         *          등록은 함수 포인터라 게임 모듈과 수명이 같다. 핫 리로드가 새 인스턴스를 만들면 새 생성자가 다시 등록한다.
+         *          부르는 .cpp 는 `GameObjectManager.h` 를 include 해야 한다. 순회 템플릿이 그때 인스턴스화된다.
          */
         template <typename TComponent>
         void registerStatefulComponent()
@@ -171,8 +176,9 @@ namespace sw
         }
         /**
          * @brief 상태 저장 전에 세운 런타임 오브젝트를 걷을 컴포넌트 타입 하나를 올립니다(`despawnViews()` 를 부른다).
-         * @details 세운 것은 상태의 모습일 뿐이다 — 스냅샷에 실으면 복원된 것이 다시 세운 것과 겹친다. 걷어 두면(삭제 대기는 스냅샷이 건너뛴다)
-         *          다시 만든 컴포넌트가 시작하며 세우고, 남은 컴포넌트는 다음 틱에 다시 세운다. 걷기는 모든 타입을 실은 뒤에 돈다.
+         * @details 세운 것은 상태에서 파생된 결과일 뿐이라, 스냅샷에 실으면 복원된 것이 다시 세운 것과 겹친다.
+         *          걷어 두면(삭제 대기는 스냅샷이 건너뛴다) 다시 만든 컴포넌트가 시작하면서 세우고, 남은 컴포넌트는 다음 틱에 다시 세운다.
+         *          걷기는 모든 타입의 상태를 실은 뒤에 돈다.
          */
         template <typename TComponent>
         void registerViewOwner()
@@ -181,7 +187,7 @@ namespace sw
             type._pDespawn = &GameInstanceBase::despawnViewsOf<TComponent>;
             _listStatefulType.push_back( type );
         }
-        /** @brief 디렉터(`GameDirectorComponent` 파생) 하나를 올립니다 — 상태를 싣고 돌려주며, 저장 전에 세운 것을 걷습니다. */
+        /** @brief 디렉터(`GameDirectorComponent` 파생) 하나를 올립니다. 상태를 싣고 돌려주며, 저장하기 전에 세운 것을 걷습니다. */
         template <typename TDirector>
         void registerDirector()
         {
@@ -198,16 +204,16 @@ namespace sw
         enum class SceneObjectFormat : uint8
         {
             WithIdentity,   ///< 오브젝트마다 id + 상태. 다른 실행에서 찍은 것이라 id 는 읽고 버립니다(새 id).
-            RestoreIdentity ///< 오브젝트마다 id + 상태. 같은 프로세스에서 찍었으므로 원래 id 를 되살립니다(핫 리로드).
+            RestoreIdentity ///< 오브젝트마다 id + 상태. 같은 프로세스에서 찍었으므로 원래 id 를 복원합니다(핫 리로드).
         };
 
         /**
          * @brief 씬 안의 모든 유효 GameObject 를 바이너리로 직렬화합니다.
-         * @details 오브젝트마다 상태 앞에 런타임 id(`ObjectIdentity`)를 싣습니다. 같은 프로세스에서 되살리면(핫 리로드)
+         * @details 오브젝트마다 상태 앞에 런타임 id(`ObjectIdentity`)를 싣습니다. 같은 프로세스에서 복원하면(핫 리로드)
          *          `GameObjectHandle` · `ComponentHandle` 이 그 너머로도 이어집니다.
          */
         [[nodiscard]] bool serializeSceneObjects( vector<uint8>& outBytes );
-        /** @brief 바이너리 데이터로부터 씬 GameObject 들을 복원합니다. @p format 은 id 가 실렸는지, 되살릴지를 알려 줍니다. */
+        /** @brief 바이너리 데이터로부터 씬 GameObject 들을 복원합니다. @p format 은 id 가 실렸는지, 복원할지를 알려 줍니다. */
         [[nodiscard]] bool deserializeSceneObjects( const uint8* pData, size_t size, SceneObjectFormat format );
 
         BootstrapConfig _bootstrap;  ///< 팩 루트와 gamesettings

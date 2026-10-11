@@ -62,7 +62,7 @@ namespace sw
             }
             case CrumbleState::Shaking:
             {
-                // 흔들리기 시작하면 내려와도 무너진다(되돌리지 않는다).
+                // 흔들리기 시작하면 내려와도 무너진다. 되돌리지 않는다.
                 if ( _stepsInState >= GenreGimmickUtil::toSteps( _crumbleDelay, 1 ) )
                 {
                     _state        = CrumbleState::Fallen;
@@ -119,7 +119,7 @@ namespace sw
         GravityComponent* pGravity = target.getComponent<GravityComponent>();
         if ( pGravity != nullptr )
             pGravity->jump( _launchVelocity._y );
-        // 캐릭터 컨트롤러는 쏜 속도를 그대로 받는다(수직은 덮고, 수평은 다시 디딜 때까지).
+        // 캐릭터 컨트롤러는 쏜 속도를 그대로 받는다. 수직 속도는 덮어쓰고, 수평 속도는 다시 디딜 때까지 유지한다.
         CharacterControllerComponent* pController = target.getComponent<CharacterControllerComponent>();
         if ( pController != nullptr )
             pController->launch( _launchVelocity );
@@ -144,7 +144,7 @@ namespace sw
         const GimmickSensorComponent* pSensor  = pOwner != nullptr ? pOwner->getComponent<GimmickSensorComponent>() : nullptr;
         if ( _bMoveOccupants == false || pManager == nullptr || pSensor == nullptr )
             return;
-        // 겹친 것이 제 틱에서 쓴 자리 위에 더한다 — 틱 뒤 게임 스레드에서(같은 틱에서 쓰면 그쪽 쓰기와 순서가 정해지지 않는다).
+        // 겹친 것이 자기 틱에서 쓴 위치 위에 더한다. 틱 뒤의 게임 스레드에서 처리한다. 같은 틱에서 쓰면 그쪽의 쓰기와 순서가 정해지지 않기 때문이다.
         const ComponentHandle self     = getHandle();
         const float3          offset   = _velocity * deltaTime;
         const float3          velocity = _velocity;
@@ -160,7 +160,7 @@ namespace sw
                 GameObject*                   pOccupant   = pManager->resolveGameObject( handle );
                 CharacterControllerComponent* pController = pOccupant != nullptr ? pOccupant->getComponent<CharacterControllerComponent>() : nullptr;
                 SceneComponent*               pScene      = pOccupant != nullptr ? pOccupant->getPrimarySceneComponent() : nullptr;
-                // 컨트롤러는 면 속도로 — 트랜스폼을 옮기면 순간이동이라 벽을 지난다.
+                // 컨트롤러에는 면 속도로 넘긴다. 트랜스폼을 직접 옮기면 순간이동이 되어 벽을 통과하기 때문이다.
                 if ( pController != nullptr )
                     pController->addSurfaceVelocity( velocity );
                 else if ( pScene != nullptr )

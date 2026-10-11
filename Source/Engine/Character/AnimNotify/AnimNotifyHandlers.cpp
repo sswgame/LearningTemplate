@@ -46,7 +46,7 @@ namespace sw
                 return engine::getBoundEngineServices()._pAudioSystem;
             }
 
-            /** @class PlaySoundHandler @brief 소켓 자리에서 소리를 냅니다(지금 오디오는 위치를 받지 않는다 — 자리는 기록에 남긴다). */
+            /** @class PlaySoundHandler @brief 소켓 위치에서 소리를 냅니다(현재 오디오는 위치를 받지 않으므로, 위치는 기록에만 남깁니다). */
             class PlaySoundHandler final : public IAnimNotifyHandler
             {
             public:
@@ -70,7 +70,7 @@ namespace sw
                 };
             };
 
-            /** @class SpawnPrefabHandler @brief 소켓 변환에 프리팹을 스폰합니다(이펙트 · 탄피). `attach` 면 오브젝트에 붙입니다. */
+            /** @class SpawnPrefabHandler @brief 소켓 변환에 프리팹을 스폰합니다(이펙트, 탄피). `attach` 면 오브젝트에 붙입니다. */
             class SpawnPrefabHandler final : public IAnimNotifyHandler
             {
             public:
@@ -97,7 +97,7 @@ namespace sw
                         pScene->setWorldTransform( spawnWorld );
                         SceneComponent* pOwnerRoot = context._owner.getPrimarySceneComponent();
                         if ( context._entry.getBoolParam( s_attach, false ) && pOwnerRoot != nullptr )
-                            (void)pScene->attachToComponent( pOwnerRoot, AttachRule::KeepWorld ); // 붙일 수 없는 부모면 월드 자리에 따로 둔다
+                            (void)pScene->attachToComponent( pOwnerRoot, AttachRule::KeepWorld ); // 붙일 수 없는 부모면 월드 위치에 따로 둔다.
                     }
                     record( context, hashed_string( prefab ), position, pSpawned != nullptr ? pSpawned->getObjectID() : 0, AnimNotifyPhase::Instant );
                 }
@@ -123,7 +123,7 @@ namespace sw
                     static const hashed_string s_sound( "sound" );
                     const float3               foot     = context._component.findSocketWorldPosition( context._entry.getNameParam( s_socket ) );
                     const float32              distance = MathUtil::max( context._entry.getFloatParam( s_distance, 0.5f ), 0.01f );
-                    // 발 위 반 거리에서 아래로 — 발이 바닥에 조금 묻혀 있어도 바닥을 맞힌다.
+                    // 발 위 반 거리에서 아래로 쏜다. 발이 바닥에 조금 묻혀 있어도 바닥을 맞힌다.
                     const float3    from = foot + float3{ 0.0f, distance * 0.5f, 0.0f };
                     const float3    to   = foot - float3{ 0.0f, distance, 0.0f };
                     CharacterRayHit hit;
@@ -151,8 +151,8 @@ namespace sw
 
             /**
              * @class HitWindowHandler
-             * @brief 구간 동안 두 소켓 사이 칼날을 프레임마다 쓸어 맞힙니다 — 칼날 위 표본점마다 지난 자리 → 지금 자리, 그리고 지금의 칼날 자체.
-             *        한 구간에 오브젝트 하나는 한 번만 맞습니다(언리얼 근접 판정 창 · AnimNotifyState 의 trace).
+             * @brief 구간 동안 두 소켓 사이 칼날을 프레임마다 쓸어서 맞힙니다. 칼날 위 샘플 점마다 지난 위치에서 현재 위치까지, 그리고 현재의 칼날 자체를 검사합니다.
+             *        한 구간에 오브젝트 하나는 한 번만 맞습니다(언리얼의 근접 판정 창과 AnimNotifyState 의 trace 에 해당합니다).
              */
             class HitWindowHandler final : public IAnimNotifyHandler
             {
@@ -161,7 +161,7 @@ namespace sw
                 bool                                       supportsState() const override { return true; }
                 void                                       onNotify( AnimNotifyContext& context ) const override
                 {
-                    // 길이 없는 판정 — 지금 칼날 하나만 잰다.
+                    // 길이 없는 판정이면 현재 칼날 하나만 측정한다.
                     AnimNotifyStateData data{};
                     AnimNotifyContext   stateContext{ context._component, context._owner, context._entry, context._fired, &data, context._deltaSeconds };
                     collectBlade( stateContext, data._listPreviousPoint );
@@ -195,7 +195,7 @@ namespace sw
                     }
                 }
 
-                /** @brief 지난 자리 → 지금 자리를 쓸고 지금으로 넘깁니다. */
+                /** @brief 지난 위치에서 현재 위치까지 쓸고, 현재 위치를 다음 기준으로 넘깁니다. */
                 static void trace( AnimNotifyContext& context )
                 {
                     if ( context._pState == nullptr )
@@ -289,7 +289,7 @@ namespace sw
                 };
             };
 
-            /** @class GameplayEventHandler @brief 같은 오브젝트의 켜진 컴포넌트에 `onAnimNotify` 를 보냅니다(구간이면 시작 · 끝). */
+            /** @class GameplayEventHandler @brief 같은 오브젝트의 켜진 컴포넌트에 `onAnimNotify` 를 보냅니다(구간이면 시작과 끝). */
             class GameplayEventHandler final : public IAnimNotifyHandler
             {
             public:
@@ -324,7 +324,7 @@ namespace sw
 
             /**
              * @class MotionWarpHandler
-             * @brief 구간 동안 같은 오브젝트의 `MotionWarpingComponent` 에 워프 창을 엽니다 — 창 끝(구간 끝)에 이름 붙은 목표에 닿게 루트 모션을 휩니다.
+             * @brief 구간 동안 같은 오브젝트의 `MotionWarpingComponent` 에 워프 창을 엽니다. 창 끝(구간 끝)에서 이름 붙은 목표에 닿도록 루트 모션을 휩니다.
              */
             class MotionWarpHandler final : public IAnimNotifyHandler
             {

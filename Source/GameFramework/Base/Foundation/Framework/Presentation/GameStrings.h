@@ -1,6 +1,6 @@
 /**
  * @file GameStrings.h
- * @brief 게임 코드가 부르는 다국어 창구입니다 — 엔진 `LocalizationManager` 를 게임 서비스로 부릅니다.
+ * @brief 게임 코드가 부르는 다국어 함수를 정의합니다. 엔진 `LocalizationManager` 를 게임 서비스로 부릅니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -24,7 +24,7 @@ namespace sw
         using LanguageChangedCallback = sw::Delegate<void( string_view oldLanguage, string_view newLanguage )>;
 
         /**
-         * @brief 게임의 로컬라이제이션 프로젝트를 올리고(앞의 게임 프로젝트는 내린다) 명령줄 · 기본 · 폴백 언어를 활성화합니다.
+         * @brief 게임의 로컬라이제이션 프로젝트를 올리고 명령줄, 기본, 폴백 언어를 활성화합니다. 앞의 게임 프로젝트는 내립니다.
          * @param projectPath 프로젝트 파일(`<팩루트>/data/localization/<게임>.locproject.json`)
          * @param defaultLanguage 기본 활성 언어 코드 (예: "ko_KR")
          * @param fallbackLanguage 대체(Fallback) 언어 코드 (예: "en_US")
@@ -61,7 +61,7 @@ namespace sw
         /** @brief 등록된 언어 변경 콜백을 해제합니다. */
         static void unregisterLanguageChangedCallback( uint32 callbackID );
 
-        /** @brief 게임 프로젝트를 내립니다(엔진 문자열은 남는다). */
+        /** @brief 게임 프로젝트를 내립니다. 엔진 문자열은 남습니다. */
         static void clear();
     };
 } // namespace sw

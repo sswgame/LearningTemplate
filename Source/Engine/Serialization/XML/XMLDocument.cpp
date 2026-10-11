@@ -124,7 +124,7 @@ namespace sw
                 result.append( line.data(), listAttrEnd[0] );
 
                 // 이어지는 속성은 **첫 속성과 같은 열**에 세운다. `<TagName ` 만큼의 폭을 들여쓰기
-                // 뒤부터 재서 공백으로 메우므로, 탭 폭이 몇이든 세로줄이 맞는다.
+                // 뒤부터 측정해서 공백으로 메우므로, 탭 폭이 몇이든 세로줄이 맞는다.
                 const size_t alignColumn = firstSpace + 1 - indentLen;
 
                 for ( size_t attrIndex = 1; attrIndex < listAttrEnd.size(); ++attrIndex )

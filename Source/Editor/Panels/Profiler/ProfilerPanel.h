@@ -73,7 +73,7 @@ namespace sw::editor
         void drawCallTreeTab();
         /** @brief 호출 트리 노드 하나와 그 자식을 표 줄로 그립니다. */
         void drawCallTreeNode( uint32 nodeIndex );
-        /** @brief 새로 담은 프레임의 GT.Frame 이 문턱을 넘었으면 담기를 멈추고 플레이를 일시정지합니다(Pause on spike). */
+        /** @brief 새로 담은 프레임의 GT.Frame 이 임계값을 넘었으면 담기를 멈추고 플레이를 일시정지합니다(Pause on spike). */
         void pauseOnSpike();
         /** @brief 캡처 파일 경로(`Saved/Profiler/ProfilerCapture.txt`)입니다. */
         static string getCaptureFilePath();
@@ -127,13 +127,13 @@ namespace sw::editor
         vector<ProfilerCallNode>       _listCallNode;       ///< 호출 트리(녹화에서 다시 접는다)
         vector<uint32>                 _listCallRoot;       ///< 호출 트리 뿌리(스레드 순 · 큰 순)
         vector<ProfilerTimelineThread> _listCallThread;     ///< 호출 트리가 접은 사건(Freeze 면 그대로)
-        float32                        _spikeThresholdMs;   ///< Pause on spike 문턱(GT.Frame, ms)
+        float32                        _spikeThresholdMs;   ///< Pause on spike 임계값(GT.Frame, ms)
         uint8                          _bCatalogDirty   : 1;
         uint8                          _bCollect        : 1; ///< 엔진 프로파일러를 켜 두고 담는다
         uint8                          _bTracyTried     : 1; ///< "Open Tracy" 를 한 번이라도 눌렀다
         uint8                          _bTimelineFrozen : 1; ///< Freeze — 녹화는 계속하고 보기만 멈춘다
         uint8                          _bTimelineZoomed : 1; ///< 사용자가 확대 · 이동했다(아니면 보이는 범위가 모은 구간을 따라간다)
-        uint8                          _bPauseOnSpike   : 1; ///< GT.Frame 이 문턱을 넘으면 멈춘다
+        uint8                          _bPauseOnSpike   : 1; ///< GT.Frame 이 임계값을 넘으면 멈춘다
         uint8                          _bCapturePaused  : 1; ///< 담기를 멈췄다 — 스파이크를 잡았거나 캡처 파일을 열었다
         uint8                          _bCallTreeFrozen : 1; ///< 호출 트리를 다시 접지 않는다
 #if SW_PROFILER_TRACE_ENABLED

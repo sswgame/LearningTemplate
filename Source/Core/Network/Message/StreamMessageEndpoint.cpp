@@ -48,22 +48,22 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 끝점이 보는 연결 하나 — I/O 스레드가 열고 닫고, 보내는 스레드는 shared_ptr 로 붙든다(닫힌 뒤 지워져도 안전). */
+    /** @brief 엔드포인트가 보는 연결 하나입니다. I/O 스레드가 열고 닫고, 보내는 스레드는 shared_ptr 로 붙잡으므로 닫힌 뒤 지워져도 안전합니다. */
     struct StreamMessageEndpoint::Connection
     {
-        mutex                   _mutex; ///< 해독기 · 보낼 프레임 버퍼 · TLS 세션
+        mutex                   _mutex; ///< 디코더, 보낼 프레임 버퍼, TLS 세션을 보호한다.
         StreamFrameDecoder      _decoder;
-        vector<uint8>           _frameScratch{};      ///< 보낼 프레임을 짓는 자리
-        unique_ptr<ITLSSession> _tlsSession{};        ///< 있으면 오가는 모든 바이트가 이것을 지난다
-        vector<uint8>           _plainScratch{};      ///< 세션이 푼 평문
-        vector<uint8>           _cipherScratch{};     ///< 세션이 내놓은 보낼 암호문
-        vector<uint8>           _compressScratch{};   ///< 보낼 몸의 압축 봉투
-        vector<uint8>           _decompressScratch{}; ///< 받은 봉투를 푼 몸
+        vector<uint8>           _frameScratch{};      ///< 보낼 프레임을 만드는 스크래치 버퍼.
+        unique_ptr<ITLSSession> _tlsSession{};        ///< 있으면 오가는 모든 바이트가 이 세션을 지난다.
+        vector<uint8>           _plainScratch{};      ///< 세션이 복호한 평문.
+        vector<uint8>           _cipherScratch{};     ///< 세션이 내놓은 보낼 암호문.
+        vector<uint8>           _compressScratch{};   ///< 보낼 본문의 압축 봉투.
+        vector<uint8>           _decompressScratch{}; ///< 받은 봉투를 푼 본문.
         NetAddress              _remote{};
         StreamConnectionHandle  _handle{};
         atomic<int64>           _roundTripNanoseconds{ -1 };
-        atomic<int32>           _pendingBytes{ 0 };                      ///< 줄에 쌓였지만 아직 pump 가 넘기지 않은 몸 바이트
-        StreamCloseReason       _errorReason{ StreamCloseReason::None }; ///< 끝점이 끊은 까닭(ProtocolError · SendQueueOverflow · SecurityFailure) — 전송의 까닭보다 앞선다
+        atomic<int32>           _pendingBytes{ 0 };                      ///< 큐에 쌓였지만 아직 pump 가 넘기지 않은 본문 바이트.
+        StreamCloseReason       _errorReason{ StreamCloseReason::None }; ///< 엔드포인트가 연결을 끊은 이유(ProtocolError, SendQueueOverflow, SecurityFailure). 전송이 알려 주는 이유보다 우선한다.
         uint8                   _bAccepted{ SW_FALSE };
         uint8                   _bOpenAnnounced{ SW_FALSE };
         uint8                   _bReceivePaused{ SW_FALSE };
@@ -74,7 +74,7 @@ namespace sw
         }
     };
 
-    /** @brief pump 로 넘길 사건 하나 — 프레임 몸은 아레나의 [_offset, _offset + _size). */
+    /** @brief pump 로 넘길 사건 하나입니다. 프레임 본문은 아레나의 [_offset, _offset + _size) 범위입니다. */
     struct StreamMessageEndpoint::Event
     {
         NetAddress             _remote{};
@@ -117,7 +117,7 @@ namespace sw
 
     void StreamMessageEndpoint::shutdown()
     {
-        // 전송을 먼저 내린다(소유자 몫) — 그 뒤에는 콜백이 오지 않으니 표 · 줄을 비운다.
+        // 전송을 먼저 종료한다(소유자의 일). 그 뒤에는 콜백이 오지 않으므로 테이블과 큐를 비운다.
         std::scoped_lock<mutex> lock{ _tableMutex };
         _mapConnection.clear();
         _pTransport = nullptr;
@@ -158,7 +158,7 @@ namespace sw
         connection->_handle               = handle;
         connection->_remote               = remote;
         connection->_bAccepted            = bAccepted ? SW_TRUE : SW_FALSE;
-        // 세션은 표에 넣기 전에 — 표에서 찾은 다른 스레드의 보내기가 세션 없이 평문을 내보내지 않게.
+        // 세션은 테이블에 넣기 전에 만든다. 테이블에서 찾은 다른 스레드의 보내기가 세션 없이 평문을 내보내지 않게 하기 위해서다.
         if ( _settings._security._pTLSContext != nullptr )
             connection->_tlsSession = _settings._security._pTLSContext->createSession();
         {
@@ -176,7 +176,7 @@ namespace sw
             closeForError( *connection, StreamCloseReason::SecurityFailure );
             return;
         }
-        // 클라이언트는 만들 때 ClientHello 를 지었다 — 보낸다. 서버는 저쪽 ClientHello 를 기다린다. 열림은 핸드셰이크 뒤.
+        // 클라이언트는 만들 때 ClientHello 를 만들어 두었으므로 보낸다. 서버는 상대의 ClientHello 를 기다린다. 열림은 핸드셰이크가 끝난 뒤에 알린다.
         (void)flushCiphertextLocked( *connection );
     }
 
@@ -194,7 +194,7 @@ namespace sw
             return;
         std::scoped_lock<mutex> lock{ connection->_mutex };
         if ( connection->_errorReason != StreamCloseReason::None )
-            return; // 이미 끊는 중 — 남은 바이트는 버린다
+            return; // 이미 끊는 중이므로 남은 바이트는 버린다.
         if ( acceptIncomingLocked( *connection, pData, size ) == false )
             return;
         if ( connection->_bReceivePaused == SW_FALSE && connection->_pendingBytes.load( std::memory_order_relaxed ) > _settings._maxPendingReceiveBytes )
@@ -210,7 +210,7 @@ namespace sw
             return decodeFramesLocked( connection, pData, size );
         ITLSSession& session = *connection._tlsSession;
         const bool   bFed    = session.feedCiphertext( pData, size );
-        (void)flushCiphertextLocked( connection ); // 핸드셰이크 답 · 세션 표 · 실패 경고
+        (void)flushCiphertextLocked( connection ); // 핸드셰이크 응답, 세션 티켓, 실패 경고를 내보낸다.
         if ( bFed == false || session.getState() == TLSSessionState::Failed )
         {
             SW_LOG_WARNING( "TLS handshake failed on stream %#: %#", connection._remote.toString().c_str(), session.getFailureText() );
@@ -220,18 +220,18 @@ namespace sw
         if ( session.getState() == TLSSessionState::Established && connection._bOpenAnnounced == SW_FALSE )
         {
             announceOpenLocked( connection );
-            (void)flushCiphertextLocked( connection ); // 핸드셰이크 중에 모아 둔 평문이 이제 레코드로 나왔다
+            (void)flushCiphertextLocked( connection ); // 핸드셰이크 중에 모아 둔 평문이 이제 레코드로 나왔다.
         }
         connection._plainScratch.clear();
         if ( session.readPlaintext( connection._plainScratch ) == false )
         {
             SW_LOG_WARNING( "TLS record rejected on stream %#: %#", connection._remote.toString().c_str(), session.getFailureText() );
-            closeForError( connection, StreamCloseReason::SecurityFailure ); // 변조된 레코드(bad record mac)
+            closeForError( connection, StreamCloseReason::SecurityFailure ); // 변조된 레코드(bad record mac).
             return false;
         }
-        (void)flushCiphertextLocked( connection ); // 읽기가 내놓은 레코드(세션 표 답 등)
+        (void)flushCiphertextLocked( connection ); // 읽기가 내놓은 레코드(세션 티켓 응답 등).
         if ( session.getState() == TLSSessionState::Closed )
-            _pTransport->close( connection._handle, StreamCloseMode::Graceful ); // 저쪽 close_notify
+            _pTransport->close( connection._handle, StreamCloseMode::Graceful ); // 상대의 close_notify.
         return connection._plainScratch.empty() ||
                decodeFramesLocked( connection, connection._plainScratch.data(), static_cast<int32>( connection._plainScratch.size() ) );
     }
@@ -254,10 +254,10 @@ namespace sw
             {
                 case StreamFrameKind::Ping:
                 {
-                    // 끝점이 스스로 답한다 — 게임 스레드를 거치지 않으니 RTT 에 프레임 길이가 섞이지 않는다.
+                    // 엔드포인트가 스스로 응답한다. 게임 스레드를 거치지 않으므로 RTT 에 프레임 길이가 섞이지 않는다.
                     connection._frameScratch.clear();
                     if ( StreamFrameEncoder::appendFrame( connection._frameScratch, StreamFrameKind::Pong, 0, frame._pBody, frame._bodySize, _settings._maxFrameBodySize ) )
-                        (void)writeOutgoingLocked( connection, connection._frameScratch ); // Pong 실패는 writeOutgoingLocked 가 연결을 닫아 알린다
+                        (void)writeOutgoingLocked( connection, connection._frameScratch ); // Pong 전송이 실패하면 writeOutgoingLocked 가 연결을 닫고 알린다.
                     break;
                 }
                 case StreamFrameKind::Pong:
@@ -275,7 +275,7 @@ namespace sw
                     int32        frameBodySize = frame._bodySize;
                     if ( ( frame._flags & StreamFrameFlag::kCompressed ) != 0 )
                     {
-                        // 원래 크기가 몸 상한을 넘으면 풀기 전에 끊는다(압축 폭탄). 모르는 코덱 · 깨진 봉투도.
+                        // 원래 크기가 본문 상한을 넘으면 풀기 전에 끊는다(압축 폭탄). 모르는 코덱이나 깨진 봉투도 끊는다.
                         if ( NetCompressionUtil::decompressEnvelope( frame._pBody, frame._bodySize, _settings._maxFrameBodySize, connection._decompressScratch ) == false )
                         {
                             closeForError( connection, StreamCloseReason::ProtocolError );
@@ -321,12 +321,12 @@ namespace sw
         if ( connection._tlsSession != nullptr )
         {
             if ( connection._tlsSession->writePlaintext( frameBytes.data(), static_cast<int32>( frameBytes.size() ) ) == false )
-                return StreamSendResult::Closed; // 세션이 실패했거나 닫혔다
+                return StreamSendResult::Closed; // 세션이 실패했거나 닫혔다.
             return flushCiphertextLocked( connection );
         }
         const StreamSendResult result = _pTransport->send( connection._handle, frameBytes.data(), static_cast<int32>( frameBytes.size() ) );
         if ( result == StreamSendResult::QueueFull )
-            closeForError( connection, StreamCloseReason::SendQueueOverflow ); // 느린 상대 — 메시지를 버리면 그 위의 순서가 깨지므로 끊는다
+            closeForError( connection, StreamCloseReason::SendQueueOverflow ); // 느린 상대다. 메시지를 버리면 그 위 계층의 순서가 깨지므로 연결을 끊는다.
         return result;
     }
 
@@ -349,7 +349,7 @@ namespace sw
             return StreamSendResult::Closed;
         std::scoped_lock<mutex> lock{ connection->_mutex };
         connection->_frameScratch.clear();
-        // 압축 → (TLS) 순서. 줄지 않으면 원문. 상한은 원문 크기로 본다(받는 쪽도 푼 크기로 본다).
+        // 압축한 뒤 (TLS 면) 암호화하는 순서다. 줄어들지 않으면 원문을 보낸다. 상한은 원문 크기로 판단한다(받는 쪽도 푼 크기로 판단한다).
         const uint8* pFrameBody    = pBody;
         int32        frameBodySize = bodySize;
         uint8        flags         = 0;
@@ -382,7 +382,7 @@ namespace sw
         const shared_ptr<Connection> connection = findConnection( handle );
         if ( connection != nullptr && mode == StreamCloseMode::Graceful )
         {
-            // 우아한 종료 — close_notify 를 먼저 보낸다(저쪽이 잘린 연결과 끝을 가른다).
+            // 우아한 종료이므로 close_notify 를 먼저 보낸다(상대가 잘린 연결과 정상 종료를 구분할 수 있다).
             std::scoped_lock<mutex> lock{ connection->_mutex };
             if ( connection->_tlsSession != nullptr && connection->_tlsSession->getState() == TLSSessionState::Established )
             {
@@ -452,7 +452,7 @@ namespace sw
                 }
             }
         }
-        // 핑 — 열린 연결마다 간격이 지났으면(전송의 유휴 시한을 넘지 않게 · RTT).
+        // 핑은 열린 연결마다 간격이 지났을 때 보낸다(전송의 유휴 시한을 넘지 않게 하고 RTT 를 측정한다).
         if ( _settings._pingIntervalSeconds > 0.0 )
         {
             const int64 now      = MonotonicClock::nowNanoseconds();

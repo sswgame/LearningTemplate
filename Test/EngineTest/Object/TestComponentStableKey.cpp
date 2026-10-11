@@ -36,8 +36,8 @@ SW_TEST_CASE( ComponentStableKeyTest, KeyRoundTripsThroughFind )
 }
 
 /**
- * @brief [ComponentStableKeyTest] 키는 이름표로 센다 — 이름표를 단 컴포넌트는 그 이름의 첫째, 나머지는 타입 이름으로 다시 센다. 이름표는 상태와 함께 다시 읽힌다
- * @details 이름표는 저장된다(언리얼의 컴포넌트 이름이 참조 · 오버라이드의 키인 자리). 그래서 이름표로 만든 키는 상태를 다시 읽어도 같은 컴포넌트를 가리킨다.
+ * @brief [ComponentStableKeyTest] 키는 이름으로 센다 — 이름을 단 컴포넌트는 그 이름의 첫째, 나머지는 타입 이름으로 다시 센다. 이름은 상태와 함께 다시 읽힌다
+ * @details 이름은 저장된다(언리얼의 컴포넌트 이름이 참조 · 오버라이드의 키인 자리). 그래서 이름으로 만든 키는 상태를 다시 읽어도 같은 컴포넌트를 가리킨다.
  */
 SW_TEST_CASE( ComponentStableKeyTest, LabelIsTheKeyAndSurvivesAReload )
 {

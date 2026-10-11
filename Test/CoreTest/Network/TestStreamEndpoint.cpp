@@ -8,7 +8,7 @@
 #include "TestFramework/TestFramework.h"
 #include "TestFramework/TestStreamEndpointPair.h"
 
-// 스트림 끝점 — 조각나 들어와도 메시지 경계 · 순서, 깨진 프레임은 ProtocolError 로 끊기, 받은 줄 상한에서 읽기 멈춤 → pump 뒤 다시, 핑 RTT, 연결 실패도 닫힘 한 번
+// 스트림 엔드포인트 — 조각나 들어와도 메시지 경계 · 순서, 깨진 프레임은 ProtocolError 로 끊기, 받은 줄 상한에서 읽기 멈춤 → pump 뒤 다시, 핑 RTT, 연결 실패도 닫힘 한 번
 
 using namespace sw;
 
@@ -70,7 +70,7 @@ SW_TEST_CASE( StreamEndpointTest, MalformedFrameClosesWithProtocolError )
     EndpointRecord           clientRecord;
     test::StreamEndpointPair pair( serverRecord, clientRecord, StreamEndpointSettings{}, LoopbackStreamConditions{} );
     pair.step( 2 );
-    // 끝점을 거치지 않고 전송에 직접 깨진 머리를 쓴다(모르는 종류 0x7F).
+    // 엔드포인트를 거치지 않고 전송에 직접 깨진 머리를 쓴다(모르는 종류 0x7F).
     const uint8 arrWire[6] = { 0x02, 0x00, 0x00, 0x00, 0x7F, 0x00 };
     {
         SW_TEST_DEFENSIVE_SCOPE( "the server endpoint logs the protocol error it closes for" );

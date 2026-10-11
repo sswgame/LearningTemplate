@@ -1,6 +1,6 @@
 /**
  * @file EditorRegistry.h
- * @brief 에디터 확장(패널 · 팝업 · 인스펙터 · 뷰포트 시각화)을 자기 파일에서 등록하는 공통 정적 등록부입니다.
+ * @brief 에디터 확장(패널 · 팝업 · 인스펙터 · 뷰포트 시각화)을 자기 파일에서 등록하는 공통 정적 레지스트리입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -16,8 +16,8 @@ namespace sw::editor
 {
     /**
      * @struct EditorRegistration
-     * @brief 등록부 한 줄의 공통 머리입니다. 종류별 줄(`EditorPanelRegistration` …)이 이것을 상속해 칸을 더합니다.
-     * @details 문자열은 리터럴이어야 합니다. 등록부는 포인터만 들고 복사하지 않습니다.
+     * @brief 레지스트리 한 줄의 공통 머리입니다. 종류별 줄(`EditorPanelRegistration` …)이 이것을 상속해 칸을 더합니다.
+     * @details 문자열은 리터럴이어야 합니다. 레지스트리는 포인터만 들고 복사하지 않습니다.
      */
     struct EditorRegistration
     {
@@ -32,7 +32,7 @@ namespace sw::editor
      * @class EditorRegistrationList
      * @brief 한 종류의 등록 목록입니다. 늘 (순서, id) 로 정렬돼 있습니다.
      * @details 정적 초기화 순서는 번역 단위 사이에서 정해지지 않으므로 등록 순서가 아니라 `_order` 가 보이는 순서를 정합니다.
-     *          목록 자체는 엔진 등록부와 같은 공통 모양(`RegistrationList` — 중복 거절 · 정렬 · id 찾기)이고, 여기서는 거절을 종류 이름과 함께 알립니다.
+     *          목록 자체는 엔진 레지스트리와 같은 공통 모양(`RegistrationList` — 중복 거절 · 정렬 · id 찾기)이고, 여기서는 거절을 종류 이름과 함께 알립니다.
      */
     class SW_EDITOR_API EditorRegistrationList
     {
@@ -77,7 +77,7 @@ namespace sw::editor
 {
     /**
      * @class EditorRegistry
-     * @brief 등록 줄 타입 하나의 등록부입니다. `TRegistration` 은 `EditorRegistration` 을 상속하고 `kKindName` 을 둡니다.
+     * @brief 등록 줄 타입 하나의 레지스트리입니다. `TRegistration` 은 `EditorRegistration` 을 상속하고 `kKindName` 을 둡니다.
      * @details 목록은 EditorModule 이 보관합니다(`getEditorRegistrationList`). 확장 모듈(DLL)의 등록도 같은 목록에 오르고,
      *          EditorModule 이 핫 리로드로 바뀌면 등록자와 함께 새로 만들어집니다.
      */

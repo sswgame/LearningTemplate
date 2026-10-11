@@ -45,7 +45,7 @@ namespace sw::test
             const uint32 uncompSize = static_cast<uint32>( content.size() );
             const uint32 crc        = StringUtil::computeCrc32( content.data(), uncompSize );
 
-            // 코덱은 리더와 같은 길로 찾는다(팩 종류 → 코덱 종류 표 + 등록부). None 은 그대로 싣는다.
+            // 코덱은 리더와 같은 길로 찾는다(팩 종류 → 코덱 종류 표 + 레지스트리). None 은 그대로 싣는다.
             const bool         bCompressed = compression != PackCompressionType::None;
             ICompressionCodec* pCodec      = bCompressed ? PackCompressionUtil::findCodec( compression ) : nullptr;
             if ( bCompressed && pCodec == nullptr )

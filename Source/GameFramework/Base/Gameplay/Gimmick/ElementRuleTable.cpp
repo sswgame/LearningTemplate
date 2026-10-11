@@ -22,7 +22,7 @@ namespace sw
             static bool isNamed( const XMLNode& node, const utf8* pName ) { return StringUtil::equals( node.getName(), pName, true ); }
         };
 
-        /** @brief 경로마다 한 번 읽어 나눠 쓰는 표입니다(GameFramework 모듈 정적 — 등록부는 `GameDataCacheRegistry` 가 맞춘다). */
+        /** @brief 경로마다 한 번 읽어서 공유하는 테이블입니다. GameFramework 모듈의 정적 변수이고, 레지스트리는 `GameDataCacheRegistry` 가 맞춥니다. */
         GameDataCache<ElementRuleTable>& getSharedTableCache()
         {
             static GameDataCache<ElementRuleTable> s_cache{ "ElementRuleTable" };
@@ -273,7 +273,7 @@ namespace sw
         clear();
         _stepTime   = root.getAttributeFloat( "stepTime", 0.25f );
         bool bValid = true;
-        // 이름은 앞에서 선언한 것만 가리킨다 — 깃발 · 재질 · 상태를 먼저 모두 읽고 규칙을 읽는다.
+        // 이름은 앞에서 선언한 것만 가리킬 수 있다. 그래서 플래그, 재질, 상태를 먼저 모두 읽고 규칙을 읽는다.
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             if ( ElementRuleTableInternal::isNamed( child, "Flag" ) )

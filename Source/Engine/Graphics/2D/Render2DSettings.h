@@ -82,7 +82,7 @@ namespace sw
         /** @brief CustomAxis 의 축입니다(정규화됨). */
         const float3& getTransparencySortAxis() const { return _sortAxis; }
         /**
-         * @brief 이 카메라에서 투명 정렬에 쓸 축입니다. 영벡터면 "눈까지의 거리" 이고, 아니면 그 축 위의 깊이(카메라에서 그 축으로 잰 값)입니다.
+         * @brief 이 카메라에서 투명 정렬에 쓸 축입니다. 영벡터면 "눈까지의 거리" 이고, 아니면 그 축 위의 깊이(카메라에서 그 축으로 측정한 값)입니다.
          * @param bOrthographic 카메라가 직교 투영인가
          * @param cameraForward 카메라가 보는 방향(정규화)
          */
@@ -95,6 +95,11 @@ namespace sw
         static const Render2DSettings& getActive();
         /** @brief 활성 표를 파일에서 다시 읽습니다(설정 핫 리로드 · 게임 전환). 게임 스레드에서만 부릅니다. */
         static void reloadActive();
+        /**
+         * @brief 활성 표의 레이어 목록을 놓습니다. 엔진 종료(`EngineBootstrap::shutdown`)만 부릅니다.
+         * @details 표는 엔진 기동 뒤 처음 읽혀 채워지므로, 놓지 않으면 종료 보고(기준선 대비 태그 증가)에 남습니다. 다음 `getActive` 는 파일을 다시 읽습니다.
+         */
+        static void releaseActive();
         /** @brief 엔진 기본 파일 경로입니다. */
         static string_view getEngineSettingsPath() { return "engine/data/render2d.xml"; }
 

@@ -69,7 +69,7 @@ namespace sw
     void LoopbackNetwork::deliverInFlight()
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        // 보낸 순서대로 — 한 끝점이 보낸 것은 순서가 지켜진다.
+        // 보낸 순서대로 — 한 엔드포인트가 보낸 것은 순서가 지켜진다.
         for ( InFlight& packet : _listInFlight )
         {
             bool bDelivered = false;
@@ -82,7 +82,7 @@ namespace sw
                     break;
                 }
             }
-            // 받을 끝점이 없으면(닫힌 포트) 버린다 — UDP 와 같다.
+            // 받을 엔드포인트가 없으면(닫힌 포트) 버린다 — UDP 와 같다.
             _deliveredCount += bDelivered ? 1u : 0u;
             _droppedCount += bDelivered ? 0u : 1u;
         }

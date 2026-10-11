@@ -56,7 +56,7 @@ namespace sw
          */
         static shared_ptr<Mesh> acquireSlicedMesh( const SlicedSpriteDesc& desc );
 
-        /** @brief `acquireSlicedMesh` 의 표를 에셋 캐시 등록부에 보이는 창구입니다("SlicedSpriteMesh" — 진단 · 비우기). `AssetManager` 가 올립니다. */
+        /** @brief `acquireSlicedMesh` 의 표를 에셋 캐시 레지스트리에 보이는 창구입니다("SlicedSpriteMesh" — 진단 · 비우기). `AssetManager` 가 올립니다. */
         static IAssetCache& getSlicedMeshCache();
     };
 } // namespace sw

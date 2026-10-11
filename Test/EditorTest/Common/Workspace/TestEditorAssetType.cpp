@@ -312,7 +312,7 @@ SW_TEST_CASE( EditorAssetTypeTest, ReloadRouteComesFromTheTable )
 }
 
 /**
- * @brief [EditorAssetTypeTest] 표에 적힌 핫 리로드 캐시 이름은 전부 엔진 등록부에 있다
+ * @brief [EditorAssetTypeTest] 표에 적힌 핫 리로드 캐시 이름은 전부 엔진 레지스트리에 있다
  * @details 이름이 어긋나면 핫 리로드가 그 종류에서 "캐시 없음" 경고만 남기고 아무것도 다시 읽지 않는다 — 에디터 표와 엔진 등록을 이 테스트가 묶는다.
  */
 SW_TEST_CASE( EditorAssetTypeTest, EveryReloadCacheNameIsRegisteredInTheEngine )

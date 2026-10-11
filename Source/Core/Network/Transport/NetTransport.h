@@ -2,7 +2,7 @@
  * @file NetTransport.h
  * @brief 전송 — 데이터그램을 주소로 보내고 받는 인터페이스와, 한 프로세스 안의 루프백 망(보낸 순서대로 배달만 합니다)입니다.
  * @details 실제 UDP 는 `UDPNetTransport`. 루프백은 테스트와 "한 프로세스 안의 서버 + 클라이언트"(리슨 서버 · 리플레이 · 봇)에 씁니다.
- *          회선 나쁨(지연 · 흔들림 · 손실 · 중복 · 깨짐 · 순서 뒤바뀜 · 대역폭)은 끝점에 씌우는 `NetEmulationTransport` 하나가 맡습니다 — UDP 에 씌우는 것과 같은 길입니다.
+ *          회선 나쁨(지연 · 흔들림 · 손실 · 중복 · 깨짐 · 순서 뒤바뀜 · 대역폭)은 엔드포인트에 씌우는 `NetEmulationTransport` 하나가 맡습니다 — UDP 에 씌우는 것과 같은 길입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -46,7 +46,7 @@ namespace sw
 {
     class LoopbackNetwork;
 
-    /** @brief 루프백 망의 끝점 하나입니다. */
+    /** @brief 루프백 망의 엔드포인트 하나입니다. */
     class SW_API LoopbackTransport final : public INetTransport
     {
     public:
@@ -80,11 +80,11 @@ namespace sw
 {
     /**
      * @class LoopbackNetwork
-     * @brief 끝점들을 들고 보낸 패킷을 보낸 순서대로 배달합니다 — 회선을 나쁘게 하지 않습니다(나쁜 회선은 끝점에 씌운 `NetEmulationTransport`).
-     *        끝점은 망이 소유하고 주소는 `127.0.0.1:포트` 입니다.
-     * @details 보낸 패킷은 다음 `deliverInFlight`(어느 끝점의 `update` 든)에 받는 끝점의 받은 편지함으로 간다 — 한 프레임에서 앞서 돈 호스트가 보낸 것을
-     *          뒤에 도는 호스트가 받는다. 받을 끝점이 없는 패킷은 버리고 센다(UDP 의 닫힌 포트).
-     *          잠금 하나가 망 전체(날아가는 패킷 · 끝점 받은 편지함)를 지킵니다 — 끝점마다 다른 스레드(`NetHostThread`)가 돌아도 된다.
+     * @brief 엔드포인트들을 들고 보낸 패킷을 보낸 순서대로 배달합니다 — 회선을 나쁘게 하지 않습니다(나쁜 회선은 엔드포인트에 씌운 `NetEmulationTransport`).
+     *        엔드포인트는 망이 소유하고 주소는 `127.0.0.1:포트` 입니다.
+     * @details 보낸 패킷은 다음 `deliverInFlight`(어느 엔드포인트의 `update` 든)에 받는 엔드포인트의 받은 편지함으로 간다 — 한 프레임에서 앞서 돈 호스트가 보낸 것을
+     *          뒤에 도는 호스트가 받는다. 받을 엔드포인트가 없는 패킷은 버리고 센다(UDP 의 닫힌 포트).
+     *          잠금 하나가 망 전체(날아가는 패킷 · 엔드포인트 받은 편지함)를 지킵니다 — 엔드포인트마다 다른 스레드(`NetHostThread`)가 돌아도 된다.
      */
     class SW_API LoopbackNetwork
     {
@@ -94,12 +94,12 @@ namespace sw
         LoopbackNetwork( const LoopbackNetwork& )            = delete;
         LoopbackNetwork& operator=( const LoopbackNetwork& ) = delete;
 
-        /** @brief 끝점을 만듭니다. 같은 포트가 있으면 nullptr 입니다. */
+        /** @brief 엔드포인트를 만듭니다. 같은 포트가 있으면 nullptr 입니다. */
         LoopbackTransport* createEndpoint( uint16 port );
-        /** @brief 날아가는 패킷을 모두 받는 끝점의 받은 편지함으로 옮깁니다(보낸 순서). */
+        /** @brief 날아가는 패킷을 모두 받는 엔드포인트의 받은 편지함으로 옮깁니다(보낸 순서). */
         void deliverInFlight();
 
-        /** @brief 받을 끝점이 없어 버린 패킷 수입니다. */
+        /** @brief 받을 엔드포인트가 없어 버린 패킷 수입니다. */
         uint64 getDroppedCount() const;
         uint64 getDeliveredCount() const;
 
@@ -118,7 +118,7 @@ namespace sw
         };
 
         mutable mutex            _mutex;
-        deque<LoopbackTransport> _listEndpoint; ///< deque — 끝점 주소가 움직이지 않는다
+        deque<LoopbackTransport> _listEndpoint; ///< deque — 엔드포인트 주소가 움직이지 않는다
         vector<InFlight>         _listInFlight; ///< 보낸 순서
         uint64                   _droppedCount;
         uint64                   _deliveredCount;

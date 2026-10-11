@@ -86,7 +86,7 @@ namespace sw
 
     void SpriteInstanceBatch::shutdown()
     {
-        // 배치의 소멸자가 등록부에서 뺀다. 머티리얼은 배치가 놓인 **뒤에** 놓는다 — 놓는 순간 캐시가 지울 수 있다.
+        // 배치의 소멸자가 레지스트리에서 뺀다. 머티리얼은 배치가 놓인 **뒤에** 놓는다 — 놓는 순간 캐시가 지울 수 있다.
         _batch.reset();
         if ( _acquiredMaterialPath.empty() )
             return;

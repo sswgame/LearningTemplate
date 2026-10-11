@@ -1,7 +1,8 @@
 /**
  * @file PropScatterComponent.h
- * @brief 장식(나무 · 꽃 · 바위) 흩뿌리기 — 씨앗 고정 배치를 영역 가장자리 · 안쪽 격자 · 배치 규칙(밀도 · 최소 거리 · 경사 · 높이 · 레이어 필터)으로 두고,
- *        제외 원은 비웁니다. 규칙 모드는 Engine 의 배치 코어(`PlacementScatter`)를 쓰고 영역 아래 지형(`TerrainComponent`)을 표면으로 읽습니다.
+ * @brief 장식(나무, 꽃, 바위)을 흩뿌리는 컴포넌트를 정의합니다.
+ * @details 씨앗이 고정된 배치를 영역 가장자리, 안쪽 격자, 배치 규칙(밀도, 최소 거리, 경사, 높이, 레이어 필터)으로 둔다. 제외 원은 비운다.
+ *          규칙 모드는 Engine 의 배치 코어(`PlacementScatter`)를 쓰고, 영역 아래 지형(`TerrainComponent`)을 표면으로 읽는다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -30,7 +31,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 고를 수 있는 모델 하나 — 메시 경로와 뽑힐 비중입니다. */
+    /** @brief 고를 수 있는 모델 하나입니다. 메시 경로와 뽑힐 비중을 담습니다. */
     REFLECT()
     struct SW_GF_API PropScatterModel
     {
@@ -45,7 +46,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 아무것도 놓지 않는 원(땅 위 — y 는 보지 않는다)입니다. 정문 앞 길 · 건물 자리를 비운다. */
+    /** @brief 아무것도 놓지 않는 원입니다. 땅 위의 원이라 y 는 보지 않으며, 정문 앞 길이나 건물 자리를 비울 때 씁니다. */
     REFLECT()
     struct SW_GF_API PropScatterExclusion
     {
@@ -60,7 +61,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 흩뿌리기의 입력입니다(컴포넌트의 PROPERTY 를 모은 것 — 계산은 씬 없이 테스트한다). */
+    /** @brief 흩뿌리기의 입력입니다. 컴포넌트의 PROPERTY 를 모은 것이며, 계산은 씬 없이 테스트할 수 있습니다. */
     struct PropScatterParams
     {
         vector<PropScatterModel>     _listModel{};
@@ -94,21 +95,23 @@ namespace sw
 {
     /**
      * @struct PropScatterMath
-     * @brief 배치 계산입니다. 같은 입력이면 같은 배치입니다(xorshift32 — 씨앗 0 은 고정점이라 1 로 바꾼다).
-     * @details 자리마다 난수를 (자리 흔들기 둘 →) 모델 → 제외 판정 → 크기 → 요 순으로 꺼냅니다. 제외된 자리는 크기 · 요를 꺼내지 않습니다.
+     * @brief 배치 계산입니다. 같은 입력이면 같은 배치가 나옵니다.
+     * @details 난수는 xorshift32 이며, 씨앗 0 은 고정점이라 1 로 바꾼다.
+     *          자리마다 난수를 자리 흔들기 둘, 모델, 제외 판정, 크기, 요 순으로 꺼낸다. 제외된 자리는 크기와 요를 꺼내지 않는다.
      */
     struct SW_GF_API PropScatterMath
     {
-        /** @brief 배치를 계산합니다. 규칙 모드는 평평한 표면(높이 = 영역 최소 y)입니다 — 지형 위는 `computeRulePlacements` 입니다. */
+        /** @brief 배치를 계산합니다. 규칙 모드는 평평한 표면(높이는 영역의 최소 y)을 씁니다. 지형 위 배치는 `computeRulePlacements` 가 합니다. */
         static void computePlacements( const PropScatterParams& params, vector<PropScatterPlacement>& outListPlacement );
         /**
-         * @brief 규칙 모드 배치를 표면 @p pSurface 위에 계산합니다(평면 좌표 = 월드 x · z). nullptr 이면 높이 = 영역 최소 y 인 평면입니다.
-         * @details 제외 원은 원 제외 영역으로, 모델 비중은 항목 비중으로 옮겨 `PlacementScatter::scatter` 에 넘깁니다. 노멀 맞춤은 오브젝트 회전이 요뿐이라 쓰지 않습니다.
+         * @brief 규칙 모드 배치를 표면 @p pSurface 위에 계산합니다. 평면 좌표는 월드 x, z 입니다. nullptr 이면 높이가 영역의 최소 y 인 평면을 씁니다.
+         * @details 제외 원은 원 제외 영역으로, 모델 비중은 항목 비중으로 옮겨 `PlacementScatter::scatter` 에 넘긴다.
+         *          오브젝트 회전이 요뿐이라서 노멀 맞춤은 쓰지 않는다.
          */
         static void computeRulePlacements( const PropScatterParams& params, const IPlacementSurface* pSurface, vector<PropScatterPlacement>& outListPlacement );
-        /** @brief [0, 1] 하나를 꺼내고 상태를 나아가게 합니다. */
+        /** @brief [0, 1] 난수 하나를 꺼내고 상태를 한 걸음 나아가게 합니다. */
         static float32 nextUnit( uint32& inoutState );
-        /** @brief 비중대로 고른 모델 번호입니다. @p unit 은 [0, 1] 입니다. 모델이 없거나 비중 합이 0 이면 −1 입니다. */
+        /** @brief 비중대로 고른 모델 번호를 반환합니다. @p unit 은 [0, 1] 입니다. 모델이 없거나 비중 합이 0 이면 −1 입니다. */
         static int32 pickModel( const vector<PropScatterModel>& listModel, float32 unit );
     };
 } // namespace sw
@@ -117,10 +120,11 @@ namespace sw
 {
     /**
      * @class PropScatterComponent
-     * @brief 플레이가 시작되면 배치대로 메시 오브젝트를 세우고, 끝나면 걷습니다. 씬에는 설정만 저장됩니다(세운 오브젝트는 저장하지 않는 런타임 산출물).
-     * @details 세운 오브젝트는 핸들로 듭니다. 틱 중에 시작돼도 `executeOrDeferPostTick` 으로 틱 뒤에 세웁니다. 틱하지 않습니다.
-     *          핸들 목록은 PROPERTY 입니다 — 핫 리로드는 오브젝트를 같은 id 로 되살리므로, 다시 만든 컴포넌트가 그 핸들로 세운 것을 알아보고
-     *          한 벌 더 세우지 않습니다. 에디터는 플레이 전 상태로 되돌리므로 씬 파일에는 빈 목록이 남습니다.
+     * @brief 플레이가 시작되면 배치대로 메시 오브젝트를 세우고, 끝나면 걷습니다.
+     * @details 씬에는 설정만 저장된다. 세운 오브젝트는 저장하지 않는 런타임 산출물이다.
+     *          세운 오브젝트는 핸들로 든다. 틱 중에 시작돼도 `executeOrDeferPostTick` 으로 틱 뒤에 세운다. 틱하지는 않는다.
+     *          핸들 목록은 PROPERTY 이다. 핫 리로드는 오브젝트를 같은 id 로 복원하므로, 다시 만든 컴포넌트가 그 핸들로 세운 것을 알아보고 한 벌 더 세우지 않는다.
+     *          에디터는 플레이 전 상태로 되돌리므로 씬 파일에는 빈 목록이 남는다.
      */
     REFLECT( Category = "World", DisplayName = "Prop Scatter", Tooltip = "Scatters seeded decoration meshes along or inside a region at play start" )
     class SW_GF_API PropScatterComponent : public Component
@@ -134,19 +138,19 @@ namespace sw
         void onBeginPlay() override;
         void onEndPlay() override;
 
-        /** @brief 고를 모델 목록을 바꿉니다(다음 시작부터). */
+        /** @brief 고를 모델 목록을 바꿉니다. 다음 시작부터 적용됩니다. */
         void setModels( const vector<PropScatterModel>& listModel ) { _listModel = listModel; }
-        /** @brief 비울 원 목록을 바꿉니다(다음 시작부터). */
+        /** @brief 비울 원 목록을 바꿉니다. 다음 시작부터 적용됩니다. */
         void setExclusions( const vector<PropScatterExclusion>& listExclusion ) { _listExclusion = listExclusion; }
-        /** @brief 지금 PROPERTY 로 계산 입력을 만듭니다. */
+        /** @brief 지금 PROPERTY 값으로 계산 입력을 만듭니다. */
         PropScatterParams makeParams() const;
-        /** @brief 세운 오브젝트를 모두 지웁니다(상태 저장 전 · 플레이 끝). */
+        /** @brief 세운 오브젝트를 모두 지웁니다. 상태를 저장하기 전과 플레이가 끝날 때 부릅니다. */
         void   despawnProps();
         uint32 getSpawnedCount() const { return static_cast<uint32>( _listSpawned.size() ); }
 
     private:
         void spawnProps();
-        /** @brief 든 핸들이 모두 살아 있는 오브젝트로 풀리고 하나 이상이면 true 입니다. */
+        /** @brief 든 핸들이 하나 이상이고 모두 살아 있는 오브젝트로 풀리면 true 입니다. */
         bool areSpawnedPropsAlive() const;
 
     private:

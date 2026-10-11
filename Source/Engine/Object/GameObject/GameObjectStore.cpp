@@ -392,7 +392,7 @@ namespace sw
             std::unique_lock<std::shared_mutex> lock{ _mutex };
             _listPendingDestroyObject.push_back( pObj );
         }
-        // 틱 등록부에는 아무것도 알리지 않는다. 삭제 대기 오브젝트는 디스패치가 건너뛰고, 실제 파괴가 등록부에서 뺀다.
+        // 틱 레지스트리에는 아무것도 알리지 않는다. 삭제 대기 오브젝트는 디스패치가 건너뛰고, 실제 파괴가 레지스트리에서 뺀다.
     }
 
     void GameObjectStore::destroyComponent( Component* pComp )
@@ -408,7 +408,7 @@ namespace sw
         // 컴포넌트가 들었으면 **엉뚱한 컴포넌트를** — 지운다. 핸들은 처리 때 다시 풀어, 이미 없으면 건너뛴다.
         std::unique_lock<std::shared_mutex> lock{ _mutex };
         _listPendingDestroyComponent.push_back( pComp->getHandle() );
-        // 틱에 참여하던 컴포넌트면 소유 오브젝트의 항목을 다시 짓게 한다. 나머지는 등록부와 무관하다.
+        // 틱에 참여하던 컴포넌트면 소유 오브젝트의 항목을 다시 짓게 한다. 나머지는 레지스트리와 무관하다.
         if ( pComp->hasTickWork() )
             _pTickRegistry->markObjectDirty( pComp->getOwner() );
     }
@@ -421,7 +421,7 @@ namespace sw
         SW_ASSERT( _pStructuralChangeBuffer->isFrozen() == false );
 
         // **컴포넌트 해체는 여기 하나다** — 등록 해제 → 파괴 콜백 → 소유자 끊기 → 소멸 → 반납.
-        // 등록부는 raw 포인터를 들고 있다(렌더 경로가 프레임마다 전부 훑으므로 핸들은 비싸다). 그래서 메모리를 실제로 놓는
+        // 레지스트리는 raw 포인터를 들고 있다(렌더 경로가 프레임마다 전부 훑으므로 핸들은 비싸다). 그래서 메모리를 실제로 놓는
         // 이 지점에서 등록을 해제해 "등록된 채로 해제" 가 구조적으로 없게 한다. `onUnregister` 는 여기서 정확히 한 번 불린다.
         // 소멸자 호출 전이어야 가상 디스패치가 유효하다. 시작했던 컴포넌트는 여기서 끝낸다 — 떼기 · 비우기 · 지연 파괴 · 모듈 내리기가
         // 모두 이 한 곳을 지나므로 onEndPlay 가 빠지는 길이 없다(모듈 코드가 아직 올라와 있는 시점이다).
@@ -514,7 +514,7 @@ namespace sw
         {
             if ( pObj == nullptr )
                 continue;
-            // 메모리를 놓기 전에 등록부의 그룹 목록에서 뺀다. 지운 컴포넌트 쪽은 소유 오브젝트가 표시되어 틱 전에 다시 지어진다.
+            // 메모리를 놓기 전에 레지스트리의 그룹 목록에서 뺀다. 지운 컴포넌트 쪽은 소유 오브젝트가 표시되어 틱 전에 다시 지어진다.
             _pTickRegistry->unregisterObject( pObj );
             _poolGameObject.destroy( pObj );
         }

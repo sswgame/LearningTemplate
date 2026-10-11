@@ -197,7 +197,7 @@ namespace sw
         const AnimationLODSettings& getLODSettings() const { return _lodSettings; }
         /** @brief 지난 판정에서 포즈 하나를 만드는 데 든 평균 시간(마이크로초, 지수 이동 평균)입니다 — 예산 배분이 씁니다. */
         float32 getAverageEvaluationMicroseconds() const { return _averageEvaluationMicroseconds; }
-        /** @brief 비용 평균을 정합니다(테스트 — 측정 대신 정한 값으로 예산을 돌린다). 0 이면 다시 잽니다. */
+        /** @brief 비용 평균을 정합니다(테스트 — 측정 대신 정한 값으로 예산을 돌린다). 0 이면 다시 측정합니다. */
         void setAverageEvaluationMicroseconds( float32 microseconds ) { _averageEvaluationMicroseconds = microseconds; }
         /** @brief 지난 판정에서 예산 배분 뒤의 예상 비용(마이크로초)입니다. */
         float32 getExpectedEvaluationMicroseconds() const { return _expectedEvaluationMicroseconds; }

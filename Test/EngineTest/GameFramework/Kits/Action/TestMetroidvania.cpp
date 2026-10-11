@@ -276,7 +276,7 @@ SW_TEST_CASE( MetroidvaniaTest, RegionMapPurchaseRevealsRoomsAndUnvisitedItemMar
     SW_EXPECT_FALSE( mapState.canFastTravel( "bench_town", "stag_cross" ) ); // 벤치는 정거장이 아니다
     SW_EXPECT_FALSE( mapState.canFastTravel( "stag_town", "stag_town" ) );
 
-    // 세이브 → 새 그래프에 되살리기.
+    // 세이브 → 새 그래프에 복원하기.
     vector<hashed_string> listRegionMap;
     vector<hashed_string> listSite;
     vector<hashed_string> listPickup;
@@ -659,7 +659,7 @@ SW_TEST_CASE( MetroidvaniaTest, StateRoundTripContinuesTheSameJourney )
     SW_EXPECT_FALSE( restoreTruncatedMetroBytes( duelistBytes, truncatedDuelist ) );
     SW_EXPECT_FALSE( truncatedDuelist.isGuarding() );
 
-    // 지도 — 교차로 지도를 사고, 가면 하나를 줍고, 정거장을 열었다. 되살린 쪽의 그래프에도 산 지역이 드러난다.
+    // 지도 — 교차로 지도를 사고, 가면 하나를 줍고, 정거장을 열었다. 복원한 쪽의 그래프에도 산 지역이 드러난다.
     MetroMapState mapState;
     mapState.initialize( &scene._catalog, &scene._graph );
     SW_EXPECT_TRUE( mapState.enterArea( "town" ) );

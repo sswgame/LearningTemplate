@@ -399,7 +399,7 @@ namespace sw::editor
             };
 
             /**
-             * @brief 에디터 커맨드의 정본입니다.
+             * @brief 에디터 커맨드의 원본입니다.
              * @details 툴팁에 단축키를 손으로 적지 않습니다. `drawCommandItem` 이 이 표의 조합으로 만들어 붙이므로 라벨과 실제 처리가
              *          어긋날 수 없습니다.
              */

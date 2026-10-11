@@ -33,7 +33,7 @@ namespace sw
             static constexpr const utf8* kAfter         = "after";
             static constexpr const utf8* kBaseName      = "PrefabBase";
 
-            /** @brief 컴포넌트 원소 하나와 그 키(`이름표#n`)입니다. */
+            /** @brief 컴포넌트 원소 하나와 그 키(`이름#n`)입니다. */
             struct KeyedComponent
             {
                 XMLNode _node;
@@ -77,7 +77,7 @@ namespace sw
             }
 
             /**
-             * @brief 컴포넌트 목록 원소의 컴포넌트마다 키를 붙여 모읍니다. 키는 `ComponentStableKey` 와 같은 규칙입니다 — 이름표(`_componentName`),
+             * @brief 컴포넌트 목록 원소의 컴포넌트마다 키를 붙여 모읍니다. 키는 `ComponentStableKey` 와 같은 규칙입니다 — 이름(`_componentName`),
              *        없거나 비었으면 원소 이름(타입), 그 뒤에 같은 이름 가운데 몇 번째인지.
              */
             static void collectComponents( const XMLNode& listNode, vector<KeyedComponent>& outListComponent )

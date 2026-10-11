@@ -1,6 +1,6 @@
 /**
  * @file GameObjectManager.h
- * @brief 씬 하나 — 오브젝트 저장소 · 틱 디스패치 · 틱 중 규칙 · 등록부 · 물리를 소유하고, 게임이 부르는 API 를 전달합니다.
+ * @brief 씬 하나 — 오브젝트 저장소 · 틱 디스패치 · 틱 중 규칙 · 레지스트리 · 물리를 소유하고, 게임이 부르는 API 를 전달합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -24,6 +24,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectStore.h"
 #include "Engine/Object/GameObject/ISceneFrameSystem.h"
+#include "Engine/Object/GameObject/ISceneService.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Object/GameObject/SceneAudio.h"
 #include "Engine/Object/GameObject/SceneFrameStep.h"
@@ -37,9 +38,8 @@ namespace sw
     class Component;
     class GameObjectManager;
     class SceneComponent;
-    class SceneNavigation;
 
-    /// @brief 씬 하나의 얼굴입니다 — 저장소(`GameObjectStore`) · 틱 디스패치(`SceneTickScheduler`) · 틱 중 규칙(`StructuralChangeBuffer`) · 등록부 · 물리를 소유하고
+    /// @brief 씬 하나의 얼굴입니다 — 저장소(`GameObjectStore`) · 틱 디스패치(`SceneTickScheduler`) · 틱 중 규칙(`StructuralChangeBuffer`) · 레지스트리 · 물리를 소유하고
     ///        `tick` 의 단계를 정합니다. 게임이 부르는 API 는 같은 이름으로 각 단위에 전달합니다.
     class SW_API GameObjectManager
     {
@@ -57,7 +57,7 @@ namespace sw
 
         /**
          * @brief 앞서 발급한 objectID 를 그대로 써서 오브젝트를 다시 만듭니다. 되돌리기 · 플레이 세션 복원 · 핫 리로드가 씁니다.
-         * @details 핸들(`GameObjectHandle` · `ComponentHandle`)은 objectID 로 대상을 찾으므로, 되살린 오브젝트가 같은 id 를 받아야
+         * @details 핸들(`GameObjectHandle` · `ComponentHandle`)은 objectID 로 대상을 찾으므로, 복원한 오브젝트가 같은 id 를 받아야
          *          그 너머로도 핸들이 이어집니다. 그 id 로 등록된 오브젝트가 아직 있으면(삭제 대기 포함) 새 id 를 쓰고 경고를 남깁니다.
          *          옛 오브젝트의 지연 파괴가 나중에 id 로 정리하는 항목(슬롯 표 · 에디터 GUID 맵 등)이 새 오브젝트 몫까지 지우지
          *          않게 하기 위해서입니다. 발급 카운터는 그 id 뒤로 밀어 앞으로의 발급과 겹치지 않게 합니다.
@@ -257,12 +257,12 @@ namespace sw
         void unregisterRootSceneComponent( SceneComponent* pComp );
 
         /**
-         * @brief 그릴 수 있는 컴포넌트의 등록부입니다.
+         * @brief 그릴 수 있는 컴포넌트의 레지스트리입니다.
          * @details PhysicsWorld 와 같은 자리입니다. 능력은 별도 타입으로 두고 매니저는 그것을 소유만
          *          합니다. 컴포넌트는 등록 시점에 이것을 받아 들고 있으므로, 매니저 전체를 알 필요가 없습니다.
          */
         PrimitiveRegistry& getPrimitiveRegistry() { return _primitiveRegistry; }
-        /** @brief 그릴 수 있는 컴포넌트의 등록부입니다. */
+        /** @brief 그릴 수 있는 컴포넌트의 레지스트리입니다. */
         const PrimitiveRegistry& getPrimitiveRegistry() const { return _primitiveRegistry; }
 
         /**
@@ -273,29 +273,29 @@ namespace sw
         const AnimationSystem& getAnimationSystem() const { return _animationSystem; }
 
         /**
-         * @brief 타입별 컴포넌트 등록부입니다(빛 · 2D 그림자 가림막 · 상호작용 대상 · 환경 질의 대상 …).
+         * @brief 타입별 컴포넌트 레지스트리입니다(빛 · 2D 그림자 가림막 · 상호작용 대상 · 환경 질의 대상 …).
          * @details 프리미티브와 같은 이유로 있습니다. 매 프레임 씬을 뒤져 **찾지** 않고, 컴포넌트가 붙을 때 **등록받습니다** —
          *          `forEachComponentOfType` 은 모든 오브젝트를 훑으므로 프레임 경로에 쓰지 않습니다. 자세한 사연은 ComponentRegistry.h 에 있습니다.
          */
         ComponentRegistry& getComponentRegistry() { return _componentRegistry; }
-        /** @brief 타입별 컴포넌트 등록부입니다. */
+        /** @brief 타입별 컴포넌트 레지스트리입니다. */
         const ComponentRegistry& getComponentRegistry() const { return _componentRegistry; }
 
         /**
-         * @brief 카메라 컴포넌트의 등록부입니다. 역할 · 우선순위로 고르는 규칙(`selectCamera`)도 여기 하나입니다.
+         * @brief 카메라 컴포넌트의 레지스트리입니다. 역할 · 우선순위로 고르는 규칙(`selectCamera`)도 여기 하나입니다.
          * @details 빛과 같은 이유로 있습니다 — 게임 · 에디터 카메라 선택이 씬 전체를 훑지 않습니다. 자세한 사연은 CameraRegistry.h 에 있습니다.
          */
         CameraRegistry& getCameraRegistry() { return _cameraRegistry; }
-        /** @brief 카메라 컴포넌트의 등록부입니다. */
+        /** @brief 카메라 컴포넌트의 레지스트리입니다. */
         const CameraRegistry& getCameraRegistry() const { return _cameraRegistry; }
 
         /**
-         * @brief 틱에 참여하는 오브젝트의 등록부입니다(언리얼 `FTickTaskManager` 의 자리). 자세한 사연은 TickRegistry.h 에 있습니다.
+         * @brief 틱에 참여하는 오브젝트의 레지스트리입니다(언리얼 `FTickTaskManager` 의 자리). 자세한 사연은 TickRegistry.h 에 있습니다.
          * @details 틱 디스패치(`SceneTickScheduler`)가 소유합니다. 컴포넌트가 틱을 켜고 끄면 소유 오브젝트가 여기에 표시하고, 디스패치 전에
          *          표시된 오브젝트만 다시 훑습니다.
          */
         TickRegistry& getTickRegistry() { return _tickScheduler.getTickRegistry(); }
-        /** @brief 틱에 참여하는 오브젝트의 등록부입니다. */
+        /** @brief 틱에 참여하는 오브젝트의 레지스트리입니다. */
         const TickRegistry& getTickRegistry() const { return _tickScheduler.getTickRegistry(); }
 
         /** @brief 핸들이 가리키는 컴포넌트를 찾습니다. 삭제 예정이면 nullptr 입니다. */
@@ -313,13 +313,28 @@ namespace sw
         SceneAudio& getSceneAudio() { return _sceneAudio; }
         /** @brief 이 씬의 강체 물리입니다. */
         const ScenePhysics& getScenePhysics() const { return _scenePhysics; }
+        /** @brief 등록 줄(`SW_SCENE_SERVICE`)로 만든 이 씬의 서비스입니다. 이 매니저가 만들지 않은 줄이면 nullptr 입니다. */
+        ISceneService* findSceneService( const SceneServiceRegistration& registration ) const;
         /**
-         * @brief 이 씬의 내비게이션(에이전트 종류마다 내비메시 · 군중, 베이크 · 재베이크, 에이전트 갱신)입니다. 물리처럼 소유만 하고 `tick` 의 한 줄만 정합니다 —
-         *        물리 앞 틱 결과를 적용한 뒤, 애니메이션 · 물리 앞(에이전트가 캐릭터 컨트롤러에 넘긴 속도가 이번 물리 프레임에 든다).
+         * @brief 이 씬의 서비스 @p TService 입니다(`ISceneService.h`). 레지스트리의 서비스는 매니저마다 하나씩 늘 있습니다.
+         * @details 언리얼 `UWorld::GetSubsystem<T>()` 와 같은 자리입니다. 코어는 서비스 타입을 모르고, 부르는 쪽이 그 타입의 헤더를 듭니다
+         *          (`manager.getSceneService<SceneNavigation>()`).
          */
-        SceneNavigation& getSceneNavigation() { return *_pSceneNavigation; }
-        /** @brief 이 씬의 내비게이션입니다. */
-        const SceneNavigation& getSceneNavigation() const { return *_pSceneNavigation; }
+        template <typename TService>
+        TService& getSceneService()
+        {
+            ISceneService* pService = findSceneService( TService::getSceneServiceRegistration() );
+            SW_ASSERT( pService != nullptr );
+            return static_cast<TService&>( *pService );
+        }
+        /** @brief 이 씬의 서비스 @p TService 입니다. */
+        template <typename TService>
+        const TService& getSceneService() const
+        {
+            const ISceneService* pService = findSceneService( TService::getSceneServiceRegistration() );
+            SW_ASSERT( pService != nullptr );
+            return static_cast<const TService&>( *pService );
+        }
 
         /** @brief 이 씬의 겹침 월드입니다(AABB 질의 월드 · 2D 콜라이더 등록 · 겹침 이벤트). 질의는 `getOverlapWorld2D().getPhysicsWorld()` 입니다. */
         SceneOverlapWorld2D& getOverlapWorld2D() { return _overlapWorld2D; }
@@ -372,7 +387,7 @@ namespace sw
         /** @brief 모든 오브젝트의 틱 항목을 다음 틱 전에 다시 짓게 합니다(타입 재바인딩 · 씬 초기화). */
         void markTickStagesDirty() { _tickScheduler.getTickRegistry().markAllDirty(); }
         /**
-         * @brief 틱 등록부가 오브젝트 항목을 다시 지은 틱의 수입니다. 진단 · 회귀 테스트용입니다.
+         * @brief 틱 레지스트리가 오브젝트 항목을 다시 지은 틱의 수입니다. 진단 · 회귀 테스트용입니다.
          * @details 틱에 참여하는 컴포넌트(`Component::hasTickWork`)가 생기거나 없어지거나 순서가 바뀔 때만 올라야 합니다.
          *          틱하지 않는 MeshComponent 를 붙였다 떼는 것으로는 오르지 않습니다. 다시 지을 때도 바뀐 오브젝트의 컴포넌트 몇 개만 훑습니다.
          */
@@ -398,9 +413,19 @@ namespace sw
 
         /**
          * @brief 겹침 월드 → 강체 물리를 한 번씩 진행합니다. 틱 · 트랜스폼 적용 뒤, 게임 스레드에서.
-         * @details 유니티는 물리 갱신 뒤 OnTrigger 를, 언리얼은 움직임이 끝난 뒤 Begin/EndOverlap 을 부른다. 여기서는 그 프레임에 적용된 월드 자리로 잰다.
+         * @details 유니티는 물리 갱신 뒤 OnTrigger 를, 언리얼은 움직임이 끝난 뒤 Begin/EndOverlap 을 부른다. 여기서는 그 프레임에 적용된 월드 자리로 측정한다.
          */
         void stepPhysics( float32 deltaTime );
+
+        /** @brief 등록 줄의 단계가 @p step 인 서비스를 등록 순서대로 갱신합니다. */
+        void updateSceneServices( SceneFrameStep step, float32 deltaTime );
+
+        /** @brief 이 매니저가 만든 씬 서비스 하나입니다. */
+        struct SceneServiceEntry
+        {
+            const SceneServiceRegistration* _pRegistration;
+            unique_ptr<ISceneService>       _pService;
+        };
 
         /** @brief 붙은 프레임 시스템 하나입니다. */
         struct FrameSystemEntry
@@ -414,22 +439,22 @@ namespace sw
 #include "Engine/Object/GameObject/SceneFrameStepList.xxx"
 #undef SW_SCENE_FRAME_STEP
 
-        // 단위들은 소유만 한다. 선언 순서가 생성 순서다 — 뒤 단위가 앞 단위를 참조로 받는다(틱 디스패치 → 계층 · 등록부 · 틱 중 규칙,
-        // 저장소 → 틱 등록부 · 틱 중 규칙). 오브젝트는 소멸자의 `clear` 가 먼저 지우므로 단위가 사라지는 순서에 기대지 않는다.
+        // 단위들은 소유만 한다. 선언 순서가 생성 순서다 — 뒤 단위가 앞 단위를 참조로 받는다(틱 디스패치 → 계층 · 레지스트리 · 틱 중 규칙,
+        // 저장소 → 틱 레지스트리 · 틱 중 규칙). 오브젝트는 소멸자의 `clear` 가 먼저 지우므로 단위가 사라지는 순서에 기대지 않는다.
 
         /** @brief 틱 중 규칙(동결 플래그 · 구조 변경 큐 · 틱 뒤 큐 · 비우는 순서)입니다. 게임이 부르는 API 는 위의 전달 함수입니다. */
         StructuralChangeBuffer _structuralChangeBuffer;
         /** @brief 트랜스폼 계층입니다. */
         SceneTransformHierarchy _transformHierarchy;
-        /** @brief 그릴 수 있는 컴포넌트의 등록부입니다. */
+        /** @brief 그릴 수 있는 컴포넌트의 레지스트리입니다. */
         PrimitiveRegistry _primitiveRegistry;
-        /** @brief 타입별 컴포넌트 등록부입니다(빛 포함). */
+        /** @brief 타입별 컴포넌트 레지스트리입니다(빛 포함). */
         ComponentRegistry _componentRegistry;
-        /** @brief 카메라 컴포넌트의 등록부입니다. */
+        /** @brief 카메라 컴포넌트의 레지스트리입니다. */
         CameraRegistry _cameraRegistry;
         /** @brief 애니메이션 시스템입니다. */
         AnimationSystem _animationSystem;
-        /** @brief 컴포넌트 틱 디스패치(틱 등록부 · 그룹 포크-조인 · 선행 조건 스테이지)입니다. */
+        /** @brief 컴포넌트 틱 디스패치(틱 레지스트리 · 그룹 포크-조인 · 선행 조건 스테이지)입니다. */
         SceneTickScheduler _tickScheduler;
         /** @brief 오브젝트 저장소(생성 · 이름 · id 표 · 조회 · 지연 파괴 · 컴포넌트 풀 · 시작 줄)입니다. 게임이 부르는 API 는 위의 전달 함수입니다. */
         GameObjectStore _store;
@@ -437,10 +462,10 @@ namespace sw
         SceneOverlapWorld2D _overlapWorld2D;
         /** @brief 강체 물리입니다. 컴포넌트의 해제가 바디를 놓는다. */
         ScenePhysics _scenePhysics;
-        /** @brief 오디오 컴포넌트 등록부와 엔진 묶기입니다. */
+        /** @brief 오디오 컴포넌트 레지스트리와 엔진 묶기입니다. */
         SceneAudio _sceneAudio;
-        /** @brief 내비게이션입니다. 컴포넌트(에이전트 · 장애물 · 표면)의 해제가 등록을 뺀다. 기능 쪽 타입이라 헤더는 전방 선언만 든다(코어 헤더가 Navigation 을 퍼뜨리지 않게). */
-        unique_ptr<SceneNavigation> _pSceneNavigation;
+        /** @brief 레지스트리(`SceneServiceRegistry`)에서 만든 기능 서비스입니다(내비게이션 …). 코어는 타입을 모르고 단계마다 `update` 만 부른다. */
+        vector<SceneServiceEntry> _listSceneService;
         /** @brief 단계마다 돌기 직전에 부르는 관찰자(`setFrameStepObserver`)입니다. 보통 비어 있습니다. */
         FrameStepObserver _frameStepObserver;
         /** @brief `FrameSystems` 단계가 붙인 순서대로 부르는 시스템입니다. 오브젝트보다 먼저 비웁니다(시스템이 컴포넌트를 가리킬 수 있다). */

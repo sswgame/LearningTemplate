@@ -166,13 +166,13 @@ namespace sw
          * @warning 이것은 `isVisibleRequested()` 와 **다른 질문**입니다. X11 에서는 `XMapWindow` 가
          *          요청일 뿐이고 창 관리자가 실제로 매핑하기 전까지 `IsViewable` 이 아닙니다.
          *          즉 방금 보이라고 한 창도 여기서는 **false** 입니다. 최소화 · 다른 워크스페이스도 같습니다.
-         *          "다시 만든 뒤 되살릴까" 같은 판단에는 쓰지 마십시오(그래서 `recreate` 는 의도를 봅니다).
+         *          "다시 만든 뒤 복원할까" 같은 판단에는 쓰지 마십시오(그래서 `recreate` 는 의도를 봅니다).
          */
         virtual bool isVisible() const { return true; }
 
         /**
          * @brief **보이기로 정해져 있는지** 반환합니다. 마지막 `showWindow()` 의 인자입니다.
-         * @details 창 관리자의 사정과 상관없이 바로 답합니다. 창을 다시 만들 때 되살릴지를 정하는
+         * @details 창 관리자의 사정과 상관없이 바로 답합니다. 창을 다시 만들 때 복원할지를 정하는
          *          것은 이 값입니다. 화면 상태가 아니라 **우리가 원한 상태**가 기준이어야 합니다.
          */
         bool isVisibleRequested() const { return _bVisibleRequested == SW_TRUE; }

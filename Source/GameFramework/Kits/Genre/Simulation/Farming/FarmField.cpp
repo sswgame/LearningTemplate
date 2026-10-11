@@ -49,7 +49,7 @@ namespace sw
 
     void FarmField::initialize( int32 width, int32 height, const CropCatalog* pCatalog )
     {
-        _topology = GridTopology{ width, height }; // 음수는 0 칸(GridTopology 생성자)
+        _topology = GridTopology{ width, height }; // 음수는 0 타일로 처리한다(GridTopology 생성자)
         _pCatalog = pCatalog;
         _listTile.clear();
         _listTile.resize( static_cast<size_t>( _topology.getCellCount() ) );
@@ -184,7 +184,7 @@ namespace sw
 
         if ( pCrop->_regrowDays > 0 )
         {
-            // 다시 자라는 작물은 남는다 — `_regrowDays` 만큼 다시 물을 받아 자라면 또 거둔다.
+            // 다시 자라는 작물은 남는다. `_regrowDays` 만큼 다시 물을 받아 자라면 또 거둘 수 있다.
             pTile->_growth = MathUtil::max( 0, pCrop->_growthDays - pCrop->_regrowDays );
             pTile->_bReady = SW_FALSE;
         }
@@ -204,21 +204,21 @@ namespace sw
             const CropDef* pCrop = tile.hasCrop() ? findCropDef( tile ) : nullptr;
             if ( pCrop != nullptr && tile._bWithered == SW_FALSE )
             {
-                // 1) 자람 — 어제 물을 받았으면 하루.
+                // 1) 자람: 어제 물을 받았으면 하루 자란다.
                 if ( tile._bWatered == SW_TRUE && tile._bReady == SW_FALSE )
                 {
                     ++tile._growth;
                     if ( tile._growth >= pCrop->_growthDays )
                         tile._bReady = SW_TRUE;
                 }
-                // 2) 시듦 — 새 계절에 자라지 않으면(다 자란 것도).
+                // 2) 시듦: 새 계절에 자라지 않으면 시든다(다 자란 것도 마찬가지이다).
                 if ( pCrop->growsIn( newSeason ) == false )
                 {
                     tile._bWithered = SW_TRUE;
                     tile._bReady    = SW_FALSE;
                 }
             }
-            // 3) 물은 마르고, 비 오는 날은 갈아 둔 칸이 젖은 채 시작한다.
+            // 3) 물은 마르고, 비 오는 날은 갈아 둔 타일이 젖은 채 시작한다.
             tile._bWatered = ( bRain && tile._bTilled == SW_TRUE ) ? SW_TRUE : SW_FALSE;
         }
     }

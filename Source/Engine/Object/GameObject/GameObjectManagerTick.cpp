@@ -11,7 +11,6 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/Component.h"
-#include "Engine/Object/Component/Navigation/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -101,7 +100,16 @@ namespace sw
     {
         // 끝난 타일 재베이크를 끼우는 것도 여기다 — 컴포넌트 틱이 질의하지 않는 구간이다.
         SW_PROFILE_SCOPE( "GT.Scene.tick.navigation" );
-        _pSceneNavigation->tick( deltaTime );
+        updateSceneServices( SceneFrameStep::Navigation, deltaTime );
+    }
+
+    void GameObjectManager::updateSceneServices( SceneFrameStep step, float32 deltaTime )
+    {
+        for ( SceneServiceEntry& entry : _listSceneService )
+        {
+            if ( entry._pService != nullptr && entry._pRegistration->_frameStep == step )
+                entry._pService->update( deltaTime );
+        }
     }
 
     void GameObjectManager::runFrameStepAnimation( float32 deltaTime )
@@ -121,7 +129,7 @@ namespace sw
 
     void GameObjectManager::runFrameStepPhysics( float32 deltaTime )
     {
-        // 이 프레임에 적용된 월드 자리로 겹침을 잰다. 이벤트 처리가 지운 것은 마지막 단계가 놓는다.
+        // 이 프레임에 적용된 월드 자리로 겹침을 측정한다. 이벤트 처리가 지운 것은 마지막 단계가 놓는다.
         SW_PROFILE_SCOPE( "GT.Scene.tick.physics" );
         stepPhysics( deltaTime );
     }

@@ -44,7 +44,7 @@ namespace sw
             static constexpr uint32 kStateTag     = FourCcUtil::make( "FARM" );
             static constexpr uint32 kStateVersion = 3;
 
-            /** @brief 폰 버튼 이름 — `FarmButton` 순서입니다(입력 맵 `data/farm.input.xml` 의 액션 이름과 같다). */
+            /** @brief 폰 버튼 이름입니다. `FarmButton` 순서이며 입력 맵 `data/farm.input.xml` 의 액션 이름과 같습니다. */
             static constexpr const utf8* kArrButtonName[] = { "Farm.Tool1", "Farm.Tool2", "Farm.Tool3", "Farm.Tool4", "Farm.SeedPrev", "Farm.SeedNext",
                                                               "Farm.Use", "Farm.Ship", "Farm.Buy", "Farm.Sleep", "Farm.Status" };
             static_assert( sizeof( kArrButtonName ) / sizeof( kArrButtonName[0] ) == static_cast<size_t>( FarmButton::Count ), "one name per farm button" );
@@ -57,7 +57,7 @@ namespace sw
             static constexpr const utf8* kSoundHarvest = "game/harvestvalley/sounds/pluck_001.ogg";
             static constexpr const utf8* kSoundShip    = "game/harvestvalley/sounds/confirmation_001.ogg";
 
-            /** @brief 공유 시계의 계절 이름(시계 설정 · 작물 카탈로그가 함께 쓴다)입니다. */
+            /** @brief 공유 시계의 계절 이름입니다(시계 설정과 작물 카탈로그가 함께 씁니다). */
             static vector<hashed_string> makeSeasons() { return { hashed_string( "Spring" ), hashed_string( "Summer" ), hashed_string( "Fall" ), hashed_string( "Winter" ) }; }
 
             static int32 getToolStaminaCost( FarmTool tool )
@@ -91,7 +91,7 @@ namespace sw
                 return "?";
             }
 
-            /** @brief 다 자란 작물의 색입니다. 모르는 작물은 초록이다. */
+            /** @brief 다 자란 작물의 색입니다. 모르는 작물은 초록입니다. */
             static float4 findCropColor( const hashed_string& cropID )
             {
                 struct CropColor
@@ -129,7 +129,7 @@ namespace sw
             }
         };
 
-        /** @brief 탐침이 읽는 디렉터 — 씬의 첫 농장 디렉터입니다(탐침은 단언 단계에서만 불린다 — 프레임 경로가 아니다). */
+        /** @brief 프로브가 읽는 디렉터입니다. 씬의 첫 농장 디렉터이며, 프로브는 단언 단계에서만 불리므로 프레임 경로가 아닙니다. */
         const FarmDirectorComponent* findProbeDirector( const GameObjectManager* pManager )
         {
             const FarmDirectorComponent* pFound = nullptr;
@@ -200,8 +200,8 @@ namespace sw
     } // namespace
 
     /**
-     * @brief `-gv_farmAutoPlay=1` — 디렉터의 자동 농부를 켭니다(씬의 `_bAutoPlay` 가 꺼져 있어도). 입력 없이 계절을 넘겨 보는 확인용입니다.
-     * @details 배포본으로도 돌린다: `App -gv_farmAutoPlay=1 -gv_profileFrames=36000`(약 10 분 = 하루 다섯).
+     * @brief `-gv_farmAutoPlay=1`: 디렉터의 자동 농부를 켭니다(씬의 `_bAutoPlay` 가 꺼져 있어도 켭니다). 입력 없이 계절을 넘겨 보는 확인용입니다.
+     * @details 배포본으로도 돌릴 수 있다. `App -gv_farmAutoPlay=1 -gv_profileFrames=36000` 은 약 10분이며 하루 다섯 번이다.
      */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_farmAutoPlay, 0, "HarvestValley: 농부도 AI 가 조종 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_farmAutoPlay, "HarvestValley", "The auto farmer AI controller possesses the farmer" );
@@ -280,7 +280,7 @@ namespace sw
         if ( deltaTime <= 0.0f )
             return;
 
-        // 농부는 폰의 의도대로 — 누가 냈는지(플레이어 · 자동 농부)는 모른다. 빙의는 틱 뒤 플러시가 스위치에 맞춘다.
+        // 농부는 폰의 의도대로 움직인다. 누가 냈는지(플레이어 또는 자동 농부)는 모른다. 빙의는 틱이 끝난 뒤 플러시가 스위치에 맞춘다.
         const PawnComponent* pFarmerPawn = findFarmerPawn();
         if ( pFarmerPawn != nullptr )
         {
@@ -288,7 +288,7 @@ namespace sw
             _bPossessionDirty = pFarmerPawn->isPossessed() == false || isAutoPlayOn() != isFarmerDrivenByAI() ? SW_TRUE : SW_FALSE;
         }
 
-        // 시간 — 공유 시계는 공유 상태가 흘린다. 다음 날 2 시가 되면 그 자리에서 쓰러져 아침이다(체력 반).
+        // 시간은 공유 시계를 공유 상태가 흘린다. 다음 날 2시가 되면 그 위치에서 쓰러져 아침이 된다(체력 반).
         const GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
         if ( pState != nullptr )
         {
@@ -404,7 +404,7 @@ namespace sw
             return _witheredCropLook;
         if ( bCropColored )
         {
-            // 뷰가 워커에서 부른다 — 컨테이너 첨자 대신 포인터로 읽는다.
+            // 뷰가 워커에서 부른다. 컨테이너 인덱스 대신 포인터로 읽는다.
             const CropLook* pLook = _listCropLook.data();
             for ( size_t lookIndex = 0; lookIndex < _listCropLook.size(); ++lookIndex )
             {
@@ -454,7 +454,7 @@ namespace sw
         {
             _listSeed.push_back( crop._seedItem );
         }
-        // 시작 돈 · 씨앗은 새 판에만 — 되살린 판에 덧쌓이지 않게.
+        // 시작 돈과 씨앗은 새 판에만 준다. 복원한 판에 덧쌓이지 않게 하기 위해서다.
         if ( bFresh )
         {
             pState->getWallet().add( _shipment.getCurrency(), _startingGold );
@@ -462,7 +462,7 @@ namespace sw
         }
         _dayStarted = pState->getClock().getDay();
         _hourOfDay  = pState->getClock().getHour();
-        // 씬에 놓인 출하함 · 가게가 있으면 그 자리다 — 에디터에서 옮기면 농부가 서는 자리가 따라온다.
+        // 씬에 놓인 출하함과 가게가 있으면 그 위치를 쓴다. 에디터에서 옮기면 농부가 서는 위치가 따라온다.
         _shippingBinPosition = findObjectPosition( _shippingBin, FarmDirectorComponentInternal::kDefaultShippingBinPosition );
         _shopPosition        = findObjectPosition( _shop, FarmDirectorComponentInternal::kDefaultShopPosition );
         _playerPosition      = _playerStart;
@@ -473,7 +473,7 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 스폰(틱 뒤 · 게임 스레드)
+    // 스폰(틱이 끝난 뒤, 게임 스레드)
     // ------------------------------------------------------------------------------
     void FarmDirectorComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
     {
@@ -536,7 +536,7 @@ namespace sw
                 pAI->possess( *pPawn );
             return;
         }
-        // 자동 플레이를 끄면 플레이어 0 의 조종자가 되찾는다 — 씬에 없으면 세운다(조종 시스템이 자동 빙의로 세우는 것과 같은 자리).
+        // 자동 플레이를 끄면 플레이어 0 의 조종자가 되찾는다. 씬에 없으면 스폰한다(조종 시스템이 자동 빙의로 스폰하는 것과 같다).
         PlayerControllerComponent* pPlayer = nullptr;
         for ( PlayerControllerComponent* pCandidate : manager.getComponentRegistry().getAll<PlayerControllerComponent>() )
         {
@@ -557,7 +557,7 @@ namespace sw
 
     void FarmDirectorComponent::spawnField( GameObjectManager& manager )
     {
-        // 칸마다 흙 · 작물 하나씩. 각 뷰가 밭의 같은 칸을 따라 모습을 맞춘다(PostUpdate).
+        // 타일마다 흙과 작물을 하나씩 둔다. 각 뷰가 밭의 같은 타일을 따라 모습을 맞춘다(PostUpdate).
         const GameObjectHandle director = getOwner()->getHandle();
         for ( int32 y = 0; y < kFieldHeight; ++y )
         {
@@ -616,7 +616,7 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 농부 폰의 의도(PrePhysics — 워커, 의도는 조종 시스템이 틱 전에 채웠다)
+    // 농부 폰의 의도(PrePhysics, 워커). 의도는 조종 시스템이 틱 전에 채웠다.
     // ------------------------------------------------------------------------------
     void FarmDirectorComponent::applyFarmerIntent( float32 deltaTime, const PawnComponent& pawn )
     {
@@ -625,7 +625,7 @@ namespace sw
         const float3         move   = intent.computeWorldMove();
         movePlayer( float3{ move._x, 0.0f, move._z }, deltaTime );
 
-        // 버튼 — 도구를 먼저 바꾸고 쓴다(같은 틱에 둘 다 누를 수 있다).
+        // 버튼은 도구를 먼저 바꾸고 쓴다(같은 틱에 둘 다 누를 수 있다).
         int32 arrButtonIndex[kButtonCount];
         for ( int32 button = 0; button < kButtonCount; ++button )
         {
@@ -666,14 +666,14 @@ namespace sw
 
     void FarmDirectorComponent::movePlayer( const float3& direction, float32 deltaTime )
     {
-        // 길이는 걷는 빠르기의 비율(스틱 반만 기울이면 반 빠르기) — 1 을 넘으면(대각선 키) 1 로 자른다.
+        // 길이는 걷는 속도의 비율이다(스틱을 반만 기울이면 반 속도). 1 을 넘으면(대각선 키) 1 로 자른다.
         const float32 length = direction.getLength();
         if ( length < 1.0e-4f )
             return;
         const float3 step  = direction * ( _walkSpeed * deltaTime * MathUtil::min( length, 1.0f ) / length );
         _playerPosition._x = MathUtil::clamp( _playerPosition._x + step._x, -5.0f, static_cast<float32>( kFieldWidth ) + 4.0f );
         _playerPosition._z = MathUtil::clamp( _playerPosition._z + step._z, -5.0f, static_cast<float32>( kFieldHeight ) + 4.0f );
-        // 네 방향 — 대각선이면 더 큰 축.
+        // 네 방향으로 맞춘다. 대각선이면 더 큰 축을 쓴다.
         if ( MathUtil::abs( direction._x ) > MathUtil::abs( direction._z ) )
             _facing = float3{ direction._x > 0.0f ? 1.0f : -1.0f, 0.0f, 0.0f };
         else
@@ -733,7 +733,7 @@ namespace sw
                 result              = _field.harvest( x, y, produce, count );
                 if ( result == FarmActionResult::Done && count > 0 )
                 {
-                    // 가방이 차면 덜 들어간다(남은 것은 밭에서 사라진다) — 넣은 수를 적는다.
+                    // 가방이 차면 덜 들어간다(남은 것은 밭에서 사라진다). 실제로 넣은 수를 적는다.
                     const int32 added = pState != nullptr ? pState->getInventory().addItem( produce, count ) : 0;
                     SW_LOG_INFO( "[Farm] harvested %# x%# (%# into the bag)", produce.c_str(), count, added );
                     getSoundQueue().queueClip( Internal::kSoundHarvest );
@@ -811,7 +811,7 @@ namespace sw
         WorldClock&                  clock        = pState->getClock();
         [[maybe_unused]] const int32 earned       = _shipment.settleShipping( _cropCatalog, pState->getWallet() );
         const hashed_string          seasonBefore = clock.getSeasonName();
-        clock.advanceToHour( 6.0f ); // 잠 — 다음 날 아침
+        clock.advanceToHour( 6.0f ); // 수면. 다음 날 아침이 된다.
         _dayStarted                               = clock.getDay();
         _hourOfDay                                = clock.getHour();
         [[maybe_unused]] const bool bSeasonChange = clock.getSeasonName() != seasonBefore;
@@ -834,7 +834,7 @@ namespace sw
         const int32 count  = static_cast<int32>( _listSeed.size() );
         _selectedSeedIndex = ( ( _selectedSeedIndex + offset ) % count + count ) % count;
         if ( isAutoPlayOn() )
-            return; // 자동 농부는 씨앗을 한 칸씩 넘겨 고른다 — 그 줄은 남기지 않는다
+            return; // 자동 농부는 씨앗을 하나씩 넘겨 가며 고른다. 그 줄은 로그에 남기지 않는다.
         [[maybe_unused]] const CropDef*            pCrop  = _cropCatalog.findCropBySeed( getSelectedSeed() );
         [[maybe_unused]] const GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
         SW_LOG_INFO( "[Farm] seed: %# (have %#, %#G)%#", getSelectedSeed().c_str(), pState != nullptr ? pState->getInventory().getItemCount( getSelectedSeed() ) : 0,
@@ -843,7 +843,7 @@ namespace sw
 
     void FarmDirectorComponent::updateCameraFocus()
     {
-        // 비스듬히 내려다보는 직교 시점 — 밭 가운데와 농부 사이를 본다. 리그는 PostUpdate 에서 이 초점을 읽고, 리그의 오브젝트에는 다른 쓰기가 없다.
+        // 비스듬히 내려다보는 직교 시점으로, 밭 중심과 농부 사이를 본다. 리그는 PostUpdate 에서 이 초점을 읽고, 리그의 오브젝트에는 다른 쓰기가 없다.
         GameObjectManager*       pManager   = getObjectManager();
         const GameObject*        pRigObject = pManager != nullptr ? pManager->resolveGameObject( _cameraRig ) : nullptr;
         OrthoCameraRigComponent* pRig       = pRigObject != nullptr ? pRigObject->getComponent<OrthoCameraRigComponent>() : nullptr;

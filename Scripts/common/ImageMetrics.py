@@ -348,7 +348,7 @@ def computeMetrics(image: RgbImage) -> ImageMetrics:
 
 
 def flattenMetricsInternal(metrics: ImageMetrics) -> dict[str, list[float]]:
-    """지표 이름 → 값 목록(스칼라도 길이 1). 배경색은 판정하지 않는다 — 전경 지표가 이미 배경을 기준으로 잰 것이다."""
+    """지표 이름 → 값 목록(스칼라도 길이 1). 배경색은 판정하지 않는다 — 전경 지표가 이미 배경을 기준으로 측정한 것이다."""
     return {
         "foregroundFraction": [metrics.foregroundFraction],
         "foregroundMean": list(metrics.foregroundMean),

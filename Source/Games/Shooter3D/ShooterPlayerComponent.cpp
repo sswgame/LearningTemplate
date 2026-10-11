@@ -46,7 +46,7 @@ namespace sw
                                                                                                     "game/shooter3d/models/blaster_h.mesh",
                                                                                                     "game/shooter3d/models/blaster_a.mesh" };
             static constexpr const utf8* kArrWeaponAction[ShooterPlayerComponent::kWeaponCount] = { "Weapon1", "Weapon2", "Weapon3" };
-            // 폰 스키마의 버튼 · 아날로그 이름(플레이어는 같은 이름의 입력 맵 액션, 자동 플레이 AI 는 그 이름을 누른다).
+            // 폰 스키마의 버튼과 아날로그 이름이다(플레이어는 같은 이름의 입력 맵 액션을 쓰고, 자동 플레이 AI 는 그 이름을 누른다).
             static constexpr const utf8* kFireButton         = "Fire";
             static constexpr const utf8* kReloadButton       = "Reload";
             static constexpr const utf8* kSwitchWeaponButton = "SwitchWeapon";
@@ -59,12 +59,12 @@ namespace sw
             static constexpr float4 kCoverHitColor{ 0.9f, 0.85f, 0.6f, 1.0f };
             static constexpr float4 kTracerColor{ 3.0f, 2.2f, 0.6f, 1.0f };
             static constexpr float4 kMuzzleFlashColor{ 4.0f, 2.8f, 0.8f, 1.0f };
-            // 사운드 이벤트 이름(shooter3d.audioevents.xml) — 플레이어 자신의 소리라 2D 로 낸다.
+            // 사운드 이벤트 이름(shooter3d.audioevents.xml). 플레이어 자신의 소리라 2D 로 낸다.
             static constexpr const utf8* kSoundLand     = "Land";
             static constexpr const utf8* kSoundHitEnemy = "HitEnemy";
             static constexpr const utf8* kSoundHitCover = "HitCover";
 
-            /** @brief 같은 오브젝트에서 컴포넌트 이름이 @p pName 인 T 입니다. 없으면 nullptr 입니다. */
+            /** @brief 같은 오브젝트에서 컴포넌트 이름이 @p pName 인 T 를 반환합니다. 없으면 nullptr 입니다. */
             template <typename T>
             static T* findNamed( const GameObject& owner, const utf8* pName )
             {
@@ -78,7 +78,7 @@ namespace sw
                 return pFound;
             }
 
-            /** @brief 아이템의 외형에서 소켓 에셋을 가진 첫 부품의 소켓 에셋입니다(무기의 총구). 없으면 빈 이름입니다. */
+            /** @brief 아이템의 외형에서 소켓 에셋을 가진 첫 부품의 소켓 에셋을 반환합니다(무기의 총구). 없으면 빈 이름입니다. */
             static hashed_string findItemSocketSet( const AppearanceDatabase& database, const hashed_string& itemID )
             {
                 const ItemCatalog*   pItems  = database.getItemCatalog();
@@ -95,7 +95,7 @@ namespace sw
             }
         };
 
-        /** @brief 시나리오 탐침이 보는 첫 슈터 플레이어입니다(드물게 불리므로 씬을 훑는다). */
+        /** @brief 시나리오 프로브가 보는 첫 슈터 플레이어입니다(드물게 불리므로 씬을 훑습니다). */
         struct ShooterPlayerProbeInternal
         {
             static const ShooterPlayerComponent* findFirstPlayer( const GameObjectManager* pManager )
@@ -111,7 +111,7 @@ namespace sw
                 return pFound;
             }
 
-            /** @brief 첫 슈터 플레이어의 무기 번호(0 소총 · 1 산탄총 · 2 권총)입니다. */
+            /** @brief 첫 슈터 플레이어의 무기 번호입니다(0 소총, 1 산탄총, 2 권총). */
             [[nodiscard]] static bool readWeaponIndex( const GameObjectManager* pManager, float64& outValue )
             {
                 const ShooterPlayerComponent* pPlayer = findFirstPlayer( pManager );
@@ -141,7 +141,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 첫 슈터 플레이어의 폰을 쥔 조종자 — 0 플레이어 · 1 AI(자동 플레이) · −1 없음(그 밖의 조종자도 −1). */
+            /** @brief 첫 슈터 플레이어의 폰을 가진 조종자를 반환합니다. 0 은 플레이어, 1 은 AI(자동 플레이), -1 은 없음입니다(그 밖의 조종자도 -1). */
             [[nodiscard]] static bool readControllerKind( const GameObjectManager* pManager, float64& outValue )
             {
                 const ShooterPlayerComponent* pPlayer = findFirstPlayer( pManager );
@@ -149,7 +149,7 @@ namespace sw
                 const PawnComponent*          pPawn   = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
                 if ( pPawn == nullptr )
                     return false;
-                // 조종자 목록은 등록부에서 — 폰을 쥔 것 하나를 찾는다.
+                // 조종자 목록은 레지스트리에서 얻는다. 폰을 가진 것 하나를 찾는다.
                 outValue = -1.0;
                 for ( ControllerComponent* pController : pManager->getComponentRegistry().getAll<ControllerComponent>() )
                 {
@@ -163,7 +163,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 첫 슈터 플레이어가 살아 있으면 1 — 쓰러지면 판을 다시 시작해 무기가 0 으로 돌아가므로 무기 단언의 전제입니다. */
+            /** @brief 첫 슈터 플레이어가 살아 있으면 1 을 반환합니다. 쓰러지면 판을 다시 시작해 무기가 0 으로 돌아가므로 무기 단언의 전제입니다. */
             [[nodiscard]] static bool readAlive( const GameObjectManager* pManager, float64& outValue )
             {
                 const ShooterPlayerComponent* pPlayer = findFirstPlayer( pManager );
@@ -264,7 +264,7 @@ namespace sw
         GameObject*        pBody    = pManager != nullptr ? pManager->resolveGameObject( _body ) : nullptr;
         if ( pBody != nullptr )
         {
-            // 부품(투구 · 무기)은 몸의 자식으로 붙어 있지만, 외형이 세운 것이라 외형이 걷는다.
+            // 부품(투구, 무기)은 몸의 자식으로 붙어 있지만, 외형이 스폰한 것이라 외형이 정리한다.
             CharacterAppearanceComponent* pAppearance = pBody->getComponent<CharacterAppearanceComponent>();
             if ( pAppearance != nullptr )
                 pAppearance->despawnParts();
@@ -287,14 +287,14 @@ namespace sw
             return;
         const float32 step = MathUtil::min( deltaTime, 0.1f );
 
-        // 시점 카메라의 프리셋(1인칭 · 3인칭 · 궤도 · CCTV) — 바뀌면 틱 뒤에 보임을 맞춘다.
+        // 시점 카메라의 프리셋(1인칭, 3인칭, 궤도, CCTV)이 바뀌면 틱이 끝난 뒤 가시성을 맞춘다.
         const bool bFirstPerson = queryFirstPerson();
         if ( bFirstPerson != ( _bFirstPerson == SW_TRUE ) )
         {
             _bFirstPerson   = bFirstPerson ? SW_TRUE : SW_FALSE;
             _bViewModeDirty = SW_TRUE;
         }
-        // 눈높이 — 몸의 Eyes 소켓(바인드 포즈)이 정한다. 몸이 조립되기 전에는 속성 값.
+        // 눈높이는 몸의 Eyes 소켓(바인드 포즈)이 정한다. 몸이 조립되기 전에는 속성 값을 쓴다.
         if ( _bodyEyeHeight <= 0.0f )
         {
             const GameObject*                   pBody       = findBodyObject();
@@ -313,14 +313,14 @@ namespace sw
         _hitMarkerTimer -= step;
         if ( _vitality.isAlive() == false )
         {
-            // 쓰러짐 클립이 도는 동안 멈춰 있다가 판을 처음부터.
+            // 쓰러짐 클립이 도는 동안 멈춰 있다가 판을 처음부터 다시 시작한다.
             _downTimer += step;
             pCamera->setEyePosition( getEyePosition() );
-            scheduleFlush(); // HUD — 쓰러짐 클립이 끝나면 판도 다시 시작한다
+            scheduleFlush(); // HUD 갱신을 예약한다. 쓰러짐 클립이 끝나면 판도 다시 시작한다.
             return;
         }
 
-        // 조종자(사람 · 자동 플레이 AI)가 틱 앞에 폰에 넣은 의도만 읽는다. 조종자가 없으면 의도는 0 이다(서 있다).
+        // 조종자(사람 또는 자동 플레이 AI)가 틱 앞에 폰에 넣은 의도만 읽는다. 조종자가 없으면 의도는 0 이다(서 있는다).
         using Internal             = ShooterPlayerComponentInternal;
         const PawnComponent* pPawn = pOwner->getComponent<PawnComponent>();
         if ( pPawn != nullptr )
@@ -335,7 +335,7 @@ namespace sw
 
         _lookYaw = pCamera->getLook().getYaw();
         pCamera->setEyePosition( getEyePosition() );
-        // HUD 는 틱 뒤에 넣는다(위젯은 게임 스레드만 고친다) — 탄약 · 체력 · 맞음 표시가 거의 매 프레임 바뀐다.
+        // HUD 는 틱이 끝난 뒤 넣는다(위젯은 게임 스레드만 고친다). 탄약, 체력, 맞음 표시가 거의 매 프레임 바뀐다.
         scheduleFlush();
     }
 
@@ -428,7 +428,7 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 입력 · 이동 · 사격(DuringPhysics — 자기 오브젝트)
+    // 입력, 이동, 사격(DuringPhysics, 자기 오브젝트)
     // ------------------------------------------------------------------------------
     void ShooterPlayerComponent::equipWeapons()
     {
@@ -452,7 +452,7 @@ namespace sw
             if ( pawn.wasButtonTriggered( pawn.findButton( hashed_string( Internal::kArrWeaponAction[weaponIndex] ) ) ) )
                 nextWeapon = weaponIndex;
         }
-        // SwitchWeapon 은 축(Q −1 · E +1)이라 버튼으로는 "발동" 만 온다 — 방향은 같은 이름의 아날로그 부호다.
+        // SwitchWeapon 은 축(Q는 -1, E는 +1)이라 버튼으로는 "발동"만 온다. 방향은 같은 이름의 아날로그 부호가 정한다.
         const hashed_string switchName( Internal::kSwitchWeaponButton );
         const int32         analogIndex = pawn.findAnalog( switchName );
         if ( pawn.wasButtonTriggered( pawn.findButton( switchName ) ) && 0 <= analogIndex && analogIndex < ControlIntent::kAnalogCount )
@@ -488,7 +488,7 @@ namespace sw
         ++_shotCount;
         _timeSinceShot      = 0.0f;
         const float3 muzzle = findMuzzlePosition();
-        // 총구 섬광 — 총구에 잠깐 빛나는 구.
+        // 총구 섬광은 총구에 잠깐 빛나는 구다.
         EffectRequest flash;
         flash._position = muzzle;
         flash._size     = _bFirstPerson == SW_TRUE ? 0.05f : 0.12f;
@@ -503,7 +503,7 @@ namespace sw
             const float32 distance  = traceShot( director, ray, weapon.getDef()._damage, bHitEnemy );
             const float3  end       = ray._origin + ray._direction * distance;
             bAnyHit                 = bAnyHit || bHitEnemy;
-            // 판정은 눈에서, 탄도선은 총구에서 — 맞은 자리까지 이은 선이다.
+            // 판정은 눈에서 하고, 탄도선은 총구에서 맞은 위치까지 이은 선이다.
             _listPendingTracer.push_back( TracerRequest{ muzzle, end } );
             if ( distance < weapon.getDef()._range )
             {
@@ -516,7 +516,7 @@ namespace sw
                 bHitCover = bHitCover || ( bHitEnemy == false && end._y > 0.05f );
             }
         }
-        // 한 발(산탄 여럿)에 소리는 하나 — 적을 맞혔으면 쇳소리, 아니고 상자 · 벽을 맞혔으면 나무 소리.
+        // 한 발(산탄은 여럿)에 소리는 하나만 낸다. 적을 맞혔으면 쇳소리, 상자나 벽을 맞혔으면 나무 소리다.
         if ( bAnyHit )
         {
             ++_hitCount;
@@ -527,7 +527,7 @@ namespace sw
         {
             _soundQueue.queueEvent( Internal::kSoundHitCover );
         }
-        // 반동 — 위로 튀고 옆으로 살짝.
+        // 반동은 위로 튀고 옆으로 살짝 흔든다.
         const float32 kick = weapon.getDef()._recoilPitch * MathUtil::kDegreeToRadian;
         camera.addRecoil( kick, kick * 0.25f * ( ( _shotCount % 2u ) == 0u ? 1.0f : -1.0f ) );
     }
@@ -544,7 +544,7 @@ namespace sw
         // 바닥
         if ( ray._direction._y < -1.0e-4f )
             nearest = MathUtil::min( nearest, -ray._origin._y / ray._direction._y );
-        // 적 — 발에서 키까지의 캡슐(물리 질의 · 부위 히트박스가 들어오면 그쪽으로).
+        // 적은 발에서 키까지의 캡슐로 본다(물리 질의나 부위 히트박스가 들어오면 그쪽을 쓴다).
         const vector<ShooterEnemyView>& listView     = director.getEnemyViews();
         const ShooterEnemyView*         pView        = listView.data();
         const ShooterEnemyView*         pNearestView = nullptr;
@@ -579,14 +579,14 @@ namespace sw
         float4x4          muzzle;
         if ( _bFirstPerson == SW_FALSE )
         {
-            // 몸이 든 무기 — 외형의 소켓 이름 공간(칸 이름 + 무기 소켓).
+            // 몸이 든 무기는 외형의 소켓 이름 공간(슬롯 이름과 무기 소켓)으로 찾는다.
             const GameObject*                   pBody       = findBodyObject();
             const CharacterAppearanceComponent* pAppearance = pBody != nullptr ? pBody->getComponent<CharacterAppearanceComponent>() : nullptr;
             if ( pAppearance != nullptr && pAppearance->findSocketWorldTransform( hashed_string( Internal::kBodyMuzzleSocket ), muzzle ) )
                 return muzzle.getTranslation();
             return fallback;
         }
-        // 1인칭 — 손에 든 총(카메라 자식) × 그 무기의 총구 소켓.
+        // 1인칭에서는 손에 든 총(카메라 자식)과 그 무기의 총구 소켓을 쓴다.
         const MeshComponent*      pViewWeapon = pOwner != nullptr ? Internal::findNamed<MeshComponent>( *pOwner, Internal::kViewWeaponName ) : nullptr;
         const AppearanceDatabase* pDatabase   = game::getService<AppearanceDatabase>();
         const hashed_string       socketPath  = pDatabase != nullptr ? Internal::findItemSocketSet( *pDatabase, getWeaponItem( _weaponIndex ) ) : hashed_string{};
@@ -613,10 +613,10 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return true;
-        // 이 오브젝트를 따라가는 게임 카메라 디렉터(시점 카메라)의 프리셋 모드.
+        // 이 오브젝트를 따라가는 게임 카메라 디렉터(시점 카메라)의 프리셋 모드를 구한다.
         const GameObjectHandle self         = pOwner->getHandle();
         bool                   bFirstPerson = true;
-        // 틱마다 묻는다 — 씬 전체를 훑지 않고 등록된 디렉터만 본다.
+        // 틱마다 묻는다. 씬 전체를 훑지 않고 등록된 디렉터만 본다.
         for ( const CameraDirectorComponent* pCameraDirector : pManager->getComponentRegistry().getAll<CameraDirectorComponent>() )
         {
             if ( pCameraDirector->isPendingDestroy() || pCameraDirector->getTarget() != self )
@@ -634,8 +634,8 @@ namespace sw
         HUDControllerComponent* pHUD   = pOwner != nullptr ? pOwner->getComponent<HUDControllerComponent>() : nullptr;
         if ( pHUD == nullptr )
             return;
-        // 값만 넣는다 — 위젯은 HUD 문서의 바인딩이 잇는다(같은 값이면 알리지 않는다). 조준선은 1인칭에서만(다른 시점에서는 몸이 보인다),
-        // 맞음 표시는 맞힌 직후 1인칭에서만. 무기 이름은 무기 표의 이름(원문)이 현지화 키다 — 글 위젯이 문화권으로 푼다.
+        // 값만 넣는다. 위젯은 HUD 문서의 바인딩이 연결한다(같은 값이면 알리지 않는다). 조준선은 1인칭에서만 보이고(다른 시점에서는 몸이 보인다),
+        // 맞음 표시는 맞힌 직후 1인칭에서만 보인다. 무기 이름은 무기 테이블의 이름(원문)이 현지화 키이며, 글 위젯이 문화권에 맞게 해석한다.
         HUDViewModel& hud        = pHUD->getViewModel();
         const bool    bCrosshair = _bFirstPerson == SW_TRUE && _vitality.isAlive();
         hud.setCrosshairShown( bCrosshair );
@@ -668,7 +668,7 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 틱 뒤(게임 스레드) — 남에게 쓰는 일
+    // 틱이 끝난 뒤(게임 스레드). 다른 오브젝트에 쓰는 일.
     // ------------------------------------------------------------------------------
     bool ShooterPlayerComponent::hasPending() const
     {
@@ -702,7 +702,7 @@ namespace sw
             return;
         if ( _bBodyRequested == SW_TRUE )
             spawnBody();
-        // 적에 피해 — 적은 움찔하거나 쓰러지고, 디렉터가 다음 틱에 센다.
+        // 적에게 피해를 준다. 적은 움찔하거나 쓰러지고, 디렉터가 다음 틱에 센다.
         for ( const EnemyHit& hit : _listPendingHit )
         {
             GameObject*            pEnemyObject = pManager->resolveGameObject( hit._enemy );
@@ -733,7 +733,7 @@ namespace sw
             MeshComponent* pModel = Internal::findNamed<MeshComponent>( *pOwner, Internal::kViewWeaponName );
             if ( pModel != nullptr )
                 pModel->setMeshID( Internal::kArrWeaponModel[_weaponIndex] );
-            // 몸의 무기 — 외형의 MainHand 칸(같은 소켓 이름 MainHand.Muzzle 이 새 무기의 총구를 가리킨다).
+            // 몸의 무기는 외형의 MainHand 슬롯이다(같은 소켓 이름 MainHand.Muzzle 이 새 무기의 총구를 가리킨다).
             GameObject*                   pBody       = findBodyObject();
             CharacterAppearanceComponent* pAppearance = pBody != nullptr ? pBody->getComponent<CharacterAppearanceComponent>() : nullptr;
             if ( pAppearance != nullptr )
@@ -742,7 +742,7 @@ namespace sw
         if ( _bViewModeDirty == SW_TRUE )
             applyViewMode();
         updateHUD();
-        // 쓰러짐 클립이 끝났다 — 디렉터가 적을 걷고 감독을 처음부터, 플레이어는 처음 자리에서.
+        // 쓰러짐 클립이 끝났다. 디렉터가 적을 정리하고 감독을 처음부터 다시 돌리며, 플레이어는 처음 위치에서 다시 시작한다.
         if ( _vitality.isAlive() == false && _downTimer >= _downTime )
         {
             if ( pDirector != nullptr )
@@ -786,7 +786,7 @@ namespace sw
         MeshComponent* pWeapon = pOwner != nullptr ? Internal::findNamed<MeshComponent>( *pOwner, Internal::kViewWeaponName ) : nullptr;
         if ( pWeapon != nullptr )
             pWeapon->setVisible( _bFirstPerson == SW_TRUE );
-        // 1인칭에서는 몸을 숨긴다 — 눈이 머리 안에 있다(머리만 숨기는 본 숨김은 PoseModifier 가 들어오면).
+        // 1인칭에서는 몸을 숨긴다. 눈이 머리 안에 있기 때문이다(머리만 숨기는 본 숨김은 PoseModifier 가 들어오면 처리한다).
         GameObject*                   pBody       = findBodyObject();
         CharacterAppearanceComponent* pAppearance = pBody != nullptr ? pBody->getComponent<CharacterAppearanceComponent>() : nullptr;
         if ( pAppearance != nullptr )

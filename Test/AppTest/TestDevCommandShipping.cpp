@@ -26,9 +26,9 @@ namespace
 } // namespace
 
 /**
- * @brief [DevCommandShippingTest] 개발 명령 등록부는 Dev 이미지(Engine.dll)에 있고 Shipping 실행 파일에는 없다
- * @details `SW_DEV_COMMAND` · 등록부 · 콘솔은 Shipping 에서 통째로 빠져야 한다(치트가 배포본에 남으면 안 된다). 컴파일 스위치가 맞는지는
- *          바이너리를 훑어 본다 — 등록부 .cpp 의 표식 글이 Dev 의 Engine 공유 라이브러리(Engine.dll · libEngine.so)에는 있고(이 테스트가 글을
+ * @brief [DevCommandShippingTest] 개발 명령 레지스트리는 Dev 이미지(Engine.dll)에 있고 Shipping 실행 파일에는 없다
+ * @details `SW_DEV_COMMAND` · 레지스트리 · 콘솔은 Shipping 에서 통째로 빠져야 한다(치트가 배포본에 남으면 안 된다). 컴파일 스위치가 맞는지는
+ *          바이너리를 훑어 본다 — 레지스트리 .cpp 의 표식 글이 Dev 의 Engine 공유 라이브러리(Engine.dll · libEngine.so)에는 있고(이 테스트가 글을
  *          찾을 수 있다는 증거), Shipping 의 App 실행 파일에는 없어야 한다. 작업 폴더는 Bin 이다. 파일 이름 · 자리는 플랫폼마다 다르다
  *          (리눅스는 `Lib/libEngine.so` · `App`) — 이름을 글자로 찾으면 그 플랫폼에서 늘 건너뛰어 "아무것도 검증하지 않은 스위트" 로 진다.
  */
@@ -44,7 +44,7 @@ SW_TEST_CASE( DevCommandShippingTest, RegistryIsCompiledOutOfShipping )
 #else
     static_assert( SW_DEV_COMMANDS_ENABLED == 1, "Dev builds keep the dev command registry" );
     SW_EXPECT_STREQ( kRegistryImageMarker, DevCommandRegistry::getImageMarker() );
-    // 등록부가 든 이미지를 이름이 아니라 주소로 찾는다 — 리눅스는 libEngine.so 가 Bin 이 아니라 Lib 에 있다.
+    // 레지스트리가 든 이미지를 이름이 아니라 주소로 찾는다 — 리눅스는 libEngine.so 가 Bin 이 아니라 Lib 에 있다.
     const string imagePath = ModuleBuildID::find( reinterpret_cast<const void*>( &DevCommandRegistry::getImageMarker ) )._modulePath;
 #endif
     if ( imagePath.empty() || FileUtil::exists( imagePath ) == false )

@@ -60,7 +60,7 @@ namespace sw
         if ( rawDamage <= 0.0f )
             return;
 
-        // 방어 감쇠 — 방어 100 이면 절반, 0 이면 그대로. 음수 방어(약화)로 피해가 커지지는 않게 0 에서 자른다(곱이 1 을 넘지 않는다).
+        // 방어 감쇠: 방어 100 이면 피해가 절반이 되고, 0 이면 그대로이다. 음수 방어(약화)로 피해가 커지지 않도록 0 에서 자른다. 곱이 1 을 넘지 않게 하기 위해서다.
         const float32 armor           = MathUtil::max( 0.0f, params._pTarget->getAttributeValue( CombatAttributes::armor() ) );
         const float32 mitigatedDamage = rawDamage * 100.0f / ( 100.0f + armor );
 

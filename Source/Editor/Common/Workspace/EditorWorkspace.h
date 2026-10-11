@@ -142,7 +142,7 @@ namespace sw::editor
         void   setScrollToComponentID( uint64 id ) { _scrollToComponentID = id; }
 
         // ------------------------------------------------------------------------------
-        // 7) 프리팹 인스턴스 경로 — 활성 씬(`Scene::getEntityPrefabPath`)이 정본이고 여기는 창구일 뿐입니다
+        // 7) 프리팹 인스턴스 경로 — 활성 씬(`Scene::getEntityPrefabPath`)이 원본이고 여기는 창구일 뿐입니다
         // ------------------------------------------------------------------------------
         /** @brief 활성 씬에 오브젝트의 프리팹 경로를 적습니다. 빈 경로는 연결을 끊습니다. 활성 씬이 없으면 아무것도 하지 않습니다. */
         void setGameObjectPrefabPath( uint64 objectID, string_view prefabPath );

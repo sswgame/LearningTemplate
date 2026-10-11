@@ -1,8 +1,8 @@
 /**
  * @file FitTables.h
- * @brief 장비 피팅의 데이터 표 — 겹 표 · 몸 영역 표 · 피팅 프로필 · 상호작용 표(`*.fit.xml`)입니다. 사람이 고치는 데이터이고 코드에 이름을 박지 않습니다.
- * @details 겹 하나 · 영역 하나 · 조합 하나를 더하는 것이 표 한 줄입니다. 상호작용 표는 (안쪽 프로필 × 바깥 프로필) → 연산 이름 + 인자이고,
- *          연산은 코드의 이름 붙은 등록부(`FitOperatorRegistry`)에서 이름으로 고릅니다 — 모르는 연산 · 모르는 인자 · 모르는 프로필은 로드 오류입니다.
+ * @brief 장비 피팅의 데이터 테이블입니다(`*.fit.xml`). 겹 테이블, 몸 영역 테이블, 피팅 프로필, 상호작용 테이블을 담습니다. 사람이 고치는 데이터이며 코드에 이름을 박지 않습니다.
+ * @details 겹, 영역, 조합을 하나 추가하는 일이 테이블 항목 하나다. 상호작용 테이블은 (안쪽 프로필 × 바깥 프로필)에서 연산 이름과 인자로 가는 매핑이고,
+ *          연산은 코드의 이름 붙은 레지스트리(`FitOperatorRegistry`)에서 이름으로 고른다. 모르는 연산, 인자, 프로필은 로드 오류다.
  *
  *          XML 예(엔진 기본: `engine/character/default.fit.xml`):
  *          @code
@@ -44,7 +44,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 몸 영역 하나 — 본 가중치(`_listBone` 의 가중치 합 ≥ `_minWeight`) 또는 칠한 정점 그룹(`_group`)으로 정합니다. */
+    /** @brief 몸 영역 하나입니다. 본 가중치(`_listBone` 의 가중치 합 ≥ `_minWeight`)나 칠한 정점 그룹(`_group`)으로 정합니다. */
     struct SW_API BodyRegionDef
     {
         hashed_string         _name{};
@@ -57,9 +57,9 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 피팅 프로필 하나입니다. 단단함은 0(천 · 소매) ~ 1(팔찌 · 갑옷)의 연속값이고, 가죽은 중간입니다.
-     * @details 조임 세기 · 감쇠 폭은 이 프로필이 **안쪽**일 때, 밀어내기 거리는 **바깥**일 때, 덮임 판정 거리는 **안쪽**일 때 씁니다.
-     *          상호작용 표의 인자가 있으면 인자가 이깁니다.
+     * @brief 피팅 프로필 하나입니다. 단단함은 0(천, 소매)에서 1(팔찌, 갑옷)까지의 연속값이고, 가죽은 중간입니다.
+     * @details 조임 세기와 감쇠 폭은 이 프로필이 **안쪽**일 때, 밀어내기 거리는 **바깥**일 때, 덮임 판정 거리는 **안쪽**일 때 쓴다.
+     *          상호작용 테이블의 인자가 있으면 인자가 우선한다.
      */
     struct SW_API FitProfileDef
     {
@@ -84,7 +84,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 상호작용 표의 한 줄 — (안쪽 프로필 × 바깥 프로필) → 연산 이름 + 인자입니다. 같은 조합에 여러 줄을 둘 수 있습니다(표 순서로 돕니다). */
+    /** @brief 상호작용 테이블의 항목 하나입니다. (안쪽 프로필 × 바깥 프로필)에서 연산 이름과 인자로 가는 매핑이며, 같은 조합에 여러 항목을 둘 수 있습니다(테이블 순서로 실행합니다). */
     struct SW_API FitInteractionDef
     {
         hashed_string       _inner{};
@@ -99,11 +99,11 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 피팅 표 묶음 하나입니다. */
+    /** @brief 피팅 테이블 모음 하나입니다. */
     class SW_API FitTables
     {
     public:
-        /** @brief XML 텍스트에서 읽습니다(비우고). 연산 이름 · 인자는 @p operators 에 대조합니다. */
+        /** @brief XML 텍스트에서 읽습니다(기존 내용은 비웁니다). 연산 이름과 인자는 @p operators 에 대조합니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, const FitOperatorRegistry& operators );
         /** @brief 리소스 파일에서 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path, const FitOperatorRegistry& operators );
@@ -123,7 +123,7 @@ namespace sw
         int32 findRegionIndex( const hashed_string& name ) const;
         /** @brief 이름의 프로필입니다. 없으면 nullptr 입니다. */
         const FitProfileDef* findProfile( const hashed_string& name ) const;
-        /** @brief (안쪽, 바깥) 조합의 줄들을 표 순서로 채웁니다(비우고 채움). */
+        /** @brief (안쪽, 바깥) 조합의 항목들을 테이블 순서로 채웁니다(비우고 채웁니다). */
         void collectInteractions( const hashed_string& innerProfile, const hashed_string& outerProfile, vector<const FitInteractionDef*>& outListInteraction ) const;
 
         /** @brief 겹들입니다. */
@@ -136,8 +136,8 @@ namespace sw
         const vector<FitInteractionDef>& getInteractions() const { return _listInteraction; }
 
         /**
-         * @brief 형상의 정점마다 영역 번호(표 순서, 없으면 `kNoGroup`)를 매깁니다. 표의 앞 줄이 먼저입니다.
-         * @details 본 가중치 영역은 스킨이 있어야 하고 본 이름을 @p bones 에서 찾습니다. 정점 그룹 영역은 형상의 칠한 그룹 이름으로 찾습니다.
+         * @brief 형상의 정점마다 영역 번호(테이블 순서, 없으면 `kNoGroup`)를 매깁니다. 테이블의 앞 항목이 먼저입니다.
+         * @details 본 가중치 영역은 스킨이 있어야 하고 본 이름을 @p bones 에서 찾는다. 정점 그룹 영역은 형상의 칠한 그룹 이름으로 찾는다.
          */
         void assignRegions( const AppearanceGeometry& geometry, const CharacterBoneArray& bones, vector<uint16>& outListVertexRegion ) const;
 

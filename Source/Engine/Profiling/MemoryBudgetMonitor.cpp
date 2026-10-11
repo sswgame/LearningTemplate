@@ -159,7 +159,7 @@ namespace sw
         if ( gv_memoryTracking >= 0 )
         {
             pProfiler->setTrackingEnabled( gv_memoryTracking != 0 );
-            // 꺼져 있는 동안의 할당은 세지 않았다 — 최고치는 켠 순간부터 다시 잰다.
+            // 꺼져 있는 동안의 할당은 세지 않았다 — 최고치는 켠 순간부터 다시 측정한다.
             pProfiler->resetPeaks();
         }
         _appliedTrackingSetting = gv_memoryTracking;

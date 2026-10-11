@@ -1,7 +1,7 @@
 /**
  * @file WeakInternCache.h
- * @brief 코드로 짓는 값(내장 도형 · 9-슬라이스 메시 · 스프라이트 텍스처 인스턴스)을 키로 나눠 주는 표이자, 그 표를 에셋 캐시 등록부에 보이는 창구입니다.
- * @details 표는 종류마다 프로세스에 하나(Engine.dll 안의 함수 정적 객체)이고, `AssetManager` 가 생성자에서 등록부에 올립니다. 그래서 진단
+ * @brief 코드로 짓는 값(내장 도형 · 9-슬라이스 메시 · 스프라이트 텍스처 인스턴스)을 키로 나눠 주는 표이자, 그 표를 에셋 캐시 레지스트리에 보이는 창구입니다.
+ * @details 표는 종류마다 프로세스에 하나(Engine.dll 안의 함수 정적 객체)이고, `AssetManager` 가 생성자에서 레지스트리에 올립니다. 그래서 진단
  *          (`getCachedCount`)과 종료 · 재초기화의 비우기(`clear`)가 경로 캐시와 같은 길을 탑니다. 키가 리소스 경로가 아니므로 핫 리로드로 다시 읽을
  *          것이 없습니다(`isCached` 는 false, `reload` 는 할 일이 없다) — 값이 기대는 파일(텍스처 · 머티리얼)은 그 파일의 캐시가 제자리로 다시 읽습니다.
  */
@@ -28,7 +28,7 @@ namespace sw
         /** @brief 값을 짓는 함수입니다. 지을 수 없으면 nullptr 을 돌려줍니다. */
         using CreateFunction = shared_ptr<ValueType> ( * )( const KeyType& key );
 
-        /** @param pKindName 등록부의 종류 이름입니다(정적 문자열). */
+        /** @param pKindName 레지스트리의 종류 이름입니다(정적 문자열). */
         explicit WeakInternCache( const utf8* pKindName )
             : _pKindName{ pKindName }
             , _table{}

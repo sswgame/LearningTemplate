@@ -16,7 +16,7 @@ namespace sw
 
     /**
      * @class UIStyleSheetCache
-     * @brief 스타일 시트(`*.uistyle.xml`)를 경로로 들고 나눠 줍니다. `UISystem` 이 소유하고 기동 단계 `UI` 가 에셋 캐시 등록부에 올립니다.
+     * @brief 스타일 시트(`*.uistyle.xml`)를 경로로 들고 나눠 줍니다. `UISystem` 이 소유하고 기동 단계 `UI` 가 에셋 캐시 레지스트리에 올립니다.
      * @details 찾는 순서 · 실패 · 다시 읽기 규칙은 `UITextAssetCache` 입니다. 게임 스레드만.
      */
     class SW_API UIStyleSheetCache final : public UITextAssetCache

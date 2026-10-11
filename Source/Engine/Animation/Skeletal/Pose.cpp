@@ -24,7 +24,7 @@ namespace sw
                 return float3{ x, y, z };
             }
 
-            /** @brief 가산 회전을 가중치만큼 줄입니다 — 단위 회전에서 짧은 쪽 nlerp 입니다. */
+            /** @brief 가산 회전을 가중치만큼 줄입니다. 단위 회전에서 짧은 쪽 nlerp 입니다. */
             static quaternion scaleRotation( const quaternion& delta, float32 weight )
             {
                 return ( weight >= 1.0f ) ? delta : quaternion::lerp( quaternion::Identity, delta, weight );

@@ -52,12 +52,12 @@ namespace sw
     class SW_API EventDispatcher final : public IModuleUnloadListener
     {
     public:
-        /** @brief 버스 · 큐 락과 더블 버퍼 아레나를 준비합니다. */
+        /** @brief 버스와 큐 락, 더블 버퍼 아레나를 준비합니다. */
         EventDispatcher();
         /** @brief 구독과 대기 큐를 비웁니다. */
         ~EventDispatcher() override;
 
-        /** @brief 구독을 해제할 때 쓰는 채널 · 타입 · 핸들 토큰입니다. */
+        /** @brief 구독을 해제할 때 쓰는 채널, 타입, 핸들 토큰입니다. */
         struct EventSubscription
         {
             hashed_string  _channel;
@@ -180,32 +180,32 @@ namespace sw
         void clear();
 
         /**
-         * @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 구독을 모두 떼고, 그 범위가 만든 채널 항목을 치웁니다. 뗀 구독 수를 반환합니다.
+         * @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 구독을 모두 해제하고, 그 범위가 만든 채널 항목을 정리합니다. 해제한 구독 수를 반환합니다.
          * @param outRemainingEntryCount 그 범위가 만들었지만 **다른 구독이 남아 지우지 못한** 채널 항목 수입니다.
-         * @details 핫 리로드가 모듈 이미지를 내리기 전에 부릅니다(`ModuleImageUtil::releaseModuleCode`). 채널 항목의 타입별 함수(브로드캐스트 ·
-         *          떼기)는 그 이벤트 타입을 **처음** 구독 · 발행한 쪽에서 인스턴스화되므로, 모듈이 만든 항목은 모듈이 내려간 뒤 발행하면
-         *          내려간 코드로 뜁니다. 그런 항목은 비었으면 지웁니다(다음 구독 · 발행이 자기 쪽에서 새로 만든다).
+         * @details 핫 리로드가 모듈 이미지를 언로드하기 전에 부른다(`ModuleImageUtil::releaseModuleCode`). 채널 항목의 타입별 함수(브로드캐스트와
+         *          해제)는 그 이벤트 타입을 **처음** 구독하거나 발행한 쪽에서 인스턴스화된다. 그래서 모듈이 만든 항목은 모듈이 언로드된 뒤 발행하면
+         *          언로드된 코드로 점프한다. 그런 항목은 비어 있으면 지운다(다음 구독이나 발행이 자기 쪽에서 새로 만든다).
          */
         uint32 releaseCodeWithin( const void* pBegin, const void* pEnd, uint32& outRemainingEntryCount );
 
         /**
-         * @brief 큐에 쌓인 이벤트 가운데 vtable 이 [@p pBegin, @p pEnd) 안인 것을 파괴하고 큐에서 뺍니다. 뺀 수를 반환합니다. 아무 스레드에서나 부를 수 있습니다.
-         * @details 모듈이 `push` 한 이벤트는 그 모듈이 인스턴스화한 vtable(소멸자 · 타입 조회)을 듭니다. 이미지를 내린 뒤 `processEvents` 나 디스패처
-         *          소멸이 그 이벤트를 만지면 내려간 코드로 뜁니다. 소멸자는 이미지가 아직 올라와 있는 지금 부릅니다. 남은 이벤트의 순서는 그대로입니다.
+         * @brief 큐에 쌓인 이벤트 중 vtable 이 [@p pBegin, @p pEnd) 안인 것을 파괴하고 큐에서 제거합니다. 제거한 수를 반환합니다. 어느 스레드에서나 부를 수 있습니다.
+         * @details 모듈이 `push` 한 이벤트는 그 모듈이 인스턴스화한 vtable(소멸자, 타입 조회)을 가진다. 이미지를 언로드한 뒤 `processEvents` 나 디스패처
+         *          소멸이 그 이벤트를 만지면 언로드된 코드로 점프한다. 소멸자는 이미지가 아직 로드돼 있는 지금 부른다. 남은 이벤트의 순서는 그대로다.
          */
         uint32 releaseQueuedEventsWithin( const void* pBegin, const void* pEnd );
 
         /**
-         * @brief 브로드캐스트 함수가 [@p pBegin, @p pEnd) 안인 채널 항목 — 그 범위의 코드가 처음 구독 · 발행해 만든 항목 — 의 수입니다(진단 · 테스트).
-         * @details 주소만 견주고 항목의 함수를 부르지 않으므로, 이미 내려간 이미지의 범위를 넘겨도 됩니다.
+         * @brief 브로드캐스트 함수가 [@p pBegin, @p pEnd) 안인 채널 항목의 수를 반환합니다. 그 범위의 코드가 처음 구독하거나 발행해 만든 항목이며, 진단과 테스트용입니다.
+         * @details 주소만 비교하고 항목의 함수를 부르지 않으므로, 이미 언로드된 이미지의 범위를 넘겨도 된다.
          */
         uint32 countChannelsCreatedWithin( const void* pBegin, const void* pEnd ) const;
 
         /** @brief 언로드 리스너 목록의 이름입니다. */
         const utf8* getModuleUnloadListenerName() const override { return "event subscriptions"; }
         /**
-         * @brief `releaseCodeWithin` + `releaseQueuedEventsWithin` 입니다. 그 범위가 만든 채널을 다른 코드가 아직 구독하면 @p outKeepImageMapped 를 true 로 둡니다 —
-         *        채널의 브로드캐스트 함수와 멀티캐스트의 해제자가 그 이미지의 코드라, 내리면 다음 발행 · 디스패처 소멸이 내려간 코드로 뜁니다.
+         * @brief `releaseCodeWithin` 과 `releaseQueuedEventsWithin` 을 함께 실행합니다. 그 범위가 만든 채널을 다른 코드가 아직 구독하면 @p outKeepImageMapped 를 true 로 둡니다.
+         *        채널의 브로드캐스트 함수와 멀티캐스트의 해제자가 그 이미지의 코드라, 언로드하면 다음 발행이나 디스패처 소멸이 언로드된 코드로 점프하기 때문입니다.
          */
         uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
 
@@ -217,9 +217,9 @@ namespace sw
         }
 
         /**
-         * @brief 지금 스레드에서 버스 함수(`publish` …)를 불러도 되는지 — 큐를 비우는 스레드이거나 아직 주인이 없으면 true 입니다.
-         * @details 바로 알리고 싶은 쪽이 고르는 자리입니다(`GameEventUtil::send`): true 면 `publish`(구독자가 그 자리에서 받는다), 아니면 `push`
-         *          (다음 `processEvents`). 언리얼이 게임 스레드에서는 델리게이트를 바로 부르고 다른 스레드는 게임 스레드 작업으로 넘기는 것과 같은 갈림입니다.
+         * @brief 지금 스레드에서 버스 함수(`publish` 등)를 불러도 되는지 반환합니다. 큐를 비우는 스레드이거나 아직 주인이 없으면 true 입니다.
+         * @details 바로 알리고 싶은 쪽이 고르는 기준이다(`GameEventUtil::send`). true 면 `publish`(구독자가 그 자리에서 받는다), 아니면 `push`
+         *          (다음 `processEvents`)를 쓴다. 언리얼이 게임 스레드에서는 델리게이트를 바로 부르고 다른 스레드는 게임 스레드 작업으로 넘기는 것과 같은 분기다.
          */
         bool isBusThread() const;
 

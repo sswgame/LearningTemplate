@@ -5,15 +5,15 @@ Scripts/lint/gate/CheckProductNames.py
 
 제품 이름(SQLite · PostgreSQL · Valkey · OpenSSL · XAudio2 · Tracy · Jolt …)은 그 제품을 감싼 드라이버 · 제공자 · 백엔드 폴더에만 있다.
 
-키트 · 엔진의 나머지는 인터페이스(`ISQLDriver` · `INetSecurityProvider` · `IAudioSystem` · `IPhysicsScene3D` …)와 등록부를 쓴다. 제품 이름이
-그 밖의 식별자에 새면 제품을 바꿀 때 그 자리가 모두 따라 바뀐다 — `SQLLocalSlotStorage` 가 등록부(`SQLDriverRegistry::findDriver`)를 두고
+키트 · 엔진의 나머지는 인터페이스(`ISQLDriver` · `INetSecurityProvider` · `IAudioSystem` · `IPhysicsScene3D` …)와 레지스트리를 쓴다. 제품 이름이
+그 밖의 식별자에 새면 제품을 바꿀 때 그 자리가 모두 따라 바뀐다 — `SQLLocalSlotStorage` 가 레지스트리(`SQLDriverRegistry::findDriver`)를 두고
 `SQLiteDriver::getInstance()` 를 직접 부르고 있었다.
 
   1) 주석 · 문자열 밖의 식별자에 제품 낱말이 들면 위반이다 — 낱말 머리(`SQLiteDriver`)든 camelCase 가운데(`getTracyPort`)든.
      `Resp` 는 `Response` 와 겹쳐 `Resp` + 대문자만 본다.
   2) 허용 자리: 그 제품을 감싼 라이브러리의 허용 뿌리(`CheckThirdPartyIsolation._kListLibraryRule` — 목록을 두 벌 두지 않는다)와
      `*/Driver/*` · `*/Windows/*` · `*/Linux/*` 폴더(드라이버 · 플랫폼 구현).
-  3) 제품을 골라 올리는 조립점(등록부 · 팩토리 · 외부 도구 실행기)은 예외 표(파일 fnmatch → 이유)에 둔다.
+  3) 제품을 골라 올리는 조립점(레지스트리 · 팩토리 · 외부 도구 실행기)은 예외 표(파일 fnmatch → 이유)에 둔다.
 
 제품 낱말 표(`[product]` · `capital_follows`)와 예외 표(`[exemption]`)는 `Scripts/lint/rules/CheckProductNames.toml` 에 있다.
 

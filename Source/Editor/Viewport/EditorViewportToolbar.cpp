@@ -89,7 +89,7 @@ namespace sw::editor
     {
         {
             // 씬 뷰의 보기 모드다(`FrameRenderer::setSceneViewMode`) — 게임 뷰는 늘 주 출력 모드(Lit)로 그린다(언리얼 뷰포트마다의 View Mode).
-            // 값이 아니라 **렌더러 상태**가 정본이므로 프레임마다 렌더러에서 읽어 표시한다. 항목 목록은 보기 모드 표(kArrRenderViewModeInfo)를 돈다.
+            // 값이 아니라 **렌더러 상태**가 원본이므로 프레임마다 렌더러에서 읽어 표시한다. 항목 목록은 보기 모드 표(kArrRenderViewModeInfo)를 돈다.
             FrameRenderer*       pRenderer   = EditorViewportToolbarInternal::findFrameRenderer();
             const RenderViewMode currentMode = ( pRenderer != nullptr ) ? pRenderer->getSceneViewMode() : RenderViewMode::Lit;
 
@@ -149,7 +149,7 @@ namespace sw::editor
                                             SW_LOCKEY( "EdCommon", "ViewportOrientationCube" ) ) )
             settings._bShowOrientationCube = ( settings._bShowOrientationCube == false );
 
-        // 컴포넌트 시각화 토글은 시각화 등록부에서 만든다. 시각화를 더해도 여기는 그대로다.
+        // 컴포넌트 시각화 토글은 시각화 레지스트리에서 만든다. 시각화를 더해도 여기는 그대로다.
         for ( uint32 index = 0; index < EditorViewportVisualizer::getCount(); ++index )
         {
             const EditorVisualizerRegistration& visualizer = EditorViewportVisualizer::getAt( index );

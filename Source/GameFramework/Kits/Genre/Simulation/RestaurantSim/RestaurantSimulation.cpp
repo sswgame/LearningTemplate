@@ -38,7 +38,7 @@ namespace sw
                 return false;
             }
 
-            /** @brief 주문 후보 하나 — 요리와 그 손님의 고르기 가중치(양수만 담는다)입니다. */
+            /** @brief 주문 후보 하나입니다. 요리와, 그 손님이 고를 가중치(양수만 담습니다)를 가집니다. */
             struct DishChoice
             {
                 const DishDef* _pDish{ nullptr };
@@ -176,7 +176,7 @@ namespace sw
         for ( KitchenOrder& order : _listOrder )
         {
             if ( order._cook == staffIndex )
-                order._cook = -1; // 남은 시간은 다음 요리사가 잇는다
+                order._cook = -1; // 남은 시간은 다음 요리사가 이어받는다
         }
         const int32 customerIndex = findCustomerIndex( staff._taskCustomer );
         if ( customerIndex >= 0 && staff._role != StaffRole::Cook )
@@ -287,7 +287,7 @@ namespace sw
         {
             if ( customer._state == CustomerState::Eating || customer._state == CustomerState::WaitingCheckout )
             {
-                settlePayment( customer ); // 다 먹은 셈 치고 낸다
+                settlePayment( customer ); // 다 먹은 것으로 치고 계산한다
             }
             else if ( customer._state == CustomerState::Queued || customer._state == CustomerState::WaitingFood )
             {
@@ -422,10 +422,10 @@ namespace sw
 
     bool RestaurantSimulation::readState( Archive& archive )
     {
-        // 사본에 읽고 끝까지 맞으면 바꾼다 — 카탈로그 · 설정 · 빌린 포인터는 사본이 그대로 든다.
+        // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 카탈로그, 설정, 빌린 포인터는 사본도 그대로 가지고 있다.
         RestaurantSimulation restored = *this;
         uint32               count    = 0;
-        // 직원마다 이름(4) + 레벨(경험치 · 누적 16 + 레벨 4) + 바쁨(4) + 일당(8) + 맡은 손님(4) + 역할 · 고용(2)
+        // 직원마다 이름(4) + 레벨(경험치와 누적 16 + 레벨 4) + 바쁨(4) + 일당(8) + 맡은 손님(4) + 역할과 고용(2)
         if ( StateArchiveUtil::readCount( archive, 42, count ) == false )
             return false;
         restored._listStaff.assign( count, StaffMember{} );
@@ -444,7 +444,7 @@ namespace sw
             staff._role = static_cast<StaffRole>( role );
         }
 
-        // 손님마다 이름 둘(8) + 기다림 · 인내 · 먹기(12) + 값(8) + 번호 · 자리 · 품질(12) + 상태 · 나름 · 계산(3)
+        // 손님마다 이름 둘(8) + 기다림, 인내, 먹기(12) + 가격(8) + 번호, 자리, 품질(12) + 상태, 서빙, 계산(3)
         if ( StateArchiveUtil::readCount( archive, 43, count ) == false )
             return false;
         restored._listCustomer.assign( count, RestaurantCustomer{} );
@@ -470,7 +470,7 @@ namespace sw
             customer._state = static_cast<CustomerState>( state );
         }
 
-        // 주문마다 이름 둘(8) + 남은 시간 · 손님 · 요리사 · 품질(16) + 준비(1)
+        // 주문마다 이름 둘(8) + 남은 시간, 손님, 요리사, 품질(16) + 준비(1)
         if ( StateArchiveUtil::readCount( archive, 25, count ) == false )
             return false;
         restored._listOrder.clear();
@@ -490,7 +490,7 @@ namespace sw
             restored._listOrder.push_back( order );
         }
 
-        // 메뉴는 카탈로그 요리마다 하나다 — 이름(4) + 값(8) + 올림(1)
+        // 메뉴는 카탈로그의 요리마다 하나이다. 이름(4) + 가격(8) + 켜짐(1)
         if ( StateArchiveUtil::readCount( archive, 13, count ) == false || count != _listMenu.size() )
             return false;
         for ( MenuEntry& entry : restored._listMenu )
@@ -546,7 +546,7 @@ namespace sw
         if ( bTailRead == false || bArrivalRead == false || archive.isError() || restored._bOpen > SW_TRUE )
             return false;
 
-        // 직원이 맡은 손님 · 주문의 손님은 있는 손님이어야 한다.
+        // 직원이 맡은 손님과 주문의 손님은 있는 손님이어야 한다.
         for ( const StaffMember& staff : restored._listStaff )
         {
             if ( staff._taskCustomer >= 0 && restored.findCustomerIndex( staff._taskCustomer ) < 0 )
@@ -659,7 +659,7 @@ namespace sw
 
     void RestaurantSimulation::finishStaffWork()
     {
-        // 조리 — 주문의 남은 시간이 요리사의 시계다.
+        // 조리: 주문의 남은 시간이 요리사의 시계이다.
         for ( KitchenOrder& order : _listOrder )
         {
             if ( order._cook < 0 || order._bReady != SW_FALSE )
@@ -686,7 +686,7 @@ namespace sw
                 customer._state = CustomerState::WaitingCheckout;
         }
 
-        // 서빙 · 계산.
+        // 서빙과 계산.
         for ( StaffMember& staff : _listStaff )
         {
             if ( staff._bHired == SW_FALSE || staff._role == StaffRole::Cook || staff._taskCustomer < 0 )
@@ -776,7 +776,7 @@ namespace sw
                     freeSeat = seat;
             }
             if ( freeSeat < 0 )
-                return; // 줄은 들어온 순서 — 앞 손님이 못 앉으면 뒤도 못 앉는다
+                return; // 줄은 들어온 순서이므로, 앞 손님이 못 앉으면 뒤 손님도 못 앉는다
             customer._seat = freeSeat;
             if ( placeOrder( customer ) == false )
                 leaveCustomer( customer, false );
@@ -790,7 +790,7 @@ namespace sw
             if ( order._cook >= 0 || order._bReady != SW_FALSE )
                 continue;
             if ( order._station.empty() == false && countCookingAt( order._station ) >= countStations( order._station ) )
-                continue; // 그 스테이션이 다 찼다 — 다른 스테이션의 주문은 먼저 시작해도 된다
+                continue; // 그 스테이션이 다 찼으므로, 다른 스테이션의 주문은 먼저 시작해도 된다
             const int32 cookIndex = findIdleStaff( StaffRole::Cook );
             if ( cookIndex < 0 )
                 return;
@@ -866,7 +866,7 @@ namespace sw
             if ( RestaurantSimulationInternal::contains( pType->_listCategory, pDish->_category ) )
                 weight *= _settings._preferredWeight;
             if ( weight <= 0.0f )
-                continue; // 고를 몫이 없는 요리는 후보가 아니다 — 모두 0 이면 시킬 것이 없어 나간다
+                continue; // 고를 가중치가 없는 요리는 후보가 아니다. 모두 0 이면 시킬 것이 없어 나간다
             listChoice.push_back( RestaurantSimulationInternal::DishChoice{ pDish, weight } );
         }
         const int32 pickIndex = _random.pickWeightedIndex( listChoice, &RestaurantSimulationInternal::getChoiceWeight );
@@ -919,7 +919,7 @@ namespace sw
         for ( auto orderIter = _listOrder.begin(); orderIter != _listOrder.end(); )
         {
             if ( orderIter->_customerID == customer._id )
-                orderIter = _listOrder.erase( orderIter ); // 거둔 재료는 버린다(원가는 이미 들어갔다)
+                orderIter = _listOrder.erase( orderIter ); // 꺼낸 재료는 버린다(원가는 이미 반영했다)
             else
                 ++orderIter;
         }

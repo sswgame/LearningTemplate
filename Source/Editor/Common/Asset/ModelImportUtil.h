@@ -209,7 +209,7 @@ namespace sw::editor
          */
         static uint32 promoteSceneRootsToTopAncestor( vector<uint8>& inoutBytes );
 
-        /** @brief 규칙대로 메시를 옮깁니다 — `translation`(원본 공간) 다음 `recenter`. 경계 상자는 삼각형이 쓰는 정점만으로 잽니다(엔진 공간). */
+        /** @brief 규칙대로 메시를 옮깁니다 — `translation`(원본 공간) 다음 `recenter`. 경계 상자는 삼각형이 쓰는 정점만으로 측정합니다(엔진 공간). */
         static void applyRule( const ModelImportRule& rule, MergedMesh& inoutMesh );
 
         /** @brief 노드와 그 자식을 따라 메시를 더합니다(스킨 없는 모델 — 월드 변환으로 한 메시). */

@@ -6,7 +6,7 @@
 
 #include <thread>
 
-// 지표 등록부 — 같은 시리즈 한 포인터, 모양이 다른 재등록 거절, 텍스트 형식(HELP · TYPE · 라벨 이스케이프 · 누적 칸 · +Inf), 동시 증가, 구간 타이머.
+// 지표 레지스트리 — 같은 시리즈 한 포인터, 모양이 다른 재등록 거절, 텍스트 형식(HELP · TYPE · 라벨 이스케이프 · 누적 칸 · +Inf), 동시 증가, 구간 타이머.
 
 using namespace sw;
 
@@ -124,7 +124,7 @@ SW_TEST_CASE( MetricRegistryTest, ScopedTimerObservesOnce )
         ScopedMetricTimer timer( pHistogram );
     }
     {
-        ScopedMetricTimer nothing( nullptr ); // 등록부 없는 조립 — 아무것도 하지 않는다
+        ScopedMetricTimer nothing( nullptr ); // 레지스트리 없는 조립 — 아무것도 하지 않는다
     }
     SW_EXPECT_EQUAL( pHistogram->getCount(), uint64( 1 ) );
     SW_EXPECT_TRUE( pHistogram->getSum() >= 0.0 );

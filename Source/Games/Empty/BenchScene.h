@@ -1,11 +1,10 @@
 /**
  * @file BenchScene.h
- * @brief 메시 벤치 하네스 — `-gv_benchMeshes=N` 으로 켜지는 측정용 씬.
- *
- * @details **새 게임을 시작할 때 지울 파일이다.** 이 템플릿이 벤치를 들고 있는 이유는 하나다 —
- *          렌더 경로를 재려면 그릴 것을 씬에 올려야 하고, 씬을 만드는 것은 엔진이 아니라 게임의
+ * @brief 메시 벤치 하네스입니다. `-gv_benchMeshes=N` 으로 켜지는 측정용 씬입니다.
+ * @details **새 게임을 시작할 때 지울 파일이다.** 이 템플릿이 벤치를 가지고 있는 이유는 하나다.
+ *          렌더 경로를 측정하려면 그릴 것을 씬에 올려야 하고, 씬을 만드는 것은 엔진이 아니라 게임의
  *          일이다. `Scripts/dev/RunBackendSmoke.py` 와 `docs/08_Verification.md` 의 측정 조건이
- *          이 플래그에 기대고 있으므로 타겟과 플래그 이름은 바꾸지 않는다.
+ *          이 플래그에 기대고 있으므로 타깃과 플래그 이름은 바꾸지 않는다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -29,7 +28,7 @@ namespace sw
 
     /**
      * @class BenchScene
-     * @brief 큐브 격자를 만들고 매 프레임 흔들어 렌더 경로를 실제로 태웁니다.
+     * @brief 큐브 격자를 만들고 매 프레임 흔들어 렌더 경로를 실제로 실행합니다.
      */
     class BenchScene
     {
@@ -42,14 +41,14 @@ namespace sw
 
         /**
          * @brief `-gv_benchMeshes=N` 이 주어졌으면 벤치 씬을 만듭니다.
-         * @details 다시 불러도 된다 — 상태 복원(모듈 리로드 · RHI 교체)이 씬을 갈아 끼운 뒤 EmptyGame 이
-         *          다시 부른다. 벤치 오브젝트는 스냅샷 직전에 despawn 으로 걷히므로 복원 뒤 씬에 없다.
-         * @return 실제로 만들었으면 true. 플래그가 없거나 0 이면 false.
+         * @details 다시 불러도 된다. 상태 복원(모듈 리로드, RHI 교체)이 씬을 교체한 뒤 EmptyGame 이
+         *          다시 부른다. 벤치 오브젝트는 스냅샷 직전에 despawn 으로 정리되므로 복원 뒤 씬에 없다.
+         * @return 실제로 만들었으면 true 를 반환합니다. 플래그가 없거나 0 이면 false 입니다.
          */
         [[nodiscard]] bool spawnFromGlobals();
 
         /**
-         * @brief 벤치가 만든 오브젝트(큐브 · 주광)를 씬에서 걷습니다. 멱등입니다.
+         * @brief 벤치가 만든 오브젝트(큐브, 주 광원)를 씬에서 정리합니다. 멱등입니다.
          * @details 상태 스냅샷 직전에 부른다. 절차 생성물은 스냅샷에 실을 이유가 없고, 실리면 복원된 것은
          *          핸들과 다른 오브젝트인 데다 메시가 없는 유령이다. 스냅샷 규칙은 게임의 것이라
          *          (GameInstanceBase 훅) 엔진 API 를 건드리지 않는다.
@@ -59,7 +58,7 @@ namespace sw
         /** @brief 벤치 큐브를 움직입니다. 비어 있으면 아무것도 하지 않습니다. */
         void update( float32 deltaTime );
 
-        /** @brief 벤치가 씬을 만들어 두었으면 true. */
+        /** @brief 벤치가 씬을 만들어 두었으면 true 를 반환합니다. */
         bool isActive() const
         {
             return _listBenchMesh.empty() == false || _listInstanceBatch.empty() == false || _bCharacterFraming == SW_TRUE || _bFaceFraming == SW_TRUE ||
@@ -69,136 +68,136 @@ namespace sw
     private:
         /** @brief 씬을 확보하고 큐브 meshCount 개를 격자로 채웁니다. */
         void spawn( uint32 meshCount );
-        /** @brief `-gv_benchCharacters=N` — 스킨드 캐릭터 N 명을 한 줄로 세우고 Idle · Walking_A 를 번갈아 재생합니다. */
+        /** @brief `-gv_benchCharacters=N`: 스킨드 캐릭터 N 명을 한 줄로 스폰하고 Idle 과 Walking_A 를 번갈아 재생합니다. */
         void spawnCharacters( uint32 characterCount );
-        /** @brief `-gv_benchCombat=1` — 전투 연출(KayKit 스켈레톤 적 · 칼 · 강체 바닥 · 연출 컴포넌트)을 세웁니다. */
+        /** @brief `-gv_benchCombat=1`: 전투 연출(KayKit 스켈레톤 적, 칼, 강체 바닥, 연출 컴포넌트)을 스폰합니다. */
         void spawnCombat();
         /** @brief 캐릭터 줄이 화면에 차도록 씬의 카메라를 맞춥니다(허리 높이를 봅니다). 격자면 앞 위에서 내려다봅니다. */
         void frameCharacterCameras( Scene* pScene, float32 halfExtent );
         /** @brief 캐릭터 줄(격자면 한 행)의 반폭입니다. */
         static float32 computeCharacterHalfExtent( uint32 characterCount );
-        /** @brief `-gv_benchFaces=N` — 테스트 머리 N 개를 한 줄로 세웁니다(표정 · 립싱크 · 깜빡임 · 시선). */
+        /** @brief `-gv_benchFaces=N`: 테스트 머리 N 개를 한 줄로 스폰합니다(표정, 립싱크, 깜빡임, 시선). */
         void spawnFaces( uint32 faceCount );
         /** @brief 머리 줄을 정면에서 보도록 카메라를 맞춥니다. */
         void frameFaceCameras( Scene* pScene );
         /** @brief 머리 줄이 화면 폭에 차는 카메라 거리(m)입니다. */
         static float32 computeFaceCameraDistance( uint32 faceCount );
         /**
-         * @brief `-gv_benchRig=N` — 후처리 리그를 건 KayKit 기사 N 명을 기울기 위에 세웁니다(BenchSceneRig.cpp): 발 디딤 · 머리 시선 ·
-         *        무기 손잡이 왼손 IK · 망토 스프링 본. 무기 · 망토는 각자 유닛(자식 오브젝트)이고 리그가 몸의 본을 따릅니다.
+         * @brief `-gv_benchRig=N`: 후처리 리그를 적용한 KayKit 기사 N 명을 경사면 위에 스폰합니다(BenchSceneRig.cpp). 발 디딤, 머리 시선,
+         *        무기 손잡이 왼손 IK, 망토 스프링 본을 확인합니다. 무기와 망토는 각자 유닛(자식 오브젝트)이고 리그가 몸의 본을 따릅니다.
          */
         void spawnRigCharacters( uint32 characterCount );
-        /** @brief 리그 데모의 프레임 갱신 — 시선 목표를 돌리고, 몸을 좌우로 틀어 망토가 흔들리게 하고, 거리 LOD 기준점(카메라)을 넣습니다. */
+        /** @brief 리그 데모의 프레임 갱신입니다. 시선 목표를 돌리고, 몸을 좌우로 틀어 망토가 흔들리게 하고, 거리 LOD 기준점(카메라)을 넣습니다. */
         void updateRigCharacters( float32 deltaTime );
-        /** @brief 리그 데모 카메라 — 기사 한 명이면 상반신 가까이, 여럿이면 줄 전체. */
+        /** @brief 리그 데모 카메라를 맞춥니다. 기사 한 명이면 상반신 가까이, 여럿이면 줄 전체를 봅니다. */
         void frameRigCameras( Scene* pScene );
         /** @brief `-gv_benchRig` 값입니다(스위치는 BenchSceneRig.cpp 가 선언합니다). */
         static uint32 getRigCharacterCount();
 
         /** @brief 인덱스로부터 결정적인 밝은 색을 만듭니다. */
         static float4 makeBenchColor( uint32 index );
-        /** @brief 인덱스가 투명 큐브인지 (결정적 해시 — 실행마다 같은 그림이 나와야 비교가 된다). */
+        /** @brief 인덱스가 투명 큐브인지 반환합니다(결정적 해시이므로 실행마다 같은 이미지가 나와 비교할 수 있습니다). */
         static bool isBenchTransparent( uint32 index, uint32 percent );
         /** @brief 격자 한 변의 절반 크기입니다. */
         static float32 halfExtentOf( uint32 side, float32 spacing );
 
-        /** @brief 씬에 주광을 만들고 그림자 볼륨을 격자 크기에 맞춥니다. */
+        /** @brief 씬에 주 광원을 만들고 그림자 볼륨을 격자 크기에 맞춥니다. */
         void spawnLight( Scene* pScene, float32 halfExtent );
         /**
-         * @brief 큐브 하나를 격자 자리 index 에 만듭니다 — 메시 종류 · 위치 · 시드 · 무버까지. 만든 메시 컴포넌트를 돌려준다.
-         * @details 첫 스폰과 `-gv_benchSpawnChurn` 의 재스폰이 같은 함수를 쓴다. 투명·큐브별 머티리얼은 첫 스폰만 덧입힌다.
+         * @brief 큐브 하나를 격자 위치 index 에 만듭니다. 메시 종류, 위치, 시드, 무버까지 설정하며, 만든 메시 컴포넌트를 반환합니다.
+         * @details 첫 스폰과 `-gv_benchSpawnChurn` 의 재스폰이 같은 함수를 쓴다. 투명 큐브와 큐브별 머티리얼은 첫 스폰에서만 적용한다.
          */
         MeshComponent* spawnCube( GameObjectManager* pObjects, Material* pSceneMaterial, uint32 index, uint32 side, float32 origin );
-        /** @brief `-gv_benchSpawnChurn=N` — 프레임마다 큐브 N 개를 지우고 같은 자리에 새로 만듭니다. */
+        /** @brief `-gv_benchSpawnChurn=N`: 프레임마다 큐브 N 개를 지우고 같은 위치에 새로 만듭니다. */
         void updateSpawnChurn( GameObjectManager* pObjects, Scene* pScene );
         /**
-         * @brief `-gv_benchLights=N` 개의 점광·스포트라이트를 격자 위에 흩뿌립니다.
-         * @details 자리는 **결정적 해시**로 정한다 — 실행마다 같은 그림이 나와야 스크린샷 비교가 된다.
-         *          홀수 번째는 스포트라이트다(점광만 두면 원뿔 감쇠 경로가 한 번도 안 돈다).
+         * @brief `-gv_benchLights=N` 개의 점광과 스포트라이트를 격자 위에 흩뿌립니다.
+         * @details 위치는 **결정적 해시**로 정한다. 실행마다 같은 이미지가 나와야 스크린샷을 비교할 수 있다.
+         *          홀수 번째는 스포트라이트다(점광만 두면 원뿔 감쇠 경로가 한 번도 실행되지 않는다).
          */
         void spawnBenchLights( Scene* pScene, float32 halfExtent );
         /**
          * @brief `-gv_benchGround=1` 이면 격자 아래에 바닥 평면을 깝니다.
-         * @details 그림자를 **받을 면**이다. 큐브만 떠 있으면 그림자가 어디에 지는지 그림으로 볼 수 없다.
+         * @details 그림자를 **받을 면**이다. 큐브만 떠 있으면 그림자가 어디에 지는지 이미지로 볼 수 없다.
          */
         void spawnGround( Scene* pScene, float32 halfExtent );
         /** @brief `-gv_benchViews=N` 이면 격자 둘레에 캡처 카메라(렌더 텍스처) N 개를 둡니다. */
         void spawnBenchViews( Scene* pScene, float32 halfExtent );
         /** @brief 씬의 모든 카메라를 격자에 맞춥니다(에디터 뷰포트 카메라 포함). */
         void frameCameras( Scene* pScene, uint32 side, float32 spacing );
-        /** @brief 카메라 하나를 격자 전체가 들어오도록 물립니다. */
+        /** @brief 카메라 하나를 격자 전체가 들어오도록 뒤로 뺍니다. */
         void frameOneCamera( CameraComponent* pCamera, uint32 side, float32 spacing );
 
         /**
-         * @brief 머티리얼 스트레스 — 값·집합·퍼뮤테이션을 무작위로 흔듭니다.
-         * @details `-gv_benchMaterialChurn*` 셋이 없으면 곧장 돌아온다. 자세한 사연은 그 스위치들의 주석.
+         * @brief 머티리얼 스트레스입니다. 값, 집합, 퍼뮤테이션을 무작위로 바꿉니다.
+         * @details `-gv_benchMaterialChurn*` 스위치 셋이 모두 없으면 곧장 돌아온다. 자세한 이유는 그 스위치들의 주석에 있다.
          */
         void updateMaterialChurn( GameObjectManager* pObjects );
-        /** @brief 인스턴스 하나의 값(색·러프니스)을 무작위로 바꿉니다. */
+        /** @brief 인스턴스 하나의 값(색, 러프니스)을 무작위로 바꿉니다. */
         void churnInstanceValue( MaterialInstance* pInstance );
-        /** @brief 목록에서 인스턴스를 놓습니다(마지막 참조면 여기서 죽는다). 없으면 아무것도 안 합니다. */
+        /** @brief 목록에서 인스턴스를 해제합니다(마지막 참조면 여기서 파괴됩니다). 없으면 아무것도 하지 않습니다. */
         void releaseChurnInstance( const MaterialInstance* pInstance );
         /**
-         * @brief 결정적 난수 한 걸음 (xorshift32).
-         * @details 표준 난수를 쓰지 않는 이유: **같은 프레임 수를 돌리면 같은 순서가 나와야** 스크린샷과
-         *          로그를 실행 간에 비교할 수 있다. 시드도 고정이다.
+         * @brief 결정적 난수를 한 단계 진행합니다(xorshift32).
+         * @details 표준 난수를 쓰지 않는 이유는 **같은 프레임 수를 돌리면 같은 순서가 나와야** 스크린샷과
+         *          로그를 실행 간에 비교할 수 있기 때문이다. 시드도 고정이다.
          */
         uint32 nextChurnRandom();
 
     private:
         /**
-         * @brief 벤치 큐브의 핸들. 씬이 큐브를 소유하고, 여기에는 주소가 없다.
-         * @details 주의: 생포인터를 들면 RHI 교체가 여기서 죽는다 — 새 게임 인스턴스가 onInitialize 에서 큐브를
+         * @brief 벤치 큐브의 핸들입니다. 씬이 큐브를 소유하므로 여기에는 주소가 없습니다.
+         * @details 주의: 생포인터를 보관하면 RHI 교체 때 죽는다. 새 게임 인스턴스가 onInitialize 에서 큐브를
          *          만든 직후 상태 복원이 씬을 통째로 지우고, 다음 update 가 죽은 주소에 setLocalPosition 을 한다.
-         *          핸들은 해석이 nullptr 로 끝날 뿐 죽은 주소가 될 수 없다.
+         *          핸들은 조회 결과가 nullptr 이 될 뿐 죽은 주소가 될 수 없다.
          */
         vector<ComponentHandle> _listBenchMesh;
         /**
-         * @brief `-gv_benchInstanced=1` 의 큐브 — 메시 종류마다 배치 하나. 큐브 i 는 배치 i % 종류수 의 항목 i / 종류수 다.
-         * @details 씬 컴포넌트가 없으므로 `_listBenchMesh` 는 비어 있고, update 가 월드 행렬을 항목에 바로 적는다.
+         * @brief `-gv_benchInstanced=1` 의 큐브입니다. 메시 종류마다 배치 하나이며, 큐브 i 는 배치 i % 종류 수의 항목 i / 종류 수입니다.
+         * @details 씬 컴포넌트가 없으므로 `_listBenchMesh` 는 비어 있고, update 가 월드 행렬을 항목에 바로 쓴다.
          */
         vector<shared_ptr<MeshInstanceBatch>> _listInstanceBatch;
         uint32                                _instanceCubeCount;
-        /** @brief 벤치가 섞어 쓰는 메시 종류 — 큐브 i 는 i % 종류수. 재스폰이 같은 종류를 다시 쓴다. */
+        /** @brief 벤치가 섞어 쓰는 메시 종류입니다. 큐브 i 는 i % 종류 수를 쓰며, 재스폰이 같은 종류를 다시 씁니다. */
         vector<shared_ptr<Mesh>> _listMeshVariant;
-        /** @brief 재스폰이 다음에 갈아 끼울 큐브 자리 (라운드 로빈). */
+        /** @brief 재스폰이 다음에 교체할 큐브 위치입니다(라운드 로빈). */
         uint32 _churnCursor;
-        /// @brief 프레임마다 다시 채우는 배치 쓰기 목록 — 큐브마다 세터를 부르지 않는다(update 주석).
+        /// @brief 프레임마다 다시 채우는 배치 쓰기 목록입니다. 큐브마다 세터를 부르지 않습니다(update 주석 참고).
         vector<SceneTransformWrite> _listTransformWrite;
-        /** @brief 벤치가 만든 주광의 핸들. despawn 이 걷을 때 쓴다. */
+        /** @brief 벤치가 만든 주 광원의 핸들입니다. despawn 이 정리할 때 씁니다. */
         ComponentHandle _keyLight;
         /**
-         * @brief 벤치가 만든 **큐브가 아닌** 것들의 핸들 — 흩뿌린 라이트와 바닥 평면.
-         * @details 모듈 리로드 · RHI 교체는 `despawn()` → `spawnFromGlobals()` 를 한 쌍으로
-         *          돈다. 주의: 벤치가 만든 것을 여기 적지 않으면 `despawn()` 이 걷지 못해 그때마다
-         *          **한 벌씩 더 쌓이고**, 재려는 경로가 측정을 망가뜨린다.
+         * @brief 벤치가 만든 **큐브가 아닌** 것들의 핸들입니다. 흩뿌린 라이트와 바닥 평면입니다.
+         * @details 모듈 리로드와 RHI 교체는 `despawn()` 과 `spawnFromGlobals()` 를 한 쌍으로
+         *          돈다. 주의: 벤치가 만든 것을 여기 적지 않으면 `despawn()` 이 정리하지 못해 그때마다
+         *          **한 벌씩 더 쌓이고**, 측정하려는 경로가 측정을 망가뜨린다.
          */
         vector<ComponentHandle> _listBenchExtra;
-        /** @brief 반투명 큐브가 쓰는 머티리얼 에셋 (블렌드 모드·퍼뮤테이션이 불투명과 다르다). */
+        /** @brief 반투명 큐브가 쓰는 머티리얼 에셋입니다(블렌드 모드와 퍼뮤테이션이 불투명과 다릅니다). */
         shared_ptr<Material> _glassMaterial;
         /**
-         * @brief 벤치가 만든 머티리얼 인스턴스 전부 — 스트레스가 흔들 대상.
-         * @details 소유를 여기서도 든다. 떼어낸 인스턴스를 이 목록에서도 놓아야 참조가 **실제로**
-         *          사라지고, 그래야 원소 회수와 상수버퍼 해제 경로가 돈다.
+         * @brief 벤치가 만든 머티리얼 인스턴스 전부입니다. 스트레스가 흔들 대상입니다.
+         * @details 소유를 여기서도 가진다. 제거한 인스턴스를 이 목록에서도 해제해야 참조가 **실제로**
+         *          사라지고, 그래야 요소 회수와 상수 버퍼 해제 경로가 돈다.
          */
         vector<shared_ptr<MaterialInstance>> _listChurnInstance;
-        /** @brief 스트레스용 난수 상태. 0 이 되면 xorshift 가 멈추므로 고정 시드로 시작한다. */
+        /** @brief 스트레스용 난수 상태입니다. 0 이 되면 xorshift 가 멈추므로 고정 시드로 시작합니다. */
         uint32 _churnRandom;
-        /** @brief 스트레스가 돈 프레임 수 — 키워드 흔들기 주기에 쓴다. */
+        /** @brief 스트레스가 돈 프레임 수입니다. 키워드를 바꾸는 주기에 씁니다. */
         uint64 _churnFrame;
-        /** @brief 애니메이션 누적 시간. */
+        /** @brief 애니메이션 누적 시간입니다. */
         float32 _benchElapsed;
         /** @brief 격자 한 변의 큐브 수. 카메라를 다시 맞출 때 씁니다. */
         uint32 _benchGridSide;
         /** @brief 늦게 생기는 에디터 카메라까지 한 번 더 맞췄으면 1. */
         uint8 _bRefreshedCameras : 1;
-        /** @brief 리그 데모의 기사 몸 유닛 핸들(몸 돌리기 · 걷기). */
+        /** @brief 리그 데모의 기사 몸 유닛 핸들입니다(몸 돌리기와 걷기). */
         vector<ComponentHandle> _listRigBody;
         /** @brief 리그 데모의 시선 목표(작은 구). */
         ComponentHandle _rigLookTarget;
-        /** @brief 캐릭터 벤치를 세웠으면 1 — 카메라를 캐릭터 기준으로 맞춥니다. */
+        /** @brief 캐릭터 벤치를 스폰했으면 1 입니다. 카메라를 캐릭터 기준으로 맞춥니다. */
         uint8                  _bCharacterFraming : 1;
-        uint8                  _bFaceFraming      : 1; ///< 테스트 머리 줄을 세웠다(카메라를 머리 높이로 맞춘다)
+        uint8                  _bFaceFraming      : 1; ///< 테스트 머리 줄을 스폰했다(카메라를 머리 높이로 맞춘다).
         [[maybe_unused]] uint8 _reserved          : 5;
     };
 } // namespace sw

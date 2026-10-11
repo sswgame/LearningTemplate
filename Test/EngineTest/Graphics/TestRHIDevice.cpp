@@ -1697,7 +1697,7 @@ SW_TEST_CASE( RHIDeviceTest, GPUTimestampsMarkUnwrittenSlotsAllBackends )
  * @details 점광 그림자(큐브) · 다중 그림자(배열)의 RHI 바탕이다. 면마다 (1) 컬러 면만 열어 면마다 다른 색으로 지우고, 깊이 면만 열어
  *          짝수 면 1.0 · 홀수 면 0.25 로 지운 뒤 (2) 컬러 면 + 깊이 면을 Load 로 열어 z = 0.5 인 화면 가득 삼각형을 빨강으로 그린다.
  *          짝수 면은 빨강, 홀수 면은 깊이 테스트에 져서 (1) 의 색이 남아야 한다 — 컬러 면 뷰가 틀리면 색이 다른 면으로 가고, 깊이 면 뷰가
- *          틀리면 다른 면의 깊이와 견주어 짝 · 홀이 섞인다. 따로, SRV 만 있는 배열 · 큐브에 면마다 다른 바이트를 올려 그대로 읽히는지 본다. 셰이더 테이블은 아직
+ *          틀리면 다른 면의 깊이와 비교해 짝 · 홀이 섞인다. 따로, SRV 만 있는 배열 · 큐브에 면마다 다른 바이트를 올려 그대로 읽히는지 본다. 셰이더 테이블은 아직
  *          Texture2D 만 받으므로 배열 · 큐브의 bindless 등록은 거부되고, 모양이 틀린 서술(정사각형 아닌 큐브 · 면 둘인 2D)은 만들어지지 않는다.
  */
 SW_TEST_CASE( RHIDeviceTest, SlicedTexturesTargetUploadAndReadBackPerSlice )

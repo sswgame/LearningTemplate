@@ -3,7 +3,7 @@
 /**
  * @file SelectionStore.js
  * @brief 꺼 둔 항목의 값 · 사용자 인자 순서 · 프리셋을 `.vscode/launchArgs.json` 에 둡니다.
- * @details CMake Tools 설정(`cmake.debugConfig.args`)에는 **켜진 것만** 들어가므로, 껐다 켤 때 되살릴 값과 프리셋은 여기 둡니다.
+ * @details CMake Tools 설정(`cmake.debugConfig.args`)에는 **켜진 것만** 들어가므로, 껐다 켤 때 복원할 값과 프리셋은 여기 둡니다.
  *          `.vscode/*` 는 `.gitignore` 로 빠져 있어 PC 마다 따로입니다. JSON 키는 저장소 규칙대로 snake_case 입니다.
  *          읽지 못한 파일은 덮어쓰지 않고 `.bad-<시각>.json` 으로 옮겨 두고 알립니다(프리셋을 조용히 잃지 않게).
  *          vscode 를 모르는 순수 모듈입니다.

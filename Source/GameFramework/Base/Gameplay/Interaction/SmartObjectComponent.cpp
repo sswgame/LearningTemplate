@@ -105,7 +105,7 @@ namespace sw
         }
         std::lock_guard<std::mutex> lock( _mutex );
         _slots.initialize( *pDef );
-        // 저장된 차지(세이브 · 핫 리로드)를 되살린다.
+        // 저장된 차지 상태(세이브, 핫 리로드)를 복원한다.
         for ( size_t slot = 0; slot < _listClaimant.size() && slot < static_cast<size_t>( _slots.getSlotCount() ); ++slot )
         {
             if ( _listClaimant[slot].isValid() )
@@ -130,7 +130,7 @@ namespace sw
     void SmartObjectComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
-        // 상호작용 표 파일을 고쳤다 — 새 표에서 자리를 다시 찾는다. 차지는 자리 번호로 이어진다(줄어든 자리의 차지는 놓인다).
+        // 상호작용 테이블 파일이 바뀌었으므로 새 테이블에서 슬롯을 다시 찾는다. 차지 상태는 슬롯 번호로 이어지고, 줄어든 슬롯의 차지는 해제된다.
         if ( _bHasOverride == SW_FALSE && _seenCatalogReloadCount != InteractionCatalog::getSharedReloadCount() )
             resolveDefinition();
     }

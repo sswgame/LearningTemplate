@@ -33,7 +33,7 @@ namespace sw::editor
     namespace
     {
         /**
-         * @brief 핀 번호의 정본은 **`DialogueGraphAsset`** 입니다. 여기서는 이름만 짧게 빌립니다.
+         * @brief 핀 번호의 원본은 **`DialogueGraphAsset`** 입니다. 여기서는 이름만 짧게 빌립니다.
          * @details 오프셋 상수와 인코딩의 사본을 여기 두지 않습니다. 링크는 디스크에 저장되므로, 한쪽만 바뀌면
          *          대화가 조용히 엉뚱한 분기를 탑니다.
          */
@@ -254,7 +254,7 @@ namespace sw::editor
             notifyDocumentEdited( "Add Dialogue Node" );
         }
 
-        // 삭제 처리. 링크가 노드에 닿는지는 핀 번호를 풀어 본다. **핀을 푸는 정본은 `DialogueGraphAsset` 이다.**
+        // 삭제 처리. 링크가 노드에 닿는지는 핀 번호를 풀어 본다. **핀을 푸는 원본은 `DialogueGraphAsset` 이다.**
         // 핀을 푸는 기준(`kPinScale`)은 `decodePinNodeID` 한 곳에만 있다. 여기서 손으로 풀면
         // 기준이 바뀔 때 노드를 지워도 그 링크가 남는다.
         processCanvasDeletions(

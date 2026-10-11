@@ -1,9 +1,9 @@
 /**
  * @file PhysicsDebugDraw.h
  * @brief 물리 디버그 그리기의 출구(`IPhysicsDebugRenderer`)와 셰이프 와이어프레임 도우미입니다.
- * @details 물리는 그리는 쪽을 모릅니다(티어가 아래다). 씬이 `drawDebug( renderer )` 로 바디마다 셰이프를 선으로 내고, 조립점의 어댑터가 그것을
- *          `DebugDrawQueue` 로 옮깁니다(`EngineLoop.cpp` 의 `EngineLoopDebugLineAdapter`, `gv_physicsDebugDraw`). 셰이프를 선으로 푸는
- *          일은 백엔드와 무관해 여기 한 곳에 둡니다 — 두 백엔드가 바디 자세만 넘깁니다.
+ * @details 물리는 그리는 쪽을 모른다(티어가 아래다). 씬이 `drawDebug( renderer )` 로 바디마다 셰이프를 선으로 내보내고, 조립 지점의 어댑터가 그것을
+ *          `DebugDrawQueue` 로 옮긴다(`EngineLoop.cpp` 의 `EngineLoopDebugLineAdapter`, `gv_physicsDebugDraw`). 셰이프를 선으로 푸는
+ *          일은 백엔드와 무관하므로 여기 한 곳에 둔다. 두 백엔드는 바디 자세만 넘긴다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -33,12 +33,12 @@ namespace sw
     /** @brief 셰이프를 와이어프레임 선으로 푸는 도우미입니다. */
     struct SW_API PhysicsDebugDrawUtil
     {
-        /** @brief 바디 종류 · 상태별 기본 색입니다(정적 회색 · 키네마틱 파랑 · 동적 초록 · 잠든 것 어둡게 · 트리거 노랑). */
+        /** @brief 바디 종류와 상태별 기본 색입니다(정적은 회색, 키네마틱은 파랑, 동적은 초록, 잠든 것은 어둡게, 트리거는 노랑). */
         static float4 getBodyColor( uint8 bodyType, bool bSleeping, bool bTrigger );
-        /** @brief 3D 셰이프 하나를 바디 자세(@p bodyPosition · @p bodyRotation)에 그립니다. */
+        /** @brief 3D 셰이프 하나를 바디 자세(@p bodyPosition, @p bodyRotation)에 그립니다. */
         static void drawShape3D( IPhysicsDebugRenderer& renderer, const PhysicsShapeDesc3D& shape, const float3& bodyPosition, const quaternion& bodyRotation,
                                  const float4& color );
-        /** @brief 2D 셰이프 하나를 바디 자세(@p bodyPosition · @p bodyAngle)에 그립니다(Z = 0). */
+        /** @brief 2D 셰이프 하나를 바디 자세(@p bodyPosition, @p bodyAngle)에 그립니다(Z = 0). */
         static void drawShape2D( IPhysicsDebugRenderer& renderer, const PhysicsShapeDesc2D& shape, const float2& bodyPosition, float32 bodyAngle,
                                  const float4& color );
     };

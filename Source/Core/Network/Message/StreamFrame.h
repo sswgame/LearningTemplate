@@ -17,7 +17,7 @@ namespace sw
         Request,     ///< `NetRequestClient` → 서버
         Response,    ///< 서버 → `NetRequestClient`
         Cancel,      ///< 요청 취소
-        Ping,        ///< 끝점이 스스로 답한다(키트는 보지 않는다)
+        Ping,        ///< 엔드포인트가 스스로 답한다(키트는 보지 않는다)
         Pong,
         Count
     };

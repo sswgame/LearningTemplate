@@ -12,11 +12,11 @@ namespace sw
     {
         /**
          * @struct PackCompressionUtilInternal
-         * @brief 활성 등록부가 없을 때 쓰는, 엔진 코덱을 모두 올린 등록부입니다.
+         * @brief 활성 레지스트리가 없을 때 쓰는, 엔진 코덱을 모두 올린 레지스트리입니다.
          */
         struct PackCompressionUtilInternal
         {
-            /** @brief 내장 둘 + 엔진 코덱을 올린 등록부를 한 번 만들어 둡니다. */
+            /** @brief 내장 둘 + 엔진 코덱을 올린 레지스트리를 한 번 만들어 둡니다. */
             static CompressionCodecRegistry& getEngineCodecRegistry()
             {
                 struct EngineCodecRegistry

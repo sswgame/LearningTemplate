@@ -65,7 +65,7 @@ namespace sw
                 return float4{ 0.6f, 0.6f, 0.6f, 1.0f };
             }
 
-            /** @brief 모델에 곱할 색입니다 — 서비스는 서비스 색을 흰 쪽으로 반쯤 섞어 벽이 그 색으로 읽히고, 집 · 나무 · 화분은 팔레트 그대로입니다. */
+            /** @brief 모델에 곱할 색입니다. 서비스는 서비스 색을 흰색 쪽으로 반쯤 섞어 벽이 그 색으로 보이게 하고, 집, 나무, 화분은 팔레트 그대로입니다. */
             static float4 computeModelTint( const CityBuildingDef& def )
             {
                 const float4 white{ 1.0f, 1.0f, 1.0f, 1.0f };
@@ -144,7 +144,7 @@ namespace sw
                 return static_cast<int32>( kind ) * kWalkerLookStride + static_cast<int32>( service );
             }
 
-            /** @brief 오브젝트 메시를 자리 · 크기로 둡니다. 메시가 없으면 nullptr 입니다. */
+            /** @brief 오브젝트 메시를 위치와 크기로 둡니다. 메시가 없으면 nullptr 입니다. */
             static MeshComponent* placeMesh( GameObject* pObject, const float3& position, const float3& scale )
             {
                 MeshComponent* pMesh = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
@@ -158,7 +158,7 @@ namespace sw
     } // namespace
 
     /**
-     * @brief `-gv_nileAutoPlay=1` — 디렉터의 자동 계획을 켭니다(씬의 `_bAutoPlay` 가 꺼져 있어도). 입력 없이 도시가 크는 확인.
+     * @brief `-gv_nileAutoPlay=1`: 디렉터의 자동 계획을 켭니다(씬의 `_bAutoPlay` 가 꺼져 있어도 켭니다). 입력 없이 도시가 커지는지 확인합니다.
      * @details 배포본으로도 돌릴 수 있게 남긴다: `App -gv_nileAutoPlay=1`. 달마다 `[Nile] month N pop P money M` 이 로그에 남는다.
      */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_nileAutoPlay, 0, "NileCity: 자동 계획으로 도시를 짓고 돌리기 (1=켜기)" );
@@ -257,7 +257,7 @@ namespace sw
     {
         if ( _bCursorValid == SW_FALSE || _listTool.empty() )
             return false;
-        // 뷰가 워커에서 부른다 — 컨테이너 첨자 대신 포인터로 읽는다.
+        // 뷰가 워커에서 부른다. 컨테이너 인덱스 대신 포인터로 읽는다.
         const CityBuildingDef* pDef = _listTool.data()[_selectedTool];
         outTile                     = _cursorTile;
         outSize                     = pDef != nullptr ? pDef->_size : 1;
@@ -343,14 +343,14 @@ namespace sw
 
     CitySettings NileDirectorComponent::makeCitySettings() const
     {
-        // 순회 서비스가 남는 시간을 키트 기본(30 초)보다 길게 — 이 도시의 도로망에서 일꾼 하나가 고리를 다 도는 데 그만큼 걸린다.
+        // 순회 서비스가 남는 시간을 키트 기본값(30초)보다 길게 잡는다. 이 도시의 도로망에서 일꾼 하나가 고리를 다 도는 데 그만큼 걸리기 때문이다.
         CitySettings settings;
         settings._serviceDuration = _serviceDuration;
         return settings;
     }
 
     // ------------------------------------------------------------------------------
-    // 상태 쓰기 · 되살리기(핫 리로드 · 세이브)
+    // 상태 쓰기 · 복원하기(핫 리로드 · 세이브)
     // ------------------------------------------------------------------------------
     void NileDirectorComponent::writeState( Archive& outArchive ) const
     {
@@ -472,7 +472,7 @@ namespace sw
 
     void NileDirectorComponent::spawnTerrain( GameObjectManager& manager )
     {
-        // 줄마다 같은 땅이 이어지는 구간을 상자 하나로(칸마다 세우면 2000 개 — 땅은 바뀌지 않는다). 바위는 칸마다 솟은 상자.
+        // 줄마다 같은 땅이 이어지는 구간을 상자 하나로 만든다(타일마다 스폰하면 2000개가 되며, 땅은 바뀌지 않는다). 바위는 타일마다 솟은 상자다.
         using Internal = NileDirectorComponentInternal;
         for ( int32 y = 0; y < _city.getHeight(); ++y )
         {
@@ -507,7 +507,7 @@ namespace sw
 
     void NileDirectorComponent::spawnRoad( GameObjectManager& manager, int32 tileIndex )
     {
-        // 도로 칸 — 보도 조각을 칸만 하게 늘린다(팔레트 머티리얼 그대로).
+        // 도로 타일은 보도 조각을 타일 크기만큼 늘려 쓴다(팔레트 머티리얼 그대로).
         const int32 x     = tileIndex % _city.getWidth();
         const int32 y     = tileIndex / _city.getWidth();
         GameObject* pRoad = spawnPrefab( manager, _roadPrefab, "NileRoad" );
@@ -541,7 +541,7 @@ namespace sw
 
     void NileDirectorComponent::spawnWalkers( GameObjectManager& manager, size_t count )
     {
-        // 일꾼 수만큼 미리 세우고 남으면 뷰가 숨긴다(오브젝트를 매 프레임 만들고 지우지 않는다). 목록 자리는 다른 일꾼에게 넘어갈 수 있다.
+        // 일꾼 수만큼 미리 스폰하고 남으면 뷰가 숨긴다(오브젝트를 매 프레임 만들고 지우지 않는다). 목록 슬롯은 다른 일꾼에게 넘어갈 수 있다.
         const GameObjectHandle director = getOwner()->getHandle();
         while ( _listWalkerObject.size() < count )
         {
@@ -589,11 +589,11 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 갱신(PrePhysics — 워커)
+    // 갱신(PrePhysics, 워커)
     // ------------------------------------------------------------------------------
     void NileDirectorComponent::collectViewChanges()
     {
-        // 도로 칸 — 깔렸거나 걷힌 칸만. 건물 칸 — 새 건물이거나 허물렸거나 다른 건물로 다시 쓰인 칸만. 단계 · 사람은 뷰가 맞춘다.
+        // 도로 타일은 깔렸거나 철거된 타일만 처리한다. 건물 타일은 새 건물이거나 허물렸거나 다른 건물로 다시 쓰인 타일만 처리한다. 단계와 사람은 뷰가 맞춘다.
         const int32 width = _city.getWidth();
         for ( int32 tileIndex = 0; tileIndex < static_cast<int32>( _listRoadShown.size() ); ++tileIndex )
         {
@@ -622,7 +622,7 @@ namespace sw
 
     void NileDirectorComponent::updateInput( float32 deltaTime, const InputManager& input )
     {
-        // 카메라 이동 · 확대는 리그(PostUpdate)가 읽는다. 여기는 도구 · 속도 · 짓기.
+        // 카메라 이동과 확대는 리그(PostUpdate)가 읽는다. 여기서는 도구, 속도, 건설을 처리한다.
         (void)deltaTime;
         // 키는 입력 맵(`data/nile.input.xml`)이 정한다.
         const InputMap& inputMap  = input.getInputMap();
@@ -664,7 +664,7 @@ namespace sw
         updateCursor( input );
         if ( _bCursorValid == SW_FALSE )
             return;
-        // 커서 칸은 포인터 위치, 누르는 것은 액션 — 길 도구는 누르는 동안 끌어 잇는다.
+        // 커서 타일은 포인터 위치로 정하고, 누르는 것은 액션이 정한다. 도로 도구는 누르는 동안 끌어서 연결한다.
         const hashed_string placeAction( "Nile.Place" );
         if ( inputMap.wasActionPressed( placeAction ) || ( _selectedTool == 0 && inputMap.isActionDown( placeAction ) ) )
             placeSelected();
@@ -674,7 +674,7 @@ namespace sw
 
     void NileDirectorComponent::updateCursor( const InputManager& input )
     {
-        // 리그의 직교 시점으로 포인터 아래 땅 칸을 찾는다. 리그는 PostUpdate 에서 쓰므로 여기서 읽는 것은 지난 프레임의 시점이다.
+        // 리그의 직교 시점으로 포인터 아래 땅 타일을 찾는다. 리그는 PostUpdate 에서 쓰므로 여기서 읽는 것은 지난 프레임의 시점이다.
         _bCursorValid                             = SW_FALSE;
         GameObjectManager*             pManager   = getObjectManager();
         const GameObject*              pRigObject = pManager != nullptr ? pManager->resolveGameObject( _cameraRig ) : nullptr;
@@ -697,7 +697,7 @@ namespace sw
         const CityBuildingDef* pDef = _listTool[static_cast<size_t>( _selectedTool )];
         if ( pDef == nullptr )
         {
-            // 도로는 끌어서 깐다 — 이미 도로인 칸은 조용히 넘어간다.
+            // 도로는 끌어서 깐다. 이미 도로인 타일은 조용히 넘어간다.
             const CityPlaceResult result = _city.placeRoad( _cursorTile._x, _cursorTile._y );
             if ( result == CityPlaceResult::NotEnoughMoney || result == CityPlaceResult::BadTerrain )
                 SW_LOG_INFO( "[Nile] cannot lay road at (%#, %#): %#", _cursorTile._x, _cursorTile._y, toString( result ) );

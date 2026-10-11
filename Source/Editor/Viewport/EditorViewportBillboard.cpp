@@ -48,7 +48,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 빌보드를 그립니다(배지 + 글리프, 이름표 `viewport.billboard.<오브젝트 이름>`). */
+            /** @brief 빌보드를 그립니다(배지 + 글리프, 이름 `viewport.billboard.<오브젝트 이름>`). */
             static void draw( const EditorViewportVisualizerArgs& args )
             {
                 SW_EDITOR_PROFILE_SCOPE( "GT.Editor.billboards" );
@@ -115,7 +115,7 @@ namespace sw::editor
                     pObject, pComponent, &row, float2{ screen.x, screen.y }
                 } );
         };
-        // 씬 전체를 훑지 않고 등록부만 본다(오브젝트 수가 아니라 그 종류의 수만큼 든다).
+        // 씬 전체를 훑지 않고 레지스트리만 본다(오브젝트 수가 아니라 그 종류의 수만큼 든다).
         for ( CameraComponent* pCamera : manager.getCameraRegistry().getAll() )
         {
             addComponent( pCamera );

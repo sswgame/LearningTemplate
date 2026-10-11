@@ -64,7 +64,7 @@ namespace sw::editor
 
         /**
          * @brief 빈 곳 오른쪽 클릭이면 노드 찾아 넣기 팝업을 엽니다. 캔버스 안(`beginCanvas` ~ `endCanvas`)에서 프레임마다 부릅니다.
-         * @details 팝업은 검색 칸(열 때 초점) + 묶음별 목록입니다. Enter 는 첫 줄을 고릅니다. 이름표: 캔버스 `graph.canvas`(endCanvas), 검색 칸 `graph.addNode.search`.
+         * @details 팝업은 검색 칸(열 때 초점) + 묶음별 목록입니다. Enter 는 첫 줄을 고릅니다. 레이블: 캔버스 `graph.canvas`(endCanvas), 검색 칸 `graph.addNode.search`.
          * @return 골랐으면 true 이고 그 종류와, 오른쪽 클릭한 자리의 캔버스 좌표를 돌려줍니다.
          */
         bool drawAddNodePopup( const vector<EditorGraphNodeKind>& listKind, uint32& outKindID, float2& outCanvasPosition );
@@ -119,7 +119,7 @@ namespace sw::editor
 
         ax::NodeEditor::EditorContext*       _pEditor;
         string                               _settingsPath;
-        float2                               _previousCanvasSize; ///< 앞 프레임의 캔버스 크기(beginCanvas 가 잰다)
+        float2                               _previousCanvasSize; ///< 앞 프레임의 캔버스 크기(beginCanvas 가 측정한다)
         float2                               _canvasSize;         ///< 이번 프레임의 캔버스 크기
         vector<Color>                        _listPinTypeColor;   ///< 핀 타입 번호 → 색
         vector<EditorGraphNodeIssue>         _listNodeIssue;      ///< 이번 프레임의 문제 노드

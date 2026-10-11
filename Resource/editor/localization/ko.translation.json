@@ -86,7 +86,7 @@
             "sourceHash": "1595c29b79061b0d"
         },
         "EdCommon.DebugHUDNotRunningHost": {
-            "text": "디버그 HUD 가 실행 중이 아닙니다(Shipping 이거나 시험 호스트입니다).",
+            "text": "디버그 HUD 가 실행 중이 아닙니다(Shipping 이거나 테스트 호스트입니다).",
             "sourceHash": "d4935f02e428954e"
         },
         "EdCommon.DebugHUDSavedIn": {

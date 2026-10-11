@@ -1835,8 +1835,8 @@ SW_TEST_CASE( ArchiveTest, VarIntRejectsNonCanonicalTenthByte )
 /**
  * @brief [ArchiveTest] 넘치는 길이를 준 readBytesView 가 버퍼 밖을 가리키지 않는다
  * @details 세 읽기 함수가 `uint64` 길이를 받는다 — `readBytes` · `readSubArchive` · `readBytesView`.
- *          앞의 둘은 `길이 > 남은 바이트` 로 **빼서** 재는데 이것만 `위치 + 길이 > 전체` 로 더해서
- *          쟀다. 위치가 0 이 아닐 때 큰 길이를 주면 그 합이 **넘쳐서 작아지고** 검사를 그대로
+ *          앞의 둘은 `길이 > 남은 바이트` 로 **빼서** 측정하는데 이것만 `위치 + 길이 > 전체` 로 더해서
+ *          측정했다. 위치가 0 이 아닐 때 큰 길이를 주면 그 합이 **넘쳐서 작아지고** 검사를 그대로
  *          통과한다 — 그러면 호출자가 받은 포인터에서 그 길이만큼 버퍼 밖을 읽는다.
  */
 SW_TEST_CASE( ArchiveTest, ReadBytesViewRejectsALengthThatWrapsTheOffset )

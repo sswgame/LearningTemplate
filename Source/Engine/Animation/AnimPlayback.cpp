@@ -10,7 +10,7 @@ namespace sw
     {
         struct AnimNotifyTrackInternal
         {
-            /** @brief 울린 알림의 순서 — 시각이 이르면 먼저, 같으면 끝이 먼저입니다. */
+            /** @brief 울린 알림의 순서입니다. 시각이 이르면 먼저이고, 시각이 같으면 끝이 먼저입니다. */
             static bool isFiredBefore( const AnimFiredNotify& lhs, const AnimFiredNotify& rhs )
             {
                 if ( lhs._time != rhs._time )
@@ -46,7 +46,7 @@ namespace sw
         float32 time = _time + MathUtil::max( deltaSeconds, 0.0f );
         if ( bLoop )
         {
-            // 한 바퀴 안으로 감는다 — 끝없이 키우면 10^6 초 근처에서 한 프레임을 더해도 값이 움직이지 않는다.
+            // 한 바퀴 안으로 감는다. 끝없이 키우면 10^6 초 근처에서 한 프레임을 더해도 값이 움직이지 않는다.
             if ( time >= playLength )
             {
                 const float32 wrapCount = MathUtil::floor( time / playLength );
@@ -121,7 +121,7 @@ namespace sw
             const bool             bState        = event._duration > 0.0f;
             const float32          endTime       = bState ? computeEndTime( event, playLength ) : 0.0f;
             const bool             bStartCrossed = ( bIncludeFrom ? event._time >= fromTime : event._time > fromTime ) && event._time <= toTime;
-            // 끝은 시작과 같은 구간 규칙이다 — 다만 시작 시각을 포함하는 첫 걸음에서도 끝 시각 자체가 from 이면 이미 닫힌 구간이라 뺀다.
+            // 끝은 시작과 같은 구간 규칙을 쓴다. 다만 시작 시각을 포함하는 첫 걸음에서도 끝 시각 자체가 from 이면 이미 닫힌 구간이라 뺀다.
             const bool bEndCrossed = bState && endTime > fromTime && endTime <= toTime;
             if ( bStartCrossed )
             {
@@ -148,7 +148,7 @@ namespace sw
                 outListFired.push_back( fired );
             }
         }
-        // 시각 순서로 — 같은 시각이면 끝이 먼저다(앞 구간이 닫힌 뒤 다음 구간이 열린다).
+        // 시각 순서로 정렬한다. 같은 시각이면 끝이 먼저다(앞 구간이 닫힌 뒤 다음 구간이 열린다).
         std::stable_sort( outListFired.begin() + static_cast<ptrdiff_t>( firstAdded ), outListFired.end(),
                           AnimNotifyTrackInternal::isFiredBefore );
     }

@@ -516,7 +516,7 @@ SW_TEST_CASE( MathTest, IsInBoundsAgreesAcrossVectorTypes )
 
 /**
  * @brief [MathTest] 뒤집을 수 없는 행렬은 **Identity 로 돌아온다** (조용히 쓰레기를 내지 않는다)
- * @details 실패를 알리는 통로가 없어서 그렇게 정해 두었다. 그 계약을 여기서 못박는다 — 스케일 0 인
+ * @details 실패를 알리는 경로가 없어서 그렇게 정해 두었다. 그 계약을 여기서 못박는다 — 스케일 0 인
  *          트랜스폼을 뒤집으면 렌더러가 엉뚱한 자리에 그리는데, 적어도 값은 예측 가능해야 한다.
  */
 SW_TEST_CASE( MathTest, SingularMatrixInvertsToIdentity )
@@ -634,7 +634,7 @@ SW_TEST_CASE( MathTest, CreateTrsWithoutRotationMatchesIdentityQuaternion )
 
 /**
  * @brief [MathTest] 행렬식이 작아도 뒤집히는 행렬은 뒤집힌다. 거울 행렬의 분해 · 굴절 · nullptr 생성도 맞다.
- * @details `invert` 가 |det| 고정 문턱(1e-7 등)으로 특이를 판정하면 균일 스케일 0.001(det 1e-9)이나 높이 200 인 직교 투영(det 5.6e-8)이 항등 행렬이 된다.
+ * @details `invert` 가 |det| 고정 임계값(1e-7 등)으로 특이를 판정하면 균일 스케일 0.001(det 1e-9)이나 높이 200 인 직교 투영(det 5.6e-8)이 항등 행렬이 된다.
  *          `decompose` 는 거울 행렬의 반사를 회전으로 보면 안 된다.
  */
 SW_TEST_CASE( MathTest, SmallDeterminantMirrorRefractAndNullConstruct )

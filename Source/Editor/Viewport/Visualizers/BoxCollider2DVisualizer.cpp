@@ -23,7 +23,7 @@ namespace sw::editor
         {
             /**
              * @brief BoxCollider2D 사각형을 와이어프레임으로 그립니다 — 물리가 판정하는 그 상자(월드 회전 · 스케일을 받은 것)입니다.
-             * @details 씬 전체를 훑지 않고 매니저의 콜라이더 등록부를 봅니다(`EditorViewportVisualizerArgs::_pListCollider`).
+             * @details 씬 전체를 훑지 않고 매니저의 콜라이더 레지스트리를 봅니다(`EditorViewportVisualizerArgs::_pListCollider`).
              */
             static void draw( const EditorViewportVisualizerArgs& args )
             {

@@ -118,7 +118,7 @@ namespace sw
              * @param pOutActual   모듈이 실제로 묶인 쪽입니다(로그용). 그 의존을 import 하지 않으면 nullptr 입니다.
              * @param pOutExpected 비교한 기준입니다(로그용).
              * @return 아직 묶이지 않았거나 @p pExpected 에 묶였으면 true 입니다.
-             * @details 리눅스는 import 표에서 결속을 읽을 수 없어서, 의존 모듈마다 박힌 도장 상수를 모듈의 검색 범위(자기 + 자기 의존)에서
+             * @details 리눅스는 import 표에서 결속을 읽을 수 없어서, 의존 모듈마다 박힌 스탬프 상수를 모듈의 검색 범위(자기 + 자기 의존)에서
              *          찾습니다. `dlsym( pModule, ... )` 이 돌려주는 주소는 그 모듈이 **실제로 묶인** 의존의 것입니다.
              */
             static bool isBoundTo( void* pModule, string_view dependencyName, string_view dependencyFileName, void* pExpected, const void*& pOutActual,
@@ -134,7 +134,7 @@ namespace sw
                 const string stampSymbolName = string{ "sw_moduleEngineAbiStamp_" } + string{ dependencyName };
                 pOutExpected                 = ModuleImageUtil::getDynamicSymbol( pExpected, stampSymbolName );
                 pOutActual                   = nullptr;
-                // 도장이 없는 모듈(정적 링크 · 도장을 박기 전 빌드)은 가릴 방법이 없다. 어긋남으로 보지 않는다.
+                // 스탬프가 없는 모듈(정적 링크 · 스탬프를 박기 전 빌드)은 가릴 방법이 없다. 어긋남으로 보지 않는다.
                 if ( pOutExpected == nullptr )
                     return true;
                 pOutActual = ModuleImageUtil::getDynamicSymbol( pModule, stampSymbolName );
@@ -178,7 +178,7 @@ namespace sw
         , _bReloadGraphBroken{ SW_FALSE }
         , _reserved{ 0 }
     {
-        // 지운 수일 뿐이다 — 아직 매핑된 사본은 다음 시작 · 종료의 정리가 지운다
+        // 지운 수일 뿐이다. 아직 매핑된 사본은 다음 시작이나 종료의 정리가 지운다.
         (void)ShadowCopyName::removeStaleCopies( ModuleImageUtil::getModuleDirectory() );
     }
 
@@ -193,7 +193,7 @@ namespace sw
         _onBeforeCommitBatch = {};
         clearReloadCallbacks();
 
-        // 지운 수일 뿐이다 — 아직 매핑된 사본은 다음 시작 · 종료의 정리가 지운다
+        // 지운 수일 뿐이다. 아직 매핑된 사본은 다음 시작이나 종료의 정리가 지운다.
         (void)ShadowCopyName::removeStaleCopies( ModuleImageUtil::getModuleDirectory() );
 
         if ( _fileWatcher != nullptr )
@@ -202,8 +202,8 @@ namespace sw
             _fileWatcher.reset();
         }
 
-        // 언로드를 미룬 옛 이미지를 먼저 내린다. 그것들은 같은 배치의 미룬 이미지나 **지금 살아 있는** 이미지에 묶여 있으므로, 살아
-        // 있는 모듈을 먼저 내리면 옛 이미지의 정적 소멸자가 내려간 코드로 뛸 수 있다.
+        // 언로드를 미룬 옛 이미지를 먼저 언로드한다. 그것들은 같은 배치의 미룬 이미지나 **지금 살아 있는** 이미지에 바인딩돼 있으므로, 살아
+        // 있는 모듈을 먼저 언로드하면 옛 이미지의 정적 소멸자가 언로드된 코드로 점프할 수 있다.
         while ( _listDeferredUnloadImage.empty() == false )
         {
             unloadOldestDeferredBatch();
@@ -238,7 +238,7 @@ namespace sw
             return;
         }
 
-        // 역순으로 언로드한다. 의존하는 모듈을 먼저 내리고, 그다음 기반 모듈을 내린다.
+        // 역순으로 언로드한다. 의존하는 모듈을 먼저 언로드하고, 그다음 기반 모듈을 언로드한다.
         for ( auto it = listOrder.rbegin(); it != listOrder.rend(); ++it )
         {
             auto mapIt = _mapModule.find( *it );
@@ -263,7 +263,7 @@ namespace sw
             return true;
         }
 
-        // 섀도 복사본과 같은 이유로 올리기 **전에** 도장을 본다. 도장이 없거나 다르면 정적 초기화가 돌기 전에 거절한다.
+        // 섀도 복사본과 같은 이유로 로드하기 **전에** 스탬프를 확인한다. 스탬프가 없거나 다르면 정적 초기화가 돌기 전에 거절한다.
         vector<uint8> bytes;
         if ( LiveReloadManagerInternal::readFileWithRetry( modulePath, bytes ) == false )
         {
@@ -280,7 +280,7 @@ namespace sw
         if ( LiveReloadManagerInternal::rejectsDelayImports( moduleName, modulePath, bytes ) )
             return false;
 
-        // 불변 조건: 여기서 전역 머리는 비어 있다(등록할 때마다 비운다). 올리면 이 모듈의 정적 등록기만 매달린다.
+        // 불변 조건: 여기서 전역 헤드는 비어 있다(등록할 때마다 비운다). 로드하면 이 모듈의 정적 등록기만 매달린다.
         void* const pSharedHandle = ModuleImageUtil::loadDynamicLibrary( modulePath );
         if ( pSharedHandle == nullptr )
         {
@@ -371,7 +371,7 @@ namespace sw
         {
             if ( notice._bSucceeded == false )
             {
-                // 실패한 빌드가 다시 쓴 모듈은 반쯤 된 집합일 수 있다 — 올리지 않는다. 파일은 그대로라 다음에 성공한 빌드의 변경과 함께 올라간다.
+                // 실패한 빌드가 다시 쓴 모듈은 반쯤 완성된 집합일 수 있으므로 로드하지 않는다. 파일은 그대로라 다음에 성공한 빌드의 변경과 함께 로드된다.
                 for ( auto& [name, context] : _mapModule )
                 {
                     if ( context._bMtimeDebouncing || context._bForceReload )
@@ -421,7 +421,7 @@ namespace sw
             }
         }
 
-        // 이 프로세스가 시킨 빌드가 도는 동안은 변경을 모아 두기만 한다 — 연쇄 빌드의 반쯤 된 집합을 올리지 않는다(`notifyBuildStarted`).
+        // 이 프로세스가 시작한 빌드가 도는 동안은 변경을 모아 두기만 한다. 연쇄 빌드의 반쯤 완성된 집합을 로드하지 않기 위해서다(`notifyBuildStarted`).
         const bool bBuildInProgress = consumeBuildNotice();
         for ( auto& [name, context] : _mapModule )
         {
@@ -537,7 +537,7 @@ namespace sw
                 continue;
             for ( const string& dependencyName : moduleContext._listDependsOn )
             {
-                // 이 매니저가 올리지 않은 의존(Engine 처럼 처음부터 링크된 것)은 교체되지 않으므로 가릴 것이 없다.
+                // 이 매니저가 로드하지 않은 의존(Engine 처럼 처음부터 링크된 것)은 교체되지 않으므로 검사할 것이 없다.
                 const auto dependencyIt = _mapModule.find( dependencyName );
                 if ( dependencyIt == _mapModule.end() || dependencyIt->second._pLibraryModule == nullptr )
                     continue;
@@ -628,7 +628,7 @@ namespace sw
         }
 
         // 의존 모듈의 NEEDED 를 그 의존의 지금 이름으로. 연쇄 리로드는 의존 순서로 prepare 하므로, 같은 연쇄에서 바뀌는 의존은 이미
-        // 새 이름을 들고 있다(`_current`). 이 매니저가 올리지 않은 의존(Engine 등)은 원래 이름 그대로 둔다.
+        // 새 이름을 가지고 있다(`_current`). 이 매니저가 로드하지 않은 의존(Engine 등)은 원래 이름 그대로 둔다.
         for ( const string& dependencyName : context._listDependsOn )
         {
             const auto dependencyIt = _mapModule.find( dependencyName );
@@ -682,14 +682,14 @@ namespace sw
                 return false;
             }
 
-            // 올리기 **전에** 본다. 올리면 정적 초기화가 돌므로, 돌고 있는 엔진과 다른 헤더로 빌드된 모듈은 그 전에 거절해야 한다.
-            // 도장이 **없는** 모듈도 거절한다 — 도장을 박지 않는 빌드 규칙으로 만든 모듈이 대조 없이 올라오지 않게(동적 모듈은 모두
-            // `sw_registerDynamicModule` 이 도장을 박는다).
+            // 로드하기 **전에** 확인한다. 로드하면 정적 초기화가 돌므로, 돌고 있는 엔진과 다른 헤더로 빌드된 모듈은 그 전에 거절해야 한다.
+            // 스탬프가 **없는** 모듈도 거절한다. 스탬프를 박지 않는 빌드 규칙으로 만든 모듈이 대조 없이 로드되지 않게 하기 위해서다(동적 모듈은 모두
+            // `sw_registerDynamicModule` 이 스탬프를 박는다).
             string     moduleStamp;
             const bool bEngineAbiMismatch = ModuleImagePatch::findEngineAbiStamp( bytes, moduleStamp ) == false || moduleStamp != engine::getEngineAbiStamp();
             if ( bEngineAbiMismatch )
             {
-                // 첫 로드면 지킬 옛 모듈이 없다 — 엔진과 모듈 중 한쪽만 다시 빌드된 것이라 둘을 함께 빌드해야 한다.
+                // 첫 로드면 지킬 옛 모듈이 없다. 엔진과 모듈 중 한쪽만 다시 빌드된 것이므로 둘을 함께 빌드해야 한다.
                 const utf8* pHint = context._pLibraryModule != nullptr ? "keeping the old module; restart to pick up the engine change"
                                                                        : "rebuild the engine and its modules together";
                 SW_LOG_ERROR( "Module %# was built against different Core/Engine headers than the running engine (module %#, engine %#) — %#",
@@ -755,7 +755,7 @@ namespace sw
 
         BLOCK( "Validate New Image" )
         {
-            // 옛 이미지가 아직 도는 동안 호스트가 새 이미지를 거절할 자리다. 거절은 적용 전 실패라 옛 것을 두고 그래프를 막지 않는다.
+            // 옛 이미지가 아직 도는 동안 호스트가 새 이미지를 거절할 수 있는 지점이다. 거절은 적용 전 실패라 옛 이미지를 두고 그래프를 막지 않는다.
             // 새 이미지의 코드가 불리므로 onAfterReload 와 같이 지킨다.
             if ( context._onValidateImage.isBound() )
             {
@@ -830,7 +830,7 @@ namespace sw
 
             invokeAfterReload( context );
 
-            // 옛 이미지는 바로 내리지 않고 언로드를 미룬다. 그래프가 깨진 경우도 같다(핸들을 잃지 않는다).
+            // 옛 이미지는 바로 언로드하지 않고 언로드를 미룬다. 그래프가 깨진 경우도 같다(핸들을 잃지 않는다).
             if ( pPreviousHandle != nullptr )
                 deferImageUnload( context._moduleName, pPreviousHandle, previousTempModule, bKeepPreviousImage );
         }
@@ -848,7 +848,7 @@ namespace sw
 
     void LiveReloadManager::invokeAfterReload( ModuleContext& context )
     {
-        // 새 이미지의 코드가 처음 도는 자리다. 여기서 죽으면 에디터째 내려가 저장하지 않은 작업을 잃으므로 지킨다.
+        // 새 이미지의 코드가 처음 도는 지점이다. 여기서 죽으면 에디터째 종료되어 저장하지 않은 작업을 잃으므로 보호한다.
         if ( context._onAfterReload.isBound() == false )
             return;
         uint32     faultCode{ 0 };
@@ -961,7 +961,7 @@ namespace sw
             const DeferredUnloadImage& deferredImage = _listDeferredUnloadImage[imageIndex - 1];
             if ( deferredImage._bKeepMapped )
             {
-                // 다른 코드가 아직 구독하는 이벤트 채널을 이 이미지가 만들었다(`ModuleImageUtil::releaseModuleCode`). 내리지도, 파일을 지우지도 않는다.
+                // 다른 코드가 아직 구독하는 이벤트 채널을 이 이미지가 만들었다(`ModuleImageUtil::releaseModuleCode`). 언로드하지도, 파일을 지우지도 않는다.
                 SW_LOG_INFO( "Keeping deferred module image %# mapped (batch %#) — an event channel it created is still subscribed", deferredImage._moduleName,
                              deferredImage._batchID );
                 continue;
@@ -1170,7 +1170,7 @@ namespace sw
             return;
         }
 
-        // 배치 직전 콜백의 거절은 적용 전 실패다 — 아무것도 내리지 않았으니 새 이미지만 버리고 옛 것으로 계속 돈다.
+        // 배치 직전 콜백의 거절은 적용 전 실패다. 아무것도 언로드하지 않았으니 새 이미지만 버리고 옛 이미지로 계속 돈다.
         if ( _onBeforeCommitBatch.isBound() && _onBeforeCommitBatch( listOrder ) == false )
         {
             SW_LOG_ERROR( "Cascade reload refused before the first commit — keeping the previous modules" );
@@ -1220,7 +1220,7 @@ namespace sw
             return;
         }
 
-        // 새 이미지가 모두 올라왔다. 의존 모듈이 옛 이미지에 묶였으면, 옛 이미지를 내린 지금 그리로 뛰는 코드가 죽는다 — 여기서 막는다.
+        // 새 이미지가 모두 로드됐다. 의존 모듈이 옛 이미지에 바인딩돼 있으면, 옛 이미지를 언로드한 지금 거기로 점프하는 코드가 죽는다. 여기서 막는다.
         if ( verifyModuleBindings() == false )
             markGraphBroken( "a module is bound to a stale dependency image after the cascade" );
     }

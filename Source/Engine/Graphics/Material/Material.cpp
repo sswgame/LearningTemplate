@@ -250,7 +250,7 @@ namespace sw
             if ( MaterialUtil::isTextureType( prop._type ) == false || prop._assetPath.empty() )
                 continue;
             // _value 도 비운다. setTextureParameter 가 인덱스를 문자열로도 남기므로, 그대로 두면
-            // 다음 패킹이 이미 해제된 인덱스를 숫자 오버라이드로 되살린다.
+            // 다음 패킹이 이미 해제된 인덱스를 숫자 오버라이드로 복원한다.
             prop._textureIndex = kInvalidDescriptorIndex;
             prop._value.clear();
         }
@@ -261,7 +261,7 @@ namespace sw
         // 통보 순서는 정해져 있지 않다. 이미 올라가 있으면 그대로 둔다.
         if ( isRHIValid() )
             return true;
-        // 한 번도 initialize 되지 않은 머티리얼이다. 되살릴 내용 자체가 없다.
+        // 한 번도 initialize 되지 않은 머티리얼이다. 복원할 내용 자체가 없다.
         if ( pDevice == nullptr || _assetPath.empty() )
             return true;
         return initialize( pDevice, _assetPath );

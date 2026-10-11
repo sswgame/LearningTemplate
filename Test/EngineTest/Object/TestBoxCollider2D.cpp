@@ -329,7 +329,7 @@ SW_TEST_CASE( BoxCollider2DTest, GeometricAndLayerOverlapAnswerTheSameBeforeAndA
     }
     manager.endPlay();
 
-    // 매니저에 등록되지 않은 콜라이더(물리 월드 없음)는 기본 행렬(모든 쌍 허용)로 잰다.
+    // 매니저에 등록되지 않은 콜라이더(물리 월드 없음)는 기본 행렬(모든 쌍 허용)로 측정한다.
     sw::BoxCollider2DComponent looseA;
     sw::BoxCollider2DComponent looseB;
     looseA.setOffsetScale( sw::float2{ 1.0f, 1.0f } );

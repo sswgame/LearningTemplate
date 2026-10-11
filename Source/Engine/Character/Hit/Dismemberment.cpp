@@ -10,7 +10,7 @@ namespace sw
     {
         struct DismembermentInternal
         {
-            /** @brief 자른 자리와 같은 자리의 정점을 표시한다(UV 이음매로 갈라진 같은 자리 정점도). */
+            /** @brief 자른 위치와 같은 위치의 정점을 표시합니다(UV 이음매로 갈라진 같은 위치 정점도 표시합니다). */
             static void flagSeamVertices( const AppearanceGeometry& piece, const vector<float3>& listSeamPosition, vector<uint8>& outListFlag )
             {
                 outListFlag.assign( piece.getVertexCount(), SW_FALSE );
@@ -65,7 +65,7 @@ namespace sw
         GeometryCutUtil::splitByTriangleMask( body, outResult._listTriangleSevered, outResult._remaining, outResult._severed );
         if ( severedCount == 0 )
             return false;
-        // 자른 자리(남은 쪽 · 떨어진 쪽 삼각형이 함께 쓰는 정점)의 구멍만 막는다 — 원래 있던 구멍은 그대로.
+        // 자른 위치(남은 쪽과 떨어진 쪽 삼각형이 함께 쓰는 정점)의 구멍만 막는다. 원래 있던 구멍은 그대로 둔다.
         vector<uint8> listUsedByKept( body.getVertexCount(), SW_FALSE );
         vector<uint8> listUsedBySevered( body.getVertexCount(), SW_FALSE );
         for ( uint32 triangle = 0; triangle < triangleCount; ++triangle )
@@ -84,9 +84,9 @@ namespace sw
         }
         vector<uint8> listSeamFlag;
         DismembermentInternal::flagSeamVertices( outResult._remaining, listSeamPosition, listSeamFlag );
-        (void)GeometryCutUtil::createCaps( outResult._remaining, outResult._remainingCap, &listSeamFlag ); // 막은 고리 수일 뿐이다 — 0 이면 막을 구멍이 없다
+        (void)GeometryCutUtil::createCaps( outResult._remaining, outResult._remainingCap, &listSeamFlag ); // 막은 고리 수일 뿐이다. 0 이면 막을 구멍이 없다.
         DismembermentInternal::flagSeamVertices( outResult._severed, listSeamPosition, listSeamFlag );
-        (void)GeometryCutUtil::createCaps( outResult._severed, outResult._severedCap, &listSeamFlag ); // 막은 고리 수일 뿐이다 — 0 이면 막을 구멍이 없다
+        (void)GeometryCutUtil::createCaps( outResult._severed, outResult._severedCap, &listSeamFlag ); // 막은 고리 수일 뿐이다. 0 이면 막을 구멍이 없다.
         return true;
     }
 } // namespace sw

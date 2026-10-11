@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Engine 폴더 간 include 그래프를 다시 재서 **강결합 묶음과 티어를 계산**한다.
+Engine 폴더 간 include 그래프를 다시 측정해서 **강결합 묶음과 티어를 계산**한다.
 
 [왜 필요한가 — 티어 표는 손으로 고른 순서가 아니다]
 `Scripts/lint/rules/CheckEngineLayers.toml` 의 `[tier]` 는 include 그래프를 위상 정렬한 결과다. 코드가 바뀌면 표도

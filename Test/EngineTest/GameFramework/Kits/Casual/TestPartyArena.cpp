@@ -190,7 +190,7 @@ SW_TEST_CASE( PartyArenaTest, EarlyPressCountsOnlyInsideTheWindow )
         TrampolineArena arena;
         SW_EXPECT_TRUE( beginArena( arena ) );
         vector<TrampolineEvent> listEvent;
-        (void)runUntilLanded( arena, 0, listEvent ); // 첫 착지 — 이후 튕김의 걸음 수를 잰다
+        (void)runUntilLanded( arena, 0, listEvent ); // 첫 착지 — 이후 튕김의 걸음 수를 측정한다
         for ( int32 frame = 0; frame < 20 && arena.findPlayer( 0 )->_state == TrampolinePlayerState::Contact; ++frame )
         {
             arena.step();

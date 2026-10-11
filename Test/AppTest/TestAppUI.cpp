@@ -163,7 +163,7 @@ namespace
 
         static float32 computeLuma( const AppUITestColor& color ) { return 0.2126f * color._r + 0.7152f * color._g + 0.0722f * color._b; }
 
-        /** @brief 사각형 안에서 오른쪽 · 아래 이웃과 휘도 차가 문턱을 넘는 픽셀 수입니다(글 · 테두리 · 모서리 모양). */
+        /** @brief 사각형 안에서 오른쪽 · 아래 이웃과 휘도 차가 임계값을 넘는 픽셀 수입니다(글 · 테두리 · 모서리 모양). */
         static uint32 countEdges( const sw::AutomationImage& image, const AppUITestRect& rect )
         {
             uint32 count = 0;

@@ -301,7 +301,7 @@ SW_TEST_CASE( GameObjectManagerTest, TickDoesNotWaitForForeignTasks )
     TaskManager&        taskManager = sw::engine::getTaskManager();
     TaskHandle          handle      = taskManager.emplaceTask( "BlockingForeignTask", SW_DELEGATE_METHOD( TaskDelegate, &BlockingForeignTask::run, &task ) );
     handle.submit();
-    // 워커가 집어 갔을 때부터 잰다. 아직 큐에 있으면 틱의 합류 대기가 그것을 도와 실행해 버릴 수 있다.
+    // 워커가 집어 갔을 때부터 측정한다. 아직 큐에 있으면 틱의 합류 대기가 그것을 도와 실행해 버릴 수 있다.
     const sw::Deadline waitDeadline = sw::Deadline::afterMilliseconds( 2000 );
     while ( task._bStarted.load( std::memory_order_acquire ) == false && waitDeadline.isExpired() == false )
     {
@@ -651,8 +651,8 @@ SW_TEST_CASE( GameObjectManagerPoolTest, ModuleComponentsPurgedBeforeUnload )
     SW_EXPECT_EQUAL( 0u, manager.destroyComponentsOfModule( "NotThisModule" ) );
     SW_EXPECT_NOT_NULL( pObject->getComponent<sw::MeshComponent>() );
 
-    // 2) 자기 모듈 이름이면 인스턴스가 사라진다 — 오브젝트 자체는 남는다(컴포넌트만 모듈 소유다). 이름표를 바꿔도 걷힌다 — 이름을
-    //    타입 조회 키로 쓰면 이름표를 바꾼 컴포넌트는 타입(과 모듈)을 잃고 남아, DLL 이 내려간 뒤 vtable 없는 객체가 된다.
+    // 2) 자기 모듈 이름이면 인스턴스가 사라진다 — 오브젝트 자체는 남는다(컴포넌트만 모듈 소유다). 이름을 바꿔도 걷힌다 — 이름을
+    //    타입 조회 키로 쓰면 이름을 바꾼 컴포넌트는 타입(과 모듈)을 잃고 남아, DLL 이 내려간 뒤 vtable 없는 객체가 된다.
     pMesh->setComponentName( sw::hashed_string( "RenamedMesh" ) );
     SW_EXPECT_EQUAL( 1u, manager.destroyComponentsOfModule( moduleName.c_str() ) );
     SW_EXPECT_NULL( pObject->getComponent<sw::MeshComponent>() );
@@ -760,9 +760,9 @@ SW_TEST_CASE( GameObjectManagerPoolTest, ConcurrentDestroyDestroysTheObjectOnlyO
 }
 
 /**
- * @brief [GameObjectManagerTest] 루트가 문턱을 넘으면 플러시가 잡으로 나뉘어도 결과는 직렬과 같다
+ * @brief [GameObjectManagerTest] 루트가 임계값을 넘으면 플러시가 잡으로 나뉘어도 결과는 직렬과 같다
  * @details 루트 서브트리마다 워커가 따로 돈다 — 자식은 자기 루트 잡 안에서 부모 다음에 계산돼야 하고, 마지막
- *          청크의 루트도 빠지면 안 된다. 문턱 아래(직렬)와 위(병렬) 두 씬을 같은 검사로 본다. 병렬 경로가
+ *          청크의 루트도 빠지면 안 된다. 임계값 아래(직렬)와 위(병렬) 두 씬을 같은 검사로 본다. 병렬 경로가
  *          벤치에서만 돌면 조용히 썩는다.
  */
 SW_TEST_CASE( GameObjectManagerTest, ParallelTransformFlushMatchesSerial )

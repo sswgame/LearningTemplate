@@ -157,7 +157,7 @@ namespace sw
     void MeshComponent::setPrimitiveIndex( uint32 index )
     {
         _primitiveIndex = index;
-        // 틱 뒤 적용 · 플러시는 이 번호로 등록부에 바로 찍는다(컴포넌트를 거치지 않는다).
+        // 틱 뒤 적용 · 플러시는 이 번호로 레지스트리에 바로 찍는다(컴포넌트를 거치지 않는다).
         setTransformPrimitiveIndex( index == kInvalidPrimitiveIndex ? SceneTransformStorage::kNoPrimitive : index );
     }
 

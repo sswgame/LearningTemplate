@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 """
 @file RunBuildBaseline.py
-@brief 빌드 시간 기준선 — 풀 빌드 · 헤더 하나 수정 · `.cpp` 하나 수정 · 워크트리 콜드를 각 N 번 재서 중앙값 표를 낸다(docs/plans/BuildSpeed.md 0 단계).
+@brief 빌드 시간 기준선 — 풀 빌드 · 헤더 하나 수정 · `.cpp` 하나 수정 · 워크트리 콜드를 각 N 번 측정해서 중앙값 표를 낸다(docs/plans/BuildSpeed.md 0 단계).
 
 이 저장소의 빌드 시간은 PC 마다 다르다. 그래서 표 머리에 PC 이름 · CPU · 논리 코어 수 · 커밋을 적고, 같은 PC 의 전후만 견준다.
-**다른 빌드가 도는 동안 재지 않는다** — 코어를 나눠 쓰면 숫자가 오염된다. ninja · cmake 프로세스가 보이면 멈춘다(`--force` 로 무시).
+**다른 빌드가 도는 동안 측정하지 않는다** — 코어를 나눠 쓰면 숫자가 오염된다. ninja · cmake 프로세스가 보이면 멈춘다(`--force` 로 무시).
 
 | 시나리오 | 무엇을 재나 | 어디서 |
 | --- | --- | --- |
@@ -47,9 +47,9 @@ from MakeWorktree import findMainRoot, kWorktreeFolderName  # noqa: E402
 kScenarioNames: tuple[str, ...] = ("full", "header", "cpp", "worktree")
 kDefaultHeader = "Source/Core/Container/vector.h"
 kDefaultSource = "Source/Engine/Object/GameObject/GameObjectManager.cpp"
-#: 기준선을 재는 별도 빌드 폴더의 접미 — 개발 트리와 sccache 를 건드리지 않는다.
+#: 기준선을 측정하는 별도 빌드 폴더의 접미 — 개발 트리와 sccache 를 건드리지 않는다.
 kBaselineDirSuffix = "-Baseline"
-#: 워크트리 콜드를 재는 임시 워크트리 이름(`py -3 -m Scripts worktree-make`).
+#: 워크트리 콜드를 측정하는 임시 워크트리 이름(`py -3 -m Scripts worktree-make`).
 kWorktreeName = "baseline-bench"
 #: 재기 전에 이 프로세스가 보이면 다른 빌드가 도는 것이다.
 kBusyProcessNames: tuple[str, ...] = ("ninja.exe", "cmake.exe", "clang-cl.exe") if os.name == "nt" else ("ninja", "cmake")
@@ -90,7 +90,7 @@ def describeMachine() -> str:
 
 
 def findBusyProcesses() -> list[str]:
-    """지금 도는 빌드 프로세스 이름들(있으면 재지 않는다)."""
+    """지금 도는 빌드 프로세스 이름들(있으면 측정하지 않는다)."""
     if os.name == "nt":
         result = runProcess(["tasklist", "/FO", "CSV", "/NH"])
         listName = [line.split(",", 1)[0].strip('"').lower() for line in result.stdout.splitlines() if line]

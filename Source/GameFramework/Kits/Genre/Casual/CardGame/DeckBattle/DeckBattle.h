@@ -1,7 +1,7 @@
 /**
  * @file DeckBattle.h
- * @brief 덱 빌딩 전투 코어(문스톤 아일랜드 · 슬레이 더 스파이어 류, 작게) — 뽑을 더미 · 손 · 버린 더미 · 소멸 더미, 턴마다 에너지 · 뽑기,
- *        데이터로 적은 카드 효과(피해 · 방어 · 뽑기 · 에너지)와 차례대로 의도를 실행하는 적 하나입니다.
+ * @brief 덱 빌딩 전투의 코어를 구현합니다. 문스톤 아일랜드나 슬레이 더 스파이어 류를 작게 줄인 것으로, 뽑을 더미, 손, 버린 더미, 소멸 더미를 두고 턴마다 에너지와 뽑기를 처리합니다.
+ *        카드 효과(피해, 방어, 뽑기, 에너지)는 데이터로 적고, 적 하나가 의도를 차례대로 실행합니다.
  */
 #pragma once
 #include "Core/Common/FourCcUtil.h"
@@ -21,11 +21,11 @@ namespace sw
     class Archive;
     class XMLNode;
 
-    /** @brief 효과 종류입니다. */
+    /** @brief 효과의 종류입니다. */
     enum class DeckBattleEffectKind : uint8
     {
-        Damage = 0, ///< 상대 방어를 먼저 깎고 남은 만큼 체력
-        Block,      ///< 내 방어(내 다음 턴 시작에 사라진다)
+        Damage = 0, ///< 상대의 방어를 먼저 깎고, 남은 만큼 체력을 깎는다
+        Block,      ///< 내 방어를 올린다(내 다음 턴이 시작되면 사라진다)
         Draw,
         Energy
     };
@@ -47,7 +47,7 @@ namespace sw
         string                   _name{};
         vector<DeckBattleEffect> _listEffect{};
         int32                    _cost{ 1 };
-        uint8                    _bExhaust{ SW_FALSE }; ///< 쓰면 소멸 더미로(이번 전투에서 다시 안 나온다)
+        uint8                    _bExhaust{ SW_FALSE }; ///< 쓰면 소멸 더미로 간다(이번 전투에서 다시 나오지 않는다)
     };
 } // namespace sw
 
@@ -56,7 +56,7 @@ namespace sw
     /**
      * @class DeckBattleCatalog
      * @brief `<DeckBattleCatalog><Card id="strike" name="Strike" cost="1" effects="Damage:6"/></DeckBattleCatalog>` 를 읽습니다.
-     *        `effects` 는 쉼표로 나눈 `종류:양`(Damage · Block · Draw · Energy)입니다.
+     *        `effects` 는 쉼표로 나눈 `종류:양`(Damage, Block, Draw, Energy)입니다.
      */
     class SW_GF_API DeckBattleCatalog : public XMLCatalog<DeckBattleCatalog>
     {
@@ -73,7 +73,7 @@ namespace sw
         int32                    getCount() const { return static_cast<int32>( _catalog.getCount() ); }
 
     private:
-        static constexpr const utf8* kXMLRootName = "DeckBattleCatalog"; ///< 루트 원소(`XMLCatalog`)
+        static constexpr const utf8* kXMLRootName = "DeckBattleCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
         GameCatalog<DeckBattleCardDef> _catalog;
@@ -88,7 +88,7 @@ namespace sw
         int32 _playerHp{ 50 };
         int32 _energyPerTurn{ 3 };
         int32 _drawPerTurn{ 5 };
-        int32 _handLimit{ 10 }; ///< 넘치게 뽑은 패는 바로 버린 더미로
+        int32 _handLimit{ 10 }; ///< 손이 넘치게 뽑은 패는 바로 버린 더미로 간다
     };
 } // namespace sw
 
@@ -97,7 +97,7 @@ namespace sw
     /** @brief 적 하나입니다. 의도는 턴마다 차례대로 돌아갑니다. */
     struct DeckBattleEnemy
     {
-        vector<DeckBattleEffect> _listIntent{}; ///< Damage = 공격, Block = 방어(그 밖은 무시)
+        vector<DeckBattleEffect> _listIntent{}; ///< Damage 는 공격, Block 은 방어이다(그 밖의 종류는 무시한다)
         int32                    _hp{ 0 };
         int32                    _block{ 0 };
         int32                    _intentIndex{ 0 };
@@ -116,7 +116,7 @@ namespace sw
 
     /**
      * @class DeckBattle
-     * @brief 한 전투입니다. 카드 한 장 = `Card`(번호 = 이 전투의 카드 자리), 정의는 `getCardDef` 로 찾습니다. 결정적입니다(씨앗).
+     * @brief 한 전투를 진행합니다. 카드 한 장은 `Card` 이고 번호는 이 전투 안에서의 카드 index 입니다. 정의는 `getCardDef` 로 찾습니다. 시드를 쓰므로 결과가 결정적입니다.
      */
     class SW_GF_API DeckBattle
     {
@@ -127,19 +127,19 @@ namespace sw
         DeckBattle();
 
         /**
-         * @brief 덱(@p listDeckCardID 의 정의 id 들)을 섞어 첫 턴을 엽니다. 카탈로그에 없는 id 는 건너뜁니다.
-         * @return 덱이 비면 false 입니다.
+         * @brief 덱(@p listDeckCardID 의 정의 id 목록)을 섞어 첫 턴을 엽니다. 카탈로그에 없는 id 는 건너뜁니다.
+         * @return 덱이 비면 false 를 반환한다.
          */
         [[nodiscard]] bool initialize( const DeckBattleCatalog* pCatalog, const DeckBattleSettings& settings, const vector<hashed_string>& listDeckCardID,
                                        const DeckBattleEnemy& enemy, uint32 seed );
-        /** @brief 손의 @p handIndex 번째 패를 씁니다. 에너지가 모자라거나 내 턴이 아니면 false 입니다. */
+        /** @brief 손의 @p handIndex 번째 패를 씁니다. 에너지가 모자라거나 내 턴이 아니면 false 를 반환합니다. */
         [[nodiscard]] bool playCard( int32 handIndex );
-        /** @brief 턴을 마칩니다 — 손을 버리고, 적이 의도를 실행하고, 살아 있으면 다음 턴(방어 초기화 · 에너지 · 뽑기)입니다. */
+        /** @brief 턴을 마칩니다. 손을 버리고, 적이 의도를 실행하고, 살아 있으면 다음 턴을 시작합니다(방어 초기화, 에너지, 뽑기). */
         void endTurn();
 
-        /** @brief 덱의 정의 id(카드 번호 순) · 네 더미 · 적 · 난수 · 체력 · 방어 · 에너지 · 턴 · 단계를 씁니다. 카탈로그 · 설정은 `initialize` 의 것이라 싣지 않는다. */
+        /** @brief 덱의 정의 id(카드 번호 순), 더미 넷, 적, 난수, 체력, 방어, 에너지, 턴, 단계를 씁니다. 카탈로그와 설정은 `initialize` 에서 받으므로 저장하지 않습니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 바꿉니다. 카탈로그에 없는 정의 id 거나 깨졌으면 false 이고 그대로입니다. */
+        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 카탈로그에 없는 정의 id 이거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
         const DeckBattleCardDef* getCardDef( const Card& card ) const;
@@ -159,7 +159,7 @@ namespace sw
         void drawCards( int32 count );
         void applyEffect( const DeckBattleEffect& effect );
 
-        vector<int32>            _listDefIndex; ///< 카드 번호 → 카탈로그 자리
+        vector<int32>            _listDefIndex; ///< 카드 번호에서 카탈로그 index 로 가는 매핑이다
         CardPile                 _drawPile;
         CardPile                 _hand;
         CardPile                 _discardPile;

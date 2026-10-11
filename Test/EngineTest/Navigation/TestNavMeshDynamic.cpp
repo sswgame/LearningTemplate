@@ -69,20 +69,20 @@ namespace
         static void tickAndFlush( sw::GameObjectManager& manager )
         {
             manager.tick( kFrame );
-            manager.getSceneNavigation().flushTileBakes();
+            manager.getSceneService<sw::SceneNavigation>().flushTileBakes();
             manager.tick( kFrame );
         }
     };
 } // namespace
 
 /**
- * @brief [NavMeshDynamicTest] 장애물 — 놓으면 닿은 타일만 재베이크해 경로가 돌아가고, 문턱보다 작게 움직이면 재베이크하지 않고, 비키거나 사라지면 곧은 경로로 돌아온다
+ * @brief [NavMeshDynamicTest] 장애물 — 놓으면 닿은 타일만 재베이크해 경로가 돌아가고, 임계값보다 작게 움직이면 재베이크하지 않고, 비키거나 사라지면 곧은 경로로 돌아온다
  */
 SW_TEST_CASE( NavMeshDynamicTest, ObstacleRebakesOnlyTheTouchedTilesAndPathsFollow )
 {
     using Internal = NavMeshDynamicTestInternal;
     sw::GameObjectManager manager;
-    sw::SceneNavigation&  navigation = manager.getSceneNavigation();
+    sw::SceneNavigation&  navigation = manager.getSceneService<sw::SceneNavigation>();
     navigation.setSettings( navtest::makeSettings() );
     Internal::spawnFloorAndSurface( manager );
     manager.beginPlay();
@@ -104,7 +104,7 @@ SW_TEST_CASE( NavMeshDynamicTest, ObstacleRebakesOnlyTheTouchedTilesAndPathsFoll
     SW_EXPECT_TRUE_MSG( rebakedAfterPlace < tileCount, ( std::to_string( rebakedAfterPlace ) + " of " + std::to_string( tileCount ) ).c_str() );
     SW_EXPECT_TRUE_MSG( detour > 18.0f, ( "detour " + std::to_string( detour ) ).c_str() );
 
-    // 문턱(0.25 m)보다 작게 움직이면 그대로다.
+    // 임계값(0.25 m)보다 작게 움직이면 그대로다.
     pRoot->setLocalPosition( sw::float3{ 0.1f, 0.0f, 0.0f } );
     Internal::tickAndFlush( manager );
     SW_EXPECT_EQUAL( rebakedAfterPlace, navigation.getRebakedTileCount() );
@@ -132,7 +132,7 @@ SW_TEST_CASE( NavMeshDynamicTest, GeometrySourceChangeRebakesThatArea )
 {
     using Internal = NavMeshDynamicTestInternal;
     sw::GameObjectManager manager;
-    sw::SceneNavigation&  navigation = manager.getSceneNavigation();
+    sw::SceneNavigation&  navigation = manager.getSceneService<sw::SceneNavigation>();
     navigation.setSettings( navtest::makeSettings() );
     Internal::spawnFloorAndSurface( manager );
     sw::GameObject*              pPillar = manager.createGameObject( sw::hashed_string( "Pillar" ) );
@@ -166,7 +166,7 @@ SW_TEST_CASE( NavMeshDynamicTest, DestructionRebakesTheBrokenWallTiles )
     sw::Scene scene{ "NavDestruction" };
     SW_ASSERT_TRUE( scene.instantiate( doc ) );
     sw::GameObjectManager& manager    = *scene.getObjectManager();
-    sw::SceneNavigation&   navigation = manager.getSceneNavigation();
+    sw::SceneNavigation&   navigation = manager.getSceneService<sw::SceneNavigation>();
     manager.beginPlay();
     for ( uint32 frame = 0; frame < 60; ++frame )
     {

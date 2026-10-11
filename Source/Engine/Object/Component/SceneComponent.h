@@ -70,7 +70,7 @@ namespace sw
 
         /**
          * @brief **옮기지 않습니다.** 이 클래스는 자기 주소로 얽혀 있는 계층의 노드입니다.
-         * @details 자식들의 `_pParent`, 부모의 `_listChild` 항목, 매니저의 루트 등록부가 모두
+         * @details 자식들의 `_pParent`, 부모의 `_listChild` 항목, 매니저의 루트 레지스트리가 모두
          *          이 객체의 **주소**를 들고 있어 옮기려면 그 셋을 모두 새 주소로 고쳐야 합니다.
          *          컴포넌트는 풀 안의 제자리에서 만들고 없애므로 실제로 옮겨지는 일이 없습니다. 그래서 막습니다.
          */
@@ -92,7 +92,7 @@ namespace sw
          * @details 트랜스폼이 바뀐 컴포넌트를 정확히 한 번 짚어 주는 지점입니다. 플러시 · 지연 합성(`getWorldMatrix` 등) · 틱 뒤 적용과
          *          배치 쓰기의 잎 루트 합성이 모두 `SceneTransformHierarchy::notifyWorldUpdated` 를 거쳐 부릅니다. 칸의 알림 비트가 꺼진
          *          파생은 불리지 않습니다(`setWorldTransformNotify`) — 메시 컴포넌트가 그렇고, 렌더 더티는 칸에 적힌 프리미티브 번호로
-         *          등록부에 바로 찍힙니다. 그래서 프레임마다 전부 훑어 "행렬이 바뀌었나" 되묻지 않아도 됩니다.
+         *          레지스트리에 바로 찍힙니다. 그래서 프레임마다 전부 훑어 "행렬이 바뀌었나" 되묻지 않아도 됩니다.
          */
         virtual void onWorldTransformUpdated() {}
 
@@ -168,8 +168,8 @@ namespace sw
         virtual bool getWorldBounds( float3& outCenter, float32& outRadius ) const;
         /**
          * @brief 그리거나 부딪히는 것의 **월드** 축 정렬 상자입니다. 크기가 없는 컴포넌트(빈 씬 컴포넌트 · 카메라 · 빛)는 false 입니다.
-         * @details 크기를 재는 쪽(에디터의 바닥 · 표면 붙이기 · 프레이밍)은 이것 하나를 본다. 자리마다 "메시면 로컬 스케일 × 단위 상자,
-         *          콜라이더면 오프셋 크기" 를 따로 세면 부모가 키운 오브젝트 · 단위 상자가 아닌 메시 · 키운 콜라이더를 틀리게 잰다.
+         * @details 크기를 측정하는 쪽(에디터의 바닥 · 표면 붙이기 · 프레이밍)은 이것 하나를 본다. 자리마다 "메시면 로컬 스케일 × 단위 상자,
+         *          콜라이더면 오프셋 크기" 를 따로 세면 부모가 키운 오브젝트 · 단위 상자가 아닌 메시 · 키운 콜라이더를 틀리게 측정한다.
          */
         virtual bool getWorldBox( AABB& outBox ) const;
 
@@ -238,7 +238,7 @@ namespace sw
     protected:
         /**
          * @brief 월드가 바뀔 때 `onWorldTransformUpdated` 를 부를지 정합니다. 기본은 부릅니다.
-         * @details 메시 컴포넌트는 끕니다 — 칸에 적힌 프리미티브 번호로 등록부에 바로 더티를 찍으므로, 틱 뒤 적용이 컴포넌트를 건너다니지 않습니다.
+         * @details 메시 컴포넌트는 끕니다 — 칸에 적힌 프리미티브 번호로 레지스트리에 바로 더티를 찍으므로, 틱 뒤 적용이 컴포넌트를 건너다니지 않습니다.
          */
         void setWorldTransformNotify( bool bNotify );
         /** @brief 칸에 렌더 프리미티브 번호를 적습니다(`PrimitiveRegistry` 가 준 번호, 없으면 `SceneTransformStorage::kNoPrimitive`). */

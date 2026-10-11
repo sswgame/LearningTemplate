@@ -1,7 +1,7 @@
 /**
  * @file RigIKSolver.h
- * @brief IK 풀이(2 본 · FABRIK · CCD · 조준)와 관절 제한입니다. 모두 `RigPoseBuffer` 의 모델 공간 위에서 돌고 결과를 로컬 회전으로 씁니다.
- * @details 평면(2D) 풀이는 같은 함수에 `RigSolveSpace::_bPlanar` 를 켜서 씁니다 — 위치를 평면에 투영하고 회전은 평면 법선(기본 Z) 둘레로만 납니다.
+ * @brief IK 풀이(2 본, FABRIK, CCD, 조준)와 관절 제한입니다. 모두 `RigPoseBuffer` 의 모델 공간 위에서 돌고, 결과를 로컬 회전으로 씁니다.
+ * @details 평면(2D) 풀이는 같은 함수에 `RigSolveSpace::_bPlanar` 를 켜서 쓴다. 위치를 평면에 투영하고, 회전은 평면 법선(기본 Z) 둘레로만 생긴다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -15,7 +15,7 @@ namespace sw
 {
     class RigPoseBuffer;
 
-    /** @brief 풀이 공간입니다. 평면이면 2D 리그(XY 평면 · Z 축 회전)입니다. */
+    /** @brief 풀이 공간입니다. 평면이면 2D 리그(XY 평면, Z 축 회전)입니다. */
     struct RigSolveSpace
     {
         float3 _planeNormal{ 0.0f, 0.0f, 1.0f };
@@ -33,9 +33,9 @@ namespace sw
     /** @brief 관절 제한의 종류입니다. */
     enum class RigJointLimitType : uint8
     {
-        None = 0, ///< 제한 없음
-        Cone,     ///< 본 축의 흔들림(swing)을 원뿔 각 안으로, 비틀림(twist)을 ± 각 안으로
-        Hinge,    ///< 한 축(본의 레퍼런스 로컬 축) 둘레 회전만, [최소, 최대] 각
+        None = 0, ///< 제한이 없다.
+        Cone,     ///< 본 축의 흔들림(swing)을 원뿔 각 안으로, 비틀림(twist)을 ± 각 안으로 제한한다.
+        Hinge,    ///< 한 축(본의 레퍼런스 로컬 축) 둘레 회전만 [최소, 최대] 각으로 제한한다.
     };
 
     /**
@@ -60,8 +60,8 @@ namespace sw
     /** @brief 사슬 IK 의 반복 설정입니다. */
     struct RigChainSettings
     {
-        float32 _tolerance{ 0.001f };           ///< 끝이 목표에 이만큼 가까우면 멈춘다(미터)
-        float32 _maxStepAngle{ MathUtil::kPi }; ///< CCD 한 관절 한 걸음의 최대 회전(라디안) — 작으면 부드럽게 휜다
+        float32 _tolerance{ 0.001f };           ///< 끝이 목표에 이만큼 가까우면 멈춘다(미터).
+        float32 _maxStepAngle{ MathUtil::kPi }; ///< CCD 에서 한 관절이 한 번에 돌 수 있는 최대 회전이다(라디안). 작으면 부드럽게 휜다.
         uint32  _iterationCount{ 10 };
     };
 } // namespace sw
@@ -70,41 +70,41 @@ namespace sw
 {
     /**
      * @struct RigIKSolver
-     * @brief IK 풀이 함수 묶음입니다. 본 번호는 작업 포즈의 번호이고, 사슬은 뿌리 → 끝 순서(각 본이 다음 본의 조상)입니다.
+     * @brief IK 풀이 함수 모음입니다. 본 번호는 작업 포즈의 번호이고, 사슬은 뿌리에서 끝으로 가는 순서입니다(각 본이 다음 본의 조상입니다).
      */
     struct SW_API RigIKSolver
     {
         /**
-         * @brief 2 본 IK(해석해) — 뿌리 · 가운데 · 끝 관절이 목표에 닿게 뿌리와 가운데를 돌립니다. 닿지 않으면 목표 쪽으로 곧게 뻗습니다.
-         * @param pPole 굽힘 쪽을 가리키는 점(모델 공간)입니다. nullptr 이면 지금 굽은 쪽을 지킵니다.
-         * @return 목표에 닿았으면(길이 안) true 입니다.
+         * @brief 2 본 IK(해석해)입니다. 뿌리, 가운데, 끝 관절이 목표에 닿도록 뿌리와 가운데를 돌립니다. 닿지 않으면 목표 쪽으로 곧게 뻗습니다.
+         * @param pPole 굽힘 쪽을 가리키는 점(모델 공간)입니다. nullptr 이면 현재 굽은 쪽을 유지합니다.
+         * @return 목표에 닿았으면(길이 안) true 를 반환합니다.
          */
         static bool solveTwoBone( RigPoseBuffer& pose, uint32 rootBone, uint32 midBone, uint32 endBone, const float3& target, const float3* pPole,
                                   const RigSolveSpace& space );
-        /** @brief FABRIK — 위치를 앞뒤로 번갈아 맞춘 뒤 회전으로 옮깁니다. 제한이 있으면 반복마다 회전을 제한하고 위치를 다시 읽습니다. */
+        /** @brief FABRIK 입니다. 위치를 앞뒤로 번갈아 맞춘 뒤 회전으로 옮깁니다. 제한이 있으면 반복마다 회전을 제한하고 위치를 다시 읽습니다. */
         static bool solveFabrik( RigPoseBuffer& pose, span<const uint32> listChainBone, const float3& target, span<const RigJointLimit> listLimit,
                                  const RigChainSettings& settings, const RigSolveSpace& space );
-        /** @brief CCD — 끝에서 뿌리로 관절마다 끝을 목표 쪽으로 돌립니다(관절마다 제한을 바로 겁니다). */
+        /** @brief CCD 입니다. 끝에서 뿌리 방향으로 관절마다 끝을 목표 쪽으로 돌립니다(관절마다 제한을 바로 적용합니다). */
         static bool solveCcd( RigPoseBuffer& pose, span<const uint32> listChainBone, const float3& target, span<const RigJointLimit> listLimit,
                               const RigChainSettings& settings, const RigSolveSpace& space );
         /**
-         * @brief 본의 로컬 축(@p localAxis)이 목표를 향하게 돌립니다. 지금(애니메이션) 방향에서 @p maxAngle 을 넘으면 그 각까지만 돕니다.
-         * @param weight 0..1 — 돌릴 몫(사슬에 나눠 줄 때)
-         * @return 돌린 각(라디안)입니다.
+         * @brief 본의 로컬 축(@p localAxis)이 목표를 향하게 돌립니다. 현재(애니메이션) 방향에서 @p maxAngle 을 넘으면 그 각까지만 돕니다.
+         * @param weight 0..1 범위로, 돌릴 비율입니다(사슬에 나눠 줄 때 씁니다).
+         * @return 돌린 각(라디안)을 반환합니다.
          */
         static float32 aimBone( RigPoseBuffer& pose, uint32 bone, const float3& localAxis, const float3& target, float32 maxAngle, float32 weight,
                                 const RigSolveSpace& space );
         /** @brief 본의 지금 로컬 회전에 제한을 겁니다. */
         static void applyJointLimit( RigPoseBuffer& pose, uint32 bone, const RigJointLimit& limit );
-        /** @brief 차이 회전 @p delta 를 축 @p axis 둘레 비틀림과 그 나머지(흔들림)로 나눕니다 — delta = swing * twist. */
+        /** @brief 차이 회전 @p delta 를 축 @p axis 둘레의 비틀림과 그 나머지(흔들림)로 나눕니다. delta = swing * twist 입니다. */
         static void decomposeSwingTwist( const quaternion& delta, const float3& axis, quaternion& outSwing, quaternion& outTwist );
         /**
-         * @brief @p from 방향을 @p to 방향으로 돌리는 최소 회전입니다.
-         * @details `quaternion::fromToRotation` 은 1e-6 안쪽의 코사인 차를 단위 회전으로 버린다(약 0.08°) — 사슬 IK 의 마지막 몇 mm 가 그 안에 든다.
-         *          여기서는 작은 각도 반각 공식(외적, 1 + 내적)을 그대로 정규화해 끝까지 수렴하게 한다.
+         * @brief @p from 방향을 @p to 방향으로 돌리는 최소 회전을 반환합니다.
+         * @details `quaternion::fromToRotation` 은 1e-6 안쪽의 코사인 차를 단위 회전으로 버린다(약 0.08°). 사슬 IK 의 마지막 몇 mm 가 그 안에 들어간다.
+         *          여기서는 작은 각도 반각 공식(외적, 1 + 내적)을 그대로 정규화해서 끝까지 수렴하게 한다.
          */
         static quaternion makeFromToRotation( const float3& from, const float3& to );
-        /** @brief 역회전입니다(`quaternion::inverse` 는 const 가 아닌 값에서 제자리 버전이 골라지므로 값으로 받는 창구를 둔다). */
+        /** @brief 역회전을 반환합니다. `quaternion::inverse` 는 const 가 아닌 값에서 제자리 버전이 선택되므로, 값으로 받는 함수를 따로 둡니다. */
         static quaternion makeInverse( const quaternion& rotation ) { return rotation.inverse(); }
         /** @brief 축 둘레 비틀림 회전의 부호 있는 각(라디안)입니다. */
         static float32 computeTwistAngle( const quaternion& twist, const float3& axis );

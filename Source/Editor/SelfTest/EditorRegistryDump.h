@@ -13,7 +13,7 @@ namespace sw::editor
 {
     /**
      * @struct EditorRegistryDump
-     * @brief 에디터 등록부를 로그로 남기는 진단 도구입니다.
+     * @brief 에디터 레지스트리를 로그로 남기는 진단 도구입니다.
      */
     struct EditorRegistryDump
     {

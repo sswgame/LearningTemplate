@@ -1,6 +1,7 @@
 /**
  * @file PawnComponent.h
- * @brief 조종 대상(폰) — 조종자가 채운 이번 틱의 의도를 들고, 버튼 · 아날로그 이름표(스키마)와 플레이어가 빙의했을 때의 입력 레이어를 정합니다.
+ * @brief 조종 대상(폰)을 정의합니다.
+ * @details 조종자가 채운 이번 틱의 의도를 들고 있고, 버튼과 아날로그의 이름(스키마), 플레이어가 빙의했을 때의 입력 레이어를 정한다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -19,7 +20,7 @@
 
 namespace sw
 {
-    /** @brief 조종자 없이 플레이를 시작한 폰을 누가 쥐는가입니다. */
+    /** @brief 조종자 없이 플레이를 시작한 폰을 누가 쥘지 정합니다. */
     ENUM()
     enum class PawnAutoPossess : uint8
     {
@@ -33,10 +34,12 @@ namespace sw
 {
     /**
      * @class PawnComponent
-     * @brief 폰 오브젝트에 하나 붙습니다. 같은 오브젝트의 이동 · 무기 · 탑승 컴포넌트는 **이것의 의도만** 읽습니다(InputMap · InputManager 를 읽지 않는다).
-     * @details 의도는 조종 시스템(`ControlSystem`, 씬 프레임 단계 `FrameSystems`)이 틱 전에 게임 스레드에서 씁니다 — 틱(병렬) 동안에는 읽기만 합니다.
-     *          조종자가 없으면 이동 · 버튼 · 아날로그가 0 이고 조종 회전은 마지막 값을 지킵니다.
-     *          언리얼 `APawn` 의 자리입니다(그쪽은 폰이 입력 컴포넌트에 바인딩하지만, 여기는 조종자가 의도 구조체 하나를 채운다 — 플레이어와 NPC 의 이동 코드가 하나).
+     * @brief 폰 오브젝트에 하나 붙습니다. 같은 오브젝트의 이동, 무기, 탑승 컴포넌트는 **이 컴포넌트의 의도만** 읽습니다.
+     * @details 이동, 무기, 탑승 컴포넌트는 InputMap 이나 InputManager 를 읽지 않는다.
+     *          의도는 조종 시스템(`ControlSystem`, 씬 프레임 단계 `FrameSystems`)이 틱 전에 게임 스레드에서 쓰고, 틱(병렬) 동안에는 읽기만 한다.
+     *          조종자가 없으면 이동, 버튼, 아날로그가 0 이고 조종 회전은 마지막 값을 지킨다.
+     *          언리얼의 `APawn` 에 해당한다. 언리얼은 폰이 입력 컴포넌트에 바인딩하지만, 여기서는 조종자가 의도 구조체 하나를 채운다.
+     *          그래서 플레이어와 NPC 의 이동 코드가 하나이다.
      */
     REFLECT( Category = "Control", DisplayName = "Pawn", Tooltip = "Something a controller can possess; movement and actions read only its control intent" )
     class SW_GF_API PawnComponent : public Component
@@ -47,29 +50,29 @@ namespace sw
         PawnComponent();
         ~PawnComponent() override = default;
 
-        /** @brief 등록부에 들고 조종 시스템을 매니저에 붙입니다(없으면). */
+        /** @brief 레지스트리에 등록하고, 조종 시스템이 없으면 매니저에 붙입니다. */
         void onRegister( GameObjectManager& manager ) override;
-        /** @brief 조종자와의 끈을 끊고 등록부에서 빠집니다. */
+        /** @brief 조종자와의 끈을 끊고 레지스트리에서 빠집니다. */
         void onUnregister( GameObjectManager& manager ) override;
 
         /** @brief 이번 틱의 의도입니다. */
         const ControlIntent& getIntent() const { return _intent; }
-        /** @brief 버튼 이름의 자리입니다(스키마 순서). 없으면 −1 입니다. 소비자는 시작할 때 한 번 풀어 둡니다. */
+        /** @brief 버튼 이름의 자리(스키마 순서)입니다. 없으면 −1 입니다. 소비자는 시작할 때 한 번 풀어 둡니다. */
         int32 findButton( const hashed_string& name ) const;
         /** @brief 아날로그 이름의 자리입니다. 없으면 −1 입니다. */
         int32 findAnalog( const hashed_string& name ) const;
         bool  isButtonDown( int32 buttonIndex ) const { return _intent.isDown( buttonIndex ); }
         bool  wasButtonTriggered( int32 buttonIndex ) const { return _intent.wasTriggered( buttonIndex ); }
 
-        /** @brief 지금 쥔 조종자 컴포넌트입니다(없으면 무효). */
+        /** @brief 지금 쥔 조종자 컴포넌트입니다. 없으면 무효 핸들입니다. */
         const ComponentHandle& getController() const { return _controller; }
         bool                   isPossessed() const { return _controller.isValid(); }
-        /** @brief 조종 회전에 더할 것(반동 · 피격 흔들림)을 쌓습니다 — 조종자가 다음 틱의 조종 회전에 넣습니다. 틱 안 여러 컴포넌트가 불러도 된다(원자적 합). */
+        /** @brief 조종 회전에 더할 것(반동, 피격 흔들림)을 쌓습니다. 조종자가 다음 틱의 조종 회전에 넣습니다. 틱 안에서 여러 컴포넌트가 불러도 됩니다(원자적 합). */
         void addControlRotationOffset( float32 deltaYaw, float32 deltaPitch );
         /**
-         * @brief 조종 회전을 이 값(라디안, 피치는 위가 +)으로 두라고 요청합니다 — 다음 틱 전에 조종 시스템이 조종자(없으면 이 폰의 의도)에 넣습니다.
-         * @details 시작 시점 · 코드가 정한 시선에 씁니다. 앞서 쌓인 오프셋은 버립니다(부른 쪽이 지금 시점에서 계산한 값이 이미 그것을 담는다).
-         *          틱 안에서 불러도 된다(원자적). 한 틱에 여러 번이면 마지막 것입니다.
+         * @brief 조종 회전을 이 값(라디안, 피치는 위가 +)으로 두라고 요청합니다. 다음 틱 전에 조종 시스템이 조종자(없으면 이 폰의 의도)에 넣습니다.
+         * @details 시작 시점이나 코드가 정한 시선에 쓴다. 앞서 쌓인 오프셋은 버린다. 부른 쪽이 지금 시점에서 계산한 값에 이미 오프셋이 담겨 있기 때문이다.
+         *          틱 안에서 불러도 된다(원자적). 한 틱에 여러 번 부르면 마지막 것이 남는다.
          */
         void requestControlRotation( float32 yaw, float32 pitch );
 
@@ -85,11 +88,11 @@ namespace sw
         float32                      getMaxPitch() const { return _maxPitch; }
         PawnAutoPossess              getAutoPossess() const { return _autoPossess; }
         void                         setAutoPossess( PawnAutoPossess autoPossess ) { _autoPossess = autoPossess; }
-        /** @brief 플레이어가 쥔 동안 커서를 창 가운데에 잠그고 숨기기를 바라는지입니다(1인칭). 플레이어 조종자가 걸고, 잠금 토글 액션(Esc)이 풀고 다시 겁니다. */
+        /** @brief 플레이어가 쥔 동안 커서를 창 가운데에 잠그고 숨기기를 바라는지 나타냅니다(1인칭). 플레이어 조종자가 걸고, 잠금 토글 액션(Esc)이 풀고 다시 겁니다. */
         bool          wantsMouseLock() const { return _bLockMouse; }
         void          setLockMouse( bool bLockMouse ) { _bLockMouse = bLockMouse; }
         const string& getAIControllerPrefab() const { return _aiControllerPrefab; }
-        /** @brief 이 폰의 의도를 내는 네트워크 연결입니다(0 = 로컬). 빙의를 따라갑니다 — 탈것은 운전석 조종자의 연결입니다. */
+        /** @brief 이 폰의 의도를 내는 네트워크 연결입니다. 0 이면 로컬이며, 빙의를 따라갑니다. 탈것은 운전석 조종자의 연결입니다. */
         uint32 getInputPeer() const { return _inputPeer; }
 
     private:
@@ -97,13 +100,13 @@ namespace sw
         friend class ControllerComponent;
 
         void applyIntent( const ControlIntent& intent ) { _intent = intent; }
-        /** @brief 조종자 없음 — 이동 · 버튼 · 아날로그 0, 조종 회전은 그대로입니다. */
+        /** @brief 조종자가 없을 때의 처리입니다. 이동, 버튼, 아날로그를 0 으로 두고 조종 회전은 그대로 둡니다. */
         void clearMotion();
-        /** @brief 쌓인 조종 회전 오프셋(요 · 피치)을 꺼내고 0 으로 돌립니다. */
+        /** @brief 쌓인 조종 회전 오프셋(요와 피치)을 꺼내고 0 으로 돌립니다. */
         float2 consumeControlRotationOffset();
         /** @brief `requestControlRotation` 이 남긴 값을 꺼냅니다. 없으면 false 입니다. */
         bool consumeControlRotationRequest( float2& outRotation );
-        /** @brief 조종자 없는 폰의 조종 회전에 요청 · 오프셋을 넣습니다(피치는 상한에서 자른다) — 쥔 이가 없어도 코드가 정한 시선 · 반동이 남는다. */
+        /** @brief 조종자 없는 폰의 조종 회전에 요청과 오프셋을 넣습니다. 피치는 상한에서 자르며, 쥔 이가 없어도 코드가 정한 시선과 반동이 남습니다. */
         void applyPendingControlRotation();
 
     private:

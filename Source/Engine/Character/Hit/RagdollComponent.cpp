@@ -242,7 +242,7 @@ namespace sw
         inoutListMask.resize( bodyCount, SW_FALSE );
         if ( bodyIndex < 0 || static_cast<size_t>( bodyIndex ) >= bodyCount )
             return;
-        // 부모가 뒤에 올 수도 있다(에셋 순서) — 바뀌지 않을 때까지 내려간다.
+        // 부모가 뒤에 올 수도 있다(에셋 순서). 바뀌지 않을 때까지 내려간다.
         inoutListMask[static_cast<size_t>( bodyIndex )] = SW_TRUE;
         bool bChanged                                   = true;
         while ( bChanged )
@@ -273,7 +273,7 @@ namespace sw
             if ( std::find( listBone.begin(), listBone.end(), _asset->_listBody[body]._bone ) != listBone.end() )
                 listDetached[body] = SW_TRUE;
         }
-        // 관절을 먼저 — 빠진 바디를 잇는 관절이 남으면 솔버가 넓은 단계 밖의 바디를 만진다.
+        // 관절을 먼저 지운다. 빠진 바디를 잇는 관절이 남으면 솔버가 넓은 단계 밖의 바디를 만진다.
         for ( size_t body = 0; body < bodyCount; ++body )
         {
             const int32 parent           = _ragdoll._listParentBody[body];
@@ -383,7 +383,7 @@ namespace sw
             return;
         }
         applyHitReaction( bodyIndex, impulse, hit._point );
-        // 가산 움찔 — 한 번 도는 레이어를 처음부터 다시, 가중치는 `_flinchSeconds` 동안 1 → 0.
+        // 가산 움찔: 한 번 도는 레이어를 처음부터 다시 시작하고, 가중치는 `_flinchSeconds` 동안 1 에서 0 으로 줄인다.
         GameObject*                pOwner    = getOwner();
         SkeletalAnimatorComponent* pAnimator = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
         if ( _flinchClip.empty() || pAnimator == nullptr || _state == RagdollState::Ragdoll )
@@ -399,7 +399,7 @@ namespace sw
 
     void RagdollComponent::updateWeights( SkeletalMeshComponent& unit, float32 deltaSeconds )
     {
-        // 움찔 레이어 가중치.
+        // 움찔 레이어 가중치를 정한다.
         GameObject*                pOwner    = unit.getOwner();
         SkeletalAnimatorComponent* pAnimator = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
         if ( _flinchLayer >= 0 && pAnimator != nullptr )
@@ -477,7 +477,7 @@ namespace sw
             _listBodyDynamic[body]       = ( bDynamic || bReacting ) ? SW_TRUE : SW_FALSE;
         }
 
-        // 뼈 가중치 — 바디가 있으면 그 바디, 없으면 가장 가까운 조상의 것(손가락은 손을 따른다).
+        // 뼈 가중치: 바디가 있으면 그 바디의 값, 없으면 가장 가까운 조상의 값을 쓴다(손가락은 손을 따른다).
         const Skeleton&      skeleton   = unit.getSkeleton();
         const vector<int32>& listParent = skeleton.getParentIndices();
         _listBoneWeight.assign( skeleton.getBoneCount(), 0.0f );
@@ -528,7 +528,7 @@ namespace sw
         const uint32    boneCount = skeleton.getBoneCount();
         if ( _listPhysicsModel.size() != boneCount )
             return false;
-        // 골반(부모 바디가 없는 바디의 뼈)과 위 몸(부분 래그돌 뿌리 뼈)으로 누운 방향을 잰다.
+        // 골반(부모 바디가 없는 바디의 뼈)과 위 몸(부분 래그돌 뿌리 뼈)으로 누운 방향을 측정한다.
         int32 pelvisBone = -1;
         for ( size_t body = 0; body < _ragdoll._listParentBody.size() && pelvisBone < 0; ++body )
         {
@@ -550,7 +550,7 @@ namespace sw
         if ( pClip == nullptr )
             return false;
 
-        // 기상 클립의 첫 자세(모델 공간) — 그 골반 → 위 몸 방향을 래그돌의 것에 맞추도록 오브젝트를 돌리고 옮긴다.
+        // 기상 클립의 첫 자세(모델 공간)에 맞춘다. 그 골반에서 위 몸으로 가는 방향을 래그돌의 방향에 맞추도록 오브젝트를 돌리고 옮긴다.
         Pose startPose;
         startPose.setToReference( skeleton );
         Pose trackPose;
@@ -576,7 +576,7 @@ namespace sw
         pRoot->setWorldPosition( rootPosition );
         pRoot->setLocalRotation( rotation.getEulerAngles() );
 
-        // 래그돌 자세를 새 오브젝트 자리 기준으로 옮겨 둔다 — 그 자세에서 클립으로 섞는다.
+        // 래그돌 자세를 새 오브젝트 위치 기준으로 옮겨 둔다. 그 자세에서 클립으로 섞는다.
         const float4x4 newUnitInverse = _pUnit->getWorldMatrix().invert();
         for ( float4x4& model : _listPhysicsModel )
         {
@@ -603,7 +603,7 @@ namespace sw
         if ( pScene == nullptr || _pUnit == nullptr )
             return;
         if ( _seenAssetReloadCount != PhysicsAssetCache::getReloadCount() )
-            loadAsset(); // 물리 에셋 파일을 고쳤다 — 다시 세운다
+            loadAsset(); // 물리 에셋 파일을 고쳤다. 바디를 다시 만든다.
         if ( consumeRebuild() || _bRebuild )
         {
             releasePhysics( physics );
@@ -618,7 +618,7 @@ namespace sw
             options._bodyType  = PhysicsBodyType::Kinematic;
             if ( PhysicsRagdollBuilder::create( *pScene, *_asset, makeSkeletonView( *_pUnit ), _pUnit->getWorldMatrix(), options, _ragdoll ) == false )
             {
-                _asset = nullptr; // 같은 오류를 프레임마다 내지 않는다 — 에셋을 고치면 다시 읽힌다
+                _asset = nullptr; // 같은 오류를 프레임마다 내지 않는다. 에셋을 고치면 다시 읽는다.
                 return;
             }
             const size_t bodyCount = _ragdoll._listBody.size();
@@ -634,12 +634,12 @@ namespace sw
         if ( _ragdoll.isEmpty() )
             return;
 
-        // 바디 종류 — 가중치가 0 보다 크면 동적. 맞음 반응만으로 동적인 바디는 중력을 받지 않는다(축 처지지 않고 충격만 받는다).
+        // 바디 종류는 가중치가 0 보다 크면 동적이다. 맞음 반응만으로 동적인 바디는 중력을 받지 않는다(축 처지지 않고 충격만 받는다).
         const bool bLimp = _state == RagdollState::Ragdoll || _state == RagdollState::Partial;
         for ( size_t body = 0; body < _ragdoll._listBody.size(); ++body )
         {
             const uint8 bWantDynamic = body < _listBodyDynamic.size() ? _listBodyDynamic[body] : SW_FALSE;
-            // 꺼진 바디(잘려 나간 영역)는 시뮬레이션 밖이다 — 종류를 바꾸지 않는다.
+            // 꺼진 바디(잘려 나간 영역)는 시뮬레이션 밖이다. 종류를 바꾸지 않는다.
             if ( bWantDynamic == _listAppliedDynamic[body] || pScene->isBodyEnabled( _ragdoll._listBody[body] ) == false )
                 continue;
             pScene->setBodyType( _ragdoll._listBody[body], bWantDynamic == SW_TRUE ? PhysicsBodyType::Dynamic : PhysicsBodyType::Kinematic );
@@ -660,7 +660,7 @@ namespace sw
                 pScene->addImpulse( body, impulse._impulse );
         }
         _listPendingImpulse.clear();
-        // 코드가 오브젝트를 순간이동시켰다 — 키네마틱 바디도 그 자리로 바로 옮긴다.
+        // 코드가 오브젝트를 순간이동시켰다. 키네마틱 바디도 그 위치로 바로 옮긴다.
         if ( consumeTeleport() )
             PhysicsRagdollBuilder::driveToPose( *pScene, _ragdoll, makeSkeletonView( *_pUnit ), _pUnit->getWorldMatrix(), 0.0f );
     }
@@ -674,7 +674,7 @@ namespace sw
         const vector<float4x4>& listModel = _pUnit->getModelSpaceTransforms();
         if ( stepIndex == 0 )
         {
-            // 이번 프레임의 포즈가 키네마틱 바디의 목표다 — 지금 바디 자리에서 프레임의 스텝 수로 나눠 간다(밀린 동적 바디가 그 속도를 받는다).
+            // 이번 프레임의 포즈가 키네마틱 바디의 목표다. 현재 바디 위치에서 프레임의 스텝 수로 나눠 간다(밀린 동적 바디가 그 속도를 받는다).
             const float4x4 unitWorld = _pUnit->getWorldMatrix();
             for ( size_t body = 0; body < bodyCount; ++body )
             {

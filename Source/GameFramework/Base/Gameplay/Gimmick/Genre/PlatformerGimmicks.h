@@ -1,7 +1,7 @@
 /**
  * @file PlatformerGimmicks.h
- * @brief 플랫포머 기믹 — 무너지는 발판 · 한쪽 발판 · 스프링/점프대(발사대) · 컨베이어 · 사다리/밧줄 구역입니다. 움직이는 발판은 회로의 `Mover` 프리팹입니다.
- * @details 모두 같은 오브젝트의 `GimmickSensorComponent`(겹친 것) 또는 겹침 훅을 읽어 2D · 3D 모두에서 돕니다. 시간은 60 Hz 걸음 수로 셉니다(결정적).
+ * @brief 플랫포머 기믹입니다. 무너지는 발판, 한쪽 발판, 스프링과 점프대(발사대), 컨베이어, 사다리와 밧줄 구역을 다룹니다. 움직이는 발판은 회로의 `Mover` 프리팹으로 만듭니다.
+ * @details 모두 같은 오브젝트의 `GimmickSensorComponent`(겹친 것)나 겹침 훅을 읽으므로 2D 와 3D 에서 모두 동작한다. 시간은 60 Hz 스텝 수로 세며 결정적이다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -24,8 +24,8 @@ namespace sw
     enum class CrumbleState : uint8
     {
         Solid = 0, ///< 서 있을 수 있다
-        Shaking,   ///< 누가 올라섰다 — `_crumbleDelay` 뒤에 무너진다
-        Fallen     ///< 몸이 꺼졌다 — `_respawnDelay` 뒤에 되살아난다(0 이면 영영)
+        Shaking,   ///< 누군가 올라섰다. `_crumbleDelay` 뒤에 무너진다
+        Fallen     ///< 몸이 꺼졌다. `_respawnDelay` 뒤에 복원되며, 0 이면 복원되지 않는다
     };
 } // namespace sw
 
@@ -42,7 +42,7 @@ namespace sw
         virtual ~CrumblePlatformComponent() override = default;
 
         void onTick( float32 deltaTime ) override;
-        /** @brief 한 걸음(60 Hz)을 진행합니다(테스트 · 롤백 재시뮬레이션). */
+        /** @brief 한 스텝(60 Hz)을 진행합니다. 테스트와 롤백 재시뮬레이션에 씁니다. */
         void stepOnce();
 
         CrumbleState getState() const { return _state; }
@@ -66,7 +66,7 @@ namespace sw
 {
     /**
      * @class OneWayPlatformComponent
-     * @brief 한쪽에서만 막는 발판입니다 — 이동 몸이 `isSolidFor( 속도 )` 를 묻습니다(위로 뛰어 오르면 통과, 내려오면 착지). 아래 키로 내려가기는 `_bDropThrough`.
+     * @brief 한쪽에서만 막는 발판입니다. 이동 몸이 `isSolidFor( 속도 )` 로 막는지 묻습니다. 위로 뛰어오르면 통과하고, 내려오면 착지합니다. 아래 키로 내려가는 것은 `_bDropThrough` 로 허용합니다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "One-Way Platform", Tooltip = "Solid only against movement opposite to its normal" )
     class SW_GF_API OneWayPlatformComponent : public Component
@@ -77,7 +77,7 @@ namespace sw
         OneWayPlatformComponent();
         virtual ~OneWayPlatformComponent() override = default;
 
-        /** @brief @p velocity 로 움직이는 몸을 막는가 — 법선을 거슬러(법선 · 속도 < 0) 올 때만 막습니다. 아래로 내려가기를 허락했고 @p bDropRequested 면 막지 않습니다. */
+        /** @brief @p velocity 로 움직이는 몸을 막으면 true 입니다. 법선을 거슬러(법선과 속도의 내적이 0 보다 작을 때) 올 때만 막습니다. 아래로 내려가기를 허용했고 @p bDropRequested 가 true 이면 막지 않습니다. */
         bool isSolidFor( const float3& velocity, bool bDropRequested ) const;
 
     private:
@@ -92,8 +92,8 @@ namespace sw
 {
     /**
      * @class LaunchPadComponent
-     * @brief 스프링 · 점프대 — 겹치기 시작한 것(태그 거르기)을 `_launchVelocity`(월드)로 쏩니다. `GravityComponent` 가 있으면 수직 속도를 그 자리에서 주고,
-     *        `GimmickLaunchEvent` 를 냅니다(캐릭터 컨트롤러 · 이동 몸이 받는다).
+     * @brief 스프링과 점프대입니다. 겹치기 시작한 것(태그로 거름)을 `_launchVelocity`(월드)로 쏩니다. `GravityComponent` 가 있으면 수직 속도를 바로 주고,
+     *        `GimmickLaunchEvent` 를 냅니다. 캐릭터 컨트롤러와 이동 몸이 이 이벤트를 받습니다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Launch Pad", Tooltip = "Spring / jump pad: launches whatever starts overlapping" )
     class SW_GF_API LaunchPadComponent : public Component
@@ -105,7 +105,7 @@ namespace sw
         virtual ~LaunchPadComponent() override = default;
 
         void onOverlapBegin( const OverlapInfo& overlap ) override;
-        /** @brief @p target 을 쏩니다(겹침이 부른다 — 테스트 · 스크립트도 부를 수 있다). */
+        /** @brief @p target 을 쏩니다. 겹침이 부르며, 테스트와 스크립트도 부를 수 있습니다. */
         void  launch( GameObject& target );
         int32 getLaunchCount() const { return _launchCount; }
 
@@ -123,8 +123,8 @@ namespace sw
 {
     /**
      * @class ConveyorComponent
-     * @brief 컨베이어 · 흐르는 물 — 같은 오브젝트의 센서에 겹친 것을 `_velocity`(월드, m/s)로 옮깁니다(틱 쓰기 큐 — 다른 오브젝트의 자리를 세터로 쓴다).
-     *        이동 몸이 스스로 움직이는 게임은 `getSurfaceVelocity` 를 읽어 더하고 `_bMoveOccupants` 를 끕니다.
+     * @brief 컨베이어와 흐르는 물입니다. 같은 오브젝트의 센서에 겹친 것을 `_velocity`(월드, m/s)로 옮깁니다. 틱 쓰기 큐를 거쳐 다른 오브젝트의 위치를 세터로 씁니다.
+     *        이동 몸이 스스로 움직이는 게임은 `getSurfaceVelocity` 를 읽어서 더하고 `_bMoveOccupants` 를 끕니다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Conveyor", Tooltip = "Carries overlapping objects at a surface velocity" )
     class SW_GF_API ConveyorComponent : public Component
@@ -151,7 +151,7 @@ namespace sw
 {
     /**
      * @class ClimbZoneComponent
-     * @brief 사다리 · 밧줄 구역 — 같은 오브젝트의 센서에 겹친 것은 `_axis` 를 따라 오를 수 있습니다. 이동 몸이 `findClimbZone` 으로 묻습니다(`_bSwing` 이면 밧줄).
+     * @brief 사다리와 밧줄 구역입니다. 같은 오브젝트의 센서에 겹친 것은 `_axis` 를 따라 오를 수 있습니다. 이동 몸이 `findClimbZone` 으로 묻습니다. `_bSwing` 이 켜져 있으면 밧줄입니다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Climb Zone", Tooltip = "Ladder or rope volume: overlapping objects may climb along the axis" )
     class SW_GF_API ClimbZoneComponent : public Component
@@ -162,12 +162,12 @@ namespace sw
         ClimbZoneComponent();
         virtual ~ClimbZoneComponent() override = default;
 
-        /** @brief 씬의 오르기 구역 목록(`ComponentRegistry`)에 듭니다 — `findClimbZone` 가 씬 전체를 훑지 않고 이 목록을 봅니다. */
+        /** @brief 씬의 오르기 구역 목록(`ComponentRegistry`)에 등록합니다. `findClimbZone` 이 씬 전체를 순회하지 않고 이 목록만 봅니다. */
         void onRegister( GameObjectManager& manager ) override;
         void onUnregister( GameObjectManager& manager ) override;
-        /** @brief @p object 가 이 구역 안인가입니다. */
+        /** @brief @p object 가 이 구역 안에 있으면 true 입니다. */
         bool contains( GameObjectHandle object ) const;
-        /** @brief @p object 가 들어 있는 구역입니다. 없으면 nullptr 입니다(등록된 구역을 본다). */
+        /** @brief @p object 가 들어 있는 구역입니다. 등록된 구역에서 찾으며, 없으면 nullptr 입니다. */
         static const ClimbZoneComponent* findClimbZone( const GameObjectManager& manager, GameObjectHandle object );
 
         const float3& getAxis() const { return _axis; }

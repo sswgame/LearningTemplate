@@ -212,7 +212,7 @@ namespace sw
         if ( pointCount == 0 )
             return computeShadowProjection( shadowMapResolution );
 
-        // (4) 빛 공간 상자 — 회전만 있는 뷰(눈 = 원점)로 옮겨 x · y · 깊이의 최소 · 최대를 잰다.
+        // (4) 빛 공간 상자 — 회전만 있는 뷰(눈 = 원점)로 옮겨 x · y · 깊이의 최소 · 최대를 측정한다.
         const float3   lightDir  = getLightDirection();
         const float3   up        = MathUtil::abs( lightDir._y ) > 0.99f ? float3::Forward : float3::Up;
         const float4x4 lightView = float4x4::makeLookAt( float3::Zero, lightDir, up );

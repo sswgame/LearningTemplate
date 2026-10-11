@@ -37,7 +37,7 @@ namespace sw
         const ActionPatternStateDef* pState = getState();
         if ( pState == nullptr )
             return action;
-        // 들어선 프레임에는 넘어가지 않는다 — 상태마다 적어도 한 프레임은 보인다.
+        // 들어선 프레임에는 다음 상태로 넘어가지 않는다. 상태마다 적어도 한 프레임은 보여야 하기 때문이다.
         if ( _bEntered == SW_FALSE )
         {
             ++_stateFrame;
@@ -49,7 +49,7 @@ namespace sw
             if ( targetIndex >= 0 && targetIndex != _stateIndex )
                 enterState( targetIndex );
             else if ( targetIndex == _stateIndex )
-                _stateFrame = 0; // 같은 상태로 — 시간만 다시 센다
+                _stateFrame = 0; // 같은 상태로 머물고 시간만 다시 센다
             pState = getState();
         }
         action._moveX         = pState->_moveX * static_cast<float32>( _facing );

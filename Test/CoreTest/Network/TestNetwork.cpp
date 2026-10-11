@@ -581,7 +581,7 @@ SW_TEST_CASE( NetworkTest, HostsHandshakeExchangeAndSurviveBadNetworks )
     pair.getServer().drainEvents( listEvent );
     SW_EXPECT_TRUE( listEvent.size() == 1 && listEvent[0]._kind == NetHostEvent::Kind::Connected );
 
-    // 나쁜 망 — 두 끝점의 보내는 쪽 흉내에 지연 80 ms ± 30, 손실 20 %, 중복 10 %, 깨짐 5 %. 신뢰 메시지 200 개가 순서대로 한 번씩.
+    // 나쁜 망 — 두 엔드포인트의 보내는 쪽 흉내에 지연 80 ms ± 30, 손실 20 %, 중복 10 %, 깨짐 5 %. 신뢰 메시지 200 개가 순서대로 한 번씩.
     NetEmulationConditions conditions;
     conditions._latency       = 0.08;
     conditions._jitter        = 0.03;
@@ -931,7 +931,7 @@ SW_TEST_CASE( NetworkTest, MalformedPayloadIsNotAcknowledged )
 }
 
 /**
- * @brief [NetworkTest] 대역폭 통계는 최근 1 초에 보내고 받은 패킷을 모두 센다 — 보내기 간격이 짧아도(120 Hz) 덜 재지 않는다
+ * @brief [NetworkTest] 대역폭 통계는 최근 1 초에 보내고 받은 패킷을 모두 센다 — 보내기 간격이 짧아도(120 Hz) 덜 측정하지 않는다
  * @details 최근 64 패킷만 보면 1/64 초보다 짧은 간격에서는 1 초 창의 일부만 센다(120 Hz 면 절반 남짓).
  */
 SW_TEST_CASE( NetworkTest, BandwidthStatCountsEveryPacketInTheLastSecond )
@@ -1188,7 +1188,7 @@ SW_TEST_CASE( NetworkTest, IdleConnectionsSendKeepAlivesInsteadOfEveryInterval )
     const uint64 serverIdleSent = serverStats._sentPacketCount - serverSent;
     SW_EXPECT_TRUE( clientIdleSent >= 8 && clientIdleSent <= 40 ); // 30 Hz 였다면 120
     SW_EXPECT_TRUE( serverIdleSent >= 8 && serverIdleSent <= 40 );
-    SW_EXPECT_TRUE( clientStats._rtt > 0.0f && clientStats._rtt < 0.1f ); // 유지 패킷도 RTT 를 잰다(지연 없는 망)
+    SW_EXPECT_TRUE( clientStats._rtt > 0.0f && clientStats._rtt < 0.1f ); // 유지 패킷도 RTT 를 측정한다(지연 없는 망)
     SW_EXPECT_TRUE( clientStats._packetLoss < 0.01f );                    // 확인만 담은 답은 확인을 바라지 않으니 잃은 것으로 세지 않는다
     SW_EXPECT_EQUAL( 1, pair.getServer().getConnectedCount() );
 
@@ -1489,7 +1489,7 @@ SW_TEST_CASE( NetworkTest, SendToPeersAndRelayReachEveryOtherPeer )
 }
 
 /**
- * @brief [NetworkTest] 루프백 망은 회선을 나쁘게 하지 않는다 — 보낸 순서대로 다음 `update` 에 배달하고, 받을 끝점이 없는 패킷은 버린 수로 센다
+ * @brief [NetworkTest] 루프백 망은 회선을 나쁘게 하지 않는다 — 보낸 순서대로 다음 `update` 에 배달하고, 받을 엔드포인트가 없는 패킷은 버린 수로 센다
  */
 SW_TEST_CASE( NetworkTest, LoopbackDeliversInSendOrderOnNextUpdate )
 {
@@ -1498,18 +1498,18 @@ SW_TEST_CASE( NetworkTest, LoopbackDeliversInSendOrderOnNextUpdate )
     LoopbackTransport* pReceiver = network.createEndpoint( 7001 );
     SW_ASSERT_NOT_NULL( pSender );
     SW_ASSERT_NOT_NULL( pReceiver );
-    SW_EXPECT_NULL( network.createEndpoint( 7001 ) ); // 한 포트에 끝점 하나
+    SW_EXPECT_NULL( network.createEndpoint( 7001 ) ); // 한 포트에 엔드포인트 하나
     for ( uint8 number = 0; number < 5; ++number )
     {
         SW_ASSERT_TRUE( pSender->send( NetAddress::makeLoopback( 7001 ), &number, 1 ) );
     }
     const uint8 orphan = 9;
-    SW_ASSERT_TRUE( pSender->send( NetAddress::makeLoopback( 7999 ), &orphan, 1 ) ); // 받을 끝점이 없다
+    SW_ASSERT_TRUE( pSender->send( NetAddress::makeLoopback( 7999 ), &orphan, 1 ) ); // 받을 엔드포인트가 없다
 
     NetAddress    from{};
     vector<uint8> buffer;
     SW_EXPECT_FALSE( pReceiver->receive( from, buffer ) ); // 다음 update 까지는 날아가는 중
-    pReceiver->update( 0.0 );                              // 어느 끝점의 update 든 망 전체를 배달한다
+    pReceiver->update( 0.0 );                              // 어느 엔드포인트의 update 든 망 전체를 배달한다
     for ( uint8 number = 0; number < 5; ++number )
     {
         SW_ASSERT_TRUE( pReceiver->receive( from, buffer ) );

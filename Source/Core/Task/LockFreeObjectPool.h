@@ -43,18 +43,18 @@ namespace sw
 
     public:
         /**
-         * @brief 자리가 나기를 기다릴 때 yield 만으로 버티는 횟수입니다. 그 뒤로는 짧게 잠듭니다.
-         * @details 기다림을 끝내는 기준은 **횟수가 아니라 시간**입니다(아래 참고). 이 값은 "CPU 를 쓰면서 기다릴 구간" 의 길이일
+         * @brief 반납할 슬롯이 나기를 기다릴 때 yield 만으로 버티는 횟수입니다. 그 뒤로는 짧게 잠듭니다.
+         * @details 기다림을 끝내는 기준은 **횟수가 아니라 시간**입니다(아래 참고). 이 값은 "CPU 를 쓰면서 기다릴 구간"의 길이일
          *          뿐이라 정확할 필요가 없습니다.
          */
         static constexpr uint32 kReleaseYieldAttempt = 256;
 
         /**
-         * @brief 자리가 나기를 기다리는 최대 **시간**(밀리초)입니다.
-         * @details **횟수로 끊으면 안 됩니다** — 코어가 적은 CI 러너에서 정상적인 반납이 단언에 걸려 프로세스가 죽습니다.
-         *          `yield()` 1024번은 몇 마이크로초면 끝나지만, 칸을 가져간 소비자가 순번을
-         *          공개하기 전에 선점되면 그 틈은 스케줄러 퀀텀(밀리초 단위) 동안 열려 있습니다. 시간으로 끊어야 "기계가 느린 것" 과
-         *          "정말 자리가 없는 것" 을 구별할 수 있습니다. 여기에 걸리는 것은 버그 경로뿐이라 넉넉하게 줍니다.
+         * @brief 반납할 슬롯이 나기를 기다리는 최대 **시간**(밀리초)입니다.
+         * @details **횟수로 끊으면 안 됩니다.** 코어가 적은 CI 러너에서 정상적인 반납이 단언에 걸려 프로세스가 죽습니다.
+         *          `yield()` 1024번은 몇 마이크로초면 끝나지만, 슬롯을 가져간 소비자가 순번을
+         *          공개하기 전에 선점되면 그 틈은 스케줄러 퀀텀(밀리초 단위) 동안 열려 있습니다. 시간으로 끊어야 "기계가 느린 것"과
+         *          "정말 슬롯이 없는 것"을 구별할 수 있습니다. 여기에 걸리는 것은 버그 경로뿐이라 넉넉하게 줍니다.
          */
         static constexpr uint32 kReleaseWaitMilli = 1000;
 
@@ -106,7 +106,7 @@ namespace sw
 
         /**
          * @brief 이 풀의 저장 공간에서 나온 포인터인지 확인합니다(반납하기 전에 걸러 내는 용도).
-         * @details 주소 범위와 슬롯 간격으로 판정하므로 기다릴 필요가 없습니다("자리가 나지 않는다" 는 증상은 경합 중인 정상 반납과
+         * @details 주소 범위와 슬롯 간격으로 판정하므로 기다릴 필요가 없습니다("슬롯이 나지 않는다"는 증상은 경합 중인 정상 반납과
          *          구별되지 않으므로 그것으로 알아내지 않습니다).
          * @note 이미 반납된 포인터는 여기서 가려내지 못합니다(범위 안에 있기 때문입니다). 그쪽은 칸마다 든 "쓰는 중" 표시가 가려냅니다.
          */
@@ -140,9 +140,9 @@ namespace sw
                 return;
             }
 
-            // **이중 반납은 칸의 "쓰는 중" 표시로 가린다** — 소멸자를 부르기 전에. 자유 큐가 가득 찼는지로는 다른 블록이 나가 있을 때
-            // 알아채지 못한다. 그러면 같은 블록이 자유 목록에 두 번 들고 소멸자도 두 번 돌며, 두 `acquire` 가 같은 메모리를 받아
-            // 서로의 객체를 덮는다(`ParallelGroupPool` 이 이 풀을 쓴다).
+            // **이중 반납은 슬롯의 "쓰는 중" 표시로 가려낸다.** 소멸자를 부르기 전에 해야 한다. 자유 큐가 가득 찼는지로는 다른 블록이 나가 있을 때
+            // 알아채지 못한다. 그러면 같은 블록이 자유 목록에 두 번 들어가고 소멸자도 두 번 돌며, 두 `acquire` 가 같은 메모리를 받아
+            // 서로의 객체를 덮어쓴다(`ParallelGroupPool` 이 이 풀을 쓴다).
             if ( _arrSlotInUse[getSlotIndex( pPtr )].exchange( 0, std::memory_order_acq_rel ) == 0 )
             {
                 SW_LOG_ASSERT( false, "LockFreeObjectPool::release: slot %# was already released (double release).", getSlotIndex( pPtr ) );
@@ -152,12 +152,12 @@ namespace sw
 
             pPtr->~T();
 
-            // "가득 찼다" 는 응답이 곧 이중 반납을 뜻하지는 않는다. 내부 MPMC 큐(Vyukov)는 소비자가 칸을 가져간 뒤 그 칸의 순번을
-            // 아직 공개하지 않은 짧은 순간에도 생산자에게 가득 찼다고 응답한다. 자리 수(`Capacity`)와 블록 수가 같으므로 그 순간은
+            // "가득 찼다"는 응답이 곧 이중 반납을 뜻하지는 않는다. 내부 MPMC 큐(Vyukov)는 소비자가 슬롯을 가져간 뒤 그 슬롯의 순번을
+            // 아직 공개하지 않은 짧은 순간에도 생산자에게 가득 찼다고 응답한다. 슬롯 수(`Capacity`)와 블록 수가 같으므로 그 순간은
             // 반드시 지나간다. 그러니 한 번 실패했다고 물러서면 안 된다. 물러서면 그 블록이 자유 목록으로 돌아가지 못해 풀이 조용히
             // 줄어들고, 오래 돌수록 `acquire` 가 nullptr 을 더 자주 반환한다.
             //
-            // 여기까지 온 포인터는 이 풀의 블록이므로, 이미 반납된 것만 아니라면 자리는 반드시 난다. 그 하나를 가르는 기준이
+            // 여기까지 온 포인터는 이 풀의 블록이므로, 이미 반납된 것만 아니라면 슬롯은 반드시 난다. 그 하나를 가르는 기준이
             // 시간(kReleaseWaitMilli)이다.
             const Deadline deadline     = Deadline::afterMilliseconds( kReleaseWaitMilli );
             uint32         attemptCount = 0;
@@ -172,7 +172,7 @@ namespace sw
                 if ( deadline.isExpired() == false )
                     continue;
 
-                // 이중 반납은 위에서 걸렀으니 여기는 일어나면 안 되는 자리다. 카운트는 줄이지 않는다(`_activeCount` 를 줄이면 0 에서
+                // 이중 반납은 위에서 걸러냈으므로 여기는 일어나면 안 되는 경로다. 카운트는 줄이지 않는다(`_activeCount` 를 줄이면 0 에서
                 // 언더플로가 나 40억이 되고, 소멸자의 "모두 반납됐는가" 단언이 엉뚱한 결과를 낸다).
                 SW_LOG_ASSERT( false, "LockFreeObjectPool::release: free queue stayed full for the whole wait." );
                 pPtr = nullptr;
@@ -204,8 +204,8 @@ namespace sw
 
     private:
         alignas( alignof( T ) ) std::array<uint8, Capacity * sizeof( T )> _arrStorage;
-        ConcurrentQueue<T*, Capacity>       _freeQueue;      ///< 다중 생산자 · 다중 소비자. acquire/release 를 스레드 안전하게 만든다
-        std::array<atomic<uint8>, Capacity> _arrSlotInUse{}; ///< 칸마다 "나가 있음" — 이중 반납을 가린다(`release`)
+        ConcurrentQueue<T*, Capacity>       _freeQueue;      ///< 다중 생산자, 다중 소비자 큐. acquire/release 를 스레드 안전하게 만든다.
+        std::array<atomic<uint8>, Capacity> _arrSlotInUse{}; ///< 슬롯마다 "나가 있음" 표시. 이중 반납을 가려낸다(`release`).
         atomic<uint32>                      _activeCount{ 0 };
     };
 } // namespace sw

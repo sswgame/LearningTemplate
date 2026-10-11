@@ -2,14 +2,14 @@
  * @file Box2DPhysicsScene.h
  * @brief `IPhysicsScene2D` 의 Box2D v3 구현입니다. Box2D 헤더를 include 하므로 `Physics/Box2D` 밖에서는 보지 않습니다.
  * @details
- *  - **레이어.** 엔진 레이어 n 은 셰이프 거름의 범주 비트 1 << n 이고, 마스크는 레이어 표의 그 행입니다. 표를 바꾸면 모든 셰이프의 거름을 다시 씁니다.
- *  - **쌍 예외.** 두 바디의 충돌을 끄는 것은 Box2D 의 필터 관절(`b2CreateFilterJoint`)입니다. 관절로 이은 두 바디는 관절의 `collideConnected` 가 막습니다.
- *  - **이벤트.** 접촉 시작 · 끝(`b2World_GetContactEvents`)과 센서 시작 · 끝(`b2World_GetSensorEvents`)을 셰이프 → 바디 표로 풀어 추적기에 넣습니다.
- *    충격량 — 시작은 부딪힘 이벤트(`b2ContactHitEvent`, 다가온 속도가 1 m/s 를 넘을 때)의 속도 × 유효 질량 × (1 + 반발)입니다. Box2D 의 시작은
- *    투기적 접촉(아직 떨어져 있다)에서도 나고 그 매니폴드는 풀기 전이라 매니폴드로는 부딪힘을 잴 수 없다. 유지는 그 스텝에 푼 접촉 충격량
- *    (마지막 서브 스텝의 `normalImpulse` × 서브 스텝 수 — `totalNormalImpulse` 는 이완 반복까지 더해 약 두 배다)입니다.
- *  - **월드에 붙는 관절.** 바디 B 가 없으면 씬이 드는 정적 바디(원점) 하나에 붙입니다.
- *  - **위치 모터.** Box2D 의 관절 스프링(목표 각 · 거리)으로 합니다. 속도 모터는 Box2D 모터 그대로입니다.
+ *  - **레이어.** 엔진 레이어 n 은 셰이프 필터의 카테고리 비트 1 << n 이고, 마스크는 레이어 테이블의 그 행이다. 테이블을 바꾸면 모든 셰이프의 필터를 다시 쓴다.
+ *  - **쌍 예외.** 두 바디의 충돌을 끄는 것은 Box2D 의 필터 관절(`b2CreateFilterJoint`)이다. 관절로 연결된 두 바디는 관절의 `collideConnected` 가 막는다.
+ *  - **이벤트.** 접촉 시작과 끝(`b2World_GetContactEvents`), 센서 시작과 끝(`b2World_GetSensorEvents`)을 셰이프에서 바디로 가는 테이블로 찾아 추적기에 넣는다.
+ *    충격량 중 시작은 부딪힘 이벤트(`b2ContactHitEvent`, 다가온 속도가 1 m/s 를 넘을 때)의 속도 × 유효 질량 × (1 + 반발)이다. Box2D 의 시작은
+ *    투기적 접촉(아직 떨어져 있다)에서도 발생하고 그 매니폴드는 풀기 전이라, 매니폴드로는 부딪힘을 측정할 수 없다. 유지는 그 스텝에 푼 접촉 충격량
+ *    (마지막 서브 스텝의 `normalImpulse` × 서브 스텝 수)이다. `totalNormalImpulse` 는 이완 반복까지 더해서 약 두 배가 된다.
+ *  - **월드에 붙는 관절.** 바디 B 가 없으면 씬이 가진 정적 바디(원점) 하나에 붙인다.
+ *  - **위치 모터.** Box2D 의 관절 스프링(목표 각, 거리)으로 구현한다. 속도 모터는 Box2D 모터를 그대로 쓴다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -96,7 +96,7 @@ namespace sw
         void                    setCharacterPosition( PhysicsCharacterHandle character, const float2& position ) override;
         bool                    getCharacterState( PhysicsCharacterHandle character, PhysicsCharacterState2D& outState ) const override;
 
-        /** @brief 2D 물리에는 바퀴 차가 없습니다 — 무효 핸들 · false 입니다. */
+        /** @brief 2D 물리에는 바퀴 차가 없습니다. 무효 핸들이나 false 를 반환합니다. */
         PhysicsVehicleHandle createWheeledVehicle( PhysicsBodyHandle chassis, const PhysicsWheeledVehicleDesc& desc ) override;
         void                 destroyVehicle( PhysicsVehicleHandle vehicle ) override { (void)vehicle; }
         bool                 isVehicleValid( PhysicsVehicleHandle vehicle ) const override
@@ -152,16 +152,16 @@ namespace sw
         /** @brief 셰이프 하나를 바디에 붙입니다. 셰이프 id(체인이면 선분들)를 기록에 더합니다. */
         [[nodiscard]] bool        attachShape( BodyRecord& record, const PhysicsShapeDesc2D& shape, const hashed_string& defaultMaterial, PhysicsBodyHandle handle );
         const PhysicsMaterialDef& resolveMaterial( const hashed_string& name, const hashed_string& fallback ) const;
-        /** @brief 재질 이름의 설정 표 번호입니다(셰이프의 `userMaterialId` — 질의가 이름으로 되돌린다). 없으면 0 입니다. */
+        /** @brief 재질 이름의 설정 테이블 번호를 반환합니다(셰이프의 `userMaterialId` 이며, 질의가 이름으로 되돌립니다). 없으면 0 입니다. */
         int32 findMaterialIndex( const hashed_string& name ) const;
-        /** @brief 설정 표 번호의 재질 이름입니다. 범위 밖이면 빈 이름입니다. */
+        /** @brief 설정 테이블 번호의 재질 이름을 반환합니다. 범위 밖이면 빈 이름입니다. */
         hashed_string     findMaterialName( int32 materialIndex ) const;
         b2Filter          makeFilter( uint8 layer ) const;
         void              applyFilter( const BodyRecord& record );
         const BodyRecord* findBody( PhysicsBodyHandle body ) const;
         BodyRecord*       findBody( PhysicsBodyHandle body );
         PhysicsBodyHandle findHandleOfShape( b2ShapeId shapeID ) const;
-        /** @brief 쌍 예외 필터 관절 표에서 @p body 가 낀 것을 지웁니다(바디를 지우면 Box2D 가 관절도 지운다). */
+        /** @brief 쌍 예외 필터 관절 테이블에서 @p body 가 포함된 것을 지웁니다(바디를 지우면 Box2D 가 관절도 지웁니다). */
         void forgetPairJointsOf( PhysicsBodyHandle body );
         /** @brief 스텝이 낸 Box2D 이벤트를 추적기에 넣고 충격량을 채웁니다. */
         void flushEvents();
@@ -178,9 +178,9 @@ namespace sw
         SlotHandleTable<JointRecord>              _joints;
         SlotHandleTable<CharacterRecord>          _characters;
         SlotHandleTable<ShapeRecord>              _shapes;
-        unordered_map<uint64, PhysicsBodyHandle>  _mapShapeToBody;     ///< 셰이프 id(색인 | 세대 << 32) → 바디. 지워진 셰이프의 끝 이벤트도 푼다
-        map<pair<uint64, uint64>, b2JointId>      _mapPairToJoint;     ///< 충돌을 끈 바디 쌍(작은 핸들 먼저) → 필터 관절
-        mutable vector<b2ContactData>             _listContactScratch; ///< 충격량을 읽을 때 쓰는 자리(할당 재사용)
+        unordered_map<uint64, PhysicsBodyHandle>  _mapShapeToBody;     ///< 셰이프 id(인덱스 | 세대 << 32)에서 바디로 가는 맵이다. 지워진 셰이프의 끝 이벤트도 찾는다.
+        map<pair<uint64, uint64>, b2JointId>      _mapPairToJoint;     ///< 충돌을 끈 바디 쌍(작은 핸들 먼저)에서 필터 관절로 가는 맵이다.
+        mutable vector<b2ContactData>             _listContactScratch; ///< 충격량을 읽을 때 쓰는 버퍼다(할당을 재사용한다).
         PhysicsContactTracker<PhysicsDimension2D> _contactTracker;
         vector<PhysicsContactEvent2D>             _listContactEvent;
         uint32                                    _bodyCount;

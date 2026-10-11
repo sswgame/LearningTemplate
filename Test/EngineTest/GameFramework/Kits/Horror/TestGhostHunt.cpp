@@ -498,7 +498,7 @@ SW_TEST_CASE( GhostHuntTest, BooHidesAndEscapes )
 }
 
 /**
- * @brief [GhostHuntTest] 상태 바이트로 되살린 저택이 같은 판을 잇는다 — 싸움 중인 유령 · 들킨 부 · 뒤진 가구 · 지금 방이 같은 바이트이고,
+ * @brief [GhostHuntTest] 상태 바이트로 복원한 저택이 같은 판을 잇는다 — 싸움 중인 유령 · 들킨 부 · 뒤진 가구 · 지금 방이 같은 바이트이고,
  *        같은 걸음을 둘 다 더 돌려도(유령 순환 · 부의 탈출 난수) 같은 바이트다. 잘린 바이트는 거절하고 그대로 둔다
  */
 SW_TEST_CASE( GhostHuntTest, StateRoundTripContinuesTheSameMansion )

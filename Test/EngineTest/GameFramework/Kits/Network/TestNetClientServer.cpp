@@ -398,7 +398,7 @@ SW_TEST_CASE( NetClientServerTest, PredictionReconcilesAndLagCompensationRewinds
 
 /**
  * @brief [NetClientServerTest] 실제 전송 위에 씌운 네트워크 흉내(지연 100 ms · 흔들림 · 손실 5 % · 순서 뒤바뀜 10 % · 회선 64 KB/s)에서도 복제가 되돌아가지 않고 따라온다
- * @details 루프백 망은 완벽하게 두고 양쪽 끝점에 `NetEmulationTransport` 를 씌운다 — UDP 전송에 씌우는 것과 같은 길이다(`-gv_netEmu*`).
+ * @details 루프백 망은 완벽하게 두고 양쪽 엔드포인트에 `NetEmulationTransport` 를 씌운다 — UDP 전송에 씌우는 것과 같은 길이다(`-gv_netEmu*`).
  */
 SW_TEST_CASE( NetClientServerTest, ReplicationSurvivesEmulatedBadNetwork )
 {

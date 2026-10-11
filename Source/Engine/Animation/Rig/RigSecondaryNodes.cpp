@@ -33,8 +33,8 @@ namespace sw
             static float32 computeKernel( float32 angle, float32 radius ) { return std::exp( -( angle * angle ) / ( radius * radius ) ); }
 
             /**
-             * @brief n × n 행렬(행 우선)의 역행렬을 가우스-요르단 소거로 구합니다. 특이하면 false 입니다.
-             * @details 포즈 구동의 포즈 수(수 개 ~ 수십 개)라 묶을 때 한 번 푼다.
+             * @brief n × n 행렬(행 우선)의 역행렬을 가우스-요르단 소거로 구합니다. 특이하면 false 를 반환합니다.
+             * @details 포즈 구동의 포즈 수는 수 개에서 수십 개라서, 바인딩할 때 한 번만 푼다.
              */
             static bool invertMatrix( vector<float32> listMatrix, uint32 size, vector<float32>& outListInverse )
             {
@@ -90,9 +90,9 @@ namespace sw
         };
 
         /**
-         * @brief 스프링 사슬(꼬리 · 머리 가닥 · 망토). 키: `bones` · `stiffness` · `damping` · `gravity` · `particle_radius` · `fixed_step` · `max_substeps` ·
-         *        `teleport_distance` · `lod_distance`(뷰에서 이보다 멀면 끔 — 0 이면 늘 켬) · `colliders`(`[{ "bone", "shape", "a", "b", "radius" }]`) ·
-         *        `use_shared_colliders`(호스트가 준 충돌체 — 물리 에셋의 구 · 캡슐 — 도 씀).
+         * @brief 스프링 체인(꼬리, 머리 가닥, 망토)입니다. 키는 `bones`, `stiffness`, `damping`, `gravity`, `particle_radius`, `fixed_step`, `max_substeps`,
+         *        `teleport_distance`, `lod_distance`(뷰에서 이보다 멀면 끔, 0 이면 항상 켬), `colliders`(`[{ "bone", "shape", "a", "b", "radius" }]`),
+         *        `use_shared_colliders`(호스트가 준 충돌체, 즉 물리 에셋의 구와 캡슐도 사용)입니다.
          */
         class RigSpringChainNode final : public RigNode
         {
@@ -109,7 +109,7 @@ namespace sw
             [[nodiscard]] bool parse( RigJSONReader& reader ) override
             {
                 bool bShared               = false;
-                _settings._gravityOverride = float3{ MathUtil::kMaxFloat, 0.0f, 0.0f }; // 표식 — "gravity" 를 읽었는지 가린다
+                _settings._gravityOverride = float3{ MathUtil::kMaxFloat, 0.0f, 0.0f }; // 표식이다. "gravity" 를 읽었는지 구분한다.
                 bool bOk                   = reader.readNameList( "bones", _listBoneName, true ) && reader.readFloat( "stiffness", _settings._stiffness, false ) &&
                            reader.readFloat( "damping", _settings._damping, false ) && reader.readFloat3( "gravity", _settings._gravityOverride, false ) && reader.readFloat( "gravity_scale", _settings._gravityScale, false ) &&
                            reader.readFloat( "particle_radius", _settings._particleRadius, false ) && reader.readFloat( "fixed_step", _settings._fixedStep, false ) &&
@@ -216,11 +216,11 @@ namespace sw
         };
 
         /**
-         * @brief 포즈 구동(RBF 포즈 드라이버). 키: `driver`(관절) · `radius_degrees`(가우스 폭) · `poses`(`[{ "name", "rotation", "morphs": [{ "morph", "weight" }],
-         *        "bones": [{ "bone", "rotation", "translation" }] }]`).
-         * @details 관절의 레퍼런스 기준 회전과 포즈마다의 회전 사이 각으로 가우스 핵을 재고, 묶을 때 푼 보간 행렬(Φ⁻¹)로 포즈 가중치를 냅니다 —
-         *          포즈 자리에서는 그 포즈만 1 입니다. 가중치만큼 보정 모프(`RigInstance::getMorphWeights`)와 보정 본(로컬 회전 · 이동 덧셈)을 냅니다.
-         *          팔꿈치를 굽히면 팔뚝 근육 보정 — 언리얼 Pose Driver · Maya RBF 의 자리입니다. 쉬는 포즈(출력 없음)도 데이터에 한 줄 넣습니다.
+         * @brief 포즈 구동(RBF 포즈 드라이버)입니다. 키는 `driver`(관절), `radius_degrees`(가우스 폭), `poses`(`[{ "name", "rotation", "morphs": [{ "morph", "weight" }],
+         *        "bones": [{ "bone", "rotation", "translation" }] }]`)입니다.
+         * @details 관절의 레퍼런스 기준 회전과 포즈마다의 회전 사이 각으로 가우스 핵을 구하고, 바인딩할 때 푼 보간 행렬(Φ⁻¹)로 포즈 가중치를 낸다.
+         *          포즈 위치에서는 그 포즈만 1 이다. 가중치만큼 보정 모프(`RigInstance::getMorphWeights`)와 보정 본(로컬 회전과 이동 덧셈)을 낸다.
+         *          팔꿈치를 굽히면 팔뚝 근육을 보정하는 식이며, 언리얼의 Pose Driver 와 Maya 의 RBF 에 해당한다. 쉬는 포즈(출력 없음)도 데이터에 한 줄 넣는다.
          */
         class RigPoseDriverNode final : public RigNode
         {

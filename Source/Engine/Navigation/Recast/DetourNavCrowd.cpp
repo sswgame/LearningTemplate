@@ -18,9 +18,9 @@ namespace sw
     {
         struct DetourNavCrowdInternal
         {
-            /** @brief 군중 밖 질의 객체의 노드 수입니다(목적지 붙이기 · 자리 맞추기는 짧다). */
+            /** @brief 군중 밖 질의 객체의 노드 수입니다(목적지 붙이기와 위치 맞추기는 짧습니다). */
             static constexpr int32 kQueryNodeCount = 512;
-            /** @brief 회피 품질 넷의 적응 표본(나눔 · 고리 · 깊이) — Detour 예제의 Low · Medium · Good · High 값입니다. */
+            /** @brief 회피 품질 넷의 적응 샘플(분할 수, 고리 수, 깊이)입니다. Detour 예제의 Low, Medium, Good, High 값입니다. */
             static constexpr uint8 kArrAdaptiveDivision[4] = { 5, 5, 7, 7 };
             static constexpr uint8 kArrAdaptiveRing[4]     = { 2, 2, 2, 3 };
             static constexpr uint8 kArrAdaptiveDepth[4]    = { 1, 2, 3, 3 };
@@ -177,7 +177,7 @@ namespace sw
     {
         if ( isActiveAgent( agentID ) == false )
             return;
-        // Detour 의 addAgent 가 하는 것과 같은 초기화 — 통로를 새 자리에서 다시 시작한다.
+        // Detour 의 addAgent 가 하는 것과 같은 초기화다. 통로를 새 위치에서 다시 시작한다.
         dtCrowdAgent* pAgent  = _pCrowd->getEditableAgent( agentID );
         dtPolyRef     polyRef = 0;
         float32       arrNearest[3]{ position._x, position._y, position._z };
@@ -209,7 +209,7 @@ namespace sw
             teleportAgent( agentID, position );
             return;
         }
-        // 통로를 따라 새 자리로 끌어 옮긴다(벽을 넘지 않는다) — 경로는 지킨다.
+        // 통로를 따라 새 위치로 끌어 옮긴다(벽을 넘지 않는다). 경로는 유지한다.
         if ( pAgent->corridor.movePosition( &position._x, _pQuery, _pCrowd->getFilter( 0 ) ) )
             dtVcopy( pAgent->npos, pAgent->corridor.getPos() );
     }
@@ -254,7 +254,7 @@ namespace sw
             }
             case DT_CROWDAGENT_TARGET_VALID:
             {
-                // 마지막 모퉁이가 끝점이고 몸 반지름의 4 분의 1 안이면 닿았다(Detour 는 끝점 앞에서 감속해 멈춘다).
+                // 마지막 모퉁이가 엔드포인트이고 몸 반지름의 4 분의 1 안이면 닿았다(Detour 는 엔드포인트 앞에서 감속해 멈춘다).
                 const bool bLastIsEnd = pAgent->ncorners > 0 && ( pAgent->cornerFlags[pAgent->ncorners - 1] & DT_STRAIGHTPATH_END ) != 0;
                 float32    remaining  = MathUtil::kMaxFloat;
                 if ( bLastIsEnd )

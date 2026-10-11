@@ -164,7 +164,7 @@ namespace sw::editor
 
         /**
          * @brief 캔버스의 노드 위치를 목록에 담고, 옮겨졌으면 dirty 로 표시합니다.
-         * @details 정본은 캔버스이고 목록은 사본입니다. 사용자가 노드를 끌면 캔버스만 압니다. 첫 프레임에 "위치가 처음
+         * @details 원본은 캔버스이고 목록은 사본입니다. 사용자가 노드를 끌면 캔버스만 압니다. 첫 프레임에 "위치가 처음
          *          정해지는 것" 은 편집이 아니므로 `_bGraphLayoutReady` 가 켜지기 전에는 dirty 로 치지 않습니다.
          */
         void cacheNodeLayout()

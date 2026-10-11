@@ -17,7 +17,7 @@ XML 속성(값 하나)과 자식 요소(목록, 구조체)의 이름은 아래 �
 
 ## 필드
 
-내비게이션 표 하나입니다. 씬의 내비게이션(`SceneNavigation`)이 처음 쓸 때 읽습니다. 쿠킹본(`.navmesh`)은 베이크에 들어간 값의 해시(`computeAgentTypeHash`)를 함께 적어 두고, 표가 바뀌면 런타임이 다시 베이크합니다.
+내비게이션 테이블 하나입니다. 씬의 내비게이션(`SceneNavigation`)이 처음 쓸 때 읽습니다. 쿠킹본(`.navmesh`)은 베이크에 들어간 값의 해시(`computeAgentTypeHash`)를 함께 적어 두고, 테이블이 바뀌면 런타임이 다시 베이크한다.
 
 원본: [`Source/Engine/Navigation/NavMeshSettings.h`](../../Source/Engine/Navigation/NavMeshSettings.h)
 
@@ -31,7 +31,7 @@ XML 속성(값 하나)과 자식 요소(목록, 구조체)의 이름은 아래 �
 
 ## `NavAgentTypeDef`
 
-에이전트 종류 하나 — 이 몸이 걸을 내비메시를 베이크하는 값입니다.
+에이전트 종류 하나입니다. 이 몸이 걸을 내비메시를 베이크하는 값입니다.
 
 원본: [`Source/Engine/Navigation/NavMeshSettings.h`](../../Source/Engine/Navigation/NavMeshSettings.h)
 
@@ -55,7 +55,7 @@ XML 속성(값 하나)과 자식 요소(목록, 구조체)의 이름은 아래 �
 
 ## `NavAreaDef`
 
-영역 하나 — 이름과 지날 때의 비용 배율입니다. 표의 순서가 영역 번호(0..15)이고 0 번이 보통 땅입니다.
+영역 하나입니다. 이름과 지날 때의 비용 배율을 담습니다. 테이블의 순서가 영역 번호(0..15)이고, 0 번이 보통 땅입니다.
 
 원본: [`Source/Engine/Navigation/NavMeshSettings.h`](../../Source/Engine/Navigation/NavMeshSettings.h)
 

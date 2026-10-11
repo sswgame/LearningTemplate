@@ -24,7 +24,7 @@ SW_SCENE_FRAME_STEP( TickPrePhysics )     // PrePhysics · DuringPhysics 그룹 
 SW_SCENE_FRAME_STEP( ApplyPrePhysics )    // 틱이 남긴 것을 적용 — 구조 변경 → 틱 중 트랜스폼 쓰기 → 틱 뒤 큐 → 병합 → 시작(`StructuralChangeBuffer::drain`)
 SW_SCENE_FRAME_STEP( Navigation )         // 틱이 건 목적지로 군중을 진행해 자리 · 컨트롤러 속도를 쓴다 — 그 속도가 이번 물리에 든다
 SW_SCENE_FRAME_STEP( Animation )          // 포즈 · 스킨 팔레트 · 루트 모션. 물리 **앞**이라 키네마틱 히트박스가 이번 포즈를 쫓는다
-SW_SCENE_FRAME_STEP( FlushPostAnimation ) // 더티 트랜스폼을 월드로 펼친다 — 물리가 이번 프레임의 자리를 잰다
+SW_SCENE_FRAME_STEP( FlushPostAnimation ) // 더티 트랜스폼을 월드로 펼친다 — 물리가 이번 프레임의 자리를 측정한다
 SW_SCENE_FRAME_STEP( Physics )            // 겹침 월드(2D 콜라이더 · 겹침 이벤트) → 강체(고정 스텝 · 보간 · 접촉 이벤트) → 플러시
 SW_SCENE_FRAME_STEP( TickPostPhysics )    // PostPhysics · PostUpdate 그룹 병렬 틱 — 이번 프레임의 바디 자세 · 겹침을 본다
 SW_SCENE_FRAME_STEP( ApplyPostPhysics )   // 위 그룹이 남긴 것을 적용(`StructuralChangeBuffer::drain`)

@@ -1,6 +1,6 @@
 /**
  * @file RigAsset.h
- * @brief 후처리 리그 에셋(`*.rig.json`) — 대상 목록과 **순서 있는** 노드 목록, 그리고 노드 종류 등록부(이름 → 만들기)입니다.
+ * @brief 후처리 리그 에셋(`*.rig.json`)입니다. 대상 목록과 **순서 있는** 노드 목록, 그리고 노드 종류 레지스트리(이름에서 생성 함수로)를 담습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -20,20 +20,20 @@ namespace sw
 
     /**
      * @class RigNodeRegistry
-     * @brief 노드 종류 이름 → 만들기 표입니다. 데이터의 `"type"` 이 여기서 고르고, 모르는 이름은 로드 오류입니다.
-     * @details 엔진 노드(IK · 제약 · 스프링 · 포즈 구동 · 발 디딤)는 처음 쓸 때 등록됩니다. 게임 · 키트는 `registerNode` 로 더합니다.
+     * @brief 노드 종류 이름에서 생성 함수로 가는 레지스트리입니다. 데이터의 `"type"` 이 여기서 고르고, 모르는 이름은 로드 오류입니다.
+     * @details 엔진 노드(IK, 제약, 스프링, 포즈 구동, 발 디딤)는 처음 쓸 때 등록된다. 게임과 키트는 `registerNode` 로 추가한다.
      */
     class SW_API RigNodeRegistry
     {
     public:
-        /** @brief 프로세스 하나의 등록부입니다(엔진 노드가 든 채로). */
+        /** @brief 프로세스 하나의 레지스트리입니다(엔진 노드가 든 채로). */
         static RigNodeRegistry& getInstance();
 
         /** @brief 종류를 등록합니다. 같은 이름이 있으면 바꿉니다. */
         void registerNode( const hashed_string& typeName, RigNodeFactory factory );
         /** @brief 이름의 노드를 만듭니다. 모르는 이름이면 nullptr 입니다. */
         unique_ptr<RigNode> createNode( const hashed_string& typeName ) const;
-        /** @brief 등록된 종류 이름들입니다(진단 · 에디터). */
+        /** @brief 등록된 종류 이름들을 반환합니다(진단과 에디터용). */
         vector<hashed_string> getTypeNames() const;
 
     private:
@@ -47,8 +47,8 @@ namespace sw
 {
     /**
      * @class RigAsset
-     * @brief 리그 하나 — 대상과 노드(원형)입니다. 노드 순서가 결과를 바꾸므로 파일 순서 그대로 평가합니다.
-     * @details 형식(JSON, 모르는 키 · 종류 · 겹친 이름은 오류):
+     * @brief 리그 하나입니다. 대상과 노드(원형)를 담습니다. 노드 순서가 결과를 바꾸므로 파일 순서 그대로 평가합니다.
+     * @details 형식은 JSON 이며, 모르는 키, 종류, 겹친 이름은 오류다.
      *          @code
      *          { "planar": false,
      *            "targets": [ { "name": "Grip", "socket": "Grip", "unit": "Weapon", "space": "handslot.r" },
@@ -57,7 +57,7 @@ namespace sw
      *            "nodes": [ { "type": "TwoBoneIK", "name": "LeftHand", "weight": 1, "weight_curve": "HandIK", "weight_slot": "Grip",
      *                         "root": "upperarm.l", "mid": "lowerarm.l", "end": "hand.l", "target": "Grip", "match_rotation": true } ] }
      *          @endcode
-     *          대상은 `bone` · `socket` · `object` 중 하나, `rotation` 은 도 단위 [피치, 요, 롤] 입니다. 노드 종류별 키는 `README.md` 표에 있습니다.
+     *          대상은 `bone`, `socket`, `object` 중 하나를 쓰고, `rotation` 은 도 단위 [피치, 요, 롤] 이다. 노드 종류별 키는 `README.md` 의 테이블에 있다.
      */
     class SW_API RigAsset
     {
@@ -70,7 +70,7 @@ namespace sw
         RigAsset( const RigAsset& )            = delete;
         RigAsset& operator=( const RigAsset& ) = delete;
         RigAsset( RigAsset&& ) noexcept;
-        /** @brief 캐시가 제자리 다시 읽기에 씁니다 — 쓰는 쪽은 내용 번호가 바뀐 것을 보고 다시 묶습니다. */
+        /** @brief 캐시가 제자리에서 다시 읽을 때 씁니다. 쓰는 쪽은 내용 번호가 바뀐 것을 보고 다시 바인딩합니다. */
         RigAsset& operator=( RigAsset&& ) noexcept;
 
         /** @brief JSON 본문을 읽습니다. 틀리면 false 이고 내용은 비웁니다. */
@@ -82,7 +82,7 @@ namespace sw
 
         const vector<RigTargetDef>&        getTargets() const { return _listTarget; }
         const vector<unique_ptr<RigNode>>& getNodes() const { return _listNode; }
-        /** @brief 내용 번호입니다 — 읽을 때마다 프로세스 고유의 새 번호를 받습니다(핫 리로드 감지). */
+        /** @brief 내용 번호입니다. 읽을 때마다 프로세스 고유의 새 번호를 받습니다(핫 리로드 감지). */
         uint64 getContentID() const { return _contentID; }
         /** @brief 2D(평면) 리그인지입니다. */
         bool isPlanar() const { return _bPlanar == SW_TRUE; }

@@ -1,6 +1,6 @@
 /**
  * @file WaterBodyComponent.h
- * @brief 물 — 호수(사각 수면)와 강(경로를 따르는 띠)에 거스트너 파도 · 깊이 색 · 프레넬 · 물가 거품을 입히고, 수면 높이 · 노멀 · 물속 질의를 줍니다.
+ * @brief 물입니다. 호수(사각 수면)와 강(경로를 따르는 띠)에 거스트너 파도, 깊이 색, 프레넬, 물가 거품을 입히고, 수면 높이, 노멀, 물속 질의를 제공합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -26,12 +26,12 @@ namespace sw
     class PrimitiveRegistry;
     class TerrainHeightfield;
 
-    /** @brief 수면의 모양입니다. */
+    /** @brief 수면의 형태입니다. */
     ENUM()
     enum class WaterBodyShape : uint8
     {
-        Lake = 0, ///< 오너 위치를 중심으로 한 사각 수면(`_size`)
-        River,    ///< `_listRiverPoint` 를 잇는 띠(폭 `_riverWidth`) — 점마다 수면 높이가 다르다
+        Lake = 0, ///< 오너 위치를 중심으로 한 사각 수면이다(`_size`).
+        River,    ///< `_listRiverPoint` 를 이은 띠다(폭 `_riverWidth`). 점마다 수면 높이가 다르다.
     };
 } // namespace sw
 
@@ -42,7 +42,7 @@ namespace sw
     {
         float4  _color{ 0.05f, 0.2f, 0.25f, 1.0f };
         float32 _density{ 0.15f };
-        float32 _depth{ 0.0f }; ///< 수면에서 아래로 잰 깊이(m)
+        float32 _depth{ 0.0f }; ///< 수면에서 아래로 측정한 깊이(m)
     };
 } // namespace sw
 
@@ -51,13 +51,13 @@ namespace sw
     /**
      * @class WaterBodyComponent
      * @brief 수면 메시(격자) 하나를 `MeshInstanceBatch` 로 그리고(반투명 패스), 같은 파도 식으로 CPU 질의에 답합니다.
-     * @details 파도는 월드 (x, z) 의 함수라 수면 메시를 어디에 두든 이어지고, CPU 질의(`computeSurfaceHeight`)와 정점 셰이더가 같은 값을 냅니다
-     *          (`WaterWaveMath` ↔ `gerstner.hlsli`, `RenderPassGPUTest.WaterWaveShaderMatchesCPU`). 파도 시간은 이 컴포넌트가 틱마다 쌓아 머티리얼에 싣고
-     *          질의도 그 시간을 씁니다(`getWaveTime`).
-     *          수면 아래 깊이는 메시를 만들 때 지형(`TerrainComponent`)을 읽어 정점 색 알파에 굽습니다 — 반투명 패스에는 장면 깊이 입력이 없어
-     *          화면 공간에서 두께를 잴 수 없기 때문입니다. 지형이 없으면 깊은 물입니다. 강은 정점 색 rg 에 흐름 방향을 싣습니다(물결이 흐른다).
-     *          강 경로는 지금 점 목록입니다 — 스플라인 컴포넌트가 생기면 그것을 경로로 받도록 바꿉니다.
-     *          스레드: 질의는 읽기만입니다. 메시 다시 만들기(`rebuildSurface`)는 틱 밖에서만 부릅니다.
+     * @details 파도는 월드 (x, z) 의 함수라 수면 메시를 어디에 두든 이어지고, CPU 질의(`computeSurfaceHeight`)와 정점 셰이더가 같은 값을 낸다
+     *          (`WaterWaveMath` 와 `gerstner.hlsli`, `RenderPassGPUTest.WaterWaveShaderMatchesCPU`). 파도 시간은 이 컴포넌트가 틱마다 쌓아 머티리얼에 싣고,
+     *          질의도 그 시간을 쓴다(`getWaveTime`).
+     *          수면 아래 깊이는 메시를 만들 때 지형(`TerrainComponent`)을 읽어 정점 색 알파에 베이크한다. 반투명 패스에는 장면 깊이 입력이 없어
+     *          화면 공간에서 두께를 측정할 수 없기 때문이다. 지형이 없으면 깊은 물이다. 강은 정점 색 rg 에 흐름 방향을 싣는다(물결이 흐른다).
+     *          강 경로는 현재 점 목록이다. 스플라인 컴포넌트가 생기면 그것을 경로로 받도록 바꾼다.
+     *          스레드: 질의는 읽기만 한다. 메시 다시 만들기(`rebuildSurface`)는 틱 밖에서만 호출한다.
      */
     REFLECT( Category = "Environment", DisplayName = "Water Body", Tooltip = "Lake or river surface with Gerstner waves and surface queries" )
     class SW_API WaterBodyComponent : public SceneComponent
@@ -74,7 +74,7 @@ namespace sw
         /** @brief 로드 순서상 지형이 뒤에 서서 깊이를 못 구웠으면 틱 뒤에 수면을 다시 만듭니다. */
         void onBeginPlay() override;
         void onPropertyChanged( hashed_string propertyName ) override;
-        /** @brief 소유 오브젝트를 켜고 끄면 수면 배치를 더티로 — 빌더가 다시 본다. */
+        /** @brief 소유 오브젝트를 켜고 끄면 수면 배치를 더티로 표시합니다. 빌더가 다시 확인합니다. */
         void onOwnerActiveInHierarchyChanged() override;
         void onTick( float32 deltaTime ) override;
         /** @brief 오너가 움직였다고 표시만 합니다(여러 스레드에서 불린다). 다음 틱이 틱 뒤로 다시 만들기를 미룹니다. */
@@ -84,28 +84,28 @@ namespace sw
         void rebuildSurface();
 
         /**
-         * @brief 월드 (x, z) 의 수면 높이(월드 y)입니다. 이 물이 덮지 않는 자리면 false 입니다.
-         * @param time 파도 시간입니다. 음수면 지금 시간(`getWaveTime`)입니다.
+         * @brief 월드 (x, z) 의 수면 높이(월드 y)를 구합니다. 이 물이 덮지 않는 위치면 false 를 반환합니다.
+         * @param time 파도 시간입니다. 음수면 현재 시간(`getWaveTime`)을 씁니다.
          */
         [[nodiscard]] bool computeSurfaceHeight( float32 worldX, float32 worldZ, float32& outHeight, float32 time = -1.0f ) const;
-        /** @brief 월드 (x, z) 의 수면 노멀입니다. 덮지 않는 자리면 false 입니다. */
+        /** @brief 월드 (x, z) 의 수면 노멀을 구합니다. 덮지 않는 위치면 false 를 반환합니다. */
         [[nodiscard]] bool computeSurfaceNormal( float32 worldX, float32 worldZ, float3& outNormal, float32 time = -1.0f ) const;
-        /** @brief 월드 점이 이 물의 수면 아래면 true 입니다(부력 · 물속 판정). @p outDepth 는 수면에서 아래로 잰 깊이입니다. */
+        /** @brief 월드 점이 이 물의 수면 아래면 true 를 반환합니다(부력과 물속 판정). @p outDepth 는 수면에서 아래로 측정한 깊이입니다. */
         bool isUnderwater( const float3& worldPosition, float32& outDepth ) const;
-        /** @brief 이 물이 덮는 자리(파도 없는 기준면 기준)면 true 입니다. */
+        /** @brief 이 물이 덮는 위치(파도 없는 기준면 기준)면 true 를 반환합니다. */
         bool coversPosition( float32 worldX, float32 worldZ ) const;
-        /** @brief 파도 값 넷(방향, 파장, 진폭, 가파름)입니다 — 셰이더에 실리는 그대로입니다. */
+        /** @brief 파도 값 넷(방향, 파장, 진폭, 가파름)을 반환합니다. 셰이더에 싣는 값과 같습니다. */
         void getWaveVectors( float4 ( &outArrWave )[shaderslot::kGerstnerWaveCount] ) const;
         /** @brief 지금 파도 시간(초)입니다. */
         float32 getWaveTime() const { return _waveTime; }
-        /** @brief 파도 시간을 정합니다(테스트 · 시퀀서). 다음 틱부터 그 값에서 쌓입니다. */
+        /** @brief 파도 시간을 정합니다(테스트와 시퀀서용). 다음 틱부터 그 값에서 쌓입니다. */
         void setWaveTime( float32 time );
         /** @brief 수면 메시 정점 수입니다(테스트). */
         uint32 getSurfaceVertexCount() const { return _surfaceVertexCount; }
 
         /**
-         * @brief @p manager 의 물 가운데 @p viewPosition 을 물속에 둔 첫 물의 안개입니다. 물속 안개를 켠 물만 봅니다. 없으면 false 입니다.
-         * @details 하늘 · 시간 · 높이 안개를 맡을 다음 일이 이 값을 읽어 안개 패스에 겁니다(지금 렌더러에는 안개 패스가 없습니다).
+         * @brief @p manager 의 물 가운데 @p viewPosition 을 물속에 둔 첫 물의 안개를 구합니다. 물속 안개를 켠 물만 봅니다. 없으면 false 를 반환합니다.
+         * @details 하늘, 시간, 높이 안개를 맡을 다음 작업이 이 값을 읽어 안개 패스에 적용한다(현재 렌더러에는 안개 패스가 없다).
          */
         [[nodiscard]] static bool findUnderwaterFog( const GameObjectManager& manager, const float3& viewPosition, WaterUnderwaterFog& outFog );
         /** @brief @p manager 의 물 가운데 월드 (x, z) 를 덮는 첫 물입니다. 빌린 포인터입니다. */
@@ -118,7 +118,7 @@ namespace sw
         void setMaterialPath( string_view path ) { _materialPath = path; }
 
     private:
-        /** @brief 강에서 (x, z) 에 가장 가까운 경로 위 점의 기준 높이 · 경로 거리를 찾습니다. 띠 밖이면 false 입니다. */
+        /** @brief 강에서 (x, z) 에 가장 가까운 경로 위 점의 기준 높이와 경로 거리를 찾습니다. 띠 밖이면 false 를 반환합니다. */
         bool findRiverBase( float32 worldX, float32 worldZ, float32& outBaseHeight ) const;
         /** @brief (x, z) 의 파도 없는 기준면 높이입니다. 덮지 않으면 false 입니다. */
         bool findBaseHeight( float32 worldX, float32 worldZ, float32& outBaseHeight ) const;
@@ -126,7 +126,7 @@ namespace sw
         void makeLakeVertices( const TerrainHeightfield* pTerrain, vector<RHIVertex>& outListVertex, float32& outBoundsRadius ) const;
         /** @brief 강 띠 정점을 만듭니다. */
         void makeRiverVertices( const TerrainHeightfield* pTerrain, vector<RHIVertex>& outListVertex, float32& outBoundsRadius ) const;
-        /** @brief 머티리얼 인스턴스에 파도 · 색 · 시간을 싣습니다. */
+        /** @brief 머티리얼 인스턴스에 파도, 색, 시간을 싣습니다. */
         void writeMaterialValues();
 
     private:
@@ -165,8 +165,8 @@ namespace sw
 
         EnvironmentMaterial           _material;
         unique_ptr<MeshInstanceBatch> _batch;
-        PrimitiveRegistry*            _pPrimitiveRegistry; ///< 등록된 매니저의 등록부(구조 링크라 생포인터)
-        float3                        _surfaceOrigin;      ///< 메시를 만들 때의 오너 월드 위치
+        PrimitiveRegistry*            _pPrimitiveRegistry; ///< 등록된 매니저의 레지스트리(구조 링크라 생포인터)
+        float3                        _surfaceOrigin;      ///< 메시를 만들 때의 오너 월드 위치다.
         float32                       _waveTime;
         uint32                        _surfaceVertexCount;
         atomic<bool>                  _bOriginDirty;    ///< 오너가 움직여 수면 원점이 낡았다

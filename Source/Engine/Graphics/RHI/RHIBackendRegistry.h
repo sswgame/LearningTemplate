@@ -1,8 +1,8 @@
 /**
  * @file RHIBackendRegistry.h
- * @brief 플러그형 RHI 백엔드 팩토리 등록부입니다(Shipping 은 백엔드 하나를 정적 링크, Dev 는 RHI_* MODULE DLL 을 로드).
+ * @brief 플러그형 RHI 백엔드 팩토리 레지스트리입니다(Shipping 은 백엔드 하나를 정적 링크, Dev 는 RHI_* MODULE DLL 을 로드).
  *
- * @note 수명: create() 로 만든 디바이스는 unloadModules() · 등록부 해체 전에 파괴해야 합니다.
+ * @note 수명: create() 로 만든 디바이스는 unloadModules() · 레지스트리 해체 전에 파괴해야 합니다.
  *       RHI::shutdown() 이 활성 디바이스를 놓은 뒤 unloadModules 를 부릅니다.
  */
 #pragma once
@@ -75,7 +75,7 @@ namespace sw
 
     private:
     public:
-        /** @brief 빈 등록부로 만듭니다. */
+        /** @brief 빈 레지스트리로 만듭니다. */
         RHIBackendRegistry();
         /** @brief 로드된 모듈을 정리합니다. */
         ~RHIBackendRegistry();

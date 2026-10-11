@@ -370,7 +370,7 @@ namespace
             }
             return true;
         }
-        /** @brief 알림 표 — 처리기 이름 · 인자를 엔진 기본 처리기 등록부에 대조한다. */
+        /** @brief 알림 표 — 처리기 이름 · 인자를 엔진 기본 처리기 레지스트리에 대조한다. */
         [[nodiscard]] static bool loadNotifyTable( const sw::string& resourceID )
         {
             sw::AnimNotifyTable table;

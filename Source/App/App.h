@@ -50,7 +50,7 @@ namespace sw
         void run();
         /** @brief `initialize` 가 false 를 돌려준 뒤의 프로세스 종료 코드입니다. 이 기계 · 빌드가 그 RHI 백엔드를 못 돌리면 `kRHIUnusableHereExitCode`, 그 밖은 -1 입니다. */
         int32 getInitFailureExitCode() const;
-        /** @brief 루프가 끝난 뒤 돌려줄 종료 코드입니다(`EngineLoop::requestQuit` — 요청이 없었으면 0). */
+        /** @brief 루프가 끝난 뒤 돌려줄 종료 코드입니다(`EngineLoop::requestQuit`. 요청이 없었으면 0). */
         int32 getExitCode() const;
 
     private:
@@ -60,16 +60,16 @@ namespace sw
         /** @brief 핫 리로드 매니저입니다. Shipping 에서는 항상 nullptr 이고, 받는 쪽이 그 경우를 처리합니다. */
         LiveReloadManager* getLiveReloadManager() const;
         /**
-         * @brief 기동 단계 `ModuleTypes` 의 호스트 로더입니다 — 타입 공급자 모듈(GameFramework · 키트 · SWGame)의 이미지를 올려 그 타입을 등록합니다.
-         * @details 헤드리스 작업(씬 쿠킹)도 이 단계를 지나므로 쿠킹이 게임 · 키트 컴포넌트를 제 타입으로 쿠킹합니다. 인스턴스는 `startModules` 가 만듭니다.
+         * @brief 기동 단계 `ModuleTypes` 의 호스트 로더입니다. 타입 공급자 모듈(GameFramework, 키트, SWGame)의 이미지를 로드해 그 타입을 등록합니다.
+         * @details 헤드리스 작업(씬 쿠킹)도 이 단계를 지나므로 쿠킹이 게임과 키트 컴포넌트를 제 타입으로 쿠킹합니다. 인스턴스는 `startModules` 가 만듭니다.
          */
         [[nodiscard]] bool loadModuleImages();
-        /** @brief EditorModuleHost 를 세워 게임 · 에디터 인스턴스를 만듭니다(모듈 이미지는 `loadModuleImages` 가 이미 올렸다). */
+        /** @brief EditorModuleHost 를 만들어 게임과 에디터 인스턴스를 만듭니다(모듈 이미지는 `loadModuleImages` 가 이미 로드했습니다). */
         bool startModules();
         /**
-         * @brief 모듈이 모두 올라온 뒤에도 가져간 곳이 없는 `-gv_*` 인자를 한 번 경고합니다.
-         * @details 파서는 모르는 `gv_` 키를 버리지 않고 보류합니다(모듈이 선언하는 변수는 파싱 시점에 아직 없습니다). 그래서 오타가
-         *          바로 드러나지 않으므로 여기서 대신 알립니다.
+         * @brief 모듈이 모두 로드된 뒤에도 가져간 곳이 없는 `-gv_*` 인자를 한 번 경고합니다.
+         * @details 파서는 모르는 `gv_` 키를 버리지 않고 보류한다(모듈이 선언하는 변수는 파싱 시점에 아직 없다). 그래서 오타가
+         *          바로 드러나지 않으므로 여기서 대신 알린다.
          */
         void warnUnknownGlobalOverrides() const;
 
@@ -80,16 +80,16 @@ namespace sw
         /** @brief 셸 액션을 갱신하고 리로드 단축키를 처리합니다. Shipping 에서는 아무것도 하지 않습니다. */
         void pollReloadHotkeys( float32 deltaTime );
 
-        /** @brief 개발 콘솔 오버레이를 만들고 시작 명령(`-gv_devConsoleExec`)을 걸어 둡니다. Shipping 에서는 아무것도 하지 않습니다. */
+        /** @brief 개발 콘솔 오버레이를 만들고 시작 명령(`-gv_devConsoleExec`)을 등록해 둡니다. Shipping 에서는 아무것도 하지 않습니다. */
         void startDevConsole();
-        /** @brief 시작 씬이 열렸으면 걸어 둔 시작 명령을 한 번 돌립니다. 프레임마다 부릅니다. */
+        /** @brief 시작 씬이 열렸으면 등록해 둔 시작 명령을 한 번 실행합니다. 프레임마다 부릅니다. */
         void runPendingDevConsoleExec();
         /** @brief 셸 InputMap 의 이번 프레임 액션으로 개발 콘솔을 갱신합니다(에디터가 없을 때). `pollReloadHotkeys` 뒤에 부릅니다. Shipping 에서는 아무것도 하지 않습니다. */
         void updateDevConsole();
         /**
-         * @brief `-gv_standardInputCommands=1` 로 띄웠으면 표준 입력에서 온 줄을 처리합니다 — `quit` · `stop` 은 종료, 나머지는 개발 콘솔 명령입니다.
-         * @return 종료를 요청받았으면 true. Shipping 에서는 늘 false 입니다.
-         * @details 부모 프로세스(에디터의 멀티 프로세스 재생)가 클라이언트를 정상 종료하는 통로다 — 창 닫기를 보낼 수 없는 부모도, 콘솔이 없는 부모도 쓴다.
+         * @brief `-gv_standardInputCommands=1` 로 실행했으면 표준 입력에서 온 줄을 처리합니다. `quit` 과 `stop` 은 종료이고, 나머지는 개발 콘솔 명령입니다.
+         * @return 종료를 요청받았으면 true 를 반환합니다. Shipping 에서는 항상 false 입니다.
+         * @details 부모 프로세스(에디터의 멀티 프로세스 재생)가 클라이언트를 정상 종료하는 경로다. 창 닫기를 보낼 수 없는 부모나 콘솔이 없는 부모도 쓴다.
          */
         bool pollStandardInputCommands();
 
@@ -122,11 +122,11 @@ namespace sw
          *          이 콘솔로 돌립니다(에디터가 있어도).
          */
         unique_ptr<DevConsoleController> _devConsoleController;
-        unique_ptr<StandardInputReader>  _standardInput;            ///< `-gv_standardInputCommands=1` 일 때만 — 부모 프로세스의 명령 통로
+        unique_ptr<StandardInputReader>  _standardInput;            ///< `-gv_standardInputCommands=1` 일 때만 있다. 부모 프로세스의 명령 채널이다.
         vector<string>                   _listStandardInputCommand; ///< 표준 입력에서 꺼낸 줄(프레임마다 재사용)
 #endif
         unique_ptr<EditorModuleHost> _moduleHost;
-        /** @brief 모듈 매니페스트(`Bin/Modules`)와 그 해석 — 무엇을 어떤 순서로 올릴지(Dev). */
+        /** @brief 모듈 매니페스트(`Bin/Modules`)와 그 해석입니다. 무엇을 어떤 순서로 로드할지 정합니다(Dev). */
         ModuleCatalog       _moduleCatalog;
         ModuleResolution    _moduleResolution;
         unique_ptr<IWindow> _window;
@@ -143,7 +143,7 @@ namespace sw
 
         uint8                  _bEnableEditor          : 1;
         [[maybe_unused]] uint8 _bDevConsoleExecPending : 1; ///< `-gv_devConsoleExec` 를 아직 돌리지 않았다(개발 콘솔은 Shipping 에 없어 거기서는 읽지 않는다)
-        uint8                  _bQuitAfterInitialize   : 1; ///< 한 번 하고 끝나는 작업(`--render-portraits`)을 마쳤다 — 루프에 들어가지 않는다
+        uint8                  _bQuitAfterInitialize   : 1; ///< 한 번 하고 끝나는 작업(`--render-portraits`)을 마쳤다. 루프에 들어가지 않는다.
         [[maybe_unused]] uint8 _reserved               : 5;
     };
 } // namespace sw

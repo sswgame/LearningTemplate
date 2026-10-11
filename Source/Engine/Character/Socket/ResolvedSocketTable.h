@@ -1,12 +1,12 @@
 /**
  * @file ResolvedSocketTable.h
- * @brief 해석된 외형의 소켓 표 — 몸 소켓과 장착 부품 소켓을 한 이름 공간(부품 것은 슬롯 이름이 앞에: `MainHand.Muzzle`)으로 내보냅니다.
- * @details 외형을 해석할 때마다(`beginResolve` → 유닛마다 `addUnit` → `endResolve`) 다시 짓지만 **이름 → 번호(`SocketID`)는 유지**합니다. 무기를
- *          바꿔도 `MainHand.Muzzle` 은 같은 번호이고 새 무기의 총구를 가리키므로, 붙어 있던 이펙트 · 사운드 · 게임 코드가 끊기지 않습니다. 이번 해석에
- *          없는 이름은 번호를 지우지 않고 꺼 둡니다(`isSocketActive`). 후보 목록(`SocketDef::_listFallback`)은 `endResolve` 가 풉니다.
+ * @brief 해석된 외형의 소켓 테이블입니다. 몸 소켓과 장착 부품 소켓을 한 이름 공간으로 내보냅니다(부품 소켓은 슬롯 이름이 앞에 붙습니다. 예: `MainHand.Muzzle`).
+ * @details 외형을 해석할 때마다(`beginResolve`, 유닛마다 `addUnit`, `endResolve`) 다시 만들지만 **이름에서 번호(`SocketID`)로 가는 매핑은 유지**한다. 무기를
+ *          바꿔도 `MainHand.Muzzle` 은 같은 번호이고 새 무기의 총구를 가리키므로, 붙어 있던 이펙트, 사운드, 게임 코드가 끊기지 않는다. 이번 해석에
+ *          없는 이름은 번호를 지우지 않고 꺼 둔다(`isSocketActive`). 후보 목록(`SocketDef::_listFallback`)은 `endResolve` 가 해석한다.
  *
- *          변환은 유닛 공간입니다 — 유닛(애니메이션 단위 하나 = GameObject 하나)의 본 배열로 계산하고, 월드가 필요하면 유닛의 월드 행렬을 곱합니다
- *          (`getSocketTransform` 이 `SocketPoseView` 로 한 번에). 본 기준 소켓은 본 비율 보정이 옮긴 본을 그대로 따르고, 표면 기준 소켓
+ *          변환은 유닛 공간이다. 유닛(애니메이션 단위 하나 = GameObject 하나)의 본 배열로 계산하고, 월드가 필요하면 유닛의 월드 행렬을 곱한다
+ *          (`getSocketTransform` 이 `SocketPoseView` 로 한 번에 처리한다). 본 기준 소켓은 본 비율 보정이 옮긴 본을 그대로 따르고, 표면 기준 소켓
  *          (`SocketAnchor::Surface`)은 `applyShapedGeometry` 가 계산한 체형 보정을 더합니다.
  */
 #pragma once
@@ -27,14 +27,14 @@ namespace sw
     struct AppearanceGeometry;
     struct CharacterBoneArray;
 
-    /** @brief 해석된 소켓 표의 번호입니다. 같은 표에서 같은 이름은 해석을 다시 해도 같은 번호입니다. */
+    /** @brief 해석된 소켓 테이블의 번호입니다. 같은 테이블에서 같은 이름은 해석을 다시 해도 같은 번호입니다. */
     using SocketID = uint32;
     /** @brief 없는 소켓 번호입니다. */
     inline constexpr SocketID kInvalidSocketID = 0xFFFFFFFFu;
 
     /**
-     * @brief 유닛마다의 본 배열 · 월드 행렬 묶음입니다(유닛 번호로 찾음). 부르는 동안만 쓰는 뷰입니다.
-     * @details 2D 유닛도 같습니다 — 본이 Z 축으로만 돌 뿐입니다.
+     * @brief 유닛마다의 본 배열과 월드 행렬 모음입니다(유닛 번호로 찾습니다). 호출하는 동안만 쓰는 뷰입니다.
+     * @details 2D 유닛도 같다. 본이 Z 축으로만 돌 뿐이다.
      */
     struct SocketPoseView
     {
@@ -62,12 +62,12 @@ namespace sw
          */
         [[nodiscard]] bool addUnit( const hashed_string& prefix, uint32 unitIndex, const SocketSet& sockets, const CharacterBoneArray& bindBones,
                                     const AppearanceGeometry* pBindGeometry, string* pOutError );
-        /** @brief 후보 목록을 풉니다. 이것을 부른 뒤부터 이번 해석의 표가 보입니다. */
+        /** @brief 후보 목록을 해석합니다. 이 함수를 호출한 뒤부터 이번 해석의 테이블이 보입니다. */
         void endResolve();
 
         /**
-         * @brief 유닛의 체형을 건 형상으로 표면 기준 소켓의 보정을 다시 계산합니다(바인드 형상과 같은 위상이어야 합니다).
-         * @details 체형 모프로 배가 나오면 허리 소켓이 앞으로 갑니다. 본 기준 소켓은 본 비율 보정이 옮긴 본을 따르므로 여기서 할 일이 없습니다.
+         * @brief 유닛의 체형을 적용한 형상으로 표면 기준 소켓의 보정을 다시 계산합니다(바인드 형상과 같은 위상이어야 합니다).
+         * @details 체형 모프로 배가 나오면 허리 소켓이 앞으로 간다. 본 기준 소켓은 본 비율 보정이 옮긴 본을 따르므로 여기서 할 일이 없다.
          */
         void applyShapedGeometry( uint32 unitIndex, const AppearanceGeometry& shapedGeometry );
 
@@ -93,7 +93,7 @@ namespace sw
          * @param unitBones `getSocketUnit( resolveTarget( socketID ) )` 유닛의 지금 본 배열입니다.
          */
         bool computeUnitTransform( SocketID socketID, const CharacterBoneArray& unitBones, float4x4& outUnitTransform ) const;
-        /** @brief 이름의 소켓 월드 변환입니다(후보를 따라가고, 그 유닛의 본 · 월드 행렬을 @p pose 에서 찾음). */
+        /** @brief 이름의 소켓 월드 변환을 반환합니다(후보를 따라가고, 그 유닛의 본과 월드 행렬을 @p pose 에서 찾습니다). */
         bool getSocketTransform( const hashed_string& fullName, const SocketPoseView& pose, float4x4& outWorldTransform ) const;
         /** @brief 번호의 소켓 월드 변환입니다. */
         bool getSocketTransform( SocketID socketID, const SocketPoseView& pose, float4x4& outWorldTransform ) const;

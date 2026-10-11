@@ -60,7 +60,7 @@ _kLinkOnlyDocument: frozenset[str] = frozenset({"docs/06_Backlog.md"})
 _kLinkOnlyFolder: tuple[str, ...] = ("docs/plans/",)
 
 #: 없어도 맞는 설정 파일 — 설정 목록(`ConfigCatalog`)이 `bOptional` 로 적은 줄(기본값과 다른 값이 있을 때만 만드는 파일 등).
-#: 목록이 정본이라 여기에 따로 적지 않는다.
+#: 목록이 원본이라 여기에 따로 적지 않는다.
 _kOptionalConfigPath: frozenset[str] = frozenset(
     entry.pathPattern for entry in kListConfigFile if entry.bOptional and "*" not in entry.pathPattern
 )

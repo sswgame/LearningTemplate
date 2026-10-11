@@ -1,6 +1,6 @@
 /**
  * @file JRPGEncounter.h
- * @brief 걸음 수 인카운터 — 걸음마다 지역 확률로 조우를 굴리고, 조우 뒤 유예 걸음 동안은 굴리지 않으며, 무리는 가중치로 고릅니다(드래곤 퀘스트).
+ * @brief 걸음 수 인카운터입니다. 걸음마다 지역 확률로 조우를 굴리고, 조우한 뒤 유예 걸음 동안은 굴리지 않으며, 무리는 가중치로 고릅니다(드래곤 퀘스트).
  */
 #pragma once
 #include "Core/Common/FourCcUtil.h"
@@ -18,7 +18,7 @@ namespace sw
 
     /**
      * @class JRPGEncounterWalker
-     * @brief 걸음을 세어 조우를 정합니다. 씨앗이 같고 걸음이 같으면 같은 걸음에서 같은 무리를 만납니다.
+     * @brief 걸음을 세어 조우를 정합니다. 시드와 걸음이 같으면 같은 걸음에서 같은 무리를 만납니다.
      */
     class SW_GF_API JRPGEncounterWalker
     {
@@ -30,13 +30,13 @@ namespace sw
         JRPGEncounterWalker();
 
         void initialize( const JRPGCatalog* pCatalog, uint32 seed );
-        /** @brief @p areaID 에서 한 걸음 걷습니다. 조우하면 그 무리, 아니면 nullptr 입니다(모르는 지역 · 무리 없는 지역도 nullptr). */
+        /** @brief @p areaID 에서 한 걸음 걷습니다. 조우하면 그 무리를 반환하고, 아니면 nullptr 을 반환합니다(모르는 지역이나 무리가 없는 지역도 nullptr 입니다). */
         const JRPGEncounterGroup* step( const hashed_string& areaID );
-        /** @brief 유예를 처음부터 다시 셉니다(마을에서 나왔을 때 · 성수). */
+        /** @brief 유예를 처음부터 다시 셉니다(마을에서 나왔을 때나 성수를 썼을 때 호출합니다). */
         void restartGrace() { _stepsSinceEncounter = 0; }
-        /** @brief 난수 · 조우 뒤 걸음 · 총 걸음을 씁니다. 카탈로그는 싣지 않는다. */
+        /** @brief 난수, 조우 뒤 걸음, 총 걸음을 씁니다. 카탈로그는 싣지 않습니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
         int32 getStepsSinceEncounter() const { return _stepsSinceEncounter; }

@@ -1,8 +1,8 @@
 /**
  * @file AudioEffect.h
- * @brief 버스 이펙트의 공통 틀 — 이름 붙인 파라미터 · 처리 함수와, 데이터의 이름으로 이펙트를 만드는 등록부입니다.
- * @details 이펙트 종류는 코드의 표(`AudioEffectRegistry`) 한 줄씩이고, 데이터(`*.audiomixer.xml` 의 `AudioEffectDesc`)는 종류 이름과 파라미터 이름으로만
- *          고릅니다. 모르는 종류 · 모르는 파라미터는 읽기 오류입니다. 파라미터는 스냅샷이 이름으로 바꿉니다(`AudioSnapshotDesc`).
+ * @brief 버스 이펙트의 공통 틀입니다. 이름을 붙인 파라미터와 처리 함수, 그리고 데이터의 이름으로 이펙트를 만드는 레지스트리를 담습니다.
+ * @details 이펙트 종류는 코드의 테이블(`AudioEffectRegistry`)에 항목 하나씩 있고, 데이터(`*.audiomixer.xml` 의 `AudioEffectDesc`)는 종류 이름과 파라미터 이름으로만
+ *          고른다. 모르는 종류나 모르는 파라미터는 읽기 오류다. 파라미터는 스냅샷이 이름으로 바꾼다(`AudioSnapshotDesc`).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -16,7 +16,7 @@ namespace sw
     /** @brief 이펙트 파라미터 하나의 서술입니다. */
     struct AudioEffectParameterInfo
     {
-        const utf8* _pName{ nullptr }; ///< 데이터 · 스냅샷이 쓰는 이름
+        const utf8* _pName{ nullptr }; ///< 데이터와 스냅샷이 쓰는 이름이다.
         float32     _defaultValue{ 0.0f };
         float32     _minValue{ 0.0f };
         float32     _maxValue{ 1.0f };
@@ -28,7 +28,7 @@ namespace sw
 {
     class IAudioEffect;
 
-    /** @brief 이펙트 종류 하나입니다(등록부의 한 줄). */
+    /** @brief 이펙트 종류 하나입니다(레지스트리의 한 줄). */
     struct AudioEffectTypeInfo
     {
         const utf8*                     _pName{ nullptr };
@@ -56,7 +56,7 @@ namespace sw
 
         /** @brief @p frameCount 프레임(스테레오 교차)을 제자리에서 처리합니다. */
         virtual void process( float32* pInterleaved, uint32 frameCount ) = 0;
-        /** @brief 지연선 · 필터 상태를 비웁니다. */
+        /** @brief 지연선과 필터 상태를 비웁니다. */
         virtual void reset() = 0;
 
         /** @brief 종류입니다. */
@@ -82,7 +82,7 @@ namespace sw
 {
     /**
      * @struct AudioEffectRegistry
-     * @brief 이름 → 이펙트 종류 표입니다. LowPass · HighPass · BandPass · Peaking · LowShelf · HighShelf · Compressor · Limiter · Reverb · Delay.
+     * @brief 이름에서 이펙트 종류로 가는 테이블입니다. LowPass, HighPass, BandPass, Peaking, LowShelf, HighShelf, Compressor, Limiter, Reverb, Delay 를 지원합니다.
      */
     struct SW_API AudioEffectRegistry
     {

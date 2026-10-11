@@ -34,7 +34,7 @@ namespace sw
         string _storeName{};
         string _payload{};
         uint64 _accountID{ 0 };
-        uint64 _ticket{ 0 }; ///< 등록부가 매기는 번호 — 결과가 같은 번호로 돌아온다
+        uint64 _ticket{ 0 }; ///< 레지스트리가 매기는 번호 — 결과가 같은 번호로 돌아온다
     };
 } // namespace sw
 

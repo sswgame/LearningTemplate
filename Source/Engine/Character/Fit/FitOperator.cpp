@@ -37,8 +37,8 @@ namespace sw
             }
 
             /**
-             * @brief 제약된 정점(양 > 0)의 양을 이웃으로 감쇠시켜 퍼뜨린다 — 가장 가까운 제약 정점의 양 × 감쇠(본 축을 따른 거리 / 폭).
-             * @details 축이 없는 정점(스킨 없음)은 그냥 거리로 잰다. 부드럽게 오므라들거나 부풀게 하는 것이 목적이다.
+             * @brief 제약된 정점(양 > 0)의 양을 이웃으로 감쇠시켜 퍼뜨립니다. 가장 가까운 제약 정점의 양 × 감쇠(본 축을 따른 거리 / 폭)를 씁니다.
+             * @details 축이 없는 정점(스킨 없음)은 그냥 거리로 측정한다. 부드럽게 오므라들거나 부풀게 하는 것이 목적이다.
              */
             static void spreadWithFalloff( const FitPartState& part, float32 falloffWidth, vector<float32>& inoutListAmount )
             {
@@ -78,7 +78,7 @@ namespace sw
             }
         };
 
-        /** @brief 조임 — 단단한 바깥 겹의 안면(또는 손으로 적은 고리) 밖에 있는 부드러운 안쪽 정점을 안으로 당긴다. 본 축을 따라 감쇠. */
+        /** @brief 조임입니다. 단단한 바깥 겹의 안면(또는 손으로 적은 고리) 밖에 있는 부드러운 안쪽 정점을 안으로 당깁니다. 본 축을 따라 감쇠합니다. */
         class FitShrinkOperator final : public IFitOperator
         {
         public:
@@ -134,7 +134,7 @@ namespace sw
                 const float32 halfWidth    = ring._width * 0.5f;
                 for ( uint32 vertex = 0; vertex < inner._listBindPosition.size(); ++vertex )
                 {
-                    // 바인드 자리에서 목표를 정하고 지금 자리와의 차를 낸다 — 야코비 반복이 몇 번이든 같은 곳에 멈춘다.
+                    // 바인드 위치에서 목표를 정하고 현재 위치와의 차를 낸다. 야코비 반복이 몇 번이든 같은 곳에 멈춘다.
                     const float3& bindPosition = inner._listBindPosition[vertex];
                     const float3  relative     = bindPosition - center;
                     const float32 axial        = relative.dot( axis );
@@ -162,7 +162,7 @@ namespace sw
                 vector<GeometryRayHit> listHit;
                 for ( uint32 vertex = 0; vertex < inner._listPosition.size(); ++vertex )
                 {
-                    // 안쪽(법선 반대)으로 쏴서 바깥 부품을 지나는 가장 깊은 면이 바깥 겹의 안면이다 — 그보다 안으로 당긴다.
+                    // 안쪽(법선 반대)으로 쏴서 바깥 부품을 지나는 가장 깊은 면이 바깥 겹의 안면이다. 그보다 안으로 당긴다.
                     const float3 inward = -inner._listNormal[vertex];
                     surface.collectHits( inner._listPosition[vertex], inward, search, listHit, static_cast<uint16>( pair._outerPart ) );
                     if ( listHit.empty() )
@@ -178,7 +178,7 @@ namespace sw
             }
         };
 
-        /** @brief 밀어내기 — 단단한 안쪽 겹 위의 부드러운 바깥 겹(갑옷 위 망토)을 바깥으로 민다. */
+        /** @brief 밀어내기입니다. 단단한 안쪽 겹 위의 부드러운 바깥 겹(갑옷 위 망토)을 바깥으로 밉니다. */
         class FitPushOperator final : public IFitOperator
         {
         public:
@@ -231,7 +231,7 @@ namespace sw
             }
         };
 
-        /** @brief 잘라 내기 — 안쪽 정점에서 법선 방향으로 쏜 광선이 판정 거리 안에서 바깥 부품에 맞으면 덮임, 세 정점이 덮이면 삼각형을 표시한다. */
+        /** @brief 잘라 내기입니다. 안쪽 정점에서 법선 방향으로 쏜 광선이 판정 거리 안에서 바깥 부품에 맞으면 덮임으로 보고, 세 정점이 덮이면 삼각형을 표시합니다. */
         class FitCutOperator final : public IFitOperator
         {
         public:
@@ -272,7 +272,7 @@ namespace sw
             }
         };
 
-        /** @brief 보고 — 두 부품이 서로 파고든 정점을 센다(가장 가까운 면의 뒤에 있으면 안). 고치지 않는다. */
+        /** @brief 보고입니다. 두 부품이 서로 파고든 정점을 셉니다(가장 가까운 면의 뒤에 있으면 안쪽입니다). 고치지 않습니다. */
         class FitReportOperator final : public IFitOperator
         {
         public:

@@ -38,7 +38,7 @@ namespace
         vector<MMOEntity>     _listEntity{};
         vector<uint32>        _listRemoved{};
         MMOReplicatorSettings _settings{};
-        uint8                 _bStampTick{ SW_FALSE }; ///< 상태 앞 4 바이트에 서버 틱(틱마다 바뀐다 — 받는 쪽이 되돌아감을 잰다)
+        uint8                 _bStampTick{ SW_FALSE }; ///< 상태 앞 4 바이트에 서버 틱(틱마다 바뀐다 — 받는 쪽이 되돌아감을 측정한다)
     };
 
     /** @brief 서버 — 연결마다 관찰자 엔티티(`kMMOObserverID`)를 중심으로 관심 영역을 돌린다. 연결이 닫히면 라우터가 관찰자를 지운다. */
@@ -89,7 +89,7 @@ namespace
         MMOTable*     _pTable;
     };
 
-    /** @brief 클라이언트 — 보이는 엔티티와, 틱 도장이 있는 상태가 뒤로 간 횟수(옛 갱신이 새 것을 덮음)를 센다. 받은 갱신 틱은 틱마다 확인한다. */
+    /** @brief 클라이언트 — 보이는 엔티티와, 틱 스탬프가 있는 상태가 뒤로 간 횟수(옛 갱신이 새 것을 덮음)를 센다. 받은 갱신 틱은 틱마다 확인한다. */
     class MMOClientSession final : public INetSimSession
     {
     public:
@@ -540,7 +540,7 @@ SW_TEST_CASE( NetMMOTest, UpdateBudgetFollowsTheConnectionCap )
 /**
  * @brief [NetMMOTest] 잃은 갱신의 엔티티는 확인을 보고 곧 다시 간다 — 서버가 보낸 순간 "안 바뀜" 으로 보고 한 차례를 통째로 기다리지 않는다
  * @details 먼 엔티티(낮은 우선도) 하나가 바뀐 직후 내리막을 30 틱 모두 잃는다. 그 사이 서버는 그 갱신을 보낸다(바뀜 가속). 회선이 돌아온 뒤
- *          클라이언트가 새 상태를 볼 때까지의 틱을 잰다. 가까운 여덟이 틱마다 바뀌어 예산(200 B)을 채운다.
+ *          클라이언트가 새 상태를 볼 때까지의 틱을 측정한다. 가까운 여덟이 틱마다 바뀌어 예산(200 B)을 채운다.
  */
 SW_TEST_CASE( NetMMOTest, LostUpdateIsResentSoonAfterTheAck )
 {

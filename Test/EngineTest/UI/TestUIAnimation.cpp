@@ -182,7 +182,7 @@ SW_TEST_CASE( UIAnimationTest, TweenInterpolatesWithCurve )
     SW_EXPECT_FALSE( fixture._ui.tween( pBox->getID(), "_opacity", "not a number", 1.0f ) );
 }
 
-/** @brief [UIAnimationTest] 렌더 변환 트랙은 레이아웃을 다시 재지 않는다(measure 0) — 그래도 기하는 움직인다 */
+/** @brief [UIAnimationTest] 렌더 변환 트랙은 레이아웃을 다시 측정하지 않는다(measure 0) — 그래도 기하는 움직인다 */
 SW_TEST_CASE( UIAnimationTest, TransformTrackDoesNotRelayout )
 {
     using Util = UIAnimationTestUtil;

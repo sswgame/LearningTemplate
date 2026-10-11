@@ -1,11 +1,11 @@
 /**
  * @file PlacementRule.h
- * @brief 규칙 기반 배치(흩뿌리기)입니다 — 밀도 · 최소 거리(푸아송) · 경사 · 높이 · 레이어 필터 · 제외 영역 · 무작위 크기 · 회전을
- *        씨앗 고정으로 계산합니다. 2D 와 3D 가 같은 코어를 씁니다.
- * @details 코어는 **평면 좌표 (u, v)** 위에서 돕니다. 3D 는 u = x, v = z 이고 높이는 표면(`IPlacementSurface`)이 줍니다(지형).
- *          2D 는 u = x, v = y 이고 표면은 타일 맵(`PlacementTileSurface`)이나 없음입니다 — 높이 0 · 위쪽 노멀 · 레이어 가중치만 다릅니다.
- *          계산은 후보마다 (씨앗, 후보 번호) 해시로 난수를 뽑으므로 같은 입력은 같은 결과이고, 후보 하나의 판정이 다른 후보의 난수를
- *          밀지 않습니다(필터 하나를 바꿔도 남는 자리는 그대로입니다). 언리얼 PCG · Horizon 의 배치 규칙과 같은 자리입니다.
+ * @brief 규칙 기반 배치(흩뿌리기)입니다. 밀도, 최소 거리(푸아송), 경사, 높이, 레이어 필터, 제외 영역, 무작위 크기, 회전을
+ *        시드 고정으로 계산합니다. 2D 와 3D 가 같은 코어를 씁니다.
+ * @details 코어는 **평면 좌표 (u, v)** 위에서 돈다. 3D 는 u = x, v = z 이고 높이는 표면(`IPlacementSurface`)이 준다(지형).
+ *          2D 는 u = x, v = y 이고 표면은 타일 맵(`PlacementTileSurface`)이거나 없음이다. 높이 0, 위쪽 노멀, 레이어 가중치만 다르다.
+ *          계산은 후보마다 (시드, 후보 번호) 해시로 난수를 뽑으므로 같은 입력은 같은 결과가 나오고, 후보 하나의 판정이 다른 후보의 난수를
+ *          밀지 않는다(필터 하나를 바꿔도 남는 위치는 그대로다). 언리얼 PCG 와 Horizon 의 배치 규칙에 해당한다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -17,18 +17,18 @@
 
 namespace sw
 {
-    /** @brief 제외 영역의 모양입니다. 평면 위의 도형이고 높이 방향으로는 끝이 없습니다(3D 에서는 기둥 · 직육면체 기둥). */
+    /** @brief 제외 영역의 형태입니다. 평면 위의 도형이고 높이 방향으로는 끝이 없습니다(3D 에서는 기둥이나 직육면체 기둥입니다). */
     ENUM()
     enum class PlacementExclusionShape : uint8
     {
-        Circle = 0, ///< 중심 · 반지름
-        Rect,       ///< 중심 · 반폭(축 정렬)
+        Circle = 0, ///< 중심과 반지름으로 정한다.
+        Rect,       ///< 중심과 반폭(축 정렬)으로 정한다.
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 아무것도 놓지 않는 평면 영역 하나입니다(길 · 건물 자리 · 물가). */
+    /** @brief 아무것도 놓지 않는 평면 영역 하나입니다(길, 건물 위치, 물가). */
     REFLECT()
     struct SW_API PlacementExclusion
     {
@@ -37,9 +37,9 @@ namespace sw
         PROPERTY( Units = m )
         float2 _center{};
         PROPERTY( Min = 0.0, Units = m )
-        float2 _halfExtent{ 1.0f, 1.0f }; ///< 사각형의 반폭
+        float2 _halfExtent{ 1.0f, 1.0f }; ///< 사각형의 반폭이다.
         PROPERTY( Min = 0.0, Units = m )
-        float32 _radius{ 1.0f }; ///< 원의 반지름
+        float32 _radius{ 1.0f }; ///< 원의 반지름이다.
         PROPERTY()
         PlacementExclusionShape _shape{ PlacementExclusionShape::Circle };
     };
@@ -48,8 +48,8 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 배치 규칙 하나 — 무엇을 놓을지가 아니라 **어디에 어떻게** 놓을지입니다. 놓을 것(메시 · 스프라이트)의 목록과 비중은 쓰는 쪽이 따로 줍니다.
-     * @details 필터는 모두 "통과해야 놓는다" 입니다. 레이어 번호가 −1 이면 그 필터를 끕니다. 각도는 라디안입니다.
+     * @brief 배치 규칙 하나입니다. 무엇을 놓을지가 아니라 **어디에 어떻게** 놓을지를 정합니다. 놓을 것(메시, 스프라이트)의 목록과 비중은 쓰는 쪽이 따로 줍니다.
+     * @details 필터는 모두 "통과해야 놓는다"는 뜻이다. 레이어 번호가 -1 이면 그 필터를 끈다. 각도는 라디안이다.
      */
     REFLECT()
     struct SW_API PlacementRule
@@ -99,7 +99,7 @@ namespace sw
         float4  _layerWeight{ 1.0f, 0.0f, 0.0f, 0.0f };
         float3  _normal{ 0.0f, 1.0f, 0.0f }; ///< 3D 는 위쪽이 +Y 입니다. 2D 표면도 같은 값을 줍니다(경사 0)
         float32 _height{ 0.0f };
-        uint8   _bValid{ SW_TRUE }; ///< 놓을 수 없는 자리(지형 구멍 · 맵 밖)면 SW_FALSE
+        uint8   _bValid{ SW_TRUE }; ///< 놓을 수 없는 위치(지형 구멍, 맵 밖)면 SW_FALSE 다.
     };
 } // namespace sw
 
@@ -107,7 +107,7 @@ namespace sw
 {
     /**
      * @class IPlacementSurface
-     * @brief 배치가 묻는 표면입니다 — 지형(3D)과 타일 맵(2D)이 구현합니다. 표면이 없으면 높이 0 · 평평함 · 레이어 0 이 가득입니다.
+     * @brief 배치가 묻는 표면입니다. 지형(3D)과 타일 맵(2D)이 구현합니다. 표면이 없으면 높이 0, 평평함, 레이어 0 이 가득입니다.
      * @details 스레드: 배치 계산 동안 읽기만 합니다.
      */
     class SW_API IPlacementSurface
@@ -126,7 +126,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 배치 하나입니다. 평면 좌표와 높이, 표면 노멀, 크기 · 요(라디안), 고른 항목 번호입니다. */
+    /** @brief 배치 하나입니다. 평면 좌표와 높이, 표면 노멀, 크기와 요(라디안), 고른 항목 번호를 담습니다. */
     struct PlacementInstance
     {
         float3  _normal{ 0.0f, 1.0f, 0.0f };
@@ -134,8 +134,8 @@ namespace sw
         float32 _height{ 0.0f };
         float32 _scale{ 1.0f };
         float32 _yaw{ 0.0f };
-        float32 _alignToNormal{ 0.0f }; ///< 규칙의 값을 그대로 싣습니다(월드 행렬을 만들 때 씁니다)
-        uint32  _hash{ 0 };             ///< 후보 해시 — 인스턴스마다 다른 값(색 흔들기 · 바람 위상)이 필요하면 씁니다
+        float32 _alignToNormal{ 0.0f }; ///< 규칙의 값을 그대로 싣는다(월드 행렬을 만들 때 쓴다).
+        uint32  _hash{ 0 };             ///< 후보 해시다. 인스턴스마다 다른 값(색 흔들기, 바람 위상)이 필요하면 쓴다.
         int32   _entryIndex{ 0 };
     };
 } // namespace sw
@@ -154,10 +154,10 @@ namespace sw
 {
     /**
      * @struct PlacementScatter
-     * @brief 규칙대로 배치를 계산합니다. 씬 없이 돌고 같은 입력이면 같은 결과입니다.
-     * @details 순서: 후보 수 = 밀도 × 면적 → 후보마다 (씨앗, 번호) 해시로 위치 → 제외 영역 → 표면(구멍) → 경사 · 높이 · 레이어 필터 →
-     *          밀도 레이어(가중치 확률로 버림) → 최소 거리(이미 놓인 것과 격자 해시로 대조) → 항목 · 크기 · 요. 최소 거리는 먼저 놓인 것이
-     *          이기는 다트 던지기라 결과가 후보 순서에만 달려 있습니다(결정적).
+     * @brief 규칙대로 배치를 계산합니다. 씬 없이 돌고, 같은 입력이면 같은 결과가 나옵니다.
+     * @details 처리 순서는 다음과 같다. 후보 수 = 밀도 × 면적을 구하고, 후보마다 (시드, 번호) 해시로 위치를 정하고, 제외 영역, 표면(구멍), 경사와 높이와 레이어 필터를 적용하고,
+     *          밀도 레이어(가중치 확률로 버림)를 적용하고, 최소 거리(이미 놓인 것과 격자 해시로 대조)를 적용한 뒤, 항목, 크기, 요를 정한다. 최소 거리는 먼저 놓인 것이
+     *          이기는 다트 던지기라 결과가 후보 순서에만 달려 있다(결정적이다).
      */
     struct SW_API PlacementScatter
     {
@@ -179,13 +179,13 @@ namespace sw
         static bool isExcluded( const vector<PlacementExclusion>& listExclusion, const float2& planePosition );
         /** @brief 비중대로 고른 항목 번호입니다. @p unit 은 [0, 1) 입니다. 비중 합이 0 이면 −1 입니다. */
         static int32 pickEntry( const vector<float32>& listEntryWeight, float32 unit );
-        /** @brief (씨앗, 번호, 칸) 을 섞은 32 비트 해시입니다. */
+        /** @brief (시드, 번호, 셀)을 섞은 32 비트 해시를 반환합니다. */
         static uint32 hashCandidate( uint32 seed, uint32 candidateIndex, uint32 lane );
         /** @brief 해시를 [0, 1) 실수로 바꿉니다(상위 24 비트). */
         static float32 toUnit( uint32 hash );
 
         /**
-         * @brief 3D 배치 하나의 월드 행렬입니다 — 평면 (u, v) 를 (x, z) 로, 높이를 y 로 놓고 요를 돌린 뒤 노멀 쪽으로 `_alignToNormal` 만큼 기울입니다.
+         * @brief 3D 배치 하나의 월드 행렬을 구합니다. 평면 (u, v) 를 (x, z) 로, 높이를 y 로 놓고 요를 돌린 뒤 노멀 쪽으로 `_alignToNormal` 만큼 기울입니다.
          * @param origin 평면 좌표의 원점(월드)입니다. 높이는 표면이 준 월드 높이 그대로라 원점의 y 를 더하지 않습니다.
          */
         static float4x4 makeWorldMatrix( const PlacementInstance& instance, const float3& origin );

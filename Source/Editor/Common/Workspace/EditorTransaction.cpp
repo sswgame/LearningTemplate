@@ -39,7 +39,7 @@ namespace sw::editor
 
             /**
              * @brief 데이터 명령이 오브젝트에 한 일을 에디터 상태에 맞춥니다. 없앨 오브젝트는 선택에서 빼고(파괴는 지연이라 남겨 두면 인스펙터 · 기즈모가
-             *        계속 잡는다), 되살린 오브젝트는 선택하고, 씬을 dirty 로 표시합니다.
+             *        계속 잡는다), 복원한 오브젝트는 선택하고, 씬을 dirty 로 표시합니다.
              */
             static void onObjectEdit( const CommandStack::ObjectEditNotice& notice )
             {

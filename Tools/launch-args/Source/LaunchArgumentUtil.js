@@ -321,7 +321,7 @@ function applyArgumentTextInternal(selection, text, catalogIndex, options) {
 
 /**
  * @brief 남이 쓴 명령줄(설정 파일을 손으로 고침 · git pull)을 선택으로 읽어 들입니다.
- * @details 명령줄이 "무엇이 켜졌는가" 의 정본입니다. 이전 선택은 꺼진 항목의 값 · 꺼진 사용자 인자를 기억하는 데만 씁니다.
+ * @details 명령줄이 "무엇이 켜졌는가" 의 원본입니다. 이전 선택은 꺼진 항목의 값 · 꺼진 사용자 인자를 기억하는 데만 씁니다.
  *          카탈로그가 모르는 글은 적힌 그대로 사용자 인자로 둡니다(잃어버리지 않는다).
  * @param options `{ commandLine, namePrefix }` 입니다.
  * @return 새 선택입니다. @p previousSelection 은 바꾸지 않습니다.

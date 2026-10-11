@@ -1,7 +1,8 @@
 /**
  * @file LedgerTypes.h
- * @brief 원장 타입 — 보유자(계정 · 맡김 · 발행 · 소각) · 이동 다리 · 잔액 · 요청 · 결과 · 분개, 분개 키 만들기와 글자 규칙입니다.
- * @details 원장은 자산의 뜻을 모른다. 자산 id 는 `[0-9a-z_.-]` 48 자 이하이고 관례로 화폐는 `cur.<이름>`, 아이템은 `item.<이름>` 이다(카탈로그가 뜻을 준다).
+ * @brief 원장이 쓰는 타입을 정의합니다.
+ * @details 보유자(계정, 맡김, 발행, 소각), 이동 다리, 잔액, 요청, 결과, 분개를 정의하고, 분개 키를 만드는 방법과 글자 규칙도 여기서 정한다.
+ *          원장은 자산의 뜻을 모른다. 자산 id 는 `[0-9a-z_.-]` 48 자 이하이고, 관례로 화폐는 `cur.<이름>`, 아이템은 `item.<이름>` 이다. 뜻은 카탈로그가 준다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -16,7 +17,7 @@ namespace sw
     class BitReader;
     class BitWriter;
 
-    /** @brief 원장 보유자의 종류입니다. 와이어 · 저장 값이라 순서를 바꾸지 않는다. */
+    /** @brief 원장 보유자의 종류입니다. 와이어와 저장에 쓰는 값이라 순서를 바꾸면 안 됩니다. */
     enum class LedgerHolderKind : uint8
     {
         Account = 0, ///< 플레이어 계정 — 잔액이 음수가 되지 않는다(환불 회수 `_bAllowDebt` 만 예외 — 빚)
@@ -29,7 +30,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 원장 보유자 하나입니다. 키는 `acct/<16 진 16>` · `esc/<도메인>/<토큰>` · `sys/mint` · `sys/sink` 입니다. */
+    /** @brief 원장 보유자 하나입니다. 키는 `acct/<16 진 16>`, `esc/<도메인>/<토큰>`, `sys/mint`, `sys/sink` 중 하나입니다. */
     struct SW_GF_API LedgerHolder
     {
         string           _escrowDomain{}; ///< Escrow 만 — `[0-9a-z_]`, 16 자 이하("mail" · "auction")
@@ -43,7 +44,7 @@ namespace sw
         static LedgerHolder makeSink();
 
         bool isSystem() const { return _kind == LedgerHolderKind::Mint || _kind == LedgerHolderKind::Sink; }
-        /** @brief 계정 id 0 · 규칙 밖 도메인/토큰 · 모르는 종류면 false 입니다. */
+        /** @brief 계정 id 가 0 이거나, 도메인이나 토큰이 규칙 밖이거나, 모르는 종류면 false 입니다. */
         bool   isValid() const;
         string makeKey() const;
         bool   operator==( const LedgerHolder& other ) const;
@@ -53,7 +54,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 이동 한 다리 — @p _from 에서 @p _to 로 @p _assetID 를 @p _amount(1 이상)만큼입니다. */
+    /** @brief 이동 한 다리입니다. @p _from 에서 @p _to 로 @p _assetID 를 @p _amount(1 이상)만큼 옮깁니다. */
     struct LedgerPosting
     {
         LedgerHolder _from{};
@@ -65,7 +66,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 잔액 하나입니다. 계정 잔액은 환불 회수로 음수(빚)일 수 있다. */
+    /** @brief 잔액 하나입니다. 계정 잔액은 환불 회수로 음수(빚)가 될 수 있습니다. */
     struct LedgerBalance
     {
         string _assetID{};
@@ -78,7 +79,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 이동을 요청한 쪽입니다(감사 · 내역 표시). 저장 값이라 순서를 바꾸지 않는다. */
+    /** @brief 이동을 요청한 쪽입니다. 감사와 내역 표시에 쓰며, 저장 값이라 순서를 바꾸면 안 됩니다. */
     enum class LedgerActorKind : uint8
     {
         System = 0, ///< 서버 로직(보상 · 만료 · 예약 작업)
@@ -104,7 +105,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 자산마다 계정 잔액 상한을 알려 주는 쪽입니다(화폐 카탈로그가 구현). */
+    /** @brief 자산마다 계정 잔액 상한을 알려 주는 인터페이스입니다. 화폐 카탈로그가 구현합니다. */
     class SW_GF_API ILedgerPolicy
     {
     public:
@@ -114,14 +115,14 @@ namespace sw
         ILedgerPolicy( const ILedgerPolicy& )            = default;
         ILedgerPolicy& operator=( const ILedgerPolicy& ) = default;
 
-        /** @brief @p assetID 의 계정 잔액 상한입니다(0 이하 = 상한 없음 — 그래도 `kMaxBalance`). 저장소 스레드에서 불린다 — 읽기만 한다. */
+        /** @brief @p assetID 의 계정 잔액 상한입니다. 0 이하면 상한이 없다는 뜻이지만 그래도 `kMaxBalance` 를 넘지 못합니다. 저장소 스레드에서 불리므로 읽기만 해야 합니다. */
         virtual int64 getBalanceCap( string_view assetID ) const = 0;
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 원장 상한입니다. */
+    /** @brief 원장의 상한 값들입니다. */
     struct LedgerConstant
     {
         static constexpr int32 kMaxPostingCount   = 16;                 ///< 한 이동의 다리 수
@@ -139,11 +140,12 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 이동 요청 하나 — 다리 여럿이 모두 적용되거나 아무것도 적용되지 않습니다.
-     * @details `_journalKey` 가 멱등 키다. 같은 키로 다시 오면 다시 적용하지 않고 처음 결과를 돌려준다(다리 · 사유가 다르면 `JournalKeyReused`).
-     *          `_pPolicy` 는 빌려 쓴다 — 일(work)이 끝날 때까지 살아야 한다.
-     *          `_bAllowDebt` 는 환불 회수(이미 써 버린 재화를 거둠)만 켠다 — 보낸 계정 잔액이 음수(빚)가 되어도 적용한다. 빚이 있는 동안 그 재화를
-     *          쓰는 이동은 모두 `InsufficientFunds` 이고(잔액이 더 내려가므로), 받는 이동이 빚을 먼저 갚는다. 맡김은 빚을 지지 않는다.
+     * @brief 이동 요청 하나입니다. 다리 여럿이 모두 적용되거나 아무것도 적용되지 않습니다.
+     * @details `_journalKey` 가 멱등 키이다. 같은 키로 다시 오면 다시 적용하지 않고 처음 결과를 돌려준다. 다리나 사유가 다르면 `JournalKeyReused` 이다.
+     *          `_pPolicy` 는 빌려 쓰므로 일(work)이 끝날 때까지 살아 있어야 한다.
+     *          `_bAllowDebt` 는 환불 회수(이미 써 버린 재화를 거둠)에서만 켠다. 켜면 보낸 계정 잔액이 음수(빚)가 되어도 적용한다.
+     *          빚이 있는 동안 그 재화를 쓰는 이동은 잔액이 더 내려가므로 모두 `InsufficientFunds` 이고, 받는 이동이 빚을 먼저 갚는다.
+     *          맡김은 빚을 지지 않는다.
      */
     struct LedgerTransferRequest
     {
@@ -161,7 +163,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 이동 결과 — 성공이면 관여한 계정 · 맡김 보유자의 이동 뒤 잔액입니다. */
+    /** @brief 이동 결과입니다. 성공이면 관여한 계정과 맡김 보유자의 이동 뒤 잔액을 담습니다. */
     struct LedgerTransferOutcome
     {
         struct HolderBalance
@@ -199,12 +201,12 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 분개 키 만들기 — `<범위>/<꼬리>`. 범위는 `[0-9a-z_.]` 32 자 이하입니다. */
+    /** @brief 분개 키를 만듭니다. 형식은 `<범위>/<꼬리>` 이며, 범위는 `[0-9a-z_.]` 32 자 이하입니다. */
     struct SW_GF_API LedgerJournalKey
     {
-        /** @brief 클라이언트 멱등 키(128 비트)로 — `<범위>/<16 진 32>`. */
+        /** @brief 클라이언트 멱등 키(128 비트)로 `<범위>/<16 진 32>` 키를 만듭니다. */
         static string makeFromIdempotency( string_view scope, uint64 keyHigh, uint64 keyLow );
-        /** @brief 바깥 토큰(영수증 거래 id · 우편 키 · 거래 id)으로 — `<범위>/<토큰 바이트의 16 진>`. 범위가 틀리거나 토큰이 비거나 `kMaxTokenBytes` 를 넘으면 false 입니다. */
+        /** @brief 바깥 토큰(영수증 거래 id, 우편 키, 거래 id)으로 `<범위>/<토큰 바이트의 16 진>` 키를 만듭니다. 범위가 틀리거나 토큰이 비거나 `kMaxTokenBytes` 를 넘으면 false 입니다. */
         [[nodiscard]] static bool makeFromToken( string_view scope, string_view token, string& outKey );
         static string             makeAccountScope( uint64 accountID );    ///< `acct.<16 진 16>`
         static string             makeAdminScope( uint64 adminAccountID ); ///< `gm.<16 진 16>`
@@ -213,7 +215,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 원장 글자 규칙 · 보유자 직렬화 — 원장 · 우편 · 키트가 같이 씁니다. */
+    /** @brief 원장의 글자 규칙과 보유자 직렬화입니다. 원장, 우편, 키트가 같이 씁니다. */
     struct SW_GF_API LedgerUtil
     {
         static bool isValidAssetID( string_view assetID );       ///< `[0-9a-z_.-]`, 1..48

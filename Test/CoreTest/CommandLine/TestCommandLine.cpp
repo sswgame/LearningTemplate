@@ -50,7 +50,7 @@ SW_TEST_CASE( CommandLineTest, ParseWidthArgument )
 /**
  * @brief [CommandLineTest] 열거자 이름은 명령줄 키가 아니다 — 인자마다 철자는 표에 적은 하나다
  * @details 열거자 이름까지 키로 받으면 같은 인자에 철자가 둘씩 생긴다(`-WIDTH` · `-W`, `-LANGUAGE` · `-lang`). 문서 · 스크립트가
- *          서로 다른 철자를 쓰기 시작하면 어느 쪽이 정본인지 알 수 없다.
+ *          서로 다른 철자를 쓰기 시작하면 어느 쪽이 원본인지 알 수 없다.
  */
 SW_TEST_CASE( CommandLineTest, EnumeratorNameIsNotACommandLineKey )
 {

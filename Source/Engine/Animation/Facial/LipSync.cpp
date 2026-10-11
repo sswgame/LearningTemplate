@@ -240,7 +240,7 @@ namespace sw
         const uint32 visemeCount = getVisemeCount();
         for ( uint32 frameIndex = 0; frameIndex < getFrameCount(); ++frameIndex )
         {
-            // 소수 셋째 자리로 줄인다 — 파일이 짧고 비교가 안정된다(가중치 정밀도로는 충분하다).
+            // 소수 셋째 자리로 줄인다. 파일이 짧아지고 비교가 안정된다(가중치 정밀도로는 충분하다).
             const JSONValue frame = frames.pushBack();
             frame.setArray();
             for ( uint32 visemeIndex = 0; visemeIndex < visemeCount; ++visemeIndex )
@@ -330,11 +330,11 @@ namespace sw
             const float32 rms      = static_cast<float32>( MathUtil::sqrt( energy / static_cast<float64>( MathUtil::max<size_t>( end - begin, 1u ) ) ) );
             const float32 openness = computeOpenness( rms, settings );
             float32*      pWeight  = &outTrack._listWeight[frameIndex * visemeCount];
-            // 첫 비즘이 무음이다 — 열린 만큼 나머지 비즘이 나눠 갖는다.
+            // 첫 비즘이 무음이다. 열린 만큼 나머지 비즘이 나눠 갖는다.
             pWeight[0] = 1.0f - openness;
             if ( openness <= 0.0f )
                 continue;
-            // 대역 모양(합 1)을 비즘 표와 코사인으로 견주고 날카로움으로 softmax 한다.
+            // 대역 형태(합 1)를 비즘 테이블과 코사인으로 비교하고, 날카로움으로 softmax 한다.
             const float64 bandSum = arrBandEnergy[0] + arrBandEnergy[1] + arrBandEnergy[2];
             float32       arrShape[3]{ 0.0f, 0.0f, 0.0f };
             for ( uint32 bandIndex = 0; bandIndex < 3; ++bandIndex )

@@ -19,7 +19,7 @@ namespace sw
         {
             static constexpr uint32 kSectionCount = 8;
 
-            /** @brief 읽은 구간 하나 — 본문은 읽은 바이트의 보기입니다. */
+            /** @brief 읽은 구간 하나입니다. 본문은 읽은 바이트를 가리키는 뷰입니다. */
             struct Section
             {
                 Archive _body{};
@@ -27,7 +27,7 @@ namespace sw
                 uint32  _version{ 0 };
             };
 
-            /** @brief 상태 하나를 그 타입의 표 · 판으로 구간 하나에 씁니다. */
+            /** @brief 상태 하나를 그 타입의 태그와 버전으로 구간 하나에 씁니다. */
             template <typename TState>
             static void writeStateSection( Archive& outArchive, const TState& state )
             {
@@ -36,7 +36,7 @@ namespace sw
                 StateArchiveUtil::writeSection( outArchive, TState::kStateTag, TState::kStateVersion, body );
             }
 
-            /** @brief 구간 하나를 사본에 읽어 끝까지 맞으면 바꿉니다. 판이 다르거나 깨졌으면 알리고 그대로 둡니다(새 판). */
+            /** @brief 구간 하나를 사본에 읽고 끝까지 맞으면 반영합니다. 버전이 다르거나 깨졌으면 경고를 남기고 그대로 두며, 이 경우 그 상태는 새 판입니다. */
             template <typename TState>
             [[nodiscard]] static bool applyStateSection( const Section& section, TState& inoutState, const utf8* pName )
             {
@@ -109,7 +109,7 @@ namespace sw
     void GameStateComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        // 디렉터와 같은 그룹 — 같은 오브젝트 안에서는 붙은 순서로 돈다(이 컴포넌트가 맨 앞).
+        // 디렉터와 같은 그룹이다. 같은 오브젝트 안에서는 붙은 순서대로 처리하며, 이 컴포넌트가 맨 앞이다.
         setTickGroup( TickGroup::PrePhysics );
     }
 
@@ -121,7 +121,7 @@ namespace sw
             return;
         _clock.update( deltaTime );
         _clock.drainEvents( _listClockEvent );
-        // 공유 평판은 공유 날 넘김에 한 번 식는다 — 빌려 쓰는 키트는 식히지 않는다(키트 수만큼 식지 않게).
+        // 공유 평판은 공유 날짜가 넘어갈 때 한 번만 식힌다. 참조해서 쓰는 키트는 식히지 않는다. 키트 수만큼 반복해서 식지 않게 하기 위해서다.
         for ( const WorldClockEvent& clockEvent : _listClockEvent )
         {
             if ( clockEvent._kind == WorldClockEvent::Kind::DayChanged )
@@ -133,7 +133,7 @@ namespace sw
 
     void GameStateComponent::writeState( Archive& outArchive ) const
     {
-        // 열리기 전(되살린 직후 두 번째 캡처)이면 받은 바이트가 곧 상태다 — 빈 판을 쓰면 세이브를 잃는다.
+        // 열리기 전(복원한 직후의 두 번째 캡처)이면 받은 바이트가 곧 상태이다. 빈 판을 쓰면 세이브를 잃는다.
         if ( _bInitialized == SW_FALSE && _pendingStateBytes.empty() == false )
         {
             outArchive.writeBytes( _pendingStateBytes.data(), _pendingStateBytes.size() );
@@ -193,10 +193,10 @@ namespace sw
         if ( StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) == false )
             return false;
         uint32 sectionCount = 0;
-        // 구간마다 표 · 판 · 길이(12) 이상
+        // 구간마다 태그, 버전, 길이(12바이트) 이상
         if ( StateArchiveUtil::readCount( archive, 12, sectionCount ) == false )
             return false;
-        // 틀을 끝까지 먼저 읽는다 — 틀이 깨졌으면 아무것도 바꾸지 않는다.
+        // 구조를 끝까지 먼저 읽는다. 구조가 깨졌으면 아무것도 바꾸지 않는다.
         vector<GameStateComponentInternal::Section> listSection;
         listSection.resize( sectionCount );
         for ( GameStateComponentInternal::Section& section : listSection )
@@ -207,7 +207,7 @@ namespace sw
         if ( archive.getRemainingBytes() != 0 )
             return false;
 
-        // 구간 하나가 깨지면 applyStateSection 이 알리고 그 구간만 새 판으로 둔다 — 결과는 버린다.
+        // 구간 하나가 깨지면 applyStateSection 이 경고를 남기고 그 구간만 새 판으로 둔다. 반환값은 쓰지 않는다.
         for ( const GameStateComponentInternal::Section& section : listSection )
         {
             switch ( section._tag )

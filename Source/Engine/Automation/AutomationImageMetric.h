@@ -62,7 +62,7 @@ namespace sw
         [[nodiscard]] static bool tryParseRegion( string_view text, AutomationImageRegion& outRegion );
         /**
          * @brief @p region 의 지표 값입니다. 영역이 픽셀 하나도 덮지 않거나 `DifferentFrom` 의 기준이 없거나 크기가 다르면 false 와 이유입니다.
-         * @param darkRatio `DarkFraction` 의 문턱(중앙값에 곱하는 수)
+         * @param darkRatio `DarkFraction` 의 임계값(중앙값에 곱하는 수)
          */
         [[nodiscard]] static bool measure( const AutomationImage& image, const AutomationImageRegion& region, AutomationImageMetricKind kind, float32 darkRatio,
                                            const AutomationImage* pReference, float64& outValue, string& outError );

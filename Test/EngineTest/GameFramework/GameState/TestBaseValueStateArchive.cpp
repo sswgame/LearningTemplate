@@ -144,7 +144,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, CountdownKeepsLatenessAndAccumulatorKee
 }
 
 /**
- * @brief [BaseValueStateArchiveTest] 자원 게이지 — 쓴 뒤 되살려 같은 회복을 낸다
+ * @brief [BaseValueStateArchiveTest] 자원 게이지 — 쓴 뒤 복원해 같은 회복을 낸다
  */
 SW_TEST_CASE( BaseValueStateArchiveTest, ResourceGaugeReplaysAfterRestore )
 {
@@ -174,7 +174,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, VitalityReplaysAfterRestore )
     VitalitySettings settings;
     settings._maxShield = 50.0f;
     Vitality vitality( settings );
-    (void)vitality.applyDamage( 30.0f, 5.0f, 7 ); // 테스트 준비 — 피해 결과값은 보지 않고 되살린 상태를 비교한다
+    (void)vitality.applyDamage( 30.0f, 5.0f, 7 ); // 테스트 준비 — 피해 결과값은 보지 않고 복원한 상태를 비교한다
     (void)vitality.addShield( 12.0f );
     vitality.setInvulnerable( 0.25f );
     vitality.update( 0.1f );
@@ -321,7 +321,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, MoveTimelineReplaysAfterRestore )
 }
 
 /**
- * @brief [BaseValueStateArchiveTest] 2D 플랫포머 이동기 — 점프 중간에 되살려 같은 궤적을 낸다
+ * @brief [BaseValueStateArchiveTest] 2D 플랫포머 이동기 — 점프 중간에 복원해 같은 궤적을 낸다
  */
 SW_TEST_CASE( BaseValueStateArchiveTest, PlatformerMotorReplaysAfterRestore )
 {
@@ -498,7 +498,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, RunMapReplaysAfterRestore )
 }
 
 /**
- * @brief [BaseValueStateArchiveTest] 원소 격자 — 번지는 불 한가운데서 되살려 같은 칸을 태운다
+ * @brief [BaseValueStateArchiveTest] 원소 격자 — 번지는 불 한가운데서 복원해 같은 칸을 태운다
  */
 SW_TEST_CASE( BaseValueStateArchiveTest, ElementGridReplaysAfterRestore )
 {
@@ -514,7 +514,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, ElementGridReplaysAfterRestore )
         }
     }
     grid.setWind( int2{ 1, 0 } );
-    (void)grid.applyStimulus( int2{ 0, 1 }, table.findStimulus( "Fire" ) ); // 테스트 준비 — 바뀐 칸 수는 보지 않고 되살린 격자를 비교한다
+    (void)grid.applyStimulus( int2{ 0, 1 }, table.findStimulus( "Fire" ) ); // 테스트 준비 — 바뀐 칸 수는 보지 않고 복원한 격자를 비교한다
     (void)grid.update( 0.37f );
 
     // 크기가 다른 격자는 거절하고 그대로다.

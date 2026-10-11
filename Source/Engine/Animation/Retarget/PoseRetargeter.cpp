@@ -17,7 +17,7 @@ namespace sw
     {
         struct PoseRetargeterInternal
         {
-            /** @brief 파일 굽기의 표본율(Hz)입니다 — 임포트 규칙의 기본과 같다. */
+            /** @brief 파일 베이크의 샘플율(Hz)입니다. 임포트 규칙의 기본과 같습니다. */
             static constexpr float32 kBakeSampleRate = 30.0f;
 
             static bool findBone( const Skeleton& skeleton, const hashed_string& name, const utf8* pSide, uint32& outBone )
@@ -109,7 +109,7 @@ namespace sw
             }
             if ( bOk == false || listChainSource.empty() || listChainTarget.empty() )
                 return false;
-            // 본 수가 다르면 사슬 길이 비율로 원본 본을 고른다(가장 가까운 것).
+            // 본 수가 다르면 사슬 길이 비율로 가장 가까운 원본 본을 고른다.
             const size_t sourceCount = listChainSource.size();
             const size_t targetCount = listChainTarget.size();
             for ( size_t targetIndex = 0; targetIndex < targetCount; ++targetIndex )
@@ -146,7 +146,7 @@ namespace sw
             pair._targetReferenceRotation = _targetBuffer.getModelRotation( pair._target );
             _listPair.push_back( pair );
         }
-        // 대상 본 순서(부모가 먼저)로 — 모델 회전을 쓸 때 부모가 이미 이번 값이어야 한다.
+        // 대상 본 순서(부모가 먼저)로 처리한다. 모델 회전을 쓸 때 부모가 이미 이번 값이어야 하기 때문이다.
         std::sort( _listPair.begin(), _listPair.end(), &PoseRetargeter::isPairBefore );
 
         _sourceRootReference       = _sourceBuffer.getModelPosition( _sourceRoot );
@@ -175,7 +175,7 @@ namespace sw
             _targetBuffer.setModelRotation( pair._target, delta * pair._targetReferenceRotation );
         }
 
-        // 2) 뿌리 · 골반 이동 — 레퍼런스에서 움직인 만큼을 높이 비로.
+        // 2) 뿌리와 골반 이동: 레퍼런스에서 움직인 만큼을 높이 비로 옮긴다.
         if ( _translationMode != RetargetTranslationMode::None )
         {
             const float32 scale = ( _translationMode == RetargetTranslationMode::ScaleByPelvisHeight ) ? _heightRatio : 1.0f;
@@ -183,7 +183,7 @@ namespace sw
             _targetBuffer.setModelPosition( _targetPelvis, _targetPelvisReference + ( _sourceBuffer.getModelPosition( _sourcePelvis ) - _sourcePelvisReference ) * scale );
         }
 
-        // 3) IK 목표 — 원본 끝이 레퍼런스에서 움직인 만큼(높이 비)을 대상 끝 레퍼런스에 더한 자리.
+        // 3) IK 목표: 원본 끝이 레퍼런스에서 움직인 만큼(높이 비)을 대상 끝 레퍼런스에 더한 위치다.
         const float32 goalScale = ( _translationMode == RetargetTranslationMode::Copy ) ? 1.0f : _heightRatio;
         _listGoal.resize( _listIKChain.size() );
         float32 pelvisDrop = 0.0f;
@@ -192,7 +192,7 @@ namespace sw
             const IKChain& chain  = _listIKChain[chainIndex];
             const float3   goal   = chain._targetEndReference + ( _sourceBuffer.getModelPosition( chain._sourceEnd ) - chain._sourceEndReference ) * goalScale;
             _listGoal[chainIndex] = goal;
-            // 다리를 다 펴도 닿지 않는 목표(늘린 다리의 보폭 끝)면 골반을 그만큼 내린다 — 발이 목표에서 떨어지지 않게(발이 미끄러지지 않게).
+            // 다리를 다 펴도 닿지 않는 목표(늘린 다리의 보폭 끝)면 골반을 그만큼 내려, 발이 목표에서 떨어지지 않게(미끄러지지 않게) 한다.
             float32 reach = 0.0f;
             for ( size_t boneIndex = 1; boneIndex < chain._listTargetBone.size(); ++boneIndex )
             {

@@ -136,7 +136,7 @@ namespace sw
         /** @brief 바인딩 변환기 표입니다(`{bind:필드, converter=이름}`). 게임 · 키트가 자기 변환기를 더한다 — 모듈이 내려가면 그 함수는 걷힌다. */
         UIBindingConverterRegistry&       getBindingConverters() { return _bindingConverters; }
         const UIBindingConverterRegistry& getBindingConverters() const { return _bindingConverters; }
-        /** @brief UI 문서 캐시입니다(기동 단계 `UI` 가 에셋 캐시 등록부에 올린다 — 핫 리로드 · 진단). */
+        /** @brief UI 문서 캐시입니다(기동 단계 `UI` 가 에셋 캐시 레지스트리에 올린다 — 핫 리로드 · 진단). */
         UIDocumentCache&       getDocumentCache() { return _documentCache; }
         const UIDocumentCache& getDocumentCache() const { return _documentCache; }
 
@@ -159,7 +159,7 @@ namespace sw
         const UIActionGlyphSource& getActionGlyphs() const { return _actionGlyphs; }
 
         // --- 스타일 · 테마 ---------------------------------------------------------------
-        /** @brief 스타일 시트 캐시입니다(기동 단계 `UI` 가 에셋 캐시 등록부에 올린다). */
+        /** @brief 스타일 시트 캐시입니다(기동 단계 `UI` 가 에셋 캐시 레지스트리에 올린다). */
         UIStyleSheetCache& getStyleSheetCache() { return _styleSheetCache; }
         /**
          * @brief 고를 수 있는 테마를 겁니다(기동 단계 `UI` — `engine/ui/uithemes.xml` · 게임 프리셋 `_uiThemes`).
@@ -448,7 +448,7 @@ namespace sw
         uint8                        _bPauseRequested     : 1; ///< 게임 정지 요청을 걸어 두었다(정지 화면이 하나라도 있다)
         uint8                        _bPendingClose       : 1; ///< 닫기를 요청한 화면이 있다
         uint8                        _bPointerKnown       : 1; ///< 마우스 위치를 한 번 읽었다(첫 프레임의 Move 기준)
-        uint8                        _bStickHeld          : 1; ///< 스틱이 탐색 문턱 너머로 기울어 있다
+        uint8                        _bStickHeld          : 1; ///< 스틱이 탐색 임계값 너머로 기울어 있다
         uint8                        _bMousePixelKnown    : 1; ///< `_lastMousePixel` 을 한 번 읽었다
         uint8                        _bTextRevisionKnown  : 1; ///< `_textRevision` 을 한 번 읽었다
         uint8                        _bGlyphStyleKnown    : 1; ///< `_glyphStyle` 을 한 번 읽었다

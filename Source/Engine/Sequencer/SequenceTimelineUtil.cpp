@@ -21,7 +21,7 @@ namespace sw
     {
         struct SequenceTimelineUtilInternal
         {
-            /** @brief 구간 동안 대상의 활성 · 트랜스폼을 정하는 종류인지 반환합니다. 표에 없는 종류는 아무것도 하지 않습니다. */
+            /** @brief 구간 동안 대상의 활성 상태와 트랜스폼을 정하는 종류인지 반환합니다. 테이블에 없는 종류는 아무것도 하지 않습니다. */
             static bool drivesTarget( const SequenceTrackItem& item )
             {
                 const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( item._kind );
@@ -53,7 +53,7 @@ namespace sw
                 return pManager->findGameObjectByName( hashed_string{ name } );
             }
 
-            /** @brief 축 하나(0 x · 1 y · 2 z)입니다. */
+            /** @brief 축 하나(0 은 x, 1 은 y, 2 는 z)입니다. */
             static float32& axisOf( float3& value, uint32 axis )
             {
                 if ( axis == 0 )
@@ -63,7 +63,7 @@ namespace sw
                 return value._z;
             }
 
-            /** @brief 프로퍼티 트랙이 가리키는 컴포넌트와 숫자 프로퍼티입니다. 못 찾거나 숫자(`float32` · `int32`)가 아니면 false 입니다. */
+            /** @brief 프로퍼티 트랙이 가리키는 컴포넌트와 숫자 프로퍼티를 찾습니다. 못 찾거나 숫자(`float32`, `int32`)가 아니면 false 를 반환합니다. */
             static bool findTrackProperty( GameObject* pTarget, const SequenceKeyTrack& track, Component*& pOutComponent, const PropertyInfo*& pOutProperty )
             {
                 pOutComponent    = nullptr;
@@ -101,7 +101,7 @@ namespace sw
                     component               = track._listChannel[channelIndex].evaluate( frame, component );
                     arrKeyed[groupIndex]    = true;
                 }
-                // 키가 있는 묶음만 쓴다 — 키 없는 회전 · 크기까지 쓰면 트랜스폼이 프레임마다 더티가 된다.
+                // 키가 있는 그룹만 쓴다. 키 없는 회전과 크기까지 쓰면 트랜스폼이 프레임마다 더티가 된다.
                 if ( arrKeyed[0] )
                     pScene->setLocalPosition( arrValue[0] );
                 if ( arrKeyed[1] )
@@ -161,7 +161,7 @@ namespace sw
         vector<const SequenceTrackItem*> listActive;
         asset.collectActiveItems( frame, listActive );
 
-        // 대상마다 원하는 상태는 하나다 — 그 대상을 덮는 활성 클립이 있으면 켜짐. **바뀔 때만** 세팅한다(클립마다 끄고 켜면
+        // 대상마다 원하는 상태는 하나다. 그 대상을 덮는 활성 클립이 있으면 켜짐이다. **바뀔 때만** 설정한다(클립마다 끄고 켜면
         // 클립이 둘인 대상이 매 프레임 꺼졌다 켜져 렌더 집합이 두 번 흔들린다).
         for ( const SequenceTrackItem& item : asset._listItem )
         {

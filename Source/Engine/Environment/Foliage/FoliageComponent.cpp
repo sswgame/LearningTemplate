@@ -35,7 +35,7 @@ namespace sw
                 return s_arrName[slot];
             }
 
-            /** @brief 메시 원점(인스턴스 위치)에서 정점까지의 가장 먼 거리입니다 — 바운드 중심이 인스턴스 위치라 그만큼 덮어야 한다. */
+            /** @brief 메시 원점(인스턴스 위치)에서 정점까지의 가장 먼 거리입니다. 바운드 중심이 인스턴스 위치라 그만큼 덮어야 합니다. */
             static float32 computeOriginRadius( const Mesh& mesh )
             {
                 const float3& boundsMin = mesh.getLocalBoundsMin();
@@ -101,7 +101,7 @@ namespace sw
     void FoliageComponent::onBeginPlay()
     {
         SceneComponent::onBeginPlay();
-        // 로드 순서상 지형이 뒤에 섰으면 처음 계산은 평면 위였다 — 모두 선 지금 지형을 다시 찾는다. 등록부를 바꾸므로 틱 뒤에.
+        // 로드 순서상 지형이 뒤에 생성되면 처음 계산은 평면 위에서 했다. 모두 생성된 지금 지형을 다시 찾는다. 레지스트리를 바꾸므로 틱 뒤에 한다.
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr || _bBuiltOnTerrain == SW_TRUE )
@@ -118,7 +118,7 @@ namespace sw
     void FoliageComponent::onPropertyChanged( hashed_string propertyName )
     {
         SceneComponent::onPropertyChanged( propertyName );
-        // 켜고 끄기는 배치를 바꾸지 않는다 — 셀을 다시 짓지 않고 빌더가 다시 보게만 한다.
+        // 켜고 끄기는 배치를 바꾸지 않는다. 셀을 다시 만들지 않고 빌더가 다시 확인하게만 한다.
         static const hashed_string s_activeName( "_bActive" );
         if ( propertyName == s_activeName )
         {
@@ -211,7 +211,7 @@ namespace sw
 
     void FoliageComponent::releaseCells()
     {
-        _listCell.clear(); // 배치의 소멸자가 등록부에서 뺀다
+        _listCell.clear(); // 배치의 소멸자가 레지스트리에서 뺀다
         _instanceCount = 0;
     }
 
@@ -221,13 +221,13 @@ namespace sw
         releaseCells();
         if ( _pPrimitiveRegistry == nullptr )
             return;
-        [[maybe_unused]] const Stopwatch stopwatch; // 아래 로그에만 쓴다 — Shipping 은 로그가 빠진다
+        [[maybe_unused]] const Stopwatch stopwatch; // 아래 로그에만 쓴다. Shipping 은 로그가 빠진다.
         const float3                     origin   = getWorldPosition();
         GameObject*                      pOwner   = getOwner();
         const GameObjectManager*         pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         _bBuiltOnTerrain                          = ( pManager != nullptr && TerrainComponent::findTerrainAt( *pManager, origin._x, origin._z ) != nullptr ) ? SW_TRUE : SW_FALSE;
 
-        // 레이어 머티리얼 — 레이어마다 자기 인스턴스(바람 반응 · 페이드가 레이어 값이다).
+        // 레이어 머티리얼은 레이어마다 자기 인스턴스를 가진다(바람 반응과 페이드가 레이어 값이다).
         _listLayerMaterial.clear();
         _listLayerMaterial.reserve( _listLayer.size() );
         const float32             cellSize = MathUtil::max( _cellSize, 4.0f );
@@ -243,7 +243,7 @@ namespace sw
             if ( computeLayerPlacements( layerIndex, listInstance ) == false || listInstance.empty() )
                 continue;
 
-            // 메시마다 · 셀마다 묶는다. 키 = 메시 번호 × 2^32 + 셀 (x, z) 해시.
+            // 메시마다 셀마다 묶는다. 키는 메시 번호 × 2^32 + 셀 (x, z) 해시다.
             vector<shared_ptr<Mesh>> listMesh;
             vector<float32>          listMeshRadius;
             for ( const FoliageMesh& foliageMesh : layer._listMesh )
@@ -267,7 +267,7 @@ namespace sw
                 mapCellToInstance[key].push_back( instanceIndex );
             }
 
-            // 셀 순서를 정렬해 등록 순서를 결정적으로 — 해시 맵 순회 순서는 실행마다 같다는 보장이 없다.
+            // 셀 순서를 정렬해 등록 순서를 결정적으로 만든다. 해시 맵 순회 순서는 실행마다 같다는 보장이 없다.
             vector<uint64> listKey;
             listKey.reserve( mapCellToInstance.size() );
             for ( const auto& [key, listIndex] : mapCellToInstance )
@@ -293,7 +293,7 @@ namespace sw
                     const float4x4           world    = PlacementScatter::makeWorldMatrix( instance, float3::Zero );
                     cell._batch->setWorld( entry, world );
                     cell._batch->setBoundsRadius( entry, listMeshRadius[meshIndex] );
-                    // 밝기 흔들기 — 인스턴스 색 칸(머티리얼을 가르지 않는다).
+                    // 밝기 흔들기는 인스턴스 색 필드로 한다(머티리얼을 가르지 않는다).
                     const float32 shade = 1.0f - layer._tintVariation * PlacementScatter::toUnit( instance._hash );
                     cell._batch->setSprite( entry, GPUSpriteInstanceData::make( float4{ 0.0f, 0.0f, 1.0f, 1.0f }, float4{ shade, shade, shade, 1.0f } ) );
                     const float3 position = world.getTranslation();
@@ -335,7 +335,7 @@ namespace sw
         {
             const FoliageLayer&  layer    = _listLayer[layerIndex];
             EnvironmentMaterial& material = *_listLayerMaterial[layerIndex];
-            // 머티리얼 값은 VS 가 읽는다(foliage.hlsl). x · y = 방향, z = 세기 × 반응, w = 시간
+            // 머티리얼 값은 VS 가 읽는다(foliage.hlsl). x 와 y 는 방향, z 는 세기 × 반응, w 는 시간이다.
             material.setVector( hashed_string( "windParams" ), float4{ wind._direction._x, wind._direction._y, wind._strength * layer._windResponse, _time } );
             // x = 흔들림 주파수, y = 돌풍 세기 × 반응, z = 돌풍 주파수, w = 흔들림이 다 차는 높이
             material.setVector( hashed_string( "windWave" ), float4{ wind._swayFrequency, wind._gustStrength * layer._windResponse, wind._gustFrequency, layer._swayHeight } );

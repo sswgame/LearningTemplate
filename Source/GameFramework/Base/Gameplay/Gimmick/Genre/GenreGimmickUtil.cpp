@@ -19,7 +19,7 @@ namespace sw
         GameObjectManager* pManager = object.getManager();
         if ( pManager == nullptr )
             return;
-        // 몸 = 씬 컴포넌트(콜라이더 · 메시 · 스프라이트 · 빛). 논리 컴포넌트(센서 · 회로 · 이 기믹)는 켜 둔 채로 시간을 센다.
+        // 몸은 씬 컴포넌트(콜라이더, 메시, 스프라이트, 라이트)이다. 논리 컴포넌트(센서, 회로, 이 기믹)는 켜 둔 채로 시간을 센다.
         const GameObjectHandle handle    = object.getHandle();
         const uint64           keepID    = pKeep != nullptr ? pKeep->getComponentID() : 0;
         GameObjectManager*     pResolver = pManager;

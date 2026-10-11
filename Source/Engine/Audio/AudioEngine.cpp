@@ -190,7 +190,7 @@ namespace sw
 
         shared_ptr<const AudioEventLibrary> pLibrary = make_shared<AudioEventLibrary>( library );
         _mapGameLibrary[libraryName]                 = pLibrary;
-        // 뱅크를 올리듯 클립 디코드를 미리 걸어 둔다 — 첫 재생이 디코드를 기다리지 않게.
+        // 뱅크를 로드하듯 클립 디코드를 미리 요청해 둔다. 첫 재생이 디코드를 기다리지 않게 하려는 것이다.
         for ( const AudioEventDesc& event : pLibrary->_listEvent )
         {
             for ( const AudioClipEntry& clip : event._listClip )
@@ -240,7 +240,7 @@ namespace sw
 
     AudioPlayingID AudioEngine::postEvent( const hashed_string& eventName, AudioEmitterID emitterID )
     {
-        // 라이브러리를 쥐고 잠금을 푼다 — 다른 스레드가 그 사이에 내려도 서술이 산다.
+        // 라이브러리를 참조한 채 잠금을 푼다. 다른 스레드가 그 사이에 언로드해도 설명자는 살아 있다.
         const AudioEventDesc*               pEvent = nullptr;
         shared_ptr<const AudioEventLibrary> pLibrary;
         {
@@ -269,7 +269,7 @@ namespace sw
         command._type      = CommandType::PostEvent;
         command._name      = eventName;
         command._emitterID = emitterID;
-        // id 는 명령을 쌓을 때(잠금 안에서) 매긴다 — 큐 순서와 id 순서가 같아야 "아직 처리되지 않은 id" 판정이 맞다.
+        // id 는 명령을 쌓을 때(잠금 안에서) 매긴다. 큐 순서와 id 순서가 같아야 "아직 처리되지 않은 id" 판정이 맞다.
         std::scoped_lock<mutex> lock{ _commandMutex };
         command._playingID             = _nextPlayingID.fetch_add( 1 );
         const AudioPlayingID playingID = command._playingID;
@@ -641,7 +641,7 @@ namespace sw
                 {
                     applyBusUserState( state );
                 }
-                // 살아 있는 보이스는 같은 이름의 버스로 옮긴다(없으면 sfx · master).
+                // 살아 있는 보이스는 같은 이름의 버스로 옮긴다(없으면 sfx, 그것도 없으면 master).
                 for ( VoiceSlot& slot : _listVoice )
                 {
                     if ( slot._bInUse )
@@ -702,7 +702,7 @@ namespace sw
             }
             case CommandType::RemoveEmitter:
             {
-                // 바로 지우지 않는다 — 그 자리의 원샷이 끝나기 전에 자리를 잃으면 2D 로 돌아가 크게 들린다.
+                // 바로 지우지 않는다. 그 에미터의 원샷이 끝나기 전에 위치를 잃으면 2D 로 돌아가 크게 들린다.
                 const auto it = _mapEmitter.find( command._emitterID );
                 if ( it != _mapEmitter.end() )
                     it->second._bRemoved = true;
@@ -723,7 +723,7 @@ namespace sw
                     break;
                 pSnapshot->_target  = 1.0f;
                 pSnapshot->_bDriven = false;
-                // 가장 나중에 켠 것이 마지막에 얹힌다.
+                // 가장 나중에 켠 것이 마지막에 적용된다.
                 const SnapshotState moved = *pSnapshot;
                 _listSnapshot.erase( _listSnapshot.begin() + ( pSnapshot - _listSnapshot.data() ) );
                 _listSnapshot.push_back( moved );
@@ -828,7 +828,7 @@ namespace sw
         if ( pClip == nullptr )
             return;
 
-        // 음악 레이어 · 스팅어는 정해진 렌더 프레임에 샘플 단위로 시작한다 — 아직 이르면 그만큼 늦추고, 클립이 늦게 왔으면 그만큼 건너뛰어 박을 지킨다.
+        // 음악 레이어와 스팅어는 정해진 렌더 프레임에 샘플 단위로 시작한다. 아직 이르면 그만큼 늦추고, 클립이 늦게 왔으면 그만큼 건너뛰어 박을 지킨다.
         const bool bScheduled = slot._musicSegment != -1;
         uint32     delay      = 0;
         float64    skipFrames = 0.0;
@@ -913,7 +913,7 @@ namespace sw
             if ( it != _mapEmitter.end() )
             {
                 const AudioAttenuationDesc& attenuation = _listAttenuation[static_cast<size_t>( slot._attenuationIndex )];
-                // 리스너가 여럿이면 가장 크게 들리는 리스너로 잰다(언리얼 · Wwise 의 "가장 가까운 리스너").
+                // 리스너가 여럿이면 가장 크게 들리는 리스너로 측정한다(언리얼과 Wwise 의 "가장 가까운 리스너").
                 bool               bHaveListener = false;
                 AudioSpatialResult best;
                 for ( const AudioListenerState& listener : _arrListener )
@@ -936,7 +936,7 @@ namespace sw
             }
         }
 
-        // 이벤트의 파라미터 곡선(RTPC) — 볼륨 dB · 피치 반음은 더하고, 로우패스는 낮은 쪽.
+        // 이벤트의 파라미터 곡선(RTPC)은 볼륨 dB 와 피치 반음은 더하고, 로우패스는 낮은 쪽을 쓴다.
         if ( slot._instanceIndex >= 0 )
         {
             const AudioEventDesc* pEvent = _listInstance[static_cast<size_t>( slot._instanceIndex )]._pDesc;
@@ -972,7 +972,7 @@ namespace sw
             slot._voice.setPlaybackRate( static_cast<float64>( pClip->_sampleRate ) / static_cast<float64>( audio::kSampleRate ) * static_cast<float64>( pitch ) );
         slot._voice.setTarget( volume, pan );
         slot._voice.setLowPass( lowPassHz );
-        // 들림은 보이스 자신의 게인(거리 · 가림 · 파라미터 · 페이드 목표)이다 — 버스 페이더는 넣지 않는다(음소거된 버스의 프리 페이더 센드가 살아 있어야 한다).
+        // 들림은 보이스 자신의 게인(거리, 가림, 파라미터, 페이드 목표)이다. 버스 페이더는 넣지 않는다(음소거된 버스의 프리 페이더 센드가 살아 있어야 한다).
         slot._audibility = volume * slot._voice.getFadeTarget();
     }
 
@@ -1024,7 +1024,7 @@ namespace sw
         sweepRemovedEmitters();
 
         mixer.process( _listBlockOutput.data(), audio::kBlockFrameCount );
-        // 장치는 [-1, 1] 밖을 감아 돌릴 수 있다 — 마지막에 자른다(리미터가 master 에 있으면 여기 닿지 않는다).
+        // 장치는 [-1, 1] 밖의 값을 감아 돌릴 수 있으므로 마지막에 자른다(리미터가 master 에 있으면 여기에 닿지 않는다).
         for ( float32& sample : _listBlockOutput )
         {
             sample = MathUtil::clamp( sample, -1.0f, 1.0f );

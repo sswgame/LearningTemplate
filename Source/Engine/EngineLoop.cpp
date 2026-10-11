@@ -678,7 +678,7 @@ namespace sw
             if ( loop._rhi->hasDevice() )
                 loop._rhi->getDevice().waitIdle();
             // GPU 자원을 든 객체들은 여기서 손으로 훑지 않는다. IRHIDevice::shutdown 이 내려가기 직전에
-            // 등록부 전체에 releaseRHI 를 부른다(RHIRenderResource). 백엔드 모듈 DLL 도 여기서 내린다.
+            // 레지스트리 전체에 releaseRHI 를 부른다(RHIRenderResource). 백엔드 모듈 DLL 도 여기서 내린다.
             loop._rhi->shutdown();
         }
         // 종료가 디바이스와 백엔드 모듈을 이미 내렸다. 남은 것은 디바이스가 없는 팩토리 객체다.
@@ -878,7 +878,7 @@ namespace sw
             // UI 행동 맵(탐색 · 확인 · 뒤로)을 못 읽으면 메뉴를 패드로 다룰 수 없다 — 데이터 오류라 기동 실패다.
             if ( ui.initialize( *loop._owned._pInputManager, loop._owned._pFontSystem.get(), defaultAssets._uiInputMap ) == false )
                 return EngineInitResult::Failed;
-            // UI 문서 · 스타일 시트 캐시를 에셋 캐시 등록부에 올린다 — 핫 리로드 · 종료 · 진단이 다른 에셋과 같은 길로 간다.
+            // UI 문서 · 스타일 시트 캐시를 에셋 캐시 레지스트리에 올린다 — 핫 리로드 · 종료 · 진단이 다른 에셋과 같은 길로 간다.
             loop._owned._pAssetManager->registerAssetCache( &ui.getDocumentCache() );
             loop._owned._pAssetManager->registerAssetCache( &ui.getStyleSheetCache() );
             // 테마 목록 — 게임 프리셋이 덮어쓰면 그것, 아니면 엔진 기본. 모르는 키는 기동 오류다(배율 규칙과 같다).
@@ -1235,7 +1235,7 @@ namespace sw
         FrameProfiler& profiler = engine::getFrameProfiler();
         profiler.beginFrame();
 
-        // 게임 스레드 전체를 한 구간으로 잡는다. 보고서가 RT 구간만 보여 주면 "프레임의 몇 % 를 쟀나" 에
+        // 게임 스레드 전체를 한 구간으로 잡는다. 보고서가 RT 구간만 보여 주면 "프레임의 몇 % 를 측정했나" 에
         // 답할 수 없다. 그 답이 없으면 다음 최적화 대상을 고르는 근거도 없다.
         SW_PROFILE_SCOPE( "GT.Frame" );
 
@@ -1291,7 +1291,7 @@ namespace sw
             Scene* pDebugScene = _owned._pSceneManager->getActiveScene();
             if ( pDebugScene != nullptr && pDebugScene->getObjectManager() != nullptr )
             {
-                SceneNavigation& navigation = pDebugScene->getObjectManager()->getSceneNavigation();
+                SceneNavigation& navigation = pDebugScene->getObjectManager()->getSceneService<SceneNavigation>();
                 navigation.updateDebugView( static_cast<uint32>( gv_navDebugDraw ) );
                 if ( gv_navDebugDraw != 0 )
                 {
@@ -1415,7 +1415,7 @@ namespace sw
                 const RenderViewMode sceneViewMode = _frameRenderer != nullptr ? _frameRenderer->getSceneViewMode() : RenderViewMode::Lit;
                 packet._mainView._viewMode         = bSceneMain ? sceneViewMode : ( _frameRenderer != nullptr ? _frameRenderer->getViewMode() : RenderViewMode::Lit );
                 // 그림자 행렬과 그 바이어스는 한 볼륨에서 같이, 카메라가 정해진 **뒤에** 만든다 — `_shadowViewDistance` 를 준 빛은 볼륨을
-                // 카메라가 보는 곳에 맞춘다. 텍셀 스냅 · 바이어스는 렌더 스레드가 만들 그림자 맵과 같은 해상도로 잰다.
+                // 카메라가 보는 곳에 맞춘다. 텍셀 스냅 · 바이어스는 렌더 스레드가 만들 그림자 맵과 같은 해상도로 측정한다.
                 if ( pLight != nullptr && pShadowLight != nullptr )
                 {
                     const uint32                      shadowResolution = FrameRenderer::getShadowMapResolution();
@@ -1555,7 +1555,7 @@ namespace sw
             // 본문으로 내린다. 씬 스냅샷 빌더가 든 머티리얼 · 인스턴스도 FrameRenderer 단계의 종료가 옛 디바이스가 살아 있을 때 놓는다.
             _startup.shutdownDependentsOf( EngineInitStep::RHI );
 
-            // 옛 디바이스의 GPU 자원은 recreateDevice 안의 shutdown 이 등록부에 통보하며 거둔다.
+            // 옛 디바이스의 GPU 자원은 recreateDevice 안의 shutdown 이 레지스트리에 통보하며 거둔다.
             _rhi->getDevice().waitIdle();
             if ( _owned._pShaderCache != nullptr )
                 _owned._pShaderCache->clearCache();
@@ -1589,7 +1589,7 @@ namespace sw
         if ( _rhi == nullptr || _rhi->hasDevice() == false )
             return false;
 
-        // 새 디바이스가 섰다. 등록부 전체에 "다시 올려라" 를 알린다. 어떤 캐시를 빠뜨렸는지
+        // 새 디바이스가 섰다. 레지스트리 전체에 "다시 올려라" 를 알린다. 어떤 캐시를 빠뜨렸는지
         // 기억할 필요가 없는 것이 이 구조의 요점이다(언리얼 FRenderResource::InitRHI 와 같은 자리).
         RHIRenderResource::initAllFor( &_rhi->getDevice() );
 

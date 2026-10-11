@@ -71,7 +71,7 @@ namespace sw
         GameObject* pOwner = getOwner();
         if ( pOwner == nullptr || _asset2D == nullptr )
             return;
-        // 그릴 메시가 없으면 쉬는 조각을 구운 평평한 메시를 온전한 모습으로 더한다.
+        // 그릴 메시가 없으면 쉬는 조각을 베이크한 평평한 메시를 온전한 모습으로 추가한다.
         for ( Component* pComp : pOwner->getComponents() )
         {
             if ( pComp != nullptr && castTo<MeshComponent>( pComp ) != nullptr )

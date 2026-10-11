@@ -300,7 +300,7 @@ namespace sw
 
     bool AudioMixerDesc::makeProcessingOrder( vector<uint32>& outListBusIndex ) const
     {
-        // 간선: 보내는 버스 → 받는 버스(부모 · 센드 대상). 받는 쪽은 들어오는 간선이 모두 처리된 뒤에 처리한다(Kahn).
+        // 간선은 보내는 버스에서 받는 버스(부모, 센드 대상)로 향한다. 받는 쪽은 들어오는 간선이 모두 처리된 뒤에 처리한다(Kahn).
         const size_t   busCount = _listBus.size();
         vector<uint32> listIncoming( busCount, 0u );
         for ( const AudioBusDesc& bus : _listBus )

@@ -212,7 +212,7 @@ namespace sw
         if ( context._pTextLayout == nullptr || _text.empty() )
             return float2{};
         resolveDisplayText( context._pLocalization, context._textRevision, context._pActionGlyphs );
-        // 줄 바꿈이면 가용 너비 안에서 잰다(무한이면 한 줄). 줄 바꿈이 아니면 늘 한 줄이다.
+        // 줄 바꿈이면 가용 너비 안에서 측정한다(무한이면 한 줄). 줄 바꿈이 아니면 늘 한 줄이다.
         const bool    bBounded = UILayoutPass::isUnbounded( availableSize._x ) == false && availableSize._x > 0.0f;
         const float32 maxWidth = _style._bWrap && bBounded ? availableSize._x : 0.0f;
         return context._pTextLayout->measure( getPlainText(), makeLayoutStyle( context._textScale ), maxWidth, getSpans() );

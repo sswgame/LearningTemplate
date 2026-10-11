@@ -53,7 +53,7 @@ _kGeneratedGlob = (
     "generated/moduleidentity/*/*",
     "Bin/Modules/*",
 )
-#: 캐시에서 견주지 않는 종류 — CMake 가 스스로 쓰는 값이라 리팩터와 무관하게 바뀐다.
+#: 캐시에서 비교하지 않는 종류 — CMake 가 스스로 쓰는 값이라 리팩터와 무관하게 바뀐다.
 _kIgnoredCacheType = {"INTERNAL", "STATIC"}
 
 

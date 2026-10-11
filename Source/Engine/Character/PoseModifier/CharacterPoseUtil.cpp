@@ -14,7 +14,7 @@ namespace sw
         for ( uint32 boneIndex = 0; boneIndex < skeleton.getBoneCount(); ++boneIndex )
         {
             const SkeletonBone& bone = skeleton.getBone( boneIndex );
-            // 부모가 앞에 있으므로 붙이면서 모델 칸도 쌓인다.
+            // 부모가 앞에 있으므로 붙이면서 모델 슬롯도 쌓인다.
             (void)outBones.addBone( bone._name, bone._parentIndex, bone._referencePose.toMatrix() );
         }
     }
@@ -23,7 +23,7 @@ namespace sw
     {
         const Skeleton& skeleton  = unit.getSkeleton();
         const uint32    boneCount = skeleton.getBoneCount();
-        // 이름 하나만 대조해도 다른 스켈레톤을 가려낸다 — 본 수가 같은 다른 리그를 받으면 다시 짓는다.
+        // 이름 하나만 대조해도 다른 스켈레톤을 가려낸다. 본 수가 같은 다른 리그를 받으면 다시 만든다.
         const bool bSameShape = inoutBones.getBoneCount() == boneCount && ( boneCount == 0 || inoutBones._listName[0] == skeleton.getBone( 0 )._name );
         if ( bSameShape == false )
             makeBindBones( skeleton, inoutBones );

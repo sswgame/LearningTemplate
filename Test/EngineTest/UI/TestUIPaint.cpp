@@ -729,7 +729,7 @@ SW_TEST_CASE( UIPaintTest, SnappedWidthDoesNotWrapFittingText )
 }
 
 /**
- * @brief [UIPaintTest] 글 위젯의 행동 태그는 문맥의 글리프 출처로 풀린다 — 입력 장치가 바뀌면(onInputGlyphsChanged) 다시 풀고 다시 잰다
+ * @brief [UIPaintTest] 글 위젯의 행동 태그는 문맥의 글리프 출처로 풀린다 — 입력 장치가 바뀌면(onInputGlyphsChanged) 다시 풀고 다시 측정한다
  * @details 변이: `TextWidget::onInputGlyphsChanged` 를 비우면 패드로 바꿔도 "[ E ] open" 이 남아 진다.
  */
 SW_TEST_CASE( UIPaintTest, ActionTagFollowsInputDevice )

@@ -1,12 +1,15 @@
 /**
  * @file GameDataCache.h
- * @brief 경로마다 한 번 읽어 여러 컴포넌트가 나눠 쓰는 게임 데이터 표(상호작용 표 · 원소 규칙 표)의 캐시와, 그 캐시들을 에셋 캐시 등록부에 올리는 목록입니다.
- * @details 캐시는 GameFramework 모듈의 정적 객체입니다. 게임 서비스가 묶이면(`game::bindGameService` — 서비스에 `AssetManager` 가 있으면) 등록부에 오르고,
- *          풀리면(`unbindGameService`) 내려갑니다. 그래서 에디터 핫 리로드가 파일을 고친 표를 종류 이름으로 찾아 다시 읽고(`reload`), 종료의 비우기 · 진단도
- *          엔진 캐시와 같은 길을 탑니다. 모듈이 내리지 않고 사라지면 `AssetManager::onModuleUnloading` 이 이미지 안의 캐시를 걷습니다.
+ * @brief 게임 데이터 표(상호작용 표, 원소 규칙 표)의 캐시와, 그 캐시들을 에셋 캐시 레지스트리에 올리는 목록을 정의합니다.
+ * @details 표는 경로마다 한 번 읽어 여러 컴포넌트가 나눠 쓴다.
+ *          캐시는 GameFramework 모듈의 정적 객체이다.
+ *          게임 서비스가 묶이면(`game::bindGameService`, 서비스에 `AssetManager` 가 있을 때) 레지스트리에 오르고, 풀리면(`unbindGameService`) 내려간다.
+ *          그래서 에디터 핫 리로드가 파일을 고친 표를 종류 이름으로 찾아 다시 읽을 수 있고(`reload`), 종료할 때의 비우기와 진단도 엔진 캐시와 같은 길을 탄다.
+ *          모듈이 내리지 않고 사라지면 `AssetManager::onModuleUnloading` 이 이미지 안의 캐시를 걷는다.
  *
- *          다시 읽은 표는 **새 객체**로 칸을 바꾸고, 옛 객체는 캐시가 사라질 때까지 살려 둡니다 — 표 안의 정의를 날 포인터로 든 컴포넌트가 그 프레임에 옛 것을 읽어도
- *          죽은 메모리를 밟지 않습니다. 쓰는 쪽은 다시 읽은 횟수(`getReloadCount`)가 바뀌면 자기 정의를 다시 찾습니다(UE `UAssetManager` 의 주 에셋 다시 읽기 자리).
+ *          다시 읽은 표는 **새 객체**로 칸을 바꾸고, 옛 객체는 캐시가 사라질 때까지 살려 둔다.
+ *          표 안의 정의를 날 포인터로 든 컴포넌트가 그 프레임에 옛 것을 읽어도 죽은 메모리를 밟지 않게 하려는 것이다.
+ *          쓰는 쪽은 다시 읽은 횟수(`getReloadCount`)가 바뀌면 자기 정의를 다시 찾는다. UE 의 `UAssetManager` 가 주 에셋을 다시 읽는 방식과 같다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -30,17 +33,17 @@ namespace sw
 
     /**
      * @struct GameDataCacheRegistry
-     * @brief GameFramework 의 데이터 캐시 목록과, 그것을 올린 에셋 매니저입니다. 캐시가 생기거나 서비스가 묶이고 풀릴 때 등록부를 맞춥니다.
+     * @brief GameFramework 의 데이터 캐시 목록과, 그것을 올린 에셋 매니저입니다. 캐시가 생기거나 서비스가 묶이고 풀릴 때 레지스트리를 맞춥니다.
      */
     struct SW_GF_API GameDataCacheRegistry
     {
-        /** @brief 캐시를 목록에 넣고, 묶인 매니저가 있으면 그 등록부에 올립니다. 캐시 생성자가 부릅니다. */
+        /** @brief 캐시를 목록에 넣고, 묶인 매니저가 있으면 그 레지스트리에 올립니다. 캐시 생성자가 부릅니다. */
         static void addCache( IAssetCache* pCache );
-        /** @brief 캐시를 목록에서 뺍니다. 캐시 소멸자가 부릅니다(매니저는 건드리지 않는다 — 프로세스 끝에는 이미 사라졌을 수 있다). */
+        /** @brief 캐시를 목록에서 뺍니다. 캐시 소멸자가 부릅니다. 프로세스 끝에는 매니저가 이미 사라졌을 수 있으므로 매니저는 건드리지 않습니다. */
         static void removeCache( const IAssetCache* pCache );
-        /** @brief 목록의 캐시를 @p pAssetManager 등록부에 올립니다. 앞서 묶인 매니저가 있으면 거기서 먼저 내립니다. nullptr 이면 내리기만 합니다. */
+        /** @brief 목록의 캐시를 @p pAssetManager 레지스트리에 올립니다. 앞서 묶인 매니저가 있으면 거기서 먼저 내립니다. nullptr 이면 내리기만 합니다. */
         static void attach( AssetManager* pAssetManager );
-        /** @brief 묶인 매니저의 등록부에서 목록의 캐시를 내립니다. */
+        /** @brief 묶인 매니저의 레지스트리에서 목록의 캐시를 내립니다. */
         static void detach() { attach( nullptr ); }
     };
 } // namespace sw
@@ -49,15 +52,15 @@ namespace sw
 {
     /**
      * @class GameDataCache
-     * @brief 경로 → 표 하나입니다. 표 타입은 `bool loadFromResource( string_view )` 를 가집니다.
+     * @brief 경로마다 표 하나를 들고 있는 캐시입니다. 표 타입은 `bool loadFromResource( string_view )` 를 가져야 합니다.
      * @tparam TableType 기본 생성되는 데이터 표 타입입니다.
-     * @details 읽지 못한 경로도 칸을 남깁니다(빈 칸) — 쓰는 쪽마다 같은 오류를 다시 내지 않고, 파일을 고치면 `reload` 가 그 칸을 채웁니다.
+     * @details 읽지 못한 경로도 빈 칸으로 남긴다. 쓰는 쪽마다 같은 오류를 다시 내지 않게 하려는 것이며, 파일을 고치면 `reload` 가 그 칸을 채운다.
      */
     template <typename TableType>
     class GameDataCache final : public IAssetCache
     {
     public:
-        /** @param pKindName 등록부의 종류 이름입니다(정적 문자열 — 에디터 핫 리로드 경로 표가 이 이름으로 찾는다). */
+        /** @param pKindName 레지스트리의 종류 이름입니다. 정적 문자열이며, 에디터 핫 리로드 경로 표가 이 이름으로 찾습니다. */
         explicit GameDataCache( const utf8* pKindName )
             : _pKindName{ pKindName }
             , _mutex{}
@@ -74,8 +77,8 @@ namespace sw
         GameDataCache& operator=( const GameDataCache& ) = delete;
 
         /**
-         * @brief 경로의 표입니다. 처음이면 읽습니다. 읽지 못했으면 nullptr 입니다. 여러 스레드에서 불려도 됩니다.
-         * @details 돌려준 표는 캐시가 사라질 때(모듈이 내릴 때)까지 삽니다(다시 읽거나 비워도 옛 표는 남는다).
+         * @brief 경로의 표를 반환합니다. 처음이면 읽으며, 읽지 못했으면 nullptr 입니다. 여러 스레드에서 불려도 됩니다.
+         * @details 반환한 표는 캐시가 사라질 때(모듈이 내릴 때)까지 산다. 다시 읽거나 비워도 옛 표는 남는다.
          */
         const TableType* find( string_view path )
         {
@@ -92,7 +95,7 @@ namespace sw
             return pTable;
         }
 
-        /** @brief 이 캐시가 표를 다시 읽은 횟수입니다. 쓰는 쪽은 값이 바뀌면 정의를 다시 찾습니다. */
+        /** @brief 이 캐시가 표를 다시 읽은 횟수입니다. 쓰는 쪽은 값이 바뀌면 정의를 다시 찾아야 합니다. */
         uint32 getReloadCount() const { return _reloadCount.load( std::memory_order_acquire ); }
 
         const utf8* getAssetKindName() const override { return _pKindName; }
@@ -103,7 +106,7 @@ namespace sw
             return _mapTable.find( makeKey( relativePath ) ) != _mapTable.end();
         }
 
-        /** @brief 읽은 적 있는 경로면 새 표로 다시 읽어 칸을 바꿉니다. 읽지 못하면 옛 표 그대로이고 오류를 남깁니다. 틱 밖(게임 스레드)에서 부릅니다. */
+        /** @brief 읽은 적 있는 경로면 새 표로 다시 읽어 칸을 바꿉니다. 읽지 못하면 옛 표를 그대로 두고 오류를 남깁니다. 틱 밖(게임 스레드)에서 불러야 합니다. */
         void reload( string_view relativePath, IRHIDevice* pDevice ) override
         {
             (void)pDevice;
@@ -111,7 +114,7 @@ namespace sw
             {
                 std::scoped_lock<mutex> lock{ _mutex };
                 if ( _mapTable.find( key ) == _mapTable.end() )
-                    return; // 아무도 읽지 않았다 — 다음 `find` 가 새 내용을 읽는다
+                    return; // 아무도 읽지 않았으므로 다음 `find` 가 새 내용을 읽는다.
             }
             unique_ptr<TableType> fresh = make_unique<TableType>();
             if ( fresh->loadFromResource( relativePath ) == false )
@@ -127,7 +130,7 @@ namespace sw
             _reloadCount.fetch_add( 1, std::memory_order_release );
         }
 
-        /** @brief 읽어 둔 표의 수입니다(읽지 못한 빈 칸은 세지 않는다). */
+        /** @brief 읽어 둔 표의 수입니다. 읽지 못한 빈 칸은 세지 않습니다. */
         size_t getCachedCount() const override
         {
             std::scoped_lock<mutex> lock{ _mutex };
@@ -141,8 +144,8 @@ namespace sw
         }
 
         /**
-         * @brief 표를 비웁니다(종료 · 재초기화) — 다음 `find` 는 파일을 새로 읽습니다.
-         * @details 앞서 돌려준 표는 버리지 않고 캐시가 사라질 때(모듈이 내릴 때)까지 둡니다. 종료 순서상 비우기 뒤에도 정의를 날 포인터로 든 컴포넌트가 남아 있을 수 있다.
+         * @brief 표를 비웁니다. 종료하거나 재초기화할 때 부르며, 다음 `find` 는 파일을 새로 읽습니다.
+         * @details 앞서 반환한 표는 버리지 않고 캐시가 사라질 때(모듈이 내릴 때)까지 둔다. 종료 순서상 비우기 뒤에도 정의를 날 포인터로 든 컴포넌트가 남아 있을 수 있기 때문이다.
          */
         void clear() override
         {
@@ -156,7 +159,7 @@ namespace sw
         }
 
     private:
-        /** @brief 표의 키입니다 — 핫 리로드가 넘기는 경로와 같은 칸을 찾도록 구분자를 맞춥니다. */
+        /** @brief 표의 키를 만듭니다. 핫 리로드가 넘기는 경로와 같은 칸을 찾도록 구분자를 맞춥니다. */
         static string makeKey( string_view path ) { return FileUtil::normalizeSeparators( path ); }
 
         const utf8*                                  _pKindName;

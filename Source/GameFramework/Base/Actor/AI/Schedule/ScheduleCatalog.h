@@ -1,9 +1,12 @@
 /**
  * @file ScheduleCatalog.h
- * @brief NPC 하루 일정 데이터 — 달력 어휘 · 장소 · 활동 자리 · 끼어들기 종류 · 약속 · 묶음(아키타입) · NPC 루틴 · 축제/행사입니다.
- * @details 사람이 고치는 데이터입니다(`*.schedules.xml`). 루틴은 조건 + 우선순위 + 시간 칸이고, 시간마다 조건이 맞는 칸 중 우선순위가 가장 높은 것이
- *          이깁니다 — 축제는 우선순위가 높은 행사 칸이라 그 시간만 덮고 나머지는 평소 루틴이 그대로 남습니다(스타듀 밸리 일정 · 축제, 스카이림
- *          Radiant AI 패키지, 동물의 숲 주민 하루, 페르소나 요일 일정, RDR2 마을 사람). 활동은 `ScheduleActivityRegistry` 의 이름으로 고릅니다.
+ * @brief NPC 하루 일정의 데이터를 정의합니다.
+ * @details 달력 어휘, 장소, 활동 자리, 끼어들기 종류, 약속, 묶음(아키타입), NPC 루틴, 축제와 행사를 담는다.
+ *          사람이 고치는 데이터(`*.schedules.xml`)이다.
+ *          루틴은 조건, 우선순위, 시간 칸으로 이루어진다. 시간마다 조건이 맞는 칸 중 우선순위가 가장 높은 것이 이긴다.
+ *          축제는 우선순위가 높은 행사 칸이라서, 그 시간만 덮고 나머지는 평소 루틴이 그대로 남는다.
+ *          스타듀 밸리의 일정과 축제, 스카이림의 Radiant AI 패키지, 동물의 숲 주민의 하루, 페르소나의 요일 일정, RDR2 의 마을 사람이 같은 모양이다.
+ *          활동은 `ScheduleActivityRegistry` 의 이름으로 고른다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -27,7 +30,7 @@ namespace sw
     /** @brief 하루의 분 수입니다. 일정 시각은 0..1440 분(정수)입니다. */
     inline constexpr int32 kScheduleMinutesPerDay = 1440;
 
-    /** @brief 장소 하나 — 일정이 가는 곳입니다. */
+    /** @brief 일정이 가는 장소 하나입니다. */
     struct SchedulePlaceDef
     {
         hashed_string _id{};
@@ -39,7 +42,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 활동 자리 하나(벤치 · 작업대) — 스마트 오브젝트가 없을 때 `ScheduleSpotLocator` 가 나눠 주는 자리입니다. */
+    /** @brief 활동 자리 하나입니다. 벤치나 작업대 같은 자리이며, 스마트 오브젝트가 없을 때 `ScheduleSpotLocator` 가 나눠 줍니다. */
     struct ScheduleSpotDef
     {
         hashed_string _id{};
@@ -52,7 +55,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 끼어들기 종류(말 걸기 · 전투 · 경보)입니다. 높은 우선순위가 위에 쌓입니다. */
+    /** @brief 끼어들기 종류(말 걸기, 전투, 경보)입니다. 우선순위가 높은 것이 위에 쌓입니다. */
     struct ScheduleInterruptDef
     {
         hashed_string _id{};
@@ -63,7 +66,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 일정 칸 하나 — 그 시간에 할 활동입니다. */
+    /** @brief 일정 칸 하나입니다. 그 시간에 할 활동을 담습니다. */
     struct ScheduleBlockDef
     {
         ScheduleCondition _condition{};
@@ -81,7 +84,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 루틴 — 조건이 맞는 날 쓰는 일정 칸 묶음입니다. */
+    /** @brief 루틴입니다. 조건이 맞는 날 쓰는 일정 칸의 묶음입니다. */
     struct ScheduleRoutineDef
     {
         hashed_string            _id{};
@@ -93,7 +96,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 묶음(아키타입) — 여러 NPC 가 나누는 루틴입니다. 부모 묶음의 루틴을 이어받습니다. */
+    /** @brief 묶음(아키타입)입니다. 여러 NPC 가 나누는 루틴이며, 부모 묶음의 루틴을 이어받습니다. */
     struct ScheduleArchetypeDef
     {
         hashed_string              _id{};
@@ -104,7 +107,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief NPC 하나입니다. 루틴은 자기 것 + 묶음 사슬의 것(같은 id 면 자기 것이 덮는다)을 읽을 때 모아 둡니다. */
+    /** @brief NPC 하나입니다. 루틴은 자기 것과 묶음 사슬의 것을 읽을 때 모아 둡니다. 같은 id 면 자기 것이 덮습니다. */
     struct ScheduleNpcDef
     {
         hashed_string              _id{};
@@ -119,7 +122,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 축제 · 행사 — 조건이 맞는 날 참가자의 그 시간을 덮는 칸입니다. */
+    /** @brief 축제나 행사입니다. 조건이 맞는 날 참가자의 그 시간을 덮는 칸입니다. */
     struct ScheduleEventDef
     {
         hashed_string            _id{};
@@ -133,7 +136,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 약속 — 두 NPC 이상의 일정이 함께 가리키는 만남(시간 · 장소)입니다. 참가자는 `Meet` 칸이 이 약속을 가리키는 NPC 입니다. */
+    /** @brief 약속입니다. 두 NPC 이상의 일정이 함께 가리키는 만남(시간과 장소)이며, 참가자는 `Meet` 칸이 이 약속을 가리키는 NPC 입니다. */
     struct ScheduleAppointmentDef
     {
         hashed_string         _id{};
@@ -172,8 +175,9 @@ namespace sw
      *       </Event>
      *     </Schedules>
      * @endcode
-     * @details 시각은 `H:MM`(0:00..24:00)입니다. 모르는 원소 · 속성 · 활동 · 장소 · 약속 · 묶음 · 요일 · 계절 · 날씨 이름, 겹치는 칸, 시작 ≥ 끝,
-     *          묶음 순환은 경고하고 그 항목을 뺍니다(`ResourceDataSchemaTest` 가 경고를 실패로 잡는다).
+     * @details 시각은 `H:MM`(0:00..24:00)으로 적는다.
+     *          모르는 이름(원소, 속성, 활동, 장소, 약속, 묶음, 요일, 계절, 날씨), 겹치는 칸, 시작 ≥ 끝, 묶음 순환은 경고하고 그 항목을 뺀다.
+     *          `ResourceDataSchemaTest` 가 그 경고를 실패로 잡는다.
      */
     class SW_GF_API ScheduleCatalog : public XMLCatalog<ScheduleCatalog>
     {
@@ -184,11 +188,11 @@ namespace sw
 
         void clear();
 
-        /** @brief "9:30" · "24:00" · "9" 를 분으로 읽습니다. 범위(0..1440) 밖 · 틀린 글이면 false 입니다. */
+        /** @brief "9:30", "24:00", "9" 같은 글을 분으로 읽습니다. 범위(0..1440) 밖이거나 틀린 글이면 false 입니다. */
         [[nodiscard]] static bool parseClockMinutes( string_view text, int32& outMinutes );
 
         const ScheduleActivityRegistry& getActivityRegistry() const;
-        /** @brief 활동 이름을 검사할 등록부입니다. 주지 않으면 기본 종류만 든 등록부입니다. 읽기 전에 정합니다. */
+        /** @brief 활동 이름을 검사할 레지스트리를 정합니다. 주지 않으면 기본 종류만 든 레지스트리를 쓰며, 읽기 전에 정해야 합니다. */
         void                                  setActivityRegistry( const ScheduleActivityRegistry* pRegistry ) { _pActivityRegistry = pRegistry; }
         const ScheduleConditionVocabulary&    getVocabulary() const { return _vocabulary; }
         const SchedulePlaceDef*               findPlace( const hashed_string& id ) const { return _placeCatalog.find( id ); }
@@ -210,13 +214,13 @@ namespace sw
         static constexpr const utf8* kXMLRootName = "Schedules"; ///< 루트 원소(`XMLCatalog`)
 
         uint32 loadRoot( const XMLNode& root, string_view sourceName );
-        /** @brief 원소 하나를 읽습니다. 읽은 NPC 수(0 · 1)입니다. */
+        /** @brief 원소 하나를 읽습니다. 읽은 NPC 수(0 또는 1)를 반환합니다. */
         uint32 loadElement( const XMLNode& node, string_view sourceName );
         void   readRoutine( const XMLNode& node, string_view sourceName, string_view ownerName, ScheduleRoutineDef& outRoutine ) const;
-        /** @brief 칸을 읽습니다. 쓸 수 없는 칸이면 경고하고 false 입니다. @p bInRoutine 이면 `Meet` 를 받습니다. */
+        /** @brief 칸을 읽습니다. 쓸 수 없는 칸이면 경고하고 false 를 반환합니다. @p bInRoutine 이면 `Meet` 를 받습니다. */
         [[nodiscard]] bool readBlock( const XMLNode& node, string_view sourceName, string_view ownerName, bool bInRoutine, ScheduleBlockDef& outBlock ) const;
         void               warnOverlappingBlocks( const vector<ScheduleBlockDef>& listBlock, string_view sourceName, string_view ownerName ) const;
-        /** @brief NPC 마다 묶음 사슬의 루틴을 이어 붙이고 약속 참가자를 모읍니다. 순환 · 모르는 이름은 경고합니다. */
+        /** @brief NPC 마다 묶음 사슬의 루틴을 이어 붙이고 약속 참가자를 모읍니다. 순환이나 모르는 이름은 경고합니다. */
         void resolveReferences( string_view sourceName );
 
         GameCatalog<SchedulePlaceDef>       _placeCatalog;

@@ -1,5 +1,5 @@
 // 패킷 압축 벤치 — 실제 흐름의 서버 → 클라이언트 데이터그램(복제 스냅숏 · 파괴 시나리오)과 채팅 메시지 표본을 패킷마다 압축했을 때의 크기 · 시간.
-// 보낸 양은 C2 가 보낼 모양(봉투 3 B, 줄지 않으면 원문)으로 센다. 코덱: LZ4 · zstd 1 · zstd 3 · zstd 1 + 학습 사전 16 KB(짝수 번째로 배우고 홀수 번째로 잰다).
+// 보낸 양은 C2 가 보낼 모양(봉투 3 B, 줄지 않으면 원문)으로 센다. 코덱: LZ4 · zstd 1 · zstd 3 · zstd 1 + 학습 사전 16 KB(짝수 번째로 배우고 홀수 번째로 측정한다).
 // 값은 Release 로 읽는다 — 켜는 규칙(15 % 이상 줄고 압축 + 해제가 패킷당 2 us 이하)은 백로그 "패킷 압축".
 #include "pch.h"
 
@@ -140,7 +140,7 @@ namespace
         SW_EXPECT_EQUAL( rawBytes, restoredTotal );
     }
 
-    /** @brief 표본 하나에 코덱 넷 — 짝수 번째로 사전을 배우고 홀수 번째로 잰다(모든 코덱이 같은 홀수 번째를 잰다). */
+    /** @brief 표본 하나에 코덱 넷 — 짝수 번째로 사전을 배우고 홀수 번째로 측정한다(모든 코덱이 같은 홀수 번째를 측정한다). */
     void measureSet( const utf8* pSetName, const vector<vector<uint8>>& listSample )
     {
         using Internal = NetCompressionBenchInternal;
@@ -398,7 +398,7 @@ SW_TEST_CASE( NetCompressionBenchTest, DestructionScenarioPackets )
 
 /**
  * @brief [NetCompressionBenchTest] 채팅 메시지 표본 — 채널 · 보낸 이 · 글(한국어 · 영어 섞음, 고정 씨앗) 2000 개를 키트 메시지 모양으로 직렬화(합성 표본)
- * @details 합성 표본이라 숫자는 채팅 키트가 실제 기록을 내면 다시 잰다.
+ * @details 합성 표본이라 숫자는 채팅 키트가 실제 기록을 내면 다시 측정한다.
  */
 SW_TEST_CASE( NetCompressionBenchTest, ChatMessages )
 {

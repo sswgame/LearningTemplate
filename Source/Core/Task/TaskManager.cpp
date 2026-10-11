@@ -35,7 +35,7 @@ namespace sw
         /// @brief 대기 함수(waitStage/waitAll/runParallel)가 잠들기 전에 도는 `cpuPause` 횟수(약 2 us)입니다. 기다리는 동안에는 다른 일을 돕습니다.
         constexpr uint32 kIdleSpinCount = 64;
         /**
-         * @brief 워커가 잠들기 전에 일감을 기다리며 스핀하는 시간(마이크로초)입니다. 짧게 둡니다(측정해 본 결과입니다).
+         * @brief 워커가 잠들기 전에 작업을 기다리며 스핀하는 시간(마이크로초)입니다. 짧게 둡니다(측정해 본 결과입니다).
          * @details 스핀은 `_workEpoch` 캐시 라인 하나만 읽으므로 큐 경합은 없습니다. 그런데도 길게(50 us) 돌리면 손해입니다. 워커가
          *          SMT 형제 코어를 차지해 게임 · 렌더 스레드가 느려집니다. 렌더 그래프 병렬 기록이 150~192 us(2 us 스핀) 대
          *          214~242 us(50 us 스핀)였습니다. 일부 워커만 길게 돌리는 hot pool(2 · 4개)도 이득이 없었습니다. 이 엔진의 프레임
@@ -208,7 +208,7 @@ namespace sw
         _bStop        = false;
         _idleWorkerMask.store( 0, std::memory_order_relaxed );
         _mainThreadParkedSlot.store( -1, std::memory_order_relaxed );
-        // 자리를 모두 만든 **뒤에** 스레드를 띄운다. 워커는 서로의 데크를 훔치므로, 도는 동안 목록의 크기가 바뀌면 안 된다.
+        // 슬롯을 모두 만든 **뒤에** 스레드를 시작한다. 워커는 서로의 데크를 훔치므로, 도는 동안 목록의 크기가 바뀌면 안 된다.
         _listWorkerSlot.reserve( threadCount );
         for ( uint32 workerIndex = 0; workerIndex < threadCount; ++workerIndex )
         {
@@ -338,7 +338,7 @@ namespace sw
         if ( t_helperScratchSlot < 0 || t_helperSlotOwnerID != _instanceID )
         {
             t_helperSlotOwnerID = _instanceID;
-            // 돌려받은 칸부터 다시 쓴다(가장 낮은 비트).
+            // 돌려받은 슬롯부터 다시 쓴다(가장 낮은 비트).
             uint32 freeMask = _helperSlotFreeMask.load( std::memory_order_acquire );
             while ( freeMask != 0 )
             {
@@ -358,7 +358,7 @@ namespace sw
             const uint32 assigned = _helperSlotCount.fetch_add( 1, std::memory_order_relaxed );
             if ( assigned >= kMaxHelperThreadCount )
             {
-                // 넘치면 마지막 칸을 나눠 쓴다. 스크래치가 겹칠 수 있으니 알린다. 끝나는 스레드가 칸을 돌려주므로 동시에 살아 있는 비워커 스레드가
+                // 넘치면 마지막 슬롯을 나눠 쓴다. 스크래치가 겹칠 수 있으므로 로그로 알린다. 끝나는 스레드가 슬롯을 돌려주므로 동시에 살아 있는 비워커 스레드가
                 // 이만큼일 때만 닿는다.
                 SW_LOG_ERROR( "More than %# non-worker threads execute tasks at once — scratch slots collide (raise kMaxHelperThreadCount)", kMaxHelperThreadCount );
                 t_helperScratchSlot = static_cast<int32>( kMaxHelperThreadCount - 1 );
@@ -373,7 +373,7 @@ namespace sw
     {
         if ( t_helperScratchSlot < 0 || t_helperSlotOwnerID != _instanceID )
             return;
-        // 넘쳐서 나눠 쓰던 마지막 칸은 다른 스레드도 쓰고 있을 수 있어 돌려주지 않는다.
+        // 넘쳐서 나눠 쓰던 마지막 슬롯은 다른 스레드도 쓰고 있을 수 있으므로 돌려주지 않는다.
         const bool bShared = _helperSlotCount.load( std::memory_order_relaxed ) > kMaxHelperThreadCount &&
                              t_helperScratchSlot == static_cast<int32>( kMaxHelperThreadCount - 1 );
         if ( bShared == false )
@@ -619,7 +619,7 @@ namespace sw
     {
         if ( count == 0 || body.isBound() == false )
             return;
-        // 문턱값 아래이거나 워커가 없으면 이 스레드가 한 번에 실행한다. 나누는 비용이 일보다 크다.
+        // 임계값 아래이거나 워커가 없으면 이 스레드가 한 번에 실행한다. 나누는 비용이 일보다 크다.
         // 그래도 병렬 본문이다 — 본문에서 만든 태스크가 최상위인 것이 개수 · 워커 수에 따라 달라지지 않게 한다.
         const uint32 workerCount = getWorkerCount();
         if ( _bInitialized == false || workerCount == 0 || count < serialThreshold )
@@ -867,7 +867,7 @@ namespace sw
                 waitMilli = static_cast<uint32>( static_cast<int64>( timeoutMs ) - elapsed );
             }
 
-            // 대상이 전체라 대기자 하나를 적어 둘 곳이 없다. 브로드캐스트를 기다리며 잠든다(활성 수 0 · 메인 일감 · clear 가 알린다).
+            // 대상이 전체라 대기자 하나를 적어 둘 곳이 없다. 브로드캐스트를 기다리며 잠든다(활성 수 0 · 메인 작업 · clear 가 알린다).
             const uint32 epoch = prepareBroadcastWait();
             if ( _activeTaskCount.load( std::memory_order_seq_cst ) > 0 )
                 commitBroadcastWait( epoch, waitMilli );
@@ -909,7 +909,7 @@ namespace sw
         const bool bMainThread = isMainThread();
         if ( bMainThread )
         {
-            // 메인 일감을 넣는 쪽이 이 칸을 보고 깨운다. 적은 뒤에 큐를 다시 확인해야 그 사이에 들어온 일감을 놓치지 않는다.
+            // 메인 작업을 넣는 쪽이 이 칸을 보고 깨운다. 적은 뒤에 큐를 다시 확인해야 그 사이에 들어온 작업을 놓치지 않는다.
             _mainThreadParkedSlot.store( static_cast<int32>( slotIndex ), std::memory_order_seq_cst );
             std::atomic_thread_fence( std::memory_order_seq_cst );
             if ( _queueMainThread.empty() == false )
@@ -1180,7 +1180,7 @@ namespace sw
                 else
                     std::this_thread::yield();
             }
-            // 이 일감을 실행할 수 있는 것은 메인 스레드뿐이다(`dispatchMainThreadTasks`). 메인이 어느 대기에서든 잠들어 있으면 깨워야
+            // 이 작업을 실행할 수 있는 것은 메인 스레드뿐이다(`dispatchMainThreadTasks`). 메인이 어느 대기에서든 잠들어 있으면 깨워야
             // 한다(아무나 하나 깨우면 엉뚱한 스레드가 깨어 메인과 태스크가 서로를 기다린다).
             wakeParkedMainThread();
             return;
@@ -1277,8 +1277,8 @@ namespace sw
                 continue;
             }
 
-            // **세대를 먼저 읽고 큐를 본다.** 그래야 그 사이에 들어온 일감이 세대를 올려 스핀이 알아챈다.
-            // (읽은 뒤에 들어온 일감은 세대를 바꾸고, 읽기 전에 들어온 일감은 바로 아래 tryTakeItem 이 본다.)
+            // **세대를 먼저 읽고 큐를 본다.** 그래야 그 사이에 들어온 작업이 세대를 올려 스핀이 알아챈다.
+            // (읽은 뒤에 들어온 작업은 세대를 바꾸고, 읽기 전에 들어온 작업은 바로 아래 tryTakeItem 이 본다.)
             bool            bFoundInSpin  = false;
             uint32          observedEpoch = _workEpoch.load( std::memory_order_acquire );
             const Stopwatch spinStopwatch;
@@ -1312,7 +1312,7 @@ namespace sw
             }
 
             // 잠드는 순서: 워드를 읽고 → 유휴 비트를 올리고 → 큐를 한 번 더 본다. 제출하는 쪽은 큐에 넣고 → 세대를 올리고 → 유휴
-            // 비트를 본다. 양쪽 모두 seq_cst 라 둘 중 하나는 반드시 상대를 본다. 그래서 넣은 일감이 잠든 워커 뒤에 남지 않는다.
+            // 비트를 본다. 양쪽 모두 seq_cst 라 둘 중 하나는 반드시 상대를 본다. 그래서 넣은 작업이 잠든 워커 뒤에 남지 않는다.
             const uint32 observedParkWord = slot._park._word.load( std::memory_order_acquire );
             _idleWorkerMask.fetch_or( idleBit, std::memory_order_seq_cst );
             std::atomic_thread_fence( std::memory_order_seq_cst );

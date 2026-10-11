@@ -19,7 +19,7 @@ using namespace sw;
 
 namespace
 {
-    /** @brief 서버(포트 4000) + 클라이언트 @p clientCount(4001 부터)를 30 프레임 동안 연결하고, 그 뒤 모든 끝점에 @p conditions 를 겁니다. */
+    /** @brief 서버(포트 4000) + 클라이언트 @p clientCount(4001 부터)를 30 프레임 동안 연결하고, 그 뒤 모든 엔드포인트에 @p conditions 를 겁니다. */
     void connectLockstepCluster( test::LoopbackCluster& cluster, int32 clientCount, const NetEmulationConditions& conditions )
     {
         NetHostSettings settings;

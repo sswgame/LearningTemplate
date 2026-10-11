@@ -77,7 +77,7 @@ namespace sw
         bool getWorldBox( AABB& outBox ) const override;
         /**
          * @brief 두 상자(`getBounds`)가 겹치는지입니다 — 순수 기하, 레이어를 보지 않습니다(유니티 `Bounds.Intersects`).
-         * @details 바디 등록 여부와 무관하게 지금 상자로 잽니다. 에디터 히트 테스트 · 배치 검사처럼 "공간이 겹치는가" 를 물을 때 씁니다.
+         * @details 바디 등록 여부와 무관하게 지금 상자로 측정합니다. 에디터 히트 테스트 · 배치 검사처럼 "공간이 겹치는가" 를 물을 때 씁니다.
          */
         bool overlapsBounds( const BoxCollider2DComponent* pOther ) const;
         /** @brief 상자가 [@p minB, @p maxB] 와 겹치는지입니다(경계 포함, 순수 기하). */

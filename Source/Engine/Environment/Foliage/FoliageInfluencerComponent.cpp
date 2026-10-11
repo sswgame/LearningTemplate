@@ -38,7 +38,7 @@ namespace sw
                 continue;
             const float3  center   = pInfluencer->getWorldPosition();
             const float32 distance = ( center - viewPosition ).getLengthSquared();
-            // 가까운 순 삽입 — 칸이 넷뿐이라 정렬 구조가 필요 없다.
+            // 가까운 순서로 삽입한다. 슬롯이 넷뿐이라 정렬 구조가 필요 없다.
             uint32 slot = count < kMaxInfluencerCount ? count : kMaxInfluencerCount;
             while ( slot > 0 && arrDistance[slot - 1] > distance )
             {

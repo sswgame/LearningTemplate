@@ -88,7 +88,7 @@ Windows는 DLL 파일 이름이 그 이름이라 복사본을 제 폴더(`<모�
 | `ModuleInstanceUtil.h` | 모듈 이미지 → API 표 → 인스턴스 절차(게임 · 에디터 공통) |
 | `ModuleCatalogLoader.cpp` | 모듈 매니페스트 읽기와 해석 |
 | `LiveReloadManager.cpp` | 핫 리로드 |
-| `ModuleImagePatch.cpp` | 섀도 복사본의 ABI 도장 · SONAME 바이트 |
+| `ModuleImagePatch.cpp` | 섀도 복사본의 ABI 스탬프 · SONAME 바이트 |
 | `ModuleCallGuard.cpp` | 새 모듈 코드 호출의 하드웨어 예외 가드 |
 | `ShadowCopyName.cpp` | 섀도 복사본 이름과 남은 복사본 정리 |
 | `ModuleCompiler.cpp` | 에디터가 부르는 백그라운드 CMake 빌드 |

@@ -145,7 +145,7 @@ namespace sw
         /**
          * @brief 열거형 하나를 불투명(opaque) 선언으로 앞세웁니다.
          * @details `namespace sw::editor { enum class EditorPanelFlags : unsigned char; }` 형태입니다.
-         *          네임스페이스가 없으면(전역 열거형) 선언만 씁니다. 기반 타입은 정본 철자를 쓰므로
+         *          네임스페이스가 없으면(전역 열거형) 선언만 씁니다. 기반 타입은 원본 철자를 쓰므로
          *          원본이 `uint8` 이어도 `unsigned char` 로 나오고, 같은 타입이라 재선언이 어긋나지
          *          않습니다.
          */
@@ -388,7 +388,7 @@ namespace sw
         }
         if ( prop._bIsBitField == SW_TRUE )
         {
-            // 파서가 잰 바이트를 박지 않는다 — 파서는 Debug 정의를 모르고 잰다(`PropertyInfo::resolveBitField` 설명).
+            // 파서가 측정한 바이트를 박지 않는다 — 파서는 Debug 정의를 모르고 측정한다(`PropertyInfo::resolveBitField` 설명).
             emit.linef( "p.resolveBitField( sizeof( %# ), []( void* pInstance ) { static_cast<%#*>( pInstance )->%# = static_cast<PropDecl>( 1 ); } );",
                         typeInfo._fullyQualifiedName, typeInfo._fullyQualifiedName, prop._memberName );
         }
@@ -745,7 +745,7 @@ namespace sw
                 if ( enumInfo._bNestedInType != SW_FALSE )
                 {
                     // 클래스 안의 열거형은 밖에서 전방 선언할 수 없어 **비트 연산자 트레이트만**
-                    // 코드젠하지 못한다. 등록부의 비트플래그 표시(`EnumInfo::_bIsBitFlag`)는 그와
+                    // 코드젠하지 못한다. 레지스트리의 비트플래그 표시(`EnumInfo::_bIsBitFlag`)는 그와
                     // 무관하게 유효하다. 인스펙터와 문자열 변환은 연산자를 쓰지 않는다. 그래서
                     // 여기서 멈추지 않고 연산자만 건너뛴다.
                     //

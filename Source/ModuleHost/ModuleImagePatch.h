@@ -1,6 +1,6 @@
 /**
  * @file ModuleImagePatch.h
- * @brief 섀도 복사본을 올리기 전에 파일 바이트를 읽고 고칩니다(엔진 ABI 도장 · 리눅스 SONAME · Windows import DLL 이름).
+ * @brief 섀도 복사본을 올리기 전에 파일 바이트를 읽고 고칩니다(엔진 ABI 스탬프 · 리눅스 SONAME · Windows import DLL 이름).
  *
  * @note 핫 리로드(`LiveReloadManager`)와 그 테스트만 쓰고, Shipping 빌드에서 함께 빠집니다(`Source/ModuleHost/CMakeLists.txt` 의 제외 목록).
  */
@@ -28,13 +28,13 @@ namespace sw
         static constexpr int64 kTagNeeded = 1;  ///< DT_NEEDED
         static constexpr int64 kTagSoname = 14; ///< DT_SONAME
 
-        /** @brief PE import 표 종류입니다. */
+        /** @brief PE import 테이블 종류입니다. */
         enum class ImportTable : uint8
         {
-            Load,  ///< 일반 import(IMAGE_DIRECTORY_ENTRY_IMPORT) — 로더가 올릴 때 묶는다
-            Delay, ///< 지연 import(IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT) — 첫 호출이 썽크를 지나 묶는다
+            Load,  ///< 일반 import(IMAGE_DIRECTORY_ENTRY_IMPORT). 로더가 로드할 때 바인딩한다
+            Delay, ///< 지연 import(IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT). 첫 호출이 썽크를 지나 바인딩한다
         };
-        /** @brief 엔진 ABI 도장 문자열의 머리입니다. 뒤에 SHA-1 16진 40 글자가 옵니다(`GenerateEngineAbiStamp.py` 와 같아야 한다). */
+        /** @brief 엔진 ABI 스탬프 문자열의 머리입니다. 뒤에 SHA-1 16진 40 글자가 옵니다(`GenerateEngineAbiStamp.py` 와 같아야 한다). */
         static constexpr const utf8* kEngineAbiStampMarker = "swEngineAbiStamp:";
         static constexpr uint32      kEngineAbiStampDigits = 40;
 
@@ -72,7 +72,7 @@ namespace sw
         static uint32 replaceImportDllName( vector<uint8>& inoutBytes, string_view from, string_view to );
 
         /**
-         * @brief 모듈 파일 바이트에서 엔진 ABI 도장(`swEngineAbiStamp:<sha1>`)을 찾습니다. 이 함수만은 ELF 에 한정되지 않습니다(DLL · SO 모두).
+         * @brief 모듈 파일 바이트에서 엔진 ABI 스탬프(`swEngineAbiStamp:<sha1>`)을 찾습니다. 이 함수만은 ELF 에 한정되지 않습니다(DLL · SO 모두).
          * @details 핫 리로드는 **모듈 코드가 한 줄도 돌기 전에**(정적 초기화 전) 돌고 있는 엔진과 같은 헤더로 빌드됐는지 봐야 하므로, 심볼을
          *          찾지 않고 파일에서 표식 문자열을 찾습니다.
          * @return 표식과 그 뒤 16진 40 글자가 온전히 있으면 true 입니다(@p outStamp 는 표식을 포함한 전체).

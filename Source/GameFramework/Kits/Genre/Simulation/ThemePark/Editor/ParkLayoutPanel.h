@@ -1,6 +1,6 @@
 /**
  * @file ParkLayoutPanel.h
- * @brief Park Layout 패널 — 배치 파일의 놀이기구 목록(비용 · 정원 · 탑승 시간), 더블클릭하면 에디터 카메라를 그 놀이기구로 옮깁니다.
+ * @brief Park Layout 패널을 구현합니다. 배치 파일의 놀이기구 목록(비용, 정원, 탑승 시간)을 보여 주며, 더블클릭하면 에디터 카메라를 그 놀이기구로 옮깁니다.
  */
 #pragma once
 #include "Editor/Common/GUI/IEditorPanel.h"
@@ -9,7 +9,7 @@ namespace sw::editor
 {
     /**
      * @class ParkLayoutPanel
-     * @brief ThemePark 키트의 에디터 확장 패널입니다. 키트 데이터를 읽기만 하므로 어느 게임으로 띄워도 돕니다.
+     * @brief ThemePark 키트의 에디터 확장 패널입니다. 키트 데이터를 읽기만 하므로 어느 게임으로 띄워도 동작합니다.
      */
     // [doc:panel-class]
     class ParkLayoutPanel final : public IEditorPanel

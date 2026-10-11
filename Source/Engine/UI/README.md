@@ -398,7 +398,7 @@ arrange가 결과 방향을 위젯에 기록하고(`isRightToLeft`), 글 위젯�
 
 위젯별로 알아 둘 점은 다음과 같습니다.
 
-- **글 위젯**(`TextWidget`)의 원하는 크기는 측정 결과입니다. 글자 배율을 곱한 크기이고, 줄 바꿈이면 가용 너비 안에서 잽니다. 그릴 때는 위젯 너비로 배치하고 결과를 캐시합니다.
+- **글 위젯**(`TextWidget`)의 원하는 크기는 측정 결과입니다. 글자 배율을 곱한 크기이고, 줄 바꿈이면 가용 너비 안에서 측정합니다. 그릴 때는 위젯 너비로 배치하고 결과를 캐시합니다.
   글과 스타일이 바뀌면 `kLayout`, 색만 바뀌면 `kPaint` 입니다. 문단 방향은 위젯의 흐름 방향이고, `_bRichText` 이면 `RichTextParser` 표기를 읽습니다.
 - **이미지 위젯**(`ImageWidget`)은 브러시(색, 둥근 모서리, 9-슬라이스)와 이미지를 곱해 그립니다. 이미지가 없으면 단색 상자입니다. `_bMirrorInRtl` 이면 RTL일 때 좌우를 뒤집습니다.
   이미지는 텍스처 객체(`setImage`)나 **경로**(`_imagePath`, `setImagePath`)로 지정합니다. 경로 이미지는 아래 "함정과 주의"의 이유로 그리기 목록에 경로 그대로 넣습니다.
@@ -484,7 +484,7 @@ Dev 구성에서 게임 창 · 에디터 게임 뷰 · 모든 Dev 실행의 런�
 - **켜고 끄기.** 마스터 단축키는 셸 입력 맵 Debug 레이어의 `DebugHUDToggle`(Ctrl+F3)입니다. 게임 맵이 F1~F12 를 스킬 키로 쓰므로(nile · skirmish · park 의 F1) Ctrl 조합이고,
   개발 콘솔(\` · Ctrl+F1) · 리로드(Ctrl+F6~F8) · 에디터 BugIt(Ctrl+Shift+F12) · 에디터 패널 F2(이름 바꾸기)와 겹치지 않으며, F3 은 마인크래프트 · 여러 엔진의 디버그 화면 키라 찾기 쉽습니다.
   개발 명령은 `hud [on|off|list|window]` · `hud <섹션> [on|off]`(섹션을 켜면 HUD 도 켠다) · `hud corner <topLeft|topRight|bottomLeft|bottomRight>` · `hud opacity <0.2..1>` 입니다.
-- **설정 창.** `hud window` 가 문서 `engine/ui/debughud.ui.xml` 을 모달로 엽니다. 표시 · 모서리 · 불투명도는 설정 바인딩(`{setting:debug.*}`)이고, 섹션 체크 상자는 `DebugHUD` 가 등록부에서 `Sections` 아래에 짓습니다.
+- **설정 창.** `hud window` 가 문서 `engine/ui/debughud.ui.xml` 을 모달로 엽니다. 표시 · 모서리 · 불투명도는 설정 바인딩(`{setting:debug.*}`)이고, 섹션 체크 상자는 `DebugHUD` 가 레지스트리에서 `Sections` 아래에 짓습니다.
   모달이라 열린 동안만 UI 가 입력을 가집니다(`isGameInputBlocked`). 닫히면 창의 보류 값을 확정해 저장합니다.
 - **저장.** 상태는 사용자 설정 `debug.hud` · `debug.hudSections` · `debug.hudCorner` · `debug.hudOpacity`(스키마 `engine/settings/debughud.settings.xml`, Dev 만 덧붙여 읽는다)이고 대상은 `gv_debugHUD*` 입니다.
   `debug.hudSections` 는 기본과 다른 섹션만 `이름`(켬) · `-이름`(끔)으로 적어서, 새 모듈의 섹션은 자기 기본으로 뜨고 내린 모듈의 낱말은 남습니다.
@@ -522,7 +522,7 @@ Dev 구성에서 게임 창 · 에디터 게임 뷰 · 모든 Dev 실행의 런�
 
 ### 성능
 
-벤치는 `App -gv_benchUiWidgets=10000 -gv_benchUiChurn=10 -gv_profileFrames=600` 입니다. Release로, VSync를 끄고 잽니다. 먼저 1/RT.Frame 이 모니터 주사율과 같지 않은지 확인합니다.
+벤치는 `App -gv_benchUiWidgets=10000 -gv_benchUiChurn=10 -gv_profileFrames=600` 입니다. Release로, VSync를 끄고 측정합니다. 먼저 1/RT.Frame 이 모니터 주사율과 같지 않은지 확인합니다.
 `Debug/UIBenchScreen` 이 스크롤 패널 안에 줄 바꿈 격자를 만듭니다. 각 항목은 테두리, 아이콘, 글이고 크기가 고정이라 레이아웃 경계입니다. 프레임마다 앞쪽 항목 M개의 글을 바꿉니다.
 Empty 게임의 `-gv_benchUiMarkers=K` 는 벤치 큐브에 화면 마커를 붙입니다. 대조군은 같은 바이너리의 `-gv_benchUiChurn=0` 입니다. 측정값은 [검증과 측정](../../../docs/08_Verification.md) 2절에 있습니다.
 
@@ -576,7 +576,7 @@ Empty 게임의 `-gv_benchUiMarkers=K` 는 벤치 큐브에 화면 마커를 붙
 **세로 상자 · 가로 흐름의 자식 64 개 이상은 보이는 범위만 걷습니다.** 그리기가 슬롯 위 변으로 이분 탐색하므로 자식의 렌더 변환은 보지 않습니다.
 그런 패널에서 렌더 변환으로 자식을 슬롯 밖 멀리 옮기면, 슬롯이 자르기 밖일 때 그 자식은 그려지지 않습니다.
 
-**디버그 HUD 섹션 본문은 섹션 등록이 아닌 곳에서 부르지 않습니다.** 본문 함수는 등록한 모듈의 것이라, 등록부에서 그 갱신 안에 찾은 포인터로만 부릅니다.
+**디버그 HUD 섹션 본문은 섹션 등록이 아닌 곳에서 부르지 않습니다.** 본문 함수는 등록한 모듈의 것이라, 레지스트리에서 그 갱신 안에 찾은 포인터로만 부릅니다.
 HUD 화면도 등록 포인터를 프레임을 넘겨 들지 않고 섹션 이름만 둡니다 — 모듈이 내려간 뒤 사라진 본문을 부르지 않게 하기 위해서입니다(`DebugHUDTest.UnloadedSectionLeavesTheScreen`).
 HUD 상태를 바꾸는 시나리오는 사용자 파일에 남으므로 끝에서 기본값으로 되돌립니다(`AppScenarioTest` 는 `-gv_userSettingsFile` 을 주지 않는다).
 

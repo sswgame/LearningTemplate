@@ -58,7 +58,7 @@ namespace sw
                 bool       bEnemyHasCommander = false;
                 const bool bLost              = SRPGProgressInternal::isCommanderLost( field, SRPGTeam::Enemy, bEnemyHasCommander );
                 if ( bEnemyHasCommander == false )
-                    return field.countAlive( SRPGTeam::Enemy ) == 0 ? SRPGOutcome::Victory : SRPGOutcome::Ongoing; // 지휘관이 없으면 전멸로
+                    return field.countAlive( SRPGTeam::Enemy ) == 0 ? SRPGOutcome::Victory : SRPGOutcome::Ongoing; // 지휘관이 없으면 전멸로 판정한다
                 return bLost ? SRPGOutcome::Victory : SRPGOutcome::Ongoing;
             }
             case SRPGObjective::ReachCell:
@@ -155,7 +155,7 @@ namespace sw
             SRPGRosterEntry& entry = _listRoster[static_cast<size_t>( unit._rosterIndex )];
             entry._pilotLevel      = unit._pilotLevel;
             entry._unitLevel       = unit._unitLevel;
-            entry._unitID          = unit._pDef->_id; // 작전 중 개발했으면 새 기체로
+            entry._unitID          = unit._pDef->_id; // 작전 중에 개발했으면 새 기체로 갱신한다
             if ( unit._bAlive == SW_FALSE )
                 entry._bLost = SW_TRUE;
         }

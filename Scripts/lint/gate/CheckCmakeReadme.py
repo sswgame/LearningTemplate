@@ -5,8 +5,8 @@ Scripts/lint/gate/CheckCmakeReadme.py
 
 `cmake/README.md` 가 **아직 사실인지** 검사합니다.
 
-`cmake/README.md` 는 스스로를 정본이라고 말한다 (루트 `CMakeLists.txt` 머리 주석: "cmake/ 의 계층과
-각 파일의 역할은 cmake/README.md 가 정본이다"). 검사하지 않는 정본 문서는 **조용히 낡는다** — 코드에서 사라진
+`cmake/README.md` 는 스스로를 원본이라고 말한다 (루트 `CMakeLists.txt` 머리 주석: "cmake/ 의 계층과
+각 파일의 역할은 cmake/README.md 가 원본이다"). 검사하지 않는 원본 문서는 **조용히 낡는다** — 코드에서 사라진
 함수 · 목록을 계속 사실처럼 적는다. `lint/` 에 린트가 살아 있는지 보는 `CheckLintsAreAlive.py` 가 있듯,
 이 게이트가 `cmake/` 문서의 그 자리다.
 

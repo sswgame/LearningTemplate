@@ -26,19 +26,19 @@ namespace sw
 
     /**
      * @struct VulkanDescriptorPoolSet
-     * @brief 커맨드 버퍼 하나가 슬롯 세트(set 0)를 할당받는 풀 묶음입니다. 언리얼 `FVulkanDescriptorPoolSetContainer` 와 같은 자리입니다.
+     * @brief 커맨드 버퍼 하나가 슬롯 세트(set 0)를 할당받는 디스크립터 풀 묶음입니다. 언리얼의 `FVulkanDescriptorPoolSetContainer` 에 해당합니다.
      * @details VkDescriptorPool 은 외부 동기화 대상이라, 여러 리스트가 여러 스레드에서 동시에 기록하려면 **풀도 리스트마다
-     *          따로**여야 합니다(커맨드 풀과 같은 제약). 디바이스 전역 풀을 뮤텍스로 잠그면 바인딩이 바뀌는 드로우마다
-     *          락이 걸려 레벨 병렬 기록이 직렬화됩니다.
-     *          그래서 커맨드 버퍼 쌍(VulkanCommandListEntry)이 자기 풀 묶음을 들고 다니고, 그 버퍼가 GPU 펜스를 통과해
-     *          재사용 풀로 돌아온 뒤에야 통째로 리셋됩니다. 락이 없습니다. 디바이스 프레임 스트림은 링 슬롯마다 하나를 씁니다.
-     *          풀 하나가 차면 다음 풀을 만듭니다(kMaxPoolsPerDescriptorPoolSet 까지).
+     *          따로** 있어야 한다(커맨드 풀과 같은 제약). 디바이스 전역 풀을 뮤텍스로 잠그면 바인딩이 바뀌는 드로우마다
+     *          락이 걸려 레벨 병렬 기록이 직렬화된다.
+     *          그래서 커맨드 버퍼 쌍(VulkanCommandListEntry)이 자기 풀 묶음을 가지고 다니고, 그 버퍼가 GPU 펜스를 통과해
+     *          재사용 풀로 돌아온 뒤에야 통째로 리셋된다. 락이 없다. 디바이스 프레임 스트림은 링 슬롯마다 하나를 쓴다.
+     *          풀 하나가 차면 다음 풀을 만든다(kMaxPoolsPerDescriptorPoolSet 까지).
      */
     struct VulkanDescriptorPoolSet
     {
         vector<VkDescriptorPool> _listPool;
         uint32                   _cursor{ 0 };                  ///< 지금 할당 중인 풀
-        uint8                    _bExhaustedLogged{ SW_FALSE }; ///< 상한 도달 로그를 한 번만
+        uint8                    _bExhaustedLogged{ SW_FALSE }; ///< 상한에 도달했다는 로그를 한 번만 남긴다.
     };
 } // namespace sw
 
@@ -46,9 +46,9 @@ namespace sw
 {
     /**
      * @struct VulkanCommandListEntry
-     * @brief `VulkanRHICommandList` 가 빌려 쓰는 커맨드 풀 + 커맨드 버퍼 쌍입니다.
+     * @brief `VulkanRHICommandList` 가 빌려 쓰는 커맨드 풀과 커맨드 버퍼 쌍입니다.
      * @details `VkCommandPool` 은 외부 동기화 대상이라 여러 스레드가 동시에 기록하려면 **리스트마다
-     *          전용 풀**이어야 합니다. 다 쓴 쌍은 GPU 펜스를 통과한 뒤에 풀로 돌아갑니다.
+     *          전용 풀**이 있어야 한다. 다 쓴 쌍은 GPU 펜스를 통과한 뒤에 풀로 돌아간다.
      */
     struct VulkanCommandListEntry
     {
@@ -61,7 +61,7 @@ namespace sw
 
 namespace sw
 {
-    /// @brief 슬롯 세트의 원소 하나입니다(어떤 버퍼의 어느 구간이 걸려 있나).
+    /// @brief 슬롯 세트의 원소 하나입니다. 어떤 버퍼의 어느 구간이 바인딩되어 있는지 나타냅니다.
     struct VulkanSlotBinding
     {
         VkBuffer _buffer{ nullptr };
@@ -74,17 +74,17 @@ namespace sw
 {
     /**
      * @struct VulkanSlotState
-     * @brief 바인드 포인트(그래픽스 · 컴퓨트) 하나의 슬롯 세트 상태입니다. 언리얼 Vulkan RHI 의 파이프라인별 디스크립터 상태와 같은 자리입니다.
-     * @details PSO 를 걸 때 비워지고(이전 패스의 t/u 슬롯이 다음 세트로 새지 않도록) 드로우 · 디스패치 직전 flushSlotSet 이
-     *          바뀐 것을 세트로 굳힙니다.
+     * @brief 바인드 포인트(그래픽스, 컴퓨트) 하나의 슬롯 세트 상태입니다. 언리얼 Vulkan RHI 의 파이프라인별 디스크립터 상태에 해당합니다.
+     * @details PSO 를 바인딩할 때 비워지고(이전 패스의 t/u 슬롯이 다음 세트로 새지 않도록), 드로우나 디스패치 직전에 flushSlotSet 이
+     *          바뀐 것을 세트로 확정한다.
      */
     struct VulkanSlotState
     {
-        /// @brief binding(종류별 시프트 + 레지스터)마다 걸린 버퍼입니다.
+        /// @brief binding(종류별 시프트 + 레지스터)마다 바인딩된 버퍼입니다.
         VulkanSlotBinding _arrSlot[shaderslot::vk::kSlotBindingCount]{};
-        /// @brief _arrSlot 중 걸린 것의 비트입니다(binding 번호 = 비트).
+        /// @brief _arrSlot 중 바인딩된 슬롯의 비트입니다(binding 번호가 비트 위치입니다).
         uint64 _slotSetMask{ 0 };
-        /// @brief 마지막으로 굳힌 세트 이후 바뀌었는지 여부입니다.
+        /// @brief 마지막으로 확정한 세트 이후 바뀌었는지 여부입니다.
         uint8 _bDirty{ SW_TRUE };
     };
 } // namespace sw
@@ -93,10 +93,10 @@ namespace sw
 {
     /**
      * @struct VulkanRecordingState
-     * @brief "지금 이 커맨드 버퍼에 무엇이 걸려 있나" 입니다. 커맨드 버퍼(=기록 스트림)마다 있어야 하는 상태입니다.
-     * @details 디바이스에 두면 여러 리스트가 동시에 기록할 때 서로의 바인딩 캐시를 덮어씁니다.
+     * @brief "지금 이 커맨드 버퍼에 무엇이 바인딩되어 있나" 를 나타냅니다. 커맨드 버퍼(기록 스트림)마다 있어야 하는 상태입니다.
+     * @details 디바이스에 두면 여러 리스트가 동시에 기록할 때 서로의 바인딩 캐시를 덮어쓴다.
      *          DX12 의 `D3D12RecordingState` 와 같은 역할이며, "기록 상태는 리스트가 소유하고 디바이스는
-     *          진짜 전역 자원만 갖는다" 는 구조입니다.
+     *          진짜 전역 자원만 가진다" 는 구조다.
      */
     struct VulkanRecordingState
     {
@@ -105,14 +105,14 @@ namespace sw
         RHIBufferHandle _boundMeshVb;
         uint32          _boundMeshStride;
         uint32          _boundMeshOffset;
-        RHIBufferHandle _boundInstanceSlotVb; ///< 슬롯 1: 인스턴스 슬롯 스트림 (0 = 안 걸림)
+        RHIBufferHandle _boundInstanceSlotVb; ///< 슬롯 1: 인스턴스 슬롯 스트림(0이면 바인딩 안 됨)
         uint32          _boundInstanceSlotOffset;
-        /// @brief 이 스트림에 렌더패스가 열려 있는지 여부입니다.
+        /// @brief 이 스트림에 렌더 패스가 열려 있는지 여부입니다.
         uint8 _bRenderPassActive : 1;
-        /// @brief 텍스처 배열 세트(set 1)를 이 버퍼의 두 바인드 포인트에 이미 걸었는지 여부입니다.
+        /// @brief 텍스처 배열 세트(set 1)를 이 버퍼의 두 바인드 포인트에 이미 바인딩했는지 여부입니다.
         uint8 _bTextureSetBound : 1;
-        /// @brief 지금 열려 있는 렌더패스가 스왑체인(백버퍼) 렌더패스인지 여부입니다. PSO 가 등록돼 있지 않을 때
-        ///        폴백 파이프라인을 고르는 기준입니다. 렌더패스 호환성 때문에 백버퍼용과 오프스크린용이 다릅니다.
+        /// @brief 지금 열려 있는 렌더 패스가 스왑체인(백버퍼) 렌더 패스인지 여부입니다. PSO 가 등록되어 있지 않을 때
+        ///        폴백 파이프라인을 고르는 기준입니다. 렌더 패스 호환성 때문에 백버퍼용과 오프스크린용이 다릅니다.
         uint8                  _bActiveSwapchainRT : 1;
         [[maybe_unused]] uint8 _reserved           : 5;
         RHIBufferHandle        _boundIndexBuffer;
@@ -122,7 +122,7 @@ namespace sw
         /// @brief 바인드 포인트별 슬롯 세트 상태입니다([0] 그래픽스, [1] 컴퓨트). 서로 독립이라 디스패치가 드로우의 바인딩을 지우지 않습니다.
         VulkanSlotState _arrSlotState[2];
 
-        /** @brief 아무것도 안 걸린 상태로 시작합니다. */
+        /** @brief 아무것도 바인딩되지 않은 상태로 시작합니다. */
         VulkanRecordingState()
             : _activeGraphicsPSO{ 0 }
             , _boundMeshVb{ 0 }
@@ -149,7 +149,7 @@ namespace sw
 
     /**
      * @class VulkanRHIDevice
-     * @brief Vulkan 1.3 그래픽스 · 컴퓨트 디바이스 구현입니다(Descriptor Indexing · bindless).
+     * @brief Vulkan 1.3 그래픽스와 컴퓨트 디바이스 구현입니다(Descriptor Indexing, bindless).
      */
     class VulkanRHIDevice : public IRHIDevice
     {
@@ -160,23 +160,23 @@ namespace sw
         friend class VulkanRHIResourceFactory;
         /** @brief 빈 Vulkan 디바이스를 만듭니다. */
         VulkanRHIDevice();
-        /** @brief 인스턴스 · 디바이스 · 스왑체인을 정리합니다. */
+        /** @brief 인스턴스, 디바이스, 스왑체인을 정리합니다. */
         virtual ~VulkanRHIDevice() override;
 
-        /** @brief Vulkan 인스턴스 · 서피스 · 디바이스 · 스왑체인 · 커맨드 풀 · 동기화 객체를 만듭니다. */
+        /** @brief Vulkan 인스턴스, 서피스, 디바이스, 스왑체인, 커맨드 풀, 동기화 객체를 만듭니다. */
         bool initializeInternal( const RHISwapChainDesc& desc ) override;
 
         /** @brief Vulkan 파이프라인과 자원을 해제합니다. */
         void shutdownInternal() override;
 
-        /** @brief 종료 3 단계: 프레임 스트림 컨텍스트를 놓고 살아 있는 커맨드 리스트를 뗍니다. */
+        /** @brief 종료 3단계입니다. 프레임 스트림 컨텍스트를 해제하고 살아 있는 커맨드 리스트를 분리합니다. */
         void detachCommandRecordingInternal() override;
 
         /** @brief GPU 가 끝날 때까지 기다리고(vkDeviceWaitIdle) 지연 해제 큐를 비웁니다. */
         void waitIdleInternal() override;
 
         /**
-         * @brief `VK_EXT_memory_budget` 으로 이 프로세스의 힙별 사용량 · 예산을 채웁니다. 사용량은 모든 힙의 합, 예산은 DEVICE_LOCAL 힙의 합입니다.
+         * @brief `VK_EXT_memory_budget` 으로 이 프로세스의 힙별 사용량과 예산을 채웁니다. 사용량은 모든 힙의 합이고, 예산은 DEVICE_LOCAL 힙의 합입니다.
          * @details 디바이스가 확장을 지원하지 않으면 false 입니다(드라이버 값은 "모름").
          */
         [[nodiscard]] bool queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget ) override;
@@ -184,12 +184,12 @@ namespace sw
         /** @brief 이번 프레임이 제출할 세대(`_frameFenceCounter + 1`)로 해제 큐에 넣습니다. */
         void enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
 
-        /** @brief 크기를 적고, 스왑체인 재생성은 beginFrame 까지 미룹니다. */
+        /** @brief 크기를 기록하고, 스왑체인 재생성은 beginFrame 까지 미룹니다. */
         void resizeInternal( uint32 width, uint32 height ) override;
         /** @brief present 모드를 새 VSync 값으로 바꾸도록 스왑체인을 다음 `beginFrame` 에서 다시 만들게 표시합니다. */
         void               applyVSyncInternal() override;
         [[nodiscard]] bool createRenderPass();
-        /** @brief 프레임을 엽니다(펜스 대기 · 스왑체인 이미지 획득 · 커맨드 버퍼 기록 시작). */
+        /** @brief 프레임을 엽니다(펜스 대기, 스왑체인 이미지 획득, 커맨드 버퍼 기록 시작). */
         void beginFrame( const float4& clearColor ) override;
 
         /** @brief 프레임을 닫습니다(vkQueueSubmit, bPresent 면 vkQueuePresentKHR). */
@@ -209,13 +209,13 @@ namespace sw
     private:
         /** @brief 쿼리 풀을 한 번만 만듭니다. */
         void ensureTimestampPool();
-        /** @brief 방금 펜스를 통과한 링 슬롯의 결과를 마이크로초로 풉니다. */
+        /** @brief 방금 펜스를 통과한 링 슬롯의 결과를 마이크로초로 변환합니다. */
         void collectTimestampsForSlot();
 
     public:
-        /** @brief 리소스 생성 · 파괴 인터페이스(VulkanRHIResourceFactory)를 반환합니다. */
+        /** @brief 리소스 생성과 파괴 인터페이스(VulkanRHIResourceFactory)를 반환합니다. */
         IRHIResourceFactory* getResourceFactory() override;
-        /** @brief 프레임 스트림 컨텍스트입니다. 백버퍼 패스 · Present 가 여기에 기록합니다. */
+        /** @brief 프레임 스트림 컨텍스트입니다. 백버퍼 패스와 Present 가 여기에 기록합니다. */
         IRHICommandContext* getFrameStreamContext() override;
 
         /** @brief 백엔드 타입(Vulkan)을 반환합니다. */
@@ -257,16 +257,16 @@ namespace sw
         /** @brief 독립 커맨드 리스트를 만듭니다. */
         unique_ptr<IRHICommandList> createCommandList() override;
 
-        /** @brief 커맨드 리스트를 프레임 스트림의 제출 순서에 잇습니다. 즉시 모드면 바로 제출합니다. */
+        /** @brief 커맨드 리스트를 프레임 스트림의 제출 순서에 연결합니다. 즉시 모드면 바로 제출합니다. */
         void executeCommandList( IRHICommandList* pCmdList ) override;
         void executeCommandListImmediate( IRHICommandList* pCmdList ) override;
 
-        /** @brief 서피스 제약으로 계약 포맷을 못 냈을 수 있으므로 실제 채택한 포맷을 보고합니다. */
+        /** @brief 서피스 제약으로 계약 포맷을 낼 수 없는 경우가 있으므로 실제로 채택한 포맷을 보고합니다. */
         RHIFormat getBackBufferFormat() const override { return _swapChain.getActualBackBufferFormat(); }
 
         /**
-         * @brief ImGui Vulkan 백엔드 초기화에 필요한 핸들(인스턴스 · 물리 디바이스 · 큐 패밀리 · 백버퍼 렌더 패스 · 이미지 수)까지 채웁니다.
-         * @details 에디터는 이 클래스를 모릅니다 — `IRHIDevice::queryNativeHandles` 가 판을 대조한 뒤 이 훅을 부릅니다.
+         * @brief ImGui Vulkan 백엔드 초기화에 필요한 핸들(인스턴스, 물리 디바이스, 큐 패밀리, 백버퍼 렌더 패스, 이미지 수)까지 채웁니다.
+         * @details 에디터는 이 클래스를 모른다. `IRHIDevice::queryNativeHandles` 가 버전을 대조한 뒤 이 훅을 부른다.
          */
         [[nodiscard]] bool queryNativeHandlesInternal( RHINativeHandles& outHandles ) const override
         {
@@ -277,7 +277,7 @@ namespace sw
             outHandles._pRenderPass     = _renderPass;
             outHandles._pQueueMutex     = &_queueMutex;
             outHandles._queueFamily     = _graphicsQueueFamilyIndex;
-            // 실제 스왑체인 이미지 수를 그대로 알린다. 매직 2 를 쓰면 백버퍼 개수 계약이 바뀔 때
+            // 실제 스왑체인 이미지 수를 그대로 알린다. 매직 넘버 2 를 쓰면 백버퍼 개수 계약이 바뀔 때
             // ImGui 쪽만 옛 값으로 남는다.
             outHandles._imageCount    = ( _swapChain.getImageCount() == 0 ) ? constant::kMaxFrameCountInFlight
                                                                             : _swapChain.getImageCount();
@@ -302,7 +302,7 @@ namespace sw
          */
         void createDebugMessenger();
         /**
-         * @brief 물리 디바이스를 고릅니다. @p bSoftwareAdapter 면 CPU 디바이스(lavapipe · SwiftShader)만 후보로 둡니다.
+         * @brief 물리 디바이스를 고릅니다. @p bSoftwareAdapter 면 CPU 디바이스(lavapipe, SwiftShader)만 후보로 둡니다.
          */
         bool pickPhysicalDevice( bool bSoftwareAdapter );
         /**
@@ -326,21 +326,21 @@ namespace sw
          */
         void destroyFrameFences();
         /**
-         * @brief GPU 가 지원하는 깊이 · 스텐실 포맷을 고릅니다.
+         * @brief GPU 가 지원하는 깊이와 스텐실 포맷을 고릅니다.
          */
         bool selectDepthFormat();
 
         /**
-         * @brief 스왑체인을 통째로 다시 만듭니다 (창 크기가 바뀌었거나 present 가 OUT_OF_DATE 를 냈을 때).
-         * @details 이미지 개수가 달라질 수 있어 세마포어와 이미지별 펜스 표까지 함께 갱신합니다.
+         * @brief 스왑체인을 통째로 다시 만듭니다. 창 크기가 바뀌었거나 present 가 OUT_OF_DATE 를 냈을 때 부릅니다.
+         * @details 이미지 개수가 달라질 수 있어 세마포어와 이미지별 펜스 테이블까지 함께 갱신한다.
          */
         [[nodiscard]] bool recreateSwapChain();
         /**
-         * @brief 서피스를 잃었을 때(VK_ERROR_SURFACE_LOST_KHR) 같은 창 위에 서피스 · 스왑체인을 다시 만듭니다. 사양은 스왑체인만이 아니라 서피스부터다.
-         * @return 다시 만들었으면 true. 창이 사라졌거나 새 서피스를 그래픽스 큐가 프레젠트할 수 없으면 false(다음 프레임에 다시 시도한다).
+         * @brief 서피스를 잃었을 때(VK_ERROR_SURFACE_LOST_KHR) 같은 창 위에 서피스와 스왑체인을 다시 만듭니다. 스왑체인만이 아니라 서피스부터 만들어야 합니다.
+         * @return 다시 만들었으면 true 입니다. 창이 사라졌거나 새 서피스를 그래픽스 큐가 프레젠트할 수 없으면 false 이며, 다음 프레임에 다시 시도합니다.
          */
         [[nodiscard]] bool recreateSurfaceAndSwapChain();
-        /** @brief 서피스를 잃은 것을 세고 경고로 남깁니다(잃은 횟수 · 그때의 프레임) — 다음 관찰이 환경 탓인지 가르게 한다. */
+        /** @brief 서피스를 잃은 것을 세고 경고로 남깁니다(잃은 횟수와 그때의 프레임). 다음에 관찰했을 때 환경 탓인지 가리는 데 씁니다. */
         void noteSurfaceLost( const utf8* pWhere );
 
         /** @brief 파이프라인 캐시를 초기화합니다. */
@@ -349,35 +349,35 @@ namespace sw
         void savePipelineCache();
 
         /**
-         * @brief 메모리 타입을 찾습니다. 찾으면 true 와 함께 outIndex 를 채웁니다.
+         * @brief 메모리 타입을 찾습니다. 찾으면 true 를 반환하며 outIndex 를 채웁니다.
          */
         bool findMemoryType( uint32 typeFilter, uint32 properties, uint32& outIndex );
         struct VulkanBufferRecord;
         struct VulkanTextureRecord;
-        /** @brief 불투명 버퍼 핸들을 VulkanBufferRecord 로 풉니다. */
+        /** @brief 불투명 버퍼 핸들로 VulkanBufferRecord 를 찾습니다. */
         VulkanBufferRecord*       resolveAllocatedBuffer( RHIBufferHandle handle );
         const VulkanBufferRecord* resolveAllocatedBuffer( RHIBufferHandle handle ) const;
         /**
-         * @brief 링 상수버퍼의 `slot` 칸에 씁니다. `_bindlessMutex` 를 (읽기로라도) 쥐고 부릅니다.
-         * @details 만들 때 크기를 넘는 쓰기는 자릅니다. 자르지 않으면 다음 칸(다음 프레임의 값)까지 덮습니다.
+         * @brief 링 상수 버퍼의 `slot` 슬롯에 씁니다. `_bindlessMutex` 를 (읽기로라도) 잡고 부릅니다.
+         * @details 만들 때 크기를 넘는 쓰기는 자른다. 자르지 않으면 다음 슬롯(다음 프레임의 값)까지 덮어쓴다.
          */
         void writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size );
-        /** @brief 링이 넘어온 칸에 옛 값이 남은 상수버퍼를 마지막 값으로 채웁니다(`RHIConstantBufferMirror`). 칸의 펜스를 지난 뒤 부릅니다. */
+        /** @brief 링이 넘어온 슬롯에 옛 값이 남은 상수 버퍼를 마지막 값으로 채웁니다(`RHIConstantBufferMirror`). 슬롯의 펜스를 지난 뒤 부릅니다. */
         void fillConstantBufferSlot();
-        /** @brief 불투명 텍스처 핸들을 VulkanTextureRecord 로 풉니다. */
+        /** @brief 불투명 텍스처 핸들로 VulkanTextureRecord 를 찾습니다. */
         VulkanTextureRecord*       resolveTexture( RHITextureHandle handle );
         const VulkanTextureRecord* resolveTexture( RHITextureHandle handle ) const;
 
-        /** @brief 텍스처 배열 세트(set 1)의 원소 수입니다. DX12 는 힙 하나(kMaxShaderVisibleDescriptors)라 값이 다릅니다. */
+        /** @brief 텍스처 배열 세트(set 1)의 원소 수입니다. DX12 는 힙 하나(kMaxShaderVisibleDescriptors)를 쓰므로 값이 다릅니다. */
         static constexpr uint32 kBindlessTextureCount = 4096;
-        /** @brief RW 텍스처 배열(set 1 binding 3)의 원소 수입니다. UAV 인덱스가 이 미만이어야 등록됩니다. */
+        /** @brief RW 텍스처 배열(set 1 binding 3)의 원소 수입니다. UAV 인덱스가 이 값 미만이어야 등록됩니다. */
         static constexpr uint32 kBindlessStorageImageCount = 1024;
-        /** @brief 슬롯 세트(set 0) 풀 하나의 세트 수입니다. 바인딩 상태가 바뀔 때마다 하나씩 씁니다(배치 · 패스 단위). 차면 풀을 하나 더 만듭니다. */
+        /** @brief 슬롯 세트(set 0) 풀 하나의 세트 수입니다. 바인딩 상태가 바뀔 때마다 하나씩 쓰며(배치, 패스 단위), 차면 풀을 하나 더 만듭니다. */
         static constexpr uint32 kSlotSetsPerPool = 4096;
-        /** @brief 풀 묶음 하나가 가질 수 있는 최대 풀 수입니다. 넘으면 에러 로그 후 직전 세트로 그립니다. */
+        /** @brief 풀 묶음 하나가 가질 수 있는 최대 풀 수입니다. 넘으면 에러 로그를 남기고 직전 세트로 그립니다. */
         static constexpr uint32 kMaxPoolsPerDescriptorPoolSet = 16;
 
-        /// @brief VkBuffer 와 메모리 · 사용 플래그입니다.
+        /// @brief VkBuffer 와 메모리, 사용 플래그입니다.
         struct VulkanBufferRecord
         {
             VkBuffer       _buffer{ nullptr };
@@ -387,17 +387,17 @@ namespace sw
             RHIBufferState _state = RHIBufferState::Common;
         };
 
-        /// @brief VkImage 와 뷰 · 현재 레이아웃입니다.
+        /// @brief VkImage 와 뷰, 현재 레이아웃입니다.
         struct VulkanTextureRecord
         {
             VkImage             _image{ nullptr };
             VkImageView         _imageView{ nullptr };
-            VkImageView         _sampleView{ nullptr }; ///< 깊이 텍스처 샘플용 DEPTH 단일 aspect 뷰. 컬러는 nullptr(_imageView 를 그대로 쓴다)
+            VkImageView         _sampleView{ nullptr }; ///< 깊이 텍스처 샘플링용 DEPTH 단일 aspect 뷰입니다. 컬러는 nullptr 이며 `_imageView` 를 그대로 씁니다.
             VkDeviceMemory      _memory{ nullptr };
             VkFramebuffer       _framebuffer{ nullptr };
             VkRenderPass        _renderPass{ nullptr };
             uint32              _format{ 0 };    ///< VkFormat
-            uint32              _rhiFormat{ 0 }; ///< RHIFormat. 업로드 때 픽셀 크기 계산용 (VkFormat 은 깊이 선택으로 달라질 수 있다)
+            uint32              _rhiFormat{ 0 }; ///< RHIFormat. 업로드 때 픽셀 크기를 계산하는 데 쓴다(VkFormat 은 깊이 선택에 따라 달라질 수 있다).
             uint32              _layout{ 0 };    ///< VkImageLayout (UNDEFINED=0)
             uint32              _width{ 0 };
             uint32              _height{ 0 };
@@ -408,18 +408,18 @@ namespace sw
             uint8               _bDepthStencil : 1;
             uint8               _reserved      : 6;
             RHIDescriptorIndex  _bindlessIndex{ kInvalidDescriptorIndex };
-            /// @brief 면이 여럿일 때 면마다의 2D 뷰(렌더 패스 첨부용)와 단일 RT 프레임버퍼입니다. `_imageView` 는 그때 셰이더가 보는 배열 · 큐브 뷰다.
+            /// @brief 면이 여럿일 때 면마다의 2D 뷰(렌더 패스 첨부용)와 단일 RT 프레임버퍼입니다. 이때 `_imageView` 는 셰이더가 보는 배열 또는 큐브 뷰입니다.
             vector<VkImageView>   _listSliceView;
             vector<VkFramebuffer> _listSliceFramebuffer;
 
-            /** @brief 면 `slice` 를 렌더 패스 첨부로 쓸 뷰입니다. 없으면 nullptr. */
+            /** @brief 면 `slice` 를 렌더 패스 첨부로 쓸 뷰입니다. 없으면 nullptr 입니다. */
             VkImageView findAttachmentView( uint32 slice ) const
             {
                 if ( _listSliceView.empty() )
                     return slice == 0 ? _imageView : nullptr;
                 return slice < _listSliceView.size() ? _listSliceView[slice] : nullptr;
             }
-            /** @brief 면 `slice` 하나를 타깃으로 하는 오프스크린 프레임버퍼입니다. 없으면 nullptr. */
+            /** @brief 면 `slice` 하나를 타깃으로 하는 오프스크린 프레임버퍼입니다. 없으면 nullptr 입니다. */
             VkFramebuffer findSliceFramebuffer( uint32 slice ) const
             {
                 if ( _listSliceFramebuffer.empty() )
@@ -434,45 +434,45 @@ namespace sw
             VkPipeline _pipeline{ nullptr };
         };
 
-        /** @brief 서술대로 VkRenderPass 를 만듭니다. 실패하면 VK_NULL_HANDLE. */
+        /** @brief 서술대로 VkRenderPass 를 만듭니다. 실패하면 VK_NULL_HANDLE 을 반환합니다. */
         VkRenderPass createRenderPassFromSpec( const VulkanRHIRenderPassCache::RenderPassSpec& spec ) const;
 
-        /** @brief 텍스처 배열 세트(set 1: 무제한 텍스처 배열 + immutable sampler)를 확보합니다. */
+        /** @brief 텍스처 배열 세트(set 1: 무제한 텍스처 배열과 immutable sampler)를 확보합니다. */
         bool ensureTextureSet();
-        /** @brief 정적 샘플러 · 세트 레이아웃 둘 · 파이프라인 레이아웃 · 풀(텍스처용 1 + 프레임별 슬롯용) · 더미 UBO 를 만듭니다. */
+        /** @brief 정적 샘플러, 세트 레이아웃 2개, 파이프라인 레이아웃, 풀(텍스처용 1개와 프레임별 슬롯용), 더미 UBO 를 만듭니다. */
         [[nodiscard]] bool createDescriptorResources();
         /** @brief 텍스처 배열(set 1 binding 0)의 원소 하나를 갱신합니다. */
         void writeBindlessTextureSlot( RHIDescriptorIndex index, VkImageView view, uint32 imageLayout );
-        /** @brief RW 텍스처 배열(set 1 binding 3)의 원소 하나를 갱신합니다 (GENERAL 레이아웃). */
+        /** @brief RW 텍스처 배열(set 1 binding 3)의 원소 하나를 갱신합니다(GENERAL 레이아웃). */
         void writeBindlessStorageImageSlot( RHIDescriptorIndex index, VkImageView view );
         /**
          * @brief 풀 묶음에서 슬롯 세트(set 0) 하나를 할당합니다. 풀이 차면 다음 풀을 만듭니다(kMaxPoolsPerDescriptorPoolSet 까지).
-         * @details 락이 없습니다. 풀 묶음은 커맨드 버퍼 하나(= 기록 스레드 하나)의 것입니다.
+         * @details 락이 없다. 풀 묶음은 커맨드 버퍼 하나(기록 스레드 하나)의 것이다.
          */
         VkDescriptorSet allocateSlotSet( VulkanDescriptorPoolSet& poolSet );
-        /** @brief 슬롯 세트 풀 하나를 만듭니다(kSlotSetsPerPool 세트, 세트마다 b/t/u 슬롯을 모두 담습니다). */
+        /** @brief 슬롯 세트 풀 하나를 만듭니다(kSlotSetsPerPool 개의 세트이며, 세트마다 b/t/u 슬롯을 모두 담습니다). */
         VkDescriptorPool createSlotPool();
-        /** @brief 풀 묶음의 풀을 모두 비웁니다. 그 버퍼의 GPU 펜스가 지난 뒤에만 부릅니다(프레임 링 슬롯 대기 · 재사용 풀 반환 뒤). */
+        /** @brief 풀 묶음의 풀을 모두 비웁니다. 그 버퍼의 GPU 펜스가 지난 뒤에만 부릅니다(프레임 링 슬롯 대기 뒤, 재사용 풀 반환 뒤). */
         void resetDescriptorPoolSet( VulkanDescriptorPoolSet& poolSet );
         /** @brief 풀 묶음의 풀을 모두 파괴합니다(shutdown). */
         void destroyDescriptorPoolSet( VulkanDescriptorPoolSet& poolSet );
         /** @brief 디바이스 프레임 스트림이 이번 링 슬롯에서 쓰는 풀 묶음입니다. */
         VulkanDescriptorPoolSet& currentFrameDescriptorPoolSet() { return _arrFrameDescriptorPoolSet[_currentFrame % constant::kMaxFrameCountInFlight]; }
-        /** @brief SRV/CB 등록부 인덱스 → 버퍼 핸들(없으면 0)입니다. */
+        /** @brief SRV/CB 레지스트리 인덱스에서 버퍼 핸들을 찾습니다(없으면 0). */
         RHIBufferHandle bindlessSourceBufferAt( RHIDescriptorIndex index ) const;
-        /** @brief UAV 등록부 인덱스 → 버퍼 핸들(없으면 0)입니다. */
+        /** @brief UAV 레지스트리 인덱스에서 버퍼 핸들을 찾습니다(없으면 0). */
         RHIBufferHandle uavSourceBufferAt( RHIDescriptorIndex index ) const;
         /** @brief 지금 열려 있는 프레임 세그먼트 버퍼입니다. 프레임 밖이면 VK_NULL_HANDLE 입니다. */
         VkCommandBuffer currentCommandBuffer() const;
-        /** @brief 리스트 전용 (풀, 버퍼) 쌍을 빌립니다. 풀이 비면 새로 만듭니다. */
+        /** @brief 리스트 전용 (풀, 버퍼) 쌍을 빌립니다. 풀이 비어 있으면 새로 만듭니다. */
         VulkanCommandListEntry acquireCommandListEntry();
-        /** @brief 빌린 쌍을 GPU 펜스 통과 후 재사용 풀로 돌려보냅니다. */
+        /** @brief 빌린 쌍을 GPU 펜스를 통과한 뒤 재사용 풀로 돌려보냅니다. */
         void recycleCommandListEntryDeferred( VulkanCommandListEntry entry );
-        /** @brief 빌린 쌍을 **지금** 부숩니다. 디바이스가 내려가며 살아 있는 리스트를 분리할 때만 씁니다. */
+        /** @brief 빌린 쌍을 **지금** 파괴합니다. 디바이스가 종료되면서 살아 있는 리스트를 분리할 때만 씁니다. */
         void destroyCommandListEntryImmediate( VulkanCommandListEntry& entry );
-        /** @brief 살아 있는 리스트를 적어 둡니다. 디바이스가 먼저 내려가면 종료 때 연결을 끊어 줍니다. */
+        /** @brief 살아 있는 리스트를 기록해 둡니다. 디바이스가 먼저 종료되면 종료할 때 연결을 끊어 줍니다. */
         void registerCommandList( VulkanRHICommandList* pCmdList );
-        /** @brief 리스트가 죽을 때 목록에서 뺍니다. */
+        /** @brief 리스트가 소멸할 때 목록에서 뺍니다. */
         void unregisterCommandList( VulkanRHICommandList* pCmdList );
         /** @brief 프레임 스트림의 다음 세그먼트 버퍼를 얻어 기록을 시작합니다. */
         VkCommandBuffer beginNextFrameSegment();
@@ -481,12 +481,12 @@ namespace sw
         bool transitionImageLayout( VkCommandBuffer cmd, VkImage image, uint32 oldLayout, uint32 newLayout, uint32 aspect );
 
         /**
-         * @brief 텍스처를 `targetLayout` 으로 전이합니다. **확인 · 배리어 · 기록이 한 덩어리입니다.**
-         * @details "현재 레이아웃을 읽고 → 배리어를 쏘고 → 레코드를 갱신" 을 호출 지점에서 따로 하지 않습니다.
-         *          병렬 패스 기록에서는 그 셋이 갈라지면 두 스레드가 같은
+         * @brief 텍스처를 `targetLayout` 으로 전이합니다. **확인, 배리어, 기록이 한 덩어리입니다.**
+         * @details "현재 레이아웃을 읽고, 배리어를 쏘고, 레코드를 갱신" 하는 세 동작을 호출 지점에서 따로 하지 않는다.
+         *          병렬 패스 기록에서 그 셋이 갈라지면 두 스레드가 같은
          *          "이전 레이아웃" 을 보고 각자 배리어를 쏘거나, 한쪽이 이미 바꿔 놓은 뒤라 실제
-         *          레이아웃과 기록이 어긋납니다. `vkQueueSubmit` 이 "이 이미지가 X 레이아웃일 것으로
-         *          기대했는데 아니다" 로 거부합니다.
+         *          레이아웃과 기록이 어긋난다. `vkQueueSubmit` 이 "이 이미지가 X 레이아웃일 것으로
+         *          기대했는데 아니다" 라며 거부한다.
          * @note 이미 그 레이아웃이면 아무것도 하지 않습니다.
          */
         void transitionTextureLayout( VkCommandBuffer cmd, VulkanTextureRecord& record, uint32 targetLayout, uint32 aspect );
@@ -496,13 +496,13 @@ namespace sw
         [[nodiscard]] bool createOffscreenFramebuffer( VulkanTextureRecord& record );
         /** @brief 오프스크린 프레임버퍼를 파괴합니다. */
         void destroyOffscreenFramebuffer( VulkanTextureRecord& record );
-        /** @brief 프레임버퍼(및 이 프레임버퍼가 소유한 렌더패스)를 GPU 펜스 통과 후 파괴하도록 큐에 넣습니다. */
+        /** @brief 프레임버퍼(와 이 프레임버퍼가 소유한 렌더 패스)를 GPU 펜스를 통과한 뒤 파괴하도록 큐에 넣습니다. */
         void enqueueFramebufferRelease( VkFramebuffer framebuffer, VkRenderPass ownedRenderPass );
         /** @brief 파이프라인용 VkRenderPass 를 확보합니다. */
         VkRenderPass ensurePipelineRenderPass( const RHIPipelineStateDesc& desc );
         /** @brief 합성 프레임버퍼를 확보합니다. */
         bool ensureCompositeFramebuffer( const VulkanRHIRenderPassCache::CompositeKey& key, VulkanRHIRenderPassCache::CompositeRecord& outRecord );
-        /** @brief 이 텍스처를 쓰는 합성 프레임버퍼를 캐시에서 떼어 GPU 펜스 뒤에 파괴합니다. */
+        /** @brief 이 텍스처를 쓰는 합성 프레임버퍼를 캐시에서 빼서 GPU 펜스 뒤에 파괴합니다. */
         void destroyCompositeFramebuffersUsing( RHITextureHandle texture );
         /** @brief usageFlags 로 VkBuffer 를 만들고 초기 데이터를 올립니다. */
         RHIBufferHandle createVulkanBuffer( uint32 sizeBytes, uint32 usageFlags, const void* pInitialData );
@@ -514,31 +514,31 @@ namespace sw
         VkQueue                  _graphicsQueue;
         uint32                   _graphicsQueueFamilyIndex;
         /// @brief 인플라이트 프레임 슬롯(0..kMaxFrameCountInFlight-1)입니다. 스왑체인 이미지 인덱스와 **다른 값**입니다.
-        ///        이미지 인덱스는 스왑체인이 acquire 로 받아 들고 있습니다(`_swapChain.getImageIndex()`).
+        ///        이미지 인덱스는 스왑체인이 acquire 로 받아 가지고 있습니다(`_swapChain.getImageIndex()`).
         uint32 _currentFrame;
 
-        /// @brief 창 하나의 서피스 · 스왑체인 · 백버퍼입니다. 이미지 · 뷰 · 프레임버퍼 · 세마포어가 모두 여기 있습니다.
+        /// @brief 창 하나의 서피스, 스왑체인, 백버퍼입니다. 이미지, 뷰, 프레임버퍼, 세마포어가 모두 여기 있습니다.
         VulkanRHISwapChain _swapChain;
 
-        VkRenderPass _renderPass;           ///< 스왑체인 렌더패스 (loadOp=CLEAR)
-        VkRenderPass _renderPassLoad;       ///< 같은 스왑체인 렌더패스의 loadOp=LOAD 변종. 한 프레임에 백버퍼를
-                                            ///< 두 번 이상 열 때(그래프가 그린 뒤 UI 를 얹을 때) 앞의 내용을 보존한다.
-        VkRenderPass  _offscreenRenderPass; ///< 게임뷰 · RT 드로우용 R8G8B8A8_UNORM 컬러 전용 패스
-        VkCommandPool _commandPool;         ///< 프레임 버퍼 · 프레임 세그먼트용. 렌더 스레드만 쓴다.
+        VkRenderPass _renderPass;           ///< 스왑체인 렌더 패스(loadOp=CLEAR)
+        VkRenderPass _renderPassLoad;       ///< 같은 스왑체인 렌더 패스의 loadOp=LOAD 변형이다. 한 프레임에 백버퍼를
+                                            ///< 두 번 이상 열 때(그래프가 그린 뒤 UI 를 올릴 때) 앞의 내용을 보존한다.
+        VkRenderPass  _offscreenRenderPass; ///< 게임 뷰와 RT 드로우용 R8G8B8A8_UNORM 컬러 전용 패스
+        VkCommandPool _commandPool;         ///< 프레임 버퍼와 프레임 세그먼트용 풀이다. 렌더 스레드만 쓴다.
         /**
-         * @brief 프레임 밖 일회성 제출(텍스처 업로드 · 리드백 · 초기 버퍼 복사) 전용 풀입니다. `_oneShotMutex` 가 지킵니다.
-         * @details 커맨드 풀은 외부 동기화 대상입니다. 게임 · 로더 스레드의 업로드가 렌더 스레드가 프레임 버퍼를 기록하는
-         *          `_commandPool` 에서 할당 · 해제하면, 스트리밍 텍스처가 프레임 기록과 겹칠 때 풀이 깨집니다.
+         * @brief 프레임 밖 일회성 제출(텍스처 업로드, 리드백, 초기 버퍼 복사) 전용 풀입니다. `_oneShotMutex` 가 보호합니다.
+         * @details 커맨드 풀은 외부 동기화 대상이다. 게임 스레드나 로더 스레드의 업로드가 렌더 스레드가 프레임 버퍼를 기록하는
+         *          `_commandPool` 에서 할당하고 해제하면, 스트리밍 텍스처가 프레임 기록과 겹칠 때 풀이 깨진다.
          */
         VkCommandPool _oneShotCommandPool;
         mutex         _oneShotMutex;
         /**
-         * @brief `_graphicsQueue` 를 쓰는 모든 호출(`vkQueueSubmit` · `vkQueueWaitIdle` · `vkQueuePresentKHR` · `vkDeviceWaitIdle`)을 지킵니다.
-         * @details VkQueue 는 외부 동기화 대상입니다. 렌더 스레드의 프레임 제출과 게임 스레드의 일회성 업로드 제출이 겹칠 수 있습니다.
+         * @brief `_graphicsQueue` 를 쓰는 모든 호출(`vkQueueSubmit`, `vkQueueWaitIdle`, `vkQueuePresentKHR`, `vkDeviceWaitIdle`)을 보호합니다.
+         * @details VkQueue 는 외부 동기화 대상이다. 렌더 스레드의 프레임 제출과 게임 스레드의 일회성 업로드 제출이 겹칠 수 있다.
          */
         mutable mutex _queueMutex;
 
-        /// @brief 텍스처 레이아웃 확인 + 전이를 보호합니다(transitionTextureLayout 참고).
+        /// @brief 텍스처 레이아웃 확인과 전이를 보호합니다(transitionTextureLayout 참고).
         mutable mutex _imageLayoutMutex;
         /// @brief 프레임 밖에서 기록된 리스트가 바꾼 레이아웃의 원래 값입니다.
         struct VulkanPendingLayout
@@ -548,9 +548,9 @@ namespace sw
             uint32          _oldLayout{ 0 };
         };
         /**
-         * @brief 시작되지 못한 프레임(최소화 · 스왑체인 재생성 중)에 기록되다 버려진 리스트가 바꾼 레이아웃의 원래 값입니다.
-         * @details 리스트가 제출되지 않으므로 `VulkanTextureRecord::_layout` 만 앞서 나갑니다. 다음 `beginFrame` 이 되돌립니다.
-         *          프레임 밖 일회성 제출(`executeCommandListImmediate`)은 제출한 리스트의 기록을 지웁니다. `_imageLayoutMutex` 가 지킵니다.
+         * @brief 시작되지 못한 프레임(최소화, 스왑체인 재생성 중)에 기록되다 버려진 리스트가 바꾼 레이아웃의 원래 값입니다.
+         * @details 리스트가 제출되지 않으므로 `VulkanTextureRecord::_layout` 만 앞서 나간다. 다음 `beginFrame` 이 되돌린다.
+         *          프레임 밖 일회성 제출(`executeCommandListImmediate`)은 제출한 리스트의 기록을 지운다. `_imageLayoutMutex` 가 보호한다.
          */
         vector<VulkanPendingLayout> _listDroppedFrameLayout;
         /** @brief `_listDroppedFrameLayout` 의 기록을 텍스처 레코드에 되돌리고 비웁니다. 새 프레임의 기록이 시작되기 전에만 부릅니다. */
@@ -560,25 +560,25 @@ namespace sw
         vector<VulkanCommandListEntry> _listFreeCmdListEntry;
         /**
          * @brief 살아 있는 커맨드 리스트입니다(소유하지 않습니다). 종료할 때 연결을 끊어 줍니다.
-         * @details 렌더 그래프가 리스트를 프레임 너머 들고 있으므로 디바이스가 먼저 내려갈 수 있습니다. 끊지 않으면
-         *          리스트 소멸자가 죽은 디바이스에 쌍을 반납하려 들고, 쌍의 풀은 새어 검증 레이어가 잡습니다.
-         *          DX12 · DX11 도 같은 보호를 둡니다.
+         * @details 렌더 그래프가 리스트를 프레임을 넘겨 가지고 있으므로 디바이스가 먼저 종료될 수 있다. 끊지 않으면
+         *          리스트 소멸자가 종료된 디바이스에 쌍을 반납하려 하고, 쌍의 풀이 누수되어 검증 레이어가 잡는다.
+         *          DX12 와 DX11 도 같은 보호를 둔다.
          */
         mutex                         _liveCmdListMutex;
         vector<VulkanRHICommandList*> _listLiveCmd;
-        /// @brief 이번 프레임에 큐에 넣을 커맨드 버퍼들입니다. 기록 순서 = 실행 순서.
+        /// @brief 이번 프레임에 큐에 넣을 커맨드 버퍼들입니다. 기록 순서가 곧 실행 순서입니다.
         vector<VkCommandBuffer> _listPendingSubmit;
-        /// @brief 프레임 스트림을 리스트 제출 지점마다 잘라 쓰는 추가 세그먼트 버퍼입니다(프레임 슬롯별 재사용).
+        /// @brief 프레임 스트림을 리스트 제출 지점마다 잘라 쓰는 추가 세그먼트 버퍼입니다(프레임 슬롯별로 재사용합니다).
         vector<VkCommandBuffer> _arrFrameSegment[constant::kMaxFrameCountInFlight];
 
         /**
          * @struct StructuredUploadSlot
          * @brief updateStructuredBufferRegions 가 쓰는 프레임 슬롯별 호스트 가시 스테이징(bump 할당)입니다.
          * @details 목적 버퍼에 vkMapMemory 로 직접 쓰면 GPU 가 직전 프레임을 아직 읽는 중인 메모리를 CPU 가
-         *          덮어써 프레임 간 찢어짐이 생깁니다. 그래서 스테이징에 쓰고
-         *          vkCmdCopyBuffer 를 프레임 커맨드버퍼에 기록하므로, 복사는 GPU 큐 순서로 앞 프레임의
-         *          읽기 뒤 · 이번 프레임의 드로우 앞에 놓입니다(DX12 와 같은 모델). 슬롯은 beginFrame 이
-         *          그 슬롯의 펜스를 기다린 뒤에만 다시 쓰이고, 같은 펜스 구간 안에서는 오프셋을 이어 씁니다.
+         *          덮어써 프레임 간 찢어짐이 생긴다. 그래서 스테이징에 쓰고
+         *          vkCmdCopyBuffer 를 프레임 커맨드 버퍼에 기록한다. 그러면 복사는 GPU 큐 순서상 앞 프레임의
+         *          읽기 뒤, 이번 프레임의 드로우 앞에 놓인다(DX12 와 같은 모델). 슬롯은 beginFrame 이
+         *          그 슬롯의 펜스를 기다린 뒤에만 다시 쓰이고, 같은 펜스 구간 안에서는 오프셋을 이어서 쓴다.
          */
         struct StructuredUploadSlot
         {
@@ -591,22 +591,22 @@ namespace sw
         };
         StructuredUploadSlot _arrStructuredUploadSlot[constant::kMaxFrameCountInFlight];
         uint32               _frameSegmentCursor;
-        float32              _timestampPeriod; ///< 타임스탬프 한 칸의 나노초(아래 `_timestampPool` 의 값)
-        /// @brief 지금 기록 중인 프레임 세그먼트. beginFrame 이 첫 세그먼트로 세운다.
+        float32              _timestampPeriod; ///< 타임스탬프 한 슬롯의 나노초(아래 `_timestampPool` 의 값)
+        /// @brief 지금 기록 중인 프레임 세그먼트입니다. beginFrame 이 첫 세그먼트로 설정합니다.
         VkCommandBuffer _activeFrameBuffer;
 
         /**
-         * @brief GPU 타임스탬프입니다. 링 슬롯마다 `constant::kMaxGPUTimestampSlot` 칸을 씁니다.
-         * @details 읽기는 `vkWaitForFences` 를 통과한 **직후**에 합니다. 그 슬롯의 GPU 작업이 이미
-         *          끝났음이 보장된 유일한 자리라, 재려고 파이프라인을 멈춰 세우지 않습니다.
+         * @brief GPU 타임스탬프입니다. 링 슬롯마다 `constant::kMaxGPUTimestampSlot` 개의 슬롯을 씁니다.
+         * @details 읽기는 `vkWaitForFences` 를 통과한 **직후**에 한다. 그 슬롯의 GPU 작업이 이미
+         *          끝났음이 보장된 유일한 지점이라, 측정하려고 파이프라인을 멈춰 세우지 않는다.
          */
-        VkQueryPool       _timestampPool;  ///< 없으면 VK_NULL_HANDLE (이 헤더는 vulkan.h 를 들이지 않는다)
-        VkQueryPool       _clockQueryPool; ///< GPU 시계 읽기(`readGPUClockNanos`)용 한 칸. 처음 읽을 때 만든다
-        RHITimestampFrame _timestampFrame; ///< 마지막으로 읽힌 프레임(`readTimestamps`)
+        VkQueryPool       _timestampPool;  ///< 없으면 VK_NULL_HANDLE 이다(이 헤더는 vulkan.h 를 include 하지 않는다).
+        VkQueryPool       _clockQueryPool; ///< GPU 시계 읽기(`readGPUClockNanos`)용 슬롯 하나다. 처음 읽을 때 만든다.
+        RHITimestampFrame _timestampFrame; ///< 마지막으로 읽은 프레임(`readTimestamps`)
 
         vector<VkCommandBuffer> _listCommandBuffer;
         vector<VkFence>         _listInFlightFence;
-        /// @brief 스왑체인 이미지 인덱스별로, 그 이미지를 마지막으로 쓴 인플라이트 펜스(소유하지 않는 사본).
+        /// @brief 스왑체인 이미지 인덱스별로, 그 이미지를 마지막으로 쓴 인플라이트 펜스입니다(소유하지 않는 사본).
         vector<VkFence> _listImagesInFlight;
         /// @brief 링 슬롯마다 마지막 제출에 매긴 _frameFenceCounter 값입니다. beginFrame 이 그 슬롯의 펜스를
         ///        기다린 뒤 _releaseQueue.tickCompleted(이 값)을 불러 실제 GPU 완료를 확인하고 해제합니다.
@@ -614,29 +614,29 @@ namespace sw
 
         void* _pHWnd;
         void* _pDisplayHandle;
-        /// @brief 스왑체인 제출마다 1씩 증가하는 단조 세대 번호입니다. 해제 큐가 실제 GPU 펜스 완료 기준으로
+        /// @brief 스왑체인 제출마다 1씩 증가하는 단조 세대 번호입니다. 해제 큐가 실제 GPU 펜스 완료를 기준으로
         ///        해제하도록(enqueueGPURelease) 프레임 카운트 대신 이 값을 씁니다.
         uint64                  _frameFenceCounter;
         uint32                  _width;
         uint32                  _height;
-        uint32                  _depthFormat;      ///< VkFormat. createTexture2D · 렌더패스가 함께 쓰는 깊이 포맷
-        uint32                  _surfaceLostCount; ///< 이 디바이스가 서피스를 잃은 횟수(진단)
+        uint32                  _depthFormat;      ///< VkFormat. createTexture2D 와 렌더 패스가 함께 쓰는 깊이 포맷
+        uint32                  _surfaceLostCount; ///< 이 디바이스가 서피스를 잃은 횟수(진단용)
         uint16                  _bFrameStarted           : 1;
         uint16                  _bEnableValidationLayers : 1;
         uint16                  _bMultiDrawIndirect      : 1;
         uint16                  _bDrawIndirectCount      : 1;
         uint16                  _bSamplerAnisotropy      : 1; ///< 정적 샘플러 ANISO_WRAP 을 실제로 이방성으로 만들 수 있는가
-        uint16                  _bFillModeNonSolid       : 1; ///< VK_POLYGON_MODE_LINE 을 쓸 수 있는가 (와이어프레임 뷰 모드)
-        uint16                  _bSwapChainDirty         : 1; ///< resize/present 결과로 예약된 스왑체인 재생성 요청
+        uint16                  _bFillModeNonSolid       : 1; ///< VK_POLYGON_MODE_LINE 을 쓸 수 있는가(와이어프레임 뷰 모드)
+        uint16                  _bSwapChainDirty         : 1; ///< resize 나 present 결과로 예약된 스왑체인 재생성 요청
         uint16                  _bDepthHasStencil        : 1; ///< _depthFormat 에 스텐실 plane 이 있는가
         uint16                  _bSwapChainImageHeld     : 1; ///< 획득했지만 아직 present 하지 않은 스왑체인 이미지를 쥐고 있는가
-        uint16                  _bMemoryBudget           : 1; ///< 디바이스에 VK_EXT_memory_budget 을 켰는가(GPU 메모리 사용량 · 예산 질의)
-        uint16                  _linuxWsi                : 2; ///< 0=없음, 1=xlib, 2=xcb (Linux만)
-        uint16                  _bSurfaceLost            : 1; ///< 서피스를 잃었고 아직 다시 만들지 못했다(다음 beginFrame 이 다시 시도한다)
+        uint16                  _bMemoryBudget           : 1; ///< 디바이스에 VK_EXT_memory_budget 을 켰는가(GPU 메모리 사용량과 예산 질의)
+        uint16                  _linuxWsi                : 2; ///< 0은 없음, 1은 xlib, 2는 xcb(Linux 전용)
+        uint16                  _bSurfaceLost            : 1; ///< 서피스를 잃었고 아직 다시 만들지 못했다(다음 beginFrame 이 다시 시도한다).
         [[maybe_unused]] uint16 _reservedVulkan          : 1;
-        // 1 바이트 필드는 위 비트필드 뒤에 모은다 — 8 바이트 필드 사이에 끼면 칸마다 패딩이 생긴다.
+        // 1바이트 필드는 위 비트필드 뒤에 모은다. 8바이트 필드 사이에 끼면 필드마다 패딩이 생긴다.
         uint8 _bSwapChainRecreateFailing; ///< 재생성 실패를 한 번만 알린다(성공하면 내린다). 실패하면 프레임마다 다시 시도한다.
-        /// @brief 이번 프레임의 acquire 세마포어 대기가 아직 소비되지 않았는지 여부입니다(첫 제출만 겁니다).
+        /// @brief 이번 프레임의 acquire 세마포어 대기가 아직 소비되지 않았는지 여부입니다(첫 제출에서만 바인딩합니다).
         uint8 _bFrameAcquireWaitPending;
         uint8 _bTimestampEnabled;                                       ///< 엔진이 켜기 전에는 풀도 만들지 않는다.
         uint8 _arrTimestampSubmitted[constant::kMaxFrameCountInFlight]; ///< 링 슬롯마다 타임스탬프 쿼리를 제출했는가
@@ -645,51 +645,51 @@ namespace sw
 
         VkPipelineLayout _pipelineLayout;
         VkDescriptorPool _descriptorPool;
-        VkSampler        _arrStaticSampler[shaderslot::kStaticSamplerCount]; ///< bindingslots.hlsli 4 의 정적 샘플러 세트 (set 1 immutable)
+        VkSampler        _arrStaticSampler[shaderslot::kStaticSamplerCount]; ///< bindingslots.hlsli 4 의 정적 샘플러 세트(set 1 immutable)
         VkPipeline       _pipeline;
         VkPipeline       _offscreenPipeline; ///< `_pipeline` 과 같은 셰이더를 `_offscreenRenderPass` 에 맞춘 것
         VkBuffer         _vertexBuffer;      ///< 풀스크린 삼각형(정점 3개)
         vector<uint32>   _listBindlessFree;
 
         RHIHandleTable<VulkanBufferRecord> _gpuBuffers;
-        /// @brief 링 상수버퍼 → 칸 하나의 크기입니다. 게임 스레드가 만들고 부수는 동안 렌더 스레드가 드로우마다 읽으므로 `_bindlessMutex` 로 지킵니다.
+        /// @brief 링 상수 버퍼에서 슬롯 하나의 크기입니다. 게임 스레드가 만들고 부수는 동안 렌더 스레드가 드로우마다 읽으므로 `_bindlessMutex` 로 보호합니다.
         unordered_map<RHIBufferHandle, uint32> _mapCbSlotSize;
-        RHIConstantBufferMirror                _constantBufferMirror; ///< 한 번 쓴 상수버퍼를 나머지 링 칸에도 채운다
-        /// @brief 프레임 스트림 컨텍스트(백버퍼 패스 · Present · 프레임 세그먼트)가 쓰는 기록 상태입니다. 리스트는
+        RHIConstantBufferMirror                _constantBufferMirror; ///< 한 번 쓴 상수 버퍼를 나머지 링 슬롯에도 채운다.
+        /// @brief 프레임 스트림 컨텍스트(백버퍼 패스, Present, 프레임 세그먼트)가 쓰는 기록 상태입니다. 리스트는
         /// 각자 자기 것을 가지므로, 여기 있는 것은 "디바이스가 직접 여는 버퍼" 전용입니다.
         VulkanRecordingState _recordingState;
-        /// @brief 디스크립터 등록부를 보호합니다. 커맨드 기록 경로가 인덱스로 이 목록들을 읽는 동안
+        /// @brief 디스크립터 레지스트리를 보호합니다. 커맨드 기록 경로가 인덱스로 이 목록들을 읽는 동안
         /// register/unregister 가 resize 로 재할당하면 기록 스레드가 쓰레기를 읽습니다
-        /// (gv_useRenderThread 기본 true 라 렌더 · 게임 스레드 사이에서 이미 성립하는 레이스).
+        /// (gv_useRenderThread 기본 true 라 렌더 스레드와 게임 스레드 사이에서 이미 성립하는 레이스).
         /// 읽기는 공유 락이라 서로를 막지 않습니다.
         mutable std::shared_mutex _bindlessMutex;
 
-        /// @brief SRV/CB 버퍼 인덱스 → 원본 버퍼(0 = 빈 슬롯)입니다. 인덱스 공간의 기준이자 프리리스트의 짝입니다.
+        /// @brief SRV/CB 버퍼 인덱스에서 원본 버퍼를 찾는 목록입니다(0이면 빈 슬롯). 인덱스 공간의 기준이며 프리리스트와 짝을 이룹니다.
         vector<RHIBufferHandle> _listBindlessSourceBuffer;
         vector<RHIBufferHandle> _listUavSourceBuffer;
-        /// @brief UAV 인덱스 → 원본 텍스처(RW 텍스처 배열 원소, 0 = 버퍼 또는 빈 슬롯)입니다. 버퍼 UAV 와 같은 인덱스 공간입니다.
+        /// @brief UAV 인덱스에서 원본 텍스처를 찾는 목록입니다(RW 텍스처 배열 원소, 0이면 버퍼 또는 빈 슬롯). 버퍼 UAV 와 같은 인덱스 공간을 씁니다.
         vector<RHITextureHandle> _listUavSourceTexture;
         vector<uint32>           _listUavFree;
 
         RHIHandleTable<VulkanTextureRecord> _gpuTextures;
         RHIReleaseQueue                     _releaseQueue;
-        /// @brief PSO 호환 렌더패스 · 합성 프레임버퍼 · desc 렌더패스 캐시입니다. Vulkan 만 갖습니다(스왑체인 RP 는 위 `_renderPass`).
+        /// @brief PSO 호환 렌더 패스, 합성 프레임버퍼, desc 렌더 패스 캐시입니다. Vulkan 만 가지고 있습니다(스왑체인 RP 는 위 `_renderPass`).
         VulkanRHIRenderPassCache _renderPassCache;
 
-        vector<uint8>  _listTextureUsed; ///< 텍스처 인덱스 공간(1 = 사용 중, 2 = 해제 대기). 프리리스트의 짝
+        vector<uint8>  _listTextureUsed; ///< 텍스처 인덱스 공간(1은 사용 중, 2는 해제 대기). 프리리스트와 짝을 이룬다.
         vector<uint32> _listTextureFree;
 
-        VkDescriptorSetLayout _slotSetLayout;    ///< set 0: 슬롯 세트 (b 0..15 UBO, t 16..31 SSBO, u 32..47 SSBO)
-        VkDescriptorSetLayout _textureSetLayout; ///< set 1: 텍스처 배열 + immutable sampler
-        VkDescriptorSet       _textureSet;       ///< set 1. 커맨드버퍼마다 한 번 바인딩
+        VkDescriptorSetLayout _slotSetLayout;    ///< set 0: 슬롯 세트(b 0..15 UBO, t 16..31 SSBO, u 32..47 SSBO)
+        VkDescriptorSetLayout _textureSetLayout; ///< set 1: 텍스처 배열과 immutable sampler
+        VkDescriptorSet       _textureSet;       ///< set 1. 커맨드 버퍼마다 한 번 바인딩한다.
         /// @brief 디바이스 프레임 스트림의 링 슬롯별 풀 묶음입니다. beginFrame 이 그 슬롯의 펜스를 기다린 뒤 통째로 리셋합니다.
         VulkanDescriptorPoolSet _arrFrameDescriptorPoolSet[constant::kMaxFrameCountInFlight];
-        /// @brief 리스트 쌍(VulkanCommandListEntry)이 빌려 쓰는 풀 묶음들의 소유자입니다. 쌍과 수명이 같습니다(재사용 풀에 남고 shutdown 에서 파괴).
+        /// @brief 리스트 쌍(VulkanCommandListEntry)이 빌려 쓰는 풀 묶음들의 소유자입니다. 쌍과 수명이 같으며(재사용 풀에 남고 shutdown 에서 파괴됩니다).
         vector<unique_ptr<VulkanDescriptorPoolSet>> _listCmdListDescriptorPoolSet;
         VkImage                                     _bindlessDummyImage;
         VkImageView                                 _bindlessDummyView;
         VkDeviceMemory                              _bindlessDummyMemory;
-        VkBuffer                                    _dummyUBO; ///< 셰이더가 정적으로 참조하지만 안 걸린 b# 슬롯이 가리키는 0 채운 256 바이트
+        VkBuffer                                    _dummyUBO; ///< 셰이더가 정적으로 참조하지만 바인딩되지 않은 b# 슬롯이 가리키는 0으로 채운 256바이트
         VkDeviceMemory                              _dummyUBOMemory;
 
         RHIHandleTable<VulkanPipelineStateRecord> _pipelineStates;

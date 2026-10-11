@@ -15,7 +15,7 @@ namespace sw
     /** @brief 보는 쪽 기준의 이동 방향입니다. */
     enum class LocomotionDirection : uint8
     {
-        Idle = 0, ///< 서 있다(수평 속도가 문턱 아래)
+        Idle = 0, ///< 서 있다(수평 속도가 임계값 아래)
         Forward,
         Backward,
         Left,
@@ -48,7 +48,7 @@ namespace sw
 {
     /**
      * @class LocomotionDirectionFilter
-     * @brief 이동 방향이 바뀐 것을 @p minHoldSeconds 동안 이어져야 받아들입니다(공중 · 착지는 바로). 애니메이터의 이동 상태가 문턱 근처에서
+     * @brief 이동 방향이 바뀐 것을 @p minHoldSeconds 동안 이어져야 받아들입니다(공중 · 착지는 바로). 애니메이터의 이동 상태가 임계값 근처에서
      *        깜빡이며 클립을 처음부터 다시 트는 것을 막습니다.
      */
     class SW_GF_API LocomotionDirectionFilter

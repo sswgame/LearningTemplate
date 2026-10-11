@@ -20,7 +20,7 @@ using namespace sw::editor;
 /**
  * @brief [EditorVisualizerGeometryTest] 콜라이더 시각화는 물리가 판정하는 상자(월드 스케일 · 회전을 받은 것)를 그린다
  * @details `getWorldBox` 의 상자를 그린다. `getWorldPosition() + offset` 에 로컬 크기의 절반을 더해 그리면 키운 콜라이더가 물리 상자보다
- *          작게 보인다(오프셋도 스케일을 받아야 한다). 시각화는 씬 전체가 아니라 매니저의 콜라이더 등록부를 본다.
+ *          작게 보인다(오프셋도 스케일을 받아야 한다). 시각화는 씬 전체가 아니라 매니저의 콜라이더 레지스트리를 본다.
  */
 SW_TEST_CASE( EditorVisualizerGeometryTest, ColliderOutlineIsThePhysicsBox )
 {
@@ -82,7 +82,7 @@ SW_TEST_CASE( EditorVisualizerGeometryTest, DebugDrawQueueBecomesWorldSegments )
     SW_EXPECT_NEAR_EQUAL( 3.0f, listSegment[0]._to._z, 1e-6f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, listSegment[0]._color._x, 1e-6f );
 
-    // 구의 선분 끝점은 모두 중심에서 반지름만큼 떨어져 있고, 세 축 평면을 다 지난다.
+    // 구의 선분 엔드포인트는 모두 중심에서 반지름만큼 떨어져 있고, 세 축 평면을 다 지난다.
     float32 maxAbsX{ 0.0f };
     float32 maxAbsY{ 0.0f };
     float32 maxAbsZ{ 0.0f };

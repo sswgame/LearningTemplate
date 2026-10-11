@@ -44,29 +44,29 @@ namespace sw
         constexpr float32 kBenchSpacing = 2.0f;
         /** @brief 격자가 화면에 들어오도록 카메라를 뒤로 뺄 때 쓰는 여유 배수. */
         constexpr float32 kBenchCameraMargin = 0.28f;
-        /** @brief 스트레스가 들고 있을 머티리얼 인스턴스 상한. 넘으면 붙이는 대신 뗀다. */
+        /** @brief 스트레스가 보관할 머티리얼 인스턴스 상한입니다. 넘으면 새로 붙이는 대신 제거합니다. */
         constexpr size_t kChurnInstanceCap = 512;
         /** @brief 스트레스가 인스턴스에서 켜고 끄는 키워드입니다. 읽는 셰이더는 없고 퍼뮤테이션만 갈립니다. */
         constexpr const utf8* kChurnKeyword = "MATERIAL_BENCH_CHURN";
-        /** @brief 스트레스가 흔드는 멀티컴파일 이름. */
+        /** @brief 스트레스가 흔드는 멀티컴파일 이름입니다. */
         constexpr const utf8* kChurnFogMultiCompile = "FogMode";
-        /** @brief 그 멀티컴파일의 선택지 — 머티리얼 에셋의 _multiCompiles 와 같아야 한다. */
+        /** @brief 그 멀티컴파일의 선택지입니다. 머티리얼 에셋의 _multiCompiles 와 같아야 합니다. */
         constexpr const utf8* kArrChurnFogOption[] = { "FOG_OFF", "FOG_LINEAR", "FOG_EXP" };
         /**
-         * @brief 벤치가 섞어 쓸 도형 — `MeshUtil::createPrimitive` 가 아는 이름이다.
-         * @note 큐브가 **첫 번째**여야 한다. `-gv_benchMeshShapes=1`(기본)이 큐브만 그려야
-         *       기존 측정·스크린샷과 비교할 수 있다.
+         * @brief 벤치가 섞어 쓸 도형입니다. `MeshUtil::createPrimitive` 가 아는 이름입니다.
+         * @note 큐브가 **첫 번째**여야 한다. `-gv_benchMeshShapes=1`(기본값)이 큐브만 그려야
+         *       기존 측정과 스크린샷을 비교할 수 있다.
          */
         constexpr const utf8* kArrBenchShape[] = { "Cube", "Sphere", "Cylinder", "Capsule", "Cone" };
-        /** @brief 벤치 캐릭터(KayKit 기사, CC0) — 스킨드 메시 · 스켈레톤 · 클립 폴더입니다(`App --import-models` 가 만든다). */
+        /** @brief 벤치 캐릭터(KayKit 기사, CC0)의 스킨드 메시, 스켈레톤, 클립 폴더입니다(`App --import-models` 가 만듭니다). */
         constexpr const utf8* kBenchCharacterMesh     = "game/shooter3d/models/kaykit/knight.mesh";
         constexpr const utf8* kBenchCharacterSkeleton = "game/shooter3d/models/kaykit/knight/knight.skeleton.json";
         constexpr const utf8* kBenchCharacterClips    = "game/shooter3d/models/kaykit/knight/clips";
-        /** @brief 벤치 캐릭터가 번갈아 재생하는 클립입니다(짝수 · 홀수 번째). */
+        /** @brief 벤치 캐릭터가 번갈아 재생하는 클립입니다(짝수 번째와 홀수 번째). */
         constexpr const utf8* kArrBenchCharacterClip[] = { "Idle", "Walking_A" };
         /** @brief 캐릭터 사이 간격(미터)입니다. */
         constexpr float32 kBenchCharacterSpacing = 1.6f;
-        /// @brief 얼굴 벤치의 테스트 머리(합성 — 모프 타깃 일곱 · 눈 본 둘)와 그 리그 · 클립 · 음성입니다.
+        /// @brief 얼굴 벤치의 테스트 머리(합성, 모프 타깃 일곱 개와 눈 본 두 개)와 그 리그, 클립, 음성입니다.
         constexpr const utf8* kBenchFaceMesh     = "game/empty/models/testhead.mesh";
         constexpr const utf8* kBenchFaceSkeleton = "game/empty/models/testhead/testhead.skeleton.json";
         constexpr const utf8* kBenchFaceClips    = "game/empty/models/testhead/clips";
@@ -78,200 +78,200 @@ namespace sw
     } // namespace
 
     // ------------------------------------------------------------------------------
-    // 벤치 스위치(`-gv_bench*`) — 이 파일만 읽으므로 여기서 정의한다
+    // 벤치 스위치(`-gv_bench*`). 이 파일만 읽으므로 여기서 정의한다.
     // ------------------------------------------------------------------------------
     /**
-     * @brief `-gv_benchMeshes=N` — 시작 시 만들 벤치 큐브 수. 0 이면 만들지 않습니다.
-     * @details 이것이 0 이 아니면 `EmptyGame` 은 `GameConfig` 의 시작 씬 대신 벤치 씬을 세운다.
+     * @brief `-gv_benchMeshes=N`: 시작할 때 만들 벤치 큐브 수입니다. 0 이면 만들지 않습니다.
+     * @details 이 값이 0 이 아니면 `EmptyGame` 은 `GameConfig` 의 시작 씬 대신 벤치 씬을 만든다.
      */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchMeshes, 0, "시작 시 생성할 벤치 큐브 수 (0=사용 안 함)" );
 
     /**
-     * @brief `-gv_benchCharacters=N` — 스킨드 캐릭터(KayKit 기사) N 명을 한 줄로 세워 짝수는 Idle, 홀수는 Walking_A 를 재생합니다.
-     * @details GPU 스키닝(모프 풀의 스킨 구간 · meshskin.hlsl)과 애니메이션 시스템을 실제 에셋으로 태우는 스위치다. `-gv_screenshotFrame` 을 둘
-     *          다르게 찍으면 포즈가 달라야 한다. 개발 빌드 전용이다 — 에셋이 Shooter3D 의 리소스에 있어 Empty 게임의 배포 팩에는 없다.
+     * @brief `-gv_benchCharacters=N`: 스킨드 캐릭터(KayKit 기사) N 명을 한 줄로 세워 짝수는 Idle, 홀수는 Walking_A 를 재생합니다.
+     * @details GPU 스키닝(모프 풀의 스킨 구간, meshskin.hlsl)과 애니메이션 시스템을 실제 에셋으로 실행하는 스위치다. `-gv_screenshotFrame` 을 둘
+     *          다르게 찍으면 포즈가 달라야 한다. 개발 빌드 전용이다. 에셋이 Shooter3D 의 리소스에 있어 Empty 게임의 배포 팩에는 없다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchCharacters, 0, "벤치 스킨드 캐릭터 수 (0=사용 안 함, KayKit 기사 · Idle/Walking_A)" );
 
     /**
-     * @brief `-gv_benchCharacterColumns=N` — 벤치 캐릭터를 한 줄이 아니라 N 열 격자로 세웁니다(0 = 한 줄). 천 명은 한 줄이면 1.6 km 다.
-     * @details 카메라는 격자 앞 위에서 내려다본다 — 앞줄은 크고 뒷줄은 작아 애니메이션 LOD 의 단계가 고루 나온다.
+     * @brief `-gv_benchCharacterColumns=N`: 벤치 캐릭터를 한 줄이 아니라 N 열 격자로 배치합니다(0 이면 한 줄). 천 명을 한 줄로 세우면 1.6km 가 된다.
+     * @details 카메라는 격자 앞 위에서 내려다본다. 앞줄은 크고 뒷줄은 작아서 애니메이션 LOD 의 단계가 고루 나온다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchCharacterColumns, 0, "벤치 캐릭터를 N 열 격자로 세운다 (0=한 줄)" );
 
     /**
-     * @brief `-gv_benchCrowdShare=1` — 벤치 캐릭터의 군중 포즈 공유를 켭니다(`SkeletalMeshComponent::setShareCrowdPose`).
-     * @details 끄면(기본) 캐릭터마다 스킨 사본 · 포즈 · 팔레트다. 켜면 같은 상태 · 위상끼리 포즈 하나 · 결과 구간 하나를 나누고, 아주 먼 캐릭터는 VAT 다.
+     * @brief `-gv_benchCrowdShare=1`: 벤치 캐릭터의 군중 포즈 공유를 켭니다(`SkeletalMeshComponent::setShareCrowdPose`).
+     * @details 끄면(기본값) 캐릭터마다 스킨 사본, 포즈, 팔레트를 따로 쓴다. 켜면 같은 상태와 위상끼리 포즈 하나와 결과 구간 하나를 나눠 쓰고, 아주 먼 캐릭터는 VAT 로 그린다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchCrowdShare, 0, "벤치 캐릭터 군중 포즈 공유 (0=캐릭터마다 사본 · 1=그룹 공유 + 먼 캐릭터 VAT)" );
 
     /**
-     * @brief `-gv_benchCharacterStagger=1` — 벤치 캐릭터의 시작 시각을 인덱스 해시로 흩습니다(군중이 한 프레임으로 맞춰 움직이지 않게).
+     * @brief `-gv_benchCharacterStagger=1`: 벤치 캐릭터의 시작 시각을 인덱스 해시로 흩어 놓습니다(군중이 한 프레임에 맞춰 움직이지 않게 합니다).
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchCharacterStagger, 0, "벤치 캐릭터 시작 시각을 흩는다 (0=모두 0 초)" );
 
     /**
-     * @brief `-gv_benchFaces=N` — 테스트 머리 N 개를 한 줄로 세웁니다(얼굴 애니메이션 확인). 모두 카메라를 보고(시선) 깜빡이며, 짝수는 Talk 클립
-     *        (모프 가중치 커브)을 재생하고 Happy 표정 0.6, 홀수는 테스트 음성을 말합니다(비즘 트랙).
+     * @brief `-gv_benchFaces=N`: 테스트 머리 N 개를 한 줄로 세웁니다(얼굴 애니메이션 확인용). 모두 카메라를 보고(시선) 눈을 깜빡이며, 짝수는 Talk 클립
+     *        (모프 가중치 커브)을 재생하고 Happy 표정 0.6 을 짓고, 홀수는 테스트 음성을 말합니다(비즘 트랙).
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchFaces, 0, "벤치 시험 머리 수 (0=사용 안 함, 모프 · 표정 · 립싱크 · 깜빡임 · 시선)" );
 
     /**
-     * @brief `-gv_benchCombat=1` — KayKit 스켈레톤 적이 걸으며(발소리 알림 · 바닥 재질) 무기 레이캐스트를 맞고(히트 존 · 움찔), 180 프레임에 치명적 맞음으로 래그돌이 되고
-     *        오른손 소켓의 칼이 물리로 떨어진 뒤 900 프레임에 일어납니다(`BenchCombatComponent`). 로그 `[BenchCombat]` 이 맞음 · 발소리 · 래그돌 상태를 적는다.
-     * @details 개발 빌드 전용이다 — 에셋이 Shooter3D 의 리소스에 있어 Empty 게임의 배포 팩에는 없다(`gv_benchCharacters` 와 같다).
+     * @brief `-gv_benchCombat=1`: KayKit 스켈레톤 적이 걸으며(발소리 알림, 바닥 재질) 무기 레이캐스트를 맞고(히트 존, 움찔), 180 프레임에 치명적인 피격으로 래그돌이 되고
+     *        오른손 소켓의 칼이 물리로 떨어진 뒤 900 프레임에 일어납니다(`BenchCombatComponent`). 로그 `[BenchCombat]` 이 피격, 발소리, 래그돌 상태를 기록합니다.
+     * @details 개발 빌드 전용이다. 에셋이 Shooter3D 의 리소스에 있어 Empty 게임의 배포 팩에는 없다(`gv_benchCharacters` 와 같다).
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchCombat, 0, "벤치 전투 연출 (0=사용 안 함, KayKit 스켈레톤 — 알림 · 히트 존 · 래그돌 · 칼 떨어뜨리기)" );
 
     /**
-     * @brief `-gv_benchMaterialInstances=1` — 벤치 큐브마다 개별 MaterialInstance 를 줍니다.
-     * @details 배치 키가 인스턴스 포인터를 포함하므로 배치가 1개에서 N개로 갈라진다 — 배치·드로우
+     * @brief `-gv_benchMaterialInstances=1`: 벤치 큐브마다 개별 MaterialInstance 를 줍니다.
+     * @details 배치 키가 인스턴스 포인터를 포함하므로 배치가 1개에서 N개로 갈라진다. 배치와 드로우
      *          경로에 실제 부하를 거는 유일한 방법이다.
-     * @note 기본은 꺼 둔다 — 배치가 하나인 기본 측정과 부하 모양이 다르다. 프레임마다 구조버퍼 업로드가
+     * @note 기본은 꺼 둔다. 배치가 하나인 기본 측정과 부하 형태가 다르기 때문이다. 프레임마다 구조 버퍼 업로드가
      *       여러 번 도는 경로라 DX12 업로드 얼로케이터의 펜스 구간 처리(`updateStructuredBuffer`)를 테스트하기에 좋다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchMaterialInstances, 0, "벤치 큐브마다 MaterialInstance 부여 (배치를 큐브 수만큼 가른다)" );
 
     /**
-     * @brief `-gv_benchMeshVariants=N` — 벤치가 쓸 **메시 종류 수**. 배치 키에 메시가 들어가므로 곧 배치 수다.
-     * @details 기본 1 은 모든 큐브가 한 배치로 묶여 드로우 경로(드로우별 상수·바인딩)를 전혀 재지 않는다.
-     *          실제 씬은 늘 여러 메시를 쓰므로, 드로우 경로를 재거나 다중 배치 버그를 보려면 이 값을 올린다.
+     * @brief `-gv_benchMeshVariants=N`: 벤치가 쓸 **메시 종류 수**입니다. 배치 키에 메시가 들어가므로 곧 배치 수입니다.
+     * @details 기본값 1 에서는 모든 큐브가 한 배치로 묶여 드로우 경로(드로우별 상수와 바인딩)를 전혀 측정하지 못한다.
+     *          실제 씬은 늘 여러 메시를 쓰므로, 드로우 경로를 측정하거나 다중 배치 버그를 보려면 이 값을 올린다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchMeshVariants, 1, "벤치 메시 종류 수 (= 배치 수, 드로우 경로 측정용)" );
 
     /**
-     * @brief `-gv_benchTransparent=<퍼센트>` — 벤치 큐브 중 이 비율을 투명으로 만듭니다 (0=전부 불투명).
-     * @details 투명 경로는 불투명과 다른 길을 간다 — 배치가 깊이순으로 갈리고, 컬링이 압축한 순서를
-     *          instancesort 가 되돌리며, 블렌딩 PSO 를 쓴다. 벤치가 전부 불투명이면 그 길을 한 번도
+     * @brief `-gv_benchTransparent=<퍼센트>`: 벤치 큐브 중 이 비율을 투명으로 만듭니다(0 이면 전부 불투명).
+     * @details 투명 경로는 불투명과 다른 경로를 탄다. 배치가 깊이 순서로 갈리고, 컬링이 압축한 순서를
+     *          instancesort 가 되돌리며, 블렌딩 PSO 를 쓴다. 벤치가 전부 불투명이면 그 경로를 한 번도
      *          지나지 않는다. 투명 큐브는 **소수의 머티리얼 인스턴스를 나눠 쓰므로** 한 배치에 투명
-     *          인스턴스가 여럿 들어간다 — 그래야 배치 안의 정렬이 실제로 검사된다.
+     *          인스턴스가 여럿 들어간다. 그래야 배치 안의 정렬이 실제로 검사된다.
      */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchTransparent, 25, "벤치 큐브 중 투명으로 만들 비율 (퍼센트)" );
 
     /**
-     * @brief `-gv_benchMaterialChurn=N` — 매 프레임 머티리얼 인스턴스 N 개의 **값**을 무작위로 바꿉니다.
-     * @details 색·러프니스를 흔든다. 정적인 벤치는 머티리얼 바이트가 한 번 올라간 뒤 영원히 그대로라
-     *          "바뀐 것만 올린다" 경로(`GPUMaterialGroupBuffer::_lastBytes` 비교, 인스턴스 CB 재작성,
-     *          구조버퍼 재업로드)를 **한 번도 지나지 않는다.** 이 스위치가 그 길을 매 프레임 태운다.
+     * @brief `-gv_benchMaterialChurn=N`: 매 프레임 머티리얼 인스턴스 N 개의 **값**을 무작위로 바꿉니다.
+     * @details 색과 러프니스를 흔든다. 정적인 벤치는 머티리얼 바이트가 한 번 업로드된 뒤 영원히 그대로라
+     *          "바뀐 것만 업로드하는" 경로(`GPUMaterialGroupBuffer::_lastBytes` 비교, 인스턴스 CB 재작성,
+     *          구조 버퍼 재업로드)를 **한 번도 지나지 않는다.** 이 스위치가 그 경로를 매 프레임 실행한다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchMaterialChurn, 0, "프레임당 값을 무작위로 바꿀 머티리얼 인스턴스 수 (0=사용 안 함)" );
 
     /**
-     * @brief `-gv_benchMaterialChurnAdd=N` — 매 프레임 인스턴스 N 개를 새로 붙이거나 떼어냅니다.
-     * @details 값이 아니라 **집합**을 흔든다. 붙이면 배치 키가 갈리고 머티리얼 원소 표에 자리가 하나
-     *          늘며, 떼면 참조가 사라져 `freeUnusedMaterialElements` 가 그 자리를 회수하고 다음 번에
-     *          재사용한다(자리를 **옮기지는 않는다** — 인스턴스에 적힌 materialIndex 가 그대로여야 한다).
-     *          떼어낸 인스턴스는 렌더 패킷이 아직 들고 있을 수 있으므로, 소유가 실제로 마지막 참조를
-     *          따라 사라지는지(상수버퍼 해제 포함)도 같이 검사된다.
-     * @note 인스턴스 수는 512 개에서 멈춘다 — 그 뒤로는 새로 붙이는 대신 떼는 쪽으로 기운다.
+     * @brief `-gv_benchMaterialChurnAdd=N`: 매 프레임 인스턴스 N 개를 새로 붙이거나 제거합니다.
+     * @details 값이 아니라 **집합**을 흔든다. 붙이면 배치 키가 갈리고 머티리얼 요소 테이블에 슬롯이 하나
+     *          늘며, 제거하면 참조가 사라져 `freeUnusedMaterialElements` 가 그 슬롯을 회수하고 다음에
+     *          재사용한다(슬롯을 **옮기지는 않는다**. 인스턴스에 적힌 materialIndex 가 그대로여야 한다).
+     *          제거한 인스턴스는 렌더 패킷이 아직 참조하고 있을 수 있으므로, 소유가 실제로 마지막 참조를
+     *          따라 사라지는지(상수 버퍼 해제 포함)도 함께 검사된다.
+     * @note 인스턴스 수는 512개에서 멈춘다. 그 뒤로는 새로 붙이는 대신 제거하는 쪽으로 기운다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchMaterialChurnAdd, 0, "프레임당 새로 붙이거나 떼어낼 머티리얼 인스턴스 수 (0=사용 안 함)" );
 
     /**
-     * @brief `-gv_benchMaterialChurnKeyword=N` — N 프레임마다 키워드·멀티컴파일을 하나 흔듭니다.
+     * @brief `-gv_benchMaterialChurnKeyword=N`: N 프레임마다 키워드와 멀티컴파일을 하나 바꿉니다.
      * @warning **셰이더가 다시 컴파일된다.** 퍼뮤테이션 해시가 바뀌면 배치 키가 갈리고 PSO 가 새로
      *          만들어지므로 프레임이 크게 튄다. 성능 측정용이 아니라 **퍼뮤테이션 경로가 살아 있는지**
-     *          보는 스위치다. 값은 크게 준다(예: 60 = 1초에 한 번).
+     *          확인하는 스위치다. 값은 크게 준다(예: 60 은 1초에 한 번).
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchMaterialChurnKeyword, 0, "N 프레임마다 키워드·멀티컴파일을 흔듭니다 (0=사용 안 함)" );
 
     /**
-     * @brief `-gv_benchMeshShapes=N` — 벤치가 섞어 쓸 도형 수 (1=큐브만, 최대 5).
-     * @details 순서는 큐브 · 구 · 실린더 · 캡슐 · 원뿔이다. 큐브 하나만 쓰면 삼각형이 12개뿐이고 면이
-     *          축에 정렬돼 있어 래스터화·보간·컬링을 거의 흔들지 않는다 — 곡면을 섞으면 배치마다
-     *          **정점 수가 크게 달라져서** 간접 인자·정점 버퍼 바인딩·바운드 반경이 전부 다른 값을 탄다.
-     * @note 기본이 1 인 이유는 **기존 측정과 스크린샷을 그대로 두기 위해서**다. 도형을 섞으면 그림이
-     *       달라지므로 큐브만 쓴 수치와 직접 비교할 수 없다.
+     * @brief `-gv_benchMeshShapes=N`: 벤치가 섞어 쓸 도형 수입니다(1 은 큐브만, 최대 5).
+     * @details 순서는 큐브, 구, 실린더, 캡슐, 원뿔이다. 큐브 하나만 쓰면 삼각형이 12개뿐이고 면이
+     *          축에 정렬돼 있어 래스터화, 보간, 컬링을 거의 흔들지 않는다. 곡면을 섞으면 배치마다
+     *          **정점 수가 크게 달라져서** 간접 인자, 정점 버퍼 바인딩, 바운드 반경이 전부 다른 값을 쓴다.
+     * @note 기본값이 1 인 이유는 **기존 측정과 스크린샷을 그대로 두기 위해서**다. 도형을 섞으면 이미지가
+     *       달라지므로 큐브만 쓴 측정값과 직접 비교할 수 없다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchMeshShapes, 1, "벤치가 섞어 쓸 도형 수 (1=큐브만 · 최대 5: 큐브·구·실린더·캡슐·원뿔)" );
 
     /**
-     * @brief `-gv_benchMeshMorph=1` — 벤치 도형의 **정점**을 GPU 가 매 프레임 변형합니다.
+     * @brief `-gv_benchMeshMorph=1`: 벤치 도형의 **정점**을 GPU 가 매 프레임 변형합니다.
      * @details 컴퓨트(meshmorph.hlsl)가 레스트 포즈를 읽어 결과 버퍼에 쓰고, 정점 셰이더가 그 결과를
-     *          `SV_VertexID` 로 풀링한다. CPU 는 정점을 한 번도 다시 올리지 않는다 — `Mesh::setVertices` 로
+     *          `SV_VertexID` 로 읽는다. CPU 는 정점을 한 번도 다시 업로드하지 않는다. `Mesh::setVertices` 로
      *          매 프레임 바꾸면 메시마다 정점 버퍼를 파괴하고 다시 만들고, 게임 스레드에서 부르는 것이라
      *          OpenGL 에서는 컨텍스트도 없다.
-     * @note 기본이 0 인 이유는 **픽셀 비교 검증을 흔들지 않기 위해서**다. 켠 상태의 검증은
-     *       `-gv_screenshotFrame` 으로 서로 다른 시각을 찍어 그림이 실제로 달라지는지로 본다.
+     * @note 기본값이 0 인 이유는 **픽셀 비교 검증을 흔들지 않기 위해서**다. 켠 상태의 검증은
+     *       `-gv_screenshotFrame` 으로 서로 다른 시각을 찍어 이미지가 실제로 달라지는지로 본다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchMeshMorph, 0, "벤치 도형의 정점을 GPU 가 매 프레임 변형합니다 (0=사용 안 함)" );
 
     /**
-     * @brief `-gv_benchAnimate=0` — 벤치의 **모든** 시간 구동 변화를 멈춥니다 (기본 1 = 움직인다).
-     * @details **기하가 있는 씬을 픽셀로 비교하려면 이것이 필요하다.** 벤치는 두 가지를 시간으로
-     *          움직인다 — 컴퓨트(instanceanim)가 만드는 회전과, `update()` 의 사인파가 만드는 상하
-     *          이동·스케일이다. 둘 다 벽시계 델타에서 나오므로 같은 `-gv_screenshotFrame` 으로 두 번
-     *          찍어도 그림이 다르다(같은 설정 두 실행이 **1.5%** 어긋난다 — 셰이더 변경의 0.5% 차이를 가린다).
-     *          손대지 않은 대조군이 움직이면 하니스를 먼저 의심할 것. 회전만 멈춰서는 부족하다(사인파가 남아
+     * @brief `-gv_benchAnimate=0`: 벤치의 **모든** 시간 구동 변화를 멈춥니다(기본값 1 은 움직입니다).
+     * @details **기하가 있는 씬을 픽셀로 비교하려면 이 스위치가 필요하다.** 벤치는 두 가지를 시간으로
+     *          움직인다. 컴퓨트(instanceanim)가 만드는 회전과, `update()` 의 사인파가 만드는 상하
+     *          이동과 스케일이다. 둘 다 실제 시계의 델타에서 나오므로 같은 `-gv_screenshotFrame` 으로 두 번
+     *          찍어도 이미지가 다르다(같은 설정으로 두 번 실행하면 **1.5%** 어긋나며, 셰이더 변경의 0.5% 차이를 가린다).
+     *          손대지 않은 대조군이 움직이면 하니스를 먼저 의심할 것. 회전만 멈추면 부족하다(사인파가 남아
      *          0.05% 흔들린다).
      */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchAnimate, 1, "벤치의 시간 구동 변화(회전·상하 이동·스케일) (0=멈춤, 픽셀 비교 검증용)" );
 
     /**
-     * @brief `-gv_benchUiMarkers=K` — 앞쪽 큐브 K 개에 화면 마커(`WidgetComponent` Screen — 숫자 글)를 붙입니다(데미지 숫자 광역 경우).
-     * @details 마커는 프레임마다 월드 점을 화면에 투영해 놓인다 — 위젯 벤치(`-gv_benchUiWidgets` · 엔진 `UIBenchScreen`)와 함께 `GT.UI.*` 로 잰다.
-     *          큐브 수(`-gv_benchMeshes`)보다 크면 큐브 수만큼입니다.
+     * @brief `-gv_benchUiMarkers=K`: 앞쪽 큐브 K 개에 화면 마커(`WidgetComponent` Screen, 숫자 글자)를 붙입니다(데미지 숫자가 많이 뜨는 경우를 재현합니다).
+     * @details 마커는 프레임마다 월드 좌표를 화면에 투영해 배치한다. 위젯 벤치(`-gv_benchUiWidgets`, 엔진 `UIBenchScreen`)와 함께 `GT.UI.*` 로 측정한다.
+     *          큐브 수(`-gv_benchMeshes`)보다 크면 큐브 수만큼 붙인다.
      */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchUiMarkers, 0, "앞쪽 벤치 큐브 K 개에 화면 마커(숫자 글)를 붙인다 (0=사용 안 함)" );
 
     /**
-     * @brief `-gv_benchMovePercent=<퍼센트>` — 프레임마다 위치·스케일을 다시 쓰는 큐브의 비율 (기본 100 = 전부).
-     * @details "일부만 움직이는 씬" 을 재기 위한 것이다 — 트랜스폼 플러시는 더티 루트만 돌므로 그 이득은
+     * @brief `-gv_benchMovePercent=<퍼센트>`: 프레임마다 위치와 스케일을 다시 쓰는 큐브의 비율입니다(기본값 100 은 전부).
+     * @details "일부만 움직이는 씬"을 측정하기 위한 것이다. 트랜스폼 플러시는 더티 루트만 도므로 그 이득은
      *          전부 움직이는 벤치에서는 보이지 않는다. 10 이면 열 개 중 하나만 쓴다(index % 100 < percent).
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchMovePercent, 100, "프레임마다 위치·스케일을 다시 쓰는 큐브의 비율 (퍼센트, 기본 100)" );
 
     /**
-     * @brief `-gv_benchInstanced=1` — 큐브를 GameObject·SceneComponent 없이 메시 인스턴스 배치(언리얼 ISM 자리)로 만듭니다.
-     * @details 같은 격자·같은 움직임·같은 시드라 그림은 같아야 한다. 플러시와 배치 트랜스폼 쓰기가 사라지는 대신 월드 행렬을
-     *          항목에 바로 적는다. 큐브별 머티리얼 인스턴스·투명 비율은 이 모드에서 지원하지 않는다(배치 하나 = 메시·머티리얼 하나).
+     * @brief `-gv_benchInstanced=1`: 큐브를 GameObject 와 SceneComponent 없이 메시 인스턴스 배치(언리얼의 ISM 에 해당)로 만듭니다.
+     * @details 같은 격자, 같은 움직임, 같은 시드라 이미지는 같아야 한다. 플러시와 배치 트랜스폼 쓰기가 사라지는 대신 월드 행렬을
+     *          항목에 바로 적는다. 큐브별 머티리얼 인스턴스와 투명 비율은 이 모드에서 지원하지 않는다(배치 하나에 메시와 머티리얼이 하나씩이다).
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchInstanced, 0, "1 이면 큐브를 GameObject 없이 메시 인스턴스 배치로 만든다 (기본 0)" );
 
     /**
-     * @brief `-gv_benchLights=N` — 격자 위에 점광·스포트라이트를 N 개 흩뿌립니다 (주광은 별개).
-     * @details 라이트 수를 늘리면 **픽셀당 루프가 길어진다** — 디퍼드는 화면 픽셀 수만큼, 포워드는
-     *          오버드로를 포함한 픽셀 수만큼이다. 그래서 두 경로의 라이트 비용이 어떻게 갈리는지를
-     *          이 스위치 하나로 잰다(`-gv_deferred` 와 함께 쓴다).
-     * @note 홀수 번째는 스포트라이트다 — 점광만 두면 원뿔 감쇠 경로가 한 번도 실행되지 않는다.
-     * @note 기본이 0 인 이유는 **기존 측정과 스크린샷을 그대로 두기 위해서**다.
+     * @brief `-gv_benchLights=N`: 격자 위에 점광과 스포트라이트를 N 개 흩뿌립니다(주 광원은 별개입니다).
+     * @details 라이트 수를 늘리면 **픽셀당 루프가 길어진다**. 디퍼드는 화면 픽셀 수만큼, 포워드는
+     *          오버드로를 포함한 픽셀 수만큼 돈다. 그래서 두 경로의 라이트 비용이 어떻게 갈리는지를
+     *          이 스위치 하나로 측정한다(`-gv_deferred` 와 함께 쓴다).
+     * @note 홀수 번째는 스포트라이트다. 점광만 두면 원뿔 감쇠 경로가 한 번도 실행되지 않는다.
+     * @note 기본값이 0 인 이유는 **기존 측정과 스크린샷을 그대로 두기 위해서**다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchLights, 0, "격자에 흩뿌릴 점광·스포트라이트 수 (주광은 별개)" );
 
     /**
-     * @brief `-gv_benchLightRadius=<유닛>` — 벤치 라이트가 닿는 반경 (0 이면 격자 간격에서 정한다).
+     * @brief `-gv_benchLightRadius=<유닛>`: 벤치 라이트가 닿는 반경입니다(0 이면 격자 간격에서 정합니다).
      * @details 반경은 **비용을 정하는 값**이다. 크면 한 픽셀에 닿는 라이트가 늘어 루프가 실제로 돌고,
-     *          작으면 감쇠가 0 이라 일찍 빠진다 — 타일 컬링의 효과를 재려면 이 값을 흔들어야 한다.
+     *          작으면 감쇠가 0 이라 일찍 빠진다. 타일 컬링의 효과를 측정하려면 이 값을 바꿔 봐야 한다.
      */
     SW_TEST_GLOBAL_VARIABLE( float32, gv_benchLightRadius, 0.0f, "벤치 라이트 반경 (0=격자 간격에서 정한다)" );
 
     /**
-     * @brief `-gv_benchGround=1` — 격자 아래에 바닥 평면을 깝니다.
+     * @brief `-gv_benchGround=1`: 격자 아래에 바닥 평면을 깝니다.
      * @details **그림자를 눈으로 확인하려면 받을 면이 있어야 한다.** 큐브만 떠 있으면 그림자는 다른
-     *          큐브 위에만 지고, 그것도 큐브가 서로 떨어져 있어 거의 보이지 않는다 — 그림자 투영이
-     *          맞는지 그림으로 판단할 수 없다.
-     * @note 기본이 0 인 이유는 **기존 측정과 스크린샷을 그대로 두기 위해서**다.
+     *          큐브 위에만 지고, 그것도 큐브가 서로 떨어져 있어 거의 보이지 않는다. 그러면 그림자 투영이
+     *          맞는지 이미지로 판단할 수 없다.
+     * @note 기본값이 0 인 이유는 **기존 측정과 스크린샷을 그대로 두기 위해서**다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchGround, 0, "격자 아래에 바닥 평면을 깝니다 (그림자를 받는 면)" );
 
     /**
-     * @brief `-gv_benchTickMovers=N` — 큐브마다 틱하는 무버 컴포넌트를 N 개 붙이고, 첫 번째가 **틱 안에서** 위치·스케일을 씁니다.
-     * @details 0 이면 게임 스레드가 틱 밖에서 배치로 쓴다. 1 은 게임플레이의 보통 모양(`onTick` 안의 세터 —
-     *          병렬 틱 중이라 지연 경로를 탄다)을 재고, 2 이상은 한 오브젝트에 틱 컴포넌트가 여럿일 때의 틱 디스패치
-     *          비용을 잰다(나머지 무버는 틱만 돈다). 두 경로의 그림은 같다.
+     * @brief `-gv_benchTickMovers=N`: 큐브마다 틱하는 무버 컴포넌트를 N 개 붙이고, 첫 번째가 **틱 안에서** 위치와 스케일을 씁니다.
+     * @details 0 이면 게임 스레드가 틱 밖에서 배치로 쓴다. 1 은 게임플레이의 일반적인 패턴(`onTick` 안의 세터,
+     *          병렬 틱 중이라 지연 경로를 탄다)을 측정하고, 2 이상은 한 오브젝트에 틱 컴포넌트가 여럿일 때의 틱 디스패치
+     *          비용을 측정한다(나머지 무버는 틱만 돈다). 두 경로의 이미지는 같다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchTickMovers, 0, "큐브마다 틱 무버 컴포넌트 N 개 — 첫 번째가 틱 안에서 위치를 쓴다 (0=배치 쓰기)" );
 
     /**
-     * @brief `-gv_benchSpawnChurn=N` — 프레임마다 큐브 N 개를 지우고 같은 자리에 새로 만듭니다 (총알처럼 스폰이 잦은 게임의 모양).
-     * @details 스폰·파괴 경로(이름 유일화 · 풀 · 등록부)와 "틱 멤버십이 매 프레임 바뀌는" 틱 등록부를 잰다. 새 큐브는 같은 메시
-     *          종류·기본 머티리얼이고, 무버(`-gv_benchTickMovers`)도 같이 붙는다.
+     * @brief `-gv_benchSpawnChurn=N`: 프레임마다 큐브 N 개를 지우고 같은 위치에 새로 만듭니다(총알처럼 스폰이 잦은 게임의 패턴입니다).
+     * @details 스폰과 파괴 경로(이름 유일화, 풀, 레지스트리)와 "틱 멤버십이 매 프레임 바뀌는" 틱 레지스트리를 측정한다. 새 큐브는 같은 메시
+     *          종류와 기본 머티리얼을 쓰고, 무버(`-gv_benchTickMovers`)도 함께 붙는다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchSpawnChurn, 0, "프레임마다 큐브 N 개를 지우고 같은 자리에 새로 만든다 (스폰·파괴·틱 레지스트리 측정)" );
 
     /**
-     * @brief `-gv_benchViews=N` — 격자를 둘러보는 캡처 카메라(CCTV) N 개를 둡니다(렌더 텍스처 512², 프레임마다 그린다).
-     * @details 추가 뷰의 비용(컬링 칸 · 풀 · 그림자 패스 · 기록)을 잰다. 한 프레임에 그리는 추가 뷰 수는 `gv_renderViewBudget` 이 자른다.
+     * @brief `-gv_benchViews=N`: 격자를 둘러보는 캡처 카메라(CCTV) N 개를 둡니다(렌더 텍스처 512², 프레임마다 그립니다).
+     * @details 추가 뷰의 비용(컬링 항목, 풀, 그림자 패스, 기록)을 측정한다. 한 프레임에 그리는 추가 뷰 수는 `gv_renderViewBudget` 이 제한한다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchViews, 0, "격자를 둘러보는 캡처 카메라(렌더 텍스처 512²) 수 (0=사용 안 함)" );
 
@@ -303,7 +303,7 @@ namespace sw
     bool BenchScene::spawnFromGlobals()
     {
         // 커맨드라인은 게임에 열려 있지 않지만(CommandLineManager HostOnly), 이 스위치는
-        // **이 모듈이 선언한다**(이 파일 위). 그래서 이름으로 조회하지 않고 그대로 읽는다 —
+        // **이 모듈이 선언한다**(이 파일 위쪽). 그래서 이름으로 조회하지 않고 그대로 읽는다.
         // 주의: 문자열 조회는 이름을 잘못 쓰면 조용히 0 으로 읽힌다.
         if ( gv_benchMeshes <= 0 && gv_benchCharacters <= 0 && gv_benchFaces <= 0 && getRigCharacterCount() == 0 && gv_benchCombat <= 0 )
             return false;
@@ -363,7 +363,7 @@ namespace sw
                      removedCount, static_cast<uint32>( _listBenchMesh.size() ),
                      static_cast<uint32>( _listBenchExtra.size() ) );
         _listBenchMesh.clear();
-        _listInstanceBatch.clear(); // 소멸자가 등록부에서 빠진다
+        _listInstanceBatch.clear(); // 소멸자가 레지스트리에서 빠진다
         _instanceCubeCount = 0;
         _listBenchExtra.clear();
         _bCharacterFraming = SW_FALSE;
@@ -402,7 +402,7 @@ namespace sw
             SW_LOG_WARNING( "[Bench] 씬 기본 머티리얼이 없습니다 — 큐브가 보이지 않을 수 있습니다." );
 
         // 메시 종류 수. 배치 키에 메시가 들어가므로 종류가 곧 **배치 수**다 — 1 이면 배치가 하나로 묶여
-        // 드로우 경로(드로우별 상수·바인딩)를 전혀 재지 못한다. 실제 씬은 늘 여러 메시를 쓴다.
+        // 드로우 경로(드로우별 상수·바인딩)를 전혀 측정하지 못한다. 실제 씬은 늘 여러 메시를 쓴다.
         uint32 meshVariantCount = static_cast<uint32>( MathUtil::max( 1, gv_benchMeshVariants ) );
         meshVariantCount        = MathUtil::min( meshVariantCount, meshCount );
 
@@ -431,7 +431,7 @@ namespace sw
         }
 
         // 정사각에 가까운 격자로 흩는다. 전부 같은 메시·머티리얼이라 배치가 하나로 묶이는데,
-        // 그게 지금 렌더러의 기본 경로(배치당 drawInstanced 한 번)를 재는 조건이다.
+        // 그게 지금 렌더러의 기본 경로(배치당 drawInstanced 한 번)를 측정하는 조건이다.
         const uint32  side   = static_cast<uint32>( MathUtil::sqrt( static_cast<float32>( meshCount ) ) ) + 1;
         const float32 origin = -0.5f * static_cast<float32>( side - 1 ) * kBenchSpacing;
 
@@ -706,7 +706,7 @@ namespace sw
 
     float32 BenchScene::computeFaceCameraDistance( uint32 faceCount )
     {
-        // 머리 줄(폭 + 여유)이 화면 폭에 차는 거리 — 기본 카메라 시야 · 16:9 에서 잰 근사다.
+        // 머리 줄(폭 + 여유)이 화면 폭에 차는 거리 — 기본 카메라 시야 · 16:9 에서 측정한 근사다.
         const float32 rowWidth = static_cast<float32>( MathUtil::max( faceCount, 1u ) ) * kBenchFaceSpacing;
         return MathUtil::max( 0.6f, rowWidth * 1.1f );
     }
@@ -803,7 +803,7 @@ namespace sw
         }
 
         // 틱 무버 — 첫 번째만 틱 안에서 위치·스케일을 쓴다(게임플레이의 보통 모양). 나머지는 틱만 돌아,
-        // 한 오브젝트에 틱 컴포넌트가 여럿일 때의 디스패치 비용을 잰다.
+        // 한 오브젝트에 틱 컴포넌트가 여럿일 때의 디스패치 비용을 측정한다.
         const int32  moverCount  = gv_benchTickMovers;
         const uint32 movePercent = static_cast<uint32>( MathUtil::clamp( gv_benchMovePercent, 0, 100 ) );
         for ( int32 moverIndex = 0; moverIndex < moverCount; ++moverIndex )
@@ -1238,7 +1238,7 @@ namespace sw
                 continue;
 
             // 목록이 상한에 닿으면 떼는 쪽으로 기운다. 상한이 없으면 큐브 수만큼 늘어나 이 스위치가
-            // 사실상 -gv_benchMaterialInstances 와 같아지고, "붙였다 뗐다" 를 재지 못한다.
+            // 사실상 -gv_benchMaterialInstances 와 같아지고, "붙였다 뗐다" 를 측정하지 못한다.
             const bool bDrop = ( _listChurnInstance.size() >= kChurnInstanceCap ) || ( ( nextChurnRandom() & 3u ) == 0u );
             if ( bDrop )
             {

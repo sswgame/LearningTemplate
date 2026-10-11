@@ -29,7 +29,7 @@ namespace sw
         _bLoop             = bLoop ? SW_TRUE : SW_FALSE;
         _rangeStartSeconds = ( _pClip != nullptr ) ? _pClip->computeFrameStartSeconds( _firstFrame, _fallbackSeconds ) : 0.0f;
         _playLength        = computeFrameStart( _frameCount );
-        // 구간의 알림 — 같은 첫 프레임 · 프레임 수의 이름 붙은 구간에서 베낀다.
+        // 구간의 알림은 같은 첫 프레임과 프레임 수를 가진 이름 붙은 구간에서 복사한다.
         _notifyTrack.clear();
         for ( size_t animationIndex = 0; _pClip != nullptr && animationIndex < _pClip->_listAnimation.size(); ++animationIndex )
         {

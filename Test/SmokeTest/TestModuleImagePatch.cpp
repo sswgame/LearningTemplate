@@ -222,9 +222,9 @@ SW_TEST_CASE( ModuleImagePatchTest, MismatchedLengthOrForeignBytesAreLeftAlone )
 }
 
 /**
- * @brief [ModuleImagePatchTest] 엔진 ABI 도장은 표식 뒤에 16진 40 글자가 온전할 때만 찾는다
- * @details 핫 리로드는 모듈 코드가 돌기 전에 파일 바이트에서 이 도장을 찾는다. 앞쪽의 불완전한 표식(표식 문자열 자체만 든 상수)은
- *          건너뛰고, 모자란 글자 · 16진이 아닌 글자는 도장으로 치지 않는다.
+ * @brief [ModuleImagePatchTest] 엔진 ABI 스탬프는 표식 뒤에 16진 40 글자가 온전할 때만 찾는다
+ * @details 핫 리로드는 모듈 코드가 돌기 전에 파일 바이트에서 이 스탬프를 찾는다. 앞쪽의 불완전한 표식(표식 문자열 자체만 든 상수)은
+ *          건너뛰고, 모자란 글자 · 16진이 아닌 글자는 스탬프로 치지 않는다.
  */
 SW_TEST_CASE( ModuleImagePatchTest, EngineAbiStampIsFoundOnlyWithAFullDigest )
 {

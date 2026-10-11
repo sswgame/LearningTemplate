@@ -454,7 +454,7 @@ SW_TEST_CASE( SurvivalHorrorTest, TurnBasedEncounterIsDeterministicAndEndsInVict
 }
 
 /**
- * @brief [SurvivalHorrorTest] 상태 바이트로 되살린 세션이 같은 조사를 잇는다 — 정신력 · 배터리 · 본 괴물 · 단서 · 시도 · 진행이 같은 바이트(집합 · 맵은 이름 순)이고,
+ * @brief [SurvivalHorrorTest] 상태 바이트로 복원한 세션이 같은 조사를 잇는다 — 정신력 · 배터리 · 본 괴물 · 단서 · 시도 · 진행이 같은 바이트(집합 · 맵은 이름 순)이고,
  *        같은 걸음을 둘 다 더 돌려도 같은 바이트다. 잘린 바이트는 거절하고 그대로 둔다
  */
 SW_TEST_CASE( SurvivalHorrorTest, StateRoundTripContinuesTheSameSession )
@@ -526,7 +526,7 @@ SW_TEST_CASE( SurvivalHorrorTest, StateRoundTripContinuesTheSameSession )
 }
 
 /**
- * @brief [SurvivalHorrorTest] 상태 바이트로 되살린 전투가 같은 전투를 잇는다 — 조사자 · 차례 · 난수 · 강인함이 같은 바이트이고 남은 차례가 같은 결과를 낸다.
+ * @brief [SurvivalHorrorTest] 상태 바이트로 복원한 전투가 같은 전투를 잇는다 — 조사자 · 차례 · 난수 · 강인함이 같은 바이트이고 남은 차례가 같은 결과를 낸다.
  *        다른 괴물로 연 전투와 잘린 바이트는 거절한다
  */
 SW_TEST_CASE( SurvivalHorrorTest, StateRoundTripContinuesTheSameEncounter )
