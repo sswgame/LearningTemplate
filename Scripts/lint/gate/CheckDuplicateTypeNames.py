@@ -30,11 +30,16 @@ from LintGate import GateResult, LintGate  # noqa: E402
 
 _kTypeRe = re.compile(r"^\s*(?:template\s*<[^;{]*>\s*)?(?:class|struct)\s+(?:SW_\w+\s+|alignas\s*\([^)]*\)\s+)*(\w+)(?:\s+final)?\s*(?::[^;{]*)?\{?\s*$")
 _kNamespaceRe = re.compile(r"^\s*namespace(?:\s+([\w:]+))?\s*\{?\s*$")
+_kBraceRe = re.compile(r"[{}]")
 
 
 def collectTypeDefinitions(path: Path, relativePath: str, mapDefinition: dict[str, set[str]]) -> None:
     """파일 하나의 네임스페이스 수준 정의를 `네임스페이스::이름 → 파일들` 에 더한다."""
-    lines = blankCommentsAndLiterals(path.read_text(encoding="utf-8", errors="replace")).split("\n")
+    text = path.read_text(encoding="utf-8", errors="replace")
+    # 이름 있는 네임스페이스와 class · struct 가 둘 다 있어야 정의가 잡힌다 — 없는 파일은 가리기도 하지 않는다(결과는 같다).
+    if "namespace" not in text or ("class" not in text and "struct" not in text):
+        return
+    lines = blankCommentsAndLiterals(text).split("\n")
     depth = 0
     stackNamespace: list[tuple[str, int]] = []
     pendingNamespace: str | None = None
@@ -44,13 +49,13 @@ def collectTypeDefinitions(path: Path, relativePath: str, mapDefinition: dict[st
         if namespaceMatch is not None:
             pendingNamespace = namespaceMatch.group(1) or ""
         typeMatch = _kTypeRe.match(line) if ("class" in line or "struct" in line) else None
-        bInNamedNamespace = bool(stackNamespace) and all(name != "" for name, _ in stackNamespace)
-        if typeMatch is not None and bInNamedNamespace and depth == stackNamespace[-1][1]:
+        if (typeMatch is not None and stackNamespace and depth == stackNamespace[-1][1]
+                and all(name != "" for name, _ in stackNamespace)):
             key = "::".join(name for name, _ in stackNamespace) + "::" + typeMatch.group(1)
             mapDefinition[key].add(relativePath)
         if "{" not in line and "}" not in line:
             continue
-        for character in line:
+        for character in _kBraceRe.findall(line):
             if character == "{":
                 depth += 1
                 if pendingNamespace is not None:

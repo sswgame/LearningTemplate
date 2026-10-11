@@ -197,29 +197,66 @@ class SourceIndex:
     mapEnum: dict[str, tuple[str, str, re.Match]] = field(default_factory=dict)
 
 
-def iterSourceFilesInternal(repositoryRoot: Path, listRoot: tuple[str, ...], listSuffix: tuple[str, ...]) -> Iterator[tuple[str, str]]:
-    """저장소 상대 경로(정렬)와 글을 냅니다. 남의 코드 · 빌드 산출물은 뺀다."""
-    listPath: list[Path] = []
-    for rootName in listRoot:
-        root = repositoryRoot / rootName
-        if root.is_file():
-            listPath.append(root)
-            continue
-        if root.is_dir() is False:
-            continue
-        for suffix in listSuffix:
-            listPath.extend(root.rglob(f"*{suffix}"))
-    for path in sorted(set(listPath)):
-        relative = path.relative_to(repositoryRoot).as_posix()
-        if any(part in f"/{relative}" for part in _kListSkipPart):
-            continue
-        yield relative, path.read_text(encoding="utf-8", errors="replace")
+class SourceTreeReader:
+    """
+    문서 한 벌을 만드는 동안 폴더마다 한 번 걷고 파일마다 한 번 읽는다 — 구조체 색인 · 전역 변수 · CMake 옵션이 같은 `Source/` 를 나눠 읽는다.
+
+    순서는 `sorted(Path)` 와 같다(Windows 는 대소문자를 가리지 않고 `\\` 로 견준다) — 같은 이름이 둘이면 먼저 본 것을 쓰므로 순서가 결과다.
+    """
+
+    def __init__(self, repositoryRoot: Path) -> None:
+        self.root = repositoryRoot
+        self._mapListing: dict[str, list[str]] = {}
+        self._mapText: dict[str, str] = {}
+
+    def listFiles(self, rootName: str) -> list[str]:
+        """`rootName`(파일 또는 폴더) 아래 파일의 저장소 상대 경로입니다. 남의 코드 · 빌드 산출물은 뺀다."""
+        listing = self._mapListing.get(rootName)
+        if listing is not None:
+            return listing
+        import os
+
+        listing = []
+        rootPath = self.root / rootName
+        if rootPath.is_file():
+            listing.append(rootName)
+        elif rootPath.is_dir():
+            for dirPath, listDirName, listFileName in os.walk(rootPath):
+                relativeDir = os.path.relpath(dirPath, self.root).replace(os.sep, "/")
+                listDirName[:] = [name for name in listDirName
+                                  if not any(part in f"/{relativeDir}/{name}/" for part in _kListSkipPart)]
+                listing.extend(f"{relativeDir}/{name}" for name in listFileName)
+        listing = [relative for relative in listing if not any(part in f"/{relative}" for part in _kListSkipPart)]
+        self._mapListing[rootName] = listing
+        return listing
+
+    def iterFiles(self, listRoot: tuple[str, ...], listSuffix: tuple[str, ...]) -> Iterator[tuple[str, str]]:
+        """저장소 상대 경로(정렬)와 글을 냅니다. 이름 끝 비교는 파일 시스템처럼(Windows 는 대소문자를 가리지 않는다)."""
+        import os
+
+        bWindows = os.name == "nt"
+
+        def normalizeCaseInternal(text: str) -> str:
+            return text.replace("/", "\\").lower() if bWindows else text
+
+        listNormSuffix = tuple(normalizeCaseInternal(suffix) for suffix in listSuffix)
+        uniqueRelative = {relative for rootName in listRoot for relative in self.listFiles(rootName)
+                          if relative == rootName or normalizeCaseInternal(relative.rsplit("/", 1)[-1]).endswith(listNormSuffix)}
+        for relative in sorted(uniqueRelative, key=normalizeCaseInternal):
+            yield relative, self.readText(relative)
+
+    def readText(self, relative: str) -> str:
+        text = self._mapText.get(relative)
+        if text is None:
+            text = (self.root / relative).read_text(encoding="utf-8", errors="replace")
+            self._mapText[relative] = text
+        return text
 
 
-def buildSourceIndex(repositoryRoot: Path) -> SourceIndex:
+def buildSourceIndex(reader: SourceTreeReader) -> SourceIndex:
     """`Source/` 의 헤더에서 `REFLECT` 구조체와 `enum class` 자리를 모읍니다. 같은 이름이 둘이면 먼저 본 것(경로 순)을 씁니다."""
     index = SourceIndex()
-    for relative, text in iterSourceFilesInternal(repositoryRoot, ("Source",), (".h",)):
+    for relative, text in reader.iterFiles(("Source",), (".h",)):
         if "REFLECT" not in text and "enum class" not in text:
             continue
         blanked = blankCodeInternal(text)
@@ -406,16 +443,17 @@ class GlobalVariableDoc:
     source: str
 
 
-def collectGlobalVariables(repositoryRoot: Path) -> list[GlobalVariableDoc]:
+def collectGlobalVariables(reader: SourceTreeReader) -> list[GlobalVariableDoc]:
     """`Source/` 의 전역 변수 정의를 모읍니다(이름 순). 매크로 정의 · 주석 안의 예시는 세지 않습니다."""
     listVariable: list[GlobalVariableDoc] = []
-    for relative, text in iterSourceFilesInternal(repositoryRoot, ("Source",), (".h", ".cpp", ".inl")):
+    for relative, text in reader.iterFiles(("Source",), (".h", ".cpp", ".inl")):
         if "GLOBAL_VARIABLE" not in text:
             continue
         blanked = blankCodeInternal(text, bKeepLiterals=True)
         blanked = re.sub(r"^[ \t]*#[ \t]*define(?:[^\n]*\\\n)*[^\n]*", lambda m: re.sub(r"[^\n]", " ", m.group(0)), blanked, flags=re.M)
+        blankedCode = blankCodeInternal(blanked)
         for match in _kGlobalVariableRe.finditer(blanked):
-            close = findClosingInternal(blankCodeInternal(blanked), match.end() - 1, "(", ")")
+            close = findClosingInternal(blankedCode, match.end() - 1, "(", ")")
             if close < 0:
                 continue
             listArgument = splitTopLevelInternal(blanked[match.end():close])
@@ -530,14 +568,14 @@ def expandCMakeWordsInternal(listWord: list[str], mapVariable: dict[str, list[st
     return listOut
 
 
-def collectBuildOptions(repositoryRoot: Path) -> list[BuildOptionDoc]:
+def collectBuildOptions(reader: SourceTreeReader) -> list[BuildOptionDoc]:
     """`SW_*` 캐시 옵션을 모읍니다(이름 순). 같은 옵션을 갈래마다 다른 기본값으로 둔 곳은 기본값을 이어 적습니다."""
     mapOption: dict[str, BuildOptionDoc] = {}
     mapChoice: dict[str, list[str]] = {}
     # configure 가 쿠킹 표에서 읽는 값(`Source/Engine/CMakeLists.txt` 의 Shipping RHI 기본) — 글로는 풀 수 없어 표에서 같은 값을 읽는다.
+    repositoryRoot = reader.root
     mapKnownVariable = {"swContractDefaultRhi": [findMacroValuesInternal(repositoryRoot).get("SW_RHI_BACKEND_DEFAULT", "")]}
-    for relative, text in iterSourceFilesInternal(repositoryRoot, ("CMakeLists.txt", "cmake", "Source", "Test", "Tools/ReflectionParser"),
-                                                  (".cmake", "CMakeLists.txt")):
+    for relative, text in reader.iterFiles(("CMakeLists.txt", "cmake", "Source", "Test", "Tools/ReflectionParser"), (".cmake", "CMakeLists.txt")):
         mapVariable = dict(mapKnownVariable)
         for match in _kLocalSetRe.finditer(text):
             if "CACHE" not in match.group(2).split():
@@ -861,7 +899,8 @@ def findMacroValuesInternal(repositoryRoot: Path) -> dict[str, str]:
 
 def buildConfigReference(repositoryRoot: Path) -> tuple[dict[str, str], list[str]]:
     """생성 문서 전부(저장소 상대 경로 → 글)와 카탈로그 위반입니다. 같은 저장소면 바이트까지 같은 결과가 나옵니다."""
-    index = buildSourceIndex(repositoryRoot)
+    reader = SourceTreeReader(repositoryRoot)
+    index = buildSourceIndex(reader)
     mapMacro = findMacroValuesInternal(repositoryRoot)
     metadata: dict = {"files": [], "globalVariables": [], "arguments": [], "buildOptions": []}
     mapOutput: dict[str, str] = {}
@@ -873,9 +912,9 @@ def buildConfigReference(repositoryRoot: Path) -> tuple[dict[str, str], list[str
         setPage.add(entry.page)
         mapOutput[f"{kConfigReferenceDir}/{entry.page}.md"] = makeEntryPage(repositoryRoot, entry, index, mapMacro, metadata)
     mapOutput[f"{kConfigReferenceDir}/UserSettings.md"] = makeUserSettingsPage(collectUserSettings(repositoryRoot))
-    mapOutput[f"{kConfigReferenceDir}/GlobalVariables.md"] = makeGlobalVariablePage(collectGlobalVariables(repositoryRoot), metadata)
+    mapOutput[f"{kConfigReferenceDir}/GlobalVariables.md"] = makeGlobalVariablePage(collectGlobalVariables(reader), metadata)
     mapOutput[f"{kConfigReferenceDir}/CommandLine.md"] = makeArgumentPage(collectArguments(repositoryRoot), metadata)
-    mapOutput[f"{kConfigReferenceDir}/BuildOptions.md"] = makeBuildOptionPage(collectBuildOptions(repositoryRoot), metadata)
+    mapOutput[f"{kConfigReferenceDir}/BuildOptions.md"] = makeBuildOptionPage(collectBuildOptions(reader), metadata)
     mapOutput[f"{kConfigReferenceDir}/{kConfigReferenceJson}"] = json.dumps(metadata, ensure_ascii=False, indent=1) + "\n"
     return mapOutput, findCatalogViolations(repositoryRoot, index) + findUndocumentedInternal(metadata)
 
