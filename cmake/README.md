@@ -71,6 +71,7 @@ cmake/
 | 함수 | 용도 |
 |------|------|
 | `sw_configurePch` | `SW_ENABLE_PCH`가 ON일 때만 `target_precompile_headers`를 적용 (`TargetCompileRules.cmake`) |
+| `sw_addSharedPchOwner` · `sw_useSharedPch` · `sw_setTargetDefsHeader` | PCH 하나를 여러 타깃이 나눠 쓴다 — 정의 없는 소유자가 짓고, 쓰는 쪽은 PCH 플래그를 옵션 맨 앞에, 타깃 고유 정의는 PCH 뒤 강제 포함 헤더로(킷 전부가 소유자 하나) |
 | `sw_configureDllExports` | 내보내기 매크로 짝(ENGINE · GF · MODULE) |
 | `sw_prependEnvPath` | configure 프로세스의 PATH 앞에 폴더를 붙인다(호스트 구분자, 이미 있으면 그대로 — `HostPath.cmake`) |
 | `sw_queueRuntimeCopy` / `sw_emitRuntimeCopies` | 런타임 DLL 복사를 모아 두었다가 타겟당 POST_BUILD 한 번으로 방출 (`BuildLayout.cmake`) |
@@ -173,6 +174,9 @@ Dev 와 Shipping · Server 는 다른 갈래를 탄다 — 고친 갈래의 프�
   OBJECT 라이브러리(`Core_objects`)는 링크를 전파하지 않는다 — 외부 라이브러리는 `Core` 와 `Engine` 양쪽에. vcpkg 업스트림 결함은 `ThirdParty/<pkg>/vcpkg-port/` 오버레이로
   (`.gitattributes` 의 `*.patch -text`).
 - **Shipping 정적 링크는 열거형만 든 `.gen.cpp` 를 버린다**(증상: `findEnum` 이 null, enum 2 개) — `sw_linkWholeArchive` 가 링커별 whole-archive 를 고른다.
+- **PCH 를 나눠 쓸 때 clang-cl 은 PCH 헤더보다 앞에 강제 포함(`/FI`)한 파일을 건너뛴다** — CMake 는 PCH 플래그를 명령줄 맨 끝에 두므로 타깃 고유 정의 헤더가
+  조용히 사라진다. 그리고 `REUSE_PRECOMPILE_HEADERS_FROM` 속성만 세우면 CMake 4.4 는 아무것도 붙이지 않는다(`target_precompile_headers( REUSE_FROM )` 이어야 한다) —
+  그래서 한동안 킷 전부가 PCH 없이 지어졌는데 빌드는 초록이었다. 확인은 `compile_commands.json` 에서 그 타깃 명령에 `/Yu` 가 있는지 본다. `sw_useSharedPch` 가 둘 다 피한다.
 - **PCH 안 헤더의 include 하나가 TU 수를 정한다** — `RHITypes.h`(PCH)가 쓰지도 않는 `RHIBackendType.h` 를 들어 1987 TU 가 그 헤더에 의존했다(끊은 뒤 약 474).
   끊을 때 직접 include 를 받는 것은 그 이름의 **값**(`RHIBackend::DirectX12`)을 쓰는 파일뿐이다 — 타입 이름만 쓰는 헤더는 불투명 선언(`enum class RHIBackend : uint32;`)으로
   선다. 거쳐 받던 파일은 글자 include 그래프에서 그 간선을 끊어 후보를 좁힌 뒤 `-fsyntax-only`(PCH 없이)로 확인한다.

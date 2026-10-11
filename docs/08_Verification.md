@@ -172,8 +172,10 @@ cd build/Ninja-Debug/Bin
   (위 OS 헤더 항목의 2.18 s 와 이 표의 1.36 s 차이는 그때 다른 빌드가 겹친 탓이다 — 같은 세션의 전후만 견준다.)
   남은 헤더 시간의 바닥: UCRT `wchar.h` → clang `intrin.h` → `immintrin.h`(AVX-512 하위 헤더 전부)가 TU 하나에 약 0.25 s 다(`__SCE__` 가 아니면 늘 전부 읽는다 — 엔진이 피할 수 없다).
   명령 다루는 법: 정규식으로 토큰만 지운다(문자열을 다시 쪼개면 `-DSW_LOG_TAG=\"…\"` 의 따옴표가 깨진다). `-ftime-trace` 는 구문 검사만으로는 파일을 쓰지 않으므로 `/Fo<임시>.obj` 로 실제 컴파일한다.
-- **킷 PCH 공유 효과**(2026-10-11, PC `SW`, Debug, 풀 빌드 `--clean-first` 를 같은 트리에서 변경 유무로 교차 3 쌍, 다른 빌드 없음): 공유 120.4 · 112.7 · 113.0 s(중앙값 **113.0**) ·
-  기준선 130.7 · 131.1 · 131.9 s(중앙값 **131.1**) — 약 −18 s(−14 %). PCH 컴파일 154 → 94 개. 에이전트 빌드가 겹친 측정은 편차가 ±40 s 라 쓸 수 없었다(`busy_before` 로 겹침을 먼저 센다).
+- **킷 PCH**(2026-10-11, PC `SW`, Debug): 첫 시도(131.1 → 113.0 s, PCH 컴파일 154 → 94)는 실제로는 킷이 **PCH 없이** 지어진 결과였다 — `REUSE_PRECOMPILE_HEADERS_FROM`
+  속성이 무시돼 킷 PCH 60 개를 안 지은 이득이 킷 TU 약 420 개의 헤더 파싱 손해보다 컸다. 진짜 공유(`sw_useSharedPch`)를 같은 날 sccache 없는 별도 폴더(`build/Ninja-Debug-Bench`)에서
+  `--clean-first` 교차 3 쌍으로 쟀다: 공유 117.5 · 115.2 · 111.7 s(중앙값 **115.2**) · PCH 없는 킷 137.3 · 135.8 · 133.2 s(중앙값 **135.8**) — −20.6 s(−15 %).
+  에이전트 빌드가 겹친 측정은 편차가 ±40 s 라 쓸 수 없다(`busy_before` 로 겹침을 먼저 센다). 개발 트리(sccache 켬)의 `--clean-first` 는 PCH 없는 TU 가 캐시에 맞아 공유 효과를 가린다.
   `.ninja_log` 는 `--clean-first` 뒤에도 이전 실행 항목이 남아 CPU 합을 그대로 더하면 틀린다.
 - **헤더 파싱 비용 상위 20 개는 `Scripts/lint/report/RunIncludeCost.py --preset Ninja-Debug --jobs 8` 로 뽑는다.**
   0 단계 집계(2026-10-10, 위와 같은 PC · 커밋, `RunIncludeCost.py --preset Ninja-Debug --jobs 8`, 다른 빌드와 겹쳐 돌았으므로 순위만 믿는다):

@@ -110,6 +110,9 @@
   카트 트랙을 공용 `SplinePath` 로 — 카트는 XZ 로 달려 랩 · 고스트 거리가 수평 길이다(3D 호 길이로 바꾸면 같은 트랙의 값이 바뀐다), 공유되는 것은 누적 거리 표 하나, 쓰는 게임 0.
 - **늘 상위에 오는 정당한 중복**(`RunDuplicateCode`): 백엔드 인터페이스 선언 · 레이스 래퍼 전달 · 플랫폼 구현 · enum 레이블 나열 · 서비스 로케이터 둘(`sw::editor` 는 nullptr, `sw::game` 은
   assert) · `MaterialPacking` 숫자 case(`-Wswitch-enum`) · DX12 상태 조회 · `TypeInfo` 생성자 · RLE · 콜스택 관문 · 셰이더 반사 D3D11/12(확인 중 — 백로그 1-3) · Win32 마우스 case · include 묶음.
+- **킷 밖 묶음의 PCH 공유**(BuildSpeed 3 단계, 2026-10-11): 컴파일 정의 차이를 `compile_commands.json` 에서 타깃별로 모으면 PCH 를 따로 짓는 것은
+  시험 9(`SW_TEST_INTERNAL` 공통, EngineTest 는 `SW_GF_IMPORTS` · 킷 `FlagOps.gen.h` 강제 포함, EditorTest · EditorUITest 는 서드파티 정의가 더 붙는다) · RHI 백엔드 4(`<타깃>_EXPORTS` 만 다름) ·
+  App · Server · ModuleHost 3 · 에디터 확장 · `SWGame` 이다. PCH 하나가 약 2.7 CPU 초라 다 합쳐도 16 스레드에서 2 ~ 3 s(측정 편차 ±3 s 안) — 킷(PCH 60 개 → 1, −20.6 s)만 했다.
 - **ReflectionParser 강제 include PCH**(2026-10-06): Debug `ReflectionParserTest` 35 케이스 25.8 초(여섯 조각, 조각당 약 4.3 초 · 한도 30 초), 파서 한 번
   1.1~1.3 초 중 공통 include 0.5 초 — 조각당 약 2 초를 위해 depfile 의존(PCH 안 헤더를 `clang_getInclusions` 가 내는가) 재검증을 떠안지 않는다.
 - **롤백에 파괴 상태 싣기**(사용자 결정 2026-10-06): 롤백 키트(격투)에 파괴물이 없고 조각 물리(Jolt)는 되감지 못한다(Chaos GC 도 롤백 없음). 롤백 게임이
