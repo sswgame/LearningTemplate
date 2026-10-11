@@ -246,7 +246,7 @@ SW_TEST_CASE( UILayoutTest, WrappedTextHeightFollowsFillWidth )
                      fixture.dump().c_str() );
 }
 
-/** @brief [UILayoutTest] 고정 크기 패널(레이아웃 경계) 아래 위젯 하나가 바뀌면 그 패널 아래만 다시 잰다 — 루트 · 형제는 0 */
+/** @brief [UILayoutTest] 고정 크기 패널(레이아웃 경계) 아래 위젯 하나가 바뀌면 그 패널 아래만 다시 측정한다 — 루트 · 형제는 0 */
 SW_TEST_CASE( UILayoutTest, OnlyDirtySubtreeIsMeasured )
 {
     sw::test::UILayoutFixture  fixture( 400.0f, 300.0f );
@@ -277,7 +277,7 @@ SW_TEST_CASE( UILayoutTest, OnlyDirtySubtreeIsMeasured )
                      "    b 70.00 0.00 30.00 40.00\n"
                      "  other 0.00 0.00 100.00 30.00\n",
                      fixture.dump().c_str() );
-    SW_EXPECT_EQUAL( 0u, fixture.update() ); // 더러운 것이 없으면 아무것도 재지 않는다
+    SW_EXPECT_EQUAL( 0u, fixture.update() ); // 더러운 것이 없으면 아무것도 측정하지 않는다
 }
 
 /** @brief [UILayoutTest] 배율 1.5 에서 회전 없는 축은 물리 픽셀에 맞춘다: x 10.3(15.45 px) → 10.0(15 px) */
@@ -401,7 +401,7 @@ SW_TEST_CASE( UILayoutTest, ScrollIntoViewMovesMinimally )
     SW_EXPECT_NEAR_EQUAL( 0.0f, pScroll->getScrollOffset()._y, 0.001f );
 }
 
-/** @brief [UILayoutTest] 스크롤 오프셋 변화는 배치만 다시 한다 — 다시 잰 위젯 0 */
+/** @brief [UILayoutTest] 스크롤 오프셋 변화는 배치만 다시 한다 — 다시 측정한 위젯 0 */
 SW_TEST_CASE( UILayoutTest, ScrollOffsetChangeIsArrangeOnly )
 {
     sw::test::UILayoutFixture              fixture( 200.0f, 100.0f );

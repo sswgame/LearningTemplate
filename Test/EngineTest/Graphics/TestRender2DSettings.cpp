@@ -59,7 +59,7 @@ SW_TEST_CASE( Render2DSettingsTest, LayerOrderWinsOverOrderInLayer )
 
 /**
  * @brief [Render2DSettingsTest] 투명 정렬 축 — Auto 는 직교에서만 시선 축, CustomAxis 는 데이터의 축(정규화)
- * @details 직교 2D 카메라에서 거리로 재면 같은 Z 의 두 스프라이트가 카메라 XY 에 따라 앞뒤가 바뀐다. 영벡터는 "거리" 를 뜻한다.
+ * @details 직교 2D 카메라에서 거리로 측정하면 같은 Z 의 두 스프라이트가 카메라 XY 에 따라 앞뒤가 바뀐다. 영벡터는 "거리" 를 뜻한다.
  */
 SW_TEST_CASE( Render2DSettingsTest, SortAxisFollowsModeAndProjection )
 {

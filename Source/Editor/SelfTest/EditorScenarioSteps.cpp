@@ -85,7 +85,7 @@ namespace sw::editor
             /** @brief 창 · 도크 사각형 비교의 픽셀 허용치입니다. */
             static constexpr float32 kPixelTolerance = 1.0f;
 
-            /** @brief 속성이 @p listAllowed 안에만 있고 @p pRequired 가 있는지 봅니다. 위젯 이름표를 적기 시작한다(이름표는 켜진 뒤 그린 위젯만 적힌다). */
+            /** @brief 속성이 @p listAllowed 안에만 있고 @p pRequired 가 있는지 봅니다. 위젯 레이블을 적기 시작한다(레이블은 켜진 뒤 그린 위젯만 적힌다). */
             static bool validate( const AutomationStep& step, std::initializer_list<string_view> listAllowed, const utf8* pRequired, string& outError )
             {
                 for ( const AutomationAttribute& attribute : step._listAttribute )
@@ -215,7 +215,7 @@ namespace sw::editor
 
             static bool validateText( const AutomationStep& step, string& outError ) { return validate( step, { "value" }, "value", outError ); }
 
-            /** @brief `anchor="x,y"`(이름표 안 자리 0..1)를 읽습니다. 없으면 가운데이고 true, 꼴이 틀리면 false 입니다. */
+            /** @brief `anchor="x,y"`(레이블 안 자리 0..1)를 읽습니다. 없으면 가운데이고 true, 꼴이 틀리면 false 입니다. */
             [[nodiscard]] static bool readAnchor( const AutomationStep& step, float2& outAnchor )
             {
                 outAnchor             = float2{ 0.5f, 0.5f };
@@ -232,7 +232,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 이름표 가운데(또는 `anchor` 자리)로 마우스를 옮기고 누르고 뗀다(ImGui 입력 큐가 누름 · 뗌을 프레임에 나눠 넣는다). 이름표가 없으면 실패를 적는다. */
+            /** @brief 레이블 가운데(또는 `anchor` 자리)로 마우스를 옮기고 누르고 뗀다(ImGui 입력 큐가 누름 · 뗌을 프레임에 나눠 넣는다). 레이블이 없으면 실패를 적는다. */
             static bool runClick( AutomationRunner& runner, const AutomationStep& step )
             {
                 const string& mark    = *step.findAttribute( "mark" );
@@ -247,7 +247,7 @@ namespace sw::editor
                     runner.recordFailure( step, "no editor widget is marked '" + mark + "' (was it drawn in the last frame?)" );
                     return true;
                 }
-                // 누름과 뗌을 두 프레임으로 — 뗌 앞에서 다시 이름표 위로 옮긴다(플랫폼이 그 사이 실제 커서를 넣는다).
+                // 누름과 뗌을 두 프레임으로 — 뗌 앞에서 다시 레이블 위로 옮긴다(플랫폼이 그 사이 실제 커서를 넣는다).
                 // 수정자(Ctrl+클릭 다중 선택 …)는 누르기 전에 눌러 뗀 뒤에 놓는다.
                 vector<int32> listModifier;
                 (void)parseModifiers( step, listModifier ); // 검사에서 봤다
@@ -262,7 +262,7 @@ namespace sw::editor
                 }
                 if ( state == PressState::Down )
                 {
-                    // 커서를 먼저 이름표에 붙잡아 한 프레임 둔 뒤 누른다 — 누른 프레임의 마우스 이동량이 0 이라 뷰포트 비행이 시점을 돌리지 않는다.
+                    // 커서를 먼저 레이블에 붙잡아 한 프레임 둔 뒤 누른다 — 누른 프레임의 마우스 이동량이 0 이라 뷰포트 비행이 시점을 돌리지 않는다.
                     (void)EditorSelfTestInput::holdMouseAtMark( mark, anchor ); // 위에서 같은 이름으로 찾았다
                     EditorSelfTestInput::waitNextFrame();
                 }
@@ -307,7 +307,7 @@ namespace sw::editor
             }
 
             /**
-             * @brief 이름표 가운데를 누르고 (dx, dy) 픽셀만큼 끌어 놓습니다(키 · 손잡이 끌기). 프레임마다 커서를 다시 넣는다 — 넣지 않은 프레임엔 플랫폼이 실제 커서를 넣는다.
+             * @brief 레이블 가운데를 누르고 (dx, dy) 픽셀만큼 끌어 놓습니다(키 · 손잡이 끌기). 프레임마다 커서를 다시 넣는다 — 넣지 않은 프레임엔 플랫폼이 실제 커서를 넣는다.
              * @details 누름 → 절반 → 끝 → 뗌을 네 프레임에 나눈다. 수정자는 누르기 전에 눌러 뗀 뒤에 놓는다.
              */
             static bool runDrag( AutomationRunner& runner, const AutomationStep& step )
@@ -376,8 +376,8 @@ namespace sw::editor
             }
 
             /**
-             * @brief 단추를 누르지 않고 커서를 이름표 자리(`anchor`)에 붙잡아 둡니다(호버). `release="true"` 까지 프레임마다 그 자리를 다시 넣는다 —
-             *        넣지 않은 프레임엔 플랫폼이 실제 커서를 넣는다. 이름표가 없으면 실패를 적는다.
+             * @brief 단추를 누르지 않고 커서를 레이블 자리(`anchor`)에 붙잡아 둡니다(호버). `release="true"` 까지 프레임마다 그 자리를 다시 넣는다 —
+             *        넣지 않은 프레임엔 플랫폼이 실제 커서를 넣는다. 레이블이 없으면 실패를 적는다.
              */
             static bool runHover( AutomationRunner& runner, const AutomationStep& step )
             {

@@ -806,7 +806,7 @@ SW_TEST_CASE( ComponentTickGroupTest, OverridingOnTickIsWhatMakesAComponentTick 
 }
 
 /**
- * @brief 범위 밖의 틱 그룹은 거절한다 — 받아 두면 등록부가 조용히 버려 그 컴포넌트가 한 번도 돌지 않는다.
+ * @brief 범위 밖의 틱 그룹은 거절한다 — 받아 두면 레지스트리가 조용히 버려 그 컴포넌트가 한 번도 돌지 않는다.
  * @details 그룹은 넷(`TickRegistry::kGroupCount`)이다. 정수에서 캐스트한 값(데이터 주도 설정)이 넘으면 `setTickGroup` 은 그대로 두고,
  *          `registerSubTick` 은 빈 핸들을 준다(언리얼 `TG_MAX` 도 유효한 그룹이 아니다).
  */
@@ -1035,7 +1035,7 @@ SW_TEST_CASE( ComponentDefaultsTest, ModuleRegistrationKeepsLiveValues )
  * @details 성공 깃발 하나만 보면 로드가 실패할 때 그 깃발이 false 로 남아 **컴포넌트를 만들 때마다 파일을 다시 연다.**
  *          기본값 파일은 있어도 되고 없어도 되는 것이라 없는 게 정상인데, 그러면 씬 로드가
  *          `컴포넌트 수 x 파일 열기 실패` 가 되어 로드 시간의 대부분을 차지한다.
- * @note 시간으로 재면 흔들리므로 **열어 본 횟수**로 본다.
+ * @note 시간으로 측정하면 흔들리므로 **열어 본 횟수**로 본다.
  */
 SW_TEST_CASE( ComponentDefaultsTest, MissingDefaultsFileIsOpenedOnlyOnce )
 {

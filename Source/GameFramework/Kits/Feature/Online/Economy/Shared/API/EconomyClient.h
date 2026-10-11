@@ -2,7 +2,7 @@
  * @file EconomyClient.h
  * @brief 경제 키트의 클라이언트 — `OnlineServiceClient` 에 올리는 `IOnlineClientService`. 지갑 · 내역 · 구매 · 영수증 지급을 보내고 잔액 캐시를 듭니다.
  * @details - 성공 응답의 잔액을 캐시에 넣는다(지갑 전체는 스냅숏, 구매 · 지급은 바뀐 것만). 다른 키트(거래 · 우편 · GM) 응답의 잔액도 게임이 `applyBalances` 로 넘긴다.
- *          - **로컬 지갑은 원장의 읽기 사본이다**: 온라인 게임은 `Wallet::add` · `trySpend` · `charge` 를 부르지 않고 `applyLedgerBalances( wallet )` 로만 맞춘다(서버가 정본).
+ *          - **로컬 지갑은 원장의 읽기 사본이다**: 온라인 게임은 `Wallet::add` · `trySpend` · `charge` 를 부르지 않고 `applyLedgerBalances( wallet )` 로만 맞춘다(서버가 원본).
  *          - 구매 · 지급 재시도는 **같은** 멱등 키로(응답의 `_idempotencyKey` 를 다시 넘긴다 — 새 키는 새 구매다).
  *          - 콜백은 `OnlineServiceClient::tick` 스레드에서 정확히 한 번 온다(보내지 못하면 그 자리에서 Unavailable).
  */

@@ -99,7 +99,7 @@ SW_TEST_CASE( GameObjectTest, DeferredComponentDestructionRemovesFromObject )
 /**
  * @brief 컴포넌트를 없애는 길 넷 모두 해제 콜백(`onUnregister` · `onDestroy`)을 정확히 한 번씩 부른다.
  * @details 목록에서 빼는 쪽과 메모리를 놓는 `destroyComponentInstance` 가 둘 다 `onUnregister` 를 부르면, 등록하는 컴포넌트가
- *          모두 두 번 불려도 되게 짜야 하고 파괴마다 등록부 잠금을 두 번 잡는다.
+ *          모두 두 번 불려도 되게 짜야 하고 파괴마다 레지스트리 잠금을 두 번 잡는다.
  */
 SW_TEST_CASE( GameObjectTest, ComponentTeardownCallbacksRunExactlyOnce )
 {
@@ -938,7 +938,7 @@ SW_TEST_CASE( GameObjectTest, DuplicateNamesUniquifyWithoutRescan )
  * @brief 같은 이름으로 스폰 · 파괴를 거듭해도 인턴되는 이름 수는 동시에 살아 있던 수를 넘지 않는다.
  * @details 번호마다 `hashed_string` 을 인턴하고 인턴 풀은 전역 65,536 칸이다(한번 들어가면 나가지 않는다). 번호가 오르기만 하면
  *          총알 100 개를 유지하며 2 만 번 갈아 끼울 때 이름 2 만 개가 풀에 쌓이고, 풀이 차면 그 뒤로 엔진의 **모든**
- *          새 `hashed_string` 이 None 이 된다. 풀의 다음 칸 번호(새 문자열의 인덱스)로 증가량을 잰다.
+ *          새 `hashed_string` 이 None 이 된다. 풀의 다음 칸 번호(새 문자열의 인덱스)로 증가량을 측정한다.
  */
 SW_TEST_CASE( GameObjectTest, SameNameChurnKeepsInternPoolBounded )
 {
@@ -1120,7 +1120,7 @@ SW_TEST_CASE( GameObjectTest, PlayLifecycleIsPairedAndExactlyOnce )
 }
 
 /**
- * @brief 이름표는 타입이 아니다 — 이름표를 바꿔도 캐스트 · 타입 조회 · 되살린 id 가 그대로이고, 다른 타입의 이름을 붙여도 그 타입이 되지 않는다.
+ * @brief 이름은 타입이 아니다 — 이름을 바꿔도 캐스트 · 타입 조회 · 복원한 id 가 그대로이고, 다른 타입의 이름을 붙여도 그 타입이 되지 않는다.
  * @details 컴포넌트 이름을 동적 타입의 조회 키로 쓰면 `setComponentName( "Muzzle" )` 일 때 타입을 잃고(저장에서 빠지고 캐스트가
  *          nullptr), `setComponentName( "CameraComponent" )` 면 SceneComponent 가 CameraComponent 로 **캐스트된다**(정의되지 않은 동작).
  */
@@ -1511,8 +1511,8 @@ SW_TEST_CASE( GameObjectTest, TickStagesRebuildOnlyWhenTickWorkChanges )
 }
 
 /**
- * @brief [GameObjectTest] 틱 등록부는 멤버십이 바뀐 오브젝트만 다시 짓고, 파괴된 오브젝트는 목록에서 빠진다.
- * @details 오브젝트가 자기 항목을 들고 등록부는 그룹마다 오브젝트 목록을 든다 — 틱 멤버십이 바뀔 때 씬 전체를 훑지 않는다.
+ * @brief [GameObjectTest] 틱 레지스트리는 멤버십이 바뀐 오브젝트만 다시 짓고, 파괴된 오브젝트는 목록에서 빠진다.
+ * @details 오브젝트가 자기 항목을 들고 레지스트리는 그룹마다 오브젝트 목록을 든다 — 틱 멤버십이 바뀔 때 씬 전체를 훑지 않는다.
  *          지켜야 할 것: (1) 틱하는 컴포넌트가 붙은 오브젝트만 그 그룹 목록에 오르고
  *          항목은 (그룹, 순서 키) 순이다 (2) 서브틱을 켜고 끄면 그 오브젝트의 항목만 바뀐다 (3) 선행 종속성이 있으면
  *          `hasPrerequisites` 가 서고, 떼면 내려간다 (4) 오브젝트를 파괴하면 목록에서 빠지고 옮겨진 오브젝트의 자리가 맞는다
@@ -1604,7 +1604,7 @@ SW_TEST_CASE( GameObjectTest, TickRegistryTracksMembershipPerObject )
 /**
  * @brief [GameObjectTest] 계층에서 꺼진 오브젝트는 틱 목록에서 빠지고 켜면 돌아온다 — 부모를 끄면 자식도, 파괴 표시된 것은 그 틱부터 돌지 않는다
  * @details 틱 목록은 켜진 오브젝트만 든다(언리얼 `FTickTaskManager` · 유니티 `BehaviourManager` 처럼 꺼진 것은 목록에서 뺀다). 디스패치는 게임
- *          오브젝트를 읽지 않으므로, 켜고 끌 때 등록부에 알리는 것이 빠지면 꺼진 오브젝트가 계속 틱한다. 파괴는 목록이 아니라 컴포넌트의
+ *          오브젝트를 읽지 않으므로, 켜고 끌 때 레지스트리에 알리는 것이 빠지면 꺼진 오브젝트가 계속 틱한다. 파괴는 목록이 아니라 컴포넌트의
  *          삭제 표시로 막는다 — 실제로 목록에서 빠지는 것은 파괴가 처리될 때다.
  */
 SW_TEST_CASE( GameObjectTest, TickListDropsInactiveObjectsAndRestoresThem )
@@ -1743,7 +1743,7 @@ SW_TEST_CASE( GameObjectTest, CastFastPathsMatchVirtualPath )
  * @brief [GameObjectTest] 배치 트랜스폼 쓰기는 세터와 같은 결과를 내고, 부모의 자손 더티와 세대를 세운다.
  * @details `applyTransformBatch` 는 워커에 나눠 필드를 쓰고 더티를 바이트 저장으로 표시한다. 세터 경로와 갈리면
  *          안 되는 것 셋 — (1) 플러시 뒤 월드 행렬이 같다 (2) 자식만 써도 부모에 자손 더티가 서서 플러시가 내려간다
- *          (3) 값이 같은 건은 건너뛰고 세대도 안 올린다. 문턱(kParallelWriteCount)을 넘겨 실제로 병렬 경로를 탄다.
+ *          (3) 값이 같은 건은 건너뛰고 세대도 안 올린다. 임계값(kParallelWriteCount)을 넘겨 실제로 병렬 경로를 탄다.
  */
 SW_TEST_CASE( GameObjectTest, ApplyTransformBatchMatchesSetters )
 {
@@ -1830,7 +1830,7 @@ SW_TEST_CASE( GameObjectTest, ApplyTransformBatchMatchesSetters )
  *          지켜야 할 것 넷: (1) 틱 안에서 쓴 값이
  *          틱 뒤 월드 행렬에 반영된다(부모 아래 것도) (2) 같은 컴포넌트에 잇따라 쓴 값은 마지막이 이긴다 (3) 위치에 이어
  *          스케일을 쓰면 둘 다 적용된다(같은 건으로 합쳐진다) (4) 다른 오브젝트의 컴포넌트를 쓰는 것도 같다. 틱이 끝나면
- *          큐는 비어 있고 더티도 남지 않는다(post 플러시). 병렬 적용 문턱을 넘는 수로 돌린다.
+ *          큐는 비어 있고 더티도 남지 않는다(post 플러시). 병렬 적용 임계값을 넘는 수로 돌린다.
  */
 SW_TEST_CASE( GameObjectTest, TickSettersQueueAndApplyAfterTick )
 {
@@ -2686,7 +2686,7 @@ SW_TEST_CASE( GameObjectTest, MultiLevelComponentGameObjectPolymorphicLookup )
 
 /**
  * @brief [GameObjectHierarchyTest] 조부모 · 부모 · 자식 3 단에서 활성은 자기 비트와 모든 조상의 비트를 함께 본다
- * @details 한 단씩 끄고 켜며, 자기가 켜져 있어도 조상 하나가 꺼져 있으면 꺼진 것으로 보이는지와 조상을 되살리면 모두 돌아오는지 본다.
+ * @details 한 단씩 끄고 켜며, 자기가 켜져 있어도 조상 하나가 꺼져 있으면 꺼진 것으로 보이는지와 조상을 복원하면 모두 돌아오는지 본다.
  */
 SW_TEST_CASE( GameObjectHierarchyTest, ActiveInHierarchyCompoundEvaluation )
 {
@@ -2760,7 +2760,7 @@ SW_TEST_CASE( GameObjectTest, ReadingTagsDoesNotAttachATagComponent )
 /**
  * @brief [GameObjectTest] 컴포넌트가 이동 불가로 남아 있는지 검증(회귀 가드)
  * @details 컴포넌트는 풀에서 제자리 생성·소멸하므로 옮겨질 일이 없다. 이동 연산을 두면 `_componentID` 가 둘이 되거나
- *          `SceneComponent` 의 자식 `_pParent` · 부모의 `_listChild` · 매니저의 루트 등록부가 옛 주소를 가리키기 쉽고,
+ *          `SceneComponent` 의 자식 `_pParent` · 부모의 `_listChild` · 매니저의 루트 레지스트리가 옛 주소를 가리키기 쉽고,
  *          쓰는 곳이 없으니 틀려도 아무도 모른다. 진짜 방어선은 `= delete` 이고 이 케이스는 그것이 유지되는지 본다.
  */
 SW_TEST_CASE( GameObjectTest, ComponentsStayNonMovable )
@@ -2788,7 +2788,7 @@ SW_TEST_CASE( GameObjectTest, ObjectIDsAreUniqueAcrossManagers )
     SW_ASSERT_NOT_NULL( pA );
     SW_ASSERT_NOT_NULL( pB );
     SW_EXPECT_TRUE( pA->getObjectID() != pB->getObjectID() );
-    // 되살린 id 도 뒤의 발급과 겹치지 않는다 — 다른 매니저의 발급에서도.
+    // 복원한 id 도 뒤의 발급과 겹치지 않는다 — 다른 매니저의 발급에서도.
     const sw::GameObject* pRestored = first.createGameObjectWithID( sw::hashed_string( "Restored" ), pB->getObjectID() + 100 );
     SW_ASSERT_NOT_NULL( pRestored );
     const sw::GameObject* pAfter = second.createGameObject( sw::hashed_string( "After" ) );
@@ -2797,10 +2797,10 @@ SW_TEST_CASE( GameObjectTest, ObjectIDsAreUniqueAcrossManagers )
 }
 
 /**
- * @brief 되살린 큰 id 도 락 없는 표에서 찾는다 — 표 범위(약 420 만)를 넘었다고 맵으로 떨어지지 않는다.
+ * @brief 복원한 큰 id 도 락 없는 표에서 찾는다 — 표 범위(약 420 만)를 넘었다고 맵으로 떨어지지 않는다.
  * @details 칸은 id 의 아래 비트다 — 칸을 다른 살아 있는 오브젝트가 쓸 때만 맵으로 간다. id 를 그대로 칸 번호로 쓰면 표 범위를 넘는 id 는
  *          모두 잠금 + 해시 맵으로 가서, 스폰이 잦은 게임은 몇 시간 뒤 모든 핸들 해석이 그 경로로 가고, 그런 세션에서 저장한 id 를
- *          되살리면(세이브 · 플레이 복원) 처음부터 그렇다.
+ *          복원하면(세이브 · 플레이 복원) 처음부터 그렇다.
  */
 SW_TEST_CASE( GameObjectTest, RestoredLargeObjectIDsStayOnTheLockFreeTable )
 {

@@ -22,7 +22,7 @@ namespace sw
     {
         /**
          * @brief KHR_debug 메시지를 엔진 로그로 보냅니다. DX11/DX12 디버그 레이어(flushDebugMessages) · Vulkan 검증 레이어와 같은 자리입니다.
-         * @details GL 오류가 로그에 나오는 통로는 이것뿐입니다(엔진은 glGetError 를 부르지 않습니다). 이 콜백이 있어야 드로우가 정상으로
+         * @details GL 오류가 로그에 나오는 경로는 이것뿐입니다(엔진은 glGetError 를 부르지 않습니다). 이 콜백이 있어야 드로우가 정상으로
          *          나가고 화면만 비는 결함이 스모크의 `[Error]` 수로 드러납니다.
          *          알림(NOTIFICATION)은 드라이버 잡담("Buffer detailed info")이라 glDebugMessageControl 로 아예 끕니다.
          */

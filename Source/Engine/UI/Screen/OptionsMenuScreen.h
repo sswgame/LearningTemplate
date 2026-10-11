@@ -26,7 +26,7 @@ namespace sw
      * @brief 엔진 기본 옵션 메뉴(언리얼 Lyra `UGameSettingRegistry` → 행 견본 · 유니티 UI Toolkit 설정 화면). 게임은 문서 · 스타일만 바꾼다
      *        (게임 프리셋 `_uiOptionsDocument` — 이름 있는 위젯 `Tabs` · `Rows` · `RestartNotice` 와 단추 명령 `Apply` · `Revert` · `Defaults` · `Close` 를 지키면 된다).
      * @details **짓기**: 탭 = `getCategories()`(빈 카테고리는 뺀다), 지금 탭의 행 = `collectSettings` 순서. 행은 형식별 견본 조각(`engine/ui/parts/setting_*.ui.xml`)을
-     *          지어 이름을 `<설정 id>.<안쪽 이름>` 으로 감싸고, 값 위젯(`Value`)에 `{setting:id}` 바인딩을 **코드로** 건다 — 스키마가 정본이라 문서에 행을 적지 않는다.
+     *          지어 이름을 `<설정 id>.<안쪽 이름>` 으로 감싸고, 값 위젯(`Value`)에 `{setting:id}` 바인딩을 **코드로** 건다 — 스키마가 원본이라 문서에 행을 적지 않는다.
      *          값 · 범위 · 선택지 · 사용 가능(`enabledWhen`)은 설정 바인딩(6-3)이 채운다. 탭은 `UI.TabNext` · `UI.TabPrevious`(패드 LB · RB)와 탭 단추로 옮긴다.
      *          **적용**: `applyPending` — 확인 대기가 시작되면 카운트다운 창(`SettingsConfirmScreen`), 다음 실행에 닿는 값이면 다시 시작 알림. 닫을 때(닫기 · 뒤로)
      *          보류 값이 있으면 "적용 · 버리기 · 취소" 를 묻는다. 키 바인딩 행의 단추는 `KeyRebindScreen` 을 연다.

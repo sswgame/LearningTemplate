@@ -1,6 +1,6 @@
 /**
  * @file CameraRegistry.h
- * @brief 카메라 컴포넌트의 등록부입니다. 역할 · 우선순위로 카메라를 고르는 규칙도 여기 하나입니다.
+ * @brief 카메라 컴포넌트의 레지스트리입니다. 역할 · 우선순위로 카메라를 고르는 규칙도 여기 하나입니다.
  *
  * [왜 필요한가]
  * `ComponentRegistry` 와 같은 이유입니다. **찾지 말고 등록받습니다.** 게임 카메라(`Scene`)와 에디터 카메라(`EditorCamera`)가 같은
@@ -30,9 +30,9 @@ namespace sw
     class SW_API CameraRegistry
     {
     public:
-        /** @brief 빈 등록부를 만듭니다. */
+        /** @brief 빈 레지스트리를 만듭니다. */
         CameraRegistry() = default;
-        /** @brief 등록부를 비웁니다. 카메라의 수명은 GameObject 가 쥡니다. */
+        /** @brief 레지스트리를 비웁니다. 카메라의 수명은 GameObject 가 쥡니다. */
         ~CameraRegistry() = default;
 
         CameraRegistry( const CameraRegistry& )            = delete;
@@ -48,14 +48,14 @@ namespace sw
 
         /**
          * @brief 역할 @p role 의 켜진 카메라 중 우선순위가 가장 높은 것입니다. 같으면 컴포넌트 id 가 큰(나중에 만든) 것이 이깁니다 — 되돌리기 ·
-         *        플레이 종료 복원이 id 를 되살리므로 편집 이력과 무관합니다. 없으면 nullptr 입니다.
+         *        플레이 종료 복원이 id 를 복원하므로 편집 이력과 무관합니다. 없으면 nullptr 입니다.
          * @details 게임 카메라(`Scene::ensureDefaultCameras`)와 에디터 카메라(`EditorCamera::find`)가 함께 쓰는 **하나의** 규칙입니다.
          *          켜짐은 `isUsableCamera` 입니다. 출력이 주 시점이 아닌 카메라(화면 사각형 · 렌더 텍스처)는 고르지 않습니다 — 그것들은 자기 출력의 추가 뷰다.
          */
         CameraComponent* selectCamera( CameraRole role ) const;
 
         /**
-         * @brief 시퀀서 카메라 컷이 고른 카메라를 적습니다(nullptr 이면 풉니다). 게임 카메라 선택에서 직접 고른 카메라 · 등록부 규칙보다 먼저입니다.
+         * @brief 시퀀서 카메라 컷이 고른 카메라를 적습니다(nullptr 이면 풉니다). 게임 카메라 선택에서 직접 고른 카메라 · 레지스트리 규칙보다 먼저입니다.
          * @details 언리얼 Camera Cut 트랙이 뷰 타깃을 덮는 자리입니다. 그 카메라가 등록 해제되면(`remove`) 함께 풀립니다.
          */
         void setCutCamera( CameraComponent* pCamera );

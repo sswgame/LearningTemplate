@@ -67,7 +67,7 @@ namespace sw
             /**
              * @brief 만들 때 넘기는 각속도를 바디 상한 안으로 줄입니다.
              * @details Jolt 는 상한을 넘는 시작 각속도에 단언한다. 상한에 붙어 돌던 바디에서 읽은 값(갈라진 파괴 덩어리가 부모 운동을 이을 때)도
-             *          길이를 다시 재면 반올림으로 상한을 한 ulp 넘을 수 있어 조금 안쪽으로 줄인다.
+             *          길이를 다시 측정하면 반올림으로 상한을 한 ulp 넘을 수 있어 조금 안쪽으로 줄인다.
              */
             static JPH::Vec3 clampAngularVelocity( const JPH::Vec3& velocity, float32 maxLength )
             {

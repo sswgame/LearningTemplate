@@ -43,7 +43,7 @@ namespace sw::editor
         /**
          * @brief "Open..." 단추(이 종류의 에셋을 찾아 고르는 팝업)와 최근 문서 콤보를 한 줄에 그립니다.
          * @details 고른 문서는 워크스페이스 포커스로 넘깁니다. 바꾸기 · 미저장 확인은 다음 그리기의 `updateFocusedDocument` 가 합니다.
-         *          이름표는 `<패널 id>.open`, 팝업 검색 칸 `<패널 id>.open.search`, 목록 줄 `<패널 id>.open.<파일 이름>` 입니다.
+         *          이름은 `<패널 id>.open`, 팝업 검색 칸 `<패널 id>.open.search`, 목록 줄 `<패널 id>.open.<파일 이름>` 입니다.
          */
         void drawDocumentOpenBar( const utf8* pMarkPrefix );
         /** @brief 최근에 연 문서(새 것이 앞, 최대 `kMaxRecentDocumentCount`)입니다. */

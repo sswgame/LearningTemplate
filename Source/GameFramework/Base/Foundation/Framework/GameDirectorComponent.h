@@ -68,7 +68,7 @@ namespace sw
         /** @brief 판의 상태를 씁니다 — `ComponentStateStore::capture` 가 부릅니다. 첫 값은 `StateArchiveUtil::writeHeader` 의 표 · 버전입니다. */
         virtual void writeState( Archive& outArchive ) const = 0;
         /**
-         * @brief `writeState` 의 바이트로 판을 되살립니다 — `ComponentStateStore::restore` 가 다시 만든 디렉터에 부릅니다.
+         * @brief `writeState` 의 바이트로 판을 복원합니다 — `ComponentStateStore::restore` 가 다시 만든 디렉터에 부릅니다.
          * @details 시작 전이면 들고 있다가 `onBeginPlay` 가 판을 연 뒤 적용합니다. 읽지 못하면 `onStateRestored( false )` 가 알리고 새 판으로 갑니다.
          */
         void restoreState( vector<uint8>&& bytes );

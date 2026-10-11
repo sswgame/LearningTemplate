@@ -105,7 +105,7 @@ namespace sw
         }
         std::lock_guard<std::mutex> lock( _mutex );
         _slots.initialize( *pDef );
-        // 저장된 차지(세이브 · 핫 리로드)를 되살린다.
+        // 저장된 차지(세이브 · 핫 리로드)를 복원한다.
         for ( size_t slot = 0; slot < _listClaimant.size() && slot < static_cast<size_t>( _slots.getSlotCount() ); ++slot )
         {
             if ( _listClaimant[slot].isValid() )

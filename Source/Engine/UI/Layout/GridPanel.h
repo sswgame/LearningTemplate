@@ -45,7 +45,7 @@ namespace sw
      * @brief 자식 슬롯의 행 · 열 · 넓이(`_row` · `_column` · `_rowSpan` · `_columnSpan`)로 칸에 놓습니다.
      * @details 트랙 크기: Fixed = 값, Auto = 넓이 1 인 자식들의 (원하는 크기 + 여백) 최대, Fill = 남은 길이를 무게로. 넓이 2 이상 자식은 덮은 트랙 합이
      *          모자라면 **모자란 만큼을 덮은 Auto 트랙들에 고르게** 더합니다(CSS Grid 의 완전한 알고리즘은 아니다). 열을 먼저 정하고, 자식을 그 열 너비로
-     *          다시 재서 행을 정합니다(줄 바꿈 글이 칸 너비로 높이를 정한다). 트랙 정의가 없으면 자식들의 최대 행 · 열 + 1 개의 Fill 트랙입니다.
+     *          다시 측정해서 행을 정합니다(줄 바꿈 글이 칸 너비로 높이를 정한다). 트랙 정의가 없으면 자식들의 최대 행 · 열 + 1 개의 Fill 트랙입니다.
      *          트랙 밖 행 · 열 번호는 경고 한 번 + 마지막 트랙으로 놓습니다. 원하는 크기에서 Fill 트랙은 내용 크기(Auto 처럼)입니다.
      */
     REFLECT( Category = "Layout", DisplayName = "Grid Panel", Tooltip = "Places children in cells of column and row tracks" )

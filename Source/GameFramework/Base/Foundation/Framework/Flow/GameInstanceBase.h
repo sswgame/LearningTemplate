@@ -198,16 +198,16 @@ namespace sw
         enum class SceneObjectFormat : uint8
         {
             WithIdentity,   ///< 오브젝트마다 id + 상태. 다른 실행에서 찍은 것이라 id 는 읽고 버립니다(새 id).
-            RestoreIdentity ///< 오브젝트마다 id + 상태. 같은 프로세스에서 찍었으므로 원래 id 를 되살립니다(핫 리로드).
+            RestoreIdentity ///< 오브젝트마다 id + 상태. 같은 프로세스에서 찍었으므로 원래 id 를 복원합니다(핫 리로드).
         };
 
         /**
          * @brief 씬 안의 모든 유효 GameObject 를 바이너리로 직렬화합니다.
-         * @details 오브젝트마다 상태 앞에 런타임 id(`ObjectIdentity`)를 싣습니다. 같은 프로세스에서 되살리면(핫 리로드)
+         * @details 오브젝트마다 상태 앞에 런타임 id(`ObjectIdentity`)를 싣습니다. 같은 프로세스에서 복원하면(핫 리로드)
          *          `GameObjectHandle` · `ComponentHandle` 이 그 너머로도 이어집니다.
          */
         [[nodiscard]] bool serializeSceneObjects( vector<uint8>& outBytes );
-        /** @brief 바이너리 데이터로부터 씬 GameObject 들을 복원합니다. @p format 은 id 가 실렸는지, 되살릴지를 알려 줍니다. */
+        /** @brief 바이너리 데이터로부터 씬 GameObject 들을 복원합니다. @p format 은 id 가 실렸는지, 복원할지를 알려 줍니다. */
         [[nodiscard]] bool deserializeSceneObjects( const uint8* pData, size_t size, SceneObjectFormat format );
 
         BootstrapConfig _bootstrap;  ///< 팩 루트와 gamesettings

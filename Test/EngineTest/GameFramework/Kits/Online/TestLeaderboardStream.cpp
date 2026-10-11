@@ -123,7 +123,7 @@ SW_TEST_CASE( LeaderboardStreamTest, ClientSubmitOnlyOnOpenBoardsAndAchievementP
     SW_ASSERT_EQUAL( recorder.getLast()._reply._listEntry.size(), size_t( 2 ) );
     SW_EXPECT_EQUAL( recorder.getLast()._reply._listEntry[1]._accountID, AccountID( 1 ) );
 
-    // 통계가 업적 문턱을 넘음 → 그 계정의 연결에 알림, 조회에도 보인다
+    // 통계가 업적 임계값을 넘음 → 그 계정의 연결에 알림, 조회에도 보인다
     leaderboard._service.changeStat( 1, "alice", "wins", 1, LeaderboardUpdate::Sum, 60, 0 );
     test::tickAll( { &server }, clients, 60 );
     vector<AchievementState> listUnlock;

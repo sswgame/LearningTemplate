@@ -28,7 +28,7 @@ namespace sw
                 return edgeAb >= 0.0f && edgeBc >= 0.0f && edgeCa >= 0.0f;
             }
 
-            /** @brief 두 선분이 끝점이 아닌 곳에서 엇갈리는지입니다. */
+            /** @brief 두 선분이 엔드포인트가 아닌 곳에서 엇갈리는지입니다. */
             static bool doSegmentsCross( const float2& a0, const float2& a1, const float2& b0, const float2& b1 )
             {
                 const float32 side0 = cross2( a0, a1, b0 );

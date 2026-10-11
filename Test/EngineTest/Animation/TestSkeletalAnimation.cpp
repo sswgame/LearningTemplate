@@ -143,7 +143,7 @@ SW_TEST_CASE( SkeletalAnimationTest, ClipSamplingMatchesHandComputedValues )
 
 /**
  * @brief [SkeletalAnimationTest] 코덱 — Raw 는 오차 0, ACL 은 정밀도 기준(0.1 mm) 근처에서 1 mm 아래이고 Raw 보다 작다
- * @details 같은 잣대(`AnimCodecRegistry::measureMaxError` — 모델 공간 가상 정점)로 두 코덱을 잰다. 이름으로 찾는 등록부도 본다.
+ * @details 같은 잣대(`AnimCodecRegistry::measureMaxError` — 모델 공간 가상 정점)로 두 코덱을 측정한다. 이름으로 찾는 레지스트리도 본다.
  */
 SW_TEST_CASE( SkeletalAnimationTest, CodecRawVsACLMaxErrorUnderThreshold )
 {

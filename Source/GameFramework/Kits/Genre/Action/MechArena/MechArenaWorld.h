@@ -244,7 +244,7 @@ namespace sw
         void writeState( BitWriter& outWriter ) const;
         /**
          * @brief 세이브 · 핫 리로드용 전체 상태를 씁니다 — 팀 이름 · 판(`MatchState`) · 걸음 · 조종사(덱 · 스킬 id, 자리 · 속도 · 입력 · 타이머 · 체력 · 부스트 ·
-         *        록온 · 근접 시간표 · 무기 · 쿨다운 · 전적) · 탄. 넷 스냅숏(`writeState( BitWriter& )`)은 화면용으로 양자화해 되살릴 수 없어 따로 둡니다.
+         *        록온 · 근접 시간표 · 무기 · 쿨다운 · 전적) · 탄. 넷 스냅숏(`writeState( BitWriter& )`)은 화면용으로 양자화해 복원할 수 없어 따로 둡니다.
          *        설정 · 카탈로그는 `initialize` 의 것이라 싣지 않고, 알림은 읽을 때 비웁니다.
          */
         void writeState( Archive& outArchive ) const;
@@ -286,7 +286,7 @@ namespace sw
         void activateSkill( int32 pilot, int32 skillIndex );
         void triggerSkills( int32 pilot, MechSkillTrigger trigger );
         void equipMech( MechPilot& pilot, int32 pilotIndex );
-        /** @brief `start` 가 판에 주는 설정입니다(되살릴 때 같은 설정으로 판을 다시 연다). */
+        /** @brief `start` 가 판에 주는 설정입니다(복원할 때 같은 설정으로 판을 다시 연다). */
         MatchSettings makeMatchSettings() const;
         /** @brief 조종사 하나를 읽어 덱 · 스킬을 카탈로그에서 찾고 탄 기체를 장착한 뒤 상태를 덮습니다. 깨졌으면 false 입니다. */
         [[nodiscard]] bool readPilot( Archive& archive, int32 pilotIndex, MechPilot& outPilot );

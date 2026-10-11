@@ -18,7 +18,7 @@ namespace test
     };
 
     /**
-     * @brief 엔진 타입 등록부의 모든 타입 · 모든 PROPERTY 를 `SerializerUtil::canCarryProperty` 로 봅니다(`Transient` 는 건너뜁니다).
+     * @brief 엔진 타입 레지스트리의 모든 타입 · 모든 PROPERTY 를 `SerializerUtil::canCarryProperty` 로 봅니다(`Transient` 는 건너뜁니다).
      * @details 직렬화기는 다룰 줄 모르는 타입을 조용히 텍스트 `null` · 바이너리 0 바이트로 써, 읽으면 그 칸이 기본값이 된다. 저장할 수 없는
      *          런타임 값(창 핸들 같은 포인터)은 `Transient` 로 적는다.
      */

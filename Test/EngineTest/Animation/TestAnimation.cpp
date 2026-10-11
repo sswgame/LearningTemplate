@@ -607,7 +607,7 @@ SW_TEST_CASE( AnimationTest, SpriteAnimatorAppliesClipTransformKeys )
 
 /**
  * @brief [AnimationTest] BlendSpace2D 는 표본 범위 밖 파라미터를 범위로 가둬, 첫 표본이 아니라 가장 가까운 모서리를 낸다
- * @details 1/d² 를 그대로 더해 절대값 1e-6 과 견주면 cm/s 단위(표본 0~600)에서 대시 2500 일 때 합이 그보다 작아 **처음 넣은 표본**(Idle)으로
+ * @details 1/d² 를 그대로 더해 절대값 1e-6 과 비교하면 cm/s 단위(표본 0~600)에서 대시 2500 일 때 합이 그보다 작아 **처음 넣은 표본**(Idle)으로
  *          튄다. 언리얼 블렌드 스페이스처럼 파라미터를 범위로 가둔다.
  */
 SW_TEST_CASE( AnimationTest, BlendSpace2DClampsFarParametersToTheSampleRange )

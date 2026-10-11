@@ -704,7 +704,7 @@ namespace sw
     bool VulkanRHIResourceFactory::readbackTexture2D( RHITextureHandle texture, uint32 mip, uint32 arraySlice, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
     {
         // **여기의 실패는 모두 소리를 낸다**(형제인 uploadTexture2D 와 같다). 리드백은 오프스크린 렌더 문제가
-        // 드러나는 통로라 "false 인데 이유가 없다" 가 곧 긴 추적이 된다.
+        // 드러나는 경로라 "false 인데 이유가 없다" 가 곧 긴 추적이 된다.
         VulkanRHIDevice::VulkanTextureRecord* pRecord = _pDevice->resolveTexture( texture );
         if ( pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
              _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_oneShotCommandPool == VK_NULL_HANDLE )

@@ -96,7 +96,7 @@ namespace sw
         uint32     _cluster{ 0 };               ///< 원문 바이트 위치
         uint32     _colorRgba{ 0xFFFFFFFFu };   ///< 리치 텍스트 색. 0xFFFFFFFF = 위젯 색 그대로
         FontFaceID _face{ kInvalidFontFaceID }; ///< 글리프를 가진 면
-        uint8      _bFauxBold{ SW_FALSE };      ///< SDF 문턱을 옮겨 굵게 그린다
+        uint8      _bFauxBold{ SW_FALSE };      ///< SDF 임계값을 옮겨 굵게 그린다
         uint8      _bFauxItalic{ SW_FALSE };    ///< 기울여 그린다
     };
 } // namespace sw
@@ -151,7 +151,7 @@ namespace sw
          */
         void layout( string_view text, const TextLayoutStyle& style, float32 maxWidth, TextLayoutResult& outResult, const vector<RichTextSpan>* pListSpan = nullptr );
         /**
-         * @brief 크기만 잽니다(레이아웃의 measure 단계). `layout(...)._size` 와 같습니다.
+         * @brief 크기만 측정합니다(레이아웃의 measure 단계). `layout(...)._size` 와 같습니다.
          * @details (글 · 스타일 · 너비 · 지금 면 사슬)로 캐시합니다 — 문화권이 바뀌어 사슬이 달라지면 캐시도 갈린다. 캐시가 차면 통째로 비운다.
          */
         float2 measure( string_view text, const TextLayoutStyle& style, float32 maxWidth, const vector<RichTextSpan>* pListSpan = nullptr );

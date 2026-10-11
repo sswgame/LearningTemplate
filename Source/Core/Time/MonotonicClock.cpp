@@ -72,7 +72,7 @@ namespace sw
             timespec request{};
             request.tv_sec  = static_cast<time_t>( remaining / constant::kNanosecondsPerSecond );
             request.tv_nsec = static_cast<decltype( request.tv_nsec )>( remaining % constant::kNanosecondsPerSecond );
-            (void)clock_nanosleep( CLOCK_MONOTONIC, 0, &request, nullptr ); // 신호에 깨면 루프가 남은 시간을 다시 잰다
+            (void)clock_nanosleep( CLOCK_MONOTONIC, 0, &request, nullptr ); // 신호에 깨면 루프가 남은 시간을 다시 측정한다
 #endif
         }
     }

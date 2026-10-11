@@ -36,7 +36,7 @@ namespace sw
             static constexpr size_t kMaxLogLine = 20000;
             /** @brief `<ExpectImage>` 가 스크린샷을 기다리는 최대 프레임 — 렌더 큐 깊이보다 넉넉히. */
             static constexpr uint32 kMaxImageWaitFrames = 30;
-            /** @brief `darkFraction` 의 기본 문턱(영역 중앙값에 곱한다)입니다. */
+            /** @brief `darkFraction` 의 기본 임계값(영역 중앙값에 곱한다)입니다. */
             static constexpr float32 kDefaultDarkRatio = 0.7f;
             /** @brief `CloseWindow` 의 기본 종료 시한(초)입니다. */
             static constexpr float32 kDefaultExitWithinSeconds = 10.0f;
@@ -911,7 +911,7 @@ namespace sw
             recordFailure( step, error );
             return;
         }
-        // 값은 늘 적는다 — 문턱을 정할 때 숫자를 본다.
+        // 값은 늘 적는다 — 임계값을 정할 때 숫자를 본다.
         string line = *step.findAttribute( "metric" ) + "(" + ( pRegion != nullptr ? *pRegion : string( "0,0,1,1" ) ) + ") " + *step.findAttribute( "file" ) + " = " +
                       Internal::formatNumber( value );
         SW_LOG_INFO( "[Scenario] metric %#", line.c_str() );

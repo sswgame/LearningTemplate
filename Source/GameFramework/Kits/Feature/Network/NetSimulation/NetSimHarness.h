@@ -68,13 +68,13 @@ namespace sw
         NetHostSettings _hostSettings{};             ///< 월드마다의 호스트 설정. 도전 소금 씨앗은 `_seed` 에서 다시 정한다
         float64         _tickInterval{ 1.0 / 60.0 }; ///< 고정 스텝(초) — 월드의 오브젝트 틱 · 망 시각이 모두 이 간격으로 간다
         uint32          _seed{ 1u };                 ///< 망 · 연결 흉내 · 도전 소금의 씨앗
-        uint16          _serverPort{ 7000 };         ///< 서버 끝점 포트. 클라이언트는 그 뒤 번호를 차례로(다시 쓰지 않는다)
+        uint16          _serverPort{ 7000 };         ///< 서버 엔드포인트 포트. 클라이언트는 그 뒤 번호를 차례로(다시 쓰지 않는다)
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 끝점 하나가 보내고 받은 양입니다(헤더 · 체크섬 포함 데이터그램 바이트). 보낸 양은 흉내가 버리기 전 — 회선에 내놓은 것이다. */
+    /** @brief 엔드포인트 하나가 보내고 받은 양입니다(헤더 · 체크섬 포함 데이터그램 바이트). 보낸 양은 흉내가 버리기 전 — 회선에 내놓은 것이다. */
     struct NetSimTraffic
     {
         uint64 _sentBytes{ 0 };
@@ -101,7 +101,7 @@ namespace sw
         void               update( float64 time ) override;
 
         const NetSimTraffic& getTraffic() const { return _traffic; }
-        /** @brief @p to 로 보낸 바이트입니다(서버 끝점에서 클라이언트 하나로 내려간 양). */
+        /** @brief @p to 로 보낸 바이트입니다(서버 엔드포인트에서 클라이언트 하나로 내려간 양). */
         uint64 getSentBytesTo( const NetAddress& to ) const;
 
     private:
@@ -213,9 +213,9 @@ namespace sw
         INetSimSession*    getSession() const { return _pSession.get(); }
         /** @brief 라우터의 처리기가 받지 않은 메시지(게임 영역 등)입니다. 틱마다 비우고 다시 채운다. */
         const vector<NetReceivedMessage>& getUnhandledMessages() const { return _listUnhandled; }
-        /** @brief 이 월드의 끝점이 보내고 받은 양입니다. */
+        /** @brief 이 월드의 엔드포인트가 보내고 받은 양입니다. */
         const NetSimTraffic& getTraffic() const { return _counter.getTraffic(); }
-        /** @brief 서버 — @p to(클라이언트 끝점)로 내려보낸 바이트입니다. */
+        /** @brief 서버 — @p to(클라이언트 엔드포인트)로 내려보낸 바이트입니다. */
         uint64     getSentBytesTo( const NetAddress& to ) const { return _counter.getSentBytesTo( to ); }
         NetAddress getAddress() const { return _counter.getLocalAddress(); }
 
@@ -226,7 +226,7 @@ namespace sw
         void tick( float32 deltaTime );
         void stop();
 
-        NetSimTrafficCounter       _counter; ///< 호스트 → 셈 → 흉내 → 루프백 끝점
+        NetSimTrafficCounter       _counter; ///< 호스트 → 셈 → 흉내 → 루프백 엔드포인트
         NetHost                    _host;
         NetMessageRouter           _router;
         unique_ptr<Scene>          _pScene;
@@ -297,11 +297,11 @@ namespace sw
         uint32  getTick() const { return _tick; }
         float64 getTime() const { return _time; }
         float64 getTickInterval() const { return _settings._tickInterval; }
-        /** @brief 버린 패킷 수입니다 — 끝점 흉내가 버린 것(손실 · 큐 넘침 · 거르개)과 받을 끝점이 없어 망이 버린 것의 합. */
+        /** @brief 버린 패킷 수입니다 — 엔드포인트 흉내가 버린 것(손실 · 큐 넘침 · 거르개)과 받을 엔드포인트가 없어 망이 버린 것의 합. */
         uint64 getDroppedPacketCount() const;
 
     private:
-        /** @brief 끝점 하나의 흉내 전송입니다. 월드가 떠나도 남아 줄에 든 패킷(끊김 알림)을 마저 내보낸다. */
+        /** @brief 엔드포인트 하나의 흉내 전송입니다. 월드가 떠나도 남아 줄에 든 패킷(끊김 알림)을 마저 내보낸다. */
         struct Link
         {
             unique_ptr<NetEmulationTransport> _pEmulation{};

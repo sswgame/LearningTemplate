@@ -1,7 +1,7 @@
 /**
  * @file AnimationAssetCache.h
  * @brief 스켈레톤(`.skeleton.json`) · 애니메이션 클립(`.animclip`) · 본 LOD(`.bonelod.json`) · 후처리 리그(`.rig.json`)를 경로로 나눠 주는 표와,
- *        그 표를 에셋 캐시 등록부에 보이는 창구들입니다.
+ *        그 표를 에셋 캐시 레지스트리에 보이는 창구들입니다.
  * @details `SpriteClipCache` · `MeshCache` 와 같은 모양입니다 — 표는 프로세스에 하나(Engine.dll 안)이고 약한 참조라 마지막 사용자가 놓으면 사라집니다.
  *          Animation(티어 2)이 아니라 Resource(티어 4)에 있는 것은 `IAssetCache` 를 구현하기 때문입니다.
  */

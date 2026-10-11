@@ -18,7 +18,7 @@
 /**
  * @brief [TerrainBenchTest] 눈이 지형을 가로지르는 600 프레임 — LOD 교체 프레임의 GT 비용(판정 · 청크 메시 · GPU 씬 수집)
  * @details 쇼케이스 씬을 그대로 세워(머티리얼 · 식생 포함) 눈을 x 축으로 250 m(60 fps 로 10 초, 초속 25 m) 옮기며 프레임마다 updateLODs ·
- *          GPUSceneBuilder::populateFromScene 을 잰다. 교체가 있었던 프레임만 따로 모은다. 렌더 스레드의 정점 풀 재생성(`RT.GPUScene.vertexPool`)은
+ *          GPUSceneBuilder::populateFromScene 을 측정한다. 교체가 있었던 프레임만 따로 모은다. 렌더 스레드의 정점 풀 재생성(`RT.GPUScene.vertexPool`)은
  *          여기 없다 — App 의 프로파일 표로 본다.
  */
 SW_TEST_CASE( TerrainBenchTest, LODSweepWorstFrame )

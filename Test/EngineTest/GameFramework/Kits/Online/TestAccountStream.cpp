@@ -118,7 +118,7 @@ namespace
         }
     };
 
-    /** @brief 클라이언트 하나 — 서비스 클라이언트(자기 끝점) + 계정 클라이언트. */
+    /** @brief 클라이언트 하나 — 서비스 클라이언트(자기 엔드포인트) + 계정 클라이언트. */
     struct ClientSide
     {
         unique_ptr<IStreamTransport> _transport;

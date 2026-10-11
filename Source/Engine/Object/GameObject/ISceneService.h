@@ -1,7 +1,7 @@
 /**
  * @file ISceneService.h
- * @brief 기능 폴더가 씬(`GameObjectManager`)마다 하나씩 두는 서비스의 계약과 등록표입니다. 서비스 클래스의 .cpp 에 `SW_SCENE_SERVICE` 한 줄을 둡니다.
- * @details 코어(`Object/GameObject`)는 등록표만 갖고 기능 서비스(내비게이션 …)의 타입을 모릅니다. 기능 폴더가 정적 초기화에서 이 표에 만드는 함수와
+ * @brief 기능 폴더가 씬(`GameObjectManager`)마다 하나씩 두는 서비스의 계약과 레지스트리입니다. 서비스 클래스의 .cpp 에 `SW_SCENE_SERVICE` 한 줄을 둡니다.
+ * @details 코어(`Object/GameObject`)는 레지스트리만 갖고 기능 서비스(내비게이션 …)의 타입을 모릅니다. 기능 폴더가 정적 초기화에서 이 표에 만드는 함수와
  *          돌 프레임 단계를 올리고, 매니저는 생성자에서 표를 훑어 서비스를 만들고 소유합니다 — 의존은 기능 → 코어 한 방향입니다.
  *          언리얼 `UWorldSubsystem`(모듈이 타입을 올리고 월드가 인스턴스를 만든다, `GetSubsystem<T>()`)과 같은 모양입니다.
  *
@@ -62,7 +62,7 @@ namespace sw
 {
     /**
      * @class SceneServiceRegistry
-     * @brief 씬 서비스의 등록표입니다. 정적 초기화에서 채우고 `GameObjectManager` 생성자가 읽습니다.
+     * @brief 씬 서비스의 레지스트리입니다. 정적 초기화에서 채우고 `GameObjectManager` 생성자가 읽습니다.
      */
     class SW_API SceneServiceRegistry
     {

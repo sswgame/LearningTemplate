@@ -320,7 +320,7 @@ namespace sw
         if ( deferIfStructureFrozen( Delegate<void( Component& )>( [group]( Component& self )
         { self.setTickGroup( group ); } ) ) )
             return;
-        // 없는 그룹을 받아 두면 등록부가 조용히 버려 이 컴포넌트가 한 번도 돌지 않는다. 지금 그룹을 지킨다.
+        // 없는 그룹을 받아 두면 레지스트리가 조용히 버려 이 컴포넌트가 한 번도 돌지 않는다. 지금 그룹을 지킨다.
         if ( isValidTickGroup( group ) == false )
         {
             SW_LOG_WARNING( "Tick group %# does not exist - the component keeps its current group", static_cast<uint32>( group ) );

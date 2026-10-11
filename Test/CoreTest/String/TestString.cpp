@@ -1543,7 +1543,7 @@ SW_TEST_CASE( StringTest, FixedStringEraseWithHugeLengthDoesNotWrap )
  */
 SW_TEST_CASE( StringTest, FormatStringWithZeroCapacityWritesNothing )
 {
-    // 한 칸이면 종결자만 들어간다 — 이쪽은 어느 빌드에서나 잰다.
+    // 한 칸이면 종결자만 들어간다 — 이쪽은 어느 빌드에서나 측정한다.
     sw::vector<utf8> oneBuffer( 1, utf8{ 'Z' } );
     sw::formatstring( oneBuffer.data(), 1, "hello" );
     SW_EXPECT_EQUAL( utf8{ 0 }, oneBuffer[0] );

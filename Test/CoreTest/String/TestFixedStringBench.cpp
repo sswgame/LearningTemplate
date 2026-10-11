@@ -1,10 +1,10 @@
 /**
  * @file TestFixedStringBench.cpp
  * @brief `fixed_string` 마이크로벤치 — 객체 크기, `size()`, 대입, 비교, `clear()`.
- * @details 숫자를 **찍기만** 하고 판정하지 않는다(기계마다 다르다). 판정은 정합성만 본다(잰 길이 합이 넣은 길이 합과 같다).
- *          회귀의 근거는 `docs/09_Decisions.md` 에 Release 로 잰 표로 남긴다 — 이 케이스는 그 표를 같은 코드로 다시 만들기 위한 자리다.
+ * @details 숫자를 **찍기만** 하고 판정하지 않는다(기계마다 다르다). 판정은 정합성만 본다(측정한 길이 합이 넣은 길이 합과 같다).
+ *          회귀의 근거는 `docs/09_Decisions.md` 에 Release 로 측정한 표로 남긴다 — 이 케이스는 그 표를 같은 코드로 다시 만들기 위한 자리다.
  *
- *          재는 것:
+ *          측정하는 것:
  *          - `sizeof` — `fixed_string<15/31/63/160>`, `fixed_wstring<15>`, 이 타입을 배열로 드는 `CrashBreadcrumbStore` · `CrashContextStore`.
  *          - 길이가 제각각인 문자열 256 개를 돌며 `size()` 를 부르는 비용.
  *          - C 문자열 대입, 같은 용량 복사 대입, 같은 내용 비교(`==`).

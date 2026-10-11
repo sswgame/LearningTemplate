@@ -1,6 +1,6 @@
 /**
  * @file LightComponent.cpp
- * @brief 빛 공통 기반 구현입니다(색 · 세기 · 위치 · 방향 · 등록부 등록).
+ * @brief 빛 공통 기반 구현입니다(색 · 세기 · 위치 · 방향 · 레지스트리 등록).
  */
 #include "pch.h"
 

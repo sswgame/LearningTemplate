@@ -30,7 +30,7 @@ namespace sw
         struct GameObjectInternal
         {
             /**
-             * @brief @p pOwner 에 붙는 @p typeName 컴포넌트가 되살릴 원래 ID 를 가져갑니다. 복원 중이 아니거나 목록에 없으면 false.
+             * @brief @p pOwner 에 붙는 @p typeName 컴포넌트가 복원할 원래 ID 를 가져갑니다. 복원 중이 아니거나 목록에 없으면 false.
              * @details 커서부터 앞으로 찾아 타입이 같은 첫 항목을 가져갑니다. 목록과 다른 컴포넌트가 끼어들어도(생성 중에 다른
              *          컴포넌트를 스스로 붙이는 타입 등) 그 하나만 새 ID 를 받고 나머지 순서는 어긋나지 않습니다.
              */
@@ -532,7 +532,7 @@ namespace sw
         {
             if ( pComp == nullptr || pComp->isPendingDestroy() )
                 continue;
-            // 타입이 먼저다. 이름표는 타입이 아니다 — 같은 이름표가 없을 때만 보조로 본다(아래).
+            // 타입이 먼저다. 이름은 타입이 아니다 — 같은 이름이 없을 때만 보조로 본다(아래).
             const TypeInfo* pTypeInfo = pComp->getTypeInfo();
             if ( pTypeInfo != nullptr && pTypeInfo->_name == typeName )
                 return pComp;
@@ -578,13 +578,13 @@ namespace sw
             pComp->_bCanEverTick = SW_FALSE;
         pComp->setOwner( this );
         pComp->_pPool     = pPool;
-        pComp->_pTypeInfo = pTypeInfo; // 타입은 여기서 한 번 정해진다. 이름표(아래)는 타입과 무관하다
+        pComp->_pTypeInfo = pTypeInfo; // 타입은 여기서 한 번 정해진다. 이름(아래)는 타입과 무관하다
 
         const hashed_string typeKey = pTypeInfo != nullptr ? pTypeInfo->_name : hashed_string{};
         pComp->setComponentName( typeKey );
         pComp->applyTypeDefaults( pTypeInfo );
 
-        // 상태를 되돌리는 로드 중이면 원래 ID 를 되살린다. 등록보다 먼저여야 서브틱 핸들도 원래 ID 로 잡힌다.
+        // 상태를 되돌리는 로드 중이면 원래 ID 를 복원한다. 등록보다 먼저여야 서브틱 핸들도 원래 ID 로 잡힌다.
         // 같은 프로세스에서 발급된 ID 라 카운터는 보통 이미 그 뒤지만, 아니면 뒤로 밀어 앞으로의 발급과 겹치지 않게 한다.
         uint64 restoredComponentID = 0;
         if ( GameObjectInternal::takeRestoredComponentID( this, typeKey, restoredComponentID ) )
@@ -596,7 +596,7 @@ namespace sw
         _listComponent.push_back( pComp );
         if ( pComp->isSceneComponent() && _pPrimaryScene.load( std::memory_order_relaxed ) == nullptr )
             _pPrimaryScene.store( pComp, std::memory_order_relaxed );
-        // 어느 등록부에 들어갈지는 컴포넌트가 안다. GameObject 는 타입을 몰라도 된다.
+        // 어느 레지스트리에 들어갈지는 컴포넌트가 안다. GameObject 는 타입을 몰라도 된다.
         pComp->onRegister( *_pOwnerManager );
         // 둘째 씬 컴포넌트부터는 primary 에 붙인다 — 오브젝트의 루트는 하나다(언리얼 RootComponent). 루트로 두면 **월드 원점**에 놓여
         // 오브젝트를 옮겨도 콜라이더 · 메시가 따라오지 않는다.
@@ -690,7 +690,7 @@ namespace sw
             _pOwnerManager->destroyComponentInstance( pComp );
             return;
         }
-        // 매니저 없이 만든 오브젝트다(등록부에 들어간 적이 없다). 해제 콜백만 부르고 힙으로 돌려준다.
+        // 매니저 없이 만든 오브젝트다(레지스트리에 들어간 적이 없다). 해제 콜백만 부르고 힙으로 돌려준다.
         pComp->onDestroy();
         pComp->setOwner( nullptr );
         sw_delete( pComp );
@@ -767,7 +767,7 @@ namespace sw
 
     void GameObject::markTickOrderDirty()
     {
-        // 죽어 가는 오브젝트는 파괴 때 등록부에서 빠진다. 표시할 것이 없다.
+        // 죽어 가는 오브젝트는 파괴 때 레지스트리에서 빠진다. 표시할 것이 없다.
         if ( _pOwnerManager != nullptr && isPendingDestroy() == false )
             _pOwnerManager->getTickRegistry().markObjectDirty( this );
     }

@@ -3,7 +3,7 @@
  * @brief 공간화 — 리스너 · 에미터 상태, 거리 감쇠 곡선(데이터), 팬(등전력 스테레오), 도플러, 가림(occlusion) → 볼륨 · 로우패스입니다.
  * @details 3D 는 리스너의 오른쪽 축으로 팬을 정하고(고도는 팬에 쓰지 않는다 — HRTF 는 없다), 2D 는 화면 평면(XY)의 가로 거리로 팬을 정합니다.
  *          감쇠 프리셋(`AudioAttenuationDesc`)은 Wwise Attenuation ShareSet · 언리얼 Sound Attenuation 의 자리이고, 소리(이벤트 · 클립)가 이름으로 고릅니다.
- *          가림 값(0 = 열림, 1 = 막힘)은 게임 스레드가 레이캐스트로 재서 넣고(`IAudioOcclusionQuery`), 엔진이 부드럽게 따라가며 볼륨 · 컷오프로 바꿉니다.
+ *          가림 값(0 = 열림, 1 = 막힘)은 게임 스레드가 레이캐스트로 측정해서 넣고(`IAudioOcclusionQuery`), 엔진이 부드럽게 따라가며 볼륨 · 컷오프로 바꿉니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -35,7 +35,7 @@ namespace sw
         Sphere,    ///< 구(반지름)
     };
 
-    /** @brief 리스너가 팬 · 거리를 재는 공간입니다. */
+    /** @brief 리스너가 팬 · 거리를 측정하는 공간입니다. */
     ENUM()
     enum class AudioSpatialMode : uint8
     {
@@ -162,7 +162,7 @@ namespace sw
 {
     /**
      * @struct AudioSpatializer
-     * @brief 공간화 순수 함수입니다. 상태가 없어 테스트가 거리 · 각도마다 바로 잽니다.
+     * @brief 공간화 순수 함수입니다. 상태가 없어 테스트가 거리 · 각도마다 바로 측정합니다.
      */
     struct SW_API AudioSpatializer
     {
@@ -184,7 +184,7 @@ namespace sw
          */
         static float3 computeClosestPoint( AudioVolumeShape shape, const float3& center, const float3& halfExtents, float32 radius, const float3& point );
         /**
-         * @brief 모양 안으로 들어간 깊이를 0..1 로 잽니다(리버브 존 블렌드) — 경계에서 0, 경계에서 @p fadeDistance 안쪽부터 1, 밖은 0.
+         * @brief 모양 안으로 들어간 깊이를 0..1 로 측정합니다(리버브 존 블렌드) — 경계에서 0, 경계에서 @p fadeDistance 안쪽부터 1, 밖은 0.
          * @details 상자는 가장 가까운 면까지의 거리, 구는 반지름 − 중심 거리입니다. @p fadeDistance 가 0 이면 안에서 바로 1 입니다.
          */
         static float32 computeInsideWeight( AudioVolumeShape shape, const float3& center, const float3& halfExtents, float32 radius, float32 fadeDistance,

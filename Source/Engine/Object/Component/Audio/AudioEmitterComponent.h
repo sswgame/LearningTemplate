@@ -60,7 +60,7 @@ namespace sw
         const hashed_string& getEvent() const { return _event; }
         /** @brief 시작할 때 낼 이벤트를 정합니다. */
         void setEvent( const hashed_string& eventName ) { _event = eventName; }
-        /** @brief 레이캐스트 가림을 재는지입니다. */
+        /** @brief 레이캐스트 가림을 측정하는지입니다. */
         bool usesOcclusion() const { return _bOcclusion; }
         /** @brief 레이캐스트 가림을 켜고 끕니다. */
         void setOcclusion( bool bOcclusion ) { _bOcclusion = bOcclusion; }

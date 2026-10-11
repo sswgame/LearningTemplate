@@ -127,7 +127,7 @@ ImGui 의 할당은 sw 할당자로 보냅니다. `ImGuiEditor::initialize` 가 
 | 폴더 | 담는 것 |
 |---|---|
 | `Common/` 루트 · `Common/Config/` | 경로, 내보내기 매크로, 외부 도구 잡 · 백그라운드 작업, 설정 표(테마 값 포함) |
-| `Common/Workspace/` | ImGui 없는 상태 — 컨텍스트, 선택, 되돌리기, 플레이 세션, 알림 큐, 에디터 카메라, 뷰 RT 판정, 레지스트리의 공통 모양, 파일 감시, 아래 층이 위 층을 부르는 창구(`IEditorPanelHost`), 에셋 종류 동작 등록부 |
+| `Common/Workspace/` | ImGui 없는 상태 — 컨텍스트, 선택, 되돌리기, 플레이 세션, 알림 큐, 에디터 카메라, 뷰 RT 판정, 레지스트리의 공통 모양, 파일 감시, 아래 층이 위 층을 부르는 창구(`IEditorPanelHost`), 에셋 종류 동작 레지스트리 |
 | `Common/Commands/` | ImGui 없는 동작 — 씬과 에셋 변이, 파일 IO, 커맨드 레지스트리 |
 | `Common/GUI/` · `Common/Widgets/` · `Popups/` | ImGui 를 그리는 셸 — 패널 · 팝업 틀과 매니저, 도킹, 메뉴, 상태 막대, 알림 그리기, 테마, 공용 위젯, 셸 팝업(커맨드 팔레트 · 빠른 열기) |
 | `Common/Backend/` | ImGui 플랫폼 · 렌더 백엔드, draw 스냅샷, 해제 큐 |
@@ -140,7 +140,7 @@ ImGui 의 할당은 sw 할당자로 보냅니다. `ImGuiEditor::initialize` 가 
 폴더는 층입니다. 아래 층은 위 층을 include 하지 않고, `Scripts/lint/gate/CheckEditorLayers.py` 가 이를 검사합니다(위반은 실패).
 아래부터 `Common` 루트 · `Backend` · `Config` → `Asset` · `Localization` · `SourceControl` → `Workspace` → `Commands` → `GUI` · `Widgets` · `Popups` → `Viewport` → `Panels` · `AssetActions` → `SelfTest` → 셸(`ImGuiEditor`) 입니다.
 티어 표와 예외(어디서나 include 해도 되는 잎 헤더, 조립 파일)는 `Scripts/lint/rules/CheckEditorLayers.toml` 에 있습니다.
-아래 층이 위 층을 불러야 하면 세 가지 중 하나를 씁니다. 틀(인터페이스 · 매니저 · 등록부)을 아래로 내리거나, 아래 층에 창구 인터페이스를 두고 위 층이 구현하거나(`IEditorPanelHost` — 커맨드가 패널을 열고 도구 문서를 저장한다),
+아래 층이 위 층을 불러야 하면 세 가지 중 하나를 씁니다. 틀(인터페이스 · 매니저 · 레지스트리)을 아래로 내리거나, 아래 층에 창구 인터페이스를 두고 위 층이 구현하거나(`IEditorPanelHost` — 커맨드가 패널을 열고 도구 문서를 저장한다),
 UI 를 만지는 명령의 등록 줄을 그 UI 의 .cpp 에 둡니다(레이아웃 · 패널 · 테마 개발 명령은 `Common/GUI/EditorUIDevCommands.cpp`, 씬 뷰 오버레이는 `Panels/Scene/SceneViewDevCommands.cpp`).
 
 판단을 ImGui 밖으로 빼 두는 이유는 테스트입니다. `Test/EditorTest` 는 ImGui 없이 도는 코드만 테스트하므로, 판단이 그리기 코드 안에 있으면 테스트가 닿지 않습니다.
@@ -177,7 +177,7 @@ Play 는 활성 씬을 스냅샷으로 찍고 월드를 시작합니다. Stop �
 - 로그: 프로세스마다 읽기 스레드가 줄을 모으고 툴바가 프레임마다 `[Server]` · `[Client1]` 꼬리표를 붙여 Output Log 에 다시 씁니다(자식의 오류 줄은 경고로). 전용 서버의 줄에는 서버가 붙인 `[tick=N]` 이 그대로 있어 클라이언트 줄과 틱으로 맞춰 봅니다. 하나가 먼저 끝나면 종료 코드 · 마지막 줄과 함께 경고합니다.
 - Window > Multiplayer 의 Session 탭: 구성(트레이스 기록 · 클라이언트 인자), 프로세스 목록(pid · 상태 · 접속 · 마지막 줄), 서버 Pause · Step N · Resume(서버 표준 입력의 Dev 명령), 출처별 로그 거르기.
 - Stop: 모든 자식의 표준 입력에 `quit` 를 보내 정상 종료시키고(15 초를 넘으면 강제 종료), Record traces 가 켜져 있으면 프로세스마다 `-gv_traceSaveOnExit` 로 쓴 파일을
-  이름표를 달아 `Saved/Traces/netplay_<시각>/merged.trace.json` 으로 합칩니다 — Profiler 창 Load Trace · Perfetto 로 엽니다. 같은 PC 라 단조 시계로 정확히 맞습니다.
+  이름을 달아 `Saved/Traces/netplay_<시각>/merged.trace.json` 으로 합칩니다 — Profiler 창 Load Trace · Perfetto 로 엽니다. 같은 PC 라 단조 시계로 정확히 맞습니다.
 - 개발 명령 `netplay.start [dedicated|listen] [<플레이어 수>]` · `netplay.stop` · `netplay.wait <클라이언트 수> [<초>]` · `netplay.server <명령>`, 탐침 `Editor.NetPlayProcessCount` · `Editor.NetPlayConnectedClients` —
   에디터 시나리오 `engine/automation/editor/netplay.scenario.xml` 이 이것으로 확인합니다. 세션 본체(`Common/Commands/EditorNetPlaySession`)는 ImGui 가 없어 `EditorTest` 가 `Server` 를 헤드리스 클라이언트로 띄워 테스트합니다.
 
@@ -200,7 +200,7 @@ Play 는 활성 씬을 스냅샷으로 찍고 월드를 시작합니다. Stop �
 원본 해시에는 원본 바이트와 적용한 규칙과 임포터 버전이 섞이므로, 규칙만 바꿔도 어긋남이 됩니다.
 
 모델 임포트는 glTF(오른손, +Y 위)를 엔진 좌표(왼손, +Y 위)로 옮기려고 X 를 뒤집고 삼각형마다 감김을 뒤집습니다. 스킨이 있으면 옆 폴더 `models/<이름>/` 에 스켈레톤, 부착 메시, 클립을 씁니다.
-VRM 은 같은 길로 임포트하고, MToon 머티리얼이 있으면 머티리얼마다 구간 메시와 툰 머티리얼을 씁니다(`VrmMaterialImporter`). 대응 표는 `VrmMaterialImporter.cpp` 의 머리 주석과 `VrmMaterialImporterTest` 가 정본입니다.
+VRM 은 같은 길로 임포트하고, MToon 머티리얼이 있으면 머티리얼마다 구간 메시와 툰 머티리얼을 씁니다(`VrmMaterialImporter`). 대응 표는 `VrmMaterialImporter.cpp` 의 머리 주석과 `VrmMaterialImporterTest` 가 원본입니다.
 임포트 규칙은 `Config/Editor/TextureImportConfig.json` 과 `Config/Editor/ModelImportConfig.json` 의 `rules` 이고, 모르는 키는 설정 전체를 거부합니다. 철자가 틀린 키가 조용히 기본값이 되지 않게 하려는 것입니다.
 
 글 수집과 PO 교환(`App --gather-text`, `--export-po`)도 같은 길로 에디터 모듈을 올려 부르는 개발 도구입니다(`Common/Localization/`).
@@ -321,7 +321,7 @@ VRM 은 같은 길로 임포트하고, MToon 머티리얼이 있으면 머티리
 - **한 패널이 문서를 둘 이상 들면 기반 비트는 "무언가 바뀌었다" 만 말합니다**(`DataTablePanel`). 어느 쪽인지는 패널이 반쪽 비트로 알고 한곳에서 맞춥니다(`syncDocumentDirty`).
 - **도구 문서 패널의 문서 바꾸기는 다음 그리기의 `updateFocusedDocument` 가 합니다.** 패널이 직접 읽으면 미저장 확인을 건너뜁니다. Quick Open 은 콘텐츠 브라우저 더블클릭과 같은 `EditorAssetCommands::openPath` 로 엽니다.
 - **되돌리기 기록은 편집 통지 뒤에 남깁니다**(`InspectorPropertyUndo::commitFinishedEdits`). 위젯이 풀린 순간에 "뒤" 스냅샷을 뜨면 다중 선택의 나머지에 입힌 값이 빠져, Ctrl+Z 가 주 선택만 되돌립니다.
-- **자식 있는 오브젝트를 지울 때는 서브트리를 후위 순서로 한 트랜잭션에 기록합니다**(`recordDestruction`). 같은 프레임에 지우고 되살린 오브젝트는 지연 파괴 때문에 새 id 를 받으므로 이름으로 다시 찾습니다.
+- **자식 있는 오브젝트를 지울 때는 서브트리를 후위 순서로 한 트랜잭션에 기록합니다**(`recordDestruction`). 같은 프레임에 지우고 복원한 오브젝트는 지연 파괴 때문에 새 id 를 받으므로 이름으로 다시 찾습니다.
 - **플레이 스냅샷은 활성 씬의 세대, 이름, 소스 경로를 함께 적습니다.** Stop 때 세대가 다르면 플레이 중에 씬이 바뀐 것이므로, 로드를 거두고 편집하던 씬을 다시 세운 뒤 되돌립니다. 그대로 되돌리면 두 씬이 섞이고, 저장하면 플레이 중에 연 씬 파일을 덮어씁니다.
 - **씬을 여는 중의 Play 는 미룹니다.** 로드가 끝난 프레임에 시작합니다. 지금 시작하면 스냅샷이 곧 내려갈 씬을 찍습니다.
 - **Maximize On Play 와 Shift+Space 는 같은 임시 레이아웃 `maximize-restore` 를 씁니다.** 상태 전이는 `EditorPlayCommands::tick` 이 프레임 끝에 한 번 보므로, 시작과 정지가 어디서 오든 같게 처리됩니다.
@@ -362,7 +362,7 @@ VRM 은 같은 길로 임포트하고, MToon 머티리얼이 있으면 머티리
 ### ImGui 위젯
 
 - **에디터 ImGui 의 픽셀 리터럴은 UI 단위이며 `EditorThemeUtil::getDpiScale()` 을 곱합니다.** ImGui 스타일 값은 테마 적용이 이미 곱하므로 거듭 곱하지 않습니다.
-- **위젯 크기에 픽셀 상수를 쓰지 않습니다.** `GetFrameHeight` 와 글자 폭에서 잽니다. 24 px 고정 단추가 150 % 배율에서 잘렸습니다. 레이블 줄 바꿈은 `EditorWidgets::drawClampedLabel` 을 씁니다.
+- **위젯 크기에 픽셀 상수를 쓰지 않습니다.** `GetFrameHeight` 와 글자 폭에서 측정합니다. 24 px 고정 단추가 150 % 배율에서 잘렸습니다. 레이블 줄 바꿈은 `EditorWidgets::drawClampedLabel` 을 씁니다.
 - **테마 적용은 스타일 크기를 ImGui 기본(96 DPI)에서 다시 시작합니다**(`EditorThemeInternal::resetSizesToDefault`). 그러지 않으면 적용마다 배율이 거듭 곱해져 도킹 구분선의 호버 여백이 옆 패널의 클릭을 가로챕니다.
 - **검색 칸 뒤에 단추를 같은 줄로 두지 않습니다.** `drawSearchField` 는 폭 0 이면 남은 폭을 다 쓰므로 뒤의 단추가 창 밖으로 밀립니다.
 - **회색 단추의 툴팁은 `ImGuiHoveredFlags_AllowWhenDisabled` 로 띄웁니다.** `EditorWidgets::drawTooltip` 은 회색 위젯 위에서 뜨지 않습니다.

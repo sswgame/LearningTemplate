@@ -8,7 +8,7 @@ Core 네트워크 층 검사 — `Source/Core/Network/` 의 폴더가 곧 층이
 강제 규칙:
   1) `Core/Network/` 아래 파일은 **자기 층 이하**의 `Core/Network/` 헤더만 include 한다(같은 폴더끼리는 된다).
      전송은 연결을 모르고, 연결은 메시지 라우터를 모르고, 메시지는 복제 부품을 모른다.
-     보안(암호 창구 · 재전송 방지 창 · 세션 키 유도)은 뿌리만 본다 — 연결(UDP AEAD) · 메시지(TLS 끝점)가 쓴다.
+     보안(암호 창구 · 재전송 방지 창 · 세션 키 유도)은 뿌리만 본다 — 연결(UDP AEAD) · 메시지(TLS 엔드포인트)가 쓴다.
   2) 표(_kNetworkTier)에 없는 하위 폴더는 실패다 — 새 폴더는 층을 정하고 넣는다.
 
   python Scripts/lint/gate/CheckCoreNetworkLayers.py [--root <repo>] [--files a.h b.cpp]

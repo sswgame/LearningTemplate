@@ -90,7 +90,7 @@ namespace sw
 
         /**
          * @brief `bin/<rhi>/cook.stamp` 를 지금 소스의 내용 해시로 다시 씁니다(쿠킹이 끝난 뒤).
-         * @param pFailedSource 이번 쿠킹에서 컴파일에 실패한 소스(정규화한 절대 경로)입니다. 도장에서 빠져 다음 쿠킹이 다시 시도합니다 —
+         * @param pFailedSource 이번 쿠킹에서 컴파일에 실패한 소스(정규화한 절대 경로)입니다. 스탬프에서 빠져 다음 쿠킹이 다시 시도합니다 —
          *                      실패한 셰이더의 옛 바이너리 위에 지금 소스의 해시를 찍으면 그 셰이더가 영영 최신으로 판정된다.
          */
         static void writeCookStamp( string_view binDirectory, const unordered_set<string>* pFailedSource = nullptr );

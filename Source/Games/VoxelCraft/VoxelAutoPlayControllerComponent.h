@@ -32,6 +32,6 @@ namespace sw
         void think( const ControlFrameContext& context, const PawnComponent& pawn ) override;
 
     private:
-        float32 _timer; ///< 행동 주기(12 초)를 재는 시간
+        float32 _timer; ///< 행동 주기(12 초)를 측정하는 시간
     };
 } // namespace sw

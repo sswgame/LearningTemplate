@@ -521,7 +521,7 @@ namespace sw
                 continue;
             const DestructionGroup old = _listGroup[static_cast<size_t>( groupIndex )];
             vector<vector<uint32>> listComponent;
-            // 붙은 덩어리는 무게로 끊길 수 있다 — 끊기면 다시 나눠 다시 잰다.
+            // 붙은 덩어리는 무게로 끊길 수 있다 — 끊기면 다시 나눠 다시 측정한다.
             for ( uint32 pass = 0; pass < kMaxSupportPass; ++pass )
             {
                 splitComponents( old._listNode, listComponent );

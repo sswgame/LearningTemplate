@@ -66,7 +66,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 움직이지 않는 바디는 정적 넓은 단계 레이어와 견주지 않습니다. */
+    /** @brief 움직이지 않는 바디는 정적 넓은 단계 레이어와 비교하지 않습니다. */
     class JoltObjectVsBroadPhaseFilter final : public JPH::ObjectVsBroadPhaseLayerFilter
     {
     public:
@@ -79,7 +79,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 엔진 레이어 행렬로 오브젝트 레이어 쌍을 거릅니다. 둘 다 움직이지 않으면 견주지 않습니다. */
+    /** @brief 엔진 레이어 행렬로 오브젝트 레이어 쌍을 거릅니다. 둘 다 움직이지 않으면 비교하지 않습니다. */
     class JoltObjectLayerPairFilter final : public JPH::ObjectLayerPairFilter
     {
     public:
@@ -235,7 +235,7 @@ namespace sw
             JPH::Ref<JPH::TwoBodyConstraint> _pConstraint;
             PhysicsBodyHandle                _bodyA{};
             PhysicsBodyHandle                _bodyB{};
-            float3                           _anchorA{}; ///< Distance 의 현재 길이를 재는 A 쪽 로컬 점
+            float3                           _anchorA{}; ///< Distance 의 현재 길이를 측정하는 A 쪽 로컬 점
             float3                           _anchorB{};
             PhysicsJointType                 _type{ PhysicsJointType::Fixed };
             bool                             _bPairFilterSet{ false }; ///< 만들 때 두 바디 쌍의 충돌을 껐다 — 지울 때 되돌린다

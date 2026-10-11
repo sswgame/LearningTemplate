@@ -39,7 +39,7 @@ namespace sw
      *              늘 화면 픽셀 배율×배율 칸이다.
      *          (2) 그리는 눈을 화면 픽셀 격자(1 / (배율 × PPU))에 붙인다 — 트랜스폼은 두고 `CameraComponent::setViewOffset` 만 바꾼다(감쇠로 따라가는
      *              카메라가 반 픽셀 아래의 움직임을 잃지 않게).
-     *          (3) 픽셀 스냅이 켜져 있으면 **자산 픽셀** 격자(1 / PPU)를 카메라 등록부와 씬의 모든 메시에 알린다 — sprite2d.hlsl 이 스프라이트
+     *          (3) 픽셀 스냅이 켜져 있으면 **자산 픽셀** 격자(1 / PPU)를 카메라 레지스트리와 씬의 모든 메시에 알린다 — sprite2d.hlsl 이 스프라이트
      *              원점을 그 격자에 붙여(`GPUSpriteInstanceData::_pixelSnap`) 배율 4 에서도 스프라이트가 화면 픽셀 1 칸이 아니라 자산 픽셀 1 칸(화면 4 칸)씩
      *              움직인다 — 두 스프라이트의 아트 픽셀이 어긋나지 않는다(유니티 Pixel Snapping 과 같은 격자). 화면 픽셀 격자로 붙이면 래스터화가
      *              이미 하는 일이라 아무것도 바뀌지 않는다. 단위가 바뀔 때만 알리고, 틱 뒤로 미룬다(다른 오브젝트의 틱과 겹치지 않게).
@@ -74,7 +74,7 @@ namespace sw
         /** @brief 값을 단위 격자의 가장 가까운 점으로 붙입니다(반은 위로). 단위가 0 이하면 그대로입니다. */
         static float32 snapToGrid( float32 value, float32 unit );
 
-        /** @brief 뷰포트 크기를 주고 카메라를 맞춥니다(틱이 카메라 등록부의 크기로 부릅니다. 테스트는 직접 부릅니다). 마지막 배치를 돌려줍니다. */
+        /** @brief 뷰포트 크기를 주고 카메라를 맞춥니다(틱이 카메라 레지스트리의 크기로 부릅니다. 테스트는 직접 부릅니다). 마지막 배치를 돌려줍니다. */
         PixelPerfectLayout applyToCamera( uint32 viewportWidth, uint32 viewportHeight );
         /** @brief 마지막으로 고른 배치입니다. */
         const PixelPerfectLayout& getLayout() const { return _layout; }
@@ -87,7 +87,7 @@ namespace sw
         void          setPixelSnapping( bool bPixelSnapping ) { _bPixelSnapping = bPixelSnapping; }
 
     private:
-        /** @brief 스냅 단위를 등록부와 씬의 메시에 알립니다. 값이 그대로면 아무것도 하지 않습니다. 틱 중이면 틱 뒤로 미룹니다. */
+        /** @brief 스냅 단위를 레지스트리와 씬의 메시에 알립니다. 값이 그대로면 아무것도 하지 않습니다. 틱 중이면 틱 뒤로 미룹니다. */
         void publishSnapUnit( float32 unit );
         /** @brief 레터박스 띠 넷을 눈 둘레에 놓습니다(자르지 않는 축의 띠는 숨깁니다). */
         void layoutBars( const float3& eye, uint32 viewportWidth, uint32 viewportHeight );

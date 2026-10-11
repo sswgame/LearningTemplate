@@ -22,7 +22,7 @@ namespace sw
      * @brief 탈것 오브젝트의 좌석 하나입니다(운전석 하나 + 승객석 여럿). 운전석이 있으면 탈것 오브젝트에 `PawnComponent` 가 있어야 합니다.
      * @details 타기 · 내리기는 `MountUtil` 이 합니다 — 탑승자는 소켓에 붙고(`SocketBindingComponent`, 붙은 동안 비용 0) 이동이 멈추며, 운전석이면
      *          탑승자의 조종자가 빙의를 탈것으로 옮깁니다. 말이든 차든 같은 틀이고 의도 → 탈것 이동 규칙만 다릅니다.
-     *          빈 좌석 찾기가 씬을 훑지 않게 등록부(`ComponentRegistry`)에 듭니다.
+     *          빈 좌석 찾기가 씬을 훑지 않게 레지스트리(`ComponentRegistry`)에 듭니다.
      */
     REFLECT( Category = "Vehicle", DisplayName = "Vehicle Seat", Tooltip = "Seat on a vehicle: socket, exit spot, rider pose; the driver seat hands the vehicle pawn to the rider's controller" )
     class SW_GF_API VehicleSeatComponent : public Component

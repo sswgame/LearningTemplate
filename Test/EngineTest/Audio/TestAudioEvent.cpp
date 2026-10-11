@@ -130,7 +130,7 @@ namespace
             return test::AudioTestUtil::computeMean( listSample, 0, 0, sw::audio::kBlockFrameCount );
         }
 
-        /** @brief 이벤트를 내고, 그 소리의 정상 레벨을 잰 뒤 소리가 끝날 때까지 렌더합니다. */
+        /** @brief 이벤트를 내고, 그 소리의 정상 레벨을 측정한 뒤 소리가 끝날 때까지 렌더합니다. */
         static float32 postAndMeasure( sw::AudioEngine& engine, const utf8* pEvent )
         {
             (void)engine.postEvent( sw::hashed_string( pEvent ) );

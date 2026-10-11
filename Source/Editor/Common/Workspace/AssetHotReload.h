@@ -61,7 +61,7 @@ namespace sw::editor
         [[nodiscard]] static bool reloadChangedAsset( string_view relativePath );
 
         /**
-         * @brief @p resources 의 등록부에서 그 경로를 든 캐시(`IAssetCache::isCached`)마다 `reload` 를 부릅니다 — 이름을 모르는 모듈 캐시의 길입니다.
+         * @brief @p resources 의 레지스트리에서 그 경로를 든 캐시(`IAssetCache::isCached`)마다 `reload` 를 부릅니다 — 이름을 모르는 모듈 캐시의 길입니다.
          * @return 다시 읽게 한 캐시 수입니다.
          */
         static uint32 reloadInCachesHolding( AssetManager& resources, string_view relativePath, IRHIDevice* pDevice );

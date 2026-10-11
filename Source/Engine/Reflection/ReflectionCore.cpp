@@ -674,7 +674,7 @@ namespace sw
         const hashed_string canonicalName = stored._name.empty() == false ? stored._name : stored._fullyQualifiedName;
         const hashed_string shortName     = stored._name; // 아래에서 `stored` 를 옮긴다
 
-        // **주소는 고정이다.** 같은 FQN 이 있으면(재등록 · 묘비) 그 객체에 덮어써 되살린다. 밖에서 든 포인터
+        // **주소는 고정이다.** 같은 FQN 이 있으면(재등록 · 묘비) 그 객체에 덮어써 복원한다. 밖에서 든 포인터
         // (`TypeLookupCache` · `_pParentType` · 컴포넌트 풀 키)가 모두 그대로 맞는다. 새 타입은 새 객체다.
         // 캐시는 배치 끝(`populateLookupCaches`)이 단일 스레드에서 만든다.
         if ( existingIt != _mapFqnToClassType.end() )
@@ -895,7 +895,7 @@ namespace sw
         out.appendFormat( "ENUM %# (module %#, %# bytes, %#%#)\n", pEnum->_fullyQualifiedName.c_str(),
                           pEnum->_moduleName.empty() ? "?" : pEnum->_moduleName.c_str(), static_cast<uint32>( pEnum->_size ),
                           pEnum->_bIsSigned != SW_FALSE ? "signed" : "unsigned", pEnum->_bIsBitFlag != SW_FALSE ? ", Flags" : "" );
-        // 값 순으로 — 이름표는 밀집 해시라 등록 순서가 남지 않는다.
+        // 값 순으로 — 이름은 밀집 해시라 등록 순서가 남지 않는다.
         vector<pair<int64, const utf8*>> listEntry;
         for ( const auto& [value, name] : pEnum->_mapValueToName )
         {
@@ -963,7 +963,7 @@ namespace sw
 
         // 지우지 않고 **묘비**를 세운다. 밖에서 든 포인터(`TypeLookupCache` 의 정적 칸 · 다른 모듈 타입의 부모 포인터)가
         // 허공을 가리키지 않도록 객체는 그 자리에 둔다. `findType` 은 해제된 타입을 nullptr 로 답하고, 같은 FQN 이
-        // 다시 올라오면 같은 객체를 되살린다.
+        // 다시 올라오면 같은 객체를 복원한다.
         for ( auto& [fqn, pInfo] : _mapFqnToClassType )
         {
             (void)fqn;

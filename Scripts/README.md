@@ -14,7 +14,7 @@ CMake는 빌드만 담당하고, 도구 탐색·설정·보조 생성 및 코드
 ## Layout
 
 **폴더가 곧 성격이다.** 새 스크립트는 "무엇을 하는가" 로 자리를 고른다 — 도구를 찾아 설치하면 `setup/`, 파일을 만들어 내면 `generate/`,
-검사 · 수정이면 `lint/` 의 네 폴더 중 하나, 사람이 가끔 돌리는 실험 도구면 `dev/`, 빌드된 App 을 돌려 그림 · 시간 · 메모리를 기준과 견주거나 에셋을
+검사 · 수정이면 `lint/` 의 네 폴더 중 하나, 사람이 가끔 돌리는 실험 도구면 `dev/`, 빌드된 App 을 돌려 그림 · 시간 · 메모리를 기준과 비교하거나 에셋을
 규칙으로 훑으면 `qa/`, 사람과 git 이 부르는 에셋 비교 · 병합이면 `asset/`. 모두 `common/` 만 import 하고 서로는 부르지 않는다
 (`common` 은 위층을 부르지 않는다).
 
@@ -29,7 +29,7 @@ CMake는 빌드만 담당하고, 도구 탐색·설정·보조 생성 및 코드
 | `generate/` | `Generate*` · `Cook*` | 빌드 · configure 가 부르는 생성기(`runGenerator`) |
 | `setup/` | `Setup*` · `Install*` · `Add*` | 외부 도구 찾기 · 설치(`__main__` 이 없는 파일은 라이브러리 — `HostTools`) |
 | `dev/` | 동사로 시작(`Run*` · `Compare*` · `Make*` · `Move*` · `Remove*` · `Configure*` · `Sample*` · `List*` …) | 사람이 가끔 — 테스트 데이터를 만드는 것은 `Make*`(`generate/` 와 겹치지 않게) |
-| `qa/` | 명사(`GoldenImages` · `Soak` …) | App 을 돌려 견주기 |
+| `qa/` | 명사(`GoldenImages` · `Soak` …) | App 을 돌려 비교하기 |
 
 `gate/CheckScriptLayout.py` 가 이 표를 지킨다(린트 폴더는 기반 클래스까지). 진입점은 모두 `main(argv)` 로 인자를 받는다(`CheckScriptEntryPoints`).
 
@@ -76,7 +76,7 @@ Scripts/
   │     ├── InstallGitHooks.py        # Git pre-commit 훅 설치
   │     └── AddDefenderExclusions.py  # Windows Defender 빌드 폴더 예외 등록
   │
-  ├── generate/                       # [생성] 정본(JSON · Constants.py · 폴더 목록)에서 파일을 만들어 낸다 — 대부분 구성 · 빌드가 부르고,
+  ├── generate/                       # [생성] 원본(JSON · Constants.py · 폴더 목록)에서 파일을 만들어 낸다 — 대부분 구성 · 빌드가 부르고,
   │                                   #        결과를 커밋하는 것(GenerateSpriteTextures)은 손으로 돌린다
   │     ├── CookAssets.py             # ★ Prefab, Scene, Resource Pack을 일괄/선택 쿠킹하는 단일 통합 쿠커
   │     ├── GenerateShippingHostDefaults.py # 런타임 JSON → Shipping 용 C++ 헤더
@@ -88,7 +88,7 @@ Scripts/
   │     ├── GenerateConfigureFiles.py # configure 가 부르는 하나 — 위 · 아래 생성기 다섯을 한 프로세스로
   │     ├── GenerateToolchainCMake.py # toolchain_config.json → CMake set() 목록
   │     ├── GenerateLintTargets.py    # lint/gate · selftest 폴더 → CMake 린트 타깃 · 테스트
-  │     ├── GenerateEngineAbiStamp.py # Core · Engine 헤더 지문 → 핫 리로드 ABI 도장 헤더
+  │     ├── GenerateEngineAbiStamp.py # Core · Engine 헤더 지문 → 핫 리로드 ABI 스탬프 헤더
   │     ├── GenerateEditorIcons.py    # 에디터 아이콘 폰트 · 글리프 상수 헤더(그림은 common/EditorIconFont.py) — 손으로 돌리고 결과를 커밋한다
   │     ├── GenerateReflectionAnnotationKeys.py # 편집기용 어노테이션 키 헤더(ReflectionAnnotationKeys.h) — 손으로 돌리고 결과를 커밋한다
   │     ├── GenerateSpriteTextures.py # 엔진 스프라이트 텍스처(DDS) · 클립 — 손으로 돌리고 결과를 커밋한다
@@ -97,12 +97,12 @@ Scripts/
   ├── lint/                           # [정적 검사 및 코드 스타일] — 폴더가 곧 성격이다
   │     ├── LintGate.py · LintFixer.py · LintReport.py # 게이트 · 픽서 · 보고서 하나 = 클래스 하나 (껍데기는 기반이 든다)
   │     ├── LintCatalog.py            # gate/ · selftest/ 를 훑어 "무엇이 있고 어떻게 돌리는가" (CMake · 훅이 읽는다)
-  │     ├── AcronymRegistry.py        # 약어 등록부 — 약어 · 줄임말 · 제품 이름 · 남의 이름 표와 철자 판정 (게이트 · 코드모드가 같이 읽는다)
+  │     ├── AcronymRegistry.py        # 약어 레지스트리 — 약어 · 줄임말 · 제품 이름 · 남의 이름 표와 철자 판정 (게이트 · 코드모드가 같이 읽는다)
   │     ├── PreCommitLint.py          # Git Staged 대상 사전 커밋 종합 검사 (넷을 조율하므로 여기 남는다)
   │     │                             #   병합 커밋은 어느 부모와도 내용이 다른 파일만 파일 단위로 본다 (아래 "커밋 훅과 병합 커밋")
-  │     ├── RunLintSuite.py           # 린트 전체를 빌드 폴더 없이 돌려 린트마다 · 커밋 훅 시간을 잰다 (CI 린트 잡)
+  │     ├── RunLintSuite.py           # 린트 전체를 빌드 폴더 없이 돌려 린트마다 · 커밋 훅 시간을 측정한다 (CI 린트 잡)
   │     ├── conventions/              # CheckCodeConventions 의 규칙 묶음(라이브러리 — 묶음 지도는 __init__.py). LintCatalog 는 훑지 않는다
-  │     ├── rules/                    # 규칙 데이터 — `<게이트 · 등록부 이름>.toml`(예외 표 `[exemption]` · 티어 · 어휘 · 허용 목록). 코드는 없다
+  │     ├── rules/                    # 규칙 데이터 — `<게이트 · 레지스트리 이름>.toml`(예외 표 `[exemption]` · 티어 · 어휘 · 허용 목록). 코드는 없다
   │     ├── gate/                     # 위반이 있으면 **실패한다** — 빌드와 커밋을 막는 건 이 폴더뿐
   │     │     ├── CheckCodeConventions.py     # C++ 엔진 코딩 컨벤션 — 진입점 · 파일 고르기 · 보고(규칙은 lint/conventions/, 맨이름 `out` 도 여기)
   │     │     ├── CheckLoopBraces.py          # 본문에 중괄호가 없는 for · while
@@ -112,8 +112,8 @@ Scripts/
   │     │     ├── CheckEditorIcons.py         # 에디터 아이콘 폰트 · 글리프 헤더가 그림 정의와 같은지
   │     │     ├── CheckReflectionAnnotationKeys.py # 편집기용 어노테이션 키 헤더가 AnnotationMeta.txt · 단위 표와 같은지
   │     │     ├── CheckResourceCredits.py     # Resource 원본 자산이 도메인 credits.md 에 있고 라이선스가 CC0 1.0 · 이 저장소인지
-  │     │     ├── CheckFunctionVocabulary.py  # 함수 이름 어휘 (한 개념 한 동사 · 대문자 묶음은 등록부 약어)
-  │     │     ├── CheckAcronymSpelling.py     # 약어 철자 (등록부 kEnforced · --enforce 약어만 막고 나머지는 숫자로만 — 고치기는 fixer/FormatAcronymSpelling.py)
+  │     │     ├── CheckFunctionVocabulary.py  # 함수 이름 어휘 (한 개념 한 동사 · 대문자 묶음은 레지스트리 약어)
+  │     │     ├── CheckAcronymSpelling.py     # 약어 철자 (레지스트리 kEnforced · --enforce 약어만 막고 나머지는 숫자로만 — 고치기는 fixer/FormatAcronymSpelling.py)
   │     │     ├── CheckIncludeOrder.py        # 인클루드 순서·중복 (검사만 — 고치기는 fixer/FormatIncludeOrder.py)
   │     │     ├── CheckEngineLayers.py        # 아키텍처 레이어 침범
   │     │     ├── CheckCoreLayers.py          # Core 폴더 티어(Common → … → LogSink), 아래 층의 pch 로그 사용
@@ -215,7 +215,7 @@ Scripts/
   │     ├── SampleStacks.py           # 살아 있는 프로세스의 스레드 스택을 여러 번 떠 함수별로(DbgHelp) — 프로파일러가 닿지 않는 곳
   │     └── StoreSymbols.py           # 빌드의 PDB · .debug 를 심볼 저장소 배치(GUID+age · .build-id)로
   │
-  ├── qa/                             # [QA] 빌드된 App 을 돌려 기준과 견주거나(hostgpu · soak · perf CTest 와 사람이 부른다) 에셋을 규칙으로 훑는다
+  ├── qa/                             # [QA] 빌드된 App 을 돌려 기준과 비교하거나(hostgpu · soak · perf CTest 와 사람이 부른다) 에셋을 규칙으로 훑는다
   │     ├── ValidateAssets.py         # 에셋 검증 표(파일 · 규칙 · 심각도 · 메시지) — 게이트와 같은 코드, 경고까지 · JSON 출력
   │     ├── GoldenImages.py           # 테스트 게임 자동 플레이 × 네 백엔드 캡처를 Test/QA/Golden 기준과 지표로 비교(`--record` 로 기준을 뜬다)
   │     ├── Soak.py                   # 자동 플레이 장시간 실행 — 메모리 · 핸들 증가 기울기, 프레임 p50 · p99
@@ -274,7 +274,7 @@ py -3 -m Scripts stacks <pid> --samples 200                   # 스택 샘플러
 
 ## 규칙 데이터 — `lint/rules/` 와 `RuleData`
 
-게이트가 빼 주는 자리(예외)와 게이트 · 등록부가 쓰는 긴 목록은 코드가 아니라 데이터다. `lint/rules/<이름>.toml` 하나에 두고,
+게이트가 빼 주는 자리(예외)와 게이트 · 레지스트리가 쓰는 긴 목록은 코드가 아니라 데이터다. `lint/rules/<이름>.toml` 하나에 두고,
 `common/RuleData.py` 가 읽고 모양을 검사한다. 이름은 게이트 이름(`CheckCoreLayers`) 또는 읽는 모듈 이름(`AcronymRegistry`)이다.
 
 ```toml
@@ -341,9 +341,9 @@ git config diff.swasset.command  "py -3 Scripts/asset/AssetMerge.py git-diff"
 
 ## 함정 · 계약
 
-- **약어 코드모드(`FormatAcronymSpelling`)는 도구 자신과 견주는 글도 고친다.** `--apply-files` · `--apply-text` 는 트리 전체를 돌고 `--files` 를 받지 않는다 — 치환 뒤 등록부 · 코드모드 · 테스트 · `AGENTS.md` 의 옛↔새 철자 예시와 인계 문서를 diff 로 보고 되돌린다(`_kTextExcludedRel` 에 오른 파일은 건너뛴다). `--check` 로 목록을 먼저 본다.
+- **약어 코드모드(`FormatAcronymSpelling`)는 도구 자신과 비교하는 글도 고친다.** `--apply-files` · `--apply-text` 는 트리 전체를 돌고 `--files` 를 받지 않는다 — 치환 뒤 레지스트리 · 코드모드 · 테스트 · `AGENTS.md` 의 옛↔새 철자 예시와 인계 문서를 diff 로 보고 되돌린다(`_kTextExcludedRel` 에 오른 파일은 건너뛴다). `--check` 로 목록을 먼저 본다.
 - **코드모드를 다시 돌리면 남의 이름도 다시 바뀐다**(Vulkan `samplerInfo.maxLod`, Tracy `queryId`, Box2D `bodyIdA`) — 앞머리 규칙은 구조체 이름만 가리고 멤버는 못 가린다. 컴파일로 드러나면 `AcronymRegistry.kExternalName` 에 올린다. `--strings` 는 파일 · 전송 형식 키(`"buildId"` · 크래시 텍스트)도 바꾸니 그 자리는 되돌린다.
-- **이름 길이 · 대소문자가 바뀌면 include 정렬과 clang-format 정렬이 달라진다** — 치환 뒤 `fixer/FormatIncludeOrder` · `FormatModified` 를 돌린다. 에디터 아이콘 상수(`EditorIconGlyphs.h`)는 생성물이라 `generate/GenerateEditorIcons.py` 로 다시 만든다(생성기가 등록부의 강제 약어로 쓴다).
+- **이름 길이 · 대소문자가 바뀌면 include 정렬과 clang-format 정렬이 달라진다** — 치환 뒤 `fixer/FormatIncludeOrder` · `FormatModified` 를 돌린다. 에디터 아이콘 상수(`EditorIconGlyphs.h`)는 생성물이라 `generate/GenerateEditorIcons.py` 로 다시 만든다(생성기가 레지스트리의 강제 약어로 쓴다).
 - **약어를 줄기 여럿으로 나눠 치환한 뒤의 병합은 손으로 풀지 않는다** — 충돌 파일은 한쪽을 고르고(`git checkout --ours`) 다른 쪽 약어의 코드모드를 다시 돌린 뒤 그쪽 커밋 본문의 손 맞춤을 다시 적용한다. 옛 폴더 철자가 남은 include 는 대소문자만 다르므로 Windows 에서는 컴파일되고 리눅스에서만 깨진다 — 실제 파일 철자와 맞는지 따로 본다. 대소문자만 바뀐 리플렉션 헤더는 `generated/` 의 낡은 스탬프(옛 철자 경로)가 "Generated file name collision" 을 낸다 — 그 스탬프와 `.gen.*` 를 지운다.
 - **`CheckCodeConventions` 의 출력 매개변수 검사는 `outP…` 를 원시 포인터 출력(`pOut`)으로 읽는다** — `outPSO` 같은 대문자 약어 이름은 풀어 쓴다(`outPipelineState`).
 - **Windows SDK 의 전역 이름과 약어 철자가 겹친다**(`UUID` · `XMLDocument`) — `using namespace sw;` 를 쓰는 전역 범위에서는 `sw::` 를 붙이고, 클래스 앞의 `friend class X;` 는 같은 이름공간에 먼저 선언한다(안 하면 전역 이름을 friend 로 잡는다).
@@ -382,7 +382,7 @@ git config diff.swasset.command  "py -3 Scripts/asset/AssetMerge.py git-diff"
   `class` · `struct` · `namespace` 줄 — 중괄호 깊이는 균형이 맞는 편집에서 안 바뀐다). 좁혀도 같은 결과인지는 건너뛴 커밋마다 부모 · 자식 트리에서 `buildConfigReference` 를 돌려
   바이트가 같은지로 봤다(최근 80 커밋 중 12 가 건너뛰기, 표본 4 개 모두 같음). git 이 답하지 못하면 도는 쪽으로 틀린다. 함정: 훅의 staged 목록은 `--diff-filter=ACM` 이라
   **삭제만 든 커밋은 어느 게이트도 보지 못한다**(내용 규칙 이전부터) — 파일 삭제가 문서 · 짝을 낡게 하는 게이트는 별도 확인이 필요하다. `selfTestCases` 는 파일 내용을 쓰므로 내용 규칙 게이트의 테스트는 그대로다.
-- **린트 시간은 `RunLintSuite` 가 잰다**(CI 린트 잡 · 손으로 `py -3 -m Scripts lint-suite`): CTest 와 같은 목록 · 인자를 빌드 폴더 없이 돌리고, CTest TIMEOUT 의 절반을
+- **린트 시간은 `RunLintSuite` 가 측정한다**(CI 린트 잡 · 손으로 `py -3 -m Scripts lint-suite`): CTest 와 같은 목록 · 인자를 빌드 폴더 없이 돌리고, CTest TIMEOUT 의 절반을
   넘긴 린트와 훅 표본(staged 1 · 10)이 `kHookBudgetSeconds` 를 넘으면 경고, 기록은 CI 아티팩트 `lint-timing`. 새 린트의 `timeoutSeconds` 는 이 PC 시간의 3~4 배로 —
   절반 경고가 먼저 울리게.
 - **파이썬 도구의 단위 테스트는 `Test/PythonTest/Test*.py`** — 파일을 놓으면 CTest 항목(`PythonTest_<이름>`, `nogpu`)이다. Blender 애드온처럼 바깥 모듈(bpy)을
@@ -464,7 +464,7 @@ git config diff.swasset.command  "py -3 Scripts/asset/AssetMerge.py git-diff"
 - **규칙 데이터를 못 읽은 게이트는 모든 조각에서 종료 2 를 낸다** — 0 이 아니라서 `CheckLintsAreAlive` 에는 "살아 있다" 로 보인다. 그래서
   그 셀프테스트가 조각 전에 게이트 클래스의 읽기 오류(`_ruleDataError`)를 따로 본다. 모듈 수준에서 읽는 목록이 깨지면 import 가 트레이스백으로 진다.
 - **`rules/*.toml` 만 바꾼 커밋은 훅이 그 게이트를 돌리지 않는다**(게이트의 `preCommitPattern` 은 소스 경로다) — 예외 · 목록을 고쳤으면
-  그 게이트를 직접 돌리거나 `ctest -L lint` 로 본다. 옛 철자를 일부러 적는 데이터 파일(약어 등록부 · 제품 이름 · 함수 어휘)은
+  그 게이트를 직접 돌리거나 `ctest -L lint` 로 본다. 옛 철자를 일부러 적는 데이터 파일(약어 레지스트리 · 제품 이름 · 함수 어휘)은
   `FormatAcronymSpelling._kTextExcludedRel` 에 있어 글 치환이 건드리지 않는다. 엔진 티어 표는 `report/RunEngineLayerGraph.py --apply` 가 TOML 과 `Source/Engine/README.md` 표를 고쳐 쓴다.
 - **"헤더 혼자 빼도 선다" 는 "아무도 안 쓴다" 가 아니다** — `RunForwardDeclarationCandidates --verify-unused` 가 고른 120 건을 지우자 소비자 TU 에서 오류 2790 개가
   났다(거쳐 받던 `RHIBackend` · `IRHIResourceFactory`, NOMINMAX 가 `windows.h` 보다 먼저 오던 순서가 깨져 `std::max` 가 매크로에 먹힘). 보고는 "후보" 로만 쓰고, 지울 때는

@@ -49,7 +49,7 @@ namespace sw
     struct SW_GF_API SaveGameLoadedEvent final : IEvent
     {
         string _savePath;         ///< 읽은(읽으려 한) 세이브 파일 경로
-        bool   _bSuccess{ true }; ///< 씬과 상태를 모두 되살렸으면 true
+        bool   _bSuccess{ true }; ///< 씬과 상태를 모두 복원했으면 true
         SW_DECLARE_GAMEPLAY_EVENT( SaveGameLoadedEvent );
     };
 } // namespace sw

@@ -63,7 +63,7 @@ namespace
  */
 SW_TEST_CASE( PropertyUnitsTest, UnitsMatchHowValuesAreStored )
 {
-    // GameFramework 타입이 등록부에 있어야 이 테스트가 HP 바를 본다(EngineTest 는 GameFramework 를 링크한다).
+    // GameFramework 타입이 레지스트리에 있어야 이 테스트가 HP 바를 본다(EngineTest 는 GameFramework 를 링크한다).
     SW_ASSERT_NOT_NULL( sw::HealthBarComponent::StaticType() );
 
     sw::vector<const sw::TypeInfo*> listType;

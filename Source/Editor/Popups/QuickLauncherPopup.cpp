@@ -213,7 +213,7 @@ namespace sw::editor
         resultsDesc._kind = editor::EditorSectionKind::Child;
         if ( EditorChrome::beginSection( resultsDesc ) )
         {
-            // 열 자리는 이번 목록의 가장 넓은 종류 표시와 글자 크기에서 정한다(고정 x 는 배율 · 글꼴이 바뀌면 겹친다). 종류는 몇 가지뿐이라 바뀔 때만 잰다.
+            // 열 자리는 이번 목록의 가장 넓은 종류 표시와 글자 크기에서 정한다(고정 x 는 배율 · 글꼴이 바뀌면 겹친다). 종류는 몇 가지뿐이라 바뀔 때만 측정한다.
             float32       widestBadgeWidth{ 0.0f };
             const string* pMeasuredCategory{ nullptr };
             for ( const QuickLauncherItem* pItem : listFiltered )

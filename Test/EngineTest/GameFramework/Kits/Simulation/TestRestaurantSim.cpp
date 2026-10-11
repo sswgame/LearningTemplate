@@ -162,7 +162,7 @@ namespace
         return count;
     }
 
-    /** @brief 빌린 것(창고 · 지갑 · 시계 · 평판)을 상태 바이트로 옮깁니다 — 되살린 식당이 따로 든 같은 공유 상태로 같은 걸음을 걷게 합니다. */
+    /** @brief 빌린 것(창고 · 지갑 · 시계 · 평판)을 상태 바이트로 옮깁니다 — 복원한 식당이 따로 든 같은 공유 상태로 같은 걸음을 걷게 합니다. */
     [[nodiscard]] bool copyRestaurantBorrowed( const RestaurantTestBorrowed& source, RestaurantTestBorrowed& outTarget )
     {
         Archive written;
@@ -183,7 +183,7 @@ namespace
 } // namespace
 
 /**
- * @brief [RestaurantSimTest] 카탈로그 — 값이 없는 요리는 빠지고, 품질은 요리사 레벨이 넘은 문턱 수(최소 1), 시간대 도착 · 날씨 배율 · 유통 기한을 읽는다
+ * @brief [RestaurantSimTest] 카탈로그 — 값이 없는 요리는 빠지고, 품질은 요리사 레벨이 넘은 임계값 수(최소 1), 시간대 도착 · 날씨 배율 · 유통 기한을 읽는다
  */
 SW_TEST_CASE( RestaurantSimTest, CatalogReadsMenuQualityAndArrivals )
 {
@@ -197,7 +197,7 @@ SW_TEST_CASE( RestaurantSimTest, CatalogReadsMenuQualityAndArrivals )
     SW_EXPECT_EQUAL( 2, pRamen->computeQuality( 3 ) );
     SW_EXPECT_EQUAL( 3, pRamen->computeQuality( 9 ) );
     SW_EXPECT_EQUAL( 3, pRamen->getMaxQuality() );
-    SW_EXPECT_EQUAL( 1, world._catalog.findDish( "cake" )->computeQuality( 1 ) ); // 문턱 아래도 ★1
+    SW_EXPECT_EQUAL( 1, world._catalog.findDish( "cake" )->computeQuality( 1 ) ); // 임계값 아래도 ★1
     SW_EXPECT_TRUE( world._catalog.findDish( "omelette" )->_recipeID == hashed_string( "omelette" ) );
 
     SW_EXPECT_NEAR_EQUAL( 20.0f, world._catalog.getArrivalRate( 12 ), 1.0e-4f );
@@ -597,7 +597,7 @@ SW_TEST_CASE( RestaurantSimTest, CustomerWithOnlyZeroWeightDishesLeavesWithoutOr
 }
 
 /**
- * @brief [RestaurantSimTest] 상태 바이트로 되살린 식당이 같은 영업을 잇는다 — 직원 · 손님 · 주문 · 재료 묶음 · 시세 · 오늘 결산 · 도착 누적이 같은 바이트이고,
+ * @brief [RestaurantSimTest] 상태 바이트로 복원한 식당이 같은 영업을 잇는다 — 직원 · 손님 · 주문 · 재료 묶음 · 시세 · 오늘 결산 · 도착 누적이 같은 바이트이고,
  *        같은 걸음을 둘 다 더 돌려도(빌린 것은 따로 옮겨 든다) 같은 바이트 · 같은 결산이다. 잘린 바이트는 거절하고 그대로 둔다
  */
 SW_TEST_CASE( RestaurantSimTest, StateRoundTripContinuesTheSameRestaurant )

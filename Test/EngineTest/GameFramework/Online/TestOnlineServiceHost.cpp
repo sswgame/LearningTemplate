@@ -16,7 +16,7 @@
 
 // 서비스 틀 — 루프백 스트림 위 호스트 + 클라이언트(한 스레드, 결정적). Hello 전 요청 거절 · 판 불일치 · 로그인 확인(익명 메서드는 통과) · 몸 상한 · 주소 도배 제한 ·
 // 늦은 답(토큰) · 닫힌 뒤 답은 버림 · 계정 떼기 → 모든 서비스에 떠남 · 알림은 그 계정에만 · 모두에게 알림 · 멱등 재시도 · 캐시 답과 버스 메시지는 맡긴 · 구독한 서비스로만 ·
-// 공유 끝점 클라이언트 둘 · 요청 추적 id 가 클라이언트 문맥에서 서비스의 로그 문맥까지.
+// 공유 엔드포인트 클라이언트 둘 · 요청 추적 id 가 클라이언트 문맥에서 서비스의 로그 문맥까지.
 
 using namespace sw;
 
@@ -206,7 +206,7 @@ namespace
         }
     };
 
-    /** @brief 클라이언트 하나 — 자기 끝점 모드. */
+    /** @brief 클라이언트 하나 — 자기 엔드포인트 모드. */
     struct ClientSide
     {
         unique_ptr<IStreamTransport> _transport;
@@ -370,7 +370,7 @@ namespace
             _requestClient.onConnectionClosed( handle );
         }
     };
-    /** @brief 공유 끝점 — 끝점 · 요청 클라이언트 하나에 연결 둘(부하 테스트 봇 모양). 리스너가 응답은 요청 클라이언트로, 나머지는 그 연결의 클라이언트로. */
+    /** @brief 공유 엔드포인트 — 엔드포인트 · 요청 클라이언트 하나에 연결 둘(부하 테스트 봇 모양). 리스너가 응답은 요청 클라이언트로, 나머지는 그 연결의 클라이언트로. */
     struct SharedEndpointBots final : public IStreamEndpointListener
     {
         unique_ptr<IStreamTransport> _transport;
@@ -588,7 +588,7 @@ SW_TEST_CASE( OnlineServiceHostTest, LateAnswersUseTheTokenAndAnswersAfterCloseA
     client._client.shutdown();
     rig.step( 4 );
     SW_EXPECT_EQUAL( 0, rig._host.getConnectionCount() );
-    SW_EXPECT_TRUE( rig._host.respondOk( held, BitWriter{} ) );                           // 처리는 끝났다(멱등 기억은 남는다) — 닫힌 연결이라 끝점이 보내지 않는다
+    SW_EXPECT_TRUE( rig._host.respondOk( held, BitWriter{} ) );                           // 처리는 끝났다(멱등 기억은 남는다) — 닫힌 연결이라 엔드포인트가 보내지 않는다
     SW_EXPECT_FALSE( rig._host.respondOk( held, BitWriter{} ) );                          // 한 번만
     SW_EXPECT_TRUE( orphan._bAnswered && orphan._status == NetRequestStatus::Cancelled ); // 클라이언트는 내릴 때 끝냈다
 }

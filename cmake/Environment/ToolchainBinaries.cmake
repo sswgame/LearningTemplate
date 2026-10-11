@@ -115,7 +115,7 @@ endmacro()
 # 3) sw_checkIpoSupport — 이 툴체인이 실제로 IPO 를 할 수 있는가
 #
 # **CMake 의 `check_ipo_supported` 는 이 툴체인에서 구조적으로 거짓을 말한다.**
-# 그것은 `try_compile(... PROJECT ...)` 로 작은 프로젝트를 따로 구성해서 재는데, 그 형식은
+# 그것은 `try_compile(... PROJECT ...)` 로 작은 프로젝트를 따로 구성해서 측정하는데, 그 형식은
 # `CMAKE_AR` 을 하위 프로젝트로 **넘기지 않는다**(CMake 4.x 의 CheckIPOSupported.cmake 는
 # CMAKE_VERBOSE_MAKEFILE · CMAKE_INTERPROCEDURAL_OPTIMIZATION · 언어 플래그만 넘긴다).
 # 그래서 하위 프로젝트는 아카이버를 스스로 찾아 시스템 것을 집고 실패한다 — 컴파일러는 멀쩡한데.

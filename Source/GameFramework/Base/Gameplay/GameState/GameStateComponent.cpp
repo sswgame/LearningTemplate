@@ -133,7 +133,7 @@ namespace sw
 
     void GameStateComponent::writeState( Archive& outArchive ) const
     {
-        // 열리기 전(되살린 직후 두 번째 캡처)이면 받은 바이트가 곧 상태다 — 빈 판을 쓰면 세이브를 잃는다.
+        // 열리기 전(복원한 직후 두 번째 캡처)이면 받은 바이트가 곧 상태다 — 빈 판을 쓰면 세이브를 잃는다.
         if ( _bInitialized == SW_FALSE && _pendingStateBytes.empty() == false )
         {
             outArchive.writeBytes( _pendingStateBytes.data(), _pendingStateBytes.size() );

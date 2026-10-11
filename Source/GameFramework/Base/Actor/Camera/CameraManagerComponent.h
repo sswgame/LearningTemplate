@@ -1,7 +1,7 @@
 /**
  * @file CameraManagerComponent.h
  * @brief 로컬 플레이어 하나의 "보는 카메라(뷰 타깃)" 를 블렌드로 바꾸는 컴포넌트입니다(언리얼 PlayerCameraManager `SetViewTargetWithBlend` ·
- *        Cinemachine Brain). 씬의 카메라는 용도(`CameraRole` — 플레이어 시점 · 보조 · 캡처)로 등록부(`CameraRegistry`)에 있습니다.
+ *        Cinemachine Brain). 씬의 카메라는 용도(`CameraRole` — 플레이어 시점 · 보조 · 캡처)로 레지스트리(`CameraRegistry`)에 있습니다.
  */
 #pragma once
 #include "Core/Common/Types.h"

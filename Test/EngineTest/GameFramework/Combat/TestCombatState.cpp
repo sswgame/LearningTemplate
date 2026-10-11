@@ -228,7 +228,7 @@ SW_TEST_CASE( CombatStateTest, GaugeExhaustionAndOverheatLockUntilRecovered )
     SW_EXPECT_NEAR_EQUAL( 120.0f, gauge.getValue(), 1.0e-4f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, gauge.getRatio(), 1.0e-4f );
 
-    // 탈진 문턱이 없으면 바닥나도 잠기지 않는다(조금 차면 바로 쓸 수 있다).
+    // 탈진 임계값이 없으면 바닥나도 잠기지 않는다(조금 차면 바로 쓸 수 있다).
     stamina._exhaustThreshold = 0.0f;
     gauge.initialize( stamina );
     SW_EXPECT_TRUE( gauge.trySpend( 100.0f ) );

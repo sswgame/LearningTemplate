@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""약어 철자 도구 — 등록부의 철자 판정, 코드모드가 건드리지 않는 자리, 파일 · 데이터 적용(임시 git 저장소), 게이트의 강제, 전후 컴파일."""
+"""약어 철자 도구 — 레지스트리의 철자 판정, 코드모드가 건드리지 않는 자리, 파일 · 데이터 적용(임시 git 저장소), 게이트의 강제, 전후 컴파일."""
 
 from __future__ import annotations
 
@@ -210,7 +210,7 @@ class AcronymGateTest(unittest.TestCase):
             root = Path(folder)
             (root / "Source" / "Probe").mkdir(parents=True)
             (root / "Source" / "Probe" / "Probe.h").write_text("class IdProbe {};\nclass GPUScene {};\n", encoding="utf-8")
-            # 등록부가 모든 약어를 강제해도 --enforce-only 로 "아직 강제 전" 상태를 만든다.
+            # 레지스트리가 모든 약어를 강제해도 --enforce-only 로 "아직 강제 전" 상태를 만든다.
             self.assertEqual(self.runGateInternal(root, "--enforce-only", "GPU"), 0)
             self.assertEqual(self.runGateInternal(root, "--enforce-only", "GPU", "--enforce", "ID"), 1)
             self.assertEqual(self.runGateInternal(root), 1)

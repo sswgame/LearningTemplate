@@ -56,7 +56,7 @@ namespace sw::editor
          * @brief 편집기 본문(위 줄의 숫자 칸 + 남은 자리 전부의 캔버스)을 그립니다.
          * @return 작업 사본의 편집을 마쳤으면 true 입니다(끌기를 놓음 · 메뉴 동작 · 숫자 칸 입력을 마침). 부르는 쪽이 `_working` 을 값에 입힌다.
          * @details 조작: 왼쪽 끌기 = 키(Shift 는 시간만 · Ctrl 은 값만) · 접선 손잡이(Cubic 키, 자동 접선이 꺼진다), 오른쪽 클릭 = 키 더하기 / 지우기 / 보간,
-         *          F = 전체 보기, 휠 = 확대, 가운데 끌기 = 이동. 이름표: `curve.canvas` · `curve.key.<n>` · `curve.menu.addKey`.
+         *          F = 전체 보기, 휠 = 확대, 가운데 끌기 = 이동. 레이블: `curve.canvas` · `curve.key.<n>` · `curve.menu.addKey`.
          */
         static bool drawEditor( EditorCurveEditorState& state );
     };

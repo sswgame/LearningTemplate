@@ -250,7 +250,7 @@ SW_TEST_CASE( TickPrerequisiteTest, DestroyedItemsLeaveTheChainSafely )
 
 /**
  * @brief [TickPrerequisiteTest] 전체 재구축(핫 리로드 · 타입 재바인딩이 부른다)과 선행 조건 컴포넌트의 교체 뒤에도 사슬이 돈다
- * @details 핫 리로드는 등록부 전체를 다시 짓고(`markTickStagesDirty`) 컴포넌트를 새 id 로 다시 만든다. 새로 만든 쪽의 핸들로 선행 조건을 다시
+ * @details 핫 리로드는 레지스트리 전체를 다시 짓고(`markTickStagesDirty`) 컴포넌트를 새 id 로 다시 만든다. 새로 만든 쪽의 핸들로 선행 조건을 다시
  *          걸기 전까지 옛 핸들은 아무것도 가리키지 않는다 — 기다리는 쪽은 기다릴 것 없이 돈다(죽은 포인터를 따라가지 않는다).
  */
 SW_TEST_CASE( TickPrerequisiteTest, ChainSurvivesRebuildAndReplacedPrerequisite )

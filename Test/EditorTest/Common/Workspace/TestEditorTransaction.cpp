@@ -137,7 +137,7 @@ SW_TEST_CASE( EditorTransactionTest, RecordModifyRunsToTheEndWithoutStack )
 
 /**
  * @brief [EditorTransactionTest] 생성과 삭제의 Undo/Redo 는 **서로의 거울**이다
- * @details 생성과 삭제는 같은 두 절차("없앤다" · "저장해 둔 XML 로 되살린다")를 **반대로 이은 것**이다.
+ * @details 생성과 삭제는 같은 두 절차("없앤다" · "저장해 둔 XML 로 복원한다")를 **반대로 이은 것**이다.
  *          두 절차를 `recordCreation` 과 `recordDestruction` 에 따로 복사해 두면 한쪽을 고칠 때 나머지 방향이
  *          조용히 뒤처지고, 증상은 **"Undo 는 되는데 Redo 는 안 된다"** 로 나온다. 사용자가 작업을
  *          잃는 방식이면서, 로그에는 아무것도 남지 않는 종류다.
@@ -203,7 +203,7 @@ SW_TEST_CASE( EditorTransactionTest, ObjectLifetimeUndoRedoAreMirrors )
 
 /**
  * @brief [EditorTransactionTest] 지운 오브젝트를 되돌리면 그 오브젝트와 컴포넌트의 핸들이 다시 풀린다
- * @details 되살린 오브젝트가 **원래 id** 를 받기 때문이다(`createGameObjectWithID`, 컴포넌트는 `ObjectIdentity`). 새 id 를 받으면
+ * @details 복원한 오브젝트가 **원래 id** 를 받기 때문이다(`createGameObjectWithID`, 컴포넌트는 `ObjectIdentity`). 새 id 를 받으면
  *          핸들이 끊긴다. 이름으로 찾는 참조로 메우면 이름을 바꿀 때 끊긴다.
  */
 SW_TEST_CASE( EditorTransactionTest, HandlesSurviveUndoOfDestruction )
@@ -250,7 +250,7 @@ SW_TEST_CASE( EditorTransactionTest, HandlesSurviveUndoOfDestruction )
 /**
  * @brief [EditorTransactionTest] 수정을 되돌려 컴포넌트가 다시 만들어져도 컴포넌트 핸들은 이어진다
  * @details 되돌리기는 상태를 다시 읽으며 컴포넌트를 **전부 지우고 새로 만든다**(`clearComponents`). 속성 하나만 바꾼 것을
- *          되돌려도 그렇다. 스냅샷에 적어 둔 id 를 되살리지 않으면 컴포넌트마다 새 id 가 나가 핸들이 끊긴다 — 마지막 블록이
+ *          되돌려도 그렇다. 스냅샷에 적어 둔 id 를 복원하지 않으면 컴포넌트마다 새 id 가 나가 핸들이 끊긴다 — 마지막 블록이
  *          그 대조군이다(씬 · 프리팹 로드와 복제가 가는 길).
  */
 SW_TEST_CASE( EditorTransactionTest, ComponentHandleSurvivesModifyUndo )

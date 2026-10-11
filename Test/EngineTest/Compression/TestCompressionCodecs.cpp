@@ -56,7 +56,7 @@ namespace
         bool        _bRoundTripOk{ false };
     };
 
-    /** @brief 한 코덱으로 압축·해제하고 크기와 시간을 잰다. */
+    /** @brief 한 코덱으로 압축·해제하고 크기와 시간을 측정한다. */
     CodecMeasure measureCodec( sw::ICompressionCodec& codec, const sw::vector<uint8>& listOriginal, int32 level )
     {
         CodecMeasure measure{};
@@ -127,7 +127,7 @@ SW_TEST_CASE( CompressionCodecTest, ExternalCodecRoundTrip )
  *          버리면서 성공이라고 말하는 셈이다. LZ4 도 int32 한계가 같은 자리에 있다.
  * @note zlib 의 한계는 **플랫폼마다 다르다** — `uLong`(= `unsigned long`)이 Windows 에서는 32비트,
  *       리눅스(LP64)에서는 64비트다. 그래서 8GiB 는 한쪽에서는 "담기지 않는 크기" 이고 다른 쪽에서는
- *       평범한 크기다. 한쪽 답을 적어 두면 다른 쪽에서 반드시 틀린다(코드는 `(uLong)-1` 로 잰다). 그래서 여기서는
+ *       평범한 크기다. 한쪽 답을 적어 두면 다른 쪽에서 반드시 틀린다(코드는 `(uLong)-1` 로 측정한다). 그래서 여기서는
  *       플랫폼을 가르지 않고 **어느 쪽에서도 참인 계약**을 단언한다.
  */
 SW_TEST_CASE( CompressionCodecTest, CodecsRejectSizesTheirLibraryCannotHold )
@@ -231,7 +231,7 @@ SW_TEST_CASE( CompressionCodecTest, ZlibReportsTruncatedInputAndShortBuffers )
 }
 
 /**
- * @brief [CompressionCodecTest] 코덱 넷을 같은 데이터로 재서 로그에 남긴다 (선택 근거 자료).
+ * @brief [CompressionCodecTest] 코덱 넷을 같은 데이터로 측정해서 로그에 남긴다 (선택 근거 자료).
  * @details 단언은 느슨하다 — 기계마다 시간이 다르므로 **숫자를 고정하지 않는다.** 이 케이스의 목적은
  *          "어떤 자리에 무엇을 쓸지" 를 고를 때 볼 실측을 남기는 것이다. 압축률만 순서를 단언한다.
  */

@@ -751,7 +751,7 @@ namespace sw::editor
         if ( releasedCount > 0 )
         {
             _registry.clear();  // 언로드되는 이미지의 위젯(그 vtable)을 남기지 않는다
-            registerBuiltins(); // 가렸던 내장 위젯을 되살린다
+            registerBuiltins(); // 가렸던 내장 위젯을 복원한다
             for ( const EditorPropertyDrawerRegistration* pRegistration : _listRegistration )
             {
                 registerType( pRegistration->_pID, pRegistration->_pCreate() );

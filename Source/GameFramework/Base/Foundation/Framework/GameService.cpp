@@ -24,7 +24,7 @@ namespace sw
         SW_GAMESERVICE_API void bindGameService( const ModuleService& service )
         {
             s_gameService = service;
-            // 데이터 표 캐시(상호작용 · 원소 규칙)를 호스트의 에셋 캐시 등록부에 올린다 — 핫 리로드 · 비우기 · 진단이 그 등록부를 훑는다.
+            // 데이터 표 캐시(상호작용 · 원소 규칙)를 호스트의 에셋 캐시 레지스트리에 올린다 — 핫 리로드 · 비우기 · 진단이 그 레지스트리를 훑는다.
             GameDataCacheRegistry::attach( getService<AssetManager>() );
         }
 

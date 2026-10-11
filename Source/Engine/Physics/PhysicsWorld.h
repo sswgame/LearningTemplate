@@ -70,7 +70,7 @@ namespace sw
 {
     /**
      * @class PhysicsWorld
-     * @brief 겹침 질의 · 레이어 필터 · 겹침 이벤트입니다. 강체가 없어 `step` 은 적분하지 않고 겹침만 다시 잽니다.
+     * @brief 겹침 질의 · 레이어 필터 · 겹침 이벤트입니다. 강체가 없어 `step` 은 적분하지 않고 겹침만 다시 측정합니다.
      */
     class SW_API PhysicsWorld
     {
@@ -104,12 +104,12 @@ namespace sw
          *
          *          **연속 바디(`_bContinuous`)는 지난 step 의 자리에서 지금 자리까지 쓸립니다**(`ContinuousCollision::sweepAABB`, 유니티 `CollisionDetectionMode2D.Continuous`).
          *          한 프레임에 얇은 바디를 통째로 건너뛴 총알도 그 바디와 겹친 것으로 칩니다 — 이번 step 에 시작하고, 다음 step 에(이미 지나갔으면)
-         *          끝납니다. 출발점에서 이미 겹쳐 있던 것(닿은 때 0)은 쓸림으로 더하지 않습니다 — 그 겹침은 지난 step 이 쟀고, 지금도 겹치면 제자리
+         *          끝납니다. 출발점에서 이미 겹쳐 있던 것(닿은 때 0)은 쓸림으로 더하지 않습니다 — 그 겹침은 지난 step 이 측정했고, 지금도 겹치면 제자리
          *          겹침이 이어 갑니다.
          *
-         *          **상대도 움직였으면 상대 운동으로 잽니다**(Box2D 총알 TOI · 유니티 Continuous Dynamic): 두 바디 모두 지난 step 의 자리에서 출발해
+         *          **상대도 움직였으면 상대 운동으로 측정합니다**(Box2D 총알 TOI · 유니티 Continuous Dynamic): 두 바디 모두 지난 step 의 자리에서 출발해
          *          연속 바디의 이동에서 상대의 이동을 뺀 만큼 쓸립니다. 프레임 사이에 총알 길을 가로질러 건너편으로 간 상대도 맞습니다(상대를
-         *          이번 step 의 자리에 세워 두고 재면 놓친다).
+         *          이번 step 의 자리에 세워 두고 측정하면 놓친다).
          */
         void step( float32 deltaTime );
         /** @brief 마지막 `step` 이 낸 겹침 이벤트입니다. 다음 `step` 까지 그대로입니다. */
@@ -129,7 +129,7 @@ namespace sw
 
         /**
          * @brief 셀 표에 들어 있는 셀 수입니다(진단용).
-         * @details 큰 바디가 그리드를 부풀리지 않는지 재는 데 씁니다. 질의 결과로는 보이지 않는
+         * @details 큰 바디가 그리드를 부풀리지 않는지 측정하는 데 씁니다. 질의 결과로는 보이지 않는
          *          비용이라 숫자로 봐야 합니다.
          */
         size_t getGridCellCount() const;
@@ -163,7 +163,7 @@ namespace sw
         /**
          * @brief 이 셀 수를 넘으면 그리드를 훑지 않고 모든 바디를 돕니다.
          * @details 넓은 질의는 셀을 다 방문하는 값이 바디를 모두 보는 값보다 비싸집니다. 질의 두 곳이 이 상수를 같이 씁니다 —
-         *          리터럴로 따로 적으면 한쪽만 바뀌어 질의 종류에 따라 다른 문턱이 됩니다.
+         *          리터럴로 따로 적으면 한쪽만 바뀌어 질의 종류에 따라 다른 임계값이 됩니다.
          */
         static constexpr int64 kMaxQueryCellCount = 1024;
 
@@ -259,9 +259,9 @@ namespace sw
         void setAABBLocked( BodyHandle handle, PhysicsBody& body, const AABB& aabb );
         /**
          * @brief 연속 바디 @p body 가 지난 step 의 자리에서 지금 자리까지 쓸리며 처음 닿은 바디를 쌍으로 더합니다. `step` 이 `_mutex` 를 잡은 채로 부릅니다.
-         * @details 상대 운동으로 잽니다 — 두 바디의 출발점(`_stepAABB`)에서 이 바디의 이동에서 상대의 이동을 뺀 만큼. 후보는 그리드에 **지금 자리**로
+         * @details 상대 운동으로 측정합니다 — 두 바디의 출발점(`_stepAABB`)에서 이 바디의 이동에서 상대의 이동을 뺀 만큼. 후보는 그리드에 **지금 자리**로
          *          들어 있으므로, 쓸린 범위를 이번 step 에 가장 많이 움직인 바디의 이동만큼 넓혀 모읍니다(그 안에 없으면 그 사이 어느 때에도 닿을 수 없다).
-         *          셀 하나보다 멀리 간 바디(@p listFarMover — 에디터 드래그 · 아주 빠른 바디)는 범위를 넓히지 않고 따로 하나씩 잽니다. 넓히면 그 한 바디
+         *          셀 하나보다 멀리 간 바디(@p listFarMover — 에디터 드래그 · 아주 빠른 바디)는 범위를 넓히지 않고 따로 하나씩 측정합니다. 넓히면 그 한 바디
          *          때문에 모든 연속 바디가 월드 전체를 훑습니다.
          * @param maxNearDisplacement 이번 step 에 셀 하나 이내로 움직인 바디들의 축별 가장 큰 거리(절댓값)
          * @param listFarMover 이번 step 에 어느 축으로든 셀 하나보다 멀리 간 바디들
@@ -271,7 +271,7 @@ namespace sw
                             vector<BodyHandle>& inoutListCandidate );
         /** @brief 연속 바디 @p body(이번 step 이동 @p displacement)가 @p candidate 와 쓸리며 처음 닿았으면 쌍으로 더합니다. `addSweptPairs` 의 후보 하나입니다. */
         void addSweptPairIfTouched( BodyHandle handle, const PhysicsBody& body, const float3& displacement, BodyHandle candidate );
-        /** @brief 바디가 이번 step 에 어느 축으로든 셀 하나보다 멀리 갔으면 true 입니다(`addSweptPairs` 가 범위를 넓히지 않고 따로 재는 바디). */
+        /** @brief 바디가 이번 step 에 어느 축으로든 셀 하나보다 멀리 갔으면 true 입니다(`addSweptPairs` 가 범위를 넓히지 않고 따로 측정하는 바디). */
         static bool isFarMover( const PhysicsBody& body );
 
     private:

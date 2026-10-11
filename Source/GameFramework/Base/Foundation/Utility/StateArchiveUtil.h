@@ -61,7 +61,7 @@ namespace sw
         static void               writeStepTimer( Archive& outArchive, const FixedStepTimer& timer );
         [[nodiscard]] static bool readStepTimer( Archive& archive, FixedStepTimer& inoutTimer );
 
-        /** @brief 남은 시간을 그대로 씁니다(음수 늦음까지 — 되살린 뒤 같은 발생 시각을 낸다). */
+        /** @brief 남은 시간을 그대로 씁니다(음수 늦음까지 — 복원한 뒤 같은 발생 시각을 낸다). */
         static void               writeCountdown( Archive& outArchive, const Countdown& countdown );
         [[nodiscard]] static bool readCountdown( Archive& archive, Countdown& outCountdown );
         /** @brief 아직 정수가 되지 않은 몫을 씁니다. */

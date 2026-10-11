@@ -3,7 +3,7 @@
  * @brief 사용자 설정(옵션 메뉴)의 스키마 — 카테고리 · 설정 정의 · 그래픽 품질 프리셋 · 사용자 파일 버전 올리기 단계 — 와 그 XML 로더입니다.
  *
  * 스키마는 사람이 편집하는 데이터(`*.settings.xml`)입니다. 엔진 파일(`engine/settings/engine.settings.xml`) 위에 게임 파일(게임 프리셋의
- * `_userSettingsSchema`)을 덧붙입니다. 코드가 가진 것은 이름으로 고르는 적용기 등록부(`UserSettingApplierRegistry`)뿐입니다.
+ * `_userSettingsSchema`)을 덧붙입니다. 코드가 가진 것은 이름으로 고르는 적용기 레지스트리(`UserSettingApplierRegistry`)뿐입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -236,7 +236,7 @@ namespace sw
 
         /**
          * @brief 정의 전체를 검사합니다 — 범위 · 기본값 · 선택지 · 의존 대상 · 품질 묶음 · 적용기와 전역 변수 이름.
-         * @param registry 적용기 · 선택지 공급자 이름을 대조할 등록부
+         * @param registry 적용기 · 선택지 공급자 이름을 대조할 레지스트리
          * @param pGlobalVariableManager 전역 변수 대상을 대조할 표. nullptr 이면 전역 변수 검사를 건너뜁니다.
          * @return 문제가 하나라도 있으면 false 입니다(모두 오류로 알립니다).
          */

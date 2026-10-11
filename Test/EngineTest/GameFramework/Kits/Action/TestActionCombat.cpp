@@ -488,7 +488,7 @@ SW_TEST_CASE( ActionCombatTest, AttackHitsEachUnitInItsHitboxOncePerSwing )
 
 /**
  * @brief [ActionCombatTest] 프레임 사이에 투사체 길을 가로질러 건너간 유닛도 맞는다(상대 운동)
- * @details 연속 충돌이 상대를 이번 step 의 자리에 세워 두고 재면 총알이 한 프레임에 x 로 10 을 가는 동안 y 로 길을 건너간 유닛은 끝 자리가 길
+ * @details 연속 충돌이 상대를 이번 step 의 자리에 세워 두고 측정하면 총알이 한 프레임에 x 로 10 을 가는 동안 y 로 길을 건너간 유닛은 끝 자리가 길
  *          밖이라 맞지 않는다. 그래서 물리가 두 바디의 이동 차이로 쓴다(Box2D 총알 TOI · 유니티 Continuous Dynamic).
  */
 SW_TEST_CASE( ActionCombatTest, ProjectileHitsAUnitThatCrossesItsPathBetweenFrames )

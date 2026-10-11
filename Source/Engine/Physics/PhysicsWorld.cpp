@@ -70,7 +70,7 @@ namespace sw
         // **곱하기 전에 넘칠지 본다.** 셀 번호는 int32 라 한 축의 폭이 2^32 까지 가고, 세 축을 곱하면
         // int64 를 한참 넘는다. 넘친 곱은 작은 수(심지어 0)가 되어 "좁은 범위" 로 읽히고, 그러면
         // `kMaxBodyCellCount` 검사를 통과해 **막으려던 순회를 그대로 돌게 된다.** 무한대 AABB 하나가
-        // 그리드 삽입을 돌아오지 않게 만든다. 부르는 쪽은 이 값을 상한과 견주기만 하므로, 넘칠 때는
+        // 그리드 삽입을 돌아오지 않게 만든다. 부르는 쪽은 이 값을 상한과 비교하기만 하므로, 넘칠 때는
         // 표현 가능한 최댓값으로 붙여 두면 답이 맞는다.
         int64 cellCount = spanX;
         if ( cellCount > MathUtil::kMaxInt64 / spanY )
@@ -244,7 +244,7 @@ namespace sw
         PhysicsBody*                        pBody = _bodies.get( handle );
         if ( pBody == nullptr )
             return;
-        // 레이어 · 트리거는 그리드와 무관하다 — 쌍을 재는 `step` 이 읽는다. 바뀌면 다음 step 에서 걸러진 쌍이 끝난다.
+        // 레이어 · 트리거는 그리드와 무관하다 — 쌍을 측정하는 `step` 이 읽는다. 바뀌면 다음 step 에서 걸러진 쌍이 끝난다.
         pBody->_layer       = state._layer;
         pBody->_bContinuous = state._bContinuous;
         pBody->_bTrigger    = state._bTrigger;
@@ -295,7 +295,7 @@ namespace sw
      */
     void PhysicsWorld::step( float32 deltaTime )
     {
-        (void)deltaTime; // 적분하지 않는다 — 강체가 없다. 겹침만 다시 잰다.
+        (void)deltaTime; // 적분하지 않는다 — 강체가 없다. 겹침만 다시 측정한다.
         std::unique_lock<std::shared_mutex> lock{ _mutex };
 
         // 바디를 먼저 베낀다 — 표를 도는 동안(표의 잠금 안) 다른 바디를 꺼내면 같은 잠금을 다시 잡는다.
@@ -310,7 +310,7 @@ namespace sw
         { listBody.push_back( BodyEntry{ handle, body } ); } );
 
         // 이번 step 에 셀 하나 이내로 움직인 바디들의 축별 가장 큰 거리 — 연속 바디의 후보를 모으는 범위를 이만큼 넓힌다(`addSweptPairs`).
-        // 셀 하나보다 멀리 간 바디는 넓히는 데 넣지 않고 따로 모아 연속 바디마다 하나씩 잰다.
+        // 셀 하나보다 멀리 간 바디는 넓히는 데 넣지 않고 따로 모아 연속 바디마다 하나씩 측정한다.
         float3             maxDisplacement{ 0.0f, 0.0f, 0.0f };
         vector<BodyHandle> listFarMover;
         for ( const BodyEntry& entry : listBody )
@@ -406,7 +406,7 @@ namespace sw
         gatherStepCandidates( CellRange::fromAABB( range, kCellSize ), inoutListCandidate );
         for ( const BodyHandle candidate : inoutListCandidate )
         {
-            // 멀리 간 바디는 아래에서 한 번만 잰다.
+            // 멀리 간 바디는 아래에서 한 번만 측정한다.
             const PhysicsBody* pOther = _bodies.get( candidate );
             if ( pOther == nullptr || isFarMover( *pOther ) )
                 continue;
@@ -432,7 +432,7 @@ namespace sw
         const float3 relativeDisplacement = displacement - otherDisplacement;
         if ( relativeDisplacement.getLengthSquared() <= 0.0f )
             return; // 함께 움직였다 — 제자리 겹침이 전부다
-        // 닿은 때 0 은 출발점에서 이미 겹쳐 있던 것이다 — 그 겹침은 지난 step 이 쟀고, 지금도 겹치면 제자리 겹침이 잇는다. 넣으면 떠난 쌍의
+        // 닿은 때 0 은 출발점에서 이미 겹쳐 있던 것이다 — 그 겹침은 지난 step 이 측정했고, 지금도 겹치면 제자리 겹침이 잇는다. 넣으면 떠난 쌍의
         // 끝이 한 step 늦는다.
         SweepHit   hit{};
         const bool bEnteredWhileMoving = ContinuousCollision::sweepAABB( body._stepAABB, relativeDisplacement, otherFrom, hit ) && hit._hitFraction > 0.0f;

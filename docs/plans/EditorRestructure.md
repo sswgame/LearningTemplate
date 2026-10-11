@@ -30,7 +30,7 @@
 | 0 | `Common`(루트) · `Common/Backend` · `Common/Config` | 경로 · 내보내기 매크로 · ImGui 백엔드 · 설정 표 |
 | 1 | `Common/Asset` · `Common/Localization` · `Common/SourceControl` | UI 없는 도구(임포터 · 검증 · 로컬라이즈 · 버전 관리) |
 | 2 | `Common/Workspace` | 편집 상태(작업 공간 · 선택 · 플레이 세션 · 핫 리로드)와 아래 층이 쓰는 창구 인터페이스 |
-| 3 | `Common/Commands` | ImGui 없는 동작과 커맨드 등록부 |
+| 3 | `Common/Commands` | ImGui 없는 동작과 커맨드 레지스트리 |
 | 4 | `Common/GUI` · `Common/Widgets` | 패널 · 팝업 틀과 매니저, 도킹, 메뉴, 알림 그리기, 테마, 공용 위젯 |
 | 5 | `Viewport` · `Popups` | 뷰포트 클라이언트 · 시각화 · 팝업 |
 | 6 | `Panels` · `AssetActions` | 구체 패널 · 에셋 종류별 동작 |
@@ -48,11 +48,11 @@
 - 위험: 낮다(코드 무변경). 검증: 게이트 OK · 자체 테스트(`py -3 -m Scripts selftest`) · `ctest -L lint`.
 
 ### 2. 의존 역전 — 아래 층이 패널 · 팝업 · 도킹을 모르게
-상용 엔진의 선: 언리얼은 탭 매니저(`FTabManager`)가 Slate 틀에 있고 구체 탭은 모듈이 등록한다. 에셋 종류 동작(`IAssetTypeActions`)은 AssetTools 의 등록부이고 편집기는 그 위다.
+상용 엔진의 선: 언리얼은 탭 매니저(`FTabManager`)가 Slate 틀에 있고 구체 탭은 모듈이 등록한다. 에셋 종류 동작(`IAssetTypeActions`)은 AssetTools 의 레지스트리이고 편집기는 그 위다.
 UI 를 조작하는 명령(탭 열기 · 레이아웃)은 그 UI 를 가진 모듈이 등록한다. 그래서 여기서도 "틀은 아래, 구체는 위, UI 를 만지는 명령의 등록 줄은 그 UI 의 .cpp" 로 한다.
 
 - 2a. 틀을 제자리로(파일 이동): `EditorPanelManager` · `EditorPopupManager` → `Common/GUI`(인터페이스 옆), `EditorViewTargetUtil`(ImGui 없는 뷰 RT 판정) ·
-  `EditorAssetTypeActions`(인터페이스 + 등록부) · `EditorCamera`(씬 안 에디터 카메라 오브젝트, ImGui 없음) → `Common/Workspace`, `EditorExternalToolJob` · `EditorBackgroundTask` → `Common` 루트,
+  `EditorAssetTypeActions`(인터페이스 + 레지스트리) · `EditorCamera`(씬 안 에디터 카메라 오브젝트, ImGui 없음) → `Common/Workspace`, `EditorExternalToolJob` · `EditorBackgroundTask` → `Common` 루트,
   `EditorSceneViewUtil`(씬 뷰 패널에 초점) → `Panels`, `TestRunnerPanel` · `EditorTestOutputParser`(자체 테스트 실행 창) → `SelfTest`.
 - 2b. 알림을 모델 · 뷰로: `EditorNotificationManager`(큐 · `push` · `update`, ImGui 없음)는 `Common/Workspace`, 그리기는 `Common/GUI/EditorNotificationView`.
   테마 값(`EditorThemePreset` · `EditorThemeConfig`)은 `Common/Config/EditorThemeConfig.h` — `EditorContext.h` 가 GUI 를 include 하지 않는다.
@@ -63,15 +63,15 @@ UI 를 조작하는 명령(탭 열기 · 레이아웃)은 그 UI 를 가진 모�
   도킹은 자체 테스트를 묻지 않고 셸이 `EditorDockLayout::setPanelOverrideRequested` 로 알린다. `EditorUtil::areSceneEditsAllowed` → `EditorPlaySession::areSceneEditsAllowed`,
   `spawnPrefabFromAssetPath` → `EditorAssetCommands` 내부. 작업 공간의 붙여넣기 · 프리셋 전달자는 지우고 `EditorTransformCommands::pasteCopiedComponent*` 가 클립보드를 읽는다.
   `Popups` 는 GUI 와 같은 티어(4)로 — 셸 팝업(커맨드 팔레트 · 빠른 열기)은 기본 커맨드 표가 토글을 가리키고, 팝업은 패널 · 뷰포트를 모른다.
-- 위험: 중간. 등록 줄을 옮기면 정적 등록 순서가 바뀔 수 있다(등록부는 순서 키로 정렬하므로 메뉴 순서는 그대로여야 한다 — `EditorRegistryDump` 로 전후 비교).
+- 위험: 중간. 등록 줄을 옮기면 정적 등록 순서가 바뀔 수 있다(레지스트리는 순서 키로 정렬하므로 메뉴 순서는 그대로여야 한다 — `EditorRegistryDump` 로 전후 비교).
   검증: Debug 경고 0, EditorTest, `-L nogpu`, 에디터 시나리오(레이아웃 · 패널 · 테마 명령을 쓰는 것).
 
 ### 3. `EditorContext` 의존 줄이기 — 비용 대비 효과가 큰 곳만
 - 3a. `EditorContext::get()` 의 이중 조회를 없앴다: 정적 포인터 하나를 돌려주고, `initialize` 의 로컬 서비스 자기 등록(`bindLocalService( this )`)을 지웠다.
-  두 경로는 늘 같은 값이었다(같은 `this` 로 걸고 같이 푼다). 잰 값(Debug, DX12 에디터 기본 배치 600 프레임, 계수기 · 반복 100 만 번은 측정용 임시 코드):
+  두 경로는 늘 같은 값이었다(같은 `this` 로 걸고 같이 푼다). 측정한 값(Debug, DX12 에디터 기본 배치 600 프레임, 계수기 · 반복 100 만 번은 측정용 임시 코드):
   프레임당 `get()` 57 회, 호출당 550 ns → 8 ns. 프레임당 약 31 us → 무시할 만한 값이 된다. Debug 값이라 Release 이득은 이보다 훨씬 작다 — **최적화가 아니라 창구 하나로 줄인 단순화**로 적는다.
 - 3b. 생성자 · 인자 주입은 하지 않는다. 호출 224 곳(62 파일) 가운데 SelfTest 52 · Panels 51 · Commands 43 · GUI 38 · Popups 17 · Viewport 13 · Workspace 9 다.
-  패널은 등록부가 인자 없이 만들고(`createEditorPanel<T>`), 상용 엔진도 에디터 하위 시스템을 전역 창구로 준다(언리얼 `GEditor->GetEditorSubsystem<T>()`,
+  패널은 레지스트리가 인자 없이 만들고(`createEditorPanel<T>`), 상용 엔진도 에디터 하위 시스템을 전역 창구로 준다(언리얼 `GEditor->GetEditorSubsystem<T>()`,
   유니티 `Selection.activeObject` · `EditorWindow.GetWindow<T>()`). 테스트가 닿아야 하는 곳은 이미 상태를 인자로 받는다(`EditorPlaySession::update( data )` ·
   `EditorTransformCommands::pasteCopiedComponentValues( workspace, … )` · `EditorSceneGenerationSync::apply( workspace, … )`) — EditorTest 는 UI 매니저 때문에
   `EditorContext` 를 만들 수 없으므로, 컨텍스트를 인자로 바꿔도 테스트가 늘지 않는다. 테스트할 판단이 생기면 그 함수가 필요한 서비스 하나(작업 공간 · 선택)를 인자로 받는다.

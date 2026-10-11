@@ -17,7 +17,7 @@
 
 using namespace sw;
 
-// 부품 병합(MeshMerger) · 신체 절단(캡) · 표면 상태(영역 채널 · UV 도장 · 찢김).
+// 부품 병합(MeshMerger) · 신체 절단(캡) · 표면 상태(영역 채널 · UV 스탬프 · 찢김).
 
 namespace
 {
@@ -264,7 +264,7 @@ SW_TEST_CASE( SurfaceStateTest, RegionChannelsSetAndDecay )
 }
 
 /**
- * @brief [SurfaceStateTest] 맞은 자리 도장 — UV 원 안의 칸이 오르고 밖은 그대로, 감쇠 채널은 줄고, 찢김(감쇠 0)은 남는다
+ * @brief [SurfaceStateTest] 맞은 자리 스탬프 — UV 원 안의 칸이 오르고 밖은 그대로, 감쇠 채널은 줄고, 찢김(감쇠 0)은 남는다
  */
 SW_TEST_CASE( SurfaceStateTest, HitStampWritesUvMaskAndDecays )
 {

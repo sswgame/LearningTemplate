@@ -264,7 +264,7 @@ namespace sw
     void FrameRenderer::reportGPUPassTimes( [[maybe_unused]] IRHIDevice* pDevice )
     {
 #if SW_PROFILE_COMPILED
-        // **몇 프레임 늦은 값이다.** 기다려서 최신 값을 받으면 재려던 그 파이프라인을 멈춰 세워
+        // **몇 프레임 늦은 값이다.** 기다려서 최신 값을 받으면 측정하려던 그 파이프라인을 멈춰 세워
         // 숫자가 거짓이 된다. 늦은 대신 정확한 쪽을 고른다.
         if ( pDevice == nullptr )
             return;

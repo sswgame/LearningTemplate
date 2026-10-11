@@ -675,7 +675,7 @@ SW_TEST_CASE( ClassicJRPGTest, StateRoundTripContinuesTheSameBattle )
         (void)walker.step( hashed_string( "field" ) );
     }
 
-    // 되살린 쪽은 같은 가방 · 지갑을 빌린다(가방을 다시 열지 않는다).
+    // 복원한 쪽은 같은 가방 · 지갑을 빌린다(가방을 다시 열지 않는다).
     GameStateRefs refs;
     refs._pInventory = &world._inventory;
     refs._pWallet    = &world._wallet;

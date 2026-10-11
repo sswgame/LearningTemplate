@@ -8,7 +8,7 @@
  *          - 서버 프로세스 여럿이 한 저장소를 쓸 수 있다. 같은 계정의 동시 로그인은 마지막 로그인이 이기고(새 로그인이 옛 세션을 밀어낸다 — 기본 정책),
  *            다른 프로세스가 밀어낸 세션은 `refreshOnlineSessions`(또는 버스 알림 — 바인딩)가 알아챈다.
  *          - 로그인 · 게스트 · 외부 · 재접속은 클라이언트 빌드 판을 원격 설정(`account.minimum_build.<플랫폼>` · `account.recommended_build.<플랫폼>` ·
- *            `account.store_url.<플랫폼>`)과 견주고(낮으면 일을 맡기지 않고 `UpdateRequired`), 성공 직전에 제재(`Online/Sanction`)를 본다.
+ *            `account.store_url.<플랫폼>`)과 비교하고(낮으면 일을 맡기지 않고 `UpdateRequired`), 성공 직전에 제재(`Online/Sanction`)를 본다.
  *          - 시각은 부르는 쪽이 넘기는 벽시계 밀리초다(세션 시한이 저장소에 남아 재시작을 넘기 때문).
  *          - `IAccountDirectory` 를 구현한다 — 채팅 · 거래가 표시 이름 · 접속 여부를 여기서 본다(이 프로세스에 붙어 있는 계정만).
  *          - 내리는 순서: 저장소 `shutdown` → 저장소 `pollCompletions`(남은 완료가 이 서비스를 부른다) → 서비스 `shutdown`.

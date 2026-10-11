@@ -351,7 +351,7 @@ namespace sw
             outArchive << cell._statusBits;
             for ( const uint8 value : cell._arrStatusValue )
             {
-                outArchive << value; // 상태 값(남은 시간 · 세기) — 비트만 실으면 되살린 불이 처음부터 탄다
+                outArchive << value; // 상태 값(남은 시간 · 세기) — 비트만 실으면 복원한 불이 처음부터 탄다
             }
         }
         StateArchiveUtil::writeInt2( outArchive, _wind );

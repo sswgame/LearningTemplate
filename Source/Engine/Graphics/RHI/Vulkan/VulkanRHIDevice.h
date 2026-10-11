@@ -458,9 +458,9 @@ namespace sw
         void destroyDescriptorPoolSet( VulkanDescriptorPoolSet& poolSet );
         /** @brief 디바이스 프레임 스트림이 이번 링 슬롯에서 쓰는 풀 묶음입니다. */
         VulkanDescriptorPoolSet& currentFrameDescriptorPoolSet() { return _arrFrameDescriptorPoolSet[_currentFrame % constant::kMaxFrameCountInFlight]; }
-        /** @brief SRV/CB 등록부 인덱스 → 버퍼 핸들(없으면 0)입니다. */
+        /** @brief SRV/CB 레지스트리 인덱스 → 버퍼 핸들(없으면 0)입니다. */
         RHIBufferHandle bindlessSourceBufferAt( RHIDescriptorIndex index ) const;
-        /** @brief UAV 등록부 인덱스 → 버퍼 핸들(없으면 0)입니다. */
+        /** @brief UAV 레지스트리 인덱스 → 버퍼 핸들(없으면 0)입니다. */
         RHIBufferHandle uavSourceBufferAt( RHIDescriptorIndex index ) const;
         /** @brief 지금 열려 있는 프레임 세그먼트 버퍼입니다. 프레임 밖이면 VK_NULL_HANDLE 입니다. */
         VkCommandBuffer currentCommandBuffer() const;
@@ -598,7 +598,7 @@ namespace sw
         /**
          * @brief GPU 타임스탬프입니다. 링 슬롯마다 `constant::kMaxGPUTimestampSlot` 칸을 씁니다.
          * @details 읽기는 `vkWaitForFences` 를 통과한 **직후**에 합니다. 그 슬롯의 GPU 작업이 이미
-         *          끝났음이 보장된 유일한 자리라, 재려고 파이프라인을 멈춰 세우지 않습니다.
+         *          끝났음이 보장된 유일한 자리라, 측정하려고 파이프라인을 멈춰 세우지 않습니다.
          */
         VkQueryPool       _timestampPool;  ///< 없으면 VK_NULL_HANDLE (이 헤더는 vulkan.h 를 들이지 않는다)
         VkQueryPool       _clockQueryPool; ///< GPU 시계 읽기(`readGPUClockNanos`)용 한 칸. 처음 읽을 때 만든다
@@ -658,7 +658,7 @@ namespace sw
         /// @brief 프레임 스트림 컨텍스트(백버퍼 패스 · Present · 프레임 세그먼트)가 쓰는 기록 상태입니다. 리스트는
         /// 각자 자기 것을 가지므로, 여기 있는 것은 "디바이스가 직접 여는 버퍼" 전용입니다.
         VulkanRecordingState _recordingState;
-        /// @brief 디스크립터 등록부를 보호합니다. 커맨드 기록 경로가 인덱스로 이 목록들을 읽는 동안
+        /// @brief 디스크립터 레지스트리를 보호합니다. 커맨드 기록 경로가 인덱스로 이 목록들을 읽는 동안
         /// register/unregister 가 resize 로 재할당하면 기록 스레드가 쓰레기를 읽습니다
         /// (gv_useRenderThread 기본 true 라 렌더 · 게임 스레드 사이에서 이미 성립하는 레이스).
         /// 읽기는 공유 락이라 서로를 막지 않습니다.

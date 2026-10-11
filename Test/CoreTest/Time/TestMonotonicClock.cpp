@@ -49,7 +49,7 @@ SW_TEST_CASE( MonotonicClockTest, CountConversionDoesNotOverflowAfterLongUptime 
 }
 
 /**
- * @brief [MonotonicClockTest] GameTimer 와 MonotonicClock 이 같은 카운터를 읽는다 — 같은 구간을 재면 거의 같은 값이다
+ * @brief [MonotonicClockTest] GameTimer 와 MonotonicClock 이 같은 카운터를 읽는다 — 같은 구간을 측정하면 거의 같은 값이다
  */
 SW_TEST_CASE( MonotonicClockTest, GameTimerUsesTheSameCounter )
 {

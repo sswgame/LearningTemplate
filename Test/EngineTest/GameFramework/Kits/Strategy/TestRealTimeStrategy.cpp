@@ -584,7 +584,7 @@ SW_TEST_CASE( RealTimeStrategyTest, StateRoundTripContinuesTheSameMatch )
 
     RTSTestScene restored;
     SW_ASSERT_TRUE( restored.initialize() );
-    (void)restored.addPlayer( 0, mineralsAtSave, 0, float3{ 6.0f, 0.0f, 6.0f } ); // 지갑은 빌려 준 쪽이 되살린다 — 월드에는 같은 수의 플레이어를 먼저
+    (void)restored.addPlayer( 0, mineralsAtSave, 0, float3{ 6.0f, 0.0f, 6.0f } ); // 지갑은 빌려 준 쪽이 복원한다 — 월드에는 같은 수의 플레이어를 먼저
     RTSSelection restoredSelection;
     Archive      reader( written.getData(), written.getSize() );
     SW_ASSERT_TRUE( restored._world.readState( reader ) );

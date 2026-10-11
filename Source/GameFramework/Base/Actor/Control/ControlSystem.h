@@ -23,7 +23,7 @@ namespace sw
     /**
      * @class ControlSystem
      * @brief 매니저 하나에 하나 — `FrameSystems` 단계에서 (1) 자동 빙의 (2) 조종자 없는 폰의 의도 0 (3) 조종자마다 의도 → 폰 을 합니다. 게임 스레드.
-     * @details 조종자 · 폰 목록은 씬을 훑지 않고 등록부(`ComponentRegistry`)에서 읽습니다(등록 순서 — 결정적). 의도는 `quantize` 를 거쳐 폰에 넣습니다 —
+     * @details 조종자 · 폰 목록은 씬을 훑지 않고 레지스트리(`ComponentRegistry`)에서 읽습니다(등록 순서 — 결정적). 의도는 `quantize` 를 거쳐 폰에 넣습니다 —
      *          로컬 플레이어도 네트워크 · 재생과 같은 값으로 움직인다.
      *          첫 폰 · 조종자가 등록될 때 `ensureFor` 가 매니저에 붙이고(매니저가 소유), 마지막 것이 빠질 때 `releaseIfUnused` 가 뗍니다 —
      *          GameFramework 모듈이 내려가기 전에 그 컴포넌트가 먼저 지워지므로 매니저에 이 타입의 객체가 남지 않는다.
@@ -89,7 +89,7 @@ namespace sw
         };
 
         ControlIntentHistory    _history;
-        vector<ComponentHandle> _listAutoPossessPawn; ///< 이번 프레임에 자동 빙의할 폰(등록부를 도는 동안 오브젝트를 만들지 않게 모은다)
+        vector<ComponentHandle> _listAutoPossessPawn; ///< 이번 프레임에 자동 빙의할 폰(레지스트리를 도는 동안 오브젝트를 만들지 않게 모은다)
         vector<QueuedPossess>   _listQueuedPossess;
         InputManager*           _pInputOverride;
         const UISystem*         _pUISystemOverride;

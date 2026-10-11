@@ -70,7 +70,7 @@ namespace sw
             }
         };
 
-        /** @brief 경로마다 한 번 읽어 나눠 쓰는 표입니다(GameFramework 모듈 정적 — 등록부는 `GameDataCacheRegistry` 가 맞춘다). */
+        /** @brief 경로마다 한 번 읽어 나눠 쓰는 표입니다(GameFramework 모듈 정적 — 레지스트리는 `GameDataCacheRegistry` 가 맞춘다). */
         GameDataCache<InteractionCatalog>& getSharedCatalogCache()
         {
             static GameDataCache<InteractionCatalog> s_cache{ "InteractionCatalog" };

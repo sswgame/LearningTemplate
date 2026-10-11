@@ -1,6 +1,6 @@
 /**
  * @file LightComponent.h
- * @brief 빛 종류들의 공통 기반입니다. 색 · 세기 · 위치 · 방향 규약 · 등록부 등록을 한 곳에 둡니다.
+ * @brief 빛 종류들의 공통 기반입니다. 색 · 세기 · 위치 · 방향 규약 · 레지스트리 등록을 한 곳에 둡니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -15,13 +15,13 @@ namespace sw
 
     /**
      * @class LightComponent
-     * @brief 빛 하나의 공통 부분입니다. 종류(방향광 · 점광 · 스포트)는 파생이 정하고, 등록부와 수집이 그 종류로 나눕니다.
+     * @brief 빛 하나의 공통 부분입니다. 종류(방향광 · 점광 · 스포트)는 파생이 정하고, 레지스트리와 수집이 그 종류로 나눕니다.
      * @details 언리얼 `ULightComponent` 의 자리입니다. 색 · 세기의 세터 · 등록과 해제 · 위치 · 방향 함수는 여기 하나입니다. 새 종류는 파생
      *          하나(GPU 원소의 자기 칸은 `writeGPULightKindFields` 재정의) + 셰이더 분기 하나입니다. 수집(`collectSceneLights`)은 종류를 모릅니다.
      *
      *          **방향 규약.** 파생의 기본 방향은 **로컬** 방향이고, 월드 회전(부모 포함)이 그것을 돌립니다. 회전이 없는 루트 빛은 기본
      *          방향을 그대로 씁니다. 주의: "로컬 회전이 0 이면 기본 방향, 아니면 전방(+Z)" 처럼 갈라 두면 부모의 회전을 무시하고, 회전이
-     *          문턱을 넘는 순간 방향이 기본 방향에서 +Z 로 튄다.
+     *          임계값을 넘는 순간 방향이 기본 방향에서 +Z 로 튄다.
      *
      *          `REFLECT( Abstract )` 라 만들 수 없고 컴포넌트 팩토리도 없습니다. 색 · 세기 PROPERTY(`_color` · `_intensity`)는 저장된 씬 ·
      *          바이너리 · 기본값이 이름으로 묶입니다.
@@ -35,7 +35,7 @@ namespace sw
         /** @brief 기본 소멸자입니다. */
         virtual ~LightComponent() override = default;
 
-        /** @brief 빛 종류입니다(`shaderslot::kLightType*`). 등록부와 수집이 이것으로 나눕니다. */
+        /** @brief 빛 종류입니다(`shaderslot::kLightType*`). 레지스트리와 수집이 이것으로 나눕니다. */
         uint32 getLightType() const { return _lightType; }
 
         /** @brief 빛 색입니다. */
@@ -58,7 +58,7 @@ namespace sw
          */
         void writeGPULight( GPULight& outLight ) const;
 
-        /** @brief 씬에 붙을 때 빛 등록부의 자기 종류 칸에 자기를 등록합니다. */
+        /** @brief 씬에 붙을 때 빛 레지스트리의 자기 종류 칸에 자기를 등록합니다. */
         void onRegister( GameObjectManager& manager ) override;
         /** @brief 씬에서 떨어질 때 등록을 해제합니다. */
         void onUnregister( GameObjectManager& manager ) override;

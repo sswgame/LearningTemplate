@@ -373,7 +373,7 @@ def checkMissingReferenceInternal(rule: Rule, relPath: str, context: ValidationC
         if not _kResourcePathRe.match(value):
             continue
         if element.tag == "entity" and name == "prefab" and element.get("prefabGuid"):
-            continue  # 프리팹 인스턴스는 guid 가 정본이다 — 경로가 낡았는지는 `prefab_guid` 가 본다
+            continue  # 프리팹 인스턴스는 guid 가 원본이다 — 경로가 낡았는지는 `prefab_guid` 가 본다
         if not context.hasResource(value.lower()):
             where = f"{element.tag}@{name}" if name else f"<{element.tag}>"
             listMessage.append(f"{where} points at '{value}', which does not exist")
@@ -524,7 +524,7 @@ def checkPrefabGuidInternal(rule: Rule, relPath: str, context: ValidationContext
             continue
         owner = next((path for path, otherGuid in mapGuid.items() if otherGuid == guid), None) if guid else None
         if bStalePathOnly:
-            # guid 가 정본이라 낡은 경로로도 열린다 — 다시 저장하면 경로가 고쳐진다는 알림이다.
+            # guid 가 원본이라 낡은 경로로도 열린다 — 다시 저장하면 경로가 고쳐진다는 알림이다.
             if owner is not None and not context.hasResource(prefab):
                 listMessage.append(f"entity {entity.get('id')} names '{prefab}' but its guid resolves to '{owner}' (resave to update the path)")
             continue

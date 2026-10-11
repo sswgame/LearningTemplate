@@ -297,7 +297,7 @@
   매니저는 생성자에서 표를 훑어 소유 캐시를 만들고 종류 이름 순으로 올립니다. 타입으로 찾는 창구는 `getAssetCache<T>()` 입니다(`getMaterialCache` 넷은 지웠습니다).
   언리얼 서브시스템(모듈이 타입을 올리고 엔진이 인스턴스를 만들며 `GetSubsystem<T>()` 로 찾는다) · 고도 `register_types` 의 `add_resource_format_loader` 와 같은 방향입니다 — 유니티 `ScriptedImporter` 도 특성으로 등록되고 `AssetDatabase` 는 구현 타입을 모릅니다.
   그래서 `Source/Engine/Resource/AssetManager.cpp` 의 배선 예외가 없어졌습니다. 모듈(게임 · 키트)의 캐시는 이 표가 아니라 `registerAssetCache` 로 올리고 내립니다(표 항목은 내리지 않으므로).
-- **씬마다 하나인 기능 서비스는 기능 폴더가 등록하고 `GameObjectManager` 는 등록표만 봅니다**(2026-10-12, 엔진 분할 2 단계). 서비스 .cpp 에 `SW_SCENE_SERVICE( SceneNavigation, Navigation )` 한 줄을 두면 매니저가 생성자에서 만들고, 그 줄의 프레임 단계에서 `update` 를, `clear` 에서 `shutdown` 을 부르며, 찾는 창구는 `getSceneService<T>()` 입니다(`Object/GameObject/ISceneService.h`).
+- **씬마다 하나인 기능 서비스는 기능 폴더가 등록하고 `GameObjectManager` 는 레지스트리만 봅니다**(2026-10-12, 엔진 분할 2 단계). 서비스 .cpp 에 `SW_SCENE_SERVICE( SceneNavigation, Navigation )` 한 줄을 두면 매니저가 생성자에서 만들고, 그 줄의 프레임 단계에서 `update` 를, `clear` 에서 `shutdown` 을 부르며, 찾는 창구는 `getSceneService<T>()` 입니다(`Object/GameObject/ISceneService.h`).
   언리얼은 `UNavigationSystem` 이 월드에 등록되는 서브시스템이고(`UWorld::GetSubsystem<T>()`), 유니티의 `NavMeshManager` 도 씬 코어 밖 모듈이라 같은 방향입니다 — 그래서 `GameObject/` 는 `Component/Navigation` 을 include 하지 않습니다(`getSceneNavigation` 은 지웠습니다).
 - **`AABB` 는 Core 수학 타입입니다**(2026-10-11, 엔진 분할). `Engine/Physics/Collision/AABB.h` → `Core/Math/AABB.h`(`Frustum.h` 옆) — 언리얼 `FBox` · `FBoxSphereBounds` 와 유니티 `Bounds` 도 물리가 아닌 수학 타입입니다. 레이어를 보는 겹침 질의 `queryOverlaps` 만 물리의 `CollisionLayers.h` 에 남고, `Spatial` 은 티어 4 → 1 로, Object → Physics include 는 41 → 36 으로 줄었습니다.
 

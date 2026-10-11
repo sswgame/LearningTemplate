@@ -18,11 +18,11 @@
 
 #include "TestFramework/TestFramework.h"
 
-// AssetCacheRegistryTest — 에셋 캐시 등록부(종료 · 진단 · 핫 리로드가 훑는 정본). 전역을 건드리지 않는다(지역 AssetManager).
+// AssetCacheRegistryTest — 에셋 캐시 레지스트리(종료 · 진단 · 핫 리로드가 훑는 원본). 전역을 건드리지 않는다(지역 AssetManager).
 
 namespace
 {
-    /** @brief 등록부가 자기를 훑었는지만 기록하는 가짜 캐시. */
+    /** @brief 레지스트리가 자기를 훑었는지만 기록하는 가짜 캐시. */
     class ProbeAssetCache final : public sw::IAssetCache
     {
     public:
@@ -54,8 +54,8 @@ namespace
 } // namespace
 
 /**
- * @brief [AssetCacheRegistryTest] 내장 캐시는 모두 등록부를 통해 보인다
- * @details 종료 · 진단 · 핫 리로드는 이름으로 캐시를 적지 않고 등록부를 훑는다 — 등록부에 빠진 캐시는 그 셋 모두에서 빠진다.
+ * @brief [AssetCacheRegistryTest] 내장 캐시는 모두 레지스트리를 통해 보인다
+ * @details 종료 · 진단 · 핫 리로드는 이름으로 캐시를 적지 않고 레지스트리를 훑는다 — 레지스트리에 빠진 캐시는 그 셋 모두에서 빠진다.
  */
 SW_TEST_CASE( AssetCacheRegistryTest, BuiltInCachesAreReachableThroughTheRegistry )
 {
@@ -114,8 +114,8 @@ SW_TEST_CASE( AssetCacheRegistryTest, BuiltInCachesComeFromFeatureRegistrations 
 }
 
 /**
- * @brief [AssetCacheRegistryTest] 코드로 짓는 값 표(내장 도형)도 등록부로 세고 비운다 — 쥔 쪽의 값은 살고, 비운 뒤의 요청은 새로 짓는다
- * @details 함수 정적 표가 등록부 밖에 있으면 진단(`getCachedCount`)에 보이지 않고 종료 · 재초기화의 비우기가 지나가지 않는다.
+ * @brief [AssetCacheRegistryTest] 코드로 짓는 값 표(내장 도형)도 레지스트리로 세고 비운다 — 쥔 쪽의 값은 살고, 비운 뒤의 요청은 새로 짓는다
+ * @details 함수 정적 표가 레지스트리 밖에 있으면 진단(`getCachedCount`)에 보이지 않고 종료 · 재초기화의 비우기가 지나가지 않는다.
  */
 SW_TEST_CASE( AssetCacheRegistryTest, InternedValueTablesAreCountedAndClearedThroughTheRegistry )
 {
@@ -203,7 +203,7 @@ SW_TEST_CASE( AssetCacheRegistryTest, ClearAssetCachesReachesEveryRegisteredCach
 
 /**
  * @brief [AssetCacheRegistryTest] 내린 캐시만 빠지고 나머지는 그대로다
- * @details **모듈이 내려가기 전에 부르는 자리다.** 등록부는 포인터만 들고 있어, 모듈 DLL 이
+ * @details **모듈이 내려가기 전에 부르는 자리다.** 레지스트리는 포인터만 들고 있어, 모듈 DLL 이
  *          사라지면 그 포인터도 가상 함수 표도 같이 사라진다 — 남겨 두면 다음 비우기가 죽은
  *          코드로 뛴다("Statics die on hot reload" 와 같은 자리).
  */
@@ -263,8 +263,8 @@ SW_TEST_CASE( AssetCacheRegistryTest, LeftoverModuleCacheIsNamedInAWarning )
 
 #if !defined( SW_SHIPPING )
 /**
- * @brief [AssetCacheRegistryTest] 모듈 이미지를 내리기 전의 정리(`ModuleImageUtil::releaseModuleCode`)는 그 이미지의 캐시를 등록부에서 내린다
- * @details 모듈이 `unregisterAssetCache` 를 빠뜨린 채 내려가면 등록부에 vtable 이 사라진 포인터가 남고, 다음 비우기 · 종료가 내려간 코드로
+ * @brief [AssetCacheRegistryTest] 모듈 이미지를 내리기 전의 정리(`ModuleImageUtil::releaseModuleCode`)는 그 이미지의 캐시를 레지스트리에서 내린다
+ * @details 모듈이 `unregisterAssetCache` 를 빠뜨린 채 내려가면 레지스트리에 vtable 이 사라진 포인터가 남고, 다음 비우기 · 종료가 내려간 코드로
  *          뛴다. 여기서는 가짜 캐시의 vtable 한 바이트를 "모듈 이미지" 로 삼는다 — 그 범위 밖인 내장 캐시는 그대로 남아야 한다.
  */
 SW_TEST_CASE( AssetCacheRegistryTest, ReleaseModuleCodeDropsCachesOfThatImage )

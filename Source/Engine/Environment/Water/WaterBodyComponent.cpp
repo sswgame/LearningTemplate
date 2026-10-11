@@ -35,7 +35,7 @@ namespace sw
                 return s_arrName[waveIndex];
             }
 
-            /** @brief 지형 높이 아래로 잰 물 깊이입니다. 지형이 없거나 덮지 않으면 열린 물 깊이입니다. */
+            /** @brief 지형 높이 아래로 측정한 물 깊이입니다. 지형이 없거나 덮지 않으면 열린 물 깊이입니다. */
             static float32 computeDepth( const TerrainHeightfield* pTerrain, float32 worldX, float32 worldZ, float32 surfaceY )
             {
                 float32 groundY{ 0.0f };
@@ -158,7 +158,7 @@ namespace sw
 
     void WaterBodyComponent::onUnregister( GameObjectManager& manager )
     {
-        _batch.reset(); // 소멸자가 등록부에서 뺀다
+        _batch.reset(); // 소멸자가 레지스트리에서 뺀다
         _material.release();
         _pPrimitiveRegistry = nullptr;
         manager.getComponentRegistry().remove<WaterBodyComponent>( this );
@@ -224,7 +224,7 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager != nullptr && _bOriginDirty.exchange( false, std::memory_order_relaxed ) )
         {
-            // 다시 만들기는 배치를 등록부에서 빼고 넣는 구조 변경이다 — 틱 뒤로 미룬다.
+            // 다시 만들기는 배치를 레지스트리에서 빼고 넣는 구조 변경이다 — 틱 뒤로 미룬다.
             const ComponentHandle self = getHandle();
             pManager->executeOrDeferPostTick( [pManager, self]()
             {

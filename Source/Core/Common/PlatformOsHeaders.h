@@ -24,6 +24,7 @@
     #include <Windows.h>
     #include <Unknwn.h>
     #include <DbgHelp.h>
+    #include <Psapi.h>
     #include <Xinput.h>
     #include <commdlg.h>
     #include <crtdbg.h>

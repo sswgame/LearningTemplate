@@ -167,7 +167,7 @@ namespace
         GameObjectManager* getManager() const { return _pScene != nullptr ? _pScene->getObjectManager() : nullptr; }
     };
 
-    /** @brief 씬의 (첫) 공유 상태입니다 — 되살린 뒤에는 오브젝트가 새로 섰다. */
+    /** @brief 씬의 (첫) 공유 상태입니다 — 복원한 뒤에는 오브젝트가 새로 섰다. */
     GameStateComponent* findSceneGameState( GameObjectManager& manager )
     {
         GameStateComponent* pFound = nullptr;
@@ -220,7 +220,7 @@ SW_TEST_CASE( GameStateComponentTest, DirectorsOnTheStateObjectTickInAttachOrder
 }
 
 /**
- * @brief [GameStateComponentTest] 스냅숏에서 되살리면 공유 상태가 먼저 돌아오고, 여는 디렉터는 시작값을 다시 넣지 않는다
+ * @brief [GameStateComponentTest] 스냅숏에서 복원하면 공유 상태가 먼저 돌아오고, 여는 디렉터는 시작값을 다시 넣지 않는다
  */
 SW_TEST_CASE( GameStateComponentTest, SnapshotRestoresSharedStateBeforeTheDirectorsSeedIt )
 {
@@ -240,7 +240,7 @@ SW_TEST_CASE( GameStateComponentTest, SnapshotRestoresSharedStateBeforeTheDirect
     SW_ASSERT_TRUE( instance.captureSnapshot( snapshot ) );
     SW_ASSERT_TRUE( instance.restoreSnapshot( snapshot ) );
     pManager->mergePendingAdds();
-    pManager->tick( 0.0f ); // 되살린 오브젝트가 시작한다 — 시계는 흐르지 않는다
+    pManager->tick( 0.0f ); // 복원한 오브젝트가 시작한다 — 시계는 흐르지 않는다
 
     GameStateComponent* pRestored = findSceneGameState( *pManager );
     SW_ASSERT_NOT_NULL( pRestored );

@@ -46,7 +46,7 @@ namespace sw
      * @class TerrainComponent
      * @brief 높이장(`.heightfield`)을 청크로 나눠 거리 LOD 메시로 그리고, 스플랫 맵(RGBA = 레이어 0..3 가중치)으로 레이어를 칠합니다.
      * @details 지형은 오너의 월드 위치에서 x · z 로 `_size` 만큼 펼쳐집니다(회전 · 크기는 보지 않습니다). 청크마다 `MeshInstanceBatch`
-     *          하나(항목 하나)를 프리미티브 등록부에 넣어 메시 컴포넌트와 같은 길(GPUScene · GPU 컬링)로 그려집니다 — 청크를 오브젝트로
+     *          하나(항목 하나)를 프리미티브 레지스트리에 넣어 메시 컴포넌트와 같은 길(GPUScene · GPU 컬링)로 그려집니다 — 청크를 오브젝트로
      *          만들지 않으므로 씬에 저장되지 않고 계층 창에도 없습니다. 틱마다 카메라 거리로 청크 LOD 를 고르고, LOD 나 이웃 LOD 가 바뀐
      *          청크만 메시를 다시 만들어 배치에 갈아 끼웁니다(`MeshInstanceBatch::setMesh`). 이웃이 더 거친 변은 접어 틈이 없습니다(`TerrainMeshBuilder`).
      *
@@ -133,7 +133,7 @@ namespace sw
 
         /** @brief 청크 배치 모두를 더티로 — 활성이 바뀌었을 때. */
         void markChunksDirty();
-        /** @brief 청크 배치를 등록부에서 빼고 놓습니다. */
+        /** @brief 청크 배치를 레지스트리에서 빼고 놓습니다. */
         void releaseChunks();
         /** @brief 지금 LOD 로 청크 배치를 모두 만들어 등록합니다. */
         void createChunks();
@@ -179,7 +179,7 @@ namespace sw
         vector<Chunk>       _listChunk;
         vector<uint32>      _listWantedLOD; ///< updateLODs 의 스크래치(청크마다 고른 LOD)
         EnvironmentMaterial _material;
-        PrimitiveRegistry*  _pPrimitiveRegistry; ///< 등록된 매니저의 등록부(구조 링크라 생포인터)
+        PrimitiveRegistry*  _pPrimitiveRegistry; ///< 등록된 매니저의 레지스트리(구조 링크라 생포인터)
         atomic<bool>        _bOriginDirty;       ///< 오너가 움직여 지형 원점이 낡았다
     };
 } // namespace sw

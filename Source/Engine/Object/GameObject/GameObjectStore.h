@@ -44,7 +44,7 @@ namespace sw
         /**
          * @brief 매니저의 다른 단위를 받아 만듭니다. 받은 참조는 매니저가 함께 소유하므로 이 타입보다 오래 삽니다.
          * @param manager 만든 오브젝트의 소유 매니저이자, 컴포넌트 등록 해제(`onUnregister`)가 받는 매니저
-         * @param tickScheduler 지운 컴포넌트 · 오브젝트를 알릴 틱 등록부의 주인(이미 만들어져 있어야 한다)
+         * @param tickScheduler 지운 컴포넌트 · 오브젝트를 알릴 틱 레지스트리의 주인(이미 만들어져 있어야 한다)
          */
         GameObjectStore( GameObjectManager& manager, SceneTickScheduler& tickScheduler, const StructuralChangeBuffer& structuralChangeBuffer );
         /** @brief 남은 오브젝트는 매니저의 `clear` 가 이미 지웠습니다. */
@@ -149,7 +149,7 @@ namespace sw
         void processDeferredDestruction();
         /** @brief 이번 프레임에 추가된 GameObject 를 활성 목록에 합칩니다. */
         void mergePendingAdds();
-        /** @brief 오브젝트 · 대기 목록 · 시작 줄을 모두 비우고 풀을 놓습니다. 다른 단위(계층 · 등록부 · 물리)는 매니저가 비웁니다. */
+        /** @brief 오브젝트 · 대기 목록 · 시작 줄을 모두 비우고 풀을 놓습니다. 다른 단위(계층 · 레지스트리 · 물리)는 매니저가 비웁니다. */
         void clear();
 
 #if !defined( SW_SHIPPING )
@@ -209,7 +209,7 @@ namespace sw
          *       오브젝트**가 쓸 때만(이만큼 떨어진 id 둘이
          *       함께 살아 있을 때 — 오래 사는 오브젝트와 420 만 뒤의 스폰) 뒤에 온 것이 맵으로 갑니다. 칸의 오브젝트가 다른 id 면 "여기 없음" 이라
          *       읽는 쪽이 id 를 견줍니다 — 묻는 id 가 `_compareFromID` 이상일 때만. 그 값은 칸 수이고, 칸 수를 넘는 id 가 한 번이라도 들어오면
-         *       0 이 됩니다. 그 전에는 칸 번호가 곧 id 라 작은 id 는 견줄 것이 없습니다(늘 견주면 오브젝트의 `_objectID` 를 한 번 더 읽어
+         *       0 이 됩니다. 그 전에는 칸 번호가 곧 id 라 작은 id 는 견줄 것이 없습니다(늘 비교하면 오브젝트의 `_objectID` 를 한 번 더 읽어
          *       조회가 0.8 ns 느리다. Release · FindByID 번갈아 5 회 5.6 → 6.4 ns).
          *       청크는 늘 1024 개 이하(32 MB 상한)입니다 — id 범위를
          *       넓히면(2 단 디렉터리) 지난 id 범위마다 청크가 남아 메모리가 스폰 수에 비례해 자랍니다. 언리얼 `FUObjectArray` 는 칸을
@@ -267,7 +267,7 @@ namespace sw
         bool isNameTakenUnlocked( hashed_string name ) const;
 
         GameObjectManager*                             _pManager;                ///< 만든 오브젝트의 소유 매니저(`GameObject::_pOwnerManager`)
-        TickRegistry*                                  _pTickRegistry;           ///< 지운 컴포넌트 · 오브젝트를 틱 등록부에 알린다
+        TickRegistry*                                  _pTickRegistry;           ///< 지운 컴포넌트 · 오브젝트를 틱 레지스트리에 알린다
         [[maybe_unused]] const StructuralChangeBuffer* _pStructuralChangeBuffer; ///< 틱 중인지만 읽는다(해체 단언 — 단언이 빠지는 Release · Shipping 에서는 읽는 곳이 없다)
 
         TypedPoolAllocator<GameObject>                          _poolGameObject;

@@ -12,7 +12,7 @@
 
 // ------------------------------------------------------------------------------
 // AudioBenchTest — 보이스 N 개의 렌더 CPU 비용(실시간 대비). 숫자는 로그로 남기고, 테스트는 실제로 그만큼 섞었는지만 본다.
-// Release 에서 잰다: EngineTest.exe --test_filter=AudioBenchTest.*
+// Release 에서 측정한다: EngineTest.exe --test_filter=AudioBenchTest.*
 // ------------------------------------------------------------------------------
 
 namespace

@@ -48,7 +48,7 @@ namespace sw
         float4  _outlineColor{};                  ///< 외곽선 색(`_outlineWidth` > 0 일 때)
         float32 _fontSize{ 16.0f };               ///< em 하나의 크기
         float32 _outlineWidth{ 0.0f };            ///< 외곽선 두께
-        uint8   _bFauxBold{ SW_FALSE };           ///< 굵은 면이 없어 SDF 문턱을 밀어 굵게
+        uint8   _bFauxBold{ SW_FALSE };           ///< 굵은 면이 없어 SDF 임계값을 밀어 굵게
         uint8   _bFauxItalic{ SW_FALSE };         ///< 기운 면이 없어 기울여 그린다
     };
 } // namespace sw
@@ -82,7 +82,7 @@ namespace sw
     class SW_API CanvasPainter
     {
     public:
-        /** @brief 가짜 굵게의 문턱 이동입니다(글꼴 픽셀 크기의 비율 — 윤곽이 양쪽으로 이만큼 밀린다). */
+        /** @brief 가짜 굵게의 임계값 이동입니다(글꼴 픽셀 크기의 비율 — 윤곽이 양쪽으로 이만큼 밀린다). */
         static constexpr float32 kFauxBoldEmFraction = 0.025f;
         /** @brief 가짜 기울임의 기울기입니다(아래로 1 내려갈 때 왼쪽으로 가는 양 — 약 11 도, 언리얼 Slate 의 가짜 이탤릭과 같은 값). */
         static constexpr float32 kFauxItalicShear = 0.2f;

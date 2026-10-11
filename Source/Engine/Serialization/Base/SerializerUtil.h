@@ -175,7 +175,7 @@ namespace sw
 
         // ------------------------------------------------------------------------------
         // 프로퍼티 값 하나 — 비트필드 · 컨테이너 · 값의 세 갈래를 한 벌로. 직렬화기 셋 · 프리팹 오버라이드 도구 · 인스펙터가 함께 쓴다
-        // (비트필드를 바이트째 견주고 옮기면 같은 바이트의 다른 플래그까지 바뀐다).
+        // (비트필드를 바이트째 비교하고 옮기면 같은 바이트의 다른 플래그까지 바뀐다).
         // ------------------------------------------------------------------------------
         /** @brief 한 인스턴스의 프로퍼티 값을 다른 인스턴스로 옮깁니다(같은 타입). 비트필드는 그 비트만, 컨테이너는 원소째 옮깁니다. */
         [[nodiscard]] SW_API static bool copyPropertyValue( const PropertyInfo& prop, const void* pSrcInstance, void* pDstInstance, const SerializeContext& context );
@@ -199,7 +199,7 @@ namespace sw
         static bool keysEqual( string_view left, string_view right, bool bIgnoreCase );
 
         /**
-         * @brief Alias 로 들어온 이름을 `SerializeContext` 핸들러가 아는 정본 이름(`_name`)으로 바꿉니다.
+         * @brief Alias 로 들어온 이름을 `SerializeContext` 핸들러가 아는 원본 이름(`_name`)으로 바꿉니다.
          * @details `SerializerUtil` · `JSONSerializer` 가 함께 쓰는 핸들러 조회 규칙입니다.
          */
         SW_API static hashed_string resolveHandlerTypeName( const hashed_string& typeName, const SerializeContext& context );

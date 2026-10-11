@@ -20,7 +20,7 @@ if(NOT SW_SHIPPING_BUILD)
 		${CMAKE_SOURCE_DIR}/Source/ModuleHost/ModuleCallGuard.cpp
 		${CMAKE_SOURCE_DIR}/Source/ModuleHost/ModuleImagePatch.cpp
 		${CMAKE_SOURCE_DIR}/Source/ModuleHost/ShadowCopyName.cpp
-		# 패처는 파일 바이트만 다루므로 Windows 에서도 합성 ELF 로 잰다(리눅스 핫 리로드의 SONAME 고유화).
+		# 패처는 파일 바이트만 다루므로 Windows 에서도 합성 ELF 로 측정한다(리눅스 핫 리로드의 SONAME 고유화).
 		TestModuleImagePatch.cpp
 		TestModuleCallGuard.cpp
 		TestShadowCopyName.cpp

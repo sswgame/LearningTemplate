@@ -1,6 +1,6 @@
 /**
  * @file EngineAbiStamp.h
- * @brief 이 Engine 이 빌드될 때의 Core · Engine 헤더 지문입니다(핫 리로드의 엔진 ABI 도장).
+ * @brief 이 Engine 이 빌드될 때의 Core · Engine 헤더 지문입니다(핫 리로드의 엔진 ABI 스탬프).
  */
 #pragma once
 #include "Core/Common/Macros.h"

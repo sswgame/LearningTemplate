@@ -13,7 +13,7 @@ namespace sw
 {
     class IRHIDevice;
 
-    /** @brief 숫자 버전입니다. 도장의 `v<N>` 과 같아야 합니다(아래 static_assert 가 견줍니다). */
+    /** @brief 숫자 버전입니다. 스탬프의 `v<N>` 과 같아야 합니다(아래 static_assert 가 견줍니다). */
     inline constexpr uint32 kRHIModuleAbiVersion = 30;
     /**
      * @brief 불투명 표면 지문입니다. 커맨드 리스트 · 디바이스 ABI 가 바뀌면 `v<N>` 을 올리고 문자열을 바꿉니다.
@@ -22,14 +22,14 @@ namespace sw
      *          - 가상 ↔ 비가상 전환(`waitIdle` · `shutdown` 은 비가상 템플릿 메서드이고 백엔드는 `...Internal` 훅만 채웁니다)
      *          - 경계를 넘는 구조체(RHITextureDesc · RHITextureUploadDesc · RHIRenderPassBeginInfo · RHINativeHandles 등)의 필드가 바뀔 때
      *          - 백엔드 디바이스가 멤버로 품는 공유 타입(RHI/Support 의 FrameResourceRing 등)의 레이아웃이 바뀔 때
-     *          RHINativeHandles 는 이 도장이 Engine ↔ RHI_* 를 덮고, Engine ↔ 부르는 모듈(에디터)은 구조체의 `_version` · `_byteSize` 로 대조합니다.
+     *          RHINativeHandles 는 이 스탬프가 Engine ↔ RHI_* 를 덮고, Engine ↔ 부르는 모듈(에디터)은 구조체의 `_version` · `_byteSize` 로 대조합니다.
      *          판마다 무엇이 바뀌었는지는 git log 에 있습니다.
      */
     inline constexpr auto kRHIModuleAbiStamp = "rhi-cl-v30-2026-10";
 
     namespace RHIModuleAbiInternal
     {
-        /** @brief 도장 `rhi-cl-v<N>-…` 의 N 을 읽습니다. 숫자 버전과 도장이 어긋나지 않게 컴파일 때 견줍니다. */
+        /** @brief 스탬프 `rhi-cl-v<N>-…` 의 N 을 읽습니다. 숫자 버전과 스탬프가 어긋나지 않게 컴파일 때 견줍니다. */
         constexpr uint32 readStampVersion( const utf8* pStamp )
         {
             uint32 index{ 0 };

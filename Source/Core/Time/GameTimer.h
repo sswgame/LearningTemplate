@@ -14,7 +14,7 @@ namespace sw
     // 1) GameTimer — resetTimer → startTimer → updateTimer(매 프레임) → stopTimer
     //    getDeltaTime 은 직전 updateTimer 와의 간격, getTotalTime 은 일시정지를 뺀 누적 시간
     // ------------------------------------------------------------------------------
-    /** @brief QPC 같은 고해상도 카운터로 누적 · 델타 시간을 잽니다. */
+    /** @brief QPC 같은 고해상도 카운터로 누적 · 델타 시간을 측정합니다. */
     class SW_API GameTimer
     {
     public:

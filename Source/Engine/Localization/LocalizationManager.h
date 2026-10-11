@@ -61,7 +61,7 @@ namespace sw
         LocalizationManager( const LocalizationManager& )            = delete;
         LocalizationManager& operator=( const LocalizationManager& ) = delete;
 
-        /** @brief 언어 코드의 정본 철자입니다 — 소문자, `-` 는 `_`(`ko-KR` · `ko_KR` → `ko_kr`). 표에 넣고 찾는 모든 길이 이것을 지납니다. */
+        /** @brief 언어 코드의 원본 철자입니다 — 소문자, `-` 는 `_`(`ko-KR` · `ko_KR` → `ko_kr`). 표에 넣고 찾는 모든 길이 이것을 지납니다. */
         static string normalizeLanguageCode( string_view languageCode );
 
         // ------------------------------------------------------------------------------

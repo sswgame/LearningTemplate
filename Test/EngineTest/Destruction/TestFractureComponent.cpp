@@ -49,7 +49,7 @@ namespace
             return asset.saveToFile( path ) ? path : sw::string{};
         }
 
-        /** @brief 테스트용 표 — 문턱이 낮고 파편이 빨리 쉰다. */
+        /** @brief 테스트용 표 — 임계값이 낮고 파편이 빨리 쉰다. */
         static sw::string writeProfile( const utf8* pName )
         {
             const sw::string path = test::makeTempPath( pName );
@@ -63,7 +63,7 @@ namespace
             return path;
         }
 
-        /** @brief 파편 예산 테스트용 표 — 잎 하나도 문턱을 넘는 센 폭발에 모두 떨어지고, 오브젝트 상한은 넉넉하고 오래 남는다. */
+        /** @brief 파편 예산 테스트용 표 — 잎 하나도 임계값을 넘는 센 폭발에 모두 떨어지고, 오브젝트 상한은 넉넉하고 오래 남는다. */
         static sw::string writeShatterProfile( const utf8* pName )
         {
             const sw::string path = test::makeTempPath( pName );

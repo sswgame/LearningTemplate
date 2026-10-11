@@ -31,7 +31,7 @@ namespace sw
         {
             /** @brief 하차 자리가 막혔을 때 둘러보는 방향 수입니다(45° 간격). */
             static constexpr int32 kExitProbeCount = 8;
-            /** @brief 겹침을 잴 때 발을 바닥에서 띄우는 높이입니다(미터 — 바닥과 겹치지 않게). */
+            /** @brief 겹침을 측정할 때 발을 바닥에서 띄우는 높이입니다(미터 — 바닥과 겹치지 않게). */
             static constexpr float32 kGroundClearance = 0.05f;
 
             static GameObjectManager* findManager( const Component& component )

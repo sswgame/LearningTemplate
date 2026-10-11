@@ -2,10 +2,10 @@
  * @file TestGameObjectBench.cpp
  * @brief GameObject · Component 마이크로벤치 — 스폰 · 틱(무버) · 파괴 · 활성 토글 · 컴포넌트 조회.
  * @details 숫자를 **찍기만** 하고 판정하지 않는다(기계마다 다르다). 판정은 정합성만 본다. `TaskManagerBenchTest` 와 같은 규칙:
- *          Release 로 읽고, 인용하려면 이전/이후 바이너리를 같은 시각에 번갈아 잰다.
+ *          Release 로 읽고, 인용하려면 이전/이후 바이너리를 같은 시각에 번갈아 측정한다.
  *
- *          재는 것:
- *          - 오브젝트 8000 개 스폰(씬 컴포넌트 + 틱 컴포넌트) · 첫 틱(병합 + 등록부) · 정상 상태 틱 · 파괴.
+ *          측정하는 것:
+ *          - 오브젝트 8000 개 스폰(씬 컴포넌트 + 틱 컴포넌트) · 첫 틱(병합 + 레지스트리) · 정상 상태 틱 · 파괴.
  *          - 틱 안에서 위치·스케일을 쓰는 무버 8000 개의 `tick()` — 병렬 틱 + 슬롯 큐 적용 + 플러시.
  *          - 깊은 계층(1000 단)의 활성 토글 — 계층 재계산이 몇 번 도는가.
  *          - 컴포넌트 조회 `getComponent<T>` 의 뜨거운 비용.
@@ -34,7 +34,7 @@ namespace
 {
     constexpr uint32 kObjectCount = 8000;
 
-    /** @brief 이름은 전부 같다 — 총알처럼 같은 이름으로 거듭 만드는 모양. 유일화가 O(1) 인지도 같이 잰다. */
+    /** @brief 이름은 전부 같다 — 총알처럼 같은 이름으로 거듭 만드는 모양. 유일화가 O(1) 인지도 같이 측정한다. */
     sw::GameObject* spawnMoverObject( sw::GameObjectManager& manager, bool bWritesTransform )
     {
         sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( "BenchObject" ) );
@@ -357,7 +357,7 @@ SW_TEST_CASE( GameObjectBenchTest, FindByID )
 }
 
 /**
- * @brief [GameObjectBenchTest] 1000 단 계층의 루트 이동 — 더티 표시(세터)와 플러시를 따로 잽니다.
+ * @brief [GameObjectBenchTest] 1000 단 계층의 루트 이동 — 더티 표시(세터)와 플러시를 따로 측정합니다.
  */
 SW_TEST_CASE( GameObjectBenchTest, DeepChainMove )
 {
@@ -397,7 +397,7 @@ SW_TEST_CASE( GameObjectBenchTest, DeepChainLifecycle )
     sw::vector<int64> listTeardown;
     for ( uint32 round = 0; round < 5; ++round )
     {
-        // 판마다 새 매니저다 — 하나를 돌려 쓰면 앞 판이 남긴 상태(풀 · 이름 번호)가 뒤 판을 잰다.
+        // 판마다 새 매니저다 — 하나를 돌려 쓰면 앞 판이 남긴 상태(풀 · 이름 번호)가 뒤 판을 측정한다.
         {
             sw::GameObjectManager manager;
             sw::RegisterMockComponents();
@@ -490,7 +490,7 @@ SW_TEST_CASE( GameObjectBenchTest, SpawnCollidersDuringPlay )
 
 /**
  * @brief [GameObjectBenchTest] 이름으로 컴포넌트 만들기 8000 회 — 씬 · 프리팹 로드가 컴포넌트마다 지나는 길(`addComponentByName`)입니다.
- * @details 오브젝트를 먼저 만들어 두고 붙이는 것만 잽니다. 코드젠이 생성 함수를 준 실제 컴포넌트(`SceneComponent` · `TagComponent`)로 잽니다.
+ * @details 오브젝트를 먼저 만들어 두고 붙이는 것만 측정합니다. 코드젠이 생성 함수를 준 실제 컴포넌트(`SceneComponent` · `TagComponent`)로 측정합니다.
  */
 SW_TEST_CASE( GameObjectBenchTest, AddComponentByName )
 {

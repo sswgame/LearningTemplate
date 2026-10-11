@@ -45,7 +45,7 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return;
-        // 이 탈것의 운전석 — 좌석 등록부에서 이 오브젝트의 것을 찾는다(씬을 훑지 않는다).
+        // 이 탈것의 운전석 — 좌석 레지스트리에서 이 오브젝트의 것을 찾는다(씬을 훑지 않는다).
         for ( VehicleSeatComponent* pSeat : pManager->getComponentRegistry().getAll<VehicleSeatComponent>() )
         {
             if ( pSeat == nullptr || pSeat->getOwner() != pOwner || pSeat->isDriverSeat() == false || pSeat->isFree() )

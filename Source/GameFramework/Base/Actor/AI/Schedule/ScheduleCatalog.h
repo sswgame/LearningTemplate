@@ -188,7 +188,7 @@ namespace sw
         [[nodiscard]] static bool parseClockMinutes( string_view text, int32& outMinutes );
 
         const ScheduleActivityRegistry& getActivityRegistry() const;
-        /** @brief 활동 이름을 검사할 등록부입니다. 주지 않으면 기본 종류만 든 등록부입니다. 읽기 전에 정합니다. */
+        /** @brief 활동 이름을 검사할 레지스트리입니다. 주지 않으면 기본 종류만 든 레지스트리입니다. 읽기 전에 정합니다. */
         void                                  setActivityRegistry( const ScheduleActivityRegistry* pRegistry ) { _pActivityRegistry = pRegistry; }
         const ScheduleConditionVocabulary&    getVocabulary() const { return _vocabulary; }
         const SchedulePlaceDef*               findPlace( const hashed_string& id ) const { return _placeCatalog.find( id ); }

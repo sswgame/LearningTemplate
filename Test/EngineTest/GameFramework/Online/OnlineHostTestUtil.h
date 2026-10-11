@@ -1,9 +1,9 @@
 /**
  * @file OnlineHostTestUtil.h
- * @brief 온라인 키트 끝단 테스트 하니스 — 루프백 망 위의 서버(호스트 · 메모리 저장소 · 메모리 캐시 · 로컬 버스 · 가짜 접속 상태)와 끝점 하나에 연결 여럿인 클라이언트 묶음입니다.
+ * @brief 온라인 키트 끝단 테스트 하니스 — 루프백 망 위의 서버(호스트 · 메모리 저장소 · 메모리 캐시 · 로컬 버스 · 가짜 접속 상태)와 엔드포인트 하나에 연결 여럿인 클라이언트 묶음입니다.
  * @details - 로그인은 테스트 서비스(영역 `OnlineMethodRange::kGame`)가 몸의 계정 id 로 `host.bindAccount` 한다 — 계정 키트 없이 "로그인한 연결" 을 만든다.
  *          - I/O 스레드 없이 `tickAll` 로 돈다(결정적). 서버 여럿은 같은 데이터(`MemoryServiceDatabase` · `MemoryEphemeralDatabase` · `LocalServerBusHub`)를 나눠 쓴다.
- *          - 클라이언트는 공유 끝점 모드(`OnlineServiceClient::initializeOnSharedEndpoint`) — 연결이 열리면 붙는다. `connect` 뒤 `tickAll` 한 번이면 Hello 까지 끝난다.
+ *          - 클라이언트는 공유 엔드포인트 모드(`OnlineServiceClient::initializeOnSharedEndpoint`) — 연결이 열리면 붙는다. `connect` 뒤 `tickAll` 한 번이면 Hello 까지 끝난다.
  *          - 접속 상태는 `FakeAccountPresence`(서버마다 하나 — 테스트가 `setOnline` 으로 "다른 서버에 붙은 계정" 을 만든다). 결과는 서버 `tick` 에 한 번 알린다.
  *          - 내리는 순서는 실제 서버와 같다: 키트(로직 · 바인딩) → 호스트 → 저장소 · 캐시. 키트 묶음은 `IOnlineTestKit` 을 구현해 `server.addKit( this )` 로 올리면
  *            서버 소멸자가 맨 먼저 `stop` 한다 — 선언 순서에 기대지 않는다.
@@ -280,7 +280,7 @@ namespace test
 
 namespace test
 {
-    /** @brief 클라이언트 묶음 — 끝점 하나 · 요청 클라이언트 하나에 연결 여럿(공유 끝점 모드 — 부하 테스트 봇과 같은 모양). */
+    /** @brief 클라이언트 묶음 — 엔드포인트 하나 · 요청 클라이언트 하나에 연결 여럿(공유 엔드포인트 모드 — 부하 테스트 봇과 같은 모양). */
     class OnlineTestClients final : public sw::IStreamEndpointListener
     {
     public:

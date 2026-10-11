@@ -87,7 +87,7 @@ namespace sw
             }
 
             // ------------------------------------------------------------------------------
-            // B) 애노테이션 찾기 — 자식 속성(AnnotateAttr)이 정본이고, 소스 텍스트는 그것이 빠졌을 때의 폴백이다
+            // B) 애노테이션 찾기 — 자식 속성(AnnotateAttr)이 원본이고, 소스 텍스트는 그것이 빠졌을 때의 폴백이다
             //
             // 묻는 쪽은 애노테이션 한 벌(`ReflectAnnotationDesc` — 접두사와 매크로 철자)을 넘긴다. 자식 속성 검색과 소스 폴백을
             // 호출부마다 조합하지 않는다.
@@ -965,7 +965,7 @@ namespace sw
                         return;
                     }
 
-                    // 자리는 재지 않는다 — 런타임이 그 구성의 레이아웃에서 찾는다(`PropertyInfo::resolveBitField`).
+                    // 자리는 측정하지 않는다 — 런타임이 그 구성의 레이아웃에서 찾는다(`PropertyInfo::resolveBitField`).
                     prop._bIsBitField = SW_TRUE;
                 }
 
@@ -1708,7 +1708,7 @@ namespace sw
         BLOCK( "Collect forward-declaration facts" )
         {
             // ENUM(Flags) 의 비트 연산자 트레이트는 이 열거형을 **전방 선언** 한 뒤 특수화한다
-            // (`CodeGenerator::makeHeaderText`). 그래서 기반 정수 타입이 필요하다. 정본 철자로
+            // (`CodeGenerator::makeHeaderText`). 그래서 기반 정수 타입이 필요하다. 원본 철자로
             // 받아야 `uint8` 같은 별칭이 아니라 `unsigned char` 가 나와 재선언이 어긋나지 않는다.
             enumInfo._underlyingType = AstVisitorInternal::takeString(
                 clang_getTypeSpelling( clang_getCanonicalType( clang_getEnumDeclIntegerType( cursor ) ) ) );
@@ -1744,7 +1744,7 @@ namespace sw
         //
         // 주의: "0 이 아닌 값이 모두 2의 거듭제곱이면 BitFlag" 같은 자동 감지를 두지 말 것 — `{ Game = 0, Editor = 1, Custom = 2 }`
         // 같은 **평범한 연속 열거형**에도 맞아 문자열 변환이 `toStringFlags` 로 가고 인스펙터가 콤보 대신 체크박스를 그리며,
-        // C++ 트레이트(`IsBitFlagEnum<>`, 명시한 `ENUM( Flags )` 로만 나간다)와 등록부가 다른 답을 낸다. 명시하지 않아 놓친 쪽은
+        // C++ 트레이트(`IsBitFlagEnum<>`, 명시한 `ENUM( Flags )` 로만 나간다)와 레지스트리가 다른 답을 낸다. 명시하지 않아 놓친 쪽은
         // 비트 연산자가 없어 컴파일이 그 자리에서 막히지만, 명시하지 않았는데 켜지는 쪽은 조용히 틀린다.
 
         SW_LOG_INFO( "ENUM          : %#  (%# values, _bIsBitFlag=%# aliases=%#)",

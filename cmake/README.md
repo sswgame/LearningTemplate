@@ -39,8 +39,8 @@ cmake/
     ├── UnbuiltSources.cmake      — 이 구성이 일부러 짓지 않는 소스 목록(sw_declare* · sw_exclude* · 플랫폼 폴더 규칙 → CheckSourceGlob)
     ├── TargetCompileRules.cmake  — 타깃 하나의 컴파일 규칙: 내보내기 매크로 짝 · PCH · 결정성 TU(sw_markDeterministicSources)
     ├── DelayLoad.cmake           — Windows 지연 로드를 정하는 유일한 자리(sw_addDelayloadHook · sw_addDelayloadSystemDlls — CheckDelayLoadSites)
-    ├── EngineAbiStamp.cmake      — 핫 리로드 ABI 도장(Core · Engine 헤더 지문을 Engine 과 Dev 모듈이 같이 박는다)
-    ├── ModuleRegistry.cmake      — 동적 모듈 레지스트리: 등록(ABI 도장 · 서버 전용 표식) · 종류별 조회 · 빌드 순서 · 빠진 등록 대조
+    ├── EngineAbiStamp.cmake      — 핫 리로드 ABI 스탬프(Core · Engine 헤더 지문을 Engine 과 Dev 모듈이 같이 박는다)
+    ├── ModuleRegistry.cmake      — 동적 모듈 레지스트리: 등록(ABI 스탬프 · 서버 전용 표식) · 종류별 조회 · 빌드 순서 · 빠진 등록 대조
     ├── ModuleTargets.cmake       — 모듈 라이브러리 팩토리(sw_addModuleLibrary)와 RHI 백엔드 · 키트 · 게임 모듈, 모듈 출력 폴더 · 서드파티 DLL 모으기
     ├── ExecutableTargets.cmake   — 실행 파일의 링크 · 배치: 통째 링크(sw_linkWholeArchive) · App/Server 의존 · 프로세스 매니페스트 · 리눅스 Shipping 심볼 분리
     ├── StageModuleRuntimeDlls.cmake — `cmake -P` 스크립트: 모듈의 서드파티 DLL 을 모듈마다 스테이지에서 applocal 로 모아 `Bin` 에 한 벌(sw_stageModuleRuntimeDlls)
@@ -142,7 +142,7 @@ Dev 와 Shipping · Server 는 다른 갈래를 탄다 — 고친 갈래의 프�
   vcpkg 라이브러리는 `sw_addVcpkgPackage`(REQUIRED) · `sw_addVcpkgHeaderOnly`. 파이썬은 프로세스 `runProcess` · 빌드 폴더 `BuildTree` · 생성 파일 `writeGeneratedFile` ·
   보고서 `LintReport` 가 한 자리이고 `CheckScriptCommonHelpers` 가 비켜 가는 호출을, `CheckScriptLayout` 이 폴더 → 이름 앞머리 → 기반 클래스 표를 지킨다.
 - **configure 의 파이썬은 `GenerateConfigureFiles.py` 한 프로세스**(생성기 다섯) — 새 configure 생성기는 각자 `sw_executePythonScript` 를 더하지 말고 거기에 한 줄.
-  재는 법: `cmake --preset <p> --profiling-format=google-trace --profiling-output=t.json` → `ConfigureSnapshot.py profile t.json`(CMake 는 B/E 짝으로 적는다).
+  측정하는 법: `cmake --preset <p> --profiling-format=google-trace --profiling-output=t.json` → `ConfigureSnapshot.py profile t.json`(CMake 는 B/E 짝으로 적는다).
   리팩터 전후 configure 동일성은 `ConfigureSnapshot.py take/diff`(실행 파일 테스트의 command 는 그 exe 가 지어졌는지에 따라 비거나 찬다 — 차이로 읽지 말 것).
 - **서드파티 격리의 링크 주인은 규칙마다다**(`CheckThirdPartyIsolation` 의 `cmakeLinkOwner`) — 엔진 백엔드는 `Source/Engine/CMakeLists.txt`, 키트 안 드라이버(SQLite)는 그 키트의 CMakeLists 가 링크한다. 어느 드라이버가 실행 파일에 드는지는 빌드 타깃(`_listTarget`)이 정한다 — 드라이버 목록 옵션을 따로 두지 않는다.
 - **빌드 타깃별 제외 에셋은 쿠킹 표 한 줄이다**(`Config/Engine/CookContract.json` 의 `asset_kinds` · `target_excluded_asset_kinds`). 쿠커(`--build-target`)가 팩에서 빼고,
@@ -155,7 +155,7 @@ Dev 와 Shipping · Server 는 다른 갈래를 탄다 — 고친 갈래의 프�
 - **enum switch 는 LLVM 방식**: 모든 열거자를 다루면 `default:` 없음(`-Werror=switch` 가 빠진 case 를, `-Werror=covered-switch-default` 가 다 다룬 switch 의
   default 를 잡는다), 일부만 다루면 `default:`(`-Wno-switch-enum` · `-Wno-switch-default`). 파일별 `#pragma` 로 switch 경고를 바꾸지 않는다. 외부 헤더는 `SYSTEM`
   include 여야 이 규칙이 그 안에 걸리지 않는다(ReflectionParser 의 nlohmann-json 이 일반 `-I` 였다).
-- **RHI 백엔드 표(이름 · 별칭 · 셰이더 폴더 · 포맷)와 쿡 접미사 표의 정본은 `Config/Engine/CookContract.json`** — `GenerateCookContract.py` 가 C++ X-macro
+- **RHI 백엔드 표(이름 · 별칭 · 셰이더 폴더 · 포맷)와 쿡 접미사 표의 원본은 `Config/Engine/CookContract.json`** — `GenerateCookContract.py` 가 C++ X-macro
   (`sw/config/CookContract.gen.h`)를 만들고 Python 은 `Scripts/common/CookContract.py` 로 읽는다. `CheckCookContract` 게이트가 쿠커 함수를 표와 대조한다.
   두 언어에 목록을 따로 적지 말 것(`PackFormat.json` 과 같은 모양). 백엔드의 빌드 칸(모듈 · 장치 소스 폴더 · 그래픽 라이브러리 · 배포 매크로)도 여기 —
   CMake 는 `generated/sw/config/CookContract.cmake` 로 읽는다(`cmake/Engine/RhiBackends.cmake`). `SW_SHIPPING_RHI_BACKEND` 는 표의 이름만 받고(별칭 · 소문자는 구성 실패 —

@@ -35,7 +35,7 @@ namespace sw
         AsyncOpenFile& operator=( const AsyncOpenFile& ) = delete;
 
         string           _path;   ///< 연 경로(로그용)
-        uint64           _size;   ///< 열 때 잰 크기
+        uint64           _size;   ///< 열 때 측정한 크기
         NativeFileHandle _handle; ///< OS 핸들(Windows HANDLE · POSIX fd)
         /**
          * @brief (Windows) 이 핸들을 묶은 완료 포트입니다. 핸들 하나는 포트 하나에만 묶이므로, 다른 매니저의 포트에 묶였으면 그 매니저는

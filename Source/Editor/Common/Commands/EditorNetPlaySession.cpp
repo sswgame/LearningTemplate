@@ -158,7 +158,7 @@ namespace sw::editor
         command = "exec " + command; // `sh -c` 가 부모로 남지 않게 — 종료 코드 · 신호가 실제 프로그램에 닿는다
 #endif
         ProcessOptions options;
-        options._bPipeStandardInput = true; // `quit` · `pause` 통로
+        options._bPipeStandardInput = true; // `quit` · `pause` 채널
         if ( FileUtil::exists( executablePath ) == false || pChild->_process.launch( command, options ) == false )
         {
             SW_LOG_ERROR( "Could not launch %#: %#", label, command );

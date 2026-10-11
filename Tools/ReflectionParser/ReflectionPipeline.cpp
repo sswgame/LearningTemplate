@@ -301,7 +301,7 @@ namespace sw
                 continue;
             }
 
-            // 시각을 **읽기 전에** 잰다. 읽은 뒤에 저장한 편집은 이 값과 달라 다음 실행이 다시 파싱한다(`writeStamp` 설명).
+            // 시각을 **읽기 전에** 측정한다. 읽은 뒤에 저장한 편집은 이 값과 달라 다음 실행이 다시 파싱한다(`writeStamp` 설명).
             const uint64 inputWriteTime = GeneratedFileUtil::getWriteTime( inputFile );
             string       content;
             if ( FileUtil::readTextFile( inputFile, content ) == false )

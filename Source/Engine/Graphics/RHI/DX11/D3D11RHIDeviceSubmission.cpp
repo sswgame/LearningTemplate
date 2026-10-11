@@ -127,7 +127,7 @@ namespace sw
 
         std::scoped_lock<mutex> lock{ _immediateContextMutex };
         // **GetData 는 즉시 컨텍스트 전용이다.** Deferred Context 에서 End 한 쿼리도 여기서만 읽는다.
-        // DONOTFLUSH 로 묻는다: 아직이면 S_FALSE 를 받고 그냥 물러난다(재려던 것을 멈추지 않는다).
+        // DONOTFLUSH 로 묻는다: 아직이면 S_FALSE 를 받고 그냥 물러난다(측정하려던 것을 멈추지 않는다).
         D3D11_QUERY_DATA_TIMESTAMP_DISJOINT disjointData{};
         if ( _deviceContext->GetData( frame._disjoint.Get(), &disjointData, sizeof( disjointData ),
                                       D3D11_ASYNC_GETDATA_DONOTFLUSH ) != S_OK )

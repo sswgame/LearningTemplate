@@ -95,7 +95,7 @@ SW_TEST_CASE( CultureTableTest, EngineTableLoadsAndInherits )
 }
 
 /**
- * @brief [CultureTableTest] 모르는 칸 · 모르는 복수형 규칙 · 없는 부모 · 정본이 아닌 코드는 로드 오류이고 표를 바꾸지 않는다
+ * @brief [CultureTableTest] 모르는 칸 · 모르는 복수형 규칙 · 없는 부모 · 원본이 아닌 코드는 로드 오류이고 표를 바꾸지 않는다
  */
 SW_TEST_CASE( CultureTableTest, BadDataIsALoadError )
 {

@@ -378,7 +378,7 @@ namespace sw
         /**
          * @brief GPU 타임스탬프입니다. 프레임 링만큼 묶음을 돌려 씁니다.
          * @details 읽기는 그 묶음을 **다시 쓰기 직전**(= 링 한 바퀴 뒤)에 DONOTFLUSH 로 한 번만 묻습니다.
-         *          아직이면 이번 바퀴는 건너뜁니다. 기다리면 재려던 파이프라인을 멈춰 세웁니다.
+         *          아직이면 이번 바퀴는 건너뜁니다. 기다리면 측정하려던 파이프라인을 멈춰 세웁니다.
          */
         D3D11TimestampFrame _arrTimestampFrame[constant::kMaxFrameCountInFlight];
         uint32              _timestampFrameIndex;

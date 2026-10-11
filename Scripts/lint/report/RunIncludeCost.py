@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-헤더마다 **모든 TU 에서 파싱하는 데 쓴 시간의 합**을 잰다 — 헤더 다이어트(docs/plans/BuildSpeed.md 2 단계)가 어디부터 줄일지 고르는 표.
+헤더마다 **모든 TU 에서 파싱하는 데 쓴 시간의 합**을 측정한다 — 헤더 다이어트(docs/plans/BuildSpeed.md 2 단계)가 어디부터 줄일지 고르는 표.
 
 [무엇을 재나]
 컴파일 DB 의 TU 마다 진짜 빌드 플래그로 `-fsyntax-only -ftime-trace` 를 한 번 돌리고(PCH 는 뗀다 — 두면 PCH 에 든 헤더가 0 으로 보인다),

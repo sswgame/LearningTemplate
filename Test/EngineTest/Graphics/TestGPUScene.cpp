@@ -114,8 +114,8 @@ SW_TEST_CASE( GPUSceneTest, BuildBatchesAndSortTransparent )
 
 /**
  * @brief 메시 인스턴스 배치 — 씬 컴포넌트 없이 N 개가 실리고, 같은 메시·머티리얼의 컴포넌트와 한 배치로 합쳐지며, 항목 하나만
- *        고치면 등록부가 더티를 알고, 배치를 놓으면 사라진다.
- * @details 언리얼 ISM 의 자리. 배치의 항목은 등록부의 프리미티브 번호 공간에서 메시 컴포넌트 **뒤에** 이어지므로, 부분 수집·
+ *        고치면 레지스트리가 더티를 알고, 배치를 놓으면 사라진다.
+ * @details 언리얼 ISM 의 자리. 배치의 항목은 레지스트리의 프리미티브 번호 공간에서 메시 컴포넌트 **뒤에** 이어지므로, 부분 수집·
  *          배치 병합·더티 구간이 컴포넌트와 같은 경로를 탄다. 항목 하나를 고친 뒤의 빌드가 그 인스턴스의 위치를 바꾸고
  *          나머지는 그대로여야 한다 — 번호가 어긋나면 엉뚱한 인스턴스가 움직인다.
  */
@@ -155,7 +155,7 @@ SW_TEST_CASE( GPUSceneTest, MeshInstanceBatchRendersWithoutComponents )
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( gpuScene.getOpaqueBatches().size() ) );
     SW_EXPECT_EQUAL( 4u, gpuScene.getOpaqueBatches()[0]._instanceCount );
 
-    // 항목 하나만 옮긴다 — 등록부가 더티를 알고, 빌드 뒤 그 인스턴스만 새 자리다.
+    // 항목 하나만 옮긴다 — 레지스트리가 더티를 알고, 빌드 뒤 그 인스턴스만 새 자리다.
     SW_EXPECT_FALSE( objects->getPrimitiveRegistry().hasDirty() );
     pBatch->setWorld( 1, sw::float4x4::makeTrs( sw::float3( 1.0f, 7.0f, -2.0f ), sw::float3( 0.0f, 0.0f, 0.0f ), sw::float3( 1.0f, 1.0f, 1.0f ) ) );
     SW_EXPECT_TRUE( objects->getPrimitiveRegistry().hasDirty() );
@@ -180,7 +180,7 @@ SW_TEST_CASE( GPUSceneTest, MeshInstanceBatchRendersWithoutComponents )
     gpuScene.populateFromScene( &scene, camPos );
     SW_EXPECT_EQUAL( 4u, static_cast<uint32>( gpuScene.getInstances().size() ) );
 
-    // 배치를 놓으면 소멸자가 등록부에서 빠진다 — 컴포넌트 하나만 남는다.
+    // 배치를 놓으면 소멸자가 레지스트리에서 빠진다 — 컴포넌트 하나만 남는다.
     pBatch.reset();
     SW_EXPECT_EQUAL( 1u, objects->getPrimitiveRegistry().getSlotCount() );
     gpuScene.populateFromScene( &scene, camPos );
@@ -438,7 +438,7 @@ SW_TEST_CASE( GPUSceneTest, InstanceRingStandalone )
 }
 
 /**
- * @brief 프리미티브 등록부: 변경을 알린 것만 다시 만들고, 알린 게 없으면 수집조차 하지 않는다.
+ * @brief 프리미티브 레지스트리: 변경을 알린 것만 다시 만들고, 알린 게 없으면 수집조차 하지 않는다.
  * @details 이 구조의 최악 실패 모드는 "움직였는데 화면이 안 따라오는 것"이다. 등록·해제·더티
  *          신호 중 하나라도 빠지면 여기서 걸린다.
  */
@@ -472,7 +472,7 @@ SW_TEST_CASE( GPUSceneTest, PrimitiveRegistryTracksChanges )
     SW_ASSERT_NOT_NULL( pMeshA );
     SW_ASSERT_NOT_NULL( pMeshB );
 
-    // 붙는 것만으로 등록부에 들어간다 — 렌더러가 씬을 뒤져 찾지 않는다.
+    // 붙는 것만으로 레지스트리에 들어간다 — 렌더러가 씬을 뒤져 찾지 않는다.
     SW_EXPECT_EQUAL( size_t( 2 ), objects->getPrimitiveRegistry().getAll().size() );
 
     sw::GPUSceneBuilder gpuScene;
@@ -502,7 +502,7 @@ SW_TEST_CASE( GPUSceneTest, PrimitiveRegistryTracksChanges )
     gpuScene.populateFromScene( &scene, camPos );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( gpuScene.getInstances().size() ) );
 
-    // 4) 컴포넌트를 떼면 등록부에서도 빠진다.
+    // 4) 컴포넌트를 떼면 레지스트리에서도 빠진다.
     sw::GameObject* pOwnerB = pMeshB->getOwner();
     SW_ASSERT_NOT_NULL( pOwnerB );
     SW_EXPECT_TRUE( pOwnerB->removeComponent( pMeshB ) );
@@ -560,7 +560,7 @@ SW_TEST_CASE( GPUSceneTest, AncestorToggleReachesGrandchildMeshOnly )
     gpuScene.populateFromScene( &scene, camPos );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( gpuScene.getInstances().size() ) );
 
-    // 메시 없는 오브젝트만 토글 — 등록부가 움직이지 않는다(수집을 건너뛰는 빠른 길이 산다).
+    // 메시 없는 오브젝트만 토글 — 레지스트리가 움직이지 않는다(수집을 건너뛰는 빠른 길이 산다).
     sw::PrimitiveRegistry& registry          = objects->getPrimitiveRegistry();
     const uint64           setGenerationBase = registry.getSetGeneration();
     SW_EXPECT_FALSE( registry.hasDirty() );
@@ -1161,7 +1161,7 @@ SW_TEST_CASE( GPUSceneTest, FrustumPlanesFromViewProj )
 /**
  * @brief [GPUSceneTest] 많은 물체 중 하나만 움직여도 그 하나가 갱신되고 나머지는 그대로인지 검증
  *
- * @details 수집은 **바뀐 프리미티브만** 다시 모은다(등록부의 더티 목록) — 8000 개 중 10 개만 움직이면
+ * @details 수집은 **바뀐 프리미티브만** 다시 모은다(레지스트리의 더티 목록) — 8000 개 중 10 개만 움직이면
  *          10 개만 모은다.
  *
  *          **이 최적화가 틀리는 모습은 "움직인 물체가 화면에서 얼어붙는 것"이다** — 더티 표시가
@@ -1281,7 +1281,7 @@ SW_TEST_CASE( GPUSceneTest, SwappedMeshesAndVisibilityTogglesKeepBatchesValid )
 
     for ( uint32 frame = 0; frame < 200; ++frame )
     {
-        // 프레임마다 바꾸는 수를 부분 수집 문턱(1/4) 아래 · 위로 오간다.
+        // 프레임마다 바꾸는 수를 부분 수집 임계값(1/4) 아래 · 위로 오간다.
         const uint32 changeCount = ( frame % 3 == 0 ) ? 15u : 2u;
         for ( uint32 change = 0; change < changeCount; ++change )
         {
@@ -1480,7 +1480,7 @@ SW_TEST_CASE( GPUSceneTest, CPUSnapshotCarriesShaderPermutations )
     pMeshComp->setMesh( mesh );
     pMeshComp->setMaterial( materialGlass.get() );
 
-    // 게임 스레드 쪽 GPUScene — 여기가 퍼뮤테이션 표의 정본이다.
+    // 게임 스레드 쪽 GPUScene — 여기가 퍼뮤테이션 표의 원본이다.
     sw::GPUSceneBuilder gtScene;
     gtScene.populateFromScene( &scene, sw::float3{ 0.0f, 0.0f, 0.0f } );
 
@@ -1517,7 +1517,7 @@ SW_TEST_CASE( GPUSceneTest, CPUSnapshotCarriesShaderPermutations )
         }
     }
 
-    // 정본은 GT 에 남아 있어야 한다 — 빼앗아 가면 다음 프레임의 인덱스가 0 부터 다시 매겨진다.
+    // 원본은 GT 에 남아 있어야 한다 — 빼앗아 가면 다음 프레임의 인덱스가 0 부터 다시 매겨진다.
     SW_EXPECT_NOT_NULL( gtScene.findShaderPermutation( permutationIndex ) );
 }
 
@@ -1717,7 +1717,7 @@ SW_TEST_CASE( GPUSceneTest, ReusedCandidateSlotsCarryNoStaleData )
 }
 
 /**
- * @brief [GPUSceneTest] 등록부는 더티 표시를 프리미티브당 한 번만 센다 — 락 없이, 워커 여럿이 동시에 찍어도
+ * @brief [GPUSceneTest] 레지스트리는 더티 표시를 프리미티브당 한 번만 센다 — 락 없이, 워커 여럿이 동시에 찍어도
  * @details `markDirty` 는 락 없는 원자 exchange 다. 같은 프리미티브를 몇 번 찍든 개수는 하나여야 하고,
  *          `consumeDirty` 는 슬롯을 한 번씩만 돌려주며 그 뒤 `hasDirty` 는 false 다. 개수를 무조건 올리면
  *          소비한 뒤에도 "더티가 남았다" 가 되어 매 프레임 헛수집을 한다.
@@ -1880,10 +1880,10 @@ SW_TEST_CASE( GPUSceneTest, PrimitiveRegistryDirtyBitsCrossWordBoundaries )
 }
 
 /**
- * @brief [GPUSceneTest] 등록부는 월드 행렬만 바뀐 칸을 렌더 상태가 바뀐 칸과 따로 내놓고, 지우기가 두 깃발과 칸 번호를 같이 옮긴다
+ * @brief [GPUSceneTest] 레지스트리는 월드 행렬만 바뀐 칸을 렌더 상태가 바뀐 칸과 따로 내놓고, 지우기가 두 깃발과 칸 번호를 같이 옮긴다
  * @details 빌더는 트랜스폼만 바뀐 칸을 다시 모으지 않고 트랜스폼 저장소의 행렬만 옮긴다(언리얼 `UpdatePrimitiveTransform` 의 자리).
  *          그러려면 (1) 월드 합성이 찍은 칸은 트랜스폼 목록에만 (2) 렌더 상태까지 바뀐 칸은 상태 목록에만 나와야 하고(겹치면 두 번 처리한다)
- *          (3) 등록부가 든 칸 번호가 컴포넌트의 것과 같아야 하며 지우기의 자리 옮김을 따라가야 한다 — 틀리면 엉뚱한 물체의 행렬이 실린다.
+ *          (3) 레지스트리가 든 칸 번호가 컴포넌트의 것과 같아야 하며 지우기의 자리 옮김을 따라가야 한다 — 틀리면 엉뚱한 물체의 행렬이 실린다.
  */
 SW_TEST_CASE( GPUSceneTest, PrimitiveRegistrySeparatesTransformOnlyChanges )
 {
@@ -1953,7 +1953,7 @@ SW_TEST_CASE( GPUSceneTest, PrimitiveRegistrySeparatesTransformOnlyChanges )
 }
 
 /**
- * @brief [GPUSceneTest] 프리미티브가 문턱을 넘으면 수집 채우기가 잡으로 나뉘어도 결과는 직렬과 같다
+ * @brief [GPUSceneTest] 프리미티브가 임계값을 넘으면 수집 채우기가 잡으로 나뉘어도 결과는 직렬과 같다
  * @details 워커는 프리미티브 번호 자리에만 쓰고, 앞으로 당기기와 해시는 직렬이다. 인스턴스 수와 위치의 합이
  *          직렬 씬과 같은 규칙으로 맞아야 하고, 전부 움직인 뒤(부분 수집 불가 → 다시 전체 수집) 도 그래야 한다.
  */
@@ -2119,7 +2119,7 @@ SW_TEST_CASE( GPUSceneTest, IncrementalTransparentTailMatchesFreshBuild )
         for ( uint32 frame = 0; frame < kFrameCount; ++frame )
         {
             placeAll( frame, frame >= kReverseFrame );
-            // 이어 짓는 쪽이 먼저다 — 등록부의 더티 표시는 먼저 지은 빌더가 가져간다(처음 보는 빌더는 어차피 전부 모은다).
+            // 이어 짓는 쪽이 먼저다 — 레지스트리의 더티 표시는 먼저 지은 빌더가 가져간다(처음 보는 빌더는 어차피 전부 모은다).
             persistent.populateFromScene( &scene, camPos );
             persistent.exportCPUSnapshot( snapshot );
             if ( frame > 0 )
@@ -2349,7 +2349,7 @@ SW_TEST_CASE( GPUSceneTest, SpriteInstanceBatchEntriesCarryFrameTintAndHide )
     builder.populateFromScene( &scene, cameraPos );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( builder.getInstances().size() ) );
 
-    // 놓으면 등록부에서 빠진다.
+    // 놓으면 레지스트리에서 빠진다.
     batch.shutdown();
     SW_EXPECT_FALSE( batch.isInitialized() );
     SW_EXPECT_EQUAL( 1u, objects->getPrimitiveRegistry().getSlotCount() );
@@ -2441,9 +2441,9 @@ SW_TEST_CASE( GPUSceneTest, SortingLayerOrdersTransparentBeforeDepth )
 }
 
 /**
- * @brief [GPUSceneTest] 같은 Z 의 두 스프라이트와 월드 UI — 직교 시선 축으로 재면 카메라가 어디로 가도 순서가 그대로다
- * @details 백로그 함정: "깊이가 같으면 거리로 정렬해, 같은 Z 의 월드 UI 와 월드 스프라이트 순서가 뒤집힐 수 있다". 거리로 재면 카메라가 왼쪽에 있을 때와
- *          오른쪽에 있을 때 같은 Z 의 두 스프라이트의 앞뒤가 바뀐다(첫 블록이 그 함정을 보인다). 시선 축(직교 카메라의 Auto)으로 재면 깊이가 같아
+ * @brief [GPUSceneTest] 같은 Z 의 두 스프라이트와 월드 UI — 직교 시선 축으로 측정하면 카메라가 어디로 가도 순서가 그대로다
+ * @details 백로그 함정: "깊이가 같으면 거리로 정렬해, 같은 Z 의 월드 UI 와 월드 스프라이트 순서가 뒤집힐 수 있다". 거리로 측정하면 카메라가 왼쪽에 있을 때와
+ *          오른쪽에 있을 때 같은 Z 의 두 스프라이트의 앞뒤가 바뀐다(첫 블록이 그 함정을 보인다). 시선 축(직교 카메라의 Auto)으로 측정하면 깊이가 같아
  *          등록 순서로 가르므로 늘 같고, 월드 UI(WorldUI 레이어)는 거리와 상관없이 맨 위다.
  */
 SW_TEST_CASE( GPUSceneTest, EqualDepthTransparentOrderIsStableUnderViewAxis )
@@ -2465,7 +2465,7 @@ SW_TEST_CASE( GPUSceneTest, EqualDepthTransparentOrderIsStableUnderViewAxis )
     const sw::float3 cameraLeft{ -6.0f, 0.0f, -8.0f };
     const sw::float3 cameraRight{ 6.0f, 0.0f, -8.0f };
 
-    // 거리(원근 카메라의 기준)로 재면 같은 Z 의 둘이 카메라를 따라 뒤집힌다 — 2D 직교 카메라에서 이 기준을 쓰면 안 되는 이유.
+    // 거리(원근 카메라의 기준)로 측정하면 같은 Z 의 둘이 카메라를 따라 뒤집힌다 — 2D 직교 카메라에서 이 기준을 쓰면 안 되는 이유.
     {
         sw::GPUSceneBuilder distanceBuilder;
         distanceBuilder.populateFromScene( &fixture._scene, cameraLeft );
@@ -2475,11 +2475,11 @@ SW_TEST_CASE( GPUSceneTest, EqualDepthTransparentOrderIsStableUnderViewAxis )
         SW_ASSERT_EQUAL( 3u, static_cast<uint32>( leftOrder.size() ) );
         SW_ASSERT_EQUAL( 3u, static_cast<uint32>( rightOrder.size() ) );
         SW_EXPECT_FALSE( sw::MathUtil::nearEqual( leftOrder[0], rightOrder[0] ) );
-        SW_EXPECT_NEAR_EQUAL( 0.5f, leftOrder[2], 1e-4f ); // 월드 UI 는 거리로 재도 레이어 덕에 맨 위다
+        SW_EXPECT_NEAR_EQUAL( 0.5f, leftOrder[2], 1e-4f ); // 월드 UI 는 거리로 측정해도 레이어 덕에 맨 위다
         SW_EXPECT_NEAR_EQUAL( 0.5f, rightOrder[2], 1e-4f );
     }
 
-    // 시선 축(+Z)으로 재면 둘의 깊이가 같아 등록 순서(왼쪽 먼저)로 가르고, 카메라를 옮겨도 그대로다.
+    // 시선 축(+Z)으로 측정하면 둘의 깊이가 같아 등록 순서(왼쪽 먼저)로 가르고, 카메라를 옮겨도 그대로다.
     sw::GPUSceneBuilder axisBuilder;
     axisBuilder.setTransparentSortAxis( sw::Render2DSettings::getActive().computeTransparentSortAxis( true, sw::float3{ 0.0f, 0.0f, 1.0f } ) );
     const sw::float3 arrCameraPos[] = {

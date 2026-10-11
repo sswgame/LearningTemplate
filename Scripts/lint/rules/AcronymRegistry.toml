@@ -1,4 +1,4 @@
-# 약어 등록부의 데이터 — 읽는 코드와 철자 규칙은 Scripts/lint/AcronymRegistry.py, 규칙 설명은 AGENTS.md "Function names".
+# 약어 레지스트리의 데이터 — 읽는 코드와 철자 규칙은 Scripts/lint/AcronymRegistry.py, 규칙 설명은 AGENTS.md "Function names".
 # 게이트(CheckAcronymSpelling · CheckFunctionVocabulary) · 코드모드(FormatAcronymSpelling) · 에디터 아이콘 생성기가 같이 읽는다.
 
 # 등록된 약어(대문자 철자).
@@ -16,7 +16,7 @@ enforced = [
 # 복수 `s` 를 붙여 쓰지 않는 약어 — `Ios` 는 `IO` 의 복수가 아니라 플랫폼 이름(iOS)이다.
 no_plural = ["IO"]
 
-# 제품 이름(정본 철자). 약어 규칙이 건드리지 않는다(`ImGui` → `ImGUI` 가 되지 않는다).
+# 제품 이름(원본 철자). 약어 규칙이 건드리지 않는다(`ImGui` → `ImGUI` 가 되지 않는다).
 product = ["ImGui", "OpenSSL", "SQLite", "Box2D", "Jolt", "FreeType", "HarfBuzz", "OpenGL", "DirectX"]
 
 # 이 이름공간 뒤(`ns::`)의 식별자는 남의 이름이다.
@@ -37,7 +37,7 @@ external_name = [
     "queryId",
 ]
 
-# 약어처럼 보이지만 줄임말인 낱말 → 이유. `acronym` 에 오르면 등록부 검사(checkRegistry)가 멈춘다.
+# 약어처럼 보이지만 줄임말인 낱말 → 이유. `acronym` 에 오르면 레지스트리 검사(checkRegistry)가 멈춘다.
 [not_acronym]
 Nav = "navigation 의 줄임말"
 Anim = "animation 의 줄임말"
@@ -49,12 +49,12 @@ Std = "C++ 표준 라이브러리 이름(std)"
 Idx = "index 의 줄임말 — `Id` 와 다른 낱말이다"
 Info = "information 의 줄임말"
 
-# 제품 이름의 옛 철자 → 정본(`product`). 코드모드가 정본으로 고쳐 쓴다.
+# 제품 이름의 옛 철자 → 원본(`product`). 코드모드가 원본으로 고쳐 쓴다.
 [product_variant]
 OpenSsl = "OpenSSL"
 Sqlite = "SQLite"
 
-# 제품 이름(`product`) → `--acronym` 으로 고르는 이름표(`SSL` 을 고르면 `OpenSsl` → `OpenSSL`).
+# 제품 이름(`product`) → `--acronym` 으로 고르는 이름(`SSL` 을 고르면 `OpenSsl` → `OpenSSL`).
 [product_acronym]
 OpenSSL = "SSL"
 SQLite = "SQL"

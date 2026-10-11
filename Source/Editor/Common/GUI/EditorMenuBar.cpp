@@ -43,7 +43,7 @@ namespace sw::editor
         struct EditorMenuBarInternal
         {
             inline static bool    _s_bShowThemeSettings = false;
-            inline static float32 _s_statusAreaWidth    = 0.0f; ///< 지난 프레임에 잰 상태 영역 너비(0 = 아직 모름)
+            inline static float32 _s_statusAreaWidth    = 0.0f; ///< 지난 프레임에 측정한 상태 영역 너비(0 = 아직 모름)
         };
     } // namespace
 } // namespace sw::editor
@@ -160,8 +160,8 @@ namespace sw::editor
         if ( pCompiler != nullptr )
             notifyLiveCodingResult( *pCompiler );
 
-        // 상태 영역은 지난 프레임에 잰 너비로 오른쪽 끝에 붙인다. 메뉴와 겹칠 자리면 이번 프레임은 그리지 않는다 — 창을 줄여도 메뉴가
-        // 가려지지 않고, 넓히면 다시 나온다. 첫 프레임은 너비를 모르므로 오른쪽 끝에서 그려 잰다.
+        // 상태 영역은 지난 프레임에 측정한 너비로 오른쪽 끝에 붙인다. 메뉴와 겹칠 자리면 이번 프레임은 그리지 않는다 — 창을 줄여도 메뉴가
+        // 가려지지 않고, 넓히면 다시 나온다. 첫 프레임은 너비를 모르므로 오른쪽 끝에서 그려 측정한다.
         const float32 menuEndX     = ImGui::GetCursorPosX();
         const float32 statusStartX = ImGui::GetWindowWidth() - EditorMenuBarInternal::_s_statusAreaWidth - ImGui::GetStyle().WindowPadding.x;
         if ( statusStartX < menuEndX )

@@ -54,9 +54,9 @@ namespace sw
         /** @brief 측정 창의 프레임당 할당 수와(켰다면) 콜스택별 상위 자리를 로그로 남깁니다. */
         void reportAllocations( uint64 frames );
 
-        /** @brief 잴 프레임 수입니다. 0 이면 프레임 수로 끊지 않습니다(시간 목표만 있을 때). */
+        /** @brief 측정할 프레임 수입니다. 0 이면 프레임 수로 끊지 않습니다(시간 목표만 있을 때). */
         uint64 _frameTarget{ 0 };
-        /** @brief 잴 시간(초)입니다. 0 이면 시간으로 끊지 않습니다. */
+        /** @brief 측정할 시간(초)입니다. 0 이면 시간으로 끊지 않습니다. */
         int64 _secondsTarget{ 0 };
         /** @brief 계측을 시작했으면 true 입니다(프레임 · 시간 목표 가운데 하나라도 있었다). */
         uint8 _bActive{ SW_FALSE };

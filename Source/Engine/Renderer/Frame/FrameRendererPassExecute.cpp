@@ -283,7 +283,7 @@ namespace sw
         // 지오메트리 패스가 그릴 컬러 타깃: 파이프라인이 선언한 컬러 출력(로드 때 해석한 `_listResolvedColorOutput`, 선언 순서)이다 — 풀스크린
         // 패스와 같은 규칙이다. 뎁스 로드 연산도 바인딩한 뎁스의 클리어 기록으로 정한다. 주의: 이름을 코드에 박으면(SceneColor ·
         // GBufferAlbedo …) 다른 이름을 쓰는 파이프라인에서 없는 첨부(핸들 0 = 백버퍼)를 연다. 선언이 없을 때만(패스 서술 없이
-        // 부르거나, 검증이 이미 오류를 낸 파이프라인) 정본 이름으로 간다.
+        // 부르거나, 검증이 이미 오류를 낸 파이프라인) 원본 이름으로 간다.
         const vector<RenderGraphPassDesc::ResolvedAttachment>* pDeclaredColor =
             ( pPassDesc != nullptr && pPassDesc->_listResolvedColorOutput.empty() == false ) ? &pPassDesc->_listResolvedColorOutput : nullptr;
         // 선언한 컬러 출력에서 역할로 고르고, 그 역할을 받은 출력이 없으면 선언 순서(fallbackIndex)로 고른다. 이미 다른 역할로 고른 자리는 건너뛴다.
@@ -396,7 +396,7 @@ namespace sw
                 }
                 case RenderPassType::ForwardOpaque:
                 {
-                    // 그림자 맵은 선언한 입력 중 ShadowMap 역할이다(첨부의 `_role` 또는 정본 이름). 선언이 없을 때만 정본 이름으로 찾는다.
+                    // 그림자 맵은 선언한 입력 중 ShadowMap 역할이다(첨부의 `_role` 또는 원본 이름). 선언이 없을 때만 원본 이름으로 찾는다.
                     const RenderGraphPassDesc::ResolvedAttachment* pShadowInput = nullptr;
                     if ( pPassDesc != nullptr )
                     {
@@ -425,7 +425,7 @@ namespace sw
                 }
                 case RenderPassType::GBuffer:
                 {
-                    // 알베도 · 노멀은 역할로 고른다(첨부의 `_role` 또는 정본 이름). 역할이 없으면 선언 순서([0] 알베도, [1] 노멀)다.
+                    // 알베도 · 노멀은 역할로 고른다(첨부의 `_role` 또는 원본 이름). 역할이 없으면 선언 순서([0] 알베도, [1] 노멀)다.
                     // 한 MRT 패스로 둘 다 쓴다(네 백엔드 모두 MRT 를 보장한다). 노멀 출력이 없는 G버퍼는 검증이 거부하므로 여기서는 그리지 않는다.
                     const AttachmentNames& names         = attachmentNames();
                     const hashed_string*   pAlbedoTarget = pickColorOutput( RenderPassInputRole::GBufferAlbedo, 0, nullptr );
@@ -449,7 +449,7 @@ namespace sw
                 }
                 case RenderPassType::Transparent:
                 {
-                    // 선언한 컬러 출력이 기준이다. 선언이 없을 때만 정본 이름 후보(TransparentColor → LitColor → SceneColor)로 간다.
+                    // 선언한 컬러 출력이 기준이다. 선언이 없을 때만 원본 이름 후보(TransparentColor → LitColor → SceneColor)로 간다.
                     const AttachmentNames& names       = attachmentNames();
                     const hashed_string&   colorTarget = pDeclaredColor != nullptr                            ? ( *pDeclaredColor )[0]._attachment
                                                        : findTransient( names._transparentColor.view() ) != 0 ? names._transparentColor

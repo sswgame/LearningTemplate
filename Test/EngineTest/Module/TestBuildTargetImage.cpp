@@ -80,7 +80,7 @@ namespace
  */
 SW_TEST_CASE( BuildTargetImageTest, ClientImagesCarryNoServerOnlyModule )
 {
-    // 타깃은 빌드 마스크(다른 TU 의 함수)로 묻는다 — 상수 이름을 견주면 쓰지 않는 갈래가 "닿지 않는 코드" 경고가 된다.
+    // 타깃은 빌드 마스크(다른 TU 의 함수)로 묻는다 — 상수 이름을 비교하면 쓰지 않는 갈래가 "닿지 않는 코드" 경고가 된다.
     if ( ModuleCatalog::getBuildTargetMask() != static_cast<uint8>( ModuleTarget::Client ) )
         SW_TEST_SKIP( "only the Client target promises to carry no server code" );
     const string appImage = findImageInBin( kAppImageName );

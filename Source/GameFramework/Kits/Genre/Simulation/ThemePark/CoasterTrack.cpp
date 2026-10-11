@@ -20,7 +20,7 @@ namespace sw
         {
             static constexpr float32 kDuplicateEpsilon = 1.0e-4f;
 
-            /** @brief 열거자 이름표 한 줄입니다. */
+            /** @brief 열거자 이름 한 줄입니다. */
             struct PieceName
             {
                 CoasterPieceType _type;

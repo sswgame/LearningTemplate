@@ -14,7 +14,7 @@ namespace test
     {
         /**
          * @brief 클라이언트 코드가 없는 빌드(전용 서버 — `SW_TARGET_TYPE=Server`)면 true 입니다.
-         * @details 타깃은 빌드 마스크(다른 TU 의 함수)로 묻는다 — 상수를 견주면 쓰지 않는 갈래가 "닿지 않는 코드" 경고가 된다.
+         * @details 타깃은 빌드 마스크(다른 TU 의 함수)로 묻는다 — 상수를 비교하면 쓰지 않는 갈래가 "닿지 않는 코드" 경고가 된다.
          */
         static bool isServerOnlyBuild() { return ( sw::ModuleCatalog::getBuildTargetMask() & static_cast<uint8>( sw::ModuleTarget::Client ) ) == 0; }
 

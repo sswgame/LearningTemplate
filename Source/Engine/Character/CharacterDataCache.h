@@ -1,7 +1,7 @@
 /**
  * @file CharacterDataCache.h
  * @brief 캐릭터 데이터 에셋을 경로로 나눠 주는 표 셋 — 소켓 에셋(`*.sockets.xml`) · 알림 표(`*.notifies.xml`) · 물리 에셋(`*.physics.xml`)입니다.
- * @details 모양은 스켈레톤 · 클립 캐시와 같습니다(`SharedAssetTable` — 약한 참조, 같은 경로는 같은 객체). 에셋 매니저의 캐시 등록부에 올라 있어
+ * @details 모양은 스켈레톤 · 클립 캐시와 같습니다(`SharedAssetTable` — 약한 참조, 같은 경로는 같은 객체). 에셋 매니저의 캐시 레지스트리에 올라 있어
  *          파일을 고치면 제자리로 다시 읽고(`reload`), 다시 읽은 횟수(`getReloadCount`)가 올라 쓰는 쪽(소켓 컴포넌트 · 알림 디스패치 · 래그돌)이
  *          자기가 지은 것을 다시 짓습니다.
  */
@@ -40,7 +40,7 @@ namespace sw
 
 namespace sw
 {
-    /** @class AnimNotifyTableCache @brief 알림 표를 기본 처리기 등록부로 읽어 나눠 줍니다. */
+    /** @class AnimNotifyTableCache @brief 알림 표를 기본 처리기 레지스트리로 읽어 나눠 줍니다. */
     class SW_API AnimNotifyTableCache final : public IAssetCache
     {
     public:

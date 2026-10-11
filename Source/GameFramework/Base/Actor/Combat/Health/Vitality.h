@@ -98,7 +98,7 @@ namespace sw
      * @class Vitality
      * @brief 한 개체의 체력입니다. 피해는 실드 → 체력 순서로 깎이고, 체력이 0 이 되면 설정에 따라 기절하거나 죽습니다.
      * @details 넘친 피해는 실드에서 체력으로 넘어가지만, 체력에서 출혈 체력으로는 넘어가지 않습니다(기절 순간의 한 방이 바로 죽이지 않게).
-     *          기절 중에는 실드 · 재생 · 경직이 멈추고 `heal` 도 듣지 않습니다 — 되살리는 길은 부활(`startRevive`) 하나입니다.
+     *          기절 중에는 실드 · 재생 · 경직이 멈추고 `heal` 도 듣지 않습니다 — 복원하는 길은 부활(`startRevive`) 하나입니다.
      *          부활은 여럿이 함께 살릴 수 있게 속도 배율을 받습니다(`startRevive` 를 다시 부르면 배율만 바뀐다).
      */
     class SW_GF_API Vitality
@@ -109,7 +109,7 @@ namespace sw
 
         /** @brief 설정을 두고 가득 찬 상태로 시작합니다(죽음 · 기절 횟수 · 알림도 비운다). */
         void initialize( const VitalitySettings& settings );
-        /** @brief 같은 설정으로 가득 찬 상태로 되살립니다(리스폰). 기절 횟수는 남깁니다 — 지우려면 `resetDownCount`. */
+        /** @brief 같은 설정으로 가득 찬 상태로 복원합니다(리스폰). 기절 횟수는 남깁니다 — 지우려면 `resetDownCount`. */
         void respawn();
         /**
          * @brief 최대 체력을 바꿉니다(하트 그릇 · 레벨 업 · 장비). 상태 · 알림 · 기절 횟수는 그대로입니다.

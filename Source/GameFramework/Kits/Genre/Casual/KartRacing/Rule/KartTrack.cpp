@@ -283,7 +283,7 @@ namespace sw
         const float32        denom = KartTrackInternal::computeFlatCross( moveX, moveZ, gateX, gateZ );
         if ( MathUtil::abs( denom ) < KartTrackInternal::kMinSegmentLength )
             return 0;
-        // from + move·s = left + gate·u, s ∈ (0, 1], u ∈ [0, 1] — 끝점에서 시작한 이동은 이미 지난 것이라 0 은 뺀다.
+        // from + move·s = left + gate·u, s ∈ (0, 1], u ∈ [0, 1] — 엔드포인트에서 시작한 이동은 이미 지난 것이라 0 은 뺀다.
         const float32 offsetX = gate._left._x - from._x;
         const float32 offsetZ = gate._left._z - from._z;
         const float32 moveT   = KartTrackInternal::computeFlatCross( offsetX, offsetZ, gateX, gateZ ) / denom;

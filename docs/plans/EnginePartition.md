@@ -16,14 +16,14 @@
 
 - `Object` 안에서 기능 의존이 몰린 곳은 `Component/{2D, 3D, Audio, Navigation, Physics}`(기능 컴포넌트)와 `GameObject/`(Graphics 10 · Physics 7 · Audio 2)다.
   `GameObject` 가 기능 폴더를 직접 아는 것이 진짜 문제다 — 컴포넌트 모델의 코어가 렌더 · 물리 · 내비를 include 한다.
-- `Engine/` 은 소스 559개 · 헤더 포함 약 1,160개, Debug `Engine.dll` 은 약 18 MB 다. 재링크 시간은 아직 재지 않았다(아래 0 단계).
+- `Engine/` 은 소스 559개 · 헤더 포함 약 1,160개, Debug `Engine.dll` 은 약 18 MB 다. 재링크 시간은 아직 측정하지 않았다(아래 0 단계).
 - 폴더 그래프는 사이클 0 이고 게이트 티어 표는 계산값과 같다(2026-10-11). `Resource` 의 기능 캐시 배선 예외는 등록 반전(`SW_BUILT_IN_ASSET_CACHE`)으로 없어졌다 — 남은 배선 예외는 `ReflectGenerated.h` 하나다.
 - Core 층 정리와 Engine 폴더 재배치(1 ~ 7)는 끝났다([Core README](../../Source/Core/README.md) · 결정 기록).
 
 ## 단계
 
 ### 0. 기준 측정 (먼저)
-- Engine 안에서 `Graphics` 한 파일 · `UI` 한 파일 · `Object` 한 파일을 고쳤을 때 Release 증분 빌드 시간(컴파일 + 재링크)을 3회씩 잰다. 표는 [검증과 측정](../08_Verification.md) 형식.
+- Engine 안에서 `Graphics` 한 파일 · `UI` 한 파일 · `Object` 한 파일을 고쳤을 때 Release 증분 빌드 시간(컴파일 + 재링크)을 3회씩 측정한다. 표는 [검증과 측정](../08_Verification.md) 형식.
 - 분할 뒤 같은 세 경우와 비교한다. 이득이 재링크 시간에서 나오지 않으면 3 단계(DLL 승격)는 하지 않는다.
 
 ### 0-3. Engine 폴더 재배치 — 남은 판단
@@ -39,8 +39,8 @@
 
 ### 2. 컴포넌트 모델을 코어와 기능으로 가르기 (중간 위험, 가장 큰 효과)
 - `Object` 를 둘로: **코어**(`GameObject` · `Prefab` · `Component` 기반 클래스 · 리플렉션 훅)와 **기능 컴포넌트**(`Component/{2D,3D,Audio,Navigation,Physics}` · `Object/Animation`).
-- 씬마다 하나인 기능 서비스는 씬 서비스 등록표(`ISceneService` · `SW_SCENE_SERVICE`)로 만든다 — `SceneNavigation` 이 첫 예이고 `GameObject/` 는 그 타입을 모른다.
-  다음: `ScenePhysics` · `SceneAudio` 를 같은 등록표로 옮긴다(`SceneAudio::update` 는 카메라가 필요해 프레임 표 밖에 있다 — 단계 하나를 더하거나 `Scene::tick` 쪽 창구가 필요하다).
+- 씬마다 하나인 기능 서비스는 씬 서비스 레지스트리(`ISceneService` · `SW_SCENE_SERVICE`)로 만든다 — `SceneNavigation` 이 첫 예이고 `GameObject/` 는 그 타입을 모른다.
+  다음: `ScenePhysics` · `SceneAudio` 를 같은 레지스트리로 옮긴다(`SceneAudio::update` 는 카메라가 필요해 프레임 표 밖에 있다 — 단계 하나를 더하거나 `Scene::tick` 쪽 창구가 필요하다).
 - 코어는 `Graphics` · `Physics` · `Navigation` · `Audio` 를 include 하지 않는다. `GameObject` 의 기능 의존 19 건(위 줄)은 기능 컴포넌트가 코어에 등록하는 방향으로 뒤집는다:
   Transform 변경 알림 · 바운드 질의 · 씬 등록 모두 `GameObject` 가 인터페이스(`ISceneListener` 꼴)로 듣는다.
 - 기능 컴포넌트는 코어 위, 각자의 기능 폴더 아래에 둔다. 폴더 이동은 `git mv` 후 코드젠을 다시 만든다(헤더 이동은 .gen.cpp 를 썩힌다 — 메모리 `moved-header-stale-codegen`).

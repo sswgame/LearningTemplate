@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file Source/Engine/CMakeLists.txt
-# @brief Engine 라이브러리 — 소스 목록 · 타깃(ABI 도장 · PCH · 내보내기) · 서드파티 링크 · RHI · 시스템 라이브러리 · 유니티 · 리플렉션 코드젠 · Jolt 오브젝트
+# @brief Engine 라이브러리 — 소스 목록 · 타깃(ABI 스탬프 · PCH · 내보내기) · 서드파티 링크 · RHI · 시스템 라이브러리 · 유니티 · 리플렉션 코드젠 · Jolt 오브젝트
 # @details
 # 폴더(Common/Reflection/...)는 소스를 나눠 두기 위한 것이고, 모듈 사이의
 # 순환 참조(Reflection <-> Graphics 등) 때문에 하나의 라이브러리로 링크한다
@@ -55,14 +55,14 @@ endif()
 sw_findEngineCompressionLibraries(listEngineCompressionLib)
 
 # ------------------------------------------------------------------------------
-# 3) Engine 타겟 — ABI 도장 · include 전파 · 정의 · PCH · Core_objects 재사용 · 내보내기
+# 3) Engine 타겟 — ABI 스탬프 · include 전파 · 정의 · PCH · Core_objects 재사용 · 내보내기
 # Core 소스는 한 번만 컴파일. 동일 .obj를 Engine에 넣어
 # Dev에서 App/Editor가 Engine.dll로부터 FileUtil/Logger를 dllimport
 # ReflectionParser는 Core STATIC만 링크해 Engine.dll 순환을 피함
 # ------------------------------------------------------------------------------
 add_library(Engine ${coreLibType} ${ENGINE_SOURCES})
 
-# 핫 리로드 ABI 도장 — Engine 이 자기 헤더 지문을 박는다(`Engine/Module/EngineAbiStamp.cpp`). 모듈도 같은 값을 박는다.
+# 핫 리로드 ABI 스탬프 — Engine 이 자기 헤더 지문을 박는다(`Engine/Module/EngineAbiStamp.cpp`). 모듈도 같은 값을 박는다.
 sw_defineEngineAbiStamp()
 add_dependencies(Engine SwEngineAbiStamp)
 target_include_directories(Engine PRIVATE "${CMAKE_BINARY_DIR}/generated/engineabi")

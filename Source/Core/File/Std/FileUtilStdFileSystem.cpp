@@ -33,8 +33,8 @@ namespace sw
             static constexpr int64 kUnixEpochTicks = 116'444'736'000'000'000;
 
             /**
-             * @brief `file_clock` 이 `WallClock` 보다 몇 눈금 앞서는지입니다(처음 한 번 잰다).
-             * @details libstdc++ 의 `file_clock` 은 기원이 2174 년이라(C++20 의 `clock_cast` 를 쓸 수 없는 C++17 이다) 두 시계를 맞대어 잰다.
+             * @brief `file_clock` 이 `WallClock` 보다 몇 눈금 앞서는지입니다(처음 한 번 측정한다).
+             * @details libstdc++ 의 `file_clock` 은 기원이 2174 년이라(C++20 의 `clock_cast` 를 쓸 수 없는 C++17 이다) 두 시계를 맞대어 측정한다.
              *          창이 가장 좁은 표본을 골라 오차를 줄이고, 한 번만 재므로 읽기 · 쓰기가 같은 값으로 오간다.
              */
             static int64 getFileClockOffsetTicks()

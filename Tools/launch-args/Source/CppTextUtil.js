@@ -3,7 +3,7 @@
 /**
  * @file CppTextUtil.js
  * @brief 컴파일러 없이 C++ 소스 글을 읽는 도구입니다 — 주석 지우기 · 매크로 호출 찾기 · 인자 나누기 · 리터럴 읽기.
- * @details 정본은 언제나 C++ 소스이고 이 모듈은 그 글을 **읽기만** 합니다. 읽지 못한 모양은 버리지 않고
+ * @details 원본은 언제나 C++ 소스이고 이 모듈은 그 글을 **읽기만** 합니다. 읽지 못한 모양은 버리지 않고
  *          `LiteralKind.Expression` 으로 원문 그대로 돌려주어, 부르는 쪽이 "모른다" 를 화면에 보일 수 있게 합니다.
  *          vscode 를 모르는 순수 모듈이라 VS Code 의 node 로 바로 테스트합니다(`Test/CppTextUtilTest.js`).
  */

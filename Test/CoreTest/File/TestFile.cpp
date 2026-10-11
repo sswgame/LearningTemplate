@@ -111,9 +111,9 @@ SW_TEST_CASE( FileTest, DirectoryThatCannotBeCreatedSaysSo )
 }
 
 /**
- * @brief [FileTest] 파일 도장(크기 · 쓰기 시각)은 파일을 열지 않고 바뀜을 알린다
- * @details 내용에서 뽑은 값(셰이더 소스 해시)을 캐시하고 "그 뒤로 바뀌었나" 만 볼 때 쓴다. 크기가 달라지면 도장이 달라야 하고,
- *          없는 파일 · 폴더는 도장이 없다(false). 같은 크기의 재쓰기는 쓰기 시각에 달렸는데 그 시각의 눈금은 시스템 시계(~1 ~ 16 ms)라
+ * @brief [FileTest] 파일 스탬프(크기 · 쓰기 시각)은 파일을 열지 않고 바뀜을 알린다
+ * @details 내용에서 뽑은 값(셰이더 소스 해시)을 캐시하고 "그 뒤로 바뀌었나" 만 볼 때 쓴다. 크기가 달라지면 스탬프가 달라야 하고,
+ *          없는 파일 · 폴더는 스탬프가 없다(false). 같은 크기의 재쓰기는 쓰기 시각에 달렸는데 그 시각의 눈금은 시스템 시계(~1 ~ 16 ms)라
  *          여기서는 크기가 다른 재쓰기로 본다.
  */
 SW_TEST_CASE( FileTest, FileStampReportsSizeAndNoticesChanges )

@@ -38,14 +38,14 @@ namespace sw::editor
         /**
          * @brief 롤백용 오브젝트 스냅샷 하나입니다.
          * @details 런타임 id(`_identity`)를 같이 적어 둡니다. 정지할 때 상태를 되돌리며 컴포넌트를 다시 만드는데, 원래 id 를
-         *          되살려야 플레이 전에 들고 있던 핸들(선택 · 씬의 활성 카메라)이 그대로 이어집니다.
+         *          복원해야 플레이 전에 들고 있던 핸들(선택 · 씬의 활성 카메라)이 그대로 이어집니다.
          */
         struct ObjectSnapshot
         {
             ObjectIdentity _identity;
             string         _name;
             vector<uint8>  _bytes;
-            string         _prefabPath; ///< 씬이 이 오브젝트에 매어 둔 프리팹 경로(`Scene::getEntityPrefabPath`). 씬을 다시 세울 때 되살린다
+            string         _prefabPath; ///< 씬이 이 오브젝트에 매어 둔 프리팹 경로(`Scene::getEntityPrefabPath`). 씬을 다시 세울 때 복원한다
         };
 
         vector<ObjectSnapshot> _listSnapshot;

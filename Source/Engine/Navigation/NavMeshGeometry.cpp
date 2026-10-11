@@ -168,7 +168,7 @@ namespace sw
             float3{ halfExtents._x,  halfExtents._y,  halfExtents._z},
             float3{-halfExtents._x,  halfExtents._y,  halfExtents._z},
         };
-        // 바깥을 보는 면(위에서 보아 시계 반대 — 윗면의 법선이 +Y). 베이크하는 쪽은 법선으로 경사를 잰다.
+        // 바깥을 보는 면(위에서 보아 시계 반대 — 윗면의 법선이 +Y). 베이크하는 쪽은 법선으로 경사를 측정한다.
         const uint32 arrIndex[36] = {
             4, 7, 6, 4, 6, 5, // 위
             0, 1, 2, 0, 2, 3, // 아래

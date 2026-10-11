@@ -21,7 +21,7 @@ build/Ninja-Debug/Bin/OnlineLoadBot.exe --scenario=Tools/OnlineLoadBot/Scenarios
 ```
 
 - `--local-server` 는 같은 프로세스에 서버를 조립합니다(`LoadBotLocalServer`). 메모리 저장소, 캐시, 메시지 버스 위에 서버 키트 일곱을 올리고, 봇은 루프백 TCP로 붙습니다(기본 포트 7100).
-- `--light-hash` 는 가벼운 Argon2id 설정을 씁니다. 로그인 해시 비용 자체를 재려면 빼고 실행합니다.
+- `--light-hash` 는 가벼운 Argon2id 설정을 씁니다. 로그인 해시 비용 자체를 측정하려면 빼고 실행합니다.
 
 끝나면 동작별 지연 표가 로그에 나오고, 오류율이 상한 이하면 종료 코드 0입니다.
 

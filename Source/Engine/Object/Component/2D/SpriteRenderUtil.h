@@ -34,7 +34,7 @@ namespace sw
          */
         static shared_ptr<MaterialInstance> acquireTextureInstance( Material* pParent, hashed_string texture, hashed_string normalMap = {} );
 
-        /** @brief `acquireTextureInstance` 의 표를 에셋 캐시 등록부에 보이는 창구입니다("SpriteTextureInstance" — 진단 · 비우기). `AssetManager` 가 올립니다. */
+        /** @brief `acquireTextureInstance` 의 표를 에셋 캐시 레지스트리에 보이는 창구입니다("SpriteTextureInstance" — 진단 · 비우기). `AssetManager` 가 올립니다. */
         static IAssetCache& getTextureInstanceCache();
 
         /**

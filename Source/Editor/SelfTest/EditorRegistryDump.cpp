@@ -32,7 +32,7 @@ namespace sw::editor
                 }
             }
 
-            /** @brief 등록부의 id 를 순서대로 한 줄씩 남깁니다. */
+            /** @brief 레지스트리의 id 를 순서대로 한 줄씩 남깁니다. */
             template <typename TRegistration>
             static void dumpIDs()
             {

@@ -16,7 +16,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// SceneLightTest — 라이트 등록부와 그것을 읽어 GPU 원소를 만드는 CPU 절반. 디바이스 없음(nogpu).
+// SceneLightTest — 라이트 레지스트리와 그것을 읽어 GPU 원소를 만드는 CPU 절반. 디바이스 없음(nogpu).
 //
 // 이 경로는 매 프레임 두 곳(`EngineLoop` · `FrameRenderer`)이 부른다.
 // 여기가 틀리면 증상은 "빛이 하나 사라졌다 / 그림자가 엉뚱한 빛에 붙었다" 라서 셰이더를 먼저
@@ -78,8 +78,8 @@ namespace
 } // namespace
 
 /**
- * @brief [SceneLightTest] 빛은 붙을 때 등록부에 들어가고, 떼거나 파괴하면 빠진다
- * @details 최악 실패 모드는 **죽은 컴포넌트를 가리키는 포인터가 등록부에 남는 것**이다 — 그러면
+ * @brief [SceneLightTest] 빛은 붙을 때 레지스트리에 들어가고, 떼거나 파괴하면 빠진다
+ * @details 최악 실패 모드는 **죽은 컴포넌트를 가리키는 포인터가 레지스트리에 남는 것**이다 — 그러면
  *          다음 프레임의 수집이 해제된 메모리를 읽는다. 지연 파괴는 플러시까지 남아 있는 것이
  *          정상이므로(그 프레임까지는 살아 있는 오브젝트다) 플러시 전후를 나눠 본다.
  */
@@ -113,7 +113,7 @@ SW_TEST_CASE( SceneLightTest, LightsJoinTheRegistryOnAttachAndLeaveWhenRemoved )
     pObjects->destroyObject( pLampOwner );
     SW_EXPECT_EQUAL( size_t( 1 ), registry.getAll<sw::LightComponent>( sw::shaderslot::kLightTypePoint ).size() );
 
-    // 3) 플러시하면 빠진다. 여기서 안 빠지면 등록부가 죽은 포인터를 든다.
+    // 3) 플러시하면 빠진다. 여기서 안 빠지면 레지스트리가 죽은 포인터를 든다.
     pObjects->processDeferredDestruction();
     SW_EXPECT_EQUAL( size_t( 0 ), registry.getAll<sw::LightComponent>( sw::shaderslot::kLightTypePoint ).size() );
     SW_EXPECT_EQUAL( size_t( 1 ), registry.getAll<sw::LightComponent>( sw::shaderslot::kLightTypeSpot ).size() );
@@ -121,7 +121,7 @@ SW_TEST_CASE( SceneLightTest, LightsJoinTheRegistryOnAttachAndLeaveWhenRemoved )
 
 /**
  * @brief [SceneLightTest] 등록은 두 번 해도 하나, 해제는 없는 것을 지워도 조용하다
- * @details 컴포넌트 경로는 한 번씩만 부르지만, 등록부가 스스로 지켜야 하는 성질이다 — 같은 빛이
+ * @details 컴포넌트 경로는 한 번씩만 부르지만, 레지스트리가 스스로 지켜야 하는 성질이다 — 같은 빛이
  *          두 번 들어가면 그 빛만 두 배로 밝아지고(원소가 둘) 원인을 셰이더에서 찾게 된다.
  */
 SW_TEST_CASE( SceneLightTest, RegistryIsIdempotentForAddAndRemove )
@@ -174,7 +174,7 @@ SW_TEST_CASE( SceneLightTest, RemovingALightKeepsTheOthersInRegistrationOrder )
 
 /**
  * @brief [SceneLightTest] 수집은 꺼진 컴포넌트와 꺼진 계층의 빛을 건너뛴다
- * @details 등록부는 "무엇이 있나" 만 안다 — 활성 판정은 수집하는 쪽의 몫이라고 두 헤더가 적어
+ * @details 레지스트리는 "무엇이 있나" 만 안다 — 활성 판정은 수집하는 쪽의 몫이라고 두 헤더가 적어
  *          두었다. 그 몫을 실제로 하는지 보는 자리다. 계층 쪽(부모만 끈다)을 따로 보는 이유는
  *          `isActive()` 만 보면 통과하기 때문이다.
  */
@@ -294,7 +294,7 @@ SW_TEST_CASE( SceneLightTest, OnlyTheFirstShadowCastingDirectionalTakesTheShadow
 /**
  * @brief [SceneLightTest] 빛 방향은 부모의 회전을 따르고, 회전에 대해 연속이다(방향광 · 스포트)
  * @details 기본 방향이 로컬 방향이고 월드 회전이 그것을 돌린다. **로컬** 회전이 0 일 때만 기본 방향을 돌려주면 회전한 부모 아래의 빛이
- *          부모를 무시하고, 회전이 작은 문턱(1e-3 라디안)을 넘는 순간 기본 방향에서 전방(+Z)으로 튄다(방향광이면 비스듬히 내리쬐던 빛이
+ *          부모를 무시하고, 회전이 작은 임계값(1e-3 라디안)을 넘는 순간 기본 방향에서 전방(+Z)으로 튄다(방향광이면 비스듬히 내리쬐던 빛이
  *          수평이 된다). 회전이 없는 루트 빛은 기본 방향 그대로다(씬 · 벤치 빛이 모두 그렇다).
  */
 SW_TEST_CASE( SceneLightTest, LightDirectionFollowsParentAndIsContinuous )
@@ -407,7 +407,7 @@ SW_TEST_CASE( SceneLightTest, SpotConeAnglesStayOrdered )
 
 /**
  * @brief [SceneLightTest] 주광 조회는 켜진 빛만 돌려주고, 없으면 nullptr 이다
- * @details `EngineLoop` 이 매 프레임 부르는 자리다. 씬 전체를 훑지 않고 등록부만 본다 — 그래도 답은 같아야 한다.
+ * @details `EngineLoop` 이 매 프레임 부르는 자리다. 씬 전체를 훑지 않고 레지스트리만 본다 — 그래도 답은 같아야 한다.
  */
 SW_TEST_CASE( SceneLightTest, FindActiveDirectionalLightSkipsInactiveOnes )
 {

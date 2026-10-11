@@ -80,7 +80,7 @@ namespace sw::editor
         void processShortcutKeys();
         /** @brief 직교 보기로 바꿉니다. @p pitch · @p yaw 는 도(°)입니다. */
         void setOrthographicView( float32 pitch, float32 yaw );
-        /** @brief 씬 뷰 최대화를 켜고 끕니다(다른 패널을 닫았다가 직전 배치를 되살린다 — 유니티 Shift+Space). */
+        /** @brief 씬 뷰 최대화를 켜고 끕니다(다른 패널을 닫았다가 직전 배치를 복원한다 — 유니티 Shift+Space). */
         void toggleMaximize();
         void processPicking( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, bool bCanvasClicked );
         /** @brief 마우스 아래 오브젝트를 찾습니다(빌보드 → 레이 피킹, 잠근 · 숨긴 오브젝트는 빈 곳). 클릭 선택과 호버가 같이 쓴다. */

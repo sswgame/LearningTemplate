@@ -119,7 +119,7 @@ SW_TEST_CASE( EditorPlaySessionTest, StopAfterSceneChangeRebuildsTheEditedScene 
 }
 
 /**
- * @brief [EditorPlaySessionTest] 씬이 그대로면 Stop 은 같은 씬에 되돌린다 — 플레이 중에 생긴 것은 지우고 지운 것은 원래 id 로 되살린다
+ * @brief [EditorPlaySessionTest] 씬이 그대로면 Stop 은 같은 씬에 되돌린다 — 플레이 중에 생긴 것은 지우고 지운 것은 원래 id 로 복원한다
  * @details 위 케이스의 대조군이다. 씬을 다시 세우는 길은 활성 씬이 **바뀌었을 때만** 타야 한다(세대로 가른다).
  */
 SW_TEST_CASE( EditorPlaySessionTest, StopWithoutSceneChangeRestoresInPlace )
@@ -154,8 +154,8 @@ SW_TEST_CASE( EditorPlaySessionTest, StopWithoutSceneChangeRestoresInPlace )
 }
 
 /**
- * @brief [EditorPlaySessionTest] 플레이 중에 부모와 자식이 모두 지워져도 Stop 이 계층째 되살린다 — 자식이 부모보다 먼저 되살아나도
- * @details 되살리기는 스냅샷 순서(만든 순서)대로 오브젝트를 읽는다. 읽을 때 부모를 붙이면 자식을 먼저 만든 경우 자식을 읽는 순간 부모가 아직
+ * @brief [EditorPlaySessionTest] 플레이 중에 부모와 자식이 모두 지워져도 Stop 이 계층째 복원한다 — 자식이 부모보다 먼저 되살아나도
+ * @details 복원하기는 스냅샷 순서(만든 순서)대로 오브젝트를 읽는다. 읽을 때 부모를 붙이면 자식을 먼저 만든 경우 자식을 읽는 순간 부모가 아직
  *          없어 루트로 남는다. 그래서 씬 로드(`Scene::instantiate`)와 같이, 모두 읽은 뒤 계층을 다시 잇는다.
  */
 SW_TEST_CASE( EditorPlaySessionTest, StopRestoresAHierarchyWhoseChildWasCreatedFirst )
@@ -197,7 +197,7 @@ SW_TEST_CASE( EditorPlaySessionTest, StopRestoresAHierarchyWhoseChildWasCreatedF
 
 /**
  * @brief [EditorPlaySessionTest] 플레이 중에 이름을 서로 바꿔도 Stop 이 자식을 원래 부모에 붙이고 이름도 되돌린다
- * @details 되살리기가 부모를 이름으로 찾으면, 플레이 중 A("Left") 가 "Tmp" 로, B("Right") 가 "Left" 로 바뀐 경우 A 를 되돌리는 순간 "Left" 는
+ * @details 복원하기가 부모를 이름으로 찾으면, 플레이 중 A("Left") 가 "Tmp" 로, B("Right") 가 "Left" 로 바뀐 경우 A 를 되돌리는 순간 "Left" 는
  *          아직 B 의 것이라 A 는 `Left_2` 가 되고, A 의 자식은 이름 "Left" 로 **B** 를 찾아 붙는다. 부모는 원래 id 로 찾고, 모두 읽은 뒤 비어 있는
  *          저장된 이름을 되찾는다.
  */
@@ -269,7 +269,7 @@ SW_TEST_CASE( EditorPlaySessionTest, PauseFromStoppedThenPlayStartsTheWorld )
     EditorPlaySession::setState( data, PlaySessionState::Playing );
     SW_EXPECT_TRUE( sceneManager.isWorldPlaying() );
 
-    // 플레이 중에 영웅이 죽는다 — Stop 이 되살려야 한다.
+    // 플레이 중에 영웅이 죽는다 — Stop 이 복원해야 한다.
     pObjects->destroyObject( pHero );
     pObjects->processDeferredDestruction();
     EditorPlaySession::setState( data, PlaySessionState::Stopped );

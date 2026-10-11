@@ -324,7 +324,7 @@ namespace sw
                 pDev->onEventsDispatched( deltaSeconds );
         }
 
-        // 가운데 고정 잠금: 이번 프레임의 델타를 잰 뒤에 커서를 되돌린다. 잠금이 쉬는 동안(포커스 밖 · Alt · 콘솔)은 되돌리지 않는다 —
+        // 가운데 고정 잠금: 이번 프레임의 델타를 측정한 뒤에 커서를 되돌린다. 잠금이 쉬는 동안(포커스 밖 · Alt · 콘솔)은 되돌리지 않는다 —
         // 되돌리면 풀린 커서도 프레임마다 가운데로 끌려와 제목 표시줄 · X 에 닿지 못한다.
         if ( _pMouse != nullptr && _pMouse->getLockMode() == MouseLockMode::LockedInCenter && isMouseLockActive() )
             recenterLockedCursorPlatform();

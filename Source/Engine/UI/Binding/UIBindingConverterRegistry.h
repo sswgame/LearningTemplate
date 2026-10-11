@@ -1,6 +1,6 @@
 /**
  * @file UIBindingConverterRegistry.h
- * @brief 바인딩 변환기(`{bind:필드, converter=Percent}`)의 이름 → 함수 등록부입니다.
+ * @brief 바인딩 변환기(`{bind:필드, converter=Percent}`)의 이름 → 함수 레지스트리입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

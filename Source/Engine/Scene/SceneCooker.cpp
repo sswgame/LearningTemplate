@@ -41,7 +41,7 @@ namespace sw
                 }
             }
 
-            /** @brief 오브젝트의 상태를 파일 id 로 적은 XML 입니다. 쿠킹 전 · 쿠킹된 뒤의 상태를 견주는 기준입니다. */
+            /** @brief 오브젝트의 상태를 파일 id 로 적은 XML 입니다. 쿠킹 전 · 쿠킹된 뒤의 상태를 비교하는 기준입니다. */
             static string makeStateText( const Scene& scene, const GameObject* pObject )
             {
                 ObjectSavedIDMap mapSavedID;

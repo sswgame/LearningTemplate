@@ -406,7 +406,7 @@ namespace sw
         synchronizeGroups();
         updateCrowd();
 
-        // 포즈 단계의 벽시계 시간을 잰다 — 예산 배분이 "유닛 하나에 얼마" 를 이 평균으로 본다(언리얼 예산 배분기도 전체 시간을 재서 나눈다).
+        // 포즈 단계의 벽시계 시간을 측정한다 — 예산 배분이 "유닛 하나에 얼마" 를 이 평균으로 본다(언리얼 예산 배분기도 전체 시간을 측정해서 나눈다).
         uint32 poseUnitCount = 0;
         for ( const SkeletalMeshComponent* pUnit : _listActive )
         {

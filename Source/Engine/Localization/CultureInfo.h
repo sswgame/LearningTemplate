@@ -1,7 +1,7 @@
 /**
  * @file CultureInfo.h
  * @brief 문화권(culture) 데이터 — 복수형 규칙 · 숫자 · 날짜 형식 · 쓰기 방향 · 글꼴 대체 목록 — 과 그 표(`*.cultures.json`)입니다.
- * @details 숫자 기호 · 날짜 패턴 · 월 이름 · 글꼴 목록은 데이터이고, 코드는 이름으로 고르는 복수형 규칙 등록부(`PluralRuleUtil`)만 갖습니다.
+ * @details 숫자 기호 · 날짜 패턴 · 월 이름 · 글꼴 목록은 데이터이고, 코드는 이름으로 고르는 복수형 규칙 레지스트리(`PluralRuleUtil`)만 갖습니다.
  *          ICU · CLDR 를 들이지 않고 그 형식의 부분 집합을 따릅니다(패턴 기호 y · M · d · H · h · m · s · a).
  */
 #pragma once
@@ -67,7 +67,7 @@ namespace sw
 
     /**
      * @struct PluralRuleUtil
-     * @brief 이름으로 고르는 복수형 규칙 등록부와 범주 이름입니다. 데이터(`pluralRule`)가 고르는 이름은 여기 있는 것뿐이고, 모르는 이름은 로드 오류입니다.
+     * @brief 이름으로 고르는 복수형 규칙 레지스트리와 범주 이름입니다. 데이터(`pluralRule`)가 고르는 이름은 여기 있는 것뿐이고, 모르는 이름은 로드 오류입니다.
      * @details `none`(ko · ja · zh — other 하나) · `english`(one: i=1, v=0) · `french`(one: i=0,1) · `russian`(ru · uk) · `polish` · `czech` · `arabic`.
      */
     struct SW_API PluralRuleUtil
@@ -105,7 +105,7 @@ namespace sw
      */
     struct SW_API CultureInfo
     {
-        string           _code;       ///< 정본 철자(`ko_kr`)
+        string           _code;       ///< 원본 철자(`ko_kr`)
         string           _parentCode; ///< 물려받는 문화권(없으면 빈 값)
         string           _nativeName; ///< 자기 언어로 쓴 이름(언어 선택 메뉴)
         string           _pluralRuleName;
@@ -169,7 +169,7 @@ namespace sw
         /** @brief 문화권 표 파일의 접미사입니다. */
         static constexpr const utf8* kExtension = ".cultures.json";
 
-        /** @brief 언어 코드의 정본 철자입니다 — 소문자, `-` 는 `_`(`ko-KR` → `ko_kr`). */
+        /** @brief 언어 코드의 원본 철자입니다 — 소문자, `-` 는 `_`(`ko-KR` → `ko_kr`). */
         static string normalizeCode( string_view code );
         /** @brief 코드의 부모 후보(`ko_kr` → `ko`, `zh_hant_tw` → `zh_hant`)입니다. 없으면 빈 값입니다. */
         static string makeParentCode( string_view normalizedCode );

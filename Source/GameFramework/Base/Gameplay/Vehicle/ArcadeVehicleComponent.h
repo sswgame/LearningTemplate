@@ -1,6 +1,6 @@
 /**
  * @file ArcadeVehicleComponent.h
- * @brief 아케이드 차 폰 이동 — 의도 → `ArcadeVehicleMotor`(가속 · 조향 · 드리프트 · 부스트 · 점프). 물리 엔진 없이 루트를 옮기고, 땅은 물리 광선으로 잽니다.
+ * @brief 아케이드 차 폰 이동 — 의도 → `ArcadeVehicleMotor`(가속 · 조향 · 드리프트 · 부스트 · 점프). 물리 엔진 없이 루트를 옮기고, 땅은 물리 광선으로 측정합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

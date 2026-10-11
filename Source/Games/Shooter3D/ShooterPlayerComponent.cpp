@@ -149,7 +149,7 @@ namespace sw
                 const PawnComponent*          pPawn   = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
                 if ( pPawn == nullptr )
                     return false;
-                // 조종자 목록은 등록부에서 — 폰을 쥔 것 하나를 찾는다.
+                // 조종자 목록은 레지스트리에서 — 폰을 쥔 것 하나를 찾는다.
                 outValue = -1.0;
                 for ( ControllerComponent* pController : pManager->getComponentRegistry().getAll<ControllerComponent>() )
                 {

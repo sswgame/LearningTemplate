@@ -106,7 +106,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 피해 단계 하나(멀쩡 → 상함 → 부서짐) — 피해가 문턱 이상이면 이 단계입니다. 부품마다 메시 변형 · 머티리얼 값(먼지 · 녹 · 찢김)을 고릅니다. */
+    /** @brief 피해 단계 하나(멀쩡 → 상함 → 부서짐) — 피해가 임계값 이상이면 이 단계입니다. 부품마다 메시 변형 · 머티리얼 값(먼지 · 녹 · 찢김)을 고릅니다. */
     struct AppearanceDamageStageDef
     {
         struct PartVariant
@@ -129,7 +129,7 @@ namespace sw
     {
         vector<AppearancePartDef>        _listPart{};
         vector<AppearanceStateDef>       _listState{};
-        vector<AppearanceDamageStageDef> _listDamageStage{}; ///< 문턱 오름차순
+        vector<AppearanceDamageStageDef> _listDamageStage{}; ///< 임계값 오름차순
         TagContainer                     _tags{};            ///< 외형 규칙이 보는 태그(`Helmet.FullFace` · `Sleeve.Long`) — 형상 변경이면 보이는 외형의 것
         hashed_string                    _id{};
         hashed_string                    _occupancy{};     ///< `SlotTable` 의 칸 묶음 — 비면 자기 칸만
@@ -139,7 +139,7 @@ namespace sw
         const AppearancePartDef*        findPart( const hashed_string& name ) const;
         const AppearanceStateDef*       findState( const hashed_string& name ) const;
         const AppearanceDamageStageDef* findDamageStage( const hashed_string& name ) const;
-        /** @brief 피해 @p damage 의 단계 번호입니다. 첫 문턱 아래면 −1(멀쩡)입니다. */
+        /** @brief 피해 @p damage 의 단계 번호입니다. 첫 임계값 아래면 −1(멀쩡)입니다. */
         int32 computeDamageStageIndex( float32 damage ) const;
         /** @brief 단계 이름의 번호입니다. 없으면 −1 입니다. */
         int32 findDamageStageIndex( const hashed_string& name ) const;

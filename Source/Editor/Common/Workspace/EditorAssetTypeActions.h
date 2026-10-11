@@ -1,6 +1,6 @@
 /**
  * @file EditorAssetTypeActions.h
- * @brief 애셋 종류별 에디터 동작(썸네일 · 열기 · 뷰포트 드롭)의 인터페이스와 등록부입니다.
+ * @brief 애셋 종류별 에디터 동작(썸네일 · 열기 · 뷰포트 드롭)의 인터페이스와 레지스트리입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -52,8 +52,8 @@ namespace sw::editor
 {
     /**
      * @class EditorAssetTypeActionsRegistry
-     * @brief 종류 → 동작 등록부입니다. 등록은 정적 초기화 때 `EditorAssetTypeActionsRegistrar` 가 합니다.
-     * @details 등록부는 EditorModule 안에 있어 핫 리로드로 모듈이 바뀌면 등록자와 함께 새로 만들어진다.
+     * @brief 종류 → 동작 레지스트리입니다. 등록은 정적 초기화 때 `EditorAssetTypeActionsRegistrar` 가 합니다.
+     * @details 레지스트리는 EditorModule 안에 있어 핫 리로드로 모듈이 바뀌면 등록자와 함께 새로 만들어진다.
      */
     class EditorAssetTypeActionsRegistry
     {

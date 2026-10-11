@@ -228,9 +228,9 @@ SW_TEST_CASE( ReflectionEnumBitFlagTest, PlainSequentialEnumIsNotABitFlag )
 }
 
 /**
- * @brief [ReflectionEnumInfoTest] 좁은 enum 의 높은 비트 · 음수 값도 메모리에서 읽은 값과 이름표의 값이 같다
+ * @brief [ReflectionEnumInfoTest] 좁은 enum 의 높은 비트 · 음수 값도 메모리에서 읽은 값과 이름의 값이 같다
  * @details 코드젠이 열거자 값을 libclang 의 **부호 있는** 값으로 적고 런타임이 1 · 2 바이트 enum 을 **부호 없이** 읽으면, 둘이
- *          엇갈린 값은 이름을 잃는다 — `ShaderStageFlag::Amplification`(0x80)이 이름표에 -128 로, 메모리에서는 128 로 읽혀
+ *          엇갈린 값은 이름을 잃는다 — `ShaderStageFlag::Amplification`(0x80)이 이름에 -128 로, 메모리에서는 128 로 읽혀
  *          `toString` 이 비고 `All` 을 저장하면 그 비트가 빠진다. 부호 있는 좁은 enum 의 음수는 반대로 어긋난다.
  */
 SW_TEST_CASE( ReflectionEnumInfoTest, NarrowEnumValuesMatchTheirNamesInMemory )

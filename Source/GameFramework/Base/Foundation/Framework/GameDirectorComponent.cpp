@@ -153,7 +153,7 @@ namespace sw
         Archive    archive( _pendingStateBytes.data(), _pendingStateBytes.size() );
         const bool bRestored = readState( archive );
         _pendingStateBytes.clear();
-        // 새 판을 열며 쌓은 소리(첫 짓기 · 웨이브)는 되살린 판의 것이 아니다.
+        // 새 판을 열며 쌓은 소리(첫 짓기 · 웨이브)는 복원한 판의 것이 아니다.
         _soundQueue.clear();
         onStateRestored( bRestored );
         despawnViews(); // 지금 상태대로 다시 세운다(다음 틱)

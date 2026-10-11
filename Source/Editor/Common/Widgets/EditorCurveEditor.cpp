@@ -30,7 +30,7 @@ namespace sw::editor
             static ImVec2 toImVec2( const float2& value ) { return ImVec2{ value._x, value._y }; }
             static float2 toFloat2( const ImVec2& value ) { return float2{ value.x, value.y }; }
 
-            /** @brief 이름표를 사각형 하나에 남깁니다(상호작용 없는 항목 — 캔버스의 누름을 뺏지 않는다). */
+            /** @brief 이름을 사각형 하나에 남깁니다(상호작용 없는 항목 — 캔버스의 누름을 뺏지 않는다). */
             static void noteRectMark( const utf8* pKey, const float2& center, float32 radius )
             {
                 if ( EditorSelfTestMarks::isEnabled() == false )

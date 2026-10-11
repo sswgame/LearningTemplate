@@ -78,7 +78,7 @@ namespace sw
      */
     struct ObjectLoadContext
     {
-        /** @brief 같은 오브젝트를 되살릴 때의 원래 id 입니다. 주면 다시 만드는 컴포넌트가 원래 componentID 를 받습니다. */
+        /** @brief 같은 오브젝트를 복원할 때의 원래 id 입니다. 주면 다시 만드는 컴포넌트가 원래 componentID 를 받습니다. */
         const ObjectIdentity* _pIdentity{ nullptr };
         /** @brief 여러 오브젝트를 함께 읽을 때의 묶음입니다. 주면 부착은 읽는 자리가 아니라 `ObjectStateBatch::finish` 가 한 번에 잇습니다. */
         ObjectStateBatch* _pBatch{ nullptr };
@@ -99,12 +99,12 @@ namespace sw
 {
     /**
      * @struct ObjectIdentity
-     * @brief 오브젝트 하나와 그 컴포넌트들의 런타임 ID 입니다. 같은 오브젝트를 되살릴 때 핸들이 끊기지 않게 상태와 함께 적어 둡니다.
+     * @brief 오브젝트 하나와 그 컴포넌트들의 런타임 ID 입니다. 같은 오브젝트를 복원할 때 핸들이 끊기지 않게 상태와 함께 적어 둡니다.
      * @details 상태(XML · JSON · 바이너리)에는 오브젝트 **자신의** ID 가 들어가지 않습니다(부착이 가리키는 부모의 id 는 들어갑니다 —
      *          `ObjectStateBatch`). 씬 · 프리팹을 읽거나 오브젝트를 복제할 때는 늘 새 ID 를
      *          받아야 하기 때문입니다(같은 프리팹을 두 번 놓으면 ID 가 겹칩니다). 에디터 되돌리기 · 플레이 세션 복원 · 핫 리로드처럼
-     *          **같은 프로세스에서 같은 오브젝트를 되살리는** 경우에만 이것을 로드 함수에 넘겨 원래 ID 를 되살립니다.
-     *          objectID 는 오브젝트를 만들 때 `GameObjectManager::createGameObjectWithID` 가, componentID 는 로드가 되살립니다.
+     *          **같은 프로세스에서 같은 오브젝트를 복원하는** 경우에만 이것을 로드 함수에 넘겨 원래 ID 를 복원합니다.
+     *          objectID 는 오브젝트를 만들 때 `GameObjectManager::createGameObjectWithID` 가, componentID 는 로드가 복원합니다.
      */
     struct ObjectIdentity
     {
@@ -240,7 +240,7 @@ namespace sw
 
         /**
          * @brief XML 문자열에서 GameObject 상태를 복원합니다(ObjectID 제외).
-         * @param context 원래 id 를 되살릴지(`_pIdentity`), 여러 오브젝트를 함께 읽는 묶음인지(`_pBatch`)입니다. 기본값은 새 id 의 단독 로드입니다.
+         * @param context 원래 id 를 복원할지(`_pIdentity`), 여러 오브젝트를 함께 읽는 묶음인지(`_pBatch`)입니다. 기본값은 새 id 의 단독 로드입니다.
          * @details 적용하기 전에 기존 컴포넌트를 비웁니다. 묶음 없이 읽으면 부착은 이 오브젝트 하나짜리 묶음으로 바로 잇습니다(다른 오브젝트는
          *          매니저의 런타임 id 로 찾습니다). 여러 오브젝트를 읽을 때는 묶음을 주고 모두 읽은 뒤 `ObjectStateBatch::finish` 를 부릅니다 —
          *          그래야 자식이 부모보다 먼저 읽혀도 부모를 찾습니다.
@@ -256,7 +256,7 @@ namespace sw
         [[nodiscard]] static size_t loadFromBinaryBuffer( GameObject* pGameObject, const uint8* pData, size_t size, const ObjectLoadContext& context = {} );
 
         // ------------------------------------------------------------------------------
-        // 2) 런타임 ID: 같은 오브젝트를 되살릴 때 핸들이 이어지게 한다(`ObjectIdentity`)
+        // 2) 런타임 ID: 같은 오브젝트를 복원할 때 핸들이 이어지게 한다(`ObjectIdentity`)
         // ------------------------------------------------------------------------------
         /** @brief 오브젝트와 컴포넌트들의 지금 ID 를 적습니다. 삭제 대기 컴포넌트는 뺍니다. */
         static ObjectIdentity captureIdentity( const GameObject* pGameObject );
@@ -269,8 +269,8 @@ namespace sw
 
         /**
          * @brief 이 프로세스에서 찍은 스냅샷인지 가리는 값입니다. 프로세스마다 처음 부를 때 한 번 무작위로 정해지고, 0 은 아닙니다.
-         * @details 핫 리로드 스냅샷과 세이브 파일은 형식이 같습니다. 다른 실행에서 만든 세이브 파일의 id 를 되살리면 이 실행에서
-         *          이미 나간 id 와 겹칠 수 있으므로, 스냅샷에 이 값을 적어 두고 같을 때만 id 를 되살립니다. Engine 에 있어서
+         * @details 핫 리로드 스냅샷과 세이브 파일은 형식이 같습니다. 다른 실행에서 만든 세이브 파일의 id 를 복원하면 이 실행에서
+         *          이미 나간 id 와 겹칠 수 있으므로, 스냅샷에 이 값을 적어 두고 같을 때만 id 를 복원합니다. Engine 에 있어서
          *          게임 · 게임프레임워크 DLL 을 다시 올려도 바뀌지 않습니다.
          */
         static uint64 getProcessToken();
@@ -287,7 +287,7 @@ namespace sw
         [[nodiscard]] static bool loadFromText( GameObject* pGameObject, string_view text, const ObjectLoadContext& context );
         /**
          * @brief 오브젝트의 상태를 제자리에서 다시 읽습니다. 세 로더(XML · JSON · 바이너리)는 포맷 읽기만 `deserializeState( version, context )` 로 넘깁니다.
-         * @details 자식 연결을 적어 두고 컴포넌트를 비운 뒤, 컴포넌트 ID 를 되살리는 범위 안에서 읽습니다. 읽으면 묶음에 적고(묶음이 없으면 한 개짜리
+         * @details 자식 연결을 적어 두고 컴포넌트를 비운 뒤, 컴포넌트 ID 를 복원하는 범위 안에서 읽습니다. 읽으면 묶음에 적고(묶음이 없으면 한 개짜리
          *          묶음으로 바로 잇습니다), 읽기에 실패해도 적어 둔 자식은 되붙입니다.
          *          정의는 .cpp 에만 있습니다(ID 범위가 `GameObject` 의 비공개 타입이라 이 클래스의 멤버여야 합니다).
          */

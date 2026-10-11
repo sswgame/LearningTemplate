@@ -545,7 +545,7 @@ SW_TEST_CASE( SceneComponentTest, RotationCacheFollowsEveryRotationChange )
  * @brief [SceneComponentTest] 틱 안에서 자기 오브젝트의 칸에 쓴 값은 틱이 끝나야 보이고, 메시는 틱 뒤 렌더 더티가 된다
  * @details 틱 중의 세터는 자기 오브젝트를 틱하는 스레드면 칸의 대기 자리에 쓰고, 틱 뒤 적용이 칸 번호 목록을 따라 옮긴다. 그 사이에
  *          다른 오브젝트가 읽는 로컬 · 월드 값은 틱 전 값이어야 한다. 메시는 훅 없이 칸의 프리미티브 번호로
- *          등록부에 더티가 찍혀야 렌더 수집이 움직임을 본다. 오브젝트가 16 개 미만이라 틱은 이 스레드가 만든 순서대로 돈다 — 쓰는 쪽이
+ *          레지스트리에 더티가 찍혀야 렌더 수집이 움직임을 본다. 오브젝트가 16 개 미만이라 틱은 이 스레드가 만든 순서대로 돈다 — 쓰는 쪽이
  *          먼저 돌고 읽는 쪽이 나중에 돈다.
  */
 SW_TEST_CASE( SceneComponentTest, TickWriteToOwnSlotIsHiddenUntilAfterTheTick )
@@ -636,7 +636,7 @@ namespace
 /**
  * @brief [SceneComponentTest] 여러 오브젝트의 틱이 한 컴포넌트에 쓰면 이기는 값은 스레드 배정과 무관하다 — 쓴 오브젝트 id 가 큰 쪽
  * @details 틱 큐를 **쓴 스레드 슬롯** 단위로 적용하면 슬롯 번호가 큰 쪽이 이겨, 같은 장면도 어느 워커가 그 오브젝트를 틱했느냐에 따라 실행마다
- *          다른 값이 남고, 건수가 문턱(1024)을 넘으면 두 워커가 그 칸을 동시에 쓴다. 그래서 (대상, 쓴 오브젝트, 순번)으로 정렬해 대상 경계에서만
+ *          다른 값이 남고, 건수가 임계값(1024)을 넘으면 두 워커가 그 칸을 동시에 쓴다. 그래서 (대상, 쓴 오브젝트, 순번)으로 정렬해 대상 경계에서만
  *          잡을 나눈다(유니티 `EntityCommandBuffer.ParallelWriter` 의 sortKey). 두 스레드가 서로 다른 슬롯에 쓰게 하고 역할을 바꿔 두 번 돌린다.
  */
 SW_TEST_CASE( SceneComponentTest, CrossObjectTickWritesResolveByWriterNotThread )

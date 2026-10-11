@@ -63,7 +63,7 @@ namespace sw::editor
 
         /**
          * @brief 검색 칸을 그립니다(그리드 위 한 줄).
-         * @param pMarkKey 주면 지우기 단추 없이 그리고 입력 칸에 이 이름표를 남깁니다(시나리오가 누른다).
+         * @param pMarkKey 주면 지우기 단추 없이 그리고 입력 칸에 이 이름을 남깁니다(시나리오가 누른다).
          */
         void drawSearchBar( const utf8* pMarkKey = nullptr );
         /** @brief 지금 검색어입니다(비면 빈 글). 환경설정 창이 섹션을 거를 때 씁니다. */

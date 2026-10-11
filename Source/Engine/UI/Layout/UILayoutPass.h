@@ -23,7 +23,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 무한 가용 크기입니다 — 그 축으로는 "원하는 만큼" 을 잽니다. 비교는 `UILayoutPass::isUnbounded` 로(여백을 빼도 무한으로 남게). */
+    /** @brief 무한 가용 크기입니다 — 그 축으로는 "원하는 만큼" 을 측정합니다. 비교는 `UILayoutPass::isUnbounded` 로(여백을 빼도 무한으로 남게). */
     inline constexpr float32 kUIUnbounded = 1.0e9f;
 
     /**
@@ -50,20 +50,20 @@ namespace sw
      * @class UILayoutPass
      * @brief 트리의 레이아웃을 돌립니다 — 더러운 뿌리만 measure → arrange 합니다(언리얼 Slate · WPF · Yoga 의 두 걷기).
      * @details measure 는 가용 크기를 받습니다(WPF · Yoga 와 같다 — 높이가 너비에 기대는 줄 바꿈 글이 같은 프레임에 맞는다. Slate 는 지난 프레임의 너비를 쓴다).
-     *          결과는 위젯에 캐시되고(같은 가용 크기 · 더럽지 않으면 다시 재지 않는다), arrange 는 기하가 바뀐 위젯만 그리기 더러움으로 만듭니다.
+     *          결과는 위젯에 캐시되고(같은 가용 크기 · 더럽지 않으면 다시 측정하지 않는다), arrange 는 기하가 바뀐 위젯만 그리기 더러움으로 만듭니다.
      *          회전 · 기울임이 없는 축은 물리 픽셀에 맞춥니다(Slate 의 픽셀 스냅 — 1 px 테두리가 번지지 않는다). 게임 스레드만.
      */
     class SW_API UILayoutPass
     {
     public:
         /**
-         * @brief 트리의 더러운 뿌리만 다시 잽니다. 루트는 뷰포트 전체에, 다른 뿌리(레이아웃 경계 · 배치만 더러운 위젯)는 지난 arrange 의 자리에 다시 놓습니다.
-         * @details 배율 · 글자 배율이 지난 걷기와 다르면 트리 전체를 다시 잽니다. 뷰포트 크기가 바뀌면 루트부터 다시 잽니다.
-         * @return 이번에 다시 잰 위젯 수입니다(`computeDesiredSize` 호출 수 — 프로파일 카운터 UI.LayoutWidgets).
+         * @brief 트리의 더러운 뿌리만 다시 측정합니다. 루트는 뷰포트 전체에, 다른 뿌리(레이아웃 경계 · 배치만 더러운 위젯)는 지난 arrange 의 자리에 다시 놓습니다.
+         * @details 배율 · 글자 배율이 지난 걷기와 다르면 트리 전체를 다시 측정합니다. 뷰포트 크기가 바뀌면 루트부터 다시 측정합니다.
+         * @return 이번에 다시 측정한 위젯 수입니다(`computeDesiredSize` 호출 수 — 프로파일 카운터 UI.LayoutWidgets).
          */
         static uint32 update( WidgetTree& tree, const UILayoutContext& context );
         /**
-         * @brief 위젯 하나를 가용 크기로 잽니다. 더럽지 않고 같은 가용 크기면 캐시를 돌려줍니다.
+         * @brief 위젯 하나를 가용 크기로 측정합니다. 더럽지 않고 같은 가용 크기면 캐시를 돌려줍니다.
          * @details 슬롯 크기 덮어쓰기 · 최소 · 최대를 적용한 값입니다(여백은 넣지 않는다 — 부모가 더한다). Collapsed 면 0 입니다.
          */
         static float2 measure( Widget& widget, const UILayoutContext& context, const float2& availableSize );
@@ -115,11 +115,11 @@ namespace sw
         }
 
     private:
-        /** @brief 이번 걷기에서 다시 재야 하는가(잰 적 없음 · 레이아웃 더러움이 이번 걷기 전의 것). */
+        /** @brief 이번 걷기에서 다시 측정해야 하는가(측정한 적 없음 · 레이아웃 더러움이 이번 걷기 전의 것). */
         static bool isMeasureStale( const Widget& widget );
         /** @brief 레이아웃 비트를 지웁니다 — 비트가 있는 위젯만 따라 내려갑니다. Collapsed 는 내려가지 않고 kChildLayout 을 남깁니다(다시 보일 때 그 아래를 다시 재게). */
         static void clearLayoutFlags( Widget& widget );
-        /** @brief 트리 루트를 뷰포트 전체에 잽니다 · 놓습니다. */
+        /** @brief 트리 루트를 뷰포트 전체에 측정합니다 · 놓습니다. */
         static void layoutTreeRoot( Widget& root, const UILayoutContext& context );
     };
 } // namespace sw

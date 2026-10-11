@@ -363,7 +363,7 @@ SW_TEST_CASE( AutomationScenarioTest, RegistriesRejectDuplicateNames )
 }
 
 /**
- * @brief [AutomationScenarioTest] PPM 을 읽어 영역 지표를 잰다 — 왼쪽 반이 어두운 4×4 그림
+ * @brief [AutomationScenarioTest] PPM 을 읽어 영역 지표를 측정한다 — 왼쪽 반이 어두운 4×4 그림
  * @details darkFraction 은 영역 중앙값 대비라, 영역 전체가 같은 밝기면 0 이고(반쪽만 보면 0) 밝고 어두운 것이 섞여야 어두운 몫이 나온다.
  */
 SW_TEST_CASE( AutomationScenarioTest, ImageMetricsReadAPpm )

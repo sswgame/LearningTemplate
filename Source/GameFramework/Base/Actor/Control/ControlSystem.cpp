@@ -148,7 +148,7 @@ namespace sw
         context._deltaTime = deltaTime;
         context._tick      = _tick;
 
-        // 등록부의 창은 등록 · 해제가 일어나면 버려야 한다 — 조종자가 판단 중에 오브젝트를 만들 수 있으므로 자리 번호로 돌며 매번 크기를 다시 본다.
+        // 레지스트리의 창은 등록 · 해제가 일어나면 버려야 한다 — 조종자가 판단 중에 오브젝트를 만들 수 있으므로 자리 번호로 돌며 매번 크기를 다시 본다.
         const ComponentRegistry::View<PawnComponent> pawnView = manager.getComponentRegistry().getAll<PawnComponent>();
         for ( size_t pawnIndex = 0; pawnIndex < pawnView.size(); ++pawnIndex )
         {
@@ -227,7 +227,7 @@ namespace sw
             if ( pPawn->isPossessed() == false )
                 _listAutoPossessPawn.push_back( pPawn->getHandle() );
         }
-        // 조종자를 세우면 등록부가 바뀐다 — 다 모은 뒤에 세운다.
+        // 조종자를 세우면 레지스트리가 바뀐다 — 다 모은 뒤에 세운다.
         for ( const ComponentHandle& handle : _listAutoPossessPawn )
         {
             PawnComponent* pPawn = static_cast<PawnComponent*>( manager.resolveComponent( handle ) );

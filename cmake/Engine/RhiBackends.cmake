@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file cmake/Engine/RhiBackends.cmake
-# @brief RHI 백엔드 표의 CMake 쪽 — 정본은 Config/Engine/CookContract.json 의 rhi_backends(configure 가 generated/sw/config/CookContract.cmake 로 옮긴다)
+# @brief RHI 백엔드 표의 CMake 쪽 — 원본은 Config/Engine/CookContract.json 의 rhi_backends(configure 가 generated/sw/config/CookContract.cmake 로 옮긴다)
 # @note 백엔드의 장치 소스는 `Source/Engine/Graphics/RHI/<source_folder>/` 아래 .cpp 전부다 — 목록을 따로 적지 않는다.
 #       RHI_* MODULE(Dev)과 Engine 정적 링크(Shipping)가 같은 함수로 묻는다.
 # ==============================================================================
@@ -40,7 +40,7 @@ function(sw_checkRhiBackendName TEXT)
 endfunction()
 
 # 배포 빌드가 Engine 에 넣을 백엔드 — 이름을 확인하고, 이 플랫폼(sw_platform_name)에 그 백엔드가 있는지 본다. 없으면 구성을 세운다.
-# 플랫폼은 그 백엔드 모듈의 매니페스트(_listPlatform)가 정본이다. 주의: 배포 구성에서는 모듈이 꺼져 있으므로(`_listConfiguration`) 활성 여부가
+# 플랫폼은 그 백엔드 모듈의 매니페스트(_listPlatform)가 원본이다. 주의: 배포 구성에서는 모듈이 꺼져 있으므로(`_listConfiguration`) 활성 여부가
 # 아니라 플랫폼 칸을 본다 — 이 확인이 없으면 그 플랫폼에 없는 백엔드를 고른 Engine 이 백엔드 없이 링크된다.
 function(sw_resolveShippingRhiBackend TEXT OUT_VAR)
 	sw_checkRhiBackendName("${TEXT}")

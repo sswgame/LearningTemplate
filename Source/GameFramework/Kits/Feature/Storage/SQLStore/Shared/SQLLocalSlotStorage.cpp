@@ -17,7 +17,7 @@ namespace sw
     {
         struct SQLLocalSlotStorageInternal
         {
-            /** @brief 로컬 슬롯이 쓰는 드라이버의 등록 이름 — 제품은 드라이버 폴더만 안다(등록부 `SQLDriverRegistry` 가 고른다). */
+            /** @brief 로컬 슬롯이 쓰는 드라이버의 등록 이름 — 제품은 드라이버 폴더만 안다(레지스트리 `SQLDriverRegistry` 가 고른다). */
             static constexpr string_view kLocalSlotDriverName = "sqlite";
 
             static int64 makeNowMs() { return FileUtil::getCurrentFileWriteTime() / ( FileUtil::kFileTimeTicksPerSecond / 1000 ); }

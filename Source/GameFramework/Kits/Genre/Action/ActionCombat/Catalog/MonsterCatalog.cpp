@@ -173,7 +173,7 @@ namespace sw
         if ( pStr == nullptr )
             return MonsterArchetype::MeleePatrol;
 
-        // 이름표는 리플렉션된 열거자 하나다(대소문자 무시). 열거자를 늘리면 여기는 고치지 않는다.
+        // 이름은 리플렉션된 열거자 하나다(대소문자 무시). 열거자를 늘리면 여기는 고치지 않는다.
         MonsterArchetype archetype{ MonsterArchetype::MeleePatrol };
         if ( engine::getTypeRegistry().enumFromString( pStr, archetype ) )
             return archetype;
