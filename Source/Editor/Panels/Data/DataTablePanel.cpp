@@ -14,6 +14,9 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
 
+#include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
+
 #include <imgui.h>
 
 SW_LOG_CALLER( "DataTablePanel" );
@@ -159,7 +162,7 @@ namespace sw::editor
 
         if ( _bLocalizationLoaded == SW_FALSE )
         {
-            EditorWidgets::drawEmptyHint( "Loading localization..." );
+            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorDataTable", "LoadingLocalization", "Loading localization..." ) );
             return;
         }
 
@@ -171,9 +174,11 @@ namespace sw::editor
         if ( EditorChrome::beginToolbar( "##locToolbar" ) )
         {
             const bool   bHasProject  = _selectedProjectIndex >= 0 && static_cast<size_t>( _selectedProjectIndex ) < _listLocalizationProject.size();
-            const string projectLabel = bHasProject ? FileUtil::getFileNamePart( _listLocalizationProject[static_cast<size_t>( _selectedProjectIndex )] ) : string( "(no project)" );
+            const string projectLabel = bHasProject ? FileUtil::getFileNamePart( _listLocalizationProject[static_cast<size_t>( _selectedProjectIndex )] ) : string( SW_LOCTEXT( "EditorDataTable", "NoProject", "(no project)" ) );
             ImGui::SetNextItemWidth( 220.0f * EditorThemeUtil::getDpiScale() );
-            if ( ImGui::BeginCombo( "##locProject", projectLabel.c_str() ) )
+            const bool bProjectOpen = ImGui::BeginCombo( "##locProject", projectLabel.c_str() );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorDataTable", "ProjectTip", "Localization project whose string tables are shown. Save or reload before switching; a project with unsaved edits stays selected." ) );
+            if ( bProjectOpen )
             {
                 for ( size_t projectIndex = 0; projectIndex < _listLocalizationProject.size(); ++projectIndex )
                 {
@@ -188,19 +193,21 @@ namespace sw::editor
                 ImGui::EndCombo();
             }
             ImGui::SameLine();
-            EditorWidgets::drawSearchField( "##locFilter", _localizationFilter, "Search keys, source or translations...", 240.0f, false );
+            EditorWidgets::drawSearchField( "##locFilter", _localizationFilter, SW_LOCTEXT( "EditorDataTable", "SearchHint", "Search keys, source or translations..." ), 240.0f, false );
             ImGui::SameLine();
 
             if ( ImGui::Button( "Save Localization" ) )
                 saveLocalization();
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorDataTable", "SaveLocalizationTip", "Write the source table and every translation table of this project." ) );
 
             ImGui::SameLine();
             if ( ImGui::Button( "Reload" ) )
                 reloadLocalization();
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorDataTable", "ReloadTip", "Read the project's tables from disk again, discarding unsaved edits." ) );
 
             ImGui::SameLine();
             ImGui::SetNextItemWidth( 160.0f * EditorThemeUtil::getDpiScale() );
-            ImGui::InputTextWithHint( "##newKey", "New string key...", _newKeyBuffer.data(), _newKeyBuffer.capacity() );
+            ImGui::InputTextWithHint( "##newKey", SW_LOCTEXT( "EditorDataTable", "NewKeyHint", "New string key..." ), _newKeyBuffer.data(), _newKeyBuffer.capacity() );
             ImGui::SameLine();
             if ( ImGui::Button( "Add Key" ) && _newKeyBuffer.empty() == false && _localizationSheet._listTablePath.empty() == false )
             {
@@ -223,6 +230,7 @@ namespace sw::editor
                     markLocalizationDirty();
                 }
             }
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorDataTable", "AddKeyTip", "Add a string with the key typed on the left. Keys already in the table are ignored." ) );
         }
         EditorChrome::endToolbar();
     }
@@ -261,15 +269,21 @@ namespace sw::editor
 
         if ( ImGui::IsItemHovered() )
         {
-            const utf8* pState = "translated";
+            const utf8* pState = SW_LOCTEXT( "EditorDataTable", "StateTranslated", "translated" );
             if ( state == TranslationState::Stale )
-                pState = "stale - the source changed after this translation";
+                pState = SW_LOCTEXT( "EditorDataTable", "StateStale", "stale - the source changed after this translation" );
             else if ( state == TranslationState::Review )
-                pState = "needs review (translation memory suggestion or fuzzy import)";
+                pState = SW_LOCTEXT( "EditorDataTable", "StateReview", "needs review (translation memory suggestion or fuzzy import)" );
             else if ( state == TranslationState::Missing )
-                pState = "missing";
-            ImGui::SetTooltip( "%s\nState: %s\nLength: %u%s", record._context.empty() ? record._comment.c_str() : record._context.c_str(), pState, length,
-                               bTooLong ? " (over the maximum length)" : "" );
+                pState = SW_LOCTEXT( "EditorDataTable", "StateMissing", "missing" );
+            const utf8*  pOverflow = bTooLong ? SW_LOCTEXT( "EditorDataTable", "OverMaxLength", " (over the maximum length)" ) : "";
+            const string tooltip   = SW_LOCFORMAT( "EditorDataTable", "TranslationCellTip", "{context}\nState: {state}\nLength: {length}{overflow}",
+                                                   TextArgumentList()
+                                                       .addText( "context", record._context.empty() ? record._comment : record._context )
+                                                       .addText( "state", pState )
+                                                       .addInteger( "length", static_cast<int64>( length ) )
+                                                       .addText( "overflow", pOverflow ) );
+            ImGui::SetTooltip( "%s", tooltip.c_str() );
         }
         return bChanged;
     }
@@ -304,7 +318,7 @@ namespace sw::editor
             if ( filter.isActive() )
                 EditorWidgets::drawNoSearchResultHint( filter.getText() );
             else
-                EditorWidgets::drawEmptyHint( "No localization records. Add a key or run App --gather-text." );
+                EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorDataTable", "NoRecordsHint", "No localization records. Add a key or run App --gather-text." ) );
             return;
         }
 
@@ -334,7 +348,14 @@ namespace sw::editor
                 ImGui::TableSetColumnIndex( 0 );
                 ImGui::TextUnformatted( record._key.c_str() );
                 if ( ImGui::IsItemHovered() && ( record._context.empty() == false || record._comment.empty() == false ) )
-                    ImGui::SetTooltip( "Context: %s\nComment: %s\nMax length: %u", record._context.c_str(), record._comment.c_str(), record._maxLength );
+                {
+                    const string tooltip = SW_LOCFORMAT( "EditorDataTable", "KeyTip", "Context: {context}\nComment: {comment}\nMax length: {maxLength}",
+                                                         TextArgumentList()
+                                                             .addText( "context", record._context )
+                                                             .addText( "comment", record._comment )
+                                                             .addInteger( "maxLength", static_cast<int64>( record._maxLength ) ) );
+                    ImGui::SetTooltip( "%s", tooltip.c_str() );
+                }
 
                 ImGui::TableSetColumnIndex( 1 );
                 if ( EditorWidgets::drawTextField( "##source", record._source, -1.0f ) )
@@ -358,6 +379,7 @@ namespace sw::editor
                 ImGui::TableSetColumnIndex( static_cast<int32>( 2 + cultureCount ) );
                 if ( ImGui::SmallButton( "Del" ) )
                     deleteIndex = static_cast<int32>( recordIndex );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorDataTable", "DeleteKeyTip", "Remove this key from the source table and every translation table when you save." ) );
 
                 ImGui::PopID();
             }
@@ -380,6 +402,7 @@ namespace sw::editor
         ImGui::Separator();
         if ( ImGui::Button( "Refresh Files" ) )
             reloadGameDataFiles();
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorDataTable", "RefreshFilesTip", "Scan the game data folders again for XML tables added or removed outside the editor." ) );
 
         editor::EditorSectionDesc listDesc{};
         listDesc._pID       = "##DataFileList";
@@ -416,9 +439,11 @@ namespace sw::editor
             ImGui::SameLine();
             if ( ImGui::Button( "Save File" ) )
                 saveSelectedGameDataFile();
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorDataTable", "SaveFileTip", "Write the edited XML text back to this file. The text is saved as typed, without validation." ) );
             ImGui::SameLine();
             if ( ImGui::Button( "Revert" ) )
                 loadSelectedGameDataFile();
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorDataTable", "RevertTip", "Discard the edits and read the file from disk again." ) );
 
             ImGui::Separator();
 
@@ -438,7 +463,7 @@ namespace sw::editor
         }
         else
         {
-            EditorWidgets::drawEmptyHint( "Select an XML data table from the list on the left." );
+            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorDataTable", "SelectTableHint", "Select an XML data table from the list on the left." ) );
         }
         ImGui::EndGroup();
     }

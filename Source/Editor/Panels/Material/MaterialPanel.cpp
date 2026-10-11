@@ -21,6 +21,7 @@
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Resource/AssetManager.h"
 
 #include <imgui.h>
@@ -223,19 +224,23 @@ namespace sw::editor
 
         if ( getLoadedAssetPath().empty() )
         {
-            EditorWidgets::drawEmptyHint( "Open a material (Open..., Quick Open or a Content Browser double-click) to edit." );
+            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorMaterial", "OpenMaterialHint", "Open a material (Open..., Quick Open or a Content Browser double-click) to edit." ) );
             return;
         }
 
         ImGui::TextDisabled( "%s", getLoadedAssetPath().c_str() );
         if ( ImGui::Button( "Reload" ) )
             reloadDocument();
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorMaterial", "ReloadTip", "Read the material from disk again, discarding unsaved edits." ) );
         ImGui::SameLine();
         if ( ImGui::Button( "Save" ) )
             (void)saveDocumentAndClearDirty(); // 저장 경로는 모두 이것을 거친다(읽지 못한 문서는 막힌다) — 실패는 그것이 알린다
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorMaterial", "SaveTip", "Write the material file and reload it in the running scene." ) );
         ImGui::SameLine();
         if ( ImGui::Button( "Apply to Selection" ) )
             applyLivePreview();
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorMaterial", "ApplyToSelectionTip",
+                                                "Show the edited material on the selected object in the viewport without saving, to judge it with the real shader and lighting." ) );
         drawPreview();
 
         ImGui::InputText( "Name", _name.data(), _name.capacity() );
@@ -245,13 +250,17 @@ namespace sw::editor
             notifyDocumentEdited( "Edit Material Name", "material-name" );
             applyLivePreview();
         }
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorMaterial", "NameTip", "Display name stored in the material file." ) );
         string shaderPath = _shaderPath.c_str();
+        ImGui::BeginGroup(); // 슬롯은 항목 여럿이라 툴팁을 묶음 전체에 건다
         if ( EditorWidgets::drawAssetSlot( "Shader", shaderPath, ".hlsl" ) )
         {
             _shaderPath = shaderPath;
             _material->setShaderPath( _shaderPath.c_str() );
             notifyDocumentEdited( "Edit Material Shader", "material-shader" );
         }
+        ImGui::EndGroup();
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorMaterial", "ShaderTip", "HLSL shader this material renders with. Drop a .hlsl file here or pick one from the Content Browser." ) );
 
         ImGui::Separator();
         ImGui::TextUnformatted( "Properties" );
@@ -290,7 +299,8 @@ namespace sw::editor
         const ImVec2                minPos = ImGui::GetCursorScreenPos();
         ImGui::Dummy( ImVec2( side, side ) );
         EditorSelfTestMarks::note( "material.preview" );
-        EditorWidgets::drawTooltip( "머티리얼 값(기본색 · 거칠기 · 금속성 · 방출)으로 셈한 미리보기입니다. 셰이더 코드는 반영하지 않습니다 — Apply to Selection 으로 씬에서 확인합니다" );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorMaterial", "PreviewTip",
+                                                "Preview computed from the material values (base color, roughness, metallic, emissive). It does not run the shader code - use Apply to Selection to check it in the scene." ) );
 
         ImDrawList*   pDrawList = ImGui::GetWindowDrawList();
         const float32 radius    = side * 0.5f - 2.0f;
@@ -369,7 +379,7 @@ namespace sw::editor
         _material->setShaderPath( _shaderPath.c_str() );
         if ( _material->saveToFile( getLoadedAssetPath() ) == false )
         {
-            _status = "Save failed";
+            _status = SW_LOCTEXT( "EditorMaterial", "SaveFailedStatus", "Save failed" );
             return false;
         }
         AssetManager*  pResources = editor::getService<AssetManager>();
@@ -377,7 +387,7 @@ namespace sw::editor
         if ( pResources != nullptr && pContext != nullptr )
             pResources->getMaterialCache().reload( getLoadedAssetPath(), pContext->getRHIDevice() );
         applyLivePreview();
-        _status = "Saved";
+        _status = SW_LOCTEXT( "EditorMaterial", "SavedStatus", "Saved" );
         clearDocumentDirty();
         syncDocumentUndoBaseline();
         return true;
@@ -394,11 +404,11 @@ namespace sw::editor
             acceptFocusedDocument();
         if ( _material->loadFromFile( path ) == false )
         {
-            _status = "Load failed - saving is disabled so the file is not overwritten";
+            _status = SW_LOCTEXT( "EditorMaterial", "LoadFailedStatus", "Load failed - saving is disabled so the file is not overwritten" );
             return ToolAssetLoadResult::Malformed;
         }
         syncNameBuffers();
-        _status = "Loaded";
+        _status = SW_LOCTEXT( "EditorMaterial", "LoadedStatus", "Loaded" );
         return ToolAssetLoadResult::Loaded;
     }
 

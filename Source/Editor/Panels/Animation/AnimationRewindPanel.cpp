@@ -13,6 +13,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/Animation/AnimationRewind.h"
 #include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
@@ -83,14 +84,14 @@ namespace sw::editor
         Scene* pScene = editor::getActiveScene();
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
         {
-            EditorWidgets::drawEmptyHint( "No active scene." );
+            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorAnimationRewind", "NoActiveScene", "No active scene." ) );
             return;
         }
         AnimationRewindRecorder& rewind = pScene->getObjectManager()->getAnimationSystem().getRewind();
         drawRecordingControls( rewind );
         if ( rewind.getTracks().empty() )
         {
-            EditorWidgets::drawEmptyHint( "Nothing recorded yet. Turn recording on and play (PIE) - or 'anim.rewind on' in the console." );
+            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorAnimationRewind", "NothingRecorded", "Nothing recorded yet. Turn recording on and play (PIE) - or 'anim.rewind on' in the console." ) );
             return;
         }
         drawTimeline( rewind );
@@ -118,7 +119,7 @@ namespace sw::editor
         ImGui::Separator();
         if ( pSelected == nullptr )
         {
-            EditorWidgets::drawEmptyHint( "Select a character (Hierarchy or Scene view) to see its recorded state." );
+            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorAnimationRewind", "SelectCharacter", "Select a character (Hierarchy or Scene view) to see its recorded state." ) );
             return;
         }
         const AnimationRewindFrame* pFrame = pSelected->findFrame( viewTime );
@@ -131,19 +132,24 @@ namespace sw::editor
         bool bRecord = AnimationRewindRecorder::isRecordingRequested();
         if ( ImGui::Checkbox( "Record", &bRecord ) )
             AnimationRewindRecorder::setRecordingRequested( bRecord );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorAnimationRewind", "RecordTip",
+                                                "Record every animated character's pose and state each frame while the game plays, so you can scrub back and inspect them. Same as 'anim.rewind on'." ) );
         ImGui::SameLine();
         float32 seconds = AnimationRewindRecorder::getRequestedWindowSeconds();
         ImGui::SetNextItemWidth( 120.0f * EditorThemeUtil::getDpiScale() );
         if ( ImGui::SliderFloat( "Window (s)", &seconds, 1.0f, 60.0f, "%.0f" ) )
             AnimationRewindRecorder::setRequestedWindowSeconds( seconds );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorAnimationRewind", "WindowTip", "How many seconds of history to keep, 1 to 60. Older frames are dropped; longer windows use more memory." ) );
         ImGui::SameLine();
         bool bDraw = _bDrawSkeleton == SW_TRUE;
         if ( ImGui::Checkbox( "Skeleton", &bDraw ) )
             _bDrawSkeleton = bDraw ? SW_TRUE : SW_FALSE;
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorAnimationRewind", "SkeletonTip", "Draw the recorded skeleton in the viewport at the time being viewed." ) );
         ImGui::SameLine();
         bool bAll = _bAllTracks == SW_TRUE;
         if ( ImGui::Checkbox( "All", &bAll ) )
             _bAllTracks = bAll ? SW_TRUE : SW_FALSE;
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorAnimationRewind", "AllTracksTip", "Draw every recorded character's skeleton, not only the selected one." ) );
         ImGui::TextDisabled( "%u tracks · %.1f KB · %.1f s of history", static_cast<uint32>( rewind.getTracks().size() ),
                              static_cast<float64>( rewind.getByteCount() ) / 1024.0, rewind.getLatestTime() - rewind.getEarliestTime() );
     }
@@ -164,6 +170,7 @@ namespace sw::editor
                 EditorPlaySession::pause();
             rewind.setScrubTime( rewind.getLatestTime() - static_cast<float64>( _scrubSecondsAgo ) );
         }
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorAnimationRewind", "TimelineTip", "Drag to scrub through the recorded history; the left end is the oldest frame. Scrubbing pauses Play In Editor." ) );
         ImGui::SameLine();
         if ( rewind.isScrubbing() )
         {
@@ -174,6 +181,7 @@ namespace sw::editor
                 if ( EditorPlaySession::isPaused() )
                     EditorPlaySession::setState( PlaySessionState::Playing );
             }
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorAnimationRewind", "ResumeTip", "Return to the live state and resume Play In Editor if scrubbing paused it." ) );
         }
         else
         {

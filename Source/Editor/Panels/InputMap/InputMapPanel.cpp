@@ -23,6 +23,8 @@
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/Virtual/InputReplay.h"
+#include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 
 #include <imgui.h>
 
@@ -337,30 +339,34 @@ namespace sw::editor
         ImGui::TextUnformatted( "Input Map" );
         ImGui::SameLine();
         EditorWidgets::drawTextField( "##InputMapPath", _inputMapPath, 260.0f );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "MapPathTip", "Resource path of the input map (*.input.xml) to edit. Press Reload after changing it." ) );
         ImGui::SameLine();
         if ( ImGui::Button( "Reload" ) )
             reloadFromFile();
         EditorSelfTestMarks::note( "inputMap.reload" );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "ReloadTip", "Read the input map from the path on the left, discarding unsaved edits." ) );
         ImGui::SameLine();
         if ( ImGui::Button( "Save" ) )
             (void)saveToFile(); // 실패는 saveToFile 이 알리고 dirty 가 남는다
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "SaveTip", "Write the default bindings to the input map file. Player remaps are stored separately in user settings." ) );
         ImGui::SameLine();
         if ( ImGui::Button( "Revert All to Default" ) )
         {
             _inputMap.resetAllBindingsToDefault();
             markDocumentDirty();
         }
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "RevertAllTip", "Put every action back to the bindings it was loaded with." ) );
         if ( isDocumentDirty() )
         {
             ImGui::SameLine();
-            EditorThemeUtil::textWarning( "* Unsaved changes" );
+            EditorThemeUtil::textWarning( SW_LOCTEXT( "EditorInputMap", "UnsavedChanges", "* Unsaved changes" ) );
         }
         InputMapConflicts::collect( _inputMap, _listConflict );
         if ( _listConflict.empty() == false )
         {
             ImGui::SameLine();
-            fixed_string<constant::kMaxBuffer32> conflictText;
-            formatstring( conflictText.data(), conflictText.capacity(), "%# conflict(s)", static_cast<uint32>( _listConflict.size() ) );
+            const string conflictText = SW_LOCFORMAT( "EditorInputMap", "ConflictCount", "{count, plural, one {# conflict} other {# conflicts}}",
+                                                      TextArgumentList().addInteger( "count", static_cast<int64>( _listConflict.size() ) ) );
             EditorThemeUtil::textError( conflictText.c_str() );
         }
         ImGui::Separator();
@@ -383,7 +389,7 @@ namespace sw::editor
     void InputMapPanel::drawActionList()
     {
         ImGui::SeparatorText( "Actions" );
-        EditorWidgets::drawSearchField( "##inputMapActionFilter", _arrActionFilter, constant::kMaxBuffer64, "Filter actions..." );
+        EditorWidgets::drawSearchField( "##inputMapActionFilter", _arrActionFilter, constant::kMaxBuffer64, SW_LOCTEXT( "EditorInputMap", "FilterActionsHint", "Filter actions..." ) );
         EditorSelfTestMarks::note( "inputMap.filter" );
         const EditorListFilter filter{ string_view( _arrActionFilter ) };
         for ( const hashed_string& actionName : _inputMap.getActionNames() )
@@ -402,7 +408,7 @@ namespace sw::editor
             if ( EditorSelfTestMarks::isEnabled() )
                 EditorSelfTestMarks::note( ( string{ "inputMap.action." } + actionName.c_str() ).c_str() );
             if ( bConflict )
-                EditorWidgets::drawTooltip( "Shares a key with another action on the same layer - see the details" );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "ActionConflictTip", "Shares a key with another action on the same layer - see the details" ) );
             ImGui::SameLine( ImGui::GetContentRegionAvail().x - ImGui::GetFontSize() * 4.0f );
             if ( bDown )
                 EditorThemeUtil::textSuccess( "DOWN" );
@@ -416,7 +422,7 @@ namespace sw::editor
     {
         if ( _selectedAction.empty() )
         {
-            EditorWidgets::drawEmptyHint( "Select an action to edit its bindings and triggers." );
+            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorInputMap", "SelectActionHint", "Select an action to edit its bindings and triggers." ) );
             return;
         }
         const hashed_string action( _selectedAction.c_str() );
@@ -427,6 +433,7 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ImGui::SmallButton( "Reset to Default" ) && _inputMap.resetActionToDefault( action ) )
             markDocumentDirty();
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "ResetActionTip", "Put this action's bindings back to the ones it was loaded with." ) );
 
         // 바인딩마다 — 키(글리프) · 레이어 · 발화 규칙(트리거) · 다시 잡기.
         ImGui::SeparatorText( "Bindings" );
@@ -450,7 +457,7 @@ namespace sw::editor
             const bool          bOpen    = ImGui::BeginCombo( "##trigger", pCurrent != nullptr ? pCurrent : "?" );
             if ( EditorSelfTestMarks::isEnabled() )
                 EditorSelfTestMarks::note( ( "inputMap.binding." + to_string( static_cast<uint64>( bindIndex ) ) + ".trigger" ).c_str() );
-            EditorWidgets::drawTooltip( "When the action fires (Pressed, Hold, Tap, Double Tap ...) - Unreal Enhanced Input triggers" );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "TriggerTip", "When the action fires (Pressed, Hold, Tap, Double Tap ...) - Unreal Enhanced Input triggers" ) );
             if ( bOpen )
             {
                 for ( uint32 option = 0; option < static_cast<uint32>( ActionTrigger::Count ); ++option )
@@ -472,11 +479,13 @@ namespace sw::editor
             }
             ImGui::EndDisabled();
             if ( bRebindable == false )
-                EditorWidgets::drawTooltip( "This binding kind (axis, stick, mouse delta ...) is not one key - edit the XML" );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "NotRebindableTip", "This binding kind (axis, stick, mouse delta ...) is not one key - edit the XML" ) );
+            else
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "RebindTip", "Replace this binding's key: press a key or pick one from the list that opens." ) );
             ImGui::PopID();
         }
         if ( bindingCount == 0 )
-            ImGui::TextDisabled( "No bindings" );
+            ImGui::TextDisabled( "%s", SW_LOCTEXT( "EditorInputMap", "NoBindings", "No bindings" ) );
 
         // 충돌 — 같은 레이어에서 같은 키를 쓰는 다른 액션. 이쪽을 다시 잡거나 저쪽 바인딩을 비운다.
         if ( InputMapConflicts::involves( _listConflict, action ) )
@@ -501,9 +510,11 @@ namespace sw::editor
                     _capturingBindIndex = bIsA ? conflict._bindIndexA : conflict._bindIndexB;
                     _bCapturingKey      = SW_TRUE;
                 }
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "RebindThisTip", "Give this action's binding a different key to resolve the conflict." ) );
                 ImGui::SameLine();
                 if ( ImGui::SmallButton( "Unbind other" ) && _inputMap.rebindKey( other, Key::Unknown, otherIndex ) )
                     markDocumentDirty();
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "UnbindOtherTip", "Clear the key from the other action's binding so this action keeps it." ) );
                 ImGui::PopID();
             }
         }
@@ -535,12 +546,14 @@ namespace sw::editor
     void InputMapPanel::drawCommandPatternTester()
     {
         EditorWidgets::drawTextField( "Pattern (numpad notation)", _testComboPattern, 150.0f );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "PatternTip",
+                                                "Fighting-game command to test, in numpad directions (2 down, 6 right, 3 down-right ...) followed by a button letter. Perform it on the gamepad or keyboard to see it match." ) );
         ImGui::SameLine();
         if ( _inputMap.wasCommandPatternTriggered( sw::hashed_string( _testComboPattern.c_str() ), 0.8f ) )
             EditorThemeUtil::textSuccess( "MATCHED" );
         else
-            ImGui::TextDisabled( "Waiting for input..." );
-        ImGui::TextDisabled( "236P = down, down-right, right + punch (the map's command history, 0.8 s window)" );
+            ImGui::TextDisabled( "%s", SW_LOCTEXT( "EditorInputMap", "WaitingForInput", "Waiting for input..." ) );
+        ImGui::TextDisabled( "%s", SW_LOCTEXT( "EditorInputMap", "PatternExample", "236P = down, down-right, right + punch (the map's command history, 0.8 s window)" ) );
     }
 
     void InputMapPanel::drawLayerList()
@@ -567,6 +580,7 @@ namespace sw::editor
                         _inputMap.setLayerEnabled( sw::hashed_string( layerName.view() ), bEnabled );
                         markDocumentDirty();
                     }
+                    EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "LayerEnabledTip", "Whether this layer starts enabled. The enabled layer with the highest priority receives input first." ) );
                     ImGui::PopID();
 
                     ImGui::TableNextColumn();
@@ -590,11 +604,13 @@ namespace sw::editor
         if ( ImGui::CollapsingHeader( "Add New Action / Layer" ) )
         {
             EditorWidgets::drawTextField( "New Action Name", _newActionName, 200.0f );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "NewActionNameTip", "Name game code uses to query the new action, for example Jump or Move." ) );
 
             ImGui::SameLine();
             const utf8* arrTypes[] = { "Boolean", "Axis 1D", "Vector 2D" };
             ImGui::SetNextItemWidth( 120.0f * EditorThemeUtil::getDpiScale() );
             ImGui::Combo( "Type", &_newActionValueType, arrTypes, 3 );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "NewActionTypeTip", "Value the action reports: Boolean for buttons, Axis 1D for a trigger or one axis, Vector 2D for a stick or WASD." ) );
 
             ImGui::SameLine();
             if ( ImGui::Button( "Create Action" ) && _newActionName.empty() == false )
@@ -605,6 +621,7 @@ namespace sw::editor
                 _newActionName = "";
                 markDocumentDirty();
             }
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "CreateActionTip", "Add the action with no bindings; select it in the list to add keys." ) );
         }
     }
 
@@ -617,7 +634,7 @@ namespace sw::editor
         if ( ImGui::BeginPopupModal( "Press Key / Button To Bind", nullptr, ImGuiWindowFlags_AlwaysAutoResize ) )
         {
             ImGui::Text( "Binding for Action: %s", _selectedAction.c_str() );
-            ImGui::Text( "Press any keyboard key, or click a button below to bind..." );
+            ImGui::TextUnformatted( SW_LOCTEXT( "EditorInputMap", "CaptureInstruction", "Press any keyboard key, or click a button below to bind..." ) );
             ImGui::Separator();
 
             // 실시간 활성 입력 감지 — 모달이 떠 있는 동안 키는 ImGui 로만 온다(`findPressedKey` 설명).
@@ -683,7 +700,7 @@ namespace sw::editor
         InputManager* pInput = getService<InputManager>();
         if ( pInput == nullptr )
         {
-            EditorWidgets::drawEmptyHint( "InputManager service is not available." );
+            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorInputMap", "NoInputManager", "InputManager service is not available." ) );
             return;
         }
 
@@ -816,19 +833,23 @@ namespace sw::editor
                 ImGui::Text( "Haptic Vibration Test:" );
                 ImGui::SetNextItemWidth( 120.0f * EditorThemeUtil::getDpiScale() );
                 ImGui::SliderFloat( "Left Motor", &_testVibLeft, 0.0f, 1.0f );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "LeftMotorTip", "Strength of the left (low-frequency) motor for the test pulse, 0 to 1." ) );
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth( 120.0f * EditorThemeUtil::getDpiScale() );
                 ImGui::SliderFloat( "Right Motor", &_testVibRight, 0.0f, 1.0f );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "RightMotorTip", "Strength of the right (high-frequency) motor for the test pulse, 0 to 1." ) );
                 ImGui::SameLine();
                 if ( ImGui::Button( "Test Pulse (0.3s)" ) )
                     pGamepad->playVibration( _testVibLeft, _testVibRight, 0.3f );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "TestPulseTip", "Vibrate gamepad 0 for 0.3 seconds with the motor strengths on the left." ) );
                 ImGui::SameLine();
                 if ( ImGui::Button( "Stop" ) )
                     pGamepad->stopVibration();
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "StopVibrationTip", "Stop any vibration on gamepad 0." ) );
             }
             else
             {
-                EditorWidgets::drawEmptyHint( "No Gamepad Connected on Port 0." );
+                EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorInputMap", "NoGamepad", "No Gamepad Connected on Port 0." ) );
             }
         }
     }
@@ -861,6 +882,7 @@ namespace sw::editor
         bool bPaused = ( _bPlotPaused == SW_TRUE );
         if ( ImGui::Checkbox( "Pause Graph", &bPaused ) )
             _bPlotPaused = bPaused ? SW_TRUE : SW_FALSE;
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "PauseGraphTip", "Freeze the graphs so you can read a past spike." ) );
 
         ImGui::Separator();
 
@@ -884,12 +906,12 @@ namespace sw::editor
         InputManager* pInput = getService<InputManager>();
         if ( pInput == nullptr )
         {
-            EditorWidgets::drawEmptyHint( "InputManager service is not available." );
+            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorInputMap", "NoInputManager", "InputManager service is not available." ) );
             return;
         }
 
         ImGui::Text( "Virtual Input Injector & Gameplay Macro Simulator" );
-        ImGui::TextDisabled( "Inject virtual key, mouse, or stick events directly into the engine without physical hardware." );
+        ImGui::TextDisabled( "%s", SW_LOCTEXT( "EditorInputMap", "InjectorHint", "Inject virtual key, mouse, or stick events directly into the engine without physical hardware." ) );
         ImGui::Separator();
 
         ImGui::Text( "1) Key Event Injector:" );
@@ -901,20 +923,25 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ImGui::Button( "Inject KeyDown" ) )
             pInput->postRawEvent( RawInputEvent::makeKeyDown( arrKeyValues[_simKeyToInject] ) );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "InjectKeyDownTip", "Send a key-press event for the chosen key, as if it were pressed and held. Send KeyUp to release it." ) );
         ImGui::SameLine();
         if ( ImGui::Button( "Inject KeyUp" ) )
             pInput->postRawEvent( RawInputEvent::makeKeyUp( arrKeyValues[_simKeyToInject] ) );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "InjectKeyUpTip", "Send a key-release event for the chosen key." ) );
         ImGui::SameLine();
         if ( ImGui::Button( "Tap Key (Down + Up)" ) )
         {
             pInput->postRawEvent( RawInputEvent::makeKeyDown( arrKeyValues[_simKeyToInject] ) );
             pInput->postRawEvent( RawInputEvent::makeKeyUp( arrKeyValues[_simKeyToInject] ) );
         }
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "TapKeyTip", "Send a press and a release in the same frame, like a quick tap." ) );
 
         ImGui::Separator();
         ImGui::Text( "2) Virtual Stick 2D Slider:" );
         ImGui::SliderFloat( "Sim Stick X", &_simStick._x, -1.0f, 1.0f );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "SimStickXTip", "Horizontal tilt to inject on gamepad 0's left stick, -1 (left) to 1 (right)." ) );
         ImGui::SliderFloat( "Sim Stick Y", &_simStick._y, -1.0f, 1.0f );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "SimStickYTip", "Vertical tilt to inject on gamepad 0's left stick, -1 (down) to 1 (up)." ) );
         if ( ImGui::Button( "Inject Stick Tilt" ) )
         {
             GamepadDevice* pGamepad = pInput->getGamepad( 0 );
@@ -924,6 +951,7 @@ namespace sw::editor
                 pGamepad->setAxis( 1, _simStick._y );
             }
         }
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "InjectStickTip", "Hold gamepad 0's left stick at the tilt set above until you reset it." ) );
         ImGui::SameLine();
         if ( ImGui::Button( "Reset Stick to Center" ) )
         {
@@ -936,6 +964,7 @@ namespace sw::editor
                 pGamepad->setAxis( 1, 0.0f );
             }
         }
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "ResetStickTip", "Return the injected stick to the center." ) );
     }
 
     void InputMapPanel::drawInputReplayTab()
@@ -943,10 +972,11 @@ namespace sw::editor
         InputManager* pInput = getService<InputManager>();
 
         ImGui::Text( "Input Replay Recorder & Deterministic QA Playback" );
-        ImGui::TextDisabled( "Playback attaches the replay as exclusive virtual input: recorded frame n is applied on the n-th input frame." );
+        ImGui::TextDisabled( "%s", SW_LOCTEXT( "EditorInputMap", "ReplayHint", "Playback attaches the replay as exclusive virtual input: recorded frame n is applied on the n-th input frame." ) );
         ImGui::Separator();
 
         EditorWidgets::drawTextField( "Replay File", _replayFilePath, 260.0f );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "ReplayFileTip", "Resource path of the .swreplay file that Save and Load use." ) );
 
         ImGui::SameLine();
         if ( ImGui::Button( "Save Replay" ) )
@@ -954,6 +984,7 @@ namespace sw::editor
             if ( _replay.saveToFile( _replayFilePath.c_str() ) == false )
                 SW_LOG_ERROR( "Could not save input replay '%#'", _replayFilePath.c_str() );
         }
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "SaveReplayTip", "Write the recorded frames to the replay file." ) );
 
         ImGui::SameLine();
         if ( ImGui::Button( "Load Replay" ) )
@@ -963,10 +994,11 @@ namespace sw::editor
             if ( _replay.loadFromFile( _replayFilePath.c_str() ) == false )
                 SW_LOG_ERROR( "Could not load input replay '%#'", _replayFilePath.c_str() );
         }
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "LoadReplayTip", "Read frames from the replay file, replacing the current recording. Stops any playback first." ) );
 
         if ( pInput == nullptr )
         {
-            EditorWidgets::drawEmptyHint( "InputManager service is not available." );
+            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorInputMap", "NoInputManager", "InputManager service is not available." ) );
             return;
         }
 
@@ -982,6 +1014,7 @@ namespace sw::editor
             ImGui::SameLine();
             if ( ImGui::Button( "■ Stop Recording" ) )
                 _replay.stopRecording();
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "StopRecordingTip", "Stop recording. The frames stay in memory until you save or record again." ) );
         }
         else if ( bPlaying == false )
         {
@@ -990,6 +1023,7 @@ namespace sw::editor
                 _replay.startRecording( "GameplaySession" );
                 _recordedBeginFrameCount = pInput->getBeginFrameCount();
             }
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "StartRecordingTip", "Record every input event, frame by frame, to replay later for bug reproduction or QA. Replaces the current recording." ) );
         }
 
         ImGui::Separator();
@@ -1001,9 +1035,11 @@ namespace sw::editor
         {
             if ( ImGui::Button( "⏸ Pause" ) )
                 _replay.seekTo( *pInput, currentFrame );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "PauseReplayTip", "Stop playback at the current frame, keeping the input state of that frame." ) );
             ImGui::SameLine();
             if ( ImGui::Button( "⏹ Stop" ) )
                 _replay.seekTo( *pInput, 0 );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "StopReplayTip", "Stop playback and rewind to the first frame." ) );
         }
         else if ( _replay.isRecording() == false && _replay.getFrameCount() > 0 )
         {
@@ -1013,17 +1049,21 @@ namespace sw::editor
                     _replay.seekTo( *pInput, 0 );
                 pInput->attachVirtualInput( &_replay, VirtualInputMode::Exclusive, false );
             }
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "PlayReplayTip", "Feed the recorded frames to the engine in place of real devices, starting from the current frame." ) );
             ImGui::SameLine();
             if ( ImGui::Button( "⏮ Step Back" ) && currentFrame > 0 )
                 _replay.seekTo( *pInput, currentFrame - 1 );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "StepBackTip", "Go back one recorded frame." ) );
             ImGui::SameLine();
             if ( ImGui::Button( "⏭ Step Forward (1 Frame)" ) )
                 _replay.seekTo( *pInput, currentFrame + 1 );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "StepForwardTip", "Apply the next recorded frame." ) );
 
             int32       frameIdx  = static_cast<int32>( currentFrame );
             const int32 maxFrames = static_cast<int32>( _replay.getFrameCount() );
             if ( ImGui::SliderInt( "Timeline Frame", &frameIdx, 0, maxFrames ) )
                 _replay.seekTo( *pInput, static_cast<uint32>( frameIdx ) );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "TimelineFrameTip", "Drag to jump to any recorded frame; the input state is rebuilt up to that frame." ) );
         }
 
         if ( currentFrame < _replay.getFrameCount() )
@@ -1046,6 +1086,7 @@ namespace sw::editor
         bool bEnabled = ( config._bEnabled == SW_TRUE );
         if ( ImGui::Checkbox( "Enable Viewport On-Screen HUD Overlay", &bEnabled ) )
             config._bEnabled = bEnabled ? SW_TRUE : SW_FALSE;
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "OverlayEnableTip", "Draw a live controller display over the game viewport. Useful for recording videos or checking input while playing." ) );
 
         ImGui::Separator();
 
@@ -1053,9 +1094,12 @@ namespace sw::editor
         int32       posIndex = static_cast<int32>( config._position );
         if ( ImGui::Combo( "Screen Anchor Position", &posIndex, arrPos, 4 ) )
             config._position = static_cast<ViewportOverlayPosition>( posIndex );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "OverlayAnchorTip", "Viewport corner the overlay is drawn in." ) );
 
         ImGui::SliderFloat( "HUD Opacity", &config._opacity, 0.1f, 1.0f );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "OverlayOpacityTip", "Overlay opacity, 0.1 (faint) to 1 (solid)." ) );
         ImGui::SliderFloat( "HUD Scale", &config._scale, 0.5f, 2.0f );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "OverlayScaleTip", "Overlay size multiplier, 0.5 to 2." ) );
 
         ImGui::Separator();
         ImGui::Text( "Visible HUD Elements:" );
@@ -1071,6 +1115,7 @@ namespace sw::editor
         bool bShowHistory = ( config._bShowCommandHistory == SW_TRUE );
         if ( ImGui::Checkbox( "Show Live Action Trigger Stream", &bShowHistory ) )
             config._bShowCommandHistory = bShowHistory ? SW_TRUE : SW_FALSE;
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInputMap", "OverlayHistoryTip", "List the most recent inputs and triggered actions, as in fighting-game training modes." ) );
     }
 
     void InputMapPanel::reloadFromFile()
