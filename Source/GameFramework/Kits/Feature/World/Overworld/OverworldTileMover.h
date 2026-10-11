@@ -1,6 +1,6 @@
 /**
  * @file OverworldTileMover.h
- * @brief 타일을 한 칸씩 걷는 몸(폰 이동) + locomotion FSM 입니다. 입력이 아니라 조종자가 낸 의도(`ControlIntent`)를 받습니다.
+ * @brief 타일을 한 칸씩 걷는 폰 이동과 locomotion FSM 입니다. 입력이 아니라 조종자가 낸 의도(`ControlIntent`)를 받습니다.
  */
 #pragma once
 #include "Core/Common/FourCcUtil.h"
@@ -19,31 +19,31 @@ namespace sw
     class TileMap;
 
     // ------------------------------------------------------------------------------
-    // 1) OverworldTileMover — 의도 → 한 칸 이동 → 워프/조우/상호작용 플래그
-    //    전환 중에는 setInputEnabled(false)
+    // 1) OverworldTileMover. 의도를 받아 한 칸 이동하고, 워프, 조우, 상호작용 플래그를 세운다
+    //    화면 전환 중에는 setInputEnabled(false) 로 입력을 막는다
     // ------------------------------------------------------------------------------
     /**
      * @brief 이번 걸음에 야생 조우가 나는지 판정합니다. `OverworldTileMover` 가 쓰는 판정 그대로입니다.
      * @param encounterRate 0 ~ 1. **0 이면 언제나 false** 이고, 1 이상이면 매 걸음 true.
      * @param stepCount 조우 타일을 밟은 누적 걸음 수(1 부터).
-     * @details 테스트가 직접 물을 수 있게 `tryStep` 밖에 둡니다. **끄려고 넣은 0 은 끄는 값이어야** 합니다.
+     * @details 테스트가 직접 호출할 수 있게 `tryStep` 밖에 둡니다. 조우를 끄려고 넣은 0 은 실제로 끄는 값이어야 합니다.
      */
     SW_GF_API bool shouldEncounterOnStep( float32 encounterRate, uint32 stepCount );
 
-    /** @brief 이동 축 데드존 · 조우율입니다. 버튼 · 이동 액션 이름은 폰의 스키마(`PawnComponent`)가 정합니다. */
+    /** @brief 이동 축 데드존과 조우율입니다. 버튼과 이동 액션 이름은 폰의 스키마(`PawnComponent`)가 정합니다. */
     struct OverworldTileMoverSettings
     {
-        float32 _moveDeadZone{ 0.5f };   ///< 이보다 작게 기운 이동 축은 걸음으로 치지 않는다
-        float32 _encounterRate{ 0.33f }; ///< 수풀 한 걸음의 조우 확률(주기로 바꿔 쓴다)
+        float32 _moveDeadZone{ 0.5f };   ///< 이보다 작게 기운 이동 축은 걸음으로 보지 않는다
+        float32 _encounterRate{ 0.33f }; ///< 수풀에서 한 걸음당 조우할 확률이다. 주기로 바꿔 쓸 수도 있다
     };
 } // namespace sw
 
 namespace sw
 {
     /**
-     * @brief 타일 스텝 이동과 워프 · 조우 · 상호작용 요청을 만듭니다.
-     * @details 폰 쪽 코드입니다 — InputMap · InputManager 를 읽지 않고, 그 오브젝트의 폰 의도(`PawnComponent::getIntent`)를 받습니다.
-     *          플레이어 · AI · 기록 재생이 같은 걸음으로 걷습니다.
+     * @brief 타일 스텝 이동을 하고 워프, 조우, 상호작용 요청을 만듭니다.
+     * @details 폰 쪽 코드이다. InputMap 이나 InputManager 를 읽지 않고, 그 오브젝트의 폰 의도(`PawnComponent::getIntent`)를 받는다.
+     *          플레이어, AI, 기록 재생이 같은 방식으로 걷는다.
      */
     class SW_GF_API OverworldTileMover
     {
@@ -54,7 +54,7 @@ namespace sw
         /** @brief 타일 (1,1), 입력 허용으로 시작합니다. */
         OverworldTileMover();
 
-        /** @brief 충돌 · 워프 조회에 쓸 타일맵을 설정합니다. */
+        /** @brief 충돌과 워프 조회에 쓸 타일맵을 설정합니다. */
         void setTileMap( TileMap* pTileMap ) { _pTileMap = pTileMap; }
         /**
          * @brief 조우 타일에서 전투가 날 확률을 설정합니다. **0 이면 나지 않습니다.**
@@ -69,8 +69,8 @@ namespace sw
         void setInputEnabled( bool bEnabled ) { _bInputEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
         /**
          * @brief 의도를 읽고 이동 FSM 을 갱신합니다.
-         * @param intent 이번 틱의 의도 — 이동 축(`_move`, y 가 위쪽 칸)을 데드존으로 네 방향 한 칸으로 읽습니다.
-         * @param interactButton 상호작용 버튼의 자리(`PawnComponent::findButton`) — 그 버튼이 발동하면 상호작용합니다. −1 이면 없음.
+         * @param intent 이번 틱의 의도입니다. 이동 축(`_move`, y 가 위쪽 타일)을 데드존으로 걸러 네 방향 한 칸으로 읽습니다.
+         * @param interactButton 상호작용 버튼의 슬롯(`PawnComponent::findButton`)입니다. 그 버튼이 발동하면 상호작용합니다. -1이면 버튼이 없습니다.
          */
         void update( float32 deltaTime, const ControlIntent& intent, int32 interactButton );
 
@@ -84,7 +84,7 @@ namespace sw
         bool consumeMovedFlag();
         /** @brief 대기 중인 워프 요청을 소비합니다. */
         bool consumeWarpRequest( string& outMapPath, int32& outSpawnX, int32& outSpawnY );
-        /** @brief 대기 중인 조우 요청을 소비합니다. 무엇을 만나는지는 게임이 장르 키트의 지역 표로 정합니다(지역 = 존 id · 태그). */
+        /** @brief 대기 중인 조우 요청을 소비합니다. 무엇을 만나는지는 게임이 장르 키트의 지역 테이블로 정하며, 지역은 존 id 와 태그로 구분합니다. */
         bool consumeEncounterRequest();
         /** @brief 대기 중인 상호작용 요청을 소비합니다. */
         bool consumeInteractRequest();
@@ -92,11 +92,12 @@ namespace sw
         /** @brief 바라보는 방향의 타일 좌표를 채웁니다. */
         void getFacingTile( int32& outX, int32& outY ) const;
         /**
-         * @brief 타일 · 이동 상태 · 대기 워프(맵 · 자리) · 조우 걸음 수 · 대기 플래그 · 입력 허용을 씁니다.
-         * @details 타일맵(빌림) · 설정은 싣지 않는다. 세이브도 이 바이트다 — 게임 상태는 스냅숏 봉투(`GameInstanceBase::saveStateToFile`)로만 저장한다(플래그는 공유 상태가 싣는다).
+         * @brief 타일, 이동 상태, 대기 중인 워프(맵과 위치), 조우 걸음 수, 대기 플래그, 입력 허용 여부를 씁니다.
+         * @details 빌려 쓰는 타일맵과 설정은 싣지 않는다. 세이브도 이 바이트를 쓴다.
+         *          게임 상태는 스냅샷 봉투(`GameInstanceBase::saveStateToFile`)로만 저장하며, 플래그는 공유 상태가 싣는다.
          */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        /** @brief `writeState` 가 쓴 바이트로 상태를 복원합니다. 바이트가 손상됐으면 false 를 반환하고 상태는 그대로 둡니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
@@ -108,7 +109,7 @@ namespace sw
         string                     _pendingWarpMap;
         PlayerLocomotion           _loco;
         int2                       _tile;             ///< 현재 타일 좌표
-        int2                       _pendingWarpSpawn; ///< 워프 후 놓일 타일 좌표
+        int2                       _pendingWarpSpawn; ///< 워프 후 배치될 타일 좌표
         OverworldTileMoverSettings _settings;
         uint32                     _encounterStepCounter;
         uint8                      _bMoved            : 1;

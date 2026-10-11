@@ -39,7 +39,7 @@ namespace sw
 
     void TileMap::resize( int32 width, int32 height )
     {
-        // 크기 상한은 `TileMapXMLData` 가 기준이다. 로더 · 에디터(`TileMapPanel::resize`)가 같은 것을 본다.
+        // 크기 상한은 `TileMapXMLData` 가 기준이다. 로더와 에디터(`TileMapPanel::resize`)가 같은 값을 본다.
         if ( _data.resetTiles( width, height ) == false )
         {
             SW_LOG_WARNING( "TileMap resize %#x%# is beyond the supported tile count (%#)",

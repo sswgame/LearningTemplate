@@ -22,7 +22,7 @@ namespace sw
                 (void)world.setBlock( x, y, z, block );
             }
 
-            /** @brief 나무 하나 — 줄기와 위가 둥근 잎 덩어리입니다. 잎은 빈 칸에만 놓습니다. */
+            /** @brief 나무 하나를 세웁니다. 줄기와 위가 둥근 잎 덩어리로 이루어지며, 잎은 빈 블록에만 놓습니다. */
             static void placeTree( VoxelWorld& world, int32 x, int32 groundY, int32 z, int32 trunkHeight, VoxelBlockIndex logBlock, VoxelBlockIndex leavesBlock )
             {
                 const int32 topY = groundY + trunkHeight;
@@ -56,7 +56,7 @@ namespace sw
     {
         const float32 noise = ValueNoise::sampleFractal( static_cast<float32>( x ) * settings._noiseScale, static_cast<float32>( z ) * settings._noiseScale,
                                                          settings._seed, settings._octaveCount );
-        // 제곱으로 낮은 땅을 넓히고 산을 드물게 — 평지 · 물가가 생긴다.
+        // 제곱을 취해 낮은 땅을 넓히고 산을 드물게 만든다. 그래서 평지와 물가가 생긴다.
         const int32 height = settings._baseHeight + static_cast<int32>( MathUtil::round( noise * noise * 1.6f * static_cast<float32>( settings._heightAmplitude ) ) );
         return MathUtil::clamp( height, 1, kVoxelChunkHeight - 10 );
     }
@@ -105,7 +105,7 @@ namespace sw
             }
         }
 
-        // 나무는 지형이 다 선 뒤에 — 이웃 기둥이 나중에 잎을 덮어쓰지 않게.
+        // 나무는 지형이 다 만들어진 뒤에 세운다. 이웃 기둥이 나중에 잎을 덮어쓰지 않게 하려는 것이다.
         if ( logBlock != kVoxelAirBlock && settings._treeChance > 0.0f )
         {
             for ( int32 z = 2; z < world.getSizeZ() - 2; ++z )
@@ -119,7 +119,7 @@ namespace sw
                     const float32 roll     = static_cast<float32>( treeHash & 0xffffu ) / 65535.0f;
                     if ( roll >= settings._treeChance )
                         continue;
-                    // 이웃 나무와 줄기가 붙지 않게 — 3 칸 안에 줄기가 있으면 건너뛴다.
+                    // 이웃 나무와 줄기가 붙지 않게 3블록 안에 줄기가 있으면 건너뛴다.
                     bool bCrowded = false;
                     for ( int32 dz = -3; dz <= 3 && bCrowded == false; ++dz )
                     {

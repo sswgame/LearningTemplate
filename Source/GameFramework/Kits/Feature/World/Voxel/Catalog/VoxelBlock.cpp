@@ -54,7 +54,7 @@ namespace sw
 
     VoxelBlockIndex VoxelBlockCatalog::addBlock( const VoxelBlockDef& block )
     {
-        // 번호 = 자리 + 1. 같은 id 는 그 자리를 그대로 쓴다(저장된 월드의 번호가 바뀌지 않게).
+        // 블록 번호는 인덱스 + 1 이다. 같은 id 는 그 인덱스를 그대로 쓴다. 저장된 월드의 번호가 바뀌지 않게 하려는 것이다.
         const int32 existingIndex = _catalog.findIndex( block._id );
         if ( existingIndex < 0 && _catalog.getCount() >= VoxelBlockInternal::kMaxBlockCount )
         {
