@@ -13,7 +13,7 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/SpirvConstants.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #if defined( SW_HAS_DXC_API )
     #include <dxcapi.h>
@@ -40,7 +40,7 @@ namespace sw
                 // 쿠킹 스탬프도 같은 표의 헤더를 본다(`ShaderCooker::kArrIncludeRootDomain`).
                 for ( const utf8* pDomain : ShaderCooker::kArrIncludeRootDomain )
                 {
-                    const string domainShaders = ResourceUtil::getDomainFolderPath( pDomain, "shaders" );
+                    const string domainShaders = ResourcePaths::getDomainFolderPath( pDomain, "shaders" );
                     if ( domainShaders.empty() == false )
                         outListDir.push_back( domainShaders );
                 }
@@ -189,8 +189,8 @@ namespace sw
 
             static string getShaderCacheDirectory()
             {
-                const string& root     = ResourceUtil::getRootFolderPath();
-                const string  baseRoot = root.empty() ? FileUtil::joinPath( ResourceUtil::getProjectFolderPath(), "Resource" ) : root;
+                const string& root     = ResourcePaths::getRootFolderPath();
+                const string  baseRoot = root.empty() ? FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), "Resource" ) : root;
                 return FileUtil::normalizeSeparators( FileUtil::joinPath( baseRoot, "cache/shaders" ) );
             }
 
@@ -275,7 +275,7 @@ namespace sw
         if ( FileUtil::exists( desc._filePath ) )
             absPathStr = desc._filePath;
         else
-            absPathStr = ResourceUtil::getResourcePath( desc._filePath );
+            absPathStr = ResourcePaths::getResourcePath( desc._filePath );
 
         if ( absPathStr.empty() || FileUtil::exists( absPathStr ) == false )
         {

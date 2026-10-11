@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Engine/Input/InputManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UISystem.h"
@@ -32,7 +32,7 @@ namespace
             , _fade{}
             , _loading{}
         {
-            SW_EXPECT_TRUE( sw::ResourceUtil::initialize() );
+            SW_EXPECT_TRUE( sw::ResourcePaths::initialize() );
             SW_EXPECT_TRUE( _input.initialize() );
             SW_EXPECT_TRUE( _ui.initialize( _input, nullptr ) );
             _loading.bindUISystem( &_ui );

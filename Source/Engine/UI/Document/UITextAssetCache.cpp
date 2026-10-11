@@ -5,7 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {
@@ -95,7 +95,7 @@ namespace sw
             outText = memory->second;
             return true;
         }
-        if ( ResourceUtil::readTextResource( path, outText ) )
+        if ( ResourceIO::readTextResource( path, outText ) )
             return true;
         return FileUtil::isRegularFile( path ) && FileUtil::readTextFile( path, outText );
     }

@@ -7,7 +7,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Physics/Box2D/Box2DPhysicsBackend.h"
 #include "Engine/Physics/Jolt/JoltPhysicsBackend.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {
@@ -32,7 +32,7 @@ namespace sw
         SW_MEMORY_SCOPE( Physics );
 
         string text;
-        if ( settingsPath.empty() == false && ResourceUtil::readTextResource( settingsPath, text ) )
+        if ( settingsPath.empty() == false && ResourceIO::readTextResource( settingsPath, text ) )
         {
             PhysicsSettings settings;
             if ( settings.loadFromXMLText( text ) == false )

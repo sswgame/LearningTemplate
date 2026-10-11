@@ -5,7 +5,7 @@
  *   포함: AssetDatabase, AssetFormatRegistry, MaterialCache, TextureCache, PrefabCache, SpriteClipCache, MeshCache, SkeletonCache, AnimClipCache, SkeletonBoneLODCache, RigAssetCache, FractureAssetCache, ResourcePackManager.
  *   등록부에는 코드로 짓는 값 표 셋(`MeshUtil` 내장 도형 · `SpriteMeshBuilder` 9-슬라이스 메시 · `SpriteRenderUtil` 텍스처 인스턴스 — `WeakInternCache`)도 오릅니다.
  *   제외(수명이 다름):
- *   - ResourceUtil: Resource/ 경로 해석만 합니다(소유권 없음)
+ *   - ResourcePaths: Resource/ 경로 해석만 합니다(소유권 없음)
  *   - ShaderCache: 셰이더 컴파일 결과 캐시(RHI)
  *   - RenderPipelineAssetCache: FrameRenderer 가 소유
  *   - ConfigManager: Config/ 호스트 JSON(Resource/ 아님)

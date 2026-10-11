@@ -8,7 +8,7 @@
 #include "Engine/Animation/Rig/RigInstance.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/AnimationTestUtil.h"
 
@@ -414,7 +414,7 @@ SW_TEST_CASE( RigAssetTest, PlanarRigStaysInPlane )
  */
 SW_TEST_CASE( RigAssetTest, KnightRigEvaluationCost )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     Skeleton knight;
     SW_ASSERT_TRUE( knight.loadFromResource( "game/shooter3d/models/kaykit/knight/knight.skeleton.json" ) );
     shared_ptr<RigAsset> asset = make_shared<RigAsset>();

@@ -10,7 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/MeshInstanceBatch.h"
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 
 #include "TestFramework/TestFramework.h"
@@ -75,7 +75,7 @@ SW_TEST_CASE( PixelPerfectCameraTest, SnapRoundsToTheNearestGridPoint )
  */
 SW_TEST_CASE( PixelPerfectCameraTest, CameraSnapsTheEyeAndSpritesReceiveTheSnapUnit )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::Scene scene( "PixelPerfectScene" );
     SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
     sw::GameObjectManager* pManager = scene.getObjectManager();

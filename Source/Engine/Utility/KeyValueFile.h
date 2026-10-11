@@ -54,7 +54,7 @@ namespace sw
         /** @brief 절대 경로를 읽고 파싱합니다. */
         [[nodiscard]] static bool loadFile( string_view absPath, KeyValueMap& outMap, KeyValueParseOptions opt = {} );
 
-        /** @brief ResourceUtil로 해석한 뒤 loadFile합니다. */
+        /** @brief ResourcePaths로 해석한 뒤 loadFile합니다. */
         [[nodiscard]] static bool loadResource( string_view relativePath, KeyValueMap& outMap, KeyValueParseOptions opt = {},
                                                 string* pOutAbsPath = nullptr );
 

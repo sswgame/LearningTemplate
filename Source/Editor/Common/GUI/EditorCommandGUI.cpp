@@ -33,7 +33,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Renderer/Capture/RenderDocCapture.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Utility/CommandStack.h"
 
 #include "RuntimeAPI/Service/IModuleCompiler.h"
@@ -102,13 +102,13 @@ namespace sw::editor
                 EditorAssetTypeRegistry::appendSuffixes( EditorAssetType::Scene, params._listFilterExtension );
 
                 const string activePack = GameConfig::getActive()._packRoot;
-                const string mapsDir    = ResourceUtil::getDomainFolderPath( activePack, path::kMapsFolder );
+                const string mapsDir    = ResourcePaths::getDomainFolderPath( activePack, path::kMapsFolder );
                 if ( FileUtil::isDirectory( mapsDir ) )
                     params._initialDirectory = mapsDir;
-                else if ( ResourceUtil::getDomainFolderPath( activePack ).empty() == false )
-                    params._initialDirectory = ResourceUtil::getDomainFolderPath( activePack );
-                else if ( ResourceUtil::getDomainFolderPath( path::kGamePack ).empty() == false )
-                    params._initialDirectory = ResourceUtil::getDomainFolderPath( path::kGamePack );
+                else if ( ResourcePaths::getDomainFolderPath( activePack ).empty() == false )
+                    params._initialDirectory = ResourcePaths::getDomainFolderPath( activePack );
+                else if ( ResourcePaths::getDomainFolderPath( path::kGamePack ).empty() == false )
+                    params._initialDirectory = ResourcePaths::getDomainFolderPath( path::kGamePack );
 
                 FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onOpenSceneDialogResult ) );
             }

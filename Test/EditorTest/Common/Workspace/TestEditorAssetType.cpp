@@ -5,6 +5,7 @@
 #include "Editor/Common/Asset/HeightfieldImporter.h"
 #include "Editor/Common/Asset/ModelImporter.h"
 #include "Editor/Common/Asset/TextureImporter.h"
+#include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 
@@ -218,20 +219,20 @@ SW_TEST_CASE( EditorAssetTypeTest, HierarchyBadgeComesFromReflectionCategory )
 SW_TEST_CASE( EditorAssetTypeTest, ProjectRelativePathLeavesAbsoluteAlone )
 {
     // 절대 경로는 구분자만 정규화되고 그대로 나온다 — 프로젝트 루트가 앞에 붙지 않는다.
-    const sw::string driveAbs = sw::editor::EditorUtil::resolveProjectRelativePath( "C:\\Temp\\editortooldefaults.json" );
+    const sw::string driveAbs = sw::editor::EditorPaths::resolveProjectRelativePath( "C:\\Temp\\editortooldefaults.json" );
     SW_EXPECT_STREQ( "C:/Temp/editortooldefaults.json", driveAbs.c_str() );
 
-    const sw::string rootAbs = sw::editor::EditorUtil::resolveProjectRelativePath( "/var/tmp/editortooldefaults.json" );
+    const sw::string rootAbs = sw::editor::EditorPaths::resolveProjectRelativePath( "/var/tmp/editortooldefaults.json" );
     SW_EXPECT_STREQ( "/var/tmp/editortooldefaults.json", rootAbs.c_str() );
 
     // 상대 경로는 프로젝트 루트가 있으면 그 아래로 간다. 루트를 못 찾으면 입력 그대로다 —
     // 어느 쪽이든 **입력이 뒤에 그대로 남아 있어야** 한다.
-    const sw::string relative = sw::editor::EditorUtil::resolveProjectRelativePath( "Config" + sw::string( 1, '\\' ) + "Editor/editortooldefaults.json" );
+    const sw::string relative = sw::editor::EditorPaths::resolveProjectRelativePath( "Config" + sw::string( 1, '\\' ) + "Editor/editortooldefaults.json" );
     SW_EXPECT_TRUE( relative.find( "Config/Editor/editortooldefaults.json" ) != sw::string::npos );
     SW_EXPECT_TRUE( relative.find( "\\" ) == sw::string::npos ); // 역슬래시는 남지 않는다
 
     // 빈 입력은 빈 결과이거나 루트 그 자체다 — 어느 쪽이든 터지지 않는다.
-    const sw::string empty = sw::editor::EditorUtil::resolveProjectRelativePath( "" );
+    const sw::string empty = sw::editor::EditorPaths::resolveProjectRelativePath( "" );
     SW_EXPECT_TRUE( empty.find( ".." ) == sw::string::npos );
 }
 

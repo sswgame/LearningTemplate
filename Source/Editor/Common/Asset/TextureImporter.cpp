@@ -14,10 +14,10 @@
 #include "Editor/Common/Asset/AssetImportStamp.h"
 #include "Editor/Common/Asset/ImageUtil.h"
 #include "Editor/Common/Asset/TextureImportConfig.h"
-#include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -521,7 +521,7 @@ namespace sw::editor
         if ( FileUtil::hasExtension( relativePath, ".dds" ) )
             return false;
 
-        const string& resourceRoot = ResourceUtil::getRootFolderPath();
+        const string& resourceRoot = ResourcePaths::getRootFolderPath();
         const string  normalized   = FileUtil::normalizeSeparators( FileUtil::joinPath( resourceRoot, relativePath ) );
         if ( makeImportedTexturePath( normalized ).empty() )
         {
@@ -579,9 +579,9 @@ namespace sw::editor
 
     string TextureImporter::makeDefaultImportConfigPath()
     {
-        const string projectRoot = EditorUtil::getProjectRootPath();
+        const string projectRoot = EditorPaths::getProjectRootPath();
         if ( projectRoot.empty() )
             return {};
-        return FileUtil::joinPath( FileUtil::joinPath( projectRoot, config::kDirConfigEditor ), EditorUtil::kTextureImportConfigFileName );
+        return FileUtil::joinPath( FileUtil::joinPath( projectRoot, config::kDirConfigEditor ), EditorPaths::kTextureImportConfigFileName );
     }
 } // namespace sw::editor

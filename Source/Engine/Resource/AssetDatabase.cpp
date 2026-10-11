@@ -9,7 +9,8 @@
 #include "Core/UUID/UUID.h"
 
 #include "Engine/Common/EngineDefines.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Utility/KeyValueFile.h"
 
 namespace sw
@@ -20,11 +21,11 @@ namespace sw
         {
             static string absoluteForRelative( string_view relativePath )
             {
-                string result = ResourceUtil::getResourcePath( relativePath );
+                string result = ResourcePaths::getResourcePath( relativePath );
                 if ( result.empty() )
                 {
                     // 쓰기 쪽: 도메인을 포함한 전역 ID 만으로 절대 경로를 만든다.
-                    result = ResourceUtil::makeAbsolutePath( relativePath );
+                    result = ResourcePaths::makeAbsolutePath( relativePath );
                 }
                 return result;
             }
@@ -39,7 +40,7 @@ namespace sw
     string AssetDatabase::toRelativePath( string_view absolutePath )
     {
         const string  absNorm      = FileUtil::normalizeSeparators( absolutePath );
-        const string& resourceRoot = ResourceUtil::getRootFolderPath();
+        const string& resourceRoot = ResourcePaths::getRootFolderPath();
         if ( resourceRoot.empty() )
             return {};
 
@@ -129,7 +130,7 @@ namespace sw
                 return result;
 #else
                 // 에셋 파일이 없는 경로에는 식별자를 지어내지 않는다. 지어 쓰면 없는 머티리얼을 acquire 만 해도 Resource/ 에 고아 `.meta` 가 생긴다.
-                if ( ResourceUtil::getResourcePath( path ).empty() )
+                if ( ResourcePaths::getResourcePath( path ).empty() )
                     return result;
                 result = UUID::generate();
                 if ( writeMetaFile( path, result, bImported ) == false )
@@ -274,10 +275,10 @@ namespace sw
 
     uint32 AssetDatabase::loadRegistry( string_view registryRelativePath )
     {
-        if ( ResourceUtil::hasResource( registryRelativePath ) == false )
+        if ( ResourceIO::hasResource( registryRelativePath ) == false )
             return 0;
         string text;
-        if ( ResourceUtil::readTextResource( registryRelativePath, text ) == false )
+        if ( ResourceIO::readTextResource( registryRelativePath, text ) == false )
             return 0;
         return loadRegistryText( text );
     }
@@ -421,7 +422,7 @@ namespace sw
     bool AssetDatabase::loadMetaFile( string_view relativePath, UUID& outGuid, bool* pOutImported ) const
     {
         const string metaRel = metaPathFor( relativePath );
-        if ( ResourceUtil::hasResource( metaRel ) == false )
+        if ( ResourceIO::hasResource( metaRel ) == false )
             return false;
 
         KeyValueMap mapData;

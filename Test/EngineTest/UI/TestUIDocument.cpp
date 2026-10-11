@@ -6,7 +6,8 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Reflection/ReflectionCast.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/UI/Animation/UIAnimation.h"
 #include "Engine/UI/Document/UIDocument.h"
@@ -130,7 +131,7 @@ namespace
 /** @brief [UIDocumentTest] 엔진 견본(일시정지 메뉴): 루트 SafeZonePanel · 이름으로 찾는 버튼 · 화면 서술 · 조각 안의 이름 */
 SW_TEST_CASE( UIDocumentTest, LoadsPauseMenuDocument )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     UIDocumentFixture        fixture;
     const sw::UIScreenHandle handle  = fixture._ui.openScreen( "engine/ui/pause.ui.xml" );
     sw::UIScreen*            pScreen = fixture._ui.findScreen( handle );
@@ -382,11 +383,11 @@ SW_TEST_CASE( UIDocumentTest, BindingAttributesAreExtracted )
 /** @brief [UIDocumentTest] 읽고 다시 쓰면 같은 문서다 — 기본값과 같은 칸은 쓰지 않고, 조각은 원소만, 바인딩 식은 식 그대로 */
 SW_TEST_CASE( UIDocumentTest, RoundTripSaveMatchesSource )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     UIDocumentFixture fixture;
     const utf8*       kPausePath = "engine/ui/pause.ui.xml";
     sw::string        sourceText;
-    SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( kPausePath, sourceText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( kPausePath, sourceText ) );
     sw::XMLDocument source;
     SW_ASSERT_TRUE( source.parse( sourceText ) );
 

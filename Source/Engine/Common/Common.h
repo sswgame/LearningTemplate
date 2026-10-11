@@ -12,4 +12,5 @@
 #include "Core/Time/GameTimer.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Resource/ResourcePaths.h"

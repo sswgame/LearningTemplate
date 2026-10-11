@@ -1,5 +1,5 @@
 /**
- * @file ResourceUtil.h
+ * @file ResourcePaths.h
  * @brief 엔진 · 공통 · 게임 · 에디터 리소스의 루트 경로를 해석합니다.
  * @note
  *   - `Resource/` 는 표시 · 감시용 최상위일 뿐, getResourcePath 의 검색 루트가 아닙니다.
@@ -16,24 +16,15 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Delegate/Delegate.h"
 
 namespace sw
 {
-    enum class AsyncIOPriority : uint8;
-
-    class AsyncReadHandle;
-    class ResourcePackManager;
-
-    /** @brief 리소스 하나의 비동기 읽기가 끝났을 때 불립니다. 성공이면 다 읽은(팩이면 풀고 CRC 까지 맞춘) 바이트이고, 옮겨 가져도 됩니다. */
-    using ResourceReadCompleteDelegate = Delegate<void( bool bSuccess, vector<uint8>& bytes )>;
-
     /**
-     * @class ResourceUtil
-     * @brief 리소스 도메인 루트 · 검색 루트를 해석하고, 논리 경로 ↔ 절대 경로를 바꾸며, 마운트된 VFS .pack 에서 읽습니다.
-     * @note 경로 I/O 만 맡습니다. 에셋 소유권은 AssetManager 에 있습니다.
+     * @class ResourcePaths
+     * @brief 리소스 도메인 루트 · 검색 루트를 해석하고, 논리 경로 ↔ 절대 경로를 바꾸며, 저장 경로를 정합니다.
+     * @note 읽기는 ResourceIO 가 맡습니다. 에셋 소유권은 AssetManager 에 있습니다.
      */
-    class SW_API ResourceUtil
+    class SW_API ResourcePaths
     {
     public:
         /**
@@ -82,40 +73,10 @@ namespace sw
         static string toResourceID( string_view path );
 
         /**
-         * @brief 상대 리소스 경로를 해석해 텍스트로 읽습니다. 낱개 파일 우선이 켜져 있으면 디스크를 먼저, 꺼져 있으면 마운트된 팩만 봅니다(OS 절대 경로는 디스크에서 바로 읽습니다).
-         * @param relativePath 팩 상대 키 또는 전역 ID(낱개 파일 우선일 때 경로를 풀지 못하면 인자 그대로 열어 봅니다)
-         * @param outText 읽은 UTF-8 본문
-         * @param pOutAbsPath 실제로 쓴 절대 경로(nullptr 가능)
-         * @return 파일을 읽었으면 true 입니다.
+         * @brief 리소스 id 에 `..` 성분이 있으면 true 입니다 — 리소스 루트 밖으로 나가는 id 입니다.
+         * @details `getResourcePath` 와 `ResourceIO` 의 읽기가 이런 id 를 풀지 않는 기준 하나입니다.
          */
-        [[nodiscard]] static bool readTextResource( string_view relativePath, string& outText,
-                                                    string* pOutAbsPath = nullptr );
-
-        /**
-         * @brief 상대 리소스 경로의 바이너리 데이터를 로드합니다. 찾는 순서는 `readTextResource` 와 같습니다.
-         * @param relativePath 팩 상대 키 또는 전역 ID
-         * @param outBytes 읽은 바이너리 데이터
-         * @return 파일을 읽었으면 true 입니다.
-         */
-        [[nodiscard]] static bool readBinaryResource( string_view relativePath, vector<uint8>& outBytes );
-
-        /**
-         * @brief 리소스 하나를 비동기로 읽습니다. 찾는 순서는 `readBinaryResource` 와 같고(OS 절대 경로 · 낱개 파일 · 팩), 읽기는
-         *        `engine::getAsyncFileIO()` 가 합니다. 팩 항목의 압축 해제 · CRC 는 완료를 받은 태스크 워커에서 합니다.
-         * @details 찾는 일(낱개 파일의 존재 확인 · 팩 색인)은 부른 스레드에서 하고, 바이트 읽기만 IO 스레드로 갑니다.
-         * @return 건 읽기의 핸들(취소 · 기다리기). 어디에도 없으면 아무것도 걸지 않고 `isValid() == false` 이며 @p onComplete 는 불리지 않습니다.
-         */
-        static AsyncReadHandle readBinaryResourceAsync( string_view relativePath, AsyncIOPriority priority, const ResourceReadCompleteDelegate& onComplete );
-
-        /**
-         * @brief 리소스가 있는지 검사합니다(VFS 팩 또는 로컬 디스크 파일).
-         * @param relativePath 팩 상대 키 또는 전역 ID
-         * @return 있으면 true 입니다.
-         */
-        static bool hasResource( string_view relativePath );
-
-        /** @brief VFS 팩 매니저를 반환합니다. */
-        static ResourcePackManager& getPackManager();
+        static bool hasParentDirectoryComponent( string_view path );
 
         /**
          * @brief 이 프로세스를 띄운 호스트의 빌드 타깃(`"Client"` · `"Server"`)을 정합니다. 그 타깃이 패키지에서 빼는 에셋 종류

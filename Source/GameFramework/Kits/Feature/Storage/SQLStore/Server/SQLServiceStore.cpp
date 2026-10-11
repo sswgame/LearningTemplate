@@ -5,7 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/LogContext.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQL/SQLDriver.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQL/SQLDriverRegistry.h"
@@ -255,7 +255,7 @@ namespace sw
         ISQLDriver* pDriver = SQLDriverRegistry::findDriver( driverName, outError );
         if ( pDriver == nullptr )
             return false;
-        const string         folderPath = FileUtil::isDirectory( migrationFolder ) ? string( migrationFolder ) : ResourceUtil::makeAbsolutePath( migrationFolder );
+        const string         folderPath = FileUtil::isDirectory( migrationFolder ) ? string( migrationFolder ) : ResourcePaths::makeAbsolutePath( migrationFolder );
         vector<SQLMigration> listMigration;
         if ( SQLMigrationRunner::loadMigrations( folderPath, pDriver->getName(), listMigration, outError ) == false )
             return false;

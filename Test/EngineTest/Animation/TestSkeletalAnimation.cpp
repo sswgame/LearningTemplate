@@ -16,7 +16,7 @@
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/AnimationTestUtil.h"
 
@@ -514,7 +514,7 @@ SW_TEST_CASE( SkeletalAnimationTest, FollowerReadsLeaderPose )
  */
 SW_TEST_CASE( SkeletalAnimationTest, AnimatorPlaysClipFromFolder )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const Skeleton    skeleton = test::makeChainSkeleton( 3 );
     const AnimRawClip raw      = test::makeChainRawClip( skeleton, 31, 30.0f, 0.4f );
     AnimClip          clip;
@@ -581,7 +581,7 @@ SW_TEST_CASE( SkeletalAnimationTest, RuntimeSkeletonSurvivesRenderAssetResolve )
  */
 SW_TEST_CASE( SkeletalAnimationTest, InterruptedCrossfadeContinuesFromThePreviousPose )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const Skeleton skeleton = test::makeChainSkeleton( 2 );
     const string   folder   = test::makeTempPath( "animclips_interrupt" );
     const utf8*    arrName[3]{ "A", "B", "C" };

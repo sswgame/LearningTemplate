@@ -2,7 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatWordFilter.h"
 
@@ -72,7 +72,7 @@ SW_TEST_CASE( ChatWordFilterTest, CleanTextRejectModeAndInvalidUtf8 )
 
 SW_TEST_CASE( ChatWordFilterTest, RepositoryWordFileLoads )
 {
-    const string   path = FileUtil::joinPath( ResourceUtil::getProjectFolderPath(), "Config/Server/chat_banned_words.txt" );
+    const string   path = FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), "Config/Server/chat_banned_words.txt" );
     ChatWordFilter filter;
     SW_ASSERT_TRUE_MSG( filter.loadFile( path, ChatFilterMode::Mask ), path.c_str() );
     SW_EXPECT_EQUAL( filter.getWordCount(), 2 ); // 주석 줄은 낱말이 아니다
@@ -81,6 +81,6 @@ SW_TEST_CASE( ChatWordFilterTest, RepositoryWordFileLoads )
 
     SW_TEST_DEFENSIVE_SCOPE( "missing word file reads as an empty list" );
     ChatWordFilter missing;
-    SW_EXPECT_FALSE( missing.loadFile( FileUtil::joinPath( ResourceUtil::getProjectFolderPath(), "Config/Server/no_such_words.txt" ), ChatFilterMode::Mask ) );
+    SW_EXPECT_FALSE( missing.loadFile( FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), "Config/Server/no_such_words.txt" ), ChatFilterMode::Mask ) );
     SW_EXPECT_EQUAL( missing.getWordCount(), 0 );
 }

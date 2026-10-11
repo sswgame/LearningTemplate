@@ -339,6 +339,7 @@ KayKit 리그의 영역 테이블은 `skeleton_warrior.fit.xml`(Head, Arm_L, Arm
 | 파일 | 내용 |
 |---|---|
 | `AnimNotify/AnimNotifyHandlers.h` | 내장 처리기와 인자 |
+| `AnimNotify/CameraShakeRequest.h` | 카메라 흔들림 요청 값 |
 | `AnimNotify/AnimNotifyComponent.h` | 알림 디스패치 |
 | `Socket/ResolvedSocketTable.h` | 소켓 해석과 변환 |
 | `Socket/SocketBindingComponent.h` | 소켓 부착 상태 |

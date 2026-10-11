@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/File/Windows/WindowsFileWatcher.h"
@@ -86,7 +86,7 @@ namespace sw
 #endif
 
 #if defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX )
-        const string rootPath = watchRootPath.empty() ? ResourceUtil::getRootFolderPath() : string( watchRootPath );
+        const string rootPath = watchRootPath.empty() ? ResourcePaths::getRootFolderPath() : string( watchRootPath );
         if ( rootPath.empty() == false )
         {
             if ( _fileWatcher->startWatching( rootPath, true ) == false )

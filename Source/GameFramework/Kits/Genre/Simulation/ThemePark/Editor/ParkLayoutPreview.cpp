@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ParkLayout.h"
@@ -62,7 +62,7 @@ namespace sw::editor
     bool ParkLayoutPreview::refresh( bool bForce )
     {
         string text;
-        if ( ResourceUtil::readTextResource( kLayoutPath, text ) == false )
+        if ( ResourceIO::readTextResource( kLayoutPath, text ) == false )
         {
             if ( _bWarned == false )
                 SW_LOG_WARNING( "%# could not be read - the park layout preview is empty", kLayoutPath );

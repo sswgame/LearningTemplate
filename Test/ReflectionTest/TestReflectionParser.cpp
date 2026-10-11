@@ -8,7 +8,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "ReflectionParser/AnnotationMeta.h"
 #include "ReflectionParser/ParserUtil.h"
@@ -89,7 +89,7 @@ namespace
 
     /**
      * @brief 임시 헤더들을 **한 번의 파서 실행**에 넣고 종료 코드 · 로그 · 산출물을 돌려줍니다.
-     * @details 헤더가 둘 이상이면 파서는 그것들을 한 번역 단위로 묶습니다. `ResourceUtil::initialize()` 를 먼저 불러 두어야 합니다.
+     * @details 헤더가 둘 이상이면 파서는 그것들을 한 번역 단위로 묶습니다. `ResourcePaths::initialize()` 를 먼저 불러 두어야 합니다.
      *          실행마다 **새 폴더**(이 케이스의 임시 경로 아래)를 쓰므로 앞 실행의 산출물이 "이미 최신" 으로 읽히지 않고,
      *          케이스가 끝나면 프레임워크가 통째로 지웁니다. 실행 파일 폴더(`Bin`)에 두면 같은 `Bin` 을 쓰는 두 프로세스가
      *          서로의 산출물을 밟습니다.
@@ -103,7 +103,7 @@ namespace
         runName.append( "parser_run_" );
         runName.append( static_cast<int32>( ++s_runIndex ) );
         const sw::string runRoot     = test::makeTempPath( runName.c_str() );
-        const sw::string projectRoot = sw::ResourceUtil::getProjectFolderPath();
+        const sw::string projectRoot = sw::ResourcePaths::getProjectFolderPath();
         const sw::string outGenDir   = sw::FileUtil::joinPath( runRoot, "gen" );
         sw::FileUtil::ensureDirectoryExists( outGenDir );
 
@@ -464,7 +464,7 @@ SW_TEST_CASE( ReflectionParserTest, MultiBitBitfieldCompilationErrorDiagnosis )
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     const ParserRunResult run = runParserOnTempHeader( parserExe, "InvalidBitfieldSample",
                                                        "#pragma once\n"
@@ -501,7 +501,7 @@ SW_TEST_CASE( ReflectionParserTest, UnknownAnnotationTokenStopsTheBuild )
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     const ParserRunResult run = runParserOnTempHeader( parserExe, "UnknownTokenSample",
                                                        "#pragma once\n"
@@ -549,7 +549,7 @@ SW_TEST_CASE( ReflectionParserTest, AliasHasOneSpelling )
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     const ParserRunResult run = runParserOnTempHeader( parserExe, "AliasSpellingSample",
                                                        "#pragma once\n"
@@ -588,7 +588,7 @@ SW_TEST_CASE( ReflectionParserTest, EveryAnnotationErrorOfATypeIsReported )
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     const ParserRunResult run = runParserOnTempHeader( parserExe, "ManyErrorsSample",
                                                        "#pragma once\n"
@@ -626,7 +626,7 @@ SW_TEST_CASE( ReflectionParserTest, ConstructorInvokerUsesPlacementNewMacro )
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     const ParserRunResult run = runParserOnTempHeader( parserExe, "CtorInvokerSample",
                                                        "#pragma once\n"
@@ -662,7 +662,7 @@ SW_TEST_CASE( ReflectionParserTest, ParserDefinesTargetMacros )
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
 #if defined( SW_PLATFORM_WINDOWS )
     const sw::string platformMacro = "SW_PLATFORM_WINDOWS";
@@ -709,7 +709,7 @@ SW_TEST_CASE( ReflectionParserTest, AccessorPropertyEmitsValueAccessor )
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     const ParserRunResult run = runParserOnTempHeader( parserExe, "AccessorPropertySample",
                                                        "#pragma once\n"
@@ -767,7 +767,7 @@ SW_TEST_CASE( ReflectionParserTest, AbstractComponentGetsNoFactory )
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     const ParserRunResult run = runParserOnTempHeader( parserExe, "AbstractFactorySample",
                                                        "#pragma once\n"
@@ -813,7 +813,7 @@ SW_TEST_CASE( ReflectionParserTest, ReflectBodyWithoutReflectStopsTheBuild )
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     const ParserRunResult run = runParserOnTempHeader( parserExe, "OrphanBodySample",
                                                        "#pragma once\n"
@@ -848,7 +848,7 @@ SW_TEST_CASE( ReflectionParserTest, OneBrokenHeaderDoesNotBlockTheOthers )
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     // (1) 애노테이션 오류 — 묶음은 파싱되고, 그 헤더만 실패한다. 깨진 헤더를 **앞에** 둔다 — 오류에서 순회가 멈추면 뒤 헤더가 빈다.
     sw::vector<TempHeader> listAnnotationCase;
@@ -890,8 +890,8 @@ SW_TEST_CASE( ReflectionParserTest, RegeneratesWhenTheParserItselfIsNewer )
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
 
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
-    const sw::string projectRoot = sw::ResourceUtil::getProjectFolderPath();
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    const sw::string projectRoot = sw::ResourcePaths::getProjectFolderPath();
     const sw::string caseRoot    = test::makeTempPath( "staleness" );
     const sw::string headerPath  = sw::FileUtil::joinPath( caseRoot, "StalenessProbeSample.h" );
     const sw::string outGenDir   = sw::FileUtil::joinPath( caseRoot, "gen" );
@@ -967,8 +967,8 @@ SW_TEST_CASE( ReflectionParserTest, SameFileNameInOneOutputDirIsRejected )
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
 
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
-    const sw::string projectRoot = sw::ResourceUtil::getProjectFolderPath();
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    const sw::string projectRoot = sw::ResourcePaths::getProjectFolderPath();
 
     const sw::string caseRoot  = test::makeTempPath( "collide" );
     const sw::string dirA      = sw::FileUtil::joinPath( caseRoot, "A" );
@@ -1095,7 +1095,7 @@ SW_TEST_CASE( ReflectionParserTest, DumpShowsWhatWasExtracted )
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     sw::vector<TempHeader> listHeader;
     listHeader.push_back( TempHeader{ "DumpSample",
@@ -1134,7 +1134,7 @@ SW_TEST_CASE( ReflectionParserTest, DumpShowsWhatWasExtracted )
 
     // `--help` 는 오류가 아니다.
     sw::ProcessOptions options;
-    options._workingDirectory = sw::ResourceUtil::getProjectFolderPath();
+    options._workingDirectory = sw::ResourcePaths::getProjectFolderPath();
     sw::string  helpLog;
     const int32 helpExit = sw::Process::execute( "\"" + parserExe + "\" --help", options,
                                                  SW_DELEGATE_LAMBDA( sw::ProcessOutputDelegate, [&helpLog]( sw::string_view line )
@@ -1156,7 +1156,7 @@ SW_TEST_CASE( ReflectionParserTest, AnnotationStringKeepsEscapesAndCommas )
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     const ParserRunResult run = runParserOnTempHeader( parserExe, "EscapedAnnotationSample",
                                                        "#pragma once\n"
@@ -1191,7 +1191,7 @@ SW_TEST_CASE( ReflectionParserTest, PunctuationInsideAnnotationStringIsNotADecla
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     const ParserRunResult run = runParserOnTempHeader( parserExe, "PunctuatedAnnotationSample",
                                                        "#pragma once\n"
@@ -1224,7 +1224,7 @@ SW_TEST_CASE( ReflectionParserTest, AliasedBaseClassKeepsParentAndFactory )
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     const ParserRunResult run = runParserOnTempHeader( parserExe, "AliasedBaseSample",
                                                        "#pragma once\n"
@@ -1283,9 +1283,9 @@ SW_TEST_CASE( ReflectionParserTest, EditSavedWhileParsingIsNotHiddenByTheStamp )
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
-    const sw::string projectRoot = sw::ResourceUtil::getProjectFolderPath();
+    const sw::string projectRoot = sw::ResourcePaths::getProjectFolderPath();
     const sw::string caseRoot    = test::makeTempPath( "midparse_edit" );
     const sw::string headerPath  = sw::FileUtil::joinPath( caseRoot, "MidParseEditSample.h" );
     const sw::string outGenDir   = sw::FileUtil::joinPath( caseRoot, "gen" );
@@ -1350,9 +1350,9 @@ SW_TEST_CASE( ReflectionParserTest, IncludedHeaderChangeRegeneratesAndIsInTheDep
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
-    const sw::string projectRoot = sw::ResourceUtil::getProjectFolderPath();
+    const sw::string projectRoot = sw::ResourcePaths::getProjectFolderPath();
     const sw::string caseRoot    = test::makeTempPath( "include_dependency" );
     const sw::string basePath    = sw::FileUtil::joinPath( caseRoot, "DependencyBaseSample.h" );
     const sw::string headerPath  = sw::FileUtil::joinPath( caseRoot, "DependencyHolderSample.h" );
@@ -1422,7 +1422,7 @@ SW_TEST_CASE( ReflectionParserTest, FlagTraitHeaderIncludesOnlyTheTrait )
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     const ParserRunResult run = runParserOnTempHeader( parserExe, "FlagTraitSample",
                                                        "#pragma once\n"
@@ -1467,7 +1467,7 @@ SW_TEST_CASE( ReflectionParserTest, FlagTraitHeaderIncludesOnlyTheTrait )
 
     sw::string traitText;
     SW_ASSERT_TRUE( sw::FileUtil::readTextFile(
-        sw::FileUtil::joinPath( sw::ResourceUtil::getProjectFolderPath(), "Source/Core/Common/BitFlagTrait.h" ), traitText ) );
+        sw::FileUtil::joinPath( sw::ResourcePaths::getProjectFolderPath(), "Source/Core/Common/BitFlagTrait.h" ), traitText ) );
     const sw::vector<sw::string> listTraitInclude = collectIncludes( traitText );
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listTraitInclude.size() );
     SW_EXPECT_TRUE_MSG( listTraitInclude[0] == "#include <type_traits>", traitText.c_str() );
@@ -1484,9 +1484,9 @@ SW_TEST_CASE( ReflectionParserTest, LocalConfigCannotOverrideCommittedDefaults )
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
-    const sw::string projectRoot = sw::ResourceUtil::getProjectFolderPath();
+    const sw::string projectRoot = sw::ResourcePaths::getProjectFolderPath();
     const sw::string caseRoot    = test::makeTempPath( "local_config" );
     const sw::string envDir      = sw::FileUtil::joinPath( caseRoot, "Config/Environment" );
     const sw::string outGenDir   = sw::FileUtil::joinPath( caseRoot, "gen" );
@@ -1545,9 +1545,9 @@ SW_TEST_CASE( ReflectionParserTest, BrokenLocalConfigStopsTheParser )
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
-    const sw::string projectRoot = sw::ResourceUtil::getProjectFolderPath();
+    const sw::string projectRoot = sw::ResourcePaths::getProjectFolderPath();
     const sw::string caseRoot    = test::makeTempPath( "broken_local_config" );
     const sw::string envDir      = sw::FileUtil::joinPath( caseRoot, "Config/Environment" );
     const sw::string outGenDir   = sw::FileUtil::joinPath( caseRoot, "gen" );
@@ -1598,7 +1598,7 @@ SW_TEST_CASE( ReflectionParserTest, FunctionParametersAndEventsAreGenerated )
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     const sw::string       kHeaderHead = "#pragma once\n"
                                          "#include \"Core/Common/Types.h\"\n"
@@ -1683,7 +1683,7 @@ SW_TEST_CASE( ReflectionParserTest, PropertyRoleAnnotationsAreValidated )
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     // 성한 헤더 하나(RepNotify 두 모양 · SaveGame · Config) + 깨진 헤더 셋(없는 함수 · 다른 인자 타입 · 섞을 수 없는 Interp)을 한 번에 돌린다.
     const sw::string kHeaderHead = "#pragma once\n"
@@ -1736,7 +1736,7 @@ SW_TEST_CASE( ReflectionParserTest, DisplayMetadataIsValidated )
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     sw::vector<TempHeader> listHeader;
     listHeader.push_back( TempHeader{ "DisplayGoodSample", makeReflectedHeader( "DisplayGoodSampleActor", "Units = \"m/s\", UIMin = 0, UIMax = 30, EditCondition = \"!_bLocked\"", "float32" ) } );
@@ -1793,7 +1793,7 @@ SW_TEST_CASE( ReflectionParserTest, ValidateFunctionsAreChecked )
     const sw::string parserExe = findReflectionParserExecutable();
     if ( parserExe.empty() )
         SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     const auto makeHeader = []( const sw::string& typeName, const sw::string& reflectArgs, const sw::string& body )
     {

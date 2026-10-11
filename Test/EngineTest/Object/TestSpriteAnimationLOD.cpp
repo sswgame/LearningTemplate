@@ -10,7 +10,7 @@
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -78,7 +78,7 @@ namespace
  */
 SW_TEST_CASE( SpriteAnimationLODTest, OffscreenSpriteKeepsTimeButSkipsFrames )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const string clipPath = TestSpriteAnimationLODInternal::writeClip();
     SW_ASSERT_FALSE( clipPath.empty() );
     GameObjectManager                            manager;
@@ -108,7 +108,7 @@ SW_TEST_CASE( SpriteAnimationLODTest, OffscreenSpriteKeepsTimeButSkipsFrames )
  */
 SW_TEST_CASE( SpriteAnimationLODTest, UpdateRateDivisorThrottlesFramePushes )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const string clipPath = TestSpriteAnimationLODInternal::writeClip();
     SW_ASSERT_FALSE( clipPath.empty() );
     GameObjectManager                            manager;
@@ -137,7 +137,7 @@ SW_TEST_CASE( SpriteAnimationLODTest, UpdateRateDivisorThrottlesFramePushes )
  */
 SW_TEST_CASE( SpriteAnimationLODTest, RewindRecordsAndRestoresSpriteFrames )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const string clipPath = TestSpriteAnimationLODInternal::writeClip();
     SW_ASSERT_FALSE( clipPath.empty() );
     GameObjectManager                            manager;

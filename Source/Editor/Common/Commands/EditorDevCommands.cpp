@@ -28,7 +28,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Utility/DebugOverlayState.h"
 
 namespace sw::editor
@@ -124,7 +124,7 @@ namespace sw::editor
                     return true;
                 }
                 // 리소스 id(`engine/automation/...`)면 리소스 트리의 그 파일이다 — 시나리오가 작업 폴더를 몰라도 된다.
-                const string resourcePath = FileUtil::joinPath( ResourceUtil::getRootFolderPath(), path );
+                const string resourcePath = FileUtil::joinPath( ResourcePaths::getRootFolderPath(), path );
                 if ( FileUtil::exists( resourcePath ) )
                 {
                     outAbsolutePath = resourcePath;

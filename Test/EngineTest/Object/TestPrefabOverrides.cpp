@@ -17,7 +17,7 @@
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneDocument.h"
@@ -124,7 +124,7 @@ SW_TEST_CASE( PrefabOverridesTest, OverridesHoldOnlyWhatDiffersAndRebuildTheInst
  */
 SW_TEST_CASE( PrefabOverridesTest, PrefabEditReachesPlacedInstancesButNotTheirOverrides )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     const sw::string prefabPath = test::makeTempPath( "crate.prefab.xml" );
     SW_ASSERT_TRUE( sw::PrefabOverridesTestInternal::writePrefab(
         sw::PrefabOverridesTestInternal::makeCratePrefab( sw::float3( 1.0f, 2.0f, 3.0f ), sw::float3( 2.0f, 2.0f, 2.0f ) ), prefabPath ) );
@@ -206,7 +206,7 @@ SW_TEST_CASE( PrefabOverridesTest, PrefabEditReachesPlacedInstancesButNotTheirOv
  */
 SW_TEST_CASE( PrefabOverridesTest, FullStatePrefabEntityIsReadAndResavedAsOverrides )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     const sw::string prefabPath = test::makeTempPath( "legacy_crate.prefab.xml" );
     SW_ASSERT_TRUE( sw::PrefabOverridesTestInternal::writePrefab(
         sw::PrefabOverridesTestInternal::makeCratePrefab( sw::float3( 1.0f, 2.0f, 3.0f ), sw::float3( 2.0f, 2.0f, 2.0f ) ), prefabPath ) );

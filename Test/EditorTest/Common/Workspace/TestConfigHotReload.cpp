@@ -3,7 +3,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Editor/Common/Config/EditorToolDefaults.h"
-#include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/Workspace/ConfigHotReload.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -44,7 +44,7 @@ SW_TEST_CASE( ConfigHotReloadTest, ChangedFileGoesToItsOwner )
     EditorToolDefaults toolDefaults{};
     toolDefaults._defaultMap = "stale";
     setEditorToolDefaults( &toolDefaults );
-    const string toolDefaultsPath = EditorUtil::resolveProjectRelativePath( config::kFileRuntimeEditorToolDefaults );
+    const string toolDefaultsPath = EditorPaths::resolveProjectRelativePath( config::kFileRuntimeEditorToolDefaults );
     if ( FileUtil::exists( toolDefaultsPath ) == false )
     {
         SW_EXPECT_FALSE( ConfigHotReload::reloadChangedFile( nullptr, toolDefaultsPath ) );

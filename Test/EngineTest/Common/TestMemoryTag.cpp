@@ -20,7 +20,7 @@
 #include "Engine/Object/Component/SceneTransformStorage.h"
 #include "Engine/Object/GameObject/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -214,7 +214,7 @@ SW_TEST_CASE( MemoryTagTest, SceneTransformPageIsTagged )
 
 /**
  * @brief [MemoryTagTest] 경로 캐시를 비우면 캐시 표(Asset)의 저장소까지 돌아간다
- * @details 엔진 종료 끝이 `ResourceUtil::clearPathCache` 를 부른다. 맵의 `clear()` 는 버킷 · 밀집 배열을 남겨, 기동 뒤 자란 표가 종료 누수 보고에 남는다.
+ * @details 엔진 종료 끝이 `ResourcePaths::clearPathCache` 를 부른다. 맵의 `clear()` 는 버킷 · 밀집 배열을 남겨, 기동 뒤 자란 표가 종료 누수 보고에 남는다.
  */
 SW_TEST_CASE( MemoryTagTest, ClearedPathCacheReturnsItsTable )
 {
@@ -223,16 +223,16 @@ SW_TEST_CASE( MemoryTagTest, ClearedPathCacheReturnsItsTable )
     const sw::MemoryProfiler* pProfiler = sw::MemoryProfiler::getActive();
     if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
         SW_TEST_SKIP( "no tracking memory profiler in this host" );
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
-    sw::ResourceUtil::clearPathCache();
+    sw::ResourcePaths::clearPathCache();
     const uint64     assetBefore = getLiveBytes( *pProfiler, sw::MemoryTag::Asset );
-    const sw::string resolved    = sw::ResourceUtil::getResourcePath( "engine/pipeline/forwardpipeline.xml" );
+    const sw::string resolved    = sw::ResourcePaths::getResourcePath( "engine/pipeline/forwardpipeline.xml" );
     SW_ASSERT_FALSE( resolved.empty() );
     // 캐시 표가 실제로 자랐어야 아래 비교가 뜻이 있다.
     SW_ASSERT_TRUE( getLiveBytes( *pProfiler, sw::MemoryTag::Asset ) > assetBefore );
 
-    sw::ResourceUtil::clearPathCache();
+    sw::ResourcePaths::clearPathCache();
     SW_EXPECT_EQUAL( assetBefore, getLiveBytes( *pProfiler, sw::MemoryTag::Asset ) );
 }
 

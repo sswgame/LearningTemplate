@@ -33,7 +33,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/CommandStack.h"
@@ -243,7 +243,7 @@ namespace sw::editor
     bool EditorAssetCommands::loadScene( string_view path )
     {
         // 리소스 트리 안이면 리소스 id 로 연다(절대 경로 · 프로젝트 기준 경로 · id 모두). 밖이면 받은 경로 그대로다.
-        string loadPath = ResourceUtil::toResourceID( path );
+        string loadPath = ResourcePaths::toResourceID( path );
         if ( loadPath.empty() )
             loadPath = string{ path };
 
@@ -450,7 +450,7 @@ namespace sw::editor
         {
             // 끌어 놓은 것은 리소스 id 다(콘텐츠 브라우저). 주의: 그것을 프로젝트 루트 기준으로 다시 `makeRelativePath` 하면 경로가 깨져
             // 스프라이트가 텍스처를 찾지 못하고 흰 사각형으로 그려진다.
-            const string textureID = ResourceUtil::toResourceID( pPath );
+            const string textureID = ResourcePaths::toResourceID( pPath );
             if ( textureID.empty() )
                 SW_LOG_WARNING( "Sprite drop: '%#' is not inside the resource tree - the sprite has no texture", pPath );
             pSprite->setTextureName( textureID );
@@ -484,7 +484,7 @@ namespace sw::editor
         // 버전 관리가 읽기 전용으로 둔 파일(git LFS lockable — 잠그기 전)에는 쓰지 않고 이유를 말한다. 쓰기 실패 로그만으로는 "잠가야 한다" 가 안 보인다.
         Scene*         pScene     = pSceneManager->getActiveScene();
         const string   targetPath = path.empty() && pScene != nullptr ? pScene->getSourcePath() : string{ path };
-        const string   targetAbs  = FileUtil::isAbsolutePath( targetPath ) ? targetPath : FileUtil::joinPath( ResourceUtil::getRootFolderPath(), targetPath );
+        const string   targetAbs  = FileUtil::isAbsolutePath( targetPath ) ? targetPath : FileUtil::joinPath( ResourcePaths::getRootFolderPath(), targetPath );
         EditorContext* pContext   = EditorContext::get();
         if ( targetPath.empty() == false && FileUtil::isReadOnlyFile( targetAbs ) )
         {
@@ -531,7 +531,7 @@ namespace sw::editor
         params._bEnableMultiselect = false;
         // 씬 이름은 쿠커의 규칙 하나다(`EditorAssetTypeRegistry` → `AssetCookPath`). 맨 `.xml` 은 쿠커가 쿠킹하지 않는 이름이다.
         EditorAssetTypeRegistry::appendSuffixes( EditorAssetType::Scene, params._listFilterExtension );
-        const string mapsDir = ResourceUtil::getDomainFolderPath( GameConfig::getActive()._packRoot, path::kMapsFolder );
+        const string mapsDir = ResourcePaths::getDomainFolderPath( GameConfig::getActive()._packRoot, path::kMapsFolder );
         if ( FileUtil::isDirectory( mapsDir ) )
             params._initialDirectory = mapsDir;
         FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, EditorAssetCommandsInternal::onSaveSceneDialogResult ) );
@@ -556,7 +556,7 @@ namespace sw::editor
 
             const string fileName = FileUtil::getFileNamePart( sourcePath );
 
-            if ( FileUtil::pathsEqualNormalized( sourcePath, ResourceUtil::makeSavePath( destFolderAbs, fileName ) ) )
+            if ( FileUtil::pathsEqualNormalized( sourcePath, ResourcePaths::makeSavePath( destFolderAbs, fileName ) ) )
             {
                 SW_LOG_TRACE( "Already in folder: %#", fileName.c_str() );
                 continue;
@@ -566,7 +566,7 @@ namespace sw::editor
             // 에디터의 임포트에는 되돌리기가 없으므로 그대로 잃는다.
             // "원래 있던 것과 같은 파일인가" 는 바로 위에서 경로로 이미 걸렀으므로, 여기까지 온 것은 **다른 파일인데 이름만 같은**
             // 경우다.
-            const string destPath = ResourceUtil::makeUniqueSavePath( destFolderAbs, fileName );
+            const string destPath = ResourcePaths::makeUniqueSavePath( destFolderAbs, fileName );
 
             FileUtil::ensureParentDirectoryExists( destPath );
             if ( FileUtil::copyFile( sourcePath, destPath ) == false )
@@ -635,7 +635,7 @@ namespace sw::editor
         FileUtil::collectFolders( folderAbs, listFolder, false );
         FileUtil::collectFiles( folderAbs, {}, listFile, bRecursive );
 
-        const string& resourceRoot = ResourceUtil::getRootFolderPath();
+        const string& resourceRoot = ResourcePaths::getRootFolderPath();
         const string  rootNorm     = resourceRoot.empty() ? string{} : FileUtil::normalizePath( resourceRoot );
 
         for ( const string& folder : listFolder )

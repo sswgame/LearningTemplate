@@ -16,7 +16,7 @@
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {
@@ -257,7 +257,7 @@ namespace sw
         VisemeTrack  track;
         string       trackText;
         bool         bStarted = false;
-        if ( ResourceUtil::readTextResource( trackPath, trackText ) && track.parseJSON( trackText, trackPath ) )
+        if ( ResourceIO::readTextResource( trackPath, trackText ) && track.parseJSON( trackText, trackPath ) )
         {
             speakTrack( track );
             bStarted = true;
@@ -267,7 +267,7 @@ namespace sw
             vector<uint8> bytes;
             AudioPcm      pcm;
             AudioClipData clip;
-            if ( ResourceUtil::readBinaryResource( audioPath, bytes ) && AudioClipDecoder::decode( audioPath, bytes.data(), bytes.size(), pcm ) &&
+            if ( ResourceIO::readBinaryResource( audioPath, bytes ) && AudioClipDecoder::decode( audioPath, bytes.data(), bytes.size(), pcm ) &&
                  AudioClipData::convertPcm( pcm, clip ) )
             {
                 vector<float32> listSample;

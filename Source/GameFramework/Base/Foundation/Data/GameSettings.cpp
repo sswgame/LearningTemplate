@@ -71,7 +71,7 @@ namespace sw
             return false;
 
         const string path = string( assetRelativePath );
-        if ( ResourceUtil::hasResource( path ) == false )
+        if ( ResourceIO::hasResource( path ) == false )
             return false;
 
         // **먼저 비운다.**

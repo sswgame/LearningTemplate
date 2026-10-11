@@ -26,7 +26,7 @@
 #include "Engine/Destruction/MeshFracture.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 #define CGLTF_IMPLEMENTATION
@@ -1395,7 +1395,7 @@ namespace sw::editor
                             return false;
                         }
                     }
-                    listTexturePath[textureIndex] = ResourceUtil::toResourceID( TextureImporter::makeImportedTexturePath( rawPath ) );
+                    listTexturePath[textureIndex] = ResourcePaths::toResourceID( TextureImporter::makeImportedTexturePath( rawPath ) );
                 }
 
                 for ( const ModelImportSection& section : result._listSection )
@@ -1416,7 +1416,7 @@ namespace sw::editor
                     }
                     // 머티리얼 캐시는 잡을 때 `.meta` 를 지어 붙인다 — 옆 폴더에 실행마다 다른 GUID 가 생기면 임포트 결과 해시가 어긋난다.
                     // 그래서 임포터가 경로에서 정해지는 GUID 로 미리 쓴다(언리얼 · 유니티의 임포트 부산물도 임포터가 식별자를 정한다).
-                    const string resourceID = ResourceUtil::toResourceID( materialPath );
+                    const string resourceID = ResourcePaths::toResourceID( materialPath );
                     if ( FileUtil::writeTextFile( materialPath + path::kMetaExtension, "guid=" + makeImportedGuid( resourceID ) + "\nsourcePath=" + resourceID + "\nimported=1\n" ) == false )
                     {
                         SW_LOG_ERROR( "Failed to write %#.meta", materialPath.c_str() );
@@ -1888,7 +1888,7 @@ namespace sw::editor
             }
             SkeletonAttachment entry{};
             entry._name           = attachment._name;
-            entry._meshPath       = ResourceUtil::toResourceID( partPath );
+            entry._meshPath       = ResourcePaths::toResourceID( partPath );
             entry._parentBone     = attachment._parentBone;
             entry._localTransform = attachment._localTransform;
             result._skeleton.addAttachment( entry );
@@ -1926,7 +1926,7 @@ namespace sw::editor
         if ( MeshAssetFormat::isMeshAssetPath( relativePath ) )
             return false;
 
-        const string& resourceRoot = ResourceUtil::getRootFolderPath();
+        const string& resourceRoot = ResourcePaths::getRootFolderPath();
         const string  normalized   = FileUtil::normalizeSeparators( FileUtil::joinPath( resourceRoot, relativePath ) );
         if ( makeImportedModelPath( normalized ).empty() )
         {

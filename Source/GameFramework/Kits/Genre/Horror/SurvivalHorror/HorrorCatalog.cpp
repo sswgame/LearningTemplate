@@ -17,7 +17,7 @@ namespace sw
     {
         struct HorrorCatalogInternal
         {
-            static constexpr const utf8* kArrItemKindName[] = { "Misc", "Weapon", "Ammo", "Heal", "Key", "SaveItem", "Battery", "Document" };
+            static constexpr const utf8* kArrItemKindName[] = { "None", "Weapon", "Ammo", "Heal", "Key", "SaveItem", "Battery", "Document" };
 
             static void parseIDList( string_view text, vector<hashed_string>& outListID )
             {

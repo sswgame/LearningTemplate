@@ -2,7 +2,7 @@
 
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
@@ -38,7 +38,7 @@ namespace sw
 
         // 아직 없는 파일이면 `getResourcePath` 가 빈 문자열을 준다(존재할 때만 해석한다). 그때는
         // 받은 경로를 그대로 쓴다. 새로 저장하는 길이 막히면 안 되기 때문이다.
-        string absPath = ResourceUtil::getResourcePath( assetRelativePath );
+        string absPath = ResourcePaths::getResourcePath( assetRelativePath );
         if ( absPath.empty() )
             absPath = assetRelativePath;
 

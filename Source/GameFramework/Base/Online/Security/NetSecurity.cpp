@@ -6,7 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "GameFramework/Base/Online/Security/OpenSSL/OpenSSLNetSecurityProvider.h"
 
@@ -25,7 +25,7 @@ namespace sw
             /** @brief 상대 경로를 프로젝트 루트 기준으로 펼칩니다(서버 설정과 같은 기준). 루트를 모르면(시험) 그대로. */
             static string makeProjectPath( string_view path )
             {
-                const string& projectFolder = ResourceUtil::getProjectFolderPath();
+                const string& projectFolder = ResourcePaths::getProjectFolderPath();
                 if ( path.empty() || projectFolder.empty() || FileUtil::isAbsolutePath( path ) )
                     return string( path );
                 return FileUtil::joinPath( projectFolder, path );
@@ -58,7 +58,7 @@ namespace sw
         outError = "development certificates are not available in Shipping - configure the TLS certificate and private key files";
         return false;
 #else
-        const string& projectFolder = ResourceUtil::getProjectFolderPath();
+        const string& projectFolder = ResourcePaths::getProjectFolderPath();
         const string  rootFolder    = projectFolder.empty() ? FileUtil::getCurrentPath() : projectFolder;
         const string  folder        = FileUtil::joinPath( FileUtil::joinPath( rootFolder, path::kSavedFolder ), kDevCertificateFolder );
         outCertificateFile          = FileUtil::joinPath( folder, kDevCertificateFile );

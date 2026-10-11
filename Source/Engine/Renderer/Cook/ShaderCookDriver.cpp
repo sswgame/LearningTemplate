@@ -19,7 +19,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 namespace sw
 {
@@ -32,7 +32,7 @@ namespace sw
         string rootDir = string( resourceRoot );
         if ( rootDir.empty() )
         {
-            rootDir = ResourceUtil::getRootFolderPath();
+            rootDir = ResourcePaths::getRootFolderPath();
             if ( rootDir.empty() )
                 rootDir = "Resource";
         }
@@ -80,7 +80,7 @@ namespace sw
             if ( FileUtil::exists( request._shaderPath ) )
                 absPath = request._shaderPath;
             else
-                absPath = ResourceUtil::getResourcePath( request._shaderPath );
+                absPath = ResourcePaths::getResourcePath( request._shaderPath );
 
             if ( FileUtil::exists( absPath ) == false )
                 continue;

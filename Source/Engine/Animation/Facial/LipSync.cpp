@@ -7,7 +7,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/AnimJSONUtil.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
@@ -80,7 +80,7 @@ namespace sw
     bool LipSyncSettings::loadFromResource( string_view path )
     {
         string text;
-        if ( ResourceUtil::readTextResource( path, text ) == false )
+        if ( ResourceIO::readTextResource( path, text ) == false )
         {
             SW_LOG_ERROR( "Lip sync settings '%#' could not be read", path );
             *this = LipSyncSettings{};
@@ -215,7 +215,7 @@ namespace sw
     bool VisemeTrack::loadFromResource( string_view path )
     {
         string text;
-        if ( ResourceUtil::readTextResource( path, text ) == false )
+        if ( ResourceIO::readTextResource( path, text ) == false )
         {
             SW_LOG_ERROR( "Viseme track '%#' could not be read", path );
             *this = VisemeTrack{};

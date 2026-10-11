@@ -8,7 +8,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -21,7 +21,7 @@
  */
 SW_TEST_CASE( MeshComponentTest, MissingMaterialUsesTheChecker )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     const sw::string& missingMaterial = sw::engine::getEngineDefaultAssets()._missingMaterial;
     SW_ASSERT_FALSE( missingMaterial.empty() );
 

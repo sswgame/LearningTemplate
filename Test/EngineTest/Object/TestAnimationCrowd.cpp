@@ -19,7 +19,8 @@
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/AnimationTestUtil.h"
 
@@ -115,7 +116,7 @@ namespace
  */
 SW_TEST_CASE( AnimationCrowdTest, SameStateUnitsShareOneBucket )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const shared_ptr<Skeleton> skeleton = TestAnimationCrowdInternal::makeSkeleton();
     const shared_ptr<Mesh>     mesh     = TestAnimationCrowdInternal::makeSkinnedCube();
     const string               folder   = TestAnimationCrowdInternal::writeClips( *skeleton );
@@ -183,7 +184,7 @@ SW_TEST_CASE( AnimationCrowdTest, SameStateUnitsShareOneBucket )
  */
 SW_TEST_CASE( AnimationCrowdTest, CrossfadeFallsBackToSoloThenRejoins )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const shared_ptr<Skeleton> skeleton = TestAnimationCrowdInternal::makeSkeleton();
     const shared_ptr<Mesh>     mesh     = TestAnimationCrowdInternal::makeSkinnedCube();
     const string               folder   = TestAnimationCrowdInternal::writeClips( *skeleton );
@@ -232,7 +233,7 @@ SW_TEST_CASE( AnimationCrowdTest, CrossfadeFallsBackToSoloThenRejoins )
  */
 SW_TEST_CASE( AnimationCrowdTest, FarUnitsSwitchToVertexAnimation )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const shared_ptr<Skeleton> skeleton = TestAnimationCrowdInternal::makeSkeleton();
     const shared_ptr<Mesh>     mesh     = TestAnimationCrowdInternal::makeSkinnedCube();
     const string               folder   = TestAnimationCrowdInternal::writeClips( *skeleton );
@@ -355,7 +356,7 @@ SW_TEST_CASE( AnimationCrowdTest, VertexAnimationBakeMatchesSkinning )
  */
 SW_TEST_CASE( AnimationCrowdTest, IdleBucketsRetireAfterKeepSeconds )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const shared_ptr<Skeleton> skeleton = TestAnimationCrowdInternal::makeSkeleton();
     const shared_ptr<Mesh>     mesh     = TestAnimationCrowdInternal::makeSkinnedCube();
     const string               folder   = TestAnimationCrowdInternal::writeClips( *skeleton );
@@ -385,7 +386,7 @@ SW_TEST_CASE( AnimationCrowdTest, IdleBucketsRetireAfterKeepSeconds )
  */
 SW_TEST_CASE( AnimationCrowdTest, CookedVertexAnimationMatchesRuntimeBake )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const shared_ptr<Skeleton> skeleton = TestAnimationCrowdInternal::makeSkeleton();
     const shared_ptr<Mesh>     mesh     = TestAnimationCrowdInternal::makeSkinnedCube();
     const string               folder   = TestAnimationCrowdInternal::writeClips( *skeleton );
@@ -412,7 +413,7 @@ SW_TEST_CASE( AnimationCrowdTest, CookedVertexAnimationMatchesRuntimeBake )
     const string cookedPath = MeshVertexAnimation::makeCookedPath( meshPath, hashed_string( "Wave" ) );
     SW_EXPECT_TRUE( StringUtil::endsWith( cookedPath, "cube.wave.vat" ) );
     vector<uint8> cookedBytes;
-    SW_ASSERT_TRUE( ResourceUtil::readBinaryResource( cookedPath, cookedBytes ) );
+    SW_ASSERT_TRUE( ResourceIO::readBinaryResource( cookedPath, cookedBytes ) );
     AnimClip clip;
     SW_ASSERT_TRUE( clip.loadFromResource( FileUtil::joinPath( folder, "wave.animclip" ) ) );
     MeshVertexAnimation runtime;

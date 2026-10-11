@@ -30,7 +30,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {
@@ -351,7 +351,7 @@ namespace sw
         if ( _bSettingsLoaded == false )
         {
             _bSettingsLoaded = true;
-            if ( ResourceUtil::hasResource( NavMeshSettings::kResourcePath ) == false || _settings.loadFromResource( NavMeshSettings::kResourcePath ) == false )
+            if ( ResourceIO::hasResource( NavMeshSettings::kResourcePath ) == false || _settings.loadFromResource( NavMeshSettings::kResourcePath ) == false )
             {
                 _settings = NavMeshSettings{};
                 _settings.ensureDefaults();
@@ -512,7 +512,7 @@ namespace sw
         shared_ptr<const NavMeshAsset> pAsset     = _pCookedAsset;
         if ( pAsset == nullptr )
         {
-            if ( cookedPath.empty() || ResourceUtil::hasResource( cookedPath ) == false )
+            if ( cookedPath.empty() || ResourceIO::hasResource( cookedPath ) == false )
                 return false;
             shared_ptr<NavMeshAsset> pLoaded = make_shared<NavMeshAsset>();
             if ( pLoaded->loadFromResource( cookedPath ) == false )

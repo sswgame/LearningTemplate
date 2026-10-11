@@ -9,7 +9,7 @@
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/SceneNavigation.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 
@@ -83,7 +83,7 @@ namespace
 SW_TEST_CASE( NavMeshBenchTest, FullBakeOfTheShowcaseAndTheShooterArena )
 {
     using Internal = NavMeshBenchTestInternal;
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::vector<int64>    listSample;
     sw::NavMeshBakeStats stats;
     SW_ASSERT_TRUE( Internal::measureBake( Internal::kShowcasePath, listSample, stats ) );
@@ -100,7 +100,7 @@ SW_TEST_CASE( NavMeshBenchTest, FullBakeOfTheShowcaseAndTheShooterArena )
 SW_TEST_CASE( NavMeshBenchTest, ThousandQueriesOnTheShooterArena )
 {
     using Internal = NavMeshBenchTestInternal;
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::Scene scene{ "NavBenchQuery" };
     SW_ASSERT_TRUE( Internal::instantiate( scene, Internal::kArenaPath ) );
     sw::SceneNavigation& navigation = scene.getObjectManager()->getSceneNavigation();
@@ -154,7 +154,7 @@ SW_TEST_CASE( NavMeshBenchTest, ThousandQueriesOnTheShooterArena )
 SW_TEST_CASE( NavMeshBenchTest, CrowdUpdateWithHundredAndFiveHundredAgents )
 {
     using Internal = NavMeshBenchTestInternal;
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::Scene scene{ "NavBenchCrowd" };
     SW_ASSERT_TRUE( Internal::instantiate( scene, Internal::kArenaPath ) );
     sw::INavMesh* pNavMesh = scene.getObjectManager()->getSceneNavigation().ensureNavMesh( sw::hashed_string{} );

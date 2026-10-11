@@ -15,7 +15,7 @@
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/AnimationTestUtil.h"
 
@@ -236,7 +236,7 @@ SW_TEST_CASE( AnimationLODTest, BoneLODMasksInheritAndValidate )
  */
 SW_TEST_CASE( AnimationLODTest, AnimatorSkipsRemovedBoneTracks )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     // bone3 의 레퍼런스는 X 축 0.3 라디안이다 — 빠진 본이 "단위" 가 아니라 "레퍼런스" 로 남는지 가른다.
     Skeleton         skeleton;
     const quaternion referenceTilt = quaternion::makeFromAxisAngle( float3{ 1.0f, 0.0f, 0.0f }, 0.3f );
@@ -424,7 +424,7 @@ SW_TEST_CASE( AnimationLODTest, BudgetAllocatorThrottlesSmallUnits )
  */
 SW_TEST_CASE( AnimationLODTest, BoneLODLoadsBesideSkeletonPath )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     GameObjectManager      manager;
     GameObject*            pObject = manager.createGameObject( hashed_string( "Knight" ) );
     SkeletalMeshComponent* pUnit   = ( pObject != nullptr ) ? pObject->addComponent<SkeletalMeshComponent>() : nullptr;

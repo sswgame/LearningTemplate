@@ -7,7 +7,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/SceneNavigation.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneNavigationCooker.h"
@@ -34,7 +34,7 @@ namespace
 SW_TEST_CASE( NavMeshCookTest, CookedTilesMatchTheRuntimeBakeAndStaleOnesAreRejected )
 {
     using Internal = NavMeshCookTestInternal;
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::NavMeshAsset cooked;
     SW_ASSERT_TRUE( sw::SceneNavigationCooker::cookScene( Internal::kScenePath, cooked ) );
     SW_ASSERT_EQUAL( size_t{ 1 }, cooked.getEntries().size() );

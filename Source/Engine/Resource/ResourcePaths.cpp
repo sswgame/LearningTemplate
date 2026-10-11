@@ -1,19 +1,15 @@
 #include "pch.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
-#include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/Pack/ResourcePackManager.h"
 
 #include "sw/config/CookContract.gen.h"
 
@@ -21,7 +17,7 @@ namespace sw
 {
     namespace
     {
-        struct ResourceUtilInternal
+        struct ResourcePathsInternal
         {
             inline static mutex                         _s_pathCacheMutex{};
             inline static unordered_map<uint64, string> _s_mapResolvedPath{};
@@ -35,37 +31,6 @@ namespace sw
             inline static std::once_flag _s_initOnce{};
 
             /**
-             * @brief 상대 id 에 `..` 성분이 있으면 true 입니다 — 리소스 루트 밖으로 나가는 id 입니다.
-             * @details 거르지 않으면 `engine/../../x` 같은 id 가 도메인 루트에 붙어 루트 밖 파일을 읽는다(언리얼은 경로를 가상
-             *          경로 · 팩 마운트 지점 안으로 가둔다). 저장소의 데이터 · 코드에는 `..` 를 쓰는 id 가 없다.
-             */
-            static bool hasParentDirectoryComponent( string_view path )
-            {
-                size_t start{ 0 };
-                while ( start <= path.size() )
-                {
-                    size_t end = path.find_first_of( "/\\", start );
-                    if ( end == string_view::npos )
-                        end = path.size();
-                    if ( path.substr( start, end - start ) == ".." )
-                        return true;
-                    start = end + 1;
-                }
-                return false;
-            }
-
-            /** @brief 절대 경로가 리소스 루트 안이면 true 입니다(팩 전용 모드가 막아야 하는 낱개 에셋). */
-            static bool isInsideResourceRoot( string_view absolutePath )
-            {
-                const string& root = ResourceUtil::getRootFolderPath();
-                if ( root.empty() )
-                    return false;
-                const string normalized = FileUtil::normalizeSeparators( absolutePath );
-                return normalized.size() > root.size() && StringUtil::startsWith( normalized, root, true ) &&
-                       ( normalized[root.size()] == '/' || root.back() == '/' );
-            }
-
-            /**
              * @brief 전역 ID(`engine/` · `common/` · `editor/` · `game/<pack>/`)를 도메인 루트로 매핑합니다.
              * @param lowerRel normalizePath 한 상대 키
              * @param outRoot 도메인 절대 루트
@@ -77,7 +42,7 @@ namespace sw
                 outRoot.clear();
                 outKeyUnderRoot.clear();
 
-                const string& resourceRoot = ResourceUtil::getRootFolderPath();
+                const string& resourceRoot = ResourcePaths::getRootFolderPath();
                 if ( resourceRoot.empty() || lowerRel.empty() || FileUtil::isAbsolutePath( lowerRel ) )
                     return false;
 
@@ -174,96 +139,34 @@ namespace sw
                 }
             }
         };
-
-        /**
-         * @brief 리소스 하나를 찾아 읽습니다. **순서는 텍스트 · 바이너리가 같습니다.**
-         * @param readFromDisk 디스크 절대 경로에서 읽는 방법.
-         * @param readFromPack 마운트된 팩에서 읽는 방법(찾았으면 팩 경로를 `outPackPath` 에 담습니다).
-         * @details 순서는 넷입니다. (0) OS 절대 경로면 디스크에서 바로, (1) 낱개 파일 우선이 켜져
-         *          있으면 디스크, (2) 마운트된 팩, (3) 낱개 경로를 풀지 못한 경우의 마지막 폴백입니다.
-         *
-         *          `readTextResource` 와 `readBinaryResource` 가 이 순서 하나를 씁니다 — 두 벌이면 한쪽만 고쳐 텍스트와
-         *          바이너리가 다른 파일을 읽게 됩니다.
-         *
-         *          경로를 한 번만 풀고, 3단계는 **1단계가 경로를 풀지 못한 경우에만** 의미가 있습니다(같은 경로를 두 번 묻지 않는다).
-         */
-        template <typename DiskReadFn, typename PackReadFn>
-        [[nodiscard]] bool readResourceCommon( string_view relativePath, string* pOutAbsPath,
-                                               const DiskReadFn& readFromDisk, const PackReadFn& readFromPack )
-        {
-            if ( relativePath.empty() )
-                return false;
-            // 이 호스트가 읽지 않는 에셋 종류(전용 서버의 텍스처 · 셰이더 바이너리 · 오디오)는 없는 것으로 친다 — 서버 팩에는 들어 있지도 않다.
-            if ( ResourceUtil::isExcludedForHost( relativePath ) )
-                return false;
-
-            // 0. OS 절대 경로(임시 파일, 외부 세이브 등)면 디스크에서 바로 읽는다. 단, 팩 전용 모드(낱개 파일 금지 — 배포 구성)에서 리소스 루트
-            //    **안**을 가리키면 거절한다 — 절대 경로로 적기만 하면 팩 전용 모드를 지나 낱개 에셋을 읽게 된다.
-            if ( FileUtil::isAbsolutePath( relativePath ) )
-            {
-                if ( ResourceUtil::getPackManager().isAllowLooseFiles() == false && ResourceUtilInternal::isInsideResourceRoot( relativePath ) )
-                {
-                    SW_LOG_WARNING( "Refusing a loose read of '%#' — this build reads resources from packs only", relativePath );
-                    return false;
-                }
-                if ( FileUtil::isRegularFile( relativePath ) == false )
-                    return false;
-                if ( pOutAbsPath != nullptr )
-                    *pOutAbsPath = string( relativePath );
-                return readFromDisk( relativePath );
-            }
-
-            if ( ResourceUtilInternal::hasParentDirectoryComponent( relativePath ) )
-            {
-                SW_LOG_WARNING( "Refusing resource id '%#' — '..' would leave the resource root", relativePath );
-                return false;
-            }
-
-            ResourcePackManager& packManager = ResourceUtil::getPackManager();
-            const bool           bLooseFirst = packManager.isAllowLooseFiles();
-
-            // 낱개 경로는 **여기서 한 번만** 푼다.
-            string loosePath;
-            if ( bLooseFirst )
-            {
-                loosePath = ResourceUtil::getResourcePath( relativePath );
-                if ( loosePath.empty() == false && FileUtil::isRegularFile( loosePath ) )
-                {
-                    if ( pOutAbsPath != nullptr )
-                        *pOutAbsPath = loosePath;
-                    return readFromDisk( loosePath );
-                }
-            }
-
-            // 2. 마운트된 팩에서 O(1) 해시로 찾아 압축을 풀어 읽는다
-            const string normalizedKey = FileUtil::normalizePath( relativePath );
-            string       mountedPackPath;
-            if ( readFromPack( normalizedKey, mountedPackPath ) )
-            {
-                if ( pOutAbsPath != nullptr )
-                    *pOutAbsPath = "[" + FileUtil::getFileNamePart( mountedPackPath ) + "]:" + normalizedKey;
-                return true;
-            }
-
-            // 3. 낱개 경로를 **못 푼 경우에만** 상대 경로 그대로 마지막으로 본다.
-            //    풀렸는데 없었다면 위에서 이미 확인했으므로 다시 묻지 않는다.
-            if ( bLooseFirst && loosePath.empty() && FileUtil::isRegularFile( relativePath ) )
-            {
-                if ( pOutAbsPath != nullptr )
-                    *pOutAbsPath = string( relativePath );
-                return readFromDisk( relativePath );
-            }
-
-            return false;
-        }
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "ResourceUtil" );
+    SW_LOG_CALLER( "ResourcePaths" );
 
-    bool ResourceUtil::initialize()
+    /**
+     * @brief 상대 id 에 `..` 성분이 있으면 true 입니다 — 리소스 루트 밖으로 나가는 id 입니다.
+     * @details 거르지 않으면 `engine/../../x` 같은 id 가 도메인 루트에 붙어 루트 밖 파일을 읽는다(언리얼은 경로를 가상
+     *          경로 · 팩 마운트 지점 안으로 가둔다). 저장소의 데이터 · 코드에는 `..` 를 쓰는 id 가 없다.
+     */
+    bool ResourcePaths::hasParentDirectoryComponent( string_view path )
+    {
+        size_t start{ 0 };
+        while ( start <= path.size() )
+        {
+            size_t end = path.find_first_of( "/\\", start );
+            if ( end == string_view::npos )
+                end = path.size();
+            if ( path.substr( start, end - start ) == ".." )
+                return true;
+            start = end + 1;
+        }
+        return false;
+    }
+
+    bool ResourcePaths::initialize()
     {
         // `_s_bInitialize` 는 "시작했다" 가 아니라 **"성공했다"** 를 뜻한다.
         //
@@ -275,11 +178,11 @@ namespace sw
         //
         // `call_once` 는 콜러블이 **예외 없이 반환하면 완료로 표시**한다. 그래서 성패는 콜러블 안에서
         // 플래그에 남기고, 반환하는 값은 그 플래그를 읽는다. 본문을 그냥 감싸기만 하면 실패가 사라진다.
-        std::call_once( ResourceUtilInternal::_s_initOnce, []()
+        std::call_once( ResourcePathsInternal::_s_initOnce, []()
         {
             {
-                std::scoped_lock<mutex> lock( ResourceUtilInternal::_s_pathCacheMutex );
-                ResourceUtilInternal::_s_mapResolvedPath.clear();
+                std::scoped_lock<mutex> lock( ResourcePathsInternal::_s_pathCacheMutex );
+                ResourcePathsInternal::_s_mapResolvedPath.clear();
             }
 
             string currentPath = FileUtil::getCurrentPath();
@@ -324,7 +227,7 @@ namespace sw
         return _s_bInitialize.load( std::memory_order_acquire );
     }
 
-    string ResourceUtil::getResourcePath( string_view filePath, string_view folderName )
+    string ResourcePaths::getResourcePath( string_view filePath, string_view folderName )
     {
         if ( filePath.empty() )
             return {};
@@ -336,7 +239,7 @@ namespace sw
             return {};
         }
         // 루트 밖으로 나가는 id 는 풀지 않는다(`readResourceCommon` 과 같은 규칙).
-        if ( ResourceUtilInternal::hasParentDirectoryComponent( filePath ) )
+        if ( hasParentDirectoryComponent( filePath ) )
             return {};
 
         uint64 cacheKeyHash = StringUtil::computeHash64( filePath );
@@ -344,9 +247,9 @@ namespace sw
             cacheKeyHash = StringUtil::computeHash64( folderName, true, cacheKeyHash );
 
         {
-            std::scoped_lock<mutex> lock( ResourceUtilInternal::_s_pathCacheMutex );
-            auto                    it = ResourceUtilInternal::_s_mapResolvedPath.find( cacheKeyHash );
-            if ( it != ResourceUtilInternal::_s_mapResolvedPath.end() )
+            std::scoped_lock<mutex> lock( ResourcePathsInternal::_s_pathCacheMutex );
+            auto                    it = ResourcePathsInternal::_s_mapResolvedPath.find( cacheKeyHash );
+            if ( it != ResourcePathsInternal::_s_mapResolvedPath.end() )
                 return it->second;
         }
 
@@ -356,9 +259,9 @@ namespace sw
         string found;
         string domainRoot;
         string keyUnderRoot;
-        if ( ResourceUtilInternal::mapGlobalIDToRoot( lowerFile, domainRoot, keyUnderRoot ) )
+        if ( ResourcePathsInternal::mapGlobalIDToRoot( lowerFile, domainRoot, keyUnderRoot ) )
         {
-            found = ResourceUtilInternal::tryUnderRoot( domainRoot, keyUnderRoot, lowerFolder );
+            found = ResourcePathsInternal::tryUnderRoot( domainRoot, keyUnderRoot, lowerFolder );
 #if defined( SW_PLATFORM_LINUX )
             // 대소문자를 가리는 파일시스템: 소문자 키로 못 찾았으면 원래 표기로 다시 찾는다.
             if ( found.empty() && lowerFile != filePath )
@@ -368,16 +271,16 @@ namespace sw
                 const size_t slash  = FileUtil::normalizeSeparators( raw ).find( '/' );
                 if ( slash != string::npos )
                     rawKey = FileUtil::normalizeSeparators( raw ).substr( slash + 1 );
-                found = ResourceUtilInternal::tryUnderRoot( domainRoot, rawKey, folderName );
+                found = ResourcePathsInternal::tryUnderRoot( domainRoot, rawKey, folderName );
             }
 #endif
         }
         else
         {
-            found = ResourceUtilInternal::tryResolveAmong( _s_listResourceFolder, lowerFile, lowerFolder );
+            found = ResourcePathsInternal::tryResolveAmong( _s_listResourceFolder, lowerFile, lowerFolder );
 #if defined( SW_PLATFORM_LINUX )
             if ( found.empty() && ( lowerFile != filePath || ( folderName.empty() == false && lowerFolder != folderName ) ) )
-                found = ResourceUtilInternal::tryResolveAmong( _s_listResourceFolder, filePath, folderName );
+                found = ResourcePathsInternal::tryResolveAmong( _s_listResourceFolder, filePath, folderName );
 #endif
         }
 
@@ -385,14 +288,14 @@ namespace sw
         {
             // 캐시는 에셋 색인의 몫이다 — 부르는 쪽(스플래시 · 모듈 · 워커)의 태그가 아니라 Asset 으로 센다(재해시가 어디서 일어나든).
             SW_MEMORY_SCOPE( Asset );
-            std::scoped_lock<mutex> lock( ResourceUtilInternal::_s_pathCacheMutex );
-            ResourceUtilInternal::_s_mapResolvedPath.insert_or_assign( cacheKeyHash, found );
+            std::scoped_lock<mutex> lock( ResourcePathsInternal::_s_pathCacheMutex );
+            ResourcePathsInternal::_s_mapResolvedPath.insert_or_assign( cacheKeyHash, found );
         }
 
         return found;
     }
 
-    string ResourceUtil::getWritePath( string_view path )
+    string ResourcePaths::getWritePath( string_view path )
     {
         if ( FileUtil::isAbsolutePath( path ) )
             return FileUtil::normalizeSeparators( path );
@@ -413,7 +316,7 @@ namespace sw
         return result;
     }
 
-    string ResourceUtil::toResourceID( string_view path )
+    string ResourcePaths::toResourceID( string_view path )
     {
         if ( path.empty() )
             return {};
@@ -442,7 +345,7 @@ namespace sw
         return id;
     }
 
-    string ResourceUtil::makeAbsolutePath( string_view relativePath )
+    string ResourcePaths::makeAbsolutePath( string_view relativePath )
     {
         if ( relativePath.empty() )
             return {};
@@ -456,91 +359,13 @@ namespace sw
             const string lowerRel = FileUtil::normalizePath( relativePath );
             string       domainRoot;
             string       keyUnderRoot;
-            if ( ResourceUtilInternal::mapGlobalIDToRoot( lowerRel, domainRoot, keyUnderRoot ) )
+            if ( ResourcePathsInternal::mapGlobalIDToRoot( lowerRel, domainRoot, keyUnderRoot ) )
                 result = FileUtil::joinPath( domainRoot, keyUnderRoot );
         }
         return result;
     }
 
-    bool ResourceUtil::readTextResource( string_view relativePath, string& outText,
-                                         string* pOutAbsPath )
-    {
-        return readResourceCommon(
-            relativePath, pOutAbsPath,
-            [&outText]( string_view absPath )
-        { return FileUtil::readTextFile( absPath, outText ); },
-            [&outText]( string_view key, string& outPackPath )
-        { return getPackManager().readTextFile( key, outText, &outPackPath ); } );
-    }
-
-    bool ResourceUtil::readBinaryResource( string_view relativePath, vector<uint8>& outBytes )
-    {
-        return readResourceCommon(
-            relativePath, nullptr,
-            [&outBytes]( string_view absPath )
-        { return FileUtil::readFile( absPath, outBytes ); },
-            [&outBytes]( string_view key, string& )
-        { return getPackManager().readFile( key, outBytes ); } );
-    }
-
-    AsyncReadHandle ResourceUtil::readBinaryResourceAsync( string_view relativePath, AsyncIOPriority priority, const ResourceReadCompleteDelegate& onComplete )
-    {
-        AsyncFileIO&    io = engine::getAsyncFileIO();
-        AsyncReadHandle handle;
-        // 찾는 순서는 동기 읽기와 같은 함수 하나다 — 두 벌이면 한쪽만 고쳐 동기와 비동기가 다른 파일을 읽는다.
-        (void)readResourceCommon(
-            relativePath, nullptr,
-            [&io, &handle, priority, &onComplete]( string_view absPath )
-        {
-            handle = io.readFile( absPath, priority, SW_DELEGATE_LAMBDA( AsyncReadCompleteDelegate, [onComplete]( AsyncReadResult& result )
-            {
-                if ( onComplete.isBound() )
-                    onComplete( result.isSucceeded(), result._bytes );
-            } ) );
-            return handle.isValid();
-        },
-            [&io, &handle, priority, &onComplete]( string_view key, string& )
-        {
-            handle = getPackManager().readFileAsync( io, key, priority, onComplete );
-            return handle.isValid();
-        } );
-        return handle;
-    }
-
-    bool ResourceUtil::hasResource( string_view relativePath )
-    {
-        if ( relativePath.empty() || isExcludedForHost( relativePath ) )
-            return false;
-
-        // 0. OS 절대 경로면 디스크에서 바로 확인한다
-        // 판정은 `FileUtil::isAbsolutePath` 가 기준이다 — 손으로 적은 복사본을 두면 기준과 답이 갈린다.
-        if ( FileUtil::isAbsolutePath( relativePath ) )
-            return FileUtil::exists( relativePath );
-
-        const string         normalizedKey = FileUtil::normalizePath( relativePath );
-        ResourcePackManager& packManager   = getPackManager();
-
-        if ( packManager.hasFile( normalizedKey ) )
-            return true;
-
-        if ( packManager.isAllowLooseFiles() )
-        {
-            const string absPath = getResourcePath( relativePath );
-            if ( absPath.empty() == false && FileUtil::exists( absPath ) )
-                return true;
-
-            return FileUtil::exists( relativePath );
-        }
-
-        return false;
-    }
-
-    ResourcePackManager& ResourceUtil::getPackManager()
-    {
-        return engine::getAssetManager().getPackManager();
-    }
-
-    string ResourceUtil::getDomainFolderPath( string_view domainName, string_view subFolder )
+    string ResourcePaths::getDomainFolderPath( string_view domainName, string_view subFolder )
     {
         if ( _s_resourceRootFolderPath.empty() || domainName.empty() )
             return {};
@@ -559,17 +384,17 @@ namespace sw
         return {};
     }
 
-    const string& ResourceUtil::getRootFolderPath()
+    const string& ResourcePaths::getRootFolderPath()
     {
         return _s_resourceRootFolderPath;
     }
 
-    const string& ResourceUtil::getProjectFolderPath()
+    const string& ResourcePaths::getProjectFolderPath()
     {
         return _s_projectFolderPath;
     }
 
-    bool ResourceUtil::setSearchPriority( const vector<string>& listPriority )
+    bool ResourcePaths::setSearchPriority( const vector<string>& listPriority )
     {
         if ( listPriority.empty() )
             return false;
@@ -625,12 +450,12 @@ namespace sw
         return true;
     }
 
-    const vector<string>& ResourceUtil::getSearchPriority()
+    const vector<string>& ResourcePaths::getSearchPriority()
     {
         return _s_listSearchPriority;
     }
 
-    string ResourceUtil::exchangeRootFolderPath( string_view resourceRootFolderPath )
+    string ResourcePaths::exchangeRootFolderPath( string_view resourceRootFolderPath )
     {
         string previous           = _s_resourceRootFolderPath;
         _s_resourceRootFolderPath = FileUtil::normalizeSeparators( resourceRootFolderPath );
@@ -639,20 +464,20 @@ namespace sw
         return previous;
     }
 
-    const vector<string>& ResourceUtil::getDefaultSearchPriority()
+    const vector<string>& ResourcePaths::getDefaultSearchPriority()
     {
         static const vector<string> s_listDefaultPriority = EngineConfig{}._listResourcePriority;
         return s_listDefaultPriority;
     }
 
-    void ResourceUtil::clearPathCache()
+    void ResourcePaths::clearPathCache()
     {
-        std::scoped_lock<mutex> lock( ResourceUtilInternal::_s_pathCacheMutex );
+        std::scoped_lock<mutex> lock( ResourcePathsInternal::_s_pathCacheMutex );
         // `clear()` 는 버킷 · 밀집 배열을 남긴다 — 종료 끝에서도 부르므로 저장소까지 놓는다.
-        ResourceUtilInternal::_s_mapResolvedPath = unordered_map<uint64, string>{};
+        ResourcePathsInternal::_s_mapResolvedPath = unordered_map<uint64, string>{};
     }
 
-    string ResourceUtil::makeSaveFolderPath( string_view absoluteFolder )
+    string ResourcePaths::makeSaveFolderPath( string_view absoluteFolder )
     {
         const string folderNorm = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( absoluteFolder ) );
 
@@ -661,12 +486,12 @@ namespace sw
 
         for ( const string& root : _s_listResourceFolder )
         {
-            ResourceUtilInternal::updateLongestSaveRoot( folderNorm, root, physicalRoot, rootNorm );
+            ResourcePathsInternal::updateLongestSaveRoot( folderNorm, root, physicalRoot, rootNorm );
         }
-        ResourceUtilInternal::updateLongestSaveRoot( folderNorm, getDomainFolderPath( path::kGamePack ), physicalRoot, rootNorm );
-        ResourceUtilInternal::updateLongestSaveRoot( folderNorm, getDomainFolderPath( path::kEnginePack ), physicalRoot, rootNorm );
-        ResourceUtilInternal::updateLongestSaveRoot( folderNorm, getDomainFolderPath( path::kCommonPack ), physicalRoot, rootNorm );
-        ResourceUtilInternal::updateLongestSaveRoot( folderNorm, getDomainFolderPath( path::kEditorPack ), physicalRoot, rootNorm );
+        ResourcePathsInternal::updateLongestSaveRoot( folderNorm, getDomainFolderPath( path::kGamePack ), physicalRoot, rootNorm );
+        ResourcePathsInternal::updateLongestSaveRoot( folderNorm, getDomainFolderPath( path::kEnginePack ), physicalRoot, rootNorm );
+        ResourcePathsInternal::updateLongestSaveRoot( folderNorm, getDomainFolderPath( path::kCommonPack ), physicalRoot, rootNorm );
+        ResourcePathsInternal::updateLongestSaveRoot( folderNorm, getDomainFolderPath( path::kEditorPack ), physicalRoot, rootNorm );
 
         if ( physicalRoot.empty() )
             return FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( string{ absoluteFolder } ) );
@@ -685,7 +510,7 @@ namespace sw
         return result;
     }
 
-    string ResourceUtil::makeSavePath( string_view absoluteFolder, string_view fileName )
+    string ResourcePaths::makeSavePath( string_view absoluteFolder, string_view fileName )
     {
         string result = makeSaveFolderPath( absoluteFolder );
         if ( fileName.empty() == false )
@@ -699,7 +524,7 @@ namespace sw
         return result;
     }
 
-    string ResourceUtil::makeUniqueSavePath( string_view absoluteFolder, string_view fileName )
+    string ResourcePaths::makeUniqueSavePath( string_view absoluteFolder, string_view fileName )
     {
         // 반환은 `savePath` 하나로만 한다. 분기마다 다른 변수를 반환하면 NRVO 가 막힌다(-Wnrvo).
         // 그래서 `const` 도 붙이지 않는다(반환할 때 자동 이동이 막힌다).
@@ -728,21 +553,21 @@ namespace sw
         return savePath;
     }
 
-    atomic<bool> ResourceUtil::_s_bInitialize{ false };
+    atomic<bool> ResourcePaths::_s_bInitialize{ false };
 
-    string ResourceUtil::_s_projectFolderPath;
+    string ResourcePaths::_s_projectFolderPath;
 
-    string ResourceUtil::_s_resourceRootFolderPath;
+    string ResourcePaths::_s_resourceRootFolderPath;
 
-    vector<string> ResourceUtil::_s_listSearchPriority;
+    vector<string> ResourcePaths::_s_listSearchPriority;
 
-    vector<string> ResourceUtil::_s_listResourceFolder;
+    vector<string> ResourcePaths::_s_listResourceFolder;
 
-    vector<string> ResourceUtil::_s_listHostExcludedExtension;
+    vector<string> ResourcePaths::_s_listHostExcludedExtension;
 
-    vector<string> ResourceUtil::_s_listHostExcludedFolder;
+    vector<string> ResourcePaths::_s_listHostExcludedFolder;
 
-    void ResourceUtil::setHostTarget( string_view buildTargetName )
+    void ResourcePaths::setHostTarget( string_view buildTargetName )
     {
         _s_listHostExcludedExtension.clear();
         _s_listHostExcludedFolder.clear();
@@ -761,7 +586,7 @@ namespace sw
                          _s_listHostExcludedExtension.size(), _s_listHostExcludedFolder.size() );
     }
 
-    bool ResourceUtil::isExcludedForHost( string_view resourcePath )
+    bool ResourcePaths::isExcludedForHost( string_view resourcePath )
     {
         if ( _s_listHostExcludedExtension.empty() && _s_listHostExcludedFolder.empty() )
             return false;

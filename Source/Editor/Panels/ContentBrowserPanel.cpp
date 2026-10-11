@@ -30,7 +30,7 @@
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include <imgui.h>
 
@@ -113,7 +113,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( listArgument.size() != 1 || pContext == nullptr )
                     return false;
-                const string folderAbs = FileUtil::joinPath( ResourceUtil::getRootFolderPath(), FileUtil::normalizePath( listArgument[0] ) );
+                const string folderAbs = FileUtil::joinPath( ResourcePaths::getRootFolderPath(), FileUtil::normalizePath( listArgument[0] ) );
                 if ( FileUtil::isDirectory( folderAbs ) == false || pContext->getPanelManager().setPanelOpen( "content_browser", true ) == false )
                     return false;
                 ContentBrowserPanel* pPanel = static_cast<ContentBrowserPanel*>( pContext->getPanelManager().findPanel( "content_browser" ) );
@@ -443,7 +443,7 @@ namespace sw::editor
         // 지우기 전에 이것을 쓰는 곳을 보인다(언리얼 Delete Assets 대화상자의 참조 수와 같다).
         if ( _referenceIndex.isReady() )
         {
-            const uint32 referrerCount = _referenceIndex.countReferrerFiles( ResourceUtil::toResourceID( _pendingDeleteAbs ) );
+            const uint32 referrerCount = _referenceIndex.countReferrerFiles( ResourcePaths::toResourceID( _pendingDeleteAbs ) );
             if ( referrerCount > 0 )
                 ImGui::TextColored( ImVec4( 1.0f, 0.7f, 0.25f, 1.0f ), "%s Used by %u file(s). They will name a missing asset.", editoricon::kWarning, referrerCount );
             else
@@ -506,7 +506,7 @@ namespace sw::editor
             return;
         _referenceIndexSerial     = serial;
         _bReferenceIndexRequested = SW_TRUE;
-        _referenceIndexJob.request( ResourceUtil::getRootFolderPath() );
+        _referenceIndexJob.request( ResourcePaths::getRootFolderPath() );
     }
 
     void ContentBrowserPanel::selectAfterFileChange( string_view absolutePath )
@@ -517,7 +517,7 @@ namespace sw::editor
         _folderCache.clear();
         // 이 변경 전에 시작한 훑기는 옮기기가 고친 색인을 낡은 결과로 덮는다. 다시 요청해 그 세대의 결과를 버린다.
         if ( _referenceIndexJob.isPending() )
-            _referenceIndexJob.request( ResourceUtil::getRootFolderPath() );
+            _referenceIndexJob.request( ResourcePaths::getRootFolderPath() );
     }
 
     bool ContentBrowserPanel::createNewFolder()
@@ -600,7 +600,7 @@ namespace sw::editor
             return;
         string resourceID;
         if ( EditorWidgets::tryAcceptAssetPayload( resourceID ) )
-            (void)moveAssetToFolder( FileUtil::joinPath( ResourceUtil::getRootFolderPath(), resourceID ), folderAbs ); // 실패는 moveAsset 이 알린다
+            (void)moveAssetToFolder( FileUtil::joinPath( ResourcePaths::getRootFolderPath(), resourceID ), folderAbs ); // 실패는 moveAsset 이 알린다
         ImGui::EndDragDropTarget();
     }
 
@@ -664,7 +664,7 @@ namespace sw::editor
 
     void ContentBrowserPanel::showReferences( string_view absolutePath, bool bDependencies )
     {
-        _referenceQueryID            = ResourceUtil::toResourceID( absolutePath );
+        _referenceQueryID            = ResourcePaths::toResourceID( absolutePath );
         _bReferenceQueryDependencies = bDependencies ? SW_TRUE : SW_FALSE;
         _bOpenReferenceResults       = SW_TRUE;
         if ( bDependencies )
@@ -819,11 +819,11 @@ namespace sw::editor
         }
         const string& packRoot = GameConfig::getActive()._packRoot;
         if ( packRoot.empty() == false )
-            addRoot( packRoot, ResourceUtil::getDomainFolderPath( packRoot ) );
+            addRoot( packRoot, ResourcePaths::getDomainFolderPath( packRoot ) );
         if ( _bShowAllPacks == SW_TRUE || packRoot.empty() )
         {
             vector<string> listPackFolder;
-            (void)FileUtil::collectFolders( ResourceUtil::getDomainFolderPath( "game" ), listPackFolder, false ); // game/ 이 없으면 팩 루트가 없다
+            (void)FileUtil::collectFolders( ResourcePaths::getDomainFolderPath( "game" ), listPackFolder, false ); // game/ 이 없으면 팩 루트가 없다
             std::sort( listPackFolder.begin(), listPackFolder.end() );
             for ( const string& packFolder : listPackFolder )
             {
@@ -832,9 +832,9 @@ namespace sw::editor
                     addRoot( packName, packFolder );
             }
         }
-        addRoot( "engine", ResourceUtil::getDomainFolderPath( "engine" ) );
-        addRoot( "common", ResourceUtil::getDomainFolderPath( "common" ) );
-        addRoot( "editor", ResourceUtil::getDomainFolderPath( "editor" ) );
+        addRoot( "engine", ResourcePaths::getDomainFolderPath( "engine" ) );
+        addRoot( "common", ResourcePaths::getDomainFolderPath( "common" ) );
+        addRoot( "editor", ResourcePaths::getDomainFolderPath( "editor" ) );
 
         // 지금 폴더가 숨긴 팩 안이면 첫 루트로 간다.
         bool bSelectedIsUnderRoot = false;
@@ -1069,8 +1069,8 @@ namespace sw::editor
         for ( uint32 favIdx = 0; favIdx < favoriteCount; ++favIdx )
         {
             const string fullFavPath = kArrFavorites[favIdx]._bEngine
-                                         ? ResourceUtil::getDomainFolderPath( "engine", kArrFavorites[favIdx]._pRelPath )
-                                         : ResourceUtil::getDomainFolderPath( GameConfig::getActive()._packRoot, kArrFavorites[favIdx]._pRelPath );
+                                         ? ResourcePaths::getDomainFolderPath( "engine", kArrFavorites[favIdx]._pRelPath )
+                                         : ResourcePaths::getDomainFolderPath( GameConfig::getActive()._packRoot, kArrFavorites[favIdx]._pRelPath );
             const bool   bSelected   = FileUtil::pathsEqualNormalized( fullFavPath, _selectedFolderAbs );
 
             if ( ImGui::Selectable( kArrFavorites[favIdx]._pLabel, bSelected ) )
@@ -1121,7 +1121,7 @@ namespace sw::editor
         const bool opened = ImGui::TreeNodeEx( labelWithIcon.c_str(), flags );
         ImGui::PopStyleColor();
         if ( EditorSelfTestMarks::isEnabled() )
-            ContentBrowserPanelInternal::noteMark( "contentBrowser.folder.", ResourceUtil::toResourceID( absPath ) );
+            ContentBrowserPanelInternal::noteMark( "contentBrowser.folder.", ResourcePaths::toResourceID( absPath ) );
         acceptAssetDrop( absPath );
 
         if ( ImGui::IsItemClicked() && ImGui::IsItemToggledOpen() == false )
@@ -1437,7 +1437,7 @@ namespace sw::editor
             }
         }
 
-        // 탐색 · I/O 는 실제 파일 시스템의 대소문자를 쓰고, 저장 경로는 ResourceUtil::makeSavePath 가 상대 경로 조각을 소문자로 바꾼다.
+        // 탐색 · I/O 는 실제 파일 시스템의 대소문자를 쓰고, 저장 경로는 ResourcePaths::makeSavePath 가 상대 경로 조각을 소문자로 바꾼다.
         _selectedFolderAbs = normalizedPath;
         _listCrumb         = listCrumb;
         _selectedAssetAbs.clear();

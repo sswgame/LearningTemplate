@@ -6,7 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/EditorPaths.h"
 
 #include "Engine/Animation/AnimJSONUtil.h"
 #include "Engine/Animation/Codec/AnimCodec.h"
@@ -387,9 +387,9 @@ namespace sw::editor
 
     string ModelImportConfig::makeDefaultConfigPath()
     {
-        const string projectRoot = EditorUtil::getProjectRootPath();
+        const string projectRoot = EditorPaths::getProjectRootPath();
         if ( projectRoot.empty() )
             return {};
-        return FileUtil::joinPath( FileUtil::joinPath( projectRoot, config::kDirConfigEditor ), EditorUtil::kModelImportConfigFileName );
+        return FileUtil::joinPath( FileUtil::joinPath( projectRoot, config::kDirConfigEditor ), EditorPaths::kModelImportConfigFileName );
     }
 } // namespace sw::editor

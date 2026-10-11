@@ -8,7 +8,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/UI/Widgets/SliderWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 #include "Engine/UI/World/WidgetComponent.h"
@@ -70,7 +70,7 @@ namespace
  */
 SW_TEST_CASE( WorldUITest, HPBarFillsItsMarkerBarsAndTheTrailFollows )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::GameObjectManager manager;
     sw::GameObject*       pHero = spawnMarkedObject( manager, "Hero", sw::float3{ 2.0f, 3.0f, 0.5f } );
     SW_ASSERT_NOT_NULL( pHero );
@@ -133,7 +133,7 @@ SW_TEST_CASE( WorldUITest, HPBarFillsItsMarkerBarsAndTheTrailFollows )
  */
 SW_TEST_CASE( WorldUITest, DamageNumberShowsItsValueAsText )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::GameObjectManager manager;
     sw::GameObject*       pHit = spawnMarkedObject( manager, "Hit", sw::float3{ 0.0f, 1.0f, 0.0f } );
     SW_ASSERT_NOT_NULL( pHit );
@@ -172,7 +172,7 @@ SW_TEST_CASE( WorldUITest, DamageNumberShowsItsValueAsText )
  */
 SW_TEST_CASE( WorldUITest, SpawnedDamageNumberCarriesItsMarker )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::GameObjectManager manager;
     manager.beginPlay();
     sw::DamageNumberComponent::spawnNumber( manager, sw::float3{ 1.0f, 2.0f, 3.0f }, 42 );
@@ -198,7 +198,7 @@ SW_TEST_CASE( WorldUITest, SpawnedDamageNumberCarriesItsMarker )
  */
 SW_TEST_CASE( WorldUITest, EffectFadesTheSpritesOfItsObject )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::GameObjectManager manager;
     sw::GameObject*       pSpark = manager.createGameObject( sw::hashed_string( "Spark" ) );
     SW_ASSERT_NOT_NULL( pSpark );
@@ -232,7 +232,7 @@ SW_TEST_CASE( WorldUITest, EffectFadesTheSpritesOfItsObject )
  */
 SW_TEST_CASE( WorldUITest, EffectResumesItsFadeAfterTheStateIsReadAgain )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::GameObjectManager manager;
     sw::GameObject*       pSpark = manager.createGameObject( sw::hashed_string( "Spark" ) );
     SW_ASSERT_NOT_NULL( pSpark );
@@ -269,7 +269,7 @@ SW_TEST_CASE( WorldUITest, EffectResumesItsFadeAfterTheStateIsReadAgain )
  */
 SW_TEST_CASE( WorldUITest, EffectIsDestroyedTheTickItsTimeRunsOut )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::GameObjectManager manager;
     sw::GameObject*       pSpark = manager.createGameObject( sw::hashed_string( "Spark" ) );
     SW_ASSERT_NOT_NULL( pSpark );
@@ -292,7 +292,7 @@ SW_TEST_CASE( WorldUITest, EffectIsDestroyedTheTickItsTimeRunsOut )
  */
 SW_TEST_CASE( WorldUITest, DamageNumberKeepsItsLifeAfterTheStateIsReadAgain )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::GameObjectManager manager;
     sw::GameObject*       pHit = spawnMarkedObject( manager, "Hit", sw::float3{ 0.0f, 1.0f, 0.0f } );
     SW_ASSERT_NOT_NULL( pHit );
@@ -326,7 +326,7 @@ SW_TEST_CASE( WorldUITest, DamageNumberKeepsItsLifeAfterTheStateIsReadAgain )
  */
 SW_TEST_CASE( WorldUITest, DamageNumberStyleChangeRepaints )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::GameObjectManager manager;
     sw::GameObject*       pHit = spawnMarkedObject( manager, "Hit", sw::float3{ 0.0f, 1.0f, 0.0f } );
     SW_ASSERT_NOT_NULL( pHit );

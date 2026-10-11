@@ -238,7 +238,7 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         page="", pathPattern="Saved/Editor/*", layer=kLayerEditor, fileFormat="ini · json · xml",
         reader="ImGui · `EditorDockLayout` · `EditorLayoutStore` · 노드 캔버스 · 도구 문서 임시본 · gv 프리셋(`GlobalVariablePresets/<팩>/`)",
         readWhen="에디터가 쓰고 읽는다", shipping="없음", bCommitted=False, bOutsideRepo=True, ownerDoc="Source/Editor/README.md",
-        note="앱이 쓰는 에디터 상태 — `EditorUtil::getEditorStateDirectory`(git 무시)"),
+        note="앱이 쓰는 에디터 상태 — `EditorPaths::getEditorStateDirectory`(git 무시)"),
 )
 
 #: `Config/` 아래인데 설정이 아닌 파일 — 대조에서 뺀다.

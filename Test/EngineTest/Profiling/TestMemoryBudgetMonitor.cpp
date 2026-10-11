@@ -8,7 +8,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Profiling/MemoryBudgetMonitor.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -65,7 +65,7 @@ SW_TEST_CASE( MemoryBudgetMonitorTest, RejectsMalformedBudgetsWithoutApplyingAny
  */
 SW_TEST_CASE( MemoryBudgetMonitorTest, RepositoryBudgetFileIsValid )
 {
-    const sw::string path = sw::FileUtil::joinPath( sw::ResourceUtil::getProjectFolderPath(), sw::MemoryBudgetMonitor::kBudgetFile );
+    const sw::string path = sw::FileUtil::joinPath( sw::ResourcePaths::getProjectFolderPath(), sw::MemoryBudgetMonitor::kBudgetFile );
     sw::string       text;
     SW_ASSERT_TRUE_MSG( sw::FileUtil::readTextFile( path, text ), path.c_str() );
 

@@ -10,7 +10,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorInspectorCommands.h"
-#include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -28,7 +28,8 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Sequencer/SequenceAsset.h"
@@ -51,9 +52,9 @@ namespace sw::editor
             const utf8* _pDefaultFileName; ///< 경로가 비었을 때 여는 기본 파일(`Saved/Editor` 아래 이름). nullptr 이면 기본 문서가 없다
         };
 
-        constexpr ToolDocumentDesc kAnimGraphDocument{ "animation graph", EditorUtil::kAnimGraphDocumentFileName };
-        constexpr ToolDocumentDesc kDialogueGraphDocument{ "dialogue graph", EditorUtil::kDialogueGraphDocumentFileName };
-        constexpr ToolDocumentDesc kSpriteClipDocument{ "sprite clip", EditorUtil::kSpriteClipDocumentFileName };
+        constexpr ToolDocumentDesc kAnimGraphDocument{ "animation graph", EditorPaths::kAnimGraphDocumentFileName };
+        constexpr ToolDocumentDesc kDialogueGraphDocument{ "dialogue graph", EditorPaths::kDialogueGraphDocumentFileName };
+        constexpr ToolDocumentDesc kSpriteClipDocument{ "sprite clip", EditorPaths::kSpriteClipDocumentFileName };
         constexpr ToolDocumentDesc kTileMapDocument{ "tile map", nullptr };
         constexpr ToolDocumentDesc kSequenceDocument{ "sequence", nullptr };
 
@@ -63,7 +64,7 @@ namespace sw::editor
             {
                 if ( path.empty() )
                     return {};
-                string absPath = ResourceUtil::getResourcePath( path );
+                string absPath = ResourcePaths::getResourcePath( path );
                 if ( absPath.empty() )
                     absPath = string{ path };
                 return absPath;
@@ -80,7 +81,7 @@ namespace sw::editor
                     return resolveExistingOrRelativePath( path );
                 if ( desc._pDefaultFileName == nullptr )
                     return {};
-                return EditorUtil::resolveEditorStateFile( desc._pDefaultFileName );
+                return EditorPaths::resolveEditorStateFile( desc._pDefaultFileName );
             }
 
             template <typename TAsset>
@@ -111,7 +112,7 @@ namespace sw::editor
             static ToolAssetLoadResult loadToolDocument( const ToolDocumentDesc& desc, TAsset& outData, string_view path, string* pOutStatus )
             {
                 const string resolved = resolveDocumentPath( desc, path );
-                if ( resolved.empty() || ResourceUtil::hasResource( resolved ) == false )
+                if ( resolved.empty() || ResourceIO::hasResource( resolved ) == false )
                 {
                     if ( pOutStatus != nullptr )
                         *pOutStatus = resolved.empty() ? ( string( "No " ) + desc._pLabel + " file yet" ) : ( "No file yet: " + makeShownPath( path, resolved ) );

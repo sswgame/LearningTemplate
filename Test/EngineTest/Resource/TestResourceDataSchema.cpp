@@ -46,7 +46,8 @@
 #include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Sequencer/SequenceAsset.h"
@@ -298,7 +299,7 @@ namespace
         [[nodiscard]] static bool loadLocalizationDocument( const sw::string& resourceID )
         {
             sw::string text;
-            if ( sw::ResourceUtil::readTextResource( resourceID, text ) == false )
+            if ( sw::ResourceIO::readTextResource( resourceID, text ) == false )
                 return false;
             TDocument  document;
             sw::string error;
@@ -347,7 +348,7 @@ namespace
         {
             sw::JSONDocument document;
             // models_raw/ 는 팩에 실리지 않아 Shipping 에서는 리소스 id 로 못 찾는다 — 임포터처럼 원본 트리에서 파일로 읽는다.
-            if ( document.loadFile( sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), resourceID ) ) == false )
+            if ( document.loadFile( sw::FileUtil::joinPath( sw::ResourcePaths::getRootFolderPath(), resourceID ) ) == false )
                 return false;
             const sw::JSONValue root = document.getRoot();
             if ( sw::AnimJSONUtil::hasOnlyKnownKeys( root, { "clips" }, resourceID ) == false || root.get( "clips" ).isObject() == false )
@@ -432,7 +433,7 @@ namespace
             sw::string importedPath;
             sw::string siblingPath;
             sw::SkeletonBoneLOD::makeSkeletonCandidatePaths( resourceID, importedPath, siblingPath );
-            const sw::string&             skeletonPath = sw::ResourceUtil::hasResource( importedPath ) ? importedPath : siblingPath;
+            const sw::string&             skeletonPath = sw::ResourceIO::hasResource( importedPath ) ? importedPath : siblingPath;
             sw::SkeletonBoneLOD           boneLOD;
             sw::Skeleton                  skeleton;
             sw::vector<sw::vector<uint8>> listMask;
@@ -700,8 +701,8 @@ namespace
  */
 SW_TEST_CASE( ResourceDataSchemaTest, EveryResourceDataFileLoadsWithoutUnknownNames )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
-    const sw::string& resourceRoot = sw::ResourceUtil::getRootFolderPath();
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    const sw::string& resourceRoot = sw::ResourcePaths::getRootFolderPath();
     SW_ASSERT_FALSE( resourceRoot.empty() );
 
     sw::vector<sw::string> listFilePath;
@@ -718,7 +719,7 @@ SW_TEST_CASE( ResourceDataSchemaTest, EveryResourceDataFileLoadsWithoutUnknownNa
     uint32 loadedCount{ 0 };
     for ( const sw::string& filePath : listFilePath )
     {
-        const sw::string resourceID = sw::ResourceUtil::toResourceID( filePath );
+        const sw::string resourceID = sw::ResourcePaths::toResourceID( filePath );
         if ( ResourceDataSchemaInternal::isDataFile( resourceID ) == false )
             continue;
 

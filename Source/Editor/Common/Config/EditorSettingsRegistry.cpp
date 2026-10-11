@@ -4,7 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 
-#include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/EditorPaths.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
@@ -172,7 +172,7 @@ namespace sw::editor
 
     string EditorPreferencesStore::getDefaultFilePath()
     {
-        return EditorUtil::resolveEditorStateFile( kFileName );
+        return EditorPaths::resolveEditorStateFile( kFileName );
     }
 
     const EditorSettingsRegistration* findSettingsRegistration( const TypeInfo* pType )

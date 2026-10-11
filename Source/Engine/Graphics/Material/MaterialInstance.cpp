@@ -147,7 +147,7 @@ namespace sw
 
     bool MaterialInstance::saveToFile( string_view assetRelativePath ) const
     {
-        string absPath = ResourceUtil::getResourcePath( assetRelativePath );
+        string absPath = ResourcePaths::getResourcePath( assetRelativePath );
         if ( absPath.empty() )
             absPath = assetRelativePath;
 

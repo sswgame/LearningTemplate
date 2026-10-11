@@ -13,7 +13,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/SceneManager.h"
 
 #include "TestFramework/TestFramework.h"
@@ -241,7 +241,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, MeshBlendModeSurvivesXML )
  */
 SW_TEST_CASE( ObjectStateRoundTripTest, MeshMaterialReferenceSurvivesXML )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     constexpr const utf8* kPath = "engine/materials/benchtextured.material";
     sw::MaterialCache&    cache = sw::engine::getAssetManager().getMaterialCache();
     SW_ASSERT_TRUE_MSG( cache.isCached( kPath ) == false, "다른 시험이 이 머티리얼을 잡고 있다 — 참조 검사가 비었다" );
@@ -284,7 +284,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, MeshMaterialReferenceSurvivesXML )
  */
 SW_TEST_CASE( ObjectStateRoundTripTest, LoadedMeshResolvesItsRenderAssetsWithoutPlay )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::GameObjectManager manager; // 시작하지 않은 월드(편집 중)
     sw::GameObject*       pSource = manager.createGameObject( sw::hashed_string( "Statue" ) );
     sw::MeshComponent*    pMesh   = pSource->addComponent<sw::MeshComponent>();

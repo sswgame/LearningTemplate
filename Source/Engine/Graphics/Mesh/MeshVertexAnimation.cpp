@@ -14,7 +14,7 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {
@@ -179,7 +179,7 @@ namespace sw
     bool MeshVertexAnimation::loadFromResource( string_view path )
     {
         vector<uint8> bytes;
-        if ( ResourceUtil::readBinaryResource( path, bytes ) == false )
+        if ( ResourceIO::readBinaryResource( path, bytes ) == false )
         {
             SW_LOG_ERROR( "Vertex animation '%#' could not be read", path );
             *this = MeshVertexAnimation{};

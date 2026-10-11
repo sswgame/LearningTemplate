@@ -6,11 +6,11 @@
 #include "Core/File/FileUtil.h"
 
 #include "Editor/Common/Config/EditorToolDefaults.h"
-#include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Text/SystemFontLocator.h"
 
 #include <imgui.h>
@@ -36,19 +36,19 @@ namespace sw::editor
                 if ( StringUtil::isNullOrEmpty( pFileName ) )
                     return {};
 
-                const string editorRoot = ResourceUtil::getDomainFolderPath( path::kEditorPack );
+                const string editorRoot = ResourcePaths::getDomainFolderPath( path::kEditorPack );
                 if ( editorRoot.empty() == false )
                 {
-                    const string candidate = FileUtil::joinPath( FileUtil::joinPath( editorRoot, editor::EditorUtil::kFontsFolderName ), pFileName );
+                    const string candidate = FileUtil::joinPath( FileUtil::joinPath( editorRoot, editor::EditorPaths::kFontsFolderName ), pFileName );
                     if ( FileUtil::isRegularFile( candidate ) )
                         return candidate;
                 }
 
-                const string& resourceRoot = ResourceUtil::getRootFolderPath();
+                const string& resourceRoot = ResourcePaths::getRootFolderPath();
                 if ( resourceRoot.empty() == false )
                 {
                     const string candidate = FileUtil::joinPath(
-                        FileUtil::joinPath( FileUtil::joinPath( resourceRoot, path::kEditorPack ), editor::EditorUtil::kFontsFolderName ), pFileName );
+                        FileUtil::joinPath( FileUtil::joinPath( resourceRoot, path::kEditorPack ), editor::EditorPaths::kFontsFolderName ), pFileName );
                     if ( FileUtil::isRegularFile( candidate ) )
                         return candidate;
                 }
@@ -145,10 +145,10 @@ namespace sw::editor
         {
             // ImWchar 가 16 비트일 때만 헤더의 범위 배열을 그대로 넘길 수 있다(IMGUI_USE_WCHAR32 를 켜면 이 단언이 알려 준다).
             static_assert( sizeof( ImWchar ) == sizeof( editoricon::kArrGlyphRange[0] ), "editor icon glyph range must match ImWchar" );
-            const string iconPath = EditorFontSetupInternal::resolveFontFile( EditorUtil::kIconFontFileName );
+            const string iconPath = EditorFontSetupInternal::resolveFontFile( EditorPaths::kIconFontFileName );
             if ( iconPath.empty() )
             {
-                SW_LOG_ERROR( "Editor icon font '%#' not found under editor/fonts - icons render as empty boxes", EditorUtil::kIconFontFileName );
+                SW_LOG_ERROR( "Editor icon font '%#' not found under editor/fonts - icons render as empty boxes", EditorPaths::kIconFontFileName );
             }
             else
             {

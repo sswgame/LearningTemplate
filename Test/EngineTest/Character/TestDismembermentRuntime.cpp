@@ -16,7 +16,7 @@
 #include "Engine/Object/GameObject/ScenePhysics.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Physics/IPhysicsScene.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/AnimationTestUtil.h"
 
@@ -87,7 +87,7 @@ namespace
 SW_TEST_CASE( DismembermentRuntimeTest, FatalHeadHitSeversAndSpawnsPhysicsPiece )
 {
     using Internal = TestDismembermentRuntimeInternal;
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     GameObjectManager   manager;
     GameObject*         pFloorObject = manager.createGameObject( hashed_string( "Floor" ) );
     RigidBodyComponent* pFloor       = pFloorObject->addComponent<RigidBodyComponent>();

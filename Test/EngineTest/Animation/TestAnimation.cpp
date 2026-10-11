@@ -15,7 +15,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/AnimationTestUtil.h"
 
@@ -437,7 +437,7 @@ SW_TEST_CASE( AnimationTest, SpriteAnimatorReopensItsGraphWhenThePathChanges )
  */
 SW_TEST_CASE( AnimationTest, SpriteAnimatorTakesFrameCountAndTimingFromTheClip )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const string clipPath = test::makeTempPath( "hero.sprite.json" );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( clipPath, R"({
   "atlas": "engine/textures/test/quadrants.dds",
@@ -516,7 +516,7 @@ SW_TEST_CASE( AnimationTest, SpriteAnimatorTakesFrameCountAndTimingFromTheClip )
  */
 SW_TEST_CASE( AnimationTest, SpriteAnimatorAppliesClipTransformKeys )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const string clipPath = test::makeTempPath( "keyed.sprite.json" );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( clipPath, R"({
   "atlas": "engine/textures/test/quadrants.dds",

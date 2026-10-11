@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/EditorPaths.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -132,6 +132,6 @@ namespace sw::editor
 
     string EditorShortcutOverrides::getDefaultFilePath()
     {
-        return EditorUtil::resolveEditorStateFile( kFileName );
+        return EditorPaths::resolveEditorStateFile( kFileName );
     }
 } // namespace sw::editor

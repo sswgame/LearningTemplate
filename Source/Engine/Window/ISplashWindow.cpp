@@ -6,7 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Resource/Image/DDSLoader.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Window/Linux/X11SplashWindow.h"
 #include "Engine/Window/Windows/Win32SplashWindow.h"
 

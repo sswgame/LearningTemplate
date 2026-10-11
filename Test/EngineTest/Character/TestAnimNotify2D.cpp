@@ -14,7 +14,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
 
@@ -75,7 +75,7 @@ namespace
  */
 SW_TEST_CASE( AnimNotify2DTest, SpriteClipRangeCarriesNotifies )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     SpriteClipAsset clip;
     clip._listFrame.resize( 6 );
     SpriteClipAnimation attack;
@@ -107,7 +107,7 @@ SW_TEST_CASE( AnimNotify2DTest, SpriteClipRangeCarriesNotifies )
  */
 SW_TEST_CASE( AnimNotify2DTest, SpriteNotifiesDriveFootstepAndHitWindowIn2D )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     SpriteClipAsset clip;
     clip._listFrame.resize( 4 );
     for ( SpriteClipFrame& frame : clip._listFrame )

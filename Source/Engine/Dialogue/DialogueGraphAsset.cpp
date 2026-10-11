@@ -9,7 +9,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/TextGatherer.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw

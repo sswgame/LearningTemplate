@@ -23,7 +23,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Renderer/Light/GPULightBuffer.h"
 #include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneDocument.h"
@@ -480,7 +480,7 @@ SW_TEST_CASE( SceneTest, PrefabGuidRoundtripAndResolve )
  */
 SW_TEST_CASE( SceneTest, EditorTestSceneResolvesMovedPrefabByGuid )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::SceneDocument doc{};
     SW_ASSERT_TRUE( doc.load( "game/empty/maps/editortest.scene.xml" ) );
 
@@ -1406,7 +1406,7 @@ SW_TEST_CASE( SceneTest, ChildOfAMissingPrefabEntityKeepsItsParentReference )
  */
 SW_TEST_CASE( SceneTest, InitializedSceneBindsSavedMeshMaterials )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     constexpr const utf8* kPath = "engine/materials/benchtextured.material";
 
     sw::SceneManager manager;
@@ -1536,7 +1536,7 @@ SW_TEST_CASE( SceneTest, PersistentRootsCarryIntoTheNextScene )
  */
 SW_TEST_CASE( SceneTest, PrefabInstanceWithSavedStateIsBuiltOnce )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     const sw::string prefabPath = test::makeTempPath( "lifecycle.prefab.xml" );
     sw::string       savedState;
     {
@@ -1791,9 +1791,9 @@ SW_TEST_CASE( SceneTest, ComponentNameSurvivesSceneFilesAndCooking )
  */
 SW_TEST_CASE( SceneTest, RepositoryScenesAndPrefabsKeepComponentNames )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::vector<sw::string> listFile;
-    SW_ASSERT_TRUE( sw::FileUtil::collectFiles( sw::ResourceUtil::getRootFolderPath(), "", listFile, true ) );
+    SW_ASSERT_TRUE( sw::FileUtil::collectFiles( sw::ResourcePaths::getRootFolderPath(), "", listFile, true ) );
 
     sw::SceneManager manager;
     SW_ASSERT_TRUE( manager.initialize() );

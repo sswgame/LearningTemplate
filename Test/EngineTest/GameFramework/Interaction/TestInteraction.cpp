@@ -14,7 +14,7 @@
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/Cache/IAssetCache.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickCircuitComponent.h"
@@ -358,7 +358,7 @@ SW_TEST_CASE( InteractionTest, GrabFallbackAttachesAndReleases )
  */
 SW_TEST_CASE( InteractionTest, CatalogReadsStepsTagsAndSlots )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     InteractionCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromResource( InteractionCatalog::kDefaultPath ) );
     const InteractionDef* pCraft = catalog.findInteraction( "Craft" );
@@ -418,7 +418,7 @@ SW_TEST_CASE( InteractionTest, BeginningInteractionSetsAlignmentWarpTarget )
  */
 SW_TEST_CASE( InteractionTest, EditedCatalogReachesComponentsThroughTheAssetCacheRegistry )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const string path = FileUtil::joinPath( test::makeTempPath( "catalogreload" ), "edited.interactions.xml" );
     FileUtil::ensureParentDirectoryExists( path );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( path, R"(<Interactions><Interaction id="Open" mode="Press" maxDistance="2"/></Interactions>)" ) );
@@ -464,7 +464,7 @@ SW_TEST_CASE( InteractionTest, EditedCatalogReachesComponentsThroughTheAssetCach
  */
 SW_TEST_CASE( InteractionTest, EditedCatalogReachesSmartObjectSlots )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const string path = FileUtil::joinPath( test::makeTempPath( "smartreload" ), "bench.interactions.xml" );
     FileUtil::ensureParentDirectoryExists( path );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( path, R"(<Interactions><SmartObject id="Bench"><Slot id="Left" offset="-0.5,0,0" tags="Activity.Sit"/></SmartObject></Interactions>)" ) );

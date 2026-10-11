@@ -19,7 +19,7 @@
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Object/Component/SceneTransformStorage.h"
 #include "Engine/Resource/AssetLoadProfiler.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 namespace sw
 {
@@ -100,7 +100,7 @@ namespace sw
 
         // 리소스 루트는 **로거 · 크래시 핸들러 다음**에 찾는다. 루트를 찾지 못했을 때의 진단(`RootFolder` 로그와 assert 메시지)이
         // 로거에 남아야 한다. `initialize()` 는 once_flag 라 두 번째 호출은 아무것도 다시 찍지 않으므로 **첫 호출이 로거 뒤에 와야** 한다.
-        if ( ResourceUtil::initialize() == false )
+        if ( ResourcePaths::initialize() == false )
         {
             SW_LOG_ERROR( "리소스 루트를 찾지 못했습니다 — Resource/ 가 있는 위치에서 실행하십시오." );
             return false;
@@ -153,7 +153,7 @@ namespace sw
         SceneTransformStorage& transformStorage = SceneTransformStorage::get();
         if ( transformStorage.releaseStorage() == false )
             SW_LOG_WARNING( "Scene transform storage still has %# live slots at shutdown - a scene component leaked", transformStorage.getLiveSlotCount() );
-        ResourceUtil::clearPathCache();
+        ResourcePaths::clearPathCache();
         AssetLoadProfiler::get().releaseStorage();
         if ( RHIRenderResource::releaseRegistryStorage() == false )
             SW_LOG_WARNING( "RHI render resources are still registered at shutdown - a mesh, texture or material leaked" );

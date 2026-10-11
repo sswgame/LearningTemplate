@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/AppearanceTestFixture.h"
 
@@ -701,7 +701,7 @@ SW_TEST_CASE( AppearanceTest, StateReresolvesOnlyWhenARevisionChanges )
  */
 SW_TEST_CASE( AppearanceTest, ShooterSampleDataResolves )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     ItemCatalog items;
     SW_ASSERT_TRUE( items.loadFromResource( "game/shooter3d/data/items.xml" ) );
     AppearanceDatabase database;

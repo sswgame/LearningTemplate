@@ -12,7 +12,8 @@
 
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Resource/AssetDatabase.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Common/PlatformOsHeaders.h"
@@ -52,7 +53,7 @@ namespace sw::editor
                     {
                         outStem   = "new_material";
                         outSuffix = ".material";
-                        return ResourceUtil::readTextResource( kMaterialTemplatePath, outText );
+                        return ResourceIO::readTextResource( kMaterialTemplatePath, outText );
                     }
                     case EditorNewAssetKind::Scene:
                     {
@@ -181,7 +182,7 @@ namespace sw::editor
         }
         if ( FileUtil::writeTextFile( outAssetAbs, text ) )
         {
-            SW_LOG_INFO( "Created '%#'", ResourceUtil::toResourceID( outAssetAbs ) );
+            SW_LOG_INFO( "Created '%#'", ResourcePaths::toResourceID( outAssetAbs ) );
             return true;
         }
         SW_LOG_ERROR( "Could not write the new asset '%#'", outAssetAbs );
@@ -202,8 +203,8 @@ namespace sw::editor
         outFixedFileCount        = 0;
         const string source      = FileUtil::normalizeSeparators( sourceAbs );
         const string destination = FileUtil::normalizeSeparators( destinationAbs );
-        const string oldID       = ResourceUtil::toResourceID( source );
-        const string newID       = ResourceUtil::toResourceID( destination );
+        const string oldID       = ResourcePaths::toResourceID( source );
+        const string newID       = ResourcePaths::toResourceID( destination );
         if ( oldID.empty() || newID.empty() || oldID == newID )
             return false;
         if ( isValidAssetName( FileUtil::getFileNamePart( destination ) ) == false )
@@ -240,7 +241,7 @@ namespace sw::editor
             }
         }
 
-        const string& resourceRoot = ResourceUtil::getRootFolderPath();
+        const string& resourceRoot = ResourcePaths::getRootFolderPath();
         inoutIndex.refreshFile( resourceRoot, oldID );
         inoutIndex.refreshFile( resourceRoot, newID );
 
@@ -298,7 +299,7 @@ namespace sw::editor
         const int32 result = SHFileOperationW( &operation );
         if ( result == 0 && operation.fAnyOperationsAborted == FALSE )
         {
-            SW_LOG_INFO( "Moved '%#' to the recycle bin", ResourceUtil::toResourceID( assetPath ) );
+            SW_LOG_INFO( "Moved '%#' to the recycle bin", ResourcePaths::toResourceID( assetPath ) );
             return true;
         }
         SW_LOG_ERROR( "Could not move '%#' to the recycle bin (code %#) - it is kept", assetPath, result );

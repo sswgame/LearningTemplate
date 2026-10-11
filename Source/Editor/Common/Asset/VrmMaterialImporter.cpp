@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -577,7 +577,7 @@ namespace sw::editor
     {
         using Internal = VrmMaterialImporterInternal;
         string templateText;
-        if ( ResourceUtil::readTextResource( Internal::kToonMaterialTemplate, templateText ) == false )
+        if ( ResourceIO::readTextResource( Internal::kToonMaterialTemplate, templateText ) == false )
             return {};
         XMLDocument document;
         if ( document.parse( templateText ) == false )

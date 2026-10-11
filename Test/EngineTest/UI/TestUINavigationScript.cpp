@@ -11,7 +11,7 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/Virtual/VirtualInputScript.h"
 #include "Engine/Reflection/ReflectionCast.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/UI/Automation/UIAutomationSteps.h"
 #include "Engine/UI/Base/PanelWidget.h"
 #include "Engine/UI/Base/UINavigationSolver.h"
@@ -266,7 +266,7 @@ SW_TEST_CASE( UINavigationScriptTest, ModalKeepsFocusInsideAndReturnsOnCancel )
  */
 SW_TEST_CASE( UINavigationScriptTest, EveryEngineDocumentIsReachableByGamepad )
 {
-    const sw::string directory = sw::ResourceUtil::getDomainFolderPath( "engine", "ui" );
+    const sw::string directory = sw::ResourcePaths::getDomainFolderPath( "engine", "ui" );
     SW_ASSERT_TRUE_MSG( directory.empty() == false, "engine/ui folder not found" );
     sw::vector<sw::string> listPath;
     SW_ASSERT_TRUE( sw::FileUtil::collectFiles( directory, ".xml", listPath, false ) );

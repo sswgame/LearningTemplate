@@ -6,11 +6,11 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Config/EditorToolDefaults.h"
-#include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -33,7 +33,7 @@ namespace sw::editor
     {
         shutdown();
 
-        const string configFolder = FileUtil::joinPath( ResourceUtil::getProjectFolderPath(), config::kDirConfig );
+        const string configFolder = FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), config::kDirConfig );
         if ( FileUtil::isDirectory( configFolder ) == false )
         {
             SW_LOG_INFO( "Config hot reload is off - no config folder at %#", configFolder.c_str() );
@@ -74,7 +74,7 @@ namespace sw::editor
             return true;
 
         // 에디터 도구 시드는 에디터가 들고 있다. 깨진 파일이면 이전 값을 그대로 둔다(읽기 실패는 loadFromHostPath 가 알린다).
-        const string toolDefaultsPath = EditorUtil::resolveProjectRelativePath( config::kFileRuntimeEditorToolDefaults );
+        const string toolDefaultsPath = EditorPaths::resolveProjectRelativePath( config::kFileRuntimeEditorToolDefaults );
         if ( FileUtil::pathsEqualNormalized( toolDefaultsPath, fullPath ) == false )
             return false;
         // 지워진 파일의 사건은 바꿀 것이 없다(없는 파일은 loadFromHostPath 가 기본값으로 성공시킨다 — 쓰던 값을 기본값으로 덮지 않는다).

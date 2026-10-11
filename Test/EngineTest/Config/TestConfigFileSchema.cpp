@@ -9,7 +9,7 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/Server/ServerConfig.h"
 #include "Engine/Profiling/MemoryBudgetMonitor.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -92,7 +92,7 @@ namespace
  */
 SW_TEST_CASE( ConfigFileSchemaTest, EveryConfigFileLoadsStrictly )
 {
-    const sw::string& projectRoot = sw::ResourceUtil::getProjectFolderPath();
+    const sw::string& projectRoot = sw::ResourcePaths::getProjectFolderPath();
     SW_ASSERT_FALSE( projectRoot.empty() );
     const sw::string configRoot = sw::FileUtil::joinPath( projectRoot, "Config" );
 

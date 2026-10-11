@@ -17,7 +17,7 @@
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/AnimationTestUtil.h"
 
@@ -108,7 +108,7 @@ namespace
  */
 SW_TEST_CASE( MotionWarpingTest, WarpWindowReachesTargetAtWindowEnd )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const string folder = TestMotionWarpingInternal::writeWalkClip( "warpclips", 0.5f, 0.0f );
     SW_ASSERT_FALSE( folder.empty() );
 
@@ -157,7 +157,7 @@ SW_TEST_CASE( MotionWarpingTest, WarpWindowReachesTargetAtWindowEnd )
  */
 SW_TEST_CASE( MotionWarpingTest, RootMotionMovesThroughCharacterController )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const string folder = TestMotionWarpingInternal::writeWalkClip( "controllerclips", 0.0f, 0.0f );
     SW_ASSERT_FALSE( folder.empty() );
 
@@ -188,7 +188,7 @@ SW_TEST_CASE( MotionWarpingTest, RootMotionMovesThroughCharacterController )
  */
 SW_TEST_CASE( MotionWarpingTest, AlignmentPointResolvesSocketMarker )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const string socketPath = test::makeTempPath( "door.sockets.xml" );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( socketPath, R"(<SocketSet><Socket name="Front" translation="0 0 1.5" rotation="0 180 0"/></SocketSet>)" ) );
 
@@ -223,7 +223,7 @@ SW_TEST_CASE( MotionWarpingTest, AlignmentPointResolvesSocketMarker )
  */
 SW_TEST_CASE( MotionWarpingTest, LocomotionWarpingScalesRateAndTurnsLowerBody )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const string folder = TestMotionWarpingInternal::writeWalkClip( "strideclips", 0.0f, 2.0f );
     SW_ASSERT_FALSE( folder.empty() );
 

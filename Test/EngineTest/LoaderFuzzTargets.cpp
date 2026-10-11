@@ -22,7 +22,7 @@
 #include "Engine/Resource/Image/DDSLoader.h"
 #include "Engine/Resource/Pack/ResourcePackReader.h"
 #include "Engine/Resource/Pack/ResourcePackTypes.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Serialization/Base/StringPool.h"
@@ -54,7 +54,7 @@ namespace test
             /** @brief 리소스 루트 아래에서 이름이 @p suffix 로 끝나는 파일을 최대 @p limit 개 읽어 씨앗으로 더합니다. */
             static void appendResourceSeeds( string_view suffix, size_t limit, vector<vector<uint8>>& outListSeed )
             {
-                const string& root = ResourceUtil::getRootFolderPath();
+                const string& root = ResourcePaths::getRootFolderPath();
                 if ( root.empty() )
                     return;
                 const string   extension = string( FileUtil::getExtension( suffix ) );

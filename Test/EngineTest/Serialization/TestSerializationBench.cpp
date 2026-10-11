@@ -12,7 +12,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 
@@ -37,7 +37,7 @@ namespace
  */
 SW_TEST_CASE( SerializationBenchTest, LargeSceneLoadAndObjectStateRoundTrip )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     // 게임 모듈 타입의 "모르는 타입" 경고를 재는 동안만 막는다 — 결과 줄([Bench])은 남아야 한다.
     sw::unique_ptr<test::ScopedLogSuppressor> pSuppressor = sw::make_unique<test::ScopedLogSuppressor>();
 

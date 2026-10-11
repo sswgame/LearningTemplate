@@ -7,7 +7,7 @@
 
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_WITH_CLIENT_CODE )
     #include "Engine/Common/EnginePlatformHeaders.h"
-    #include "Engine/Resource/ResourceUtil.h"
+    #include "Engine/Resource/ResourcePaths.h"
 
 namespace sw
 {
@@ -57,7 +57,7 @@ namespace sw
              */
             static bool decodeWithMediaFoundation( string_view path, AudioPcm& outPcm )
             {
-                string absPath = ResourceUtil::getResourcePath( path );
+                string absPath = ResourcePaths::getResourcePath( path );
                 if ( absPath.empty() )
                     absPath = string( path );
 

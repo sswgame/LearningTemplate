@@ -82,7 +82,8 @@
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/Image/ImageFileWriter.h"
 #include "Engine/Resource/Pack/ResourcePackManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneNavigationCooker.h"
 #include "Engine/Telemetry/CrashReportService.h"
@@ -193,7 +194,7 @@ namespace sw
             // Config/ 는 프로젝트 루트에 있고 실행 파일은 build/<preset>/Bin 에서 돈다. 작업 디렉터리 기준으로만 찾으면
             // 모두 "없음" 이 되어 조용히 기본값으로 떨어지므로, Resource/ 를 찾을 때 알아낸 프로젝트 루트를 넘긴다.
             loop._configManager = make_unique<ConfigManager>();
-            loop._configManager->setRootDirectory( ResourceUtil::getProjectFolderPath() );
+            loop._configManager->setRootDirectory( ResourcePaths::getProjectFolderPath() );
             ConfigManager::setPrimary( loop._configManager.get() );
             loop._configManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &EngineLoop::onConfigReloaded, &loop ) );
 
@@ -209,7 +210,7 @@ namespace sw
             GameConfig::setActive( *pGameConfig );
 
             // 메모리 태그 예산(데이터). 틀린 표는 오류를 남기고 예산 없이 간다 — 진단 설정 하나로 기동을 세우지 않는다.
-            (void)loop._memoryBudgetMonitor.loadBudgetFile( FileUtil::joinPath( ResourceUtil::getProjectFolderPath(), MemoryBudgetMonitor::kBudgetFile ) );
+            (void)loop._memoryBudgetMonitor.loadBudgetFile( FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), MemoryBudgetMonitor::kBudgetFile ) );
             return EngineInitResult::Succeeded;
         }
         static void destroy( EngineLoop& loop )
@@ -467,7 +468,7 @@ namespace sw
                 string cookedDir;
                 loop._owned._pCommandLineManager->getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
                 SW_LOG_INFO( "Starting Headless (CookScenes) -> '%#'...", cookedDir );
-                const string& resourceRoot     = ResourceUtil::getRootFolderPath();
+                const string& resourceRoot     = ResourcePaths::getRootFolderPath();
                 uint32        sceneFailedCount = 0;
                 const uint32  sceneCount       = SceneCooker::cookAllScenes( resourceRoot, cookedDir, sceneFailedCount );
                 // 프리팹 · GUID 레지스트리도 여기서 만든다 — 형식과 규칙을 쓰는 곳이 엔진 하나여야 한다.
@@ -477,7 +478,7 @@ namespace sw
                 [[maybe_unused]] const uint32 registryCount       = AssetDatabase::writeRegistryFiles( resourceRoot, cookedDir, registryFailedCount );
                 // 정점 애니메이션(VAT) — 데이터가 고른 (메시, 클립)을 굽는다. 프레임율은 군중 표의 것이라 런타임 굽기와 같다.
                 AnimationCrowdSettings crowdSettings{};
-                if ( ResourceUtil::hasResource( AnimationCrowdSettings::kResourcePath ) )
+                if ( ResourceIO::hasResource( AnimationCrowdSettings::kResourcePath ) )
                     (void)crowdSettings.loadFromResource( AnimationCrowdSettings::kResourcePath ); // 실패는 loadFromResource 가 오류로 남기고 기본 프레임율로 굽는다
                 uint32                        vertexAnimationFailedCount = 0;
                 [[maybe_unused]] const uint32 vertexAnimationCount =
@@ -505,7 +506,7 @@ namespace sw
                 uint32                  lipSyncFailedCount = 0;
                 [[maybe_unused]] uint32 lipSyncCount       = 0; // 로그로만 쓴다(Shipping 은 빠진다)
                 if ( lipSyncSettings.loadFromResource( LipSyncSettings::kResourcePath ) )
-                    lipSyncCount = LipSyncImport::importAll( ResourceUtil::getRootFolderPath(), lipSyncSettings, lipSyncFailedCount );
+                    lipSyncCount = LipSyncImport::importAll( ResourcePaths::getRootFolderPath(), lipSyncSettings, lipSyncFailedCount );
                 else
                     ++lipSyncFailedCount;
                 SW_LOG_INFO( "Imported %# viseme tracks (%# failures).", lipSyncCount, lipSyncFailedCount );
@@ -952,7 +953,7 @@ namespace sw
             return false;
         }
         // 서버 패키지에 없는 에셋 종류(텍스처 · 셰이더 바이너리 · 오디오 — 쿠킹 표의 target_excluded_asset_kinds)는 서버가 읽지 않는다.
-        ResourceUtil::setHostTarget( bDedicatedServer ? "Server" : "Client" );
+        ResourcePaths::setHostTarget( bDedicatedServer ? "Server" : "Client" );
         // `-gv_memoryTracking=1` 은 기동의 할당부터 센다(Release 는 추적이 꺼진 채 선다).
         _memoryBudgetMonitor.applyTrackingSetting();
 

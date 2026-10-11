@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 
@@ -104,7 +104,7 @@ namespace sw
     bool TileSetAsset::loadFromResource( string_view path )
     {
         string text;
-        if ( ResourceUtil::readTextResource( path, text ) == false )
+        if ( ResourceIO::readTextResource( path, text ) == false )
         {
             SW_LOG_ERROR( "Tile set '%#' not found", path );
             return false;

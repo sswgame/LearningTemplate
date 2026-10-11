@@ -15,7 +15,7 @@
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestFramework.h"
 #include "TestFramework/TestTick.h"
@@ -100,7 +100,7 @@ namespace
  */
 SW_TEST_CASE( RagdollTest, KayKitHitboxesFollowThePose )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     GameObjectManager manager;
     TestRagdollInternal::spawnFloor( manager );
     RagdollComponent* pRagdoll = TestRagdollInternal::spawnSkeleton( manager, "Skeleton", float3{ 0.0f, 0.0f, 0.0f }, false );
@@ -127,7 +127,7 @@ SW_TEST_CASE( RagdollTest, KayKitHitboxesFollowThePose )
  */
 SW_TEST_CASE( RagdollTest, WeaponTraceResolvesHitZone )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     GameObjectManager manager;
     RagdollComponent* pTarget  = TestRagdollInternal::spawnSkeleton( manager, "Target", float3{ 0.0f, 0.0f, 0.0f }, false );
     RagdollComponent* pShooter = TestRagdollInternal::spawnSkeleton( manager, "Shooter", float3{ 0.0f, 0.0f, -3.0f }, false );
@@ -157,7 +157,7 @@ SW_TEST_CASE( RagdollTest, WeaponTraceResolvesHitZone )
  */
 SW_TEST_CASE( RagdollTest, FatalHitRagdollsSettlesAndGetsUp )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     GameObjectManager manager;
     TestRagdollInternal::spawnFloor( manager );
     RagdollComponent* pRagdoll = TestRagdollInternal::spawnSkeleton( manager, "Victim", float3{ 0.0f, 0.0f, 0.0f }, true );
@@ -206,7 +206,7 @@ SW_TEST_CASE( RagdollTest, FatalHitRagdollsSettlesAndGetsUp )
  */
 SW_TEST_CASE( RagdollTest, HitReactionAndPartialRagdollAffectOnlyTheSubtree )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     GameObjectManager manager;
     TestRagdollInternal::spawnFloor( manager );
     RagdollComponent* pRagdoll = TestRagdollInternal::spawnSkeleton( manager, "Dummy", float3{ 0.0f, 0.0f, 0.0f }, true );
@@ -250,7 +250,7 @@ SW_TEST_CASE( RagdollTest, HitReactionAndPartialRagdollAffectOnlyTheSubtree )
  */
 SW_TEST_CASE( RagdollTest, PhysicsAssetHotReloadRebuildsBodies )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const string path = test::makeTempPath( "dummy.physics.xml" );
     const utf8*  pTwoBodies =
         R"(<PhysicsAsset><_listBody>

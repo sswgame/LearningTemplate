@@ -303,8 +303,8 @@
 - **이름은 상용 엔진과 견주어 정한다(2026-10-10, 이름 점검).** 이름 점검이 모호하다고 한 것을 모두 바꾸지 않는다. 그대로 두는 것: `GameObjectManager`(한 씬의 `GameObject` 를 만들고 소유하고 틱한다),
   `GPUScene`(언리얼 `GPUScene` 과 같은 용어), `PhysicsWorld`(사용자 결정 — `IPhysicsScene` 과 이름이 비슷해도 둔다), `GameConfig`(프리셋 JSON) 와 `GameSettings`(팩의 `gamesettings.xml`) — 언리얼도 프로젝트
   설정과 게임 설정이 따로 있다, `GameplayAbilityDef`(카탈로그 정의: id · 클래스 이름 · `GameplayAbilityConfig`)와 `GameplayAbilityConfig`(어빌리티 하나의 설정) — 정의가 설정을 품는 층이라 둘 다 필요하다,
-  `AbilitySpec`(언리얼 `FGameplayAbilitySpec` — 부여된 인스턴스), `TypeInfo` · `Info` 값 묶음, `InputManager` · `AssetManager`. 나눈다: `ResourceUtil` 은 경로 쪽과 읽기 쪽으로(언리얼 `FPaths` / `FFileHelper` 가 같은 선),
-  `EditorUtil` 은 경로를 `EditorPaths` 로 뺀다. `FrameRendererUtil` 은 그대로(언리얼 `RenderUtils` 도 같은 묶음). 전체 목록과 이유는 [이름 정리 계획](plans/NamingPass.md).
+  `AbilitySpec`(언리얼 `FGameplayAbilitySpec` — 부여된 인스턴스), `TypeInfo` · `Info` 값 묶음, `InputManager` · `AssetManager`. 나눈다: `ResourceUtil` 은 경로 쪽 `ResourcePaths` 와 읽기 쪽 `ResourceIO` 로(언리얼 `FPaths` / `FFileHelper` 가 같은 선 — 끝났다),
+  `EditorUtil` 은 경로를 `EditorPaths` 로 뺀다. `FrameRendererUtil` 은 그대로(언리얼 `RenderUtils` 도 같은 묶음). 파일 이름과 타입이 어긋난 곳은 `EditorColor.h`(색 타입 + 색 상수 묶음) · `EventType.h`(이벤트 ID 와 `IEvent`) · `Crafting.h`(제작 모듈 헤더)를 그대로 둔다 — 파일이 한 모듈의 묶음이다. 전체 목록과 이유는 [이름 정리 계획](plans/NamingPass.md).
 
 ### 5-5. 그래픽스와 RHI
 

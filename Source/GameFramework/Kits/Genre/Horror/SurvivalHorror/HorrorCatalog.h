@@ -23,7 +23,7 @@ namespace sw
     /** @brief 아이템의 쓰임입니다. */
     enum class HorrorItemKind : uint8
     {
-        Misc = 0,
+        None = 0,
         Weapon,
         Ammo,
         Heal,     ///< 체력 · 정신력 회복(약초 · 진정제)
@@ -55,7 +55,7 @@ namespace sw
         int32          _width{ 1 };
         int32          _height{ 1 };
         int32          _maxStack{ 1 }; ///< 한 자리에 겹치는 수(탄약)
-        HorrorItemKind _kind{ HorrorItemKind::Misc };
+        HorrorItemKind _kind{ HorrorItemKind::None };
     };
 } // namespace sw
 

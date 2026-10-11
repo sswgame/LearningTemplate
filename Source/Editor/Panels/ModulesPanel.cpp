@@ -7,7 +7,7 @@
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/EditorModuleOverrides.h"
-#include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -60,7 +60,7 @@ namespace sw::editor
                 const size_t dot      = gameName.rfind( '.' );
                 if ( dot != string::npos )
                     gameName.resize( dot );
-                return EditorUtil::resolveProjectRelativePath( "Source/Games/" + gameName + "/" + config::kTargetGameModule + ModuleCatalog::kManifestExtension );
+                return EditorPaths::resolveProjectRelativePath( "Source/Games/" + gameName + "/" + config::kTargetGameModule + ModuleCatalog::kManifestExtension );
             }
 
             static string findInactiveReason( const ModuleResolution& resolution, const string& name )

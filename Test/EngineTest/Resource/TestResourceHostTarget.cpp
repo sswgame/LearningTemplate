@@ -3,7 +3,8 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Resource/Image/DDSLoader.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/HostTargetTestUtil.h"
 
@@ -26,23 +27,23 @@ SW_TEST_CASE( ResourceHostTargetTest, DedicatedServerDoesNotReadExcludedKinds )
 {
     if ( test::HostTargetTestUtil::isLeftOutOfServerPackage( kTexturePath ) )
         SW_TEST_SKIP( "the dedicated server package leaves textures, shader binaries and audio out (CookContract target_excluded_asset_kinds)" );
-    SW_ASSERT_TRUE_MSG( sw::ResourceUtil::hasResource( kTexturePath ), kTexturePath );
-    SW_ASSERT_TRUE_MSG( sw::ResourceUtil::hasResource( kShaderBinaryPath ), kShaderBinaryPath );
+    SW_ASSERT_TRUE_MSG( sw::ResourceIO::hasResource( kTexturePath ), kTexturePath );
+    SW_ASSERT_TRUE_MSG( sw::ResourceIO::hasResource( kShaderBinaryPath ), kShaderBinaryPath );
 
     test::ScopedLogCollector     logCollector;
     const test::ScopedHostTarget hostTarget{ "Server" };
-    SW_EXPECT_TRUE( sw::ResourceUtil::isExcludedForHost( kTexturePath ) );
-    SW_EXPECT_TRUE( sw::ResourceUtil::isExcludedForHost( kShaderBinaryPath ) );
-    SW_EXPECT_TRUE( sw::ResourceUtil::isExcludedForHost( "game/abilityarena/sounds/error_004.ogg" ) );
-    SW_EXPECT_FALSE( sw::ResourceUtil::isExcludedForHost( kPipelinePath ) );
-    SW_EXPECT_FALSE( sw::ResourceUtil::isExcludedForHost( "game/empty/models/crate.mesh" ) );
-    SW_EXPECT_FALSE( sw::ResourceUtil::isExcludedForHost( "engine/myshaders/binary/x.txt" ) ); // 폴더 조각은 경계에서만 맞는다
+    SW_EXPECT_TRUE( sw::ResourcePaths::isExcludedForHost( kTexturePath ) );
+    SW_EXPECT_TRUE( sw::ResourcePaths::isExcludedForHost( kShaderBinaryPath ) );
+    SW_EXPECT_TRUE( sw::ResourcePaths::isExcludedForHost( "game/abilityarena/sounds/error_004.ogg" ) );
+    SW_EXPECT_FALSE( sw::ResourcePaths::isExcludedForHost( kPipelinePath ) );
+    SW_EXPECT_FALSE( sw::ResourcePaths::isExcludedForHost( "game/empty/models/crate.mesh" ) );
+    SW_EXPECT_FALSE( sw::ResourcePaths::isExcludedForHost( "engine/myshaders/binary/x.txt" ) ); // 폴더 조각은 경계에서만 맞는다
 
     sw::vector<uint8> bytes;
-    SW_EXPECT_FALSE( sw::ResourceUtil::hasResource( kTexturePath ) );
-    SW_EXPECT_FALSE( sw::ResourceUtil::readBinaryResource( kTexturePath, bytes ) );
-    SW_EXPECT_FALSE( sw::ResourceUtil::readBinaryResource( kShaderBinaryPath, bytes ) );
-    SW_EXPECT_TRUE( sw::ResourceUtil::readBinaryResource( kPipelinePath, bytes ) );
+    SW_EXPECT_FALSE( sw::ResourceIO::hasResource( kTexturePath ) );
+    SW_EXPECT_FALSE( sw::ResourceIO::readBinaryResource( kTexturePath, bytes ) );
+    SW_EXPECT_FALSE( sw::ResourceIO::readBinaryResource( kShaderBinaryPath, bytes ) );
+    SW_EXPECT_TRUE( sw::ResourceIO::readBinaryResource( kPipelinePath, bytes ) );
     sw::DDSImageData image; // 로더도 조용히 진다(서버가 지형 스플랫 · 머티리얼 텍스처를 찾을 때)
     SW_EXPECT_FALSE( sw::DDSLoader::loadFromResource( kTexturePath, image ) );
     SW_EXPECT_TRUE_MSG( logCollector.joined().empty(), logCollector.joined().c_str() );
@@ -57,7 +58,7 @@ SW_TEST_CASE( ResourceHostTargetTest, ClientReadsEveryKind )
         SW_TEST_SKIP( "the dedicated server package leaves textures, shader binaries and audio out (CookContract target_excluded_asset_kinds)" );
     const test::ScopedHostTarget hostTarget{ "Client" };
     sw::vector<uint8>            bytes;
-    SW_EXPECT_FALSE( sw::ResourceUtil::isExcludedForHost( kTexturePath ) );
-    SW_EXPECT_TRUE( sw::ResourceUtil::readBinaryResource( kTexturePath, bytes ) );
-    SW_EXPECT_TRUE( sw::ResourceUtil::readBinaryResource( kShaderBinaryPath, bytes ) );
+    SW_EXPECT_FALSE( sw::ResourcePaths::isExcludedForHost( kTexturePath ) );
+    SW_EXPECT_TRUE( sw::ResourceIO::readBinaryResource( kTexturePath, bytes ) );
+    SW_EXPECT_TRUE( sw::ResourceIO::readBinaryResource( kShaderBinaryPath, bytes ) );
 }

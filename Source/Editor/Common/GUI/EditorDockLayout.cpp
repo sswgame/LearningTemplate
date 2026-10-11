@@ -7,7 +7,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 
-#include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -202,8 +202,8 @@ namespace sw::editor
         _imguiIniPath.clear();
         _windowsIniPath.clear();
 
-        const string imguiPath   = EditorUtil::resolveEditorStateFile( EditorUtil::kImguiIniFileName );
-        const string windowsPath = EditorUtil::resolveEditorStateFile( EditorUtil::kWindowsIniFileName );
+        const string imguiPath   = EditorPaths::resolveEditorStateFile( EditorPaths::kImguiIniFileName );
+        const string windowsPath = EditorPaths::resolveEditorStateFile( EditorPaths::kWindowsIniFileName );
         if ( imguiPath.empty() || windowsPath.empty() )
         {
             SW_LOG_WARNING( "Failed to resolve Saved/Editor - layout will not persist." );

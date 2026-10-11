@@ -7,6 +7,7 @@
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorExternalToolJob.h"
+#include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -112,7 +113,7 @@ namespace sw::editor
         _listGame.clear();
         _gameIndex = 0;
         vector<string> listFile;
-        (void)FileUtil::collectFiles( FileUtil::joinPath( EditorUtil::getProjectRootPath(), "Config/Game" ), "", listFile, false ); // 폴더가 없으면 게임이 없다
+        (void)FileUtil::collectFiles( FileUtil::joinPath( EditorPaths::getProjectRootPath(), "Config/Game" ), "", listFile, false ); // 폴더가 없으면 게임이 없다
         const string& packRoot = GameConfig::getActive()._packRoot;
         for ( const string& filePath : listFile )
         {
@@ -129,7 +130,7 @@ namespace sw::editor
     string PackagingPanel::makeCommand() const
     {
         using Internal           = PackagingPanelInternal;
-        const string projectRoot = EditorUtil::getProjectRootPath();
+        const string projectRoot = EditorPaths::getProjectRootPath();
         string       command     = string{ EditorUtil::kPythonCommand } + " " + Internal::quote( FileUtil::joinPath( projectRoot, Internal::kScriptRelativePath ) );
         command += string{ " --target " } + Internal::kArrTarget[_targetIndex];
         if ( _gameIndex < _listGame.size() )
@@ -149,7 +150,7 @@ namespace sw::editor
 
     bool PackagingPanel::startPackaging()
     {
-        if ( _pJob->request( makeCommand(), EditorUtil::getProjectRootPath() ) == false )
+        if ( _pJob->request( makeCommand(), EditorPaths::getProjectRootPath() ) == false )
             return false;
         _listLine.clear();
         _progress        = PackagingProgress{};

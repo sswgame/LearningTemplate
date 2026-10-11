@@ -7,7 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -32,9 +32,9 @@ namespace
         static sw::vector<sw::string> collectScenarioPaths( const sw::vector<sw::string>& listFolder )
         {
             sw::vector<sw::string> listPath;
-            if ( sw::ResourceUtil::initialize() == false )
+            if ( sw::ResourcePaths::initialize() == false )
                 return listPath;
-            const sw::string& resourceRoot = sw::ResourceUtil::getRootFolderPath();
+            const sw::string& resourceRoot = sw::ResourcePaths::getRootFolderPath();
             for ( const sw::string& folderID : listFolder )
             {
                 sw::vector<sw::string> listFile;
@@ -45,7 +45,7 @@ namespace
                 for ( const sw::string& filePath : listFile )
                 {
                     if ( sw::StringUtil::endsWith( filePath, ".scenario.xml", true ) )
-                        listPath.push_back( sw::ResourceUtil::toResourceID( filePath ) );
+                        listPath.push_back( sw::ResourcePaths::toResourceID( filePath ) );
                 }
             }
             return listPath;

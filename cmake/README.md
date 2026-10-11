@@ -145,7 +145,7 @@ Dev 와 Shipping · Server 는 다른 갈래를 탄다 — 고친 갈래의 프�
   리팩터 전후 configure 동일성은 `ConfigureSnapshot.py take/diff`(실행 파일 시험의 command 는 그 exe 가 지어졌는지에 따라 비거나 찬다 — 차이로 읽지 말 것).
 - **서드파티 격리의 링크 주인은 규칙마다다**(`CheckThirdPartyIsolation` 의 `cmakeLinkOwner`) — 엔진 백엔드는 `Source/Engine/CMakeLists.txt`, 키트 안 드라이버(SQLite)는 그 키트의 CMakeLists 가 링크한다. 어느 드라이버가 실행 파일에 드는지는 빌드 타깃(`_listTarget`)이 정한다 — 드라이버 목록 옵션을 따로 두지 않는다.
 - **빌드 타깃별 제외 에셋은 쿠킹 표 한 줄이다**(`Config/Engine/CookContract.json` 의 `asset_kinds` · `target_excluded_asset_kinds`). 쿠커(`--build-target`)가 팩에서 빼고,
-  같은 호스트의 런타임(`ResourceUtil::setHostTarget`)은 그 종류를 읽지 않는다 — 한쪽만 고치면 서버가 "파일 없음" 을 쏟거나 팩에 쓸모없는 바이트가 남는다.
+  같은 호스트의 런타임(`ResourcePaths::setHostTarget`)은 그 종류를 읽지 않는다 — 한쪽만 고치면 서버가 "파일 없음" 을 쏟거나 팩에 쓸모없는 바이트가 남는다.
   종류를 더하면 `CheckCookContract` · `TestServerPackExclusion` · `ResourceHostTargetTest` 가 같이 본다.
 - **서드파티 고지는 빌드가 만든다** — `ThirdPartyNotices` 타깃(`Scripts/generate/GenerateThirdPartyNotices.py`)이 `Bin/THIRD_PARTY_NOTICES.txt` 에
   매니페스트가 끌어오는 vcpkg 포트의 `share/<포트>/copyright` 를 모은다(설치 트리를 워크트리끼리 나눠 써 트리 전체가 아니라 `vcpkg/status` 의 의존 닫힘).

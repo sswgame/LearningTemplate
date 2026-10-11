@@ -8,7 +8,7 @@
 
 #include "Engine/Animation/AnimJSONUtil.h"
 #include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
@@ -33,7 +33,7 @@ namespace sw
     bool AnimationLODSettings::loadFromResource( string_view path )
     {
         string text;
-        if ( ResourceUtil::readTextResource( path, text ) == false )
+        if ( ResourceIO::readTextResource( path, text ) == false )
         {
             SW_LOG_ERROR( "Animation LOD settings '%#' could not be read", path );
             *this = AnimationLODSettings{};

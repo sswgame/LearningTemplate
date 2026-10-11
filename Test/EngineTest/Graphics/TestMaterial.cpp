@@ -20,7 +20,7 @@
  */
 SW_TEST_CASE( MaterialTest, MaterialLoadAndSave )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
     bool                         loadOk   = material->loadFromFile( "engine/materials/defaultmaterial.material" );
@@ -58,7 +58,7 @@ SW_TEST_CASE( MaterialTest, MaterialLoadAndSave )
  */
 SW_TEST_CASE( MaterialTest, MaterialPermutationDefines )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
     SW_EXPECT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
@@ -175,7 +175,7 @@ SW_TEST_CASE( MaterialTest, MaterialEnumBitFlagPack )
  */
 SW_TEST_CASE( MaterialTest, MaterialColorModification )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
     SW_EXPECT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
@@ -212,7 +212,7 @@ SW_TEST_CASE( MaterialTest, AsyncMaterialLoadTest )
  */
 SW_TEST_CASE( MaterialTest, MaterialDefaultAndInstanceOverride )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
     SW_EXPECT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
@@ -293,7 +293,7 @@ SW_TEST_CASE( MaterialTest, MaterialReflectionSchemaSync )
  */
 SW_TEST_CASE( MaterialTest, MaterialInstanceOverride )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
     SW_EXPECT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
@@ -933,7 +933,7 @@ SW_TEST_CASE( MaterialTest, ReloadForgetsTheShaderLayout )
  */
 SW_TEST_CASE( MaterialTest, InstanceTextureOverrideRoundTripsAsAnAssetPath )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::shared_ptr<sw::Material> parent = sw::Material::create();
     SW_ASSERT_TRUE( parent->loadFromFile( "engine/materials/benchtextured.material" ) );
 

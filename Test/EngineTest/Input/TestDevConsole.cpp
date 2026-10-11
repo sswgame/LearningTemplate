@@ -10,7 +10,7 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Window/NativeWindowEvent.h"
 
 #include "TestFramework/TestFramework.h"
@@ -62,7 +62,7 @@ namespace
 
         bool initialize()
         {
-            if ( _input.initialize() == false || ResourceUtil::initialize() == false )
+            if ( _input.initialize() == false || ResourcePaths::initialize() == false )
                 return false;
             _pShellMap = EngineLoop::createShellInputMap( EngineDefaultAssets{}._shellInputMap );
             _pShellMap->setInputManager( &_input );

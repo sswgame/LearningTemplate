@@ -7,6 +7,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Commands/EditorExternalToolJob.h"
+#include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/EditorUtil.h"
 
 namespace sw::editor
@@ -40,7 +41,7 @@ namespace sw::editor
     EditorAssetValidation::EditorAssetValidation()
         : _pJob{ make_unique<EditorExternalToolJob>() }
         , _listPendingPath{}
-        , _projectRoot{ EditorUtil::getProjectRootPath() }
+        , _projectRoot{ EditorPaths::getProjectRootPath() }
         , _bDisabled{ SW_FALSE }
     {
     }

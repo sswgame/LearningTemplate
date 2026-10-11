@@ -12,7 +12,7 @@
 #include "Editor/Common/Asset/ImageUtil.h"
 
 #include "Engine/Environment/Terrain/HeightfieldData.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 namespace sw::editor
 {
@@ -145,7 +145,7 @@ namespace sw::editor
         if ( isRawHeightfieldPath( relativePath ) == false )
             return false;
         // 바뀐 파일 하나가 아니라 어긋난 것 전부를 일괄 임포트로 — 스탬프를 적는 길이 하나여야 명령줄 임포트와 같은 판정을 받는다(구멍 마스크도 원본 해시에 든다).
-        const AssetImportSummary summary = importAllHeightfields( ResourceUtil::getRootFolderPath(), AssetImportMode::ImportStale );
+        const AssetImportSummary summary = importAllHeightfields( ResourcePaths::getRootFolderPath(), AssetImportMode::ImportStale );
         for ( const string& problem : summary._listProblem )
         {
             SW_LOG_ERROR( "Heightfield import failed: %#", problem.c_str() );

@@ -91,7 +91,7 @@ cd build/Ninja-Debug/Bin
 - **Hierarchy 는 화면 밖의 접힌 루트를 빈자리로 둔다**(이어진 것은 빈자리 하나) — 큐브 8000 Release `GT.Editor.updateUI` p50 4.2~4.7 → 1.3~1.4 ms, Hierarchy 패널
   평균 3.4~4.1 → 0.63~0.65 ms(큐브 100 에서는 0.12 ms). 남은 몫은 루트 8000 개를 도는 것(열림 상태 조회) — 더 줄이려면 열린 루트 목록을 들고 보이는 범위만 계산한다.
   빈자리 높이는 접힌 루트 줄(프레임 높이 + 줄 간격)과 같아야 스크롤이 튀지 않는다(`hierarchy.offscreenRootsKeepTheirPlace`).
-- **AppSmokeTest 의 Unknown 태그 상한(8 KB)은 파일 수에도 걸린다** — 태그 없는 호출자(App 스플래시)가 공유 캐시(`ResourceUtil` 경로 캐시)의
+- **AppSmokeTest 의 Unknown 태그 상한(8 KB)은 파일 수에도 걸린다** — 태그 없는 호출자(App 스플래시)가 공유 캐시(`ResourcePaths` 경로 캐시)의
   재해시를 일으키면 그 버킷 배열이 Unknown 으로 센다. 데이터 파일 몇 개를 더하자 18 KB 가 넘었다. 공유 캐시는 넣는 자리에서 자기 태그를 건다.
 - **성능은 Release 로 잰다.** Debug 는 레이스 검출기 · 이터레이터 프록시로 컨테이너 코드를 과장한다(668 vs 87 us). 이전 · 이후 바이너리를 같은 스크립트로
   **번갈아** 2~3 회 잰다(`git stash -u` → 빌드 → 복사 → `stash pop` → 빌드). 아침 기준선과 오후 결과를 견주면 기계 상태가 결과로 읽힌다.
@@ -258,7 +258,7 @@ cd build/Ninja-Debug/Bin
 - **골든 기준은 뜬 장치를 적는다**(`device` — GPU 이름 · 드라이버, 다음 `--record` 부터) — 다른 기계에서 지면 비교 메시지가 두 장치를 함께 찍는다.
   기계별 기준(`<백엔드>.<기계>.json`)은 만들지 않는다(사용자 결정 2026-10-06) — 다른 기계에서 진 기록이 생기면 그 기계에서 `--record` 해 드라이버 차이인지 회귀인지 가른다.
 - **할당 실패 경로는 `Memory::injectAllocationFailures( count )`(Dev, 스레드 국소)로 시험한다** — 이 스레드의 다음 count 번 `allocate` · `allocateAligned` 가 nullptr.
-- **낱개 파일 · 팩 경쟁을 시험하려면 리소스 루트를 임시 폴더로 바꾼다**(`ResourceUtil::exchangeRootFolderPath` — 검색 폴더 · 경로 캐시를 다시 짓고 앞 루트를 돌려준다).
+- **낱개 파일 · 팩 경쟁을 시험하려면 리소스 루트를 임시 폴더로 바꾼다**(`ResourcePaths::exchangeRootFolderPath` — 검색 폴더 · 경로 캐시를 다시 짓고 앞 루트를 돌려준다).
 - **빌드 출력을 `| head` 로 자르지 말 것** — 파이프가 닫히면 빌드가 중간에 죽고 낡은 바이너리가 남는다. 파일로 받은 뒤 본다.
 - **Windows ASan 이 `stack-overflow` 만 내고 스택을 풀지 못하면** 후보 함수마다 `fopen` · `fflush` · `fclose` 로 호출을 한 줄씩 남기고(줄 수 상한을 둡니다) 되풀이되는 모양을 봅니다.
 - **`FrameRenderer::executePacket` 은 패킷의 스냅샷을 옮겨 갑니다.** 테스트에서 같은 패킷을 두 번 내면 두 번째는 빈 프레임입니다. App 실기동으로 좁혀지지 않는 백엔드 교체 결함은 `RenderPassGPUTest.RendererSurvivesDeviceRecreate` 쪽으로 옮겨 재현합니다.

@@ -7,7 +7,7 @@
 
 #include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {
@@ -196,7 +196,7 @@ namespace sw
         if ( AudioClipDecoder::isSupportedExtension( pathView ) )
         {
             vector<uint8> bytes;
-            const bool    bRead = ResourceUtil::readBinaryResource( pathView, bytes ) ||
+            const bool    bRead = ResourceIO::readBinaryResource( pathView, bytes ) ||
                                ( FileUtil::exists( pathView ) && FileUtil::readFile( pathView, bytes ) );
             if ( bRead )
                 bDecoded = AudioClipDecoder::decode( pathView, bytes.data(), bytes.size(), pcm );

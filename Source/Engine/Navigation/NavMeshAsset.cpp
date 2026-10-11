@@ -12,7 +12,7 @@
 #include "Engine/Common/EngineParallel.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Navigation/NavMeshSettings.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/Base/BinaryStream.h"
 
 namespace sw
@@ -149,7 +149,7 @@ namespace sw
     bool NavMeshAsset::loadFromResource( string_view resourcePath )
     {
         vector<uint8> bytes;
-        if ( ResourceUtil::readBinaryResource( resourcePath, bytes ) == false )
+        if ( ResourceIO::readBinaryResource( resourcePath, bytes ) == false )
             return false;
         return readBytes( bytes.data(), bytes.size(), resourcePath );
     }

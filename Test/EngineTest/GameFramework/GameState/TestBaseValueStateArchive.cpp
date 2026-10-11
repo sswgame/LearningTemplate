@@ -5,7 +5,7 @@
  */
 #include "pch.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Actor/AI/SpawnDirector.h"
@@ -503,7 +503,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, RunMapReplaysAfterRestore )
 SW_TEST_CASE( BaseValueStateArchiveTest, ElementGridReplaysAfterRestore )
 {
     ElementRuleTable table;
-    SW_ASSERT_TRUE( ResourceUtil::initialize() && table.loadFromResource( kValueStateElementTablePath ) );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() && table.loadFromResource( kValueStateElementTablePath ) );
     ElementGrid grid;
     grid.initialize( 8, 3, &table );
     for ( int32 y = 0; y < 3; ++y )

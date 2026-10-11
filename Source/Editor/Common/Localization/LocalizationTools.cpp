@@ -19,7 +19,7 @@
 #include "Engine/Localization/PortableObjectFile.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Localization/TranslationMemory.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -39,10 +39,10 @@ namespace sw
                 if ( FileUtil::exists( path ) || FileUtil::isDirectory( path ) )
                     return FileUtil::normalizeSeparators( path );
                 // 리소스 루트 아래의 전역 id(`game/shooter3d/…`)는 활성 게임과 상관없이 그 자리다 — 도구는 모든 팩을 다룬다.
-                const string underRoot = FileUtil::joinPath( ResourceUtil::getRootFolderPath(), path );
+                const string underRoot = FileUtil::joinPath( ResourcePaths::getRootFolderPath(), path );
                 if ( FileUtil::exists( underRoot ) || FileUtil::isDirectory( underRoot ) )
                     return FileUtil::normalizeSeparators( underRoot );
-                const string resolved = ResourceUtil::getResourcePath( path );
+                const string resolved = ResourcePaths::getResourcePath( path );
                 return resolved.empty() ? string( path ) : FileUtil::normalizeSeparators( resolved );
             }
 
@@ -329,7 +329,7 @@ namespace sw
 {
     string LocalizationTools::findRepositoryRoot()
     {
-        return FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( ResourceUtil::getRootFolderPath() ) );
+        return FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( ResourcePaths::getRootFolderPath() ) );
     }
 
     void LocalizationTools::collectProjectPaths( vector<string>& outListProjectPath, bool bAllGames )
@@ -346,7 +346,7 @@ namespace sw
         if ( bAllGames )
         {
             vector<string> listPack;
-            if ( FileUtil::collectFolders( FileUtil::joinPath( ResourceUtil::getRootFolderPath(), "game" ), listPack, false ) )
+            if ( FileUtil::collectFolders( FileUtil::joinPath( ResourcePaths::getRootFolderPath(), "game" ), listPack, false ) )
             {
                 std::sort( listPack.begin(), listPack.end() );
                 for ( const string& packFolder : listPack )
@@ -356,7 +356,7 @@ namespace sw
             }
         }
         else
-            listGameFolder.push_back( ResourceUtil::getDomainFolderPath( GameConfig::getActive()._packRoot, localizationFolder ) );
+            listGameFolder.push_back( ResourcePaths::getDomainFolderPath( GameConfig::getActive()._packRoot, localizationFolder ) );
 
         for ( const string& gameFolder : listGameFolder )
         {
@@ -485,7 +485,7 @@ namespace sw
                 string     text;
                 if ( bCandidate == false || FileUtil::readTextFile( filePath, text ) == false )
                     continue;
-                gatherAssetFile( project, gatherer, FileUtil::skipUtf8Bom( text ), ResourceUtil::toResourceID( filePath ) );
+                gatherAssetFile( project, gatherer, FileUtil::skipUtf8Bom( text ), ResourcePaths::toResourceID( filePath ) );
                 gatherer.countFile();
             }
         }

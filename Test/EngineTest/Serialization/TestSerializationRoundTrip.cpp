@@ -16,7 +16,7 @@
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
@@ -50,11 +50,11 @@ namespace
         static sw::vector<sw::string> collectSceneAndPrefabIDs()
         {
             sw::vector<sw::string> listFilePath;
-            (void)sw::FileUtil::collectFiles( sw::ResourceUtil::getRootFolderPath(), "", listFilePath, true ); // 실패하면 빈 목록 — 부르는 쪽이 개수로 잡는다
+            (void)sw::FileUtil::collectFiles( sw::ResourcePaths::getRootFolderPath(), "", listFilePath, true ); // 실패하면 빈 목록 — 부르는 쪽이 개수로 잡는다
             sw::vector<sw::string> listResourceID;
             for ( const sw::string& filePath : listFilePath )
             {
-                const sw::string resourceID = sw::ResourceUtil::toResourceID( filePath );
+                const sw::string resourceID = sw::ResourcePaths::toResourceID( filePath );
                 if ( isScene( resourceID ) || isPrefab( resourceID ) )
                     listResourceID.push_back( resourceID );
             }
@@ -149,7 +149,7 @@ namespace
  */
 SW_TEST_CASE( SerializationRoundTripTest, EveryResourceComponentRewritesToTheSameBytes )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     const sw::vector<sw::string> listResourceID = SerializationRoundTripInternal::collectSceneAndPrefabIDs();
     SW_ASSERT_TRUE( listResourceID.size() >= 5u );
 
@@ -191,7 +191,7 @@ SW_TEST_CASE( SerializationRoundTripTest, DumpEveryResourceObjectState )
     const utf8* pDumpDir = std::getenv( "SW_SERIALIZATION_DUMP_DIR" );
     if ( pDumpDir == nullptr || pDumpDir[0] == 0 )
         SW_TEST_SKIP( "SW_SERIALIZATION_DUMP_DIR is not set" );
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     test::ScopedLogSuppressor suppressor;
     uint32                    fileCount{ 0 };

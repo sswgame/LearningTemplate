@@ -6,7 +6,7 @@
 #include "Editor/Common/Asset/ModelImportConfig.h"
 #include "Editor/Common/Asset/TextureImportConfig.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
-#include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/EditorPaths.h"
 
 #include "Engine/Config/ConfigManager.h"
 
@@ -81,7 +81,7 @@ namespace
  */
 SW_TEST_CASE( EditorConfigFileSchemaTest, EveryEditorConfigFileLoadsStrictly )
 {
-    const string   editorConfigDir = EditorUtil::resolveProjectRelativePath( "Config/Editor" );
+    const string   editorConfigDir = EditorPaths::resolveProjectRelativePath( "Config/Editor" );
     vector<string> listFilePath;
     SW_ASSERT_TRUE( FileUtil::collectFiles( editorConfigDir, "", listFilePath, true ) );
 

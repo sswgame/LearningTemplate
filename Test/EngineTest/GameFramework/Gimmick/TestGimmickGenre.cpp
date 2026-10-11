@@ -11,7 +11,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "GameFramework/Base/Gameplay/Gimmick/Genre/AdventureGimmicks.h"
 #include "GameFramework/Base/Gameplay/Gimmick/Genre/HorrorStealthGimmicks.h"
@@ -121,7 +121,7 @@ SW_TEST_CASE( GimmickGenreTest, PlatformerCrumbleLaunchConveyor )
 SW_TEST_CASE( GimmickGenreTest, PushBlockAndTorchPuzzle )
 {
     using Internal = GimmickGenreTestInternal;
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     GameObjectManager   manager;
     GameObject*         pBlock = Internal::spawnBox( manager, "Block", float3{ 0.0f, 0.0f, 0.0f }, float2{ 0.9f, 0.9f }, false );
     PushBlockComponent* pPush  = pBlock->addComponent<PushBlockComponent>();
@@ -242,7 +242,7 @@ SW_TEST_CASE( GimmickGenreTest, ShooterBarrelsTurretCover )
 SW_TEST_CASE( GimmickGenreTest, RacingHorrorStealth )
 {
     using Internal = GimmickGenreTestInternal;
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     GameObjectManager         manager;
     vector<GimmickItemChoice> listChoice;
     for ( const utf8* pItem : { "Banana", "Shell", "Mushroom" } )
@@ -363,8 +363,8 @@ SW_TEST_CASE( GimmickGenreTest, AbilityGateAndGatheringNode )
  */
 SW_TEST_CASE( GimmickGenreTest, EveryGimmickPrefabSpawnsWithValidWiring )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
-    const string   folder = FileUtil::joinPath( ResourceUtil::getRootFolderPath(), "common/prefabs/gimmicks" );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    const string   folder = FileUtil::joinPath( ResourcePaths::getRootFolderPath(), "common/prefabs/gimmicks" );
     vector<string> listFile;
     SW_ASSERT_TRUE( FileUtil::collectFiles( folder, ".xml", listFile, true ) );
     GameObjectManager manager;
@@ -372,7 +372,7 @@ SW_TEST_CASE( GimmickGenreTest, EveryGimmickPrefabSpawnsWithValidWiring )
     int32             circuitCount = 0;
     for ( const string& filePath : listFile )
     {
-        const string resourceID = ResourceUtil::toResourceID( filePath );
+        const string resourceID = ResourcePaths::toResourceID( filePath );
         PrefabAsset  prefab;
         SW_EXPECT_TRUE_MSG( prefab.loadFromXMLFile( resourceID ), resourceID.c_str() );
         GameObject* pObject = manager.createGameObject( hashed_string( "Gimmick" ) );

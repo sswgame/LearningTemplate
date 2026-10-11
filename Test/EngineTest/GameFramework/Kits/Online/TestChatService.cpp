@@ -6,7 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Network/BitStream.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/GameFramework/Online/OnlineHostTestUtil.h"
 
@@ -254,7 +254,7 @@ SW_TEST_CASE( ChatServiceTest, FilterAndSpamApplyToChannelMessages )
     MemoryServiceDatabase database;
     LocalServerBusHub     hub;
     ChatSettings          settings;
-    settings._bannedWordsPath = FileUtil::joinPath( ResourceUtil::getProjectFolderPath(), "Config/Server/chat_banned_words.txt" );
+    settings._bannedWordsPath = FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), "Config/Server/chat_banned_words.txt" );
     ChatNode node( &database, &hub, 1, settings );
     node._directory._mapOnline[10] = "alice";
     node._service.joinChannel( 10, "world.kr", 0, 1 );

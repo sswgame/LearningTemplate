@@ -7,7 +7,8 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -285,7 +286,7 @@ SW_TEST_CASE( AssetStreamingTest, DataRequestDoesNotPiggybackOnAnExistenceCheck 
     // **진짜로 읽히는 경로여야 한다.** 없는 경로를 쓰면 데이터 콜백이 `bSuccess = false` 로
     // 오고, "성공인데 바이트가 없다" 는 이 케이스의 단언을 지나가 버린다(변이가 통과한다).
     // 프리셋마다 리소스가 어디에 있는지 다르므로 — Shipping 은 팩만 읽는다 —
-    // **직접 만든 파일을 절대 경로로** 준다. `ResourceUtil` 은 절대 경로를 디스크에서 그대로
+    // **직접 만든 파일을 절대 경로로** 준다. `ResourcePaths` 은 절대 경로를 디스크에서 그대로
     // 읽으므로 어느 프리셋에서나 같은 답이 나온다.
     const sw::string assetPath = test::makeTempPath( "sw_stream_piggyback.bin" );
 
@@ -295,7 +296,7 @@ SW_TEST_CASE( AssetStreamingTest, DataRequestDoesNotPiggybackOnAnExistenceCheck 
     const utf8* pAssetPath = assetPath.c_str();
 
     sw::vector<uint8> directBytes;
-    SW_ASSERT_TRUE( sw::ResourceUtil::readBinaryResource( pAssetPath, directBytes ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readBinaryResource( pAssetPath, directBytes ) );
     SW_ASSERT_TRUE( directBytes.empty() == false );
 
     constexpr uint32 kRound = 32;

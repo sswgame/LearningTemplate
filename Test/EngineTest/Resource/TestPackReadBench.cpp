@@ -26,7 +26,7 @@
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/Pack/ResourcePackManager.h"
 #include "Engine/Resource/Pack/ResourcePackReader.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 
 #include "EngineTest/ResourcePackTestUtil.h"
 
@@ -141,7 +141,7 @@ namespace
         bool              bAllRead = true;
 
         // 스트리밍 큐는 전역 VFS 를 읽는다 — 이 팩을 가장 높은 우선순위로 올렸다가 내린다.
-        sw::ResourcePackManager& packManager = sw::ResourceUtil::getPackManager();
+        sw::ResourcePackManager& packManager = sw::ResourceIO::getPackManager();
         if ( packManager.mountPack( packPath, 1000 ) == false )
             return false;
 

@@ -7,7 +7,7 @@
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Commands/EditorViewportPreview.h"
-#include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorNodeGraphID.h"
@@ -193,14 +193,14 @@ namespace sw::editor
                                      _listNode.size(), _listLink.size() );
             else
                 ImGui::TextDisabled( "Nodes: %zu  Links: %zu  (%s)", _listNode.size(), _listLink.size(),
-                                     EditorUtil::kAnimGraphDocumentFileName );
+                                     EditorPaths::kAnimGraphDocumentFileName );
         }
         EditorChrome::endToolbar();
     }
 
     void AnimGraphPanel::drawAnimationCanvas()
     {
-        if ( beginGraphCanvas( "AnimGraphCanvas", EditorUtil::kAnimGraphCanvasFileName ) == false )
+        if ( beginGraphCanvas( "AnimGraphCanvas", EditorPaths::kAnimGraphCanvasFileName ) == false )
         {
             if ( _nodeGraph.hasContext() == false )
                 ImGui::TextUnformatted( "Failed to create Animation Graph editor context." );

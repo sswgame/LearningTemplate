@@ -11,7 +11,8 @@
 
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 namespace sw
 {
@@ -61,7 +62,7 @@ namespace sw
         // **파일 이름이 아니라 폴더**에 넣는 이유는 이름이 쿠커가 쿠킹하는 이름과 글자 단위로 같아야
         // 하기 때문이다(규칙이 둘이면 그중 하나가 기준을 이긴다. `ShaderCookerTest` 가 지키는 계약이다).
         const string_view rhiFolder  = ShaderCooker::getSubfolderForFormat( desc._targetFormat );
-        const string      absPath    = ResourceUtil::getResourcePath( desc._filePath );
+        const string      absPath    = ResourcePaths::getResourcePath( desc._filePath );
         const uint64      sourceHash = absPath.empty() ? 0u : ShaderCooker::computeEffectiveSourceHash( absPath );
 
         StringBuilder<constant::kMaxBuffer64> sb;
@@ -114,7 +115,7 @@ namespace sw
         string cacheKey;
         uint64 currentSourceHash{ 0 };
 
-        absPath = ResourceUtil::getResourcePath( desc._filePath );
+        absPath = ResourcePaths::getResourcePath( desc._filePath );
 
         StringBuilder<constant::kMaxBuffer256> sb;
         sb.append( desc._filePath ).append( '_' ).append( desc._entryPoint ).append( '_' ).append( static_cast<int32>( desc._stage ) ).append( '_' ).append( static_cast<int32>( desc._targetFormat ) );
@@ -175,7 +176,7 @@ namespace sw
         // (CookAssets.py --verify-shaders).
         if ( absPath.empty() == false )
         {
-            const string precookedAbsPath = ResourceUtil::getResourcePath( precookedRelPath );
+            const string precookedAbsPath = ResourcePaths::getResourcePath( precookedRelPath );
             if ( precookedAbsPath.empty() == false && FileUtil::exists( precookedAbsPath ) )
             {
                 const string binDirAbs = FileUtil::getDirectoryPart( FileUtil::normalizeSeparators( precookedAbsPath ) );
@@ -189,7 +190,7 @@ namespace sw
 #endif
 
         vector<uint8> precookedBytes;
-        if ( bPrecookedUsable && ResourceUtil::readBinaryResource( precookedRelPath, precookedBytes ) && precookedBytes.empty() == false )
+        if ( bPrecookedUsable && ResourceIO::readBinaryResource( precookedRelPath, precookedBytes ) && precookedBytes.empty() == false )
         {
             SW_LOG_TRACE( "Loaded pre-cooked shader binary: %# (%zu bytes)", precookedRelPath.c_str(), precookedBytes.size() );
             ShaderCompileResult result{};

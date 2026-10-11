@@ -15,7 +15,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -51,7 +51,7 @@ namespace
  */
 SW_TEST_CASE( SpriteComponentTest, SpriteDrawsATexturedQuadWithTheSpriteMaterial )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::GameObjectManager manager;
     sw::SpriteComponent*  pSprite = spawnSprite( manager, "Torch", kTextureA );
     SW_ASSERT_NOT_NULL( pSprite );
@@ -79,7 +79,7 @@ SW_TEST_CASE( SpriteComponentTest, SpriteDrawsATexturedQuadWithTheSpriteMaterial
  */
 SW_TEST_CASE( SpriteComponentTest, SpritesWithTheSameTextureShareOneInstance )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::GameObjectManager manager;
     sw::SpriteComponent*  pFirst  = spawnSprite( manager, "TorchA", kTextureA );
     sw::SpriteComponent*  pSecond = spawnSprite( manager, "TorchB", kTextureA );
@@ -109,7 +109,7 @@ SW_TEST_CASE( SpriteComponentTest, SpritesWithTheSameTextureShareOneInstance )
  */
 SW_TEST_CASE( SpriteComponentTest, FrameAndTintTravelInTheInstanceNotTheMaterial )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::GameObjectManager manager;
     sw::SpriteComponent*  pRed   = spawnSprite( manager, "Red", kTextureA );
     sw::SpriteComponent*  pGhost = spawnSprite( manager, "Ghost", kTextureA );
@@ -152,7 +152,7 @@ SW_TEST_CASE( SpriteComponentTest, FrameAndTintTravelInTheInstanceNotTheMaterial
  */
 SW_TEST_CASE( SpriteComponentTest, ClipSelectsTheFrameAndLendsItsAtlas )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     const sw::string    clipPath = test::makeTempPath( "atlas.sprite.json" );
     sw::SpriteClipAsset clip;
     clip._atlasPath = kTextureB;
@@ -196,7 +196,7 @@ SW_TEST_CASE( SpriteComponentTest, ClipSelectsTheFrameAndLendsItsAtlas )
  */
 SW_TEST_CASE( SpriteComponentTest, SavedClipPathLoadsTheClip )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::GameObjectManager manager;
     sw::GameObject*       pObject = manager.createGameObject( sw::hashed_string( "ClipSprite" ) );
     SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString(
@@ -216,7 +216,7 @@ SW_TEST_CASE( SpriteComponentTest, SavedClipPathLoadsTheClip )
  */
 SW_TEST_CASE( SpriteComponentTest, ReloadedClipReachesSpritesThatHoldIt )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     const sw::string    clipPath = test::makeTempPath( "reloaded.sprite.json" );
     sw::SpriteClipAsset clip;
     clip._atlasPath = kTextureA;
@@ -262,7 +262,7 @@ SW_TEST_CASE( SpriteComponentTest, ReloadedClipReachesSpritesThatHoldIt )
  */
 SW_TEST_CASE( SpriteComponentTest, SlicedSpritesShareTheSliceMeshAndReadTheBorderFromTheClip )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::GameObjectManager manager;
     sw::SpriteComponent*  pPanelA = spawnSprite( manager, "PanelA", kTextureA );
     sw::SpriteComponent*  pPanelB = spawnSprite( manager, "PanelB", kTextureA );

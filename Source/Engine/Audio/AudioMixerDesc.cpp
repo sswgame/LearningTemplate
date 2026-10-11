@@ -3,7 +3,7 @@
 #include "Engine/Audio/AudioMixerDesc.h"
 
 #include "Engine/Audio/DSP/AudioEffect.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
@@ -13,7 +13,7 @@ namespace sw
     bool AudioMixerDesc::loadFromResource( string_view resourcePath )
     {
         string text;
-        if ( ResourceUtil::readTextResource( resourcePath, text ) == false )
+        if ( ResourceIO::readTextResource( resourcePath, text ) == false )
         {
             SW_LOG_ERROR( "Audio mixer not found: %#", resourcePath );
             return false;

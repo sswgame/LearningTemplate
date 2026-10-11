@@ -7,7 +7,8 @@
 #include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Audio/IAudioSystem.h"
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/HostTargetTestUtil.h"
 
@@ -474,7 +475,7 @@ SW_TEST_CASE( AudioSystemTest, OggVorbisDecodesToPcm )
     if ( test::HostTargetTestUtil::isLeftOutOfServerPackage( "game/empty/sounds/click.ogg" ) )
         SW_TEST_SKIP( "the dedicated server package leaves textures, shader binaries and audio out (CookContract target_excluded_asset_kinds)" );
     sw::vector<uint8> listBytes;
-    SW_ASSERT_TRUE( sw::ResourceUtil::readBinaryResource( "game/empty/sounds/click.ogg", listBytes ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readBinaryResource( "game/empty/sounds/click.ogg", listBytes ) );
 
     sw::AudioPcm pcm;
     SW_ASSERT_TRUE( sw::AudioClipDecoder::decode( "game/empty/sounds/click.ogg", listBytes.data(), listBytes.size(), pcm ) );
@@ -508,7 +509,7 @@ SW_TEST_CASE( AudioSystemTest, OggVorbisDecodesToPcm )
  */
 SW_TEST_CASE( AudioSystemTest, OggWithOutOfPacketCommentLengthsIsRejected )
 {
-    const sw::string  path = sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "game/shooter3d/sounds/footstep_concrete_000.ogg" );
+    const sw::string  path = sw::FileUtil::joinPath( sw::ResourcePaths::getRootFolderPath(), "game/shooter3d/sounds/footstep_concrete_000.ogg" );
     sw::vector<uint8> originalBytes;
     SW_ASSERT_TRUE_MSG( sw::FileUtil::readFile( path, originalBytes ), path.c_str() );
 

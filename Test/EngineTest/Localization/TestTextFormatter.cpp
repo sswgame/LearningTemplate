@@ -2,7 +2,7 @@
 
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/LocalizationTestUtil.h"
 

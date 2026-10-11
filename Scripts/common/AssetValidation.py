@@ -125,7 +125,7 @@ class ValidationContext:
     _uniqueShaderWord: set[str] | None = None
 
     def hasResource(self, relPath: str) -> bool:
-        # 리소스 id 는 찾을 때 소문자로 맞춘다(`ResourceUtil::normalizePath`) — 비교도 소문자로 한다.
+        # 리소스 id 는 찾을 때 소문자로 맞춘다(`ResourcePaths::normalizePath`) — 비교도 소문자로 한다.
         if self._uniquePath is None:
             self._uniquePath = {path.lower() for path in self.listAllPath}
         return relPath.lower() in self._uniquePath

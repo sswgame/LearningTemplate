@@ -12,7 +12,7 @@
 #include "Engine/Renderer/Cook/ShaderCookDriver.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -467,13 +467,13 @@ SW_TEST_CASE( ShaderCacheStressTest, MultiThreadedClearAndQueryStress )
  */
 SW_TEST_CASE( ShaderCookerTest, DepthOnlyPassesHaveNoPixelStage )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     // 1) 실제 파이프라인 — 그림자 패스는 PS 없음, 씬 메시를 그리는 나머지는 PS 있음.
     const utf8* arrPipeline[] = { "engine/pipeline/forwardpipeline.xml", "engine/pipeline/deferredpipeline.xml" };
     for ( const utf8* pPipeline : arrPipeline )
     {
-        const sw::string absPath = sw::ResourceUtil::getResourcePath( pPipeline );
+        const sw::string absPath = sw::ResourcePaths::getResourcePath( pPipeline );
         SW_EXPECT_TRUE_MSG( absPath.empty() == false, pPipeline );
         if ( absPath.empty() )
             continue;
@@ -613,8 +613,8 @@ SW_TEST_CASE( ShaderCookerTest, CachePathCarriesPermutationHash )
  */
 SW_TEST_CASE( ShaderCookStampTest, FreshnessIsJudgedByContentNotFileTime )
 {
-    const sw::string shaderPath = sw::ResourceUtil::getResourcePath( "engine/shaders/forwardlit.hlsl" );
-    const sw::string binDir     = sw::ResourceUtil::getResourcePath( "engine/shaders/bin/dx12" );
+    const sw::string shaderPath = sw::ResourcePaths::getResourcePath( "engine/shaders/forwardlit.hlsl" );
+    const sw::string binDir     = sw::ResourcePaths::getResourcePath( "engine/shaders/bin/dx12" );
     // 쿠킹된 트리가 없는 환경(클린 체크아웃 직후)에서는 볼 것이 없다.
     if ( shaderPath.empty() || binDir.empty() )
         return;
@@ -658,9 +658,9 @@ SW_TEST_CASE( ShaderCookStampTest, FreshnessIsJudgedByContentNotFileTime )
  */
 SW_TEST_CASE( ShaderCookStampTest, HeaderInAnotherIncludeRootMakesOutputStale )
 {
-    const sw::string shaderPath       = sw::ResourceUtil::getResourcePath( "common/shaders/samplecompute.hlsl" );
-    const sw::string binDir           = sw::ResourceUtil::getResourcePath( "common/shaders/bin/dx12" );
-    const sw::string engineShadersDir = sw::ResourceUtil::getDomainFolderPath( "engine", "shaders" );
+    const sw::string shaderPath       = sw::ResourcePaths::getResourcePath( "common/shaders/samplecompute.hlsl" );
+    const sw::string binDir           = sw::ResourcePaths::getResourcePath( "common/shaders/bin/dx12" );
+    const sw::string engineShadersDir = sw::ResourcePaths::getDomainFolderPath( "engine", "shaders" );
     // 쿠킹된 트리가 없는 환경(클린 체크아웃 직후)에서는 볼 것이 없다.
     if ( shaderPath.empty() || binDir.empty() || engineShadersDir.empty() )
         return;

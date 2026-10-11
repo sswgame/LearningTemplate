@@ -10,7 +10,7 @@
 #include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/AudioClipDecoder.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {
@@ -37,7 +37,7 @@ namespace sw
             vector<uint8> bytes;
             AudioPcm      pcm;
             AudioClipData clip;
-            if ( ResourceUtil::readBinaryResource( relative, bytes ) == false || AudioClipDecoder::decode( relative, bytes.data(), bytes.size(), pcm ) == false ||
+            if ( ResourceIO::readBinaryResource( relative, bytes ) == false || AudioClipDecoder::decode( relative, bytes.data(), bytes.size(), pcm ) == false ||
                  AudioClipData::convertPcm( pcm, clip ) == false )
             {
                 SW_LOG_ERROR( "Lip sync import could not decode '%#'", relative.c_str() );

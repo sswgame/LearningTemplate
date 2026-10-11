@@ -42,7 +42,7 @@
 #include "Engine/Renderer/Scene/GPUScene.h"
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Window/IWindow.h"
 
@@ -2241,7 +2241,7 @@ namespace
  */
 SW_TEST_CASE( GPUSceneTest, SpriteFrameAndTintRideTheInstanceWithoutSplittingTheBatch )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::Scene scene( "GpuSceneSprites" );
     SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
     sw::GameObjectManager* objects = scene.getObjectManager();
@@ -2301,7 +2301,7 @@ SW_TEST_CASE( GPUSceneTest, SpriteFrameAndTintRideTheInstanceWithoutSplittingThe
  */
 SW_TEST_CASE( GPUSceneTest, SpriteInstanceBatchEntriesCarryFrameTintAndHide )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::Scene scene( "GpuSceneSpriteBatch" );
     SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
     sw::GameObjectManager* objects = scene.getObjectManager();
@@ -2411,7 +2411,7 @@ SW_TEST_CASE( GPUSceneTest, SkinPalettesSurviveAUnitLeavingTheFrame )
  */
 SW_TEST_CASE( GPUSceneTest, SortingLayerOrdersTransparentBeforeDepth )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     TransparentSortFixture fixture;
     SW_ASSERT_TRUE( fixture.initialize() );
     const sw::Render2DSettings& settings = sw::Render2DSettings::getActive();
@@ -2448,7 +2448,7 @@ SW_TEST_CASE( GPUSceneTest, SortingLayerOrdersTransparentBeforeDepth )
  */
 SW_TEST_CASE( GPUSceneTest, EqualDepthTransparentOrderIsStableUnderViewAxis )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     TransparentSortFixture fixture;
     SW_ASSERT_TRUE( fixture.initialize() );
     uint32 worldUIKey{ 0 };

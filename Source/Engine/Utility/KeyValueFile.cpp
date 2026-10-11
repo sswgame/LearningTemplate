@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {
@@ -53,7 +53,7 @@ namespace sw
     {
         string text;
         string absPath;
-        if ( ResourceUtil::readTextResource( relativePath, text, &absPath ) == false )
+        if ( ResourceIO::readTextResource( relativePath, text, &absPath ) == false )
             return false;
         if ( pOutAbsPath != nullptr )
             *pOutAbsPath = std::move( absPath );

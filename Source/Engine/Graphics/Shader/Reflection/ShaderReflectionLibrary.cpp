@@ -15,7 +15,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 namespace sw
@@ -312,8 +312,8 @@ namespace sw
         // 없고, 바인더가 b1 을 아예 안 걸어서 DX12 가 비어 있는 루트 디스크립터를 읽고 GPU 페이지
         // 폴트(DEVICE_HUNG)로 죽는다. 셰이더 한 줄 고쳤을 뿐인데 죽는 곳은 드로우라 추적이 오래 걸린다.
         {
-            const string sourceAbs   = ResourceUtil::getResourcePath( desc._filePath );
-            const string manifestAbs = ResourceUtil::getResourcePath( binDirRel + getManifestFileName() );
+            const string sourceAbs   = ResourcePaths::getResourcePath( desc._filePath );
+            const string manifestAbs = ResourcePaths::getResourcePath( binDirRel + getManifestFileName() );
             if ( sourceAbs.empty() == false && manifestAbs.empty() == false )
             {
                 // 판정 기준은 ShaderCache 와 **같은 것 하나**, cook.stamp 의 내용 해시다. 파일 시간으로

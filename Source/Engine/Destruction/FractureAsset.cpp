@@ -5,7 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {
@@ -380,7 +380,7 @@ namespace sw
     {
         clear();
         vector<uint8> bytes;
-        if ( ResourceUtil::readBinaryResource( path, bytes ) == false )
+        if ( ResourceIO::readBinaryResource( path, bytes ) == false )
             return false;
         return readFromBytes( bytes.data(), bytes.size() );
     }

@@ -4,7 +4,7 @@
 
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Resource/AssetLoadProfiler.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -111,7 +111,7 @@ SW_TEST_CASE( AssetLoadProfilerTest, ScopesSplitPhasesAndAggregatePerKind )
  */
 SW_TEST_CASE( AssetLoadProfilerTest, MeshCacheLoadsLeaveRecords )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     AssetLoadProfiler& profiler = AssetLoadProfiler::get();
     profiler.reset();
 

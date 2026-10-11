@@ -3,7 +3,7 @@
 """
 빌드 타깃별 제외 에셋 종류(`Config/Engine/CookContract.json` 의 `target_excluded_asset_kinds`)의 단위 시험.
 
-전용 서버 패키지에는 텍스처 · 셰이더 바이너리 · 오디오가 **0 개**여야 하고(서버는 그 종류를 읽지 않는다 — `ResourceUtil::setHostTarget`),
+전용 서버 패키지에는 텍스처 · 셰이더 바이너리 · 오디오가 **0 개**여야 하고(서버는 그 종류를 읽지 않는다 — `ResourcePaths::setHostTarget`),
 메시 · 애니메이션은 남아야 한다(충돌 · 소켓 · 히트박스 · 루트 모션). 저장소의 실제 `Resource/` 를 쿠커가 팩에 넣을 파일 목록
 (`CookAssets.collectPackFiles` — `cookPack` 이 쓰는 것과 같은 판단)으로 훑는다.
 """

@@ -13,7 +13,7 @@
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {
@@ -121,7 +121,7 @@ namespace sw
         {
             _bCrowdSettingsReady = SW_TRUE;
             AnimationCrowdSettings settings;
-            if ( ResourceUtil::hasResource( AnimationCrowdSettings::kResourcePath ) && settings.loadFromResource( AnimationCrowdSettings::kResourcePath ) )
+            if ( ResourceIO::hasResource( AnimationCrowdSettings::kResourcePath ) && settings.loadFromResource( AnimationCrowdSettings::kResourcePath ) )
                 _crowd.setSettings( settings );
         }
         // 묶음 · 사본 · VAT 를 정한다(게임 스레드 — 메시를 갈아 끼운다). 나눈 유닛은 이번 프레임 포즈 단계를 돌지 않는다.
@@ -201,7 +201,7 @@ namespace sw
         {
             // 표가 없으면 단계 없는 기본(가시성만)이다. 있는데 틀리면 오류를 남기고 기본으로 간다.
             _bLODSettingsReady = SW_TRUE;
-            if ( ResourceUtil::hasResource( AnimationLODSettings::kResourcePath ) )
+            if ( ResourceIO::hasResource( AnimationLODSettings::kResourcePath ) )
                 (void)_lodSettings.loadFromResource( AnimationLODSettings::kResourcePath ); // 틀리면 loadFromResource 가 오류를 남기고 기본으로 돌린다
         }
 

@@ -17,7 +17,7 @@
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -165,7 +165,7 @@ namespace
  */
 SW_TEST_CASE( FacialAnimationTest, ImportedTestHeadCarriesMorphTargetsAndWeightCurves )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     MeshAssetData mesh{};
     SW_ASSERT_TRUE( MeshAssetFormat::loadFromResource( TestFacialAnimationInternal::kMeshPath, mesh ) );
     SW_EXPECT_TRUE( mesh.hasSkin() );
@@ -214,7 +214,7 @@ SW_TEST_CASE( FacialAnimationTest, ImportedTestHeadCarriesMorphTargetsAndWeightC
  */
 SW_TEST_CASE( FacialAnimationTest, LipSyncAnalyzerSeparatesSyntheticVowels )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     LipSyncSettings settings;
     SW_ASSERT_TRUE( settings.loadFromResource( LipSyncSettings::kResourcePath ) );
 
@@ -286,7 +286,7 @@ SW_TEST_CASE( FacialAnimationTest, LipSyncAnalyzerSeparatesSyntheticVowels )
  */
 SW_TEST_CASE( FacialAnimationTest, ExpressionsAndCurvesDriveMorphWeights )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     GameObjectManager         manager;
     SkeletalMeshComponent*    pUnit = nullptr;
     FacialAnimationComponent* pFace = TestFacialAnimationInternal::createHead( manager, pUnit, "Talk" );
@@ -318,7 +318,7 @@ SW_TEST_CASE( FacialAnimationTest, ExpressionsAndCurvesDriveMorphWeights )
  */
 SW_TEST_CASE( FacialAnimationTest, SpeechOpensTheMouthFromTrackOrAmplitude )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     GameObjectManager         manager;
     SkeletalMeshComponent*    pUnit = nullptr;
     FacialAnimationComponent* pFace = TestFacialAnimationInternal::createHead( manager, pUnit );
@@ -368,7 +368,7 @@ SW_TEST_CASE( FacialAnimationTest, SpeechOpensTheMouthFromTrackOrAmplitude )
  */
 SW_TEST_CASE( FacialAnimationTest, BlinkFollowsTheRigIntervals )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     GameObjectManager         manager;
     SkeletalMeshComponent*    pUnit = nullptr;
     FacialAnimationComponent* pFace = TestFacialAnimationInternal::createHead( manager, pUnit );
@@ -400,7 +400,7 @@ SW_TEST_CASE( FacialAnimationTest, BlinkFollowsTheRigIntervals )
  */
 SW_TEST_CASE( FacialAnimationTest, GazeTurnsEyesTowardTheTargetWithinTheLimit )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     GameObjectManager         manager;
     SkeletalMeshComponent*    pUnit = nullptr;
     FacialAnimationComponent* pFace = TestFacialAnimationInternal::createHead( manager, pUnit );
@@ -442,7 +442,7 @@ SW_TEST_CASE( FacialAnimationTest, GazeTurnsEyesTowardTheTargetWithinTheLimit )
  */
 SW_TEST_CASE( FacialAnimationTest, AnimatorExpressionCurvesDriveExpressions )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     AnimClip grin;
     SW_ASSERT_TRUE( grin.loadFromResource( string( TestFacialAnimationInternal::kClipFolder ) + "/talk.animclip" ) );
     grin.setName( hashed_string( "Grin" ) );

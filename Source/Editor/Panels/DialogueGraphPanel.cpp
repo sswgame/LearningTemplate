@@ -11,7 +11,7 @@
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Commands/EditorViewportPreview.h"
-#include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorNodeGraphID.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -163,7 +163,7 @@ namespace sw::editor
         canvasDesc._flags     = editor::EditorSectionFlags::NoScrollbar | editor::EditorSectionFlags::NoScrollWithMouse;
         EditorChrome::beginSection( canvasDesc );
 
-        if ( beginGraphCanvas( "DialogueGraphCanvas", EditorUtil::kDialogueGraphCanvasFileName ) == false )
+        if ( beginGraphCanvas( "DialogueGraphCanvas", EditorPaths::kDialogueGraphCanvasFileName ) == false )
         {
             if ( _nodeGraph.hasContext() == false )
                 ImGui::TextUnformatted( "Failed to create Dialogue Node Editor context." );

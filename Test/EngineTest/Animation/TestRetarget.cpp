@@ -16,7 +16,7 @@
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/AnimationTestUtil.h"
 
@@ -126,7 +126,7 @@ namespace
  */
 SW_TEST_CASE( RetargetTest, ProfileParsesAndRejectsUnknownNames )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     RetargetProfile profile;
     SW_ASSERT_TRUE( profile.loadFromResource( TestRetargetInternal::kProfile ) );
     SW_EXPECT_EQUAL( 8u, static_cast<uint32>( profile.getChains().size() ) );
@@ -310,7 +310,7 @@ SW_TEST_CASE( RetargetTest, BakedClipMatchesRuntimeRetarget )
  */
 SW_TEST_CASE( RetargetTest, KnightWalkOnProportionedMinion )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     Skeleton knight;
     Skeleton minion;
     SW_ASSERT_TRUE( knight.loadFromResource( TestRetargetInternal::kKnightSkeleton ) );
@@ -422,7 +422,7 @@ SW_TEST_CASE( RetargetTest, ComponentFollowsSourceUnit )
  */
 SW_TEST_CASE( RetargetTest, BakeClipFileWritesTargetClip )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const string outPath = FileUtil::joinPath( test::makeTempPath( "retargetbake" ), "walking_a_minion.animclip" );
     SW_ASSERT_TRUE( RetargetBakeUtil::bakeClipFile( TestRetargetInternal::kProfile, TestRetargetInternal::kKnightWalk, outPath ) );
     AnimClip baked;

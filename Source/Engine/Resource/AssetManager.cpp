@@ -22,7 +22,7 @@
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/Cache/IAssetCache.h"
 #include "Engine/Resource/Pack/ResourcePackManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 namespace sw
 {
@@ -79,7 +79,7 @@ namespace sw
 
     bool AssetManager::initialize()
     {
-        if ( ResourceUtil::initialize() == false )
+        if ( ResourcePaths::initialize() == false )
         {
             SW_LOG_ERROR( "Failed to initialize AssetManager!" );
             return false;
@@ -94,7 +94,7 @@ namespace sw
         // 우선순위 적용과 마운트를 **여기서 붙여 둔다.** 둘을 호출자에게 맡기면 순서를 뒤집거나
         // 사이에 다른 것을 끼워 넣을 수 있고, 실제로 그래서 팩이 게임 도메인 없이 실린 적이 있다.
         if ( listSearchPriority.empty() == false )
-            ResourceUtil::setSearchPriority( listSearchPriority );
+            ResourcePaths::setSearchPriority( listSearchPriority );
 
         // 소스 트리를 읽는 쿠킹은 팩을 올리지 않는다 — 팩은 쿠킹의 산출물이다. 느슨한 파일을 배포 구성에서도 읽고, GUID 표는 `.meta` 를 훑는다.
         _contentSource = source;
@@ -118,13 +118,13 @@ namespace sw
         const string exeDir         = FileUtil::getBinaryDirectory();
         const string arrCandidate[] = { FileUtil::joinPath( exeDir, "Packs" ),
                                         "Packs",
-                                        FileUtil::joinPath( ResourceUtil::getProjectFolderPath(), "Packs" ),
+                                        FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), "Packs" ),
                                         "Bin/Packs" };
         for ( const string& packsDir : arrCandidate )
         {
             if ( packsDir.empty() )
                 continue;
-            if ( _pPackManager->scanAndMountPacks( packsDir, ResourceUtil::getSearchPriority() ) )
+            if ( _pPackManager->scanAndMountPacks( packsDir, ResourcePaths::getSearchPriority() ) )
                 return true;
         }
         return false;
@@ -149,9 +149,9 @@ namespace sw
         {
             SW_LOG_INFO( "에셋 레지스트리 %# 항목 (팩 assetregistry.txt)", registered );
         }
-        else if ( ResourceUtil::getRootFolderPath().empty() == false )
+        else if ( ResourcePaths::getRootFolderPath().empty() == false )
         {
-            registered = _assetDatabase.scanMetaFiles( ResourceUtil::getRootFolderPath() );
+            registered = _assetDatabase.scanMetaFiles( ResourcePaths::getRootFolderPath() );
             SW_LOG_INFO( "에셋 레지스트리 %# 항목 (.meta 스캔)", registered );
         }
         return registered;

@@ -6,7 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
@@ -724,7 +724,7 @@ namespace sw
     bool CultureTable::loadFromResource( string_view resourcePath )
     {
         string text;
-        if ( ResourceUtil::readTextResource( resourcePath, text ) == false )
+        if ( ResourceIO::readTextResource( resourcePath, text ) == false )
         {
             SW_LOG_ERROR( "Culture table '%#' cannot be read", resourcePath );
             return false;

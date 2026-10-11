@@ -11,7 +11,7 @@
 
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Resource/Image/DDSLoader.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -226,8 +226,8 @@ namespace sw::editor
      */
     SW_TEST_CASE( EditorTexturePipelineTest, ImageUtilAndTextureImporterEndToEnd )
     {
-        SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
-        const string rawSplashPath = sw::ResourceUtil::getResourcePath( "textures_raw/splash.png" );
+        SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+        const string rawSplashPath = sw::ResourcePaths::getResourcePath( "textures_raw/splash.png" );
         if ( rawSplashPath.empty() )
         {
             // If textures_raw is not yet set in Resource priority, test direct path
@@ -568,11 +568,11 @@ namespace sw::editor
      */
     SW_TEST_CASE( TextureImportStampTest, RepositoryRawTexturesMatchTheirDDS )
     {
-        SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+        SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
         TextureImportConfig config;
         SW_ASSERT_TRUE( config.loadFromFile( TextureImporter::makeDefaultImportConfigPath() ) );
 
-        const AssetImportSummary summary = TextureImporter::importAllTextures( sw::ResourceUtil::getRootFolderPath(), config, AssetImportMode::CheckOnly );
+        const AssetImportSummary summary = TextureImporter::importAllTextures( sw::ResourcePaths::getRootFolderPath(), config, AssetImportMode::CheckOnly );
         string                   problemText;
         for ( const string& problem : summary._listProblem )
         {

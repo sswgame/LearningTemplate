@@ -10,7 +10,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
@@ -52,7 +52,7 @@ namespace sw
                 bLoaded = FileUtil::readFile( fileName, _bytes );
 
             if ( bLoaded == false )
-                bLoaded = ResourceUtil::readBinaryResource( fileName, _bytes );
+                bLoaded = ResourceIO::readBinaryResource( fileName, _bytes );
 
             if ( bLoaded )
             {

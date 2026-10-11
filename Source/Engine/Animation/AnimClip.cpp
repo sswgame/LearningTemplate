@@ -8,7 +8,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {
@@ -408,7 +408,7 @@ namespace sw
     {
         SW_MEMORY_SCOPE( Animation );
         vector<uint8> bytes;
-        if ( ResourceUtil::readBinaryResource( path, bytes ) == false )
+        if ( ResourceIO::readBinaryResource( path, bytes ) == false )
         {
             SW_LOG_ERROR( "Animation clip '%#' could not be read", path );
             clear();

@@ -2,7 +2,7 @@
 
 #include "Core/Container/vector.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Text/IFontRasterizer.h"
 
 #include "TestFramework/TestFramework.h"
@@ -18,7 +18,7 @@ namespace
         static sw::FontFaceID openEngineFace( sw::IFontRasterizer& rasterizer )
         {
             sw::vector<uint8> bytes;
-            if ( sw::ResourceUtil::readBinaryResource( kFontPath, bytes ) == false )
+            if ( sw::ResourceIO::readBinaryResource( kFontPath, bytes ) == false )
                 return sw::kInvalidFontFaceID;
             return rasterizer.loadFace( std::move( bytes ), 0, kFontPath );
         }

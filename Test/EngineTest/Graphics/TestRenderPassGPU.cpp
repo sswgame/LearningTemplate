@@ -64,7 +64,8 @@
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 #include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Text/GlyphCache.h"
@@ -693,7 +694,7 @@ namespace
     void expectShadowCastsOnEveryBackend( const utf8* pTestName, float32 shadowExtent )
     {
         sw::string pipelineText;
-        SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "engine/pipeline/forwardpipeline.xml", pipelineText ) );
+        SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "engine/pipeline/forwardpipeline.xml", pipelineText ) );
         constexpr sw::string_view kDepthWriteOn  = "_bEnableDepthWrite=\"true\"";
         constexpr sw::string_view kDepthWriteOff = "_bEnableDepthWrite=\"false\"";
         const size_t              shadowPassAt   = pipelineText.find( "_type=\"Shadow\"" );
@@ -1312,7 +1313,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialPermutationDrivesBatchPSO )
  */
 SW_TEST_CASE( RenderPassGPUTest, SpriteDrawsWithTheSpriteShader )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
     {
@@ -3680,7 +3681,7 @@ SW_TEST_CASE( RenderPassGPUTest, ForgetThenInitDoesNotDoubleMaterialTextureOrdin
  */
 SW_TEST_CASE( RenderPassGPUTest, MaterialRequestedWithoutADeviceIsUploadedLater )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     constexpr const utf8* kPath = "engine/materials/benchtextured.material";
     sw::MaterialCache&    cache = sw::engine::getAssetManager().getMaterialCache();
 
@@ -4226,7 +4227,7 @@ SW_TEST_CASE( RenderPassGPUTest, FusedPostChainMatchesStaged )
 SW_TEST_CASE( RenderPassGPUTest, RenamedAttachmentsRenderTheSameImage )
 {
     sw::string pipelineText;
-    SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "engine/pipeline/forwardpipeline.xml", pipelineText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "engine/pipeline/forwardpipeline.xml", pipelineText ) );
     pipelineText = sw::StringUtil::replace( pipelineText, "SceneColor", "MainColor" );
     pipelineText = sw::StringUtil::replace( pipelineText, "SceneDepth", "MainDepth" );
     // 그림자 맵도 이름을 바꾸고 역할을 적는다 — ForwardOpaque 는 그림자 맵을 이름이 아니라 ShadowMap 역할의 입력으로 찾는다.
@@ -4302,7 +4303,7 @@ SW_TEST_CASE( RenderPassGPUTest, RenamedAttachmentsRenderTheSameImage )
 SW_TEST_CASE( RenderPassGPUTest, RenamedGBufferAttachmentsRenderTheSameImage )
 {
     sw::string pipelineText;
-    SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "engine/pipeline/deferredpipeline.xml", pipelineText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "engine/pipeline/deferredpipeline.xml", pipelineText ) );
     struct AttachmentRename
     {
         const utf8* _pOldName;
@@ -4479,11 +4480,11 @@ SW_TEST_CASE( RenderPassGPUTest, InstanceOverridesReachTheGPUOnEveryBackend )
  */
 SW_TEST_CASE( RenderPassGPUTest, MissingTextureSamplesTheChecker )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     constexpr const utf8* kPresentTexture = "engine/textures/test/checker.dds";
     constexpr const utf8* kAbsentTexture  = "engine/textures/test/doesnotexist.dds";
     sw::string            xml;
-    SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "engine/materials/benchtextured.material", xml ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "engine/materials/benchtextured.material", xml ) );
     SW_ASSERT_TRUE( xml.find( kPresentTexture ) != sw::string::npos );
     xml                             = sw::StringUtil::replace( xml, kPresentTexture, kAbsentTexture );
     const sw::string missingTexture = sw::engine::getEngineDefaultAssets()._missingTexture;
@@ -4529,7 +4530,7 @@ SW_TEST_CASE( RenderPassGPUTest, MissingTextureSamplesTheChecker )
 SW_TEST_CASE( RenderPassGPUTest, DepthPrepassRendersTheSameImage )
 {
     sw::string prepassText;
-    SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "engine/pipeline/forwardprepasspipeline.xml", prepassText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "engine/pipeline/forwardprepasspipeline.xml", prepassText ) );
     SW_ASSERT_TRUE( prepassText.find( "_type=\"DepthPrepass\"" ) != sw::string::npos );
     const sw::string renamedPath = test::makeTempPath( "renamedprepasspipeline.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( renamedPath, sw::StringUtil::replace( prepassText, "SceneDepth", "MainDepth" ) ) );
@@ -4843,7 +4844,7 @@ SW_TEST_CASE( RenderPassGPUTest, MirroredMeshShowsItsOuterFaces )
  */
 SW_TEST_CASE( RenderPassGPUTest, MaterialTexturesAreSampledLinearWrap )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     // 쿼드 픽셀 가운데 섞인 픽셀의 하한(%)과, 기준 백엔드와의 섞인 픽셀 수 차이 상한(%). 최근접은 0 %, CLAMP 는 기준보다 10 % 남짓 적다.
     constexpr uint32 kMinMixedPercent = 3;
     constexpr uint32 kMaxDriftPercent = 5;
@@ -5155,7 +5156,7 @@ SW_TEST_CASE( RenderPassGPUTest, EngineTextureSlotsAreSampledLinearClamp )
  */
 SW_TEST_CASE( RenderPassGPUTest, SpriteFramesAndTintsArePerInstance )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     constexpr const utf8* kQuadrantTexture = "engine/textures/test/quadrants.dds";
     struct SpriteCase
     {
@@ -5330,7 +5331,7 @@ SW_TEST_CASE( RenderPassGPUTest, SpriteFramesAndTintsArePerInstance )
 SW_TEST_CASE( RenderPassGPUTest, HalfResolutionAttachmentCoversItsWholeTarget )
 {
     sw::string pipelineText;
-    SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "engine/pipeline/forwardpipelinestaged.xml", pipelineText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "engine/pipeline/forwardpipelinestaged.xml", pipelineText ) );
     const sw::string bloomDecl = "<RenderPassAttachment _name=\"BloomColor\"";
     SW_ASSERT_TRUE( pipelineText.find( bloomDecl ) != sw::string::npos );
     pipelineText              = sw::StringUtil::replace( pipelineText, bloomDecl, bloomDecl + " _resolutionDivisor=\"2\"" );
@@ -5448,7 +5449,7 @@ SW_TEST_CASE( RenderPassGPUTest, HalfResolutionAttachmentCoversItsWholeTarget )
 SW_TEST_CASE( RenderPassGPUTest, HalfResolutionBloomBlursByTheSourceTexel )
 {
     sw::string pipelineText;
-    SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "engine/pipeline/forwardpipelinestaged.xml", pipelineText ) );
+    SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "engine/pipeline/forwardpipelinestaged.xml", pipelineText ) );
     // 깊이도 같이 나눈다 — 한 패스의 출력(색 · 깊이)은 같은 크기여야 한다(파이프라인 검증).
     for ( const utf8* pName : { "SceneColor", "SceneDepth", "BloomColor" } )
     {
@@ -6493,7 +6494,7 @@ SW_TEST_CASE( RenderPassGPUTest, CrowdSharingAndVertexAnimationMatchPerUnitSkinn
         BindPose,
     };
 
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::shared_ptr<sw::Skeleton> skeleton = sw::make_shared<sw::Skeleton>( test::makeChainSkeleton( 2 ) );
     // 클립 — 반복, 길이 1 초, bone1 이 Z 축으로 크게 돈다.
     const sw::string folder = test::makeTempPath( "crowdgpuclips" );
@@ -6797,7 +6798,7 @@ SW_TEST_CASE( RenderPassGPUTest, VertexStageMaterialSchemaIsUsed )
  */
 SW_TEST_CASE( RenderPassGPUTest, PixelArtSpritesSnapToTheAssetPixelGrid )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     constexpr const utf8* kStripeTexture = "engine/textures/test/pixelstripes.dds";
     constexpr float32     kPixelsPerUnit = 8.0f;
     constexpr int32       kZoom          = 4;
@@ -6945,7 +6946,7 @@ SW_TEST_CASE( RenderPassGPUTest, PixelArtSpritesSnapToTheAssetPixelGrid )
  */
 SW_TEST_CASE( RenderPassGPUTest, Light2DFalloffAndShadowOnEveryBackend )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     constexpr float32 kOrthoHeight = 4.0f;
     constexpr float32 kOuterRadius = 2.0f;
 
@@ -7436,7 +7437,7 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasDrawsOnEveryBackend )
         // 캔버스 — 글리프는 저장소 글꼴(라틴)이라 기계마다 같다.
         sw::unique_ptr<sw::IFontRasterizer> rasterizer = sw::IFontRasterizer::createDefault();
         sw::vector<uint8>                   fontBytes;
-        SW_ASSERT_TRUE( sw::ResourceUtil::readBinaryResource( "engine/fonts/kenney_future.ttf", fontBytes ) );
+        SW_ASSERT_TRUE( sw::ResourceIO::readBinaryResource( "engine/fonts/kenney_future.ttf", fontBytes ) );
         const sw::FontFaceID face = rasterizer->loadFace( std::move( fontBytes ), 0, "engine/fonts/kenney_future.ttf" );
         SW_ASSERT_TRUE( face != sw::kInvalidFontFaceID );
         sw::GlyphCache      glyphCache( *rasterizer );

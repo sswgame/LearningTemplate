@@ -27,7 +27,7 @@
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/HostTargetTestUtil.h"
 
@@ -76,10 +76,10 @@ namespace
  */
 SW_TEST_CASE( ShaderCookRequestTest, PassDefineReachesCookedRequests )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     sw::vector<sw::ShaderCookRequest> listRequest;
-    sw::ShaderCookDriver::collectAllRequests( sw::ResourceUtil::getRootFolderPath(), listRequest );
+    sw::ShaderCookDriver::collectAllRequests( sw::ResourcePaths::getRootFolderPath(), listRequest );
     SW_EXPECT_TRUE_MSG( listRequest.empty() == false, "요청을 하나도 모으지 못했다 — 리소스 루트를 못 찾았을 수 있다" );
     SW_ASSERT_TRUE( listRequest.empty() == false );
 
@@ -104,9 +104,9 @@ SW_TEST_CASE( ShaderCookRequestTest, PassDefineReachesCookedRequests )
  */
 SW_TEST_CASE( ShaderCookRequestTest, MaterialShaderBaseVariantIsRequested )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::vector<sw::ShaderCookRequest> listRequest;
-    sw::ShaderCookDriver::collectAllRequests( sw::ResourceUtil::getRootFolderPath(), listRequest );
+    sw::ShaderCookDriver::collectAllRequests( sw::ResourcePaths::getRootFolderPath(), listRequest );
     SW_ASSERT_TRUE( listRequest.empty() == false );
     const uint64 baseHash    = sw::ShaderCooker::computePermutationHash( sw::vector<sw::string>{} );
     const utf8*  arrShader[] = { "engine/shaders/water.hlsl", "engine/shaders/terrain.hlsl", "engine/shaders/foliage.hlsl" };
@@ -124,10 +124,10 @@ SW_TEST_CASE( ShaderCookRequestTest, MaterialShaderBaseVariantIsRequested )
  */
 SW_TEST_CASE( ShaderCookRequestTest, RequestsAreUnique )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     sw::vector<sw::ShaderCookRequest> listRequest;
-    sw::ShaderCookDriver::collectAllRequests( sw::ResourceUtil::getRootFolderPath(), listRequest );
+    sw::ShaderCookDriver::collectAllRequests( sw::ResourcePaths::getRootFolderPath(), listRequest );
     SW_ASSERT_TRUE( listRequest.empty() == false );
 
     uint32 duplicateCount = 0;
@@ -155,10 +155,10 @@ SW_TEST_CASE( ShaderCookRequestTest, RequestsAreUnique )
  */
 SW_TEST_CASE( ShaderCookRequestTest, RequestedShaderPathsAreUniqueAcrossDomains )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     sw::vector<sw::ShaderCookRequest> listRequest;
-    sw::ShaderCookDriver::collectAllRequests( sw::ResourceUtil::getRootFolderPath(), listRequest );
+    sw::ShaderCookDriver::collectAllRequests( sw::ResourcePaths::getRootFolderPath(), listRequest );
     SW_ASSERT_TRUE( listRequest.empty() == false );
 
     // 도메인을 뗀 경로 → 처음 본 전역 경로
@@ -188,7 +188,7 @@ SW_TEST_CASE( ShaderCookRequestTest, RequestedShaderPathsAreUniqueAcrossDomains 
  */
 SW_TEST_CASE( ShaderCookRequestTest, EveryPipelinePassShaderIsRequested )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     sw::EngineDefaultAssets engineDefaultAssets;
     SW_ASSERT_TRUE( engineDefaultAssets.loadFromResource() );
@@ -259,7 +259,7 @@ SW_TEST_CASE( ShaderCookRequestTest, EveryPipelinePassShaderIsRequested )
  */
 SW_TEST_CASE( ShaderCookRequestTest, EveryViewModeVariantOfEveryMeshPassTypeIsRequested )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     sw::EngineDefaultAssets engineDefaultAssets;
     SW_ASSERT_TRUE( engineDefaultAssets.loadFromResource() );
@@ -311,12 +311,12 @@ SW_TEST_CASE( ShaderCookRequestTest, EveryViewModeVariantOfEveryMeshPassTypeIsRe
  */
 SW_TEST_CASE( ShaderCookRequestTest, CookedManifestHoldsEveryRequest )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     if ( test::HostTargetTestUtil::isServerOnlyBuild() )
         SW_TEST_SKIP( "the dedicated server package leaves textures, shader binaries and audio out (CookContract target_excluded_asset_kinds)" );
 
     sw::vector<sw::ShaderCookRequest> listRequest;
-    sw::ShaderCookDriver::collectAllRequests( sw::ResourceUtil::getRootFolderPath(), listRequest );
+    sw::ShaderCookDriver::collectAllRequests( sw::ResourcePaths::getRootFolderPath(), listRequest );
     SW_ASSERT_TRUE( listRequest.empty() == false );
 
     const sw::ShaderTargetFormat arrFormat[] = { sw::ShaderTargetFormat::DXBC_D3D11, sw::ShaderTargetFormat::DXIL_D3D12,
@@ -370,9 +370,9 @@ SW_TEST_CASE( ShaderCookRequestTest, CookedManifestHoldsEveryRequest )
  */
 SW_TEST_CASE( ShaderCookRequestTest, CookedFoldersHoldOnlyRequestedBinaries )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
-    const sw::string& rootDir = sw::ResourceUtil::getRootFolderPath();
+    const sw::string& rootDir = sw::ResourcePaths::getRootFolderPath();
     SW_ASSERT_TRUE( rootDir.empty() == false );
 
     sw::vector<sw::ShaderCookRequest> listRequest;
@@ -387,7 +387,7 @@ SW_TEST_CASE( ShaderCookRequestTest, CookedFoldersHoldOnlyRequestedBinaries )
     for ( const sw::ShaderCookRequest& request : listRequest )
     {
         const sw::string absPath = sw::FileUtil::exists( request._shaderPath ) ? request._shaderPath
-                                                                               : sw::ResourceUtil::getResourcePath( request._shaderPath );
+                                                                               : sw::ResourcePaths::getResourcePath( request._shaderPath );
         if ( sw::FileUtil::exists( absPath ) == false )
             continue;
         const sw::string normPath  = sw::FileUtil::normalizeSeparators( absPath );
@@ -445,10 +445,10 @@ SW_TEST_CASE( ShaderCookRequestTest, CookedFoldersHoldOnlyRequestedBinaries )
  */
 SW_TEST_CASE( ShaderCookRequestTest, EveryRuntimeStaticSwitchCombinationIsRequested )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::EngineDefaultAssets engineDefaultAssets;
     SW_ASSERT_TRUE( engineDefaultAssets.loadFromResource() );
-    const sw::string&                 rootDir = sw::ResourceUtil::getRootFolderPath();
+    const sw::string&                 rootDir = sw::ResourcePaths::getRootFolderPath();
     sw::vector<sw::ShaderCookRequest> listRequest;
     sw::ShaderCookDriver::collectAllRequests( rootDir, listRequest );
     SW_ASSERT_TRUE( listRequest.empty() == false );

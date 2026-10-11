@@ -5,12 +5,12 @@
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
-#include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw::editor
@@ -36,7 +36,7 @@ namespace sw::editor
     string EditorGlobalVariableCommands::getPresetFolderPath()
     {
         // 앱이 쓰는 상태라 팩 밖이다 — 팩 안(`data/presets/globalvars`)에 두면 쿠킹이 게임 팩에 싣는다. 팩마다 폴더를 나눈다.
-        const string stateDir = EditorUtil::getEditorStateDirectory();
+        const string stateDir = EditorPaths::getEditorStateDirectory();
         if ( stateDir.empty() )
             return {};
         const string packName = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( GameConfig::getActive()._packRoot ) );
@@ -45,7 +45,7 @@ namespace sw::editor
 
     string EditorGlobalVariableCommands::getComponentPresetFolderPath()
     {
-        return ResourceUtil::getDomainFolderPath(
+        return ResourcePaths::getDomainFolderPath(
             GameConfig::getActive()._packRoot,
             FileUtil::joinPath( path::kDataFolder, path::kPresetsFolder ) );
     }

@@ -18,7 +18,7 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneManager.h"
@@ -307,7 +307,7 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, OverridesPairComponentsByKeyAndRevert
  */
 SW_TEST_CASE( EditorToolAssetCommandsTest, RevertingAnOverrideRemovesItFromTheSavedScene )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const string prefabPath = test::makeTempPath( "revert_crate.prefab.xml" );
     {
         GameObjectManager authoring;

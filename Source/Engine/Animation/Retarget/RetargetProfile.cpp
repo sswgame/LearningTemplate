@@ -5,7 +5,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Animation/Rig/RigNode.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
@@ -76,7 +76,7 @@ namespace sw
     bool RetargetProfile::loadFromResource( string_view path )
     {
         string text;
-        if ( ResourceUtil::readTextResource( path, text ) == false )
+        if ( ResourceIO::readTextResource( path, text ) == false )
         {
             SW_LOG_ERROR( "Retarget profile '%#' could not be read", path );
             clear();

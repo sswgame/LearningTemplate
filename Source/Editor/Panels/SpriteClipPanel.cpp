@@ -8,7 +8,7 @@
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
-#include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
@@ -63,11 +63,11 @@ namespace sw::editor
         {
             saveJSON();
             if ( getLoadedAssetPath().empty() )
-                _status = string{ "Saved " } + EditorUtil::kSpriteClipDocumentFileName;
+                _status = string{ "Saved " } + EditorPaths::kSpriteClipDocumentFileName;
             else
                 _status = string{ "Saved " } + getLoadedAssetPath();
         }
-        ImGui::TextDisabled( "%s/%s (separate from AnimGraph)", config::kDirSavedEditor, EditorUtil::kSpriteClipDocumentFileName );
+        ImGui::TextDisabled( "%s/%s (separate from AnimGraph)", config::kDirSavedEditor, EditorPaths::kSpriteClipDocumentFileName );
 
         ImGui::Separator();
         ImGui::TextUnformatted( "Frames (u,v,w,h,durationMs)" );

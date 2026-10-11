@@ -16,7 +16,7 @@
 #include "Editor/Common/Asset/TextureImporter.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "RuntimeAPI/ABI/EditorAPI.h"
 
@@ -49,7 +49,7 @@ namespace sw::editor
                             SW_LOG_ERROR( "Cannot import textures without the import config: %#", configPath.c_str() );
                             return -1;
                         }
-                        summary    = TextureImporter::importAllTextures( ResourceUtil::getRootFolderPath(), config, mode );
+                        summary    = TextureImporter::importAllTextures( ResourcePaths::getRootFolderPath(), config, mode );
                         pKindLabel = "Texture";
                         break;
                     }
@@ -62,13 +62,13 @@ namespace sw::editor
                             SW_LOG_ERROR( "Cannot import models without the import config: %#", configPath.c_str() );
                             return -1;
                         }
-                        summary    = ModelImporter::importAllModels( ResourceUtil::getRootFolderPath(), config, mode );
+                        summary    = ModelImporter::importAllModels( ResourcePaths::getRootFolderPath(), config, mode );
                         pKindLabel = "Model";
                         break;
                     }
                     case EditorImportKind::Heightfield:
                     {
-                        summary    = HeightfieldImporter::importAllHeightfields( ResourceUtil::getRootFolderPath(), mode );
+                        summary    = HeightfieldImporter::importAllHeightfields( ResourcePaths::getRootFolderPath(), mode );
                         pKindLabel = "Heightfield";
                         break;
                     }

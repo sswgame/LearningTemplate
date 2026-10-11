@@ -12,7 +12,7 @@
 #include "Engine/Graphics/RHI/Support/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIRequiredVersion.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/RHIFakeDevice.h"
 
@@ -452,7 +452,7 @@ SW_TEST_CASE( VulkanAPIVersionTest, DeviceBelowTheShaderTargetIsRejected )
  */
 SW_TEST_CASE( VulkanAPIVersionTest, CookedVulkanSpirvMatchesTheRequiredAPI )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     constexpr uint32 kSpirvMagic     = 0x07230203u;
     const uint32     expectedVersion = sw::VulkanRHIRequiredVersion::computeSpirvVersion( sw::VulkanRHIRequiredVersion::kRequiredMinor );
@@ -461,7 +461,7 @@ SW_TEST_CASE( VulkanAPIVersionTest, CookedVulkanSpirvMatchesTheRequiredAPI )
     uint32 checkedCount{ 0 };
     for ( const utf8* pDomain : arrDomain )
     {
-        const sw::string       binDirectory = sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), sw::string( pDomain ) + "/shaders/bin/vulkan" );
+        const sw::string       binDirectory = sw::FileUtil::joinPath( sw::ResourcePaths::getRootFolderPath(), sw::string( pDomain ) + "/shaders/bin/vulkan" );
         sw::vector<sw::string> listSpirvPath;
         if ( sw::FileUtil::collectFiles( binDirectory, ".spv", listSpirvPath, false ) == false )
             continue;

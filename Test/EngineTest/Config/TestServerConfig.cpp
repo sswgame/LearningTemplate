@@ -6,7 +6,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/Server/ServerConfig.h"
 #include "Engine/Config/Server/ServerSecret.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -16,7 +16,7 @@
  */
 SW_TEST_CASE( ServerConfigTest, RepositoryServerConfigsLoad )
 {
-    const sw::string       serverDirectory = sw::FileUtil::joinPath( sw::ResourceUtil::getProjectFolderPath(), "Config/Server" );
+    const sw::string       serverDirectory = sw::FileUtil::joinPath( sw::ResourcePaths::getProjectFolderPath(), "Config/Server" );
     sw::vector<sw::string> listFile;
     SW_ASSERT_TRUE( sw::FileUtil::collectFiles( serverDirectory, ".json", listFile, false ) );
     SW_ASSERT_TRUE_MSG( listFile.empty() == false, serverDirectory.c_str() );

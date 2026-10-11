@@ -8,7 +8,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 
@@ -24,7 +24,7 @@
 SW_TEST_CASE( TerrainBenchTest, LODSweepWorstFrame )
 {
     constexpr uint32 kFrameCount = 600;
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::SceneDocument doc;
     SW_ASSERT_TRUE( doc.loadXML( "game/empty/maps/envshowcase.scene.xml" ) );
     sw::Scene scene{ "TerrainBench" };

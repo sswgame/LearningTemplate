@@ -9,7 +9,7 @@
 #include "Core/Module/ModuleImageUtil.h"
 
 #include "Engine/Module/ModuleCatalog.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -269,7 +269,7 @@ SW_TEST_CASE( ModuleCatalogTest, BuildAndRuntimeAgree )
  */
 SW_TEST_CASE( ModuleCatalogTest, EveryRepositoryManifestParses )
 {
-    const sw::string       sourceDirectory = sw::FileUtil::joinPath( sw::ResourceUtil::getProjectFolderPath(), "Source" );
+    const sw::string       sourceDirectory = sw::FileUtil::joinPath( sw::ResourcePaths::getProjectFolderPath(), "Source" );
     sw::vector<sw::string> listFile;
     SW_ASSERT_TRUE( sw::FileUtil::collectFiles( sourceDirectory, ".json", listFile, true ) );
     uint32 manifestCount = 0;

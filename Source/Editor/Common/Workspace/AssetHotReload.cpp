@@ -18,7 +18,7 @@
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/Cache/IAssetCache.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 
 namespace sw::editor
@@ -126,10 +126,10 @@ namespace sw::editor
         FileWatchMatchDelegate fileWatchDelegate{ SW_DELEGATE_METHOD( FileWatchMatchDelegate, &AssetHotReload::onResourceFileChanged, this ) };
         // 감시 접두어는 **절대 경로**여야 한다 — 이벤트의 `_directory` 는 감시자가 열어 둔 절대 경로(리소스 루트)이고,
         // 접두어 비교는 그 둘을 그대로 맞춰 본다(상대 경로를 주면 비교가 항상 실패한다).
-        _resourceWatchHandle = _pFileWatchDispatcher->registerWatch( ResourceUtil::getRootFolderPath(), listExtension, fileWatchDelegate );
+        _resourceWatchHandle = _pFileWatchDispatcher->registerWatch( ResourcePaths::getRootFolderPath(), listExtension, fileWatchDelegate );
         // 디스크 목록을 든 화면(콘텐츠 브라우저)이 다시 읽을 때를 알도록, 종류와 무관하게 모든 변경을 센다.
         FileWatchMatchDelegate treeWatchDelegate{ SW_DELEGATE_METHOD( FileWatchMatchDelegate, &AssetHotReload::onResourceTreeChanged, this ) };
-        _contentWatchHandle = _pFileWatchDispatcher->registerWatch( ResourceUtil::getRootFolderPath(), {}, treeWatchDelegate );
+        _contentWatchHandle = _pFileWatchDispatcher->registerWatch( ResourcePaths::getRootFolderPath(), {}, treeWatchDelegate );
         return _resourceWatchHandle.isValid();
     }
 
@@ -167,7 +167,7 @@ namespace sw::editor
             return;
 
         string relPath{};
-        if ( FileUtil::makeRelativePath( ResourceUtil::getRootFolderPath(), FileUtil::joinPath( changeEvent._directory, changeEvent._filename ), relPath ) == false )
+        if ( FileUtil::makeRelativePath( ResourcePaths::getRootFolderPath(), FileUtil::joinPath( changeEvent._directory, changeEvent._filename ), relPath ) == false )
             return;
 
         if ( relPath.empty() )

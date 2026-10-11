@@ -15,7 +15,7 @@
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -248,7 +248,7 @@ namespace sw
     bool PrefabAsset::loadFromBinaryFile( string_view assetRelativePath )
     {
         _bValid        = SW_FALSE;
-        string absPath = ResourceUtil::getResourcePath( assetRelativePath );
+        string absPath = ResourcePaths::getResourcePath( assetRelativePath );
         if ( absPath.empty() )
             absPath = assetRelativePath;
 
@@ -296,7 +296,7 @@ namespace sw
 
     bool PrefabAsset::saveToXMLFile( string_view assetRelativePath ) const
     {
-        const string absPath = ResourceUtil::getWritePath( assetRelativePath );
+        const string absPath = ResourcePaths::getWritePath( assetRelativePath );
 
         const string xmlBody = ( _stateFormat == PrefabStateFormat::XML ) ? _stateData : convertState( PrefabStateFormat::XML );
 
@@ -341,7 +341,7 @@ namespace sw
 
     bool PrefabAsset::saveToJSONFile( string_view assetRelativePath ) const
     {
-        const string absPath = ResourceUtil::getWritePath( assetRelativePath );
+        const string absPath = ResourcePaths::getWritePath( assetRelativePath );
 
         const string jsonStr = ( _stateFormat == PrefabStateFormat::JSON ) ? _stateData : convertState( PrefabStateFormat::JSON );
         if ( jsonStr.empty() )
@@ -381,7 +381,7 @@ namespace sw
 
     bool PrefabAsset::saveToBinaryFile( string_view assetRelativePath ) const
     {
-        const string absPath = ResourceUtil::getWritePath( assetRelativePath );
+        const string absPath = ResourcePaths::getWritePath( assetRelativePath );
 
         Archive arch;
         arch << PrefabAssetInternal::kBinMagic;

@@ -6,7 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/EditorPaths.h"
 
 namespace sw::editor
 {
@@ -42,7 +42,7 @@ namespace sw::editor
 
     string EditorLayoutStore::getDefaultFolder()
     {
-        const string stateDirectory = EditorUtil::getEditorStateDirectory();
+        const string stateDirectory = EditorPaths::getEditorStateDirectory();
         if ( stateDirectory.empty() )
             return {};
         return FileUtil::joinPath( stateDirectory, kFolderName );

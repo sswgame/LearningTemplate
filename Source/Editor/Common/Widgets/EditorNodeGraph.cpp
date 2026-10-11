@@ -4,7 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -61,7 +61,7 @@ namespace sw::editor
         ed::Config config{};
         if ( StringUtil::isNullOrEmpty( pSettingsFileName ) == false )
         {
-            const string settingsPath = EditorUtil::resolveEditorStateFile( pSettingsFileName );
+            const string settingsPath = EditorPaths::resolveEditorStateFile( pSettingsFileName );
             if ( settingsPath.empty() == false )
             {
                 _settingsPath       = settingsPath;

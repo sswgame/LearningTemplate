@@ -12,7 +12,7 @@
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
-#include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/GUI/EditorCommandGUI.h"
 #include "Editor/Common/GUI/EditorNotificationManager.h"
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
@@ -89,7 +89,7 @@ namespace sw::editor
         _pAssetHotReload            = make_unique<AssetHotReload>();
         _pConfigHotReload           = make_unique<ConfigHotReload>();
         _pAssetValidation           = make_unique<EditorAssetValidation>();
-        _pSourceControl             = sw::make_unique<EditorSourceControl>( EditorUtil::getProjectRootPath() );
+        _pSourceControl             = sw::make_unique<EditorSourceControl>( EditorPaths::getProjectRootPath() );
         _pInspectorComponentManager = make_unique<InspectorComponentManager>();
         _pInspectorPropertyManager  = make_unique<InspectorPropertyManager>();
         _pDefaultObjects            = make_unique<EditorDefaultObjects>();

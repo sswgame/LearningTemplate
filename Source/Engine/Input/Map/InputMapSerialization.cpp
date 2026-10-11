@@ -6,7 +6,7 @@
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 /**
@@ -702,7 +702,7 @@ namespace sw
         if ( bAllWritten == false )
             return false;
 
-        const string absPath = ResourceUtil::getWritePath( relativePath );
+        const string absPath = ResourcePaths::getWritePath( relativePath );
         if ( doc.saveFile( absPath ) == false )
         {
             SW_LOG_ERROR( "Could not write InputMap %#", absPath );

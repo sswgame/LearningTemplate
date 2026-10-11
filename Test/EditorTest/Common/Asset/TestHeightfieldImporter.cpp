@@ -6,7 +6,7 @@
 #include "Editor/Common/Asset/HeightfieldImporter.h"
 
 #include "Engine/Environment/Terrain/HeightfieldData.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -104,9 +104,9 @@ SW_TEST_CASE( HeightfieldImporterTest, StampTracksSourceAndHoleMask )
  */
 SW_TEST_CASE( HeightfieldImporterTest, RepositoryRawHeightfieldsMatchTheirAssets )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     const sw::editor::AssetImportSummary summary =
-        sw::editor::HeightfieldImporter::importAllHeightfields( sw::ResourceUtil::getRootFolderPath(), sw::editor::AssetImportMode::CheckOnly );
+        sw::editor::HeightfieldImporter::importAllHeightfields( sw::ResourcePaths::getRootFolderPath(), sw::editor::AssetImportMode::CheckOnly );
     sw::string problemText;
     for ( const sw::string& problem : summary._listProblem )
     {

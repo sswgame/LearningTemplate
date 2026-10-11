@@ -11,7 +11,7 @@
 #include "Engine/Destruction/MeshFracture.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -435,12 +435,12 @@ SW_TEST_CASE( ModelImporterTest, ImportRuleIsChosenByPathAndFeedsTheSourceHash )
  */
 SW_TEST_CASE( ModelImporterTest, RepositoryRawModelsMatchTheirMeshes )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::editor::ModelImportConfig config;
     SW_ASSERT_TRUE( config.loadFromFile( sw::editor::ModelImportConfig::makeDefaultConfigPath() ) );
 
     const sw::editor::AssetImportSummary summary =
-        sw::editor::ModelImporter::importAllModels( sw::ResourceUtil::getRootFolderPath(), config, sw::editor::AssetImportMode::CheckOnly );
+        sw::editor::ModelImporter::importAllModels( sw::ResourcePaths::getRootFolderPath(), config, sw::editor::AssetImportMode::CheckOnly );
     sw::string problemText;
     for ( const sw::string& problem : summary._listProblem )
     {
@@ -459,8 +459,8 @@ SW_TEST_CASE( ModelImporterTest, RepositoryRawModelsMatchTheirMeshes )
  */
 SW_TEST_CASE( ModelImporterTest, SkinnedModelImportsSkeletonClipsAndAttachments )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
-    const sw::string resourceRoot = sw::ResourceUtil::getRootFolderPath();
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    const sw::string resourceRoot = sw::ResourcePaths::getRootFolderPath();
     const sw::string knightPath   = sw::FileUtil::joinPath( resourceRoot, "game/shooter3d/models_raw/kaykit/knight.glb" );
 
     sw::editor::ModelImportRule rule;

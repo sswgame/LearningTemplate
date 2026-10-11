@@ -2,7 +2,7 @@
 
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
@@ -12,7 +12,7 @@ namespace sw
     bool PhysicsAsset::loadFromResource( string_view resourcePath )
     {
         string text;
-        if ( ResourceUtil::readTextResource( resourcePath, text ) == false )
+        if ( ResourceIO::readTextResource( resourcePath, text ) == false )
         {
             SW_LOG_ERROR( "Physics asset not found: %#", resourcePath );
             return false;

@@ -13,7 +13,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 namespace sw
 {
@@ -151,7 +151,7 @@ namespace sw
                 const string ownDirLower = StringUtil::toLower( shadersDir.c_str() );
                 for ( const utf8* pDomain : ShaderCooker::kArrIncludeRootDomain )
                 {
-                    const string rootDir = FileUtil::normalizeSeparators( ResourceUtil::getDomainFolderPath( pDomain, "shaders" ) );
+                    const string rootDir = FileUtil::normalizeSeparators( ResourcePaths::getDomainFolderPath( pDomain, "shaders" ) );
                     if ( rootDir.empty() || StringUtil::toLower( rootDir.c_str() ) == ownDirLower )
                         continue;
                     vector<string> listHeader;
@@ -330,7 +330,7 @@ namespace sw
         // 경로까지 섞는다. 헤더를 **지우기만** 해도 값이 달라져야 한다(내용만 XOR 하면 같은 내용 둘이
         // 서로를 지운다). 정렬은 collectFiles 순서에 기대지 않고 곱셈 누적으로 순서 무관하게 만든다.
         uint64        combined = 0;
-        const string& rootDir  = ResourceUtil::getRootFolderPath();
+        const string& rootDir  = ResourcePaths::getRootFolderPath();
         if ( rootDir.empty() == false )
         {
             vector<string> listHeader;

@@ -62,7 +62,7 @@
 
 티어가 아닌 파일이 두 종류 있고, 게이트도 이 둘을 예외로 둡니다.
 
-- **prelude와 경로 헬퍼**(`EngineMinimal.h`, `Resource/ResourceUtil.h`)는 어느 티어에서든 씁니다. 타입 별칭과 전방 선언을 모은 헤더, 리소스 경로를 해석하는 헬퍼이기 때문입니다. `Common/Common.h` 는 티어 0 이라 예외가 필요 없습니다.
+- **prelude와 경로 헬퍼**(`EngineMinimal.h`, `Resource/ResourcePaths.h`)는 어느 티어에서든 씁니다. 타입 별칭과 전방 선언을 모은 헤더, 리소스 경로를 해석하는 헬퍼이기 때문입니다. `Common/Common.h` 는 티어 0 이라 예외가 필요 없습니다.
 - **배선 파일**(`Reflection/ReflectGenerated.h`, `Resource/AssetManager.cpp`)은 노출하는 모든 서브시스템을 알아야 하는 곳입니다.
 - 두 목록은 `Scripts/lint/rules/CheckEngineLayers.toml` 의 `[exemption]` 이 정본입니다. 더는 위 티어를 include 하지 않는 줄은 낡은 예외로 실패합니다.
 
@@ -162,7 +162,7 @@ py -3 Scripts/lint/gate/CheckEngineLayers.py
 `Resource/` 에는 에셋 데이터베이스(`AssetDatabase`), 에셋 매니저(`AssetManager`), 팩 파일 가상 파일 시스템(`ResourcePackManager`), 스트리밍 큐(`AssetStreamingQueue`)가 있습니다.
 
 팩 리더는 위치를 지정해 읽으므로 여러 스레드가 잠금 없이 읽을 수 있습니다. 매니저는 리더를 찾는 동안만 잠급니다.
-`readFileAsync` 는 `AsyncFileIO` 에 구간 읽기를 걸고, 압축 해제와 CRC 검사는 태스크 워커에서 합니다. 스트리밍 큐의 바이트 요청은 `ResourceUtil::readBinaryResourceAsync` 로 갑니다.
+`readFileAsync` 는 `AsyncFileIO` 에 구간 읽기를 걸고, 압축 해제와 CRC 검사는 태스크 워커에서 합니다. 스트리밍 큐의 바이트 요청은 `ResourceIO::readBinaryResourceAsync` 로 갑니다.
 
 스트리밍 큐는 호스트 전용 서비스(`HostOnly`)라 게임 모듈에는 보이지 않습니다. `EngineLoop` 의 기동 단계가 만들고 종료합니다.
 완료 콜백은 엔진 루프가 메인 스레드에서 프레임마다 내보냅니다(`update()`). 결과를 값으로 받으려면 `requestAssetFuture` 를 씁니다.
@@ -328,7 +328,7 @@ Godot처럼 "노드는 RID만 안다"로 바꾸면 모든 컴포넌트에 해석
 **`initialize` 본문은 다시 실행될 수 있어야 합니다.** 백엔드 교체가 같은 본문을 다시 부릅니다. 디바이스 설정을 처음 한 번만 적용하면 교체 뒤에 예전 디바이스의 값이 남습니다.
 `setMergeBatchesAcrossMaterials` 가 그렇게 예전 값으로 남은 적이 있습니다.
 
-**기동 순서의 몇 가지는 진단 때문에 정해져 있습니다.** `ResourceUtil::initialize()` 는 로거 뒤에 와야 진단이 남습니다. 그다음이 설정, 그다음이 `AssetManager::initialize()` 와 `mountContent` 입니다.
+**기동 순서의 몇 가지는 진단 때문에 정해져 있습니다.** `ResourcePaths::initialize()` 는 로거 뒤에 와야 진단이 남습니다. 그다음이 설정, 그다음이 `AssetManager::initialize()` 와 `mountContent` 입니다.
 종료할 때는 `_rhi->shutdown()` 이 `AssetManager::shutdown` 보다 먼저입니다. 오디오는 TaskManager보다 먼저 종료하고, `_voiceMutex` 로 `_bInitialized` 를 먼저 내립니다.
 테스트 호스트도 앱과 같은 순서(리플렉션 등록, 설정, AssetManager)를 지킵니다.
 

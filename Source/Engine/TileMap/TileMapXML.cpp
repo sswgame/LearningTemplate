@@ -5,7 +5,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/TileMap/TileSetAsset.h"
 
@@ -72,7 +73,7 @@ namespace sw
 
         string text;
         string absPath;
-        if ( ResourceUtil::readTextResource( path, text, &absPath ) == false && FileUtil::readTextFile( path, text ) == false )
+        if ( ResourceIO::readTextResource( path, text, &absPath ) == false && FileUtil::readTextFile( path, text ) == false )
         {
             SW_LOG_ERROR( "TileMap file not found: %#", path );
             return false;
@@ -343,7 +344,7 @@ namespace sw
 
     bool TileMapXMLData::save( string_view path ) const
     {
-        string absPath = ResourceUtil::getResourcePath( path );
+        string absPath = ResourcePaths::getResourcePath( path );
         if ( absPath.empty() )
             absPath = path;
 

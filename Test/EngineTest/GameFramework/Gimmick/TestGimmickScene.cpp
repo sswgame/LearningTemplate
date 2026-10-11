@@ -8,7 +8,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 
@@ -183,7 +183,7 @@ SW_TEST_CASE( GimmickSceneTest, InvalidWiringIsRejectedAtLoad )
  */
 SW_TEST_CASE( GimmickSceneTest, ShowcaseSceneWiresAcrossObjects )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     SceneDocument doc;
     SW_ASSERT_TRUE( doc.loadXML( "game/empty/maps/gimmickshowcase.scene.xml" ) );
     Scene scene{ "GimmickShowcase" };

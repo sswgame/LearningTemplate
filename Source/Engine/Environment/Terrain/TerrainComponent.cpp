@@ -13,7 +13,7 @@
 #include "Engine/Object/GameObject/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Resource/Image/DDSLoader.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 namespace sw
 {
@@ -212,7 +212,7 @@ namespace sw
             return;
         }
         // 전용 서버의 패키지에는 텍스처가 없다 — 층 질의는 레이어 0 이다(경고를 남기지 않는다).
-        if ( ResourceUtil::isExcludedForHost( _splatTexturePath ) )
+        if ( ResourcePaths::isExcludedForHost( _splatTexturePath ) )
         {
             _heightfield.setSplat( 0, 0, {} );
             return;

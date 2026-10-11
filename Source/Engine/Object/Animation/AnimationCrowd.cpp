@@ -13,7 +13,7 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshVertexAnimation.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
@@ -68,7 +68,7 @@ namespace sw
     bool AnimationCrowdSettings::loadFromResource( string_view path )
     {
         string text;
-        if ( ResourceUtil::readTextResource( path, text ) == false )
+        if ( ResourceIO::readTextResource( path, text ) == false )
         {
             SW_LOG_ERROR( "Animation crowd settings '%#' could not be read", path );
             *this = AnimationCrowdSettings{};
@@ -308,7 +308,7 @@ namespace sw
         entry._bAnchorRootMotion = anchor;
         const string cookedPath  = MeshVertexAnimation::makeCookedPath( meshPath, clip.getName() );
         bool         bReady      = false;
-        if ( cookedPath.empty() == false && ResourceUtil::hasResource( cookedPath ) && animation->loadFromResource( cookedPath ) )
+        if ( cookedPath.empty() == false && ResourceIO::hasResource( cookedPath ) && animation->loadFromResource( cookedPath ) )
         {
             // 쿠킹본은 같은 조건(정점 수 · 루트 묶기)일 때만 쓴다 — 아니면 굽는다.
             bReady = animation->_vertexCount == sourceMesh->getVertexCount() && animation->_bAnchorRootMotion == anchor;

@@ -78,8 +78,8 @@ PC `SW`(Ryzen 7 6800H), main `603653abc` + 이 검증의 고침. WSL 리눅스�
 
 전체 검증(옛 7 번)은 2026-10-11 에 했다(맨 위 "검증 결과"). 리눅스는 CI 결과로 본다(`IOUring` · `Epoll` · `LinuxAsyncFileIOBackend` · `PosixThreadCrashStack` 등은 개명 뒤 한 번도 컴파일되지 않았다).
 
-1. **이름 정리 — 남은 것.** 계획 [이름 정리](NamingPass.md) "채택 — 남은 치환"(바이트 · 시간 단위 접미사 건별 판단, 파일 이름과 타입이 어긋난 곳, `Misc = 0`)과
-   큰 이름 `ResourceUtil` → `ResourcePaths` + `ResourceIO`(313), `EditorUtil` 경로 → `EditorPaths`(사용자 결정 5-4 로 정해졌다).
+1. **이름 정리 — 남은 것.** 계획 [이름 정리](NamingPass.md) "채택 — 남은 치환": 바이트 · 시간 단위 접미사 건별 판단(버퍼 · 메모리 필드만 `sizeBytes`, 초 · 밀리초가 모호한 시간 필드만 접미사), `MathUtil::getRandom` 은 중복 정리 3번과 함께.
+   (`Misc` → `None`, `CameraShakeRequest.h` 분리, `ResourceUtil` → `ResourcePaths` + `ResourceIO`, `EditorUtil` 경로 → `EditorPaths` 는 2026-10-11 에 끝났다. 시험 샤드 · 린트 통과, 에디터 시나리오 · Shipping 은 아직 안 돌렸다.)
 2. **빌드 속도 2 ~ 6 단계.** 계획 [빌드 속도](BuildSpeed.md). 0 단계 기준선(Debug, Ryzen 7 6800H, 3회 중앙값: 풀 131.5 s · 헤더 하나 수정 131.6 s · `.cpp` 하나 7.2 s · 워크트리 콜드 142.9 s)과 상위 헤더 20개(헤더 파싱 비율 82 %, 1위 `Engine/pch.h`, 2위 `CoreMinimal.h`)는 `docs/08_Verification.md` 빌드 속도 절과 `BuildSpeed.md` 에 있다. **헤더 하나를 고치면 풀 빌드와 같은 시간이 든다**(Core 기본 헤더 — 헤더 다이어트의 근거). Release 는 풀 한 번(192 s)만 재었다. Jolt 래퍼 TU 는 자기 PCH 를 가진 OBJECT 라이브러리로 11.1 → 5.5 s 로 줄었다(6 단계 끝). 헤더 다이어트 → PCH 공유(타깃마다 86개) → 개발 증분(PCH)과 콜드(PCH 없이 유니티 + sccache) 구성 분리 → 유니티 확대. 단계마다 같은 표로 전후를 남기고, 효과 없으면 되돌려 `docs/09_Decisions.md` 3절에 숫자와 함께 적는다. 7 ~ 9 는 필요할 때만(사용자 결정).
 3. **행동이 바뀔 수 있는 중복 정리.** 결정적 난수를 Core 로(xorshift32 사본 7곳 · splitmix64 3곳; 상태 바이트 호환을 시험으로 증명), 격자 사본 13곳 → `GridTopology`(Engine · Editor 용은 Core 나 Engine 쪽으로 올리는 선결 과제), 타이머 약 25곳 → `Countdown`, 실시간 키트 HP 직접 관리 → `Vitality`. 상태 바이트와 게임 동작에 닿으므로 시험과 함께.
 4. **엔진 분할 1단계 이후.** 계획 [엔진 분할](EnginePartition.md): 작은 고리(`Automation ↔ UI`, `Text` 티어 불일치), `Object` 코어와 기능 컴포넌트 가르기(`GameObject/` 코어가 `Graphics` 15 · `Physics` 10 · `Navigation` 5 · `Audio` 2 를 include), `OBJECT` 라이브러리 분할 → (빌드 속도 측정으로 이득이 확인되면) DLL 승격, 다중 월드. 에디터는 `GameFramework` 를, 서버 실행 파일도 `GameFramework` 를 include 할 수 없다 — 그래서 에디터 · 서버가 쓰는 폴더는 Engine 에 남는다.

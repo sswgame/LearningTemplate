@@ -11,7 +11,7 @@
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Localization/LocalizationManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 namespace sw::editor
 {
@@ -62,18 +62,18 @@ namespace sw::editor
 
     string EditorDataTableCommands::getLocalizationFolderPath()
     {
-        return ResourceUtil::getDomainFolderPath( GameConfig::getActive()._packRoot, FileUtil::joinPath( path::kDataFolder, path::kLocalizationFolder ) );
+        return ResourcePaths::getDomainFolderPath( GameConfig::getActive()._packRoot, FileUtil::joinPath( path::kDataFolder, path::kLocalizationFolder ) );
     }
 
     string EditorDataTableCommands::getGameDataFolderPath()
     {
-        return ResourceUtil::getDomainFolderPath( GameConfig::getActive()._packRoot, path::kDataFolder );
+        return ResourcePaths::getDomainFolderPath( GameConfig::getActive()._packRoot, path::kDataFolder );
     }
 
     void EditorDataTableCommands::collectLocalizationProjects( vector<string>& outListProjectPath )
     {
         outListProjectPath.clear();
-        const string enginePath = ResourceUtil::getResourcePath( EditorDataTableCommandsInternal::kEngineProject );
+        const string enginePath = ResourcePaths::getResourcePath( EditorDataTableCommandsInternal::kEngineProject );
         if ( enginePath.empty() == false && FileUtil::exists( enginePath ) )
             outListProjectPath.push_back( FileUtil::normalizeSeparators( enginePath ) );
 

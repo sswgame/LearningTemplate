@@ -17,7 +17,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/AutomationProbe.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 
 #include <imgui.h>
 
@@ -518,7 +518,7 @@ namespace sw::editor
         if ( ImGui::Button( "Load" ) )
         {
             // 적어 넣은 경로에 파일이 없으면 지금 맵을 그대로 둔다(새 문서로 표시하면 편집 중인 맵이 저장 안 한 채 깨끗해진다).
-            if ( ResourceUtil::hasResource( _pathBuffer.c_str() ) )
+            if ( ResourceIO::hasResource( _pathBuffer.c_str() ) )
                 reloadDocument();
             else
                 SW_LOG_WARNING( "No tile map at '%#'", _pathBuffer.c_str() );

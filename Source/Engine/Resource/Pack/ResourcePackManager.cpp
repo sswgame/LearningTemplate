@@ -8,7 +8,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 namespace sw
 {
@@ -57,7 +58,7 @@ namespace sw
                 if ( stem.empty() )
                     return 0;
 
-                const vector<string>& listPriorityEffective = listPriority.empty() ? ResourceUtil::getDefaultSearchPriority() : listPriority;
+                const vector<string>& listPriorityEffective = listPriority.empty() ? ResourcePaths::getDefaultSearchPriority() : listPriority;
                 const size_t          priorityCount         = listPriorityEffective.size();
 
                 // 1. listPriorityEffective 순서대로 맞는 토큰을 찾는다(앞쪽 인덱스일수록 우선순위가 높다)
@@ -219,7 +220,7 @@ namespace sw
 
         int32 effectivePriority = priority;
         if ( effectivePriority <= 0 )
-            effectivePriority = ResourcePackManagerInternal::computePackDefaultPriority( packFilePath, ResourceUtil::getSearchPriority() );
+            effectivePriority = ResourcePackManagerInternal::computePackDefaultPriority( packFilePath, ResourcePaths::getSearchPriority() );
 
         shared_ptr<ResourcePackReader> pReader = sw::make_shared<ResourcePackReader>();
         if ( pReader->open( normalizedPath ) == false )

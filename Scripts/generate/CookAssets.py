@@ -354,7 +354,7 @@ def shouldIncludeFile(relPath: str, config: dict, targetRhi: str = "dx12", build
     PackConfig에 정의된 전역 및 개별 규칙에 따라 파일 패킹 포함 여부를 판단합니다.
 
     `buildTarget`(Game · Client · Server)이 표(`target_excluded_asset_kinds`)에서 빼는 종류(전용 서버: 텍스처 · 셰이더 바이너리 · 오디오)는
-    넣지 않는다 — 그 호스트의 런타임은 같은 표로 그 종류를 읽지 않는다(`ResourceUtil::setHostTarget`).
+    넣지 않는다 — 그 호스트의 런타임은 같은 표로 그 종류를 읽지 않는다(`ResourcePaths::setHostTarget`).
     """
     if buildTarget and _gCookContract.findExcludedKind(relPath, buildTarget) is not None:
         return False

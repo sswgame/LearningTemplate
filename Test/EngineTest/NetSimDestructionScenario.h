@@ -15,7 +15,7 @@
 #include "Engine/Object/GameObject/ScenePhysics.h"
 #include "Engine/Physics/Collision/CollisionLayers.h"
 #include "Engine/Physics/PhysicsSettings.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 
@@ -514,7 +514,7 @@ namespace test
 
     [[nodiscard]] inline bool loadShowcase( SceneDocument& outDocument )
     {
-        return ResourceUtil::initialize() && outDocument.loadXML( "game/empty/maps/destructionshowcase.scene.xml" );
+        return ResourcePaths::initialize() && outDocument.loadXML( "game/empty/maps/destructionshowcase.scene.xml" );
     }
 
     inline NetEmulationConditions makeConditions( float64 latency, float64 jitter, float32 loss, float32 duplicate, float32 reorder )

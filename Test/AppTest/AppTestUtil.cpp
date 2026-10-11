@@ -8,7 +8,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Graphics/RHI/RHIInitResult.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -74,9 +74,9 @@ namespace test
     sw::string AppTestUtil::readActivePackRoot()
     {
         sw::string packRoot;
-        if ( sw::ResourceUtil::initialize() == false )
+        if ( sw::ResourcePaths::initialize() == false )
             return packRoot;
-        const sw::string repositoryRoot = sw::FileUtil::getDirectoryPart( sw::ResourceUtil::getRootFolderPath() );
+        const sw::string repositoryRoot = sw::FileUtil::getDirectoryPart( sw::ResourcePaths::getRootFolderPath() );
         sw::string       text;
         if ( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( repositoryRoot, sw::config::kFileRuntimeGameConfig ), text ) == false )
             return packRoot;

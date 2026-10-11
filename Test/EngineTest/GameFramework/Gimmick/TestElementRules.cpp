@@ -1,7 +1,7 @@
 // 원소 규칙표 — 데이터로 적은 불 번짐 · 물로 끄기 · 바람, 액션 어드벤처 키트의 격자가 같은 규칙표 위에서 같은 결과를 낸다, 모르는 이름은 읽기 오류.
 #include "pch.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "GameFramework/Base/Gameplay/Gimmick/ElementGrid.h"
 #include "GameFramework/Base/Gameplay/Gimmick/ElementRuleTable.h"
@@ -17,7 +17,7 @@ namespace
     {
         static constexpr const utf8* kDefaultTablePath = "common/data/elements/default.elements.xml";
 
-        [[nodiscard]] static bool loadDefaultTable( ElementRuleTable& outTable ) { return ResourceUtil::initialize() && outTable.loadFromResource( kDefaultTablePath ); }
+        [[nodiscard]] static bool loadDefaultTable( ElementRuleTable& outTable ) { return ResourcePaths::initialize() && outTable.loadFromResource( kDefaultTablePath ); }
 
         /** @brief 풀 들판에 나무 · 얼음 · 물을 섞은 같은 판을 두 격자에 깝니다(재질 이름 = 키트 열거 이름). */
         static void fillField( ElementGrid& grid, const ElementRuleTable& table )

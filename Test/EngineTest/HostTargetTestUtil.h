@@ -4,7 +4,8 @@
  */
 #pragma once
 #include "Engine/Module/ModuleCatalog.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 namespace test
 {
@@ -22,17 +23,17 @@ namespace test
          * @details 서버 패키지는 쿠킹 표 `target_excluded_asset_kinds` 의 종류(텍스처 · 셰이더 바이너리 · 오디오)를 담지 않는다. 클라이언트 코드가 든
          *          빌드에서 파일이 없으면 결함이므로 false 다 — 그 시험은 돌아서 진다.
          */
-        static bool isLeftOutOfServerPackage( sw::string_view resourceID ) { return isServerOnlyBuild() && sw::ResourceUtil::hasResource( resourceID ) == false; }
+        static bool isLeftOutOfServerPackage( sw::string_view resourceID ) { return isServerOnlyBuild() && sw::ResourceIO::hasResource( resourceID ) == false; }
     };
 } // namespace test
 
 namespace test
 {
-    /** @brief 시험 동안 호스트 타깃(`ResourceUtil::setHostTarget`)을 바꾸고 끝에 하네스 값(빈 값 — 아무것도 빼지 않는다)으로 되돌립니다. */
+    /** @brief 시험 동안 호스트 타깃(`ResourcePaths::setHostTarget`)을 바꾸고 끝에 하네스 값(빈 값 — 아무것도 빼지 않는다)으로 되돌립니다. */
     struct ScopedHostTarget
     {
-        explicit ScopedHostTarget( sw::string_view buildTargetName ) { sw::ResourceUtil::setHostTarget( buildTargetName ); }
-        ~ScopedHostTarget() { sw::ResourceUtil::setHostTarget( "" ); }
+        explicit ScopedHostTarget( sw::string_view buildTargetName ) { sw::ResourcePaths::setHostTarget( buildTargetName ); }
+        ~ScopedHostTarget() { sw::ResourcePaths::setHostTarget( "" ); }
 
         ScopedHostTarget( const ScopedHostTarget& )            = delete;
         ScopedHostTarget& operator=( const ScopedHostTarget& ) = delete;

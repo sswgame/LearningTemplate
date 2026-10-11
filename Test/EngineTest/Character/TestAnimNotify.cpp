@@ -15,7 +15,7 @@
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/AnimationTestUtil.h"
 #include "EngineTest/TestGameObjectMocks.h"
@@ -282,7 +282,7 @@ SW_TEST_CASE( AnimNotifyTest, DispatchRunsStateHandlersOnceAndClosesInterruptedS
  */
 SW_TEST_CASE( AnimNotifyTest, AnimatorDeliversClipNotifiesToDispatcher )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const Skeleton    skeleton = test::makeChainSkeleton( 2 );
     const AnimRawClip raw      = test::makeChainRawClip( skeleton, 31, 30.0f, 0.2f );
     AnimClip          clip;

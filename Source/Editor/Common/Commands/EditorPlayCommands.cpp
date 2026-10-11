@@ -9,7 +9,7 @@
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
-#include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/GUI/EditorDockLayout.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorNotificationManager.h"
@@ -82,7 +82,7 @@ namespace sw::editor
         if ( pDock == nullptr )
             return false;
         // 직전 배치는 에디터 상태 폴더의 임시 레이아웃으로 둔다(이름 붙인 레이아웃 목록에 섞이지 않게).
-        const string folder = FileUtil::joinPath( EditorUtil::getEditorStateDirectory(), "Temp" );
+        const string folder = FileUtil::joinPath( EditorPaths::getEditorStateDirectory(), "Temp" );
         if ( pDock->saveNamedLayout( kMaximizeLayoutName, folder ) == false )
             return false;
         EditorPanelManager& panelManager = pContext->getPanelManager();
@@ -106,7 +106,7 @@ namespace sw::editor
         EditorDockLayout* pDock    = pContext != nullptr ? pContext->findDockLayout() : nullptr;
         if ( pDock == nullptr )
             return false;
-        const string folder = FileUtil::joinPath( EditorUtil::getEditorStateDirectory(), "Temp" );
+        const string folder = FileUtil::joinPath( EditorPaths::getEditorStateDirectory(), "Temp" );
         return pDock->requestLoadNamedLayout( kMaximizeLayoutName, folder );
     }
 

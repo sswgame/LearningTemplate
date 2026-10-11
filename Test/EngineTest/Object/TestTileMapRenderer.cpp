@@ -8,7 +8,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/PhysicsWorld.h"
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 
 #include "TestFramework/TestFramework.h"
@@ -32,7 +32,7 @@ namespace
  */
 SW_TEST_CASE( TileMapRendererTest, TilesDrawRepaintAndBuildColliders )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::Scene scene( "TileMapScene" );
     SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
     sw::GameObjectManager* pManager = scene.getObjectManager();

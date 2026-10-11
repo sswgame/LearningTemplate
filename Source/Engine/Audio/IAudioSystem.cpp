@@ -9,7 +9,7 @@
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Audio/AudioMusic.h"
 #include "Engine/Audio/NullAudioSystem.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 
 // NullAudioSystem 은 Windows 에서 쓰이지 않지만 **항상 컴파일한다.** 헤더 전용이라 비용이 없고,
 // `#else` 안에만 두었을 때는 Windows 에서 한 번도 컴파일되지 않아 조용히 썩는다(FileWatcher 의
@@ -76,7 +76,7 @@ namespace sw
             return true;
 
         AudioMixerDesc mixerDesc;
-        if ( ResourceUtil::hasResource( kDefaultMixerPath ) == false || mixerDesc.loadFromResource( kDefaultMixerPath ) == false )
+        if ( ResourceIO::hasResource( kDefaultMixerPath ) == false || mixerDesc.loadFromResource( kDefaultMixerPath ) == false )
             mixerDesc = AudioMixerDesc::makeDefault();
         if ( _pEngine->initialize( mixerDesc ) == false && _pEngine->initialize( AudioMixerDesc::makeDefault() ) == false )
             return false;
@@ -136,7 +136,7 @@ namespace sw
         SW_MEMORY_SCOPE( Audio );
         if ( _bInitialized == false || path.empty() )
             return false;
-        if ( ResourceUtil::hasResource( path ) == false )
+        if ( ResourceIO::hasResource( path ) == false )
         {
             SW_LOG_WARNING( "Audio resource not found: %#", path );
             return false;
@@ -159,7 +159,7 @@ namespace sw
         if ( _musicPath == path && _pEngine->isPlaying( _musicPlayingID ) )
             return true;
         // 있는 곡인지 **멈추기 전에** 본다 — 없는 곡을 요청해 틀어져 있던 BGM 만 꺼지면 안 된다.
-        if ( ResourceUtil::hasResource( path ) == false )
+        if ( ResourceIO::hasResource( path ) == false )
         {
             SW_LOG_WARNING( "Audio resource not found: %#", path );
             return false;

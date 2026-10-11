@@ -16,7 +16,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/AnimationTestUtil.h"
 
@@ -299,7 +299,7 @@ SW_TEST_CASE( PoseModifierTest, FootPlacementUsesScenePhysics )
  */
 SW_TEST_CASE( PoseModifierTest, HotReloadRebindsRig )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const string      path = FileUtil::joinPath( test::makeTempPath( "rigreload" ), "reach.rig.json" );
     const string_view firstJSON =
         R"({ "targets": [ { "name": "A", "object": "A" }, { "name": "B", "object": "B" } ], "nodes": [ { "type": "Position", "name": "Reach", "bone": "bone2", "target": "A" } ] })";
@@ -331,7 +331,7 @@ SW_TEST_CASE( PoseModifierTest, HotReloadRebindsRig )
  */
 SW_TEST_CASE( PoseModifierTest, PhysicsAssetShapesBecomeSpringColliders )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     Skeleton skeleton;
     (void)skeleton.addBone( "pelvis", -1, test::makeBoneTransform( float3{} ), float4x4::Identity );
     (void)skeleton.addBone( "spine", 0, test::makeBoneTransform( float3{ 0.0f, 0.5f, 0.0f } ), float4x4::Identity );

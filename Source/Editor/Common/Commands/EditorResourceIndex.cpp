@@ -6,7 +6,7 @@
 
 #include "Editor/Common/Workspace/EditorAssetType.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 namespace sw::editor
 {
@@ -16,7 +16,7 @@ namespace sw::editor
         const EditorAssetTypeInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( kind );
         if ( pInfo == nullptr )
             return false;
-        const string resourceID = ResourceUtil::toResourceID( filePath );
+        const string resourceID = ResourcePaths::toResourceID( filePath );
         if ( resourceID.empty() )
             return false;
 
@@ -32,7 +32,7 @@ namespace sw::editor
     {
         outList.clear();
 
-        const string& resourceFolder = ResourceUtil::getRootFolderPath();
+        const string& resourceFolder = ResourcePaths::getRootFolderPath();
         if ( resourceFolder.empty() )
             return;
 
@@ -75,7 +75,7 @@ namespace sw::editor
     void EditorResourceIndex::collectCatalogCounts( EditorResourceCatalogCounts& outCounts )
     {
         vector<string> listAllFile;
-        const string&  resourceRootPath = ResourceUtil::getRootFolderPath();
+        const string&  resourceRootPath = ResourcePaths::getRootFolderPath();
         // 리소스 루트가 없거나 그새 사라졌으면 모든 종류가 0 개다.
         if ( resourceRootPath.empty() == false )
             (void)FileUtil::collectFiles( resourceRootPath, "", listAllFile, true );

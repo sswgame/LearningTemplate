@@ -4,7 +4,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include "TestFramework/TestFramework.h"
@@ -19,7 +19,7 @@
  */
 SW_TEST_CASE( ConfigReferenceTest, FieldsMatchReflection )
 {
-    const sw::string path = sw::FileUtil::joinPath( sw::ResourceUtil::getProjectFolderPath(), "docs/Config/ConfigReference.json" );
+    const sw::string path = sw::FileUtil::joinPath( sw::ResourcePaths::getProjectFolderPath(), "docs/Config/ConfigReference.json" );
     sw::JSONDocument doc;
     SW_ASSERT_TRUE_MSG( doc.loadPath( path ), path.c_str() );
 

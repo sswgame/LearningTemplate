@@ -8,7 +8,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 
 #include <pugixml.hpp>
 
@@ -650,7 +650,7 @@ namespace sw
     {
         string text;
         string absPath;
-        if ( ResourceUtil::readTextResource( relativePath, text, &absPath ) == false )
+        if ( ResourceIO::readTextResource( relativePath, text, &absPath ) == false )
         {
             _lastError = string( relativePath ) + ": not found (no file at that path and no resource by that name)";
             return false;

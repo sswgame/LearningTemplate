@@ -7,7 +7,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {
@@ -235,7 +235,7 @@ namespace sw
 
         // 엔진 서비스가 없으면(테스트 · 툴) 그 자리에서 끝낸다. 태스크가 끝났을 때와 **같은 완료 절차**다.
         vector<uint8> bytes;
-        const bool    bSuccess = bFetchData ? ResourceUtil::readBinaryResource( pathStr, bytes ) : ResourceUtil::hasResource( pathStr );
+        const bool    bSuccess = bFetchData ? ResourceIO::readBinaryResource( pathStr, bytes ) : ResourceIO::hasResource( pathStr );
         completeRequestLocked( pathStr, bSuccess, std::move( bytes ) );
     }
 
@@ -248,7 +248,7 @@ namespace sw
             if ( itGeneration == _mapRequestGeneration.end() || itGeneration->second != generation )
                 return;
         }
-        const AsyncReadHandle handle = ResourceUtil::readBinaryResourceAsync(
+        const AsyncReadHandle handle = ResourceIO::readBinaryResourceAsync(
             pathStr, toIOPriority( priority ),
             SW_DELEGATE_LAMBDA( ResourceReadCompleteDelegate, [this, pathStr, generation]( bool bSuccess, vector<uint8>& bytes )
         {
@@ -336,9 +336,9 @@ namespace sw
         vector<uint8> bytes;
         bool          bSuccess = false;
         if ( bFetchData )
-            bSuccess = ResourceUtil::readBinaryResource( pathStr, bytes );
+            bSuccess = ResourceIO::readBinaryResource( pathStr, bytes );
         else
-            bSuccess = ResourceUtil::hasResource( pathStr );
+            bSuccess = ResourceIO::hasResource( pathStr );
 
         std::scoped_lock<mutex> innerLock{ _mutex };
 

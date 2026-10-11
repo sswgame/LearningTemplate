@@ -21,7 +21,7 @@
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -293,7 +293,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, SyntheticViolationsAreDetected )
  */
 SW_TEST_CASE( ShaderBindingValidatorTest, AllCookedShadersMatchContract )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     struct Target
     {
@@ -311,7 +311,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, AllCookedShadersMatchContract )
     uint32 violationCount{ 0 };
     for ( const utf8* pDomain : arrDomain )
     {
-        const sw::string shaderDir = sw::ResourceUtil::getDomainFolderPath( pDomain, "shaders" );
+        const sw::string shaderDir = sw::ResourcePaths::getDomainFolderPath( pDomain, "shaders" );
         if ( shaderDir.empty() )
             continue;
         for ( const Target& target : arrTarget )
@@ -359,8 +359,8 @@ SW_TEST_CASE( ShaderBindingValidatorTest, AllCookedShadersMatchContract )
  */
 SW_TEST_CASE( ShaderBindingValidatorTest, ReflectionNamesAreUniformAcrossBackends )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
-    const sw::string shaderDir = sw::ResourceUtil::getDomainFolderPath( "engine", "shaders" );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    const sw::string shaderDir = sw::ResourcePaths::getDomainFolderPath( "engine", "shaders" );
     if ( shaderDir.empty() )
         SW_TEST_SKIP( "engine/shaders 를 찾지 못했습니다" );
 
@@ -532,8 +532,8 @@ SW_TEST_CASE( ShaderBindingValidatorTest, Dx12RootSignatureFitsBudget )
  */
 SW_TEST_CASE( ShaderBindingValidatorTest, InstanceElementLayoutMatchesCPUStruct )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
-    const sw::string shaderDir = sw::ResourceUtil::getDomainFolderPath( "engine", "shaders" );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    const sw::string shaderDir = sw::ResourcePaths::getDomainFolderPath( "engine", "shaders" );
     if ( shaderDir.empty() )
         SW_TEST_SKIP( "engine/shaders 를 찾지 못했습니다" );
 
@@ -651,7 +651,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, EveryBoundNameIsInCookedReflection )
     // 배포본은 팩에서 읽고, 팩에는 정적으로 링크한 백엔드(`SW_SHIPPING_RHI_BACKEND`) 하나의 셰이더만 든다 — 네 백엔드 대조는 개발 빌드가 한다.
     SW_TEST_SKIP( "Shipping packs hold the cooked shaders of one backend only" );
 #endif
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     constexpr uint32             kFormatCount            = 4;
     const sw::ShaderTargetFormat arrFormat[kFormatCount] = {
@@ -827,9 +827,9 @@ SW_TEST_CASE( ShaderBindingValidatorTest, ReservedTableIsConsistent )
  */
 SW_TEST_CASE( ShaderBindingValidatorTest, ConsumedVertexAttributeMaskFollowsShaderInputs )
 {
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     const sw::string binDir = sw::FileUtil::joinPath(
-        sw::FileUtil::joinPath( sw::ResourceUtil::getDomainFolderPath( "engine", "shaders" ), "bin" ),
+        sw::FileUtil::joinPath( sw::ResourcePaths::getDomainFolderPath( "engine", "shaders" ), "bin" ),
         sw::string( sw::ShaderCooker::getSubfolderForFormat( sw::ShaderTargetFormat::SPIRV_Vulkan ) ) );
     auto maskOf = [&binDir]( const utf8* pFileName, uint32& outInputCount ) -> uint32
     {
@@ -901,7 +901,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, LayoutNumbersAreDefinedOnlyInBindingSl
     sw::vector<sw::string> listFile;
     for ( const utf8* pDomain : { "engine", "common" } )
     {
-        const sw::string shaderFolder = sw::ResourceUtil::getDomainFolderPath( pDomain, "shaders" );
+        const sw::string shaderFolder = sw::ResourcePaths::getDomainFolderPath( pDomain, "shaders" );
         SW_ASSERT_FALSE( shaderFolder.empty() );
         sw::FileUtil::collectFiles( shaderFolder, ".hlsl", listFile, true );
         sw::FileUtil::collectFiles( shaderFolder, ".hlsli", listFile, true );
@@ -934,7 +934,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, LayoutNumbersAreDefinedOnlyInBindingSl
  */
 SW_TEST_CASE( ShaderBindingValidatorTest, RootConstantLimitIsTheShaderContract )
 {
-    const sw::string       rhiFolder = sw::FileUtil::joinPath( sw::ResourceUtil::getProjectFolderPath(), "Source/Engine/Graphics/RHI" );
+    const sw::string       rhiFolder = sw::FileUtil::joinPath( sw::ResourcePaths::getProjectFolderPath(), "Source/Engine/Graphics/RHI" );
     sw::vector<sw::string> listFile;
     sw::FileUtil::collectFiles( rhiFolder, ".h", listFile, true );
     sw::FileUtil::collectFiles( rhiFolder, ".cpp", listFile, true );

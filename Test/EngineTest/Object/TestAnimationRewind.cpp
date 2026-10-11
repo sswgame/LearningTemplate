@@ -13,7 +13,7 @@
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/AnimationTestUtil.h"
 
@@ -141,7 +141,7 @@ SW_TEST_CASE( AnimationRewindTest, PoseEncodingRoundTripsWithinQuantization )
  */
 SW_TEST_CASE( AnimationRewindTest, RecordsStateWithinTheWindow )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const shared_ptr<Skeleton> skeleton = make_shared<Skeleton>( test::makeChainSkeleton( 3 ) );
     const string               folder   = TestAnimationRewindInternal::writeWaveClip( *skeleton );
     SW_ASSERT_FALSE( folder.empty() );
@@ -200,7 +200,7 @@ SW_TEST_CASE( AnimationRewindTest, RecordsStateWithinTheWindow )
  */
 SW_TEST_CASE( AnimationRewindTest, ScrubFreezesEvaluationAndAppliesRecordedPose )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const shared_ptr<Skeleton> skeleton = make_shared<Skeleton>( test::makeChainSkeleton( 3 ) );
     const string               folder   = TestAnimationRewindInternal::writeWaveClip( *skeleton );
     SW_ASSERT_FALSE( folder.empty() );
@@ -249,7 +249,7 @@ SW_TEST_CASE( AnimationRewindTest, ScrubFreezesEvaluationAndAppliesRecordedPose 
  */
 SW_TEST_CASE( AnimationRewindTest, TrackOutlivesItsUnitUntilTheWindowPasses )
 {
-    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const shared_ptr<Skeleton> skeleton = make_shared<Skeleton>( test::makeChainSkeleton( 3 ) );
     const string               folder   = TestAnimationRewindInternal::writeWaveClip( *skeleton );
     SW_ASSERT_FALSE( folder.empty() );

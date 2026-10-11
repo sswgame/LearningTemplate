@@ -18,7 +18,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Renderer/Capture/BugItReport.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 
 #include <imgui.h>
 
@@ -219,7 +219,7 @@ namespace sw::editor
         {
             _bScenarioListDirty = SW_FALSE;
             _listScenarioPath.clear();
-            const string&  root = ResourceUtil::getRootFolderPath();
+            const string&  root = ResourcePaths::getRootFolderPath();
             vector<string> listFilePath;
             if ( FileUtil::collectFiles( root, ".xml", listFilePath, true ) )
             {

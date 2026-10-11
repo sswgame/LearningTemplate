@@ -41,7 +41,7 @@ namespace
   <Rules saveMode="InkRibbon" gridWidth="4" gridHeight="2" maxSanity="100" darknessDrain="10" sanityRegen="5" sanityRegenDelay="2"
          hallucinationThreshold="0.3" maxAimSway="2" maxBattery="20" batteryDrain="2" repeatSightingScale="0.25"/>
   <Item id="herbGreen" kind="Heal" heal="25"/>
-  <Item id="herbRed" kind="Misc"/>
+  <Item id="herbRed" kind="None"/>
   <Item id="herbMix" kind="Heal" heal="100"/>
   <Item id="herbSuper" kind="Heal" w="2" h="2" heal="100"/>
   <Item id="sedative" kind="Heal" sanity="20"/>
@@ -50,8 +50,8 @@ namespace
   <Item id="ammo" kind="Ammo" maxStack="10"/>
   <Item id="rifle" kind="Weapon" w="3" h="1"/>
   <Item id="handgun" kind="Weapon" w="2" h="1"/>
-  <Item id="case" kind="Misc" w="2" h="2"/>
-  <Item id="junk" kind="Misc"/>
+  <Item id="case" kind="None" w="2" h="2"/>
+  <Item id="junk" kind="None"/>
   <Item id="keyRed" kind="Key"/>
   <Item id="oddThing" kind="Spaceship"/>
   <Combine id="mixGR" a="herbGreen" b="herbRed" out="herbMix"/>
@@ -101,7 +101,7 @@ SW_TEST_CASE( SurvivalHorrorTest, CatalogReadsItemsCombinesPuzzlesAndRules )
     SW_EXPECT_EQUAL( 1, pRifle->_height );
     SW_EXPECT_TRUE( pRifle->_kind == HorrorItemKind::Weapon );
     SW_EXPECT_EQUAL( 10, catalog.findItem( "ammo" )->_maxStack );
-    SW_EXPECT_TRUE( catalog.findItem( "oddThing" )->_kind == HorrorItemKind::Misc ); // 모르는 종류는 경고하고 기본값
+    SW_EXPECT_TRUE( catalog.findItem( "oddThing" )->_kind == HorrorItemKind::None ); // 모르는 종류는 경고하고 기본값
 
     // 조합은 순서가 없다 — 기반 RecipeCatalog 의 Combine 작업대 레시피.
     const RecipeDef* pMix = catalog.findCombine( "herbRed", "herbGreen" );

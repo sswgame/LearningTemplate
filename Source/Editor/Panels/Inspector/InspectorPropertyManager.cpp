@@ -30,7 +30,7 @@
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/SceneManager.h"
 
 #include <imgui.h>
@@ -199,7 +199,7 @@ namespace sw::editor
                 ContentBrowserPanel* pPanel = static_cast<ContentBrowserPanel*>( pContext->getPanelManager().findPanel( "content_browser" ) );
                 if ( pPanel == nullptr )
                     return;
-                const string fileAbs = FileUtil::joinPath( ResourceUtil::getRootFolderPath(), FileUtil::normalizePath( resourcePath ) );
+                const string fileAbs = FileUtil::joinPath( ResourcePaths::getRootFolderPath(), FileUtil::normalizePath( resourcePath ) );
                 pPanel->openFolder( FileUtil::getDirectoryPart( fileAbs ) );
             }
         };

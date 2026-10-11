@@ -5,7 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -69,7 +69,7 @@ namespace sw::editor
             return;
         _bLoaded = true;
         // 저장된 값을 먼저 읽고 등록한다 — 등록은 저장된 바를 덮지 않고 기본값만 적는다.
-        const string path = EditorUtil::resolveEditorStateFile( EditorViewportOverlaysInternal::kFileName );
+        const string path = EditorPaths::resolveEditorStateFile( EditorViewportOverlaysInternal::kFileName );
         KeyValueMap  mapData;
         if ( path.empty() == false && FileUtil::exists( path ) && KeyValueFile::loadFile( path, mapData ) ) // 처음엔 파일이 없다
             _layout.readFrom( EditorViewportOverlaysInternal::kViewPrefix, mapData );
@@ -85,7 +85,7 @@ namespace sw::editor
 
     void EditorViewportOverlays::save() const
     {
-        const string path = EditorUtil::resolveEditorStateFile( EditorViewportOverlaysInternal::kFileName );
+        const string path = EditorPaths::resolveEditorStateFile( EditorViewportOverlaysInternal::kFileName );
         if ( path.empty() )
             return;
         KeyValueMap mapData;

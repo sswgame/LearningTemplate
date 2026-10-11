@@ -8,7 +8,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Localization/LocalizationManager.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Text/SystemFontLocator.h"
 
 namespace sw
@@ -314,7 +314,7 @@ namespace sw
         }
         else if ( bResourcePath )
         {
-            bRead = ResourceUtil::readBinaryResource( path, bytes );
+            bRead = ResourceIO::readBinaryResource( path, bytes );
         }
         else
         {

@@ -8,7 +8,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 
@@ -78,12 +79,12 @@ namespace sw
             static void loadActive( Render2DSettings& outSettings )
             {
                 // 첫 읽기가 리소스 루트를 잡기 전에 올 수 있다(엔진 기동 없이 도는 시험). 그대로 읽으면 기본 표가 프로세스 끝까지 남는다.
-                (void)ResourceUtil::initialize();
+                (void)ResourcePaths::initialize();
                 const string& packRoot = GameConfig::getActive()._packRoot;
                 if ( packRoot.empty() == false )
                 {
                     const string gamePath = FileUtil::joinPath( packRoot, "data/render2d.xml" );
-                    if ( ResourceUtil::hasResource( gamePath ) )
+                    if ( ResourceIO::hasResource( gamePath ) )
                     {
                         Render2DSettings gameSettings;
                         if ( gameSettings.loadFromResource( gamePath ) )
@@ -113,7 +114,7 @@ namespace sw
     bool Render2DSettings::loadFromResource( string_view path )
     {
         string text;
-        if ( ResourceUtil::readTextResource( path, text ) == false )
+        if ( ResourceIO::readTextResource( path, text ) == false )
         {
             SW_LOG_ERROR( "2D render settings '%#' not found", path );
             return false;

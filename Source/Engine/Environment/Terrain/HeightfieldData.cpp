@@ -4,7 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {
@@ -99,7 +99,7 @@ namespace sw
     bool HeightfieldData::loadFromResource( string_view resourceID )
     {
         vector<uint8> bytes;
-        if ( ResourceUtil::readBinaryResource( resourceID, bytes ) == false )
+        if ( ResourceIO::readBinaryResource( resourceID, bytes ) == false )
         {
             SW_LOG_ERROR( "Heightfield '%#' could not be read", resourceID );
             return false;

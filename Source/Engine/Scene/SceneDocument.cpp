@@ -206,7 +206,7 @@ namespace sw
             }
         }
 
-        const string absPath = ResourceUtil::getWritePath( path );
+        const string absPath = ResourcePaths::getWritePath( path );
         if ( absPath.empty() )
         {
             SW_LOG_ERROR( "Cannot resolve save path: %#", path );
@@ -232,7 +232,7 @@ namespace sw
         string        absPath;
         Archive       arch;
 
-        if ( ResourceUtil::readBinaryResource( path, bytes ) )
+        if ( ResourceIO::readBinaryResource( path, bytes ) )
         {
             arch    = Archive( bytes.data(), bytes.size() );
             absPath = path;
@@ -243,7 +243,7 @@ namespace sw
                 absPath = FileUtil::normalizeSeparators( path );
             else
             {
-                absPath = ResourceUtil::getResourcePath( path );
+                absPath = ResourcePaths::getResourcePath( path );
                 if ( absPath.empty() )
                     absPath = path;
             }
@@ -343,7 +343,7 @@ namespace sw
             arch << entity._prefabOverrideXML;
         }
 
-        const string absPath = ResourceUtil::getWritePath( path );
+        const string absPath = ResourcePaths::getWritePath( path );
         if ( absPath.empty() )
         {
             SW_LOG_ERROR( "Cannot resolve save path: %#", path );
@@ -371,7 +371,7 @@ namespace sw
         if ( FileUtil::hasExtension( path, ".bin" ) )
             return loadBinary( path );
 
-        if ( binPath.empty() == false && ResourceUtil::hasResource( binPath ) && loadBinary( binPath ) )
+        if ( binPath.empty() == false && ResourceIO::hasResource( binPath ) && loadBinary( binPath ) )
             return true;
 
         return loadXML( path );

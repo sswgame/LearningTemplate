@@ -13,7 +13,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/SceneNavigation.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 
@@ -160,7 +160,7 @@ SW_TEST_CASE( NavMeshDynamicTest, GeometrySourceChangeRebakesThatArea )
 SW_TEST_CASE( NavMeshDynamicTest, DestructionRebakesTheBrokenWallTiles )
 {
     using Internal = NavMeshDynamicTestInternal;
-    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::SceneDocument doc;
     SW_ASSERT_TRUE( doc.loadXML( "game/empty/maps/destructionshowcase.scene.xml" ) );
     sw::Scene scene{ "NavDestruction" };

@@ -91,7 +91,7 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
     const sw::string includeRel = "engine/shaders/livereloadprobe.hlsli";
     const sw::string shaderRel  = "engine/shaders/livereloadprobe.hlsl";
 
-    const sw::string engineFolder = sw::ResourceUtil::getDomainFolderPath( "engine" );
+    const sw::string engineFolder = sw::ResourcePaths::getDomainFolderPath( "engine" );
     SW_ASSERT_FALSE( engineFolder.empty() );
     const sw::string includeAbs = sw::FileUtil::joinPath( engineFolder, "shaders/livereloadprobe.hlsli" );
     const sw::string shaderAbs  = sw::FileUtil::joinPath( engineFolder, "shaders/livereloadprobe.hlsl" );
@@ -175,7 +175,7 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
 SW_TEST_CASE( LiveShaderTest, LiveCompileWritesUnderItsOwnCodegen )
 {
     // 쿠킹된 바이너리가 없는 셰이더라야 실시간 컴파일을 탄다.
-    const sw::string engineFolder = sw::ResourceUtil::getDomainFolderPath( "engine" );
+    const sw::string engineFolder = sw::ResourcePaths::getDomainFolderPath( "engine" );
     SW_ASSERT_FALSE( engineFolder.empty() );
     const sw::string shaderAbs = sw::FileUtil::joinPath( engineFolder, "shaders/livecodegenprobe.hlsl" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( shaderAbs, "float4 VSMain( float3 pos : POSITION ) : SV_POSITION { return float4( pos * 3.0, 1.0 ); }\n" ) );

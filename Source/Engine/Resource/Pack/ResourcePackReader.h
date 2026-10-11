@@ -8,7 +8,7 @@
 #include "Core/File/AsyncFileIO.h"
 
 #include "Engine/Resource/Pack/ResourcePackTypes.h"
-#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {

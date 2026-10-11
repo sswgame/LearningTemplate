@@ -6,7 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/string_splitter.h"
 
-#include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/EditorPaths.h"
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -25,7 +25,7 @@ namespace sw::editor
         if ( rel.empty() )
             rel = string( config::kFileRuntimeEditorToolDefaults );
 
-        const string absPath = EditorUtil::resolveProjectRelativePath( rel );
+        const string absPath = EditorPaths::resolveProjectRelativePath( rel );
 
         // 따로 읽고 성공할 때만 덮는다 — 틀린 파일의 앞부분 값이 섞이면 무엇이 기본값인지 아무도 모른다. 오류는 키 이름과 함께 readConfigFile 이 남긴다.
         EditorToolDefaults     loaded{};
