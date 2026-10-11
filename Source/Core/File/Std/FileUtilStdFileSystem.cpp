@@ -94,7 +94,8 @@ namespace sw
                 return std::filesystem::path( widePath.c_str() );
 #else
                 // POSIX 의 좁은 문자 경로는 인코딩 변환이 없다. 구분자만 맞춘다(`\` 가 섞인 경로도 Windows 와 같은 폴더를 가리킨다).
-                return std::filesystem::path( FileUtil::normalizeSeparators( path ) );
+                const string separated = FileUtil::normalizeSeparators( path );
+                return std::filesystem::path( std::string_view( separated.data(), separated.size() ) );
 #endif
             }
 

@@ -722,6 +722,11 @@ SW_TEST_CASE( ResourceDataSchemaTest, EveryResourceDataFileLoadsWithoutUnknownNa
         const sw::string resourceID = sw::ResourcePaths::toResourceID( filePath );
         if ( ResourceDataSchemaInternal::isDataFile( resourceID ) == false )
             continue;
+#if defined( SW_SHIPPING )
+        // 에디터 팩(`editor/`)은 배포본에 없다 — 그 데이터는 Dev 빌드의 이 시험이 읽는다.
+        if ( sw::StringUtil::startsWith( resourceID, "editor/" ) )
+            continue;
+#endif
 
         const ResourceDataSchemaInternal::DataKind* pKind = ResourceDataSchemaInternal::findKind( resourceID );
         SW_EXPECT_TRUE_MSG( pKind != nullptr, ( "종류 표에 없는 데이터 파일입니다: " + resourceID ).c_str() );
