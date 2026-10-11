@@ -410,9 +410,9 @@ VRM 은 같은 길로 임포트하고, MToon 머티리얼이 있으면 머티리
 
 ### 임포트
 
-- **임포트 동작을 바꾸면 임포터 버전을 올립니다**(`TextureImporterInternal::kImporterVersion`, `ModelImporterInternal::kImporterVersion`, `HeightfieldImporterInternal::kImporterVersion`). 올려야 모든 스탬프가 어긋남이 되어 다시 임포트됩니다.
+- **임포트 동작을 바꾸면 임포터 버전을 올립니다**(`TextureImporterInternal::kImporterVersion`, `ModelImportUtil::kImporterVersion`, `HeightfieldImporterInternal::kImporterVersion`). 올려야 모든 스탬프가 어긋남이 되어 다시 임포트됩니다.
 - **모델 임포트의 옆 폴더(`models/<모델>/`)는 임포트마다 통째로 지워집니다.** 손으로 쓴 캐릭터 데이터는 `game/<게임>/characters/<캐릭터>/` 처럼 임포트 산출물 밖에 둡니다. 클립 알림은 원본 옆 `<모델>.clips.json` 에 적습니다.
-- **임포터는 결과 옆 폴더의 머티리얼에 경로에서 정해지는 GUID 의 `.meta` 를 미리 씁니다**(`ModelImporterInternal::makeImportedGuid`). 머티리얼 캐시가 첫 실행에 실행마다 다른 GUID 를 지으면 스탬프가 "손으로 바꿨다" 가 됩니다.
+- **임포터는 결과 옆 폴더의 머티리얼에 경로에서 정해지는 GUID 의 `.meta` 를 미리 씁니다**(`ModelImportUtil::makeImportedGuid`). 머티리얼 캐시가 첫 실행에 실행마다 다른 GUID 를 지으면 스탬프가 "손으로 바꿨다" 가 됩니다.
 - **원본 glb 는 내려받은 그대로 둡니다.** 비표준 씬 뿌리는 임포터가 받고, 배치 오프셋은 `ModelImportConfig.json` 규칙의 `translation` 으로 지웁니다. 스킨드 모델에 `translation` 과 `recenter` 는 오류입니다. 바인드 행렬이 어긋나기 때문입니다.
 - **Debug App 의 `--import-textures` 는 BC7 큰 원본에 매우 느립니다**(1024² 한 장에 20 분 넘게). 큰 BC7 은 Release App 으로 굽습니다.
 - **BC 압축은 높이 64 줄의 가로 띠로 나눠 작업 시스템이 병렬로 합니다.** `TEX_COMPRESS_DEFAULT` 일 때만 결과가 통째 압축과 같은 바이트입니다. 디더링이나 오차 확산을 켜면 블록 사이가 이어져 깨집니다.
