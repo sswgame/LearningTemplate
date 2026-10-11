@@ -175,6 +175,42 @@ SW_TEST_CASE( AppScenarioTest, EveryScenarioPassesOnEveryBackend )
         SW_TEST_SKIP( "no scenario could run on this machine" );
 }
 
+/**
+ * @brief [AppScenarioTest] 시나리오를 한 프로세스에서 이어 돌린다 — 게임 모듈 리로드 → 렌더 확인 → 다시 리로드가 모든 백엔드에서 통과하고, 단계마다 보고가 남는다
+ * @details 체인은 앞 단계의 씬 · 모듈 상태를 이어받는다(`-scenario=a,b,c`). 두 번째 리로드가 첫 번째의 완료 수에 속지 않고(`Module.ReloadPending`) 제 리로드를 기다리는지, 사이의 렌더 시나리오가
+ *          리로드 뒤 새 이미지로 그리는지 본다. 프로세스는 백엔드마다 하나다. 개발 명령이 없는 구성(Shipping)은 13 으로 건너뛴다.
+ */
+SW_TEST_CASE( AppScenarioTest, ChainedScenariosShareOneProcess )
+{
+#if defined( SW_SHIPPING )
+    constexpr const utf8* kArrBackendSwitch[] = { "" };
+#else
+    #define SW_APP_SCENARIO_CHAIN_BACKEND_SWITCH( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) "-" CommandLineName,
+    constexpr const utf8* kArrBackendSwitch[] = { SW_RHI_BACKEND_TABLE( SW_APP_SCENARIO_CHAIN_BACKEND_SWITCH ) };
+    #undef SW_APP_SCENARIO_CHAIN_BACKEND_SWITCH
+#endif
+    const sw::vector<sw::string> listScenario{ "engine/automation/hotreload.scenario.xml", "engine/automation/runner.scenario.xml", "engine/automation/hotreload.scenario.xml" };
+    uint32                       ranCount = 0;
+    for ( const utf8* pSwitch : kArrBackendSwitch )
+    {
+        sw::string       scenarioLines;
+        const int32      exitCode = test::AppTestUtil::runScenarioChain( listScenario, "reload_render_reload", pSwitch, scenarioLines );
+        const sw::string label    = sw::string( "chain " ) + pSwitch + " -> exit " + sw::to_string( exitCode ) + "\n" + scenarioLines;
+        SW_EXPECT_TRUE_MSG( exitCode != test::AppTestUtil::kNotLaunchedExitCode, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)에 App 이 있습니까?" );
+        if ( test::AppTestUtil::isSkippedExitCode( exitCode ) )
+        {
+            SW_LOG_INFO( "[AppScenarioTest] skipped %#", label.c_str() );
+            continue;
+        }
+        SW_EXPECT_TRUE_MSG( exitCode == 0, label.c_str() );
+        SW_EXPECT_TRUE_MSG( scenarioLines.find( "chain stage 3/3 PASS" ) != sw::string::npos, label.c_str() );
+        SW_EXPECT_TRUE_MSG( scenarioLines.find( "chain PASS (3 stage(s), 0 failed, 0 not run)" ) != sw::string::npos, label.c_str() );
+        ++ranCount;
+    }
+    if ( ranCount == 0 )
+        SW_TEST_SKIP( "no backend could run the chain on this machine" );
+}
+
 // 에디터 작업 흐름 시나리오(`engine/automation/editor` 의 `.scenario.xml`)를 에디터를 켠 실행(`-EnableEditor`)으로 돌린다. 에디터 동작을 바꿨으면 이 시나리오로 확인한다.
 // 실행마다 빈 에디터 상태 폴더(`Bin/Saved/Automation/EditorState/<묶음>_<백엔드>`)로 시작하므로 사용자의 `Saved/Editor` 를 읽지도 쓰지도 않는다.
 // `<묶음>.<n>.scenario.xml` 은 한 폴더를 이어 써 저장된 상태를 읽는 분기를 본다. 배포본에는 에디터가 없다.

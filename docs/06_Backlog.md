@@ -114,6 +114,12 @@
 - **`editor/materialpreview` 가 OpenGL 에서 한 번 졌다**(2026-10-11, `AppScenarioTest.EditorScenariosPassOnOpenGL` 샤드 안 — 단독 3/3 통과). `WaitUntil Editor.MaterialPreviewRedMinusBlue <= -40` 이
   1200 프레임을 기다리고도 +180(빨강)이었다 — 시간이 아니라 미리보기 렌더 타깃이 갱신되지 않은 상태에 머문 것이다. 재현되면 미리보기 재렌더 요청(속성 변경 → 렌더 타깃 갱신) 경로를 GL 에서 본다.
 
+- **에디터 시나리오를 한 프로세스로 묶는다**(사용자 제안 2026-10-12) — 체인(`-scenario=a,b,c -scenario-keep-going`)이 들어갔다. 58 개를 DX12 한 프로세스로 돌리면 160 초이고 31 개가 지는데,
+  전부 앞 시나리오가 남긴 상태 때문이다(되돌리기 스택 누적 `Editor.UndoCount`, `Editor.SceneDirty`, 선택, 열린 패널, 씬 내용, 출력 로그 행). 시나리오 사이에 "새 에디터 세션" 으로 되돌리는 개발 명령
+  (`editor.resetSession` — 플레이 중지 · 시작 씬 다시 열기 · 되돌리기 스택 비우기 · 선택 해제 · 레이아웃 초기화 · 패널 닫기)을 두고, 리셋 시나리오를 사이에 끼운 체인으로 `AppScenarioTest` 의 에디터 케이스를
+  바꾼다. 시작 상태를 전제하는 시나리오(`editorstartup` · `defaultlayout` · `savedstate.<n>` · `loadingscreen`)는 체인 밖에 두고, 리로드 단계(`module.reload`)를 사이에 끼워 "리로드 뒤에도 편집 상태가 산다" 도 같은 프로세스에서 본다.
+- **백엔드 교체 단계**(`<SwapBackend backend="vulkan"/>` 같은 것) — 체인이 한 프로세스에서 네 백엔드를 차례로 건너게 한다(지금은 백엔드마다 프로세스 하나). `gv_rhiSwapAtFrame` 의 경로(`RHI::requestBackendChange`)를 단계로 감싸고
+  교체 뒤 `Module.*` · 씬 개수 탐침을 같이 본다.
 ### 1-5. 핫 리로드 · 모듈
 
 - **바깥 빌드(터미널 · IDE)의 리로드 트리거는 여전히 mtime 디바운스뿐이다** — 에디터가 시킨 빌드는 성공 뒤에만 올린다(`LiveReloadManager::notifyBuildStarted/Finished`).
@@ -554,5 +560,3 @@
   엔진 인터페이스 뒤 + 격리 게이트, vcpkg 변경은 main 에서 먼저.
 - **임포터가 1 채널(R8) DDS 를 내는 규칙**(조건: 마스크 · 1 채널 텍스처 에셋이 생기면) — RHI · 로더는 `R8_UNORM`(DXGI 61, DX10 머리)을 읽는다. `App --import-textures` 의
   규칙 표(`TextureImportConfig.json`)에 R8 출력이 없다.
-- **핫 리로드 시나리오**(사용자 제안 2026-10-12) — 핫 리로드를 확인하는 자동화 시나리오가 없다. 지금은 `-gv_reloadGameAtFrame` · `-gv_rhiSwapAtFrame` 로 손으로 건다. 시나리오 단계(`<ReloadModule name="…"/>` 같은 것)를 더해 게임 모듈 · 키트 · 에디터 확장을 리로드하고, 리로드 뒤 로그 · 씬 상태(컴포넌트 수 · 값)가 같은지 `ExpectLog` · 상태 검사로 본다. 지연 로드 제거(`LiveReloadManager::rewriteShadowImageNames`) 뒤라 의존 사슬(키트 → 공유 키트, SWGame → 키트)을 한 번씩 리로드하는 시나리오가 회귀를 가장 잘 잡는다. 같은 판에 섀도 폴더가 남지 않았는지도 단언한다.
-- **시나리오를 이어 돌리는 방법**(사용자 제안 2026-10-12) — 시나리오는 한 파일이 프로세스 하나에서 한 번 돈다. 앞 시나리오가 만든 상태에서 다음 시나리오가 이어지게 하려면 (예: 씬 로드 → 리로드 → 백엔드 교체 → 저장 · 복원) 시나리오 목록(`<ScenarioChain>` 또는 `--scenario a,b,c`)을 한 프로세스에서 차례로 실행하는 실행기가 필요하다. 단계마다 앞 시나리오의 통과 여부를 보고, 실패하면 이후는 건너뛰며 어느 단계에서 졌는지 남긴다. 먼저 `AppScenarioTest` 의 프로세스 하나당 시나리오 하나 구조를 읽고, 프레임 번호를 시나리오마다 0 부터 다시 셀지 이어서 셀지 정한다.

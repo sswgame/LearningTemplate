@@ -190,6 +190,8 @@ namespace sw
         /** @brief 로드된 모듈의 핸들을 반환합니다. */
         void* getModuleHandle( string_view moduleName ) const;
 
+        /** @brief 끝까지 성공한 연쇄 리로드 수입니다(교체 · 콜백 · 바인딩 검사를 모두 마친 것). 실패하거나 적용 전에 거절된 리로드는 세지 않습니다. 자동화가 완료를 기다릴 때 읽습니다. */
+        uint32 getCompletedReloadCount() const { return _completedReloadCount; }
         /** @brief 교체된 뒤 언로드를 미루고 아직 로드해 둔 옛 이미지 수입니다(`kMaxDeferredUnloadBatchCount` 배치까지). */
         uint32 getDeferredUnloadImageCount() const { return static_cast<uint32>( _listDeferredUnloadImage.size() ); }
 
@@ -325,6 +327,7 @@ namespace sw
         DrainWorkersDelegate                 _drainWorkers;
         vector<DeferredUnloadImage>          _listDeferredUnloadImage; ///< 언로드를 미룬 옛 이미지. 오래된 것부터
         uint32                               _reloadBatchID;           ///< 연쇄 리로드마다 오르는 배치 번호
+        uint32                               _completedReloadCount;    ///< 끝까지 성공한 연쇄 리로드 수(`getCompletedReloadCount`)
         uint8                                _bReloadGraphBroken : 1;
         [[maybe_unused]] uint8               _reserved           : 7;
     };

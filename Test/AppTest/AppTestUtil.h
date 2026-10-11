@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 
 namespace sw
 {
@@ -50,7 +51,19 @@ namespace test
          */
         static int32 runScenario( const sw::string& scenarioPath, const utf8* pBackendSwitch, sw::string& outScenarioLines,
                                   sw::string_view extraArguments = {} );
+        /**
+         * @brief 시나리오 여럿을 **한 프로세스**에서 차례로 돌립니다(`-scenario=a,b,c`). 앞 단계가 통과해야 다음으로 가고, 앞 단계가 만든 상태를 이어받습니다.
+         * @param chainName 로그 · 보고 파일 이름(`Saved/Automation/chain_<이름>_<백엔드>.log` · `.<단계>.json`)
+         * @return 체인의 종료 코드 — 전부 통과면 0, 아니면 처음 통과하지 못한 단계의 코드입니다. `[Scenario] chain stage n/m …` 줄이 @p outScenarioLines 에 모입니다.
+         */
+        static int32 runScenarioChain( const sw::vector<sw::string>& listScenarioPath, const sw::string& chainName, const utf8* pBackendSwitch,
+                                       sw::string& outScenarioLines, sw::string_view extraArguments = {} );
         /** @brief 이 기계에서 돌릴 수 없어 건너뛸 종료 코드(13 건너뜀 · 77 백엔드 없음 · 못 띄움)면 true 입니다. */
         static bool isSkippedExitCode( int32 exitCode );
+
+    private:
+        /** @brief `-scenario=` 인자(경로 하나 또는 쉼표 목록)를 받아 App 을 띄우고 종료 코드를 돌려줍니다. */
+        static int32 runScenarioArgument( const sw::string& scenarioArgument, const sw::string& outputStem, const utf8* pBackendSwitch, sw::string& outScenarioLines,
+                                          sw::string_view extraArguments );
     };
 } // namespace test

@@ -2,6 +2,7 @@
 
 #include "App/App.h"
 
+#include "App/AppAutomation.h"
 #include "App/EditorModuleHost.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
@@ -429,9 +430,11 @@ namespace sw
 
         // 모듈 감시자는 모듈을 로드하는 ModuleHost 보다 먼저 있어야 한다. ModuleHost 가 이 포인터로 모듈을 로드하고 리로드 콜백을 등록한다.
         _liveReloadManager = make_unique<LiveReloadManager>();
+        AppAutomation::bindLiveReloadManager( _liveReloadManager.get() ); // 개발 명령 `module.reload` · 탐침 `Module.*` 가 읽는다
         // 모듈 DLL 을 언로드할 수 있는 곳은 "씬은 사라졌고 서비스는 아직 있는" 좁은 구간뿐이다. 엔진이 제공하는 훅에 등록한다.
         _engineLoop.setOnScenesReleased( SW_DELEGATE_LAMBDA( Delegate<void()>, [this]()
         {
+            AppAutomation::bindLiveReloadManager( nullptr );
             if ( _liveReloadManager != nullptr )
                 _liveReloadManager->shutdown();
         } ) );

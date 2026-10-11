@@ -3537,6 +3537,14 @@
    "description": "시나리오 결과 JSON 을 쓸 경로(비면 쓰지 않는다)."
   },
   {
+   "name": "SCENARIO_KEEP_GOING",
+   "spellings": [
+    "scenario-keep-going"
+   ],
+   "value": "플래그(`-이름`)",
+   "description": "시나리오 여럿(`-scenario=a,b,c`)에서 한 단계가 실패해도 다음 단계를 돌려 실패를 한꺼번에 모은다(기본은 첫 실패에서 멈춘다). 건너뜀(13)은 늘 멈춘다."
+  },
+  {
    "name": "RENDERDOC",
    "spellings": [
     "renderdoc"

@@ -175,6 +175,7 @@ namespace sw
         , _drainWorkers{}
         , _listDeferredUnloadImage{}
         , _reloadBatchID{ 0 }
+        , _completedReloadCount{ 0 }
         , _bReloadGraphBroken{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -1222,7 +1223,12 @@ namespace sw
 
         // 새 이미지가 모두 로드됐다. 의존 모듈이 옛 이미지에 바인딩돼 있으면, 옛 이미지를 언로드한 지금 거기로 점프하는 코드가 죽는다. 여기서 막는다.
         if ( verifyModuleBindings() == false )
+        {
             markGraphBroken( "a module is bound to a stale dependency image after the cascade" );
+            return;
+        }
+        if ( _bReloadGraphBroken == SW_FALSE ) // 리로드 직후 콜백의 결함도 그래프를 막는다 — 그런 리로드는 성공으로 세지 않는다
+            ++_completedReloadCount;
     }
 
     LiveReloadManager::ModuleContext::ModuleContext() noexcept

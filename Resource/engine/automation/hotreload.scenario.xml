@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  엔진 시나리오 — 게임 모듈(SWGame) 핫 리로드(Dev 전용): 개발 명령 `module.reload` 로 리로드를 예약하고, 끝날 때까지(`Module.ReloadPending` 0) 기다린 뒤
+  그래프가 막히지 않았는지 · 의존 모듈이 지금 이미지에 묶였는지 · 씬이 그대로인지 본다. 리로드는 벽시계 디바운스(300 ms)와 DLL 복사를 거치므로 프레임 시한을 넉넉히 둔다.
+  `module.reload <모듈>` 에 키트나 에디터 확장 이름을 주면 의존 사슬(키트 → 공유 키트, SWGame → 키트)이 한 번에 돈다. 게임 팩의 시나리오가 그 모듈 이름으로 쓴다.
+  Shipping 에는 개발 명령이 없어 13(건너뜀)으로 끝난다.
+  실행: App.exe -scenario=engine/automation/hotreload.scenario.xml -dx12   (AppScenarioTest 가 백엔드마다 돈다)
+-->
+<Scenario name="engine.hotreload" fixedDelta="0.0166667" timeoutFrames="9000" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<At frame="0">
+		<Expect probe="Module.GraphBroken" equals="0"/>
+		<Expect probe="Module.BindingsOk" equals="1"/>
+		<Expect probe="Scene.ObjectCount" atLeast="1"/>
+	</At>
+	<At frame="5"><DevCommand line="module.reload SWGame"/></At>
+	<At frame="6"><WaitUntil probe="Module.ReloadPending" equals="0" timeoutFrames="6000"/></At>
+	<At frame="10">
+		<Expect probe="Module.GraphBroken" equals="0"/>
+		<Expect probe="Module.BindingsOk" equals="1"/>
+		<Expect probe="Module.ReloadCount" atLeast="1"/>
+		<Expect probe="Scene.ObjectCount" atLeast="1"/>
+		<ExpectLog contains="Manual Live Reload queued for SWGame" atLeast="1"/>
+		<Pass/>
+	</At>
+</Scenario>

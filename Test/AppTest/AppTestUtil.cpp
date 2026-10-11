@@ -90,10 +90,28 @@ namespace test
 
     int32 AppTestUtil::runScenario( const sw::string& scenarioPath, const utf8* pBackendSwitch, sw::string& outScenarioLines, sw::string_view extraArguments )
     {
+        return runScenarioArgument( scenarioPath, AppTestUtilInternal::getScenarioStem( scenarioPath ), pBackendSwitch, outScenarioLines, extraArguments );
+    }
+
+    int32 AppTestUtil::runScenarioChain( const sw::vector<sw::string>& listScenarioPath, const sw::string& chainName, const utf8* pBackendSwitch,
+                                         sw::string& outScenarioLines, sw::string_view extraArguments )
+    {
+        sw::string argument;
+        for ( const sw::string& scenarioPath : listScenarioPath )
+        {
+            argument += argument.empty() ? "" : ",";
+            argument += scenarioPath;
+        }
+        return runScenarioArgument( argument, "chain_" + chainName, pBackendSwitch, outScenarioLines, extraArguments );
+    }
+
+    int32 AppTestUtil::runScenarioArgument( const sw::string& scenarioArgument, const sw::string& outputStem, const utf8* pBackendSwitch, sw::string& outScenarioLines,
+                                            sw::string_view extraArguments )
+    {
         const sw::string backend    = pBackendSwitch[0] == '-' ? sw::string( pBackendSwitch + 1 ) : sw::string( "default" );
-        const sw::string outputBase = "Saved/Automation/" + AppTestUtilInternal::getScenarioStem( scenarioPath ) + "_" + backend;
+        const sw::string outputBase = "Saved/Automation/" + outputStem + "_" + backend;
         (void)sw::FileUtil::ensureDirectoryExists( "Saved/Automation" );
-        sw::string arguments = "-scenario=" + scenarioPath + " -scenario-report=" + outputBase + ".json " + pBackendSwitch;
+        sw::string arguments = "-scenario=" + scenarioArgument + " -scenario-report=" + outputBase + ".json " + pBackendSwitch;
         if ( extraArguments.empty() == false )
         {
             arguments += " ";

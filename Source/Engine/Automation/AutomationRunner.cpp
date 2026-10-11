@@ -184,6 +184,18 @@ namespace sw
                 return true;
             }
 
+            /** @brief 탐침 `Scene.ObjectCount` 입니다. 활성 씬의 오브젝트 수입니다(핫 리로드 · 백엔드 교체 앞뒤로 씬이 그대로인지 볼 때 씁니다). */
+            [[nodiscard]] static bool readSceneObjectCount( const GameObjectManager* pManager, float64& outValue )
+            {
+                if ( pManager == nullptr )
+                    return false;
+                uint32 count = 0;
+                pManager->forEachGameObject( [&count]( GameObject* /*pObject*/ )
+                { ++count; } );
+                outValue = static_cast<float64>( count );
+                return true;
+            }
+
 #if SW_PROFILER_TRACE_ENABLED
             /** @brief 탐침 `Profiler.TraceRecording` 입니다. 긴 캡처(`profile.trace record`)가 아직 모으는 중이면 1 입니다. */
             [[nodiscard]] static bool readTraceRecording( const GameObjectManager* pManager, float64& outValue )
@@ -201,6 +213,7 @@ namespace sw
 {
     SW_AUTOMATION_PROBE( inputOsDeviceInputBlocked, "Input.OsDeviceInputBlocked", "1 while unattended automation drops the person's mouse and keyboard window events",
                          &AutomationRunnerInternal::readOsDeviceInputBlocked );
+    SW_AUTOMATION_PROBE( sceneObjectCount, "Scene.ObjectCount", "Objects in the active scene", &AutomationRunnerInternal::readSceneObjectCount );
 #if SW_PROFILER_TRACE_ENABLED
     // 긴 캡처는 벽시계로 끝난다. 시나리오는 고정 프레임이 아니라 이 탐침을 `WaitUntil` 로 기다린다(빠른 백엔드는 몇 백 프레임이 0.3 초 안에 돈다).
     SW_AUTOMATION_PROBE( profilerTraceRecording, "Profiler.TraceRecording", "1 while a profile.trace record capture is still collecting",

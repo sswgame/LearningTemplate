@@ -186,6 +186,37 @@ echo $LASTEXITCODE
 `region` 은 `x0,y0,x1,y1` 형식의 0..1 비율입니다. `darkFraction` 은 영역 전체가 한 밝기면 0이 나오므로, 밝기가 섞인 영역을 골라야 합니다.
 지표 값은 언제나 로그(`[Scenario] metric darkFraction(0,0,1,0.12) park.ppm = 0.034`)와 보고 JSON에 적힙니다. 임계값은 이렇게 측정한 값을 보고 정합니다.
 
+### 시나리오 이어 돌리기 — 한 프로세스에서 여럿
+
+`-scenario=` 에 쉼표로 여러 경로를 주면 한 프로세스에서 차례로 돕니다(`AutomationScenarioChain`). 앞 단계가 통과해야 다음으로 가고, 앞 단계가 만든 상태(씬, 올라온 모듈, 백엔드)를 이어받습니다.
+
+```powershell
+./App.exe -dx12 -scenario=engine/automation/hotreload.scenario.xml,engine/automation/runner.scenario.xml,engine/automation/hotreload.scenario.xml -scenario-report=Saved/Automation/chain.json
+```
+
+- 단계마다 시나리오 프레임은 0 부터 다시 셉니다(시작 조건이 그 단계에서 다시 참이 되는 프레임이 0). 고정 프레임 시간도 단계의 `fixedDelta` 로 다시 맞춥니다.
+- 첫 실패에서 멈추고 나머지는 돌리지 않습니다. `-scenario-keep-going` 이면 실패해도 이어 돌려 실패를 한꺼번에 모읍니다(단계가 서로 독립일 때). 건너뜀(13)은 이 기계가 못 도는 것이라 늘 멈춥니다.
+- 종료 코드는 처음 통과하지 못한 단계의 코드이고, 로그에 `[Scenario] chain stage 2/3 FAIL (이름) - 1 later stage(s) skipped` 와 `[Scenario] chain PASS (3 stage(s), 0 failed, 0 not run)` 가 남습니다.
+- 보고 JSON 은 단계마다 `<이름>.<단계 번호>.json` 입니다(단계가 하나면 그대로).
+- `CloseWindow` 로 끝나는 시나리오는 마지막 단계에만 둡니다(창이 닫히면 루프가 끝나 남은 단계를 돌 수 없고, 그때는 실패로 끝납니다).
+- 상태를 이어받으므로 단계는 앞 단계가 남긴 것에 기대지 않게 씁니다. 리로드 횟수처럼 프로세스 전체로 세는 값은 상대값 탐침(`Module.ReloadPending`)으로 봅니다.
+  에디터 시나리오를 묶으려면 단계 사이에 에디터 상태를 되돌려야 합니다(되돌리기 스택 · 선택 · 씬 내용이 남는다 — 백로그).
+
+### 핫 리로드 시나리오
+
+`Resource/engine/automation/hotreload.scenario.xml` 이 게임 모듈을 리로드합니다. 개발 명령 `module.reload <모듈>`(`App/AppAutomation.cpp`)로 예약하고, 탐침으로 끝을 기다린 뒤 결과를 봅니다.
+
+| 이름 | 종류 | 뜻 |
+|---|---|---|
+| `module.reload <모듈>` | `DevCommand` | 그 모듈과 그것에 의존하는 모듈의 리로드를 예약합니다(개발 콘솔에서도 쓴다). Shipping 에는 없어 그 시나리오는 13 으로 끝납니다 |
+| `Module.ReloadPending` | 탐침 | 예약한 리로드가 끝나기 전 1, 끝나면(또는 그래프가 막히면) 0. 앞선 리로드 횟수와 무관해 체인에서도 `WaitUntil … equals="0"` 으로 기다립니다 |
+| `Module.ReloadCount` | 탐침 | 프로세스가 시작한 뒤 끝까지 성공한 연쇄 리로드 수 |
+| `Module.GraphBroken` | 탐침 | 실패한 리로드가 그래프를 막았으면 1(프로세스를 다시 시작해야 한다) |
+| `Module.BindingsOk` | 탐침 | 모든 모듈이 지금 보관한 의존 이미지에 묶였으면 1(`LiveReloadManager::verifyModuleBindings`) |
+| `Scene.ObjectCount` | 탐침 | 활성 씬의 오브젝트 수(리로드 앞뒤로 씬이 사라지지 않았는지) |
+
+리로드는 벽시계 디바운스(300 ms)와 DLL 복사를 거치므로 `WaitUntil` 의 `timeoutFrames` 를 넉넉히 둡니다(빠른 백엔드는 프레임이 훨씬 빨리 돈다). 키트나 에디터 확장을 리로드하려면 게임 팩의 시나리오에서 그 모듈 이름을 줍니다.
+
 ### CTest — `AppScenarioTest`
 
 `Test/AppTest/TestAppScenario.cpp` 는 `Resource/engine/automation/*.scenario.xml` 과 활성 게임 팩의 `automation/*.scenario.xml` 을 모두 찾습니다.

@@ -157,6 +157,7 @@ SW_TEST_CASE( ModuleHostTest, ShutdownDetachesEveryCallbackItRegistered )
 
     // 호스트가 자기 콜백을 뗄 때 쓰는 바로 그 창구다.
     manager.clearReloadCallbacks();
+    SW_EXPECT_EQUAL( uint32{ 0 }, manager.getCompletedReloadCount() );
 
     // 디바운스(300ms)를 넘겨 **실제로 다시 올린다** — 리로드가 일어나지 않으면 "안 불렸다" 는
     // 아무것도 증명하지 못한다. 핸들이 바뀌는 것이 리로드가 돌았다는 증거다.
@@ -172,6 +173,7 @@ SW_TEST_CASE( ModuleHostTest, ShutdownDetachesEveryCallbackItRegistered )
     SW_EXPECT_TRUE_MSG( manager.getModuleHandle( "SWGame" ) != initialHandle,
                         "리로드가 일어나지 않았습니다 — 이 케이스는 아무것도 검증하지 못합니다" );
     SW_EXPECT_TRUE_MSG( bBeforeCalled == false, "뗀 콜백이 아직 불립니다 — 죽은 객체를 가리키는 자리다" );
+    SW_EXPECT_TRUE_MSG( manager.getCompletedReloadCount() == 1, "끝까지 성공한 리로드는 정확히 한 번으로 센다(자동화 `Module.ReloadCount` 가 읽는다)" );
 
     manager.shutdown();
 }
