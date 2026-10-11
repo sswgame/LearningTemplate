@@ -484,8 +484,7 @@
   `kHookBudgetSeconds`(1: 8 · 10: 12 s)는 이 PC 기준 짐작이다 — 첫 `lint-timing` 아티팩트를 보고 러너 값의 1.5 배로 고친다.
 - **Scripts 정리의 남은 후보**(2026-10-10, 진행 계획은 [Scripts 개편 계획](plans/ScriptsRestructure.md)). 커밋 훅의 바닥은 트리 전체 게이트 여섯이 비슷한 높이(조용할 때 1~1.4 s,
   대개 `Source/` 를 읽는 값)로 만든다 — `CheckConfigReference` 하나를 파일 단위로 나눠도 바닥은 그대로라 하지 않는다(계획 1 단계에 숫자).
-  ① `CheckOutParameterNames`(맨이름 `out`)는 `CheckCodeConventions` 의 `Naming/OutParameter` 와 같은 주제다 — 줄 규칙 하나로 합치면 게이트 하나가 준다
-  (CTest 이름을 옮기는 일). ② `dev/MoveEngineFolders.py` · `MoveGameFrameworkLayout.py` 는 "이동 표 + git mv + 경로 치환" 이 같은
+  `dev/MoveEngineFolders.py` · `MoveGameFrameworkLayout.py` 는 "이동 표 + git mv + 경로 치환" 이 같은
   모양이다 — 폴더 재배치가 끝났으니 지우거나 공용 이동기 하나로.
 
 ### 1-10. 관찰 중 — 다시 보이면 원인을 판다

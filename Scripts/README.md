@@ -104,8 +104,7 @@ Scripts/
   │     ├── conventions/              # CheckCodeConventions 의 규칙 묶음(라이브러리 — 묶음 지도는 __init__.py). LintCatalog 는 훑지 않는다
   │     ├── rules/                    # 규칙 데이터 — `<게이트 · 등록부 이름>.toml`(예외 표 `[exemption]` · 티어 · 어휘 · 허용 목록). 코드는 없다
   │     ├── gate/                     # 위반이 있으면 **실패한다** — 빌드와 커밋을 막는 건 이 폴더뿐
-  │     │     ├── CheckCodeConventions.py     # C++ 엔진 코딩 컨벤션 — 진입점 · 파일 고르기 · 보고(규칙은 lint/conventions/)
-  │     │     ├── CheckOutParameterNames.py   # 맨이름 `out` 매개변수(헤더 선언)
+  │     │     ├── CheckCodeConventions.py     # C++ 엔진 코딩 컨벤션 — 진입점 · 파일 고르기 · 보고(규칙은 lint/conventions/, 맨이름 `out` 도 여기)
   │     │     ├── CheckLoopBraces.py          # 본문에 중괄호가 없는 for · while
   │     │     ├── CheckDiscardReason.py       # 실패 가능 함수 결과를 (void) 로 버리는 자리의 이유 한 줄
   │     │     ├── CheckSuppressionReasons.py  # NOLINT · diagnostic ignored · CMake 경고 끄기의 검사 이름과 이유

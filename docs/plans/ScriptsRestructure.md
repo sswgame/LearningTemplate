@@ -59,9 +59,9 @@
 남은 바닥은 게이트 여섯이 각자 `Source/` 를 읽는 값(1~1.4 s)이다. 이 때문에 6 순위(`CheckConfigReference` 파일 단위)는 하지 않는다 — 그것만 0 으로 만들어도
 나머지 다섯이 같은 높이다. 더 내리려면 트리 전체 게이트들이 파일 읽기를 나누는 구조(한 프로세스가 읽고 여럿이 훑기)가 필요하고, 그건 GIL 때문에 동시 실행을 잃는다.
 
-### 2. `CheckOutParameterNames` 를 `CheckCodeConventions` 로
-맨이름 `out` 검사를 파일 범위 규칙(`Naming/BareOutParameter`, 헤더만)으로 옮기고 게이트 파일을 지운다. CTest 항목은 폴더를 훑어 만들므로 따라 사라진다.
-자기 시험 조각은 규칙이 든다(`badSample`). 별칭 · 옛 이름은 두지 않는다.
+### 2. 맨이름 `out` 게이트를 `CheckCodeConventions` 로 (끝남)
+맨이름 `out` 검사를 파일 범위 규칙(`Naming/BareOutParameter`, 헤더만)으로 옮기고 게이트 파일을 지웠다. CTest 항목은 폴더를 훑어 만들므로 따라 사라진다.
+자기 시험 조각은 규칙이 든다(`badSample`). 별칭 · 옛 이름은 두지 않는다. 트리 전체 위반 0, 자기 시험 37 카테고리 · 게이트 56 개 통과.
 
 ### 3. 폴더 이동기 둘 지우기
 티어 표 맞추기를 `lint/report/RunEngineLayerGraph.py --apply` 로 옮기고(묶음 채우기 계산 포함) 이동기 둘을 지운다. 이동 표는 커밋 기록에 남는다.

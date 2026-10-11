@@ -72,7 +72,7 @@ cmake --build --preset Ninja-Debug
   `pp` (`_ppMember`, `ppMember`). Triple pointers or higher (`ppp`, `_ppp`, `***`) are strictly forbidden as architectural flaws.
 - Associative containers use a `map` prefix (`map`, `_map`); fixed arrays use `arr` (`_arr`); variable arrays/lists use a `list` prefix (`list`, `_list`); sets use a `unique` prefix (`unique`, `_unique`, e.g. `_uniqueIds`). Do not use a `List` suffix for variable arrays/lists. Except for the `unique` prefix (`_uniqueIds`, `outUniqueIds`) and raw byte buffers (`_bytes`, `outBytes`), all container and parameter names MUST use singular form (e.g. `_listActor`, `_listItem`, `_mapIDToName`, `outListItem`, `outListHandle`; plural forms like `_listActors` are strictly forbidden). Byte vectors (`vector<uint8>`, `vector<int8>`, `vector<utf8>`) whose names contain the word `byte`/`bytes` (e.g. `_bytes`, `_rawBytes`, `bytes`, `outBytes`, `pOutBytes`) omit the `list` prefix.
 - Function parameters use `camelCase`. Output parameters (Out-parameters) must start with an `out` prefix (`out` + PascalCase, e.g. `outValue`, `outConfig`, `outX`) with containers following `out` in singular form (`outListItem`, `outMapData`, `outArrBuffer`; `outUniqueIds` allows plural). Exceptionally, raw pointer output parameters place the `p`/`pp` prefix before `out`: `pOut...` (pointer, e.g. `pOutBuffer`, `pOutAPI`, `pOutResult`), `ppOut...` (double pointer), `pInOut...` (inout pointer, e.g. `pInOutSize`). In/Out parameters use `inout` / `pInOut` (e.g. `inoutSkeleton`, `pInOutSize`). A bare `out` names nothing and is blocked
-  in header declarations (`CheckOutParameterNames.py`).
+  in header declarations (`CheckCodeConventions` rule `Naming/BareOutParameter`).
 - Use descriptive names; do not use opaque abbreviations or loop counters such
   as `i`, `j`, or `k` (use at least `index`).
 - **GPU resource verbs are a closed vocabulary.** A class that owns RHI resources derives from
@@ -100,7 +100,7 @@ verbs below (`BannedVerb`), abbreviations in function names (`Abbreviation`: `At
 predicates (`CheckVerb`), `string_view`/`hashed_string` name pairs (`NamePair`) and bare getters (`BareGetter`).
 Declarations that predate a check sit in the gate's exemption table, `[exemption]` in `Scripts/lint/rules/CheckFunctionVocabulary.toml`
 (key `<Rule>:<HeaderStem>::<function>`, the reason
-"개명 예정 <new name>" or "도메인 용어"; `CheckOutParameterNames.py` does the same for bare `out`); a new declaration is never added there unless the verb is
+"개명 예정 <new name>" or "도메인 용어"); a new declaration is never added there unless the verb is
 the domain's own term (`UUID::generate`, `SurfaceBvh::build`), and a fixed name is removed from the table — a full run
 reports keys that no longer match. The `on*` and spell-it-out rules are kept by review.
 
