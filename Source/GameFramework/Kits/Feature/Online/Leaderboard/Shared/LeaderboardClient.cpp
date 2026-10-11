@@ -80,7 +80,7 @@ namespace sw
         LeaderboardProtocol::writeRequest( body, request );
         NetRequestOptions options;
         if ( method == LeaderboardMethod::kSubmitScore )
-            options._idempotencyKey = NetIdempotencyKey::makeRandom(); // 다시 보내도 합산 표에 두 번 들어가지 않게
+            options._idempotencyKey = NetIdempotencyKey::makeRandom(); // 다시 보내도 합산 보드에 두 번 들어가지 않게 한다
         return _callTable.send( *_pClient, method, body, options, OnlineResponseDelegate::create<&LeaderboardClient::onResponse>( this ), PendingCall{ onReply, method } );
     }
 

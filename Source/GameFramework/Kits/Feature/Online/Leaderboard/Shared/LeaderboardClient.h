@@ -1,8 +1,8 @@
 /**
  * @file LeaderboardClient.h
- * @brief 순위표 키트의 클라이언트 — `OnlineServiceClient` 에 올리는 `IOnlineClientService`. 상위 · 내 둘레 · 통계 · 점수 제출 · 업적 · 시즌 결과를 묻고 업적 달성 알림을 쌓습니다.
- * @details - 요청마다 결과 델리게이트를 정확히 한 번(`OnlineServiceClient::tick` 스레드) — 업무 결과는 `_reply._result`, 전송 · 공통 오류는 `_errorCode`.
- *          - 점수 제출은 서버가 `_bClientSubmit` 표만 받는다(아니면 NotAllowed) — 보통 점수는 서버 게임 로직이 낸다.
+ * @brief 순위표 키트의 클라이언트입니다. `OnlineServiceClient` 에 등록하는 `IOnlineClientService` 이며, 상위 순위, 내 주변 순위, 통계, 점수 제출, 업적, 시즌 결과를 요청하고 업적 달성 알림을 쌓아 둡니다.
+ * @details - 요청마다 결과 델리게이트를 `OnlineServiceClient::tick` 스레드에서 정확히 한 번 부른다. 업무 결과는 `_reply._result` 에, 전송 오류와 공통 오류는 `_errorCode` 에 있다.
+ *          - 점수 제출은 서버가 `_bClientSubmit` 이 켜진 보드만 받으며 아니면 NotAllowed 이다. 보통 점수는 서버 게임 로직이 낸다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -24,7 +24,7 @@ namespace sw
         LeaderboardReply _reply{};
         uint64           _requestID{ 0 };
         uint16           _method{ 0 };
-        uint16           _errorCode{ 0 }; ///< 전송 · 공통 오류(`OnlineError`)
+        uint16           _errorCode{ 0 }; ///< 전송 오류나 공통 오류(`OnlineError`)이다
     };
 
     using LeaderboardReplyDelegate = Delegate<void( const LeaderboardClientReply& )>;
@@ -34,14 +34,14 @@ namespace sw
 {
     /**
      * @class LeaderboardClient
-     * @brief 연결 하나의 순위표 창구입니다.
+     * @brief 연결 하나의 순위표 클라이언트입니다.
      */
     class SW_GF_API LeaderboardClient final : public IOnlineClientService
     {
     public:
         LeaderboardClient();
 
-        /** @brief @p pClient 는 빌려 쓴다 — `registerClientService( this )` 는 부르는 쪽이(초기화 전에). */
+        /** @brief @p pClient 는 빌려 씁니다. `registerClientService( this )` 는 호출하는 쪽이 초기화하기 전에 부릅니다. */
         void initialize( OnlineServiceClient* pClient );
 
         uint64 requestTop( string_view boardID, int32 offset, int32 count, const LeaderboardReplyDelegate& onReply );

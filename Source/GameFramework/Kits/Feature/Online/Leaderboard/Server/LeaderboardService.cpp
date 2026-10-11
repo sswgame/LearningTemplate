@@ -25,9 +25,9 @@ namespace sw
             static constexpr uint8       kFormatVersion       = 1;
             static constexpr int32       kMaxConflictRetry    = 4;
             static constexpr int32       kRebuildBatch        = 256;
-            static constexpr int32       kPlayersPerCommit    = 15;        ///< 사람마다 쓰기 넷(결과 + 우편 · 보낸 기록 · 만료 색인) — 트랜잭션 상한 64 안
-            static constexpr int64       kSettlementWindowMs  = 604800000; ///< 7 일 — 시즌 끝부터 이 안에 정산이 돈다
-            static constexpr int64       kSettlementLeaseMs   = 600000;    ///< 10 분 — 돌던 서버가 죽으면 다른 서버가 이어받는다
+            static constexpr int32       kPlayersPerCommit    = 15;        ///< 사람마다 쓰기가 넷이다. 결과, 우편, 보낸 기록, 만료 인덱스이며 트랜잭션 상한 64 안에 든다
+            static constexpr int64       kSettlementWindowMs  = 604800000; ///< 7일이다. 시즌이 끝난 뒤 이 안에 정산이 돈다
+            static constexpr int64       kSettlementLeaseMs   = 600000;    ///< 10분이다. 돌던 서버가 죽으면 다른 서버가 이어받는다
             static constexpr const utf8* kSettlementJobPrefix = "lb.settle.";
             static constexpr const utf8* kAchievementSender   = "system.achievement";
             static constexpr const utf8* kSeasonSender        = "system.season";
@@ -44,7 +44,7 @@ namespace sw
                 return s_table;
             }
 
-            /** @brief 시즌 id 의 16 진 8 자리입니다(작업 id · 우편 멱등 키를 64 바이트 안에). */
+            /** @brief 시즌 id 를 16진 8자리 문자열로 만듭니다. 작업 id 와 우편 멱등 키를 64바이트 안에 두려는 것입니다. */
             static string makeSeasonHex( uint32 seasonID ) { return ServiceKeyUtil::makeHex64( seasonID ).substr( 8 ); }
 
             static string makeSeasonResultKey( string_view boardID, uint32 seasonID, AccountID accountID )
@@ -52,7 +52,7 @@ namespace sw
                 return string( boardID ) + "/" + makeSeasonHex( seasonID ) + "/" + ServiceKeyUtil::makeHex64( accountID );
             }
 
-            /** @brief 시즌 표의 시즌 목록 규칙 — id 1 이상 · 유일, 시작 < 끝, 보상 구간 1 ≤ from ≤ to · 자산 · 수량 · 우편 제목. */
+            /** @brief 시즌 보드의 시즌 목록 규칙을 검사합니다. id 는 1 이상이고 유일해야 하며, 시작이 끝보다 앞서야 합니다. 보상 구간은 1 ≤ from ≤ to 이고 자산, 수량, 우편 제목이 있어야 합니다. */
             static bool areSeasonsValid( const LeaderboardDefinition& definition )
             {
                 if ( definition._reset != LeaderboardReset::Season )
@@ -78,7 +78,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 보상 우편 하나를 트랜잭션에 붙입니다(재원 발행 · 보관 30 일 · 만료 때 첨부 소멸). */
+            /** @brief 보상 우편 하나를 트랜잭션에 붙입니다. 재원을 발행하며 30일 보관하고 만료되면 첨부가 사라집니다. */
             static LedgerResult stageRewardMail( IServiceStoreConnection& connection, ServiceTransaction& inoutTransaction, AccountID accountID, string_view assetID,
                                                  int64 amount, string_view titleKey, string_view senderName, string idempotencyKey, int64 nowMs )
             {
@@ -132,7 +132,7 @@ namespace sw
                 return reader.hasOverflowed() == false;
             }
 
-            /** @brief 갱신 방식으로 새 값을 정합니다. 쓸 필요가 없으면 @p outbChanged 가 거짓. */
+            /** @brief 갱신 방식에 따라 새 값을 정합니다. 쓸 필요가 없으면 @p outbChanged 가 false 입니다. */
             static int64 applyUpdate( LeaderboardUpdate update, LeaderboardOrder order, bool bHasOld, int64 oldValue, int64 value, bool& outbChanged )
             {
                 outbChanged = true;
@@ -158,7 +158,7 @@ namespace sw
                 }
             }
 
-            /** @brief @p prefix 아래의 점수를 모두 읽습니다(묶음마다 커서). */
+            /** @brief @p prefix 아래의 점수를 모두 읽습니다. 배치마다 커서를 씁니다. */
             [[nodiscard]] static bool readAllScores( IServiceStoreConnection& connection, const string& prefix, vector<LeaderboardScoreRow>& outListScore )
             {
                 string cursor;
@@ -182,13 +182,13 @@ namespace sw
             }
         };
 
-        /** @brief 점수(또는 통계) 하나를 판 조건으로 쓰는 일 — 갱신 방식에 따라 새 값을 정한다. */
+        /** @brief 점수(또는 통계) 하나를 버전 조건으로 쓰는 작업입니다. 갱신 방식에 따라 새 값을 정합니다. */
         class LeaderboardWriteWork final : public IServiceStoreWork
         {
         public:
             hashed_string        _table{};
             string               _key{};
-            string               _boardID{}; ///< 점수면 표 id, 통계면 통계 이름(완료가 연동 표를 찾는다)
+            string               _boardID{}; ///< 점수이면 보드 id 이고 통계이면 통계 이름이다. 완료에서 연결된 보드를 찾는 데 쓴다
             string               _displayName{};
             LeaderboardService*  _pService{ nullptr };
             AccountID            _accountID{ kInvalidAccountID };
@@ -218,7 +218,7 @@ namespace sw
                     _finalValue         = Internal::applyUpdate( _update, _order, bHasOld, oldValue, _value, bChanged );
                     if ( bChanged == false )
                     {
-                        _result = LeaderboardResult::Ok; // 더 좋지 않다 — 쓰지 않는다
+                        _result = LeaderboardResult::Ok; // 더 좋지 않으므로 쓰지 않는다
                         return;
                     }
                     ServiceTransaction transaction;
@@ -242,7 +242,7 @@ namespace sw
             }
         };
 
-        /** @brief 캐시를 잃은 기간의 점수를 영속에서 모두 읽는 일입니다. */
+        /** @brief 캐시를 잃은 기간의 점수를 영속 저장소에서 모두 읽는 작업입니다. */
         class LeaderboardRebuildWork final : public IServiceStoreWork
         {
         public:
@@ -270,7 +270,7 @@ namespace sw
             uint8                       _bReadOk;
         };
 
-        /** @brief 계정의 통계를 모두 읽는 일입니다. */
+        /** @brief 계정의 통계를 모두 읽는 작업입니다. */
         class LeaderboardStatReadWork final : public IServiceStoreWork
         {
         public:
@@ -310,7 +310,7 @@ namespace sw
             LeaderboardResult       _result;
         };
 
-        /** @brief 업적 하나를 "없어야 함" 으로 쓰고 보상 우편을 같은 트랜잭션에 넣는 일 — 이미 있으면 아무것도 하지 않는다. */
+        /** @brief 업적 하나를 "없어야 함" 조건으로 쓰고 보상 우편을 같은 트랜잭션에 넣는 작업입니다. 이미 있으면 아무것도 하지 않습니다. */
         class AchievementUnlockWork final : public IServiceStoreWork
         {
         public:
@@ -329,16 +329,16 @@ namespace sw
                 const string  key = ServiceKeyUtil::makeHex64( _accountID ) + "/" + _definition._achievementID;
                 ServiceRecord existing;
                 if ( connection.readRecord( Internal::getAchievementTable(), key, existing ) != ServiceStoreResult::NotFound )
-                    return; // 이미 달성 · 저장소 실패 — 다음 통계 변화 때 다시 본다
+                    return; // 이미 달성했거나 저장소가 실패했다. 다음 통계 변화 때 다시 확인한다
                 ServiceTransaction transaction;
-                transaction.put( Internal::getAchievementTable(), key, Internal::encodeScore( _nowMs, _nowMs, string_view{} ), ServiceRecord::kAbsentVersion ); // 값 = 달성 시각
+                transaction.put( Internal::getAchievementTable(), key, Internal::encodeScore( _nowMs, _nowMs, string_view{} ), ServiceRecord::kAbsentVersion ); // 값은 달성 시각이다
                 if ( _definition._rewardAssetID.empty() == false )
                 {
                     const string       idempotencyKey = string( "ach." ) + ServiceKeyUtil::makeHex64( _accountID ) + "." + _definition._achievementID;
                     const LedgerResult staged         = Internal::stageRewardMail( connection, transaction, _accountID, _definition._rewardAssetID, _definition._rewardAmount,
                                                                                    _definition._mailTitleKey, Internal::kAchievementSender, idempotencyKey, _nowMs );
                     if ( staged != LedgerResult::Ok )
-                        return; // 우편 규칙 · 저장소 — 업적도 쓰지 않는다(다음에 다시)
+                        return; // 우편 규칙이나 저장소 때문에 실패했으므로 업적도 쓰지 않는다. 다음에 다시 시도한다
                 }
                 _bUnlocked = connection.commit( transaction ) == ServiceStoreResult::Ok ? SW_TRUE : SW_FALSE;
             }
@@ -356,7 +356,7 @@ namespace sw
             uint8                 _bUnlocked;
         };
 
-        /** @brief 계정이 달성한 업적을 모두 읽는 일입니다. */
+        /** @brief 계정이 달성한 업적을 모두 읽는 작업입니다. */
         class AchievementReadWork final : public IServiceStoreWork
         {
         public:
@@ -396,7 +396,7 @@ namespace sw
             LeaderboardResult        _result;
         };
 
-        /** @brief 시즌 결과 하나를 읽는 일입니다(값 = 점수 · 순위). */
+        /** @brief 시즌 결과 하나를 읽는 작업입니다. 값은 점수와 순위입니다. */
         class SeasonResultReadWork final : public IServiceStoreWork
         {
         public:
@@ -441,7 +441,7 @@ namespace sw
             LeaderboardResult   _result;
         };
 
-        /** @brief 시즌 하나의 정산 — 점수를 모두 읽어 순위를 매기고, 15 명씩 결과 + 보상 우편을 한 트랜잭션으로. 결과가 있는 사람은 건너뛴다(다시 돌아도 한 번). */
+        /** @brief 시즌 하나를 정산하는 작업입니다. 점수를 모두 읽어 순위를 매기고, 15명씩 결과와 보상 우편을 한 트랜잭션으로 씁니다. 결과가 있는 사람은 건너뛰므로 다시 돌아도 한 번만 처리됩니다. */
         class SeasonSettlementWork final : public IServiceStoreWork
         {
         public:
@@ -463,7 +463,7 @@ namespace sw
                 vector<LeaderboardScoreRow> listScore;
                 if ( Internal::readAllScores( connection, Internal::makeScorePrefix( _board._boardID, _season._seasonID ), listScore ) == false )
                     return;
-                // 순위 — 정렬 방향, 같은 점수는 계정 id 오름차순(정산은 다시 돌아도 같은 순위여야 한다)
+                // 순위는 정렬 방향으로 정하고 같은 점수는 계정 id 오름차순으로 정한다. 정산이 다시 돌아도 같은 순위여야 하기 때문이다
                 if ( _board._order == LeaderboardOrder::Descending )
                     std::sort( listScore.begin(), listScore.end(), isHigherFirst );
                 else
@@ -478,7 +478,7 @@ namespace sw
                             return;
                     }
                     if ( transaction.isEmpty() == false && connection.commit( transaction ) != ServiceStoreResult::Ok )
-                        return; // 다음 실행(임대가 지나 다른 서버 · 다시 부름)이 남은 사람부터 — 결과가 있는 사람은 건너뛴다
+                        return; // 다음 실행이 남은 사람부터 이어서 처리한다. 임대가 지나 다른 서버가 맡거나 다시 부르는 경우이며, 결과가 있는 사람은 건너뛴다
                 }
                 _bSucceeded = SW_TRUE;
             }
@@ -496,7 +496,7 @@ namespace sw
                 return left._score != right._score ? left._score < right._score : left._accountID < right._accountID;
             }
 
-            /** @brief 한 사람의 결과 + 보상을 붙입니다. 이미 결과가 있으면 건너뛴다. 저장소 · 우편 실패면 false. */
+            /** @brief 한 사람의 결과와 보상을 붙입니다. 이미 결과가 있으면 건너뜁니다. 저장소나 우편이 실패하면 false 를 반환합니다. */
             bool stagePlayer( IServiceStoreConnection& connection, ServiceTransaction& inoutTransaction, const LeaderboardScoreRow& row, int32 rank )
             {
                 using Internal               = LeaderboardServiceInternal;
@@ -601,7 +601,7 @@ namespace sw
         const bool bAlreadyRegistered  = _mapBoard.find( definition._boardID ) != _mapBoard.end();
         _mapBoard[definition._boardID] = definition;
         if ( definition._reset != LeaderboardReset::Season || _pScheduler == nullptr || bAlreadyRegistered )
-            return true; // 같은 표를 다시 올려도 정산 작업은 한 번
+            return true; // 같은 보드를 다시 등록해도 정산 작업은 한 번만 만든다
         for ( const LeaderboardSeason& season : definition._listSeason )
         {
             ScheduleDefinition job;
@@ -661,7 +661,7 @@ namespace sw
                     if ( season._startMs <= nowMs && nowMs < season._endMs )
                         return season._seasonID;
                 }
-                return 0; // 시즌 밖 — 제출은 NotRanked
+                return 0; // 시즌 밖이므로 제출은 NotRanked 로 끝난다
             }
             default:
             {
@@ -732,7 +732,7 @@ namespace sw
         work->_value                          = value;
         work->_nowMs                          = nowMs;
         work->_update                         = update;
-        work->_order                          = LeaderboardOrder::Descending; // 통계의 Best = 큰 값
+        work->_order                          = LeaderboardOrder::Descending; // 통계의 Best 는 큰 값이다
         work->_operation                      = LeaderboardOperation::StatChange;
         ++_pendingCount;
         _dependencies._pStore->submit( std::move( work ) );
@@ -756,12 +756,12 @@ namespace sw
             return;
         if ( operation == LeaderboardOperation::StatChange )
         {
-            for ( const auto& [id, board] : _mapBoard ) // 통계 연동 표 — 같은 값을 낸다(꼬리표 0 — 완료 없음)
+            for ( const auto& [id, board] : _mapBoard ) // 통계에 연결된 보드에 같은 값을 낸다. 요청 태그가 0이라 완료가 없다
             {
                 if ( board._sourceStat == boardID )
                     submitScore( board._boardID, accountID, displayName, finalScore, nowMs, 0 );
             }
-            for ( const auto& [achievementID, achievement] : _mapAchievement ) // 임계값을 넘은 업적 — 이미 달성했으면 일이 아무것도 하지 않는다
+            for ( const auto& [achievementID, achievement] : _mapAchievement ) // 임계값을 넘은 업적이다. 이미 달성했으면 작업은 아무것도 하지 않는다
             {
                 if ( achievement._statName == boardID && finalScore >= achievement._threshold )
                 {
@@ -785,7 +785,7 @@ namespace sw
     {
         const auto waitIt = _mapRankKeyToWaitingRead.find( rankKey );
         if ( waitIt != _mapRankKeyToWaitingRead.end() )
-            _mapRankKeyToLateWrite[rankKey].push_back( LeaderboardScoreRow{ accountID, cacheScore } ); // 다시 채우는 중 — 채운 뒤(옛 값을 덮도록) 한 번 더
+            _mapRankKeyToLateWrite[rankKey].push_back( LeaderboardScoreRow{ accountID, cacheScore } ); // 다시 채우는 중이므로 채운 뒤에 한 번 더 싣는다. 이전 값을 덮기 위해서이다
         (void)_dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, ServiceKeyUtil::makeHex64( accountID ), cacheScore ),
                                               EphemeralStoreRouter::ReplyDelegate{} );
     }
@@ -834,7 +834,7 @@ namespace sw
         const auto   waitIt  = _mapRankKeyToWaitingRead.find( rankKey );
         if ( waitIt != _mapRankKeyToWaitingRead.end() )
         {
-            waitIt->second.push_back( read ); // 다시 채우는 중 — 줄
+            waitIt->second.push_back( read ); // 다시 채우는 중이므로 대기시킨다
             return;
         }
         const uint64 requestID            = _dependencies._pRouter->submit( EphemeralRequest::makeGet( LeaderboardServiceInternal::makeReadyKey( rankKey ) ),
@@ -855,7 +855,7 @@ namespace sw
             return;
         }
         const string rankKey = makeRankKey( read._boardID, read._periodID );
-        if ( reply._result == EphemeralResult::NotFound ) // 캐시를 잃었다(또는 처음) — 영속에서 다시 채운다
+        if ( reply._result == EphemeralResult::NotFound ) // 캐시를 잃었거나 처음이므로 영속 저장소에서 다시 채운다
         {
             vector<PendingRead>& listWaiting = _mapRankKeyToWaitingRead[rankKey];
             listWaiting.push_back( read );
@@ -914,14 +914,14 @@ namespace sw
             (void)_dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, ServiceKeyUtil::makeHex64( row._accountID ), toCacheScore( order, row._score ) ),
                                                   EphemeralStoreRouter::ReplyDelegate{} );
         }
-        for ( const LeaderboardScoreRow& row : listLateWrite ) // 다시 채우는 동안 쓴 점수 — 영속에서 읽은 옛 값을 덮는다(이미 캐시 점수)
+        for ( const LeaderboardScoreRow& row : listLateWrite ) // 다시 채우는 동안 쓴 점수이다. 영속 저장소에서 읽은 이전 값을 덮으며 이미 캐시 점수이다
         {
             (void)_dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, ServiceKeyUtil::makeHex64( row._accountID ), row._score ),
                                                   EphemeralStoreRouter::ReplyDelegate{} );
         }
         (void)_dependencies._pRouter->submit( EphemeralRequest::makeSet( LeaderboardServiceInternal::makeReadyKey( rankKey ), vector<uint8>{ 1 }, 0 ),
                                               EphemeralStoreRouter::ReplyDelegate{} );
-        // 캐시 앞은 맡긴 순서대로 답한다 — 아래 읽기는 위 쓰기 뒤에 처리된다
+        // 캐시는 맡긴 순서대로 응답한다. 아래 읽기는 위 쓰기 뒤에 처리된다
         for ( const PendingRead& read : listWaiting )
         {
             startRead( read );
@@ -979,7 +979,7 @@ namespace sw
             LeaderboardEntry entry;
             if ( ServiceKeyUtil::parseHex64( reply._listMember[memberIndex]._member, entry._accountID ) == false )
                 continue;
-            entry._score = toCacheScore( order, reply._listMember[memberIndex]._score ); // 부호 되돌림(같은 함수)
+            entry._score = toCacheScore( order, reply._listMember[memberIndex]._score ); // 같은 함수로 부호를 되돌린다
             entry._rank  = query._read._offset + static_cast<int32>( memberIndex ) + 1;
             query._listEntry.push_back( std::move( entry ) );
         }
@@ -1142,7 +1142,7 @@ namespace sw
 
     void LeaderboardService::onScheduledRun( const ScheduledRun& run )
     {
-        // 작업 id "lb.settle.<표>.<시즌 16 진 8>" — 표 id 에 '.' 가 없으므로 마지막 '.' 뒤가 시즌
+        // 작업 id 는 "lb.settle.<보드>.<시즌 16진 8자리>" 이다. 보드 id 에 '.' 가 없으므로 마지막 '.' 뒤가 시즌이다
         const string_view jobID( run._jobID );
         const string_view prefix( LeaderboardServiceInternal::kSettlementJobPrefix );
         const size_t      lastDot  = jobID.rfind( '.' );
@@ -1165,7 +1165,7 @@ namespace sw
                 _pScheduler->completeRun( run, false );
             return;
         }
-        _mapJobToRun[run._jobID] = run; // 끝나면 completeRun 에 넘긴다(작업마다 하나 — 표 둘의 시즌이 같은 날 끝나도 섞이지 않는다)
+        _mapJobToRun[run._jobID] = run; // 끝나면 completeRun 에 넘긴다. 작업마다 하나씩 두므로 보드 둘의 시즌이 같은 날 끝나도 섞이지 않는다
         ++_pendingCount;
         _dependencies._pStore->submit( sw::make_unique<SeasonSettlementWork>( this, *pBoard, *pSeason, run._jobID, run._occurrenceMs, SettlementDelegate{} ) );
     }
