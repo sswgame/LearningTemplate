@@ -10,6 +10,9 @@
   리눅스는 이제 컴파일되고 시험 단계에서 진다(2026-10-11 `954ed55cb` 실행). 고친 것: `FileUtil` 파일 시각 기원(libstdc++ `file_clock` 은 2174 기원) · POSIX 경로 구분자 정규화, 헤드리스(서버) 입력의 게임패드 슬롯 · 창 포커스, 서버 시험의 `exec`(dash 의 `sh -c` 가 SIGTERM 에 먼저 죽어 143).
   고쳤고 CI 로 확인할 것: `OnlineLoadBotTest.TwoHundredBots…`(캐시 TTL 이 단조 시계라 느린 빌드에서 매칭 임대가 풀렸다 — 캐시를 서버 틱 시각에 맞춤),
   `EpollStreamTransport` 경합 보고(비 const `_listLoop[]` · 공유 읽기 버퍼가 검출기에 쓰기로 잡혔다), `StreamTransportTest.PlatformAbortWithNothingPendingStillCloses`(epoll 은 멈춘 동안 읽지 않는다 — 시험을 모델별로).
+  `ab65f898f` 를 push 했고 CI 실행이 진행 중이었다(결과 미확인). 포함: POSIX `toPath` 변환 · Shipping 데이터 시험의 `editor/` 리소스 건너뜀 · 에디터 현지화 키 전용(`SW_LOCKEY`) · `sw::Color` 이전.
+  2026-10-11 실행(`ab65f898f`) 결과: 윈도 네 잡 통과(Debug 미확인), 리눅스는 시험 단계 실패 — 그 뒤 고친 것: ASan 둘(OpenSSL 스택 수명 · `NetRequestTest` 선언 순서), `ServerBootTest` 접속 로그(`GameNetSession::shutdown` 이 남은 사건을 로그), 진단 보강(`(nested)` 줄 표식 · 리바인드 시험 프레임별 포커스). 다음 CI 로 확인할 것: `UIOptionsMenuTest.RebindIgnoresUIActionsWhileListening`(리눅스에서 jump=839 · 포커스 823=`Tab.controls`, 창이 닫힌 뒤 탐색 Up 한 번 발화로 추정 — 실패 메시지가 범인을 보인다), TSan 조각의 새니타이저 보고.
+  새로 나온 Windows Debug `DelayLoadBindTest`(`GF_Mailbox.dll` 지연 임포트 미결속)는 로컬에서 통과한다 — 다시 나오면 원인을 판다. 끝난 워크트리(locA~commentpass)는 지웠다.
   **아직 남은 리눅스 실패**(원인 불명): `UIOptionsMenuTest.RebindIgnoresUIActionsWhileListening`(포커스 위젯 ID 839 ≠ 823, Debug · Shipping · ASan — 다음 CI 에서 실패 메시지가 포커스 위젯 이름을 보인다),
   `GameObjectTest.ApplyTransformBatchMatchesSetters` 와 `LoaderFuzzTest` 에서 멈춤(Linux Debug 조각이 그 시험 중에 끝났다), ASan 중단 두 건(`PlatformLoginTest.Oidc…` · `NetRequestTest.IdempotentRetry…`).
   Windows STL containers 잡은 sw 할당자 · 기록 해시에 기대는 시험 셋(`MemoryTagTest` 둘 · `DestructionDamageTest.EventLogHash…`)을 건너뛰게 했다. 같은 시험이 기본 컨테이너 구성에서 가끔 지는지는 지켜본다(Windows Debug 잡의 `ActionAdventure` · `ActionCombat` · `ActionPlatformer` 실패는 한 번 있었고 다음 실행에서 사라졌다).
@@ -27,7 +30,7 @@
 3. **빌드 속도 2 ~ 6 단계.** 계획 [빌드 속도](BuildSpeed.md). 기준선은 `docs/08_Verification.md` "빌드 속도". 단계마다 같은 표로 전후를 남기고, 효과 없으면 되돌려 `docs/09_Decisions.md` 3절에 숫자와 함께 적는다. PCH 공유(3 단계)는 타깃마다 다른 정의
    (`SW_LOG_TAG` · `SW_EXPORTS`/`SW_IMPORTS` · 타깃별 `FlagOps.gen.h` 강제 포함)가 걸림돌이다 — 먼저 컴파일 정의 차이 목록을 뽑는다. 7 ~ 9 는 필요할 때만(사용자 결정).
 4. **중복 정리 — 끝.** 결정적 난수 · 격자 사본 여섯 · 타이머(남은 7곳은 엔진 · 에디터라 그대로)는 끝났고, 키트 체력 직접 관리의 `Vitality` 이전은 하지 않기로 했다(결정 기록 5-8). 남은 격자 손셈(`Habitat` · `Overworld` 타일맵 · 게임 코드)은 파일 스키마가 얽혀 키트가 `getTopology()` 를 열 때 같이.
-5. **엔진 분할.** 계획 [엔진 분할](EnginePartition.md) 0 · 1 ~ 5 단계(작은 고리, `Object` 코어 / 기능 가르기, `OBJECT` 라이브러리 → DLL 승격, 월드를 값으로, 모듈 창구).
+5. **엔진 분할.** 계획 [엔진 분할](EnginePartition.md) 0 단계(기준 측정) · 2 ~ 5 단계(작은 고리의 남은 `Resource → Animation` · `AABB` 를 Physics 밖으로, `Object` 코어 / 기능 가르기, `OBJECT` 라이브러리 → DLL 승격, 월드를 값으로, 모듈 창구).
 6. **서버 디버깅.** 계획 [서버 디버깅](ServerDebug.md) — S2(디버거 대기 · 서버 `pause`/`step`)는 들어갔다. 다음 S1 은 `Server` 에서 네트워크 서버를 여는 시험 게임이 먼저 있어야 접속을 확인할 수 있다.
 7. **6 차(주석을 새 문체로).**
 
