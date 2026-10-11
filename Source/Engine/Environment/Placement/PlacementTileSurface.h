@@ -1,6 +1,6 @@
 /**
  * @file PlacementTileSurface.h
- * @brief 2D 타일 맵을 배치 표면으로 — 타일 종류가 곧 레이어입니다(풀 타일에만 꽃, 모래 타일에만 조개).
+ * @brief 2D 타일 맵을 배치 표면으로 쓰는 어댑터입니다. 타일 종류가 곧 레이어입니다(풀 타일에만 꽃, 모래 타일에만 조개).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -13,14 +13,14 @@ namespace sw
 {
     /**
      * @class PlacementTileSurface
-     * @brief 격자 타일 맵 위의 배치 표면입니다. 평면 좌표 (u, v) = 2D 의 (x, y) 이고 타일 (0, 0) 의 왼쪽 아래 모서리가 원점입니다.
-     * @details 타일 값 0..3 은 그 레이어의 가중치 1(나머지 0)이고, 그 밖의 값(빈 칸 · 벽)은 놓을 수 없는 자리입니다. 높이 0 · 위쪽 노멀이라
-     *          경사 · 높이 필터는 늘 통과합니다 — 2D 규칙은 레이어 · 밀도 · 최소 거리 · 제외 영역만 씁니다.
+     * @brief 격자 타일 맵 위의 배치 표면입니다. 평면 좌표 (u, v) 는 2D 의 (x, y) 이고, 타일 (0, 0) 의 왼쪽 아래 모서리가 원점입니다.
+     * @details 타일 값 0..3 은 그 레이어의 가중치 1(나머지 0)이고, 그 밖의 값(빈 셀, 벽)은 놓을 수 없는 위치다. 높이 0 과 위쪽 노멀이라
+     *          경사와 높이 필터는 항상 통과한다. 2D 규칙은 레이어, 밀도, 최소 거리, 제외 영역만 쓴다.
      */
     class SW_API PlacementTileSurface final : public IPlacementSurface
     {
     public:
-        /** @brief 놓을 수 없는 칸의 값입니다. */
+        /** @brief 놓을 수 없는 셀의 값입니다. */
         static constexpr uint8 kBlockedTile = 0xFFu;
 
         PlacementTileSurface();

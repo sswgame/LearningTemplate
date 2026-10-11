@@ -76,7 +76,7 @@ namespace sw
 
     float3 TerrainHeightfield::computeSampleNormal( uint32 sampleX, uint32 sampleZ ) const
     {
-        // 가장자리는 자른 샘플을 쓰므로 그 쪽 차분은 한 칸짜리가 된다 — 간격도 그만큼 줄인다.
+        // 가장자리는 제한한 샘플을 쓰므로 그쪽 차분은 한 셀짜리가 된다. 간격도 그만큼 줄인다.
         const int32   x      = static_cast<int32>( sampleX );
         const int32   z      = static_cast<int32>( sampleZ );
         const int32   last   = static_cast<int32>( _resolution ) - 1;
@@ -217,7 +217,7 @@ namespace sw
         float32 height{ 0.0f };
         if ( _heightfield.findHeightAt( planePosition._x, planePosition._y, height ) == false )
         {
-            // 지형 밖은 표면이 아니다. 구멍은 표면이지만 놓을 수 없는 자리다.
+            // 지형 밖은 표면이 아니다. 구멍은 표면이지만 놓을 수 없는 위치다.
             outSample._bValid = SW_FALSE;
             return _heightfield.isHoleAt( planePosition._x, planePosition._y );
         }
