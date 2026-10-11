@@ -94,12 +94,8 @@ namespace sw
                 (void)s_bAdded;
             }
 
-            /** @brief `EnumerateLoadedModulesW64` 가 이미지마다 부르는 곳 — 기준 주소(= 모듈 핸들)를 @p pContext 의 목록에 모읍니다. */
-            static BOOL CALLBACK collectLoadedModule( PCWSTR, DWORD64 moduleBase, ULONG, PVOID pContext )
-            {
-                static_cast<vector<void*>*>( pContext )->push_back( reinterpret_cast<void*>( static_cast<uintptr_t>( moduleBase ) ) );
-                return TRUE;
-            }
+            /** @brief 올라온 이미지 목록을 다시 읽는 시간 한도(ms)입니다 — 다른 스레드가 DLL 을 올리고 내리는 동안 열거가 드물게 진다. */
+            static constexpr uint64 kEnumerateModulesRetryMs = 1000;
 #endif
         };
     } // namespace
@@ -266,7 +262,12 @@ namespace sw
         uint32        failedCount{ 0 };
         for ( ;; )
         {
-            collectLoadedModuleHandles( listHandle );
+            if ( collectLoadedModuleHandles( listHandle ) == false )
+            {
+                // 목록을 못 읽으면 어떤 이미지도 묶이지 않는다 — 그 모듈들의 첫 float 인자 호출이 쓰레기 값을 받는다. 조용히 넘기지 않는다.
+                SW_LOG_ERROR( "Could not enumerate the loaded modules - their delay-loaded imports stay unbound and bind on their first call" );
+                return failedCount + 1;
+            }
             bool bBoundAny{ false };
             for ( void* pHandle : listHandle )
             {
@@ -281,11 +282,38 @@ namespace sw
         }
     }
 
-    void ModuleImageUtil::collectLoadedModuleHandles( vector<void*>& outListHandle )
+    bool ModuleImageUtil::collectLoadedModuleHandles( vector<void*>& outListHandle )
     {
         outListHandle.clear();
 #if defined( SW_PLATFORM_WINDOWS )
-        (void)EnumerateLoadedModulesW64( GetCurrentProcess(), &ModuleImageUtilInternal::collectLoadedModule, &outListHandle ); // 실패하면 빈 목록
+        // DbgHelp 의 `EnumerateLoadedModulesW64` 는 쓰지 않는다 — 다른 스레드가 DLL 을 올리고 내리는 동안 몇 % 확률로 실패한다(엔진 기동에는 로거 ·
+        // 작업 스레드가 함께 선다). `K32EnumProcessModules` 도 같은 순간에 드물게 질 수 있어(ERROR_PARTIAL_COPY) 시간 한도 안에서 다시 읽는다.
+        const HANDLE hProcess   = GetCurrentProcess();
+        const uint64 deadlineMs = GetTickCount64() + ModuleImageUtilInternal::kEnumerateModulesRetryMs;
+        size_t       capacity   = 256;
+        for ( ;; )
+        {
+            outListHandle.resize( capacity );
+            const DWORD capacityBytes = static_cast<DWORD>( capacity * sizeof( HMODULE ) );
+            DWORD       neededBytes   = 0;
+            if ( K32EnumProcessModules( hProcess, reinterpret_cast<HMODULE*>( outListHandle.data() ), capacityBytes, &neededBytes ) != FALSE )
+            {
+                if ( neededBytes <= capacityBytes )
+                {
+                    outListHandle.resize( neededBytes / sizeof( HMODULE ) );
+                    return true;
+                }
+                capacity = neededBytes / sizeof( HMODULE ) + 64; // 그 사이 늘었을 수 있어 여유를 둔다
+            }
+            if ( GetTickCount64() >= deadlineMs )
+            {
+                outListHandle.clear();
+                return false;
+            }
+            (void)SwitchToThread();
+        }
+#else
+        return true;
 #endif
     }
 

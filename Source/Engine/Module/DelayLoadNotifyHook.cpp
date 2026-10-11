@@ -48,7 +48,11 @@ namespace sw
                 {
                     void* pHandle = ModuleImageUtil::loadDynamicLibrary( fullPath );
                     if ( pHandle != nullptr )
+                    {
+                        // 여기서 처음 올린 이미지는 아무도 묶지 않았다 — 그 이미지의 지연 import 도 첫 호출 전에 묶는다(첫 float 인자가 망가진다).
+                        (void)ModuleImageUtil::bindDelayLoadImports( pHandle ); // 못 묶으면 경고했다
                         return reinterpret_cast<FARPROC>( pHandle );
+                    }
                 }
                 SW_LOG_ERROR( "DelayLoad failed to find/load DLL: '%#' (fullPath: '%#')", dllName, fullPath );
             }
