@@ -333,16 +333,13 @@ namespace test
         {
             // 단계 앞마다 한 줄 — 종료에서 멈춘 실행(요약은 찍혔는데 마지막 `shut down` 줄이 없다)이 어느 단계에서 멈췄는지 로그에 남는다.
             // 로그 매크로는 Shipping 에서 빠지므로 표준 출력으로 찍는다.
-            std::fprintf( stdout, "[TestHost] stopping: startup steps
-" );
+            std::fprintf( stdout, "[TestHost] stopping: startup steps\n" );
             std::fflush( stdout );
             _pState->_startup.shutdownAll();
-            std::fprintf( stdout, "[TestHost] stopping: destroying objects
-" );
+            std::fprintf( stdout, "[TestHost] stopping: destroying objects\n" );
             std::fflush( stdout );
             _pState->_startup.destroyAll();
-            std::fprintf( stdout, "[TestHost] stopping: bootstrap
-" );
+            std::fprintf( stdout, "[TestHost] stopping: bootstrap\n" );
             std::fflush( stdout );
             _pState->_bootstrap.shutdown();
         }
