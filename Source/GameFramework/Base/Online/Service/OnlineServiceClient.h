@@ -1,12 +1,17 @@
 /**
  * @file OnlineServiceClient.h
- * @brief 서비스 틀의 클라이언트 쪽 — 연결 하나 + 요청 클라이언트 + Hello(키트 판 협상) + 알림을 영역마다 나누기 + 끊기면 다시 연결(물러남).
- * @details - 두 모드: **자기 엔드포인트**(`initialize` — 전송은 빌려 쓰고 엔드포인트 · 요청 클라이언트를 가진다, 게임 클라이언트)과 **공유 엔드포인트**(`initializeOnSharedEndpoint` —
- *            엔드포인트 · 요청 클라이언트 · 전송은 부르는 쪽 것, 이 객체는 연결 하나의 Hello · 알림만 — 부하 테스트 봇이 연결 수천을 한 프로세스에서 연다).
- *          - Hello 가 끝나기 전에 보낸 요청은 모았다가 끝나면 맡긴 순서대로 보낸다(시한은 맡긴 때부터). 다시 연결하면 Hello 를 다시 하고 서비스에 `onClientReady`
- *            를 알린다 — 계정 키트가 재접속(토큰)을 먼저 보내는 자리다. 끊길 때 날아가던 요청은 ConnectionLost 로 끝난다(재시도는 같은 멱등 키로 부르는 쪽이).
- *          - 판이 안 맞으면(`kVersionMismatch`) 다시 연결하지 않는다 — 클라이언트는 "업데이트 필요" 화면.
- *          - 모든 콜백은 `tick`(공유 모드는 `handleFrame` · `handleClosed`)을 부른 스레드다.
+ * @brief 서비스 틀의 클라이언트 쪽을 정의합니다.
+ * @details 연결 하나, 요청 클라이언트, Hello(키트 버전 협상), 알림을 영역마다 나누는 일, 끊겼을 때 다시 연결하는 일(물러남)을 맡는다.
+ *
+ *          - 두 모드가 있다.
+ *            **자기 엔드포인트**(`initialize`)는 전송은 빌려 쓰고 엔드포인트와 요청 클라이언트를 가진다. 게임 클라이언트가 쓴다.
+ *            **공유 엔드포인트**(`initializeOnSharedEndpoint`)는 엔드포인트, 요청 클라이언트, 전송이 부르는 쪽 것이고, 이 객체는 연결 하나의 Hello 와 알림만 맡는다.
+ *            부하 테스트 봇이 연결 수천을 한 프로세스에서 열 때 쓴다.
+ *          - Hello 가 끝나기 전에 보낸 요청은 모았다가, 끝나면 맡긴 순서대로 보낸다. 시한은 맡긴 때부터 센다.
+ *            다시 연결하면 Hello 를 다시 하고 서비스에 `onClientReady` 를 알린다. 계정 키트는 여기서 재접속(토큰)을 먼저 보낸다.
+ *            끊길 때 날아가던 요청은 ConnectionLost 로 끝난다. 재시도는 부르는 쪽이 같은 멱등 키로 해야 한다.
+ *          - 버전이 안 맞으면(`kVersionMismatch`) 다시 연결하지 않는다. 클라이언트는 "업데이트 필요" 화면을 보여 준다.
+ *          - 모든 콜백은 `tick`(공유 모드는 `handleFrame`, `handleClosed`)을 부른 스레드에서 불린다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -46,7 +51,7 @@ namespace sw
 {
     /**
      * @class IOnlineClientService
-     * @brief 클라이언트 쪽 키트 하나(계정 · 거래 · 채팅 …의 클라이언트)입니다 — 영역 · 판을 Hello 에 싣고, 그 영역의 알림을 받습니다.
+     * @brief 클라이언트 쪽 키트 하나(계정, 거래, 채팅 등의 클라이언트)입니다. 영역과 버전을 Hello 에 싣고, 그 영역의 알림을 받습니다.
      */
     class SW_GF_API IOnlineClientService
     {
@@ -60,9 +65,9 @@ namespace sw
         virtual uint16 getMethodRange() const                        = 0;
         virtual uint32 getProtocolVersion() const                    = 0;
         virtual void   onServicePush( uint16 kind, BitReader& body ) = 0;
-        /** @brief Hello 가 끝났다(처음 · 다시 연결). 계정 키트는 여기서 재접속 요청을 보낸다. */
+        /** @brief Hello 가 끝났을 때(처음 연결과 다시 연결) 불립니다. 계정 키트는 여기서 재접속 요청을 보냅니다. */
         virtual void onClientReady( OnlineServiceClient& client ) { (void)client; }
-        /** @brief 연결이 끊겼다(다시 연결을 기다린다). 계정 키트는 로그인 상태를 내린다. */
+        /** @brief 연결이 끊겼을 때 불립니다. 다시 연결을 기다리며, 계정 키트는 로그인 상태를 내립니다. */
         virtual void onClientDisconnected( OnlineServiceClient& client ) { (void)client; }
     };
 } // namespace sw
@@ -104,32 +109,35 @@ namespace sw
         OnlineServiceClient( const OnlineServiceClient& )            = delete;
         OnlineServiceClient& operator=( const OnlineServiceClient& ) = delete;
 
-        /** @brief 키트를 올립니다(빌려 쓴다, 초기화 전에). 영역이 겹치면 false. */
+        /** @brief 키트를 올립니다. 빌려 쓰며 초기화 전에 불러야 합니다. 영역이 겹치면 false 입니다. */
         [[nodiscard]] bool registerClientService( IOnlineClientService* pService );
 
-        /** @brief 자기 엔드포인트 모드 — 전송(빌려 쓴다)을 띄우고 서버에 겁니다. */
+        /** @brief 자기 엔드포인트 모드로 시작합니다. 전송(빌려 쓴다)을 띄우고 서버에 연결을 겁니다. */
         [[nodiscard]] bool initialize( IStreamTransport* pTransport, const OnlineServiceClientSettings& settings, string& outError );
         /**
-         * @brief 공유 엔드포인트 모드 — 엔드포인트 · 요청 클라이언트 · 전송은 부르는 쪽(봇 실행기)이 갖고, 이 객체는 연결 하나(@p handle — 이미 열린 것)의 Hello · 알림 나누기만 합니다.
-         *        부르는 쪽 리스너가 이 연결의 프레임 · 닫힘을 `handleFrame` · `handleClosed` 로 넘깁니다. 다시 연결하지 않는다(봇이 스스로 다시 만든다).
+         * @brief 공유 엔드포인트 모드로 시작합니다.
+         * @details 엔드포인트, 요청 클라이언트, 전송은 부르는 쪽(봇 실행기)이 갖는다. 이 객체는 연결 하나(@p handle, 이미 열린 것)의 Hello 와 알림 나누기만 한다.
+         *          부르는 쪽 리스너가 이 연결의 프레임과 닫힘을 `handleFrame` 과 `handleClosed` 로 넘긴다.
+         *          다시 연결하지 않는다. 봇이 스스로 다시 만든다.
          */
         [[nodiscard]] bool initializeOnSharedEndpoint( StreamMessageEndpoint* pEndpoint, NetRequestClient* pRequestClient, StreamConnectionHandle handle,
                                                        const OnlineServiceClientSettings& settings );
         void               shutdown();
 
-        /** @brief 자기 엔드포인트 모드는 전송 · 엔드포인트 · 요청 시한 · 다시 연결을 돈다. 두 모드 모두 모은 요청의 시한을 본다. */
+        /** @brief 자기 엔드포인트 모드에서는 전송, 엔드포인트, 요청 시한, 다시 연결을 돌립니다. 두 모드 모두 모은 요청의 시한을 봅니다. */
         void tick( int64 nowMs );
 
-        /** @brief 요청을 보냅니다(Hello 전 · 문이 닫혀 있으면 모은다). id 입니다 — 콜백의 `_requestID`. 콜백은 정확히 한 번. */
+        /** @brief 요청을 보내고 id 를 반환합니다. Hello 전이거나 문이 닫혀 있으면 모아 둡니다. id 는 콜백의 `_requestID` 와 같으며, 콜백은 정확히 한 번 불립니다. */
         uint64 sendRequest( uint16 method, const BitWriter& body, const NetRequestOptions& options, OnlineResponseDelegate onResponse );
         /**
-         * @brief 요청 문 — 닫히면 @p ownerRange(계정 키트) 밖의 요청은 문이 열릴 때까지 모은다. 다시 연결한 뒤 재접속 응답 전에 다른 키트의 요청이 서버에 닿아
-         *        "로그인 안 됨" 으로 끝나지 않게 계정 키트가 닫고 연다. 열면 모은 요청을 맡긴 순서대로 보낸다.
+         * @brief 요청 문을 열고 닫습니다. 닫히면 @p ownerRange(계정 키트) 밖의 요청은 문이 열릴 때까지 모읍니다.
+         * @details 다시 연결한 뒤 재접속 응답이 오기 전에 다른 키트의 요청이 서버에 닿으면 "로그인 안 됨" 으로 끝난다. 그것을 막으려고 계정 키트가 문을 닫고 연다.
+         *          열면 모은 요청을 맡긴 순서대로 보낸다.
          */
         void setRequestGate( uint16 ownerRange, bool bClosed );
         bool isRequestGateClosed() const { return _bGateClosed == SW_TRUE; }
 
-        /** @brief 공유 엔드포인트 모드 — Message 프레임(알림)이면 영역의 서비스 `onServicePush` 로. 요청 응답은 부르는 쪽이 `NetRequestClient::handleFrame` 으로 먼저 거른다. */
+        /** @brief 공유 엔드포인트 모드에서 프레임을 받습니다. Message 프레임(알림)이면 영역의 서비스 `onServicePush` 로 넘깁니다. 요청 응답은 부르는 쪽이 `NetRequestClient::handleFrame` 으로 먼저 거릅니다. */
         void handleFrame( StreamFrameKind kind, const uint8* pBody, int32 bodySize );
         void handleClosed( StreamCloseReason reason );
 
@@ -139,7 +147,7 @@ namespace sw
         int64                  getServerTimeMs() const { return _serverTimeMs; }
         uint64                 getRemoteConfigHash() const { return _remoteConfigHash; }
 
-        // IStreamEndpointListener — 자기 엔드포인트 모드의 `tick` 안
+        // IStreamEndpointListener 구현이다. 자기 엔드포인트 모드의 `tick` 안에서 불린다.
         void onEndpointOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted ) override;
         void onEndpointFrame( StreamConnectionHandle handle, StreamFrameKind kind, const uint8* pBody, int32 bodySize ) override;
         void onEndpointClosed( StreamConnectionHandle handle, StreamCloseReason reason ) override;
