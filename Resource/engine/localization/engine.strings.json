@@ -60,6 +60,78 @@
                 "engine/ui/confirm_unsaved.ui.xml"
             ]
         },
+        "EditorTip.CameraFar": {
+            "source": "Farthest distance the camera draws. Geometry beyond this is clipped.",
+            "origins": [
+                "Source/Editor/Panels/Inspector/CameraComponentInspector.cpp"
+            ]
+        },
+        "EditorTip.CameraFov": {
+            "source": "Vertical field of view in degrees. Larger values show more of the scene and stretch the edges.",
+            "origins": [
+                "Source/Editor/Panels/Inspector/CameraComponentInspector.cpp"
+            ]
+        },
+        "EditorTip.CameraNear": {
+            "source": "Closest distance the camera draws. Geometry nearer than this is clipped; keep it as large as the scene allows to avoid depth fighting.",
+            "origins": [
+                "Source/Editor/Panels/Inspector/CameraComponentInspector.cpp"
+            ]
+        },
+        "EditorTip.CameraOrthoHeight": {
+            "source": "World-space height of the visible area; the width follows the aspect ratio.",
+            "origins": [
+                "Source/Editor/Panels/Inspector/CameraComponentInspector.cpp"
+            ]
+        },
+        "EditorTip.CameraOrthographic": {
+            "source": "Use a parallel (non-perspective) projection, as for 2D or isometric views. FOV is ignored while on.",
+            "origins": [
+                "Source/Editor/Panels/Inspector/CameraComponentInspector.cpp"
+            ]
+        },
+        "EditorTip.CurveKeyInterpolation": {
+            "source": "How the curve moves from this key to the next: Constant holds the value, Linear is a straight line, Cubic is a smooth spline.",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorCurveEditor.cpp"
+            ]
+        },
+        "EditorTip.CurveKeyTime": {
+            "source": "When the key sits on the curve's time axis. It stays between its neighbouring keys.",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorCurveEditor.cpp"
+            ]
+        },
+        "EditorTip.CurveKeyValue": {
+            "source": "The curve's value at this key.",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorCurveEditor.cpp"
+            ]
+        },
+        "EditorTip.DebugHUDCorner": {
+            "source": "Which screen corner the Debug HUD is anchored to.",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp"
+            ]
+        },
+        "EditorTip.DebugHUDOpacity": {
+            "source": "Background opacity of the Debug HUD panels.",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp"
+            ]
+        },
+        "EditorTip.DebugHUDOpenWindow": {
+            "source": "The same checklist as a runtime UI window (shows in the game view while playing)",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp"
+            ]
+        },
+        "EditorTip.DebugHUDSection": {
+            "source": "Show or hide this section of the in-game Debug HUD. The grey text is the section's registration name.",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp"
+            ]
+        },
         "Keep": {
             "source": "Keep",
             "context": "TextWidget._text",

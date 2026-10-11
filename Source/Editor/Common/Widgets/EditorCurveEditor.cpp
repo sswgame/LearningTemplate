@@ -9,6 +9,8 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Localization/LocText.h"
+
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -129,6 +131,7 @@ namespace sw::editor
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth( width );
                 ImGui::InputFloat( "##time", &key._time, 0.0f, 0.0f, "%.3f" );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTip", "CurveKeyTime", "When the key sits on the curve's time axis. It stays between its neighbouring keys." ) );
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
                 {
                     key._time = clampKeyTime( curve, state._selectedKey, key._time );
@@ -139,6 +142,7 @@ namespace sw::editor
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth( width );
                 ImGui::InputFloat( "##value", &key._value, 0.0f, 0.0f, "%.3f" );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTip", "CurveKeyValue", "The curve's value at this key." ) );
                 bFinished = bFinished || ImGui::IsItemDeactivatedAfterEdit();
                 ImGui::SameLine();
                 ImGui::TextUnformatted( "Interpolation" );
@@ -151,6 +155,7 @@ namespace sw::editor
                     key._interpolation = static_cast<CurveInterpolation>( current );
                     bFinished          = true;
                 }
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTip", "CurveKeyInterpolation", "How the curve moves from this key to the next: Constant holds the value, Linear is a straight line, Cubic is a smooth spline." ) );
                 if ( bFinished )
                     curve.sortAndComputeAutoTangents();
                 return bFinished;

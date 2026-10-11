@@ -3,7 +3,7 @@
     "sourceCulture": "en",
     "cultures": [ "ko", "ja" ],
     "stringTables": [ "engine.strings.json" ],
-    "codeRoots": [ "Source/Engine", "Source/GameFramework" ],
+    "codeRoots": [ "Source/Engine", "Source/GameFramework", "Source/Editor" ],
     "assetRoots": [ "engine/settings", "engine/data", "engine/ui" ],
     "assetRules": [
         { "files": ".settings.xml", "elements": [ "Category", "Setting", "Option" ], "attribute": "text", "kind": "key" }

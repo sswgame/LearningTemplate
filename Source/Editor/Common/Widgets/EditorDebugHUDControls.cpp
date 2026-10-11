@@ -9,6 +9,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Localization/LocText.h"
 #include "Engine/UI/Debug/DebugHUD.h"
 
 #include <imgui.h>
@@ -46,6 +47,7 @@ namespace sw::editor
             ImGui::PushID( pSection->_pName );
             if ( ImGui::Checkbox( pSection->_pTitle, &bShown ) && pHUD->setSectionShown( pSection->_pName, bShown ) == false )
                 SW_LOG_WARNING( "Debug HUD section '%#' is not registered any more", pSection->_pName );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTip", "DebugHUDSection", "Show or hide this section of the in-game Debug HUD. The grey text is the section's registration name." ) );
             if ( EditorSelfTestMarks::isEnabled() )
                 EditorSelfTestMarks::note( ( string{ "debugHUD.section." } + pSection->_pName ).c_str() );
             ImGui::SameLine();
@@ -69,12 +71,14 @@ namespace sw::editor
             }
             ImGui::EndCombo();
         }
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTip", "DebugHUDCorner", "Which screen corner the Debug HUD is anchored to." ) );
         float32 opacity = DebugHUD::getOpacity();
         if ( ImGui::SliderFloat( "Opacity", &opacity, DebugHUD::kMinOpacity, DebugHUD::kMaxOpacity, "%.2f" ) )
             pHUD->setOpacity( opacity );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTip", "DebugHUDOpacity", "Background opacity of the Debug HUD panels." ) );
         if ( ImGui::Button( "Open in-game settings window" ) && pHUD->openWindow() == false )
             SW_LOG_WARNING( "The Debug HUD settings window could not be opened (%#)", DebugHUD::kWindowDocumentPath );
-        EditorWidgets::drawTooltip( "The same checklist as a runtime UI window (shows in the game view while playing)" );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTip", "DebugHUDOpenWindow", "The same checklist as a runtime UI window (shows in the game view while playing)" ) );
     }
 
     void EditorDebugHUDControls::drawPreferencesPage()

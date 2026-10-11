@@ -8,6 +8,215 @@ msgstr ""
 "X-Message-Format: ICU\n"
 "X-Generator: SWEngine LocalizationTools\n"
 
+#. Context: TextWidget._text
+#: engine/ui/key_rebind.ui.xml
+msgctxt "Already used by"
+msgid "Already used by"
+msgstr ""
+
+#. Context: TextWidget._text
+#: engine/ui/confirm_unsaved.ui.xml
+#: engine/ui/options.ui.xml
+msgctxt "Apply"
+msgid "Apply"
+msgstr ""
+
+#. Context: TextWidget._text
+#: engine/ui/confirm_unsaved.ui.xml
+#: engine/ui/key_rebind.ui.xml
+msgctxt "Cancel"
+msgid "Cancel"
+msgstr ""
+
+#. Context: TextWidget._text
+#: engine/ui/debughud.ui.xml
+#: engine/ui/options.ui.xml
+msgctxt "Close"
+msgid "Close"
+msgstr ""
+
+#. Context: TextWidget._text
+#: engine/ui/debughud.ui.xml
+msgctxt "Corner"
+msgid "Corner"
+msgstr ""
+
+#. Context: TextWidget._text
+#: engine/ui/debughud.ui.xml
+msgctxt "Debug HUD"
+msgid "Debug HUD"
+msgstr ""
+
+#. Context: TextWidget._text
+#: engine/ui/options.ui.xml
+msgctxt "Defaults"
+msgid "Defaults"
+msgstr ""
+
+#. Context: TextWidget._text
+#: engine/ui/confirm_unsaved.ui.xml
+msgctxt "Discard"
+msgid "Discard"
+msgstr ""
+
+#: Source/Editor/Panels/Inspector/CameraComponentInspector.cpp
+msgctxt "EditorTip.CameraFar"
+msgid "Farthest distance the camera draws. Geometry beyond this is clipped."
+msgstr ""
+
+#: Source/Editor/Panels/Inspector/CameraComponentInspector.cpp
+msgctxt "EditorTip.CameraFov"
+msgid "Vertical field of view in degrees. Larger values show more of the scene and stretch the edges."
+msgstr ""
+
+#: Source/Editor/Panels/Inspector/CameraComponentInspector.cpp
+msgctxt "EditorTip.CameraNear"
+msgid "Closest distance the camera draws. Geometry nearer than this is clipped; keep it as large as the scene allows to avoid depth fighting."
+msgstr ""
+
+#: Source/Editor/Panels/Inspector/CameraComponentInspector.cpp
+msgctxt "EditorTip.CameraOrthoHeight"
+msgid "World-space height of the visible area; the width follows the aspect ratio."
+msgstr ""
+
+#: Source/Editor/Panels/Inspector/CameraComponentInspector.cpp
+msgctxt "EditorTip.CameraOrthographic"
+msgid "Use a parallel (non-perspective) projection, as for 2D or isometric views. FOV is ignored while on."
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+msgctxt "EditorTip.CurveKeyInterpolation"
+msgid "How the curve moves from this key to the next: Constant holds the value, Linear is a straight line, Cubic is a smooth spline."
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+msgctxt "EditorTip.CurveKeyTime"
+msgid "When the key sits on the curve's time axis. It stays between its neighbouring keys."
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+msgctxt "EditorTip.CurveKeyValue"
+msgid "The curve's value at this key."
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp
+msgctxt "EditorTip.DebugHUDCorner"
+msgid "Which screen corner the Debug HUD is anchored to."
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp
+msgctxt "EditorTip.DebugHUDOpacity"
+msgid "Background opacity of the Debug HUD panels."
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp
+msgctxt "EditorTip.DebugHUDOpenWindow"
+msgid "The same checklist as a runtime UI window (shows in the game view while playing)"
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp
+msgctxt "EditorTip.DebugHUDSection"
+msgid "Show or hide this section of the in-game Debug HUD. The grey text is the section's registration name."
+msgstr ""
+
+#. Context: TextWidget._text
+#: engine/ui/confirm_countdown.ui.xml
+msgctxt "Keep"
+msgid "Keep"
+msgstr ""
+
+#. Context: TextWidget._text
+#: engine/ui/confirm_countdown.ui.xml
+msgctxt "Keep these display settings?"
+msgid "Keep these display settings?"
+msgstr ""
+
+#. Context: TextWidget._text
+#: engine/ui/loading.ui.xml
+msgctxt "Loading"
+msgid "Loading"
+msgstr ""
+
+#. Context: TextWidget._text
+#: engine/ui/debughud.ui.xml
+msgctxt "Opacity"
+msgid "Opacity"
+msgstr ""
+
+#. Context: TextWidget._text
+#: engine/ui/options.ui.xml
+#: engine/ui/pause.ui.xml
+msgctxt "Options"
+msgid "Options"
+msgstr ""
+
+#. Context: TextWidget._text
+#: engine/ui/pause.ui.xml
+msgctxt "Paused"
+msgid "Paused"
+msgstr ""
+
+#. Context: TextWidget._text
+#: engine/ui/key_rebind.ui.xml
+msgctxt "Press a key. Escape cancels; hold Escape for one second to bind it."
+msgid "Press a key. Escape cancels; hold Escape for one second to bind it."
+msgstr ""
+
+#. Context: TextWidget._text
+#: engine/ui/pause.ui.xml
+msgctxt "Resume"
+msgid "Resume"
+msgstr ""
+
+#. Context: TextWidget._text
+#: engine/ui/confirm_countdown.ui.xml
+#: engine/ui/options.ui.xml
+msgctxt "Revert"
+msgid "Revert"
+msgstr ""
+
+#. Context: TextWidget._text
+#: engine/ui/confirm_countdown.ui.xml
+msgctxt "Reverting in"
+msgid "Reverting in"
+msgstr ""
+
+#. Context: TextWidget._text
+#: engine/ui/debughud.ui.xml
+msgctxt "Sections"
+msgid "Sections"
+msgstr ""
+
+#. Context: TextWidget._text
+#: engine/ui/debughud.ui.xml
+msgctxt "Show HUD (Ctrl+F3)"
+msgid "Show HUD (Ctrl+F3)"
+msgstr ""
+
+#. Context: TextWidget._text
+#: engine/ui/options.ui.xml
+msgctxt "Some changes take effect after a restart."
+msgid "Some changes take effect after a restart."
+msgstr ""
+
+#. Context: TextWidget._text
+#: engine/ui/key_rebind.ui.xml
+msgctxt "Swap"
+msgid "Swap"
+msgstr ""
+
+#. Context: TextWidget._text
+#: engine/ui/confirm_unsaved.ui.xml
+msgctxt "You have changes that are not applied."
+msgid "You have changes that are not applied."
+msgstr ""
+
+#. Context: TextWidget._text
+#: engine/ui/parts/inputhint.ui.xml
+msgctxt "[action=UI.Accept] Select"
+msgid "[action=UI.Accept] Select"
+msgstr ""
+
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
@@ -46,6 +255,13 @@ msgstr ""
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
+msgctxt "settings.accessibility.reduceMotion"
+msgid "Reduce Motion"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
 msgctxt "settings.accessibility.subtitleBackground"
 msgid "Subtitle Background"
 msgstr ""
@@ -76,6 +292,27 @@ msgstr ""
 #: engine/settings/engine.settings.xml
 msgctxt "settings.accessibility.uiScale"
 msgid "UI Scale"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.accessibility.uiTheme"
+msgid "UI Theme"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.accessibility.uiTheme.default"
+msgid "Default"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.accessibility.uiTheme.highcontrast"
+msgid "High Contrast"
 msgstr ""
 
 #. Context: Options menu label
@@ -174,6 +411,13 @@ msgstr ""
 #: engine/settings/engine.settings.xml
 msgctxt "settings.category.language"
 msgid "Language"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.category.privacy"
+msgid "Privacy"
 msgstr ""
 
 #. Context: Options menu label
@@ -311,6 +555,13 @@ msgstr ""
 #. Context: Options menu label
 #. Max length: 32
 #: engine/settings/engine.settings.xml
+msgctxt "settings.gameplay.showTutorials"
+msgid "Show Tutorials"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
 msgctxt "settings.graphics.effectsQuality"
 msgid "Effects Quality"
 msgstr ""
@@ -425,6 +676,41 @@ msgstr ""
 #: engine/settings/engine.settings.xml
 msgctxt "settings.language.text"
 msgid "Text Language"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.privacy.crashReports"
+msgid "Crash Reports"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.privacy.crashReports.ask"
+msgid "Ask Each Time"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.privacy.crashReports.local"
+msgid "Keep Local"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.privacy.crashReports.send"
+msgid "Send Automatically"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.privacy.telemetry"
+msgid "Share Usage Data"
 msgstr ""
 
 #. Shown after applying settings marked apply=restart

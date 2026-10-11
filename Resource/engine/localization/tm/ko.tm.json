@@ -22,12 +22,20 @@
             "text": "오디오"
         },
         {
+            "source": "Background opacity of the Debug HUD panels.",
+            "text": "디버그 HUD 패널의 배경 불투명도입니다."
+        },
+        {
             "source": "Borderless",
             "text": "테두리 없음"
         },
         {
             "source": "Camera Shake",
             "text": "카메라 흔들림"
+        },
+        {
+            "source": "Closest distance the camera draws. Geometry nearer than this is clipped; keep it as large as the scene allows to avoid depth fighting.",
+            "text": "카메라가 그리는 가장 가까운 거리입니다. 이보다 가까운 지오메트리는 잘려 나갑니다. 깊이 충돌(z-fighting)을 피하려면 장면이 허용하는 만큼 크게 두세요."
         },
         {
             "source": "Color Vision Mode",
@@ -60,6 +68,10 @@
         {
             "source": "Effects Volume",
             "text": "효과음 음량"
+        },
+        {
+            "source": "Farthest distance the camera draws. Geometry beyond this is clipped.",
+            "text": "카메라가 그리는 가장 먼 거리입니다. 이보다 먼 지오메트리는 잘려 나갑니다."
         },
         {
             "source": "Field of View",
@@ -104,6 +116,10 @@
         {
             "source": "Hold",
             "text": "누르고 있기"
+        },
+        {
+            "source": "How the curve moves from this key to the next: Constant holds the value, Linear is a straight line, Cubic is a smooth spline.",
+            "text": "이 키에서 다음 키까지 곡선이 움직이는 방식입니다. Constant 는 값을 유지하고, Linear 는 직선, Cubic 은 부드러운 스플라인입니다."
         },
         {
             "source": "Interface Volume",
@@ -182,6 +198,10 @@
             "text": "그림자 품질"
         },
         {
+            "source": "Show or hide this section of the in-game Debug HUD. The grey text is the section's registration name.",
+            "text": "게임 안 디버그 HUD 의 이 구역을 보이거나 숨깁니다. 회색 글자는 구역의 등록 이름입니다."
+        },
+        {
             "source": "Spatial",
             "text": "공간"
         },
@@ -218,6 +238,14 @@
             "text": "텍스처 품질"
         },
         {
+            "source": "The curve's value at this key.",
+            "text": "이 키에서 곡선이 가지는 값입니다."
+        },
+        {
+            "source": "The same checklist as a runtime UI window (shows in the game view while playing)",
+            "text": "같은 체크리스트를 런타임 UI 창으로 엽니다(플레이 중 게임 뷰에 보입니다)."
+        },
+        {
             "source": "Toggle",
             "text": "전환"
         },
@@ -238,8 +266,16 @@
             "text": "업스케일러"
         },
         {
+            "source": "Use a parallel (non-perspective) projection, as for 2D or isometric views. FOV is ignored while on.",
+            "text": "원근 없는 평행 투영을 씁니다(2D · 아이소메트릭 시점). 켜져 있는 동안 FOV 는 무시됩니다."
+        },
+        {
             "source": "Vertical Sync",
             "text": "수직 동기화"
+        },
+        {
+            "source": "Vertical field of view in degrees. Larger values show more of the scene and stretch the edges.",
+            "text": "세로 시야각(도)입니다. 값이 클수록 장면이 넓게 보이고 가장자리가 늘어나 보입니다."
         },
         {
             "source": "View Distance",
@@ -254,12 +290,24 @@
             "text": "{name}은(는) 무엇을 할까?"
         },
         {
+            "source": "When the key sits on the curve's time axis. It stays between its neighbouring keys.",
+            "text": "이 키가 곡선의 시간 축에서 놓인 위치입니다. 이웃한 키 사이에만 둘 수 있습니다."
+        },
+        {
+            "source": "Which screen corner the Debug HUD is anchored to.",
+            "text": "디버그 HUD 를 붙여 둘 화면 모서리입니다."
+        },
+        {
             "source": "Window Mode",
             "text": "창 모드"
         },
         {
             "source": "Windowed",
             "text": "창"
+        },
+        {
+            "source": "World-space height of the visible area; the width follows the aspect ratio.",
+            "text": "보이는 영역의 월드 높이입니다. 너비는 화면 비율을 따라갑니다."
         },
         {
             "source": "{count, plural, one {# setting takes} other {# settings take}} effect after a restart.",
