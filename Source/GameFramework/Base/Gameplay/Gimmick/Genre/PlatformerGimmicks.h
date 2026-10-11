@@ -77,7 +77,7 @@ namespace sw
         OneWayPlatformComponent();
         virtual ~OneWayPlatformComponent() override = default;
 
-        /** @brief @p velocity 로 움직이는 몸을 막으면 true 입니다. 법선을 거슬러(법선 · 속도 < 0) 올 때만 막습니다. 아래로 내려가기를 허용했고 @p bDropRequested 가 true 이면 막지 않습니다. */
+        /** @brief @p velocity 로 움직이는 몸을 막으면 true 입니다. 법선을 거슬러(법선과 속도의 내적이 0 보다 작을 때) 올 때만 막습니다. 아래로 내려가기를 허용했고 @p bDropRequested 가 true 이면 막지 않습니다. */
         bool isSolidFor( const float3& velocity, bool bDropRequested ) const;
 
     private:

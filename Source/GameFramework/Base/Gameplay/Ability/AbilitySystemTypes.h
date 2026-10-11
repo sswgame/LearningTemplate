@@ -4,7 +4,7 @@
  *
  * @details 어빌리티 시스템은 네 부분으로 나뉘며, 언리얼 GAS 와 이름과 역할이 1:1 로 대응한다.
  *          - **어트리뷰트**(`AttributeSet`): 숫자 상태(체력, 마나, 공격력). 기본값(base)과 지속 효과를 더한 현재값(current)을 따로 둔다.
- *          - **게임플레이 이펙트**(`GameplayEffectDef` · `GameplayEffectSpec`): 어트리뷰트와 태그를 바꾸는 데이터. 즉시, 지속, 무한 유형이 있고 주기와 스택을 지원한다.
+ *          - **게임플레이 이펙트**(`GameplayEffectDef` 와 `GameplayEffectSpec`): 어트리뷰트와 태그를 바꾸는 데이터. 즉시, 지속, 무한 유형이 있고 주기와 스택을 지원한다.
  *          - **게임플레이 어빌리티**(`GameplayAbility`): 발동 조건(태그, 비용, 쿨다운)을 통과하면 실행되는 행동. 지연 작업은 `AbilityTask` 가 맡는다.
  *          - **어빌리티 시스템 컴포넌트**(`AbilitySystemComponent`): 위 셋을 한 오브젝트에서 함께 돌리고, 시간과 태그와 이벤트를 처리한다.
  *
