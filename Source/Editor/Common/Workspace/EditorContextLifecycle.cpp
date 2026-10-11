@@ -35,6 +35,7 @@
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Localization/LocalizationManager.h"
 
 namespace sw::editor
 {
@@ -100,6 +101,13 @@ namespace sw::editor
 
         setActive( this );
 
+        // 에디터 UI 문구 — 엔진 표와 따로 올려 에디터가 있는 동안만 쓰인다(없으면 SW_LOCTEXT 가 영어 원문을 돌려준다).
+        if ( LocalizationManager* pLocalization = getService<LocalizationManager>() )
+        {
+            if ( pLocalization->mountProject( EditorPaths::kLocalizationProject, LocalizationScope::Editor ) == false )
+                SW_LOG_WARNING( "Editor localization project '%#' is not (fully) loaded", EditorPaths::kLocalizationProject );
+        }
+
         _pInspectorComponentManager->registerDefaults();
         _pInspectorPropertyManager->registerDefaults();
         _pPopupManager->registerDefaultPopups();
@@ -121,6 +129,9 @@ namespace sw::editor
 
         if ( s_pActiveContext == this )
             setActive( nullptr );
+
+        if ( LocalizationManager* pLocalization = getService<LocalizationManager>() )
+            pLocalization->unmountProjects( LocalizationScope::Editor );
 
         _pModuleUnloadListener.reset(); // 매니저보다 먼저 — 언로드 훑기가 지워진 매니저를 밟지 않게
         _pNetPlaySession.reset();       // 자식 프로세스를 정상 종료시킨다 — 로거가 아직 있을 때

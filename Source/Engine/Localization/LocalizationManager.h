@@ -26,7 +26,8 @@ namespace sw
     enum class LocalizationScope : uint8
     {
         Engine = 0,
-        Game
+        Game,
+        Editor ///< 에디터 UI 문구 — 에디터 모듈이 올리고 내린다(배포본에는 없다)
     };
 
     /** @brief 문화권 하나의 번역 상태 수입니다(올린 프로젝트 전체). */

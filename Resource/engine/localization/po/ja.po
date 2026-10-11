@@ -59,66 +59,6 @@ msgctxt "Discard"
 msgid "Discard"
 msgstr ""
 
-#: Source/Editor/Panels/Inspector/CameraComponentInspector.cpp
-msgctxt "EditorTip.CameraFar"
-msgid "Farthest distance the camera draws. Geometry beyond this is clipped."
-msgstr ""
-
-#: Source/Editor/Panels/Inspector/CameraComponentInspector.cpp
-msgctxt "EditorTip.CameraFov"
-msgid "Vertical field of view in degrees. Larger values show more of the scene and stretch the edges."
-msgstr ""
-
-#: Source/Editor/Panels/Inspector/CameraComponentInspector.cpp
-msgctxt "EditorTip.CameraNear"
-msgid "Closest distance the camera draws. Geometry nearer than this is clipped; keep it as large as the scene allows to avoid depth fighting."
-msgstr ""
-
-#: Source/Editor/Panels/Inspector/CameraComponentInspector.cpp
-msgctxt "EditorTip.CameraOrthoHeight"
-msgid "World-space height of the visible area; the width follows the aspect ratio."
-msgstr ""
-
-#: Source/Editor/Panels/Inspector/CameraComponentInspector.cpp
-msgctxt "EditorTip.CameraOrthographic"
-msgid "Use a parallel (non-perspective) projection, as for 2D or isometric views. FOV is ignored while on."
-msgstr ""
-
-#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
-msgctxt "EditorTip.CurveKeyInterpolation"
-msgid "How the curve moves from this key to the next: Constant holds the value, Linear is a straight line, Cubic is a smooth spline."
-msgstr ""
-
-#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
-msgctxt "EditorTip.CurveKeyTime"
-msgid "When the key sits on the curve's time axis. It stays between its neighbouring keys."
-msgstr ""
-
-#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
-msgctxt "EditorTip.CurveKeyValue"
-msgid "The curve's value at this key."
-msgstr ""
-
-#: Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp
-msgctxt "EditorTip.DebugHUDCorner"
-msgid "Which screen corner the Debug HUD is anchored to."
-msgstr ""
-
-#: Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp
-msgctxt "EditorTip.DebugHUDOpacity"
-msgid "Background opacity of the Debug HUD panels."
-msgstr ""
-
-#: Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp
-msgctxt "EditorTip.DebugHUDOpenWindow"
-msgid "The same checklist as a runtime UI window (shows in the game view while playing)"
-msgstr ""
-
-#: Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp
-msgctxt "EditorTip.DebugHUDSection"
-msgid "Show or hide this section of the in-game Debug HUD. The grey text is the section's registration name."
-msgstr ""
-
 #. Context: TextWidget._text
 #: engine/ui/confirm_countdown.ui.xml
 msgctxt "Keep"

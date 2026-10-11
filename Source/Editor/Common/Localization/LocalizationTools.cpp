@@ -8,6 +8,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/MarkupTagScanner.h"
 
+#include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Common/EngineDefines.h"
@@ -340,6 +341,7 @@ namespace sw
         const string               engineProject  = pDefaultAssets != nullptr ? pDefaultAssets->_localizationProject : EngineDefaultAssets{}._localizationProject;
         if ( engineProject.empty() == false )
             outListProjectPath.push_back( LocalizationToolsInternal::resolveAbsolutePath( engineProject ) );
+        outListProjectPath.push_back( LocalizationToolsInternal::resolveAbsolutePath( editor::EditorPaths::kLocalizationProject ) ); // 에디터 UI 문구
 
         const string   localizationFolder = FileUtil::joinPath( path::kDataFolder, path::kLocalizationFolder );
         vector<string> listGameFolder;
