@@ -43,7 +43,7 @@ namespace sw
     void ChatServer::onHostShutdown( OnlineServiceHost& host )
     {
         (void)host;
-        _listSubscribedTopic.clear(); // 구독은 호스트가 이어서 모두 푼다
+        _listSubscribedTopic.clear(); // 구독은 호스트가 이어서 모두 해제한다
         _pHost = nullptr;
     }
 
@@ -143,7 +143,7 @@ namespace sw
                 continue;
             BitWriter reply;
             ChatProtocol::writeReply( reply, completion._method, completion._reply );
-            (void)host.respondOk( token, reply ); // 연결이 그새 닫혔으면 호스트가 버린다
+            (void)host.respondOk( token, reply ); // 연결이 그사이 닫혔으면 호스트가 버린다
         }
 
         _listDeliveryScratch.clear();
@@ -152,7 +152,7 @@ namespace sw
         {
             BitWriter body;
             ChatProtocol::writeMessage( body, delivery._message );
-            (void)host.sendPush( delivery._recipientID, ChatMethod::kPushMessage, body ); // 그새 떠난 계정이면 버린다
+            (void)host.sendPush( delivery._recipientID, ChatMethod::kPushMessage, body ); // 그사이 떠난 계정이면 버린다
         }
     }
 

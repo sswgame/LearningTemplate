@@ -45,7 +45,7 @@ namespace sw
             return false;
         outMessage._kind        = static_cast<ChatChannelKind>( kind );
         outMessage._recipientID = reader.readVarUint();
-        if ( ServiceKeyUtil::readString( reader, ChatLimit::kMaxTextSize, outMessage._text ) == false ) // 가린 글은 코드 포인트마다 '*' 하나라 원문보다 길지 않다
+        if ( ServiceKeyUtil::readString( reader, ChatLimit::kMaxTextSize, outMessage._text ) == false ) // 가린 글은 코드 포인트마다 '*' 하나이므로 원문보다 길지 않다
             return false;
         outMessage._sentMs    = reader.readVarInt();
         outMessage._serverID  = reader.readVarUint();

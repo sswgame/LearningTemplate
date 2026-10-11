@@ -25,7 +25,7 @@ namespace sw
 
     uint64 ChatSpamGuard::computeTextHash( string_view text )
     {
-        // 코드 포인트 단위 FNV-1a — 글자 하나가 정규화로 사라지거나(끼움 글자) 바뀌어도(대소 · 전각) 같은 값이 된다.
+        // 코드 포인트 단위 FNV-1a 이다. 글자 하나가 정규화로 사라지거나(끼움 글자) 바뀌어도(대소문자, 전각) 같은 값이 된다.
         uint64 hash   = HashUtil::kFnvOffset64;
         size_t offset = 0;
         while ( offset < text.size() )

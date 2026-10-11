@@ -14,7 +14,7 @@ namespace sw
         {
             static bool isIDCharacter( utf8 ch ) { return ( 'a' <= ch && ch <= 'z' ) || ( '0' <= ch && ch <= '9' ) || ch == '_' || ch == '.'; }
 
-            /** @brief 접두 뒤에 이름이 한 글자 이상 있는가입니다. */
+            /** @brief 접두어 뒤에 이름이 한 글자 이상 있으면 true 입니다. */
             static bool hasPrefixWithName( string_view text, string_view prefix ) { return text.size() > prefix.size() && StringUtil::startsWith( text, prefix ); }
         };
     } // namespace

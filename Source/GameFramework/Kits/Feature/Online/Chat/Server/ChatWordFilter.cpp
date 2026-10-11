@@ -16,7 +16,7 @@ namespace sw
             static constexpr uint32 kReplacementCodepoint = 0xFFFDu;
             static constexpr uint32 kMaskCodepoint        = '*';
 
-            /** @brief 글을 코드 포인트로 풉니다. 잘못된 UTF-8 이면 false(글에 그대로 적힌 U+FFFD 는 받는다). */
+            /** @brief 글을 코드 포인트로 분해합니다. 잘못된 UTF-8 이면 false 를 반환하며, 글에 그대로 적힌 U+FFFD 는 받아들입니다. */
             static bool decode( string_view text, vector<uint32>& outListCodepoint )
             {
                 size_t offset = 0;
@@ -41,13 +41,13 @@ namespace sw
         , _wordCount{ 0 }
         , _mode{ ChatFilterMode::Mask }
     {
-        _listNode.emplace_back(); // 뿌리 — 낱말이 없어도 `apply` 가 0 번 노드를 본다
+        _listNode.emplace_back(); // 루트이다. 낱말이 없어도 `apply` 가 0번 노드를 본다
     }
 
     uint32 ChatWordFilter::normalizeCodepoint( uint32 codepoint )
     {
         if ( 0xFF01u <= codepoint && codepoint <= 0xFF5Eu )
-            codepoint -= 0xFEE0u; // 전각 ASCII → 반각
+            codepoint -= 0xFEE0u; // 전각 ASCII 를 반각으로 바꾼다
         if ( 'A' <= codepoint && codepoint <= 'Z' )
             return codepoint - 'A' + 'a';
         switch ( codepoint )
@@ -61,7 +61,7 @@ namespace sw
             case '~':
             case '!':
             case '|':
-            case 0x3000u: // 전각 공백
+            case 0x3000u: // 전각 공백이다
                 return 0;
             default:
                 return codepoint;
@@ -116,7 +116,7 @@ namespace sw
 
     void ChatWordFilter::computeFailLinks()
     {
-        // 너비 우선 — 부모의 실패 고리를 따라가며 같은 글자의 자식을 찾는다. 뿌리의 자식은 뿌리로 실패한다.
+        // 너비 우선으로 처리한다. 부모의 실패 링크를 따라가며 같은 글자의 자식을 찾으며, 루트의 자식은 루트로 실패한다.
         vector<int32> listQueue;
         for ( const auto& [codepoint, childIndex] : _listNode[0]._mapChild )
         {
@@ -136,7 +136,7 @@ namespace sw
                 const int32 failChild = findChild( failIndex, codepoint );
                 Node&       child     = _listNode[static_cast<size_t>( childIndex )];
                 child._fail           = failChild >= 0 ? failChild : 0;
-                // 긴 낱말의 길 위에 있는 짧은 낱말(abcd 안의 bc)은 실패 고리로만 보인다 — 물려받아야 잡힌다.
+                // 긴 낱말의 경로 위에 있는 짧은 낱말(abcd 안의 bc)은 실패 링크로만 보인다. 물려받아야 잡을 수 있다.
                 child._matchLength = std::max( child._matchLength, _listNode[static_cast<size_t>( child._fail )]._matchLength );
                 listQueue.push_back( childIndex );
             }
@@ -174,7 +174,7 @@ namespace sw
         if ( ChatWordFilterInternal::decode( text, listCodepoint ) == false )
             return ChatFilterVerdict::InvalidText;
 
-        // 끼움 글자를 건너뛴 정규화 글의 각 글자가 원문 몇째 글자인지 — 걸린 구간을 원문 자리로 되돌린다.
+        // 끼움 글자를 건너뛴 정규화 글의 각 글자가 원문의 몇 번째 글자인지 기록한다. 걸린 구간을 원문 위치로 되돌리는 데 쓴다.
         vector<int32> listOriginalIndex;
         vector<uint8> listMasked( listCodepoint.size(), 0 );
         listOriginalIndex.reserve( listCodepoint.size() );
