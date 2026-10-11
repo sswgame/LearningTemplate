@@ -1,6 +1,10 @@
 # vcpkg 오버레이 포트의 패치는 업스트림과 바이트 단위로 같아야 한다 — 줄끝 변환 금지
 *.patch -text
 
+# 오버레이 포트(ThirdParty/*/vcpkg-port)는 체크아웃마다 바이트가 같아야 한다 — vcpkg 가 포트 파일 바이트로 포트 해시(ABI)를 정한다.
+# core.autocrlf 로 워크트리만 CRLF 가 되면 같은 내용인데도 "다시 빌드해야 한다" 로 판정돼, 바뀐 것 없이 공유 설치 폴더가 다시 설치됐다.
+ThirdParty/*/vcpkg-port/** -text
+
 # 골든 이미지(Test/AppTest/Golden — CompressionStream 으로 감싼 PPM)는 바이너리다
 *.ppm.z binary
 
