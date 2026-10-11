@@ -56,23 +56,23 @@ namespace sw
 
     /**
      * @struct ShaderStageInfo
-     * @brief 스테이지 하나의 표 한 줄입니다. 축약 태그 · 기본 진입점 · 컴파일 프로파일(SM5 / SM6)을 담습니다.
-     * @details 쿠커의 태그 · 기본 진입점, 컴파일러의 프로파일, 바인딩 레이아웃의 비트 변환이 모두 이 표를 봅니다(switch 를
-     *          파일마다 두지 않습니다). 스테이지를 하나 더하면 열거형과 이 표의 한 줄입니다. `_pProfileSm5` 가 nullptr 이면
-     *          SM5(DXBC · D3D11)에 그 스테이지가 없다는 뜻입니다.
+     * @brief 스테이지 하나의 테이블 항목입니다. 축약 태그, 기본 진입점, 컴파일 프로파일(SM5 / SM6)을 담습니다.
+     * @details 쿠커의 태그와 기본 진입점, 컴파일러의 프로파일, 바인딩 레이아웃의 비트 변환이 모두 이 테이블을 본다(switch 를
+     *          파일마다 두지 않는다). 스테이지를 추가하려면 열거형과 이 테이블에 한 줄씩 더한다. `_pProfileSm5` 가 nullptr 이면
+     *          SM5(DXBC, D3D11)에 그 스테이지가 없다는 뜻이다.
      */
     struct ShaderStageInfo
     {
-        const utf8* _pTag;        ///< 파일 이름 · 로그의 축약("vs")
+        const utf8* _pTag;        ///< 파일 이름과 로그에 쓰는 축약("vs")
         const utf8* _pEntryPoint; ///< 기본 진입점("VSMain")
         const utf8* _pProfileSm5; ///< DXBC(D3D11) 프로파일("vs_5_0"). 없으면 nullptr
-        const utf8* _pProfileSm6; ///< DXIL · SPIR-V 프로파일("vs_6_6")
+        const utf8* _pProfileSm6; ///< DXIL과 SPIR-V 프로파일("vs_6_6")
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 스테이지의 표 한 줄입니다. `Count` 이상이면 버텍스 줄입니다(폴백). */
+    /** @brief 스테이지의 테이블 항목입니다. `Count` 이상이면 버텍스 항목을 반환합니다(폴백). */
     inline const ShaderStageInfo& getShaderStageInfo( ShaderStage stage ) noexcept
     {
         static constexpr ShaderStageInfo arrInfo[static_cast<size_t>( ShaderStage::Count )] = {
@@ -89,7 +89,7 @@ namespace sw
         return arrInfo[index];
     }
 
-    /** @brief @p entryPoint 가 비어 있으면 스테이지의 기본 진입점(표의 `_pEntryPoint`)입니다. 진입점 기본값은 이 표 하나다. */
+    /** @brief @p entryPoint 가 비어 있으면 스테이지의 기본 진입점(테이블의 `_pEntryPoint`)을 반환합니다. 진입점 기본값은 이 테이블 하나가 정합니다. */
     inline string_view resolveEntryPoint( const string_view entryPoint, const ShaderStage stage ) noexcept
     {
         return entryPoint.empty() ? string_view( getShaderStageInfo( stage )._pEntryPoint ) : entryPoint;
@@ -119,7 +119,7 @@ namespace sw
 
         /**
          * @brief `"NAME=VALUE"` 또는 `"NAME"`(값 1) 한 줄을 매크로로 해석합니다.
-         * @details PSO 생성 경로(DX11 · DX12 · GL)와 바인딩 레이아웃 캐시가 같은 문자열 형식을 쓰므로 파싱은 여기 하나입니다.
+         * @details PSO 생성 경로(DX11, DX12, GL)와 바인딩 레이아웃 캐시가 같은 문자열 형식을 쓰므로 파싱은 여기 하나다.
          */
         static ShaderMacroDefine parse( string_view define )
         {
@@ -155,11 +155,11 @@ namespace sw
         ShaderStage               _stage        = ShaderStage::Vertex;              ///< 컴파일 대상 셰이더 스테이지
         ShaderTargetFormat        _targetFormat = ShaderTargetFormat::SPIRV_Vulkan; ///< 출력 포맷
         /**
-         * @brief 디버그 정보 + 최적화 끔(`-Zi -Od` / `D3DCOMPILE_DEBUG|SKIP_OPTIMIZATION`)으로 컴파일할지 여부입니다.
-         * @details **요청하는 쪽**이 정합니다. 주의: **빌드 구성**(SW_DEBUG)이 정하면 쿠킹된 바이너리(저장소에 커밋되고 배포에
+         * @brief 디버그 정보를 넣고 최적화를 끄는(`-Zi -Od` / `D3DCOMPILE_DEBUG|SKIP_OPTIMIZATION`) 컴파일인지 나타냅니다.
+         * @details **요청하는 쪽**이 정한다. 주의: **빌드 구성**(SW_DEBUG)이 정하면 쿠킹된 바이너리(저장소에 커밋되고 배포에
          *          실리는 것)의 내용이 "어느 App.exe 가 쿠커로 돌았나" 에 따라 달라지고, 쿠커가 Debug 를 먼저 집으면
-         *          커밋된 셰이더가 모두 무최적화가 됩니다. 런타임
-         *          라이브 컴파일(ShaderCache)은 Debug 에서 켜고, 쿠커는 절대 켜지 않습니다.
+         *          커밋된 셰이더가 모두 무최적화가 된다. 런타임
+         *          라이브 컴파일(ShaderCache)은 Debug 에서 켜고, 쿠커는 절대 켜지 않는다.
          */
         uint8 _bDebugCodegen = SW_FALSE;
     };
