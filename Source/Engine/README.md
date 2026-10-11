@@ -342,7 +342,7 @@ Godot처럼 "노드는 RID만 안다"로 바꾸면 모든 컴포넌트에 해석
 이름 풀 블록은 넣는 쪽 태그가 아니라 `EngineMisc` 로 셉니다. 종료 보고가 0인지는 `AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline` 이 보통 실행과 에디터를 켠 실행 둘로 확인합니다.
 
 **기준선은 `EngineLoop::initialize` 끝이고, 게임 · 에디터 모듈은 그 뒤에 오릅니다.** 그 모듈이 키운 프로세스 정적 저장소는 넣는 쪽 태그(Editor · Scene)에 남습니다.
-번역 문자열 저장소(`StringTable::releaseTextStorage`)와 등록부 용량(`RegistrationList::shrinkToFit` — 개발 명령 · 자동화 단계 · 탐침 · 모듈 언로드 리스너)은 `EngineBootstrap::shutdown` 이,
+번역 문자열 저장소(`StringTable::releaseTextStorage`), 활성 2D 렌더 설정(`Render2DSettings::releaseActive` — 다음 `getActive` 가 다시 읽는다)과 등록부 용량(`RegistrationList::shrinkToFit` — 개발 명령 · 자동화 단계 · 탐침 · 모듈 언로드 리스너)은 `EngineBootstrap::shutdown` 이,
 창 제목 사본은 App 이 엔진을 내리기 전에 놓습니다. 등록부 저장소는 넣는 쪽과 관계없이 `EngineMisc` 로 세어, 다시 잡아도 다른 태그로 옮겨 가지 않습니다.
 Debug STL 은 문자열 객체마다 16 B 컨테이너 프록시를 잡습니다. 함수 안 `static const string` 은 처음 부른 자리의 태그로 프로세스 끝까지 남으므로 이미지 적재 때 서는 정적 멤버로 둡니다.
 스레드 지역 컨테이너도 스레드가 종료 보고보다 오래 살므로 인라인 버퍼(`small_vector`)로 둡니다.

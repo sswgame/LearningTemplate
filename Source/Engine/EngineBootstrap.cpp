@@ -20,6 +20,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/EngineServiceCollection.h"
+#include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Localization/StringTable.h"
 #include "Engine/Object/Component/SceneTransformStorage.h"
@@ -164,6 +165,7 @@ namespace sw
             SW_LOG_WARNING( "RHI render resources are still registered at shutdown - a mesh, texture or material leaked" );
         // 번역 문자열은 지역화 서비스가 내려간 뒤라 들고 있는 쪽이 없다. 등록부는 모듈이 모두 내려가 엔진 것만 남았다 — 기동 뒤 모듈이 키운 용량을 놓는다.
         StringTable::releaseTextStorage();
+        Render2DSettings::releaseActive();
         IModuleUnloadListener::releaseUnusedStorage();
         AutomationStepRegistry::releaseUnusedStorage();
         AutomationProbes::releaseUnusedStorage();
