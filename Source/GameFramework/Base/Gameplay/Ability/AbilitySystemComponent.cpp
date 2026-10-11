@@ -24,10 +24,10 @@ namespace sw
     {
         struct AbilitySystemComponentInternal
         {
-            /** @brief 시간 비교의 허용 오차입니다 — 0.1 초씩 더한 시간이 정확히 1 이 되지 않는 것을 흡수합니다. */
+            /** @brief 시간 비교의 허용 오차입니다. 0.1 초씩 더한 시간이 정확히 1 이 되지 않는 부동소수점 오차를 흡수합니다. */
             static constexpr float32 kTimeEpsilon = 1.0e-4f;
 
-            /** @brief @p container 의 태그 중 하나라도 @p query 의 태그(또는 그 하위)이면 true 입니다. */
+            /** @brief @p container 의 태그 중 하나라도 @p query 의 태그이거나 그 하위 태그이면 true 입니다. */
             static bool matchesAnyTag( const TagContainer& container, const TagContainer& query )
             {
                 for ( const TagID& queryTag : query.getTags() )
@@ -48,7 +48,7 @@ namespace sw
                 bool    _bHasOverride{ false };
             };
 
-            /** @brief 변경 하나를 스택 @p stackScale 만큼 집계에 더합니다. */
+            /** @brief 변경 하나를 스택 @p stackScale 만큼 집계에 반영합니다. */
             static void accumulate( const EvaluatedModifier& modifier, float32 stackScale, Aggregation& inoutAggregation )
             {
                 switch ( modifier._op )
@@ -78,7 +78,7 @@ namespace sw
                 }
             }
 
-            /** @brief base 에 집계를 얹은 값입니다(언리얼 `FAggregatorModChannel::EvaluateWithBase`). */
+            /** @brief base 에 집계를 적용한 값입니다(언리얼의 `FAggregatorModChannel::EvaluateWithBase` 에 해당). */
             static float32 evaluate( float32 baseValue, const Aggregation& aggregation )
             {
                 if ( aggregation._bHasOverride )
@@ -123,9 +123,10 @@ namespace sw
 {
     /**
      * @class AbilitySystemModuleUnloadGuard
-     * @brief 모듈(DLL · SO)을 내리기 전에 그 모듈의 코드(게임 어빌리티 · 어트리뷰트 묶음 · 실행 계산 · 델리게이트)를 컴포넌트에서 뗍니다.
-     * @details 게임 모듈이 준 어빌리티 인스턴스는 vtable 이 그 모듈 안에 있습니다. 핫 리로드가 모듈을 내린 뒤 컴포넌트가 그것을 지우면 내려간
-     *          코드로 뜁니다. 그래서 컴포넌트마다 보유자 하나를 두고(`IModuleUnloadListener`), 내리기 전에 그 범위의 것을 지금(코드가 아직 있을 때) 지웁니다.
+     * @brief 모듈(DLL, SO)을 언로드하기 전에, 그 모듈의 코드(게임 어빌리티, 어트리뷰트 세트, 실행 계산, 델리게이트)를 가리키는 참조를 컴포넌트에서 제거합니다.
+     * @details 게임 모듈이 준 어빌리티 인스턴스는 vtable 이 그 모듈 안에 있다. 핫 리로드가 모듈을 언로드한 뒤에 컴포넌트가 그 인스턴스를 지우면,
+     *          이미 언로드된 코드로 점프해서 크래시가 난다. 그래서 컴포넌트마다 리스너를 하나 두고(`IModuleUnloadListener`),
+     *          언로드하기 전에 코드가 아직 남아 있을 때 해당 범위의 것을 지운다.
      */
     class AbilitySystemModuleUnloadGuard final : public IModuleUnloadListener
     {
@@ -199,7 +200,7 @@ namespace sw
 
     AbilitySystemComponent::~AbilitySystemComponent()
     {
-        // 순서: 더는 훑이지 않게 → 바깥 구독을 떼고(지우는 중에 게임 코드를 부르지 않는다) → 어빌리티(작업이 이 컴포넌트에서 구독을 뗀다) → 나머지.
+        // 순서는 다음과 같다. 먼저 순회가 더 일어나지 않게 하고, 바깥 구독을 해제한다(지우는 중에 게임 코드를 부르지 않기 위해서다). 그다음 어빌리티를 지우고(작업이 이 컴포넌트에서 구독을 해제한다), 마지막에 나머지를 지운다.
         _pModuleCodeGuard.reset();
         _anyAttributeChangedMulticast.removeAll();
         _tagChangedMulticast.removeAll();
@@ -271,7 +272,7 @@ namespace sw
             return false;
         }
 
-        // 묶음의 기본값은 붙이기 **전에** 정한다 — 붙인 뒤에 정하면 "체력 ≤ 최대 체력" 같은 훅이 정하는 순서에 따라 값을 자른다.
+        // 세트의 기본값은 붙이기 **전에** 정한다. 붙인 뒤에 정하면 "체력 ≤ 최대 체력" 같은 훅이 값을 정하는 순서에 따라 값을 잘라 버린다.
         for ( const AbilitySetAttributeSetEntry& setEntry : pSet->_listAttributeSet )
         {
             unique_ptr<AttributeSet> pAttributeSet = pCatalog->createAttributeSet( setEntry._className );
@@ -286,7 +287,7 @@ namespace sw
                 if ( attributeEntry._bHasRange == SW_TRUE )
                     pAttributeSet->setAttributeRange( attributeEntry._attribute, attributeEntry._minValue, attributeEntry._maxValue );
             }
-            (void)addAttributeSet( std::move( pAttributeSet ) ); // 방금 만든 묶음이라 nullptr 이 아니다
+            (void)addAttributeSet( std::move( pAttributeSet ) ); // 방금 만든 세트이므로 nullptr 이 아니다
         }
 
         for ( const TagID& tag : pSet->_looseTags.getTags() )
@@ -322,7 +323,7 @@ namespace sw
         pRaw->setOwningAbilitySystem( this );
         _listAttributeSet.push_back( std::move( pAttributeSet ) );
 
-        // 먼저 걸린 지속 이펙트가 이 묶음의 어트리뷰트를 바꾸고 있었을 수 있다 — current 를 지금 다시 집계한다.
+        // 먼저 걸린 지속 이펙트가 이 세트의 어트리뷰트를 바꾸고 있었을 수 있으므로, current 를 지금 다시 집계한다.
         for ( const hashed_string& name : pRaw->getAttributeNames() )
         {
             recomputeAttribute( name );
@@ -472,7 +473,7 @@ namespace sw
         spec._pDef    = pDef;
         spec._level   = level;
         spec._context = makeEffectContext();
-        // 쏜 쪽 어트리뷰트를 지금 찍어 둔다 — 투사체가 나는 동안 쏜 쪽이 사라져도 공식은 이 값을 쓴다.
+        // 쏜 쪽 어트리뷰트를 지금 저장해 둔다. 투사체가 나는 동안 쏜 쪽이 사라져도 공식은 이 값을 쓴다.
         for ( const unique_ptr<AttributeSet>& pAttributeSet : _listAttributeSet )
         {
             for ( const hashed_string& name : pAttributeSet->getAttributeNames() )
@@ -510,7 +511,7 @@ namespace sw
         const ScopedListLock     lock{ *this };
         const GameplayEffectDef& def = *spec._pDef;
         if ( def._removeEffectsWithTags.getTagCount() > 0 )
-            (void)removeActiveEffectsWithTags( def._removeEffectsWithTags ); // 지울 것이 없어도 된다
+            (void)removeActiveEffectsWithTags( def._removeEffectsWithTags ); // 지울 이펙트가 없어도 된다
 
         if ( def._durationPolicy == EffectDurationPolicy::Instant )
         {
@@ -527,7 +528,7 @@ namespace sw
         if ( pTarget->canMutateNow() )
             return pTarget->applyGameplayEffectSpecToSelf( spec );
 
-        // 다른 워커가 대상을 틱하고 있을 수 있다 — 틱 직후 게임 스레드에서 건다. 대상은 핸들로 다시 찾는다(그 사이 사라질 수 있다).
+        // 다른 워커가 대상을 틱하고 있을 수 있으므로 틱 직후 게임 스레드에서 건다. 그 사이 대상이 사라질 수 있어서 핸들로 다시 찾는다.
         GameObject*           pTargetOwner = pTarget->getOwner();
         GameObjectManager*    pManager     = pTargetOwner != nullptr ? pTargetOwner->getManager() : nullptr;
         const ComponentHandle targetHandle = pTarget->getHandle();
@@ -703,7 +704,7 @@ namespace sw
         const ScopedListLock lock{ *this };
         pRaw->onGranted();
         if ( pRaw->getConfig()._bActivateOnGranted == SW_TRUE )
-            (void)tryActivateAbility( handle ); // 패시브가 조건에 막히면 다음 부여 · 발동을 기다린다
+            (void)tryActivateAbility( handle ); // 패시브가 조건에 막히면 다음 부여나 발동을 기다린다
         return handle;
     }
 
@@ -746,10 +747,10 @@ namespace sw
             return result;
 
         AbilitySpec*     pSpec    = findAbilitySpecMutable( handle );
-        GameplayAbility* pAbility = pSpec->_pAbility.get(); // canActivateAbility 가 스펙 · 인스턴스를 확인했다
+        GameplayAbility* pAbility = pSpec->_pAbility.get(); // canActivateAbility 가 스펙과 인스턴스를 이미 확인했다
         if ( pAbility->isActive() )
-            pAbility->cancelAbility(); // 다시 걸기 — 도는 발동을 끝내고 새로 시작한다
-        // 취소 알림이 스펙을 거뒀을 수 있다.
+            pAbility->cancelAbility(); // 다시 발동하기: 실행 중인 발동을 끝내고 새로 시작한다
+        // 취소 알림이 스펙을 제거했을 수 있다.
         if ( pSpec->_bPendingRemove == SW_TRUE )
             return AbilityActivationResult::InvalidSpec;
         pAbility->beginActivation( pTriggerEvent );
@@ -900,7 +901,7 @@ namespace sw
             const bool       bWasActive = pAbility->isActive();
             pAbility->setInputPressed( true );
             if ( bWasActive == false )
-                (void)tryActivateAbility( spec._handle ); // 쿨다운 · 비용으로 막히면 그대로 둔다(UI 가 `canActivateAbility` 로 보여 준다)
+                (void)tryActivateAbility( spec._handle ); // 쿨다운이나 비용으로 막히면 그대로 둔다(UI 가 `canActivateAbility` 로 표시한다)
         }
     }
 
@@ -951,7 +952,7 @@ namespace sw
         GameplayEventData    eventData = payload;
         eventData._eventTag            = eventTag;
 
-        // 1) 트리거 — 이벤트 태그가 트리거 태그와 같거나 그 하위면 발동한다("Event.Hit.Fire" 는 "Event.Hit" 트리거를 깨운다).
+        // 1) 트리거: 이벤트 태그가 트리거 태그와 같거나 그 하위이면 발동한다("Event.Hit.Fire" 는 "Event.Hit" 트리거를 발동시킨다).
         int32        triggeredCount = 0;
         const size_t specCount      = _listAbilitySpec.size();
         for ( size_t specIndex = 0; specIndex < specCount && specIndex < _listAbilitySpec.size(); ++specIndex )
@@ -972,7 +973,7 @@ namespace sw
                 ++triggeredCount;
         }
 
-        // 2) 구독자 — 같은 태그와 그 조상 태그마다("Event.Hit.Fire" → "Event.Hit" → "Event"). 조상의 id 는 intern 하지 않고 해시만 구한다.
+        // 2) 구독자: 같은 태그와 그 조상 태그마다 호출한다("Event.Hit.Fire", "Event.Hit", "Event" 순). 조상의 id 는 intern 하지 않고 해시만 구한다.
         const utf8* pTagText = eventTag.getString();
         if ( pTagText != nullptr )
         {
@@ -1176,7 +1177,7 @@ namespace sw
         pData->_baseValue = newBase;
         recomputeAttribute( modifier._attribute );
 
-        // 훅이 다른 어트리뷰트(체력)를 바꾸며 묶음 목록을 건드리지 않으므로 묶음 포인터는 그대로 쓸 수 있다.
+        // 훅이 다른 어트리뷰트(체력)를 바꿔도 세트 목록은 건드리지 않으므로, 세트 포인터를 그대로 써도 된다.
         AttributeModCallbackData callbackData;
         callbackData._pSpec     = &spec;
         callbackData._pTarget   = this;
@@ -1191,7 +1192,7 @@ namespace sw
     {
         const GameplayEffectDef& def = *spec._pDef;
 
-        // 스택 — 대상에 하나만 두고 개수를 올린다.
+        // 스택: 대상에 하나만 두고 스택 수를 올린다.
         if ( def._stackingPolicy == EffectStackingPolicy::AggregateByTarget )
         {
             ActiveGameplayEffect* pExisting = findStackableEffect( def );
@@ -1230,7 +1231,7 @@ namespace sw
             pNewEffect->_grantedTags.addTag( tag );
         }
 
-        // 주기 이펙트의 모디파이어는 주기마다 base 에 쓴다(도트) — 걸려 있는 동안 current 에 얹지 않는다(언리얼과 같다).
+        // 주기 이펙트의 모디파이어는 주기마다 base 에 쓴다(도트 대미지). 걸려 있는 동안 current 에는 반영하지 않는다(언리얼과 같음).
         if ( def.isPeriodic() == false )
         {
             for ( const GameplayEffectModifier& modifier : def._listModifier )
@@ -1287,7 +1288,7 @@ namespace sw
         {
             if ( pActiveEffect->_bPendingRemove == SW_TRUE )
                 continue;
-            // 같은 정의(같은 객체) 또는 같은 id — 카탈로그를 다시 읽어 정의 객체가 바뀌어도 같은 이펙트로 쌓인다.
+            // 같은 정의 객체이거나 같은 id 이면 같은 이펙트로 본다. 카탈로그를 다시 읽어 정의 객체가 바뀌어도 같은 이펙트로 쌓인다.
             const GameplayEffectDef& activeDef = *pActiveEffect->_spec._pDef;
             const bool               bSameDef  = &activeDef == &def || ( def._id.empty() == false && activeDef._id == def._id );
             if ( bSameDef )
@@ -1301,7 +1302,7 @@ namespace sw
         const size_t effectCount = _listActiveEffect.size();
         for ( size_t effectIndex = 0; effectIndex < effectCount && effectIndex < _listActiveEffect.size(); ++effectIndex )
         {
-            // 원소는 `unique_ptr` 이고 잠금 중에는 지우지 않으므로, 콜백이 목록을 늘려도 이 포인터는 산다.
+            // 원소가 `unique_ptr` 이고 잠금 중에는 지우지 않으므로, 콜백이 목록을 늘려도 이 포인터는 유효하다.
             ActiveGameplayEffect* pActiveEffect = _listActiveEffect[effectIndex].get();
             if ( pActiveEffect->_bPendingRemove == SW_TRUE )
                 continue;
@@ -1312,7 +1313,7 @@ namespace sw
             if ( bPeriodic == false && bTimed == false )
                 continue;
 
-            // 남은 시간을 다음 사건(주기 실행 · 만료)까지 잘라 가며 쓴다 — 한 프레임이 주기 여럿을 넘어도 순서대로 실행하고, 만료 뒤의 주기는 실행하지 않는다.
+            // 남은 시간을 다음 사건(주기 실행이나 만료)까지 잘라서 쓴다. 한 프레임이 주기 여러 개를 넘어도 순서대로 실행하고, 만료된 뒤의 주기는 실행하지 않는다.
             float32 timeLeft = deltaTime;
             while ( timeLeft > 0.0f && pActiveEffect->_bPendingRemove == SW_FALSE )
             {
@@ -1382,7 +1383,7 @@ namespace sw
     {
         _bHasPendingRemoval = SW_FALSE;
 
-        // 지우는 것을 목록 밖으로 먼저 옮긴다 — 소멸자(어빌리티의 작업 정리)가 이 컴포넌트를 불러도 목록은 이미 정돈돼 있다.
+        // 지울 것을 목록 밖으로 먼저 옮긴다. 소멸자(어빌리티의 작업 정리)가 이 컴포넌트를 불러도 목록은 이미 정리된 상태이다.
         vector<unique_ptr<ActiveGameplayEffect>> listRemovedEffect;
         for ( size_t effectIndex = _listActiveEffect.size(); effectIndex > 0; --effectIndex )
         {
@@ -1405,7 +1406,7 @@ namespace sw
             }
         }
 
-        // 소멸이 다시 지우기를 표시하면(드물다) 잠금 밖이니 한 번 더 정리한다.
+        // 소멸 중에 다시 지우기가 표시되면(드문 경우) 잠금 밖이므로 한 번 더 정리한다.
         ++_listLockDepth;
         listRemovedSpec.clear();
         listRemovedEffect.clear();
@@ -1501,7 +1502,7 @@ namespace sw
         else
             _mapTagCount.insert_or_assign( tag._id, TagCountEntry{ tag, newCount } );
 
-        // 알림은 생기고 사라질 때만 — 같은 태그를 주는 이펙트가 하나 더 걸려도 "태그가 생겼다" 는 아니다(언리얼 NewOrRemoved).
+        // 알림은 태그가 생기거나 사라질 때만 보낸다. 같은 태그를 주는 이펙트가 하나 더 걸려도 "태그가 생겼다" 고 알리지 않는다(언리얼의 NewOrRemoved 와 같음).
         if ( oldCount == 0 )
         {
             _ownedTags.addTag( tag );
@@ -1581,7 +1582,7 @@ namespace sw
 
     void AbilitySystemComponent::handleAbilityEnded( GameplayAbility& ability, bool bWasCancelled )
     {
-        // 발동 때 붙인 것을 그대로 뗀다 — 설정은 도는 동안 바꾸지 않는다(`GameplayAbility::getConfig` 의 약속).
+        // 발동할 때 붙인 것을 그대로 뗀다. 실행 중에는 설정을 바꾸지 않는다는 `GameplayAbility::getConfig` 의 약속에 의존한다.
         const GameplayAbilityConfig& config = ability.getConfig();
         updateTagCounts( config._activationOwnedTags, -1 );
         updateBlockedAbilityTags( config._blockAbilitiesWithTags, -1 );
@@ -1630,7 +1631,7 @@ namespace sw
         if ( pManager == nullptr )
             return;
 
-        // 자리는 지금 읽는다(자기 오브젝트라 이 워커가 읽어도 된다). 만들기는 틱 중이면 틱 직후다(`DamageNumberComponent::spawnNumber`).
+        // 위치는 지금 읽는다. 자기 오브젝트이므로 이 워커가 읽어도 된다. 숫자 생성은 틱 중이면 틱 직후에 한다(`DamageNumberComponent::spawnNumber`).
         const SceneComponent* pRoot    = pOwner->getPrimarySceneComponent();
         const float3          position = ( pRoot != nullptr ? pRoot->getWorldPosition() : float3{} ) + _damageNumberOffset;
         const int32           value    = static_cast<int32>( MathUtil::round( amount ) );
@@ -1643,7 +1644,7 @@ namespace sw
     {
         uint32 releasedCount = 0;
 
-        // 1) 델리게이트 — 게임이 건 구독(스텁이 그 모듈 안). 지우기 전에 떼어 정리 중에 불리지 않게 한다.
+        // 1) 델리게이트: 게임이 등록한 구독이며 스텁이 그 모듈 안에 있다. 지우기 전에 해제해서 정리 중에 호출되지 않게 한다.
         releasedCount += _anyAttributeChangedMulticast.removeCodeWithin( pBegin, pEnd );
         releasedCount += _tagChangedMulticast.removeCodeWithin( pBegin, pEnd );
         releasedCount += _effectAppliedMulticast.removeCodeWithin( pBegin, pEnd );
@@ -1661,7 +1662,7 @@ namespace sw
         {
             const ScopedListLock lock{ *this };
 
-            // 2) 어빌리티 — 인스턴스의 vtable 이 그 모듈 안이면 지금(코드가 아직 있을 때) 거둔다. 작업이 건 이벤트 구독도 함께 떨어진다.
+            // 2) 어빌리티: 인스턴스의 vtable 이 그 모듈 안에 있으면 코드가 아직 남아 있는 지금 제거한다. 작업이 등록한 이벤트 구독도 함께 해제된다.
             const size_t specCount = _listAbilitySpec.size();
             for ( size_t specIndex = 0; specIndex < specCount && specIndex < _listAbilitySpec.size(); ++specIndex )
             {
@@ -1675,7 +1676,7 @@ namespace sw
                 }
             }
 
-            // 3) 그 모듈의 실행 계산을 쓰는 걸린 이펙트 — 다음 주기에 내려간 코드를 부르지 않게 푼다.
+            // 3) 그 모듈의 실행 계산을 쓰는 이펙트: 다음 주기에 언로드된 코드를 부르지 않도록 해제한다.
             const size_t effectCount = _listActiveEffect.size();
             for ( size_t effectIndex = 0; effectIndex < effectCount && effectIndex < _listActiveEffect.size(); ++effectIndex )
             {
@@ -1694,7 +1695,7 @@ namespace sw
             }
         }
 
-        // 4) 게임 모듈이 정의한 어트리뷰트 묶음 — 값은 함께 사라진다(다시 올라온 게임이 세트를 다시 준다).
+        // 4) 게임 모듈이 정의한 어트리뷰트 세트: 값도 함께 사라진다. 모듈을 다시 로드하면 게임이 세트를 다시 준다.
         for ( size_t setIndex = _listAttributeSet.size(); setIndex > 0; --setIndex )
         {
             if ( IModuleUnloadListener::isAddressWithin( IModuleUnloadListener::findVtableAddress( _listAttributeSet[setIndex - 1].get() ), pBegin, pEnd ) )
