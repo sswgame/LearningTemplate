@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""워크트리 도구(MakeWorktree · RemoveWorktree)와 CI 조회 도구(ListCiJobs)의 판단 — git · 네트워크 없이."""
+"""워크트리 도구(MakeWorktree · RemoveWorktree)와 CI 도구(ListCiJobs · CiFailureReport)의 판단 — git · 네트워크 없이."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "Scripts"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "Scripts" / "dev"))
 
+import CiFailureReport  # noqa: E402
 import ListCiJobs  # noqa: E402
 import MakeWorktree  # noqa: E402
 import RemoveWorktree  # noqa: E402
@@ -115,6 +116,66 @@ class ListCiJobsTest(unittest.TestCase):
         ]
         listLine = ListCiJobs.formatFailureAnnotations(listAnnotation, maxChars=10)
         self.assertEqual(listLine, ["-- b.cpp:7 FooTest.Bar", "x" * 10])
+
+    def testJobTableCarriesStepTimeExitCodeAndCtestTimeouts(self) -> None:
+        payload = {"jobs": [
+            {"id": 1, "name": "tsan", "conclusion": "failure", "status": "completed",
+             "started_at": "2026-10-11T14:52:06Z", "completed_at": "2026-10-11T15:10:12Z",
+             "steps": [{"name": "Build", "conclusion": "success", "started_at": "2026-10-11T14:53:00Z", "completed_at": "2026-10-11T14:58:00Z"},
+                       {"name": "Test", "conclusion": "failure", "started_at": "2026-10-11T14:58:22Z", "completed_at": "2026-10-11T15:10:06Z"},
+                       {"name": "Upload", "conclusion": "skipped"}]},
+        ]}
+        listAnnotation = [
+            {"annotation_level": "notice", "title": "sccache", "message": "Process completed with exit code 99."},
+            {"annotation_level": "failure", "title": "ctest EngineTest_Shard1 [Timeout 180.0 s / 180 s]", "message": "..."},
+            {"annotation_level": "failure", "title": "ctest EngineTest_Shard2 [exit 1 after 12.3 s / 180 s]", "message": "..."},
+            {"annotation_level": "failure", "title": "", "message": "Process completed with exit code 8."},
+        ]
+        outcome = ListCiJobs.collectJobOutcome(listAnnotation)
+        self.assertEqual(outcome.listExitCode, [8])
+        listLine = ListCiJobs.formatJobLines(payload, {1: outcome})
+        self.assertEqual(listLine, ["1  tsan  failure  18m06s  | 실패 단계: Test(11m44s, exit 8)  | ctest 진 것 2 (Timeout 1)"])
+        self.assertTrue(ListCiJobs.isRunFinished(payload))
+        self.assertFalse(ListCiJobs.isRunFinished({"jobs": [{"status": "in_progress"}]}))
+
+    def testRateLimitIsRecognizedAndCachedBodyIsReusedOn304(self) -> None:
+        import io
+        import urllib.error
+        import urllib.request
+        from email.message import Message
+        from unittest import mock
+
+        def makeError(code: int, remaining: str, body: bytes) -> urllib.error.HTTPError:
+            headers = Message()
+            headers["X-RateLimit-Limit"] = "60"
+            headers["X-RateLimit-Remaining"] = remaining
+            headers["X-RateLimit-Reset"] = "1791734015"
+            return urllib.error.HTTPError("https://example", code, "error", headers, io.BytesIO(body))
+
+        with tempfile.TemporaryDirectory() as tempDir:
+            client = ListCiJobs.GithubClient(Path(tempDir))
+            client.writeCacheInternal("https://example/a", 'W/"tag"', {"jobs": []})
+            with mock.patch.object(urllib.request, "urlopen", side_effect=makeError(304, "41", b"")):
+                self.assertEqual(client.fetch("https://example/a"), {"jobs": []})
+            self.assertEqual((client.callCount, client.cacheHitCount, client.remaining), (0, 1, 41))
+            with mock.patch.object(urllib.request, "urlopen", side_effect=makeError(403, "0", b'{"message":"API rate limit exceeded"}')):
+                with self.assertRaises(ListCiJobs.RateLimitError) as context:
+                    client.fetch("https://example/b")
+            self.assertEqual((context.exception.limit, context.exception.resetEpoch), (60, 1791734015))
+            with mock.patch.object(urllib.request, "urlopen", side_effect=makeError(403, "12", b'{"message":"Must have admin rights"}')):
+                with self.assertRaises(urllib.error.HTTPError):
+                    client.fetch("https://example/c")
+
+
+class CiFailureReportTest(unittest.TestCase):
+    def testTestResultSeparatesTimeoutFromFailureAndCrash(self) -> None:
+        timedOut = "[ RUN      ] FooTest.Hangs\n<end of output>\nTest time = 180.03 sec\n"
+        failed = "[TestHost] shut down - exit code 1\n<end of output>\nTest time =  12.30 sec\n"
+        crashed = "[ RUN      ] FooTest.Crashes\n<end of output>\nTest time =   4.00 sec\n"
+        self.assertEqual(CiFailureReport.describeTestResult(timedOut, 180.0), "Timeout 180.0 s / 180 s")
+        self.assertEqual(CiFailureReport.describeTestResult(failed, 180.0), "exit 1 after 12.3 s / 180 s")
+        self.assertEqual(CiFailureReport.describeTestResult(crashed, None), "no exit line after 4.0 s")
+        self.assertEqual(CiFailureReport.describeTestResult("", 180.0), "no elapsed time")
 
 
 if __name__ == "__main__":

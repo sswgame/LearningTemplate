@@ -344,3 +344,6 @@ cd build/Ninja-Debug/Bin
 - **`SW_ENABLE_DEADLOCK_DETECTION` 은 CI Windows Debug 잡이 `RunBuildWarnings.py --define SW_ENABLE_DEADLOCK_DETECTION --fail-on error` 로 지킨다.**
 - **CI 실패는 `Scripts/dev/CiFailureReport.py` 가 주석으로 올린다**(테스트 · 구성 실패의 vcpkg 포트 로그 · 크래시 스택 `Bin/Saved/Logs/crash_*.stack.txt`).
   작업 로그 · 아티팩트는 관리자 전용(API 403)이라 밖에서는 주석만 보인다.
+  진 테스트 주석의 제목에 결과가 붙는다. `[Timeout 180.0 s / 180 s]` 는 ctest 가 한도에서 죽인 것(멈춤이거나 느려진 것)이고, `[exit 1 after …]` 는 스스로 진 것,
+  `[no exit line after …]` 는 한도 전에 종료 줄 없이 끝난 것(크래시)이다. `py -3 -m Scripts ci-jobs <실행 id> --annotations` 의 잡 표는 실패한 단계의 경과 시간 ·
+  종료 코드와 ctest Timeout 수를 보인다. 응답은 임시 폴더에 캐시해 끝난 실행을 다시 물으면 API 를 쓰지 않는다(익명 한도는 시간당 60 회).
