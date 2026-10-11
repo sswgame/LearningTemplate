@@ -26,7 +26,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 
-// 에디터 자체 시험 중 입력(클릭 · 타이핑 · 호버)을 흉내 내는 것들 — EditorSelfTestInput 이 다음 프레임의 ImGui 입력 큐에 넣는다.
+// 에디터 자체 테스트 중 입력(클릭 · 타이핑 · 호버)을 흉내 내는 것들 — EditorSelfTestInput 이 다음 프레임의 ImGui 입력 큐에 넣는다.
 // 주의: 플랫폼 백엔드가 프레임마다 실제 커서를 넣을 수 있어, 누르기 · 떼기 · 호버는 그 단계마다 이름표 위로 다시 옮긴 뒤 넣는다.
 
 namespace sw::editor
@@ -35,7 +35,7 @@ namespace sw::editor
     {
         struct EditorSelfTestInputCasesInternal
         {
-            /** @brief 툴팁 지연(ImGuiHoveredFlags_DelayShort)을 기다리는 단계의 상한입니다 — 실행기의 시험당 상한(300)보다 작다. */
+            /** @brief 툴팁 지연(ImGuiHoveredFlags_DelayShort)을 기다리는 단계의 상한입니다 — 실행기의 테스트당 상한(300)보다 작다. */
             static constexpr uint32 kMaxTooltipWaitStep = 240;
 
             /** @brief 클릭 하나의 누르기 · 떼기를 이름표 위에서 넣습니다. 이름표가 없으면 false. */
@@ -47,7 +47,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 마우스를 화면 밖으로 치웁니다 — 다음 시험의 호버를 흐리지 않게. */
+            /** @brief 마우스를 화면 밖으로 치웁니다 — 다음 테스트의 호버를 흐리지 않게. */
             static void moveMouseAway() { EditorSelfTestInput::moveMouse( float2{ -10000.0f, -10000.0f } ); }
 
             // --------------------------------------------------------------------------------------------------
@@ -93,7 +93,7 @@ namespace sw::editor
             static void finishTyping( HierarchyPanel* pHierarchy, GameObjectManager* pManager )
             {
                 TypingProbe& probe = getTypingProbe();
-                ImGui::ClearActiveID(); // 검색 칸의 입력 상태를 놓는다 — 다음 시험의 키가 이리 오지 않게
+                ImGui::ClearActiveID(); // 검색 칸의 입력 상태를 놓는다 — 다음 테스트의 키가 이리 오지 않게
                 if ( pHierarchy != nullptr )
                     pHierarchy->setFilterText( "" );
                 EditorContext* pContext = EditorContext::get();
@@ -239,7 +239,7 @@ namespace sw::editor
 
             static EditorSelfTestStep runTooltipOnHover( EditorSelfTestContext& context )
             {
-                // 시험이 그리는 창 하나 — 패널 배치와 무관하게 늘 같은 자리 · 맨 위다.
+                // 테스트가 그리는 창 하나 — 패널 배치와 무관하게 늘 같은 자리 · 맨 위다.
                 // 주 뷰포트 안 — 데스크톱 좌표 (40, 300) 은 창 밖일 수 있고, 그러면 창이 자기 플랫폼 창(뷰포트)으로 떠 호버가 실제 커서를 따른다.
                 const ImGuiViewport* pMainViewport = ImGui::GetMainViewport();
                 ImGui::SetNextWindowViewport( pMainViewport->ID );
@@ -284,7 +284,7 @@ namespace sw::editor
             // --------------------------------------------------------------------------------------------------
             // input.classicDarkSwatch — Classic Dark 프리셋에서 테마 대화상자의 스와치를 누르면 액센트가 바뀐다(끝에 원래 테마로 되돌린다)
             // --------------------------------------------------------------------------------------------------
-            /** @brief 시험 앞의 테마와 에디터 설정 파일 바이트입니다 — 스와치 클릭은 설정 파일을 다시 쓴다(saveToConfig), 끝에 바이트째 되돌린다. */
+            /** @brief 테스트 앞의 테마와 에디터 설정 파일 바이트입니다 — 스와치 클릭은 설정 파일을 다시 쓴다(saveToConfig), 끝에 바이트째 되돌린다. */
             struct SwatchProbe
             {
                 EditorThemeConfig _theme;
@@ -351,14 +351,14 @@ namespace sw::editor
                         break;
                     }
                 }
-                // 되돌리기 — 사용자의 에디터 설정에 시험의 테마가 남지 않게. 메모리(활성 설정)는 저장으로, 파일은 원래 바이트로(저장기가 줄끝 · 끝 줄바꿈을 바꾼다).
+                // 되돌리기 — 사용자의 에디터 설정에 테스트의 테마가 남지 않게. 메모리(활성 설정)는 저장으로, 파일은 원래 바이트로(저장기가 줄끝 · 끝 줄바꿈을 바꾼다).
                 SwatchProbe& probe = getSwatchProbe();
                 EditorMenuBar::closeThemeDialog();
                 EditorThemeUtil::applyTheme( probe._theme );
                 EditorThemeUtil::saveToConfig();
                 if ( probe._bConfigExisted && FileUtil::writeFile( getEditorConfigPath(), probe._configBytes.data(), probe._configBytes.size() ) == false )
                     (void)context.expect( false, "could not restore the editor config file" );
-                // 원래 없던 파일은 지운다 — 못 지우면 시험 테마가 사용자 설정에 남으므로 위 쓰기 실패처럼 시험 실패로 알린다.
+                // 원래 없던 파일은 지운다 — 못 지우면 테스트 테마가 사용자 설정에 남으므로 위 쓰기 실패처럼 테스트 실패로 알린다.
                 if ( probe._bConfigExisted == false && FileUtil::removeFile( getEditorConfigPath() ) == false )
                     (void)context.expect( false, "could not remove the editor config file the test created" );
                 probe = SwatchProbe{};
@@ -387,7 +387,7 @@ namespace sw::editor
                 const uint32    stepIndex  = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
-                    // 줄이 하나는 있어야 토글이 그려진다 — 빈 씬에서도 돌게 하나 만들고, 앞 시험이 남긴 검색어를 지운다(걸러지면 줄이 없다).
+                    // 줄이 하나는 있어야 토글이 그려진다 — 빈 씬에서도 돌게 하나 만들고, 앞 테스트가 남긴 검색어를 지운다(걸러지면 줄이 없다).
                     if ( pHierarchy != nullptr )
                         pHierarchy->setFilterText( "" );
                     GameObject* pObj = pManager->createGameObject( hashed_string( "EditorSelfTestToggle" ) );
@@ -397,7 +397,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Continue;
                 }
 
-                // 앞 시험이 연 창이 Hierarchy 를 가렸을 수 있다 — 몇 프레임은 이름표를 기다린다.
+                // 앞 테스트가 연 창이 Hierarchy 를 가렸을 수 있다 — 몇 프레임은 이름표를 기다린다.
                 constexpr uint32   kMaxMarkWaitStep = 10;
                 EditorSelfTestMark mark{};
                 const bool         bMarked = EditorSelfTestMarks::find( "hierarchy.activeToggle", mark );

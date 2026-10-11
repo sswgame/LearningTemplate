@@ -676,7 +676,7 @@ namespace sw::editor
                     editorConfig = getActiveTheme();
                 }
                 if ( index == 2 )
-                    EditorSelfTestMarks::note( "theme.swatch.violet" ); // 에디터 자체 시험(input.classicDarkSwatch)이 누른다
+                    EditorSelfTestMarks::note( "theme.swatch.violet" ); // 에디터 자체 테스트(input.classicDarkSwatch)이 누른다
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeAccentSwatch" ) );
                 ImGui::PopID();
             }
@@ -770,7 +770,7 @@ namespace sw::editor
 
     const utf8* EditorThemeUtil::makeIconLabel( const utf8* pIcon, const utf8* pLabel )
     {
-        // UI 스레드 하나가 부르지만 자체 시험 스레드에서도 불릴 수 있어 스레드마다 버퍼를 둔다.
+        // UI 스레드 하나가 부르지만 자체 테스트 스레드에서도 불릴 수 있어 스레드마다 버퍼를 둔다.
         thread_local fixed_string<constant::kMaxBuffer256> s_label;
         formatstring( s_label.data(), s_label.capacity(), "%#  %#", pIcon, pLabel );
         return s_label.c_str();

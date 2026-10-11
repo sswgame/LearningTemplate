@@ -1,6 +1,6 @@
 /**
  * @file EditorCurveProbeComponent.h
- * @brief 커브 편집기 시나리오가 다는 시험 컴포넌트입니다(에디터 안에만 있고 "Add Component" 메뉴에 나오지 않는다).
+ * @brief 커브 편집기 시나리오가 다는 테스트 컴포넌트입니다(에디터 안에만 있고 "Add Component" 메뉴에 나오지 않는다).
  */
 #pragma once
 #include "Engine/Object/Component/Component.h"

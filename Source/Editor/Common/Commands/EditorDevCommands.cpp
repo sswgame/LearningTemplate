@@ -177,7 +177,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 고른 오브젝트마다 컴포넌트 하나를 단다(되돌리기 한 줄씩). "Add Component" 메뉴에 숨긴 타입(`HideInMenu`)도 단다 — 시나리오가 시험 컴포넌트를 단다. */
+            /** @brief 고른 오브젝트마다 컴포넌트 하나를 단다(되돌리기 한 줄씩). "Add Component" 메뉴에 숨긴 타입(`HideInMenu`)도 단다 — 시나리오가 테스트 컴포넌트를 단다. */
             static bool runAddComponent( const vector<string>& listArgument, string& outReply )
             {
                 EditorContext* pContext = EditorContext::get();

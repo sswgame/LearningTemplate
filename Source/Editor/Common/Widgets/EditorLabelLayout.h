@@ -17,7 +17,7 @@ namespace sw::editor
      */
     struct EditorLabelLayoutUtil
     {
-        /** @brief 글자열 너비를 재는 함수입니다(ImGui 는 CalcTextSize, 시험은 글자 수 × 고정 폭). */
+        /** @brief 글자열 너비를 재는 함수입니다(ImGui 는 CalcTextSize, 테스트는 글자 수 × 고정 폭). */
         using MeasureFunc = float32 ( * )( string_view text, void* pUserData );
 
         /**

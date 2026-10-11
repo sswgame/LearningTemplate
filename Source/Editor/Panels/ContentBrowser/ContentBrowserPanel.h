@@ -38,7 +38,7 @@ namespace sw::editor
         void shutdown( IRHIDevice* pDevice ) override;
 
         // ------------------------------------------------------------------------------
-        // 1-1) 삭제 · 시험 창구 — 우클릭 Delete 는 requestDeleteAsset → 확인 모달 → confirmDeleteAsset 이다. 자체 시험이 같은 길을 부른다
+        // 1-1) 삭제 · 테스트용 함수 — 우클릭 Delete 는 requestDeleteAsset → 확인 모달 → confirmDeleteAsset 이다. 자체 테스트가 같은 길을 부른다
         // ------------------------------------------------------------------------------
         /** @brief 폴더로 갑니다(그 폴더를 든 콘텐츠 루트에서 만든 경로 줄과 함께). */
         void openFolder( string_view absolutePath );

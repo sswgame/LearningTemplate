@@ -336,7 +336,7 @@ namespace sw
     void LocalizationTools::collectProjectPaths( vector<string>& outListProjectPath, bool bAllGames )
     {
         outListProjectPath.clear();
-        // 에디터 모듈은 엔진 서비스를 서비스 표로만 본다(EngineServices.h 는 Engine · App · 시험 전용). 표가 없으면(시험) 기본값이다.
+        // 에디터 모듈은 엔진 서비스를 서비스 표로만 본다(EngineServices.h 는 Engine · App · 테스트 전용). 표가 없으면(테스트) 기본값이다.
         const EngineDefaultAssets* pDefaultAssets = editor::getService<const EngineDefaultAssets>();
         const string               engineProject  = pDefaultAssets != nullptr ? pDefaultAssets->_localizationProject : EngineDefaultAssets{}._localizationProject;
         if ( engineProject.empty() == false )

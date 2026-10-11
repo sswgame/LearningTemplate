@@ -29,7 +29,7 @@ namespace sw::editor
             /** @brief `-gv_editorOpenPanel` 이 이 값이면 등록된 패널을 전부 엽니다. 패널 id 는 `hierarchy` 같은 소문자 이름이라 겹치지 않습니다. */
             static constexpr const utf8* kOpenAllPanels = "all";
 
-            /** @brief 셸이 요청한 레이아웃 덮어쓰기(자체 시험 실행) — `setPanelOverrideRequested`. */
+            /** @brief 셸이 요청한 레이아웃 덮어쓰기(자체 테스트 실행) — `setPanelOverrideRequested`. */
             inline static bool _s_bPanelOverrideRequested = false;
 
             /** @brief 이보다 작은 뷰포트(최소화한 창의 0×0)는 비율의 기준으로 삼지 않습니다. 비율이 0 이 되면 되돌릴 수 없습니다. */
@@ -247,7 +247,7 @@ namespace sw::editor
             return;
         }
 
-        // 에디터 자체 시험은 사용자의 레이아웃과 무관한 상태에서 돈다 — 등록된 기본 가시성(코어 열림 · 도구 닫힘)과 기본 도킹 배치.
+        // 에디터 자체 테스트는 사용자의 레이아웃과 무관한 상태에서 돈다 — 등록된 기본 가시성(코어 열림 · 도구 닫힘)과 기본 도킹 배치.
         if ( gv_editorOpenPanel.empty() && isPanelOverrideActive() )
         {
             SW_LOG_INFO( "Editor self test: default panel visibility and dock layout (saved layout is neither read nor written)." );

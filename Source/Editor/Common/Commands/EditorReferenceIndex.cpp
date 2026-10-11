@@ -18,7 +18,7 @@ namespace sw::editor
             /** @brief 참조를 훑는 텍스트 에셋의 확장자입니다. 바이너리(dds, mesh, 셰이더 바이너리)는 글이 아니다. */
             static constexpr const utf8* kArrTextExtension[] = { ".xml", ".json", ".material", ".hlsl", ".hlsli" };
             /**
-             * @brief 텍스트지만 에셋이 아닌 것입니다 — 자동화 시나리오는 시험 입력이라 참조자로 세지 않는다.
+             * @brief 텍스트지만 에셋이 아닌 것입니다 — 자동화 시나리오는 테스트 입력이라 참조자로 세지 않는다.
              * @details 세면 이름 바꾸기가 도는 시나리오 파일까지 고쳐 쓴다. 시나리오가 적은 경로는 에셋이 옮겨지면 시나리오가 져서 알려야 한다.
              */
             static constexpr const utf8* kScenarioSuffix = ".scenario.xml";

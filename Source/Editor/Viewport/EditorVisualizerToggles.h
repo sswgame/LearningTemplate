@@ -1,6 +1,6 @@
 /**
  * @file EditorVisualizerToggles.h
- * @brief 뷰포트 시각화의 켬/끔을 id 로 보관합니다(ImGui 없음 — EditorTest 가 시험합니다).
+ * @brief 뷰포트 시각화의 켬/끔을 id 로 보관합니다(ImGui 없음 — EditorTest 가 테스트합니다).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -35,7 +35,7 @@ namespace sw::editor
         bool isOn( const EditorVisualizerRegistration& registration ) const;
         /** @brief 켜거나 끕니다. 기본값과 같아지면 기록을 지웁니다. */
         void setOn( const EditorVisualizerRegistration& registration, bool bOn );
-        /** @brief 바꾼 기록 수입니다(시험). */
+        /** @brief 바꾼 기록 수입니다(테스트). */
         uint32 getOverrideCount() const { return static_cast<uint32>( _listToggle.size() ); }
 
     private:

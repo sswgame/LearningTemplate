@@ -302,7 +302,7 @@ namespace sw::editor
 {
     /**
      * @struct EditorCommandTableUtil
-     * @brief 커맨드 등록 줄(`SW_EDITOR_COMMAND`)을 레지스트리에 옮깁니다. ImGui 를 쓰지 않으므로 EditorTest 가 시험합니다.
+     * @brief 커맨드 등록 줄(`SW_EDITOR_COMMAND`)을 레지스트리에 옮깁니다. ImGui 를 쓰지 않으므로 EditorTest 가 테스트합니다.
      */
     struct SW_EDITOR_API EditorCommandTableUtil
     {

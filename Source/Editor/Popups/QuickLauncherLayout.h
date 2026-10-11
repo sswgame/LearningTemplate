@@ -1,6 +1,6 @@
 /**
  * @file QuickLauncherLayout.h
- * @brief Quick Open(`QuickLauncherPopup`) 결과 줄의 배치입니다 — 종류 표시 · 이름 · 경로 열. ImGui 를 모릅니다(EditorTest 가 시험합니다).
+ * @brief Quick Open(`QuickLauncherPopup`) 결과 줄의 배치입니다 — 종류 표시 · 이름 · 경로 열. ImGui 를 모릅니다(EditorTest 가 테스트합니다).
  */
 #pragma once
 #include "Core/Common/Types.h"

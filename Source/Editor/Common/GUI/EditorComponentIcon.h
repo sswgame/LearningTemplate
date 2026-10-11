@@ -1,6 +1,6 @@
 /**
  * @file EditorComponentIcon.h
- * @brief 컴포넌트 타입 → 아이콘 글리프 · 색 · 빌보드 여부 표입니다(ImGui 없음 — EditorTest 가 시험합니다).
+ * @brief 컴포넌트 타입 → 아이콘 글리프 · 색 · 빌보드 여부 표입니다(ImGui 없음 — EditorTest 가 테스트합니다).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -46,7 +46,7 @@ namespace sw::editor
          * @return 빌보드 종류 컴포넌트가 있으면 그 줄, 없으면 오브젝트 기본 줄입니다.
          */
         static const EditorComponentIconRow& findObjectRow( const GameObject& object );
-        /** @brief 타입 이름 표의 줄 수 · 줄입니다(시험이 타입 이름을 레지스트리와 맞춘다). */
+        /** @brief 타입 이름 표의 줄 수 · 줄입니다(테스트가 타입 이름을 레지스트리와 맞춘다). */
         static uint32                        getTypeRowCount();
         static const EditorComponentIconRow& getTypeRow( uint32 index );
         /** @brief 글리프(UTF-8 한 글자)의 코드 포인트입니다. 잘못된 글이면 0 입니다(탐침이 숫자로 비교한다). */

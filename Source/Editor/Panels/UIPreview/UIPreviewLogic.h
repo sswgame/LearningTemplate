@@ -1,6 +1,6 @@
 /**
  * @file UIPreviewLogic.h
- * @brief UI 미리보기 패널(`UIPreviewPanel`)의 판단입니다 — 해상도 견본 → 뷰포트, 이미지 맞춤 · 점 옮기기, 위젯 트리 줄. ImGui 를 모른다(EditorTest 가 시험한다).
+ * @brief UI 미리보기 패널(`UIPreviewPanel`)의 판단입니다 — 해상도 견본 → 뷰포트, 이미지 맞춤 · 점 옮기기, 위젯 트리 줄. ImGui 를 모른다(EditorTest 가 테스트한다).
  */
 #pragma once
 #include "Core/Common/Types.h"

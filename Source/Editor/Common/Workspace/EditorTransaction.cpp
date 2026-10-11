@@ -19,7 +19,7 @@ namespace sw::editor
     {
         struct EditorTransactionInternal
         {
-            /** @brief Undo 스택입니다. 서비스가 풀린 뒤(종료 · 시험)에는 nullptr 이라 부르는 쪽이 확인합니다. */
+            /** @brief Undo 스택입니다. 서비스가 풀린 뒤(종료 · 테스트)에는 nullptr 이라 부르는 쪽이 확인합니다. */
             static CommandStack* getCommandStack()
             {
                 return editor::getService<CommandStack>();
@@ -27,7 +27,7 @@ namespace sw::editor
 
             /**
              * @brief 활성 씬을 dirty 로 표시합니다. 기록할 때와 되돌리기 · 다시 하기가 씬을 바꿀 때 부릅니다.
-             * @details 컨텍스트가 없으면(시험 · 도구) 지역 서비스로 건 워크스페이스에 표시합니다.
+             * @details 컨텍스트가 없으면(테스트 · 도구) 지역 서비스로 건 워크스페이스에 표시합니다.
              */
             static void markActiveSceneDirty()
             {

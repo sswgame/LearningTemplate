@@ -1,6 +1,6 @@
 /**
  * @file InspectorPropertyLayout.h
- * @brief 인스펙터가 반사 프로퍼티를 무엇을 · 어떤 순서로 그리는지 정합니다(ImGui 에 의존하지 않아 시험을 붙일 수 있습니다).
+ * @brief 인스펙터가 반사 프로퍼티를 무엇을 · 어떤 순서로 그리는지 정합니다(ImGui 에 의존하지 않아 테스트를 붙일 수 있습니다).
  */
 #pragma once
 #include "Core/Common/Types.h"

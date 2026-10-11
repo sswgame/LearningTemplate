@@ -21,7 +21,7 @@ namespace sw::editor
 {
     /**
      * @class EditorLogCommands
-     * @brief 로그 줄을 IDE 로 여는 판단과 명령을 ImGui 없이 만듭니다(`Test/EditorTest` 가 시험합니다).
+     * @brief 로그 줄을 IDE 로 여는 판단과 명령을 ImGui 없이 만듭니다(`Test/EditorTest` 가 테스트합니다).
      */
     class EditorLogCommands
     {

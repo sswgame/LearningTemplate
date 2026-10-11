@@ -16,9 +16,9 @@ namespace sw::editor
     {
         struct EditorSelfTestInternal
         {
-            /** @brief 시험을 시작하기 전에 기다리는 에디터 프레임 수입니다. 패널이 한 번씩 그려지고 기본 도킹이 적용될 때까지입니다. */
+            /** @brief 테스트를 시작하기 전에 기다리는 에디터 프레임 수입니다. 패널이 한 번씩 그려지고 기본 도킹이 적용될 때까지입니다. */
             static constexpr uint32 kWarmupFrameCount = 5;
-            /** @brief 시험 하나가 쓸 수 있는 최대 단계(프레임) 수입니다. 넘으면 실패로 적고 다음 시험으로 갑니다. */
+            /** @brief 테스트 하나가 쓸 수 있는 최대 단계(프레임) 수입니다. 넘으면 실패로 적고 다음 테스트로 갑니다. */
             static constexpr uint32 kMaxStepCount = 300;
 
             /** @brief 실행기 상태입니다. 모듈이 다시 올라오면 새로 시작합니다. */
@@ -106,9 +106,9 @@ namespace sw::editor
     SW_LOG_CALLER( "EditorSelfTest" );
 
     // 이 파일만 읽으므로 여기서 정의한다(헤더에 선언하지 않는다).
-    /** @brief `-gv_editorSelfTest=<패턴>`: 에디터가 뜬 뒤 이름이 맞는 에디터 자체 시험을 돌리고 앱을 닫습니다(`*` 와 쉼표). */
+    /** @brief `-gv_editorSelfTest=<패턴>`: 에디터가 뜬 뒤 이름이 맞는 에디터 자체 테스트를 돌리고 앱을 닫습니다(`*` 와 쉼표). */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorSelfTest, "", "에디터가 뜬 뒤 이름이 패턴에 맞는 에디터 자체 시험을 돌리고 끝낸다 (* · 쉼표, 비우면 사용 안 함)" );
-    /** @brief `-gv_editorSelfTestReport=<파일>`: 에디터 자체 시험의 결과 줄을 이 파일에 씁니다. */
+    /** @brief `-gv_editorSelfTestReport=<파일>`: 에디터 자체 테스트의 결과 줄을 이 파일에 씁니다. */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorSelfTestReport, "", "에디터 자체 시험 결과를 쓸 파일 (비우면 로그에만)" );
 
     EditorSelfTestContext::EditorSelfTestContext()
@@ -200,7 +200,7 @@ namespace sw::editor
         if ( state._bStarted == false )
         {
             state._bStarted = true;
-            // 시험이 도는 동안 패널이 누를 위젯의 이름표를 적는다(EditorSelfTestMarks::note). 끝나면 시작 전 상태로 되돌린다.
+            // 테스트가 도는 동안 패널이 누를 위젯의 이름표를 적는다(EditorSelfTestMarks::note). 끝나면 시작 전 상태로 되돌린다.
             state._bMarksWereEnabled = EditorSelfTestMarks::isEnabled();
             EditorSelfTestMarks::setEnabled( true );
             for ( uint32 index = 0; index < Registry::getCount(); ++index )

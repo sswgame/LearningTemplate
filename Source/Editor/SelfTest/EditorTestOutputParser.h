@@ -1,6 +1,6 @@
 /**
  * @file EditorTestOutputParser.h
- * @brief Test Runner 창이 시험 실행 파일(`*Test.exe`)의 출력을 읽는 규칙입니다 — `--test_list` 의 케이스 이름과 실행 줄(`[ RUN ]` · `[       OK ]` · `[  FAILED  ]` ·
+ * @brief Test Runner 창이 테스트 실행 파일(`*Test.exe`)의 출력을 읽는 규칙입니다 — `--test_list` 의 케이스 이름과 실행 줄(`[ RUN ]` · `[       OK ]` · `[  FAILED  ]` ·
  *        `[  SKIPPED ]`)을 케이스 결과로 바꿉니다(ImGui 없음, EditorTest 가 본다).
  */
 #pragma once
@@ -10,7 +10,7 @@
 
 namespace sw::editor
 {
-    /** @brief 시험 케이스 하나의 상태입니다. */
+    /** @brief 테스트 케이스 하나의 상태입니다. */
     enum class EditorTestCaseState : uint8
     {
         Running = 0, ///< `[ RUN ]` 은 봤고 끝 줄은 아직이다(프로세스가 그 케이스에서 죽었으면 이대로 남는다)
@@ -34,7 +34,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief 시험 실행 파일의 출력 읽기입니다. */
+    /** @brief 테스트 실행 파일의 출력 읽기입니다. */
     struct EditorTestOutputParser
     {
         /** @brief `--test_list` 출력에서 케이스 이름(`Suite.Case`)을 나온 순서대로 모읍니다. host 스위트 목록 뒤는 보지 않고, 같은 이름은 한 번만 담습니다. */

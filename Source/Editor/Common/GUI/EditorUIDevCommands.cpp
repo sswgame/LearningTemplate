@@ -30,7 +30,7 @@ namespace sw::editor
                     outReply = "unknown theme preset '" + listArgument[0] + "' (ModernDark, DeepCharcoal, MidnightBlue, ClassicDark)";
                     return false;
                 }
-                // 적용만 한다 — 설정 파일에 쓰지 않는다(시험 · 시나리오가 사용자 설정을 바꾸지 않게). 대화상자에서 고르면 저장된다.
+                // 적용만 한다 — 설정 파일에 쓰지 않는다(테스트 · 시나리오가 사용자 설정을 바꾸지 않게). 대화상자에서 고르면 저장된다.
                 EditorThemeUtil::applyPreset( preset );
                 outReply = "theme " + listArgument[0];
                 return true;

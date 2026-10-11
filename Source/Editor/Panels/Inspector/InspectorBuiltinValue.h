@@ -1,7 +1,7 @@
 /**
  * @file InspectorBuiltinValue.h
  * @brief 내장 값 타입(`ReflectBuiltins.xxx`)마다 인스펙터 위젯 갈래와 CallInEditor 인자 · 반환 처리를 정하는 표입니다.
- * @details ImGui 에 의존하지 않아 시험을 붙일 수 있습니다. 표의 줄은 `ReflectBuiltins.xxx` 를 include 해서 만들므로, 내장 타입이
+ * @details ImGui 에 의존하지 않아 테스트를 붙일 수 있습니다. 표의 줄은 `ReflectBuiltins.xxx` 를 include 해서 만들므로, 내장 타입이
  *          하나 늘면 `InspectorWidgetFor` 특수화가 없는 한 컴파일되지 않습니다. 그리는 쪽은 `InspectorPropertyManager.cpp` 입니다.
  */
 #pragma once

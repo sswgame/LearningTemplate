@@ -1,6 +1,6 @@
 /**
  * @file ProfilerScopeHistory.h
- * @brief 에디터 프로파일러 패널의 상태 · 집계입니다(ImGui 없음 — `EditorTest` 가 시험한다). 그리기는 `ProfilerPanel` 입니다.
+ * @brief 에디터 프로파일러 패널의 상태 · 집계입니다(ImGui 없음 — `EditorTest` 가 테스트한다). 그리기는 `ProfilerPanel` 입니다.
  * @details 엔진 `FrameProfiler` 는 세션 전체를 접은 통계(`-gv_profileFrames` 보고)를 듭니다. 패널은 **최근 N 프레임**을 실시간으로 봐야 하므로
  *          프레임마다 마지막으로 접힌 값(`getLastFrameNanos` · `getLastFrameCount`)을 구간별 고리에 담아 창 안에서 p50 · p99 · 최대를 셉니다.
  *          Tracy 가 꺼진 빌드에서도 같습니다 — 이 표는 엔진 표만 읽습니다.

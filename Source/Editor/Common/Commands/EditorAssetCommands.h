@@ -86,7 +86,7 @@ namespace sw::editor
         static void collectFolderListing( string_view folderAbs, vector<EditorFolderListingEntry>& outList, bool bRecursive = false );
         /** @brief 폴더의 직속 하위 폴더 절대 경로를 채웁니다. */
         static void collectChildFolders( string_view folderAbs, vector<string>& outList );
-        /** @brief `collectChildFolders` 가 디스크를 읽은 횟수입니다(프로세스 누계). 자체 시험이 "그리기마다 디스크를 읽지 않는다" 를 본다. */
+        /** @brief `collectChildFolders` 가 디스크를 읽은 횟수입니다(프로세스 누계). 자체 테스트가 "그리기마다 디스크를 읽지 않는다" 를 본다. */
         static uint64 getChildFolderScanCount();
         /** @brief 현재 씬에서 해당 프리팹만 보이게 합니다. 중첩이면 스택에 쌓습니다. */
         static bool enterPrefabIsolation( string_view prefabPath );

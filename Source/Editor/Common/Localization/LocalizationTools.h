@@ -69,7 +69,7 @@ namespace sw
 {
     /**
      * @struct LocalizationTools
-     * @brief 상태 없는 도구 함수입니다. 헤드리스 진입점(`runEditorLocalizationTask`, App 이 에디터 모듈을 올려 부른다)과 시험이 부릅니다.
+     * @brief 상태 없는 도구 함수입니다. 헤드리스 진입점(`runEditorLocalizationTask`, App 이 에디터 모듈을 올려 부른다)과 테스트가 부릅니다.
      */
     struct LocalizationTools
     {
