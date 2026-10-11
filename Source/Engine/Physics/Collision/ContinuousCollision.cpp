@@ -2,9 +2,8 @@
 
 #include "Engine/Physics/Collision/ContinuousCollision.h"
 
+#include "Core/Math/AABB.h"
 #include "Core/Math/Math.h"
-
-#include "Engine/Physics/Collision/AABB.h"
 
 namespace sw
 {

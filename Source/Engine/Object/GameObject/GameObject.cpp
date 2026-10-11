@@ -2,13 +2,14 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 
+#include "Core/Math/AABB.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/TagComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
-#include "Engine/Physics/Collision/AABB.h"
 #include "Engine/Reflection/ReflectionCore.h"
 
 namespace sw

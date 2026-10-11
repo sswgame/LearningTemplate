@@ -2,6 +2,7 @@
 
 #include "Engine/Object/Component/2D/TileMapRendererComponent.h"
 
+#include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
@@ -9,7 +10,6 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Physics/Collision/AABB.h"
 #include "Engine/Physics/PhysicsWorld.h"
 
 namespace sw

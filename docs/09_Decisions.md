@@ -294,6 +294,7 @@
 - **Engine 폴더 사이의 작은 고리는 "위층이 아래층 등록표에 등록" 과 "둘을 다 아는 층으로 옮기기" 로 풉니다**(2026-10-11, 엔진 분할 1 단계). 자동화 실행기는 UI 를 모르고 UI 가 단계 · 로딩 화면 시작 차단 조건(`SW_AUTOMATION_START_BLOCKER`)을 올립니다 — 언리얼 Automation 도 모듈이 테스트 · 래치 명령을 등록하고 실행기는 그 모듈을 모릅니다.
   정점 애니메이션 굽기(`MeshVertexAnimationBaker`)는 `Object/Animation` 으로, 물리 디버그 선 어댑터는 조립점 `EngineLoop.cpp` 로 옮겨 `Graphics` 가 `Animation` · `Physics` 를 include 하지 않습니다 — 언리얼 AnimToTexture 도 애니메이션과 렌더를 함께 드는 별도 플러그인입니다.
   `Source/Engine/Resource/AssetManager.cpp` 의 기능 캐시 소유(Animation · Character · Destruction · Graphics)는 게이트의 배선 예외로 두고 2 단계(코어 / 기능 가르기)에서 등록 반전과 함께 다룹니다.
+- **`AABB` 는 Core 수학 타입입니다**(2026-10-11, 엔진 분할). `Engine/Physics/Collision/AABB.h` → `Core/Math/AABB.h`(`Frustum.h` 옆) — 언리얼 `FBox` · `FBoxSphereBounds` 와 유니티 `Bounds` 도 물리가 아닌 수학 타입입니다. 레이어를 보는 겹침 질의 `queryOverlaps` 만 물리의 `CollisionLayers.h` 에 남고, `Spatial` 은 티어 4 → 1 로, Object → Physics include 는 41 → 36 으로 줄었습니다.
 
 ### 5-4. 데이터, 직렬화, 설정
 

@@ -5,8 +5,7 @@
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
-
-#include "Engine/Physics/Collision/AABB.h"
+#include "Core/Math/AABB.h"
 
 namespace sw
 {

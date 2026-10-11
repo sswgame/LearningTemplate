@@ -4,6 +4,7 @@
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Commands/EditorGlobalVariableCommands.h"
@@ -16,7 +17,6 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Physics/Collision/AABB.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 

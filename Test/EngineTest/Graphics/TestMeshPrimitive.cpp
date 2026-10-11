@@ -2,6 +2,7 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/FrameArenaAllocator.h"
+#include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Task/TaskManager.h"
@@ -20,7 +21,6 @@
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Physics/Collision/AABB.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/RenderFramePacket.h"

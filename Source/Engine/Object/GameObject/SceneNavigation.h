@@ -20,6 +20,7 @@
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/AABB.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
@@ -27,7 +28,6 @@
 #include "Engine/Navigation/NavMeshAsset.h"
 #include "Engine/Navigation/NavMeshSettings.h"
 #include "Engine/Navigation/NavigationTypes.h"
-#include "Engine/Physics/Collision/AABB.h"
 
 namespace sw
 {

@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/Capture/PortraitRenderer.h"
 
+#include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -15,7 +16,6 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Physics/Collision/AABB.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Resource/AssetManager.h"

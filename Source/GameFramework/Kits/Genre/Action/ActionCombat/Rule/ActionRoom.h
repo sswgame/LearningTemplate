@@ -8,9 +8,9 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/AABB.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Physics/Collision/AABB.h"
 #include "Engine/Physics/Collision/CollisionLayers.h"
 
 #include "GameFramework/Base/Foundation/Utility/Grid/FacingDir.h"

@@ -30,7 +30,7 @@
 3. **빌드 속도 2 ~ 6 단계.** 계획 [빌드 속도](BuildSpeed.md). 기준선은 `docs/08_Verification.md` "빌드 속도". 단계마다 같은 표로 전후를 남기고, 효과 없으면 되돌려 `docs/09_Decisions.md` 3절에 숫자와 함께 적는다. PCH 공유(3 단계)는 타깃마다 다른 정의
    (`SW_LOG_TAG` · `SW_EXPORTS`/`SW_IMPORTS` · 타깃별 `FlagOps.gen.h` 강제 포함)가 걸림돌이다 — 먼저 컴파일 정의 차이 목록을 뽑는다. 7 ~ 9 는 필요할 때만(사용자 결정).
 4. **중복 정리 — 끝.** 결정적 난수 · 격자 사본 여섯 · 타이머(남은 7곳은 엔진 · 에디터라 그대로)는 끝났고, 키트 체력 직접 관리의 `Vitality` 이전은 하지 않기로 했다(결정 기록 5-8). 남은 격자 손셈(`Habitat` · `Overworld` 타일맵 · 게임 코드)은 파일 스키마가 얽혀 키트가 `getTopology()` 를 열 때 같이.
-5. **엔진 분할.** 계획 [엔진 분할](EnginePartition.md) 0 단계(기준 측정) · 2 ~ 5 단계(작은 고리의 남은 `Resource → Animation` · `AABB` 를 Physics 밖으로, `Object` 코어 / 기능 가르기, `OBJECT` 라이브러리 → DLL 승격, 월드를 값으로, 모듈 창구).
+5. **엔진 분할.** 계획 [엔진 분할](EnginePartition.md) 0 단계(기준 측정) · 2 ~ 5 단계(작은 고리의 남은 `Resource → Animation`, `Object` 코어 / 기능 가르기, `OBJECT` 라이브러리 → DLL 승격, 월드를 값으로, 모듈 창구).
 6. **서버 디버깅.** 계획 [서버 디버깅](ServerDebug.md) — S2(디버거 대기 · 서버 `pause`/`step`)는 들어갔다. 다음 S1 은 `Server` 에서 네트워크 서버를 여는 시험 게임이 먼저 있어야 접속을 확인할 수 있다.
 7. **6 차(주석을 새 문체로).**
 
