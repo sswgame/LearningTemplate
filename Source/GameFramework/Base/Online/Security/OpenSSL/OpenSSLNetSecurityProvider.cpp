@@ -388,11 +388,13 @@ namespace sw
                 OSSL_PARAM_BLD* pBuilder = OSSL_PARAM_BLD_new();
                 if ( pBuilder == nullptr )
                     return nullptr;
-                BIGNUM*       pModulus  = nullptr;
-                BIGNUM*       pExponent = nullptr;
+                BIGNUM* pModulus  = nullptr;
+                BIGNUM* pExponent = nullptr;
+                // OSSL_PARAM_BLD 의 push_* 는 포인터만 적어 두고 OSSL_PARAM_BLD_to_param 에서 복사한다 — 넘기는 버퍼는 to_param 까지 살아 있어야 한다.
                 vector<uint8> pointBytes;
-                const utf8*   pKeyType = "RSA";
-                bool          bBuilt   = false;
+                utf8          arrGroup[] = "prime256v1";
+                const utf8*   pKeyType   = "RSA";
+                bool          bBuilt     = false;
                 if ( publicKey._algorithm == NetSignatureAlgorithm::RsaPkcs1Sha256 )
                 {
                     pModulus  = BN_bin2bn( publicKey._modulus.data(), static_cast<int32>( publicKey._modulus.size() ), nullptr );
@@ -403,9 +405,8 @@ namespace sw
                 }
                 else
                 {
-                    pKeyType              = "EC";
-                    const bool bSizeOk    = static_cast<int32>( publicKey._x.size() ) == kEcCoordinateSize && static_cast<int32>( publicKey._y.size() ) == kEcCoordinateSize;
-                    utf8       arrGroup[] = "prime256v1";
+                    pKeyType           = "EC";
+                    const bool bSizeOk = static_cast<int32>( publicKey._x.size() ) == kEcCoordinateSize && static_cast<int32>( publicKey._y.size() ) == kEcCoordinateSize;
                     if ( bSizeOk )
                     {
                         pointBytes.push_back( 0x04 ); // 압축하지 않은 점

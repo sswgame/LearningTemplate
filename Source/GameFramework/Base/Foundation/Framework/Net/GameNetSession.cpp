@@ -169,6 +169,14 @@ namespace sw
             return;
         // 스레드를 먼저 멈춘다 — 끊기 패킷은 disconnectAll 이 바로 보낸다(update 를 돌 스레드가 없어도).
         _thread.stop();
+        // 마지막 update 뒤에 쌓인 연결 사건도 로그에 남긴다 — 접속 직후 종료 명령이 같은 틱에 오면 update 없이 여기로 온다.
+        // 처리기에는 나눠 주지 않는다(키트 처리기는 onShutdown 에서 내려갔다).
+        if ( _role != GameNetRole::None )
+        {
+            _listEventScratch.clear();
+            _host.drainEvents( _listEventScratch );
+            logEvents();
+        }
         _host.disconnectAll();
         if ( _role != GameNetRole::None )
             SW_LOG_INFO( "Net session closed (%#)", toString( _role ) );
@@ -187,6 +195,11 @@ namespace sw
         reportConnectResult();
         _listEventScratch.clear();
         (void)_router.pump( _host, nullptr, &_listEventScratch ); // 처리기가 없는 메시지는 버린다(맡은 키트가 없다)
+        logEvents();
+    }
+
+    void GameNetSession::logEvents() const
+    {
         for ( const NetHostEvent& event : _listEventScratch )
         {
             if ( _role == GameNetRole::Server )
