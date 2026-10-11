@@ -329,5 +329,5 @@ namespace sw::editor
         ImGui::EndChild();
     }
 
-    SW_EDITOR_PANEL( MultiplayerPanel, "multiplayer", EditorPanelCategory::Tool, 2030 );
+    SW_EDITOR_PANEL( MultiplayerPanel, "multiplayer", EditorPanelCategory::Tool, 2035 );
 } // namespace sw::editor
