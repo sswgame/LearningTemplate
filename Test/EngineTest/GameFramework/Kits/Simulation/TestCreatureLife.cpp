@@ -546,7 +546,7 @@ SW_TEST_CASE( CreatureLifeTest, TownStateRoundTripContinuesTheSameTown )
     SW_EXPECT_EQUAL( town.countHabitats( "tall_grass" ), restored.countHabitats( "tall_grass" ) );
     SW_EXPECT_TRUE( town.getAppealTierName() == restored.getAppealTierName() );
 
-    // 받은 부탁도 이어진다 — 되살린 마을이 열매를 건네받아 끝내고 보상한다(호감도는 공유 평판이라 두 마을이 같은 값을 본다)
+    // 받은 부탁도 이어진다 — 복원한 마을이 열매를 건네받아 끝내고 보상한다(호감도는 공유 평판이라 두 마을이 같은 값을 본다)
     const int32 friendshipBefore = town.getFriendship( "sprout" );
     Inventory   inventory;
     inventory.initialize( &world._items, 8 );

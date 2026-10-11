@@ -22,7 +22,7 @@ namespace
     using FakeRegistry  = EditorRegistry<FakeRegistration>;
     using FakeRegistrar = EditorRegistrar<FakeRegistration>;
 
-    /** @brief 등록부의 id 를 순서대로 쉼표로 이은 글입니다. */
+    /** @brief 레지스트리의 id 를 순서대로 쉼표로 이은 글입니다. */
     string joinRegisteredIDs()
     {
         string text;
@@ -39,7 +39,7 @@ namespace
 /**
  * @brief [EditorRegistryTest] 보이는 순서는 등록 순서가 아니라 순서 키 — 같으면 id 사전순 — 가 정한다
  * @details 패널 · 팝업 · 시각화는 각자 자기 .cpp 의 정적 등록자로 등록되고, 번역 단위 사이의 정적 초기화 순서는 정해지지 않는다.
- *          그래서 Panel 메뉴 · 툴바 체크박스 순서가 링크 순서에 따라 바뀌지 않으려면 등록부가 순서 키로 줄을 세워야 한다.
+ *          그래서 Panel 메뉴 · 툴바 체크박스 순서가 링크 순서에 따라 바뀌지 않으려면 레지스트리가 순서 키로 줄을 세워야 한다.
  */
 SW_TEST_CASE( EditorRegistryTest, OrderKeyDecidesOrderNotRegistrationOrder )
 {

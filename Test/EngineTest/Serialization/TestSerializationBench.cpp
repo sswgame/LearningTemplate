@@ -1,7 +1,7 @@
 /**
  * @file TestSerializationBench.cpp
  * @brief 직렬화 벤치 — 가장 큰 씬(`game/abilityarena/maps/arena.scene.xml`, 282 KB)의 로드와 그 오브젝트 상태의 세 형식 쓰기 · 읽기.
- * @details 숫자를 찍기만 하고 판정하지 않는다(`TaskManagerBenchTest` 와 같은 규칙: Release 로 읽고, 이전/이후 바이너리를 같은 시각에 번갈아 잰다).
+ * @details 숫자를 찍기만 하고 판정하지 않는다(`TaskManagerBenchTest` 와 같은 규칙: Release 로 읽고, 이전/이후 바이너리를 같은 시각에 번갈아 측정한다).
  *          EngineTest 에는 게임 모듈이 없어 게임 컴포넌트는 원문을 맡는 길(`MissingComponent`)로 지난다 — 이전/이후가 같은 조건이다.
  */
 #include "pch.h"
@@ -38,7 +38,7 @@ namespace
 SW_TEST_CASE( SerializationBenchTest, LargeSceneLoadAndObjectStateRoundTrip )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    // 게임 모듈 타입의 "모르는 타입" 경고를 재는 동안만 막는다 — 결과 줄([Bench])은 남아야 한다.
+    // 게임 모듈 타입의 "모르는 타입" 경고를 측정하는 동안만 막는다 — 결과 줄([Bench])은 남아야 한다.
     sw::unique_ptr<test::ScopedLogSuppressor> pSuppressor = sw::make_unique<test::ScopedLogSuppressor>();
 
     sw::vector<int64> listLoadMicro;
@@ -103,7 +103,7 @@ SW_TEST_CASE( SerializationBenchTest, LargeSceneLoadAndObjectStateRoundTrip )
             const sw::Stopwatch stopwatch;
             for ( const sw::string& json : listJSON )
             {
-                (void)sw::ObjectStateSerializer::loadFromJSONString( pScratch, json ); // 시간만 잰다
+                (void)sw::ObjectStateSerializer::loadFromJSONString( pScratch, json ); // 시간만 측정한다
             }
             listJSONReadMicro.push_back( stopwatch.getElapsedMicroseconds() );
         }
@@ -112,7 +112,7 @@ SW_TEST_CASE( SerializationBenchTest, LargeSceneLoadAndObjectStateRoundTrip )
             for ( size_t objectIndex = 0; objectIndex < listObject.size(); ++objectIndex )
             {
                 listBinary[objectIndex].clear();
-                (void)sw::ObjectStateSerializer::saveToBinaryBuffer( listObject[objectIndex], listBinary[objectIndex] ); // 시간만 잰다
+                (void)sw::ObjectStateSerializer::saveToBinaryBuffer( listObject[objectIndex], listBinary[objectIndex] ); // 시간만 측정한다
             }
             listBinaryWriteMicro.push_back( stopwatch.getElapsedMicroseconds() );
         }
@@ -120,7 +120,7 @@ SW_TEST_CASE( SerializationBenchTest, LargeSceneLoadAndObjectStateRoundTrip )
             const sw::Stopwatch stopwatch;
             for ( const sw::vector<uint8>& bytes : listBinary )
             {
-                (void)sw::ObjectStateSerializer::loadFromBinaryBuffer( pScratch, bytes.data(), bytes.size() ); // 시간만 잰다
+                (void)sw::ObjectStateSerializer::loadFromBinaryBuffer( pScratch, bytes.data(), bytes.size() ); // 시간만 측정한다
             }
             listBinaryReadMicro.push_back( stopwatch.getElapsedMicroseconds() );
         }

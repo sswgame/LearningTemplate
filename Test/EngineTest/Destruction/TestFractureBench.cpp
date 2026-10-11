@@ -13,7 +13,7 @@
 
 /**
  * @brief [FractureBenchTest] 파괴 쇼케이스의 beginPlay + 첫 틱 — 잎 볼록 껍질을 짓는 한 프레임(다섯 판)
- * @details 씬을 판마다 새로 세워 beginPlay 와 첫 틱(파괴물마다 첫 물리 스텝 앞에서 상태 · 잎 셰이프를 세운다)을 잰다.
+ * @details 씬을 판마다 새로 세워 beginPlay 와 첫 틱(파괴물마다 첫 물리 스텝 앞에서 상태 · 잎 셰이프를 세운다)을 측정한다.
  *          기준: 잎마다 ~80 us(Release)면 잎 312 개에 ≈ 25 ms.
  */
 SW_TEST_CASE( FractureBenchTest, ShowcaseBeginPlay )

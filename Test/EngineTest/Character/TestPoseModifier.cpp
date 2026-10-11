@@ -279,7 +279,7 @@ SW_TEST_CASE( PoseModifierTest, FootPlacementUsesScenePhysics )
     {
         manager.tick( 1.0f / 60.0f );
     }
-    // 면: 상자 윗면 가운데와 법선을 같은 회전(오일러 → 쿼터니언)으로 구해 발 X · Z 의 높이를 잰다.
+    // 면: 상자 윗면 가운데와 법선을 같은 회전(오일러 → 쿼터니언)으로 구해 발 X · Z 의 높이를 측정한다.
     const quaternion tilt        = quaternion::makeFromYawPitchRoll( float3{ 0.0f, 0.0f, 0.25f } );
     const float3     normal      = float3::transform( float3::UnitY, tilt );
     const float3     top         = float3{ 0.0f, -0.5f, 0.0f } + float3::transform( float3{ 0.0f, 0.5f, 0.0f }, tilt );

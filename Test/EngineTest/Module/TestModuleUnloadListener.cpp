@@ -74,7 +74,7 @@ namespace
 
 /**
  * @brief [ModuleUnloadListenerTest] 정리는 살아 있는 리스너를 모두 훑는다 — 만들어지면 들고, 사라지면 빠진다
- * @details 등록부를 하나 더할 때 고칠 곳은 그 등록부의 상속 한 줄이어야 한다. 여기서는 엔진이 모르는 가짜 리스너를 세워 `releaseModuleCode` 가
+ * @details 레지스트리를 하나 더할 때 고칠 곳은 그 레지스트리의 상속 한 줄이어야 한다. 여기서는 엔진이 모르는 가짜 리스너를 세워 `releaseModuleCode` 가
  *          그것까지 지나가는지, 범위 밖은 건드리지 않는지, "이미지를 내리지 말라" 는 답을 그대로 올리는지, 사라진 리스너는 목록에서 빠지는지 본다.
  */
 SW_TEST_CASE( ModuleUnloadListenerTest, ReleaseModuleCodeSweepsEveryLiveListener )
@@ -102,7 +102,7 @@ SW_TEST_CASE( ModuleUnloadListenerTest, ReleaseModuleCodeSweepsEveryLiveListener
         SW_EXPECT_EQUAL( 0u, sw::ModuleImageUtil::releaseModuleCode( "ProbeModule", s_arrProbeImage, s_arrProbeImage + 16, &bKeepImageMapped ) );
         SW_EXPECT_TRUE( bKeepImageMapped );
 
-        // 사본도 따로 오른다(복사로 생긴 등록부가 훑기에서 빠지지 않게).
+        // 사본도 따로 오른다(복사로 생긴 레지스트리가 훑기에서 빠지지 않게).
         const ProbeUnloadListener copy{ probe };
         SW_EXPECT_EQUAL( listenerCountBefore + 2, sw::IModuleUnloadListener::getListenerCount() );
     }

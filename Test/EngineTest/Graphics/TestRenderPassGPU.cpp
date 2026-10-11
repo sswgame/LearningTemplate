@@ -91,7 +91,7 @@ namespace
     /**
      * @brief 첨부 하나의 R 채널 평균(0~255)을 되읽습니다. 실패하면 0.
      * @details 반정밀도(R16G16B16A16_FLOAT) 첨부는 [0,1] 로 클램프해 환산한다 — 두 판을 비교하는 데만
-     *          쓰므로 정확한 휘도가 아니라 **같은 규칙으로 잰 같은 수**이면 된다.
+     *          쓰므로 정확한 휘도가 아니라 **같은 규칙으로 측정한 같은 수**이면 된다.
      */
     float64 readMeanChannel( sw::FrameRenderer& renderer, const utf8* pAttachment )
     {
@@ -544,7 +544,7 @@ namespace
     };
 
     /**
-     * @brief 그려진 픽셀 마스크 — 모서리 픽셀(배경)과 색 거리가 문턱을 넘는 픽셀입니다. 클리어 색 · 톤매핑과 무관하게 배경을 걷어 냅니다.
+     * @brief 그려진 픽셀 마스크 — 모서리 픽셀(배경)과 색 거리가 임계값을 넘는 픽셀입니다. 클리어 색 · 톤매핑과 무관하게 배경을 걷어 냅니다.
      */
     struct DrawnMask
     {
@@ -1136,7 +1136,7 @@ SW_TEST_CASE( RenderPassGPUTest, FrameRendererDeferredPipelineParallelLevels )
         SW_EXPECT_TRUE_MSG( renderer.getGPUScene().getInstances().empty() == false, ( label + ": GPUScene 이 비었다" ).c_str() );
         SW_EXPECT_TRUE_MSG( serialMean > 0.0, ( label + ": 직렬 판의 LitColor 를 되읽지 못했다" ).c_str() );
 
-        // **병렬 판은 세 번 재서 각각 기준과 대조한다.** 레이스는 **프로세스마다 굳는** 경향이 있어
+        // **병렬 판은 세 번 측정해서 각각 기준과 대조한다.** 레이스는 **프로세스마다 굳는** 경향이 있어
         // (한 번 어긋나면 그 프로세스의 판이 모두 어긋난다) 반복은 굳지 않는 경우를 위한 보험이다.
         // **코드가 옳으면 언제나 통과한다**(직렬 == 병렬은 결정적이다).
         constexpr uint32 kParallelRunCount = 3;
@@ -1271,7 +1271,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialPermutationDrivesBatchPSO )
                     SW_EXPECT_TRUE_MSG( false, ( label + ": 배치 PSO 의 디스크립터를 찾을 수 없다" ).c_str() );
                 }
 
-                // 그림자 패스는 자기 지오메트리 셰이더가 정본이다 — 머티리얼 셰이더로 갈아타면 안 된다.
+                // 그림자 패스는 자기 지오메트리 셰이더가 원본이다 — 머티리얼 셰이더로 갈아타면 안 된다.
                 const sw::RHIPipelineStateHandle shadowPSO = renderer.getEnginePSO( sw::RenderPassType::Shadow );
                 sw::RHIPipelineStateDesc         shadowDesc{};
                 if ( shadowPSO != 0 && renderer.findPSODesc( shadowPSO, shadowDesc ) )
@@ -2059,7 +2059,7 @@ SW_TEST_CASE( RenderPassGPUTest, FrameRendererParityAllBackends )
             bOk = scene.ensureDefaultCameras();
 
         // 메시를 **여러 개** 만든다 — 배치 키에 메시가 들어가므로 곧 배치 수이고, 배치가 하나뿐이면
-        // 인스턴스 시작 오프셋이 늘 0 이라 인다이렉트 드로우의 백엔드 차이를 전혀 재지 못한다
+        // 인스턴스 시작 오프셋이 늘 0 이라 인다이렉트 드로우의 백엔드 차이를 전혀 측정하지 못한다
         // (Vulkan 의 gl_InstanceIndex 가 firstInstance 를 포함하는 차이가 그런 것이다).
         constexpr uint32         kParityMeshCount = 3;
         sw::shared_ptr<sw::Mesh> arrMesh[kParityMeshCount];
@@ -2350,9 +2350,9 @@ SW_TEST_CASE( RenderPassGPUTest, ViewModeSelectsDistinctPipelineStates )
 /**
  * @brief 디바이스를 다시 만든 뒤에도 **같은 FrameRenderer** 가 다시 그리는지 — 백엔드 교체의 재현.
  * @details 앱의 교체 경로는 GT GPUScene 을 비우고, FrameRenderer 를 shutdown → 새 디바이스로 initialize 한다.
- *          **투명(유리) 머티리얼**로 잰다 — 불투명은 머티리얼 버퍼가 빠져도(폴백 0) 보이지만, 투명은 알파 0 이라
+ *          **투명(유리) 머티리얼**로 측정한다 — 불투명은 머티리얼 버퍼가 빠져도(폴백 0) 보이지만, 투명은 알파 0 이라
  *          사라진다. 예컨대 `clear()` 가 그룹 목록만 지우고 경로→인덱스 맵을 남기면 그룹 조회가 범위 밖 인덱스를 돌려줘
- *          빈 화면이 된다. 세 번 잰다: 첫 디바이스, 재생성 뒤 같은 렌더러, 재생성 뒤
+ *          빈 화면이 된다. 세 번 측정한다: 첫 디바이스, 재생성 뒤 같은 렌더러, 재생성 뒤
  *          새 렌더러(대조군 — 렌더러에 남은 상태인지 디바이스 쪽인지 가른다).
  */
 SW_TEST_CASE( RenderPassGPUTest, RendererSurvivesDeviceRecreate )
@@ -2513,8 +2513,8 @@ SW_TEST_CASE( RenderPassGPUTest, MeshReleaseWaitsForTheRenderThreadFrame )
 }
 
 /**
- * @brief 새 디바이스가 서면 등록부가 **스스로** 리소스를 되살린다 — 아무도 각 리소스를 손으로 다시 올리지 않는다.
- * @details 이 테스트가 지키는 것은 "어느 캐시를 다시 올려야 하는지 기억하지 않아도 된다" 이다. 되살릴 목록을
+ * @brief 새 디바이스가 서면 레지스트리가 **스스로** 리소스를 복원한다 — 아무도 각 리소스를 손으로 다시 올리지 않는다.
+ * @details 이 테스트가 지키는 것은 "어느 캐시를 다시 올려야 하는지 기억하지 않아도 된다" 이다. 복원할 목록을
  *          바깥이 들면 목록에서 빠진 것은 교체 뒤 조용히 비어 있다. 아래 initAllFor 한 줄을 지우면 이 테스트가 빨개진다.
  */
 SW_TEST_CASE( RenderPassGPUTest, RegistryRestoresResourcesOnNewDevice )
@@ -2533,7 +2533,7 @@ SW_TEST_CASE( RenderPassGPUTest, RegistryRestoresResourcesOnNewDevice )
 
     SW_ASSERT_TRUE( device.recreateDevice() );
 
-    // 여기가 요점이다 — 큐브를 **이름으로 부르지 않는다.** 등록부가 알아서 되살린다.
+    // 여기가 요점이다 — 큐브를 **이름으로 부르지 않는다.** 레지스트리가 알아서 복원한다.
     sw::RHIRenderResource::initAllFor( device.get() );
     SW_EXPECT_TRUE_MSG( cube->isRHIValid(), "새 디바이스가 섰는데 등록부가 리소스를 되살리지 않았다" );
 
@@ -2666,7 +2666,7 @@ SW_TEST_CASE( RenderPassGPUTest, DeferredPipelineDrawsGeometry )
  * @brief [RenderPassGPUTest] 씬 배치를 멀티 드로우로 묶어도 그림이 같고, 호출 수는 배치 수보다 적다
  * @details 배치마다 다른 값(인스턴스 시작·모프 풀·정점 풀 시작)을 배치 표(g_SwBatches)로 옮기고, 같은 PSO·머티리얼의 연속
  *          배치를 drawIndirect 한 번(멀티 드로우)으로 낸다. 인스턴스는 슬롯 1 의 인스턴스 슬롯 스트림(간접 인자의 startInstance 부터)
- *          으로 자기 자리를 얻고, 배치는 인스턴스에서 — 어느 통로가 틀려도 그림이 달라진다(엉뚱한 인스턴스·정점 구간). 그래서
+ *          으로 자기 자리를 얻고, 배치는 인스턴스에서 — 어느 경로가 틀려도 그림이 달라진다(엉뚱한 인스턴스·정점 구간). 그래서
  *          묶은 그림과 배치마다 부른 그림, 그리고 정점 풀 없이 그린 그림을 픽셀로 비교한다.
  */
 SW_TEST_CASE( RenderPassGPUTest, MergedSceneDrawsMatchPerBatch )
@@ -3009,7 +3009,7 @@ SW_TEST_CASE( RenderPassGPUTest, RenderTargetsArePublishedForTheEditor )
  *          원소**를 읽고, 그것이 정확히 B≠A 로 나타난다(binding.hlsli 주석). C 는 "모프가 실제로 걸리는가"
  *          만 본다 — A 와 **달라야** 한다.
  *          **모프 시각을 고정한다**(`setAnimationTimeOverride`). 변위는 sin(2t + F·(x+y+z)) 인데 단위 큐브 정점의 위상(F = 6)은 2π 로 접으면
- *          모두 π ± 0.43 근처라, t ≈ π/2 + kπ 에서는 모든 정점의 변위가 함께 0 을 지나 노멀 음영만 남는다(달라진 픽셀 약 2 %, 문턱 5 % 미만).
+ *          모두 π ± 0.43 근처라, t ≈ π/2 + kπ 에서는 모든 정점의 변위가 함께 0 을 지나 노멀 음영만 남는다(달라진 픽셀 약 2 %, 임계값 5 % 미만).
  *          벽시계로 찍으면 부하로 늦어진 실행이 그 창(주기 π 초의 약 12 %)에 들어가 진다. t = 3π/4 는 |sin 2t| = 1 인 자리다.
  */
 SW_TEST_CASE( RenderPassGPUTest, MorphPoolIdentityMatchesRest )
@@ -3163,7 +3163,7 @@ SW_TEST_CASE( RenderPassGPUTest, MorphPoolIdentityMatchesRest )
             if ( rest._bOk && morphed._bOk )
             {
                 // 지표는 **달라진 픽셀 수**다 — 변형은 위치와 노멀을 같이 바꾸므로 음영이 바뀐 픽셀까지 센다. 고정한 시각(3π/4)에서
-                // 네 백엔드 모두 그려진 픽셀의 약 18 % 가 다르다(문턱 5 %).
+                // 네 백엔드 모두 그려진 픽셀의 약 18 % 가 다르다(임계값 5 %).
                 const uint32 diffCount = countDifferentPixels( rest, morphed );
                 SW_EXPECT_TRUE_MSG( diffCount > rest._drawnCount / 20,
                                     ( label + ": 모프를 켰는데 그림이 레스트와 같다 (달라진 픽셀 " + sw::to_string( diffCount ) + " / 그려진 " +
@@ -4340,7 +4340,7 @@ SW_TEST_CASE( RenderPassGPUTest, RenamedGBufferAttachmentsRenderTheSameImage )
         pipelineText     = pipelineText.substr( 0, outputBegin ) + block + pipelineText.substr( outputEnd );
         SW_ASSERT_TRUE( pipelineText.find( "<item>MainNormal</item>", outputBegin ) < pipelineText.find( "<item>MainAlbedo</item>", outputBegin ) );
     }
-    // 정본 이름이 남아 있으면 테스트가 아무것도 바꾸지 않은 것이다.
+    // 원본 이름이 남아 있으면 테스트가 아무것도 바꾸지 않은 것이다.
     SW_ASSERT_TRUE( pipelineText.find( "<item>GBufferAlbedo</item>" ) == sw::string::npos );
     SW_ASSERT_TRUE( pipelineText.find( "_role=\"GBufferAlbedo\"" ) != sw::string::npos );
     const sw::string renamedPath = test::makeTempPath( "renameddeferredpipeline.xml" );
@@ -4896,7 +4896,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialTexturesAreSampledLinearWrap )
     uint32     comparedCount{ 0 };
     uint32     referenceMixed{ 0 };
     sw::string referenceName;
-    // 기준(네이티브 bindless)을 먼저 잰다. 목록 순서(DX11 이 먼저)를 그대로 쓰면 비교할 기준이 없다.
+    // 기준(네이티브 bindless)을 먼저 측정한다. 목록 순서(DX11 이 먼저)를 그대로 쓰면 비교할 기준이 없다.
     sw::vector<sw::RHIBackend> listBackend;
     for ( sw::RHIBackend backend : test::kArrAllRHIBackend )
     {
@@ -5133,7 +5133,7 @@ SW_TEST_CASE( RenderPassGPUTest, EngineTextureSlotsAreSampledLinearClamp )
         const uint32 bloomDiffer = countDiffer( capture._bloomColor, reference._bloomColor );
         SW_LOG_INFO( "%#drawn %# px (left edge %#), SceneColor differs %# px, BloomColor differs %# px from %#", label, drawnCount, leftEdgeDrawnCount,
                      sceneDiffer, bloomDiffer, referenceName );
-        // 입력이 같아야 블룸 비교가 샘플러를 잰다.
+        // 입력이 같아야 블룸 비교가 샘플러를 측정한다.
         SW_EXPECT_TRUE_MSG( sceneDiffer * 1000u <= drawnCount * kMaxDifferPermille,
                             ( label + "SceneColor 가 " + referenceName + "과 " + sw::to_string( sceneDiffer ) + " 픽셀 다르다 — 블룸 비교의 전제가 깨졌다" ).c_str() );
         SW_EXPECT_TRUE_MSG( bloomDiffer * 1000u <= drawnCount * kMaxDifferPermille,
@@ -5461,7 +5461,7 @@ SW_TEST_CASE( RenderPassGPUTest, HalfResolutionBloomBlursByTheSourceTexel )
     const sw::string halfPath = test::makeTempPath( "halfsourcebloomforwardpipeline.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( halfPath, pipelineText ) );
 
-    // FrameRendererConstants.cpp 의 kDefaultBloomParams(문턱 · 세기 · 무릎)와 같은 값.
+    // FrameRendererConstants.cpp 의 kDefaultBloomParams(임계값 · 세기 · 무릎)와 같은 값.
     constexpr float32 kBloomThreshold = 0.55f;
     constexpr float32 kBloomIntensity = 0.65f;
     constexpr float32 kBloomKnee      = 0.25f;

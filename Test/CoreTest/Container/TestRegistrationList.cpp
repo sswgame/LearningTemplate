@@ -8,7 +8,7 @@ using namespace sw;
 
 namespace
 {
-    /** @brief 등록 대상 역할만 하는 객체입니다. 등록부는 소유하지 않으므로 테스트가 들고 있습니다. */
+    /** @brief 등록 대상 역할만 하는 객체입니다. 레지스트리는 소유하지 않으므로 테스트가 들고 있습니다. */
     struct RegistrationProbe
     {
         int32 _value{ 0 };
@@ -16,7 +16,7 @@ namespace
 } // namespace
 
 // ------------------------------------------------------------------------------
-// RegistrationListTest — 엔진 · 에디터 등록부의 공통 모양
+// RegistrationListTest — 엔진 · 에디터 레지스트리의 공통 모양
 // ------------------------------------------------------------------------------
 /**
  * @brief [RegistrationListTest] 같은 객체 · nullptr 는 한 번도 더 오르지 않고, 빼기는 남은 것의 등록 순서를 지킨다
@@ -47,7 +47,7 @@ SW_TEST_CASE( RegistrationListTest, RejectsDuplicatesAndKeepsInsertionOrderOnRem
 
 /**
  * @brief [RegistrationListTest] 이름은 올릴 때 복사하고, 같은 이름의 다른 객체는 거절해 먼저 것을 둔다
- * @details 에셋 캐시 등록부가 이 모양이다 — 모듈이 내리지 않고 사라진 캐시의 이름을 그 객체에 묻지 않고 말해야 한다.
+ * @details 에셋 캐시 레지스트리가 이 모양이다 — 모듈이 내리지 않고 사라진 캐시의 이름을 그 객체에 묻지 않고 말해야 한다.
  */
 SW_TEST_CASE( RegistrationListTest, CopiesNamesAndRejectsADuplicateName )
 {
@@ -78,7 +78,7 @@ SW_TEST_CASE( RegistrationListTest, CopiesNamesAndRejectsADuplicateName )
 
 /**
  * @brief [RegistrationListTest] (순서 값, 이름) 정렬 목록은 등록 순서와 무관하게 같은 순서이고, 이름을 요구하면 빈 이름을 거절한다
- * @details 에디터 확장 등록부가 이 모양이다 — 정적 초기화 순서는 번역 단위마다 달라 등록 순서로 보여 주면 빌드마다 메뉴가 바뀐다.
+ * @details 에디터 확장 레지스트리가 이 모양이다 — 정적 초기화 순서는 번역 단위마다 달라 등록 순서로 보여 주면 빌드마다 메뉴가 바뀐다.
  */
 SW_TEST_CASE( RegistrationListTest, OrdersByOrderThenNameAndRequiresNames )
 {

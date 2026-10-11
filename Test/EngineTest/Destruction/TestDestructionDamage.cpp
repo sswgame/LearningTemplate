@@ -14,7 +14,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-// DestructionDamageTest — 변형 문턱(깊이별) · 넘친 몫이 아래 레벨로 · 연결 세기 · 부딪힘 충격량 · 폭발 감쇠, 같은 사건열 = 같은 상태(네트워크 동기화).
+// DestructionDamageTest — 변형 임계값(깊이별) · 넘친 몫이 아래 레벨로 · 연결 세기 · 부딪힘 충격량 · 폭발 감쇠, 같은 사건열 = 같은 상태(네트워크 동기화).
 
 namespace
 {
@@ -78,7 +78,7 @@ namespace
 } // namespace
 
 /**
- * @brief [DestructionDamageTest] 약한 피해는 쌓이기만 하고, 쌓여 뿌리 문턱을 넘으면 큰 덩어리(묶음)로만 갈라지고, 더 맞으면 그 안의 조각이 떨어진다
+ * @brief [DestructionDamageTest] 약한 피해는 쌓이기만 하고, 쌓여 뿌리 임계값을 넘으면 큰 덩어리(묶음)로만 갈라지고, 더 맞으면 그 안의 조각이 떨어진다
  */
 SW_TEST_CASE( DestructionDamageTest, StrainAccumulatesAndOpensLevelsProgressively )
 {
@@ -95,7 +95,7 @@ SW_TEST_CASE( DestructionDamageTest, StrainAccumulatesAndOpensLevelsProgressivel
     SW_EXPECT_NEAR_EQUAL( 30.0f, state.getNodeStrain( asset._graph.getRootNode() ), 1e-4f );
     SW_EXPECT_EQUAL( 1u, Internal::countActiveNodes( state ) );
 
-    // 쌓여 60 — 뿌리(50)가 갈라지고 넘친 10 은 묶음 문턱(80)에 못 미친다. 떨어진 것은 없다.
+    // 쌓여 60 — 뿌리(50)가 갈라지고 넘친 10 은 묶음 임계값(80)에 못 미친다. 떨어진 것은 없다.
     SW_ASSERT_TRUE( state.applyDamage( Internal::makeHit( hitPoint, 30.0f, 0.0f, sw::DestructionDamageKind::Point ), change ) );
     SW_EXPECT_FALSE( change.hasGroupChange() );
     const uint32 afterRoot = Internal::countActiveNodes( state );
@@ -143,7 +143,7 @@ SW_TEST_CASE( DestructionDamageTest, ExplosionShattersNearPiecesAndKeepsFarOnesA
 }
 
 /**
- * @brief [DestructionDamageTest] 부딪힘 충격량은 문턱 아래면 피해가 아니고, 넘은 몫 × 배율이 변형이다
+ * @brief [DestructionDamageTest] 부딪힘 충격량은 임계값 아래면 피해가 아니고, 넘은 몫 × 배율이 변형이다
  */
 SW_TEST_CASE( DestructionDamageTest, ImpactImpulseBecomesStrainAboveTheMinimum )
 {
@@ -263,7 +263,7 @@ SW_TEST_CASE( DestructionDamageTest, EventLogHashMatchesTheRecordedValueOnEveryB
 }
 
 /**
- * @brief [DestructionDamageTest] 조각이 깨지지 않을 만큼(잎 문턱이 높다)이라도 맞닿은 면의 세기를 넘는 변형이면 연결이 끊겨 모서리 벽돌이 떨어진다
+ * @brief [DestructionDamageTest] 조각이 깨지지 않을 만큼(잎 임계값이 높다)이라도 맞닿은 면의 세기를 넘는 변형이면 연결이 끊겨 모서리 벽돌이 떨어진다
  */
 SW_TEST_CASE( DestructionDamageTest, LinkStrainSeparatesPiecesThatDoNotShatter )
 {

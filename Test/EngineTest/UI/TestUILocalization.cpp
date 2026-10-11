@@ -12,7 +12,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// UILocalizationTest — 현지화 글 바인딩(6-2): 글 위젯의 `_text` 는 키 또는 글 그대로, 언어를 바꾸면(글 판) 다시 풀고 다시 잰다 · 글꼴 대체 사슬도 문화권을 따른다.
+// UILocalizationTest — 현지화 글 바인딩(6-2): 글 위젯의 `_text` 는 키 또는 글 그대로, 언어를 바꾸면(글 판) 다시 풀고 다시 측정한다 · 글꼴 대체 사슬도 문화권을 따른다.
 // 글꼴은 가짜 래스터라이저(글자마다 0.5 em 전진 — 너비 = 글자 수에 비례)라 기계와 상관없다. 디바이스 없음(nogpu).
 
 namespace
@@ -101,7 +101,7 @@ namespace
     };
 } // namespace
 
-/** @brief [UILocalizationTest] 언어를 바꾸면 이미 그린 글이 새 언어로 바뀌고 다시 잰다(원하는 크기가 바뀐다) */
+/** @brief [UILocalizationTest] 언어를 바꾸면 이미 그린 글이 새 언어로 바뀌고 다시 측정한다(원하는 크기가 바뀐다) */
 SW_TEST_CASE( UILocalizationTest, LanguageSwitchUpdatesTextAndLayout )
 {
     UILocalizationFixture fixture;
@@ -130,7 +130,7 @@ SW_TEST_CASE( UILocalizationTest, MissingKeyShowsSourceText )
     SW_EXPECT_STREQ( "Menu.Start", pTyped->getDisplayText().c_str() );
 }
 
-/** @brief [UILocalizationTest] 의사 문화권(qps-ploc)은 글을 늘린다 — 늘어난 글로 다시 잰다(긴 번역에 레이아웃이 버티는지 보는 길) */
+/** @brief [UILocalizationTest] 의사 문화권(qps-ploc)은 글을 늘린다 — 늘어난 글로 다시 측정한다(긴 번역에 레이아웃이 버티는지 보는 길) */
 SW_TEST_CASE( UILocalizationTest, PseudoLocaleExpandsLayout )
 {
     UILocalizationFixture fixture;

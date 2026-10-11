@@ -1078,7 +1078,7 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, TypeInfoAddressIsStableAcrossRegistrat
 /**
  * @brief [ReflectionTypeInfoTest] 등록된 모든 비트필드는 **이 빌드 구성의 실제 레이아웃에서** 앞뒤의 보통 프로퍼티 사이에 있다
  * @details 보통 프로퍼티의 오프셋은 생성 코드가 `offsetof` 로 적어 그 구성의 레이아웃을 따른다. 비트필드는 `offsetof` 를 쓸 수 없어
- *          파서가 libclang 으로 잰 숫자를 박는데, 파서는 Debug 정의(`SW_DEBUG` · `_DEBUG`)를 모른 채 잰다 — Debug 에서 커지는 멤버
+ *          파서가 libclang 으로 측정한 숫자를 박는데, 파서는 Debug 정의(`SW_DEBUG` · `_DEBUG`)를 모른 채 측정한다 — Debug 에서 커지는 멤버
  *          (`sw::string` 의 경쟁 검사 자리 · 반복자 디버그) 뒤의 비트필드가 엉뚱한 바이트를 가리킬 수 있다 — 씬 로드 · 인스펙터가
  *          그 비트를 쓰면 옆 문자열의 용량 비트를 뒤집는다.
  */

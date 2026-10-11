@@ -196,7 +196,7 @@ SW_TEST_CASE( WorldSystemsTest, FlagConditionsFollowPrecedenceParenthesesAndReje
     SW_EXPECT_TRUE( flags.clearFlag( hashed_string( "c" ) ) );
     SW_EXPECT_FALSE( flags.clearFlag( hashed_string( "c" ) ) );
 
-    // 세이브 목록은 이름 순, 되살리면 같은 값.
+    // 세이브 목록은 이름 순, 복원하면 같은 값.
     flags.setFlag( hashed_string( "Zeta" ), -2 );
     flags.setFlag( hashed_string( "beta" ), 7 );
     vector<GameFlagEntry> listEntry;
@@ -287,7 +287,7 @@ SW_TEST_CASE( WorldSystemsTest, AreaGraphDetoursLockedDoorsAndReportsTheFrontier
     SW_EXPECT_EQUAL( 2, listRegion[1]._visitedCount );
     SW_EXPECT_EQUAL( 4, listRegion[1]._totalCount );
 
-    // 세이브 → 새 그래프에 되살리기.
+    // 세이브 → 새 그래프에 복원하기.
     vector<hashed_string> listVisited;
     vector<hashed_string> listDiscovered;
     graph.fillVisitedAreas( listVisited );

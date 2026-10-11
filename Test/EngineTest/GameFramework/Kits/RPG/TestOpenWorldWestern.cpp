@@ -300,7 +300,7 @@ SW_TEST_CASE( OpenWorldWesternTest, HonorTiersGiveDiscountsAndDialogueFlags )
 }
 
 /**
- * @brief [OpenWorldWesternTest] 유대 단계는 카탈로그의 누적 경험치 문턱에서 오른다 — 타기의 소수 경험치는 버려지지 않고 쌓인다, 한 번에 두 단계를 넘으면 둘 다 열린다,
+ * @brief [OpenWorldWesternTest] 유대 단계는 카탈로그의 누적 경험치 임계값에서 오른다 — 타기의 소수 경험치는 버려지지 않고 쌓인다, 한 번에 두 단계를 넘으면 둘 다 열린다,
  *        세이브 왕복 뒤에도 같은 걸음에서 오른다
  */
 SW_TEST_CASE( OpenWorldWesternTest, HorseBondLevelsAtTheCatalogThresholds )
@@ -315,7 +315,7 @@ SW_TEST_CASE( OpenWorldWesternTest, HorseBondLevelsAtTheCatalogThresholds )
         horse.update( 0.5f, 0.0f ); // 19.5
     }
     SW_EXPECT_EQUAL( 1, horse.getBondLevel() );
-    horse.update( 0.5f, 0.0f ); // 20 — 단계 2 문턱
+    horse.update( 0.5f, 0.0f ); // 20 — 단계 2 임계값
     SW_EXPECT_EQUAL( 2, horse.getBondLevel() );
     for ( int32 step = 0; step < 59; ++step )
     {
@@ -337,7 +337,7 @@ SW_TEST_CASE( OpenWorldWesternTest, HorseBondLevelsAtTheCatalogThresholds )
         restored.update( 0.25f, 0.0f ); // 49.75
     }
     SW_EXPECT_EQUAL( 2, restored.getBondLevel() );
-    restored.update( 0.25f, 0.0f ); // 50 — 단계 3 문턱
+    restored.update( 0.25f, 0.0f ); // 50 — 단계 3 임계값
     SW_EXPECT_EQUAL( 3, restored.getBondLevel() );
 
     // 한 번에 두 단계 — 둘 다의 능력이 열린다
@@ -565,7 +565,7 @@ SW_TEST_CASE( OpenWorldWesternTest, StateRoundTripContinuesTheSameRide )
     SW_EXPECT_TRUE( restoredHorse.hasAbility( hashed_string( "rear" ) ) );
     SW_EXPECT_NEAR_EQUAL( horse.getStamina().getMax(), restoredHorse.getStamina().getMax(), 1.0e-3f );
 
-    // 같은 걸음을 둘 다 더 돌리면 바이트가 같다(겁 문턱을 넘어 난수를 하나 쓴다).
+    // 같은 걸음을 둘 다 더 돌리면 바이트가 같다(겁 임계값을 넘어 난수를 하나 쓴다).
     SW_EXPECT_TRUE( horse.frighten( 1.5f ) == restoredHorse.frighten( 1.5f ) );
     horse.update( 1.0f, 1.0f );
     restoredHorse.update( 1.0f, 1.0f );

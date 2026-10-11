@@ -162,7 +162,7 @@ namespace sw
             void* getNativeHandle() const override { return nullptr; }
         };
 
-        // 모듈 코드 정리 테스트가 등록부마다 하나씩 다는 함수들이다. 몸통을 서로 다르게 둔다 — 같으면 링커가 접어 스텁 주소가 겹칠 수 있다.
+        // 모듈 코드 정리 테스트가 레지스트리마다 하나씩 다는 함수들이다. 몸통을 서로 다르게 둔다 — 같으면 링커가 접어 스텁 주소가 겹칠 수 있다.
         int32 s_sweepProbeValue{ 0 };
 
         /** @brief 이벤트 버스에 구독하는 처리기입니다. */
@@ -547,10 +547,10 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadCascadeSuccessPath )
 }
 
 /**
- * @brief [ArchitectureTest] 모듈 이미지를 내리기 전의 정리는 에디터가 다는 엔진 쪽 등록부 넷을 모두 본다
+ * @brief [ArchitectureTest] 모듈 이미지를 내리기 전의 정리는 에디터가 다는 엔진 쪽 레지스트리 넷을 모두 본다
  * @details `ModuleImageUtil::releaseModuleCode` 는 모듈이 스스로 떼지 않은 것을 떼는 안전망이다. 에디터는 이벤트 구독 · 로그 리스너(콘솔 패널) ·
- *          Undo 명령(트랜잭션) · 창 닫기 처리기를 달고, `ImGuiEditor::shutdown` · `~ConsolePanel` 이 손으로 뗀다. 여기서는 등록부마다
- *          하나씩 달고 범위를 그 하나의 스텁으로 좁혀 부른다 — 이 실행 파일의 다른 등록은 건드리지 않고, 등록부 하나를 빠뜨리면 진다.
+ *          Undo 명령(트랜잭션) · 창 닫기 처리기를 달고, `ImGuiEditor::shutdown` · `~ConsolePanel` 이 손으로 뗀다. 여기서는 레지스트리마다
+ *          하나씩 달고 범위를 그 하나의 스텁으로 좁혀 부른다 — 이 실행 파일의 다른 등록은 건드리지 않고, 레지스트리 하나를 빠뜨리면 진다.
  */
 SW_TEST_CASE( ArchitectureTest, ReleaseModuleCodeSweepsEveryRegistryTheEditorUses )
 {
@@ -1110,13 +1110,13 @@ SW_TEST_CASE( ArchitectureTest, DeferredUnloadImagesStayMappedUntilTheirBatchIsE
 }
 
 /**
- * @brief [ArchitectureTest] 빌드된 모듈은 돌고 있는 엔진과 같은 ABI 도장을 들고 있다
- * @details 도장은 Core · Engine 헤더 내용의 지문이고 Engine 과 모듈이 같은 생성 헤더로 박는다. 이 테스트는 빌드 연결(생성 소스가 모듈마다
+ * @brief [ArchitectureTest] 빌드된 모듈은 돌고 있는 엔진과 같은 ABI 스탬프를 들고 있다
+ * @details 스탬프는 Core · Engine 헤더 내용의 지문이고 Engine 과 모듈이 같은 생성 헤더로 박는다. 이 테스트는 빌드 연결(생성 소스가 모듈마다
  *          들어가고, 링커가 지우지 않는다)을 실제 파일로 확인한다.
  */
 SW_TEST_CASE( ArchitectureTest, ModulesCarryTheRunningEngineAbiStamp )
 {
-    // 에디터도 같은 매니저로 리로드된다 — 도장이 빠지면 에디터만 헤더가 어긋난 채 올라간다.
+    // 에디터도 같은 매니저로 리로드된다 — 스탬프가 빠지면 에디터만 헤더가 어긋난 채 올라간다.
     const utf8* arrModuleName[] = { "GameFramework", "SWGame", "EditorModule" };
     for ( const utf8* pModuleName : arrModuleName )
     {
@@ -1134,7 +1134,7 @@ SW_TEST_CASE( ArchitectureTest, ModulesCarryTheRunningEngineAbiStamp )
 
 /**
  * @brief [ArchitectureTest] 다른 엔진 헤더로 빌드된 모듈은 올리기 전에 거절되고, 그래프는 막히지 않는다
- * @details SWGame 을 다른 이름으로 복사해 도장 한 글자를 바꾼다(엔진 헤더를 고친 빌드에서 Engine.dll 은 잠겨 못 바뀌고 모듈만 새로 써진
+ * @details SWGame 을 다른 이름으로 복사해 스탬프 한 글자를 바꾼다(엔진 헤더를 고친 빌드에서 Engine.dll 은 잠겨 못 바뀌고 모듈만 새로 써진
  *          경우). 등록은 실패해야 하고 — 모듈 코드는 한 줄도 돌지 않았다 — 옛 모듈을 유지하는 실패라 그래프는 멀쩡해야 한다.
  */
 SW_TEST_CASE( ArchitectureTest, ModuleBuiltAgainstOtherEngineHeadersIsRejected )
@@ -1149,7 +1149,7 @@ SW_TEST_CASE( ArchitectureTest, ModuleBuiltAgainstOtherEngineHeadersIsRejected )
     sw::string stamp;
     SW_ASSERT_TRUE( sw::ModuleImagePatch::findEngineAbiStamp( bytes, stamp ) );
 
-    // 도장의 마지막 16진 글자를 바꾼다. 같은 길이라 파일 배치는 그대로다.
+    // 스탬프의 마지막 16진 글자를 바꾼다. 같은 길이라 파일 배치는 그대로다.
     const sw::string_view view{ reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() };
     const size_t          stampPos = view.find( stamp );
     SW_ASSERT_TRUE( stampPos != sw::string_view::npos );
@@ -1643,7 +1643,7 @@ SW_TEST_CASE( ModuleAPITest, GameFrameworkKitsModuleTypeRegistration )
  * @brief [ModuleAPITest] 자식 프로세스 역할: 공용 모듈을 먼저 올리면 GameFramework 의 타입이 제 이름으로 남는다. 그냥 실행하면 건너뛴다.
  * @details `ModuleHost` 의 순서를 그대로 밟는다 — 공용 모듈 → 키트 → SWGame 등록, SWGame 서비스 묶기(공용 모듈을 먼저 올리지 않으면 여기서
  *          GameFramework 가 지연 로드로 **처음** 올라온다), 그리고 `bindGameAPI` 끝의 인자 없는 등록. 프로세스마다 한 번뿐인 일이라(이미지는 내려가지 않는다)
- *          앞선 케이스가 SWGame 을 올린 이 프로세스에서는 잴 수 없어 자식에서 잰다.
+ *          앞선 케이스가 SWGame 을 올린 이 프로세스에서는 측정할 수 없어 자식에서 측정한다.
  */
 SW_TEST_CASE( ModuleAPITest, SharedModuleChildKeepsItsRegistrations )
 {
@@ -1682,7 +1682,7 @@ SW_TEST_CASE( ModuleAPITest, SharedModuleChildKeepsItsRegistrations )
 /**
  * @brief [ModuleAPITest] 공용 모듈(GameFramework)의 타입은 그것을 링크한 키트 · SWGame 이 아니라 **제 이름**으로 등록된다
  * @details 공용 모듈을 처음 부르는 쪽(Windows 지연 로드 · 리눅스 첫 키트의 DT_NEEDED)이 올리면 그 정적 등록기가 SWGame · 첫 키트의
- *          이름으로 들어가, 첫 SWGame 리로드가 GameFramework 컴포넌트를 모든 씬에서 지우고 돌아오지 않는다. 새 프로세스에서 잰다.
+ *          이름으로 들어가, 첫 SWGame 리로드가 GameFramework 컴포넌트를 모든 씬에서 지우고 돌아오지 않는다. 새 프로세스에서 측정한다.
  */
 SW_TEST_CASE( ModuleAPITest, GameFrameworkRegistersUnderItsOwnName )
 {
@@ -1703,7 +1703,7 @@ SW_TEST_CASE( ModuleAPITest, GameFrameworkRegistersUnderItsOwnName )
  * @brief [ModuleAPITest] 자식 프로세스 역할: 모듈을 모두 올린 뒤 등록된 모든 PROPERTY 를 직렬화기 판정으로 본다. 그냥 실행하면 건너뛴다.
  * @details `ModuleHost` 의 순서대로 공용 모듈 → 킷 → 게임 → 에디터를 올린다. 모듈마다 타입이 하나 이상 올라왔는지 먼저 본다 — 아무것도 안
  *          올라왔으면 아래 판정은 엔진 타입만 본 셈이다. 공용 모듈의 등록 귀속은 프로세스마다 한 번뿐이라(이미지는 내려가지 않는다) 앞선 케이스가
- *          모듈을 올린 이 프로세스가 아니라 자식에서 잰다(`SharedModuleChildKeepsItsRegistrations` 와 같은 까닭).
+ *          모듈을 올린 이 프로세스가 아니라 자식에서 측정한다(`SharedModuleChildKeepsItsRegistrations` 와 같은 까닭).
  */
 SW_TEST_CASE( ModuleAPITest, ModulePropertyChildChecksEveryType )
 {
@@ -1829,7 +1829,7 @@ SW_TEST_CASE( ModuleAPITest, GameModuleRepeatedReloadCycle )
  * @brief [ModuleAPITest] 자식 프로세스 역할: GameFramework 를 직접 올리고 게임을 한 번 돌린 뒤 내리면, GameFramework 가 만든 이벤트 채널 항목이 디스패처에서 빠진다.
  * @details 게임이 첫 씬을 요청하면 GameFramework 의 코드가 "game" 채널에 이벤트를 낸다(`GameEventUtil::send`). 그 채널 항목의 브로드캐스트 함수와
  *          멀티캐스트의 해제자(`shared_ptr` 제어 블록)는 GameFramework 이미지의 코드라, 이미지를 내린 뒤 디스패처가 소멸하면 내려간 코드로 뛴다.
- *          공용 모듈은 프로세스마다 한 번 올라오므로(이미지는 내려가지 않는다) 깨끗한 자식에서 잰다. 그냥 실행하면 건너뛴다.
+ *          공용 모듈은 프로세스마다 한 번 올라오므로(이미지는 내려가지 않는다) 깨끗한 자식에서 측정한다. 그냥 실행하면 건너뛴다.
  */
 SW_TEST_CASE( ModuleAPITest, UnloadChildReleasesTheChannelsItsImageCreated )
 {

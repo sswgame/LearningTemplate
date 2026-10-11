@@ -45,7 +45,7 @@ namespace
 
     struct UIScaleTestUtil
     {
-        /** @brief 가로 상자(간격 10) · 고정 위젯 둘을 짓고 @p uiScale 배율 뷰포트로 잽니다. */
+        /** @brief 가로 상자(간격 10) · 고정 위젯 둘을 짓고 @p uiScale 배율 뷰포트로 측정합니다. */
         static void createRow( sw::test::UILayoutFixture& fixture, const sw::UIViewport& viewport )
         {
             fixture.getContext()._viewportSize = viewport._size;

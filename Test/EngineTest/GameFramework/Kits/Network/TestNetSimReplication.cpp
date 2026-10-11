@@ -9,7 +9,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 복제 키트를 가상 서버 하니스 위에서 — 메시지 상한 · 예산이 늘 찬 회선에서 스냅숏이 끊기지 않고 따라오는지, 숫자(틱)로 잰다.
+// 복제 키트를 가상 서버 하니스 위에서 — 메시지 상한 · 예산이 늘 찬 회선에서 스냅숏이 끊기지 않고 따라오는지, 숫자(틱)로 측정한다.
 // 서버 세션은 테스트가 채운 엔티티 표를 틱마다 그대로 복제하고, 클라이언트 세션은 받은 가장 새 스냅숏을 본다.
 
 using namespace sw;
@@ -24,7 +24,7 @@ namespace
         vector<NetEntityState>    _listEntity{};
         ReplicationServerSettings _settings{};
         const IReplicationPolicy* _pPolicy{ nullptr };
-        uint8                     _bStampTick{ SW_FALSE }; ///< 상태 앞 4 바이트에 서버 틱을 적는다(틱마다 바뀌고, 받은 쪽이 낡은 정도를 잰다)
+        uint8                     _bStampTick{ SW_FALSE }; ///< 상태 앞 4 바이트에 서버 틱을 적는다(틱마다 바뀌고, 받은 쪽이 낡은 정도를 측정한다)
     };
 
     class TableServerSession final : public INetSimSession
@@ -63,7 +63,7 @@ namespace
         ReplicationTable* _pTable;
     };
 
-    /** @brief 클라이언트 — 가장 새 스냅숏과, 엔티티마다 그 상태가 서버 틱 몇에 만들어졌는지(틱 도장)의 가장 큰 뒤처짐을 든다. */
+    /** @brief 클라이언트 — 가장 새 스냅숏과, 엔티티마다 그 상태가 서버 틱 몇에 만들어졌는지(틱 스탬프)의 가장 큰 뒤처짐을 든다. */
     class TableClientSession final : public INetSimSession
     {
     public:
@@ -103,7 +103,7 @@ namespace
             }
         }
 
-        /** @brief 이 틱부터 받은 스냅숏으로 낡은 정도를 잽니다. 엔티티 id 는 @p entityCount 보다 작다. */
+        /** @brief 이 틱부터 받은 스냅숏으로 낡은 정도를 측정합니다. 엔티티 id 는 @p entityCount 보다 작다. */
         void beginMeasure( uint32 fromTick, uint32 entityCount )
         {
             _measureFromTick = fromTick;
@@ -111,7 +111,7 @@ namespace
         }
 
         const ReplicationClient& getClient() const { return _client; }
-        /** @brief 잰 동안 그 엔티티의 상태가 서버보다 가장 많이 뒤처진 틱 수입니다. */
+        /** @brief 측정한 동안 그 엔티티의 상태가 서버보다 가장 많이 뒤처진 틱 수입니다. */
         uint32 getMaxStaleness( uint32 entityID ) const { return _listMaxStaleness[entityID]; }
 
     private:

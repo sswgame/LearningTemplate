@@ -35,7 +35,7 @@ namespace
  *          그건 백엔드마다 사정이 다르고, 무엇보다 "누가 상태를 아는가" 가 흐려진다 — 배리어를 병렬 기록 스레드가
  *          정하는 구조는 깨지기 쉽다.
  *
- *          그래서 그래프가 정본이다. 여기서는 그 추론만 따로 본다(커맨드 리스트 없이).
+ *          그래서 그래프가 원본이다. 여기서는 그 추론만 따로 본다(커맨드 리스트 없이).
  */
 SW_TEST_CASE( RenderGraphTest, RenderGraphInfersOnlyChangedBarriers )
 {

@@ -17,7 +17,7 @@
 
     #include "TestFramework/TestFramework.h"
 
-// DebugHUDTest — 디버그 HUD: 섹션 등록부(등록 · 순서 · 거절 · 모듈 언로드), 설정 글(켬 · 끔 낱말), 사용자 설정 왕복(파일까지),
+// DebugHUDTest — 디버그 HUD: 섹션 레지스트리(등록 · 순서 · 거절 · 모듈 언로드), 설정 글(켬 · 끔 낱말), 사용자 설정 왕복(파일까지),
 // HUD 화면이 켜진 섹션만 그리고 모서리를 따르는지, 설정 창이 열린 동안만 게임 입력을 막는지. 디바이스 없음(nogpu).
 
 namespace

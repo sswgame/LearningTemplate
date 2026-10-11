@@ -62,7 +62,7 @@ namespace
                 <Offer id="gem_100"><Product store="fake" id="gem100"/><Grant asset="cur.gem_paid" amount="100"/></Offer></OfferCatalog>)",
                                            "offer" );
 #if !defined( SW_SHIPPING )
-            // 가짜 검증기는 개발 전용이라 Shipping 의 경제 서비스는 그것이 든 등록부를 거절한다(ShippingRefusesDevelopmentValidator).
+            // 가짜 검증기는 개발 전용이라 Shipping 의 경제 서비스는 그것이 든 레지스트리를 거절한다(ShippingRefusesDevelopmentValidator).
             (void)_receipts.registerValidator( &_fake );
 #endif
             EconomyServiceSettings settings;
@@ -178,7 +178,7 @@ SW_TEST_CASE( EconomyServiceTest, ReceiptGoesThroughTheValidatorThenGrants )
 }
 
 /**
- * @brief [EconomyServiceTest] 개발 전용 검증기(가짜 스토어)가 든 등록부는 Shipping 에서 초기화를 거절하고, 개발 빌드에서는 받는다
+ * @brief [EconomyServiceTest] 개발 전용 검증기(가짜 스토어)가 든 레지스트리는 Shipping 에서 초기화를 거절하고, 개발 빌드에서는 받는다
  */
 SW_TEST_CASE( EconomyServiceTest, ShippingRefusesDevelopmentValidator )
 {

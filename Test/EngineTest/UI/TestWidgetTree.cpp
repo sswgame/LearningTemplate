@@ -7,7 +7,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// WidgetTreeTest — 위젯 트리 뼈대: 번호표 · 이름표 · 무효화 이유와 레이아웃 경계. 디바이스 없음(nogpu).
+// WidgetTreeTest — 위젯 트리 뼈대: 번호표 · 이름 · 무효화 이유와 레이아웃 경계. 디바이스 없음(nogpu).
 
 namespace
 {
@@ -54,7 +54,7 @@ SW_TEST_CASE( WidgetTreeTest, AddRemoveRegistersIDsAndNames )
     SW_EXPECT_TRUE( removed->getTree() == nullptr );
     SW_EXPECT_TRUE( removed->getParent() == nullptr );
     SW_EXPECT_TRUE( tree.findWidgetByID( removedID ) == nullptr );
-    SW_EXPECT_TRUE( tree.findWidgetByName( "a" ) == nullptr ); // 이름의 주인이 떨어졌다 — 둘째 "a" 는 이름표에 오르지 않았다
+    SW_EXPECT_TRUE( tree.findWidgetByName( "a" ) == nullptr ); // 이름의 주인이 떨어졌다 — 둘째 "a" 는 이름에 오르지 않았다
     SW_EXPECT_EQUAL( 2u, tree.getWidgetCount() );
 
     // 번호는 다시 쓰지 않는다 — 떼었다 다시 붙여도 같은 번호, 새 위젯은 새 번호.

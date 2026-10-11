@@ -10,7 +10,7 @@
 #include "TestFramework/TestFramework.h"
 
 // ------------------------------------------------------------------------------
-// AudioDSPTest — 버스 이펙트(바이쿼드 · 컴프레서 · 리미터 · 리버브 · 딜레이)를 버퍼에서 숫자로 잰다. 장치 없음.
+// AudioDSPTest — 버스 이펙트(바이쿼드 · 컴프레서 · 리미터 · 리버브 · 딜레이)를 버퍼에서 숫자로 측정한다. 장치 없음.
 // ------------------------------------------------------------------------------
 
 namespace
@@ -129,8 +129,8 @@ SW_TEST_CASE( AudioDSPTest, BiquadFrequencyResponseAtPoints )
 }
 
 /**
- * @brief [AudioDSPTest] 컴프레서 — 문턱 위는 (입력 − 문턱)·(1 − 1/비율) 만큼 줄이고, 문턱 아래는 건드리지 않는다
- * @details -6.02 dBFS 사인 · 문턱 -24 dB · 비율 4 · 니 0 이면 출력 피크는 -24 + 18.02/4 = -19.5 dB, 감소량 13.5 dB 다.
+ * @brief [AudioDSPTest] 컴프레서 — 임계값 위는 (입력 − 임계값)·(1 − 1/비율) 만큼 줄이고, 임계값 아래는 건드리지 않는다
+ * @details -6.02 dBFS 사인 · 임계값 -24 dB · 비율 4 · 니 0 이면 출력 피크는 -24 + 18.02/4 = -19.5 dB, 감소량 13.5 dB 다.
  */
 SW_TEST_CASE( AudioDSPTest, CompressorGainReduction )
 {

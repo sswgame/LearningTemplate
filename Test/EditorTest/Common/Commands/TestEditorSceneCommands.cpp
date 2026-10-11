@@ -293,7 +293,7 @@ SW_TEST_CASE( EditorSceneCommandsTest, SeveralObjectsAreOneUndoStep )
                     pChild->addComponent<SceneComponent>() != nullptr );
     pManager->mergePendingAdds();
     SW_ASSERT_TRUE( pChild->attachToParent( pB ) );
-    // 지운 오브젝트는 지연 파괴 뒤 되살아나므로 이름으로 센다(되살린 것은 원래 id 지만 지울 때까지는 묘비가 남는다).
+    // 지운 오브젝트는 지연 파괴 뒤 되살아나므로 이름으로 센다(복원한 것은 원래 id 지만 지울 때까지는 묘비가 남는다).
     const auto countLive = [pManager]()
     {
         size_t count = 0;

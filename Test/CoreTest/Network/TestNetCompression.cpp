@@ -13,7 +13,7 @@
 
 #include <cstring>
 
-// 압축 봉투 — 왕복 · 줄지 않으면 원문, 폭탄(원래 크기가 상한 초과) · 모르는 코덱 · 깨진 크기 칸은 코덱을 부르기 전에 거절, 스트림 끝점은 압축 프레임을 풀어 넘기고
+// 압축 봉투 — 왕복 · 줄지 않으면 원문, 폭탄(원래 크기가 상한 초과) · 모르는 코덱 · 깨진 크기 칸은 코덱을 부르기 전에 거절, 스트림 엔드포인트는 압축 프레임을 풀어 넘기고
 // 푼 크기가 몸 상한을 넘으면 ProtocolError 로 끊는다. Engine 코덱이 없어 Core 내장 RLE 와 테스트용 코덱을 쓴다.
 
 using namespace sw;
@@ -71,7 +71,7 @@ namespace
         }
     };
 
-    /** @brief 테스트 동안 활성 등록부를 바꿔 끼운다(끝에 되돌린다). */
+    /** @brief 테스트 동안 활성 레지스트리를 바꿔 끼운다(끝에 되돌린다). */
     struct ScopedActiveRegistry
     {
         explicit ScopedActiveRegistry( CompressionCodecRegistry* pRegistry )

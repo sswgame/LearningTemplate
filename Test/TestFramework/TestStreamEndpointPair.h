@@ -1,7 +1,7 @@
 /**
  * @file Test/TestFramework/TestStreamEndpointPair.h
- * @brief 스트림 테스트의 끝점 한 쌍 — 루프백 스트림 망 위에 서버 · 클라이언트 `StreamMessageEndpoint` 를 세우고 클라이언트가 서버에 연결을 겁니다.
- * @details 전송은 I/O 스레드 없이(`_ioThreadCount = 0`) 돌고 `step` 이 두 전송의 `pollIO` 와 두 끝점의 `pump` 를 차례로 부른다 — 한 스레드라 결정적이다.
+ * @brief 스트림 테스트의 엔드포인트 한 쌍 — 루프백 스트림 망 위에 서버 · 클라이언트 `StreamMessageEndpoint` 를 세우고 클라이언트가 서버에 연결을 겁니다.
+ * @details 전송은 I/O 스레드 없이(`_ioThreadCount = 0`) 돌고 `step` 이 두 전송의 `pollIO` 와 두 엔드포인트의 `pump` 를 차례로 부른다 — 한 스레드라 결정적이다.
  *          Core 헤더만 include 한다(CoreTest 의 엔진 금지 규칙).
  */
 #pragma once
@@ -14,7 +14,7 @@ namespace test
 {
     /**
      * @class StreamEndpointPair
-     * @brief 서버 끝점은 `listen` 하고 클라이언트 끝점은 `_clientHandle` 로 연결을 겁니다. 소멸자가 두 전송을 내리고 남은 닫힘을 한 번 넘깁니다.
+     * @brief 서버 엔드포인트는 `listen` 하고 클라이언트 엔드포인트는 `_clientHandle` 로 연결을 겁니다. 소멸자가 두 전송을 내리고 남은 닫힘을 한 번 넘깁니다.
      */
     class StreamEndpointPair
     {
@@ -61,7 +61,7 @@ namespace test
         StreamEndpointPair( const StreamEndpointPair& )            = delete;
         StreamEndpointPair& operator=( const StreamEndpointPair& ) = delete;
 
-        /** @brief 두 전송을 돌고 두 끝점을 pump 하기를 @p count 번 합니다. */
+        /** @brief 두 전송을 돌고 두 엔드포인트를 pump 하기를 @p count 번 합니다. */
         void step( int32 count )
         {
             for ( int32 index = 0; index < count; ++index )

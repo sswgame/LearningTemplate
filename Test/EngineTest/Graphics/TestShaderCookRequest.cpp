@@ -71,7 +71,7 @@ namespace
 
 /**
  * @brief [ShaderCookRequestTest] 패스가 C++ 에서 얹는 define 까지 요청에 든다
- * @details `FrameRendererUtil::getPassDefine` 이 런타임과 쿠커가 함께 보는 **유일한 정본**이다.
+ * @details `FrameRendererUtil::getPassDefine` 이 런타임과 쿠커가 함께 보는 **유일한 원본**이다.
  *          쿠커가 그것을 안 보면 런타임이 요청하는 해시가 목록에 없다.
  */
 SW_TEST_CASE( ShaderCookRequestTest, PassDefineReachesCookedRequests )

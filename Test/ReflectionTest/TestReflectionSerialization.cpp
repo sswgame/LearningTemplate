@@ -3047,8 +3047,8 @@ SW_TEST_CASE( ReflectionSerializationTest, OutOfRangeIntegerTextIsRejectedNotWra
 }
 
 /**
- * @brief [ReflectionSerializationTest] 프로퍼티 값 하나를 옮기고 견주고 글로 쓰는 한 벌 — 비트필드는 그 비트만, 컨테이너는 원소째
- * @details 직렬화기 셋 · 프리팹 오버라이드 도구 · 인스펙터가 이 한 벌을 쓴다. 비트필드의 **바이트**를 견주고 옮기면 같은 바이트의 다른
+ * @brief [ReflectionSerializationTest] 프로퍼티 값 하나를 옮기고 비교하고 글로 쓰는 한 벌 — 비트필드는 그 비트만, 컨테이너는 원소째
+ * @details 직렬화기 셋 · 프리팹 오버라이드 도구 · 인스펙터가 이 한 벌을 쓴다. 비트필드의 **바이트**를 비교하고 옮기면 같은 바이트의 다른
  *          플래그까지 "바뀜" 으로 보이거나 지워지고, 컨테이너를 값 경로로만 옮기면 되돌리지 못한다.
  *          불리언 글은 엄격하다 — "ture" 를 조용히 false 로 읽지 않는다.
  */

@@ -211,7 +211,7 @@ SW_TEST_CASE( SpriteComponentTest, SavedClipPathLoadsTheClip )
 
 /**
  * @brief [SpriteComponentTest] 사용 중인 클립을 캐시가 제자리로 다시 읽은 뒤 `_clipPath` 변경 알림을 받으면, 경로가 같아도 새 프레임 · 아틀라스를 쓴다
- * @details 에디터 핫 리로드와 같은 두 단계다: 등록부에서 찾은 "SpriteClip" 캐시가 제자리로 다시 읽고(`IAssetCache::reload`),
+ * @details 에디터 핫 리로드와 같은 두 단계다: 레지스트리에서 찾은 "SpriteClip" 캐시가 제자리로 다시 읽고(`IAssetCache::reload`),
  *          에디터가 그 경로를 든 프로퍼티로 `onPropertyChanged` 를 부른다(`AssetHotReload::notifyAssetUsers`).
  */
 SW_TEST_CASE( SpriteComponentTest, ReloadedClipReachesSpritesThatHoldIt )

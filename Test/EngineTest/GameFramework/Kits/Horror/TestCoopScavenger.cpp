@@ -116,7 +116,7 @@ namespace
             return refs;
         }
 
-        /** @brief 이미 연 공유 상태를 다시 열지 않고 빌려 줍니다(되살린 원정이 같은 시계 · 날씨를 본다). */
+        /** @brief 이미 연 공유 상태를 다시 열지 않고 빌려 줍니다(복원한 원정이 같은 시계 · 날씨를 본다). */
         GameStateRefs borrowRefs()
         {
             GameStateRefs refs;
@@ -609,7 +609,7 @@ SW_TEST_CASE( CoopScavengerTest, CompanySellingTerminalAndGameOver )
 }
 
 /**
- * @brief [CoopScavengerTest] 상태 바이트로 되살린 원정이 같은 원정을 잇는다 — 사람 · 우주선 고철 · 시설(바닥 · 잠금 해제 · 다시 지은 그래프) · 위협 감독 · 할당량이
+ * @brief [CoopScavengerTest] 상태 바이트로 복원한 원정이 같은 원정을 잇는다 — 사람 · 우주선 고철 · 시설(바닥 · 잠금 해제 · 다시 지은 그래프) · 위협 감독 · 할당량이
  *        같은 바이트이고, 같은 걸음을 둘 다 더 돌려도 같은 바이트다. 잘린 바이트는 거절하고 그대로 둔다
  */
 SW_TEST_CASE( CoopScavengerTest, StateRoundTripContinuesTheSameExpedition )

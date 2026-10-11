@@ -231,7 +231,7 @@ SW_TEST_CASE( AudioSpatialTest, NearestListenerWins )
     const sw::vector<float32> listSample = test::AudioTestUtil::render( engine, 512 );
     SW_EXPECT_NEAR_EQUAL( 0.5f, test::AudioTestUtil::computeMean( listSample, 0, 0, 512 ), 1e-3f );
 
-    // 리스너 1 을 끄면 리스너 0(100 m 밖, Inverse 1/30)으로 잰다.
+    // 리스너 1 을 끄면 리스너 0(100 m 밖, Inverse 1/30)으로 측정한다.
     sw::AudioListenerState off = AudioSpatialTestInternal::makeListener();
     off._bActive               = false;
     engine.setListener( 1, off );

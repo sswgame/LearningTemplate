@@ -346,7 +346,7 @@ SW_TEST_CASE( RenderPassTest, RenderGraphLinearChainProducesSinglePassLevels )
  *          여러 건으로 진다. 툴체인(clang · libclang 판)에 따라서만 나타날 수 있어 로컬에서는 재현되지 않을 수 있다.
  *
  *          그래서 이 케이스는 **연쇄가 시작되는 한 지점만** 보고, 졌을 때 어디가 끊겼는지 메시지에 담는다:
- *          `typeFqn` 이 무엇으로 읽혔는지 · FQN 으로 찾히는지 · 짧은 이름으로 찾히는지 · 이름표가 몇 개인지 ·
+ *          `typeFqn` 이 무엇으로 읽혔는지 · FQN 으로 찾히는지 · 짧은 이름으로 찾히는지 · 이름이 몇 개인지 ·
  *          등록된 enum 이 모두 몇 개인지. 같은 경로를 쓰는 `RenderPassType` 이 대조군이다 — 그쪽이 되고 이쪽이
  *          안 되면 리플렉션 전체가 아니라 이 헤더 하나의 문제다.
  */
@@ -385,7 +385,7 @@ SW_TEST_CASE( RenderPassTest, PipelineFormatNamesResolveThroughReflection )
 /**
  * @brief 엔진이 실제로 배포하는 파이프라인 XML 들이 스스로 모순이 없는지.
  * @details 모두 검증 0건이어야 한다. 여기가 깨지면 런타임에 포맷이 어긋나 조용히 잘못 그리거나 GPU 가 죽는다.
- *          패스 수는 GPU 타임스탬프가 재는 수(`FrameRendererUtil::kGPUTimedPassCapacity`) 이하여야 한다 — 넘는 패스는 프로파일에서 빠진다.
+ *          패스 수는 GPU 타임스탬프가 측정하는 수(`FrameRendererUtil::kGPUTimedPassCapacity`) 이하여야 한다 — 넘는 패스는 프로파일에서 빠진다.
  */
 SW_TEST_CASE( RenderPassTest, ShippedPipelinesValidateClean )
 {
@@ -411,7 +411,7 @@ SW_TEST_CASE( RenderPassTest, ShippedPipelinesValidateClean )
 }
 
 /**
- * @brief [RenderPassTest] GPU 타임스탬프가 재는 패스 수와 칸 배치가 맞다 — 넘는 패스 수를 세는 함수가 로드 경고의 근거다
+ * @brief [RenderPassTest] GPU 타임스탬프가 측정하는 패스 수와 칸 배치가 맞다 — 넘는 패스 수를 세는 함수가 로드 경고의 근거다
  * @details 패스는 인덱스 x 2 쌍을 쓰고 뒤쪽 칸은 프레임 · 컴퓨트 예약이다. 실행 · 보고 · 로드 경고가 모두 `kGPUTimedPassCapacity` 하나로 자른다.
  */
 SW_TEST_CASE( RenderPassTest, GPUTimestampPassCapacityMatchesSlotLayout )
@@ -589,7 +589,7 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
         SW_EXPECT_TRUE_MSG( res.validate( "unit-test" ) == 0u, pFormat );
     }
 
-    // 5) 이름은 정본 하나로 통일돼 있다 — 다른 표기(`Shading`, `PostBloom`)는 오류로 잡힌다.
+    // 5) 이름은 원본 하나로 통일돼 있다 — 다른 표기(`Shading`, `PostBloom`)는 오류로 잡힌다.
     //    이름을 바꾸면 XML 을 새 이름으로 다시 쓴다(ValueAlias 는 실제 게임 데이터가 생긴 뒤의 창구다).
     {
         auto removedTypeIsRejected = []( const utf8* pRemovedType ) -> bool
@@ -894,7 +894,7 @@ SW_TEST_CASE( RenderPassTest, GeometryPassColorTargetsComeFromTheDeclaration )
         desc._listPass.push_back( pass );
     };
 
-    // 출력에 뎁스가 섞여 있어도 컬러만, 선언 순서대로 — 이름은 정본(GBufferAlbedo …)이 아니어도 된다.
+    // 출력에 뎁스가 섞여 있어도 컬러만, 선언 순서대로 — 이름은 원본(GBufferAlbedo …)이 아니어도 된다.
     {
         sw::RenderPipelineAsset res;
         makePipeline( res, "GBuffer", { "MainDepth", "MainAlbedo", "MainNormal" } );

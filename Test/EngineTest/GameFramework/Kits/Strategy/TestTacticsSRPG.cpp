@@ -642,7 +642,7 @@ SW_TEST_CASE( TacticsSRPGTest, LevelUpDevelopmentAndRogueliteCampaign )
 }
 
 /**
- * @brief [TacticsSRPGTest] 상태 바이트로 되살린 전장이 같은 전투를 잇는다 — 지형 · 유닛(탄 · EN · 기력 · 레벨 · 차례 비트) · 차례 · 난수가 같은 바이트이고,
+ * @brief [TacticsSRPGTest] 상태 바이트로 복원한 전장이 같은 전투를 잇는다 — 지형 · 유닛(탄 · EN · 기력 · 레벨 · 차례 비트) · 차례 · 난수가 같은 바이트이고,
  *        같은 걸음(적 페이즈의 반격 · 페이즈 넘김)을 둘 다 더 돌려도 같은 바이트다. 크기가 다른 전장과 잘린 바이트는 거절한다
  */
 SW_TEST_CASE( TacticsSRPGTest, StateRoundTripContinuesTheSameBattlefield )
@@ -710,7 +710,7 @@ SW_TEST_CASE( TacticsSRPGTest, StateRoundTripContinuesTheSameBattlefield )
 }
 
 /**
- * @brief [TacticsSRPGTest] 상태 바이트로 되살린 캠페인이 같은 판을 잇는다 — 작전 지도 · 명단 · 씨앗 · 작전 중이 같은 바이트이고, 같은 작전을 끝내고 다음 칸을 골라도
+ * @brief [TacticsSRPGTest] 상태 바이트로 복원한 캠페인이 같은 판을 잇는다 — 작전 지도 · 명단 · 씨앗 · 작전 중이 같은 바이트이고, 같은 작전을 끝내고 다음 칸을 골라도
  *        같은 바이트 · 같은 전장 씨앗이다. 잘린 바이트는 거절하고 그대로 둔다
  */
 SW_TEST_CASE( TacticsSRPGTest, StateRoundTripContinuesTheSameCampaign )

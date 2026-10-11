@@ -169,7 +169,7 @@ namespace sw
             return indexOffset;
         }
 
-        /** @brief RLE 를 그대로 위임하고 해제 횟수만 세는 코덱입니다. 팩 리더가 등록부의 코덱을 쓰는지 봅니다. */
+        /** @brief RLE 를 그대로 위임하고 해제 횟수만 세는 코덱입니다. 팩 리더가 레지스트리의 코덱을 쓰는지 봅니다. */
         class CountingRleCodec final : public ICompressionCodec
         {
         public:
@@ -246,7 +246,7 @@ SW_TEST_CASE( ResourcePackTest, SinglePackMountAndHashLookup )
 /**
  * @brief [ResourcePackTest] 팩이 아는 압축 종류마다 왕복되는가 — 리플렉션된 `PackCompressionType` 의 모든 값(Custom 제외).
  * @details 팩은 자기 디스크 enum(`PackCompressionType`)을 표 한 곳(`PackCompressionUtil::kArrCodecMapping`)에서 스트림 쪽
- *          `CompressionCodecType` 으로 옮기고 등록부에서 코덱을 찾는다. 팩 종류를 늘리고 표에 줄을 빠뜨리면 그 종류에서 여기서 진다.
+ *          `CompressionCodecType` 으로 옮기고 레지스트리에서 코덱을 찾는다. 팩 종류를 늘리고 표에 줄을 빠뜨리면 그 종류에서 여기서 진다.
  */
 SW_TEST_CASE( ResourcePackTest, EveryPackCodecRoundTrips )
 {
@@ -294,8 +294,8 @@ SW_TEST_CASE( ResourcePackTest, EveryPackCodecRoundTrips )
 }
 
 /**
- * @brief [ResourcePackTest] 팩 리더는 코덱을 활성 등록부에서 찾는다 — 등록부가 바꾼 구현을 팩도 쓴다
- * @details 리더가 코덱 클래스를 직접 만들면 등록부에서 같은 종류를 바꿔도(엔진 · 모듈의 다른 구현) 팩만 옛 구현을 쓴다. 여기서는 RLE 자리를
+ * @brief [ResourcePackTest] 팩 리더는 코덱을 활성 레지스트리에서 찾는다 — 레지스트리가 바꾼 구현을 팩도 쓴다
+ * @details 리더가 코덱 클래스를 직접 만들면 레지스트리에서 같은 종류를 바꿔도(엔진 · 모듈의 다른 구현) 팩만 옛 구현을 쓴다. 여기서는 RLE 자리를
  *          해제 횟수를 세는 코덱으로 바꾸고 RLE 팩을 읽는다. 끝나면 내장 RLE 로 되돌린다.
  */
 SW_TEST_CASE( ResourcePackTest, PackReaderUsesTheActiveCodecRegistry )
@@ -922,9 +922,9 @@ SW_TEST_CASE( ResourcePackTest, StringPoolReadStopsAtPoolEnd )
 
 /**
  * @brief [ResourcePackTest] FAT 항목이 적어 둔 크기도 파일로 검증되는지 확인
- * @details `validateHeaderGeometry` 는 **헤더의 구역**(인덱스 · 스트링 풀)뿐 아니라 **항목**도 잰다.
+ * @details `validateHeaderGeometry` 는 **헤더의 구역**(인덱스 · 스트링 풀)뿐 아니라 **항목**도 측정한다.
  *          `readFile` 은 항목이 적어 둔 크기를 그대로 `resize` 에 넣으므로 — `_uncompressedSize` 는
- *          `uint32` 라 — 재지 않으면 손상된 32바이트 항목 하나가 **4GB 할당 요청**이 된다.
+ *          `uint32` 라 — 측정하지 않으면 손상된 32바이트 항목 하나가 **4GB 할당 요청**이 된다.
  *
  *          항목을 한 번 걸러 두면 `readFile` 은 그 값을 믿어도 된다 — 그래서 검사는 여는
  *          시점에 있고, 이 케이스도 `open()` 이 거부하는지를 본다.
@@ -1068,7 +1068,7 @@ SW_TEST_CASE( ResourcePackTest, EmptyCompressedPayloadIsNotSuccess )
 
     const uint64 indexOffset = sw::readIndexOffsetInternal( packPath );
     SW_ASSERT_TRUE( indexOffset != 0 );
-    // CRC 없는 팩으로 만든다 — CRC 가 있으면 0 으로 찬 데이터를 그것이 먼저 잡아, 이 수정만 따로 잴 수 없다.
+    // CRC 없는 팩으로 만든다 — CRC 가 있으면 0 으로 찬 데이터를 그것이 먼저 잡아, 이 수정만 따로 측정할 수 없다.
     const uint32 zero{ 0 };
     const uint16 noFlags{ 0 };
     SW_ASSERT_TRUE( sw::patchFileBytesInternal( packPath, indexOffset + 16, &zero, sizeof( zero ) ) ); // _compressedSize
