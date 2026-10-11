@@ -3,6 +3,7 @@
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Math/AABB.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/TagID.h"
 #include "Core/String/fixed_string.h"
@@ -20,7 +21,6 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
-#include "Engine/Physics/Collision/AABB.h"
 #include "Engine/Physics/Collision/ContinuousCollision.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Scene/Scene.h"

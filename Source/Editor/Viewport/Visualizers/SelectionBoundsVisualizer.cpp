@@ -4,6 +4,7 @@
  */
 #include "pch.h"
 
+#include "Core/Math/AABB.h"
 #include "Core/Math/MatrixMath.h"
 
 #include "Editor/Common/GUI/EditorColorUtil.h"
@@ -18,7 +19,6 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Physics/Collision/AABB.h"
 #include "Engine/Reflection/ReflectionCast.h"
 
 #include <imgui.h>

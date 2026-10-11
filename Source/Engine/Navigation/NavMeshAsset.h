@@ -14,10 +14,10 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/AABB.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Navigation/INavMesh.h"
-#include "Engine/Physics/Collision/AABB.h"
 
 namespace sw
 {

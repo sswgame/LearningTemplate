@@ -2,6 +2,8 @@
 
 #include "Engine/Object/Component/3D/MeshComponent.h"
 
+#include "Core/Math/AABB.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -13,7 +15,6 @@
 #include "Engine/Object/GameObject/CameraRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Physics/Collision/AABB.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceIO.h"
 

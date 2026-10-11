@@ -15,11 +15,11 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/AABB.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Navigation/NavigationTypes.h"
-#include "Engine/Physics/Collision/AABB.h"
 
 namespace sw
 {

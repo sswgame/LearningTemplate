@@ -2,11 +2,11 @@
 
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 
+#include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Physics/Collision/AABB.h"
 #include "Engine/Physics/PhysicsWorld.h"
 
 namespace sw

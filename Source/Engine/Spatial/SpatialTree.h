@@ -6,10 +6,10 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/AABB.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Physics/Collision/AABB.h"
 
 namespace sw
 {

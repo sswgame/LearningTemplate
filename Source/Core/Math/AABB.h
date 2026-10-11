@@ -1,13 +1,12 @@
 /**
  * @file AABB.h
- * @brief 가벼운 AABB 와 충돌 레이어를 고려한 겹침 질의입니다.
+ * @brief 축 정렬 경계 상자(AABB)입니다. 물리 · 공간 분할 · 렌더 · 내비가 함께 쓰는 수학 타입입니다.
+ * @details 충돌 레이어를 고려한 겹침 질의(`queryOverlaps`)는 물리 쪽 `CollisionLayers.h` 에 있습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Math/Math.h"
-
-#include "Engine/Physics/Collision/CollisionLayers.h"
 
 namespace sw
 {
@@ -95,13 +94,4 @@ namespace sw
         float3 getCenter() const noexcept { return isValid() ? ( _min + _max ) * 0.5f : float3{ 0.0f, 0.0f, 0.0f }; }
         float3 getExtents() const noexcept { return isValid() ? ( _max - _min ) * 0.5f : float3{ 0.0f, 0.0f, 0.0f }; }
     };
-
-    /** @brief AABB 가 겹치고 CollisionLayers 가 그 쌍을 허용하면 true 입니다. */
-    inline bool queryOverlaps( const AABB& a, uint8 layerA, const AABB& b, uint8 layerB,
-                               const CollisionLayers& layers )
-    {
-        if ( layers.shouldCollide( layerA, layerB ) == false )
-            return false;
-        return a.intersects( b );
-    }
 } // namespace sw

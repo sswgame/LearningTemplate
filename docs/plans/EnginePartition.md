@@ -3,19 +3,19 @@
 `Engine.dll` 하나를 티어 경계로 나누고, 그 전에 의존 방향의 약한 고리를 푼다. 폴더 의존은 이미 DAG 이고 `CheckEngineLayers.py` 가 지킨다.
 막힌 곳은 링크 단위가 하나라는 점과, 컴포넌트 모델(`Object`)이 기능 폴더 다섯에 묶여 있다는 점이다.
 
-## 측정한 현재 상태 (2026-10-10, `Source/Engine` 의 `#include "Engine/…"` 수)
+## 측정한 현재 상태 (2026-10-10, `Source/Engine` 의 `#include "Engine/…"` 수 — Object → Physics 는 2026-10-11 `AABB` 를 Core 로 옮긴 뒤)
 
 | 방향 | include 수 | 파일 수 | 대표 헤더 |
 |---|---|---|---|
 | Object → Graphics | 51 | 21 | `Mesh.h` · `GPULight.h` · `ShaderBindingSlots.h` · `MaterialInstance.h` |
-| Object → Physics | 41 | 22 | `IPhysicsScene.h` · `PhysicsTypes.h` · `AABB.h` |
+| Object → Physics | 36 | 19 | `IPhysicsScene.h` · `PhysicsTypes.h` · `PhysicsWorld.h` |
 | Object → Animation | 38 | 22 | `Skeleton.h` · `Pose.h` · `AnimClip.h` |
 | Object → Audio | 11 | 8 | `AudioSpatial.h` · `AudioEngine.h` |
 | Object → Navigation | 8 | 4 | `NavMeshGeometry.h` · `INavMesh.h` |
 | Resource → Animation | 2 | 1 | `AnimationAssetCache.h` · `SpriteClipCache.h` — `AssetManager.cpp`(게이트 배선 예외) |
 | Scene → Graphics | 3 | 2 | `MaterialCache.h` · `IRHIDevice.h` |
 
-- `Object` 안에서 기능 의존이 몰린 곳은 `Component/{2D, 3D, Audio, Navigation, Physics}`(기능 컴포넌트)와 `GameObject/`(Graphics 15 · Physics 10 · Navigation 5 · Audio 2)다.
+- `Object` 안에서 기능 의존이 몰린 곳은 `Component/{2D, 3D, Audio, Navigation, Physics}`(기능 컴포넌트)와 `GameObject/`(Graphics 15 · Physics 8 · Navigation 5 · Audio 2)다.
   `GameObject` 가 기능 폴더를 직접 아는 것이 진짜 문제다 — 컴포넌트 모델의 코어가 렌더 · 물리 · 내비를 include 한다.
 - `Engine/` 은 소스 559개 · 헤더 포함 약 1,160개, Debug `Engine.dll` 은 약 18 MB 다. 재링크 시간은 아직 재지 않았다(아래 0 단계).
 - 폴더 그래프는 사이클 0 이고 게이트 티어 표는 계산값과 같다(2026-10-11, 1 단계 뒤).
@@ -41,7 +41,7 @@
 ### 2. 컴포넌트 모델을 코어와 기능으로 가르기 (중간 위험, 가장 큰 효과)
 - `Object` 를 둘로: **코어**(`GameObject` · `Prefab` · `Component` 기반 클래스 · 리플렉션 훅)와 **기능 컴포넌트**(`Component/{2D,3D,Audio,Navigation,Physics}` · `Object/Animation`).
 - `Resource/AssetManager.cpp` 가 기능 캐시(Animation · Character · Destruction · Graphics)를 직접 만든다(게이트 배선 예외). 기능 폴더가 `Resource` 에 캐시를 등록하는 방향으로 뒤집고 예외를 지운다.
-- 코어는 `Graphics` · `Physics` · `Navigation` · `Audio` 를 include 하지 않는다. `GameObject` 의 기능 의존 32 건(위 표)은 기능 컴포넌트가 코어에 등록하는 방향으로 뒤집는다:
+- 코어는 `Graphics` · `Physics` · `Navigation` · `Audio` 를 include 하지 않는다. `GameObject` 의 기능 의존 30 건(위 표)은 기능 컴포넌트가 코어에 등록하는 방향으로 뒤집는다:
   Transform 변경 알림 · 바운드 질의 · 씬 등록 모두 `GameObject` 가 인터페이스(`ISceneListener` 꼴)로 듣는다.
 - 기능 컴포넌트는 코어 위, 각자의 기능 폴더 아래에 둔다. 폴더 이동은 `git mv` 후 코드젠을 다시 만든다(헤더 이동은 .gen.cpp 를 썩힌다 — 메모리 `moved-header-stale-codegen`).
 - 확인: `RunEngineLayerGraph.py` 에서 코어 폴더가 기능 폴더를 가리키는 화살표가 0.

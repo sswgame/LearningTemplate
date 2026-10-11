@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Math/AABB.h"
 
 namespace sw
 {
@@ -35,4 +36,16 @@ namespace sw
     private:
         uint32 _arrMatrix[kLayerCount];
     };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief AABB 가 겹치고 CollisionLayers 가 그 쌍을 허용하면 true 입니다. */
+    inline bool queryOverlaps( const AABB& a, uint8 layerA, const AABB& b, uint8 layerB,
+                               const CollisionLayers& layers )
+    {
+        if ( layers.shouldCollide( layerA, layerB ) == false )
+            return false;
+        return a.intersects( b );
+    }
 } // namespace sw
