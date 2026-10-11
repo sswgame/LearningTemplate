@@ -19,10 +19,10 @@ namespace sw
             static inline bool s_bDumped{ false };
 
             /**
-             * @brief 셀 의미가 있는 창인지 판별합니다.
-             * @details ImGui 는 툴팁 · 드래그 페이로드 · 디버그 창도 같은 목록에 담습니다. `##` 로 시작하는 내부 창은 뺍니다.
-             *          자식 창(`부모/##자식`)은 남깁니다. 내용이 자식에 들어 있는 패널이 많아서, 빼면 오히려 중요한 것이 보이지
-             *          않습니다.
+             * @brief 덤프할 의미가 있는 창인지 판별합니다.
+             * @details ImGui 는 툴팁, 드래그 페이로드, 디버그 창도 같은 목록에 담는다. `##` 로 시작하는 내부 창은 뺀다.
+             *          자식 창(`부모/##자식`)은 남긴다. 내용이 자식에 들어 있는 패널이 많아서, 빼면 오히려 중요한 것이 보이지
+             *          않는다.
              */
             static bool isReportableWindow( const ImGuiWindow* pWindow )
             {
@@ -35,11 +35,11 @@ namespace sw
 
             /**
              * @brief `BeginChild( int )` 로 만든 서드파티 자식 창인지 판별합니다.
-             * @details 우리 패널은 자식 창에 늘 문자열 id 를 줍니다(`##log_scroll`, `GvTable_...`). 숫자만으로 된 이름은 라이브러리가
-             *          정수 id 로 만든 것이고, 그런 위젯은 **부모의 드로우리스트에 그리는 경우가 있습니다.** 확인한 예로,
-             *          ImSequencer 는 함수 앞머리에서 `GetWindowDrawList()` 를 잡아 두고 `BeginChild( 889 )` 안에서도 계속 그 리스트에
-             *          그립니다(vcpkg imguizmo 1.10 의 ImSequencer.cpp 81행 vs 165행). 그래서 자식 창 `00000379`(=889)은 정점이 0
-             *          인데 화면에는 타임라인이 그려져 있습니다. 우리가 판별할 방법이 없으므로 빈 패널로 세지 않습니다.
+             * @details 엔진의 패널은 자식 창에 항상 문자열 id 를 준다(`##log_scroll`, `GvTable_...`). 숫자만으로 된 이름은 라이브러리가
+             *          정수 id 로 만든 것이고, 그런 위젯은 부모의 드로우 리스트에 그리는 경우가 있다. 예를 들어
+             *          ImSequencer 는 함수 앞부분에서 `GetWindowDrawList()` 를 잡아 두고 `BeginChild( 889 )` 안에서도 계속 그 리스트에
+             *          그린다(vcpkg imguizmo 1.10 의 ImSequencer.cpp 81행과 165행). 그래서 자식 창 `00000379`(=889)는 정점이 0
+             *          인데 화면에는 타임라인이 그려져 있다. 판별할 방법이 없으므로 빈 패널로 세지 않는다.
              */
             static bool isThirdPartyNumberedChild( const ImGuiWindow* pWindow )
             {
@@ -66,15 +66,15 @@ namespace sw
             }
 
             /**
-             * @brief 정점이 0 인 것이 **정상인** 창인지 판별합니다.
-             * @details 네 종류가 그렇습니다.
-             *          (1) 도킹 호스트처럼 **자식이 내용을 들고 있는 컨테이너**,
-             *          (2) 배경을 그리지 않는 창,
-             *          (3) 라이브러리가 정수 id 로 만든 자식 창(위 참고),
-             *          (4) **입력을 전혀 받지 않는 순수 오버레이**. ImGuizmo 가 만드는 `gizmo` 창이
-             *              그렇습니다. 선택이 없으면 그릴 것이 없습니다. 사용자가 조작하는 패널은 `NoInputs`
-             *              를 갖지 않으므로, 이 조건이 진짜 고장을 가릴 일은 없습니다.
-             *          이것까지 경고하면 실행할 때마다 거짓 경보가 나서 아무도 이 도구를 믿지 않습니다.
+             * @brief 정점이 0 인 것이 정상인 창인지 판별합니다.
+             * @details 네 종류가 해당한다.
+             *          (1) 도킹 호스트처럼 자식이 내용을 가진 컨테이너
+             *          (2) 배경을 그리지 않는 창
+             *          (3) 라이브러리가 정수 id 로 만든 자식 창(위 참고)
+             *          (4) 입력을 전혀 받지 않는 순수 오버레이. ImGuizmo 가 만드는 `gizmo` 창이
+             *              그렇다. 선택이 없으면 그릴 것이 없다. 사용자가 조작하는 패널은 `NoInputs`
+             *              를 가지지 않으므로, 이 조건이 진짜 고장을 가릴 일은 없다.
+             *          이것까지 경고하면 실행할 때마다 거짓 경보가 나서 아무도 이 도구를 믿지 않게 된다.
              */
             static bool isEmptyByDesign( const ImGuiWindow* pWindow )
             {
@@ -94,9 +94,9 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "PanelDump" );
 
-    // 이 파일만 읽으므로 여기서 정의한다(헤더에 선언하지 않는다).
+    // 이 파일만 읽으므로 여기서 정의하고 헤더에는 선언하지 않는다.
     /**
-     * @brief `-gv_editorPanelDump=<N>`: N 번째 ImGui 프레임에 에디터 창별 드로우 통계를 덤프합니다.
+     * @brief `-gv_editorPanelDump=<N>` 은 N 번째 ImGui 프레임에 에디터 창별 드로우 통계를 덤프합니다.
      * @details 0 이면 아무것도 하지 않습니다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_editorPanelDump, 0, "N 번째 프레임에 에디터 ImGui 창별 드로우 통계를 덤프 (0=사용 안 함)" );
@@ -133,8 +133,8 @@ namespace sw::editor
 
             ++windowCount;
 
-            // 보이는데 정점이 0 이고 설계상 정상도 아니면 **빈 패널**이다. "컴파일은 통과했는데 화면이 비었다" 를 기계가 읽을
-            // 수 있게 만든 형태다.
+            // 보이는데 정점이 0 이고 설계상 정상도 아니면 빈 패널이다. "컴파일은 통과했는데 화면이 비었다" 를 기계가 읽을
+            // 수 있는 형태로 만든 것이다.
             const bool bVisible = bActive && bCollapsed == false && bHidden == false;
             const bool bBlank   = bVisible && vertexCount == 0 && EditorPanelDumpInternal::isEmptyByDesign( pWindow ) == false;
             if ( bBlank )

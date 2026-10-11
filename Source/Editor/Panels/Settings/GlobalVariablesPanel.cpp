@@ -35,15 +35,15 @@ namespace sw::editor
             static constexpr Color kPinnedText{ 1.0f, 0.85f, 0.2f, 1.0f };
 
             /**
-             * @brief 모듈별 묶음 표의 플래그입니다 — 스크롤(ScrollY)이 없어 행 수만큼만 차지합니다.
-             * @details ScrollY 표에 바깥 높이 0 을 주면 ImGui 는 남은 높이를 모두 준다. 그러면 첫 묶음이 패널을 다 차지해 다음 모듈은 바깥을 한참
-             *          스크롤해야 보인다. 스크롤은 패널(바깥 창)이 한다. 평면 표만 ScrollY 로 남은 높이를 채운다.
+             * @brief 모듈별 그룹 테이블의 플래그입니다. 스크롤(ScrollY)이 없으므로 행 수만큼만 차지합니다.
+             * @details ScrollY 테이블에 바깥 높이 0 을 주면 ImGui 는 남은 높이를 모두 준다. 그러면 첫 그룹이 패널을 다 차지해 다음 모듈은 바깥을 한참
+             *          스크롤해야 보인다. 스크롤은 패널(바깥 창)이 한다. 평면 테이블만 ScrollY 로 남은 높이를 채운다.
              */
             static constexpr ImGuiTableFlags kGroupedTableFlags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable;
 
             /**
-             * @brief 변수 표의 틀을 엽니다. 핀 · 이름 · 타입 · 값 · 리셋 다섯 열은 고정 섹션과 본문(모듈별 · 평면)이 같습니다.
-             * @return 표가 열렸으면 true. `EndTable` 은 부르는 쪽이 부릅니다.
+             * @brief 변수 테이블의 틀을 엽니다. 핀, 이름, 타입, 값, 리셋 다섯 열은 고정 섹션과 본문(모듈별, 평면)이 같습니다.
+             * @return 테이블이 열렸으면 true 입니다. `EndTable` 은 호출하는 쪽이 호출합니다.
              */
             static bool beginVariableTable( const utf8* pID, ImGuiTableFlags flags, float32 outerHeight )
             {
@@ -229,7 +229,7 @@ namespace sw::editor
 
         for ( const string& varName : listAllName )
         {
-            // 테스트용(`SW_TEST_GLOBAL_VARIABLE`)은 벤치 · 자동화 스위치라 여기 두지 않는다. 실행 인자로만 준다. 개수에서도 뺀다.
+            // 테스트용(`SW_TEST_GLOBAL_VARIABLE`)은 벤치와 자동화 스위치이므로 여기 두지 않는다. 실행 인자로만 준다. 개수에서도 뺀다.
             GlobalVariableInfo* pInfo = pGvm->findVariable( varName );
             if ( pInfo == nullptr || pInfo->_bTestOnly )
                 continue;
@@ -238,8 +238,8 @@ namespace sw::editor
                 listFiltered.push_back( pInfo );
         }
 
-        // 포인터를 담은 컨테이너를 정렬하지만 **비교는 포인터 값이 아니라 (모듈, 이름)** 으로 한다.
-        // 전역 변수 이름은 GlobalVariableManager 의 키라 유일하므로 순서가 매번 같다.
+        // 포인터를 담은 컨테이너를 정렬하지만 비교는 포인터 값이 아니라 (모듈, 이름) 으로 한다.
+        // 전역 변수 이름은 GlobalVariableManager 의 키이므로 유일하고, 순서가 매번 같다.
         // NOLINTNEXTLINE(bugprone-nondeterministic-pointer-iteration-order)
         std::sort( listFiltered.begin(), listFiltered.end(), GlobalVariablesPanelInternal::compareVariableInfo );
 
@@ -247,7 +247,7 @@ namespace sw::editor
 
         drawPinnedSection( *pGvm );
 
-        // 걸러져서 0건인 것과 애초에 없는 것은 다르게 말해 준다.
+        // 필터에 걸러져서 0건인 것과 애초에 없는 것은 다르게 안내한다.
         if ( listFiltered.empty() )
         {
             if ( filter.isActive() )
@@ -262,7 +262,7 @@ namespace sw::editor
 
     void GlobalVariablesPanel::drawVariableToolbar( GlobalVariableManager& gvm )
     {
-        // 1) 상단 툴바 (검색, 모듈 그룹화, 기본값 리셋, 프리셋 메뉴)
+        // 1) 상단 툴바. 검색, 모듈 그룹화, 기본값 리셋, 프리셋 메뉴가 있다
         if ( EditorChrome::beginToolbar( "##GvToolbar" ) )
         {
             EditorWidgets::drawSearchField( "##GvSearch", _searchFilter,
@@ -305,7 +305,7 @@ namespace sw::editor
                     const string presetPath = FileUtil::joinPath(
                         EditorGlobalVariableCommands::getPresetFolderPath(),
                         string( _presetNameBuf.c_str() ) + ".gvpreset.xml" );
-                    // 이름 붙인 프리셋 저장은 세션 문서의 저장이 아니다 — 세션의 dirty 는 건드리지 않는다.
+                    // 이름 붙인 프리셋 저장은 세션 문서의 저장이 아니다. 세션의 dirty 는 건드리지 않는다.
                     if ( EditorGlobalVariableCommands::savePreset( presetPath, _presetNameBuf.c_str() ) )
                     {
                         _presetNameBuf.clear();
@@ -350,7 +350,7 @@ namespace sw::editor
 
                         if ( ImGui::MenuItem( displayName.c_str() ) )
                         {
-                            // 읽은 프리셋이 지금 값이 된다 — 저장된 세션과 다르므로 dirty 다. 못 읽으면 값이 그대로다.
+                            // 읽은 프리셋이 현재 값이 된다. 저장된 세션과 다르므로 dirty 다. 읽지 못하면 값이 그대로다.
                             if ( EditorGlobalVariableCommands::loadPreset( presetFile ) == false )
                                 SW_LOG_ERROR( "Could not load preset '%#'", presetFile.c_str() );
                         }
@@ -372,7 +372,7 @@ namespace sw::editor
         {
             if ( ImGui::CollapsingHeader( "Pinned / Favorites", ImGuiTreeNodeFlags_DefaultOpen ) )
             {
-                // 고정 섹션은 스크롤하지 않는다. 본문 표 위에 통째로 보인다.
+                // 고정 섹션은 스크롤하지 않는다. 본문 테이블 위에 통째로 보인다.
                 if ( GlobalVariablesPanelInternal::beginVariableTable(
                          "PinnedGvTable", ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable, 0.0f ) )
                 {
@@ -395,7 +395,7 @@ namespace sw::editor
 
     void GlobalVariablesPanel::drawVariableTable( const vector<GlobalVariableInfo*>& listFiltered )
     {
-        // 4) 메인 변수 테이블 (모듈별 묶음 또는 평면)
+        // 4) 메인 변수 테이블. 모듈별 그룹이거나 평면이다
         if ( _bGroupByModule == SW_TRUE )
         {
             string currentModule;

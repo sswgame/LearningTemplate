@@ -62,9 +62,9 @@ namespace sw::editor
             static constexpr Color kCallInEditorText{ 0.3f, 0.8f, 1.0f, 1.0f };
 
             /**
-             * @brief 오브젝트 하나를 바꾸는 인스펙터 편집 — 멈춰 있으면 되돌리기 기록과 씬 dirty 를 남기고, 플레이 중이면 바로 바꿉니다.
-             * @details 이름 · 활성 · 부모 해제 · 컴포넌트 활성 · 컴포넌트 제거가 이것을 지난다 — 기록도 dirty 도 없이 바꾸면 그 편집만
-             *          하고 다른 씬을 열거나 끌 때 묻지도 않고 사라지고 Ctrl+Z 로도 돌릴 수 없다. 플레이 중에는 씬 명령이 막히므로
+             * @brief 오브젝트 하나를 바꾸는 인스펙터 편집입니다. 정지 상태이면 되돌리기 기록과 씬 dirty 를 남기고, 플레이 중이면 바로 바꿉니다.
+             * @details 이름, 활성, 부모 해제, 컴포넌트 활성, 컴포넌트 제거가 이 함수를 지난다. 기록도 dirty 도 없이 바꾸면 그 편집은
+             *          다른 씬을 열거나 에디터를 끌 때 묻지도 않고 사라지고 Ctrl+Z 로도 돌릴 수 없다. 플레이 중에는 씬 명령이 막히므로
              *          (플레이 사본은 Stop 이 되돌린다) 바로 바꾼다.
              */
             template <typename EditFunc>
@@ -82,7 +82,7 @@ namespace sw::editor
                 EditorSceneCommands::commitModify( pObj, beforeSnapshot, undoLabel );
             }
 
-            /** @brief 컨테이너 구조 편집(더하기 · 지우기 · 다시 넣기)입니다. 주인 오브젝트가 있으면 되돌리기에 남기고, 없으면 그냥 바꿉니다. */
+            /** @brief 컨테이너 구조 편집(추가, 삭제, 다시 넣기)입니다. 주인 오브젝트가 있으면 되돌리기에 남기고, 없으면 그냥 바꿉니다. */
             template <typename EditFunc>
             static void applyContainerEdit( GameObject* pOwner, string_view undoLabel, EditFunc&& edit )
             {
@@ -92,7 +92,7 @@ namespace sw::editor
                     applyObjectEdit( pOwner, undoLabel, std::forward<EditFunc>( edit ) );
             }
 
-            /** @brief 키 · 원소 하나를 값 자리에 둔 프로퍼티입니다(오프셋 0). 글 변환(`SerializerUtil::formatPropertyText` · `applyPropertyText`)에 씁니다. */
+            /** @brief 키나 원소 하나를 값 위치(오프셋 0)에 둔 프로퍼티입니다. 텍스트 변환(`SerializerUtil::formatPropertyText`, `applyPropertyText`)에 씁니다. */
             static PropertyInfo makeValueProperty( const hashed_string& typeName )
             {
                 PropertyInfo valueProp{};
@@ -134,7 +134,7 @@ namespace sw::editor
         beginTarget( target );
         drawTypeProperties( target._pInstance, target._pType, pSectionTitle, listDrawnName );
         endTarget();
-        // 편집 통지(다중 선택의 나머지에 값 입히기)가 끝난 뒤에 되돌리기를 남긴다.
+        // 편집 알림(다중 선택의 나머지에 값 적용)이 끝난 뒤에 되돌리기를 남긴다.
         InspectorPropertyUndo::commitFinishedEdits();
     }
 
@@ -156,8 +156,8 @@ namespace sw::editor
 
     void EditorPropertyGrid::applyPropertyTextAsEdit( void* pInstance, const PropertyInfo& prop, string_view text, const utf8* pUndoLabel )
     {
-        // 그 프로퍼티 하나만 쓰고(비트필드는 그 비트만) 알린 뒤 되돌리기에 남긴다. 주의: `{"이름":값}` 을 JSON 으로 읽히면 읽기가 빠진
-        // 프로퍼티마다 기본값을 채우므로 **다른 프로퍼티까지** 바뀐다 — 글 하나로 프로퍼티 하나만 쓴다.
+        // 그 프로퍼티 하나만 쓰고(비트필드는 그 비트만) 알린 뒤 되돌리기에 남긴다. `{"이름":값}` 을 JSON 으로 읽히면 읽기에서 빠진
+        // 프로퍼티마다 기본값을 채우므로 다른 프로퍼티까지 바뀐다. 그래서 텍스트 하나로 프로퍼티 하나만 쓴다.
         GameObject*  pOwnerObj = _pEditTargetComponent != nullptr ? _pEditTargetComponent->getOwner() : _pEditTargetObject;
         const string value{ text };
         auto         apply = [this, &prop, pInstance, &value]()
@@ -194,7 +194,7 @@ namespace sw::editor
         if ( pInstance == nullptr || pTypeInfo == nullptr )
             return;
 
-        // 무엇을 어떤 순서로 그릴지는 `InspectorPropertyLayout` 이 정한다 — 상속분까지, 카테고리는 기반부터 처음 나온 순서.
+        // 무엇을 어떤 순서로 그릴지는 `InspectorPropertyLayout` 이 정한다. 상속한 프로퍼티까지 포함하고, 카테고리는 기반 클래스부터 처음 나온 순서다.
         const EditorListFilter         filter{ _propertyFilter.c_str() };
         vector<InspectorPropertyGroup> listGroup;
         InspectorPropertyLayout::collectPropertyGroups( *pTypeInfo, listDrawnName, filter, listGroup );
@@ -209,7 +209,7 @@ namespace sw::editor
 
         if ( pSectionTitle != nullptr )
             ImGui::SeparatorText( pSectionTitle );
-        // 컴포넌트면 그 타입의 기본 인스턴스(CDO)와 견준다. 중첩 구조체 · 씬 밖 객체는 메타의 기본값 글뿐이다.
+        // 컴포넌트이면 그 타입의 기본 인스턴스(CDO)와 비교한다. 중첩 구조체와 씬 밖 객체는 메타의 기본값 텍스트만 있다.
         const void*    pDefaultInstance = nullptr;
         EditorContext* pDefaultContext  = EditorContext::get();
         if ( _pEditTargetComponent != nullptr && pInstance == _pEditTargetComponent && pDefaultContext != nullptr )
@@ -228,7 +228,7 @@ namespace sw::editor
 
                 for ( const PropertyInfo* prop : props )
                 {
-                    // `EditCondition` 이 거짓이면 숨기거나(EditConditionHides) 막는다. 판정은 ImGui 를 모르는 `PropertyEditCondition` 이 한다.
+                    // `EditCondition` 이 거짓이면 숨기거나(EditConditionHides) 막는다. 판정은 ImGui 에 의존하지 않는 `PropertyEditCondition` 이 한다.
                     const PropertyEditState editState = PropertyEditCondition::getEditState( *pTypeInfo, *prop, pInstance );
                     if ( editState == PropertyEditState::Hidden )
                         continue;
@@ -262,7 +262,7 @@ namespace sw::editor
                         ImGui::EndPopup();
                     }
 
-                    // 기본값과 다르면 이름 칸 끝에 되돌리기 단추(언리얼의 노란 화살표). 기본값은 컴포넌트의 기본 인스턴스(CDO) — 없으면 메타 글.
+                    // 기본값과 다르면 이름 영역 끝에 되돌리기 버튼(언리얼의 노란 화살표)을 둔다. 기본값은 컴포넌트의 기본 인스턴스(CDO)이고, 없으면 메타 텍스트다.
                     if ( EditorDefaultObjects::isDefaultValue( *prop, pInstance, pDefaultInstance ) == false )
                     {
                         ImGui::SameLine();
@@ -287,7 +287,7 @@ namespace sw::editor
                     ImGui::BeginDisabled( editState == PropertyEditState::Disabled );
                     drawPropertyWidget( pInstance, *prop );
                     ImGui::EndDisabled();
-                    // 시나리오가 누를 수 있게 값 칸에 이름을 남긴다(`inspector.property.<타입>.<프로퍼티>`, 테스트를 켰을 때만 기록된다).
+                    // 시나리오가 누를 수 있게 값 입력란에 이름을 남긴다(`inspector.property.<타입>.<프로퍼티>`). 테스트를 켰을 때만 기록한다.
                     fixed_string<constant::kMaxBuffer128> mark;
                     formatstring( mark.data(), mark.capacity(), "inspector.property.%#.%#", pTypeInfo->_name.c_str(), prop->_name.c_str() );
                     EditorSelfTestMarks::note( mark.c_str() );
@@ -303,7 +303,7 @@ namespace sw::editor
         // ImGui 는 이번 프레임에 활성 아이템이 편집됐는지를 컨텍스트에 전역으로 기록한다. 위젯을
         // 그리기 전후로 그 플래그의 **변화**를 보면 "그 사이에 그린 이 프로퍼티가 편집됐다" 를 정확히
         // 가려낼 수 있다. 위젯이 아이템 하나든 여럿이든, 값이 float 이든 string 이든 상관없다.
-        // 위젯마다 판정을 심으면 새 위젯을 추가할 때 빠뜨리는데, 여기 한 곳이면 빠뜨릴 수 없다.
+        // 위젯마다 판정을 넣으면 새 위젯을 추가할 때 빠뜨리기 쉽지만, 여기 한 곳에 두면 빠뜨릴 수 없다.
         ImGuiContext& g             = *ImGui::GetCurrentContext();
         const bool    bEditedBefore = g.ActiveIdHasBeenEditedThisFrame;
 
@@ -311,7 +311,7 @@ namespace sw::editor
         drawPropertyWidgetBody( pInstance, prop );
         --_propertyDrawDepth;
 
-        // 컨테이너·중첩 구조체는 이 함수가 재귀한다. 통지는 가장 바깥에서 한 번만 한다.
+        // 컨테이너와 중첩 구조체는 이 함수가 재귀한다. 알림은 가장 바깥에서 한 번만 한다.
         if ( _propertyDrawDepth == 0 && bEditedBefore == false && g.ActiveIdHasBeenEditedThisFrame )
             notifyPropertyEdited( prop );
     }
@@ -323,11 +323,11 @@ namespace sw::editor
         else if ( _pEditTargetObject != nullptr )
             _pEditTargetObject->onPropertyChanged( prop._name );
 
-        // 씬 밖 객체(환경설정 · 문서)는 대상이 준 곳으로 알린다.
+        // 씬 밖 객체(환경설정, 문서)는 대상이 지정한 곳으로 알린다.
         if ( _onEdited.isBound() )
             _onEdited( prop );
 
-        // 고친 값을 검증해 맵 검사 결과를 바꾼다(로그는 남기지 않는다 — 끄는 동안 프레임마다 온다).
+        // 고친 값을 검증해 맵 검사 결과를 바꾼다. 로그는 남기지 않는다. 끄는 동안 프레임마다 호출되기 때문이다.
         const GameObject* pOwner = ( _pEditTargetComponent != nullptr ) ? _pEditTargetComponent->getOwner() : _pEditTargetObject;
         if ( pOwner != nullptr )
             (void)ObjectValidation::reportGameObject( *pOwner, false );
@@ -382,9 +382,9 @@ namespace sw::editor
         if ( pRegistry == nullptr )
             return;
 
-        // **enum 의 실제 크기로** 읽고 쓴다(`EnumInfo::_size` · 부호). 주의: 늘 int32 로 읽고 쓰면 — 엔진의 enum 은 대부분 uint8 ·
-        // uint16 이라 — 하나를 고를 때마다 뒤의 필드를 덮고(`CameraComponent::_role` 을 고르면 바로 뒤의 `_bOrthographic` 이 꺼진다),
-        // 읽을 때는 이웃 바이트가 섞여 멀쩡한 값이 "<Unknown>" 으로 뜬다.
+        // enum 의 실제 크기(`EnumInfo::_size` 와 부호)로 읽고 쓴다. 항상 int32 로 읽고 쓰면, 엔진의 enum 은 대부분 uint8 이나
+        // uint16 이므로 하나를 고를 때마다 뒤의 필드를 덮어쓰고(`CameraComponent::_role` 을 고르면 바로 뒤의 `_bOrthographic` 이 꺼진다),
+        // 읽을 때는 이웃 바이트가 섞여 멀쩡한 값이 "<Unknown>" 으로 보인다.
         void* pEnumMemory = prop.getValuePtr<void>( pInstance );
         if ( pEnumMemory == nullptr )
             return;
@@ -484,9 +484,9 @@ namespace sw::editor
     {
         const utf8* pLabel = "##value";
 
-        // 이 함수의 **모든 분기는 무언가를 그리고 끝난다.** 아무것도 그리지 않고 돌아가면 인스펙터에는 **빈 칸 하나**만 남아,
-        // 값이 비었는지, 그리지 못하는 것인지, 버그인지 화면만 보고는 구분할 수 없다(모르는 타입도 "No inspector for ..." 라고
-        // 알린다). 맵 프로퍼티도 실제로 있다(`GameSettings::_mapCustomProperty` 등).
+        // 이 함수의 모든 분기는 무언가를 그리고 끝난다. 아무것도 그리지 않고 반환하면 인스펙터에는 빈 항목 하나만 남아,
+        // 값이 비었는지, 그리지 못하는 것인지, 버그인지 화면만 보고는 구분할 수 없다. 모르는 타입도 "No inspector for ..." 라고
+        // 알린다. 맵 프로퍼티도 실제로 있다(`GameSettings::_mapCustomProperty` 등).
         void* pContainer = prop.getRawPtr( pInstance );
         if ( pContainer == nullptr )
         {
@@ -507,7 +507,7 @@ namespace sw::editor
             drawMapContainer( pContainer, prop, *pMap, bReadOnly );
             return;
         }
-        // 원소가 곧 정렬 · 해시 키인 컨테이너(`set`)는 제자리에서 고칠 수 없다 — 지우고 다시 넣는다.
+        // 원소가 곧 정렬 키이거나 해시 키인 컨테이너(`set`)는 제자리에서 고칠 수 없으므로 지우고 다시 넣는다.
         if ( pSeq->allowsInPlaceElementWrite() == false )
         {
             drawKeyedSequenceContainer( pContainer, prop, *pSeq, bReadOnly );
@@ -522,7 +522,7 @@ namespace sw::editor
 
         if ( ImGui::TreeNodeEx( pLabel, ImGuiTreeNodeFlags_SpanFullWidth, "%s", headerBuf.c_str() ) )
         {
-            // 고정 배열은 칸 수가 정해져 있다 — 더하기 · 비우기는 아무 일도 하지 않으므로 그리지 않는다.
+            // 고정 배열은 원소 수가 정해져 있다. 추가와 비우기는 아무 일도 하지 않으므로 그리지 않는다.
             if ( bReadOnly == false && pSeq->isFixedSize() == false )
             {
                 if ( ImGui::SmallButton( "+ Add" ) )
@@ -541,8 +541,8 @@ namespace sw::editor
                 ImGui::Separator();
             }
 
-            // 원소 위젯도 같은 규칙을 받아야 한다 — `bReadOnly` 가 위의 버튼만 가리면
-            // **`ReadOnly` 컨테이너의 원소가 그대로 편집된다.**
+            // 원소 위젯도 같은 규칙을 받아야 한다. `bReadOnly` 가 위의 버튼만 가리면
+            // `ReadOnly` 컨테이너의 원소가 그대로 편집된다.
             ImGui::BeginDisabled( bElementEditable == false );
 
             const size_t newCount = pSeq->getSize( pContainer );
@@ -587,7 +587,7 @@ namespace sw::editor
         valueProp._metadata          = prop._metadata;
         const bool bElementEditable  = EditorSessionPolicy::areContainerElementEditsAllowed( bReadOnly, true );
 
-        // 값은 맵 노드 안에서 제자리로 고친다(되돌리기는 위젯 하나 단위 — `drawPropertyWidget`). 지우기는 순회가 끝난 뒤에 한다.
+        // 값은 맵 노드 안에서 그 자리에서 고친다. 되돌리기는 위젯 하나 단위다(`drawPropertyWidget`). 삭제는 순회가 끝난 뒤에 한다.
         size_t eraseOrdinal = static_cast<size_t>( -1 );
         size_t ordinal      = 0;
         mapWrapper.forEachMutable( pContainer, SW_DELEGATE_LAMBDA( MapForEachMutableDelegate, [&]( const void* pKey, void* pValue )
@@ -618,7 +618,7 @@ namespace sw::editor
         string keyText;
         if ( bReadOnly == false && drawContainerAddRow( SW_LOCKEY( "EditorInspector", "NewKeyHint" ), keyText ) )
         {
-            // 키를 키 타입으로 읽어 본다. 같은 키(글이 같다)가 이미 있으면 값을 덮어쓰지 않는다.
+            // 키를 키 타입으로 읽어 본다. 같은 키(텍스트가 같다)가 이미 있으면 값을 덮어쓰지 않는다.
             void* pKey   = Memory::allocateAligned( mapWrapper.getKeySize(), alignof( std::max_align_t ) );
             void* pValue = Memory::allocateAligned( mapWrapper.getValueSize(), alignof( std::max_align_t ) );
             mapWrapper.defaultConstructKey( pKey );
@@ -668,7 +668,7 @@ namespace sw::editor
                 eraseIndex = elemIndex;
             if ( bReadOnly == false )
                 ImGui::SameLine();
-            // 원소는 글 칸이다. Enter 로 낸 글을 원소 타입으로 읽어 지우고 다시 넣는다 — 원소가 곧 정렬 키라 제자리 쓰기는 트리를 망친다.
+            // 원소는 텍스트 입력란이다. Enter 로 확정한 텍스트를 원소 타입으로 읽어 지우고 다시 넣는다. 원소가 곧 정렬 키이므로 제자리에 쓰면 트리가 깨진다.
             fixed_string<constant::kMaxBuffer256> elementText{ SerializerUtil::formatPropertyText( elementProp, sequence.getElementConst( pContainer, elemIndex ), context ).c_str() };
             const ImGuiInputTextFlags             flags = bElementEditable ? ImGuiInputTextFlags_EnterReturnsTrue : ImGuiInputTextFlags_ReadOnly;
             ImGui::SetNextItemWidth( -FLT_MIN );
@@ -776,7 +776,7 @@ namespace sw::editor
 
         for ( const FunctionInfo& method : pTypeInfo->_listMethod )
         {
-            // 생성자 호출기는 초기화되지 않은 저장 공간(placement new)을 기대한다. 살아 있는 인스펙터 인스턴스에 부르면 안전하지 않다.
+            // 생성자 호출기는 초기화되지 않은 저장 공간(placement new)을 기대한다. 살아 있는 인스펙터 인스턴스에 호출하면 안전하지 않다.
             if ( method._metadata._bConstructor != SW_FALSE )
                 continue;
 
@@ -820,7 +820,7 @@ namespace sw::editor
             for ( uint32 paramIndex = 0; paramIndex < static_cast<uint32>( listSlot.size() ); ++paramIndex )
             {
                 ImGui::PushID( static_cast<int32>( paramIndex ) );
-                // 선언의 인자 이름이 있으면 그것, 없으면 순번이다.
+                // 선언에 인자 이름이 있으면 그것을 쓰고, 없으면 순번을 쓴다.
                 const FunctionParameterInfo&         parameter = method._listParameter[paramIndex];
                 fixed_string<constant::kMaxBuffer64> label;
                 if ( parameter._name.empty() )

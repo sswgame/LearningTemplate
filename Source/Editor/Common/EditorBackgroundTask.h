@@ -2,13 +2,13 @@
  * @file EditorBackgroundTask.h
  * @brief 워커가 만들고 게임 스레드가 가져가는 에디터 백그라운드 잡의 공통 뼈대입니다.
  *
- * @details 에디터의 파일 스캔 · 로컬라이즈 로드 같은 잡은 모두 같은 규약을 씁니다. 게임 스레드가 `request()` 로 입력을
- *          싣고 세대를 올리면, 워커가 그 세대의 결과를 만들어 싣고, 게임 스레드가 `take()` 로 가져갑니다. 잠금 · 세대 확인 ·
- *          플래그 전환을 잡마다 복사하면 한 벌만 틀려도 결과를 잃거나 낡은 세대의 결과가 섞이는 종류의 버그가 납니다.
- *          그래서 규약은 여기 한 곳에 두고, 각 잡은 **입력 타입과 실제 작업 본문**만 갖습니다.
+ * @details 에디터의 파일 스캔과 로컬라이즈 로드 같은 잡은 모두 같은 규약을 쓴다. 게임 스레드가 `request()` 로 입력을
+ *          싣고 세대를 올리면, 워커가 그 세대의 결과를 만들어 싣고, 게임 스레드가 `take()` 로 가져간다. 락, 세대 확인,
+ *          플래그 전환을 잡마다 복사하면 한 곳만 틀려도 결과를 잃거나 오래된 세대의 결과가 섞이는 버그가 난다.
+ *          그래서 규약은 여기 한 곳에 두고, 각 잡은 입력 타입과 실제 작업 본문만 가진다.
  *
- * @note 이 헤더는 구체적인 잡이나 에디터 UI 에 의존하지 않습니다. 그래서 단위 테스트가 ImGui 를 끌어오지 않고 규약만
- *       따로 검증할 수 있습니다.
+ * @note 이 헤더는 구체적인 잡이나 에디터 UI 에 의존하지 않는다. 그래서 단위 테스트가 ImGui 를 끌어오지 않고 규약만
+ *       따로 검증할 수 있다.
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
@@ -18,7 +18,7 @@
 
 namespace sw::editor
 {
-    /** @brief 입력이 없는 잡을 위한 빈 입력. */
+    /** @brief 입력이 없는 잡을 위한 빈 입력입니다. */
     struct EditorBackgroundNoInput
     {
     };
@@ -28,11 +28,11 @@ namespace sw::editor
 {
     /**
      * @class EditorBackgroundTask
-     * @brief 워커가 만들고 게임 스레드가 가져가는 잡의 공통 뼈대입니다(잠금 · 세대 · 완료 플래그).
-     * @details 상태를 `shared_ptr` 로 들고 워커에 넘깁니다. 잡 객체(패널 멤버)가 먼저 사라져도 워커는 유효한 메모리에 쓰고
-     *          끝납니다. 세대 번호는 "요청이 갱신됐으니 낡은 워커의 결과는 버린다" 는 뜻입니다.
-     * @tparam TInput  워커에 넘길 입력 (없으면 EditorBackgroundNoInput)
-     * @tparam TResult 워커가 만들어 낼 결과
+     * @brief 워커가 만들고 게임 스레드가 가져가는 잡의 공통 뼈대입니다. 락, 세대, 완료 플래그를 담당합니다.
+     * @details 상태를 `shared_ptr` 로 보관해 워커에 넘긴다. 잡 객체(패널 멤버)가 먼저 사라져도 워커는 유효한 메모리에 쓰고
+     *          끝난다. 세대 번호는 "요청이 갱신되었으니 오래된 워커의 결과는 버린다" 는 뜻이다.
+     * @tparam TInput  워커에 넘길 입력입니다. 없으면 EditorBackgroundNoInput 입니다.
+     * @tparam TResult 워커가 만들어 낼 결과입니다.
      */
     template <typename TInput, typename TResult>
     class EditorBackgroundTask
@@ -45,8 +45,8 @@ namespace sw::editor
         }
 
         /**
-         * @brief 완료된 결과를 가져옵니다. 새 결과가 있으면 true입니다.
-         * @details 한 번 가져가면 완료 표시가 내려갑니다. 같은 결과를 두 번 주지 않습니다.
+         * @brief 완료된 결과를 가져옵니다. 새 결과가 있으면 true 입니다.
+         * @details 한 번 가져가면 완료 표시가 내려간다. 같은 결과를 두 번 주지 않는다.
          */
         bool take( TResult& outResult )
         {
@@ -64,7 +64,7 @@ namespace sw::editor
             return true;
         }
 
-        /** @brief 워커가 아직 돌고 있으면 true입니다. */
+        /** @brief 워커가 아직 실행 중이면 true 입니다. */
         bool isPending() const
         {
             if ( _pState == nullptr )
@@ -75,7 +75,7 @@ namespace sw::editor
         }
 
     protected:
-        /** @brief 게임 스레드와 워커가 함께 보는 상태. */
+        /** @brief 게임 스레드와 워커가 함께 보는 상태입니다. */
         struct State
         {
             mutable mutex          _mutex{};
@@ -100,7 +100,7 @@ namespace sw::editor
 
         /**
          * @brief 입력을 싣고 세대를 올립니다.
-         * @return 워커에 넘길 세대 번호.
+         * @return 워커에 넘길 세대 번호입니다.
          */
         uint32 beginRequest( TInput input )
         {
@@ -113,7 +113,7 @@ namespace sw::editor
             return _pState->_generation;
         }
 
-        /** @brief 워커에서 부릅니다. 세대가 아직 유효하면 입력을 복사합니다. 낡은 세대면 false 입니다. */
+        /** @brief 워커에서 호출합니다. 세대가 아직 유효하면 입력을 복사하고, 오래된 세대면 false 를 반환합니다. */
         [[nodiscard]] static bool readInput( const shared_ptr<State>& pState, uint32 generation, TInput& outInput )
         {
             if ( pState == nullptr )
@@ -127,7 +127,7 @@ namespace sw::editor
             return true;
         }
 
-        /** @brief 워커에서 부릅니다. 세대가 아직 유효하면 결과를 싣고 완료로 표시합니다. 낡은 세대면 버립니다. */
+        /** @brief 워커에서 호출합니다. 세대가 아직 유효하면 결과를 싣고 완료로 표시하며, 오래된 세대면 버립니다. */
         static void publish( const shared_ptr<State>& pState, uint32 generation, TResult&& result )
         {
             if ( pState == nullptr )
