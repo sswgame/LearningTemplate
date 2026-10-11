@@ -10,6 +10,8 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Delegate/Delegate.h"
 
+#include <variant>
+
 namespace sw
 {
     /** @brief 커맨드라인 파서. registerToCommandLine / updateFromCommandLine 에 넘깁니다. */

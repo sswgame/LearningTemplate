@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <mutex>
 #include <random>
+#include <sstream>
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include <process.h>

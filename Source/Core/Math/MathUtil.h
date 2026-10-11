@@ -309,45 +309,44 @@ namespace sw
             return ( ( value + alignT - T( 1 ) ) / alignT ) * alignT;
         }
 
-        /** @brief 임의의 난수를 반환합니다. */
+        /**
+         * @brief 스레드마다 씨앗이 다른 64 비트 난수입니다(비결정 — 결정적 난수는 `XorShift32` · `HashUtil::splitMix64Next`).
+         * @details 엔진(`std::mt19937_64`)은 MathUtil.cpp 에 둔다 — `<random>` 을 모든 TU 가 읽지 않게.
+         */
+        static SW_API uint64 getRandomBits64();
+
+        /** @brief 임의의 난수를 반환합니다. 실수는 [0, 1), 정수는 [0, 최댓값] 입니다. */
         template <typename T>
         static SW_INLINE T getRandom()
         {
             static_assert( std::is_arithmetic_v<T>, "T should be arithmetic" );
-
-            thread_local std::mt19937_64 t_generator{ std::random_device{}() };
-
-            using DistType = std::conditional_t<
-                std::is_floating_point_v<T>,
-                std::uniform_real_distribution<T>,
-                std::uniform_int_distribution<std::conditional_t<( sizeof( T ) < 2 ), int32, T>>>;
-
-            DistType dist{};
-            return static_cast<T>( dist( t_generator ) );
+            if constexpr ( std::is_floating_point_v<T> )
+                return static_cast<T>( static_cast<float64>( getRandomBits64() >> 11 ) * 0x1.0p-53 );
+            else
+                return static_cast<T>( getRandomBits64() & static_cast<uint64>( std::numeric_limits<T>::max() ) );
         }
 
-        /** @brief 지정된 범위 [from, to] 내의 임의의 난수를 반환합니다. */
+        /** @brief 지정된 범위 [from, to] 내의 임의의 난수를 반환합니다. 거꾸로 주면 바꿔 읽습니다. */
         template <typename T>
         static SW_INLINE T getRandomRange( T from, T to )
         {
             static_assert( std::is_arithmetic_v<T>, "T should be arithmetic" );
-
-            thread_local std::mt19937_64 t_generator{ std::random_device{}() };
-
-            T start = static_cast<T>( from );
-            T end   = static_cast<T>( to );
+            T start = from;
+            T end   = to;
             if ( start > end )
                 std::swap( start, end );
-
-            using DistType = std::conditional_t<
-                std::is_floating_point_v<T>,
-                std::uniform_real_distribution<T>,
-                std::uniform_int_distribution<std::conditional_t<( sizeof( T ) < 2 ), int32, T>>>;
-
-            DistType dist{ static_cast<std::conditional_t<( sizeof( T ) < 2 ), int32, T>>( start ),
-                           static_cast<std::conditional_t<( sizeof( T ) < 2 ), int32, T>>( end ) };
-
-            return static_cast<T>( dist( t_generator ) );
+            if constexpr ( std::is_floating_point_v<T> )
+            {
+                const T value = start + ( end - start ) * getRandom<T>();
+                return value > end ? end : value;
+            }
+            else
+            {
+                // 부호 있는 타입도 차이는 부호 없는 64 비트로 정확히 담긴다. span 0 은 전 범위(2^64)다.
+                const uint64 span = static_cast<uint64>( end ) - static_cast<uint64>( start ) + 1u;
+                const uint64 bits = getRandomBits64();
+                return static_cast<T>( static_cast<uint64>( start ) + ( span == 0u ? bits : bits % span ) );
+            }
         }
 
         /** @brief 소수 부분만 반환합니다(x - floor(x)). 정수 타입이면 0 입니다. */

@@ -16,6 +16,8 @@
 #include "Core/Log/LogTypes.h"
 #include "Core/Log/Logger.h"
 
+#include <condition_variable>
+
 namespace sw
 {
     class FileLogOutput;

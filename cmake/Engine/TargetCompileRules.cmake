@@ -37,7 +37,7 @@ function(sw_configurePch targetName headerPath)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# sw_addSharedPchOwner — 같은 정의를 가진 타깃들이 PCH 하나를 나눠 쓰게 하는 중립 소유자(`REUSE_PRECOMPILE_HEADERS_FROM`).
+# sw_addSharedPchOwner — 같은 정의를 가진 타깃들이 PCH 하나를 나눠 쓰게 하는 중립 소유자(쓰는 쪽은 `sw_useSharedPch`).
 #   clang 은 PCH 와 명령줄의 `-D` 가 하나라도 다르면 거부한다(`definition of macro 'SW_LOG_TAG' differs`). 소유자는 타깃 고유 정의가 없고
 #   `LINK` 만 받아 공통 정의(`SW_IMPORTS` 등)를 물려받는다 — 특정 킷이 소유하면 그 킷의 정의가 PCH 에 구워져 나머지로 샌다.
 # ------------------------------------------------------------------------------
@@ -55,9 +55,43 @@ function(sw_addSharedPchOwner OWNER_NAME HEADER_PATH)
 endfunction()
 
 # ------------------------------------------------------------------------------
+# sw_useSharedPch — 타깃이 `sw_addSharedPchOwner` 의 PCH 를 쓴다(clang-cl 만 — 그 밖은 PCH 없이 짓는다).
+#   CMake 의 `REUSE_PRECOMPILE_HEADERS_FROM` 을 쓰지 않는 까닭 둘:
+#   - 속성만 세우면(`set_target_properties`) CMake 4.4 는 조용히 무시한다 — `target_precompile_headers( REUSE_FROM )` 이어야 붙는다.
+#   - CMake 는 PCH 플래그(`/Yu` · `/FI<cmake_pch.hxx>`)를 명령줄 맨 끝에 둔다. clang-cl 은 PCH 헤더보다 **앞에** 강제 포함한 파일을 건너뛰므로
+#     타깃 고유 정의 헤더(`sw_setTargetDefsHeader`)가 사라진다. 그래서 PCH 플래그를 타깃 옵션 맨 앞(`BEFORE`)에 직접 넣어 정의 헤더 ·
+#     의존 타깃의 `FlagOps.gen.h` 가 PCH **뒤에** 읽히게 한다.
+#   PCH 안 헤더는 `/showIncludes` 에 나오지 않으므로 소유자의 PCH 오브젝트를 모든 C++ 소스의 `OBJECT_DEPENDS` 로 건다 —
+#   소스가 다 붙은 뒤(리플렉션 단계 뒤) 부른다. `SKIP_PRECOMPILE_HEADERS` 소스는 `/Y-` 로 PCH 를 끈다.
+# ------------------------------------------------------------------------------
+function(sw_useSharedPch TARGET_NAME OWNER_NAME)
+	if(NOT SW_ENABLE_PCH OR NOT MSVC OR NOT TARGET ${OWNER_NAME})
+		return()
+	endif()
+	get_target_property(ownerBinaryDir ${OWNER_NAME} BINARY_DIR)
+	set(pchDir "${ownerBinaryDir}/CMakeFiles/${OWNER_NAME}.dir")
+	set(pchHeader "${pchDir}/cmake_pch.hxx")
+	target_compile_options(${TARGET_NAME} BEFORE PRIVATE "/Yu${pchHeader}" "/Fp${pchDir}/cmake_pch.cxx.pch" "/FI${pchHeader}")
+	add_dependencies(${TARGET_NAME} ${OWNER_NAME})
+	get_target_property(listSource ${TARGET_NAME} SOURCES)
+	foreach(src IN LISTS listSource)
+		if(NOT src MATCHES "\\.(cpp|cxx|cc)$")
+			continue()
+		endif()
+		get_source_file_property(bSkipPch "${src}" TARGET_DIRECTORY ${TARGET_NAME} SKIP_PRECOMPILE_HEADERS)
+		if(bSkipPch)
+			set_property(SOURCE "${src}" TARGET_DIRECTORY ${TARGET_NAME} APPEND PROPERTY COMPILE_OPTIONS "/Y-")
+		else()
+			set_property(SOURCE "${src}" TARGET_DIRECTORY ${TARGET_NAME} APPEND PROPERTY OBJECT_DEPENDS "${pchDir}/cmake_pch.cxx.obj")
+		endif()
+	endforeach()
+endfunction()
+
+# ------------------------------------------------------------------------------
 # sw_setTargetDefsHeader — 타깃 고유 정의(`SW_LOG_TAG` · `SW_GF_EXPORTS`)를 `-D` 대신 PCH 뒤에 강제 포함하는 헤더로 준다.
 #   PCH 를 나눠 쓰려면 명령줄 정의가 같아야 하므로 타깃마다 다른 값은 여기로 옮긴다. `Logger.h` 가 PCH 안에서 기본 `SW_LOG_TAG` 를 정의해
 #   두므로 `#undef` 로 덮는다. 인자: LOG_TAG, GF_EXPORTS(켜면 `SW_GF_EXPORTS` 정의).
+#   PCH 안의 헤더가 읽는 정의는 여기 둘 수 없다(PCH 를 만들 때 이미 정해졌다) — `SW_GF_EXPORTS` 를 읽는 `GameFrameworkExports.h` 는 PCH 밖이다.
 # ------------------------------------------------------------------------------
 function(sw_setTargetDefsHeader TARGET_NAME)
 	cmake_parse_arguments(ARG "GF_EXPORTS" "LOG_TAG" "" ${ARGN})

@@ -9,6 +9,8 @@
 #include "TestFramework/TestEnvironment.h"
 #include "TestFramework/TestFilter.h"
 
+#include <sstream>
+
 namespace test
 {
     // ------------------------------------------------------------------------------

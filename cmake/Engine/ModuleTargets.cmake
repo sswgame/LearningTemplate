@@ -86,7 +86,7 @@ function(sw_addModuleLibrary TARGET_NAME)
 	endif()
 	target_link_libraries(${TARGET_NAME} PRIVATE ${ARG_LINK_PRIVATE} sw_global_options)
 	if(ARG_KIND STREQUAL "kit")
-		# 키트는 명령줄 정의가 서로 같아야 PCH 하나(`sw_kit_pch`)를 나눠 쓴다 — 타깃 고유 정의는 강제 포함 헤더로 준다.
+		# 키트는 명령줄 정의가 서로 같아야 PCH 하나(`sw_kit_pch`, 함수 끝의 `sw_useSharedPch`)를 나눠 쓴다 — 타깃 고유 정의는 강제 포함 헤더로 준다.
 		# 자동 정의 `<타깃>_EXPORTS` 는 아무도 쓰지 않아 끈다.
 		set_target_properties(${TARGET_NAME} PROPERTIES DEFINE_SYMBOL "")
 		if(ARG_DEFINITIONS)
@@ -98,11 +98,8 @@ function(sw_addModuleLibrary TARGET_NAME)
 			target_compile_definitions(${TARGET_NAME} INTERFACE SW_GF_IMPORTS)
 		endif()
 		sw_setTargetDefsHeader(${TARGET_NAME} ${listTargetDefsOption})
-		if(SW_ENABLE_PCH)
-			sw_addSharedPchOwner(sw_kit_pch "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h"
-				LINK GameFramework Engine sw_public_source_includes sw_global_options)
-			set_target_properties(${TARGET_NAME} PROPERTIES REUSE_PRECOMPILE_HEADERS_FROM sw_kit_pch)
-		endif()
+		sw_addSharedPchOwner(sw_kit_pch "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h"
+			LINK GameFramework Engine sw_public_source_includes sw_global_options)
 	else()
 		target_compile_definitions(${TARGET_NAME} PRIVATE "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" ${ARG_DEFINITIONS})
 		sw_configurePch(${TARGET_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
@@ -128,6 +125,10 @@ function(sw_addModuleLibrary TARGET_NAME)
 			INCLUDES "${CMAKE_SOURCE_DIR}/Source"
 			EXCLUDE_REGEX "${ARG_REFLECTION_EXCLUDE}"
 		)
+	endif()
+
+	if(ARG_KIND STREQUAL "kit")
+		sw_useSharedPch(${TARGET_NAME} sw_kit_pch)   # 소스(리플렉션 산출물 포함)가 다 붙은 뒤
 	endif()
 endfunction()
 

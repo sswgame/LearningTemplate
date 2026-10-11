@@ -2,6 +2,8 @@
 
 #include "Core/Container/DynamicBitset.h"
 
+#include <ostream>
+
 SW_LOG_CALLER( "DynamicBitset" );
 namespace sw
 {
