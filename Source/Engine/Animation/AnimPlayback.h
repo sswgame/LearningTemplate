@@ -1,8 +1,8 @@
 /**
  * @file AnimPlayback.h
- * @brief 2D · 3D 가 함께 쓰는 재생 핵심 — 재생할 것(`IAnimPlayable`), 시간 커서, 알림 트랙입니다.
- * @details 스프라이트 클립 구간과 스켈레탈 클립은 "샘플이 무엇을 내는가" 만 다릅니다(프레임 번호 ↔ 본 포즈). 시간을 흘리고 · 되감고 ·
- *          끝을 알고 · 지나간 알림을 고르는 일은 둘이 같으므로 여기 한 벌입니다(`AnimPlayer` · `AnimGraphPlayer` 도 이것만 봅니다).
+ * @brief 2D 와 3D 가 함께 쓰는 재생 핵심입니다. 재생할 것(`IAnimPlayable`), 시간 커서, 알림 트랙을 담습니다.
+ * @details 스프라이트 클립 구간과 스켈레탈 클립은 "샘플이 무엇을 내는가"만 다르다(프레임 번호와 본 포즈). 시간을 흘리고, 되감고,
+ *          끝을 알고, 지나간 알림을 고르는 일은 둘이 같으므로 여기에 한 벌만 둔다(`AnimPlayer` 와 `AnimGraphPlayer` 도 이것만 본다).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -18,7 +18,7 @@ namespace sw
 
     /**
      * @class IAnimPlayable
-     * @brief 재생할 수 있는 것 하나입니다(스켈레탈 `AnimClip`, 스프라이트 클립의 이름 붙은 구간). 길이 · 기본 반복 · 알림만 압니다.
+     * @brief 재생할 수 있는 것 하나입니다(스켈레탈 `AnimClip`, 스프라이트 클립의 이름 붙은 구간). 길이, 기본 반복, 알림만 압니다.
      */
     class SW_API IAnimPlayable
     {
@@ -28,7 +28,7 @@ namespace sw
         IAnimPlayable( const IAnimPlayable& )            = default;
         IAnimPlayable& operator=( const IAnimPlayable& ) = default;
 
-        /** @brief 한 바퀴 길이(초)입니다. 0 보다 커야 재생됩니다. */
+        /** @brief 한 바퀴 길이(초)를 반환합니다. 0 보다 커야 재생됩니다. */
         virtual float32 getPlayLength() const = 0;
         /** @brief 데이터가 정한 기본 반복 여부입니다. */
         virtual bool isLoopingByDefault() const = 0;
@@ -42,8 +42,8 @@ namespace sw
     /**
      * @struct AnimTimeStep
      * @brief 커서가 한 번 나아간 구간입니다. 알림은 이 구간에서 고릅니다.
-     * @details 구간은 `(_previousTime, _currentTime]` 이고, `_wrapCount` 번 끝을 지나 처음으로 돌아왔습니다. 재생 직후 첫 걸음은 시작 시각을
-     *          포함합니다(`_bIncludesStart`) — 0 초의 알림이 시작에서 한 번 울립니다.
+     * @details 구간은 `(_previousTime, _currentTime]` 이고, `_wrapCount` 번 끝을 지나 처음으로 돌아왔다. 재생 직후 첫 걸음은 시작 시각을
+     *          포함한다(`_bIncludesStart`). 0 초의 알림이 시작에서 한 번 울린다.
      */
     struct AnimTimeStep
     {
@@ -90,7 +90,7 @@ namespace sw
 {
     /**
      * @struct AnimNotifyEvent
-     * @brief 클립 시각에 붙은 이름 하나입니다(발소리 · 칼 휘두름 시작). `_duration` 이 0 보다 크면 구간 알림(NotifyState)입니다 —
+     * @brief 클립 시각에 붙은 이름 하나입니다(발소리, 칼 휘두름 시작). `_duration` 이 0 보다 크면 구간 알림(NotifyState)입니다.
      *        시작 시각을 지날 때 `Begin`, 끝 시각(시작 + 길이, 한 바퀴 끝을 넘지 않음)을 지날 때 `End` 가 울립니다.
      */
     struct AnimNotifyEvent
@@ -105,8 +105,8 @@ namespace sw
 {
     /**
      * @struct AnimFiredNotify
-     * @brief 이번 갱신에 울린 알림 하나입니다. `_weight` 는 그 클립의 섞임 가중치입니다(크로스페이드 중 두 클립 모두 울립니다).
-     * @details `_pSource` · `_eventIndex` 가 구간 알림 하나를 가립니다(같은 클립의 같은 알림이 `Begin` 과 `End` 에서 같은 값). `_time` 은 `End` 면 끝 시각입니다.
+     * @brief 이번 갱신에 울린 알림 하나입니다. `_weight` 는 그 클립의 섞임 가중치입니다(크로스페이드 중에는 두 클립 모두 울립니다).
+     * @details `_pSource` 와 `_eventIndex` 가 구간 알림 하나를 가린다(같은 클립의 같은 알림이 `Begin` 과 `End` 에서 같은 값이다). `End` 면 `_time` 은 끝 시각이다.
      */
     struct AnimFiredNotify
     {
@@ -141,13 +141,13 @@ namespace sw
         void clear() { _listEvent.clear(); }
         /**
          * @brief 걸음 @p step 이 지난 알림을 @p outListFired 에 시각 순서로 덧붙입니다. @p pSource 는 이 트랙을 가진 재생할 것입니다.
-         * @details 반복을 한 번 넘으면 (이전, 끝] 과 [0, 지금] 을, 여러 번 넘으면 그 사이의 온 바퀴도 셉니다. 한 시각의 알림은 한 바퀴에 한 번입니다.
-         *          구간 알림은 시작 시각에서 `Begin`, 끝 시각에서 `End` 를 냅니다 — 같은 시각이면 `End` 가 먼저입니다(앞 구간이 닫히고 다음이 열린다).
+         * @details 반복을 한 번 넘으면 (이전, 끝] 과 [0, 현재] 를, 여러 번 넘으면 그 사이의 온 바퀴도 센다. 한 시각의 알림은 한 바퀴에 한 번이다.
+         *          구간 알림은 시작 시각에서 `Begin`, 끝 시각에서 `End` 를 낸다. 같은 시각이면 `End` 가 먼저다(앞 구간이 닫히고 다음 구간이 열린다).
          */
         void collectFired( const AnimTimeStep& step, float32 playLength, float32 weight, const IAnimPlayable* pSource, vector<AnimFiredNotify>& outListFired ) const;
 
     private:
-        /** @brief 구간 [from, to] 의 알림 시작 · 끝을 덧붙입니다. @p bIncludeFrom 이 거짓이면 from 은 뺍니다. */
+        /** @brief 구간 [from, to] 의 알림 시작과 끝을 덧붙입니다. @p bIncludeFrom 이 false 면 from 은 뺍니다. */
         void collectRange( float32 fromTime, float32 toTime, bool bIncludeFrom, float32 playLength, float32 weight, const IAnimPlayable* pSource,
                            vector<AnimFiredNotify>& outListFired ) const;
         /** @brief 구간 알림의 끝 시각입니다(한 바퀴 끝을 넘지 않습니다). */

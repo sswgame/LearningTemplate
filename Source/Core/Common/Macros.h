@@ -1,13 +1,13 @@
 /**
  * @file Macros.h
- * @brief Core 공통 매크로입니다 — 어서션, 디버그 브레이크, SW_API, 인라인 힌트 등. 타깃 매크로 검사는 TargetMacroCheck.h 입니다.
+ * @brief Core 공통 매크로(어서션, 디버그 브레이크, SW_API, 인라인 힌트 등)를 정의합니다. 타깃 매크로 검사는 TargetMacroCheck.h 에 있습니다.
  */
 #pragma once
 #include "Core/Common/TargetMacroCheck.h"
 #include "Core/Common/Types.h"
 
 #include <cstdio>      // SW_ASSERT 가 멈추기 전에 남기는 한 줄(Debug)
-#include <type_traits> // SW_REQUIRES · arrayCountHelper 의 std::enable_if_t
+#include <type_traits> // SW_REQUIRES 와 arrayCountHelper 의 std::enable_if_t
 
 // ------------------------------------------------------------------------------
 // 1) 전처리기 유틸리티 (Pre-processor Utilities)
@@ -20,9 +20,9 @@
 #define SW_OFFSET_OF( type, member ) offsetof( type, member )
 
 // ------------------------------------------------------------------------------
-// 2) 디버그 브레이크 — 어서션이 실패하면 디버거에서 멈춘다
-//    MSVC 확장(`__debugbreak` · `__FUNCSIG__` · `__forceinline` · `__declspec`)을 쓸 수 있는지는 SW_PLATFORM_WINDOWS 로 묻는다.
-//    Windows 는 MS ABI 툴체인(cl · clang-cl)만 짓고(TargetMacroCheck.h), clang-cl 은 SW_COMPILER_CLANG 이라 SW_COMPILER_MSVC 로는 물을 수 없다.
+// 2) 디버그 브레이크. 어서션이 실패하면 디버거에서 멈춘다.
+//    MSVC 확장(`__debugbreak`, `__FUNCSIG__`, `__forceinline`, `__declspec`)을 쓸 수 있는지는 SW_PLATFORM_WINDOWS 로 판단한다.
+//    Windows 는 MS ABI 툴체인(cl, clang-cl)만 빌드하고(TargetMacroCheck.h), clang-cl 은 SW_COMPILER_CLANG 이므로 SW_COMPILER_MSVC 로는 판단할 수 없다.
 // ------------------------------------------------------------------------------
 #if defined( SW_PLATFORM_WINDOWS )
     /** @brief MSVC 확장 디버거 브레이크입니다(cl · clang-cl). */
@@ -44,7 +44,7 @@
 #endif
 
 // ------------------------------------------------------------------------------
-// 4) 디버그 / 릴리즈 — 따로 정하지 않았으면 _DEBUG 로 가린다
+// 4) 디버그와 릴리즈. 따로 정하지 않았으면 _DEBUG 로 구분한다.
 // ------------------------------------------------------------------------------
 #if !defined( SW_DEBUG ) && !defined( SW_RELEASE )
 
@@ -58,8 +58,8 @@
 #endif
 
 // ------------------------------------------------------------------------------
-// 5) SW_ASSERT — 논리 불변식 검사(메시지 없음, 자주 도는 경로용)
-//    메시지가 필요하면 Logger.h 의 SW_LOG_ASSERT 를 쓴다. 그쪽은 배포본에서도 로그를 남긴다
+// 5) SW_ASSERT. 논리 불변식을 검사한다(메시지 없음, 자주 도는 경로용).
+//    메시지가 필요하면 Logger.h 의 SW_LOG_ASSERT 를 쓴다. 그쪽은 배포본에서도 로그를 남긴다.
 // ------------------------------------------------------------------------------
 /**
  * 사용 가이드:
@@ -69,7 +69,7 @@
  * 둘은 배포본에서 다르게 동작합니다.
  *   - `SW_ASSERT`     : Debug 가 아니면 통째로 사라집니다. 식도 평가하지 않으므로, 부수 효과가 있는 식을 넣으면
  *                       배포본에서는 그 효과가 없어집니다.
- *   - `SW_LOG_ASSERT` : Debug 에서만 멈추고, 그 밖의 빌드에서는 Error 로그를 남깁니다 — 배포본에서도 계약이 깨진 순간을
+ *   - `SW_LOG_ASSERT` : Debug 에서만 멈추고, 그 밖의 빌드에서는 Error 로그를 남깁니다. 배포본에서도 계약이 깨진 순간을
  *                       놓치지 않습니다(Logger.h 의 비-Debug 분기 참고).
  *
  * 배포본에서도 반드시 막아야 하는 조건에는 둘 다 맞지 않습니다. 직접 if 로 검사하고 빠져나가십시오.
@@ -79,9 +79,9 @@ namespace sw::internal
 {
     /**
      * @brief `SW_ASSERT` 가 멈추기 **전에** 무엇이 어디서 어긋났는지 stderr 에 남깁니다.
-     * @details 디버거 없이 돌면(CI · 테스트 자식 · 다른 사람의 PC) 남는 것은 크래시 리포트의 "EXCEPTION_BREAKPOINT"(리눅스는 SIGILL)와
-     *          스택뿐이라, 이것이 없으면 어느 식이 어긋났는지 모른다. 식 · 파일 · 줄 · 함수를 남기고 버퍼를 비운 뒤 멈춘다(로거는 비동기라
-     *          멈추면 잃을 수 있다).
+     * @details 디버거 없이 실행하면(CI, 테스트 자식 프로세스, 다른 사람의 PC) 크래시 리포트의 "EXCEPTION_BREAKPOINT"(리눅스는 SIGILL)와
+     *          스택만 남는다. 이 함수가 없으면 어느 식이 어긋났는지 알 수 없다.
+     *          그래서 식, 파일, 줄, 함수를 남기고 버퍼를 비운 뒤 멈춘다. 로거는 비동기라 멈추면 메시지를 잃을 수 있기 때문이다.
      */
     inline void printAssertFailure( const utf8* pExpression, const utf8* pFile, int32 line, const utf8* pFunction ) noexcept
     {
@@ -91,9 +91,9 @@ namespace sw::internal
 } // namespace sw::internal
 
     /**
-     * @brief 식이 거짓이면 그 식 · 자리를 stderr 에 남기고 디버거에서 멈춥니다. Debug 가 아니면 식째 사라집니다.
-     * @note 테스트가 단언 가로채기(`test::ScopedAssertCapture`)를 걸어 두었으면 멈추지 않고 세기만 합니다(`tryCaptureAssert`).
-     *       대화형 에디터 실행이면 App 이 건 대화상자가 멈출지 묻습니다(`shouldBreakOnAssert` — 이번만 · 디버거 · 이 자리 늘 무시).
+     * @brief 식이 거짓이면 그 식과 위치를 stderr 에 남기고 디버거에서 멈춥니다. Debug 가 아니면 식째 사라집니다.
+     * @note 테스트가 단언 가로채기(`test::ScopedAssertCapture`)를 걸어 두었으면 멈추지 않고 개수만 센다(`tryCaptureAssert`).
+     *       대화형 에디터 실행이면 App 이 설치한 대화상자가 멈출지 묻는다(`shouldBreakOnAssert`). 선택지는 이번만 무시, 디버거 중단, 이 위치 항상 무시다.
      */
     #define SW_ASSERT( expr )                                                                                                 \
         do                                                                                                                    \
@@ -112,7 +112,7 @@ namespace sw::internal
 #endif
 
 // ------------------------------------------------------------------------------
-// 6) 플랫폼 · 아키텍처 · 컴파일러 — `SW_PLATFORM_*` · `SW_X64` / `SW_ARM64` · `SW_COMPILER_*` 는 CMake 가 정의하고
+// 6) 플랫폼, 아키텍처, 컴파일러. `SW_PLATFORM_*`, `SW_X64` / `SW_ARM64`, `SW_COMPILER_*` 는 CMake 가 정의하고
 //    `TargetMacroCheck.h`(이 파일 맨 위에서 포함)가 실제 컴파일러와 대조한다. 여기서 다시 판정하지 않는다.
 // ------------------------------------------------------------------------------
 
@@ -146,48 +146,48 @@ namespace sw::internal
 #endif
 
 // ------------------------------------------------------------------------------
-// 8) 단언 가로채기 — 테스트가 단언 경로를 지나가게 할 때만 쓴다
+// 8) 단언 가로채기. 테스트가 단언 경로를 지나가게 할 때만 쓴다.
 //    Debug 의 단언은 멈추므로(`SW_DEBUG_BREAK`) 단언이 걸리는 입력을 테스트하면 프로세스가 죽는다. 가로채기를 건 동안은 멈추지 않고
-//    센다 — 유니티 `LogAssert.Expect` · 언리얼 자동화의 기대 오류와 같은 일이다. 정의는 `Core/Common/Macros.cpp`.
+//    개수만 센다. 유니티의 `LogAssert.Expect`, 언리얼 자동화의 기대 오류와 같은 역할이다. 정의는 `Core/Common/Macros.cpp` 에 있다.
 // ------------------------------------------------------------------------------
 #if defined( SW_DEBUG )
-// 멈추는 단언(`SW_ASSERT` · 멈추는 `SW_LOG_ASSERT`)은 Debug 에만 있으므로 가로채기도 Debug 에만 둔다 — 배포본에는 테스트가 단언을 끄는 창구가 없다.
+// 멈추는 단언(`SW_ASSERT`, 멈추는 `SW_LOG_ASSERT`)은 Debug 에만 있으므로 가로채기도 Debug 에만 둔다. 배포본에는 테스트가 단언을 끄는 함수가 없다.
 namespace sw::internal
 {
-    /** @brief 가로채기가 걸려 있으면 단언 하나를 세고 true 입니다 — 부르는 쪽(`SW_ASSERT` · `SW_LOG_ASSERT`)은 멈추지 않습니다. */
+    /** @brief 가로채기가 걸려 있으면 단언 하나를 세고 true 를 반환합니다. 부르는 쪽(`SW_ASSERT`, `SW_LOG_ASSERT`)은 멈추지 않습니다. */
     [[nodiscard]] SW_API bool tryCaptureAssert() noexcept;
-    /** @brief 가로채기를 겁니다. 겹쳐 걸 수 있고, 건 횟수만큼 풀어야 멈춤이 돌아옵니다. */
+    /** @brief 가로채기를 겁니다. 겹쳐 걸 수 있으며, 건 횟수만큼 풀어야 멈춤이 돌아옵니다. */
     SW_API void beginAssertCapture() noexcept;
-    /** @brief 가로채기 하나를 풉니다. */
+    /** @brief 가로채기 하나를 해제합니다. */
     SW_API void endAssertCapture() noexcept;
-    /** @brief 프로세스가 지금까지 가로챈 단언 수입니다(구간의 수는 시작과 끝의 차로 측정한다). */
+    /** @brief 프로세스가 지금까지 가로챈 단언 수입니다. 구간의 수는 시작과 끝의 차로 측정합니다. */
     [[nodiscard]] SW_API uint32 getCapturedAssertCount() noexcept;
 } // namespace sw::internal
 
 // ------------------------------------------------------------------------------
-// 9) 단언 대화상자 — 대화형 에디터 실행에서만 App 이 건다(언리얼 ensure 대화상자). 정의는 `Core/Common/Macros.cpp`.
-//    걸리지 않았으면(자동 실행 · 테스트 · 에디터 없는 실행) 단언은 지금처럼 멈춘다.
+// 9) 단언 대화상자. 대화형 에디터 실행에서만 App 이 설치한다(언리얼의 ensure 대화상자). 정의는 `Core/Common/Macros.cpp` 에 있다.
+//    설치되지 않았으면(자동 실행, 테스트, 에디터 없는 실행) 단언은 기존처럼 멈춘다.
 // ------------------------------------------------------------------------------
 namespace sw::internal
 {
-    /** @brief 대화상자가 고른 것입니다. */
+    /** @brief 대화상자에서 고른 동작입니다. */
     enum class AssertAction : uint8
     {
-        Break,        ///< 디버거로 멈춘다(디버거가 없으면 크래시 리포트)
-        IgnoreOnce,   ///< 이번만 넘긴다
-        IgnoreAlways, ///< 이 자리(파일 · 줄)는 이 실행 동안 넘긴다
+        Break,        ///< 디버거로 멈춘다(디버거가 없으면 크래시 리포트가 남는다).
+        IgnoreOnce,   ///< 이번만 넘긴다.
+        IgnoreAlways, ///< 이 위치(파일과 줄)는 이 실행 동안 계속 넘긴다.
     };
 
-    /** @brief 대화상자 함수입니다. @p pMessage 는 `SW_LOG_ASSERT` 의 메시지(없으면 nullptr)입니다. */
+    /** @brief 대화상자 함수입니다. @p pMessage 는 `SW_LOG_ASSERT` 의 메시지이며, 없으면 nullptr 입니다. */
     using AssertDialogFunc = AssertAction ( * )( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line );
 
-    /** @brief 대화상자를 겁니다. nullptr 이면 뗍니다(늘 멈춘다). "늘 무시" 로 고른 자리도 함께 잊습니다. */
+    /** @brief 대화상자를 설치합니다. nullptr 이면 해제하며, 이후 단언은 항상 멈춥니다. "항상 무시"로 고른 위치도 함께 잊습니다. */
     SW_API void setAssertDialog( AssertDialogFunc pfnDialog ) noexcept;
-    /** @brief 대화상자가 걸려 있으면 true 입니다. */
+    /** @brief 대화상자가 설치돼 있으면 true 를 반환합니다. */
     [[nodiscard]] SW_API bool hasAssertDialog() noexcept;
     /**
-     * @brief 단언이 멈춰야 하면 true 입니다. 이 자리가 "늘 무시" 면 false, 대화상자가 없으면 true(지금 동작), 있으면 묻는다.
-     * @details 대화상자는 한 번에 하나다 — 떠 있는 동안 다른 스레드의 단언은 잠금에서 기다린다.
+     * @brief 단언이 멈춰야 하면 true 를 반환합니다. 이 위치가 "항상 무시"이면 false, 대화상자가 없으면 true(기존 동작), 있으면 대화상자에 묻습니다.
+     * @details 대화상자는 한 번에 하나만 뜬다. 떠 있는 동안 다른 스레드의 단언은 잠금에서 기다린다.
      */
     [[nodiscard]] SW_API bool shouldBreakOnAssert( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line ) noexcept;
 } // namespace sw::internal
@@ -203,7 +203,7 @@ namespace sw::internal
 #define SW_BIT( x ) ( 1u << ( x ) )
 
 // ------------------------------------------------------------------------------
-// 8) 비트 필드 불리언 값 — 1/0 이 개수가 아니라 상태라는 것을 드러낸다
+// 8) 비트 필드 불리언 값. 1과 0이 개수가 아니라 상태라는 점을 드러낸다.
 //        비트 필드에 true/false 를 바로 대입하면 경고가 날 수 있어 SW_TRUE(1) / SW_FALSE(0) 을 쓴다.
 // ------------------------------------------------------------------------------
 /** @brief 비트 필드에 참(1)을 대입할 때 사용합니다. */
@@ -218,7 +218,7 @@ namespace sw::internal
 // 9) SW_COUNT_OF — 정적 배열의 원소 수
 // ------------------------------------------------------------------------------
 // 도우미 템플릿은 `sw` 안에 둔다. 모든 TU 가 이 헤더를 거치므로, 전역에 내놓은 이름 하나가 곧 저장소 전체의 이름
-// 하나가 된다. 매크로가 이름공간까지 붙여 부르므로 쓰는 쪽은 달라지지 않는다.
+// 하나가 된다. 매크로가 네임스페이스까지 붙여 부르므로 쓰는 쪽의 코드는 달라지지 않는다.
 namespace sw
 {
 #if defined( SW_COMPILER_CLANG )
@@ -236,7 +236,7 @@ namespace sw
 #define SW_COUNT_OF( array ) ( sizeof( sw::arrayCountHelper( array ) ) - 1 )
 
 // ------------------------------------------------------------------------------
-// 10) 인라인 · 노인라인 · restrict — 핫패스 최적화 힌트
+// 10) 인라인, 노인라인, restrict. 핫패스 최적화 힌트.
 // ------------------------------------------------------------------------------
 #if defined( SW_PLATFORM_WINDOWS )
     /** @brief 강제 인라인 힌트입니다(MSVC 확장, cl · clang-cl). */
@@ -255,7 +255,7 @@ namespace sw
 #endif
 
 // ------------------------------------------------------------------------------
-// 11) CPU Pause / Yield — 스핀 대기 힌트 (x64 PAUSE · arm64 YIELD)
+// 11) CPU Pause / Yield. 스핀 대기 힌트(x64 PAUSE, arm64 YIELD).
 // ------------------------------------------------------------------------------
 #if defined( SW_X64 )
     #if defined( SW_PLATFORM_WINDOWS )

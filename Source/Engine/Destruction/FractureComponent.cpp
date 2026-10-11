@@ -26,7 +26,7 @@ namespace sw
     void FractureComponent::onRegister( GameObjectManager& manager )
     {
         FractureComponentBase::onRegister( manager );
-        _pSceneNavigation = &manager.getSceneNavigation();
+        _pSceneNavigation = &manager.getSceneService<SceneNavigation>();
         _pSceneNavigation->registerGeometrySource( &_navGeometrySource );
     }
 
@@ -103,7 +103,7 @@ namespace sw
         const FractureAsset* pAsset = _fracture.findAsset();
         if ( pAsset == nullptr || _fracture.isFractured() == false )
             return;
-        // 붙어 있는 조각은 쪼갤 때의 오브젝트 자세에 정적 바디로 서 있다 — 그 자세로 조각 삼각형(메시 공간)을 옮긴다.
+        // 붙어 있는 조각은 쪼갤 때의 오브젝트 자세에 정적 바디로 서 있다. 그 자세로 조각 삼각형(메시 공간)을 옮긴다.
         const float4x4 world = _fracture.makeFracturedObjectMatrix();
         for ( uint32 leaf = 0; leaf < pAsset->getPieceCount(); ++leaf )
         {

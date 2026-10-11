@@ -1,13 +1,18 @@
 /**
  * @file EphemeralStore.h
- * @brief 휘발성 저장 계약 — 만료 있는 키-값 · 원자 증감 · 비교 후 쓰기 · 정렬 집합(순위표) · 발행/구독. 요청을 맡기고(`submit`) 답을 거둡니다(`pollReplies`).
- * @details - 잃어도 되는 것만 둔다. 원본은 `IServiceStore` 다(캐시를 통째로 잃어도 영속 데이터는 맞아야 한다 — 거래는 영속 원장 트랜잭션이 원본이고,
- *            캐시 임대는 "같은 계정의 동시 거래를 일찍 거절" 하는 최적화일 뿐이다). 그래서 트랜잭션 · 판이 없고, 모든 값에 만료를 줄 수 있다.
- *          - 키는 ASCII(`[0-9a-z_.:/-]`, 256 B 이하) — 드라이버가 배포 접두를 붙인다.
- *          - 점수는 정수(±2^53 — RESP 서버의 점수는 배정밀도라 그 안에서만 정확하다). 같은 점수는 멤버 이름의 바이트 역순(순위표 "큰 것부터" 와 같은 방향).
- *          - 발행/구독은 최대 한 번 배달이다(구독 전 · 끊긴 동안의 메시지는 없다). 놓치면 안 되는 것은 영속 저장 + 다시 읽기로.
- *          - 답은 맡긴 순서대로 온다(한 앞 안에서). 한 앞은 서비스 스레드 하나가 맡기고 거둔다.
- *          자체 서버가 Redis/Valkey 를 세션 · 순위 · 팬아웃에 쓰고 RDB 를 원본으로 두는 것과 같은 경계다.
+ * @brief 휘발성 저장 계약을 정의합니다.
+ * @details 만료가 있는 키-값, 원자 증감, 비교 후 쓰기, 정렬 집합(순위표), 발행/구독을 지원한다.
+ *          요청을 맡기고(`submit`) 답을 거둔다(`pollReplies`).
+ *          자체 서버가 Redis/Valkey 를 세션, 순위, 팬아웃에 쓰고 RDB 를 원본으로 두는 것과 같은 경계이다.
+ *
+ *          - 잃어도 되는 것만 둔다. 원본은 `IServiceStore` 이다. 캐시를 통째로 잃어도 영속 데이터는 맞아야 한다.
+ *            거래의 원본은 영속 원장 트랜잭션이고, 캐시 임대는 "같은 계정의 동시 거래를 일찍 거절"하는 최적화일 뿐이다.
+ *            그래서 트랜잭션과 버전이 없고, 모든 값에 만료를 줄 수 있다.
+ *          - 키는 ASCII(`[0-9a-z_.:/-]`, 256 B 이하)이다. 드라이버가 배포 접두를 붙인다.
+ *          - 점수는 정수(±2^53)이다. RESP 서버의 점수는 배정밀도라 그 범위 안에서만 정확하다.
+ *            같은 점수는 멤버 이름의 바이트 역순으로 정렬해, 순위표의 "큰 것부터"와 같은 방향이 되게 한다.
+ *          - 발행/구독은 최대 한 번 배달한다. 구독 전이나 끊긴 동안의 메시지는 없다. 놓치면 안 되는 것은 영속 저장에 두고 다시 읽어야 한다.
+ *          - 답은 한 앞 안에서 맡긴 순서대로 온다. 한 앞은 서비스 스레드 하나가 맡기고 거둔다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -18,7 +23,7 @@
 
 namespace sw
 {
-    /** @brief 휘발성 저장 호출의 결과입니다. */
+    /** @brief 휘발성 저장 호출의 결과 코드입니다. */
     enum class EphemeralResult : uint8
     {
         Ok = 0,
@@ -63,7 +68,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 요청 하나입니다. `make*` 로 만든다. */
+    /** @brief 요청 하나입니다. `make*` 로 만듭니다. */
     struct SW_GF_API EphemeralRequest
     {
         vector<uint8>      _value{};
@@ -92,9 +97,9 @@ namespace sw
         static EphemeralRequest makeScoreRange( string_view key, int32 offset, int32 count );
         static EphemeralRequest makePublish( string_view channel, vector<uint8> messageBytes );
 
-        /** @brief 키 규칙 · 크기 · 점수 범위를 봅니다(구현이 맡기 전에 — 아니면 Invalid 답). */
+        /** @brief 키 규칙, 크기, 점수 범위를 검사합니다. 구현이 맡기기 전에 부르며, 어긋나면 Invalid 답을 냅니다. */
         bool isWellFormed() const;
-        /** @brief 키 규칙(`[0-9a-z_.:/-]`, 1..256 B)을 지키는가입니다. */
+        /** @brief 키가 키 규칙(`[0-9a-z_.:/-]`, 1..256 B)을 지키면 true 입니다. */
         static bool isValidKey( string_view key );
     };
 } // namespace sw
@@ -138,8 +143,10 @@ namespace sw
 {
     /**
      * @class IEphemeralStore
-     * @brief 휘발성 저장의 앞입니다 — 서비스 스레드 하나가 맡기고 거둔다. 구현: `MemoryEphemeralStore`(서버 한 대 · 테스트), RESP 구현(GF_Server_CacheStore).
-     *        서비스는 `pollReplies` · `pollMessages` 를 부르지 않는다 — `host.getEphemeralRouter()`(앞 전체의 것을 꺼내므로 소비자가 둘이면 서로의 답을 가져간다).
+     * @brief 휘발성 저장의 앞입니다. 서비스 스레드 하나가 맡기고 거둡니다.
+     * @details 구현은 `MemoryEphemeralStore`(서버 한 대와 테스트)와 RESP 구현(GF_Server_CacheStore)이 있다.
+     *          서비스는 `pollReplies` 나 `pollMessages` 를 직접 부르지 않고 `host.getEphemeralRouter()` 를 쓴다.
+     *          직접 부르면 앞 전체의 답을 꺼내므로, 소비자가 둘이면 서로의 답을 가져간다.
      */
     class SW_GF_API IEphemeralStore
     {
@@ -154,18 +161,18 @@ namespace sw
         IEphemeralStore( const IEphemeralStore& )            = delete;
         IEphemeralStore& operator=( const IEphemeralStore& ) = delete;
 
-        /** @brief 요청을 맡깁니다. 요청 id(1 부터)입니다 — 답의 `_requestID`. */
+        /** @brief 요청을 맡기고 요청 id 를 반환합니다. id 는 1 부터 시작하며 답의 `_requestID` 와 같습니다. */
         virtual uint64 submit( const EphemeralRequest& request ) = 0;
-        /** @brief 끝난 답을 @p outListReply 뒤에 붙입니다. 붙인 수입니다. */
+        /** @brief 끝난 답을 @p outListReply 뒤에 붙이고, 붙인 수를 반환합니다. */
         virtual int32 pollReplies( vector<EphemeralReply>& outListReply ) = 0;
 
         virtual void  subscribe( string_view channel )                         = 0;
         virtual void  unsubscribe( string_view channel )                       = 0;
         virtual int32 pollMessages( vector<EphemeralMessage>& outListMessage ) = 0;
 
-        /** @brief 맡았지만 아직 거두지 않은 답의 수입니다. */
+        /** @brief 맡았지만 아직 거두지 않은 답의 수를 반환합니다. */
         virtual int32 getPendingCount() const = 0;
-        /** @brief 남은 요청은 Unavailable 로 답하고 구독을 푼다. 그 뒤 맡긴 요청도 Unavailable 이다. */
+        /** @brief 남은 요청은 Unavailable 로 답하고 구독을 풉니다. 그 뒤에 맡긴 요청도 Unavailable 입니다. */
         virtual void shutdown() = 0;
     };
 } // namespace sw

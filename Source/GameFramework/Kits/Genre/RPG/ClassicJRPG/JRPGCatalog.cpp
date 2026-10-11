@@ -150,7 +150,7 @@ namespace sw
             ++loadedCount;
         }
 
-        // 서로 가리키는 id 는 다 읽은 뒤에 확인한다.
+        // 서로 가리키는 id 는 모두 읽은 뒤에 확인한다.
         for ( const JRPGClassDef& def : _classCatalog.getAll() )
         {
             for ( const JRPGLearnEntry& learn : def._listLearn )

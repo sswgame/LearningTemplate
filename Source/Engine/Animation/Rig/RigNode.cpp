@@ -19,7 +19,7 @@ namespace sw
     {
         struct RigNodeInternal
         {
-            /** @brief "key '<키>' <설명>" 꼴의 오류 문장입니다. */
+            /** @brief "key '<키>' <설명>" 형태의 오류 문장입니다. */
             static string makeKeyMessage( string_view key, string_view what )
             {
                 string message = "key '";
@@ -265,7 +265,7 @@ namespace sw
             return true;
         for ( size_t index = 1; index < outListBone.size(); ++index )
         {
-            // 사슬은 각 본이 다음 본의 조상이어야 한다(사이에 본이 끼어도 된다 — 팔뚝 → 손목 → 손).
+            // 사슬은 각 본이 다음 본의 조상이어야 한다(사이에 본이 끼어도 된다. 예를 들어 팔뚝, 손목, 손 순서다).
             int32 current = static_cast<int32>( outListBone[index] );
             while ( current >= 0 && current != static_cast<int32>( outListBone[index - 1] ) )
             {

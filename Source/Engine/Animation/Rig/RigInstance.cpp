@@ -17,7 +17,7 @@ namespace sw
     {
         struct RigInstanceInternal
         {
-            /** @brief 본 모델 변환 위에 본 기준 오프셋을 얹습니다(행벡터: 오프셋이 먼저). @p bScaled 면 오프셋 이동에 본 스케일을 곱합니다. */
+            /** @brief 본 모델 변환 위에 본 기준 오프셋을 적용합니다(행 벡터이므로 오프셋이 먼저). @p bScaled 면 오프셋 이동에 본 스케일을 곱합니다. */
             static void composeOnBone( RigPoseBuffer& pose, uint32 bone, const float3& offsetPosition, const quaternion& offsetRotation, bool bScaled,
                                        float3& outPosition, quaternion& outRotation )
             {
@@ -89,14 +89,14 @@ namespace sw
                 BoneTransform         socketLocal{};
                 const RigSocketLookup lookup = ( pOwnSockets != nullptr ) ? pOwnSockets->findSocket( target._socket, boneName, socketLocal ) : RigSocketLookup::Missing;
                 if ( lookup == RigSocketLookup::OtherUnit )
-                    continue; // 해석된 외형의 다른 유닛 소켓 — 호스트가 값을 넣는다
+                    continue; // 해석된 외형에 있는 다른 유닛의 소켓이다. 호스트가 값을 넣는다.
                 if ( lookup == RigSocketLookup::Missing )
                 {
                     SW_LOG_ERROR( "Rig '%#': target '%#' names unknown socket '%#'", label, target._name.c_str(), target._socket.c_str() );
                     bOk = false;
                     continue;
                 }
-                // 데이터 오프셋은 소켓 공간에서 먼저 걸린다(행벡터: 오프셋 × 소켓 로컬).
+                // 데이터 오프셋은 소켓 공간에서 먼저 적용된다(행 벡터: 오프셋 × 소켓 로컬).
                 offset = BoneTransform::makeFromMatrix( target._offset.toMatrix() * socketLocal.toMatrix() );
             }
             if ( boneName.empty() && target._kind == RigTargetKind::Socket )
@@ -292,7 +292,7 @@ namespace sw
         _pose.initialize( inoutLocalPose, listParent );
         for ( RigMorphWeight& morph : _listMorphWeight )
         {
-            morph._weight = 0.0f; // 이름 목록은 남긴다 — 프레임마다 다시 잡지 않게
+            morph._weight = 0.0f; // 이름 목록은 유지한다. 프레임마다 다시 할당하지 않게 하려는 것이다.
         }
 
         RigEvaluateContext context{};
@@ -322,7 +322,7 @@ namespace sw
             _listNode[nodeIndex]->evaluate( context );
             if ( bBlend )
             {
-                // 노드 앞 포즈와 섞는다 — 로컬에서 섞으므로 쓰지 않은 자손은 그대로 따라온다.
+                // 노드 앞 포즈와 섞는다. 로컬에서 섞으므로 쓰지 않은 자손은 그대로 따라온다.
                 for ( size_t index = 0; index < listWritten.size(); ++index )
                 {
                     _pose.setLocal( listWritten[index], BoneTransform::blend( _listBlendScratch[index], _pose.getLocal( listWritten[index] ), weight ) );

@@ -29,7 +29,7 @@ namespace sw
             static constexpr int32 kMaxQueryNodeCount = 4096;
             /** @brief 경로가 지나는 폴리곤의 상한입니다. */
             static constexpr int32 kMaxPathPolyCount = 512;
-            /** @brief 폴리곤 참조 비트(Detour 32 비트 참조) 중 타일 · 폴리곤에 줄 수 있는 몫입니다(나머지 10 비트는 세대). */
+            /** @brief 폴리곤 참조 비트(Detour 32 비트 참조) 중 타일과 폴리곤에 줄 수 있는 비트 수입니다(나머지 10 비트는 세대입니다). */
             static constexpr uint32 kTileAndPolyBits = 22;
             /** @brief 타일 비트의 상한(나머지가 타일당 폴리곤)입니다. */
             static constexpr uint32 kMaxTileBits = 14;
@@ -52,7 +52,7 @@ namespace sw
                     Memory::free( pPtr );
             }
 
-            /** @brief Recast · Detour 의 할당을 엔진 할당기(태그 Navigation)로 돌립니다. 처음 만들 때 한 번. */
+            /** @brief Recast 와 Detour 의 할당을 엔진 할당기(태그 Navigation)로 돌립니다. 처음 만들 때 한 번 호출합니다. */
             static void routeAllocatorsOnce()
             {
                 static const bool s_bRouted = []()
@@ -82,7 +82,7 @@ namespace sw
                 return static_cast<uint8>( area + 1 );
             }
 
-            /** @brief 베이크 중간 결과를 들고 끝에서 놓습니다(실패로 빠져나가도). */
+            /** @brief 베이크 중간 결과를 보관하고 끝에서 해제합니다(실패로 빠져나가도 해제합니다). */
             struct BuildScratch
             {
                 rcHeightfield*        _pSolid{ nullptr };
@@ -146,7 +146,7 @@ namespace sw
         _grid._tileWorldSize        = tileWorldSize;
         _grid._tileCountX           = MathUtil::max( 1, static_cast<int32>( MathUtil::ceil( ( bounds._max._x - bounds._min._x ) / tileWorldSize ) ) );
         _grid._tileCountZ           = MathUtil::max( 1, static_cast<int32>( MathUtil::ceil( ( bounds._max._z - bounds._min._z ) / tileWorldSize ) ) );
-        // 높이 범위는 몸 높이만큼 넉넉히 — 파괴로 생긴 조각이 원래 상자 위로 조금 솟아도 그 타일을 다시 베이크하게.
+        // 높이 범위는 몸 높이만큼 넉넉히 잡는다. 파괴로 생긴 조각이 원래 상자 위로 조금 솟아도 그 타일을 다시 베이크하게 하려는 것이다.
         _minY = bounds._min._y - agentType._height;
         _maxY = bounds._max._y + agentType._height;
 
@@ -204,7 +204,7 @@ namespace sw
         outListTile.clear();
         if ( _pNavMesh == nullptr || _grid._tileWorldSize <= 0.0f || bounds.isValid() == false )
             return;
-        // 베이크 테두리(몸 반지름 + 3 칸)만큼 넓힌다 — 이웃 타일의 기하가 이 타일 가장자리의 깎기를 바꾼다.
+        // 베이크 테두리(몸 반지름 + 3 셀)만큼 넓힌다. 이웃 타일의 기하가 이 타일 가장자리의 깎기를 바꾸기 때문이다.
         const float32 border = ( MathUtil::ceil( _agentType._radius / _agentType._cellSize ) + 3.0f ) * _agentType._cellSize;
         const int32   minX   = static_cast<int32>( MathUtil::floor( ( bounds._min._x - border - _grid._origin._x ) / _grid._tileWorldSize ) );
         const int32   maxX   = static_cast<int32>( MathUtil::floor( ( bounds._max._x + border - _grid._origin._x ) / _grid._tileWorldSize ) );
@@ -278,7 +278,7 @@ namespace sw
              rcCreateHeightfield( &context, *scratch._pSolid, config.width, config.height, config.bmin, config.bmax, config.cs, config.ch ) == false )
             return false;
 
-        // 타일에 닿는 삼각형만 번호 · 영역을 모아 한 번에 복셀화한다. 경사가 걸을 수 없는 삼각형은 영역을 지운다(막기는 한다).
+        // 타일에 닿는 삼각형만 번호와 영역을 모아 한 번에 복셀화한다. 경사가 걸을 수 없는 삼각형은 영역을 지운다(막기는 한다).
         vector<int32> listTriangleIndex( listTriangle.size() * 3 );
         vector<uint8> listTriangleArea( listTriangle.size() );
         for ( size_t slot = 0; slot < listTriangle.size(); ++slot )
@@ -308,7 +308,7 @@ namespace sw
         if ( rcErodeWalkableArea( &context, config.walkableRadius, *scratch._pCompact ) == false )
             return false;
 
-        // 볼록 부피 — 깎은 뒤에 칠하므로 뚫는 부피(장애물)는 몸 반지름만큼 넓혀 칠한다(유니티 Carve 와 같은 결과).
+        // 볼록 부피는 깎은 뒤에 칠하므로, 뚫는 부피(장애물)는 몸 반지름만큼 넓혀서 칠한다(유니티 Carve 와 같은 결과다).
         vector<float32>                listVolumePoint;
         vector<float32>                listOffsetPoint;
         vector<const NavConvexVolume*> listVolume;
@@ -608,7 +608,7 @@ namespace sw
             releaseQuery( bLocked );
             return NavPathStatus::Failed;
         }
-        // 끝 폴리곤에 닿지 못했으면(막힘 · 노드 상한) 닿은 마지막 폴리곤에서 끝에 가장 가까운 점까지만 간다.
+        // 끝 폴리곤에 닿지 못했으면(막혔거나 노드 상한에 걸렸으면) 닿은 마지막 폴리곤에서 끝에 가장 가까운 점까지만 간다.
         const bool bPartial = dtStatusDetail( status, DT_PARTIAL_RESULT ) || arrPoly[polyCount - 1] != endRef;
         float32    arrGoal[3]{ arrEnd[0], arrEnd[1], arrEnd[2] };
         if ( bPartial )
@@ -690,7 +690,7 @@ namespace sw
     {
         if ( _pNavMesh == nullptr )
             return;
-        // 폴리곤 테두리 — 걸을 면의 바깥 경계는 진하게, 안쪽 이음은 옅게. 바닥과 겹쳐 깜빡이지 않게 조금 띄운다.
+        // 폴리곤 테두리는 걸을 면의 바깥 경계를 진하게, 안쪽 이음을 옅게 그린다. 바닥과 겹쳐 깜빡이지 않게 조금 띄운다.
         const float4           innerColor{ color._x, color._y, color._z, color._w * 0.35f };
         const float3           lift{ 0.0f, 0.05f, 0.0f };
         const dtNavMesh* const pConst = _pNavMesh;
@@ -736,7 +736,7 @@ namespace sw
                 const dtPoly& poly = pTile->polys[polyIndex];
                 if ( poly.getType() == DT_POLYTYPE_OFFMESH_CONNECTION || pTile->detailMeshes == nullptr )
                     continue;
-                // 디테일 삼각형 — 꼭짓점 번호가 폴리곤 꼭짓점 수보다 작으면 폴리곤 꼭짓점, 아니면 디테일 꼭짓점이다.
+                // 디테일 삼각형이다. 꼭짓점 번호가 폴리곤 꼭짓점 수보다 작으면 폴리곤 꼭짓점이고, 아니면 디테일 꼭짓점이다.
                 const dtPolyDetail& detail = pTile->detailMeshes[polyIndex];
                 const uint8         area   = poly.getArea();
                 const uint8         engine = ( 1 <= area && area <= NavigationConstant::kMaxAreaCount ) ? static_cast<uint8>( area - 1 ) : 0;
@@ -766,7 +766,7 @@ namespace sw
 
     uint32 NavMeshBackend::getBackendFormatVersion()
     {
-        // Detour 타일 바이트의 판(DT_NAVMESH_VERSION) — 라이브러리가 그 판을 올리면 쿠킹본이 낡는다.
+        // Detour 타일 바이트의 버전(DT_NAVMESH_VERSION)이다. 라이브러리가 그 버전을 올리면 쿠킹본이 낡는다.
         return static_cast<uint32>( DT_NAVMESH_VERSION );
     }
 

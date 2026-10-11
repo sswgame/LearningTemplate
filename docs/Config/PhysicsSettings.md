@@ -17,7 +17,7 @@ XML 속성(값 하나)과 자식 요소(목록, 구조체)의 이름은 아래 �
 
 ## 필드
 
-물리 설정 표 하나입니다. `PhysicsSystem` 이 기동 때 읽어 모든 씬에 나눠 줍니다. 레이어 순서가 레이어 번호입니다(0..31). 레이어 · 재질이 하나도 없으면 `Default` 하나씩을 채웁니다(`ensureDefaults`).
+물리 설정 하나입니다. `PhysicsSystem` 이 기동할 때 읽어 모든 씬에 나눠 줍니다. 레이어 순서가 레이어 번호다(0..31). 레이어와 재질이 하나도 없으면 `Default` 하나씩을 채운다(`ensureDefaults`).
 
 원본: [`Source/Engine/Physics/PhysicsSettings.h`](../../Source/Engine/Physics/PhysicsSettings.h)
 
@@ -32,7 +32,7 @@ XML 속성(값 하나)과 자식 요소(목록, 구조체)의 이름은 아래 �
 
 ## `PhysicsLayerDef`
 
-충돌 레이어 하나와 그것이 부딪히는 레이어 이름들입니다. 표는 대칭으로 읽습니다 — 한쪽만 적어도 둘이 부딪힙니다.
+충돌 레이어 하나와 그 레이어가 부딪히는 레이어 이름들입니다. 테이블은 대칭으로 읽으므로 한쪽만 적어도 둘이 부딪힙니다.
 
 원본: [`Source/Engine/Physics/PhysicsSettings.h`](../../Source/Engine/Physics/PhysicsSettings.h)
 
@@ -43,7 +43,7 @@ XML 속성(값 하나)과 자식 요소(목록, 구조체)의 이름은 아래 �
 
 ## `PhysicsMaterialDef`
 
-물리 재질 하나입니다. 두 셰이프가 닿으면 마찰은 기하 평균(√(a·b)), 반발은 큰 쪽을 씁니다(Jolt · Box2D 기본과 같다).
+물리 재질 하나입니다. 두 셰이프가 닿으면 마찰은 기하 평균(√(a·b))을, 반발은 큰 쪽을 씁니다(Jolt 와 Box2D 의 기본과 같습니다).
 
 원본: [`Source/Engine/Physics/PhysicsSettings.h`](../../Source/Engine/Physics/PhysicsSettings.h)
 

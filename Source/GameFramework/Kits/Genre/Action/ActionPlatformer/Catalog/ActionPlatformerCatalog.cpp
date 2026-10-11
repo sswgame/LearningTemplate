@@ -202,7 +202,7 @@ namespace sw
         pattern._start = ActionPlatformerCatalogInternal::readName( node, "start" );
         if ( pattern._start.empty() || pattern.findStateIndex( pattern._start ) < 0 )
             pattern._start = pattern._listState.front()._id;
-        // 이어지는 상태 이름이 틀리면 그 자리에서 알린다(테스트 · 에디터가 바로 본다).
+        // 이어지는 상태 이름이 틀리면 그 자리에서 경고한다(테스트와 에디터가 바로 볼 수 있다).
         for ( const ActionPatternStateDef& state : pattern._listState )
         {
             const hashed_string arrTarget[] = { state._next, state._onNear, state._onHit };

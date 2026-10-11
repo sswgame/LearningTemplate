@@ -13,7 +13,7 @@ namespace sw
     {
         struct PhysicsRagdollInternal
         {
-            /** @brief 행렬의 자리 · 회전입니다(배율은 버린다). */
+            /** @brief 행렬의 위치와 회전을 구합니다(배율은 버립니다). */
             static void decomposePose( const float4x4& matrix, float3& outPosition, quaternion& outRotation )
             {
                 float3 scale{};
@@ -96,7 +96,7 @@ namespace sw
             }
         }
 
-        // 바디 — 뼈의 월드 자세에 한 번에 넣는다. 셰이프는 뼈 로컬이라 바디의 틀이 곧 뼈의 틀이다.
+        // 바디는 뼈의 월드 자세에 한 번에 넣는다. 셰이프는 뼈 로컬이라 바디의 좌표계가 곧 뼈의 좌표계다.
         vector<PhysicsBodyDesc3D> listDesc( bodyCount );
         for ( size_t bodyIndex = 0; bodyIndex < bodyCount; ++bodyIndex )
         {
@@ -123,7 +123,7 @@ namespace sw
             }
         }
 
-        // 관절 — 부모 사슬에서 가장 가까운 바디가 있는 뼈와 잇는다. 자리는 이 뼈의 원점, 축은 뼈 로컬 축을 월드로 돌린 것.
+        // 관절은 부모 체인에서 가장 가까운 바디가 있는 뼈와 연결한다. 위치는 이 뼈의 원점이고, 축은 뼈 로컬 축을 월드로 돌린 것이다.
         outRagdoll._listParentBody.assign( bodyCount, -1 );
         outRagdoll._listJoint.assign( bodyCount, PhysicsJointHandle{} );
         for ( size_t bodyIndex = 0; bodyIndex < bodyCount; ++bodyIndex )
@@ -247,7 +247,7 @@ namespace sw
                 outListModelSpaceBone[boneIndex] = inputModel;
                 continue;
             }
-            // 바디 없는 뼈 — 입력 포즈의 부모 상대 변환을 새 부모 위에 놓는다.
+            // 바디 없는 뼈는 입력 포즈의 부모 상대 변환을 새 부모 위에 놓는다.
             const float4x4 local             = inputModel * skeleton._listModelSpaceBone[static_cast<size_t>( parent )].invert();
             outListModelSpaceBone[boneIndex] = local * outListModelSpaceBone[static_cast<size_t>( parent )];
         }

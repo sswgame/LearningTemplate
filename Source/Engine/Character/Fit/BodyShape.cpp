@@ -279,7 +279,7 @@ namespace sw
                     axisValue = value._value;
             }
             axisValue = MathUtil::clamp( axisValue, axis._min, axis._max );
-            // 0 이 기본 체형 — 양쪽은 max 에서 1, 음쪽은 min 에서 1.
+            // 0 이 기본 체형이다. 양쪽은 max 에서 1, 음쪽은 min 에서 1 이 된다.
             const bool               bPositive = axisValue > 0.0f;
             const float32            span      = bPositive ? axis._max : -axis._min;
             const float32            weight    = span > 0.0f ? MathUtil::abs( axisValue ) / span : 0.0f;

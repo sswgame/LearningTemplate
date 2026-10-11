@@ -15,7 +15,7 @@ namespace sw
     {
         struct XAudio2SystemInternal
         {
-            /** @brief 스트리밍 버퍼 하나의 길이(프레임)입니다 — 10.7 ms. */
+            /** @brief 스트리밍 버퍼 하나의 길이(프레임)입니다. 10.7 ms 입니다. */
             static constexpr uint32 kStreamBufferFrameCount = 512;
             /** @brief 장치에 걸어 둘 버퍼 수입니다. 지연은 대략 (수 − 1) × 버퍼 길이입니다. */
             static constexpr uint32 kStreamBufferCount = 3;
@@ -53,7 +53,7 @@ namespace sw
             };
 
             /**
-             * @brief 공통 디코더가 다루지 않는 형식(MP3 · ADPCM WAV 등)을 Media Foundation 으로 16 비트 PCM 으로 풉니다. 클립 캐시의 대체 디코더입니다.
+             * @brief 공통 디코더가 다루지 않는 형식(MP3, ADPCM WAV 등)을 Media Foundation 으로 16 비트 PCM 으로 디코드합니다. 클립 캐시의 대체 디코더입니다.
              */
             static bool decodeWithMediaFoundation( string_view path, AudioPcm& outPcm )
             {
@@ -130,7 +130,7 @@ namespace sw
             {
                 AudioEngine*         _pEngine{ nullptr };
                 IXAudio2SourceVoice* _pVoice{ nullptr };
-                vector<float32>      _listBuffer{}; ///< 버퍼 `kStreamBufferCount` 개를 이어 붙인 것
+                vector<float32>      _listBuffer{}; ///< 버퍼 `kStreamBufferCount` 개를 이어 붙인 것이다.
                 uint32               _nextBuffer{ 0 };
                 std::atomic<bool>    _bStopping{ false };
 
@@ -228,7 +228,7 @@ namespace sw
         hr = _impl->_pXAudio->CreateMasteringVoice( &_impl->_pMasterVoice, audio::kChannelCount, audio::kSampleRate );
         if ( FAILED( hr ) || _impl->_pMasterVoice == nullptr )
         {
-            // 출력 장치가 없는 기계(CI 러너 · 서버 · 원격 세션)는 고장이 아니다 — 오프라인 렌더로 돈다는 것만 알린다. 장치가 있는데 실패한 것만 경고다.
+            // 출력 장치가 없는 기계(CI 러너, 서버, 원격 세션)는 고장이 아니다. 오프라인 렌더로 동작한다는 것만 알린다. 장치가 있는데 실패한 경우만 경고한다.
             if ( hr == HRESULT_FROM_WIN32( ERROR_NOT_FOUND ) )
                 SW_LOG_INFO( "No audio output device (0x%#). Rendering offline.", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
             else
@@ -277,7 +277,7 @@ namespace sw
     {
         if ( _impl == nullptr )
             return;
-        // 콜백이 더 제출하지 않게 먼저 표시하고, 보이스를 부순다 — DestroyVoice 는 처리 중인 콜백이 끝날 때까지 기다린다.
+        // 콜백이 더 제출하지 않게 먼저 표시하고, 보이스를 파괴한다. DestroyVoice 는 처리 중인 콜백이 끝날 때까지 기다린다.
         _impl->_callback._bStopping.store( true, std::memory_order_release );
         if ( _impl->_pStreamVoice != nullptr )
         {

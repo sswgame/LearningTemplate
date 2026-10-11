@@ -18,7 +18,7 @@ namespace sw
     {
     public:
         REFLECT_BODY();
-        /** @brief 피해가 HP 에 닿은 그 자리에서 불리는 델리게이트입니다(`registerDamageApplied`). */
+        /** @brief 피해가 HP 에 닿는 시점에 호출되는 델리게이트입니다(`registerDamageApplied`). */
         using DamageAppliedDelegate = Delegate<void( const DamageAppliedEvent& )>;
 
         UnitStatsComponent();
@@ -28,23 +28,22 @@ namespace sw
         void onTick( float32 deltaTime ) override;
 
         /**
-         * @brief 피해를 줍니다 — 투사체 · 공격 판정 · 게임 코드가 모두 이 하나를 지납니다(언리얼 `AActor::TakeDamage`).
-         * @details 방어력을 빼고 최소 1 을 깎은 뒤 무적 시간을 겁니다(`DamageMath::applyArmor`). 죽었거나 무적이거나 @p amount 가 0 이하면 아무것도 하지 않습니다. HP 가 깎였으면 그 자리에서
-         *          `registerDamageApplied` 의 델리게이트를 부르고 `DamageAppliedEvent` 를 "game" 채널에 냅니다(`GameEventUtil::send`). 틱 중(구조 동결)이면
-         *          틱 직후로 미루고, 미룬 것도 @p instigator 를 들고 갑니다.
-         * @param instigator 피해를 낸 쪽(쏜 · 휘두른 오브젝트). 이벤트에 그대로 실립니다. 모르면 무효 핸들
+         * @brief 피해를 줍니다. 투사체, 공격 판정, 게임 코드가 모두 이 함수 하나를 지납니다(언리얼 `AActor::TakeDamage` 에 해당).
+         * @details 방어력을 빼고 최소 1을 깎은 뒤 무적 시간을 건다(`DamageMath::applyArmor`). 죽었거나 무적이거나 @p amount 가 0 이하면 아무것도 하지 않는다. HP 가 깎였으면 바로
+         *          `registerDamageApplied` 의 델리게이트를 부르고 `DamageAppliedEvent` 를 "game" 채널에 낸다(`GameEventUtil::send`). 틱 중(구조 동결)이면 틱 직후로 미루며, 미룬 피해도 @p instigator 를 유지한다.
+         * @param instigator 피해를 낸 쪽(쏘거나 휘두른 오브젝트). 이벤트에 그대로 실린다. 모르면 무효 핸들
          */
         void takeDamage( int32 amount, GameObjectHandle instigator = GameObjectHandle{} );
         void heal( int32 amount );
 
         /**
-         * @brief HP 가 깎인 그 자리에서 부를 델리게이트를 겁니다(언리얼 `OnTakeAnyDamage` — 액터에 붙은 멀티캐스트).
-         * @details 피해는 게임 스레드에서 적용됩니다 — 틱 중의 피해는 틱 직후(같은 프레임)로 미뤄지고, 겹침 전달 · 게임 코드도 게임 스레드에서 돈다.
-         *          그래서 구독자는 같은 프레임에 받습니다. 구독은 저장되지 않습니다 — 컴포넌트가 다시 만들어지면(되돌리기 · 핫 리로드) 다시 겁니다.
-         * @return 뗄 때 쓰는 핸들
+         * @brief HP 가 깎일 때 호출할 델리게이트를 등록합니다(언리얼 `OnTakeAnyDamage` 처럼 액터에 붙는 멀티캐스트입니다).
+         * @details 피해는 게임 스레드에서 적용된다. 틱 중의 피해는 틱 직후(같은 프레임)로 미뤄지고, 겹침 전달과 게임 코드도 게임 스레드에서 돈다.
+         *          그래서 구독자는 같은 프레임에 받는다. 구독은 저장되지 않으므로, 컴포넌트를 다시 만들면(되돌리기, 핫 리로드) 다시 등록해야 한다.
+         * @return 해제할 때 쓰는 핸들
          */
         DelegateHandle registerDamageApplied( const DamageAppliedDelegate& delegate );
-        /** @brief `registerDamageApplied` 로 건 델리게이트를 뗍니다. */
+        /** @brief `registerDamageApplied` 로 등록한 델리게이트를 해제합니다. */
         void unregisterDamageApplied( DelegateHandle handle );
 
         FUNCTION( Category = "Actions", DisplayName = "Heal 20 HP", CallInEditor )
@@ -54,32 +53,32 @@ namespace sw
         int32 getMaxHp() const { return _maxHp; }
         int32 getAttack() const { return _attack; }
         int32 getDefense() const { return _defense; }
-        /** @brief 기본 이동 속도입니다 — 초당 월드 유닛(m/s)입니다. 이동 코드는 프레임 시간을 곱해 씁니다(`getMoveSpeed() * deltaTime`). */
+        /** @brief 기본 이동 속도입니다. 단위는 초당 월드 유닛(m/s)이며, 이동 코드는 프레임 시간을 곱해서 씁니다(`getMoveSpeed() * deltaTime`). */
         float32 getMoveSpeed() const { return _moveSpeed; }
         bool    isDead() const { return _bIsDead; }
-        /** @brief 체력 원천의 읽기입니다 — HP · 최대 HP · 죽음을 그대로 옮깁니다. */
+        /** @brief 체력 원천의 읽기 뷰입니다. HP, 최대 HP, 죽음을 그대로 전달합니다. */
         HealthReading getHealthReading() const override;
 
-        /** @brief 스탯을 한 번에 정합니다. 같은 오브젝트의 HP 바는 새 비율로 다시 맞춥니다(흔적 없이). */
+        /** @brief 스탯을 한 번에 정합니다. 같은 오브젝트의 HP 바는 새 비율로 다시 맞춥니다(변화 연출 없이). */
         void setStats( int32 hp, int32 maxHp, int32 attack, int32 defense, float32 moveSpeed, float32 maxInvincibilityTime );
-        /** @brief 몬스터 카탈로그의 한 종(`MonsterCatalog::findMonster`)으로 스탯을 정합니다. 단위는 같습니다(이동 속도 m/s, 무적 시간 s). */
+        /** @brief 몬스터 카탈로그의 한 종(`MonsterCatalog::findMonster`)으로 스탯을 정합니다. 단위는 같습니다(이동 속도는 m/s, 무적 시간은 s). */
         void setStats( const MonsterDef& monsterDef );
 
-        /** @brief 깎인 피해를 데미지 숫자로 띄울지 정합니다(기본 꺼짐). 숫자는 `getDamageNumberOffset()` 만큼 위에 새 오브젝트로 뜬다. */
+        /** @brief 깎인 피해를 데미지 숫자로 띄울지 정합니다(기본은 끔). 숫자는 `getDamageNumberOffset()` 만큼 위에 새 오브젝트로 뜹니다. */
         void setShowDamageNumbers( bool bShow ) { _bShowDamageNumbers = bShow; }
         /** @brief 깎인 피해를 데미지 숫자로 띄우는지 반환합니다. */
         bool showsDamageNumbers() const { return _bShowDamageNumbers; }
-        /** @brief 데미지 숫자가 뜨는 자리(유닛의 월드 위치 기준 오프셋)입니다. */
+        /** @brief 데미지 숫자가 뜨는 위치입니다(유닛의 월드 위치 기준 오프셋). */
         const float3& getDamageNumberOffset() const { return _damageNumberOffset; }
 
     private:
-        /** @brief 피해를 지금 적용하고 깎였으면 `DamageAppliedEvent` 를 냅니다. 피해가 HP 에 닿는 유일한 자리입니다. */
+        /** @brief 피해를 지금 적용하고, 깎였으면 `DamageAppliedEvent` 를 냅니다. 피해가 HP 에 닿는 유일한 경로입니다. */
         void applyTakeDamage( int32 amount, GameObjectHandle instigator );
         void applyHeal( int32 amount );
-        /** @brief 깎인 피해 @p amount 를 데미지 숫자 오브젝트로 띄웁니다(`_bShowDamageNumbers` 일 때). */
+        /** @brief 깎인 피해 @p amount 를 데미지 숫자 오브젝트로 띄웁니다(`_bShowDamageNumbers` 가 true 일 때). */
         void spawnDamageNumber( int32 amount );
 
-        /** @brief HP 가 깎일 때 부를 구독자들입니다(`registerDamageApplied`). 저장하지 않는다 — 코드가 거는 것이다. */
+        /** @brief HP 가 깎일 때 호출할 구독자 목록입니다(`registerDamageApplied`). 코드가 등록하는 값이므로 저장하지 않습니다. */
         MulticastDelegate<void( const DamageAppliedEvent& )> _damageAppliedMulticast;
         PROPERTY( Category = "Stats", DisplayName = "HP", Tooltip = "Current Health Points", Min = 0.0, Meta = "Units=HP" )
         int32 _hp;

@@ -74,7 +74,7 @@ namespace sw
 
         if ( _pGraph == nullptr || _currentNodeID <= 0 || _player.hasFinished() == false )
             return;
-        // 재생할 것이 없는 상태는 길이 0 이라 곧 "끝났다" — 그래도 다음으로 바로 넘어가지 않고 머문다(다음 advance · play 까지).
+        // 재생할 것이 없는 상태는 길이가 0 이라 곧 "끝났다"가 된다. 그래도 다음으로 바로 넘어가지 않고 머문다(다음 advance 나 play 까지).
         if ( _player.getCurrentPlayable() == nullptr )
             return;
         const AnimGraphLink* pFinish = _pGraph->findFinishLink( _currentNodeID );

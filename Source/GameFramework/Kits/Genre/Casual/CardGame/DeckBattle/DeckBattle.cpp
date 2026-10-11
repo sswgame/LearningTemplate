@@ -34,7 +34,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 더미의 카드 번호가 모두 덱(@p cardCount 장) 안인가입니다. */
+            /** @brief 더미의 카드 번호가 모두 덱(@p cardCount 장) 안에 있는지 반환합니다. */
             static bool arePileIDsInDeck( const CardPile& pile, size_t cardCount )
             {
                 for ( const Card& card : pile.getCards() )
@@ -158,7 +158,7 @@ namespace sw
         {
             if ( _drawPile.isEmpty() )
             {
-                // 버린 더미를 섞어 다시 뽑을 더미로.
+                // 버린 더미를 섞어 다시 뽑을 더미로 쓴다.
                 (void)_discardPile.drawInto( _drawPile, _discardPile.getCount() );
                 _drawPile.shuffle( _random );
             }
@@ -229,7 +229,7 @@ namespace sw
         if ( _phase != DeckBattlePhase::PlayerTurn )
             return;
         (void)_hand.drawInto( _discardPile, _hand.getCount() );
-        // 적 차례 — 방어는 적 차례 시작에 사라진다.
+        // 적 차례에서는 방어가 적 차례 시작에 사라진다.
         _enemy._block = 0;
         if ( _enemy._listIntent.empty() == false )
         {
@@ -286,7 +286,7 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return false;
-        // 사본에 읽고 끝까지 맞으면 바꾼다 — 카탈로그 · 설정은 사본이 그대로 든다.
+        // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 카탈로그와 설정은 사본도 그대로 가지고 있다.
         DeckBattle battle   = *this;
         uint32     defCount = 0;
         // 카드마다 정의 id 이름(4) 이상
@@ -336,7 +336,7 @@ namespace sw
             return false;
         battle._phase = static_cast<DeckBattlePhase>( phase );
 
-        // 더미의 카드 번호가 덱 안이어야 한다(`getCardDef` 가 정의 자리를 찾는다).
+        // 더미의 카드 번호가 덱 안이어야 한다(`getCardDef` 가 카탈로그 index 를 찾는다).
         const size_t cardCount = battle._listDefIndex.size();
         const bool   bIDsValid = DeckBattleInternal::arePileIDsInDeck( battle._drawPile, cardCount ) && DeckBattleInternal::arePileIDsInDeck( battle._hand, cardCount ) &&
                                DeckBattleInternal::arePileIDsInDeck( battle._discardPile, cardCount ) &&

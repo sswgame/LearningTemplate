@@ -17,8 +17,8 @@ namespace sw
         struct TileMapXMLInternal
         {
             /**
-             * @brief 0~255 칸(높이 · 아틀라스 · 색)을 읽습니다. 범위를 넘으면 0 · 255 로 묶고 경고합니다.
-             * @details 그대로 잘라 넣으면 색 "300" 이 44 · "-1" 이 255 가 된다(유니티 `Color32` 는 묶는다).
+             * @brief 0~255 값(높이, 아틀라스, 색)을 읽습니다. 범위를 넘으면 0 이나 255 로 제한하고 경고합니다.
+             * @details 그대로 잘라 넣으면 색 "300" 이 44 가 되고 "-1" 이 255 가 된다(유니티의 `Color32` 는 제한한다).
              */
             static uint8 readByteAttribute( const XMLNode& node, const utf8* pName, int32 fallback )
             {
@@ -31,7 +31,7 @@ namespace sw
                 return static_cast<uint8>( value );
             }
 
-            /** @brief 표가 레이어 값 순서이고, 본문으로 저장하는 레이어가 하나뿐인지 봅니다. */
+            /** @brief 테이블이 레이어 값 순서인지, 본문으로 저장하는 레이어가 하나뿐인지 확인합니다. */
             static constexpr bool isFlagLayerTableValid()
             {
                 size_t textLayerCount{ 0 };
@@ -118,8 +118,8 @@ namespace sw
             _height = 8;
         }
 
-        // **파일이 말한 크기를 그대로 잡지 않는다.** 바로 아래에서 `_width x _height` 칸짜리
-        // 배열 넷을 잡으므로, 손상되거나 손으로 잘못 적은 맵 하나가 수십억 칸 요청이 된다.
+        // **파일이 말한 크기를 그대로 잡지 않는다.** 바로 아래에서 `_width x _height` 셀짜리
+        // 배열 넷을 잡으므로, 손상되거나 손으로 잘못 적은 맵 하나가 수십억 셀 요청이 된다.
         if ( isSizeSupported( _width, _height ) == false )
         {
             SW_LOG_ERROR( "TileMap size %#x%# is beyond the supported tile count (%#)", _width, _height, kMaxTileCount );
@@ -147,7 +147,7 @@ namespace sw
                     getFlagLayer( info._layer )[elementIndex] = TileMapXMLInternal::readFlag( tileNode, info );
                 }
 
-                // 높이 · 틴트가 없는 맵은 레이어 값으로 보기를 만든다.
+                // 높이와 틴트가 없는 맵은 레이어 값으로 비주얼을 만든다.
                 Visual tileVisual{};
                 if ( tileNode.findAttribute( "h" ) != nullptr )
                     tileVisual._height = TileMapXMLInternal::readByteAttribute( tileNode, "h", 0 );
@@ -206,7 +206,7 @@ namespace sw
             }
         }
 
-        // 타일 레이어 — 팔레트(브러시 이름)와 칸마다 팔레트 번호. 칸 수가 맞지 않거나 팔레트 밖 번호는 읽기 오류다.
+        // 타일 레이어는 팔레트(브러시 이름)와 셀마다 팔레트 번호를 읽는다. 셀 수가 맞지 않거나 팔레트 밖 번호는 읽기 오류다.
         XMLNode tileLayer = root.findChild( "tileLayer" );
         if ( tileLayer.isValid() )
         {
@@ -377,10 +377,10 @@ namespace sw
         const size_t count = static_cast<size_t>( _width ) * static_cast<size_t>( _height );
 
         // **네 배열이 `_width × _height` 와 같다는 보장은 이 구조체에 없다.** 필드가 모두 공개라
-        // 크기만 바꾸고 칸을 늘리지 않은 채로 저장할 수 있고, 그러면 여기서 남의 메모리를 읽어 파일에
-        // 적는다(Debug 는 vector assert 에서 죽고, 배포본은 조용히 쓰레기 값을 쓴다). 모자란 칸은
+        // 크기만 바꾸고 셀을 늘리지 않은 채로 저장할 수 있고, 그러면 여기서 남의 메모리를 읽어 파일에
+        // 적는다(Debug 는 vector assert 에서 죽고, 배포본은 조용히 쓰레기 값을 쓴다). 모자란 셀은
         // **읽기 쪽 기본값**으로 적는다. `loadFromXML` 이 `<t>` 가 없을 때 넣는 값과 같아서
-        // 왕복이 어긋나지 않는다(통행 가능 · 조우 없음 · 기본 틴트).
+        // 왕복이 어긋나지 않는다(통행 가능, 조우 없음, 기본 틴트).
         size_t tileCount = MathUtil::min( count, _listVisual.size() );
         for ( const vector<uint8>& listFlag : _arrFlagLayer )
         {
@@ -399,7 +399,7 @@ namespace sw
             XMLNode       tileNode   = tiles.appendChild( "t" );
             const Visual& tileVisual = bHasTile ? _listVisual[tileIndex] : defaultVisual;
             tileNode.appendAttribute( "h", static_cast<int32>( tileVisual._height ) );
-            // 레이어는 표 순서로 적는다. 속성은 기본값과 다를 때만 적고, 본문 레이어는 맨 끝 본문이 된다.
+            // 레이어는 테이블 순서로 적는다. 속성은 기본값과 다를 때만 적고, 본문 레이어는 맨 끝 본문이 된다.
             const utf8* pTextFlag = nullptr;
             for ( const TileFlagLayerInfo& info : kArrTileFlagLayerInfo )
             {
@@ -431,7 +431,7 @@ namespace sw
                 warpNode.appendAttribute( "pair", warp._pairID );
         }
 
-        // 타일 레이어는 타일셋이 있을 때만 쓴다 — 없는 맵은 예전과 바이트까지 같다. 칸은 한 행씩 줄을 바꿔 적는다(사람이 읽고 비교할 수 있게).
+        // 타일 레이어는 타일셋이 있을 때만 쓴다. 없는 맵은 이전과 바이트까지 같다. 셀은 한 행씩 줄을 바꿔 적는다(사람이 읽고 비교할 수 있게 하려는 것이다).
         if ( _tileSetPath.empty() == false )
         {
             XMLNode tileLayer = root.appendChild( "tileLayer" );

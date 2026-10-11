@@ -1,6 +1,7 @@
 /**
  * @file WorldClock.h
- * @brief 게임 시계 — 하루 길이 · 시간 배율 · 멈춤, 시 · 분 · 날 · 계절 · 해, 새벽 · 낮 · 해질녘 · 밤, 햇빛 세기, 잠자기(그 시각까지 건너뛰기)입니다.
+ * @brief 게임 시계를 정의합니다.
+ * @details 하루 길이, 시간 배율, 멈춤, 시와 분과 날과 계절과 해, 새벽과 낮과 해질녘과 밤, 햇빛 세기, 잠자기(그 시각까지 건너뛰기)를 다룬다.
  */
 #pragma once
 #include "Core/Common/FourCcUtil.h"
@@ -35,7 +36,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 하루의 때입니다. */
+    /** @brief 하루의 때(새벽, 낮, 해질녘, 밤)입니다. */
     enum class DayPhase : uint8
     {
         Night = 0,
@@ -66,7 +67,7 @@ namespace sw
 {
     /**
      * @class WorldClock
-     * @brief 오픈월드 · 농장 · 생활 장르의 시계입니다. 시간은 `update` 로만 흐르고, 한 번에 많이 흘러도 넘은 시 · 날 경계를 모두 알립니다(잠 · 빨리 감기).
+     * @brief 오픈월드, 농장, 생활 장르의 시계입니다. 시간은 `update` 로만 흐르며, 한 번에 많이 흘러도 넘은 시와 날의 경계를 모두 알립니다. 잠과 빨리 감기가 그 경우입니다.
      */
     class SW_GF_API WorldClock
     {
@@ -80,9 +81,9 @@ namespace sw
         void update( float32 deltaTime );
         void setPaused( bool bPaused ) { _bPaused = bPaused ? SW_TRUE : SW_FALSE; }
         void setTimeScale( float32 timeScale );
-        /** @brief 그 날 그 시각으로 옮깁니다(알림 없음 — 로드). */
+        /** @brief 그 날 그 시각으로 옮깁니다. 알림은 없으며 로드에 씁니다. */
         void setTime( int32 day, float32 hour );
-        /** @brief 다음 @p hour 시까지 건너뜁니다(잠). 지나간 경계는 알립니다. */
+        /** @brief 다음 @p hour 시까지 건너뜁니다. 잠에 씁니다. 지나간 경계는 알립니다. */
         void advanceToHour( float32 hour );
 
         float32       getHour() const;
@@ -94,20 +95,20 @@ namespace sw
         hashed_string getSeasonName() const;
         int32         getYear() const;
         DayPhase      getDayPhase() const;
-        /** @brief 햇빛 세기(0 밤 .. 1 한낮) — 새벽 · 해질녘에 부드럽게 바뀝니다(조명 · 하늘색). */
+        /** @brief 햇빛 세기를 반환합니다. 0 이 밤이고 1 이 한낮이며, 새벽과 해질녘에 부드럽게 바뀝니다. 조명과 하늘색에 씁니다. */
         float32 computeDaylight() const;
-        /** @brief 해의 각도(도) — 6 시 0°, 12 시 90°, 18 시 180° 입니다. */
+        /** @brief 해의 각도(도)를 반환합니다. 6 시가 0°, 12 시가 90°, 18 시가 180° 입니다. */
         float32                   computeSunAngle() const;
         float32                   getTimeScale() const { return _timeScale; }
         const WorldClockSettings& getSettings() const { return _settings; }
         bool                      isPaused() const { return _bPaused != SW_FALSE; }
         void                      drainEvents( vector<WorldClockEvent>& outListEvent );
-        /** @brief 날 · 하루 안의 초 · 배율 · 멈춤을 씁니다. 설정(하루 길이 · 계절)은 `initialize` 의 것이라 싣지 않습니다. */
+        /** @brief 날, 하루 안의 초, 배율, 멈춤을 씁니다. 설정(하루 길이와 계절)은 `initialize` 의 것이라 싣지 않습니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 바꿉니다(알림 없음). 날이 음수이거나 시각이 지금 설정의 하루 밖이면 false 이고 그대로입니다. */
+        /** @brief `writeState` 의 바이트로 상태를 바꿉니다. 알림은 없습니다. 날이 음수이거나 시각이 지금 설정의 하루 밖이면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
-        /** @brief @p settings 의 시계에서 @p hour 시의 때입니다 — 시계가 그 시각에 있을 때의 `getDayPhase` 와 같습니다(일정이 미래 시각을 판정할 때). */
+        /** @brief @p settings 의 시계에서 @p hour 시의 때를 반환합니다. 시계가 그 시각에 있을 때의 `getDayPhase` 와 같으며, 일정이 미래 시각을 판정할 때 씁니다. */
         static DayPhase computePhaseAt( const WorldClockSettings& settings, float32 hour );
 
     private:

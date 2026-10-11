@@ -42,7 +42,7 @@ namespace sw
 
     JPH::JobHandle JoltJobSystem::CreateJob( const utf8* pJobName, JPH::ColorArg color, const JobFunction& jobFunction, JPH::uint32 dependencyCount )
     {
-        // 잡 자리가 다 찼으면 다른 스레드가 잡을 끝내 자리를 돌려줄 때까지 양보하며 다시 묻는다(Jolt JobSystemThreadPool 과 같은 처리).
+        // 잡 슬롯이 다 찼으면 다른 스레드가 잡을 끝내 슬롯을 돌려줄 때까지 양보하며 다시 확인한다(Jolt JobSystemThreadPool 과 같은 처리).
         JPH::uint32 index = JPH::FixedSizeFreeList<Job>::cInvalidObjectIndex;
         for ( ;; )
         {
@@ -53,7 +53,7 @@ namespace sw
         }
         Job* pJob = &_jobs.Get( index );
 
-        // 핸들이 참조 하나를 든다. 의존이 없으면 바로 큐에 넣는다.
+        // 핸들이 참조 하나를 가진다. 의존이 없으면 바로 큐에 넣는다.
         JobHandle handle{ pJob };
         if ( dependencyCount == 0 )
             QueueJob( pJob );
@@ -62,7 +62,7 @@ namespace sw
 
     void JoltJobSystem::QueueJob( Job* pJob )
     {
-        // 큐가 참조 하나를 든다 — 태스크가 실행 뒤에 놓는다.
+        // 큐가 참조 하나를 가진다. 태스크가 실행한 뒤에 해제한다.
         pJob->AddRef();
         {
             std::scoped_lock<mutex> lock{ _queueMutex };
@@ -78,7 +78,7 @@ namespace sw
         TaskHandle   handle      = taskManager.emplaceTask( "JoltJob", SW_DELEGATE_METHOD( TaskDelegate, &JoltJobSystem::runQueuedJob, this ) );
         if ( handle.isValid() == false )
         {
-            // 태스크를 낼 수 없다(풀이 바닥났거나 내리는 중) — 여기서 실행한다.
+            // 태스크를 낼 수 없다(풀이 바닥났거나 종료 중이다). 여기서 실행한다.
             _pendingTaskCount.fetch_sub( 1, std::memory_order_acq_rel );
             Job* pQueued = popQueuedJob();
             if ( pQueued != nullptr )
@@ -88,7 +88,7 @@ namespace sw
             }
             return;
         }
-        // 스텝을 부른 스레드가 장벽에서 곧바로 기다린다 — 게임 스레드의 대량 잡 뒤에 줄을 서지 않게 High 레인으로 낸다.
+        // 스텝을 호출한 스레드가 장벽에서 곧바로 기다린다. 게임 스레드의 대량 잡 뒤에 줄을 서지 않게 High 레인으로 낸다.
         handle.setPriority( TaskPriority::High );
         taskManager.submit( handle );
     }

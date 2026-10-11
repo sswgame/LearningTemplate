@@ -12,7 +12,7 @@ namespace sw
     {
         struct WaterWaveMathInternal
         {
-            /** @brief 파도 하나의 항 — 방향 · 파수 · 진폭 · Q · 위상입니다. 셰이더 `swComputeGerstnerTerm` 과 같은 순서로 계산한다(부동소수 결과를 맞추려고). */
+            /** @brief 파도 하나의 항입니다. 방향, 파수, 진폭, Q, 위상을 담습니다. 부동소수 결과를 맞추려고 셰이더 `swComputeGerstnerTerm` 과 같은 순서로 계산합니다. */
             struct WaveTerm
             {
                 float2  _direction{};
@@ -71,7 +71,7 @@ namespace sw
 
     float3 WaterWaveMath::computeNormal( const float2& origin, float32 time, float32 gravity, const float4 ( &arrWave )[shaderslot::kGerstnerWaveCount] )
     {
-        // 옮겨 간 면의 두 접선(원점 x · z 로 편미분)의 외적이다 — GPU Gems 의 근사(옮겨 간 자리에서 위상을 다시 측정한다)가 아니라 정확한 노멀이다.
+        // 옮겨 간 면의 두 접선(원점 x 와 z 로 편미분)의 외적이다. GPU Gems 의 근사(옮겨 간 위치에서 위상을 다시 측정한다)가 아니라 정확한 노멀이다.
         using Internal           = WaterWaveMathInternal;
         const uint32 activeCount = countActiveWaves( arrWave );
         float3       tangentX{ 1.0f, 0.0f, 0.0f };
@@ -99,7 +99,7 @@ namespace sw
 
     float32 WaterWaveMath::computeSurfaceHeight( const float2& position, float32 time, float32 gravity, const float4 ( &arrWave )[shaderslot::kGerstnerWaveCount], uint32 iterationCount, float2* pOutOrigin )
     {
-        // 원점 p 는 p + 변위(p).xz = 위치 를 풀어 찾는다. Q 가 고리를 막는 범위라 수평 변위의 기울기가 1 보다 작아 고정점 반복이 수렴한다.
+        // 원점 p 는 p + 변위(p).xz = 위치 를 풀어서 찾는다. Q 가 고리를 막는 범위라 수평 변위의 기울기가 1 보다 작아 고정점 반복이 수렴한다.
         float2 origin = position;
         for ( uint32 iteration = 0; iteration < iterationCount; ++iteration )
         {

@@ -18,7 +18,7 @@ namespace sw
     {
         struct AbilityCatalogInternal
         {
-            /** @brief `<X tag="A.B"/>` 자식들을 컨테이너에 더합니다(태그 속성이 빈 노드는 건너뛴다). */
+            /** @brief `<X tag="A.B"/>` 자식들을 컨테이너에 추가합니다. 태그 속성이 비어 있는 노드는 건너뜁니다. */
             static void readTagChildren( const XMLNode& parent, const utf8* pChildName, TagContainer& outTags )
             {
                 for ( XMLNode child = parent.findChild( pChildName ); child; child = child.findNextSibling( pChildName ) )
@@ -30,7 +30,7 @@ namespace sw
                 }
             }
 
-            /** @brief 속성 @p pName 을 이름으로 읽습니다. 없거나 비었으면 빈 이름입니다. */
+            /** @brief 속성 @p pName 을 이름으로 읽습니다. 속성이 없거나 비어 있으면 빈 이름입니다. */
             static hashed_string readName( const XMLNode& node, const utf8* pName )
             {
                 const utf8* pText = node.findAttribute( pName );
@@ -39,7 +39,7 @@ namespace sw
                 return hashed_string( pText );
             }
 
-            /** @brief `<Modifier>` 하나를 읽습니다. 어트리뷰트가 없거나 열거 이름을 모르면 false 입니다(경고). */
+            /** @brief `<Modifier>` 하나를 읽습니다. 어트리뷰트가 없거나 열거형 이름을 알 수 없으면 경고를 남기고 false 를 반환합니다. */
             [[nodiscard]] static bool readModifier( const XMLNode& node, const utf8* pEffectID, string_view sourceName, GameplayEffectModifier& outModifier )
             {
                 outModifier._attribute = readName( node, "attribute" );
@@ -92,7 +92,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief "Damage" 실행 계산을 노드의 매개변수로 만듭니다. */
+            /** @brief 노드의 매개변수로 "Damage" 실행 계산을 만듭니다. */
             static shared_ptr<const IGameplayEffectExecution> createDamageExecution( const XMLNode& node )
             {
                 shared_ptr<DamageExecution> pExecution = make_shared<DamageExecution>();
@@ -244,7 +244,7 @@ namespace sw
     {
         uint32 loadedCount = 0;
 
-        // 이펙트 → 어빌리티 → 세트. 어빌리티가 비용 · 쿨다운 이펙트를 가리키므로 파일 안의 순서와 상관없이 이펙트를 먼저 다 읽는다.
+        // 이펙트, 어빌리티, 세트 순으로 읽는다. 어빌리티가 비용 이펙트와 쿨다운 이펙트를 참조하므로, 파일 안의 순서와 상관없이 이펙트를 먼저 모두 읽는다.
         for ( XMLNode node = root.findChild( "GameplayEffect" ); node; node = node.findNextSibling( "GameplayEffect" ) )
         {
             GameplayEffectDef def;
@@ -364,7 +364,7 @@ namespace sw
             SW_LOG_WARNING( "%#: ability '%#' has no class - skipped", sourceName, pID );
             return false;
         }
-        // 클래스 이름은 여기서 풀지 않는다 — 클래스는 게임 모듈이 등록하므로 데이터를 읽는 순서와 상관없어야 한다. 없는 클래스는 만들 때(`createAbility`) 알린다.
+        // 클래스 이름은 여기서 찾지 않는다. 클래스는 게임 모듈이 등록하므로 데이터를 읽는 순서에 영향받으면 안 된다. 없는 클래스는 만들 때(`createAbility`) 경고한다.
 
         GameplayAbilityConfig& config      = outDef._config;
         config._id                         = outDef._id;

@@ -54,7 +54,7 @@ namespace sw
             _listEquipped.push_back( pCharm->_id );
             return MetroCharmResult::Equipped;
         }
-        // 넘겨 끼기 — 빈 슬롯이 하나라도 남아 있을 때 한 번만(이미 넘겼으면 끝).
+        // 넘겨 끼기는 빈 슬롯이 하나라도 남아 있을 때 한 번만 가능하다(이미 넘겼으면 더는 못 낀다).
         if ( _pCatalog->getRules()._bAllowOvercharm == SW_TRUE && used < _notchCount )
         {
             _listEquipped.push_back( pCharm->_id );
@@ -141,7 +141,7 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return false;
-        // 가진 것 · 낀 것 순서 — 둘 다 카탈로그의 부적이고 겹치지 않으며, 낀 것은 가진 것이어야 한다
+        // 가진 것, 낀 것 순서로 읽는다. 둘 다 카탈로그의 부적이고 겹치지 않으며, 낀 것은 가진 것이어야 한다
         vector<hashed_string> listOwned;
         vector<hashed_string> listEquipped;
         for ( int32 listIndex = 0; listIndex < 2; ++listIndex )

@@ -1,9 +1,9 @@
 /**
  * @file AudioTypes.h
- * @brief 오디오 엔진이 함께 쓰는 낱말 — 출력 형식 상수 · 식별자 · dB 변환 · 결정적 난수입니다.
- * @details 믹서는 **고정 형식** 하나로 돕니다: 48 kHz · 스테레오 · float32 교차(interleaved). 클립은 읽을 때 float 로 풀고, 재생할 때 피치와 함께
- *          선형 보간으로 리샘플합니다. 블록(`kAudioBlockFrameCount`) 단위로 명령 · 파라미터 · 공간화 · 보이스 제한을 갱신하고, 블록 안에서는 샘플마다
- *          게인을 램프합니다(지퍼 잡음 없음).
+ * @brief 오디오 엔진이 함께 쓰는 기본 정의입니다. 출력 형식 상수, 식별자, dB 변환, 결정적 난수를 담습니다.
+ * @details 믹서는 **고정 형식** 하나로 동작한다. 48 kHz, 스테레오, float32 교차(interleaved)다. 클립은 읽을 때 float 로 풀고, 재생할 때 피치와 함께
+ *          선형 보간으로 리샘플한다. 블록(`kAudioBlockFrameCount`) 단위로 명령, 파라미터, 공간화, 보이스 제한을 갱신하고, 블록 안에서는 샘플마다
+ *          게인을 램프한다(지퍼 잡음이 없다).
  */
 #pragma once
 #include "Core/Common/HashUtil.h"
@@ -20,9 +20,9 @@ namespace sw
         inline constexpr uint32 kSampleRate = 48000;
         /** @brief 믹서 출력 채널 수입니다(스테레오). */
         inline constexpr uint32 kChannelCount = 2;
-        /** @brief 믹서가 한 번에 처리하는 프레임 수입니다(5.3 ms). 파라미터 · 공간화는 블록마다 갱신됩니다. */
+        /** @brief 믹서가 한 번에 처리하는 프레임 수입니다(5.3 ms). 파라미터와 공간화는 블록마다 갱신합니다. */
         inline constexpr uint32 kBlockFrameCount = 256;
-        /** @brief 블록 하나의 길이(초)입니다. 이벤트 · 음악 페이드가 블록마다 이만큼 나아갑니다. */
+        /** @brief 블록 하나의 길이(초)입니다. 이벤트와 음악 페이드가 블록마다 이만큼 진행합니다. */
         inline constexpr float32 kBlockSeconds = static_cast<float32>( kBlockFrameCount ) / static_cast<float32>( kSampleRate );
         /** @brief "들리지 않음" 으로 보는 dB 바닥입니다. 이 아래는 0 으로 다룹니다. */
         inline constexpr float32 kSilenceDb = -96.0f;
@@ -33,9 +33,9 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 재생 하나(이벤트 인스턴스 · 클립 재생)의 id 입니다. 0 은 없음이고, 다시 쓰지 않습니다. */
+    /** @brief 재생 하나(이벤트 인스턴스나 클립 재생)의 id 입니다. 0 은 없음이며, 다시 쓰지 않습니다. */
     using AudioPlayingID = uint64;
-    /** @brief 소리를 내는 자리(게임 오브젝트)의 id 입니다. 0 은 "자리 없음 — 2D(공간화 없음)" 입니다. */
+    /** @brief 소리를 내는 에미터(게임 오브젝트)의 id 입니다. 0 은 "에미터 없음"이며 2D(공간화 없음)로 재생합니다. */
     using AudioEmitterID = uint64;
 } // namespace sw
 
@@ -43,7 +43,7 @@ namespace sw
 {
     /**
      * @struct AudioMath
-     * @brief dB · 선형 게인 · 반음 변환입니다. dB 바닥(`audio::kSilenceDb`) 아래는 게인 0 입니다.
+     * @brief dB, 선형 게인, 반음 변환입니다. dB 바닥(`audio::kSilenceDb`) 아래는 게인 0 입니다.
      */
     struct AudioMath
     {
@@ -84,9 +84,9 @@ namespace sw
 {
     /**
      * @struct AudioRandom
-     * @brief 씨앗으로 정해지는 난수(SplitMix64)입니다. 컨테이너의 클립 고르기 · 볼륨 · 피치 범위가 씁니다.
-     * @details 오프라인 렌더 테스트가 같은 출력을 내도록 엔진이 씨앗을 듭니다(`AudioEngine::setRandomSeed`). 전역 난수(`MathUtil::getRandom`)는
-     *          스레드마다 씨앗이 달라 쓰지 않습니다.
+     * @brief 시드로 정해지는 난수(SplitMix64)입니다. 컨테이너의 클립 고르기와 볼륨, 피치 범위가 씁니다.
+     * @details 오프라인 렌더 테스트가 같은 출력을 내도록 엔진이 시드를 보관합니다(`AudioEngine::setRandomSeed`). 전역 난수(`MathUtil::getRandom`)는
+     *          스레드마다 시드가 달라 쓰지 않습니다.
      */
     struct AudioRandom
     {

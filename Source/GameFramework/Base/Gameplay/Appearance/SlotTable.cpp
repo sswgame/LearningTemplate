@@ -69,7 +69,7 @@ namespace sw
                 AppearanceXMLUtil::reportUnknownChild( root, child, report, sourceName );
             }
         }
-        // 칸 선언이 묶음보다 뒤에 와도 되게 이름 확인은 끝에서 한다.
+        // 슬롯 선언이 점유 그룹보다 뒤에 와도 되도록, 이름 확인은 마지막에 한다.
         for ( const SlotOccupancyDef& occupancy : _listOccupancy )
         {
             for ( const hashed_string& slot : occupancy._listSlot )

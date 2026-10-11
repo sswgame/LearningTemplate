@@ -11,7 +11,7 @@ namespace sw
     {
         struct RawAnimCodecInternal
         {
-            /** @brief 머리 크기(표본 수 · 표본율 · 트랙 수)입니다. */
+            /** @brief 헤더 크기입니다(샘플 수, 샘플율, 트랙 수). */
             static constexpr size_t kHeaderSize = 12;
             /** @brief 표본 하나의 트랙 하나가 차지하는 float 수입니다. */
             static constexpr uint32 kFloatPerTransform = 10;

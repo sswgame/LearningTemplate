@@ -1,7 +1,9 @@
 /**
  * @file Weapon.h
- * @brief 총 한 자루의 정의(weapons.xml)와 상태 — 연사 간격 · 탄창 · 재장전 · 탄 퍼짐 · 산탄 · 거리 감쇠 · 탄속입니다.
- * @details 장르 공통입니다 — 1인칭 슈터 · 배틀로얄 · 서부극 · 기체 액션이 같은 정의와 상태를 씁니다(키트끼리는 링크하지 않으므로 기반에 둔다).
+ * @brief 총 한 자루의 정의(weapons.xml)와 상태를 정의합니다.
+ * @details 연사 간격, 탄창, 재장전, 탄 퍼짐, 산탄, 거리 감쇠, 탄속을 다룬다.
+ *          장르와 무관하며 1인칭 슈터, 배틀로얄, 서부극, 기체 액션이 같은 정의와 상태를 쓴다.
+ *          키트끼리는 링크하지 않으므로 기반에 둔다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -23,8 +25,8 @@ namespace sw
 
     /**
      * @brief 총 한 종류입니다. 각도는 도, 시간은 초, 거리는 m 입니다.
-     * @details 퍼짐은 쏠 때마다 `_spreadPerShot` 만큼 커지고(상한 `_maxSpread`), 쏘지 않으면 초당 `_spreadRecovery` 만큼 `_minSpread` 로 돌아옵니다.
-     *          피해는 숫자로만 들고 있습니다 — 게임이 어빌리티 시스템의 피해 이펙트(SetByCaller)로 넘깁니다.
+     * @details 퍼짐은 쏠 때마다 `_spreadPerShot` 만큼 커지고(상한은 `_maxSpread`), 쏘지 않으면 초당 `_spreadRecovery` 만큼 `_minSpread` 로 돌아온다.
+     *          피해는 숫자로만 들고 있고, 게임이 어빌리티 시스템의 피해 이펙트(SetByCaller)로 넘긴다.
      */
     struct WeaponDef
     {
@@ -55,7 +57,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `<WeaponCatalog><Weapon id="rifle" name="Rifle" fireInterval="0.1" .../></WeaponCatalog>` 를 읽습니다(속성 이름 = 필드 이름에서 `_` 를 뺀 것). */
+    /** @brief `<WeaponCatalog><Weapon id="rifle" name="Rifle" fireInterval="0.1" .../></WeaponCatalog>` 를 읽습니다. 속성 이름은 필드 이름에서 `_` 를 뺀 것입니다. */
     class SW_GF_API WeaponCatalog : public XMLCatalog<WeaponCatalog>
     {
         friend class XMLCatalog<WeaponCatalog>;
@@ -89,7 +91,7 @@ namespace sw
         SemiAutoHeld   ///< 반자동인데 방아쇠를 떼지 않았다
     };
 
-    /** @brief 한 번 쏜 결과 — 알마다의 광선입니다. */
+    /** @brief 한 번 쏜 결과입니다. 알마다의 광선을 담습니다. */
     struct WeaponShot
     {
         vector<GameRay> _listRay{};
@@ -101,29 +103,31 @@ namespace sw
 {
     /**
      * @class WeaponState
-     * @brief 총 한 자루를 들고 있는 상태입니다 — 탄창 · 예비탄 · 연사 쿨다운 · 재장전 · 퍼짐.
-     * @details 시간은 `update` 로만 흐릅니다(테스트 · 일시정지에서 그대로 멈춘다). 퍼짐 난수는 상태가 들고 있어 씨앗이 같으면 같은 탄이 나갑니다.
-     *          연사: 쿨다운이 프레임 안에서 0 을 지나친 몫(늦음)을 다음 발 간격에서 빼므로 연사 속도가 fps 와 무관합니다. `pullTrigger` 한 번에
-     *          한 발이고 잇는 몫은 한 간격까지라, fps 가 1 / 간격보다 낮으면 프레임마다 한 발로 떨어집니다(멈춘 프레임 뒤에 몰아 쏘지 않는다 —
-     *          CS 의 "한 틱 안의 늦음만 잇는다" 와 같은 규칙). 쉬다가 당긴 첫 발은 쉰 시간을 잇지 않습니다.
+     * @brief 총 한 자루를 들고 있는 상태입니다. 탄창, 예비탄, 연사 쿨다운, 재장전, 퍼짐을 담습니다.
+     * @details 시간은 `update` 로만 흐르므로 테스트나 일시정지에서는 그대로 멈춘다.
+     *          퍼짐 난수는 상태가 들고 있어서, 씨앗이 같으면 같은 탄이 나간다.
+     *          연사에서는 쿨다운이 프레임 안에서 0 을 지나친 몫(늦음)을 다음 발 간격에서 빼므로 연사 속도가 fps 와 무관하다.
+     *          `pullTrigger` 한 번에 한 발이고 이어 주는 몫은 한 간격까지이다. 그래서 fps 가 1 / 간격보다 낮으면 프레임마다 한 발로 떨어진다.
+     *          멈춘 프레임 뒤에 몰아서 쏘지 않으며, CS 의 "한 틱 안의 늦음만 이어 준다"와 같은 규칙이다.
+     *          쉬다가 당긴 첫 발은 쉰 시간을 이어 주지 않는다.
      */
     class SW_GF_API WeaponState
     {
     public:
         WeaponState();
 
-        /** @brief 총을 들고 탄창을 채웁니다(예비탄 @p reserveAmmo). */
+        /** @brief 총을 들고 탄창을 채웁니다. 예비탄은 @p reserveAmmo 입니다. */
         void equip( const WeaponDef& weapon, int32 reserveAmmo, uint32 spreadSeed = 1u );
-        /** @brief 시간을 흘립니다 — 쿨다운 · 재장전 · 퍼짐 회복. */
+        /** @brief 시간을 흘립니다. 쿨다운, 재장전, 퍼짐 회복이 진행됩니다. */
         void update( float32 deltaTime );
         /**
          * @brief 방아쇠를 당깁니다(누른 동안 매 프레임). 쏘면 @p outShot 에 알마다 광선을 채웁니다.
-         * @param bTriggerJustPressed 이번 프레임에 눌렀는지 — 반자동 총은 이때만 쏜다
+         * @param bTriggerJustPressed 이번 프레임에 눌렀는지 나타낸다. 반자동 총은 이때만 쏜다.
          */
         WeaponFireResult pullTrigger( const GameRay& aim, bool bTriggerJustPressed, WeaponShot& outShot );
         /** @brief 재장전을 시작합니다. 이미 가득이거나 예비탄이 없거나 재장전 중이면 false 입니다. */
         [[nodiscard]] bool startReload();
-        /** @brief 예비탄을 더합니다(상한까지). */
+        /** @brief 예비탄을 상한까지 더합니다. */
         void addReserveAmmo( int32 amount );
 
         const WeaponDef& getDef() const { return _def; }
@@ -133,9 +137,9 @@ namespace sw
         bool             isReloading() const { return _reload.isActive(); }
         float32          getReloadRemaining() const { return _reload.getRemaining(); }
 
-        /** @brief 무기 정의 id · 난수 · 쿨다운 · 장전 · 퍼짐 · 탄창 · 예비탄을 씁니다. 정의는 `equip` 의 것이라 id 만 싣고, 읽을 때 지금 정의와 id 가 다르면 거절합니다. */
+        /** @brief 무기 정의 id, 난수, 쿨다운, 장전, 퍼짐, 탄창, 예비탄을 씁니다. 정의는 `equip` 의 것이라 id 만 싣고, 읽을 때 지금 정의와 id 가 다르면 거절합니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        /** @brief `writeState` 의 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
     private:

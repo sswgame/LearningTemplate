@@ -23,12 +23,12 @@ namespace sw
     {
         struct TerrainComponentInternal
         {
-            /** @brief DXGI 비압축 8 비트 4 채널 — RGBA(UNORM · SRGB) 와 BGRA(UNORM · SRGB). */
+            /** @brief DXGI 비압축 8 비트 4 채널 포맷입니다. RGBA(UNORM, SRGB)와 BGRA(UNORM, SRGB)가 있습니다. */
             static constexpr uint32 kDxgiRgba8     = 28;
             static constexpr uint32 kDxgiRgba8Srgb = 29;
             static constexpr uint32 kDxgiBgra8     = 87;
             static constexpr uint32 kDxgiBgra8Srgb = 91;
-            /** @brief LOD 를 바꾸기 전에 거리가 임계값을 넘어야 하는 비율 — 임계값에 선 카메라가 매 프레임 메시를 다시 만들지 않게. */
+            /** @brief LOD 를 바꾸기 전에 거리가 임계값을 넘어야 하는 비율입니다. 임계값에 선 카메라가 매 프레임 메시를 다시 만들지 않게 합니다. */
             static constexpr float32 kLODHysteresis = 0.1f;
 
             static const hashed_string& getLayerColorName( uint32 layerIndex )
@@ -38,7 +38,7 @@ namespace sw
                 return s_arrName[layerIndex];
             }
 
-            /** @brief 카메라에서 청크 사각형(xz)까지 · 청크 높이 중간까지의 거리입니다. */
+            /** @brief 카메라에서 청크 사각형(xz)까지의 거리와 청크 높이 중간까지의 거리입니다. */
             static float32 computeChunkDistance( const TerrainHeightfield& heightfield, const TerrainChunkLayout& layout, uint32 chunkX, uint32 chunkZ, const float3& viewPosition )
             {
                 const float3  origin   = heightfield.getOrigin();
@@ -97,7 +97,7 @@ namespace sw
         manager.getComponentRegistry().add<TerrainComponent>( this ); // `findTerrainAt` 이 씬을 훑지 않고 본다
         _pPrimitiveRegistry = &manager.getPrimitiveRegistry();
         if ( _heightfieldPath.empty() == false )
-            (void)reloadTerrain(); // 실패는 안에서 알린다 — 그리지 않을 뿐이다
+            (void)reloadTerrain(); // 실패는 안에서 알린다. 그리지 않을 뿐이다.
     }
 
     void TerrainComponent::onUnregister( GameObjectManager& manager )
@@ -118,14 +118,14 @@ namespace sw
     void TerrainComponent::onPropertyChanged( hashed_string propertyName )
     {
         SceneComponent::onPropertyChanged( propertyName );
-        // 켜고 끄기는 기하를 바꾸지 않는다 — 청크를 다시 짓지 않고 빌더가 다시 보게만 한다.
+        // 켜고 끄기는 기하를 바꾸지 않는다. 청크를 다시 만들지 않고 빌더가 다시 확인하게만 한다.
         static const hashed_string s_activeName( "_bActive" );
         if ( propertyName == s_activeName )
         {
             markChunksDirty();
             return;
         }
-        // 트랜스폼(위치)이 바뀐 것도 여기로 온다 — 지형 원점이 따라 움직인다.
+        // 트랜스폼(위치)이 바뀐 것도 여기로 온다. 지형 원점이 따라 움직인다.
         (void)reloadTerrain();
     }
 
@@ -158,7 +158,7 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager != nullptr && _bOriginDirty.exchange( false, std::memory_order_relaxed ) )
         {
-            // 다시 읽기는 배치를 레지스트리에서 빼고 넣는 구조 변경이다 — 틱 뒤로 미루고, 그 사이 사라졌을 수 있으니 핸들로 다시 찾는다.
+            // 다시 읽기는 배치를 레지스트리에서 빼고 넣는 구조 변경이다. 틱 뒤로 미루고, 그 사이 사라졌을 수 있으니 핸들로 다시 찾는다.
             const ComponentHandle self = getHandle();
             pManager->executeOrDeferPostTick( [pManager, self]()
             {
@@ -211,7 +211,7 @@ namespace sw
             _heightfield.setSplat( 0, 0, {} );
             return;
         }
-        // 전용 서버의 패키지에는 텍스처가 없다 — 층 질의는 레이어 0 이다(경고를 남기지 않는다).
+        // 전용 서버의 패키지에는 텍스처가 없다. 레이어 질의는 레이어 0 이다(경고를 남기지 않는다).
         if ( ResourcePaths::isExcludedForHost( _splatTexturePath ) )
         {
             _heightfield.setSplat( 0, 0, {} );
@@ -264,7 +264,7 @@ namespace sw
         }
         _material.setVector( hashed_string( "layerDetail" ), float4{ arrDetail[0], arrDetail[1], arrDetail[2], arrDetail[3] } );
         _material.setVector( hashed_string( "layerTriplanar" ), float4{ arrTriplanar[0], arrTriplanar[1], arrTriplanar[2], arrTriplanar[3] } );
-        // x = 스플랫 너비(텍셀 중심 맞추기), y = 디테일 반복(1/m), z = 절벽 임계값(노멀 y), w = 절벽 레이어(−1 = 끔)
+        // x 는 스플랫 너비(텍셀 중심 맞추기), y 는 디테일 반복(1/m), z 는 절벽 임계값(노멀 y), w 는 절벽 레이어(-1 이면 끔)다.
         const float32 splatWidth = static_cast<float32>( _heightfield.getSplatWidth() );
         _material.setVector( hashed_string( "terrainParams" ), float4{ splatWidth, _detailTiling, _cliffStart, static_cast<float32>( _cliffLayer ) } );
         _material.setTexture( hashed_string( "splatMap" ), _splatTexturePath );
@@ -336,7 +336,7 @@ namespace sw
             const float32 distance   = Internal::computeChunkDistance( _heightfield, _layout, chunkX, chunkZ, viewPosition );
             const uint32  currentLOD = _listChunk[chunkIndex]._lod;
             uint32        wantedLOD  = TerrainMeshBuilder::selectLOD( distance, _lodDistance, _layout._maxLOD );
-            // 임계값 근처에서 흔들리지 않게 — 바꾸는 쪽으로 10 % 더 넘어야 바꾼다.
+            // 임계값 근처에서 흔들리지 않게 한다. 바꾸는 쪽으로 10 % 더 넘어야 바꾼다.
             if ( wantedLOD != currentLOD )
             {
                 const float32 margin = wantedLOD > currentLOD ? ( 1.0f - Internal::kLODHysteresis ) : ( 1.0f + Internal::kLODHysteresis );
@@ -357,7 +357,7 @@ namespace sw
             bool bChanged = chunk._lod != _listWantedLOD[chunkIndex];
             for ( uint32 side = 0; side < 4; ++side )
             {
-                // 이웃이 이쪽보다 고우면 접는 것은 이웃의 일이다 — 그 변은 이쪽 메시에 영향이 없다.
+                // 이웃이 이쪽보다 고우면 접는 것은 이웃의 일이다. 그 변은 이쪽 메시에 영향이 없다.
                 const uint32 oldEffective   = MathUtil::max( chunk._arrNeighborLOD[side], chunk._lod );
                 const uint32 newEffective   = MathUtil::max( arrNeighborLOD[side], _listWantedLOD[chunkIndex] );
                 bChanged                    = bChanged || oldEffective != newEffective;

@@ -30,8 +30,8 @@ namespace sw
             }
 
             /**
-             * @brief 사슬의 관절 제한을 읽습니다 — `[{ "bone", "type": "Cone"|"Hinge", "swing_degrees", "twist_degrees", "axis", "min_degrees", "max_degrees" }]`.
-             * @details 본 이름은 묶을 때 사슬 자리로 바꿉니다(여기서는 이름과 값만).
+             * @brief 사슬의 관절 제한을 읽습니다. 형식은 `[{ "bone", "type": "Cone"|"Hinge", "swing_degrees", "twist_degrees", "axis", "min_degrees", "max_degrees" }]` 입니다.
+             * @details 본 이름은 바인딩할 때 사슬 인덱스로 바꾼다(여기서는 이름과 값만 읽는다).
              */
             struct LimitSpec
             {
@@ -77,7 +77,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 제한 이름을 사슬 자리로 옮기고, 레퍼런스 회전 · 본 축(본 → 다음 사슬 본, 본 자기 공간)을 채웁니다. */
+            /** @brief 제한 이름을 사슬 인덱스로 옮기고, 레퍼런스 회전과 본 축(본에서 다음 사슬 본으로 가는 방향, 본 자기 공간)을 채웁니다. */
             static bool bindLimits( const RigBindContext& context, const vector<LimitSpec>& listSpec, const vector<uint32>& listChainBone,
                                     vector<RigJointLimit>& outListLimit )
             {
@@ -115,9 +115,9 @@ namespace sw
             }
         };
         /**
-         * @brief 2 본 IK(팔 · 다리 · 손 IK). 키: `root` · `mid` · `end` · `target` · `pole`(대상, 선택) · `match_rotation`(끝 본 회전을 대상 회전으로) ·
-         *        `keep_end_rotation`(기본 true — 끝 본의 모델 회전을 애니메이션 값으로 지킨다).
-         * @details 왼손을 무기 손잡이 소켓에 — `target` 이 무기 유닛의 `Grip` 소켓(space = 오른손)이고 `match_rotation` 이면 손이 손잡이 방향으로 돈다.
+         * @brief 2 본 IK(팔, 다리, 손 IK)입니다. 키는 `root`, `mid`, `end`, `target`, `pole`(대상, 선택), `match_rotation`(끝 본 회전을 대상 회전으로 맞춤),
+         *        `keep_end_rotation`(기본 true, 끝 본의 모델 회전을 애니메이션 값으로 유지)입니다.
+         * @details 왼손을 무기 손잡이 소켓에 붙이려면 `target` 을 무기 유닛의 `Grip` 소켓(space = 오른손)으로 두고 `match_rotation` 을 켠다. 그러면 손이 손잡이 방향으로 돈다.
          */
         class RigTwoBoneIKNode final : public RigNode
         {
@@ -192,7 +192,7 @@ namespace sw
         };
 
         /**
-         * @brief 사슬 IK(FABRIK 또는 CCD). 키: `bones`(뿌리 → 끝) · `target` · `iterations` · `tolerance` · `max_step_degrees`(CCD) · `limits` · `match_rotation`.
+         * @brief 사슬 IK(FABRIK 또는 CCD)입니다. 키는 `bones`(뿌리에서 끝으로), `target`, `iterations`, `tolerance`, `max_step_degrees`(CCD), `limits`, `match_rotation` 입니다.
          */
         class RigChainIKNode final : public RigNode
         {
@@ -259,8 +259,8 @@ namespace sw
         };
 
         /**
-         * @brief 조준 · 시선(Aim / LookAt). 키: `bone` · `target` · `aim_axis`(본 로컬, 기본 +Z) · `max_degrees`(애니메이션 방향에서 벗어날 상한) ·
-         *        `chain`(`[{ "bone", "weight" }]` — 조준 본의 조상들이 회전을 나눠 받는다, 뿌리 쪽부터).
+         * @brief 조준과 시선(Aim, LookAt)입니다. 키는 `bone`, `target`, `aim_axis`(본 로컬, 기본 +Z), `max_degrees`(애니메이션 방향에서 벗어날 수 있는 상한),
+         *        `chain`(`[{ "bone", "weight" }]`, 조준 본의 조상들이 뿌리 쪽부터 회전을 나눠 받음)입니다.
          */
         class RigAimNode final : public RigNode
         {
@@ -312,7 +312,7 @@ namespace sw
                 quaternion           targetRotation{};
                 if ( context._pInstance->resolveTarget( _target, pose, targetPosition, targetRotation ) == false )
                     return;
-                // 상한은 애니메이션 방향 기준이다 — 목표 방향을 그 원뿔 안으로 먼저 잘라 둔다.
+                // 상한은 애니메이션 방향 기준이다. 목표 방향을 그 원뿔 안으로 먼저 잘라 둔다.
                 const float3 bonePosition = pose.getModelPosition( _bone );
                 const float3 animated     = space.projectVector( float3::transform( _aimAxis, pose.getModelRotation( _bone ) ) ).normalize();
                 const float3 toTarget     = space.projectVector( targetPosition - bonePosition );
@@ -364,10 +364,10 @@ namespace sw
         };
 
         /**
-         * @brief 발 디딤(Foot Placement). 키: `pelvis` · `feet`(`[{ "root", "mid", "end" }]`) · `trace_up` · `trace_down` · `max_pelvis_drop` · `max_raise` ·
-         *        `interp_speed`(초당 따라잡는 비) · `align_to_normal` · `max_align_degrees`.
-         * @details 게임 스레드 준비에서 발마다(지난 평가의 애니메이션 발 자리) 위에서 아래로 땅 광선을 쏘고, 평가에서 발마다 땅 높이(유닛 바닥 기준)를
-         *          부드럽게 따라 낮은 쪽만큼 골반을 내리고 2 본 IK 로 발을 땅에 올리고 법선에 맞춰 돌립니다. 언리얼 Foot Placement · Leg IK 의 자리입니다.
+         * @brief 발 디딤(Foot Placement)입니다. 키는 `pelvis`, `feet`(`[{ "root", "mid", "end" }]`), `trace_up`, `trace_down`, `max_pelvis_drop`, `max_raise`,
+         *        `interp_speed`(초당 따라잡는 비율), `align_to_normal`, `max_align_degrees` 입니다.
+         * @details 게임 스레드 준비 단계에서 발마다(지난 평가의 애니메이션 발 위치) 위에서 아래로 땅 광선을 쏜다. 평가에서는 발마다 땅 높이(유닛 바닥 기준)를
+         *          부드럽게 따라가고, 낮은 쪽만큼 골반을 내린 뒤, 2 본 IK 로 발을 땅에 올리고 법선에 맞춰 돌린다. 언리얼의 Foot Placement 와 Leg IK 에 해당한다.
          */
         class RigFootPlacementNode final : public RigNode
         {
@@ -431,7 +431,7 @@ namespace sw
                     foot._bHit = SW_FALSE;
                     if ( context._pGroundQuery == nullptr )
                         continue;
-                    // 발 자리(바닥 높이로 내린 것) 위 trace_up 에서 아래로 trace_up + trace_down.
+                    // 발 위치(바닥 높이로 내린 값) 위 trace_up 에서 아래로 trace_up + trace_down 만큼 쏜다.
                     const float3 footOnFloor{ foot._animatedModel._x, 0.0f, foot._animatedModel._z };
                     const float3 origin = float3::transform( footOnFloor, context._worldFromModel ) + up * _traceUp;
                     RigGroundHit hit{};
@@ -456,7 +456,7 @@ namespace sw
                     foot._bInitialized  = SW_TRUE;
                     lowest              = MathUtil::min( lowest, foot._offset );
                 }
-                // 골반은 가장 낮은 발만큼 내린다 — 높은 쪽 발은 무릎을 굽혀 올린다.
+                // 골반은 가장 낮은 발만큼 내린다. 높은 쪽 발은 무릎을 굽혀 올린다.
                 const float32 pelvisGoal = MathUtil::max( lowest, -_maxPelvisDrop );
                 _pelvisOffset            = _bPelvisInitialized == SW_TRUE ? MathUtil::lerp( _pelvisOffset, pelvisGoal, blend ) : pelvisGoal;
                 _bPelvisInitialized      = SW_TRUE;

@@ -1,34 +1,47 @@
 /**
  * @file NetHost.h
- * @brief 서버 · 클라이언트 엔드포인트 — 연결 핸드셰이크(요청 → 도전 → 응답 → 수락), 체크섬 · 프로토콜 id 로 남의 패킷 거르기, 연결 유지 · 타임아웃 · 끊기, 연결마다의 신뢰성 계층입니다.
- * @details 연결 요청에는 게임 id 와 프로토콜 id(게임 id + 와이어 판, `NetProtocol`)가 실린다. 서버는 프로토콜 id 가 다르면 이유를 붙여 거절한다 — 같은 게임의
- *          다른 판은 `VersionMismatch`, 다른 게임은 `Rejected`(양쪽 로그에 두 값을 남긴다). 요청 · 거절만 판과 상관없는 고정 머리(`NetProtocol::kHandshakeID`)로
- *          싸고, 나머지 패킷은 프로토콜 id 로 싸서 다른 판의 패킷은 체크섬부터 틀린다.
- *          장르별 네트워크 방식(클라이언트-서버 복제 · 락스텝 · 턴 중계 · MMO)은 이 위에 키트로 얹습니다. 여기는 "누가 연결됐고 어느 채널로 무엇이 왔는가" 까지입니다.
- *          도전(challenge) 단계는 위조한 주소로 서버에 연결 자리를 잡는 것을 막습니다 — 도전 값은 실제 그 주소로 간 패킷에만 들어 있습니다.
- *          서버는 요청에 상태를 남기지 않습니다(netcode.io connect token · QUIC Retry · 언리얼 StatelessConnectHandlerComponent): 도전 값은
- *          비밀 키 · 주소 · 클라이언트 소금 · 시간 칸에서 만들어 돌려주기만 하고, 그 값을 되돌려 준 응답이 와야 자리를 잡는다. 응답은 값을 만든 칸과
- *          다음 칸 안(`kChallengeWindowSeconds` 의 1~2 배)에만 통한다. 값은 키 섞기(splitmix)라 암호학적 MAC 은 아니다 — 위조 주소의 자리 채우기를 막는 데까지다.
+ * @brief 서버와 클라이언트의 엔드포인트를 구현합니다.
+ * @details 연결 핸드셰이크(요청, 챌린지, 응답, 수락)를 처리하고, 체크섬과 프로토콜 ID로 다른 프로그램의 패킷을 걸러 낸다.
+ *          연결 유지, 타임아웃, 연결 끊기, 연결별 신뢰성 계층도 여기서 맡는다.
  *
- *          **대역폭 상한**: 연결마다 토큰 버킷(`NetHostSettings::_maxBytesPerSecond`, 언리얼 `NetSpeed`)이다. 몫이 남으면 보내기 차례 하나에 패킷을 여럿
- *          (`kMaxPacketsPerSend` 까지) 보내고, 다 쓰면 메시지 없이 머리(확인 · 유지)만 보낸다 — 포화돼도 연결은 끊기지 않는다. 키트의 틱 예산은
- *          `NetSendBudget::computeTickBudget` 으로 이 값에서 몫을 받는다.
+ *          연결 요청에는 게임 ID와 프로토콜 ID(게임 ID에 와이어 버전을 합친 값, `NetProtocol`)가 실린다.
+ *          서버는 프로토콜 ID가 다르면 이유를 붙여 거절한다. 같은 게임의 다른 버전은 `VersionMismatch`, 다른 게임은 `Rejected` 이고, 양쪽 로그에 두 값을 남긴다.
+ *          요청과 거절 패킷만 버전과 상관없는 고정 헤더(`NetProtocol::kHandshakeID`)로 싼다.
+ *          나머지 패킷은 프로토콜 ID로 싸므로, 다른 버전의 패킷은 체크섬부터 맞지 않는다.
  *
- *          **스레드**: 공개 함수는 모두 잠금 하나로 지켜져 아무 스레드에서나 부를 수 있습니다(게임 스레드가 보내고, 작업 스레드가 꺼내고, 네트워크
- *          스레드가 `update` 한다). `update` 는 소켓 받기 · 보내기를 **잠금 밖에서** 묶어 하고 잠금 안에서는 패킷 처리만 하므로, 시스템 호출이
- *          보내는 쪽 스레드를 막지 않습니다. `update` 를 부르는 스레드는 한 번에 하나입니다 — 보통 `NetHostThread` 가 맡아 게임 프레임과
- *          상관없이 받기 · 확인 · 재전송 · 유지를 돌립니다(로딩 · 멈춘 프레임에 연결이 끊기지 않는다).
+ *          클라이언트-서버 복제, 락스텝, 턴 중계, MMO 같은 장르별 네트워크 방식은 이 계층 위에 키트로 구현한다.
+ *          이 계층의 일은 "누가 연결됐고 어느 채널로 무엇이 왔는가"까지다.
  *
- *          **암호화**(`NetHostSettings::_security`, 기본 꺼짐 — `NetHostSecurity.h`): 응답 · 수락에 일회 X25519 공개 키를 싣고, 서버는 상태 없는 도전을 통과한
- *          응답에만 키를 계산한다. 키 = HKDF(공유 비밀, 소금 = 세션 비밀), 데이터 · 끊기 패킷은 `[종류][연결 값][64 비트 번호][AEAD + 태그]`
- *          (AAD = 프로토콜 id ‖ 그 머리). 받는 쪽은 1024 재전송 창으로 거르고 **복호가 통과한 뒤에** 번호를 표시한다(먼저 표시하면 위조 패킷이 진짜 번호를 태운다).
- *          토큰 결속(서버 `INetConnectAuthenticator` · 클라이언트 `NetConnectCredentials`)이면 응답의 세션 비밀 증명 태그가 맞아야 자리를 잡고, 클라이언트는
- *          수락의 키 확인 태그로 서버가 같은 키를 가졌는지 본다. 방식 · 결속 여부는 프로토콜 id 에 섞여 협상하지 않는다 — 한쪽만이면 `SecurityMismatch`.
- *          인증기 없는 암호화(일회 키 — 중간자는 못 막는다)는 개발 빌드만: Shipping 서버는 인증기 없이 암호화로 `listen` 하지 못한다.
+ *          챌린지 단계는 위조한 주소로 서버의 연결 슬롯을 차지하는 공격을 막는다. 챌린지 값은 실제로 그 주소로 보낸 패킷에만 들어 있다.
+ *          서버는 요청에 상태를 남기지 않는다(netcode.io connect token, QUIC Retry, 언리얼 StatelessConnectHandlerComponent와 같은 방식).
+ *          챌린지 값은 비밀 키, 주소, 클라이언트 솔트, 시간 윈도우를 섞어 만들어 돌려주기만 한다. 그 값을 되돌려 주는 응답이 와야 슬롯을 할당한다.
+ *          응답은 값을 만든 윈도우와 그다음 윈도우 안(`kChallengeWindowSeconds` 의 1~2배)에만 유효하다.
+ *          값은 키를 섞는 splitmix 이므로 암호학적 MAC은 아니다. 위조한 주소로 슬롯을 채우는 공격을 막는 데까지만 쓴다.
  *
- *          **디버거 대기**(`NetHostSettings::_debugHold`, 개발 빌드만): 디버거가 붙은 호스트는 데이터 패킷마다 1 비트로 알리고, 상대는 그 연결의 시간 초과를
- *          `_debugHoldTimeoutSeconds` 로 늘린다 — 한쪽이 중단점에 멈춰도 다른 쪽이 끊지 않는다. 멈췄던 쪽은 `update` 사이의 빈 시간만큼 연결 시계를 민다.
- *          Shipping 은 알리지도 믿지도 않는다(비트를 켠 클라이언트가 자리를 붙잡지 못하게).
+ *          **대역폭 상한**: 연결마다 토큰 버킷(`NetHostSettings::_maxBytesPerSecond`, 언리얼의 `NetSpeed`)을 둔다.
+ *          토큰이 남아 있으면 한 번의 전송에 패킷을 여럿(`kMaxPacketsPerSend` 까지) 보낸다.
+ *          토큰을 다 쓰면 메시지 없이 헤더(확인과 연결 유지)만 보내므로, 대역폭이 포화돼도 연결은 끊기지 않는다.
+ *          키트의 틱 예산은 `NetSendBudget::computeTickBudget` 이 이 값에서 할당받는다.
+ *
+ *          **스레드**: 공개 함수는 모두 잠금 하나로 보호하므로 어느 스레드에서나 부를 수 있다.
+ *          게임 스레드가 보내고, 작업 스레드가 꺼내고, 네트워크 스레드가 `update` 한다.
+ *          `update` 는 소켓 받기와 보내기를 **잠금 밖에서** 묶어 처리하고 잠금 안에서는 패킷 처리만 하므로, 시스템 호출이 보내는 쪽 스레드를 막지 않는다.
+ *          `update` 를 부르는 스레드는 한 번에 하나여야 한다. 보통 `NetHostThread` 가 맡아 게임 프레임과 상관없이 받기, 확인, 재전송, 연결 유지를 돌린다.
+ *          그래서 로딩이나 프레임 멈춤 중에도 연결이 끊기지 않는다.
+ *
+ *          **암호화**(`NetHostSettings::_security`, 기본값은 꺼짐, `NetHostSecurity.h`): 응답과 수락에 일회용 X25519 공개 키를 싣는다.
+ *          서버는 상태 없는 챌린지를 통과한 응답에만 키를 계산한다. 키는 HKDF(공유 비밀, 솔트는 세션 비밀)로 만든다.
+ *          데이터 패킷과 끊기 패킷은 `[종류][연결 값][64비트 번호][AEAD + 태그]` 형식이고, AAD는 프로토콜 ID와 이 헤더를 이은 값이다.
+ *          받는 쪽은 1024개 크기의 재전송 방지 윈도우로 걸러 내고, **복호가 성공한 뒤에** 번호를 표시한다. 먼저 표시하면 위조 패킷이 진짜 번호를 소모시킨다.
+ *          토큰 결속(서버는 `INetConnectAuthenticator`, 클라이언트는 `NetConnectCredentials`)을 쓰면 응답의 세션 비밀 증명 태그가 맞아야 슬롯을 할당한다.
+ *          클라이언트는 수락에 든 키 확인 태그로 서버가 같은 키를 가졌는지 확인한다.
+ *          암호화 방식과 토큰 결속 여부는 프로토콜 ID에 섞이지 않고 협상하지도 않는다. 한쪽만 켜면 `SecurityMismatch` 가 된다.
+ *          인증기 없는 암호화(일회용 키라 중간자 공격은 막지 못한다)는 개발 빌드에서만 허용한다. Shipping 서버는 인증기 없이 암호화로 `listen` 할 수 없다.
+ *
+ *          **디버거 대기**(`NetHostSettings::_debugHold`, 개발 빌드만): 디버거가 붙은 호스트는 데이터 패킷마다 1비트로 이 사실을 알린다.
+ *          상대는 그 연결의 타임아웃을 `_debugHoldTimeoutSeconds` 로 늘리므로, 한쪽이 중단점에 멈춰도 다른 쪽이 연결을 끊지 않는다.
+ *          멈췄던 쪽은 `update` 사이의 빈 시간만큼 연결 시계를 앞으로 민다.
+ *          Shipping 은 이 비트를 보내지도 믿지도 않는다. 비트를 켠 클라이언트가 슬롯을 계속 붙잡는 일을 막기 위해서다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -52,15 +65,16 @@ namespace sw
     class INetTransport;
 
     /**
-     * @brief 디버거 대기 — 이 호스트가 중단점에 멈출 수 있다고 상대에게 알릴 때입니다(개발 빌드만, Shipping 은 늘 알리지 않고 상대의 알림도 무시한다).
-     * @details 알리는 쪽은 데이터 패킷마다 1 비트를 켠다. 받는 쪽은 그 연결의 시간 초과를 `NetHostSettings::_debugHoldTimeoutSeconds` 로 늘린다 — 서버가
-     *          중단점에 멈춰도 클라이언트가 끊지 않는다. 알리는 쪽 자신은 `update` 사이가 크게 벌어지면(프로세스가 멈췄다) 그만큼 시계를 멈춘 것으로 친다(가상 시계).
+     * @brief 이 호스트가 중단점에 멈출 수 있다고 상대에게 알릴 시점을 정합니다.
+     * @details 개발 빌드에서만 동작한다. Shipping 은 알리지 않고 상대의 알림도 무시한다.
+     *          알리는 쪽은 데이터 패킷마다 1비트를 켠다. 받는 쪽은 그 연결의 타임아웃을 `NetHostSettings::_debugHoldTimeoutSeconds` 로 늘린다.
+     *          알리는 쪽 자신은 `update` 사이가 크게 벌어지면(프로세스가 멈췄다고 보고) 그만큼 시계가 멈춘 것으로 간주한다(가상 시계).
      */
     enum class NetDebugHold : uint8
     {
-        Off = 0,              ///< 알리지 않는다(시간 초과 테스트 · 디버거 아래에서도 원래 시간 초과를 보려는 쪽)
-        WhenDebuggerAttached, ///< 이 프로세스에 디버거가 붙어 있을 때만(`Process::isDebuggerPresent`, 1 초마다 다시 묻는다)
-        Always                ///< 늘 — 테스트, 디버거 없이 멈추는 도구
+        Off = 0,              ///< 알리지 않는다. 타임아웃 테스트나 디버거 아래에서 원래 타임아웃을 보려는 경우에 쓴다.
+        WhenDebuggerAttached, ///< 이 프로세스에 디버거가 붙어 있을 때만 알린다(`Process::isDebuggerPresent`, 1초마다 다시 확인한다).
+        Always                ///< 항상 알린다. 테스트나 디버거 없이 멈추는 도구에 쓴다.
     };
 } // namespace sw
 
@@ -69,25 +83,25 @@ namespace sw
     /** @brief 호스트 설정입니다. 시간은 초입니다. */
     struct NetHostSettings
     {
-        uint32              _gameID{ NetProtocol::kDefaultGameID }; ///< 게임마다 다르게 — 다르면 연결을 Rejected 로 거절한다
-        uint32              _wireVersion{ 0 };                      ///< 게임 · 키트 층의 판(`NetWireVersion::combine`) — 다르면 VersionMismatch. Core 판은 저절로 섞인다
-        uint64              _saltSeed{ 0 };                         ///< 도전 값 씨앗 — 0 이면 운영체제 난수(위조 연결을 막는다). 테스트는 고정해도 된다
+        uint32              _gameID{ NetProtocol::kDefaultGameID }; ///< 게임마다 다르게 정한다. 다르면 연결을 Rejected 로 거절한다.
+        uint32              _wireVersion{ 0 };                      ///< 게임과 키트 계층의 버전(`NetWireVersion::combine`). 다르면 VersionMismatch 가 된다. Core 버전은 자동으로 섞인다.
+        uint64              _saltSeed{ 0 };                         ///< 챌린지 값의 시드. 0이면 운영체제 난수를 쓴다(위조 연결을 막는다). 테스트에서는 고정해도 된다.
         float64             _timeoutSeconds{ 5.0 };
         float64             _connectTimeout{ 5.0 };
         float64             _connectRetryInterval{ 0.2 };
-        float64             _sendInterval{ 1.0 / 30.0 };       ///< 연결마다 패킷을 보내는 가장 짧은 간격
-        float64             _keepAliveInterval{ 0.25 };        ///< 보낼 것(메시지 · 재전송 · 확인)이 없으면 이 간격으로만 보낸다(유지 · RTT)
-        float64             _debugHoldTimeoutSeconds{ 600.0 }; ///< 상대가 디버거 대기를 알린 연결의 시간 초과(개발 빌드만 — 중단점에 오래 멈춰도 끊지 않는다)
+        float64             _sendInterval{ 1.0 / 30.0 };       ///< 연결마다 패킷을 보내는 최소 간격.
+        float64             _keepAliveInterval{ 0.25 };        ///< 보낼 것(메시지, 재전송, 확인)이 없으면 이 간격으로만 보낸다(연결 유지와 RTT 측정).
+        float64             _debugHoldTimeoutSeconds{ 600.0 }; ///< 상대가 디버거 대기를 알린 연결의 타임아웃(개발 빌드만). 중단점에 오래 멈춰도 끊지 않는다.
         int32               _maxConnections{ 16 };
-        int32               _maxBytesPerSecond{ 100000 }; ///< 연결마다 보내는 바이트 상한(토큰 버킷 — 언리얼 `NetSpeed` 기본과 같다). 다 쓰면 메시지는 기다리고 확인 · 유지만 간다. 패킷 하나(1200) 아래는 그 값으로
-        NetSecuritySettings _security{};                  ///< 암호화 · 토큰 결속(기본 꺼짐) — 양쪽이 같아야 연결된다
+        int32               _maxBytesPerSecond{ 100000 }; ///< 연결마다 보내는 바이트 상한(토큰 버킷, 언리얼 `NetSpeed` 기본값과 같다). 다 쓰면 메시지는 기다리고 확인과 연결 유지 패킷만 나간다. 패킷 하나(1200바이트)보다 작은 값은 패킷 하나 크기로 올려 쓴다.
+        NetSecuritySettings _security{};                  ///< 암호화와 토큰 결속 설정(기본값은 꺼짐). 양쪽이 같아야 연결된다.
         NetDebugHold        _debugHold{ NetDebugHold::WhenDebuggerAttached };
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 호스트에서 생긴 일입니다. */
+    /** @brief 호스트에서 일어난 사건입니다. */
     struct NetHostEvent
     {
         enum class Kind : uint8
@@ -115,7 +129,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `NetInbound` 의 메시지 하나 — 바이트는 `NetInbound::_bytes` 의 [_offset, _offset + _size) 입니다(첫 바이트 = 종류). */
+    /** @brief `NetInbound` 에 든 메시지 하나입니다. 바이트는 `NetInbound::_bytes` 의 [_offset, _offset + _size) 범위이고, 첫 바이트가 메시지 종류입니다. */
     struct NetInboundMessage
     {
         int32          _connectionID{ -1 };
@@ -127,7 +141,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `NetHost::drainInbound` 가 잠금 한 번에 꺼낸 연결 사건과 받은 메시지입니다. 다시 쓰면 할당하지 않는다(바이트는 한 아레나에). */
+    /** @brief `NetHost::drainInbound` 가 잠금 한 번에 꺼낸 연결 사건과 받은 메시지입니다. 다시 쓰면 할당하지 않으며, 바이트는 아레나 하나에 모읍니다. */
     struct NetInbound
     {
         vector<NetHostEvent>      _listEvent{};
@@ -147,7 +161,8 @@ namespace sw
 {
     /**
      * @class NetHost
-     * @brief 서버는 `listen`, 클라이언트는 `connect` 로 시작해 `update( 시각 )` 합니다(직접 매 프레임, 또는 `NetHostThread`). 클라이언트의 서버 연결은 id 0 입니다.
+     * @brief 서버는 `listen`, 클라이언트는 `connect` 로 시작한 뒤 `update( 시각 )` 를 부르는 네트워크 호스트입니다.
+     * @details `update` 는 매 프레임 직접 부르거나 `NetHostThread` 에 맡긴다. 클라이언트에서 서버 연결의 ID는 0이다.
      * @code
      *     host.initialize( &transport, settings );
      *     (void)host.listen();
@@ -161,9 +176,9 @@ namespace sw
     class SW_API NetHost
     {
     public:
-        static constexpr int32   kMaxDatagramPerUpdate   = 512; ///< `update` 한 번에 받는 데이터그램 한도 — 나머지는 다음 번에(소켓 버퍼에 남는다)
-        static constexpr int32   kMaxPacketsPerSend      = 8;   ///< 보내기 차례 하나에 연결마다 보내는 패킷 상한 — 대역폭 몫이 남고 실을 것이 있으면 여럿
-        static constexpr float64 kChallengeWindowSeconds = 5.0; ///< 도전 값의 시간 칸 — 만든 칸과 다음 칸 동안 통한다
+        static constexpr int32   kMaxDatagramPerUpdate   = 512; ///< `update` 한 번에 받는 데이터그램 한도. 나머지는 소켓 버퍼에 남겨 다음 호출에서 받는다.
+        static constexpr int32   kMaxPacketsPerSend      = 8;   ///< 한 번의 전송에서 연결마다 보내는 패킷 상한. 대역폭 토큰이 남고 보낼 것이 있으면 여러 개를 보낸다.
+        static constexpr float64 kChallengeWindowSeconds = 5.0; ///< 챌린지 값의 시간 윈도우. 값을 만든 윈도우와 그다음 윈도우 동안 유효하다.
 
         NetHost();
         ~NetHost();
@@ -175,18 +190,20 @@ namespace sw
         void               initialize( INetTransport* pTransport, const NetHostSettings& settings );
         [[nodiscard]] bool listen();
         [[nodiscard]] bool connect( const NetAddress& serverAddress );
-        /** @brief 세션 토큰을 내밀며 연결합니다(토큰 결속 서버). 토큰 · 비밀은 로그인 키트가 TLS 로 받은 것입니다. */
+        /** @brief 세션 토큰을 내밀며 연결합니다(토큰 결속 서버용). 토큰과 비밀은 로그인 키트가 TLS 로 받은 값입니다. */
         [[nodiscard]] bool connect( const NetAddress& serverAddress, const NetConnectCredentials& credentials );
         /**
-         * @brief 비동기 연결 — 연결되거나 실패(거절 · 가득 참 · 타임아웃 · 끊음)하면 채워지는 future 를 돌려줍니다. 시작부터 못 하면 이미 채워진 future(Rejected)입니다.
-         * @details 결과(와 `then` 후속 작업)는 그 일을 처리한 스레드(`update` · `disconnect` 를 부른 쪽)에서 잠금을 푼 뒤에 채워진다. 다시 `connect` 하면
-         *          앞의 future 는 Requested 로 끝난다.
+        /**
+         * @brief 비동기로 연결하고, 연결되거나 실패(거절, 정원 초과, 타임아웃, 끊김)하면 채워지는 future 를 돌려줍니다.
+         * @details 시작부터 실패하면 이미 채워진 future(Rejected)를 돌려준다.
+         *          결과와 `then` 후속 작업은 그 일을 처리한 스레드(`update` 나 `disconnect` 를 부른 쪽)에서 잠금을 푼 뒤에 채운다.
+         *          다시 `connect` 하면 앞의 future 는 Requested 로 끝난다.
          */
         TaskFuture<NetConnectResult> connectAsync( const NetAddress& serverAddress );
         TaskFuture<NetConnectResult> connectAsync( const NetAddress& serverAddress, const NetConnectCredentials& credentials );
-        /** @brief 받기(잠금 밖) → 처리 · 타임아웃 · 보낼 패킷 만들기(잠금 안) → 보내기(잠금 밖)입니다. 한 번에 한 스레드만 부른다. */
+        /** @brief 소켓에서 받고(잠금 밖), 패킷 처리와 타임아웃 확인과 보낼 패킷 생성을 하고(잠금 안), 보냅니다(잠금 밖). 한 번에 한 스레드만 부른다. */
         void update( float64 nowSeconds );
-        /** @brief 받을 데이터그램이 생기거나 @p timeoutSeconds 가 지날 때까지 잠듭니다(`update` 를 도는 스레드가 부른다). */
+        /** @brief 받을 데이터그램이 생기거나 @p timeoutSeconds 가 지날 때까지 잠듭니다. `update` 를 도는 스레드가 부릅니다. */
         bool waitForReceive( float64 timeoutSeconds );
 
         [[nodiscard]] bool sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size );
@@ -194,49 +211,52 @@ namespace sw
         {
             return sendMessage( connectionID, channel, buffer.data(), static_cast<int32>( buffer.size() ) );
         }
-        /** @brief 연결된 모두에게 보냅니다(@p exceptID 는 빼고). 보낸 수입니다. */
+        /** @brief 연결된 모두에게 보냅니다. @p exceptID 는 제외합니다. 반환값은 보낸 수입니다. */
         int32 broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID = -1 );
-        /** @brief 받은 메시지 하나를 꺼냅니다 — 연결 순, 채널은 신뢰 순서 → 신뢰 순서 없음 → 순서만 → 비신뢰 순(채널 값 순). */
+        /** @brief 받은 메시지 하나를 꺼냅니다. 연결 순서대로, 채널은 신뢰 순서, 신뢰 순서 없음, 순서만, 비신뢰 순(채널 값 순)으로 확인합니다. */
         [[nodiscard]] bool receiveMessage( int32& outConnectionID, NetChannelType& outChannel, vector<uint8>& outBuffer );
         void               disconnect( int32 connectionID );
         void               disconnectAll();
         void               drainEvents( vector<NetHostEvent>& outListEvent );
         /**
-         * @brief 쌓인 연결 사건과 받은 메시지를 **잠금 한 번에** 모두 꺼냅니다(@p outInbound 를 비우고 채운다). 사건이 메시지보다 먼저입니다.
-         * @details 닫힌 연결의 받은 메시지는 닫을 때 지워지므로, 꺼낸 메시지는 모두 지금 그 자리의 연결 것이다 — 사건을 먼저 처리하면 같은 자리에 새로 온
-         *          연결의 메시지를 옛 연결의 상태로 읽지 않는다. `receiveMessage` · `drainEvents` 와 섞어 쓰지 않는다(`NetMessageRouter::pump` 가 쓴다).
+        /**
+         * @brief 쌓인 연결 사건과 받은 메시지를 **잠금 한 번에** 모두 꺼냅니다. @p outInbound 를 비운 뒤 채우며, 사건이 메시지보다 앞에 옵니다.
+         * @details 닫힌 연결의 받은 메시지는 연결을 닫을 때 지워지므로, 꺼낸 메시지는 모두 지금 그 슬롯에 있는 연결의 것이다.
+         *          사건을 먼저 처리하면 같은 슬롯에 새로 연결된 클라이언트의 메시지를 옛 연결의 상태로 읽지 않는다.
+         *          `receiveMessage` 나 `drainEvents` 와 섞어 쓰지 않는다(`NetMessageRouter::pump` 가 이 함수를 쓴다).
          */
         void drainInbound( NetInbound& outInbound );
 
         bool               isServer() const;
         NetConnectionState getConnectionState( int32 connectionID ) const;
-        /** @brief 연결 통계의 사본입니다(연결돼 있지 않으면 false). 다른 스레드가 `update` 하는 중에도 안전합니다. */
+        /** @brief 연결 통계의 사본입니다. 연결돼 있지 않으면 false 를 반환합니다. 다른 스레드가 `update` 하는 중에도 안전합니다. */
         [[nodiscard]] bool getConnectionStats( int32 connectionID, NetConnectionStats& outStats ) const;
         /**
+        /**
          * @brief 연결 객체를 그대로 빌려줍니다.
-         * @warning 잠금 밖으로 나가는 포인터입니다 — `update` 를 도는 다른 스레드가 없을 때만(한 스레드로 쓸 때 · 테스트). 스레드가 돌면 `getConnectionStats`.
+         * @warning 잠금 밖으로 나가는 포인터이므로 `update` 를 도는 다른 스레드가 없을 때만(한 스레드에서 쓰거나 테스트에서) 쓴다. 스레드가 돌고 있으면 `getConnectionStats` 를 쓴다.
          */
         const NetConnection* findConnection( int32 connectionID ) const;
         NetAddress           getConnectionAddress( int32 connectionID ) const;
         int32                getConnectedCount() const;
-        /** @brief 클라이언트 — 서버가 준 자기 번호(서버의 연결 id)입니다. 연결 전이면 −1 입니다. */
+        /** @brief 클라이언트에서 서버가 준 자기 번호(서버 쪽 연결 ID)를 반환합니다. 연결 전이면 -1 입니다. */
         int32 getClientIndex() const;
         void  collectConnected( vector<int32>& outListConnection ) const;
-        /** @brief 이 호스트가 지금 디버거 대기를 알리는가 — 마지막 `update` 기준(`NetHostSettings::_debugHold`, Shipping 은 늘 false)입니다. */
+        /** @brief 이 호스트가 지금 디버거 대기를 알리는지 반환합니다. 마지막 `update` 기준이며(`NetHostSettings::_debugHold`), Shipping 은 항상 false 입니다. */
         bool   isDebugHoldAnnounced() const;
         uint64 getRejectedPacketCount() const;
-        /** @brief 서버 — 인증기가 이 연결에 준 주체(로그인 계정)입니다. 없으면 0 입니다. */
+        /** @brief 서버에서 인증기가 이 연결에 지정한 주체(로그인 계정)를 반환합니다. 없으면 0 입니다. */
         uint64 getConnectionPrincipal( int32 connectionID ) const;
-        /** @brief 복호 · 증명 · 키 확인 실패로 버린 패킷 수입니다(진단 · 테스트). */
+        /** @brief 복호, 증명, 키 확인에 실패해 버린 패킷 수입니다(진단과 테스트용). */
         uint64 getAuthenticationFailureCount() const;
-        /** @brief 재전송 방지 창이 버린 패킷 수입니다. */
+        /** @brief 재전송 방지 윈도우가 버린 패킷 수입니다. */
         uint64 getReplayRejectedCount() const;
-        /** @brief 이 호스트의 프로토콜 id(`NetProtocol::makeProtocolID( 게임 id, 와이어 판 )`)입니다. */
+        /** @brief 이 호스트의 프로토콜 ID(`NetProtocol::makeProtocolID( 게임 ID, 와이어 버전 )`)입니다. */
         uint32 getProtocolID() const;
-        /** @brief 연결마다의 보내기 상한(초당 바이트, `NetHostSettings::_maxBytesPerSecond`)입니다 — 키트가 틱 예산을 셈한다(`NetSendBudget::computeTickBudget`). */
+        /** @brief 연결마다의 보내기 상한(초당 바이트, `NetHostSettings::_maxBytesPerSecond`)입니다. 키트가 틱 예산을 계산할 때 씁니다(`NetSendBudget::computeTickBudget`). */
         int32 getMaxBytesPerSecond() const;
 
-        /** @brief 패킷 몸의 첫 3 비트 — 핸드셰이크 단계 · 데이터 · 끊김입니다. */
+        /** @brief 패킷 본문의 첫 3비트로, 핸드셰이크 단계와 데이터와 끊김을 구분합니다. */
         enum class PacketType : uint8
         {
             ConnectRequest = 0,
@@ -249,32 +269,32 @@ namespace sw
             Count
         };
 
-        /** @brief 데이터그램(머리 포함)의 패킷 종류를 엿봅니다 — 체크섬은 보지 않는다. 너무 짧으면 Count 입니다(흉내 거르개 · 진단). */
+        /** @brief 데이터그램(헤더 포함)의 패킷 종류를 미리 확인합니다. 체크섬은 보지 않으며, 너무 짧으면 Count 를 반환합니다(위조 패킷 필터와 진단용). */
         static PacketType peekPacketType( const uint8* pData, int32 size );
-        /** @brief 패킷 체크섬(머리 값을 먼저 섞은 FNV-1a)입니다 — 테스트 · 진단 도구가 고친 패킷의 체크섬을 다시 맞출 때. */
+        /** @brief 패킷 체크섬입니다(헤더 값을 먼저 섞은 FNV-1a). 테스트와 진단 도구가 고친 패킷의 체크섬을 다시 맞출 때 씁니다. */
         static uint32 computePacketChecksum( uint32 headerID, const uint8* pBody, int32 size );
 
     private:
-        /** @brief 판과 상관없는 고정 머리(`NetProtocol::kHandshakeID`)로 싸는 패킷 — 요청과 거절뿐입니다. 두 패킷의 배치는 판이 바뀌어도 그대로 둔다. */
+        /** @brief 버전과 상관없는 고정 헤더(`NetProtocol::kHandshakeID`)로 싸는 패킷입니다. 요청과 거절뿐이며, 두 패킷의 배치는 버전이 바뀌어도 그대로 둡니다. */
         static bool isHandshakeFramed( PacketType type ) { return type == PacketType::ConnectRequest || type == PacketType::Denied; }
 
-        /** @brief 연결 하나의 암호 상태 — 암호화 방식일 때만 있다. */
+        /** @brief 연결 하나의 암호 상태입니다. 암호화 방식일 때만 만듭니다. */
         struct SlotSecurity
         {
-            NetX25519KeyPair     _keyPair{};      ///< 이쪽의 일회 키(클라이언트는 키를 만든 뒤 지운다, 서버는 공개 키만 남긴다 — 수락 재전송)
-            NetSessionKeys       _keys{};         ///< 방향별 키 · IV
-            unique_ptr<INetAead> _sendAead{};     ///< 보내는 방향 키를 박은 AEAD
-            unique_ptr<INetAead> _receiveAead{};  ///< 받는 방향 키를 박은 AEAD
-            NetReplayWindow      _replayWindow{}; ///< 받은 패킷 번호
+            NetX25519KeyPair     _keyPair{};      ///< 이쪽의 일회용 키. 클라이언트는 키를 만든 뒤 지우고, 서버는 수락을 다시 보낼 때 쓰도록 공개 키만 남긴다.
+            NetSessionKeys       _keys{};         ///< 방향별 키와 IV.
+            unique_ptr<INetAead> _sendAead{};     ///< 보내는 방향 키로 초기화한 AEAD.
+            unique_ptr<INetAead> _receiveAead{};  ///< 받는 방향 키로 초기화한 AEAD.
+            NetReplayWindow      _replayWindow{}; ///< 받은 패킷 번호의 재전송 방지 윈도우.
             uint64               _sendPacketNumber{ 0 };
-            uint64               _principalID{ 0 };                                      ///< 서버 — 인증기가 준 주체
-            uint8                _arrKeyConfirmTag[NetSecurityConstant::kAeadTagSize]{}; ///< 서버 — 수락을 다시 보낼 때 같은 태그
+            uint64               _principalID{ 0 };                                      ///< 서버 전용. 인증기가 지정한 주체.
+            uint8                _arrKeyConfirmTag[NetSecurityConstant::kAeadTagSize]{}; ///< 서버 전용. 수락을 다시 보낼 때 같은 태그를 쓰기 위해 보관한다.
             uint8                _bKeysReady{ SW_FALSE };
         };
 
         struct Slot
         {
-            unique_ptr<SlotSecurity> _security{}; ///< 암호화 방식일 때만
+            unique_ptr<SlotSecurity> _security{}; ///< 암호화 방식일 때만 있다.
             NetConnection            _connection{};
             NetAddress               _address{};
             uint64                   _clientSalt{ 0 };
@@ -282,13 +302,13 @@ namespace sw
             float64                  _lastReceiveTime{ 0.0 };
             float64                  _lastSendTime{ -1.0 };
             float64                  _connectStartTime{ 0.0 };
-            float64                  _sendCredit{ 0.0 };                         ///< 대역폭 몫(바이트) — 0 보다 크면 꽉 찬 패킷을 보낼 수 있다(빚 모양 — 보낸 뒤 음수가 될 수 있다)
-            float64                  _lastCreditTime{ -1.0 };                    ///< 몫을 마지막으로 채운 때 — 음수면 아직(연결되면 가득 채운다)
-            NetConnectionState       _state{ NetConnectionState::Disconnected }; ///< 서버의 자리는 Connecting 을 거치지 않는다(응답이 맞아야 잡는다)
-            uint8                    _bRemoteDebugHold{ SW_FALSE };              ///< 상대가 마지막 데이터 패킷에서 디버거 대기를 알렸다(개발 빌드만 본다)
+            float64                  _sendCredit{ 0.0 };                         ///< 대역폭 토큰(바이트). 0보다 크면 꽉 찬 패킷을 보낼 수 있다. 보낸 뒤에는 음수가 될 수 있다.
+            float64                  _lastCreditTime{ -1.0 };                    ///< 토큰을 마지막으로 채운 시각. 음수면 아직 채운 적이 없다는 뜻이며, 연결되면 가득 채운다.
+            NetConnectionState       _state{ NetConnectionState::Disconnected }; ///< 서버 슬롯은 Connecting 을 거치지 않는다. 응답이 맞아야 슬롯을 할당하기 때문이다.
+            uint8                    _bRemoteDebugHold{ SW_FALSE };              ///< 상대가 마지막 데이터 패킷에서 디버거 대기를 알렸다(개발 빌드만 읽는다).
         };
 
-        /** @brief 보낼 데이터그램 하나 — 바이트는 `OutgoingBatch::_bytes` 의 [_offset, _offset + _size) 입니다. */
+        /** @brief 보낼 데이터그램 하나입니다. 바이트는 `OutgoingBatch::_bytes` 의 [_offset, _offset + _size) 범위입니다. */
         struct OutgoingDatagram
         {
             NetAddress _to{};
@@ -296,7 +316,7 @@ namespace sw
             int32      _size{ 0 };
         };
 
-        /** @brief 잠금 안에서 쌓고 잠금 밖에서 보내는 묶음입니다. 둘을 맞바꿔(swap) 할당 없이 넘긴다. */
+        /** @brief 잠금 안에서 쌓고 잠금 밖에서 보내는 배치입니다. 둘을 swap 해서 할당 없이 넘깁니다. */
         struct OutgoingBatch
         {
             vector<OutgoingDatagram> _listDatagram{};
@@ -315,45 +335,45 @@ namespace sw
             NetAddress    _from{};
         };
 
-        /** @brief 끝난 비동기 연결 — 잠금 밖에서 채운다. */
+        /** @brief 끝난 비동기 연결입니다. 잠금 밖에서 채웁니다. */
         struct FinishedConnect
         {
             TaskPromise<NetConnectResult> _promise{};
             NetConnectResult              _result{};
         };
 
-        // 아래는 모두 잠금을 잡은 채로 부른다.
+        // 아래 함수는 모두 잠금을 잡은 채로 부른다.
         void handlePacket( float64 nowSeconds, const NetAddress& from, const uint8* pData, int32 size );
         void updateSlots( float64 nowSeconds );
         void sendControl( const NetAddress& to, PacketType type, uint64 valueA, uint64 valueB );
-        /** @brief 연결 요청을 거절합니다 — 이유와 이 호스트의 프로토콜 id, 요청의 클라이언트 소금(위조 거절을 거르는 값)을 싣는다. */
+        /** @brief 연결 요청을 거절합니다. 이유, 이 호스트의 프로토콜 ID, 요청에 든 클라이언트 솔트(위조 거절을 걸러 내는 값)를 싣습니다. */
         void sendDenied( const NetAddress& to, NetDisconnectReason reason, uint64 clientSalt );
-        /** @brief 클라이언트 — 도전 응답(암호화면 공개 키 · [토큰 · 증명 태그])을 보냅니다. */
+        /** @brief 클라이언트가 챌린지 응답을 보냅니다. 암호화 방식이면 공개 키를, 토큰 결속이면 토큰과 증명 태그를 함께 싣습니다. */
         void sendChallengeResponse( Slot& slot );
-        /** @brief 서버 — 수락(암호화면 공개 키 · 키 확인 태그)을 보냅니다. */
+        /** @brief 서버가 수락을 보냅니다. 암호화 방식이면 공개 키와 키 확인 태그를 함께 싣습니다. */
         void sendAccepted( int32 slotIndex );
-        /** @brief 서버 — 응답의 공개 키 · 토큰 · 증명을 읽고 검증해 키를 만듭니다. 틀리면 거절을 보내고 false. */
+        /** @brief 서버가 응답의 공개 키, 토큰, 증명을 읽고 검증해 키를 만듭니다. 틀리면 거절을 보내고 false 를 반환합니다. */
         [[nodiscard]] bool acceptSecureResponse( BitReader& reader, const NetAddress& from, uint64 clientSalt, uint64 challenge, unique_ptr<SlotSecurity>& outSecurity );
-        /** @brief 클라이언트 — 수락의 공개 키 · 키 확인 태그를 읽고 키를 만듭니다. 틀리면 연결을 닫고 false. */
+        /** @brief 클라이언트가 수락의 공개 키와 키 확인 태그를 읽고 키를 만듭니다. 틀리면 연결을 닫고 false 를 반환합니다. */
         [[nodiscard]] bool acceptSecureAccepted( BitReader& reader, Slot& slot, int32 slotIndex, uint32 serverIndex );
-        /** @brief 암호화된 데이터 · 끊기 패킷을 짓습니다(@p pPlain 을 봉인). 보낸 데이터그램 바이트 수, 실패면 0 입니다. */
+        /** @brief 암호화된 데이터 패킷과 끊기 패킷을 만듭니다(@p pPlain 을 봉인). 보낸 데이터그램의 바이트 수를 반환하며, 실패하면 0 입니다. */
         int32 sendSealed( Slot& slot, PacketType type, const uint8* pPlain, int32 plainSize );
-        /** @brief 암호화된 데이터 · 끊기 몸(머리 8 바이트 뒤)을 엽니다 — 재전송 창 · 태그 검사. 연 평문은 `_listOpenScratch` 입니다. */
+        /** @brief 암호화된 데이터 패킷과 끊기 패킷의 본문(헤더 8바이트 뒤)을 엽니다. 재전송 방지 윈도우와 태그를 검사하며, 연 평문은 `_listOpenScratch` 에 담깁니다. */
         [[nodiscard]] bool openSealed( Slot& slot, const uint8* pBody, int32 bodySize );
-        /** @brief 암호화 방식의 데이터 · 끊기 패킷(머리 8 바이트 뒤 몸)을 처리합니다. */
+        /** @brief 암호화 방식의 데이터 패킷과 끊기 패킷(헤더 8바이트 뒤의 본문)을 처리합니다. */
         void handleSealedPacket( float64 nowSeconds, PacketType type, int32 slotIndex, const uint8* pBody, int32 bodySize );
-        /** @brief 이 호스트의 기능 마스크(`NetProtocolFeature`)입니다 — 역할 · 자격이 정해진 뒤(listen · connect) 프로토콜 id 에 섞는다. */
+        /** @brief 이 호스트의 기능 마스크(`NetProtocolFeature`)입니다. 역할과 자격이 정해진 뒤(listen, connect) 프로토콜 ID에 섞습니다. */
         uint32 computeFeatureMask() const;
         bool   isEncrypted() const { return _settings._security._mode == NetSecurityMode::Encrypted; }
-        /** @brief `_packetWriter` 의 몸에 헤더(머리 값 · 체크섬)를 붙여 보낼 묶음에 넣습니다. */
+        /** @brief `_packetWriter` 의 본문에 헤더(헤더 값과 체크섬)를 붙여 보낼 배치에 넣습니다. */
         void sendFramed( const NetAddress& to, uint32 headerID );
-        /** @brief 패킷 하나를 씁니다 — 몫이 남았으면 메시지까지, 다 썼으면 머리(확인)만. 몫에서 보낸 바이트를 뺀다. */
+        /** @brief 패킷 하나를 씁니다. 대역폭 토큰이 남아 있으면 메시지까지 싣고, 다 썼으면 헤더(확인)만 싣습니다. 보낸 바이트만큼 토큰에서 뺍니다. */
         void sendPayload( float64 nowSeconds, Slot& slot );
-        /** @brief 지난 채움 뒤 흐른 시간만큼 대역폭 몫을 채웁니다(상한 — 보내기 간격 두 번어치, 최소 패킷 하나). */
+        /** @brief 지난 충전 이후 흐른 시간만큼 대역폭 토큰을 채웁니다. 상한은 보내기 간격 두 번어치이고, 최소 패킷 하나 크기입니다. */
         void refillSendCredit( float64 nowSeconds, Slot& slot ) const;
-        /** @brief 디버거 대기를 알릴지 다시 정하고(디버거는 1 초마다 묻는다), 알리는 중에 `update` 사이가 벌어졌으면 그 시간만큼 연결 시계를 민다(가상 시계). */
+        /** @brief 디버거 대기를 알릴지 다시 정합니다(디버거는 1초마다 확인). 알리는 중에 `update` 사이가 벌어졌으면 그 시간만큼 연결 시계를 앞으로 밀습니다(가상 시계). */
         void updateDebugHold( float64 nowSeconds );
-        /** @brief 이 연결의 시간 초과입니다 — 상대가 디버거 대기를 알렸으면(개발 빌드) `_debugHoldTimeoutSeconds` 와 큰 쪽입니다. */
+        /** @brief 이 연결의 타임아웃을 반환합니다. 상대가 디버거 대기를 알렸다면(개발 빌드) `_debugHoldTimeoutSeconds` 와 기본값 중 큰 쪽입니다. */
         float64                      computeTimeoutSeconds( const Slot& slot ) const;
         void                         closeSlot( int32 slotIndex, NetDisconnectReason reason, bool bNotifyRemote );
         bool                         startConnect( const NetAddress& serverAddress );
@@ -364,7 +384,7 @@ namespace sw
         bool                         sendMessageLocked( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size );
         void                         takePending( OutgoingBatch& outBatch, vector<FinishedConnect>& outListFinished );
 
-        // 잠금 밖에서.
+        // 잠금 밖에서 부른다.
         void        sendBatch( const OutgoingBatch& batch );
         static void deliverFinished( vector<FinishedConnect>& listFinished );
 
@@ -373,27 +393,27 @@ namespace sw
         void   unbindAddress( int32 slotIndex );
         int32  findFreeSlot() const;
         uint64 nextSalt();
-        /** @brief 상태 없는 도전 값 — 비밀 키 · 주소 · 클라이언트 소금 · 시간 칸을 섞는다. 0 이 아니다. */
+        /** @brief 상태 없는 챌린지 값입니다. 비밀 키, 주소, 클라이언트 솔트, 시간 윈도우를 섞으며 0 이 되지 않습니다. */
         uint64       makeChallengeToken( const NetAddress& address, uint64 clientSalt, int64 window ) const;
         static int64 computeChallengeWindow( float64 nowSeconds );
         bool         isValidSlot( int32 slotIndex ) const { return slotIndex >= 0 && slotIndex < static_cast<int32>( _listSlot.size() ); }
 
-        mutable mutex                 _mutex; ///< 아래 상태 모두(잠금 밖 전용이라고 적은 것은 빼고)
+        mutable mutex                 _mutex; ///< 아래 상태 전부. 잠금 밖 전용이라고 적은 것은 제외한다.
         vector<Slot>                  _listSlot;
         vector<NetHostEvent>          _listEvent;
         OutgoingBatch                 _pendingBatch;     ///< 잠금 안에서 쌓인 보낼 데이터그램
         BitWriter                     _packetWriter;     ///< 보낼 패킷의 몸
-        unordered_map<uint64, int32>  _mapSlotByAddress; ///< 주소 → 자리(연결이 많아도 패킷마다 선형 탐색하지 않게)
-        TaskPromise<NetConnectResult> _connectPromise;   ///< 기다리는 비동기 연결(`_bConnectPending`)
-        vector<FinishedConnect>       _listFinished;     ///< 끝난 비동기 연결 — 잠금을 풀고 채운다
-        vector<ReceivedDatagram>      _listReceived;     ///< `update` 스레드 전용 — 잠금 밖에서 받은 묶음(버퍼를 다시 쓴다)
-        OutgoingBatch                 _flushBatch;       ///< `update` 스레드 전용 — 잠금 밖에서 보내는 묶음
-        vector<FinishedConnect>       _listDeliver;      ///< `update` 스레드 전용
-        vector<uint8>                 _listDrainScratch; ///< `drainInbound` 가 메시지 하나를 꺼내 두는 자리
-        BitWriter                     _plainWriter;      ///< 암호화 — NetConnection 이 쓴 평문 패킷
-        vector<uint8>                 _listSealScratch;  ///< 암호화 — 봉인한 암호문 + 태그
-        vector<uint8>                 _listOpenScratch;  ///< 암호화 — 연 평문
-        NetConnectCredentials         _credentials;      ///< 클라이언트 — 지금 연결에 내미는 것
+        unordered_map<uint64, int32>  _mapSlotByAddress; ///< 주소에서 슬롯으로 가는 맵. 연결이 많아도 패킷마다 선형 탐색하지 않게 한다.
+        TaskPromise<NetConnectResult> _connectPromise;   ///< 기다리는 비동기 연결(`_bConnectPending`).
+        vector<FinishedConnect>       _listFinished;     ///< 끝난 비동기 연결. 잠금을 푼 뒤 채운다.
+        vector<ReceivedDatagram>      _listReceived;     ///< `update` 스레드 전용. 잠금 밖에서 받은 배치(버퍼를 다시 쓴다).
+        OutgoingBatch                 _flushBatch;       ///< `update` 스레드 전용. 잠금 밖에서 보내는 배치.
+        vector<FinishedConnect>       _listDeliver;      ///< `update` 스레드 전용.
+        vector<uint8>                 _listDrainScratch; ///< `drainInbound` 가 메시지 하나를 꺼내 두는 스크래치 버퍼.
+        BitWriter                     _plainWriter;      ///< 암호화에서 NetConnection 이 쓴 평문 패킷.
+        vector<uint8>                 _listSealScratch;  ///< 암호화에서 봉인한 암호문과 태그.
+        vector<uint8>                 _listOpenScratch;  ///< 암호화에서 연 평문.
+        NetConnectCredentials         _credentials;      ///< 클라이언트 전용. 지금 연결에 제시하는 자격.
         NetHostSettings               _settings;
         INetTransport*                _pTransport;
         uint64                        _saltState;
@@ -401,16 +421,16 @@ namespace sw
         uint64                        _authenticationFailureCount;
         uint64                        _replayRejectedCount;
         uint64                        _mismatchLogCount;
-        uint64                        _challengeSecret;      ///< 서버 — 도전 값의 비밀 키(소금 씨앗에서) ///< 판 · 게임이 다른 요청 수 — 로그는 1 · 2 · 4 · 8 … 번째에만(요청 폭주가 로그를 메우지 않게)
-        float64                       _lastUpdateTime;       ///< 지난 `update` 의 시각 — 음수면 아직(가상 시계가 멈춘 시간을 측정한다)
-        float64                       _nextDebuggerPollTime; ///< 디버거가 붙었는지 다시 물을 시각
+        uint64                        _challengeSecret;      ///< 서버 전용. 챌린지 값의 비밀 키(솔트 시드에서 만든다).
+        float64                       _lastUpdateTime;       ///< 지난 `update` 의 시각. 음수면 아직 호출한 적이 없다(가상 시계가 멈춘 시간을 측정할 때 쓴다).
+        float64                       _nextDebuggerPollTime; ///< 디버거가 붙었는지 다시 확인할 시각.
         uint32                        _protocolID;
-        atomic<uint32>                _updateDepth; ///< `update` 를 동시에 두 스레드가 부르는 실수를 잡는다
+        atomic<uint32>                _updateDepth; ///< `update` 를 두 스레드가 동시에 부르는 실수를 잡는다.
         int32                         _clientIndex;
-        int32                         _receiveCursor; ///< 받기를 연결마다 고르게 돌리는 자리
+        int32                         _receiveCursor; ///< 연결마다 받기를 고르게 돌리기 위한 시작 위치.
         uint8                         _bServer;
         uint8                         _bConnectPending;
-        uint8                         _bHasCredentials; ///< 클라이언트 — 자격을 내미는 연결(토큰 결속)
-        uint8                         _bDebugHold;      ///< 지금 디버거 대기를 알린다(데이터 패킷의 비트)
+        uint8                         _bHasCredentials; ///< 클라이언트 전용. 자격을 제시하는 연결이다(토큰 결속).
+        uint8                         _bDebugHold;      ///< 지금 디버거 대기를 알린다(데이터 패킷의 비트).
     };
 } // namespace sw

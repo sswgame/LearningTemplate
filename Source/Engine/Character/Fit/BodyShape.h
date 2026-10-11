@@ -1,10 +1,10 @@
 /**
  * @file BodyShape.h
- * @brief 체형 — 축(홀쭉↔뚱뚱 × 약함↔근육 · 키) 데이터(`BodyShapeSet`, `*.bodyshape.xml`)와 본 비율 보정(`BoneProportion`)입니다.
- * @details 같은 스켈레톤 위에 여러 외형을 내는 두 갈래입니다. 축 값(슬라이더)마다 양 · 음 쪽에 모프 대상 하나와 본 비율 몇 줄을 적고, 값이
- *          그 쪽 끝으로 갈수록 모프 가중치와 본 비율이 커집니다. 본 비율은 **가산 층**이라 애니메이션이 정한 로컬 변환 위에 겹칩니다
- *          (스케일은 곱, 오프셋은 더함 — 키 · 팔다리 길이). 모프는 통합 쪽이 GPU 모프 풀에 겁니다. 여기의 `BodyShapeUtil` 은 CPU 에서 같은 일을
- *          해 피팅 · 소켓 보정이 체형을 건 바인드 형상을 보게 합니다.
+ * @brief 체형입니다. 축(홀쭉함과 뚱뚱함, 약함과 근육, 키) 데이터(`BodyShapeSet`, `*.bodyshape.xml`)와 본 비율 보정(`BoneProportion`)을 담습니다.
+ * @details 같은 스켈레톤으로 여러 외형을 내는 두 가지 방법이다. 축 값(슬라이더)마다 양쪽과 음쪽에 모프 대상 하나와 본 비율 몇 줄을 적고, 값이
+ *          그쪽 끝으로 갈수록 모프 가중치와 본 비율이 커진다. 본 비율은 **가산 층**이라 애니메이션이 정한 로컬 변환 위에 겹친다
+ *          (스케일은 곱하고 오프셋은 더하며, 키와 팔다리 길이를 바꾼다). 모프는 통합 쪽이 GPU 모프 풀에 적용한다. 여기의 `BodyShapeUtil` 은 CPU 에서 같은 일을 해서,
+ *          피팅과 소켓 보정이 체형을 적용한 바인드 형상을 보게 한다.
  *
  *          XML 예:
  *          @code
@@ -49,13 +49,13 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 본 비율 보정 묶음입니다(본별 스케일 · 오프셋, 애니메이션 위의 가산 층). */
+    /** @brief 본 비율 보정 모음입니다(본별 스케일과 오프셋이며, 애니메이션 위의 가산 층입니다). */
     class SW_API BoneProportion
     {
     public:
         /** @brief 본 하나의 보정을 정합니다(있으면 바꿈). */
         void setBone( const hashed_string& bone, const float3& scale, const float3& offset );
-        /** @brief 보정을 @p weight 만큼 겹칩니다 — 스케일은 lerp(1, s, w) 를 곱하고, 오프셋은 o × w 를 더합니다. */
+        /** @brief 보정을 @p weight 만큼 겹칩니다. 스케일은 lerp(1, s, w) 를 곱하고, 오프셋은 o × w 를 더합니다. */
         void accumulate( const BoneProportionEntry& entry, float32 weight );
         /** @brief 본의 보정입니다. 없으면 nullptr 입니다. */
         const BoneProportionEntry* findBone( const hashed_string& bone ) const;
@@ -69,8 +69,8 @@ namespace sw
          */
         void apply( CharacterBoneArray& inoutBones ) const;
         /**
-         * @brief 같은 보정을 애니메이션 포즈(SoA)에 겹칩니다 — 스켈레톤 본 이름으로 찾고, 스케일은 곱하고 오프셋은 더합니다.
-         * @details 레퍼런스 포즈에 걸면 "비율이 다른 스켈레톤" 이 됩니다 — 리타기터의 대상 레퍼런스 덮어쓰기(`PoseRetargeter::initialize`)로 넘깁니다.
+         * @brief 같은 보정을 애니메이션 포즈(SoA)에 겹칩니다. 스켈레톤 본 이름으로 찾고, 스케일은 곱하고 오프셋은 더합니다.
+         * @details 레퍼런스 포즈에 적용하면 "비율이 다른 스켈레톤"이 된다. 리타기터의 대상 레퍼런스 덮어쓰기(`PoseRetargeter::initialize`)로 넘긴다.
          */
         void applyToPose( const Skeleton& skeleton, Pose& inoutPose ) const;
 
@@ -84,7 +84,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 축의 한쪽(양 · 음) 끝에서 거는 모프와 본 비율입니다. */
+    /** @brief 축의 한쪽(양쪽 또는 음쪽) 끝에서 적용하는 모프와 본 비율입니다. */
     struct SW_API BodyShapeAxisSide
     {
         hashed_string               _morph{};
@@ -108,7 +108,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 축 하나의 값입니다(외형 프리셋 · 슬라이더가 줌). */
+    /** @brief 축 하나의 값입니다(외형 프리셋이나 슬라이더가 줍니다). */
     struct BodyShapeValue
     {
         hashed_string _axis{};
@@ -132,7 +132,7 @@ namespace sw
     class SW_API BodyShapeSet
     {
     public:
-        /** @brief XML 텍스트에서 읽습니다. 모르는 속성 · 원소 · 겹친 축은 오류입니다. */
+        /** @brief XML 텍스트에서 읽습니다. 모르는 속성이나 원소, 겹친 축은 오류입니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 리소스 파일에서 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path );
@@ -143,8 +143,8 @@ namespace sw
         /** @brief 축들입니다. */
         const vector<BodyShapeAxis>& getAxes() const { return _listAxis; }
         /**
-         * @brief 축이 적은 모프 이름 · 본 이름이 몸 형상(@p pBody) · 본 배열(@p pBones)에 있는지 봅니다(널이면 그쪽은 건너뜀).
-         * @return 없는 이름이 있으면 오류 글을 더하고 false 입니다.
+         * @brief 축이 적은 모프 이름과 본 이름이 몸 형상(@p pBody)과 본 배열(@p pBones)에 있는지 검사합니다(널이면 그쪽은 건너뜁니다).
+         * @return 없는 이름이 있으면 오류 문장을 추가하고 false 를 반환합니다.
          */
         bool validate( const AppearanceGeometry* pBody, const CharacterBoneArray* pBones, string* pOutError ) const;
         /**
@@ -171,8 +171,8 @@ namespace sw
         /** @brief 모프 가중치를 형상 위치(와 법선)에 겁니다. 형상에 없는 모프는 건너뜁니다. */
         static void applyMorphs( AppearanceGeometry& inoutGeometry, vector_reference<const BodyMorphWeight> listMorphWeight );
         /**
-         * @brief 바인드 형상을 다른 포즈(본 비율을 건 레퍼런스 포즈 · 애니메이션 포즈)로 선형 블렌드 스키닝합니다.
-         * @details 스킨 행렬 = 바인드 모델의 역 × 포즈 모델(행벡터). 스킨이 없는 형상은 그대로 복사합니다. 법선도 같은 행렬로 돌립니다.
+         * @brief 바인드 형상을 다른 포즈(본 비율을 적용한 레퍼런스 포즈나 애니메이션 포즈)로 선형 블렌드 스키닝합니다.
+         * @details 스킨 행렬 = 바인드 모델의 역 × 포즈 모델(행 벡터)이다. 스킨이 없는 형상은 그대로 복사한다. 법선도 같은 행렬로 돌린다.
          */
         static void skinToPose( const AppearanceGeometry& bindGeometry, const CharacterBoneArray& bindBones, const CharacterBoneArray& poseBones,
                                 AppearanceGeometry& outGeometry );

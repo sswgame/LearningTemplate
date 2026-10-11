@@ -1,6 +1,6 @@
 /**
  * @file WitcherMutagens.h
- * @brief 강화 · 변이 슬롯 — 스킬 슬롯 묶음(레벨로 열림)마다 변이원 슬롯 하나, 같은 묶음에 색이 맞는 스킬마다 변이원 보너스가 오릅니다.
+ * @brief 강화와 변이 슬롯을 다룹니다. 스킬 슬롯 그룹(레벨로 열림)마다 변이원 슬롯이 하나 있고, 같은 그룹에 색이 맞는 스킬이 있을 때마다 변이원 보너스가 오릅니다.
  */
 #pragma once
 #include "Core/Common/FourCcUtil.h"
@@ -22,7 +22,7 @@ namespace sw
     {
         Ok = 0,
         InvalidSlot,
-        Locked,          ///< 레벨이 모자라 묶음이 닫혀 있다
+        Locked,          ///< 레벨이 모자라 그룹이 닫혀 있다
         AlreadyEquipped, ///< 그 스킬은 다른 슬롯에 있다
         UnknownMutagen
     };
@@ -31,8 +31,8 @@ namespace sw
 
     /**
      * @class WitcherMutagens
-     * @brief 묶음 배치는 카탈로그의 `<SlotGroup>` 순서입니다. 스킬을 배웠는지(랭크)는 게임이 `SkillTreeState` 로 보고 끼웁니다 — 여기는 자리와 색만 봅니다.
-     *        레벨이 내려가 묶음이 닫혀도 끼운 것은 남지만 능력치에는 들어가지 않습니다.
+     * @brief 그룹 배치는 카탈로그의 `<SlotGroup>` 순서입니다. 스킬을 배웠는지(랭크)는 게임이 `SkillTreeState` 로 확인하고 끼웁니다. 이 클래스는 슬롯과 색만 봅니다.
+     *        레벨이 내려가 그룹이 닫혀도 끼운 것은 남지만 능력치에는 들어가지 않습니다.
      */
     class SW_GF_API WitcherMutagens
     {
@@ -52,15 +52,15 @@ namespace sw
         int32         getGroupCount() const { return static_cast<int32>( _listGroup.size() ); }
         hashed_string getSkill( int32 group, int32 slot ) const;
         hashed_string getMutagen( int32 group ) const;
-        /** @brief 그 묶음에서 변이원과 색이 맞는 스킬 수입니다. */
+        /** @brief 그 그룹에서 변이원과 색이 맞는 스킬 수를 반환합니다. */
         int32 countMatches( int32 group ) const;
-        /** @brief 열린 묶음의 변이원 능력치(기본 + 맞은 스킬 × 맞춤 값)를 더합니다. */
+        /** @brief 열린 그룹의 변이원 능력치(기본 값에 맞은 스킬 수 × 맞춤 값을 더한 것)를 더합니다. */
         void computeStats( StatBlock& outStats ) const;
-        /** @brief 열린 슬롯에 끼운 스킬입니다(능동 스킬 목록). */
+        /** @brief 열린 슬롯에 끼운 스킬(능동 스킬 목록)을 반환합니다. */
         void collectEquippedSkills( vector<hashed_string>& outListSkill ) const;
-        /** @brief 캐릭터 레벨과 묶음마다 끼운 스킬 · 변이원을 씁니다. 카탈로그(묶음 구성)는 싣지 않는다. */
+        /** @brief 캐릭터 레벨과 그룹마다 끼운 스킬과 변이원을 씁니다. 카탈로그(그룹 구성)는 싣지 않습니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 바꿉니다. 묶음 · 슬롯 수가 지금과 다르거나 모르는 변이원이거나 깨졌으면 false 이고 그대로입니다. */
+        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 그룹이나 슬롯 수가 지금과 다르거나 모르는 변이원이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
     private:

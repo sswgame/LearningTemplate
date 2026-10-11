@@ -64,7 +64,7 @@ namespace sw
                 return describeSource( def ) + ": node '" + node._id.c_str() + "' (" + node._kind.c_str() + ")";
             }
 
-            /** @brief 매개변수 글을 종류의 모양대로 해석합니다. 숫자 · 벡터를 하나도 읽지 못하면 false 입니다. */
+            /** @brief 매개변수 문자열을 종류의 형식대로 해석합니다. 숫자나 벡터를 하나도 읽지 못하면 false 입니다. */
             [[nodiscard]] static bool parseParam( const GimmickParamSpec& spec, const string& text, GimmickParamValue& outValue )
             {
                 outValue._text = text;
@@ -126,7 +126,7 @@ namespace sw
         _stepTime = def.getStepTime() > 0.0f ? def.getStepTime() : GimmickCircuitDef::kDefaultStepTime;
         _timer    = FixedStepTimer( _stepTime, 0.25f );
 
-        // 1) 노드 — id · 종류 · 매개변수
+        // 1) 노드: id, 종류, 매개변수
         const vector<GimmickNodeDef>& listNodeDef = def.getNodes();
         _listNode.resize( listNodeDef.size() );
         for ( size_t nodeIndex = 0; nodeIndex < listNodeDef.size(); ++nodeIndex )
@@ -180,7 +180,7 @@ namespace sw
             _listIntState.resize( _listIntState.size() + kind._intStateCount, 0 );
         }
 
-        // 2) 배선 — 출력 포트에서 입력 포트로, 받는 노드 순서로 모은다(같은 입력의 여러 배선은 OR).
+        // 2) 배선: 출력 포트에서 입력 포트로 이어지는 배선을 받는 노드 순서대로 모은다. 같은 입력에 여러 배선이 오면 OR 로 처리한다.
         vector<vector<InputWire>> listWirePerNode( _listNode.size() );
         for ( const GimmickWireDef& wire : def.getWires() )
         {
@@ -218,7 +218,7 @@ namespace sw
             _listInputWire.insert( _listInputWire.end(), listWirePerNode[nodeIndex].begin(), listWirePerNode[nodeIndex].end() );
         }
 
-        // 3) 처음 상태 — 종류의 초기화가 매개변수를 해석해 채운다(틀린 이름 · 모양은 여기서 거절).
+        // 3) 처음 상태: 종류의 초기화가 매개변수를 해석해서 채운다. 틀린 이름이나 형식은 여기서 거절한다.
         for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
         {
             NodeRuntime& node = _listNode[nodeIndex];
@@ -232,7 +232,7 @@ namespace sw
             node._outputBits = context._outputBits;
         }
 
-        // 4) 평가 순서 — 고리를 끊는 노드(지연)가 먼저, 나머지는 위상 순서(같으면 정의 순서). 남는 노드가 있으면 지연 없는 고리다.
+        // 4) 평가 순서: 고리를 끊는 노드(지연)가 먼저이고, 나머지는 위상 순서이다. 위상 순서가 같으면 정의 순서를 따른다. 남는 노드가 있으면 지연 없는 고리가 있다는 뜻이다.
         vector<uint32> listIndegree( _listNode.size(), 0 );
         for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
         {
@@ -265,7 +265,7 @@ namespace sw
                 listPlaced[nodeIndex] = SW_TRUE;
                 _listOrder.push_back( static_cast<uint32>( nodeIndex ) );
                 bProgress = true;
-                // 이 노드를 원천으로 하는 배선의 받는 쪽 차수를 내린다.
+                // 이 노드를 원천으로 하는 배선의 받는 쪽 진입 차수를 줄인다.
                 for ( size_t targetIndex = 0; targetIndex < _listNode.size(); ++targetIndex )
                 {
                     const NodeRuntime& target = _listNode[targetIndex];
@@ -360,7 +360,7 @@ namespace sw
             if ( bBreaker == false )
                 node._previousInputBits = context._inputBits;
         }
-        // 고리를 끊는 노드는 모든 노드가 이번 걸음을 낸 뒤의 입력을 받아 둔다.
+        // 고리를 끊는 노드는 모든 노드가 이번 스텝을 실행한 뒤의 입력을 받아 둔다.
         for ( const uint32 nodeIndex : _listOrder )
         {
             NodeRuntime& node = _listNode[nodeIndex];
@@ -395,7 +395,7 @@ namespace sw
     void GimmickCircuit::resetToInitial()
     {
         if ( _initialStateBytes.empty() == false )
-            (void)loadState( _initialStateBytes ); // 같은 회로가 저장한 바이트라 모양이 늘 맞는다
+            (void)loadState( _initialStateBytes ); // 같은 회로가 저장한 바이트이므로 구조가 항상 맞는다
     }
 
     void GimmickCircuit::setSensorValue( int32 node, float32 value )

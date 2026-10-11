@@ -1,6 +1,6 @@
 /**
  * @file RigPoseBuffer.h
- * @brief 후처리 리그의 작업 포즈 — 로컬 변환(원본)과 지연 갱신되는 모델 공간 변환(이동 · 회전 · 스케일)을 함께 듭니다.
+ * @brief 후처리 리그의 작업 포즈입니다. 로컬 변환(원본)과, 지연 갱신되는 모델 공간 변환(이동, 회전, 스케일)을 함께 보관합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -15,19 +15,19 @@ namespace sw
 {
     /**
      * @class RigPoseBuffer
-     * @brief IK · 제약 노드가 읽고 쓰는 포즈입니다. 로컬이 원본이고, 모델 공간은 읽을 때 더러운 본부터 다시 구합니다.
-     * @details 행벡터 규약(모델 = 로컬 × 부모 모델)을 쿼터니언으로 풉니다 — 모델 회전 = 부모 회전 * 로컬 회전(로컬을 먼저 적용),
-     *          모델 위치 = 부모 위치 + 부모 회전으로 돌린 (로컬 위치 ∘ 부모 스케일), 모델 스케일 = 로컬 스케일 ∘ 부모 스케일.
-     *          균등 스케일이면 `Pose::computeModelSpace` 의 행렬과 같습니다(비균등 스케일의 전단은 버립니다).
-     *          모델 공간에 쓰면(`setModelRotation` · `setModelPosition`) 그 본의 로컬을 바꾸고 자손을 더럽힙니다 — 부모가 자식보다 앞이라
-     *          다음 읽기가 더러운 첫 본부터 한 번 훑습니다.
+     * @brief IK 와 제약 노드가 읽고 쓰는 포즈입니다. 로컬이 원본이고, 모델 공간은 읽을 때 더티한 본부터 다시 구합니다.
+     * @details 행 벡터 규약(모델 = 로컬 × 부모 모델)을 쿼터니언으로 푼다. 모델 회전 = 부모 회전 * 로컬 회전(로컬을 먼저 적용),
+     *          모델 위치 = 부모 위치 + 부모 회전으로 돌린 (로컬 위치 ∘ 부모 스케일), 모델 스케일 = 로컬 스케일 ∘ 부모 스케일이다.
+     *          균등 스케일이면 `Pose::computeModelSpace` 의 행렬과 같다(비균등 스케일의 전단은 버린다).
+     *          모델 공간에 쓰면(`setModelRotation`, `setModelPosition`) 그 본의 로컬을 바꾸고 자손을 더티로 표시한다. 부모가 자식보다 앞이라
+     *          다음 읽기가 더티한 첫 본부터 한 번 훑는다.
      */
     class SW_API RigPoseBuffer
     {
     public:
         RigPoseBuffer();
 
-        /** @brief 로컬 포즈와 부모 표를 복사해 시작합니다(본 수 = 둘 중 작은 쪽). */
+        /** @brief 로컬 포즈와 부모 테이블을 복사해 시작합니다(본 수는 둘 중 작은 쪽입니다). */
         void initialize( const Pose& localPose, const vector<int32>& listParent );
         /** @brief 로컬 포즈를 @p outPose 에 씁니다(본 수가 같아야 합니다). */
         void writeTo( Pose& outPose ) const;
@@ -63,7 +63,7 @@ namespace sw
         void rotateModel( uint32 boneIndex, const quaternion& delta );
         /**
          * @brief @p boneIndex 를 돌려 @p childIndex 의 모델 위치가 @p newChildPosition 방향을 향하게 합니다(길이는 그대로).
-         * @details 사슬 IK 가 풀어 낸 관절 위치를 회전으로 옮기는 자리입니다 — 본 → 자식 방향을 새 방향으로 돌리는 최소 회전입니다.
+         * @details 사슬 IK 가 풀어 낸 관절 위치를 회전으로 옮기는 함수다. 본에서 자식으로 가는 방향을 새 방향으로 돌리는 최소 회전이다.
          */
         void aimBoneAt( uint32 boneIndex, uint32 childIndex, const float3& newChildPosition );
 

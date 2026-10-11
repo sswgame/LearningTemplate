@@ -12,7 +12,7 @@ namespace sw
         {
             static constexpr uint32 kKMeansIterations = 4;
 
-            /** @brief 짓는 동안의 노드입니다. 잎이면 `_leaf` 가 옛 잎 번호입니다. */
+            /** @brief 만드는 동안 쓰는 노드입니다. 잎이면 `_leaf` 가 이전 잎 번호입니다. */
             struct BuildNode
             {
                 vector<uint32> _listChild;
@@ -21,7 +21,7 @@ namespace sw
                 uint32         _leaf{ 0xFFFFFFFFu };
             };
 
-            /** @brief 합집합-찾기(경로 압축)입니다. */
+            /** @brief 유니온 파인드(경로 압축)입니다. */
             static uint32 findRoot( vector<uint32>& inoutListParent, uint32 item )
             {
                 uint32 root = item;
@@ -44,14 +44,14 @@ namespace sw
                 const uint32 rootRhs = findRoot( inoutListParent, rhs );
                 if ( rootLhs == rootRhs )
                     return;
-                // 작은 번호를 뿌리로 — 결과가 합치는 순서에 달리지 않는다.
+                // 작은 번호를 뿌리로 삼는다. 결과가 합치는 순서에 좌우되지 않는다.
                 if ( rootLhs < rootRhs )
                     inoutListParent[rootRhs] = rootLhs;
                 else
                     inoutListParent[rootLhs] = rootRhs;
             }
 
-            /** @brief 자식들을 묶는 노드를 더하고 그 번호를 돌려줍니다(부피 가중 중심). */
+            /** @brief 자식들을 묶는 노드를 추가하고 그 번호를 반환합니다(부피 가중 중심). */
             static uint32 makeCluster( vector<BuildNode>& inoutListBuild, vector<uint32> listChild )
             {
                 BuildNode cluster;
@@ -84,7 +84,7 @@ namespace sw
                 }
             }
 
-            /** @brief 노드들을 @p clusterCount 개로 나눕니다(가장 먼 점 고르기 + k-평균). 결과는 묶음마다 노드 목록이고 빈 묶음은 없습니다. */
+            /** @brief 노드들을 @p clusterCount 개로 나눕니다(가장 먼 점 고르기와 k-평균). 결과는 묶음마다 노드 목록이며 빈 묶음은 없습니다. */
             static void partitionNodes( const vector<BuildNode>& listBuild, const vector<uint32>& listCurrent, uint32 clusterCount, vector<vector<uint32>>& outListGroup )
             {
                 const uint32 count = static_cast<uint32>( listCurrent.size() );
@@ -97,7 +97,7 @@ namespace sw
                 }
                 weightedCenter = totalVolume > 0.0f ? weightedCenter / totalVolume : listBuild[listCurrent[0]]._centroid;
 
-                // 가장 먼 점 고르기 — 첫 씨앗은 무게 중심에 가장 가까운 노드.
+                // 가장 먼 점 고르기: 첫 시드는 무게 중심에 가장 가까운 노드다.
                 vector<float3>  listSite;
                 vector<float32> listNearest( count, MathUtil::kMaxFloat );
                 uint32          first     = 0;
@@ -177,7 +177,7 @@ namespace sw
             /** @brief 묶음마다 연결로 이어진 덩어리로 다시 나눕니다. */
             static void splitDisconnected( const vector<BuildNode>& listBuild, const vector<FractureLink>& listLink, uint32 leafCount, vector<vector<uint32>>& inoutListGroup )
             {
-                // 옛 잎 → 지금 노드 번호(current 안의 자리 대신 빌드 노드 번호).
+                // 이전 잎에서 지금 노드 번호로 가는 매핑이다(current 안의 인덱스 대신 빌드 노드 번호를 쓴다).
                 vector<uint32> listOwner( leafCount, 0xFFFFFFFFu );
                 vector<uint32> listGroupOf( listBuild.size(), 0xFFFFFFFFu );
                 vector<uint32> listLeaf;
@@ -386,7 +386,7 @@ namespace sw
         }
         const uint32 buildRoot = listCurrent.size() == 1 ? listCurrent[0] : FractureGraphInternal::makeCluster( listBuild, listCurrent );
 
-        // 깊이 우선 — 잎 순서와 묶음의 뒤 순서(자식이 먼저 → 뿌리가 마지막)를 함께 매긴다.
+        // 깊이 우선으로 잎 순서와 묶음의 뒤 순서(자식이 먼저, 뿌리가 마지막)를 함께 매긴다.
         vector<uint32> listFinalOf( listBuild.size(), 0xFFFFFFFFu );
         vector<uint32> listClusterOrder;
         {
@@ -452,7 +452,7 @@ namespace sw
                 result._listNode[listFinalOf[child]]._parent = static_cast<int32>( listFinalOf[buildIndex] );
             }
         }
-        // 잎 구간 · 깊이 — 묶음은 자식 뒤에 있으므로 앞에서부터 구간을, 뒤에서부터 깊이를 채운다.
+        // 잎 구간과 깊이를 채운다. 묶음은 자식 뒤에 있으므로 앞에서부터 구간을, 뒤에서부터 깊이를 채운다.
         for ( uint32 nodeIndex = leafCount; nodeIndex < nodeCount; ++nodeIndex )
         {
             FractureNode& node   = result._listNode[nodeIndex];

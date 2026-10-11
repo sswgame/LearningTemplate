@@ -123,7 +123,7 @@ namespace sw
     bool Wallet::readState( Archive& archive )
     {
         uint32 count = 0;
-        // 칸마다 이름 길이(4) + 잔액(8) 이상
+        // 통화마다 이름 길이(4) + 잔액(8) 이상
         if ( StateArchiveUtil::readCount( archive, 12, count ) == false )
             return false;
         vector<WalletBalance> listBalance;
@@ -576,7 +576,7 @@ namespace sw
     {
         vector<ShopRuntime> listRuntime = _listRuntime;
         uint32              shopCount   = 0;
-        // 가게마다 이름(4) + 개수 셋(12) + 배율 둘(8) + 날(4) 이상
+        // 가게마다 이름(4) + 개수 세 개(12) + 배율 두 개(8) + 날짜(4) 이상
         if ( StateArchiveUtil::readCount( archive, 28, shopCount ) == false )
             return false;
         for ( uint32 shopIndex = 0; shopIndex < shopCount; ++shopIndex )
@@ -613,7 +613,7 @@ namespace sw
             archive >> saved._daysSinceRestock;
             if ( archive.isError() )
                 return false;
-            // 카탈로그에서 지운 가게는 버리고, 재고 줄 수가 바뀐 가게는 깨진 것으로 본다(재고는 정의 순서로 짝짓는다)
+            // 카탈로그에서 지운 가게는 버리고, 재고 항목 수가 바뀐 가게는 깨진 것으로 본다. 재고는 정의 순서로 짝지어 복원한다
             for ( ShopRuntime& runtime : listRuntime )
             {
                 if ( runtime._shopID != saved._shopID )

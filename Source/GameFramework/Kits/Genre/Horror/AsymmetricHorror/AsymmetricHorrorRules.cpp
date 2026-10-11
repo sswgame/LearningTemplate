@@ -16,7 +16,7 @@ namespace sw
         {
             static constexpr uint32 kMaxScaleCount = 8;
 
-            /** @brief "1,1.7,2.1" 을 읽습니다. 비었으면 @p outListScale 을 그대로 둡니다. */
+            /** @brief "1,1.7,2.1" 을 읽습니다. 비어 있으면 @p outListScale 을 그대로 둡니다. */
             static void readScales( const XMLNode& node, vector<float32>& outListScale )
             {
                 const string_view text = node.getAttributeText( "scales" );

@@ -33,7 +33,7 @@ namespace sw
             static bool isStopBefore( const RhythmStop& lhs, const RhythmStop& rhs ) { return lhs._beat < rhs._beat; }
             static bool isMeasureChangeBefore( const RhythmMeasureChange& lhs, const RhythmMeasureChange& rhs ) { return lhs._beat < rhs._beat; }
 
-            /** @brief `_beat` 가 @p beat 보다 작은 점의 수입니다(이분 탐색). */
+            /** @brief `_beat` 가 @p beat 보다 작은 점의 수를 반환합니다(이분 탐색). */
             static size_t countPointsBeforeBeat( const vector<RhythmTimingPoint>& listPoint, float32 beat )
             {
                 size_t low  = 0;
@@ -49,7 +49,7 @@ namespace sw
                 return low;
             }
 
-            /** @brief `_time` 이 @p seconds 이하인 점의 수입니다(이분 탐색). */
+            /** @brief `_time` 이 @p seconds 이하인 점의 수를 반환합니다(이분 탐색). */
             static size_t countPointsUpToTime( const vector<RhythmTimingPoint>& listPoint, float32 seconds )
             {
                 size_t low  = 0;
@@ -280,7 +280,7 @@ namespace sw
         vector<RhythmStop> listSortedStop = listStop;
         std::stable_sort( listSortedStop.begin(), listSortedStop.end(), &RhythmChartInternal::isStopBefore );
 
-        // 박 0 의 BPM 은 박 0 이하의 마지막 변화, 없으면 첫 변화입니다.
+        // 박 0 의 BPM 은 박 0 이하의 마지막 변화이고, 없으면 첫 변화이다.
         float32 bpm = listSortedBpm.empty() ? RhythmChartInternal::kDefaultBpm : listSortedBpm.front()._bpm;
         _listTimingPoint.clear();
         RhythmTimingPoint first;

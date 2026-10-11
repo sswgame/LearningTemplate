@@ -31,7 +31,7 @@ namespace sw
                 return frame;
             }
 
-            /** @brief @p axisA · @p axisB 가 펼치는 평면의 원(중심 @p center)입니다. */
+            /** @brief @p axisA 와 @p axisB 가 펼치는 평면의 원(중심 @p center)을 그립니다. */
             static void drawCircle( IPhysicsDebugRenderer& renderer, const Frame3D& frame, const float3& center, const float3& axisA, const float3& axisB,
                                     float32 radius, const float4& color )
             {
@@ -123,7 +123,7 @@ namespace sw
             }
             case PhysicsShapeType3D::ConvexHull:
             {
-                // 껍질의 면은 백엔드가 짓는다 — 점 사이의 별 모양(중심에서 각 점)으로 부피만 보인다.
+                // 껍질의 면은 백엔드가 만든다. 점 사이의 별 모양(중심에서 각 점)으로 부피만 보이게 한다.
                 float3 center{};
                 for ( const float3& point : shape._listPoint )
                 {

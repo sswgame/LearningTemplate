@@ -18,7 +18,7 @@ namespace sw
     {
         struct DialogueGraphAssetInternal
         {
-            /** @brief 특성 표가 타입 값 순서대로인지 봅니다. `findNodeInfo` 가 값으로 바로 찾습니다. */
+            /** @brief 특성 테이블이 타입 값 순서대로인지 확인합니다. `findNodeInfo` 가 값으로 바로 찾습니다. */
             static constexpr bool isInfoTableOrdered()
             {
                 for ( size_t index = 0; index < SW_COUNT_OF( kArrDialogueNodeInfo ); ++index )
@@ -182,8 +182,8 @@ namespace sw
 
     int32 DialogueGraphAsset::encodePin( int32 nodeID, int32 pinOffset )
     {
-        // 오프셋이 자릿수를 넘으면 노드 id 를 오염시킨다. 링크가 **다른 노드**를 가리키게 된다.
-        // 조용히 그런 값을 만들지 않고 0(없는 핀)을 반환한다.
+        // 오프셋이 자릿수를 넘으면 노드 id 를 오염시켜, 링크가 **다른 노드**를 가리키게 된다.
+        // 그런 값을 조용히 만들지 않고 0(없는 핀)을 반환한다.
         if ( nodeID <= 0 || pinOffset <= 0 || pinOffset >= kPinScale )
             return 0;
         return nodeID * kPinScale + pinOffset;
@@ -275,9 +275,9 @@ namespace sw
         if ( engine::areEngineServicesBound() == false )
             return string{ textOrKey };
 
-        // **키가 아닐 수도 있는 텍스트로 물어본다.** `hashed_string` 을 만들어 물으면 그 대사 원문이
-        // intern 아레나에 영구히 남는다(대화가 늘수록 함께 늘어나는 누수). 표는 해시로만
-        // 열리므로 intern 없이 물어볼 수 있다.
+        // **키가 아닐 수도 있는 텍스트로 조회한다.** `hashed_string` 을 만들어 조회하면 그 대사 원문이
+        // intern 아레나에 영구히 남아, 대화가 늘수록 메모리가 누수된다. 테이블은 해시로만
+        // 조회되므로 intern 없이 조회할 수 있다.
         const utf8* pResolved = engine::getLocalizationManager().getStringByText( textOrKey, nullptr );
         if ( StringUtil::isNullOrEmpty( pResolved ) )
             return string{ textOrKey };

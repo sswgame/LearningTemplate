@@ -198,7 +198,7 @@ namespace sw
             }
             _report.addError( "equip conditions form a cycle: %#", chain );
         }
-        // 공유 코드 · 네트워크는 아이템 · 외형 · 프리셋 id 를 32 비트 해시로 싣는다.
+        // 공유 코드와 네트워크는 아이템, 외형, 프리셋 id 를 32 비트 해시로 싣는다.
         const vector<ItemDef>& listItem = _pItemCatalog->getItems();
         for ( size_t lhs = 0; lhs < listItem.size(); ++lhs )
         {
@@ -258,7 +258,7 @@ namespace sw
         {
             for ( const CustomizationParamDef& param : schema._listParameter )
             {
-                // 고르기가 더하는 외형의 주인은 매개변수 이름이다 — 칸 이름과 겹치면 규칙 대상 · 소켓 앞머리가 둘을 가리킨다.
+                // 고르기가 추가하는 외형의 주인은 매개변수 이름이다. 슬롯 이름과 겹치면 규칙 대상과 소켓 접두어가 둘 다 가리키게 되어 모호해진다.
                 if ( _slotTable.hasSlot( param._name ) )
                     _report.addError( "schema '%#' parameter '%#' has the name of a slot - owner names must be unique", schema._id.c_str(), param._name.c_str() );
                 for ( const CustomizationOptionDef& option : param._listOption )

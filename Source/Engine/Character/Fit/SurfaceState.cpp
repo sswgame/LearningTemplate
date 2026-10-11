@@ -132,7 +132,7 @@ namespace sw
         {
             for ( int32 texelX = minX; texelX <= maxX; ++texelX )
             {
-                // 칸 중심까지의 거리 — 반지름 안은 값 그대로, 바깥 한 칸 폭은 부드럽게 0 으로.
+                // 셀 중심까지의 거리를 본다. 반지름 안은 값 그대로 쓰고, 바깥 한 셀 폭은 부드럽게 0 으로 줄인다.
                 const float32 offsetX  = static_cast<float32>( texelX ) + 0.5f - centerX;
                 const float32 offsetY  = static_cast<float32>( texelY ) + 0.5f - centerY;
                 const float32 distance = MathUtil::sqrt( offsetX * offsetX + offsetY * offsetY );

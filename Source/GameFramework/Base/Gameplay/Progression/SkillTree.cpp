@@ -80,7 +80,7 @@ namespace sw
                 skill._cost          = MathUtil::max( 0, node.getAttributeInt( "cost", skill._cost ) );
                 skill._requiredLevel = node.getAttributeInt( "level", skill._requiredLevel );
                 skill._requiredSpent = MathUtil::max( 0, node.getAttributeInt( "spent", skill._requiredSpent ) );
-                // "basic:2,stance" — 이름:랭크(생략하면 1).
+                // "basic:2,stance" 형식이며, 이름:랭크로 적고 랭크를 생략하면 1 이다.
                 GameDataXML::forEachToken( node.getAttributeText( "requires" ), ", ", [&]( string_view token )
                 {
                     SkillRequirement requirement;
@@ -96,7 +96,7 @@ namespace sw
                 } );
                 const XMLNode statNode = node.findChild( "Stats" );
                 if ( statNode )
-                    (void)skill._statsPerRank.loadFromAttributes( statNode ); // 읽은 속성 수만 돌려준다 — 없으면 빈 스탯이다
+                    (void)skill._statsPerRank.loadFromAttributes( statNode ); // 읽은 속성 수만 반환한다. 속성이 없으면 빈 스탯이다
                 tree._listSkill.push_back( skill );
             }
             for ( const SkillDef& skill : tree._listSkill )
@@ -216,7 +216,7 @@ namespace sw
                 if ( requirement._skillID == skill._id && newRank < requirement._rank )
                     return SkillResult::RequiredByOther;
             }
-            // 층 — 내리면 이 스킬을 열어 준 점수가 모자라게 되는가.
+            // 층 검사: 랭크를 내리면 이 스킬을 열어 준 점수가 모자라게 되는지 확인한다.
             if ( static_cast<int32>( other ) != index && otherSkill._requiredSpent > getSpentPoints() - skill._cost - otherSkill._cost * _listRank[other] )
                 return SkillResult::RequiredByOther;
         }

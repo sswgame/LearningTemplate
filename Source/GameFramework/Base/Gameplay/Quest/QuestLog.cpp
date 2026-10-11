@@ -117,7 +117,7 @@ namespace sw
         const QuestStage* pStage = quest.findStage( stageID );
         if ( pStage == nullptr || depth >= kMaxChainedStages )
         {
-            progress._status = QuestStatus::Failed; // 데이터가 끊겼다 — 멈추지 않게 실패로
+            progress._status = QuestStatus::Failed; // 데이터가 끊겼으므로 멈추지 않게 실패로 처리한다
             pushEvent( QuestEvent::Kind::Failed, progress );
             return;
         }
@@ -182,7 +182,7 @@ namespace sw
     int32 QuestLog::applyNotify( const hashed_string& kind, const hashed_string& target, int32 value, bool bAbsolute )
     {
         int32 advancedCount = 0;
-        // 단계가 넘어가며 진행 목록이 바뀌지 않도록 자리로 돈다(퀘스트는 여기서 생기지 않는다).
+        // 단계가 넘어가면서 진행 목록이 바뀌어도 안전하도록 인덱스로 순회한다. 퀘스트는 여기서 새로 생기지 않는다.
         for ( size_t questIndex = 0; questIndex < _listProgress.size(); ++questIndex )
         {
             QuestProgress& progress = _listProgress[questIndex];
@@ -326,7 +326,7 @@ namespace sw
     bool QuestLog::readState( Archive& archive )
     {
         uint32 progressCount = 0;
-        // 퀘스트마다 이름 둘(8) + 목표 수(4) + 단계 시간(4) + 완료 횟수(4) + 상태(1) + 선택 대기(1) 이상
+        // 퀘스트마다 이름 두 개(8) + 목표 수(4) + 단계 시간(4) + 완료 횟수(4) + 상태(1) + 선택 대기(1) 이상
         if ( StateArchiveUtil::readCount( archive, 22, progressCount ) == false )
             return false;
         vector<QuestProgress> listProgress;

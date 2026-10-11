@@ -101,7 +101,7 @@ namespace sw
             slot._surfaceBinding      = SurfaceBinding{};
             slot._shapeOffsetLocal    = float3::Zero;
 
-            // 부모의 바인드 모델 변환 — 표면 보정 델타를 부모 축으로 옮겨 애니메이션을 따르게 한다.
+            // 부모의 바인드 모델 변환이다. 표면 보정 델타를 부모 축으로 옮겨 애니메이션을 따르게 한다.
             SocketDef parentOnly    = def;
             parentOnly._translation = float3::Zero;
             parentOnly._rotation    = quaternion::Identity;
@@ -191,7 +191,7 @@ namespace sw
     {
         if ( isSocketActive( socketID ) == false )
             return kInvalidSocketID;
-        // 후보가 다시 후보를 가리킬 수 있다 — 순환이면 소켓 수만큼 걷고 멈춘다.
+        // 후보가 다시 후보를 가리킬 수 있다. 순환이면 소켓 수만큼 따라간 뒤 멈춘다.
         SocketID current = socketID;
         for ( size_t step = 0; step < _listSlot.size(); ++step )
         {

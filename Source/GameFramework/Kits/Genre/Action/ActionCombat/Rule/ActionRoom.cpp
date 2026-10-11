@@ -21,10 +21,10 @@ namespace sw
     namespace
     {
         /**
-         * @brief 이 킷의 플레이어 쪽 조절 값입니다. **한 자리에 모아 둡니다.** 적의 수치는 몬스터 정의(`MonsterDef`)에 있습니다.
-         * @details 같은 값을 두 자리에 적지 말 것 — 예컨대 대시 쿨다운은 `update()` 가 넣는 값이자
-         *          `getDashFill()` 의 분모라, 한쪽만 바꾸면 **게이지가 거짓말을 합니다**(쿨다운을 1.2 초로
-         *          늘렸는데 게이지는 0.85 초에 가득 차는 식).
+         * @brief 이 킷의 플레이어 쪽 조절 값입니다. **한 곳에 모아 둡니다.** 적의 수치는 몬스터 정의(`MonsterDef`)에 있습니다.
+         * @details 같은 값을 두 곳에 적지 않는다. 예를 들어 대시 쿨다운은 `update()` 가 넣는 값이자
+         *          `getDashFill()` 의 분모이므로 한쪽만 바꾸면 **게이지가 거짓말을 한다**(쿨다운을 1.2초로
+         *          늘렸는데 게이지는 0.85초에 가득 차는 식이다).
          */
         struct ActionRoomTuning
         {
@@ -32,15 +32,15 @@ namespace sw
             static constexpr float32 kDashCooldown = 0.85f;
             /** @brief 대시가 주는 무적 시간(초)입니다. */
             static constexpr float32 kDashInvulnerable = 0.22f;
-            /** @brief 맞았을 때의 무적 시간(초)입니다. 대시가 주는 것보다 **깁니다.** */
+            /** @brief 맞았을 때의 무적 시간(초)입니다. 대시가 주는 무적 시간보다 **깁니다.** */
             static constexpr float32 kHitInvulnerable = 0.7f;
             /** @brief 플레이어 공격 쿨다운(초)입니다. */
             static constexpr float32 kAttackCooldown = 0.28f;
-            /** @brief 플레이어 공격 한 번의 피해입니다 — 적의 방어(`MonsterDef::_def`)를 빼고 들어간다(내장 그런트 방어 0 → 34, 보스 방어 16 → 18). */
+            /** @brief 플레이어 공격 한 번의 피해입니다. 적의 방어(`MonsterDef::_def`)를 뺀 값이 들어갑니다(내장 그런트는 방어 0이라 34, 보스는 방어 16이라 18). */
             static constexpr float32 kPlayerAttackDamage = 34.0f;
         };
 
-        /** @brief 룸에 세울 적 하나 — 종 id 와 자리(m)입니다. */
+        /** @brief 룸에 스폰할 적 하나입니다. 종 id 와 위치(m)를 가집니다. */
         struct ActionRoomSpawnDef
         {
             const utf8* _pMonsterID;
@@ -53,7 +53,7 @@ namespace sw
             static constexpr const utf8* kGruntID = "grunt";
             static constexpr const utf8* kBossID  = "boss";
 
-            /** @brief 룸 종류마다의 배치입니다. 쓰는 게임이 생기면 맵의 스폰 지점으로 옮길 자리다. */
+            /** @brief 룸 종류마다의 배치입니다. 이 값을 쓰는 게임이 생기면 맵의 스폰 지점으로 옮길 후보입니다. */
             static constexpr ActionRoomSpawnDef kArrEntranceSpawn[] = {
                 {kGruntID, 6.0f, 3.0f},
                 {kGruntID, 8.0f, 5.0f}
@@ -68,9 +68,9 @@ namespace sw
             };
 
             /**
-             * @brief 카탈로그가 없거나 그 종이 없을 때 쓰는 내장 정의입니다 — 데이터 없이도 룸이 돈다. 값은 옛 상수 그대로다
+             * @brief 카탈로그가 없거나 그 종이 없을 때 쓰는 내장 정의입니다. 데이터 없이도 룸이 돌아갑니다. 값은 기존 상수와 같습니다
              *        (`ActionCombatTest.ActionRoomEnemyNumbersStayTheSame`).
-             * @return @p monsterID 가 내장 종이 아니면 false
+             * @return @p monsterID 가 내장 종이 아니면 false 입니다.
              */
             static bool findBuiltInMonster( const hashed_string& monsterID, MonsterDef& outDef )
             {
@@ -101,7 +101,7 @@ namespace sw
                     outDef._attackCoolTime   = 1.6f;
                     outDef._firstAttackDelay = 1.2f;
 
-                    // 겨냥한 한 발과 겨냥을 90° 돌린 옆 한 발.
+                    // 겨냥한 한 발과, 겨냥을 90° 돌린 옆 한 발이다.
                     MonsterShotDef aimed;
                     aimed._angleDegrees = 0.0f;
                     aimed._speed        = 4.5f;
@@ -188,7 +188,7 @@ namespace sw
     {
         clear();
         _kind = kind;
-        // 들어오면 문이 닫힌다 — 진입이 닫은 것이다(오버월드는 이 존의 워프를 막는다).
+        // 들어오면 문이 닫힌다. 진입이 닫은 것이다(오버월드는 이 존의 워프를 막는다).
         sendGateState( true, true );
     }
 
@@ -199,7 +199,7 @@ namespace sw
         PlayerDefeatedInRoomEvent defeated;
         defeated._returnMapPath = _site._returnMapPath;
         GameEventUtil::send( defeated );
-        // 싸움이 끝났다 — 문을 열고 룸을 비운다(다시 들어오면 처음부터).
+        // 싸움이 끝났다. 문을 열고 룸을 비운다(다시 들어오면 처음부터 시작한다).
         sendGateState( false, false );
         clear();
     }
@@ -224,7 +224,7 @@ namespace sw
     {
         if ( _kind != ActionRoomKind::Boss )
             return 0.0f;
-        // 보스 룸 적 전부의 HP 합이다 — 보스 하나면 그 보스의 비율이고, 쓰러진 적은 0 이다.
+        // 보스 룸 적 전부의 HP 합이다. 보스가 하나면 그 보스의 비율이고, 쓰러진 적은 0이다.
         float32 hp    = 0.0f;
         float32 hpMax = 0.0f;
         for ( const Actor& actor : _listActor )
@@ -261,8 +261,8 @@ namespace sw
         if ( input._bDashPressed == SW_TRUE && _dashCooldown.isActive() == false )
         {
             _dashCooldown.start( ActionRoomTuning::kDashCooldown );
-            // **줄이지 않는다.** 그냥 대입하면 맞고 얻은 0.7 초짜리 무적이 대시 한 번에
-            // 0.22 초로 **깎인다.** 대시가 피해를 덜 보게 해야 하는데 오히려 더 보게 된다.
+            // **줄이지 않는다.** 그냥 대입하면 맞아서 얻은 0.7초짜리 무적이 대시 한 번에
+            // 0.22초로 **깎인다.** 대시가 피해를 덜 받게 해야 하는데 오히려 더 받게 된다.
             _invulnerable.extendTo( ActionRoomTuning::kDashInvulnerable );
             result._bDashStarted = SW_TRUE;
         }
@@ -319,7 +319,7 @@ namespace sw
         actor._position = position;
         actor._hp       = static_cast<float32>( def._hp );
         actor._defIndex = static_cast<uint16>( defIndex );
-        // 쏘는 종만 시간을 측정한다 — 첫 발은 나타나고 `_firstAttackDelay` 뒤다.
+        // 쏘는 종만 시간을 측정한다. 첫 발은 나타난 뒤 `_firstAttackDelay` 가 지나야 나간다.
         if ( def._listShot.empty() == false )
             actor._attackTimer.start( def._firstAttackDelay );
         _listActor.push_back( actor );
@@ -333,7 +333,7 @@ namespace sw
                 return static_cast<int32>( defIndex );
         }
 
-        // 게임이 건 카탈로그가 먼저다. 걸린 카탈로그에 없는 id 는 알린다 — 데이터 오타가 내장 수치로 조용히 바뀌면 "고쳤는데 그대로" 를 찾을 길이 없다.
+        // 게임이 등록한 카탈로그가 먼저다. 등록된 카탈로그에 없는 id 는 경고한다. 데이터 오타가 내장 수치로 조용히 바뀌면 "고쳤는데 그대로"라는 증상의 원인을 찾을 수 없다.
         MonsterDef            def;
         const MonsterCatalog* pCatalog = game::getService<MonsterCatalog>();
         const MonsterDef*     pFound   = ( pCatalog != nullptr ) ? pCatalog->findMonster( monsterID ) : nullptr;
@@ -370,7 +370,7 @@ namespace sw
                 continue;
             if ( queryOverlaps( atk, kLayerPlayerAtk, computeActorBounds( actor ), kLayerEnemy, _layers ) == false )
                 continue;
-            // 방어 식은 유닛 스탯과 같다(고정 방어를 빼고 최소 1) — 같은 몬스터 정의를 두 곳이 다르게 읽지 않는다.
+            // 방어 공식은 유닛 스탯과 같다(고정 방어를 빼고 최소 1을 보장한다). 같은 몬스터 정의를 두 곳이 다르게 읽지 않는다.
             const float32 defense = static_cast<float32>( _listMonsterDef[actor._defIndex]._def );
             actor._hp -= DamageMath::applyArmor( ActionRoomTuning::kPlayerAttackDamage, defense, 0.0f, 1.0f );
             if ( actor._hp <= 0.0f )
@@ -398,11 +398,11 @@ namespace sw
             actor._attackTimer.tick( deltaTime );
             if ( actor._attackTimer.isActive() )
                 continue;
-            // 늦음을 이어 발사 빈도가 fps 에 매이지 않게 한다(한 간격까지 — 멈춘 프레임 뒤에 몰아 쏘지 않는다).
+            // 늦은 시간을 이어서 발사 빈도가 fps 에 묶이지 않게 한다(최대 한 간격까지만 이어 가므로, 멈춘 프레임 뒤에 몰아 쏘지 않는다).
             actor._attackTimer.restart( def._attackCoolTime );
             ++outResult._enemyVolleyCount;
 
-            // 탄은 정의의 줄마다 한 발 — 겨냥 방향을 `_angleDegrees` 만큼 돌린 쪽으로 난다(0 은 겨냥, 90 은 (−y, x)).
+            // 탄은 정의의 줄마다 한 발이다. 겨냥 방향을 `_angleDegrees` 만큼 돌린 쪽으로 난다(0은 겨냥 방향, 90은 (−y, x) 방향).
             const float2 aim = float2{ playerX - actor._position._x, playerY - actor._position._y }.normalize();
             for ( const MonsterShotDef& shot : def._listShot )
             {
@@ -448,7 +448,7 @@ namespace sw
         if ( _invulnerable.isActive() )
             return;
 
-        // 룸이 돌려주는 피해는 방어 전 값이다 — 플레이어의 방어 · HP 는 게임이 든다.
+        // 룸이 반환하는 피해는 방어를 빼기 전 값이다. 플레이어의 방어와 HP 는 게임이 가진다.
         const AABB hurt = playerHurtBox( playerX, playerY );
         for ( const Actor& actor : _listActor )
         {
@@ -581,7 +581,7 @@ namespace sw
 
     bool ActionRoom::readState( Archive& archive )
     {
-        // 사본에 읽고 끝까지 맞으면 바꾼다 — 자리 · 충돌 층은 사본이 그대로 든다.
+        // 사본에 읽고 끝까지 맞으면 바꾼다. 위치 정보와 충돌 레이어는 사본이 그대로 가지고 있다.
         ActionRoom restored = *this;
         uint8      kind     = 0;
         uint8      bCleared = SW_FALSE;
@@ -595,7 +595,7 @@ namespace sw
         restored._kind     = static_cast<ActionRoomKind>( kind );
         restored._bCleared = bCleared;
 
-        // 종 정의는 id 로 다시 찾는다 — 같은 순서로 더해 적의 종 칸이 그대로 맞는다.
+        // 종 정의는 id 로 다시 찾는다. 같은 순서로 추가하므로 적의 종 인덱스가 그대로 맞는다.
         uint32 defCount = 0;
         if ( StateArchiveUtil::readCount( archive, 4, defCount ) == false )
             return false;
@@ -610,7 +610,7 @@ namespace sw
         }
 
         uint32 actorCount = 0;
-        // 적마다 자리(8) + 체력(4) + 사격 시간(4) + 종 칸(2) + 생존(1)
+        // 적마다 위치(8) + 체력(4) + 사격 시간(4) + 종 인덱스(2) + 생존(1) 바이트
         if ( StateArchiveUtil::readCount( archive, 19, actorCount ) == false )
             return false;
         restored._listActor.assign( actorCount, Actor{} );
@@ -630,7 +630,7 @@ namespace sw
         }
 
         uint32 projectileCount = 0;
-        // 투사체마다 자리(8) + 속도(8) + 수명(4) + 반지름(4) + 피해(4) + 생존(1)
+        // 투사체마다 위치(8) + 속도(8) + 수명(4) + 반지름(4) + 피해(4) + 생존(1) 바이트
         if ( StateArchiveUtil::readCount( archive, 29, projectileCount ) == false )
             return false;
         restored._listProjectile.assign( projectileCount, Projectile{} );

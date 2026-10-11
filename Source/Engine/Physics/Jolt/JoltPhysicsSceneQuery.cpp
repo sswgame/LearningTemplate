@@ -41,7 +41,7 @@ namespace sw
                 uint32 _layerMask;
             };
 
-            /** @brief 쏘는 쪽 바디 · 쏘는 오브젝트의 바디 모두(사용자 값)와(원하면) 트리거를 뺍니다. */
+            /** @brief 쏘는 쪽 바디와 쏘는 오브젝트의 모든 바디(사용자 값 기준), 그리고 원하면 트리거를 결과에서 뺍니다. */
             class QueryBodyFilter final : public JPH::BodyFilter
             {
             public:
@@ -58,7 +58,7 @@ namespace sw
                 {
                     if ( _bIncludeTriggers == false && body.IsSensor() )
                         return false;
-                    // 바디의 Jolt 사용자 값은 엔진 핸들이다 — 엔진 사용자 값(오브젝트 id)은 씬의 기록에 있다.
+                    // 바디의 Jolt 사용자 값은 엔진 핸들이다. 엔진 사용자 값(오브젝트 id)은 씬의 기록에 있다.
                     return _ignoreUserData == 0 || _scene.getBodyUserData( PhysicsBodyHandle::fromPacked( body.GetUserData() ) ) != _ignoreUserData;
                 }
 
@@ -181,7 +181,7 @@ namespace sw
                 settings.mPosition1 = settings.mPosition2 = anchor;
                 settings.mTwistAxis1 = settings.mTwistAxis2 = axis;
                 settings.mPlaneAxis1 = settings.mPlaneAxis2 = planeAxis;
-                // 엔진은 "축 둘레의 스윙 한계" 로 적는다 — Jolt 의 plane 반각이 plane 축 둘레, normal 반각이 그 둘에 수직인 축 둘레다.
+                // 엔진은 "축 둘레의 스윙 한계"로 적는다. Jolt 의 plane 반각이 plane 축 둘레, normal 반각이 그 둘에 수직인 축 둘레다.
                 settings.mPlaneHalfConeAngle  = desc._swingLimitNormal;
                 settings.mNormalHalfConeAngle = desc._swingLimitPlane;
                 settings.mTwistMinAngle       = desc._minLimit;
@@ -232,7 +232,7 @@ namespace sw
         record._bPairFilterSet = desc._bCollideConnectedBodies == false && desc._bodyB.isValid();
         if ( desc._type == PhysicsJointType::Distance )
         {
-            // 지금 길이를 측정하려고 두 점을 각 바디의 로컬로 적어 둔다.
+            // 현재 길이를 측정하려고 두 점을 각 바디의 로컬로 적어 둔다.
             float3     positionA{};
             quaternion rotationA{};
             (void)getBodyTransform( desc._bodyA, positionA, rotationA );
@@ -263,7 +263,7 @@ namespace sw
         if ( record._pConstraint != nullptr )
         {
             _system.RemoveConstraint( record._pConstraint.GetPtr() );
-            // 깨어나게 해 남은 바디가 그 자리에 떠 있지 않게 한다.
+            // 깨워서 남은 바디가 그 위치에 떠 있지 않게 한다.
             wakeBody( record._bodyA );
             wakeBody( record._bodyB );
         }
@@ -327,7 +327,7 @@ namespace sw
 
     PhysicsCharacterHandle JoltPhysicsScene::createCharacter( const PhysicsCharacterDesc3D& desc )
     {
-        // 캡슐 바닥이 캐릭터 원점(발)에 오게 올려 둔다.
+        // 캡슐 바닥이 캐릭터 원점(발)에 오도록 올려 둔다.
         const float32             centerHeight = desc._halfHeight + desc._radius;
         JPH::CapsuleShapeSettings capsule{ desc._halfHeight, desc._radius };
         capsule.SetEmbedded();
@@ -430,7 +430,7 @@ namespace sw
         if ( lock.Succeeded() )
         {
             outHit._normal = JoltUtil::toEngine( lock.GetBody().GetWorldSpaceSurfaceNormal( hit.mSubShapeID2, point ) );
-            // 이 씬이 짓는 셰이프는 모두 `JoltPhysicsMaterial` 을 단다(기본 재질만 예외 — 그때는 이름이 비었다).
+            // 이 씬이 만드는 셰이프는 모두 `JoltPhysicsMaterial` 을 단다(기본 재질만 예외이며, 그때는 이름이 비어 있다).
             const JPH::PhysicsMaterial* pMaterial = lock.GetBody().GetShape()->GetMaterial( hit.mSubShapeID2 );
             if ( pMaterial != nullptr && pMaterial != JPH::PhysicsMaterial::sDefault.GetPtr() )
                 outHit._material = static_cast<const JoltPhysicsMaterial*>( pMaterial )->getName();
@@ -479,7 +479,7 @@ namespace sw
         JPH::AllHitCollisionCollector<JPH::CollideShapeCollector> collector;
         _system.GetNarrowPhaseQuery().CollideShape( pShape.GetPtr(), JPH::Vec3::sReplicate( 1.0f ), transform, settings, JPH::RVec3::sZero(), collector,
                                                     JPH::BroadPhaseLayerFilter{}, layerFilter, bodyFilter );
-        // 같은 바디의 여러 서브 셰이프가 따로 잡힌다 — 바디 순으로 줄 세워 한 번씩 붙인다.
+        // 같은 바디의 여러 서브 셰이프가 따로 잡힌다. 바디 순으로 정렬해 한 번씩 붙인다.
         vector<PhysicsBodyHandle> listFound;
         listFound.reserve( collector.mHits.size() );
         for ( const JPH::CollideShapeResult& hit : collector.mHits )

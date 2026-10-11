@@ -14,7 +14,7 @@ namespace sw
         {
             static constexpr float32 kMinLengthSq = 1.0e-10f;
 
-            /** @brief 닿는 후보 하나 — 정렬 열쇠(우선도 · 거리 · 오브젝트 id · 원래 자리)입니다. */
+            /** @brief 닿는 후보 하나입니다. 정렬 키(우선도, 거리, 오브젝트 id, 원래 인덱스)를 담습니다. */
             struct ReachableCandidate
             {
                 uint64  _objectID{ 0 };
@@ -31,7 +31,7 @@ namespace sw
                         return lhs._priority > rhs._priority;
                     if ( lhs._distance != rhs._distance )
                         return lhs._distance < rhs._distance;
-                    // 동률은 오브젝트 id 로 가른다 — 후보를 모은 순서(등록 순서 · 씬 순서)에 기대지 않는다.
+                    // 동률은 오브젝트 id 로 가른다. 후보를 모은 순서(등록 순서나 씬 순서)에 의존하지 않기 위해서다.
                     if ( lhs._objectID != rhs._objectID )
                         return lhs._objectID < rhs._objectID;
                     return lhs._index < rhs._index;

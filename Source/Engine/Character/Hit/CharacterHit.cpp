@@ -139,7 +139,7 @@ namespace sw
         inoutHit._bodyIndex        = -1;
         if ( body.isValid() == false )
             return;
-        // 래그돌 · 히트박스 — 물리 에셋 바디의 히트 존이 먼저다.
+        // 래그돌과 히트박스에서는 물리 에셋 바디의 히트 존을 먼저 본다.
         const RagdollComponent* pRagdoll = target.getComponent<RagdollComponent>();
         if ( pRagdoll != nullptr )
         {
