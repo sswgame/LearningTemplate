@@ -40,7 +40,7 @@ namespace sw
     void LiveOpsServer::onHostShutdown( OnlineServiceHost& host )
     {
         (void)host;
-        _pHost = nullptr; // 구독은 호스트가 이어서 모두 푼다
+        _pHost = nullptr; // 구독은 호스트가 이어서 모두 해제한다
     }
 
     uint32 LiveOpsServer::getProtocolVersion() const { return LiveOpsProtocol::kVersion; }
@@ -103,7 +103,7 @@ namespace sw
         const uint64 tag = _pendingTable.add( context._token );
         if ( context._method == LiveOpsMethod::kRegisterDevice )
         {
-            registration._registeredMs = context._nowMs; // 등록 시각은 서버 시계(한도를 넘으면 가장 오래된 것을 밀어낸다)
+            registration._registeredMs = context._nowMs; // 등록 시각은 서버 시계로 정한다. 한도를 넘으면 가장 오래된 것을 밀어낸다
             _pDispatcher->registerDevice( context._accountID, registration, tag );
         }
         else
@@ -146,7 +146,7 @@ namespace sw
         if ( _pService == nullptr || message._topic != LiveOpsBus::kChangedTopic )
             return;
         if ( pBus != nullptr && message._originServerID == pBus->getServerID() )
-            return; // 이 서버가 낸 것 — 쓰기 완료 때 이미 다시 읽기를 걸었다
+            return; // 이 서버가 낸 것이다. 쓰기 완료 때 이미 다시 읽기를 걸었다
         _pService->notifyChanged();
     }
 
