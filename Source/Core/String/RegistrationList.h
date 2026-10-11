@@ -8,6 +8,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
 namespace sw
@@ -38,6 +39,9 @@ namespace sw
      *          - **찾기**: 이름으로(`findByName`) · 객체로(`contains`).
      *          - **훑기**: `getItems()` 는 포인터만 든 연속 배열이라 훑는 쪽에 비용이 없습니다.
      *          - **이름 사본**: 이름은 **올릴 때** 복사합니다. 모듈이 내려간 뒤에도 그 이름으로 알리거나 찾을 수 있고, 죽은 객체의 가상 함수를 묻지 않습니다.
+     *
+     *          **저장소는 늘 `EngineMisc` 태그로 셉니다.** 프로세스 정적 등록부는 기동 뒤에 오른 모듈(에디터 · 게임)이 등록하며 용량을 키우는데, 넣는 쪽 태그로
+     *          세면 그 모듈이 내려간 뒤에도 커진 용량이 그 태그에 남습니다. 종료 끝에서 `shrinkToFit` 으로 남은 항목만큼 다시 잡아 기준선으로 돌려놓습니다.
      *
      *          **잠금은 들지 않습니다.** 여러 스레드가 만지는 등록부(카메라 · 빛 · 모듈 언로드 리스너)는 자기 잠금 안에서 부릅니다 — 그 잠금이
      *          "가장 안쪽" 이라는 각자의 규칙을 그대로 지키게 하려는 것입니다. 항목 수가 많고 슬롯 인덱스로 O(1) 빼기를 하는 등록부(프리미티브 ·
@@ -84,6 +88,7 @@ namespace sw
          */
         RegistrationResult add( T* pItem, string_view name = {}, int32 order = 0 )
         {
+            SW_MEMORY_SCOPE( EngineMisc );
             if ( pItem == nullptr )
                 return RegistrationResult::NullItem;
             if ( contains( pItem ) )
@@ -131,6 +136,33 @@ namespace sw
             _listItem.clear();
             _listName.clear();
             _listOrder.clear();
+        }
+
+        /**
+         * @brief 저장소를 지금 항목 수에 맞춰 다시 잡습니다(비었으면 놓기만 합니다). 순서와 이름은 그대로입니다.
+         * @details 엔진 종료 끝이 부릅니다 — 내려간 모듈이 키운 용량과, Debug STL 이 원소를 옮길 때 그 자리 태그로 새로 잡은 문자열 프록시를 돌려놓습니다.
+         */
+        void shrinkToFit()
+        {
+            SW_MEMORY_SCOPE( EngineMisc );
+            vector<T*>     listItem;
+            vector<string> listName;
+            vector<int32>  listOrder;
+            if ( _listItem.empty() == false )
+            {
+                listItem.reserve( _listItem.size() );
+                listName.reserve( _listName.size() );
+                listOrder.reserve( _listOrder.size() );
+                for ( size_t index = 0; index < _listItem.size(); ++index )
+                {
+                    listItem.push_back( _listItem[index] );
+                    listName.push_back( std::move( _listName[index] ) );
+                    listOrder.push_back( _listOrder[index] );
+                }
+            }
+            _listItem  = std::move( listItem );
+            _listName  = std::move( listName );
+            _listOrder = std::move( listOrder );
         }
 
         /** @brief 그 객체가 올라 있는지 봅니다. */

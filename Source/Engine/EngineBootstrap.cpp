@@ -12,11 +12,16 @@
 #include "Core/LogSink/AsyncLogSink.h"
 #include "Core/Module/ModuleBuildID.h"
 #include "Core/Module/ModuleImageUtil.h"
+#include "Core/Module/ModuleUnloadListener.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Automation/AutomationProbe.h"
+#include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/EngineServiceCollection.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
+#include "Engine/Localization/StringTable.h"
 #include "Engine/Object/Component/SceneTransformStorage.h"
 #include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/ResourcePaths.h"
@@ -157,6 +162,14 @@ namespace sw
         AssetLoadProfiler::get().releaseStorage();
         if ( RHIRenderResource::releaseRegistryStorage() == false )
             SW_LOG_WARNING( "RHI render resources are still registered at shutdown - a mesh, texture or material leaked" );
+        // 번역 문자열은 지역화 서비스가 내려간 뒤라 들고 있는 쪽이 없다. 등록부는 모듈이 모두 내려가 엔진 것만 남았다 — 기동 뒤 모듈이 키운 용량을 놓는다.
+        StringTable::releaseTextStorage();
+        IModuleUnloadListener::releaseUnusedStorage();
+        AutomationStepRegistry::releaseUnusedStorage();
+        AutomationProbes::releaseUnusedStorage();
+#if SW_DEV_COMMANDS_ENABLED
+        DevCommandRegistry::get().releaseUnusedStorage();
+#endif
 
         // 로거 **스레드**는 메모리 프로파일러보다 먼저 세운다. 그 스레드도 메모리를 풀며 프로파일러를 부른다(`Memory::free` → `recordFree`).
         // 로거 객체는 맨 마지막에 놓는다 — 그 사이의 로그는 출력에 바로 쓰인다.

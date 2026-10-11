@@ -4,6 +4,7 @@
 
 #include "Core/Container/vector.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/Memory.h"
 
 namespace sw
 {
@@ -13,7 +14,7 @@ namespace sw
     {
         struct AutomationProbeInternal
         {
-            /** @brief 등록된 탐침(등록 순서). Engine 이미지의 함수 정적이라 게임 모듈이 바뀌어도 남는다. */
+            /** @brief 등록된 탐침(등록 순서). Engine 이미지의 함수 정적이라 게임 모듈이 바뀌어도 남는다. 넣는 쪽과 관계없이 `EngineMisc` 로 센다(`RegistrationList` 와 같다). */
             static vector<const AutomationProbeRegistration*>& getRegistrations()
             {
                 static vector<const AutomationProbeRegistration*> s_listRegistration;
@@ -34,8 +35,25 @@ namespace sw
             SW_LOG_ERROR( "Automation probe '%#' is registered twice - the second one is ignored", pRegistration->_pName );
             return false;
         }
+        SW_MEMORY_SCOPE( EngineMisc );
         AutomationProbeInternal::getRegistrations().push_back( pRegistration );
         return true;
+    }
+
+    void AutomationProbes::releaseUnusedStorage()
+    {
+        SW_MEMORY_SCOPE( EngineMisc );
+        vector<const AutomationProbeRegistration*>& listRegistration = AutomationProbeInternal::getRegistrations();
+        vector<const AutomationProbeRegistration*>  listFitted;
+        if ( listRegistration.empty() == false )
+        {
+            listFitted.reserve( listRegistration.size() );
+            for ( const AutomationProbeRegistration* pRegistration : listRegistration )
+            {
+                listFitted.push_back( pRegistration );
+            }
+        }
+        listRegistration = std::move( listFitted );
     }
 
     void AutomationProbes::unregisterProbe( const AutomationProbeRegistration* pRegistration )

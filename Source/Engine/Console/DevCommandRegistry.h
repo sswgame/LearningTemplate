@@ -67,6 +67,8 @@ namespace sw
         void collectNames( string_view prefix, vector<string>& outListName ) const;
         /** @brief 등록된 명령 수입니다. */
         uint32 getCount() const { return _registration.getCount(); }
+        /** @brief 내려간 모듈이 키운 용량을 놓습니다(`RegistrationList::shrinkToFit`). 엔진 종료 끝(`EngineBootstrap::shutdown`)이 모듈을 모두 내린 뒤 부릅니다. */
+        void releaseUnusedStorage() { _registration.shrinkToFit(); }
 
     private:
         RegistrationList<const DevCommandRegistration> _registration; ///< 이름은 대소문자를 무시하고, 이름 없는 등록은 거절한다

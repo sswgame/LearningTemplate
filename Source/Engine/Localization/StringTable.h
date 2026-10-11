@@ -38,9 +38,16 @@ namespace sw
         size_t size() const;
         bool   empty() const;
 
+        /**
+         * @brief 모든 표가 함께 쓰는 번역 문자열 저장소(`LocalizedTextArena`)를 놓습니다. 그 뒤로 앞서 돌려준 문자열 포인터는 모두 무효입니다.
+         * @details 엔진 종료 끝(`EngineBootstrap::shutdown`)이 지역화 서비스와 모듈을 모두 내린 뒤 부릅니다. 기동 뒤에 오른 모듈(에디터)이 채운 몫이
+         *          종료 보고에 그 태그의 증가로 남지 않게 합니다. 놓은 뒤에 다시 넣으면 저장소를 새로 잡습니다.
+         */
+        static void releaseTextStorage();
+
     private:
         mutable std::shared_mutex _mutex;
-        /// @brief 키 해시 → 번역 문자열. 문자열은 추가 전용 저장소(StringTable.cpp 의 `LocalizedTextArena`)에 있어 표가 바뀌어도 사라지지 않는다.
+        /// @brief 키 해시 → 번역 문자열. 문자열은 추가 전용 저장소(StringTable.cpp 의 `LocalizedTextArena`)에 있어 표가 바뀌어도 엔진 종료까지 사라지지 않는다.
         unordered_map<uint64, const utf8*> _mapTable;
     };
 } // namespace sw

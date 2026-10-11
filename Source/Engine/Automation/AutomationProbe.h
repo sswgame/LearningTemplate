@@ -37,6 +37,8 @@ namespace sw
         static void unregisterProbe( const AutomationProbeRegistration* pRegistration );
         /** @brief 이름으로 찾습니다. 없으면 nullptr 입니다. */
         static const AutomationProbeRegistration* find( string_view name );
+        /** @brief 내려간 모듈이 키운 등록표 용량을 놓습니다. 엔진 종료 끝(`EngineBootstrap::shutdown`)이 모듈을 모두 내린 뒤 부릅니다. */
+        static void releaseUnusedStorage();
     };
 } // namespace sw
 

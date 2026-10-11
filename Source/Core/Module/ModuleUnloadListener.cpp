@@ -118,6 +118,13 @@ namespace sw
         return list._registeredListener.getCount();
     }
 
+    void IModuleUnloadListener::releaseUnusedStorage()
+    {
+        ModuleUnloadListenerList& list = getModuleUnloadListenerList();
+        std::scoped_lock<mutex>   lock{ list._mutex };
+        list._registeredListener.shrinkToFit();
+    }
+
     bool IModuleUnloadListener::isAddressWithin( const void* pCode, const void* pBegin, const void* pEnd )
     {
         const uintptr_t code = reinterpret_cast<uintptr_t>( pCode );

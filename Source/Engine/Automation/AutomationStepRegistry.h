@@ -66,6 +66,8 @@ namespace sw
         static void unregisterStartBlocker( const AutomationStartBlocker* pBlocker );
         /** @brief 등록된 조건 중 하나라도 시작을 막으면 true 입니다. */
         static bool isStartBlocked();
+        /** @brief 내려간 모듈이 키운 두 등록표의 용량을 놓습니다. 엔진 종료 끝(`EngineBootstrap::shutdown`)이 모듈을 모두 내린 뒤 부릅니다. */
+        static void releaseUnusedStorage();
     };
 } // namespace sw
 

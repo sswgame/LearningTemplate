@@ -131,6 +131,16 @@ namespace sw
         void setTitle( const utf8* pTitle );
         /** @brief 지금 제목입니다(UTF-16 — 플랫폼 창이 쓰는 그대로). */
         const wstring& getTitle() const { return _title; }
+        /**
+         * @brief `recreate` 용 제목 사본(`_title`)을 놓습니다. 플랫폼 창의 제목 줄은 그대로이고, 이 뒤로 `recreate` 는 실패합니다.
+         * @details 창은 엔진 종료 뒤에 부서지므로, 기동 뒤에 바꾼 제목(에디터)이 엔진 종료 보고에 그 태그의 증가로 남는다. App 이 엔진을 내리기 직전에 부릅니다.
+         *          빈 객체를 대입하지 않고 비운 뒤 줄인다 — 새 문자열 객체를 만들지 않아 지금 태그로 잡는 블록이 없다.
+         */
+        void releaseTitleStorage()
+        {
+            _title.clear();
+            _title.shrink_to_fit();
+        }
 
         // ------------------------------------------------------------------------------
         // IRenderSurface: RHI 가 창 시스템을 모르는 채로 묻는 다섯 가지
