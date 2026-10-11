@@ -204,7 +204,12 @@ SW_TEST_CASE( ActionCombatTest, ProjectileDamagesTheUnitItHitsOnceAndIsGoneAfter
     const uint64 bulletID = pProjectile->getOwner()->getObjectID();
 
     manager.beginPlay();
-    SW_ASSERT_TRUE_MSG( tickUntilHpChanges( manager, *pTarget, 100, 0.1f, 20 ) >= 0, "the bullet never hit the unit" );
+    // 지면 총알이 남았는지(지나쳤나 · 벽처럼 멈췄나)와 유닛의 HP 를 메시지에 남긴다.
+    const int32 hitFrame = tickUntilHpChanges( manager, *pTarget, 100, 0.1f, 20 );
+    utf8        arrMissDetail[96]{};
+    (void)std::snprintf( arrMissDetail, sizeof( arrMissDetail ), "the bullet never hit the unit: bullet alive %d, target hp %d",
+                         manager.findGameObjectByID( bulletID ) != nullptr ? 1 : 0, pTarget->getHp() );
+    SW_ASSERT_TRUE_MSG( hitFrame >= 0, arrMissDetail );
     SW_EXPECT_EQUAL( 80, pTarget->getHp() );
     SW_EXPECT_TRUE( manager.findGameObjectByID( bulletID ) == nullptr );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), manager.getAllGameObjects().size() );

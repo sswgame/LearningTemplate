@@ -223,7 +223,20 @@ SW_TEST_CASE( MechArenaTest, ShotsBuildDownThenWakeGrantsInvulnerability )
     world.drainEvents( listEvent );
     SW_EXPECT_EQUAL( countEvents( listEvent, MechArenaEvent::Kind::WokeUp, target ), 1 );
     SW_EXPECT_TRUE( world.findPilot( target )->_state == MechPilotState::Active );
-    SW_EXPECT_TRUE( world.findPilot( target )->_vitality.isInvulnerable() );
+    // 지면 기상 알림이 실어 온 무적 시간(데이터 1 초)과 그 뒤 이 조종사의 알림 수를 남긴다 — 무적이 짧게 걸렸는지, 일찍 일어났는지 가린다.
+    float32 wakeInvulnerable = -1.0f;
+    int32   eventsAfterWake  = 0;
+    for ( const MechArenaEvent& event : listEvent )
+    {
+        if ( event._kind == MechArenaEvent::Kind::WokeUp && event._pilot == target )
+            wakeInvulnerable = event._value;
+        else if ( wakeInvulnerable >= 0.0f && event._pilot == target )
+            ++eventsAfterWake;
+    }
+    utf8 arrWakeDetail[96]{};
+    (void)std::snprintf( arrWakeDetail, sizeof( arrWakeDetail ), "woke-up invulnerable %.9g s, target events after it %d", static_cast<float64>( wakeInvulnerable ),
+                         eventsAfterWake );
+    SW_EXPECT_TRUE_MSG( world.findPilot( target )->_vitality.isInvulnerable(), arrWakeDetail );
     tapButton( world, shooter, []( MechInput& input )
     { input._bFire = SW_TRUE; } );
     SW_EXPECT_NEAR_EQUAL( world.findPilot( target )->_vitality.getHealth(), 800.0f, 0.01f );
