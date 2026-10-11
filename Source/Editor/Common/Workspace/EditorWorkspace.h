@@ -147,7 +147,7 @@ namespace sw::editor
         /** @brief 활성 씬에 오브젝트의 프리팹 경로를 적습니다. 빈 경로는 연결을 끊습니다. 활성 씬이 없으면 아무것도 하지 않습니다. */
         void setGameObjectPrefabPath( uint64 objectID, string_view prefabPath );
         /** @brief 활성 씬이 적어 둔 오브젝트의 프리팹 경로입니다. 프리팹 인스턴스가 아니거나 활성 씬이 없으면 빈 문자열입니다. */
-        const string& getGameObjectPrefabPath( uint64 objectID ) const;
+        string_view getGameObjectPrefabPath( uint64 objectID ) const;
 
         // ------------------------------------------------------------------------------
         // 8) 뷰포트 카메라 북마크 (0~8 인덱스, 1~9 슬롯)

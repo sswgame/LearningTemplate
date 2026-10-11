@@ -103,7 +103,7 @@ namespace sw
          */
         class DirectionalLightComponent* findShadowCastingDirectionalLight() const;
         /** @brief 엔티티가 스폰된 프리팹 에셋 경로를 반환합니다(없으면 빈 문자열). */
-        const string& getEntityPrefabPath( uint64 objectID ) const;
+        string_view getEntityPrefabPath( uint64 objectID ) const;
 
         /**
          * @brief 프리팹을 찾지 못해 오브젝트로 만들지 못한 엔티티의 수입니다(유니티의 "Missing Prefab").

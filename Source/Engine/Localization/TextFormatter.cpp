@@ -483,7 +483,7 @@ namespace sw
                     noteArgumentError( "date/time argument '" + string( name ) + "' is not a date" );
                     return;
                 }
-                const string& pattern = type == "date" ? _pCulture->findDatePattern( style ) : _pCulture->findTimePattern( style );
+                const string_view pattern = type == "date" ? _pCulture->findDatePattern( style ) : _pCulture->findTimePattern( style );
                 if ( pattern.empty() )
                 {
                     noteArgumentError( "unknown date/time style '" + string( style ) + "'" );

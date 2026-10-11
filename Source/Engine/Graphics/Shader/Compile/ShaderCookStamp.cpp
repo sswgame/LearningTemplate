@@ -33,7 +33,7 @@ namespace sw
              * @details 2 → 3 은 포맷이 아니라 **판정 기준**이 바뀐 것입니다(파일 시간 → 내용 해시).
              *          3 이전 스탬프는 "쿠킹된 것이 소스와 같다" 는 보장을 하지 못하므로 믿지 않습니다.
              */
-            inline static const string kCookStampHeader{ "SWCOOK 3" };
+            static constexpr string_view kCookStampHeader{ "SWCOOK 3" };
 
             /** @brief 스탬프의 16자리 hex 를 uint64 로 바꿉니다. 형식이 아니면 0(= 불일치 처리)입니다. */
             static uint64 parseHex64( string_view hex )
@@ -287,7 +287,8 @@ namespace sw
 
                 std::sort( listLine.begin(), listLine.end() );
 
-                string text = kCookStampHeader + "\n";
+                string text{ kCookStampHeader };
+                text += '\n';
                 for ( const string& line : listLine )
                 {
                     text += line;

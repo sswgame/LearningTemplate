@@ -12,11 +12,6 @@ namespace sw
 {
     SW_LOG_CALLER( "GameStrings" );
 
-    namespace
-    {
-        static const string s_emptyString{};
-    } // namespace
-
     bool GameStrings::initialize( string_view projectPath, string_view defaultLanguage, string_view fallbackLanguage )
     {
         LocalizationManager* pLoc = game::getService<LocalizationManager>();
@@ -42,7 +37,7 @@ namespace sw
     {
         LocalizationManager* pLoc = game::getService<LocalizationManager>();
         if ( pLoc == nullptr )
-            return s_emptyString;
+            return {};
 
         return pLoc->getCurrentLanguage();
     }
@@ -58,7 +53,7 @@ namespace sw
     {
         LocalizationManager* pLoc = game::getService<LocalizationManager>();
         if ( pLoc == nullptr )
-            return s_emptyString;
+            return {};
 
         return pLoc->getFallbackLanguage();
     }

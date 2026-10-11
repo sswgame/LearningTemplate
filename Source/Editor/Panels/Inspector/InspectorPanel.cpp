@@ -181,7 +181,7 @@ namespace sw::editor
         ImGui::Spacing();
         ImGui::Separator();
 
-        const string& pfbPath = ws.getGameObjectPrefabPath( pObj->getObjectID() );
+        const string_view pfbPath = ws.getGameObjectPrefabPath( pObj->getObjectID() );
         if ( pfbPath.empty() == false )
             drawPrefabLinkSection( pObj, pfbPath );
 
@@ -286,12 +286,12 @@ namespace sw::editor
         return EditorMultiEditUtil::hasMixedValues( prop, listInstance );
     }
 
-    void InspectorPanel::drawPrefabLinkSection( GameObject* pObj, const string& prefabPath )
+    void InspectorPanel::drawPrefabLinkSection( GameObject* pObj, string_view prefabPath )
     {
         EditorWidgets::drawChip( "Prefab", editor::style::kAccent );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "PrefabInstance" ) );
         ImGui::SameLine();
-        ImGui::TextDisabled( "%s", prefabPath.c_str() );
+        ImGui::TextDisabled( "%.*s", static_cast<int32>( prefabPath.size() ), prefabPath.data() );
 
         if ( ImGui::Button( "Apply to Prefab" ) )
             (void)EditorInspectorCommands::applyToPrefab( pObj, prefabPath ); // 실패는 프리팹 저장이 알린다
@@ -299,7 +299,7 @@ namespace sw::editor
 
         ImGui::SameLine();
         if ( ImGui::Button( "Revert to Prefab" ) && EditorInspectorCommands::revertToPrefab( pObj, prefabPath ) == false )
-            SW_LOG_WARNING( "Revert to Prefab failed for '%#' (%#)", pObj->getName().c_str(), prefabPath.c_str() );
+            SW_LOG_WARNING( "Revert to Prefab failed for '%#' (%#)", pObj->getName().c_str(), prefabPath );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "RevertToPrefab" ) );
 
         ImGui::SameLine();

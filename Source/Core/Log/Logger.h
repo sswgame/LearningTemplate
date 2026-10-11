@@ -56,7 +56,7 @@ namespace sw
         /** @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 리스너를 모두 떼고, 뗀 수를 반환합니다(핫 리로드가 모듈을 내리기 전에 부른다). */
         virtual uint32 releaseListenerCodeWithin( const void* pBegin, const void* pEnd ) = 0;
         /** @brief 로그 파일이 있는 폴더의 경로입니다. */
-        virtual const string& getLogFolderPath() = 0;
+        virtual string_view getLogFolderPath() = 0;
         /**
          * @brief 크래시 경로에서 부릅니다: 큐에 남은 줄과 장치 버퍼를 **지금 이 스레드에서** 내보냅니다. 락을 바로 잡지 못하면 포기합니다.
          * @details 감싸는 싱크(테스트 프레임워크)는 감싼 싱크로 넘깁니다. 비동기 큐가 없는 싱크는 아무것도 하지 않아도 됩니다.

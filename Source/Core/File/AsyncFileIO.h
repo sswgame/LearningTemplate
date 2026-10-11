@@ -110,8 +110,8 @@ namespace sw
         bool isValid() const;
         /** @brief 열 때 잰 파일 크기(바이트)입니다. 열리지 않았으면 0 입니다. */
         uint64 getSize() const;
-        /** @brief 연 경로입니다. */
-        const string& getPath() const;
+        /** @brief 연 경로입니다. 열리지 않았으면 빈 값입니다. */
+        string_view getPath() const;
 
         /**
          * @brief @p offset 에서 @p size 바이트를 @p pDst 로 읽습니다(동기, 위치 지정).

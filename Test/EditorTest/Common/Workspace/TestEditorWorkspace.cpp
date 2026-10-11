@@ -40,10 +40,10 @@ SW_TEST_CASE( EditorWorkspaceTest, PrefabPathIsReadFromTheActiveScene )
 
     // 씬에서 끊은 연결은 워크스페이스에서도 끊겨 보인다.
     pFirst->setEntityPrefabPath( heroID, "" );
-    SW_EXPECT_TRUE_MSG( workspace.getGameObjectPrefabPath( heroID ).empty(), workspace.getGameObjectPrefabPath( heroID ).c_str() );
+    SW_EXPECT_TRUE_MSG( workspace.getGameObjectPrefabPath( heroID ).empty(), sw::string{ workspace.getGameObjectPrefabPath( heroID ) }.c_str() );
 
     // 활성 씬이 바뀌면 옛 씬의 연결은 보이지 않는다.
     workspace.setGameObjectPrefabPath( heroID, "game/prefabs/hero.prefab" );
     SW_ASSERT_NOT_NULL( sceneManager.createEmptyActiveScene( "Second" ) );
-    SW_EXPECT_TRUE_MSG( workspace.getGameObjectPrefabPath( heroID ).empty(), workspace.getGameObjectPrefabPath( heroID ).c_str() );
+    SW_EXPECT_TRUE_MSG( workspace.getGameObjectPrefabPath( heroID ).empty(), sw::string{ workspace.getGameObjectPrefabPath( heroID ) }.c_str() );
 }

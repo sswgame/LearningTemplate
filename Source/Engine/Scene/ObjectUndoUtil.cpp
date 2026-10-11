@@ -137,9 +137,9 @@ namespace sw
         SceneManager* const  pSceneManager = &sceneManager;
         const uint64         objectID      = pObj->getObjectID();
         const string         name{ pObj->getName().c_str() };
-        const ObjectSnapshot snapshot   = captureSnapshot( pObj );
-        const Scene*         pScene     = sceneManager.getActiveScene();
-        const string         prefabPath = ( pScene != nullptr ) ? pScene->getEntityPrefabPath( objectID ) : string{};
+        const ObjectSnapshot snapshot = captureSnapshot( pObj );
+        const Scene*         pScene   = sceneManager.getActiveScene();
+        const string         prefabPath{ ( pScene != nullptr ) ? pScene->getEntityPrefabPath( objectID ) : string_view{} };
 
         const Delegate<void()> destroyStep  = SW_DELEGATE_LAMBDA( Delegate<void()>, [pStack, pSceneManager, objectID, name]()
          {

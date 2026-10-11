@@ -982,13 +982,12 @@ namespace sw
         }
 
         /** @brief 카테고리를 반환합니다. */
-        const string& getCategory() const noexcept
+        string_view getCategory() const noexcept
         {
 #if !defined( SW_SHIPPING )
             return _metadata._category;
 #else
-            static const string s_empty;
-            return s_empty;
+            return {};
 #endif
         }
 
@@ -1003,13 +1002,12 @@ namespace sw
         }
 
         /** @brief 툴팁 문자열을 반환합니다. */
-        const string& getTooltip() const noexcept
+        string_view getTooltip() const noexcept
         {
 #if !defined( SW_SHIPPING )
             return _metadata._tooltip;
 #else
-            static const string s_empty;
-            return s_empty;
+            return {};
 #endif
         }
 

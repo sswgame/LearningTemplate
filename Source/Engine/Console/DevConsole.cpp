@@ -334,23 +334,25 @@ namespace sw
         return bChanged;
     }
 
-    const string* DevConsole::moveHistoryBack()
+    bool DevConsole::moveHistoryBack( string& outLine )
     {
         if ( _historyCursor == 0 || _listHistory.empty() )
-            return nullptr;
+            return false;
         --_historyCursor;
-        return &_listHistory[_historyCursor];
+        outLine = _listHistory[_historyCursor];
+        return true;
     }
 
-    const string* DevConsole::moveHistoryForward()
+    bool DevConsole::moveHistoryForward( string& outLine )
     {
-        static const string s_emptyLine{};
         if ( _historyCursor >= _listHistory.size() )
-            return nullptr;
+            return false;
         ++_historyCursor;
         if ( _historyCursor == _listHistory.size() )
-            return &s_emptyLine;
-        return &_listHistory[_historyCursor];
+            outLine.clear();
+        else
+            outLine = _listHistory[_historyCursor];
+        return true;
     }
 } // namespace sw
 

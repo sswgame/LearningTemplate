@@ -110,7 +110,7 @@ namespace sw
          * @brief 디스크에서 읽은 바이트(@p storedBytes)를 풀고 CRC 를 맞춰 @p outBytes 에 담습니다. 동기 · 비동기 읽기가 같은 길을 씁니다.
          * @param packPath 실패 로그에 적을 팩 경로
          */
-        static bool decodeStoredBytes( const PackReadPlan& plan, const string& packPath, vector<uint8>& storedBytes, vector<uint8>& outBytes );
+        static bool decodeStoredBytes( const PackReadPlan& plan, string_view packPath, vector<uint8>& storedBytes, vector<uint8>& outBytes );
 
         /**
          * @brief 헤더가 말하는 인덱스 · 스트링 풀 구역이 **실제 파일 안에** 있는지 확인합니다.

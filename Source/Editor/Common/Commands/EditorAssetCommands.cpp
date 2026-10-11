@@ -178,7 +178,7 @@ namespace sw::editor
             {
                 if ( pObject == nullptr || prefabPath.empty() )
                     return false;
-                const string& mapped = ws.getGameObjectPrefabPath( pObject->getObjectID() );
+                const string_view mapped = ws.getGameObjectPrefabPath( pObject->getObjectID() );
                 if ( mapped.empty() == false && FileUtil::pathsEqualNormalized( mapped, prefabPath ) )
                     return true;
                 return false;

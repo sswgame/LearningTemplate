@@ -63,7 +63,7 @@ namespace sw::editor
             if ( EditorSelfTestMarks::isEnabled() )
                 EditorSelfTestMarks::note( ( markPrefix + "." + typeName.c_str() ).c_str() );
             if ( pTypeInfo != nullptr )
-                EditorWidgets::drawTooltip( pTypeInfo->getTooltip().c_str() );
+                EditorWidgets::drawTooltip( string{ pTypeInfo->getTooltip() }.c_str() );
         };
 
         if ( bHasFilter )
@@ -97,7 +97,7 @@ namespace sw::editor
             const TypeInfo* pTypeInfo = ( pRegistry != nullptr ) ? pRegistry->findType( typeName ) : nullptr;
             if ( pTypeInfo != nullptr && pTypeInfo->isHiddenInMenu() )
                 continue;
-            string category = ( pTypeInfo != nullptr && pTypeInfo->getCategory().empty() == false ) ? pTypeInfo->getCategory() : "General";
+            string category{ ( pTypeInfo != nullptr && pTypeInfo->getCategory().empty() == false ) ? pTypeInfo->getCategory() : string_view{ "General" } };
             mapCategorized[category].emplace_back( typeName, pTypeInfo );
         }
         for ( const auto& [category, items] : mapCategorized )
