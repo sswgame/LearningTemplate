@@ -3,11 +3,11 @@
 """
 Scripts/lint/fixer/FormatAcronymSpelling.py
 
-약어 철자 코드모드 — Pascal 낱말로 쓴 약어를 대문자로 고칩니다(AGENTS.md "Function names", 규칙 정본은 `Scripts/lint/AcronymRegistry.py`).
+약어 철자 코드모드 — Pascal 낱말로 쓴 약어를 대문자로 고칩니다(AGENTS.md "Function names", 규칙 원본은 `Scripts/lint/AcronymRegistry.py`).
 
 `UiSystem` → `UISystem`, `updateUi` → `updateUI`, `_pGpuScene` → `_pGPUScene`, `entityIds` → `entityIDs`. 이름 맨 앞의 소문자 약어(`uiSystem`)는 그대로다.
 문자열 리터럴 · 주석 · `#include` 줄 · `gv_` 전역 변수 · `SW_*` 매크로 · 서드파티 이름 · 제품 이름(`ImGui`)은 건드리지 않는다.
-서드파티 이름은 등록부의 앞머리 · 이름공간 · 이름 표(`kExternalName`)로만 가린다 — 코드모드가 외부 헤더를 직접 읽으면 기계마다 깔린 SDK 에 따라
+서드파티 이름은 레지스트리의 앞머리 · 이름공간 · 이름 표(`kExternalName`)로만 가린다 — 코드모드가 외부 헤더를 직접 읽으면 기계마다 깔린 SDK 에 따라
 같은 트리를 다르게 고친다. 사전 실행(`--report`)이 외부 헤더(`ThirdParty/` · vcpkg 설치 헤더 · Windows SDK · Vulkan SDK)를 훑어 거기에도 있는
 이름을 "의심" 으로 내면, 사람이 남의 이름(`GetCurrentProcessId` · DXGI `VendorId`)만 골라 `kExternalName` 에 올린다(`SocketId` 처럼 우리 이름이 겹친 것은 둔다).
 

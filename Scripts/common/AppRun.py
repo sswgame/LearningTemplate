@@ -6,7 +6,7 @@
 QA 러너 셋(`Scripts/qa/GoldenImages.py` · `Soak.py` · `PerfRegression.py`)이 같은 규칙을 쓴다. 규칙은 `Test/AppTest/TestAppSmoke.cpp`
 (`AppSmokeTest`)와 같다 — 종료 코드 0, `[Error]` 0 줄, 백엔드가 없거나 드라이버가 기능을 안 주면 그 판은 결함이 아니라 환경이다.
 
-자원은 **밖에서** 잰다(엔진은 주기적으로 메모리 · 핸들을 남기지 않는다): Windows 는 `GetProcessMemoryInfo` · `GetProcessHandleCount` ·
+자원은 **밖에서** 측정한다(엔진은 주기적으로 메모리 · 핸들을 남기지 않는다): Windows 는 `GetProcessMemoryInfo` · `GetProcessHandleCount` ·
 `GetGuiResources`, 리눅스는 `/proc/<pid>/status` · `/proc/<pid>/fd`. 외부 패키지(psutil)는 쓰지 않는다.
 """
 
@@ -53,7 +53,7 @@ _kProfileWallRe = re.compile(r"\[Profile\] wall\s+(\d+) frames in (\d+) ms\s+=\s
 
 @dataclass
 class ResourceSample:
-    """프로세스 자원 한 번 잰 값."""
+    """프로세스 자원 한 번 측정한 값."""
 
     seconds: float
     privateBytes: int
@@ -128,7 +128,7 @@ def loadGameTable(repositoryRoot: Path) -> dict:
 # 프로세스 자원
 # ------------------------------------------------------------------------------
 def sampleProcessResources(process: subprocess.Popen, startSeconds: float) -> ResourceSample | None:
-    """도는 프로세스의 자원을 한 번 잽니다. 이미 끝났거나 잴 수 없으면 None 입니다."""
+    """도는 프로세스의 자원을 한 번 측정합니다. 이미 끝났거나 측정할 수 없으면 None 입니다."""
     if process.poll() is not None:
         return None
     elapsed = time.monotonic() - startSeconds
@@ -188,7 +188,7 @@ def runApp(appPath: Path, listArgument: list[str], *, cwd: Path | None = None, t
            sampleIntervalSeconds: float = 0.0, echo: bool = False) -> AppRunResult:
     """
     App 을 띄워 끝날 때까지 기다립니다. 출력은 별도 스레드가 계속 읽는다(파이프가 차서 App 이 멈추지 않게).
-    `sampleIntervalSeconds` 가 0 보다 크면 그 간격으로 자원을 잰다. 시간을 넘기면 죽이고 `bTimedOut` 이다.
+    `sampleIntervalSeconds` 가 0 보다 크면 그 간격으로 자원을 측정한다. 시간을 넘기면 죽이고 `bTimedOut` 이다.
     작업 폴더는 기본으로 App 이 있는 `Bin` 이다(App 은 거기서 위로 `Resource/` 를 찾는다).
     """
     result = AppRunResult()

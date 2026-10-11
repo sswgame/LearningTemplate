@@ -16,14 +16,14 @@
 
 - `Object` 안에서 기능 의존이 몰린 곳은 `Component/{2D, 3D, Audio, Navigation, Physics}`(기능 컴포넌트)와 `GameObject/`(Graphics 10 · Physics 7 · Audio 2)다.
   `GameObject` 가 기능 폴더를 직접 아는 것이 진짜 문제다 — 컴포넌트 모델의 코어가 렌더 · 물리 · 내비를 include 한다.
-- `Engine/` 은 소스 559개 · 헤더 포함 약 1,160개, Debug `Engine.dll` 은 약 18 MB 다. 재링크 시간은 아직 재지 않았다(아래 0 단계).
+- `Engine/` 은 소스 559개 · 헤더 포함 약 1,160개, Debug `Engine.dll` 은 약 18 MB 다. 재링크 시간은 아직 측정하지 않았다(아래 0 단계).
 - 폴더 그래프는 사이클 0 이고 게이트 티어 표는 계산값과 같다(2026-10-11). `Resource` 의 기능 캐시 배선 예외는 등록 반전(`SW_BUILT_IN_ASSET_CACHE`)으로 없어졌다 — 남은 배선 예외는 `ReflectGenerated.h` 하나다.
 - Core 층 정리와 Engine 폴더 재배치(1 ~ 7)는 끝났다([Core README](../../Source/Core/README.md) · 결정 기록).
 
 ## 단계
 
 ### 0. 기준 측정 (먼저)
-- Engine 안에서 `Graphics` 한 파일 · `UI` 한 파일 · `Object` 한 파일을 고쳤을 때 Release 증분 빌드 시간(컴파일 + 재링크)을 3회씩 잰다. 표는 [검증과 측정](../08_Verification.md) 형식.
+- Engine 안에서 `Graphics` 한 파일 · `UI` 한 파일 · `Object` 한 파일을 고쳤을 때 Release 증분 빌드 시간(컴파일 + 재링크)을 3회씩 측정한다. 표는 [검증과 측정](../08_Verification.md) 형식.
 - 분할 뒤 같은 세 경우와 비교한다. 이득이 재링크 시간에서 나오지 않으면 3 단계(DLL 승격)는 하지 않는다.
 
 ### 0-3. Engine 폴더 재배치 — 남은 판단

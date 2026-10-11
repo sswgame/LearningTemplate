@@ -2,7 +2,7 @@
 
 LLVM(컴파일러), Ninja(빌드 도구), vcpkg(패키지 매니저) 등 엔진을 빌드하기 위해 필요한 **외부 도구(툴체인)들을 탐색하고 자동으로 다운로드/설치**하는 스크립트 모음입니다.
 
-정본(JSON · `Constants.py`)에서 CMake 파일이나 헤더를 **만들어 내는** 스크립트는 여기 두지 않는다 — `Scripts/generate/` 에 있다
+원본(JSON · `Constants.py`)에서 CMake 파일이나 헤더를 **만들어 내는** 스크립트는 여기 두지 않는다 — `Scripts/generate/` 에 있다
 (`GenerateToolchainCMake.py` 는 이 폴더가 쓴 toolchain_config.json 을 읽지만, 하는 일이 생성이라 그쪽이다).
 
 ## ⚠️ 실행 시점
@@ -32,7 +32,7 @@ LLVM(컴파일러), Ninja(빌드 도구), vcpkg(패키지 매니저) 등 엔진�
 - **WSL 의 sccache 적중은 빈 의존 파일(.d)을 남길 수 있다** — 적중한 오브젝트의 `ninja -t deps` 가 `#deps 0` 이면 그 TU 의 소스 · 헤더를 고쳐도 `ninja: no work to do`
   다(유니티 TU 에서 봤다). 낡은 빌드가 의심되면 그 오브젝트를 지우거나 `SCCACHE_RECACHE=1` 로 다시 짓는다.
 - **LLVM 을 다시 깔면 PCH 가 전부 낡는다**(`… has been modified since the precompiled header was built`). `.pch` 와 짝 `cmake_pch.cxx.obj` 를 같이 지운다(`SetupLlvm.py` 가 한다).
-- **오랜만에 쓰는 WSL 클론은 많이 뒤처져 있을 수 있습니다.** 실패가 이번 변경 탓인지 보려면 패치 없는 HEAD 로 기준선을 먼저 잽니다. 클론은 `git fetch … main` 뒤 `git reset --hard FETCH_HEAD` 로 맞추고 stash 를 쌓지 않습니다.
+- **오랜만에 쓰는 WSL 클론은 많이 뒤처져 있을 수 있습니다.** 실패가 이번 변경 탓인지 보려면 패치 없는 HEAD 로 기준선을 먼저 측정합니다. 클론은 `git fetch … main` 뒤 `git reset --hard FETCH_HEAD` 로 맞추고 stash 를 쌓지 않습니다.
   리눅스 전용 파일은 Windows 빌드가 컴파일하지 않으므로 고쳤으면 반드시 WSL 에서 빌드합니다.
 - **vcpkg 기준선을 올리면 WSL 클론의 `Tools/vcpkg` 도 그 커밋으로 옮기고 다시 부트스트랩합니다**(`git -C Tools/vcpkg fetch origin` → `checkout <기준선>` → `./bootstrap-vcpkg.sh`).
   안 하면 configure 가 `no version database entry` 로 죽습니다. 포트가 빠지는 기준선이면 `-DSW_VCPKG_FORCE_INSTALL=ON` 이 한 번 필요합니다(WSL 클론은 워크트리를 나누지 않는다).

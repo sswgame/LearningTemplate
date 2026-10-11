@@ -11,7 +11,7 @@ CMake 캐시 옵션 · 사용자 설정 스키마)에서 만들고, 이 게이�
 검사 규칙:
 - `docs/Config/` 의 파일이 생성 결과와 같다 — 없는 파일 · 다른 파일 · 생성하지 않는 남은 파일은 위반
 - `Config/` 의 모든 파일 · `Resource/` 의 설정 XML · `Source/` 의 모듈 매니페스트가 목록의 어느 줄에 맞는다
-- 목록의 줄이 가리키는 리플렉션 구조체 · `ConfigKeyDoc` 표 · 정본 문서가 있다(선택 줄이 아니면 맞는 파일도 있어야 한다)
+- 목록의 줄이 가리키는 리플렉션 구조체 · `ConfigKeyDoc` 표 · 원본 문서가 있다(선택 줄이 아니면 맞는 파일도 있어야 한다)
 - 설정 칸 · 명령줄 줄 · 전역 변수의 설명이 비어 있지 않다
 
   python Scripts/lint/gate/CheckConfigReference.py [--root <repo>]

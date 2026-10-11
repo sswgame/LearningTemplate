@@ -9,7 +9,7 @@ CTest 의 `lint` 라벨은 configure 한 빌드 폴더가 있어야 돈다. CI �
 
 **시간 상한.** 린트마다 CTest TIMEOUT(`timeoutSeconds`)이 이미 있다. 그 **절반**을 넘기면 경고한다 — 느린 기계에서 곧 시간 초과로 질
 린트다. 상한을 따로 적은 표는 두지 않는다(표가 둘이면 어긋난다).
-`--hook-sample 1,10` 은 커밋 훅을 **임시 인덱스**(`GIT_INDEX_FILE`)로 흉내 내 staged 파일 수별 시간을 잰다 — 진짜 인덱스 · 작업 트리는
+`--hook-sample 1,10` 은 커밋 훅을 **임시 인덱스**(`GIT_INDEX_FILE`)로 흉내 내 staged 파일 수별 시간을 측정한다 — 진짜 인덱스 · 작업 트리는
 건드리지 않는다.
 
   py -3 Scripts/lint/RunLintSuite.py [--root <repo>] [--build-dir <dir>] [--json <out>] [--hook-sample 1,10]
@@ -34,9 +34,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))      # Scripts — 
 from common import getCpuCount, getProjectRoot, mapConcurrent, runGit, runProcess  # noqa: E402
 from LintCatalog import LintTarget, discoverLintTargets  # noqa: E402
 
-#: 경고 문턱 — CTest TIMEOUT 의 이 비율을 넘기면 경고한다.
+#: 경고 임계값 — CTest TIMEOUT 의 이 비율을 넘기면 경고한다.
 kWarnTimeoutRatio = 0.5
-#: 훅 시간 경고 문턱(초) — staged 파일 수 → 상한. 8 코어 개발 PC 에서 잰 값의 두 배쯤이다. CI 첫 기록을 보고 고친다.
+#: 훅 시간 경고 임계값(초) — staged 파일 수 → 상한. 8 코어 개발 PC 에서 측정한 값의 두 배쯤이다. CI 첫 기록을 보고 고친다.
 kHookBudgetSeconds: dict[int, float] = {1: 8.0, 10: 12.0, 100: 20.0}
 #: 훅 표본 — 이 폴더의 C++ 파일을 이름순으로 앞에서부터 고른다(결정적이다. 셰이더는 고르지 않는다 — 훅이 쿠킹을 부른다).
 _kHookSampleRoot = "Source/Engine"
