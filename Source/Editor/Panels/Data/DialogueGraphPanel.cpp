@@ -20,6 +20,7 @@
 
 #include "Engine/Dialogue/DialogueCursor.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
+#include "Engine/Localization/LocText.h"
 
 #include <imgui.h>
 #include <imgui-node-editor/imgui_node_editor.h>
@@ -126,14 +127,17 @@ namespace sw::editor
                     addNode( info._type );
                     notifyDocumentEdited( "Add Dialogue Node" );
                 }
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorDialogueGraph", "AddNodeTip", "Add a node of this type to the graph. You can also right-click empty canvas to search for one." ) );
                 ImGui::SameLine();
             }
             EditorWidgets::drawToolbarSeparator();
             if ( ImGui::Button( "Save" ) )
                 (void)saveGraphData(); // 실패는 저장 커맨드가 알린다
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorDialogueGraph", "SaveTip", "Write the dialogue graph and its node layout to the asset file." ) );
             ImGui::SameLine();
             if ( ImGui::Button( "Reload" ) )
                 reloadDocument();
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorDialogueGraph", "ReloadTip", "Reload the graph from disk, discarding unsaved edits." ) );
             ImGui::SameLine();
             if ( ImGui::Button( "Reset Default" ) )
             {
@@ -143,9 +147,11 @@ namespace sw::editor
                 _nodeGraph.requestContentFit();
                 notifyDocumentEdited( "Reset Dialogue Graph" );
             }
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorDialogueGraph", "ResetDefaultTip", "Replace the whole graph with the sample conversation." ) );
             ImGui::SameLine();
             if ( ImGui::Button( "Zoom Fit" ) )
                 _nodeGraph.requestContentFit();
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorDialogueGraph", "ZoomFitTip", "Zoom and pan the canvas so every node is visible." ) );
             drawPreviewToolbar();
 
             ImGui::SameLine();
@@ -166,7 +172,7 @@ namespace sw::editor
         if ( beginGraphCanvas( "DialogueGraphCanvas", EditorPaths::kDialogueGraphCanvasFileName ) == false )
         {
             if ( _nodeGraph.hasContext() == false )
-                ImGui::TextUnformatted( "Failed to create Dialogue Node Editor context." );
+                ImGui::TextUnformatted( SW_LOCTEXT( "EditorDialogueGraph", "ContextCreateFailed", "Failed to create Dialogue Node Editor context." ) );
             EditorChrome::endSection();
             return;
         }
@@ -379,15 +385,19 @@ namespace sw::editor
             _bPreviewPlaying                = SW_TRUE;
             enterPreviewNode( asset, pStart != nullptr ? pStart->_id : 0 );
         }
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorDialogueGraph", "PlayPreviewTip",
+                                                "Run the conversation from the Start node and show each line in the viewport. Lines advance on their own; choices and conditions wait for the buttons that appear." ) );
         ImGui::SameLine();
         if ( ImGui::Button( "Advance Preview" ) )
             previewStep( DialogueStepInput{} );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorDialogueGraph", "AdvancePreviewTip", "Move the preview to the next node without waiting." ) );
         ImGui::SameLine();
         if ( ImGui::Button( "Stop Preview" ) )
         {
             _bPreviewPlaying = SW_FALSE;
             _previewNodeID   = 0;
         }
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorDialogueGraph", "StopPreviewTip", "End the preview." ) );
         if ( _previewNodeID <= 0 )
             return;
 
@@ -413,6 +423,7 @@ namespace sw::editor
                     input._choiceIndex = choiceIndex;
                     previewStep( input );
                 }
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorDialogueGraph", "PreviewChoiceTip", "Pick this choice and follow its link." ) );
             }
         }
         if ( pInfo->_flow == DialogueNodeFlow::Condition )
@@ -424,9 +435,11 @@ namespace sw::editor
                 input._bConditionMet = true;
                 previewStep( input );
             }
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorDialogueGraph", "PreviewTrueTip", "Treat the condition as met and follow the True link." ) );
             ImGui::SameLine();
             if ( ImGui::SmallButton( "False" ) )
                 previewStep( DialogueStepInput{} );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorDialogueGraph", "PreviewFalseTip", "Treat the condition as not met and follow the False link." ) );
         }
     }
 
@@ -569,7 +582,7 @@ namespace sw::editor
 
         const ImVec4 headerColor( pInfo->_color._x, pInfo->_color._y, pInfo->_color._z, pInfo->_color._w );
         if ( pInfo->_bHasSpeaker )
-            ImGui::TextColored( headerColor, "[%s: %s]", pInfo->_pName, node._speaker.empty() ? "(No Speaker)" : node._speaker.c_str() );
+            ImGui::TextColored( headerColor, "[%s: %s]", pInfo->_pName, node._speaker.empty() ? SW_LOCTEXT( "EditorDialogueGraph", "NoSpeaker", "(No Speaker)" ) : node._speaker.c_str() );
         else
             ImGui::TextColored( headerColor, "[%s]", pInfo->_pName );
 
@@ -658,6 +671,7 @@ namespace sw::editor
             EditorWidgets::drawTextField( "Speaker", node._speaker );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorDialogueGraph", "SpeakerTip", "Name shown as the speaker of this line." ) );
         }
 
         switch ( info._body )
@@ -669,6 +683,7 @@ namespace sw::editor
                     node._text = textBuf.c_str();
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
                     notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorDialogueGraph", "TextTip", "The line the player reads. On a Choice node it is the prompt shown above the options." ) );
                 break;
             }
             case DialogueNodeBody::Condition:
@@ -676,7 +691,9 @@ namespace sw::editor
                 EditorWidgets::drawTextField( "Condition", node._condition );
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
                     notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
-                ImGui::TextDisabled( "Ex: boss_defeated && gold >= 10" );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorDialogueGraph", "ConditionTip",
+                                                        "Expression the game evaluates when the conversation reaches this node; true follows the True link, false the False link." ) );
+                ImGui::TextDisabled( "%s", SW_LOCTEXT( "EditorDialogueGraph", "ConditionExample", "Ex: boss_defeated && gold >= 10" ) );
                 break;
             }
             case DialogueNodeBody::Action:
@@ -684,7 +701,8 @@ namespace sw::editor
                 EditorWidgets::drawTextField( "Command", node._actionCommand );
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
                     notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
-                ImGui::TextDisabled( "Ex: give_item:potion:3" );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorDialogueGraph", "CommandTip", "Command the game runs when the conversation passes this node, written as name:argument:argument." ) );
+                ImGui::TextDisabled( "%s", SW_LOCTEXT( "EditorDialogueGraph", "CommandExample", "Ex: give_item:potion:3" ) );
                 break;
             }
             case DialogueNodeBody::None:
@@ -711,6 +729,7 @@ namespace sw::editor
                 ImGui::PopID();
                 break;
             }
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorDialogueGraph", "RemoveChoiceTip", "Remove this choice option." ) );
             ImGui::PopID();
         }
 
@@ -719,6 +738,7 @@ namespace sw::editor
             node._listChoice.push_back( "New choice option" );
             notifyDocumentEdited( "Edit Dialogue Node" );
         }
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorDialogueGraph", "AddChoiceTip", "Add an option the player can pick. Each option gets its own output pin." ) );
     }
 
     void DialogueGraphPanel::drawInputPin( int32 nodeID )
