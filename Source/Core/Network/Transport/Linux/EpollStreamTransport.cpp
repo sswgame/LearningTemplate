@@ -116,7 +116,7 @@ namespace sw
         mutable mutex                       _tableMutex;
         vector<unique_ptr<EpollConnection>> _listConnection;
         vector<uint32>                      _listFreeIndex;
-        unique_ptr<EpollLoop[]>             _arrLoop;
+        vector<unique_ptr<EpollLoop>>       _listLoop;
         int32                               _loopCount{ 0 };
         vector<uint8>                       _receiveScratchBytes; ///< 읽기 버퍼 — 루프마다 한 칸(루프 수 × `_receiveChunkBytes`, getScratch)
         StreamTransportSettings             _settings{};
@@ -200,20 +200,20 @@ namespace sw
             epoll_event event{};
             event.events   = EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLET;
             event.data.u64 = tag;
-            return epoll_ctl( _arrLoop[loopIndex]._epollFd, EPOLL_CTL_ADD, fd, &event ) == 0;
+            return epoll_ctl( _listLoop[loopIndex]->_epollFd, EPOLL_CTL_ADD, fd, &event ) == 0;
         }
 
         void wakeLoop( int32 loopIndex )
         {
             const uint64 value = 1;
-            (void)::write( _arrLoop[loopIndex]._wakeFd, &value, sizeof( value ) );
+            (void)::write( _listLoop[loopIndex]->_wakeFd, &value, sizeof( value ) );
         }
 
         void scheduleCommand( int32 loopIndex, uint32 index )
         {
             {
-                std::scoped_lock<mutex> lock{ _arrLoop[loopIndex]._commandMutex };
-                _arrLoop[loopIndex]._listCommandIndex.push_back( index );
+                std::scoped_lock<mutex> lock{ _listLoop[loopIndex]->_commandMutex };
+                _listLoop[loopIndex]->_listCommandIndex.push_back( index );
             }
             wakeLoop( loopIndex );
         }
@@ -552,7 +552,7 @@ namespace sw
 
         int32 runOnce( int32 loopIndex, int32 timeoutMilli, int64& inoutNextSweep )
         {
-            EpollLoop&  loop = _arrLoop[loopIndex];
+            EpollLoop&  loop = *_listLoop[loopIndex];
             epoll_event arrEvent[Internal::kEventBatch];
             const int32 count   = epoll_wait( loop._epollFd, arrEvent, Internal::kEventBatch, timeoutMilli );
             int32       handled = 0;
@@ -620,11 +620,14 @@ namespace sw
         state._pHandler  = pHandler;
         state._loopCount = settings._ioThreadCount > 0 ? settings._ioThreadCount : 1;
         state._bThreaded = settings._ioThreadCount > 0 ? SW_TRUE : SW_FALSE;
-        state._arrLoop   = make_unique<EpollLoop[]>( static_cast<size_t>( state._loopCount ) );
+        for ( int32 index = 0; index < state._loopCount; ++index )
+        {
+            state._listLoop.push_back( make_unique<EpollLoop>() );
+        }
         state._receiveScratchBytes.resize( static_cast<size_t>( state._loopCount ) * static_cast<size_t>( settings._receiveChunkBytes ) );
         for ( int32 index = 0; index < state._loopCount; ++index )
         {
-            EpollLoop& loop = state._arrLoop[index];
+            EpollLoop& loop = *state._listLoop[index];
             loop._epollFd   = epoll_create1( EPOLL_CLOEXEC );
             loop._wakeFd    = eventfd( 0, EFD_NONBLOCK | EFD_CLOEXEC );
             if ( loop._epollFd < 0 || loop._wakeFd < 0 || state.registerFd( index, loop._wakeFd, EpollStreamTransportInternal::kWakeTag ) == false )
@@ -639,7 +642,7 @@ namespace sw
         {
             for ( int32 index = 0; index < state._loopCount; ++index )
             {
-                state._arrLoop[index]._thread = std::thread( &State::runThread, &state, index );
+                state._listLoop[index]->_thread = std::thread( &State::runThread, &state, index );
             }
         }
         return true;
@@ -648,7 +651,7 @@ namespace sw
     void EpollStreamTransport::shutdown()
     {
         State& state = *_state;
-        if ( state._arrLoop == nullptr )
+        if ( state._listLoop.empty() )
             return;
         state._bStopping.store( true, std::memory_order_release );
         if ( state._listenFd >= 0 )
@@ -672,8 +675,8 @@ namespace sw
                 }
                 if ( bSchedule )
                 {
-                    std::scoped_lock<mutex> commandLock{ state._arrLoop[connection._loopIndex]._commandMutex };
-                    state._arrLoop[connection._loopIndex]._listCommandIndex.push_back( index );
+                    std::scoped_lock<mutex> commandLock{ state._listLoop[connection._loopIndex]->_commandMutex };
+                    state._listLoop[connection._loopIndex]->_listCommandIndex.push_back( index );
                 }
             }
         }
@@ -685,8 +688,8 @@ namespace sw
         {
             for ( int32 index = 0; index < state._loopCount; ++index )
             {
-                if ( state._arrLoop[index]._thread.joinable() )
-                    state._arrLoop[index]._thread.join(); // 루프는 열린 연결이 0 이 될 때까지 돈다
+                if ( state._listLoop[index]->_thread.joinable() )
+                    state._listLoop[index]->_thread.join(); // 루프는 열린 연결이 0 이 될 때까지 돈다
             }
         }
         else
@@ -699,12 +702,12 @@ namespace sw
         }
         for ( int32 index = 0; index < state._loopCount; ++index )
         {
-            if ( state._arrLoop[index]._epollFd >= 0 )
-                ::close( state._arrLoop[index]._epollFd );
-            if ( state._arrLoop[index]._wakeFd >= 0 )
-                ::close( state._arrLoop[index]._wakeFd );
+            if ( state._listLoop[index]->_epollFd >= 0 )
+                ::close( state._listLoop[index]->_epollFd );
+            if ( state._listLoop[index]->_wakeFd >= 0 )
+                ::close( state._listLoop[index]->_wakeFd );
         }
-        state._arrLoop.reset();
+        state._listLoop.clear();
         state._listenPort   = 0;
         state._bInitialized = SW_FALSE;
     }

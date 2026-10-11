@@ -220,6 +220,9 @@ SW_TEST_CASE( MemoryTagTest, ClearedPathCacheReturnsItsTable )
 {
     if constexpr ( sw::kMemoryTagScopesEnabled == false )
         SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+#if defined( SW_ENABLE_STL_CONTAINER )
+    SW_TEST_SKIP( "containers use std::allocator in this configuration, so sw memory tags do not see them" );
+#endif
     const sw::MemoryProfiler* pProfiler = sw::MemoryProfiler::getActive();
     if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
         SW_TEST_SKIP( "no tracking memory profiler in this host" );
@@ -245,6 +248,9 @@ SW_TEST_CASE( MemoryTagTest, PrimitiveDirtyFlagsAreTagged )
 {
     if constexpr ( sw::kMemoryTagScopesEnabled == false )
         SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+#if defined( SW_ENABLE_STL_CONTAINER )
+    SW_TEST_SKIP( "containers use std::allocator in this configuration, so sw memory tags do not see them" );
+#endif
     const sw::MemoryProfiler* pProfiler = sw::MemoryProfiler::getActive();
     if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
         SW_TEST_SKIP( "no tracking memory profiler in this host" );

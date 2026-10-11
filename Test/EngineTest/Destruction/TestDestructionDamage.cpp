@@ -221,6 +221,9 @@ SW_TEST_CASE( DestructionDamageTest, SameEventLogGivesTheSameStateOnAnotherMachi
  */
 SW_TEST_CASE( DestructionDamageTest, EventLogHashMatchesTheRecordedValueOnEveryBuild )
 {
+#if defined( SW_ENABLE_STL_CONTAINER )
+    SW_TEST_SKIP( "the recorded hash is for the default containers; the STL-container configuration only has to compile" );
+#endif
     using Internal = TestDestructionDamageInternal;
     sw::FractureAsset asset;
     SW_ASSERT_TRUE( Internal::makeWall( asset ) );
