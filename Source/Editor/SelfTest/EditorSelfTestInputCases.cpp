@@ -26,8 +26,8 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 
-// 에디터 자체 테스트 중 입력(클릭 · 타이핑 · 호버)을 흉내 내는 것들 — EditorSelfTestInput 이 다음 프레임의 ImGui 입력 큐에 넣는다.
-// 주의: 플랫폼 백엔드가 프레임마다 실제 커서를 넣을 수 있어, 누르기 · 떼기 · 호버는 그 단계마다 레이블 위로 다시 옮긴 뒤 넣는다.
+// 에디터 자체 테스트 중 입력(클릭, 타이핑, 호버)을 흉내 내는 테스트들이다. EditorSelfTestInput 이 다음 프레임의 ImGui 입력 큐에 넣는다.
+// 플랫폼 백엔드가 프레임마다 실제 커서를 넣을 수 있으므로, 누르기, 떼기, 호버는 그 단계마다 레이블 위로 다시 옮긴 뒤 넣는다.
 
 namespace sw::editor
 {
@@ -35,10 +35,10 @@ namespace sw::editor
     {
         struct EditorSelfTestInputCasesInternal
         {
-            /** @brief 툴팁 지연(ImGuiHoveredFlags_DelayShort)을 기다리는 단계의 상한입니다 — 실행기의 테스트당 상한(300)보다 작다. */
+            /** @brief 툴팁 지연(ImGuiHoveredFlags_DelayShort)을 기다리는 단계의 상한입니다. 실행기의 테스트당 상한(300)보다 작습니다. */
             static constexpr uint32 kMaxTooltipWaitStep = 240;
 
-            /** @brief 클릭 하나의 누르기 · 떼기를 레이블 위에서 넣습니다. 레이블이 없으면 false. */
+            /** @brief 클릭 하나의 누르기와 떼기를 레이블 위에서 넣습니다. 레이블이 없으면 false 입니다. */
             static bool pressOnMark( const utf8* pKey, bool bDown )
             {
                 if ( EditorSelfTestInput::moveMouseToMark( pKey ) == false )
@@ -47,28 +47,28 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 마우스를 화면 밖으로 치웁니다 — 다음 테스트의 호버를 흐리지 않게. */
+            /** @brief 마우스를 화면 밖으로 치웁니다. 다음 테스트의 호버를 흐리지 않게 하기 위해서입니다. */
             static void moveMouseAway() { EditorSelfTestInput::moveMouse( float2{ -10000.0f, -10000.0f } ); }
 
             // --------------------------------------------------------------------------------------------------
-            // input.hierarchySearchTyping — 검색 칸을 클릭하고 타이핑하면 `tag:` 필터가 걸리고, 없는 이름은 0 건 안내를 그린다
+            // input.hierarchySearchTyping: 검색 입력란을 클릭하고 타이핑하면 `tag:` 필터가 걸리고, 없는 이름은 0건 안내를 그린다
             // --------------------------------------------------------------------------------------------------
             struct TypingProbe
             {
-                string _pressDiagnosis{}; ///< 누른 프레임 뒤의 입력 대상(`describeInputTarget`) — 실패 이유에 붙인다
+                string _pressDiagnosis{}; ///< 누른 프레임 뒤의 입력 대상(`describeInputTarget`). 실패 이유에 붙인다
                 uint64 _objectID{ 0 };
                 uint32 _hintCountBefore{ 0 };
-                uint32 _phase{ 0 };      ///< 지금 단계(프레임 번호가 아니다 — 글자를 기다리는 동안 머문다)
-                uint32 _waitFrames{ 0 }; ///< 글자가 칸에 닿기를 기다린 프레임 수
+                uint32 _phase{ 0 };      ///< 현재 단계. 프레임 번호가 아니며, 글자를 기다리는 동안 머문다
+                uint32 _waitFrames{ 0 }; ///< 글자가 입력란에 도착하기를 기다린 프레임 수
 
-                /** @brief 글자가 칸에 닿기를 기다리는 최대 프레임 수입니다. */
+                /** @brief 글자가 입력란에 도착하기를 기다리는 최대 프레임 수입니다. */
                 static constexpr uint32 kMaxWaitFrames = 8;
             };
 
             /**
-             * @brief 글자가 어디로 가는지 가르는 상태 한 줄입니다 — 활성 위젯 · 레이블 위젯 · 호버 위젯 · 호버 창 · 글자 입력 요구.
-             * @details 활성 위젯이 레이블 위젯과 같은데 글자가 안 닿으면 글자 주입 경로가, 다르면 클릭이 칸을 잡지 못한 것이다(호버 창이 다른 창이면
-             *          그 창이 가로챘다 — 도킹 구분선(d077a5252) · 처음부터 열린 떠 있는 창).
+             * @brief 글자가 어디로 가는지 구분하는 상태 한 줄을 만듭니다. 활성 위젯, 레이블 위젯, 호버 위젯, 호버 창, 글자 입력 요구를 담습니다.
+             * @details 활성 위젯이 레이블 위젯과 같은데 글자가 도착하지 않으면 글자 주입 경로가 문제이고, 다르면 클릭이 입력란을 잡지 못한 것이다. 호버 창이 다른 창이면
+             *          그 창이 가로챈 것이다. 도킹 구분선이나 처음부터 열려 있던 떠 있는 창이 그 예다.
              */
             static string describeInputTarget( const utf8* pMarkKey )
             {
@@ -93,7 +93,7 @@ namespace sw::editor
             static void finishTyping( HierarchyPanel* pHierarchy, GameObjectManager* pManager )
             {
                 TypingProbe& probe = getTypingProbe();
-                ImGui::ClearActiveID(); // 검색 칸의 입력 상태를 놓는다 — 다음 테스트의 키가 이리 오지 않게
+                ImGui::ClearActiveID(); // 검색 입력란의 입력 상태를 놓는다. 다음 테스트의 키가 이리 오지 않게 한다
                 if ( pHierarchy != nullptr )
                     pHierarchy->setFilterText( "" );
                 EditorContext* pContext = EditorContext::get();
@@ -131,12 +131,12 @@ namespace sw::editor
                         probe._objectID = pObj->getObjectID();
                         pHierarchy->setFilterText( "" );
                         ++probe._phase;
-                        return EditorSelfTestStep::Continue; // 패널이 한 번 그려져 레이블이 생기게
+                        return EditorSelfTestStep::Continue; // 패널이 한 번 그려져 레이블이 생기게 한다
                     }
                     case 1:
                     case 5:
                     {
-                        // 검색 칸을 누른다(InputText 는 누를 때 잡힌다). 두 번째(5)는 지운 칸을 다시 잡는다.
+                        // 검색 입력란을 누른다(InputText 는 누를 때 잡힌다). 두 번째(5)는 지운 입력란을 다시 잡는다.
                         if ( context.expect( pressOnMark( "hierarchy.filter", true ), "the hierarchy search field left no mark" ) == false )
                         {
                             finishTyping( pHierarchy, pManager );
@@ -162,15 +162,15 @@ namespace sw::editor
                     }
                     case 4:
                     {
-                        // 글자 사건은 마우스 사건과 같은 프레임에 들면 ImGui 가 다음 프레임으로 흘려 보낸다(io.ConfigInputTrickleEventQueue) — 몇 프레임 기다린다.
+                        // 글자 이벤트가 마우스 이벤트와 같은 프레임에 들어오면 ImGui 가 다음 프레임으로 흘려 보낸다(io.ConfigInputTrickleEventQueue). 그래서 몇 프레임 기다린다.
                         if ( pHierarchy->getFilterText() != "tag:SwSelfTest" && probe._waitFrames < TypingProbe::kMaxWaitFrames )
                         {
                             ++probe._waitFrames;
                             return EditorSelfTestStep::Continue;
                         }
                         probe._waitFrames = 0;
-                        // 글자가 든 프레임에 패널이 칸 → 트리 순으로 그렸다. 칸에 닿았는지 · 필터가 탐침을 찾았는지 본다.
-                        // 실패하면 이유에 누른 뒤 · 지금의 입력 대상을 붙인다 — 실행 한 번으로 "클릭이 칸을 못 잡았다" 와 "글자가 안 들어갔다" 가 갈린다.
+                        // 글자가 들어온 프레임에 패널이 입력란, 트리 순서로 그렸다. 글자가 입력란에 도착했는지, 필터가 프로브를 찾았는지 확인한다.
+                        // 실패하면 이유에 누른 뒤와 현재의 입력 대상을 붙인다. 실행 한 번으로 "클릭이 입력란을 못 잡았다" 와 "글자가 안 들어갔다" 를 구분할 수 있다.
                         string what{ "typing did not reach the search field [after press: " };
                         what += probe._pressDiagnosis;
                         what += " | now: ";
@@ -178,7 +178,7 @@ namespace sw::editor
                         what += "]";
                         (void)context.expect( pHierarchy->getFilterText() == "tag:SwSelfTest", what.c_str() );
                         (void)context.expect( pHierarchy->getVisibleRootCount() == 1, "the typed tag filter did not find the probe object" );
-                        // 지우고 없는 이름을 친다 — 입력 중인 칸은 ImGui 가 든 글을 쓰므로 먼저 놓고 지운 뒤 다시 누른다.
+                        // 지우고 없는 이름을 입력한다. 입력 중인 입력란은 ImGui 가 가진 텍스트를 쓰므로, 먼저 놓고 지운 뒤 다시 누른다.
                         ImGui::ClearActiveID();
                         pHierarchy->setFilterText( "" );
                         ++probe._phase;
@@ -208,7 +208,7 @@ namespace sw::editor
             }
 
             // --------------------------------------------------------------------------------------------------
-            // input.tooltipOnHover — 마우스를 버튼 위에 두면 툴팁 창이 뜬다(EditorWidgets::drawTooltip 의 지연 포함)
+            // input.tooltipOnHover: 마우스를 버튼 위에 두면 툴팁 창이 뜬다. EditorWidgets::drawTooltip 의 지연도 포함한다
             // --------------------------------------------------------------------------------------------------
             static bool isAnyTooltipShown()
             {
@@ -223,7 +223,7 @@ namespace sw::editor
                 return false;
             }
 
-            /** @brief 제목에 @p pTitlePart 가 든 창을 찾습니다(아이콘 글자가 붙은 제목). 없으면 nullptr. */
+            /** @brief 제목에 @p pTitlePart 가 들어 있는 창을 찾습니다. 아이콘 문자가 붙은 제목도 찾습니다. 없으면 nullptr 입니다. */
             static ImGuiWindow* findWindowByTitlePart( const utf8* pTitlePart )
             {
                 const ImGuiContext* pImGui = ImGui::GetCurrentContext();
@@ -239,8 +239,8 @@ namespace sw::editor
 
             static EditorSelfTestStep runTooltipOnHover( EditorSelfTestContext& context )
             {
-                // 테스트가 그리는 창 하나 — 패널 배치와 무관하게 늘 같은 자리 · 맨 위다.
-                // 주 뷰포트 안 — 데스크톱 좌표 (40, 300) 은 창 밖일 수 있고, 그러면 창이 자기 플랫폼 창(뷰포트)으로 떠 호버가 실제 커서를 따른다.
+                // 테스트가 그리는 창 하나다. 패널 배치와 무관하게 항상 같은 위치이고 맨 위에 있다.
+                // 주 뷰포트 안에 둔다. 데스크톱 좌표 (40, 300) 은 창 밖일 수 있고, 그러면 창이 자기 플랫폼 창(뷰포트)으로 떠서 호버가 실제 커서를 따른다.
                 const ImGuiViewport* pMainViewport = ImGui::GetMainViewport();
                 ImGui::SetNextWindowViewport( pMainViewport->ID );
                 ImGui::SetNextWindowPos( ImVec2( pMainViewport->WorkPos.x + 40.0f, pMainViewport->WorkPos.y + 300.0f ), ImGuiCond_Always );
@@ -260,7 +260,7 @@ namespace sw::editor
 
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
-                    return EditorSelfTestStep::Continue; // 레이블이 생기게 한 번 그린다
+                    return EditorSelfTestStep::Continue; // 레이블이 생기도록 한 번 그린다
                 if ( bShown && stepIndex > 1 )
                 {
                     moveMouseAway();
@@ -272,7 +272,7 @@ namespace sw::editor
                     moveMouseAway();
                     return EditorSelfTestStep::Done;
                 }
-                // 지연 동안 마우스를 버튼 위에 둔다(실제 커서가 끼어들어도 이 프레임의 마지막 위치는 버튼이다).
+                // 지연 동안 마우스를 버튼 위에 둔다. 실제 커서가 끼어들어도 이 프레임의 마지막 위치는 버튼이다.
                 if ( EditorSelfTestInput::moveMouseToMark( "selftest.tooltipButton" ) == false )
                 {
                     (void)context.expect( false, "the probe button left no mark" );
@@ -282,9 +282,9 @@ namespace sw::editor
             }
 
             // --------------------------------------------------------------------------------------------------
-            // input.classicDarkSwatch — Classic Dark 프리셋에서 테마 대화상자의 스와치를 누르면 액센트가 바뀐다(끝에 원래 테마로 되돌린다)
+            // input.classicDarkSwatch: Classic Dark 프리셋에서 테마 대화상자의 스와치를 누르면 액센트가 바뀐다. 끝나면 원래 테마로 되돌린다
             // --------------------------------------------------------------------------------------------------
-            /** @brief 테스트 앞의 테마와 에디터 설정 파일 바이트입니다 — 스와치 클릭은 설정 파일을 다시 쓴다(saveToConfig), 끝에 바이트째 되돌린다. */
+            /** @brief 테스트 앞의 테마와 에디터 설정 파일 바이트입니다. 스와치 클릭은 설정 파일을 다시 쓰므로(saveToConfig), 끝나면 바이트째 되돌립니다. */
             struct SwatchProbe
             {
                 EditorThemeConfig _theme;
@@ -302,14 +302,14 @@ namespace sw::editor
 
             static EditorSelfTestStep runClassicDarkSwatch( EditorSelfTestContext& context )
             {
-                const Color violet{ 0.65f, 0.35f, 0.95f, 1.0f }; // EditorThemeUtil 의 셋째 스와치(Neon Violet)와 같은 값
+                const Color violet{ 0.65f, 0.35f, 0.95f, 1.0f }; // EditorThemeUtil 의 세 번째 스와치(Neon Violet)와 같은 값이다
                 switch ( context.getStepIndex() )
                 {
                     case 0:
                     {
                         SwatchProbe& probe = getSwatchProbe();
                         probe._theme       = EditorThemeUtil::getActiveTheme();
-                        // 파일이 없을 수 있다(Saved/Editor 는 git 무시 — 새 체크아웃) — 없으면 읽지 않는다(readFile 은 없는 파일을 오류로 남긴다).
+                        // 파일이 없을 수 있다. Saved/Editor 는 git 이 무시하므로 새 체크아웃에는 없다. 없으면 읽지 않는다. readFile 은 없는 파일을 오류로 남기기 때문이다.
                         const string configPath = getEditorConfigPath();
                         probe._bConfigExisted   = FileUtil::isRegularFile( configPath ) && FileUtil::readFile( configPath, probe._configBytes );
                         EditorThemeUtil::applyPreset( EditorThemePreset::ClassicDark );
@@ -318,7 +318,7 @@ namespace sw::editor
                     }
                     case 1:
                     {
-                        // 대화상자가 한 번 그려졌다(레이블이 생겼다). 떠 있는 창(자기 플랫폼 창)이어도 레이블의 뷰포트를 함께 넣으므로 클릭이 닿는다.
+                        // 대화상자가 한 번 그려져서 레이블이 생겼다. 떠 있는 창(자기 플랫폼 창)이어도 레이블의 뷰포트를 함께 넣으므로 클릭이 닿는다.
                         (void)context.expect( findWindowByTitlePart( "Theme & Look and Feel" ) != nullptr, "the theme dialog did not open" );
                         return EditorSelfTestStep::Continue;
                     }
@@ -334,7 +334,7 @@ namespace sw::editor
                     }
                     case 4:
                     {
-                        (void)pressOnMark( "theme.swatch.violet", false ); // 버튼은 뗄 때 눌린다 — 떼는 자리도 스와치 위여야 한다
+                        (void)pressOnMark( "theme.swatch.violet", false ); // 버튼은 뗄 때 눌린다. 떼는 위치도 스와치 위여야 한다
                         return EditorSelfTestStep::Continue;
                     }
                     case 5:
@@ -351,14 +351,14 @@ namespace sw::editor
                         break;
                     }
                 }
-                // 되돌리기 — 사용자의 에디터 설정에 테스트의 테마가 남지 않게. 메모리(활성 설정)는 저장으로, 파일은 원래 바이트로(저장기가 줄끝 · 끝 줄바꿈을 바꾼다).
+                // 되돌린다. 사용자의 에디터 설정에 테스트의 테마가 남지 않게 하기 위해서다. 메모리(활성 설정)는 저장으로, 파일은 원래 바이트로 되돌린다. 저장기가 줄 끝과 마지막 줄바꿈을 바꾸기 때문이다.
                 SwatchProbe& probe = getSwatchProbe();
                 EditorMenuBar::closeThemeDialog();
                 EditorThemeUtil::applyTheme( probe._theme );
                 EditorThemeUtil::saveToConfig();
                 if ( probe._bConfigExisted && FileUtil::writeFile( getEditorConfigPath(), probe._configBytes.data(), probe._configBytes.size() ) == false )
                     (void)context.expect( false, "could not restore the editor config file" );
-                // 원래 없던 파일은 지운다 — 못 지우면 테스트 테마가 사용자 설정에 남으므로 위 쓰기 실패처럼 테스트 실패로 알린다.
+                // 원래 없던 파일은 지운다. 지우지 못하면 테스트 테마가 사용자 설정에 남으므로 위의 쓰기 실패처럼 테스트 실패로 알린다.
                 if ( probe._bConfigExisted == false && FileUtil::removeFile( getEditorConfigPath() ) == false )
                     (void)context.expect( false, "could not remove the editor config file the test created" );
                 probe = SwatchProbe{};
@@ -367,7 +367,7 @@ namespace sw::editor
             }
 
             // --------------------------------------------------------------------------------------------------
-            // hierarchy.visibilityToggleFits — Hierarchy 가시성 토글이 아이콘을 담는다(폭이 글꼴 · DPI 배율을 따른다)
+            // hierarchy.visibilityToggleFits: Hierarchy 가시성 토글이 아이콘을 담을 수 있다. 폭이 글꼴과 DPI 배율을 따른다
             // --------------------------------------------------------------------------------------------------
             static uint64& getToggleProbeObjectID()
             {
@@ -387,7 +387,7 @@ namespace sw::editor
                 const uint32    stepIndex  = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
-                    // 줄이 하나는 있어야 토글이 그려진다 — 빈 씬에서도 돌게 하나 만들고, 앞 테스트가 남긴 검색어를 지운다(걸러지면 줄이 없다).
+                    // 행이 하나는 있어야 토글이 그려진다. 빈 씬에서도 실행되도록 하나 만들고, 앞 테스트가 남긴 검색어를 지운다. 걸러지면 행이 없다.
                     if ( pHierarchy != nullptr )
                         pHierarchy->setFilterText( "" );
                     GameObject* pObj = pManager->createGameObject( hashed_string( "EditorSelfTestToggle" ) );
@@ -397,7 +397,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Continue;
                 }
 
-                // 앞 테스트가 연 창이 Hierarchy 를 가렸을 수 있다 — 몇 프레임은 레이블을 기다린다.
+                // 앞 테스트가 연 창이 Hierarchy 를 가렸을 수 있으므로 몇 프레임은 레이블을 기다린다.
                 constexpr uint32   kMaxMarkWaitStep = 10;
                 EditorSelfTestMark mark{};
                 const bool         bMarked = EditorSelfTestMarks::find( "hierarchy.activeToggle", mark );
@@ -426,7 +426,7 @@ namespace sw::editor
             }
 
             // --------------------------------------------------------------------------------------------------
-            // hierarchy.selectedRowLeavesTheToggleVisible — 고른 줄의 선택 배경 · 클릭 영역이 가시성 토글을 덮지 않는다
+            // hierarchy.selectedRowLeavesTheToggleVisible: 선택한 행의 선택 배경과 클릭 영역이 가시성 토글을 덮지 않는다
             // --------------------------------------------------------------------------------------------------
             static uint64& getRowProbeObjectID()
             {
