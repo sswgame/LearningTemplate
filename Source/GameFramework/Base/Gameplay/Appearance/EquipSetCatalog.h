@@ -1,7 +1,7 @@
 /**
  * @file EquipSetCatalog.h
- * @brief 장비 세트 — 칸별 장비 목록(한 번에 입힘), 몸 종류(성별 · 종족)별 변형, 세트를 다 갖추면 한 외형으로 바꾸는 "세트 완성 표현" 입니다.
- * @details 세트 효과 같은 수치는 게임플레이(어빌리티 시스템) 몫이라 여기 두지 않습니다.
+ * @brief 장비 세트입니다. 슬롯별 장비 목록(한 번에 입힘), 몸 종류(성별, 종족)별 변형, 세트를 모두 갖추면 한 외형으로 바꾸는 "세트 완성 표현" 을 담습니다.
+ * @details 세트 효과 같은 수치는 게임플레이(어빌리티 시스템)가 맡으므로 여기에 두지 않는다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -17,7 +17,7 @@ namespace sw
     class AppearanceLoadReport;
     class XMLNode;
 
-    /** @brief 세트 조각 — 칸 하나와 그 칸에서 조각으로 치는 아이템들(첫 것이 세트를 입힐 때 고르는 것)입니다. */
+    /** @brief 세트 조각입니다. 슬롯 하나와, 그 슬롯에서 조각으로 인정하는 아이템 목록을 담습니다. 목록의 첫 아이템이 세트를 입힐 때 고르는 아이템입니다. */
     struct EquipSetPieceDef
     {
         vector<hashed_string> _listItem{};
@@ -27,7 +27,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 몸 종류 변형 — 같은 칸의 조각을 바꿉니다. */
+    /** @brief 몸 종류 변형입니다. 같은 슬롯의 조각을 바꿉니다. */
     struct EquipSetVariantDef
     {
         vector<EquipSetPieceDef> _listPiece{};
@@ -42,9 +42,9 @@ namespace sw
     {
         vector<EquipSetPieceDef>   _listPiece{};
         vector<EquipSetVariantDef> _listVariant{};
-        vector<hashed_string>      _listCompleteSlot{}; ///< 세트 완성 표현이 대신하는 칸(첫 칸이 그 외형을 가진다)
+        vector<hashed_string>      _listCompleteSlot{}; ///< 세트 완성 표현이 대신하는 슬롯(첫 슬롯이 그 외형을 가진다)
         hashed_string              _id{};
-        hashed_string              _completeVisual{}; ///< 세트 완성 표현 외형 — 비면 없음
+        hashed_string              _completeVisual{}; ///< 세트 완성 표현의 외형. 비어 있으면 없음
     };
 } // namespace sw
 
@@ -53,8 +53,8 @@ namespace sw
     /**
      * @class EquipSetCatalog
      * @brief `<EquipSetCatalog><Set id="Recon"><Piece slot="Head" items="recon_helmet"/><Variant bodyType="Female"><Piece slot="Body" items="recon_vest_f"/></Variant>
-     *        <Complete visual="recon_full" slots="Head,Body"/></Set></EquipSetCatalog>` 입니다.
-     * @details 장착 조건(`Equipment`)에는 `IEquipSetLookup` 으로 세트 정보를 빌려 줍니다.
+     *        <Complete visual="recon_full" slots="Head,Body"/></Set></EquipSetCatalog>` 형식으로 읽습니다.
+     * @details 장착 조건(`Equipment`)에는 `IEquipSetLookup` 으로 세트 정보를 넘겨 준다. 소유권은 넘기지 않는다.
      */
     class SW_GF_API EquipSetCatalog : public IEquipSetLookup
     {
@@ -64,11 +64,11 @@ namespace sw
 
         const EquipSetDef*         findSet( const hashed_string& id ) const;
         const vector<EquipSetDef>& getSets() const { return _listSet; }
-        /** @brief @p bodyType 의 조각 목록(기본 조각에 몸 변형을 칸별로 덮은 것)입니다. */
+        /** @brief @p bodyType 의 조각 목록입니다. 기본 조각에 몸 변형을 슬롯별로 덮어쓴 결과입니다. */
         void computePieces( const EquipSetDef& def, const hashed_string& bodyType, vector<EquipSetPieceDef>& outListPiece ) const;
 
         /**
-         * @brief 칸 → 아이템 조회(@p findItemInSlot( slot ) → 아이템 id, 비면 없음)로 조각 수를 셉니다. 외형 해석과 장착 조건이 같은 계산을 씁니다.
+         * @brief 슬롯에서 아이템을 찾는 함수(@p findItemInSlot( slot ) → 아이템 id, 비어 있으면 없음)로 조각 수를 셉니다. 외형 해석과 장착 조건이 같은 계산을 씁니다.
          */
         template <typename TFindItem>
         EquipSetProgress computeProgressWith( const EquipSetDef& def, const hashed_string& bodyType, TFindItem&& findItemInSlot ) const

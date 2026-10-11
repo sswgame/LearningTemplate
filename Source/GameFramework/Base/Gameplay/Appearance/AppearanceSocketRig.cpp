@@ -17,7 +17,7 @@ namespace sw
             static constexpr const utf8* kDefaultSocketKinds = "engine/character/default.socketkinds.xml";
             static constexpr const utf8* kRigidRootBone      = "root";
 
-            /** @brief 몸 부품 — 주인이 빈 첫 스킨드 부품입니다. 없으면 -1 입니다. */
+            /** @brief 몸 부품입니다. 주인이 비어 있는 첫 스킨드 부품이며, 없으면 -1 입니다. */
             static int32 findBodyPart( const ResolvedAppearance& resolved )
             {
                 for ( size_t partIndex = 0; partIndex < resolved._listPart.size(); ++partIndex )
@@ -94,7 +94,7 @@ namespace sw
         _listPartUnit.assign( resolved._listPart.size(), kNoUnit );
         bool bSucceeded = true;
 
-        // 유닛 0 = 몸. 소켓 에셋이 없어도 자리를 둔다(덮어쓰기만으로 소켓이 생길 수 있다).
+        // 유닛 0 은 몸이다. 소켓 에셋이 없어도 유닛을 만든다. 덮어쓰기만으로 소켓이 생길 수 있기 때문이다.
         const int32 bodyPart = AppearanceSocketRigInternal::findBodyPart( resolved );
         SocketSet   bodySockets;
         if ( bodyPart >= 0 )
@@ -113,7 +113,7 @@ namespace sw
         if ( _table.addUnit( hashed_string{}, kBodyUnit, bodySockets, bodyBindBones, nullptr, pOutError ) == false )
             bSucceeded = false;
 
-        // 부품 유닛 — 소켓 에셋을 가진 부품마다 하나(강체: 본 "root" 하나). 이름은 주인 이름이 앞에 붙는다.
+        // 부품 유닛은 소켓 에셋을 가진 부품마다 하나이다(강체이며 본 "root" 하나). 이름 앞에는 주인 이름이 붙는다.
         for ( size_t partIndex = 0; partIndex < resolved._listPart.size(); ++partIndex )
         {
             const ResolvedPart& part = resolved._listPart[partIndex];
@@ -154,7 +154,7 @@ namespace sw
         float4x4                  socketInUnit;
         if ( _table.computeUnitTransform( target, unitBones, socketInUnit ) == false )
             return false;
-        // 행벡터 — 배치 오프셋은 소켓 공간에서 먼저 적용된다.
+        // 행벡터 규약이므로 배치 오프셋이 소켓 공간에서 먼저 적용된다.
         outInUnit = makePlacementTransform( placement ) * socketInUnit;
         return true;
     }
@@ -194,7 +194,7 @@ namespace sw
             def._translation = socketOverride._placement._offset;
             def._rotation    = quaternion::makeFromYawPitchRoll( socketOverride._placement._rotation * MathUtil::kDegreeToRadian );
             def._fieldMask   = SocketFieldBit::kTranslation | SocketFieldBit::kRotation;
-            // 부모 후보는 본 또는 몸 소켓 이름 — 소켓이면 그 소켓의 부모 본을 따른다(소켓 위 소켓은 표가 풀지 않는다).
+            // 부모 후보는 본 이름이거나 몸 소켓 이름이다. 소켓이면 그 소켓의 부모 본을 따른다. 소켓 위의 소켓은 테이블이 해석하지 않는다.
             for ( const hashed_string& candidate : socketOverride._placement._listSocket )
             {
                 const SocketDef* pExisting = inoutBodySockets.findSocket( candidate );

@@ -38,7 +38,7 @@ namespace sw
                 { func( *pMesh ); } );
             }
 
-            /** @brief 메시에 머티리얼 값을 겁니다 — 메시 몫 인스턴스(없으면 메시의 머티리얼에서 새로)에 넣습니다. */
+            /** @brief 메시에 머티리얼 값을 적용합니다. 메시 전용 인스턴스에 넣고, 없으면 메시의 머티리얼에서 새로 만듭니다. */
             static void applyParameter( MeshComponent& mesh, const ResolvedMaterialValue& value )
             {
                 shared_ptr<MaterialInstance> instance = mesh.getMaterialInstance();
@@ -165,7 +165,7 @@ namespace sw
         GameObjectManager* pManager = findManager();
         if ( pManager == nullptr )
             return;
-        // 메시 보임은 렌더 상태다 — 틱 안이면 틱 뒤에 건다.
+        // 메시 보임은 렌더 상태이므로, 틱 안이면 틱 뒤에 적용한다.
         const ComponentHandle self = getHandle();
         pManager->executeOrDeferPostTick( [pManager, self]()
         {
@@ -195,7 +195,7 @@ namespace sw
         GameObjectManager* pManager = findManager();
         if ( pManager == nullptr || _assembleCount == 0 )
             return false;
-        // 유닛 번호 순서의 월드 — 몸은 이 오브젝트, 부품은 그 부품 오브젝트(지난 프레임에 적용된 자리).
+        // 유닛 번호 순서의 월드이다. 몸은 이 오브젝트이고, 부품은 그 부품 오브젝트이며, 지난 프레임에 적용된 위치를 쓴다.
         vector<float4x4> listUnitWorld;
         listUnitWorld.reserve( _rig.getUnitCount() );
         for ( uint32 unitIndex = 0; unitIndex < _rig.getUnitCount(); ++unitIndex )
@@ -286,7 +286,7 @@ namespace sw
         _bodyPart = applyBodyPart( *pBody );
         CharacterPoseUtil::makeBindBones( pBody->getSkeleton(), _bodyBindBones );
         _bodyBones = _bodyBindBones;
-        (void)CharacterPoseUtil::copyUnitPose( *pBody, _bodyBones ); // 포즈가 아직 없으면 바인드 본 그대로 소켓을 구한다
+        (void)CharacterPoseUtil::copyUnitPose( *pBody, _bodyBones ); // 포즈가 아직 없으면 바인드 본 그대로 소켓을 계산한다
         string socketError;
         if ( _rig.rebuild( _resolved, _bodyBindBones, _socketCache, &socketError ) == false )
             SW_LOG_ERROR( "Appearance '%#' sockets: %#", _presetID.c_str(), socketError.c_str() );
@@ -306,7 +306,7 @@ namespace sw
             const ResolvedPart& part = _resolved._listPart[partIndex];
             if ( part._owner.empty() == false || part._kind != AppearancePartKind::Skinned )
                 continue;
-            // 스켈레톤 먼저 — 메시의 스킨 사본이 그 본 수를 본다.
+            // 스켈레톤을 먼저 적용한다. 메시의 스킨 사본이 그 본 수를 참조하기 때문이다.
             if ( string_view( body.getSkeletonPath() ) != string_view( part._skeleton.c_str() ) )
                 body.setSkeletonPath( part._skeleton.c_str() );
             if ( string_view( body.getMeshID() ) != string_view( part._asset.c_str() ) )
@@ -322,7 +322,7 @@ namespace sw
     void CharacterAppearanceComponent::syncParts( GameObjectManager& manager, SkeletalMeshComponent& body, int32 bodyPart )
     {
         using Internal = CharacterAppearanceComponentInternal;
-        // 남길 것을 고르고 없어진 것은 지운다 — 같은 부품(주인 · 이름 · 에셋)은 그 오브젝트를 그대로 쓴다(무기를 바꿔도 투구는 그대로).
+        // 남길 것을 고르고 없어진 것은 지운다. 같은 부품(주인, 이름, 에셋)은 그 오브젝트를 그대로 쓴다. 그래서 무기를 바꿔도 투구는 그대로 남는다.
         vector<SpawnedPart> listKeep;
         vector<uint8>       listPartCovered( _resolved._listPart.size(), SW_FALSE );
         for ( const SpawnedPart& spawned : _listSpawnedPart )
@@ -373,7 +373,7 @@ namespace sw
             }
             else if ( part._kind == AppearancePartKind::Skinned )
             {
-                // 몸을 리더로 따르는 스킨드 부품(옷 · 머리카락) — 몸의 자식, 자리는 몸과 같다.
+                // 몸을 리더로 따르는 스킨드 부품(옷, 머리카락)이다. 몸의 자식이 되고 위치는 몸과 같다.
                 pObject                         = manager.createGameObject( part._partName );
                 SkeletalMeshComponent* pSkinned = pObject->addComponent<SkeletalMeshComponent>();
                 pSkinned->setSkeletonPath( part._skeleton.empty() ? string_view( body.getSkeletonPath() ) : string_view( part._skeleton.c_str() ) );
@@ -382,7 +382,7 @@ namespace sw
                     pSkinned->setMaterialPath( part._material.c_str() );
                 pSkinned->setLeaderPose( static_cast<SkeletalMeshComponent*>( manager.resolveComponent( bodyHandle ) ) );
                 if ( pBodyScene != nullptr )
-                    (void)pSkinned->attachToComponent( pBodyScene, AttachRule::KeepRelative ); // 붙일 수 없는 부모면 false — 부위는 제자리에 남는다
+                    (void)pSkinned->attachToComponent( pBodyScene, AttachRule::KeepRelative ); // 붙일 수 없는 부모이면 false 이고, 그 부위는 제자리에 남는다
                 spawned._bSocketPart = SW_FALSE;
             }
             if ( pObject == nullptr )
@@ -416,7 +416,7 @@ namespace sw
                 continue;
             spawned._holderUnit            = unitIndex;
             const hashed_string socketName = part._placement._listSocket.empty() ? hashed_string{} : part._placement._listSocket[0];
-            // 같은 holder · 소켓이면 자리만 고친다(다시 붙이면 되돌아가기 블렌드가 끊긴다).
+            // 같은 holder 와 소켓이면 위치만 고친다. 다시 붙이면 되돌아가기 블렌드가 끊기기 때문이다.
             if ( pBinding->getState() == SocketBindingState::Bound && pBinding->getHolder() == pHolder->getHandle() && pBinding->getSocketName() == socketName )
                 pBinding->updateSocketTransform( inUnit );
             else
@@ -430,7 +430,7 @@ namespace sw
         for ( const ResolvedMaterialValue& value : _resolved._listMaterialValue )
         {
             if ( value._target != ResolvedMaterialTarget::Parameter )
-                continue; // 염색 마스크 채널 · 팔레트 칸은 그것을 읽는 머티리얼이 생기면 건다
+                continue; // 염색 마스크 채널과 팔레트 슬롯은 그것을 읽는 머티리얼이 생기면 적용한다
             if ( value._owner.empty() && ( value._part.empty() || ( _bodyPart >= 0 && _resolved._listPart[static_cast<size_t>( _bodyPart )]._partName == value._part ) ) )
                 Internal::applyParameter( body, value );
             for ( const SpawnedPart& spawned : _listSpawnedPart )
