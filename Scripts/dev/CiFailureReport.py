@@ -6,6 +6,7 @@
 
     python Scripts/dev/CiFailureReport.py tests --ctest-dir build/CI-Debug            # 진 시험: 실패 줄 · 마지막 [ RUN ] · 끝 25 줄 · 크래시 스택
     python Scripts/dev/CiFailureReport.py configure --log build/configure.log         # 구성 실패: vcpkg 가 가리킨 로그들의 끝
+    python Scripts/dev/CiFailureReport.py build --log build/build.log                 # 빌드 실패: 오류 줄(컴파일 · 링크)과 앞뒤 몇 줄, 없으면 끝 60 줄
 
 크래시 스택은 시험 실행 파일의 크래시 핸들러가 로그 폴더(`Bin/Saved/Logs/crash_<세션>.stack.txt`)에 남긴 것입니다.
 주석은 단계마다 error 10 개 · 잡마다 50 개까지 보인다(GitHub 한도) — 시험은 20 개, 로그 파일은 8 개까지만 올린다.
@@ -33,6 +34,10 @@ _kMaxStackCount = 3
 _kMaxStackChars = 4000
 _kTailLineCount = 25
 _kLogTailLineCount = 60
+# 빌드 로그에서 오류를 고르는 줄: 컴파일러 `error:`, 링커 `undefined`/`duplicate symbol`, ninja `FAILED:`/`build stopped`.
+_kBuildErrorMarker = re.compile(r"\berror\b[:\s]|\bundefined (reference|symbol)\b|duplicate symbol|^FAILED:|ninja: build stopped|\bfatal error\b")
+_kMaxBuildErrorCount = 12
+_kBuildContextLines = 2
 
 
 def escapeAnnotationInternal(text: str) -> str:
@@ -97,6 +102,28 @@ def reportConfigure(logPath: Path) -> int:
     return 0
 
 
+def reportBuild(logPath: Path) -> int:
+    lines = [_kAnsi.sub("", line) for line in readTextInternal(logPath).splitlines()]
+    listHit = [index for index, line in enumerate(lines) if _kBuildErrorMarker.search(line) is not None]
+    if not listHit:
+        emitErrorInternal("build", kNewline.join(lines[-_kLogTailLineCount:]))
+        return 0
+    listBlock: list[str] = []
+    lastEnd = -1
+    for index in listHit:
+        if len(listBlock) >= _kMaxBuildErrorCount:
+            break
+        begin = max(index - _kBuildContextLines, lastEnd + 1)
+        end = min(index + _kBuildContextLines + 1, len(lines))
+        if begin >= end:
+            continue
+        listBlock.append(kNewline.join(lines[begin:end]))
+        lastEnd = end - 1
+    for position, block in enumerate(listBlock):
+        emitErrorInternal(f"build {position + 1}/{len(listBlock)}", block)
+    return 0
+
+
 def main(listArgument: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="CI 실패를 GitHub 주석으로 올린다")
     listSub = parser.add_subparsers(dest="kind", required=True)
@@ -104,8 +131,12 @@ def main(listArgument: list[str] | None = None) -> int:
     tests.add_argument("--ctest-dir", type=Path, required=True)
     configure = listSub.add_parser("configure", help="구성(vcpkg 설치) 실패")
     configure.add_argument("--log", type=Path, required=True)
+    build = listSub.add_parser("build", help="빌드 실패")
+    build.add_argument("--log", type=Path, required=True)
     args = parser.parse_args(listArgument)
-    return reportTests(args.ctest_dir) if args.kind == "tests" else reportConfigure(args.log)
+    if args.kind == "tests":
+        return reportTests(args.ctest_dir)
+    return reportBuild(args.log) if args.kind == "build" else reportConfigure(args.log)
 
 
 if __name__ == "__main__":

@@ -217,9 +217,19 @@ jobs:
         path: ${{ github.workspace }}/build/vcpkg_cache
         key: ${{ steps.vcpkg-cache.outputs.cache-primary-key }}
 
+    # 출력을 파일로도 받는다 — 컴파일러 오류가 주석으로 안 잡히는 실패(링크 · TSan 구성)를 아래 단계가 올린다.
     - name: Build
+      id: build
+      shell: pwsh
       run: |
-        cmake --build --preset ${{ matrix.preset }}
+        cmake --build --preset ${{ matrix.preset }} 2>&1 | Tee-Object -FilePath build/build.log
+        exit $LASTEXITCODE
+
+    - name: Report build failure as annotations
+      if: failure() && steps.build.outcome == 'failure'
+      shell: bash
+      run: |
+        ${{ runner.os == 'Windows' && 'python' || 'python3' }} Scripts/dev/CiFailureReport.py build --log build/build.log
 
     # `SW_ENABLE_DEADLOCK_DETECTION` 은 어느 프리셋도 켜지 않는 옵션이라 짓지 않으면 썩는다. 구성을 따로 짓지 않고, 방금 지은 컴파일 DB 의
     # 모든 TU 를 그 정의를 더해 -fsyntax-only 로 돌린다. 오류가 있거나 검사한 TU 가 없으면 진다(경고는 컴파일러 버전마다 달라 보고만 한다).
