@@ -1,6 +1,6 @@
 /**
  * @file EditorAssetCommands.h
- * @brief 애셋 열기 / 씬 로드 / 프리팹·스프라이트 스폰 커맨드
+ * @brief 애셋 열기, 씬 로드, 프리팹과 스프라이트 스폰 커맨드를 제공합니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -19,7 +19,7 @@ namespace sw
 
 namespace sw::editor
 {
-    /** @brief Content Browser 폴더 한 항목 */
+    /** @brief Content Browser 폴더의 항목 하나입니다. */
     struct EditorFolderListingEntry
     {
         string _name;
@@ -27,7 +27,7 @@ namespace sw::editor
         string _absolutePath;
         string _extension;
         bool   _bIsDirectory{ false };
-        bool   _bReadOnly{ false }; ///< 파일이 읽기 전용이다(버전 관리 잠금 전 · 손으로 막음). 목록을 만들 때 워커가 측정한다.
+        bool   _bReadOnly{ false }; ///< 파일이 읽기 전용이다. 버전 관리가 잠그기 전이거나 사람이 막은 경우다. 목록을 만들 때 워커가 확인한다.
     };
 } // namespace sw::editor
 
@@ -35,62 +35,62 @@ namespace sw::editor
 {
     /**
      * @class EditorAssetCommands
-     * @brief Content Browser, 뷰포트 드롭, 메뉴가 공유하는 애셋 도메인 동작입니다.
+     * @brief Content Browser, 뷰포트 드롭, 메뉴가 함께 쓰는 애셋 도메인 동작입니다.
      */
     class EditorAssetCommands
     {
     public:
-        /** @brief 등록된 애셋 에디터를 열거나 씬/머티리얼을 처리합니다. */
+        /** @brief 등록된 애셋 에디터를 열거나 씬과 머티리얼을 처리합니다. */
         [[nodiscard]] static bool openPath( string_view relativePath );
         /** @brief 씬을 비동기 로드하고 선택을 지웁니다. */
         [[nodiscard]] static bool loadScene( string_view path );
-        /** @brief dirty면 확인을 띄우고, 아니면 로드합니다. 플레이 중이면 false입니다. */
+        /** @brief dirty 이면 확인을 띄우고, 아니면 로드합니다. 플레이 중이면 false 입니다. */
         [[nodiscard]] static bool tryOpenScene( string_view path );
-        /** @brief dirty면 확인을 띄우고, 아니면 빈 씬으로 바꿉니다. */
+        /** @brief dirty 이면 확인을 띄우고, 아니면 빈 씬으로 바꿉니다. */
         [[nodiscard]] static bool tryCreateNewScene();
-        /** @brief 포커스된 더티 도구 문서를 저장하거나 활성 씬을 저장합니다. */
+        /** @brief 포커스된 dirty 도구 문서를 저장하거나 활성 씬을 저장합니다. */
         static void saveFocusedOrScene();
-        /** @brief "저장하지 않은 변경" 확인 창에서 고른 것을 적용합니다. */
+        /** @brief "저장하지 않은 변경" 확인 창에서 선택한 것을 적용합니다. */
         static void applyUnsavedSceneChoice( EditorUnsavedChoice choice );
-        /** @brief dirty면 확인을 띄우고, 아니면 종료를 허용합니다. */
+        /** @brief dirty 이면 확인을 띄우고, 아니면 종료를 허용합니다. */
         [[nodiscard]] static bool tryBeginQuit();
-        /** @brief 창 닫기를 시도합니다. dirty면 확인 모달이 뜹니다. */
+        /** @brief 창 닫기를 시도합니다. dirty 이면 확인 모달이 뜹니다. */
         static void requestExit();
-        /** @brief 활성 씬 세대가 바뀌면 dirty/프리팹 맵을 동기화합니다. */
+        /** @brief 활성 씬 세대가 바뀌면 dirty 와 프리팹 맵을 동기화합니다. */
         static void syncAfterSceneGenerationChange();
         /** @brief 포커스 애셋 경로만 바꿉니다. */
         static void focusPath( string_view relativePath );
-        /** @brief 프리팹을 스폰하고 Undo/선택을 기록합니다. */
+        /** @brief 프리팹을 스폰하고 Undo 와 선택을 기록합니다. */
         static GameObject* spawnPrefab( GameObjectManager* pManager, const utf8* pPath, GameObject* pParent,
                                         const utf8* pUndoLabel = "Spawn Prefab" );
         /** @brief 텍스처 경로로 스프라이트 오브젝트를 만듭니다. */
         static GameObject* spawnSprite( GameObjectManager* pManager, const utf8* pPath, const float3& worldPos );
-        /** @brief 뷰포트에 드롭한 것을 스폰하거나 로드합니다. 히트 위치는 부르는 쪽이 구합니다. */
+        /** @brief 뷰포트에 드롭한 것을 스폰하거나 로드합니다. 히트 위치는 호출하는 쪽이 구합니다. */
         static void dropAt( GameObjectManager* pManager, const utf8* pPath, const float3& spawnPos );
-        /** @brief 활성 씬을 XML로 저장합니다. path가 비면 씬 소스 경로를 씁니다. */
+        /** @brief 활성 씬을 XML 로 저장합니다. path 가 비어 있으면 씬 소스 경로를 씁니다. */
         [[nodiscard]] static bool saveActiveScene( string_view path = {} );
         /** @brief 소스 경로가 있으면 저장하고, 없으면 Save As 대화상자를 엽니다. */
         static void saveActiveSceneOrPrompt();
         /** @brief 파일을 Content Browser 폴더로 복사하고 메타를 만듭니다. */
         static uint32 importFiles( string_view destFolderAbs, const vector<string>& listSourcePath );
-        /** @brief 애셋 파일과 짝 .meta를 삭제합니다. */
+        /** @brief 애셋 파일과 짝이 되는 .meta 파일을 삭제합니다. */
         [[nodiscard]] static bool deleteAsset( string_view absolutePath );
 
         /**
          * @brief 파일 탐색기에서 이 경로를 선택한 채로 엽니다.
-         * @details 셸 없이 프로세스를 직접 띄웁니다. 셸(`system`)을 거치면 경로 안의 `&` · `"` 가 명령으로 해석되고 콘솔 창이
-         *          한 번 깜빡입니다.
+         * @details 셸 없이 프로세스를 직접 실행한다. 셸(`system`)을 거치면 경로 안의 `&` 와 `"` 가 명령으로 해석되고 콘솔 창이
+         *          한 번 깜빡인다.
          */
         static bool showInFileExplorer( string_view absolutePath );
-        /** @brief 폴더의 직속 하위 폴더/파일을 채웁니다. .meta는 제외합니다. @p bRecursive 면 파일은 하위 폴더 전부에서 모읍니다(폴더는 직속만). */
+        /** @brief 폴더의 직속 하위 폴더와 파일을 채웁니다. .meta 는 제외합니다. @p bRecursive 이면 파일은 하위 폴더 전부에서 모으고 폴더는 직속만 모읍니다. */
         static void collectFolderListing( string_view folderAbs, vector<EditorFolderListingEntry>& outList, bool bRecursive = false );
         /** @brief 폴더의 직속 하위 폴더 절대 경로를 채웁니다. */
         static void collectChildFolders( string_view folderAbs, vector<string>& outList );
-        /** @brief `collectChildFolders` 가 디스크를 읽은 횟수입니다(프로세스 누계). 자체 테스트가 "그리기마다 디스크를 읽지 않는다" 를 본다. */
+        /** @brief `collectChildFolders` 가 디스크를 읽은 횟수입니다. 프로세스 누계이며, 자체 테스트가 "그릴 때마다 디스크를 읽지 않는다" 를 확인할 때 씁니다. */
         static uint64 getChildFolderScanCount();
         /** @brief 현재 씬에서 해당 프리팹만 보이게 합니다. 중첩이면 스택에 쌓습니다. */
         static bool enterPrefabIsolation( string_view prefabPath );
-        /** @brief 프리팹 Isolation을 종료하고 숨겼던 오브젝트를 복원합니다. bSaveToPrefab이면 루트를 템플릿에 씁니다. */
+        /** @brief 프리팹 Isolation 을 종료하고 숨겼던 오브젝트를 복원합니다. bSaveToPrefab 이면 루트를 템플릿에 씁니다. */
         static bool exitPrefabIsolation( bool bSaveToPrefab );
     };
 } // namespace sw::editor
