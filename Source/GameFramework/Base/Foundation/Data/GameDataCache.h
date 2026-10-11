@@ -1,7 +1,7 @@
 /**
  * @file GameDataCache.h
- * @brief 경로마다 한 번 읽어 여러 컴포넌트가 나눠 쓰는 게임 데이터 표(상호작용 표 · 원소 규칙 표)의 캐시와, 그 캐시들을 에셋 캐시 등록부에 올리는 목록입니다.
- * @details 캐시는 GameFramework 모듈의 정적 객체입니다. 게임 서비스가 묶이면(`game::bindGameService` — 서비스에 `AssetManager` 가 있으면) 등록부에 오르고,
+ * @brief 경로마다 한 번 읽어 여러 컴포넌트가 나눠 쓰는 게임 데이터 표(상호작용 표 · 원소 규칙 표)의 캐시와, 그 캐시들을 에셋 캐시 레지스트리에 올리는 목록입니다.
+ * @details 캐시는 GameFramework 모듈의 정적 객체입니다. 게임 서비스가 묶이면(`game::bindGameService` — 서비스에 `AssetManager` 가 있으면) 레지스트리에 오르고,
  *          풀리면(`unbindGameService`) 내려갑니다. 그래서 에디터 핫 리로드가 파일을 고친 표를 종류 이름으로 찾아 다시 읽고(`reload`), 종료의 비우기 · 진단도
  *          엔진 캐시와 같은 길을 탑니다. 모듈이 내리지 않고 사라지면 `AssetManager::onModuleUnloading` 이 이미지 안의 캐시를 걷습니다.
  *
@@ -30,17 +30,17 @@ namespace sw
 
     /**
      * @struct GameDataCacheRegistry
-     * @brief GameFramework 의 데이터 캐시 목록과, 그것을 올린 에셋 매니저입니다. 캐시가 생기거나 서비스가 묶이고 풀릴 때 등록부를 맞춥니다.
+     * @brief GameFramework 의 데이터 캐시 목록과, 그것을 올린 에셋 매니저입니다. 캐시가 생기거나 서비스가 묶이고 풀릴 때 레지스트리를 맞춥니다.
      */
     struct SW_GF_API GameDataCacheRegistry
     {
-        /** @brief 캐시를 목록에 넣고, 묶인 매니저가 있으면 그 등록부에 올립니다. 캐시 생성자가 부릅니다. */
+        /** @brief 캐시를 목록에 넣고, 묶인 매니저가 있으면 그 레지스트리에 올립니다. 캐시 생성자가 부릅니다. */
         static void addCache( IAssetCache* pCache );
         /** @brief 캐시를 목록에서 뺍니다. 캐시 소멸자가 부릅니다(매니저는 건드리지 않는다 — 프로세스 끝에는 이미 사라졌을 수 있다). */
         static void removeCache( const IAssetCache* pCache );
-        /** @brief 목록의 캐시를 @p pAssetManager 등록부에 올립니다. 앞서 묶인 매니저가 있으면 거기서 먼저 내립니다. nullptr 이면 내리기만 합니다. */
+        /** @brief 목록의 캐시를 @p pAssetManager 레지스트리에 올립니다. 앞서 묶인 매니저가 있으면 거기서 먼저 내립니다. nullptr 이면 내리기만 합니다. */
         static void attach( AssetManager* pAssetManager );
-        /** @brief 묶인 매니저의 등록부에서 목록의 캐시를 내립니다. */
+        /** @brief 묶인 매니저의 레지스트리에서 목록의 캐시를 내립니다. */
         static void detach() { attach( nullptr ); }
     };
 } // namespace sw
@@ -57,7 +57,7 @@ namespace sw
     class GameDataCache final : public IAssetCache
     {
     public:
-        /** @param pKindName 등록부의 종류 이름입니다(정적 문자열 — 에디터 핫 리로드 경로 표가 이 이름으로 찾는다). */
+        /** @param pKindName 레지스트리의 종류 이름입니다(정적 문자열 — 에디터 핫 리로드 경로 표가 이 이름으로 찾는다). */
         explicit GameDataCache( const utf8* pKindName )
             : _pKindName{ pKindName }
             , _mutex{}

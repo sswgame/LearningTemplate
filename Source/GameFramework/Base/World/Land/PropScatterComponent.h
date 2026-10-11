@@ -119,7 +119,7 @@ namespace sw
      * @class PropScatterComponent
      * @brief 플레이가 시작되면 배치대로 메시 오브젝트를 세우고, 끝나면 걷습니다. 씬에는 설정만 저장됩니다(세운 오브젝트는 저장하지 않는 런타임 산출물).
      * @details 세운 오브젝트는 핸들로 듭니다. 틱 중에 시작돼도 `executeOrDeferPostTick` 으로 틱 뒤에 세웁니다. 틱하지 않습니다.
-     *          핸들 목록은 PROPERTY 입니다 — 핫 리로드는 오브젝트를 같은 id 로 되살리므로, 다시 만든 컴포넌트가 그 핸들로 세운 것을 알아보고
+     *          핸들 목록은 PROPERTY 입니다 — 핫 리로드는 오브젝트를 같은 id 로 복원하므로, 다시 만든 컴포넌트가 그 핸들로 세운 것을 알아보고
      *          한 벌 더 세우지 않습니다. 에디터는 플레이 전 상태로 되돌리므로 씬 파일에는 빈 목록이 남습니다.
      */
     REFLECT( Category = "World", DisplayName = "Prop Scatter", Tooltip = "Scatters seeded decoration meshes along or inside a region at play start" )

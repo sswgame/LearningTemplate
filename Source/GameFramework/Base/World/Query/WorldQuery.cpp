@@ -89,7 +89,7 @@ namespace sw
             outHit._point    = hit._point;
             outHit._objectID = hit._pObject != nullptr ? hit._pObject->getObjectID() : 0;
         }
-        // 2D 씬은 XY 평면 — 같은 선분의 평면 길이로 잰다.
+        // 2D 씬은 XY 평면 — 같은 선분의 평면 길이로 측정한다.
         const float32 planarLength = float2{ delta._x, delta._y }.getLength();
         if ( planarLength > MathUtil::kEpsilon && CharacterHitUtil::raycast2D( _manager, from, delta, planarLength, MathUtil::kMaxUInt32, ignoreObjectID, hit ) )
         {

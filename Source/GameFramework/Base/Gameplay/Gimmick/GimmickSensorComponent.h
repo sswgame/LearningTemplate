@@ -21,7 +21,7 @@ namespace sw
 {
     /**
      * @class GimmickWeightComponent
-     * @brief 눌림판이 재는 무게입니다(데이터로 덮을 때). 없으면 강체(`RigidBodyComponent` · `RigidBody2DComponent`)의 질량, 그것도 없으면 센서의 기본 무게입니다.
+     * @brief 눌림판이 측정하는 무게입니다(데이터로 덮을 때). 없으면 강체(`RigidBodyComponent` · `RigidBody2DComponent`)의 질량, 그것도 없으면 센서의 기본 무게입니다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Gimmick Weight", Tooltip = "Weight a pressure plate measures for this object" )
     class SW_GF_API GimmickWeightComponent : public Component

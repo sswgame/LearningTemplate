@@ -319,7 +319,7 @@ namespace sw
         actor._position = position;
         actor._hp       = static_cast<float32>( def._hp );
         actor._defIndex = static_cast<uint16>( defIndex );
-        // 쏘는 종만 시간을 잰다 — 첫 발은 나타나고 `_firstAttackDelay` 뒤다.
+        // 쏘는 종만 시간을 측정한다 — 첫 발은 나타나고 `_firstAttackDelay` 뒤다.
         if ( def._listShot.empty() == false )
             actor._attackTimer.start( def._firstAttackDelay );
         _listActor.push_back( actor );

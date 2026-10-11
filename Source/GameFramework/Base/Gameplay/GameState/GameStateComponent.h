@@ -52,7 +52,7 @@ namespace sw
     enum class GameStateInitResult : uint8
     {
         Fresh = 0,         ///< 새 판 — 여는 디렉터가 시작값(시작 돈 · 첫 플래그)을 넣는다
-        Restored,          ///< 들고 있던 세이브 · 핫 리로드 바이트로 되살렸다 — 시작값을 넣지 않는다
+        Restored,          ///< 들고 있던 세이브 · 핫 리로드 바이트로 복원했다 — 시작값을 넣지 않는다
         AlreadyInitialized ///< 같은 오브젝트의 앞 디렉터가 이미 열었다 — 설정은 무시한다(새 판인지는 `isFreshGame`)
     };
 } // namespace sw
@@ -68,7 +68,7 @@ namespace sw
      *          - **알림** — 시계 알림은 이 컴포넌트가 틱마다 꺼내 `getClockEvents` 로 내놓는다(다음 틱 처음에 비운다). 지갑 · 일지 · 평판의 알림 버퍼는
      *            게임(화면)의 것이다 — 빌려 쓰는 키트는 꺼내지 않고 상태(`QuestLog::getStatus` …)를 본다.
      *          - **여는 쪽** — 같은 오브젝트의 첫 디렉터가 `startGame` 에서 `initialize` 를 부른다. 시작값(공유 상태를 건드리는 시작 배치 포함)은
-     *            `isFreshGame()` 일 때만 넣는다 — 되살린 판 위에 시작값이 덧쌓이지 않게.
+     *            `isFreshGame()` 일 때만 넣는다 — 복원한 판 위에 시작값이 덧쌓이지 않게.
      *          - **세이브** — `writeState` 는 상태마다 구간 하나(`StateArchiveUtil::writeSection`)라 모르는 구간은 건너뛰고 빠진 구간은 새 판으로 둔다.
      *            게임 인스턴스가 생성자에서 `registerStatefulComponent<GameStateComponent>()` 로 스냅숏에 올린다.
      */
@@ -85,8 +85,8 @@ namespace sw
         virtual ~GameStateComponent() override;
 
         /**
-         * @brief 판 상태를 엽니다. 첫 호출만 설정을 쓰고, 들고 있던 복원 바이트가 있으면 그것으로 되살립니다.
-         * @return 새 판 · 되살림 · 이미 열림. 되살리려던 바이트를 읽지 못했으면 알리고 새 판(`Fresh`)입니다.
+         * @brief 판 상태를 엽니다. 첫 호출만 설정을 쓰고, 들고 있던 복원 바이트가 있으면 그것으로 복원합니다.
+         * @return 새 판 · 복원 · 이미 열림. 복원하려던 바이트를 읽지 못했으면 알리고 새 판(`Fresh`)입니다.
          */
         GameStateInitResult initialize( const GameStateSettings& settings );
 
@@ -101,7 +101,7 @@ namespace sw
         void restoreState( vector<uint8>&& bytes );
 
         bool isInitialized() const { return _bInitialized == SW_TRUE; }
-        /** @brief 이번 판이 새 판으로 열렸으면 true 입니다(되살린 판이면 false). 디렉터가 시작값을 넣을지 묻습니다. */
+        /** @brief 이번 판이 새 판으로 열렸으면 true 입니다(복원한 판이면 false). 디렉터가 시작값을 넣을지 묻습니다. */
         bool                   isFreshGame() const { return _bFreshGame == SW_TRUE; }
         Wallet&                getWallet() { return _wallet; }
         const Wallet&          getWallet() const { return _wallet; }

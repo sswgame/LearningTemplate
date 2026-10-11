@@ -55,7 +55,7 @@ namespace sw
     /**
      * @class GatheringNodeComponent
      * @brief 채집 지점(약초 · 광맥 · 나무) — 같은 오브젝트의 상호작용(Gather)을 끝낸 이에게 `_item` × `_count` 를 주고(`GimmickItemEvent`), `_uses` 번 쓰면
-     *        몸과 상호작용을 끄고 `_respawnDelay` 뒤에 되살립니다. 걸음 수로 세어 결정적입니다.
+     *        몸과 상호작용을 끄고 `_respawnDelay` 뒤에 복원합니다. 걸음 수로 세어 결정적입니다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Gathering Node", Tooltip = "Gives items when gathered, depletes and respawns" )
     class SW_GF_API GatheringNodeComponent : public Component

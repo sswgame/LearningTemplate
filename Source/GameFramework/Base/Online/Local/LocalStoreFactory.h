@@ -31,7 +31,7 @@ namespace sw
 {
     /**
      * @struct LocalStoreFactory
-     * @brief 로컬 저장 공장 · 바닥 등록부입니다(게임 스레드).
+     * @brief 로컬 저장 공장 · 바닥 레지스트리입니다(게임 스레드).
      */
     struct SW_GF_API LocalStoreFactory
     {

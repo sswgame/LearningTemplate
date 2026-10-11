@@ -191,7 +191,7 @@ namespace sw
                     stats._airtime += deltaTime;
             }
 
-            // 뒤집힘 — 좌석 위가 땅을 향했다가(문턱 아래) 바로 서면(문턱 위) 하나.
+            // 뒤집힘 — 좌석 위가 땅을 향했다가(임계값 아래) 바로 서면(임계값 위) 하나.
             if ( bInverted == false && frame._up._y < CoasterTrainInternal::kInversionUpY )
             {
                 bInverted = true;

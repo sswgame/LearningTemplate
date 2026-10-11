@@ -68,7 +68,7 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return;
-        // 좌석 등록부에서 이 말의 것만 — 내리기는 등록부를 바꾸지 않지만, 내린 탑승자를 먼저 모은 뒤 내린다.
+        // 좌석 레지스트리에서 이 말의 것만 — 내리기는 레지스트리를 바꾸지 않지만, 내린 탑승자를 먼저 모은 뒤 내린다.
         vector<GameObjectHandle> listRider;
         for ( const VehicleSeatComponent* pSeat : pManager->getComponentRegistry().getAll<VehicleSeatComponent>() )
         {

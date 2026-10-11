@@ -95,7 +95,7 @@ namespace sw
     public:
         /** @brief 경로에 지금 상태를 씁니다. 성공하면 true 입니다. */
         using SaveDelegate = Delegate<bool( string_view path )>;
-        /** @brief 경로의 상태를 읽어 되살립니다. 성공하면 true 입니다. */
+        /** @brief 경로의 상태를 읽어 복원합니다. 성공하면 true 입니다. */
         using LoadDelegate = Delegate<bool( string_view path )>;
 
         AutosaveManager();

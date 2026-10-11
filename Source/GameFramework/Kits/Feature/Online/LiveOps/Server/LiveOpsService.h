@@ -6,7 +6,7 @@
  *          - 매개변수 값이 `@<설정 키>` 면 원격 설정(`RemoteConfig`)의 글 · 정수로 푼다 — 이벤트를 다시 쓰지 않고 값을 운영 설정으로 바꾼다.
  *            기능 플래그 `feature.liveops`(없으면 켬)가 꺼지면 아무 이벤트도 보이지 않는다(긴급 스위치).
  *          - 열린 이벤트 묶음 · 회차 끝 · 원격 설정 묶음의 해시가 바뀌면(시작 · 끝 · 회차 경계 · 다시 읽기) `takeStateChange` 가 참 — 바인딩이 모두에게 "다시 받아라" 를 알린다.
- *          PlayFab LiveOps(타이틀 데이터 · 예약) · Unity Remote Config(조건 · 출시 비율 · 일정)와 같은 자리 — 일정은 영속 + 버스, 값은 원격 설정으로 두 정본을 섞지 않는다.
+ *          PlayFab LiveOps(타이틀 데이터 · 예약) · Unity Remote Config(조건 · 출시 비율 · 일정)와 같은 자리 — 일정은 영속 + 버스, 값은 원격 설정으로 두 원본을 섞지 않는다.
  */
 #pragma once
 #include "Core/Common/Types.h"

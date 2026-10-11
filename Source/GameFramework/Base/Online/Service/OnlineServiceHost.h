@@ -1,6 +1,6 @@
 /**
  * @file OnlineServiceHost.h
- * @brief 서비스 틀 — 프로세스 하나의 서비스 호스트. 스트림 끝점 · 요청 서버를 갖고 판 협상 · 인증 확인 · 요청 보호(주소 · 계정마다 토큰 버킷, 몸 상한)를 한 뒤
+ * @brief 서비스 틀 — 프로세스 하나의 서비스 호스트. 스트림 엔드포인트 · 요청 서버를 갖고 판 협상 · 인증 확인 · 요청 보호(주소 · 계정마다 토큰 버킷, 몸 상한)를 한 뒤
  *        메서드 영역을 맡은 서비스(`IOnlineService`)로 넘깁니다.
  * @details - 서비스 스레드 하나(`tick` 을 부르는 스레드)에서 돈다 — 서비스의 콜백은 모두 그 스레드다. 계정 ↔ 연결 표를 갖고 알림(`sendPush`)을 보낸다.
  *          - **캐시 앞 · 서버 버스의 소비자는 호스트 하나다**: 캐시 답 · 채널 메시지는 `getEphemeralRouter()` 가 요청 id · 채널로, 버스 메시지는 `subscribeServerBus`
@@ -140,7 +140,7 @@ namespace sw
 
         /** @brief 서비스를 올립니다(빌려 쓴다). 영역이 이미 있거나 메서드 번호가 겹치면 오류 로그와 함께 false — 아무것도 올리지 않는다. */
         [[nodiscard]] bool registerService( IOnlineService* pService );
-        /** @brief 끝점 pump · 요청 시한 · 캐시 라우터 · 서버 버스 · 서비스 틱. */
+        /** @brief 엔드포인트 pump · 요청 시한 · 캐시 라우터 · 서버 버스 · 서비스 틱. */
         void tick( int64 nowMs );
 
         // 답 — 서비스가 부른다(한 번만). 이미 답했거나 끝난 요청이면 false.

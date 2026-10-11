@@ -153,7 +153,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 업적 하나의 정의입니다(서버가 기동 때 올린다). 통계가 문턱을 넘으면 한 번 달성 · 보상은 우편. */
+    /** @brief 업적 하나의 정의입니다(서버가 기동 때 올린다). 통계가 임계값을 넘으면 한 번 달성 · 보상은 우편. */
     struct AchievementDefinition
     {
         string _achievementID{}; ///< `[0-9a-z_]`

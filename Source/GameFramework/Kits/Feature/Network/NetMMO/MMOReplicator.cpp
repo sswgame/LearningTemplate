@@ -318,7 +318,7 @@ namespace sw
             const MMOEntity&    entity   = getEntity( visible.first );
             const float32       distance = MMOReplicatorInternal::computeFlatDistance( center, entity._position );
             const VisibleEntry& entry    = visible.second;
-            // 오가는 갱신이 있으면 그것과 견준다 — 확인을 기다리는 동안 같은 상태를 "바뀜" 으로 가속하지 않는다. 잃으면 확인된 상태(옛것)와 견주게 된다.
+            // 오가는 갱신이 있으면 그것과 견준다 — 확인을 기다리는 동안 같은 상태를 "바뀜" 으로 가속하지 않는다. 잃으면 확인된 상태(옛것)와 비교하게 된다.
             const vector<uint8>& reference = entry._bInFlight == SW_TRUE ? entry._listInFlightState : entry._listSentState;
             const bool           bChanged  = entity._listState != reference;
             prioritizer.accumulate( visible.first, _pPolicy->computePriority( connectionID, entity, distance ) * ( bChanged ? _settings._changedBoost : 1.0f ), deltaTime );

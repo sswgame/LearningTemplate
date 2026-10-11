@@ -103,7 +103,7 @@ namespace sw
             return false;
         vector<float3> listPoint;
         GridPathfinder::makeWorldPath( grid, listCell, listPoint );
-        // 첫 점은 지금 칸 가운데 — 이미 그 칸 안이니 건너뛰고, 끝점은 칸 가운데가 아니라 실제 목표(닿은 경우).
+        // 첫 점은 지금 칸 가운데 — 이미 그 칸 안이니 건너뛰고, 엔드포인트는 칸 가운데가 아니라 실제 목표(닿은 경우).
         if ( listPoint.empty() == false )
             listPoint.erase( listPoint.begin() );
         if ( result == GridPathResult::Found )

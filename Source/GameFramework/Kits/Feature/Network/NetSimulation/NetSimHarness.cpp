@@ -14,7 +14,7 @@ namespace sw
     {
         struct NetSimHarnessInternal
         {
-            /** @brief 씨앗 하나에서 끝점마다 다른 씨앗을 냅니다(splitmix64 한 걸음). */
+            /** @brief 씨앗 하나에서 엔드포인트마다 다른 씨앗을 냅니다(splitmix64 한 걸음). */
             static uint64 mixSeed( uint64 seed, uint64 salt )
             {
                 uint64 value = seed + HashUtil::kGoldenRatio64 * ( salt + 1u );
@@ -275,7 +275,7 @@ namespace sw
             NetSimWorld& world = *_listClient[index];
             if ( world.getWorldIndex() != worldIndex )
                 continue;
-            // 끊김 알림을 흉내 줄에 넣는다 — 끝점(Link)은 남아 다음 망 단계들이 마저 내보낸다.
+            // 끊김 알림을 흉내 줄에 넣는다 — 엔드포인트(Link)은 남아 다음 망 단계들이 마저 내보낸다.
             world.getHost().disconnectAll();
             world.getHost().update( _time );
             _listClient.erase( _listClient.begin() + static_cast<std::ptrdiff_t>( index ) );
@@ -359,7 +359,7 @@ namespace sw
         {
             pWorld->getHost().update( _time );
         }
-        // 2) 흉내 줄에서 때가 된 것을 망에 싣고 망이 배달한다(떠난 클라이언트의 끝점도 — 끊김 알림이 아직 줄에 있을 수 있다).
+        // 2) 흉내 줄에서 때가 된 것을 망에 싣고 망이 배달한다(떠난 클라이언트의 엔드포인트도 — 끊김 알림이 아직 줄에 있을 수 있다).
         for ( unique_ptr<Link>& pLink : _listLink )
         {
             pLink->_pEmulation->update( _time );

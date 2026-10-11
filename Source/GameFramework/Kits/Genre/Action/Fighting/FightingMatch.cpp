@@ -43,7 +43,7 @@ namespace sw
                 writeCounter( writer, timeline.getHitstopRemaining() );
             }
 
-            /** @brief 타임라인을 되살립니다(기반 `MoveTimeline::restoreState` — 기술은 쓰는 쪽이 찾아 넘긴다). */
+            /** @brief 타임라인을 복원합니다(기반 `MoveTimeline::restoreState` — 기술은 쓰는 쪽이 찾아 넘긴다). */
             [[nodiscard]] static bool readTimeline( BitReader& reader, const FighterMove* pMove, MoveTimeline& outTimeline )
             {
                 const bool  bPlaying = reader.readBool();
@@ -1117,14 +1117,14 @@ namespace sw
                 writer.writeBool( flag == SW_TRUE );
             }
             FightingMatchInternal::writeTimeline( writer, fighter._timeline );
-            // 입력 버퍼 — 오래된 것부터(되살릴 때 그 순서로 다시 쌓는다).
+            // 입력 버퍼 — 오래된 것부터(복원할 때 그 순서로 다시 쌓는다).
             FightingMatchInternal::writeCounter( writer, fighter._inputBuffer.getFrameCount() );
             for ( int32 framesAgo = fighter._inputBuffer.getFrameCount() - 1; framesAgo >= 0; --framesAgo )
             {
                 writer.writeBits( encodeInput( fighter._inputBuffer.getFrame( framesAgo ) ), 8 );
             }
         }
-        // 라운드 묶음은 맨 뒤 — 되살릴 때 마지막에 읽어, 맞을 때만 바뀌는 묶음 덕에 loadState 가 통째로 원자적이다.
+        // 라운드 묶음은 맨 뒤 — 복원할 때 마지막에 읽어, 맞을 때만 바뀌는 묶음 덕에 loadState 가 통째로 원자적이다.
         _series.writeState( writer );
         outBuffer = writer.releaseBytes();
     }

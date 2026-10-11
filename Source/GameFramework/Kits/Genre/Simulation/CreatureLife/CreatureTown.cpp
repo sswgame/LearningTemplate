@@ -933,7 +933,7 @@ namespace sw
         }
         town._eventBuffer.clear();
         town.updateAppealTier();
-        town._eventBuffer.clear(); // 되살린 단계는 알리지 않는다
+        town._eventBuffer.clear(); // 복원한 단계는 알리지 않는다
         *this = std::move( town );
         return true;
     }

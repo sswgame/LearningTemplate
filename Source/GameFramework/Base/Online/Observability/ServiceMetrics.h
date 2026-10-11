@@ -1,7 +1,7 @@
 /**
  * @file ServiceMetrics.h
  * @brief 서비스 하나의 표준 지표 — `service_requests_total{service,method,result}` · `service_request_seconds{service,method}` · `service_store_pending{service}`.
- * @details 메서드 · 결과 이름은 서비스가 등록 때 넘기는 닫힌 집합이다(라벨에 계정 id · 추적 id 를 넣지 않는다). 등록부(`Engine/Observability/MetricRegistry`)가
+ * @details 메서드 · 결과 이름은 서비스가 등록 때 넘기는 닫힌 집합이다(라벨에 계정 id · 추적 id 를 넣지 않는다). 레지스트리(`Engine/Observability/MetricRegistry`)가
  *          null 이면 모든 호출이 아무것도 하지 않는다. 지연은 응답 시점에 재므로 서비스는 받은 시각을 일 객체에 들고 `complete` 에서 `observe` 한다.
  */
 #pragma once

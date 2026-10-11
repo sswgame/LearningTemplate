@@ -1,6 +1,6 @@
 /**
  * @file ScheduleActivity.h
- * @brief 일정 활동 등록부 — 데이터의 `activity="WorkAt"` 이 고르는 이름 붙은 활동 종류입니다.
+ * @brief 일정 활동 레지스트리 — 데이터의 `activity="WorkAt"` 이 고르는 이름 붙은 활동 종류입니다.
  * @details 코드는 활동 종류(어디로 가서 무엇을 하는가의 규칙)만 등록하고, 어느 NPC 가 언제 무엇을 하는지는 데이터가 이름으로 고릅니다.
  *          모르는 이름은 읽을 때 오류입니다. 게임은 종류를 더 등록할 수 있습니다(낚시 = 스마트 오브젝트 `FishingSpot` 을 쓰는 활동).
  */
@@ -51,7 +51,7 @@ namespace sw
     public:
         ScheduleActivityRegistry();
 
-        /** @brief 기본 종류만 든 등록부입니다(게임이 등록부를 주지 않은 카탈로그가 쓴다). */
+        /** @brief 기본 종류만 든 레지스트리입니다(게임이 레지스트리를 주지 않은 카탈로그가 쓴다). */
         static const ScheduleActivityRegistry& getBuiltin();
 
         /** @brief 종류를 더합니다. 이름이 비었거나 이미 있으면 false 입니다. */

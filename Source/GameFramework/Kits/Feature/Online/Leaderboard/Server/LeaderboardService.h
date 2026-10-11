@@ -1,12 +1,12 @@
 /**
  * @file LeaderboardService.h
  * @brief 순위표 로직 — 점수 · 통계는 영속(판 조건, 충돌이면 다시), 순위는 캐시 정렬 집합(잃으면 영속에서 다시 채움). 전송을 모릅니다(서비스 스레드 하나).
- * @details - 정본은 영속 `lb_score`(`<표>/<기간 16 진>/<계정 16 진>` → 점수 · 시각 · 이름). 순위는 캐시 `lb/<표>/<기간>`(멤버 = 계정 16 진, 오름차순 표는 부호를 뒤집는다).
+ * @details - 원본은 영속 `lb_score`(`<표>/<기간 16 진>/<계정 16 진>` → 점수 · 시각 · 이름). 순위는 캐시 `lb/<표>/<기간>`(멤버 = 계정 16 진, 오름차순 표는 부호를 뒤집는다).
  *            준비 표시(`lb/<표>/<기간>/ready`)가 없으면 영속에서 모두 읽어 다시 채운 뒤 답한다 — 그동안 온 읽기는 줄을 서고, 그동안 쓴 점수는 다시 채운 뒤 한 번 더 싣는다.
  *          - 갱신 Best · Latest · Sum, 기간 None · Daily · Weekly(`ServiceScheduler::computeLatestOccurrence` — 같은 규칙 하나, 기간 id = 기간 시작 시각).
  *          - 통계 `lb_stat`(`<계정>/<이름>`) — 바뀌면 그 통계에 건 표에 같은 값을 낸다.
  *          - 상위 · 내 둘레 조회는 표시 이름을 캐시 `lb/name/<계정>`(30 일)에서 함께 읽는다.
- *          - 업적: 통계가 문턱을 넘으면 `lb_achievement` 를 "없어야 함" 으로 + 보상 우편(`ServiceMail::stageSend` — 재원 발행, 멱등 키 `ach.<계정>.<업적>`)을
+ *          - 업적: 통계가 임계값을 넘으면 `lb_achievement` 를 "없어야 함" 으로 + 보상 우편(`ServiceMail::stageSend` — 재원 발행, 멱등 키 `ach.<계정>.<업적>`)을
  *            한 트랜잭션에 — 두 번 넘어도 한 번. 시즌 정산: 예약 작업(`lb.settle.<표>.<시즌 16 진 8>`, 창 [끝, 끝 + 7 일))이 점수를 모두 읽어 순위(같은 점수는
  *            계정 id 오름차순)대로 결과 `lb_season_result`("없어야 함") + 구간 보상 우편을 15 명씩 한 트랜잭션에 — 결과가 있는 사람은 건너뛴다(다시 돌아도 한 번).
  *          PlayFab Statistics + Leaderboards · EOS Stats → Leaderboards · Nakama Leaderboards(best · set · incr)와 같은 자리다.

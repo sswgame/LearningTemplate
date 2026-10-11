@@ -61,7 +61,7 @@ namespace sw
 
         void setSettings( const KartAISettings& settings ) { _settings = settings; }
         void reset() { _driftSide = 0; }
-        /** @brief 드리프트 중인 쪽을 되살립니다(경기 상태 읽기 — −1 · 0 · 1). */
+        /** @brief 드리프트 중인 쪽을 복원합니다(경기 상태 읽기 — −1 · 0 · 1). */
         void setDriftSide( int32 driftSide ) { _driftSide = driftSide; }
 
         /** @brief 이번 걸음의 입력입니다. @p trackDistance 는 차의 중심선 거리입니다. */

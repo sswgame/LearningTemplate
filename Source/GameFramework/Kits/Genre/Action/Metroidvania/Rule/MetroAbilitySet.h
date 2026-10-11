@@ -2,7 +2,7 @@
  * @file MetroAbilitySet.h
  * @brief 능력 잠금 — 얻은 능력(대시 · 2단 점프 · 벽 점프 · 갈고리 …)이 기반 `PlatformerMotor2D` 의 설정을 바꾸고, `GameFlags` 에 플래그를 켜 `AreaGraph` 의 길 잠금을 엽니다.
  * @details 몸은 늘 "잠긴 기본 설정"(벽 점프 · 공중 점프 · 대시 없음)에서 시작하고, 얻은 능력의 `_motor` 값을 얻은 순서대로 더해 새 설정을 만듭니다.
- *          같은 능력 집합이면 늘 같은 설정입니다(결정적). 세이브는 `GameFlags` 하나로 충분합니다 — `restoreFromFlags` 가 플래그에서 능력을 되살립니다.
+ *          같은 능력 집합이면 늘 같은 설정입니다(결정적). 세이브는 `GameFlags` 하나로 충분합니다 — `restoreFromFlags` 가 플래그에서 능력을 복원합니다.
  */
 #pragma once
 #include "Core/Common/FourCcUtil.h"
@@ -37,7 +37,7 @@ namespace sw
 
         /** @brief 능력을 얻습니다 — 플래그를 켭니다. 새로 얻었으면 true, 이미 있거나 모르는 능력이면 false 입니다. */
         bool grantAbility( const hashed_string& abilityID, GameFlags& flags );
-        /** @brief 세이브에서 — 플래그가 켜진 능력을 카탈로그 순서로 되살립니다(지금 능력은 비운다). 되살린 수입니다. */
+        /** @brief 세이브에서 — 플래그가 켜진 능력을 카탈로그 순서로 복원합니다(지금 능력은 비운다). 복원한 수입니다. */
         int32 restoreFromFlags( const GameFlags& flags );
         bool  hasAbility( const hashed_string& abilityID ) const;
 

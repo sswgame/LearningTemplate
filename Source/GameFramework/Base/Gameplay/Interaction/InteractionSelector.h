@@ -16,7 +16,7 @@ namespace sw
 {
     class GameObjectManager;
 
-    /** @brief 거리 · 각을 재는 공간입니다. */
+    /** @brief 거리 · 각을 측정하는 공간입니다. */
     ENUM()
     enum class InteractionSpace : uint8
     {

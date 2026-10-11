@@ -62,7 +62,7 @@ namespace sw
 {
     /**
      * @class ItemBoxComponent
-     * @brief 닿은 것(태그 거르기)에 후보 중 가중치로 뽑은 아이템을 주고(`GimmickItemEvent`) 몸을 숨겼다가 `_respawnDelay` 뒤에 되살립니다.
+     * @brief 닿은 것(태그 거르기)에 후보 중 가중치로 뽑은 아이템을 주고(`GimmickItemEvent`) 몸을 숨겼다가 `_respawnDelay` 뒤에 복원합니다.
      * @details 뽑기는 씨앗(`_seed`)과 지금까지 연 횟수로 정합니다 — 같은 순서로 열면 같은 아이템입니다(리플레이 · 롤백). 순위 가중치 같은 게임 규칙은
      *          이벤트를 받는 쪽(카트 아이템 규칙)이 아이템을 바꿔 적용합니다.
      */

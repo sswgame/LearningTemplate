@@ -17,7 +17,7 @@ namespace sw
 
     /**
      * @struct SQLDriverRegistry
-     * @brief 드라이버 등록부입니다. 스레드 안전입니다.
+     * @brief 드라이버 레지스트리입니다. 스레드 안전입니다.
      */
     struct SW_GF_API SQLDriverRegistry
     {

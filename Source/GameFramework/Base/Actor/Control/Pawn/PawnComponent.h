@@ -1,6 +1,6 @@
 /**
  * @file PawnComponent.h
- * @brief 조종 대상(폰) — 조종자가 채운 이번 틱의 의도를 들고, 버튼 · 아날로그 이름표(스키마)와 플레이어가 빙의했을 때의 입력 레이어를 정합니다.
+ * @brief 조종 대상(폰) — 조종자가 채운 이번 틱의 의도를 들고, 버튼 · 아날로그 이름(스키마)와 플레이어가 빙의했을 때의 입력 레이어를 정합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -47,9 +47,9 @@ namespace sw
         PawnComponent();
         ~PawnComponent() override = default;
 
-        /** @brief 등록부에 들고 조종 시스템을 매니저에 붙입니다(없으면). */
+        /** @brief 레지스트리에 들고 조종 시스템을 매니저에 붙입니다(없으면). */
         void onRegister( GameObjectManager& manager ) override;
-        /** @brief 조종자와의 끈을 끊고 등록부에서 빠집니다. */
+        /** @brief 조종자와의 끈을 끊고 레지스트리에서 빠집니다. */
         void onUnregister( GameObjectManager& manager ) override;
 
         /** @brief 이번 틱의 의도입니다. */
