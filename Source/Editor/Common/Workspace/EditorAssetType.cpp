@@ -29,17 +29,17 @@ namespace sw::editor
         {
             EndsWith = 0,
             Extension,
-            CookableSource, ///< 엔진의 쿠킹 규칙(`AssetCookPath`) — 쿠커가 쿠킹하는 저작 소스만. 접미사는 엔진 표에서 온다
-            RawHeightfield  ///< `heightfields_raw/` 아래의 높이장 원본 — 같은 `.png` 라도 텍스처 원본이 아니다(`HeightfieldImporter::isRawHeightfieldPath`)
+            CookableSource, ///< 엔진의 쿠킹 규칙(`AssetCookPath`)을 따른다. 쿠커가 쿠킹하는 저작 소스만 해당하며, 접미사는 엔진 테이블에서 온다
+            RawHeightfield  ///< `heightfields_raw/` 아래의 높이장 원본이다. 같은 `.png` 라도 텍스처 원본이 아니다(`HeightfieldImporter::isRawHeightfieldPath`)
         };
 
-        // 여기 적힌 확장자는 **이 저장소가 실제로 읽거나 쓰는 것만** 둔다 — 엔진은 HLSL 전용이고(`.glsl` 등 없음),
+        // 여기 적는 확장자는 이 저장소가 실제로 읽거나 쓰는 것만 둔다. 엔진은 HLSL 전용이므로 `.glsl` 등은 없고,
         // 오디오는 XAudio2 가 읽는 `.wav` 뿐이다. 셰이더는 공유 헤더 `.hlsli` 도 소스다.
-        // `.spv` 는 넣지 않는다. 그것은 **쿠킹된 산출물**이라(`Resource/common/shaders/bin/`) 셰이더
+        // `.spv` 는 넣지 않는다. 그것은 쿠킹된 산출물이므로(`Resource/common/shaders/bin/`) 셰이더
         // 소스로 세면 콘텐츠 브라우저가 빌드 출력 수백 개를 애셋으로 보여 준다.
         //
-        // 씬 · 프리팹은 여기 적지 않는다 — 쿠커가 쿠킹하는 이름이 곧 에디터가 여는 이름이다(`AssetCookPath`). 여기 따로 적으면
-        // 쿠커가 쿠킹하지 않는 이름(`_scene.xml` · 아무 `.xml` · 확장자 없는 `.scene` 등)도 씬 · 프리팹으로 열고 저장하게 되어 에디터에서는 되고
+        // 씬과 프리팹은 여기 적지 않는다. 쿠커가 쿠킹하는 이름이 곧 에디터가 여는 이름이다(`AssetCookPath`). 여기 따로 적으면
+        // 쿠커가 쿠킹하지 않는 이름(`_scene.xml`, 아무 `.xml`, 확장자 없는 `.scene` 등)도 씬이나 프리팹으로 열고 저장하게 되어 에디터에서는 되고
         // 배포본에는 없다. 쿠킹된 산출물(`.prefab.bin`)은 `.spv` 처럼 에셋이 아니다(`PrefabAsset::saveToFile` 은 소스만 쓴다).
         constexpr string_view kArrTextureExt[]         = { ".png", ".jpg", ".jpeg", ".tga", ".dds", ".hdr", ".bmp" };
         constexpr string_view kArrMaterialExt[]        = { ".material" };
@@ -57,18 +57,18 @@ namespace sw::editor
         constexpr string_view kArrRigSuffix[]          = { RigAsset::kExtension };
         constexpr string_view kArrAnimClipExt[]        = { AnimClip::kExtension };
         constexpr string_view kArrFractureExt[]        = { FractureAsset::kExtension };
-        constexpr string_view kArrModelSourceExt[]     = { ".glb", ".gltf", ".vrm" }; ///< `models_raw/` 의 원본 — 임포트하는 것이 리로드다
-        constexpr string_view kArrHeightfieldRawExt[]  = { ".png", ".r16" };          ///< `heightfields_raw/` 의 원본 · 구멍 마스크 — 임포트하는 것이 리로드다
+        constexpr string_view kArrModelSourceExt[]     = { ".glb", ".gltf", ".vrm" }; ///< `models_raw/` 의 원본이다. 임포트하는 것이 리로드다
+        constexpr string_view kArrHeightfieldRawExt[]  = { ".png", ".r16" };          ///< `heightfields_raw/` 의 원본과 구멍 마스크다. 임포트하는 것이 리로드다
         constexpr string_view kArrHeightfieldExt[]     = { HeightfieldData::kExtension };
-        constexpr string_view kArrLocalizationSuffix[] = { SourceStringTable::kExtension, TranslationTable::kExtension, LocalizationProject::kExtension }; ///< 올린 프로젝트를 다시 읽는다(`LocalizationManager`)
-        constexpr string_view kArrUIDocumentSuffix[]   = { UIDocumentAsset::kExtension };                                                                  ///< UI 문서 — 그 문서로 연 화면을 다시 짓는다(`UISystem`)
-        constexpr string_view kArrUIStyleSuffix[]      = { UIStyleSheetAsset::kExtension };                                                                ///< UI 스타일 시트 — 쓰는 화면을 다시 맞춘다
-        constexpr string_view kArrModuleDataSuffix[]   = { ".interactions.xml", ".elements.xml" };                                                         ///< 모듈이 올린 데이터 표 캐시(GameFramework 상호작용 · 원소 규칙 표)
+        constexpr string_view kArrLocalizationSuffix[] = { SourceStringTable::kExtension, TranslationTable::kExtension, LocalizationProject::kExtension }; ///< 로드한 프로젝트를 다시 읽는다(`LocalizationManager`)
+        constexpr string_view kArrUIDocumentSuffix[]   = { UIDocumentAsset::kExtension };                                                                  ///< UI 문서다. 그 문서로 연 화면을 다시 만든다(`UISystem`)
+        constexpr string_view kArrUIStyleSuffix[]      = { UIStyleSheetAsset::kExtension };                                                                ///< UI 스타일 시트다. 쓰는 화면을 다시 맞춘다
+        constexpr string_view kArrModuleDataSuffix[]   = { ".interactions.xml", ".elements.xml" };                                                         ///< 모듈이 로드한 데이터 테이블 캐시다(GameFramework 의 상호작용 테이블과 원소 규칙 테이블)
         /**
          * @struct AssetMatchRow
-         * @brief 경로 판정 규칙 한 줄입니다 — 어느 종류인지, 그리고 핫 리로드가 그 파일을 어떻게 다시 읽는지.
-         * @details 한 종류가 줄을 둘 이상 가질 수 있다. 매칭 방식이 다를 때다(SpriteClip 은 문서 접미사와 이미지 확장자를 함께 쓴다).
-         *          종류를 보여 주는 정보(이름 · 아이콘 · 색 · 패널 · 필터)는 종류 표(`kArrKindInfo`)에 종류마다 한 줄로 둔다.
+         * @brief 경로 판정 규칙 하나입니다. 어느 종류인지와 핫 리로드가 그 파일을 어떻게 다시 읽는지를 담습니다.
+         * @details 한 종류가 규칙을 둘 이상 가질 수 있다. 매칭 방식이 다를 때다. SpriteClip 은 문서 접미사와 이미지 확장자를 함께 쓴다.
+         *          종류를 보여 주는 정보(이름, 아이콘, 색, 패널, 필터)는 종류 테이블(`kArrKindInfo`)에 종류마다 항목 하나로 둔다.
          */
         struct AssetMatchRow
         {
@@ -76,11 +76,11 @@ namespace sw::editor
             MatchMode               _mode;
             const string_view*      _pSuffix;
             uint32                  _suffixCount;
-            const utf8*             _pCacheKindName;  ///< 이 줄의 파일을 들고 있는 엔진 캐시(`IAssetCache::getAssetKindName`). nullptr 이면 핫 리로드 대상이 아닙니다
-            AssetSourceImporterFunc _pfnImportSource; ///< 캐시가 읽기 전에 소스를 임포트하는 임포터. nullptr 이면 바로 캐시가 다시 읽습니다
+            const utf8*             _pCacheKindName;  ///< 이 규칙의 파일을 가진 엔진 캐시(`IAssetCache::getAssetKindName`). nullptr 이면 핫 리로드 대상이 아니다
+            AssetSourceImporterFunc _pfnImportSource; ///< 캐시가 읽기 전에 소스를 임포트하는 임포터. nullptr 이면 바로 캐시가 다시 읽는다
         };
 
-        // 줄 순서가 곧 **판정 우선순위**다 — 처음 맞는 줄이 이긴다(`findKind` · `findReloadRoute`).
+        // 규칙 순서가 곧 판정 우선순위다. 처음 맞는 규칙이 이긴다(`findKind`, `findReloadRoute`).
         constexpr AssetMatchRow kArrAssetMatch[] = {
             {        EditorAssetType::Scene, MatchMode::CookableSource,                nullptr,                                     0,                                nullptr,                                              nullptr},
             {       EditorAssetType::Prefab, MatchMode::CookableSource,                nullptr,                                     0,                               "Prefab",                                              nullptr},
@@ -109,8 +109,8 @@ namespace sw::editor
             {         EditorAssetType::Data,      MatchMode::Extension,            kArrDataExt,            SW_COUNT_OF( kArrDataExt ),                                nullptr,                                              nullptr},
         };
 
-        // 종류마다 한 줄. 줄 순서가 곧 **브라우저 필터 · 도구 패널 · 리소스 카탈로그의 표시 순서**다.
-        // 칸: 종류 · 이름(단수) · 브라우저 라벨 · 패널 제목 · 아이콘 · 색 · 액센트 색 · Other 제외 · 임포트
+        // 종류마다 항목 하나다. 항목 순서가 곧 브라우저 필터, 도구 패널, 리소스 카탈로그의 표시 순서다.
+        // 필드는 종류, 이름(단수), 브라우저 라벨, 패널 제목, 아이콘, 색, 액센트 색, Other 제외, 임포트 순서다
         constexpr EditorAssetTypeInfo kArrKindInfo[] = {
             {        EditorAssetType::Scene,       "Scene",       "Scenes",           nullptr,       editoricon::kScene,                style::kAccent,  true,  true, false},
             {       EditorAssetType::Prefab,      "Prefab",      "Prefabs",   "Prefab Editor",      editoricon::kPrefab, { 0.35f, 0.70f, 1.00f, 1.0f }, false,  true,  true},
@@ -132,7 +132,7 @@ namespace sw::editor
             {         EditorAssetType::Data,        "Data",         "Data",           nullptr,       editoricon::kTable, { 0.60f, 0.75f, 0.95f, 1.0f }, false, false, false},
         };
 
-        /** @brief 종류 표가 `Unknown` 을 뺀 모든 종류를 꼭 한 번씩 담고, 이름 · 라벨 · 아이콘 칸이 비지 않았는지입니다. */
+        /** @brief 종류 테이블이 `Unknown` 을 뺀 모든 종류를 한 번씩 담고, 이름, 라벨, 아이콘 필드가 비어 있지 않은지 검사합니다. */
         constexpr bool isKindTableComplete()
         {
             for ( uint32 kindValue = 1; kindValue < static_cast<uint32>( EditorAssetType::Count ); ++kindValue )
@@ -153,7 +153,7 @@ namespace sw::editor
             return true;
         }
 
-        /** @brief 모든 종류가 판정 줄을 하나 이상 가졌는지입니다. 줄이 없는 종류는 어떤 경로에도 걸리지 않습니다. */
+        /** @brief 모든 종류가 판정 규칙을 하나 이상 가졌는지 검사합니다. 규칙이 없는 종류는 어떤 경로에도 해당하지 않습니다. */
         constexpr bool isEveryKindMatchable()
         {
             for ( uint32 kindValue = 1; kindValue < static_cast<uint32>( EditorAssetType::Count ); ++kindValue )
@@ -199,7 +199,7 @@ namespace sw::editor
                 return false;
             }
 
-            /** @brief 엔진 쿠킹 규칙의 종류입니다. 씬 · 프리팹이 아니면 `AssetKind::Count` 입니다. */
+            /** @brief 엔진 쿠킹 규칙의 종류를 반환합니다. 씬이나 프리팹이 아니면 `AssetKind::Count` 입니다. */
             static AssetKind getCookKind( EditorAssetType kind )
             {
                 if ( kind == EditorAssetType::Scene )
@@ -218,7 +218,7 @@ namespace sw::editor
                 return matchSuffixList( path, row._pSuffix, row._suffixCount, row._mode );
             }
 
-            /** @brief 줄 하나의 접미사를 @p outListSuffix 에 더합니다. 쿠킹 규칙 줄은 엔진 표에서 가져옵니다(정적 문자열). */
+            /** @brief 규칙 하나의 접미사를 @p outListSuffix 에 추가합니다. 쿠킹 규칙은 엔진 테이블에서 가져옵니다(정적 문자열). */
             static void appendRowSuffixes( const AssetMatchRow& row, vector<string_view>& outListSuffix )
             {
                 if ( row._mode == MatchMode::CookableSource )
@@ -253,7 +253,7 @@ namespace sw::editor
                 return listMapping;
             }
 
-            /** @brief 전용 패널이 있는 종류를 종류 표 순서대로 모읍니다. */
+            /** @brief 전용 패널이 있는 종류를 종류 테이블 순서대로 모읍니다. */
             static vector<EditorAssetType> buildToolPanelKinds()
             {
                 vector<EditorAssetType> listKind{};
@@ -265,7 +265,7 @@ namespace sw::editor
                 return listKind;
             }
 
-            /** @brief 라벨이 있는 종류로 브라우저 필터를 만듭니다. 앞뒤의 All/Other 는 종류가 아닙니다. */
+            /** @brief 라벨이 있는 종류로 브라우저 필터를 만듭니다. 앞뒤의 All 과 Other 는 종류가 아닙니다. */
             static vector<EditorAssetBrowserFilter> buildBrowserFilters()
             {
                 vector<EditorAssetBrowserFilter> listFilter{};
@@ -278,21 +278,21 @@ namespace sw::editor
                 return listFilter;
             }
 
-            /** @brief 종류의 패널 제목입니다. 없으면 nullptr 이고, `getPanelTitle` 의 빈 문자열과 구분됩니다. */
+            /** @brief 종류의 패널 제목을 반환합니다. 없으면 nullptr 이며, `getPanelTitle` 의 빈 문자열과 구분됩니다. */
             static const utf8* getPanelTitleOf( EditorAssetType kind )
             {
                 const EditorAssetTypeInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( kind );
                 return pInfo != nullptr ? pInfo->_pPanelTitle : nullptr;
             }
 
-            /** @brief 종류가 브라우저 "Other" 필터에서 빠지는지입니다. */
+            /** @brief 종류가 브라우저 "Other" 필터에서 빠지면 true 입니다. */
             static bool isOtherExcluded( EditorAssetType kind )
             {
                 const EditorAssetTypeInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( kind );
                 return pInfo != nullptr && pInfo->_bOtherExcluded;
             }
 
-            /** @brief 종류의 접미사가 임포트 대화상자에 들어가는지입니다. */
+            /** @brief 종류의 접미사가 임포트 대화상자에 들어가면 true 입니다. */
             static bool isImportable( EditorAssetType kind )
             {
                 const EditorAssetTypeInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( kind );
@@ -309,7 +309,7 @@ namespace sw::editor
                 return false;
             }
 
-            /** @brief 줄 하나의 접미사를 중복 없이 @p outListSuffix 에 더합니다. */
+            /** @brief 규칙 하나의 접미사를 중복 없이 @p outListSuffix 에 추가합니다. */
             static void appendUniqueRowSuffixes( const AssetMatchRow& row, vector<string>& outListSuffix )
             {
                 vector<string_view> listRowSuffix{};
@@ -459,7 +459,7 @@ namespace sw::editor
         AssetReloadRoute route{};
         if ( path.empty() )
             return route;
-        // 표 순서대로 첫 일치 줄이 이긴다(이미지는 SpriteClip 이미지 줄보다 앞선 Texture 줄로 간다).
+        // 테이블 순서대로 첫 일치 규칙이 이긴다. 이미지는 SpriteClip 이미지 규칙보다 앞선 Texture 규칙으로 간다.
         for ( const AssetMatchRow& row : kArrAssetMatch )
         {
             if ( EditorAssetTypeInternal::matchRow( row, path ) == false )

@@ -61,9 +61,9 @@ namespace sw::editor
             static constexpr Color kMultiSelectionText{ 0.4f, 0.7f, 1.0f, 1.0f };
 
             /**
-             * @brief 오브젝트 하나를 바꾸는 인스펙터 편집 — 멈춰 있으면 되돌리기 기록과 씬 dirty 를 남기고, 플레이 중이면 바로 바꿉니다.
-             * @details 이름 · 활성 · 부모 해제 · 컴포넌트 활성 · 컴포넌트 제거가 이것을 지난다 — 기록도 dirty 도 없이 바꾸면 그 편집만
-             *          하고 다른 씬을 열거나 끌 때 묻지도 않고 사라지고 Ctrl+Z 로도 돌릴 수 없다. 플레이 중에는 씬 명령이 막히므로
+             * @brief 오브젝트 하나를 바꾸는 인스펙터 편집입니다. 정지 상태이면 되돌리기 기록과 씬 dirty 를 남기고, 플레이 중이면 바로 바꿉니다.
+             * @details 이름, 활성, 부모 해제, 컴포넌트 활성, 컴포넌트 제거가 이 함수를 지난다. 기록도 dirty 도 없이 바꾸면 그 편집은
+             *          다른 씬을 열거나 에디터를 끌 때 묻지도 않고 사라지고 Ctrl+Z 로도 돌릴 수 없다. 플레이 중에는 씬 명령이 막히므로
              *          (플레이 사본은 Stop 이 되돌린다) 바로 바꾼다.
              */
             template <typename EditFunc>
@@ -111,9 +111,9 @@ namespace sw::editor
         drawSelectionSection();
         InspectorPropertyUndo::commitFinishedEdits();
 
-        // Undo/Redo 단축키는 여기서 처리하지 않는다 — edit.undo / edit.redo 커맨드가 유일한 처리자다.
+        // Undo 와 Redo 단축키는 여기서 처리하지 않는다. edit.undo 와 edit.redo 커맨드가 유일한 처리자다.
         // ImGui 의 IsKeyPressed 는 소비되지 않으므로 여기서도 받으면 전역 처리기(EditorCommandGUI)와 함께
-        // **두 번 되돌린다.**
+        // 두 번 되돌리게 된다.
 
         EditorWidgets::popInspectorStyle();
     }
@@ -125,7 +125,7 @@ namespace sw::editor
             return;
 
         EditorWidgets::drawSectionHeader( "Selection" );
-        // 잠그면 선택이 바뀌어도 지금 오브젝트를 계속 보인다(유니티 Inspector 자물쇠 · 언리얼의 여러 Details 창 대신).
+        // 잠그면 선택이 바뀌어도 현재 오브젝트를 계속 보여 준다. 유니티 Inspector 의 자물쇠에 해당하며, 언리얼에서는 Details 창을 여러 개 여는 것과 같은 용도다.
         ImGui::SameLine( ImGui::GetContentRegionAvail().x - ImGui::GetFrameHeight() );
         const bool bLocked = _lockedObjectID != 0;
         if ( EditorWidgets::drawToggleIconButton( "##inspectorLock", bLocked, editoricon::kLock, editoricon::kUnlock, SW_LOCKEY( "EditorInspector", "LockedToObject" ),
@@ -161,14 +161,14 @@ namespace sw::editor
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorInspector", "SelectionGone" ) );
             if ( _lockedObjectID != 0 )
-                _lockedObjectID = 0; // 잠근 오브젝트가 사라졌다 — 선택을 따라가는 데로 돌아간다
+                _lockedObjectID = 0; // 잠근 오브젝트가 사라졌으므로 선택을 따라가는 상태로 돌아간다
             else
                 ws.clearSelection();
             return;
         }
 
-        // 플레이 중에도 값은 고친다(유니티 플레이 모드 편집) — Stop 이 스냅샷으로 되돌리고, 남기려면 Keep Simulation Changes.
-        // 구조 편집(컴포넌트 더하기 · 프리팹)은 씬 명령이 플레이 중에 스스로 거절한다.
+        // 플레이 중에도 값은 고칠 수 있다(유니티의 플레이 모드 편집). Stop 이 스냅샷으로 되돌리며, 남기려면 Keep Simulation Changes 를 쓴다.
+        // 구조 편집(컴포넌트 추가, 프리팹)은 씬 명령이 플레이 중에 스스로 거절한다.
         if ( EditorPlaySession::areSceneEditsAllowed() == false )
         {
             EditorWidgets::drawChip( "Play Mode", editor::style::kWarn );
@@ -211,7 +211,7 @@ namespace sw::editor
         if ( bEditsAllowed == false )
             ImGui::BeginDisabled();
 
-        // 활성은 모두에 — 섞여 있으면 혼합 표시(체크는 주 선택 값).
+        // 활성은 모든 선택에 적용한다. 값이 섞여 있으면 혼합으로 표시하고, 체크는 주 선택의 값을 따른다.
         bool bMixedActive = false;
         for ( const GameObject* pObject : listObject )
         {
@@ -315,7 +315,7 @@ namespace sw::editor
         ImGui::SeparatorText( "Components" );
         EditorContext* pSelEditorContext = EditorContext::get();
         IRHIDevice*    pRHIDevice        = ( pSelEditorContext != nullptr ) ? pSelEditorContext->getRHIDevice() : nullptr;
-        // 복사한다. 아래 루프가 컴포넌트를 뗄 수 있어 원본을 돌 수 없다.
+        // 복사한다. 아래 루프가 컴포넌트를 제거할 수 있어 원본을 순회할 수 없다.
         const vector<Component*> listComponent( pObj->getComponents().begin(), pObj->getComponents().end() );
         for ( Component* pComp : listComponent )
         {
@@ -323,12 +323,12 @@ namespace sw::editor
                 continue;
 
             const utf8* pComponentName = pComp->getComponentName().empty() == false ? pComp->getComponentName().c_str() : "Component";
-            // 카드 머리 앞에 컴포넌트 아이콘(유니티 Inspector · 언리얼 Details 의 컴포넌트 머리)
+            // 카드 헤더 앞에 컴포넌트 아이콘을 둔다. 유니티 Inspector 와 언리얼 Details 의 컴포넌트 헤더에 해당한다
             fixed_string<constant::kMaxBuffer128> cardTitle;
             formatstring( cardTitle.data(), cardTitle.capacity(), "%#  %#", EditorComponentIcon::findRow( pComp->getTypeInfo() )._pGlyph, pComponentName );
             const utf8* pName = cardTitle.c_str();
-            // 체크박스는 컴포넌트 **자기** 비트다. 주의: 실효값(isActive — 소유 오브젝트의 계층 활성까지)을 읽어 그대로 다시 쓰면
-            // 꺼진 부모 아래의 컴포넌트는 인스펙터에 보이기만 해도 자기 비트가 꺼진다. 쓰는 것도 바뀐 때 한 번이다(아래).
+            // 체크박스는 컴포넌트 자기 비트다. 실효값(isActive, 소유 오브젝트의 계층 활성까지 포함)을 읽어 그대로 다시 쓰면
+            // 꺼진 부모 아래의 컴포넌트는 인스펙터에 보이기만 해도 자기 비트가 꺼지므로 주의한다. 쓰는 것도 값이 바뀐 때 한 번이다(아래).
             const bool bWasActive = pComp->isSelfActive();
             bool       bActive    = bWasActive;
             bool       bRemove{ false };
@@ -372,14 +372,14 @@ namespace sw::editor
                 if ( pGameObjectManager == nullptr )
                     (void)pObj->removeComponent( pComp ); // 실패는 removeComponent 가 알리고 카드가 남는다
                 else if ( EditorPlaySession::areSceneEditsAllowed() )
-                    EditorSceneCommands::destroyComponent( pGameObjectManager, pObj, pComp ); // 기록 · dirty
+                    EditorSceneCommands::destroyComponent( pGameObjectManager, pObj, pComp ); // 기록과 dirty 를 남긴다
                 else
-                    pGameObjectManager->destroyComponent( pComp ); // 플레이 사본 — Stop 이 되돌린다
+                    pGameObjectManager->destroyComponent( pComp ); // 플레이 사본이므로 Stop 이 되돌린다
                 break;
             }
         }
 
-        // 컴포넌트 목록 끝의 Add Component(유니티 Inspector 맨 아래 · 언리얼 Details 의 Add) — Hierarchy 메뉴와 같은 목록이다.
+        // 컴포넌트 목록 끝의 Add Component 다. 유니티 Inspector 맨 아래, 언리얼 Details 의 Add 에 해당하며 Hierarchy 메뉴와 같은 목록이다.
         ImGui::Spacing();
         const float32 buttonWidth = MathUtil::min( ImGui::GetContentRegionAvail().x, 220.0f * EditorThemeUtil::getDpiScale() );
         ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ( ImGui::GetContentRegionAvail().x - buttonWidth ) * 0.5f );
@@ -430,7 +430,7 @@ namespace sw::editor
                         (void)EditorTransformCommands::pasteCopiedComponentAsNew( workspace, pObj ); // 실패는 붙여넣기가 로그로 알린다
                 }
                 ImGui::Separator();
-                // 주 씬 컴포넌트(뿌리 트랜스폼)는 옮기지 않고, 그 자리로 옮겨 들어가지도 않는다(`GameObject::moveComponent`).
+                // 주 씬 컴포넌트(루트 트랜스폼)는 옮기지 않고, 그 위치로 옮겨 들어가지도 않는다(`GameObject::moveComponent`).
                 const auto& listComponent = pObj->getComponents();
                 size_t      index         = 0;
                 while ( index < listComponent.size() && listComponent[index] != pComp )
@@ -514,8 +514,8 @@ namespace sw::editor
     {
         ImGui::Text( "GameObject  ID: %u", static_cast<uint32>( pObj->getObjectID() ) );
 
-        // 편집 중이 아니면 오브젝트 이름으로 채운다. 편집 중인 글을 멤버로 들어야 칸을 떠난 프레임(ImGui 가 버퍼에 쓰지 않는다)에도 적용할 수 있다 —
-        // Enter 로도, 다른 곳을 눌러 떠나도 적용한다(유니티 · 언리얼). Esc 는 ImGui 가 글을 되돌려 편집 없음으로 끝난다.
+        // 편집 중이 아니면 오브젝트 이름으로 채운다. 편집 중인 텍스트를 멤버로 보관해야 입력란을 떠난 프레임(ImGui 가 버퍼에 쓰지 않는다)에도 적용할 수 있다.
+        // Enter 를 누르거나 다른 곳을 눌러 떠나도 적용한다(유니티와 언리얼). Esc 는 ImGui 가 텍스트를 되돌려 편집 없음으로 끝난다.
         const bool bEditingName = ImGui::GetActiveID() == ImGui::GetID( "Name" ) && _nameEditObjectID == pObj->getObjectID();
         if ( bEditingName == false )
         {
@@ -579,8 +579,8 @@ namespace sw::editor
             return;
         }
 
-        // 확장은 이 타입과 그 기반들에 등록된 것 전부다(기반 → 파생). 각자 자기 구역을 그리고 직접 그린 반사 프로퍼티만 감춘다 — 나머지 반사
-        // 프로퍼티는 상속분까지 아래에서 그린다(언리얼 Details 의 `IDetailCustomization` · `HideProperty`).
+        // 확장은 이 타입과 그 기반 타입들에 등록된 것 전부다(기반에서 파생 순서). 각자 자기 영역을 그리고 직접 그린 리플렉션 프로퍼티만 감춘다. 나머지 리플렉션
+        // 프로퍼티는 상속한 것까지 아래에서 그린다(언리얼 Details 의 `IDetailCustomization` 과 `HideProperty`).
         vector<IInspectorComponent*> listInspector;
         pContext->getInspectorComponentManager().collectForType( *pTypeInfo, listInspector );
         vector<hashed_string> listDrawnName;
@@ -590,8 +590,8 @@ namespace sw::editor
         }
         for ( IInspectorComponent* pInspector : listInspector )
         {
-            // 확장 구역도 프로퍼티 위젯과 같은 규칙으로 되돌리기 · dirty 에 남긴다 — 구역을 한 묶음으로 닫고 그 묶음을 위젯 하나처럼 추적한다
-            // (구역이 위젯마다 `trackPod` 를 부르지 않아도 된다).
+            // 확장 영역도 프로퍼티 위젯과 같은 규칙으로 되돌리기와 dirty 에 남긴다. 영역을 하나로 묶어 위젯 하나처럼 추적하므로
+            // 영역이 위젯마다 `trackPod` 를 호출하지 않아도 된다.
             ImGui::BeginGroup();
             pInspector->drawSection( pComp, pRHIDevice );
             ImGui::EndGroup();

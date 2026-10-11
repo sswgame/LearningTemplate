@@ -15,11 +15,11 @@ namespace sw::editor
     {
         /**
          * @struct VrmMaterialImporterInternal
-         * @brief 키 표 · 값 읽기 · 머티리얼 XML 채우기입니다.
+         * @brief 키 테이블, 값 읽기, 머티리얼 XML 채우기를 담당합니다.
          */
         struct VrmMaterialImporterInternal
         {
-            /** @brief 엔진 툰 머티리얼 틀입니다. 프로퍼티 목록 · 퍼뮤테이션은 이 파일 하나가 원본입니다. */
+            /** @brief 엔진 툰 머티리얼 템플릿 경로입니다. 프로퍼티 목록과 퍼뮤테이션의 원본은 이 파일 하나입니다. */
             static constexpr string_view kToonMaterialTemplate = "engine/materials/toon.material";
 
             /** @brief 0.x 원소의 최상위 키입니다. */
@@ -31,8 +31,8 @@ namespace sw::editor
                                                              "_OutlineWidth", "_OutlineWidthMode", "_OutlineScaledMaxDistance",
                                                              "_OutlineColorMode", "_OutlineLightingMix" };
             /**
-             * @brief 0.x 에서 알지만 옮기지 않는 실수 키와 그 키가 효과 없는 값입니다. 다른 값이면 무시 목록에 남깁니다.
-             * @details 블렌드 상태(_SrcBlend · _DstBlend · _ZWrite · _AlphaToMask)는 _BlendMode 에서 나오고 _DebugMode · _MToonVersion 은 그림과 무관해 늘 조용히 넘긴다.
+             * @brief 0.x 에서 알지만 옮기지 않는 실수 키와, 그 키가 효과 없는 값입니다. 다른 값이면 무시 목록에 남깁니다.
+             * @details 블렌드 상태(_SrcBlend, _DstBlend, _ZWrite, _AlphaToMask)는 _BlendMode 에서 정해지고, _DebugMode 와 _MToonVersion 은 렌더링과 무관하므로 항상 조용히 넘긴다.
              */
             struct IgnoredFloat
             {
@@ -41,11 +41,11 @@ namespace sw::editor
                 bool        _bAlwaysSilent;
             };
             static constexpr IgnoredFloat kArrVrm0IgnoredFloat[] = {
-                {             "_BumpScale", 1.0f, false}, // 노멀 맵 없음
+                {             "_BumpScale", 1.0f, false}, // 노멀 맵이 없다
                 {      "_ShadingGradeRate", 1.0f,  true}, // 셰이딩 그레이드 텍스처가 없으면 효과가 없다
                 { "_LightColorAttenuation", 0.0f, false},
-                {"_IndirectLightIntensity", 0.1f,  true}, // 환경광이 균일해 섞을 것이 없다
-                {       "_OutlineCullMode", 1.0f, false}, // 외곽선은 늘 앞면 컬링
+                {"_IndirectLightIntensity", 0.1f,  true}, // 환경광이 균일하므로 섞을 것이 없다
+                {       "_OutlineCullMode", 1.0f, false}, // 외곽선은 항상 앞면을 컬링한다
                 {         "_UvAnimScrollX", 0.0f, false},
                 {         "_UvAnimScrollY", 0.0f, false},
                 {        "_UvAnimRotation", 0.0f, false},
@@ -58,15 +58,15 @@ namespace sw::editor
             };
             /** @brief 0.x 에서 옮기는 색 키입니다. */
             static constexpr string_view kArrVrm0Color[] = { "_Color", "_ShadeColor", "_EmissionColor", "_RimColor", "_OutlineColor" };
-            /** @brief 0.x 텍스처 키 — 옮기는 넷과 알지만 옮기지 않는 것들입니다. 같은 이름의 벡터 키는 텍스처 타일링([x, y, 크기 x, 크기 y])입니다. */
+            /** @brief 0.x 텍스처 키입니다. 옮기는 네 개와 알지만 옮기지 않는 것들이 있습니다. 같은 이름의 벡터 키는 텍스처 타일링([x, y, 크기 x, 크기 y])입니다. */
             static constexpr string_view kArrVrm0Texture[]        = { "_MainTex", "_ShadeTexture", "_EmissionMap", "_SphereAdd" };
             static constexpr string_view kArrVrm0IgnoredTexture[] = { "_BumpMap", "_ReceiveShadowTexture", "_ShadingGradeTexture", "_RimTexture", "_OutlineWidthTexture",
                                                                       "_UvAnimMaskTexture" };
-            /** @brief 0.x 의 MToon 이 아닌 셰이더 — glTF 기본 머티리얼을 평면 툰으로 옮깁니다. */
+            /** @brief 0.x 의 MToon 이 아닌 셰이더입니다. glTF 기본 머티리얼을 평면 툰으로 옮깁니다. */
             static constexpr string_view kArrVrm0FlatShader[] = { "VRM_USE_GLTFSHADER", "VRM/UnlitTexture", "VRM/UnlitCutout", "VRM/UnlitTransparent",
                                                                   "VRM/UnlitTransparentZWrite" };
 
-            /** @brief 1.0 `VRMC_materials_mtoon` 의 키 — 옮기는 것과 알지만 옮기지 않는 것들입니다. */
+            /** @brief 1.0 `VRMC_materials_mtoon` 의 키입니다. 옮기는 것과 알지만 옮기지 않는 것이 있습니다. */
             static constexpr string_view kArrMtoon1Key[]        = { "specVersion",
                                                                     "transparentWithZWrite",
                                                                     "renderQueueOffsetNumber",
@@ -125,7 +125,7 @@ namespace sw::editor
                     pOutListIgnored->push_back( name );
             }
 
-            /** @brief 객체의 키를 표와 대조합니다. 모르는 키가 있으면 그 이름을 @p outError 에 쓰고 false 입니다. */
+            /** @brief 객체의 키를 테이블과 대조합니다. 모르는 키가 있으면 그 이름을 @p outError 에 쓰고 false 를 반환합니다. */
             template <size_t Count>
             [[nodiscard]] static bool checkKeys( const JSONValue& object, const string_view ( &arrKnown )[Count], string_view context, string& outError )
             {
@@ -140,7 +140,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 숫자 @p count 개의 배열을 읽습니다. 모자란 칸은 그대로 둡니다. 배열이 아니거나 숫자가 아니면 false 입니다. */
+            /** @brief 숫자 @p count 개의 배열을 읽습니다. 모자란 원소는 그대로 둡니다. 배열이 아니거나 숫자가 아니면 false 입니다. */
             [[nodiscard]] static bool readNumbers( const JSONValue& value, float32* pOutValue, uint32 count )
             {
                 if ( value.isArray() == false || value.size() < count )
@@ -155,7 +155,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 색(3 또는 4 칸)을 읽습니다. 3 칸이면 알파는 1 입니다. */
+            /** @brief 색(원소 3개 또는 4개)을 읽습니다. 3개이면 알파는 1 입니다. */
             [[nodiscard]] static bool readColor( const JSONValue& value, float4& outColor )
             {
                 float32 arrValue[4]{ 0.0f, 0.0f, 0.0f, 1.0f };
@@ -171,7 +171,7 @@ namespace sw::editor
                                VrmMaterialImporter::convertGammaToLinear( gamma._z ), gamma._w };
             }
 
-            /** @brief glTF textureInfo 의 텍스처 번호입니다. 없으면 -1 입니다. 지원하지 않는 텍스처 확장(KHR_texture_transform)이 있으면 무시 목록에 남깁니다. */
+            /** @brief glTF textureInfo 의 텍스처 번호를 반환합니다. 없으면 -1 입니다. 지원하지 않는 텍스처 확장(KHR_texture_transform)이 있으면 무시 목록에 남깁니다. */
             static int32 readTextureIndex( const JSONValue& textureInfo, vector<string>* pOutListIgnored )
             {
                 if ( textureInfo.isObject() == false || textureInfo.get( "index", false ).isNumber() == false )
@@ -190,7 +190,7 @@ namespace sw::editor
             }
 
             /**
-             * @brief glTF 기본 머티리얼(baseColor · alphaMode · alphaCutoff · doubleSided · emissive)을 읽습니다. 1.0 의 MToon 과 0.x 의 평면 셰이더가 함께 씁니다.
+             * @brief glTF 기본 머티리얼(baseColor, alphaMode, alphaCutoff, doubleSided, emissive)을 읽습니다. 1.0 의 MToon 과 0.x 의 평면 셰이더가 함께 씁니다.
              * @return alphaMode 를 모르면 false 입니다.
              */
             [[nodiscard]] static bool readGltfBase( const JSONValue& gltfMaterial, ToonMaterialDesc& inoutDesc, vector<string>* pOutListIgnored, string& outError )
@@ -236,7 +236,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 그림자 없이 기본색 하나로 칠하는 평면 툰입니다(언릿 · glTF 셰이더). */
+            /** @brief 그림자 없이 기본색 하나로 칠하는 평면 툰입니다. 언릿과 glTF 셰이더가 해당합니다. */
             static void makeFlat( ToonMaterialDesc& inoutDesc )
             {
                 inoutDesc._shadeColor   = inoutDesc._baseColor;
@@ -245,7 +245,7 @@ namespace sw::editor
                 inoutDesc._outlineMode  = ToonOutlineMode::None;
             }
 
-            /** @brief 소수 여섯 자리까지의 글입니다(XML 에 쓰는 값). */
+            /** @brief 소수 여섯 자리까지의 문자열입니다. XML 에 쓰는 값입니다. */
             static string formatNumber( float32 value )
             {
                 utf8 arrText[constant::kMaxBuffer32]{};
@@ -258,7 +258,7 @@ namespace sw::editor
                 return formatNumber( color._x ) + " " + formatNumber( color._y ) + " " + formatNumber( color._z ) + " " + formatNumber( color._w );
             }
 
-            /** @brief `_properties` 에서 이름의 항목입니다. */
+            /** @brief `_properties` 에서 그 이름의 항목을 찾습니다. */
             static XMLNode findProperty( const XMLNode& properties, string_view name )
             {
                 for ( XMLNode item = properties.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
@@ -276,7 +276,7 @@ namespace sw::editor
 {
     float32 VrmMaterialImporter::convertGammaToLinear( float32 value )
     {
-        // sRGB 전달 함수(IEC 61966-2-1)의 역. 유니티가 감마 색을 선형으로 바꾸는 식과 같다.
+        // sRGB 전달 함수(IEC 61966-2-1)의 역함수다. 유니티가 감마 색을 선형으로 바꾸는 식과 같다.
         if ( value <= 0.04045f )
             return value / 12.92f;
         return MathUtil::pow( ( value + 0.055f ) / 1.055f, 2.4f );
@@ -298,7 +298,7 @@ namespace sw::editor
         if ( Internal::checkKeys( materialProperty, Internal::kArrVrm0RootKey, context, outError ) == false )
             return false;
 
-        // MToon 이 아닌 셰이더(언릿 · glTF 셰이더)는 glTF 머티리얼을 평면 툰으로 옮긴다.
+        // MToon 이 아닌 셰이더(언릿, glTF 셰이더)는 glTF 머티리얼을 평면 툰으로 옮긴다.
         if ( Internal::contains( Internal::kArrVrm0FlatShader, shader ) )
         {
             if ( Internal::readGltfBase( gltfMaterial, outDesc, pOutListIgnored, outError ) == false )
@@ -390,7 +390,7 @@ namespace sw::editor
                 outError = context + ": unknown vector property '" + key + "'";
                 return false;
             }
-            // 텍스처 타일링 [x, y, 크기 x, 크기 y] — 늘 [0, 0, 1, 1] 이다. 다르면 지원하지 않는 타일링이다.
+            // 텍스처 타일링 [x, y, 크기 x, 크기 y] 는 항상 [0, 0, 1, 1] 이어야 한다. 다르면 지원하지 않는 타일링이다.
             float32 arrTiling[4]{ 0.0f, 0.0f, 1.0f, 1.0f };
             if ( Internal::readNumbers( value, arrTiling, 4 ) == false )
             {
@@ -447,7 +447,7 @@ namespace sw::editor
             outDesc._alphaMode = ToonAlphaMode::Opaque;
         else if ( blendMode == 1 )
             outDesc._alphaMode = ToonAlphaMode::Cutout;
-        else if ( blendMode == 2 || blendMode == 3 ) // 3 = 깊이를 쓰는 반투명 — 엔진 반투명 패스는 깊이를 쓰지 않는다
+        else if ( blendMode == 2 || blendMode == 3 ) // 3 은 깊이를 쓰는 반투명이다. 엔진의 반투명 패스는 깊이를 쓰지 않는다
             outDesc._alphaMode = ToonAlphaMode::Transparent;
         else
         {
@@ -463,8 +463,8 @@ namespace sw::editor
         }
         outDesc._bTwoSided = ( cullMode == 0 ) ? SW_TRUE : SW_FALSE;
 
-        // 계단 — 0.x 는 [shift, lerp( 1, shift, toony )] 를 [0, 1] 로 편다(N·L 기준). 1.0 은 [-1 + toony, 1 - toony] 를 N·L + shift 에 건다.
-        // 같은 경계가 되게: 1.0 shift = -(아래 + 위) / 2, toony = 1 - (위 - 아래) / 2.
+        // 계단은 0.x 에서 [shift, lerp( 1, shift, toony )] 를 [0, 1] 로 편다(N·L 기준). 1.0 은 [-1 + toony, 1 - toony] 를 N·L + shift 에 적용한다.
+        // 같은 경계가 되도록 1.0 의 shift 는 -(아래 + 위) / 2, toony 는 1 - (위 - 아래) / 2 로 정한다.
         const float32 shadeShift = findFloat( "_ShadeShift", 0.0f );
         const float32 shadeToony = findFloat( "_ShadeToony", 0.9f );
         const float32 lower      = shadeShift;
@@ -478,7 +478,7 @@ namespace sw::editor
         outDesc._rimLightingMix  = findFloat( "_RimLightingMix", 0.0f );
         outDesc._matcapColor     = float4{ 1.0f, 1.0f, 1.0f, 1.0f };
 
-        // 외곽선 — 0.x 월드 두께는 cm, 화면 두께는 NDC 의 1 % 단위(NDC 높이 2 = 화면 높이)라 화면 높이 비율은 × 0.005 다.
+        // 외곽선에서 0.x 의 월드 두께는 cm 단위이고, 화면 두께는 NDC 의 1 % 단위이다(NDC 높이 2 가 화면 높이). 그래서 화면 높이 비율은 × 0.005 다.
         const int32   outlineMode  = static_cast<int32>( findFloat( "_OutlineWidthMode", 0.0f ) + 0.5f );
         const float32 outlineWidth = findFloat( "_OutlineWidth", 0.0f );
         if ( outlineMode == 0 )
@@ -496,7 +496,7 @@ namespace sw::editor
         outDesc._outlineMaxDistance = findFloat( "_OutlineScaledMaxDistance", 1.0f ) > 0.0f && outDesc._outlineMode == ToonOutlineMode::Screen
                                         ? findFloat( "_OutlineScaledMaxDistance", 1.0f )
                                         : 1000.0f;
-        // _OutlineColorMode 0 = 고정 색(빛을 섞지 않는다), 1 = 섞는다.
+        // _OutlineColorMode 가 0 이면 고정 색이고 빛을 섞지 않는다. 1 이면 섞는다.
         outDesc._outlineLightingMix = static_cast<int32>( findFloat( "_OutlineColorMode", 0.0f ) + 0.5f ) == 0 ? 0.0f : findFloat( "_OutlineLightingMix", 1.0f );
         return true;
     }
@@ -516,7 +516,7 @@ namespace sw::editor
         const JSONValue mtoon      = extensions.isObject() ? extensions.get( "VRMC_materials_mtoon", false ) : JSONValue{};
         if ( mtoon.isObject() == false )
         {
-            // MToon 이 없는 머티리얼(KHR_materials_unlit · PBR)은 평면 툰이다.
+            // MToon 이 없는 머티리얼(KHR_materials_unlit, PBR)은 평면 툰으로 처리한다.
             Internal::makeFlat( outDesc );
             return true;
         }
@@ -532,7 +532,7 @@ namespace sw::editor
             Internal::appendIgnored( pOutListIgnored, key );
         }
 
-        // 1.0 의 기본값(VRMC_materials_mtoon 스키마) — 키가 없으면 이 값이다.
+        // 1.0 의 기본값(VRMC_materials_mtoon 스키마)이다. 키가 없으면 이 값을 쓴다.
         auto readFloat = [&]( string_view key, float32 fallback ) -> float32
         { return static_cast<float32>( mtoon.get( key, false ).asFloat( static_cast<float64>( fallback ) ) ); };
         auto readFactor = [&]( string_view key, const float4& fallback, float4& outColor ) -> bool
@@ -639,7 +639,7 @@ namespace sw::editor
             else if ( name == "TwoSided" )
                 bEnabled = desc._bTwoSided == SW_TRUE;
             item.setAttribute( "bEnabled", bEnabled ? "1" : "0" );
-            // 임포트한 머티리얼의 스위치는 에셋이 정한 값이다 — 틀(engine toon)이 런타임 스위치로 둔 것도 그 상태만 쿠킹한다.
+            // 임포트한 머티리얼의 스위치는 에셋이 정한 값이다. 템플릿(engine toon)이 런타임 스위치로 둔 것도 그 상태만 쿠킹한다.
             item.setAttribute( "bShaderFeature", "1" );
         }
         if ( desc._alphaMode == ToonAlphaMode::Transparent )
