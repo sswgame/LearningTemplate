@@ -21,7 +21,7 @@ namespace sw
             static constexpr int64 kFirstRetryDelayMs = 100;
             static constexpr int64 kMaxRetryDelayMs   = 5000;
 
-            /** @brief 닫힌 연결 — 모든 호출이 ConnectionLost 입니다(다시 여는 중 · 내리는 중의 일). */
+            /** @brief 닫힌 연결입니다. 모든 호출이 ConnectionLost 를 반환하며, 다시 여는 중이거나 종료 중인 작업에 씁니다. */
             class ClosedConnection final : public ISQLConnection
             {
             public:
@@ -72,7 +72,7 @@ namespace sw
     SQLConnectionPool::~SQLConnectionPool()
     {
         shutdown();
-        // 거두지 않은 일은 complete 없이 버린다 — 맡긴 서비스가 먼저 내려가 complete 가 가리킬 곳이 없다(메모리 구현과 같다).
+        // 회수하지 않은 작업은 complete 없이 버린다. 맡긴 서비스가 먼저 종료되어 complete 가 가리킬 대상이 없기 때문이며, 메모리 구현도 같다.
         std::scoped_lock<mutex> lock{ _mutex };
         _listCompleted.clear();
     }
@@ -113,7 +113,7 @@ namespace sw
                 worker.join();
         }
         _listWorker.clear();
-        // 워커가 없거나(초기화 전) 남긴 일 — 닫힌 연결로 돌려 완료 큐에.
+        // 워커가 없거나(초기화 전) 남긴 작업은 닫힌 연결로 실행해 완료 큐에 넣는다.
         SQLConnectionPoolInternal::ClosedConnection closed;
         for ( ;; )
         {
@@ -155,7 +155,7 @@ namespace sw
 
     int32 SQLConnectionPool::pollCompletions()
     {
-        // complete 안에서 새 일을 맡길 수 있다 — 꺼낸 목록을 잠금 밖에서 돈다(메모리 구현과 같은 순서 약속).
+        // complete 안에서 새 작업을 맡길 수 있다. 그래서 꺼낸 목록을 락 밖에서 순회한다. 메모리 구현과 같은 순서 규약이다.
         vector<unique_ptr<ISQLJob>> listReady;
         {
             std::scoped_lock<mutex> lock{ _mutex };
@@ -197,7 +197,7 @@ namespace sw
                 _jobReady.wait( lock, [this]()
                 { return _bStopping == SW_TRUE || _listQueuedJob.empty() == false; } );
                 if ( _listQueuedJob.empty() )
-                    return; // 멈추는 중이고 남은 일이 없다
+                    return; // 종료 중이고 남은 작업이 없다
                 job = std::move( _listQueuedJob.front() );
                 _listQueuedJob.pop_front();
                 bStopping = _bStopping == SW_TRUE;

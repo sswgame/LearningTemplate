@@ -16,7 +16,7 @@ namespace sw
             static constexpr int64 kNanosecondsPerMillisecond = 1000000;
             static constexpr int64 kFirstBackoffMs            = 100;
 
-            // 걸음 번호 — 한 요청의 몇 번째 명령인지(답 순서는 연결이 지킨다).
+            // 단계 번호다. 한 요청의 몇 번째 명령인지를 나타내며, 답 순서는 연결이 지킨다.
             static constexpr uint32 kStepFirst          = 0;
             static constexpr uint32 kStepSecond         = 1;
             static constexpr uint32 kStepThird          = 2;
@@ -122,7 +122,7 @@ namespace sw
             finishOperation( operation, EphemeralResult::Ok );
             return requestID;
         }
-        // 비교 후 쓰기가 GET 답을 기다리는 동안은 내보내지 않는다(막힘이 풀리면 `sendDeferredOperations` 가 맡긴 순서대로 보낸다).
+        // 비교 후 쓰기가 GET 답을 기다리는 동안은 내보내지 않는다. 막힘이 풀리면 `sendDeferredOperations` 가 맡긴 순서대로 보낸다.
         if ( _blockingRequestID == 0 )
             sendOperation( operation );
         return requestID;
@@ -172,7 +172,7 @@ namespace sw
             std::scoped_lock<mutex> lock{ _mutex };
             if ( _subscribeConnection.getState() == RespConnectionState::Closed )
             {
-                (void)ensureSubscribeConnection(); // 열리면 모든 채널을 다시 구독한다(이 채널 포함)
+                (void)ensureSubscribeConnection(); // 열리면 모든 채널을 다시 구독한다. 이 채널도 포함한다
             }
             else
             {
@@ -247,7 +247,7 @@ namespace sw
             if ( operation._bDone == SW_FALSE )
                 failOperation( operation );
         }
-        _transport->shutdown(); // 콜백이 우리 잠금을 잡으므로 잠금 밖에서
+        _transport->shutdown(); // 콜백이 우리 락을 잡으므로 락 밖에서 호출한다
         _listChannel.clear();
         _listMessage.clear();
         _blockingRequestID = 0;
@@ -287,7 +287,7 @@ namespace sw
         }
         if ( _subscribeConnection.handleClosed( handle, reason ) )
         {
-            _subscriptionAckCount            = _subscriptionSentCount; // 오지 않을 확인을 기다리지 않는다
+            _subscriptionAckCount            = _subscriptionSentCount; // 오지 않을 확인은 기다리지 않는다
             _nextSubscribeConnectNanoseconds = nowNanoseconds + _subscribeBackoffMs * RespEphemeralStoreInternal::kNanosecondsPerMillisecond;
             _subscribeBackoffMs              = RespEphemeralStoreInternal::makeNextBackoffMs( _subscribeBackoffMs, _settings._maxBackoffMs );
         }
@@ -332,7 +332,7 @@ namespace sw
         }
         if ( bConnected == false )
         {
-            finishOperation( operation, EphemeralResult::Unavailable ); // 물러남 동안 — 기다리게 하지 않는다
+            finishOperation( operation, EphemeralResult::Unavailable ); // 백오프 중이므로 기다리게 하지 않는다
             return;
         }
         const EphemeralRequest& request = operation._request;
@@ -365,7 +365,7 @@ namespace sw
             case EphemeralOperation::CompareAndSet:
             case EphemeralOperation::CompareAndErase:
             {
-                // WATCH 는 이 연결의 상태다 — GET 답을 볼 때까지 뒤 요청을 내보내지 않는다.
+                // WATCH 는 이 연결의 상태이므로 GET 답을 볼 때까지 뒤 요청을 내보내지 않는다.
                 _blockingRequestID = operation._reply._requestID;
                 sendCommand( operation, RespCommand{ "WATCH" }.addText( key ), RespEphemeralStoreInternal::kStepFirst );
                 sendCommand( operation, RespCommand{ "GET" }.addText( key ), RespEphemeralStoreInternal::kStepSecond );
@@ -378,7 +378,7 @@ namespace sw
                     sendCommand( operation, RespCommand{ "INCRBY" }.addText( key ).addInteger( request._delta ), RespEphemeralStoreInternal::kStepFirst );
                     break;
                 }
-                // 새로 생긴 키에만 만료를 건다 — 없을 때만 0 을 만료와 함께 두고 더한다(한 트랜잭션, Lua 없이).
+                // 새로 생긴 키에만 만료를 건다. 키가 없을 때만 0을 만료와 함께 두고 더하며, 한 트랜잭션으로 처리하므로 Lua 가 필요 없다.
                 sendCommand( operation, RespCommand{ "MULTI" }, RespEphemeralStoreInternal::kStepFirst );
                 sendCommand( operation, RespCommand{ "SET" }.addText( key ).addText( "0" ).addText( "PX" ).addInteger( request._ttlMs ).addText( "NX" ),
                              RespEphemeralStoreInternal::kStepSecond );
@@ -457,7 +457,7 @@ namespace sw
             case EphemeralOperation::Get:
             {
                 if ( value.isNull() || RespEphemeralStoreInternal::isWrongType( value ) )
-                    reply._result = EphemeralResult::NotFound; // 정렬 집합 키는 값으로 없다(메모리 구현과 같다)
+                    reply._result = EphemeralResult::NotFound; // 정렬 집합 키는 값으로는 없는 것이다. 메모리 구현과 같다
                 else if ( value._type != RespType::BulkString )
                     reply._result = EphemeralResult::Invalid;
                 else
@@ -496,11 +496,11 @@ namespace sw
                     if ( value._type == RespType::Integer )
                         reply._integer = value._integer;
                     else
-                        reply._result = EphemeralResult::Invalid; // 정수가 아닌 값 · 넘침
+                        reply._result = EphemeralResult::Invalid; // 정수가 아닌 값이거나 범위를 넘었다
                     break;
                 }
                 if ( step != RespEphemeralStoreInternal::kStepFourth )
-                    break; // MULTI · QUEUED
+                    break; // MULTI 와 QUEUED 의 답이다
                 const bool bExecuted = value._type == RespType::Array && value._listElement.size() == 2;
                 if ( bExecuted == false || value._listElement[1]._type != RespType::Integer )
                 {
@@ -584,7 +584,7 @@ namespace sw
     void RespEphemeralStore::handleCompareReply( Operation& operation, uint32 step, const RespValue& value )
     {
         EphemeralReply& reply = operation._reply;
-        if ( step == RespEphemeralStoreInternal::kStepSecond ) // GET — 다음 명령을 정한다
+        if ( step == RespEphemeralStoreInternal::kStepSecond ) // GET 의 답이다. 다음 명령을 정한다
         {
             const bool bMatches = value._type == RespType::BulkString && value._bytes == operation._request._expected;
             if ( bMatches == false )
@@ -610,7 +610,7 @@ namespace sw
                 }
                 sendCommand( operation, RespCommand{ "EXEC" }, RespEphemeralStoreInternal::kStepCompareExec );
             }
-            // 이 요청의 명령은 모두 선에 올랐다 — 뒤 요청이 이어 나가도 WATCH 사이에 끼지 않는다.
+            // 이 요청의 명령은 모두 전송됐으므로 뒤 요청이 이어서 나가도 WATCH 사이에 끼지 않는다.
             if ( _blockingRequestID == operation._reply._requestID )
             {
                 _blockingRequestID = 0;
@@ -619,7 +619,7 @@ namespace sw
             return;
         }
         if ( step == RespEphemeralStoreInternal::kStepCompareExec && value.isNull() )
-            reply._result = EphemeralResult::Conflict; // WATCH 뒤에 누가 바꿨다
+            reply._result = EphemeralResult::Conflict; // WATCH 뒤에 다른 곳에서 값을 바꿨다
         else if ( step == RespEphemeralStoreInternal::kStepCompareExec && value._type != RespType::Array )
             reply._result = EphemeralResult::Invalid;
     }
@@ -673,7 +673,7 @@ namespace sw
             _subscribeBackoffMs              = RespEphemeralStoreInternal::makeNextBackoffMs( _subscribeBackoffMs, _settings._maxBackoffMs );
             return false;
         }
-        // 새 연결은 구독이 없다 — 채널을 모두 다시 구독한다(끊긴 동안의 메시지는 없다 — 최대 한 번 배달).
+        // 새 연결에는 구독이 없으므로 채널을 모두 다시 구독한다. 끊긴 동안의 메시지는 받지 못하며, 배달은 최대 한 번이다.
         for ( const string& channel : _listChannel )
         {
             RespCommand command{ "SUBSCRIBE" };
@@ -694,7 +694,7 @@ namespace sw
             if ( operation._bDone == SW_TRUE || operation._bSent == SW_FALSE )
                 continue;
             bExpired = nowNanoseconds - operation._sentAtNanoseconds > timeoutNanoseconds;
-            break; // 답은 보낸 순서대로 온다 — 가장 오래된 것만 보면 된다
+            break; // 답은 보낸 순서대로 오므로 가장 오래된 것만 보면 된다
         }
         if ( bExpired == false )
             return;
@@ -703,7 +703,7 @@ namespace sw
             std::scoped_lock<mutex> lock{ _mutex };
             _commandConnection.abort( *_transport, "request timed out" );
             _commandConnection.takeReplyRecords( listRecord );
-            // 시한은 서버 쪽 문제라 바로 다시 걸지 않는다.
+            // 시한 초과는 서버 쪽 문제이므로 바로 다시 연결하지 않는다.
             _nextCommandConnectNanoseconds = nowNanoseconds + _commandBackoffMs * RespEphemeralStoreInternal::kNanosecondsPerMillisecond;
             _commandBackoffMs              = RespEphemeralStoreInternal::makeNextBackoffMs( _commandBackoffMs, _settings._maxBackoffMs );
         }

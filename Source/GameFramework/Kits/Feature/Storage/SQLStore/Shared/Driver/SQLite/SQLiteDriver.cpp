@@ -26,7 +26,7 @@ namespace sw
 
             static SQLResult toSQLResult( int32 code )
             {
-                switch ( code & 0xFF ) // 확장 코드의 기본 코드
+                switch ( code & 0xFF ) // 확장 코드에서 기본 코드를 뽑는다
                 {
                     case SQLITE_OK:
                     case SQLITE_DONE:
@@ -47,7 +47,7 @@ namespace sw
                 }
             }
 
-            /** @brief 연결 하나 — 연 워커 스레드 하나가 쓴다(SQLITE_OPEN_NOMUTEX). */
+            /** @brief 연결 하나입니다. 연 워커 스레드 하나만 쓰며 SQLITE_OPEN_NOMUTEX 로 엽니다. */
             class SQLiteConnection final : public ISQLConnection
             {
             public:
@@ -137,7 +137,7 @@ namespace sw
 
                 static void bindValue( sqlite3_stmt* pStatement, int32 position, const SQLValue& value )
                 {
-                    // 빈 글 · 빈 바이트도 NULL 이 아니다 — 자료 포인터가 nullptr 이면 sqlite3 가 NULL 로 묶으므로 따로 묶는다.
+                    // 빈 문자열과 빈 바이트도 NULL 이 아니다. 데이터 포인터가 nullptr 이면 sqlite3 가 NULL 로 바인딩하므로 따로 바인딩한다.
                     switch ( value._type )
                     {
                         case SQLValueType::Null:
@@ -237,14 +237,14 @@ namespace sw
         }
         const string path( connection );
         sqlite3*     pDatabase = nullptr;
-        const int32  flags     = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX; // 연결은 한 스레드가 쓴다
+        const int32  flags     = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX; // 연결은 한 스레드만 쓴다
         if ( sqlite3_open_v2( path.c_str(), &pDatabase, flags, nullptr ) != SQLITE_OK )
         {
             outError = "sqlite open '" + path + "' failed: " + ( pDatabase != nullptr ? sqlite3_errmsg( pDatabase ) : "out of memory" );
             sqlite3_close_v2( pDatabase );
             return nullptr;
         }
-        // WAL — 읽기와 쓰기가 막지 않는다. synchronous FULL — 서비스 저장(거래)은 정전에도 커밋이 남아야 한다. busy_timeout — 다른 연결의 쓰기를 5 초까지 기다린다.
+        // WAL 은 읽기와 쓰기가 서로 막지 않게 한다. synchronous FULL 은 서비스 저장(거래)의 커밋이 정전에도 남게 한다. busy_timeout 은 다른 연결의 쓰기를 5초까지 기다린다.
         utf8*       pError = nullptr;
         const int32 code   = sqlite3_exec( pDatabase, "PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;",
                                            nullptr, nullptr, &pError );
