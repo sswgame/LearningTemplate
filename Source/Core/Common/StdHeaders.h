@@ -18,6 +18,7 @@
 #include <chrono>
 #include <cinttypes>
 #include <climits>
+#include <cmath>
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
