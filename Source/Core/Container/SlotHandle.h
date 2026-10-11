@@ -49,7 +49,9 @@ namespace sw
         friend constexpr bool operator!=( SlotHandle lhs, SlotHandle rhs ) noexcept { return ( lhs == rhs ) == false; }
         friend constexpr bool operator<( SlotHandle lhs, SlotHandle rhs ) noexcept { return lhs.packed() < rhs.packed(); }
 
-        friend std::ostream& operator<<( std::ostream& os, SlotHandle handle )
+        /// 스트림 타입을 템플릿으로 받아 <ostream> 없이 선언한다(쓰는 쪽이 스트림 헤더를 include 한다).
+        template <typename Stream, typename = decltype( std::declval<Stream&>() << uint32{} )>
+        friend Stream& operator<<( Stream& os, SlotHandle handle )
         {
             os << handle._index << ':' << handle._generation;
             return os;

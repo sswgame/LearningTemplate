@@ -13,6 +13,8 @@
 
 #include "TestFramework/TestFramework.h"
 
+#include <sstream>
+
 /**
  * @brief [StringTest] 넓은 문자가 하위 한 바이트로 잘리지 않는다
  * @details 부호 확장을 막으려고 `uint8` 로 **고정**하면 안 된다. 이 해시 템플릿은 `utf16`

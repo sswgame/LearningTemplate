@@ -3,24 +3,21 @@
  * @brief Core 가 쓰는 C/C++ 표준 라이브러리 헤더 묶음입니다.
  * @details 서드파티 헤더(imgui, vulkan, glad 등)는 여기에 넣지 말고 쓰는 곳에서 include 합니다.
  *
- * @warning PCH 없이 이 파일을 직접 포함하면 빌드가 느려질 수 있습니다.
- *          - <regex>   : 파싱 테이블을 만드느라 컴파일 시간이 매우 깁니다.
- *          - <random>  : 템플릿 전개 비용이 큽니다.
- *          - <iostream>: 정적 초기화 비용이 있습니다.
- *          자주 바뀌지 않는 TU 에서는 pch.h 를 통해 포함하고, 그 밖에서는 필요한 헤더만 직접 include 하십시오.
+ * @warning 모든 TU 가 읽는 헤더입니다(CoreMinimal · pch.h). Core 헤더가 쓰는 것만 둡니다.
+ *          스트림(<fstream> · <sstream> · <iostream> · <ostream>) · <random> · <regex> · <future> · <variant> · <condition_variable> ·
+ *          <csignal> · <queue> · <stack> · <bitset> 처럼 몇 파일만 쓰는 무거운 헤더는 쓰는 파일이 직접 include 합니다
+ *          (PCH 를 끈 콜드 빌드에서 TU 마다 파싱 시간이 붙는다 — docs/plans/BuildSpeed.md 2 단계).
+ *          스트림 연산자 선언은 <iosfwd> 의 전방 선언으로 충분합니다.
  */
 #pragma once
 #include <algorithm>
 #include <array>
-#include <bitset>
 #include <cassert>
 #include <cctype>
 #include <charconv>
 #include <chrono>
 #include <cinttypes>
 #include <climits>
-#include <condition_variable>
-#include <csignal>
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
@@ -29,23 +26,16 @@
 #include <cwctype>
 #include <deque>
 #include <exception>
-#include <fstream>
 #include <functional>
-#include <future>
 #include <initializer_list>
-#include <iostream>
+#include <iosfwd>
 #include <limits>
 #include <list>
 #include <map>
 #include <memory>
 #include <optional>
-#include <queue>
-#include <random>
-#include <regex>
 #include <set>
 #include <shared_mutex>
-#include <sstream>
-#include <stack>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -55,5 +45,4 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
-#include <variant>
 #include <vector>

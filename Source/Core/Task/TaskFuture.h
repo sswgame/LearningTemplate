@@ -9,6 +9,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskTypes.h"
 
+#include <condition_variable>
+
 namespace sw
 {
     template <typename T>

@@ -13,6 +13,8 @@
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Frame/RenderFramePacket.h"
 
+#include <condition_variable>
+
 namespace sw
 {
     class FrameRenderer;

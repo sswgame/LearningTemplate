@@ -24,9 +24,10 @@
 기준선 표(PC `SW` · Ryzen 7 6800H, 풀 131.5 s · 헤더 하나 131.6 s · `.cpp` 하나 7.2 s · 워크트리 콜드 142.9 s)와 상위 헤더 20 개는 [검증과 측정](../08_Verification.md) "빌드 속도" 절에 있다.
 헤더 시나리오가 풀 빌드와 같다 — Core 기본 헤더 하나를 고치면 사실상 전 TU 를 다시 컴파일한다(2 단계의 근거). 헤더 파싱 비율 82 %(구문 검사 기준), 1위 `Engine/pch.h`, 2위 `CoreMinimal.h`.
 
-### 2. 헤더 다이어트 (Core 층 정리 뒤)
-0 단계의 상위 헤더 20 개를 전방 선언 · include 정리로 줄인다(`RunForwardDeclarationCandidates.py --apply` 로 후보를 뽑는다). 한 헤더씩 커밋하고 전후 시간을 잰다.
-`String/Logger.h` · `hashed_string.h` · `Container/vector.h` 처럼 모든 TU 가 읽는 헤더가 가장 크다. 기준: 헤더 파싱 비율(`Total Source` / 전체)을 57 % 에서 40 % 아래로.
+### 2. 헤더 다이어트 — 끝(OS 헤더 · `StdHeaders.h`)
+OS 헤더(`Windows.h` 묶음)를 `EngineMinimal.h` 에서 빼고, `StdHeaders.h` 에서 몇 파일만 쓰는 무거운 표준 헤더(스트림 · `<random>` · `<regex>` · `<future>` · `<variant>` 등)를 뺐다.
+PCH 없는 TU 넷의 구문 검사 합이 5.02 → 4.08 s(−19 %)다([검증과 측정](../08_Verification.md) "빌드 속도"). 헤더 파싱 비율 40 % 목표는 닿지 않았다(53 → 51 %) —
+남은 헤더 시간의 약 30 % 는 UCRT `wchar.h` 가 무조건 읽는 clang `intrin.h`(TU 하나에 약 0.25 s)라 엔진 쪽에서 줄일 수 없고, 나머지 대부분은 모든 `.cpp` 가 첫 줄에 읽는 `pch.h` 자체다.
 
 
 ### 3. PCH 공유 (GameFramework 폴더 재배치 뒤)

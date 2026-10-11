@@ -37,6 +37,8 @@
 
 #include "TestFramework/TestFramework.h"
 
+#include <fstream>
+
 // RenderPassTest — 파이프라인 XML · 렌더 그래프 위상 · 검증. GPU 디바이스를 만들지 않는다(nogpu).
 
 SW_TEST_CASE( RenderPassTest, XMLSerializationRoundtrip )

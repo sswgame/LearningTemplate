@@ -17,6 +17,8 @@
 #include "Core/Task/LockFreeObjectPool.h"
 #include "Core/Task/TaskTypes.h"
 
+#include <variant>
+
 namespace sw
 {
     struct ParallelGroup;

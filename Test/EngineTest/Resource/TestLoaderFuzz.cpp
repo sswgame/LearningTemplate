@@ -12,6 +12,7 @@
 #include <cinttypes>
 #include <cstdio>
 #include <cstdlib>
+#include <random>
 
 using namespace sw;
 

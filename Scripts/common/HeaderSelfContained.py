@@ -106,6 +106,9 @@ def makeSeedIndex(database: Sequence[dict], buildDir: Path | None = None, reposi
         filePath = entry.get("file", "").replace("\\", "/")
         if not filePath or filePath.endswith(_kPchSourceSuffixes):
             continue
+        # 헤더 쪽은 resolve 한 경로로 찾는다 — 정션 · subst 로 짠 빌드의 DB 경로도 같은 모양으로 맞춘다(안 맞추면 엉뚱한 TU 의 플래그를 받는다).
+        if Path(filePath).is_absolute():
+            filePath = normalizePath(Path(filePath).resolve())
         seedDir = filePath.rsplit("/", 1)[0] + "/"
         if buildPrefix and rootPrefix and seedDir.lower().startswith(buildPrefix) and "/CMakeFiles/" in seedDir:
             seedDir = rootPrefix + seedDir[len(buildPrefix):].split("/CMakeFiles/")[0] + "/"

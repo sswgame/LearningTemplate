@@ -262,7 +262,10 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
   angle brackets and are separately grouped.
 - Sort includes within a group where doing so does not undermine a required
   ordering. Prefer `Core/Common/StdHeaders.h` and
-  `Core/Common/PlatformOsHeaders.h` over scattered system/OS includes.
+  `Core/Common/PlatformOsHeaders.h` over scattered system/OS includes — except the heavy standard
+  headers few files use (streams, `<random>`, `<regex>`, `<future>`, `<variant>`, `<condition_variable>`,
+  `<csignal>`, `<queue>`, `<stack>`, `<bitset>`): those are not in `StdHeaders.h`, and the file that uses them
+  includes them directly (every TU parses `StdHeaders.h`; declare stream operators with `<iosfwd>`).
 - Platform-specific includes go in **one** `#if SW_PLATFORM_WINDOWS / #elif ... / #endif` chain after the
   unconditional includes; inside a branch, project headers, a blank line, then system headers. Never open a
   second block on the same condition family for the system headers (`CheckIncludeOrder.py` rejects it).

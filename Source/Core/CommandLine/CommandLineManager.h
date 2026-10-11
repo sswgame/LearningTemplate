@@ -10,6 +10,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Log/Logger.h"
 
+#include <variant>
+
 namespace sw
 {
 

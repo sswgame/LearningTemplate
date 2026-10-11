@@ -11,6 +11,8 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
+#include <queue>
+
 namespace sw
 {
     namespace
