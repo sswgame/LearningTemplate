@@ -6,6 +6,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/XorShift32.h"
 #include "Core/Network/Transport/StreamSendQueue.h"
 
 #include <mutex>
@@ -74,9 +75,7 @@ namespace sw
 
             int32 nextRandomInRange( int32 maxValue ) // 1..maxValue
             {
-                _randomState ^= _randomState << 13;
-                _randomState ^= _randomState >> 17;
-                _randomState ^= _randomState << 5;
+                _randomState = XorShift32::next( _randomState );
                 return 1 + static_cast<int32>( _randomState % static_cast<uint32>( maxValue ) );
             }
         };

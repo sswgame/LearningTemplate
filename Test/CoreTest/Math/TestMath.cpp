@@ -1,8 +1,10 @@
 #include "pch.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Math/XorShift32.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -691,3 +693,31 @@ static_assert( sw::MathUtil::kDegreeToRadian == 3.14159265358979f / 180.0f, "kDe
 static_assert( sw::MathUtil::kRadianToDegree == 180.0f / 3.14159265358979f, "kRadianToDegree 는 옛 식과 같아야 한다" );
 static_assert( sw::MathUtil::kPi64 / 180.0 == 0.017453292519943295769237, "도 → 라디안(float64)은 ReflectUnits 의 옛 리터럴과 같아야 한다" );
 static_assert( sw::MathUtil::kSqrt2 == 1.41421356f, "kSqrt2 는 옛 kDiagonalFactor 와 같은 float 이어야 한다" );
+
+/**
+ * @brief [MathTest] xorshift32 는 씨앗 1 에서 기록해 둔 수열을 낸다 — 상태 바이트가 사본 일곱 곳의 옛 구현과 같다
+ */
+SW_TEST_CASE( MathTest, XorShift32SequenceMatchesTheRecordedValues )
+{
+    uint32           state          = 1u;
+    constexpr uint32 kArrExpected[] = { 0x00042021u, 0x04080601u, 0x9DCCA8C5u, 0x1255994Fu };
+    for ( const uint32 expected : kArrExpected )
+    {
+        state = sw::XorShift32::next( state );
+        SW_EXPECT_EQUAL( expected, state );
+    }
+    SW_EXPECT_EQUAL( 0u, sw::XorShift32::next( 0u ) ); // 0 은 고정점이다 — 부르는 쪽이 0 이 아닌 씨앗을 준다
+    SW_EXPECT_TRUE( sw::XorShift32::toUnit24( 0xFFFFFFFFu ) < 1.0f );
+    SW_EXPECT_EQUAL( 0.0f, sw::XorShift32::toUnit24( 0xFFu ) );
+}
+
+/**
+ * @brief [MathTest] splitmix64 는 씨앗 0 에서 기록해 둔 수열을 낸다
+ */
+SW_TEST_CASE( MathTest, SplitMix64NextMatchesTheRecordedValues )
+{
+    uint64 state = 0;
+    SW_EXPECT_EQUAL( 0xE220A8397B1DCDAFull, sw::HashUtil::splitMix64Next( state ) );
+    SW_EXPECT_EQUAL( 0x6E789E6AA1B965F4ull, sw::HashUtil::splitMix64Next( state ) );
+    SW_EXPECT_EQUAL( 0x06C45D188009454Full, sw::HashUtil::splitMix64Next( state ) );
+}

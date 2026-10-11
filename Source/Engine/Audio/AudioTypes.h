@@ -95,9 +95,7 @@ namespace sw
         /** @brief 다음 64 비트 값입니다. */
         uint64 nextUint64()
         {
-            _state += HashUtil::kGoldenRatio64;
-            uint64 mixed = _state;
-            return HashUtil::mix64( mixed );
+            return HashUtil::splitMix64Next( _state );
         }
 
         /** @brief [0, 1) 의 값입니다. */

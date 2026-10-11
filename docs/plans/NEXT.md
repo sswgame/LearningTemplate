@@ -4,7 +4,7 @@
 
 ## 지금 상태 (2026-10-11)
 
-- 구조 이동(Core 층 · GameFramework · Engine 폴더 · DevTools 해체 · Network 이동 · ModuleHost 분리), 도구(약어 · 이름 린트 · 빌드 속도 측정), 에디터 보강, 이름 정리(큰 이름 · 파일 분리 · 바이트 접미사)가 끝났다.
+- 구조 이동(Core 층 · GameFramework · Engine 폴더 · DevTools 해체 · Network 이동 · ModuleHost 분리), 도구(약어 · 이름 린트 · 빌드 속도 측정), 에디터 보강, 이름 정리(큰 이름 · 파일 분리 · 바이트 접미사 · 난수 통합)가 끝났다 — 계획 문서는 지우고 기각한 제안은 결정 기록 5-4 로 옮겼다.
 - 전체 검증(2026-10-11, PC `SW`)은 린트 63/63 · Debug `-L nogpu` · `-L hostgpu` · Shipping · Server · 게임별 프리셋 여덟 · 대표 실행 네 백엔드가 통과했다. 이후 변경은 린트 + Debug `-L nogpu` + Shipping `-L nogpu` 로 확인했다.
 - **CI**: 새 push 마다 진행 중인 실행이 취소돼 결과를 못 볼 수 있다 — push 는 묶어서 하고 실행이 끝나기를 기다린 뒤 다음을 올린다. 리눅스 구성은 zlib `ZLIB::ZLIBSTATIC` 대응(`6f6a441c9`)으로 통과했고, 리눅스 빌드는 `EpollStreamTransport` 의 `unique_ptr<EpollLoop[]>` 를 고쳤다(`37df145`) —
   이 뒤 결과를 아직 못 봤다. 개명 뒤 한 번도 컴파일되지 않은 리눅스 전용 파일(`IOUring` · `LinuxAsyncFileIOBackend` · `PosixThreadCrashStack`)에서 오류가 더 나올 수 있다.
@@ -19,14 +19,13 @@
 도우미가 동시에 빌드할 때는 `D:\Projects\Personal\LT-wt\BUILD-LOCK-README.txt` 의 슬롯 잠금을 쓴다. 검증은 큰 묶음 끝에 한 번, 사이에는 Debug 풀 컴파일 + 린트 게이트만. WSL(리눅스)은 CI 로 본다.
 
 1. **CI 확인과 리눅스 빌드 오류 잡기.** 위 "CI" 항.
-2. **이름 정리 — 남은 것.** `MathUtil::getRandom` 뿐(3번 "결정적 난수를 Core 로" 와 함께). 계획 [이름 정리](NamingPass.md).
-3. **트레이스 내보내기 X5 · X4.** 계획 [트레이스 내보내기](TraceExport.md) — 자동 첨부, 여러 프로세스 합치기(X1 ~ X3 은 끝났다). X5 는 Shipping 서버에서 어떻게 할지 다시 정한다(내보내기 코드는 Shipping 에서 빠진다).
-4. **빌드 속도 2 ~ 6 단계.** 계획 [빌드 속도](BuildSpeed.md). 기준선은 `docs/08_Verification.md` "빌드 속도". 단계마다 같은 표로 전후를 남기고, 효과 없으면 되돌려 `docs/09_Decisions.md` 3절에 숫자와 함께 적는다. PCH 공유(3 단계)는 타깃마다 다른 정의
+2. **트레이스 내보내기 X5 · X4.** 계획 [트레이스 내보내기](TraceExport.md) — 자동 첨부, 여러 프로세스 합치기(X1 ~ X3 은 끝났다). X5 는 Shipping 서버에서 어떻게 할지 다시 정한다(내보내기 코드는 Shipping 에서 빠진다).
+3. **빌드 속도 2 ~ 6 단계.** 계획 [빌드 속도](BuildSpeed.md). 기준선은 `docs/08_Verification.md` "빌드 속도". 단계마다 같은 표로 전후를 남기고, 효과 없으면 되돌려 `docs/09_Decisions.md` 3절에 숫자와 함께 적는다. PCH 공유(3 단계)는 타깃마다 다른 정의
    (`SW_LOG_TAG` · `SW_EXPORTS`/`SW_IMPORTS` · 타깃별 `FlagOps.gen.h` 강제 포함)가 걸림돌이다 — 먼저 컴파일 정의 차이 목록을 뽑는다. 7 ~ 9 는 필요할 때만(사용자 결정).
-5. **행동이 바뀔 수 있는 중복 정리.** 결정적 난수를 Core 로(xorshift32 사본 7곳 · splitmix64 3곳; 상태 바이트 호환을 시험으로 증명), 격자 사본 13곳 → `GridTopology`, 타이머 약 25곳 → `Countdown`, 실시간 키트 HP 직접 관리 → `Vitality`. 상태 바이트와 게임 동작에 닿으므로 시험과 함께.
-6. **엔진 분할.** 계획 [엔진 분할](EnginePartition.md) 0 · 1 ~ 5 단계(작은 고리, `Object` 코어 / 기능 가르기, `OBJECT` 라이브러리 → DLL 승격, 월드를 값으로, 모듈 창구).
-7. **서버 디버깅.** 계획 [서버 디버깅](ServerDebug.md) — 이름 정리가 끝나면 시작한다(사용자 결정).
-8. **6 차(주석을 새 문체로).**
+4. **행동이 바뀔 수 있는 중복 정리.** (결정적 난수는 `XorShift32` · `HashUtil::splitMix64Next` 로 끝났다.) 격자 사본 13곳 → `GridTopology`, 타이머 약 25곳 → `Countdown`, 실시간 키트 HP 직접 관리 → `Vitality`. 상태 바이트와 게임 동작에 닿으므로 시험과 함께.
+5. **엔진 분할.** 계획 [엔진 분할](EnginePartition.md) 0 · 1 ~ 5 단계(작은 고리, `Object` 코어 / 기능 가르기, `OBJECT` 라이브러리 → DLL 승격, 월드를 값으로, 모듈 창구).
+6. **서버 디버깅.** 계획 [서버 디버깅](ServerDebug.md) — 이름 정리가 끝났으니 시작할 수 있다.
+7. **6 차(주석을 새 문체로).**
 
 ### 알아 둘 함정
 

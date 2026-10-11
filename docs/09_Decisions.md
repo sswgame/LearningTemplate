@@ -304,7 +304,25 @@
   `GPUScene`(언리얼 `GPUScene` 과 같은 용어), `PhysicsWorld`(사용자 결정 — `IPhysicsScene` 과 이름이 비슷해도 둔다), `GameConfig`(프리셋 JSON) 와 `GameSettings`(팩의 `gamesettings.xml`) — 언리얼도 프로젝트
   설정과 게임 설정이 따로 있다, `GameplayAbilityDef`(카탈로그 정의: id · 클래스 이름 · `GameplayAbilityConfig`)와 `GameplayAbilityConfig`(어빌리티 하나의 설정) — 정의가 설정을 품는 층이라 둘 다 필요하다,
   `AbilitySpec`(언리얼 `FGameplayAbilitySpec` — 부여된 인스턴스), `TypeInfo` · `Info` 값 묶음, `InputManager` · `AssetManager`. 나눈다: `ResourceUtil` 은 경로 쪽 `ResourcePaths` 와 읽기 쪽 `ResourceIO` 로(언리얼 `FPaths` / `FFileHelper` 가 같은 선 — 끝났다),
-  `EditorUtil` 은 경로를 `EditorPaths` 로 뺀다. `FrameRendererUtil` 은 그대로(언리얼 `RenderUtils` 도 같은 묶음). 파일 이름과 타입이 어긋난 곳은 `EditorColor.h`(색 타입 + 색 상수 묶음) · `EventType.h`(이벤트 ID 와 `IEvent`) · `Crafting.h`(제작 모듈 헤더)를 그대로 둔다 — 파일이 한 모듈의 묶음이다. 전체 목록과 이유는 [이름 정리 계획](plans/NamingPass.md).
+  `EditorUtil` 은 경로를 `EditorPaths` 로 뺀다. `FrameRendererUtil` 은 그대로(언리얼 `RenderUtils` 도 같은 묶음). 파일 이름과 타입이 어긋난 곳은 `EditorColor.h`(색 타입 + 색 상수 묶음) · `EventType.h`(이벤트 ID 와 `IEvent`) · `Crafting.h`(제작 모듈 헤더)를 그대로 둔다 — 파일이 한 모듈의 묶음이다. 기각한 제안의 목록과 이유는 아래 표. `MathUtil::getRandom` · `getRandomRange` 는 스레드마다 씨앗이 다른 비결정 난수라 그대로 둔다(언리얼 `FMath::Rand` 와 같은 자리) — 결정적 난수는 `Core/Math/XorShift32.h` · `HashUtil::splitMix64Next`.
+
+이름 점검(2026-10-10)의 제안 가운데 **기각한 것**(이름이 이미 맞다):
+
+| 제안 | 이유 |
+|---|---|
+| `GameObjectManager` → `SceneObjects` | 하는 일을 정확히 말한다. `SceneObjects` 가 더 흐리다. 헤더 주석("씬 하나의 얼굴")만 관계를 정확히 고친다 |
+| `GPUScene` → `GpuFrameData` | 언리얼의 `GPUScene`(인스턴스 데이터를 GPU 에 올려 둔 장면)와 같은 용어다 |
+| `InputManager` → `InputHub` | 싱글턴 허브라는 결정(이 문서)과 `Manager` 접미 관례 그대로 |
+| `AssetManager` → `AssetFacade` | 캐시 묶음이라도 `Manager` 로 일관(`GameObjectManager` · `ConfigManager` 와 같은 층)(그 안의 `getMaterialManager` 는 `getMaterialCache` 로 바꿨다) |
+| `TypeInfo` 세 뜻 → `*KindRow` | `RenderPassTypeInfo` 는 "패스 종류의 정보"를 이름 그대로 담는다 |
+| `OverlapInfo` · `CollisionInfo` · `HitInfo` → `*Event`/`*Contact` | 접촉 결과 값 묶음이고 `Info` 가 맞다(언리얼 `FHitResult` 와 같은 자리) |
+| `ModuleService` → `ModuleServiceTable` | C ABI 이름이라 ABI 도장 · 모듈 전부에 걸린다 |
+| `ComponentRegistry` → `*Index` 등 | `Registry` 는 이 저장소에서 "등록된 것의 목록"으로 일관 |
+| `WeakInternTable` → `WeakSharedTable` | `Intern` 은 `hashed_string` 과 같은 쓰임 |
+| 열거형 `Auto` · `Normal` · `Custom` · `Count` | 열거형 안에서만 뜻이 서고 각자 문맥이 분명하다. `Misc = 0`(`HorrorCatalog.h`) `Misc = 0`(`HorrorCatalog.h`) 하나만 `None` 으로 바꿨다 |
+| 통지 동사(`notify` · `broadcast` · `publish` …) 규칙화 | 추정에 그친다 |
+
+약어 철자 · 어휘표 · 접미사는 AGENTS.md "Function names" 와 [코딩 규칙 예시](04_CodingGuidelines.md) 2 절에 있다.
 
 ### 5-5. 그래픽스와 RHI
 

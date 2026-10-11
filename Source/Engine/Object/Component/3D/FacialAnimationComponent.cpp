@@ -5,6 +5,7 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/XorShift32.h"
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Audio/AudioClip.h"
@@ -328,12 +329,8 @@ namespace sw
 
     float32 FacialAnimationComponent::nextRandom()
     {
-        uint32 state = _randomState;
-        state ^= state << 13;
-        state ^= state >> 17;
-        state ^= state << 5;
-        _randomState = state;
-        return static_cast<float32>( state & 0xFFFFFFu ) / static_cast<float32>( 0x1000000u );
+        _randomState = XorShift32::next( _randomState );
+        return static_cast<float32>( _randomState & 0xFFFFFFu ) / static_cast<float32>( 0x1000000u );
     }
 
     void FacialAnimationComponent::advanceTime( float32 deltaSeconds )

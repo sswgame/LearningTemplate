@@ -40,6 +40,13 @@ namespace sw
             return value ^ ( value >> 31 );
         }
 
+        /** @brief splitmix64 수열의 다음 값입니다 — 상태에 황금비를 더하고 마무리 섞기를 합니다. 씨앗 0 도 쓸 수 있습니다(고정점이 없다). */
+        [[nodiscard]] static constexpr uint64 splitMix64Next( uint64& inoutState ) noexcept
+        {
+            inoutState += kGoldenRatio64;
+            return mix64( inoutState );
+        }
+
         /** @brief @p seed 에 @p value 를 섞습니다(boost `hash_combine` 의 64 비트 판). */
         [[nodiscard]] static constexpr uint64 combine( const uint64 seed, const uint64 value ) noexcept
         {

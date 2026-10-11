@@ -24,9 +24,7 @@ namespace sw
         /** @brief 다음 64 비트 값입니다. */
         uint64 nextUint64()
         {
-            _state += HashUtil::kGoldenRatio64;
-            uint64 value = _state;
-            return HashUtil::mix64( value );
+            return HashUtil::splitMix64Next( _state );
         }
 
         /** @brief [0, 1) 의 실수입니다(위 24 비트 — float32 가 정확히 담는다). */

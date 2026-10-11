@@ -17,7 +17,6 @@
 "확인 필요" 가 붙은 항목은 열려 있는지부터 확인하고 시작한다.
 
 - **엔진 분할 — 계획은 [docs/plans/EnginePartition.md](plans/EnginePartition.md).** `Engine.dll` 을 티어 경계로 나누기 전에 의존 방향의 약한 고리를 푼다. 단위를 끝내면 계획 문서에서 지운다.
-- **이름 정리 — 계획은 [docs/plans/NamingPass.md](plans/NamingPass.md).** 남은 것은 `MathUtil::getRandom` 뿐이다(결정적 난수를 Core 로 옮기는 중복 정리와 함께).
 - **빌드 속도 — 계획은 [docs/plans/BuildSpeed.md](plans/BuildSpeed.md).** 사용자 결정(2026-10-10): 1 ~ 6 단계까지 하고 7 ~ 9 는 필요할 때만. 컴파일이 CPU 시간의 85 %, 헤더 파싱이 한 TU 의 57 %, PCH 가 타깃마다 86 개. 1 단계(시험 빌드 분리)와 0 단계 도구(`RunBuildBaseline` · `RunIncludeCost`)는 끝났고, 기준선 측정은 다른 빌드가 없을 때 남았다.
 
 ### 1-1. 직렬화 · 리플렉션

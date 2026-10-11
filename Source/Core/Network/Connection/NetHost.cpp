@@ -229,10 +229,7 @@ namespace sw
 
     uint64 NetHost::nextSalt()
     {
-        // splitmix64
-        _saltState += HashUtil::kGoldenRatio64;
-        uint64 value = _saltState;
-        return HashUtil::mix64( value );
+        return HashUtil::splitMix64Next( _saltState );
     }
 
     bool NetHost::listen()

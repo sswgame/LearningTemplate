@@ -2,6 +2,8 @@
 
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 
+#include "Core/Math/XorShift32.h"
+
 namespace sw
 {
     GameRandom::GameRandom( uint32 seed )
@@ -16,12 +18,8 @@ namespace sw
 
     uint32 GameRandom::nextUint()
     {
-        uint32 value = _state;
-        value ^= value << 13;
-        value ^= value >> 17;
-        value ^= value << 5;
-        _state = value;
-        return value;
+        _state = XorShift32::next( _state );
+        return _state;
     }
 
     float32 GameRandom::nextFloat()

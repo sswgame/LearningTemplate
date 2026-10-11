@@ -5,6 +5,7 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/XorShift32.h"
 
 #include <algorithm>
 
@@ -253,11 +254,7 @@ namespace sw
     float32 NetEmulationTransport::nextRandom()
     {
         // xorshift32 — 씨앗이 같으면 같은 수열(시험 · 재현).
-        uint32 value = _randomState;
-        value ^= value << 13;
-        value ^= value >> 17;
-        value ^= value << 5;
-        _randomState = value;
-        return static_cast<float32>( value >> 8 ) * ( 1.0f / 16777216.0f );
+        _randomState = XorShift32::next( _randomState );
+        return XorShift32::toUnit24( _randomState );
     }
 } // namespace sw

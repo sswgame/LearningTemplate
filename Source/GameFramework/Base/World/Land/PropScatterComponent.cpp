@@ -4,6 +4,7 @@
 
 #include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/XorShift32.h"
 
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -46,9 +47,7 @@ namespace sw
     {
         if ( inoutState == 0u )
             inoutState = 1u;
-        inoutState ^= inoutState << 13;
-        inoutState ^= inoutState >> 17;
-        inoutState ^= inoutState << 5;
+        inoutState = XorShift32::next( inoutState );
         return static_cast<float32>( inoutState & 0xFFFFu ) / 65535.0f;
     }
 

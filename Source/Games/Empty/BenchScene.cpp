@@ -6,6 +6,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/XorShift32.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Graphics/Material/Material.h"
@@ -1169,9 +1170,7 @@ namespace sw
     {
         // xorshift32. 표준 난수를 쓰지 않는 이유는 **재현**이다 — 같은 프레임 수를 돌리면 같은 순서가
         // 나와야 스크린샷과 로그를 실행 사이에 비교할 수 있다.
-        _churnRandom ^= _churnRandom << 13;
-        _churnRandom ^= _churnRandom >> 17;
-        _churnRandom ^= _churnRandom << 5;
+        _churnRandom = XorShift32::next( _churnRandom );
         return _churnRandom;
     }
 

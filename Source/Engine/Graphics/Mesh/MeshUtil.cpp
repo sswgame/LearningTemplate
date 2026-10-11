@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/XorShift32.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -623,10 +624,8 @@ namespace sw
         uint32 state    = 0x2545F491u;
         auto   nextUnit = [&state]() -> float32
         {
-            state ^= state << 13;
-            state ^= state >> 17;
-            state ^= state << 5;
-            return static_cast<float32>( state >> 8 ) * ( 1.0f / 16777216.0f );
+            state = XorShift32::next( state );
+            return XorShift32::toUnit24( state );
         };
 
         constexpr uint32  kSegmentCount = 3;
