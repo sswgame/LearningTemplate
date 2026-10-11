@@ -15,6 +15,7 @@
 #include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Localization/LocText.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 
 #include <imgui.h>
@@ -114,7 +115,7 @@ namespace sw::editor
         }
         if ( _pSelected == nullptr || _pSelected->_pfnGetType() == nullptr )
         {
-            EditorWidgets::drawEmptyHint( "No section matches the search." );
+            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorSettings", "NoSectionMatches", "No section matches the search." ) );
             ImGui::EndChild();
             savePendingChanges( false );
             return;
@@ -141,7 +142,7 @@ namespace sw::editor
             if ( _pendingSaveNanoseconds == 0 )
                 _pendingSaveNanoseconds = MonotonicClock::nowNanoseconds();
         }
-        EditorWidgets::drawTooltip( "이 섹션의 값을 모두 기본값으로 되돌립니다" );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSettings", "ResetSection", "Reset every value in this section to its default" ) );
         ImGui::EndChild();
         savePendingChanges( false );
     }

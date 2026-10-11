@@ -20,6 +20,7 @@
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/CameraRegistry.h"
 #include "Engine/Scene/Scene.h"
 
@@ -123,7 +124,7 @@ namespace sw::editor
                 ImGui::EndCombo();
             }
             EditorSelfTestMarks::note( "gameView.aspect" );
-            EditorWidgets::drawTooltip( "게임 뷰 화면 비율 — 자유(패널 전체) · 16:9(남는 쪽은 레터박스)" );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorScene", "GameViewAspect", "Game view aspect ratio - Free (whole panel) or 16:9 (letterboxed on the spare side)" ) );
 
             ImGui::SameLine();
             // 유니티 게임 뷰의 Maximize On Play 자리 — 값은 환경설정(Editor/Play)이고 바꾸면 바로 저장한다.
@@ -131,7 +132,7 @@ namespace sw::editor
             if ( ImGui::Checkbox( "Max", &playPreferences._bMaximizeOnPlay ) && EditorPreferencesStore::saveAll( EditorPreferencesStore::getDefaultFilePath() ) == false )
                 SW_LOG_WARNING( "Editor preferences could not be saved" );
             EditorSelfTestMarks::note( "gameView.maximizeOnPlay" );
-            EditorWidgets::drawTooltip( "Maximize On Play - 플레이하는 동안 게임 뷰만 남기고, Stop 하면 배치를 되돌립니다" );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorScene", "MaximizeOnPlay", "Maximize On Play - keep only the game view while playing and restore the layout on Stop" ) );
 
             ImGui::SameLine();
             // 게임 HUD(`DebugHUD`) — 런타임 UI 라 게임 뷰에 그대로 그려진다(멈춤 · 일시정지에는 숨는다). 게임 값(`DebugOverlayState`)은 HUD 의 overlay 섹션이다.
@@ -141,7 +142,7 @@ namespace sw::editor
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kCamera, "##GameViewScreenshot" ) ) )
                 EditorScreenshotCommands::captureGameView();
             EditorSelfTestMarks::note( "gameView.screenshot" );
-            EditorWidgets::drawTooltip( "게임 뷰 그림을 Saved/Screenshots/<시각>.png 로 저장합니다 (F9 — 포커스가 있는 뷰)" );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorScene", "GameViewScreenshot", "Save the game view image to Saved/Screenshots/<time>.png (F9 - the focused view)" ) );
         }
         EditorChrome::endToolbar();
     }

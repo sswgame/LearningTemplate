@@ -34,6 +34,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -124,8 +125,8 @@ namespace sw::editor
         // 잠그면 선택이 바뀌어도 지금 오브젝트를 계속 보인다(유니티 Inspector 자물쇠 · 언리얼의 여러 Details 창 대신).
         ImGui::SameLine( ImGui::GetContentRegionAvail().x - ImGui::GetFrameHeight() );
         const bool bLocked = _lockedObjectID != 0;
-        if ( EditorWidgets::drawToggleIconButton( "##inspectorLock", bLocked, editoricon::kLock, editoricon::kUnlock, "Locked to this object - click to follow the selection",
-                                                  "Following the selection - click to lock to this object" ) )
+        if ( EditorWidgets::drawToggleIconButton( "##inspectorLock", bLocked, editoricon::kLock, editoricon::kUnlock, SW_LOCTEXT( "EditorInspector", "LockedToObject", "Locked to this object - click to follow the selection" ),
+                                                  SW_LOCTEXT( "EditorInspector", "FollowingSelection", "Following the selection - click to lock to this object" ) ) )
             _lockedObjectID = bLocked ? 0 : pContext->getWorkspace().getSelectedObjectID();
         EditorSelfTestMarks::note( "inspector.lock" );
 
@@ -141,21 +142,21 @@ namespace sw::editor
         const uint64 shownObjectID = _lockedObjectID != 0 ? _lockedObjectID : ws.getSelectedObjectID();
         if ( shownObjectID == 0 )
         {
-            EditorWidgets::drawEmptyHint( "Nothing selected. Pick in the Scene view or use Hierarchy." );
+            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorInspector", "NothingSelected", "Nothing selected. Pick in the Scene view or use Hierarchy." ) );
             return;
         }
 
         Scene* pScene = editor::getActiveScene();
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
         {
-            EditorWidgets::drawEmptyHint( "No active scene." );
+            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorInspector", "NoActiveScene", "No active scene." ) );
             return;
         }
 
         GameObject* pObj = pScene->getObjectManager()->findGameObjectByID( shownObjectID );
         if ( pObj == nullptr )
         {
-            EditorWidgets::drawEmptyHint( "Selected object no longer exists." );
+            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorInspector", "SelectionGone", "Selected object no longer exists." ) );
             if ( _lockedObjectID != 0 )
                 _lockedObjectID = 0; // 잠근 오브젝트가 사라졌다 — 선택을 따라가는 데로 돌아간다
             else
@@ -182,7 +183,7 @@ namespace sw::editor
             drawPrefabLinkSection( pObj, pfbPath );
 
         _propertyGrid.drawSearchBar();
-        EditorWidgets::drawTooltip( "프로퍼티 및 컴포넌트 이름을 검색하여 필터링합니다" );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInspector", "SearchTooltip", "Filter by property and component name" ) );
         ImGui::Spacing();
 
         const TypeInfo* pTypeInfo = pObj->getTypeInfo();
@@ -217,7 +218,7 @@ namespace sw::editor
         if ( bMixedActive )
         {
             ImGui::TextDisabled( "\xe2\x80\x94" );
-            EditorWidgets::drawTooltip( "Multiple values" );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInspector", "MultipleValues", "Multiple values" ) );
             ImGui::SameLine();
         }
         if ( ImGui::Checkbox( "Active", &bActive ) )
@@ -285,23 +286,23 @@ namespace sw::editor
     void InspectorPanel::drawPrefabLinkSection( GameObject* pObj, const string& prefabPath )
     {
         EditorWidgets::drawChip( "Prefab", editor::style::kAccent );
-        EditorWidgets::drawTooltip( "프리팹 인스턴스입니다" );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInspector", "PrefabInstance", "This is a prefab instance" ) );
         ImGui::SameLine();
         ImGui::TextDisabled( "%s", prefabPath.c_str() );
 
         if ( ImGui::Button( "Apply to Prefab" ) )
             (void)EditorInspectorCommands::applyToPrefab( pObj, prefabPath ); // 실패는 프리팹 저장이 알린다
-        EditorWidgets::drawTooltip( "현재 오브젝트의 변경사항을 프리팹 원본 파일에 저장합니다" );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInspector", "ApplyToPrefab", "Save this object's changes to the source prefab file" ) );
 
         ImGui::SameLine();
         if ( ImGui::Button( "Revert to Prefab" ) && EditorInspectorCommands::revertToPrefab( pObj, prefabPath ) == false )
             SW_LOG_WARNING( "Revert to Prefab failed for '%#' (%#)", pObj->getName().c_str(), prefabPath.c_str() );
-        EditorWidgets::drawTooltip( "프리팹 원본 파일의 내용으로 현재 오브젝트를 되돌립니다" );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInspector", "RevertToPrefab", "Revert this object to the contents of the source prefab file" ) );
 
         ImGui::SameLine();
         if ( ImGui::Button( "Unlink" ) )
             EditorInspectorCommands::unlinkPrefab( pObj );
-        EditorWidgets::drawTooltip( "프리팹과의 연결을 끊고 독립된 일반 오브젝트로 변환합니다" );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInspector", "UnlinkPrefab", "Break the link to the prefab and turn this into a standalone object" ) );
 
         ImGui::Separator();
     }
@@ -451,7 +452,7 @@ namespace sw::editor
                 if ( ImGui::BeginMenu( "Presets" ) )
                 {
                     static fixed_string<constant::kMaxBuffer64> s_presetNameBuf;
-                    ImGui::InputTextWithHint( "##presetName", "Preset Name...", s_presetNameBuf.data(),
+                    ImGui::InputTextWithHint( "##presetName", SW_LOCTEXT( "EditorInspector", "PresetNameHint", "Preset Name..." ), s_presetNameBuf.data(),
                                               s_presetNameBuf.capacity() );
                     ImGui::SameLine();
                     if ( ImGui::Button( "Save" ) && s_presetNameBuf.empty() == false )
@@ -525,12 +526,12 @@ namespace sw::editor
             InspectorPanelInternal::applyObjectEdit( pObj, "Rename GameObject", [pObj, this]()
             { pObj->setName( hashed_string( _nameEditBuffer.c_str() ) ); } );
         EditorSelfTestMarks::note( "inspector.name" );
-        EditorWidgets::drawTooltip( "게임오브젝트의 고유 이름 (Enter 키로 적용)" );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInspector", "ObjectName", "Unique name of the GameObject (Enter to apply)" ) );
 
         bool bActive = pObj->isActive();
         if ( ImGui::Checkbox( "Active", &bActive ) )
             EditorSceneCommands::setActive( pObj, bActive );
-        EditorWidgets::drawTooltip( "게임오브젝트의 활성화 상태를 토글합니다" );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInspector", "ObjectActive", "Toggle whether the GameObject is active" ) );
 
         GameObject* pParent = pObj->getParent();
         if ( pParent != nullptr )
@@ -540,7 +541,7 @@ namespace sw::editor
             if ( ImGui::SmallButton( "Unparent" ) )
                 InspectorPanelInternal::applyObjectEdit( pObj, "Unparent GameObject", [pObj]()
                 { pObj->detachFromParent(); } );
-            EditorWidgets::drawTooltip( "부모 오브젝트와의 연결을 해제하고 씬 루트로 이동합니다" );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInspector", "Unparent", "Detach from the parent object and move to the scene root" ) );
         }
         else
             ImGui::TextDisabled( "Parent: (root)" );
@@ -571,7 +572,7 @@ namespace sw::editor
         const TypeInfo* pTypeInfo = pComp->getTypeInfo();
         if ( pTypeInfo == nullptr )
         {
-            EditorWidgets::drawEmptyHint( "No TypeInfo registered for this component." );
+            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorInspector", "NoTypeInfo", "No TypeInfo registered for this component." ) );
             return;
         }
 

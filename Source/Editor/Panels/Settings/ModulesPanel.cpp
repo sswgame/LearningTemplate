@@ -15,6 +15,8 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Localization/LocText.h"
+
 #include "sw/config/ConfigConstants.h"
 
 #include <imgui.h>
@@ -113,7 +115,7 @@ namespace sw::editor
         }
         if ( _bChangedSinceStart )
         {
-            EditorThemeUtil::textWarning( "Module set changed - build to apply, then restart the editor." );
+            EditorThemeUtil::textWarning( SW_LOCTEXT( "EditorSettings", "ModuleSetChanged", "Module set changed - build to apply, then restart the editor." ) );
             ImGui::SameLine();
             if ( ImGui::SmallButton( "Build" ) )
             {
@@ -121,11 +123,13 @@ namespace sw::editor
                 if ( pContext != nullptr )
                     (void)pContext->getCommandRegistry().execute( "build.compileAll" ); // 막혀 있으면 빌드 상태 표시가 알린다
             }
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSettings", "BuildModules", "Compile every module with the changed module set" ) );
         }
         if ( ImGui::SmallButton( "Refresh" ) )
             reloadCatalog();
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSettings", "RefreshModules", "Read the module catalog from the module folder again" ) );
         ImGui::SameLine();
-        EditorWidgets::drawSearchField( "##ModuleFilter", _filter, "Search modules...", 0.0f, false );
+        EditorWidgets::drawSearchField( "##ModuleFilter", _filter, SW_LOCTEXT( "EditorSettings", "SearchModulesHint", "Search modules..." ), 0.0f, false );
         EditorSelfTestMarks::note( "modules.search" );
         const EditorListFilter filter{ _filter.c_str() };
 
@@ -168,6 +172,8 @@ namespace sw::editor
                 formatstring( mark.data(), mark.capacity(), "modules.toggle.%#", manifest._name.c_str() );
                 EditorSelfTestMarks::note( mark.c_str() );
                 ImGui::EndDisabled();
+                if ( ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_DelayShort ) )
+                    ImGui::SetTooltip( "%s", bLocked ? SW_LOCTEXT( "EditorSettings", "ModuleLocked", "Editor and game modules cannot be turned off here" ) : SW_LOCTEXT( "EditorSettings", "ModuleToggle", "Turn this module on or off (the affected modules are shown before it applies)" ) );
                 ImGui::TableSetColumnIndex( 1 );
                 ImGui::TextUnformatted( manifest._name.c_str() );
                 EditorWidgets::drawTooltip( manifest._description.c_str() );

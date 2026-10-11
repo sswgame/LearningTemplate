@@ -12,6 +12,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Input/InputManager.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 #include <imgui.h>
@@ -32,7 +33,7 @@ namespace sw::editor
         UserSettingsManager* pSettings = editor::getService<UserSettingsManager>();
         if ( pSettings == nullptr || pSettings->getCategories().empty() )
         {
-            EditorWidgets::drawEmptyHint( "User settings are not loaded." );
+            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorSettings", "UserSettingsNotLoaded", "User settings are not loaded." ) );
             return;
         }
         UserSettingsManager& settings = *pSettings;

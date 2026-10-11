@@ -19,6 +19,8 @@
 #include "Editor/Panels/Scene/EditorSceneViewUtil.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -71,8 +73,7 @@ namespace sw::editor
                 _s_toastSceneGeneration = generation;
                 if ( counts._errorCount == 0 )
                     return;
-                fixed_string<constant::kMaxBuffer128> message;
-                formatstring( message.data(), message.capacity(), "%# error(s), %# warning(s). Open Map Check from the status bar.", counts._errorCount, counts._warningCount );
+                const string message = SW_LOCFORMAT( "EditorMapCheck", "SceneIssuesToast", "{errorCount} error(s), {warningCount} warning(s). Open Map Check from the status bar.", TextArgumentList().addInteger( "errorCount", counts._errorCount ).addInteger( "warningCount", counts._warningCount ) );
                 context.getNotificationManager().push( "Map Check", message.c_str(), NotificationType::Warning, 6.0f );
             }
 
@@ -95,7 +96,10 @@ namespace sw::editor
                 if ( bOpen && pContext != nullptr )
                     pContext->getWorkspace().requestOpenPanel( "Map Check" );
                 if ( ImGui::IsItemHovered() )
-                    ImGui::SetTooltip( "Map Check: %u error(s), %u warning(s)", counts._errorCount, counts._warningCount );
+                {
+                    const string tooltipText = SW_LOCFORMAT( "EditorMapCheck", "StatusTooltip", "Map Check: {errorCount} error(s), {warningCount} warning(s)", TextArgumentList().addInteger( "errorCount", counts._errorCount ).addInteger( "warningCount", counts._warningCount ) );
+                    ImGui::SetTooltip( "%s", tooltipText.c_str() );
+                }
             }
 
             /** @brief 줄 @p issue 의 오브젝트를 활성 씬에서 찾습니다. 없으면 nullptr 입니다(지운 오브젝트 · 다른 씬의 결과). */
@@ -180,7 +184,7 @@ namespace sw::editor
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kRefresh, "Check Map" ) ) )
             (void)validateActiveScene(); // 검사한 수는 로그에 남는다
         EditorSelfTestMarks::note( "mapCheck.checkMap" );
-        EditorWidgets::drawTooltip( "활성 씬의 모든 오브젝트를 다시 검증합니다" );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorMapCheck", "CheckMap", "Validate every object of the active scene again" ) );
 
         ImGui::SameLine();
         bool                                 bShowErrors = _bShowErrors == SW_TRUE;
@@ -191,6 +195,7 @@ namespace sw::editor
             _bShowErrors = bShowErrors ? SW_TRUE : SW_FALSE;
             _bRowsDirty  = SW_TRUE;
         }
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorMapCheck", "ShowErrors", "Show error rows" ) );
         ImGui::SameLine();
         bool                                 bShowWarnings = _bShowWarnings == SW_TRUE;
         fixed_string<constant::kMaxBuffer64> warningLabel;
@@ -200,8 +205,9 @@ namespace sw::editor
             _bShowWarnings = bShowWarnings ? SW_TRUE : SW_FALSE;
             _bRowsDirty    = SW_TRUE;
         }
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorMapCheck", "ShowWarnings", "Show warning rows" ) );
         ImGui::SameLine();
-        EditorWidgets::drawSearchField( "##mapcheck_search", _searchBuffer, "Search", 0.0f, false );
+        EditorWidgets::drawSearchField( "##mapcheck_search", _searchBuffer, SW_LOCTEXT( "EditorMapCheck", "SearchHint", "Search" ), 0.0f, false );
 
         if ( _listRow.empty() )
         {
@@ -209,7 +215,7 @@ namespace sw::editor
             if ( filter.isActive() )
                 EditorWidgets::drawNoSearchResultHint( filter.getText() );
             else
-                EditorWidgets::drawEmptyHint( "No validation issues. Check Map validates every object of the active scene." );
+                EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorMapCheck", "NoIssues", "No validation issues. Check Map validates every object of the active scene." ) );
             return;
         }
 
@@ -255,7 +261,7 @@ namespace sw::editor
                 EditorSelfTestMarks::note( mark.c_str() );
             }
             if ( pObject == nullptr )
-                EditorWidgets::drawTooltip( "This object is not in the active scene" );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorMapCheck", "NotInActiveScene", "This object is not in the active scene" ) );
 
             ImGui::TableSetColumnIndex( 2 );
             ImGui::TextUnformatted( issue._typeName.c_str() );
