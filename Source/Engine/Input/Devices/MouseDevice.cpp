@@ -39,13 +39,13 @@ namespace sw
 
     void MouseDevice::poll( [[maybe_unused]] float32 deltaTime )
     {
-        // 마우스는 폴링하지 않는다 — 이번 프레임 이동은 이벤트가 쌓고(`setPosition` · `addRawDelta`), 스무딩은 이벤트를 다 적용한 뒤
-        // `onEventsDispatched` 가 한 번 건다.
+        // 마우스는 폴링하지 않는다. 이번 프레임의 이동은 이벤트가 쌓고(`setPosition`, `addRawDelta`), 스무딩은 이벤트를 모두 적용한 뒤
+        // `onEventsDispatched` 가 한 번 적용한다.
     }
 
     void MouseDevice::onEventsDispatched( float32 deltaTime )
     {
-        // 흐른 시간이 없는 프레임(0 이나 음수로 부른 테스트 · 재동기화)은 기준 시간 한 칸으로 친다.
+        // 흐른 시간이 없는 프레임(0 이나 음수로 부른 테스트, 재동기화)은 기준 시간 한 프레임으로 취급한다.
         const float32 frameSeconds = deltaTime > 0.0f ? deltaTime : kSmoothingReferenceSeconds;
         const float2  movement     = getMovementDelta();
         float32       velocityX    = movement._x / frameSeconds;
@@ -217,7 +217,7 @@ namespace sw
 
     void MouseDevice::setPosition( int32 x, int32 y )
     {
-        // 첫 위치는 기준점이 없다 — (0, 0) 에서 그 자리까지를 이동으로 내면 시작할 때 1인칭 시점이 수백 픽셀만큼 튄다.
+        // 첫 위치는 기준점이 없다. (0, 0) 에서 그 위치까지를 이동으로 내면 시작할 때 1인칭 시점이 수백 픽셀만큼 튄다.
         if ( _bHasPosition == SW_FALSE )
         {
             setPositionWithoutDelta( x, y );
@@ -231,7 +231,7 @@ namespace sw
 
     void MouseDevice::setPositionWithoutDelta( int32 x, int32 y )
     {
-        // 이번 프레임의 `_delta` 는 이미 계산돼 있다. 기준점(`_prevMouse`)도 함께 옮겨야 다음 이동이 되돌린 자리에서부터 측정한다.
+        // 이번 프레임의 `_delta` 는 이미 계산되어 있다. 기준점(`_prevMouse`)도 함께 옮겨야 다음 이동이 되돌린 위치에서부터 측정된다.
         _mouse._x     = x;
         _mouse._y     = y;
         _prevMouse._x = x;

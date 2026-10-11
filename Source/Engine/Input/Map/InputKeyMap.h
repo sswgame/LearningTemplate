@@ -1,6 +1,6 @@
 /**
  * @file InputKeyMap.h
- * @brief 플랫폼 VK / KeySym → Key 변환과 Win32 폴링 표입니다.
+ * @brief 플랫폼 VK/KeySym 을 Key 로 변환하고, Win32 폴링 테이블을 제공합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -10,10 +10,10 @@
 
 namespace sw
 {
-    /** @brief 플랫폼 키 · 마우스 코드를 엔진 Key/MouseButton 으로 바꿉니다. */
+    /** @brief 플랫폼 키와 마우스 코드를 엔진 Key/MouseButton 으로 바꿉니다. */
     struct SW_API InputKeyMap
     {
-        /** @brief 가상 키 ↔ 엔진 Key 한 쌍입니다. */
+        /** @brief 가상 키와 엔진 Key 의 한 쌍입니다. */
         struct VkKeyPair
         {
             int32 _vk;
@@ -29,7 +29,7 @@ namespace sw
         /** @brief Win32 마우스 메시지를 MouseButton 으로 바꿉니다. */
         static MouseButton mapWin32MouseButton( uint32 message, uintptr_t wParam );
 
-        /** @brief GetAsyncKeyState 로 폴링할 가상 키 ↔ Key 표를 반환합니다. 항목 수는 @p outCount 에 담깁니다(Windows 가 아니면 nullptr 과 0). */
+        /** @brief GetAsyncKeyState 로 폴링할 가상 키와 Key 의 테이블을 반환합니다. 항목 수는 @p outCount 에 담깁니다(Windows 가 아니면 nullptr 과 0). */
         static const VkKeyPair* getWin32PollKeyTable( uint32& outCount );
     };
 } // namespace sw

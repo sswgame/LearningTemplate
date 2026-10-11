@@ -12,8 +12,8 @@ namespace sw
     {
         struct InputKeyMapWin32Internal
         {
-            static constexpr uint32 kExtendedKeyFlag = 0x01000000u;                  ///< lParam 24 번 비트 — 오른쪽 Ctrl · Alt, 숫자패드 Enter
-            static constexpr SHORT  kKeyDownBit      = static_cast<SHORT>( 0x8000 ); ///< GetAsyncKeyState 의 지금 눌림 비트
+            static constexpr uint32 kExtendedKeyFlag = 0x01000000u;                  ///< lParam 24 번 비트입니다. 오른쪽 Ctrl, Alt, 숫자패드 Enter 에 켜집니다.
+            static constexpr SHORT  kKeyDownBit      = static_cast<SHORT>( 0x8000 ); ///< GetAsyncKeyState 의 지금 눌림 비트입니다.
 
             static Key resolveShiftKey( intptr_t lParam )
             {

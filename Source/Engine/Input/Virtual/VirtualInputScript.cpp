@@ -49,7 +49,7 @@ namespace sw
             }
             case InputDeviceKind::Gamepad:
             {
-                // 트리거(100 · 101)와 스틱은 축이다 — `addGamepadAxis` 로 낸다.
+                // 트리거(100, 101)와 스틱은 축이다. `addGamepadAxis` 로 낸다.
                 if ( slot._controlIndex >= static_cast<uint16>( GamepadButton::Count ) )
                     return false;
                 const GamepadButton button = static_cast<GamepadButton>( slot._controlIndex );
@@ -99,7 +99,7 @@ namespace sw
 
     void VirtualInputScript::delayEventsFrom( uint32 firstFrameIndex, uint32 frameCount )
     {
-        // 목록은 프레임 순이다 — 뒤에서부터 밀면 순서가 그대로이고, 커서 앞(이미 낸 사건)에는 닿지 않는다.
+        // 목록은 프레임 순서다. 뒤에서부터 밀면 순서가 그대로이고, 커서 앞(이미 낸 이벤트)에는 닿지 않는다.
         for ( size_t index = _listEntry.size(); index > 0 && _listEntry[index - 1]._frameIndex >= firstFrameIndex; --index )
         {
             _listEntry[index - 1]._frameIndex += frameCount;
@@ -114,7 +114,7 @@ namespace sw
 
     void VirtualInputScript::emitFrame( uint32 frameIndex, vector<RawInputEvent>& outListEvent )
     {
-        // 되돌아간 프레임(떼었다 다시 붙임)이면 처음부터 찾는다.
+        // 프레임 번호가 되돌아갔으면(뗐다가 다시 붙인 경우) 처음부터 찾는다.
         if ( _cursor > 0 && _cursor <= _listEntry.size() && _listEntry[_cursor - 1]._frameIndex >= frameIndex )
             _cursor = 0;
         while ( _cursor < _listEntry.size() && _listEntry[_cursor]._frameIndex < frameIndex )

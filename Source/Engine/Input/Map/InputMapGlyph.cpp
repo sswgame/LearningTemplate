@@ -7,9 +7,9 @@
 
 /**
  * @file InputMapGlyph.cpp
- * @brief 바인딩을 UI 프롬프트 문자열("[ E ]" 등)로 바꾸는 글리프 조회입니다.
+ * @brief 바인딩을 UI 프롬프트 문자열("[ E ]" 등)로 바꾸는 글리프 조회를 구현합니다.
  *
- * getGlyphForAction() 은 현재 활성 장치(키보드 · Xbox · PlayStation · Switch)에 맞는 표기를 고릅니다.
+ * getGlyphForAction() 은 현재 활성 장치(키보드, Xbox, PlayStation, Switch)에 맞는 표기를 고릅니다.
  * previewDevice 를 직접 넘기는 오버로드는 실제 장치와 상관없이 특정 플랫폼 표기를 미리 볼 때 씁니다
  * (에디터의 Glyph Previewer 탭이 이것으로 플랫폼별 표기를 나란히 비교해 보여 줍니다).
  */
@@ -75,15 +75,15 @@ namespace sw
                 return "?";
             }
 
-            /** @brief 슬롯이 키보드 · 마우스 장치인지 반환합니다. */
+            /** @brief 슬롯이 키보드나 마우스 장치인지 반환합니다. */
             static bool isKeyboardOrMouseSlot( const InputSlot& slot )
             {
                 return slot._deviceKind == InputDeviceKind::Keyboard || slot._deviceKind == InputDeviceKind::Mouse;
             }
 
             /**
-             * @brief 키보드 · 마우스 장치에서 바인딩 하나의 표기입니다. 이 장치로 보일 것이 없으면 빈 문자열입니다(다음 바인딩을 본다).
-             * @details `BindingKind` 를 빠짐없이 다룹니다(파일 머리의 -Wswitch-enum 오류가 빠진 종류를 짚는다).
+             * @brief 키보드와 마우스 장치에서 바인딩 하나의 표기를 반환합니다. 이 장치로 보일 것이 없으면 빈 문자열이며, 다음 바인딩을 봅니다.
+             * @details `BindingKind` 를 빠짐없이 다룬다. 파일 머리의 -Wswitch-enum 오류가 빠진 종류를 알려 준다.
              */
             static string makeKeyboardMouseGlyph( const ActionBinding& binding, InputGlyphStyle device )
             {
@@ -140,7 +140,7 @@ namespace sw
                     {
                         return "[ Any Key ]";
                     }
-                    case BindingKind::GamepadStick2D: // 게임패드 전용 — 키보드 표기가 없다
+                    case BindingKind::GamepadStick2D: // 게임패드 전용이라 키보드 표기가 없다
                     case BindingKind::Count:
                     {
                         return {};
@@ -149,8 +149,8 @@ namespace sw
             }
 
             /**
-             * @brief 게임패드 장치에서 바인딩 하나의 표기입니다. 이 장치로 보일 것이 없으면 빈 문자열입니다(다음 바인딩을 본다).
-             * @details `BindingKind` 를 빠짐없이 다룹니다(파일 머리의 -Wswitch-enum 오류가 빠진 종류를 짚는다).
+             * @brief 게임패드 장치에서 바인딩 하나의 표기를 반환합니다. 이 장치로 보일 것이 없으면 빈 문자열이며, 다음 바인딩을 봅니다.
+             * @details `BindingKind` 를 빠짐없이 다룬다. 파일 머리의 -Wswitch-enum 오류가 빠진 종류를 알려 준다.
              */
             static string makeGamepadGlyph( const ActionBinding& binding, InputGlyphStyle device )
             {
@@ -181,7 +181,7 @@ namespace sw
                             return {};
                         return string( "[ " ) + slotToGlyph( binding._arrSlot[0], device ) + " / " + slotToGlyph( binding._arrSlot[1], device ) + " ]";
                     }
-                    case BindingKind::Vector2DComposite: // 키보드 · 마우스 전용 종류 — 게임패드 표기가 없다
+                    case BindingKind::Vector2DComposite: // 키보드와 마우스 전용 종류라 게임패드 표기가 없다
                     case BindingKind::MouseDelta2D:
                     case BindingKind::MouseWheel1D:
                     case BindingKind::VirtualJoystick2D:

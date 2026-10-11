@@ -41,8 +41,8 @@ namespace sw
 
         /**
          * @brief 마우스 메시지의 lParam 에서 클라이언트 좌표를 꺼냅니다. 좌표는 부호 있는 16 비트입니다(창 밖 캡처 중에는 음수).
-         * @details 장치에 적지 않습니다. 장치 상태는 `beginFrame` 이 큐를 재생할 때만 바뀝니다. lParam 0 을 "좌표 없음" 으로 보지
-         *          않습니다 — (0, 0) 은 창 왼쪽 위 픽셀이라는 정당한 좌표입니다.
+         * @details 장치에 직접 적지 않는다. 장치 상태는 `beginFrame` 이 큐를 재생할 때만 바뀐다. lParam 0 을 "좌표 없음" 으로 보지
+         *          않는다. (0, 0) 은 창 왼쪽 위 픽셀이라는 정당한 좌표이기 때문이다.
          */
         void readMouseEventPositionInternal( LPARAM lParam, int32& outX, int32& outY )
         {
@@ -51,10 +51,10 @@ namespace sw
         }
 
         /**
-         * @brief 마우스 잠금 영역을 화면 좌표로 구합니다(클라이언트 영역, 서브 사각형이 있으면 그 안).
-         * @details `applyMouseLockMode` 의 ClipCursor 와 가운데 고정의 되돌림이 같은 사각형을 봐야 합니다. 둘이 따로 계산하면 서브 사각형을
-         *          쓸 때 되돌림이 클립 밖 좌표를 가리킵니다.
-         * @param outClientTopLeft 잠금 영역의 왼쪽 위(클라이언트 좌표).
+         * @brief 마우스 잠금 영역을 화면 좌표로 구합니다(클라이언트 영역이며, 서브 사각형이 있으면 그 안).
+         * @details `applyMouseLockMode` 의 ClipCursor 와 가운데 고정의 되돌림이 같은 사각형을 봐야 한다. 둘이 따로 계산하면 서브 사각형을
+         *          쓸 때 되돌림이 클립 밖 좌표를 가리킨다.
+         * @param outClientTopLeft 잠금 영역의 왼쪽 위 좌표입니다(클라이언트 좌표).
          */
         bool computeLockRectInternal( const MouseDevice& mouse, HWND pHwnd, RECT& outScreenRect, POINT& outClientTopLeft )
         {
@@ -78,13 +78,13 @@ namespace sw
             return true;
         }
 
-        /** @brief 포인터 이탈 알림(WM_MOUSELEAVE)을 요청해 둔 상태인지 여부입니다. TrackMouseEvent 는 이탈을 한 번 알리고 풀립니다. */
+        /** @brief 포인터 이탈 알림(WM_MOUSELEAVE)을 요청해 둔 상태인지 나타냅니다. TrackMouseEvent 는 이탈을 한 번 알리고 해제됩니다. */
         struct PointerTrackingInternal
         {
             static inline bool s_bTrackingLeave{ false };
         };
 
-        /** @brief SPI_xxxKEYS 접근성 단축키(고정 키 · 토글 키 · 필터 키)의 이전 상태를 보관합니다(disable/restoreAccessibilityShortcuts 용). */
+        /** @brief SPI_xxxKEYS 접근성 단축키(고정 키, 토글 키, 필터 키)의 이전 상태를 보관합니다(disable/restoreAccessibilityShortcuts 용). */
         struct AccessibilityInternal
         {
             static inline STICKYKEYS s_prevStickyKeys{ sizeof( STICKYKEYS ), 0 };
@@ -152,7 +152,7 @@ namespace sw
                 const MouseButton btn = InputKeyMap::mapWin32MouseButton( event._message, event._wParam );
                 if ( btn < MouseButton::Count )
                 {
-                    // 클라이언트 영역 누름만 여기 온다(제목 표시줄 · X 는 WM_NCLBUTTONDOWN) — 포커스를 잃었다 돌아온 뒤 잠금을 다시 잡는 자리다.
+                    // 클라이언트 영역의 누름만 여기로 온다(제목 표시줄과 X 는 WM_NCLBUTTONDOWN). 포커스를 잃었다 돌아온 뒤 잠금을 다시 잡는 지점이다.
                     // 잠금을 건 그 누름은 게임에 넘기지 않는다(짝인 뗌도 아래에서 삼킨다).
                     if ( onPlatformPointerPressed( btn ) )
                         break;
@@ -207,7 +207,7 @@ namespace sw
                         ReleaseCapture();
 
                     if ( onPlatformPointerReleased( btn ) )
-                        break; // 잠금을 건 누름의 짝이다 — 누름을 삼켰으니 뗌도 게임에 없다
+                        break; // 잠금을 건 누름의 짝이다. 누름을 삼켰으니 뗌도 게임에 전달하지 않는다
 
                     postRawEvent( RawInputEvent::makeMouseButtonUp( btn, mouseX, mouseY, modifierMask ) );
                 }
@@ -219,8 +219,8 @@ namespace sw
                 int32 mouseY = 0;
                 readMouseEventPositionInternal( event._lParam, mouseX, mouseY );
 
-                // 포인터가 창 안으로 들어온 첫 이동이다. 이탈 알림을 요청해 둬야 WM_MOUSELEAVE 가 온다 — 요청하지 않으면
-                // `isPointerInside()` · `isPointerOverRect()` 가 늘 false 다.
+                // 포인터가 창 안으로 들어온 첫 이동이다. 이탈 알림을 요청해 둬야 WM_MOUSELEAVE 가 온다. 요청하지 않으면
+                // `isPointerInside()` 와 `isPointerOverRect()` 가 늘 false 다.
                 if ( PointerTrackingInternal::s_bTrackingLeave == false && event._pNativeWindow != nullptr )
                 {
                     TRACKMOUSEEVENT trackEvent{};
@@ -254,8 +254,8 @@ namespace sw
             }
             case WM_CHAR:
             {
-                // BMP 밖 글자(이모지 · 확장 한자)는 높은 · 낮은 서로게이트 WM_CHAR 두 개로 온다. 높은 반쪽은 다음 WM_CHAR 까지 들고 있다가
-                // 짝과 합쳐 한 글자(UTF-8 4 바이트)로 보낸다. 짝 없는 반쪽은 U+FFFD 한 글자다(`StringUtil::utf16ToUtf8` 과 같은 규칙).
+                // BMP 밖 글자(이모지, 확장 한자)는 높은 서로게이트와 낮은 서로게이트, 두 개의 WM_CHAR 로 온다. 높은 반쪽은 다음 WM_CHAR 까지 보관했다가
+                // 짝과 합쳐 한 글자(UTF-8 4 바이트)로 보낸다. 짝 없는 반쪽은 U+FFFD 한 글자로 처리한다(`StringUtil::utf16ToUtf8` 과 같은 규칙).
                 if ( event._wParam == 0 || event._wParam >= 0x10000 )
                     break;
                 const uint32 codeUnit         = static_cast<uint32>( event._wParam );
@@ -291,7 +291,7 @@ namespace sw
                         HIMC hImc = ImmGetContext( pHwnd );
                         if ( hImc != nullptr )
                         {
-                            // `ImmGetCompositionStringW` 가 반환하는 것은 **바이트 수**이고 버퍼는
+                            // `ImmGetCompositionStringW` 가 반환하는 값은 바이트 수이고 버퍼는
                             // 와이드 문자 배열이다. 그래서 상한을 버퍼 길이에서 직접 계산한다(바이트 상수와 문자 상수를
                             // 따로 두면 어느 한쪽만 고칠 때 조용히 넘친다).
                             using CompositionBuffer                  = fixed_wstring<constant::kMaxBuffer256>;
@@ -317,9 +317,9 @@ namespace sw
                 }
                 break;
             }
-            // 포커스: OS 쪽 일(커서 가두기 · 풀기)은 지금 하고, 장치 상태 리셋은 큐 순서 안에서 한다(`beginFrame` 참고).
-            // 커서 풀기를 미루면 다음 프레임이 오기 전까지 다른 창에서도 커서가 갇혀 있다. 포커스를 얻어도 잠금은 다시 걸지 않는다 —
-            // 제목 표시줄 · X 를 눌러 활성화한 사용자가 그 버튼까지 커서를 가져갈 수 있어야 한다(클라이언트를 누르면 다시 잡는다).
+            // 포커스: OS 쪽 일(커서 가두기와 풀기)은 지금 하고, 장치 상태 리셋은 큐 순서 안에서 한다(`beginFrame` 참고).
+            // 커서 풀기를 미루면 다음 프레임이 오기 전까지 다른 창에서도 커서가 갇혀 있다. 포커스를 얻어도 잠금은 다시 걸지 않는다.
+            // 제목 표시줄이나 X 를 눌러 활성화한 사용자가 그 버튼까지 커서를 가져갈 수 있어야 하기 때문이다(클라이언트를 누르면 다시 잡는다).
             case WM_SETFOCUS:
             {
                 onPlatformFocusChanged( true );
@@ -336,7 +336,7 @@ namespace sw
             case WM_MOVE:
             case WM_DISPLAYCHANGE:
             {
-                syncMouseLock(); // 클립 사각형을 새 창 자리로 다시 측정한다(DPI 변경은 SetWindowPos 를 거쳐 여기로 온다)
+                syncMouseLock(); // 클립 사각형을 새 창 위치로 다시 측정한다(DPI 변경은 SetWindowPos 를 거쳐 여기로 온다)
                 break;
             }
             case WM_ACTIVATE:
@@ -395,7 +395,7 @@ namespace sw
 
     void InputManager::registerPlatformGamepads()
     {
-        // 슬롯 수 · 0번 캐시 · 연결 콜백은 엔진 정책이라 기반 클래스가 맡는다. 여기서 정하는 것은 XInput 이라는 것뿐이다.
+        // 슬롯 수, 0번 캐시, 연결 콜백은 엔진 정책이라 기반 클래스가 맡는다. 여기서 정하는 것은 XInput 이라는 것뿐이다.
         registerGamepadSlots<XInputGamepadDevice>();
     }
 
@@ -414,7 +414,7 @@ namespace sw
             return;
 
         HWND pHwnd = static_cast<HWND>( pWindow->getNativeHandle() );
-        // 전경이 아닌 창은 커서를 가두지 않는다 — ClipCursor 는 화면 전체에 걸린다.
+        // 전경이 아닌 창은 커서를 가두지 않는다. ClipCursor 는 화면 전체에 걸리기 때문이다.
         if ( pHwnd == nullptr || GetForegroundWindow() != pHwnd )
         {
             ClipCursor( nullptr );

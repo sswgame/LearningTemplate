@@ -13,10 +13,10 @@
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
 
-// 이 파일은 플랫폼 독립적이다. 플랫폼별 구현(게임패드 백엔드, 커서 잠금 · 표시,
+// 이 파일은 플랫폼에 독립적이다. 플랫폼별 구현(게임패드 백엔드, 커서 잠금과 표시,
 // 접근성 단축키 억제)은 InputManager.h 의 "플랫폼별 구현" 절에 있는 훅(registerPlatformGamepads() 등)으로만
-// 연결되고, 실제 구현은 Windows/InputManagerWin32.cpp · Linux/InputManagerX11.cpp 에 있다.
-// 새 플랫폼을 더하거나 플랫폼 동작을 바꿀 때 이 파일을 건드릴 필요가 없어야 한다.
+// 연결하고, 실제 구현은 Windows/InputManagerWin32.cpp 와 Linux/InputManagerX11.cpp 에 있다.
+// 새 플랫폼을 추가하거나 플랫폼 동작을 바꿀 때 이 파일을 건드릴 필요가 없어야 한다.
 
 namespace sw
 {
@@ -123,7 +123,7 @@ namespace sw
             }
         }
 
-        // 모듈이 등록한 장치는 vtable 이 그 이미지에 있다 — 내린 뒤 폴링하면 내려간 코드로 뛴다. 소멸자가 아직 있는 지금 내린다.
+        // 모듈이 등록한 장치는 vtable 이 그 이미지에 있다. 언로드한 뒤 폴링하면 사라진 코드로 점프한다. 소멸자가 아직 있는 지금 제거한다.
         vector<IInputDevice*> listModuleDevice;
         for ( const unique_ptr<IInputDevice>& pDevice : _listDevice )
         {
@@ -183,7 +183,7 @@ namespace sw
     bool InputManager::postWindowStateEvent( const RawInputEvent& rawEvent )
     {
         // 음소거는 "입력을 무시한다" 는 뜻이지 "창이 포커스를 잃은 것도 모른다" 는 뜻이 아니다. 음소거 중에 포커스를 잃고
-        // 풀린 뒤에도 그 전의 눌림이 남아 있으면 안 된다.
+        // 음소거가 풀린 뒤에도 그 전의 눌림이 남아 있으면 안 된다.
         const bool bPushed = _queueRawEvent.push( rawEvent );
         if ( bPushed == false )
             _droppedRawEventCount.fetch_add( 1, std::memory_order_relaxed );
@@ -234,7 +234,7 @@ namespace sw
             }
         }
 
-        // 대표 편의 포인터(키보드 · 마우스 · 게임패드)가 해제되면 남은 장치 중 같은 종류로 다시 잡는다.
+        // 대표 편의 포인터(키보드, 마우스, 게임패드)가 해제되면 남은 장치 중 같은 종류로 다시 잡는다.
         if ( bWasKeyboard == false && bWasMouse == false && bWasGamepad == false )
             return;
 
@@ -275,8 +275,8 @@ namespace sw
         if ( droppedCount > 0 )
             SW_LOG_WARNING( "Raw input event queue full (capacity=%d). %d event(s) dropped in previous frame.", static_cast<int32>( _queueRawEvent.capacity() ), droppedCount );
 
-        // 1) 등록된 모든 장치의 프레임을 시작하고(이전 프레임 엣지 초기화) 폴링한다. 배타 가상 입력이면 폴링하지 않는다 — 패드 폴링
-        //    (XInput · 조이스틱)이 가상 패드 상태를 실제 패드 값으로 덮는다.
+        // 1) 등록된 모든 장치의 프레임을 시작하고(이전 프레임 엣지 초기화) 폴링한다. 배타 가상 입력이면 폴링하지 않는다.
+        //    패드 폴링(XInput, 조이스틱)이 가상 패드 상태를 실제 패드 값으로 덮어쓰기 때문이다.
         const bool bOsSuppressed = isOsInputSuppressed();
         for ( auto& pDev : _listDevice )
         {
@@ -289,16 +289,16 @@ namespace sw
             }
         }
 
-        // 지난 프레임까지 뗀 가린 키를 푼다. 뗀 프레임에는 아직 가린다 — 게임이 누른 적 없는 키의 "뗌" 을 보지 않게.
+        // 지난 프레임까지 뗀 키는 가림을 푼다. 뗀 프레임에는 아직 가린다. 게임이 누른 적 없는 키의 "뗌" 을 보지 않게 하기 위해서다.
         releaseCapturedKeys();
 
         // 2) 락프리 큐에 비동기로 들어온 이번 프레임 원시 이벤트를 한꺼번에 꺼낸다
         _listDrainedEvent.clear();
         _queueRawEvent.drain( _listDrainedEvent );
-        // 배타 가상 입력: OS 가 낸 장치 사건 · 창 포커스 사건을 버린다(글자 입력도 — 가상 원천이 `makeTextInput` 으로 낸다).
+        // 배타 가상 입력: OS 가 낸 장치 이벤트와 창 포커스 이벤트를 버린다(글자 입력도 버리며, 가상 원천이 `makeTextInput` 으로 따로 낸다).
         if ( bOsSuppressed )
             _listDrainedEvent.clear();
-        // 2-1) 가상 입력 원천의 이번 프레임 사건을 OS 사건 뒤에 붙인다 — 같은 재생 자리(3)를 탄다.
+        // 2-1) 가상 입력 원천의 이번 프레임 이벤트를 OS 이벤트 뒤에 붙인다. 같은 재생 경로(3)를 탄다.
         if ( _pVirtualInput != nullptr )
         {
             const size_t firstVirtual = _listDrainedEvent.size();
@@ -310,22 +310,22 @@ namespace sw
             ++_virtualFrameIndex;
         }
 
-        // 3) 꺼낸 원시 이벤트를 **들어온 순서대로** 장치에 적용한다(새 프레임 엣지 플래그 설정). 포커스 잃음도 이 순서 안에서
-        //    적용해야 그보다 먼저 들어온 키 누름이 리셋 뒤에 되살아나지 않는다(알트탭하면 캐릭터가 계속 달리던 원인).
+        // 3) 꺼낸 원시 이벤트를 들어온 순서대로 장치에 적용한다(새 프레임 엣지 플래그 설정). 포커스를 잃는 이벤트도 이 순서 안에서
+        //    적용해야 그보다 먼저 들어온 키 누름이 리셋 뒤에 다시 적용되지 않는다(알트탭하면 캐릭터가 계속 달리는 문제가 생긴다).
         for ( const RawInputEvent& rawEvent : _listDrainedEvent )
         {
             dispatchRawEvent( rawEvent );
         }
 
-        // 이벤트를 다 적용한 뒤 장치마다 한 번 마무리한다 — 마우스 스무딩은 이벤트 수가 아니라 흐른 시간으로 한 번 건다.
+        // 이벤트를 모두 적용한 뒤 장치마다 한 번 마무리한다. 마우스 스무딩은 이벤트 수가 아니라 흐른 시간으로 한 번 적용한다.
         for ( auto& pDev : _listDevice )
         {
             if ( pDev != nullptr )
                 pDev->onEventsDispatched( deltaSeconds );
         }
 
-        // 가운데 고정 잠금: 이번 프레임의 델타를 측정한 뒤에 커서를 되돌린다. 잠금이 쉬는 동안(포커스 밖 · Alt · 콘솔)은 되돌리지 않는다 —
-        // 되돌리면 풀린 커서도 프레임마다 가운데로 끌려와 제목 표시줄 · X 에 닿지 못한다.
+        // 가운데 고정 잠금: 이번 프레임의 델타를 측정한 뒤에 커서를 되돌린다. 잠금이 쉬는 동안(포커스 밖, Alt, 콘솔)은 되돌리지 않는다.
+        // 되돌리면 잠금이 풀린 커서도 프레임마다 가운데로 끌려와서 제목 표시줄이나 X 에 닿지 못한다.
         if ( _pMouse != nullptr && _pMouse->getLockMode() == MouseLockMode::LockedInCenter && isMouseLockActive() )
             recenterLockedCursorPlatform();
 
@@ -348,8 +348,8 @@ namespace sw
                 setActiveGlyphStyle( InputGlyphStyle::KeyboardMouse );
         }
 
-        // 5) 통합 InputMap 을 이번 프레임 입력으로 갱신한다(게임플레이가 읽는 맵). 갱신은 맵의 주인이 한다 — 엔진 루프 ·
-        //    리플레이 재동기화 · 테스트가 같은 길을 탄다.
+        // 5) 통합 InputMap 을 이번 프레임 입력으로 갱신한다(게임플레이가 읽는 맵). 갱신은 맵의 주인이 한다.
+        //    엔진 루프, 리플레이 재동기화, 테스트가 같은 경로를 탄다.
         if ( _pInputMap != nullptr )
             _pInputMap->update( deltaSeconds );
     }
@@ -365,7 +365,7 @@ namespace sw
                 const uint64 keyBit   = uint64{ 1 } << ( keyIndex % 64 );
                 if ( keyIndex < static_cast<size_t>( Key::Count ) )
                 {
-                    // 게임이 아닌 쪽이 키보드를 쥔 동안 눌린 키는 뗄 때까지 게임에 가린다. 게임이 쥔 동안 새로 누르면 가림을 푼다.
+                    // 게임이 아닌 쪽이 키보드를 가진 동안 눌린 키는 뗄 때까지 게임에 가린다. 게임이 가진 동안 새로 누르면 가림을 해제한다.
                     if ( _keyboardFocus != InputKeyboardFocus::Game )
                         _arrCapturedKeyMask[keyIndex / 64] |= keyBit;
                     else
@@ -468,7 +468,7 @@ namespace sw
 
             case RawInputEventType::GamepadConnectionChanged:
             {
-                // 가상 연결 사건은 가상 세션 동안 패드의 연결 여부를 정한다(실제 연결은 폴링이 정한다).
+                // 가상 연결 이벤트가 가상 세션 동안 패드의 연결 여부를 정한다(실제 연결은 폴링이 정한다).
                 GamepadDevice* pPad = getGamepad( rawEvent._deviceIndex );
                 if ( rawEvent._bSynthetic == SW_TRUE && pPad != nullptr )
                     pPad->setVirtualConnected( rawEvent._payload._gamepadData._bConnected == SW_TRUE );
@@ -563,7 +563,7 @@ namespace sw
         if ( focus == InputKeyboardFocus::Count )
             return;
         _keyboardFocus = focus;
-        // 개발 콘솔 · 텍스트 입력이 키보드를 쥐는 동안은 마우스도 놓는다(커서로 창 밖 · 제목 표시줄에 갈 수 있게).
+        // 개발 콘솔이나 텍스트 입력이 키보드를 가진 동안은 마우스도 놓는다(커서로 창 밖이나 제목 표시줄에 갈 수 있게).
         syncMouseLock();
     }
 
@@ -619,7 +619,7 @@ namespace sw
 
     bool InputManager::wasAnyInputPressed() const
     {
-        // 키보드는 게임이 포커스를 쥘 때만 "아무 키" 다 — 콘솔에 치는 글자가 "Press Any Key" 를 넘기지 않게.
+        // 키보드는 게임이 포커스를 가질 때만 "아무 키" 로 본다. 콘솔에 치는 글자가 "Press Any Key" 를 넘기지 않게 하기 위해서다.
         if ( _pKeyboard != nullptr && _keyboardFocus == InputKeyboardFocus::Game && _pKeyboard->wasAnyKeyPressed() )
             return true;
 
@@ -717,7 +717,7 @@ namespace sw
 
     bool InputManager::isPointerOwnedByGame() const
     {
-        // 배타 가상 입력 중에는 OS 포인터를 게임이 쥐지 않는다(사람이 같은 기계를 쓴다). 잠금 모드(장치 상태)는 남겨 두고 떼면 `syncMouseLock` 이 건다.
+        // 배타 가상 입력 중에는 게임이 OS 포인터를 잡지 않는다(사람이 같은 기계를 쓴다). 잠금 모드(장치 상태)는 남겨 두고, 가상 입력을 떼면 `syncMouseLock` 이 다시 건다.
         if ( isOsInputSuppressed() )
             return false;
         if ( _bWindowFocused == SW_FALSE || _bAltHeld == SW_TRUE || _keyboardFocus != InputKeyboardFocus::Game )
@@ -737,7 +737,7 @@ namespace sw
         else
             releaseMouseLockMode();
 
-        // `ShowCursor` 는 카운터다 — 바뀔 때만 부른다. 부를 때마다 더하면 레이어 하나 올릴 때마다 숨김 한 번이 더 필요해진다.
+        // `ShowCursor` 는 카운터다. 바뀔 때만 부른다. 부를 때마다 더하면 레이어 하나를 올릴 때마다 숨김을 해제하는 호출이 한 번 더 필요해진다.
         const bool bHide = _pMouse != nullptr && _pMouse->isCursorVisible() == false && isPointerOwnedByGame();
         if ( bHide == ( _bCursorHiddenApplied == SW_TRUE ) )
             return;
@@ -751,7 +751,7 @@ namespace sw
         if ( bFocused == false )
         {
             _bMouseLockEngaged = SW_FALSE;
-            _bAltHeld          = SW_FALSE; // Alt+Tab 의 Alt 떼기는 다른 창으로 간다
+            _bAltHeld          = SW_FALSE; // Alt+Tab 의 Alt 뗌은 다른 창으로 간다
         }
         syncMouseLock();
     }
@@ -798,7 +798,7 @@ namespace sw
             return;
         const bool bWasLocked = _pMouse->getLockMode() != MouseLockMode::None;
         _pMouse->setLockMode( mode );
-        // 잠금을 새로 켤 때 창이 지금 전경이면 바로 잡는다(시작 직후 · Esc 로 다시 잠글 때). 아니면 클라이언트를 눌러야 잡는다.
+        // 잠금을 새로 켤 때 창이 지금 전경이면 바로 잡는다(시작 직후나 Esc 로 다시 잠글 때). 아니면 클라이언트를 눌러야 잡는다.
         if ( mode != MouseLockMode::None && bWasLocked == false )
         {
             const bool bFocused = isWindowFocusedPlatform();
@@ -865,7 +865,7 @@ namespace sw
         _bOsDeviceInputBlocked   = SW_FALSE; // 붙이는 쪽(자동화 실행기)이 다시 켠다
         _virtualInputMode        = mode;
         _virtualFrameIndex       = 0;
-        // 사람이 누르고 있던 것 · 큐에 남은 OS 사건이 첫 프레임에 새지 않게 지운다.
+        // 사람이 누르고 있던 입력과 큐에 남은 OS 이벤트가 첫 프레임에 새지 않게 지운다.
         if ( bResetState )
             resetAllDeviceState();
         const bool bExclusive = mode == VirtualInputMode::Exclusive;
@@ -894,7 +894,7 @@ namespace sw
 
     void InputManager::setOsDeviceInputBlocked( bool bBlocked )
     {
-        // 배타 가상 입력 없이 막으면 사람도 자동화도 입력을 못 넣는다 — 붙어 있을 때만 켠다.
+        // 배타 가상 입력 없이 막으면 사람도 자동화도 입력을 넣지 못한다. 붙어 있을 때만 켠다.
         const bool bApply = bBlocked && isOsInputSuppressed();
         if ( bBlocked && bApply == false )
             SW_LOG_WARNING( "OS device input stays live: blocking needs an exclusive virtual input source" );

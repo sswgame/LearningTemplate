@@ -1,6 +1,6 @@
 /**
  * @file KeyCodeUtil.h
- * @brief 키보드 · 마우스 바인드 ID 입니다. ENUM() 이 KeyCodeUtil.gen.cpp 에 등록합니다.
+ * @brief 키보드와 마우스 바인드 ID 를 정의합니다. ENUM() 이 KeyCodeUtil.gen.cpp 에 등록합니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -153,7 +153,7 @@ namespace sw
     {
         /** @brief 이름에서 Key 를 해석합니다. */
         static Key fromName( string_view name );
-        /** @brief Key 의 안정적인 이름을 반환합니다. 엔진 서비스가 묶여 있지 않으면 "Unknown" 입니다. */
+        /** @brief Key 의 안정적인 이름을 반환합니다. 엔진 서비스가 바인딩되어 있지 않으면 "Unknown" 입니다. */
         static const utf8* toName( Key key );
     };
 } // namespace sw

@@ -11,13 +11,13 @@
 
 /**
  * @file InputMapSerialization.cpp
- * @brief InputMap XML 로드(디자인 타임 기본 바인딩)와 유저 바인딩 저장 · 로드(런타임 리매핑 영속화)입니다.
+ * @brief InputMap XML 로드(디자인 타임 기본 바인딩)와 유저 바인딩 저장, 로드(런타임 리매핑 영속화)를 구현합니다.
  *
  * 두 XML 포맷은 용도가 다릅니다.
- *  - loadFromResource() / saveToResource() : Resource/ 의 InputMap XML(레이어-액션-기본 바인딩 정의)을 읽어 InputMap 을 처음 구성하고,
- *    에디터 InputMap 패널이 편집한 정의를 같은 형식 · 같은 자리에 다시 씁니다.
- *  - saveUserBindings()/loadUserBindings() : 플레이어가 키를 리매핑한 결과를 저장 · 복원하는 별도의 유저 바인딩 XML 입니다.
- *  - actionTriggerFromName()/actionTriggerToName() : 두 포맷이 함께 쓰는 ActionTrigger 이름 ↔ enum 변환 표입니다.
+ *  - `loadFromResource()`, `saveToResource()`: Resource/ 의 InputMap XML(레이어, 액션, 기본 바인딩 정의)을 읽어 InputMap 을 처음 구성합니다.
+ *    에디터 InputMap 패널에서 편집한 정의는 같은 형식으로 같은 위치에 다시 씁니다.
+ *  - `saveUserBindings()`, `loadUserBindings()`: 플레이어가 키를 리매핑한 결과를 저장하고 복원하는 별도의 유저 바인딩 XML 입니다.
+ *  - `actionTriggerFromName()`, `actionTriggerToName()`: 두 포맷이 함께 쓰는 ActionTrigger 이름과 enum 의 변환 테이블입니다.
  */
 
 namespace sw
@@ -106,8 +106,8 @@ namespace sw
             }
 
             /**
-             * @brief 유저 바인딩 줄의 `trigger` 를 읽습니다. 없거나 모르는 이름이면 그 종류의 기본값(`fallback`)입니다.
-             * @details 저장 쪽은 늘 적는다 — 빼고 저장하면 다시 읽을 때 기본값으로 돌아가, 누르는 동안 매 프레임 발화하는(Down) 축 합성 같은 결함이 돌아온다.
+             * @brief 유저 바인딩 줄의 `trigger` 를 읽습니다. 없거나 모르는 이름이면 그 종류의 기본값(`fallback`)을 반환합니다.
+             * @details 저장할 때는 항상 적는다. 빼고 저장하면 다시 읽을 때 기본값으로 돌아가서, 누르는 동안 매 프레임 발화하는(Down) 축 합성 같은 결함이 생긴다.
              */
             static ActionTrigger readUserBindingTrigger( XMLNode bindNode, ActionTrigger fallback )
             {
@@ -133,9 +133,9 @@ namespace sw
             }
 
             /**
-             * @brief 바인딩 하나를 `<InputMap>` 의 액션 노드 아래에 `loadFromResource` 가 읽는 모양으로 씁니다.
-             * @return `<InputMap>` 형식에 자리가 없는 종류(가상 조이스틱 · 단축키 · 아무 키)면 오류를 남기고 false 입니다 —
-             *         빼고 쓰면 다시 읽을 때 그 바인딩이 조용히 사라진다.
+             * @brief 바인딩 하나를 `<InputMap>` 의 액션 노드 아래에, `loadFromResource` 가 읽는 형태로 씁니다.
+             * @return `<InputMap>` 형식으로 표현할 수 없는 종류(가상 조이스틱, 단축키, 아무 키)면 오류를 남기고 false 를 반환합니다.
+             *         빼고 쓰면 다시 읽을 때 그 바인딩이 조용히 사라지기 때문입니다.
              */
             [[nodiscard]] static bool writeDefinitionBinding( XMLNode actionNode, const utf8* pActionName, const ActionBinding& binding )
             {
@@ -207,7 +207,7 @@ namespace sw
                             axisNode.appendAttribute( "negative", KeyCodeUtil::toName( static_cast<Key>( negativeSlot._controlIndex ) ) );
                             axisNode.appendAttribute( "positive", KeyCodeUtil::toName( static_cast<Key>( positiveSlot._controlIndex ) ) );
                         }
-                        // 적지 않으면 Down 으로 읽힌다 — 그 밖의 trigger 만 적는다.
+                        // Down 은 적지 않아도 Down 으로 읽히므로, 그 밖의 trigger 만 적는다.
                         if ( binding._trigger != ActionTrigger::Down && pTriggerName != nullptr )
                             axisNode.appendAttribute( InputMapXML::kAttrTrigger, pTriggerName );
                         axisNode.appendAttribute( InputMapXML::kAttrLayer, binding._layer.c_str() );
@@ -264,9 +264,9 @@ namespace sw
 
             /**
              * @brief `pad` 속성을 슬롯 범위(0 ~ `kMaxGamepadSlot` - 1)에서 읽습니다. 없으면 0 번 패드입니다.
-             * @return 정수가 아니거나 범위 밖이면 경고하고 false 입니다 — 부르는 쪽은 그 바인딩을 버립니다.
-             * @details 잘라 담으면 "256" 이 0 번, "-1" 이 255 번 패드가 되고 4 번 이상은 없는 패드에 말없이 묶입니다. 패드 번호를 읽는
-             *          자리 셋(리소스 스틱 · 유저 스틱 · 유저 단일 버튼)이 이 하나를 지납니다.
+             * @return 정수가 아니거나 범위 밖이면 경고하고 false 를 반환하며, 호출한 쪽은 그 바인딩을 버립니다.
+             * @details 값을 잘라서 담으면 "256" 이 0 번, "-1" 이 255 번 패드가 되고, 4 번 이상은 없는 패드에 말없이 묶인다.
+             *          패드 번호를 읽는 세 곳(리소스 스틱, 유저 스틱, 유저 단일 버튼)이 모두 이 함수를 거친다.
              */
             [[nodiscard]] static bool tryGetPadIndex( XMLNode node, uint8& outPadIndex )
             {
@@ -278,8 +278,8 @@ namespace sw
             }
 
             /**
-             * @brief `modifierMask` 속성을 아는 수정 키 비트(`ModifierKey::All`) 안에서 읽습니다. 없으면 0(수정 키 없음)입니다.
-             * @return 정수가 아니거나 모르는 비트를 들면 경고하고 false 입니다 — 부르는 쪽은 그 바인딩을 버립니다("257" 이 Ctrl 로 감기던 자리).
+             * @brief `modifierMask` 속성을 아는 수정 키 비트(`ModifierKey::All`) 범위에서 읽습니다. 없으면 0(수정 키 없음)입니다.
+             * @return 정수가 아니거나 모르는 비트가 있으면 경고하고 false 를 반환하며, 호출한 쪽은 그 바인딩을 버립니다. 범위를 검사하지 않으면 "257" 이 Ctrl 로 읽힙니다.
              */
             [[nodiscard]] static bool tryGetModifierMask( XMLNode node, uint8& outModifierMask )
             {
@@ -291,8 +291,8 @@ namespace sw
             }
 
             /**
-             * @brief 1D 축 합성의 두 슬롯을 읽습니다 — `source="gamepad"`(+ `pad`)면 게임패드 버튼 이름, 없거나 `key` 면 키 이름입니다.
-             * @return 이름을 모르거나 패드 번호가 틀리면 경고하고 false 입니다 — 부르는 쪽은 그 바인딩을 버립니다.
+             * @brief 1D 축 합성의 두 슬롯을 읽습니다. `source="gamepad"`(와 `pad`)면 게임패드 버튼 이름, 없거나 `key` 면 키 이름을 읽습니다.
+             * @return 이름을 모르거나 패드 번호가 틀리면 경고하고 false 를 반환하며, 호출한 쪽은 그 바인딩을 버립니다.
              */
             [[nodiscard]] static bool tryReadAxisSlots( XMLNode node, const utf8* pNegativeName, const utf8* pPositiveName, InputSlot& outNegative, InputSlot& outPositive )
             {
@@ -391,7 +391,7 @@ namespace sw
             if ( StringUtil::isNullOrEmpty( pActionName ) )
                 return;
 
-            // 값 종류를 적은 액션은 바인딩보다 먼저 만든다 — 바인딩 없이 이름만 있는 액션(에디터의 "Add Action")도 다시 읽힌다.
+            // 값 종류를 적은 액션은 바인딩보다 먼저 만든다. 바인딩 없이 이름만 있는 액션(에디터의 "Add Action")도 다시 읽혀야 하기 때문이다.
             const utf8* pValueTypeAttr = actionNode.findAttribute( InputMapSerializationInternal::InputMapXML::kAttrValueType );
             if ( pValueTypeAttr != nullptr )
             {
@@ -408,7 +408,7 @@ namespace sw
                 layer = hashed_string( pLayerAttr );
             ensureLayer( layer );
 
-            // 적지 않은 trigger 는 단일 키 · 조합이 Pressed, 축 합성이 Down 이다 — 적은 trigger 는 셋 모두에 간다.
+            // trigger 를 적지 않으면 단일 키와 조합은 Pressed, 축 합성은 Down 이 된다. 적은 trigger 는 셋 모두에 그대로 적용한다.
             auto        defaultTrigger        = ActionTrigger::Pressed;
             bool        bActionTriggerWritten = false;
             const utf8* pTriggerAttr          = actionNode.findAttribute( InputMapSerializationInternal::InputMapXML::kAttrTrigger );
@@ -422,7 +422,7 @@ namespace sw
                 }
             }
 
-            // 연속 값 바인딩(2D 합성 · 스틱 · 마우스 이동량)은 매 프레임 읽는 값이라 Down 고정이다 — 다른 trigger 를 조용히 버리지 않고 알린다.
+            // 연속 값 바인딩(2D 합성, 스틱, 마우스 이동량)은 매 프레임 읽는 값이라 Down 으로 고정한다. 다른 trigger 는 조용히 버리지 않고 경고한다.
             const bool bHasContinuousBinding = actionNode.findChild( "vector2d" ).isValid() || actionNode.findChild( "stick" ).isValid() ||
                                                actionNode.findChild( "mouseDelta" ).isValid();
             if ( bActionTriggerWritten && defaultTrigger != ActionTrigger::Down && bHasContinuousBinding )
@@ -536,7 +536,7 @@ namespace sw
                 InputSlot negativeSlot{};
                 InputSlot positiveSlot{};
                 if ( InputMapSerializationInternal::tryReadAxisSlots( axisNode, "negative", "positive", negativeSlot, positiveSlot ) == false )
-                    continue; // 모르는 이름 · 패드 번호는 알렸다 — 이 바인딩을 버린다
+                    continue; // 모르는 이름이나 패드 번호는 이미 경고했으므로 이 바인딩을 버린다
                 hashed_string axisLayer      = layer;
                 const utf8*   pAxisLayerAttr = axisNode.findAttribute( "layer" );
                 if ( StringUtil::isNullOrEmpty( pAxisLayerAttr ) == false )
@@ -544,7 +544,7 @@ namespace sw
                     axisLayer = hashed_string( pAxisLayerAttr );
                     ensureLayer( axisLayer );
                 }
-                // 축 값은 trigger 와 관계없이 누르는 동안 읽힌다 — trigger 는 액션 발화(누를 때마다 한 칸 등)만 정한다.
+                // 축 값은 trigger 와 관계없이 누르는 동안 읽힌다. trigger 는 액션 발화(누를 때마다 한 칸 등)만 정한다.
                 ActionTrigger axisTrigger      = bActionTriggerWritten ? defaultTrigger : ActionTrigger::Down;
                 const utf8*   pAxisTriggerAttr = axisNode.findAttribute( InputMapSerializationInternal::InputMapXML::kAttrTrigger );
                 if ( pAxisTriggerAttr != nullptr )
@@ -561,7 +561,7 @@ namespace sw
             {
                 uint8 padIndex{ 0 };
                 if ( InputMapSerializationInternal::tryGetPadIndex( stickNode, padIndex ) == false )
-                    continue; // 경고했다 — 엉뚱한 패드에 묶지 않고 이 바인딩을 버린다
+                    continue; // 이미 경고했으므로 엉뚱한 패드에 묶지 않고 이 바인딩을 버린다
                 const utf8*        pStickName      = stickNode.findAttribute( "stick" );
                 const GamepadStick stick           = ( pStickName != nullptr && StringUtil::equals( pStickName, "Right", true ) ) ? GamepadStick::Right : GamepadStick::Left;
                 const float32      deadzone        = stickNode.getAttributeFloat( "deadzone", 0.15f );
@@ -601,7 +601,7 @@ namespace sw
                     bindChord( hashed_string( pActionName ), modifierKey, triggerKey, trigger, hashed_string( chordLayer.view() ) );
             }
 
-            // 6) <mouseDelta> 태그 파싱 — 마우스 이동량(시점). scale 은 감도 배율이다(1 = 픽셀 그대로).
+            // 6) <mouseDelta> 태그 파싱. 마우스 이동량(시점)이며 scale 은 감도 배율이다(1 = 픽셀 그대로).
             for ( XMLNode deltaNode = actionNode.findChild( "mouseDelta" ); deltaNode.isValid(); deltaNode = deltaNode.findNextSibling( "mouseDelta" ) )
             {
                 hashed_string deltaLayer      = layer;
@@ -614,7 +614,7 @@ namespace sw
                 bindMouseDelta( hashed_string( pActionName ), deltaNode.getAttributeFloat( "scale", 1.0f ), hashed_string( deltaLayer.view() ) );
             }
 
-            // 7) <mouseWheel> 태그 파싱 — 마우스 휠(1D 축). scale 은 배율이다(1 = 한 칸에 1).
+            // 7) <mouseWheel> 태그 파싱. 마우스 휠(1D 축)이며 scale 은 배율이다(1 = 한 칸에 1).
             for ( XMLNode wheelNode = actionNode.findChild( "mouseWheel" ); wheelNode.isValid(); wheelNode = wheelNode.findNextSibling( "mouseWheel" ) )
             {
                 hashed_string wheelLayer      = layer;
@@ -684,7 +684,7 @@ namespace sw
             layerNode.appendAttribute( InputMapXML::kAttrAlwaysOn, pLayer->_bAlwaysOn != SW_FALSE );
         }
 
-        // 액션은 등록 순서로 쓴다 — 다시 읽은 맵의 액션 순서가 같다. 바인딩마다 레이어 · 트리거를 적어 액션 기본값에 기대지 않는다.
+        // 액션은 등록 순서대로 쓴다. 그래야 다시 읽은 맵의 액션 순서가 같다. 바인딩마다 레이어와 트리거를 적어서 액션 기본값에 기대지 않는다.
         bool bAllWritten = true;
         for ( const hashed_string& actionName : _listActionName )
         {
@@ -726,14 +726,14 @@ namespace sw
                 XMLNode bindNode = root.appendChild( "bind" );
                 bindNode.appendAttribute( "action", actionName.c_str() );
                 bindNode.appendAttribute( "layer", b._layer.c_str() );
-                // 이름은 표에서 온다 — 쓰는 쪽과 읽는 쪽이 리터럴을 따로 들면 한쪽만 고쳐 파일이 조용히 왕복하지 않게 된다.
+                // 이름은 테이블에서 가져온다. 쓰는 쪽과 읽는 쪽이 리터럴을 따로 가지면 한쪽만 고쳤을 때 파일이 조용히 왕복되지 않는다.
                 bindNode.appendAttribute( "kind", BindingKinds::toName( b._kind ) );
-                // 발화 규칙도 바인딩의 일부다 — 빼면 다시 읽을 때 종류의 기본값으로 돌아간다(`readUserBindingTrigger`).
+                // 발화 규칙도 바인딩의 일부다. 빼면 다시 읽을 때 종류의 기본값으로 돌아간다(`readUserBindingTrigger`).
                 const utf8* pTriggerName = actionTriggerToName( b._trigger );
                 if ( pTriggerName != nullptr )
                     bindNode.appendAttribute( "trigger", pTriggerName );
 
-                // 종류를 늘리고 여기를 빠뜨리면 그 바인딩이 특성 하나 없이 저장돼 **조용히 사라진다** — 그래서 default 가 오류를 남긴다.
+                // 종류를 추가하고 여기를 빠뜨리면 그 바인딩이 특성 하나 없이 저장되어 조용히 사라진다. 그래서 default 에서 오류를 남긴다.
                 switch ( b._kind )
                 {
                     case BindingKind::SingleSlot:
@@ -827,12 +827,12 @@ namespace sw
                     }
                     case BindingKind::AnyKey:
                     {
-                        break; // 이름 말고 적을 것이 없다.
+                        break; // 이름 말고는 적을 것이 없다.
                     }
                     case BindingKind::Count:
                     {
-                        // 종류를 늘리고 이 switch 를 빠뜨렸다. 이름은 표에서 왔으므로 `kind` 는
-                        // 제대로 적혔지만 **딸린 특성이 하나도 없어** 다시 읽을 수 없는 줄이 된다.
+                        // 종류를 추가하고 이 switch 를 빠뜨린 경우다. 이름은 테이블에서 왔으므로 `kind` 는
+                        // 제대로 적히지만 딸린 특성이 하나도 없어서 다시 읽을 수 없는 줄이 된다.
                         SW_LOG_ERROR( "저장하지 못한 바인딩 종류입니다 (kind=%#) — BindingKind 를 늘리고 saveUserBindings 를 빠뜨렸습니다.",
                                       BindingKinds::toName( b._kind ) );
                         break;
@@ -866,7 +866,7 @@ namespace sw
             if ( StringUtil::isNullOrEmpty( pAction ) )
                 continue;
 
-            // 이름 → 종류는 표가 답한다. 종류가 없거나 모르는 이름이면 그 바인딩은 읽지 않는다 — 저장 쪽은 늘 `kind` 를 쓴다.
+            // 이름에서 종류는 테이블이 찾는다. 종류가 없거나 모르는 이름이면 그 바인딩은 읽지 않는다. 저장할 때는 항상 `kind` 를 쓰기 때문이다.
             const BindingKind parsedKind = ( pKindStr != nullptr ) ? BindingKinds::fromName( pKindStr ) : BindingKind::Count;
             if ( parsedKind == BindingKind::Count )
             {
@@ -901,7 +901,7 @@ namespace sw
                 {
                     uint8 pad{ 0 };
                     if ( InputMapSerializationInternal::tryGetPadIndex( bindNode, pad ) == false )
-                        break; // 경고했다 — 이 바인딩을 버린다
+                        break; // 이미 경고했으므로 이 바인딩을 버린다
                     const utf8*        pStickStr     = bindNode.findAttribute( "stick" );
                     const GamepadStick stick         = StringUtil::equals( pStickStr, "Right", true ) ? GamepadStick::Right : GamepadStick::Left;
                     const float32      deadzone      = bindNode.getAttributeFloat( "deadzone", 0.15f );
@@ -945,7 +945,7 @@ namespace sw
                 {
                     uint8 modifierMask{ 0 };
                     if ( InputMapSerializationInternal::tryGetModifierMask( bindNode, modifierMask ) == false )
-                        break; // 경고했다 — 다른 수정 키 조합으로 묶지 않고 이 바인딩을 버린다
+                        break; // 이미 경고했으므로 다른 수정 키 조합으로 묶지 않고 이 바인딩을 버린다
                     const Key key = KeyCodeUtil::fromName( bindNode.getAttributeText( "key" ) );
                     if ( key != Key::Unknown )
                         bindShortcut( hashed_string( pAction ), key, modifierMask, InputMapSerializationInternal::readUserBindingTrigger( bindNode, ActionTrigger::Pressed ),
@@ -959,7 +959,7 @@ namespace sw
                 }
                 case BindingKind::SingleSlot:
                 {
-                    // 저장 쪽과 같은 모양만 읽는다: source="key" key=… · source="mouse" button=… · source="gamepad" code=… pad=…
+                    // 저장할 때와 같은 형태만 읽는다: source="key" key=…, source="mouse" button=…, source="gamepad" code=… pad=…
                     const utf8*         pSourceStr    = bindNode.findAttribute( "source" );
                     const ActionTrigger singleTrigger = InputMapSerializationInternal::readUserBindingTrigger( bindNode, ActionTrigger::Pressed );
                     if ( StringUtil::equals( pSourceStr, "key", true ) )
@@ -994,7 +994,7 @@ namespace sw
                 }
                 case BindingKind::Count:
                 {
-                    // 표는 이름을 알았는데 여기가 모른다. 종류를 늘리고 이 switch 를 빠뜨린 것이다.
+                    // 테이블은 이 이름을 아는데 여기서는 모른다. 종류를 추가하고 이 switch 를 빠뜨린 경우다.
                     SW_LOG_ERROR( "읽지 못한 바인딩 종류입니다 (kind=%#) — BindingKind 를 늘리고 loadUserBindings 를 빠뜨렸습니다.", pKindStr );
                     break;
                 }
