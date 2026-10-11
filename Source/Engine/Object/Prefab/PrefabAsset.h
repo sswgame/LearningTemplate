@@ -130,8 +130,10 @@ namespace sw
          */
         void reload( string_view assetRelativePath, IRHIDevice* pDevice = nullptr ) override;
 
+        /** @brief 등록부의 종류 이름 — `AssetManager::getAssetCache<T>()` 가 이것으로 찾습니다. */
+        static constexpr const utf8* kAssetKindName = "Prefab";
         /** @brief 이 캐시가 다루는 에셋 종류의 이름입니다. */
-        const utf8* getAssetKindName() const override { return "Prefab"; }
+        const utf8* getAssetKindName() const override { return kAssetKindName; }
         /** @brief 그 프리팹을 지금 캐시가 들고 있는지 반환합니다. */
         bool isCached( string_view assetRelativePath ) const override;
         /** @brief 지금 들고 있는 항목 수입니다. */

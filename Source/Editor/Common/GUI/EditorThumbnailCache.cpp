@@ -22,7 +22,7 @@ namespace sw::editor
             static TextureCache* findTextureCache()
             {
                 AssetManager* pAssets = editor::getService<AssetManager>();
-                return pAssets != nullptr ? &pAssets->getTextureCache() : nullptr;
+                return pAssets != nullptr ? &pAssets->getAssetCache<TextureCache>() : nullptr;
             }
 
             static IImGuiRendererBackend* findRendererBackend()

@@ -2,8 +2,9 @@
  * @file AssetManager.h
  * @brief 팩 에셋(GUID · 스키마 · Material · Texture · Prefab · Mesh)을 한곳에서 들고 있는 파사드입니다. `EngineLoop` 가 `EngineServiceCollection` 로 소유합니다.
  * @note
- *   포함: AssetDatabase, AssetFormatRegistry, MaterialCache, TextureCache, PrefabCache, SpriteClipCache, MeshCache, SkeletonCache, AnimClipCache, SkeletonBoneLODCache, RigAssetCache, FractureAssetCache, ResourcePackManager.
- *   등록부에는 코드로 짓는 값 표 셋(`MeshUtil` 내장 도형 · `SpriteMeshBuilder` 9-슬라이스 메시 · `SpriteRenderUtil` 텍스처 인스턴스 — `WeakInternCache`)도 오릅니다.
+ *   포함: AssetDatabase, AssetFormatRegistry, ResourcePackManager, 에셋 캐시 등록부.
+ *   기능 캐시(Material · Texture · Prefab · Mesh · Skeleton · Fracture …)는 **각 기능 폴더가 등록합니다**(`SW_BUILT_IN_ASSET_CACHE`, `Cache/BuiltInAssetCache.h`).
+ *   매니저는 생성자에서 등록표를 훑어 소유 캐시를 만들고, 코드로 짓는 값 표(`WeakInternCache`)는 빌려 올립니다. 타입으로 찾을 때는 `getAssetCache<T>()` 입니다.
  *   제외(수명이 다름):
  *   - ResourcePaths: Resource/ 경로 해석만 합니다(소유권 없음)
  *   - ShaderCache: 셰이더 컴파일 결과 캐시(RHI)
@@ -22,25 +23,11 @@
 
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetFormat.h"
+#include "Engine/Resource/Cache/IAssetCache.h"
 
 namespace sw
 {
-    class AnimClipCache;
-    class AnimNotifyTableCache;
-    class FractureAssetCache;
-    class IAssetCache;
-    class LocalizationReloadCache;
-    class MaterialCache;
-    class MeshCache;
-    class PhysicsAssetCache;
-    class PrefabCache;
     class ResourcePackManager;
-    class RigAssetCache;
-    class SkeletonBoneLODCache;
-    class SkeletonCache;
-    class SocketSetCache;
-    class SpriteClipCache;
-    class TextureCache;
 
     /** @brief `AssetManager::mountContent` 가 무엇을 콘텐츠로 올리는지입니다. */
     enum class ContentSource : uint8
@@ -115,7 +102,7 @@ namespace sw
         // ----------------------------------------------------------------------
         /**
          * @brief 경로 키 에셋 캐시를 등록부에 올립니다. 소유하지 않습니다.
-         * @details 내장 캐시(Material · Texture · Prefab · SpriteClip · Mesh)는 생성자가 등록합니다. 모듈이 자기 에셋
+         * @details 내장 캐시(기능 폴더가 `SW_BUILT_IN_ASSET_CACHE` 로 올린 것)는 생성자가 등록합니다. 모듈이 자기 에셋
          *          종류를 더할 때 이것을 부릅니다. 그러면 종료 · 진단 · 재초기화가 **자동으로**
          *          그 캐시까지 훑습니다. 같은 포인터를 두 번 올리면 무시합니다.
          * @param pCache 매니저보다 오래 사는 캐시. nullptr 은 무시합니다.
@@ -136,6 +123,21 @@ namespace sw
          * @details 이름으로 도는 코드(진단 · 도구)가 캐시 셋을 다시 적지 않게 하는 창구입니다.
          */
         IAssetCache* findAssetCache( string_view assetKindName ) const;
+        /**
+         * @brief 내장 캐시를 타입으로 받습니다(`getAssetCache<MaterialCache>()`). 타입은 `kAssetKindName` 을 내고, 부르는 쪽이 그 헤더를 include 합니다.
+         * @details 언리얼 `GetSubsystem<T>()` 와 같은 창구입니다 — `Resource` 가 기능 캐시 타입을 모르므로 타입을 아는 쪽이 고릅니다. 내장 캐시는
+         *          매니저와 수명이 같아 항상 있습니다(없으면 단언).
+         */
+        template <typename TCache>
+        TCache& getAssetCache()
+        {
+            return static_cast<TCache&>( getBuiltInAssetCache( TCache::kAssetKindName ) );
+        }
+        template <typename TCache>
+        const TCache& getAssetCache() const
+        {
+            return static_cast<const TCache&>( getBuiltInAssetCache( TCache::kAssetKindName ) );
+        }
         /**
          * @brief 등록된 캐시를 모두 비웁니다.
          * @details `shutdown` 이 이것을 씁니다. 종료 경로가 캐시 이름을 손으로 적으면 하나가 빠져 재초기화 뒤에도 옛 내용이 남습니다.
@@ -168,43 +170,17 @@ namespace sw
         AssetFormatRegistry&       getAssetFormatRegistry() { return _assetFormatRegistry; }
         const AssetFormatRegistry& getAssetFormatRegistry() const { return _assetFormatRegistry; }
 
-        /** @brief 경로 키 Material 인스턴스 캐시(GPU 수명 포함)를 반환합니다. */
-        MaterialCache&       getMaterialCache();
-        const MaterialCache& getMaterialCache() const;
-        /** @brief 경로 키 Texture2D 인스턴스 캐시(GPU 수명 포함)를 반환합니다. 머티리얼의 Texture2D 프로퍼티(assetPath)가 여기서 빌립니다. */
-        TextureCache&       getTextureCache();
-        const TextureCache& getTextureCache() const;
-
-        /** @brief 경로 키 메시 에셋(`.mesh`) 캐시를 반환합니다. 표는 프로세스에 하나라 `MeshCache::acquire` 를 바로 불러도 같습니다. */
-        MeshCache&       getMeshCache();
-        const MeshCache& getMeshCache() const;
-
-        /** @brief Prefab 로드 · 스폰 캐시를 반환합니다. */
-        PrefabCache&       getPrefabCache();
-        const PrefabCache& getPrefabCache() const;
-
     private:
         /** @brief 내장 캐시(`_listBuiltInAssetCache`)인지 봅니다. 종료 경고 · 모듈 코드 걷기에서 뺍니다. */
         bool isBuiltInAssetCache( const IAssetCache* pCache ) const;
+        /** @brief `getAssetCache<T>()` 의 몸통 — 종류 이름으로 내장 캐시를 찾습니다. 없으면 단언합니다(등록하지 않은 타입을 물은 것). */
+        IAssetCache& getBuiltInAssetCache( string_view assetKindName ) const;
 
-        AssetDatabase                       _assetDatabase;
-        AssetFormatRegistry                 _assetFormatRegistry;
-        unique_ptr<MaterialCache>           _materialCache;
-        unique_ptr<TextureCache>            _textureCache;
-        unique_ptr<PrefabCache>             _prefabCache;
-        unique_ptr<SpriteClipCache>         _spriteClipCache;         ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
-        unique_ptr<MeshCache>               _meshCache;               ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
-        unique_ptr<SkeletonCache>           _skeletonCache;           ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
-        unique_ptr<AnimClipCache>           _animClipCache;           ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
-        unique_ptr<SkeletonBoneLODCache>    _boneLODCache;            ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
-        unique_ptr<SocketSetCache>          _socketSetCache;          ///< 캐릭터 데이터(소켓 에셋) — 등록부에 보이는 창구
-        unique_ptr<AnimNotifyTableCache>    _notifyTableCache;        ///< 캐릭터 데이터(알림 표)
-        unique_ptr<PhysicsAssetCache>       _physicsAssetCache;       ///< 물리 에셋(래그돌 · 히트박스)
-        unique_ptr<RigAssetCache>           _rigAssetCache;           ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
-        unique_ptr<LocalizationReloadCache> _localizationReloadCache; ///< 로컬라이제이션 파일의 핫 리로드 창구 — 글은 `LocalizationManager` 가 갖는다
-        unique_ptr<FractureAssetCache>      _fractureCache;           ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
-        unique_ptr<ResourcePackManager>     _pPackManager;
-        vector<IAssetCache*>                _listBuiltInAssetCache; ///< 내장 캐시 전부 — 위 멤버와 Engine.dll 의 정적 값 표(`MeshUtil::getPrimitiveCache` 등). 생성자가 이 순서로 올린다
+        AssetDatabase                   _assetDatabase;
+        AssetFormatRegistry             _assetFormatRegistry;
+        vector<unique_ptr<IAssetCache>> _listOwnedAssetCache; ///< 기능 폴더가 등록한 소유 캐시(`SW_BUILT_IN_ASSET_CACHE`) — 매니저마다 하나씩
+        unique_ptr<ResourcePackManager> _pPackManager;
+        vector<IAssetCache*>            _listBuiltInAssetCache; ///< 내장 캐시 전부 — 소유 캐시와 빌려 온 공유 캐시(Engine.dll 의 정적 값 표). 종류 이름 순으로 올린다
         /**
          * @brief 등록된 캐시 목록입니다. 소유하지 않습니다(내장 캐시는 위 멤버가, 모듈이 올린 것은 그 모듈이 소유합니다).
          * @details 종류 이름(`getAssetKindName`)은 **올릴 때** 복사합니다. 모듈이 자기 캐시를 내리지 않고 사라지면 그 포인터의 가상 함수 표도

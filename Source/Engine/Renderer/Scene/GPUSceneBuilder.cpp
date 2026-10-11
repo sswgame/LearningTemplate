@@ -806,7 +806,7 @@ namespace sw
     {
         if ( engine::areEngineServicesBound() == false )
             return;
-        const uint32 generation = engine::getAssetManager().getTextureCache().getReloadGeneration();
+        const uint32 generation = engine::getAssetManager().getAssetCache<TextureCache>().getReloadGeneration();
         if ( generation == _lastTextureReloadGeneration )
             return;
         _lastTextureReloadGeneration = generation;

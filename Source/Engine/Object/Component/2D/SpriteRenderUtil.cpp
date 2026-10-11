@@ -6,6 +6,7 @@
 
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
+#include "Engine/Resource/Cache/BuiltInAssetCache.h"
 #include "Engine/Resource/Cache/WeakInternCache.h"
 
 namespace sw
@@ -87,4 +88,9 @@ namespace sw
             SW_LOG_ERROR( "'%#': unknown sorting layer '%#' - drawn in 'Default' (layers are listed in render2d.xml)", ownerLabel, layerName.c_str() );
         return sortKey;
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_BUILT_IN_SHARED_ASSET_CACHE( SpriteTextureInstance, &SpriteRenderUtil::getTextureInstanceCache );
 } // namespace sw

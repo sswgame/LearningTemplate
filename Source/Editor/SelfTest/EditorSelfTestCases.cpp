@@ -454,7 +454,7 @@ namespace sw::editor
                 AssetManager* pResources = editor::getService<AssetManager>();
                 if ( context.expect( pResources != nullptr, "no resource manager" ) == false )
                     return EditorSelfTestStep::Done;
-                const MaterialCache& cache = pResources->getMaterialCache();
+                const MaterialCache& cache = pResources->getAssetCache<MaterialCache>();
                 if ( context.expect( cache.isCached( kFirstPath ) == false, "the first probe material is already held by something else" ) == false )
                     return EditorSelfTestStep::Done;
 

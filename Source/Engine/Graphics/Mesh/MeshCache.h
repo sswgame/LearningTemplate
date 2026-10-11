@@ -39,8 +39,10 @@ namespace sw
          */
         [[nodiscard]] static bool reloadShared( string_view path, IRHIDevice* pDevice );
 
+        /** @brief 등록부의 종류 이름 — `AssetManager::getAssetCache<T>()` 가 이것으로 찾습니다. */
+        static constexpr const utf8* kAssetKindName = "Mesh";
         /** @brief 등록부의 종류 이름("Mesh")입니다. 에디터 에셋 종류 표가 이 이름으로 핫 리로드를 보냅니다. */
-        const utf8* getAssetKindName() const override { return "Mesh"; }
+        const utf8* getAssetKindName() const override { return kAssetKindName; }
         /** @brief 그 경로의 메시를 누가 쥐고 있는지 반환합니다. */
         bool isCached( string_view relativePath ) const override;
         /** @brief 사용 중이면 제자리로 다시 읽습니다(`reloadShared`). */

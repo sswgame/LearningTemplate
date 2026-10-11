@@ -71,7 +71,7 @@ namespace sw
             return;
         _requestedMaterialPath = path;
 
-        MaterialCache& cache     = engine::getAssetManager().getMaterialCache();
+        MaterialCache& cache     = engine::getAssetManager().getAssetCache<MaterialCache>();
         Material*      pMaterial = nullptr;
         hashed_string  borrowedPath{};
         if ( path.empty() == false )
@@ -128,7 +128,7 @@ namespace sw
         {
             _pMaterial = nullptr;
             if ( engine::areEngineServicesBound() )
-                engine::getAssetManager().getMaterialCache().release( _acquiredMaterialPath.c_str() );
+                engine::getAssetManager().getAssetCache<MaterialCache>().release( _acquiredMaterialPath.c_str() );
             _acquiredMaterialPath = hashed_string{};
         }
         _requestedMaterialPath = hashed_string{};

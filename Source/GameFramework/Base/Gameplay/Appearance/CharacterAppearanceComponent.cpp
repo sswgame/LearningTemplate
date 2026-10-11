@@ -367,7 +367,7 @@ namespace sw
             spawned._partIndex = static_cast<uint32>( partIndex );
             if ( part._kind == AppearancePartKind::SocketPrefab )
             {
-                pObject = pAssetManager != nullptr ? pAssetManager->getPrefabCache().spawn( &manager, part._asset.c_str(), part._partName.c_str() ) : nullptr;
+                pObject = pAssetManager != nullptr ? pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, part._asset.c_str(), part._partName.c_str() ) : nullptr;
                 if ( pObject != nullptr && pObject->getComponent<SocketBindingComponent>() == nullptr )
                     (void)pObject->addComponent<SocketBindingComponent>();
             }

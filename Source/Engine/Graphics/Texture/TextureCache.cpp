@@ -11,6 +11,7 @@
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
+#include "Engine/Resource/Cache/BuiltInAssetCache.h"
 
 namespace sw
 {
@@ -187,4 +188,9 @@ namespace sw
         std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
         _impl->_mapEntry.clear();
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_BUILT_IN_ASSET_CACHE( TextureCache );
 } // namespace sw

@@ -13,6 +13,7 @@
 #include "Engine/Object/Component/2D/SpriteRenderUtil.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Resource/Cache/BuiltInAssetCache.h"
 #include "Engine/Resource/Cache/IAssetCache.h"
 
 #include "TestFramework/TestFramework.h"
@@ -82,12 +83,34 @@ SW_TEST_CASE( AssetCacheRegistryTest, BuiltInCachesAreReachableThroughTheRegistr
     SW_EXPECT_NULL( resources.findAssetCache( "" ) );
 
     // 찾은 것이 실제로 그 캐시다 — 이름만 맞고 다른 것을 주면 진단이 거짓말을 한다.
-    SW_EXPECT_TRUE( resources.findAssetCache( "Material" ) == static_cast<sw::IAssetCache*>( &resources.getMaterialCache() ) );
-    SW_EXPECT_TRUE( resources.findAssetCache( "Texture" ) == static_cast<sw::IAssetCache*>( &resources.getTextureCache() ) );
-    SW_EXPECT_TRUE( resources.findAssetCache( "Prefab" ) == static_cast<sw::IAssetCache*>( &resources.getPrefabCache() ) );
+    SW_EXPECT_TRUE( resources.findAssetCache( "Material" ) == static_cast<sw::IAssetCache*>( &resources.getAssetCache<sw::MaterialCache>() ) );
+    SW_EXPECT_TRUE( resources.findAssetCache( "Texture" ) == static_cast<sw::IAssetCache*>( &resources.getAssetCache<sw::TextureCache>() ) );
+    SW_EXPECT_TRUE( resources.findAssetCache( "Prefab" ) == static_cast<sw::IAssetCache*>( &resources.getAssetCache<sw::PrefabCache>() ) );
     SW_EXPECT_TRUE( resources.findAssetCache( "PrimitiveMesh" ) == &sw::MeshUtil::getPrimitiveCache() );
     SW_EXPECT_TRUE( resources.findAssetCache( "SlicedSpriteMesh" ) == &sw::SpriteMeshBuilder::getSlicedMeshCache() );
     SW_EXPECT_TRUE( resources.findAssetCache( "SpriteTextureInstance" ) == &sw::SpriteRenderUtil::getTextureInstanceCache() );
+}
+
+/**
+ * @brief [AssetCacheRegistryTest] 내장 캐시는 기능 폴더의 등록에서 온다 — 매니저마다 소유 캐시를 새로 만들고, 종류 이름 순으로 오른다
+ * @details `Resource` 는 기능 캐시 타입을 모른다(`SW_BUILT_IN_ASSET_CACHE`). 등록 순서는 링크 순서라, 매니저가 이름 순으로 늘어놓지 않으면
+ *          비우기 순서가 빌드마다 달라진다. 소유 캐시를 매니저끼리 나누면 한 매니저의 종료가 다른 매니저의 캐시를 비운다.
+ */
+SW_TEST_CASE( AssetCacheRegistryTest, BuiltInCachesComeFromFeatureRegistrations )
+{
+    sw::AssetManager first;
+    sw::AssetManager second;
+
+    const sw::vector<sw::IAssetCache*> listCache = first.getAllAssetCache();
+    SW_EXPECT_EQUAL( sw::BuiltInAssetCacheRegistry::getAll().size(), listCache.size() );
+    for ( size_t index = 1; index < listCache.size(); ++index )
+    {
+        SW_EXPECT_TRUE( sw::string_view{ listCache[index - 1]->getAssetKindName() } < sw::string_view{ listCache[index]->getAssetKindName() } );
+    }
+
+    // 소유 캐시는 매니저마다 따로, 공유 캐시(코드로 짓는 값 표)는 같은 객체다.
+    SW_EXPECT_TRUE( &first.getAssetCache<sw::MaterialCache>() != &second.getAssetCache<sw::MaterialCache>() );
+    SW_EXPECT_TRUE( first.findAssetCache( "PrimitiveMesh" ) == second.findAssetCache( "PrimitiveMesh" ) );
 }
 
 /**
@@ -151,7 +174,7 @@ SW_TEST_CASE( AssetCacheRegistryTest, SecondCacheWithTheSameKindNameIsRejected )
         resources.registerAssetCache( &impostor );
     }
     SW_EXPECT_EQUAL( builtInCount, resources.getAllAssetCache().size() );
-    SW_EXPECT_TRUE( resources.findAssetCache( "Material" ) == static_cast<sw::IAssetCache*>( &resources.getMaterialCache() ) );
+    SW_EXPECT_TRUE( resources.findAssetCache( "Material" ) == static_cast<sw::IAssetCache*>( &resources.getAssetCache<sw::MaterialCache>() ) );
     resources.unregisterAssetCache( &impostor ); // 올라 있지 않아도 조용하다
 }
 

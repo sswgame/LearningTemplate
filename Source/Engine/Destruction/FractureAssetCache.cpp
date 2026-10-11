@@ -3,6 +3,7 @@
 #include "Engine/Destruction/FractureAssetCache.h"
 
 #include "Engine/Destruction/FractureAsset.h"
+#include "Engine/Resource/Cache/BuiltInAssetCache.h"
 #include "Engine/Resource/Cache/SharedAssetTable.h"
 
 namespace sw
@@ -60,4 +61,9 @@ namespace sw
     {
         FractureAssetCacheInternal::getTable().clear();
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_BUILT_IN_ASSET_CACHE( FractureAssetCache );
 } // namespace sw

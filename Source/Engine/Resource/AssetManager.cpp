@@ -5,21 +5,10 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Animation/AnimationAssetCache.h"
-#include "Engine/Animation/Sprite/SpriteClipCache.h"
-#include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Destruction/FractureAssetCache.h"
-#include "Engine/Graphics/2D/SpriteMeshBuilder.h"
-#include "Engine/Graphics/Material/MaterialCache.h"
-#include "Engine/Graphics/Mesh/MeshCache.h"
-#include "Engine/Graphics/Mesh/MeshUtil.h"
-#include "Engine/Graphics/Texture/TextureCache.h"
-#include "Engine/Localization/LocalizationReloadCache.h"
-#include "Engine/Object/Component/2D/SpriteRenderUtil.h"
-#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
+#include "Engine/Resource/Cache/BuiltInAssetCache.h"
 #include "Engine/Resource/Cache/IAssetCache.h"
 #include "Engine/Resource/Pack/ResourcePackManager.h"
 #include "Engine/Resource/ResourcePaths.h"
@@ -28,47 +17,45 @@ namespace sw
 {
     SW_LOG_CALLER( "AssetManager" );
 
+    namespace
+    {
+        struct AssetManagerInternal
+        {
+            /** @brief 내장 캐시 정렬 — 종류 이름 순(비우기 순서를 링크 순서와 떼어 고정한다). */
+            static bool isKindNameLess( const IAssetCache* pLeft, const IAssetCache* pRight )
+            {
+                return string_view{ pLeft->getAssetKindName() } < string_view{ pRight->getAssetKindName() };
+            }
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
     AssetManager::AssetManager()
         : _assetDatabase{}
         , _assetFormatRegistry{}
-        , _materialCache{ make_unique<MaterialCache>() }
-        , _textureCache{ make_unique<TextureCache>() }
-        , _prefabCache{ make_unique<PrefabCache>() }
-        , _spriteClipCache{ make_unique<SpriteClipCache>() }
-        , _meshCache{ make_unique<MeshCache>() }
-        , _skeletonCache{ make_unique<SkeletonCache>() }
-        , _animClipCache{ make_unique<AnimClipCache>() }
-        , _boneLODCache{ make_unique<SkeletonBoneLODCache>() }
-        , _socketSetCache{ make_unique<SocketSetCache>() }
-        , _notifyTableCache{ make_unique<AnimNotifyTableCache>() }
-        , _physicsAssetCache{ make_unique<PhysicsAssetCache>() }
-        , _rigAssetCache{ make_unique<RigAssetCache>() }
-        , _localizationReloadCache{ make_unique<LocalizationReloadCache>() }
-        , _fractureCache{ make_unique<FractureAssetCache>() }
+        , _listOwnedAssetCache{}
         , _pPackManager{ make_unique<ResourcePackManager>() }
         , _listBuiltInAssetCache{}
         , _registeredAssetCache{}
         , _contentSource{ ContentSource::Cooked }
     {
-        // 내장 캐시는 이 목록 하나에 적는다 — 등록 · "내장인가" 판정이 모두 이것을 본다. 내장 캐시도 **등록부를 통해서만** 훑는다.
-        // 코드로 짓는 값 표(내장 도형 · 9-슬라이스 메시 · 스프라이트 텍스처 인스턴스)는 Engine.dll 의 정적 객체다 — 매니저보다 오래 산다.
-        _listBuiltInAssetCache = { _materialCache.get(),
-                                   _textureCache.get(),
-                                   _prefabCache.get(),
-                                   _spriteClipCache.get(),
-                                   _meshCache.get(),
-                                   _skeletonCache.get(),
-                                   _animClipCache.get(),
-                                   _boneLODCache.get(),
-                                   _socketSetCache.get(),
-                                   _notifyTableCache.get(),
-                                   _physicsAssetCache.get(),
-                                   _rigAssetCache.get(),
-                                   _localizationReloadCache.get(),
-                                   _fractureCache.get(),
-                                   &MeshUtil::getPrimitiveCache(),
-                                   &SpriteMeshBuilder::getSlicedMeshCache(),
-                                   &SpriteRenderUtil::getTextureInstanceCache() };
+        // 내장 캐시는 기능 폴더가 등록표에 올린 것이다 — Resource 는 그 타입을 모른다. 소유 캐시는 여기서 만들고, 공유 캐시(Engine.dll 의
+        // 정적 값 표)는 빌려 온다. 등록 순서는 링크 순서라 종류 이름 순으로 늘어놓아 비우기 순서를 고정한다. 등록 · "내장인가" 판정이 모두 이 목록을 본다.
+        for ( const BuiltInAssetCacheRegistration* pRegistration : BuiltInAssetCacheRegistry::getAll() )
+        {
+            if ( pRegistration->_pCreate != nullptr )
+            {
+                _listOwnedAssetCache.push_back( pRegistration->_pCreate() );
+                _listBuiltInAssetCache.push_back( _listOwnedAssetCache.back().get() );
+            }
+            else if ( pRegistration->_pGetShared != nullptr )
+            {
+                _listBuiltInAssetCache.push_back( &pRegistration->_pGetShared() );
+            }
+        }
+        std::sort( _listBuiltInAssetCache.begin(), _listBuiltInAssetCache.end(), AssetManagerInternal::isKindNameLess );
         for ( IAssetCache* pCache : _listBuiltInAssetCache )
         {
             registerAssetCache( pCache );
@@ -259,44 +246,13 @@ namespace sw
         return releasedCount;
     }
 
-    MaterialCache& AssetManager::getMaterialCache()
+    IAssetCache& AssetManager::getBuiltInAssetCache( string_view assetKindName ) const
     {
-        return *_materialCache;
-    }
-
-    const MaterialCache& AssetManager::getMaterialCache() const
-    {
-        return *_materialCache;
-    }
-
-    TextureCache& AssetManager::getTextureCache()
-    {
-        return *_textureCache;
-    }
-
-    const TextureCache& AssetManager::getTextureCache() const
-    {
-        return *_textureCache;
-    }
-
-    MeshCache& AssetManager::getMeshCache()
-    {
-        return *_meshCache;
-    }
-
-    const MeshCache& AssetManager::getMeshCache() const
-    {
-        return *_meshCache;
-    }
-
-    PrefabCache& AssetManager::getPrefabCache()
-    {
-        return *_prefabCache;
-    }
-
-    const PrefabCache& AssetManager::getPrefabCache() const
-    {
-        return *_prefabCache;
+        IAssetCache* pCache = _registeredAssetCache.findByName( assetKindName );
+        if ( pCache == nullptr || isBuiltInAssetCache( pCache ) == false )
+            SW_LOG_ERROR( "Built-in asset cache '%#' is not registered - its .cpp needs SW_BUILT_IN_ASSET_CACHE", assetKindName );
+        SW_ASSERT( pCache != nullptr );
+        return *pCache;
     }
 
     ResourcePackManager& AssetManager::getPackManager()

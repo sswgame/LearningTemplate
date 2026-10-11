@@ -4,6 +4,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Localization/LocalizationManager.h"
+#include "Engine/Resource/Cache/BuiltInAssetCache.h"
 
 namespace sw
 {
@@ -22,4 +23,9 @@ namespace sw
     {
         return engine::areEngineServicesBound() ? engine::getLocalizationManager().getMountedProjectNames().size() : 0u;
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_BUILT_IN_ASSET_CACHE( LocalizationReloadCache );
 } // namespace sw

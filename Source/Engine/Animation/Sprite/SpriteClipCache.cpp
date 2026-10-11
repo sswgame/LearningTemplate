@@ -5,6 +5,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
+#include "Engine/Resource/Cache/BuiltInAssetCache.h"
 #include "Engine/Resource/Cache/SharedAssetTable.h"
 
 namespace sw
@@ -61,4 +62,9 @@ namespace sw
     {
         SpriteClipCacheInternal::getSharedTable().clear();
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_BUILT_IN_ASSET_CACHE( SpriteClipCache );
 } // namespace sw

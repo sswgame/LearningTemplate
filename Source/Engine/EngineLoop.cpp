@@ -1341,7 +1341,7 @@ namespace sw
         // 처음 쓰는 머티리얼의 스폰)만 렌더 스레드를 기다린다.
         if ( _rhi != nullptr && _rhi->hasDevice() )
         {
-            MaterialCache& materials = _owned._pAssetManager->getMaterialCache();
+            MaterialCache& materials = _owned._pAssetManager->getAssetCache<MaterialCache>();
             if ( materials.hasPendingInitialize() && _renderThread != nullptr )
                 _renderThread->waitIdle();
             materials.initializePending( &_rhi->getDevice() );

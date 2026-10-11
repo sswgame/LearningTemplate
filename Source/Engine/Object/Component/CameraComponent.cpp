@@ -72,8 +72,8 @@ namespace sw
         // 렌더 텍스처의 크기를 먼저 알린다 — 그 텍스처를 읽는 머티리얼이 카메라보다 먼저 빌려도 같은 크기로 만들어지게.
         if ( _renderOutput._target != CameraOutputTarget::RenderTexture || _renderOutput._renderTexture.empty() || engine::areEngineServicesBound() == false )
             return;
-        engine::getAssetManager().getTextureCache().declareRenderTarget( _renderOutput._renderTexture, _renderOutput._renderTextureWidth,
-                                                                         _renderOutput._renderTextureHeight );
+        engine::getAssetManager().getAssetCache<TextureCache>().declareRenderTarget( _renderOutput._renderTexture, _renderOutput._renderTextureWidth,
+                                                                                     _renderOutput._renderTextureHeight );
     }
 
     void CameraComponent::onUnregister( GameObjectManager& manager )
