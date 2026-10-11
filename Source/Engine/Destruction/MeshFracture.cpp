@@ -23,18 +23,18 @@ namespace sw
         struct MeshFractureInternal
         {
             static constexpr int32   kOuterTag          = -1;
-            static constexpr int32   kSurfaceTag        = -2; ///< 대리 부피를 쪼갤 때의 원래 겉면(막지 않고 자른다)
+            static constexpr int32   kSurfaceTag        = -2; ///< 대리 부피를 쪼갤 때의 원래 겉면 태그다(막지 않고 자른다).
             static constexpr uint32  kSiteAttemptFactor = 200;
-            static constexpr float32 kPlaneEpsilon      = 1.0e-5f; ///< 이 거리(미터) 안의 정점은 자르는 평면 위로 본다
+            static constexpr float32 kPlaneEpsilon      = 1.0e-5f; ///< 이 거리(미터) 안의 정점은 자르는 평면 위에 있는 것으로 본다.
 
-            /** @brief 삼각형 하나와, 안쪽 면이면 그 면을 낸 이웃 씨앗입니다. */
+            /** @brief 삼각형 하나와, 안쪽 면이면 그 면을 만든 이웃 시드입니다. */
             struct Triangle
             {
                 RHIVertex _arrVertex[3];
                 int32     _tag;
             };
 
-            /** @brief 자른 자리의 선분 하나(남는 쪽 면의 경계 방향 — 나가는 점 → 들어오는 점)입니다. */
+            /** @brief 자른 곳의 선분 하나입니다. 남는 쪽 면의 경계 방향이며, 나가는 점에서 들어오는 점으로 향합니다. */
             struct Segment
             {
                 float3 _from;
@@ -73,9 +73,9 @@ namespace sw
             static uint64 makeEdgeKey( uint64 from, uint64 to ) { return from * HashUtil::kGoldenRatio64 ^ ( to + 0x632BE59BD9B4E019ull + ( from << 6 ) + ( from >> 2 ) ); }
 
             /**
-             * @brief 허용 오차 안의 자리를 처음 본 자리로 맞추는 용접기입니다(격자 칸 + 이웃 27 칸을 봐 칸 경계에 걸친 점도 맞춘다).
-             * @details 칸 꼭짓점(세 평면이 만나는 점)은 서로 다른 모서리에서 따로 구해져 1e-7 m 쯤 어긋난 두 점이 됩니다. 그대로 두면 아주 짧은 변이
-             *          생기고, 다음 자르기에서 그 둘을 다른 점으로 다뤄 면이 한 모서리에 넷이 붙는 조각이 남습니다.
+             * @brief 허용 오차 안의 위치를 처음 본 위치로 맞추는 용접기입니다. 격자 셀과 이웃 27 셀을 모두 봐서 셀 경계에 걸친 점도 맞춥니다.
+             * @details 셀 꼭짓점(세 평면이 만나는 점)은 서로 다른 모서리에서 따로 구해져 1e-7 m 쯤 어긋난 두 점이 된다.
+             *          그대로 두면 아주 짧은 변이 생기고, 다음 자르기에서 그 둘을 다른 점으로 다뤄 한 모서리에 면이 넷 붙은 조각이 남는다.
              */
             struct PositionWelder
             {
@@ -124,7 +124,7 @@ namespace sw
                 inoutVertex._arrPosition[2] = position._z;
             }
 
-            /** @brief 허용 오차 안의 자리를 처음 본 자리로 맞춥니다(입력 메시). */
+            /** @brief 허용 오차 안의 위치를 처음 본 위치로 맞춥니다(입력 메시). */
             static void weldPositions( vector<RHIVertex>& inoutListVertex )
             {
                 PositionWelder welder;
@@ -159,8 +159,8 @@ namespace sw
             }
 
             /**
-             * @brief 모서리 위 교점입니다. 엔드포인트를 자리 순으로 정렬해 구하므로, 그 모서리를 나누는 두 삼각형이 비트까지 같은 자리를 얻습니다.
-             *        한 엔드포인트가 평면 위(거리 0)면 그 엔드포인트 그대로입니다.
+             * @brief 모서리 위의 교점을 구합니다. 엔드포인트를 위치 순으로 정렬해 구하므로, 그 모서리를 나누는 두 삼각형이 비트까지 같은 위치를 얻습니다.
+             *        한 엔드포인트가 평면 위(거리 0)면 그 엔드포인트를 그대로 씁니다.
              */
             static RHIVertex intersect( const RHIVertex& vertexA, float32 distanceA, const RHIVertex& vertexB, float32 distanceB )
             {
@@ -179,7 +179,7 @@ namespace sw
 
             static float32 computeTriangleArea( const float3& a, const float3& b, const float3& c ) { return ( b - a ).cross( c - a ).getLength() * 0.5f; }
 
-            /** @brief 세 꼭짓점이 모두 다른 자리인지입니다(길이 0 인 변이 없다). */
+            /** @brief 세 꼭짓점이 모두 다른 위치인지 반환합니다(길이 0 인 변이 없는지). */
             static bool hasDistinctCorners( const Triangle& triangle )
             {
                 const float3 a = getPosition( triangle._arrVertex[0] );
@@ -196,7 +196,7 @@ namespace sw
                 outV                = normal.cross( outU );
             }
 
-            /** @brief 선분을 이어 닫힌 고리들을 만듭니다. 닫히지 않는 사슬은 버리고 그 수를 돌려줍니다. */
+            /** @brief 선분을 이어 닫힌 고리들을 만듭니다. 닫히지 않는 체인은 버리고 그 수를 반환합니다. */
             static uint32 linkSegments( const vector<Segment>& listSegment, vector<vector<float3>>& outListLoop )
             {
                 unordered_map<uint64, vector<uint32>> mapStart;
@@ -250,8 +250,8 @@ namespace sw
             }
 
             /**
-             * @brief 조각을 평면 n·x ≤ c 쪽만 남기고 자릅니다. 자른 자리는 안쪽 면(태그 @p tag)으로 막습니다.
-             * @return 닫히지 않은 고리 수(입력이 닫혔으면 0)입니다.
+             * @brief 조각을 평면 n·x ≤ c 쪽만 남기고 자릅니다. 자른 단면은 안쪽 면(태그 @p tag)으로 막습니다.
+             * @return 닫히지 않은 고리 수입니다(입력이 닫혔으면 0).
              */
             static uint32 clipPiece( const vector<Triangle>& listInput, const float3& normal, float32 offset, int32 tag, const FractureSettings& settings,
                                      vector<Triangle>& outListOutput, bool& outbNearDuplicate, bool bCap = true )
@@ -267,7 +267,7 @@ namespace sw
                     for ( uint32 corner = 0; corner < 3; ++corner )
                     {
                         arrDistance[corner] = normal.dot( getPosition( triangle._arrVertex[corner] ) ) - offset;
-                        // 평면에 아주 가까운 정점은 평면 위로 본다 — 정점마다 정하므로 이웃 삼각형이 같은 판정을 받고, 칸 꼭짓점 둘레에 아주 짧은 변이 생기지 않는다.
+                        // 평면에 아주 가까운 정점은 평면 위에 있는 것으로 본다. 정점마다 정하므로 이웃 삼각형이 같은 판정을 받고, 셀 꼭짓점 둘레에 아주 짧은 변이 생기지 않는다.
                         if ( MathUtil::abs( arrDistance[corner] ) <= kPlaneEpsilon )
                             arrDistance[corner] = 0.0f;
                         if ( arrDistance[corner] <= 0.0f )
@@ -281,7 +281,7 @@ namespace sw
                     if ( keptCount == 0 )
                         continue;
 
-                    // 서덜랜드-호지먼 — 남는 다각형(볼록, 넷 이하)과 나가는 점 · 들어오는 점.
+                    // 서덜랜드-호지먼 알고리즘이다. 남는 다각형(볼록, 4 개 이하)과 나가는 점, 들어오는 점을 구한다.
                     RHIVertex arrPolygon[4];
                     uint32    polygonCount = 0;
                     RHIVertex exitVertex{};
@@ -322,8 +322,8 @@ namespace sw
                 if ( listSegment.empty() || outListOutput.empty() || bCap == false )
                     return 0;
 
-                // 자른 자리에 아주 가까운 두 점이 생겼는지 본다 — 칸 꼭짓점(세 평면이 만나는 점)은 서로 다른 모서리에서 따로 구해져 1e-7 m 쯤 어긋난
-                // 두 점이 된다. 그대로 두면 다음 자르기에서 그 둘을 다른 점으로 다뤄 한 모서리에 면 넷이 붙는다. 생겼으면 이 자르기 뒤에 조각 전체를 다듬는다.
+                // 자른 곳에 아주 가까운 두 점이 생겼는지 확인한다. 셀 꼭짓점(세 평면이 만나는 점)은 서로 다른 모서리에서 따로 구해져 1e-7 m 쯤 어긋난
+                // 두 점이 된다. 그대로 두면 다음 자르기에서 그 둘을 다른 점으로 다뤄 한 모서리에 면이 넷 붙는다. 생겼으면 이 자르기 뒤에 조각 전체를 다듬는다.
                 PositionWelder welder;
                 for ( const Segment& segment : listSegment )
                 {
@@ -336,7 +336,7 @@ namespace sw
                 vector<vector<float3>> listLoop;
                 const uint32           openCount = linkSegments( listSegment, listLoop );
 
-                // 막기 — 남는 면의 경계는 나가는 점 → 들어오는 점이므로, 캡은 그 반대로 감는다(메시 앞면 규약과 같아진다).
+                // 막기: 남는 면의 경계는 나가는 점에서 들어오는 점 방향이므로, 캡은 그 반대로 감는다(메시 앞면 규약과 같아진다).
                 float3 axisU{};
                 float3 axisV{};
                 makePlaneBasis( normal, axisU, axisV );
@@ -379,7 +379,7 @@ namespace sw
                         vertex._arrColor[2]      = settings._interiorColor._z;
                         vertex._arrColor[3]      = settings._interiorColor._w;
                     }
-                    // 넓이가 0 에 가까워도 남긴다 — 일직선 세 점의 삼각형이 빠지면 옆면과 이음이 끊긴다. 같은 점이 겹친 것만 뺀다.
+                    // 넓이가 0 에 가까워도 남긴다. 일직선 세 점의 삼각형이 빠지면 옆면과의 이음이 끊긴다. 같은 점이 겹친 것만 뺀다.
                     if ( hasDistinctCorners( cap ) )
                         outListOutput.push_back( cap );
                 }
@@ -397,7 +397,7 @@ namespace sw
                 }
             }
 
-            /** @brief 씨앗점을 놓습니다(메시 안의 점만). */
+            /** @brief 시드 점을 놓습니다(메시 안의 점만). */
             static void placeSites( vector_reference<const RHIVertex> listVertex, const FractureSettings& settings, vector<float3>& outListSite )
             {
                 float3 boundsMin{};
@@ -469,7 +469,7 @@ namespace sw
                 }
             }
 
-            /** @brief 껍질 점 — 고유 자리, 너무 많으면 고른 방향(피보나치 구)마다 가장 먼 점만 남깁니다. */
+            /** @brief 껍질 점을 구합니다. 고유한 위치만 쓰고, 너무 많으면 고른 방향(피보나치 구)마다 가장 먼 점만 남깁니다. */
             static void makeHull( const vector<Triangle>& listTriangle, const float3& centroid, uint32 maxPoint, vector<float3>& outListPoint )
             {
                 vector<float3>                listUnique;
@@ -520,8 +520,8 @@ namespace sw
             }
 
             /**
-             * @brief 조각을 다듬습니다 — 아주 가까운 자리를 하나로 용접하고, 꼭짓점이 겹친 삼각형과 서로 뒤집힌 같은 삼각형 쌍(두께 0 인 지느러미)을 뺍니다.
-             *        셋 다 닫힘을 지킵니다(빠지는 것은 스스로 상쇄되는 변들뿐이다).
+             * @brief 조각을 다듬습니다. 아주 가까운 위치를 하나로 용접하고, 꼭짓점이 겹친 삼각형과 서로 뒤집힌 같은 삼각형 쌍(두께 0 인 지느러미)을 뺍니다.
+             *        셋 모두 닫힘을 유지합니다(빠지는 것은 스스로 상쇄되는 변뿐입니다).
              */
             static void cleanPiece( vector<Triangle>& inoutListTriangle )
             {
@@ -540,7 +540,7 @@ namespace sw
                     if ( hasDistinctCorners( triangle ) )
                         listKept.push_back( triangle );
                 }
-                // 뒤집힌 쌍 — 꼭짓점 열쇠를 가장 작은 것부터 돌려 세운 순서(감은 방향 유지)로 묶는다.
+                // 뒤집힌 쌍: 꼭짓점 키를 가장 작은 것부터 돌려 세운 순서(감은 방향 유지)로 묶는다.
                 unordered_map<uint64, vector<uint32>> mapTriangle;
                 vector<uint8>                         listRemoved( listKept.size(), 0 );
                 for ( uint32 index = 0; index < static_cast<uint32>( listKept.size() ); ++index )
@@ -632,14 +632,15 @@ namespace sw
             }
 
             /**
-             * @brief 안쪽 면(평면마다 한 무리)의 삼각형을 다시 짓습니다 — 무리 경계 고리에서 일직선 위의 점을 빼고 귀 자르기로 다시 나눕니다.
-             * @details 자를 때마다 앞서 막은 면의 대각선을 가로질러 교점이 생기고, 그 점들이 다음 막음의 고리에 일직선으로 쌓여 조각 하나가 안쪽
-             *          삼각형 수백 개가 됩니다(벽 200 조각 4.7 만 개). 점은 그 점을 쓰는 **모든** 면이 안쪽 면이고 그 모든 무리의 고리에서 일직선일 때만
-             *          함께 뺍니다 — 한쪽만 빼면 이웃과 T 자 이음이 생긴다. 겉면이 쓰는 점은 그대로 둡니다.
+             * @brief 안쪽 면(평면마다 한 그룹)의 삼각형을 다시 만듭니다. 그룹 경계 고리에서 일직선 위의 점을 빼고 귀 자르기로 다시 나눕니다.
+             * @details 자를 때마다 앞서 막은 면의 대각선을 가로질러 교점이 생기고, 그 점들이 다음 막음의 고리에 일직선으로 쌓인다.
+             *          그러면 조각 하나의 안쪽 삼각형이 수백 개가 된다(벽 200 조각에서 4.7 만 개).
+             *          점은 그 점을 쓰는 **모든** 면이 안쪽 면이고 그 모든 그룹의 고리에서 일직선일 때만 함께 뺀다.
+             *          한쪽만 빼면 이웃과 T 자 이음이 생긴다. 겉면이 쓰는 점은 그대로 둔다.
              */
             static void simplifyCaps( vector<Triangle>& inoutListTriangle, const FractureSettings& settings )
             {
-                // 무리(태그)마다 삼각형 번호.
+                // 그룹(태그)마다 삼각형 번호다.
                 vector<int32>          listTag;
                 vector<vector<uint32>> listGroupTriangle;
                 for ( uint32 index = 0; index < static_cast<uint32>( inoutListTriangle.size() ); ++index )
@@ -661,7 +662,7 @@ namespace sw
                 }
                 if ( listTag.empty() )
                     return;
-                // 점마다 — 겉면이 쓰는지.
+                // 점마다 겉면이 쓰는지 기록한다.
                 unordered_map<uint64, uint8>  mapSurfaceUse;
                 unordered_map<uint64, float3> mapPoint;
                 for ( const Triangle& triangle : inoutListTriangle )
@@ -676,7 +677,7 @@ namespace sw
                             bOuter = SW_TRUE;
                     }
                 }
-                // 무리마다 경계 고리(점 열쇠) — 무리 안에서 반대 방향이 없는 모서리를 잇는다.
+                // 그룹마다 경계 고리(점 키)를 만든다. 그룹 안에서 반대 방향이 없는 모서리를 잇는다.
                 vector<vector<vector<uint64>>> listGroupLoop( listTag.size() );
                 for ( size_t group = 0; group < listTag.size(); ++group )
                 {
@@ -701,7 +702,7 @@ namespace sw
                                 mapNext[from].push_back( to );
                         }
                     }
-                    // 갈래(한 점에서 나가는 경계가 둘 이상)가 있으면 이 무리는 건드리지 않는다.
+                    // 분기(한 점에서 나가는 경계가 둘 이상)가 있으면 이 그룹은 건드리지 않는다.
                     bool bSimple = true;
                     for ( const auto& [key, listTo] : mapNext )
                     {
@@ -739,7 +740,7 @@ namespace sw
                         listGroupLoop[group].push_back( std::move( listLoopKey ) );
                     }
                 }
-                // 뺄 점 — 겉면이 쓰지 않고, 그 점이 든 모든 고리에서 일직선이고, 모든 무리가 고리를 지었다.
+                // 뺄 점은 겉면이 쓰지 않고, 그 점이 있는 모든 고리에서 일직선이고, 모든 그룹이 고리를 만든 점이다.
                 unordered_map<uint64, uint32> mapLoopCount;
                 unordered_map<uint64, uint8>  mapKeep;
                 for ( size_t group = 0; group < listTag.size(); ++group )
@@ -772,7 +773,7 @@ namespace sw
                         }
                     }
                 }
-                // 고리에 들지 않고 삼각형에만 든 점(무리 안쪽 점)은 남긴다 — 그런 무리는 다시 짓지 않는다.
+                // 고리에 없고 삼각형에만 있는 점(그룹 안쪽 점)은 남긴다. 그런 그룹은 다시 만들지 않는다.
                 vector<uint8> listRebuild( listTag.size(), SW_FALSE );
                 bool          bAnyRemoved = false;
                 for ( size_t group = 0; group < listTag.size(); ++group )
@@ -826,8 +827,8 @@ namespace sw
                 if ( bAnyRemoved == false )
                     return;
 
-                // 다시 짓기 — 고리에서 뺄 점을 빼고 평면 기준 축으로 귀 자르기. 한 무리라도 막히면 그 무리의 점을 모두 남기고 처음부터 다시 한다
-                // (그 무리만 원래 삼각형을 두면 이웃이 뺀 점과 T 자 이음이 생긴다).
+                // 다시 만들기: 고리에서 뺄 점을 빼고 평면 기준 축으로 귀 자르기를 한다. 한 그룹이라도 막히면 그 그룹의 점을 모두 남기고 처음부터 다시 한다
+                // (그 그룹만 원래 삼각형을 두면 이웃이 뺀 점과 T 자 이음이 생긴다).
                 vector<uint8>    listDrop( inoutListTriangle.size(), 0 );
                 vector<Triangle> listNew;
                 for ( uint32 attempt = 0; attempt < 4; ++attempt )
@@ -899,7 +900,7 @@ namespace sw
                     if ( bFailed == false )
                         break;
                     if ( attempt == 3 )
-                        return; // 계속 막히면 손대지 않는다
+                        return; // 계속 막히면 손대지 않는다.
                 }
                 vector<Triangle> listResult;
                 listResult.reserve( inoutListTriangle.size() );
@@ -1005,7 +1006,7 @@ namespace sw
     void MeshFractureUtil::makeConvexHull( vector_reference<const RHIVertex> listVertex, vector<RHIVertex>& outListVertex )
     {
         outListVertex.clear();
-        // 고유 점.
+        // 고유한 점만 모은다.
         vector<float3>                listPoint;
         unordered_map<uint64, uint32> mapSeen;
         for ( const RHIVertex& vertex : listVertex )
@@ -1020,7 +1021,7 @@ namespace sw
         float3 hi{};
         MeshFractureInternal::collectBounds( listVertex, lo, hi );
         const float32 epsilon = MathUtil::max( ( hi - lo ).getLength(), 1.0e-3f ) * 1.0e-6f;
-        // 처음 사면체 — 가장 먼 점들.
+        // 처음 사면체는 가장 먼 점들로 만든다.
         uint32 arrStart[4] = { 0, 0, 0, 0 };
         for ( uint32 index = 1; index < static_cast<uint32>( listPoint.size() ); ++index )
         {
@@ -1087,7 +1088,7 @@ namespace sw
         addFaceOutward( arrStart[0], arrStart[2], arrStart[3] );
         addFaceOutward( arrStart[1], arrStart[2], arrStart[3] );
 
-        // 점마다 — 보이는 면을 지우고 지평선 모서리마다 그 점과 새 면을 잇는다.
+        // 점마다 보이는 면을 지우고, 지평선 모서리마다 그 점과 새 면을 잇는다.
         unordered_map<uint64, uint32> mapEdgeFace;
         for ( uint32 point = 0; point < static_cast<uint32>( listPoint.size() ); ++point )
         {
@@ -1145,7 +1146,7 @@ namespace sw
 
     bool MeshFractureUtil::isClosedMesh( vector_reference<const RHIVertex> listVertex )
     {
-        // 자리가 비트까지 같은 정점만 같은 정점이다 — 세 평면이 만나는 꼭짓점 둘레의 아주 짧은 변(1e-5 미만)도 변으로 센다.
+        // 위치가 비트까지 같은 정점만 같은 정점이다. 세 평면이 만나는 꼭짓점 둘레의 아주 짧은 변(1e-5 미만)도 변으로 센다.
         unordered_map<uint64, uint32> mapEdgeCount;
         vector<uint64>                listKey( listVertex.size() );
         for ( size_t index = 0; index < listVertex.size(); ++index )
@@ -1270,10 +1271,10 @@ namespace sw
             return false;
         }
 
-        // 용접 — 허용 오차 안의 자리를 한 자리로 맞춘다. 자르기는 자리가 비트까지 같아야 이웃 삼각형의 교점이 같다.
+        // 용접: 허용 오차 안의 위치를 한 점으로 맞춘다. 자르기는 위치가 비트까지 같아야 이웃 삼각형의 교점이 같다.
         vector<RHIVertex> listWelded( listVertex.begin(), listVertex.end() );
         MeshFractureInternal::weldPositions( listWelded );
-        // 쪼갤 부피 — 메시 자체, 또는 닫힌 대리(경계 상자 · 볼록 껍질). 대리면 원래 겉면은 따로 막지 않고 자른다.
+        // 쪼갤 부피는 메시 자체이거나 닫힌 대리(경계 상자, 볼록 껍질)다. 대리면 원래 겉면은 따로 막지 않고 자른다.
         vector<RHIVertex> listVolume;
         if ( settings._volume == FractureVolume::Hull )
             makeConvexHull( listWelded, listVolume );
@@ -1306,7 +1307,7 @@ namespace sw
             listSite.push_back( float3{} );
         const uint32 siteCount = static_cast<uint32>( listSite.size() );
 
-        // 칸마다 — 가까운 이웃부터 이등분 평면으로 자른다.
+        // 셀마다 가까운 이웃부터 이등분 평면으로 자른다.
         vector<vector<Triangle>>           listSitePiece( siteCount );
         vector<vector<Triangle>>           listSiteSurface( siteCount );
         uint32                             openLoopCount = 0;
@@ -1335,7 +1336,7 @@ namespace sw
                 }
                 for ( const std::pair<float32, uint32>& entry : listOrder )
                 {
-                    // 이등분 평면까지 거리 = 씨앗 거리 / 2. 조각 반경보다 멀면 이 평면도, 뒤의 평면도 닿지 않는다.
+                    // 이등분 평면까지의 거리는 시드 거리 / 2 다. 조각 반경보다 멀면 이 평면도, 뒤의 평면도 닿지 않는다.
                     if ( entry.first * 0.25f > radiusSquared )
                         break;
                     const float3  delta       = listSite[entry.second] - listSite[site];
@@ -1381,7 +1382,7 @@ namespace sw
         if ( openLoopCount > 0 )
             SW_LOG_WARNING( "Fracture left %# cut loops open (non-manifold input) - those pieces may have holes", openLoopCount );
 
-        // 조각 — 빈 칸 · 부피 0 은 뺀다.
+        // 조각: 빈 셀과 부피 0 은 뺀다.
         vector<uint32>    listPieceOfSite( siteCount, 0xFFFFFFFFu );
         vector<uint32>    listSiteOfPiece;
         FractureGraph     graph;
@@ -1409,7 +1410,7 @@ namespace sw
         const uint32 pieceCount = static_cast<uint32>( listSiteOfPiece.size() );
         graph._leafCount        = pieceCount;
 
-        // 연결 — 조각 i 에 j 쪽 평면이 낸 안쪽 면 넓이. 두 쪽 중 작은 것(둘 다 닿아야 연결).
+        // 연결: 조각 i 에 j 쪽 평면이 만든 안쪽 면 넓이다. 두 쪽 중 작은 값을 쓴다(둘 다 닿아야 연결이다).
         unordered_map<uint64, float32> mapArea;
         for ( uint32 piece = 0; piece < pieceCount; ++piece )
         {
@@ -1449,7 +1450,7 @@ namespace sw
             const vector<Triangle>& listTriangle = listSitePiece[site];
             FracturePiece           piece;
             piece._firstVertex = static_cast<uint32>( outAsset._listVertex.size() );
-            // 그림 — 메시 부피면 조각 그대로, 대리 부피면 원래 겉면 조각 + 대리의 안쪽 면(대리의 바깥 면은 그리지 않는다).
+            // 렌더링: 메시 부피면 조각 그대로, 대리 부피면 원래 겉면 조각과 대리의 안쪽 면을 쓴다(대리의 바깥 면은 그리지 않는다).
             const auto appendTriangle = [&outAsset]( const Triangle& triangle, FractureSurfaceSlot slot )
             {
                 for ( const RHIVertex& vertex : triangle._arrVertex )

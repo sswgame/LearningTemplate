@@ -16,8 +16,8 @@ namespace sw
 
     /**
      * @brief 대화 노드 타입입니다.
-     * @details 종류를 더하면 `kArrDialogueNodeInfo` 에 줄 하나와 `DialogueRunnerComponent::executeNode` 의 case 하나를 더합니다.
-     *          표는 static_assert 가, 러너 switch 는 그 파일의 -Wswitch-enum 오류가 빠뜨림을 짚습니다.
+     * @details 종류를 추가하면 `kArrDialogueNodeInfo` 에 항목 하나와 `DialogueRunnerComponent::executeNode` 의 case 하나를 추가한다.
+     *          테이블은 static_assert 가, 러너의 switch 는 -Wswitch-enum 오류가 누락을 알려 준다.
      */
     enum class DialogueAssetNodeType : uint8
     {
@@ -30,48 +30,48 @@ namespace sw
         Count /**< 표식입니다. 노드 타입이 아닙니다. */
     };
 
-    /** @brief 노드가 다음으로 넘어가려면 무엇이 필요한지입니다. 런타임 러너와 에디터 미리보기가 같은 값을 봅니다. */
+    /** @brief 노드가 다음으로 넘어가려면 필요한 조건입니다. 런타임 러너와 에디터 미리보기가 같은 값을 봅니다. */
     enum class DialogueNodeFlow : uint8
     {
         PassThrough, /**< 입력 없이 곧바로 다음 노드로 갑니다. */
         WaitAdvance, /**< 대사를 보이고 진행 입력을 기다립니다. */
         WaitChoice,  /**< 선택지를 보이고 고를 때까지 기다립니다. */
-        Condition,   /**< 조건식 결과로 갈 곳을 고릅니다. 러너는 식을 평가하고, 미리보기는 사람이 참 · 거짓을 고릅니다. */
+        Condition,   /**< 조건식 결과로 다음 노드를 고릅니다. 러너는 식을 평가하고, 미리보기에서는 사용자가 참이나 거짓을 고릅니다. */
         Finish       /**< 대화가 끝납니다. */
     };
 
-    /** @brief 노드가 내는 출력 핀의 모양입니다. 다음 노드를 찾는 규칙(`DialogueCursor::step`)도 이것이 정합니다. */
+    /** @brief 노드의 출력 핀 형태입니다. `DialogueCursor::step` 이 다음 노드를 찾는 규칙도 이 값으로 정해집니다. */
     enum class DialogueNodeOutput : uint8
     {
         None,   /**< 출력 핀이 없습니다. 다음 노드는 없습니다. */
         Next,   /**< 기본 출력 핀(`kPinOffsetOut`) 하나입니다. */
-        Branch, /**< 참 · 거짓 핀입니다. 이어지지 않은 쪽은 기본 출력 핀으로 갑니다. */
-        Choice  /**< 선택지마다 핀 하나입니다. 이어지지 않은 선택지는 기본 출력 핀으로 갑니다. */
+        Branch, /**< 참 핀과 거짓 핀이 있습니다. 연결되지 않은 쪽은 기본 출력 핀으로 갑니다. */
+        Choice  /**< 선택지마다 핀이 하나씩 있습니다. 연결되지 않은 선택지는 기본 출력 핀으로 갑니다. */
     };
 
-    /** @brief 노드가 편집하는 본문 글 칸입니다. */
+    /** @brief 노드가 편집하는 본문 필드입니다. */
     enum class DialogueNodeBody : uint8
     {
         None,      /**< 본문이 없습니다. */
-        Text,      /**< `_text` — 대사 · 선택지 질문입니다. */
-        Condition, /**< `_condition` — Branch 조건식입니다. */
-        Action     /**< `_actionCommand` — 실행할 명령입니다. */
+        Text,      /**< `_text` 입니다. 대사나 선택지 질문이 들어갑니다. */
+        Condition, /**< `_condition` 입니다. Branch 노드의 조건식이 들어갑니다. */
+        Action     /**< `_actionCommand` 입니다. 실행할 명령이 들어갑니다. */
     };
 
-    /** @brief 노드 종류 하나의 특성입니다. 이름 · 핀 · 진행 방식 · 편집 칸 · 기본값이 모두 이 줄에서 옵니다. */
+    /** @brief 노드 종류 하나의 특성입니다. 이름, 핀, 진행 방식, 편집 필드, 기본값이 모두 이 항목에 있습니다. */
     struct DialogueNodeInfo
     {
         const utf8*           _pName;              /**< JSON `type` 값이자 화면 이름입니다. */
         const utf8*           _pDefaultSpeaker;    /**< 새 노드의 화자입니다. */
-        const utf8*           _pDefaultBody;       /**< 새 노드의 본문(`_body` 칸)입니다. */
+        const utf8*           _pDefaultBody;       /**< 새 노드의 본문입니다. `_body` 필드에 들어갑니다. */
         float4                _color;              /**< 그래프 노드 머리 색입니다. */
-        DialogueAssetNodeType _type;               /**< 노드 타입입니다. 표의 순번과 같아야 합니다. */
+        DialogueAssetNodeType _type;               /**< 노드 타입입니다. 테이블의 순번과 같아야 합니다. */
         DialogueNodeFlow      _flow;               /**< 다음으로 넘어가는 방식입니다. */
-        DialogueNodeOutput    _output;             /**< 출력 핀 모양입니다. */
-        DialogueNodeBody      _body;               /**< 편집하는 본문 칸입니다. */
-        bool                  _bHasInputPin;       /**< 들어오는 핀이 있는지입니다. */
-        bool                  _bHasSpeaker;        /**< 화자 칸을 편집하는지입니다. */
-        bool                  _bAddable;           /**< 에디터 추가 메뉴에 보이는지입니다(Start 는 그래프마다 하나라 없음). */
+        DialogueNodeOutput    _output;             /**< 출력 핀 형태입니다. */
+        DialogueNodeBody      _body;               /**< 편집하는 본문 필드입니다. */
+        bool                  _bHasInputPin;       /**< 입력 핀이 있는지입니다. */
+        bool                  _bHasSpeaker;        /**< 화자 필드를 편집하는지입니다. */
+        bool                  _bAddable;           /**< 에디터 추가 메뉴에 보이는지입니다. Start 는 그래프마다 하나뿐이라 보이지 않습니다. */
         uint8                 _defaultChoiceCount; /**< 새 노드에 넣을 선택지 수입니다. */
     };
 } // namespace sw
@@ -79,8 +79,8 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 노드 종류 표입니다. **종류마다 한 줄이고, 순서는 `DialogueAssetNodeType` 값 순서입니다.**
-     * @details 에셋 이름 해석 · 런타임 진행(`DialogueCursor`) · 에디터 그리기 · 추가 메뉴 · 인스펙터가 모두 이 표를 봅니다.
+     * @brief 노드 종류 테이블입니다. **종류마다 항목이 하나이고, 순서는 `DialogueAssetNodeType` 값 순서입니다.**
+     * @details 에셋 이름 해석, 런타임 진행(`DialogueCursor`), 에디터 그리기, 추가 메뉴, 인스펙터가 모두 이 테이블을 읽는다.
      */
     inline constexpr DialogueNodeInfo kArrDialogueNodeInfo[] = {
         {   "Start",    "",                       "", float4( 0.2f, 0.9f, 0.3f, 1.0f ),    DialogueAssetNodeType::Start, DialogueNodeFlow::PassThrough,   DialogueNodeOutput::Next,      DialogueNodeBody::None, false, false, false, 0},
@@ -97,14 +97,14 @@ namespace sw
     /** @brief 대화 그래프 노드입니다. */
     struct DialogueAssetNode
     {
-        int32                 _id{ 0 };                                 /**< 그래프 안에서 유일한 노드 id. 1 이상이어야 합니다. */
+        int32                 _id{ 0 };                                 /**< 그래프 안에서 유일한 노드 id 입니다. 1 이상이어야 합니다. */
         DialogueAssetNodeType _type{ DialogueAssetNodeType::Dialogue }; /**< 노드 종류입니다. */
-        string                _speaker;                                 /**< 화자 이름(또는 로컬라이즈 키)입니다. */
-        string                _text;                                    /**< 대사 원문 또는 로컬라이즈 키입니다. */
+        string                _speaker;                                 /**< 화자 이름이거나 로컬라이즈 키입니다. */
+        string                _text;                                    /**< 대사 원문이거나 로컬라이즈 키입니다. */
         string                _condition;                               /**< Branch 노드가 평가할 조건식입니다. */
         string                _actionCommand;                           /**< Action 노드가 실행할 명령입니다. */
         vector<string>        _listChoice;                              /**< Choice 노드의 선택지입니다. 순서가 곧 핀 번호입니다. */
-        /** @brief 그래프 에디터에서의 노드 위치입니다. JSON 키는 그대로 "x"/"y" 라 파일 형식은 바뀌지 않습니다. */
+        /** @brief 그래프 에디터에서의 노드 위치입니다. JSON 키는 "x", "y" 그대로라 파일 형식은 바뀌지 않습니다. */
         float2 _position{ 40.0f, 40.0f };
     };
 } // namespace sw

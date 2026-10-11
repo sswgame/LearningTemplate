@@ -32,7 +32,7 @@ namespace sw
 
     bool FractureAssetCache::reloadShared( string_view path )
     {
-        // 제자리로 바꾸지 않고 떼어 낸다 — 쪼갠 조각의 바디 · 그림이 옛 형상을 가리키는 채로 내용만 바뀌면 안 된다.
+        // 제자리로 바꾸지 않고 분리한다. 쪼갠 조각의 바디와 렌더링이 이전 형상을 가리킨 채 내용만 바뀌면 안 된다.
         return FractureAssetCacheInternal::getTable().detachShared( path, &FractureAssetCacheInternal::loadFracture );
     }
 

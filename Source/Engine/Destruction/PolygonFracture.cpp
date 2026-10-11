@@ -20,7 +20,7 @@ namespace sw
             static constexpr float32 kLineEpsilon       = 1.0e-6f;
             static constexpr uint32  kSiteAttemptFactor = 200;
 
-            /** @brief 다각형 꼭짓점 하나와, 그 꼭짓점에서 다음 꼭짓점으로 가는 변을 낸 이웃 씨앗(바깥 변은 -1)입니다. */
+            /** @brief 다각형 꼭짓점 하나와, 그 꼭짓점에서 다음 꼭짓점으로 가는 변을 만든 이웃 시드(바깥 변은 -1)입니다. */
             struct Corner
             {
                 float2 _point;
@@ -62,7 +62,7 @@ namespace sw
                     {
                         const float32 t     = curDist / ( curDist - nextDist );
                         const float2  point = cur._point + ( next._point - cur._point ) * t;
-                        // 나가는 점에서 들어오는 점까지는 자른 변(tag), 들어오는 점에서 다음 꼭짓점까지는 원래 변(cur 의 tag).
+                        // 나가는 점에서 들어오는 점까지는 자른 변(tag)이고, 들어오는 점에서 다음 꼭짓점까지는 원래 변(cur 의 tag)이다.
                         outListOutput.push_back( Corner{ point, bCurKept ? tag : cur._tag } );
                     }
                 }
@@ -245,7 +245,7 @@ namespace sw
             listCell[site] = std::move( listCorner );
         }
 
-        // 조각 — 넓이 0 은 뺀다.
+        // 조각: 넓이 0 은 뺀다.
         vector<uint32> listPieceOfSite( siteCount, 0xFFFFFFFFu );
         vector<uint32> listSiteOfPiece;
         FractureGraph  graph;
@@ -276,7 +276,7 @@ namespace sw
         const uint32 pieceCount = static_cast<uint32>( listSiteOfPiece.size() );
         graph._leafCount        = pieceCount;
 
-        // 연결 — 조각 i 에서 j 쪽 직선이 낸 변 길이와 그 반대 중 짧은 것.
+        // 연결: 조각 i 에서 j 쪽 직선이 만든 변 길이와 그 반대 방향 변 길이 중 짧은 것을 쓴다.
         vector<float32> listLength( static_cast<size_t>( pieceCount ) * pieceCount, 0.0f );
         for ( uint32 piece = 0; piece < pieceCount; ++piece )
         {
@@ -337,7 +337,7 @@ namespace sw
             piece._firstVertex = static_cast<uint32>( outAsset._listVertex.size() );
             for ( size_t index = 0; index + 2 < listIndex.size(); index += 3 )
             {
-                // 앞(+Z) 반시계 그대로 · 뒤(−Z) 뒤집어 — 어느 쪽에서 보아도 보인다.
+                // 앞면(+Z)은 반시계 그대로, 뒷면(-Z)은 뒤집어 만든다. 어느 쪽에서 보아도 보인다.
                 const float2& a = listPoint[listIndex[index]];
                 const float2& b = listPoint[listIndex[index + 1]];
                 const float2& c = listPoint[listIndex[index + 2]];
