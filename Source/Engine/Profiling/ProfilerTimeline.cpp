@@ -43,12 +43,17 @@ namespace sw
     /** @brief 스레드 하나의 사건 링입니다. 칸은 relaxed 원자라 덮이는 중에 읽어도 레이스가 아닙니다. */
     struct ProfilerTimeline::ThreadBuffer
     {
-        atomic<uint64>  _writeCount{ 0 };                 ///< 지금까지 쓴 사건 수(쓰는 스레드만 올린다, release)
-        atomic<uint64>  _arrBeginNanos[kEventCapacity]{}; ///< 사건 시작
-        atomic<uint64>  _arrEndNanos[kEventCapacity]{};   ///< 사건 끝
-        atomic<uint64>  _arrSlotDepth[kEventCapacity]{};  ///< 슬롯(아래 32 비트) · 깊이(위 32 비트)
-        string          _name;                            ///< OS 스레드 이름 또는 "Thread <번호>"(만들 때 한 번 정한다)
-        std::thread::id _ownerThread;                     ///< 쓰는 스레드 — 스레드 지역 캐시가 빗나갔을 때 같은 스레드의 버퍼를 다시 찾는다
+        atomic<uint64> _writeCount{ 0 };                 ///< 지금까지 쓴 사건 수(쓰는 스레드만 올린다, release)
+        atomic<uint64> _arrBeginNanos[kEventCapacity]{}; ///< 사건 시작
+        atomic<uint64> _arrEndNanos[kEventCapacity]{};   ///< 사건 끝
+        atomic<uint64> _arrSlotDepth[kEventCapacity]{};  ///< 슬롯(아래 32 비트) · 깊이(위 32 비트)
+#if SW_PROFILER_TRACE_ENABLED
+        vector<ProfilerTimelineEvent> _listLong;           ///< 긴 캡처의 사건(쓰는 스레드만 덧붙인다 — 읽기는 캡처를 멈춘 뒤)
+        uint32                        _longEpoch{ 0 };     ///< `_listLong` 이 속한 캡처 번호
+        atomic<bool>                  _bLongBusy{ false }; ///< 덧붙이는 중 — 멈추는 쪽이 끝나기를 기다린다
+#endif
+        string          _name;        ///< OS 스레드 이름 또는 "Thread <번호>"(만들 때 한 번 정한다)
+        std::thread::id _ownerThread; ///< 쓰는 스레드 — 스레드 지역 캐시가 빗나갔을 때 같은 스레드의 버퍼를 다시 찾는다
     };
 
     ProfilerTimeline::ProfilerTimeline()
@@ -58,6 +63,13 @@ namespace sw
         , _threadCount{ 0 }
         , _generation{ ProfilerTimelineInternal::allocateGeneration() }
         , _bRecording{ false }
+#if SW_PROFILER_TRACE_ENABLED
+        , _longLimit{ 0 }
+        , _longEpoch{ 0 }
+        , _bLongTruncated{ false }
+        , _bLongPrevRecording{ false }
+        , _bLongFrameBusy{ false }
+#endif
     {
     }
 
@@ -123,6 +135,39 @@ namespace sw
         pBuffer->_arrSlotDepth[cell].store( static_cast<uint64>( slot ) | ( static_cast<uint64>( depth ) << ProfilerTimelineInternal::kDepthShift ),
                                             std::memory_order_relaxed );
         pBuffer->_writeCount.store( writeIndex + 1, std::memory_order_release );
+
+#if SW_PROFILER_TRACE_ENABLED
+        if ( _longLimit.load( std::memory_order_relaxed ) != 0 )
+        {
+            // 멈추는 쪽과 맞물린다: 바쁨 표시를 먼저 올리고 상한을 다시 읽는다(seq_cst) — 멈춘 뒤에는 덧붙이지 않거나, 멈추는 쪽이 끝나기를 기다린다.
+            pBuffer->_bLongBusy.store( true, std::memory_order_seq_cst );
+            const uint32 limit = _longLimit.load( std::memory_order_seq_cst );
+            if ( limit != 0 )
+            {
+                const uint32 epoch = _longEpoch.load( std::memory_order_relaxed );
+                if ( pBuffer->_longEpoch != epoch )
+                {
+                    pBuffer->_listLong.clear();
+                    pBuffer->_longEpoch = epoch;
+                    pBuffer->_listLong.reserve( MathUtil::min<uint32>( limit, 65536 ) );
+                }
+                if ( pBuffer->_listLong.size() < limit )
+                {
+                    ProfilerTimelineEvent event;
+                    event._beginNanos = beginNanos;
+                    event._endNanos   = endNanos;
+                    event._slot       = slot;
+                    event._depth      = depth;
+                    pBuffer->_listLong.push_back( event );
+                }
+                else
+                {
+                    _bLongTruncated.store( true, std::memory_order_relaxed );
+                }
+            }
+            pBuffer->_bLongBusy.store( false, std::memory_order_release );
+        }
+#endif
     }
 
     void ProfilerTimeline::recordFrameBegin( uint64 nanos )
@@ -132,7 +177,81 @@ namespace sw
         const uint64 writeIndex = _frameWriteCount.load( std::memory_order_relaxed );
         _arrFrameBeginNanos[writeIndex % kFrameCapacity].store( nanos, std::memory_order_relaxed );
         _frameWriteCount.store( writeIndex + 1, std::memory_order_release );
+
+#if SW_PROFILER_TRACE_ENABLED
+        if ( _longLimit.load( std::memory_order_relaxed ) != 0 )
+        {
+            _bLongFrameBusy.store( true, std::memory_order_seq_cst );
+            const uint32 limit = _longLimit.load( std::memory_order_seq_cst );
+            if ( limit != 0 )
+            {
+                if ( _listLongFrameBegin.size() < limit )
+                    _listLongFrameBegin.push_back( nanos );
+                else
+                    _bLongTruncated.store( true, std::memory_order_relaxed );
+            }
+            _bLongFrameBusy.store( false, std::memory_order_release );
+        }
+#endif
     }
+
+#if SW_PROFILER_TRACE_ENABLED
+    void ProfilerTimeline::startLongCapture( uint32 maxEventsPerThread )
+    {
+        stopLongCapture(); // 진행 중이던 것을 먼저 닫아 쓰는 쪽이 모두 멈춘 뒤에 비운다
+        _listLongFrameBegin.clear();
+        _bLongTruncated.store( false, std::memory_order_relaxed );
+        _bLongPrevRecording.store( isRecording(), std::memory_order_relaxed );
+        _longEpoch.fetch_add( 1, std::memory_order_relaxed );
+        setRecording( true );
+        _longLimit.store( maxEventsPerThread == 0 ? 1 : maxEventsPerThread, std::memory_order_seq_cst );
+    }
+
+    void ProfilerTimeline::stopLongCapture()
+    {
+        if ( _longLimit.exchange( 0, std::memory_order_seq_cst ) == 0 )
+            return;
+        // 덧붙이는 중인 쓰기가 끝나기를 기다린다(바쁨 표시는 상한을 읽기 전에 올라간다).
+        const uint32 threadCount = MathUtil::min( _threadCount.load( std::memory_order_acquire ), kMaxThread );
+        for ( uint32 threadIndex = 0; threadIndex < threadCount; ++threadIndex )
+        {
+            ThreadBuffer* pBuffer = _arrThreadBuffer[threadIndex].load( std::memory_order_acquire );
+            while ( pBuffer != nullptr && pBuffer->_bLongBusy.load( std::memory_order_acquire ) )
+            {
+                std::this_thread::yield();
+            }
+        }
+        while ( _bLongFrameBusy.load( std::memory_order_acquire ) )
+        {
+            std::this_thread::yield();
+        }
+        setRecording( _bLongPrevRecording.load( std::memory_order_relaxed ) );
+    }
+
+    bool ProfilerTimeline::collectLongCapture( vector<ProfilerTimelineThread>& outListThread, vector<uint64>& outListFrameBegin,
+                                               bool& outTruncated ) const
+    {
+        outListThread.clear();
+        outListFrameBegin        = _listLongFrameBegin;
+        outTruncated             = _bLongTruncated.load( std::memory_order_relaxed );
+        const uint32 epoch       = _longEpoch.load( std::memory_order_relaxed );
+        const uint32 threadCount = MathUtil::min( _threadCount.load( std::memory_order_acquire ), kMaxThread );
+        for ( uint32 threadIndex = 0; threadIndex < threadCount; ++threadIndex )
+        {
+            const ThreadBuffer* pBuffer = _arrThreadBuffer[threadIndex].load( std::memory_order_acquire );
+            if ( pBuffer == nullptr || pBuffer->_longEpoch != epoch || pBuffer->_listLong.empty() )
+                continue;
+            ProfilerTimelineThread thread;
+            thread._name      = pBuffer->_name;
+            thread._listEvent = pBuffer->_listLong;
+            std::stable_sort( thread._listEvent.begin(), thread._listEvent.end(),
+                              []( const ProfilerTimelineEvent& left, const ProfilerTimelineEvent& right )
+            { return left._beginNanos < right._beginNanos; } );
+            outListThread.push_back( std::move( thread ) );
+        }
+        return outListThread.empty() == false;
+    }
+#endif
 
     bool ProfilerTimeline::collectRecentFrames( uint32 frameCount, vector<ProfilerTimelineThread>& outListThread, uint64& outBeginNanos,
                                                 uint64& outEndNanos ) const

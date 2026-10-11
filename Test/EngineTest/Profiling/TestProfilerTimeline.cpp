@@ -128,3 +128,65 @@ SW_TEST_CASE( ProfilerTimelineTest, NothingIsRecordedWhileOff )
     SW_EXPECT_TRUE( listThread.empty() );
     SW_EXPECT_EQUAL( 0u, timeline.countActiveThreads( 4 ) );
 }
+
+#if SW_PROFILER_TRACE_ENABLED
+
+/**
+ * @brief [ProfilerTimelineTest] 긴 캡처는 링이 넘치는 양도 처음부터 담고, 예산을 넘으면 거기서 멈춰 잘림 표지를 남긴다
+ */
+SW_TEST_CASE( ProfilerTimelineTest, LongCaptureKeepsEverythingFromTheStartUntilTheBudget )
+{
+    sw::ProfilerTimeline timeline;
+    SW_EXPECT_FALSE( timeline.isRecording() );
+    constexpr uint32 kBudget = sw::ProfilerTimeline::kEventCapacity + 100; // 링 크기보다 큰 예산
+    timeline.startLongCapture( kBudget );
+    SW_EXPECT_TRUE( timeline.isLongCaptureActive() );
+    SW_EXPECT_TRUE( timeline.isRecording() ); // 꺼져 있어도 캡처가 켠다
+    timeline.recordFrameBegin( 1 );
+    for ( uint32 index = 0; index < kBudget + 5; ++index )
+    {
+        timeline.recordEvent( 3, 10 + index * 2, 11 + index * 2, 0 );
+    }
+    timeline.stopLongCapture();
+    SW_EXPECT_FALSE( timeline.isLongCaptureActive() );
+    SW_EXPECT_FALSE( timeline.isRecording() ); // 시작 전 상태로
+
+    sw::vector<sw::ProfilerTimelineThread> listThread;
+    sw::vector<uint64>                     listFrameBegin;
+    bool                                   bTruncated = false;
+    SW_ASSERT_TRUE( timeline.collectLongCapture( listThread, listFrameBegin, bTruncated ) );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listThread.size() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( kBudget ), listThread[0]._listEvent.size() );
+    SW_EXPECT_EQUAL( 10ull, listThread[0]._listEvent.front()._beginNanos ); // 링이었다면 앞이 버려졌을 것
+    SW_EXPECT_TRUE( bTruncated );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), listFrameBegin.size() );
+
+    // 멈춘 뒤의 사건은 담지 않는다.
+    timeline.recordEvent( 3, 99999, 100000, 0 );
+    SW_ASSERT_TRUE( timeline.collectLongCapture( listThread, listFrameBegin, bTruncated ) );
+    SW_EXPECT_EQUAL( static_cast<size_t>( kBudget ), listThread[0]._listEvent.size() );
+}
+
+/**
+ * @brief [ProfilerTimelineTest] 긴 캡처를 다시 시작하면 지난 캡처의 사건은 비워진다
+ */
+SW_TEST_CASE( ProfilerTimelineTest, RestartedLongCaptureDropsThePreviousCapture )
+{
+    sw::ProfilerTimeline timeline;
+    timeline.startLongCapture( 100 );
+    timeline.recordEvent( 1, 10, 20, 0 );
+    timeline.stopLongCapture();
+    timeline.startLongCapture( 100 );
+    timeline.recordEvent( 2, 30, 40, 0 );
+    timeline.stopLongCapture();
+
+    sw::vector<sw::ProfilerTimelineThread> listThread;
+    sw::vector<uint64>                     listFrameBegin;
+    bool                                   bTruncated = true;
+    SW_ASSERT_TRUE( timeline.collectLongCapture( listThread, listFrameBegin, bTruncated ) );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listThread[0]._listEvent.size() );
+    SW_EXPECT_EQUAL( 2u, listThread[0]._listEvent[0]._slot );
+    SW_EXPECT_FALSE( bTruncated );
+}
+
+#endif // SW_PROFILER_TRACE_ENABLED

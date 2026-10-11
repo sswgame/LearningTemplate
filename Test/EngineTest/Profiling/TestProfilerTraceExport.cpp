@@ -5,6 +5,8 @@
 
 #include "TestFramework/TestFramework.h"
 
+#if SW_PROFILER_TRACE_ENABLED
+
 // ProfilerTraceExport — Trace Event JSON 의 형식 · 이름 · 마이크로초 단위 · 머리말.
 
 namespace
@@ -106,3 +108,26 @@ SW_TEST_CASE( ProfilerTraceExportTest, EmptyInputIsStillValidJSON )
     SW_ASSERT_TRUE( document.parse( json ) );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), document.getRoot().get( "traceEvents" ).size() ); // process_name 하나
 }
+
+/**
+ * @brief [ProfilerTraceExportTest] 잘린 캡처는 머리말과 전역 표식으로 알린다
+ */
+SW_TEST_CASE( ProfilerTraceExportTest, TruncatedCaptureIsMarked )
+{
+    sw::ProfilerTraceMeta meta = makeMeta();
+    meta._bTruncated           = true;
+    const sw::string json      = sw::ProfilerTraceExport::makeTraceJSON( makeThreads(), {}, { "a", "b" }, meta );
+    sw::JSONDocument document;
+    SW_ASSERT_TRUE( document.parse( json ) );
+    const sw::JSONValue root = document.getRoot();
+    SW_EXPECT_TRUE( root.get( "otherData" ).get( "truncated" ).asBool() );
+    bool bFoundMark = false;
+    for ( size_t index = 0; index < root.get( "traceEvents" ).size(); ++index )
+    {
+        if ( root.get( "traceEvents" ).at( index ).get( "name" ).asString().find( "TRUNCATED" ) != sw::string::npos )
+            bFoundMark = true;
+    }
+    SW_EXPECT_TRUE( bFoundMark );
+}
+
+#endif // SW_PROFILER_TRACE_ENABLED

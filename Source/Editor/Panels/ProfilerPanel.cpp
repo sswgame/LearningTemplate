@@ -360,6 +360,7 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ImGui::SmallButton( "Fit" ) )
             _bTimelineZoomed = SW_FALSE;
+#if SW_PROFILER_TRACE_ENABLED
         ImGui::SameLine();
         if ( ImGui::SmallButton( "Save Trace" ) )
         {
@@ -373,6 +374,7 @@ namespace sw::editor
         }
         EditorSelfTestMarks::note( "profiler.timeline.saveTrace" );
         EditorWidgets::drawTooltip( "Save the frames shown as Saved/Traces/trace_<time>.trace.json (Chrome Trace Event - open in Perfetto UI or chrome://tracing)" );
+#endif
         ImGui::SameLine();
         ImGui::TextDisabled( "| wheel = zoom, drag = pan, deep analysis: Tracy" );
 

@@ -1,6 +1,6 @@
 # 트레이스 내보내기 계획 — Chrome Tracing 형식으로 저장하고 열기
 
-상태: X1(변환기와 저장 — `ProfilerTraceExport`, 개발 명령 `profile.trace save`, 에디터 Save Trace)은 2026-10-11 에 들어갔다. 남은 단위는 아래 순서대로 진행한다.
+상태: X1(변환기와 저장 — `ProfilerTraceExport`, 개발 명령 `profile.trace save`, 에디터 Save Trace)과 X2(긴 캡처 `profile.trace record`)는 2026-10-11 에 들어갔다. 둘 다 Shipping 에서는 빠진다(`SW_PROFILER_TRACE_ENABLED`, 사용자 결정). 남은 단위는 아래 순서대로 진행한다.
 
 ## 왜 필요한가
 
@@ -25,14 +25,6 @@ Chrome Tracing 의 Trace Event 형식(JSON)은 사양이 공개돼 있고 `chrom
 | GPU | 패스마다 GPU 시간, Tracy 로 내는 `GPUTimelineExporter` | JSON 으로는 안 나간다 |
 
 ## 단위 (위가 아래의 바닥)
-
-### X2 긴 캡처 — N 초 모으기
-
-링 버퍼는 최근만 남기므로 긴 구간은 따로 모읍니다.
-
-- `profile.trace record <초>` — 시작하면 스레드마다 미리 잡은 큰 버퍼(예산 상한을 설정 값으로)에 기록하고, 끝나면 저장한다. 예산을 넘으면 거기서 멈추고 "잘림" 표지를 남긴다(오래된 것을 버리지 않는다 — 시작부터 보고 싶은 경우).
-- 끄면 비용 0. 켜도 지금 링 버퍼 기록과 같은 비용에서 버퍼 크기만 다르다(측정해서 문서에 한 줄).
-- 확인: 5 초 기록 후 저장 파일의 시간 폭이 5 초 안팎, 예산 초과 때 잘림 표지.
 
 ### X3 에디터에서 열기 · 비교
 
@@ -61,11 +53,11 @@ Timeline 탭이 `.trace.json` 을 불러와 보여 줍니다.
 
 ## 순서
 
-X2 → X3 → X5 → X4(X1 은 끝났다). X4 는 서버 디버깅 계획(`docs/plans/ServerDebug.md`) S1 · S5 와 함께 정한다.
+X3 → X5 → X4(X1 · X2 는 끝났다). X4 는 서버 디버깅 계획(`docs/plans/ServerDebug.md`) S1 · S5 와 함께 정한다.
 
 ## 정한 것 · 지키는 것
 
 - 뷰어는 만들지 않는다. 외부 뷰어(Perfetto UI · `chrome://tracing`)가 읽는 파일을 낸다. Tracy 는 깊은 분석 도구로 그대로 둔다 — 둘은 역할이 다르다(이식성 · 공유 대 정밀).
 - 서드파티 JSON 라이브러리를 들이지 않는다. 이미 쓰는 JSON 기록기로 쓴다.
-- Shipping 에서도 저장 창구는 있어야 하나(CI · 운영 서버 용도), 개발 명령이 없는 빌드이므로 서버 운영 쪽 진입점(운영 엔드포인트 · 서버 설정)을 따로 정한다 — X5 에서 결정.
+- Shipping 에서는 내보내기 코드를 컴파일하지 않는다(사용자 결정 2026-10-11 — `SW_PROFILER_TRACE_ENABLED`). 운영 서버의 느린 틱 캡처(X5)는 Shipping 서버가 아니라 Dev 구성 서버나 별도 진입점으로 풀 것인지 X5 에서 다시 정한다.
 - 단위마다 확인은 자동 시나리오와 단위 시험으로 한다.

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  엔진 시나리오 — 프로파일러 긴 캡처(Dev 전용): 개발 명령 profile.trace record <초> [<경로>] [<스레드당 사건 예산>] 이 처음부터 N 초를 모아 끝나면 Saved/Traces 에
+  Chrome Trace Event 파일로 저장한다. 첫 캡처는 기본 예산으로 끝까지 담고(잘림 없음), 둘째는 예산 50 으로 거기서 멈춰 잘림 표지("TRUNCATED")를 남긴다.
+  캡처가 진행 중일 때 같은 명령을 다시 주면 거절한다.
+  실행: App.exe -scenario=engine/automation/profiletrace.scenario.xml -dx12   (AppScenarioTest 가 백엔드마다 돈다)
+-->
+<Scenario name="engine.profiletrace" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<At frame="5"><DevCommand line="profile.trace record 0.3"/></At>
+	<At frame="200"><ExpectLog contains="Trace recording saved" atLeast="1"/></At>
+	<At frame="210"><DevCommand line="profile.trace record 0.3 50"/></At>
+	<At frame="420">
+		<ExpectLog contains="TRUNCATED" atLeast="1"/>
+		<Pass/>
+	</At>
+</Scenario>

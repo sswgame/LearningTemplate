@@ -2,16 +2,18 @@
 
 #include "Engine/Profiling/ProfilerTraceExport.h"
 
-#include "Core/File/FileUtil.h"
-#include "Core/Process/Process.h"
-#include "Core/Time/MonotonicClock.h"
-#include "Core/Time/WallClock.h"
+#if SW_PROFILER_TRACE_ENABLED
 
-#include "Engine/Common/EngineServices.h"
-#include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Resource/ResourcePaths.h"
-#include "Engine/Serialization/JSON/JSONDocument.h"
+    #include "Core/File/FileUtil.h"
+    #include "Core/Process/Process.h"
+    #include "Core/Time/MonotonicClock.h"
+    #include "Core/Time/WallClock.h"
+
+    #include "Engine/Common/EngineServices.h"
+    #include "Engine/Console/DevCommandRegistry.h"
+    #include "Engine/Profiling/FrameProfiler.h"
+    #include "Engine/Resource/ResourcePaths.h"
+    #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
@@ -51,6 +53,7 @@ namespace sw
         json += ",\"processID\":" + pid;
         json += ",\"wallUnixMilliseconds\":" + to_string( meta._wallUnixMilliseconds );
         json += ",\"monotonicNanoseconds\":" + to_string( meta._monotonicNanoseconds );
+        json += meta._bTruncated ? ",\"truncated\":true" : ",\"truncated\":false";
         json += "},\"traceEvents\":[";
 
         json += "{\"name\":\"process_name\",\"ph\":\"M\",\"pid\":" + pid + ",\"tid\":0,\"args\":{\"name\":";
@@ -80,6 +83,22 @@ namespace sw
             }
         }
 
+        if ( meta._bTruncated )
+        {
+            // 예산을 넘어 뒤가 잘렸다 — 뷰어에서도 보이게 전역 표식을 마지막 시각에 둔다.
+            uint64 lastNanos = 0;
+            for ( const ProfilerTimelineThread& thread : listThread )
+            {
+                for ( const ProfilerTimelineEvent& event : thread._listEvent )
+                {
+                    lastNanos = event._endNanos > lastNanos ? event._endNanos : lastNanos;
+                }
+            }
+            json += ",{\"name\":\"TRUNCATED (event budget reached)\",\"cat\":\"trace\",\"ph\":\"i\",\"s\":\"g\",\"pid\":" + pid + ",\"tid\":0,\"ts\":";
+            appendMicroseconds( json, lastNanos );
+            json += '}';
+        }
+
         for ( const uint64 frameBegin : listFrameBegin )
         {
             json += ",{\"name\":\"Frame\",\"cat\":\"frame\",\"ph\":\"i\",\"s\":\"g\",\"pid\":" + pid + ",\"tid\":0,\"ts\":";
@@ -88,6 +107,97 @@ namespace sw
         }
         json += "]}\n";
         return json;
+    }
+
+    namespace
+    {
+        /** @brief 진행 중인 긴 캡처입니다. 시작과 끝이 모두 게임 스레드라 잠금이 없고, 다른 스레드는 `_bActive` 만 읽습니다. */
+        struct LongRecording
+        {
+            atomic<bool> _bActive{ false };
+            int64        _endNanos{ 0 };
+            string       _path;
+            string       _processName;
+        };
+        LongRecording g_longRecording;
+    } // namespace
+
+    bool ProfilerTraceExport::startRecording( FrameProfiler& profiler, float64 seconds, string_view path, string_view processName, uint32 budget,
+                                              string& outReply )
+    {
+        if ( g_longRecording._bActive.load( std::memory_order_acquire ) )
+        {
+            outReply = "a trace recording is already running";
+            return false;
+        }
+        if ( seconds <= 0.0 )
+        {
+            outReply = "usage: profile.trace record <seconds> [<path>] [<eventBudgetPerThread>]";
+            return false;
+        }
+        profiler.setEnabled( true ); // 스코프가 시계를 읽어야 사건이 쌓인다
+        profiler.getTimeline().startLongCapture( budget == 0 ? kDefaultEventBudgetPerThread : budget );
+        g_longRecording._endNanos    = MonotonicClock::nowNanoseconds() + static_cast<int64>( seconds * 1.0e9 );
+        g_longRecording._path        = string( path );
+        g_longRecording._processName = string( processName );
+        g_longRecording._bActive.store( true, std::memory_order_release );
+        outReply = "recording " + to_string( static_cast<int64>( seconds ) ) + " s - the file is written when it ends";
+        return true;
+    }
+
+    bool ProfilerTraceExport::isRecording()
+    {
+        return g_longRecording._bActive.load( std::memory_order_acquire );
+    }
+
+    void ProfilerTraceExport::tickRecording( FrameProfiler& profiler )
+    {
+        if ( g_longRecording._bActive.load( std::memory_order_acquire ) == false )
+            return;
+        if ( MonotonicClock::nowNanoseconds() < g_longRecording._endNanos )
+            return;
+        ProfilerTimeline& timeline = profiler.getTimeline();
+        timeline.stopLongCapture();
+        g_longRecording._bActive.store( false, std::memory_order_release );
+
+        vector<ProfilerTimelineThread> listThread;
+        vector<uint64>                 listFrameBegin;
+        bool                           bTruncated = false;
+        if ( timeline.collectLongCapture( listThread, listFrameBegin, bTruncated ) == false )
+        {
+            SW_LOG_WARNING( "Trace recording ended with no events" );
+            return;
+        }
+        vector<string> listSlotName;
+        const uint32   scopeCount = profiler.getScopeCount();
+        listSlotName.resize( scopeCount );
+        for ( uint32 slot = 0; slot < scopeCount; ++slot )
+        {
+            const utf8* pName = profiler.findScopeName( slot );
+            if ( pName != nullptr )
+                listSlotName[slot] = pName;
+        }
+        ProfilerTraceMeta meta;
+        meta._processName          = g_longRecording._processName;
+        meta._processID            = Process::getCurrentProcessID();
+        meta._wallUnixMilliseconds = WallClock::nowUnixMilliseconds();
+        meta._monotonicNanoseconds = static_cast<uint64>( MonotonicClock::nowNanoseconds() );
+        meta._bTruncated           = bTruncated;
+
+        string savedPath = g_longRecording._path;
+        if ( savedPath.empty() )
+        {
+            savedPath = FileUtil::joinPath( FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), "Saved/Traces" ),
+                                            "trace_" + to_string( meta._wallUnixMilliseconds ) + kFileExtension );
+        }
+        if ( FileUtil::ensureParentDirectoryExists( savedPath ) == false ||
+             FileUtil::writeTextFile( savedPath, makeTraceJSON( listThread, listFrameBegin, listSlotName, meta ) ) == false )
+        {
+            SW_LOG_ERROR( "Trace recording could not be written to %#", savedPath );
+            return;
+        }
+        SW_LOG_INFO( "Trace recording saved %# (%# threads, %# frame marks%#)", savedPath, listThread.size(), listFrameBegin.size(),
+                     bTruncated ? ", TRUNCATED" : "" );
     }
 
     bool ProfilerTraceExport::saveRecentFrames( const FrameProfiler& profiler, uint32 frameCount, string_view path, string_view processName,
@@ -153,7 +263,7 @@ namespace sw
     }
 } // namespace sw
 
-#if SW_DEV_COMMANDS_ENABLED
+    #if SW_DEV_COMMANDS_ENABLED
 namespace sw
 {
     namespace
@@ -165,10 +275,30 @@ namespace sw
             {
                 if ( engine::areEngineServicesBound() == false )
                     return false;
-                if ( listArgument.empty() || listArgument[0] != "save" )
+                if ( listArgument.empty() || ( listArgument[0] != "save" && listArgument[0] != "record" ) )
                 {
-                    outReply = "usage: profile.trace save [<path>] [<frames>]";
+                    outReply = "usage: profile.trace save [<path>] [<frames>] | profile.trace record <seconds> [<path>] [<eventBudgetPerThread>]";
                     return false;
+                }
+                if ( listArgument[0] == "record" )
+                {
+                    if ( listArgument.size() < 2 )
+                    {
+                        outReply = "usage: profile.trace record <seconds> [<path>] [<eventBudgetPerThread>]";
+                        return false;
+                    }
+                    string recordPath;
+                    uint32 budget = 0;
+                    for ( size_t index = 2; index < listArgument.size(); ++index )
+                    {
+                        const string& argument = listArgument[index];
+                        if ( argument.empty() == false && argument.find_first_not_of( "0123456789" ) == string::npos )
+                            budget = static_cast<uint32>( std::stoul( std::string( argument.c_str() ) ) );
+                        else
+                            recordPath = argument;
+                    }
+                    const float64 seconds = std::strtod( listArgument[1].c_str(), nullptr );
+                    return ProfilerTraceExport::startRecording( engine::getFrameProfiler(), seconds, recordPath, "Game", budget, outReply );
                 }
                 string path;
                 uint32 frameCount = ProfilerTimeline::kFrameCapacity - 1;
@@ -189,4 +319,6 @@ namespace sw
     SW_DEV_COMMAND( ProfileTrace, "profile.trace", "profile.trace save [<path>] [<frames>]",
                     "Save the profiler timeline of the recent frames as a Chrome trace (.trace.json)", &ProfilerTraceDevCommandsInternal::runTrace );
 } // namespace sw
-#endif
+    #endif
+
+#endif // SW_PROFILER_TRACE_ENABLED
