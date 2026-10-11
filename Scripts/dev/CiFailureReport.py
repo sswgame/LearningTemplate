@@ -25,8 +25,11 @@ import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(co
 kNewline = "\n"
 _kAnsi = re.compile(r"\x1b\[[0-9;]*m")
 # 시험 틀이 stdout 에 찍는 실패 줄만 고른다. 로거가 같은 내용을 "[날짜] …" 로 한 번 더 찍으므로 그 줄은 뺀다.
+# 새니타이저 보고(케이스는 모두 통과해도 종료 코드로 조각을 떨어뜨린다)도 고른다. 틀 시험이 일부러 지게 만든 안쪽 케이스 줄은
+# "(nested) " 로 시작하므로 여기에 걸리지 않는다.
 _kTestMarker = re.compile(r"^\[  FAILED  \]|^  \[FAILED\]|^    Condition:|^    Message  :|verified nothing|^ Tests failed|^   - |no cases in this executable|"
-                          r"selected no test|^Invalid|^Unknown --")
+                          r"selected no test|^Invalid|^Unknown --|^WARNING: \w+Sanitizer|^SUMMARY: \w+Sanitizer|^==\d+==ERROR: \w+Sanitizer|"
+                          r"runtime error:")
 _kVcpkgLogLine = re.compile(r"^\s*(/\S+\.log|[A-Za-z]:[\\/]\S+\.log)\s*$")
 _kMaxTestCount = 20
 _kMaxLogCount = 8

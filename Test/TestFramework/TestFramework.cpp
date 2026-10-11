@@ -220,6 +220,12 @@ namespace test
         return s_instance;
     }
 
+    const utf8* TestRegistry::getLinePrefix() const
+    {
+        // 시험 안에서 만든 레지스트리(틀 자체를 시험한다)가 일부러 지는 케이스의 줄은 바깥 실행의 실패로 읽히면 안 된다.
+        return this == &getInstance() ? "" : "(nested) ";
+    }
+
     void TestRegistry::registerTest( const utf8* pSuiteName, const utf8* pTestName, sw::Delegate<void()> func )
     {
         _listTest.push_back( { pSuiteName, pTestName, func } );
@@ -503,14 +509,15 @@ namespace test
         s_bReportingFailure = true;
 
         _currentContext.addFailure( condition, file, line, message );
-        std::fprintf( stdout, "\n  [FAILED] %s:%d\n    Condition: %s\n", file.c_str(), line, condition.c_str() );
+        const utf8* pPrefix = getLinePrefix();
+        std::fprintf( stdout, "\n%s  [FAILED] %s:%d\n%s    Condition: %s\n", pPrefix, file.c_str(), line, pPrefix, condition.c_str() );
         if ( message.empty() == false )
-            std::fprintf( stdout, "    Message  : %s\n", message.c_str() );
+            std::fprintf( stdout, "%s    Message  : %s\n", pPrefix, message.c_str() );
         std::fflush( stdout );
-        SW_LOG_ERROR( "\n  [FAILED] %#:%#", file.c_str(), line );
-        SW_LOG_ERROR( "    Condition: %#", condition.c_str() );
+        SW_LOG_ERROR( "\n%#  [FAILED] %#:%#", pPrefix, file.c_str(), line );
+        SW_LOG_ERROR( "%#    Condition: %#", pPrefix, condition.c_str() );
         if ( message.empty() == false )
-            SW_LOG_ERROR( "    Message  : %#", message.c_str() );
+            SW_LOG_ERROR( "%#    Message  : %#", pPrefix, message.c_str() );
         s_bReportingFailure = false;
     }
 
@@ -621,7 +628,8 @@ namespace test
     CaseResult TestRegistry::runCase( const TestCaseInfo& testInfo, float64& outElapsedMs )
     {
         _currentContext.begin( testInfo.fullName() );
-        std::fprintf( stdout, "[ RUN      ] %s\n", testInfo.fullName().c_str() );
+        const utf8* pPrefix = getLinePrefix();
+        std::fprintf( stdout, "%s[ RUN      ] %s\n", pPrefix, testInfo.fullName().c_str() );
         std::fflush( stdout );
         SW_LOG_INFO( "%#", testInfo.fullName().c_str() );
 
@@ -682,20 +690,20 @@ namespace test
 
         if ( _currentContext.isSkipped() && _currentContext.hasFailed() == false )
         {
-            std::fprintf( stdout, "[  SKIPPED ] %s\n", testInfo.fullName().c_str() );
+            std::fprintf( stdout, "%s[  SKIPPED ] %s\n", pPrefix, testInfo.fullName().c_str() );
             std::fflush( stdout );
             SW_LOG_INFO( "%#", testInfo.fullName().c_str() );
             return CaseResult::Skipped;
         }
         if ( _currentContext.hasFailed() )
         {
-            std::fprintf( stdout, "[  FAILED  ] %s (%.2f ms)\n", testInfo.fullName().c_str(), outElapsedMs );
+            std::fprintf( stdout, "%s[  FAILED  ] %s (%.2f ms)\n", pPrefix, testInfo.fullName().c_str(), outElapsedMs );
             std::fflush( stdout );
             const sw::string testName = testInfo.fullName();
             SW_LOG_ERROR( "%# (%# ms)", testName.c_str(), sw::Fmt( outElapsedMs, sw::Format().precision( 2 ) ) );
             return CaseResult::Failed;
         }
-        std::fprintf( stdout, "[       OK ] %s (%.2f ms)\n", testInfo.fullName().c_str(), outElapsedMs );
+        std::fprintf( stdout, "%s[       OK ] %s (%.2f ms)\n", pPrefix, testInfo.fullName().c_str(), outElapsedMs );
         std::fflush( stdout );
         SW_LOG_INFO( "%# (%# ms)", testInfo.fullName().c_str(), sw::Fmt( outElapsedMs, sw::Format().precision( 2 ) ) );
         return CaseResult::Passed;
@@ -910,10 +918,11 @@ namespace test
         std::fprintf( stdout, " Tests passed: %d / %d (%d skipped, %.2f ms total)\n", passedCount, passedCount + failedCount + skippedCount, skippedCount, totalMs );
         if ( failedCount > 0 )
         {
-            std::fprintf( stdout, " Tests failed (%d):\n", failedCount );
+            const utf8* pPrefix = getLinePrefix();
+            std::fprintf( stdout, "%s Tests failed (%d):\n", pPrefix, failedCount );
             for ( const auto& name : listFailedTestName )
             {
-                std::fprintf( stdout, "   - %s\n", name.c_str() );
+                std::fprintf( stdout, "%s   - %s\n", pPrefix, name.c_str() );
             }
             if ( _bShuffle )
                 std::fprintf( stdout, " Replay this order with --test_shuffle=%u\n", _shuffleSeed );

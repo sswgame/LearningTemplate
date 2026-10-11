@@ -120,6 +120,30 @@ namespace
             return pMenu != nullptr ? static_cast<ScreenType*>( _ui.findScreen( pMenu->getPromptScreen() ) ) : nullptr;
         }
 
+        /**
+         * @brief 지금 포커스 위젯 이름과 지난 프레임에 발화한 UI 탐색 행동 · 스틱 값을 한 줄로 만듭니다(실패 메시지용).
+         * @details 포커스가 엉뚱한 곳으로 가면 어느 행동이 옮겼는지가 원인이다. 리눅스 CI 에서만 지는 경로를 로그 없이 좁히려고 둔다.
+         */
+        sw::string describeFocusAndActions() const
+        {
+            const sw::WidgetID    focused     = _ui.getFocusManager().getFocusedWidget();
+            const sw::WidgetTree* pTree       = _ui.getFocusManager().getFocusedTree();
+            const sw::Widget*     pFocused    = pTree != nullptr ? pTree->findWidgetByID( focused ) : nullptr;
+            sw::string            detail      = sw::string( "focus '" ) + ( pFocused != nullptr ? pFocused->getName().c_str() : "(none)" ) + "' actions [";
+            const sw::InputMap*   pUIMap      = _ui.getUIInputMap();
+            const utf8*           arrAction[] = { sw::UIActionName::kNavigateUp, sw::UIActionName::kNavigateDown, sw::UIActionName::kNavigateLeft,
+                                                  sw::UIActionName::kNavigateRight, sw::UIActionName::kFocusNext, sw::UIActionName::kFocusPrevious,
+                                                  sw::UIActionName::kTabNext, sw::UIActionName::kTabPrevious };
+            for ( const utf8* pAction : arrAction )
+            {
+                if ( pUIMap != nullptr && pUIMap->wasActionTriggered( sw::hashed_string( pAction ) ) )
+                    detail += sw::string( pAction ) + " ";
+            }
+            const sw::float2 stick = pUIMap != nullptr ? pUIMap->getVector2D( sw::hashed_string( sw::UIActionName::kNavigateStick ) ) : sw::float2{};
+            detail += "] stick (" + sw::to_string( stick._x ) + ", " + sw::to_string( stick._y ) + ")";
+            return detail;
+        }
+
         /** @brief 탭을 설정 카테고리 @p categoryIndex(스키마 순서 — 빈 카테고리 빼고)로 옮깁니다. */
         void selectTab( uint32 index )
         {
@@ -264,11 +288,14 @@ SW_TEST_CASE( UIOptionsMenuTest, RebindIgnoresUIActionsWhileListening )
     pRebind = fixture.getPrompt<sw::KeyRebindScreen>();
     SW_ASSERT_NOT_NULL( pRebind );
     fixture.runFrame();
-    fixture.tapKey( sw::Key::Down );
-    const sw::WidgetID focused       = fixture._ui.getFocusManager().getFocusedWidget();
-    const sw::Widget*  pFocused      = pMenu->getTree().findWidgetByID( focused );
-    const sw::string   focusedDetail = sw::string( "focused widget '" ) + ( pFocused != nullptr ? pFocused->getName().c_str() : "(not in menu)" ) + "'";
-    SW_EXPECT_TRUE_MSG( jumpButton == focused, focusedDetail.c_str() ); // 아래 행(Fire)으로 가지 않았다
+    // 누른 프레임과 뗀 프레임을 따로 돌려 프레임마다 포커스와 발화한 행동을 남긴다. 지면 어느 프레임의 어느 행동이 옮겼는지 보인다.
+    SW_EXPECT_TRUE( fixture._input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::Down ) ) );
+    fixture.runFrame();
+    const sw::string pressedDetail = "pressed frame: " + fixture.describeFocusAndActions();
+    SW_EXPECT_TRUE( fixture._input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::Down ) ) );
+    fixture.runFrame();
+    const sw::string focusedDetail = pressedDetail + "; released frame: " + fixture.describeFocusAndActions();
+    SW_EXPECT_TRUE_MSG( jumpButton == fixture._ui.getFocusManager().getFocusedWidget(), focusedDetail.c_str() ); // 아래 행(Fire)으로 가지 않았다
     SW_EXPECT_STREQ( "Key.Down", sw::string( fixture._settings.getValue( "controls.jump" ) ).c_str() );
     SW_EXPECT_TRUE( fixture.getPrompt<sw::KeyRebindScreen>() == nullptr );
 }
