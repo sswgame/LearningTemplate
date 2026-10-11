@@ -7,6 +7,7 @@
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/NetTransport.h"
+#include "Core/Process/Process.h"
 
 #include <chrono>
 #include <cstring>
@@ -25,6 +26,12 @@ namespace sw
             static constexpr int32 kSecureHeadSize    = 1 + 4 + 8; ///< 암호화 몸의 머리 — 종류 바이트 · 연결 값 · 패킷 번호(BE)
             static constexpr int32 kAadSize           = 4 + kSecureHeadSize;
             static constexpr int32 kKeyConfirmAadSize = 4 + 8; ///< 서버가 준 자리 번호 ‖ 서버 소금
+#if !defined( SW_SHIPPING )
+            /** @brief 디버거 대기 중 `update` 사이가 이보다 벌어지면 프로세스가 멈췄던 것으로 보고 연결 시계를 민다 — 보통 간격(수 ms)보다 훨씬 길게. */
+            static constexpr float64 kDebugStallSeconds = 0.5;
+            /** @brief 디버거가 붙었는지 다시 묻는 간격 — Linux 는 파일을 읽는다. */
+            static constexpr float64 kDebuggerPollSeconds = 1.0;
+#endif
 
             /** @brief 증명 태그의 AAD — 클라이언트 소금 ‖ 도전 값 ‖ 클라이언트 공개 키 ‖ 토큰(다른 응답에 옮겨 붙이지 못한다). */
             static vector<uint8> makeProofAad( uint64 clientSalt, uint64 challenge, const uint8* pPublicKey, const uint8* pToken, int32 tokenSize )
@@ -141,6 +148,8 @@ namespace sw
         , _replayRejectedCount{ 0 }
         , _mismatchLogCount{ 0 }
         , _challengeSecret{ 0 }
+        , _lastUpdateTime{ -1.0 }
+        , _nextDebuggerPollTime{ 0.0 }
         , _protocolID{ 0 }
         , _updateDepth{ 0 }
         , _clientIndex{ -1 }
@@ -148,6 +157,7 @@ namespace sw
         , _bServer{ SW_FALSE }
         , _bConnectPending{ SW_FALSE }
         , _bHasCredentials{ SW_FALSE }
+        , _bDebugHold{ SW_FALSE }
     {
     }
 
@@ -176,6 +186,9 @@ namespace sw
             _clientIndex                = -1;
             _bServer                    = SW_FALSE;
             _bHasCredentials            = SW_FALSE;
+            _bDebugHold                 = SW_FALSE;
+            _lastUpdateTime             = -1.0;
+            _nextDebuggerPollTime       = 0.0;
             _credentials                = NetConnectCredentials{};
             _plainWriter.reserve( kNetMaxPacketSize );
             _protocolID = NetProtocol::makeProtocolID( settings._gameID, settings._wireVersion, computeFeatureMask() ); // listen · connect 가 역할에 맞춰 다시 셈한다
@@ -665,6 +678,7 @@ namespace sw
         {
             // 암호화 — NetConnection 패킷을 평문으로 짓고 봉인한다. 예산에서 암호화 머리 · 태그 몫을 뺀다.
             _plainWriter.clear();
+            _plainWriter.writeBits( _bDebugHold == SW_TRUE ? 1u : 0u, 1 ); // 디버거 대기 — 평문 첫 비트(봉인된다)
             const int32 maxBytes =
                 slot._sendCredit > 0.0 ? kNetMaxPacketSize - NetHostInternal::kHeaderSize - NetHostInternal::kSecureHeadSize - NetSecurityConstant::kAeadTagSize : 0;
             slot._connection.writePacket( nowSeconds, _plainWriter, maxBytes, _settings._keepAliveInterval );
@@ -679,6 +693,7 @@ namespace sw
         // 연결 값(두 소금의 섞음) — 같은 주소의 옛 연결 · 위조 패킷을 거른다.
         const uint64 token = slot._clientSalt ^ slot._serverSalt;
         writer.writeBits( static_cast<uint32>( token ), 32 );
+        writer.writeBits( _bDebugHold == SW_TRUE ? 1u : 0u, 1 ); // 디버거 대기
         // 대역폭 몫을 다 썼으면 머리(확인 · 유지)만 — 메시지는 다음 차례에 간다.
         const int32 maxBytes = slot._sendCredit > 0.0 ? kNetMaxPacketSize - NetHostInternal::kHeaderSize : 0;
         slot._connection.writePacket( nowSeconds, writer, maxBytes, _settings._keepAliveInterval );
@@ -697,6 +712,65 @@ namespace sw
         else
             slot._sendCredit = MathUtil::min( capacity, slot._sendCredit + rate * MathUtil::max( 0.0, nowSeconds - slot._lastCreditTime ) );
         slot._lastCreditTime = nowSeconds;
+    }
+
+    void NetHost::updateDebugHold( float64 nowSeconds )
+    {
+#if defined( SW_SHIPPING )
+        (void)nowSeconds;
+#else
+        switch ( _settings._debugHold )
+        {
+            case NetDebugHold::Off:
+            {
+                _bDebugHold = SW_FALSE;
+                break;
+            }
+            case NetDebugHold::Always:
+            {
+                _bDebugHold = SW_TRUE;
+                break;
+            }
+            case NetDebugHold::WhenDebuggerAttached:
+            {
+                if ( nowSeconds >= _nextDebuggerPollTime )
+                {
+                    _bDebugHold           = Process::isDebuggerPresent() ? SW_TRUE : SW_FALSE;
+                    _nextDebuggerPollTime = nowSeconds + NetHostInternal::kDebuggerPollSeconds;
+                }
+                break;
+            }
+        }
+        // 가상 시계 — 알리는 중에 update 사이가 크게 벌어졌으면 프로세스가 멈췄던 것이다(중단점 · 일시정지). 그동안 상대가 보낸 것을 못 받은 것은
+        // 상대 탓이 아니므로, 멈춘 시간만큼 받은 시각 · 연결 시작 시각을 민다(재개한 쪽이 상대를 시간 초과로 끊지 않는다).
+        const float64 stalledSeconds = _lastUpdateTime < 0.0 ? 0.0 : nowSeconds - _lastUpdateTime;
+        if ( _bDebugHold == SW_TRUE && stalledSeconds > NetHostInternal::kDebugStallSeconds )
+        {
+            for ( Slot& slot : _listSlot )
+            {
+                slot._lastReceiveTime += stalledSeconds;
+                if ( slot._connectStartTime >= 0.0 )
+                    slot._connectStartTime += stalledSeconds;
+            }
+        }
+#endif
+        _lastUpdateTime = nowSeconds;
+    }
+
+    float64 NetHost::computeTimeoutSeconds( const Slot& slot ) const
+    {
+#if defined( SW_SHIPPING )
+        (void)slot;
+        return _settings._timeoutSeconds; // 배포 빌드는 알림을 믿지 않는다 — 클라이언트가 비트를 켜 자리를 붙잡지 못하게
+#else
+        return slot._bRemoteDebugHold == SW_TRUE ? MathUtil::max( _settings._timeoutSeconds, _settings._debugHoldTimeoutSeconds ) : _settings._timeoutSeconds;
+#endif
+    }
+
+    bool NetHost::isDebugHoldAnnounced() const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        return _bDebugHold == SW_TRUE;
     }
 
     bool NetHost::waitForReceive( float64 timeoutSeconds )
@@ -739,6 +813,7 @@ namespace sw
             // 2) 처리 · 타임아웃 · 보낼 패킷 — 잠금 안.
             {
                 std::scoped_lock<mutex> lock{ _mutex };
+                updateDebugHold( nowSeconds );
                 for ( int32 index = 0; index < receivedCount; ++index )
                 {
                     const ReceivedDatagram& datagram = _listReceived[static_cast<size_t>( index )];
@@ -784,7 +859,7 @@ namespace sw
                 }
                 case NetConnectionState::Connected:
                 {
-                    if ( nowSeconds - slot._lastReceiveTime > _settings._timeoutSeconds )
+                    if ( nowSeconds - slot._lastReceiveTime > computeTimeoutSeconds( slot ) )
                     {
                         closeSlot( static_cast<int32>( index ), NetDisconnectReason::Timeout, false );
                         break;
@@ -863,8 +938,12 @@ namespace sw
                 ++_rejectedPacketCount;
                 return;
             }
+            const uint8 bRemoteDebugHold = reader.readBits( 1 ) != 0 ? SW_TRUE : SW_FALSE;
             if ( slot._connection.readPacket( nowSeconds, reader ) )
-                slot._lastReceiveTime = nowSeconds;
+            {
+                slot._lastReceiveTime  = nowSeconds;
+                slot._bRemoteDebugHold = bRemoteDebugHold;
+            }
             return;
         }
 
@@ -1062,9 +1141,13 @@ namespace sw
                 closeSlot( slotIndex, NetDisconnectReason::Remote, false );
             return;
         }
-        BitReader plainReader( _listOpenScratch.data(), static_cast<int32>( _listOpenScratch.size() ) );
+        BitReader   plainReader( _listOpenScratch.data(), static_cast<int32>( _listOpenScratch.size() ) );
+        const uint8 bRemoteDebugHold = plainReader.readBits( 1 ) != 0 ? SW_TRUE : SW_FALSE;
         if ( pSlot->_connection.readPacket( nowSeconds, plainReader ) )
-            pSlot->_lastReceiveTime = nowSeconds;
+        {
+            pSlot->_lastReceiveTime  = nowSeconds;
+            pSlot->_bRemoteDebugHold = bRemoteDebugHold;
+        }
     }
 
     void NetHost::closeSlot( int32 slotIndex, NetDisconnectReason reason, bool bNotifyRemote )
@@ -1085,7 +1168,8 @@ namespace sw
         }
         const bool bWasVisible = slot._state == NetConnectionState::Connected || _bServer == SW_FALSE;
         unbindAddress( slotIndex );
-        slot._state = NetConnectionState::Disconnected;
+        slot._state            = NetConnectionState::Disconnected;
+        slot._bRemoteDebugHold = SW_FALSE;
         slot._connection.reset();
         if ( slot._security != nullptr )
         {

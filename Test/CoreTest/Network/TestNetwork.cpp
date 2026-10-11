@@ -643,6 +643,7 @@ SW_TEST_CASE( NetworkTest, HostsRejectFullServersForeignProtocolsAndDetectDiscon
     NetHostSettings settings;
     settings._maxConnections = 1;
     settings._timeoutSeconds = 1.0;
+    settings._debugHold      = NetDebugHold::Off; // 디버거 아래에서 돌려도 원래 시간 초과를 본다
     LoopbackNetwork network;
     NetHost         server;
     NetHost         first;
@@ -708,6 +709,82 @@ SW_TEST_CASE( NetworkTest, HostsRejectFullServersForeignProtocolsAndDetectDiscon
     first.drainEvents( listEvent );
     SW_ASSERT_TRUE( listEvent.empty() == false );
     SW_EXPECT_TRUE( listEvent.back()._reason == NetDisconnectReason::Timeout );
+}
+
+/**
+ * @brief [NetworkTest] 디버거 대기를 알린 서버가 멈춰도(중단점) 클라이언트는 끊지 않고, 재개한 서버도 멈춘 동안을 시간 초과로 치지 않는다
+ * @details 서버만 멈춤(클라이언트는 알림 비트를 보고 시한을 늘린다) → 둘 다 멈춤(한 프로세스가 통째로 멈춤 — 클라이언트는 알리지 않으므로 서버는
+ *          가상 시계로만 버틴다) → 대기 시한(10 초)을 넘긴 멈춤은 끊긴다.
+ */
+SW_TEST_CASE( NetworkTest, DebugHoldKeepsTheConnectionThroughABreakpoint )
+{
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "debug hold is a development-build feature" );
+#else
+    NetHostSettings clientSettings;
+    clientSettings._timeoutSeconds          = 1.0;
+    clientSettings._debugHoldTimeoutSeconds = 10.0;
+    clientSettings._debugHold               = NetDebugHold::Off;
+    NetHostSettings serverSettings          = clientSettings;
+    serverSettings._debugHold               = NetDebugHold::Always;
+    LoopbackNetwork network;
+    NetHost         server;
+    NetHost         client;
+    server.initialize( network.createEndpoint( 4000 ), serverSettings );
+    client.initialize( network.createEndpoint( 5000 ), clientSettings );
+    SW_ASSERT_TRUE( server.listen() );
+    SW_ASSERT_TRUE( client.connect( NetAddress::makeLoopback( 4000 ) ) );
+    float64    time   = 0.0;
+    const auto runFor = [&]( float64 seconds, bool bServer, bool bClient )
+    {
+        for ( float64 elapsed = 0.0; elapsed < seconds; elapsed += 1.0 / 60.0 )
+        {
+            time += 1.0 / 60.0;
+            if ( bServer )
+                server.update( time );
+            if ( bClient )
+                client.update( time );
+        }
+    };
+    runFor( 0.3, true, true );
+    SW_ASSERT_TRUE( client.getConnectionState( 0 ) == NetConnectionState::Connected );
+    SW_EXPECT_TRUE( server.isDebugHoldAnnounced() );
+    SW_EXPECT_FALSE( client.isDebugHoldAnnounced() );
+
+    // 서버만 6 초 멈춘다 — 보통 시한(1 초)이면 끊겼을 것이다.
+    runFor( 6.0, false, true );
+    SW_EXPECT_TRUE( client.getConnectionState( 0 ) == NetConnectionState::Connected );
+    runFor( 0.5, true, true ); // 서버가 쌓인 패킷을 비운다
+    SW_EXPECT_EQUAL( 1, server.getConnectedCount() );
+
+    // 둘 다 6 초 멈춘다 — 서버가 먼저 깨어난다. 클라이언트는 알리지 않았고 쌓인 패킷도 없으니 서버는 가상 시계로만 버틴다.
+    time += 6.0;
+    server.update( time );
+    SW_EXPECT_EQUAL( 1, server.getConnectedCount() );
+    client.update( time );
+    runFor( 0.5, true, true );
+    SW_EXPECT_EQUAL( 1, server.getConnectedCount() );
+    SW_EXPECT_TRUE( client.getConnectionState( 0 ) == NetConnectionState::Connected );
+    const vector<uint8> hello = makeMessage( 77 );
+    SW_ASSERT_TRUE( client.sendMessage( 0, NetChannelType::ReliableOrdered, hello ) );
+    runFor( 0.3, true, true );
+    int32          connectionID = -1;
+    NetChannelType channel      = NetChannelType::Unreliable;
+    vector<uint8>  buffer;
+    SW_ASSERT_TRUE( server.receiveMessage( connectionID, channel, buffer ) );
+    SW_EXPECT_EQUAL( 77, readMessageValue( buffer ) );
+
+    // 대기 시한(10 초)을 넘긴 멈춤은 끊긴다 — 9 초에는 살아 있고 12 초에는 끊겼다.
+    vector<NetHostEvent> listEvent;
+    client.drainEvents( listEvent );
+    listEvent.clear();
+    runFor( 9.0, false, true );
+    SW_EXPECT_TRUE( client.getConnectionState( 0 ) == NetConnectionState::Connected );
+    runFor( 3.0, false, true );
+    client.drainEvents( listEvent );
+    SW_ASSERT_TRUE( listEvent.empty() == false );
+    SW_EXPECT_TRUE( listEvent.back()._reason == NetDisconnectReason::Timeout );
+#endif
 }
 
 /**

@@ -25,6 +25,10 @@
  *          토큰 결속(서버 `INetConnectAuthenticator` · 클라이언트 `NetConnectCredentials`)이면 응답의 세션 비밀 증명 태그가 맞아야 자리를 잡고, 클라이언트는
  *          수락의 키 확인 태그로 서버가 같은 키를 가졌는지 본다. 방식 · 결속 여부는 프로토콜 id 에 섞여 협상하지 않는다 — 한쪽만이면 `SecurityMismatch`.
  *          인증기 없는 암호화(일회 키 — 중간자는 못 막는다)는 개발 빌드만: Shipping 서버는 인증기 없이 암호화로 `listen` 하지 못한다.
+ *
+ *          **디버거 대기**(`NetHostSettings::_debugHold`, 개발 빌드만): 디버거가 붙은 호스트는 데이터 패킷마다 1 비트로 알리고, 상대는 그 연결의 시간 초과를
+ *          `_debugHoldTimeoutSeconds` 로 늘린다 — 한쪽이 중단점에 멈춰도 다른 쪽이 끊지 않는다. 멈췄던 쪽은 `update` 사이의 빈 시간만큼 연결 시계를 민다.
+ *          Shipping 은 알리지도 믿지도 않는다(비트를 켠 클라이언트가 자리를 붙잡지 못하게).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -47,6 +51,21 @@ namespace sw
     class INetAead;
     class INetTransport;
 
+    /**
+     * @brief 디버거 대기 — 이 호스트가 중단점에 멈출 수 있다고 상대에게 알릴 때입니다(개발 빌드만, Shipping 은 늘 알리지 않고 상대의 알림도 무시한다).
+     * @details 알리는 쪽은 데이터 패킷마다 1 비트를 켠다. 받는 쪽은 그 연결의 시간 초과를 `NetHostSettings::_debugHoldTimeoutSeconds` 로 늘린다 — 서버가
+     *          중단점에 멈춰도 클라이언트가 끊지 않는다. 알리는 쪽 자신은 `update` 사이가 크게 벌어지면(프로세스가 멈췄다) 그만큼 시계를 멈춘 것으로 친다(가상 시계).
+     */
+    enum class NetDebugHold : uint8
+    {
+        Off = 0,              ///< 알리지 않는다(시간 초과 시험 · 디버거 아래에서도 원래 시간 초과를 보려는 쪽)
+        WhenDebuggerAttached, ///< 이 프로세스에 디버거가 붙어 있을 때만(`Process::isDebuggerPresent`, 1 초마다 다시 묻는다)
+        Always                ///< 늘 — 시험, 디버거 없이 멈추는 도구
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 호스트 설정입니다. 시간은 초입니다. */
     struct NetHostSettings
     {
@@ -56,11 +75,13 @@ namespace sw
         float64             _timeoutSeconds{ 5.0 };
         float64             _connectTimeout{ 5.0 };
         float64             _connectRetryInterval{ 0.2 };
-        float64             _sendInterval{ 1.0 / 30.0 }; ///< 연결마다 패킷을 보내는 가장 짧은 간격
-        float64             _keepAliveInterval{ 0.25 };  ///< 보낼 것(메시지 · 재전송 · 확인)이 없으면 이 간격으로만 보낸다(유지 · RTT)
+        float64             _sendInterval{ 1.0 / 30.0 };       ///< 연결마다 패킷을 보내는 가장 짧은 간격
+        float64             _keepAliveInterval{ 0.25 };        ///< 보낼 것(메시지 · 재전송 · 확인)이 없으면 이 간격으로만 보낸다(유지 · RTT)
+        float64             _debugHoldTimeoutSeconds{ 600.0 }; ///< 상대가 디버거 대기를 알린 연결의 시간 초과(개발 빌드만 — 중단점에 오래 멈춰도 끊지 않는다)
         int32               _maxConnections{ 16 };
         int32               _maxBytesPerSecond{ 100000 }; ///< 연결마다 보내는 바이트 상한(토큰 버킷 — 언리얼 `NetSpeed` 기본과 같다). 다 쓰면 메시지는 기다리고 확인 · 유지만 간다. 패킷 하나(1200) 아래는 그 값으로
         NetSecuritySettings _security{};                  ///< 암호화 · 토큰 결속(기본 꺼짐) — 양쪽이 같아야 연결된다
+        NetDebugHold        _debugHold{ NetDebugHold::WhenDebuggerAttached };
     };
 } // namespace sw
 
@@ -199,8 +220,10 @@ namespace sw
         NetAddress           getConnectionAddress( int32 connectionID ) const;
         int32                getConnectedCount() const;
         /** @brief 클라이언트 — 서버가 준 자기 번호(서버의 연결 id)입니다. 연결 전이면 −1 입니다. */
-        int32  getClientIndex() const;
-        void   collectConnected( vector<int32>& outListConnection ) const;
+        int32 getClientIndex() const;
+        void  collectConnected( vector<int32>& outListConnection ) const;
+        /** @brief 이 호스트가 지금 디버거 대기를 알리는가 — 마지막 `update` 기준(`NetHostSettings::_debugHold`, Shipping 은 늘 false)입니다. */
+        bool   isDebugHoldAnnounced() const;
         uint64 getRejectedPacketCount() const;
         /** @brief 서버 — 인증기가 이 연결에 준 주체(로그인 계정)입니다. 없으면 0 입니다. */
         uint64 getConnectionPrincipal( int32 connectionID ) const;
@@ -262,6 +285,7 @@ namespace sw
             float64                  _sendCredit{ 0.0 };                         ///< 대역폭 몫(바이트) — 0 보다 크면 꽉 찬 패킷을 보낼 수 있다(빚 모양 — 보낸 뒤 음수가 될 수 있다)
             float64                  _lastCreditTime{ -1.0 };                    ///< 몫을 마지막으로 채운 때 — 음수면 아직(연결되면 가득 채운다)
             NetConnectionState       _state{ NetConnectionState::Disconnected }; ///< 서버의 자리는 Connecting 을 거치지 않는다(응답이 맞아야 잡는다)
+            uint8                    _bRemoteDebugHold{ SW_FALSE };              ///< 상대가 마지막 데이터 패킷에서 디버거 대기를 알렸다(개발 빌드만 본다)
         };
 
         /** @brief 보낼 데이터그램 하나 — 바이트는 `OutgoingBatch::_bytes` 의 [_offset, _offset + _size) 입니다. */
@@ -326,7 +350,11 @@ namespace sw
         /** @brief 패킷 하나를 씁니다 — 몫이 남았으면 메시지까지, 다 썼으면 머리(확인)만. 몫에서 보낸 바이트를 뺀다. */
         void sendPayload( float64 nowSeconds, Slot& slot );
         /** @brief 지난 채움 뒤 흐른 시간만큼 대역폭 몫을 채웁니다(상한 — 보내기 간격 두 번어치, 최소 패킷 하나). */
-        void                         refillSendCredit( float64 nowSeconds, Slot& slot ) const;
+        void refillSendCredit( float64 nowSeconds, Slot& slot ) const;
+        /** @brief 디버거 대기를 알릴지 다시 정하고(디버거는 1 초마다 묻는다), 알리는 중에 `update` 사이가 벌어졌으면 그 시간만큼 연결 시계를 민다(가상 시계). */
+        void updateDebugHold( float64 nowSeconds );
+        /** @brief 이 연결의 시간 초과입니다 — 상대가 디버거 대기를 알렸으면(개발 빌드) `_debugHoldTimeoutSeconds` 와 큰 쪽입니다. */
+        float64                      computeTimeoutSeconds( const Slot& slot ) const;
         void                         closeSlot( int32 slotIndex, NetDisconnectReason reason, bool bNotifyRemote );
         bool                         startConnect( const NetAddress& serverAddress );
         bool                         connectLocked( const NetAddress& serverAddress, const NetConnectCredentials* pCredentials );
@@ -373,7 +401,9 @@ namespace sw
         uint64                        _authenticationFailureCount;
         uint64                        _replayRejectedCount;
         uint64                        _mismatchLogCount;
-        uint64                        _challengeSecret; ///< 서버 — 도전 값의 비밀 키(소금 씨앗에서) ///< 판 · 게임이 다른 요청 수 — 로그는 1 · 2 · 4 · 8 … 번째에만(요청 폭주가 로그를 메우지 않게)
+        uint64                        _challengeSecret;      ///< 서버 — 도전 값의 비밀 키(소금 씨앗에서) ///< 판 · 게임이 다른 요청 수 — 로그는 1 · 2 · 4 · 8 … 번째에만(요청 폭주가 로그를 메우지 않게)
+        float64                       _lastUpdateTime;       ///< 지난 `update` 의 시각 — 음수면 아직(가상 시계가 멈춘 시간을 잰다)
+        float64                       _nextDebuggerPollTime; ///< 디버거가 붙었는지 다시 물을 시각
         uint32                        _protocolID;
         atomic<uint32>                _updateDepth; ///< `update` 를 동시에 두 스레드가 부르는 실수를 잡는다
         int32                         _clientIndex;
@@ -381,5 +411,6 @@ namespace sw
         uint8                         _bServer;
         uint8                         _bConnectPending;
         uint8                         _bHasCredentials; ///< 클라이언트 — 자격을 내미는 연결(토큰 결속)
+        uint8                         _bDebugHold;      ///< 지금 디버거 대기를 알린다(데이터 패킷의 비트)
     };
 } // namespace sw

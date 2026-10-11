@@ -407,6 +407,26 @@ namespace sw
             return true;
         return errno == EPERM;
     }
+
+    bool Process::isDebuggerPresent()
+    {
+        // ptrace 로 붙은 디버거(gdb · lldb)는 /proc/self/status 의 TracerPid 에 pid 를 남긴다. 0 이면 아무도 붙지 않았다.
+        const int32 descriptor = ::open( "/proc/self/status", O_RDONLY | O_CLOEXEC );
+        if ( descriptor < 0 )
+            return false;
+        utf8          arrText[constant::kMaxBuffer4096]{};
+        const ssize_t readSize = ::read( descriptor, arrText, sizeof( arrText ) );
+        ::close( descriptor );
+        if ( readSize <= 0 )
+            return false;
+        const string_view text( arrText, static_cast<size_t>( readSize ) );
+        const string_view kField = "TracerPid:";
+        size_t            cursor = text.find( kField );
+        if ( cursor == string_view::npos )
+            return false;
+        cursor = text.find_first_not_of( " \t", cursor + kField.size() );
+        return cursor != string_view::npos && text[cursor] != '0' && text[cursor] != '\n';
+    }
 } // namespace sw
 
 #endif

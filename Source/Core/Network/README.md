@@ -100,6 +100,10 @@ py -3 -m Scripts test NetworkThreadTest.*
 키는 HKDF(공유 비밀, 솔트 = 세션 비밀)로 만들고, 데이터와 끊기 패킷은 AEAD로 암호화합니다. 토큰 결속(`INetConnectAuthenticator`, `NetConnectCredentials`)을 쓰면 세션 비밀의 증명 태그가 맞아야 자리를 잡습니다.
 인증기 없는 암호화는 개발 빌드에서만 허용하고, Shipping 서버는 listen에 실패합니다. 암호 구현은 `Security/INetSecurityProvider` 인터페이스 뒤에 있고, 구현체는 Engine의 OpenSSL 코드입니다.
 
+**디버거 대기.** 서버가 중단점에 멈추면 프로세스의 모든 스레드가 서므로 `NetHostThread` 도 유지 패킷을 못 보내고, 클라이언트는 5초 뒤 끊습니다.
+그래서 디버거가 붙은 호스트(`NetHostSettings::_debugHold`, 기본 `WhenDebuggerAttached`)는 데이터 패킷 몸 첫 비트로 그 사실을 알리고, 상대는 그 연결의 시간 초과를 `_debugHoldTimeoutSeconds`(기본 600초)로 늘립니다.
+멈췄던 쪽은 `update` 사이가 0.5초 넘게 벌어지면 그만큼 연결 시계를 밀어(가상 시계) 재개 직후 상대를 끊지 않습니다. 개발 빌드 전용이고, Shipping 은 알리지도 믿지도 않습니다.
+
 ### 메시지와 라우터
 
 `NetMessageWriter` 는 종류 바이트와 본문을 쓰고 버퍼를 다시 씁니다. `INetMessageHandler` 는 메시지 영역 하나와 그 안의 종류 마스크를 맡습니다.
@@ -197,6 +201,9 @@ RTT는 요청 패킷이 가장 새 확인으로 돌아올 때만 측정합니다
 
 **UDP 암호화는 협상하지 않습니다.** 암호화와 토큰 결속 여부를 프로토콜 id에 섞어, 한쪽만 다르면 `SecurityMismatch` 로 거절합니다. 평문으로 내려가는 경로가 없습니다.
 AEAD nonce는 방향별 IV XOR 64비트 패킷 번호입니다. 재전송 방지 창(1024)은 **복호가 통과한 뒤에** 표시합니다. 먼저 표시하면 위조 패킷이 진짜 번호를 써 버립니다.
+
+**시간 초과를 보는 테스트는 `_debugHold = NetDebugHold::Off` 로 두세요.** 기본값은 디버거가 붙으면 알림을 켜므로, 테스트를 디버거 아래에서 돌리면 멈춘 상대를 600초 동안 끊지 않아 시간 초과 단언이 집니다.
+반대로 "Shipping 은 알림을 믿지 않는다"를 지우면 비트를 켠 클라이언트가 서버 자리를 붙잡을 수 있습니다.
 
 **Windows UDP의 두 방어를 지우지 마세요.** `SIO_UDP_CONNRESET` 끄기와 받기 루프의 "오류는 건너뛰고 다음 것"을 둘 다 빼도 테스트는 통과합니다. 루프백 ICMP 리셋을 테스트가 재현하지 못하기 때문입니다.
 

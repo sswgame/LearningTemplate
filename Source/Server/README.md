@@ -59,6 +59,10 @@ curl -s http://127.0.0.1:9100/healthz   # ok
 **3단계 — 콘솔 명령을 씁니다.** 실행 중인 서버의 표준 입력에 `status` 를 치면 가동 시간, 틱 수, 틱 시간 평균과 최대, 버린 틱 수가 나옵니다. `quit` 이나 `stop` 은 정상 종료합니다.
 Dev 빌드는 개발 콘솔과 같은 명령(개발 명령, `gv_*` 전역 변수)도 받습니다.
 
+Dev 빌드는 게임 틱을 멈추는 명령도 받습니다. `pause` 는 틱을 멈추고, `step 3` 은 세 틱만 돌린 뒤 다시 멈추고, `resume` 은 다시 돕니다(로그 `Server paused at tick N`, `Server stepped to tick N (paused)`).
+디버거 없이 중단점처럼 서버를 세우는 길입니다. 멈춘 동안에도 콘솔, 종료 신호, 상태 확인 박동, 네트워크 스레드(`NetHostThread`)는 돌므로 클라이언트는 끊기지 않고 지연이 커진 것처럼 봅니다.
+디버거로 멈추면 네트워크 스레드도 서는데, 그때는 `NetHost` 의 디버거 대기가 연결을 지킵니다([Network README](../Core/Network/README.md) "디버거 대기").
+
 **4단계 — 배포 서버를 빌드합니다.** `Ninja-Shipping-Server` 프리셋은 서버만 빌드하고, 쿠킹도 서버 패키지 규칙으로 합니다.
 
 ```powershell

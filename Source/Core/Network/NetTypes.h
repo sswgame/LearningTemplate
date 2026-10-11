@@ -39,7 +39,7 @@ namespace sw
      */
     struct NetWireVersion
     {
-        static constexpr uint32 kCore = 5; ///< 5: 프로토콜 id 에 기능 마스크(암호화 · 토큰 결속), 암호화 패킷 배치
+        static constexpr uint32 kCore = 6; ///< 6: 데이터 패킷 몸 첫머리에 디버거 대기 1 비트(`NetDebugHold`)
 
         /** @brief 층들의 판을 값 하나로 섞습니다(FNV-1a — 순서도 섞인다). */
         static constexpr uint32 combine( std::initializer_list<uint32> listVersion )

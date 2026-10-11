@@ -98,8 +98,10 @@ namespace sw
         , _statusTickMaxNanoseconds{ 0 }
         , _statusTickSampleCount{ 0 }
         , _droppedTickCount{ 0 }
+        , _pendingStepCount{ 0 }
         , _bReady{ SW_FALSE }
         , _bSignalHandlerInstalled{ SW_FALSE }
+        , _bPaused{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -290,6 +292,15 @@ namespace sw
                 break;
             }
 
+            if ( _bPaused == SW_TRUE && _pendingStepCount == 0 )
+            {
+                // 일시정지 — 게임 틱만 멈춘다. 살아 있으니 상태 확인 박동은 계속(감시자가 재시작하지 않게), 재개 때 밀린 틱을 몰아 돌지 않게 마감을 지금으로.
+                _healthRegistry->markTick( ServerAppInternal::nowMonotonicMs() );
+                MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + _tickNanoseconds );
+                deadline = MonotonicClock::nowNanoseconds();
+                continue;
+            }
+
             const int64 tickStart = MonotonicClock::nowNanoseconds();
             tickOnce( deltaSeconds );
             const int64 tickTime = MonotonicClock::nowNanoseconds() - tickStart;
@@ -304,6 +315,8 @@ namespace sw
             _statusTickMaxNanoseconds = tickTime > _statusTickMaxNanoseconds ? tickTime : _statusTickMaxNanoseconds;
             ++_statusTickSampleCount;
             ++_tickCount;
+            if ( _bPaused == SW_TRUE && _pendingStepCount > 0 && --_pendingStepCount == 0 )
+                SW_LOG_INFO( "Server stepped to tick %# (paused)", _tickCount );
             if ( gv_serverExitAfterTicks > 0 && _tickCount >= static_cast<uint64>( gv_serverExitAfterTicks ) )
                 ShutdownSignal::request( ShutdownCause::TickLimit );
 
@@ -366,9 +379,12 @@ namespace sw
         }
         if ( command == "help" )
         {
-            SW_LOG_INFO( "Server commands: quit | stop | status | help%#", SW_DEV_COMMANDS_ENABLED ? " (Dev: dev commands and gv_* variables too)" : "" );
+            SW_LOG_INFO( "Server commands: quit | stop | status | help%#",
+                         SW_DEV_COMMANDS_ENABLED ? " (Dev: pause | resume | step [N], dev commands and gv_* variables too)" : "" );
             return;
         }
+        if ( executePauseCommand( command ) )
+            return;
 #if SW_DEV_COMMANDS_ENABLED
         // Dev 는 개발 콘솔과 같은 명령(개발 명령 · gv_* 전역 변수)을 받는다 — 답 · 실패는 DevConsole 이 로그에 남긴다. Shipping 서버는 위 넷뿐이다.
         if ( _devConsole != nullptr )
@@ -380,12 +396,51 @@ namespace sw
         SW_LOG_WARNING( "Unknown server command '%#' - type help", string( command ).c_str() );
     }
 
+    bool ServerApp::executePauseCommand( string_view command )
+    {
+#if SW_DEV_COMMANDS_ENABLED
+        if ( command == "pause" )
+        {
+            _bPaused          = SW_TRUE;
+            _pendingStepCount = 0;
+            SW_LOG_INFO( "Server paused at tick %#", _tickCount );
+            return true;
+        }
+        if ( command == "resume" )
+        {
+            _bPaused          = SW_FALSE;
+            _pendingStepCount = 0;
+            SW_LOG_INFO( "Server resumed at tick %#", _tickCount );
+            return true;
+        }
+        const string_view kStep = "step";
+        const bool        bStep = command.substr( 0, kStep.size() ) == kStep && ( command.size() == kStep.size() || command[kStep.size()] == ' ' );
+        if ( bStep == false )
+            return false;
+        int32             stepCount = 1;
+        const string_view argument  = StringUtil::trim( command.substr( kStep.size() ) );
+        if ( argument.empty() == false && ( StringUtil::parseInt( argument, stepCount ) == false || stepCount <= 0 ) )
+        {
+            SW_LOG_WARNING( "step takes a positive tick count - got '%#'", string( argument ).c_str() );
+            return true;
+        }
+        if ( _bPaused == SW_FALSE )
+            SW_LOG_INFO( "Server paused at tick %#", _tickCount );
+        _bPaused          = SW_TRUE; // 도는 중에 step 이면 멈추고 그만큼만 돈다
+        _pendingStepCount = static_cast<uint32>( stepCount );
+        return true;
+#else
+        (void)command;
+        return false;
+#endif
+    }
+
     void ServerApp::logStatus() const
     {
         const int64 uptimeSeconds = ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / constant::kNanosecondsPerSecond;
         const int64 averageMicro  = _statusTickSampleCount > 0 ? _statusTickSumNanoseconds / _statusTickSampleCount / 1000 : 0;
-        SW_LOG_INFO( "Dedicated server status - uptime %# s, tick %#, tick time avg %# us / max %# us (budget %# us), dropped ticks %#", uptimeSeconds, _tickCount,
-                     averageMicro, _statusTickMaxNanoseconds / 1000, _tickNanoseconds / 1000, _droppedTickCount );
+        SW_LOG_INFO( "Dedicated server status - uptime %# s, tick %#%#, tick time avg %# us / max %# us (budget %# us), dropped ticks %#", uptimeSeconds, _tickCount,
+                     _bPaused == SW_TRUE ? " (paused)" : "", averageMicro, _statusTickMaxNanoseconds / 1000, _tickNanoseconds / 1000, _droppedTickCount );
     }
 
     void ServerApp::shutdown()

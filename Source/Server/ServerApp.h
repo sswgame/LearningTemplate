@@ -9,6 +9,7 @@
  *          밀리면 `_maxCatchUpTicks` 까지 잠 없이 몰아 돌고 그 이상은 버린다(경고).
  *          운영 관측: 지표 등록부(`server_tick_seconds` · `server_dropped_ticks_total`)와 상태 확인(틱마다 박동, 종료 요청 때 비우는 중)을 늘 들고,
  *          설정의 `_opsPort` 가 0 이 아니면 운영 HTTP 끝점(`/metrics` · `/healthz` · `/readyz`, 기본 바인드 `127.0.0.1`)을 연다.
+ *          Dev 는 콘솔 `pause` · `resume` · `step [N]` 으로 게임 틱을 멈추고 한 틱씩 돌린다(디버거 없이 중단점처럼 — 네트워크 스레드는 계속 돌아 연결이 산다).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -69,6 +70,8 @@ namespace sw
         void               tickOnce( float32 deltaSeconds );
         /** @brief 콘솔 명령 한 줄을 이 스레드(게임 스레드)에서 처리합니다. */
         void executeCommand( string_view line );
+        /** @brief Dev 의 일시정지 명령(`pause` · `resume` · `step [N]`)이면 처리하고 true 입니다. Shipping 은 늘 false 입니다. */
+        bool executePauseCommand( string_view command );
         void logStatus() const;
 
     private:
@@ -96,9 +99,11 @@ namespace sw
         int64                             _statusTickMaxNanoseconds; ///< 틱 본문 시간 최대
         uint32                            _statusTickSampleCount;
         uint32                            _droppedTickCount; ///< 밀려 버린 틱 수(누적)
+        uint32                            _pendingStepCount; ///< 일시정지 중 더 돌 틱 수(`step N`)
 
         uint8                  _bReady                  : 1;
         uint8                  _bSignalHandlerInstalled : 1;
-        [[maybe_unused]] uint8 _reserved                : 6;
+        uint8                  _bPaused                 : 1; ///< Dev `pause` — 게임 틱을 멈춘다(콘솔 · 종료 신호 · 네트워크 스레드는 돈다)
+        [[maybe_unused]] uint8 _reserved                : 5;
     };
 } // namespace sw

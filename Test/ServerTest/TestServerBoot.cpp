@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Process/Process.h"
 #include "Core/Time/MonotonicClock.h"
@@ -135,6 +136,47 @@ SW_TEST_CASE( ServerBootTest, QuitCommandOnStandardInputStopsTheServer )
             { (void)process.writeInput( "status\nquit\n" ); } ); // 못 쓰면 서버가 끝나지 않아 아래 expectCleanExit 가 실패한다
     expectCleanExit( run, "ConsoleCommand" );
     SW_EXPECT_TRUE( run._output.find( "Dedicated server status" ) != string::npos );
+}
+
+/**
+ * @brief [ServerBootTest] Dev 의 pause 는 게임 틱을 멈추고 step N 은 정확히 N 틱만 돌린다(서버 디버깅 S2 — 디버거 없는 중단점)
+ * @details 멈춘 1 초 동안 틱이 돌았다면 step 뒤의 틱 번호가 멈춘 틱 + 3 보다 크다. 재개하면 틱 상한까지 돌아 스스로 끝난다.
+ */
+SW_TEST_CASE( ServerBootTest, PauseStopsTicksAndStepRunsExactlyN )
+{
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "pause and step are development-build console commands" );
+#else
+    if ( findServerPath().empty() )
+        SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
+    ProcessOptions options;
+    options._bPipeStandardInput = true;
+    const ServerRun run         = runServer( "-gv_serverExitAfterTicks=120", options, []( Process& process )
+            {
+        (void)process.writeInput( "pause\n" ); // 못 쓰면 멈춘 줄이 없어 아래 단언이 실패한다
+        std::this_thread::sleep_for( std::chrono::seconds( 1 ) );
+        (void)process.writeInput( "step 3\n" ); // 못 쓰면 한 틱 진행 줄이 없어 아래 단언이 실패한다
+        std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
+        (void)process.writeInput( "status\nresume\n" ); // 못 쓰면 서버가 멈춘 채 끝나지 않아 expectCleanExit 가 실패한다
+    } );
+    expectCleanExit( run, "TickLimit" );
+    const string pausedLine  = "Server paused at tick ";
+    const string steppedLine = "Server stepped to tick ";
+    const size_t pausedAt    = run._output.find( pausedLine );
+    const size_t steppedAt   = run._output.find( steppedLine );
+    SW_ASSERT_TRUE_MSG( pausedAt != string::npos && steppedAt != string::npos, "the server did not report pause and step" );
+    int64 pausedTick  = -1;
+    int64 steppedTick = -1;
+    SW_ASSERT_TRUE( StringUtil::parseInt64( StringUtil::trim( run._output.substr( pausedAt + pausedLine.size(), run._output.find( '\n', pausedAt ) - pausedAt - pausedLine.size() ) ),
+                                            pausedTick ) );
+    const size_t steppedEnd = run._output.find( ' ', steppedAt + steppedLine.size() );
+    SW_ASSERT_TRUE( StringUtil::parseInt64( run._output.substr( steppedAt + steppedLine.size(), steppedEnd - steppedAt - steppedLine.size() ), steppedTick ) );
+    SW_EXPECT_EQUAL( pausedTick + 3, steppedTick );
+    const size_t statusAt = run._output.find( "Dedicated server status" );
+    SW_ASSERT_TRUE( statusAt != string::npos );
+    SW_EXPECT_TRUE( run._output.substr( statusAt, run._output.find( '\n', statusAt ) - statusAt ).find( "(paused)" ) != string::npos );
+    SW_EXPECT_TRUE( run._output.find( "Server resumed at tick" ) != string::npos );
+#endif
 }
 
 /**
