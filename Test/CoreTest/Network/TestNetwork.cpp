@@ -1047,8 +1047,8 @@ SW_TEST_CASE( NetworkTest, UDPTransportSendsDatagramsOverLocalhost )
 {
     UDPNetTransport server;
     UDPNetTransport client;
-    SW_ASSERT_TRUE( server.open( 0 ) );
-    SW_ASSERT_TRUE( client.open( 0 ) );
+    SW_ASSERT_TRUE( server.open( 0, true ) );
+    SW_ASSERT_TRUE( client.open( 0, true ) );
     const NetAddress serverAddress = server.getLocalAddress();
     SW_EXPECT_TRUE( serverAddress._port != 0 );
     const uint8 arrData[5] = { 1, 2, 3, 4, 5 };
@@ -1072,7 +1072,7 @@ SW_TEST_CASE( NetworkTest, UDPTransportSendsDatagramsOverLocalhost )
     NetAddress closedAddress{};
     {
         UDPNetTransport closed;
-        SW_ASSERT_TRUE( closed.open( 0 ) );
+        SW_ASSERT_TRUE( closed.open( 0, true ) );
         closedAddress = closed.getLocalAddress();
     }
     SW_ASSERT_TRUE( client.send( closedAddress, arrData, 5 ) );

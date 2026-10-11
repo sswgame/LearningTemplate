@@ -51,6 +51,7 @@ namespace sw
         NetAddress      _serverAddress{}; ///< 클라이언트 — 붙을 서버
         uint16          _listenPort{ 0 }; ///< 서버 — 열 UDP 포트
         GameNetRole     _role{ GameNetRole::None };
+        bool            _bLoopbackOnly{ true }; ///< 이 기계의 상대만 받는다 — 개발 실행의 기본. 다른 기계와 하려면 `gv_netLoopbackOnly=0`
     };
 } // namespace sw
 

@@ -2597,6 +2597,14 @@
    "source": "Source/GameFramework/Base/Foundation/Framework/Net/GameNetSession.cpp"
   },
   {
+   "name": "gv_netLoopbackOnly",
+   "type": "bool",
+   "default": "true",
+   "kind": "시험",
+   "description": "게임 UDP 소켓을 127.0.0.1 에만 묶는다 (0=모든 인터페이스, 다른 기계와 붙을 때)",
+   "source": "Source/GameFramework/Base/Foundation/Framework/Net/GameNetSession.cpp"
+  },
+  {
    "name": "gv_nileAutoPlay",
    "type": "int32",
    "default": "0",

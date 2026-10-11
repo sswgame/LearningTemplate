@@ -95,7 +95,7 @@ namespace
     {
         using Internal = NetUDPBenchInternal;
         UDPNetTransport serverSocket;
-        if ( serverSocket.open( 0 ) == false )
+        if ( serverSocket.open( 0, true ) == false )
             return false;
         CountingTransport serverTransport( &serverSocket );
         NetHostSettings   settings;
@@ -111,7 +111,7 @@ namespace
         for ( int32 index = 0; index < clientCount; ++index )
         {
             unique_ptr<BenchClient> client = make_unique<BenchClient>();
-            if ( client->_transport.open( 0 ) == false )
+            if ( client->_transport.open( 0, true ) == false )
             {
                 SW_LOG_WARNING( "Opened only %# client sockets of %# - raise the descriptor limit (Linux: ulimit -n 8192)", index, clientCount );
                 return false;

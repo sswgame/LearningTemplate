@@ -315,8 +315,8 @@ SW_TEST_CASE( NetworkThreadTest, UDPHostsRunOnThreadsOverLocalhost )
 {
     UDPNetTransport serverTransport;
     UDPNetTransport clientTransport;
-    SW_ASSERT_TRUE( serverTransport.open( 0 ) );
-    SW_ASSERT_TRUE( clientTransport.open( 0 ) );
+    SW_ASSERT_TRUE( serverTransport.open( 0, true ) );
+    SW_ASSERT_TRUE( clientTransport.open( 0, true ) );
     NetHost server;
     NetHost client;
     server.initialize( &serverTransport, NetHostSettings{} );

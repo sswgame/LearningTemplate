@@ -134,7 +134,7 @@ namespace sw::editor
     uint16 EditorNetPlaySession::findFreeUDPPort()
     {
         UDPNetTransport probe;
-        if ( probe.open( 0 ) == false )
+        if ( probe.open( 0, true ) == false )
             return 0;
         const uint16 port = probe.getLocalAddress()._port;
         probe.close();

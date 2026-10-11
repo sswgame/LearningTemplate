@@ -24,8 +24,11 @@ namespace sw
 
         /** @brief 소켓 라이브러리를 엽니다(Windows 만 실제로 한다). 여러 번 불러도 됩니다. */
         [[nodiscard]] static bool initialize();
-        /** @brief 논블로킹 UDP 소켓을 @p port 에 엽니다(0 = 아무 포트). 실패하면 `kInvalidSocket` 입니다. */
-        static uint64 openUDPSocket( uint16 port );
+        /**
+         * @brief 논블로킹 UDP 소켓을 @p port 에 엽니다(0 = 아무 포트). 실패하면 `kInvalidSocket` 입니다.
+         * @param bLoopbackOnly true 이면 127.0.0.1 에만 묶는다 — 모든 인터페이스에 묶으면 Windows 방화벽이 실행 파일마다 허용 창을 띄운다.
+         */
+        static uint64 openUDPSocket( uint16 port, bool bLoopbackOnly );
         static void   closeSocket( uint64 socketHandle );
         /** @brief 실제로 묶인 포트입니다(0 으로 열었을 때). */
         static uint16              getBoundPort( uint64 socketHandle );

@@ -62,7 +62,7 @@ namespace sw
 #endif
     }
 
-    uint64 PlatformSocketUtil::openUDPSocket( uint16 port )
+    uint64 PlatformSocketUtil::openUDPSocket( uint16 port, bool bLoopbackOnly )
     {
         if ( initialize() == false )
             return kInvalidSocket;
@@ -72,7 +72,7 @@ namespace sw
         sockaddr_in local{};
         local.sin_family      = AF_INET;
         local.sin_port        = htons( port );
-        local.sin_addr.s_addr = htonl( INADDR_ANY );
+        local.sin_addr.s_addr = htonl( bLoopbackOnly ? INADDR_LOOPBACK : INADDR_ANY );
         bool bOk              = bind( native, reinterpret_cast<const sockaddr*>( &local ), sizeof( local ) ) == 0;
         // 서버는 한 틱에 여러 연결의 패킷이 몰린다 — 기본 버퍼(리눅스 208 KB · Windows 64 KB)가 넘치면 커널이 조용히 버린다. 실패해도 계속한다.
         const int32 bufferSize = 1 << 20;

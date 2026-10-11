@@ -14,10 +14,10 @@ namespace sw
 
     UDPNetTransport::~UDPNetTransport() { close(); }
 
-    bool UDPNetTransport::open( uint16 port )
+    bool UDPNetTransport::open( uint16 port, bool bLoopbackOnly )
     {
         close();
-        _socketHandle = PlatformSocketUtil::openUDPSocket( port );
+        _socketHandle = PlatformSocketUtil::openUDPSocket( port, bLoopbackOnly );
         if ( _socketHandle == PlatformSocketUtil::kInvalidSocket )
             return false;
         _localAddress = NetAddress::makeLoopback( PlatformSocketUtil::getBoundPort( _socketHandle ) );

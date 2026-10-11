@@ -21,7 +21,7 @@ namespace
     uint16 findFreePort()
     {
         UDPNetTransport probe;
-        if ( probe.open( 0 ) == false )
+        if ( probe.open( 0, true ) == false )
             return 0;
         const uint16 port = probe.getLocalAddress()._port;
         probe.close();
@@ -84,7 +84,7 @@ SW_TEST_CASE( GameNetSessionTest, ClientRetriesUntilTheServerStarts )
 SW_TEST_CASE( GameNetSessionTest, ServerOnAPortInUseStaysInactive )
 {
     UDPNetTransport holder;
-    SW_ASSERT_TRUE( holder.open( 0 ) );
+    SW_ASSERT_TRUE( holder.open( 0, true ) );
     GameNetSessionParams params;
     params._role       = GameNetRole::Server;
     params._listenPort = holder.getLocalAddress()._port;

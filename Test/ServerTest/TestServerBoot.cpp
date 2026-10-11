@@ -246,7 +246,7 @@ SW_TEST_CASE( ServerBootTest, NetListenPortAcceptsAClientFromAnotherProcess )
     uint16 port = 0;
     {
         UDPNetTransport probe; // 비어 있는 포트를 고른다 — 닫은 뒤 서버가 연다
-        SW_ASSERT_TRUE( probe.open( 0 ) );
+        SW_ASSERT_TRUE( probe.open( 0, true ) );
         port = probe.getLocalAddress()._port;
         probe.close();
     }
@@ -258,7 +258,7 @@ SW_TEST_CASE( ServerBootTest, NetListenPortAcceptsAClientFromAnotherProcess )
         UDPNetTransport transport;
         NetHost         client;
         NetHostThread   thread;
-        if ( transport.open( 0 ) )
+        if ( transport.open( 0, true ) )
         {
             client.initialize( &transport, NetHostSettings{} );
             TaskFuture<NetConnectResult> future = client.connectAsync( NetAddress::makeLoopback( port ) );

@@ -19,8 +19,8 @@ namespace sw
         UDPNetTransport( const UDPNetTransport& )            = delete;
         UDPNetTransport& operator=( const UDPNetTransport& ) = delete;
 
-        /** @brief 포트를 엽니다(0 = 아무 포트 — 클라이언트). */
-        [[nodiscard]] bool open( uint16 port );
+        /** @brief 포트를 엽니다(0 = 아무 포트 — 클라이언트). @p bLoopbackOnly 가 true 이면 이 기계(127.0.0.1)의 상대만 받는다 — 시험 · 개발 실행용. */
+        [[nodiscard]] bool open( uint16 port, bool bLoopbackOnly );
         void               close();
         bool               isOpen() const;
 

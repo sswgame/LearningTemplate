@@ -215,6 +215,7 @@
 | `gv_firstScene` | `string` | — | 시험 · 배포본에도 | 팩 설정의 시작 씬 대신 처음 열 씬의 리소스 경로 (비우면 사용 안 함) | [GameInstanceBase.cpp](../../Source/GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.cpp) |
 | `gv_netConnectAddress` | `string` | — | 시험 | 클라이언트로 붙을 게임 서버 주소 (주소:포트, 비면 끄기) | [GameNetSession.cpp](../../Source/GameFramework/Base/Foundation/Framework/Net/GameNetSession.cpp) |
 | `gv_netListenPort` | `int32` | `0` | 시험 | 게임 네트워크 서버로 열 UDP 포트 (0=끄기) | [GameNetSession.cpp](../../Source/GameFramework/Base/Foundation/Framework/Net/GameNetSession.cpp) |
+| `gv_netLoopbackOnly` | `bool` | `true` | 시험 | 게임 UDP 소켓을 127.0.0.1 에만 묶는다 (0=모든 인터페이스, 다른 기계와 붙을 때) | [GameNetSession.cpp](../../Source/GameFramework/Base/Foundation/Framework/Net/GameNetSession.cpp) |
 | `gv_scheduleTrace` | `string` | — | 시험 | Schedule: log the why-am-I-here trace and today's timeline of this NPC id (* = all) when the value changes | [ScheduleSystem.cpp](../../Source/GameFramework/Base/Actor/AI/Schedule/ScheduleSystem.cpp) |
 
 ## `Source/Games/AbilityArena`
