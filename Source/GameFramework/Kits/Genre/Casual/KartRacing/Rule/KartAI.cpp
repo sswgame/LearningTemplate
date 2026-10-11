@@ -22,7 +22,7 @@ namespace sw
         const float32 speed     = MathUtil::max( 0.0f, motor.getForwardSpeed() );
         const float32 lookAhead = _settings._lookAheadBase + _settings._lookAheadPerSpeed * speed;
 
-        // 1) 앞 곡선 — 도는 쪽 안으로 레이싱 라인을 붙인다(오른쪽으로 돌면 오른쪽 +).
+        // 1) 앞 곡선: 도는 쪽 안으로 레이싱 라인을 붙인다(오른쪽으로 돌면 오른쪽 +).
         const float32 corner      = track.computeHeadingChange( trackDistance, _settings._cornerLookAhead );
         const float32 cornerRatio = _settings._cornerAngle > 0.0f ? MathUtil::clamp( corner / _settings._cornerAngle, -1.0f, 1.0f ) : 0.0f;
         const float32 lineOffset  = cornerRatio * _settings._racingLine * track.getWidth() * 0.5f;
@@ -35,11 +35,11 @@ namespace sw
         const float32        error  = MathUtil::wrapAngle( aimYaw - motor.getYaw() );
         input._steer                = MathUtil::clamp( error * _settings._steerGain, -1.0f, 1.0f );
 
-        // 2) 페달 — 아주 급한 곡선만 늦춘다.
+        // 2) 페달: 아주 급한 곡선에서만 늦춘다.
         const float32 absCorner = MathUtil::abs( corner );
         input._throttle         = absCorner > _settings._brakeAngle ? 0.4f : 1.0f;
 
-        // 3) 드리프트 — 큰 곡선 앞에서 그 쪽으로 걸고, 곡선이 펴지면 놓는다(미니터보를 받는다).
+        // 3) 드리프트: 큰 곡선 앞에서 그쪽으로 걸고, 곡선이 펴지면 놓는다(미니터보를 받는다).
         const float32 driftMinSpeed = motor.getSettings()._driftMinSpeed;
         const int32   cornerSide    = corner > 0.0f ? 1 : -1;
         if ( _driftSide == 0 )
@@ -58,7 +58,7 @@ namespace sw
         if ( _driftSide != 0 )
         {
             input._bDriftHeld = SW_TRUE;
-            // 걸 때는 그 쪽으로 꺾어야 걸린다. 걸린 뒤의 조향은 조이기 · 풀기라 오차를 그대로 쓴다.
+            // 걸 때는 그쪽으로 꺾어야 걸린다. 건 뒤의 조향은 조이기와 풀기이므로 오차를 그대로 쓴다.
             if ( motor.isDrifting() == false )
                 input._steer = static_cast<float32>( _driftSide );
         }
