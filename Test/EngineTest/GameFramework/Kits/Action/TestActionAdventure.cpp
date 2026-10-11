@@ -465,11 +465,13 @@ SW_TEST_CASE( ActionAdventureTest, FireSpreadsDownwindAndBurnsOut )
     {
         gridA.step();
     }
+    // 갱신마다 돈 걸음 수를 남긴다 — 걸음 수가 어긋나면 몇 번째 갱신이 빠졌는지 메시지에 보인다.
+    utf8 arrStepsPerUpdate[64]{};
     for ( int32 tick = 0; tick < 12; ++tick )
     {
-        (void)gridB.update( 0.125f );
+        arrStepsPerUpdate[tick] = static_cast<utf8>( '0' + gridB.update( 0.125f ) );
     }
-    SW_EXPECT_EQUAL( gridA.getStepCount(), gridB.getStepCount() );
+    SW_EXPECT_TRUE_MSG( gridA.getStepCount() == gridB.getStepCount(), arrStepsPerUpdate );
     SW_EXPECT_EQUAL( gridA.computeStateHash(), gridB.computeStateHash() );
 
     // 바람이 없으면 불은 사방 — 거슬러 오는 쪽 풀도 옆의 나무도 탄다.

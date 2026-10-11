@@ -15,7 +15,7 @@
   새로 나온 Windows Debug `DelayLoadBindTest`(`GF_Mailbox.dll` 지연 임포트 미결속)는 로컬에서 통과한다 — 다시 나오면 원인을 판다. 끝난 워크트리(locA~commentpass)는 지웠다.
   **아직 남은 리눅스 실패**(원인 불명): `UIOptionsMenuTest.RebindIgnoresUIActionsWhileListening`(포커스 위젯 ID 839 ≠ 823, Debug · Shipping · ASan — 다음 CI 에서 실패 메시지가 포커스 위젯 이름을 보인다),
   `GameObjectTest.ApplyTransformBatchMatchesSetters` 와 `LoaderFuzzTest` 에서 멈춤(Linux Debug 조각이 그 시험 중에 끝났다), ASan 중단 두 건(`PlatformLoginTest.Oidc…` · `NetRequestTest.IdempotentRetry…`).
-  Windows STL containers 잡은 sw 할당자 · 기록 해시에 기대는 시험 셋(`MemoryTagTest` 둘 · `DestructionDamageTest.EventLogHash…`)을 건너뛰게 했다. 같은 시험이 기본 컨테이너 구성에서 가끔 지는지는 지켜본다(Windows Debug 잡의 `ActionAdventure` · `ActionCombat` · `ActionPlatformer` 실패는 한 번 있었고 다음 실행에서 사라졌다).
+  Windows STL containers 잡은 sw 할당자 · 기록 해시에 기대는 시험 셋(`MemoryTagTest` 둘 · `DestructionDamageTest.EventLogHash…`)을 건너뛰게 했다. 같은 시험이 기본 컨테이너 구성에서 가끔 지는지는 지켜본다. Windows Debug · STL 잡의 액션 키트 시험 실패는 일회성이 아니라 네 실행 연속으로 나는 간헐 실패다 — 백로그 "CI Windows Debug · STL 잡에서 액션 키트 시험 넷이 자주 진다" 항목.
 - **못 한 것**: 리눅스(CI 로), 실제 RenderDoc 캡처(이 PC 에 없다), 단언 대화상자 세 단추(모달), Tracy 0.14.1 뷰어 연결, 배율 1.5 · 2 에디터, Dialogue Graph 첫 열기, 리눅스 RPATH.
 - 최근에 들어간 것: 이름 정리(`ResourceUtil` → `ResourcePaths` + `ResourceIO`, `EditorUtil` 경로 → `EditorPaths`, `Misc` → `None`, `CameraShakeRequest.h`, `_sizeBytes`),
   트레이스 내보내기 X1 · X2(`ProfilerTraceExport`, `profile.trace save | record`, 에디터 Save Trace, Shipping 제외 매크로 `SW_PROFILER_TRACE_ENABLED`). 마지막 커밋 `d5cc62f1e` 는 아직 push 하지 않았다.

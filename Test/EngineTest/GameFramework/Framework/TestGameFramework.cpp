@@ -1591,9 +1591,22 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterCatalogAndStats )
     SW_EXPECT_EQUAL( 100, stats.getMaxHp() );
     SW_EXPECT_FALSE( stats.isDead() );
 
+    // 피해 전 무적 시간은 0 이어야 한다. 지면 메시지에 무적 시간(값과 비트) · 객체 주소 · 소유자 · 사망 표시를 남긴다(첫 피해만 막히는 실패를 가린다).
+    const TypeInfo*     pStatsTypeInfo   = engine::getTypeRegistry().findType( hashed_string( "sw::UnitStatsComponent" ) );
+    const PropertyInfo* pInvincibleTimer = ( pStatsTypeInfo != nullptr ) ? pStatsTypeInfo->findProperty( hashed_string( "_invincibilityTime" ) ) : nullptr;
+    SW_ASSERT_NOT_NULL( pInvincibleTimer );
+    const float32 invincibilityBeforeHit = pInvincibleTimer->getValue<float32>( &stats );
+    uint32        invincibilityBits      = 0;
+    std::memcpy( &invincibilityBits, &invincibilityBeforeHit, sizeof( invincibilityBits ) );
+    utf8 arrStateBeforeHit[192]{};
+    (void)std::snprintf( arrStateBeforeHit, sizeof( arrStateBeforeHit ), "before hit: invincibility %.9g (0x%08x), stats %p, owner %p, dead %d, defense %d",
+                         static_cast<float64>( invincibilityBeforeHit ), invincibilityBits, static_cast<const void*>( &stats ), static_cast<const void*>( stats.getOwner() ),
+                         stats.isDead() ? 1 : 0, stats.getDefense() );
+    SW_EXPECT_TRUE_MSG( invincibilityBeforeHit == 0.0f && stats.getOwner() == nullptr, arrStateBeforeHit );
+
     // 25 대미지 (방어력 5 적용 -> 실 대미지 20, 남은 HP 80)
     stats.takeDamage( 25 );
-    SW_EXPECT_EQUAL( 80, stats.getHp() );
+    SW_EXPECT_TRUE_MSG( stats.getHp() == 80, arrStateBeforeHit );
 
     // 10 회복 -> HP 90
     stats.heal( 10 );
