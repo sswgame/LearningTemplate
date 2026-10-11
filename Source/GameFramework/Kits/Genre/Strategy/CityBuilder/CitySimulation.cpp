@@ -302,7 +302,7 @@ namespace sw
 
     void CitySimulation::refreshAccess( CityBuilding& building ) const
     {
-        // 둘레 한 칸 안의 도로를 찾는다(대각선은 제외). 집은 파라오처럼 두 칸 안이면 된다.
+        // 둘레 한 셀 안의 도로를 찾는다(대각선은 제외). 집은 파라오처럼 두 셀 안이면 된다.
         building._accessTile  = int2{ -1, -1 };
         const int32 size      = building._pDef->_size;
         const int32 reach     = building.isHouse() ? 2 : 1;

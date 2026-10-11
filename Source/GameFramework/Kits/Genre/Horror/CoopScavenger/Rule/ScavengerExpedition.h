@@ -99,7 +99,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 빌려 쓰는 데이터 묶음입니다. 카탈로그 말고는 없어도 되며, 없으면 날씨, 위협, 상점이 빠집니다. */
+    /** @brief 빌려 쓰는 데이터 번들입니다. 카탈로그 말고는 없어도 되며, 없으면 날씨, 위협, 상점이 빠집니다. */
     struct ScavengerExpeditionData
     {
         const ScavengerCatalog* _pCatalog{ nullptr };

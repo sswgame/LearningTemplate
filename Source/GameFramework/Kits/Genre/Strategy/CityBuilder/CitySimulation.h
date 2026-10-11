@@ -189,7 +189,7 @@ namespace sw
          */
         void settleMonth( bool bNewYear );
 
-        /** @brief 도로 한 칸을 깝니다. 공유 땅이 남의 것이면 `Occupied` 를 반환합니다. */
+        /** @brief 도로 한 셀을 깝니다. 공유 땅이 남의 것이면 `Occupied` 를 반환합니다. */
         CityPlaceResult placeRoad( int32 x, int32 y );
         /** @brief 두 지점 사이에 ㄱ 자 도로를 깝니다(먼저 X, 다음 Y). 깐 셀 수를 반환합니다. */
         int32 placeRoadLine( const int2& from, const int2& to );

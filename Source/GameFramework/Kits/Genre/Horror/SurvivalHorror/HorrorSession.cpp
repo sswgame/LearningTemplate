@@ -260,7 +260,7 @@ namespace sw
         }
         if ( bAllFit == false )
         {
-            // 결과가 다 들어가지 않으면 없던 일로 한다. 넣은 결과를 빼고 재료를 돌려놓는다(재료가 비운 자리이므로 항상 들어간다).
+            // 결과가 다 들어가지 않으면 없던 일로 한다. 넣은 결과를 빼고 재료를 돌려놓는다(재료가 비운 슬롯이므로 항상 들어간다).
             for ( size_t outputIndex = 0; outputIndex < listOutput.size(); ++outputIndex )
             {
                 if ( listAdded[outputIndex] > 0 )

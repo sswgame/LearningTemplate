@@ -1,6 +1,6 @@
 /**
  * @file PartyRoundSeries.h
- * @brief 파티 게임의 라운드 묶음을 진행합니다. 라운드 목록(미니 게임, 시간, 점수 제한)을 차례로 돌리고, 라운드 순위로 점수표에 점수를 쌓아 먼저 N 점에 닿은 사람이 우승합니다.
+ * @brief 파티 게임의 라운드 시리즈을 진행합니다. 라운드 목록(미니 게임, 시간, 점수 제한)을 차례로 돌리고, 라운드 순위로 점수표에 점수를 쌓아 먼저 N 점에 닿은 사람이 우승합니다.
  * @details 라운드 안에서 무슨 일이 있었는지는 모른다. 미니 게임이 라운드 점수(사람 순서)를 넘기면 순위를 매겨 순위 점수를 준다.
  *          같은 라운드 점수는 같은 순위이고 같은 순위 점수이다. 한 라운드에 여럿이 목표에 닿으면 총점이 가장 높은 한 명이 우승하고,
  *          그 총점도 같으면 아무도 우승하지 않고 다음 라운드로 간다(서든 데스). 점수표는 기반 `RoundSeries` 가 가지고 있고, 이 클래스는 라운드 목록, XML, 이벤트를 가진다.
@@ -31,7 +31,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 라운드 묶음에서 일어난 일을 알리는 이벤트입니다. */
+    /** @brief 라운드 시리즈에서 일어난 일을 알리는 이벤트입니다. */
     struct PartySeriesEvent
     {
         enum class Kind : uint8
@@ -92,7 +92,7 @@ namespace sw
         void                         pushEvent( PartySeriesEvent::Kind kind, int32 player, int32 value, int32 points );
 
         vector<PartyRoundDef>         _listRound;
-        RoundSeriesSettings           _seriesSettings; ///< 다음 `start` 가 묶음에 넘길 순위 점수, 목표, 동점 규칙(서든 데스)이다
+        RoundSeriesSettings           _seriesSettings; ///< 다음 `start` 가 시리즈에 넘길 순위 점수, 목표, 동점 규칙(서든 데스)이다
         RoundSeries                   _series;
         EventBuffer<PartySeriesEvent> _eventBuffer;
     };

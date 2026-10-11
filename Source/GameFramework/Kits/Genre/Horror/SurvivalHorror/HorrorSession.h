@@ -110,9 +110,9 @@ namespace sw
         const GridInventory& getInventory() const { return *_pInventory; }
         /** @brief 가방 슬롯 하나에서 @p count 개를 상자로 넣습니다. 모자라면 false 를 반환합니다. */
         [[nodiscard]] bool storeInBox( int32 instanceID, int32 count );
-        /** @brief 상자에서 꺼내 가방에 넣고 넣은 개수를 반환합니다(자리가 모자란 만큼은 상자에 남습니다). */
+        /** @brief 상자에서 꺼내 가방에 넣고 넣은 개수를 반환합니다(슬롯이 모자란 만큼은 상자에 남습니다). */
         int32 takeFromBox( const hashed_string& itemID, int32 count );
-        /** @brief 두 슬롯의 아이템을 하나씩 써서 섞습니다(약초, 화약). 레시피가 없거나 결과를 둘 자리가 없으면 아무것도 바꾸지 않고 false 를 반환합니다. */
+        /** @brief 두 슬롯의 아이템을 하나씩 써서 섞습니다(약초, 화약). 레시피가 없거나 결과를 둘 슬롯이 없으면 아무것도 바꾸지 않고 false 를 반환합니다. */
         [[nodiscard]] bool combineItems( int32 firstInstanceID, int32 secondInstanceID );
 
         // ── 자원 ──────────────────────────────────────────────────────────

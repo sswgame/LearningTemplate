@@ -196,7 +196,7 @@ namespace sw
         if ( count > faceUp )
             return false; // 뒤집힌 패는 옮길 수 없다
         const int32 baseIndex = from.getCount() - count;
-        // 옮기는 묶음도 색이 번갈아 가며 하나씩 내려가야 한다. 앞면이면 항상 그렇지만, 상태를 그대로 받은 판을 위해 확인한다.
+        // 옮기는 카드 그룹도 색이 번갈아 가며 하나씩 내려가야 한다. 앞면이면 항상 그렇지만, 상태를 그대로 받은 판을 위해 확인한다.
         for ( int32 index = baseIndex + 1; index < from.getCount(); ++index )
         {
             const Card& upper = from.getAt( index );
