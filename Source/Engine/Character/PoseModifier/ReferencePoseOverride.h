@@ -1,8 +1,8 @@
 /**
  * @file ReferencePoseOverride.h
- * @brief 스켈레톤 레퍼런스 포즈 덮어쓰기(`*.refpose.xml`) — 본별 위치 · 회전 · 스케일과 좌우 대칭 짝입니다.
+ * @brief 스켈레톤 레퍼런스 포즈 덮어쓰기(`*.refpose.xml`)입니다. 본별 위치, 회전, 스케일과 좌우 대칭 쌍을 담습니다.
  * @details 스켈레톤은 glTF 에서 다시 임포트되는 산출물이라 고치면 재임포트가 지웁니다. 그래서 레퍼런스 포즈 편집은 소켓처럼 **따로 둔 덮어쓰기
- *          데이터**입니다(계층 추가 · 삭제는 DCC 몫). 적은 칸만 바꿉니다(위치만 적으면 회전 · 스케일은 임포트 값).
+ *          데이터**입니다. 계층 추가와 삭제는 DCC 에서 합니다. 적은 필드만 바꿉니다(위치만 적으면 회전과 스케일은 임포트 값을 씁니다).
  *
  *          XML 예:
  *          @code
@@ -29,7 +29,7 @@ namespace sw
     class CharacterDataReader;
     class XMLNode;
 
-    /** @brief 본 하나의 덮어쓰기입니다. `_fieldMask` 는 적은 칸(1 위치 · 2 회전 · 4 스케일)입니다. */
+    /** @brief 본 하나의 덮어쓰기입니다. `_fieldMask` 는 적은 필드를 나타냅니다(1 위치, 2 회전, 4 스케일). */
     struct SW_API BoneOverride
     {
         static constexpr uint8 kTranslationBit = 1u << 0;
@@ -67,7 +67,7 @@ namespace sw
         /** @brief XML 텍스트로 씁니다. */
         string saveToXMLText() const;
 
-        /** @brief 본 덮어쓰기를 더합니다(같은 본이면 적은 칸을 합칩니다). */
+        /** @brief 본 덮어쓰기를 추가합니다(같은 본이면 적은 필드를 합칩니다). */
         void setOverride( const BoneOverride& boneOverride );
         /** @brief 본의 덮어쓰기입니다. 없으면 nullptr 입니다. */
         const BoneOverride* findOverride( const hashed_string& bone ) const;
@@ -80,7 +80,7 @@ namespace sw
          * @return 짝이나 원본 덮어쓰기가 없으면 false 입니다.
          */
         bool mirrorOverride( const hashed_string& sourceBone );
-        /** @brief 덮어쓰기 · 짝의 본 이름이 @p bones 에 모두 있으면 true, 아니면 오류 글을 더하고 false 입니다. */
+        /** @brief 덮어쓰기와 쌍의 본 이름이 @p bones 에 모두 있으면 true 를 반환하고, 아니면 오류 문장을 추가하고 false 를 반환합니다. */
         bool validateBones( const CharacterBoneArray& bones, string* pOutError ) const;
         /** @brief 본 배열의 로컬 변환에 덮어쓰기를 적용하고 모델 변환을 다시 계산합니다. */
         void apply( CharacterBoneArray& inoutBones ) const;

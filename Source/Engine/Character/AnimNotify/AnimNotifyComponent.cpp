@@ -43,7 +43,7 @@ namespace sw
         , _bPendingFrame{ SW_FALSE }
         , _bPendingRestarted{ SW_FALSE }
     {
-        // 애니메이터가 부른다 — 자기 틱은 없다.
+        // 애니메이터가 호출한다. 자기 틱은 없다.
         setCanEverTick( false );
     }
 
@@ -139,7 +139,7 @@ namespace sw
 
     void AnimNotifyComponent::deferFrame( const AnimNotifyFrame& frame )
     {
-        // 워커(스프라이트 틱) — 베껴 두고 틱 뒤 게임 스레드에서 처리한다. 같은 오브젝트의 틱은 한 워커가 돌아 이 칸을 다른 워커가 만지지 않는다.
+        // 워커(스프라이트 틱)에서는 복사해 두고 틱 뒤 게임 스레드에서 처리한다. 같은 오브젝트의 틱은 한 워커가 돌므로 이 슬롯을 다른 워커가 만지지 않는다.
         _listPendingFired.assign( frame._listFired.begin(), frame._listFired.end() );
         _listPendingActive.assign( frame._listActivePlayable.begin(), frame._listActivePlayable.end() );
         _pendingDeltaSeconds        = frame._deltaSeconds;
@@ -226,14 +226,14 @@ namespace sw
     void AnimNotifyComponent::processFrame( const AnimNotifyFrame& frame )
     {
         _listAction.clear();
-        // 표 파일을 고쳤으면 — 열린 구간을 옛 줄(베낀 것)로 닫고 새 표로 잇는다.
+        // 테이블 파일을 고쳤으면 열린 구간을 이전 항목(복사해 둔 것)으로 닫고 새 테이블로 이어 간다.
         if ( _notifyTablePath.empty() == false && _seenTableReloadCount != AnimNotifyTableCache::getReloadCount() )
             loadNotifyTable();
 
-        // 0) 재생할 것이 바뀌었다(스프라이트가 같은 객체를 다른 구간으로) — 옛 구간의 열린 알림은 모두 끊긴 것이다.
+        // 0) 재생할 것이 바뀌었다(스프라이트가 같은 객체를 다른 구간으로 재생한다). 이전 구간의 열린 알림은 모두 끊긴 것이다.
         if ( frame._bRestarted == SW_TRUE )
             closeAllStates();
-        // 1) 클립이 재생에서 빠진 구간은 끊긴 것이다 — 끝을 대신 낸다.
+        // 1) 클립이 재생에서 빠진 구간은 끊긴 것이다. 끝을 대신 낸다.
         for ( size_t stateIndex = _listActiveState.size(); stateIndex > 0; --stateIndex )
         {
             const ActiveState& state   = _listActiveState[stateIndex - 1];
@@ -246,7 +246,7 @@ namespace sw
                 endState( stateIndex - 1, nullptr, frame._deltaSeconds );
         }
 
-        // 2) 지난 프레임부터 열린 구간의 틱 — 이번 프레임의 움직임(칼 궤적)을 끝보다 먼저 측정한다.
+        // 2) 지난 프레임부터 열린 구간의 틱이다. 이번 프레임의 움직임(칼 궤적)을 끝보다 먼저 측정한다.
         for ( size_t stateIndex = 0; stateIndex < _listActiveState.size(); ++stateIndex )
         {
             ActiveState& state = _listActiveState[stateIndex];
@@ -276,11 +276,11 @@ namespace sw
             }
             if ( bState == false || fired._phase == AnimNotifyPhase::Instant )
             {
-                // 길이 없는 알림 — 또는 구간을 받지 않는 처리기에 온 구간 알림의 시작. 한 번 부른다.
+                // 길이 없는 알림이거나, 구간을 받지 않는 처리기에 온 구간 알림의 시작이다. 한 번 호출한다.
                 callHandler( *pEntry, fired, nullptr, AnimNotifyPhase::Instant, false, frame._deltaSeconds );
                 continue;
             }
-            // 같은 구간이 이미 열려 있으면(끝을 못 보고 다시 시작 — 시각 점프) 먼저 닫는다.
+            // 같은 구간이 이미 열려 있으면(끝을 못 보고 다시 시작한 경우, 즉 시각이 점프한 경우) 먼저 닫는다.
             for ( size_t stateIndex = 0; stateIndex < _listActiveState.size(); ++stateIndex )
             {
                 if ( _listActiveState[stateIndex]._pSource == fired._pSource && _listActiveState[stateIndex]._eventIndex == fired._eventIndex )

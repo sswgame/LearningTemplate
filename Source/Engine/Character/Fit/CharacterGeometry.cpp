@@ -155,7 +155,7 @@ namespace sw
 
     float3 CharacterGeometryUtil::findClosestPointOnTriangle( const float3& point, const float3& a, const float3& b, const float3& c, float32& outU, float32& outV )
     {
-        // Ericson, Real-Time Collision Detection 5.1.5 — 보로노이 영역으로 나눠 가장 가까운 점을 고른다.
+        // Ericson, Real-Time Collision Detection 5.1.5 를 따른다. 보로노이 영역으로 나눠 가장 가까운 점을 고른다.
         const float3  ab = b - a;
         const float3  ac = c - a;
         const float3  ap = point - a;

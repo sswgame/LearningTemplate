@@ -206,7 +206,7 @@ namespace sw
         const BoneOverride* pSource    = findOverride( sourceBone );
         if ( targetBone.empty() || pSource == nullptr )
             return false;
-        // 축에 수직인 면으로 비춘다 — 위치는 그 축 성분의 부호, 회전은 나머지 두 허수 성분의 부호를 뒤집는다.
+        // 축에 수직인 면으로 반사한다. 위치는 그 축 성분의 부호를, 회전은 나머지 두 허수 성분의 부호를 뒤집는다.
         BoneOverride mirrored     = *pSource;
         mirrored._bone            = targetBone;
         float32* pTranslation     = mirrored._translation.data();

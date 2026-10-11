@@ -1,6 +1,6 @@
 /**
  * @file Dismemberment.h
- * @brief 신체 절단 형상 — 몸 영역(`FitTables` 의 영역 표)을 잘라 남은 몸 · 떨어진 조각을 나누고, 두 쪽의 구멍을 캡으로 막습니다.
+ * @brief 신체 절단 형상입니다. 몸 영역(`FitTables` 의 영역 테이블)을 잘라 남은 몸과 떨어진 조각을 나누고, 두 쪽의 구멍을 캡으로 막습니다.
  * @details 잘라 낸 삼각형 마스크는 잘라 내기와 같은 보임 마스크 길(`FitPartResult::hideTriangles`)로 조립된 메시에서 빠집니다. 떨어진 조각은
  *          자기 형상(+ 캡)으로 나와 나중의 파괴 · 물리 단계가 강체로 띄웁니다. 자르기 자체는 `GeometryCutUtil`(형상 입력 → 형상 출력)이라 미리
  *          쪼갠 파괴 가능 메시도 같은 도우미를 씁니다.
@@ -22,7 +22,7 @@ namespace sw
         AppearanceGeometry _remainingCap{};        ///< 남은 몸의 구멍 캡
         AppearanceGeometry _severed{};             ///< 떨어진 조각
         AppearanceGeometry _severedCap{};          ///< 떨어진 조각의 구멍 캡
-        vector<uint8>      _listTriangleSevered{}; ///< 원본 삼각형마다 잘렸는가 — 보임 마스크에 그대로 씀
+        vector<uint8>      _listTriangleSevered{}; ///< 원본 삼각형마다 잘렸는지 나타낸다. 보임 마스크에 그대로 쓴다.
     };
 } // namespace sw
 
