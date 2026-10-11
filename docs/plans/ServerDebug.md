@@ -1,7 +1,7 @@
 # 서버 디버깅 계획 — 에디터에서 서버 · 멀티플레이를 손쉽게 보는 길
 
 상태: 결정은 끝났고(2026-10-11, 사용자가 추천안을 받아들임) S2(중단점 친화)와 S1(멀티 프로세스 재생)이 들어갔습니다. 다음은 S4 입니다.
-S1 에서 남은 것(프리셋 저장 · 줄마다 서버 틱 · 합친 트레이스 자동 열기 · 핫 리로드 넘어 세션 유지)은 [백로그](../06_Backlog.md) "서버 디버깅" 항목에 있습니다.
+S1 에서 남은 것(프리셋 저장 · 리슨 호스트 줄의 틱 · 합친 트레이스 자동 열기 · 핫 리로드 넘어 세션 유지)은 [백로그](../06_Backlog.md) "서버 디버깅" 항목에 있습니다.
 
 ## 왜 필요한가
 
@@ -23,7 +23,7 @@ S1 에서 남은 것(프리셋 저장 · 줄마다 서버 틱 · 합친 트레�
 | 한 프로세스 가상 서버 | `NetSimHarness`(`Source/GameFramework/Kits/Feature/Network/NetSimulation/NetSimHarness.h`) — 결정적, 월드마다 씬 · 물리 | 렌더러 · 에디터 연결(화면 없음) |
 | 전용 서버 | `Server`(`Source/Server/README.md`) — 고정 틱, 운영 엔드포인트, `pause` · `step N` · `resume` | — |
 | 게임의 네트워크 역할 | `GameNetSession`(`GameInstanceBase` 소유) — `-gv_netListenPort` · `-gv_netConnectAddress` 로 어느 게임이든 서버 · 클라이언트 | 핫 리로드를 넘는 세션 |
-| 멀티 프로세스 재생 | 툴바 Net Mode · Multiplayer 창 Session 탭(`EditorNetPlaySession`) — 로그 모으기 · 서버 일시정지 · 트레이스 합치기 | 프리셋 저장 |
+| 멀티 프로세스 재생 | 툴바 Net Mode · Multiplayer 창 Session 탭(`EditorNetPlaySession`) — 로그 모으기(전용 서버 줄마다 `[tick=N]`) · 서버 일시정지 · 트레이스 합치기 | 프리셋 저장 |
 | 지표 | `/metrics` · 틱 시간 · 버린 틱, 연결별 트래픽 셈(`NetSimTrafficCounter`) | 패널 · 시간축 보기 |
 | 재현 | 의도 기록(`.swintent`), 롤백 세션, 파괴 해시 비교 | 에디터에서 되감기 · 어긋남 찾기 |
 | 개발 도구 | 개발 콘솔 · `bugit` · 디버그 HUD(계획) | 서버에 원격으로 명령 |

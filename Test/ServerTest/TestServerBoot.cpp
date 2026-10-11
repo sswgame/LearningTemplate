@@ -130,6 +130,10 @@ SW_TEST_CASE( ServerBootTest, StartsTicksAndExitsWithoutWindowOrGPU )
     SW_ASSERT_TRUE_MSG( skippedLine != string::npos, "the dedicated server did not report the client-only startup steps it skipped" );
     const string skipped = run._output.substr( skippedLine, run._output.find( '\n', skippedLine ) - skippedLine );
     SW_EXPECT_TRUE( skipped.find( "RHI" ) != string::npos && skipped.find( "FrameRenderer" ) != string::npos && skipped.find( "UserSettings" ) != string::npos );
+    // 기동 뒤의 줄에는 서버 틱 번호가 붙는다(멀티 프로세스 재생의 Output Log 가 서버 줄을 틱으로 맞춰 본다) — 기동 중의 줄에는 없다.
+    SW_EXPECT_TRUE_MSG( run._output.find( "[tick=60] - Dedicated server shutdown requested (TickLimit) after 60 ticks" ) != string::npos,
+                        "the shutdown line does not carry the server tick" );
+    SW_EXPECT_TRUE_MSG( run._output.substr( 0, skippedLine ).find( "[tick=" ) == string::npos, "a startup line carries a tick tag before the server is ready" );
 }
 
 /**

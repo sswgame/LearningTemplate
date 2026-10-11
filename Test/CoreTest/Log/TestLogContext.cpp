@@ -132,3 +132,41 @@ SW_TEST_CASE( LogContextTest, OnlyLinesWithAContextCarryTheTag )
     SW_EXPECT_TRUE( entryCapture._listEntry[1]._context._traceID == context._traceID );
     SW_EXPECT_EQUAL( entryCapture._listEntry[1]._context._principalID, uint64( 0x42 ) );
 }
+
+/**
+ * @brief [LogContextTest] 틱 번호를 정한 동안의 줄에만 `[tick=N]` 이 문맥 꼬리표 앞에 붙고, 떼면 예전 형식으로 돌아간다(전용 서버가 틱마다 정한다)
+ */
+SW_TEST_CASE( LogContextTest, TickTagAppearsOnlyWhileTheTickNumberIsSet )
+{
+    AsyncLogSink logger;
+    logger.initialize();
+    unique_ptr<LogContextCaptureOutput> output   = make_unique<LogContextCaptureOutput>();
+    LogContextCaptureOutput*            pCapture = output.get();
+    SW_ASSERT_TRUE( logger.addOutput( std::move( output ) ) );
+
+    uint64 tickNumber = 1;
+    SW_EXPECT_FALSE( Logger::getTickNumber( tickNumber ) );
+    SW_EXPECT_EQUAL( tickNumber, uint64( 0 ) );
+    Logger::setTickNumber( 0 ); // 0 도 꼬리표가 붙는다 — 첫 틱
+    logger.writeLog( LogLevel::Info, "Test", "Probe", "first tick", __FILE__, __LINE__ );
+    Logger::setTickNumber( 1234 );
+    SW_EXPECT_TRUE( Logger::getTickNumber( tickNumber ) );
+    SW_EXPECT_EQUAL( tickNumber, uint64( 1234 ) );
+    LogContext context;
+    context._principalID = 0x42;
+    {
+        ScopedLogContext scope( context );
+        logger.writeLog( LogLevel::Info, "Test", "Probe", "tick and context", __FILE__, __LINE__ );
+    }
+    Logger::clearTickNumber();
+    logger.writeLog( LogLevel::Info, "Test", "Probe", "cleared", __FILE__, __LINE__ );
+    logger.shutdown();
+
+    SW_ASSERT_EQUAL( 3u, static_cast<uint32>( pCapture->_listFormatted.size() ) );
+    const string& first   = pCapture->_listFormatted[0];
+    const string& both    = pCapture->_listFormatted[1];
+    const string& cleared = pCapture->_listFormatted[2];
+    SW_EXPECT_TRUE_MSG( first.find( "[Test] [Probe] [Info] [tick=0] - first tick\n" ) != string::npos, first.c_str() );
+    SW_EXPECT_TRUE_MSG( both.find( "[Test] [Probe] [Info] [tick=1234] [acct=0000000000000042] - tick and context\n" ) != string::npos, both.c_str() );
+    SW_EXPECT_TRUE_MSG( cleared.find( "[Test] [Probe] [Info] - cleared\n" ) != string::npos, cleared.c_str() );
+}

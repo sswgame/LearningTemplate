@@ -157,6 +157,8 @@ namespace sw
 #endif
 
         _bReady = SW_TRUE;
+        // 여기부터 모든 줄에 `[tick=N]`(N = 끝낸 틱 수 — 도는 틱의 0 기준 번호)이 붙는다. 멀티 프로세스 재생의 Output Log 가 서버 줄을 틱으로 맞춰 본다.
+        Logger::setTickNumber( _tickCount );
         SW_LOG_INFO( "Dedicated server ready - target %#, %# Hz, game port %#, service port %#, startup %# ms", build::kTargetName, _pServerConfig->_tickRateHz,
                      _pServerConfig->_gamePort, _pServerConfig->_servicePort, ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / 1000000 );
         return true;
@@ -315,6 +317,7 @@ namespace sw
             _statusTickMaxNanoseconds = tickTime > _statusTickMaxNanoseconds ? tickTime : _statusTickMaxNanoseconds;
             ++_statusTickSampleCount;
             ++_tickCount;
+            Logger::setTickNumber( _tickCount );
             if ( _bPaused == SW_TRUE && _pendingStepCount > 0 && --_pendingStepCount == 0 )
                 SW_LOG_INFO( "Server stepped to tick %# (paused)", _tickCount );
             if ( gv_serverExitAfterTicks > 0 && _tickCount >= static_cast<uint64>( gv_serverExitAfterTicks ) )
@@ -461,6 +464,7 @@ namespace sw
         // 로거는 엔진 종료와 함께 내려간다 — 마지막 줄은 그 앞에 남긴다(시험 · 운영 도구가 이 줄로 정상 종료를 본다).
         SW_LOG_INFO( "Dedicated server shutdown complete" );
         _engineLoop.shutdown();
+        Logger::clearTickNumber();
         if ( _bSignalHandlerInstalled == SW_TRUE )
             ShutdownSignal::uninstall();
         // Windows 창 닫기 · 시스템 종료 처리기가 이것을 기다린다.

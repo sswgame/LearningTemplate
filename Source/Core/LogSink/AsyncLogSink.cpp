@@ -374,20 +374,23 @@ namespace sw
         const LogContext& context = LogContext::getCurrent();
         utf8              arrContextTag[LogContext::kMaxTagSize];
         (void)context.formatTag( arrContextTag, LogContext::kMaxTagSize );
+        // 틱 꼬리표(`Logger::setTickNumber` — 전용 서버)도 같은 자리에 붙는다. 정하지 않았으면 빈 글이다.
+        fixed_string<32> tickTag{};
+        uint64           tickNumber{ 0 };
+        if ( Logger::getTickNumber( tickNumber ) )
+            formatstring( tickTag.data(), tickTag.capacity(), "[tick=%#] ", tickNumber );
 
         // 2단계: 스택의 8KB fixed_string 버퍼에 한 번만 포맷한다(힙 할당 없음)
         fixed_string<constant::kMaxBuffer8192> formattedBuffer{};
         if ( StringUtil::isNullOrEmpty( pEffectiveCaller ) == false )
         {
-            formatstring( formattedBuffer.data(), formattedBuffer.capacity(),
-                          "[%#] [%#] [%#] [%#] %#- %#\n -> %#:%#\n",
-                          dateStr.c_str(), pEffectiveTag, pEffectiveCaller, kArrHeader[levelIndex], arrContextTag, pEffectiveMsg, pEffectiveFile, line );
+            formatstring( formattedBuffer.data(), formattedBuffer.capacity(), "[%#] [%#] [%#] [%#] %#%#- %#\n -> %#:%#\n", dateStr.c_str(), pEffectiveTag,
+                          pEffectiveCaller, kArrHeader[levelIndex], tickTag.c_str(), arrContextTag, pEffectiveMsg, pEffectiveFile, line );
         }
         else
         {
-            formatstring( formattedBuffer.data(), formattedBuffer.capacity(),
-                          "[%#] [%#] [%#] %#- %#\n -> %#:%#\n",
-                          dateStr.c_str(), pEffectiveTag, kArrHeader[levelIndex], arrContextTag, pEffectiveMsg, pEffectiveFile, line );
+            formatstring( formattedBuffer.data(), formattedBuffer.capacity(), "[%#] [%#] [%#] %#%#- %#\n -> %#:%#\n", dateStr.c_str(), pEffectiveTag,
+                          kArrHeader[levelIndex], tickTag.c_str(), arrContextTag, pEffectiveMsg, pEffectiveFile, line );
         }
 
         // 3단계: 64비트 SWAR 로 UTF-8 인지 빠르게 검증하고, 아니면 **잘못된 바이트만** `\xNN` 으로 바꾼다. 줄 전체를 로캘 변환하면
