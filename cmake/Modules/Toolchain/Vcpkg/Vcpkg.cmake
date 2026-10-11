@@ -19,6 +19,18 @@ include("${CMAKE_CURRENT_LIST_DIR}/../../../Environment/PythonUtils.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/../../../Config/LoadConfigConstants.cmake")
 
 # ------------------------------------------------------------------------------
+# 0) sw_vcpkgHashFileNormalized — 줄끝(CRLF/LF)을 같게 보고 파일 내용의 SHA256 을 구한다
+# 스탬프는 main 체크아웃과 워크트리가 나눠 쓴다. 두 체크아웃의 줄끝이 다르면(core.autocrlf — main 은 LF, 워크트리는 CRLF 로 나온 적이 있다)
+# 내용이 같아도 해시가 달라 configure 마다 스탬프가 번갈아 덮이고, 그때마다 바뀐 것 없이 설치가 돌았다.
+# ------------------------------------------------------------------------------
+function(sw_vcpkgHashFileNormalized FILE_PATH OUT_VAR)
+    file(READ "${FILE_PATH}" swContent)
+    string(REPLACE "\r\n" "\n" swContent "${swContent}")
+    string(SHA256 swHash "${swContent}")
+    set(${OUT_VAR} "${swHash}" PARENT_SCOPE)
+endfunction()
+
+# ------------------------------------------------------------------------------
 # 1) sw_vcpkgComputeManifestHash — manifest + overlay port/triplet SHA256
 # 포함: vcpkg.json, vcpkg-configuration.json, ThirdParty/*/vcpkg-port,
 # cmake/Modules/Toolchain/Vcpkg 오버레이 triplet (.cmake). 없으면 빈 문자열
@@ -45,7 +57,7 @@ function(sw_vcpkgComputeManifestHash OUT_VAR)
 
     foreach(overlayFile IN LISTS swOverlayPortFiles)
         if(EXISTS "${overlayFile}")
-            file(SHA256 "${overlayFile}" hOverlay)
+            sw_vcpkgHashFileNormalized("${overlayFile}" hOverlay)
             string(APPEND hash "${hOverlay}")
         endif()
     endforeach()
@@ -64,7 +76,7 @@ function(sw_vcpkgComputeManifestHash OUT_VAR)
         endif()
 
         if(EXISTS "${tripletFile}")
-            file(SHA256 "${tripletFile}" hTriplet)
+            sw_vcpkgHashFileNormalized("${tripletFile}" hTriplet)
             string(APPEND hash "${hTriplet}")
         endif()
     endforeach()
@@ -83,12 +95,12 @@ function(sw_vcpkgComputeManifestHashLegacy OUT_VAR)
     set(hash "")
 
     if(EXISTS "${swSrcDir}/vcpkg.json")
-        file(SHA256 "${swSrcDir}/vcpkg.json" h1)
+        sw_vcpkgHashFileNormalized("${swSrcDir}/vcpkg.json" h1)
         string(APPEND hash "${h1}")
     endif()
 
     if(EXISTS "${swSrcDir}/vcpkg-configuration.json")
-        file(SHA256 "${swSrcDir}/vcpkg-configuration.json" h2)
+        sw_vcpkgHashFileNormalized("${swSrcDir}/vcpkg-configuration.json" h2)
         string(APPEND hash "${h2}")
     endif()
 
