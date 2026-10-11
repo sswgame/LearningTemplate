@@ -31,7 +31,7 @@ option(SW_SHIPPING_BUILD "배포용 단일 실행 파일 정적 링크 빌드 (E
 
 # 빌드 타깃 종류 — 언리얼 TargetType(Game · Client · Server)과 같은 자리. 모듈 매니페스트의 `_listTarget` 과 코드 매크로
 # (`SW_WITH_CLIENT_CODE` · `SW_WITH_SERVER_CODE`, `cmake/Engine/BuildLayout.cmake`)가 이 값을 따른다.
-# Game   — 클라이언트 + 서버 코드 전부(개발 · 에디터 · 한 프로세스 서버/클라 시험 · 리슨 서버). App 과 Server 를 짓는다.
+# Game   — 클라이언트 + 서버 코드 전부(개발 · 에디터 · 한 프로세스 서버/클라 테스트 · 리슨 서버). App 과 Server 를 짓는다.
 # Client — 서버 전용 모듈이 없는 플레이어 배포본. App 만 짓는다.
 # Server — 클라이언트 전용 모듈(에디터 · RHI 백엔드)과 창 · GPU · 오디오 장치 코드가 없는 전용 서버. Server 만 짓는다.
 # 비우면 Shipping 은 Client, 그 밖은 Game 이다. 캐시 값은 그대로 두고 같은 이름의 보통 변수로 가린다 — 아래 모든 곳이 해석된 값을 본다.
@@ -71,7 +71,7 @@ set_property(CACHE SW_SHIPPING_RHI_BACKEND PROPERTY STRINGS DirectX11 DirectX12 
 option(SW_BUILD_GAMEFRAMEWORK "Source/GameFramework 및 게임 장르별 키트 라이브러리 빌드" ON)
 
 # 끄면 활성 게임(과 그 밖의 켜진 비키트 모듈)이 의존으로 닿지 않는 키트를 짓지 않는다. 게임별 · Shipping 프리셋이 끈다(언리얼 패키징이 프로젝트가 켠 플러그인만 담는 것과 같다).
-# 켜 두는 Ninja-Debug · CI 프리셋이 모든 키트와 키트 시험을 짓는다.
+# 켜 두는 Ninja-Debug · CI 프리셋이 모든 키트와 키트 테스트를 짓는다.
 option(SW_BUILD_UNUSED_KITS "활성 게임이 쓰지 않는 장르 키트도 빌드(끄면 게임 의존으로 닿는 키트만)" ON)
 option(SW_ENABLE_PCH "빌드 속도 단축을 위한 프리컴파일드 헤더(PCH) 사용" ON)
 
@@ -87,7 +87,7 @@ set_property(CACHE SW_SANITIZER_KIND PROPERTY STRINGS address thread)
 option(SW_ENABLE_FUZZING "리눅스 clang + ASan 에서 libFuzzer 대상(LoaderFuzzer)과 엔진 커버리지 계측" OFF)
 
 # 배포 빌드의 산출물 디렉터리에 테스트 실행 파일이 섞이면 안 된다. 그렇다고 Shipping 에서 테스트를
-# 끄면 배포 구성이 실제로 도는지 아무도 확인하지 않게 된다(CI 는 Shipping 에서도 같은 시험 집합을 돈다).
+# 끄면 배포 구성이 실제로 도는지 아무도 확인하지 않게 된다(CI 는 Shipping 에서도 같은 테스트 집합을 돈다).
 # 테스트는 어디서든 빌드하고, Shipping 에서는 실행 파일을 Bin 이 아니라 TestBin 으로 뺀다(sw_addTestExecutable).
 # 테스트가 끌고 오는 개발용 DLL 은 각 호출부의 SW_SHIPPING_BUILD 가드가 이미 막고 있다.
 option(SW_ENABLE_TESTING "단위/통합 테스트 프로젝트 빌드 및 CTest 등록" ON)

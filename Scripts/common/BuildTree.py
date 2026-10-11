@@ -24,7 +24,7 @@ kCMakeCacheFileName = "CMakeCache.txt"
 #: CMake 가 "이 구성이 일부러 짓지 않는 소스" 를 적는 자리(빌드 폴더 기준) — CMake 의 `SW_UNBUILT_SOURCE_LIST`.
 kUnbuiltSourceListRelPath = "generated/sw/config/UnbuiltSources.txt"
 kAppExecutableNames: tuple[str, ...] = ("App.exe", "App")
-#: 시험까지 짓는 타깃 — 기본 `all` 은 시험 실행 파일을 짓지 않는다(`Test/` 는 `EXCLUDE_FROM_ALL`, `cmake/Engine/TestTargets.cmake` 의 `AllTests`).
+#: 테스트까지 짓는 타깃 — 기본 `all` 은 테스트 실행 파일을 짓지 않는다(`Test/` 는 `EXCLUDE_FROM_ALL`, `cmake/Engine/TestTargets.cmake` 의 `AllTests`).
 kTestBuildTargets: tuple[str, ...] = ("all", "AllTests")
 
 
@@ -113,12 +113,12 @@ class BuildTree:
 
     @property
     def binDir(self) -> Path:
-        """실행 파일 · 시험의 작업 폴더(시험 실행 파일은 모든 구성에서 `TestBin` 에 있다)."""
+        """실행 파일 · 테스트의 작업 폴더(테스트 실행 파일은 모든 구성에서 `TestBin` 에 있다)."""
         return self.path / "Bin"
 
     @property
     def testBinDir(self) -> Path:
-        """시험 실행 파일이 있는 폴더 — `TestBin`(없으면 `Bin` — 시험을 `Bin` 에 내던 옛 빌드 폴더)."""
+        """테스트 실행 파일이 있는 폴더 — `TestBin`(없으면 `Bin` — 테스트를 `Bin` 에 내던 옛 빌드 폴더)."""
         testBin = self.path / "TestBin"
         return testBin if testBin.is_dir() else self.binDir
 
@@ -185,7 +185,7 @@ class BuildTree:
         return {line.strip().replace("\\", "/").lower() for line in lines if line.strip()}
 
     def buildCommand(self, listTarget: Sequence[str] = kTestBuildTargets, jobCount: int | None = None) -> list[str]:
-        """이 트리를 짓는 명령(`cmake --build <폴더> --target …`). 기본은 시험까지(`kTestBuildTargets`)."""
+        """이 트리를 짓는 명령(`cmake --build <폴더> --target …`). 기본은 테스트까지(`kTestBuildTargets`)."""
         command = ["cmake", "--build", str(self.path), "--target", *listTarget]
         if jobCount:
             command += ["-j", str(jobCount)]

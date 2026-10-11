@@ -2,7 +2,7 @@
 
 /**
  * @file CatalogScannerTest.js
- * @brief `CatalogProfile` · `CatalogScanner` 시험입니다.
+ * @brief `CatalogProfile` · `CatalogScanner` 테스트입니다.
  * @details 셋을 봅니다.
  *          - 엔진과 무관한 프로필(다른 매크로 이름 · 인자 순서 · `--` 접두사)로도 같은 일을 하는가 — 확장은 특정 프로젝트를 모른다.
  *          - 이 확장이 들어 있는 실제 저장소를 `Profiles/SwEngine.json` 으로 읽어, 매크로 호출 수와 카탈로그 수가 같은가.

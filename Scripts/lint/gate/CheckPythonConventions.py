@@ -231,7 +231,7 @@ class StyleScanInternal:
             self.addViolation("future", 1, "`from __future__ import annotations` 가 없습니다")
 
     def checkMainGuard(self, node: ast.If) -> None:
-        """`if __name__ == "__main__":` 의 몸은 `sys.exit(main(...))`(시험은 `unittest.main(...)`) 한 줄이다."""
+        """`if __name__ == "__main__":` 의 몸은 `sys.exit(main(...))`(테스트는 `unittest.main(...)`) 한 줄이다."""
         if len(node.body) == 1 and isinstance(node.body[0], ast.Expr) and isinstance(node.body[0].value, ast.Call):
             call = node.body[0].value
             if isDottedNameInternal(call.func, "unittest.main"):

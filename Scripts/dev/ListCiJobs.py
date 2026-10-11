@@ -7,7 +7,7 @@
     py -3 -m Scripts ci-jobs --runs                       # main 의 최근 실행(상태 · 결과 · 커밋)
     py -3 -m Scripts ci-jobs --runs --branch wt/apply5    # 다른 브랜치
     py -3 -m Scripts ci-jobs <실행 id>                    # 그 실행의 잡과 실패한 단계
-    py -3 -m Scripts ci-jobs <실행 id> --annotations      # 실패한 잡마다 실패 주석(진 시험 · 크래시 스택 · vcpkg 로그 끝)
+    py -3 -m Scripts ci-jobs <실행 id> --annotations      # 실패한 잡마다 실패 주석(진 테스트 · 크래시 스택 · vcpkg 로그 끝)
     py -3 -m Scripts ci-jobs --job <잡 id> [<잡 id> …]    # 잡의 실패 주석 전문
 
 작업 로그와 아티팩트는 저장소 관리자만 받을 수 있어(공개 저장소도 API 가 403) 밖에서 읽을 수 있는 것은 실행 목록, 잡 단계, 주석뿐입니다.

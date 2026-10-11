@@ -6,7 +6,7 @@
 # ==============================================================================
 include_guard(GLOBAL)
 
-# 주의: `cmake -P` 스크립트(시험)도 이 파일을 include 한다. 스크립트 모드는 cmake_minimum_required 가 없으면 정책이 전부 OLD 라
+# 주의: `cmake -P` 스크립트(테스트)도 이 파일을 include 한다. 스크립트 모드는 cmake_minimum_required 가 없으면 정책이 전부 OLD 라
 # `IN_LIST`(CMP0057)가 "Unknown arguments" 가 된다 — 조용히 다르게 돌지 않게 여기서 세운다.
 if(NOT CMAKE_MINIMUM_REQUIRED_VERSION)
 	message(FATAL_ERROR "[RHI] include RhiBackends.cmake after cmake_minimum_required() — script mode (cmake -P) otherwise runs it under OLD policies")

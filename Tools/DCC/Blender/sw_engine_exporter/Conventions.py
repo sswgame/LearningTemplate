@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-엔진 규약 — 이름 · 경로 · 좌표계 변환. **bpy 를 쓰지 않는다**(Blender 없이 CI 에서 시험한다: Test/PythonTest/TestBlenderExporter.py).
+엔진 규약 — 이름 · 경로 · 좌표계 변환. **bpy 를 쓰지 않는다**(Blender 없이 CI 에서 테스트한다: Test/PythonTest/TestBlenderExporter.py).
 
 좌표계: Blender 는 오른손 · +Z 위 · 앞이 -Y, glTF 는 오른손 · +Y 위 · 앞이 +Z, 엔진은 왼손 · +Y 위 · 앞이 +Z 다.
 Blender 의 glTF 내보내기(`export_yup=True`)가 Blender → glTF 를, 엔진의 모델 임포터(`ModelImporter::convertToEngineSpace`)가
@@ -142,7 +142,7 @@ def computeEngineEulerDegrees(rotation: Matrix3) -> list[float]:
 
 
 def makeEngineQuaternion(pitch: float, yaw: float, roll: float) -> list[float]:
-    """엔진 `quaternion::makeFromYawPitchRoll` 을 그대로 옮긴 것(x, y, z, w) — 시험이 변환을 엔진 식과 맞춰 보는 데 쓴다."""
+    """엔진 `quaternion::makeFromYawPitchRoll` 을 그대로 옮긴 것(x, y, z, w) — 테스트가 변환을 엔진 식과 맞춰 보는 데 쓴다."""
     halfYaw, halfPitch, halfRoll = yaw * 0.5, pitch * 0.5, roll * 0.5
     sinYaw, cosYaw = math.sin(halfYaw), math.cos(halfYaw)
     sinPitch, cosPitch = math.sin(halfPitch), math.cos(halfPitch)

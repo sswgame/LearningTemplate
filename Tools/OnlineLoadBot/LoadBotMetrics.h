@@ -1,6 +1,6 @@
 /**
  * @file LoadBotMetrics.h
- * @brief 부하 시험 지표 — 동작마다 지연 표본(마이크로초) · 오류 수, 오류 종류별 수, 알림 종류별 수, 연결 사건, 경기 id. 끝에 백분위 표와 JSON 을 냅니다.
+ * @brief 부하 테스트 지표 — 동작마다 지연 표본(마이크로초) · 오류 수, 오류 종류별 수, 알림 종류별 수, 연결 사건, 경기 id. 끝에 백분위 표와 JSON 을 냅니다.
  * @details 표본을 모두 들고 끝에 정렬한다(봇 수천 × 동작 수십 = 수십만 개 — 수 MB, 백분위가 정확하다). 실행기 스레드 하나에서 쓴다.
  *          오류 종류는 글 키다: 전송 · 공통 오류는 `code<OnlineError 번호>`, 업무 결과가 Ok 가 아니면 `<동작>.result<결과 번호>`.
  */
@@ -31,7 +31,7 @@ namespace sw
 {
     /**
      * @class LoadBotMetrics
-     * @brief 부하 시험 지표입니다.
+     * @brief 부하 테스트 지표입니다.
      */
     class LoadBotMetrics
     {

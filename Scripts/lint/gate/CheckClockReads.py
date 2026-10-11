@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""엔진 코드 · 시험 코드가 `std::chrono` 시계를 직접 읽는 곳을 잡는다 — 시계는 `Source/Core/Time/MonotonicClock.h` 하나다.
+"""엔진 코드 · 테스트 코드가 `std::chrono` 시계를 직접 읽는 곳을 잡는다 — 시계는 `Source/Core/Time/MonotonicClock.h` 하나다.
 
-시계가 하나여야 프로파일러 · 로그 · 기한 · 시험이 같은 시각을 본다. 대신 쓸 것(같은 헤더):
+시계가 하나여야 프로파일러 · 로그 · 기한 · 테스트가 같은 시각을 본다. 대신 쓸 것(같은 헤더):
 
     MonotonicClock::nowNanoseconds()                   지금 시각
     Stopwatch · getElapsedMilliseconds()      걸린 시간

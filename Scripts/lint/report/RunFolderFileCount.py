@@ -12,7 +12,7 @@
 엔진 루트에 둘 수 있는 파일은 게이트(`CheckEngineRootFiles.py`)가 막는다.
 
 세는 것: 바로 아래의 C++ 파일(`kCppAllExtensions`)과 X-macro 표(`.xxx`). 하위 폴더는 세지 않는다.
-파일 하나짜리 폴더는 `Source/` 만 본다 — 시험 폴더는 소스 폴더를 따르므로 하나짜리여도 자리가 맞다.
+파일 하나짜리 폴더는 `Source/` 만 본다 — 테스트 폴더는 소스 폴더를 따르므로 하나짜리여도 자리가 맞다.
 
 사용법:
   py -3 Scripts/lint/report/RunFolderFileCount.py              # 상한 40

@@ -4,12 +4,12 @@
 @file CiFailureReport.py
 @brief CI 실패를 GitHub 주석(::error)으로 올립니다 — 작업 로그 · 아티팩트는 저장소 관리자만 받을 수 있어(공개 저장소도 API 가 403) 밖에서 보이는 곳은 주석뿐입니다.
 
-    python Scripts/dev/CiFailureReport.py tests --ctest-dir build/CI-Debug            # 진 시험: 실패 줄 · 마지막 [ RUN ] · 끝 25 줄 · 크래시 스택
+    python Scripts/dev/CiFailureReport.py tests --ctest-dir build/CI-Debug            # 진 테스트: 실패 줄 · 마지막 [ RUN ] · 끝 25 줄 · 크래시 스택
     python Scripts/dev/CiFailureReport.py configure --log build/configure.log         # 구성 실패: vcpkg 가 가리킨 로그들의 끝
     python Scripts/dev/CiFailureReport.py build --log build/build.log                 # 빌드 실패: 오류 줄(컴파일 · 링크)과 앞뒤 몇 줄, 없으면 끝 60 줄
 
-크래시 스택은 시험 실행 파일의 크래시 핸들러가 로그 폴더(`Bin/Saved/Logs/crash_<세션>.stack.txt`)에 남긴 것입니다.
-주석은 단계마다 error 10 개 · 잡마다 50 개까지 보인다(GitHub 한도) — 시험은 20 개, 로그 파일은 8 개까지만 올린다.
+크래시 스택은 테스트 실행 파일의 크래시 핸들러가 로그 폴더(`Bin/Saved/Logs/crash_<세션>.stack.txt`)에 남긴 것입니다.
+주석은 단계마다 error 10 개 · 잡마다 50 개까지 보인다(GitHub 한도) — 테스트는 20 개, 로그 파일은 8 개까지만 올린다.
 """
 
 from __future__ import annotations
@@ -24,8 +24,8 @@ import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(co
 
 kNewline = "\n"
 _kAnsi = re.compile(r"\x1b\[[0-9;]*m")
-# 시험 틀이 stdout 에 찍는 실패 줄만 고른다. 로거가 같은 내용을 "[날짜] …" 로 한 번 더 찍으므로 그 줄은 뺀다.
-# 새니타이저 보고(케이스는 모두 통과해도 종료 코드로 조각을 떨어뜨린다)도 고른다. 틀 시험이 일부러 지게 만든 안쪽 케이스 줄은
+# 테스트 틀이 stdout 에 찍는 실패 줄만 고른다. 로거가 같은 내용을 "[날짜] …" 로 한 번 더 찍으므로 그 줄은 뺀다.
+# 새니타이저 보고(케이스는 모두 통과해도 종료 코드로 조각을 떨어뜨린다)도 고른다. 틀 테스트가 일부러 지게 만든 안쪽 케이스 줄은
 # "(nested) " 로 시작하므로 여기에 걸리지 않는다.
 _kTestMarker = re.compile(r"^\[  FAILED  \]|^  \[FAILED\]|^    Condition:|^    Message  :|verified nothing|^ Tests failed|^   - |no cases in this executable|"
                           r"selected no test|^Invalid|^Unknown --|^WARNING: \w+Sanitizer|^SUMMARY: \w+Sanitizer|^==\d+==ERROR: \w+Sanitizer|"
@@ -60,7 +60,7 @@ def readTextInternal(path: Path) -> str:
 
 
 def collectCrashStacksInternal(ctestDir: Path) -> list[str]:
-    """시험 실행 파일의 크래시 핸들러가 남긴 스택(`Bin/Saved/**/crash_*.stack.txt`)을 새것부터 셋까지."""
+    """테스트 실행 파일의 크래시 핸들러가 남긴 스택(`Bin/Saved/**/crash_*.stack.txt`)을 새것부터 셋까지."""
     savedDir = ctestDir / "Bin" / "Saved"
     if not savedDir.is_dir():
         return []

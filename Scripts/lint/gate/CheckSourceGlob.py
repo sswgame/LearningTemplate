@@ -62,7 +62,7 @@ class CheckSourceGlobGate(LintGate):
 
     본 검사는 **빌드 트리의 compile_commands.json** 과 대조한다(빌드 없이 돌리면 스스로 "소스 목록만 보고" 하고 0 을 돌려준다).
     고르는 빌드 폴더는 `--build-dir`(CTest 가 `${CMAKE_BINARY_DIR}` 를 넘긴다) · `--preset`, 없으면 `.clangd` 가 가리키는 트리다(`BuildTree`).
-    자가 시험은 임시 트리에 `build/compile_commands.json` 을 직접 써서 `--build-dir build` 로 돌린다 — "짓지 않는 소스" 목록이 있어도 거기 없는
+    자가 테스트는 임시 트리에 `build/compile_commands.json` 을 직접 써서 `--build-dir build` 로 돌린다 — "짓지 않는 소스" 목록이 있어도 거기 없는
     빠진 소스는 잡는지 본다(목록이 게이트를 눈멀게 하지 않는지).
     """
 

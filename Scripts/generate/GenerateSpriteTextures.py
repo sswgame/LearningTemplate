@@ -1,7 +1,7 @@
 """엔진이 들고 다니는 작은 스프라이트 텍스처와 그 클립을 만듭니다(DDS, RGBA8, 밉 하나).
 
   - `engine/textures/test/quadrants.dds` + `quadrants.sprite.json` — 네 칸(왼쪽 위 빨강 · 오른쪽 위 초록 · 왼쪽 아래 파랑 · 오른쪽 아래 흰색)
-    시험 텍스처입니다. 인스턴스마다 다른 UV 사각형 · 색을 픽셀로 확인하는 시험(RenderPassGPUTest)과 확인용 씬의 애니메이션 아틀라스가 씁니다.
+    테스트 텍스처입니다. 인스턴스마다 다른 UV 사각형 · 색을 픽셀로 확인하는 테스트(RenderPassGPUTest)과 확인용 씬의 애니메이션 아틀라스가 씁니다.
   - `engine/textures/missing.dds` — 마젠타 · 검정 체커(64x64, 16 텍셀 칸). 못 읽은 텍스처 · 머티리얼 대신 샘플합니다
     (`EngineDefaultAssets::_missingTexture` · `missingmaterial.material`).
 
@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — com
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 
-kQuadrantSize = 64       # 시험 텍스처 한 변(텍셀). 칸 하나가 32x32 — 선형 필터가 이웃 칸을 끌어오는 띠가 프레임 폭의 1/32 에 그친다
+kQuadrantSize = 64       # 테스트 텍스처 한 변(텍셀). 칸 하나가 32x32 — 선형 필터가 이웃 칸을 끌어오는 띠가 프레임 폭의 1/32 에 그친다
 kQuadrantColors = ((255, 0, 0, 255), (0, 255, 0, 255), (0, 0, 255, 255), (255, 255, 255, 255))  # 왼위 · 오위 · 왼아래 · 오아래
 
 kQuadrantsTexturePath = "engine/textures/test/quadrants.dds"
@@ -44,7 +44,7 @@ def makeDdsBytes(width: int, height: int, rgbaBytes: bytes | bytearray) -> bytes
 
 
 def makeQuadrantTextureInternal() -> tuple[int, int, bytearray, list[dict]]:
-    """네 칸 시험 텍스처의 픽셀과, 칸마다 한 프레임(250 ms)인 클립 프레임 목록을 만듭니다."""
+    """네 칸 테스트 텍스처의 픽셀과, 칸마다 한 프레임(250 ms)인 클립 프레임 목록을 만듭니다."""
     half = kQuadrantSize // 2
     pixels = bytearray()
     for y in range(kQuadrantSize):

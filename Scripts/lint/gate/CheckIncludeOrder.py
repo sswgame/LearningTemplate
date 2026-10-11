@@ -330,7 +330,7 @@ def fixText(text: str, relativeFilePath: str) -> tuple[str, bool]:
     return newText, newText != text
 
 
-#: 픽서의 조각 — 게이트의 첫 자가 시험 조각(Engine 이 Core 보다 앞)과 그것을 고친 결과.
+#: 픽서의 조각 — 게이트의 첫 자가 테스트 조각(Engine 이 Core 보다 앞)과 그것을 고친 결과.
 kFixBadSample = '#include "pch.h"\n\n#include "Engine/Common/EngineServices.h"\n#include "Core/File/FileUtil.h"\n'
 kFixGoodSample = '#include "pch.h"\n\n#include "Core/File/FileUtil.h"\n\n#include "Engine/Common/EngineServices.h"\n'
 

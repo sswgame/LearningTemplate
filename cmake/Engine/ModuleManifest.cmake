@@ -3,10 +3,10 @@
 # @brief 모듈 매니페스트(`<모듈>.module.json`) 읽기 · 해석 — 켜짐 · 의존 확인 · 적재 순서, Dev 는 매니페스트를 `Bin/Modules/` 에 복사한다
 # ==============================================================================
 #
-# 해석 결과를 묻는 쪽(꺼진 모듈 건너뛰기 · 꺼진 키트의 시험 소스 빼기)은 `ModuleActivation.cmake`, `Bin` 의 옛 산출물 지우기는 `BuildLayout.cmake` 다.
+# 해석 결과를 묻는 쪽(꺼진 모듈 건너뛰기 · 꺼진 키트의 테스트 소스 빼기)은 `ModuleActivation.cmake`, `Bin` 의 옛 산출물 지우기는 `BuildLayout.cmake` 다.
 #
 # 규칙은 런타임(`Engine/Module/ModuleCatalog.cpp`)과 같다 — 한쪽만 고치면 빌드한 것과 App 이 올리는 것이 갈린다.
-# 그래서 해석 결과(켜진 모듈 · 적재 순서)를 `Bin/Modules/ResolvedModules.txt` 로 남기고, 시험(`ModuleCatalogTest.BuildAndRuntimeAgree`)이
+# 그래서 해석 결과(켜진 모듈 · 적재 순서)를 `Bin/Modules/ResolvedModules.txt` 로 남기고, 테스트(`ModuleCatalogTest.BuildAndRuntimeAgree`)이
 # 같은 매니페스트를 C++ 로 해석해 견준다.
 #
 # 켜짐 = (프로젝트 `SWGame.module.json` 의 `_listModuleOverride` 에 있으면 그 값, 없으면 `_bEnabledByDefault`)
@@ -16,7 +16,7 @@
 # 켜진 모듈의 의존은 있어야 하고 · 켜져 있어야 하고 · `_minVersion` 이상이어야 하며 · 순환이 없어야 한다 — 아니면 구성이 선다.
 # 적재 순서 = 의존이 먼저, 동점은 이름 순(`TopologicalSortUtil::sortByDependency` 와 같다).
 #
-# 주의: `cmake -P` 스크립트(시험)도 이 파일을 include 한다. 스크립트 모드는 cmake_minimum_required 가 없으면 정책이 전부 OLD 라
+# 주의: `cmake -P` 스크립트(테스트)도 이 파일을 include 한다. 스크립트 모드는 cmake_minimum_required 가 없으면 정책이 전부 OLD 라
 # `IN_LIST`(CMP0057)가 "Unknown arguments" 가 된다 — 조용히 다르게 돌지 않게 여기서 세운다.
 if(NOT CMAKE_MINIMUM_REQUIRED_VERSION)
 	message(FATAL_ERROR "[Module] include ModuleManifest.cmake after cmake_minimum_required() — script mode (cmake -P) otherwise runs it under OLD policies")

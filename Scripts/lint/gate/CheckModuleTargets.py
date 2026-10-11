@@ -14,7 +14,7 @@
      매니페스트 밖 폴더: `Source/Core` · `Source/Engine` · `Source/RuntimeAPI` 는 둘 다(에디터 진입점 접착제만 Client), `Source/App` 은 Client,
      App · Server 가 같이 쓰는 `Source/ModuleHost` 는 둘 다, `Source/Server` 는 Server.
      소속은 그 파일을 품은 가장 깊은 매니페스트 폴더다(`Source/Engine/Graphics/RHI/Modules/DX12/` 은 RHI_DX12).
-     `Test/` · `Tools/` 는 보지 않는다 — 시험 소스는 CMake 가 꺼진 모듈의 것을 뺀다(`sw_excludeSourcesOfInactiveKits`).
+     `Test/` · `Tools/` 는 보지 않는다 — 테스트 소스는 CMake 가 꺼진 모듈의 것을 뺀다(`sw_excludeSourcesOfInactiveKits`).
 
   python Scripts/lint/gate/CheckModuleTargets.py [--root <repo>]
 """

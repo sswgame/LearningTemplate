@@ -2,7 +2,7 @@
 
 /**
  * @file CppTextUtilTest.js
- * @brief `CppTextUtil` 의 주석 지우기 · 매크로 인자 나누기 · 리터럴 읽기 시험입니다.
+ * @brief `CppTextUtil` 의 주석 지우기 · 매크로 인자 나누기 · 리터럴 읽기 테스트입니다.
  */
 
 const assert = require('node:assert/strict');

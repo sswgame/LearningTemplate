@@ -21,7 +21,7 @@
     py -3 Scripts/dev/RunBuildBaseline.py                                 # Ninja-Debug, 네 시나리오 × 3 회
     py -3 Scripts/dev/RunBuildBaseline.py --preset Ninja-Debug --preset Ninja-Release --out build/BuildBaseline.md
     py -3 Scripts/dev/RunBuildBaseline.py --scenario header --scenario cpp --repeat 5
-    py -3 Scripts/dev/RunBuildBaseline.py --with-tests                     # 기본 타깃에 시험(AllTests)까지
+    py -3 Scripts/dev/RunBuildBaseline.py --with-tests                     # 기본 타깃에 테스트(AllTests)까지
 """
 
 from __future__ import annotations

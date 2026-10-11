@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Launch Args 확장의 시험 · 패키징 도구입니다. Node.js · npm · vsce 없이 돕니다.
+"""Launch Args 확장의 테스트 · 패키징 도구입니다. Node.js · npm · vsce 없이 돕니다.
 
-VS Code 안에 든 Node 런타임(`ELECTRON_RUN_AS_NODE=1 Code.exe`)으로 시험을 돌리고, VSIX(zip + 매니페스트)는 파이썬이 직접 씁니다.
+VS Code 안에 든 Node 런타임(`ELECTRON_RUN_AS_NODE=1 Code.exe`)으로 테스트를 돌리고, VSIX(zip + 매니페스트)는 파이썬이 직접 씁니다.
 
-  py -3 Tools/launch-args/Scripts/ExtensionTool.py test                 # 단위 시험(node:test)
-  py -3 Tools/launch-args/Scripts/ExtensionTool.py test --integration   # + 격리된 VS Code 확장 호스트 통합 시험
-  py -3 Tools/launch-args/Scripts/ExtensionTool.py package              # 시험 뒤 dist/<이름>-<판>.vsix
+  py -3 Tools/launch-args/Scripts/ExtensionTool.py test                 # 단위 테스트(node:test)
+  py -3 Tools/launch-args/Scripts/ExtensionTool.py test --integration   # + 격리된 VS Code 확장 호스트 통합 테스트
+  py -3 Tools/launch-args/Scripts/ExtensionTool.py package              # 테스트 뒤 dist/<이름>-<판>.vsix
   py -3 Tools/launch-args/Scripts/ExtensionTool.py install              # 만든 VSIX 를 지금 VS Code 에 설치
 
 VS Code 위치는 `--code <Code.exe>` · 환경 변수 `VSCODE_EXECUTABLE` · 흔한 설치 경로 · PATH 의 `code` 순으로 찾습니다.
@@ -76,7 +76,7 @@ def makeCleanEnvironmentInternal() -> dict[str, str]:
 
 
 def runUnitTestInternal(codePath: Path) -> int:
-    """단위 시험을 VS Code 의 Node 로 돌립니다."""
+    """단위 테스트를 VS Code 의 Node 로 돌립니다."""
     environment = dict(makeCleanEnvironmentInternal(), ELECTRON_RUN_AS_NODE="1")
     listTestPath = [str(_kExtensionRoot / "Test" / name) for name in _kListUnitTest]
     print(f"[unit] {codePath} --test ({len(listTestPath)} files)", flush=True)
@@ -88,7 +88,7 @@ def runUnitTestInternal(codePath: Path) -> int:
 
 
 def findCmakeToolsInternal() -> Path | None:
-    """사용자 확장 폴더에서 CMake Tools(가장 높은 판)를 찾습니다. 통합 시험은 그 설정(`cmake.debugConfig`)이 등록돼야 합니다."""
+    """사용자 확장 폴더에서 CMake Tools(가장 높은 판)를 찾습니다. 통합 테스트는 그 설정(`cmake.debugConfig`)이 등록돼야 합니다."""
     extensionsRoot = Path.home() / ".vscode" / "extensions"
     if extensionsRoot.is_dir() is False:
         return None
@@ -171,7 +171,7 @@ def makeManifestInternal(packageJson: dict) -> str:
 
 
 def collectPackagedFilesInternal() -> list[Path]:
-    """VSIX 에 담을 파일(확장 루트 기준)입니다. 시험 · 스크립트 · 산출물은 담지 않습니다."""
+    """VSIX 에 담을 파일(확장 루트 기준)입니다. 테스트 · 스크립트 · 산출물은 담지 않습니다."""
     listFile = [_kExtensionRoot / name for name in _kListPackagedFile]
     for folderName in _kListPackagedFolder:
         listFile += sorted(path for path in (_kExtensionRoot / folderName).rglob("*") if path.is_file())

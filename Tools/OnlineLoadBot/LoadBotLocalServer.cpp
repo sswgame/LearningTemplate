@@ -35,7 +35,7 @@ namespace sw
         struct LoadBotLocalServerInternal
         {
             static constexpr int32  kUnlimitedAttemptBurst = 1000000; ///< 봇은 한 주소에서 온다 — 주소마다 제한을 사실상 끈다
-            static constexpr uint32 kLightHashMemoryKiB    = 256;     ///< 시험용 가벼운 Argon2id
+            static constexpr uint32 kLightHashMemoryKiB    = 256;     ///< 테스트용 가벼운 Argon2id
             static constexpr uint32 kLightHashIterations   = 1;
             static constexpr int32  kMatchTeamCount        = 2;
             static constexpr uint64 kGameServerID          = 0x100;

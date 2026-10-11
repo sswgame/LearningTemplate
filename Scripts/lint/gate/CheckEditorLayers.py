@@ -9,7 +9,7 @@ Editor 폴더 층 검사 — `Source/Editor` 의 폴더가 층이고, 아래 층
 강제 규칙:
   1) 층은 `Common/<하위 폴더>`(Common 바로 아래 파일은 `Common`), 그 밖의 최상위 폴더(`Panels` · `Viewport` …), 그리고 `Source/Editor` 바로 아래 파일(`<root>`)이다.
   2) 파일은 **자기 층 이하**의 `Editor/…` 헤더만 include 한다. 같은 티어의 다른 층은 서로 include 해도 된다(`Common/GUI` ↔ `Common/Widgets`).
-     `.cpp` 도 센다 — 아래 층의 구현이 위 층을 부르면 그 층을 따로 시험하거나 떼어 낼 수 없다.
+     `.cpp` 도 센다 — 아래 층의 구현이 위 층을 부르면 그 층을 따로 테스트하거나 떼어 낼 수 없다.
   3) 티어 표에 없는 층은 실패다 — 새 폴더는 티어를 정하고 넣는다.
   예외 표의 키는 셋이다: `prelude:<include 경로>`(어느 층에서 include 해도 되는 잎 헤더 — 위 층을 include 하지 않는다),
   `wiring:<파일>`(모든 매니저를 만들어야 해서 위 층을 include 하는 조립 파일), `violation:<파일> -> <include 경로>`(아직 고치지 않은 위반 — 줄일 대상).

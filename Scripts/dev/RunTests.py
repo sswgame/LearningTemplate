@@ -7,8 +7,8 @@
 작업 폴더가 **`Bin`** 이어야 한다는 것(아니면 `Resource/` 를 못 찾는다), 그리고 실행 파일은 **`TestBin`** 에
 있다는 것. 셋 다 CLAUDE.md 의 함정 목록에 있다. 이 스크립트가 셋을 대신 안다.
 
-돌리기 전에 시험까지 짓는다(`cmake --build <폴더> --target all AllTests`) — 기본 빌드(`all`)는 시험 실행 파일을 짓지 않고,
-옛 실행 파일로 돌면 고친 것을 시험하지 않은 채 통과한다. 이미 지은 트리면 ninja 가 할 일이 없어 몇 초다. `--no-build` 는 건너뛴다.
+돌리기 전에 테스트까지 짓는다(`cmake --build <폴더> --target all AllTests`) — 기본 빌드(`all`)는 테스트 실행 파일을 짓지 않고,
+옛 실행 파일로 돌면 고친 것을 테스트하지 않은 채 통과한다. 이미 지은 트리면 ninja 가 할 일이 없어 몇 초다. `--no-build` 는 건너뛴다.
 
 사용법:
     py -3 Scripts/dev/RunTests.py SceneTest.*                         # Debug, 그 스위트가 사는 실행 파일에서

@@ -360,7 +360,7 @@ def checkShaderTextInternal(text: str, relPath: str) -> list[str]:
 
 
 def wrapHeaderInternal(body: str) -> str:
-    """자가 시험용 `.hlsli` 조각 — 맞는 include 가드로 감싸 그 조각이 노리는 규칙 하나만 걸리게 한다."""
+    """자가 테스트용 `.hlsli` 조각 — 맞는 include 가드로 감싸 그 조각이 노리는 규칙 하나만 걸리게 한다."""
     return f"#ifndef SW_ENGINE_PROBE_HLSLI\n#define SW_ENGINE_PROBE_HLSLI\n{body}#endif\n"
 
 
@@ -382,7 +382,7 @@ class CheckShaderConventionsGate(LintGate):
     hint = ("  AGENTS.md '### HLSL': 함수 camelCase(공유 헤더는 sw…, 한 파일은 접두어 없음, 진입점 VSMain/PSMain/CSMain 예외), 타입 PascalCase\n"
             "  (공유 헤더는 Sw…), 필드 · 지역 · 매개변수 camelCase(한 글자 · 줄임말 · 키워드 금지, out/inout 접두어, 배열 arr), static const\n"
             "  kPascalCase, #define SW_, groupshared s_, 전역 · cbuffer 멤버 g_Pascal(문자열로 묶인 이름이라 바꾸지 않는다).")
-    # 조각마다 그 규칙 하나만 걸리게 짓는다 — 다른 위반이 섞이면 노리는 규칙이 죽어도 이 시험은 통과한다.
+    # 조각마다 그 규칙 하나만 걸리게 짓는다 — 다른 위반이 섞이면 노리는 규칙이 죽어도 이 테스트는 통과한다.
     selfTestCases = [
         {"name": "PascalCase 함수", "files": {kProbeSource: "float4 SampleThing( float2 uv ) { return 0; }\n"}},
         {"name": "공유 헤더 함수에 sw 없음", "files": {kProbeHeader: wrapHeaderInternal("float loadValue( uint slotIndex ) { return 0; }\n")}},

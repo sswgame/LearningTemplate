@@ -26,7 +26,7 @@ from common.AssetValidation import RuleConfigError, loadRules, validate  # noqa:
 #: 규칙 표(저장소 루트 기준).
 _kRulePath = "Config/Editor/AssetValidationRules.json"
 
-#: 자기 시험이 쓰는 최소 규칙 표 — 시험 트리에는 저장소의 규칙 표가 없다.
+#: 자기 테스트가 쓰는 최소 규칙 표 — 테스트 트리에는 저장소의 규칙 표가 없다.
 _kSelfTestRules = (
     '{"rules": ['
     '{"name": "references-exist", "check": "missing_reference", "include_patterns": ["*.xml"]},'

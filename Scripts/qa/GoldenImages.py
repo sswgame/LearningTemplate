@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-골든 이미지 회귀 — 시험 게임의 자동 플레이를 네 백엔드(dx12 · dx11 · vk · gl)로 그려 정해 둔 프레임을 캡처하고, 기준과 **배경을 뺀 지표**로 견준다.
+골든 이미지 회귀 — 테스트 게임의 자동 플레이를 네 백엔드(dx12 · dx11 · vk · gl)로 그려 정해 둔 프레임을 캡처하고, 기준과 **배경을 뺀 지표**로 견준다.
 
     py -3 -m Scripts golden --app build/Ninja-Debug-NileCity/Bin/App.exe              # 그 빌드의 활성 게임, 네 백엔드
     py -3 -m Scripts golden --app <App> --backends dx12 vk                             # 백엔드를 골라
