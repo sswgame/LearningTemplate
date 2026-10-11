@@ -1,13 +1,12 @@
 /**
  * @file SkirmishDirectorComponent.h
- * @brief StarSkirmish 의 판을 돌리는 컴포넌트 — 한 판(`SkirmishMatch`) · 고르기 · 명령 · 생산 · 건설 · 부대 입력 · 속도 · 알림, 그리고 절벽 · 유닛(프리팹) 스폰 지시입니다.
+ * @brief StarSkirmish 의 판을 돌리는 컴포넌트입니다. 한 판(`SkirmishMatch`), 선택, 명령, 생산, 건설, 부대 입력, 속도, 알림을 맡고 절벽과 유닛(프리팹) 스폰을 지시합니다.
+ * @details 언리얼의 GameMode/GameState 에 해당합니다. 씬에 하나만 둡니다. 규칙(채취, 생산, 전투, 안개, AI)은 키트의 `RTSWorld`, `RTSCommanderAI`,
+ *          `SkirmishMatch` 가 맡고, 이 컴포넌트는 사람의 입력과 무엇을 어디에 스폰할지를 안다. 유닛 모습은 뷰(`SkirmishUnitComponent`)가, 끌어서 선택하는 상자는
+ *          `SkirmishDragComponent` 가 이 컴포넌트를 **읽기만** 해서 맞춘다.
  *
- * @details 언리얼 GameMode/GameState 의 자리입니다. 씬에 하나 둡니다. 규칙(채취 · 생산 · 전투 · 안개 · AI)은 키트의 `RTSWorld` · `RTSCommanderAI` 와
- *          `SkirmishMatch` 가 맡고, 여기는 사람의 입력과 무엇을 어디에 세우는지를 압니다. 유닛 모습은 뷰(`SkirmishUnitComponent`)가, 끌어 고르기 상자는
- *          `SkirmishDragComponent` 가 이 컴포넌트를 **읽기만** 해서 맞춥니다.
- *
- *          틱 규칙: 디렉터는 `TickGroup::PrePhysics` 에서 상태를 쓰고, 뷰 · 카메라 리그는 `PostUpdate` 에서 읽습니다(그룹은 차례로 돈다).
- *          스폰은 틱 안에서 할 수 없으므로 보이기 시작한 · 사라진 유닛 자리를 쌓아 두고 `executeOrDeferPostTick` 한 번으로 틱 뒤에 세우고 지웁니다.
+ *          틱 규칙은 다음과 같다. 디렉터는 `TickGroup::PrePhysics` 에서 상태를 쓰고, 뷰와 카메라 리그는 `PostUpdate` 에서 읽는다(그룹은 차례로 돈다).
+ *          스폰은 틱 안에서 할 수 없으므로 보이기 시작한 유닛과 사라진 유닛의 슬롯을 쌓아 두었다가 `executeOrDeferPostTick` 한 번으로 틱이 끝난 뒤에 스폰하고 지운다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -38,9 +37,9 @@ namespace sw
 
     /**
      * @class SkirmishDirectorComponent
-     * @brief 1 대 1 한 판입니다. 플레이가 시작되면 유닛 데이터를 읽고 판을 엽니다 — 사람(파랑) 대 컴퓨터, 자동 플레이면 컴퓨터 대 컴퓨터.
-     * @details 판(월드 · AI 진행 · 고름 · 속도)은 PROPERTY 가 아니라 `writeState` 로 게임 상태 스냅샷의 컴포넌트 섹션에 실려 핫 리로드 · 세이브를
-     *          넘깁니다(`StarSkirmishGame`). 움직이던 유닛은 앞 명령의 길을 다시 구합니다. 세운 오브젝트는 핸들로 들고, 상태 저장 전에 걷습니다.
+     * @brief 1 대 1 한 판을 진행합니다. 플레이가 시작되면 유닛 데이터를 읽고 판을 엽니다. 사람(파랑) 대 컴퓨터이며, 자동 플레이면 컴퓨터 대 컴퓨터입니다.
+     * @details 판(월드, AI 진행, 선택, 속도)은 PROPERTY 가 아니라 `writeState` 로 게임 상태 스냅샷의 컴포넌트 섹션에 실려 핫 리로드와 세이브를
+     *          넘긴다(`StarSkirmishGame`). 움직이던 유닛은 앞 명령의 경로를 다시 구한다. 스폰한 오브젝트는 핸들로 보관하고, 상태를 저장하기 전에 정리한다.
      */
     REFLECT( Category = "RealTimeStrategy", DisplayName = "Skirmish Director", Tooltip = "Runs the skirmish match, the human commands and spawns the unit views" )
     class SkirmishDirectorComponent : public GameDirectorComponent
@@ -51,21 +50,21 @@ namespace sw
         SkirmishDirectorComponent();
         virtual ~SkirmishDirectorComponent() override;
 
-        /** @brief 판(월드 · AI 진행 · 고름 · 속도 · 멈춤)을 씁니다 — `ComponentStateStore::capture` 가 부릅니다. */
+        /** @brief 판(월드, AI 진행, 선택, 속도, 일시정지)을 씁니다. `ComponentStateStore::capture` 가 부릅니다. */
         void writeState( Archive& outArchive ) const override;
 
-        // ---- 뷰가 읽는 것(PostUpdate — 디렉터가 쓰지 않는 그룹) ----
+        // ---- 뷰가 읽는 것(PostUpdate. 디렉터가 쓰지 않는 그룹) ----
         const RTSWorld& getWorld() const { return _match.getWorld(); }
         bool            isSelected( RTSUnitID unitID ) const { return _selection.isSelected( unitID ); }
-        /** @brief 유닛 주인(또는 자원 종류) · 고름의 모습입니다. 아직 없으면 비어 있다. */
+        /** @brief 유닛 주인(또는 자원 종류)과 선택 여부를 반환합니다. 아직 없으면 비어 있습니다. */
         const shared_ptr<MaterialInstance>& findUnitLook( const RTSUnit& unit, bool bSelected ) const;
-        /** @brief 끌어 고르는 중이면 true 이고 땅 위 상자의 가운데 · 크기를 줍니다. */
+        /** @brief 끌어서 선택하는 중이면 true 를 반환하고, 땅 위 상자의 중심과 크기를 채웁니다. */
         bool findDragBox( float3& outCenter, float3& outScale ) const;
 
     protected:
-        /** @brief 유닛 데이터를 읽고 판을 엽니다 — 사람(파랑) 대 컴퓨터, 자동 플레이면 컴퓨터 대 컴퓨터. */
+        /** @brief 유닛 데이터를 읽고 판을 엽니다. 사람(파랑) 대 컴퓨터이며, 자동 플레이면 컴퓨터 대 컴퓨터입니다. */
         [[nodiscard]] bool startGame() override;
-        /** @brief `writeState` 의 바이트를 읽습니다. 끝까지 맞지 않으면 false 입니다(판은 반쯤 바뀌었을 수 있다 — `onStateRestored` 가 새 판으로 되돌린다). */
+        /** @brief `writeState` 의 바이트를 읽습니다. 끝까지 맞지 않으면 false 를 반환합니다(판이 반쯤 바뀌었을 수 있으므로 `onStateRestored` 가 새 판으로 되돌립니다). */
         [[nodiscard]] bool readState( Archive& archive ) override;
         void               onStateRestored( bool bRestored ) override;
         void               onGameStarted() override;
@@ -75,10 +74,10 @@ namespace sw
         bool               hasPendingSpawn() const override { return _listPendingUnit.empty() == false; }
 
     private:
-        /** @brief 유닛 id 자리 하나의 모습입니다. 틱이 보일 유닛을 정하고 틱 뒤에 오브젝트를 맞춘다. */
+        /** @brief 유닛 ID 슬롯 하나의 모습입니다. 틱이 보일 유닛을 정하고, 틱이 끝난 뒤 오브젝트를 맞춥니다. */
         struct UnitSlot
         {
-            RTSUnitID        _shownID{}; ///< 세웠거나 세울 유닛(무효면 없다)
+            RTSUnitID        _shownID{}; ///< 스폰했거나 스폰할 유닛(무효면 없다).
             GameObjectHandle _object{};
             uint32           _stamp{ 0 };
         };
@@ -86,20 +85,20 @@ namespace sw
     private:
         void spawnCliffs( GameObjectManager& manager );
         void spawnUnit( GameObjectManager& manager, int32 slotIndex );
-        /** @brief 유닛 모습 인스턴스(편 · 자원 × 고름)를 만듭니다(뷰가 워커에서 고른다). */
+        /** @brief 유닛 모습 인스턴스(팀 또는 자원과 선택 여부 조합)를 만듭니다(뷰가 워커에서 고릅니다). */
         void prepareUnitLooks( Material* pMaterial );
 
-        /** @brief 보일 유닛(안개 · 죽음)과 세운 모습을 견줘 바뀐 자리를 쌓습니다(PrePhysics). */
+        /** @brief 보일 유닛(안개, 죽음)과 스폰한 모습을 비교해 바뀐 슬롯을 쌓습니다(PrePhysics). */
         void collectUnitChanges();
         void updateInput( const InputManager& input );
         void updateHumanCommands( const InputManager& input );
         void updateDrag( const InputManager& input, const float3& point, bool bPointValid );
-        /** @brief `Skirmish.Order`(오른쪽 클릭) — 고른 것에 커서 자리로 똑똑한 명령(이동 · 공격 · 채취 · 집결)을 냅니다. */
+        /** @brief `Skirmish.Order`(오른쪽 클릭)입니다. 선택한 유닛에 커서 위치로 상황에 맞는 명령(이동, 공격, 채취, 집결)을 냅니다. */
         void issueOrder( const float3& point, bool bQueue );
         void orderBuild( const utf8* pBuildingID, const float3& point );
         void trainFromPrimary( int32 productIndex );
         void handleEvents();
-        /** @brief 포인터가 가리키는 땅(y = 0) 자리입니다(`getMousePositionNormalized`). 맵 밖이면 false 입니다. */
+        /** @brief 포인터가 가리키는 땅(y = 0) 위치를 반환합니다(`getMousePositionNormalized`). 맵 밖이면 false 입니다. */
         [[nodiscard]] bool       findGroundPoint( const InputManager& input, float3& outPoint ) const;
         OrthoCameraRigComponent* findCameraRig() const;
 
@@ -122,9 +121,9 @@ namespace sw
         RTSSelection                         _selection;
         vector<RTSEvent>                     _listEvent;
         vector<UnitSlot>                     _listUnitSlot;
-        vector<int32>                        _listPendingUnit; ///< 맞출 유닛 자리(틱 뒤)
-        MaterialTintCache                    _tintCache;       ///< 유닛 색(같은 색은 나눠 쓴다)
-        vector<shared_ptr<MaterialInstance>> _listUnitLook;    ///< (편 · 자원 칸) × 2 + 고름
+        vector<int32>                        _listPendingUnit; ///< 모습을 맞출 유닛 슬롯(틱이 끝난 뒤 처리).
+        MaterialTintCache                    _tintCache;       ///< 유닛 색(같은 색은 나눠 쓴다).
+        vector<shared_ptr<MaterialInstance>> _listUnitLook;    ///< (팀 또는 자원 종류) x 2 + 선택 여부로 만든 유닛 모습 인스턴스.
         float3                               _dragStart;
         float3                               _dragPoint;
         float32                              _timeScale;

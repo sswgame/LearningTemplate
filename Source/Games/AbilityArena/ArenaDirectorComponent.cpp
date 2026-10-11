@@ -36,13 +36,13 @@ namespace sw
         {
             static constexpr uint32 kStateTag       = FourCcUtil::make( "ARNA" );
             static constexpr uint32 kStateVersion   = 1;
-            static constexpr int32  kProjectileTint = 3; ///< `applyTint` 의 투사체 번호(앞 셋은 `ArenaUnitKind` 순)
+            static constexpr int32  kProjectileTint = 3; ///< `applyTint` 의 투사체 번호(앞의 셋은 `ArenaUnitKind` 순서다).
 
             static constexpr const utf8* kSoundWave       = "game/abilityarena/sounds/maximize_001.ogg";
             static constexpr const utf8* kSoundPlayerFell = "game/abilityarena/sounds/error_004.ogg";
             static constexpr const utf8* kSoundEnemyFell  = "game/abilityarena/sounds/impact_punch_heavy_000.ogg";
 
-            /** @brief 종류마다의 어빌리티 세트 id 입니다. */
+            /** @brief 종류별 어빌리티 세트 ID 입니다. */
             static hashed_string findAbilitySetID( ArenaUnitKind kind )
             {
                 switch ( kind )
@@ -57,7 +57,7 @@ namespace sw
                 return hashed_string{};
             }
 
-            /** @brief 탐침이 읽는 디렉터 — 씬의 첫 아레나 디렉터입니다(탐침은 단언 단계에서만 불린다 — 프레임 경로가 아니다). */
+            /** @brief 프로브가 읽는 디렉터입니다. 씬의 첫 아레나 디렉터이며, 프로브는 단언 단계에서만 불리므로 프레임 경로가 아닙니다. */
             static const ArenaDirectorComponent* findProbeDirector( const GameObjectManager* pManager )
             {
                 const ArenaDirectorComponent* pFound = nullptr;
@@ -122,8 +122,8 @@ namespace sw
     } // namespace
 
     /**
-     * @brief `-gv_arenaAutoPlay=1` — 디렉터의 자동 전투를 켭니다(씬의 `_bAutoPlay` 가 꺼져 있어도). 플레이어도 AI 가 움직인다.
-     * @details 배포본 실행 파일로도 돌릴 수 있게 남긴다: `App -gv_arenaAutoPlay=1 -gv_profileFrames=1200`.
+     * @brief `-gv_arenaAutoPlay=1`: 디렉터의 자동 전투를 켭니다(씬의 `_bAutoPlay` 가 꺼져 있어도 켭니다). 플레이어도 AI 가 움직입니다.
+     * @details 배포본 실행 파일로도 돌릴 수 있게 남겨 둔다. `App -gv_arenaAutoPlay=1 -gv_profileFrames=1200` 처럼 쓴다.
      */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_arenaAutoPlay, 0, "AbilityArena: 플레이어도 AI 가 조종 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_arenaAutoPlay, "AbilityArena", "The auto battle AI controller possesses the player" );
@@ -218,7 +218,7 @@ namespace sw
 
     void ArenaDirectorComponent::onStateRestored( bool bRestored )
     {
-        // 어느 쪽이든 걷힌다 — 다음 틱이 플레이어와 지금 웨이브를 다시 세운다.
+        // 어느 쪽이든 정리된다. 다음 틱이 플레이어와 현재 웨이브를 다시 스폰한다.
         if ( bRestored )
             SW_LOG_INFO( "[Arena] arena state restored - wave %#, %# kills", _wave, _killCount );
         else
@@ -229,7 +229,7 @@ namespace sw
     {
         if ( _bUnitsRequested == SW_FALSE )
         {
-            // 처음(또는 상태 저장 전에 걷은 뒤) — 플레이어와 지금 웨이브를 세운다.
+            // 처음이거나 상태를 저장하기 전에 정리한 뒤다. 플레이어와 현재 웨이브를 스폰한다.
             _bUnitsRequested = SW_TRUE;
             requestUnit( ArenaUnitKind::Player, float3{ 0.0f, 0.0f, 0.0f }, 1 );
             requestWave( _wave == 0 );
@@ -243,7 +243,7 @@ namespace sw
         }
         updateUnitViews();
 
-        // 빙의는 틱 뒤에 — 자동 플레이 스위치와 플레이어 폰을 쥔 조종자가 다르면 플러시를 잡는다(`hasPendingSpawn`).
+        // 빙의는 틱이 끝난 뒤에 한다. 자동 플레이 스위치와 플레이어 폰을 조종하는 조종자가 다르면 플러시를 잡는다(`hasPendingSpawn`).
         const PawnComponent* pPlayerPawn = findPlayerPawn();
         if ( pPlayerPawn != nullptr )
         {
@@ -361,7 +361,7 @@ namespace sw
         request._velocity    = facing * speed;
         request._range       = range;
         request._bFromPlayer = from.hasMatchingTag( "Team.Player"_tag ) ? SW_TRUE : SW_FALSE;
-        // 어빌리티는 워커(유닛의 틱)에서 쏜다 — 오브젝트는 틱 뒤 게임 스레드에서 세운다. 그 사이 디렉터가 사라질 수 있으니 핸들로 다시 찾는다.
+        // 어빌리티는 워커(유닛의 틱)에서 쏘고, 오브젝트는 틱이 끝난 뒤 게임 스레드에서 스폰한다. 그 사이 디렉터가 사라질 수 있으니 핸들로 다시 찾는다.
         const ComponentHandle self = getHandle();
         pManager->executeOrDeferPostTick( SW_DELEGATE_LAMBDA( GameObjectManager::PostTickDelegate, [pManager, self, request]()
         {
@@ -392,7 +392,7 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 스폰(요청은 틱 안 · 세우기는 틱 뒤 게임 스레드)
+    // 스폰. 요청은 틱 안에서 하고, 스폰은 틱이 끝난 뒤 게임 스레드에서 한다.
     // ------------------------------------------------------------------------------
     void ArenaDirectorComponent::requestWave( bool bAdvance )
     {
@@ -424,10 +424,10 @@ namespace sw
 
     void ArenaDirectorComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
     {
-        (void)bRespawnViews; // 플레이어 · 웨이브는 틱이 청한다(`_bUnitsRequested`) — 여기는 쌓인 것만 세운다
+        (void)bRespawnViews; // 플레이어와 웨이브는 틱이 요청한다(`_bUnitsRequested`). 여기서는 쌓인 것만 스폰한다.
         for ( const SpawnRequest& request : _listPendingUnit )
         {
-            (void)spawnUnit( manager, request ); // 하나가 실패해도 나머지는 선다 — 실패한 플레이어는 다시 서기 시간이 지나 다시 세운다
+            (void)spawnUnit( manager, request ); // 하나가 실패해도 나머지는 스폰한다. 실패한 플레이어는 다시 등장할 시간이 지나면 다시 스폰한다.
         }
         _listPendingUnit.clear();
         syncPlayerPossession( manager );
@@ -451,7 +451,7 @@ namespace sw
             return false;
         }
 
-        // 카탈로그는 정하지 않는다 — 게임 서비스(`AbilityCatalog`)를 쓴다. 포인터를 박아 두면 모듈이 다시 올라온 뒤 옛 카탈로그를 가리킨다.
+        // 카탈로그는 이 컴포넌트가 정하지 않는다. 게임 서비스(`AbilityCatalog`)를 쓴다. 포인터를 박아 두면 모듈이 다시 로드된 뒤 옛 카탈로그를 가리킨다.
         const hashed_string setID = ArenaDirectorComponentInternal::findAbilitySetID( request._kind );
         if ( pAbilitySystem->grantAbilitySet( setID ) == false )
         {
@@ -459,7 +459,7 @@ namespace sw
             manager.destroyObject( pObject );
             return false;
         }
-        // 웨이브가 오르면 적의 체력 · 공격력이 오른다(이펙트의 perLevel 이 붙은 값만 커진다).
+        // 웨이브가 오르면 적의 체력과 공격력이 오른다(이펙트의 perLevel 이 붙은 값만 커진다).
         if ( request._level > 1 )
         {
             const float32 levelScale = 1.0f + 0.15f * static_cast<float32>( request._level - 1 );
@@ -523,7 +523,7 @@ namespace sw
                 pAI->possess( *pPawn );
             return;
         }
-        // 자동 플레이를 끄면 플레이어 0 의 조종자가 되찾는다 — 씬에 없으면 세운다(조종 시스템이 자동 빙의로 세우는 것과 같은 자리).
+        // 자동 플레이를 끄면 플레이어 0 의 조종자가 되찾는다. 씬에 없으면 스폰한다(조종 시스템이 자동 빙의로 스폰하는 것과 같다).
         PlayerControllerComponent* pPlayer = nullptr;
         for ( PlayerControllerComponent* pCandidate : manager.getComponentRegistry().getAll<PlayerControllerComponent>() )
         {
@@ -573,7 +573,7 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 갱신(PrePhysics — 이 그룹에는 디렉터만 돈다)
+    // 갱신(PrePhysics). 이 그룹에서는 디렉터만 돈다.
     // ------------------------------------------------------------------------------
     void ArenaDirectorComponent::updateUnits( float32 deltaTime )
     {
@@ -608,7 +608,7 @@ namespace sw
             }
             if ( unit._deathTimer >= 0.0f )
             {
-                // 유닛이 납작해지는 동안 기다렸다가 걷는다 — 쥐고 있던 AI 조종자도 같이.
+                // 유닛이 납작해지는 동안 기다렸다가 정리한다. 조종하던 AI 조종자도 함께 정리한다.
                 unit._deathTimer -= deltaTime;
                 if ( unit._deathTimer <= 0.0f )
                 {
@@ -631,8 +631,8 @@ namespace sw
 
     void ArenaDirectorComponent::updateUnitViews()
     {
-        // 이번 프레임의 모습 — 유닛 · 투사체가 뒤 그룹에서 읽는다. 틱 전 자리다(틱 안의 쓰기는 틱 뒤에 보인다). 이번 프레임 자리가 필요한 쪽은
-        // 트랜스폼을 읽는다 — 조종자의 판단은 다음 틱 전에(`findUnitPosition`), 카메라는 물리 뒤 단계에서.
+        // 이번 프레임의 스냅샷이다. 유닛과 투사체가 뒤 그룹에서 읽으며 틱 전 위치다(틱 안의 쓰기는 틱이 끝난 뒤에 보인다). 이번 프레임 위치가 필요한 쪽은
+        // 트랜스폼을 읽는다. 조종자의 판단은 다음 틱 전에(`findUnitPosition`), 카메라는 물리 뒤 단계에서 읽는다.
         _listUnitView.clear();
         _playerFocus                = float3{ 0.0f, 0.0f, 0.0f };
         _playerObject               = GameObjectHandle{};
@@ -676,7 +676,7 @@ namespace sw
             _playerRespawnTimer = -1.0f;
             return;
         }
-        // 쓰러진 플레이어는 걷힌 뒤 잠시 있다가 가운데에 다시 선다(웨이브는 이어진다).
+        // 쓰러진 플레이어는 정리된 뒤 잠시 있다가 중앙에 다시 등장한다(웨이브는 이어진다).
         if ( _playerRespawnTimer < 0.0f )
             _playerRespawnTimer = _playerRespawnDelay;
         _playerRespawnTimer -= deltaTime;
@@ -721,7 +721,7 @@ namespace sw
 
     void ArenaDirectorComponent::pruneProjectiles()
     {
-        // 다 난 투사체는 스스로 지운다 — 목록은 상태 저장 전에 걷을 것만 든다(풀리지 않는 핸들은 덜어 낸다).
+        // 다 쓴 투사체는 스스로 지운다. 목록에는 상태를 저장하기 전에 정리할 것만 남기므로, 유효하지 않은 핸들은 덜어 낸다.
         GameObjectManager* pManager = getObjectManager();
         for ( size_t projectileIndex = _listProjectile.size(); projectileIndex > 0; --projectileIndex )
         {
