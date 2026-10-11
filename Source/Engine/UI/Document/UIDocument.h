@@ -21,7 +21,7 @@ namespace sw
      */
     struct UIDocumentNode
     {
-        hashed_string         _typeName{};       ///< 위젯 타입 이름(원소 이름) — 지을 때 타입 등록부에서 찾는다(모듈 다시 로드에도 이름은 남는다)
+        hashed_string         _typeName{};       ///< 위젯 타입 이름(원소 이름) — 지을 때 타입 레지스트리에서 찾는다(모듈 다시 로드에도 이름은 남는다)
         string                _propertyXML{};    ///< 자식 위젯 · 바인딩 속성을 뺀 원소 XML
         string                _fragment{};       ///< `UserWidget` 이면 끼울 조각 문서 경로(정규화)
         vector<UIBindingDesc> _listBinding{};    ///< 이 원소에서 뗀 바인딩 식(위젯 번호는 무효)

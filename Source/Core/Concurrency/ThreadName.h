@@ -10,10 +10,10 @@ namespace sw
 {
     /**
      * @struct ThreadName
-     * @brief 스레드 이름을 OS 에 적습니다. 이름표는 OS 하나에만 둡니다.
+     * @brief 스레드 이름을 OS 에 적습니다. 이름은 OS 하나에만 둡니다.
      * @details 디버거(Visual Studio · gdb)와 외부 프로파일러(Tracy 는 Windows 에서 `GetThreadDescription`, 리눅스에서
      *          `/proc/self/task/<tid>/comm` 을 읽는다)가 같은 이름을 봅니다. 그래서 프로파일러를 켜기 **전에** 만든 스레드도
-     *          이름이 붙어 있고, 엔진이 따로 이름표를 들 필요가 없습니다.
+     *          이름이 붙어 있고, 엔진이 따로 이름을 들 필요가 없습니다.
      */
     struct SW_API ThreadName
     {

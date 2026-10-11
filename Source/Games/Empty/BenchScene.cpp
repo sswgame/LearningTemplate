@@ -134,7 +134,7 @@ namespace sw
 
     /**
      * @brief `-gv_benchMeshVariants=N` — 벤치가 쓸 **메시 종류 수**. 배치 키에 메시가 들어가므로 곧 배치 수다.
-     * @details 기본 1 은 모든 큐브가 한 배치로 묶여 드로우 경로(드로우별 상수·바인딩)를 전혀 재지 않는다.
+     * @details 기본 1 은 모든 큐브가 한 배치로 묶여 드로우 경로(드로우별 상수·바인딩)를 전혀 측정하지 않는다.
      *          실제 씬은 늘 여러 메시를 쓰므로, 드로우 경로를 재거나 다중 배치 버그를 보려면 이 값을 올린다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchMeshVariants, 1, "벤치 메시 종류 수 (= 배치 수, 드로우 경로 측정용)" );
@@ -209,7 +209,7 @@ namespace sw
 
     /**
      * @brief `-gv_benchUiMarkers=K` — 앞쪽 큐브 K 개에 화면 마커(`WidgetComponent` Screen — 숫자 글)를 붙입니다(데미지 숫자 광역 경우).
-     * @details 마커는 프레임마다 월드 점을 화면에 투영해 놓인다 — 위젯 벤치(`-gv_benchUiWidgets` · 엔진 `UIBenchScreen`)와 함께 `GT.UI.*` 로 잰다.
+     * @details 마커는 프레임마다 월드 점을 화면에 투영해 놓인다 — 위젯 벤치(`-gv_benchUiWidgets` · 엔진 `UIBenchScreen`)와 함께 `GT.UI.*` 로 측정한다.
      *          큐브 수(`-gv_benchMeshes`)보다 크면 큐브 수만큼입니다.
      */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchUiMarkers, 0, "앞쪽 벤치 큐브 K 개에 화면 마커(숫자 글)를 붙인다 (0=사용 안 함)" );
@@ -232,7 +232,7 @@ namespace sw
      * @brief `-gv_benchLights=N` — 격자 위에 점광·스포트라이트를 N 개 흩뿌립니다 (주광은 별개).
      * @details 라이트 수를 늘리면 **픽셀당 루프가 길어진다** — 디퍼드는 화면 픽셀 수만큼, 포워드는
      *          오버드로를 포함한 픽셀 수만큼이다. 그래서 두 경로의 라이트 비용이 어떻게 갈리는지를
-     *          이 스위치 하나로 잰다(`-gv_deferred` 와 함께 쓴다).
+     *          이 스위치 하나로 측정한다(`-gv_deferred` 와 함께 쓴다).
      * @note 홀수 번째는 스포트라이트다 — 점광만 두면 원뿔 감쇠 경로가 한 번도 실행되지 않는다.
      * @note 기본이 0 인 이유는 **기존 측정과 스크린샷을 그대로 두기 위해서**다.
      */
@@ -241,7 +241,7 @@ namespace sw
     /**
      * @brief `-gv_benchLightRadius=<유닛>` — 벤치 라이트가 닿는 반경 (0 이면 격자 간격에서 정한다).
      * @details 반경은 **비용을 정하는 값**이다. 크면 한 픽셀에 닿는 라이트가 늘어 루프가 실제로 돌고,
-     *          작으면 감쇠가 0 이라 일찍 빠진다 — 타일 컬링의 효과를 재려면 이 값을 흔들어야 한다.
+     *          작으면 감쇠가 0 이라 일찍 빠진다 — 타일 컬링의 효과를 측정하려면 이 값을 흔들어야 한다.
      */
     SW_TEST_GLOBAL_VARIABLE( float32, gv_benchLightRadius, 0.0f, "벤치 라이트 반경 (0=격자 간격에서 정한다)" );
 
@@ -258,20 +258,20 @@ namespace sw
      * @brief `-gv_benchTickMovers=N` — 큐브마다 틱하는 무버 컴포넌트를 N 개 붙이고, 첫 번째가 **틱 안에서** 위치·스케일을 씁니다.
      * @details 0 이면 게임 스레드가 틱 밖에서 배치로 쓴다. 1 은 게임플레이의 보통 모양(`onTick` 안의 세터 —
      *          병렬 틱 중이라 지연 경로를 탄다)을 재고, 2 이상은 한 오브젝트에 틱 컴포넌트가 여럿일 때의 틱 디스패치
-     *          비용을 잰다(나머지 무버는 틱만 돈다). 두 경로의 그림은 같다.
+     *          비용을 측정한다(나머지 무버는 틱만 돈다). 두 경로의 그림은 같다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchTickMovers, 0, "큐브마다 틱 무버 컴포넌트 N 개 — 첫 번째가 틱 안에서 위치를 쓴다 (0=배치 쓰기)" );
 
     /**
      * @brief `-gv_benchSpawnChurn=N` — 프레임마다 큐브 N 개를 지우고 같은 자리에 새로 만듭니다 (총알처럼 스폰이 잦은 게임의 모양).
-     * @details 스폰·파괴 경로(이름 유일화 · 풀 · 등록부)와 "틱 멤버십이 매 프레임 바뀌는" 틱 등록부를 잰다. 새 큐브는 같은 메시
+     * @details 스폰·파괴 경로(이름 유일화 · 풀 · 레지스트리)와 "틱 멤버십이 매 프레임 바뀌는" 틱 레지스트리를 측정한다. 새 큐브는 같은 메시
      *          종류·기본 머티리얼이고, 무버(`-gv_benchTickMovers`)도 같이 붙는다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchSpawnChurn, 0, "프레임마다 큐브 N 개를 지우고 같은 자리에 새로 만든다 (스폰·파괴·틱 레지스트리 측정)" );
 
     /**
      * @brief `-gv_benchViews=N` — 격자를 둘러보는 캡처 카메라(CCTV) N 개를 둡니다(렌더 텍스처 512², 프레임마다 그린다).
-     * @details 추가 뷰의 비용(컬링 칸 · 풀 · 그림자 패스 · 기록)을 잰다. 한 프레임에 그리는 추가 뷰 수는 `gv_renderViewBudget` 이 자른다.
+     * @details 추가 뷰의 비용(컬링 칸 · 풀 · 그림자 패스 · 기록)을 측정한다. 한 프레임에 그리는 추가 뷰 수는 `gv_renderViewBudget` 이 자른다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchViews, 0, "격자를 둘러보는 캡처 카메라(렌더 텍스처 512²) 수 (0=사용 안 함)" );
 
@@ -363,7 +363,7 @@ namespace sw
                      removedCount, static_cast<uint32>( _listBenchMesh.size() ),
                      static_cast<uint32>( _listBenchExtra.size() ) );
         _listBenchMesh.clear();
-        _listInstanceBatch.clear(); // 소멸자가 등록부에서 빠진다
+        _listInstanceBatch.clear(); // 소멸자가 레지스트리에서 빠진다
         _instanceCubeCount = 0;
         _listBenchExtra.clear();
         _bCharacterFraming = SW_FALSE;
@@ -402,7 +402,7 @@ namespace sw
             SW_LOG_WARNING( "[Bench] 씬 기본 머티리얼이 없습니다 — 큐브가 보이지 않을 수 있습니다." );
 
         // 메시 종류 수. 배치 키에 메시가 들어가므로 종류가 곧 **배치 수**다 — 1 이면 배치가 하나로 묶여
-        // 드로우 경로(드로우별 상수·바인딩)를 전혀 재지 못한다. 실제 씬은 늘 여러 메시를 쓴다.
+        // 드로우 경로(드로우별 상수·바인딩)를 전혀 측정하지 못한다. 실제 씬은 늘 여러 메시를 쓴다.
         uint32 meshVariantCount = static_cast<uint32>( MathUtil::max( 1, gv_benchMeshVariants ) );
         meshVariantCount        = MathUtil::min( meshVariantCount, meshCount );
 
@@ -431,7 +431,7 @@ namespace sw
         }
 
         // 정사각에 가까운 격자로 흩는다. 전부 같은 메시·머티리얼이라 배치가 하나로 묶이는데,
-        // 그게 지금 렌더러의 기본 경로(배치당 drawInstanced 한 번)를 재는 조건이다.
+        // 그게 지금 렌더러의 기본 경로(배치당 drawInstanced 한 번)를 측정하는 조건이다.
         const uint32  side   = static_cast<uint32>( MathUtil::sqrt( static_cast<float32>( meshCount ) ) ) + 1;
         const float32 origin = -0.5f * static_cast<float32>( side - 1 ) * kBenchSpacing;
 
@@ -706,7 +706,7 @@ namespace sw
 
     float32 BenchScene::computeFaceCameraDistance( uint32 faceCount )
     {
-        // 머리 줄(폭 + 여유)이 화면 폭에 차는 거리 — 기본 카메라 시야 · 16:9 에서 잰 근사다.
+        // 머리 줄(폭 + 여유)이 화면 폭에 차는 거리 — 기본 카메라 시야 · 16:9 에서 측정한 근사다.
         const float32 rowWidth = static_cast<float32>( MathUtil::max( faceCount, 1u ) ) * kBenchFaceSpacing;
         return MathUtil::max( 0.6f, rowWidth * 1.1f );
     }
@@ -803,7 +803,7 @@ namespace sw
         }
 
         // 틱 무버 — 첫 번째만 틱 안에서 위치·스케일을 쓴다(게임플레이의 보통 모양). 나머지는 틱만 돌아,
-        // 한 오브젝트에 틱 컴포넌트가 여럿일 때의 디스패치 비용을 잰다.
+        // 한 오브젝트에 틱 컴포넌트가 여럿일 때의 디스패치 비용을 측정한다.
         const int32  moverCount  = gv_benchTickMovers;
         const uint32 movePercent = static_cast<uint32>( MathUtil::clamp( gv_benchMovePercent, 0, 100 ) );
         for ( int32 moverIndex = 0; moverIndex < moverCount; ++moverIndex )
@@ -1238,7 +1238,7 @@ namespace sw
                 continue;
 
             // 목록이 상한에 닿으면 떼는 쪽으로 기운다. 상한이 없으면 큐브 수만큼 늘어나 이 스위치가
-            // 사실상 -gv_benchMaterialInstances 와 같아지고, "붙였다 뗐다" 를 재지 못한다.
+            // 사실상 -gv_benchMaterialInstances 와 같아지고, "붙였다 뗐다" 를 측정하지 못한다.
             const bool bDrop = ( _listChurnInstance.size() >= kChurnInstanceCap ) || ( ( nextChurnRandom() & 3u ) == 0u );
             if ( bDrop )
             {

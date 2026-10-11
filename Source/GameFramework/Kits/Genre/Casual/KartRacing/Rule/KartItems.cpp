@@ -20,7 +20,7 @@ namespace sw
     {
         struct KartItemsInternal
         {
-            /** @brief 열거자 이름표 한 줄입니다. */
+            /** @brief 열거자 이름 한 줄입니다. */
             struct KindName
             {
                 KartItemKind _kind;

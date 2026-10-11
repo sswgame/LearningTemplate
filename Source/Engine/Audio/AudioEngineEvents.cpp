@@ -157,7 +157,7 @@ namespace sw
         EventState&           state = stateIt->second;
         const AudioEventDesc& event = *state._pDesc;
 
-        // 쿨다운 — 오디오 시각(렌더한 프레임)으로 잰다.
+        // 쿨다운 — 오디오 시각(렌더한 프레임)으로 측정한다.
         const uint64 cooldownFrames = static_cast<uint64>( event._cooldownSeconds * static_cast<float32>( audio::kSampleRate ) );
         if ( cooldownFrames > 0 && state._bPostedOnce && _renderedFrameCount - state._lastPostFrame < cooldownFrames )
         {

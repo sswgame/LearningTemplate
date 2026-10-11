@@ -167,7 +167,7 @@ namespace
 
 /**
  * @brief [UIAccessibilityTest] 글자 배율이 줄여도 글은 12 UI 단위 밑으로 가지 않는다 — 12 보다 작게 적은 글은 그 크기가 하한이고, 키우는 쪽은 그대로 곱한다
- * @details 글 위젯의 측정까지: 글자 크기 16 · 배율 0.5 는 크기 12 · 배율 1 과 같은 크기로 잰다. 변이: `computeScaledFontSize` 의 하한을 빼면 8 로 잰다.
+ * @details 글 위젯의 측정까지: 글자 크기 16 · 배율 0.5 는 크기 12 · 배율 1 과 같은 크기로 측정한다. 변이: `computeScaledFontSize` 의 하한을 빼면 8 로 측정한다.
  */
 SW_TEST_CASE( UIAccessibilityTest, TextScaleHasMinimumSize )
 {

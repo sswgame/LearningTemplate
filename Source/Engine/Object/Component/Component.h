@@ -67,7 +67,7 @@ namespace sw
         uint32 _subTickID{ 0 };
         /**
          * @brief 그 컴포넌트를 가진 오브젝트입니다. 비교 · 해시에는 쓰지 않습니다.
-         * @details 등록부가 선행 조건이 가리키는 항목을 씬 전체를 훑지 않고 그 오브젝트에서만 찾는 데 씁니다. 0 이면(소유자 없이 만든 핸들)
+         * @details 레지스트리가 선행 조건이 가리키는 항목을 씬 전체를 훑지 않고 그 오브젝트에서만 찾는 데 씁니다. 0 이면(소유자 없이 만든 핸들)
          *          선행 조건으로 받지 않습니다.
          */
         uint64 _objectID{ 0 };
@@ -117,9 +117,9 @@ namespace sw
     /**
      * @struct SubTickInfo
      * @brief 컴포넌트에 등록된 서브틱 하나의 메타데이터와 선행 조건 정보입니다.
-     * @details 활성은 둘이다. `_bActive` 는 틱 등록부가 읽는 값이라 틱 중이면 틱 뒤에 바뀌고, `_bRunnable` 은 실행 직전에 보는 값이라 틱 중에도
+     * @details 활성은 둘이다. `_bActive` 는 틱 레지스트리가 읽는 값이라 틱 중이면 틱 뒤에 바뀌고, `_bRunnable` 은 실행 직전에 보는 값이라 틱 중에도
      *          바로 바뀐다(다른 워커가 쓰므로 원자다). 틱 동안 목록의 모양은 얼어 있어(구조 변경은 미룬다) 원소를 가리켜 써도 된다.
-     *          서브틱 1~63 은 컴포넌트의 원자 마스크가 같은 일을 O(1) 로 한다 — `_bRunnable` 은 64 번부터의 정본이다.
+     *          서브틱 1~63 은 컴포넌트의 원자 마스크가 같은 일을 O(1) 로 한다 — `_bRunnable` 은 64 번부터의 원본이다.
      */
     struct SubTickInfo
     {
@@ -370,10 +370,10 @@ namespace sw
         virtual void onAnimNotify( const AnimNotifyInfo& notify ) { (void)notify; }
         /**
          * @brief 소유 GameObject 에 붙은 직후 불립니다.
-         * @details 자기가 어떤 등록부에 들어가야 하는지는 자기가 압니다. GameObject 가 `castTo` 로
-         *          타입을 골라 대신 등록해 주면, 등록부가 하나 늘 때마다 GameObject 를 고쳐야 하고
+         * @details 자기가 어떤 레지스트리에 들어가야 하는지는 자기가 압니다. GameObject 가 `castTo` 로
+         *          타입을 골라 대신 등록해 주면, 레지스트리가 하나 늘 때마다 GameObject 를 고쳐야 하고
          *          GameObject 가 MeshComponent 같은 하위 타입을 알게 됩니다.
-         * @param manager 자기가 속한 매니저. 필요한 것(등록부 · 물리 월드 등)을 여기서 꺼내 **들고
+         * @param manager 자기가 속한 매니저. 필요한 것(레지스트리 · 물리 월드 등)을 여기서 꺼내 **들고
          *        있습니다**. 쓸 때마다 소유자를 거슬러 올라가 찾지 않습니다. 그 조회는 소유자가 이미
          *        끊긴 파괴 시점에 엉뚱한 씬을 가리킵니다.
          */
@@ -469,9 +469,9 @@ namespace sw
          */
         void setCanEverTick( bool bCanEverTick );
         /**
-         * @brief 컴포넌트의 이름표를 설정합니다(기본은 타입 이름). **타입이 아닙니다.** 상태와 함께 저장됩니다.
+         * @brief 컴포넌트의 이름을 설정합니다(기본은 타입 이름). **타입이 아닙니다.** 상태와 함께 저장됩니다.
          * @details 오브젝트 안에서 컴포넌트를 가리키는 키(`ComponentStableKey` — 부착 대상 · 프리팹 오버라이드 · 에디터 선택 복원)가 이 이름으로
-         *          셉니다. 언리얼의 컴포넌트 이름이 참조 · 오버라이드의 키인 것과 같은 자리입니다. 이름표가 없는 상태는 기본값(타입 이름)으로
+         *          셉니다. 언리얼의 컴포넌트 이름이 참조 · 오버라이드의 키인 것과 같은 자리입니다. 이름이 없는 상태는 기본값(타입 이름)으로
          *          읽힙니다. 타입은 만들 때 받은 `TypeInfo`(`_pTypeInfo`)이고 이름과 무관합니다 — 타입 이름이 필요하면 `getTypeName`.
          * @note 풀 키도 **아닙니다.** 파괴는 `_pPool` 로 돌아갑니다. 이름을 바꾸면 그 컴포넌트를 키로 가리키던 저장된 참조(다른 컴포넌트의 부착 ·
          *       프리팹 오버라이드)는 다음 로드에서 가리킬 곳을 잃습니다 — 언리얼이 컴포넌트 이름을 바꿀 때와 같습니다.
@@ -483,11 +483,11 @@ namespace sw
 
         /**
          * @brief 런타임 타입 리플렉션 정보(TypeInfo)입니다 — 만들 때 받은 타입이고, 그 타입이 해제됐으면 nullptr 입니다.
-         * @details 이름표(`_componentName`)와 무관합니다 — `setComponentName` 으로 이름을 바꿔도 타입은 그대로입니다. TypeInfo 의 주소는
+         * @details 이름(`_componentName`)와 무관합니다 — `setComponentName` 으로 이름을 바꿔도 타입은 그대로입니다. TypeInfo 의 주소는
          *          고정이라(`TypeRegistry`) 포인터 하나를 들면 됩니다.
          */
         virtual const TypeInfo* getTypeInfo() const;
-        /** @brief 타입 이름입니다(타입이 없으면 이름표). 복사 · 붙여넣기 · 프리셋 · 타입 필터처럼 "무슨 타입인가" 를 묻는 자리가 씁니다. */
+        /** @brief 타입 이름입니다(타입이 없으면 이름). 복사 · 붙여넣기 · 프리셋 · 타입 필터처럼 "무슨 타입인가" 를 묻는 자리가 씁니다. */
         hashed_string getTypeName() const;
         /**
          * @brief 만들 때 받은 TypeInfo 를(살아 있으면), 아니면 가상 `getTypeInfo()` 의 답을 반환합니다.
@@ -557,7 +557,7 @@ namespace sw
     protected:
         GameObject* _pOwner;      ///< 소유자 GameObject
         uint64      _componentID; ///< 컴포넌트 고유 일련번호
-        /** @brief 이름표(기본은 타입 이름)입니다. 저장됩니다 — 컴포넌트 키(`ComponentStableKey`)가 이것으로 셉니다. 타입이 아니다 — `setComponentName` */
+        /** @brief 이름(기본은 타입 이름)입니다. 저장됩니다 — 컴포넌트 키(`ComponentStableKey`)가 이것으로 셉니다. 타입이 아니다 — `setComponentName` */
         PROPERTY( HideInInspector )
         hashed_string   _componentName;
         const TypeInfo* _pTypeInfo; ///< 만들 때 받은 타입. `GameObject::attachCreatedComponent` 가 한 번 적는다(공개 전이라 원자가 아니다)

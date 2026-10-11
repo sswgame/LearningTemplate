@@ -1,7 +1,7 @@
 /**
  * @file ZstdDictionaryCompressor.h
  * @brief zstd 학습 사전으로 작은 덩어리(네트워크 패킷)를 압축 · 해제합니다 — 사전과 문맥을 미리 만들어 둡니다.
- * @details 등록부의 코덱이 아니다 — 사전은 양쪽이 같은 것을 가져야 해 코덱 id 하나로 고를 수 없다. 지금은 측정(`NetCompressionBenchTest`)만 쓴다.
+ * @details 레지스트리의 코덱이 아니다 — 사전은 양쪽이 같은 것을 가져야 해 코덱 id 하나로 고를 수 없다. 지금은 측정(`NetCompressionBenchTest`)만 쓴다.
  *          한 스레드가 쓴다(문맥을 다시 쓴다).
  */
 #pragma once

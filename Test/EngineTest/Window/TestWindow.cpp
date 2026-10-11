@@ -112,7 +112,7 @@ SW_TEST_CASE( WindowTest, DestroyedActiveWindowClearsGlobal )
 /**
  * @brief [WindowTest] 다시 만들어도 **보이던 창은 보인다** — 그리고 크기·제목을 지킨다
  * @details 다시 만드는 절차는 기반 `IWindow::recreate()` 한 벌이고, 플랫폼은 훅만 구현한다. 절차가 플랫폼마다 따로 있으면
- *          표시 상태를 되살리지 않는 쪽이 생기고, 그 길로 들어온 창은 백엔드 교체(`RHI::recreateDevice` 가 `recreate()` 를
+ *          표시 상태를 복원하지 않는 쪽이 생기고, 그 길로 들어온 창은 백엔드 교체(`RHI::recreateDevice` 가 `recreate()` 를
  *          부른다) 뒤 **화면에서 사라진다.**
  *
  *          "보이던 창이었나" 는 `isVisible()` 로 물으면 안 된다 — X11 에서 그것은 "창 관리자가 이미 매핑했는가" 라서,

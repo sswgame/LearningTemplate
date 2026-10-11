@@ -1,6 +1,6 @@
 /**
  * @file AnimCodec.h
- * @brief 애니메이션 코덱 인터페이스 — 쿠킹 · 임포트 때 압축(코덱 id + 불투명 블롭), 런타임에 샘플링. 코덱 등록부와 오차 측정입니다.
+ * @brief 애니메이션 코덱 인터페이스 — 쿠킹 · 임포트 때 압축(코덱 id + 불투명 블롭), 런타임에 샘플링. 코덱 레지스트리와 오차 측정입니다.
  * @details 라이브러리(ACL 등)는 코덱 백엔드 폴더(`Codec/<이름>/`) 안에서만 보입니다. 바깥은 이 헤더의 타입만 압니다 —
  *          언리얼 `UAnimBoneCompressionCodec` · Godot PhysicsServer 처럼 구현을 갈아 끼울 수 있게 하는 경계입니다.
  */
@@ -73,7 +73,7 @@ namespace sw
     struct AnimCodecSettings
     {
         float32 _precision{ 0.0001f };  ///< 가상 정점이 벗어나도 되는 거리(미터)입니다.
-        float32 _shellDistance{ 0.1f }; ///< 가상 정점을 본에서 얼마나 떨어뜨려 재는지(미터)입니다 — 캐릭터 살갗 두께 정도.
+        float32 _shellDistance{ 0.1f }; ///< 가상 정점을 본에서 얼마나 떨어뜨려 측정하는지(미터)입니다 — 캐릭터 살갗 두께 정도.
     };
 } // namespace sw
 
@@ -128,7 +128,7 @@ namespace sw
 {
     /**
      * @struct AnimCodecRegistry
-     * @brief 코덱 등록부입니다. 코드는 이름 붙은 코덱만 들고, 어느 것을 쓸지는 데이터(이름)가 고릅니다. 모르는 이름 · 번호는 nullptr 입니다.
+     * @brief 코덱 레지스트리입니다. 코드는 이름 붙은 코덱만 들고, 어느 것을 쓸지는 데이터(이름)가 고릅니다. 모르는 이름 · 번호는 nullptr 입니다.
      */
     struct SW_API AnimCodecRegistry
     {
@@ -136,11 +136,11 @@ namespace sw
         static const IAnimCodec* findCodec( AnimCodecID id );
         /** @brief 이름으로 찾습니다(대소문자 무시). */
         static const IAnimCodec* findCodecByName( string_view name );
-        /** @brief 압축하고 오차를 잽니다(임포트 · 테스트). */
+        /** @brief 압축하고 오차를 측정합니다(임포트 · 테스트). */
         [[nodiscard]] static bool compressAndMeasure( const IAnimCodec& codec, const AnimRawClip& rawClip, const AnimCodecSettings& settings,
                                                       vector<uint8>& outBytes, AnimCodecStats& outStats );
         /**
-         * @brief 원본과 블롭을 같은 시각들(표본마다 + 표본 사이 가운데)에서 샘플해 모델 공간 가상 정점(본 원점 + 세 축 방향 shell 거리)의 최대 거리를 잽니다.
+         * @brief 원본과 블롭을 같은 시각들(표본마다 + 표본 사이 가운데)에서 샘플해 모델 공간 가상 정점(본 원점 + 세 축 방향 shell 거리)의 최대 거리를 측정합니다.
          * @details 코덱과 무관한 한 벌의 잣대라 Raw · ACL 을 같은 숫자로 비교합니다.
          */
         static float32 measureMaxError( const IAnimCodec& codec, const AnimRawClip& rawClip, const uint8* pBytes, size_t byteCount, float32 shellDistance );

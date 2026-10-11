@@ -27,7 +27,7 @@ namespace sw
                 quaternion rotation{};
                 float3     translation{};
                 // 축 하나가 0 이면 회전을 뽑을 수 없어 decompose 가 Identity 를 준다. 그래도
-                // 스케일 0 은 그대로 살려 둔다. 눌린 포즈를 1 로 되살리면 그것대로 틀린 그림이다.
+                // 스케일 0 은 그대로 살려 둔다. 눌린 포즈를 1 로 복원하면 그것대로 틀린 그림이다.
                 pose.decompose( outScale, rotation, translation );
                 return DualQuaternion( rotation, translation );
             }
@@ -117,7 +117,7 @@ namespace sw
         // 역거리 가중치(IDW). 표본 수에 상한이 없다(고정 길이 버퍼를 두지 않는다 — 넘는 표본을 한 마디 없이 버리게 된다).
         //
         // 파라미터는 **표본 범위로 먼저 가둔다**(언리얼 블렌드 스페이스와 같다). 가중치는 가장 가까운 표본의 거리로 나눠 1 이 되게 한다.
-        // 주의: 1/d² 를 그대로 더해 절대값 문턱과 견주면 cm/s 단위(표본 0~600)에서 대시 2500 일 때 표본마다 가중치가 2e-7 쯤이라
+        // 주의: 1/d² 를 그대로 더해 절대값 임계값과 비교하면 cm/s 단위(표본 0~600)에서 대시 2500 일 때 표본마다 가중치가 2e-7 쯤이라
         // "합이 너무 작다" 에 걸려, 가장 가까운 표본이 아니라 **처음 넣은 표본**(보통 Idle)으로 튄다.
         float2 minParam = _listSample.front()._parameter;
         float2 maxParam = _listSample.front()._parameter;

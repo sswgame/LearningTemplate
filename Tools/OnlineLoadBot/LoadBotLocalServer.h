@@ -26,7 +26,7 @@ namespace sw
         int32          _maxConnections{ 1024 }; ///< 받을 연결 상한(봇 수보다 크게)
         int32          _gameServerCapacity{ 100000 };
         uint16         _port{ 7100 };
-        uint8          _bLightPasswordHash{ SW_FALSE }; ///< 테스트 — 가벼운 Argon2id(실제 비용을 재려면 끈다)
+        uint8          _bLightPasswordHash{ SW_FALSE }; ///< 테스트 — 가벼운 Argon2id(실제 비용을 측정하려면 끈다)
     };
 } // namespace sw
 
@@ -49,7 +49,7 @@ namespace sw
         [[nodiscard]] bool initialize( IStreamTransport* pTransport, const LoadBotLocalServerSettings& settings, string& outError );
         void               shutdown();
 
-        /** @brief 호스트 틱 · 게임 서버 하트비트입니다. @p nowMs 는 서비스 시각(실제 실행은 UTC 밀리초, 테스트는 가짜 시각) — 캐시 만료도 이 시각으로 잰다. */
+        /** @brief 호스트 틱 · 게임 서버 하트비트입니다. @p nowMs 는 서비스 시각(실제 실행은 UTC 밀리초, 테스트는 가짜 시각) — 캐시 만료도 이 시각으로 측정한다. */
         void tick( int64 nowMs );
 
         OnlineServiceHost& getHost();

@@ -1,6 +1,6 @@
 /**
  * @file DestructionProfile.h
- * @brief 파괴 재질 표(`*.destruction.xml`) — 깊이별 변형 문턱 · 연결 세기 · 지지 세기 · 밀도 · 충격 → 변형 · 파편 예산을 사람이 고치는 데이터로 둡니다.
+ * @brief 파괴 재질 표(`*.destruction.xml`) — 깊이별 변형 임계값 · 연결 세기 · 지지 세기 · 밀도 · 충격 → 변형 · 파편 예산을 사람이 고치는 데이터로 둡니다.
  * @details 같은 `.fracture` 를 콘크리트 · 나무로 다르게 부수려면 표만 바꿉니다(다시 쿠킹하지 않는다). 모르는 원소 · 속성 · 숫자가 아닌 숫자는 로드 오류입니다.
  * @code
  *     <DestructionProfile density="2000" physicsMaterial="Default">
@@ -30,7 +30,7 @@ namespace sw
         /** @brief 엔진 기본 표 경로입니다(컴포넌트가 표를 적지 않으면 이것). */
         static constexpr string_view kDefaultPath = "engine/destruction/default.destruction.xml";
 
-        vector<float32> _listStrainThreshold; ///< 깊이별 변형 문턱(이만큼 쌓이면 묶음이 자식으로 갈라진다 · 잎은 떨어져 나간다). 더 깊으면 마지막 값
+        vector<float32> _listStrainThreshold; ///< 깊이별 변형 임계값(이만큼 쌓이면 묶음이 자식으로 갈라진다 · 잎은 떨어져 나간다). 더 깊으면 마지막 값
         hashed_string   _physicsMaterial;     ///< 조각 바디의 물리 재질 이름
         float32         _density;             ///< 킬로그램/세제곱미터(2D 는 /제곱미터) — 지지 하중 · 바디 질량
         float32         _linkStrength;        ///< 연결이 끊기는 변형(맞닿은 넓이 1 제곱미터당)
@@ -49,7 +49,7 @@ namespace sw
 
         DestructionProfile();
 
-        /** @brief 깊이의 문턱입니다. 표가 비면 무한(갈라지지 않는다)입니다. */
+        /** @brief 깊이의 임계값입니다. 표가 비면 무한(갈라지지 않는다)입니다. */
         float32 getStrainThreshold( uint32 depth ) const;
         /** @brief 글에서 읽습니다. 오류는 모아 로그로 내고 false 입니다(그때 값은 기본값). */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );

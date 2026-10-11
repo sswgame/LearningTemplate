@@ -42,7 +42,7 @@ namespace sw
                 if ( target > current )
                     inoutWallet.add( currency, target - current );
                 else if ( target < current )
-                    inoutWallet.charge( currency, current - target ); // 빚(음수)까지 그대로 — 원장이 정본이다
+                    inoutWallet.charge( currency, current - target ); // 빚(음수)까지 그대로 — 원장이 원본이다
             }
         };
     } // namespace

@@ -39,7 +39,7 @@ namespace sw
     {
         struct SceneTestInternal
         {
-            /** @brief 매니저의 오브젝트마다 "오브젝트 이름: 컴포넌트 이름표…" 한 줄을 이름 순으로 모읍니다. 모르는 타입(`MissingComponent`)은 뺍니다. */
+            /** @brief 매니저의 오브젝트마다 "오브젝트 이름: 컴포넌트 이름…" 한 줄을 이름 순으로 모읍니다. 모르는 타입(`MissingComponent`)은 뺍니다. */
             static vector<string> collectComponentNames( const GameObjectManager* pManager )
             {
                 vector<string>      listLine;
@@ -64,7 +64,7 @@ namespace sw
                 return listLine;
             }
 
-            /** @brief 파일이 이름표(`_componentName`)를 적었으면 true 입니다 — 적지 않은 옛 파일만 기본값(타입 이름)으로 읽혀야 한다. */
+            /** @brief 파일이 이름(`_componentName`)를 적었으면 true 입니다 — 적지 않은 옛 파일만 기본값(타입 이름)으로 읽혀야 한다. */
             static bool isLabelledFile( const string& path )
             {
                 string text;
@@ -72,8 +72,8 @@ namespace sw
             }
 
             /**
-             * @brief 매니저의 컴포넌트마다 이름표를 `Named<번호>` 로 바꿉니다(모르는 타입은 뺍니다).
-             * @return 바꾸기 전 이름표가 타입 이름이 **아니던** 컴포넌트 수입니다 — 이름표가 없는 옛 파일이면 0 이어야 합니다.
+             * @brief 매니저의 컴포넌트마다 이름을 `Named<번호>` 로 바꿉니다(모르는 타입은 뺍니다).
+             * @return 바꾸기 전 이름이 타입 이름이 **아니던** 컴포넌트 수입니다 — 이름이 없는 옛 파일이면 0 이어야 합니다.
              */
             static uint32 renameEveryComponent( const GameObjectManager* pManager )
             {
@@ -497,8 +497,8 @@ SW_TEST_CASE( SceneTest, EditorTestSceneResolvesMovedPrefabByGuid )
 }
 
 /**
- * @brief [SceneTest] 주광 조회가 등록부를 보고, 활성/파괴를 따라간다
- * @details 주광은 매 프레임 **모든 GameObject** 를 훑지 않고 등록부에서 찾는다. 조회 결과가 씬을 훑은 것과 같은지
+ * @brief [SceneTest] 주광 조회가 레지스트리를 보고, 활성/파괴를 따라간다
+ * @details 주광은 매 프레임 **모든 GameObject** 를 훑지 않고 레지스트리에서 찾는다. 조회 결과가 씬을 훑은 것과 같은지
  *          고정한다 — 없음 · 있음 · 비활성 · 파괴 네 상태다.
  */
 SW_TEST_CASE( SceneTest, DirectionalLightLookupFollowsRegistry )
@@ -534,14 +534,14 @@ SW_TEST_CASE( SceneTest, DirectionalLightLookupFollowsRegistry )
     pSun->setActive( true );
     SW_EXPECT_EQUAL( pLight, scene.findActiveDirectionalLight() );
 
-    // 파괴되면 등록이 풀린다 — 등록부에 죽은 포인터가 남으면 여기서 잡힌다.
+    // 파괴되면 등록이 풀린다 — 레지스트리에 죽은 포인터가 남으면 여기서 잡힌다.
     scene.getObjectManager()->destroyObject( pSun, true );
     scene.getObjectManager()->tick( 0.016f );
     SW_EXPECT_NULL( scene.findActiveDirectionalLight() );
 }
 
 /**
- * @brief [SceneTest] 게임 카메라는 프레임마다 등록부의 규칙으로 다시 골라진다 — 늦게 생긴 높은 우선순위, 끄기, 역할 변경, 파괴 대기, 동률, 직접 지정
+ * @brief [SceneTest] 게임 카메라는 프레임마다 레지스트리의 규칙으로 다시 골라진다 — 늦게 생긴 높은 우선순위, 끄기, 역할 변경, 파괴 대기, 동률, 직접 지정
  * @details 처음 한 번 고른 결과를 캐시하면 나중에 생긴 더 높은 우선순위의 카메라는 선택되지 않고, 꺼 둔 카메라가 계속 선택된다.
  *          첫 호출이 이미 있는 "GameCamera" 의 위치 · 렌즈를 기본값으로 되돌리면 씬 파일에 둔 카메라가 첫 프레임에 옮겨진다.
  *          에디터 카메라도 같은 규칙(`CameraRegistry::selectCamera`)을 쓴다.
@@ -594,7 +594,7 @@ SW_TEST_CASE( SceneTest, GameCameraSelectionFollowsTheRegistry )
     scene.ensureDefaultCameras();
     SW_EXPECT_TRUE( scene.getActiveGameCamera() == pHigh );
 
-    // 파괴 대기가 되면 그 프레임부터 빠진다(메모리는 아직 살아 있다). 규칙 자체가 거르는지 등록부 선택으로 본다.
+    // 파괴 대기가 되면 그 프레임부터 빠진다(메모리는 아직 살아 있다). 규칙 자체가 거르는지 레지스트리 선택으로 본다.
     pObjects->destroyObject( pHighObj );
     SW_EXPECT_TRUE( pObjects->getCameraRegistry().selectCamera( sw::CameraRole::Game ) == pDefault );
     scene.ensureDefaultCameras();
@@ -788,7 +788,7 @@ SW_TEST_CASE( SceneTest, ShadowVolumeSnapsToTexelsWhilePanning )
 }
 
 /**
- * @brief [SceneTest] 씬 라이트 수집이 등록부를 보고, 타입·그림자 플래그를 제대로 싣는다
+ * @brief [SceneTest] 씬 라이트 수집이 레지스트리를 보고, 타입·그림자 플래그를 제대로 싣는다
  * @details 렌더 스레드는 씬을 못 보므로 라이트는 **패킷으로만** 간다. 그 변환이 이 함수 하나라
  *          여기가 틀리면 "빛이 하나 조용히 엉뚱하게 계산된다" 로만 드러난다.
  */
@@ -1657,8 +1657,8 @@ SW_TEST_CASE( SceneTest, BrokenSceneFileSaysWhereNotFileNotFound )
 
 /**
  * @brief [SceneTest] 엔진 서비스 없이도 XML 씬 · 프리팹을 읽고, 지원하는 것보다 새 형식 · 올릴 단계가 없는 옛 판은 그때도 거절한다
- * @details 단독 도구 · 테스트는 서비스를 묶지 않고 에셋을 읽는다. 로더가 `getAssetManager()` 로 형식 등록부를 꺼내면 거기서 assert 다 —
- *          같은 함수의 GUID 블록과 바이너리 로더는 이미 서비스가 있는지 묻는다. 서비스가 없을 때는 내장 migrator 만 든 등록부로 판정한다.
+ * @details 단독 도구 · 테스트는 서비스를 묶지 않고 에셋을 읽는다. 로더가 `getAssetManager()` 로 형식 레지스트리를 꺼내면 거기서 assert 다 —
+ *          같은 함수의 GUID 블록과 바이너리 로더는 이미 서비스가 있는지 묻는다. 서비스가 없을 때는 내장 migrator 만 든 레지스트리로 판정한다.
  */
 SW_TEST_CASE( SceneTest, XMLAssetsLoadWithoutEngineServices )
 {
@@ -1719,9 +1719,9 @@ SW_TEST_CASE( SceneTest, XMLAssetsLoadWithoutEngineServices )
 }
 
 /**
- * @brief [SceneTest] 컴포넌트 이름표는 씬 파일(XML) · 쿠킹한 씬(SCN1 바이너리 상태)을 건너 남고, 그 이름표로 가리킨 부착도 그 자리에 붙는다
- * @details 이름표는 오브젝트 안에서 컴포넌트를 가리키는 키다(언리얼의 컴포넌트 이름 자리). 저장하지 않으면 씬을 다시 열 때 기본값(타입 이름)으로
- *          돌아가, 이름표로 찾던 게임 코드와 그 키로 적힌 부착이 다른 컴포넌트를 본다.
+ * @brief [SceneTest] 컴포넌트 이름은 씬 파일(XML) · 쿠킹한 씬(SCN1 바이너리 상태)을 건너 남고, 그 이름으로 가리킨 부착도 그 자리에 붙는다
+ * @details 이름은 오브젝트 안에서 컴포넌트를 가리키는 키다(언리얼의 컴포넌트 이름 자리). 저장하지 않으면 씬을 다시 열 때 기본값(타입 이름)으로
+ *          돌아가, 이름으로 찾던 게임 코드와 그 키로 적힌 부착이 다른 컴포넌트를 본다.
  */
 SW_TEST_CASE( SceneTest, ComponentNameSurvivesSceneFilesAndCooking )
 {
@@ -1741,7 +1741,7 @@ SW_TEST_CASE( SceneTest, ComponentNameSurvivesSceneFilesAndCooking )
     SW_ASSERT_NOT_NULL( pFlashRoot );
     SW_ASSERT_TRUE( pFlashRoot->attachToComponent( pMuzzle ) );
 
-    /** @brief 다시 지은 씬의 이름표 · 부착이 처음과 같은지 봅니다. */
+    /** @brief 다시 지은 씬의 이름 · 부착이 처음과 같은지 봅니다. */
     struct Check
     {
         static void run( const sw::Scene* pBuilt, const utf8* pWhere )
@@ -1771,7 +1771,7 @@ SW_TEST_CASE( SceneTest, ComponentNameSurvivesSceneFilesAndCooking )
     SW_ASSERT_TRUE( pFromXML->instantiate( fromXML ) );
     Check::run( pFromXML, "xml" );
 
-    // 쿠커는 엔티티 상태를 리플렉션 바이너리로 쿠킹한다 — 그 길에도 실려야 배포본이 같은 이름표를 본다.
+    // 쿠커는 엔티티 상태를 리플렉션 바이너리로 쿠킹한다 — 그 길에도 실려야 배포본이 같은 이름을 본다.
     SW_EXPECT_EQUAL( 2u, sw::SceneCooker::cookEntityState( fromXML ) );
     const sw::string binPath = test::makeTempPath( "named_components.scene.bin" );
     SW_ASSERT_TRUE( fromXML.saveBinary( binPath ) );
@@ -1786,7 +1786,7 @@ SW_TEST_CASE( SceneTest, ComponentNameSurvivesSceneFilesAndCooking )
 }
 
 /**
- * @brief [SceneTest] 저장소의 실제 씬 · 프리팹이 모두 읽히고(이름표가 없는 옛 파일 — 기본값은 타입 이름, 이름표를 적은 파일 — 그 이름), 이름표를 달아
+ * @brief [SceneTest] 저장소의 실제 씬 · 프리팹이 모두 읽히고(이름이 없는 옛 파일 — 기본값은 타입 이름, 이름을 적은 파일 — 그 이름), 이름을 달아
  *        다시 쓰면 그대로 돌아온다
  */
 SW_TEST_CASE( SceneTest, RepositoryScenesAndPrefabsKeepComponentNames )

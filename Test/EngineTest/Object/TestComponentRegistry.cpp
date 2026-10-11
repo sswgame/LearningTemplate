@@ -1,6 +1,6 @@
 /**
  * @file TestComponentRegistry.cpp
- * @brief 타입별 컴포넌트 등록부 — 붙이기 · 떼기 · 파괴 · 상태 되살리기 뒤에도 목록이 씬 전수 훑기(`forEachComponentOfType`)와 같은가.
+ * @brief 타입별 컴포넌트 레지스트리 — 붙이기 · 떼기 · 파괴 · 상태 복원하기 뒤에도 목록이 씬 전수 훑기(`forEachComponentOfType`)와 같은가.
  * @details 최악 실패 모드는 죽은 컴포넌트가 목록에 남는 것(다음 조회가 해제된 메모리를 읽는다)과, 살아 있는 것이 빠지는 것(빛 · 상호작용 대상이
  *          조용히 사라진다)이다. 둘 다 "전수 훑기와 같은가" 하나로 잡는다.
  */
@@ -35,7 +35,7 @@ namespace sw
     {
         struct ComponentRegistryTestInternal
         {
-            /** @brief 등록부의 한 칸을 정렬한 포인터 목록으로 꺼냅니다. */
+            /** @brief 레지스트리의 한 칸을 정렬한 포인터 목록으로 꺼냅니다. */
             template <typename T>
             static vector<const Component*> collectRegistered( const GameObjectManager& manager, uint32 channel )
             {
@@ -105,7 +105,7 @@ namespace sw
 using namespace sw;
 
 /**
- * @brief [ComponentRegistryTest] 붙이기 · 떼기 · 오브젝트 파괴를 섞은 400 걸음 내내 등록부가 씬 전수 훑기와 같다
+ * @brief [ComponentRegistryTest] 붙이기 · 떼기 · 오브젝트 파괴를 섞은 400 걸음 내내 레지스트리가 씬 전수 훑기와 같다
  * @details 지연 파괴는 플러시까지 살아 있는 오브젝트라(훑기는 파괴 예약을 건너뛴다) 플러시 뒤에 견준다.
  */
 SW_TEST_CASE( ComponentRegistryTest, MatchesFullSceneScanThroughChurn )
@@ -152,7 +152,7 @@ SW_TEST_CASE( ComponentRegistryTest, MatchesFullSceneScanThroughChurn )
             GameObject* pObject = listObject[Internal::nextRandom( state ) % listObject.size()];
             Component*  pFirst  = pObject->getComponent<Component>();
             if ( pFirst != nullptr )
-                (void)pObject->removeComponent( pFirst ); // 무작위 조작 — 성공 여부와 무관하게 등록부가 버티는지만 본다
+                (void)pObject->removeComponent( pFirst ); // 무작위 조작 — 성공 여부와 무관하게 레지스트리가 버티는지만 본다
         }
         else
         {
@@ -168,7 +168,7 @@ SW_TEST_CASE( ComponentRegistryTest, MatchesFullSceneScanThroughChurn )
 }
 
 /**
- * @brief [ComponentRegistryTest] 떼어 낸 컴포넌트의 핸들은 더는 등록되지 않고, 상태로 되살린 새 컴포넌트는 새로 등록된다(핫 리로드 · 되돌리기의 길)
+ * @brief [ComponentRegistryTest] 떼어 낸 컴포넌트의 핸들은 더는 등록되지 않고, 상태로 복원한 새 컴포넌트는 새로 등록된다(핫 리로드 · 되돌리기의 길)
  */
 SW_TEST_CASE( ComponentRegistryTest, HandlesOfRemovedComponentsAreNotRegistered )
 {
@@ -180,7 +180,7 @@ SW_TEST_CASE( ComponentRegistryTest, HandlesOfRemovedComponentsAreNotRegistered 
     SW_EXPECT_TRUE( manager.getComponentRegistry().isRegistered<LightComponent>( oldHandle, shaderslot::kLightTypePoint ) );
     SW_EXPECT_FALSE( manager.getComponentRegistry().isRegistered<LightComponent>( oldHandle, shaderslot::kLightTypeSpot ) );
 
-    // 상태를 받아 두고 컴포넌트를 모두 지운 뒤 되살린다 — 모듈 리로드가 컴포넌트를 내리고 다시 세우는 모양.
+    // 상태를 받아 두고 컴포넌트를 모두 지운 뒤 복원한다 — 모듈 리로드가 컴포넌트를 내리고 다시 세우는 모양.
     const string state = ObjectStateSerializer::saveToXMLString( pObject );
     pObject->clearComponents();
     SW_EXPECT_FALSE( manager.getComponentRegistry().isRegistered<LightComponent>( oldHandle, shaderslot::kLightTypePoint ) );

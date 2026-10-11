@@ -19,14 +19,14 @@ Engine 이 아는 것은 지연 로드 훅이 묻는 창구(`ModuleHandleProvide
   (`bindDelayLoadImportsOfLoadedModules` — 테스트 실행 파일이 링크한 키트)이 모듈 코드가 돌기 전에 부른다. `/DELAYLOAD` 는 `DelayLoad.cmake` 의 두 함수로만
   (`CheckDelayLoadSites`) — Engine 의 시스템 DLL(D3DCompiler · MF · XAudio2 · Tracy)은 미리 묶지 않으니 첫 인자가 float 인 함수를 부르지 않는다.
   Shipping 은 키트 · 게임을 정적으로 링크해 모듈 지연 로드가 없다. 테스트: `DelayLoadBindTest` · `ArchitectureTest.ReloadedDependentsBindToTheCurrentImages`.
-- **게임 인스턴스는 핫 리로드 · 백엔드 교체마다 다시 선다 — `onInitialize` 의 "처음 한 번" 일은 되살린 월드를 덮는다.** 첫 씬 요청이 그랬다(되살린 씬을 몇 프레임
+- **게임 인스턴스는 핫 리로드 · 백엔드 교체마다 다시 선다 — `onInitialize` 의 "처음 한 번" 일은 복원한 월드를 덮는다.** 첫 씬 요청이 그랬다(복원한 씬을 몇 프레임
   뒤 새 첫 씬이 바꿔 디렉터 상태가 사라졌다) — `requestFirstScene` 은 살아 있는 씬 위에서는 아무것도 하지 않는다. PROPERTY 가 아닌 디렉터 상태는
   `ComponentStateStore`(봉투 v3 의 세 번째 섹션)로 넘기고, 손 없이 확인은 `App -gv_reloadGameAtFrame=N`.
-- **모듈 켜기/끄기 · 의존 · 적재 순서는 매니페스트(`<모듈>.module.json`)가 정본이다**(CMake `ModuleManifest.cmake` 와 App `ModuleCatalog` 가 같은 규칙 — 둘의 답을
+- **모듈 켜기/끄기 · 의존 · 적재 순서는 매니페스트(`<모듈>.module.json`)가 원본이다**(CMake `ModuleManifest.cmake` 와 App `ModuleCatalog` 가 같은 규칙 — 둘의 답을
   `ModuleCatalogTest.BuildAndRuntimeAgree` 가 견준다). 새 동적 모듈은 매니페스트가 없으면 `sw_registerDynamicModule` 에서 구성이 선다. 게임 매니페스트는 활성 게임 것만
   빌드가 읽으므로 다른 게임 것은 `ModuleCatalogTest.EveryRepositoryManifestParses` 가 본다. 꺼진 모듈의 낡은 DLL 은 `Bin` 에 남아도 올리지 않는다.
-  키트 폴더 목록도 매니페스트가 정본(`sw_getModuleDirectoriesOfKind` — 의존 순서로 들어가 `sw_linkSharedKit` 의 공유 키트가 먼저 선다, 링크는 매니페스트 의존이어야 한다).
-- **올라온 모듈 이미지를 다루는 코드는 `Core/Module/ModuleImageUtil` 한 곳이다**(이름 · 올리기 · 심볼 · 범위 · 의존 고정 · import 결속 · 코드 떼기 · 내리기). `FileUtil` 에 되돌리지 말 것. 섀도 복사본 **파일 바이트**(`ModuleImagePatch`)와 리로드 정책(`ShadowCopyName` · 리눅스 도장 결속 검사)은 쓰는 곳이 핫 리로드 하나라 App 의 `LiveReloadManager` 곁에 있다.
+  키트 폴더 목록도 매니페스트가 원본(`sw_getModuleDirectoriesOfKind` — 의존 순서로 들어가 `sw_linkSharedKit` 의 공유 키트가 먼저 선다, 링크는 매니페스트 의존이어야 한다).
+- **올라온 모듈 이미지를 다루는 코드는 `Core/Module/ModuleImageUtil` 한 곳이다**(이름 · 올리기 · 심볼 · 범위 · 의존 고정 · import 결속 · 코드 떼기 · 내리기). `FileUtil` 에 되돌리지 말 것. 섀도 복사본 **파일 바이트**(`ModuleImagePatch`)와 리로드 정책(`ShadowCopyName` · 리눅스 스탬프 결속 검사)은 쓰는 곳이 핫 리로드 하나라 App 의 `LiveReloadManager` 곁에 있다.
 - **핫 리로드가 아닌 곳에서 모듈 이미지를 내릴 때는 `ModuleImageUtil::unloadModuleImage`(Core) 하나로** — 게임 · 에디터 모듈과 RHI 백엔드 모듈이 같은 창구다(RHI 층은 Module 층을 include 할 수 없어 Core 에 둔다. 로그 이름은 적재 때 받은 경로로 — 종료 중 서비스 소멸자에서 리플렉션 조회(`RHI::getBackendTypeName`)를 부르면 정리 중인 TypeRegistry 를 읽어 죽는다) — `releaseModuleCode` 로 그 이미지 코드를 쥔 등록(디스패처 채널 등)을 떼고,
   떼지 못하면 내리지 않으며, 끌어온 의존 이미지는 고정한다(리눅스는 DT_NEEDED 가 함께 내려가 종료 때 남은 채널 deleter 로 SEGFAULT, Windows 는 /DELAYLOAD 가
   GameFramework 를 프로세스 끝까지 잡아 가려졌다). 섀도 사본 이름은 `<모듈>_temp_p<pid>_…` — 정리는 다른 살아 있는 프로세스의 사본을 남긴다(`Bin` 은 CTest `-j` 로 같이
@@ -36,7 +36,7 @@ Engine 이 아는 것은 지연 로드 훅이 묻는 창구(`ModuleHandleProvide
   `-gv_editorStartupScene` 이 마지막 요청이 된다). Shipping 통째 링크(/WHOLEARCHIVE) 목록은 `sw_configureAppDependencies`(모듈 등록 뒤)에서만 읽는다 — App 이 GF · 게임보다
   먼저 add_subdirectory 되어 GF · 킷 · 게임의 등록기가 배포본에서 빠져 있었다. 쿠킹은 `ContentSource::SourceTree`(팩은 산출물이라 입력이 아니다)이고, MissingComponent 가
   든 씬은 쿠킹하지 않고 실패(종료 코드 → CookAssets)로 센다.
-- **모듈 코드를 쥘 수 있는 등록부는 `IModuleUnloadListener` 를 상속해 스스로 등록한다**(`releaseModuleCode` 에 손 목록을 다시 만들지 말 것). 보유자 객체는
+- **모듈 코드를 쥘 수 있는 레지스트리는 `IModuleUnloadListener` 를 상속해 스스로 등록한다**(`releaseModuleCode` 에 손 목록을 다시 만들지 말 것). 보유자 객체는
   엔진(또는 App) 코드가 만들고 생성자를 .cpp 에 둔다 — 모듈 안에서 만든 보유자가 모듈보다 오래 살면 훑기가 내려간 vtable 로 뛴다.
 - **매니페스트 내용도 구성 의존이다**(`CMAKE_CONFIGURE_DEPENDS`) — 켜짐을 바꾸면 다음 빌드가 다시 구성한다. 켜고 끄기는 에디터의 Modules 창이
   프로젝트 `_listModuleOverride` 를 고쳐 쓴다(기본과 다를 때만 줄, `EditorModuleOverrideUtil`). 적용은 빌드 뒤 다시 시작이다(실행 중에 켜지 않는다).
@@ -45,11 +45,11 @@ Engine 이 아는 것은 지연 로드 훅이 묻는 창구(`ModuleHandleProvide
   (`ModuleCatalog::parseManifest` 와 CMake 가 같은 검사), 의존이 꺼지면 확장도 오류 없이 함께 꺼진다(쓰지 않아 뺀 키트의 확장은 매니페스트도 복사하지 않는다).
 - **`ModuleImageUtil::releaseModuleCode` 는 델리게이트 스텁 주소로** 그 이미지가 단 등록을 뗀다. 뗀 것이 있다는 경고는 모듈의 손 정리가 빠졌다는 뜻이고 늘 0 이어야 한다. 테스트 함정: 몸통이 같은
   람다는 ICF 가 접어 주소가 겹친다.
-- **엔진 ABI 도장**(`Scripts/generate/GenerateEngineAbiStamp.py`, 엔진 헤더 + `.xxx` + RuntimeAPI + GameFramework 의 SHA-1)은 섀도 복사본을 올리기 **전에** 파일 바이트에서 대조한다. 주석만
-  바꿔도 바뀌는 것은 의도다. 도장 없는 모듈은 거절한다. RHI 모듈은 `kRHIModuleAbiVersion` == 도장 `v<N>`(static_assert), GameAPI · EditorAPI 표를 바꾸면 `kModuleAbiVersion` 을 올리고
+- **엔진 ABI 스탬프**(`Scripts/generate/GenerateEngineAbiStamp.py`, 엔진 헤더 + `.xxx` + RuntimeAPI + GameFramework 의 SHA-1)은 섀도 복사본을 올리기 **전에** 파일 바이트에서 대조한다. 주석만
+  바꿔도 바뀌는 것은 의도다. 스탬프 없는 모듈은 거절한다. RHI 모듈은 `kRHIModuleAbiVersion` == 스탬프 `v<N>`(static_assert), GameAPI · EditorAPI 표를 바꾸면 `kModuleAbiVersion` 을 올리고
   App · 모듈을 같이 빌드한다. 컨테이너 인라인 코드는 모듈마다 복사된다 — 내부를 바꾸면 모든 모듈을 다시 빌드한다(새 Engine.dll + 옛 App.exe 는 로그 없이 -1).
 - **모듈 등록** — GameFramework 는 키트 · SWGame 보다 먼저, 제 이름으로. 팩토리의 모듈은 등록을 모으는 모듈(`_activeModuleName`). 모듈 전역 변수는 `GlobalVariableRegistrar::getHead()` 에
-  매달려 commit 에서 모듈 이름으로 오른다(`SW_GVM_MODULE_HEAD` 류를 되살리지 말 것). 게임 모듈 리로드가 실패하면 씬 저장을 막는다(`setSaveBlockReason`). 모듈 언로드는
+  매달려 commit 에서 모듈 이름으로 오른다(`SW_GVM_MODULE_HEAD` 류를 복원하지 말 것). 게임 모듈 리로드가 실패하면 씬 저장을 막는다(`setSaveBlockReason`). 모듈 언로드는
   `destroyComponentsOfModule` 을 팩토리를 걷기 **전에**, DLL 은 "씬은 사라지고 서비스는 살아 있는" 구간에서만(`setOnScenesReleased`). 모듈 에셋 캐시는 `registerAssetCache` /
   `unregisterAssetCache` 짝(이름은 등록 때 복사). 로드 모듈의 코덱 · 로그 리스너(`releaseListenerCodeWithin`)도 내리기 전에 뗀다.
 - **절차 생성물은** `onBeforeStateSerialize` 에서 걷고 `onAfterStateDeserialize` 에서 다시 만든다(스냅샷에 실리면 메시 없는 유령). 리로드 전용 API 를 엔진에 넣지 않는다.

@@ -243,7 +243,7 @@ SW_TEST_CASE( WidgetComponentTest, WorldSpaceEmitsRenderTextureList )
 
 /**
  * @brief [WidgetComponentTest] 가장자리에 붙인 마커의 방향 각은 화면 가운데에서 목표 쪽이다 — 오른쪽 π/2 · 왼쪽 −π/2 · 위 0(시계 방향, 라디안), 오른쪽 뒤도 오른쪽
- * @details 변이: 각을 y 를 뒤집지 않고(UI y 아래가 +) 재면 위의 목표가 π 가 되어 진다.
+ * @details 변이: 각을 y 를 뒤집지 않고(UI y 아래가 +) 측정하면 위의 목표가 π 가 되어 진다.
  */
 SW_TEST_CASE( WidgetComponentTest, EdgeClampArrowPointsToTarget )
 {

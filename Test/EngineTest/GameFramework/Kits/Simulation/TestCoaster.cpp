@@ -168,7 +168,7 @@ SW_TEST_CASE( CoasterTest, LiftBrakesAndStationDriveTheTrain )
 }
 
 /**
- * @brief [CoasterTest] 루프가 있는 회로는 테스트 운행에서 한 바퀴를 돌고, 뒤집힘 하나 · 바닥의 큰 양의 G · 낙하 하나를 잰다
+ * @brief [CoasterTest] 루프가 있는 회로는 테스트 운행에서 한 바퀴를 돌고, 뒤집힘 하나 · 바닥의 큰 양의 G · 낙하 하나를 측정한다
  */
 SW_TEST_CASE( CoasterTest, LoopCircuitCompletesWithOneInversion )
 {

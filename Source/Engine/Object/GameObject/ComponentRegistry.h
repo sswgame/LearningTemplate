@@ -1,6 +1,6 @@
 /**
  * @file ComponentRegistry.h
- * @brief 타입별 컴포넌트 등록부입니다 — "그 타입의 컴포넌트를 모두" 를 씬 전체를 훑지 않고 돌려줍니다.
+ * @brief 타입별 컴포넌트 레지스트리입니다 — "그 타입의 컴포넌트를 모두" 를 씬 전체를 훑지 않고 돌려줍니다.
  *
  * [왜 필요한가]
  * `GameObjectManager::forEachComponentOfType` 은 **모든 오브젝트**를 공유 잠금 아래 훑고 오브젝트마다 타입 검사를 합니다. 빛 찾기가 그랬을 때
@@ -15,7 +15,7 @@
  *   정규 이름이라 모듈을 다시 올려 `TypeInfo` 주소가 바뀌어도 같은 칸입니다.
  * - 칸(`channel`)은 한 타입 안의 하위 목록입니다(빛은 종류 — 방향광 · 점광 · 스포트).
  * - 목록은 **등록 순서**를 지키고, 빼도 남은 것의 순서가 그대로입니다("활성인 첫 방향광" 이 등록 순서로 정해진다).
- * - 활성 여부는 부르는 쪽이 봅니다(`Component::isActive`). 등록부는 "무엇이 있나" 만 압니다.
+ * - 활성 여부는 부르는 쪽이 봅니다(`Component::isActive`). 레지스트리는 "무엇이 있나" 만 압니다.
  * - 항목은 컴포넌트 핸들(오브젝트 id + 컴포넌트 id — 다시 쓰지 않는 id 라 세대와 같다)을 함께 듭니다. 프레임을 넘겨 들 것은 핸들로 들고 매니저로 풉니다.
  *
  * @note 락은 `PrimitiveRegistry` 와 같이 **가장 안쪽**입니다. 등록 · 해제는 매니저 락 안에서 불릴 수 있습니다. 조회는 잠그지 않습니다 —
@@ -120,7 +120,7 @@ namespace sw
             return containsHandle( computeTypeKey( T::StaticType() ), channel, handle );
         }
 
-        /** @brief 등록부의 키입니다 — 타입의 정규 이름 해시입니다. nullptr 이면 0 입니다. */
+        /** @brief 레지스트리의 키입니다 — 타입의 정규 이름 해시입니다. nullptr 이면 0 입니다. */
         static uint32 computeTypeKey( const TypeInfo* pType );
 
     private:

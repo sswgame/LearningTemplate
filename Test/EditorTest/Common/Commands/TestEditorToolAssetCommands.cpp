@@ -243,7 +243,7 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, ApplyToPrefabWritesThePrefabsFormatAn
 /**
  * @brief [EditorToolAssetCommandsTest] 오버라이드는 컴포넌트를 안정 키로 짝짓고, 되돌리기는 그 컴포넌트의 그 비트만 바꾼다
  * @details 컴포넌트를 타입 이름으로 짝지으면 같은 타입의 둘째 컴포넌트(소켓)가 첫째의 원형과 비교되어 바꾸지 않은 위치가 오버라이드로 보이고,
- *          되돌리기가 첫째에 적용된다. 비트필드를 바이트째 견주고 옮기면 같은 바이트의 런타임 플래그(재생 중)가 다를 때 반복 설정이
+ *          되돌리기가 첫째에 적용된다. 비트필드를 바이트째 비교하고 옮기면 같은 바이트의 런타임 플래그(재생 중)가 다를 때 반복 설정이
  *          오버라이드로 보이고, 되돌리면 재생이 멈춘다. 되돌린 값을 알리지 않으면 위치가 월드 행렬에 들지 않는다.
  */
 SW_TEST_CASE( EditorToolAssetCommandsTest, OverridesPairComponentsByKeyAndRevertOnlyTheirOwnValue )

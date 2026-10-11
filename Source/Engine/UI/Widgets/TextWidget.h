@@ -31,7 +31,7 @@ namespace sw
      *          문단 방향은 이 위젯의 흐름 방향(`isRightToLeft`)입니다. `_bRichText` 면 `[b]` · `[i]` · `[color=]` · `[size=]` 표기를 읽습니다(`RichTextParser`).
      *          글리프 아틀라스를 쓰므로 페이지가 비워지면(세대가 오르면) 다시 칠합니다.
      *          `_text` 는 현지화 키 또는 글 그대로이고, 보이는 글은 측정 · 칠하기 때 문맥의 문화권으로 풀어 글 판과 함께 캐시합니다 — 언어가 바뀌면
-     *          `UISystem` 이 `onTextRevisionChanged` 로 알려 다시 풀고 다시 잽니다(언리얼 FText 의 TextRevision).
+     *          `UISystem` 이 `onTextRevisionChanged` 로 알려 다시 풀고 다시 측정합니다(언리얼 FText 의 TextRevision).
      */
     REFLECT( Category = "UI", DisplayName = "Text", Tooltip = "Draws a line or paragraph of text" )
     class SW_API TextWidget : public Widget

@@ -505,11 +505,11 @@ namespace sw
 
     hashed_string SerializerUtil::resolveHandlerTypeName( const hashed_string& typeName, const SerializeContext& context )
     {
-        // 등록된 이름 그대로 핸들러가 있으면 그것이 정본이다.
+        // 등록된 이름 그대로 핸들러가 있으면 그것이 원본이다.
         if ( context.findBinaryWriter( typeName ) != nullptr || context.findTextWriter( typeName ) != nullptr )
             return typeName;
 
-        // 없으면 리플렉션이 아는 정본 이름(`_name`)으로 한 번 더 물어본다. Alias · 옛 이름으로 들어온 경우다.
+        // 없으면 리플렉션이 아는 원본 이름(`_name`)으로 한 번 더 물어본다. Alias · 옛 이름으로 들어온 경우다.
         TypeRegistry&   registry  = engine::getTypeRegistry();
         const TypeInfo* pTypeInfo = registry.findType( typeName );
         if ( pTypeInfo != nullptr && pTypeInfo->_name.empty() == false &&

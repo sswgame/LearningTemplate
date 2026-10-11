@@ -183,7 +183,7 @@ namespace sw
         (void)context;
         if ( hasFocus() == false )
             return;
-        // 커서 — 글 끝(왼쪽에서 오른쪽이면 글 오른쪽, 오른쪽에서 왼쪽이면 왼쪽). 글 너비는 안의 글 위젯이 잰 원하는 크기다.
+        // 커서 — 글 끝(왼쪽에서 오른쪽이면 글 오른쪽, 오른쪽에서 왼쪽이면 왼쪽). 글 너비는 안의 글 위젯이 측정한 원하는 크기다.
         const WidgetGeometry& display   = _pDisplay->getGeometry();
         const WidgetGeometry& self      = getGeometry();
         const float32         textWidth = ( _text.empty() && _composition.empty() ) ? 0.0f : _pDisplay->getDesiredSize()._x;

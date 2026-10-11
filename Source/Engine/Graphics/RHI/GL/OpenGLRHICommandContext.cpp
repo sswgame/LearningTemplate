@@ -364,10 +364,10 @@ namespace sw
 
     void OpenGLRHICommandContext::bindComputeUav( RHIDescriptorIndex index, uint32 slot )
     {
-        // 인덱스는 **UAV 등록부의 것**이다. 그 등록부는 RW 텍스처와 버퍼를 함께 담으므로 어느 쪽인지는
-        // 레코드가 말해 준다. 다른 등록부를 넘겨짚지 않는다.
+        // 인덱스는 **UAV 레지스트리의 것**이다. 그 레지스트리는 RW 텍스처와 버퍼를 함께 담으므로 어느 쪽인지는
+        // 레코드가 말해 준다. 다른 레지스트리를 넘겨짚지 않는다.
         //
-        // 주의: UAV 등록부에서 못 찾았다고 **bindless(SRV) 등록부**로 흘러내리면 안 된다. 세 등록부가 각자
+        // 주의: UAV 레지스트리에서 못 찾았다고 **bindless(SRV) 레지스트리**로 흘러내리면 안 된다. 세 레지스트리가 각자
         // 0 부터 번호를 발급하므로 그 넘겨짚기는 언젠가 맞아떨어지고, 그때 **엉뚱한 버퍼가 엉뚱한
         // binding 에** 조용히 걸린다.
         if ( _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex )
@@ -414,11 +414,11 @@ namespace sw
     {
         // **텍스처 전용이다.** 버퍼는 `bindStructuredBuffer` 가 건다.
         //
-        // 주의: 텍스처 등록부에 없다고 버퍼 등록부로 흘러내리면 안 된다. 텍스처 · 버퍼 · UAV 는 **각자 0 부터
+        // 주의: 텍스처 레지스트리에 없다고 버퍼 레지스트리로 흘러내리면 안 된다. 텍스처 · 버퍼 · UAV 는 **각자 0 부터
         // 시작하는 별개의 프리리스트**라 같은 번호가 셋 다 유효할 수 있고, 그러면 버퍼 인덱스가 그 번호의
         // **텍스처**로 걸린다(모프 정점 버퍼 t11 이 텍스처로 걸리면 정점 셰이더가 SSBO 11 에서 0 을 읽어
         // **OpenGL 에서만** 기하가 사라진다). 부르는 쪽은 종류를 이미 알고 그에 맞는 함수를 부른다.
-        // 다른 세 백엔드도 추측하지 않는다(DX11 은 텍스처 등록부만 본다).
+        // 다른 세 백엔드도 추측하지 않는다(DX11 은 텍스처 레지스트리만 본다).
         if ( _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex )
             return;
 

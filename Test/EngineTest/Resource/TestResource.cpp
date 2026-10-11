@@ -339,7 +339,7 @@ SW_TEST_CASE( ResourceTest, ConfigurableResourcePriorityAndDlcSupport )
     SW_EXPECT_STREQ( "game", defaultPriority[0].c_str() );
 
     // 2. 임시 game 및 DLC 디렉터리/에셋 생성하여 우선순위 오버라이드 검증
-    //    **소스 트리의 Resource/ 에 쓴다** — 우선순위 토큰은 리소스 루트 아래 폴더로만 풀리므로 임시 폴더로는 못 잰다.
+    //    **소스 트리의 Resource/ 에 쓴다** — 우선순위 토큰은 리소스 루트 아래 폴더로만 풀리므로 임시 폴더로는 못 측정한다.
     //    그래서 정리를 끝에 손으로 두지 않고 만들기 전에 걸어 둔다(일찍 빠지거나 죽어도 작업 트리에 남지 않게). 지우는 것은
     //    이 케이스가 만든 폴더뿐이다 — `Resource/dlc` 는 이 케이스가 만들었을 때만 지운다(진짜 DLC 를 같이 지우지 않게).
     const sw::string rootDir    = sw::ResourcePaths::getRootFolderPath();
@@ -835,7 +835,7 @@ SW_TEST_CASE( ResourceTest, EnsureMetaKeysAnAbsolutePathInsideTheRootByItsID )
 
 /**
  * @brief [ResourceTest] 레지스트리 본문(`<guid> <sourcePath>`)이 양방향 매핑으로 등록되고, 주석·빈 줄·깨진 줄은 건너뛴다.
- * @details 이 형식은 엔진 쿠킹 단계(`AssetDatabase::makeRegistryText`)가 쓰고 여기가 읽는다 — 배포본 GUID 의 유일한 통로다.
+ * @details 이 형식은 엔진 쿠킹 단계(`AssetDatabase::makeRegistryText`)가 쓰고 여기가 읽는다 — 배포본 GUID 의 유일한 경로다.
  */
 SW_TEST_CASE( ResourceTest, AssetRegistryTextRegistersMappings )
 {

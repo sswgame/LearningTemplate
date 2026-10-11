@@ -11,9 +11,9 @@
 (docs/08_Verification.md 2 절 "측정 · 프로파일"). 판정: 값 > 기준 × (1 + 허용) + 바닥(us) 이면 회귀다. 개선은 알리기만 한다.
 
 회귀로 지면 한 번 더 돌려 측정 창 전체를 트레이스로 남긴다(`-gv_profileTracePath`, 끄려면 `--no-trace`) — `<App 폴더>/Saved/Traces/perf_<게임>_<백엔드>.trace.json`.
-Perfetto UI · `chrome://tracing` · 에디터 프로파일러 패널의 Load Trace 로 연다. 숫자를 재는 판에는 켜지 않는다(긴 캡처가 사건마다 24 B 를 쓴다).
+Perfetto UI · `chrome://tracing` · 에디터 프로파일러 패널의 Load Trace 로 연다. 숫자를 측정하는 판에는 켜지 않는다(긴 캡처가 사건마다 24 B 를 쓴다).
 
-Debug 숫자로는 재지 않는다 — Debug 는 경합 검출기 · 할당 추적으로 컨테이너 코드가 과장된다(빌드 형식이 Release 가 아니면 멈춘다).
+Debug 숫자로는 측정하지 않는다 — Debug 는 경합 검출기 · 할당 추적으로 컨테이너 코드가 과장된다(빌드 형식이 Release 가 아니면 멈춘다).
 """
 
 from __future__ import annotations
@@ -42,7 +42,7 @@ def makeMachineKey() -> str:
 
 
 def measureInternal(appPath: Path, listArgument: list[str], runCount: int) -> tuple[dict[str, dict[str, float]], list[str]]:
-    """판마다 재서 구간별 (p50, p99, avg) 중앙값을 돌려줍니다. 실패한 판은 이유를 모은다."""
+    """판마다 측정해서 구간별 (p50, p99, avg) 중앙값을 돌려줍니다. 실패한 판은 이유를 모은다."""
     mapSample: dict[str, dict[str, list[float]]] = {}
     listFailure: list[str] = []
     for runIndex in range(runCount):

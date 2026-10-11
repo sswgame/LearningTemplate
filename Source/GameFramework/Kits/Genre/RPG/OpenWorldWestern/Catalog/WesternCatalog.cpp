@@ -321,7 +321,7 @@ namespace sw
         std::stable_sort( _listPursuit.begin(), _listPursuit.end(), byPursuitLevel );
         std::stable_sort( _listBondLevel.begin(), _listBondLevel.end(), byBondLevel );
         std::stable_sort( _listDeadEyeLevel.begin(), _listDeadEyeLevel.end(), byDeadEyeLevel );
-        // 유대 단계는 기반 레벨 진행으로 센다 — 단계 사이 문턱 차이가 표다(첫 단계가 시작).
+        // 유대 단계는 기반 레벨 진행으로 센다 — 단계 사이 임계값 차이가 표다(첫 단계가 시작).
         vector<int64> listXpToNext;
         for ( size_t bondIndex = 1; bondIndex < _listBondLevel.size(); ++bondIndex )
         {

@@ -136,7 +136,7 @@ namespace sw
         PlacementRegion computeRegion() const;
         /** @brief 셀 배치 모두를 더티로 — 활성이 바뀌었을 때. */
         void markCellsDirty();
-        /** @brief 셀 배치를 모두 등록부에서 빼고 놓습니다. */
+        /** @brief 셀 배치를 모두 레지스트리에서 빼고 놓습니다. */
         void releaseCells();
 
     private:
@@ -151,7 +151,7 @@ namespace sw
 
         vector<Cell>                            _listCell;
         vector<unique_ptr<EnvironmentMaterial>> _listLayerMaterial;  ///< 레이어마다 하나(바람 값을 레이어마다 싣는다)
-        PrimitiveRegistry*                      _pPrimitiveRegistry; ///< 등록된 매니저의 등록부(구조 링크라 생포인터)
+        PrimitiveRegistry*                      _pPrimitiveRegistry; ///< 등록된 매니저의 레지스트리(구조 링크라 생포인터)
         float32                                 _time;
         uint32                                  _instanceCount;
         uint8                                   _bBuiltOnTerrain : 1; ///< 마지막 계산이 지형 위였다(아니면 시작 때 지형을 다시 찾는다)

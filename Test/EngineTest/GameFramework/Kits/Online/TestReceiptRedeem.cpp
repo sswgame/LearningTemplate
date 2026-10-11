@@ -1,5 +1,5 @@
 // 영수증 지급 — 가짜 제공자는 다음 poll 에 결과, 유효한 영수증은 한 번 지급, 다른 계정의 같은 영수증은 AlreadyRedeemed, 무효 · 환불 · 대기 · 모르는 상품 · 샌드박스,
-// 등록부는 같은 스토어 · 규칙 밖 이름을 거절한다.
+// 레지스트리는 같은 스토어 · 규칙 밖 이름을 거절한다.
 #include "pch.h"
 
 #include "GameFramework/Base/Online/Ledger/Ledger.h"

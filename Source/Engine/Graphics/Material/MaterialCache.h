@@ -44,7 +44,7 @@ namespace sw
         /** @brief 대입을 금지합니다. */
         MaterialCache& operator=( const MaterialCache& ) = delete;
 
-        /** @brief 등록부의 종류 이름 — `AssetManager::getAssetCache<T>()` 가 이것으로 찾습니다. */
+        /** @brief 레지스트리의 종류 이름 — `AssetManager::getAssetCache<T>()` 가 이것으로 찾습니다. */
         static constexpr const utf8* kAssetKindName = "Material";
         /** @brief 이 캐시가 다루는 에셋 종류의 이름입니다. */
         const utf8* getAssetKindName() const override { return kAssetKindName; }

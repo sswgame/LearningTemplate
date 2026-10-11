@@ -1,7 +1,7 @@
 /**
  * @file MailboxClient.h
  * @brief 우편함 키트의 클라이언트 — `OnlineServiceClient` 에 올리는 `IOnlineClientService`. 목록 · 읽음 · 수령 · 모두 받기 · 지우기를 보내고 첫 쪽 목록 캐시와 안 읽은 수를 듭니다.
- * @details - 수령 응답의 잔액(`_listBalance`)은 게임이 경제 클라이언트로 넘긴다(키트끼리 모른다 — 원장이 정본).
+ * @details - 수령 응답의 잔액(`_listBalance`)은 게임이 경제 클라이언트로 넘긴다(키트끼리 모른다 — 원장이 원본).
  *          - 커서 없는 목록 응답이 캐시를 바꾸고, 수령 · 읽음 · 지우기 성공은 그 키의 우편을 바로 고친다(모두 받기는 다음 목록으로 맞춘다).
  *          - 수령 재시도는 같은 멱등 키로(응답의 `_idempotencyKey`). 콜백은 정확히 한 번(`OnlineServiceClient::tick` 스레드).
  */

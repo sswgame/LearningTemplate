@@ -454,7 +454,7 @@ namespace sw
         {
             _listSeed.push_back( crop._seedItem );
         }
-        // 시작 돈 · 씨앗은 새 판에만 — 되살린 판에 덧쌓이지 않게.
+        // 시작 돈 · 씨앗은 새 판에만 — 복원한 판에 덧쌓이지 않게.
         if ( bFresh )
         {
             pState->getWallet().add( _shipment.getCurrency(), _startingGold );

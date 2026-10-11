@@ -94,7 +94,7 @@ namespace sw
 
         /**
          * @brief 값이 @p value 보다 작으면 @p value 로 올리고, 바꾸기 전의 값을 반환합니다(C++26 `std::atomic::fetch_max` 와 같습니다).
-         * @details CAS 루프로 구현합니다. 되살린 ID 뒤로 발급 카운터를 밀어 두는 곳처럼 드물게 쓰는 용도입니다.
+         * @details CAS 루프로 구현합니다. 복원한 ID 뒤로 발급 카운터를 밀어 두는 곳처럼 드물게 쓰는 용도입니다.
          */
         T fetch_max( T value, std::memory_order order = std::memory_order_seq_cst ) noexcept
         {

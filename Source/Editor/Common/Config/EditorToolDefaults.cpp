@@ -19,7 +19,7 @@ namespace sw::editor
 
     bool EditorToolDefaults::loadFromHostPath( string_view hostRelativePath )
     {
-        // 경로의 정본은 `Scripts/common/Constants.py` 하나다. 경로를 바꾸는 칸을 `EditorConfig` 에 두지 말 것 — 그 파일은
+        // 경로의 원본은 `Scripts/common/Constants.py` 하나다. 경로를 바꾸는 칸을 `EditorConfig` 에 두지 말 것 — 그 파일은
         // **테마를 저장할 때마다 기계가 다시 쓴다.**
         string rel = string( hostRelativePath );
         if ( rel.empty() )

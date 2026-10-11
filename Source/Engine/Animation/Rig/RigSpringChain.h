@@ -86,7 +86,7 @@ namespace sw
         vector<float3>  _listPosition;
         vector<float3>  _listPreviousPosition;
         vector<float3>  _listAnimated; ///< 이번 프레임 애니메이션 자세(월드)
-        vector<float32> _listLength;   ///< 부모 입자까지의 길이(애니메이션 자세에서 잰다)
+        vector<float32> _listLength;   ///< 부모 입자까지의 길이(애니메이션 자세에서 측정한다)
         float3          _lastRootPosition;
         float32         _accumulator;
         uint32          _lastStepCount;

@@ -48,7 +48,7 @@ SW_TEST_CASE( EditorTransformCommandsTest, AlignUsesWorldPositionsUnderARotatedS
 
 /**
  * @brief [EditorTransformCommandsTest] 바닥 붙이기는 월드 Y 로 한다 — 부모 아래의 오브젝트도 월드 바닥에 선다
- * @details 월드 위치를 읽고 **로컬** 칸에 쓰면 부모가 위로 옮겨져 있기만 해도 그만큼 뜬다. 크기도 월드로 잰다.
+ * @details 월드 위치를 읽고 **로컬** 칸에 쓰면 부모가 위로 옮겨져 있기만 해도 그만큼 뜬다. 크기도 월드로 측정한다.
  */
 SW_TEST_CASE( EditorTransformCommandsTest, SnapToGroundPutsAParentedObjectOnWorldGround )
 {
@@ -110,8 +110,8 @@ SW_TEST_CASE( EditorTransformCommandsTest, PastedValuesAndPresetsReachTheWorldTr
 }
 
 /**
- * @brief [EditorTransformCommandsTest] 붙여넣기 · 프리셋 · 새 컴포넌트로 붙여넣기는 값만 옮기고 컴포넌트 이름표는 옮기지 않는다
- * @details 이름표는 저장되는 PROPERTY 라 직렬화기가 값과 함께 싣는다. 그대로 옮기면 붙여 넣은 컴포넌트가 원본의 이름(컴포넌트 키)을 갖게 되어,
+ * @brief [EditorTransformCommandsTest] 붙여넣기 · 프리셋 · 새 컴포넌트로 붙여넣기는 값만 옮기고 컴포넌트 이름은 옮기지 않는다
+ * @details 이름은 저장되는 PROPERTY 라 직렬화기가 값과 함께 싣는다. 그대로 옮기면 붙여 넣은 컴포넌트가 원본의 이름(컴포넌트 키)을 갖게 되어,
  *          같은 오브젝트 안에서 키가 겹치거나 대상을 가리키던 부착 · 오버라이드가 가리킬 곳을 잃는다.
  */
 SW_TEST_CASE( EditorTransformCommandsTest, PastingValuesKeepsTheTargetsComponentName )
@@ -167,8 +167,8 @@ SW_TEST_CASE( EditorTransformCommandsTest, PresetNamesFollowOneRule )
 }
 
 /**
- * @brief [EditorTransformCommandsTest] 바닥 붙이기는 메시의 실제 크기로 잰다 — 평면은 바닥에 눕고, 단위 상자가 아닌 메시도 바닥에 선다
- * @details 오브젝트의 월드 상자(`GameObject::getWorldBox`)로 잰다. "메시면 월드 스케일 × 단위 상자" 로 셈하면 두께 없는 평면이 반 칸(0.5) 뜬다.
+ * @brief [EditorTransformCommandsTest] 바닥 붙이기는 메시의 실제 크기로 측정한다 — 평면은 바닥에 눕고, 단위 상자가 아닌 메시도 바닥에 선다
+ * @details 오브젝트의 월드 상자(`GameObject::getWorldBox`)로 측정한다. "메시면 월드 스케일 × 단위 상자" 로 셈하면 두께 없는 평면이 반 칸(0.5) 뜬다.
  */
 SW_TEST_CASE( EditorTransformCommandsTest, SnapToGroundMeasuresTheMeshNotAUnitBox )
 {

@@ -114,7 +114,7 @@ namespace sw
             }
 
             /**
-             * @brief 런타임 등록부에 올릴 별칭 목록입니다. 네임스페이스가 있으면 한정 이름도 함께 올립니다.
+             * @brief 런타임 레지스트리에 올릴 별칭 목록입니다. 네임스페이스가 있으면 한정 이름도 함께 올립니다.
              * @details 공백이 든 별칭(`unsigned int`)이나 이미 한정된 별칭(`sw::string`)은 한정하지 않습니다.
              */
             static vector<string> makeRegistryAliases( const vector<string>& listArgument )

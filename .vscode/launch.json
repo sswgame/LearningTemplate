@@ -19,7 +19,7 @@
             ]
         },
         {
-            // CMake Tools 상태 표시줄에서 고른 실행 대상(App · 시험 실행 파일 …)을 디버그한다. 대상이 오래됐으면 먼저 빌드한다.
+            // CMake Tools 상태 표시줄에서 고른 실행 대상(App · 테스트 실행 파일 …)을 디버그한다. 대상이 오래됐으면 먼저 빌드한다.
             "name": "CMake 실행 대상 (CodeLLDB · 사이드바 인자)",
             "type": "lldb",
             "request": "launch",
@@ -33,9 +33,9 @@
             ]
         },
         {
-            // 시험 실행 파일 하나를 골라 케이스 필터로 돌린다. 작업 폴더는 Bin 이어야 한다(위로 올라가며 Resource/ 를 찾는다).
-            // Shipping 의 시험 실행 파일은 Bin 이 아니라 TestBin 에 있다 — 디버그는 Debug 계열 프리셋에서 한다.
-            "name": "시험 (CodeLLDB)",
+            // 테스트 실행 파일 하나를 골라 케이스 필터로 돌린다. 작업 폴더는 Bin 이어야 한다(위로 올라가며 Resource/ 를 찾는다).
+            // Shipping 의 테스트 실행 파일은 Bin 이 아니라 TestBin 에 있다 — 디버그는 Debug 계열 프리셋에서 한다.
+            "name": "테스트 (CodeLLDB)",
             "type": "lldb",
             "request": "launch",
             "program": "${command:cmake.buildDirectory}/Bin/${input:testExecutable}.exe",
@@ -73,7 +73,7 @@
             ]
         },
         {
-            "name": "시험 (WSL)",
+            "name": "테스트 (WSL)",
             "type": "lldb",
             "request": "launch",
             "program": "${workspaceFolder}/build/WSL-Debug/Bin/${input:testExecutable}",
@@ -91,7 +91,7 @@
         {
             "id": "testExecutable",
             "type": "pickString",
-            "description": "디버그할 시험 실행 파일",
+            "description": "디버그할 테스트 실행 파일",
             "options": [
                 "EngineTest",
                 "CoreTest",

@@ -482,7 +482,7 @@ namespace sw
         _socialClient.drainNotifications( _listSocialNotification );
         for ( const SocialNotification& notification : _listSocialNotification )
         {
-            if ( notification._kind == SocialNotificationKind::FriendRequested ) // 받은 신청은 바로 수락한다(재지 않는다)
+            if ( notification._kind == SocialNotificationKind::FriendRequested ) // 받은 신청은 바로 수락한다(측정하지 않는다)
                 (void)_socialClient.respondFriend( notification._otherID, true, SocialReplyDelegate::create<&LoadBot::onFriendAccepted>( this ) );
         }
     }

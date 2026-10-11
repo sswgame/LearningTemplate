@@ -476,7 +476,7 @@ SW_TEST_CASE( AppearanceTest, ItemCustomizationAttachesAndChoosesVariants )
 }
 
 /**
- * @brief [AppearanceTest] 피해 단계 — 문턱 아래는 멀쩡, 문턱부터 그 단계의 변형 · 머티리얼 값, 내구도가 닳은 만큼도 피해다, 단계에 걸린 부품은 떨어진다
+ * @brief [AppearanceTest] 피해 단계 — 임계값 아래는 멀쩡, 임계값부터 그 단계의 변형 · 머티리얼 값, 내구도가 닳은 만큼도 피해다, 단계에 걸린 부품은 떨어진다
  */
 SW_TEST_CASE( AppearanceTest, DamageStagesFollowDataThresholds )
 {
@@ -493,7 +493,7 @@ SW_TEST_CASE( AppearanceTest, DamageStagesFollowDataThresholds )
     SW_EXPECT_TRUE( resolved.findPart( hashed_string( "MainHand" ), hashed_string( "Blade" ) )->_damageStage.empty() );
     SW_EXPECT_TRUE( Internal::findMaterial( resolved, "MainHand", "Rust" ) == nullptr );
 
-    // 문턱과 같은 피해는 그 단계다(문턱 "이상").
+    // 임계값과 같은 피해는 그 단계다(임계값 "이상").
     const ItemVisualDef* pSwordVisual = fixture._database.getVisuals().findVisual( hashed_string( "sword" ) );
     SW_EXPECT_EQUAL( -1, pSwordVisual->computeDamageStageIndex( 0.29f ) );
     SW_EXPECT_EQUAL( 0, pSwordVisual->computeDamageStageIndex( 0.3f ) );

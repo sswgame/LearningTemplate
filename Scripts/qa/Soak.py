@@ -7,7 +7,7 @@
     py -3 -m Scripts soak --app <App> --backend vk --minutes 30 --out soak.json
 
 App 은 `-gv_profileSeconds=<분 × 60>` 으로 그 시간을 재고 스스로 끝난다(프레임 수로 끊으면 장면마다 몇 초인지 모른다). 그동안 이 스크립트가
-밖에서 자원을 잰다(사유 메모리 · 작업 집합 · 핸들 · GDI/USER 객체). 판정:
+밖에서 자원을 측정한다(사유 메모리 · 작업 집합 · 핸들 · GDI/USER 객체). 판정:
   - 종료 코드 0, `[Error]` 0 줄
   - 워밍업 뒤 사유 메모리 증가 기울기 ≤ `--max-private-mb-per-minute`, 핸들 증가 기울기 ≤ `--max-handles-per-minute`
   - (`--max-p99-ms` 를 주면) GT.Frame · RT.Frame 의 p99 ≤ 그 값

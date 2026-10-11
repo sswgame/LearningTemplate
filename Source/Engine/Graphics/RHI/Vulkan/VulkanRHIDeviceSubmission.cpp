@@ -116,7 +116,7 @@ namespace sw
         // 슬롯은 리셋된 채로 남아 영영 준비되지 않고, 그것 하나 때문에 범위 전체가 VK_NOT_READY 가 된다.
         uint64       arrResult[constant::kMaxGPUTimestampSlot * 2]{};
         const uint32 base = getTimestampBase();
-        // **기다리지 않는다**(WAIT 비트 없음). 재려던 파이프라인을 멈추면 숫자가 거짓이 된다.
+        // **기다리지 않는다**(WAIT 비트 없음). 측정하려던 파이프라인을 멈추면 숫자가 거짓이 된다.
         // 그래서 VK_NOT_READY 도 정상 응답으로 받는다(쓰인 칸의 값은 이미 채워져 있다).
         const VkResult result =
             vkGetQueryPoolResults( _device, _timestampPool, base, constant::kMaxGPUTimestampSlot, sizeof( arrResult ), arrResult,

@@ -3,7 +3,7 @@
  * @brief 온라인 부하 테스트 봇 — `OnlineLoadBot --scenario=<json> (--server=<ip:port> | --local-server[=<port>]) [--bots=N] [--report=<json>]
  *        [--max-error-percent=N] [--light-hash]`.
  * @details - `--local-server` 는 같은 프로세스에 서버 조립(`LoadBotLocalServer`)을 띄우고 루프백 TCP(플랫폼 전송)로 붙는다 — 전용 서버가 온라인 서비스를
- *            조립하기 전까지 키트 · 와이어 · 전송을 함께 재는 길이다. 서버 시각은 UTC 벽시계, 봇 지연은 `MonotonicClock`.
+ *            조립하기 전까지 키트 · 와이어 · 전송을 함께 측정하는 길이다. 서버 시각은 UTC 벽시계, 봇 지연은 `MonotonicClock`.
  *          - 끝에 동작별 지연 백분위 표를 로그로, `--report` 면 JSON 을 파일로 쓴다. 오류율이 상한(기본 1 %)을 넘으면 종료 코드 1, 인자 · 시나리오 오류는 2.
  */
 #include "pch.h"

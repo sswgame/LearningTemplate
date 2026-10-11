@@ -113,7 +113,7 @@ namespace sw
             pass._listResolvedInput.clear();
             pass._listResolvedOutput.clear();
             pass._listResolvedColorOutput.clear();
-            // 역할은 첨부의 선언(`_role`)이 먼저, 그다음 정본 이름 · 포맷이다(resolveRenderPassInputRole).
+            // 역할은 첨부의 선언(`_role`)이 먼저, 그다음 원본 이름 · 포맷이다(resolveRenderPassInputRole).
             auto resolveAttachment = [&]( const string& attachmentName ) -> RenderGraphPassDesc::ResolvedAttachment
             {
                 const RenderPassAttachment*             pAttachment = findAttachment( attachmentName );

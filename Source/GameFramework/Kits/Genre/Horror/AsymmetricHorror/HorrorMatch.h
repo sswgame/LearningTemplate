@@ -296,7 +296,7 @@ namespace sw
         /**
          * @brief 세이브 · 핫 리로드용 전체 상태를 씁니다 — 살인마 id · 판(`MatchState`) · 걸음 · 무대(자리 · 판자 · 사물함 · 창틀 · 발전기 · 탈출구 · 해치) ·
          *        생존자(체력 · 치료 진행 · 점수 · 타이머 · 갈고리 · 일) · 살인마(점수 · 자리 · 쿨다운 · 들고 있는 생존자) · 엔드게임. 넷 스냅숏(`writeState( BitWriter& )`)은
-         *        화면용으로 양자화해 되살릴 수 없어 따로 둡니다. 설정 · 카탈로그는 `initialize` 의 것이라 싣지 않고, 알림은 읽을 때 비웁니다.
+         *        화면용으로 양자화해 복원할 수 없어 따로 둡니다. 설정 · 카탈로그는 `initialize` 의 것이라 싣지 않고, 알림은 읽을 때 비웁니다.
          */
         void writeState( Archive& outArchive ) const;
         /**
@@ -348,7 +348,7 @@ namespace sw
         void syncHealthState( HorrorSurvivor& survivor );
         void awardScore( StatBlock& outScore, const utf8* pAction, float32 amount );
         void configureGenerator( int32 generator, bool bRegressing );
-        /** @brief `start` 가 판에 주는 설정입니다(되살릴 때 같은 설정으로 판을 다시 연다). */
+        /** @brief `start` 가 판에 주는 설정입니다(복원할 때 같은 설정으로 판을 다시 연다). */
         MatchSettings makeMatchSettings() const;
         /** @brief 생존자 하나의 상태를 읽어 덮습니다(규칙 · 치료 설정은 `addSurvivor` 가 세운 것). 깨졌으면 false 입니다. */
         [[nodiscard]] bool readSurvivor( Archive& archive, HorrorSurvivor& outSurvivor ) const;

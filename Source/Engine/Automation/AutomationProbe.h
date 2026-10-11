@@ -17,7 +17,7 @@ namespace sw
     struct AutomationProbeRegistration
     {
         const utf8*             _pName;    ///< `<게임>.<값>` (예: `Shooter3D.WeaponIndex`)
-        const utf8*             _pTooltip; ///< 무엇을 재는가
+        const utf8*             _pTooltip; ///< 무엇을 측정하는가
         AutomationProbeFunction _pFunction;
     };
 } // namespace sw
@@ -27,7 +27,7 @@ namespace sw
     /**
      * @class AutomationProbes
      * @brief 탐침 등록표입니다. 모듈을 내리면(핫 리로드) 그 모듈의 탐침도 빠집니다. 같은 이름이 둘이면 뒤 것을 거절하고 오류를 남깁니다.
-     * @details 등록부는 Engine 이미지의 함수 정적이라 게임 모듈이 바뀌어도 남습니다(`GameAutoplay` 와 같은 모양). 게임 스레드 · 정적 초기화에서만 씁니다.
+     * @details 레지스트리는 Engine 이미지의 함수 정적이라 게임 모듈이 바뀌어도 남습니다(`GameAutoplay` 와 같은 모양). 게임 스레드 · 정적 초기화에서만 씁니다.
      */
     class SW_API AutomationProbes
     {

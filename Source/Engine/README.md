@@ -43,7 +43,7 @@
 
 - **토대.** Engine의 어느 것도 참조하지 않습니다. `Compression` 은 외부 라이브러리(lz4, zstd)로 Core의 인터페이스를 구현합니다. Core가 그 라이브러리에 종속되지 않게 하려고 여기 둡니다.
   네트워크 보안(OpenSSL)은 온라인을 쓰는 게임만 필요하므로 Engine 이 아니라 `GameFramework/Base/Online/Security` 에 있습니다 — Engine.dll 은 libssl · libcrypto 를 모릅니다.
-  `Observability` 는 Core만 보는 서버 운영 관측입니다. 엔진의 HTTP(운영 끝점 `OpsHTTPEndpoint`, 텔레메트리 · 크래시 보고가 쓰는 `IHTTPClient`)도 여기 한 곳에 있습니다.
+  `Observability` 는 Core만 보는 서버 운영 관측입니다. 엔진의 HTTP(운영 엔드포인트 `OpsHTTPEndpoint`, 텔레메트리 · 크래시 보고가 쓰는 `IHTTPClient`)도 여기 한 곳에 있습니다.
 - **설정과 물리.** 물리의 설정 테이블, 물리 에셋, 셰이프 서술자가 리플렉션 데이터라서 물리가 설정과 같은 자리에 있습니다.
 - **공간.** 공간 분할(`Spatial`)은 Core 수학의 `AABB`(`Core/Math/AABB.h`)만 쓰므로 토대 바로 위에 있습니다. 물리 · 렌더 · 내비가 그 위에서 같은 트리를 씁니다.
 - **에셋과 내비.** `Resource` 는 에셋 데이터베이스, 팩, 캐시 레지스트리(`IAssetCache`)입니다.
@@ -65,7 +65,7 @@
 
 - **prelude와 경로 헬퍼**(`EngineMinimal.h`, `Resource/ResourcePaths.h`)는 어느 티어에서든 씁니다. 타입 별칭과 전방 선언을 모은 헤더, 리소스 경로를 해석하는 헬퍼이기 때문입니다. `Common/Common.h` 는 티어 0 이라 예외가 필요 없습니다.
 - **배선 파일**(`Reflection/ReflectGenerated.h`)은 노출하는 모든 서브시스템을 알아야 하는 곳입니다. 생성 코드가 쓰는 모든 형식을 모읍니다.
-- 두 목록은 `Scripts/lint/rules/CheckEngineLayers.toml` 의 `[exemption]` 이 정본입니다. 더는 위 티어를 include 하지 않는 줄은 낡은 예외로 실패합니다.
+- 두 목록은 `Scripts/lint/rules/CheckEngineLayers.toml` 의 `[exemption]` 이 원본입니다. 더는 위 티어를 include 하지 않는 줄은 낡은 예외로 실패합니다.
 
 ## 따라 해 보기 — 새 코드가 들어갈 폴더 고르기
 
@@ -198,7 +198,7 @@ Shipping 실행 파일에 레지스트리가 없는지는 `DevCommandShippingTes
 글자는 액션이 아니라 글자 입력(`InputManager::setTextInputCallback( …, InputKeyboardFocus::DevConsole )`)으로 받고, 콘솔을 여닫은 프레임의 글자는 버립니다.
 열려 있는 동안 콘솔이 키보드 포커스를 가지므로 게임의 키보드 입력은 "안 눌림"이 됩니다. 패드는 포커스와 관계가 없어 게임이 계속 받습니다.
 
-런타임 디버그 HUD(FPS · 스레드 시간 · 드로우 · 메모리 · 오브젝트 · 물리 · 오디오 · 입력 · 카메라 · 게임 디버그 값)도 같은 Dev 전용 도구입니다. 섹션 등록부는 `Console/DebugHUDRegistry` 이고,
+런타임 디버그 HUD(FPS · 스레드 시간 · 드로우 · 메모리 · 오브젝트 · 물리 · 오디오 · 입력 · 카메라 · 게임 디버그 값)도 같은 Dev 전용 도구입니다. 섹션 레지스트리는 `Console/DebugHUDRegistry` 이고,
 섹션은 소유 코드의 `.cpp` 에 `SW_DEBUG_HUD_SECTION` 한 줄로 답니다. 단축키(Ctrl+F3), 명령 `hud`, 설정 창, 꺼진 상태의 비용은 [UI README](UI/README.md#디버그-hud)에 있습니다.
 
 ### 서버 운영 관측
@@ -213,7 +213,7 @@ Shipping 실행 파일에 레지스트리가 없는지는 `DevCommandShippingTes
 XML · JSON 문서(`XMLDocument`, `JSONDocument`, `ConfigKeyDoc`)는 `Serialization/XML` · `Serialization/JSON` 에 있습니다. 데이터 XML의 "모르는 이름" 검사는 `XMLNameCheck` 하나가 합니다. 문구는 `<원소> has unknown attribute 'x'` 로 같고, 데이터 오류면 Error, 읽기를 계속하는 로더면 Warning을 고릅니다.
 게임 시간 배율(`GameTimeScale`, `gv_timeScale`)은 호스트가 프레임 시간에 곱합니다. 게임의 자동 플레이 스위치 계약(`GameAutoplay`, `SW_GAME_AUTOPLAY`)도 여기 있습니다.
 `Profiling/` 은 엔진 프로파일러입니다. `SW_PROFILE_SCOPE` 한 줄이 `FrameProfiler` 표와 Tracy 구간에 함께 남습니다([Profiling](Profiling/README.md)).
-`Console/` 은 개발 명령 레지스트리와 콘솔 해석기, 디버그 HUD 섹션 등록부, `TileMap/` 은 2D 타일맵 데이터(타일셋 에셋, 맵 XML, 격자 도우미)입니다. 셋 다 쓰는 곳이 여러 티어에 걸쳐 바닥 가까이 둡니다.
+`Console/` 은 개발 명령 레지스트리와 콘솔 해석기, 디버그 HUD 섹션 레지스트리, `TileMap/` 은 2D 타일맵 데이터(타일셋 에셋, 맵 XML, 격자 도우미)입니다. 셋 다 쓰는 곳이 여러 티어에 걸쳐 바닥 가까이 둡니다.
 배치 규칙의 타일 표면(`Environment/Placement/PlacementTileSurface`)은 타일 값을 받아 쓰는 어댑터라 `TileMap` 과 겹치지 않습니다.
 
 `Module/` 에는 모듈 DLL 쪽 계약만 둡니다.
@@ -342,8 +342,8 @@ Godot처럼 "노드는 RID만 안다"로 바꾸면 모든 컴포넌트에 해석
 이름 풀 블록은 넣는 쪽 태그가 아니라 `EngineMisc` 로 셉니다. 종료 보고가 0인지는 `AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline` 이 보통 실행과 에디터를 켠 실행 둘로 확인합니다.
 
 **기준선은 `EngineLoop::initialize` 끝이고, 게임 · 에디터 모듈은 그 뒤에 오릅니다.** 그 모듈이 키운 프로세스 정적 저장소는 넣는 쪽 태그(Editor · Scene)에 남습니다.
-번역 문자열 저장소(`StringTable::releaseTextStorage`), 활성 2D 렌더 설정(`Render2DSettings::releaseActive` — 다음 `getActive` 가 다시 읽는다)과 등록부 용량(`RegistrationList::shrinkToFit` — 개발 명령 · 자동화 단계 · 탐침 · 모듈 언로드 리스너)은 `EngineBootstrap::shutdown` 이,
-창 제목 사본은 App 이 엔진을 내리기 전에 놓습니다. 등록부 저장소는 넣는 쪽과 관계없이 `EngineMisc` 로 세어, 다시 잡아도 다른 태그로 옮겨 가지 않습니다.
+번역 문자열 저장소(`StringTable::releaseTextStorage`), 활성 2D 렌더 설정(`Render2DSettings::releaseActive` — 다음 `getActive` 가 다시 읽는다)과 레지스트리 용량(`RegistrationList::shrinkToFit` — 개발 명령 · 자동화 단계 · 탐침 · 모듈 언로드 리스너)은 `EngineBootstrap::shutdown` 이,
+창 제목 사본은 App 이 엔진을 내리기 전에 놓습니다. 레지스트리 저장소는 넣는 쪽과 관계없이 `EngineMisc` 로 세어, 다시 잡아도 다른 태그로 옮겨 가지 않습니다.
 Debug STL 은 문자열 객체마다 16 B 컨테이너 프록시를 잡습니다. 함수 안 `static const string` 은 처음 부른 자리의 태그로 프로세스 끝까지 남으므로 이미지 적재 때 서는 정적 멤버로 둡니다.
 스레드 지역 컨테이너도 스레드가 종료 보고보다 오래 살므로 인라인 버퍼(`small_vector`)로 둡니다.
 진단은 `captureTagBaseline` 직후 `setDetailedTrackingEnabled( true )`, 보고 직전 `getTopCallStacks( LiveBytes )` 를 stderr 나 파일로 찍고, 기록을 의심 태그로만 거르면 빨리 좁혀집니다.

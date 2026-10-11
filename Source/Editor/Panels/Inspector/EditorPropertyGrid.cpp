@@ -287,7 +287,7 @@ namespace sw::editor
                     ImGui::BeginDisabled( editState == PropertyEditState::Disabled );
                     drawPropertyWidget( pInstance, *prop );
                     ImGui::EndDisabled();
-                    // 시나리오가 누를 수 있게 값 칸에 이름표를 남긴다(`inspector.property.<타입>.<프로퍼티>`, 테스트를 켰을 때만 기록된다).
+                    // 시나리오가 누를 수 있게 값 칸에 이름을 남긴다(`inspector.property.<타입>.<프로퍼티>`, 테스트를 켰을 때만 기록된다).
                     fixed_string<constant::kMaxBuffer128> mark;
                     formatstring( mark.data(), mark.capacity(), "inspector.property.%#.%#", pTypeInfo->_name.c_str(), prop->_name.c_str() );
                     EditorSelfTestMarks::note( mark.c_str() );

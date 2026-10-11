@@ -54,7 +54,7 @@ namespace sw
 {
     /**
      * @class UserSettingsEngineAppliers
-     * @brief 엔진 적용기 묶음입니다. `UserSettingsManager` 가 하나 들고 등록부에 올립니다.
+     * @brief 엔진 적용기 묶음입니다. `UserSettingsManager` 가 하나 들고 레지스트리에 올립니다.
      * @details 이름(스키마의 `target="applier:…"`):
      *          - `audio.busVolume`(param = 버스) · `audio.mute`
      *          - `input.mouseSensitivity` · `input.gamepadSensitivity` · `input.invertX` · `input.invertY` · `input.stickDeadzone` ·

@@ -47,7 +47,7 @@ namespace
         sw::vector<sw::float2>                   listPosition;
         for ( uint32 index = 0; index < kContinuousCount; ++index )
         {
-            // 정지 바디 사이(격자 칸의 가운데)를 지나간다 — 겹침 이벤트가 아니라 후보 모으기를 잰다.
+            // 정지 바디 사이(격자 칸의 가운데)를 지나간다 — 겹침 이벤트가 아니라 후보 모으기를 측정한다.
             const sw::float2     position{ static_cast<float32>( index % 50 ) * kStaticSpacing + 5.0f, static_cast<float32>( index / 50 ) * 300.0f + 5.0f };
             sw::PhysicsBodyState state;
             state._aabb        = makeBoxAt( position._x, position._y );

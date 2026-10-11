@@ -36,7 +36,7 @@ namespace test
      * @param caseFullName    `Suite.Case` — 보통 그 케이스는 환경 변수가 없으면 스스로 건너뛰는 "자식 역할" 케이스다.
      * @param listEnvironment 자식에게만 보일 환경 변수(띄우는 동안만 걸고 되돌린다).
      * @param timeoutSeconds  넘으면 자식을 죽이고 `_bTimedOut` 을 세운다. 새니타이저 빌드는 열 배(CTest 시한과 같은 규칙).
-     * @details 프로세스마다 한 번뿐인 상태(지연 로드된 DLL 의 등록 귀속)나 프로세스를 죽이는 일(크래시 보고)을 재는 케이스가
+     * @details 프로세스마다 한 번뿐인 상태(지연 로드된 DLL 의 등록 귀속)나 프로세스를 죽이는 일(크래시 보고)을 측정하는 케이스가
      *          쓴다. 시한을 넘기면 자식을 죽이고 그 케이스가 진다 — 출력 꼬리를 실패 메시지에 붙일 수 있다. 시한이 없으면 멈춘 자식
      *          하나가 실행 파일 전체를 CTest 시한까지 세워 두고, 어느 자식이 어디까지 갔는지도 남지 않는다.
      */
@@ -44,7 +44,7 @@ namespace test
                                              uint32 timeoutSeconds );
 
     /**
-     * @brief 이 실행 파일을 @p arguments 그대로 붙여 자식 프로세스로 띄운다 — 하네스 자체의 명령줄 처리(`--help` 등)를 재는 케이스가 쓴다.
+     * @brief 이 실행 파일을 @p arguments 그대로 붙여 자식 프로세스로 띄운다 — 하네스 자체의 명령줄 처리(`--help` 등)를 측정하는 케이스가 쓴다.
      * @param arguments 실행 파일 경로 뒤에 붙는 인자 문자열이다(따옴표는 부르는 쪽이 붙인다).
      * @details 환경 변수와 시한은 `runThisExecutableAsChild` 와 같다(그 함수가 `--test_filter=<caseFullName>` 으로 이것을 부른다).
      */

@@ -4,7 +4,7 @@
  * @details 수집(`--gather-text`) · 가져오기(`--import-po`)가 지금 원문의 번역(Current)을 쌍으로 넣으므로, 원문이 바뀌거나 키가 사라진 뒤에도 옛 쌍이 남습니다.
  *          - 정확히 같은 원문 → 그대로 채우고 지금 원문의 번역으로 받는다.
  *          - 정규화(대소문자 · 공백 · 끝 문장부호)가 같거나 유사도 `kFuzzyThreshold` 이상 → 채우되 검토 표시(review — 화면에 안 나온다, PO 의 `#, fuzzy`).
- *          유사도는 정규화한 글자열의 편집 거리(레벤슈타인, UTF-8 글자 단위)로 잽니다. 상용 CAT 도구(memoQ · Trados)의 퍼지 일치와 같은 생각입니다.
+ *          유사도는 정규화한 글자열의 편집 거리(레벤슈타인, UTF-8 글자 단위)로 측정합니다. 상용 CAT 도구(memoQ · Trados)의 퍼지 일치와 같은 생각입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

@@ -108,7 +108,7 @@ namespace sw
         if ( ( widget._dirtyFlags & WidgetDirty::kLayout ) == 0 || ( previous & WidgetDirty::kLayout ) != 0 )
             return;
         // 레이아웃: 부모 쪽으로 kChildLayout 을 올린다. 부모의 크기가 자식에 기대지 않으면(레이아웃 경계) 거기서 멈추고
-        // 그 부모를 "다시 잴 뿌리" 로 적는다. 이미 kChildLayout 인 조상을 만나면 그 위는 이미 표시됐다.
+        // 그 부모를 "다시 측정할 뿌리" 로 적는다. 이미 kChildLayout 인 조상을 만나면 그 위는 이미 표시됐다.
         Widget* pCurrent = &widget;
         while ( pCurrent->_pParent != nullptr )
         {

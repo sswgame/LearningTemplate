@@ -330,7 +330,7 @@ SW_TEST_CASE( SideScrollConquestTest, TerritoryRaisesIncomeAndCounterAttackWaves
     SW_EXPECT_EQUAL( 4, world.computeWaveSize() ); // 기본 2 + 영토(2 − 1) × 2
     SW_EXPECT_EQUAL( 6, world.computeFreeWorkers() );
 
-    // 다음 수입: 마을 5 + 전초기지 3(수입 시각 10 초 경계를 비켜서 잰다).
+    // 다음 수입: 마을 5 + 전초기지 3(수입 시각 10 초 경계를 비켜서 측정한다).
     runWorld( world, 0.5f );
     const int32 goldBefore = world.getResource( "gold" );
     runWorld( world, 10.0f );
@@ -441,7 +441,7 @@ SW_TEST_CASE( SideScrollConquestTest, AttackRateFollowsTheIntervalNotTheStep )
 }
 
 /**
- * @brief [SideScrollConquestTest] 상태 바이트로 되살린 전장이 같은 전쟁을 잇는다 — 거점 · 건물(대기열 · 일꾼) · 병사 · 자원 · 지휘관 · 타이머가 같은 바이트이고,
+ * @brief [SideScrollConquestTest] 상태 바이트로 복원한 전장이 같은 전쟁을 잇는다 — 거점 · 건물(대기열 · 일꾼) · 병사 · 자원 · 지휘관 · 타이머가 같은 바이트이고,
  *        같은 걸음을 둘 다 더 돌려도(훈련 · 생산 · 돌격 · 웨이브) 같은 바이트다. 잘린 바이트는 거절하고 그대로 둔다
  */
 SW_TEST_CASE( SideScrollConquestTest, StateRoundTripContinuesTheSameWar )

@@ -79,7 +79,7 @@ namespace sw
 
         /** @brief 세이브용 — 산 지도 · 연 지점 · 주운 것(각 카탈로그 순서)입니다. */
         void fillSaveState( vector<hashed_string>& outListRegionMap, vector<hashed_string>& outListSite, vector<hashed_string>& outListPickup ) const;
-        /** @brief 세이브에서 되살립니다(그래프의 방문 · 발견은 `AreaGraph::restoreState` 로 따로). 지도를 산 지역은 다시 드러냅니다. */
+        /** @brief 세이브에서 복원합니다(그래프의 방문 · 발견은 `AreaGraph::restoreState` 로 따로). 지도를 산 지역은 다시 드러냅니다. */
         void restoreSaveState( const vector<hashed_string>& listRegionMap, const vector<hashed_string>& listSite, const vector<hashed_string>& listPickup );
 
         /** @brief 산 지도 · 연 지점 · 주운 것을 씁니다. 방문 · 발견은 빌린 `AreaGraph` 의 것, 카탈로그는 `initialize` 의 것이라 싣지 않습니다. */

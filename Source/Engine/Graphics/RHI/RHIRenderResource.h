@@ -14,7 +14,7 @@
  *       - `releaseRHI( pDevice )`: 디바이스가 **아직 살아 있습니다.** 자기 GPU 리소스를 제대로 돌려주고 핸들을 비웁니다.
  *       - `forgetRHI( pDevice )`: 디바이스가 **이미 없습니다.** 돌려줄 곳이 없으니 핸들만 비웁니다(destroy 하면 해제 후 사용입니다).
  *       정상 경로는 언제나 전자입니다. 후자는 `shutdown()` 없이 사라진 디바이스에 대한 안전망입니다.
- *       되살리는 절반은 `initRHI( pDevice )` 이고, 새 디바이스가 선 직후 `initAllFor` 가 같은 목록에 밀어 넣습니다.
+ *       복원하는 절반은 `initRHI( pDevice )` 이고, 새 디바이스가 선 직후 `initAllFor` 가 같은 목록에 밀어 넣습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -73,7 +73,7 @@ namespace sw
         static void initAllFor( IRHIDevice* pDevice );
 
         /**
-         * @brief 등록부가 비었으면 그 저장소(버킷 · 원소 배열)까지 놓습니다. 엔진 종료 끝이 부릅니다.
+         * @brief 레지스트리가 비었으면 그 저장소(버킷 · 원소 배열)까지 놓습니다. 엔진 종료 끝이 부릅니다.
          * @return 아직 등록된 객체가 있으면 아무것도 놓지 않고 false 입니다 — 그 객체가 새는 것입니다.
          * @details `erase` 는 원소만 지우고 저장소를 남겨, 기동 뒤 만든 메시 몫이 종료 누수 보고(Mesh 태그)에 남는다.
          */

@@ -34,7 +34,7 @@ namespace sw
             static constexpr float32 kFocusRingWidth  = 2.0f;
             static constexpr float32 kFocusRingOutset = 3.0f;
             static constexpr float32 kFocusRingRadius = 6.0f;
-            /** @brief 보이는 자식 범위를 이분 탐색으로 찾는 자식 수 문턱입니다 — 그보다 적으면 자식마다 자르기 검사가 더 싸다. */
+            /** @brief 보이는 자식 범위를 이분 탐색으로 찾는 자식 수 임계값입니다 — 그보다 적으면 자식마다 자르기 검사가 더 싸다. */
             static constexpr uint32 kVisibleRangeSearchMinChildCount = 64;
 
             /**

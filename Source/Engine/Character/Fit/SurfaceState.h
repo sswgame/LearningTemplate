@@ -1,6 +1,6 @@
 /**
  * @file SurfaceState.h
- * @brief 몸 표면 상태 — 몸 영역마다 머티리얼 값 채널(젖음 · 흙 · 피 · 상처 …)과, 부품마다 UV 공간 마스크(맞은 자리 도장 · 찢김 구멍)입니다.
+ * @brief 몸 표면 상태 — 몸 영역마다 머티리얼 값 채널(젖음 · 흙 · 피 · 상처 …)과, 부품마다 UV 공간 마스크(맞은 자리 스탬프 · 찢김 구멍)입니다.
  * @details 채널은 데이터 표(`SurfaceChannelTable`, `*.surfacechannels.xml`) 한 줄씩입니다 — 이름 · 초당 감쇠 · 최댓값 · UV 마스크 해상도 ·
  *          알파 잘라 내기(찢김). 영역 값은 머티리얼 파라미터로(영역마다 채널 순서의 벡터), UV 마스크는 텍스처로 올라갑니다(통합 쪽 일).
  *          찢김 채널은 머티리얼이 알파로 잘라 구멍을 내고, 다 찢긴 삼각형은 잘라 내기와 같은 보임 마스크 길(`FitPartResult::hideTriangles`)로
@@ -69,7 +69,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief UV 공간 정사각 마스크(값 0..최댓값)입니다. 도장 · 표본 · 감쇠를 합니다. */
+    /** @brief UV 공간 정사각 마스크(값 0..최댓값)입니다. 스탬프 · 표본 · 감쇠를 합니다. */
     class SW_API SurfaceMask
     {
     public:
@@ -116,7 +116,7 @@ namespace sw
         void getRegionParameters( uint32 region, vector<float32>& outListValue ) const;
 
         /**
-         * @brief 맞은 자리 도장 — 부품의 그 채널 UV 마스크에 원을 찍고, 영역 값도 @p value 만큼 올립니다(영역이 `kNoGroup` 이면 영역은 건너뜀).
+         * @brief 맞은 자리 스탬프 — 부품의 그 채널 UV 마스크에 원을 찍고, 영역 값도 @p value 만큼 올립니다(영역이 `kNoGroup` 이면 영역은 건너뜀).
          * @return 모르는 채널 · 부품이면 false 입니다. 마스크가 없는 채널은 영역 값만 올립니다.
          */
         bool stampHit( uint32 part, uint16 region, const hashed_string& channel, const float2& uvCenter, float32 uvRadius, float32 value );

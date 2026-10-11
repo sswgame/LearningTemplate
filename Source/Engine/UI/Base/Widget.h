@@ -58,7 +58,7 @@ namespace sw
         // --- 트리 ---------------------------------------------------------------
         WidgetID             getID() const { return _id; }
         const hashed_string& getName() const { return _name; }
-        /** @brief 이름을 바꿉니다. 트리에 붙어 있으면 이름표도 고칩니다. */
+        /** @brief 이름을 바꿉니다. 트리에 붙어 있으면 이름도 고칩니다. */
         void         setName( const hashed_string& name );
         PanelWidget* getParent() const { return _pParent; }
         WidgetTree*  getTree() const { return _pTree; }
@@ -173,7 +173,7 @@ namespace sw
 
     protected:
         /**
-         * @brief 원하는 크기를 잽니다(레이아웃 measure). 패널은 여기서 자식을 `UILayoutPass::measure` 로 잽니다. 기본은 0 입니다.
+         * @brief 원하는 크기를 측정합니다(레이아웃 measure). 패널은 여기서 자식을 `UILayoutPass::measure` 로 측정합니다. 기본은 0 입니다.
          * @param availableSize 슬롯이 줄 수 있는 크기(여백 · 덮어쓰기 적용 뒤, UI 단위). 축이 `kUIUnbounded` 면 그 축은 원하는 만큼.
          */
         virtual float2 computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const;
@@ -204,7 +204,7 @@ namespace sw
         friend class UIStylePass;
         friend class UIStyleTransition;
 
-        /** @brief 이 위젯과 자손을 @p pTree 에 붙입니다 — 번호를 이름표에 올리고 밀린 무효화를 트리에 넘깁니다. */
+        /** @brief 이 위젯과 자손을 @p pTree 에 붙입니다 — 번호를 이름에 올리고 밀린 무효화를 트리에 넘깁니다. */
         void attachToTree( WidgetTree* pTree, PanelWidget* pParent );
         /** @brief 이 위젯과 자손을 트리에서 뗍니다(자손 먼저). 부모 링크는 그대로 둡니다. */
         void detachFromTree();
@@ -235,7 +235,7 @@ namespace sw
         WidgetTree*    _pTree;             ///< 붙은 트리(떨어져 있으면 nullptr)
         WidgetID       _id;
         uint32         _dirtyFlags;   ///< WidgetDirty 비트
-        uint32         _layoutSerial; ///< 마지막으로 잰 레이아웃 걷기 번호(0 = 아직 잰 적 없음)
+        uint32         _layoutSerial; ///< 마지막으로 측정한 레이아웃 걷기 번호(0 = 아직 측정한 적 없음)
 
         PROPERTY( DisplayName = "Opacity", Min = 0.0, Max = 1.0 )
         float32 _opacity;

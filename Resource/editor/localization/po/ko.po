@@ -116,7 +116,7 @@ msgstr "디버그 HUD 가 실행 중이 아닙니다"
 #: Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp
 msgctxt "EdCommon.DebugHUDNotRunningHost"
 msgid "Debug HUD is not running (Shipping or a test host)."
-msgstr "디버그 HUD 가 실행 중이 아닙니다(Shipping 이거나 시험 호스트입니다)."
+msgstr "디버그 HUD 가 실행 중이 아닙니다(Shipping 이거나 테스트 호스트입니다)."
 
 #: Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp
 msgctxt "EdCommon.DebugHUDSavedIn"

@@ -114,7 +114,7 @@ namespace sw::editor
             return nullptr;
 
         // **서브트리 전체를 복제한다**(유니티 Ctrl+D · 언리얼 Duplicate). 씬은 자식을 자기 엔티티로 저장하므로, 선택한 것만 복제하면
-        // 자식은 원본 밑에 남는다. 부모부터 모은다 — 되돌리기 묶음의 다시 하기가 부모를 먼저 되살린다.
+        // 자식은 원본 밑에 남는다. 부모부터 모은다 — 되돌리기 묶음의 다시 하기가 부모를 먼저 복원한다.
         vector<GameObject*> listSource;
         EditorSceneCommandsInternal::collectSubtreeChildFirst( pSrc, listSource );
         std::reverse( listSource.begin(), listSource.end() );
@@ -486,7 +486,7 @@ namespace sw::editor
         if ( pObj == nullptr )
             return;
 
-        // 크기는 월드 상자 하나로 잰다(`GameObject::getWorldBox`). 기준점(primary 의 월드 자리)에서 바닥까지 · 가로 반 크기를 지금 상자에서 얻는다.
+        // 크기는 월드 상자 하나로 측정한다(`GameObject::getWorldBox`). 기준점(primary 의 월드 자리)에서 바닥까지 · 가로 반 크기를 지금 상자에서 얻는다.
         float32               bottomOffset = 0.0f;
         float32               halfExtentX  = 0.5f;
         float32               halfExtentZ  = 0.5f;

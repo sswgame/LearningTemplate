@@ -109,8 +109,8 @@ namespace sw
          */
         [[nodiscard]] bool initializeDedicatedServer( LiveReloadManager* pLiveReloadManager );
         /**
-         * @brief 모듈 인스턴스를 내리고, 등록부에 걸어 둔 콜백을 **모두** 떼어 냅니다.
-         * @details 콜백은 이 객체의 메서드를 가리킵니다. 실행 파일이 이 객체를 등록부보다 먼저 지우므로, 여기서 떼지 않으면 그 사이에
+         * @brief 모듈 인스턴스를 내리고, 레지스트리에 걸어 둔 콜백을 **모두** 떼어 냅니다.
+         * @details 콜백은 이 객체의 메서드를 가리킵니다. 실행 파일이 이 객체를 레지스트리보다 먼저 지우므로, 여기서 떼지 않으면 그 사이에
          *          리로드가 돌 때 이미 사라진 객체를 부르게 됩니다.
          */
         void shutdown();

@@ -2,7 +2,7 @@
  * @file GPUSceneBuilder.h
  * @brief 게임 스레드가 씬의 프리미티브(MeshComponent · 인스턴스 배치 항목)를 모아 `GPUSceneSnapshot` 을 만드는 쪽입니다.
  * @details 렌더 스레드 쪽(`GPUScene`)과는 스냅샷 타입으로만 만납니다. 여기에는 GPU 핸들이 하나도 없고, 저쪽에는 씬이 없습니다.
- *          프레임 간에 유지되는 것은 재구축 판단용 캐시(후보 집합 · 카메라 · 세대)와 **머티리얼 원소 등록부**
+ *          프레임 간에 유지되는 것은 재구축 판단용 캐시(후보 집합 · 카메라 · 세대)와 **머티리얼 원소 레지스트리**
  *          (언리얼 GPUScene 의 영속 ID 자리)입니다. 스냅샷은 매 프레임 복사해 내보내고 기준은 여기 남습니다.
  */
 #pragma once
@@ -49,7 +49,7 @@ namespace sw
          * @brief 프리미티브가 이 수 이상이면 전체 수집의 채우기를 잡에 나눕니다.
          * @details 채우기는 프리미티브당 ~12 ns 라 8000 개가 직렬 100 us 입니다. 잡 디스패치 바닥(~50 us)과 같은
          *          자릿수라 지금은 병렬이 86 us 로 비기는 수준입니다. 프리미티브당 일이 늘면(LOD 선택 · 스키닝 바운드)
-         *          바로 이득이 나는 구조라 문턱만 두고 유지합니다. 부분 수집(더티 < 1/4)은 직렬입니다. 그쪽은 일이 작습니다.
+         *          바로 이득이 나는 구조라 임계값만 두고 유지합니다. 부분 수집(더티 < 1/4)은 직렬입니다. 그쪽은 일이 작습니다.
          */
         static constexpr uint32 kParallelCollectPrimitiveCount = 4096;
         /**
@@ -59,7 +59,7 @@ namespace sw
          */
         static constexpr uint32 kParallelTransformCopyCount = 2048;
 
-        /** @brief 스냅샷 · 캐시 · 머티리얼 등록부를 비웁니다(스냅샷이 든 소유도 여기서 놓입니다). */
+        /** @brief 스냅샷 · 캐시 · 머티리얼 레지스트리를 비웁니다(스냅샷이 든 소유도 여기서 놓입니다). */
         void clear();
         /**
          * @brief 프리미티브(MeshComponent · 인스턴스 배치 항목)를 모아 CPU 스냅샷을 만듭니다(게임 스레드).
@@ -68,12 +68,12 @@ namespace sw
          * @note 인스턴스 채우기(`GT.GPUScene.build.fill`)는 이 스레드에서 합니다. 워커로 나눠 봤지만 **모든 크기에서 졌습니다**.
          *       원소당 일이 필드 몇 개 복사라 디스패치 · 대기 비용이 일 자체보다 훨씬 큽니다
          *       (400개 358us → 1us, 20,000개 219us → 99us). 다시 나누자고 제안하기 전에 그 숫자를 볼 것.
-         *       수집과 전체 제자리 갱신은 문턱을 넘으면 병렬로 돕니다(`kParallelCollectPrimitiveCount` · `refreshInstancesInPlace`).
+         *       수집과 전체 제자리 갱신은 임계값을 넘으면 병렬로 돕니다(`kParallelCollectPrimitiveCount` · `refreshInstancesInPlace`).
          */
         void populateFromScene( Scene* pScene, const float3& cameraPos );
         /**
-         * @brief 투명 정렬의 깊이를 잴 축입니다. 영벡터(기본)면 카메라까지의 거리, 아니면 카메라에서 그 축으로 잰 깊이입니다.
-         * @details 직교 2D 카메라에서 거리로 재면 같은 Z 의 두 스프라이트가 카메라의 XY 위치에 따라 앞뒤가 바뀝니다. `EngineLoop` 가
+         * @brief 투명 정렬의 깊이를 측정할 축입니다. 영벡터(기본)면 카메라까지의 거리, 아니면 카메라에서 그 축으로 측정한 깊이입니다.
+         * @details 직교 2D 카메라에서 거리로 측정하면 같은 Z 의 두 스프라이트가 카메라의 XY 위치에 따라 앞뒤가 바뀝니다. `EngineLoop` 가
          *          `Render2DSettings::computeTransparentSortAxis` 로 정해 넘깁니다(유니티 Transparency Sort Mode). 바뀌면 다음 빌드가 다시 정렬합니다.
          */
         void setTransparentSortAxis( const float3& axis );
@@ -95,7 +95,7 @@ namespace sw
          * @brief 이번 빌드가 그릴 메시 중 아직 안 올라간 것을 업로드 큐에 올립니다(게임 스레드).
          * @details 렌더 스레드가 처음 그릴 때 만들 것을 **그리기 전에** 만들어 두기 위한 것입니다. 큐가 만들어
          *          두면 RT 의 `Mesh::initRHI` 호출은 핸들을 읽는 일이 되고, 큐가 못 다룬 것은 RT 가
-         *          그 자리에서 만듭니다. 앞당기는 장치이지 유일한 통로가 아닙니다.
+         *          그 자리에서 만듭니다. 앞당기는 장치이지 유일한 경로가 아닙니다.
          */
         void requestGPUUploads( GPUUploadQueue& queue ) const;
         /**
@@ -147,7 +147,7 @@ namespace sw
         void rebuildTransparentTail();
         /** @brief 오래 안 쓰인 머티리얼 원소를 회수해 자리를 프리리스트로 돌립니다(인덱스는 옮기지 않습니다). */
         void freeUnusedMaterialElements();
-        /** @brief 머티리얼 원소 등록부를 통째로 비웁니다(그룹 기준이 바뀌었을 때). */
+        /** @brief 머티리얼 원소 레지스트리를 통째로 비웁니다(그룹 기준이 바뀌었을 때). */
         void resetMaterialRegistry();
         /** @brief 머티리얼의 셰이더 타입 그룹 인덱스를 찾거나 만듭니다(populateBatches 안). 머티리얼이 없으면 kInvalidMaterialGroup 입니다. */
         uint32 materialGroupFor( const Material* pMaterial );
@@ -229,7 +229,7 @@ namespace sw
             uint8                 _bHasLast{ SW_FALSE };
         };
         vector<MaterialGroupState> _listMaterialGroupState;
-        /// @brief 빌드 번호입니다. 원소가 마지막으로 쓰인 시점을 재는 데만 씁니다(회수 판정).
+        /// @brief 빌드 번호입니다. 원소가 마지막으로 쓰인 시점을 측정하는 데만 씁니다(회수 판정).
         uint64 _buildCounter{ 0 };
         /**
          * @brief 마지막 수집 때 본 퍼뮤테이션 세대입니다(`MaterialUtil::getPermutationGeneration`).
@@ -402,18 +402,18 @@ namespace sw
         /** @brief 후보 배열에 실리지 않은 프리미티브의 표시입니다. */
         static constexpr uint32 kInvalidCandidateIndex = invalid_index::kUint32;
         /**
-         * @brief 이번 프레임에 "바뀌었다" 고 표시된 프리미티브의 등록부 인덱스입니다.
-         * @details 등록부에서 받을 때는 **렌더 상태가** 바뀐 것뿐이고(다시 모은다), 부분 수집이 끝나면 `_listTransformDirtyPrimitive` 를
+         * @brief 이번 프레임에 "바뀌었다" 고 표시된 프리미티브의 레지스트리 인덱스입니다.
+         * @details 레지스트리에서 받을 때는 **렌더 상태가** 바뀐 것뿐이고(다시 모은다), 부분 수집이 끝나면 `_listTransformDirtyPrimitive` 를
          *          뒤에 이어 붙인다 — 채우기 · 제자리 갱신은 둘을 가리지 않는다.
          */
         vector<uint32> _listDirtyPrimitive;
         /**
-         * @brief 이번 프레임에 **월드 행렬만** 바뀐 프리미티브의 등록부 인덱스입니다(`PrimitiveRegistry::markTransformDirty`).
-         * @details 이것들은 후보를 다시 채우지 않고 트랜스폼 저장소의 행렬만 옮긴다(`copyCandidateTransforms`). 부분 수집의 문턱(더티가
+         * @brief 이번 프레임에 **월드 행렬만** 바뀐 프리미티브의 레지스트리 인덱스입니다(`PrimitiveRegistry::markTransformDirty`).
+         * @details 이것들은 후보를 다시 채우지 않고 트랜스폼 저장소의 행렬만 옮긴다(`copyCandidateTransforms`). 부분 수집의 임계값(더티가
          *          번호 공간의 4 분의 1 미만)도 이것들은 세지 않는다 — 큐브 8000 개가 모두 움직이는 프레임도 부분 수집이다.
          */
         vector<uint32> _listTransformDirtyPrimitive;
-        /** @brief 등록부 인덱스 -> 후보 인덱스입니다(`kInvalidCandidateIndex` = 후보에 안 실림). */
+        /** @brief 레지스트리 인덱스 -> 후보 인덱스입니다(`kInvalidCandidateIndex` = 후보에 안 실림). */
         vector<uint32> _listPrimitiveToCandidate;
         /// @brief 전체 수집이 프리미티브 번호 자리에 남긴 `CollectFlag` 입니다. 앞으로 당길 때 읽습니다.
         vector<uint8> _listCollectFlag;
@@ -557,13 +557,13 @@ namespace sw
 
         /**
          * @brief 배치마다 그 배치의 인스턴스가 쓰는 머티리얼 원소 인덱스(중복 없이)입니다. `_listBatchElementRange` 로 자릅니다.
-         * @details 회수 시계 도장은 **원소**에 찍는 것이라 인스턴스 8000 개가 아니라 (배치, 원소) 쌍만 돌면 됩니다.
+         * @details 회수 시계 스탬프는 **원소**에 찍는 것이라 인스턴스 8000 개가 아니라 (배치, 원소) 쌍만 돌면 됩니다.
          *          합치기가 꺼져 있으면 배치당 원소 하나, 켜져 있어도 배치당 머티리얼 종류 수입니다.
          */
         vector<uint32>         _listBatchElementIndex;
         vector<GPUInstanceRun> _listBatchElementRange;
 
-        /** @brief 마지막으로 반영한 프리미티브 집합 세대입니다. 달라졌으면 등록부가 바뀐 것입니다. */
+        /** @brief 마지막으로 반영한 프리미티브 집합 세대입니다. 달라졌으면 레지스트리가 바뀐 것입니다. */
         uint64 _lastPrimitiveSetGeneration{ 0 };
         float3 _lastCameraPos{};
         /** @brief 투명 정렬의 깊이 축입니다(영벡터 = 카메라까지의 거리). `setTransparentSortAxis`. */

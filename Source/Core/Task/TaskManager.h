@@ -157,12 +157,12 @@ namespace sw
         void submitWithoutWake( const TaskHandle& handle );
         /**
          * @brief 부른 순간 잠들어 있던 워커를 모두 깨웁니다. 태스크 수를 아는 쪽은 아래 오버로드로 **필요한 수만큼만** 깨우십시오.
-         * @details 부른 뒤에 잠드는 워커는 깨우지 않습니다. 그 워커는 잠들기 전에 큐를 한 번 더 보므로 넣은 일감을 놓치지 않습니다.
+         * @details 부른 뒤에 잠드는 워커는 깨우지 않습니다. 그 워커는 잠들기 전에 큐를 한 번 더 보므로 넣은 작업을 놓치지 않습니다.
          */
         void wakeSleepingWorkers();
         /**
          * @brief 잠든 워커 중 @p requestedCount 개만 깨웁니다. `submitWithoutWake` 로 모두 넣은 뒤 부릅니다.
-         * @details 모두 깨우면 워커 열넷이 일감 여섯을 두고 다투는 thundering herd 가 됩니다. 렌더 그래프 병렬 기록이 두 배
+         * @details 모두 깨우면 워커 열넷이 작업 여섯을 두고 다투는 thundering herd 가 됩니다. 렌더 그래프 병렬 기록이 두 배
          *          느려졌습니다(150~192 -> 329~380 us). 넣은 태스크 수만큼만 깨우는 것이 가장 빨랐습니다.
          */
         void wakeSleepingWorkers( uint32 requestedCount );
@@ -300,18 +300,18 @@ namespace sw
 
         // --- 기다리기 ---
         /**
-         * @brief 기다리는 동안의 한 걸음입니다. 메인이면 메인 일감을 돌리고, 준비된 일을 하나 돕거나, 잠깐 스핀합니다.
+         * @brief 기다리는 동안의 한 걸음입니다. 메인이면 메인 작업을 돌리고, 준비된 일을 하나 돕거나, 잠깐 스핀합니다.
          * @param bHelpLowQueue false 면 Low 줄(백그라운드 I/O)은 돕지 않습니다(`runParallel` 의 합류 대기 — 그 줄은 합류를 앞당기지 않는다).
          * @return 계속 돌아야 하면 true, 스핀 예산을 다 써서 이제 잠들 차례면 false(예산은 다시 채워 둡니다)
          * @details `waitForJoin` 과 `waitAll` 이 함께 씁니다. 둘이 다른 것은 잠드는 방법뿐입니다.
          */
         bool helpOrSpin( uint32& inoutSpinCount, bool bHelpLowQueue );
-        /** @brief @p join 이 0 이 될 때까지 기다립니다. 메인 일감을 실행하고, 다른 일을 돕고(@p bHelpLowQueue 가 false 면 Low 줄은 빼고), 잠깐 스핀하다가 자기 슬롯에서 잠듭니다. */
+        /** @brief @p join 이 0 이 될 때까지 기다립니다. 메인 작업을 실행하고, 다른 일을 돕고(@p bHelpLowQueue 가 false 면 Low 줄은 빼고), 잠깐 스핀하다가 자기 슬롯에서 잠듭니다. */
         void waitForJoin( JoinCounter& join, bool bHelpLowQueue );
         /** @brief 이 스레드를 @p join 의 대기자로 등록하고 잠듭니다. 깨어나면 부르는 쪽이 조건을 다시 확인합니다. */
         void parkOnJoin( JoinCounter& join );
         /**
-         * @brief 완료 브로드캐스트(스테이지 완료 · 활성 수 0 · 메인 일감 · clear)를 기다리며 잠들 준비를 합니다. 대기자 수를 올리고 세대를 반환합니다.
+         * @brief 완료 브로드캐스트(스테이지 완료 · 활성 수 0 · 메인 작업 · clear)를 기다리며 잠들 준비를 합니다. 대기자 수를 올리고 세대를 반환합니다.
          * @details 부르는 쪽은 그 뒤에 조건을 다시 확인하고, `commitBroadcastWait` 로 잠들거나 `cancelBroadcastWait` 로 취소합니다. 수를
          *          먼저 올리고 조건을 보는 쪽과, 조건을 바꾸고 수를 보는 완료 쪽이 Dekker 식 짝을 이룹니다.
          */
@@ -322,7 +322,7 @@ namespace sw
         void cancelBroadcastWait();
         /** @brief 브로드캐스트 대기자가 있으면 브로드캐스트 세대를 올려 모두 깨웁니다. */
         void notifyBroadcast();
-        /** @brief 메인 스레드가(어느 대기에서든) 잠들어 있으면 깨웁니다. 메인 전용 일감이 들어왔을 때 부릅니다. */
+        /** @brief 메인 스레드가(어느 대기에서든) 잠들어 있으면 깨웁니다. 메인 전용 작업이 들어왔을 때 부릅니다. */
         void wakeParkedMainThread();
         /** @brief 대기자 슬롯 @p slotIndex 의 스레드를 깨웁니다. 할 일 없는 워커(슬롯 = 워커 번호)와 기다리는 스레드 모두 이 함수 하나로 깨웁니다. */
         void unparkSlot( uint32 slotIndex );
@@ -382,7 +382,7 @@ namespace sw
          */
         alignas( 64 ) atomic<uint64> _idleWorkerMask;
         /**
-         * @brief 일감이 들어올 때마다 오르는 세대입니다. 스핀 중인 워커는 **이 값만 읽습니다.**
+         * @brief 작업이 들어올 때마다 오르는 세대입니다. 스핀 중인 워커는 **이 값만 읽습니다.**
          * @details 스핀 중에 매번 큐를 뒤지면(`tryTakeItem`) 전역 MPMC 큐의 CAS 와 데크마다의 steal 을 워커 전부가 동시에 반복해서
          *          건드려, 스핀을 늘릴 때 게임 · 렌더 스레드의 코어까지 빼앗습니다. 읽기 전용 캐시 라인 하나만 보면 경합이 없고,
          *          세대가 바뀌었을 때만 큐를 건드립니다. `submitWithoutWake` 는 세대를 올리지 않고, 묶음 끝의
@@ -400,9 +400,9 @@ namespace sw
         atomic<uint32> _broadcastWaiterCount; ///< 브로드캐스트를 기다리며 잠든(또는 잠들려는) 스레드 수
         /**
          * @brief 메인 스레드가 잠들어 있으면 그 대기자 슬롯이고, 아니면 -1 입니다.
-         * @details 메인 전용 일감(`MainThread` 지정)은 메인 스레드만 실행할 수 있습니다. 메인이 스테이지를 기다리다 잠든 사이에 그
-         *          스테이지의 태스크가 메인 일감을 만들면, 메인을 깨우지 않는 한 둘 다 영원히 기다립니다(아무나 하나 깨우면 엉뚱한
-         *          스레드가 깹니다). 메인은 어느 대기에서든 잠들기 전에 여기에 자기 슬롯을 적고, 메인 일감을 넣는 쪽은
+         * @details 메인 전용 작업(`MainThread` 지정)은 메인 스레드만 실행할 수 있습니다. 메인이 스테이지를 기다리다 잠든 사이에 그
+         *          스테이지의 태스크가 메인 작업을 만들면, 메인을 깨우지 않는 한 둘 다 영원히 기다립니다(아무나 하나 깨우면 엉뚱한
+         *          스레드가 깹니다). 메인은 어느 대기에서든 잠들기 전에 여기에 자기 슬롯을 적고, 메인 작업을 넣는 쪽은
          *          여기를 봅니다.
          */
         atomic<int32> _mainThreadParkedSlot;

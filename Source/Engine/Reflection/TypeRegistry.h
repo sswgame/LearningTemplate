@@ -92,7 +92,7 @@ namespace sw
      *
      *          **세대를 보지 않는 이유.** `TypeInfo` 의 주소는 고정입니다. 레지스트리가 `unique_ptr` 로 들고,
      *          표가 커져도 옮기지 않으며, 모듈 해제는 지우는 대신 `_bAlive` 를 내립니다(묘비). 같은 FQN 이 다시
-     *          등록되면 같은 객체에 덮어써 되살립니다. 그래서 적중은 "포인터 하나 + 살아 있나" 로 끝납니다(캐스트마다 두 번 오는 자리입니다).
+     *          등록되면 같은 객체에 덮어써 복원합니다. 그래서 적중은 "포인터 하나 + 살아 있나" 로 끝납니다(캐스트마다 두 번 오는 자리입니다).
      *          세대(`gv_typeTableGeneration`)는 **빈 답**(미등록)을 매번 다시 찾지 않으려고만 씁니다.
      *          핫 리로드로 모듈이 사라지면 그 모듈의 정적 칸도 같이 사라지고, 다시 올라온 모듈의 칸은
      *          비어서 첫 호출에 찾습니다.
@@ -205,7 +205,7 @@ namespace sw
         const EnumInfo* findEnum( const hashed_string& nameOrFqn ) const;
         /**
          * @brief 이름 · FQN · 별칭의 **해시**로 EnumInfo 를 찾습니다. 바이너리 태그의 기록 타입 해시가 enum 일 때 씁니다(`findWireTypeName`).
-         * @details 해시로 여는 표가 없어 이름표를 훑습니다 — 타입이 바뀐 필드를 읽는 드문 길에서만 부릅니다.
+         * @details 해시로 여는 표가 없어 이름을 훑습니다 — 타입이 바뀐 필드를 읽는 드문 길에서만 부릅니다.
          */
         const EnumInfo* findEnumByNameHash( uint32 nameHash ) const;
 

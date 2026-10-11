@@ -49,9 +49,9 @@ namespace sw
         ControllerComponent();
         ~ControllerComponent() override = default;
 
-        /** @brief 등록부에 들고 조종 시스템을 매니저에 붙입니다(없으면). */
+        /** @brief 레지스트리에 들고 조종 시스템을 매니저에 붙입니다(없으면). */
         void onRegister( GameObjectManager& manager ) override;
-        /** @brief 쥔 폰을 놓고 등록부에서 빠집니다. */
+        /** @brief 쥔 폰을 놓고 레지스트리에서 빠집니다. */
         void onUnregister( GameObjectManager& manager ) override;
         /** @brief `_possessAtStart` 가 있으면 그 오브젝트의 폰을 쥡니다. */
         void onBeginPlay() override;

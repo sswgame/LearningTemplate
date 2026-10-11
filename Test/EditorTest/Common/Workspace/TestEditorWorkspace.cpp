@@ -16,7 +16,7 @@ using namespace sw;
 using namespace sw::editor;
 
 /**
- * @brief [EditorWorkspaceTest] 프리팹 인스턴스 경로는 활성 씬이 정본이다 — 워크스페이스는 사본을 들지 않는다
+ * @brief [EditorWorkspaceTest] 프리팹 인스턴스 경로는 활성 씬이 원본이다 — 워크스페이스는 사본을 들지 않는다
  * @details 씬에서 연결을 끊거나(`Scene::setEntityPrefabPath` 를 부르는 엔진 경로) 활성 씬이 바뀌면(플레이 세션이 씬을 다시 세운다) 워크스페이스도
  *          같은 답을 해야 한다. 사본을 들면 옛 씬의 경로가 새 씬의 같은 id 에 남아, 프리팹 적용 · 되돌리기 메뉴가 연결 없는 오브젝트에 뜬다.
  */

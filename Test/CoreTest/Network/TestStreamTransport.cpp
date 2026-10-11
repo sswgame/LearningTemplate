@@ -251,7 +251,7 @@ namespace
 
     void runConnectToClosedPortFails( StreamRig& rig )
     {
-        // 리슨을 열지 않은 서버의 포트 — 루프백은 등록부에 없고, 플랫폼은 RST(ECONNREFUSED · WSAECONNREFUSED).
+        // 리슨을 열지 않은 서버의 포트 — 루프백은 레지스트리에 없고, 플랫폼은 RST(ECONNREFUSED · WSAECONNREFUSED).
         SW_ASSERT_TRUE( rig._server->listen( NetAddress::makeLoopback( 0 ) ) );
         const uint16 port = rig._server->getListenPort();
         rig._server->shutdown();

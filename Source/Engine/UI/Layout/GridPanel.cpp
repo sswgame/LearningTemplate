@@ -243,7 +243,7 @@ namespace sw
             SW_LOG_WARNING( "[UI] Grid panel '%#' has %# children outside its tracks - they are placed in the last track", getName().c_str(), _outOfRangeCellCount );
         }
 
-        // 1) 열: 덮은 트랙이 모두 Fixed 면 그 너비, 아니면 무한으로 잰다.
+        // 1) 열: 덮은 트랙이 모두 Fixed 면 그 너비, 아니면 무한으로 측정한다.
         vector<float32> listExtent( listPlacement.size(), 0.0f );
         for ( uint32 index = 0; index < static_cast<uint32>( listPlacement.size() ); ++index )
         {
@@ -262,7 +262,7 @@ namespace sw
         vector<float32> listColumnContent;
         GridPanelInternal::resolveTracks( listColumnTrack, availableSize._x, _cellSpacing._x, listPlacement, listExtent, true, false, listColumnContent );
 
-        // 2) 행: 정한 열 너비로 다시 잰다(줄 바꿈 글의 높이).
+        // 2) 행: 정한 열 너비로 다시 측정한다(줄 바꿈 글의 높이).
         for ( uint32 index = 0; index < static_cast<uint32>( listPlacement.size() ); ++index )
         {
             const GridPlacement& placement    = listPlacement[index];

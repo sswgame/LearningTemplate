@@ -84,8 +84,8 @@ namespace sw::editor
 
         /**
          * @brief 인스턴스와 프리팹 기본값(CDO)의 컴포넌트 프로퍼티 차이를 모읍니다.
-         * @details 컴포넌트는 안정 키(`타입#n`)로 짝짓고, 값은 `SerializerUtil` 한 벌로 견주고 적습니다. 주의: 타입 이름으로 짝지으면 같은 타입의
-         *          둘째 컴포넌트가 첫째의 원형과 비교되고, 비트필드를 바이트째 견주면 같은 바이트의 다른 플래그까지 오버라이드로 보인다.
+         * @details 컴포넌트는 안정 키(`타입#n`)로 짝짓고, 값은 `SerializerUtil` 한 벌로 비교하고 적습니다. 주의: 타입 이름으로 짝지으면 같은 타입의
+         *          둘째 컴포넌트가 첫째의 원형과 비교되고, 비트필드를 바이트째 비교하면 같은 바이트의 다른 플래그까지 오버라이드로 보인다.
          */
         static void collectComponentOverrides( GameObject* pInstance, GameObject* pCdo, vector<PrefabOverrideItem>& outListOverride );
         /** @brief 오버라이드 하나를 템플릿 기본값으로 되돌립니다. 원형(CDO)은 프리팹에서 만듭니다(`revertComponentOverride`). */

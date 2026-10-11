@@ -18,7 +18,7 @@
 
 #include <thread>
 
-// 셰이더 주변 — 스테이지 비트 연산 · 쿠킹(퍼뮤테이션 해시·파일 이름) · 캐시 동시성 · 쿠킹 도장.
+// 셰이더 주변 — 스테이지 비트 연산 · 쿠킹(퍼뮤테이션 해시·파일 이름) · 캐시 동시성 · 쿠킹 스탬프.
 // 전부 디스크와 순수 계산만 본다. 실제 컴파일은 TestShaderCompiler.cpp (CI 가 못 돌린다).
 /**
  * @brief [ShaderStageTest] 8대 스테이지 플래그 변환 및 경계값/오버플로 엣지 케이스 검증
@@ -299,8 +299,8 @@ SW_TEST_CASE( ShaderCookerTest, CachedSourceHashNoticesEditedFile )
 }
 
 /**
- * @brief [ShaderCookerTest] 쿠킹하지 못한 소스는 도장에서 빠진다 — 다음 쿠킹이 그것을 최신으로 보지 않고 다시 쿠킹한다
- * @details 컴파일에 실패해도 쿠킹이 폴더 전체의 지금 소스 해시로 도장을 찍으면 그 셰이더의 **옛 바이너리**가 최신으로 판정된다 — 다음 쿠킹도
+ * @brief [ShaderCookerTest] 쿠킹하지 못한 소스는 스탬프에서 빠진다 — 다음 쿠킹이 그것을 최신으로 보지 않고 다시 쿠킹한다
+ * @details 컴파일에 실패해도 쿠킹이 폴더 전체의 지금 소스 해시로 스탬프를 찍으면 그 셰이더의 **옛 바이너리**가 최신으로 판정된다 — 다음 쿠킹도
  *          건너뛰고 `--cook-shaders` 는 종료 코드 0 이라 배포본에 옛 바이너리가 실린다.
  */
 SW_TEST_CASE( ShaderCookerTest, FailedSourcesAreLeftOutOfTheCookStamp )
@@ -315,7 +315,7 @@ SW_TEST_CASE( ShaderCookerTest, FailedSourcesAreLeftOutOfTheCookStamp )
 
     const sw::unordered_set<sw::string> uniqueFailedSource{ brokenPath };
     sw::ShaderCooker::writeCookStamp( binDir, &uniqueFailedSource );
-    sw::ShaderCooker::invalidateSharedHeaderCache(); // 도장 읽기 캐시를 비워 방금 쓴 도장을 읽게 한다
+    sw::ShaderCooker::invalidateSharedHeaderCache(); // 스탬프 읽기 캐시를 비워 방금 쓴 스탬프를 읽게 한다
 
     SW_EXPECT_TRUE( sw::ShaderCooker::isCookedOutputCurrent( binDir, goodPath ) );
     SW_EXPECT_FALSE( sw::ShaderCooker::isCookedOutputCurrent( binDir, brokenPath ) );
@@ -545,7 +545,7 @@ SW_TEST_CASE( ShaderCookerTest, DepthOnlyPassesHaveNoPixelStage )
 
 /**
  * @brief [ShaderCookerTest] 파이프라인 XML 의 첨부 포맷 이름은 RHIFormat 의 모든 열거자를 그 이름 그대로 읽는다
- * @details 로드 검증(`RenderPipelineAsset::validate`)과 실제 생성(`parseAttachmentFormat`)이 같은 이름표를 봐야 한다. 이름표가 둘이면
+ * @details 로드 검증(`RenderPipelineAsset::validate`)과 실제 생성(`parseAttachmentFormat`)이 같은 이름을 봐야 한다. 이름이 둘이면
  *          검증은 통과하는 "R32_FLOAT" 가 생성에서 조용히 R8G8B8A8_UNORM 이 된다. 이름 → 값 → 이름이 열거자마다 제자리로 돌아오는지 본다.
  */
 SW_TEST_CASE( ShaderCookerTest, AttachmentFormatNameRoundTripsEveryRHIFormat )
@@ -587,7 +587,7 @@ SW_TEST_CASE( ShaderCookerTest, CachePathCarriesPermutationHash )
     SW_EXPECT_STREQ( "engine/shaders/bin/vulkan/forwardlit_ps.spv", plainPath.c_str() );
     SW_EXPECT_TRUE_MSG( unlitPath != plainPath, "퍼뮤테이션이 다른데 같은 바이너리를 읽는다 — define 이 GPU 에 닿지 않는다" );
 
-    // 쿠커가 쿠킹하는 이름과 글자 단위로 같아야 한다(다른 규칙이 하나라도 있으면 그 규칙이 정본을 이긴다).
+    // 쿠커가 쿠킹하는 이름과 글자 단위로 같아야 한다(다른 규칙이 하나라도 있으면 그 규칙이 원본을 이긴다).
     const sw::string cookedName = sw::ShaderCooker::computeBinaryFileName( "forwardlit", sw::ShaderStage::Pixel, "PSMain",
                                                                            sw::ShaderCooker::computePermutationHash( unlit._listDefine ), ".spv" );
     SW_EXPECT_STREQ( ( sw::string( "engine/shaders/bin/vulkan/" ) + cookedName ).c_str(), unlitPath.c_str() );

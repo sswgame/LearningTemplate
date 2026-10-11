@@ -110,7 +110,7 @@ namespace sw
                 }
             }
 
-            /** @brief 넘은 예산을 다시 감시하는 문턱(예산의 90 %)입니다. 경계에서 오락가락할 때 경고가 넘치지 않게 한다. */
+            /** @brief 넘은 예산을 다시 감시하는 임계값(예산의 90 %)입니다. 경계에서 오락가락할 때 경고가 넘치지 않게 한다. */
             static constexpr uint64 kBudgetRearmPercent = 90;
 
             static inline thread_local bool       t_bIsInsideProfiler = false;

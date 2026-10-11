@@ -72,7 +72,7 @@ namespace sw
          * @brief 슬롯 하나에 bindless 인덱스의 버퍼를 겁니다(세트는 flushSlotSet 이 굳힙니다).
          * @param bCompute true 면 컴퓨트 바인드 포인트의 상태, false 면 그래픽스. 둘은 독립이다.
          * @param bindingIndex 세트 0 의 binding (종류별 시프트 + 레지스터 번호).
-         * @param bUav true 면 UAV 등록부, false 면 SRV/CB 등록부.
+         * @param bUav true 면 UAV 레지스트리, false 면 SRV/CB 레지스트리.
          * @param bConstantBuffer true 면 링 상수버퍼의 이번 프레임 슬롯 오프셋 · 크기를 쓴다.
          */
         void setSlot( bool bCompute, uint32 bindingIndex, RHIDescriptorIndex index, bool bUav, bool bConstantBuffer );

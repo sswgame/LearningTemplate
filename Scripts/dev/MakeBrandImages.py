@@ -55,7 +55,7 @@ SignedDistance = Callable[[float, float], float]
 
 
 def convexPolygonInternal(listPoint: list[tuple[float, float]]) -> SignedDistance:
-    """시계 방향(화면 좌표 — y 아래) 볼록 다각형의 부호 거리(안쪽 음수). 변 직선까지의 거리 중 최대 — 바깥 꼭짓점 근처는 조금 작게 잰다."""
+    """시계 방향(화면 좌표 — y 아래) 볼록 다각형의 부호 거리(안쪽 음수). 변 직선까지의 거리 중 최대 — 바깥 꼭짓점 근처는 조금 작게 측정한다."""
     listEdge = []
     for index, (startX, startY) in enumerate(listPoint):
         endX, endY = listPoint[(index + 1) % len(listPoint)]
@@ -145,7 +145,7 @@ def renderInternal(width: int, height: int, background: Callable[[int, int], tup
                    listLayer: list[Layer], markOrigin: tuple[float, float], markScale: float) -> bytes:
     """RGBA 행 우선 바이트. `background` 는 (픽셀 → (색, 알파)), 모노그램은 markOrigin 에 높이 markScale 픽셀로 놓는다."""
     originX, originY = markOrigin
-    # 모노그램이 닿는 픽셀 범위 — 밖은 거리를 재지 않는다.
+    # 모노그램이 닿는 픽셀 범위 — 밖은 거리를 측정하지 않는다.
     minX = max(int(originX) - 2, 0)
     maxX = min(int(originX + kMarkWidth * markScale) + 3, width)
     minY = max(int(originY) - 2, 0)

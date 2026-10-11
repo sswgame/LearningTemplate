@@ -119,7 +119,7 @@ namespace sw
         _snapshot._listOpaqueBatch.clear();
         _snapshot._listTransparentBatch.clear();
         _snapshot._listAllBatch.clear();
-        // 머티리얼 등록부는 "그룹 목록(스냅샷)" 과 "셰이더 경로→인덱스 맵" 이 한 몸이다. 목록만 지우면 맵이 옛 인덱스를
+        // 머티리얼 레지스트리는 "그룹 목록(스냅샷)" 과 "셰이더 경로→인덱스 맵" 이 한 몸이다. 목록만 지우면 맵이 옛 인덱스를
         // 반환하고 materialGroupFor 가 범위 밖이라 조용히 건너뛴다. 그러면 배치에 머티리얼 버퍼가 안 실려 폴백(0)으로
         // 그려지고, 투명 머티리얼은 알파 0 이라 화면에서 사라진다(백엔드 교체 뒤 유리 큐브가 없어지던 원인).
         resetMaterialRegistry();
@@ -308,7 +308,7 @@ namespace sw
         candidate._sprite                    = item._sprite;
         candidate._vertexAnimationPhase      = 0.0f;
         candidate._sortKey                   = pBatch->getSortKey();
-        // 메시 컴포넌트 판과 같은 규칙: 날 포인터로 먼저 견주고, 다르면 소유를 싣는다.
+        // 메시 컴포넌트 판과 같은 규칙: 날 포인터로 먼저 비교하고, 다르면 소유를 싣는다.
         if ( candidate._mesh.get() != pMesh )
             candidate._mesh = pBatch->getMesh();
         if ( candidate._instance.get() != pBatch->getRawMaterialInstance() )
@@ -326,7 +326,7 @@ namespace sw
             pMaterial = candidate._instance->getParent();
         if ( pMaterial == nullptr )
             pMaterial = pScene->getMaterial();
-        // 날 포인터로 먼저 견주고, 다르면 소유를 싣는다. 같으면 참조 카운트를 건드리지 않는다.
+        // 날 포인터로 먼저 비교하고, 다르면 소유를 싣는다. 같으면 참조 카운트를 건드리지 않는다.
         if ( candidate._material.get() != pMaterial )
             candidate._material = GPUSceneBuilderInternal::shareMaterial( pMaterial );
 
@@ -357,7 +357,7 @@ namespace sw
         // 행렬 하나(64 바이트)와 번호 셋을 읽는 것뿐이다. 움직였다고 메시 컴포넌트 · 소유 오브젝트(활성) · 메시 · 머티리얼이
         // 바뀌지는 않으므로 후보를 다시 채우지 않는다.
         //
-        // 워커는 컨테이너를 만지지 않는다. 포인터만 넘긴다. 번호 하나가 후보 하나라(등록부 → 후보 표는 단사) 워커끼리 겹치지 않는다.
+        // 워커는 컨테이너를 만지지 않는다. 포인터만 넘긴다. 번호 하나가 후보 하나라(레지스트리 → 후보 표는 단사) 워커끼리 겹치지 않는다.
         struct TransformCopyJob
         {
             const uint32*                _pPrimitive{ nullptr };
@@ -481,7 +481,7 @@ namespace sw
 
         size_t candidateCount = 0;
 
-        // **바뀐 것만 다시 모은다.** 집합 세대가 그대로면 등록부의 자리 배치가 그대로이므로, 지난
+        // **바뀐 것만 다시 모은다.** 집합 세대가 그대로면 레지스트리의 자리 배치가 그대로이므로, 지난
         // 프레임 후보를 그대로 두고 더티 프리미티브의 자리만 새로 채우면 된다(8000 개 중 10 개만
         // 움직인 프레임에 8000 개를 모두 다시 모으면 모두 움직일 때와 같은 244 us 가 든다).
         //
@@ -560,7 +560,7 @@ namespace sw
         // 채우기 · 제자리 갱신은 렌더 상태 · 트랜스폼을 가리지 않고 "바뀐 칸" 목록 하나를 본다.
         _listDirtyPrimitive.insert( _listDirtyPrimitive.end(), _listTransformDirtyPrimitive.begin(), _listTransformDirtyPrimitive.end() );
 
-        // 등록부에는 그릴 수 있는 것만 들어 있다. 타입 검사가 없다.
+        // 레지스트리에는 그릴 수 있는 것만 들어 있다. 타입 검사가 없다.
         //
         // **워커가 자기 칸에서 비교까지 끝낸다**: 후보 채우기, 지난 후보와의 배치 키 · 내용 비교, 퍼뮤테이션
         // 해시 재사용. 직렬 패스로 같은 칸들을 다시 지나가지 않는다. 직렬에 남는 것은 앞으로 당기기와,
@@ -702,7 +702,7 @@ namespace sw
         if ( bContentSame && bCamSame )
         {
             // 부분 수집은 시작할 때 두 배열을 맞바꿨다 — 최신 후보는 scratch 쪽이다. 기준으로 돌려놓지 않으면 다음 프레임이
-            // 두 프레임 전 후보와 견주고, 그 위의 분할 표가 실제 후보와 어긋난다.
+            // 두 프레임 전 후보와 비교하고, 그 위의 분할 표가 실제 후보와 어긋난다.
             if ( bPartialDone )
                 _listBuiltCandidate.swap( _listScratchCandidate );
             _lastPrimitiveSetGeneration = setGeneration;
@@ -719,7 +719,7 @@ namespace sw
         // 정렬은 건너뛴다(움직이는 씬에서 이 정렬이 유일한 O(N log N) 이다).
         //
         // 이 판단은 수집이 남긴 표시의 합만 읽는다. 스코프 없이 두면 표에서 `build` 와 하위 항목들의 차이로만
-        // 나타나 아무도 보지 않으므로 재는 자리를 둔다.
+        // 나타나 아무도 보지 않으므로 측정하는 자리를 둔다.
         bool bBatchKeysSame = false;
         {
             SW_PROFILE_SCOPE( "GT.GPUScene.build.batchKeys" );
@@ -1089,7 +1089,7 @@ namespace sw
         // 0 이 아니었으면 빼고 새 값이 0 이 아니면 더한다. 전체 훑기 경로만 0 부터 다시 센다.
         // 투명 꼬리를 다시 짓는 프레임은 접두부를 통째로 훑는다. 더티 목록에는 자리가 바뀔 투명 후보도 섞여 있다.
         // **더티가 많으면 통째로 훑는다.** 부분 훑기는 더티 목록 순서(프리미티브 번호)라 인스턴스 자리가 흩어지고 직렬이다. 트랜스폼만 바뀐
-        // 프리미티브는 몇 개든 부분 수집으로 오므로(큐브 8000 개가 모두 움직여도) 여기서 가른다. 수집의 문턱과 같은 4 분의 1 이다.
+        // 프리미티브는 몇 개든 부분 수집으로 오므로(큐브 8000 개가 모두 움직여도) 여기서 가른다. 수집의 임계값과 같은 4 분의 1 이다.
         const bool bFewDirty       = _listDirtyPrimitive.size() * 4 < _listScratchCandidate.size();
         const bool bPartialRefresh = bPartialCollect && bFewDirty && bTransparentOrderChanged == false &&
                                      _listCandidateToInstance.size() == _listScratchCandidate.size();
@@ -1181,7 +1181,7 @@ namespace sw
             job._pChunk          = _listRefreshChunk.data();
             job._firstChunkBlock = bTransparentOrderChanged ? 1u : 0u;
 
-            // 블록 하나면 나눌 것이 없다. 그래서 문턱은 2.
+            // 블록 하나면 나눌 것이 없다. 그래서 임계값은 2.
             engine::runParallel( chunkCount + job._firstChunkBlock, 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &RefreshJob::refreshRange, &job ) );
 
             // 합친다. 실패 하나면 전체 실패, 구간은 경계가 맞닿으면 잇고 상한을 넘으면 전체 더티다.
@@ -1301,14 +1301,14 @@ namespace sw
 
         // 배치 구성은 그대로지만 **회수 시계는 돌아야 한다**. 안 그러면 물체가 움직이기만 하는 씬에서
         // 시계가 멈춰, 안 쓰이게 된 머티리얼 원소가 영원히 회수되지 않는다(자리가 조금씩 샌다).
-        // 지금 배치가 가리키는 원소는 모두 살아 있으므로 이번 빌드 번호로 도장을 찍어 둔다.
-        // **부분 갱신 프레임에도 돌린다.** 도장은 더티 인스턴스가 아니라 배치가 적어 둔 (배치, 원소) 쌍 전부에 찍고, 부분 갱신은
+        // 지금 배치가 가리키는 원소는 모두 살아 있으므로 이번 빌드 번호로 스탬프를 찍어 둔다.
+        // **부분 갱신 프레임에도 돌린다.** 스탬프는 더티 인스턴스가 아니라 배치가 적어 둔 (배치, 원소) 쌍 전부에 찍고, 부분 갱신은
         // 배치 구성이 그대로인 프레임이라(투명 꼬리도 다시 짓지 않는다) 그 목록이 지금 그리는 원소 그대로다. 주의: 부분 갱신
         // 프레임에 시계를 멈추면, 트랜스폼만 바뀐 프리미티브는 부분 수집으로 가므로(모두 움직이는 씬도 그렇다) 숨기거나 뺀 메시의
         // 원소를 다음 구조 변경까지 붙든다.
         ++_buildCounter;
         SW_PROFILE_SCOPE( "GT.GPUScene.build.refresh.stamp" );
-        // 도장은 원소에 찍는다. 인스턴스 8000 개를 돌 것 없이 배치가 적어 둔 (배치, 원소) 쌍만 돈다.
+        // 스탬프는 원소에 찍는다. 인스턴스 8000 개를 돌 것 없이 배치가 적어 둔 (배치, 원소) 쌍만 돈다.
         const size_t batchCount = MathUtil::min( _snapshot._listAllBatch.size(), _listBatchElementRange.size() );
         for ( size_t batchIndex = 0; batchIndex < batchCount; ++batchIndex )
         {
@@ -1505,7 +1505,7 @@ namespace sw
         batch._materialIndex     = 0;
 
         // 인스턴스마다 자기 (머티리얼, 인스턴스) 원소를 받는다. 합치기가 켜져 있으면 한 배치에 여러 머티리얼이 산다.
-        // 배치가 쓰는 원소는 중복 없이 적어 둔다(회수 도장이 인스턴스가 아니라 이 목록을 돈다). 정렬돼 있어 같은
+        // 배치가 쓰는 원소는 중복 없이 적어 둔다(회수 스탬프가 인스턴스가 아니라 이 목록을 돈다). 정렬돼 있어 같은
         // 원소는 연속으로 오므로 직전 것과 다를 때만 더한다.
         const uint32 batchIndex = static_cast<uint32>( _snapshot._listAllBatch.size() );
         _listBatchElementRange.push_back( GPUInstanceRun{ static_cast<uint32>( _listBatchElementIndex.size() ), 0 } );

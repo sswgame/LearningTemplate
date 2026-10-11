@@ -20,13 +20,13 @@ namespace sw
     /**
      * @struct ShaderCookSummary
      * @brief 일괄 쿠킹이 한 일입니다. 실패 · 계약 위반이 하나라도 있으면 `App --cook-shaders` 는 실패로 끝납니다.
-     * @details 주의: 실패한 셰이더의 소스에도 도장을 찍으면 다음 쿠킹이 그것을 건너뛰어, 문법 오류가 든 셰이더의 옛 바이너리가
-     *          종료 코드 0 으로 배포본에 실립니다. 실패는 세어 돌려주고 그 소스는 도장에서 뺍니다.
+     * @details 주의: 실패한 셰이더의 소스에도 스탬프를 찍으면 다음 쿠킹이 그것을 건너뛰어, 문법 오류가 든 셰이더의 옛 바이너리가
+     *          종료 코드 0 으로 배포본에 실립니다. 실패는 세어 돌려주고 그 소스는 스탬프에서 뺍니다.
      */
     struct [[nodiscard]] ShaderCookSummary
     {
         uint32 _cookedCount{ 0 };            ///< 새로 쿠킹된 바이너리 수
-        uint32 _failedCount{ 0 };            ///< 컴파일에 실패한 (요청, 포맷) 수 — 그 소스는 도장에서 빠져 다음 쿠킹이 다시 시도한다
+        uint32 _failedCount{ 0 };            ///< 컴파일에 실패한 (요청, 포맷) 수 — 그 소스는 스탬프에서 빠져 다음 쿠킹이 다시 시도한다
         uint32 _contractViolationCount{ 0 }; ///< 바인딩 계약 위반 수
         /** @brief 실패도 위반도 없으면 true 입니다. */
         bool isClean() const { return _failedCount == 0 && _contractViolationCount == 0; }

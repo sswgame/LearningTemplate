@@ -913,7 +913,7 @@ namespace sw
             if ( it != _mapEmitter.end() )
             {
                 const AudioAttenuationDesc& attenuation = _listAttenuation[static_cast<size_t>( slot._attenuationIndex )];
-                // 리스너가 여럿이면 가장 크게 들리는 리스너로 잰다(언리얼 · Wwise 의 "가장 가까운 리스너").
+                // 리스너가 여럿이면 가장 크게 들리는 리스너로 측정한다(언리얼 · Wwise 의 "가장 가까운 리스너").
                 bool               bHaveListener = false;
                 AudioSpatialResult best;
                 for ( const AudioListenerState& listener : _arrListener )

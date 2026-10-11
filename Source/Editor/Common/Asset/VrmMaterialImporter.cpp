@@ -19,7 +19,7 @@ namespace sw::editor
          */
         struct VrmMaterialImporterInternal
         {
-            /** @brief 엔진 툰 머티리얼 틀입니다. 프로퍼티 목록 · 퍼뮤테이션은 이 파일 하나가 정본입니다. */
+            /** @brief 엔진 툰 머티리얼 틀입니다. 프로퍼티 목록 · 퍼뮤테이션은 이 파일 하나가 원본입니다. */
             static constexpr string_view kToonMaterialTemplate = "engine/materials/toon.material";
 
             /** @brief 0.x 원소의 최상위 키입니다. */

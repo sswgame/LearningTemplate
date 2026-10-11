@@ -1,6 +1,6 @@
 /**
  * @file FitOperator.h
- * @brief 피팅 연산의 계약(`IFitOperator`)과 이름 붙은 등록부(`FitOperatorRegistry`)입니다. 상호작용 표가 연산을 이름으로 고릅니다.
+ * @brief 피팅 연산의 계약(`IFitOperator`)과 이름 붙은 레지스트리(`FitOperatorRegistry`)입니다. 상호작용 표가 연산을 이름으로 고릅니다.
  * @details 연산은 단계 하나에 속합니다 — 변형(`Deform`: 조임 · 밀어내기, 야코비 반복 안에서 정점 변위를 더함), 덮임(`Coverage`: 잘라 내기, 덮인
  *          삼각형을 표시), 검증(`Validate`: 보고). 새 효과는 연산 하나를 등록하면 표에서 씁니다. 기본 넷은 `registerDefaultOperators` 가 올립니다:
  *          `Shrink` · `Push` · `Cut` · `Report`.
@@ -58,7 +58,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 이름 → 연산 등록부입니다. */
+    /** @brief 이름 → 연산 레지스트리입니다. */
     class SW_API FitOperatorRegistry
     {
     public:

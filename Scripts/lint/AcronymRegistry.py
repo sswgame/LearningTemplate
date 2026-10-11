@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-약어 등록부 — 무엇이 약어이고 어떻게 쓰는지를 정하는 한 자리입니다(AGENTS.md "Function names").
+약어 레지스트리 — 무엇이 약어이고 어떻게 쓰는지를 정하는 한 자리입니다(AGENTS.md "Function names").
 
 게이트(`gate/CheckAcronymSpelling.py`) · 코드모드(`fixer/FormatAcronymSpelling.py`) · 사전 실행 보고가 모두 이 모듈을 읽는다.
 목록과 규칙을 한 파일에 두는 이유는 하나다 — 게이트가 막는 철자와 코드모드가 고치는 철자가 갈리면 고친 코드를 게이트가 다시 막는다.
@@ -11,7 +11,7 @@
   `pUiSystem` → `pUISystem`). 이름 맨 앞의 소문자 약어(`uiSystem` · `_gpuScene`)는 camelCase 의 첫 낱말이라 그대로다.
 - 바꾸지 않는 것: 문자열 리터럴 · 주석 · `#include` 줄(파일 이름은 `--apply-files` 가 따로 옮긴다), `gv_` 전역 변수, 대문자 매크로(`SW_*`),
   서드파티 이름(`kExternalPrefixRe` · `kExternalNamespace` · `kExternalName`), 제품 이름(`kProductName` — `ImGui` 의 `Gui` 는 약어가 아니다).
-- 줄임말(`kNotAcronym`)은 약어가 아니다 — 등록부에 오르면 시작할 때 멈춘다.
+- 줄임말(`kNotAcronym`)은 약어가 아니다 — 레지스트리에 오르면 시작할 때 멈춘다.
 
 `kEnforced` 는 게이트가 막는 약어다. 약어 하나를 트리 전체에서 바꾼 커밋이 그 약어를 올린다 — 그 전까지 게이트는 보고만 한다.
 
@@ -48,27 +48,27 @@ kEnforced: frozenset[str] = frozenset(_kRuleData["enforced"])
 #: 복수 `s` 를 붙여 쓰지 않는 약어 — `Ios` 는 `IO` 의 복수가 아니라 플랫폼 이름(iOS)이다.
 kNoPlural: frozenset[str] = frozenset(_kRuleData["no_plural"])
 
-#: 약어처럼 보이지만 줄임말인 낱말 → 이유. 등록부(`kAcronym`)에 오르면 `checkRegistry` 가 멈춘다.
+#: 약어처럼 보이지만 줄임말인 낱말 → 이유. 레지스트리(`kAcronym`)에 오르면 `checkRegistry` 가 멈춘다.
 kNotAcronym: dict[str, str] = _kRuleData["not_acronym"]
 
 
 @dataclass(frozen=True)
 class ProductName:
-    """제품 이름 — 제품 철자가 정본이다. `variants` 는 정본으로 고쳐 쓰는 옛 철자, `acronym` 은 `--acronym` 으로 고르는 이름표."""
+    """제품 이름 — 제품 철자가 원본이다. `variants` 는 원본으로 고쳐 쓰는 옛 철자, `acronym` 은 `--acronym` 으로 고르는 이름."""
 
     canonical: str
     variants: tuple[str, ...] = ()
     acronym: str = ""
 
 
-#: 제품 이름. 정본 철자는 약어 규칙이 건드리지 않는다(`ImGui` → `ImGUI` 가 되지 않는다).
+#: 제품 이름. 원본 철자는 약어 규칙이 건드리지 않는다(`ImGui` → `ImGUI` 가 되지 않는다).
 kProductName: tuple[ProductName, ...] = tuple(
     ProductName(canonical,
                 tuple(variant for variant, target in _kRuleData["product_variant"].items() if target == canonical),
                 _kRuleData["product_acronym"].get(canonical, ""))
     for canonical in _kRuleData["product"])
 
-#: 고를 수 있는 이름표 전체 — 약어 + 제품 이름표(`SSL` — `OpenSsl` → `OpenSSL`). `--acronym` 을 생략하면 이것이다.
+#: 고를 수 있는 이름 전체 — 약어 + 제품 이름(`SSL` — `OpenSsl` → `OpenSSL`). `--acronym` 을 생략하면 이것이다.
 kSelectable: tuple[str, ...] = kAcronym + tuple(dict.fromkeys(product.acronym for product in kProductName
                                                              if product.acronym and product.acronym not in kAcronym))
 
@@ -108,7 +108,7 @@ def toPascal(acronym: str) -> str:
 
 
 def checkRegistry() -> list[str]:
-    """등록부 자체의 모순(줄임말과 겹침 · 중복 · 강제 목록이 등록부 밖)을 돌려줍니다."""
+    """레지스트리 자체의 모순(줄임말과 겹침 · 중복 · 강제 목록이 레지스트리 밖)을 돌려줍니다."""
     listProblem: list[str] = []
     setNotAcronym = {word.upper() for word in kNotAcronym}
     listProblem += [f"'{acronym}' 은 줄임말 표(kNotAcronym)에도 있습니다" for acronym in kAcronym if acronym in setNotAcronym]
@@ -124,7 +124,7 @@ def checkRegistry() -> list[str]:
 
 
 def resolveAcronyms(listArgument: Iterable[str] | None) -> tuple[str, ...]:
-    """`--acronym Ui,Gpu` 같은 인자를 등록부 철자로 풉니다. 비면 전체. 제품 이름표(`SSL`)도 받습니다."""
+    """`--acronym Ui,Gpu` 같은 인자를 레지스트리 철자로 풉니다. 비면 전체. 제품 이름(`SSL`)도 받습니다."""
     listName = [name.strip().upper() for argument in (listArgument or ()) for name in argument.split(",") if name.strip()]
     if not listName:
         return kSelectable
@@ -162,7 +162,7 @@ def isExternalName(name: str, qualifier: str = "") -> bool:
 
 
 def findProductSpans(name: str, acronyms: tuple[str, ...]) -> tuple[list[tuple[int, int]], list[tuple[int, int, str]]]:
-    """이름 안의 제품 이름 자리 — (지킬 구간들, 고쳐 쓸 구간 · 정본 철자들)."""
+    """이름 안의 제품 이름 자리 — (지킬 구간들, 고쳐 쓸 구간 · 원본 철자들)."""
     listProtected: list[tuple[int, int]] = []
     listRespell: list[tuple[int, int, str]] = []
     for product in kProductName:
@@ -216,7 +216,7 @@ def changedAcronyms(name: str, acronyms: tuple[str, ...] = kSelectable) -> tuple
 def findAdjacentAcronyms(name: str) -> list[str]:
     """
     대문자 약어가 이어 붙은 자리(규칙 4) — `RHIUIPass` 의 `RHIUI`, `GPUID` 의 `GPUID`. 약어 하나(`AABB` · `UUID`)는 아니다.
-    대문자 묶음을 등록부 약어 둘 이상으로 남김없이 나눌 수 있을 때만 잡는다.
+    대문자 묶음을 레지스트리 약어 둘 이상으로 남김없이 나눌 수 있을 때만 잡는다.
     """
     if _kSkipNameRe.match(name):
         return []
@@ -233,7 +233,7 @@ def findAdjacentAcronyms(name: str) -> list[str]:
 
 @lru_cache(maxsize=4096)
 def splitIntoAcronyms(run: str) -> tuple[str, ...]:
-    """`run` 을 등록부 약어 둘 이상으로 남김없이 나눈 한 가지(없으면 빈 튜플)."""
+    """`run` 을 레지스트리 약어 둘 이상으로 남김없이 나눈 한 가지(없으면 빈 튜플)."""
     def splitFrom(index: int) -> tuple[str, ...] | None:
         if index == len(run):
             return ()

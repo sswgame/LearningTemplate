@@ -73,24 +73,24 @@ namespace sw
         BindlessHandleSet bindlessHandlesAt( RHIDescriptorIndex index ) const;
 
         /**
-         * @brief 어느 bindless 등록부인지입니다. **힙 인덱스 공간은 하나**지만 기록은 둘로 나뉩니다.
+         * @brief 어느 bindless 레지스트리인지입니다. **힙 인덱스 공간은 하나**지만 기록은 둘로 나뉩니다.
          * @details 둘이 같은 프리리스트를 쓰므로(`_listFreeBindless`) 인덱스는 섞이지 않습니다.
          *          나뉘는 것은 "그 슬롯이 무엇을 들고 있었나" 뿐입니다.
          */
         enum class BindlessRegistry : uint8
         {
-            ShaderResource, ///< SRV/CBV 등록부.
-            UnorderedAccess ///< UAV 등록부.
+            ShaderResource, ///< SRV/CBV 레지스트리.
+            UnorderedAccess ///< UAV 레지스트리.
         };
 
         /**
-         * @brief 등록부의 한 슬롯을 비우고 인덱스를 펜스 뒤 회수에 맡깁니다.
+         * @brief 레지스트리의 한 슬롯을 비우고 인덱스를 펜스 뒤 회수에 맡깁니다.
          * @details **이미 빈 슬롯을 다시 돌려주면 같은 인덱스가 두 리소스에 발급됩니다.** 그 검사를 SRV/CBV 쪽과
-         *          UAV 쪽이 같이 씁니다(다른 것은 등록부와 로그 문구뿐입니다).
+         *          UAV 쪽이 같이 씁니다(다른 것은 레지스트리와 로그 문구뿐입니다).
          */
         void releaseBindlessRecord( BindlessRegistry registry, RHIDescriptorIndex index );
         /**
-         * @brief 등록부의 칸 `index` 에 리소스 · 핸들 셋 · 원래 핸들(버퍼나 텍스처 하나, 다른 쪽은 0)을 적습니다. 칸이 모자라면 늘립니다.
+         * @brief 레지스트리의 칸 `index` 에 리소스 · 핸들 셋 · 원래 핸들(버퍼나 텍스처 하나, 다른 쪽은 0)을 적습니다. 칸이 모자라면 늘립니다.
          * @details 다섯 등록 경로(텍스처 SRV · 구조버퍼 SRV · CBV · 버퍼 UAV · 텍스처 UAV)가 같이 씁니다.
          *          인덱스를 집은 잠금 안에서 부릅니다.
          */

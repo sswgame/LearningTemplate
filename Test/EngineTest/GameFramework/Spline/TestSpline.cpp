@@ -27,7 +27,7 @@ SW_TEST_CASE( SplineTest, ArcLengthParameterization )
     SW_EXPECT_NEAR_EQUAL( 1.0f, polyline.sampleAtDistance( 5.0f )._tangent._y, 1.0e-4f );
     SW_EXPECT_NEAR_EQUAL( 7.0f, polyline.sampleAtDistance( 100.0f )._distance, 1.0e-4f ); // 열린 곡선은 잘린다
 
-    // 곡선 — 거리 s 로 고른 점의 참 호 길이(아주 촘촘한 표로 잰 값)가 s 다. 매개변수 t 를 고르게 나눈 점은 그렇지 않다.
+    // 곡선 — 거리 s 로 고른 점의 참 호 길이(아주 촘촘한 표로 측정한 값)가 s 다. 매개변수 t 를 고르게 나눈 점은 그렇지 않다.
     const vector<float3> listPoint = {
         float3{0.0f, 0.0f, 0.0f},
         float3{1.0f, 0.0f, 0.0f},
@@ -49,7 +49,7 @@ SW_TEST_CASE( SplineTest, ArcLengthParameterization )
     SW_EXPECT_TRUE_MSG( maxError < 0.01f, std::to_string( maxError ).c_str() );
     const float32 middleOfSegment = reference.findClosest( curve.evaluate( 0.5f ) )._distance; // 첫 구간의 t = 0.5
     SW_EXPECT_TRUE( MathUtil::abs( middleOfSegment - reference.findClosest( curve.evaluate( 1.0f ) )._distance * 0.5f ) > 0.05f );
-    SW_EXPECT_NEAR_EQUAL( 8.0f, listSample.back()._position._x, 1.0e-3f ); // 끝점 포함
+    SW_EXPECT_NEAR_EQUAL( 8.0f, listSample.back()._position._x, 1.0e-3f ); // 엔드포인트 포함
 
     // 닫힌 곡선 — 길이 + 1 은 1 로 감기고, 음수도 감긴다.
     SplinePath loop;
@@ -66,7 +66,7 @@ SW_TEST_CASE( SplineTest, ArcLengthParameterization )
 }
 
 /**
- * @brief [SplineTest] 3차 베지어는 끝점을 지나고 손잡이 쪽으로 휘며, 개수 규칙(3n+1 · 닫힌 3n)이 틀리면 짓지 않는다
+ * @brief [SplineTest] 3차 베지어는 엔드포인트를 지나고 손잡이 쪽으로 휘며, 개수 규칙(3n+1 · 닫힌 3n)이 틀리면 짓지 않는다
  */
 SW_TEST_CASE( SplineTest, BezierPassesAnchorsAndChecksShape )
 {

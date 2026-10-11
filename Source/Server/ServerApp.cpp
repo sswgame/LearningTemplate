@@ -237,7 +237,7 @@ namespace sw
             SW_LOG_ERROR( "Server config _opsListenAddress '%#' is not an IPv4 address", _pServerConfig->_opsListenAddress.c_str() );
             return false;
         }
-        opsSettings._bindAddress._port = static_cast<uint16>( _pServerConfig->_opsPort ); // 포트는 _opsPort 가 정본(주소 칸에 포트를 적어도 무시)
+        opsSettings._bindAddress._port = static_cast<uint16>( _pServerConfig->_opsPort ); // 포트는 _opsPort 가 원본(주소 칸에 포트를 적어도 무시)
         _opsTransport                  = StreamTransportFactory::createPlatformTransport();
         if ( _opsTransport == nullptr )
         {
@@ -253,7 +253,7 @@ namespace sw
         {
             _opsEndpoint.reset();
             _opsTransport.reset();
-            return false; // 운영자가 켠 끝점을 못 열면 서지 않는다 — 감시자가 볼 수 없는 서버다
+            return false; // 운영자가 켠 엔드포인트를 못 열면 서지 않는다 — 감시자가 볼 수 없는 서버다
         }
         return true;
     }
@@ -459,7 +459,7 @@ namespace sw
             _moduleHost->shutdown();
             _moduleHost.reset();
         }
-        // 운영 끝점은 게임을 내리는 동안에도 비우는 중(/readyz 503)을 알리다 마지막에 닫는다 — 로그를 남기므로 엔진(로거)보다 먼저.
+        // 운영 엔드포인트는 게임을 내리는 동안에도 비우는 중(/readyz 503)을 알리다 마지막에 닫는다 — 로그를 남기므로 엔진(로거)보다 먼저.
         shutdownObservability();
         // 로거는 엔진 종료와 함께 내려간다 — 마지막 줄은 그 앞에 남긴다(테스트 · 운영 도구가 이 줄로 정상 종료를 본다).
         SW_LOG_INFO( "Dedicated server shutdown complete" );

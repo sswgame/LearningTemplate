@@ -560,7 +560,7 @@ namespace sw
         /**
          * @brief GPU 타임스탬프입니다. 링 슬롯마다 `constant::kMaxGPUTimestampSlot` 칸을 씁니다.
          * @details 읽기는 `waitForRingSlot()` 이 그 슬롯의 펜스를 통과시킨 **직후**에 합니다. 그때가
-         *          "그 프레임의 GPU 작업이 끝났음" 이 이미 보장된 유일한 자리라, 재려고 파이프라인을
+         *          "그 프레임의 GPU 작업이 끝났음" 이 이미 보장된 유일한 자리라, 측정하려고 파이프라인을
          *          멈춰 세우는 일이 없습니다.
          */
         Microsoft::WRL::ComPtr<ID3D12QueryHeap> _timestampHeap;

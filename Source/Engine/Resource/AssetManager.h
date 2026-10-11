@@ -2,7 +2,7 @@
  * @file AssetManager.h
  * @brief 팩 에셋(GUID · 스키마 · Material · Texture · Prefab · Mesh)을 한곳에서 들고 있는 파사드입니다. `EngineLoop` 가 `EngineServiceCollection` 로 소유합니다.
  * @note
- *   포함: AssetDatabase, AssetFormatRegistry, ResourcePackManager, 에셋 캐시 등록부.
+ *   포함: AssetDatabase, AssetFormatRegistry, ResourcePackManager, 에셋 캐시 레지스트리.
  *   기능 캐시(Material · Texture · Prefab · Mesh · Skeleton · Fracture …)는 **각 기능 폴더가 등록합니다**(`SW_BUILT_IN_ASSET_CACHE`, `Cache/BuiltInAssetCache.h`).
  *   매니저는 생성자에서 등록표를 훑어 소유 캐시를 만들고, 코드로 짓는 값 표(`WeakInternCache`)는 빌려 올립니다. 타입으로 찾을 때는 `getAssetCache<T>()` 입니다.
  *   제외(수명이 다름):
@@ -98,10 +98,10 @@ namespace sw
         void garbageCollectUnusedAssets();
 
         // ----------------------------------------------------------------------
-        // 에셋 캐시 등록부: 종류를 늘리는 자리
+        // 에셋 캐시 레지스트리: 종류를 늘리는 자리
         // ----------------------------------------------------------------------
         /**
-         * @brief 경로 키 에셋 캐시를 등록부에 올립니다. 소유하지 않습니다.
+         * @brief 경로 키 에셋 캐시를 레지스트리에 올립니다. 소유하지 않습니다.
          * @details 내장 캐시(기능 폴더가 `SW_BUILT_IN_ASSET_CACHE` 로 올린 것)는 생성자가 등록합니다. 모듈이 자기 에셋
          *          종류를 더할 때 이것을 부릅니다. 그러면 종료 · 진단 · 재초기화가 **자동으로**
          *          그 캐시까지 훑습니다. 같은 포인터를 두 번 올리면 무시합니다.
@@ -109,8 +109,8 @@ namespace sw
          */
         void registerAssetCache( IAssetCache* pCache );
         /**
-         * @brief 등록부에서 캐시를 내립니다. **모듈은 내려가기 전에 반드시 이것을 부릅니다.**
-         * @details 등록부는 포인터만 듭니다. 모듈 DLL 이 내려가면 그 포인터도, 가상 함수 표도 같이
+         * @brief 레지스트리에서 캐시를 내립니다. **모듈은 내려가기 전에 반드시 이것을 부릅니다.**
+         * @details 레지스트리는 포인터만 듭니다. 모듈 DLL 이 내려가면 그 포인터도, 가상 함수 표도 같이
          *          사라집니다(CLAUDE.md 의 "Statics die on hot reload" 와 같은 자리입니다). 남겨 두면 다음
          *          종료 · 비우기가 죽은 코드로 뛰어듭니다.
          * @param pCache 등록했던 그 포인터. 등록된 적이 없으면 아무 일도 하지 않습니다.
@@ -153,7 +153,7 @@ namespace sw
         /** @brief 언로드 리스너 목록의 이름입니다. */
         const utf8* getModuleUnloadListenerName() const override { return "asset caches"; }
         /**
-         * @brief 객체나 vtable 이 [@p pBegin, @p pEnd) 안인 캐시(모듈이 올리고 내리지 않은 것)를 등록부에서 내립니다. 비우지 않습니다 —
+         * @brief 객체나 vtable 이 [@p pBegin, @p pEnd) 안인 캐시(모듈이 올리고 내리지 않은 것)를 레지스트리에서 내립니다. 비우지 않습니다 —
          *        캐시는 그것을 만든 모듈이 소유하고, 이미지가 아직 올라 있는 동안 모듈이 스스로 지웁니다. 내장 캐시는 보지 않습니다.
          */
         uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
@@ -166,7 +166,7 @@ namespace sw
         AssetDatabase&       getAssetDatabase() { return _assetDatabase; }
         const AssetDatabase& getAssetDatabase() const { return _assetDatabase; }
 
-        /** @brief XML formatVersion 이관 등록부를 반환합니다. */
+        /** @brief XML formatVersion 이관 레지스트리를 반환합니다. */
         AssetFormatRegistry&       getAssetFormatRegistry() { return _assetFormatRegistry; }
         const AssetFormatRegistry& getAssetFormatRegistry() const { return _assetFormatRegistry; }
 

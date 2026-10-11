@@ -17,7 +17,7 @@ namespace sw
     /**
      * @class UIDocumentCache
      * @brief UI 문서(`*.ui.xml`)를 경로로 들고 파싱한 노드 트리를 나눠 줍니다 — 같은 문서로 화면을 여러 번 열어도 파일은 한 번만 읽습니다.
-     * @details `UISystem` 이 소유하고, 기동 단계 `UI` 가 에셋 캐시 등록부(`AssetManager`)에 올립니다(종료 · 진단 · 핫 리로드가 다른 캐시와 같은 길).
+     * @details `UISystem` 이 소유하고, 기동 단계 `UI` 가 에셋 캐시 레지스트리(`AssetManager`)에 올립니다(종료 · 진단 · 핫 리로드가 다른 캐시와 같은 길).
      *          찾는 순서 · 실패 · 다시 읽기 규칙은 `UITextAssetCache` 입니다. 게임 스레드만.
      */
     class SW_API UIDocumentCache final : public UITextAssetCache

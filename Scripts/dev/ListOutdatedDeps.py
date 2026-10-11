@@ -33,7 +33,7 @@ kHeldBackPrefix: dict[str, tuple[str, str]] = {
     "openssl": ("4.", "OpenSSL 4 는 따로 올린다"),
     "glad": ("2.", "glad2 는 따로 올린다"),
 }
-#: 판을 견주지 않고 "따로" 로만 적는 포트(셰이더 컴파일러 — 구운 셰이더 전부가 바뀐다).
+#: 판을 비교하지 않고 "따로" 로만 적는 포트(셰이더 컴파일러 — 구운 셰이더 전부가 바뀐다).
 kHeldBackPort: dict[str, str] = {"directx-dxc": "DXC 는 따로 올린다"}
 _kGithubRepo = re.compile(r"\bREPO\s+([\w.-]+/[\w.-]+)")
 

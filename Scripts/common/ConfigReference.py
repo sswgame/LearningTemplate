@@ -1,7 +1,7 @@
 """
 Scripts/common/ConfigReference.py
 
-설정 참조 문서(`docs/Config/`)를 코드에서 만듭니다. **정본은 코드이고 문서는 출력입니다.**
+설정 참조 문서(`docs/Config/`)를 코드에서 만듭니다. **원본은 코드이고 문서는 출력입니다.**
 
 - 설정 파일의 칸 표 — 설정 구조체(`REFLECT` · `PROPERTY`)의 이름 · 타입 · 기본값(멤버 초기값) · 범위(`Min` · `Max`) · 단위(`Units`) ·
   설명(문서 주석, 없으면 `Tooltip`)과 enum 값. 손으로 읽는 설정은 그 읽기 코드가 검사에 쓰는 `ConfigKeyDoc` 표.

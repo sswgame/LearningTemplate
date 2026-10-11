@@ -7,7 +7,7 @@ Scripts/lint/gate/CheckAcronymSpelling.py
 (AGENTS.md "Function names" 규칙 2 · 3 · 4, 목록과 철자 판정은 `Scripts/lint/AcronymRegistry.py` 한 자리).
 
 **강제는 약어 하나씩이다.** 트리에는 아직 바꾸지 않은 약어 철자가 수만 곳 있다. 그것을 모두 예외로 적지 않는다 —
-등록부의 `kEnforced` 에 오른 약어(그 약어를 트리 전체에서 바꾼 커밋이 올린다)와 `--enforce` 로 넘긴 약어만 위반이고,
+레지스트리의 `kEnforced` 에 오른 약어(그 약어를 트리 전체에서 바꾼 커밋이 올린다)와 `--enforce` 로 넘긴 약어만 위반이고,
 나머지는 요약 줄의 숫자로만 보인다(`--verbose` 면 약어별 숫자). 그래서 평소 종료 코드는 0 이다.
 
 보는 것:

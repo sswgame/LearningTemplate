@@ -310,7 +310,7 @@ namespace sw
         vector<float32>                    _listGradeScale;   ///< 등급 0..3
         ReputationCatalog                  _honorReputation;
         WesternBondExperience              _bondExperience;
-        ExperienceCurve                    _bondCurve; ///< 단계 사이 경험치(정렬한 `_listBondLevel` 의 문턱 차이)
+        ExperienceCurve                    _bondCurve; ///< 단계 사이 경험치(정렬한 `_listBondLevel` 의 임계값 차이)
         WesternSurvivalSettings            _survival;
         hashed_string                      _currency;
         int32                              _extraHitPenalty; ///< 첫 발 뒤 한 발마다 떨어지는 등급

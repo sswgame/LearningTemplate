@@ -7,8 +7,8 @@
  *          → 종료 신호 처리기 → 콘솔 입력 → "Dedicated server ready" → 고정 틱 루프 → 종료 요청 → 역순 종료 → "Dedicated server shutdown complete".
  *          한 틱 = 게임 고정 스텝 하나(델타는 늘 `1 / _tickRateHz` — 서버 시뮬레이션이 벽시계 흔들림을 받지 않는다). 다음 틱 마감까지 잠자고,
  *          밀리면 `_maxCatchUpTicks` 까지 잠 없이 몰아 돌고 그 이상은 버린다(경고).
- *          운영 관측: 지표 등록부(`server_tick_seconds` · `server_dropped_ticks_total`)와 상태 확인(틱마다 박동, 종료 요청 때 비우는 중)을 늘 들고,
- *          설정의 `_opsPort` 가 0 이 아니면 운영 HTTP 끝점(`/metrics` · `/healthz` · `/readyz`, 기본 바인드 `127.0.0.1`)을 연다.
+ *          운영 관측: 지표 레지스트리(`server_tick_seconds` · `server_dropped_ticks_total`)와 상태 확인(틱마다 박동, 종료 요청 때 비우는 중)을 늘 들고,
+ *          설정의 `_opsPort` 가 0 이 아니면 운영 HTTP 엔드포인트(`/metrics` · `/healthz` · `/readyz`, 기본 바인드 `127.0.0.1`)을 연다.
  *          Dev 는 콘솔 `pause` · `resume` · `step [N]` 으로 게임 틱을 멈추고 한 틱씩 돌린다(디버거 없이 중단점처럼 — 네트워크 스레드는 계속 돌아 연결이 산다).
  */
 #pragma once
@@ -62,7 +62,7 @@ namespace sw
         /** @brief 기동 단계 `ModuleTypes` 의 호스트 로더 — 서버 대상 모듈의 이미지를 올린다(App::loadModuleImages 와 같은 자리). */
         [[nodiscard]] bool loadModuleImages();
         [[nodiscard]] bool loadServerConfig();
-        /** @brief 지표 · 상태 등록부를 세우고, 설정이 켜면 운영 HTTP 끝점을 엽니다. 켰는데 열지 못하면 false(기동 실패)입니다. */
+        /** @brief 지표 · 상태 레지스트리를 세우고, 설정이 켜면 운영 HTTP 엔드포인트를 엽니다. 켰는데 열지 못하면 false(기동 실패)입니다. */
         [[nodiscard]] bool initializeObservability();
         void               shutdownObservability();
         LiveReloadManager* getLiveReloadManager() const;
@@ -85,7 +85,7 @@ namespace sw
         StandardInputReader               _console;
         unique_ptr<MetricRegistry>        _metricRegistry;
         unique_ptr<ServiceHealthRegistry> _healthRegistry;
-        unique_ptr<IStreamTransport>      _opsTransport; ///< 운영 HTTP 의 스트림 전송(끝점이 빌려 쓴다 — 끝점을 내린 뒤 지운다)
+        unique_ptr<IStreamTransport>      _opsTransport; ///< 운영 HTTP 의 스트림 전송(엔드포인트가 빌려 쓴다 — 엔드포인트를 내린 뒤 지운다)
         unique_ptr<OpsHTTPEndpoint>       _opsEndpoint;
         vector<string>                    _listPendingCommand;  ///< 콘솔에서 꺼낸 줄(틱마다 재사용)
         const ServerConfig*               _pServerConfig;       // ConfigManager 가 소유한다

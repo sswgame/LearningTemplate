@@ -57,7 +57,7 @@ namespace
 SW_TEST_CASE( DelayLoadBindTest, EveryDelayImportIsBoundAfterEngineStartup )
 {
     sw::vector<void*> listHandle;
-    sw::ModuleImageUtil::collectLoadedModuleHandles( listHandle );
+    SW_ASSERT_TRUE( sw::ModuleImageUtil::collectLoadedModuleHandles( listHandle ) );
     SW_ASSERT_TRUE( listHandle.empty() == false );
 
     uint32 hookedModuleCount{ 0 };

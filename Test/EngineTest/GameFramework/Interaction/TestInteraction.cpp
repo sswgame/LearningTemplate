@@ -451,9 +451,9 @@ SW_TEST_CASE( InteractionTest, BeginningInteractionSetsAlignmentWarpTarget )
 }
 
 /**
- * @brief [InteractionTest] 상호작용 표 파일을 고치면 핫 리로드가 등록부의 캐시로 새 표를 읽고, 컴포넌트가 다음 틱에 새 정의를 쓴다
- * @details 표 캐시가 모듈 정적 맵이라 등록부 밖에 있으면 에디터 핫 리로드가 찾을 이름이 없어, 고친 파일이 다시 시작할 때까지 반영되지 않는다.
- *          게임 서비스가 묶이면(`bindGameService` — `AssetManager` 포함) 캐시가 등록부에 오르고, 다시 읽은 뒤에도 옛 정의를 든 쪽은 죽은 메모리를 읽지 않는다.
+ * @brief [InteractionTest] 상호작용 표 파일을 고치면 핫 리로드가 레지스트리의 캐시로 새 표를 읽고, 컴포넌트가 다음 틱에 새 정의를 쓴다
+ * @details 표 캐시가 모듈 정적 맵이라 레지스트리 밖에 있으면 에디터 핫 리로드가 찾을 이름이 없어, 고친 파일이 다시 시작할 때까지 반영되지 않는다.
+ *          게임 서비스가 묶이면(`bindGameService` — `AssetManager` 포함) 캐시가 레지스트리에 오르고, 다시 읽은 뒤에도 옛 정의를 든 쪽은 죽은 메모리를 읽지 않는다.
  */
 SW_TEST_CASE( InteractionTest, EditedCatalogReachesComponentsThroughTheAssetCacheRegistry )
 {
@@ -473,7 +473,7 @@ SW_TEST_CASE( InteractionTest, EditedCatalogReachesComponentsThroughTheAssetCach
         pInteractable->setCatalogPath( path );
         pInteractable->setInteractionID( "Open" );
     }
-    IAssetCache*          pCache  = resources.findAssetCache( "InteractionCatalog" ); // 표 캐시는 처음 읽을 때 생겨 묶인 등록부에 오른다
+    IAssetCache*          pCache  = resources.findAssetCache( "InteractionCatalog" ); // 표 캐시는 처음 읽을 때 생겨 묶인 레지스트리에 오른다
     const InteractionDef* pBefore = pInteractable != nullptr ? pInteractable->getDefinition() : nullptr;
 
     SW_ASSERT_TRUE( FileUtil::writeTextFile( path, R"(<Interactions><Interaction id="Open" mode="Press" maxDistance="5"/></Interactions>)" ) );
@@ -485,7 +485,7 @@ SW_TEST_CASE( InteractionTest, EditedCatalogReachesComponentsThroughTheAssetCach
     const InteractionDef* pAfter = pInteractable != nullptr ? pInteractable->getDefinition() : nullptr;
     binding.release();
 
-    SW_EXPECT_NULL( resources.findAssetCache( "InteractionCatalog" ) ); // 서비스가 풀리면 등록부에서 내려간다
+    SW_EXPECT_NULL( resources.findAssetCache( "InteractionCatalog" ) ); // 서비스가 풀리면 레지스트리에서 내려간다
     SW_ASSERT_NOT_NULL( pInteractable );
     SW_ASSERT_TRUE_MSG( pCache != nullptr, "상호작용 표 캐시가 에셋 캐시 등록부에 없다 — 에디터 핫 리로드가 고친 표를 다시 읽을 길이 없다" );
     SW_EXPECT_TRUE( bCached );
@@ -541,7 +541,7 @@ SW_TEST_CASE( InteractionTest, EditedCatalogReachesSmartObjectSlots )
 
 /**
  * @brief [InteractionTest] 하는 쪽은 등록된 대상(`ComponentRegistry`)에서 고른다 — 씬 전수 훑기로 고른 것과 자리마다 같고, 모듈을 내렸다 다시 붙여도 목록이 맞다
- * @details 후보를 등록부에서 모으고 닿지 않는 것을 미리 거르므로, 등록이 빠지거나(대상이 사라진다) 죽은 것이 남거나(해제된 메모리) 거르기가 고르기와
+ * @details 후보를 레지스트리에서 모으고 닿지 않는 것을 미리 거르므로, 등록이 빠지거나(대상이 사라진다) 죽은 것이 남거나(해제된 메모리) 거르기가 고르기와
  *          다르면 여기서 갈린다. 동률은 오브젝트 id 로 가르므로 모은 순서와 무관하다.
  */
 SW_TEST_CASE( InteractionTest, RegistryCandidatesMatchFullSceneScan )
@@ -574,7 +574,7 @@ SW_TEST_CASE( InteractionTest, RegistryCandidatesMatchFullSceneScan )
     pInteractor->setEyeOffset( float3{} );
     SW_ASSERT_EQUAL( listInteractable.size(), manager.getComponentRegistry().getAll<InteractableComponent>().size() );
 
-    /** @brief 전수 훑기로 고른 대상(없으면 무효 핸들)입니다 — 등록부 이전의 고르기 그대로. */
+    /** @brief 전수 훑기로 고른 대상(없으면 무효 핸들)입니다 — 레지스트리 이전의 고르기 그대로. */
     const auto selectByScan = [&manager, pPlayer]()
     {
         InteractionViewer viewer;

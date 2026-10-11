@@ -550,7 +550,7 @@ SW_TEST_CASE( UIStyleTest, OffscreenScreenFinishesTransitionsAtOnce )
 
 /**
  * @brief [UIStyleTest] 엔진 고대비 테마(engine/ui/uithemes.xml 의 highcontrast)가 읽히고, 견본 pause.ui.xml 에서 창은 불투명 · 테두리 2, 글은 바탕과 7:1 이상 대비다
- * @details 고대비 테마 = 기본 시트 + 고대비 시트(색 · 테두리만 덮는다) — 기본 시트의 여백은 남는다. 대비는 WCAG 상대 휘도로 잰다.
+ * @details 고대비 테마 = 기본 시트 + 고대비 시트(색 · 테두리만 덮는다) — 기본 시트의 여백은 남는다. 대비는 WCAG 상대 휘도로 측정한다.
  */
 SW_TEST_CASE( UIStyleTest, HighContrastThemeLoads )
 {

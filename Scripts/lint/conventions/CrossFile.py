@@ -173,7 +173,7 @@ def checkHeaderMemberInitializersInternal(filesToScan: list[Path], projectRoot: 
     생성자가 초기화 리스트로 멤버를 채우는 클래스가, 헤더에서도 기본값을 주고 있는지 검사합니다.
 
     한 멤버의 초기값이 두 곳에 적히면 어느 쪽이 이기는지 읽어서는 알 수 없고(생성자가 이긴다), 값을 고칠 때
-    한쪽만 고치는 일이 생깁니다. 정본은 하나여야 합니다 — 생성자가 있으면 생성자입니다.
+    한쪽만 고치는 일이 생깁니다. 원본은 하나여야 합니다 — 생성자가 있으면 생성자입니다.
     헤더와 `.cpp` 를 같이 봐야 알 수 있으므로 **전체 스캔에서만** 돕니다.
     """
     violations: list[ConventionViolation] = []

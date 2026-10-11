@@ -51,7 +51,7 @@ namespace sw
 
     protected:
         /**
-         * @param pAssetKindName 등록부의 종류 이름("UIDocument")입니다.
+         * @param pAssetKindName 레지스트리의 종류 이름("UIDocument")입니다.
          * @param pAssetLabel    오류 · 로그 글에 쓰는 이름("UI document")입니다.
          * @param pParse         글 → 에셋 파서입니다.
          */

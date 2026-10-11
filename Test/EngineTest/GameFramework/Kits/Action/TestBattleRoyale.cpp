@@ -266,7 +266,7 @@ SW_TEST_CASE( BattleRoyaleTest, NextZoneCenterAvoidsForbiddenTerrain )
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kBrCatalogXML, "BattleRoyaleTest" ) );
     BrWestWaterTerrain terrain;
 
-    // 콜백이 없으면 서쪽(물)에도 원이 생긴다 — 이 테스트가 콜백을 실제로 재는지 확인.
+    // 콜백이 없으면 서쪽(물)에도 원이 생긴다 — 이 테스트가 콜백을 실제로 측정하는지 확인.
     int32 westWithoutCallback = 0;
     int32 westWithCallback    = 0;
     for ( uint32 seed = 1; seed <= 40; ++seed )

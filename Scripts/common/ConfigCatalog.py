@@ -4,10 +4,10 @@ Scripts/common/ConfigCatalog.py
 설정 파일 목록 — 파일마다 "어느 층 · 무엇이 읽나 · 언제 · 배포본에 들어가나 · 커밋하나" 를 적은 표 하나입니다.
 
 칸 표(이름 · 타입 · 기본값 · 범위 · 설명)는 여기 적지 않습니다. 그것은 코드(설정 구조체의 PROPERTY 와 문서 주석, 손으로 읽는 설정의
-`ConfigKeyDoc` 표)가 정본이고 `ConfigReference.py` 가 거기서 뽑습니다. 이 표가 들고 있는 것은 코드에서 뽑을 수 없는 것 — 경로와 수명 — 뿐입니다.
+`ConfigKeyDoc` 표)가 원본이고 `ConfigReference.py` 가 거기서 뽑습니다. 이 표가 들고 있는 것은 코드에서 뽑을 수 없는 것 — 경로와 수명 — 뿐입니다.
 
 `CheckConfigReference.py` 가 이 표를 저장소와 양쪽으로 대조합니다: `Config/` 의 파일 · `Resource/` 의 설정 XML 이 모두 어느 줄에 맞아야 하고,
-줄이 가리키는 타입 · 키 표 · 정본 문서가 있어야 합니다. 그래서 새 설정 파일은 이 표에 한 줄을 더해야 커밋됩니다.
+줄이 가리키는 타입 · 키 표 · 원본 문서가 있어야 합니다. 그래서 새 설정 파일은 이 표에 한 줄을 더해야 커밋됩니다.
 """
 
 from __future__ import annotations
@@ -61,7 +61,7 @@ class ConfigFileEntry:
     keyStyle: str = ""            #: 위 `kKeyStyle*` 하나
     keyTableSource: str = ""      #: `ConfigKeyDoc` 표가 있는 파일(손으로 읽는 설정)
     listKeyTable: tuple[str, ...] = ()  #: 그 파일의 표 이름들(`kArrTextureRuleKeyDoc` …) — 표마다 한 절
-    ownerDoc: str = ""            #: 칸 표 대신 정본 문서(파이썬이 정본인 계약 · 따로 문서가 있는 형식)
+    ownerDoc: str = ""            #: 칸 표 대신 원본 문서(파이썬이 원본인 계약 · 따로 문서가 있는 형식)
     bOptional: bool = False       #: 맞는 파일이 하나도 없어도 된다(게임 팩의 덮어쓰기 · 아직 없는 서버 설정)
     bOutsideRepo: bool = False    #: 저장소 밖 파일(사용자 폴더) — 대조하지 않는다
     note: str = ""                #: 색인에 붙일 한 줄

@@ -41,7 +41,7 @@ namespace sw
      * @class GameObject
      * @brief 수명 주기(beginPlay), 태그, 컴포넌트 목록을 가진 월드 액터입니다.
      * @details **이 헤더는 `GameObjectManager` 를 include 하지 않습니다** — 그러면 GameObject 를 아는 모든 TU 가 매니저(물리 월드 ·
-     *          등록부 셋 · 풀)까지 알게 됩니다. 매니저가 필요한 걸음(동결 확인 · 저장소 · 붙이기 · 미루기)은 템플릿이 아닌 멤버 넷이고
+     *          레지스트리 셋 · 풀)까지 알게 됩니다. 매니저가 필요한 걸음(동결 확인 · 저장소 · 붙이기 · 미루기)은 템플릿이 아닌 멤버 넷이고
      *          템플릿은 `T` 만 다룹니다.
      */
     REFLECT()
@@ -153,7 +153,7 @@ namespace sw
         GameObject* getParent() const;
         /**
          * @brief 이 오브젝트(자식 오브젝트는 빼고)의 켜진 씬 컴포넌트들이 그리거나 부딪히는 것을 덮는 **월드** 상자입니다. 크기 있는 것이 없으면 false 입니다.
-         * @details 에디터의 바닥 · 표면 붙이기 · 프레이밍이 크기를 이것 하나로 잰다(`SceneComponent::getWorldBox`).
+         * @details 에디터의 바닥 · 표면 붙이기 · 프레이밍이 크기를 이것 하나로 측정한다(`SceneComponent::getWorldBox`).
          */
         bool getWorldBox( AABB& outBox ) const;
 
@@ -306,10 +306,10 @@ namespace sw
         /** @brief componentID 로 소유 컴포넌트를 찾습니다. */
         Component* findComponentByID( uint64 componentID, bool bIncludePendingDestroy = false ) const;
 
-        /** @brief 이 오브젝트의 틱 멤버십이 바뀌었다고 등록부에 알립니다. 다음 틱 전에 항목을 다시 짓습니다. */
+        /** @brief 이 오브젝트의 틱 멤버십이 바뀌었다고 레지스트리에 알립니다. 다음 틱 전에 항목을 다시 짓습니다. */
         void markTickOrderDirty();
 
-        /** @brief 틱 등록부의 항목입니다((그룹, 순서 키) 순). `TickRegistry` 가 짓고, 디스패치는 등록부의 칸(`TickObjectEntry`)으로 읽습니다. */
+        /** @brief 틱 레지스트리의 항목입니다((그룹, 순서 키) 순). `TickRegistry` 가 짓고, 디스패치는 레지스트리의 칸(`TickObjectEntry`)으로 읽습니다. */
         const TickItemList& getTickItems() const { return _listTickItem; }
 
         /**
@@ -403,13 +403,13 @@ namespace sw
          *          `Component*` 로 드는 이유: 이 헤더는 SceneComponent 를 모릅니다. 씬 컴포넌트인지는 플래그 비트로 압니다.
          */
         mutable atomic<Component*> _pPrimaryScene;
-        /** @brief 틱 등록부의 항목입니다((그룹, 순서 키) 순). `TickRegistry` 만 짓습니다. 틱할 것이 없는 오브젝트는 비어 있습니다. */
+        /** @brief 틱 레지스트리의 항목입니다((그룹, 순서 키) 순). `TickRegistry` 만 짓습니다. 틱할 것이 없는 오브젝트는 비어 있습니다. */
         TickItemList _listTickItem;
-        /** @brief 등록부의 그룹 목록에서의 자기 자리입니다. 없으면 `TickRegistry::kNotInList` 입니다. */
+        /** @brief 레지스트리의 그룹 목록에서의 자기 자리입니다. 없으면 `TickRegistry::kNotInList` 입니다. */
         uint32 _arrTickIndex[TickRegistry::kGroupCount];
-        /** @brief 이 오브젝트의 서브틱에 등록된 선행 조건 수입니다. 등록부가 총수를 유지하는 데 씁니다. */
+        /** @brief 이 오브젝트의 서브틱에 등록된 선행 조건 수입니다. 레지스트리가 총수를 유지하는 데 씁니다. */
         uint32 _tickPrerequisiteCount;
-        /** @brief 틱 멤버십이 바뀌어 등록부의 더티 목록에 올라 있는지 나타냅니다(원자: 워커에서 표시합니다). */
+        /** @brief 틱 멤버십이 바뀌어 레지스트리의 더티 목록에 올라 있는지 나타냅니다(원자: 워커에서 표시합니다). */
         atomic<uint8> _bTickDirty;
     };
 

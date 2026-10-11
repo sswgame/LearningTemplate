@@ -193,7 +193,7 @@ namespace sw
         pManager->executeOrDeferPostTick( [pManager, self]()
         {
             PropScatterComponent* pScatter = static_cast<PropScatterComponent*>( pManager->resolveComponent( self ) );
-            // 핫 리로드가 되살린 것이 있으면 그대로 쓴다.
+            // 핫 리로드가 복원한 것이 있으면 그대로 쓴다.
             if ( pScatter != nullptr && pScatter->areSpawnedPropsAlive() == false )
                 pScatter->spawnProps();
         } );

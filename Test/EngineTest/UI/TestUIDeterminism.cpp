@@ -29,7 +29,7 @@
 #include <cstdlib>
 
 // UIDeterminismTest — 같은 입력이면 같은 사각형 · 같은 그리기 목록: 견본 문서 넷(일시정지 · 옵션(테스트 스키마) · HUD 견본 · 알림)을 해상도 셋 × UI 배율 둘로
-// 레이아웃 덤프 · 캔버스 덤프해 골든(Test/EngineTest/UI/Golden)과 견주고, 같은 문서를 두 번 · 자식 생성 순서를 섞어 지어도 같은 덤프인지 본다.
+// 레이아웃 덤프 · 캔버스 덤프해 골든(Test/EngineTest/UI/Golden)과 비교하고, 같은 문서를 두 번 · 자식 생성 순서를 섞어 지어도 같은 덤프인지 본다.
 // 가짜 래스터라이저(글자 0.5 em)라 글꼴 · FreeType 판에 기대지 않는다. 골든 갱신: SW_UPDATE_GOLDEN=1 로 돌리고 diff 를 보고 커밋한다. 디바이스 없음(nogpu).
 
 namespace

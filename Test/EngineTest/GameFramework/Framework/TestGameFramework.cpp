@@ -1018,10 +1018,10 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseCorruptedBufferFaultResilience 
 }
 
 /**
- * @brief [GameFrameworkTest] 같은 프로세스에서 찍은 스냅샷은 오브젝트 · 컴포넌트 id 를 되살리고, 다른 실행의 스냅샷은 새 id 를 받는다
- * @details 핫 리로드가 이 길이다. 게임 모듈을 다시 올리면 씬 오브젝트를 스냅샷으로 되살리는데, 같은 id 를 받아야 게임 · 엔진이
+ * @brief [GameFrameworkTest] 같은 프로세스에서 찍은 스냅샷은 오브젝트 · 컴포넌트 id 를 복원하고, 다른 실행의 스냅샷은 새 id 를 받는다
+ * @details 핫 리로드가 이 길이다. 게임 모듈을 다시 올리면 씬 오브젝트를 스냅샷으로 복원하는데, 같은 id 를 받아야 게임 · 엔진이
  *          들고 있던 핸들(씬의 활성 카메라 등)이 이어진다. 세이브 파일처럼 다른 실행에서 찍은 것은 그 실행에서 나간 id 와 겹칠 수
- *          있어 되살리지 않는다. 봉투 머리의 프로세스 토큰(v2: magic 4 · version 4 · token 8 바이트)이 둘을 가른다.
+ *          있어 복원하지 않는다. 봉투 머리의 프로세스 토큰(v2: magic 4 · version 4 · token 8 바이트)이 둘을 가른다.
  */
 SW_TEST_CASE( GameFrameworkTest, SnapshotRestoresIDsOnlyWithinTheSameProcess )
 {
@@ -1145,7 +1145,7 @@ SW_TEST_CASE( GameFrameworkTest, ComponentStateRidesTheSnapshotToTheRecreatedCom
 
 /**
  * @brief [GameFrameworkTest] 살아 있는 씬 위에 다시 선 게임 인스턴스(핫 리로드 · 백엔드 교체)는 첫 씬을 요청하지 않는다 — 처음 선 인스턴스만 요청한다
- * @details 요청하면 비동기 로드가 끝나는 순간 스냅샷으로 되살린 씬(또는 에디터가 연 씬)을 새 씬이 덮어써, 되살린 디렉터 상태가 그 자리에서 사라진다.
+ * @details 요청하면 비동기 로드가 끝나는 순간 스냅샷으로 복원한 씬(또는 에디터가 연 씬)을 새 씬이 덮어써, 복원한 디렉터 상태가 그 자리에서 사라진다.
  */
 SW_TEST_CASE( GameFrameworkTest, RecreatedGameInstanceKeepsTheLiveScene )
 {
@@ -1341,7 +1341,7 @@ SW_TEST_CASE( GameFrameworkTest, SnapshotRestoreKeepsASocketChildReadBeforeItsPa
     expectWeaponInHand( "같은 실행(핫 리로드)" );
 
     vector<uint8> foreign = snapshot;
-    foreign[8] ^= 0xFF; // 프로세스 토큰 — 다른 실행의 세이브처럼 id 를 되살리지 않는다
+    foreign[8] ^= 0xFF; // 프로세스 토큰 — 다른 실행의 세이브처럼 id 를 복원하지 않는다
     SW_ASSERT_TRUE( instance.restoreSnapshot( foreign ) );
     pManager->mergePendingAdds();
     expectWeaponInHand( "다른 실행(세이브)" );
@@ -1681,8 +1681,8 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterStatsAreInMetersAndReach
 }
 
 /**
- * @brief [GameFrameworkTest] monsters.xml 의 archetype 은 열거자 이름표 그대로 읽히고, 모르는 이름은 경고한다
- * @details 이름표는 리플렉션된 `MonsterArchetype` 하나다 — 열거자를 늘려도 파서를 고치지 않는다. 오타("Ranged")는 MeleePatrol 로
+ * @brief [GameFrameworkTest] monsters.xml 의 archetype 은 열거자 이름 그대로 읽히고, 모르는 이름은 경고한다
+ * @details 이름은 리플렉션된 `MonsterArchetype` 하나다 — 열거자를 늘려도 파서를 고치지 않는다. 오타("Ranged")는 MeleePatrol 로
  *          물러나되 몬스터 id 와 함께 경고가 남아야 한다. 조용히 물러나면 원거리 몬스터가 근접 순찰로 도는 이유를 찾을 길이 없다.
  */
 SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterArchetypeNamesAndUnknownWarning )
@@ -2103,7 +2103,7 @@ SW_TEST_CASE( GameFrameworkTest, ActionRoom_DashDoesNotShortenHitInvulnerability
  * @brief [GameFrameworkTest] 대시 게이지가 쿨다운과 **같은 속도로** 찬다
  * @details 게이지를 만드는 `getDashFill()` 이 쿨다운 값을 **자기 몫으로 또 들면** 한쪽만 바꿀 때 게이지가 거짓말을 한다.
  * @note 양 끝(0 과 1)만 보면 이 어긋남이 **안 잡힌다** — 이른 반환과 `saturate` 때문에 분모가
- *       무엇이든 끝점은 같다. 그래서 **중간 지점**을 본다. 쿨다운 길이는 테스트가 직접 재서
+ *       무엇이든 엔드포인트는 같다. 그래서 **중간 지점**을 본다. 쿨다운 길이는 테스트가 직접 측정해서
  *       쓴다(숫자를 여기 다시 적으면 그것도 세 번째 사본이 된다).
  */
 SW_TEST_CASE( GameFrameworkTest, ActionRoom_DashGaugeFillsAtTheCooldownRate )
@@ -2792,7 +2792,7 @@ SW_TEST_CASE( GameFrameworkTest, UnboundGameServiceReturnsNullInsteadOfBreaking 
 
 /**
  * @brief [GameFrameworkTest] 감당할 수 없는 크기의 resize 는 거절한다
- * @details 상한은 `TileMapXMLData` 가 정본이고 로더 · 에디터 · `TileMap::resize` 가 모두 그것을 본다. `resize` 가 안 보면
+ * @details 상한은 `TileMapXMLData` 가 원본이고 로더 · 에디터 · `TileMap::resize` 가 모두 그것을 본다. `resize` 가 안 보면
  *          코드로 맵을 만들 때 `100000 x 100000` 한 줄이 10^10 칸 요청이 된다.
  */
 SW_TEST_CASE( GameFrameworkTest, TileMap_ResizeBeyondTheTileLimitIsRejected )

@@ -53,7 +53,7 @@ namespace sw
 
         /**
          * @brief 피드 포워드 컴프레서(스테레오 링크, 피크 검출, 소프트 니) — Giannoulis · Massberg · Reiss(2012)의 "smooth decoupled peak" 검출기.
-         * @details 파라미터: thresholdDb · ratio · attackMs · releaseMs · kneeDb · makeupDb. 게인 감소(dB)는 정상 상태에서 (입력 − 문턱)·(1 − 1/비율)입니다.
+         * @details 파라미터: thresholdDb · ratio · attackMs · releaseMs · kneeDb · makeupDb. 게인 감소(dB)는 정상 상태에서 (입력 − 임계값)·(1 − 1/비율)입니다.
          */
         class AudioCompressorEffect final : public IAudioEffect
         {

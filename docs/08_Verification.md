@@ -1,11 +1,11 @@
 # 검증과 측정
 
-변경이 맞는지 확인하는 방법과 성능을 재는 방법을 모은 문서입니다. 무엇을 돌려야 일을 끝낸 것으로 보는지, 측정값을 어떻게 읽는지,
+변경이 맞는지 확인하는 방법과 성능을 측정하는 방법을 모은 문서입니다. 무엇을 돌려야 일을 끝낸 것으로 보는지, 측정값을 어떻게 읽는지,
 테스트를 쓸 때 무엇을 조심하는지를 다룹니다. 한 모듈에만 해당하는 함정은 그 모듈 README 의 "함정 · 계약" 절에 있습니다.
 
 ## 1. 손대기 전에 — 검증 규칙
 
-숫자 기준선(테스트 수 · 창 수 · 시간)은 적어 두지 않는다. 금방 낡는다. **비교가 필요하면 바꾸기 전과 후를 그 자리에서 잰다.**
+숫자 기준선(테스트 수 · 창 수 · 시간)은 적어 두지 않는다. 금방 낡는다. **비교가 필요하면 바꾸기 전과 후를 그 자리에서 측정한다.**
 통과 기준은 "전부 통과, 스킵은 Dev 전용 케이스 · 그 플랫폼에 없는 타깃뿐" 이다.
 
 개발 기본 빌드(`cmake --build --preset Ninja-Debug`)는 테스트 실행 파일을 짓지 않는다. 테스트까지 지으려면 `--target all AllTests` 를 붙인다.
@@ -60,10 +60,10 @@ cd build/Ninja-Debug/Bin
 다른 씬은 `"-gv_editorStartupScene=<경로>"` 로 연다. **PowerShell 은 점이 든 인자를 쪼갠다 — 따옴표로 감쌀 것.**
 씬 · 프리팹 에셋은 **엔진 직렬화기로 만든다**(손으로 쓴 XML 은 깨진다 — [Scene README](../Source/Engine/Scene/README.md) "함정 · 계약" 참고).
 
-**렌더 결과는 픽셀로 잰다.** `-gv_screenshot=out.ppm`(`-gv_screenshotFrame=N`)은 톤맵까지 든 최종 화면이다. 눈으로 보지 말고
+**렌더 결과는 픽셀로 측정한다.** `-gv_screenshot=out.ppm`(`-gv_screenshotFrame=N`)은 톤맵까지 든 최종 화면이다. 눈으로 보지 말고
 배경과 다른 픽셀 수 · 채널 평균을 센다. `-gv_viewMode=<0|1|2>`(Lit · Unlit · Wireframe)는 에디터 없이도 고른다.
 **벤치는 `-gv_benchAnimate=0` 이어야 결정적이다**(네 백엔드 0 바이트 차이). 애니메이션을 켠 채 차이를 주장하려면 같은 조건
-두 판으로 잡음 바닥을 먼저 잰다.
+두 판으로 잡음 바닥을 먼저 측정한다.
 
 ```powershell
 ./App.exe -dx12 -gv_benchMeshes=8 -gv_benchAnimate=0 -gv_profileFrames=20 -gv_viewMode=2 "-gv_screenshot=wire.ppm"
@@ -93,8 +93,8 @@ cd build/Ninja-Debug/Bin
   빈자리 높이는 접힌 루트 줄(프레임 높이 + 줄 간격)과 같아야 스크롤이 튀지 않는다(`hierarchy.offscreenRootsKeepTheirPlace`).
 - **AppSmokeTest 의 Unknown 태그 상한(8 KB)은 파일 수에도 걸린다** — 태그 없는 호출자(App 스플래시)가 공유 캐시(`ResourcePaths` 경로 캐시)의
   재해시를 일으키면 그 버킷 배열이 Unknown 으로 센다. 데이터 파일 몇 개를 더하자 18 KB 가 넘었다. 공유 캐시는 넣는 자리에서 자기 태그를 건다.
-- **성능은 Release 로 잰다.** Debug 는 레이스 검출기 · 이터레이터 프록시로 컨테이너 코드를 과장한다(668 vs 87 us). 이전 · 이후 바이너리를 같은 스크립트로
-  **번갈아** 2~3 회 잰다(`git stash -u` → 빌드 → 복사 → `stash pop` → 빌드). 아침 기준선과 오후 결과를 견주면 기계 상태가 결과로 읽힌다.
+- **성능은 Release 로 측정한다.** Debug 는 레이스 검출기 · 이터레이터 프록시로 컨테이너 코드를 과장한다(668 vs 87 us). 이전 · 이후 바이너리를 같은 스크립트로
+  **번갈아** 2~3 회 측정한다(`git stash -u` → 빌드 → 복사 → `stash pop` → 빌드). 아침 기준선과 오후 결과를 비교하면 기계 상태가 결과로 읽힌다.
 - **측정 기계**: i5-8500(6 코어 6 스레드). 게임 · 렌더 스레드 + 워커 넷이 코어를 나눠, 나눠도 벽시계가 잘 안 준다 — 틱이 쓰는 CPU 총량이 벽시계를 정한다.
   프로파일러가 없으면 `Ninja-Release`(PDB 있음 — 줄 표) + `py -3 -m Scripts stacks <pid>`(DbgHelp 샘플러). ICF 로 함수가 남의 이름으로 보인다.
 - **표 읽기.** 열은 avg · p50 · p99 · min · max · per_frame 이고 카운터 값은 per_frame 열에 있다(시간 열 0 을 "죽은 경로" 로 읽지 말 것). 평균이 히치를 가린다 —
@@ -123,17 +123,17 @@ cd build/Ninja-Debug/Bin
 - **텍스처 임포트 압축**(2026-10-10, Release App `--import-textures`, 워커 14 개 PC, 세 번): 띠 병렬 압축(`BandCompressJobInternal`) 전 → 후로
   BC7 512² 밉 10 단(`engine/textures_raw/random/grass.jpg`) 61.7~62.6 → 8.1~8.3 s, BC3 1024² 밉 11 단(`f00_000_face_00`) 17 → 2 ms,
   BC3 2048² 밉 12 단(`f00_001_body_00`) 70~72 → 9~10 ms, 원본 39 장 전체 3 분 35 초 → 40 초. 결과 DDS 는 스탬프 해시까지 바이트가 같다(스탬프를 비우고 전부 다시 임포트해
-  `git status` 와 `import.stamp` 대조). 재는 법: 그 원본의 스탬프 줄만 지우고 `App --import-textures` — 로그 `Compressed WxH (… bands on N workers): T ms`.
+  `git status` 와 `import.stamp` 대조). 측정하는 법: 그 원본의 스탬프 줄만 지우고 `App --import-textures` — 로그 `Compressed WxH (… bands on N workers): T ms`.
   띠를 64 → 16 줄로 잘게 나눠도 그대로였다(BC7 512² 8.2~8.4 s). BC7 은 BC1 · BC3 보다 수천 배 느리다 — 무거운 것은 BC7 원본 수다.
 - **벤치 스위치**(`Source/Games/Empty/BenchScene.cpp`): `-gv_benchMeshes=N` · `-gv_benchLights=N` · `-gv_benchGround=1` · `-gv_benchMovePercent=%` · `-gv_benchInstanced=1` ·
   `-gv_benchTickMovers=N`(틱 **안** 세터 — 실제 게임플레이 경로) · `-gv_benchSpawnChurn=N` · `-gv_benchMeshVariants` · `-gv_benchMeshShapes=N` ·
   `-gv_benchMaterialChurn*` · `-gv_benchAnimate=0`(컴퓨트 회전과 `update` 사인파를 **둘 다** 멈춘다), `-gv_deferred=1`, `-gv_useRenderThread=0`.
-- **`-gv_profileFrames=N` 은 프레임 수다** — VSync 가 꺼진 가벼운 장면은 1500 fps 라 90000 프레임이 1 분에 끝난다(시간 상한은 없다). 시간으로 재려면
+- **`-gv_profileFrames=N` 은 프레임 수다** — VSync 가 꺼진 가벼운 장면은 1500 fps 라 90000 프레임이 1 분에 끝난다(시간 상한은 없다). 시간으로 측정하려면
   `-gv_profileSeconds=S`(먼저 닿는 쪽이 끝낸다 — soak 이 쓴다).
-- **프레임당 힙 할당**은 `-gv_profileFrames` 보고의 `alloc/frame`, 콜스택은 `-gv_profileAllocSites=N`(Debug App — 횟수는 최적화와 무관, 시간은 같이 재지 말 것).
+- **프레임당 힙 할당**은 `-gv_profileFrames` 보고의 `alloc/frame`, 콜스택은 `-gv_profileAllocSites=N`(Debug App — 횟수는 최적화와 무관, 시간은 같이 측정하지 말 것).
 - **씬 로드 측정**: `Scripts/dev/MakeStressScene.py` 로 큰 씬(도형 섞기) → `-gv_firstScene=<씬>`(또는 Empty 팩 `data/gamesettings.xml` 의 `startMap`) → `[SceneLoad]` 줄. Dev 는 `Cooked/` 를 마운트하지
   않으므로 쿠킹 효과는 `--cooked-dir=<repo>/Resource` 로 쿠킹하고 재고 지운다. `[SceneLoad]` 가 `.xml` 을 가리키면 쿠킹본을 안 읽은 것이다.
-- **벤치가 상태를 공유하면 단계 순서를 잰다.** 손대지 않은 대조군이 움직이면 하니스를 의심한다. 벤치 메시가 공유라 배치 결함을 가린 적이 있다 — 씬에서 온 메시로도 본다.
+- **벤치가 상태를 공유하면 단계 순서를 측정한다.** 손대지 않은 대조군이 움직이면 하니스를 의심한다. 벤치 메시가 공유라 배치 결함을 가린 적이 있다 — 씬에서 온 메시로도 본다.
 - **GPU 업로드 비용은 호출당이다**(DX12 ~3.3 us) — 쪼개면 느려진다. 구간을 배열로 묶어 한 번에.
 - **워커가 쓴 데이터를 다른 코어가 읽으면** 캐시 이동이 항목당 일(~40 ns)보다 비싸다. 쓰는 스레드와 읽는 스레드를 같게 둔다.
 - **워커는 공유 카운터 · 비트필드에 쓰지 않는다.** `fetch_add` 한 줄이 병렬 플러시를 직렬보다 느리게 했다. "하나라도" 플래그는 프레임에 한 번 쓰고 읽기만 한다.
@@ -142,15 +142,15 @@ cd build/Ninja-Debug/Bin
 - **측정 라운드마다 매니저 · 풀 · 레지스트리를 새로 만듭니다.** best-of-N 반복은 자라는 컨테이너가 만든 오염을 거르지 못합니다. 같은 값이 연달아 세 번 나올 때까지 수치를 믿지 않습니다.
 - **한 번만 일어나는 이벤트(백엔드 교체 프레임의 최대값 등)는 3 회 이상 되풀이해 이상치를 거릅니다.** 프레임 1 에만 일어나는 일(업로드 · PSO 생성)은 워밍업(`FrameProfileSession::kWarmupFrames`) 뒤의 측정 창 밖입니다.
   측정 창 안에서 전량 재생성을 일으키려면 `-gv_rhiSwapAtFrame` 을 워밍업보다 뒤로 줍니다. 히치 최적화는 평균이 아니라 최악 프레임으로 판정합니다.
-- **성능 워크로드는 움직여야 합니다.** 정지한 씬은 "바뀐 것 없음" 빠른 경로만 잽니다. 워크로드가 지나지 않은 경로는 "검증됨" 이 아니라 "실행된 적 없음" 으로 보고,
+- **성능 워크로드는 움직여야 합니다.** 정지한 씬은 "바뀐 것 없음" 빠른 경로만 측정합니다. 워크로드가 지나지 않은 경로는 "검증됨" 이 아니라 "실행된 적 없음" 으로 보고,
   최적화 대상은 프로파일 표에서 고르고 전후 숫자를 커밋 메시지에 남깁니다. 새 프로파일 구간을 넣을 때는 그 상위 구간도 함께 넣습니다. 하위 구간의 합과 전체의 차가 대개 진짜 병목입니다.
 - **렌더 성능은 디스크에서 읽은 씬으로 배치 수를 먼저 셉니다.** 인스턴스 수와 배치 수가 비슷하면 인스턴싱이 꺼진 것입니다.
 
 ### 빌드 속도
 
-- **빌드 시간 기준선은 `Scripts/dev/RunBuildBaseline.py`** — 풀 빌드(sccache 없는 별도 폴더) · 헤더 하나 수정 · `.cpp` 하나 수정 · 워크트리 콜드(sccache 웜)를 각 3 회 재서
+- **빌드 시간 기준선은 `Scripts/dev/RunBuildBaseline.py`** — 풀 빌드(sccache 없는 별도 폴더) · 헤더 하나 수정 · `.cpp` 하나 수정 · 워크트리 콜드(sccache 웜)를 각 3 회 측정해서
   중앙값 표를 내고 머리에 PC 이름 · CPU 를 적는다. 다른 빌드가 돌면 멈춘다. 헤더별 누적 파싱 시간 상위는 `Scripts/lint/report/RunIncludeCost.py`(전 TU `-ftime-trace`, PCH 없이)다.
-  표는 같은 PC 의 전후만 견준다([빌드 속도 계획](plans/BuildSpeed.md) 0 단계). 재는 동안은 `LT-wt/.slot1` ~ `.slot3` 를 모두 잡아 다른 에이전트의 빌드를 막는다.
+  표는 같은 PC 의 전후만 견준다([빌드 속도 계획](plans/BuildSpeed.md) 0 단계). 측정하는 동안은 `LT-wt/.slot1` ~ `.slot3` 를 모두 잡아 다른 에이전트의 빌드를 막는다.
 - **기준선**(2026-10-10, PC `SW` · AMD Ryzen 7 6800H 논리 코어 16, 커밋 `0d054352a`(= main `8653de727` + 스크립트 수정), `Ninja-Debug`, 타깃 `all`, 테스트 제외):
 
   | 시나리오 | 1 회(s) | 2 회(s) | 3 회(s) | 중앙값(s) |
@@ -161,11 +161,11 @@ cd build/Ninja-Debug/Bin
   | 워크트리 콜드(구성 + 빌드, sccache 웜) | 141.2 | 146.8 | 142.9 | **142.9** |
 
   헤더 시나리오가 풀 빌드와 같다 — Core 기본 헤더 하나를 고치면 사실상 전 TU 를 다시 컴파일한다(2 단계 헤더 다이어트의 근거).
-  워크트리 콜드가 풀 빌드보다 느린 것은 PCH 를 켠 Windows 빌드가 sccache 에 거의 맞지 않기 때문이다(`/Yu` 캐시 불가, `Scripts/setup/README.md`). Release 는 재지 않았다(풀 1 회 192.3 s 만 있다).
+  워크트리 콜드가 풀 빌드보다 느린 것은 PCH 를 켠 Windows 빌드가 sccache 에 거의 맞지 않기 때문이다(`/Yu` 캐시 불가, `Scripts/setup/README.md`). Release 는 측정하지 않았다(풀 1 회 192.3 s 만 있다).
 
 - **OS 헤더를 PCH 에서 뺀 효과**(2026-10-11, PC `SW`, Debug, `EngineMinimal.h` 가 `Windows.h` 묶음을 더는 넣지 않음): PCH 없이 `-fsyntax-only` 한 번역 단위의 중앙값(5 회)이 `GameObjectManager.cpp` 2.63 → 2.18 s ·
   `Scene.cpp` 2.74 → 2.24 s · `AudioClip.cpp` 2.56 → 2.11 s · `AnimClip.cpp` 2.66 → 2.06 s(약 −19 %, TU 하나에 −0.5 s). PCH 를 켠 개발 풀 빌드는 131.5 → 127 s(−3 %)로 작다 — 이득은 PCH 를 끄는 구성(Windows CI)에서 크다.
-  `Scripts` 없이 재는 법: `compile_commands.json` 의 명령에서 `/Yu` · `/Fp` · PCH 강제 포함 · `/Fo` 를 빼고 `-fsyntax-only -include Source/Engine/pch.h` 를 붙여 5 회 돌린다.
+  `Scripts` 없이 측정하는 법: `compile_commands.json` 의 명령에서 `/Yu` · `/Fp` · PCH 강제 포함 · `/Fo` 를 빼고 `-fsyntax-only -include Source/Engine/pch.h` 를 붙여 5 회 돌린다.
 - **`StdHeaders.h` 다이어트 효과**(2026-10-11, PC `SW`, Debug, 세 슬롯을 잡고 다른 빌드 없음): 스트림 · `<random>` · `<regex>` · `<future>` · `<variant>` · `<condition_variable>` · `<csignal>` ·
   `<queue>` · `<stack>` · `<bitset>` 을 빼고 쓰는 파일이 직접 include(`MathUtil::getRandom` 의 엔진은 `MathUtil.cpp` 로). PCH 없이 `-fsyntax-only` 5 회 중앙값: `GameObjectManager.cpp` 1.36 → 1.03 s ·
   `Scene.cpp` 1.34 → 1.19 s · `AudioClip.cpp` 1.17 → 0.94 s · `AnimClip.cpp` 1.13 → 0.92 s(합 5.02 → 4.08 s, −19 %). 실제 컴파일(`-ftime-trace`, 1 회) 합 8.39 → 7.57 s, 헤더 파싱 비율 53 → 51 %.
@@ -174,7 +174,7 @@ cd build/Ninja-Debug/Bin
   명령 다루는 법: 정규식으로 토큰만 지운다(문자열을 다시 쪼개면 `-DSW_LOG_TAG=\"…\"` 의 따옴표가 깨진다). `-ftime-trace` 는 구문 검사만으로는 파일을 쓰지 않으므로 `/Fo<임시>.obj` 로 실제 컴파일한다.
 - **킷 PCH**(2026-10-11, PC `SW`, Debug): 첫 시도(131.1 → 113.0 s, PCH 컴파일 154 → 94)는 실제로는 킷이 **PCH 없이** 지어진 결과였다 — `REUSE_PRECOMPILE_HEADERS_FROM`
   속성이 무시돼 킷 PCH 60 개를 안 지은 이득이 킷 TU 약 420 개의 헤더 파싱 손해보다 컸다. 진짜 공유(`sw_useSharedPch`)를 같은 날 sccache 없는 별도 폴더(`build/Ninja-Debug-Bench`)에서
-  `--clean-first` 교차 3 쌍으로 쟀다: 공유 117.5 · 115.2 · 111.7 s(중앙값 **115.2**) · PCH 없는 킷 137.3 · 135.8 · 133.2 s(중앙값 **135.8**) — −20.6 s(−15 %).
+  `--clean-first` 교차 3 쌍으로 측정했다: 공유 117.5 · 115.2 · 111.7 s(중앙값 **115.2**) · PCH 없는 킷 137.3 · 135.8 · 133.2 s(중앙값 **135.8**) — −20.6 s(−15 %).
   에이전트 빌드가 겹친 측정은 편차가 ±40 s 라 쓸 수 없다(`busy_before` 로 겹침을 먼저 센다). 개발 트리(sccache 켬)의 `--clean-first` 는 PCH 없는 TU 가 캐시에 맞아 공유 효과를 가린다.
   `.ninja_log` 는 `--clean-first` 뒤에도 이전 실행 항목이 남아 CPU 합을 그대로 더하면 틀린다.
 - **구성별 풀 빌드**(2026-10-11, PC `SW`, Debug, 킷 PCH 공유 뒤, `build/Ninja-Debug-Bench` 에서 `--clean-first`, 세 슬롯을 잡고 다른 빌드 없음):
@@ -188,8 +188,8 @@ cd build/Ninja-Debug/Bin
   | 개발 | sccache 웜 | 45.9 · 44.4 · 44.7 | **44.7** |
   | 유니티만 | sccache 웜 | 45.4 · 45.5 · 44.1 | **45.4** |
 
-  웜 측정은 같은 빌드 폴더에서 한 번 지어 캐시를 채운 뒤 잰다. 구성을 번갈아 재면 로컬 캐시가 서로를 밀어내 44 ~ 80 s 로 흔들린다 — 구성마다 따로 잰다.
-  `cmake --preset` · `--clean-first` 는 공유 vcpkg 설치 폴더를 다시 깔 수 있으니 `py -3 -m Scripts shared-lock acquire vcpkg` 를 쥐고 잰다(다른 쪽이 설치 중이면 헤더가 사라져 빌드가 진다).
+  웜 측정은 같은 빌드 폴더에서 한 번 지어 캐시를 채운 뒤 측정한다. 구성을 번갈아 측정하면 로컬 캐시가 서로를 밀어내 44 ~ 80 s 로 흔들린다 — 구성마다 따로 측정한다.
+  `cmake --preset` · `--clean-first` 는 공유 vcpkg 설치 폴더를 다시 깔 수 있으니 `py -3 -m Scripts shared-lock acquire vcpkg` 를 쥐고 측정한다(다른 쪽이 설치 중이면 헤더가 사라져 빌드가 진다).
 - **헤더 파싱 비용 상위 20 개는 `Scripts/lint/report/RunIncludeCost.py --preset Ninja-Debug --jobs 8` 로 뽑는다.**
   0 단계 집계(2026-10-10, 위와 같은 PC · 커밋, `RunIncludeCost.py --preset Ninja-Debug --jobs 8`, 다른 빌드와 겹쳐 돌았으므로 순위만 믿는다):
   TU 1936 개 중 헤더 파싱 합 2619.9 s / 컴파일러 합 3190.5 s = **82 %**(구문 검사만이라 진짜 빌드 비율보다 높다).
@@ -219,7 +219,7 @@ cd build/Ninja-Debug/Bin
   | 20 | 145.6 | 1357 | 107.3 | `WinSDK/um/objbase.h` |
 - **Jolt 백엔드 TU**(`Physics/Jolt/*.cpp` 다섯, 같은 PC, 컴파일 DB 명령 그대로 3 회 중앙값의 합): 자기 PCH 없이 11.1 s(그중 헤더 파싱 7.0 s, 엔진 `pch.h` 만 5.8 s) →
   `EngineJolt_objects` PCH 2.9 s + TU 2.6 s = 5.5 s. 한 파일 수정 뒤 다시 짓는 시간은 TU 하나당 1.9 ~ 2.5 s → 0.3 ~ 0.8 s 다.
-  재는 법: `/clang:-ftime-trace` 를 `-c --` 앞에 넣는다(뒤에 두면 파일 이름으로 읽힌다). 다른 빌드가 돌 때 잰 값은 1.5 배까지 흔들린다.
+  측정하는 법: `/clang:-ftime-trace` 를 `-c --` 앞에 넣는다(뒤에 두면 파일 이름으로 읽힌다). 다른 빌드가 돌 때 측정한 값은 1.5 배까지 흔들린다.
 
 ## 3. 검증 · 테스트 쓰기
 
@@ -242,7 +242,7 @@ cd build/Ninja-Debug/Bin
   환경 탓으로 물러나는 새 경로는 백엔드가 `_initResult` 를 적어야 건너뜀이 된다(안 적으면 결함으로 진다).
 - **백엔드마다 디바이스를 세우는 테스트는 `test::RHIBackendSweep`** — `for ( test::RHITestDevice& device : sweep )`, 건너뛰기는 케이스가 `sweep.getReadyCount() == 0` 으로.
   오프스크린 · 한 프레임 도우미(`makeSingleTargetPSODesc` · `beginOffscreenRenderPass` · `countPrimaryColorPixels` · `renderSceneFrame`)를 먼저 볼 것.
-- **macOS 는 지원 대상이 아니다** — 코드는 10-04 에 지웠고 `CheckTargetMacros` 가 `SW_PLATFORM_MACOS` 를 막는다. 되살리려면 그 전 git 기록에서. `Vcpkg.cmake` 의 APPLE 갈래 ·
+- **macOS 는 지원 대상이 아니다** — 코드는 10-04 에 지웠고 `CheckTargetMacros` 가 `SW_PLATFORM_MACOS` 를 막는다. 복원하려면 그 전 git 기록에서. `Vcpkg.cmake` 의 APPLE 갈래 ·
   레거시 스탬프 이관과 `arm64-osx` · `x64-osx` 트리플릿은 손대지 않는 파일이라 사용자가 정리한다.
 - **ThreadSanitizer 는 이 리눅스 환경의 clang 18 에 런타임이 없다** — clang 으로 `-fsanitize=thread` 컴파일하고 링크만 gcc 의
   `/usr/lib/x86_64-linux-gnu/libtsan.so.2` 를 직접 붙이면 돈다(`setarch -R` 으로 ASLR 을 끈다). 일부러 만든 경합을 잡는 것까지 확인했다(2026-10-03,
@@ -269,13 +269,13 @@ cd build/Ninja-Debug/Bin
 - **워크트리와 vcpkg 스탬프:** 스탬프 해시는 트립릿 파일(`cmake/Modules/Toolchain/Vcpkg/*-{windows,linux,osx}.cmake`)의 **바이트**로 계산한다. 작업 사본의
   줄끝이 체크아웃과 다르면(git 은 같은 파일로 본다) main 과 워크트리가 서로의 스탬프를 "매니페스트 변경" 으로 보고 configure 마다 vcpkg install 이 돈다.
   워크트리를 만들기 전에 `git diff --quiet` 로 같은지 보고, 다르면 그 파일을 지우고 `git checkout` 으로 다시 받는다.
-- **진단 도구 표는 `docs/01_GettingStarted.md` §5** 가 정본이다(`-gv_dumpReflection=…`, `ReflectionParser --dump`, `-gv_dumpRenderGraph=1`, `'A' waits on 'B'`,
+- **진단 도구 표는 `docs/01_GettingStarted.md` §5** 가 원본이다(`-gv_dumpReflection=…`, `ReflectionParser --dump`, `-gv_dumpRenderGraph=1`, `'A' waits on 'B'`,
   `경로:줄:열: 이유`, `[SW_ASSERT]` stderr, `-gv_screenshot`). 테스트 도우미도 거기 있다.
 - **렌더 변경은 스크린샷까지 봐야 검증이다.** 로그 · 테스트가 다 초록인데 화면만 찢어진 적이 있다. 정적 씬은 바이트까지 결정적이라 4 백엔드 전후 sha 로 비교한다.
   4 백엔드 대조는 Debug 로(Shipping 은 `SW_SHIPPING_RHI_BACKEND` 하나만 링크하고 `-vk` 를 거절한다).
 - **픽셀 지표는 튼튼하게.** "특정 색 픽셀 수" 는 클리어 색 · 톤맵에 무너진다 — 모서리 기준 배경 제거 + 평균(R−B) 대소, 또는 "고유 색 ≥ 2". sin(시간) 구동
   지표는 "달라진 픽셀 수" 로. define 이 GPU 에 닿았는지는 PSO 디스크립터가 아니라 픽셀로 본다. 막히면 PPM 을 덤프한다.
-- **`-gv_screenshot` 은 PrintWindow 가 아니다** — PPM 이 정본이다. `-gv_screenshotFrame=N` 으로 프레임을, `-gv_screenshotAttachment=<이름>` 으로 첨부를 고른다.
+- **`-gv_screenshot` 은 PrintWindow 가 아니다** — PPM 이 원본이다. `-gv_screenshotFrame=N` 으로 프레임을, `-gv_screenshotAttachment=<이름>` 으로 첨부를 고른다.
   "가끔 튄다" 는 한 장으로 안 잡힌다 — `-gv_screenshotCount=30 -gv_screenshotInterval=2` 로 연속으로 찍어(`_000` … 이 붙는다) 장을 나란히 본다.
 - **"조용한 프레임" 버그는 벤치가 가린다**(회전 큐브라 매 프레임 dirty). 에디터 정지 화면으로 본다: `-EnableEditor -gv_benchMeshes=1 -gv_screenshot -gv_screenshotFrame=60`.
   그리는 것이 의심스러우면 `-gv_gpuCulling=0` · `-gv_drawMerge=0` · `-gv_vertexPool=0` 으로 경로를 하나씩 뗀다.
@@ -301,14 +301,14 @@ cd build/Ninja-Debug/Bin
 - **테스트 도우미**: `test::makeTempPath` · `makeTempDirectory`(케이스 폴더, 끝나면 지우고 못 지우면 진다), `test::ScopedLogCollector`, `test::ScopedFailureCapture`,
   `test::ScopedDefensiveTestLog`, `SW_ASSERT_TRUE_MSG`, `test::runThisExecutableAsChild`, `test::RHITestDevice`(`kArrAllRHIBackend`), `test::RHITestImage`,
   `test::FakeRHIDevice`(병렬 기록 nogpu), `LitCubeScene` · `renderPresentCaptureOf` · `compareCaptures`(TestRenderPassGPU.cpp), 에디터 지역 서비스 `Test/EditorTest/EditorTestServices.h`, 네트워크 호스트 묶음 `test::LoopbackCluster`(`TestFramework/TestLoopbackCluster.h` — 루프백 +
-  끝점마다 흉내, 손 시각 `step` · 호스트 스레드, CoreTest 도 쓴다. 씬 · 라우터까지 필요하면 `NetSimHarness`).
+  엔드포인트마다 흉내, 손 시각 `step` · 호스트 스레드, CoreTest 도 쓴다. 씬 · 라우터까지 필요하면 `NetSimHarness`).
 - **테스트 실행기 규칙** — 필터로 고른 스위트의 케이스가 전부 스킵되면 실패다(`--allow_empty_suite`). 테스트는 `Bin` 에 쓰지 않는다. `RUN_SERIAL` 은 이유와 함께만.
   PowerShell 에서 쉼표가 든 `--test_filter` 는 따옴표로 감싼다(안 감싸면 앞 토큰만 먹고 오류도 없다).
-- **단언 규칙** — 공개 API 는 단언 뒤에 진짜 if 가드를 둔다(Release 에서 단언이 사라진다). 그런 경로의 테스트는 Debug 에서 skip 하고 Release · Shipping 에서 잰다.
+- **단언 규칙** — 공개 API 는 단언 뒤에 진짜 if 가드를 둔다(Release 에서 단언이 사라진다). 그런 경로의 테스트는 Debug 에서 skip 하고 Release · Shipping 에서 측정한다.
   작업 스레드 안의 `SW_ASSERT_*` 는 그 람다만 끝낸다. future 테스트에서 `wait()` 를 부르지 말 것(회귀가 정지가 된다) — `isValid()` 와 짧은 `waitFor`.
 - **EditorTest 는 ImGui 를 링크하지 않고 정해 둔 Editor 파일만 링크한다**(`EditorAssetCommands.cpp` 는 빠져 있다). 테스트할 로직은 ImGui 없는 함수로 꺼낸다 —
   `alignObjects( listObject, … )`, `EditorPlaySession::captureSnapshot( PlaySessionData& )`, `EditorSessionPolicy`. `EditorContext::get()` 을 읽는 함수는 테스트할 수 없다.
-- **할당 0 을 보는 테스트는 여러 번 재어 최솟값을 본다**(누계는 프로세스 전체 값). 누수 테스트는 `MemoryProfiler::getLiveAllocationCount` 로, 노드를 동시에 여럿 쥐고.
+- **할당 0 을 보는 테스트는 여러 번 측정해 최솟값을 본다**(누계는 프로세스 전체 값). 누수 테스트는 `MemoryProfiler::getLiveAllocationCount` 로, 노드를 동시에 여럿 쥐고.
 - **공유 테스트 픽스처의 등록**(`makeMockComponentTypeInfo` 등)은 짝 `.cpp` 한 TU 에. 헤더에 두면 TU 마다 `TypeInfo` 가 중복 등록된다. 테스트 본문(전역 스코프)에서는 `sw::` 로 한정한다.
 - **골든 기준은 뜬 장치를 적는다**(`device` — GPU 이름 · 드라이버, 다음 `--record` 부터) — 다른 기계에서 지면 비교 메시지가 두 장치를 함께 찍는다.
   기계별 기준(`<백엔드>.<기계>.json`)은 만들지 않는다(사용자 결정 2026-10-06) — 다른 기계에서 진 기록이 생기면 그 기계에서 `--record` 해 드라이버 차이인지 회귀인지 가른다.

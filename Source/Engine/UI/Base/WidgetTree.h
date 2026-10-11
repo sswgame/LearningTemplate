@@ -1,6 +1,6 @@
 /**
  * @file WidgetTree.h
- * @brief 위젯 트리 하나입니다 — 루트 · 번호표 · 이름표 · 더러운 목록 · 이 트리의 포커스 위젯.
+ * @brief 위젯 트리 하나입니다 — 루트 · 번호표 · 이름 · 더러운 목록 · 이 트리의 포커스 위젯.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -23,9 +23,9 @@ namespace sw
 
     /**
      * @class WidgetTree
-     * @brief 루트 위젯 하나와 그 아래 모든 위젯의 번호표 · 이름표, 무효화 목록을 듭니다(언리얼 UWidgetTree · 유니티 패널).
+     * @brief 루트 위젯 하나와 그 아래 모든 위젯의 번호표 · 이름, 무효화 목록을 듭니다(언리얼 UWidgetTree · 유니티 패널).
      * @details 화면(`UIScreen`) 하나가 트리 하나를 가집니다. 무효화는 이유별 목록으로 모입니다 — 레이아웃은 부모 쪽으로 레이아웃 경계까지 올라가 그
-     *          "다시 잴 뿌리" 만 적고(`getLayoutDirtyRoots`), 그리기 · 스타일은 위젯 자신만 적습니다. 목록은 번호를 듭니다 — 그 사이 떨어진 위젯은 걷는 쪽이 건너뜁니다.
+     *          "다시 측정할 뿌리" 만 적고(`getLayoutDirtyRoots`), 그리기 · 스타일은 위젯 자신만 적습니다. 목록은 번호를 듭니다 — 그 사이 떨어진 위젯은 걷는 쪽이 건너뜁니다.
      *          포커스: 포커스 관리자(`UIFocusManager`)가 이 트리에 포커스를 두면 그 위젯 번호가 여기 적힙니다. 그 위젯이 떨어지면 트리가 포커스를 풀고,
      *          트리가 지워지면 관리자에게 알립니다.
      */
@@ -58,7 +58,7 @@ namespace sw
         void notifyDirty( Widget& widget, uint32 dirtyReason );
         /** @brief 무효화 뒤 처리할 것(레이아웃 · 그리기 · 스타일)이 있는가. 없으면 프레임이 트리를 건너뜁니다. */
         bool hasPendingWork() const;
-        /** @brief 다시 잴 뿌리(레이아웃 경계 · 루트)의 번호입니다 — 레이아웃 걷기가 읽고 비웁니다. */
+        /** @brief 다시 측정할 뿌리(레이아웃 경계 · 루트)의 번호입니다 — 레이아웃 걷기가 읽고 비웁니다. */
         const vector<WidgetID>& getLayoutDirtyRoots() const { return _listLayoutDirtyRoot; }
         /** @brief 그림(또는 변환 · 불투명도)이 바뀐 위젯 번호입니다 — 그리기 걷기가 읽고 비웁니다. */
         const vector<WidgetID>& getPaintDirtyWidgets() const { return _listPaintDirty; }
@@ -92,11 +92,11 @@ namespace sw
         void registerWidget( Widget& widget );
         /** @brief 번호 · 이름을 내립니다(`Widget::detachFromTree` 가 부른다). 이 트리의 포커스 위젯이면 포커스를 풉니다. */
         void unregisterWidget( Widget& widget );
-        /** @brief 이름표에 올립니다. 같은 이름이 이미 있으면 경고하고 먼저 것을 둡니다. */
+        /** @brief 이름에 올립니다. 같은 이름이 이미 있으면 경고하고 먼저 것을 둡니다. */
         void registerName( Widget& widget );
-        /** @brief 이름표에서 내립니다(이 위젯이 그 이름의 주인일 때만). */
+        /** @brief 이름에서 내립니다(이 위젯이 그 이름의 주인일 때만). */
         void unregisterName( Widget& widget );
-        /** @brief @p widget 을 다시 잴 뿌리로 적습니다(이미 적혔으면 아무것도 하지 않는다). */
+        /** @brief @p widget 을 다시 측정할 뿌리로 적습니다(이미 적혔으면 아무것도 하지 않는다). */
         void addLayoutRoot( Widget& widget );
 
     private:

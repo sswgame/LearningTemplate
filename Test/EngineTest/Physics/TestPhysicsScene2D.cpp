@@ -9,7 +9,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 2D 물리 씬(Box2D 백엔드)을 인터페이스로만 잰다 — 3D 테스트(`PhysicsScene3DTest`)과 같은 질문을 평면에서.
+// 2D 물리 씬(Box2D 백엔드)을 인터페이스로만 측정한다 — 3D 테스트(`PhysicsScene3DTest`)과 같은 질문을 평면에서.
 
 namespace
 {

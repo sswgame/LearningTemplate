@@ -336,7 +336,7 @@ namespace sw
             case WM_MOVE:
             case WM_DISPLAYCHANGE:
             {
-                syncMouseLock(); // 클립 사각형을 새 창 자리로 다시 잰다(DPI 변경은 SetWindowPos 를 거쳐 여기로 온다)
+                syncMouseLock(); // 클립 사각형을 새 창 자리로 다시 측정한다(DPI 변경은 SetWindowPos 를 거쳐 여기로 온다)
                 break;
             }
             case WM_ACTIVATE:

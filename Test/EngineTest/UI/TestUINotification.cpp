@@ -94,7 +94,7 @@ SW_TEST_CASE( UINotificationTest, QueuesBeyondThree )
     SW_EXPECT_EQUAL( 3u, pStack->getChildCount() ); // 내린 항목의 위젯은 지웠다
 }
 
-/** @brief [UINotificationTest] 같은 글을 다시 올리면 새로 쌓지 않고 센다("x2") · 시간을 다시 잰다 */
+/** @brief [UINotificationTest] 같은 글을 다시 올리면 새로 쌓지 않고 센다("x2") · 시간을 다시 측정한다 */
 SW_TEST_CASE( UINotificationTest, SameTextMergesWithCount )
 {
     using Util = UINotificationTestUtil;
@@ -102,7 +102,7 @@ SW_TEST_CASE( UINotificationTest, SameTextMergesWithCount )
     fixture.notes().post( Util::make( "Game saved", 2.0f ) );
     fixture.runFrame( 1.5f );
     fixture.notes().post( Util::make( "Game saved", 2.0f ) );
-    fixture.runFrame( 1.0f ); // 다시 잰다 — 처음부터 2.5 초지만 남아 있다
+    fixture.runFrame( 1.0f ); // 다시 측정한다 — 처음부터 2.5 초지만 남아 있다
     SW_ASSERT_EQUAL( 1u, fixture.notes().getVisibleCount() );
     SW_EXPECT_EQUAL( 2u, fixture.notes().getVisibleCountOf( 0 ) );
     const sw::UIScreen* pScreen = fixture._ui.findScreen( fixture.notes().getScreen() );

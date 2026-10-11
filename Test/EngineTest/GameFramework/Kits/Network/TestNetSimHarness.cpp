@@ -336,7 +336,7 @@ namespace
         {
             (void)harness.addClient( NetSimLinkConditions::makeSymmetric( bad ) );
         }
-        // 상자가 떨어지는 동안(움직이는 상태)에 멈춰 잰다.
+        // 상자가 떨어지는 동안(움직이는 상태)에 멈춰 측정한다.
         harness.stepTicks( 90 );
         vector<NetSimWorld*> listClient;
         harness.collectClients( listClient );

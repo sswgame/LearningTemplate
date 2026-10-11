@@ -201,7 +201,7 @@ SW_TEST_CASE( TextLayoutTest, MixedFaceLineUsesTallestMetrics )
     SW_EXPECT_NEAR_EQUAL( 10.0f, latinOnly._listLine[0]._height, 1e-4f );
 }
 
-/** @brief [TextLayoutTest] 측정은 배치의 크기와 같다 — 캐시 적중 뒤에도, 너비가 달라지면 다시 잰다 */
+/** @brief [TextLayoutTest] 측정은 배치의 크기와 같다 — 캐시 적중 뒤에도, 너비가 달라지면 다시 측정한다 */
 SW_TEST_CASE( TextLayoutTest, MeasureMatchesLayoutSize )
 {
     TextLayoutTestFixture fixture;

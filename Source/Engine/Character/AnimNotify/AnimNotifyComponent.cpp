@@ -246,7 +246,7 @@ namespace sw
                 endState( stateIndex - 1, nullptr, frame._deltaSeconds );
         }
 
-        // 2) 지난 프레임부터 열린 구간의 틱 — 이번 프레임의 움직임(칼 궤적)을 끝보다 먼저 잰다.
+        // 2) 지난 프레임부터 열린 구간의 틱 — 이번 프레임의 움직임(칼 궤적)을 끝보다 먼저 측정한다.
         for ( size_t stateIndex = 0; stateIndex < _listActiveState.size(); ++stateIndex )
         {
             ActiveState& state = _listActiveState[stateIndex];

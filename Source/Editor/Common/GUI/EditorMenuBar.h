@@ -45,7 +45,7 @@ namespace sw::editor
         static void drawNamedLayoutMenu( EditorDockLayout& dockLayout );
         /**
          * @brief 메뉴바 오른쪽의 빌드 상태와 RHI·FPS 표시를 그립니다.
-         * @details 지난 프레임에 잰 너비로 오른쪽 끝에 붙이고, 마지막 메뉴와 겹칠 자리면 그 프레임은 그리지 않습니다.
+         * @details 지난 프레임에 측정한 너비로 오른쪽 끝에 붙이고, 마지막 메뉴와 겹칠 자리면 그 프레임은 그리지 않습니다.
          */
         static void drawStatusArea();
         /** @brief 라이브 코딩 빌드가 끝난 순간(Compiling → Success / Failed)을 알림으로 띄웁니다. 상태 영역을 그리지 않는 프레임에도 부릅니다. */

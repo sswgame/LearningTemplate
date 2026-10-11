@@ -66,7 +66,7 @@ namespace sw
         collectAllRequests( rootDir, listRequest );
 
         ShaderCookSummary summary{};
-        // 컴파일에 실패한 소스(정규화한 절대 경로)를 RHI 폴더마다 적는다 — 그 소스는 도장에서 빼서 다음 쿠킹이 다시 시도한다.
+        // 컴파일에 실패한 소스(정규화한 절대 경로)를 RHI 폴더마다 적는다 — 그 소스는 스탬프에서 빼서 다음 쿠킹이 다시 시도한다.
         unordered_map<string, unordered_set<string>> mapFailedSourceByDir;
 
         // 리플렉션은 RHI 폴더마다 파일 하나로 모은다. 셰이더마다 사이드카를 두면 팩 엔트리와
@@ -144,7 +144,7 @@ namespace sw
         {
             if ( ShaderReflectionLibrary::save( manifestPair.second, manifestPair.first ) == false )
             {
-                // 매니페스트를 못 쓰면 이 폴더는 최신이 아니다 — 도장을 찍지 않는다(다음 쿠킹이 다시 판정한다).
+                // 매니페스트를 못 쓰면 이 폴더는 최신이 아니다 — 스탬프를 찍지 않는다(다음 쿠킹이 다시 판정한다).
                 SW_LOG_ERROR( "Shader reflection manifest could not be written: %#", manifestPair.first );
                 ++summary._failedCount;
                 continue;

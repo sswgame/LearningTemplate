@@ -408,7 +408,7 @@ SW_TEST_CASE( PrefabTest, SaveToFileWritesThePathsFormatAndRefusesOtherPaths )
  * @brief [PrefabTest] 되돌리기는 소켓에 단 인스턴스를 **그 소켓**에 둔다 — 컴포넌트 id 도 그대로라 핸들이 이어진다
  * @details 되돌리기가 부모를 오브젝트로 적고 `attachToParent`(부모의 primary)로 다시 붙이면 트럭 짐칸(소켓)에 실린 상자가 트럭 몸통으로 옮겨 가며
  *          자리가 튄다. 컴포넌트가 새 id 를 받으면 인스턴스의 컴포넌트를 가리키던 핸들(씬의 활성 카메라 · 게임 코드)이 끊긴다. 되돌리기 · 플레이
- *          종료 · 핫 리로드와 같이 원래 id 를 되살린다.
+ *          종료 · 핫 리로드와 같이 원래 id 를 복원한다.
  */
 SW_TEST_CASE( PrefabTest, RevertKeepsTheSocketAndTheComponentIDs )
 {
@@ -542,8 +542,8 @@ SW_TEST_CASE( PrefabTest, EngineCooksXMLAndJSONPrefabs )
 }
 
 /**
- * @brief [PrefabTest] 컴포넌트 이름표는 프리팹의 세 형식(XML · JSON · 쿠킹한 PFB2)을 건너 남는다
- * @details 이름표는 오브젝트 안에서 컴포넌트를 가리키는 키다(부착 대상 · 프리팹 오버라이드). 프리팹이 이름표를 잃으면 스폰한 인스턴스가 기본값(타입 이름)을
+ * @brief [PrefabTest] 컴포넌트 이름은 프리팹의 세 형식(XML · JSON · 쿠킹한 PFB2)을 건너 남는다
+ * @details 이름은 오브젝트 안에서 컴포넌트를 가리키는 키다(부착 대상 · 프리팹 오버라이드). 프리팹이 이름을 잃으면 스폰한 인스턴스가 기본값(타입 이름)을
  *          달고 나와, 그 이름으로 적힌 오버라이드 · 부착이 가리킬 곳을 잃는다.
  */
 SW_TEST_CASE( PrefabTest, ComponentNameSurvivesEveryPrefabFormat )

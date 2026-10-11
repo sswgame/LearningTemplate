@@ -38,7 +38,7 @@
 
 namespace sw
 {
-    /** @brief 조립 테스트의 카탈로그입니다 — 디렉터는 되살릴 때 새로 서므로 포인터를 들지 않고 여기서 얻는다(게임에서는 게임 인스턴스가 로컬 서비스로 든다). */
+    /** @brief 조립 테스트의 카탈로그입니다 — 디렉터는 복원할 때 새로 서므로 포인터를 들지 않고 여기서 얻는다(게임에서는 게임 인스턴스가 로컬 서비스로 든다). */
     struct KitCompositionCatalogs
     {
         static constexpr const utf8* kCropXML       = R"(
@@ -357,7 +357,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 둘째 조립 테스트의 카탈로그입니다(디렉터는 되살릴 때 새로 서므로 포인터를 들지 않고 여기서 얻는다). */
+    /** @brief 둘째 조립 테스트의 카탈로그입니다(디렉터는 복원할 때 새로 서므로 포인터를 들지 않고 여기서 얻는다). */
     struct LandCompositionCatalogs
     {
         static constexpr const utf8* kCityXML          = R"(
@@ -704,7 +704,7 @@ namespace
         int32       _creatureCount{ 0 };
         int32       _friendship{ 0 };
         int32       _orchardCount{ 0 };
-        int32       _stateCount{ 0 }; ///< 씬의 공유 상태 수 — 되살린 뒤에도 하나여야 한다
+        int32       _stateCount{ 0 }; ///< 씬의 공유 상태 수 — 복원한 뒤에도 하나여야 한다
         uint32      _cropCount{ 0 };
         uint32      _readyCount{ 0 };
         QuestStatus _requestStatus{ QuestStatus::NotStarted };
@@ -925,7 +925,7 @@ SW_TEST_CASE( KitCompositionTest, SaveFromAnotherRunRestoresBothKitsAndTheShared
     }
     SW_ASSERT_TRUE( instance.restoreSnapshot( snapshot ) );
     pManager->mergePendingAdds();
-    pManager->tick( 0.0f ); // 되살린 오브젝트가 시작한다 — 시계는 흐르지 않는다
+    pManager->tick( 0.0f ); // 복원한 오브젝트가 시작한다 — 시계는 흐르지 않는다
 
     KitCompositionDigest after;
     SW_ASSERT_TRUE( makeCompositionDigest( *pManager, after ) );
@@ -951,7 +951,7 @@ SW_TEST_CASE( KitCompositionTest, SaveFromAnotherRunRestoresBothKitsAndTheShared
 }
 
 /**
- * @brief [KitCompositionTest] 핫 리로드 스냅숏(같은 프로세스 — id 를 되살림)으로 판을 걷었다 세워도 끊기지 않은 판과 끝까지 같다
+ * @brief [KitCompositionTest] 핫 리로드 스냅숏(같은 프로세스 — id 를 복원)으로 판을 걷었다 세워도 끊기지 않은 판과 끝까지 같다
  */
 SW_TEST_CASE( KitCompositionTest, HotReloadSnapshotContinuesLikeAnUninterruptedRun )
 {
@@ -983,7 +983,7 @@ SW_TEST_CASE( KitCompositionTest, HotReloadSnapshotContinuesLikeAnUninterruptedR
         SW_ASSERT_NOT_NULL( pManager );
         pManager->beginPlay();
         runCompositionTicks( *pManager, KitCompositionTestInternal::kHalfRunTicks );
-        pManager->tick( 0.0f ); // 되살린 쪽과 같은 자리에 같은 빈 틱
+        pManager->tick( 0.0f ); // 복원한 쪽과 같은 자리에 같은 빈 틱
         runCompositionTicks( *pManager, KitCompositionTestInternal::kHalfRunTicks );
         SW_ASSERT_TRUE( makeCompositionDigest( *pManager, straight ) );
         pManager->endPlay();

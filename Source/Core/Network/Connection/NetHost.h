@@ -1,6 +1,6 @@
 /**
  * @file NetHost.h
- * @brief 서버 · 클라이언트 끝점 — 연결 핸드셰이크(요청 → 도전 → 응답 → 수락), 체크섬 · 프로토콜 id 로 남의 패킷 거르기, 연결 유지 · 타임아웃 · 끊기, 연결마다의 신뢰성 계층입니다.
+ * @brief 서버 · 클라이언트 엔드포인트 — 연결 핸드셰이크(요청 → 도전 → 응답 → 수락), 체크섬 · 프로토콜 id 로 남의 패킷 거르기, 연결 유지 · 타임아웃 · 끊기, 연결마다의 신뢰성 계층입니다.
  * @details 연결 요청에는 게임 id 와 프로토콜 id(게임 id + 와이어 판, `NetProtocol`)가 실린다. 서버는 프로토콜 id 가 다르면 이유를 붙여 거절한다 — 같은 게임의
  *          다른 판은 `VersionMismatch`, 다른 게임은 `Rejected`(양쪽 로그에 두 값을 남긴다). 요청 · 거절만 판과 상관없는 고정 머리(`NetProtocol::kHandshakeID`)로
  *          싸고, 나머지 패킷은 프로토콜 id 로 싸서 다른 판의 패킷은 체크섬부터 틀린다.
@@ -402,7 +402,7 @@ namespace sw
         uint64                        _replayRejectedCount;
         uint64                        _mismatchLogCount;
         uint64                        _challengeSecret;      ///< 서버 — 도전 값의 비밀 키(소금 씨앗에서) ///< 판 · 게임이 다른 요청 수 — 로그는 1 · 2 · 4 · 8 … 번째에만(요청 폭주가 로그를 메우지 않게)
-        float64                       _lastUpdateTime;       ///< 지난 `update` 의 시각 — 음수면 아직(가상 시계가 멈춘 시간을 잰다)
+        float64                       _lastUpdateTime;       ///< 지난 `update` 의 시각 — 음수면 아직(가상 시계가 멈춘 시간을 측정한다)
         float64                       _nextDebuggerPollTime; ///< 디버거가 붙었는지 다시 물을 시각
         uint32                        _protocolID;
         atomic<uint32>                _updateDepth; ///< `update` 를 동시에 두 스레드가 부르는 실수를 잡는다

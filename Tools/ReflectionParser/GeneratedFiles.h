@@ -58,7 +58,7 @@ namespace sw
 
         /**
          * @brief 스탬프를 씁니다. 내용은 원본 경로 한 줄과 `input <쓰기 시각>` 한 줄입니다.
-         * @details `inputWriteTime` 은 **파싱하려고 읽기 전에** 잰 입력의 쓰기 시각입니다. 다음 실행은 이 값이 지금 시각과 **같을 때만** 최신으로
+         * @details `inputWriteTime` 은 **파싱하려고 읽기 전에** 측정한 입력의 쓰기 시각입니다. 다음 실행은 이 값이 지금 시각과 **같을 때만** 최신으로
          *          봅니다(`IncrementalCheck::isUpToDate`). 스탬프 파일의 시각(= 다 쓴 때)이 입력보다 새로운지만 보면 파싱하는 동안 저장한
          *          편집이 "스탬프보다 오래됐다" 며 다음 실행에서도 무시된다 — 그 헤더를 다시 저장할 때까지.
          */
@@ -69,7 +69,7 @@ namespace sw
 
         /**
          * @brief 이번 실행의 시작을 출력 폴더의 표식 파일(`ReflectionParser.run`)에 적고 그 쓰기 시각을 돌려줍니다.
-         * @details 의존의 시각은 파싱한 **뒤에야** 잴 수 있다(무엇을 include 했는지 그때 안다). 그 사이에 저장한 편집을 놓치지 않으려고, 이 시각
+         * @details 의존의 시각은 파싱한 **뒤에야** 측정할 수 있다(무엇을 include 했는지 그때 안다). 그 사이에 저장한 편집을 놓치지 않으려고, 이 시각
          *          이후에 바뀐 의존은 0 으로 적는다 — 다음 실행이 다시 파싱한다. 파일 시각과 같은 시계 · 단위라 비교가 맞다.
          */
         static uint64 markRunStart( const string& outputDir );
@@ -89,7 +89,7 @@ namespace sw
 {
     /**
      * @class IncrementalCheck
-     * @brief "이 입력의 산출물은 최신인가" 를 답합니다. 도구 쪽 시각은 시작할 때 한 번만 잽니다.
+     * @brief "이 입력의 산출물은 최신인가" 를 답합니다. 도구 쪽 시각은 시작할 때 한 번만 측정합니다.
      * @details **도구도 입력입니다.** 산출물의 모양은 입력 헤더만이 아니라 파서 실행 파일 · builtins · 철자 표 · 템플릿 ·
      *          설정 파일이 함께 정합니다. 그중 가장 새것보다 스탬프가 오래됐으면 다시 만듭니다.
      */
@@ -104,7 +104,7 @@ namespace sw
     private:
         const ParserConfig* _pConfig;
         uint64              _newestToolWriteTime;
-        /** @brief 의존 파일의 쓰기 시각 캐시 — 같은 헤더를 입력마다 다시 재지 않는다(한 실행 안에서만, 한 스레드에서만 쓴다). */
+        /** @brief 의존 파일의 쓰기 시각 캐시 — 같은 헤더를 입력마다 다시 측정하지 않는다(한 실행 안에서만, 한 스레드에서만 쓴다). */
         mutable unordered_map<string, uint64> _mapDependencyWriteTime;
     };
 } // namespace sw

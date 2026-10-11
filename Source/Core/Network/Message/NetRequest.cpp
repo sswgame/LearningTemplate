@@ -528,7 +528,7 @@ namespace sw
                 purgeIdempotencyLocked( MonotonicClock::nowNanoseconds() );
             }
         }
-        sendResponse( token._handle, token._requestID, status, pBody, bodySize ); // 연결이 닫혔으면 끝점이 Closed 로 버린다 — 기억은 이미 했다
+        sendResponse( token._handle, token._requestID, status, pBody, bodySize ); // 연결이 닫혔으면 엔드포인트가 Closed 로 버린다 — 기억은 이미 했다
         for ( const NetRequestToken& waiter : listWaiter )
         {
             sendResponse( waiter._handle, waiter._requestID, status, pBody, bodySize );

@@ -39,7 +39,7 @@ namespace sw
         /**
          * @brief `nowNanoseconds()` 기준 @p deadlineNanoseconds 까지 이 스레드를 재웁니다(이미 지났으면 바로 돌아온다). 고정 틱 루프의 잠자기입니다.
          * @details Windows 는 고해상도 대기 타이머(`CREATE_WAITABLE_TIMER_HIGH_RESOLUTION` — 없으면 `Sleep` 밀리초)로 1 ms 해상도 한계를 피하고,
-         *          리눅스는 `clock_nanosleep` 상대 대기입니다. 일찍 깨거나 신호에 깨면 남은 시간을 다시 재서 마감까지 다시 잡니다.
+         *          리눅스는 `clock_nanosleep` 상대 대기입니다. 일찍 깨거나 신호에 깨면 남은 시간을 다시 측정해서 마감까지 다시 잡니다.
          */
         static void sleepUntilNanoseconds( int64 deadlineNanoseconds ) noexcept;
     };
@@ -49,12 +49,12 @@ namespace sw
 {
     /**
      * @class Stopwatch
-     * @brief 만들 때(또는 `restart` 때)부터 지난 시간을 정수로 잽니다. 프레임 델타 · 일시정지가 필요하면 `GameTimer` 를 씁니다.
+     * @brief 만들 때(또는 `restart` 때)부터 지난 시간을 정수로 측정합니다. 프레임 델타 · 일시정지가 필요하면 `GameTimer` 를 씁니다.
      */
     class Stopwatch
     {
     public:
-        /** @brief 지금부터 잽니다. */
+        /** @brief 지금부터 측정합니다. */
         Stopwatch() noexcept
             : _startNanoseconds{ MonotonicClock::nowNanoseconds() }
         {

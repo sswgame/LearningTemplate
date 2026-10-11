@@ -87,7 +87,7 @@ private:
 
 - `REFLECT()` 는 이 타입을 생성기의 대상으로 표시합니다.
 - `REFLECT_BODY()` 는 `StaticType()` 을 선언합니다. 정의는 생성된 `.gen.cpp` 에 들어갑니다.
-  생성 코드가 `private` 멤버의 위치를 `offsetof` 로 재야 하므로 `friend` 선언도 이 매크로에 들어 있습니다.
+  생성 코드가 `private` 멤버의 위치를 `offsetof` 로 측정해야 하므로 `friend` 선언도 이 매크로에 들어 있습니다.
 - `PROPERTY()` 를 단 멤버만 저장되고 인스펙터에 나옵니다. 괄호 안의 토큰(`Units`, `Min`)이 메타데이터입니다.
 - `MulticastDelegate` 멤버에 `PROPERTY()` 를 달면 값이 아니라 **이벤트**로 등록됩니다. 저장되지 않고, 다른 오브젝트의 함수를 이름으로 연결하는 데 씁니다.
 

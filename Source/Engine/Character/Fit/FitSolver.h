@@ -150,15 +150,15 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 피팅 관리자입니다. 연산 등록부를 갖고(기본 넷이 올라 있음), 표 · 입력을 받아 결과를 냅니다. */
+    /** @brief 피팅 관리자입니다. 연산 레지스트리를 갖고(기본 넷이 올라 있음), 표 · 입력을 받아 결과를 냅니다. */
     class SW_API FitSolver
     {
     public:
         FitSolver();
 
-        /** @brief 연산 등록부입니다. 표를 읽기 전에 사용자 연산을 올립니다. */
+        /** @brief 연산 레지스트리입니다. 표를 읽기 전에 사용자 연산을 올립니다. */
         FitOperatorRegistry& getOperatorRegistry() { return _operatorRegistry; }
-        /** @brief 연산 등록부입니다(읽기). */
+        /** @brief 연산 레지스트리입니다(읽기). */
         const FitOperatorRegistry& getOperatorRegistry() const { return _operatorRegistry; }
         /** @brief 변형 단계의 야코비 반복 수입니다(기본 3). */
         void setIterationCount( uint32 iterationCount ) { _iterationCount = iterationCount == 0 ? 1 : iterationCount; }

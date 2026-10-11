@@ -100,7 +100,7 @@ SW_TEST_CASE( MemoryTagTest, DiagnosticBootstrapEnablesPlatformLeakChecks )
 /**
  * @brief [MemoryTagTest] 워커에서 짓는 씬(비동기 로드)의 할당이 Scene 으로 세인다
  * @details 로드는 `SceneManager::dispatchLoad` 가 만든 태스크가 워커에서 한다(문서 읽기 · GameObject 생성). 태스크는 만든 쪽의 태그를
- *          상속하므로 진입점(`dispatchLoad`)의 Scene 이 워커까지 간다. 씬 채택(`tickTransitions`)을 부르기 **전에** 재서 워커 몫만 본다.
+ *          상속하므로 진입점(`dispatchLoad`)의 Scene 이 워커까지 간다. 씬 채택(`tickTransitions`)을 부르기 **전에** 측정해서 워커 몫만 본다.
  *          이 테스트 스레드의 태그는 Unknown 이라, 기다리며 이 스레드가 대신 실행해도 진입점이 없으면 Scene 이 늘지 않는다.
  */
 SW_TEST_CASE( MemoryTagTest, AsyncSceneLoadOnWorkerIsTaggedScene )
@@ -139,7 +139,7 @@ SW_TEST_CASE( MemoryTagTest, AsyncSceneLoadOnWorkerIsTaggedScene )
     SW_EXPECT_TRUE( future.isReady() );
     SW_EXPECT_NOT_NULL( future.get() );
 
-    // GameObject 64 개 + 문서 · 이름표만으로도 수 KB 다. 진입점이 빠지면 워커 몫은 Unknown 으로 가고 Scene 은 그대로다.
+    // GameObject 64 개 + 문서 · 이름만으로도 수 KB 다. 진입점이 빠지면 워커 몫은 Unknown 으로 가고 Scene 은 그대로다.
     SW_EXPECT_TRUE_MSG( sceneAfterWorker > sceneBefore + 4096, ( sw::string( "Scene bytes grew by " ) + sw::to_string( sceneAfterWorker - sceneBefore ) ).c_str() );
     SW_EXPECT_TRUE( sw::Memory::getCurrentMemoryTag() == outerTag );
 
@@ -168,7 +168,7 @@ SW_TEST_CASE( MemoryTagTest, PrimitiveMeshIsTaggedMesh )
         meshHeld = getLiveBytes( *pProfiler, sw::MemoryTag::Mesh );
         SW_EXPECT_TRUE( meshHeld > meshBefore + 1024 );
     }
-    // 정점 · 인덱스는 돌려준다. 렌더 자원 등록부처럼 한 번 자란 표는 남을 수 있어 "거의 다" 로 본다.
+    // 정점 · 인덱스는 돌려준다. 렌더 자원 레지스트리처럼 한 번 자란 표는 남을 수 있어 "거의 다" 로 본다.
     const uint64 meshAfter = getLiveBytes( *pProfiler, sw::MemoryTag::Mesh );
     SW_EXPECT_TRUE( meshAfter < meshBefore + ( meshHeld - meshBefore ) / 4 );
 #endif
@@ -240,7 +240,7 @@ SW_TEST_CASE( MemoryTagTest, ClearedPathCacheReturnsItsTable )
 }
 
 /**
- * @brief [MemoryTagTest] 프리미티브 등록부의 더티 비트 배열은 sw 할당자로 잡혀 그때의 태그로 세인다
+ * @brief [MemoryTagTest] 프리미티브 레지스트리의 더티 비트 배열은 sw 할당자로 잡혀 그때의 태그로 세인다
  * @details 항목 4096 개 배치를 등록하면 항목 표(16 B × 4096)와 더티 비트 배열 둘(워드 64 개 × 8 B)이 그 태그로 잡힌다. 비트 배열을 CRT `new` 로
  *          잡으면 항목 표 몫만 늘어 하한에 못 미친다.
  */

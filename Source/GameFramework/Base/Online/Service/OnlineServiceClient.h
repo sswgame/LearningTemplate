@@ -1,8 +1,8 @@
 /**
  * @file OnlineServiceClient.h
  * @brief 서비스 틀의 클라이언트 쪽 — 연결 하나 + 요청 클라이언트 + Hello(키트 판 협상) + 알림을 영역마다 나누기 + 끊기면 다시 연결(물러남).
- * @details - 두 모드: **자기 끝점**(`initialize` — 전송은 빌려 쓰고 끝점 · 요청 클라이언트를 가진다, 게임 클라이언트)과 **공유 끝점**(`initializeOnSharedEndpoint` —
- *            끝점 · 요청 클라이언트 · 전송은 부르는 쪽 것, 이 객체는 연결 하나의 Hello · 알림만 — 부하 테스트 봇이 연결 수천을 한 프로세스에서 연다).
+ * @details - 두 모드: **자기 엔드포인트**(`initialize` — 전송은 빌려 쓰고 엔드포인트 · 요청 클라이언트를 가진다, 게임 클라이언트)과 **공유 엔드포인트**(`initializeOnSharedEndpoint` —
+ *            엔드포인트 · 요청 클라이언트 · 전송은 부르는 쪽 것, 이 객체는 연결 하나의 Hello · 알림만 — 부하 테스트 봇이 연결 수천을 한 프로세스에서 연다).
  *          - Hello 가 끝나기 전에 보낸 요청은 모았다가 끝나면 맡긴 순서대로 보낸다(시한은 맡긴 때부터). 다시 연결하면 Hello 를 다시 하고 서비스에 `onClientReady`
  *            를 알린다 — 계정 키트가 재접속(토큰)을 먼저 보내는 자리다. 끊길 때 날아가던 요청은 ConnectionLost 로 끝난다(재시도는 같은 멱등 키로 부르는 쪽이).
  *          - 판이 안 맞으면(`kVersionMismatch`) 다시 연결하지 않는다 — 클라이언트는 "업데이트 필요" 화면.
@@ -80,7 +80,7 @@ namespace sw
 
     struct OnlineServiceClientSettings
     {
-        StreamTransportSettings _transportSettings{}; ///< 자기 끝점 모드 — `_ioThreadCount == 0` 이면 `tick` 이 전송을 돈다
+        StreamTransportSettings _transportSettings{}; ///< 자기 엔드포인트 모드 — `_ioThreadCount == 0` 이면 `tick` 이 전송을 돈다
         StreamEndpointSettings  _endpointSettings{};
         NetAddress              _serverAddress{};
         string                  _gameBuild{}; ///< Hello 에 싣는 게임 빌드 글(64 B 이하)
@@ -107,17 +107,17 @@ namespace sw
         /** @brief 키트를 올립니다(빌려 쓴다, 초기화 전에). 영역이 겹치면 false. */
         [[nodiscard]] bool registerClientService( IOnlineClientService* pService );
 
-        /** @brief 자기 끝점 모드 — 전송(빌려 쓴다)을 띄우고 서버에 겁니다. */
+        /** @brief 자기 엔드포인트 모드 — 전송(빌려 쓴다)을 띄우고 서버에 겁니다. */
         [[nodiscard]] bool initialize( IStreamTransport* pTransport, const OnlineServiceClientSettings& settings, string& outError );
         /**
-         * @brief 공유 끝점 모드 — 끝점 · 요청 클라이언트 · 전송은 부르는 쪽(봇 실행기)이 갖고, 이 객체는 연결 하나(@p handle — 이미 열린 것)의 Hello · 알림 나누기만 합니다.
+         * @brief 공유 엔드포인트 모드 — 엔드포인트 · 요청 클라이언트 · 전송은 부르는 쪽(봇 실행기)이 갖고, 이 객체는 연결 하나(@p handle — 이미 열린 것)의 Hello · 알림 나누기만 합니다.
          *        부르는 쪽 리스너가 이 연결의 프레임 · 닫힘을 `handleFrame` · `handleClosed` 로 넘깁니다. 다시 연결하지 않는다(봇이 스스로 다시 만든다).
          */
         [[nodiscard]] bool initializeOnSharedEndpoint( StreamMessageEndpoint* pEndpoint, NetRequestClient* pRequestClient, StreamConnectionHandle handle,
                                                        const OnlineServiceClientSettings& settings );
         void               shutdown();
 
-        /** @brief 자기 끝점 모드는 전송 · 끝점 · 요청 시한 · 다시 연결을 돈다. 두 모드 모두 모은 요청의 시한을 본다. */
+        /** @brief 자기 엔드포인트 모드는 전송 · 엔드포인트 · 요청 시한 · 다시 연결을 돈다. 두 모드 모두 모은 요청의 시한을 본다. */
         void tick( int64 nowMs );
 
         /** @brief 요청을 보냅니다(Hello 전 · 문이 닫혀 있으면 모은다). id 입니다 — 콜백의 `_requestID`. 콜백은 정확히 한 번. */
@@ -129,7 +129,7 @@ namespace sw
         void setRequestGate( uint16 ownerRange, bool bClosed );
         bool isRequestGateClosed() const { return _bGateClosed == SW_TRUE; }
 
-        /** @brief 공유 끝점 모드 — Message 프레임(알림)이면 영역의 서비스 `onServicePush` 로. 요청 응답은 부르는 쪽이 `NetRequestClient::handleFrame` 으로 먼저 거른다. */
+        /** @brief 공유 엔드포인트 모드 — Message 프레임(알림)이면 영역의 서비스 `onServicePush` 로. 요청 응답은 부르는 쪽이 `NetRequestClient::handleFrame` 으로 먼저 거른다. */
         void handleFrame( StreamFrameKind kind, const uint8* pBody, int32 bodySize );
         void handleClosed( StreamCloseReason reason );
 
@@ -139,7 +139,7 @@ namespace sw
         int64                  getServerTimeMs() const { return _serverTimeMs; }
         uint64                 getRemoteConfigHash() const { return _remoteConfigHash; }
 
-        // IStreamEndpointListener — 자기 끝점 모드의 `tick` 안
+        // IStreamEndpointListener — 자기 엔드포인트 모드의 `tick` 안
         void onEndpointOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted ) override;
         void onEndpointFrame( StreamConnectionHandle handle, StreamFrameKind kind, const uint8* pBody, int32 bodySize ) override;
         void onEndpointClosed( StreamConnectionHandle handle, StreamCloseReason reason ) override;

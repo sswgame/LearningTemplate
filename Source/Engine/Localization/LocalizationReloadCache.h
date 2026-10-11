@@ -1,6 +1,6 @@
 /**
  * @file LocalizationReloadCache.h
- * @brief 로컬라이제이션 파일(원문 표 · 번역 표 · 프로젝트)을 에셋 캐시 등록부에 보이는 창구입니다 — 에디터 핫 리로드가 다른 에셋과 같은 길로 다시 읽게 합니다.
+ * @brief 로컬라이제이션 파일(원문 표 · 번역 표 · 프로젝트)을 에셋 캐시 레지스트리에 보이는 창구입니다 — 에디터 핫 리로드가 다른 에셋과 같은 길로 다시 읽게 합니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -18,7 +18,7 @@ namespace sw
     class SW_API LocalizationReloadCache final : public IAssetCache
     {
     public:
-        /** @brief 등록부의 종류 이름("StringTable")입니다. */
+        /** @brief 레지스트리의 종류 이름("StringTable")입니다. */
         const utf8* getAssetKindName() const override { return "StringTable"; }
         /** @brief 그 경로가 올린 프로젝트의 파일인지입니다. */
         bool isCached( string_view relativePath ) const override;

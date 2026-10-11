@@ -334,7 +334,7 @@ namespace sw
             pWeight[0] = 1.0f - openness;
             if ( openness <= 0.0f )
                 continue;
-            // 대역 모양(합 1)을 비즘 표와 코사인으로 견주고 날카로움으로 softmax 한다.
+            // 대역 모양(합 1)을 비즘 표와 코사인으로 비교하고 날카로움으로 softmax 한다.
             const float64 bandSum = arrBandEnergy[0] + arrBandEnergy[1] + arrBandEnergy[2];
             float32       arrShape[3]{ 0.0f, 0.0f, 0.0f };
             for ( uint32 bandIndex = 0; bandIndex < 3; ++bandIndex )

@@ -76,7 +76,7 @@ namespace sw
             SW_LOG_WARNING( "[Meadow] the farm cannot start - %#", pState == nullptr ? "no GameStateComponent in front of it on this object" : "the crop catalog is not loaded" );
             return false;
         }
-        // 이 오브젝트의 첫 디렉터가 판을 연다. 시작 돈은 새 판일 때만(되살린 판 위에 덧쌓이지 않게).
+        // 이 오브젝트의 첫 디렉터가 판을 연다. 시작 돈은 새 판일 때만(복원한 판 위에 덧쌓이지 않게).
         if ( pState->initialize( MeadowVillageData::makeStateSettings() ) == GameStateInitResult::Fresh )
             pState->getWallet().add( Wallet::getDefaultCurrency(), _startingGold );
         _field.initialize( kFieldWidth, kFieldHeight, pCrops );

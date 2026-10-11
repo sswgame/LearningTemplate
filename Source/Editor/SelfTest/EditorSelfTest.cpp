@@ -37,7 +37,7 @@ namespace sw::editor
                 bool                         _bStarted{ false };
                 bool                         _bQuitWhenDone{ false };
                 bool                         _bCommandLineConsumed{ false }; ///< `-gv_editorSelfTest` 를 한 번 실행으로 바꿨다
-                bool                         _bMarksWereEnabled{ false };    ///< 시작 전 이름표 기록 상태(끝나면 되돌린다)
+                bool                         _bMarksWereEnabled{ false };    ///< 시작 전 레이블 기록 상태(끝나면 되돌린다)
             };
 
             static RunState& getState()
@@ -200,7 +200,7 @@ namespace sw::editor
         if ( state._bStarted == false )
         {
             state._bStarted = true;
-            // 테스트가 도는 동안 패널이 누를 위젯의 이름표를 적는다(EditorSelfTestMarks::note). 끝나면 시작 전 상태로 되돌린다.
+            // 테스트가 도는 동안 패널이 누를 위젯의 레이블을 적는다(EditorSelfTestMarks::note). 끝나면 시작 전 상태로 되돌린다.
             state._bMarksWereEnabled = EditorSelfTestMarks::isEnabled();
             EditorSelfTestMarks::setEnabled( true );
             for ( uint32 index = 0; index < Registry::getCount(); ++index )

@@ -761,7 +761,7 @@ namespace sw
                 if ( board._sourceStat == boardID )
                     submitScore( board._boardID, accountID, displayName, finalScore, nowMs, 0 );
             }
-            for ( const auto& [achievementID, achievement] : _mapAchievement ) // 문턱을 넘은 업적 — 이미 달성했으면 일이 아무것도 하지 않는다
+            for ( const auto& [achievementID, achievement] : _mapAchievement ) // 임계값을 넘은 업적 — 이미 달성했으면 일이 아무것도 하지 않는다
             {
                 if ( achievement._statName == boardID && finalScore >= achievement._threshold )
                 {

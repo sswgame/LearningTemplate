@@ -22,7 +22,7 @@ namespace sw
             static bool isNamed( const XMLNode& node, const utf8* pName ) { return StringUtil::equals( node.getName(), pName, true ); }
         };
 
-        /** @brief 경로마다 한 번 읽어 나눠 쓰는 표입니다(GameFramework 모듈 정적 — 등록부는 `GameDataCacheRegistry` 가 맞춘다). */
+        /** @brief 경로마다 한 번 읽어 나눠 쓰는 표입니다(GameFramework 모듈 정적 — 레지스트리는 `GameDataCacheRegistry` 가 맞춘다). */
         GameDataCache<ElementRuleTable>& getSharedTableCache()
         {
             static GameDataCache<ElementRuleTable> s_cache{ "ElementRuleTable" };

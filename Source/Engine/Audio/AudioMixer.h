@@ -48,7 +48,7 @@ namespace sw
         const hashed_string& getBusName( uint32 busIndex ) const { return _listBusState[busIndex]._name; }
         /** @brief 버스의 입력 버퍼(스테레오 교차, 블록 길이)입니다. 보이스가 여기에 더합니다. */
         float32* getBusInput( uint32 busIndex ) { return _listBusState[busIndex]._listInput.data(); }
-        /** @brief 데이터가 정한 보이스 상한 · 들림 문턱입니다. */
+        /** @brief 데이터가 정한 보이스 상한 · 들림 임계값입니다. */
         const AudioMixerDesc& getDesc() const { return _desc; }
 
         /** @brief 사용자 볼륨(선형, [0, 1])을 정합니다 — 설정 메뉴의 버스 볼륨입니다. */
@@ -124,7 +124,7 @@ namespace sw
             }
         };
 
-        AudioMixerDesc _desc;            /**< 만든 데이터입니다(보이스 상한 · 문턱을 엔진이 읽는다). */
+        AudioMixerDesc _desc;            /**< 만든 데이터입니다(보이스 상한 · 임계값을 엔진이 읽는다). */
         vector<Bus>    _listBusState;    /**< 버스(데이터 순서)입니다. */
         vector<uint32> _listOrder;       /**< 처리 순서입니다. */
         uint32         _masterIndex;     /**< master 버스 번호입니다. */

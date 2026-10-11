@@ -2,7 +2,7 @@
  * @file LocalDeviceKeyProvider.h
  * @brief 장치 키 — 처음 쓸 때 난수 32 B 를 사용자 데이터 폴더의 파일에 두고 그 뒤로는 읽습니다. Windows 는 DPAPI 로 감싸(이 PC 의 이 사용자만 푼다),
  *        리눅스는 소유자만 읽는 파일(0600)입니다.
- * @details 실수 · 가벼운 변조 막기다 — 키가 그 PC 에 있으므로 치트는 막지 못한다(경쟁 데이터의 정본은 서버). 키 파일을 잃으면 봉인된 슬롯은 WrongKey 다.
+ * @details 실수 · 가벼운 변조 막기다 — 키가 그 PC 에 있으므로 치트는 막지 못한다(경쟁 데이터의 원본은 서버). 키 파일을 잃으면 봉인된 슬롯은 WrongKey 다.
  *          계정 단위 키(서버가 준 것)를 쓰려면 다른 `ILocalStoreKeyProvider` 를 준다.
  */
 #pragma once

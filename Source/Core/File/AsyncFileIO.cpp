@@ -324,8 +324,8 @@ namespace sw
             request._pFile = file.getOpenFile();
         }
 
-        // 구간은 정확해야 한다. 끝을 넘는 구간을 짧게 읽어 주면 부르는 쪽이 크기를 다시 재야 하고, 팩처럼 크기를 믿는 쪽이 틀린다.
-        // 뺄셈으로 잰다 — `offset + size` 는 넘칠 수 있다.
+        // 구간은 정확해야 한다. 끝을 넘는 구간을 짧게 읽어 주면 부르는 쪽이 크기를 다시 측정해야 하고, 팩처럼 크기를 믿는 쪽이 틀린다.
+        // 뺄셈으로 측정한다 — `offset + size` 는 넘칠 수 있다.
         const uint64 fileSize = request._pFile->_size;
         if ( request._offset > fileSize )
             return AsyncIOStatus::OutOfRange;
@@ -564,7 +564,7 @@ namespace sw
     {
         if ( bReadSucceeded == false )
             return AsyncIOStatus::ReadFailed;
-        // 열 때 잰 크기 안의 구간인데 짧게 끝났다 — 그 사이 파일이 줄었다.
+        // 열 때 측정한 크기 안의 구간인데 짧게 끝났다 — 그 사이 파일이 줄었다.
         return bytesDone == bytesRequested ? AsyncIOStatus::Succeeded : AsyncIOStatus::OutOfRange;
     }
 } // namespace sw

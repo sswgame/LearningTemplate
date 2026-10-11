@@ -1,6 +1,6 @@
 /**
  * @file UICanvasDump.h
- * @brief 캔버스 그리기 목록을 글로 씁니다 — 결정성 골든(`UIDeterminismTest`)이 견주는 형식입니다.
+ * @brief 캔버스 그리기 목록을 글로 씁니다 — 결정성 골든(`UIDeterminismTest`)이 비교하는 형식입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

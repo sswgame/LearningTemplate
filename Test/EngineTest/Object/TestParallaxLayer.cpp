@@ -95,7 +95,7 @@ SW_TEST_CASE( ParallaxLayerTest, LayerFollowsTheGameCameraAndRestoresOnEndPlay )
     SW_EXPECT_NEAR_EQUAL( 2.0f, moved._y, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 5.0f, moved._z, 1e-4f );
 
-    // 다음 틱은 저작 자리에서 다시 잰다(누적되지 않는다).
+    // 다음 틱은 저작 자리에서 다시 측정한다(누적되지 않는다).
     pLayer->onTick( 0.016f );
     SW_EXPECT_NEAR_EQUAL( moved._x, pRoot->getLocalPosition()._x, 1e-4f );
 

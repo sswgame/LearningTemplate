@@ -20,7 +20,7 @@ Common = 0
 # 외부 압축 라이브러리(lz4·zstd) 코덱. Core 의 ICompressionCodec 만 구현하고 Engine 것은 안 본다
 # — Core 를 압축 라이브러리에 종속시키지 않으려고 여기 둔다(Source/Engine/CMakeLists.txt 주석 참고).
 Compression = 0
-# 서버 운영 관측(지표 등록부 · 상태 확인 · 운영 HTTP 끝점). Core(로그 · 스트림 전송)만 보고 Engine 의 다른 폴더는 안 본다 — 전용 서버 실행 파일이
+# 서버 운영 관측(지표 레지스트리 · 상태 확인 · 운영 HTTP 엔드포인트). Core(로그 · 스트림 전송)만 보고 Engine 의 다른 폴더는 안 본다 — 전용 서버 실행 파일이
 # GameFramework DLL 없이 들고, 기반 Online 의 서비스 지표 묶음이 그 위에 선다.
 Observability = 0
 # 리플렉션 — 토대 위의 타입 레지스트리.
@@ -41,7 +41,7 @@ TileMap = 3
 Config = 3
 # 물리 — 설정 표 · 물리 에셋 · 셰이프 서술자가 리플렉션 데이터다.
 Physics = 3
-# 에셋 데이터베이스 · 팩 · 캐시 등록부(IAssetCache). 기능 캐시는 각 기능 폴더가 이것을 구현한다.
+# 에셋 데이터베이스 · 팩 · 캐시 레지스트리(IAssetCache). 기능 캐시는 각 기능 폴더가 이것을 구현한다.
 Resource = 4
 # 내비메시(인터페이스 · 베이크 입력 · 설정 표 · Recast 백엔드). 물리의 셰이프 서술자를 읽어 베이크하고, 씬의 내비게이션(Object)과
 # 컴포넌트가 쓴다 — 공간 분할과 같은 자리.

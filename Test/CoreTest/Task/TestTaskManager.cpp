@@ -3,7 +3,7 @@
  * @brief TaskManager — 실행·의존성·병렬 분할·스테이지·메인 스레드 친화도·취소·동시 제출.
  * @details 여기서는 **스케줄러가 지켜야 하는 약속**만 본다: 낸 일은 반드시 돌고, 의존성 순서가
  *          지켜지고, 병렬 분할이 빠짐없이 한 번씩 덮고, 스테이지 대기가 끝을 보장하고, 메인
- *          스레드 일감은 메인 스레드에서만 돌고, 취소된 일은 돌지 않는다.
+ *          스레드 작업은 메인 스레드에서만 돌고, 취소된 일은 돌지 않는다.
  *
  * @note 모든 대기에 **타임아웃을 건다.** 스케줄러가 멈추는 결함이 회귀하면 이 바이너리가
  *       CTest 타임아웃(30초)까지 붙잡히는 대신 그 자리에서 진다.
@@ -329,8 +329,8 @@ SW_TEST_CASE( TaskManagerTest, WaitStageReturnsOnlyAfterEveryStageTaskIsDone )
 }
 
 /**
- * @brief [TaskManagerTest] 메인 스레드 친화도 일감은 메인 스레드에서만, dispatch 로만 돈다
- * @details 워커가 집어가면 그 일감이 기대한 스레드 규약(렌더 컨텍스트 · UI 등)이 깨진다.
+ * @brief [TaskManagerTest] 메인 스레드 친화도 작업은 메인 스레드에서만, dispatch 로만 돈다
+ * @details 워커가 집어가면 그 작업이 기대한 스레드 규약(렌더 컨텍스트 · UI 등)이 깨진다.
  *          dispatch 를 부르기 전에는 돌지 않아야 하고, 돈 스레드가 메인이어야 한다.
  */
 SW_TEST_CASE( TaskManagerTest, MainThreadTaskRunsOnlyOnTheMainThread )
@@ -435,7 +435,7 @@ SW_TEST_CASE( TaskManagerTest, WhenAllRunsOnceAfterEveryDependency )
 
 /**
  * @brief [TaskManagerTest] 태스크 안에서 다른 스테이지를 기다려도 멈추지 않는다
- * @details 워커가 대기에 들어가면 그 워커가 처리했어야 할 일감이 갈 곳을 잃는다 — 그래서
+ * @details 워커가 대기에 들어가면 그 워커가 처리했어야 할 작업이 갈 곳을 잃는다 — 그래서
  *          `waitStage` 는 자면서 기다리지 않고 **다른 일을 도와 실행한다**(work helping).
  *          그 장치가 빠지면 워커 수보다 깊게 중첩되는 순간 전부 서로를 기다린다.
  */
@@ -478,7 +478,7 @@ SW_TEST_CASE( TaskManagerTest, NestedWaitInsideATaskDoesNotStall )
 /**
  * @brief [TaskManagerTest] 여러 스레드가 동시에 밀어 넣어도 하나도 잃지 않는다
  * @details 워커 로컬 큐가 가득 차면 전역 큐로 흘려보내는 경로가 있다(`WorkStealingDeque::push`
- *          는 늘리지 않고 false 를 돌려준다). 그 흘려보내기가 새면 일감이 조용히 사라진다.
+ *          는 늘리지 않고 false 를 돌려준다). 그 흘려보내기가 새면 작업이 조용히 사라진다.
  */
 SW_TEST_CASE( TaskManagerTest, ConcurrentSubmitLosesNothing )
 {
@@ -524,7 +524,7 @@ SW_TEST_CASE( TaskManagerTest, ConcurrentSubmitLosesNothing )
  *
  *          여기서는 살아 있는 할당 수로 같은 것을 본다: 매니저를 세워 스테이지를 여럿 **동시에** 쥐었다 부수는
  *          한 바퀴를 돌고, 그 전후의 살아 있는 할당 수가 제자리로 돌아오는지 본다. 첫 바퀴는 워밍업이다 —
- *          로거·스레드 런타임이 한 번만 잡는 것들을 재지 않기 위해서다.
+ *          로거·스레드 런타임이 한 번만 잡는 것들을 측정하지 않기 위해서다.
  */
 SW_TEST_CASE( TaskManagerTest, DestroyedManagerReturnsItsStageNodes )
 {
@@ -541,7 +541,7 @@ SW_TEST_CASE( TaskManagerTest, DestroyedManagerReturnsItsStageNodes )
     pMemory->setTrackingEnabled( bWasTracking );
 
     // 스테이지 하나가 새면 그 안의 목록·뮤텍스까지 따라 남으므로 새면 스테이지 수보다 크게 벌어진다.
-    // 문턱을 스테이지 수로 둔 것은 로거가 아직 안 비운 메시지 같은 잡음을 결함으로 읽지 않기 위해서다.
+    // 임계값을 스테이지 수로 둔 것은 로거가 아직 안 비운 메시지 같은 잡음을 결함으로 읽지 않기 위해서다.
     const uint64 leaked = after > before ? after - before : 0;
     SW_EXPECT_TRUE_MSG( leaked < kLeakProbeStageCount,
                         ( sw::string( "매니저를 부순 뒤에도 살아 있는 할당이 " ) + sw::to_string( leaked ) +
@@ -550,11 +550,11 @@ SW_TEST_CASE( TaskManagerTest, DestroyedManagerReturnsItsStageNodes )
 }
 
 /**
- * @brief [TaskManagerTest] 스테이지를 기다리다 잠든 메인 스레드는 메인 전용 일감이 생기면 깨어난다
+ * @brief [TaskManagerTest] 스테이지를 기다리다 잠든 메인 스레드는 메인 전용 작업이 생기면 깨어난다
  * @details 메인은 자기 워드 하나에 잠든다. 그 스테이지의 워커 태스크가 뒤늦게 `MainThread` 친화도 태스크를 같은
- *          스테이지에 넣으면, 그 일감은 메인만 돌릴 수 있으므로 **메인을 깨우지 않으면 둘 다 영원히 기다린다.**
+ *          스테이지에 넣으면, 그 작업은 메인만 돌릴 수 있으므로 **메인을 깨우지 않으면 둘 다 영원히 기다린다.**
  *          조건 변수 하나에 `notify_one` 을 쓰면 엉뚱한 스레드가 깨어 멈춘다 — 그래서 메인이 잠들기 전에
- *          자기 슬롯을 적어 두고 메인 일감을 넣는 쪽이 그 슬롯을 깨운다. 그 길이 끊기면 이 케이스는 CTest 타임아웃으로 진다.
+ *          자기 슬롯을 적어 두고 메인 작업을 넣는 쪽이 그 슬롯을 깨운다. 그 길이 끊기면 이 케이스는 CTest 타임아웃으로 진다.
  */
 SW_TEST_CASE( TaskManagerTest, MainThreadTaskWakesParkedMainThread )
 {
@@ -567,7 +567,7 @@ SW_TEST_CASE( TaskManagerTest, MainThreadTaskWakesParkedMainThread )
 
     sw::TaskHandle worker = manager.emplaceTask( "LateMainSpawner", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&manager, &stage, &bMainTaskRan, &bMainTaskRanOnMain]()
     {
-        // 메인이 스핀(수 us)을 지나 잠들 때까지 기다린 뒤에 메인 일감을 만든다.
+        // 메인이 스핀(수 us)을 지나 잠들 때까지 기다린 뒤에 메인 작업을 만든다.
         std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
         sw::TaskHandle mainTask = manager.emplaceTask( "LateMain",
                                                        SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&manager, &bMainTaskRan, &bMainTaskRanOnMain]()
@@ -748,7 +748,7 @@ SW_TEST_CASE( TaskManagerTest, ParallelParentWithMainAffinityCompletesOnMainOnly
  * @brief [TaskManagerTest] 모두 깨우기는 부른 순간 잠들어 있던 워커만 깨우고 돌아온다
  * @details 할 일 없이 깨어난 워커는 스핀(2 us) 뒤 곧바로 다시 잠든다. 루프가 워커 하나를 깨울 때마다 유휴 마스크를
  *          새로 읽으면 그렇게 다시 잠든 워커를 또 깨운다. 깨우기 시스템 호출이 그 스핀보다 느린 곳(WSL)에서는 마스크가 비는
- *          순간이 좀처럼 오지 않아 호출 한 번이 수십 초를 돈다. 일감 없이 여러 번 불러 전체 시간이 상한 안인지 본다.
+ *          순간이 좀처럼 오지 않아 호출 한 번이 수십 초를 돈다. 작업 없이 여러 번 불러 전체 시간이 상한 안인지 본다.
  *          상한을 넘으면 그 자리에서 멈춘다.
  */
 SW_TEST_CASE( TaskManagerTest, WakeAllDoesNotChaseWorkersThatSleepAgain )

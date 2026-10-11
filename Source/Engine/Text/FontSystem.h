@@ -52,7 +52,7 @@ namespace sw
 
         FontFaceID _arrFace[kMaxFaceCount]{}; ///< 앞이 먼저. 쓰지 않는 칸은 kInvalidFontFaceID
         uint8      _faceCount{ 0 };           ///< 쓰는 칸 수
-        uint8      _bFauxBold{ SW_FALSE };    ///< 고른 가족에 굵은 면이 없어 일반 면을 굵게 그린다(SDF 문턱 이동)
+        uint8      _bFauxBold{ SW_FALSE };    ///< 고른 가족에 굵은 면이 없어 일반 면을 굵게 그린다(SDF 임계값 이동)
         uint8      _bFauxItalic{ SW_FALSE };  ///< 기운 면이 없어 기울여 그린다
     };
 } // namespace sw

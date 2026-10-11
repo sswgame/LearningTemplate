@@ -74,7 +74,7 @@ namespace sw
 
         /** @brief 세이브용 — 이름 순(대소문자 무시 사전순) 목록입니다. */
         void fillEntries( vector<GameFlagEntry>& outListEntry ) const;
-        /** @brief 세이브에서 되살립니다(지금 값은 모두 지운다). */
+        /** @brief 세이브에서 복원합니다(지금 값은 모두 지운다). */
         void restoreEntries( const vector<GameFlagEntry>& listEntry );
         /** @brief 플래그를 이름 순으로 씁니다 — 같은 플래그면 넣은 순서와 상관없이 같은 바이트입니다. */
         void writeState( Archive& outArchive ) const;

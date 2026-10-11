@@ -126,7 +126,7 @@ namespace sw
         void fillVisitedAreas( vector<hashed_string>& outListArea ) const;
         /** @brief 세이브용 — 발견한 방 id(이름 순)입니다. */
         void fillDiscoveredAreas( vector<hashed_string>& outListArea ) const;
-        /** @brief 세이브에서 되살립니다. 방문한 방은 발견도 됩니다. 모르는 id 는 건너뜁니다. */
+        /** @brief 세이브에서 복원합니다. 방문한 방은 발견도 됩니다. 모르는 id 는 건너뜁니다. */
         void restoreState( const vector<hashed_string>& listVisited, const vector<hashed_string>& listDiscovered );
 
         bool                    isVisited( const hashed_string& areaID ) const;

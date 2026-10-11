@@ -1,6 +1,6 @@
 # Scripts/generate (자동화 및 데이터/코드 생성 스크립트)
 
-**정본(JSON · `Constants.py` · 폴더 목록 · 리소스)에서 파일을 만들어 내는** 스크립트가 모여 있습니다 — 데이터 쿠킹, C++ 헤더 · CMake 목록 생성,
+**원본(JSON · `Constants.py` · 폴더 목록 · 리소스)에서 파일을 만들어 내는** 스크립트가 모여 있습니다 — 데이터 쿠킹, C++ 헤더 · CMake 목록 생성,
 문서. 대부분은 구성 · 빌드 시점에 CMake 가 부르지만, 결과를 커밋하는 것(`GenerateSpriteTextures.py`)과 문서(`GenerateDocs.py`, `SW_BUILD_DOCS` 일 때만
 타깃)는 손으로 돌립니다. 부르는 쪽이 아니라 **파일을 만든다는 것**이 이 폴더의 정의입니다.
 
@@ -18,13 +18,13 @@
 | `GenerateConfigureFiles.py` | 구성 시점 생성기 다섯(CMakeConstants · PackFormat · CookContract · ShippingHostDefaults · LintTargets)을 **한 프로세스로** 차례로 부른다 — configure 가 부르는 것은 이것 하나(생성기마다 파이썬을 띄우면 configure 의 3 할이 파이썬이었다). 각 생성기는 단독 실행도 그대로 | 위 다섯의 출력 |
 | `GenerateToolchainCMake.py` | `Config/Environment/toolchain_config.json` 을 CMake `set()` 목록으로 (구성 시점) | `build/.../ToolchainVars.cmake` |
 | `GenerateLintTargets.py` | `lint/gate` · `lint/selftest` 폴더를 CMake 린트 타깃 · 테스트로 (구성 시점) | `build/.../LintTargets.cmake` |
-| `GenerateEngineAbiStamp.py` | Core · Engine 헤더 내용의 지문 — 핫 리로드의 엔진 ABI 도장 (빌드 시점) | `build/.../EngineAbiStamp.gen.h` |
+| `GenerateEngineAbiStamp.py` | Core · Engine 헤더 내용의 지문 — 핫 리로드의 엔진 ABI 스탬프 (빌드 시점) | `build/.../EngineAbiStamp.gen.h` |
 | `GenerateThirdPartyNotices.py` | 서드파티 라이선스 고지 — 매니페스트(`vcpkg.json`)가 끌어오는 포트의 `share/<포트>/copyright` 와 저장소에 원문 그대로 둔 코드의 `ThirdParty/<이름>/LICENSE.md` 를 모은다(빌드 시점, `ThirdPartyNotices` 타깃) | `build/*/Bin/THIRD_PARTY_NOTICES.txt` |
 | `GenerateEditorIcons.py` | 에디터 아이콘 폰트와 글리프 상수 헤더 — 그림은 `Scripts/common/EditorIconFont.py` 의 `kListIcon` (손으로 돌리고 결과를 커밋한다. 다르면 `CheckEditorIcons`) | `Resource/editor/fonts/sweditoricons.ttf` · `Source/Editor/Common/GUI/EditorIconGlyphs.h` |
 | `GenerateReflectionAnnotationKeys.py` | 편집기(clangd)가 `REFLECT` · `PROPERTY` · `FUNCTION` · `ENUM` 인자 키를 완성하게 하는 선언 헤더 — 키는 `AnnotationMeta.txt`, 단위는 `ReflectUnits.h`, 내용은 `Scripts/common/ReflectionAnnotationKeys.py` (손으로 돌리고 결과를 커밋한다. 다르면 `CheckReflectionAnnotationKeys`) | `Source/Engine/Reflection/ReflectionAnnotationKeys.h` |
 | `GenerateSpriteTextures.py` | 엔진이 들고 다니는 작은 스프라이트 텍스처(DDS)와 클립 — 네 칸 테스트 텍스처 (손으로 돌린다, 결과를 커밋한다) | `Resource/engine/textures/test/quadrants.*` · `Resource/engine/textures/missing.dds` |
 
-`setup/` 은 **외부 도구를 찾아 설치하는** 폴더이고, 정본에서 파일을 만들어 내는 일은 구성 시점이든 빌드 시점이든 여기다.
+`setup/` 은 **외부 도구를 찾아 설치하는** 폴더이고, 원본에서 파일을 만들어 내는 일은 구성 시점이든 빌드 시점이든 여기다.
 
 > **씬 쿠킹은 소스 트리를 읽습니다.** `App --cook-scenes` 는 팩을 마운트하지 않고 소스 트리(`ContentSource::SourceTree`)를 올려, 배포 구성에서도
 > 느슨한 파일 · 소스 프리팹을 읽습니다. 모르는 타입의 컴포넌트(`MissingComponent`)가 든 씬은 쿠킹하지 않고 실패로 세며, 실패가 하나라도 있으면

@@ -194,7 +194,7 @@ namespace sw
          */
         uint32 applyTickWrites( GameObjectManager& manager, PrimitiveRegistry& registry );
         /**
-         * @brief 바깥에서 준 쓰기 여럿을 적용합니다(`GameObjectManager::applyTransformBatch`). 건수가 문턱을 넘으면 워커에 나눕니다.
+         * @brief 바깥에서 준 쓰기 여럿을 적용합니다(`GameObjectManager::applyTransformBatch`). 건수가 임계값을 넘으면 워커에 나눕니다.
          * @details 틱 중이면 건마다 세터로 돌립니다 — 세터가 틱 중 쓰기 길을 탑니다. 배치의 병렬 적용은 구조 변경이 없는 틱 밖에서만 안전합니다.
          *          핸들이 씬 컴포넌트가 아니거나 죽었으면 그 건은 건너뜁니다. 세대는 끝에 한 번 올립니다. 같은 핸들이 여러 번 있으면 배열에서
          *          뒤의 것이 이깁니다 — 병렬일 때도 그렇도록 건을 대상(componentID) 버킷으로 나눠, 한 대상은 한 워커가 배열 순서대로 씁니다.
@@ -209,7 +209,7 @@ namespace sw
          * @brief 칸의 월드가 다시 합성된 직후의 알림입니다. 칸의 프리미티브에 렌더 더티를 찍고, 알림 비트가 켜져 있으면 소유 컴포넌트의 훅을 부릅니다.
          * @details 메시 컴포넌트는 훅을 끄고 칸에 프리미티브 번호를 적으므로 컴포넌트를 건너다니지 않습니다. 컴포넌트의 합성
          *          (`SceneComponent::updateWorldTransformFromParent`)과 칸의 합성(`applyLocalChange`)이 같은 이 함수를 씁니다.
-         * @param pRegistry 칸이 속한 씬의 프리미티브 등록부. 씬에 붙지 않은 컴포넌트면 nullptr 입니다.
+         * @param pRegistry 칸이 속한 씬의 프리미티브 레지스트리. 씬에 붙지 않은 컴포넌트면 nullptr 입니다.
          */
         static void notifyWorldUpdated( SceneTransformPage& page, uint32 pageIndex, PrimitiveRegistry* pRegistry );
 
@@ -222,7 +222,7 @@ namespace sw
         /** @brief 지금 플러시를 기다리는 루트 수입니다. */
         size_t getDirtyRootCount() const { return _listDirtyRoot.size(); }
 
-        /** @brief 더티 루트의 월드 캐시를 계층 순으로 갱신하고 목록을 비웁니다. 루트 수가 문턱을 넘으면 병렬로 돕니다. */
+        /** @brief 더티 루트의 월드 캐시를 계층 순으로 갱신하고 목록을 비웁니다. 루트 수가 임계값을 넘으면 병렬로 돕니다. */
         void flush();
         /** @brief 더티 목록을 비웁니다(매니저 clear). */
         void clear();

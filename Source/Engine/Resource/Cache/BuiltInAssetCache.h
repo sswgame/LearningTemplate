@@ -1,7 +1,7 @@
 /**
  * @file BuiltInAssetCache.h
  * @brief 엔진 기능 폴더가 자기 에셋 캐시를 `AssetManager` 에 등록하는 창구입니다. 캐시 클래스의 .cpp 에 `SW_BUILT_IN_ASSET_CACHE` 한 줄을 둡니다.
- * @details `Resource` 는 등록부만 갖고 기능 캐시(Material · Mesh · Skeleton · Fracture …)의 타입을 모릅니다. 기능 폴더가 정적 초기화에서 이 표에
+ * @details `Resource` 는 레지스트리만 갖고 기능 캐시(Material · Mesh · Skeleton · Fracture …)의 타입을 모릅니다. 기능 폴더가 정적 초기화에서 이 표에
  *          만드는 함수를 올리고, `AssetManager` 는 생성자에서 표를 훑어 캐시를 만들고 소유합니다 — 의존은 기능 → Resource 한 방향입니다.
  *          언리얼 서브시스템(모듈이 자기 타입을 올리고 엔진이 인스턴스를 만든다) · 고도 `register_types` 의 `add_resource_format_loader` 와 같은 모양입니다.
  *

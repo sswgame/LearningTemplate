@@ -160,7 +160,7 @@ namespace sw::internal
     SW_API void beginAssertCapture() noexcept;
     /** @brief 가로채기 하나를 풉니다. */
     SW_API void endAssertCapture() noexcept;
-    /** @brief 프로세스가 지금까지 가로챈 단언 수입니다(구간의 수는 시작과 끝의 차로 잰다). */
+    /** @brief 프로세스가 지금까지 가로챈 단언 수입니다(구간의 수는 시작과 끝의 차로 측정한다). */
     [[nodiscard]] SW_API uint32 getCapturedAssertCount() noexcept;
 } // namespace sw::internal
 

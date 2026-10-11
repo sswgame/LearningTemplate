@@ -1,6 +1,6 @@
 /**
  * @file AbilityCatalog.h
- * @brief id 로 찾는 이펙트 · 어빌리티 · 어빌리티 세트 정의와, 이름으로 만드는 클래스 등록부입니다.
+ * @brief id 로 찾는 이펙트 · 어빌리티 · 어빌리티 세트 정의와, 이름으로 만드는 클래스 레지스트리입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

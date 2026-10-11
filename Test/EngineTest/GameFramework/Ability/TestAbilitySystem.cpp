@@ -896,9 +896,9 @@ SW_TEST_CASE( AbilitySystemTest, ModuleCodeReleaseRetiresOnlyAbilitiesFromThatMo
 }
 
 /**
- * @brief [AbilitySystemTest] 데이터가 쓰는 열거자 이름은 리플렉션 이름표로 모두 왕복한다 — 손으로 쓴 표가 따로 없다
- * @details 카탈로그 XML 의 `op` · `source` · `duration` · `stacking` · `stackExpiration` 은 `ENUM()` 이름표(`TypeRegistry::enumFromString`)로 읽는다.
- *          열거자를 더하면 이름표도 함께 생긴다. 대소문자는 가리지 않고, 모르는 이름은 false 다.
+ * @brief [AbilitySystemTest] 데이터가 쓰는 열거자 이름은 리플렉션 이름으로 모두 왕복한다 — 손으로 쓴 표가 따로 없다
+ * @details 카탈로그 XML 의 `op` · `source` · `duration` · `stacking` · `stackExpiration` 은 `ENUM()` 이름(`TypeRegistry::enumFromString`)로 읽는다.
+ *          열거자를 더하면 이름도 함께 생긴다. 대소문자는 가리지 않고, 모르는 이름은 false 다.
  */
 SW_TEST_CASE( AbilitySystemTest, EnumNamesRoundTrip )
 {

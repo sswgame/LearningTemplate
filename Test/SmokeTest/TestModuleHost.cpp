@@ -135,8 +135,8 @@ SW_TEST_CASE( ModuleHostTest, SuspendingAnEditorWithoutStopLeavesTheWorldStopped
 // 아래 케이스는 **개발 구성 전용**이다 — `LiveReloadManager` 는 배포 빌드에 아예 들어가지 않는다
 // (모듈이 전부 정적 링크라 다시 올릴 것이 없다. `Test/SmokeTest/CMakeLists.txt` 의 소스 목록 참고).
 /**
- * @brief [ModuleHostTest] 종료하면 등록부에 남은 콜백이 없다
- * @details 콜백은 `ModuleHost` 의 메서드를 가리킨다. `App` 은 호스트를 먼저 지우고 등록부를 나중에
+ * @brief [ModuleHostTest] 종료하면 레지스트리에 남은 콜백이 없다
+ * @details 콜백은 `ModuleHost` 의 메서드를 가리킨다. `App` 은 호스트를 먼저 지우고 레지스트리를 나중에
  *          내리므로, 남아 있으면 그 사이의 리로드가 죽은 객체로 뛰어든다. 배수·배치 델리게이트뿐
  *          아니라 **모듈마다 건 것도** 떼야 한다.
  */

@@ -108,7 +108,7 @@ namespace sw
 
         /** @brief 열린 파일이면 true 입니다. */
         bool isValid() const;
-        /** @brief 열 때 잰 파일 크기(바이트)입니다. 열리지 않았으면 0 입니다. */
+        /** @brief 열 때 측정한 파일 크기(바이트)입니다. 열리지 않았으면 0 입니다. */
         uint64 getSize() const;
         /** @brief 연 경로입니다. 열리지 않았으면 빈 값입니다. */
         string_view getPath() const;

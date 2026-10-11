@@ -1,4 +1,4 @@
-// 라운드 묶음 — 선승(1 위 1 점) · 라운드 시간(걸음) · 라운드 사이 대기 · 무승부 · 서든 데스, 순위 점수(같은 점수 같은 순위 · 목록 밖 0 점), 상태 바이트 형식 · 되살리기 · 거절.
+// 라운드 묶음 — 선승(1 위 1 점) · 라운드 시간(걸음) · 라운드 사이 대기 · 무승부 · 서든 데스, 순위 점수(같은 점수 같은 순위 · 목록 밖 0 점), 상태 바이트 형식 · 복원하기 · 거절.
 #include "pch.h"
 
 #include "Core/Network/BitStream.h"
@@ -93,7 +93,7 @@ SW_TEST_CASE( RoundSeriesTest, FirstToWinClockIntermissionAndTieRules )
 }
 
 /**
- * @brief [RoundSeriesTest] 순위 점수 — 같은 점수 같은 순위 · 목록 밖 0 점 · 대기 0 은 바로 다음 라운드, 상태 바이트 형식(바이트 그대로) · 되살리기 · 참가자 수가 다르거나 모자란 바이트는 거절하고 바꾸지 않는다
+ * @brief [RoundSeriesTest] 순위 점수 — 같은 점수 같은 순위 · 목록 밖 0 점 · 대기 0 은 바로 다음 라운드, 상태 바이트 형식(바이트 그대로) · 복원하기 · 참가자 수가 다르거나 모자란 바이트는 거절하고 바꾸지 않는다
  */
 SW_TEST_CASE( RoundSeriesTest, PlacementPointsAndStateBytes )
 {
@@ -126,7 +126,7 @@ SW_TEST_CASE( RoundSeriesTest, PlacementPointsAndStateBytes )
     const vector<uint8> expectedBytes{ 0x01, 0x02, 0x00, 0x00, 0x01, 0x04, 0x04, 0x06, 0x04, 0x00 };
     SW_EXPECT_TRUE( bytes == expectedBytes );
 
-    // 같은 설정 · 참가자 수의 묶음에 되살린다.
+    // 같은 설정 · 참가자 수의 묶음에 복원한다.
     RoundSeries restored;
     restored.initialize( settings );
     SW_ASSERT_TRUE( restored.start( 4 ) );

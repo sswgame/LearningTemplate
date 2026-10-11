@@ -17,7 +17,7 @@ namespace sw
 {
     /**
      * @class NetParallelFor
-     * @brief [0, count) 를 `TaskManager` 워커에 나눠 돌리고 끝날 때까지 기다립니다. 매니저가 없거나 일이 문턱보다 적으면 지금 스레드가 돈다.
+     * @brief [0, count) 를 `TaskManager` 워커에 나눠 돌리고 끝날 때까지 기다립니다. 매니저가 없거나 일이 임계값보다 적으면 지금 스레드가 돈다.
      */
     class NetParallelFor
     {

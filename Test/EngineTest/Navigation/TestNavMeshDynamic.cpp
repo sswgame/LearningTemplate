@@ -76,7 +76,7 @@ namespace
 } // namespace
 
 /**
- * @brief [NavMeshDynamicTest] 장애물 — 놓으면 닿은 타일만 재베이크해 경로가 돌아가고, 문턱보다 작게 움직이면 재베이크하지 않고, 비키거나 사라지면 곧은 경로로 돌아온다
+ * @brief [NavMeshDynamicTest] 장애물 — 놓으면 닿은 타일만 재베이크해 경로가 돌아가고, 임계값보다 작게 움직이면 재베이크하지 않고, 비키거나 사라지면 곧은 경로로 돌아온다
  */
 SW_TEST_CASE( NavMeshDynamicTest, ObstacleRebakesOnlyTheTouchedTilesAndPathsFollow )
 {
@@ -104,7 +104,7 @@ SW_TEST_CASE( NavMeshDynamicTest, ObstacleRebakesOnlyTheTouchedTilesAndPathsFoll
     SW_EXPECT_TRUE_MSG( rebakedAfterPlace < tileCount, ( std::to_string( rebakedAfterPlace ) + " of " + std::to_string( tileCount ) ).c_str() );
     SW_EXPECT_TRUE_MSG( detour > 18.0f, ( "detour " + std::to_string( detour ) ).c_str() );
 
-    // 문턱(0.25 m)보다 작게 움직이면 그대로다.
+    // 임계값(0.25 m)보다 작게 움직이면 그대로다.
     pRoot->setLocalPosition( sw::float3{ 0.1f, 0.0f, 0.0f } );
     Internal::tickAndFlush( manager );
     SW_EXPECT_EQUAL( rebakedAfterPlace, navigation.getRebakedTileCount() );

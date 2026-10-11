@@ -635,7 +635,7 @@ SW_TEST_CASE( ObjectStateXMLSerializerTest, ParentChildHierarchyRoundtrip )
  * @brief [ObjectStateRoundTripTest] PROPERTY 하나가 사라져도 그 전의 바이너리 상태는 읽힌다 — 사라진 칸만 버린다(XML 과 같은 규칙)
  * @details 세 형식이 같다: 지금 타입에 없는 칸은 건너뛰고 나머지를 읽는다. 바이너리만 엄격하면 컴포넌트 안의 모르는 칸 하나에 **오브젝트 통째로**
  *          읽기가 실패하고, 오브젝트 자기 칸이 사라지면 판 붙은 읽기가 이관 함수 없이 거절한다 — 바이너리 상태가 스키마보다 오래 사는 자리(디스크의
- *          세이브, 핫 리로드 뒤 Stop 이 되살리는 플레이 스냅샷)에서 그 오브젝트가 모두 사라진다.
+ *          세이브, 핫 리로드 뒤 Stop 이 복원하는 플레이 스냅샷)에서 그 오브젝트가 모두 사라진다.
  */
 SW_TEST_CASE( ObjectStateRoundTripTest, StateSavedBeforeAPropertyWasRemovedStillLoads )
 {
@@ -909,7 +909,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, UnknownComponentIsKeptAndWrittenBack )
 
 /**
  * @brief [ObjectStateRoundTripTest] 저장된 상태의 enum 은 열거자로 돌아온다 — 다음 빌드가 열거자 순서를 바꿔도, 열거자를 지워도(그 칸만 기본값, 나머지는 그대로)
- * @details 바이너리 상태(세이브 · 핫 리로드 뒤 Stop 이 되살리는 플레이 스냅샷 · 되돌리기)가 enum 을 int64 **값**으로 실으면 열거자를 사이에 넣을 때 저장된
+ * @details 바이너리 상태(세이브 · 핫 리로드 뒤 Stop 이 복원하는 플레이 스냅샷 · 되돌리기)가 enum 을 int64 **값**으로 실으면 열거자를 사이에 넣을 때 저장된
  *          Green 이 다른 열거자로 읽히고, 지운 열거자는 그 값의 다른 열거자가 된다 — XML 은 그 칸만 실패로 남긴다. 바이너리도 컴포넌트 안의 읽지 못한 칸
  *          하나에 그 컴포넌트(와 뒤의 컴포넌트)를 버리면 안 된다. 테스트는 손으로 올린 enum 을 저장 뒤에 같은 이름으로 다시 올린다(핫 리로드 · 다음 빌드의 자리).
  */

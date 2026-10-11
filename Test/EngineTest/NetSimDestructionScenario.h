@@ -208,7 +208,7 @@ namespace test
 
         /**
          * @brief 서버 틱(소수)의 자리 — 앞뒤 기록 사이 선형. 그 틱에 서버에 그 그룹이 없었으면 false.
-         * @details 서버에서 이미 갈라진 그룹을 클라이언트가 아직 들고 있는 것(가른 사건이 신뢰 채널에서 밀렸다)은 자세 오차가 아니라 사건 지연이다 — 따로 잰다.
+         * @details 서버에서 이미 갈라진 그룹을 클라이언트가 아직 들고 있는 것(가른 사건이 신뢰 채널에서 밀렸다)은 자세 오차가 아니라 사건 지연이다 — 따로 측정한다.
          */
         bool sample( uint32 objectIndex, uint32 groupID, float32 tick, float3& outPosition )
         {
@@ -385,7 +385,7 @@ namespace test
                 for ( size_t entry = 0; entry < listCountTick.size(); ++entry )
                 {
                     const DestructionState& localState = session._objects._listFracture[listCountObject[entry]]->getState();
-                    // 이 클라이언트가 그 사건까지 적용했으면 지연을 잰다(처음 본 틱 — 늦게 들어온 클라이언트는 스냅숏이 담았다).
+                    // 이 클라이언트가 그 사건까지 적용했으면 지연을 측정한다(처음 본 틱 — 늦게 들어온 클라이언트는 스냅숏이 담았다).
                     if ( localState.getEventCount() > listCountIndex[entry] && pClient->getWorldIndex() != lateClient )
                         result._maxEventLagTicks = MathUtil::max( result._maxEventLagTicks, static_cast<int32>( tick - listCountTick[entry] ) );
                 }
@@ -405,7 +405,7 @@ namespace test
                     }
                 }
             }
-            // 이미 맞춘 사건의 지연은 다시 재지 않는다(앞에서 지운다) — 모든 클라이언트가 그 번호를 넘으면 지운다.
+            // 이미 맞춘 사건의 지연은 다시 측정하지 않는다(앞에서 지운다) — 모든 클라이언트가 그 번호를 넘으면 지운다.
             for ( size_t entry = listCountTick.size(); entry > 0; --entry )
             {
                 bool bEveryone = true;

@@ -4,7 +4,7 @@
  * @details - 계정 키트(서버)가 구현한다(`OnlinePresence` — 캐시 `presence:` 키 · 버스 `push.<서버>`). 거래 · 채팅 · 친구 · 매칭 같은 다른 키트는 이 창구만 본다
  *            (키트끼리 include 하지 못한다 — 기록 형식은 구현 하나가 갖는다).
  *          - 찾기 결과는 맡긴 델리게이트로 정확히 한 번 온다(`cancel` 한 것은 빼고, 호스트 `tick` 안 — 맡긴 함수 안에서 바로 부르지 않는다). 여러 서비스가 같이 찾아도 서로의 결과를 가져가지 않는다.
- *          - 서버 한 대면 없어도 된다(nullptr) — 이 프로세스의 `IAccountDirectory` 로 충분하다. 알림은 최대 한 번(버스)이다 — 정본은 저장소.
+ *          - 서버 한 대면 없어도 된다(nullptr) — 이 프로세스의 `IAccountDirectory` 로 충분하다. 알림은 최대 한 번(버스)이다 — 원본은 저장소.
  *          언리얼 `IOnlinePresence::QueryPresence`(사용자 id → 상태, 완료 델리게이트) · Nakama status registry 와 같은 자리다.
  */
 #pragma once

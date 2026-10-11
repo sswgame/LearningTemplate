@@ -1,7 +1,7 @@
 /**
  * @file LocalizationDocuments.h
  * @brief 로컬라이제이션 저작 파일 셋 — 원문 문자열 표(`*.strings.json`) · 문화권 번역 표(`<culture>.translation.json`) · 프로젝트(`*.locproject.json`) — 입니다.
- * @details 원문 표가 정본입니다(언리얼 String Table · 유니티 Shared Table Data). 키마다 원문 · 맥락 · 설명 · 최대 길이 · 나온 자리를 듭니다.
+ * @details 원문 표가 원본입니다(언리얼 String Table · 유니티 Shared Table Data). 키마다 원문 · 맥락 · 설명 · 최대 길이 · 나온 자리를 듭니다.
  *          번역 표는 번역마다 **번역할 때의 원문 해시**를 들어, 원문이 바뀌면 그 번역은 낡은(stale) 것이 되고 화면에 나오지 않습니다(언리얼과 같다 —
  *          낡은 번역 대신 다음 문화권으로 떨어진다). 모르는 칸은 로드 오류이고, 쓰기는 키 사전 순이라 diff 가 작습니다.
  */

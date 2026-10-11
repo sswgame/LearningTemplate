@@ -292,7 +292,7 @@ SW_TEST_CASE( GameDirectorTest, RegisteredDirectorRidesTheSnapshot )
 
     SW_ASSERT_TRUE( instance.restoreSnapshot( snapshot ) );
     pManager->mergePendingAdds();
-    pManager->tick( 1.0f / 60.0f ); // 되살린 디렉터가 시작하며(또는 다음 틱에) 지금 상태대로 다시 세운다
+    pManager->tick( 1.0f / 60.0f ); // 복원한 디렉터가 시작하며(또는 다음 틱에) 지금 상태대로 다시 세운다
     MockGameDirectorComponent* pRestored = static_cast<MockGameDirectorComponent*>( pManager->resolveComponent( handle ) );
     SW_ASSERT_NOT_NULL( pRestored );
     SW_EXPECT_EQUAL( 99, pRestored->_value );

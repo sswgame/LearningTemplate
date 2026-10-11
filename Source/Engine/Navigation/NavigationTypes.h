@@ -113,7 +113,7 @@ namespace sw
     /** @brief 내비메시 위 레이캐스트(시선) 결과입니다 — 걸을 면을 따라 곧게 가다 경계에 막힌 곳입니다. */
     struct NavRaycastHit
     {
-        float3  _position{}; ///< 막힌 곳(안 막혔으면 끝점)
+        float3  _position{}; ///< 막힌 곳(안 막혔으면 엔드포인트)
         float3  _normal{};   ///< 막은 경계의 바깥쪽 법선(XZ)
         float32 _fraction{ 1.0f };
         bool    _bHit{ false };

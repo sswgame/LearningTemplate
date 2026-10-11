@@ -217,7 +217,7 @@ namespace sw
         struct BindlessResourceRecord
         {
             RHIBufferHandle  _buffer{ 0 };
-            RHITextureHandle _texture{ 0 }; ///< UAV 등록부에서 RW 텍스처(이미지 유닛)면 0 이 아니다
+            RHITextureHandle _texture{ 0 }; ///< UAV 레지스트리에서 RW 텍스처(이미지 유닛)면 0 이 아니다
 
             /** @brief `releaseFreeListIndex` 가 "이 슬롯이 비었는가" 를 묻는 데 씁니다. */
             bool operator==( const BindlessResourceRecord& other ) const

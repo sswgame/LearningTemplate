@@ -422,7 +422,7 @@ SW_TEST_CASE( FacialAnimationTest, GazeTurnsEyesTowardTheTargetWithinTheLimit )
     const float3 turned = TestFacialAnimationInternal::getEyeForward( *pUnit, "eye.l", forwardAxis, turnedPosition );
     SW_EXPECT_TRUE( turned.dot( ( nearAim - turnedPosition ).normalize() ) > 0.9999f );
 
-    // 옆 60° — 30° 에서 멈춘다(레퍼런스 앞에서 잰다).
+    // 옆 60° — 30° 에서 멈춘다(레퍼런스 앞에서 측정한다).
     pFace->setLookAtTarget( eyePosition + restForward + side * MathUtil::tan( MathUtil::toRadian( 60.0f ) ) );
     system.evaluate( 1.0f / 60.0f );
     const float3  clamped = TestFacialAnimationInternal::getEyeForward( *pUnit, "eye.l", forwardAxis, turnedPosition );

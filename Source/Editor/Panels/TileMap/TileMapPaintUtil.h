@@ -27,7 +27,7 @@ namespace sw::editor
          * @details @p start 가 맵 밖이면 비웁니다. 재귀하지 않으므로 큰 맵에서도 스택이 넘치지 않는다.
          */
         static void collectFloodFillCells( const vector<uint64>& listCellValue, int32 width, int32 height, const int2& start, vector<int2>& outListCell );
-        /** @brief 격자 원점에서 잰 화면 위치(@p localX, @p localY)가 놓인 칸입니다. 음수 쪽도 내림이라 원점 왼쪽 · 위는 -1 칸입니다. */
+        /** @brief 격자 원점에서 측정한 화면 위치(@p localX, @p localY)가 놓인 칸입니다. 음수 쪽도 내림이라 원점 왼쪽 · 위는 -1 칸입니다. */
         static int2 findCellAt( float32 localX, float32 localY, float32 cellSize );
     };
 } // namespace sw::editor

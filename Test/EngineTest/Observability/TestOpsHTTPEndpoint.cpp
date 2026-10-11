@@ -67,7 +67,7 @@ namespace
         StreamConnectionHandle _handle{};
     };
 
-    /** @brief 루프백 망 위의 끝점 + 클라이언트 하나(한 스레드, 결정적). */
+    /** @brief 루프백 망 위의 엔드포인트 + 클라이언트 하나(한 스레드, 결정적). */
     struct OpsLoopbackRig
     {
         LoopbackStreamNetwork        _network{ 3u };
@@ -131,7 +131,7 @@ SW_TEST_CASE( OpsHTTPEndpointTest, RoutesAndStatusCodes )
     SW_EXPECT_EQUAL( OpsHTTPEndpoint::makeResponse( "POST /metrics HTTP/1.1", &metrics, &health, 0, response ), 405 );
     SW_EXPECT_EQUAL( OpsHTTPEndpoint::makeResponse( "GET /nothing HTTP/1.1", &metrics, &health, 0, response ), 404 );
     SW_EXPECT_EQUAL( OpsHTTPEndpoint::makeResponse( "garbage", &metrics, &health, 0, response ), 400 );
-    SW_EXPECT_EQUAL( OpsHTTPEndpoint::makeResponse( "GET /metrics HTTP/1.1", nullptr, &health, 0, response ), 404 ); // 등록부 없는 경로
+    SW_EXPECT_EQUAL( OpsHTTPEndpoint::makeResponse( "GET /metrics HTTP/1.1", nullptr, &health, 0, response ), 404 ); // 레지스트리 없는 경로
     const int32 store = health.registerCheck( "service_store", true );
     SW_EXPECT_EQUAL( OpsHTTPEndpoint::makeResponse( "GET /readyz HTTP/1.1", &metrics, &health, 0, response ), 503 ); // 필수 검사 미확인
     health.setCheck( store, HealthState::Ok, "" );
