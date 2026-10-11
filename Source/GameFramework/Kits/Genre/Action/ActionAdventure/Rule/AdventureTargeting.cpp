@@ -94,7 +94,7 @@ namespace sw
         }
         if ( _selector.hasTarget() && _selector.update( eye, listCandidate, deltaTime ) )
             refreshTargetPosition( listCandidate );
-        // 회피 동작은 끝날 때까지 입력을 받지 않는다(공중에서 방향을 바꾸지 못한다).
+        // 회피 동작은 끝날 때까지 입력을 받지 않는다(공중에서 방향을 바꿀 수 없다).
         if ( _evade.isActive() && _evade.tick( deltaTime ) == false )
             return _state;
         const bool bLocked  = _selector.hasTarget();
@@ -156,7 +156,7 @@ namespace sw
 
     bool AdventureTargeting::readState( Archive& archive )
     {
-        // 사본에 읽고 끝까지 맞으면 바꾼다 — 설정은 사본이 그대로 든다.
+        // 사본에 읽고 끝까지 맞으면 바꾼다. 설정은 사본이 그대로 가지고 있다.
         AdventureTargeting restored = *this;
         uint8              state    = 0;
         if ( restored._selector.readState( archive ) == false )
