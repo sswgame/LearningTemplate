@@ -18,10 +18,10 @@ namespace sw
     {
         struct CitySimulationInternal
         {
-            static constexpr uint32 kMinBuildingStateBytes = 64; ///< 건물 하나의 상태가 적어도 쓰는 바이트(개수 상한)
-            static constexpr uint32 kMinWalkerStateBytes   = 56; ///< 일꾼 하나의 상태가 적어도 쓰는 바이트(개수 상한)
+            static constexpr uint32 kMinBuildingStateBytes = 64; ///< 건물 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
+            static constexpr uint32 kMinWalkerStateBytes   = 56; ///< 일꾼 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
 
-            /** @brief 노동 순서 — 물 → 식량 사슬 → 나머지(작을수록 먼저). */
+            /** @brief 노동을 나누는 순서입니다. 물, 식량 사슬, 나머지 순이며 값이 작을수록 먼저입니다. */
             static int32 computeLaborPriority( const CityBuildingDef& def )
             {
                 if ( def._kind == CityBuildingKind::Service && def._service == CityService::Water )
@@ -38,7 +38,7 @@ namespace sw
                 return MathUtil::max( dx, dy );
             }
 
-            /** @brief 한 사람 더 받으려는 집이 바라는 물자 재고입니다(두 달치). */
+            /** @brief 한 사람 더 받으려는 집이 바라는 물자 재고를 반환합니다(두 달치). */
             static int32 computeStockTarget( int32 population, int32 goodsPerFourPeople )
             {
                 return MathUtil::max( 2, ( population + 3 ) / 4 * goodsPerFourPeople * 2 );
@@ -161,7 +161,7 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 짓기
+    // 건설
     // ------------------------------------------------------------------------------
     void CitySimulation::bindLand( LandRegistry* pLand, const int2& origin )
     {
@@ -180,7 +180,7 @@ namespace sw
         const int32 cost = _pCatalog != nullptr ? _pCatalog->getRoadCost() : 2;
         if ( _pWallet == nullptr || _pWallet->trySpend( _settings._currency, cost ) == false )
             return CityPlaceResult::NotEnoughMoney;
-        (void)_land.claimRect( x, y, x, y, false ); // 위에서 볼 수 있음을 확인했다
+        (void)_land.claimRect( x, y, x, y, false ); // 위에서 이미 확인했다
         _listTile[static_cast<size_t>( _topology.toIndex( x, y ) )]._bRoad = SW_TRUE;
         _bRoadsDirty                                                       = SW_TRUE;
         return CityPlaceResult::Ok;
@@ -209,7 +209,7 @@ namespace sw
         const CityBuildingDef* pDef = _pCatalog != nullptr ? _pCatalog->findBuilding( buildingID ) : nullptr;
         if ( pDef == nullptr )
             return CityPlaceResult::UnknownBuilding;
-        // 범위를 먼저 — 발밑 일부만 맵 밖이어도 "땅이 나쁘다" 가 아니라 "밖" 이다.
+        // 범위를 먼저 확인한다. 발밑 일부만 맵 밖이어도 "땅이 나쁘다" 가 아니라 "범위 밖" 으로 처리한다.
         if ( _topology.isRectInside( int2{ x, y }, int2{ pDef->_size, pDef->_size } ) == false )
             return CityPlaceResult::OutOfBounds;
         for ( int32 dy = 0; dy < pDef->_size; ++dy )
@@ -227,9 +227,9 @@ namespace sw
         }
         if ( _pWallet == nullptr || _pWallet->trySpend( _settings._currency, pDef->_cost ) == false )
             return CityPlaceResult::NotEnoughMoney;
-        (void)_land.claimRect( x, y, x + pDef->_size - 1, y + pDef->_size - 1, true ); // 위에서 칸마다 볼 수 있음을 확인했다
+        (void)_land.claimRect( x, y, x + pDef->_size - 1, y + pDef->_size - 1, true ); // 위에서 타일마다 확인했다
 
-        // 허문 자리를 다시 쓴다 — 칸이 가리키는 번호가 안정적이게 목록에서 지우지 않았다.
+        // 허문 슬롯을 다시 쓴다. 타일이 가리키는 번호가 바뀌지 않도록 목록에서 지우지 않는다.
         int32 index = -1;
         for ( size_t buildingIndex = 0; buildingIndex < _listBuilding.size(); ++buildingIndex )
         {
@@ -302,7 +302,7 @@ namespace sw
 
     void CitySimulation::refreshAccess( CityBuilding& building ) const
     {
-        // 둘레 한 칸 안의 도로(대각선 빼고). 집은 파라오처럼 두 칸 안이면 된다.
+        // 둘레 한 칸 안의 도로를 찾는다(대각선은 제외). 집은 파라오처럼 두 칸 안이면 된다.
         building._accessTile  = int2{ -1, -1 };
         const int32 size      = building._pDef->_size;
         const int32 reach     = building.isHouse() ? 2 : 1;
@@ -333,7 +333,7 @@ namespace sw
         {
             tile._roadComponent = -1;
         }
-        // 도로 조각마다 너비 우선 — 큐는 길 찾기와 같은 재사용 스크래치(조각 번호가 칸의 "봤다" 표시다).
+        // 도로 조각마다 너비 우선 탐색을 한다. 큐는 길 찾기와 같은 재사용 스크래치를 쓰고, 조각 번호가 타일의 "봤다" 표시를 겸한다.
         int32 component = 0;
         for ( int32 y = 0; y < _topology._height; ++y )
         {
@@ -369,7 +369,7 @@ namespace sw
             if ( building._bAlive != SW_FALSE )
                 refreshAccess( building );
         }
-        // 도로가 끊겨 지금 칸이 도로가 아닌 일꾼은 사라진다.
+        // 도로가 끊겨 지금 타일이 도로가 아닌 일꾼은 사라진다.
         for ( CityWalker& walker : _listWalker )
         {
             if ( isRoad( walker._tile._x, walker._tile._y ) == false )
@@ -396,7 +396,7 @@ namespace sw
                 {
                     if ( _topology.isInside( x, y ) == false )
                         continue;
-                    // 발밑과 바로 둘레는 다 받고 반경 끝으로 갈수록 줄어든다.
+                    // 발밑과 바로 둘레는 다 받고, 반경 끝으로 갈수록 줄어든다.
                     const int32 distance = CitySimulationInternal::computeChebyshev( int2{ x, y }, building._origin, size );
                     const int32 value    = building._pDef->_desirability * ( radius + 1 - MathUtil::max( 0, distance - 1 ) ) / ( radius + 1 );
                     CityTile&   tile     = _listTile[static_cast<size_t>( _topology.toIndex( x, y ) )];
@@ -452,7 +452,7 @@ namespace sw
                 if ( building._bAlive == SW_FALSE || building.isHouse() || CitySimulationInternal::computeLaborPriority( *building._pDef ) != priority )
                     continue;
                 const int32 needed = building._pDef->_workers;
-                // 길이 없으면 일꾼이 오지 못한다(반경 서비스 — 우물 — 는 길이 없어도 된다).
+                // 길이 없으면 일꾼이 오지 못한다. 반경 서비스(우물)는 길이 없어도 된다.
                 const bool bReachable     = building.hasRoadAccess() || building._pDef->_delivery == CityDelivery::Radius;
                 building._assignedWorkers = bReachable ? MathUtil::min( needed, remaining ) : 0;
                 remaining -= building._assignedWorkers;
@@ -476,7 +476,7 @@ namespace sw
                 {
                     if ( def._delivery == CityDelivery::Radius )
                     {
-                        // 반경 안의 집에 늘 준다(파라오의 우물).
+                        // 반경 안의 집에 항상 준다(파라오의 우물).
                         for ( CityBuilding& house : _listBuilding )
                         {
                             if ( house._bAlive != SW_FALSE && house.isHouse() &&
@@ -495,7 +495,7 @@ namespace sw
                 }
                 case CityBuildingKind::Producer:
                 {
-                    // 범람원 농장은 해마다의 범람이, 다른 땅은 반쯤의 비옥함이 만든 양을 정한다.
+                    // 범람원 농장은 해마다의 범람이, 다른 땅은 반쯤의 비옥함이 생산량을 정한다.
                     const float32 fertility = ( def._bRequiresTerrain != SW_FALSE && def._requiredTerrain == CityTerrain::Floodplain ) ? _floodFertility : 1.0f;
                     building._productionProgress += deltaTime * building._efficiency * fertility / def._productionTime;
                     if ( building._productionProgress >= 1.0f && def._listGood.empty() == false )
@@ -509,7 +509,7 @@ namespace sw
                 }
                 case CityBuildingKind::Market:
                 {
-                    // 사 오기 — 같은 도로망의 창고에서 파는 물자마다 상한의 몫까지(바자 구매인을 줄였다).
+                    // 사 오기: 같은 도로망의 창고에서 파는 물자마다 상한의 일정 비율까지 사 온다.
                     const int32 component = getRoadComponent( building._accessTile );
                     const int32 perGood   = def._listGood.empty() ? 0 : def._capacity / static_cast<int32>( def._listGood.size() );
                     for ( const hashed_string& goodID : def._listGood )
@@ -635,7 +635,7 @@ namespace sw
         outListPath.clear();
         if ( isRoad( from._x, from._y ) == false || isRoad( to._x, to._y ) == false || getRoadComponent( from ) != getRoadComponent( to ) )
             return false;
-        // 칸 표시 · 부모 · 큐는 재사용 스크래치에 — 일꾼을 내보낼 때마다 W × H 를 새로 잡지 않는다.
+        // 타일 표시, 부모, 큐는 재사용 스크래치에 둔다. 일꾼을 내보낼 때마다 W x H 를 새로 할당하지 않기 위해서다.
         const int32 goal = _topology.toIndex( to );
         _roadSearch.begin( _topology.getCellCount() );
         _roadSearch.visit( _topology.toIndex( from ), -1 );
@@ -659,7 +659,7 @@ namespace sw
             outListPath.push_back( _topology.toCell( index ) );
         }
         std::reverse( outListPath.begin(), outListPath.end() );
-        outListPath.erase( outListPath.begin() ); // 지금 칸은 빼고 다음 칸부터
+        outListPath.erase( outListPath.begin() ); // 지금 타일은 빼고 다음 타일부터 간다
         return true;
     }
 
@@ -680,7 +680,7 @@ namespace sw
 
     void CitySimulation::stepWalker( CityWalker& walker )
     {
-        // 다음 칸에 닿았다 → 그 칸에서 할 일 → 그다음 칸을 고른다.
+        // 다음 타일에 닿았으면 그 타일에서 할 일을 하고, 그다음 타일을 고른다.
         walker._previousTile = walker._tile;
         walker._tile         = walker._nextTile;
         if ( isRoad( walker._tile._x, walker._tile._y ) == false )
@@ -695,7 +695,7 @@ namespace sw
         {
             if ( walker._listPath.empty() )
             {
-                // 다 왔다 — 수레는 창고에 내리고, 돌아가는 일꾼은 집에 든다.
+                // 다 왔다. 수레는 창고에 내리고, 돌아가는 일꾼은 집에 들어간다.
                 if ( walker._kind == CityWalkerKind::Cart && walker._targetBuilding >= 0 )
                 {
                     CityBuilding& storage = _listBuilding[static_cast<size_t>( walker._targetBuilding )];
@@ -713,13 +713,13 @@ namespace sw
             return;
         }
 
-        // 돌아다니기 — 걸음을 다 쓰면 돌아간다.
+        // 돌아다니기: 걸음을 다 쓰면 돌아간다.
         if ( --walker._stepsLeft <= 0 )
         {
             startReturn( walker );
             return;
         }
-        // 갈림길 — 안 가 본 도로 중에서 씨앗 난수로 고른다(파라오의 순회 일꾼처럼). 나갈 때마다 다른 쪽으로 가서 시간이 지나면 고루 닿는다.
+        // 갈림길에서는 안 가 본 도로 중에서 시드 난수로 고른다(파라오의 순회 일꾼처럼). 나갈 때마다 다른 쪽으로 가므로 시간이 지나면 고루 닿는다.
         int2  arrCandidate[4];
         int32 candidateCount = 0;
         for ( int32 pass = 0; pass < 2 && candidateCount == 0; ++pass )
@@ -731,13 +731,13 @@ namespace sw
                     continue;
                 const bool bVisited = std::find( walker._listVisited.begin(), walker._listVisited.end(), next ) != walker._listVisited.end();
                 if ( pass == 0 && bVisited )
-                    continue; // 첫 바퀴는 안 가 본 칸만
+                    continue; // 첫 바퀴는 안 가 본 타일만 고른다
                 arrCandidate[candidateCount++] = next;
             }
         }
         int2 best = candidateCount > 0 ? arrCandidate[_random.nextInt( 0, candidateCount - 1 )] : walker._previousTile;
         if ( isRoad( best._x, best._y ) == false )
-            best = walker._tile; // 혼자 놓인 도로 칸 — 제자리
+            best = walker._tile; // 혼자 놓인 도로 타일이라 제자리에 있는다
         walker._nextTile = best;
         walker._listVisited.push_back( best );
     }
@@ -749,7 +749,7 @@ namespace sw
         if ( home._bAlive == SW_FALSE || findRoadPath( walker._tile, home._accessTile, walker._listPath ) == false )
         {
             if ( walker._tile == home._accessTile && home._bAlive != SW_FALSE )
-                walker._listPath.clear(); // 이미 집 앞
+                walker._listPath.clear(); // 이미 집 앞이다
             else
             {
                 removeWalker( walker );
@@ -793,14 +793,14 @@ namespace sw
                 }
                 if ( walker._kind != CityWalkerKind::Trader )
                     continue;
-                // 상인 — 시장 재고에서 집이 바라는 만큼(두 달치까지) 판다.
+                // 상인은 시장 재고에서 집이 바라는 만큼(두 달치까지) 판다.
                 CityBuilding& market = _listBuilding[static_cast<size_t>( walker._homeBuilding )];
                 const int32   target = CitySimulationInternal::computeStockTarget( house._population, _settings._goodsPerFourPeople );
                 for ( const hashed_string& goodID : market._pDef->_listGood )
                 {
                     const int32 want = MathUtil::min( target - house._stock.getItemCount( goodID ), market._stock.getItemCount( goodID ) );
                     if ( want > 0 )
-                        (void)market._stock.moveItemTo( house._stock, goodID, want ); // want 는 시장 재고 이하라 늘 성공한다
+                        (void)market._stock.moveItemTo( house._stock, goodID, want ); // want 는 시장 재고 이하이므로 항상 성공한다
                 }
             }
         }
@@ -843,7 +843,7 @@ namespace sw
 
     void CitySimulation::updateHouses( float32 deltaTime )
     {
-        // 사람이 오는가 — 일자리가 남거나 실업이 적고, 집에 빈 자리가 있으면.
+        // 사람이 오는 조건은 일자리가 남거나 실업이 적고, 집에 빈 자리가 있는 것이다.
         const int32 jobs = [this]()
         {
             int32 total = 0;
@@ -902,16 +902,16 @@ namespace sw
         {
             if ( house._bAlive == SW_FALSE || house.isHouse() == false || house._population <= 0 )
                 continue;
-            // 먹기 — 가진 물자마다 네 사람에 하나.
+            // 먹기: 가진 물자마다 네 사람에 하나를 먹는다.
             const int32           need = ( house._population + 3 ) / 4 * _settings._goodsPerFourPeople;
             vector<hashed_string> listGood;
             house._stock.getItemIDs( listGood );
             for ( const hashed_string& goodID : listGood )
             {
-                // 재고가 0 이면 false — 먹을 것이 없을 뿐이다
+                // 재고가 0 이면 false 를 반환한다. 먹을 것이 없을 뿐이다
                 (void)house._stock.removeItem( goodID, MathUtil::min( need, house._stock.getItemCount( goodID ) ) );
             }
-            // 세금 — 세리가 다녀간 집만.
+            // 세금: 세리가 다녀간 집만 낸다.
             const CityHouseLevelDef* pLevel = _pCatalog->findHouseLevel( house._level );
             if ( pLevel != nullptr && isHouseServed( house, CityService::Tax ) )
                 income += house._population * pLevel->_taxPerPerson;
@@ -919,7 +919,7 @@ namespace sw
         _wageDebt += static_cast<float32>( _employed ) * _settings._wagePerWorkerPerMonth;
         const int32 wages = static_cast<int32>( _wageDebt );
         _wageDebt -= static_cast<float32>( wages );
-        // 결산이 모자라면 빚이다(임금은 미룰 수 없다).
+        // 결산에서 돈이 모자라면 빚이 된다(임금은 미룰 수 없다).
         if ( _pWallet != nullptr && income > wages )
             _pWallet->add( _settings._currency, income - wages );
         else if ( _pWallet != nullptr && income < wages )
@@ -929,7 +929,7 @@ namespace sw
 
         if ( bNewYear )
         {
-            // 범람 — 해마다 다르다(40 % … 100 %). 범람원 농장의 다음 한 해를 정한다.
+            // 범람: 해마다 다르다(40 % ... 100 %). 범람원 농장의 다음 한 해 생산량을 정한다.
             _floodFertility = _random.nextRange( 0.4f, 1.0f );
             _eventBuffer.push( CityEvent{ static_cast<int32>( _floodFertility * 100.0f ), -1, CityEvent::Kind::Flood } );
         }
@@ -981,7 +981,7 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 상태 쓰기 · 읽기(핫 리로드 · 세이브)
+    // 상태 쓰기와 읽기(핫 리로드, 세이브)
     // ------------------------------------------------------------------------------
     void CitySimulation::writeState( Archive& outArchive ) const
     {
@@ -1066,7 +1066,7 @@ namespace sw
         if ( archive.isError() || width != _topology._width || height != _topology._height || _pCatalog == nullptr )
             return false;
 
-        const int32      buildingLimit = static_cast<int32>( _listTile.size() ); // 건물은 적어도 한 칸이다
+        const int32      buildingLimit = static_cast<int32>( _listTile.size() ); // 건물은 적어도 한 셀을 차지한다
         vector<CityTile> listTile( _listTile.size() );
         for ( CityTile& tile : listTile )
         {
@@ -1092,7 +1092,7 @@ namespace sw
                 return false;
             building._pDef = defID.empty() ? nullptr : _pCatalog->findBuilding( defID );
             if ( defID.empty() == false && building._pDef == nullptr )
-                return false; // 카탈로그에서 빠진 건물 — 도시를 맞출 수 없다
+                return false; // 카탈로그에서 빠진 건물이라 도시를 맞출 수 없다
             if ( building._stock.readState( archive ) == false )
                 return false;
             StateArchiveUtil::readInt2( archive, building._origin );
