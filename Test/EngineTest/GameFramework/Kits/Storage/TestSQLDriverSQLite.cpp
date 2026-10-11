@@ -34,7 +34,7 @@ namespace
         string          makeTableName( const utf8* pCaseName ) { return string( "drv_" ) + pCaseName; }
     };
 
-    /** @brief 풀 시험의 일 — 워커에서 행 하나를 넣고, 거둘 때 거둔 스레드와 결과를 적는다. */
+    /** @brief 풀 테스트의 일 — 워커에서 행 하나를 넣고, 거둘 때 거둔 스레드와 결과를 적는다. */
     class SQLPoolCountingJob final : public ISQLJob
     {
     public:

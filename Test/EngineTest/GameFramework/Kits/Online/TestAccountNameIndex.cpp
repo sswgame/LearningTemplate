@@ -13,7 +13,7 @@ using namespace sw;
 
 namespace
 {
-    /** @brief 다른 키트(친구 · 우편)의 저장소 일 모양 — run 은 저장소 스레드, 결과는 complete 뒤 시험 스레드가 본다. */
+    /** @brief 다른 키트(친구 · 우편)의 저장소 일 모양 — run 은 저장소 스레드, 결과는 complete 뒤 테스트 스레드가 본다. */
     class NameLookupWork final : public IServiceStoreWork
     {
     public:

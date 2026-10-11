@@ -118,7 +118,7 @@ Ninja는 구성이 하나뿐인 생성기라서 `ctest -C Debug` 의 `-C` 는 �
 
 **테스트 실행 파일은 모든 구성에서 `TestBin` 에 있지만, 작업 폴더는 여전히 `Bin` 입니다.** `Bin` 에 테스트 바이너리와 DXC가 섞이지 않게 출력 폴더만 나눈 것입니다.
 `TestBin` 에서 그대로 돌리면 리소스 루트를 찾지 못하고, Dev 는 `Engine.dll` 도 찾지 못합니다(Windows 로더가 작업 폴더 `Bin` 에서 찾는다).
-모듈 DLL 은 `Bin/Modules` 에 있고, 시험은 그것을 `FileUtil::getBinaryDirectory`(TestBin → Bin) 기준으로 찾습니다.
+모듈 DLL 은 `Bin/Modules` 에 있고, 테스트는 그것을 `FileUtil::getBinaryDirectory`(TestBin → Bin) 기준으로 찾습니다.
 
 ```powershell
 cd build/Ninja-Debug/Bin
@@ -313,14 +313,14 @@ $env:SW_FUZZ_ITERATIONS=20000; $env:SW_FUZZ_TRACE=1; cd build/Ninja-Debug/Bin; .
   `SW_TEST_REQUIRES_HOST` 는 `HOST_SPLIT` 으로 등록된 폴더에 있어야 효력이 있습니다. 그렇지 않으면 아무도 읽지 않아 CI가 그 스위트를 돌립니다. 이것도 `CheckTestSuites.py` 가 확인합니다.
 - **실행 파일 폴더(`Bin`)나 소스 트리에 파일을 쓰지 마세요.** 같은 `Bin` 을 쓰는 다른 프로세스와 부딪치고, 단언으로 일찍 빠지면 파일이 남습니다.
   소스 트리의 `Resource/` 에 꼭 써야 한다면 만들기 **전에** `SW_TEST_DEFER_CLEANUP` 으로 지우는 일을 걸어 둡니다(`ResourceTest.ConfigurableResourcePriorityAndDlcSupport`).
-- **시험 도우미의 실패 가능 bool 도 `[[nodiscard]]` 입니다.** `parsePpm` · `readCounters` · `createPackFile` 의 false 를 버리면 시험이 통과한 척 이어집니다.
+- **테스트 도우미의 실패 가능 bool 도 `[[nodiscard]]` 입니다.** `parsePpm` · `readCounters` · `createPackFile` 의 false 를 버리면 테스트가 통과한 척 이어집니다.
   부르는 쪽은 `SW_ASSERT_TRUE( … )` 로 받습니다. `CheckFallibleNodiscard.py` 가 `Test` 까지 봅니다.
 - **스킵은 "이 구성에 없다" 일 때만 씁니다.** 있어야 할 것이 실패하면 단언합니다. SmokeTest 는 모듈 파일이 있는지를 `isModuleBuilt` 로 보고 스킵하고,
   지어진 모듈의 `registerModule` 실패(로드 · 바인딩)는 `SW_ASSERT_TRUE_MSG` 로 실패시킵니다. 등록 실패를 스킵으로 바꾸면 회귀가 스킵 줄 하나로 지나갑니다.
 - **오브젝트는 지역 `GameObjectManager` 로 만듭니다.** 전역 활성 씬을 빌려 쓰면 테스트끼리 상태가 샙니다.
 - **`TestBin` 에서 테스트를 직접 돌리지 마세요.** 리소스 루트를 찾지 못합니다. 작업 폴더는 언제나 `Bin` 입니다.
 - **커버리지 안내 퍼징은 Linux에서만 합니다.** Windows의 `clang_rt.fuzzer` 는 정적 런타임(/MT)뿐이라 동적 런타임(/MD)인 엔진과 링크되지 않습니다. 디코더만 /MT로 떼어 돌리지 않고, 같은 코드를 Linux가 퍼징합니다.
-- **틀을 시험하려고 시험 안에서 만든 `TestRegistry` 의 결과 줄은 `(nested) ` 로 시작합니다.** `TestFrameworkTest` 는 안쪽 케이스(`GpuProbeTest.LogsError`)를 일부러 지게 만듭니다.
+- **틀을 테스트하려고 테스트 안에서 만든 `TestRegistry` 의 결과 줄은 `(nested) ` 로 시작합니다.** `TestFrameworkTest` 는 안쪽 케이스(`GpuProbeTest.LogsError`)를 일부러 지게 만듭니다.
   CI 실패 보고(`Scripts/dev/CiFailureReport.py`)는 줄 머리(`[  FAILED  ]` · `  [FAILED]`)로 실패를 고르므로, 머리가 같으면 그 조각의 진짜 실패(새니타이저 보고처럼 표시 줄이 없는 것) 대신 안쪽 줄이 보고됩니다.
 - `EditorTest` 는 Editor 소스를 손으로 나열합니다. 나열한 파일이 실제로 있는지, ImGui를 include하지 않는지는 `CheckTestSuites.py` 가 확인합니다.
 

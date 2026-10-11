@@ -22,7 +22,7 @@
 #include "TestFramework/TestFramework.h"
 
 // UIOptionsMenuTest — 옵션 메뉴(8-2): 설정 스키마 → 탭 · 행(엔진 문서 engine/ui/options.ui.xml + 행 견본 조각), 확인 카운트다운, 닫을 때 보류 값 확인,
-// 키 바인딩 창(원시 입력 · 겹침 바꾸기 · 받는 동안 UI 행동 끔), enabledWhen, 패드 탐색, 일시정지 메뉴(UI.Pause). 시험 스키마(XML 글) · 디바이스 없음(nogpu).
+// 키 바인딩 창(원시 입력 · 겹침 바꾸기 · 받는 동안 UI 행동 끔), enabledWhen, 패드 탐색, 일시정지 메뉴(UI.Pause). 테스트 스키마(XML 글) · 디바이스 없음(nogpu).
 
 namespace
 {
@@ -49,7 +49,7 @@ namespace
 </UserSettingsSchema>)";
     };
 
-    /** @brief 시험 스키마의 설정(키 바인딩 대상은 자기 입력 맵) · 입력 · UI 행동 맵을 든 UI 시스템, 그리고 엔진 옵션 메뉴입니다. */
+    /** @brief 테스트 스키마의 설정(키 바인딩 대상은 자기 입력 맵) · 입력 · UI 행동 맵을 든 UI 시스템, 그리고 엔진 옵션 메뉴입니다. */
     struct UIOptionsMenuFixture
     {
         sw::InputMap            _bindingMap; ///< 키 바인딩 설정의 대상(Jump = Space, Fire = F)

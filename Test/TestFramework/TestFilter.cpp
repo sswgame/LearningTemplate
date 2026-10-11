@@ -10,7 +10,7 @@ namespace test
         _listExcludePattern.clear();
 
         // gtest 와 같은 모양이다: 첫 `-` 앞은 고르는 패턴, 뒤는 빼는 패턴이다. 패턴 사이는 `:` 도 쉼표도 된다(`A.*:B.*-A.X` == `A.*,B.*,-A.X`).
-        // 시험 이름에는 `-` 가 없으므로 첫 `-` 가 늘 경계다.
+        // 테스트 이름에는 `-` 가 없으므로 첫 `-` 가 늘 경계다.
         const size_t     dash         = filter.find( '-' );
         const sw::string includePart  = filter.substr( 0, dash );
         const sw::string excludePart  = dash == sw::string::npos ? sw::string{} : filter.substr( dash + 1 );

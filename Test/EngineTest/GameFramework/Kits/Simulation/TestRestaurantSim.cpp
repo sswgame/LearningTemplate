@@ -81,7 +81,7 @@ namespace
         }
     };
 
-    /** @brief 시험이 함께 쓰는 카탈로그들입니다. */
+    /** @brief 테스트가 함께 쓰는 카탈로그들입니다. */
     struct RestaurantTestWorld
     {
         RestaurantCatalog _catalog;
@@ -175,7 +175,7 @@ namespace
                outTarget._reputation.readState( reader );
     }
 
-    /** @brief 시험의 뽑기 흉내가 쓰는 가중치 읽기입니다 — 실수 하나가 곧 가중치입니다. */
+    /** @brief 테스트의 뽑기 흉내가 쓰는 가중치 읽기입니다 — 실수 하나가 곧 가중치입니다. */
     float32 getRestaurantTestWeight( float32 weight )
     {
         return weight;
@@ -502,7 +502,7 @@ SW_TEST_CASE( RestaurantSimTest, FullDayClosesTheBooksDeterministically )
 /**
  * @brief [RestaurantSimTest] 손님은 (좋아하는 분류 배율 × 가격 수요) 가중치로 요리를 고른다 — 같은 씨앗 · 같은 가중치의 뽑기와 한 그릇씩 같다
  * @details 학생(Noodle 선호)에게 라멘은 1 × `_preferredWeight` 3, 오믈렛은 1 이다. 케이크는 오븐이 없어 후보가 아니다. 시뮬레이션의 난수는 손님 도착과
- *          요리 고르기에만 쓰이고 이 시험은 영업을 열지 않으므로(도착 없음), 같은 씨앗의 `GameRandom` 으로 같은 순서를 다시 뽑아 견준다.
+ *          요리 고르기에만 쓰이고 이 테스트는 영업을 열지 않으므로(도착 없음), 같은 씨앗의 `GameRandom` 으로 같은 순서를 다시 뽑아 견준다.
  */
 SW_TEST_CASE( RestaurantSimTest, CustomersPickDishesLikeTheSeededWeightedDraw )
 {

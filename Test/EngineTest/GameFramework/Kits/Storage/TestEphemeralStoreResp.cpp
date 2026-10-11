@@ -12,7 +12,7 @@
 
 // RESP 휘발성 저장 — 실제 Valkey(리눅스 · WSL) · Garnet(Windows)에 계약 여덟. 서버가 있어야 돈다(SW_TEST_RESP_URL = 공장 끝점 글).
 // 로컬: `docker run -p 6379:6379 valkey/valkey:8` 뒤 `set SW_TEST_RESP_URL=127.0.0.1:6379?prefix=t:`, Windows Garnet 은 `garnet-server --port 6380`.
-// 같은 시험이 두 서버에서 같게 돌아 명령 부분집합(GF_Server_CacheStore README)을 지킨다.
+// 같은 테스트가 두 서버에서 같게 돌아 명령 부분집합(GF_Server_CacheStore README)을 지킨다.
 
 using namespace sw;
 

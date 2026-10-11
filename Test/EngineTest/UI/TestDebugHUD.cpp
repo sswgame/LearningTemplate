@@ -1,6 +1,6 @@
 #include "pch.h"
 
-// 디버그 HUD 는 개발 도구라 Shipping 에는 없다(`SW_DEV_COMMANDS_ENABLED`) — 이 시험도 없다.
+// 디버그 HUD 는 개발 도구라 Shipping 에는 없다(`SW_DEV_COMMANDS_ENABLED`) — 이 테스트도 없다.
 
 #if !defined( SW_SHIPPING )
 

@@ -364,7 +364,7 @@ SW_TEST_CASE( OnlineMultiServerTest, WipedCacheComesBackOnTheNextPresenceRefresh
     rig._cacheDatabase.clearData(); // 캐시 서버가 다시 떴다
     const TradeClientReply lost = rig.waitTrade( rig._aliceOnA, rig._aliceOnA._trade.invite( "bob" ) );
     SW_EXPECT_EQUAL( int32( TradeResult::PeerOffline ), int32( lost._result ) );
-    rig.step( 60 ); // 다시 적기 주기(시험 1 초) 를 넘긴다
+    rig.step( 60 ); // 다시 적기 주기(테스트 1 초) 를 넘긴다
     const TradeClientReply found = rig.waitTrade( rig._aliceOnA, rig._aliceOnA._trade.invite( "bob" ) );
     SW_EXPECT_EQUAL( int32( TradeResult::Ok ), int32( found._result ) );
     SW_EXPECT_TRUE( found._snapshot.findSideIndex( bobID ) >= 0 );

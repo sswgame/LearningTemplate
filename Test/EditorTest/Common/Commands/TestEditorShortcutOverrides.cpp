@@ -12,7 +12,7 @@ using namespace sw::editor;
 
 namespace
 {
-    /** @brief 단축키 하나만 든 시험 커맨드입니다. */
+    /** @brief 단축키 하나만 든 테스트 커맨드입니다. */
     EditorCommandDesc makeCommand( const utf8* pID, const EditorCommandShortcut& shortcut )
     {
         EditorCommandDesc desc{};
@@ -84,7 +84,7 @@ SW_TEST_CASE( EditorShortcutOverridesTest, ConflictIsReportedByValidateAndFileRo
     registry.registerCommand( makeCommand( "edit.redo", { EditorCommandKey::Y, commandmodifier::kCtrl } ) );
     EditorShortcutOverrides overrides;
     overrides.setOverride( "edit.redo", { EditorCommandKey::Z, commandmodifier::kCtrl }, {}, { EditorCommandKey::Y, commandmodifier::kCtrl }, {} );
-    (void)overrides.applyTo( registry ); // 수는 위 시험이 본다
+    (void)overrides.applyTo( registry ); // 수는 위 테스트가 본다
     string report;
     SW_EXPECT_FALSE( registry.validate( report ) );
 

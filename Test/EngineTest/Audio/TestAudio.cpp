@@ -468,7 +468,7 @@ SW_TEST_CASE( AudioSystemTest, DecoderKeepsWavFormatFields )
 /**
  * @brief [AudioSystemTest] OGG Vorbis 를 16 비트 PCM 으로 푼다 — 팩 안에서도 되도록 바이트에서 푼다
  * @details Media Foundation 은 Vorbis 를 모른다. 게임 효과음(Kenney 팩)이 OGG 라 이 디코더가 없으면 재생이 조용히 실패한다.
- *          시험 자료는 `game/empty/sounds/click.ogg`(Kenney CC0)다.
+ *          테스트 자료는 `game/empty/sounds/click.ogg`(Kenney CC0)다.
  */
 SW_TEST_CASE( AudioSystemTest, OggVorbisDecodesToPcm )
 {

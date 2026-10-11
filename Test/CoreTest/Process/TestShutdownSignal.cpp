@@ -31,7 +31,7 @@ SW_TEST_CASE( ShutdownSignalTest, FirstRequestWins )
 
 /**
  * @brief [ShutdownSignalTest] OS 가 보낸 종료 신호(POSIX SIGTERM · Windows Ctrl+Break)가 프로세스를 죽이지 않고 깃발만 세운다
- * @details POSIX 는 이 프로세스에 진짜 SIGTERM 을 `raise` 한다 — 처리기를 설치하지 않으면 시험 프로세스가 죽어 이 시험이 진다.
+ * @details POSIX 는 이 프로세스에 진짜 SIGTERM 을 `raise` 한다 — 처리기를 설치하지 않으면 테스트 프로세스가 죽어 이 테스트가 진다.
  *          Windows 는 콘솔 그룹 전체(CTest 포함)로 가는 `GenerateConsoleCtrlEvent` 대신 처리기 본문을 직접 부른다.
  */
 SW_TEST_CASE( ShutdownSignalTest, TerminateSignalSetsTheFlag )

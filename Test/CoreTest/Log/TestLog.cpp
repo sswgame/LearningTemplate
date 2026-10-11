@@ -129,7 +129,7 @@ namespace
     };
 #endif // SW_DEBUG
 
-    /** @brief 아무 데도 쓰지 않고 받은 줄 수만 세는 시험용 출력 장치. */
+    /** @brief 아무 데도 쓰지 않고 받은 줄 수만 세는 테스트용 출력 장치. */
     class CountingLogOutput final : public sw::ILogOutput
     {
     public:
@@ -140,7 +140,7 @@ namespace
         uint32 _writeCount{ 0 };
     };
 
-    /** @brief 받은 줄의 완성된 글(`LogRecord::_formatted` — 파일 · 콘솔이 쓰는 그것)을 모으는 시험용 출력 장치. */
+    /** @brief 받은 줄의 완성된 글(`LogRecord::_formatted` — 파일 · 콘솔이 쓰는 그것)을 모으는 테스트용 출력 장치. */
     class CapturingLogOutput final : public sw::ILogOutput
     {
     public:
@@ -507,7 +507,7 @@ SW_TEST_CASE( LogTest, OutputsBeyondTheCapAreRejectedNotSilentlyIgnored )
     sw::AsyncLogSink logger;
     logger.initialize();
 
-    // 기본으로 콘솔·파일이 달려 있다. 남은 자리를 시험용 장치로 채우고, 한 개 더 시도한다.
+    // 기본으로 콘솔·파일이 달려 있다. 남은 자리를 테스트용 장치로 채우고, 한 개 더 시도한다.
     sw::vector<CountingLogOutput*> listAttached;
     for ( uint32 attempt = 0; attempt < 16; ++attempt )
     {

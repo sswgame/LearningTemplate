@@ -40,7 +40,7 @@ namespace
 
         /**
          * @class RecordingTask
-         * @brief 단계가 불린 순서를 적고, 기본 포즈 단계에서 첫 본을 정해진 값으로 돌리는 시험용 일입니다.
+         * @brief 단계가 불린 순서를 적고, 기본 포즈 단계에서 첫 본을 정해진 값으로 돌리는 테스트용 일입니다.
          */
         class RecordingTask final : public IAnimationPhaseTask
         {

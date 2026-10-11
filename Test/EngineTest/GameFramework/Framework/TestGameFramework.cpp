@@ -74,7 +74,7 @@ namespace
     };
 
     /**
-     * @brief `TestCustomState` 를 게임 상태로 내는 인스턴스입니다 — 스냅샷 · 세이브 · 되감기 · 변조 시험이 같이 씁니다.
+     * @brief `TestCustomState` 를 게임 상태로 내는 인스턴스입니다 — 스냅샷 · 세이브 · 되감기 · 변조 테스트가 같이 씁니다.
      * @details 상태 타입은 손으로 지은 TypeInfo 한 벌(프로세스에 하나)로 설명합니다. 직렬화 훅이 불렸는지 기록합니다.
      */
     class CustomStateGameInstance : public GameInstanceBase
@@ -171,7 +171,7 @@ namespace
         return bytes;
     }
 
-    /** @brief SAV1 시험의 받침 — 이름 · 지역 · 태그 목록 · 자리 · 분이 다 다른 리플렉션 구조체 하나입니다. */
+    /** @brief SAV1 테스트의 받침 — 이름 · 지역 · 태그 목록 · 자리 · 분이 다 다른 리플렉션 구조체 하나입니다. */
     ScheduleNpcSaveState makeSaveSlotProbe( const utf8* pID, int32 minute )
     {
         ScheduleNpcSaveState probe;
@@ -2867,7 +2867,7 @@ SW_TEST_CASE( GameFrameworkTest, SnapshotRestoreThatStopsHalfwayFails )
  */
 SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
 {
-    // 실행 설정 · 서비스 · 전역 기본값 경로는 시험이 빠져나가도 되돌린다.
+    // 실행 설정 · 서비스 · 전역 기본값 경로는 테스트가 빠져나가도 되돌린다.
     struct ScopedRunState
     {
         GameConfig   _oldConfig{ GameConfig::getActive() };

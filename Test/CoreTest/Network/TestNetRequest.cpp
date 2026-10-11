@@ -34,7 +34,7 @@ namespace
         Delegate<void( const NetResponse& )> makeCallback() { return Delegate<void( const NetResponse& )>::create<&ResponseLog::onResponse>( this ); }
     };
 
-    /** @brief 메서드 1 = 바로 메아리, 2 = 토큰을 들고 나중에(시험이 respond). 처리 횟수를 센다. */
+    /** @brief 메서드 1 = 바로 메아리, 2 = 토큰을 들고 나중에(테스트가 respond). 처리 횟수를 센다. */
     struct EchoService final : public INetRequestHandler
     {
         vector<NetRequestToken> _listDeferred{};

@@ -1,6 +1,6 @@
 /**
  * @file LocalStoreContract.h
- * @brief `ILocalStore` 계약 시험 — 메모리 · 파일 · SQLite 저장소가 같은 케이스를 같은 결과로 통과해야 합니다.
+ * @brief `ILocalStore` 계약 테스트 — 메모리 · 파일 · SQLite 저장소가 같은 케이스를 같은 결과로 통과해야 합니다.
  * @details 픽스처는 `ILocalStore& getStore()` · `ILocalSlotStorage& getStorage()`(바닥 — 저장소가 쉬는 동안 봉투를 직접 고친다) ·
  *          `test::LocalStoreTestKey& getKey()`(봉인 키 — 바꾸면 WrongKey) · `void restart()`(앞을 내리고 같은 데이터로 다시 — 다시 켠 게임)를 준다.
  *          봉인 케이스는 Engine 의 암호 제공자(OpenSSL)를 쓴다.
@@ -25,7 +25,7 @@
 
 namespace test
 {
-    /** @brief 시험의 봉인 키 — 바이트 하나로 키 전체를 채운다(바꾸면 다른 장치). */
+    /** @brief 테스트의 봉인 키 — 바이트 하나로 키 전체를 채운다(바꾸면 다른 장치). */
     class LocalStoreTestKey final : public sw::ILocalStoreKeyProvider
     {
     public:
@@ -41,7 +41,7 @@ namespace test
 
 namespace test
 {
-    /** @brief 계약 케이스 몸들입니다(시험 스레드). */
+    /** @brief 계약 케이스 몸들입니다(테스트 스레드). */
     struct LocalStoreContract
     {
         static sw::LocalSealContext makeSealContext( LocalStoreTestKey& key )

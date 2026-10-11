@@ -17,7 +17,7 @@
 namespace
 {
     /**
-     * @brief 시험 동안 활성 출력을 바꾸고, 끝나면 원래 것으로 되돌립니다.
+     * @brief 테스트 동안 활성 출력을 바꾸고, 끝나면 원래 것으로 되돌립니다.
      */
     struct ScopedActiveBackendInternal
     {
@@ -35,7 +35,7 @@ namespace
         sw::IProfilerBackend* _pPrevious;
     };
 
-    /** @brief 시험용 계측 지점 하나입니다. 매크로를 함수 안에 두어 지점이 한 번만 등록되게 합니다. */
+    /** @brief 테스트용 계측 지점 하나입니다. 매크로를 함수 안에 두어 지점이 한 번만 등록되게 합니다. */
     void runProbeScopeInternal()
     {
         SW_PROFILE_SCOPE( "ProfilerBackendTest.Probe" );
@@ -149,7 +149,7 @@ SW_TEST_CASE( ProfilerBackendTest, CounterBecomesOnePlotPointPerFrame )
 
 /**
  * @brief [ProfilerBackendTest] Tracy 출력은 뷰어 없이도 구간 · GPU 타임라인을 받는다(이 빌드에 Tracy 가 있을 때)
- * @details 소켓 너머 뷰어가 실제로 받았는지는 여기서 볼 수 없다(Tracy 는 뷰어가 붙을 때까지 큐에 쌓는다). 이 시험은 TracyClient.dll 이
+ * @details 소켓 너머 뷰어가 실제로 받았는지는 여기서 볼 수 없다(Tracy 는 뷰어가 붙을 때까지 큐에 쌓는다). 이 테스트는 TracyClient.dll 이
  *          지연 로드로 올라오고, C API 호출 순서(GPU 컨텍스트 → 구간 열기 · 시각 → 닫기 · 시각)가 클라이언트를 죽이지 않는지까지 본다.
  */
 SW_TEST_CASE( ProfilerBackendTest, TracyBackendAcceptsZonesWithoutViewer )
@@ -180,7 +180,7 @@ SW_TEST_CASE( ProfilerBackendTest, TracyBackendAcceptsZonesWithoutViewer )
 
 /**
  * @brief [ProfilerBackendTest] 이름 붙은 태스크와 스테이지 대기가 활성 출력에 구간으로 남는다
- * @details Core 의 TaskManager 는 프로파일러를 모른다 — Tracy 를 켤 때 Engine 이 꽂는 훅(`getTaskProfileHook`)을 시험이 같은 방식으로 꽂는다.
+ * @details Core 의 TaskManager 는 프로파일러를 모른다 — Tracy 를 켤 때 Engine 이 꽂는 훅(`getTaskProfileHook`)을 테스트가 같은 방식으로 꽂는다.
  */
 SW_TEST_CASE( ProfilerBackendTest, NamedTaskAndStageWaitBecomeZones )
 {

@@ -7,7 +7,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 테마파크 키트의 코스터 — 조각으로 지은 트랙의 모양(닫힘 · 좌표계), 열차 물리(에너지 보존 · 체인 · 브레이크), 시험 운행 평가(뒤집힘 · G ·
+// 테마파크 키트의 코스터 — 조각으로 지은 트랙의 모양(닫힘 · 좌표계), 열차 물리(에너지 보존 · 체인 · 브레이크), 테스트 운행 평가(뒤집힘 · G ·
 // 에어타임 · 멈춤)를 본다. 엔진 오브젝트 없이 수학만 돈다.
 
 using namespace sw;
@@ -168,7 +168,7 @@ SW_TEST_CASE( CoasterTest, LiftBrakesAndStationDriveTheTrain )
 }
 
 /**
- * @brief [CoasterTest] 루프가 있는 회로는 시험 운행에서 한 바퀴를 돌고, 뒤집힘 하나 · 바닥의 큰 양의 G · 낙하 하나를 잰다
+ * @brief [CoasterTest] 루프가 있는 회로는 테스트 운행에서 한 바퀴를 돌고, 뒤집힘 하나 · 바닥의 큰 양의 G · 낙하 하나를 잰다
  */
 SW_TEST_CASE( CoasterTest, LoopCircuitCompletesWithOneInversion )
 {

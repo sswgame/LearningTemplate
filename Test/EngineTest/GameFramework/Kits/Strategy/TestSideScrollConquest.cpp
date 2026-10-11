@@ -77,7 +77,7 @@ namespace
         return true;
     }
 
-    /** @brief 웨이브가 없는 카탈로그(부대 · 공성만 보는 시험)입니다. */
+    /** @brief 웨이브가 없는 카탈로그(부대 · 공성만 보는 테스트)입니다. */
     void disableWaves( ConquestCatalog& catalog )
     {
         ConquestRules rules = catalog.getRules();
@@ -233,11 +233,11 @@ SW_TEST_CASE( SideScrollConquestTest, MoraleNearTheCommanderAndWallsChangeDamage
     ConquestWorld nearWorld;
     nearWorld.initialize( &catalog );
     const int32 nearSpear = nearWorld.spawnUnit( "spearman", ConquestTeam::Player, 4.0f, ConquestOrder::Hold );
-    (void)nearWorld.spawnUnit( "guard", ConquestTeam::Enemy, 4.5f, ConquestOrder::Hold ); // 시험 준비 — 결과는 아래 단언이 전투 결과로 확인한다
+    (void)nearWorld.spawnUnit( "guard", ConquestTeam::Enemy, 4.5f, ConquestOrder::Hold ); // 테스트 준비 — 결과는 아래 단언이 전투 결과로 확인한다
     ConquestWorld farWorld;
     farWorld.initialize( &catalog );
     const int32 farSpear = farWorld.spawnUnit( "spearman", ConquestTeam::Player, 20.0f, ConquestOrder::Hold );
-    (void)farWorld.spawnUnit( "guard", ConquestTeam::Enemy, 20.5f, ConquestOrder::Hold ); // 시험 준비 — 결과는 아래 단언이 전투 결과로 확인한다
+    (void)farWorld.spawnUnit( "guard", ConquestTeam::Enemy, 20.5f, ConquestOrder::Hold ); // 테스트 준비 — 결과는 아래 단언이 전투 결과로 확인한다
     runWorld( nearWorld, 3.0f );
     runWorld( farWorld, 3.0f );
     const float32 nearDealt = nearWorld.findUnit( nearSpear )->_damageDealt;
@@ -253,7 +253,7 @@ SW_TEST_CASE( SideScrollConquestTest, MoraleNearTheCommanderAndWallsChangeDamage
     ConquestWorld flatWorld;
     flatWorld.initialize( &flatCatalog );
     const int32 flatSpear = flatWorld.spawnUnit( "spearman", ConquestTeam::Player, 4.0f, ConquestOrder::Hold );
-    (void)flatWorld.spawnUnit( "guard", ConquestTeam::Enemy, 4.5f, ConquestOrder::Hold ); // 시험 준비 — 결과는 아래 단언이 전투 결과로 확인한다
+    (void)flatWorld.spawnUnit( "guard", ConquestTeam::Enemy, 4.5f, ConquestOrder::Hold ); // 테스트 준비 — 결과는 아래 단언이 전투 결과로 확인한다
     runWorld( flatWorld, 3.0f );
     SW_EXPECT_NEAR_EQUAL( farDealt, flatWorld.findUnit( flatSpear )->_damageDealt, 1.0e-3f );
 
@@ -293,10 +293,10 @@ SW_TEST_CASE( SideScrollConquestTest, GatesBlockRamsBreachLaddersBypassAndCaptur
     // 충차가 성문(그다음 성벽)을 부수고 기병이 수비대를 쓸면 점령 — 적 거점이 없으니 승리.
     ConquestWorld siege;
     siege.initialize( &catalog );
-    (void)siege.spawnUnit( "ram", ConquestTeam::Player, 50.0f, ConquestOrder::Charge ); // 시험 준비 — 결과는 아래 단언이 전투 결과로 확인한다
+    (void)siege.spawnUnit( "ram", ConquestTeam::Player, 50.0f, ConquestOrder::Charge ); // 테스트 준비 — 결과는 아래 단언이 전투 결과로 확인한다
     for ( int32 index = 0; index < 4; ++index )
     {
-        (void)siege.spawnUnit( "cavalry", ConquestTeam::Player, 45.0f - static_cast<float32>( index ), ConquestOrder::Charge ); // 시험 준비 — 아래 단언이 본다
+        (void)siege.spawnUnit( "cavalry", ConquestTeam::Player, 45.0f - static_cast<float32>( index ), ConquestOrder::Charge ); // 테스트 준비 — 아래 단언이 본다
     }
     vector<ConquestEvent> listEvent;
     for ( int32 second = 0; second < 90 && siege.isVictory() == false; ++second )
@@ -369,7 +369,7 @@ SW_TEST_CASE( SideScrollConquestTest, SameInputsGiveTheSameBattle )
         (void)pWorld->placeBuilding( "barracks", "home" );
         (void)pWorld->trainUnit( 0, "spearman" );
         (void)pWorld->trainUnit( 0, "archer" );
-        (void)pWorld->spawnUnit( "ram", ConquestTeam::Player, 10.0f, ConquestOrder::Charge ); // 시험 준비 — 결과는 아래 단언이 전투 결과로 확인한다
+        (void)pWorld->spawnUnit( "ram", ConquestTeam::Player, 10.0f, ConquestOrder::Charge ); // 테스트 준비 — 결과는 아래 단언이 전투 결과로 확인한다
         pWorld->setCommanderMove( 1.0f );
     }
     for ( int32 frame = 0; frame < 400; ++frame )
@@ -421,14 +421,14 @@ SW_TEST_CASE( SideScrollConquestTest, AttackRateFollowsTheIntervalNotTheStep )
     ConquestWorld unitWorld;
     unitWorld.initialize( &catalog );
     const int32 spear = unitWorld.spawnUnit( "spearman", ConquestTeam::Player, 20.0f, ConquestOrder::Hold );
-    (void)unitWorld.spawnUnit( "guard", ConquestTeam::Enemy, 20.5f, ConquestOrder::Hold ); // 시험 준비 — 결과는 아래 단언이 전투 결과로 확인한다
+    (void)unitWorld.spawnUnit( "guard", ConquestTeam::Enemy, 20.5f, ConquestOrder::Hold ); // 테스트 준비 — 결과는 아래 단언이 전투 결과로 확인한다
     runWorld( unitWorld, seconds );
     SW_EXPECT_NEAR_EQUAL( design, unitWorld.findUnit( spear )->_damageDealt / 5.0f, 1.0f );
 
     // 지휘관 — 바로 앞의 과녁을 친다(지휘관 피해 10). 요새의 수비대(60)는 세지 않는다.
     ConquestWorld commanderWorld;
     commanderWorld.initialize( &catalog );
-    // 시험 준비 — 결과는 아래 단언이 전투 결과로 확인한다
+    // 테스트 준비 — 결과는 아래 단언이 전투 결과로 확인한다
     (void)commanderWorld.spawnUnit( "guard", ConquestTeam::Enemy, commanderWorld.getCommander()._x + 1.0f, ConquestOrder::Hold );
     runWorld( commanderWorld, seconds );
     float32 guardLoss = 0.0f;
@@ -455,7 +455,7 @@ SW_TEST_CASE( SideScrollConquestTest, StateRoundTripContinuesTheSameWar )
     SW_EXPECT_TRUE( world.assignWorkers( 1, 2 ) == ConquestResult::Ok );
     SW_EXPECT_TRUE( world.trainUnit( 0, "spearman" ) == ConquestResult::Ok );
     SW_EXPECT_TRUE( world.trainUnit( 0, "archer" ) == ConquestResult::Ok );
-    (void)world.spawnUnit( "ram", ConquestTeam::Player, 10.0f, ConquestOrder::Charge ); // 시험 준비 — 결과는 아래 단언이 전투 결과로 확인한다
+    (void)world.spawnUnit( "ram", ConquestTeam::Player, 10.0f, ConquestOrder::Charge ); // 테스트 준비 — 결과는 아래 단언이 전투 결과로 확인한다
     world.setCommanderMove( 1.0f );
     for ( int32 frame = 0; frame < 100; ++frame )
     {

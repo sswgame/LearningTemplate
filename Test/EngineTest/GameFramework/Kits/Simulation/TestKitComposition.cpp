@@ -1,6 +1,6 @@
 /**
  * @file TestKitComposition.cpp
- * @brief 장르 키트 둘을 한 씬 · 한 공유 상태에 섞는 조립 시험입니다 — Farming + CreatureLife(틱 순서 · 키트 사이 흐름), RTS + CityBuilder(한 땅 · 한 지갑 · 한 시계),
+ * @brief 장르 키트 둘을 한 씬 · 한 공유 상태에 섞는 조립 테스트입니다 — Farming + CreatureLife(틱 순서 · 키트 사이 흐름), RTS + CityBuilder(한 땅 · 한 지갑 · 한 시계),
  *        둘 다 다른 실행의 세이브 · 핫 리로드 왕복.
  * @details 밭이 순무를 키워 팔면 번 돈이 공유 지갑에 들고, 마을이 같은 틱에 그 돈으로 과수원을 심어 생물의 부탁(공유 일지)이 끝난다.
  *          공유 상태(`GameStateComponent`)와 두 디렉터가 한 오브젝트에 그 순서로 붙어 시계 → 밭 → 마을 순서로 매 틱 돈다.
@@ -38,7 +38,7 @@
 
 namespace sw
 {
-    /** @brief 조립 시험의 카탈로그입니다 — 디렉터는 되살릴 때 새로 서므로 포인터를 들지 않고 여기서 얻는다(게임에서는 게임 인스턴스가 로컬 서비스로 든다). */
+    /** @brief 조립 테스트의 카탈로그입니다 — 디렉터는 되살릴 때 새로 서므로 포인터를 들지 않고 여기서 얻는다(게임에서는 게임 인스턴스가 로컬 서비스로 든다). */
     struct KitCompositionCatalogs
     {
         static constexpr const utf8* kCropXML       = R"(
@@ -357,7 +357,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 둘째 조립 시험의 카탈로그입니다(디렉터는 되살릴 때 새로 서므로 포인터를 들지 않고 여기서 얻는다). */
+    /** @brief 둘째 조립 테스트의 카탈로그입니다(디렉터는 되살릴 때 새로 서므로 포인터를 들지 않고 여기서 얻는다). */
     struct LandCompositionCatalogs
     {
         static constexpr const utf8* kCityXML          = R"(

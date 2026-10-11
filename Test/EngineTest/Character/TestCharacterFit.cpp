@@ -108,7 +108,7 @@ namespace
             return minY;
         }
 
-        /** @brief 사용자 연산 — 안쪽 정점을 법선으로 `amount` 만큼 부풀린다(이름으로 표에서 고르는지 보는 시험용). */
+        /** @brief 사용자 연산 — 안쪽 정점을 법선으로 `amount` 만큼 부풀린다(이름으로 표에서 고르는지 보는 테스트용). */
         class InflateOperator final : public IFitOperator
         {
         public:

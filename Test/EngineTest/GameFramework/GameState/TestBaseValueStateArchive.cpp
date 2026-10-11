@@ -1,6 +1,6 @@
 /**
  * @file TestBaseValueStateArchive.cpp
- * @brief 키트가 품는 기반 값 타입(타이머 · 게이지 · 체력 · 차례 · 무기 · 기술 · 이동기 …)의 상태 바이트 왕복 시험입니다.
+ * @brief 키트가 품는 기반 값 타입(타이머 · 게이지 · 체력 · 차례 · 무기 · 기술 · 이동기 …)의 상태 바이트 왕복 테스트입니다.
  * @details 타입마다 한 사례 — 움직인 뒤 쓰고, 새 객체에 읽고, 둘을 같은 걸음만큼 더 돌려 바이트가 같은지 봅니다.
  */
 #include "pch.h"
@@ -174,7 +174,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, VitalityReplaysAfterRestore )
     VitalitySettings settings;
     settings._maxShield = 50.0f;
     Vitality vitality( settings );
-    (void)vitality.applyDamage( 30.0f, 5.0f, 7 ); // 시험 준비 — 피해 결과값은 보지 않고 되살린 상태를 비교한다
+    (void)vitality.applyDamage( 30.0f, 5.0f, 7 ); // 테스트 준비 — 피해 결과값은 보지 않고 되살린 상태를 비교한다
     (void)vitality.addShield( 12.0f );
     vitality.setInvulnerable( 0.25f );
     vitality.update( 0.1f );
@@ -514,7 +514,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, ElementGridReplaysAfterRestore )
         }
     }
     grid.setWind( int2{ 1, 0 } );
-    (void)grid.applyStimulus( int2{ 0, 1 }, table.findStimulus( "Fire" ) ); // 시험 준비 — 바뀐 칸 수는 보지 않고 되살린 격자를 비교한다
+    (void)grid.applyStimulus( int2{ 0, 1 }, table.findStimulus( "Fire" ) ); // 테스트 준비 — 바뀐 칸 수는 보지 않고 되살린 격자를 비교한다
     (void)grid.update( 0.37f );
 
     // 크기가 다른 격자는 거절하고 그대로다.

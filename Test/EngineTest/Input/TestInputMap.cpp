@@ -836,7 +836,7 @@ SW_TEST_CASE( InputMapTest, UserBindingsRejectOutOfRangePadAndModifierMask )
  * @brief [InputMapTest] 유저 바인딩은 저장 쪽이 쓰는 모양만 읽는다 — 종류(kind)가 없거나 단일 슬롯의 특성 이름이 다르면 버리고 알린다
  * @details 저장 쪽(`saveUserBindings`)은 늘 `kind` 를 쓰고, 단일 슬롯은 `source="key" key=…` · `source="mouse" button=…` ·
  *          `source="gamepad" code=… pad=…` 이다. 읽는 쪽이 `kind` 없는 바인딩과 `source="key" code=…` 같은 저장하지 않는 모양까지
- *          짐작해 읽으면, 저장 형식이 바뀌어도 시험이 그 차이를 보지 못한다.
+ *          짐작해 읽으면, 저장 형식이 바뀌어도 테스트가 그 차이를 보지 못한다.
  */
 SW_TEST_CASE( InputMapTest, UserBindingsReadOnlyTheSavedShape )
 {
@@ -1316,7 +1316,7 @@ SW_TEST_CASE( InputMapTest, RebindWithResolutionKeepsTheBindingKind )
 /**
  * @brief [InputMapTest] 통합 InputMap 은 입력 프레임이 갱신한다 — 따로 update() 를 부르지 않아도 액션이 한 번 발동한다
  * @details 입력 프레임이 통합 맵을 갱신하지 않으면 실제 루프에서 게임플레이 맵(`PlayerController` 가 읽는 맵)의 액션이 하나도 발동하지 않는다.
- *          시험이 `beginFrame` 뒤에 손으로 `update` 를 부르면 그것을 못 잡는다.
+ *          테스트가 `beginFrame` 뒤에 손으로 `update` 를 부르면 그것을 못 잡는다.
  */
 SW_TEST_CASE( InputMapTest, IntegratedMapIsUpdatedByTheInputFrame )
 {

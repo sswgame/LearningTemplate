@@ -26,7 +26,7 @@
 
 namespace
 {
-    /** @brief 이름의 프로퍼티(별칭 포함)에 값을 넣습니다. 세터가 없는 칸을 시험이 정할 때 씁니다. */
+    /** @brief 이름의 프로퍼티(별칭 포함)에 값을 넣습니다. 세터가 없는 칸을 테스트가 정할 때 씁니다. */
     template <typename TComponent, typename T>
     bool setReflectedValue( TComponent* pComponent, const utf8* pName, const T& value )
     {

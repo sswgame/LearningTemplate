@@ -56,7 +56,7 @@ namespace
     /** @brief 지역 레지스트리의 케이스 본문 — 예상 밖 Error 를 하나 남깁니다. */
     void logProbeError() { SW_LOG_ERROR( "Deliberate probe error (TestFrameworkTest.HostSuiteCaseFailsOnUnexpectedErrorLog)" ); }
 
-    /** @brief 지역 레지스트리의 케이스 본문 — 방어 시험 구간 안에서 Error 를 남깁니다. */
+    /** @brief 지역 레지스트리의 케이스 본문 — 방어 테스트 구간 안에서 Error 를 남깁니다. */
     void logProbeErrorInDefensiveScope()
     {
         SW_TEST_DEFENSIVE_SCOPE( "probe error inside a defensive scope" );
@@ -354,7 +354,7 @@ SW_TEST_CASE( TestFrameworkTest, FilterReadsColonCommaAndDash )
 
 /**
  * @brief [TestFrameworkTest] 호스트 스위트 케이스는 예상 밖 Error 로그 하나로 진다 — 방어 구간의 Error 와 일반 스위트는 그대로 통과
- * @details GPU 시험은 검증 레이어 · 드라이버 오류를 Error 로그로만 남기고 단언은 통과할 수 있다(Vulkan 구간이 `[Error]` 17 줄을 찍으며
+ * @details GPU 테스트는 검증 레이어 · 드라이버 오류를 Error 로그로만 남기고 단언은 통과할 수 있다(Vulkan 구간이 `[Error]` 17 줄을 찍으며
  *          통과한 적이 있다). 이 케이스는 일부러 Error 한 줄을 남기므로 그 줄이 이 실행의 출력에 보인다.
  */
 SW_TEST_CASE( TestFrameworkTest, HostSuiteCaseFailsOnUnexpectedErrorLog )
@@ -402,7 +402,7 @@ SW_TEST_CASE( TestFrameworkTest, KnownErrorLogIsToleratedOnlyForItsSuiteAndText 
 
 /**
  * @brief [TestFrameworkTest] 단언 가로채기 안에서는 SW_ASSERT · SW_LOG_ASSERT 가 멈추지 않고 세어지며, 그 뒤 줄이 돈다
- * @details Debug 의 단언은 디버거에서 멈춘다 — 가로채기가 없으면 단언이 걸리는 입력을 시험할 수 없다. 겹쳐 건 가로채기도 바깥이 끝날 때까지 유지된다.
+ * @details Debug 의 단언은 디버거에서 멈춘다 — 가로채기가 없으면 단언이 걸리는 입력을 테스트할 수 없다. 겹쳐 건 가로채기도 바깥이 끝날 때까지 유지된다.
  */
 SW_TEST_CASE( TestFrameworkTest, AssertCaptureCountsInsteadOfBreaking )
 {

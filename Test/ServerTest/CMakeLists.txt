@@ -16,7 +16,7 @@ sw_addTestExecutable(ServerTest
 	TIMEOUT
 		180
 )
-# 시험은 빌드된 Server 를 띄운다 — 옆에 서 있어야 한다(Dev 는 게임 모듈도).
+# 테스트는 빌드된 Server 를 띄운다 — 옆에 서 있어야 한다(Dev 는 게임 모듈도).
 add_dependencies(ServerTest Server)
 if(TARGET SWGame)
 	add_dependencies(ServerTest SWGame)

@@ -1212,7 +1212,7 @@ SW_TEST_CASE( GameObjectTest, DeferredPrimaryRemovalRefreshesActive )
     sw::GameObject*       pObj      = manager.createGameObject( sw::hashed_string( "TwoSceneComps" ) );
     sw::SceneComponent*   pPrimary  = pObj->addComponent<sw::SceneComponent>();
     sw::SceneComponent*   pSecond   = pObj->addComponent<sw::SceneComponent>();
-    pSecond->detachFromComponent(); // 둘째 씬 컴포넌트는 붙이는 순간 primary 아래로 간다 — 이 시험은 일부러 뗀 루트를 본다
+    pSecond->detachFromComponent(); // 둘째 씬 컴포넌트는 붙이는 순간 primary 아래로 간다 — 이 테스트는 일부러 뗀 루트를 본다
     SW_ASSERT_TRUE( pPrimary->attachToComponent( pParentSc ) );
     pParent->setActive( false );
     SW_ASSERT_FALSE( pObj->isActiveInHierarchy() );
@@ -2476,7 +2476,7 @@ SW_TEST_CASE( GameObjectTest, ChaoticHierarchyMutationAndActiveToggleStressTest 
         pObj->addComponent<sw::MockMeshComponent>();
 
         if ( index > 0 && ( index % 3 != 0 ) )
-            (void)pObj->attachToParent( listAliveObject[index / 2] ); // 시험 준비 — 실패해도 루트로 남을 뿐 시험 대상이 아니다
+            (void)pObj->attachToParent( listAliveObject[index / 2] ); // 테스트 준비 — 실패해도 루트로 남을 뿐 테스트 대상이 아니다
 
         listAliveObject.push_back( pObj );
     }
@@ -2499,7 +2499,7 @@ SW_TEST_CASE( GameObjectTest, ChaoticHierarchyMutationAndActiveToggleStressTest 
             {
                 // 1) 부모 재지정 시도 (A -> B)
                 if ( pObjA != pObjB )
-                    (void)pObjA->attachToParent( pObjB ); // 무작위 조작 — 순환 등의 거절도 시험하는 경로다
+                    (void)pObjA->attachToParent( pObjB ); // 무작위 조작 — 순환 등의 거절도 테스트하는 경로다
             }
             else if ( actionType == 1 )
             {
@@ -2812,7 +2812,7 @@ SW_TEST_CASE( GameObjectTest, RestoredLargeObjectIDsStayOnTheLockFreeTable )
     SW_EXPECT_EQUAL( pRestored, manager.findGameObjectByID( kLargeID ) );
     SW_EXPECT_EQUAL( 0u, manager.getOverflowObjectCount() );
 
-    // 발급은 그 뒤로 이어지고(발급은 프로세스 전체라 다른 시험이 더 멀리 갔을 수 있다), 역시 표에 있다.
+    // 발급은 그 뒤로 이어지고(발급은 프로세스 전체라 다른 테스트가 더 멀리 갔을 수 있다), 역시 표에 있다.
     sw::GameObject* pNext = manager.createGameObject( sw::hashed_string( "Next" ) );
     SW_ASSERT_NOT_NULL( pNext );
     SW_EXPECT_TRUE( pNext->getObjectID() > kLargeID );

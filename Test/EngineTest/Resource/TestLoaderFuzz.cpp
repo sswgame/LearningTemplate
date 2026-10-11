@@ -209,7 +209,7 @@ namespace
 
 /**
  * @brief [LoaderFuzzTest] 모든 로더가 변이한 입력에 죽지도 단언하지도 않는다(씨앗 그대로도 포함)
- * @details 대상 표는 `LoaderFuzzTargets.cpp` 다. 씨앗을 하나도 못 모은 대상은 시험이 진다(대상이 아무것도 안 먹은 것이다).
+ * @details 대상 표는 `LoaderFuzzTargets.cpp` 다. 씨앗을 하나도 못 모은 대상은 테스트가 진다(대상이 아무것도 안 먹은 것이다).
  *          단언은 `ScopedAssertCapture` 로 세고, 걸리면 대상 이름과 회차를 알린다 — 바깥 데이터로 걸리는 단언은 결함이다(입력 검증이 먼저 막아야 한다).
  */
 SW_TEST_CASE( LoaderFuzzTest, EveryLoaderSurvivesMutatedInput )
@@ -256,7 +256,7 @@ SW_TEST_CASE( LoaderFuzzTest, EveryLoaderSurvivesMutatedInput )
                 std::printf( "[Fuzz] %s seed %zu iteration %" PRIu64 " size %zu\n", target._pName, seedIndex, static_cast<uint64>( iteration ),
                              input.size() );
                 std::fflush( stdout );
-                // 죽은 입력을 그대로 남긴다 — 프로세스가 죽어도 파일은 남는다(회귀 시험의 재료).
+                // 죽은 입력을 그대로 남긴다 — 프로세스가 죽어도 파일은 남는다(회귀 테스트의 재료).
                 (void)FileUtil::writeFile( test::makeFuzzTracePath( target._pName ), input.data(), input.size() );
             }
             target._pfnRun( input.data(), input.size() );

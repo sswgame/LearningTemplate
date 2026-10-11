@@ -15,7 +15,7 @@ namespace
 {
     constexpr float32 kStep3D = 1.0f / 60.0f;
 
-    /** @brief 시험용 설정 — 레이어 Default(0) · Ghost(1, Default 와 부딪히지 않는다) · Solid(2), 재질 Default · Bouncy(반발 0.8) · Dead(반발 0). */
+    /** @brief 테스트용 설정 — 레이어 Default(0) · Ghost(1, Default 와 부딪히지 않는다) · Solid(2), 재질 Default · Bouncy(반발 0.8) · Dead(반발 0). */
     sw::PhysicsSettings makeSettings()
     {
         sw::PhysicsSettings settings;

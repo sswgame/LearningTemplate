@@ -15,7 +15,7 @@ using namespace sw;
 
 namespace
 {
-    /** @brief 서버 프로세스 하나의 로직 — 저장소 앞 · 캐시 앞 · 라우터 · 로컬 버스 · 디렉터리. 버스 메시지는 호스트 대신 시험이 비워 notifyChanged 로 넘긴다. */
+    /** @brief 서버 프로세스 하나의 로직 — 저장소 앞 · 캐시 앞 · 라우터 · 로컬 버스 · 디렉터리. 버스 메시지는 호스트 대신 테스트가 비워 notifyChanged 로 넘긴다. */
     struct DirectoryNode
     {
         MemoryServiceStore                _store;

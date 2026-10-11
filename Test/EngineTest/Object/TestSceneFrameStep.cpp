@@ -70,7 +70,7 @@ SW_TEST_CASE( SceneFrameStepTest, PrePhysicsTickWritesLandInTheApplyStep )
 
 namespace
 {
-    /** @brief 불릴 때마다 단계와 순번을 적는 시험 시스템입니다. 지정한 이름의 시스템을 떼어 볼 수도 있다. */
+    /** @brief 불릴 때마다 단계와 순번을 적는 테스트 시스템입니다. 지정한 이름의 시스템을 떼어 볼 수도 있다. */
     class SceneFrameStepTestSystem final : public sw::ISceneFrameSystem
     {
     public:

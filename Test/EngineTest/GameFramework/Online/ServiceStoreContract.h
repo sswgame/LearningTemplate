@@ -1,10 +1,10 @@
 /**
  * @file ServiceStoreContract.h
- * @brief `IServiceStore` 계약 시험 — 메모리 · SQL(SQLite) · SQL(PostgreSQL) 구현이 같은 케이스를 같은 결과로 통과해야 합니다.
+ * @brief `IServiceStore` 계약 테스트 — 메모리 · SQL(SQLite) · SQL(PostgreSQL) 구현이 같은 케이스를 같은 결과로 통과해야 합니다.
  * @details 스위트 파일이 픽스처(`getStore()` · `makeTableName( 케이스 이름 )`)를 주고 `SW_SERVICE_STORE_CONTRACT_SUITE( 스위트, 픽스처 )` 를 부른다.
  *          표 이름은 케이스마다 달라(`contract_<케이스>`) 한 DB 를 여러 케이스가 써도 섞이지 않는다 — 실 DB 구현은 실행마다 다른 접두를 붙인다.
- *          케이스 몸은 저장소 스레드(SQL 은 풀 워커)에서 돈다 — 거기서는 `SW_EXPECT_*` 를 부르지 않고(시험 틀의 기록은 시험 스레드 것이다)
- *          처음 어긋난 단계 번호만 적어 두고 돌아온다. 시험 스레드가 그 번호를 단언한다.
+ *          케이스 몸은 저장소 스레드(SQL 은 풀 워커)에서 돈다 — 거기서는 `SW_EXPECT_*` 를 부르지 않고(테스트 틀의 기록은 테스트 스레드 것이다)
+ *          처음 어긋난 단계 번호만 적어 두고 돌아온다. 테스트 스레드가 그 번호를 단언한다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -22,7 +22,7 @@
 
 namespace test
 {
-    /** @brief 케이스 하나의 문맥 — 표 이름과 처음 어긋난 단계입니다. 저장소 스레드가 쓰고, 일이 거둬진 뒤 시험 스레드가 읽는다. */
+    /** @brief 케이스 하나의 문맥 — 표 이름과 처음 어긋난 단계입니다. 저장소 스레드가 쓰고, 일이 거둬진 뒤 테스트 스레드가 읽는다. */
     struct ServiceStoreContractContext
     {
         sw::hashed_string _table{};
@@ -42,7 +42,7 @@ namespace test
 
 namespace test
 {
-    /** @brief 시험의 일 하나 — 함수 포인터 하나를 저장소 스레드에서 돌리고, 완료(시험 스레드)를 센다. */
+    /** @brief 테스트의 일 하나 — 함수 포인터 하나를 저장소 스레드에서 돌리고, 완료(테스트 스레드)를 센다. */
     class ServiceStoreContractWork final : public sw::IServiceStoreWork
     {
     public:
@@ -67,7 +67,7 @@ namespace test
 
 namespace test
 {
-    /** @brief 저장소 스레드의 `run` 과 시험 스레드의 `complete` 에서 본 로그 문맥을 적는 일입니다(적은 칸은 거둔 뒤 시험 스레드가 읽는다). */
+    /** @brief 저장소 스레드의 `run` 과 테스트 스레드의 `complete` 에서 본 로그 문맥을 적는 일입니다(적은 칸은 거둔 뒤 테스트 스레드가 읽는다). */
     class ServiceStoreLogContextWork final : public sw::IServiceStoreWork
     {
     public:

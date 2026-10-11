@@ -11,7 +11,7 @@
 #include "TestFramework/TestFramework.h"
 
 // Engine_Reflection — PROPERTY 의 `Units` 메타가 값이 저장된 단위와 맞는지 본다.
-// PROPERTY 의 `Units` 메타는 에디터 메타데이터라 Shipping 빌드에는 없다(`findCustomMeta` 가 늘 nullptr) — 그 규칙 시험도 없다.
+// PROPERTY 의 `Units` 메타는 에디터 메타데이터라 Shipping 빌드에는 없다(`findCustomMeta` 가 늘 nullptr) — 그 규칙 테스트도 없다.
 
 #if !defined( SW_SHIPPING )
 namespace
@@ -63,7 +63,7 @@ namespace
  */
 SW_TEST_CASE( PropertyUnitsTest, UnitsMatchHowValuesAreStored )
 {
-    // GameFramework 타입이 등록부에 있어야 이 시험이 HP 바를 본다(EngineTest 는 GameFramework 를 링크한다).
+    // GameFramework 타입이 등록부에 있어야 이 테스트가 HP 바를 본다(EngineTest 는 GameFramework 를 링크한다).
     SW_ASSERT_NOT_NULL( sw::HealthBarComponent::StaticType() );
 
     sw::vector<const sw::TypeInfo*> listType;
@@ -112,7 +112,7 @@ SW_TEST_CASE( PropertyUnitsTest, UnitsMatchHowValuesAreStored )
             }
         }
     }
-    // 규칙이 아무것도 보지 않으면 이 시험은 아무것도 지키지 않는다 — 회전 · FOV · 원뿔 각 둘 · HP 바 비율 셋이 있다.
+    // 규칙이 아무것도 보지 않으면 이 테스트는 아무것도 지키지 않는다 — 회전 · FOV · 원뿔 각 둘 · HP 바 비율 셋이 있다.
     SW_EXPECT_TRUE( unitCount >= 10 );
     SW_EXPECT_TRUE( angleCount >= 4 );
     SW_EXPECT_TRUE( ratioCount >= 3 );

@@ -27,7 +27,7 @@ using namespace sw;
 
 namespace sw
 {
-    /** @brief 맞음을 적는 컴포넌트입니다(2D 시험용). */
+    /** @brief 맞음을 적는 컴포넌트입니다(2D 테스트용). */
     class MockHitRecorder2DComponent : public Component
     {
     public:

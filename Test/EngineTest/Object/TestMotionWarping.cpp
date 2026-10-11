@@ -232,7 +232,7 @@ SW_TEST_CASE( MotionWarpingTest, LocomotionWarpingScalesRateAndTurnsLowerBody )
     SW_ASSERT_NOT_NULL( pObject );
     SkeletalAnimatorComponent* pAnimator = TestMotionWarpingInternal::addAnimator( *pObject, folder );
     SW_ASSERT_NOT_NULL( pAnimator );
-    pAnimator->setExtractRootMotion( false ); // 움직임은 시험이 직접 준다
+    pAnimator->setExtractRootMotion( false ); // 움직임은 테스트가 직접 준다
     LocomotionWarpingComponent* pLocomotion = pObject->addComponent<LocomotionWarpingComponent>();
     SW_ASSERT_NOT_NULL( pLocomotion );
     pLocomotion->setOrientationBones( {

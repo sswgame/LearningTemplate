@@ -49,7 +49,7 @@
 
 namespace sw
 {
-    /** @brief 시험용 폰 이동 — 의도의 월드 이동 × 4 m/s 로 자리를 옮긴다(물리 없음). 폰은 의도만 읽는다는 것의 가장 작은 모양이다. */
+    /** @brief 테스트용 폰 이동 — 의도의 월드 이동 × 4 m/s 로 자리를 옮긴다(물리 없음). 폰은 의도만 읽는다는 것의 가장 작은 모양이다. */
     class ControlTestMoverComponent : public Component
     {
     public:
@@ -87,7 +87,7 @@ namespace
     {
         static constexpr float32 kDeltaTime = 1.0f / 60.0f;
 
-        /** @brief 자리 · 폰(버튼 "Jump") · 시험 이동을 가진 폰 오브젝트입니다. */
+        /** @brief 자리 · 폰(버튼 "Jump") · 테스트 이동을 가진 폰 오브젝트입니다. */
         static GameObject* spawnPawn( GameObjectManager& manager, const utf8* pName, const float3& position )
         {
             GameObject*     pObject = manager.createGameObject( hashed_string( pName ) );
@@ -622,7 +622,7 @@ SW_TEST_CASE( ControlTest, IntentFileRoundTrips )
     ControlIntentHistory loaded;
     string               error;
     SW_ASSERT_TRUE_MSG( loaded.loadFromFile( path, error ), error.c_str() );
-    (void)FileUtil::tryRemoveFile( path ); // 임시 파일 정리 — 지우지 못해도 시험 결과와 무관하다
+    (void)FileUtil::tryRemoveFile( path ); // 임시 파일 정리 — 지우지 못해도 테스트 결과와 무관하다
 
     SW_ASSERT_EQUAL( 2, loaded.getTrackCount() );
     const int32 walker  = loaded.findTrack( "Walker" );

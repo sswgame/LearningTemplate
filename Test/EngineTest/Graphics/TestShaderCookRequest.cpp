@@ -305,7 +305,7 @@ SW_TEST_CASE( ShaderCookRequestTest, EveryViewModeVariantOfEveryMeshPassTypeIsRe
 
 /**
  * @brief [ShaderCookRequestTest] 쿠킹된 리플렉션 매니페스트(배포 팩에 실리는 것)가 쿠커의 요청을 모두 담는다
- * @details 위 시험들은 "요청 ⊇ 런타임이 요구하는 것" 을 본다. 여기는 "쿠킹된 것 ⊇ 요청" — 요청 규칙을 바꾸고 `App.exe --cook-shaders` 를
+ * @details 위 테스트들은 "요청 ⊇ 런타임이 요구하는 것" 을 본다. 여기는 "쿠킹된 것 ⊇ 요청" — 요청 규칙을 바꾸고 `App.exe --cook-shaders` 를
  *          빠뜨리면 커밋된 산출물에 그 조합이 없어 Shipping 이 PSO 를 못 만든다. 매니페스트 키는 쿠커의 바이너리 파일 이름이다.
  *          배포본은 고른 백엔드의 매니페스트만 실으므로 없는 백엔드 폴더는 건너뛰되, 하나는 있어야 한다.
  */
@@ -365,7 +365,7 @@ SW_TEST_CASE( ShaderCookRequestTest, CookedManifestHoldsEveryRequest )
 
 /**
  * @brief [ShaderCookRequestTest] 커밋된 `shaders/bin/<rhi>` 폴더에는 지금 요청이 만드는 바이너리만 있다
- * @details 위 시험의 반대쪽 — "쿠킹된 것 ⊆ 요청". 쿠커는 매니페스트를 요청으로 새로 쓰지만 요청에서 빠진 바이너리 파일은 지우지 않는다.
+ * @details 위 테스트의 반대쪽 — "쿠킹된 것 ⊆ 요청". 쿠커는 매니페스트를 요청으로 새로 쓰지만 요청에서 빠진 바이너리 파일은 지우지 않는다.
  *          셰이더나 쿠킹할 목록 줄을 지우고 그 바이너리를 남기면 매니페스트에 없는 파일이 배포 팩에 실린다.
  */
 SW_TEST_CASE( ShaderCookRequestTest, CookedFoldersHoldOnlyRequestedBinaries )
@@ -439,7 +439,7 @@ SW_TEST_CASE( ShaderCookRequestTest, CookedFoldersHoldOnlyRequestedBinaries )
 /**
  * @brief [ShaderCookRequestTest] 머티리얼이 런타임에 바꿀 수 있는 정적 스위치(`bShaderFeature="0"`)의 모든 조합을, 씬 메시 패스마다 요청한다
  * @details 런타임은 `Material::setStaticSwitch` 로 바뀐 define 목록으로 변형 PSO 를 만든다(`createMaterialPSOVariant` — 패스 define ∪ 머티리얼 define).
- *          쿠커가 에셋 상태만 쿠킹하면 Dev 는 실시간 컴파일로 그려지고 Shipping 에서만 바이너리가 없다(툰 TwoSided 를 켠 시험이 Shipping hostgpu 에서만 졌다).
+ *          쿠커가 에셋 상태만 쿠킹하면 Dev 는 실시간 컴파일로 그려지고 Shipping 에서만 바이너리가 없다(툰 TwoSided 를 켠 테스트가 Shipping hostgpu 에서만 졌다).
  *          조합은 쿠커와 따로 런타임 API(`setStaticSwitch` → `getCachedShaderDefines`)로 만들고, 패스마다 런타임과 같은 합집합을 기대한다.
  *          `bShaderFeature="1"` 스위치는 에셋 상태만 쿠킹하는 계약이라 보지 않는다.
  */
@@ -506,6 +506,6 @@ SW_TEST_CASE( ShaderCookRequestTest, EveryRuntimeStaticSwitchCombinationIsReques
             }
         }
     }
-    // 툰 머티리얼(engine/materials/toon.material)의 Outline · TwoSided 가 런타임 스위치다 — 하나도 없으면 이 시험은 눈이 멀었다.
+    // 툰 머티리얼(engine/materials/toon.material)의 Outline · TwoSided 가 런타임 스위치다 — 하나도 없으면 이 테스트는 눈이 멀었다.
     SW_EXPECT_TRUE_MSG( runtimeComboCount >= 4, "런타임 정적 스위치를 가진 머티리얼이 없다 — 이 시험이 아무것도 보지 않는다" );
 }

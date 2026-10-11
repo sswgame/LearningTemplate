@@ -32,7 +32,7 @@ namespace
 
     constexpr uint32 kMMOObserverID = 1;
 
-    /** @brief 시험이 틱 사이에 바꾸는 서버 쪽 엔티티 표입니다. 표의 엔티티를 틱마다 `setEntity` 하고, 빠진 것은 지운다. */
+    /** @brief 테스트가 틱 사이에 바꾸는 서버 쪽 엔티티 표입니다. 표의 엔티티를 틱마다 `setEntity` 하고, 빠진 것은 지운다. */
     struct MMOTable
     {
         vector<MMOEntity>     _listEntity{};

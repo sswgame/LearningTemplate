@@ -52,7 +52,7 @@ namespace
 	</_listEvent>
 </AudioEventLibrary>)";
 
-        /** @brief 이 시험의 그래프 · 라이브러리 · 직류 클립(스테레오 1.0, 길이 1 초 0.5)을 올린 엔진입니다. */
+        /** @brief 이 테스트의 그래프 · 라이브러리 · 직류 클립(스테레오 1.0, 길이 1 초 0.5)을 올린 엔진입니다. */
         static bool initializeEngine( sw::AudioEngine& engine )
         {
             sw::AudioMixerDesc mixerDesc;

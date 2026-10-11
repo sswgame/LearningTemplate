@@ -1,7 +1,7 @@
 /**
  * @file TestGameObjectMocks.h
  * @brief GameObject·Component 테스트가 함께 쓰는 모의 컴포넌트들.
- * @details 목을 이 헤더에 두므로 GameObject·Component 시험 파일을 주제별로 나눌 수 있다.
+ * @details 목을 이 헤더에 두므로 GameObject·Component 테스트 파일을 주제별로 나눌 수 있다.
  *
  *          **이 목들은 코드젠을 쓰지 않는다.** `REFLECT_BODY()` 가 선언만 하고 `StaticType()` 은 아래에서 손으로
  *          정의한다 — 테스트 로컬 `TypeInfo` 를 만들어 쓰기 때문이다(RTTI 없음). 그래서 그 `TypeInfo` 캐시는
@@ -83,7 +83,7 @@ namespace sw
         bool               _bTickStopVisibleInTick{ false };   ///< 끈 **직후**(아직 틱 안) 꺼진 것이 보였는지
         /**
          * @brief 설정되면 틱이 그 컴포넌트의 서브틱을 바꾼다 — 3 을 등록하고, 1 에 `_tickSubTickPrerequisite` 를 선행 조건으로 더하고, 1 을 끄고, 2 를 해제한다.
-         * @details 시험이 1 · 2 를 미리 등록해 둔다. 바꾼 **직후**(아직 틱 안) 목록에 보였는지를 하나씩 적는다 — 미뤘으면 넷 다 아직 안 보인다.
+         * @details 테스트가 1 · 2 를 미리 등록해 둔다. 바꾼 **직후**(아직 틱 안) 목록에 보였는지를 하나씩 적는다 — 미뤘으면 넷 다 아직 안 보인다.
          *          원자 마스크는 바로 바뀌어야 한다(끈 서브틱 · 해제한 서브틱은 이번 틱의 남은 항목에서 곧바로 빠진다) — 그것도 적는다.
          */
         Component*    _pTickSubTickTarget{ nullptr };
@@ -134,9 +134,9 @@ namespace sw
             if ( _pTickDestroyManager != nullptr && _pTickDestroyObject != nullptr )
                 _pTickDestroyManager->destroyObject( _pTickDestroyObject );
             if ( _pTickRemoveOwner != nullptr && _pTickRemoveComp != nullptr )
-                (void)_pTickRemoveOwner->removeComponent( _pTickRemoveComp ); // 지워졌는지는 시험이 본다
+                (void)_pTickRemoveOwner->removeComponent( _pTickRemoveComp ); // 지워졌는지는 테스트가 본다
             if ( _pTickAttachChild != nullptr && _pTickAttachParent != nullptr )
-                (void)_pTickAttachChild->attachToComponent( _pTickAttachParent ); // 붙었는지는 시험이 계층으로 본다
+                (void)_pTickAttachChild->attachToComponent( _pTickAttachParent ); // 붙었는지는 테스트가 계층으로 본다
             if ( _pTickClearOwner != nullptr )
             {
                 _pTickClearOwner->clearComponents();
@@ -158,13 +158,13 @@ namespace sw
             {
                 _pTickSubTickTarget->registerSubTick( TickGroup::PostPhysics, 3 );
                 _bTickSubTickAddVisibleInTick = ( findSubTick( _pTickSubTickTarget, 3 ) != nullptr );
-                (void)_pTickSubTickTarget->addSubTickPrerequisite( 1, _tickSubTickPrerequisite ); // 붙었는지는 시험이 목록으로 본다
+                (void)_pTickSubTickTarget->addSubTickPrerequisite( 1, _tickSubTickPrerequisite ); // 붙었는지는 테스트가 목록으로 본다
                 const SubTickInfo* pFirst              = findSubTick( _pTickSubTickTarget, 1 );
                 _bTickSubTickPrerequisiteVisibleInTick = ( pFirst != nullptr && pFirst->_listPrerequisite.empty() == false );
                 _pTickSubTickTarget->setSubTickActive( 1, false );
                 pFirst                        = findSubTick( _pTickSubTickTarget, 1 );
                 _bTickSubTickOffVisibleInTick = ( pFirst != nullptr && pFirst->_bActive == SW_FALSE );
-                (void)_pTickSubTickTarget->unregisterSubTick( 2 ); // 빠졌는지는 시험이 목록으로 본다
+                (void)_pTickSubTickTarget->unregisterSubTick( 2 ); // 빠졌는지는 테스트가 목록으로 본다
                 _bTickSubTickRemoveVisibleInTick = ( findSubTick( _pTickSubTickTarget, 2 ) == nullptr );
                 _bTickSubTickMaskOffInTick       = ( _pTickSubTickTarget->isSubTickActive( 1 ) == false && _pTickSubTickTarget->isSubTickActive( 2 ) == false );
             }
@@ -178,7 +178,7 @@ namespace sw
             if ( _pTickAdoptChild != nullptr && _pTickAdoptParent != nullptr )
             {
                 (void)_pTickAdoptChild->addComponent<SceneComponent>();      // 틱 중이라 미뤄진다(nullptr)
-                (void)_pTickAdoptChild->attachToParent( _pTickAdoptParent ); // 이것도 미뤄진다 — 붙었는지는 시험이 본다
+                (void)_pTickAdoptChild->attachToParent( _pTickAdoptParent ); // 이것도 미뤄진다 — 붙었는지는 테스트가 본다
             }
         }
     };
@@ -258,7 +258,7 @@ namespace sw
             if ( pSibling != nullptr && getOwner() != nullptr )
             {
                 pSibling->_pSiblingToRemoveOnUnregister = nullptr;
-                (void)getOwner()->removeComponent( pSibling ); // 지워졌는지는 시험이 본다
+                (void)getOwner()->removeComponent( pSibling ); // 지워졌는지는 테스트가 본다
             }
             Component::onUnregister( manager );
         }
@@ -696,7 +696,7 @@ namespace sw
             if ( _bWriteOnSubTick == SW_TRUE )
                 setLocalPosition( base + _offset );
             if ( _pAttachChild != nullptr && _pAttachParent != nullptr )
-                (void)_pAttachChild->attachToComponent( _pAttachParent, AttachRule::KeepWorld ); // 틱 중이면 미뤄져 true — 결과는 시험이 틱 뒤 계층으로 본다
+                (void)_pAttachChild->attachToComponent( _pAttachParent, AttachRule::KeepWorld ); // 틱 중이면 미뤄져 true — 결과는 테스트가 틱 뒤 계층으로 본다
             if ( _pDestroyObject != nullptr && getOwner() != nullptr && getOwner()->getManager() != nullptr )
             {
                 getOwner()->getManager()->destroyObject( _pDestroyObject );
@@ -823,7 +823,7 @@ namespace sw
     /**
      * @brief 상태를 다 읽으면(`onPostLoad`) 정해 둔 프리팹을 스폰하는 컴포넌트입니다 — 프리팹 안에 두면 "스폰이 스폰을 부르는" 순환이 된다.
      * @details 스폰의 상태 읽기가 만드는 컴포넌트라 설정은 정적 칸으로 받습니다(정의는 TestGameObjectMocks.cpp 에 한 번). 순환 방어가 없을 때
-     *          시험이 스택을 넘기지 않고 지도록 `kMaxNestedSpawn` 번에서 멈춥니다.
+     *          테스트가 스택을 넘기지 않고 지도록 `kMaxNestedSpawn` 번에서 멈춥니다.
      */
     class MockPostLoadSpawnerComponent : public Component
     {

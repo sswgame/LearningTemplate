@@ -8,7 +8,7 @@ using namespace sw;
 
 namespace
 {
-    /** @brief 등록 대상 역할만 하는 객체입니다. 등록부는 소유하지 않으므로 시험이 들고 있습니다. */
+    /** @brief 등록 대상 역할만 하는 객체입니다. 등록부는 소유하지 않으므로 테스트가 들고 있습니다. */
     struct RegistrationProbe
     {
         int32 _value{ 0 };

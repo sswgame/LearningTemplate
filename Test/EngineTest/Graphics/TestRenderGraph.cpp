@@ -257,7 +257,7 @@ SW_TEST_CASE( RenderGraphTest, DescribeCompiledOrderListsLevelsAndResources )
 
 /**
  * @brief [RenderGraphTest] 병렬 기록은 패스마다 한 번 기록하고, 레벨 순서로 닫힌 리스트를 제출한다(가짜 디바이스 — GPU 불필요)
- * @details 이 경로는 디바이스가 있어야 돌아서 GPU 시험에서만 지나갔다. A · C 는 레벨 0, A 의 출력을 읽는 B 는 레벨 1 이다.
+ * @details 이 경로는 디바이스가 있어야 돌아서 GPU 테스트에서만 지나갔다. A · C 는 레벨 0, A 의 출력을 읽는 B 는 레벨 1 이다.
  */
 SW_TEST_CASE( RenderGraphTest, ParallelExecutionRecordsEachPassOnceInLevelOrder )
 {

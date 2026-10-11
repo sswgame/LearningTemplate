@@ -1,6 +1,6 @@
 /**
  * @file Test/TestFramework/TestLoopbackCluster.h
- * @brief 네트워크 시험의 호스트 묶음 — 루프백 망 하나 위에서 끝점마다 흉내(`NetEmulationTransport`)를 씌운 `NetHost` 여럿을 손 시각이나 네트워크 스레드로 돌립니다.
+ * @brief 네트워크 테스트의 호스트 묶음 — 루프백 망 하나 위에서 끝점마다 흉내(`NetEmulationTransport`)를 씌운 `NetHost` 여럿을 손 시각이나 네트워크 스레드로 돌립니다.
  * @details CoreTest · EngineTest 가 같이 씁니다(Core 헤더만 include 한다 — CoreTest 의 엔진 금지 규칙). 씬 · 오브젝트 · 라우터까지 세우는 판은
  *          GameFramework 의 `NetSimHarness` 를 쓴다.
  */

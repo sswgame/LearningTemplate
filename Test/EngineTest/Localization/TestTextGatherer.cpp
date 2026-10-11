@@ -46,7 +46,7 @@ namespace
         }
 
 #if !defined( SW_SHIPPING )
-        /** @brief `Localizable` · `NotLocalizable` · 표시 없는 문자열 프로퍼티를 가진 시험용 타입을 리플렉션 표에 올립니다(코드젠 없이 손으로). */
+        /** @brief `Localizable` · `NotLocalizable` · 표시 없는 문자열 프로퍼티를 가진 테스트용 타입을 리플렉션 표에 올립니다(코드젠 없이 손으로). */
         static void registerProbeType()
         {
             static sw::TypeInfo s_info{};

@@ -21,7 +21,7 @@ namespace
 {
     struct SocketBindingTestInternal
     {
-        /** @brief 물리 바디 흉내 — 시작 변환에서 속도로 움직인다(시간은 시험이 넘김). */
+        /** @brief 물리 바디 흉내 — 시작 변환에서 속도로 움직인다(시간은 테스트가 넘김). */
         class FakePhysicsBody final : public ISocketPhysicsBody
         {
         public:

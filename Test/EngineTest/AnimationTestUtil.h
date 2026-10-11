@@ -1,6 +1,6 @@
 /**
  * @file AnimationTestUtil.h
- * @brief 애니메이션 시험이 함께 쓰는 재생할 것 · 풀이 · 손으로 만든 스켈레톤과 원본 클립입니다.
+ * @brief 애니메이션 테스트가 함께 쓰는 재생할 것 · 풀이 · 손으로 만든 스켈레톤과 원본 클립입니다.
  */
 #pragma once
 #include "Core/Container/unordered_map.h"

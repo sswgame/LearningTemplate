@@ -7,7 +7,7 @@
 
 namespace
 {
-    /** @brief recreateSurface 호출 수를 세고 정해 둔 결과를 돌려주는 시험 표면입니다. */
+    /** @brief recreateSurface 호출 수를 세고 정해 둔 결과를 돌려주는 테스트 표면입니다. */
     class CountingSurface final : public sw::IRenderSurface
     {
     public:

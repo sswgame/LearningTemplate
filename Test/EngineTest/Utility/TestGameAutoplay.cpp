@@ -30,7 +30,7 @@ namespace
  */
 SW_TEST_CASE( GameAutoplayTest, FakeGameRegistersAndTheSwitchFlipsItsVariable )
 {
-    SW_EXPECT_TRUE( GameAutoplay::findActive() == nullptr ); // 엔진 시험에는 게임이 없다
+    SW_EXPECT_TRUE( GameAutoplay::findActive() == nullptr ); // 엔진 테스트에는 게임이 없다
     SW_EXPECT_FALSE( GameAutoplay::setOn( true ) );
 
     GlobalVariableManager& variables = engine::getGlobalVariableManager();

@@ -49,7 +49,7 @@ namespace
         return static_cast<int32>( wallet.getBalance( "Cash" ) );
     }
 
-    /** @brief 손님이 저절로 오지 않는 공원입니다(시험이 `admitGuest` 로만 들인다). */
+    /** @brief 손님이 저절로 오지 않는 공원입니다(테스트가 `admitGuest` 로만 들인다). */
     ThemeParkSettings makeClosedGateSettings()
     {
         ThemeParkSettings settings;
@@ -200,7 +200,7 @@ SW_TEST_CASE( ThemeParkTest, TiredGuestsLeaveAndRunningCostsAreCharged )
 }
 
 /**
- * @brief [ThemeParkTest] 코스터 시험 운행 결과로 놀이기구를 만들면 평가 셋이 옮겨지고 한 바퀴 시간에 태우는 시간이 더해진다
+ * @brief [ThemeParkTest] 코스터 테스트 운행 결과로 놀이기구를 만들면 평가 셋이 옮겨지고 한 바퀴 시간에 태우는 시간이 더해진다
  */
 SW_TEST_CASE( ThemeParkTest, CoasterStatsBecomeARide )
 {

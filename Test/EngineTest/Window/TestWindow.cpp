@@ -134,7 +134,7 @@ SW_TEST_CASE( WindowTest, RecreateKeepsVisibilityAndSize )
     // `ShowWindow` 가 세운 WS_VISIBLE 스타일이라 즉시 참이지만, X11 의 `IsViewable` 은 **창 관리자가
     // 실제로 매핑한 뒤**에야 참이다 — 방금 보이라고 한 창도 아직 거짓이고, 이 테스트는 이벤트 루프를
     // 돌리지 않는다. 그런 플랫폼에서 화면 상태를 단언하면 **엔진이 아니라
-    // 창 관리자를 시험하는 것**이 된다.
+    // 창 관리자를 테스트하는 것**이 된다.
     const bool bPlatformAnswersVisibilitySynchronously = window->isVisible();
 
     const uint32 widthBefore  = window->getWidth();

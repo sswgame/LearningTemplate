@@ -332,7 +332,7 @@ SW_TEST_CASE( TerrainTest, ComponentLoadsAndUpdatesLODs )
     pTerrain->setHeightRange( TerrainTestUtil::kHeightMin, TerrainTestUtil::kHeightMax );
     pTerrain->setChunkCells( 16 );
     pTerrain->setLODDistance( 20.0f );
-    pTerrain->setMaterialPath( "" ); // 그리지 않는 시험 — 머티리얼을 잡지 않는다
+    pTerrain->setMaterialPath( "" ); // 그리지 않는 테스트 — 머티리얼을 잡지 않는다
     SW_ASSERT_TRUE( pTerrain->reloadTerrain() );
     SW_EXPECT_EQUAL( 16u, pTerrain->getChunkLayout().getChunkCount() );
 

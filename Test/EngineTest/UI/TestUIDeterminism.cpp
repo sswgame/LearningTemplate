@@ -28,7 +28,7 @@
 
 #include <cstdlib>
 
-// UIDeterminismTest — 같은 입력이면 같은 사각형 · 같은 그리기 목록: 견본 문서 넷(일시정지 · 옵션(시험 스키마) · HUD 견본 · 알림)을 해상도 셋 × UI 배율 둘로
+// UIDeterminismTest — 같은 입력이면 같은 사각형 · 같은 그리기 목록: 견본 문서 넷(일시정지 · 옵션(테스트 스키마) · HUD 견본 · 알림)을 해상도 셋 × UI 배율 둘로
 // 레이아웃 덤프 · 캔버스 덤프해 골든(Test/EngineTest/UI/Golden)과 견주고, 같은 문서를 두 번 · 자식 생성 순서를 섞어 지어도 같은 덤프인지 본다.
 // 가짜 래스터라이저(글자 0.5 em)라 글꼴 · FreeType 판에 기대지 않는다. 골든 갱신: SW_UPDATE_GOLDEN=1 로 돌리고 diff 를 보고 커밋한다. 디바이스 없음(nogpu).
 
@@ -56,7 +56,7 @@ namespace
             {3840.0f, 2160.0f, 1.5f},
         };
 
-        /** @brief 옵션 메뉴의 시험 스키마 — 카테고리 둘, 형식마다 한 줄. */
+        /** @brief 옵션 메뉴의 테스트 스키마 — 카테고리 둘, 형식마다 한 줄. */
         static constexpr const utf8* kSchemaXML = R"(
 <UserSettingsSchema version="1">
     <Category id="audio" text="Audio"/>
@@ -70,7 +70,7 @@ namespace
     </Setting>
 </UserSettingsSchema>)";
 
-        /** @brief HUD 견본 — 네 모서리 앵커 · 진행 막대 · 글 · 가운데 조준 상자(게임 팩에 기대지 않는 엔진 시험 문서). */
+        /** @brief HUD 견본 — 네 모서리 앵커 · 진행 막대 · 글 · 가운데 조준 상자(게임 팩에 기대지 않는 엔진 테스트 문서). */
         static constexpr utf8 kHUDDocument[] = "<UIDocument _schemaVersion=\"1\">\n"
                                                "\t<UIScreenDesc _layer=\"HUD\" _bTakesFocus=\"false\" _bShowCursor=\"false\" />\n"
                                                "\t<SafeZonePanel _visibility=\"SelfHitTestInvisible\">\n"
@@ -408,7 +408,7 @@ SW_TEST_CASE( UIDeterminismTest, PauseMatchesGolden )
     UIDeterminismSampleUtil::expectSampleGolden( UIDeterminismSample::Pause );
 }
 
-/** @brief [UIDeterminismTest] 엔진 옵션 메뉴(시험 스키마 — 탭 둘 · 형식마다 행)의 덤프가 골든과 같다 */
+/** @brief [UIDeterminismTest] 엔진 옵션 메뉴(테스트 스키마 — 탭 둘 · 형식마다 행)의 덤프가 골든과 같다 */
 SW_TEST_CASE( UIDeterminismTest, OptionsMatchesGolden )
 {
     UIDeterminismSampleUtil::expectSampleGolden( UIDeterminismSample::Options );

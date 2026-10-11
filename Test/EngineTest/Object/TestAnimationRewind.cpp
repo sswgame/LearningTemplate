@@ -150,7 +150,7 @@ SW_TEST_CASE( AnimationRewindTest, RecordsStateWithinTheWindow )
     SW_ASSERT_NOT_NULL( pUnit );
     AnimationSystem& system = manager.getAnimationSystem();
 
-    // 꺼져 있으면 아무것도 남기지 않는다(요청이 프로세스 전역이라 시험이 직접 확인한다).
+    // 꺼져 있으면 아무것도 남기지 않는다(요청이 프로세스 전역이라 테스트가 직접 확인한다).
     SW_ASSERT_FALSE( AnimationRewindRecorder::isRecordingRequested() );
     system.evaluate( 1.0f / 30.0f );
     SW_EXPECT_TRUE( system.getRewind().getTracks().empty() );

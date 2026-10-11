@@ -226,7 +226,7 @@ SW_TEST_CASE( GameFrameworkUtilTest, CountdownRepeatRateDoesNotDependOnFrameRate
 
 /**
  * @brief [GameFrameworkUtilTest] `tickRepeat` — 누르고 있는 동안 간격마다 한 번, 지나친 몫을 이어 빈도가 걸음 크기에 매이지 않고, 쉬면 늦음을 버린다
- * @details 시험 게임 둘이 이 줄을 쓴다 — VoxelCraft 블록 놓기(0.25 초 간격, 걸음 0.1 초 상한)와 Shooter3D 적 휘두르기(1.5 초). 손으로 세던 판
+ * @details 테스트 게임 둘이 이 줄을 쓴다 — VoxelCraft 블록 놓기(0.25 초 간격, 걸음 0.1 초 상한)와 Shooter3D 적 휘두르기(1.5 초). 손으로 세던 판
  *          (`x -= dt; if ( want && x <= 0 ) x = interval;`)은 0.1 초 걸음에서 놓기 간격을 0.3 초로 늘렸다 — 10 초 누르면 41 이 아니라 34 번.
  */
 SW_TEST_CASE( GameFrameworkUtilTest, CountdownTickRepeatKeepsTheHeldRate )
@@ -608,7 +608,7 @@ SW_TEST_CASE( GameFrameworkUtilTest, StatBlockReadsAttributesAndMerges )
 /**
  * @brief [GameFrameworkUtilTest] 정수 가중치 뽑기는 `nextInt( 0, 합 − 1 )` 한 번 — 손으로 걷던 조우표와 같은 씨앗에서 같은 결과다
  * @details 조우표 · 드롭표가 손으로 쓰던 걷기(정수 합 → `nextInt` → 가중치를 빼며 걷기)를 공용으로 옮겼다. 옮긴 뒤에도 같은 씨앗의
- *          리플레이 · 결정성 시험이 그대로이도록 난수 흐름이 손 걷기와 정확히 같은지를 본다. 0 · 음수는 뽑히지 않고 합이 0 이면 −1 이다.
+ *          리플레이 · 결정성 테스트가 그대로이도록 난수 흐름이 손 걷기와 정확히 같은지를 본다. 0 · 음수는 뽑히지 않고 합이 0 이면 −1 이다.
  */
 SW_TEST_CASE( GameFrameworkUtilTest, IntegerWeightedPickMatchesTheHandWalkStream )
 {

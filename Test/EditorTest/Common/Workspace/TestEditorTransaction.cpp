@@ -486,7 +486,7 @@ SW_TEST_CASE( EditorTransactionTest, RemovingAComponentCanBeUndone )
 
 /**
  * @brief [EditorTransactionTest] 에디터 코드를 내려도(핫 리로드) 오브젝트 편집은 되돌릴 수 있고, 문서 편집(모듈 코드)만 떨어진다
- * @details 에디터 코드가 든 이미지(이 시험 실행 파일 — 에디터 소스를 함께 컴파일한다)의 범위로 스택을 훑는다. `EditorTransaction` 이 기록한 오브젝트
+ * @details 에디터 코드가 든 이미지(이 테스트 실행 파일 — 에디터 소스를 함께 컴파일한다)의 범위로 스택을 훑는다. `EditorTransaction` 이 기록한 오브젝트
  *          편집은 엔진 데이터 명령이라 남아 같은 상태로 오가야 하고, `EditorTransaction::push` 의 람다(패널 코드)는 떨어져야 한다. 알림 처리기도
  *          이 이미지의 코드라 떨어지고, 다시 걸면(새 모듈의 initialize) 리로드 전의 명령도 씬을 dirty 로 만든다.
  */

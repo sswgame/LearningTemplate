@@ -75,7 +75,7 @@ namespace
     const sw::float4 UIStyleTestUtil::kBlue{ 0.0f, 0.0f, 1.0f, 1.0f };
     const sw::float4 UIStyleTestUtil::kYellow{ 1.0f, 1.0f, 0.0f, 1.0f };
 
-    /** @brief 전역 bool 변수 하나를 이름으로 바꾸고 스코프 끝에 되돌립니다(시험 DLL 은 Engine 의 gv_* 를 extern 으로 못 읽는다). */
+    /** @brief 전역 bool 변수 하나를 이름으로 바꾸고 스코프 끝에 되돌립니다(테스트 DLL 은 Engine 의 gv_* 를 extern 으로 못 읽는다). */
     class ScopedBoolVariable
     {
     public:
@@ -102,7 +102,7 @@ namespace
         bool                    _bPrevious;
     };
 
-    /** @brief 전환 시험의 시트 — 배경색만 1 초 Linear 로 옮기고, 글 색은 적지 않아 바로 바뀐다. */
+    /** @brief 전환 테스트의 시트 — 배경색만 1 초 Linear 로 옮기고, 글 색은 적지 않아 바로 바뀐다. */
     constexpr utf8 kTransitionSheet[] = "<UIStyleSheet _schemaVersion=\"1\">\n"
                                         "\t<Rule _selector=\"BorderPanel\" _transition=\"_backgroundColor 1 Linear\" />\n"
                                         "\t<Rule _selector=\".a\" _backgroundColor=\"1,0,0,1\" _textColor=\"0,1,0,1\" />\n"

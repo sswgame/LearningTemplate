@@ -21,7 +21,7 @@ using namespace sw;
 
 namespace
 {
-    /** @brief 이 서버 호스트에 로그인해 붙은 계정 — 이름은 시험이 적는다. */
+    /** @brief 이 서버 호스트에 로그인해 붙은 계정 — 이름은 테스트가 적는다. */
     class HostAccountDirectory final : public IAccountDirectory
     {
     public:

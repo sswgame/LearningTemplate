@@ -143,7 +143,7 @@ namespace
             const sw::string genCpp = sw::FileUtil::joinPath( outGenDir, header._fileStem + ".gen.cpp" );
             sw::string       generated;
             if ( sw::FileUtil::exists( genCpp ) && sw::FileUtil::readTextFile( genCpp, generated ) == false )
-                generated.clear(); // 못 읽은 산출물은 빈 것으로 본다 — 시험이 내용으로 진다
+                generated.clear(); // 못 읽은 산출물은 빈 것으로 본다 — 테스트가 내용으로 진다
             result._listGeneratedCpp.push_back( generated );
 
             const sw::string genHeader = sw::FileUtil::joinPath( outGenDir, header._fileStem + ".gen.h" );
@@ -654,7 +654,7 @@ SW_TEST_CASE( ReflectionParserTest, ConstructorInvokerUsesPlacementNewMacro )
 /**
  * @brief [ReflectionParserTest] 파서는 헤더를 이 빌드와 같은 타깃 매크로(플랫폼 · 아키텍처 · `SW_COMPILER_CLANG`)로 읽는다
  * @details libclang 은 CMake 를 거치지 않으므로 `SW_PLATFORM_*` · `SW_X64` / `SW_ARM64` · `SW_COMPILER_*` 를 파서가 직접 넘긴다
- *          (`ParserConfig::load`). 빠지면 헤더가 그 매크로로 고른 갈래가 파서와 컴파일러에서 달라진다. 이 시험 바이너리가 받은
+ *          (`ParserConfig::load`). 빠지면 헤더가 그 매크로로 고른 갈래가 파서와 컴파일러에서 달라진다. 이 테스트 바이너리가 받은
  *          매크로를 헤더 안에서 `#error` 로 대조한다.
  */
 SW_TEST_CASE( ReflectionParserTest, ParserDefinesTargetMacros )

@@ -402,7 +402,7 @@ SW_TEST_CASE( ShooterTest, TurnTowardAngleTakesTheShortWayAndCapsTheStep )
 /**
  * @brief [ShooterTest] Shooter3D 플레이어 폰(아레나 씬의 `_autoPossess Player0` 폰)의 이동 · 시선 액션과 버튼 · 아날로그 이름이 모두 입력 맵에 있다
  * @details 플레이어 조종자는 폰 스키마의 이름을 같은 이름의 입력 맵 액션으로 읽는다 — 없는 이름은 빙의 때 경고 한 줄 뒤 조용히 눌리지 않는다.
- *          그것을 실행 없이 데이터로 막는다(씬은 실제 로더로 읽는다 — 게임 모듈 타입은 이 시험 실행 파일에 없어 건너뛴다).
+ *          그것을 실행 없이 데이터로 막는다(씬은 실제 로더로 읽는다 — 게임 모듈 타입은 이 테스트 실행 파일에 없어 건너뛴다).
  */
 SW_TEST_CASE( ShooterTest, PawnSchemaMatchesTheInputMap )
 {

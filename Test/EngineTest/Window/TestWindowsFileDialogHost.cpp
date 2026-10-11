@@ -68,7 +68,7 @@ namespace
         }
 
         /**
-         * @brief 대화상자 스레드가 끝날 때까지 기다립니다. 조작이 빗나가 대화상자가 남았으면 그 스레드의 창을 닫아 시험이 멈추지 않게 합니다.
+         * @brief 대화상자 스레드가 끝날 때까지 기다립니다. 조작이 빗나가 대화상자가 남았으면 그 스레드의 창을 닫아 테스트가 멈추지 않게 합니다.
          */
         static void joinDialogThread( std::thread& dialogThread, const std::atomic<bool>& bDone )
         {
@@ -96,7 +96,7 @@ namespace
 
 /**
  * @brief [WindowsFileDialogHostTest] 열기 대화상자에서 파일 이름을 넣고 확인을 누르면 그 경로 하나가 돌아온다
- * @details 필터 글(`makeFilterText`)은 nogpu 시험이 보지만 대화상자를 실제로 띄워 결과 버퍼를 읽는 길은 이 케이스만 지난다.
+ * @details 필터 글(`makeFilterText`)은 nogpu 테스트가 보지만 대화상자를 실제로 띄워 결과 버퍼를 읽는 길은 이 케이스만 지난다.
  */
 SW_TEST_CASE( WindowsFileDialogHostTest, OpenReturnsTheChosenFile )
 {

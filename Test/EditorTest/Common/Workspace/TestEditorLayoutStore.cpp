@@ -55,5 +55,5 @@ SW_TEST_CASE( EditorLayoutStoreTest, SaveLoadListRemoveRoundTrip )
     EditorLayoutStore::collectNames( folder, listName );
     SW_ASSERT_EQUAL( size_t( 1 ), listName.size() );
     SW_EXPECT_FALSE( EditorLayoutStore::load( folder, "Beta", loadedIni, loadedVisibility ) );
-    (void)FileUtil::removeDirectory( folder ); // 시험 폴더 정리 — 실패해도 다음 실행이 지운다
+    (void)FileUtil::removeDirectory( folder ); // 테스트 폴더 정리 — 실패해도 다음 실행이 지운다
 }

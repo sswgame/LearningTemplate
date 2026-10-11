@@ -145,8 +145,8 @@ SW_TEST_CASE( RealTimeStrategyTest, WorkersGatherReturnCargoAndMoveOnFromDeplete
     SW_ASSERT_TRUE( baseID.isValid() );
     SW_EXPECT_TRUE( scene._world.getGrid().isWalkable( 5, 5 ) == false ); // 본진이 칸을 막는다
     const RTSUnitID shardID = scene.spawn( "shard", RTSWorld::kNoOwner, 5.5f, 12.5f );
-    (void)scene.spawn( "minerals", RTSWorld::kNoOwner, 6.5f, 12.5f ); // 시험 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
-    (void)scene.spawn( "minerals", RTSWorld::kNoOwner, 7.5f, 12.5f ); // 시험 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
+    (void)scene.spawn( "minerals", RTSWorld::kNoOwner, 6.5f, 12.5f ); // 테스트 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
+    (void)scene.spawn( "minerals", RTSWorld::kNoOwner, 7.5f, 12.5f ); // 테스트 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
     const RTSUnitID workerA = scene.spawn( "worker", player, 10.5f, 10.5f );
     const RTSUnitID workerB = scene.spawn( "worker", player, 10.5f, 9.5f );
     SW_EXPECT_TRUE( scene._world.findUnit( shardID )->_owner == RTSWorld::kNoOwner );
@@ -184,7 +184,7 @@ SW_TEST_CASE( RealTimeStrategyTest, ProductionQueuesChargeUpFrontAndWaitForSuppl
     const RTSUnitID barracksID = scene.spawn( "barracks", player, 20.5f, 4.5f );
     for ( int32 index = 0; index < 9; ++index )
     {
-        (void)scene.spawn( "worker", player, 10.5f + static_cast<float32>( index ), 20.5f ); // 시험 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
+        (void)scene.spawn( "worker", player, 10.5f + static_cast<float32>( index ), 20.5f ); // 테스트 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
     }
     scene.run( 0.1f );
     const RTSPlayer* pPlayer = scene._world.findPlayer( player );
@@ -246,7 +246,7 @@ SW_TEST_CASE( RealTimeStrategyTest, WorkersConstructBuildingsAndRefineriesYieldG
     RTSTestScene scene;
     SW_ASSERT_TRUE( scene.initialize() );
     const int32 player = scene.addPlayer( 0, 300, 0, float3{ 6.0f, 0.0f, 6.0f } );
-    (void)scene.spawn( "base", player, 4.5f, 4.5f ); // 시험 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
+    (void)scene.spawn( "base", player, 4.5f, 4.5f ); // 테스트 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
     const RTSUnitID mineralID = scene.spawn( "minerals", RTSWorld::kNoOwner, 12.5f, 12.5f );
     const RTSUnitID geyserID  = scene.spawn( "geyser", RTSWorld::kNoOwner, 4.5f, 14.5f );
     const RTSUnitID builderA  = scene.spawn( "worker", player, 10.5f, 4.5f );
@@ -474,7 +474,7 @@ SW_TEST_CASE( RealTimeStrategyTest, SelectionPrefersOwnUnitsAndControlGroupsPrun
     // 부대의 해병이 죽으면 부대에서 빠진다.
     for ( int32 index = 0; index < 3; ++index )
     {
-        (void)scene.spawn( "marine", red, 11.5f + static_cast<float32>( index ), 9.5f ); // 시험 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
+        (void)scene.spawn( "marine", red, 11.5f + static_cast<float32>( index ), 9.5f ); // 테스트 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
     }
     scene.run( 10.0f );
     SW_EXPECT_NULL( scene._world.findUnit( marineB ) );
@@ -495,14 +495,14 @@ SW_TEST_CASE( RealTimeStrategyTest, AIGrowsEconomyBuildsArmyAndWinsByRazingBuild
     const int32     human     = scene.addPlayer( 0, 0, 0, float3{ 8.0f, 0.0f, 8.0f } );
     const int32     cpu       = scene.addPlayer( 1, 50, 0, float3{ 44.0f, 0.0f, 44.0f } );
     const RTSUnitID humanBase = scene.spawn( "base", human, 6.5f, 6.5f );
-    (void)scene.spawn( "base", cpu, 42.5f, 42.5f ); // 시험 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
+    (void)scene.spawn( "base", cpu, 42.5f, 42.5f ); // 테스트 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
     for ( int32 index = 0; index < 8; ++index )
     {
-        (void)scene.spawn( "minerals", RTSWorld::kNoOwner, 40.5f + static_cast<float32>( index ), 52.5f ); // 시험 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
+        (void)scene.spawn( "minerals", RTSWorld::kNoOwner, 40.5f + static_cast<float32>( index ), 52.5f ); // 테스트 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
     }
     for ( int32 index = 0; index < 4; ++index )
     {
-        (void)scene.spawn( "worker", cpu, 41.5f + static_cast<float32>( index ), 49.5f ); // 시험 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
+        (void)scene.spawn( "worker", cpu, 41.5f + static_cast<float32>( index ), 49.5f ); // 테스트 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
     }
 
     RTSCommanderAISettings aiSettings;
@@ -657,7 +657,7 @@ SW_TEST_CASE( RealTimeStrategyTest, PlayersSpendFromTheirOwnBorrowedWallets )
     const int32 blue = scene.addPlayer( 0, 100, 0, float3{ 6.0f, 0.0f, 6.0f } );
     const int32 red  = scene.addPlayer( 1, 100, 0, float3{ 40.0f, 0.0f, 40.0f } );
     scene._arrWallet[blue].add( "Deben", 500 );    // 같은 지갑에 다른 키트의 돈
-    (void)scene.spawn( "base", blue, 4.5f, 4.5f ); // 시험 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
+    (void)scene.spawn( "base", blue, 4.5f, 4.5f ); // 테스트 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
     const RTSUnitID barracksID = scene.spawn( "barracks", blue, 12.5f, 4.5f );
     SW_ASSERT_TRUE( barracksID.isValid() );
     SW_EXPECT_TRUE( scene._world.train( barracksID, hashed_string( "marine" ) ) == RTSCommandResult::Ok );

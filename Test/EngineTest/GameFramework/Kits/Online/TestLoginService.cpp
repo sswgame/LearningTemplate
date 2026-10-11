@@ -25,7 +25,7 @@ using namespace sw;
 
 namespace
 {
-    /** @brief 시험용 결정적 "암호" — 암호가 아니다. 난수는 씨앗에서, 해시는 FNV 섞기입니다. 비밀번호 해시를 몇 번 불렀는지 셉니다. */
+    /** @brief 테스트용 결정적 "암호" — 암호가 아니다. 난수는 씨앗에서, 해시는 FNV 섞기입니다. 비밀번호 해시를 몇 번 불렀는지 셉니다. */
     class TestLoginCrypto final : public ILoginCrypto
     {
     public:
@@ -346,7 +346,7 @@ namespace
         static void writeSanction( MemoryServiceDatabase& database, uint64 accountID, ServiceSanctionKind kind, int64 untilMs )
         {
             ServiceSanctionState state;
-            (void)ServiceSanction::readState( database, accountID, state ); // 없으면 빈 상태로 시작한다 — 시험 준비라 아래 commit 결과만 쓴다
+            (void)ServiceSanction::readState( database, accountID, state ); // 없으면 빈 상태로 시작한다 — 테스트 준비라 아래 commit 결과만 쓴다
             state._arrUntilMs[static_cast<int32>( kind )] = untilMs;
             state._reasonCode                             = "sanction.cheat";
             ServiceTransaction transaction;

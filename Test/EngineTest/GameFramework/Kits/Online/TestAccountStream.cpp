@@ -33,7 +33,7 @@ namespace
 {
     constexpr uint16 kServerPort = 7311;
 
-    /** @brief 시험용 고정 봉인 키입니다. */
+    /** @brief 테스트용 고정 봉인 키입니다. */
     class FixedSealKey final : public ILocalStoreKeyProvider
     {
     public:
@@ -90,7 +90,7 @@ namespace
             , _host{}
         {
             LoginSettings settings;
-            settings._passwordHashParams._memoryKiB                        = 256; // 시험 — 가벼운 Argon2id
+            settings._passwordHashParams._memoryKiB                        = 256; // 테스트 — 가벼운 Argon2id
             settings._passwordHashParams._iterationCount                   = 1;
             const uint8 arrMasterKey[LoginTicketAuthority::kMasterKeySize] = { 9, 8, 7, 6, 5, 4, 3, 2, 1 };
             _loginService.initialize( &_store, &_crypto, settings, arrMasterKey );

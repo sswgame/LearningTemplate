@@ -248,7 +248,7 @@ SW_TEST_CASE( EditorPlaySessionTest, StopRestoresParentsByIDAfterPlayRenames )
 /**
  * @brief [EditorPlaySessionTest] 멈춤에서 일시정지를 거쳐 Play 해도 월드가 켜지고 스냅샷이 찍힌다 — Stop 이 편집 씬을 되돌린다
  * @details 멈춤 → 플레이에서만 월드를 켜면, 멈춤 → 일시정지 → 플레이는 스냅샷도 onBeginPlay 도 없이 플레이가 돌고 Stop 이 편집 씬을
- *          되돌리지 못한다. 상태 전환 본체가 상태를 인자로 받으므로 EditorContext 없이 시험한다.
+ *          되돌리지 못한다. 상태 전환 본체가 상태를 인자로 받으므로 EditorContext 없이 테스트한다.
  */
 SW_TEST_CASE( EditorPlaySessionTest, PauseFromStoppedThenPlayStartsTheWorld )
 {
@@ -282,7 +282,7 @@ SW_TEST_CASE( EditorPlaySessionTest, PauseFromStoppedThenPlayStartsTheWorld )
 /**
  * @brief [EditorPlaySessionTest] 씬을 여는 중에 누른 Play 는 미뤄졌다가 로드가 끝난 프레임에 그 씬으로 시작한다
  * @details 로드 중에 바로 시작하면 스냅샷이 곧 내려갈 씬을 찍고 플레이 중에 로드가 끝나 씬이 바뀐다. 언리얼 `RequestPlaySession` 처럼 요청을 걸어
- *          두고 로드가 끝난 다음 틱에 시작한다. 이 시험이 돌 수 있게 상태 전환 본체가 상태를 인자로 받는다(EditorTest 는 EditorContext 를 만들 수 없다).
+ *          두고 로드가 끝난 다음 틱에 시작한다. 이 테스트가 돌 수 있게 상태 전환 본체가 상태를 인자로 받는다(EditorTest 는 EditorContext 를 만들 수 없다).
  */
 SW_TEST_CASE( EditorPlaySessionTest, PlayRequestedWhileASceneLoadsStartsAfterTheLoad )
 {

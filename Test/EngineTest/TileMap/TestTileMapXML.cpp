@@ -339,7 +339,7 @@ SW_TEST_CASE( TileMapXMLTest, EveryFlagLayerRoundTripsAlone )
 
 /**
  * @brief [TileMapXMLTest] 레이어 표로 하는 쓰기가 기준 형식과 같은 바이트를 낸다
- * @details 아래 두 문서는 기준 출력이다(저장소에 타일맵 파일이 없어 시험 안에 둔다). 하나는 칸마다 다른 맵,
+ * @details 아래 두 문서는 기준 출력이다(저장소에 타일맵 파일이 없어 테스트 안에 둔다). 하나는 칸마다 다른 맵,
  *          하나는 높이 · 틴트 없이 `enc` · `pt` 만 적힌 손글 맵을 읽어 다시 쓴 것이다.
  */
 SW_TEST_CASE( TileMapXMLTest, SavedBytesMatchTheExistingFormat )

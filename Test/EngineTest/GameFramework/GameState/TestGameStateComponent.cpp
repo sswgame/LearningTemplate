@@ -1,6 +1,6 @@
 /**
  * @file TestGameStateComponent.cpp
- * @brief 공유 판 상태(`GameStateComponent`)의 순서 · 여는 규칙 · 구간 세이브 시험입니다.
+ * @brief 공유 판 상태(`GameStateComponent`)의 순서 · 여는 규칙 · 구간 세이브 테스트입니다.
  */
 #include "pch.h"
 

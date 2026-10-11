@@ -64,7 +64,7 @@ namespace test
          * @details 단언은 작업 스레드에서도 불린다(`runParallel` 본문 · `std::thread` 람다). 락 없이 벡터에 `push_back` 하면
          *          **둘이 동시에 실패할 때** 그 벡터가 깨진다 — 병렬 코드가 틀렸다는 것을 알려야 할 바로 그 순간에.
          *          gtest 도 단언을 스레드 안전하게 보장한다. 엔진의 `sw::mutex` 를 쓰지 않는 것은 그것이 Debug 에서 데드락 탐지기를
-         *          타기 때문이다 — 그 탐지기를 시험하는 케이스가 있다.
+         *          타기 때문이다 — 그 탐지기를 테스트하는 케이스가 있다.
          */
         std::mutex& getRecordMutex()
         {
@@ -75,12 +75,12 @@ namespace test
         /** @brief 이 스레드가 지금 `addFailure` 안에 있는가 — 거기서 남기는 `[FAILED]` 줄은 예상 밖 Error 로 세지 않는다. */
         thread_local bool s_bReportingFailure = false;
 
-        /** @brief 방어 시험 구간(`SW_TEST_DEFENSIVE_SCOPE`)이 Error · Warning 앞에 붙이는 표식입니다. */
+        /** @brief 방어 테스트 구간(`SW_TEST_DEFENSIVE_SCOPE`)이 Error · Warning 앞에 붙이는 표식입니다. */
         constexpr sw::string_view kDefensiveLogPrefix = "[Expected Defensive Test]";
 
         /**
          * @brief 호스트 스위트 케이스 하나 동안 남은 Error 로그를 셉니다.
-         * @details GPU 시험은 검증 레이어 · 드라이버 오류를 Error 로그로만 남기고 단언은 통과할 수 있다. 그래서 호스트 스위트의
+         * @details GPU 테스트는 검증 레이어 · 드라이버 오류를 Error 로그로만 남기고 단언은 통과할 수 있다. 그래서 호스트 스위트의
          *          케이스는 예상 밖 Error 가 하나라도 있으면 진다. 의도된 Error 는 `SW_TEST_DEFENSIVE_SCOPE` 안에서 남기면 표식이
          *          붙어 세지 않고, `SW_TEST_SUPPRESS_LOGS` 안의 로그는 아예 남지 않는다. 그 스위트에 선언된 알려진 Error
          *          (`SW_TEST_KNOWN_ERROR_LOG`)는 세지 않고 그 선언의 `_hitCount` 에 센다.
@@ -222,7 +222,7 @@ namespace test
 
     const utf8* TestRegistry::getLinePrefix() const
     {
-        // 시험 안에서 만든 레지스트리(틀 자체를 시험한다)가 일부러 지는 케이스의 줄은 바깥 실행의 실패로 읽히면 안 된다.
+        // 테스트 안에서 만든 레지스트리(틀 자체를 테스트한다)가 일부러 지는 케이스의 줄은 바깥 실행의 실패로 읽히면 안 된다.
         return this == &getInstance() ? "" : "(nested) ";
     }
 

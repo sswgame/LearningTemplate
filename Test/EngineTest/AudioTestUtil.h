@@ -1,6 +1,6 @@
 /**
  * @file AudioTestUtil.h
- * @brief 오디오 시험의 합성 클립(직류 · 사인 · 임펄스)과 장치 없는 렌더 · 측정(RMS · 피크 · 한 주파수의 진폭)입니다.
+ * @brief 오디오 테스트의 합성 클립(직류 · 사인 · 임펄스)과 장치 없는 렌더 · 측정(RMS · 피크 · 한 주파수의 진폭)입니다.
  */
 #pragma once
 #include "Core/Math/MathUtil.h"
@@ -11,7 +11,7 @@
 
 namespace test
 {
-    /** @brief 오디오 시험 도우미입니다. */
+    /** @brief 오디오 테스트 도우미입니다. */
     struct AudioTestUtil
     {
         /** @brief 모든 샘플이 @p value 인 클립(직류)입니다. */

@@ -24,7 +24,7 @@ def runGitInternal(cwd: Path, *args: str) -> None:
 
 
 def applyWithoutRestartInternal(projectRoot: Path) -> bool:
-    """설정만 쓴다 — 시험이 이 기계의 sccache 서버를 멈추면 안 된다."""
+    """설정만 쓴다 — 테스트가 이 기계의 sccache 서버를 멈추면 안 된다."""
     return SetupSccache.applySccacheConfig(projectRoot, None, bRestart=False)
 
 

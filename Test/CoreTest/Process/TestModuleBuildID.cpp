@@ -50,7 +50,7 @@ SW_TEST_CASE( ModuleBuildIDTest, ExecutableHasAStableSymbolKey )
     SW_EXPECT_TRUE_MSG( sw::FileUtil::getFileNamePart( executable._debugFile ) == executable._debugFile, executable._debugFile.c_str() );
     #endif
 #endif
-    // 이 함수의 주소도 실행 파일 안이다(Core 는 시험 실행 파일에 들어 있다).
+    // 이 함수의 주소도 실행 파일 안이다(Core 는 테스트 실행 파일에 들어 있다).
     const sw::ModuleBuildID self = sw::ModuleBuildID::find( reinterpret_cast<const void*>( &ModuleBuildIDTestInternal::isHex ) );
     SW_EXPECT_TRUE( self._id == executable._id );
     SW_EXPECT_TRUE( sw::FileUtil::pathsEqualNormalized( self._modulePath, executable._modulePath ) );

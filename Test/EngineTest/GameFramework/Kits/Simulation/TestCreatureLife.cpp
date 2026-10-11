@@ -65,7 +65,7 @@ namespace
 <WeatherCatalog transition="0"><Weather id="sunny"/><Weather id="rain"/></WeatherCatalog>
 )";
 
-    /** @brief 시험이 함께 쓰는 카탈로그들입니다. */
+    /** @brief 테스트가 함께 쓰는 카탈로그들입니다. */
     struct CreatureLifeTestWorld
     {
         CreatureLifeCatalog _catalog;

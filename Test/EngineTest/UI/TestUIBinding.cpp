@@ -19,11 +19,11 @@
 #include "TestFramework/TestFramework.h"
 
 // UIBindingTest — 데이터 바인딩(6-1): 뷰모델 필드 통지 · 단방향/양방향 · 메시지 패턴(format) · 변환기 · 타입 검사 · 칸에 맞는 무효화 · 폴링.
-// 시험 뷰모델은 리플렉션 표를 손으로 짓는다(시험 타깃에 코드젠이 없다). 디바이스 없음(nogpu).
+// 테스트 뷰모델은 리플렉션 표를 손으로 짓는다(테스트 타깃에 코드젠이 없다). 디바이스 없음(nogpu).
 
 namespace
 {
-    /** @brief 손으로 지은 리플렉션 표를 가진 시험 뷰모델입니다. */
+    /** @brief 손으로 지은 리플렉션 표를 가진 테스트 뷰모델입니다. */
     class TestHUDViewModel : public sw::UIViewModel
     {
     public:

@@ -1,9 +1,9 @@
 /**
  * @file EphemeralStoreContract.h
- * @brief `IEphemeralStore` 계약 시험 — 메모리 · RESP 구현이 같은 케이스를 같은 결과로 통과해야 합니다.
+ * @brief `IEphemeralStore` 계약 테스트 — 메모리 · RESP 구현이 같은 케이스를 같은 결과로 통과해야 합니다.
  * @details 픽스처는 `IEphemeralStore& getStore()` · `IEphemeralStore& getSecondStore()`(같은 데이터의 두 번째 앞 — 발행/구독) ·
  *          `void advanceTimeMs( int64 )`(메모리: 시계를 민다, RESP: 그만큼 잔다) · `string makeKey( const utf8* )`(실행마다 다른 접두)를 준다.
- *          답은 시험 스레드가 `pollReplies` 로 거두므로 케이스 몸에서 단언해도 된다.
+ *          답은 테스트 스레드가 `pollReplies` 로 거두므로 케이스 몸에서 단언해도 된다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -18,7 +18,7 @@
 
 namespace test
 {
-    /** @brief 계약 케이스 몸들입니다(시험 스레드). */
+    /** @brief 계약 케이스 몸들입니다(테스트 스레드). */
     struct EphemeralStoreContract
     {
         /** @brief 요청 하나를 맡기고 그 답을 기다립니다(RESP 는 소켓 왕복 — 10 초 상한). 답을 받았으면 true 입니다. */

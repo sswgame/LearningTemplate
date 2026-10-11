@@ -33,7 +33,7 @@ namespace
 </ShopCatalog>
 )";
 
-    /** @brief "flag:chapter2 ..." 를 받으면 열림 여부를 그대로 돌려주는 시험용 평가기입니다. */
+    /** @brief "flag:chapter2 ..." 를 받으면 열림 여부를 그대로 돌려주는 테스트용 평가기입니다. */
     struct TestConditionEvaluator final : public IShopConditionEvaluator
     {
         bool isConditionMet( string_view expression ) const override

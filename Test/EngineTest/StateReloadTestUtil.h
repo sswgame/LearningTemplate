@@ -1,6 +1,6 @@
 /**
  * @file StateReloadTestUtil.h
- * @brief 플레이 중인 오브젝트의 상태를 그 자리에 다시 읽는 시험 도우미입니다(플레이 중 되돌리기 · 핫 리로드와 같은 길).
+ * @brief 플레이 중인 오브젝트의 상태를 그 자리에 다시 읽는 테스트 도우미입니다(플레이 중 되돌리기 · 핫 리로드와 같은 길).
  */
 #pragma once
 #include "Core/Container/vector.h"

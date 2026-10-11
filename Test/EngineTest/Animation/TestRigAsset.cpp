@@ -410,7 +410,7 @@ SW_TEST_CASE( RigAssetTest, PlanarRigStaysInPlane )
 
 /**
  * @brief [RigAssetTest] 데모 리그 비용 — 기사(`knight.rig.json`, 41 본: 발 디딤 · 시선 · 왼손 IK · 팔뚝 비틀림)와 망토(스프링 사슬)를 한 번 평가하는 시간을 잰다
- * @details 숫자를 남기는 시험이다(Release 로 돌려 읽는다). 단언은 넉넉한 상한 하나 — 회귀가 몇 배로 커졌을 때만 걸린다.
+ * @details 숫자를 남기는 테스트다(Release 로 돌려 읽는다). 단언은 넉넉한 상한 하나 — 회귀가 몇 배로 커졌을 때만 걸린다.
  */
 SW_TEST_CASE( RigAssetTest, KnightRigEvaluationCost )
 {

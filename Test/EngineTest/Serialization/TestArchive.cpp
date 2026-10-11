@@ -1577,7 +1577,7 @@ SW_TEST_CASE( ArchiveTest, CorruptedDocumentBinaryStreams )
 
 /**
  * @brief [ArchiveTest] 세이브 바이트는 같은 값이면 같은 바이트다(결정적) — 그리고 읽으면 그 값이 돌아온다
- * @details 게임 플래그의 이름 순 결정성은 스냅숏 봉투 쪽 시험(`SharedStateArchiveTest`)이 본다 — SaveGame 은 사용자 파일만 싣는다.
+ * @details 게임 플래그의 이름 순 결정성은 스냅숏 봉투 쪽 테스트(`SharedStateArchiveTest`)이 본다 — SaveGame 은 사용자 파일만 싣는다.
  */
 SW_TEST_CASE( ArchiveTest, SaveGameReflectionChecksumAndLoad )
 {

@@ -52,7 +52,7 @@ namespace
 
 /**
  * @brief [DelayLoadBindTest] 엔진 기동 뒤, 지연 로드 훅을 넣은 모든 모듈의 지연 import 가 묶여 있다 — 첫 호출이 썽크를 지나지 않는다
- * @details 시험 실행 파일은 키트를 링크해 OS 로더가 함께 올린다. 엔진 기동(`EngineBootstrap::initialize`)이 그런 모듈을 미리 묶는다.
+ * @details 테스트 실행 파일은 키트를 링크해 OS 로더가 함께 올린다. 엔진 기동(`EngineBootstrap::initialize`)이 그런 모듈을 미리 묶는다.
  */
 SW_TEST_CASE( DelayLoadBindTest, EveryDelayImportIsBoundAfterEngineStartup )
 {

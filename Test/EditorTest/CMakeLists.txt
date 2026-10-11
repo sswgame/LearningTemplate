@@ -3,14 +3,14 @@
 # @brief Editor 판별·세션 정책 단위 테스트 (UI/ImGui 없음)
 # ==============================================================================
 
-# 에디터 · App 시험은 클라이언트 코드다 — 전용 서버 타깃(Server)에는 에디터 · App · 창이 없어 짓지 않는다.
+# 에디터 · App 테스트는 클라이언트 코드다 — 전용 서버 타깃(Server)에는 에디터 · App · 창이 없어 짓지 않는다.
 if(SW_TARGET_TYPE STREQUAL "Server")
 	sw_declareUnbuiltDirectory("${CMAKE_CURRENT_SOURCE_DIR}")
 	return()
 endif()
 
-# 시험 소스는 이 폴더를 훑는다(`sw_addTestExecutable`). Editor 소스는 직접 나열해 같이 컴파일한다 — `EditorModule` 은 ImGui 를
-# 링크하므로 시험은 그것을 링크하지 않는다(시험은 ImGui 없이 돈다).
+# 테스트 소스는 이 폴더를 훑는다(`sw_addTestExecutable`). Editor 소스는 직접 나열해 같이 컴파일한다 — `EditorModule` 은 ImGui 를
+# 링크하므로 테스트는 그것을 링크하지 않는다(테스트는 ImGui 없이 돈다).
 #
 # **이 목록은 "Editor/Common 전부" 도 "ImGui 를 안 쓰는 것 전부" 도 아니다.** 테스트가 실제로 링크해야
 # 하는 것만 적는다. 기계가 대신 고를 수 없어서 목록은 손으로 두되,
@@ -118,7 +118,7 @@ sw_addTestExecutable(EditorTest
 
 target_include_directories(EditorTest PRIVATE "${CMAKE_SOURCE_DIR}/Source")
 
-# 멀티 프로세스 재생 시험(EditorNetPlaySessionTest)은 빌드한 Server 를 서버 · 헤드리스 클라이언트로 띄운다 — 시험보다 먼저 지어 둔다.
+# 멀티 프로세스 재생 테스트(EditorNetPlaySessionTest)은 빌드한 Server 를 서버 · 헤드리스 클라이언트로 띄운다 — 테스트보다 먼저 지어 둔다.
 if(TARGET Server)
 	add_dependencies(EditorTest Server)
 endif()

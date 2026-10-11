@@ -29,7 +29,7 @@ namespace
     }
 
     /**
-     * @brief 상태 시험의 enum(`sw::StateShiftColor`)을 열거자 목록으로 레지스트리에 올립니다. 같은 이름으로 다시 부르면 그 자리에 덮어씁니다 — 다음 빌드 ·
+     * @brief 상태 테스트의 enum(`sw::StateShiftColor`)을 열거자 목록으로 레지스트리에 올립니다. 같은 이름으로 다시 부르면 그 자리에 덮어씁니다 — 다음 빌드 ·
      *        핫 리로드가 열거자를 옮기거나 지운 자리입니다(코드의 값은 그대로).
      */
     void registerStateShiftColor( const sw::vector<sw::pair<const utf8*, int64>>& listEnumerator )
@@ -49,7 +49,7 @@ namespace
         sw::engine::getTypeRegistry().registerEnum( info );
     }
 
-    /** @brief 저장하는 빌드의 열거자 — 코드의 값과 같습니다. 시험은 끝에 이것으로 되돌립니다. */
+    /** @brief 저장하는 빌드의 열거자 — 코드의 값과 같습니다. 테스트는 끝에 이것으로 되돌립니다. */
     void registerStateShiftColorAsDeclared()
     {
         registerStateShiftColor( {
@@ -64,7 +64,7 @@ namespace sw
 {
     /**
      * @brief 저장한 뒤에 PROPERTY 하나(`_dropped`)가 사라지는 컴포넌트입니다 — 다음 빌드 · 핫 리로드의 자리. 코드젠 없이 타입 정보를 손으로 등록하고,
-     *        시험이 같은 이름으로 다시 등록해(핫 리로드가 하는 일) 칸 하나를 지운다. 타입 정보는 레지스트리의 것을 쓴다(재등록이 같은 주소에 덮는다).
+     *        테스트가 같은 이름으로 다시 등록해(핫 리로드가 하는 일) 칸 하나를 지운다. 타입 정보는 레지스트리의 것을 쓴다(재등록이 같은 주소에 덮는다).
      */
     class SchemaShiftComponent : public Component
     {
@@ -99,7 +99,7 @@ namespace sw
         return s_pType;
     }
 
-    /** @brief 상태 시험의 enum 입니다. 레지스트리의 열거자 표는 시험이 손으로 올린다(`registerStateShiftColor`). */
+    /** @brief 상태 테스트의 enum 입니다. 레지스트리의 열거자 표는 테스트가 손으로 올린다(`registerStateShiftColor`). */
     enum class StateShiftColor : int32
     {
         Red   = 0,
@@ -911,7 +911,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, UnknownComponentIsKeptAndWrittenBack )
  * @brief [ObjectStateRoundTripTest] 저장된 상태의 enum 은 열거자로 돌아온다 — 다음 빌드가 열거자 순서를 바꿔도, 열거자를 지워도(그 칸만 기본값, 나머지는 그대로)
  * @details 바이너리 상태(세이브 · 핫 리로드 뒤 Stop 이 되살리는 플레이 스냅샷 · 되돌리기)가 enum 을 int64 **값**으로 실으면 열거자를 사이에 넣을 때 저장된
  *          Green 이 다른 열거자로 읽히고, 지운 열거자는 그 값의 다른 열거자가 된다 — XML 은 그 칸만 실패로 남긴다. 바이너리도 컴포넌트 안의 읽지 못한 칸
- *          하나에 그 컴포넌트(와 뒤의 컴포넌트)를 버리면 안 된다. 시험은 손으로 올린 enum 을 저장 뒤에 같은 이름으로 다시 올린다(핫 리로드 · 다음 빌드의 자리).
+ *          하나에 그 컴포넌트(와 뒤의 컴포넌트)를 버리면 안 된다. 테스트는 손으로 올린 enum 을 저장 뒤에 같은 이름으로 다시 올린다(핫 리로드 · 다음 빌드의 자리).
  */
 SW_TEST_CASE( ObjectStateRoundTripTest, SavedEnumsKeepTheirEnumeratorAcrossEnumChanges )
 {

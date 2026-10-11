@@ -11,7 +11,7 @@
 #include "TestFramework/TestFramework.h"
 
 // FontSystemTest — 글꼴 카탈로그 · 가족 고르기(굵기 · 가짜 굵게) · 문화권 대체 사슬 · 못 찾은 가족의 경고 한 번. 디바이스 없음(nogpu).
-// 실제 글꼴 시험(CatalogDefaultFamilyOpens)은 저장소 글꼴로만 단언한다 — 시스템 글꼴은 기계마다 달라 글리프 존재 · 사슬 길이만 본다(결정 R1).
+// 실제 글꼴 테스트(CatalogDefaultFamilyOpens)은 저장소 글꼴로만 단언한다 — 시스템 글꼴은 기계마다 달라 글리프 존재 · 사슬 길이만 본다(결정 R1).
 
 namespace
 {

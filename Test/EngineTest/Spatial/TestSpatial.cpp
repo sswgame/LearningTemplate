@@ -594,7 +594,7 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2DInfiniteBoundsTerminate )
  * @brief [SpatialTest] 모든 질의가 결과 벡터를 먼저 비운다
  * @details `SpatialHashGrid2D` · `PhysicsWorld` · `BVHTree3D` · `SpatialTree` 가 같은 약속이다. 어느 하나가 **덧붙이기만** 하거나
  *          트리가 빌 때 벡터를 아예 건드리지 않고 돌아가면, 벡터 하나를 프레임마다 돌려 쓰는 호출부에 **지난 프레임의 답이 이번
- *          답인 척** 남는다. 질의마다 새 벡터를 넘기는 시험은 이것을 못 잡는다.
+ *          답인 척** 남는다. 질의마다 새 벡터를 넘기는 테스트는 이것을 못 잡는다.
  */
 SW_TEST_CASE( SpatialTest, QueriesOverwriteTheOutListInsteadOfAppending )
 {

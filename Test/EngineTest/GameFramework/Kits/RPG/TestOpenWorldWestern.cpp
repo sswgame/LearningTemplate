@@ -76,7 +76,7 @@ namespace
 </WesternCatalog>
 )";
 
-    /** @brief 시험용 시야 — id 목록에 든 목격자만 본다. */
+    /** @brief 테스트용 시야 — id 목록에 든 목격자만 본다. */
     class ListedSight : public IWesternWitnessSight
     {
     public:

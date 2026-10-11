@@ -14,13 +14,13 @@
 #include <cstring>
 
 // 압축 봉투 — 왕복 · 줄지 않으면 원문, 폭탄(원래 크기가 상한 초과) · 모르는 코덱 · 깨진 크기 칸은 코덱을 부르기 전에 거절, 스트림 끝점은 압축 프레임을 풀어 넘기고
-// 푼 크기가 몸 상한을 넘으면 ProtocolError 로 끊는다. Engine 코덱이 없어 Core 내장 RLE 와 시험용 코덱을 쓴다.
+// 푼 크기가 몸 상한을 넘으면 ProtocolError 로 끊는다. Engine 코덱이 없어 Core 내장 RLE 와 테스트용 코덱을 쓴다.
 
 using namespace sw;
 
 namespace
 {
-    /** @brief 부른 수를 세는 시험용 코덱(id Custom) — 압축은 그대로 복사, 해제도 복사. */
+    /** @brief 부른 수를 세는 테스트용 코덱(id Custom) — 압축은 그대로 복사, 해제도 복사. */
     class CountingCodec final : public ICompressionCodec
     {
     public:
@@ -71,7 +71,7 @@ namespace
         }
     };
 
-    /** @brief 시험 동안 활성 등록부를 바꿔 끼운다(끝에 되돌린다). */
+    /** @brief 테스트 동안 활성 등록부를 바꿔 끼운다(끝에 되돌린다). */
     struct ScopedActiveRegistry
     {
         explicit ScopedActiveRegistry( CompressionCodecRegistry* pRegistry )

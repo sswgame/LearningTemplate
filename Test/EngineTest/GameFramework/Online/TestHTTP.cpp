@@ -69,7 +69,7 @@ namespace
                    _client.initialize( _network.createTransport(), transportSettings, clientSettings );
         }
 
-        /** @brief 요청 하나를 끝까지 돌립니다. @p bServe 가 false 면 서버를 돌리지 않는다(시한 시험). */
+        /** @brief 요청 하나를 끝까지 돌립니다. @p bServe 가 false 면 서버를 돌리지 않는다(시한 테스트). */
         HTTPClientResponse run( const HTTPClientRequest& request, bool bServe = true )
         {
             int64        nowMs     = 0;

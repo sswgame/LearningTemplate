@@ -2164,10 +2164,10 @@ SW_TEST_CASE( GPUSceneTest, IncrementalTransparentTailMatchesFreshBuild )
 
 namespace
 {
-    /** @brief 스프라이트 시험이 쓰는 네 칸 텍스처입니다(Scripts/generate/GenerateSpriteTextures.py). */
+    /** @brief 스프라이트 테스트가 쓰는 네 칸 텍스처입니다(Scripts/generate/GenerateSpriteTextures.py). */
     constexpr const utf8* kSpriteQuadrantTexture = "engine/textures/test/quadrants.dds";
 
-    /** @brief 경계 중심의 X 로 인스턴스를 찾습니다(스프라이트 시험은 X 로 늘어놓는다). 없으면 nullptr 입니다. */
+    /** @brief 경계 중심의 X 로 인스턴스를 찾습니다(스프라이트 테스트는 X 로 늘어놓는다). 없으면 nullptr 입니다. */
     const sw::GPUInstance* findInstanceAtX( const sw::vector<sw::GPUInstance>& listInstance, float32 x )
     {
         for ( const sw::GPUInstance& instance : listInstance )
@@ -2193,7 +2193,7 @@ namespace
         return pSprite;
     }
 
-    /** @brief 투명 정렬 시험의 장면 — 반투명 에셋 하나 · 큐브 하나를 나눠 쓰는 메시들(같은 배치에 들어가 배치 안 순서가 그대로 보인다). */
+    /** @brief 투명 정렬 테스트의 장면 — 반투명 에셋 하나 · 큐브 하나를 나눠 쓰는 메시들(같은 배치에 들어가 배치 안 순서가 그대로 보인다). */
     struct TransparentSortFixture
     {
         sw::Scene                    _scene{ "GpuSceneSortingLayers" };
@@ -2265,7 +2265,7 @@ SW_TEST_CASE( GPUSceneTest, SpriteFrameAndTintRideTheInstanceWithoutSplittingThe
     sw::GPUSceneSnapshot first;
     builder.exportCPUSnapshot( first );
     SW_ASSERT_EQUAL( 3u, static_cast<uint32>( first.getInstances().size() ) );
-    // 같은 텍스처(머티리얼 인스턴스)라 프레임 · 색이 달라도 배치 하나다. (디바이스 없는 시험이라 머티리얼 파일이 아직 안 읽혀 블렌드는 기본값이다 —
+    // 같은 텍스처(머티리얼 인스턴스)라 프레임 · 색이 달라도 배치 하나다. (디바이스 없는 테스트라 머티리얼 파일이 아직 안 읽혀 블렌드는 기본값이다 —
     // 반투명 배치인지는 RenderPassGPUTest.SpriteFramesAndTintsArePerInstance 가 실제 디바이스에서 본다.)
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( first._listAllBatch.size() ) );
     SW_EXPECT_EQUAL( 3u, first._listAllBatch[0]._instanceCount );

@@ -356,7 +356,7 @@ namespace
     }
 
     /**
-     * @brief 다중 뷰 시험 무대 — 붉은 큐브(−X 멀리) · 푸른 큐브(+X 멀리), 주광, 주 카메라(원점을 본다), 큐브마다 그것만 보는 캡처 카메라를 둘 수 있다.
+     * @brief 다중 뷰 테스트 무대 — 붉은 큐브(−X 멀리) · 푸른 큐브(+X 멀리), 주광, 주 카메라(원점을 본다), 큐브마다 그것만 보는 캡처 카메라를 둘 수 있다.
      * @details 머티리얼은 실제 에셋을 읽어 색만 바꾼다(손으로 지은 XML 은 퍼뮤테이션이 빠져 쿠킹된 변형과 맞지 않는다).
      */
     struct MultiViewScene
@@ -470,7 +470,7 @@ namespace
     };
 
     /**
-     * @brief 툰 · 외곽선 시험 무대 — 기본 카메라(원점을 본다), 옆에서 비스듬히 드는 주광, 원점의 구 하나.
+     * @brief 툰 · 외곽선 테스트 무대 — 기본 카메라(원점을 본다), 옆에서 비스듬히 드는 주광, 원점의 구 하나.
      * @details 머티리얼은 실제 에셋(defaultmaterial · toon)을 읽어 값만 바꾼다(손으로 지은 XML 은 퍼뮤테이션이 빠져 쿠킹된 변형과 맞지 않는다).
      */
     struct ToonSphereScene
@@ -1299,7 +1299,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialPermutationDrivesBatchPSO )
         }
     }
 
-    // 형제 시험(카메라 컬링·투명 정렬·뷰 모드 등)과 같은 규칙으로 빠진다 — 여기서 단언하면 디스플레이가 없는
+    // 형제 테스트(카메라 컬링·투명 정렬·뷰 모드 등)과 같은 규칙으로 빠진다 — 여기서 단언하면 디스플레이가 없는
     // 환경에서 진다. X11 디스플레이가 없으면 창이 안 열려 네 백엔드가 전부 초기화에 실패하고,
     // 그건 결함이 아니라 그 환경에 GPU 가 없다는 뜻이다.
     if ( sweep.getReadyCount() == 0 )
@@ -2479,7 +2479,7 @@ SW_TEST_CASE( RenderPassGPUTest, UploadQueueLeavesMeshesToTheRenderThreadWithout
     SW_EXPECT_EQUAL( 0u, queue.flush() );
     SW_EXPECT_FALSE( mesh->isRHIValid() );
 
-    // 렌더 스레드 자리(여기서는 컨텍스트를 쥔 시험 스레드)에서 만든다 — GPUScene 업로드가 하는 일이다.
+    // 렌더 스레드 자리(여기서는 컨텍스트를 쥔 테스트 스레드)에서 만든다 — GPUScene 업로드가 하는 일이다.
     SW_EXPECT_TRUE( mesh->initRHI( device.get() ) );
     mesh->releaseRHI( device.get() );
 }
@@ -2499,7 +2499,7 @@ SW_TEST_CASE( RenderPassGPUTest, MeshReleaseWaitsForTheRenderThreadFrame )
         SW_ASSERT_NOT_NULL( mesh.get() );
         SW_EXPECT_TRUE_MSG( mesh->initRHI( device.get() ), label.c_str() );
 
-        // 렌더 스레드가 프레임을 들고 있다. 이 시험 스레드는 렌더 스레드가 아니다(묶인 렌더 스레드가 없다).
+        // 렌더 스레드가 프레임을 들고 있다. 이 테스트 스레드는 렌더 스레드가 아니다(묶인 렌더 스레드가 없다).
         const size_t deferredBefore = device->getDeferredHandleCount();
         device->notifyRenderFrameQueued();
         mesh.reset();
@@ -3219,7 +3219,7 @@ SW_TEST_CASE( RenderPassGPUTest, SkinnedMeshFollowsPaletteLikeCPUSkinning )
         const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
         for ( uint32 frame = 0; frame < 4; ++frame )
         {
-            // 팔레트는 애니메이션 시스템이 틱 뒤에 만든다 — 시험은 틱 대신 평가만 부른다.
+            // 팔레트는 애니메이션 시스템이 틱 뒤에 만든다 — 테스트는 틱 대신 평가만 부른다.
             scene.getObjectManager()->getAnimationSystem().evaluate( 0.0f );
             device.beginFrame( clear );
             if ( renderer.execute( &device, &scene ) == false )
@@ -3585,7 +3585,7 @@ SW_TEST_CASE( RenderPassGPUTest, MorphWeightsDeformBeforeSkinningLikeCPU )
  * @brief [RenderPassGPUTest] 정점 · 모프 풀은 메시 **내용**이 바뀌면 다시 만든다 — 포인터가 같아도
  * @details 메시 집합이 그대로인지를 포인터로만 보면, 메시가 지워진 자리에 새 메시가 생기거나(할당기는 같은 크기의 자리를 곧바로
  *          다시 준다) 같은 메시의 정점을 바꿀 때(`setVertices`) "같은 집합" 으로 보여 옛 정점을 그리고, 정점 수가 줄었으면 배치의 정점 구간이
- *          다른 메시의 정점을 읽는다. 주소 재사용은 시험에서 마음대로 일으킬 수 없어, 같은 원인의 다른 얼굴(같은 메시의 정점 교체)로 본다.
+ *          다른 메시의 정점을 읽는다. 주소 재사용은 테스트에서 마음대로 일으킬 수 없어, 같은 원인의 다른 얼굴(같은 메시의 정점 교체)로 본다.
  */
 SW_TEST_CASE( RenderPassGPUTest, MeshPoolsRebuildWhenMeshContentChanges )
 {
@@ -3779,7 +3779,7 @@ SW_TEST_CASE( RenderPassGPUTest, ReloadedTextureIsReboundToMaterialsAndBatches )
 
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the texture reload rebinding test" );
-    // 지연 해제(DX12 · Vulkan)가 있으면 새 인덱스는 언제나 다르다 — 그것조차 없으면 이 시험은 아무것도 보지 못한 것이다.
+    // 지연 해제(DX12 · Vulkan)가 있으면 새 인덱스는 언제나 다르다 — 그것조차 없으면 이 테스트는 아무것도 보지 못한 것이다.
     SW_EXPECT_TRUE_MSG( changedIndexCount > 0, "어느 백엔드에서도 다시 올린 텍스처의 인덱스가 바뀌지 않았습니다 — 시험이 결함을 볼 수 없습니다" );
 }
 
@@ -4340,7 +4340,7 @@ SW_TEST_CASE( RenderPassGPUTest, RenamedGBufferAttachmentsRenderTheSameImage )
         pipelineText     = pipelineText.substr( 0, outputBegin ) + block + pipelineText.substr( outputEnd );
         SW_ASSERT_TRUE( pipelineText.find( "<item>MainNormal</item>", outputBegin ) < pipelineText.find( "<item>MainAlbedo</item>", outputBegin ) );
     }
-    // 정본 이름이 남아 있으면 시험이 아무것도 바꾸지 않은 것이다.
+    // 정본 이름이 남아 있으면 테스트가 아무것도 바꾸지 않은 것이다.
     SW_ASSERT_TRUE( pipelineText.find( "<item>GBufferAlbedo</item>" ) == sw::string::npos );
     SW_ASSERT_TRUE( pipelineText.find( "_role=\"GBufferAlbedo\"" ) != sw::string::npos );
     const sw::string renamedPath = test::makeTempPath( "renameddeferredpipeline.xml" );
@@ -4578,7 +4578,7 @@ SW_TEST_CASE( RenderPassGPUTest, DepthPrepassRendersTheSameImage )
 /**
  * @brief [RenderPassGPUTest] 그림자 패스가 바닥에 그림자를 드리운다 — 네 백엔드 모두
  * @details 깊이 전용 PSO(픽셀 스테이지 없음)의 드로우를 백엔드가 버리면(그리기 때 PS 까지 요구하면) 그림자 맵이 클리어 값뿐이라 그 백엔드
- *          화면에만 그림자가 없다. 두 판을 서로 맞추기만 하는 시험은 둘 다 그림자가 없어도 같아 이것을 못 잡는다.
+ *          화면에만 그림자가 없다. 두 판을 서로 맞추기만 하는 테스트는 둘 다 그림자가 없어도 같아 이것을 못 잡는다.
  *          그래서 그림자 패스의 깊이 쓰기만 끈 판(그림자 맵이 비는 판)과 **달라야** 한다.
  */
 SW_TEST_CASE( RenderPassGPUTest, ShadowPassCastsOnEveryBackend )
@@ -4601,7 +4601,7 @@ SW_TEST_CASE( RenderPassGPUTest, ShadowSurvivesLargeShadowVolume )
  * @details 노멀을 월드 행렬로 옮기면(`mul( float4( n, 0 ), world )`) 균등 스케일 · 회전뿐일 때는 방향이 같아 드러나지 않지만, X 로 세 배
  *          늘린 부모 아래에서 Y 로 돈 쿼드는 노멀이 늘어난 축 쪽으로 50° 넘게 기운다 — 늘린 메시의 조명이 통째로 틀린다. 셰이더는 3x3 의
  *          여인수 행렬(외적 셋)로 옮기고 행렬식의 부호를 곱한다(binding.hlsli `swComputeWorldNormal`) — 부호가 없으면 거울 스케일(-3)에서 노멀이 뒤집힌다.
- *          기대값은 CPU 가 **다른 길**(월드 행렬의 역행렬 → 전치)로 구하고, 월드 행렬로 옮긴 식이 기대와 충분히 다른 배치인지도 먼저 확인한다 — 아니면 이 시험은
+ *          기대값은 CPU 가 **다른 길**(월드 행렬의 역행렬 → 전치)로 구하고, 월드 행렬로 옮긴 식이 기대와 충분히 다른 배치인지도 먼저 확인한다 — 아니면 이 테스트는
  *          눈이 멀어 있다. 노멀은 조명 이전의 값이라 G버퍼에서 직접 읽는다. 거울 배치는 컬 모드를 뒤집어 그리므로(`GPUMeshBatch::_bReverseCulling`)
  *          파이프라인의 후면 컬링을 그대로 두어도 카메라 쪽 면이 G버퍼에 남는다.
  */
@@ -5039,7 +5039,7 @@ SW_TEST_CASE( RenderPassGPUTest, EngineTextureSlotsAreSampledLinearClamp )
         bool      bOk = scene.ensureDefaultCameras();
         if ( bOk )
         {
-            // 밝은 면이 있어야 블룸이 퍼진다. 그림자는 끈다 — 에뮬 백엔드는 그림자 비교를 다르게 한다(이 시험의 대상이 아니다).
+            // 밝은 면이 있어야 블룸이 퍼진다. 그림자는 끈다 — 에뮬 백엔드는 그림자 비교를 다르게 한다(이 테스트의 대상이 아니다).
             sw::GameObject*                pLightObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "KeyLight" ) );
             sw::DirectionalLightComponent* pLight       = ( pLightObject != nullptr ) ? pLightObject->addComponent<sw::DirectionalLightComponent>() : nullptr;
             bOk                                         = pLight != nullptr;
@@ -6265,7 +6265,7 @@ SW_TEST_CASE( RenderPassGPUTest, GlContextBindWaitsForAShortHolder )
     if ( device.isReady() == false )
         SW_TEST_SKIP( "OpenGL is not available" );
     sw::IRHIDevice* pDevice = device.get();
-    pDevice->unbindGraphicsContext(); // 시험 스레드가 쥐고 있던 것을 놓는다
+    pDevice->unbindGraphicsContext(); // 테스트 스레드가 쥐고 있던 것을 놓는다
 
     std::atomic<bool>  bHeld{ false };
     std::atomic<bool>  bHolderDone{ false };
@@ -6317,7 +6317,7 @@ SW_TEST_CASE( RenderPassGPUTest, SoftwareAdapterSwitchStartsWarp )
         SW_EXPECT_TRUE( pSwitch->setValueAsInt( 0 ) );
         SW_EXPECT_TRUE_MSG( bReady, "the WARP device did not start" );
         SW_EXPECT_TRUE_MSG( bSoftware, "gv_rhiSoftwareAdapter=1 did not put the device on the software adapter" );
-        // 환경 변수(SW_RHI_SOFTWARE_ADAPTER=1)로 시험 전체를 WARP 로 돌리는 실행이면 "끄면 하드웨어" 는 볼 수 없다.
+        // 환경 변수(SW_RHI_SOFTWARE_ADAPTER=1)로 테스트 전체를 WARP 로 돌리는 실행이면 "끄면 하드웨어" 는 볼 수 없다.
         const utf8*         pEnv     = std::getenv( "SW_RHI_SOFTWARE_ADAPTER" );
         const bool          bEnvWarp = pEnv != nullptr && sw::StringUtil::equals( pEnv, "1" );
         test::RHITestDevice hardware( backend );
@@ -6565,7 +6565,7 @@ SW_TEST_CASE( RenderPassGPUTest, CrowdSharingAndVertexAnimationMatchPerUnitSkinn
         const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
         for ( uint32 frame = 0; frame < 4; ++frame )
         {
-            // 팔레트 · 묶음은 애니메이션 시스템이 틱 뒤에 만든다 — 시험은 틱 대신 평가만 부른다(시간은 흐르지 않는다).
+            // 팔레트 · 묶음은 애니메이션 시스템이 틱 뒤에 만든다 — 테스트는 틱 대신 평가만 부른다(시간은 흐르지 않는다).
             manager.getAnimationSystem().evaluate( 0.0f );
             device->beginFrame( clear );
             if ( renderer.execute( device.get(), &scene ) == false )
@@ -7402,7 +7402,7 @@ SW_TEST_CASE( RenderPassGPUTest, TwoSidedMaterialDrawsBackFaces )
  *          엔진 글꼴(라틴, 저장소 글꼴)의 SDF 글리프 "A". 단언은 픽셀 값이 아니라 A 와의 차이로 본다(장면 · 클리어 색 · 톤매핑에 매이지 않게):
  *          캔버스 밖은 A 그대로(Load — Clear 로 열면 장면이 사라진다), 둥근 모서리 바깥 · 가위 밖도 A 그대로, 겹친 곳은 빨강 반 + 파랑 반,
  *          글리프 상자의 밝기 증가가 백엔드끼리 2 % 안. 백버퍼 사본이 캡처와 같다 — 캡처 → 백버퍼 복사가 Canvas 뒤에 있다.
- *          경로 그림(네 칸 시험 텍스처 — 게임 스레드는 경로만 싣고 렌더러가 `TextureCache` 로 푼다)은 칸마다 제 색이다(왼위 빨강 · 오위 초록 · 왼아래 파랑).
+ *          경로 그림(네 칸 테스트 텍스처 — 게임 스레드는 경로만 싣고 렌더러가 `TextureCache` 로 푼다)은 칸마다 제 색이다(왼위 빨강 · 오위 초록 · 왼아래 파랑).
  */
 SW_TEST_CASE( RenderPassGPUTest, CanvasDrawsOnEveryBackend )
 {
@@ -7699,7 +7699,7 @@ SW_TEST_CASE( RenderPassGPUTest, WorldWidgetRenderTextureIsSampled )
 
 /**
  * @brief [RenderPassGPUTest] 캔버스 색각 보정 — 녹색약(2)에서 빨강 · 초록 사각형의 출력이 보정 식의 결과(±2/255)와 같고, 끔(0)이면 그대로다 — 4 백엔드
- * @details 기대값은 시험 안의 C++ 식(Machado 2009 녹색약 행렬로 흉내 → 빨강 쪽 오차를 초록 · 파랑으로 옮김)이다 — 셰이더(colorvision.hlsli)와 따로 적어 서로를 잡는다.
+ * @details 기대값은 테스트 안의 C++ 식(Machado 2009 녹색약 행렬로 흉내 → 빨강 쪽 오차를 초록 · 파랑으로 옮김)이다 — 셰이더(colorvision.hlsli)와 따로 적어 서로를 잡는다.
  *          사각형은 불투명이라 장면과 섞이지 않는다. 변이: canvas.hlsl 의 보정 호출을 빼면 녹색약에서도 빨강이 (255, 0, 0) 이라 진다.
  */
 SW_TEST_CASE( RenderPassGPUTest, CanvasColorVisionChangesRedGreen )

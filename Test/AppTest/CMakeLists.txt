@@ -3,7 +3,7 @@
 # @brief App(런처) 테스트 — 혼자 도는 정책(nogpu) + 실기동 스모크(hostgpu)
 # ==============================================================================
 
-# 에디터 · App 시험은 클라이언트 코드다 — 전용 서버 타깃(Server)에는 에디터 · App · 창이 없어 짓지 않는다.
+# 에디터 · App 테스트는 클라이언트 코드다 — 전용 서버 타깃(Server)에는 에디터 · App · 창이 없어 짓지 않는다.
 if(SW_TARGET_TYPE STREQUAL "Server")
 	sw_declareUnbuiltDirectory("${CMAKE_CURRENT_SOURCE_DIR}")
 	return()
@@ -16,7 +16,7 @@ endif()
 # 돌리지 않으므로, 그 그물은 실제 `App.exe` 를 돌려 보는 것뿐이다. 그 집합은 GPU·창이 필요하니
 # 아래에서 `hostgpu` 로 갈라 둔다. 헤드리스 씬 쿠킹(`TestAppCook.cpp`)은 창 · GPU 가 없어도 돌아 `nogpu` 쪽에 남는다.
 #
-# 시험 소스는 이 폴더를 훑는다(`sw_addTestExecutable`). App 소스는 하나도 끌어오지 않는다 — 끌어오면 그 의존성이 조용히 따라온다.
+# 테스트 소스는 이 폴더를 훑는다(`sw_addTestExecutable`). App 소스는 하나도 끌어오지 않는다 — 끌어오면 그 의존성이 조용히 따라온다.
 sw_addTestExecutable(AppTest
 	HOST_SPLIT
 	LIBS

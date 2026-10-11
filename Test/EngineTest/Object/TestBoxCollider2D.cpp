@@ -286,7 +286,7 @@ SW_TEST_CASE( BoxCollider2DTest, TriggerCollidersReportOverlapsAndSaySo )
 
 /**
  * @brief [BoxCollider2DTest] 순수 기하(`overlapsBounds`)와 레이어 반영 겹침(`isTouching`)은 각자 바디 등록 전후로 같은 답이고, 레이어가 막는 쌍에서 서로 다르다
- * @details 판정 하나가 바디 등록 여부로 갈리면 시작 전(에디터 · 시험)은 상자만, 시작 뒤(플레이)는 물리의 레이어 행렬까지 봐서 같은 쌍을 물어도 Play 를
+ * @details 판정 하나가 바디 등록 여부로 갈리면 시작 전(에디터 · 테스트)은 상자만, 시작 뒤(플레이)는 물리의 레이어 행렬까지 봐서 같은 쌍을 물어도 Play 를
  *          누르면 답이 바뀐다. 유니티처럼 `Bounds.Intersects`(기하) 와 `Collider2D.IsTouching`(물리 규칙) 을 이름이 다른 두 함수로 둔다.
  */
 SW_TEST_CASE( BoxCollider2DTest, GeometricAndLayerOverlapAnswerTheSameBeforeAndAfterBodiesExist )

@@ -113,7 +113,7 @@ namespace
             return pFound;
         }
 
-        /** @brief 같은 대본(시각마다 같은 신호)을 돌려 사건과 상태 해시를 받습니다 — 결정성 시험이 씨앗만 바꿔 부른다. */
+        /** @brief 같은 대본(시각마다 같은 신호)을 돌려 사건과 상태 해시를 받습니다 — 결정성 테스트가 씨앗만 바꿔 부른다. */
         static uint64 runScript( uint32 seed, vector<AIDirectorEvent>& outListEvent )
         {
             AIDirectorProfile profile;

@@ -1,6 +1,6 @@
 /**
  * @file AppearanceTestFixture.h
- * @brief 외형 시험의 공통 데이터 — 기사 세트 · 로브 · 양손검 · 망토(세트 조건) · 칼(꾸미기 · 상태 · 피해 단계) · 사람 스키마 · 규칙 · 프리셋입니다.
+ * @brief 외형 테스트의 공통 데이터 — 기사 세트 · 로브 · 양손검 · 망토(세트 조건) · 칼(꾸미기 · 상태 · 피해 단계) · 사람 스키마 · 규칙 · 프리셋입니다.
  */
 #pragma once
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"

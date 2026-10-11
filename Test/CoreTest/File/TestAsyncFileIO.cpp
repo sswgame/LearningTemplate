@@ -1,8 +1,8 @@
 /**
  * @file TestAsyncFileIO.cpp
  * @brief 비동기 파일 읽기 — 전체 · 구간 읽기, 없는 파일 · 끝을 넘는 구간, 우선순위 순서, 취소, 내린 뒤 요청, future, 태스크 워커 완료.
- * @details 같은 시험을 이 플랫폼의 기본 백엔드(Windows IOCP · 리눅스 io_uring — 없으면 스레드 풀)와 스레드 풀 백엔드로 각각 돌린다.
- *          순서 시험은 "동시 진행 1 개" 로 백엔드를 막아 두고(첫 요청의 완료 콜백이 IO 스레드에서 기다린다) 그동안 쌓인 요청이 어떤 순서로
+ * @details 같은 테스트를 이 플랫폼의 기본 백엔드(Windows IOCP · 리눅스 io_uring — 없으면 스레드 풀)와 스레드 풀 백엔드로 각각 돌린다.
+ *          순서 테스트는 "동시 진행 1 개" 로 백엔드를 막아 두고(첫 요청의 완료 콜백이 IO 스레드에서 기다린다) 그동안 쌓인 요청이 어떤 순서로
  *          나오는지 본다 — 시간에 기대지 않는다.
  */
 #include "pch.h"
@@ -22,7 +22,7 @@
 
 namespace
 {
-    /** @brief 시험 파일 크기 — IOCP 가 한 번에 끝내지 못할 만큼 크지는 않지만 구간 시험이 의미 있는 크기. */
+    /** @brief 테스트 파일 크기 — IOCP 가 한 번에 끝내지 못할 만큼 크지는 않지만 구간 테스트가 의미 있는 크기. */
     constexpr uint32 kFileBytes = 256 * 1024;
 
     /** @brief 위치 @p offset 의 바이트 값입니다(어느 구간을 읽었는지 내용으로 가린다). */
@@ -31,7 +31,7 @@ namespace
         return static_cast<uint8>( ( offset * 31 + ( offset >> 8 ) ) & 0xFF );
     }
 
-    /** @brief 알려진 내용의 시험 파일을 쓰고 경로를 돌려줍니다. */
+    /** @brief 알려진 내용의 테스트 파일을 쓰고 경로를 돌려줍니다. */
     sw::string writeTestFile( const utf8* pName, uint32 byteCount = kFileBytes )
     {
         sw::vector<uint8> bytes( byteCount );
@@ -56,10 +56,10 @@ namespace
         return true;
     }
 
-    /** @brief 시험마다 도는 두 백엔드입니다. */
+    /** @brief 테스트마다 도는 두 백엔드입니다. */
     const sw::AsyncIOBackendKind kArrBackendKind[] = { sw::AsyncIOBackendKind::Auto, sw::AsyncIOBackendKind::ThreadPool };
 
-    /** @brief 동시 진행 1 개 · 스레드 하나인 매니저를 시작합니다(순서 시험용). */
+    /** @brief 동시 진행 1 개 · 스레드 하나인 매니저를 시작합니다(순서 테스트용). */
     bool startSerialIO( sw::AsyncFileIO& io, sw::AsyncIOBackendKind kind )
     {
         sw::AsyncFileIOSettings settings{};

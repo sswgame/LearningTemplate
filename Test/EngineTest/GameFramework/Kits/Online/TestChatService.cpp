@@ -22,7 +22,7 @@ using namespace sw;
 
 namespace
 {
-    /** @brief 이 서버에 붙은 계정 — 시험이 채운다. */
+    /** @brief 이 서버에 붙은 계정 — 테스트가 채운다. */
     class ChatTestDirectory final : public IAccountDirectory
     {
     public:
@@ -65,7 +65,7 @@ namespace
         }
     };
 
-    /** @brief 서버 하나 — 저장소 앞 · 로컬 버스 · 가짜 접속 상태 · 채팅. 버스 구독 바뀜과 메시지는 호스트 대신 시험이 처리한다. */
+    /** @brief 서버 하나 — 저장소 앞 · 로컬 버스 · 가짜 접속 상태 · 채팅. 버스 구독 바뀜과 메시지는 호스트 대신 테스트가 처리한다. */
     struct ChatNode
     {
         MemoryServiceStore        _store;

@@ -9,7 +9,7 @@
 
 namespace
 {
-    /** @brief 모든 바이트를 0xA5 와 XOR 하는 시험용 코덱 — 쓰였는지 바이트로 알 수 있다. */
+    /** @brief 모든 바이트를 0xA5 와 XOR 하는 테스트용 코덱 — 쓰였는지 바이트로 알 수 있다. */
     class XorTestCodec final : public sw::ICompressionCodec
     {
     public:

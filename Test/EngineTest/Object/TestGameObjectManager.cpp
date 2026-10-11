@@ -907,7 +907,7 @@ namespace
         return info;
     }
 
-    /** @brief 짧은 이름이 같은 두 시험 타입의 줄입니다. 모듈 "TestShadowProbe" 로 올린다. */
+    /** @brief 짧은 이름이 같은 두 테스트 타입의 줄입니다. 모듈 "TestShadowProbe" 로 올린다. */
     TypeInfo makeShadowProbeTypeInfo( const utf8* pFqn, size_t size, Component* ( *addComponent )(GameObject*))
     {
         TypeInfo info{};
@@ -950,7 +950,7 @@ const TypeInfo* sw::KitProbeComponent::StaticType()
 
 /**
  * @brief [GameObjectManagerTest] 생성 함수는 타입 표 하나에 있다 — 먼저 만든 매니저도 나중에 오른 모듈 타입을 만들고, 모듈을 내리면 어느 매니저도 못 만든다
- * @details 매니저마다 만들 때 팩토리 표를 모으면 씬에 속하지 않은 매니저(비동기 로드의 워커 · 시험)는 나중에 오른 모듈을 모르고, 내린
+ * @details 매니저마다 만들 때 팩토리 표를 모으면 씬에 속하지 않은 매니저(비동기 로드의 워커 · 테스트)는 나중에 오른 모듈을 모르고, 내린
  *          모듈의 람다를 그대로 든다. 그리고 생성 함수의 모듈은 박힌 이름("GameFramework")이 아니라 **올린 모듈**("GF_TestKit")이다 — 그래야
  *          키트를 내릴 때 같이 걷힌다. 걷힌 뒤에는 미리 들고 있던 `TypeInfo*` 의 칸도 비어 있어야 한다(내려간 이미지를 가리키면 안 된다).
  */

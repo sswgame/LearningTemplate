@@ -121,7 +121,7 @@ namespace test
         /**
          * @brief 이 실행이 맡은 케이스 — 고른 케이스(`isSelected`) 중 이 샤드의 것을 등록 순서로.
          * @details `--test_shard=INDEX/COUNT`(또는 gtest 의 `GTEST_SHARD_INDEX` · `GTEST_TOTAL_SHARDS`)이면 **스위트 안에서 번갈아** 나눈다
-         *          (스위트 번호 + 스위트 안 순번을 COUNT 로 나눈 나머지). 느린 스위트 하나가 실행 시간을 다 차지할 때(ReflectionTest 의 파서 시험)
+         *          (스위트 번호 + 스위트 안 순번을 COUNT 로 나눈 나머지). 느린 스위트 하나가 실행 시간을 다 차지할 때(ReflectionTest 의 파서 테스트)
          *          그 스위트가 반씩 갈려야 샤드가 의미 있다. 샤드가 하나면 고른 케이스 전부다.
          */
         sw::vector<const TestCaseInfo*> selectCasesForThisShard() const;
@@ -138,8 +138,8 @@ namespace test
         /** @brief 견딘 알려진 Error 로그를 실행 요약에 찍습니다. */
         void printKnownErrorLogSummary() const;
         /**
-         * @brief 결과 줄(`[ RUN ]` · `[FAILED]` · 실패 요약)의 머리입니다. 프로세스 레지스트리는 빈 문자열, 시험 안에서 만든 레지스트리는 `(nested) ` 입니다.
-         * @details CI 실패 보고(`Scripts/dev/CiFailureReport.py`)와 에디터 시험 출력 해석은 줄 머리로 실패를 고른다. 틀 시험이 일부러 지게 만든
+         * @brief 결과 줄(`[ RUN ]` · `[FAILED]` · 실패 요약)의 머리입니다. 프로세스 레지스트리는 빈 문자열, 테스트 안에서 만든 레지스트리는 `(nested) ` 입니다.
+         * @details CI 실패 보고(`Scripts/dev/CiFailureReport.py`)와 에디터 테스트 출력 해석은 줄 머리로 실패를 고른다. 틀 테스트가 일부러 지게 만든
          *          안쪽 케이스가 바깥 실행의 실패로 보이지 않게 한다.
          */
         const utf8* getLinePrefix() const;
@@ -343,9 +343,9 @@ namespace test
 {
     /**
      * @brief 스코프 동안 단언(`SW_ASSERT` · `SW_LOG_ASSERT`)이 멈추지 않고 세어지게 하는 RAII 헬퍼입니다.
-     * @details Debug 의 단언은 디버거에서 멈추므로(`SW_DEBUG_BREAK`) 단언이 걸리는 입력을 시험하면 프로세스가 죽는다. 이 스코프 안에서는
+     * @details Debug 의 단언은 디버거에서 멈추므로(`SW_DEBUG_BREAK`) 단언이 걸리는 입력을 테스트하면 프로세스가 죽는다. 이 스코프 안에서는
      *          단언이 세어지기만 하고 코드는 그 뒤로 이어진다(배포본과 같은 길). `getCount()` 로 "단언이 걸렸나" 를 묻는다.
-     *          단언은 Debug 에서만 있으므로 그 밖의 구성에서 `getCount()` 는 늘 0 이다 — 시험은 `kAssertsAreActive` 로 갈라 묻는다.
+     *          단언은 Debug 에서만 있으므로 그 밖의 구성에서 `getCount()` 는 늘 0 이다 — 테스트는 `kAssertsAreActive` 로 갈라 묻는다.
      *          `SW_LOG_ASSERT` 는 Error 로그도 남기므로 `SW_TEST_DEFENSIVE_SCOPE` 와 같이 쓴다.
      */
     class ScopedAssertCapture
@@ -386,7 +386,7 @@ namespace test
 {
     /**
      * @brief 스코프 동안 남은 Warning · Error 로그를 모아 "이 경고가 나왔나" 를 묻는 RAII 헬퍼입니다.
-     * @details 시험마다 `Logger::addGlobalListener` 리스너를 손으로 만들지 않게 한 자리에 둔다. 리스너는 남기는 스레드에서
+     * @details 테스트마다 `Logger::addGlobalListener` 리스너를 손으로 만들지 않게 한 자리에 둔다. 리스너는 남기는 스레드에서
      *          곧바로 불리므로 같은 스레드의 경고는 그 호출이 돌아오면 이미 모여 있다. `ScopedDefensiveTestLog` 와 같이 써도 된다 — 그때 메시지 앞에
      *          `[Expected Defensive Test]` 가 붙지만 `countContaining` 은 부분 문자열로 찾는다.
      */
@@ -627,7 +627,7 @@ namespace test
  * @param substring 그 Error 줄에 든 고정 문구(영문 원문).
  * @param reason    왜 견디는지 · 어디서 고칠지(영문 — 실행 요약에 찍힌다).
  * @details 호스트 스위트의 케이스는 예상 밖 Error 로그 하나로 진다(검증 레이어 · 드라이버 오류가 단언 없이 지나가지 않게).
- *          의도된 Error 는 `SW_TEST_DEFENSIVE_SCOPE` 로 감싸고, 이 선언은 **원인이 시험 밖(엔진)에 있고 아직 못 고친 것**에만 쓴다.
+ *          의도된 Error 는 `SW_TEST_DEFENSIVE_SCOPE` 로 감싸고, 이 선언은 **원인이 테스트 밖(엔진)에 있고 아직 못 고친 것**에만 쓴다.
  *          실행 요약이 견딘 줄 수를 찍고, 한 번도 나오지 않았으면 "지워도 된다" 고 알린다. 고쳤으면 이 줄을 지운다.
  */
 #define SW_TEST_KNOWN_ERROR_LOG( SuiteName, substring, reason ) \

@@ -700,10 +700,10 @@ namespace
 } // namespace
 
 /**
- * @brief [AppSmokeTest] 에디터 자체 시험이 실제 에디터 안에서 모두 통과하고, 그 실행이 사용자의 레이아웃을 건드리지 않는다
+ * @brief [AppSmokeTest] 에디터 자체 테스트가 실제 에디터 안에서 모두 통과하고, 그 실행이 사용자의 레이아웃을 건드리지 않는다
  * @details 패널 · 위젯 · 도킹은 에디터 컨텍스트와 ImGui 프레임이 모두 서 있어야 재현된다(UE Automation · Unity EditMode 의 자리). App 을
- *          `-gv_editorSelfTest=*` 로 띄우면 에디터가 등록된 시험(`SW_EDITOR_SELF_TEST`)을 프레임마다 한 단계씩 돌리고 보고서를 쓴 뒤 스스로 닫힌다.
- *          알려진 시험이 모두 PASS 로 나와야 하고(빠지면 등록이 링크에서 빠진 것), 끝 줄의 실패 수가 0 이어야 한다. 시험 실행은 저장된 레이아웃을
+ *          `-gv_editorSelfTest=*` 로 띄우면 에디터가 등록된 테스트(`SW_EDITOR_SELF_TEST`)을 프레임마다 한 단계씩 돌리고 보고서를 쓴 뒤 스스로 닫힌다.
+ *          알려진 테스트가 모두 PASS 로 나와야 하고(빠지면 등록이 링크에서 빠진 것), 끝 줄의 실패 수가 0 이어야 한다. 테스트 실행은 저장된 레이아웃을
  *          읽지도 쓰지도 않는다 — 끝난 뒤 `Config/Editor/imgui.ini` 가 실행 전과 바이트까지 같아야 한다.
  */
 SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
@@ -756,7 +756,7 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
     const bool    bIniExistedBefore = readOptionalFile( imguiIniPath, listIniBefore );
 
     const string reportPath = test::makeTempPath( "editor_self_test.txt" );
-    // 보고서 경로는 따옴표 없이 넘긴다 — 시험 임시 폴더에는 공백이 없다.
+    // 보고서 경로는 따옴표 없이 넘긴다 — 테스트 임시 폴더에는 공백이 없다.
     string arguments{ "-gv_profileFrames=1200 -EnableEditor -dx12 -gv_editorSelfTest=* -gv_editorSelfTestReport=" };
     arguments += reportPath;
     const AppRunResult result = runApp( arguments, "EditorSelfTest|" );
@@ -793,7 +793,7 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
  * @details 렌더 스레드는 UI 가 새 draw 스냅샷을 내기 전까지 옛 스냅샷을 여러 프레임에 다시 그린다. 뷰 RT 를 다시 만들 때 놓은 ImGui 디스크립터
  *          세트 · 렌더 타깃을 UI 스레드에서 곧바로 놓으면 그 프레임들이 놓인 세트를 쓰고(`vkFreeDescriptorSets ... in use`), 새 렌더 타깃을
  *          렌더러가 쓰기 전에 샘플링하면 UNDEFINED 레이아웃을 읽는다. 둘 다 검증 레이어가 [Error] 로 남긴다. `sceneView.resizeEveryFrame` 이
- *          90 프레임 동안 매 프레임 크기를 바꾼다. 검증 레이어는 Debug `Bin` 에 함께 놓인다 — 꺼진 채로 돌면 이 시험은 아무것도 보지 못하므로 진다.
+ *          90 프레임 동안 매 프레임 크기를 바꾼다. 검증 레이어는 Debug `Bin` 에 함께 놓인다 — 꺼진 채로 돌면 이 테스트는 아무것도 보지 못하므로 진다.
  */
 SW_TEST_CASE( AppSmokeTest, VulkanEditorSceneViewResizeLeavesNoValidationError )
 {
