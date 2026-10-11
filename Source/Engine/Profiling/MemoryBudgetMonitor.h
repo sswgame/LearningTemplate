@@ -10,7 +10,38 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/array.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Memory/MemoryTag.h"
+
+#include "Engine/Reflection/ReflectionMacros.h"
+
+namespace sw
+{
+    /** @brief 예산 파일의 한 줄입니다(`_listBudget` 의 원소). 같은 태그 두 번 · 0 이하 크기는 `applyBudgetJSON` 이 오류로 돌립니다. */
+    REFLECT()
+    struct SW_API MemoryBudgetEntry
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Memory tag name (MemoryTag: Texture, Mesh, Audio, Animation, Physics, Navigation, Scene, UI, Script ... case-insensitive)" )
+        string _tag;
+        PROPERTY( Min = 0.0, Tooltip = "Budget in MiB, greater than 0. One [MemoryBudget] warning when it is exceeded" )
+        float64 _megabytes{ 0.0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 예산 파일(`Config/Engine/MemoryBudget.json`)이 담는 내용입니다. 리플렉션으로 읽습니다(`ConfigManager::readConfigJSON` — 모르는 키 · 읽지 못한 값은 오류). */
+    REFLECT()
+    struct SW_API MemoryBudgetFile
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "One budget line per tag - tags without a line have no budget (no warning)" )
+        vector<MemoryBudgetEntry> _listBudget;
+    };
+} // namespace sw
 
 namespace sw
 {

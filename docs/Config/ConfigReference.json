@@ -125,26 +125,26 @@
    "page": "MemoryBudget",
    "path": "Config/Engine/MemoryBudget.json",
    "layer": "엔진 기본값",
-   "type": "",
+   "type": "MemoryBudgetFile",
    "types": [
     {
-     "name": "kArrMemoryBudgetRootKeyDoc",
-     "source": "Source/Engine/Profiling/MemoryBudgetMonitor.cpp",
+     "name": "MemoryBudgetFile",
+     "source": "Source/Engine/Profiling/MemoryBudgetMonitor.h",
      "fields": [
       {
        "name": "_listBudget",
-       "type": "object[]",
+       "type": "vector<MemoryBudgetEntry>",
        "default": "",
        "min": "",
        "max": "",
        "units": "",
-       "description": "태그마다 예산 한 줄 — 없는 태그는 예산이 없다(경고하지 않는다)"
+       "description": "One budget line per tag - tags without a line have no budget (no warning)"
       }
      ]
     },
     {
-     "name": "kArrMemoryBudgetEntryKeyDoc",
-     "source": "Source/Engine/Profiling/MemoryBudgetMonitor.cpp",
+     "name": "MemoryBudgetEntry",
+     "source": "Source/Engine/Profiling/MemoryBudgetMonitor.h",
      "fields": [
       {
        "name": "_tag",
@@ -153,16 +153,16 @@
        "min": "",
        "max": "",
        "units": "",
-       "description": "메모리 태그 이름(`MemoryTag` — Texture · Mesh · Audio · Animation · Physics · Navigation · Scene · UI · Script …, 대소문자 무시)"
+       "description": "Memory tag name (MemoryTag: Texture, Mesh, Audio, Animation, Physics, Navigation, Scene, UI, Script ... case-insensitive)"
       },
       {
        "name": "_megabytes",
-       "type": "number",
-       "default": "",
-       "min": "",
+       "type": "float64",
+       "default": "0.0",
+       "min": "0.0",
        "max": "",
        "units": "",
-       "description": "예산(MiB, 0 보다 크다). 넘으면 `[MemoryBudget]` 경고 한 번"
+       "description": "Budget in MiB, greater than 0. One [MemoryBudget] warning when it is exceeded"
       }
      ]
     }

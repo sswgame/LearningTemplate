@@ -14,25 +14,14 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Serialization/JSON/ConfigKeyDoc.h"
-#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
     namespace
     {
         SW_LOG_CALLER( "MemoryBudget" );
-
-        /** @brief 예산 파일의 뿌리입니다. */
-        static constexpr ConfigKeyDoc kArrMemoryBudgetRootKeyDoc[] = {
-            { "_listBudget", "object[]", "", "태그마다 예산 한 줄 — 없는 태그는 예산이 없다(경고하지 않는다)" },
-        };
-        /** @brief `_listBudget` 한 줄입니다. 같은 태그 두 번 · 0 이하 크기는 오류입니다. */
-        static constexpr ConfigKeyDoc kArrMemoryBudgetEntryKeyDoc[] = {
-            {      "_tag", "string", "", "메모리 태그 이름(`MemoryTag` — Texture · Mesh · Audio · Animation · Physics · Navigation · Scene · UI · Script …, 대소문자 무시)"},
-            {"_megabytes", "number", "",                                                                       "예산(MiB, 0 보다 크다). 넘으면 `[MemoryBudget]` 경고 한 번"},
-        };
 
         struct MemoryBudgetMonitorInternal
         {
@@ -68,59 +57,37 @@ namespace sw
 
     bool MemoryBudgetMonitor::applyBudgetJSON( string_view jsonText, MemoryProfiler& profiler, string& outError )
     {
-        JSONDocument document;
-        if ( document.parse( jsonText, "MemoryBudget" ) == false )
+        // 키는 대소문자까지 맞아야 하고, 모르는 키 · 읽지 못한 값 · 범위 밖 숫자는 오류다(`readConfigJSON` 이 어느 키인지 로그로 알린다).
+        MemoryBudgetFile file;
+        if ( ConfigManager::readConfigJSON( file, jsonText, "MemoryBudget" ) == false )
         {
-            outError = document.getLastError();
-            return false;
-        }
-
-        const JSONValue root = document.getRoot();
-        string          unknownKey;
-        if ( root.isObject() == false || ConfigKeyDocUtil::hasOnlyKnownKeys( root, kArrMemoryBudgetRootKeyDoc, "MemoryBudget", &unknownKey ) == false )
-        {
-            outError = root.isObject() ? "unknown key '" + unknownKey + "'" : string( "the root must be an object" );
-            return false;
-        }
-
-        const JSONValue list = root.get( "_listBudget" );
-        if ( list.isValid() && list.isArray() == false )
-        {
-            outError = "_listBudget must be an array";
+            outError = "the budget file is not a JSON object, has an unknown key or an unreadable value (the log names the key)";
             return false;
         }
 
         // 먼저 모두 검사하고, 틀린 곳이 없을 때만 건다 — 반쯤 걸린 예산 표를 남기지 않는다.
         array<uint64, kMemoryTagCount> arrBudgetBytes{};
-        const size_t                   entryCount = list.isValid() ? list.size() : 0;
-        for ( size_t index = 0; index < entryCount; ++index )
+        for ( size_t index = 0; index < file._listBudget.size(); ++index )
         {
-            const JSONValue entry = list.at( index );
-            if ( entry.isObject() == false || ConfigKeyDocUtil::hasOnlyKnownKeys( entry, kArrMemoryBudgetEntryKeyDoc, "MemoryBudget entry", &unknownKey ) == false )
+            const MemoryBudgetEntry& entry = file._listBudget[index];
+            MemoryTag                tag{ MemoryTag::Unknown };
+            if ( MemoryProfiler::findMemoryTagByName( entry._tag, tag ) == false )
             {
-                outError = "budget entry " + to_string( index ) + ( entry.isObject() ? ": unknown key '" + unknownKey + "'" : string( " is not an object" ) );
+                outError = "budget entry " + to_string( index ) + ": unknown memory tag '" + entry._tag + "'";
                 return false;
             }
-            const string tagName = entry.get( "_tag" ).asString();
-            MemoryTag    tag{ MemoryTag::Unknown };
-            if ( MemoryProfiler::findMemoryTagByName( tagName, tag ) == false )
+            if ( entry._megabytes <= 0.0 )
             {
-                outError = "budget entry " + to_string( index ) + ": unknown memory tag '" + tagName + "'";
-                return false;
-            }
-            const JSONValue megabytes = entry.get( "_megabytes" );
-            if ( megabytes.isNumber() == false || megabytes.asFloat() <= 0.0 )
-            {
-                outError = "budget entry " + to_string( index ) + " (" + tagName + "): _megabytes must be a positive number";
+                outError = "budget entry " + to_string( index ) + " (" + entry._tag + "): _megabytes must be a positive number";
                 return false;
             }
             const uint32 tagIndex = static_cast<uint32>( tag );
             if ( arrBudgetBytes[tagIndex] != 0 )
             {
-                outError = "budget entry " + to_string( index ) + ": tag '" + tagName + "' is listed twice";
+                outError = "budget entry " + to_string( index ) + ": tag '" + entry._tag + "' is listed twice";
                 return false;
             }
-            arrBudgetBytes[tagIndex] = static_cast<uint64>( megabytes.asFloat() * static_cast<float64>( MemoryBudgetMonitorInternal::kBytesPerMegabyte ) );
+            arrBudgetBytes[tagIndex] = static_cast<uint64>( entry._megabytes * static_cast<float64>( MemoryBudgetMonitorInternal::kBytesPerMegabyte ) );
         }
 
         for ( uint32 tagIndex = 0; tagIndex < kMemoryTagCount; ++tagIndex )

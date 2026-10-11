@@ -13,25 +13,25 @@
 | 배포본 | 읽지 않음(배포본에는 메모리 프로파일러가 없다) |
 | 커밋 | 한다 |
 
-JSON 키는 아래 테이블의 키 그대로입니다. 모르는 키는 로드 오류이고, 읽기 코드가 이 테이블(`ConfigKeyDoc`)로 검사합니다.
+JSON 키는 아래 필드 이름 그대로입니다(앞의 `_` 포함). 적지 않은 필드는 기본값입니다. 모르는 키나 읽지 못하는 값은 로드 오류입니다.
 
 ## 필드
 
-예산 파일의 뿌리입니다.
+예산 파일(`Config/Engine/MemoryBudget.json`)이 담는 내용입니다. 리플렉션으로 읽습니다(`ConfigManager::readConfigJSON` — 모르는 키 · 읽지 못한 값은 오류).
 
-원본: [`Source/Engine/Profiling/MemoryBudgetMonitor.cpp`](../../Source/Engine/Profiling/MemoryBudgetMonitor.cpp)
-
-| 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |
-|---|---|---|---|---|---|
-| `_listBudget` | `object[]` | — |  |  | 태그마다 예산 한 줄 — 없는 태그는 예산이 없다(경고하지 않는다) |
-
-## `kArrMemoryBudgetEntryKeyDoc`
-
-`_listBudget` 한 줄입니다. 같은 태그 두 번 · 0 이하 크기는 오류입니다.
-
-원본: [`Source/Engine/Profiling/MemoryBudgetMonitor.cpp`](../../Source/Engine/Profiling/MemoryBudgetMonitor.cpp)
+원본: [`Source/Engine/Profiling/MemoryBudgetMonitor.h`](../../Source/Engine/Profiling/MemoryBudgetMonitor.h)
 
 | 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |
 |---|---|---|---|---|---|
-| `_tag` | `string` | — |  |  | 메모리 태그 이름(`MemoryTag` — Texture · Mesh · Audio · Animation · Physics · Navigation · Scene · UI · Script …, 대소문자 무시) |
-| `_megabytes` | `number` | — |  |  | 예산(MiB, 0 보다 크다). 넘으면 `[MemoryBudget]` 경고 한 번 |
+| `_listBudget` | `vector<MemoryBudgetEntry>` | — |  |  | One budget line per tag - tags without a line have no budget (no warning) |
+
+## `MemoryBudgetEntry`
+
+예산 파일의 한 줄입니다(`_listBudget` 의 원소). 같은 태그 두 번 · 0 이하 크기는 `applyBudgetJSON` 이 오류로 돌립니다.
+
+원본: [`Source/Engine/Profiling/MemoryBudgetMonitor.h`](../../Source/Engine/Profiling/MemoryBudgetMonitor.h)
+
+| 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |
+|---|---|---|---|---|---|
+| `_tag` | `string` | — |  |  | Memory tag name (MemoryTag: Texture, Mesh, Audio, Animation, Physics, Navigation, Scene, UI, Script ... case-insensitive) |
+| `_megabytes` | `float64` | `0.0` | 0.0 ~ - |  | Budget in MiB, greater than 0. One [MemoryBudget] warning when it is exceeded |

@@ -20,6 +20,19 @@
 - 최근에 들어간 것: 이름 정리(`ResourceUtil` → `ResourcePaths` + `ResourceIO`, `EditorUtil` 경로 → `EditorPaths`, `Misc` → `None`, `CameraShakeRequest.h`, `_sizeBytes`),
   트레이스 내보내기 X1 · X2(`ProfilerTraceExport`, `profile.trace save | record`, 에디터 Save Trace, Shipping 제외 매크로 `SW_PROFILER_TRACE_ENABLED`). 마지막 커밋 `d5cc62f1e` 는 아직 push 하지 않았다.
 
+## 2026-10-12 세션에서 한 것 (`d9d92b145` · `fa11265aa` · 이어지는 커밋)
+
+- **모듈 매니페스트를 리플렉션으로 읽는다**(`ModuleManifestFile`): 키 표 · 낱말→비트 변환 · 종류 이름 표를 지웠고 칸 표는 PROPERTY 에서 나온다(`docs/Config/ModuleManifest.md`). `AnimationLODSettings` · `MemoryBudgetFile` 도 같은 방식으로 옮겼다.
+  **옮기지 않는 것**(판정): `TextureImportConfig` · `ModelImportConfig`(적지 않은 값이 부모 프리셋을 따르는 "적지 않음" 의미가 필요 — 리플렉션이 못 가른다), `CrashReportService`(동적 JSON 문서), 외부 형식(JWT · Chrome 트레이스 · VRM),
+  enum 이름 표 45 곳(배열 인덱스라 해시 조회보다 빠르고 static_assert 가 지키며 일부는 와이어 문자열이라 열거자 이름과 다르다).
+  **남은 후보**: `SpriteClipAsset` · `SequenceAsset` · `FacialRig` · `LipSync` · `Skeleton` · `AnimGraphAsset` · `DialogueGraphAsset` · `LocalizationDocuments` · `CultureInfo` — 데이터 파일 키를 `_이름` 규약으로 다시 써야 하므로(결정 기록 5-4) 파일 하나씩 데이터와 함께 옮긴다.
+- **시나리오 체인**(`-scenario=a,b,c` · `-scenario-keep-going` · 루트 `isolated="true"`)과 **핫 리로드 시나리오**(개발 명령 `module.reload` · 탐침 `Module.*` · `Scene.ObjectCount`)가 들어갔다. 에디터 시나리오는 한 프로세스에서 시나리오마다 초기화를 끼우고 6 개마다
+  리로드(게임 → 키트 연쇄 → 키트 + 에디터 확장 → 에디터)를 돌려 가며 돈다 — DX12 144 초(프로세스마다 띄우면 272 초). 설명은 [Automation README](../../Source/Engine/Automation/README.md).
+- **리로드 결함 둘을 고쳤다**: ① 새 이미지의 정적 등록(개발 명령 · 탐침 · 시나리오 단계)이 이름 중복으로 거절돼 에디터 모듈 리로드 뒤 전부 사라졌다(`RegistrationReloadScope`, [Module README](../../Source/Engine/Module/README.md)).
+  ② `356bc42fd` 가 테스트 하네스 문자열의 `\n` 을 실제 줄바꿈으로 넣어 테스트 타깃이 지어지지 않았다.
+- **못 고친 것 — OpenGL 에디터의 체인 안 리로드 크래시**(`ImGui_ImplOpenGL3_RenderDrawData`): [백로그](../06_Backlog.md) 1-4 "에디터 체인에 남은 것" ①. 지금 `-gl` 케이스는 리로드를 체인 밖 프로세스로 돌린다.
+- **규칙**: Bash heredoc 으로 파이썬을 만들지 않는다([AGENTS.md](../../AGENTS.md) "Editing traps" 첫 항목).
+
 ## 다음 세션이 할 일 (순서대로)
 
 작업 방식은 [작업 흐름](../11_Workflow.md). 도우미 여럿은 워크트리(`py -3 -m Scripts worktree-make <이름>`)에서만 일하고 push 하지 않으며, 적용 담당 하나가 `git merge --ff-only wt/<이름>` 으로 `main` 에 넣고 push 한다.

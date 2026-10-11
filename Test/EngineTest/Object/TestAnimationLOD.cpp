@@ -91,8 +91,8 @@ namespace
         static AnimationLODSettings makeTwoLevelSettings( bool bInterpolate )
         {
             AnimationLODSettings settings{};
-            settings._listRateLevel.push_back( AnimationLODRateLevel{ 0.3f, 1u, static_cast<uint8>( SW_FALSE ) } );
-            settings._listRateLevel.push_back( AnimationLODRateLevel{ 0.0f, 4u, static_cast<uint8>( bInterpolate ? SW_TRUE : SW_FALSE ) } );
+            settings._listRateLevel.push_back( AnimationLODRateLevel{ 0.3f, 1u, false } );
+            settings._listRateLevel.push_back( AnimationLODRateLevel{ 0.0f, 4u, bInterpolate } );
             return settings;
         }
     };
@@ -123,11 +123,11 @@ SW_TEST_CASE( AnimationLODTest, ScreenSizeFromViewProjection )
 SW_TEST_CASE( AnimationLODTest, SettingsParseAndSelectLevel )
 {
     AnimationLODSettings settings;
-    SW_ASSERT_TRUE( settings.parseJSON( R"({ "rate_levels": [ { "min_screen_size": 0.25, "update_rate_divisor": 1, "interpolate": false },
-                                                              { "min_screen_size": 0.1, "update_rate_divisor": 2, "interpolate": true },
-                                                              { "min_screen_size": 0.0, "update_rate_divisor": 8, "interpolate": false } ],
-                                            "offscreen_update_rate_divisor": 0, "budget_milliseconds": 1.5, "max_update_rate_divisor": 16,
-                                            "vertex_animation_screen_size": 0.02 })",
+    SW_ASSERT_TRUE( settings.parseJSON( R"({ "_listRateLevel": [ { "_minScreenSize": 0.25, "_updateRateDivisor": 1, "_bInterpolate": false },
+                                                              { "_minScreenSize": 0.1, "_updateRateDivisor": 2, "_bInterpolate": true },
+                                                              { "_minScreenSize": 0.0, "_updateRateDivisor": 8, "_bInterpolate": false } ],
+                                            "_offscreenUpdateRateDivisor": 0, "_budgetMilliseconds": 1.5, "_maxUpdateRateDivisor": 16,
+                                            "_vertexAnimationScreenSize": 0.02 })",
                                         "test" ) );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( settings._listRateLevel.size() ) );
     SW_EXPECT_EQUAL( 0u, settings.selectRateLevel( 0.5f ) );
@@ -145,11 +145,11 @@ SW_TEST_CASE( AnimationLODTest, SettingsParseAndSelectLevel )
 
     test::ScopedDefensiveTestLog expected( "malformed animation LOD tables are rejected" );
     AnimationLODSettings         bad;
-    SW_EXPECT_FALSE( bad.parseJSON( R"({ "rate_levels": [ { "min_screen_size": 0.0, "update_rate_divisor": 1, "interpolate": false } ], "typo": 1 })", "test" ) );
-    SW_EXPECT_FALSE( bad.parseJSON( R"({ "rate_levels": [ { "min_screen_size": 0.1, "update_rate_divisor": 1, "interpolate": false },
-                                                        { "min_screen_size": 0.2, "update_rate_divisor": 2, "interpolate": false } ],
-                                       "offscreen_update_rate_divisor": 0, "budget_milliseconds": 0, "max_update_rate_divisor": 8,
-                                       "vertex_animation_screen_size": 0 })",
+    SW_EXPECT_FALSE( bad.parseJSON( R"({ "_listRateLevel": [ { "_minScreenSize": 0.0, "_updateRateDivisor": 1, "_bInterpolate": false } ], "typo": 1 })", "test" ) );
+    SW_EXPECT_FALSE( bad.parseJSON( R"({ "_listRateLevel": [ { "_minScreenSize": 0.1, "_updateRateDivisor": 1, "_bInterpolate": false },
+                                                        { "_minScreenSize": 0.2, "_updateRateDivisor": 2, "_bInterpolate": false } ],
+                                       "_offscreenUpdateRateDivisor": 0, "_budgetMilliseconds": 0, "_maxUpdateRateDivisor": 8,
+                                       "_vertexAnimationScreenSize": 0 })",
                                     "test" ) );
     SW_EXPECT_TRUE( bad._listRateLevel.empty() );
 }

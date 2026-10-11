@@ -13,9 +13,10 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
-    class JSONValue;
     class SkeletonBoneLOD;
 
     /**
@@ -65,11 +66,17 @@ namespace sw
      * @struct AnimationLODRateLevel
      * @brief 화면 크기 한 구간의 갱신 주기입니다. 화면 크기가 `_minScreenSize` 이상인 첫 단계가 고릅니다.
      */
-    struct AnimationLODRateLevel
+    REFLECT()
+    struct SW_API AnimationLODRateLevel
     {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0.0, Tooltip = "Smallest on-screen size (bounding sphere diameter / screen height) this level still covers" )
         float32 _minScreenSize{ 0.0f };
-        uint32  _updateRateDivisor{ 1 };
-        uint8   _bInterpolate{ SW_FALSE };
+        PROPERTY( Min = 1, Tooltip = "Build the pose every N frames" )
+        uint32 _updateRateDivisor{ 1 };
+        PROPERTY( Tooltip = "Fill skipped frames by blending the last two poses" )
+        bool _bInterpolate{ false };
     };
 } // namespace sw
 
@@ -77,33 +84,40 @@ namespace sw
 {
     /**
      * @struct AnimationLODSettings
-     * @brief LOD 표(데이터)입니다. 형식: `{ "rate_levels": [ { "min_screen_size", "update_rate_divisor", "interpolate" } ], "offscreen_update_rate_divisor",
-     *        "budget_milliseconds", "max_update_rate_divisor", "vertex_animation_screen_size" }`. 단계는 `min_screen_size` 가 줄어드는 순이고 마지막 단계는 0 이어야 합니다.
-     * @details `offscreen_update_rate_divisor` 가 0 이면 화면 밖 유닛은 포즈를 만들지 않습니다(시간 · 알림은 흐릅니다). `budget_milliseconds` 가 0 이면 예산을 보지 않습니다.
-     *          `vertex_animation_screen_size` 보다 작은 군중 유닛은 정점 애니메이션(VAT)으로 그립니다(0 이면 쓰지 않음).
+     * @brief LOD 표(데이터)입니다(`engine/animation/animationlod.json`). 단계는 `_minScreenSize` 가 줄어드는 순이고 마지막 단계는 0 이어야 합니다(`validate`).
+     * @details `_offscreenUpdateRateDivisor` 가 0 이면 화면 밖 유닛은 포즈를 만들지 않습니다(시간 · 알림은 흐릅니다). `_budgetMilliseconds` 가 0 이면 예산을 보지 않습니다.
+     *          `_vertexAnimationScreenSize` 보다 작은 군중 유닛은 정점 애니메이션(VAT)으로 그립니다(0 이면 쓰지 않음).
+     *          파일은 리플렉션 구조체로 읽는다(`ConfigManager::readConfigJSON` — 모르는 키 · 읽지 못한 값 · 범위 밖 숫자는 오류). 칸 표는 PROPERTY 가 정본이다.
      */
+    REFLECT()
     struct SW_API AnimationLODSettings
     {
+        REFLECT_BODY();
+
         /** @brief 표 파일의 리소스 경로입니다. */
         static constexpr string_view kResourcePath = "engine/animation/animationlod.json";
 
+        PROPERTY( Tooltip = "Update-rate levels from the largest on-screen size to 0 (at least one; the last must start at 0)" )
         vector<AnimationLODRateLevel> _listRateLevel;
-        uint32                        _offscreenUpdateRateDivisor{ 0 };
-        uint32                        _maxUpdateRateDivisor{ 16 };
-        float32                       _budgetMilliseconds{ 0.0f };
-        float32                       _vertexAnimationScreenSize{ 0.0f };
+        PROPERTY( Min = 0, Tooltip = "Update divisor for units that are not visible (0: no pose at all)" )
+        uint32 _offscreenUpdateRateDivisor{ 0 };
+        PROPERTY( Min = 1, Tooltip = "Upper bound the budget allocator may raise a divisor to" )
+        uint32 _maxUpdateRateDivisor{ 16 };
+        PROPERTY( Min = 0.0, Units = ms, Tooltip = "Animation budget per frame (0: unlimited)" )
+        float32 _budgetMilliseconds{ 0.0f };
+        PROPERTY( Min = 0.0, Tooltip = "Crowd units smaller than this on screen are drawn with vertex animation (0: never)" )
+        float32 _vertexAnimationScreenSize{ 0.0f };
 
-        /** @brief JSON 을 읽습니다. 모르는 키 · 순서가 틀린 단계는 오류이고 false 입니다(내용은 기본값으로 돌아갑니다). */
+        /** @brief JSON 을 읽고 검사합니다. 모르는 키 · 순서가 틀린 단계는 오류이고 false 입니다(내용은 기본값으로 돌아갑니다). */
         [[nodiscard]] bool parseJSON( string_view json, string_view sourceLabel );
         /** @brief 리소스 경로의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path );
+        /** @brief 단계가 비지 않았고, `_minScreenSize` 가 줄어드는 순이며, 마지막이 0 인지 봅니다. 어긋나면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool validate( string_view sourceLabel ) const;
         /** @brief 화면 크기의 주기 단계입니다. 표가 비었으면 0 입니다. */
         uint32 selectRateLevel( float32 screenSize ) const;
         /** @brief 단계가 없는 기본 표(모든 유닛이 매 프레임)입니다. */
         static AnimationLODSettings makeDefault() { return AnimationLODSettings{}; }
-
-    private:
-        [[nodiscard]] bool parseRoot( const JSONValue& root, string_view sourceLabel );
     };
 } // namespace sw
 
