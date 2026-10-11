@@ -238,6 +238,9 @@ SW_TEST_CASE( ServerBootTest, StopRequestShutsDownGracefully )
  */
 SW_TEST_CASE( ServerBootTest, NetListenPortAcceptsAClientFromAnotherProcess )
 {
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "-gv_netListenPort is a development global variable - the shipping server opens its game port from the server config" );
+#else
     if ( findServerPath().empty() )
         SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
     uint16 port = 0;
@@ -278,10 +281,11 @@ SW_TEST_CASE( ServerBootTest, NetListenPortAcceptsAClientFromAnotherProcess )
     SW_EXPECT_TRUE( bConnected );
     SW_EXPECT_TRUE_MSG( run._output.find( "Net session listening on UDP port " + to_string( port ) ) != string::npos, "the game instance did not open the port" );
     SW_EXPECT_TRUE_MSG( run._output.find( "Net session client 0 connected from 127.0.0.1" ) != string::npos, "the server did not log the client" );
-#if !defined( SW_SHIPPING )
+    #if !defined( SW_SHIPPING )
     SW_EXPECT_TRUE_MSG( run._output.find( "net session: Server, connected 1, port " + to_string( port ) ) != string::npos, "net.status did not report the client" );
-#endif
+    #endif
     SW_EXPECT_TRUE( run._output.find( "Net session closed (Server)" ) != string::npos );
+#endif
 }
 
 /**

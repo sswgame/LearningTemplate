@@ -41,7 +41,7 @@ namespace sw
             {
                 static const int64 s_offset = []()
                 {
-                    constexpr int64 kTicksPerMilli = kFileTimeTicksPerSecond / 1000;
+                    constexpr int64 kTicksPerMilli = FileUtil::kFileTimeTicksPerSecond / 1000;
                     int64           bestOffset     = 0;
                     int64           bestWindow     = std::numeric_limits<int64>::max();
                     for ( uint32 sample = 0; sample < 8; ++sample )
