@@ -12,6 +12,7 @@
 #include "Engine/Common/EngineParallel.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshVertexAnimation.h"
+#include "Engine/Object/Animation/MeshVertexAnimationBaker.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"

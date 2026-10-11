@@ -19,6 +19,13 @@ namespace sw
                 static RegistrationList<const AutomationStepRegistration> s_registration{ RegistrationOrder::Insertion, true };
                 return s_registration;
             }
+
+            /** @brief 등록된 시작 차단 조건(등록 순서)입니다. */
+            static RegistrationList<const AutomationStartBlocker>& getStartBlockers()
+            {
+                static RegistrationList<const AutomationStartBlocker> s_blocker{ RegistrationOrder::Insertion, true };
+                return s_blocker;
+            }
         };
     } // namespace
 } // namespace sw
@@ -61,6 +68,33 @@ namespace sw
         return false;
     }
 
+    bool AutomationStepRegistry::registerStartBlocker( const AutomationStartBlocker* pBlocker )
+    {
+        if ( pBlocker == nullptr || pBlocker->_pName == nullptr || pBlocker->_pIsBlocking == nullptr )
+            return false;
+        if ( AutomationStepRegistryInternal::getStartBlockers().add( pBlocker, pBlocker->_pName ) != RegistrationResult::Added )
+        {
+            SW_LOG_ERROR( "Automation start blocker <%#> is already defined - the second one is ignored", pBlocker->_pName );
+            return false;
+        }
+        return true;
+    }
+
+    void AutomationStepRegistry::unregisterStartBlocker( const AutomationStartBlocker* pBlocker )
+    {
+        (void)AutomationStepRegistryInternal::getStartBlockers().remove( pBlocker ); // 올라 있지 않은 조건을 빼는 것은 할 일이 없는 것이다
+    }
+
+    bool AutomationStepRegistry::isStartBlocked()
+    {
+        for ( const AutomationStartBlocker* pBlocker : AutomationStepRegistryInternal::getStartBlockers().getItems() )
+        {
+            if ( pBlocker->_pIsBlocking() )
+                return true;
+        }
+        return false;
+    }
+
     AutomationStepRegistrar::AutomationStepRegistrar( const AutomationStepRegistration* pRegistration )
         : _pRegistration{ AutomationStepRegistry::registerStep( pRegistration ) ? pRegistration : nullptr }
     {
@@ -70,5 +104,16 @@ namespace sw
     {
         if ( _pRegistration != nullptr )
             AutomationStepRegistry::unregisterStep( _pRegistration );
+    }
+
+    AutomationStartBlockerRegistrar::AutomationStartBlockerRegistrar( const AutomationStartBlocker* pBlocker )
+        : _pBlocker{ AutomationStepRegistry::registerStartBlocker( pBlocker ) ? pBlocker : nullptr }
+    {
+    }
+
+    AutomationStartBlockerRegistrar::~AutomationStartBlockerRegistrar()
+    {
+        if ( _pBlocker != nullptr )
+            AutomationStepRegistry::unregisterStartBlocker( _pBlocker );
     }
 } // namespace sw

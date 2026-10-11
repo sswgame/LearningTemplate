@@ -35,7 +35,6 @@
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Canvas/CanvasTestPattern.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
-#include "Engine/Graphics/Debug/PhysicsDebugDrawAdapter.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
@@ -62,6 +61,7 @@
 #include "Engine/Object/GameObject/CameraRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Physics/PhysicsDebugDraw.h"
 #include "Engine/Physics/PhysicsSystem.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackend.h"
@@ -142,6 +142,28 @@ namespace sw
 namespace sw
 {
     SW_LOG_CALLER( "EngineLoop" );
+
+    namespace
+    {
+        /**
+         * @class EngineLoopDebugLineAdapter
+         * @brief 물리 · 내비 디버그 선(`IPhysicsDebugRenderer`)을 디버그 드로우 큐로 옮깁니다.
+         * @details 물리는 그리는 쪽을, Graphics 는 물리를 모릅니다 — 둘을 다 아는 조립점(EngineLoop)이 잇습니다.
+         */
+        class EngineLoopDebugLineAdapter final : public IPhysicsDebugRenderer
+        {
+        public:
+            explicit EngineLoopDebugLineAdapter( DebugDrawQueue& queue )
+                : _queue{ queue }
+            {
+            }
+
+            void drawLine( const float3& from, const float3& to, const float4& color ) override { _queue.drawLine( from, to, color ); }
+
+        private:
+            DebugDrawQueue& _queue;
+        };
+    } // namespace
 
     // ------------------------------------------------------------------------------
     // 기동 단계 본문 — 표(`EngineInitStepList.xxx`)의 줄 순서대로 적는다. 단계마다 무엇을 세우고(initialize) · 내리고(shutdown) ·
@@ -1257,7 +1279,7 @@ namespace sw
             const Scene* pDebugScene = _owned._pSceneManager->getActiveScene();
             if ( pDebugScene != nullptr && pDebugScene->getObjectManager() != nullptr )
             {
-                PhysicsDebugDrawAdapter adapter{ engine::getDebugDrawQueue() };
+                EngineLoopDebugLineAdapter adapter{ engine::getDebugDrawQueue() };
                 pDebugScene->getObjectManager()->getScenePhysics().drawDebug( adapter );
             }
         }
@@ -1272,7 +1294,7 @@ namespace sw
                 navigation.updateDebugView( static_cast<uint32>( gv_navDebugDraw ) );
                 if ( gv_navDebugDraw != 0 )
                 {
-                    PhysicsDebugDrawAdapter adapter{ engine::getDebugDrawQueue() };
+                    EngineLoopDebugLineAdapter adapter{ engine::getDebugDrawQueue() };
                     navigation.drawDebug( adapter, static_cast<uint32>( gv_navDebugDraw ) );
                 }
             }

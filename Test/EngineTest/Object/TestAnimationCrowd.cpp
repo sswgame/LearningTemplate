@@ -14,6 +14,7 @@
 #include "Engine/Graphics/Mesh/MeshVertexAnimation.h"
 #include "Engine/Object/Animation/AnimationCrowd.h"
 #include "Engine/Object/Animation/AnimationSystem.h"
+#include "Engine/Object/Animation/MeshVertexAnimationBaker.h"
 #include "Engine/Object/Animation/VertexAnimationCooker.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"

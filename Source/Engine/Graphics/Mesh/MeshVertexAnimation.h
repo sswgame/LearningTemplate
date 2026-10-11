@@ -1,6 +1,6 @@
 /**
  * @file MeshVertexAnimation.h
- * @brief 정점 애니메이션(VAT, Vertex Animation Texture) — 스킨드 메시에 클립 하나를 미리 스키닝해 프레임 × 정점 표로 구운 것과 그 굽기입니다.
+ * @brief 정점 애니메이션(VAT, Vertex Animation Texture) — 스킨드 메시에 클립 하나를 미리 스키닝해 프레임 × 정점 표로 구운 것입니다.
  * @details 먼 군중은 CPU 포즈도 GPU 스키닝도 없이 이 표를 정점 셰이더가 인스턴스마다 다른 시각으로 읽어 그립니다(언리얼 AnimToTexture ·
  *          유니티 VAT 셰이더의 자리). 이름은 "텍스처" 지만 이 엔진은 정점 셰이더가 구조버퍼를 `SV_VertexID` 로 읽으므로(모프 풀과 같은 길)
  *          표를 모프 결과 버퍼의 맨 앞 구간에 싣습니다 — 텍스처 바인딩이 새로 필요 없고 네 백엔드가 같은 길을 탑니다.
@@ -10,16 +10,11 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
 namespace sw
 {
-    class AnimClip;
-    class Mesh;
-    class Skeleton;
-
     /**
      * @struct MeshVertexAnimation
      * @brief 구운 표입니다. 원소 하나 = 정점 하나의 한 프레임 = float4(위치 xyz, 노멀을 정수로 담은 w — `packNormal`).
@@ -62,27 +57,5 @@ namespace sw
         [[nodiscard]] bool loadFromResource( string_view path );
         /** @brief 메시 경로와 클립 이름의 쿠킹본 경로입니다(`a/knight.mesh` + `Idle` → `a/knight.idle.vat`). 메시 경로가 `.mesh` 가 아니면 빈 문자열입니다. */
         static string makeCookedPath( string_view meshPath, const hashed_string& clipName );
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
-     * @struct MeshVertexAnimationBaker
-     * @brief 스킨드 메시 + 스켈레톤 + 클립을 표로 굽습니다. 런타임이 처음 쓸 때 굽고(군중 시스템의 캐시), 같은 함수가 쿠킹의 자리입니다.
-     * @details 프레임마다 클립을 샘플해(`AnimClip::samplePose` — 애니메이터와 같은 길) 모델 공간 · 팔레트를 구하고, 정점을 meshskin.hlsl 과
-     *          같은 식(가중치 넷의 선형 섞기, 노멀 정규화)으로 CPU 에서 스키닝합니다.
-     */
-    struct SW_API MeshVertexAnimationBaker
-    {
-        /**
-         * @brief 굽습니다. 메시에 스킨이 없거나 본 수가 스켈레톤과 다르면 false 입니다.
-         * @param framesPerSecond 표의 프레임율(먼 군중이라 낮게 — 15 정도).
-         * @param bAnchorRootMotion 클립의 루트 모션 트랙을 시작 자리에 묶습니다(루트 모션을 오브젝트가 맡는 애니메이터와 같은 모양).
-         */
-        [[nodiscard]] static bool bake( const Mesh& skinMesh, const Skeleton& skeleton, const AnimClip& clip, float32 framesPerSecond, bool bAnchorRootMotion,
-                                        MeshVertexAnimation& outAnimation );
-        /** @brief 팔레트로 메시 정점을 스키닝합니다(meshskin.hlsl 과 같은 식). 위치 · 노멀을 정점 순서로 냅니다. */
-        static void skinVertices( const Mesh& skinMesh, const vector<float4x4>& listPalette, vector<float3>& outListPosition, vector<float3>& outListNormal );
     };
 } // namespace sw

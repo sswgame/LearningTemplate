@@ -68,9 +68,17 @@ namespace sw
                     runner.recordFailure( step, "could not write " + path );
                 return true;
             }
+
+            /** @brief 로딩 화면이 떠 있으면 게임 입력이 막혀 있다 — `ScenePlaying` 시나리오는 걷힐 때까지 시작하지 않습니다. */
+            static bool isLoadingScreenBlocking()
+            {
+                const UISystem* pUISystem = engine::areEngineServicesBound() ? engine::getBoundEngineServices()._pUISystem : nullptr;
+                return pUISystem != nullptr && pUISystem->isInitialized() && pUISystem->isLoadingScreenShown();
+            }
         };
     } // namespace
 
+    SW_AUTOMATION_START_BLOCKER( uiLoadingScreen, "UILoadingScreen", &UIAutomationStepsInternal::isLoadingScreenBlocking );
     SW_AUTOMATION_STEP( uiLayoutDump, UIAutomationSteps::kLayoutDumpKind, &UIAutomationStepsInternal::runLayoutDump, &UIAutomationStepsInternal::validateLayoutDump,
                         false );
     SW_AUTOMATION_STEP( uiExpect, UIAutomationSteps::kExpectUIKind, &UIAutomationStepsInternal::runExpectUI, &UIAutomationSteps::validateExpectUI, false );

@@ -28,8 +28,8 @@
 | 7 | `Graphics` |
 | 8 | `Window`, `Object` |
 | 9 | `Input`, `Scene`, `Sequencer`, `Character`, `Environment` |
-| 10 | `UserSettings`, `Module`, `Destruction` |
-| 11 | `Telemetry`, `Renderer`, `UI`, `Automation` |
+| 10 | `UserSettings`, `Module`, `Destruction`, `Automation` |
+| 11 | `Telemetry`, `Renderer`, `UI` |
 | 12 | `EngineLoop` 등 루트 파일 |
 
 표의 숫자는 include 그래프에서 계산한 값입니다(`py -3 Scripts/lint/report/RunEngineLayerGraph.py --apply` 가 게이트 표와 이 표를 함께 고칩니다). 폴더마다의 뜻은 아래 목록에 있습니다.

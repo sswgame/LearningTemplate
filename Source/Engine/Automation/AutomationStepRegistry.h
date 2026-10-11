@@ -30,6 +30,22 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 지금 시나리오 시작을 막아야 하면 true 입니다(로딩 화면이 게임 입력을 막는 동안). 게임 스레드입니다. */
+    using AutomationStartBlockFunction = bool ( * )();
+
+    /**
+     * @struct AutomationStartBlocker
+     * @brief `ScenePlaying` 시작 조건을 미루는 조건 하나 — 실행기보다 위층(UI 의 로딩 화면)이 아래로 등록합니다. 실행기는 그 층을 include 하지 않습니다.
+     */
+    struct AutomationStartBlocker
+    {
+        const utf8*                  _pName; ///< 로그 · 중복 판정 이름
+        AutomationStartBlockFunction _pIsBlocking;
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class AutomationStepRegistry
      * @brief 단계 종류 등록표입니다. 엔진 단계(`Tap` · `Expect` …)와 같은 이름은 거절합니다. 모듈을 내리면 그 모듈의 단계도 빠집니다.
@@ -44,6 +60,12 @@ namespace sw
         static const AutomationStepRegistration* find( string_view kind );
         /** @brief 엔진이 직접 처리하는 단계 이름(`Tap` · `Expect` · `Pass` …)이면 true 입니다. 등록표는 이 이름을 받지 않습니다. */
         static bool isEngineStepKind( string_view kind );
+
+        /** @brief 시작 차단 조건을 등록합니다. 같은 이름이 있으면 false 입니다. */
+        static bool registerStartBlocker( const AutomationStartBlocker* pBlocker );
+        static void unregisterStartBlocker( const AutomationStartBlocker* pBlocker );
+        /** @brief 등록된 조건 중 하나라도 시작을 막으면 true 입니다. */
+        static bool isStartBlocked();
     };
 } // namespace sw
 
@@ -61,7 +83,26 @@ namespace sw
     };
 } // namespace sw
 
+namespace sw
+{
+    /** @brief `SW_AUTOMATION_START_BLOCKER` 가 두는 정적 등록자입니다. */
+    struct SW_API AutomationStartBlockerRegistrar
+    {
+        explicit AutomationStartBlockerRegistrar( const AutomationStartBlocker* pBlocker );
+        ~AutomationStartBlockerRegistrar();
+        AutomationStartBlockerRegistrar( const AutomationStartBlockerRegistrar& )            = delete;
+        AutomationStartBlockerRegistrar& operator=( const AutomationStartBlockerRegistrar& ) = delete;
+
+        const AutomationStartBlocker* _pBlocker;
+    };
+} // namespace sw
+
 /** @brief 단계 종류를 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). */
 #define SW_AUTOMATION_STEP( id, pKind, pRun, pValidate, bBeforeInput )                                            \
     static const ::sw::AutomationStepRegistration sw_automationStep_##id{ pKind, pRun, pValidate, bBeforeInput }; \
     static const ::sw::AutomationStepRegistrar    sw_automationStepRegistrar_##id { &sw_automationStep_##id }
+
+/** @brief 시작 차단 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). */
+#define SW_AUTOMATION_START_BLOCKER( id, pName, pIsBlocking )                                                \
+    static const ::sw::AutomationStartBlocker          sw_automationStartBlocker_##id{ pName, pIsBlocking }; \
+    static const ::sw::AutomationStartBlockerRegistrar sw_automationStartBlockerRegistrar_##id { &sw_automationStartBlocker_##id }

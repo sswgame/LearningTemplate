@@ -291,6 +291,9 @@ namespace sw
 **새 단계 종류를 만들려면** `SW_AUTOMATION_STEP( 변수 이름, "단계 이름", 실행 함수, 검사 함수, 입력 전 여부 )` 로 등록합니다. `ControlAutomationSteps.cpp` 와 `UIAutomationSteps.cpp` 가 참고할 예입니다.
 검사 함수는 모르는 속성을 오류로 돌려줘야 합니다.
 
+**시작을 미루는 조건을 더하려면** `SW_AUTOMATION_START_BLOCKER( 변수 이름, "이름", 판정 함수 )` 로 등록합니다. `ScenePlaying` 시작 조건은 등록된 조건이 모두 false 일 때 참이 됩니다.
+UI 의 로딩 화면 조건이 `UIAutomationSteps.cpp` 에 있습니다. 실행기는 UI 를 include 하지 않고, 위층이 아래층 등록표에 등록합니다.
+
 ## 함정과 주의
 
 - **모르는 것은 조용히 버리지 않습니다.** 모르는 요소, 모르는 속성, 형식이 틀린 값, 모르는 프로브, 모르는 전역 변수는 모두 읽기 오류(11)입니다. 오타가 "통과"로 숨지 않게 하기 위해서입니다.

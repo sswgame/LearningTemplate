@@ -20,6 +20,7 @@
 #include "Engine/Text/GlyphCache.h"
 #include "Engine/Text/TextLayout.h"
 #include "Engine/UI/Animation/UIStyleTransition.h"
+#include "Engine/UI/Automation/UIAutomationSteps.h"
 #include "Engine/UI/Base/UIEventRouter.h"
 #include "Engine/UI/Base/UINavigationSolver.h"
 #include "Engine/UI/Base/Widget.h"
@@ -199,6 +200,7 @@ namespace sw
 
     bool UISystem::initialize( InputManager& inputManager, FontSystem* pFontSystem, string_view uiInputMapPath )
     {
+        UIAutomationSteps::ensureLinked();
         _pInput                    = &inputManager;
         _pFontSystem               = pFontSystem;
         _actionGlyphs._pInput      = &inputManager;

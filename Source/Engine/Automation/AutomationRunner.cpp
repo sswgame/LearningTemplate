@@ -21,8 +21,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/UI/Automation/UIAutomationSteps.h"
-#include "Engine/UI/UISystem.h"
 #include "Engine/Window/IWindow.h"
 
 namespace sw
@@ -223,7 +221,6 @@ namespace sw
     {
         AutomationEnvironmentSteps::ensureLinked();
         AutomationWindowSteps::ensureLinked();
-        UIAutomationSteps::ensureLinked();
     }
 
     AutomationRunner::~AutomationRunner()
@@ -289,11 +286,10 @@ namespace sw
             return;
         if ( _bStarted == SW_FALSE )
         {
-            // 씬 플레이 중 = 활성 씬이 플레이를 시작했고 로딩 화면이 걷혔다(로딩 화면은 게임 입력을 막는다 — 그동안 넣은 입력은 폰에 닿지 않는다).
-            const GameObjectManager* pManager  = findActiveObjectManager();
-            const UISystem*          pUISystem = engine::areEngineServicesBound() ? engine::getBoundEngineServices()._pUISystem : nullptr;
-            const bool               bLoading  = pUISystem != nullptr && pUISystem->isInitialized() && pUISystem->isLoadingScreenShown();
-            const bool               bReady    = _scenario.getStartCondition() == AutomationStartCondition::Immediately || ( pManager != nullptr && pManager->hasBegunPlay() && bLoading == false );
+            // 씬 플레이 중 = 활성 씬이 플레이를 시작했고 시작 차단 조건이 모두 풀렸다(UI 의 로딩 화면은 게임 입력을 막는다 — 그동안 넣은 입력은 폰에 닿지 않는다).
+            const GameObjectManager* pManager = findActiveObjectManager();
+            const bool               bBlocked = AutomationStepRegistry::isStartBlocked();
+            const bool               bReady   = _scenario.getStartCondition() == AutomationStartCondition::Immediately || ( pManager != nullptr && pManager->hasBegunPlay() && bBlocked == false );
             if ( bReady == false )
             {
                 if ( ++_waitFrameCount > _scenario.getStartTimeoutFrames() )

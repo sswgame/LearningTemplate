@@ -12,16 +12,13 @@
 | Object → Animation | 38 | 22 | `Skeleton.h` · `Pose.h` · `AnimClip.h` |
 | Object → Audio | 11 | 8 | `AudioSpatial.h` · `AudioEngine.h` |
 | Object → Navigation | 8 | 4 | `NavMeshGeometry.h` · `INavMesh.h` |
-| Graphics → Animation | 3 | 1 | `Skeleton.h` · `Pose.h` · `AnimClip.h` |
-| Graphics → Physics | 1 | 1 | `PhysicsDebugDraw.h` |
-| Resource → Animation | 5 | 2 | `AnimClip.h` · `RigAsset.h` |
+| Resource → Animation | 2 | 1 | `AnimationAssetCache.h` · `SpriteClipCache.h` — `AssetManager.cpp`(게이트 배선 예외) |
 | Scene → Graphics | 3 | 2 | `MaterialCache.h` · `IRHIDevice.h` |
-| Automation → UI / UI → Automation | 2 / 3 | 1 / 1 | `UISystem.h` / `AutomationRunner.h` — 게이트가 보고하는 유일한 사이클 |
 
 - `Object` 안에서 기능 의존이 몰린 곳은 `Component/{2D, 3D, Audio, Navigation, Physics}`(기능 컴포넌트)와 `GameObject/`(Graphics 15 · Physics 10 · Navigation 5 · Audio 2)다.
   `GameObject` 가 기능 폴더를 직접 아는 것이 진짜 문제다 — 컴포넌트 모델의 코어가 렌더 · 물리 · 내비를 include 한다.
 - `Engine/` 은 소스 559개 · 헤더 포함 약 1,160개, Debug `Engine.dll` 은 약 18 MB 다. 재링크 시간은 아직 재지 않았다(아래 0 단계).
-- 게이트 티어 표가 실제와 다르다: `Text`(표 5, 실제 3).
+- 폴더 그래프는 사이클 0 이고 게이트 티어 표는 계산값과 같다(2026-10-11, 1 단계 뒤).
 - Core 층 정리와 Engine 폴더 재배치(1 ~ 7)는 끝났다([Core README](../../Source/Core/README.md) · 결정 기록).
 
 ## 단계
@@ -41,14 +38,9 @@
 **Engine 에 남는 이유가 있는 폴더(2026-10-10 사용 현황 조사):** 에디터는 `GameFramework` 를 include 할 수 없다(`CheckEngineLayers`: Editor 금지 목록) — 그래서 에디터가 쓰는 폴더(`Dialogue` · `Sequencer` · `Destruction` · `Environment` · `Automation` · `UI` · `Animation` · `Scene` …)는 Engine 이 아니면 둘 곳이 없다. 서버 실행 파일도 `GameFramework` 를 모르므로 `Observability`(서버가 `MetricRegistry` · `OpsHTTPEndpoint` 를 쓴다)도 남는다.
 `Character` 는 `Destruction`(에디터가 씀)과 `Resource/AssetManager` 가 쓰고 `Spatial` 은 `Character/Fit` 이 쓰므로 남는다 — `Resource` 의 기능 캐시를 자기 폴더로 보낸 뒤에도 `Destruction` 이 `Character` 를 쓴다. `Telemetry` 는 `EngineLoop` · App · 게임이, `Compression` 은 Core 인터페이스의 코덱 공급자라 Core 가 서드파티를 몰라야 하는 규칙 때문에 남는다.
 
-### 1. 작은 고리 풀기 (낮은 위험)
-- 게이트 티어 표를 실제에 맞춘다(`Text`). `RunEngineLayerGraph.py` 출력이 기준.
-- `Automation ↔ UI`: 공유 타입(단계 레지스트리 · 시나리오 인터페이스)을 `Automation` 쪽 인터페이스로 두고 `UI` 가 단계를 등록하게 한다 — `Automation` 은 `UI` 를 include 하지 않는다.
-- `Graphics → Animation` 3 건: 스키닝 입력(`Skeleton` · `Pose` · `AnimClip`)을 GPU 쪽 중립 타입으로 받게 한다. `Graphics → Physics` 1 건(`PhysicsDebugDraw`): 디버그 선 입력을 `Common` 의 선 목록 타입으로.
-- `Resource → Animation` 5 건: 에셋 종류 등록을 `Animation` 이 `Resource` 에 하게 뒤집는다(레지스트리 방향 반전).
-
 ### 2. 컴포넌트 모델을 코어와 기능으로 가르기 (중간 위험, 가장 큰 효과)
 - `Object` 를 둘로: **코어**(`GameObject` · `Prefab` · `Component` 기반 클래스 · 리플렉션 훅)와 **기능 컴포넌트**(`Component/{2D,3D,Audio,Navigation,Physics}` · `Object/Animation`).
+- `Resource/AssetManager.cpp` 가 기능 캐시(Animation · Character · Destruction · Graphics)를 직접 만든다(게이트 배선 예외). 기능 폴더가 `Resource` 에 캐시를 등록하는 방향으로 뒤집고 예외를 지운다.
 - 코어는 `Graphics` · `Physics` · `Navigation` · `Audio` 를 include 하지 않는다. `GameObject` 의 기능 의존 32 건(위 표)은 기능 컴포넌트가 코어에 등록하는 방향으로 뒤집는다:
   Transform 변경 알림 · 바운드 질의 · 씬 등록 모두 `GameObject` 가 인터페이스(`ISceneListener` 꼴)로 듣는다.
 - 기능 컴포넌트는 코어 위, 각자의 기능 폴더 아래에 둔다. 폴더 이동은 `git mv` 후 코드젠을 다시 만든다(헤더 이동은 .gen.cpp 를 썩힌다 — 메모리 `moved-header-stale-codegen`).
@@ -75,7 +67,6 @@
 | 단계 | 규모 | 위험 | 확인 |
 |---|---|---|---|
 | 0 측정 | 작음 | 없음 | 증분 시간 표 |
-| 1 작은 고리 | 작음 | 낮음 | `RunEngineLayerGraph` 사이클 0 · 티어 표 일치 |
 | 2 코어 / 기능 가르기 | 중간 | 중간 | 코어 → 기능 화살표 0 · EngineTest · 씬 로드 · 에디터 시나리오 |
 | 3 링크 분할 | 중간 | 낮음(OBJECT) / 중간(DLL) | 네 백엔드 × Dev · Shipping · Server 빌드 |
 | 4 월드 | 큼 | 높음 | 프리팹 격리 · 서버 방 시나리오 |
