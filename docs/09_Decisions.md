@@ -163,7 +163,7 @@
 | `IRenderSurface`(Common 루트) · `ServerConfig` · `ServerSecret`(Config 루트) | `Graphics/RHI/IRenderSurface` · `Config/Server/` |
 | `Utility/{XML,JSON,TileMap,Console,Profiling}` | `Serialization/{XML,JSON}` · `TileMap/` · `Console/` · `Profiling/` |
 | `Telemetry/HTTPClient` · `UI/Screens/` · `Serialization/Core/` · `UI/Core/` | `Observability/HTTPClient` · `UI/Screen/` · `Serialization/Base/` · `UI/Base/` |
-| `Physics` · `Resource` · `Animation` · `Input` 루트 파일 | `Physics/{Collision,Asset}` · `Resource/{Pack,Image,Cache}` · `Animation/{Sprite,Graph,Skeletal}` · `Input/{Map,Virtual}`(표는 `Scripts/dev/MoveEngineFolders.py`) |
+| `Physics` · `Resource` · `Animation` · `Input` 루트 파일 | `Physics/{Collision,Asset}` · `Resource/{Pack,Image,Cache}` · `Animation/{Sprite,Graph,Skeletal}` · `Input/{Map,Virtual}`(이동 표는 그 이동 커밋들의 기록) |
 
 일부러 둔 용어: stamp · kit · cook · orphan · chord · pin.
 
@@ -416,6 +416,12 @@
   Shipping 서버는 지표(`server_tick_seconds` 히스토그램 · 밀린 틱 경고)로 "느린 틱이 났다" 까지만 알립니다. 언리얼도 Insights 트레이스를 Shipping 에서 빼고 프로파일이 필요한 서버는 Test · Development 구성으로 띄우며, 유니티 프로파일러도 Development 빌드에만 있습니다.
 - **여러 프로세스 트레이스는 첫 파일을 기준으로, 같은 호스트면 옮기지 않고 다른 호스트면 벽시계로 맞춥니다**(2026-10-11, X4). 같은 기계의 단조 시계(QPC · `CLOCK_MONOTONIC`)는 프로세스끼리 같아 정확하고,
   벽시계는 밀리초 해상도라 같은 기계에서 쓰면 오히려 틀립니다. 다른 기계는 시계 차이(NTP 수준)만큼 틀린 것을 줄 묶음 이름에 적습니다. Perfetto 도 여러 트레이스를 시계 동기화 표식으로 맞추고, 표식이 없으면 그대로 겹칩니다.
+- **게임의 네트워크 역할은 게임 코드가 아니라 실행 인자가 정합니다**(2026-10-11, 서버 디버깅 S1). `GameInstanceBase` 가 `GameNetSession` 을 들고 `-gv_netListenPort`(서버 · 리슨 호스트) · `-gv_netConnectAddress`(클라이언트)로 엽니다 —
+  시험 게임을 따로 세우지 않고 Empty 를 포함한 모든 게임이 서버 · 클라이언트로 뜹니다. 언리얼의 넷 드라이버(`?listen` · `open <주소>`)와 Godot 의 `SceneMultiplayer` 가 같은 자리이고, 장르별 복제는 키트가 세션의 라우터에 처리기를 답니다.
+  기본은 꺼짐입니다(전용 서버도 `ServerConfig::_gamePort` 를 저절로 열지 않는다) — 한 기계에서 서버를 여럿 띄우는 시험이 포트로 부딪히지 않게. 운영 서버가 설정의 게임 포트를 여는 일은 백로그에 남깁니다.
+- **에디터의 멀티 프로세스 재생은 자식 프로세스의 표준 입력으로 제어하고, 트레이스는 종료할 때 쓰게 합니다**(2026-10-11, S1). 클라이언트(App)도 `-gv_standardInputCommands=1` 이면 `quit` · 개발 명령을 받습니다 —
+  Windows 의 Ctrl+Break 는 부모가 콘솔에 붙어 있어야 보낼 수 있어 에디터(창 프로그램)에서 쓸 수 없고, 강제 종료는 트레이스를 잃습니다. 트레이스는 `-gv_traceSaveOnExit=<경로>` 로 엔진 종료 첫머리에 쓰고(Stop 때 명령을 한 번 더 보내 기다리지 않는다),
+  에디터가 프로세스 이름표(`Server` · `Client1`)를 달아 `mergeTraceJSON` 으로 합칩니다. 언리얼의 "Run Under One Process" 끔(자식 프로세스 PIE)과 같은 모양이고, 언리얼은 자식을 끌 때 프로세스를 죽이지만 여기서는 트레이스 때문에 정상 종료를 먼저 기다립니다(시한 15 초, 넘으면 강제 종료).
 
 ### 5-11. 에디터와 외부 공개
 

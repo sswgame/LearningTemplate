@@ -2,6 +2,9 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Network/Connection/NetHost.h"
+#include "Core/Network/Connection/NetHostThread.h"
+#include "Core/Network/Transport/UDPNetTransport.h"
 #include "Core/Process/Process.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -226,6 +229,59 @@ SW_TEST_CASE( ServerBootTest, StopRequestShutsDownGracefully )
 #else
     expectCleanExit( run, "Terminate" );
 #endif
+}
+
+/**
+ * @brief [ServerBootTest] `-gv_netListenPort` 로 띄운 서버의 게임 인스턴스가 UDP 포트를 열고, 다른 프로세스(이 시험)의 클라이언트를 받는다(서버 디버깅 S1 의 선행)
+ * @details 키트가 없는 게임(Empty)도 네트워크 서버가 된다 — 역할은 게임 코드가 아니라 실행 인자가 정한다(`GameNetSession`). 접속을 서버 로그 ·
+ *          개발 명령 `net.status`(Dev) 로 확인하고, quit 뒤에 세션을 닫은 줄이 남는지 본다.
+ */
+SW_TEST_CASE( ServerBootTest, NetListenPortAcceptsAClientFromAnotherProcess )
+{
+    if ( findServerPath().empty() )
+        SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
+    uint16 port = 0;
+    {
+        UDPNetTransport probe; // 비어 있는 포트를 고른다 — 닫은 뒤 서버가 연다
+        SW_ASSERT_TRUE( probe.open( 0 ) );
+        port = probe.getLocalAddress()._port;
+        probe.close();
+    }
+    ProcessOptions options;
+    options._bPipeStandardInput = true;
+    bool            bConnected  = false;
+    const ServerRun run         = runServer( "-gv_serverExitAfterTicks=100000 -gv_netListenPort=" + to_string( port ), options, [port, &bConnected]( Process& process )
+            {
+        UDPNetTransport transport;
+        NetHost         client;
+        NetHostThread   thread;
+        if ( transport.open( 0 ) )
+        {
+            client.initialize( &transport, NetHostSettings{} );
+            TaskFuture<NetConnectResult> future = client.connectAsync( NetAddress::makeLoopback( port ) );
+            if ( thread.start( &client ) )
+            {
+                const Deadline deadline = Deadline::afterMilliseconds( 10000 );
+                while ( future.isReady() == false && deadline.isExpired() == false )
+                {
+                    std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
+                }
+                bConnected = future.isReady() && future.get().isConnected();
+            }
+        }
+        (void)process.writeInput( "net.status\nquit\n" );                // 못 쓰면 서버가 끝나지 않아 아래 expectCleanExit 가 실패한다
+        std::this_thread::sleep_for( std::chrono::milliseconds( 300 ) ); // 끊기 전에 상태 줄이 연결 1 을 보게
+        thread.stop();
+        client.disconnectAll();
+    } );
+    expectCleanExit( run, "ConsoleCommand" );
+    SW_EXPECT_TRUE( bConnected );
+    SW_EXPECT_TRUE_MSG( run._output.find( "Net session listening on UDP port " + to_string( port ) ) != string::npos, "the game instance did not open the port" );
+    SW_EXPECT_TRUE_MSG( run._output.find( "Net session client 0 connected from 127.0.0.1" ) != string::npos, "the server did not log the client" );
+#if !defined( SW_SHIPPING )
+    SW_EXPECT_TRUE_MSG( run._output.find( "net session: Server, connected 1, port " + to_string( port ) ) != string::npos, "net.status did not report the client" );
+#endif
+    SW_EXPECT_TRUE( run._output.find( "Net session closed (Server)" ) != string::npos );
 }
 
 /**

@@ -11,13 +11,17 @@
 큰 작업 배치는 단위로 나누어 워크트리 하나에 브랜치 하나씩 진행합니다. 워크트리는 main 체크아웃과 같은 저장소를 공유하는 별도 작업 폴더입니다.
 
 ```powershell
-py -3 -m Scripts worktree-make <이름>                  # <main 의 부모>/LT-wt/<이름>, 브랜치 wt/<이름>, 기준 origin/main
+py -3 -m Scripts worktree-make <이름>                  # <드라이브>:/w/<이름>(Windows) · <main 의 부모>/LT-wt/<이름>, 브랜치 wt/<이름>, 기준 origin/main
 py -3 -m Scripts worktree-make <이름> --base wt/apply5 # 다른 브랜치에서 갈라 만든다
 py -3 -m Scripts worktree-remove <이름>                # 나눠 쓰는 링크를 먼저 끊고 지운다
+py -3 -m Scripts shared-lock acquire vcpkg --owner <이름> --purpose "configure"   # vcpkg 를 부르기 전(cmake --preset · --clean-first · 설치) — 쓰는 쪽이 있으면 기다린다
+py -3 -m Scripts shared-lock release vcpkg --owner <이름>                          # 끝나면 바로 놓는다(status 로 누가 쓰는지 본다)
 ```
 
 - 워크트리는 내려받은 도구(LLVM, Ninja, sccache, vcpkg)와 vcpkg 설치 폴더를 main 체크아웃과 링크로 나눠 씁니다. 이 링크 폴더(`Tools/*`, `build/vcpkg_*`)는 지우거나 고치지 않습니다.
   그래서 `vcpkg.json`, 포트, `cmake/Modules/Toolchain/Vcpkg/*` 를 바꿔야 하면 워크트리에서 바꾸지 않고 main 에서 먼저 바꿉니다.
+- **공유 설치 폴더를 건드리기 전에 쓰는 쪽이 있는지 묻습니다.** `cmake --preset`, `--clean-first` 빌드, vcpkg 설치처럼 vcpkg 를 부르는 일은 먼저 `shared-lock acquire vcpkg` 로 잡고 끝나면 놓습니다.
+  의존성 정의가 다른 트리가 같은 `build/vcpkg_installed` 에 설치하면 main 의 라이브러리가 지워져 main 빌드가 `libpq.lib` 같은 링크 오류로 섭니다. 기다려도 안 풀리면 사용자에게 알립니다.
 - **적용 담당은 하나입니다.** 적용 담당이 단위 브랜치를 받아 합치고, 빌드하고, 전체를 검증하고, main 에 넣고 push 합니다. 넓게 건드리는 변경(폴더 이동, 헤더, 매크로 철자)을 먼저 넣습니다.
 - **도우미는 자기 워크트리 안에서만 일합니다.** 다른 워크트리와 main 체크아웃을 건드리지 않고, push 하지 않습니다. 단위를 끝낼 때마다 최신 main 을 받아 충돌을 스스로 풉니다.
   적용 담당은 충돌을 풀지 않고 되돌려 보냅니다. 셰이더 매니페스트, 쿠킹 바이너리, `import.stamp` 같은 생성 산출물이 충돌하면 한쪽을 고르지 않고 `App --cook-shaders` 나 `--import-models` 로 다시 만듭니다.

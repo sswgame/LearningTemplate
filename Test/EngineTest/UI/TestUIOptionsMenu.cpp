@@ -265,7 +265,10 @@ SW_TEST_CASE( UIOptionsMenuTest, RebindIgnoresUIActionsWhileListening )
     SW_ASSERT_NOT_NULL( pRebind );
     fixture.runFrame();
     fixture.tapKey( sw::Key::Down );
-    SW_EXPECT_EQUAL( jumpButton, fixture._ui.getFocusManager().getFocusedWidget() ); // 아래 행(Fire)으로 가지 않았다
+    const sw::WidgetID focused       = fixture._ui.getFocusManager().getFocusedWidget();
+    const sw::Widget*  pFocused      = pMenu->getTree().findWidgetByID( focused );
+    const sw::string   focusedDetail = sw::string( "focused widget '" ) + ( pFocused != nullptr ? pFocused->getName().c_str() : "(not in menu)" ) + "'";
+    SW_EXPECT_TRUE_MSG( jumpButton == focused, focusedDetail.c_str() ); // 아래 행(Fire)으로 가지 않았다
     SW_EXPECT_STREQ( "Key.Down", sw::string( fixture._settings.getValue( "controls.jump" ) ).c_str() );
     SW_EXPECT_TRUE( fixture.getPrompt<sw::KeyRebindScreen>() == nullptr );
 }

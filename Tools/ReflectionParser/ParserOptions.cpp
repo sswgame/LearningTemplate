@@ -2,6 +2,7 @@
 
 #include "ReflectionParser/ParserOptions.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 
@@ -60,6 +61,45 @@ namespace sw
                 return nullptr;
             }
 
+            /**
+             * @brief `@파일` 인자를 그 파일의 줄들로 펼칩니다(줄 하나가 인자 하나, 빈 줄은 건너뜀).
+             * @details 명령 줄은 Windows 에서 32767 자까지라 입력 헤더가 많으면 넘는다 — 빌드 체계는 인자를 응답 파일로 넘긴다.
+             * @return 파일을 못 읽으면 이유를 알리고 false
+             */
+            static bool expandArguments( const int32 argc, utf8* argv[], vector<string>& outListArgument )
+            {
+                for ( int32 argIndex = 1; argIndex < argc; ++argIndex )
+                {
+                    if ( argv[argIndex][0] != '@' )
+                    {
+                        outListArgument.emplace_back( argv[argIndex] );
+                        continue;
+                    }
+                    string text;
+                    if ( FileUtil::readTextFile( argv[argIndex] + 1, text ) == false )
+                    {
+                        SW_LOG_ERROR( "Could not read the response file: %#", argv[argIndex] + 1 );
+                        return false;
+                    }
+                    size_t lineBegin = 0;
+                    while ( lineBegin <= text.size() )
+                    {
+                        size_t lineEnd = text.find( '\n', lineBegin );
+                        if ( lineEnd == string::npos )
+                            lineEnd = text.size();
+                        size_t trimmedEnd = lineEnd;
+                        while ( trimmedEnd > lineBegin && text[trimmedEnd - 1] == '\r' )
+                        {
+                            --trimmedEnd;
+                        }
+                        if ( trimmedEnd > lineBegin )
+                            outListArgument.emplace_back( text.substr( lineBegin, trimmedEnd - lineBegin ) );
+                        lineBegin = lineEnd + 1;
+                    }
+                }
+                return true;
+            }
+
             static const OptionRow* findRow( const string_view flag )
             {
                 for ( const OptionRow& row : kArrOptionRow )
@@ -86,30 +126,36 @@ namespace sw
 {
     bool ParserOptions::parse( const int32 argc, utf8* argv[] )
     {
-        for ( int32 argIndex = 1; argIndex < argc; ++argIndex )
+        vector<string> listArgument;
+        if ( ParserOptionsInternal::expandArguments( argc, argv, listArgument ) == false )
+            return false;
+
+        const size_t argCount = listArgument.size();
+        for ( size_t argIndex = 0; argIndex < argCount; ++argIndex )
         {
-            if ( const SwitchRow* pSwitch = ParserOptionsInternal::findSwitch( argv[argIndex] ) )
+            const string& argument = listArgument[argIndex];
+            if ( const SwitchRow* pSwitch = ParserOptionsInternal::findSwitch( argument ) )
             {
                 this->*pSwitch->_pSwitch = true;
                 continue;
             }
-            const OptionRow* pRow = ParserOptionsInternal::findRow( argv[argIndex] );
+            const OptionRow* pRow = ParserOptionsInternal::findRow( argument );
             if ( pRow == nullptr )
             {
-                SW_LOG_ERROR( "Unknown argument: %#", argv[argIndex] );
+                SW_LOG_ERROR( "Unknown argument: %#", argument );
                 return false;
             }
-            if ( argIndex + 1 >= argc )
+            if ( argIndex + 1 >= argCount )
             {
                 SW_LOG_ERROR( "%# needs a value %#.", pRow->_pFlag, pRow->_pValueName );
                 return false;
             }
 
-            const utf8* pValue = argv[++argIndex];
+            const string& value = listArgument[++argIndex];
             if ( pRow->_pList != nullptr )
-                ( this->*pRow->_pList ).emplace_back( pValue );
+                ( this->*pRow->_pList ).emplace_back( value );
             else
-                this->*pRow->_pValue = pValue;
+                this->*pRow->_pValue = value;
         }
 
         // 사용법만 묻는 실행 — 필수 인자를 따지지 않는다.

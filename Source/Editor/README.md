@@ -161,6 +161,18 @@ Play 는 활성 씬을 스냅샷으로 찍고 월드를 시작합니다. Stop �
 플레이 중에는 편집 내역을 맡겨 두므로(`CommandStack::parkHistory`) 플레이 중 인스펙터 편집은 기록하지 않고 바로 적용합니다. Stop 이 그 편집을 되돌립니다.
 남기고 싶은 오브젝트는 Keep Simulation Changes 로 적어 두면, Stop 이 되돌린 뒤 그 상태를 입히고 되돌리기 하나로 기록합니다.
 
+### 멀티 프로세스 재생
+
+툴바 Play 앞의 Net Mode 를 Dedicated Server 나 Listen Host 로 바꾸고 플레이어 수를 고르면, Play 가 에디터 안이 아니라 서버와 클라이언트를 자식 프로세스로 띄웁니다
+(언리얼 PIE 의 Net Mode + "Run Under One Process" 끔). 서버는 `Server`(전용) 또는 첫 `App`(리슨 호스트)이고 `-gv_netListenPort`, 클라이언트는 `App` 이고 `-gv_netConnectAddress` 를 받습니다 — 포트는 비어 있는 것을 고릅니다.
+
+- 로그: 프로세스마다 읽기 스레드가 줄을 모으고 툴바가 프레임마다 `[Server]` · `[Client1]` 꼬리표를 붙여 Output Log 에 다시 씁니다(자식의 오류 줄은 경고로). 하나가 먼저 끝나면 종료 코드 · 마지막 줄과 함께 경고합니다.
+- Window > Multiplayer 의 Session 탭: 구성(트레이스 기록 · 클라이언트 인자), 프로세스 목록(pid · 상태 · 접속 · 마지막 줄), 서버 Pause · Step N · Resume(서버 표준 입력의 Dev 명령), 출처별 로그 거르기.
+- Stop: 모든 자식의 표준 입력에 `quit` 를 보내 정상 종료시키고(15 초를 넘으면 강제 종료), Record traces 가 켜져 있으면 프로세스마다 `-gv_traceSaveOnExit` 로 쓴 파일을
+  이름표를 달아 `Saved/Traces/netplay_<시각>/merged.trace.json` 으로 합칩니다 — Profiler 창 Load Trace · Perfetto 로 엽니다. 같은 PC 라 단조 시계로 정확히 맞습니다.
+- 개발 명령 `netplay.start [dedicated|listen] [<플레이어 수>]` · `netplay.stop` · `netplay.wait <클라이언트 수> [<초>]` · `netplay.server <명령>`, 탐침 `Editor.NetPlayProcessCount` · `Editor.NetPlayConnectedClients` —
+  에디터 시나리오 `engine/automation/editor/netplay.scenario.xml` 이 이것으로 확인합니다. 세션 본체(`Common/Commands/EditorNetPlaySession`)는 ImGui 가 없어 `EditorTest` 가 `Server` 를 헤드리스 클라이언트로 띄워 시험합니다.
+
 ### 씬 뷰와 게임 뷰
 
 씬 뷰(`SceneViewPanel`)는 에디터 카메라(`EditorCamera::ensure`)로 그린 씬 위에 격자, 기즈모, 피킹, 눈금자, 시각화, 디버그 선, HUD 상자, 방향 큐브를 ImGui 로 얹습니다.

@@ -162,9 +162,22 @@ def findIncludeViolations(repositoryRoot: Path, listOwner: list[TargetOwner]) ->
     resolver = IncludeResolver(repositoryRoot, "Source")
     listPath = LintGate.selectTargetFiles(repositoryRoot, None, listScanRoot=("Source",), suffixes=_kSourceSuffixes)
     listViolation: list[str] = []
+    # 소속은 대개 폴더가 정한다 — include 마다 모듈 전부를 훑지 않게 폴더별로 한 번만 찾는다. 파일 하나를 가리키는 줄(`/` 로 끝나지 않는
+    # `folder`)에 맞는 파일만 그때마다 찾는다.
+    mapOwnerByDirectory: dict[str, TargetOwner | None] = {}
+    tupleFileOwnerPath = tuple(owner.folder for owner in listAllOwner if not owner.folder.endswith("/"))
+
+    def findOwnerCached(relativePath: str) -> TargetOwner | None:
+        if tupleFileOwnerPath and relativePath.startswith(tupleFileOwnerPath):
+            return findOwner(listAllOwner, relativePath)
+        directory = relativePath[: relativePath.rfind("/") + 1]
+        if directory not in mapOwnerByDirectory:
+            mapOwnerByDirectory[directory] = findOwner(listAllOwner, directory)
+        return mapOwnerByDirectory[directory]
+
     for path, text in LintGate.readFiles(listPath, mustContain="#"):
         relative = path.relative_to(repositoryRoot).as_posix()
-        owner = findOwner(listAllOwner, relative)
+        owner = findOwnerCached(relative)
         if owner is None:
             continue
         for lineNumber, rawInclude in iterIncludes(text, bQuotedOnly=True):
@@ -172,7 +185,7 @@ def findIncludeViolations(repositoryRoot: Path, listOwner: list[TargetOwner]) ->
             includedRelative = resolver.resolveInclude(relative, includePath)
             if includedRelative is None:
                 continue
-            includedOwner = findOwner(listAllOwner, includedRelative)
+            includedOwner = findOwnerCached(includedRelative)
             if includedOwner is None or includedOwner is owner:
                 continue
             missing = owner.setTarget - includedOwner.setTarget

@@ -31,7 +31,7 @@
 - 분할 뒤 같은 세 경우와 비교한다. 이득이 재링크 시간에서 나오지 않으면 3 단계(DLL 승격)는 하지 않는다.
 
 ### 0-3. Engine 폴더 재배치 — 남은 판단
-옛 경로와 옮기지 않기로 한 것은 [결정 기록](../09_Decisions.md) 2 · 4 절, 이동 도구는 `Scripts/dev/MoveEngineFolders.py`(`--sync-tier` 가 게이트 표와 `Source/Engine/README.md` 티어 표를 맞춘다).
+옛 경로와 옮기지 않기로 한 것은 [결정 기록](../09_Decisions.md) 2 · 4 절, 티어 표는 `py -3 Scripts/lint/report/RunEngineLayerGraph.py --apply` 가 게이트 표와 `Source/Engine/README.md` 티어 표를 함께 맞춘다(이동 도구는 끝나서 지웠다).
 
 - `Utility` 루트 10 파일(`CommandStack` · `DebugOverlayState` · `GameAutoplay` · `GameTimeScale` · `KeyValueFile`)은 이름만 보고 두었다. 후보는 `CommandStack` → `Scene`(에디터 실행 취소),
   `KeyValueFile` → `Serialization/Format`, `GameTimeScale` · `GameAutoplay` → `Config`, `DebugOverlayState` → `Profiling` 이다.

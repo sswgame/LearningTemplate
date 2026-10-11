@@ -227,6 +227,7 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 | `Editor.PreferencesVisibleSections`, `Editor.PreferencesSavedKeyCount` | 환경설정 창이 보인 섹션 수(검색 뒤), `EditorPreferences.json` 에 저장된 키 수 |
 | `Editor.ShortcutConflictCount`, `Editor.ShortcutOverrideCount` | 단축키 편집기가 묻는 충돌 수, 사용자 단축키 덮어쓰기 수 |
 | `Editor.ModulePreviewNewlyInactive` | 모듈 창이 묻는 미리보기에서 새로 꺼지는 모듈 수(묻지 않으면 0) |
+| `Editor.NetPlayProcessCount`, `Editor.NetPlayConnectedClients` | 멀티 프로세스 재생의 프로세스 수(멈추면 0), 서버에 붙었다고 로그에 남긴 클라이언트 수 |
 | `Editor.SelectedPropertySum` | 선택한 오브젝트 모두의 `gv_editorProbeProperty` 값 합(다중 편집) |
 | `Editor.SelectedCurveKeyCount` | 주 선택 오브젝트의 `gv_editorProbeProperty` 커브(`FloatCurve`) 키 수 |
 | `Editor.HierarchyRowIcon` | `gv_editorProbeObject` 이름의 오브젝트가 Hierarchy 줄에 그리는 아이콘 코드 포인트 |

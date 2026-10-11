@@ -14,6 +14,7 @@
 | `gv_devConsoleOpen` | `int32` | `0` | 시험 | 게임 창 개발 콘솔을 연 채로 시작 (1=열기) | [App.cpp](../../Source/App/App.cpp) |
 | `gv_fixedFrameDelta` | `float32` | `0.0` | 시험 · 배포본에도 | 프레임마다 흘릴 고정 시간(초, 0=실시간) — 결정적 실행 | [App.cpp](../../Source/App/App.cpp) |
 | `gv_reloadGameAtFrame` | `int32` | `0` | 시험 | 이 프레임에 게임 모듈 핫 리로드를 요청한다 (0=사용 안 함) | [App.cpp](../../Source/App/App.cpp) |
+| `gv_standardInputCommands` | `int32` | `0` | 시험 | 표준 입력의 줄을 명령으로 받는다 (quit=종료, 1=켜기) | [App.cpp](../../Source/App/App.cpp) |
 | `gv_userSettingsApply` | `string` | — | 시험 · 배포본에도 | 사용자 설정을 메뉴와 같은 길로 바꾼다: "id=value;id=value" (자동화) | [UserSettingsHost.cpp](../../Source/App/UserSettingsHost.cpp) |
 | `gv_userSettingsApplyFrame` | `int32` | `30` | 시험 · 배포본에도 | gv_userSettingsApply 를 적용할 프레임 | [UserSettingsHost.cpp](../../Source/App/UserSettingsHost.cpp) |
 | `gv_userSettingsAutoConfirm` | `bool` | `true` | 시험 · 배포본에도 | gv_userSettingsApply 의 화면 변경을 바로 확인한다 (false 면 카운트다운이 되돌린다) | [UserSettingsHost.cpp](../../Source/App/UserSettingsHost.cpp) |
@@ -118,6 +119,7 @@
 | `gv_profileFrames` | `int32` | `0` | 시험 · 배포본에도 | 프레임 프로파일 측정 프레임 수 (0=사용 안 함) | [FrameProfileSession.cpp](../../Source/Engine/Profiling/FrameProfileSession.cpp) |
 | `gv_profileSeconds` | `int32` | `0` | 시험 · 배포본에도 | 프레임 프로파일 측정 시간(초, 0=사용 안 함) | [FrameProfileSession.cpp](../../Source/Engine/Profiling/FrameProfileSession.cpp) |
 | `gv_profileTracePath` | `string` | — | 시험 | 측정 창 전체를 이 경로에 트레이스로 저장 (비면 끄기) | [FrameProfileSession.cpp](../../Source/Engine/Profiling/FrameProfileSession.cpp) |
+| `gv_traceSaveOnExit` | `string` | — | 시험 | 종료할 때 최근 프레임의 타임라인을 이 경로에 트레이스로 저장 (비면 끄기) | [ProfilerTraceExport.cpp](../../Source/Engine/Profiling/ProfilerTraceExport.cpp) |
 | `gv_traceSlowTickMs` | `int32` | `0` | 시험 | 틱 본문이 N ms 를 넘으면 앞뒤 프레임을 트레이스로 저장 (0=끄기) | [ProfilerTraceExport.cpp](../../Source/Engine/Profiling/ProfilerTraceExport.cpp) |
 | `gv_tracy` | `bool` | `false` | 시험 | Tracy 프로파일러로 계측을 내보낸다(기동부터, 뷰어는 localhost 로 붙는다) | [ProfilerBackend.cpp](../../Source/Engine/Profiling/ProfilerBackend.cpp) |
 | `gv_tracyMemory` | `bool` | `false` | 시험 | Tracy 에 할당 · 해제를 메모리 태그별로 보낸다(느림, gv_tracy 와 같이) | [ProfilerBackend.cpp](../../Source/Engine/Profiling/ProfilerBackend.cpp) |
@@ -211,6 +213,8 @@
 | `gv_aiDirectorTrace` | `int32` | `0` | 시험 | AIDirector: log every phase change, spawn, encounter and reward (1=on) | [AIDirector.cpp](../../Source/GameFramework/Base/Actor/AI/Director/AIDirector.cpp) |
 | `gv_cameraPreset` | `string` | — | 시험 · 배포본에도 | 카메라 디렉터의 시작 프리셋 id (캡처 카메라 제외, 비우면 데이터대로) | [CameraDirectorComponent.cpp](../../Source/GameFramework/Base/Actor/Camera/CameraDirectorComponent.cpp) |
 | `gv_firstScene` | `string` | — | 시험 · 배포본에도 | 팩 설정의 시작 씬 대신 처음 열 씬의 리소스 경로 (비우면 사용 안 함) | [GameInstanceBase.cpp](../../Source/GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.cpp) |
+| `gv_netConnectAddress` | `string` | — | 시험 | 클라이언트로 붙을 게임 서버 주소 (주소:포트, 비면 끄기) | [GameNetSession.cpp](../../Source/GameFramework/Base/Foundation/Framework/Net/GameNetSession.cpp) |
+| `gv_netListenPort` | `int32` | `0` | 시험 | 게임 네트워크 서버로 열 UDP 포트 (0=끄기) | [GameNetSession.cpp](../../Source/GameFramework/Base/Foundation/Framework/Net/GameNetSession.cpp) |
 | `gv_scheduleTrace` | `string` | — | 시험 | Schedule: log the why-am-I-here trace and today's timeline of this NPC id (* = all) when the value changes | [ScheduleSystem.cpp](../../Source/GameFramework/Base/Actor/AI/Schedule/ScheduleSystem.cpp) |
 
 ## `Source/Games/AbilityArena`

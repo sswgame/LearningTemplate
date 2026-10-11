@@ -49,7 +49,7 @@ namespace sw
         [[nodiscard]] bool initialize( IStreamTransport* pTransport, const LoadBotLocalServerSettings& settings, string& outError );
         void               shutdown();
 
-        /** @brief 호스트 틱 · 게임 서버 하트비트입니다. @p nowMs 는 서비스 시각(실제 실행은 UTC 밀리초, 시험은 가짜 시각). */
+        /** @brief 호스트 틱 · 게임 서버 하트비트입니다. @p nowMs 는 서비스 시각(실제 실행은 UTC 밀리초, 시험은 가짜 시각) — 캐시 만료도 이 시각으로 잰다. */
         void tick( int64 nowMs );
 
         OnlineServiceHost& getHost();

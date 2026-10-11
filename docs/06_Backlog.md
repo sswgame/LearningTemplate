@@ -344,7 +344,8 @@
   ④ 서버 빌드에서 렌더러 코드를 아예 빼기(지금은 컴파일만 되고 돌지 않는다 — 크기 · 링크 시간을 재고). ⑤ 리눅스 서버(`WSL-*-Server`) 빌드 · `readelf -d` 로
   libX11 없음 확인 · `ServerTest` — 이 묶음은 Windows 만 확인했다.
 
-- **서버 디버깅 — 계획은 [docs/plans/ServerDebug.md](plans/ServerDebug.md).** 에디터에서 서버 · 멀티플레이를 손쉽게 보는 길(Net Mode 재생 · 서버 검사기 · 회선 조절 · 네트워크 프로파일러 · 서버 권위 겹쳐 보기 · 틱별 해시 비교). 결정은 끝났다(여러 프로세스 먼저 · 읽기 전용 + 개발 콘솔 명령 · Multiplayer 창 하나). S2(중단점 친화)는 들어갔고 다음은 S1 — 선행으로 `Server` 에서 네트워크 서버를 여는 시험 게임(또는 키트 예제)이 하나 있어야 접속을 확인할 수 있다. 운영 단위 O1 ~ O7(사고 기록 · 로그 · 드레인 · 관리 채널 · 부하 기준선 · 배포)도 같은 문서에 있다. 단위를 끝내면 계획 문서에서 지운다.
+- **서버 디버깅 — 계획은 [docs/plans/ServerDebug.md](plans/ServerDebug.md).** 에디터에서 서버 · 멀티플레이를 손쉽게 보는 길(Net Mode 재생 · 서버 검사기 · 회선 조절 · 네트워크 프로파일러 · 서버 권위 겹쳐 보기 · 틱별 해시 비교). 결정은 끝났다(여러 프로세스 먼저 · 읽기 전용 + 개발 콘솔 명령 · Multiplayer 창 하나). S2(중단점 친화)와 S1(멀티 프로세스 재생 — 툴바 Net Mode · Multiplayer 창 Session 탭 · 트레이스 합치기 · 모든 게임의 `GameNetSession`)은 들어갔고 다음은 S4. 운영 단위 O1 ~ O7(사고 기록 · 로그 · 드레인 · 관리 채널 · 부하 기준선 · 배포)도 같은 문서에 있다. 단위를 끝내면 계획 문서에서 지운다.
+  S1 에서 남은 것: ① 사용자 프리셋 저장("서버 + 클라이언트 2" 를 이름 붙여 에디터 상태에 — 지금은 마지막 구성만 세션이 들고 있고 에디터를 다시 띄우면 Standalone) ② Output Log 줄마다 서버 틱 번호(지금은 출처 꼬리표 `[Server]` · `[Client1]` 만) ③ Stop 뒤 합친 트레이스를 Profiler 창 Timeline 탭에 저절로 열기(지금은 경로를 로그 · Session 탭에 남기고 Load Trace 로 연다) ④ 게임 모듈 핫 리로드를 넘어 세션 유지 — 게임 인스턴스가 다시 서면 `GameNetSession` 도 닫고 다시 열어 클라이언트가 끊긴다(리로드가 새 인스턴스를 먼저 만들면 포트가 아직 잡혀 있어 다시 열지 못한다; 세션을 엔진 쪽 수명으로 옮긴다 — 언리얼 넷 드라이버는 월드 소유) ⑤ 운영 서버가 `ServerConfig::_gamePort` 를 저절로 여는 길(지금은 `-gv_netListenPort` 를 줄 때만 연다 — 결정 기록 5-10) ⑥ 클라이언트 창 배치(여러 App 창이 겹쳐 뜬다 — 언리얼은 창 위치를 나란히 둔다).
 
 - **네트워크 — 포화된 연결의 비신뢰 줄**(N21a 뒤). 대역폭 몫을 다 쓰면 메시지가 기다리는데, 비신뢰 줄(`NetConnection::_listOutgoingUnreliable`)에는 상한이 없어 오래 포화되면
   옛 비신뢰가 쌓였다 몰려 간다. 언리얼은 포화면(`IsNetReady` 거짓) 액터 복제를 건너뛴다 — 키트가 `NetHost` 에 "이 연결이 포화인가" 를 묻거나 줄에 나이 상한을 둔다. 재고 나서.
@@ -482,12 +483,10 @@
 - **CI 린트 잡이 처음으로 린트 전부를 리눅스에서 돈다**(`RunLintSuite`, 2026-10-06 — 그 전엔 `CheckCodeConventions` 하나). 첫 실행에서 지는 게이트가 있으면
   그 게이트의 결함(경로 대소문자 · 줄끝 · 외부 도구)이다 — 고치고, 급하면 그 단계에 `continue-on-error` 를 한 번 두고 여기 적는다. 훅 상한
   `kHookBudgetSeconds`(1: 8 · 10: 12 s)는 이 PC 기준 짐작이다 — 첫 `lint-timing` 아티팩트를 보고 러너 값의 1.5 배로 고친다.
-- **Scripts 정리의 남은 후보**(2026-10-10, `CodeText` 도우미 · `lint/conventions/` 나누기 · 훅 내용 규칙 뒤). 커밋 훅의 바닥은 아직 트리 전체 게이트 `CheckConfigReference` · `CheckDuplicateTypeNames` ·
-  `CheckKitNamespaces` 다 — 내용 규칙으로 토큰이 없는 소스 커밋에서는 서지 않게 했지만, 토큰이 든 파일(`REFLECT` · `enum class` 헤더)을 건드린 커밋은 여전히 돈다.
-  더 줄이려면 `CheckConfigReference` 를 파일 단위로(생성 문서를 통째로 다시 만들지 않고 바뀐 구조체만) 나눠야 한다.
-  ① `CheckOutParameterNames`(맨이름 `out`)는 `CheckCodeConventions` 의 `Naming/OutParameter` 와 같은 주제다 — 줄 규칙 하나로 합치면 게이트 하나가 준다
-  (CTest 이름을 옮기는 일). ② `dev/MoveEngineFolders.py` · `MoveGameFrameworkLayout.py` 는 "이동 표 + git mv + 경로 치환" 이 같은
-  모양이다 — 폴더 재배치가 끝났으니 지우거나 공용 이동기 하나로.
+- **Scripts 정리의 남은 후보**([Scripts 개편 계획](plans/ScriptsRestructure.md)). 커밋 훅의 바닥은 트리 전체 게이트 여섯이 비슷한 높이(조용할 때 1~1.4 s,
+  대개 `Source/` 를 읽는 값)로 만든다 — `CheckConfigReference` 하나를 파일 단위로 나눠도 바닥은 그대로라 하지 않는다(계획 1 단계에 숫자). 더 내리려면
+  트리 전체 게이트가 파일 읽기를 나누는 구조가 필요하다. 남은 작은 것: `CheckFunctionVocabulary` 의 손으로 짠 주석 가리기(`common.CodeText` 로),
+  `dev/MoveEditorState.py`(PC 마다 한 번짜리 옛 자리 이동기 — 모든 PC 가 돌렸으면 지운다).
 
 ### 1-10. 관찰 중 — 다시 보이면 원인을 판다
 

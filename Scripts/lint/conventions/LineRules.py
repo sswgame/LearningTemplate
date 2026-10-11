@@ -606,6 +606,59 @@ class OutParameterNameRule( ConventionRule ):
                     )
         return violations
 
+
+#: 참조 · 포인터 뒤에 이름이 딱 `out` 인 매개변수(기본값 `= x` 도 본다, `==` 는 식이라 뺀다).
+_kBareOutRe = re.compile(r"[&*]\s*out\s*(?:[,)]|=(?!=))")
+_kOpenCallRe = re.compile(r"\b([A-Za-z_]\w*)\s*\(")
+_kBlockCommentRe = re.compile(r"/\*.*?\*/", re.S)
+_kNotFunctionNameKeyword = frozenset({"if", "for", "while", "switch", "return", "sizeof", "decltype", "alignof", "noexcept",
+                                      "static_cast", "reinterpret_cast", "const_cast", "dynamic_cast"})
+
+
+class BareOutParameterRule( ConventionRule ):
+    """
+    Naming/BareOutParameter — 헤더 선언의 맨이름 `out` 매개변수.
+
+    out 매개변수는 `out` + 채우는 것(`outBody` · 포인터면 `pOutPath`)으로 쓴다(AGENTS.md "Naming › C++"). 맨이름 `out` 은 무엇을 채우는지가 빠져
+    같은 함수의 다른 out 과 구별되지 않는다. 선언이 여러 줄이면 매개변수 줄 앞에서 마지막으로 연 `이름(` 을 함수 이름으로 알린다 — 그래서 줄 규칙이
+    아니라 파일 규칙이다.
+    """
+    category = "Naming/BareOutParameter"
+    scope = "file"
+    badSampleFile = "Source/Probe/BareOut.h"
+    badSample = "#pragma once\n\nstruct Probe\n{\n    void parse( int32 a,\n                Desc* out = nullptr );\n};\n"
+
+    def onFile(self, ctx: LineScanContext, listLine: list[str]) -> list[ConventionViolation]:
+        if ctx.isHeader is False or not any("out" in line for line in listLine):
+            return []
+        # 주석의 줄바꿈은 남긴다 — 보고하는 줄 번호가 원문과 맞아야 한다.
+        text = _kBlockCommentRe.sub(lambda comment: "\n" * comment.group(0).count("\n"), "\n".join(listLine))
+        violations: list[ConventionViolation] = []
+        lastOpenName = ""
+        for lineNum, rawLine in enumerate(text.split("\n"), start=1):
+            line = rawLine.split("//", 1)[0]
+            if not line.strip() or line.lstrip().startswith("#"):
+                continue
+            bareOut = _kBareOutRe.search(line) if "out" in line else None
+            for openMatch in _kOpenCallRe.finditer(line):
+                if bareOut is not None and openMatch.start() > bareOut.start():
+                    break
+                if openMatch.group(1) not in _kNotFunctionNameKeyword:
+                    lastOpenName = openMatch.group(1)
+            if bareOut is None:
+                continue
+            violations.append(
+                ConventionViolation(
+                    file_path=ctx.relPath,
+                    line_number=lineNum,
+                    rule_category=self.category,
+                    message=f"'{lastOpenName}' 의 맨이름 'out' 매개변수입니다. 채우는 것을 이름에 담아 'outXxx'(포인터면 'pOutXxx')로 씁니다.",
+                    snippet=listLine[lineNum - 1].strip() if lineNum <= len(listLine) else "",
+                )
+            )
+        return violations
+
+
 class ClassMemberNamingRule( ConventionRule ):
     """Naming/ContainerSingular · Naming/DynamicContainer · Naming/FixedArray · Naming/MapContainer · Naming/RawPointer · Naming/SetContainer"""
     categories = (

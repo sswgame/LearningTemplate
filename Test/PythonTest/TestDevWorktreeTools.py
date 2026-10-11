@@ -15,6 +15,31 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "Scripts" / "dev"))
 import ListCiJobs  # noqa: E402
 import MakeWorktree  # noqa: E402
 import RemoveWorktree  # noqa: E402
+import RunSharedLock as SharedLock  # noqa: E402
+
+
+class SharedLockTest(unittest.TestCase):
+    def testSecondOwnerWaitsUntilTheFirstReleases(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            lockDirectory = SharedLock.getLockDirectory(Path(temp), "vcpkg")
+            self.assertTrue(SharedLock.tryAcquire(lockDirectory, "a", "install", 1, 1000.0))
+            self.assertFalse(SharedLock.tryAcquire(lockDirectory, "b", "install", 2, 1001.0))
+            self.assertFalse(SharedLock.release(lockDirectory, "b"))  # 남의 잠금은 놓지 못한다
+            self.assertTrue(SharedLock.release(lockDirectory, "a"))
+            self.assertTrue(SharedLock.tryAcquire(lockDirectory, "b", "install", 2, 1002.0))
+
+    def testAbandonedLockIsTakenOver(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            lockDirectory = SharedLock.getLockDirectory(Path(temp), "vcpkg")
+            self.assertTrue(SharedLock.tryAcquire(lockDirectory, "gone", "install", 0, 1000.0))  # pid 0 은 살아 있지 않다
+            self.assertFalse(SharedLock.tryAcquire(lockDirectory, "b", "install", 2, 1000.0 + 60))
+            self.assertTrue(SharedLock.tryAcquire(lockDirectory, "b", "install", 2, 1000.0 + SharedLock.kStaleSeconds + 1))
+
+    def testResourceNameMustBeFolderSafe(self) -> None:
+        for name in ("", "a/b", ".."):
+            with self.subTest(name=name):
+                with self.assertRaises(ValueError):
+                    SharedLock.getLockDirectory(Path("/repo"), name)
 
 
 class MakeWorktreePlanTest(unittest.TestCase):

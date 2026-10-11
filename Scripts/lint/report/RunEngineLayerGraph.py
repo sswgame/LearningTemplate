@@ -18,11 +18,13 @@ Engine 폴더 간 include 그래프를 다시 재서 **강결합 묶음과 티�
 사용법:
   py -3 Scripts/lint/report/RunEngineLayerGraph.py            # 묶음과 티어
   py -3 Scripts/lint/report/RunEngineLayerGraph.py --edges    # 묶음 안의 엣지를 파일 단위로
+  py -3 Scripts/lint/report/RunEngineLayerGraph.py --apply    # 폴더를 옮긴 뒤 — 게이트 티어 표와 Source/Engine/README.md 티어 표를 계산값으로
 """
 
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -121,11 +123,111 @@ def computeTiersInternal(listEdge: dict[str, dict[str, list[str]]]) -> dict[str,
     return mapTier
 
 
+def computeTiersFillingComponentsInternal(listEdge: dict[str, dict[str, list[str]]]) -> dict[str, int]:
+    """`computeTiersInternal` 에 묶음까지 놓는다 — 바깥 의존이 다 놓인 묶음은 한 덩어리로 의존 대상의 최대 + 1, 그 위도 같은 규칙(표에 쓸 값)."""
+    mapTier = computeTiersInternal(listEdge)
+    uniqueNode = set(listEdge)
+    for source in list(listEdge):
+        uniqueNode.update(listEdge[source])
+    uniqueRemaining = uniqueNode - set(mapTier)
+
+    def tierAboveInternal(listMember: list[str]) -> int:
+        return max((mapTier[dep] for member in listMember for dep in listEdge.get(member, {}) if dep in mapTier), default=-1) + 1
+
+    while uniqueRemaining:
+        listReady = sorted(node for node in uniqueRemaining if all(dep in mapTier for dep in listEdge.get(node, {})))
+        if listReady:
+            for node in listReady:
+                mapTier[node] = tierAboveInternal([node])
+            uniqueRemaining -= set(listReady)
+            continue
+        mapSubEdge = {node: {dep: [] for dep in listEdge.get(node, {}) if dep in uniqueRemaining} for node in uniqueRemaining}
+        listCycle = [component for component in findComponentsInternal(mapSubEdge)
+                     if all(dep in mapTier or dep in component for member in component for dep in listEdge.get(member, {}))]
+        if not listCycle:
+            break
+        tier = tierAboveInternal(listCycle[0])
+        for node in listCycle[0]:
+            mapTier[node] = tier
+        uniqueRemaining -= set(listCycle[0])
+    return mapTier
+
+
+#: 티어 표(`rules/CheckEngineLayers.toml` 의 `[tier]`) 한 줄 — `이름 = 숫자` 또는 `"<root>" = 숫자`, 끝 주석은 그대로 둔다.
+_kTierEntryRe = re.compile(r'^(?:"([^"]+)"|([A-Za-z0-9_-]+))\s*=\s*(\d+)(\s*#.*)?$')
+
+
+def readKeepingNewlineInternal(path: Path) -> tuple[str, str]:
+    with path.open("r", encoding="utf-8", newline="") as stream:
+        text = stream.read()
+    return text, ("\r\n" if "\r\n" in text else "\n")
+
+
+def writeTierTablesInternal(repositoryRoot: Path, mapTier: dict[str, int]) -> list[str]:
+    """
+    티어 표(`Scripts/lint/rules/CheckEngineLayers.toml` 의 `[tier]`)와 `Source/Engine/README.md` 의 `| 티어 | 폴더 |` 표를 계산값으로 고쳐 쓴다.
+    TOML 항목(바로 위 주석 줄 + 키 줄)은 (티어, 원래 순서)로 다시 줄 세운다. 고친 파일의 저장소 상대 경로를 돌려준다.
+    """
+    listChanged: list[str] = []
+    rulePath = Path(__file__).resolve().parents[1] / "rules" / "CheckEngineLayers.toml"   # 규칙 데이터는 스크립트 트리의 것(RuleData 와 같다)
+    text, newline = readKeepingNewlineInternal(rulePath)
+    listLine = text.split(newline)
+    beginIndex = next(index for index, line in enumerate(listLine) if line == "[tier]")
+    endIndex = next((index for index in range(beginIndex + 1, len(listLine)) if listLine[index].startswith("[")), len(listLine))
+    listEntry: list[tuple[int, int, str, list[str]]] = []
+    listComment: list[str] = []
+    for line in listLine[beginIndex + 1 : endIndex]:
+        match = _kTierEntryRe.match(line)
+        if not match:
+            listComment.append(line)
+            continue
+        layerName = match.group(1) or match.group(2)
+        tier = mapTier.get(layerName, int(match.group(3)))
+        if layerName == gate._kRootLayerName and layerName not in mapTier:
+            tier = max(mapTier.values(), default=0) + 1
+        keyText = f'"{match.group(1)}"' if match.group(1) else match.group(2)
+        listEntry.append((tier, len(listEntry), layerName, listComment + [f"{keyText} = {tier}{match.group(4) or ''}"]))
+        listComment = []
+    listEntry.sort(key=lambda entry: (entry[0], entry[1]))
+    listBody = [line for entry in listEntry for line in entry[3]] + listComment
+    newText = newline.join(listLine[: beginIndex + 1] + listBody + listLine[endIndex:])
+    if newText != text:
+        with rulePath.open("w", encoding="utf-8", newline="") as stream:
+            stream.write(newText)
+        listChanged.append("Scripts/lint/rules/CheckEngineLayers.toml")
+
+    mapRow: dict[int, list[str]] = defaultdict(list)
+    for tier, _, layerName, _ in listEntry:
+        mapRow[tier].append(layerName)
+    readmePath = repositoryRoot / kDirSourceEngine / "README.md"
+    readmeText, newline = readKeepingNewlineInternal(readmePath)
+    listReadmeLine = readmeText.split(newline)
+    headerIndex = next((index for index, line in enumerate(listReadmeLine) if line.startswith("| 티어 | 폴더 |")), None)
+    if headerIndex is None:
+        return listChanged
+    endRowIndex = headerIndex + 2
+    while endRowIndex < len(listReadmeLine) and listReadmeLine[endRowIndex].startswith("|"):
+        endRowIndex += 1
+    listRow = []
+    for tier in sorted(mapRow):
+        listName = ["`EngineLoop` 등 루트 파일" if name == gate._kRootLayerName else f"`{name}`" for name in mapRow[tier]]
+        listRow.append(f"| {tier} | {', '.join(listName)} |")
+    listReadmeLine[headerIndex:endRowIndex] = ["| 티어 | 폴더 |", "|---|---|"] + listRow
+    newReadmeText = newline.join(listReadmeLine)
+    if newReadmeText != readmeText:
+        with readmePath.open("w", encoding="utf-8", newline="") as stream:
+            stream.write(newReadmeText)
+        listChanged.append(f"{kDirSourceEngine}/README.md")
+    return listChanged
+
+
 class RunEngineLayerGraphReport(LintReport):
-    description = "Engine 폴더 include 그래프의 묶음과 티어를 계산한다"
+    description = "Engine 폴더 include 그래프의 묶음과 티어를 계산한다(`--apply` 는 티어 표 둘을 고쳐 쓴다)"
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("--edges", action="store_true", help="묶음 안의 엣지를 파일 단위로 찍는다")
+        parser.add_argument("--apply", action="store_true",
+                            help="게이트 티어 표(rules/CheckEngineLayers.toml)와 Source/Engine/README.md 티어 표를 계산값으로 고쳐 쓴다(폴더를 옮긴 뒤)")
 
     def produce(self, context: ReportContext, args: argparse.Namespace) -> int:
         repositoryRoot = context.repositoryRoot
@@ -155,6 +257,9 @@ class RunEngineLayerGraphReport(LintReport):
             marker = "" if expected == mapTier[layer] else f"   <- 게이트 표는 {expected}"
             listDependency = sorted(listEdge.get(layer, {}))
             print(f"  {mapTier[layer]:2d}  {layer:20s} -> {', '.join(listDependency)}{marker}")
+        if args.apply:
+            listChanged = writeTierTablesInternal(repositoryRoot, computeTiersFillingComponentsInternal(listEdge))
+            print("\n[RunEngineLayerGraph] 티어 표를 고쳤다: " + " · ".join(listChanged) if listChanged else "\n[RunEngineLayerGraph] 티어 표가 이미 계산값과 같다")
         return 0
 
 

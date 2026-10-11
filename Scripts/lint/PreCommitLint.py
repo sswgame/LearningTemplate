@@ -30,6 +30,7 @@ import concurrent.futures
 import os
 import re
 import sys
+import time
 from dataclasses import dataclass, field
 from fnmatch import fnmatch
 from pathlib import Path
@@ -225,14 +226,15 @@ def selectGatesForStaged(projectRoot: Path, listStaged: list[Path], listFileScop
     return listPlan
 
 
-def runGateProcessInternal(plan: GateRunPlan, projectRoot: Path) -> tuple[int, str]:
+def runGateProcessInternal(plan: GateRunPlan, projectRoot: Path) -> tuple[int, str, float]:
     """
-    게이트를 하위 프로세스로 돌려 (종료 코드, 출력)을 돌려준다. 출력은 UTF-8, stderr 를 stdout 에 섞고 버퍼 없이 써서 — 위반 머리말(stderr)과
+    게이트를 하위 프로세스로 돌려 (종료 코드, 출력, 걸린 초)를 돌려준다. 출력은 UTF-8, stderr 를 stdout 에 섞고 버퍼 없이 써서 — 위반 머리말(stderr)과
     목록(stdout)이 이 프로세스에서 돌 때와 같은 순서로 남는다.
     """
     environment = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUNBUFFERED="1")
+    start = time.perf_counter()
     result = runProcess([sys.executable, plan.script.scriptPath, *plan.listArgument], cwd=projectRoot, env=environment, bMergeStderr=True)
-    return result.returnCode, result.stdout
+    return result.returnCode, result.stdout, time.perf_counter() - start
 
 
 def runGatesInternal(projectRoot: Path, listStaged: list[Path], listFileScoped: list[Path]) -> bool:
@@ -247,6 +249,8 @@ def runGatesInternal(projectRoot: Path, listStaged: list[Path], listFileScoped: 
     listPlan = selectGatesForStaged(projectRoot, listStaged, listFileScoped, listScript, StagedContentProbe(projectRoot))
     listBackground = [plan for plan in listPlan if plan.bBackground]
     bFailed = False
+    # 게이트마다 걸린 초 — 훅의 바닥(가장 긴 트리 전체 게이트)을 따로 도구 없이 보이게 끝에 찍는다.
+    listTiming: list[tuple[float, str, bool]] = []
 
     # 하위 프로세스를 기다리는 일이라 스레드로 띄운다(기다리는 동안 GIL 을 놓는다). 코어 수보다 많이 띄우면 경합만 는다.
     with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, min(len(listBackground), getCpuCount()))) as executor:
@@ -259,16 +263,24 @@ def runGatesInternal(projectRoot: Path, listStaged: list[Path], listFileScoped: 
             print(f"\n{head} ...", flush=True)
             future = mapFuture.get(plan.script.name)
             if future is None:
+                start = time.perf_counter()
                 if plan.script.gateClass.run(plan.listArgument) != 0:
                     bFailed = True
+                listTiming.append((time.perf_counter() - start, plan.script.name, False))
                 sys.stdout.flush()
                 sys.stderr.flush()
                 continue
-            returnCode, output = future.result()
+            returnCode, output, seconds = future.result()
+            listTiming.append((seconds, plan.script.name, True))
             sys.stdout.write(output)
             sys.stdout.flush()
             if returnCode != 0:
                 bFailed = True
+    if listTiming:
+        listTiming.sort(reverse=True)
+        foregroundSeconds = sum(seconds for seconds, _, bBackground in listTiming if not bBackground)
+        slowest = ", ".join(f"{name} {seconds:.2f} s{'(트리 전체)' if bBackground else ''}" for seconds, name, bBackground in listTiming[:3])
+        print(f"\n[PreCommitLint] 게이트 시간: 가장 긴 것 {slowest} · 파일 단위 합 {foregroundSeconds:.2f} s")
     return bFailed
 
 

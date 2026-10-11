@@ -114,7 +114,7 @@ _kForbiddenPrefixRules: tuple[tuple[str, tuple[str, ...]], ...] = (
 # Engine 최상위 폴더를 담지 않는 파일(EngineLoop.cpp 등)의 가상 티어 이름.
 _kRootLayerName = "<root>"
 
-# Engine 내부 티어 — 숫자가 큰 쪽이 위다(`rules/CheckEngineLayers.toml` 의 `[tier]`, 계산은 RunEngineLayerGraph · MoveEngineFolders --sync-tier).
+# Engine 내부 티어 — 숫자가 큰 쪽이 위다(`rules/CheckEngineLayers.toml` 의 `[tier]`, 계산 · 고쳐 쓰기는 RunEngineLayerGraph --apply).
 _kRuleSchema = {"tier": kKindInteger}
 _kEngineTier: dict[str, int] = LintGate.readRules("CheckEngineLayers", _kRuleSchema, requiredKeys=("tier",))["tier"]
 

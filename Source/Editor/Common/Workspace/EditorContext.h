@@ -21,6 +21,7 @@ namespace sw::editor
     class EditorDefaultObjects;
     class EditorDockLayout;
     class EditorModuleUnloadListener;
+    class EditorNetPlaySession;
     class EditorNotificationManager;
     class EditorPanelManager;
     class EditorPopupManager;
@@ -90,6 +91,8 @@ namespace sw::editor
         InspectorPropertyManager&  getInspectorPropertyManager() { return *_pInspectorPropertyManager; }
         /** @brief 컴포넌트 타입마다의 기본값 인스턴스입니다(인스펙터의 "기본값과 다름" 판정). */
         EditorDefaultObjects& getDefaultObjects() { return *_pDefaultObjects; }
+        /** @brief 멀티 프로세스 재생(서버 · 클라이언트 자식 프로세스)입니다 — 툴바의 Net Mode 와 Multiplayer 창이 같이 씁니다. */
+        EditorNetPlaySession& getNetPlaySession() { return *_pNetPlaySession; }
 
         void        setRHIDevice( IRHIDevice* pDevice ) { _pRHIDevice = pDevice; }
         IRHIDevice* getRHIDevice() const { return _pRHIDevice; }
@@ -137,6 +140,7 @@ namespace sw::editor
         unique_ptr<InspectorPropertyManager>   _pInspectorPropertyManager;
         unique_ptr<EditorModuleUnloadListener> _pModuleUnloadListener; ///< 매니저들보다 먼저 지운다(shutdown)
         unique_ptr<EditorDefaultObjects>       _pDefaultObjects;
+        unique_ptr<EditorNetPlaySession>       _pNetPlaySession;
         IRHIDevice*                            _pRHIDevice;
         EditorDockLayout*                      _pDockLayout;
         IImGuiRendererBackend*                 _pRendererBackend;

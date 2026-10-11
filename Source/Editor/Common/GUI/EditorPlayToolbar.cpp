@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/Commands/EditorNetPlaySession.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -12,6 +13,7 @@
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Panels/MultiplayerPanel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorCamera.h"
 
@@ -73,6 +75,37 @@ namespace sw::editor
                     startSession( session );
             }
 
+            /**
+             * @brief Net Mode 가 Standalone 이 아니면 멀티 프로세스 재생의 Play · Stop 을 그리고 true 입니다(에디터 안 재생 단추는 그리지 않는다).
+             * @details 언리얼 PIE 의 Net Mode 드롭다운과 같은 자리 — Play 가 서버 · 클라이언트 프로세스를 띄우고 Stop 이 모두 끈다.
+             */
+            static bool drawNetPlayControls( EditorContext& context )
+            {
+                EditorNetPlaySession& session = context.getNetPlaySession();
+                (void)MultiplayerPanel::drawNetModeCombo( session ); // 바뀐 구성은 다음 Play 에 쓰인다
+                if ( session.getSettings()._mode == EditorNetMode::Standalone && session.isRunning() == false )
+                    return false;
+                ImGui::SameLine();
+                if ( session.isRunning() == false )
+                {
+                    if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlay, "Play" ) ) )
+                        (void)MultiplayerPanel::startSession( session ); // 실패 이유는 세션이 로그에 남긴다
+                    EditorSelfTestMarks::note( "toolbar.netPlay" );
+                    EditorWidgets::drawTooltip( "서버와 클라이언트를 따로 띄워 붙입니다 — 로그는 Output Log 에 [Server] · [Client1] 로 모이고, Stop 이 모두 끕니다" );
+                    return true;
+                }
+                fixed_string<constant::kMaxBuffer64> chip;
+                formatstring( chip.data(), chip.capacity(), "Net %d/%d", session.getConnectedClientCount(), session.getProcessCount() - 1 );
+                EditorWidgets::drawChip( chip.c_str(), editor::style::kOk );
+                EditorWidgets::drawTooltip( "붙은 클라이언트 / 띄운 클라이언트 — 프로세스 목록 · 서버 일시정지는 Window > Multiplayer" );
+                ImGui::SameLine();
+                if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kStop, "Stop" ) ) )
+                    (void)session.stop(); // 합친 트레이스 경로는 로그에 남는다
+                EditorSelfTestMarks::note( "toolbar.netStop" );
+                EditorWidgets::drawTooltip( "모든 프로세스를 정상 종료시키고, 트레이스를 켰으면 한 파일로 합칩니다" );
+                return true;
+            }
+
             /** @brief Play/Sim/Pause/Step/Stop 단추를 그립니다. */
             static void drawTransportControls()
             {
@@ -81,6 +114,9 @@ namespace sw::editor
                 const bool             bSceneDirty  = ( pContext != nullptr && pContext->getWorkspace().isSceneDirty() );
                 const bool             bSimulating  = EditorPlaySession::isSimulating();
 
+                // Net Mode 고르기는 에디터 안 재생이 멈췄을 때만 — 재생 중에 바꾸면 Stop 단추가 사라진다.
+                if ( pContext != nullptr && EditorPlaySession::isStopped() && drawNetPlayControls( *pContext ) )
+                    return;
                 if ( EditorPlaySession::isPlayQueued() )
                 {
                     EditorWidgets::drawChip( "Starting", editor::style::kWarn );
@@ -236,6 +272,11 @@ namespace sw::editor
 {
     void EditorPlayToolbar::draw()
     {
+        // 멀티 프로세스 재생의 로그 · 종료 알림은 툴바가 프레임마다 모은다(Multiplayer 창을 닫아도).
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext != nullptr )
+            pContext->getNetPlaySession().update();
+
         ImGuiViewport*             pViewport = ImGui::GetMainViewport();
         const ImGuiStyle&          style     = ImGui::GetStyle();
         const float32              height    = ImGui::GetFrameHeight() + style.WindowPadding.y * 2.0f;
