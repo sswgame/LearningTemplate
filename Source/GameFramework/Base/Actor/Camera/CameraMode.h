@@ -1,9 +1,11 @@
 /**
  * @file CameraMode.h
- * @brief 카메라 모드의 계산 — 입력을 상태로(`applyCameraInput`), 프리셋 · 대상 · 상태를 포즈로(`evaluateCameraMode`) 바꿉니다.
- * @details 컴포넌트 · 씬을 모르는 순수 계산이라 씬 없이 테스트합니다. 모드는 `CameraPresetMode` 하나에 프리셋의 섹션(입력 · 제약 · 프레이밍 · 충돌 ·
- *          훑기)이 얹히고, 프레임 사이에 남는 것(입력이 돌린 각 · 줌 · 팬, 스프링 암 길이, 조준, look-ahead)은 `CameraModeState` 에 있습니다.
- *          직교 리그(`OrthoCameraRigComponent`) · 1인칭(`FirstPersonCameraComponent`) · 디렉터(`CameraDirectorComponent`)가 같은 계산을 부릅니다.
+ * @brief 카메라 모드의 계산을 정의합니다.
+ * @details 입력을 상태로 바꾸고(`applyCameraInput`), 프리셋과 대상과 상태를 포즈로 바꾼다(`evaluateCameraMode`).
+ *          컴포넌트와 씬을 모르는 순수 계산이라 씬 없이 테스트할 수 있다.
+ *          모드는 `CameraPresetMode` 하나이고 거기에 프리셋의 섹션(입력, 제약, 프레이밍, 충돌, 훑기)이 얹힌다.
+ *          프레임 사이에 남는 것(입력이 돌린 각, 줌, 팬, 스프링 암 길이, 조준, look-ahead)은 `CameraModeState` 에 있다.
+ *          직교 리그(`OrthoCameraRigComponent`), 1인칭(`FirstPersonCameraComponent`), 디렉터(`CameraDirectorComponent`)가 같은 계산을 부른다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -18,7 +20,7 @@ namespace sw
 {
     class ICameraCollisionProbe;
 
-    /** @brief 이번 프레임의 카메라 입력입니다. 읽는 쪽(`InputManager` 를 보는 컴포넌트)이 채우고, 모드는 프리셋의 `<Input>` 이 받는 것만 씁니다. */
+    /** @brief 이번 프레임의 카메라 입력입니다. `InputManager` 를 보는 컴포넌트가 채우고, 모드는 프리셋의 `<Input>` 이 받는 것만 씁니다. */
     struct CameraModeInput
     {
         float2  _lookDelta{};           ///< 시점 이동량(`Camera.Look` — 마우스면 픽셀, +y 는 화면 아래)
@@ -32,8 +34,8 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 모드가 프레임 사이에 들고 있는 것입니다. 새 프리셋을 켜면 새로 시작합니다(`reset`).
-     * @details 요 · 피치 오프셋은 입력이 돌린 것이고(프리셋 각에 더한다), 줌은 0 이면 프리셋 값(원근은 거리, 직교는 높이)입니다.
+     * @brief 모드가 프레임 사이에 들고 있는 상태입니다. 새 프리셋을 켜면 새로 시작합니다(`reset`).
+     * @details 요와 피치 오프셋은 입력이 돌린 것이며 프리셋 각에 더한다. 줌이 0 이면 프리셋 값(원근은 거리, 직교는 높이)을 쓴다.
      */
     struct CameraModeState
     {
@@ -53,32 +55,35 @@ namespace sw
         uint8   _bHasPreviousFocus{ SW_FALSE };
         uint8   _bArmBlocked{ SW_FALSE }; ///< 지난 평가에서 암이 막혀 당겨졌다(진단 · 테스트)
 
-        /** @brief 새로 시작합니다(프리셋을 켤 때). */
+        /** @brief 새로 시작합니다. 프리셋을 켤 때 부릅니다. */
         void reset() { *this = CameraModeState{}; }
     };
 
     /**
-     * @brief 입력을 상태에 더합니다. 프리셋의 `<Input>` 이 받는 것만 쓰고 `<Confiner>` 의 피치 · 줌 범위로 자릅니다.
-     * @details 마우스 시점의 피치는 화면 아래로 끌면 아래(+)입니다. 휠 한 칸은 줌에 `zoomStep`(확대) 또는 1/`zoomStep`(축소)을 곱합니다. 이동은 지금
-     *          보이는 요 기준이고 직교 시점은 화면 높이에 비례합니다(확대할수록 느리다 — 화면에서 보이는 빠르기가 같다).
+     * @brief 입력을 상태에 더합니다. 프리셋의 `<Input>` 이 받는 것만 쓰고 `<Confiner>` 의 피치와 줌 범위로 자릅니다.
+     * @details 마우스 시점의 피치는 화면 아래로 끌면 아래(+)이다.
+     *          휠 한 칸은 줌에 `zoomStep`(확대) 또는 1/`zoomStep`(축소)을 곱한다.
+     *          이동은 지금 보이는 요 기준이고, 직교 시점은 화면 높이에 비례한다. 확대할수록 느려져서 화면에서 보이는 빠르기가 같다.
      */
     SW_GF_API void applyCameraInput( const CameraPresetDef& def, const CameraModeInput& input, float32 deltaTime, CameraModeState& inoutState );
 
     /**
-     * @brief 프리셋을 대상 · 상태로 풀어 포즈를 냅니다(감쇠 · 블렌드 · 흔들림 전). @p pProbe 가 있고 `<Collision>` 이 켜져 있으면 암을 쓸어 봅니다.
-     * @details 시간(@p deltaTime)으로 상태의 시간 · look-ahead · 회전 요 따라가기 · 암 회복 · 조준 감쇠가 흐릅니다. 순서: 줌 · 그룹 맞추기 → 각
-     *          (프리셋 + 입력 + 훑기, 피치는 제약으로 자름) → 피벗(모드별, look-ahead · 팬 · 직교 초점 상자) → 자리(피벗에서 거리만큼 뒤) → 스프링 암 →
-     *          프레이밍(조준) → 카메라 상자.
+     * @brief 프리셋을 대상과 상태로 풀어 포즈를 냅니다. 감쇠, 블렌드, 흔들림을 적용하기 전의 포즈입니다.
+     * @details @p pProbe 가 있고 `<Collision>` 이 켜져 있으면 암을 쓸어 본다.
+     *          시간(@p deltaTime)에 따라 상태의 시간, look-ahead, 회전 요 따라가기, 암 회복, 조준 감쇠가 흐른다.
+     *          계산 순서는 다음과 같다.
+     *          줌과 그룹 맞추기, 각(프리셋과 입력과 훑기를 더하고 피치는 제약으로 자름), 피벗(모드별로 look-ahead, 팬, 직교 초점 상자),
+     *          자리(피벗에서 거리만큼 뒤), 스프링 암, 프레이밍(조준), 카메라 상자 순이다.
      */
     SW_GF_API CameraPose evaluateCameraMode( const CameraPresetDef& def, const CameraTarget& target, float32 deltaTime, CameraModeState& inoutState,
                                              const ICameraCollisionProbe* pProbe );
 
-    /** @brief 프리셋을 대상에 맞춰 상태 없이 풉니다(입력 · 암 · 프레이밍 상태 없음, 시간 0). 순수 함수입니다. */
+    /** @brief 프리셋을 대상에 맞춰 상태 없이 풉니다. 입력, 암, 프레이밍 상태가 없고 시간은 0 입니다. 순수 함수입니다. */
     SW_GF_API CameraPose evaluatePreset( const CameraPresetDef& def, const CameraTarget& target );
 
-    /** @brief 점 여럿을 담는 대상입니다 — 초점은 점들을 감싸는 상자의 가운데, 반지름은 그 가운데에서 가장 먼 점까지입니다. 점이 없으면 기본값입니다. */
+    /** @brief 점 여럿을 담는 대상을 만듭니다. 초점은 점들을 감싸는 상자의 가운데이고, 반지름은 그 가운데에서 가장 먼 점까지입니다. 점이 없으면 기본값입니다. */
     SW_GF_API CameraTarget makeGroupCameraTarget( const float3* pPoint, uint32 pointCount );
 
-    /** @brief @p from 에서 @p to 를 보는 요 · 피치(rad, 피치는 + 가 아래)입니다. 같은 점이면 0 입니다. */
+    /** @brief @p from 에서 @p to 를 보는 요와 피치(rad, 피치는 +가 아래)입니다. 같은 점이면 0 입니다. */
     SW_GF_API float2 computeLookAngles( const float3& from, const float3& to );
 } // namespace sw

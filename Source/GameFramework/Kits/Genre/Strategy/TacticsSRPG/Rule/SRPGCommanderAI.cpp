@@ -15,7 +15,7 @@ namespace sw
         {
             static constexpr int32 kNoScore = -2147483647;
 
-            /** @brief @p cell 에서 가장 가까운 적까지의 거리입니다. 적이 없으면 −1 입니다. */
+            /** @brief @p cell 에서 가장 가까운 적까지의 거리를 반환합니다. 적이 없으면 -1 입니다. */
             static int32 computeNearestHostileDistance( const SRPGBattlefield& field, const SRPGUnit& unit, const int2& cell )
             {
                 int32 nearest = -1;
@@ -82,7 +82,7 @@ namespace sw
             listStand.push_back( unit._cell );
         }
         if ( unit._bAttacked == SW_TRUE )
-            return true; // 이미 쳤다 — 제자리에서 끝낸다
+            return true; // 이미 공격했으므로 제자리에서 끝낸다
 
         int32        bestScore = SRPGCommanderAIInternal::kNoScore;
         int32        bestCost  = 0;
@@ -117,7 +117,7 @@ namespace sw
         if ( outPlan._bAttack == SW_TRUE )
             return true;
 
-        // 칠 것이 없다 — 가장 가까운 적에게 다가간다(같으면 덜 걷는 칸)
+        // 공격할 대상이 없으면 가장 가까운 적에게 다가간다(거리가 같으면 덜 걷는 셀을 고른다).
         int32 bestDistance = SRPGCommanderAIInternal::computeNearestHostileDistance( field, unit, unit._cell );
         bestCost           = 0;
         for ( const int2& stand : listStand )

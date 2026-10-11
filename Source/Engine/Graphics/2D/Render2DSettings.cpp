@@ -3,6 +3,8 @@
 #include "Engine/Graphics/2D/Render2DSettings.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -65,15 +67,23 @@ namespace sw
                 return true;
             }
 
-            /** @brief 활성 표의 저장소입니다. 처음 읽기는 잠그고, 그 뒤로는 읽기만 합니다. */
-            static Render2DSettings& getStorage()
+            /**
+             * @brief 활성 표의 저장소입니다. 읽기 · 다시 읽기 · 놓기만 잠그고, 읽힌 뒤의 조회는 잠그지 않습니다.
+             * @details 엔진 기동 뒤 처음 읽혀 채워지므로 종료 때 `Render2DSettings::releaseActive` 가 레이어 목록을 놓습니다.
+             *          놓은 뒤 다시 부르면(같은 프로세스의 다음 엔진 기동) 처음처럼 파일을 읽습니다.
+             */
+            struct ActiveStorage
             {
-                static Render2DSettings s_settings;
-                return s_settings;
-            }
+                Render2DSettings _settings;
+                mutex            _loadMutex;
+                atomic<bool>     _bLoaded;
+            };
 
-            /** @brief 활성 표 저장소를 파일에서 채웁니다. */
-            static void loadStorage() { loadActive( getStorage() ); }
+            static ActiveStorage& getStorage()
+            {
+                static ActiveStorage s_storage;
+                return s_storage;
+            }
 
             /** @brief 활성 게임 팩의 파일, 없으면 엔진 파일을 읽어 @p outSettings 에 넣습니다. */
             static void loadActive( Render2DSettings& outSettings )
@@ -288,14 +298,34 @@ namespace sw
 
     const Render2DSettings& Render2DSettings::getActive()
     {
-        static std::once_flag s_onceLoad;
-        std::call_once( s_onceLoad, &Render2DSettingsInternal::loadStorage );
-        return Render2DSettingsInternal::getStorage();
+        Render2DSettingsInternal::ActiveStorage& storage = Render2DSettingsInternal::getStorage();
+        if ( storage._bLoaded.load( std::memory_order_acquire ) == false )
+        {
+            std::lock_guard<mutex> lock( storage._loadMutex );
+            if ( storage._bLoaded.load( std::memory_order_relaxed ) == false )
+            {
+                Render2DSettingsInternal::loadActive( storage._settings );
+                storage._bLoaded.store( true, std::memory_order_release );
+            }
+        }
+        return storage._settings;
     }
 
     void Render2DSettings::reloadActive()
     {
-        (void)getActive(); // 첫 읽기가 뒤에 다시 덮어쓰지 않게 먼저 끝낸다
-        Render2DSettingsInternal::loadActive( Render2DSettingsInternal::getStorage() );
+        Render2DSettingsInternal::ActiveStorage& storage = Render2DSettingsInternal::getStorage();
+        std::lock_guard<mutex>                   lock( storage._loadMutex );
+        Render2DSettingsInternal::loadActive( storage._settings );
+        storage._bLoaded.store( true, std::memory_order_release );
+    }
+
+    void Render2DSettings::releaseActive()
+    {
+        Render2DSettingsInternal::ActiveStorage& storage = Render2DSettingsInternal::getStorage();
+        std::lock_guard<mutex>                   lock( storage._loadMutex );
+        // clear() 는 용량을 남긴다 — 타입을 적은 빈 목록을 대입해 버퍼까지 놓는다.
+        storage._settings._listSortingLayer  = vector<hashed_string>();
+        storage._settings._defaultLayerIndex = 0;
+        storage._bLoaded.store( false, std::memory_order_release );
     }
 } // namespace sw

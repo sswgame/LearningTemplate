@@ -1,7 +1,7 @@
 /**
  * @file WitcherAlchemy.h
- * @brief 연금술 — 레시피로 물약 · 변이 혼합물 · 오일 · 폭탄 만들기(기반 `Crafter`), 사용 횟수와 명상으로 보충(술 소모), 독성(최대치 · 서서히 감소 ·
- *        변이 혼합물은 효과 동안 묶임), 칼에 바른 오일의 적중 횟수입니다.
+ * @brief 연금술을 다룹니다. 레시피로 물약, 변이 혼합물, 오일, 폭탄을 만들고(기반 `Crafter`), 사용 횟수는 명상으로 보충하며(술을 소모), 독성(최대치, 서서히 감소,
+ *        변이 혼합물은 효과 동안 묶임)과 칼에 바른 오일의 적중 횟수를 관리합니다.
  */
 #pragma once
 #include "Core/Common/FourCcUtil.h"
@@ -29,21 +29,21 @@ namespace sw
     {
         Ok = 0,
         UnknownItem,
-        WrongKind,      ///< 마시는 것이 아니다 · 칼에 바르는 것이 아니다 · 던지는 것이 아니다
+        WrongKind,      ///< 마시는 것이 아니거나, 칼에 바르는 것이 아니거나, 던지는 것이 아니다
         NotInInventory, ///< 만든 적이 없다
-        NoCharges,      ///< 다 썼다 — 명상으로 보충한다
+        NoCharges,      ///< 다 썼다(명상으로 보충한다)
         TooToxic,       ///< 마시면 최대 독성을 넘는다
-        AlreadyActive   ///< 같은 변이 혼합물이 이미 돈다
+        AlreadyActive   ///< 같은 변이 혼합물이 이미 돌고 있다
     };
 
     SW_GF_API const utf8* toString( WitcherUseResult result );
 
-    /** @brief 지금 도는 효과 하나입니다. */
+    /** @brief 지금 돌고 있는 효과 하나입니다. */
     struct WitcherActiveEffect
     {
         hashed_string _itemID{};
         Countdown     _remaining{};
-        float32       _lockedToxicity{ 0.0f }; ///< 변이 혼합물 — 효과가 끝날 때까지 줄지 않는 몫
+        float32       _lockedToxicity{ 0.0f }; ///< 변이 혼합물이 가진 독성으로, 효과가 끝날 때까지 줄지 않는다
     };
 } // namespace sw
 
@@ -51,8 +51,8 @@ namespace sw
 {
     /**
      * @class WitcherAlchemy
-     * @brief 위쳐 한 명의 연금술입니다. 물건 하나는 한 번 만들면 인벤토리에 남고(아이템 하나) 사용 횟수만 줄어듭니다 — 명상하면 술 하나로 모든 물건이
-     *        가득 찹니다. 독성은 묶이지 않은 몫이 초당 일정량 줄고, 변이 혼합물의 몫은 효과가 끝날 때 풀립니다.
+     * @brief 위쳐 한 명의 연금술입니다. 물건 하나는 한 번 만들면 인벤토리에 남고(아이템 하나) 사용 횟수만 줄어듭니다. 명상하면 술 하나로 모든 물건이
+     *        가득 찹니다. 독성은 묶이지 않은 부분이 초당 일정량 줄고, 변이 혼합물이 가진 부분은 효과가 끝날 때 풀립니다.
      */
     class SW_GF_API WitcherAlchemy
     {
@@ -63,19 +63,19 @@ namespace sw
         WitcherAlchemy();
 
         void initialize( const WitcherCatalog* pCatalog, const RecipeCatalog* pRecipeCatalog );
-        /** @brief 레시피를 만듭니다(기반 `Crafter::craft`). 결과가 연금술 물건이면 그 사용 횟수를 가득 채웁니다. */
+        /** @brief 레시피로 물건을 만듭니다(기반 `Crafter::craft`). 결과가 연금술 물건이면 사용 횟수를 가득 채웁니다. */
         CraftResult brew( const hashed_string& recipeID, Inventory& inoutInventory, const hashed_string& station, int32 level );
-        /** @brief 마실 수 있는가입니다(물약 · 변이 혼합물). */
+        /** @brief 마실 수 있는지 반환합니다(물약, 변이 혼합물). */
         WitcherUseResult evaluateDrink( const hashed_string& itemID, const Inventory& inventory ) const;
-        /** @brief 마십니다 — 사용 횟수 하나 · 독성 · 효과. */
+        /** @brief 마십니다. 사용 횟수를 하나 쓰고 독성과 효과를 적용합니다. */
         WitcherUseResult drink( const hashed_string& itemID, const Inventory& inventory );
-        /** @brief 칼에 오일을 바릅니다(앞의 오일은 지운다). */
+        /** @brief 칼에 오일을 바릅니다(앞의 오일은 지웁니다). */
         WitcherUseResult applyOil( const hashed_string& itemID, const Inventory& inventory );
-        /** @brief 폭탄을 던집니다. 성공하면 @p outElement 가 폭탄의 속성입니다. */
+        /** @brief 폭탄을 던집니다. 성공하면 @p outElement 에 폭탄의 속성이 담깁니다. */
         WitcherUseResult throwBomb( const hashed_string& itemID, const Inventory& inventory, hashed_string& outElement );
-        /** @brief 칼이 맞혔습니다 — 바른 오일의 속성을 돌려주고(없으면 빈 이름) 적중 횟수를 하나 씁니다. */
+        /** @brief 칼이 맞혔음을 알립니다. 바른 오일의 속성을 반환하고(없으면 빈 이름) 적중 횟수를 하나 씁니다. */
         hashed_string consumeOilHit();
-        /** @brief 명상합니다 — 술 하나를 쓰고 가진 모든 연금술 물건의 사용 횟수를 채웁니다. 술이 없으면 false 입니다. */
+        /** @brief 명상합니다. 술 하나를 쓰고 가진 모든 연금술 물건의 사용 횟수를 채웁니다. 술이 없으면 false 를 반환합니다. */
         [[nodiscard]] bool meditate( Inventory& inoutInventory );
         void               update( float32 deltaTime );
 
@@ -87,9 +87,9 @@ namespace sw
         int32                              getOilHits() const { return _oilHits; }
         const vector<WitcherActiveEffect>& getActiveEffects() const { return _listEffect; }
         Crafter&                           getCrafter() { return _crafter; }
-        /** @brief 제작기 · 남은 충전 · 도는 효과(남은 시간 · 묶인 독성) · 바른 기름과 남은 타격 · 떠 있는 독성을 씁니다. 카탈로그 · 레시피 카탈로그는 싣지 않는다. */
+        /** @brief 제작기, 남은 충전, 도는 효과(남은 시간과 묶인 독성), 바른 오일과 남은 적중 횟수, 떠 있는 독성을 씁니다. 카탈로그와 레시피 카탈로그는 싣지 않습니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 바꿉니다. 모르는 연금 아이템이거나 깨졌으면 false 이고 그대로입니다. */
+        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 모르는 연금 아이템이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
@@ -111,7 +111,7 @@ namespace sw
         const WitcherCatalog*       _pCatalog;
         const RecipeCatalog*        _pRecipeCatalog;
         hashed_string               _oilID;
-        float32                     _floatingToxicity; ///< 묶이지 않은 독성(서서히 준다)
+        float32                     _floatingToxicity; ///< 묶이지 않은 독성(서서히 줄어든다)
         int32                       _oilHits;
     };
 } // namespace sw

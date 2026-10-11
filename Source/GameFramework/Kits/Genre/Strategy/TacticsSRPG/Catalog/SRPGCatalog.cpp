@@ -33,7 +33,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief "1 1 - 2" 처럼 이동 타입 순서의 정수 넷입니다. `-` 는 @p dashValue 입니다. */
+            /** @brief "1 1 - 2" 처럼 이동 타입 순서의 정수 네 개를 읽습니다. `-` 는 @p dashValue 로 읽습니다. */
             static void parseFourInts( string_view text, int32 dashValue, int32 ( &inoutArrValue )[kSRPGMoveTypeCount], bool bAptitude )
             {
                 int32 slot = 0;

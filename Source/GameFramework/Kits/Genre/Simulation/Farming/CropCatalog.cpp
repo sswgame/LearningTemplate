@@ -19,7 +19,7 @@ namespace sw
     {
         struct CropCatalogInternal
         {
-            /** @brief "Spring, Summer" 를 이름 목록으로 읽습니다. 알려 둔 계절이 있으면 모르는 이름은 알리고 뺀다. */
+            /** @brief "Spring, Summer" 를 이름 목록으로 읽습니다. 알려 둔 계절이 있으면 모르는 이름은 경고하고 뺍니다. */
             static void parseSeasons( string_view text, const vector<hashed_string>& listKnown, string_view sourceName, const utf8* pCropID,
                                       vector<hashed_string>& outListSeason )
             {
@@ -73,7 +73,7 @@ namespace sw
 
     void CropCatalog::rebuildItemIndex()
     {
-        // 같은 아이템을 두 작물이 쓰면 앞 작물이 이긴다(읽은 순서) — 예전 선형 조회와 같은 답.
+        // 같은 아이템을 두 작물이 쓰면 앞 작물이 이긴다(읽은 순서).
         _mapSeedIndex.clear();
         _mapProduceIndex.clear();
         for ( uint32 cropIndex = 0; cropIndex < static_cast<uint32>( _catalog.getCount() ); ++cropIndex )
@@ -119,7 +119,7 @@ namespace sw
             }
             if ( crop._regrowDays > crop._growthDays )
                 SW_LOG_WARNING( "%#: crop '%#' regrows slower (%#) than it first grows (%#)", sourceName, pID, crop._regrowDays, crop._growthDays );
-            (void)_catalog.add( crop ); // 색인은 한 번에 — 작물마다 다시 짓지 않는다
+            (void)_catalog.add( crop ); // 인덱스는 한 번에 만들고, 작물마다 다시 만들지 않는다
             ++loadedCount;
         }
         rebuildItemIndex();

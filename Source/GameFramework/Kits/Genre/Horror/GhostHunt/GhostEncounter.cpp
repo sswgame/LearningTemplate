@@ -18,7 +18,7 @@ namespace sw
         {
             static constexpr int32 kFleeDirectionCount = 8;
 
-            /** @brief XZ 로 눕혀 길이 1 로 — 너무 짧으면 0 벡터입니다. */
+            /** @brief XZ 평면으로 눕혀 길이를 1 로 만듭니다. 너무 짧으면 0 벡터를 반환합니다. */
             static float3 flatten( const float3& direction )
             {
                 const float3  flat{ direction._x, 0.0f, direction._z };
@@ -162,7 +162,7 @@ namespace sw
         _suctionTarget = ghostID;
         _surgeGauge    = 0.0f;
         enterState( *pGhost, GhostState::Sucking );
-        // 처음에는 플레이어에게서 멀어지는 쪽으로 — 그 뒤로는 간격마다 씨앗 난수로.
+        // 처음에는 플레이어에게서 멀어지는 쪽으로 정하고, 그 뒤로는 간격마다 시드 난수로 정한다.
         pGhost->_fleeDirection = GhostEncounterInternal::flatten( toGhost );
         if ( pGhost->_fleeDirection.getLengthSquared() < 0.5f )
             chooseFleeDirection( *pGhost );
@@ -204,7 +204,7 @@ namespace sw
             tick._bCaught = SW_TRUE;
             return tick;
         }
-        // 도망 방향 바꾸기 — 흡입이 이 시계를 쥔다(update 는 흡입 중인 유령을 건너뛴다).
+        // 도망 방향 바꾸기는 흡입이 이 타이머를 가지고 있다(update 는 흡입 중인 유령을 건너뛴다).
         GhostInstance* pStill = findGhostMutable( ghostID );
         pStill->_timer.tick( deltaTime );
         if ( pStill->_timer.isActive() == false )
@@ -419,7 +419,7 @@ namespace sw
             return false;
         GameRandom random = _random;
         uint32     count  = 0;
-        // 유령마다 이름(4) + 자리 · 도망 방향(24) + 체력 · 시간 · 번호(12) + 상태(1) 이상
+        // 유령마다 이름(4) + 위치, 도망 방향(24) + 체력, 시간, 번호(12) + 상태(1) 이상
         if ( StateArchiveUtil::readRandom( archive, random ) == false || StateArchiveUtil::readCount( archive, 41, count ) == false )
             return false;
         vector<GhostInstance> listGhost( count );

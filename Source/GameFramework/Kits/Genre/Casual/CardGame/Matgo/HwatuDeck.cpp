@@ -26,7 +26,7 @@ namespace sw
 
                 Table()
                 {
-                    // 월마다 앞의 둘은 특별한 장(광 · 열끗 · 띠), 뒤는 피. 12 월만 넷이 다르다.
+                    // 월마다 앞의 둘은 특별한 장(광, 열끗, 띠), 뒤는 피이다. 12월만 넷이 다르다.
                     for ( int32 month = 1; month <= HwatuDeck::kMonthCount; ++month )
                     {
                         set( month, 2, makeInfo( month, HwatuKind::Pi ) );

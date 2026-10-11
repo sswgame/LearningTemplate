@@ -86,7 +86,7 @@ namespace sw
         layout._drawPile.shuffle( random );
         layout._listHand.resize( static_cast<size_t>( MathUtil::max( 2, settings._playerCount ) ) );
         (void)layout._drawPile.deal( layout._listHand, settings._handSize );
-        // 와일드가 아닌 첫 장을 뒤집는다 — 와일드는 더미 맨 아래로.
+        // 와일드가 아닌 첫 장을 뒤집는다. 와일드는 더미 맨 아래로 보낸다.
         for ( int32 attempt = 0; attempt < UnoGameInternal::kFirstCardTries; ++attempt )
         {
             Card card;
@@ -160,7 +160,7 @@ namespace sw
         {
             if ( _drawPile.isEmpty() )
             {
-                // 버린 더미의 맨 위만 남기고 섞어 새 더미로.
+                // 버린 더미의 맨 위만 남기고 섞어 새 더미로 쓴다.
                 Card top;
                 if ( _discardPile.draw( top ) == false )
                     break;
@@ -196,7 +196,7 @@ namespace sw
             return false; // 지금 색이 있으면 +4 를 낼 수 없다
 
         _unoTarget = -1;              // 앞사람을 잡을 기회는 다음 행동에서 닫힌다
-        (void)hand.removeAt( index ); // 뺀 카드는 위에서 읽어 둔 card 다
+        (void)hand.removeAt( index ); // 뺀 카드는 위에서 읽어 둔 card 이다
         _discardPile.push( card );
         _eventBuffer.push( UnoEvent{ player, 0, card._id, UnoEvent::Kind::Played } );
         _color = bWild ? chosenColor : static_cast<UnoColor>( card._suit );
@@ -228,7 +228,7 @@ namespace sw
             {
                 _direction = -_direction;
                 _eventBuffer.push( UnoEvent{ player, _direction, Card::kNoCard, UnoEvent::Kind::Reversed } );
-                // 둘이면 리버스는 스킵 — 다시 내 차례.
+                // 둘이면 리버스는 스킵이 되어 다시 내 차례이다.
                 _currentPlayer = getPlayerCount() == 2 ? player : findNextPlayer( player, 1 );
                 break;
             }
@@ -343,7 +343,7 @@ namespace sw
         archive >> handCount;
         if ( archive.isError() || handCount != _listHand.size() )
             return false;
-        // 사본에 읽고 끝까지 맞으면 바꾼다 — 설정은 사본이 그대로 든다.
+        // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 설정은 사본도 그대로 가지고 있다.
         UnoGame game = *this;
         for ( CardPile& hand : game._listHand )
         {

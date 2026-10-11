@@ -17,8 +17,8 @@ namespace sw
     {
         struct ThemeParkInternal
         {
-            static constexpr uint32  kMinRideStateBytes  = 64; ///< 놀이기구 하나의 상태가 적어도 쓰는 바이트(개수 상한)
-            static constexpr uint32  kMinGuestStateBytes = 80; ///< 손님 하나의 상태가 적어도 쓰는 바이트(개수 상한)
+            static constexpr uint32  kMinRideStateBytes  = 64; ///< 놀이기구 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
+            static constexpr uint32  kMinGuestStateBytes = 80; ///< 손님 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
             static constexpr float32 kLeaveEnergy        = 0.1f;
             static constexpr float32 kLeaveHappiness     = 0.15f;
             static constexpr float32 kNauseaPerRating    = 0.06f;  ///< 멀미 평가 1 이 손님 멀미에 더하는 양
@@ -143,7 +143,7 @@ namespace sw
         ride._bOpen    = bOpen ? SW_TRUE : SW_FALSE;
         if ( bOpen )
             return;
-        // 닫으면 줄은 흩어진다(타고 있는 손님은 이번 바퀴를 마저 돈다).
+        // 닫으면 줄이 흩어진다(타고 있는 손님은 이번 바퀴를 마저 돈다).
         const vector<uint32> listQueued = ride._listQueue;
         ride._listQueue.clear();
         for ( const uint32 guestID : listQueued )
@@ -196,7 +196,7 @@ namespace sw
         ride._nausea     = stats._nausea;
         ride._cycleTime  = MathUtil::max( 1.0f, stats._lapTime + loadTime );
         ride._capacity   = MathUtil::max( 1, capacity );
-        // 시작 값 — 가치만큼 받는다(게임이 바꾼다).
+        // 시작 값은 가치만큼 받는다(게임이 바꾼다).
         ride._price = static_cast<int32>( MathUtil::round( computeRideValue( ride ) ) );
         return ride;
     }
@@ -252,7 +252,7 @@ namespace sw
         runRides( deltaTime );
         updateGuests( deltaTime );
 
-        // 운영비 — 열린 놀이기구마다 분당.
+        // 운영비는 열린 놀이기구마다 분당 나간다.
         float32 costPerSecond = 0.0f;
         for ( const ParkRide& ride : _listRide )
         {
@@ -264,8 +264,8 @@ namespace sw
         if ( _pWallet != nullptr )
             _pWallet->charge( _settings._currency, runningCost );
 
-        // 떠난 손님을 지운다(놀이기구의 줄 · 탑승자에는 남아 있지 않다 — 떠나기 전에 뺐다). 한 번에 당겨 담아 순서(id 오름차순)를 지킨다 —
-        // 손님마다 `erase` 하면 뒤를 매번 옮긴다.
+        // 떠난 손님을 지운다(놀이기구의 줄과 탑승자에는 남아 있지 않다. 떠나기 전에 뺐다). 한 번에 당겨 담아 순서(id 오름차순)를 지킨다.
+        // 손님마다 `erase` 하면 뒤를 매번 옮기게 된다.
         _listGuest.erase( std::remove_if( _listGuest.begin(), _listGuest.end(), []( const ParkGuest& guest )
         { return guest._state == ParkGuestState::Left; } ),
                           _listGuest.end() );
@@ -285,7 +285,7 @@ namespace sw
             const float32 maxIntensity    = _random.nextRange( _settings._guestMaxIntensityMin, _settings._guestMaxIntensityMax );
             const float32 nauseaTolerance = _random.nextRange( _settings._guestNauseaToleranceMin, _settings._guestNauseaToleranceMax );
             if ( admitGuest( cash, minIntensity, maxIntensity, nauseaTolerance ) == false )
-                break; // 꽉 찼거나 입장료를 못 낸다 — 이번에는 그만 들인다
+                break; // 꽉 찼거나 입장료를 못 낸다. 이번에는 그만 들인다
         }
     }
 
@@ -413,7 +413,7 @@ namespace sw
                         chooseNextRide( guest );
                         break;
                     }
-                    // 줄의 자리 — 입구에서 정문 쪽으로 늘어선다(그리기용).
+                    // 줄의 위치는 입구에서 정문 쪽으로 늘어선다(그리기용).
                     const ParkRide& ride      = _listRide[static_cast<size_t>( guest._targetRideIndex )];
                     size_t          lineIndex = 0;
                     while ( lineIndex < ride._listQueue.size() && ride._listQueue[lineIndex] != guest._id )
@@ -437,7 +437,7 @@ namespace sw
 
     void ThemeParkSimulation::chooseNextRide( ParkGuest& guest )
     {
-        // 떠날 때인가 — 지쳤다 · 기분이 바닥 · 멀미 · 돈이 바닥.
+        // 떠날 때인지 판단한다. 지쳤거나, 기분이 바닥이거나, 멀미가 심하거나, 돈이 바닥이면 떠난다.
         if ( guest._energy < ThemeParkInternal::kLeaveEnergy )
         {
             sendHome( guest, ParkGuestThought::Tired );
@@ -504,7 +504,7 @@ namespace sw
 
         if ( bestRide < 0 )
         {
-            // 탈 것이 없다 — 기분이 조금 상하고 둘러본다.
+            // 탈 것이 없으면 기분이 조금 상하고 둘러본다.
             guest._happiness       = MathUtil::max( 0.0f, guest._happiness - 0.05f );
             guest._thought         = lastReject == ParkGuestThought::None ? ParkGuestThought::NothingToRide : lastReject;
             guest._targetRideIndex = -1;
@@ -602,7 +602,7 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 상태 쓰기 · 읽기(핫 리로드 · 세이브)
+    // 상태 쓰기와 읽기(핫 리로드, 세이브)
     // ------------------------------------------------------------------------------
     void ThemeParkSimulation::writeState( Archive& outArchive ) const
     {

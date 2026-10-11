@@ -18,7 +18,7 @@ namespace sw
         {
             static constexpr const utf8* kArrStatName[kMonsterStatCount] = { "Hp", "Attack", "Defense", "SpecialAttack", "SpecialDefense", "Speed" };
 
-            /** @brief "39 52 43 60 50 65" 같은 정수 여섯입니다. 빠진 칸은 그대로 둡니다. */
+            /** @brief "39 52 43 60 50 65" 같은 정수 여섯 개를 읽습니다. 빠진 항목은 그대로 둡니다. */
             static void parseSixInts( string_view text, int32 ( &inoutArrValue )[kMonsterStatCount], int32 minValue )
             {
                 int32 slot = 0;
@@ -180,7 +180,7 @@ namespace sw
     bool MonsterCollectorCatalog::rollEncounter( const hashed_string& area, const hashed_string& timeOfDay, GameRandom& random, hashed_string& outSpeciesID,
                                                  int32& outLevel ) const
     {
-        // 후보를 목록에 모으지 않고 같은 순서로 두 번 훑는다(합 → 고르기). 조우마다 할당이 없다.
+        // 후보를 목록에 모으지 않고 같은 순서로 두 번 훑는다(합을 구하고, 고른다). 그러면 조우마다 할당이 생기지 않는다.
         const auto forEachCandidate = [&]( auto&& visit )
         {
             for ( const MonsterEncounterDef& table : _encounterCatalog.getAll() )
@@ -288,7 +288,7 @@ namespace sw
             }
             else if ( bNature )
             {
-                // 칸이 없으면 기본값(Attack) 그대로 — up · down 이 같으면 무보정 성격이다. 틀린 이름은 그 성격을 빼고 알린다(반쪽만 보정되지 않게).
+                // 값이 없으면 기본값(Attack)을 그대로 쓴다. up 과 down 이 같으면 보정이 없는 성격이다. 틀린 이름은 그 성격을 빼고 경고한다(반쪽만 보정되지 않게 하기 위해서다).
                 MonsterNatureDef def;
                 def._id                    = hashed_string( pID );
                 const string_view upText   = node.getAttributeText( "up" );
@@ -320,7 +320,7 @@ namespace sw
             ++loadedCount;
         }
 
-        // 다른 정의를 가리키는 id 는 다 읽은 뒤에 확인한다(앞에 적힌 종이 뒤의 종으로 진화할 수 있다).
+        // 다른 정의를 가리키는 id 는 모두 읽은 뒤에 확인한다(앞에 적힌 종이 뒤에 적힌 종으로 진화할 수 있다).
         for ( const MonsterSpeciesDef& species : _speciesCatalog.getAll() )
         {
             for ( const MonsterLearnEntry& learn : species._listLearn )
@@ -429,7 +429,7 @@ namespace sw
                     def._listEvolution.push_back( evolution );
             }
         }
-        // 레벨 순서가 흐트러져 있어도 "그 레벨까지 배운 마지막 넷" 이 맞게 — 같은 레벨은 적힌 순서를 지킨다.
+        // 레벨 순서가 흐트러져 있어도 "그 레벨까지 배운 마지막 네 개"가 맞게 나오도록 정렬한다. 같은 레벨은 적힌 순서를 지킨다.
         for ( size_t index = 1; index < def._listLearn.size(); ++index )
         {
             MonsterLearnEntry entry  = def._listLearn[index];

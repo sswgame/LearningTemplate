@@ -1,14 +1,14 @@
 /**
  * @file HorrorMatch.h
- * @brief 1 대 4 비대칭 공포 한 판(서버 권위) — 생존자(건강 → 부상 → 빈사 → 들림 → 갈고리 1 · 2 · 3 단계, 구출 · 치료 · 몸부림), 발전기(다인 수리 · 스킬 체크 ·
- *        폭발 소음 · 걷어차기 퇴행), 탈출구 전원 · 열기 · 해치 · 엔드게임 붕괴, 판자 · 창틀 · 사물함, 살인마(속도 · 공격 쿨다운 · 헛방 · 위협 반경 · 능력),
- *        블러드포인트, 결과(탈출 · 희생)입니다.
- * @details 고정 걸음(`FixedStepTimer`)으로만 흐르고 스킬 체크는 씨앗으로 정해져 같은 호출이면 같은 결과입니다. 기반을 이렇게 씁니다.
- *          - 체력 상태: `Vitality`(체력 2 = 건강 · 1 = 부상 · 기절 = 빈사, 출혈 체력 = 남은 출혈 초, 기절 중 부활 = 빈사 회복)
- *          - 수리 · 치료 · 탈출구: `InteractionProgress`(인원 배율 · 스킬 체크 `TimingJudge` · 실패 소음 · 퇴행)
- *          - 판 · 결과: `MatchState`(생존자 팀 · 살인마 팀, 탈출 · 희생은 탈락, 점수)
- *          - 살인마 봇의 감각: `collectKillerStimuli` 가 `AIPerception::sense` 에 넣을 자극(위치 · 소음 반경)을 채운다.
- *          위치는 XZ 평면(y = 0)이고 이동은 `moveSurvivor` · `moveKiller` 로 — 키트가 상태에 맞는 속도를 곱합니다(벽 충돌은 게임이).
+ * @brief 1 대 4 비대칭 공포 한 판(서버 권위)을 진행합니다. 생존자(건강, 부상, 빈사, 들림, 갈고리 1, 2, 3단계, 구출, 치료, 몸부림), 발전기(다인 수리, 스킬 체크,
+ *        폭발 소음, 걷어차기 퇴행), 탈출구(전원, 열기), 해치, 엔드게임 붕괴, 판자, 창틀, 사물함, 살인마(속도, 공격 쿨다운, 헛방, 위협 반경, 능력),
+ *        블러드포인트, 결과(탈출과 희생)를 다룹니다.
+ * @details 고정 걸음(`FixedStepTimer`)으로만 흐르고 스킬 체크는 시드로 정해지므로, 같은 호출이면 같은 결과가 나온다. 기반은 이렇게 쓴다.
+ *          - 체력 상태: `Vitality`(체력 2 는 건강, 1 은 부상, 기절은 빈사이며, 출혈 체력은 남은 출혈 초이고 기절 중 부활은 빈사 회복이다)
+ *          - 수리, 치료, 탈출구: `InteractionProgress`(인원 배율, 스킬 체크 `TimingJudge`, 실패 소음, 퇴행)
+ *          - 판과 결과: `MatchState`(생존자 팀과 살인마 팀이며, 탈출과 희생은 탈락이고, 점수를 쓴다)
+ *          - 살인마 봇의 감각: `collectKillerStimuli` 가 `AIPerception::sense` 에 넣을 자극(위치와 소음 반경)을 채운다.
+ *          위치는 XZ 평면(y = 0)이고 이동은 `moveSurvivor` 와 `moveKiller` 로 한다. 키트가 상태에 맞는 속도를 곱한다(벽 충돌은 게임이 처리한다).
  */
 #pragma once
 #include "Core/Common/FourCcUtil.h"
@@ -42,22 +42,22 @@ namespace sw
     {
         Healthy = 0,
         Injured,
-        Dying,   ///< 빈사 — 기어가며 출혈, 치료로 부상까지 회복
+        Dying,   ///< 빈사 상태이다. 기어가며 출혈이 있고, 치료하면 부상까지 회복한다
         Carried, ///< 살인마가 들고 있다(몸부림)
-        Hooked,  ///< 갈고리(`_hookStage` 1 = 버티기, 2 = 몸부림)
+        Hooked,  ///< 갈고리에 걸렸다(`_hookStage` 1 은 버티기, 2 는 몸부림)
         Sacrificed,
         Escaped
     };
 
-    /** @brief 생존자가 붙어 있는 일입니다. */
+    /** @brief 생존자가 하고 있는 일입니다. */
     enum class SurvivorActivity : uint8
     {
         None = 0,
-        Repairing,   ///< `_activityTarget` = 발전기
-        Healing,     ///< `_activityTarget` = 치료받는 생존자
-        OpeningGate, ///< `_activityTarget` = 탈출구
-        Vaulting,    ///< `_activityTarget` = 창틀
-        InLocker     ///< `_activityTarget` = 사물함
+        Repairing,   ///< `_activityTarget` 은 발전기이다
+        Healing,     ///< `_activityTarget` 은 치료받는 생존자이다
+        OpeningGate, ///< `_activityTarget` 은 탈출구이다
+        Vaulting,    ///< `_activityTarget` 은 창틀이다
+        InLocker     ///< `_activityTarget` 은 사물함이다
     };
 
     /** @brief 판자의 상태입니다. */
@@ -68,32 +68,32 @@ namespace sw
         Broken
     };
 
-    /** @brief 살인마 공격 결과입니다. */
+    /** @brief 살인마 공격의 결과입니다. */
     enum class KillerAttackResult : uint8
     {
-        Hit = 0, ///< 건강 → 부상
-        Downed,  ///< 부상 → 빈사
-        Missed,  ///< 헛방(헛방 쿨다운)
-        NotReady ///< 쿨다운 · 기절 · 다른 일 중 · 들고 있다
+        Hit = 0, ///< 건강에서 부상이 되었다
+        Downed,  ///< 부상에서 빈사가 되었다
+        Missed,  ///< 헛방이다(헛방 쿨다운이 걸린다)
+        NotReady ///< 쿨다운, 기절, 다른 일 중, 들고 있는 상태 중 하나라서 공격할 수 없다
     };
 
     /** @brief 생존자 하나입니다. */
     struct HorrorSurvivor
     {
         Vitality            _vitality{};
-        InteractionProgress _healing{}; ///< 이 생존자를 치료하는 진행(치료하는 쪽들이 붙는다)
-        StatBlock           _score{};   ///< 블러드포인트 범주 → 점수
+        InteractionProgress _healing{}; ///< 이 생존자를 치료하는 진행이다(치료하는 쪽들이 붙는다)
+        StatBlock           _score{};   ///< 블러드포인트 범주별 점수이다
         float3              _position{};
-        float32             _lastMoveSpeed{ 0.0f }; ///< 이번 프레임에 움직인 속도(빠른 넘기 판정)
+        float32             _lastMoveSpeed{ 0.0f }; ///< 이번 프레임에 움직인 속도이다(빠른 넘기 판정에 쓴다)
         Countdown           _hasteRemaining{};
         float32             _hookTimer{ 0.0f };
-        float32             _struggleIdle{ 0.0f }; ///< 2 단계에서 몸부림을 멈춘 시간
+        float32             _struggleIdle{ 0.0f }; ///< 2단계에서 몸부림을 멈춘 시간
         float32             _wiggleProgress{ 0.0f };
         Countdown           _vaultRemaining{};
-        float32             _noiseRadius{ 0.0f }; ///< 지금 내고 있는 소음(살인마 자극)
+        float32             _noiseRadius{ 0.0f }; ///< 지금 내고 있는 소음이다(살인마 자극)
         Countdown           _noiseRemaining{};
         float3              _vaultExit{};
-        int32               _hookStage{ 0 }; ///< 걸린 횟수(이번 걸림의 단계)
+        int32               _hookStage{ 0 }; ///< 걸린 횟수이다(이번 걸림의 단계)
         int32               _activityTarget{ -1 };
         int32               _participant{ -1 };
         SurvivorState       _state{ SurvivorState::Healthy };
@@ -115,11 +115,11 @@ namespace sw
         StatBlock              _score{};
         float3                 _position{};
         float3                 _forward{ 0.0f, 0.0f, 1.0f };
-        float3                 _busyExit{}; ///< 넘기가 끝나면 설 자리
+        float3                 _busyExit{}; ///< 넘기가 끝나면 설 위치
         const HorrorKillerDef* _pDef{ nullptr };
         Countdown              _attackCooldown{};
         Countdown              _stunRemaining{};
-        Countdown              _busyRemaining{}; ///< 판자 부수기 · 넘기 · 사물함 뒤지기
+        Countdown              _busyRemaining{}; ///< 판자 부수기, 넘기, 사물함 뒤지기 중이다
         Countdown              _abilityCooldown{};
         int32                  _carrying{ -1 };
         int32                  _breakingPallet{ -1 };
@@ -137,8 +137,8 @@ namespace sw
     {
         InteractionProgress _progress{};
         float3              _position{};
-        uint8               _bKicked{ SW_FALSE };  ///< 걷어차여 아무도 없으면 줄고 있다(누가 다시 붙으면 멈춘다)
-        uint8               _bBlocked{ SW_FALSE }; ///< 필요한 수가 다 고쳐져 더는 못 고친다
+        uint8               _bKicked{ SW_FALSE };  ///< 걷어차여서 아무도 없으면 줄고 있다(누가 다시 붙으면 멈춘다)
+        uint8               _bBlocked{ SW_FALSE }; ///< 필요한 수가 다 고쳐져서 더는 고칠 수 없다
     };
 } // namespace sw
 
@@ -159,45 +159,45 @@ namespace sw
     {
         float3  _position{};
         float32 _blockedRemaining{ 0.0f };
-        int32   _chaseVaultCount{ 0 }; ///< 추격 중 넘은 횟수(막히면 0)
+        int32   _chaseVaultCount{ 0 }; ///< 추격 중 넘은 횟수이다(막히면 0)
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 판에서 생긴 일입니다. 생존자 번호는 0 부터, 살인마는 −1 로 적습니다. */
+    /** @brief 판에서 일어난 일을 알리는 이벤트입니다. 생존자 번호는 0부터이고 살인마는 -1 로 적습니다. */
     struct AsymmetricHorrorEvent
     {
         enum class Kind : uint8
         {
-            Hit = 0, ///< _actor = 맞은 생존자
+            Hit = 0, ///< `_actor` 는 맞은 생존자이다
             Missed,
             Downed,
             PickedUp,
-            Hooked, ///< _value = 단계
+            Hooked, ///< `_value` 는 단계이다
             HookStageAdvanced,
-            Sacrificed, ///< _value = 1 이면 출혈사
-            Rescued,    ///< _actor = 구한 쪽, _target = 구해진 쪽
+            Sacrificed, ///< `_value` 가 1 이면 출혈사이다
+            Rescued,    ///< `_actor` 는 구한 쪽, `_target` 은 구해진 쪽이다
             WiggledFree,
-            Healed,             ///< _target = 나은 쪽, _value = 새 상태(SurvivorState)
-            SkillCheckStarted,  ///< _actor, _value = 목표 시각(그 일의 시계 — `findActivityProgress`)
-            SkillCheckResult,   ///< _actor, _value = 1 성공 · 0 실패
-            Noise,              ///< _position, _value = 반경 — 살인마에게 알린다
-            GeneratorCompleted, ///< _target = 발전기
+            Healed,             ///< `_target` 은 나은 쪽, `_value` 는 새 상태(SurvivorState)이다
+            SkillCheckStarted,  ///< `_value` 는 목표 시각이다(그 일의 시계이며 `findActivityProgress` 로 얻는다)
+            SkillCheckResult,   ///< `_value` 가 1 이면 성공, 0 이면 실패이다
+            Noise,              ///< `_position` 과 `_value`(반경)로 살인마에게 알린다
+            GeneratorCompleted, ///< `_target` 은 발전기이다
             GeneratorKicked,
             GatesPowered,
             GateOpened,
             HatchOpened,
             HatchClosed,
             CollapseStarted,
-            Escaped, ///< _actor, _value = 1 이면 해치
+            Escaped, ///< `_value` 가 1 이면 해치로 탈출한 것이다
             PalletDropped,
-            KillerStunned, ///< _value = 시간
+            KillerStunned, ///< `_value` 는 시간이다
             PalletBroken,
-            Vaulted, ///< _actor(−1 = 살인마), _target = 창틀, _value = 1 이면 빠른 넘기
+            Vaulted, ///< `_actor` 가 -1 이면 살인마이고, `_target` 은 창틀이며, `_value` 가 1 이면 빠른 넘기이다
             WindowBlocked,
             LockerGrab,
-            MatchEnded ///< _value = 희생 수, _target = 탈출 수
+            MatchEnded ///< `_value` 는 희생 수, `_target` 은 탈출 수이다
         };
         float3  _position{};
         float32 _value{ 0.0f };
@@ -222,9 +222,9 @@ namespace sw
 {
     /**
      * @class HorrorMatch
-     * @brief 서버가 돌리는 한 판입니다. 규칙 카탈로그는 빌려 씁니다(판보다 오래 산다).
-     * @details 무대(발전기 · 갈고리 · 판자 · 창틀 · 사물함 · 탈출구 · 해치 자리)는 `start` 전에 더합니다.
-     *          모든 행동 함수는 거리 · 상태를 보고 못 하면 false 이고, 시간이 드는 일은 `update` 가 진행합니다.
+     * @brief 서버가 돌리는 한 판입니다. 규칙 카탈로그는 빌려 쓰므로 판보다 오래 살아야 합니다.
+     * @details 무대(발전기, 갈고리, 판자, 창틀, 사물함, 탈출구, 해치 위치)는 `start` 전에 추가해야 한다.
+     *          모든 행동 함수는 거리와 상태를 확인해 할 수 없으면 false 를 반환하고, 시간이 드는 일은 `update` 가 진행한다.
      */
     class SW_GF_API HorrorMatch
     {
@@ -234,7 +234,7 @@ namespace sw
 
         HorrorMatch();
 
-        /** @brief 규칙과 살인마를 정합니다. 살인마 id 를 모르면 false 입니다. */
+        /** @brief 규칙과 살인마를 정합니다. 살인마 id 를 모르면 false 를 반환합니다. */
         [[nodiscard]] bool initialize( const HorrorMatchSettings& settings, const AsymmetricHorrorRulesCatalog* pCatalog );
         int32              addSurvivor( const float3& position );
         void               setKillerPosition( const float3& position );
@@ -249,7 +249,7 @@ namespace sw
         void               update( float32 deltaTime );
 
         // --- 생존자 ---
-        /** @brief @p direction(XZ, 길이 1 이하) 쪽으로 이번 프레임만큼 움직입니다. 하던 일은 그만둡니다. */
+        /** @brief @p direction(XZ 평면, 길이 1 이하) 쪽으로 이번 프레임만큼 움직입니다. 하던 일은 그만둡니다. */
         void               moveSurvivor( int32 survivor, const float3& direction, float32 deltaTime );
         [[nodiscard]] bool startRepair( int32 survivor, int32 generator );
         [[nodiscard]] bool startHeal( int32 healer, int32 patient );
@@ -259,11 +259,11 @@ namespace sw
         bool               respondSkillCheck( int32 survivor, float32 pressTime );
         [[nodiscard]] bool rescue( int32 rescuer, int32 hooked );
         [[nodiscard]] bool dropPallet( int32 survivor, int32 pallet );
-        /** @brief 창틀을 넘습니다. 달려 들어오면(이번 프레임 이동 속도) 빠른 넘기 — 소음이 난다. */
+        /** @brief 창틀을 넘습니다. 달려 들어오면(이번 프레임 이동 속도 기준) 빠른 넘기이며 소음이 납니다. */
         [[nodiscard]] bool vault( int32 survivor, int32 window );
         [[nodiscard]] bool enterLocker( int32 survivor, int32 locker );
         void               exitLocker( int32 survivor );
-        /** @brief 열린 탈출구 · 열린 해치 옆이면 탈출합니다. */
+        /** @brief 열린 탈출구나 열린 해치 옆이면 탈출합니다. */
         [[nodiscard]] bool escape( int32 survivor );
         void               setStruggling( int32 survivor, bool bStruggling );
         void               setWiggling( int32 survivor, bool bWiggling );
@@ -276,32 +276,32 @@ namespace sw
         [[nodiscard]] bool kickGenerator( int32 generator );
         [[nodiscard]] bool breakPallet( int32 pallet );
         [[nodiscard]] bool killerVault( int32 window );
-        /** @brief 사물함을 엽니다. 안에 생존자가 있으면 바로 듭니다(true). 비었으면 뒤지는 시간만 듭니다. */
+        /** @brief 사물함을 엽니다. 안에 생존자가 있으면 바로 들고(true), 비었으면 뒤지는 시간만 듭니다. */
         [[nodiscard]] bool searchLocker( int32 locker );
         [[nodiscard]] bool closeHatch();
-        /** @brief 능력을 씁니다(쿨다운이 남았으면 false — 효과는 게임이). */
+        /** @brief 능력을 씁니다. 쿨다운이 남았으면 false 를 반환하며, 효과는 게임이 처리합니다. */
         [[nodiscard]] bool useKillerAbility();
 
         // --- 읽기 ---
-        /** @brief 심장 소리 세기 0..1(위협 반경 밖 0, 살인마 자리 1)입니다. */
+        /** @brief 심장 소리 세기를 0..1 로 반환합니다(위협 반경 밖은 0, 살인마 위치는 1). */
         float32 computeHeartbeat( int32 survivor ) const;
         float32 computeSurvivorSpeed( int32 survivor ) const;
         float32 computeKillerSpeed() const;
-        /** @brief 살인마 봇의 `AIPerception::sense` 에 넣을 자극 — 숨지 않은 생존자, 이번 걸음 소음 반경을 실은 위치입니다. */
+        /** @brief 살인마 봇의 `AIPerception::sense` 에 넣을 자극을 모읍니다. 숨지 않은 생존자의 위치에 이번 걸음의 소음 반경을 실습니다. */
         void                       collectKillerStimuli( vector<AIStimulus>& outListStimulusEntry ) const;
         const InteractionProgress* findActivityProgress( int32 survivor ) const;
         void                       makeSnapshot( HorrorSnapshot& outSnapshot ) const;
         /** @brief 서버 권위 상태를 바이트로 씁니다(`HorrorSnapshotCodec::write`). */
         void writeState( BitWriter& outWriter ) const;
         /**
-         * @brief 세이브 · 핫 리로드용 전체 상태를 씁니다 — 살인마 id · 판(`MatchState`) · 걸음 · 무대(자리 · 판자 · 사물함 · 창틀 · 발전기 · 탈출구 · 해치) ·
-         *        생존자(체력 · 치료 진행 · 점수 · 타이머 · 갈고리 · 일) · 살인마(점수 · 자리 · 쿨다운 · 들고 있는 생존자) · 엔드게임. 넷 스냅숏(`writeState( BitWriter& )`)은
-         *        화면용으로 양자화해 복원할 수 없어 따로 둡니다. 설정 · 카탈로그는 `initialize` 의 것이라 싣지 않고, 알림은 읽을 때 비웁니다.
+         * @brief 세이브와 핫 리로드용 전체 상태를 씁니다. 살인마 id, 판(`MatchState`), 걸음, 무대(위치, 판자, 사물함, 창틀, 발전기, 탈출구, 해치),
+         *        생존자(체력, 치료 진행, 점수, 타이머, 갈고리, 하던 일), 살인마(점수, 위치, 쿨다운, 들고 있는 생존자), 엔드게임을 씁니다. 네트워크 스냅샷(`writeState( BitWriter& )`)은
+         *        화면용으로 양자화한 값이라 복원할 수 없으므로 따로 둡니다. 설정과 카탈로그는 `initialize` 에서 받으므로 저장하지 않고, 이벤트는 읽을 때 비웁니다.
          */
         void writeState( Archive& outArchive ) const;
         /**
-         * @brief `writeState( Archive& )` 의 바이트로 바꿉니다. 무대 · 생존자는 바이트가 정하고 규칙은 `initialize` 의 카탈로그를 씁니다.
-         *        `initialize` 하지 않았거나, 살인마 id 가 지금 설정과 다르거나, 깨진 바이트면 false 이고 그대로입니다.
+         * @brief `writeState( Archive& )` 가 쓴 바이트를 읽어 상태를 복원합니다. 무대와 생존자는 바이트가 정하고, 규칙은 `initialize` 의 카탈로그를 씁니다.
+         *        `initialize` 하지 않았거나, 살인마 id 가 지금 설정과 다르거나, 바이트가 깨졌으면 false 를 반환하고 상태는 그대로입니다.
          */
         [[nodiscard]] bool readState( Archive& archive );
         void               drainEvents( vector<AsymmetricHorrorEvent>& outListEvent );
@@ -332,12 +332,12 @@ namespace sw
         void stepGenerators( float32 deltaTime );
         void stepGates( float32 deltaTime );
         void stepEndgame( float32 deltaTime );
-        /** @brief 진행의 알림을 꺼내 스킬 체크 · 소음 · 점수로 옮깁니다. 이번에 끝났으면 true 입니다. */
+        /** @brief 진행 도구의 이벤트를 꺼내 스킬 체크, 소음, 점수로 옮깁니다. 이번에 끝났으면 true 를 반환합니다. */
         bool                 drainProgress( InteractionProgress& progress, const float3& position );
         InteractionProgress* findActivityProgressMutable( int32 survivor );
         void                 releaseHealers( int32 patient, bool bResetProgress );
         void                 finishHeal( int32 patient );
-        /** @brief 빈사 · 들림에서 부상으로 돌립니다(치료 완료 · 구출 · 몸부림 탈출). */
+        /** @brief 빈사나 들림 상태에서 부상으로 되돌립니다(치료 완료, 구출, 몸부림 탈출). */
         void restoreInjured( HorrorSurvivor& survivor );
         void sacrifice( int32 survivor, bool bBledOut );
         void leaveActivity( int32 survivor );
@@ -348,9 +348,9 @@ namespace sw
         void syncHealthState( HorrorSurvivor& survivor );
         void awardScore( StatBlock& outScore, const utf8* pAction, float32 amount );
         void configureGenerator( int32 generator, bool bRegressing );
-        /** @brief `start` 가 판에 주는 설정입니다(복원할 때 같은 설정으로 판을 다시 연다). */
+        /** @brief `start` 가 판에 주는 설정입니다. 복원할 때 같은 설정으로 판을 다시 엽니다. */
         MatchSettings makeMatchSettings() const;
-        /** @brief 생존자 하나의 상태를 읽어 덮습니다(규칙 · 치료 설정은 `addSurvivor` 가 세운 것). 깨졌으면 false 입니다. */
+        /** @brief 생존자 하나의 상태를 읽어 덮어씁니다(규칙과 치료 설정은 `addSurvivor` 가 만든 것을 씁니다). 데이터가 깨졌으면 false 를 반환합니다. */
         [[nodiscard]] bool readSurvivor( Archive& archive, HorrorSurvivor& outSurvivor ) const;
         void               makeNoise( int32 survivor, float32 radius, const float3& position );
         void               pushEvent( AsymmetricHorrorEvent::Kind kind, int32 actor, int32 target, float32 value, const float3& position );

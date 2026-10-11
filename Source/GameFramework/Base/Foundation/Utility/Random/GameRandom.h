@@ -1,6 +1,7 @@
 /**
  * @file GameRandom.h
- * @brief 씨앗이 같으면 같은 수열을 내는 난수(xorshift32)와 좌표 해시 — 테스트 · 리플레이 · 절차 생성이 되풀이되게 합니다.
+ * @brief 씨앗이 같으면 같은 수열을 내는 난수(xorshift32)와 좌표 해시를 정의합니다.
+ * @details 테스트, 리플레이, 절차 생성이 같은 결과를 되풀이하게 한다.
  */
 #pragma once
 #include "Core/Common/HashUtil.h"
@@ -13,8 +14,8 @@ namespace sw
 {
     /**
      * @class GameRandom
-     * @brief 결정적 난수입니다. 장르를 가리지 않습니다 — 탄 퍼짐(슈터) · 손님 성향(테마파크) · 날씨(농장)가 같은 것을 씁니다.
-     * @details 표준 `<random>` 은 분포 구현이 표준 라이브러리마다 달라 같은 씨앗이 플랫폼마다 다른 수를 냅니다. 여기는 정수 연산만 씁니다.
+     * @brief 결정적 난수입니다. 장르를 가리지 않아서 슈터의 탄 퍼짐, 테마파크의 손님 성향, 농장의 날씨가 같은 것을 씁니다.
+     * @details 표준 `<random>` 은 분포 구현이 표준 라이브러리마다 달라서 같은 씨앗이 플랫폼마다 다른 수를 낸다. 여기는 정수 연산만 쓴다.
      */
     class SW_GF_API GameRandom
     {
@@ -27,17 +28,17 @@ namespace sw
         void   setSeed( uint32 seed );
         uint32 getState() const { return _state; }
         uint32 nextUint();
-        /** @brief [0, 1) 의 실수입니다(위 24 비트). */
+        /** @brief [0, 1) 범위의 실수를 반환합니다. 위 24 비트를 씁니다. */
         float32 nextFloat();
-        /** @brief [@p minValue, @p maxValue) 의 실수입니다. */
+        /** @brief [@p minValue, @p maxValue) 범위의 실수를 반환합니다. */
         float32 nextRange( float32 minValue, float32 maxValue );
-        /** @brief [@p minValue, @p maxValue] 의 정수입니다(양 끝 포함). */
+        /** @brief [@p minValue, @p maxValue] 범위의 정수를 반환합니다. 양 끝을 포함합니다. */
         int32 nextInt( int32 minValue, int32 maxValue );
-        /** @brief 확률 @p probability 로 true 입니다. */
+        /** @brief 확률 @p probability 로 true 를 반환합니다. */
         bool nextChance( float32 probability ) { return nextFloat() < probability; }
 
         /**
-         * @brief 가중치로 하나를 고릅니다(`nextFloat` 한 번). @p getWeight( 원소 ) 가 가중치이고 음수는 0 으로 칩니다. 합이 0 이하이면 −1 입니다.
+         * @brief 가중치로 하나를 고릅니다. `nextFloat` 를 한 번 씁니다. @p getWeight( 원소 ) 가 가중치이고 음수는 0 으로 칩니다. 합이 0 이하이면 −1 입니다.
          * @code
          *     const int32 index = random.pickWeightedIndex( listItem, []( const ItemDef& def ) { return def._weight; } );
          * @endcode
@@ -68,13 +69,14 @@ namespace sw
                 }
                 ++index;
             }
-            return last; // 부동소수 끝자락 — 마지막 양수 원소
+            return last; // 부동소수 끝자락에서는 마지막 양수 원소를 고른다.
         }
 
         /**
-         * @brief 정수 가중치로 하나를 고릅니다(`nextInt( 0, 합 − 1 )` 한 번). 음수는 0, 합이 0 이하이면 −1 입니다.
-         * @details 정수 가중치(조우표 · 드롭표)는 이것을 쓴다 — 정수 합 · 정수 비교로 걸어 부동소수 누적 오차가 없고(가중치 합이 커도 비율이 정확하다),
-         *          손으로 걷던 조우표와 난수 흐름이 같다.
+         * @brief 정수 가중치로 하나를 고릅니다. `nextInt( 0, 합 − 1 )` 를 한 번 씁니다. 음수는 0 으로 치고, 합이 0 이하이면 −1 입니다.
+         * @details 정수 가중치(조우표, 드롭표)는 이것을 쓴다.
+         *          정수 합과 정수 비교로 고르므로 부동소수 누적 오차가 없고, 가중치 합이 커도 비율이 정확하다.
+         *          손으로 고르던 조우표와 난수 흐름도 같다.
          */
         template <typename TList, typename TGetWeight>
         int32 pickWeightedIndexInt( const TList& list, TGetWeight&& getWeight )
@@ -103,7 +105,7 @@ namespace sw
             return -1;
         }
 
-        /** @brief Fisher-Yates 로 섞습니다(뒤에서부터 [0, i] 의 한 자리와 바꾼다 — 원소 수 − 1 번 `nextInt`). */
+        /** @brief Fisher-Yates 로 섞습니다. 뒤에서부터 [0, i] 의 한 자리와 바꾸며, `nextInt` 를 원소 수 − 1 번 부릅니다. */
         template <typename TList>
         void shuffle( TList& inoutList )
         {
@@ -127,7 +129,7 @@ namespace sw
 {
     /**
      * @struct GameHash
-     * @brief 좌표 → 정수 해시입니다(lowbias32 섞기). 상태가 없어 어느 칸부터 물어도 같은 값이라 절차 생성(지형 · 나무 · 광석)에 씁니다.
+     * @brief 좌표를 정수 해시로 바꿉니다(lowbias32 섞기). 상태가 없어서 어느 칸부터 물어도 같은 값이 나오므로, 절차 생성(지형, 나무, 광석)에 씁니다.
      */
     struct GameHash
     {
@@ -147,13 +149,13 @@ namespace sw
             return mix32( static_cast<uint32>( x ) * 0x9e3779b1u ^ mix32( static_cast<uint32>( z ) * 0x85ebca77u ^ seed ) );
         }
 
-        /** @brief 3 차원 칸의 해시입니다 — y 를 섞어 x 에 접은 뒤 2 차원 해시로 넘긴다. */
+        /** @brief 3 차원 칸의 해시입니다. y 를 섞어 x 에 접은 뒤 2 차원 해시로 넘깁니다. */
         static constexpr uint32 hashCoord( int32 x, int32 y, int32 z, uint32 seed )
         {
             return hashCoord( static_cast<int32>( static_cast<uint32>( x ) ^ mix32( static_cast<uint32>( y ) * 0xc2b2ae35u ^ seed ) ), z, seed );
         }
 
-        /** @brief 해시의 아래 24 비트를 [0, 1] 실수로 — 확률 비교에 씁니다. */
+        /** @brief 해시의 아래 24 비트를 [0, 1] 실수로 바꿉니다. 확률 비교에 씁니다. */
         static constexpr float32 toUnitFloat( uint32 hash ) { return static_cast<float32>( hash & 0xffffffu ) / static_cast<float32>( 0xffffffu ); }
     };
 } // namespace sw
