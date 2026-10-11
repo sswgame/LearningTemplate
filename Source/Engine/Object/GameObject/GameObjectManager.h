@@ -24,6 +24,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectStore.h"
 #include "Engine/Object/GameObject/ISceneFrameSystem.h"
+#include "Engine/Object/GameObject/ISceneService.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Object/GameObject/SceneAudio.h"
 #include "Engine/Object/GameObject/SceneFrameStep.h"
@@ -37,7 +38,6 @@ namespace sw
     class Component;
     class GameObjectManager;
     class SceneComponent;
-    class SceneNavigation;
 
     /// @brief 씬 하나의 얼굴입니다 — 저장소(`GameObjectStore`) · 틱 디스패치(`SceneTickScheduler`) · 틱 중 규칙(`StructuralChangeBuffer`) · 레지스트리 · 물리를 소유하고
     ///        `tick` 의 단계를 정합니다. 게임이 부르는 API 는 같은 이름으로 각 단위에 전달합니다.
@@ -313,13 +313,28 @@ namespace sw
         SceneAudio& getSceneAudio() { return _sceneAudio; }
         /** @brief 이 씬의 강체 물리입니다. */
         const ScenePhysics& getScenePhysics() const { return _scenePhysics; }
+        /** @brief 등록 줄(`SW_SCENE_SERVICE`)로 만든 이 씬의 서비스입니다. 이 매니저가 만들지 않은 줄이면 nullptr 입니다. */
+        ISceneService* findSceneService( const SceneServiceRegistration& registration ) const;
         /**
-         * @brief 이 씬의 내비게이션(에이전트 종류마다 내비메시 · 군중, 베이크 · 재베이크, 에이전트 갱신)입니다. 물리처럼 소유만 하고 `tick` 의 한 줄만 정합니다 —
-         *        물리 앞 틱 결과를 적용한 뒤, 애니메이션 · 물리 앞(에이전트가 캐릭터 컨트롤러에 넘긴 속도가 이번 물리 프레임에 든다).
+         * @brief 이 씬의 서비스 @p TService 입니다(`ISceneService.h`). 레지스트리의 서비스는 매니저마다 하나씩 늘 있습니다.
+         * @details 언리얼 `UWorld::GetSubsystem<T>()` 와 같은 자리입니다. 코어는 서비스 타입을 모르고, 부르는 쪽이 그 타입의 헤더를 듭니다
+         *          (`manager.getSceneService<SceneNavigation>()`).
          */
-        SceneNavigation& getSceneNavigation() { return *_pSceneNavigation; }
-        /** @brief 이 씬의 내비게이션입니다. */
-        const SceneNavigation& getSceneNavigation() const { return *_pSceneNavigation; }
+        template <typename TService>
+        TService& getSceneService()
+        {
+            ISceneService* pService = findSceneService( TService::getSceneServiceRegistration() );
+            SW_ASSERT( pService != nullptr );
+            return static_cast<TService&>( *pService );
+        }
+        /** @brief 이 씬의 서비스 @p TService 입니다. */
+        template <typename TService>
+        const TService& getSceneService() const
+        {
+            const ISceneService* pService = findSceneService( TService::getSceneServiceRegistration() );
+            SW_ASSERT( pService != nullptr );
+            return static_cast<const TService&>( *pService );
+        }
 
         /** @brief 이 씬의 겹침 월드입니다(AABB 질의 월드 · 2D 콜라이더 등록 · 겹침 이벤트). 질의는 `getOverlapWorld2D().getPhysicsWorld()` 입니다. */
         SceneOverlapWorld2D& getOverlapWorld2D() { return _overlapWorld2D; }
@@ -402,6 +417,16 @@ namespace sw
          */
         void stepPhysics( float32 deltaTime );
 
+        /** @brief 등록 줄의 단계가 @p step 인 서비스를 등록 순서대로 갱신합니다. */
+        void updateSceneServices( SceneFrameStep step, float32 deltaTime );
+
+        /** @brief 이 매니저가 만든 씬 서비스 하나입니다. */
+        struct SceneServiceEntry
+        {
+            const SceneServiceRegistration* _pRegistration;
+            unique_ptr<ISceneService>       _pService;
+        };
+
         /** @brief 붙은 프레임 시스템 하나입니다. */
         struct FrameSystemEntry
         {
@@ -439,8 +464,8 @@ namespace sw
         ScenePhysics _scenePhysics;
         /** @brief 오디오 컴포넌트 레지스트리와 엔진 묶기입니다. */
         SceneAudio _sceneAudio;
-        /** @brief 내비게이션입니다. 컴포넌트(에이전트 · 장애물 · 표면)의 해제가 등록을 뺀다. 기능 쪽 타입이라 헤더는 전방 선언만 든다(코어 헤더가 Navigation 을 퍼뜨리지 않게). */
-        unique_ptr<SceneNavigation> _pSceneNavigation;
+        /** @brief 레지스트리(`SceneServiceRegistry`)에서 만든 기능 서비스입니다(내비게이션 …). 코어는 타입을 모르고 단계마다 `update` 만 부른다. */
+        vector<SceneServiceEntry> _listSceneService;
         /** @brief 단계마다 돌기 직전에 부르는 관찰자(`setFrameStepObserver`)입니다. 보통 비어 있습니다. */
         FrameStepObserver _frameStepObserver;
         /** @brief `FrameSystems` 단계가 붙인 순서대로 부르는 시스템입니다. 오브젝트보다 먼저 비웁니다(시스템이 컴포넌트를 가리킬 수 있다). */

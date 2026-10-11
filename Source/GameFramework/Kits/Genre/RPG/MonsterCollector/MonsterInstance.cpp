@@ -15,7 +15,7 @@ namespace sw
     {
         struct MonsterInstanceInternal
         {
-            /** @brief 레벨 @p level 의 기술을 배웁니다. 칸이 차면 막힘 알림을 냅니다. */
+            /** @brief 레벨 @p level 의 기술을 배웁니다. 슬롯이 차면 막힘 알림을 냅니다. */
             static void learnLevelMoves( const MonsterCollectorCatalog& catalog, const MonsterSpeciesDef& species, MonsterInstance& inoutMonster, int32 level,
                                          vector<MonsterGrowthEvent>& outListEvent )
             {
@@ -168,7 +168,7 @@ namespace sw
         if ( listNature.empty() == false )
             monster._natureID = listNature[static_cast<size_t>( random.nextInt( 0, static_cast<int32>( listNature.size() ) - 1 ) )]._id;
 
-        // 그 레벨까지 배운 것 중 마지막 넷 — 앞에서부터 채우고, 차면 가장 오래된 칸부터 밀어낸다.
+        // 그 레벨까지 배운 것 중 마지막 네 개를 앞에서부터 채우고, 슬롯이 차면 가장 오래된 슬롯부터 밀어낸다.
         for ( const MonsterLearnEntry& learn : pSpecies->_listLearn )
         {
             if ( learn._level > monster._level )
@@ -181,7 +181,7 @@ namespace sw
             int32 targetSlot = monster.countMoves();
             if ( targetSlot >= MonsterInstance::kMoveSlotCount )
             {
-                // 가장 오래된 칸을 빼고 앞으로 당긴다 — 칸 순서가 배운 순서를 유지한다.
+                // 가장 오래된 슬롯을 빼고 앞으로 당긴다. 그러면 슬롯 순서가 배운 순서를 유지한다.
                 for ( int32 slot = 0; slot + 1 < MonsterInstance::kMoveSlotCount; ++slot )
                 {
                     monster._arrMove[slot] = monster._arrMove[slot + 1];

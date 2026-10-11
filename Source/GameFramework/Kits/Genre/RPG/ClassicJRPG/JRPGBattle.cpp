@@ -158,7 +158,7 @@ namespace sw
         {
             const int32 actor = _turnOrder.next();
             if ( actor < 0 || _turnOrder.getRound() != roundBefore + 1 )
-                break; // 이번 라운드 차례가 다 돌았다(다음 큐는 다음 라운드의 restartRound 가 버린다)
+                break; // 이번 라운드의 차례가 다 돌았다(남은 큐는 다음 라운드의 restartRound 가 버린다)
             if ( actor >= kEnemyActorBase )
                 executeEnemy( actor - kEnemyActorBase );
             else
@@ -317,7 +317,7 @@ namespace sw
         addComboPoints( _settings._comboPerHit );
         addInner( memberIndex, _settings._innerPerAttack );
 
-        // 타이밍 공격(씨 오브 스타즈) — 맞으면 추가 타격 하나. 추가 타격도 잠금을 깨고 콤보 포인트를 준다.
+        // 타이밍 공격(씨 오브 스타즈)이다. 맞으면 추가 타격이 하나 들어가고, 추가 타격도 잠금을 깨며 콤보 포인트를 준다.
         if ( isTimed( JRPGTimingKind::Attack, memberIndex ) && _listEnemy[static_cast<size_t>( target )].isAlive() )
         {
             pushEvent( JRPGBattleEvent::Kind::TimedHit, false, memberIndex, target );
@@ -354,7 +354,7 @@ namespace sw
 
         if ( pSpell->_kind == JRPGSpellKind::Damage )
         {
-            // 주문은 지능, 초식(비급)은 힘으로 키운다.
+            // 주문은 지능으로, 초식(비급)은 힘으로 위력이 커진다.
             const bool            bTechnique = pSpell->_manualID.empty() == false;
             const int32           scale      = bTechnique ? _pParty->computeAttack( memberIndex ) : member.getStat( JRPGStat::Intellect );
             const int32           base       = pSpell->_power * ( 100 + scale ) / 100;
@@ -453,7 +453,7 @@ namespace sw
         if ( enemy.isCasting() )
         {
             if ( --enemy._castTurnsLeft > 0 )
-                return; // 아직 시전 중
+                return; // 아직 시전 중이다
             const JRPGSpellDef* pSpell    = _pCatalog->findSpell( pEnemy->_castSpellID );
             const int32         remaining = static_cast<int32>( enemy._listLock.size() );
             const int32         basePower = pSpell != nullptr ? pSpell->_power : 0;
@@ -478,7 +478,7 @@ namespace sw
             return;
         }
 
-        // 살아 있는 멤버 중 하나를 씨앗 난수로 고른다.
+        // 살아 있는 멤버 중 하나를 시드 난수로 고른다.
         vector<int32> listAlive;
         for ( int32 memberIndex = 0; memberIndex < _pParty->getMemberCount(); ++memberIndex )
         {
@@ -513,7 +513,7 @@ namespace sw
         enemy._hp -= MathUtil::max( 0, dealt );
         pushEvent( JRPGBattleEvent::Kind::Damage, false, memberIndex, enemyIndex, dealt );
 
-        // 잠금: 한 타의 유형 하나마다 같은 유형 잠금을 하나 깬다. 다 깨면 시전이 취소된다.
+        // 잠금은 한 타의 유형 하나마다 같은 유형의 잠금을 하나 깬다. 다 깨면 시전이 취소된다.
         if ( enemy.isCasting() && enemy._listLock.empty() == false )
         {
             for ( const hashed_string& type : listDamageType )
@@ -681,10 +681,10 @@ namespace sw
 
     bool JRPGBattle::readState( Archive& archive )
     {
-        // 사본에 읽고 끝까지 맞으면 바꾼다 — 카탈로그 · 판정 · 타이밍 입력 · 설정은 사본이 그대로 든다.
+        // 사본에 읽고 끝까지 맞으면 바꾼다. 카탈로그, 판정, 타이밍 입력, 설정은 사본이 그대로 가지고 있다.
         JRPGBattle restored = *this;
         uint32     count    = 0;
-        // 적마다 이름(4) + 잠금 수(4) + HP · 시전 · 잠금 전체 · 차례(16) 이상
+        // 적마다 이름(4) + 잠금 수(4) + HP, 시전, 잠금 전체, 차례(16) 바이트 이상
         if ( _pCatalog == nullptr || StateArchiveUtil::readCount( archive, 24, count ) == false )
             return false;
         restored._listEnemy.assign( count, JRPGEnemyState{} );
@@ -707,7 +707,7 @@ namespace sw
             archive >> enemy._turnsTaken;
         }
 
-        // 명령마다 이름(4) + 대상(4) + 종류(1) + 방어(1)
+        // 명령마다 이름(4) + 대상(4) + 종류(1) + 방어(1) 바이트
         if ( StateArchiveUtil::readCount( archive, 10, count ) == false )
             return false;
         const uint32 memberCount = _pParty != nullptr ? static_cast<uint32>( _pParty->getMemberCount() ) : 0;

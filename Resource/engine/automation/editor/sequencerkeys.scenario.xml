@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  에디터 시나리오 — Sequencer 키 트랙(N9): Quick Open 으로 시험 시퀀스(sequencerkeys/, GameCamera 를 모는 빈 트랜스폼 트랙)를 열고,
+  에디터 시나리오 — Sequencer 키 트랙(N9): Quick Open 으로 테스트 시퀀스(sequencerkeys/, GameCamera 를 모는 빈 트랜스폼 트랙)를 열고,
   프레임 0 에서 Key 단추로 키를 찍은 뒤 Location X 칸에 2 를 친다. 시간 막대에 100 을 쳐서 옮기고 Location X 칸에 12 를 치면
   그 채널에 둘째 키가 생긴다(자동 키). 시간 막대 가운데를 누르면 미리보기가 GameCamera 를 두 키 사이(2 와 12 사이)로 옮긴다.
   드래그 칸 · 슬라이더는 Ctrl+클릭이 글 입력이다. Quick Open 은 파일 목록이 온 뒤에 열므로 시퀀서 대상이 생길 때까지 WaitUntil 로 기다린다.
