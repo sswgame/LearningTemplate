@@ -1,7 +1,15 @@
 # ThreadSanitizer 억제 목록 — `sw_applySanitizerTestProperties`(cmake/Engine/TestTargets.cmake)가 TSan 구성의 모든 ctest 항목에
 # `TSAN_OPTIONS=suppressions=<이 파일>` 로 건다.
 #
-# 비어 있는 것이 정상이다. 원자 연산으로 스스로 동기화하는 서드파티(Jolt · Box2D)는 TSan 구성에서 트리플릿 `x64-linux-tsan`
+# 우리 코드의 경쟁은 억제하지 않는다 — 아래 줄은 고칠 수 없는 서드파티 내부뿐이다. 원자 연산으로 스스로 동기화하는 서드파티(Jolt · Box2D)는 TSan 구성에서 트리플릿 `x64-linux-tsan`
 # (cmake/Modules/Toolchain/VcpkgTsan)이 -fsanitize=thread 로 지어 그 동기화가 보인다. 계측 안 된 라이브러리를 억제로 덮지 말 것 —
 # `race:` 는 보고의 두 스택 **어느 프레임**과도 맞춰서, 라이브러리 잡 함수(`JPH::JobSystem::Job::Execute` 등)를 억제하면 그 잡 안에서
 # 불리는 엔진 콜백(접촉 리스너 등)의 진짜 경쟁까지 가려진다. 줄을 더해야 하면 가장 좁은 함수 하나로, 바로 위에 이유와 날짜를 적는다.
+
+# 2026-10-12 Jolt 의 assert 용 멤버 `mLockedThreadID`(JPH_ENABLE_ASSERTS, Debug 만)를 `Mutex::try_lock` 이 락을 잡기 전에 읽고 락을 쥔 스레드가 쓴다.
+# 진단 값이라 동작에는 영향이 없고 서드파티 코드라 고칠 수 없다. 이 함수 하나만 건다.
+race:JPH::Mutex::try_lock
+
+# 2026-10-12 SQLite 의 WAL 공유 메모리 헤더는 `fcntl` 파일 잠금으로 보호된다 — TSan 은 그것을 동기화로 보지 못한다(계측 안 된 서드파티). 이 함수 하나만 건다.
+race:walIndexWriteHdr
+

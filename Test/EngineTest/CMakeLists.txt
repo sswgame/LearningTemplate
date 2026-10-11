@@ -38,10 +38,11 @@ sw_addTestExecutable(EngineTest
 	TIMEOUT
 		180
 	# `_NoGPU` 는 한 실행으로 이 기계(부하가 걸린 16 스레드)에서 120 초, WSL 에서는 180 초 한도를 넘었다 — 느린 케이스(망 시뮬 · 파괴 · 로더 퍼징
-	# 10~36 초)가 몰려 있다. 네 조각(`EngineTest_NoGPU_Shard1` ~ `_Shard4`, 케이스는 스위트 안에서 번갈아 나뉜다)으로 갈라 CI 의 `-j 4` 로 같이 돈다.
+	# 10~36 초)가 몰려 있다. 여섯 조각(`EngineTest_NoGPU_Shard1` ~ `_Shard6`, 케이스는 스위트 안에서 번갈아 나뉜다)으로 갈라 CI 의 `-j 4` 로 같이 돈다.
 	# 세 조각일 때 느린 CI 러너(리눅스 · Windows Debug)에서 조각이 한도를 넘어, 그때 돌던 케이스(로더 퍼징 · 트랜스폼 배치 벤치)가 멈춘 것처럼 보였다.
+	# 네 조각도 리눅스 Debug 에서 126~180 초로 한도에 닿아(2026-10-12 실행) 여섯으로 늘렸다.
 	SHARDS
-		4
+		6
 	# `_HostOnly` 는 한 실행이 이 PC(부하)에서 193~246 초라 한도(180)를 넘었다. 두 조각(`EngineTest_HostOnly_Shard1` · `_Shard2`)으로
 	# 가른다 — GPU 를 잡으므로 조각도 직렬이고, 합계는 같되 조각마다 한도를 받는다.
 	HOST_SHARDS
@@ -65,7 +66,7 @@ sw_deployRuntimeDependencies(EngineTest ALWAYS_DXC)
 sw_addDynamicModuleDependencies(EngineTest KINDS rhi)
 
 # ------------------------------------------------------------------------------
-# 2) ctest — `HOST_SPLIT` 이 `EngineTest_NoGPU_Shard1..4` · `EngineTest_HostOnly_Shard1..2` 를 등록한다
+# 2) ctest — `HOST_SPLIT` 이 `EngineTest_NoGPU_Shard1..6` · `EngineTest_HostOnly_Shard1..2` 를 등록한다
 #
 # CI 러너가 못 돌리는 스위트(GPU · 디스플레이 · DXC)는 **자기 파일에서** `SW_TEST_REQUIRES_HOST( 스위트, "이유" )`
 # 로 선언한다. `_NoGPU` 는 그 선언을 뺀 집합(`--host_suites=exclude`, 라벨 `nogpu` — CI 가 도는 것),
