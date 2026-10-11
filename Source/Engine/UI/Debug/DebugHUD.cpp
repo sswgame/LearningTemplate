@@ -34,11 +34,11 @@ namespace sw
     {
         struct DebugHUDInternal
         {
-            /** @brief 섹션 본문을 다시 부르는 간격(초)입니다 — 언리얼 `stat` 처럼 읽을 수 있는 빠르기(4 Hz). 켜짐 · 목록이 바뀌면 바로 부른다. */
+            /** @brief 섹션 본문을 다시 부르는 간격(초)입니다. 언리얼 `stat` 처럼 읽을 수 있는 빠르기(4 Hz)이며, 켜짐이나 목록이 바뀌면 바로 부릅니다. */
             static constexpr float32 kRefreshSeconds = 0.25f;
             /** @brief 화면 모서리에서 패널까지의 여백(UI 단위)입니다. */
             static constexpr float32 kPanelMargin = 16.0f;
-            /** @brief 줄 이름 칸의 너비(UI 단위)입니다. */
+            /** @brief 줄 이름 필드의 너비(UI 단위)입니다. */
             static constexpr float32 kLabelWidth = 150.0f;
             /** @brief 그래프 크기(UI 단위)입니다. */
             static constexpr float32 kGraphWidth    = 240.0f;
@@ -85,7 +85,7 @@ namespace sw
                 style._fontSize               = fontSize;
                 widget->setTextStyle( style );
                 widget->setColor( color );
-                widget->setLocalized( false ); // 개발 도구라 영어 고정(README "함정")
+                widget->setLocalized( false ); // 개발 도구라 영어로 고정한다(README "함정" 참고)
                 widget->setText( text );
                 return widget;
             }
@@ -97,7 +97,7 @@ namespace sw
                 return name;
             }
 
-            /** @brief 모서리의 캔버스 슬롯 — 오른쪽 · 아래 모서리는 앵커 1 과 음의 여백, 그쪽 변을 두고 커진다. */
+            /** @brief 모서리의 캔버스 슬롯입니다. 오른쪽과 아래 모서리는 앵커 1 과 음의 여백을 쓰고, 그쪽 변을 기준으로 커집니다. */
             static void applyCorner( Widget& panel, DebugHUDCorner corner )
             {
                 const bool       bRight  = corner == DebugHUDCorner::TopRight || corner == DebugHUDCorner::BottomRight;
@@ -131,7 +131,7 @@ namespace sw
 
         /**
          * @class DebugHUDGraphWidget
-         * @brief 막대 그래프 하나를 칠합니다(프레임 시간). 리플렉션 타입이 아니다 — 문서에 쓰지 않고 HUD 만 코드로 짓는다.
+         * @brief 막대 그래프 하나를 칠합니다(프레임 시간). 리플렉션 타입이 아니므로 문서에 쓰지 않고 HUD 만 코드로 만듭니다.
          */
         class DebugHUDGraphWidget final : public Widget
         {
@@ -185,9 +185,9 @@ namespace sw
 
         /**
          * @class DebugHUDScreen
-         * @brief HUD 화면입니다(오버레이 층 — 포커스 · 포인터 · 게임 입력을 받지 않는다). 켜진 섹션마다 제목 · 줄 · 그래프 상자 하나를 둡니다.
-         * @details `onTick` 이 프레임 시간을 모으고, `kRefreshSeconds` 마다(또는 섹션 목록 · 설정 글이 바뀌면 바로) 켜진 섹션의 본문만 부릅니다.
-         *          위젯은 줄 수 · 그래프 유무가 그대로면 글만 바꾼다(같은 글이면 무효화도 없다).
+         * @brief HUD 화면입니다(오버레이 레이어이며 포커스, 포인터, 게임 입력을 받지 않습니다). 켜진 섹션마다 제목, 줄, 그래프 상자 하나를 둡니다.
+         * @details `onTick` 이 프레임 시간을 모으고, `kRefreshSeconds` 마다(또는 섹션 목록이나 설정 값이 바뀌면 바로) 켜진 섹션의 본문만 부른다.
+         *          위젯은 줄 수와 그래프 유무가 그대로면 텍스트만 바꾼다(같은 텍스트면 무효화도 없다).
          */
         class DebugHUDScreen final : public UIScreen
         {
@@ -207,7 +207,7 @@ namespace sw
             {
             }
 
-            /** @brief HUD 화면을 짓습니다(캔버스 루트 → 패널 → 세로 상자). */
+            /** @brief HUD 화면을 만듭니다(캔버스 루트, 패널, 세로 상자). */
             static unique_ptr<DebugHUDScreen> create()
             {
                 unique_ptr<CanvasPanel> root  = make_unique<CanvasPanel>();
@@ -260,7 +260,7 @@ namespace sw
             }
 
         private:
-            /** @struct SectionView @brief 그리는 섹션 하나 — 상자 위젯 · 줄 수 · 그래프 위젯입니다. */
+            /** @struct SectionView @brief 그리는 섹션 하나입니다. 상자 위젯, 줄 수, 그래프 위젯을 가집니다. */
             struct SectionView
             {
                 string   _name;
@@ -301,7 +301,7 @@ namespace sw
                     _listShownScratch[index]->_pFunc( _writer );
                     writeSectionView( _listView[index], *_listShownScratch[index] );
                 }
-                _listShownScratch.clear(); // 등록 포인터는 이 호출 안에서만 — 다음 갱신 전에 모듈이 내려갈 수 있다
+                _listShownScratch.clear(); // 등록 포인터는 이 호출 안에서만 쓴다. 다음 갱신 전에 모듈이 언로드될 수 있기 때문이다
             }
 
             bool matchesShownSections() const
@@ -335,7 +335,7 @@ namespace sw
                 }
             }
 
-            /** @brief 상자의 자식을 이번 줄 수 · 그래프 유무에 맞추고 글을 씁니다(제목 → 그래프 → 줄 순서). */
+            /** @brief 상자의 자식을 이번 줄 수와 그래프 유무에 맞추고 텍스트를 씁니다(제목, 그래프, 줄 순서). */
             void writeSectionView( SectionView& view, const DebugHUDSectionRegistration& registration )
             {
                 PanelWidget* pBox = castTo<PanelWidget>( getTree().findWidgetByID( view._box ) );
@@ -369,7 +369,7 @@ namespace sw
                 }
                 if ( bHasGraph )
                 {
-                    // 그래프 위젯은 리플렉션 타입이 아니라 castTo 로 풀 수 없다 — 이 번호는 위에서 DebugHUDGraphWidget 으로 지은 것이다.
+                    // 그래프 위젯은 리플렉션 타입이 아니라 castTo 로 찾을 수 없다. 이 번호는 위에서 DebugHUDGraphWidget 으로 만든 것이다.
                     Widget* pGraph = getTree().findWidgetByID( view._graph );
                     if ( pGraph != nullptr )
                         static_cast<DebugHUDGraphWidget*>( pGraph )->setValues( _writer.getGraph(), _writer.getGraphMax() );
@@ -393,9 +393,9 @@ namespace sw
         private:
             DebugHUDSectionWriter                      _writer;
             vector<SectionView>                        _listView;
-            vector<const DebugHUDSectionRegistration*> _listShownScratch; ///< 이번 갱신의 켜진 섹션(호출 안에서만 — 모듈이 내려가면 빠진다)
+            vector<const DebugHUDSectionRegistration*> _listShownScratch; ///< 이번 갱신에서 켜진 섹션입니다(호출 안에서만 쓰며, 모듈이 언로드되면 빠집니다).
             string                                     _seenState;        ///< 마지막으로 본 `gv_debugHUDSections`
-            uint64                                     _seenRevision;     ///< 마지막으로 본 레지스트리 판
+            uint64                                     _seenRevision;     ///< 마지막으로 본 레지스트리 버전입니다.
             WidgetID                                   _panel;
             WidgetID                                   _column;
             float32                                    _secondsSinceRefresh;
@@ -405,8 +405,8 @@ namespace sw
 
         /**
          * @class DebugHUDWindowScreen
-         * @brief 설정 창입니다(문서 `engine/ui/debughud.ui.xml`). 표시 · 모서리 · 불투명도는 문서의 설정 바인딩이, 섹션 체크 상자는 이 클래스가 레지스트리에서 짓습니다.
-         * @details 체크 상자를 사용자가 바꾸면 `DebugHUD::setSectionShown` 으로 쓰고, 명령 · 다른 곳에서 설정이 바뀌면 체크 상자를 따라 맞춥니다.
+         * @brief 설정 창입니다(문서 `engine/ui/debughud.ui.xml`). 표시, 모서리, 불투명도는 문서의 설정 바인딩이 처리하고, 섹션 체크 상자는 이 클래스가 레지스트리에서 만듭니다.
+         * @details 체크 상자를 사용자가 바꾸면 `DebugHUD::setSectionShown` 으로 쓰고, 명령이나 다른 곳에서 설정이 바뀌면 체크 상자를 따라 맞춥니다.
          */
         class DebugHUDWindowScreen final : public UIScreen
         {
@@ -435,7 +435,7 @@ namespace sw
                         continue;
                     const bool bChecked = pCheckBox->isChecked();
                     if ( bChecked != ( _listLastChecked[index] == SW_TRUE ) && pHUD != nullptr )
-                        (void)pHUD->setSectionShown( _listSectionName[index], bChecked ); // 이름은 방금 레지스트리에서 찾았다
+                        (void)pHUD->setSectionShown( _listSectionName[index], bChecked ); // 이름은 방금 레지스트리에서 찾은 것이다
                     else
                         pCheckBox->setChecked( DebugHUD::isSectionShown( *pRegistration ) );
                     _listLastChecked[index] = pCheckBox->isChecked() ? SW_TRUE : SW_FALSE;
@@ -486,11 +486,11 @@ namespace sw
         private:
             vector<string>   _listSectionName;
             vector<WidgetID> _listCheckBox;
-            vector<uint8>    _listLastChecked; ///< 지난 틱의 체크 — 다르면 사용자가 바꾼 것
+            vector<uint8>    _listLastChecked; ///< 지난 틱의 체크 상태입니다. 다르면 사용자가 바꾼 것입니다.
             uint64           _seenRevision;
         };
 
-        /** @brief 지금 동작 중인 조종자(Engine 이미지 — 핫 리로드와 무관)입니다. */
+        /** @brief 지금 동작 중인 컨트롤러입니다(Engine 이미지에 있으므로 핫 리로드와 무관합니다). */
         DebugHUD* s_pActiveHUD = nullptr;
 
         struct DebugHUDCommandInternal
@@ -535,7 +535,7 @@ namespace sw
                     return false;
                 (void)hud.setSectionShown( pRegistration->_pName, bShown ); // 방금 레지스트리에서 찾은 이름이다
                 if ( bShown )
-                    hud.setShown( true ); // 섹션을 켜면 HUD 도 보인다(언리얼 `stat fps`)
+                    hud.setShown( true ); // 섹션을 켜면 HUD 도 보인다(언리얼 `stat fps` 와 같다)
                 outReply = string( "debug HUD section " ) + pRegistration->_pName + ( bShown ? " on" : " off" );
                 return true;
             }
@@ -699,7 +699,7 @@ namespace sw
 
     void DebugHUD::update( const InputMap* pShellMap )
     {
-        SW_PROFILE_SCOPE( "GT.DebugHUD" ); // 꺼진 상태의 비용을 측정하는 구간(검증과 측정 2절) — 섹션 본문은 GT.DebugHUD.Sections
+        SW_PROFILE_SCOPE( "GT.DebugHUD" ); // 꺼진 상태의 비용을 측정하는 구간이다(검증과 측정 2절). 섹션 본문은 GT.DebugHUD.Sections 에서 측정한다
         if ( _pUI == nullptr )
             return;
         if ( pShellMap != nullptr && pShellMap->wasActionTriggered( _toggleAction ) )
@@ -709,7 +709,7 @@ namespace sw
             syncScreen();
         if ( _screen != kInvalidUIScreenHandle || _bProfilerEnabledByHUD == SW_TRUE )
             syncFrameProfiler();
-        // 창이 닫혔다(닫기 단추 · 뒤로) — 창의 설정 바인딩이 넣은 보류 값을 확정해 사용자 파일에 남긴다.
+        // 창이 닫혔다(닫기 단추나 뒤로 가기). 창의 설정 바인딩이 넣은 보류 값을 확정해 사용자 파일에 남긴다.
         if ( _window != kInvalidUIScreenHandle && _pUI->findScreen( _window ) == nullptr )
         {
             _window = kInvalidUIScreenHandle;
@@ -804,7 +804,7 @@ namespace sw
 
     uint32 DebugHUD::getDrawnSectionCount() const
     {
-        // 이 번호의 화면은 `syncScreen` 이 DebugHUDScreen 으로 지은 것이다(코드 화면이라 castTo 로 풀 타입 정보가 없다).
+        // 이 번호의 화면은 `syncScreen` 이 DebugHUDScreen 으로 만든 것이다(코드 화면이라 castTo 로 찾을 타입 정보가 없다).
         const UIScreen* pScreen = isScreenOpen() ? _pUI->findScreen( _screen ) : nullptr;
         return pScreen != nullptr ? static_cast<const DebugHUDScreen*>( pScreen )->getSectionViewCount() : 0;
     }
@@ -861,7 +861,7 @@ namespace sw
     {
         if ( _pSettings != nullptr && _pSettings->findSetting( settingID ) != nullptr )
         {
-            (void)_pSettings->setPendingValue( settingID, value ); // 범위 밖이면 매니저가 맞춰 받는다
+            (void)_pSettings->setPendingValue( settingID, value ); // 범위 밖이면 매니저가 보정해서 받는다
             (void)_pSettings->applyPending();                      // 저장 실패는 매니저가 로그에 남긴다
             return;
         }

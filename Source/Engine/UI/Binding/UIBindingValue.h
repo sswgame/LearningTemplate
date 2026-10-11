@@ -18,40 +18,40 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 바인딩 값의 갈래입니다. 갈래가 같거나 바꿀 수 있으면 타입이 달라도 묶습니다(`UIBindingValueUtil::canConvert`).
-     * @details 불리언 ↔ 숫자는 서로 바꾸고(0 아니면 참), 무엇이든 글로는 바꿉니다(리플렉션 글 표기). 글 → 숫자 · 불리언은 바꾸지 않습니다(변환기를 쓴다).
-     *          그 밖의 타입(색 · 벡터 · 열거형 · 구조체)은 같은 타입끼리 · 글로만 묶습니다.
+     * @brief 바인딩 값의 종류입니다. 종류가 같거나 바꿀 수 있으면 타입이 달라도 연결합니다(`UIBindingValueUtil::canConvert`).
+     * @details 불리언과 숫자는 서로 바꾸고(0 이 아니면 true), 무엇이든 텍스트로는 바꾼다(리플렉션 텍스트 표기). 텍스트에서 숫자나 불리언으로는 바꾸지 않는다(변환기를 쓴다).
+     *          그 밖의 타입(색, 벡터, 열거형, 구조체)은 같은 타입끼리, 또는 텍스트로만 연결한다.
      */
     enum class UIBindingValueKind : uint8
     {
-        None,   ///< 값 없음
+        None,   ///< 값이 없습니다.
         Bool,   ///< bool
-        Number, ///< 정수 · 실수
-        Text,   ///< string · hashed_string
-        Other   ///< 그 밖의 리플렉션 타입(같은 타입끼리 · 글로만)
+        Number, ///< 정수와 실수입니다.
+        Text,   ///< string 과 hashed_string 입니다.
+        Other   ///< 그 밖의 리플렉션 타입입니다(같은 타입끼리, 또는 텍스트로만 연결).
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @struct UIBindingValue @brief 바인딩이 나르는 값 하나입니다(갈래 + 그 값). */
+    /** @struct UIBindingValue @brief 바인딩이 나르는 값 하나입니다(종류와 그 값). */
     struct SW_API UIBindingValue
     {
-        string             _text{}; ///< Text 의 값(Other 를 글로 바꾼 것도)
+        string             _text{}; ///< Text 의 값입니다(Other 를 텍스트로 바꾼 것도 여기에 담습니다).
         float64            _number{ 0.0 };
         UIBindingValueKind _kind{ UIBindingValueKind::None };
         bool               _bValue{ false };
-        bool               _bInteger{ false }; ///< Number 가 정수 타입에서 왔다(형식 인자 · 글 표기가 소수점을 쓰지 않는다)
+        bool               _bInteger{ false }; ///< Number 가 정수 타입에서 왔는지 나타냅니다(형식 인자와 텍스트 표기에서 소수점을 쓰지 않습니다).
 
         static UIBindingValue makeBool( bool bValue );
         static UIBindingValue makeNumber( float64 number, bool bInteger );
         static UIBindingValue makeText( string_view text );
 
-        /** @brief 불리언으로 읽습니다(숫자는 0 이 아니면 참, 글은 비지 않으면 참). */
+        /** @brief 불리언으로 읽습니다(숫자는 0 이 아니면 true, 텍스트는 비어 있지 않으면 true). */
         bool toBool() const;
-        /** @brief 숫자로 읽습니다(불리언은 1 · 0, 글은 0). */
+        /** @brief 숫자로 읽습니다(불리언은 1 또는 0, 텍스트는 0). */
         float64 toNumber() const;
-        /** @brief 글로 씁니다(숫자는 가장 짧은 왕복 표기, 정수면 소수점 없이). */
+        /** @brief 텍스트로 씁니다(숫자는 가장 짧은 왕복 표기이고, 정수면 소수점 없이 씁니다). */
         string toText() const;
     };
 } // namespace sw
@@ -60,12 +60,12 @@ namespace sw
 {
     /**
      * @struct UIPropertyPath
-     * @brief 리플렉션 프로퍼티 경로(`_text` · `_slot._widthOverride`)를 푼 것입니다 — 뿌리 타입부터 잎 프로퍼티까지의 사슬.
-     * @details 바인딩을 걸 때 한 번 풀고, 값을 읽고 쓸 때는 사슬을 따라 주소만 계산합니다(이름 조회 없음).
+     * @brief 리플렉션 프로퍼티 경로(`_text`, `_slot._widthOverride`)를 해석한 결과입니다. 루트 타입부터 잎 프로퍼티까지의 연쇄입니다.
+     * @details 바인딩을 연결할 때 한 번 해석하고, 값을 읽고 쓸 때는 연쇄를 따라 주소만 계산한다(이름 조회 없음).
      */
     struct SW_API UIPropertyPath
     {
-        vector<const PropertyInfo*> _listProperty{}; ///< 뿌리 쪽부터(마지막이 잎)
+        vector<const PropertyInfo*> _listProperty{}; ///< 루트 쪽부터 나열합니다(마지막이 잎).
         UIBindingValueKind          _kind{ UIBindingValueKind::None };
 
         bool                isValid() const { return _listProperty.empty() == false; }
@@ -81,32 +81,32 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 바인딩 값 · 프로퍼티 경로 도우미입니다. */
+    /** @brief 바인딩 값과 프로퍼티 경로 도우미입니다. */
     struct SW_API UIBindingValueUtil
     {
-        /** @brief 리플렉션 타입 이름의 갈래입니다. */
+        /** @brief 리플렉션 타입 이름의 종류를 반환합니다. */
         static UIBindingValueKind classifyType( const hashed_string& typeName );
-        /** @brief @p from 갈래 값을 @p to 갈래 칸에 쓸 수 있는가입니다(같은 Other 타입끼리는 `canBindPaths` 가 따로 본다). */
+        /** @brief @p from 종류의 값을 @p to 종류의 필드에 쓸 수 있는지 반환합니다(같은 Other 타입끼리는 `canBindPaths` 가 따로 확인합니다). */
         static bool canConvert( UIBindingValueKind from, UIBindingValueKind to );
-        /** @brief 갈래 이름(오류 문구)입니다. */
+        /** @brief 종류 이름입니다(오류 메시지용). */
         static const utf8* getKindName( UIBindingValueKind kind );
 
         /**
-         * @brief @p type(기반 포함) 기준 경로 @p path 를 풉니다. 중간은 리플렉션 구조체여야 하고 컨테이너는 받지 않습니다(잎의 `vector<string>` 은 받는다).
+         * @brief @p type(기반 타입 포함) 기준으로 경로 @p path 를 해석합니다. 중간은 리플렉션 구조체여야 하고 컨테이너는 받지 않습니다(잎의 `vector<string>` 은 받습니다).
          * @return 모르는 이름이면 false 이고 @p outError 에 이유(영어)를 둡니다.
          */
         [[nodiscard]] static bool resolvePath( const TypeInfo& type, string_view path, UIPropertyPath& outPath, string& outError );
 
-        /** @brief 경로 값을 읽습니다. Other 는 리플렉션 글 표기를 Text 로 둡니다. 컨테이너는 None 입니다. */
+        /** @brief 경로 값을 읽습니다. Other 는 리플렉션 텍스트 표기를 Text 로 둡니다. 컨테이너는 None 입니다. */
         static UIBindingValue readValue( const UIPropertyPath& path, const void* pRoot );
         /**
-         * @brief @p value 를 경로 칸의 타입으로 바꿔 씁니다. 같은 값이면 쓰지 않습니다.
-         * @return 칸이 바뀌었으면 true 입니다. 바꿀 수 없으면(갈래가 맞지 않거나 글을 읽지 못하면) 쓰지 않고 false 입니다.
+         * @brief @p value 를 경로 필드의 타입으로 바꿔 씁니다. 같은 값이면 쓰지 않습니다.
+         * @return 필드가 바뀌었으면 true 입니다. 바꿀 수 없으면(종류가 맞지 않거나 텍스트를 읽지 못하면) 쓰지 않고 false 입니다.
          */
         [[nodiscard]] static bool writeValue( const UIPropertyPath& path, void* pRoot, const UIBindingValue& value );
         /**
-         * @brief 같은 타입의 칸끼리 값을 옮깁니다(색 · 벡터 · 열거형처럼 Other 갈래 — 리플렉션 글 표기로 왕복). 같은 값이면 쓰지 않습니다.
-         * @return 칸이 바뀌었으면 true 입니다.
+         * @brief 같은 타입의 필드끼리 값을 옮깁니다(색, 벡터, 열거형처럼 Other 종류이며, 리플렉션 텍스트 표기로 왕복합니다). 같은 값이면 쓰지 않습니다.
+         * @return 필드가 바뀌었으면 true 입니다.
          */
         [[nodiscard]] static bool copyValue( const UIPropertyPath& sourcePath, const void* pSourceRoot, const UIPropertyPath& targetPath, void* pTargetRoot );
     };

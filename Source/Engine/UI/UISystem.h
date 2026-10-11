@@ -1,6 +1,6 @@
 /**
  * @file UISystem.h
- * @brief 런타임 UI 의 엔진 서비스입니다 — 화면 스택 · 입력 → 사건 · 갱신 순서를 돕니다.
+ * @brief 런타임 UI 의 엔진 서비스입니다. 화면 스택, 입력에서 UI 이벤트로의 변환, 갱신 순서를 담당합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -43,11 +43,11 @@ namespace sw
     class UserSettingsManager;
     class WidgetComponent;
 
-    /** @brief UI 를 지금 무엇으로 다루는가입니다(CommonUI 의 입력 방식). 탐색이면 포커스 테두리를 보이고, 포인터면 숨긴다. */
+    /** @brief UI 를 지금 어떤 방식으로 다루는지 나타냅니다(CommonUI 의 입력 방식). 탐색이면 포커스 테두리를 보이고, 포인터면 숨깁니다. */
     enum class UIInputMode : uint8
     {
-        Pointer,   ///< 마우스 · 터치
-        Navigation ///< 키보드 · 게임패드
+        Pointer,   ///< 마우스, 터치
+        Navigation ///< 키보드, 게임패드
     };
 } // namespace sw
 
@@ -55,22 +55,25 @@ namespace sw
 {
     /**
      * @class UISystem
-     * @brief 런타임 UI 의 엔진 서비스입니다(`engine::getUISystem()` · 게임은 `game::getService<UISystem>()`).
-     * @details 언리얼 `FSlateApplication` + CommonUI `UCommonUIActionRouter` 의 자리입니다. 틱은 둘로 나뉩니다 —
-     *          `processInput`(입력 갱신 직후, 게임 틱 **앞** — UI 가 먹은 입력을 폰이 못 보게)과 `update`(게임 틱 **뒤**, 렌더 패킷 앞 —
-     *          이번 프레임의 게임 상태로 애니메이션 → 바인딩 → 스타일 → 레이아웃 → 그리기). 기동 단계 `UI`(Client 대상)가 `initialize` 합니다.
+     * @brief 런타임 UI 의 엔진 서비스입니다(`engine::getUISystem()`, 게임은 `game::getService<UISystem>()`).
+     * @details 언리얼의 `FSlateApplication` 과 CommonUI 의 `UCommonUIActionRouter` 에 해당한다.
+     *          틱은 둘로 나뉜다. `processInput` 은 입력 갱신 직후, 게임 틱 앞에서 돌아서 UI 가 처리한 입력을 폰이 보지 못하게 한다.
+     *          `update` 는 게임 틱 뒤, 렌더 패킷 앞에서 돌며 이번 프레임의 게임 상태로 애니메이션, 바인딩, 스타일, 레이아웃, 그리기를 순서대로 처리한다.
+     *          기동 단계 `UI`(Client 대상)가 `initialize` 한다.
      *
-     *          **화면 스택**: 화면은 층(`UILayer`)마다 쌓입니다 — 그리기 순서 = 층 순서 → 층 안 쌓인 순서, 입력은 그 역순입니다. 맨 위의 포커스 받는 화면이
-     *          **활성 화면**이고 포커스 · UI 행동을 받습니다. 모달 · 로딩 화면은 아래 화면과 게임의 입력을 막습니다(`isGameInputBlocked` — 플레이어 조종자가 본다).
-     *          덮인 화면은 그때의 포커스를 기억했다가 다시 활성이 되면 돌려줍니다. 닫기는 지연입니다(이번 입력 처리가 끝난 뒤).
+     *          **화면 스택**: 화면은 레이어(`UILayer`)마다 쌓인다. 그리기 순서는 레이어 순서, 같은 레이어 안에서는 쌓인 순서이고, 입력은 그 역순이다.
+     *          맨 위에서 포커스를 받는 화면이 **활성 화면**이며 포커스와 UI 액션을 받는다.
+     *          모달 화면과 로딩 화면은 아래 화면과 게임의 입력을 막는다(`isGameInputBlocked`, 플레이어 컨트롤러가 확인한다).
+     *          다른 화면에 덮인 화면은 그때의 포커스를 기억했다가 다시 활성이 되면 돌려준다. 닫기는 지연 처리하며, 이번 입력 처리가 끝난 뒤에 실행한다.
      *
-     *          **행동 입력**: UI 는 키 · 버튼을 직접 보지 않고 자기 입력 맵(`EngineDefaultAssets::_uiInputMap` — 레이어 `UI`, 활성 화면이 있을 때만 켠다)의
-     *          행동(`UI.Navigate*` · `UI.Accept` · `UI.Back` · `UI.FocusNext` …)을 받아 활성 화면의 포커스 경로로 보냅니다. UI 가 쓴 행동의 물리 입력은
-     *          뗄 때까지 **먹힌 입력**입니다(`isActionConsumed` — 플레이어 조종자가 의도를 만들 때 이것을 보는 한 자리라, 패드 A 로 메뉴를 누르면 점프하지 않는다).
-     *          위젯이 처리한 마우스 버튼도 먹힌다. 입력 방식(포인터 / 탐색)은 이번 프레임 마지막으로 쓴 장치로 정합니다. 글 입력 칸이 포커스를 쥐면
-     *          키보드 포커스 `UI` 를 잡습니다(그동안 게임은 키를 보지 못하고, UI 행동은 Back · Tab 만).
+     *          **액션 입력**: UI 는 키와 버튼을 직접 보지 않고 자기 입력 맵(`EngineDefaultAssets::_uiInputMap`, 레이어 `UI`, 활성 화면이 있을 때만 켠다)의
+     *          액션(`UI.Navigate*`, `UI.Accept`, `UI.Back`, `UI.FocusNext` 등)을 받아 활성 화면의 포커스 경로로 보낸다.
+     *          UI 가 사용한 액션의 물리 입력은 뗄 때까지 **소비된 입력**이다(`isActionConsumed`). 플레이어 컨트롤러가 의도를 만들 때 이것만 확인하면 되므로,
+     *          패드 A 로 메뉴를 눌러도 점프하지 않는다. 위젯이 처리한 마우스 버튼도 소비된다.
+     *          입력 방식(포인터 또는 탐색)은 이번 프레임에 마지막으로 쓴 장치로 정한다. 텍스트 입력 위젯이 포커스를 가지면
+     *          키보드 포커스 `UI` 를 잡는다. 그동안 게임은 키를 보지 못하고, UI 액션은 Back 과 Tab 만 받는다.
      *
-     *          핫 리로드: 내려가는 모듈 이미지에 vtable 이 있는 화면 · 위젯(게임 · 키트가 만든 타입)이 든 화면은 그 자리에서 닫습니다. 게임 스레드만.
+     *          핫 리로드: 언로드되는 모듈 이미지에 vtable 이 있는 화면과 위젯(게임이나 키트가 만든 타입)을 가진 화면은 그 자리에서 닫는다. 게임 스레드에서만 호출한다.
      */
     class SW_API UISystem final : public IModuleUnloadListener
     {
@@ -81,47 +84,47 @@ namespace sw
         UISystem& operator=( const UISystem& ) = delete;
 
         /**
-         * @brief 입력을 묶고 일을 시작합니다.
-         * @param inputManager 행동 · 포인터를 읽는 입력(테스트는 자기 것을 넘긴다).
-         * @param pFontSystem 글 측정 · 그리기가 쓰는 글꼴(레이아웃부터). 없으면 글 위젯이 크기 0 입니다.
-         * @param uiInputMapPath UI 행동 맵 리소스(`engine/input/ui.input.xml`). 비우면 UI 행동이 없습니다(포인터만).
-         * @return 행동 맵을 주었는데 읽지 못하면 false 입니다.
+         * @brief 입력을 연결하고 시작합니다.
+         * @param inputManager 액션과 포인터를 읽는 입력입니다(테스트는 자기 것을 넘깁니다).
+         * @param pFontSystem 텍스트 측정과 그리기가 쓰는 글꼴입니다(레이아웃부터 사용). 없으면 텍스트 위젯의 크기가 0 입니다.
+         * @param uiInputMapPath UI 액션 맵 리소스(`engine/input/ui.input.xml`)입니다. 비우면 UI 액션이 없습니다(포인터만 동작).
+         * @return 액션 맵을 지정했는데 읽지 못하면 false 입니다.
          */
         [[nodiscard]] bool initialize( InputManager& inputManager, FontSystem* pFontSystem, string_view uiInputMapPath = {} );
-        /** @brief 화면을 모두 닫고(지연 없이) 입력을 놓습니다. 건 게임 정지 요청도 풉니다. */
+        /** @brief 화면을 모두 즉시 닫고 입력을 놓습니다. 걸어 둔 게임 정지 요청도 해제합니다. */
         void shutdown();
         bool isInitialized() const { return _pInput != nullptr; }
 
-        /** @brief 입력 → UI 사건(게임 틱 앞). 뗀 입력 풀기 → UI 맵 갱신 → 입력 방식 → 포인터 → 행동 → 글 포커스 → 닫기 요청 적용 순서입니다. */
+        /** @brief 입력을 UI 이벤트로 처리합니다(게임 틱 앞). 순서는 뗀 입력 해제, UI 맵 갱신, 입력 방식 결정, 포인터, 액션, 텍스트 포커스, 닫기 요청 적용입니다. */
         void processInput( float32 deltaSeconds );
         /**
-         * @brief 애니메이션 → 바인딩 → 스타일 → 레이아웃 → 그리기(게임 틱 뒤). @p viewport 는 이번 프레임에 UI 를 그릴 화면입니다.
-         * @details 레이아웃은 화면 트리마다 `UILayoutPass::update( 트리, makeLayoutContext() )` — 화면마다 뷰포트(UI 단위) 전체가 루트 사각형입니다.
-         *          포인터 위치는 다음 `processInput` 이 이 뷰포트의 배율로 UI 단위로 바꿉니다.
+         * @brief 애니메이션, 바인딩, 스타일, 레이아웃, 그리기를 순서대로 처리합니다(게임 틱 뒤). @p viewport 는 이번 프레임에 UI 를 그릴 화면입니다.
+         * @details 레이아웃은 화면 트리마다 `UILayoutPass::update( 트리, makeLayoutContext() )` 로 돌린다. 화면마다 뷰포트(UI 단위) 전체가 루트 사각형이다.
+         *          포인터 위치는 다음 `processInput` 이 이 뷰포트의 배율로 UI 단위로 바꾼다.
          */
         void update( float32 deltaSeconds, const UIViewport& viewport );
 
         // --- 화면 스택 ---------------------------------------------------------------
-        /** @brief 화면을 그 층의 맨 위에 올립니다. 활성 화면이 바뀌면 포커스를 옮깁니다(탐색 방식이면 기본 포커스). */
+        /** @brief 화면을 해당 레이어의 맨 위에 올립니다. 활성 화면이 바뀌면 포커스를 옮깁니다(탐색 방식이면 기본 포커스). */
         UIScreenHandle pushScreen( unique_ptr<UIScreen> screen );
         /**
-         * @brief 화면을 닫습니다(지연 — 사건 처리 중에 닫아도 이번 경로가 끝난 뒤 · 다음 `processInput` 끝 · `update` 앞에서 지운다).
-         * @details 화면에 `Close` 애니메이션이 있으면 그것을 틀고 끝난 뒤 지웁니다 — 그동안 화면은 입력 · 포커스를 받지 않고 그려지기만 합니다.
+         * @brief 화면을 닫습니다. 지연 처리하므로 이벤트 처리 중에 닫아도 이번 경로가 끝난 뒤, 다음 `processInput` 끝과 `update` 앞에서 지웁니다.
+         * @details 화면에 `Close` 애니메이션이 있으면 재생하고 끝난 뒤 지운다. 그동안 화면은 입력과 포커스를 받지 않고 그리기만 한다.
          */
         void closeScreen( UIScreenHandle handle );
-        /** @brief 화면을 찾습니다. 없거나 이미 지웠으면 nullptr 입니다(닫는 중인 화면은 찾는다). */
+        /** @brief 화면을 찾습니다. 없거나 이미 지웠으면 nullptr 입니다(닫는 중인 화면은 찾을 수 있습니다). */
         UIScreen* findScreen( UIScreenHandle handle ) const;
-        /** @brief 지금 활성 화면(맨 위의 포커스 받는 화면 — 막는 화면 아래로는 내려가지 않는다)입니다. 없으면 nullptr 입니다. */
+        /** @brief 지금 활성 화면(맨 위에서 포커스를 받는 화면)을 반환합니다. 입력을 막는 화면 아래로는 내려가지 않습니다. 없으면 nullptr 입니다. */
         UIScreen* getActiveScreen() const;
         uint32    getScreenCount() const { return static_cast<uint32>( _listScreen.size() ); }
 
         // --- 문서 ---------------------------------------------------------------
         /**
-         * @brief UI 문서 @p documentPath 로 화면을 지어 올립니다 — 문서의 `UIScreenDesc` 로, 바인딩 식은 화면이 듭니다(`UIScreen::getBindings`).
-         * @return 읽지 못하거나 지을 수 없으면(모르는 타입 · 속성 · 값) 무효 핸들이고, 오류(파일 · 줄)를 로그에 남깁니다.
+         * @brief UI 문서 @p documentPath 로 화면을 생성해 올립니다. 문서의 `UIScreenDesc` 로 만들며, 바인딩 식은 화면이 보관합니다(`UIScreen::getBindings`).
+         * @return 읽지 못하거나 생성할 수 없으면(모르는 타입, 속성, 값) 무효 핸들이며, 오류(파일, 줄)를 로그에 남깁니다.
          */
         [[nodiscard]] UIScreenHandle openScreen( string_view documentPath ) { return openScreen<UIScreen>( documentPath ); }
-        /** @brief 문서를 C++ 화면 클래스 @p ScreenType(`onCommand` · `onBack` 을 덮어쓴 것 — 생성자는 `( const UIScreenDesc&, unique_ptr<Widget> )`)으로 엽니다. */
+        /** @brief 문서를 C++ 화면 클래스 @p ScreenType 으로 엽니다. `onCommand` 와 `onBack` 을 재정의한 클래스여야 하며, 생성자는 `( const UIScreenDesc&, unique_ptr<Widget> )` 형태입니다. */
         template <typename ScreenType>
         [[nodiscard]] UIScreenHandle openScreen( string_view documentPath )
         {
@@ -133,129 +136,129 @@ namespace sw
                 return kInvalidUIScreenHandle;
             return pushDocumentScreen( sw::make_unique<ScreenType>( desc, std::move( root ) ), documentPath, std::move( listBinding ), std::move( listStyleSheet ) );
         }
-        /** @brief 바인딩 변환기 표입니다(`{bind:필드, converter=이름}`). 게임 · 키트가 자기 변환기를 더한다 — 모듈이 내려가면 그 함수는 걷힌다. */
+        /** @brief 바인딩 변환기 레지스트리입니다(`{bind:필드, converter=이름}`). 게임과 키트가 자기 변환기를 추가하며, 모듈이 언로드되면 그 함수는 제거됩니다. */
         UIBindingConverterRegistry&       getBindingConverters() { return _bindingConverters; }
         const UIBindingConverterRegistry& getBindingConverters() const { return _bindingConverters; }
-        /** @brief UI 문서 캐시입니다(기동 단계 `UI` 가 에셋 캐시 레지스트리에 올린다 — 핫 리로드 · 진단). */
+        /** @brief UI 문서 캐시입니다. 기동 단계 `UI` 가 에셋 캐시 레지스트리에 등록하며, 핫 리로드와 진단에 쓰입니다. */
         UIDocumentCache&       getDocumentCache() { return _documentCache; }
         const UIDocumentCache& getDocumentCache() const { return _documentCache; }
 
-        // --- 엔진 기본 메뉴(옵션 · 일시정지) ---------------------------------------------------
-        /** @brief 옵션 메뉴 문서입니다(기동 단계 `UI` — 엔진 기본 `engine/ui/options.ui.xml`, 게임 프리셋 `_uiOptionsDocument` 가 덮어쓴다). */
+        // --- 엔진 기본 메뉴(옵션, 일시정지) ---------------------------------------------------
+        /** @brief 옵션 메뉴 문서입니다. 기동 단계 `UI` 가 엔진 기본 `engine/ui/options.ui.xml` 로 정하며, 게임 프리셋의 `_uiOptionsDocument` 가 덮어씁니다. */
         const string& getOptionsMenuDocument() const { return _optionsMenuDocument; }
         void          setOptionsMenuDocument( string_view documentPath ) { _optionsMenuDocument = documentPath; }
         /**
-         * @brief 일시정지 메뉴 문서를 겁니다. 비우면(기본) 일시정지 메뉴가 없습니다. 걸면 화면이 없을 때 UI 맵의 `UI.Pause`(Esc · 패드 Start)가
-         *        `PauseMenuScreen` 으로 엽니다 — 그 입력은 UI 가 먹어 게임 행동(마우스 잠금 토글 등)이 보지 못한다.
+         * @brief 일시정지 메뉴 문서를 지정합니다. 비우면(기본) 일시정지 메뉴가 없습니다.
+         * @details 지정하면 화면이 없을 때 UI 맵의 `UI.Pause`(Esc, 패드 Start)가 `PauseMenuScreen` 을 엽니다. 그 입력은 UI 가 소비하므로 게임 액션(마우스 잠금 토글 등)은 보지 못한다.
          */
         void          setPauseMenuDocument( string_view documentPath );
         const string& getPauseMenuDocument() const { return _pauseMenuDocument; }
-        /** @brief 설정 출처입니다(`setUserSettings` 가 준 것, 없으면 엔진 서비스 — 그것도 없으면 nullptr). 옵션 메뉴 · 설정 바인딩이 쓴다. */
+        /** @brief 설정 출처입니다. `setUserSettings` 로 받은 것이고, 없으면 엔진 서비스이며, 그것도 없으면 nullptr 입니다. 옵션 메뉴와 설정 바인딩이 씁니다. */
         UserSettingsManager* findUserSettings() const;
-        /** @brief 알림 · 토스트입니다(오버레이 층 — 셋까지 쌓고 대기열 · 같은 글 합치기). 게임 · 키트가 `post` 한다. */
+        /** @brief 알림과 토스트입니다. 오버레이 레이어에서 세 개까지 쌓고, 대기열을 두며, 같은 글은 합칩니다. 게임과 키트가 `post` 합니다. */
         UINotificationService&       getNotifications() { return _notifications; }
         const UINotificationService& getNotifications() const { return _notifications; }
-        /** @brief `[action=이름]` 태그의 글리프 출처입니다(게임 입력 맵 → UI 맵, 지금 장치 종류). */
+        /** @brief `[action=이름]` 태그의 글리프 출처입니다(게임 입력 맵, UI 맵, 지금 장치 종류). */
         const UIActionGlyphSource& getActionGlyphs() const { return _actionGlyphs; }
 
-        // --- 스타일 · 테마 ---------------------------------------------------------------
-        /** @brief 스타일 시트 캐시입니다(기동 단계 `UI` 가 에셋 캐시 레지스트리에 올린다). */
+        // --- 스타일과 테마 ---------------------------------------------------------------
+        /** @brief 스타일 시트 캐시입니다. 기동 단계 `UI` 가 에셋 캐시 레지스트리에 등록합니다. */
         UIStyleSheetCache& getStyleSheetCache() { return _styleSheetCache; }
         /**
-         * @brief 고를 수 있는 테마를 겁니다(기동 단계 `UI` — `engine/ui/uithemes.xml` · 게임 프리셋 `_uiThemes`).
-         * @details 사용자 설정 `gv_uiTheme`(accessibility.uiTheme)의 테마가 목록에 있으면 그것, 없으면 목록의 기본 테마로 바꿉니다. 그 뒤 설정이 바뀌면
-         *          `update` 가 따라갑니다(모르는 이름이면 경고하고 지금 테마를 둔다).
+         * @brief 선택할 수 있는 테마를 등록합니다(기동 단계 `UI`, `engine/ui/uithemes.xml`, 게임 프리셋 `_uiThemes`).
+         * @details 사용자 설정 `gv_uiTheme`(accessibility.uiTheme)의 테마가 목록에 있으면 그 테마로, 없으면 목록의 기본 테마로 바꾼다. 그 뒤 설정이 바뀌면
+         *          `update` 가 따라간다(모르는 이름이면 경고하고 지금 테마를 유지한다).
          */
         void                  setThemeCatalog( const UIThemeCatalog& catalog );
         const UIThemeCatalog& getThemeCatalog() const { return _themeCatalog; }
         /**
-         * @brief 테마를 고릅니다 — 모든 화면의 스타일 묶음을 테마 시트 → 문서 시트로 다시 걸고 트리 전체를 다시 맞춥니다. 모르는 이름이면 false 입니다.
-         * @details 읽지 못한 시트는 오류를 남기고 뺍니다(나머지 시트로 그린다).
+         * @brief 테마를 선택합니다. 모든 화면의 스타일 시트를 테마 시트, 문서 시트 순서로 다시 적용하고 트리 전체를 다시 맞춥니다. 모르는 이름이면 false 입니다.
+         * @details 읽지 못한 시트는 오류를 남기고 제외한다(나머지 시트로 그린다).
          */
         [[nodiscard]] bool   setTheme( const hashed_string& name );
         const hashed_string& getThemeName() const { return _themeName; }
         // --- 화면 마커(WidgetComponent Screen) -------------------------------------------
         /**
-         * @brief 마커 화면(HUD 층 · 캔버스 패널 루트 · 클릭을 막지 않음)에 위젯을 붙이고 그 번호를 돌려줍니다. 마커 화면은 처음 붙일 때 만들고 마지막을 뗄 때 닫는다.
-         * @details 위치는 붙인 쪽이 슬롯 앵커 · 오프셋으로 매 프레임 정한다(`WidgetComponent::applyPlacement`).
+         * @brief 마커 화면(HUD 레이어, 캔버스 패널 루트, 클릭을 막지 않음)에 위젯을 붙이고 그 번호를 반환합니다. 마커 화면은 처음 붙일 때 만들고, 마지막 위젯을 뗄 때 닫습니다.
+         * @details 위치는 붙인 쪽이 슬롯 앵커와 오프셋으로 매 프레임 정한다(`WidgetComponent::applyPlacement`).
          */
         WidgetID addScreenMarker( unique_ptr<Widget> widget );
         /** @brief 마커 위젯을 떼어 지웁니다. */
         void removeScreenMarker( WidgetID widget );
-        /** @brief 마커 위젯입니다(없으면 nullptr). */
+        /** @brief 마커 위젯을 반환합니다(없으면 nullptr). */
         Widget* findScreenMarker( WidgetID widget ) const;
-        /** @brief 위젯 컴포넌트를 등록합니다 — `update` 가 레이아웃 앞에서 화면 마커 자리를 갱신한다(시작할 때 컴포넌트가 부른다). */
+        /** @brief 위젯 컴포넌트를 등록합니다. 컴포넌트가 시작할 때 부르며, `update` 가 레이아웃 앞에서 화면 마커 위치를 갱신합니다. */
         void   registerWidgetComponent( WidgetComponent& component );
         void   unregisterWidgetComponent( WidgetComponent& component );
         uint32 getWidgetComponentCount() const { return static_cast<uint32>( _listWidgetComponent.size() ); }
-        /** @brief World 위젯 컴포넌트의 렌더 텍스처 목록을 덧붙입니다(`EngineLoop` 가 렌더 패킷 캔버스의 대상 목록에 — 렌더러가 장면 앞에서 그린다). */
+        /** @brief World 위젯 컴포넌트의 렌더 텍스처 목록을 덧붙입니다. `EngineLoop` 가 렌더 패킷 캔버스의 대상 목록에 넣으며, 렌더러가 장면 앞에서 그립니다. */
         void collectWorldCanvases( vector<CanvasTargetDrawList>& inoutListTarget ) const;
 
         // --- 오프스크린 화면(에디터 UI 미리보기) -----------------------------------------------
         /**
-         * @brief 문서 @p documentPath 를 화면 스택 **밖**에서 지어 렌더 텍스처 @p targetPath(`rendertarget/...`)에 그립니다 — 입력 · 포커스 없음, 게임 UI 와 섞이지 않는다.
-         * @details 스타일 · 테마 · 핫 리로드는 스택의 화면과 같은 길이다(문서를 고치면 미리보기도 다시 짓는다). 그리기 목록은 `collectWorldCanvases` 가 렌더 텍스처 대상으로 낸다.
-         * @return 짓지 못하면 무효 핸들입니다(오류는 로그).
+         * @brief 문서 @p documentPath 를 화면 스택 밖에서 생성해 렌더 텍스처 @p targetPath(`rendertarget/...`)에 그립니다. 입력과 포커스가 없고 게임 UI 와 섞이지 않습니다.
+         * @details 스타일, 테마, 핫 리로드는 스택의 화면과 같은 경로로 처리한다(문서를 고치면 미리보기도 다시 생성한다). 그리기 목록은 `collectWorldCanvases` 가 렌더 텍스처 대상으로 내보낸다.
+         * @return 생성하지 못하면 무효 핸들입니다(오류는 로그에 남깁니다).
          */
         UIScreenHandle openOffscreenScreen( string_view documentPath, string_view targetPath );
         void           closeOffscreenScreen( UIScreenHandle handle );
         UIScreen*      findOffscreenScreen( UIScreenHandle handle ) const;
         /**
-         * @brief 오프스크린 화면의 뷰포트(UI 단위 크기 · 배율 · 안전 영역 — 렌더 텍스처 = 물리 크기) · 글자 배율 · 테마(빈 이름 = 지금 테마)를 정합니다.
-         * @details 테마가 바뀌면 그 화면의 스타일 묶음만 다시 건다(게임 UI 의 테마는 그대로).
+         * @brief 오프스크린 화면의 뷰포트(UI 단위 크기, 배율, 안전 영역. 렌더 텍스처 크기가 물리 크기), 글자 배율, 테마(빈 이름이면 지금 테마)를 정합니다.
+         * @details 테마가 바뀌면 그 화면의 스타일 시트만 다시 적용한다(게임 UI 의 테마는 그대로다).
          */
         void setOffscreenView( UIScreenHandle handle, const UIViewport& viewport, float32 textScale, const hashed_string& theme );
 
         // --- 핫 리로드 ---------------------------------------------------------------
         /**
-         * @brief 문서 @p documentPath 가 바뀌었다 — 그 문서(또는 그것을 조각으로 쓰는 문서)로 연 화면을 새로 짓습니다(캐시의 다시 읽기 알림이 부른다).
-         * @details 포커스 위젯 · 스크롤 패널의 스크롤 오프셋을 **이름으로** 기억했다가 새 트리의 같은 이름에 돌려줍니다. 짓기가 실패하면 옛 트리를 그대로 둡니다.
-         *          화면 서술(층 · 모달 …)은 바꾸지 않습니다(스택 순서가 흔들리지 않게 — 다음에 열 때 새 서술).
+         * @brief 문서 @p documentPath 가 바뀌었을 때, 그 문서(또는 그것을 조각으로 쓰는 문서)로 연 화면을 새로 생성합니다(캐시의 다시 읽기 알림이 부릅니다).
+         * @details 포커스 위젯과 스크롤 패널의 스크롤 오프셋을 이름으로 기억했다가 새 트리의 같은 이름에 복원한다. 생성이 실패하면 기존 트리를 그대로 둔다.
+         *          화면 서술(레이어, 모달 등)은 바꾸지 않는다. 스택 순서가 흔들리지 않게 하기 위해서이며, 다음에 열 때 새 서술을 쓴다.
          */
         void onDocumentReloaded( string_view documentPath );
-        /** @brief 스타일 시트 @p sheetPath 가 바뀌었다 — 그 시트를 쓰는 화면의 스타일 묶음을 다시 걸고 위젯을 다시 맞춥니다(트리는 그대로). */
+        /** @brief 스타일 시트 @p sheetPath 가 바뀌었을 때, 그 시트를 쓰는 화면의 스타일 시트를 다시 적용하고 위젯을 다시 맞춥니다(트리는 그대로). */
         void onStyleSheetReloaded( string_view sheetPath );
 
         // --- 애니메이션 ---------------------------------------------------------------
         /**
-         * @brief 위젯 @p widget 의 프로퍼티 @p propertyPath 를 지금 값에서 @p endValue(글 표기)로 @p duration 초 동안 옮깁니다(코드 한 줄 트윈 — Godot `Tween`).
-         * @details 그 위젯이 든 화면의 재생기(`UIScreen::getAnimationPlayer`)가 돌립니다. 같은 위젯 · 경로의 트윈은 새 것이 대신합니다.
-         * @return 위젯이 어느 화면에도 없거나 경로 · 값을 읽지 못하면 경고하고 false 입니다.
+         * @brief 위젯 @p widget 의 프로퍼티 @p propertyPath 를 지금 값에서 @p endValue(텍스트 표기)까지 @p duration 초 동안 옮깁니다(코드 한 줄 트윈, Godot 의 `Tween` 에 해당).
+         * @details 그 위젯이 속한 화면의 재생기(`UIScreen::getAnimationPlayer`)가 돌린다. 같은 위젯과 경로의 트윈은 새 것이 대신한다.
+         * @return 위젯이 어느 화면에도 없거나 경로나 값을 읽지 못하면 경고하고 false 입니다.
          */
         bool tween( WidgetID widget, string_view propertyPath, string_view endValue, float32 duration, BlendCurve curve = BlendCurve::EaseOut );
 
         // --- 자막 ---------------------------------------------------------------
-        /** @brief 자막(오버레이 층 아래 가운데, 둘까지 — 사용자 설정의 끔/켬 · 크기 · 배경)입니다. */
+        /** @brief 자막입니다. 오버레이 레이어 아래 가운데에 최대 둘까지 표시하며, 사용자 설정의 끔/켬, 크기, 배경을 따릅니다. */
         UISubtitleService&       getSubtitles() { return _subtitles; }
         const UISubtitleService& getSubtitles() const { return _subtitles; }
 
         // --- 게임 쪽이 묻는 것 -----------------------------------------------------------
-        /** @brief 모달 · 로딩 화면이 떠 있어 게임 입력을 막아야 하면 true 입니다(플레이어 조종자가 의도를 0 으로 둔다). */
+        /** @brief 모달이나 로딩 화면이 떠 있어 게임 입력을 막아야 하면 true 입니다(플레이어 컨트롤러가 의도를 0 으로 둡니다). */
         bool isGameInputBlocked() const;
-        /** @brief Loading 층 화면(로딩 화면)이 떠 있으면 true 입니다(닫는 중은 뺀다) — 자동화의 "씬 플레이 중" 은 이것이 걷힌 뒤다. */
+        /** @brief Loading 레이어 화면(로딩 화면)이 떠 있으면 true 입니다(닫는 중인 화면은 제외). 자동화의 "씬 플레이 중" 판정은 이 값이 false 가 된 뒤에 합니다. */
         bool isLoadingScreenShown() const;
         /**
-         * @brief 화면(로딩 · HUD · 메뉴) 그리기와 포인터 입력을 막거나 풉니다. 화면 상태(스택 · 포커스)는 그대로이고 오프스크린 미리보기는 그대로 그린다.
-         * @details 게임 update 가 돌지 않는 동안(에디터 멈춤 · Simulate) 호스트가 켠다 — 그 화면을 닫을 게임 코드가 돌지 않으므로 그리면 편집 화면을 덮은 채 남는다
+         * @brief 화면(로딩, HUD, 메뉴) 그리기와 포인터 입력을 막거나 해제합니다. 화면 상태(스택, 포커스)는 그대로이고, 오프스크린 미리보기는 계속 그립니다.
+         * @details 게임 update 가 돌지 않는 동안(에디터 멈춤, Simulate) 호스트가 켠다. 그 화면을 닫을 게임 코드가 돌지 않으므로, 그리면 편집 화면을 덮은 채 남기 때문이다
          *          (언리얼 에디터 뷰포트도 PIE 전에는 UMG 위젯이 없다).
          */
         void setOnScreenSuppressed( bool bSuppressed ) { _bOnScreenSuppressed = bSuppressed ? SW_TRUE : SW_FALSE; }
         bool isOnScreenSuppressed() const { return _bOnScreenSuppressed == SW_TRUE; }
-        /** @brief 활성 화면이 OS 커서를 바라면 true 입니다(플레이어 조종자가 마우스 잠금을 쉰다). */
+        /** @brief 활성 화면이 OS 커서를 필요로 하면 true 입니다(플레이어 컨트롤러가 마우스 잠금을 쉽니다). */
         bool wantsCursor() const;
-        /** @brief @p inputMap 의 행동 @p action 을 지금 누르는 물리 입력이 모두 UI 가 먹은 것이면 true 입니다(플레이어 조종자가 묻는다). */
+        /** @brief @p inputMap 의 액션 @p action 을 지금 누르는 물리 입력이 모두 UI 에 소비된 것이면 true 입니다(플레이어 컨트롤러가 묻습니다). */
         bool isActionConsumed( const InputMap& inputMap, const hashed_string& action ) const;
-        /** @brief @p inputMap 의 행동 @p action 이 지금 쓰는 물리 입력을 먹습니다(UI 가 그 행동을 처리했다). */
+        /** @brief @p inputMap 의 액션 @p action 이 지금 쓰는 물리 입력을 소비합니다(UI 가 그 액션을 처리했습니다). */
         void consumeAction( const InputMap& inputMap, const hashed_string& action );
-        /** @brief 마우스 버튼 @p button 을 먹습니다. */
+        /** @brief 마우스 버튼 @p button 을 소비합니다. */
         void consumeMouseButton( MouseButton button ) { _consumption.consumeMouseButton( button ); }
-        /** @brief 원시 입력 슬롯 @p slot 을 먹습니다(키 바인딩 창이 받은 키 — 뗄 때까지 게임 · UI 행동이 보지 못한다). */
+        /** @brief 원시 입력 슬롯 @p slot 을 소비합니다(키 바인딩 창이 받은 키이며, 뗄 때까지 게임과 UI 액션이 보지 못합니다). */
         void                      consumeSlot( const InputSlot& slot ) { _consumption.consumeSlot( slot ); }
         const UIInputConsumption& getInputConsumption() const { return _consumption; }
-        /** @brief UI 행동 맵입니다(행동 맵을 주지 않았으면 nullptr). */
+        /** @brief UI 액션 맵입니다(액션 맵을 지정하지 않았으면 nullptr). */
         InputMap* getUIInputMap() const { return _uiInputMap.get(); }
 
-        // --- 포커스 · 입력 방식 ---------------------------------------------------------------
+        // --- 포커스와 입력 방식 ---------------------------------------------------------------
         UIFocusManager&       getFocusManager() { return _focus; }
         const UIFocusManager& getFocusManager() const { return _focus; }
         const UIPointerState& getPointerState() const { return _pointer; }
@@ -266,133 +269,133 @@ namespace sw
         InputManager*     getInputManager() const { return _pInput; }
         FontSystem*       getFontSystem() const { return _pFontSystem; }
         const UIViewport& getViewport() const { return _viewport; }
-        /** @brief 글 측정 엔진입니다(글꼴이 없으면 nullptr). 레이아웃 문맥이 넘긴다. */
+        /** @brief 텍스트 측정 엔진입니다(글꼴이 없으면 nullptr). 레이아웃 컨텍스트가 넘깁니다. */
         TextLayoutEngine* getTextLayout() const { return _textLayout.get(); }
 
-        /** @brief 해상도 → 배율 규칙입니다(기동 단계 `UI` 가 `engine/ui/uiscale.xml` · 게임 프리셋 `_uiScaleSettings` 로 정한다). */
+        /** @brief 해상도에서 배율을 구하는 규칙입니다. 기동 단계 `UI` 가 `engine/ui/uiscale.xml` 과 게임 프리셋 `_uiScaleSettings` 로 정합니다. */
         const UIScaleSettings& getScaleSettings() const { return _scaleSettings; }
         void                   setScaleSettings( const UIScaleSettings& settings ) { _scaleSettings = settings; }
         /**
-         * @brief 물리 화면 크기로 이번 프레임의 UI 뷰포트를 만듭니다 — 배율 = 규칙 × gv_uiScale(× 창 배율, 설정이 켤 때), 안전 영역 = gv_uiDebugSafeZone.
-         * @param contentScale 창의 OS 배율(`IWindow::getContentScale`).
+         * @brief 물리 화면 크기로 이번 프레임의 UI 뷰포트를 만듭니다. 배율은 규칙 × gv_uiScale(설정이 켜면 × 창 배율)이고, 안전 영역은 gv_uiDebugSafeZone 입니다.
+         * @param contentScale 창의 OS 배율입니다(`IWindow::getContentScale`).
          */
         UIViewport computeViewport( const float2& physicalSize, float32 contentScale ) const;
         /**
-         * @brief 지금 뷰포트(`update` 가 받은 것) · gv_uiTextScale · 글 측정 · 문화권 방향으로 레이아웃 문맥을 만듭니다(`UILayoutPass::update` 에 넘긴다).
-         * @details 루트의 흐름 방향 = 문화권이 오른쪽에서 왼쪽인가(`UILayoutPass::isCultureRightToLeft`) — 문화권이 바뀌면 다음 걷기가 트리를 다시 놓는다.
+         * @brief 지금 뷰포트(`update` 가 받은 것), gv_uiTextScale, 텍스트 측정, 문화권 방향으로 레이아웃 컨텍스트를 만듭니다(`UILayoutPass::update` 에 넘깁니다).
+         * @details 루트의 흐름 방향은 문화권이 오른쪽에서 왼쪽인지(`UILayoutPass::isCultureRightToLeft`)로 정한다. 문화권이 바뀌면 다음 순회에서 트리를 다시 배치한다.
          */
         UILayoutContext makeLayoutContext() const;
-        /** @brief 지금 글리프 캐시 · 글 배치 · 배율 · 프레임 번호로 그리기 문맥을 만듭니다(그리기 걷기에 넘긴다). */
+        /** @brief 지금 글리프 캐시, 텍스트 레이아웃, 배율, 프레임 번호로 그리기 컨텍스트를 만듭니다(그리기 순회에 넘깁니다). */
         UIPaintContext makePaintContext() const;
         /**
-         * @brief 이번 프레임의 UI 그리기 목록입니다(물리 픽셀 — 대상 크기 = 뷰포트 물리 크기). `EngineLoop` 가 렌더 패킷의 주 출력 캔버스에 싣는다.
-         * @details 화면을 그리기 순서(층 → 쌓인 순서)로, 화면마다 위젯 그림 캐시를 이어 붙이고, 탐색 입력 방식이면 포커스 테두리를 그 화면 위에 얹는다.
+         * @brief 이번 프레임의 UI 그리기 목록입니다(물리 픽셀, 대상 크기는 뷰포트의 물리 크기). `EngineLoop` 가 렌더 패킷의 주 출력 캔버스에 싣습니다.
+         * @details 화면을 그리기 순서(레이어, 쌓인 순서)로 이어 붙이면서 화면마다 위젯 그리기 캐시를 연결하고, 탐색 입력 방식이면 포커스 테두리를 그 화면 위에 덧그린다.
          */
         const CanvasDrawList& getCanvas() const { return _canvas; }
-        /** @brief 그리기 목록 내용이 바뀔 때만 오르는 번호입니다(1 부터 — 렌더러가 같으면 사각형을 다시 올리지 않는다). */
+        /** @brief 그리기 목록 내용이 바뀔 때만 오르는 번호입니다(1 부터 시작하며, 같으면 렌더러가 사각형을 다시 업로드하지 않습니다). */
         uint64 getCanvasRevision() const { return _canvasRevision; }
         /**
-         * @brief 스택의 화면마다 레이아웃 덤프(`UILayoutDump`, 물리 픽셀)를 그리기 순서로 이어 씁니다 — 화면마다 첫 줄 `## <문서 경로 또는 (code)>`.
-         * @details 실기동 테스트(`AppUITest` — 시나리오 단계 `UILayoutDump`)이 위젯 이름으로 스크린샷 안의 사각형을 찾는 길입니다.
+         * @brief 스택의 화면마다 레이아웃 덤프(`UILayoutDump`, 물리 픽셀)를 그리기 순서로 이어 씁니다. 화면마다 첫 줄은 `## <문서 경로 또는 (code)>` 입니다.
+         * @details 실기동 테스트(`AppUITest`, 시나리오 단계 `UILayoutDump`)가 위젯 이름으로 스크린샷 안의 사각형을 찾는 경로다.
          */
         string makeLayoutDump() const;
-        /** @brief 문화권 출처를 정합니다(테스트가 자기 것을 넘긴다 — 전역 문화권을 건드리지 않게). nullptr 이면 바인딩된 엔진 서비스입니다. */
+        /** @brief 문화권 출처를 정합니다. 테스트가 자기 것을 넘겨 전역 문화권을 건드리지 않게 합니다. nullptr 이면 바인딩된 엔진 서비스를 씁니다. */
         void setLocalization( const LocalizationManager* pLocalization ) { _pLocalization = pLocalization; }
-        /** @brief 설정 바인딩(`{setting:id}`)의 출처를 정합니다(테스트가 자기 것을 넘긴다). nullptr 이면 바인딩된 엔진 서비스입니다. 화면 바인딩은 다시 걸린다. */
+        /** @brief 설정 바인딩(`{setting:id}`)의 출처를 정합니다. 테스트가 자기 것을 넘길 수 있고, nullptr 이면 바인딩된 엔진 서비스를 씁니다. 화면 바인딩은 다시 연결됩니다. */
         void setUserSettings( UserSettingsManager* pSettings );
 
         const utf8* getModuleUnloadListenerName() const override { return "ui screens"; }
-        /** @brief vtable 이 [@p pBegin, @p pEnd) 안인 화면 · 위젯이 든 화면을 그 자리에서 닫습니다. 닫은 화면 수를 반환합니다. */
+        /** @brief vtable 이 [@p pBegin, @p pEnd) 안에 있는 화면과 위젯을 가진 화면을 그 자리에서 닫습니다. 닫은 화면 수를 반환합니다. */
         uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
 
     private:
-        /** @brief 문서를 캐시에서 찾아 위젯 트리를 짓습니다. 스타일 시트는 문서와 조각(끼운 순서)의 것을 모읍니다. 실패하면 오류를 로그에 남기고 nullptr 입니다. */
+        /** @brief 문서를 캐시에서 찾아 위젯 트리를 생성합니다. 스타일 시트는 문서와 조각(끼워 넣은 순서)의 것을 모읍니다. 실패하면 오류를 로그에 남기고 nullptr 를 반환합니다. */
         unique_ptr<Widget> instantiateDocument( string_view documentPath, UIScreenDesc& outDesc, vector<UIBindingDesc>& outListBinding, vector<string>& outListStyleSheet );
-        /** @brief 문서로 지은 화면에 문서 경로 · 바인딩 · 스타일 시트를 적고 올립니다. */
+        /** @brief 문서로 생성한 화면에 문서 경로, 바인딩, 스타일 시트를 기록하고 올립니다. */
         UIScreenHandle pushDocumentScreen( unique_ptr<UIScreen> screen, string_view documentPath, vector<UIBindingDesc> listBinding, vector<string> listStyleSheet );
-        /** @brief 화면의 스타일 묶음을 테마 @p themeName(빈 이름 = 지금 테마) 시트 → 화면 시트로 다시 걸고 트리 전체를 다시 맞추게 합니다. */
+        /** @brief 화면의 스타일 시트를 테마 @p themeName(빈 이름이면 지금 테마) 시트, 화면 시트 순서로 다시 적용하고 트리 전체를 다시 맞추게 합니다. */
         void rebuildStyleSet( UIScreen& screen, const hashed_string& themeName = hashed_string{} );
-        /** @brief 오프스크린 화면마다 스타일 · 레이아웃 · 그리기를 자기 뷰포트로 돌립니다(`update` 끝). */
+        /** @brief 오프스크린 화면마다 스타일, 레이아웃, 그리기를 자기 뷰포트로 돌립니다(`update` 끝). */
         void updateOffscreenScreens();
-        /** @brief 화면 @p screen 의 트리를 그 문서로 새로 짓습니다(포커스 · 스크롤을 이름으로 이어 간다). 실패하면 옛 트리를 두고 false 입니다. */
+        /** @brief 화면 @p screen 의 트리를 그 문서로 새로 생성합니다(포커스와 스크롤을 이름으로 이어 갑니다). 실패하면 기존 트리를 두고 false 를 반환합니다. */
         bool rebuildScreenFromDocument( UIScreen& screen );
-        /** @brief 화면 문서(`_documentPath`)의 애니메이션을 재생기에 겁니다 — 재생 중인 애니메이션 · 트윈은 멈춘다(옛 트리의 위젯 번호를 가리킨다). */
+        /** @brief 화면 문서(`_documentPath`)의 애니메이션을 재생기에 등록합니다. 재생 중인 애니메이션과 트윈은 멈춥니다(기존 트리의 위젯 번호를 가리키기 때문입니다). */
         void applyDocumentAnimations( UIScreen& screen );
-        /** @brief 문서 @p documentPath 가 조각 사슬로 @p usedPath 를 쓰는가(자기 자신 포함)입니다. */
+        /** @brief 문서 @p documentPath 가 조각 연쇄로 @p usedPath 를 쓰는지(자기 자신 포함) 반환합니다. */
         bool isDocumentUsing( const string& documentPath, string_view usedPath );
         /** @brief 모듈 다시 로드로 닫은 문서 화면을 다시 엽니다(다음 `update` 앞). */
         void reopenClosedScreens();
-        /** @brief 시트들을 캐시에서 읽습니다(읽지 못한 것은 오류를 남기고 뺀다). */
+        /** @brief 시트를 캐시에서 읽습니다(읽지 못한 것은 오류를 남기고 제외합니다). */
         void appendStyleSheets( const vector<string>& listPath, vector<shared_ptr<const UIStyleSheetAsset>>& inoutListSheet );
-        /** @brief 이번 프레임 원시 사건에서 마지막으로 쓴 장치로 입력 방식을 정합니다(커서는 자리가 실제로 바뀐 이동만). */
+        /** @brief 이번 프레임 원시 이벤트에서 마지막으로 쓴 장치로 입력 방식을 정합니다(커서는 위치가 실제로 바뀐 이동만 인정합니다). */
         void updateInputMode();
-        /** @brief UI 행동을 활성 화면으로 보냅니다(탐색 · 스틱 · 확인 · 뒤로 · 탭). */
+        /** @brief UI 액션을 활성 화면으로 보냅니다(탐색, 스틱, 확인, 뒤로, 탭). */
         void processActions( float32 deltaSeconds );
-        /** @brief 탐색 행동 하나 — 포커스 경로에 먼저, 아무도 안 먹으면 포커스를 옮긴다. 썼으면 true 입니다. */
+        /** @brief 탐색 액션 하나를 처리합니다. 포커스 경로에 먼저 보내고, 아무도 소비하지 않으면 포커스를 옮깁니다. 사용했으면 true 입니다. */
         bool handleNavigation( UIScreen& screen, const hashed_string& action, UINavigationDirection direction );
-        /** @brief 스틱 탐색 — 크게 기울면 큰 축 방향으로 한 번, 그 뒤 탐색 반복 간격으로 반복합니다. */
+        /** @brief 스틱 탐색을 처리합니다. 크게 기울이면 큰 축 방향으로 한 번 이동하고, 그 뒤 탐색 반복 간격으로 반복합니다. */
         void processStickNavigation( UIScreen& screen, float32 deltaSeconds );
-        /** @brief 스크롤 행동(`UI.Scroll` — 오른쪽 스틱)을 포커스 경로(없으면 포인터가 올라간 경로)로 보냅니다. 스크롤 패널이 쓰면 먹습니다. */
+        /** @brief 스크롤 액션(`UI.Scroll`, 오른쪽 스틱)을 포커스 경로로 보냅니다. 포커스 경로가 없으면 포인터가 올라간 경로로 보냅니다. 스크롤 패널이 쓰면 소비합니다. */
         void processScroll( UIScreen& screen );
-        /** @brief 행동 사건 하나를 활성 화면의 포커스 경로로 보냅니다. 처리됐으면 true 입니다. */
+        /** @brief 액션 이벤트 하나를 활성 화면의 포커스 경로로 보냅니다. 처리됐으면 true 입니다. */
         bool routeAction( UIScreen& screen, const hashed_string& action, const float2& value );
-        /** @brief 행동 사건 하나를 @p path 로 보냅니다(이번 입력 프레임 시간을 싣는다). 처리됐으면 true 입니다. */
+        /** @brief 액션 이벤트 하나를 @p path 로 보냅니다(이번 입력 프레임 시간을 싣습니다). 처리됐으면 true 입니다. */
         bool routeActionAlong( UIScreen& screen, const UIWidgetPath& path, const hashed_string& action, const float2& value );
-        /** @brief 포커스 위젯이 글 입력 칸이면 키보드 포커스 `UI` 를 잡고, 아니면 놓습니다. */
+        /** @brief 포커스 위젯이 텍스트 입력 위젯이면 키보드 포커스 `UI` 를 잡고, 아니면 놓습니다. */
         void updateKeyboardFocus();
         /** @brief 키보드 포커스가 `UI` 일 때 오는 글자를 포커스 위젯에 보냅니다. */
         void onTextInput( string_view text );
         /** @brief 키보드 포커스가 `UI` 일 때 오는 조합 중 글자를 포커스 위젯에 보냅니다. */
         void onTextComposition( string_view text );
-        /** @brief 글자 사건을 포커스 위젯 하나에 보냅니다. */
+        /** @brief 글자 이벤트를 포커스 위젯 하나에 보냅니다. */
         void dispatchTextEvent( string_view text, bool bComposition );
-        /** @brief 마우스 상태를 포인터 사건으로 바꿔 화면들로 보냅니다. */
+        /** @brief 마우스 상태를 포인터 이벤트로 바꿔 화면들로 보냅니다. */
         void processPointer();
-        /** @brief 포인터 사건 하나를 받을 화면으로 보냅니다. 처리했으면 true 입니다. */
+        /** @brief 포인터 이벤트 하나를 받을 화면으로 보냅니다. 처리했으면 true 입니다. */
         bool dispatchPointerEvent( const UIPointerEvent& event );
-        /** @brief 점 아래의 맨 위 화면입니다(막는 화면 아래로는 내려가지 않는다). 없으면 nullptr 입니다. */
+        /** @brief 점 아래의 맨 위 화면을 반환합니다(입력을 막는 화면 아래로는 내려가지 않습니다). 없으면 nullptr 입니다. */
         UIScreen* findPointerScreen( const float2& point ) const;
         /**
-         * @brief 바인딩 단계 — 글 판(현지화)이 바뀌었으면 글꼴 대체 사슬을 비우고 모든 위젯에 알린 뒤(`Widget::onTextRevisionChanged`),
-         *        화면마다 바인딩 집합을 돌린다(걸리지 않았으면 걸고, 바뀐 소스의 칸만 쓴다 — 글 판이 바뀌면 형식 바인딩도 다시).
+         * @brief 바인딩 단계입니다. 텍스트 버전(현지화)이 바뀌었으면 글꼴 대체 연쇄를 비우고 모든 위젯에 알린 뒤(`Widget::onTextRevisionChanged`),
+         *        화면마다 바인딩 집합을 돌립니다. 연결되지 않았으면 연결하고, 바뀐 소스의 필드만 씁니다. 텍스트 버전이 바뀌면 형식 바인딩도 다시 평가합니다.
          */
         void updateBindings();
-        /** @brief 입력 장치 종류(글리프)가 바뀌었으면 화면 위젯마다 `onInputGlyphsChanged` 를 부릅니다(행동 태그를 든 글이 다시 배치된다). */
+        /** @brief 입력 장치 종류(글리프)가 바뀌었으면 화면 위젯마다 `onInputGlyphsChanged` 를 부릅니다(액션 태그가 있는 텍스트를 다시 배치합니다). */
         void refreshInputGlyphs();
-        /** @brief 지금 문화권 출처입니다(`setLocalization` 이 준 것, 없으면 엔진 서비스 — 그것도 없으면 nullptr). */
+        /** @brief 지금 문화권 출처입니다. `setLocalization` 으로 받은 것이고, 없으면 엔진 서비스이며, 그것도 없으면 nullptr 입니다. */
         const LocalizationManager* findLocalization() const;
         /** @brief 화면을 그리기 순서로 칠해 그리기 목록을 만들고, 내용이 바뀌었으면 번호를 올립니다. */
         void paintScreens();
-        /** @brief 사용자 설정 `gv_uiTheme`(accessibility.uiTheme)이 바뀌었으면 그 테마로 바꿉니다(빈 값 · 테마 목록이 없으면 그대로). */
+        /** @brief 사용자 설정 `gv_uiTheme`(accessibility.uiTheme)이 바뀌었으면 그 테마로 바꿉니다(빈 값이거나 테마 목록이 없으면 그대로 둡니다). */
         void syncThemeSetting();
-        /** @brief `gv_uiDemo` 를 따라 개발 테스트 화면을 열고 닫습니다(열면 입력 방식을 탐색으로 — 첫 버튼에 포커스 테두리). */
+        /** @brief `gv_uiDemo` 를 따라 개발용 테스트 화면을 열고 닫습니다(열면 입력 방식을 탐색으로 바꿔 첫 버튼에 포커스 테두리를 보입니다). */
         void syncDemoScreen();
-        /** @brief `gv_benchUiWidgets` 를 보고 벤치 화면(`UIBenchScreen`)을 열고 닫습니다(칸 수가 바뀌면 다시 짓는다). */
+        /** @brief `gv_benchUiWidgets` 를 보고 벤치 화면(`UIBenchScreen`)을 열고 닫습니다(개수가 바뀌면 다시 만듭니다). */
         void syncBenchScreen();
-        /** @brief `gv_uiOptionsMenu` 를 따라 옵션 메뉴를 열고 닫습니다(개발 스위치 — 스크린샷 · 네 백엔드 확인). */
+        /** @brief `gv_uiOptionsMenu` 를 따라 옵션 메뉴를 열고 닫습니다(개발용 스위치이며, 스크린샷과 네 백엔드 확인에 씁니다). */
         void syncOptionsMenuSwitch();
         /** @brief 화면이 없을 때 `UI.Pause` 가 오면 일시정지 메뉴를 엽니다. */
         void processPauseAction();
-        /** @brief UI 맵 레이어를 맞춥니다 — `UI` 는 활성 화면이 있을 때, `UIGlobal`(일시정지)은 없고 일시정지 메뉴가 있을 때. */
+        /** @brief UI 맵 레이어를 맞춥니다. `UI` 는 활성 화면이 있을 때 켜고, `UIGlobal`(일시정지)은 활성 화면이 없고 일시정지 메뉴가 있을 때 켭니다. */
         void syncInputLayers( const UIScreen* pActive );
         /** @brief 닫기를 요청한 화면을 지웁니다. */
         void applyPendingCloses();
-        /** @brief 닫는 중이 아닌 화면마다 `UIScreen::onTick` 을 부릅니다(틱이 화면을 올리고 닫아도 되게 번호로 돈다). */
+        /** @brief 닫는 중이 아닌 화면마다 `UIScreen::onTick` 을 부릅니다(틱이 화면을 올리고 닫아도 되도록 번호로 돕니다). */
         void tickScreens( float32 deltaSeconds );
-        /** @brief 화면 @p index 를 바로 지웁니다(포인터 · 포커스가 그 트리를 놓게). */
+        /** @brief 화면 @p index 를 바로 지웁니다(포인터와 포커스가 그 트리를 놓게 합니다). */
         void destroyScreenAt( uint32 index );
-        /** @brief 활성 화면 · 게임 정지를 다시 정합니다(화면을 올리고 지운 뒤). */
+        /** @brief 활성 화면과 게임 정지를 다시 정합니다(화면을 올리고 지운 뒤 부릅니다). */
         void refreshActiveScreen();
-        /** @brief @p screen 이 활성이 될 때의 포커스 — 기억한 위젯, 없고 탐색 방식이면 기본 포커스. */
+        /** @brief @p screen 이 활성이 될 때의 포커스를 반환합니다. 기억한 위젯이 있으면 그것이고, 없고 탐색 방식이면 기본 포커스입니다. */
         void restoreFocus( UIScreen& screen );
 
     private:
-        /** @struct OffscreenScreen @brief 화면 스택 밖의 화면 하나 — 렌더 텍스처 경로 · 뷰포트 · 그리기 목록입니다(에디터 미리보기). */
+        /** @struct OffscreenScreen @brief 화면 스택 밖의 화면 하나입니다. 렌더 텍스처 경로, 뷰포트, 그리기 목록을 가집니다(에디터 미리보기). */
         struct OffscreenScreen
         {
             unique_ptr<UIScreen> _screen{};
             hashed_string        _targetPath{};
-            hashed_string        _theme{}; ///< 빈 이름 = 지금 테마
+            hashed_string        _theme{}; ///< 빈 이름이면 지금 테마입니다.
             UIViewport           _viewport{};
             CanvasDrawList       _canvas{};
             CanvasDrawList       _scratch{};
@@ -400,58 +403,58 @@ namespace sw
             float32              _textScale{ 1.0f };
         };
 
-        vector<unique_ptr<UIScreen>> _listScreen;    ///< 그리기 순서(층 → 쌓인 순서). 입력은 역순.
-        vector<OffscreenScreen>      _listOffscreen; ///< 스택 밖 화면(에디터 미리보기 — 입력 없음)
+        vector<unique_ptr<UIScreen>> _listScreen;    ///< 그리기 순서(레이어, 쌓인 순서)로 정렬한 목록입니다. 입력은 역순으로 처리합니다.
+        vector<OffscreenScreen>      _listOffscreen; ///< 스택 밖의 화면입니다(에디터 미리보기이며 입력이 없습니다).
         UIDocumentCache              _documentCache;
         UIStyleSheetCache            _styleSheetCache;
         UIThemeCatalog               _themeCatalog;
-        hashed_string                _themeName;          ///< 지금 테마(없으면 빈 이름 — 문서 시트만)
-        string                       _themeSetting;       ///< 마지막으로 본 `gv_uiTheme` 값(바뀔 때만 테마를 고른다)
-        vector<string>               _listReopenDocument; ///< 모듈 다시 로드로 닫은 문서 화면(다음 update 가 다시 연다)
+        hashed_string                _themeName;          ///< 지금 테마입니다(없으면 빈 이름이며 문서 시트만 씁니다).
+        string                       _themeSetting;       ///< 마지막으로 본 `gv_uiTheme` 값입니다(바뀔 때만 테마를 고릅니다).
+        vector<string>               _listReopenDocument; ///< 모듈 다시 로드로 닫은 문서 화면입니다(다음 update 가 다시 엽니다).
         UIBindingConverterRegistry   _bindingConverters;
         UINotificationService        _notifications;
-        UIActionGlyphSource          _actionGlyphs; ///< 입력 관리자 · UI 맵(초기화 때 채운다)
+        UIActionGlyphSource          _actionGlyphs; ///< 입력 관리자와 UI 맵에서 가져오는 글리프 출처입니다(초기화 때 채웁니다).
         UIFocusManager               _focus;
         UIPointerState               _pointer;
         UIInputConsumption           _consumption;
-        unique_ptr<InputMap>         _uiInputMap; ///< UI 행동 맵(레이어 `UI` — 활성 화면이 있을 때만 켠다)
+        unique_ptr<InputMap>         _uiInputMap; ///< UI 액션 맵입니다(레이어 `UI` 는 활성 화면이 있을 때만 켭니다).
         InputManager*                _pInput;
         FontSystem*                  _pFontSystem;
-        const LocalizationManager*   _pLocalization; ///< 문화권 출처(nullptr = 엔진 서비스)
-        UserSettingsManager*         _pUserSettings; ///< 설정 바인딩 출처(nullptr = 엔진 서비스)
+        const LocalizationManager*   _pLocalization; ///< 문화권 출처입니다(nullptr 이면 엔진 서비스).
+        UserSettingsManager*         _pUserSettings; ///< 설정 바인딩 출처입니다(nullptr 이면 엔진 서비스).
         unique_ptr<TextLayoutEngine> _textLayout;
         UIScaleSettings              _scaleSettings;
         UISubtitleService            _subtitles;
         UIViewport                   _viewport;
-        CanvasDrawList               _canvas;         ///< 이번 프레임 그리기 목록
-        CanvasDrawList               _canvasScratch;  ///< 칠하는 중의 목록(같은 내용이면 버린다)
-        uint64                       _canvasRevision; ///< `_canvas` 내용 번호
+        CanvasDrawList               _canvas;         ///< 이번 프레임의 그리기 목록입니다.
+        CanvasDrawList               _canvasScratch;  ///< 칠하는 중인 목록입니다(같은 내용이면 버립니다).
+        uint64                       _canvasRevision; ///< `_canvas` 내용의 번호입니다.
         float2                       _lastPointerPosition;
-        int2                         _lastMousePixel;     ///< 입력 방식을 정할 때 본 마지막 커서 자리(창 픽셀)
-        float32                      _stickRepeatSeconds; ///< 스틱 탐색의 다음 반복까지 남은 시간
-        float32                      _inputDeltaSeconds;  ///< 이번 `processInput` 의 프레임 시간(행동 사건에 싣는다)
-        UINavigationDirection        _stickDirection;     ///< 스틱이 지금 가리키는 탐색 방향(기울지 않았으면 Next — 쓰지 않는 값)
+        int2                         _lastMousePixel;     ///< 입력 방식을 정할 때 본 마지막 커서 위치입니다(창 픽셀).
+        float32                      _stickRepeatSeconds; ///< 스틱 탐색의 다음 반복까지 남은 시간입니다.
+        float32                      _inputDeltaSeconds;  ///< 이번 `processInput` 의 프레임 시간입니다(액션 이벤트에 싣습니다).
+        UINavigationDirection        _stickDirection;     ///< 스틱이 지금 가리키는 탐색 방향입니다(기울이지 않았으면 Next 이며 쓰지 않는 값입니다).
         UIScreenHandle               _activeScreen;
-        UIScreenHandle               _demoScreen;          ///< `-gv_uiDemo` 가 연 테스트 화면(없으면 무효)
-        UIScreenHandle               _benchScreen;         ///< `-gv_benchUiWidgets` 가 연 벤치 화면(없으면 무효)
-        UIScreenHandle               _markerScreen;        ///< 화면 마커를 담는 HUD 화면(없으면 무효)
-        vector<WidgetComponent*>     _listWidgetComponent; ///< 등록된 위젯 컴포넌트(소유하지 않는다 — 끝날 때 스스로 뺀다)
-        vector<UIScreenHandle>       _listTickScratch;     ///< `tickScreens` 가 도는 번호(프레임마다 다시 쓴다)
-        string                       _optionsMenuDocument; ///< 옵션 메뉴 문서
-        string                       _pauseMenuDocument;   ///< 일시정지 메뉴 문서(비면 일시정지 메뉴 없음)
-        UIScreenHandle               _optionsSwitchScreen; ///< `-gv_uiOptionsMenu` 가 연 옵션 메뉴(없으면 무효)
+        UIScreenHandle               _demoScreen;          ///< `-gv_uiDemo` 가 연 테스트 화면입니다(없으면 무효).
+        UIScreenHandle               _benchScreen;         ///< `-gv_benchUiWidgets` 가 연 벤치 화면입니다(없으면 무효).
+        UIScreenHandle               _markerScreen;        ///< 화면 마커를 담는 HUD 화면입니다(없으면 무효).
+        vector<WidgetComponent*>     _listWidgetComponent; ///< 등록된 위젯 컴포넌트입니다(소유하지 않으며, 끝날 때 스스로 뺍니다).
+        vector<UIScreenHandle>       _listTickScratch;     ///< `tickScreens` 가 도는 번호입니다(프레임마다 다시 씁니다).
+        string                       _optionsMenuDocument; ///< 옵션 메뉴 문서입니다.
+        string                       _pauseMenuDocument;   ///< 일시정지 메뉴 문서입니다(비면 일시정지 메뉴가 없습니다).
+        UIScreenHandle               _optionsSwitchScreen; ///< `-gv_uiOptionsMenu` 가 연 옵션 메뉴입니다(없으면 무효).
         UIScreenHandle               _nextScreenHandle;
         uint32                       _nextPushOrder;
-        uint32                       _textRevision; ///< 마지막 바인딩 단계가 본 글 판
+        uint32                       _textRevision; ///< 마지막 바인딩 단계가 본 텍스트 버전입니다.
         UIInputMode                  _inputMode;
-        InputGlyphStyle              _glyphStyle;              ///< 마지막으로 본 입력 장치 종류(`refreshInputGlyphs`)
-        uint8                        _bPauseRequested     : 1; ///< 게임 정지 요청을 걸어 두었다(정지 화면이 하나라도 있다)
-        uint8                        _bPendingClose       : 1; ///< 닫기를 요청한 화면이 있다
-        uint8                        _bPointerKnown       : 1; ///< 마우스 위치를 한 번 읽었다(첫 프레임의 Move 기준)
-        uint8                        _bStickHeld          : 1; ///< 스틱이 탐색 임계값 너머로 기울어 있다
-        uint8                        _bMousePixelKnown    : 1; ///< `_lastMousePixel` 을 한 번 읽었다
-        uint8                        _bTextRevisionKnown  : 1; ///< `_textRevision` 을 한 번 읽었다
-        uint8                        _bGlyphStyleKnown    : 1; ///< `_glyphStyle` 을 한 번 읽었다
-        uint8                        _bOnScreenSuppressed : 1; ///< 화면 그리기 · 포인터 입력을 막는다(`setOnScreenSuppressed`)
+        InputGlyphStyle              _glyphStyle;              ///< 마지막으로 본 입력 장치 종류입니다(`refreshInputGlyphs`).
+        uint8                        _bPauseRequested     : 1; ///< 게임 정지 요청을 걸어 두었는지 나타냅니다(정지 화면이 하나라도 있으면 true).
+        uint8                        _bPendingClose       : 1; ///< 닫기를 요청한 화면이 있는지 나타냅니다.
+        uint8                        _bPointerKnown       : 1; ///< 마우스 위치를 한 번 읽었는지 나타냅니다(첫 프레임의 Move 기준).
+        uint8                        _bStickHeld          : 1; ///< 스틱이 탐색 임계값을 넘어 기울어 있는지 나타냅니다.
+        uint8                        _bMousePixelKnown    : 1; ///< `_lastMousePixel` 을 한 번 읽었는지 나타냅니다.
+        uint8                        _bTextRevisionKnown  : 1; ///< `_textRevision` 을 한 번 읽었는지 나타냅니다.
+        uint8                        _bGlyphStyleKnown    : 1; ///< `_glyphStyle` 을 한 번 읽었는지 나타냅니다.
+        uint8                        _bOnScreenSuppressed : 1; ///< 화면 그리기와 포인터 입력을 막는지 나타냅니다(`setOnScreenSuppressed`).
     };
 } // namespace sw
