@@ -74,6 +74,8 @@ namespace sw::editor
             static constexpr uint32 kArrTimelineFrameChoice[] = { 1, 4, 16 };
             /** @brief 휠 한 칸의 확대 배율입니다(1 보다 작으면 확대). */
             static constexpr float32 kTimelineWheelZoomFactor = 0.8f;
+            /** @brief 불러온 트레이스 구간의 슬롯 번호가 시작하는 값입니다 — 살아 있는 프로파일러 슬롯(`FrameProfiler::kMaxScope` 미만)과 겹치지 않는다. */
+            static constexpr uint32 kLoadedSlotBase = 1u << 20;
             /** @brief 스레드 이름 칸의 폭입니다(UI 단위, DPI 배율을 곱한다). */
             static constexpr float32 kTimelineLabelWidth = 120.0f;
 
@@ -130,6 +132,15 @@ namespace sw::editor
         , _bPauseOnSpike{ SW_FALSE }
         , _bCapturePaused{ SW_FALSE }
         , _bCallTreeFrozen{ SW_FALSE }
+#if SW_PROFILER_TRACE_ENABLED
+        , _loadedTrace{}
+        , _listTimelineDraw{}
+        , _listLoadedFrameDraw{}
+        , _traceStatus{}
+        , _arrTraceSearch{}
+        , _traceSearchMatched{ 0 }
+        , _bLoadedTrace{ SW_FALSE }
+#endif
     {
     }
 
@@ -374,6 +385,8 @@ namespace sw::editor
         }
         EditorSelfTestMarks::note( "profiler.timeline.saveTrace" );
         EditorWidgets::drawTooltip( "Save the frames shown as Saved/Traces/trace_<time>.trace.json (Chrome Trace Event - open in Perfetto UI or chrome://tracing)" );
+        ImGui::NewLine();
+        drawTraceControls();
 #endif
         ImGui::SameLine();
         ImGui::TextDisabled( "| wheel = zoom, drag = pan, deep analysis: Tracy" );
@@ -388,16 +401,140 @@ namespace sw::editor
             _timelineViewBegin = _timelineWindowBegin;
             _timelineViewEnd   = _timelineWindowEnd;
         }
-        if ( _listTimelineThread.empty() )
+#if SW_PROFILER_TRACE_ENABLED
+        composeTimelineDraw();
+        const vector<ProfilerTimelineThread>& listDraw = _bLoadedTrace == SW_TRUE ? _listTimelineDraw : _listTimelineThread;
+        const vector<string>*                 pLoaded  = _bLoadedTrace == SW_TRUE ? &_loadedTrace._listSlotName : nullptr;
+#else
+        const vector<ProfilerTimelineThread>& listDraw = _listTimelineThread;
+        const vector<string>*                 pLoaded  = nullptr;
+#endif
+        if ( listDraw.empty() )
         {
-            ImGui::TextDisabled( "%s", bRecording ? "Waiting for frames..." : "Press Record to capture the last frames per thread." );
+            ImGui::TextDisabled( "%s", bRecording ? "Waiting for frames..." : "Press Record to capture the last frames per thread, or Load Trace." );
             return;
         }
         timeline.collectFrameBegins( _timelineViewBegin, _timelineViewEnd, _listTimelineFrameBegin );
-        drawTimelineCanvas();
+#if SW_PROFILER_TRACE_ENABLED
+        if ( _bLoadedTrace == SW_TRUE )
+        {
+            for ( const uint64 frameBegin : _listLoadedFrameDraw )
+            {
+                if ( _timelineViewBegin <= frameBegin && frameBegin <= _timelineViewEnd )
+                    _listTimelineFrameBegin.push_back( frameBegin );
+            }
+        }
+#endif
+        drawTimelineCanvas( listDraw, pLoaded );
     }
 
-    void ProfilerPanel::drawTimelineCanvas()
+#if SW_PROFILER_TRACE_ENABLED
+    void ProfilerPanel::setTraceSearch( const utf8* pText )
+    {
+        std::snprintf( _arrTraceSearch, constant::kMaxBuffer128, "%s", pText != nullptr ? pText : "" );
+    }
+
+    bool ProfilerPanel::loadTraceFile( string_view path )
+    {
+        string error;
+        if ( ProfilerTraceExport::loadTraceFile( path, _loadedTrace, error ) == false )
+        {
+            _traceStatus = "Load failed: " + error;
+            SW_LOG_WARNING( "Trace not loaded: %#", error );
+            return false;
+        }
+        _bLoadedTrace    = SW_TRUE;
+        _bTimelineZoomed = SW_FALSE;
+        _traceStatus     = "Loaded " + FileUtil::getFileNamePart( path ) + " (" + to_string( _loadedTrace._listThread.size() ) + " threads, " +
+                       to_string( _loadedTrace._listSlotName.size() ) + " scopes)";
+        SW_LOG_INFO( "Trace loaded: %#", _traceStatus );
+        return true;
+    }
+
+    bool ProfilerPanel::loadLatestTrace()
+    {
+        const string path = ProfilerTraceExport::findLatestTraceFile();
+        if ( path.empty() )
+        {
+            _traceStatus = "No trace in Saved/Traces - press Save Trace first";
+            return false;
+        }
+        return loadTraceFile( path );
+    }
+
+    void ProfilerPanel::drawTraceControls()
+    {
+        if ( ImGui::SmallButton( "Load Trace" ) )
+            if ( loadLatestTrace() == false )
+                SW_LOG_WARNING( "%#", _traceStatus );
+        EditorSelfTestMarks::note( "profiler.timeline.loadTrace" );
+        EditorWidgets::drawTooltip( "Load the newest Saved/Traces/*.trace.json under the live threads (first times aligned) - a failing run next to a healthy one" );
+        if ( _bLoadedTrace == SW_TRUE )
+        {
+            ImGui::SameLine();
+            if ( ImGui::SmallButton( "Unload" ) )
+            {
+                _bLoadedTrace    = SW_FALSE;
+                _loadedTrace     = ProfilerLoadedTrace{};
+                _bTimelineZoomed = SW_FALSE;
+            }
+            EditorSelfTestMarks::note( "profiler.timeline.unloadTrace" );
+        }
+        ImGui::SameLine();
+        EditorWidgets::drawSearchField( "##traceSearch", _arrTraceSearch, constant::kMaxBuffer128, "Find scope...", 140.0f * EditorThemeUtil::getDpiScale(), false );
+        EditorSelfTestMarks::note( "profiler.timeline.traceSearch" );
+        if ( _traceStatus.empty() == false )
+            ImGui::TextDisabled( "%s", _traceStatus.c_str() );
+    }
+
+    void ProfilerPanel::composeTimelineDraw()
+    {
+        _listTimelineDraw.clear();
+        _listLoadedFrameDraw.clear();
+        if ( _bLoadedTrace == SW_FALSE )
+            return;
+        // 살아 있는 기록이 있으면 불러온 트레이스의 첫 시각을 그 구간 시작에 맞춘다(둘은 다른 프로세스의 단조 시계라 절대 시각으로는 못 겹친다).
+        const bool   bLive  = _listTimelineThread.empty() == false;
+        const uint64 anchor = bLive ? _timelineWindowBegin : _loadedTrace._beginNanos;
+        const int64  shift  = static_cast<int64>( anchor ) - static_cast<int64>( _loadedTrace._beginNanos );
+        _listTimelineDraw   = _listTimelineThread;
+        for ( const ProfilerTimelineThread& source : _loadedTrace._listThread )
+        {
+            ProfilerTimelineThread copy;
+            copy._name = "[loaded] " + source._name;
+            copy._listEvent.reserve( source._listEvent.size() );
+            for ( ProfilerTimelineEvent event : source._listEvent )
+            {
+                event._beginNanos = static_cast<uint64>( static_cast<int64>( event._beginNanos ) + shift );
+                event._endNanos   = static_cast<uint64>( static_cast<int64>( event._endNanos ) + shift );
+                event._slot += ProfilerPanelInternal::kLoadedSlotBase;
+                copy._listEvent.push_back( event );
+            }
+            _listTimelineDraw.push_back( std::move( copy ) );
+        }
+        for ( const uint64 frameBegin : _loadedTrace._listFrameBegin )
+        {
+            _listLoadedFrameDraw.push_back( static_cast<uint64>( static_cast<int64>( frameBegin ) + shift ) );
+        }
+        if ( bLive == false )
+        {
+            _timelineWindowBegin = anchor;
+            _timelineWindowEnd   = static_cast<uint64>( static_cast<int64>( _loadedTrace._endNanos ) + shift );
+            if ( _bTimelineZoomed == SW_FALSE || _timelineViewEnd <= _timelineViewBegin )
+            {
+                _timelineViewBegin = _timelineWindowBegin;
+                _timelineViewEnd   = _timelineWindowEnd;
+            }
+        }
+        else if ( _timelineWindowEnd < static_cast<uint64>( static_cast<int64>( _loadedTrace._endNanos ) + shift ) && _bTimelineZoomed == SW_FALSE )
+        {
+            // 불러온 쪽이 더 길면 보이는 범위를 넓혀 둘 다 보이게 한다.
+            _timelineViewEnd = static_cast<uint64>( static_cast<int64>( _loadedTrace._endNanos ) + shift );
+        }
+    }
+#endif
+
+    void ProfilerPanel::drawTimelineCanvas( const vector<ProfilerTimelineThread>& listThread, const vector<string>* pLoadedSlotName )
     {
         const FrameProfiler* pProfiler  = editor::getService<FrameProfiler>();
         const float32        dpiScale   = EditorThemeUtil::getDpiScale();
@@ -409,7 +546,7 @@ namespace sw::editor
         const float32        trackWidth = totalWidth - labelWidth;
         const float32        trackLeft  = origin.x + labelWidth;
 
-        ProfilerTimelineLayout::layoutRects( _listTimelineThread, _timelineViewBegin, _timelineViewEnd, trackWidth, _listTimelineRect, _listTimelineLaneCount );
+        ProfilerTimelineLayout::layoutRects( listThread, _timelineViewBegin, _timelineViewEnd, trackWidth, _listTimelineRect, _listTimelineLaneCount );
         float32 totalHeight{ 0.0f };
         for ( const uint16 laneCount : _listTimelineLaneCount )
         {
@@ -433,28 +570,57 @@ namespace sw::editor
         }
 
         ImDrawList*     pDrawList = ImGui::GetWindowDrawList();
-        vector<float32> listRowTop( _listTimelineThread.size(), 0.0f );
+        vector<float32> listRowTop( listThread.size(), 0.0f );
         float32         rowTop = origin.y;
-        for ( size_t threadIndex = 0; threadIndex < _listTimelineThread.size(); ++threadIndex )
+        for ( size_t threadIndex = 0; threadIndex < listThread.size(); ++threadIndex )
         {
             listRowTop[threadIndex] = rowTop;
             const float32 rowHeight = static_cast<float32>( _listTimelineLaneCount[threadIndex] ) * laneHeight;
             pDrawList->AddRectFilled( ImVec2{ origin.x, rowTop }, ImVec2{ origin.x + totalWidth, rowTop + rowHeight },
                                       ImGui::GetColorU32( ImGuiCol_FrameBg, ( threadIndex % 2 == 0 ) ? 0.6f : 0.3f ) );
             pDrawList->AddText( ImVec2{ origin.x + rowGap * 2.0f, rowTop + rowGap }, ImGui::GetColorU32( ImGuiCol_Text ),
-                                _listTimelineThread[threadIndex]._name.c_str() );
+                                listThread[threadIndex]._name.c_str() );
             rowTop += rowHeight + rowGap;
         }
 
         pDrawList->PushClipRect( ImVec2{ trackLeft, origin.y }, ImVec2{ origin.x + totalWidth, origin.y + totalHeight }, true );
         const ProfilerTimelineRect* pHoveredRect = nullptr;
+        // 슬롯 → 이름: 불러온 트레이스의 슬롯은 `kLoadedSlotBase` 이상이라 그 표를 본다.
+        const auto findName = [&]( uint32 slot ) -> const utf8*
+        {
+            if ( slot >= ProfilerPanelInternal::kLoadedSlotBase )
+            {
+                const size_t loadedIndex = slot - ProfilerPanelInternal::kLoadedSlotBase;
+                return ( pLoadedSlotName != nullptr && loadedIndex < pLoadedSlotName->size() ) ? ( *pLoadedSlotName )[loadedIndex].c_str() : nullptr;
+            }
+            return pProfiler != nullptr ? pProfiler->findScopeName( slot ) : nullptr;
+        };
+#if SW_PROFILER_TRACE_ENABLED
+        const bool bSearching = _arrTraceSearch[0] != '\0';
+        _traceSearchMatched   = 0;
+#endif
         for ( const ProfilerTimelineRect& rect : _listTimelineRect )
         {
-            const ProfilerTimelineEvent& event = _listTimelineThread[rect._threadIndex]._listEvent[rect._eventIndex];
+            const ProfilerTimelineEvent& event = listThread[rect._threadIndex]._listEvent[rect._eventIndex];
             const ImVec2                 minPoint{ trackLeft + rect._x0, listRowTop[rect._threadIndex] + static_cast<float32>( rect._depth ) * laneHeight };
             const ImVec2                 maxPoint{ trackLeft + rect._x1, minPoint.y + laneHeight - 1.0f };
-            pDrawList->AddRectFilled( minPoint, maxPoint, ProfilerPanelInternal::computeSlotColor( event._slot ) );
-            const utf8* pName = pProfiler != nullptr ? pProfiler->findScopeName( event._slot ) : nullptr;
+            const utf8*                  pName     = findName( event._slot );
+            ImU32                        slotColor = ProfilerPanelInternal::computeSlotColor( event._slot );
+#if SW_PROFILER_TRACE_ENABLED
+            // 검색어가 있으면 맞는 구간만 또렷하게 두고 나머지는 흐리게 한다.
+            if ( bSearching )
+            {
+                if ( pName != nullptr && StringUtil::contains( pName, _arrTraceSearch, true ) )
+                    ++_traceSearchMatched;
+                else
+                    slotColor = ( slotColor & 0x00FFFFFFu ) | ( 50u << IM_COL32_A_SHIFT );
+            }
+            else
+            {
+                ++_traceSearchMatched;
+            }
+#endif
+            pDrawList->AddRectFilled( minPoint, maxPoint, slotColor );
             if ( rect._bShowsLabel == SW_TRUE && pName != nullptr )
             {
                 pDrawList->PushClipRect( minPoint, maxPoint, true );
@@ -475,12 +641,26 @@ namespace sw::editor
 
         if ( pHoveredRect != nullptr )
         {
-            const ProfilerTimelineEvent& event = _listTimelineThread[pHoveredRect->_threadIndex]._listEvent[pHoveredRect->_eventIndex];
-            const utf8*                  pName = pProfiler != nullptr ? pProfiler->findScopeName( event._slot ) : nullptr;
+            const ProfilerTimelineEvent& event = listThread[pHoveredRect->_threadIndex]._listEvent[pHoveredRect->_eventIndex];
+            const utf8*                  pName = findName( event._slot );
             ImGui::BeginTooltip();
             ImGui::TextUnformatted( pName != nullptr ? pName : "?" );
             ImGui::Text( "%.1f us, depth %u", static_cast<float64>( event._endNanos - event._beginNanos ) / 1000.0, static_cast<uint32>( event._depth ) );
-            ImGui::TextDisabled( "%s", _listTimelineThread[pHoveredRect->_threadIndex]._name.c_str() );
+            ImGui::TextDisabled( "%s", listThread[pHoveredRect->_threadIndex]._name.c_str() );
+            // 같은 구간(같은 스레드 · 같은 슬롯)의 횟수 · 합 · 최대 — 어느 구간이 늘었는지 한눈에 본다.
+            uint32  sameCount{ 0 };
+            float64 sameTotalUs{ 0.0 };
+            float64 sameMaxUs{ 0.0 };
+            for ( const ProfilerTimelineEvent& other : listThread[pHoveredRect->_threadIndex]._listEvent )
+            {
+                if ( other._slot != event._slot )
+                    continue;
+                const float64 micros = static_cast<float64>( other._endNanos - other._beginNanos ) / 1000.0;
+                ++sameCount;
+                sameTotalUs += micros;
+                sameMaxUs = MathUtil::max( sameMaxUs, micros );
+            }
+            ImGui::TextDisabled( "same scope here: %u x, total %.1f us, max %.1f us", sameCount, sameTotalUs, sameMaxUs );
             ImGui::EndTooltip();
         }
     }

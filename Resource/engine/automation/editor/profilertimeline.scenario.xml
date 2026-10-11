@@ -2,10 +2,11 @@
 <!--
   에디터 시나리오 — 프로파일러 패널의 Timeline 탭: 녹화 단추(profiler.timeline.record)를 누르면 최근 프레임의 계측 구간이 스레드마다 쌓인다.
   게임 스레드(GT.Frame)와 렌더 스레드(RT.Frame)가 모두 있어야 한다(Editor.ProfilerTimelineThreadCount 2 이상). 다시 누르면 녹화가 멈춘다.
+  Load Trace 는 가장 최근 저장 파일을 살아 있는 스레드 아래에 겹쳐 그리고(첫 시각을 맞춘다), 검색 칸은 맞는 구간만 또렷하게 둔다. Unload 로 지운다.
   Save Trace 단추(profiler.timeline.saveTrace)는 보이는 프레임을 Saved/Traces/trace_<시각>.trace.json(Chrome Trace Event)으로 저장하고 로그에 "Timeline trace: saved" 를 남긴다.
   실행: App.exe -EnableEditor -scenario=engine/automation/editor/profilertimeline.scenario.xml -gv_editorStateDir=<빈 폴더> -dx12
 -->
-<Scenario name="editor.profilertimeline" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.profilertimeline" fixedDelta="0.0166667" timeoutFrames="700" startAfter="Immediately" input="exclusive">
 	<At frame="5"><DevCommand line="layout.reset"/></At>
 	<At frame="10"><ResizeWindow width="1600" height="900"/></At>
 	<At frame="30"><DevCommand line="panel.focus profiler"/></At>
@@ -22,5 +23,17 @@
 	<At frame="130"><EditorClick mark="profiler.timeline.record"/></At>
 	<At frame="150"><Expect probe="Editor.ProfilerTimelineThreadCount" atLeast="2"/></At>
 	<At frame="155"><EditorClick mark="profiler.timeline.saveTrace"/></At>
-	<At frame="170"><ExpectLog contains="Timeline trace: saved" atLeast="1"/><Pass/></At>
+	<At frame="170"><ExpectLog contains="Timeline trace: saved" atLeast="1"/></At>
+	<!-- 저장한 트레이스를 불러와 살아 있는 기록 아래에 겹친다 · 구간 이름으로 찾는다 · 지운다 -->
+	<At frame="175"><EditorClick mark="profiler.timeline.loadTrace"/></At>
+	<At frame="195"><Expect probe="Editor.ProfilerLoadedTraceThreads" atLeast="2"/></At>
+	<At frame="200"><EditorClick mark="profiler.timeline.traceSearch"/></At>
+	<At frame="205"><EditorKey key="Ctrl+A"/></At>
+	<At frame="208"><EditorText value="GT.Frame"/></At>
+	<At frame="225"><Expect probe="Editor.ProfilerTraceSearchMatches" atLeast="2"/></At>
+	<At frame="228"><EditorKey key="Ctrl+A"/></At>
+	<At frame="231"><EditorText value="zzNoSuchScope"/></At>
+	<At frame="250"><Expect probe="Editor.ProfilerTraceSearchMatches" equals="0"/></At>
+	<At frame="255"><EditorClick mark="profiler.timeline.unloadTrace"/></At>
+	<At frame="275"><Expect probe="Editor.ProfilerLoadedTraceThreads" equals="0"/><Pass/></At>
 </Scenario>

@@ -20,7 +20,7 @@
 
 1. **CI 확인과 리눅스 빌드 오류 잡기.** 위 "CI" 항.
 2. **이름 정리 — 남은 것.** `MathUtil::getRandom` 뿐(3번 "결정적 난수를 Core 로" 와 함께). 계획 [이름 정리](NamingPass.md).
-3. **트레이스 내보내기 X3 · X5 · X4.** 계획 [트레이스 내보내기](TraceExport.md) — 에디터에서 `.trace.json` 열기 · 비교, 자동 첨부, 여러 프로세스 합치기. X5 는 Shipping 서버에서 어떻게 할지 다시 정한다(내보내기 코드는 Shipping 에서 빠진다).
+3. **트레이스 내보내기 X5 · X4.** 계획 [트레이스 내보내기](TraceExport.md) — 자동 첨부, 여러 프로세스 합치기(X1 ~ X3 은 끝났다). X5 는 Shipping 서버에서 어떻게 할지 다시 정한다(내보내기 코드는 Shipping 에서 빠진다).
 4. **빌드 속도 2 ~ 6 단계.** 계획 [빌드 속도](BuildSpeed.md). 기준선은 `docs/08_Verification.md` "빌드 속도". 단계마다 같은 표로 전후를 남기고, 효과 없으면 되돌려 `docs/09_Decisions.md` 3절에 숫자와 함께 적는다. PCH 공유(3 단계)는 타깃마다 다른 정의
    (`SW_LOG_TAG` · `SW_EXPORTS`/`SW_IMPORTS` · 타깃별 `FlagOps.gen.h` 강제 포함)가 걸림돌이다 — 먼저 컴파일 정의 차이 목록을 뽑는다. 7 ~ 9 는 필요할 때만(사용자 결정).
 5. **행동이 바뀔 수 있는 중복 정리.** 결정적 난수를 Core 로(xorshift32 사본 7곳 · splitmix64 3곳; 상태 바이트 호환을 시험으로 증명), 격자 사본 13곳 → `GridTopology`, 타이머 약 25곳 → `Countdown`, 실시간 키트 HP 직접 관리 → `Vitality`. 상태 바이트와 게임 동작에 닿으므로 시험과 함께.

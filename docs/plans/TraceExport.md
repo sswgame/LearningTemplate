@@ -1,6 +1,6 @@
 # 트레이스 내보내기 계획 — Chrome Tracing 형식으로 저장하고 열기
 
-상태: X1(변환기와 저장 — `ProfilerTraceExport`, 개발 명령 `profile.trace save`, 에디터 Save Trace)과 X2(긴 캡처 `profile.trace record`)는 2026-10-11 에 들어갔다. 둘 다 Shipping 에서는 빠진다(`SW_PROFILER_TRACE_ENABLED`, 사용자 결정). 남은 단위는 아래 순서대로 진행한다.
+상태: X1(변환기와 저장)과 X2(긴 캡처 `profile.trace record`), X3(에디터 Timeline 탭에서 불러오기 · 겹쳐 비교 · 구간 검색)는 2026-10-11 에 들어갔다. 둘 다 Shipping 에서는 빠진다(`SW_PROFILER_TRACE_ENABLED`, 사용자 결정). 남은 단위는 아래 순서대로 진행한다.
 
 ## 왜 필요한가
 
@@ -20,20 +20,11 @@ Chrome Tracing 의 Trace Event 형식(JSON)은 사양이 공개돼 있고 `chrom
 |---|---|---|
 | 기록 | `ProfilerTimeline`(`Source/Engine/Profiling/ProfilerTimeline.h`) — 스레드마다 링 버퍼(8192 사건), 프레임 시작 시각 링 64 개, 스레드 이름 | 최근 몇 프레임만 남는다 |
 | 보기 | 에디터 프로파일러 패널(`Source/Editor/Panels/ProfilerPanel.h`)의 Timeline · Call Tree 탭 | 저장 · 불러오기 없음 |
-| 저장 | `ProfilerTraceExport` — 최근 프레임을 Trace Event JSON 으로 저장 | 긴 구간 · 불러오기는 아직 |
+| 저장 · 열기 | `ProfilerTraceExport` — 저장 · 긴 캡처 · 읽기, 에디터 Load Trace | 여러 프로세스 합치기는 아직 |
 | 외부 | Tracy(`Source/Engine/Profiling/README.md`) | 뷰어 설치 · 같은 PC · Shipping 없음 |
 | GPU | 패스마다 GPU 시간, Tracy 로 내는 `GPUTimelineExporter` | JSON 으로는 안 나간다 |
 
 ## 단위 (위가 아래의 바닥)
-
-### X3 에디터에서 열기 · 비교
-
-Timeline 탭이 `.trace.json` 을 불러와 보여 줍니다.
-
-- 불러온 트레이스는 읽기 전용 줄로 현재 기록 위에 또는 아래에 나란히 놓는다(CI 에서 받은 실패 트레이스와 내 PC 의 정상 트레이스 비교).
-- 구간 이름으로 검색하고, 선택한 구간의 시간 · 부모 · 같은 이름 구간의 통계(횟수 · 합 · 최대)를 보인다.
-- 큰 파일은 한 번에 다 그리지 않고 보이는 범위만 배치한다(지금 `ProfilerTimelineLayout` 이 하는 일).
-- 확인: 시나리오로 시험용 트레이스를 열어 탐침(스레드 수 · 사건 수 · 선택한 구간의 통계)이 맞는지.
 
 ### X4 여러 프로세스 합치기
 
@@ -53,7 +44,7 @@ Timeline 탭이 `.trace.json` 을 불러와 보여 줍니다.
 
 ## 순서
 
-X3 → X5 → X4(X1 · X2 는 끝났다). X4 는 서버 디버깅 계획(`docs/plans/ServerDebug.md`) S1 · S5 와 함께 정한다.
+X5 → X4(X1 ~ X3 은 끝났다). X4 는 서버 디버깅 계획(`docs/plans/ServerDebug.md`) S1 · S5 와 함께 정한다.
 
 ## 정한 것 · 지키는 것
 

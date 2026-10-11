@@ -246,6 +246,8 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 | `Editor.SceneViewRequested`, `Editor.GameViewRequested` | 이번 프레임에 에디터가 호스트에 그 뷰 RT 를 그려 달라고 했으면 1. 게임 뷰는 패널이 안 보이면(접힘 · 닫힘 · 다른 탭) 0 이고, 씬 뷰는 두 뷰가 다 가려져도 1 이다 |
 | `Editor.SceneViewDrawn` | 이번 UI 프레임에 Scene 패널이 씬 뷰를 그렸으면(앞 탭으로 보이면) 1 — 씬 뷰가 보이는지는 이것으로 본다 |
 | `Editor.TestRunnerPassCount` | 마지막(또는 지금) 에디터 자체 시험 실행에서 통과한 시험 수 — Test Runner 창 · `-gv_editorSelfTest` 모두 |
+| `Editor.ProfilerLoadedTraceThreads` | Timeline 탭에 불러온 트레이스 파일의 스레드 수(없으면 0) |
+| `Editor.ProfilerTraceSearchMatches` | 타임라인 구간 이름 검색어와 맞은 사건 수(마지막으로 그린 것, 검색어가 없으면 모든 사건) |
 | `Editor.ProfilerTimelineThreadCount` | 프로파일러 타임라인이 최근 4 프레임에 사건을 남긴 스레드 수(녹화 전 0) |
 | `Editor.ContentGameRootCount` | 콘텐츠 브라우저의 게임 팩 루트 수(활성 팩만이면 1) |
 | `Editor.ThumbnailCacheCount`, `Editor.ThumbnailFallbackGlyphCount` | 콘텐츠 브라우저가 든 텍스처 썸네일 수, 지난 그리기에서 종류 아이콘으로 그린 타일 수 |

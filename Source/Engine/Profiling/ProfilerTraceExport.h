@@ -33,6 +33,21 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 불러온 트레이스 파일입니다 — 스레드마다 사건(시작 시각 순 · 깊이는 겹침으로 다시 계산), 구간 이름 표, 프레임 경계입니다. */
+    struct ProfilerLoadedTrace
+    {
+        ProfilerTraceMeta              _meta;
+        vector<ProfilerTimelineThread> _listThread;
+        vector<string>                 _listSlotName; ///< 사건의 `_slot` 이 이 표의 번호다(이름마다 하나)
+        vector<uint64>                 _listFrameBegin;
+        uint64                         _beginNanos{ 0 }; ///< 가장 이른 사건 시작
+        uint64                         _endNanos{ 0 };   ///< 가장 늦은 사건 끝
+        string                         _sourcePath;
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class ProfilerTraceExport
      * @brief 타임라인 사건 → Trace Event JSON 변환기와 저장 창구입니다(전부 static).
@@ -69,6 +84,18 @@ namespace sw
         static bool isRecording();
         /** @brief 긴 캡처의 시간이 다 됐으면 멈추고 저장합니다. 진행 중이 아니면 atomic 하나 읽고 돌아옵니다. 게임 스레드가 부릅니다. */
         static void tickRecording( FrameProfiler& profiler );
+
+        /**
+         * @brief Trace Event JSON(이 파일이 낸 것, 또는 완전 이벤트 `X` 와 스레드 이름 메타를 가진 다른 도구의 것)을 읽습니다.
+         * @details 시각은 마이크로초 → 나노초. 같은 (pid, tid) 는 한 스레드이고, 스레드 줄 이름은 `thread_name` 메타입니다(없으면 `tid <번호>`).
+         *          깊이는 시작 시각 순으로 겹침을 세어 다시 계산합니다(파일에 깊이가 없다). 구간 이름은 같은 글이면 같은 번호입니다.
+         * @return 사건이 하나라도 있으면 true. 아니면 @p outError 에 이유.
+         */
+        [[nodiscard]] static bool parseTraceJSON( string_view json, ProfilerLoadedTrace& outTrace, string& outError );
+        /** @brief 파일을 읽어 `parseTraceJSON` 으로 해석합니다. */
+        [[nodiscard]] static bool loadTraceFile( string_view path, ProfilerLoadedTrace& outTrace, string& outError );
+        /** @brief 기본 저장 폴더(`<프로젝트>/Saved/Traces`)에서 가장 최근 `.trace.json` 의 경로입니다. 없으면 빈 글. */
+        static string findLatestTraceFile();
 
         /**
          * @brief 최근 @p frameCount 프레임을 모아 @p path 에 저장합니다.

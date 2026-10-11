@@ -16,6 +16,8 @@
 #include "Editor/Panels/ProfilerScopeHistory.h"
 #include "Editor/Panels/ProfilerTimelineLayout.h"
 
+#include "Engine/Profiling/ProfilerTraceExport.h"
+
 namespace sw::editor
 {
     /** @brief 메모리 · 성능 프로파일러 탭을 보여 주는 에디터 도구 창입니다. */
@@ -54,8 +56,18 @@ namespace sw::editor
         void drawScopeTable( ProfilerScopeKind kind );
         /** @brief 스레드 미니 타임라인 탭입니다 — 녹화 · 최근 프레임 수 · Freeze · 확대(휠) · 이동(끌기) · 툴팁 · 프레임 경계선. */
         void drawTimelineTab();
-        /** @brief 타임라인 캔버스(스레드 줄 · 사각형 · 프레임 경계선 · 툴팁)를 그립니다. */
-        void drawTimelineCanvas();
+        /**
+         * @brief 타임라인 캔버스(스레드 줄 · 사각형 · 프레임 경계선 · 툴팁)를 그립니다.
+         * @param listThread 그릴 스레드(살아 있는 기록 + 불러온 트레이스를 겹친 목록)
+         * @param pLoadedSlotName 불러온 트레이스의 구간 이름 표(없으면 nullptr) — `kLoadedSlotBase` 이상인 슬롯이 이 표를 가리킨다
+         */
+        void drawTimelineCanvas( const vector<ProfilerTimelineThread>& listThread, const vector<string>* pLoadedSlotName );
+#if SW_PROFILER_TRACE_ENABLED
+        /** @brief 저장한 트레이스를 불러오고 지우는 줄과 구간 이름 검색 칸을 그립니다. */
+        void drawTraceControls();
+        /** @brief 불러온 트레이스를 살아 있는 기록 아래에 겹쳐(첫 시각을 맞춰) 그릴 목록으로 만듭니다. */
+        void composeTimelineDraw();
+#endif
 
         /** @brief 호출 트리 탭입니다 — 타임라인 녹화의 사건을 경로로 접어 합 · 자기 시간 · 횟수를 보인다(유니티 Profiler Hierarchy). */
         void drawCallTreeTab();
@@ -75,6 +87,18 @@ namespace sw::editor
         uint64 getCapturedFrameCount() const { return _scopeHistory.getCapturedFrameCount(); }
         /** @brief 탐침 — 마지막으로 그린 호출 트리의 노드 수입니다. */
         uint32 getCallTreeNodeCount() const { return static_cast<uint32>( _listCallNode.size() ); }
+#if SW_PROFILER_TRACE_ENABLED
+        /** @brief 탐침 — 불러온 트레이스의 스레드 수(없으면 0)입니다. */
+        uint32 getLoadedTraceThreadCount() const { return _bLoadedTrace == SW_TRUE ? static_cast<uint32>( _loadedTrace._listThread.size() ) : 0; }
+        /** @brief 탐침 — 마지막으로 그린 타임라인에서 검색어와 맞은 사건 수입니다(검색어가 없으면 모든 사건). */
+        uint32 getTraceSearchMatchCount() const { return _traceSearchMatched; }
+        /** @brief 구간 이름 검색어를 정합니다(자동화가 입력 흉내 없이 쓴다). */
+        void setTraceSearch( const utf8* pText );
+        /** @brief 저장 폴더의 가장 최근 트레이스를 불러옵니다. 성공하면 true. */
+        [[nodiscard]] bool loadLatestTrace();
+        /** @brief 지정한 파일을 불러옵니다. 성공하면 true. */
+        [[nodiscard]] bool loadTraceFile( string_view path );
+#endif
 
     private:
         /** @brief 활성 씬의 컴포넌트 분포 섹션을 그립니다. */
@@ -112,5 +136,14 @@ namespace sw::editor
         uint8                          _bPauseOnSpike   : 1; ///< GT.Frame 이 문턱을 넘으면 멈춘다
         uint8                          _bCapturePaused  : 1; ///< 담기를 멈췄다 — 스파이크를 잡았거나 캡처 파일을 열었다
         uint8                          _bCallTreeFrozen : 1; ///< 호출 트리를 다시 접지 않는다
+#if SW_PROFILER_TRACE_ENABLED
+        ProfilerLoadedTrace            _loadedTrace;         ///< 불러온 트레이스(`_bLoadedTrace` 일 때만 뜻이 있다)
+        vector<ProfilerTimelineThread> _listTimelineDraw;    ///< 이번 프레임에 그릴 스레드(살아 있는 것 + 불러온 것, 프레임마다 다시 쓴다)
+        vector<uint64>                 _listLoadedFrameDraw; ///< 불러온 트레이스의 프레임 경계(살아 있는 기록의 시각으로 옮긴 것)
+        string                         _traceStatus;         ///< 마지막 불러오기 결과 한 줄
+        utf8                           _arrTraceSearch[constant::kMaxBuffer128];
+        uint32                         _traceSearchMatched;
+        uint8                          _bLoadedTrace : 1;
+#endif
     };
 } // namespace sw::editor

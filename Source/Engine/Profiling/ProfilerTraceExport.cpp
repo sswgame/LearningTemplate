@@ -109,6 +109,160 @@ namespace sw
         return json;
     }
 
+    bool ProfilerTraceExport::parseTraceJSON( string_view json, ProfilerLoadedTrace& outTrace, string& outError )
+    {
+        outTrace = ProfilerLoadedTrace{};
+        JSONDocument document;
+        if ( document.parse( json ) == false )
+        {
+            outError = "not valid JSON: " + document.getLastError();
+            return false;
+        }
+        const JSONValue root = document.getRoot();
+        // 배열만 있는 형식도 허용한다(Trace Event 사양의 JSON Array Format).
+        const JSONValue events = root.isArray() ? root : root.get( "traceEvents" );
+        if ( events.isArray() == false )
+        {
+            outError = "no traceEvents array";
+            return false;
+        }
+        const JSONValue other = root.isObject() ? root.get( "otherData" ) : JSONValue{};
+        if ( other.isObject() )
+        {
+            outTrace._meta._processName          = other.get( "processName" ).asString();
+            outTrace._meta._processID            = static_cast<int32>( other.get( "processID" ).asInt() );
+            outTrace._meta._wallUnixMilliseconds = other.get( "wallUnixMilliseconds" ).asInt();
+            outTrace._meta._monotonicNanoseconds = other.get( "monotonicNanoseconds" ).asUint();
+            outTrace._meta._bTruncated           = other.get( "truncated" ).asBool();
+        }
+
+        struct ThreadKey
+        {
+            int64 _pid;
+            int64 _tid;
+        };
+        vector<ThreadKey> listKey;
+        const auto        findThread = [&]( int64 pid, int64 tid ) -> size_t
+        {
+            for ( size_t index = 0; index < listKey.size(); ++index )
+            {
+                if ( listKey[index]._pid == pid && listKey[index]._tid == tid )
+                    return index;
+            }
+            listKey.push_back( { pid, tid } );
+            ProfilerTimelineThread thread;
+            thread._name = "tid " + to_string( tid );
+            outTrace._listThread.push_back( thread );
+            return listKey.size() - 1;
+        };
+        vector<std::pair<size_t, string>> listThreadName;
+        const auto                        findSlot = [&]( const string& name ) -> uint32
+        {
+            for ( size_t index = 0; index < outTrace._listSlotName.size(); ++index )
+            {
+                if ( outTrace._listSlotName[index] == name )
+                    return static_cast<uint32>( index );
+            }
+            outTrace._listSlotName.push_back( name );
+            return static_cast<uint32>( outTrace._listSlotName.size() - 1 );
+        };
+
+        size_t eventCount = 0;
+        for ( size_t index = 0; index < events.size(); ++index )
+        {
+            const JSONValue event = events.at( index );
+            const string    phase = event.get( "ph" ).asString();
+            const int64     pid   = event.get( "pid" ).asInt();
+            const int64     tid   = event.get( "tid" ).asInt();
+            if ( phase == "X" )
+            {
+                const float64         begin    = event.get( "ts" ).asFloat();
+                const float64         duration = event.get( "dur" ).asFloat();
+                ProfilerTimelineEvent loaded;
+                loaded._beginNanos = static_cast<uint64>( begin * 1000.0 + 0.5 );
+                loaded._endNanos   = loaded._beginNanos + static_cast<uint64>( duration * 1000.0 + 0.5 );
+                loaded._slot       = findSlot( event.get( "name" ).asString() );
+                outTrace._listThread[findThread( pid, tid )]._listEvent.push_back( loaded );
+                ++eventCount;
+            }
+            else if ( phase == "M" && event.get( "name" ).asString() == "thread_name" )
+            {
+                outTrace._listThread[findThread( pid, tid )]._name = event.get( "args" ).get( "name" ).asString();
+            }
+            else if ( phase == "i" && event.get( "name" ).asString() == "Frame" )
+            {
+                outTrace._listFrameBegin.push_back( static_cast<uint64>( event.get( "ts" ).asFloat() * 1000.0 + 0.5 ) );
+            }
+        }
+        if ( eventCount == 0 )
+        {
+            outError = "no complete events (ph=X) in the file";
+            return false;
+        }
+
+        bool bFirst = true;
+        for ( ProfilerTimelineThread& thread : outTrace._listThread )
+        {
+            std::stable_sort( thread._listEvent.begin(), thread._listEvent.end(),
+                              []( const ProfilerTimelineEvent& left, const ProfilerTimelineEvent& right )
+            { return left._beginNanos < right._beginNanos; } );
+            vector<uint64> listOpenEnd; // 깊이 = 아직 안 끝난 바깥 구간 수
+            for ( ProfilerTimelineEvent& event : thread._listEvent )
+            {
+                while ( listOpenEnd.empty() == false && listOpenEnd.back() <= event._beginNanos )
+                {
+                    listOpenEnd.pop_back();
+                }
+                event._depth = static_cast<uint16>( listOpenEnd.size() );
+                listOpenEnd.push_back( event._endNanos );
+                outTrace._beginNanos = ( bFirst || event._beginNanos < outTrace._beginNanos ) ? event._beginNanos : outTrace._beginNanos;
+                outTrace._endNanos   = ( bFirst || event._endNanos > outTrace._endNanos ) ? event._endNanos : outTrace._endNanos;
+                bFirst               = false;
+            }
+        }
+        std::sort( outTrace._listFrameBegin.begin(), outTrace._listFrameBegin.end() );
+        return true;
+    }
+
+    bool ProfilerTraceExport::loadTraceFile( string_view path, ProfilerLoadedTrace& outTrace, string& outError )
+    {
+        string text;
+        if ( FileUtil::readTextFile( path, text ) == false )
+        {
+            outError = "cannot read " + string( path );
+            return false;
+        }
+        if ( parseTraceJSON( text, outTrace, outError ) == false )
+            return false;
+        outTrace._sourcePath = string( path );
+        return true;
+    }
+
+    string ProfilerTraceExport::findLatestTraceFile()
+    {
+        vector<string> listFile;
+        const string   folder = FileUtil::joinPath( ResourcePaths::getProjectFolderPath(), "Saved/Traces" );
+        if ( FileUtil::collectFiles( folder, ".json", listFile, false ) == false )
+            return {};
+        string latest;
+        int64  latestStamp = -1;
+        for ( const string& file : listFile )
+        {
+            const string name = FileUtil::getFileNamePart( file );
+            if ( name.size() <= 11 || name.find( kFileExtension ) == string::npos )
+                continue;
+            // trace_<유닉스 밀리초>.trace.json — 숫자 부분이 가장 큰 것이 최근이다.
+            const size_t underscore = name.find( '_' );
+            const int64  stamp      = underscore == string::npos ? 0 : static_cast<int64>( std::strtoll( name.c_str() + underscore + 1, nullptr, 10 ) );
+            if ( stamp > latestStamp )
+            {
+                latestStamp = stamp;
+                latest      = file;
+            }
+        }
+        return latest;
+    }
+
     namespace
     {
         /** @brief 진행 중인 긴 캡처입니다. 시작과 끝이 모두 게임 스레드라 잠금이 없고, 다른 스레드는 `_bActive` 만 읽습니다. */

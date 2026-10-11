@@ -1349,6 +1349,24 @@ namespace sw::editor
                         outValue = pPanel->isCapturePaused() ? 1.0 : 0.0;
                         break;
                     }
+                    case 4:
+                    {
+#if SW_PROFILER_TRACE_ENABLED
+                        outValue = static_cast<float64>( pPanel->getLoadedTraceThreadCount() );
+#else
+                        outValue = 0.0;
+#endif
+                        break;
+                    }
+                    case 5:
+                    {
+#if SW_PROFILER_TRACE_ENABLED
+                        outValue = static_cast<float64>( pPanel->getTraceSearchMatchCount() );
+#else
+                        outValue = 0.0;
+#endif
+                        break;
+                    }
                     default:
                     {
                         outValue = static_cast<float64>( pPanel->getCapturedFrameCount() );
@@ -1362,6 +1380,8 @@ namespace sw::editor
             [[nodiscard]] static bool readProfilerSelectedFrame( const GameObjectManager* /*pManager*/, float64& outValue ) { return readProfilerPanelValue( 1, outValue ); }
             [[nodiscard]] static bool readProfilerCapturePaused( const GameObjectManager* /*pManager*/, float64& outValue ) { return readProfilerPanelValue( 2, outValue ); }
             [[nodiscard]] static bool readProfilerCapturedFrames( const GameObjectManager* /*pManager*/, float64& outValue ) { return readProfilerPanelValue( 3, outValue ); }
+            [[nodiscard]] static bool readProfilerLoadedTraceThreads( const GameObjectManager* /*pManager*/, float64& outValue ) { return readProfilerPanelValue( 4, outValue ); }
+            [[nodiscard]] static bool readProfilerTraceSearchMatches( const GameObjectManager* /*pManager*/, float64& outValue ) { return readProfilerPanelValue( 5, outValue ); }
 
             /** @brief 렌더 타깃 창 값 하나입니다(열려 있지 않으면 값을 내지 않는다). 픽셀 값은 읽은 적이 없으면 내지 않는다. */
             [[nodiscard]] static bool readRenderTargetPanelValue( uint32 which, float64& outValue )
@@ -1595,6 +1615,11 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readProfilerCapturePaused );
     SW_AUTOMATION_PROBE( editorProfilerCapturedFrames, "Editor.ProfilerCapturedFrames", "Frames the profiler panel captured (or the opened capture holds)",
                          &EditorScenarioStepsInternal::readProfilerCapturedFrames );
+    SW_AUTOMATION_PROBE( editorProfilerLoadedTraceThreads, "Editor.ProfilerLoadedTraceThreads", "Threads of the trace file loaded into the profiler Timeline tab (0 when none)",
+                         &EditorScenarioStepsInternal::readProfilerLoadedTraceThreads );
+    SW_AUTOMATION_PROBE( editorProfilerTraceSearchMatches, "Editor.ProfilerTraceSearchMatches",
+                         "Timeline events whose scope name matches the search text, counted over the last drawn timeline (all events when the text is empty)",
+                         &EditorScenarioStepsInternal::readProfilerTraceSearchMatches );
     SW_AUTOMATION_PROBE( editorProfilerTimelineThreadCount, "Editor.ProfilerTimelineThreadCount",
                          "Threads with profile scopes in the profiler timeline over the last 4 frames (0 while not recording)",
                          &EditorScenarioStepsInternal::readProfilerTimelineThreadCount );
