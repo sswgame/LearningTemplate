@@ -1,6 +1,6 @@
 /**
  * @file ImGuiEditor.h
- * @brief ImGui 에디터 호스트입니다(OS/GPU 백엔드 · 프레임 루프).
+ * @brief ImGui 에디터 호스트입니다. OS 와 GPU 백엔드, 프레임 루프를 담당합니다.
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
@@ -19,22 +19,22 @@ namespace sw::editor
     class IImGuiPlatformBackend;
     class IImGuiRendererBackend;
 
-    /** @brief ImGui 플랫폼 · 렌더러 호스트입니다. 메뉴 · 도크 · 폰트는 Common 에 맡깁니다. */
+    /** @brief ImGui 플랫폼과 렌더러의 호스트입니다. 메뉴, 도크, 폰트는 Common 에 맡깁니다. */
     class ImGuiEditor : public IEditor
     {
     public:
         // ------------------------------------------------------------------------------
-        // 1) 수명 주기 (생성자는 플래그만, GPU · ImGui 는 initialize / shutdown 에서)
+        // 1) 수명 주기. 생성자는 플래그만 설정하고, GPU 와 ImGui 는 initialize 와 shutdown 에서 다룬다
         // ------------------------------------------------------------------------------
-        /** @brief ImGui 에디터 셸을 생성합니다. */
+        /** @brief ImGui 에디터 셸을 만듭니다. */
         ImGuiEditor();
         /** @brief ImGui 에디터 셸을 파괴합니다. */
         virtual ~ImGuiEditor() override;
 
         // ------------------------------------------------------------------------------
-        // 2) IEditor — 초기화 / 프레임 / 이벤트 / 텍스처
+        // 2) IEditor: 초기화, 프레임, 이벤트, 텍스처
         // ------------------------------------------------------------------------------
-        /** @brief 플랫폼 백엔드·렌더러·폰트를 초기화합니다. */
+        /** @brief 플랫폼 백엔드, 렌더러, 폰트를 초기화합니다. */
         bool initialize( IWindow* pWindow, IRHIDevice* pRHIDevice ) override;
         /** @brief 에디터 리소스를 해제합니다. */
         void shutdown() override;
@@ -47,21 +47,21 @@ namespace sw::editor
         /** @brief 메인 스왑체인 Present 뒤에 멀티 뷰포트를 그립니다. */
         void postPresent( IRHIDevice* pRHIDevice ) override;
         void abandonPendingDraw() override;
-        /** @brief 네이티브 이벤트를 ImGui 플랫폼 레이어로 전달합니다. */
+        /** @brief 네이티브 이벤트를 ImGui 플랫폼 레이어에 전달합니다. */
         bool processEvent( const NativeWindowEvent& event ) override;
-        /** @brief RHI 텍스처를 ImGui 텍스처 ID로 등록합니다. */
+        /** @brief RHI 텍스처를 ImGui 텍스처 ID 로 등록합니다. */
         void* registerTexture( uint64 texture ) override;
-        /** @brief 등록된 ImGui 텍스처 ID를 해제합니다. */
+        /** @brief 등록된 ImGui 텍스처 ID 를 해제합니다. */
         void unregisterTexture( void* pTextureID ) override;
-        /** @brief 이번 프레임 게임 뷰 RT 핸들과 크기를 조회합니다. */
+        /** @brief 이번 프레임 게임 뷰의 렌더 타깃 핸들과 크기를 조회합니다. */
         void getGameViewport( uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) const override;
-        /** @brief 이번 프레임 씬 뷰 RT 핸들과 크기를 조회합니다. */
+        /** @brief 이번 프레임 씬 뷰의 렌더 타깃 핸들과 크기를 조회합니다. */
         void getSceneViewport( uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) const override;
         /** @brief 이번 프레임 씬 뷰를 그리는 카메라를 반환합니다. */
         CameraComponent* getSceneViewCamera() const override;
-        /** @brief 에디터 시뮬레이션(PIE)이 실행 중인지 반환합니다. */
+        /** @brief 에디터 시뮬레이션(PIE)이 실행 중이면 true 입니다. */
         bool isPlaying() const override;
-        /** @brief 에디터 시뮬레이션이 일시정지인지 반환합니다. */
+        /** @brief 에디터 시뮬레이션이 일시정지 상태이면 true 입니다. */
         bool isPaused() const override;
         /** @brief 에디터 시뮬레이션(PIE)을 정지합니다. */
         void stopSimulation() override;
@@ -70,15 +70,15 @@ namespace sw::editor
 
     private:
         /**
-         * @brief `initialize` 가 세운 단계를 **세운 역순으로** 내립니다. 단계마다 null 안전이라 어느 단계에서 멈춘 초기화의 실패 경로와
+         * @brief `initialize` 가 초기화한 단계를 초기화의 역순으로 정리합니다. 단계마다 null 에 안전하므로, 어느 단계에서 멈춘 초기화의 실패 경로와
          *        정상 종료(`shutdown`)가 같은 본문을 씁니다.
-         * @details 세우는 순서: 에디터 데이터 → ImGui · ImPlot 컨텍스트(+ 글꼴) → 플랫폼 백엔드 → 렌더 백엔드 → (스플래시) → 에디터 컨텍스트 · 패널 ·
-         *          Undo 편집 리스너 → 창 닫기 질의 처리기. 단계를 더하면 이 함수의 같은 자리(역순)에 내리기를 더합니다.
+         * @details 초기화 순서는 에디터 데이터, ImGui 와 ImPlot 컨텍스트(글꼴 포함), 플랫폼 백엔드, 렌더 백엔드, (스플래시), 에디터 컨텍스트와 패널과
+         *          Undo 편집 리스너, 창 닫기 질의 처리기다. 단계를 추가하면 이 함수의 같은 위치(역순)에 정리 코드를 추가한다.
          */
         void shutdownPartialInitialization();
         bool onWindowCloseQuery();
         // ------------------------------------------------------------------------------
-        // 3) ImGui 프레임 · 백엔드 렌더
+        // 3) ImGui 프레임과 백엔드 렌더
         // ------------------------------------------------------------------------------
         /** @brief ImGui 프레임을 시작합니다. */
         void beginFrame();
@@ -86,13 +86,13 @@ namespace sw::editor
         void endFrame();
         /** @brief ImGui 렌더러 백엔드로 주어진 DrawData 를 그립니다. */
         void renderBackend( IRHIDevice* pRHIDevice, ImDrawData* pDrawData );
-        /** @brief 렌더 스레드가 이전 스냅샷을 쓰는 동안 NewFrame을 미룹니다. */
+        /** @brief 렌더 스레드가 이전 스냅샷을 쓰는 동안 NewFrame 을 미룹니다. */
         void waitForDrawSnapshotIdle();
 
     private:
         /** @brief 렌더 중인 슬롯이 없음을 뜻하는 센티널 값입니다. */
         static constexpr uint32 _s_kInvalidDrawSlot = invalid_index::kUint32;
-        // draw 스냅샷 슬롯 수는 인플라이트 프레임 수와 같은 개념이라 constant::kMaxFrameCountInFlight 를 직접 쓴다. 별칭을
+        // draw 스냅샷 슬롯 수는 인플라이트 프레임 수와 같은 개념이므로 constant::kMaxFrameCountInFlight 를 직접 쓴다. 별칭을
         // 두면 같은 개념에 이름이 둘이 되고, 한쪽만 바뀌어도 컴파일은 통과한다.
         static_assert( constant::kMaxFrameCountInFlight >= 2, "draw 스냅샷은 최소 2개(더블 버퍼) 이상이어야 합니다." );
 
@@ -104,7 +104,7 @@ namespace sw::editor
         EditorDrawDataSnapshot            _arrDrawSnapshot[constant::kMaxFrameCountInFlight];
         atomic<uint32>                    _publishedDrawSlot;
         atomic<uint32>                    _inFlightDrawSlot;
-        /// @brief 마지막으로 낸 draw 스냅샷 번호입니다(UI 스레드 전용, 1 부터). 놓은 자원의 해제를 이 번호로 줄 세웁니다(`EditorDrawReleaseQueue`).
+        /// @brief 마지막으로 낸 draw 스냅샷 번호입니다. UI 스레드 전용이며 1 부터 시작합니다. 해제한 리소스의 해제 순서를 이 번호로 정합니다(`EditorDrawReleaseQueue`).
         uint64 _lastDrawSnapshotSequence;
 
         uint8                  _bInitialized  : 1;
