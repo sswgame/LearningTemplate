@@ -38,7 +38,7 @@
 
 namespace sw
 {
-    /** @brief `-gv_serverExitAfterTicks=N`: N 틱을 돈 뒤 스스로 정상 종료합니다(기동 · 종료 테스트). Shipping 에도 등록합니다 — 배포 서버 산출물을 같은 테스트가 띄운다. */
+    /** @brief `-gv_serverExitAfterTicks=N`: N 틱을 돈 뒤 스스로 정상 종료합니다(기동과 종료 테스트용). Shipping 에도 등록하며, 배포 서버 산출물을 같은 테스트가 실행합니다. */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_serverExitAfterTicks, 0, "이 틱 수를 돈 뒤 정상 종료 (0=끄기)" );
 } // namespace sw
 
@@ -50,18 +50,18 @@ namespace sw
     {
         struct ServerAppInternal
         {
-            /** @brief 밀림 경고를 몇 번에 한 번만 남기나 — 과부하 서버가 로그 때문에 더 느려지지 않게. */
+            /** @brief 밀림 경고를 몇 번에 한 번만 남길지 정합니다. 과부하 서버가 로그 때문에 더 느려지지 않게 하기 위해서입니다. */
             static constexpr uint32 kDroppedTickWarningInterval = 100;
-            /** @brief 클라이언트 산출물에 없어야 할 표식(`BuildTargetImageTest`) — 서버 실행 파일 자신도 서버 전용이다. */
+            /** @brief 클라이언트 산출물에 없어야 할 표식(`BuildTargetImageTest`)입니다. 서버 실행 파일 자신도 서버 전용입니다. */
             static constexpr utf8 kArrServerImageMarker[] = "sw-server-only-module:Server";
-            /** @brief 운영 HTTP 는 스크레이퍼 · 감시자 몇이 붙는다 — 연결 상한과 유휴 시한을 작게. */
+            /** @brief 운영 HTTP 에는 스크레이퍼와 감시자 몇 개만 붙으므로 연결 상한과 유휴 시한을 작게 잡습니다. */
             static constexpr int32   kOpsMaxConnections     = 64;
             static constexpr float64 kOpsIdleTimeoutSeconds = 10.0;
 
             static int64 nowMonotonicMs() { return MonotonicClock::nowNanoseconds() / 1000000; }
         };
 
-        /** @brief 표식 글을 링커가 버리지 못하게 정적 초기화에서 한 번 읽는다(서버 전용 모듈의 생성 표식과 같은 방식). */
+        /** @brief 링커가 표식 문자열을 버리지 못하게 정적 초기화에서 한 번 읽습니다(서버 전용 모듈의 생성 표식과 같은 방식입니다). */
         struct ServerImageMarkerInternal
         {
             ServerImageMarkerInternal()
@@ -110,7 +110,7 @@ namespace sw
 
     int32 ServerApp::runMain( int32 argc, utf8* pArgv[] )
     {
-        // 줄마다 내보낸다 — 테스트 · journald · docker logs 가 "ready" 줄을 바로 본다. 엔진(로거)을 세우기 전에 켠다.
+        // 줄마다 내보낸다. 테스트, journald, docker logs 가 "ready" 줄을 바로 볼 수 있다. 엔진(로거)을 시작하기 전에 켠다.
         ConsoleLogOutput::setFlushEveryLine( true );
         ServerApp  server{};
         const bool bStarted = server.initialize( argc, pArgv );
@@ -129,7 +129,7 @@ namespace sw
             SW_LOG_ERROR( "EngineLoop initialization failed (dedicated server)" );
             return false;
         }
-        // 헤드리스 작업(서버 팩의 씬 쿠킹)은 엔진 기동 안에서 끝났다. 실패는 종료 코드로 — CookAssets.py 가 본다.
+        // 헤드리스 작업(서버 팩의 씬 쿠킹)은 엔진 기동 안에서 끝났다. 실패는 종료 코드로 알린다. CookAssets.py 가 이 코드를 본다.
         if ( _engineLoop.isHeadless() )
             return _engineLoop.didHeadlessTaskFail() == false;
 
@@ -157,7 +157,7 @@ namespace sw
 #endif
 
         _bReady = SW_TRUE;
-        // 여기부터 모든 줄에 `[tick=N]`(N = 끝낸 틱 수 — 도는 틱의 0 기준 번호)이 붙는다. 멀티 프로세스 재생의 Output Log 가 서버 줄을 틱으로 맞춰 본다.
+        // 여기부터 모든 줄에 `[tick=N]`이 붙는다. N 은 끝낸 틱 수이며, 지금 도는 틱의 0 기준 번호다. 멀티 프로세스 재생의 Output Log 가 서버 줄을 틱 기준으로 맞춰 본다.
         Logger::setTickNumber( _tickCount );
         SW_LOG_INFO( "Dedicated server ready - target %#, %# Hz, game port %#, service port %#, startup %# ms", build::kTargetName, _pServerConfig->_tickRateHz,
                      _pServerConfig->_gamePort, _pServerConfig->_servicePort, ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / 1000000 );
@@ -168,11 +168,11 @@ namespace sw
     {
         SW_MEMORY_SCOPE( EngineMisc );
 #if !defined( SW_SHIPPING )
-        // 전용 서버는 Server 대상 모듈만 올린다 — Game 빌드에서도 에디터 · RHI 모듈을 올리지 않는다.
+        // 전용 서버는 Server 대상 모듈만 로드한다. Game 빌드에서도 에디터와 RHI 모듈을 로드하지 않는다.
         if ( ModuleCatalogLoader::loadAndResolve( static_cast<uint8>( ModuleTarget::Server ), _moduleCatalog, _moduleResolution ) == false )
             return false;
         _liveReloadManager = make_unique<LiveReloadManager>();
-        // 모듈 DLL 을 내릴 수 있는 곳은 "씬은 사라졌고 서비스는 아직 있는" 구간뿐이다(App 과 같은 훅).
+        // 모듈 DLL 을 언로드할 수 있는 곳은 "씬은 사라졌고 서비스는 아직 있는" 구간뿐이다(App 과 같은 훅).
         _engineLoop.setOnScenesReleased( SW_DELEGATE_LAMBDA( Delegate<void()>, [this]()
         {
             if ( _liveReloadManager != nullptr )
@@ -205,8 +205,8 @@ namespace sw
         }
         if ( pConfigManager == nullptr )
             return false;
-        // Shipping 도 디스크에서 읽는다 — 운영자가 고치는 파일이다(굽지 않는다). 없으면 Shipping 은 서지 않는다: 기본 포트로 조용히 뜬 서버는
-        // 틀린 DB · 캐시에 붙는 서버다.
+        // Shipping 도 디스크에서 읽는다. 운영자가 고치는 파일이므로 베이크하지 않는다. 파일이 없으면 Shipping 은 서버를 시작하지 않는다.
+        // 기본 포트로 조용히 뜬 서버는 틀린 DB 와 캐시에 붙는 서버이기 때문이다.
         if ( pConfigManager->loadConfig<ServerConfig>( path ) )
         {
             _pServerConfig = pConfigManager->getConfig<ServerConfig>();
@@ -237,7 +237,7 @@ namespace sw
             SW_LOG_ERROR( "Server config _opsListenAddress '%#' is not an IPv4 address", _pServerConfig->_opsListenAddress.c_str() );
             return false;
         }
-        opsSettings._bindAddress._port = static_cast<uint16>( _pServerConfig->_opsPort ); // 포트는 _opsPort 가 원본(주소 칸에 포트를 적어도 무시)
+        opsSettings._bindAddress._port = static_cast<uint16>( _pServerConfig->_opsPort ); // 포트는 `_opsPort` 가 기준이다(주소 필드에 포트를 적어도 무시한다).
         _opsTransport                  = StreamTransportFactory::createPlatformTransport();
         if ( _opsTransport == nullptr )
         {
@@ -253,7 +253,7 @@ namespace sw
         {
             _opsEndpoint.reset();
             _opsTransport.reset();
-            return false; // 운영자가 켠 엔드포인트를 못 열면 서지 않는다 — 감시자가 볼 수 없는 서버다
+            return false; // 운영자가 켠 엔드포인트를 열지 못하면 서버를 시작하지 않는다. 감시자가 볼 수 없는 서버이기 때문이다.
         }
         return true;
     }
@@ -290,13 +290,13 @@ namespace sw
             if ( cause != ShutdownCause::None || _engineLoop.isQuitRequested() )
             {
                 SW_LOG_INFO( "Dedicated server shutdown requested (%#) after %# ticks", ShutdownSignal::getCauseName( cause ), _tickCount );
-                _healthRegistry->setDraining( true ); // /readyz 503 — 부하 분산기가 새 접속을 끊는다(내리는 동안 /healthz 는 살아 있음)
+                _healthRegistry->setDraining( true ); // /readyz 는 503 을 반환한다. 부하 분산기가 새 접속을 끊는다(종료하는 동안에도 /healthz 는 살아 있다).
                 break;
             }
 
             if ( _bPaused == SW_TRUE && _pendingStepCount == 0 )
             {
-                // 일시정지 — 게임 틱만 멈춘다. 살아 있으니 상태 확인 박동은 계속(감시자가 재시작하지 않게), 재개 때 밀린 틱을 몰아 돌지 않게 마감을 지금으로.
+                // 일시정지에서는 게임 틱만 멈춘다. 서버는 살아 있으므로 상태 확인 박동은 계속 보내(감시자가 재시작하지 않게 한다). 재개할 때 밀린 틱을 몰아서 돌지 않게 마감을 지금으로 바꾼다.
                 _healthRegistry->markTick( ServerAppInternal::nowMonotonicMs() );
                 MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + _tickNanoseconds );
                 deadline = MonotonicClock::nowNanoseconds();
@@ -308,7 +308,7 @@ namespace sw
             const int64 tickTime = MonotonicClock::nowNanoseconds() - tickStart;
             _pTickHistogram->observe( static_cast<float64>( tickTime ) * 1.0e-9 );
 #if SW_PROFILER_TRACE_ENABLED
-            // 느린 틱 자동 캡처(`-gv_traceSlowTickMs`) — 꺼져 있으면 정수 비교 하나다. Shipping 서버에는 없다(지표 `server_tick_seconds` 만).
+            // 느린 틱 자동 캡처(`-gv_traceSlowTickMs`)는 꺼져 있으면 정수 비교 하나다. Shipping 서버에는 없다(지표 `server_tick_seconds` 만 있다).
             ProfilerTraceExport::tickSlowFrameCapture( engine::getFrameProfiler(), static_cast<uint64>( tickStart ),
                                                        static_cast<uint64>( tickStart + tickTime ), "Server" );
 #endif
@@ -327,7 +327,7 @@ namespace sw
             const int64 now = MonotonicClock::nowNanoseconds();
             if ( now - deadline > maxBehind )
             {
-                // 따라잡을 수 없을 만큼 밀렸다 — 밀린 시간을 버리고 지금부터 다시 센다(몰아 돌기가 다음 틱을 또 밀지 않게).
+                // 따라잡을 수 없을 만큼 밀렸다. 밀린 시간을 버리고 지금부터 다시 센다(몰아서 돌다가 다음 틱을 또 밀지 않게 한다).
                 const uint32 dropped = static_cast<uint32>( ( now - deadline ) / _tickNanoseconds );
                 if ( _droppedTickCount == 0 ||
                      _droppedTickCount / ServerAppInternal::kDroppedTickWarningInterval != ( _droppedTickCount + dropped ) / ServerAppInternal::kDroppedTickWarningInterval )
@@ -345,7 +345,7 @@ namespace sw
 
     void ServerApp::tickOnce( float32 deltaSeconds )
     {
-        // App::run 의 한 프레임에서 창 · 에디터 · 사용자 설정 · 백엔드 교체를 뺀 것이다. 한 틱 = 고정 스텝 하나.
+        // App::run 의 한 프레임에서 창, 에디터, 사용자 설정, 백엔드 교체를 뺀 것이다. 한 틱은 고정 스텝 하나다.
         _engineLoop.beginFrame( deltaSeconds );
         _moduleHost->beginFrame();
         {
@@ -389,7 +389,7 @@ namespace sw
         if ( executePauseCommand( command ) )
             return;
 #if SW_DEV_COMMANDS_ENABLED
-        // Dev 는 개발 콘솔과 같은 명령(개발 명령 · gv_* 전역 변수)을 받는다 — 답 · 실패는 DevConsole 이 로그에 남긴다. Shipping 서버는 위 넷뿐이다.
+        // Dev 는 개발 콘솔과 같은 명령(개발 명령과 gv_* 전역 변수)을 받는다. 응답과 실패는 DevConsole 이 로그에 남긴다. Shipping 서버는 위의 네 가지만 받는다.
         if ( _devConsole != nullptr )
         {
             (void)_devConsole->submit( command );
@@ -429,7 +429,7 @@ namespace sw
         }
         if ( _bPaused == SW_FALSE )
             SW_LOG_INFO( "Server paused at tick %#", _tickCount );
-        _bPaused          = SW_TRUE; // 도는 중에 step 이면 멈추고 그만큼만 돈다
+        _bPaused          = SW_TRUE; // 도는 중에 step 이면 멈추고 그만큼만 돈다.
         _pendingStepCount = static_cast<uint32>( stepCount );
         return true;
 #else
@@ -449,25 +449,25 @@ namespace sw
     void ServerApp::shutdown()
     {
         _console.stop();
-        vector<string>{}.swap( _listPendingCommand ); // 엔진 종료의 누수 보고 전에 놓는다(기동 뒤에 잡은 용량)
+        vector<string>{}.swap( _listPendingCommand ); // 엔진 종료의 누수 보고 전에 해제한다(기동 뒤에 잡은 용량).
 #if SW_DEV_COMMANDS_ENABLED
         _devConsole.reset();
 #endif
-        // 게임 · 모듈 인스턴스를 엔진보다 먼저 내린다(App::shutdown 과 같은 순서).
+        // 게임과 모듈 인스턴스를 엔진보다 먼저 종료한다(App::shutdown 과 같은 순서).
         if ( _moduleHost != nullptr )
         {
             _moduleHost->shutdown();
             _moduleHost.reset();
         }
-        // 운영 엔드포인트는 게임을 내리는 동안에도 비우는 중(/readyz 503)을 알리다 마지막에 닫는다 — 로그를 남기므로 엔진(로거)보다 먼저.
+        // 운영 엔드포인트는 게임을 종료하는 동안에도 비우는 중(/readyz 503)임을 알리다가 마지막에 닫는다. 로그를 남기므로 엔진(로거)보다 먼저 닫는다.
         shutdownObservability();
-        // 로거는 엔진 종료와 함께 내려간다 — 마지막 줄은 그 앞에 남긴다(테스트 · 운영 도구가 이 줄로 정상 종료를 본다).
+        // 로거는 엔진 종료와 함께 종료된다. 마지막 줄은 그 앞에 남긴다(테스트와 운영 도구가 이 줄로 정상 종료를 확인한다).
         SW_LOG_INFO( "Dedicated server shutdown complete" );
         _engineLoop.shutdown();
         Logger::clearTickNumber();
         if ( _bSignalHandlerInstalled == SW_TRUE )
             ShutdownSignal::uninstall();
-        // Windows 창 닫기 · 시스템 종료 처리기가 이것을 기다린다.
+        // Windows 창 닫기와 시스템 종료 처리기가 이것을 기다린다.
         ShutdownSignal::notifyShutdownComplete();
     }
 } // namespace sw

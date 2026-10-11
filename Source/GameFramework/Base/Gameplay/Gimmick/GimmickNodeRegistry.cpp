@@ -14,7 +14,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 내장 노드 종류입니다. 포트 번호는 종류를 만들 때 적은 이름의 자리와 같습니다. */
+        /** @brief 내장 노드 종류입니다. 포트 번호는 종류를 만들 때 적은 이름의 순서와 같습니다. */
         struct GimmickNodeRegistryInternal
         {
             static constexpr uint32 kMaxPortCount     = 32;
@@ -88,9 +88,9 @@ namespace sw
             }
 
             // ------------------------------------------------------------------------------
-            // 센서 — 바깥이 `_sensorValue`(수준) · `_sensorImpulse`(충격)를 넣는다
+            // 센서: 바깥이 `_sensorValue`(수준)와 `_sensorImpulse`(충격)를 넣는다
             // ------------------------------------------------------------------------------
-            /** @brief Volume — 인원 수. 출력 Occupied · Empty · OnEnter · OnExit, 매개변수 minCount. 상태 int[0] = 지난 인원. */
+            /** @brief Volume 은 인원 수를 읽는다. 출력은 Occupied, Empty, OnEnter, OnExit 이고, 매개변수는 minCount 이다. 상태 int[0] 은 지난 인원이다. */
             static void stepVolume( GimmickNodeContext& context )
             {
                 const int32 count     = static_cast<int32>( context._sensorValue + 0.5f );
@@ -103,7 +103,7 @@ namespace sw
                 context._pIntState[0] = count;
             }
 
-            /** @brief PressurePlate — 무게. 출력 Pressed · OnPress · OnRelease, 매개변수 threshold · latch. 상태 int[0] = 눌림. */
+            /** @brief PressurePlate 는 무게를 읽는다. 출력은 Pressed, OnPress, OnRelease 이고, 매개변수는 threshold 와 latch 이다. 상태 int[0] 은 눌림 여부이다. */
             static void stepPressurePlate( GimmickNodeContext& context )
             {
                 const bool bWasPressed = context._pIntState[0] != 0;
@@ -115,7 +115,7 @@ namespace sw
                 context._pIntState[0] = bPressed ? 1 : 0;
             }
 
-            /** @brief Laser · Signal — 값 0.5 이상이면 켬. 출력 (켬, 끔, 켜짐 펄스, 꺼짐 펄스). 상태 int[0] = 켬. */
+            /** @brief Laser 와 Signal 은 값이 0.5 이상이면 켜진 것으로 본다. 출력은 켬, 끔, 켜짐 펄스, 꺼짐 펄스 네 가지이다. 상태 int[0] 은 켜짐 여부이다. */
             static void stepBinarySensor( GimmickNodeContext& context )
             {
                 const bool bWasOn = context._pIntState[0] != 0;
@@ -127,7 +127,7 @@ namespace sw
                 context._pIntState[0] = bOn ? 1 : 0;
             }
 
-            /** @brief Proximity — 값 = 가장 가까운 대상까지 거리. 출력 Near · Far · OnApproach · OnLeave, 매개변수 radius. */
+            /** @brief Proximity 의 값은 가장 가까운 대상까지의 거리이다. 출력은 Near, Far, OnApproach, OnLeave 이고, 매개변수는 radius 이다. */
             static void stepProximity( GimmickNodeContext& context )
             {
                 const bool bWasNear = context._pIntState[0] != 0;
@@ -139,7 +139,7 @@ namespace sw
                 context._pIntState[0] = bNear ? 1 : 0;
             }
 
-            /** @brief Timer — 입력 Enable · Reset, 출력 OnTick · Running, 매개변수 interval · startEnabled · repeat. 상태 int[0] = 지난 걸음, int[1] = 울렸음. */
+            /** @brief Timer 의 입력은 Enable 과 Reset, 출력은 OnTick 과 Running, 매개변수는 interval, startEnabled, repeat 이다. 상태 int[0] 은 지난 스텝 수이고, int[1] 은 울렸는지 여부이다. */
             static void stepTimer( GimmickNodeContext& context )
             {
                 if ( context.isRising( 1 ) )
@@ -165,7 +165,7 @@ namespace sw
                 context.setOutput( 1, bCanRun );
             }
 
-            /** @brief Damage — 충격 = 이번 피해. 입력 Reset, 출력 OnDamaged · Broken, 매개변수 threshold · health. 상태 float[0] = 누적, int[0] = 부서짐. */
+            /** @brief Damage 의 충격은 이번 피해이다. 입력은 Reset, 출력은 OnDamaged 와 Broken, 매개변수는 threshold 와 health 이다. 상태 float[0] 은 누적 피해이고, int[0] 은 부서짐 여부이다. */
             static void stepDamage( GimmickNodeContext& context )
             {
                 if ( context.isRising( 0 ) )
@@ -183,7 +183,7 @@ namespace sw
                 context.setOutput( 1, context._pIntState[0] != 0 );
             }
 
-            /** @brief Interaction — 충격 = 사용 횟수. 출력 OnUsed · Toggled. 상태 int[0] = 뒤집힘. */
+            /** @brief Interaction 의 충격은 사용 횟수이다. 출력은 OnUsed 와 Toggled 이다. 상태 int[0] 은 뒤집힘 여부이다. */
             static void stepInteraction( GimmickNodeContext& context )
             {
                 const int32 useCount = static_cast<int32>( context._sensorImpulse + 0.5f );
@@ -193,26 +193,26 @@ namespace sw
                 context.setOutput( 1, context._pIntState[0] != 0 );
             }
 
-            /** @brief Constant — 출력 Out = value ≠ 0. */
+            /** @brief Constant 의 출력 Out 은 value 가 0 이 아니면 참이다. */
             static void stepConstant( GimmickNodeContext& context ) { context.setOutput( 0, context.getNumber( 0 ) != 0.0f ); }
 
             // ------------------------------------------------------------------------------
             // 연산자
             // ------------------------------------------------------------------------------
-            /** @brief And — 연결된 입력이 모두 참(연결이 없으면 거짓). */
+            /** @brief And 는 연결된 입력이 모두 참이면 참이다. 연결된 입력이 없으면 거짓이다. */
             static void stepAnd( GimmickNodeContext& context )
             {
                 const uint32 connected = context._connectedInputBits;
                 context.setOutput( 0, connected != 0 && ( context._inputBits & connected ) == connected );
             }
 
-            /** @brief Or — 입력 하나라도 참. */
+            /** @brief Or 는 입력 하나라도 참이면 참이다. */
             static void stepOr( GimmickNodeContext& context ) { context.setOutput( 0, ( context._inputBits & context._connectedInputBits ) != 0 ); }
 
-            /** @brief Xor — 참인 입력이 홀수 개. */
+            /** @brief Xor 는 참인 입력이 홀수 개이면 참이다. */
             static void stepXor( GimmickNodeContext& context ) { context.setOutput( 0, ( countBits( context._inputBits & context._connectedInputBits ) & 1u ) != 0 ); }
 
-            /** @brief Not — 입력을 뒤집는다. */
+            /** @brief Not 은 입력을 뒤집는다. */
             static void stepNot( GimmickNodeContext& context ) { context.setOutput( 0, context.isInput( 0 ) == false ); }
 
             static bool initializeStartBit( GimmickNodeContext& context )
@@ -222,7 +222,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief Toggle — In 이 오를 때마다 뒤집고 Reset 이 오르면 처음 값. 매개변수 start. */
+            /** @brief Toggle 은 In 이 오를 때마다 값을 뒤집고, Reset 이 오르면 처음 값으로 돌아간다. 매개변수는 start 이다. */
             static void stepToggle( GimmickNodeContext& context )
             {
                 if ( context.isRising( 1 ) )
@@ -232,7 +232,7 @@ namespace sw
                 context.setOutput( 0, context._pIntState[0] != 0 );
             }
 
-            /** @brief Latch — Set 이면 참으로, Reset 이면 거짓으로 남는다(둘 다면 Reset). 매개변수 start. */
+            /** @brief Latch 는 Set 이면 참으로, Reset 이면 거짓으로 유지한다. 둘 다 켜지면 Reset 이 우선한다. 매개변수는 start 이다. */
             static void stepLatch( GimmickNodeContext& context )
             {
                 if ( context.isInput( 1 ) )
@@ -242,7 +242,7 @@ namespace sw
                 context.setOutput( 0, context._pIntState[0] != 0 );
             }
 
-            /** @brief Counter — Count 가 오르면 +1, Down 이면 −1(0 아래로 가지 않는다), Reset 이면 0. 출력 Reached(≥ target) · OnReached. */
+            /** @brief Counter 는 Count 가 오르면 +1, Down 이 오르면 −1(0 아래로 내려가지 않음), Reset 이 오르면 0 으로 만든다. 출력은 Reached(target 이상)와 OnReached 이다. */
             static void stepCounter( GimmickNodeContext& context )
             {
                 int32& count = context._pIntState[0];
@@ -258,9 +258,9 @@ namespace sw
             }
 
             /**
-             * @brief Delay — 입력의 바뀜(오름 · 내림)을 seconds 만큼(걸음 수) 뒤에 출력에 옮깁니다. 고리를 끊는 노드입니다.
-             * @details 상태 int[0] = 출력, [1] = 마지막으로 받은 입력, [2] = 대기 수, [3] = 머리, [4..] = 바뀔 걸음(원형 큐). 큐가 차면 마지막으로 받은
-             *          바뀜을 지웁니다 — 새 바뀜이 그것을 되돌리는 것이라(바뀜은 늘 번갈아 온다) 창보다 짧은 펄스가 사라질 뿐 수준은 어긋나지 않습니다.
+             * @brief Delay 는 입력의 변화(오름과 내림)를 seconds 만큼(스텝 수 기준) 뒤에 출력에 옮깁니다. 고리를 끊는 노드입니다.
+             * @details 상태 int[0] 은 출력, [1] 은 마지막으로 받은 입력, [2] 는 대기 수, [3] 은 큐의 머리, [4..] 는 변화가 일어날 스텝(원형 큐)이다. 큐가 차면 마지막으로 받은
+             *          변화를 지운다. 새 변화가 그것을 되돌리는 것이기 때문이다(변화는 항상 번갈아 온다). 그 결과 지연 창보다 짧은 펄스만 사라지고 수준은 어긋나지 않는다.
              */
             static void stepDelay( GimmickNodeContext& context )
             {
@@ -291,7 +291,7 @@ namespace sw
                 ++pState[2];
             }
 
-            /** @brief Pulse — In 이 오르면 seconds 동안 Out 이 참(다시 오르면 처음부터). 상태 int[0] = 남은 걸음. */
+            /** @brief Pulse 는 In 이 오르면 seconds 동안 Out 이 참이다. 그 사이에 다시 오르면 처음부터 센다. 상태 int[0] 은 남은 스텝 수이다. */
             static void stepPulse( GimmickNodeContext& context )
             {
                 if ( context.isRising( 0 ) )
@@ -302,8 +302,8 @@ namespace sw
             }
 
             /**
-             * @brief Sequence — In0..In(count−1) 이 차례로 올라야 Done(남는다). 틀린 입력이 오르면 OnFail 이고 처음부터(그것이 In0 이면 첫 칸은 맞은 것).
-             * @details 한 걸음에 여럿이 오르면 번호 순서로 봅니다. Reset 이 오르면 처음으로. 상태 int[0] = 진행, int[1] = 끝남.
+             * @brief Sequence 는 In0..In(count−1) 이 차례로 올라야 Done 이 되고 그 상태가 유지된다. 틀린 입력이 오르면 OnFail 이 나오고 처음부터 다시 시작한다. 틀린 입력이 In0 이면 첫 단계는 맞은 것으로 센다.
+             * @details 한 스텝에 여러 입력이 오르면 번호 순서로 처리한다. Reset 이 오르면 처음으로 돌아간다. 상태 int[0] 은 진행 단계이고, int[1] 은 끝났는지 여부이다.
              */
             static void stepSequence( GimmickNodeContext& context )
             {
@@ -340,7 +340,7 @@ namespace sw
             }
 
             // ------------------------------------------------------------------------------
-            // 액추에이터 — 상태 float[0] 이 오브젝트에 거는 값(열림 · 거리 · 높이 · 각)
+            // 액추에이터: 상태 float[0] 이 오브젝트에 적용하는 값이다(열림, 거리, 높이, 각도)
             // ------------------------------------------------------------------------------
             static bool initializeDoor( GimmickNodeContext& context )
             {
@@ -351,7 +351,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief Door — 입력 Open(수준) · Toggle(오름) · Lock(수준, 멈춤), 출력 Opened · Closed · Moving · OnOpened · OnClosed. */
+            /** @brief Door 의 입력은 Open(수준), Toggle(오름), Lock(수준, 멈춤)이고, 출력은 Opened, Closed, Moving, OnOpened, OnClosed 이다. */
             static void stepDoor( GimmickNodeContext& context )
             {
                 if ( context.isRising( 1 ) )
@@ -395,10 +395,10 @@ namespace sw
             }
 
             /**
-             * @brief Mover — 길(호 길이)을 따라 speed(m/s)로 갑니다. 입력 Enable(수준, 연결이 없으면 autoStart) · Reverse(수준) · Restart(오름),
-             *        출력 AtStart · AtEnd · Moving · OnArrive. 모드 Once · Loop · PingPong, 곡선 curve, 끝에서 pause 초 멈춤.
-             * @details 진행은 정수 걸음 p(0..P, P = ⌈길이 / 속도 / 걸음⌉)로 셉니다 — 끝에 닿는 걸음이 정확히 정해지고 누적 오차가 없습니다. 거리 = 곡선(p / P) × 길이.
-             *          상태 float[0] = 거리, int[0] = p, [1] = 방향, [2] = 남은 멈춤, [3] = 모드, [4] = 곡선.
+             * @brief Mover 는 경로(호 길이)를 따라 speed(m/s)로 움직입니다. 입력은 Enable(수준, 연결이 없으면 autoStart), Reverse(수준), Restart(오름)이고,
+             *        출력은 AtStart, AtEnd, Moving, OnArrive 입니다. 모드는 Once, Loop, PingPong 이고, 곡선은 curve 이며, 끝에서 pause 초 동안 멈춥니다.
+             * @details 진행은 정수 스텝 p(0..P, P = ⌈길이 / 속도 / 스텝⌉)로 센다. 그래서 끝에 닿는 스텝이 정확히 정해지고 누적 오차가 없다. 거리는 곡선(p / P) × 길이이다.
+             *          상태 float[0] 은 거리, int[0] 은 p, [1] 은 방향, [2] 는 남은 멈춤, [3] 은 모드, [4] 는 곡선이다.
              */
             static void stepMover( GimmickNodeContext& context )
             {
@@ -501,7 +501,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief Elevator — 입력 Up · Down · Call0..Call3(오름), 출력 Moving · OnArrive · AtBottom · AtTop. 상태 float[0] = 높이, [1..] = 층, int[0] = 목표 층. */
+            /** @brief Elevator 의 입력은 Up, Down, Call0..Call3(오름)이고, 출력은 Moving, OnArrive, AtBottom, AtTop 이다. 상태 float[0] 은 높이, [1..] 은 층별 높이, int[0] 은 목표 층이다. */
             static void stepElevator( GimmickNodeContext& context )
             {
                 int32&      target     = context._pIntState[0];
@@ -528,8 +528,8 @@ namespace sw
             }
 
             /**
-             * @brief Rotator — 입력 Enable(수준, 연결이 없으면 autoStart) · Reverse(수준), 출력 Rotating · AtTarget · AtRest. 상태 float[0] = 각(도).
-             * @details targetAngle 이 0 이면 켜진 동안 계속 돈다(0..360 으로 감김). 아니면 켜지면 그 각으로, 꺼지면 0 으로 speed(도/초)로 간다(도개교 · 회전문).
+             * @brief Rotator 의 입력은 Enable(수준, 연결이 없으면 autoStart)과 Reverse(수준)이고, 출력은 Rotating, AtTarget, AtRest 이다. 상태 float[0] 은 각도(도)이다.
+             * @details targetAngle 이 0 이면 켜진 동안 계속 돈다. 각도는 0..360 으로 감긴다. 0 이 아니면 켜졌을 때 그 각도로, 꺼졌을 때 0 으로 speed(도/초)로 움직인다. 도개교와 회전문이 이 방식이다.
              */
             static void stepRotator( GimmickNodeContext& context )
             {
@@ -558,7 +558,7 @@ namespace sw
                 context.setOutput( 2, angle == 0.0f );
             }
 
-            /** @brief Spawner — 입력 Spawn · Reset(오름), 출력 OnSpawn · Exhausted, 매개변수 maxCount(0 = 끝없음) · prefab · offset. 상태 int[0] = 낸 수. */
+            /** @brief Spawner 의 입력은 Spawn 과 Reset(오름)이고, 출력은 OnSpawn 과 Exhausted 이다. 매개변수는 maxCount(0 이면 무제한), prefab, offset 이다. 상태 int[0] 은 스폰한 수이다. */
             static void stepSpawner( GimmickNodeContext& context )
             {
                 if ( context.isRising( 1 ) )
@@ -581,8 +581,8 @@ namespace sw
             }
 
             /**
-             * @brief Hazard — 입력 Enable(수준, 연결이 없으면 startEnabled), 출력 Active · OnActivate · OnDamageTick. onTime 켜짐 · offTime 꺼짐을
-             *        되풀이(offTime 0 이면 늘 켜짐), phase 로 시작을 민다. 켜진 동안 damageInterval 마다 OnDamageTick(켜지는 걸음에 한 번).
+             * @brief Hazard 의 입력은 Enable(수준, 연결이 없으면 startEnabled)이고, 출력은 Active, OnActivate, OnDamageTick 이다. onTime 동안 켜지고 offTime 동안 꺼지는 것을
+             *        반복하며(offTime 이 0 이면 항상 켜짐), phase 로 시작 시점을 민다. 켜진 동안 damageInterval 마다 OnDamageTick 을 낸다. 켜지는 스텝에 한 번 낸다.
              */
             static void stepHazard( GimmickNodeContext& context )
             {
@@ -617,7 +617,7 @@ namespace sw
                 context.setOutput( 2, bTick );
             }
 
-            /** @brief Light — 입력 On(수준, 연결이 없으면 startOn) · Toggle(오름), 출력 Lit. */
+            /** @brief Light 의 입력은 On(수준, 연결이 없으면 startOn)과 Toggle(오름)이고, 출력은 Lit 이다. */
             static void stepLight( GimmickNodeContext& context )
             {
                 if ( context.isRising( 1 ) )
@@ -625,10 +625,10 @@ namespace sw
                 context.setOutput( 0, context.isInputHigh( 0, context.getNumber( 0 ) != 0.0f ) != ( context._pIntState[0] != 0 ) );
             }
 
-            /** @brief Sound — 입력 Play(오름), 출력 OnPlay. 소리 경로(sound)는 씬 쪽이 낸다. */
+            /** @brief Sound 의 입력은 Play(오름)이고, 출력은 OnPlay 이다. 소리 경로(sound)는 씬 쪽이 정한다. */
             static void stepSound( GimmickNodeContext& context ) { context.setOutput( 0, context.isRising( 0 ) ); }
 
-            /** @brief Enable — 입력 Enable(수준, 연결이 없으면 startEnabled) · Toggle(오름), 출력 Enabled. 씬 쪽이 대상 오브젝트를 켜고 끈다. */
+            /** @brief Enable 의 입력은 Enable(수준, 연결이 없으면 startEnabled)과 Toggle(오름)이고, 출력은 Enabled 이다. 씬 쪽이 대상 오브젝트를 켜고 끈다. */
             static void stepEnable( GimmickNodeContext& context )
             {
                 if ( context.isRising( 1 ) )

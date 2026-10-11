@@ -1,6 +1,6 @@
 /**
  * @file RacingGimmicks.h
- * @brief 레이싱 기믹 — 부스트 패드 · 아이템 상자(씨앗 고정 가중치 뽑기 · 다시 나타남)입니다.
+ * @brief 레이싱 기믹입니다. 부스트 패드와 아이템 상자(시드를 고정한 가중치 뽑기, 다시 나타남)를 다룹니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -33,7 +33,7 @@ namespace sw
 
 namespace sw
 {
-    /** @class BoostPadComponent — 밟기 시작한 것(태그 거르기)에 `GimmickBoostEvent` 를 냅니다(차량 몸이 받는다). */
+    /** @class BoostPadComponent 는 밟기 시작한 것(태그로 거름)에 `GimmickBoostEvent` 를 냅니다. 차량 몸이 이 이벤트를 받습니다. */
     REFLECT( Category = "Gimmick", DisplayName = "Boost Pad", Tooltip = "Sends a boost event to whatever starts overlapping" )
     class SW_GF_API BoostPadComponent : public Component
     {
@@ -62,9 +62,9 @@ namespace sw
 {
     /**
      * @class ItemBoxComponent
-     * @brief 닿은 것(태그 거르기)에 후보 중 가중치로 뽑은 아이템을 주고(`GimmickItemEvent`) 몸을 숨겼다가 `_respawnDelay` 뒤에 복원합니다.
-     * @details 뽑기는 씨앗(`_seed`)과 지금까지 연 횟수로 정합니다 — 같은 순서로 열면 같은 아이템입니다(리플레이 · 롤백). 순위 가중치 같은 게임 규칙은
-     *          이벤트를 받는 쪽(카트 아이템 규칙)이 아이템을 바꿔 적용합니다.
+     * @brief 닿은 것(태그로 거름)에 후보 중 가중치로 뽑은 아이템을 주고(`GimmickItemEvent`), 몸을 숨겼다가 `_respawnDelay` 뒤에 복원합니다.
+     * @details 뽑기는 시드(`_seed`)와 지금까지 연 횟수로 정한다. 같은 순서로 열면 같은 아이템이 나오므로 리플레이와 롤백에 쓸 수 있다. 순위 가중치 같은 게임 규칙은
+     *          이벤트를 받는 쪽(카트 아이템 규칙)이 아이템을 바꿔서 적용한다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Item Box", Tooltip = "Gives a seeded weighted item on touch, hides and respawns" )
     class SW_GF_API ItemBoxComponent : public Component
@@ -78,7 +78,7 @@ namespace sw
         void onOverlapBegin( const OverlapInfo& overlap ) override;
         void onTick( float32 deltaTime ) override;
         void stepOnce();
-        /** @brief @p target 에게 엽니다(겹침이 부른다). 비어 있으면(숨은 동안) 아무 일 없이 무효 이름입니다. */
+        /** @brief @p target 에게 엽니다. 겹침이 부릅니다. 비어 있어서(숨은 동안) 아이템을 줄 수 없으면 아무 일도 없이 무효 이름을 반환합니다. */
         hashed_string open( GameObject& target );
         void          setChoices( const vector<GimmickItemChoice>& listChoice ) { _listChoice = listChoice; }
 

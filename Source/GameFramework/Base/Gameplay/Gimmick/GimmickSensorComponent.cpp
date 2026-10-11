@@ -90,7 +90,7 @@ namespace sw
             removeOccupant( overlap._pOther->getHandle() );
             return;
         }
-        // 상대가 사라졌다 — 살아 있지 않은 핸들을 모두 뺀다.
+        // 상대가 사라졌으므로 살아 있지 않은 핸들을 모두 뺀다.
         const GameObject*        pOwner   = getOwner();
         const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
@@ -114,7 +114,7 @@ namespace sw
             const GameObject* pOccupant = pManager->resolveGameObject( handle );
             if ( pOccupant == nullptr )
                 continue;
-            // 데이터가 적은 무게가 먼저, 다음은 강체의 질량(바디가 있으면 바디의 것), 없으면 센서의 기본 무게.
+            // 데이터에 적힌 무게를 먼저 쓰고, 없으면 강체의 질량(바디가 있으면 바디의 값)을 쓰고, 그것도 없으면 센서의 기본 무게를 쓴다.
             const GimmickWeightComponent* pWeight = pOccupant->getComponent<GimmickWeightComponent>();
             const RigidBodyComponent*     pBody3D = pOccupant->getComponent<RigidBodyComponent>();
             const RigidBody2DComponent*   pBody2D = pOccupant->getComponent<RigidBody2DComponent>();
@@ -142,7 +142,7 @@ namespace sw
 
     float32 GimmickSensorComponent::consumeUses()
     {
-        // 상호작용은 센서를 모른다 — 같은 오브젝트의 완료 수를 끌어 읽어 지난번 뒤로 늘어난 만큼을 사용으로 센다.
+        // 상호작용은 센서를 모른다. 그래서 같은 오브젝트의 완료 수를 직접 읽고, 지난번 이후 늘어난 만큼을 사용 횟수로 센다.
         const GameObject*            pOwner        = getOwner();
         const InteractableComponent* pInteractable = pOwner != nullptr ? pOwner->getComponent<InteractableComponent>() : nullptr;
         uint32                       newCompleted  = 0;

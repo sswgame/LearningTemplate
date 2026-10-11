@@ -62,7 +62,7 @@ namespace sw
             previousLevel = level;
             if ( pot._amount <= 0 )
                 continue;
-            // 아무도 못 가져가는 몫(폴드한 사람만 낸 꼭대기)과 가져갈 사람이 같은 이웃 팟은 아래 팟에 붙인다.
+            // 아무도 못 가져가는 몫(폴드한 사람만 낸 꼭대기)과, 가져갈 사람이 같은 이웃 팟은 아래 팟에 붙인다.
             const bool bMerge = outListPot.empty() == false &&
                                 ( pot._listEligibleSeat.empty() || PokerTableInternal::isSameSeatList( pot._listEligibleSeat, outListPot.back()._listEligibleSeat ) );
             if ( bMerge )
@@ -88,7 +88,7 @@ namespace sw
             {
                 bestScore = MathUtil::max( bestScore, listScore[static_cast<size_t>( seat )] );
             }
-            // 이긴 자리를 버튼 왼쪽부터의 순서로 — 나머지 칩이 그 순서로 간다.
+            // 이긴 자리를 버튼 왼쪽부터의 순서로 정렬한다. 나머지 칩이 그 순서로 돌아간다.
             vector<int32> listWinner;
             for ( int32 offset = 0; offset < seatCount; ++offset )
             {
@@ -223,7 +223,7 @@ namespace sw
         _currentBet    = MathUtil::max( _listSeat[static_cast<size_t>( smallBlindSeat )]._committed, _listSeat[static_cast<size_t>( bigBlindSeat )]._committed );
         _lastRaiseSize = _settings._bigBlind;
 
-        // 스몰 블라인드부터 한 장씩 두 바퀴.
+        // 스몰 블라인드부터 한 장씩 두 바퀴를 나눈다.
         for ( int32 holeIndex = 0; holeIndex < PokerTableInternal::kHoleCount; ++holeIndex )
         {
             int32 seat = smallBlindSeat;
@@ -283,7 +283,7 @@ namespace sw
                     return false;
                 const bool bAllIn = needed == pokerSeat._stack;
                 if ( bAllIn == false && amount < getMinRaiseTo() )
-                    return false; // 최소 증액 미달 — 올인만 예외
+                    return false; // 최소 증액에 미달한다(올인만 예외이다)
                 raiseTo = amount;
                 break;
             }
@@ -513,7 +513,7 @@ namespace sw
         archive >> seatCount;
         if ( archive.isError() || seatCount != _listSeat.size() )
             return false;
-        // 사본에 읽고 끝까지 맞으면 바꾼다 — 설정은 사본이 그대로 든다.
+        // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 설정은 사본도 그대로 가지고 있다.
         PokerTable  table = *this;
         const int32 count = static_cast<int32>( seatCount );
         for ( PokerSeat& seat : table._listSeat )

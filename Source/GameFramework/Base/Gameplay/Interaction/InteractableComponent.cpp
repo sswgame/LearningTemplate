@@ -88,7 +88,7 @@ namespace sw
     void InteractableComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
-        // 상호작용 표 파일을 고쳤다 — 새 표에서 정의를 다시 찾는다(옛 표는 캐시가 살려 두므로 이 프레임에 옛 정의를 읽은 쪽도 안전하다).
+        // 상호작용 테이블 파일이 바뀌었으므로 새 테이블에서 정의를 다시 찾는다. 이전 테이블은 캐시가 유지하므로, 이 프레임에 이전 정의를 읽은 쪽도 안전하다.
         if ( _bHasOverride == SW_FALSE && _seenCatalogReloadCount != InteractionCatalog::getSharedReloadCount() )
             resolveDefinition();
         if ( _cooldownRemaining > 0.0f )
@@ -132,7 +132,7 @@ namespace sw
             outYaw      = 0.0f;
             return false;
         }
-        // 정의의 마커를 이 오브젝트의 소켓 · 마커 표에서 찾는다 — 마커의 +Z 가 하는 쪽이 볼 방향이다. 없으면 오브젝트 원점 · 앞.
+        // 정의의 마커를 이 오브젝트의 소켓과 마커 테이블에서 찾는다. 마커의 +Z 가 하는 쪽이 볼 방향이다. 없으면 오브젝트의 원점과 앞 방향을 쓴다.
         const InteractionDef* pDef  = getDefinition();
         float4x4              world = pScene->getWorldMatrix();
         const bool            bMarker =

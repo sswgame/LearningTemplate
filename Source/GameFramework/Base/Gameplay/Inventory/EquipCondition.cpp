@@ -13,12 +13,12 @@ namespace sw
     {
         struct EquipConditionInternal
         {
-            /** @brief 깊이 우선 탐색 상태입니다 — 0 안 봄, 1 보는 중(스택), 2 끝남. */
+            /** @brief 깊이 우선 탐색 상태입니다. 0 은 아직 안 봄, 1 은 보는 중(스택에 있음), 2 는 끝남입니다. */
             static constexpr uint8 kVisitNone   = 0;
             static constexpr uint8 kVisitActive = 1;
             static constexpr uint8 kVisitDone   = 2;
 
-            /** @brief 조건 있는 아이템 @p fromIndex 의 조건을 채울 수 있는 조건 있는 아이템들입니다. */
+            /** @brief 조건이 있는 아이템 @p fromIndex 의 조건을 채울 수 있는, 조건이 있는 아이템 목록입니다. */
             static void collectEdges( const vector<ItemDef>& listItem, size_t fromIndex, const IEquipSetLookup* pSetLookup, vector<size_t>& outListTarget )
             {
                 outListTarget.clear();
@@ -64,7 +64,7 @@ namespace sw
                 {
                     if ( inoutState[target] == kVisitActive )
                     {
-                        // 스택에서 target 부터 지금까지가 사슬이다.
+                        // 스택에서 target 부터 지금까지가 순환 경로이다.
                         bool bInCycle = false;
                         for ( const size_t stackIndex : inoutStack )
                         {

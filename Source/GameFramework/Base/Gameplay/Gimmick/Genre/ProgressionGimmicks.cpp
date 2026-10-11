@@ -28,7 +28,7 @@ namespace sw
     void AbilityGateComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        // 세이브 · 핫 리로드로 열린 채 돌아왔으면 몸을 꺼 둔다.
+        // 세이브나 핫 리로드로 열린 채 돌아왔으면 몸을 꺼 둔다.
         GameObject* pOwner = getOwner();
         if ( _bOpen && pOwner != nullptr )
             GenreGimmickUtil::setBodyActive( *pOwner, false, this );
@@ -121,7 +121,7 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return;
-        // 상호작용(Gather)을 끝낸 이에게 준다.
+        // 상호작용(Gather)을 끝낸 쪽에 준다.
         GimmickSensorComponent* pSensor = pOwner->getComponent<GimmickSensorComponent>();
         if ( pSensor != nullptr && pSensor->consumeUses() > 0.0f )
         {

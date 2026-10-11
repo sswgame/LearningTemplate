@@ -22,18 +22,18 @@ namespace sw
         struct NetHostInternal
         {
             static constexpr int32 kTypeBits          = 3;
-            static constexpr int32 kHeaderSize        = 8;         ///< 프로토콜 id 4 + 체크섬 4
-            static constexpr int32 kSecureHeadSize    = 1 + 4 + 8; ///< 암호화 몸의 머리 — 종류 바이트 · 연결 값 · 패킷 번호(BE)
+            static constexpr int32 kHeaderSize        = 8;         ///< 프로토콜 ID 4바이트와 체크섬 4바이트.
+            static constexpr int32 kSecureHeadSize    = 1 + 4 + 8; ///< 암호화 본문의 헤더. 종류 1바이트, 연결 값 4바이트, 패킷 번호 8바이트(빅 엔디언).
             static constexpr int32 kAadSize           = 4 + kSecureHeadSize;
-            static constexpr int32 kKeyConfirmAadSize = 4 + 8; ///< 서버가 준 자리 번호 ‖ 서버 소금
+            static constexpr int32 kKeyConfirmAadSize = 4 + 8; ///< 서버가 지정한 슬롯 번호와 서버 솔트를 이은 값.
 #if !defined( SW_SHIPPING )
-            /** @brief 디버거 대기 중 `update` 사이가 이보다 벌어지면 프로세스가 멈췄던 것으로 보고 연결 시계를 민다 — 보통 간격(수 ms)보다 훨씬 길게. */
+            /** @brief 디버거 대기 중 `update` 사이가 이 값보다 벌어지면 프로세스가 멈췄던 것으로 보고 연결 시계를 민다. 평소 간격(수 ms)보다 훨씬 길게 잡는다. */
             static constexpr float64 kDebugStallSeconds = 0.5;
-            /** @brief 디버거가 붙었는지 다시 묻는 간격 — Linux 는 파일을 읽는다. */
+            /** @brief 디버거가 붙었는지 다시 확인하는 간격입니다. Linux 에서는 파일을 읽어 확인합니다. */
             static constexpr float64 kDebuggerPollSeconds = 1.0;
 #endif
 
-            /** @brief 증명 태그의 AAD — 클라이언트 소금 ‖ 도전 값 ‖ 클라이언트 공개 키 ‖ 토큰(다른 응답에 옮겨 붙이지 못한다). */
+            /** @brief 증명 태그의 AAD입니다. 클라이언트 솔트, 챌린지 값, 클라이언트 공개 키, 토큰을 이어 붙이므로 다른 응답에 옮겨 붙일 수 없습니다. */
             static vector<uint8> makeProofAad( uint64 clientSalt, uint64 challenge, const uint8* pPublicKey, const uint8* pToken, int32 tokenSize )
             {
                 vector<uint8> listAad( 16u + static_cast<size_t>( NetSecurityConstant::kX25519KeySize ) + static_cast<size_t>( tokenSize ) );
@@ -48,7 +48,7 @@ namespace sw
                 return listAad;
             }
 
-            /** @brief 키 확인 태그의 AAD — 서버가 준 자리 번호 4 LE ‖ 서버 소금 8 LE. */
+            /** @brief 키 확인 태그의 AAD입니다. 서버가 지정한 슬롯 번호(4바이트, 리틀 엔디언)와 서버 솔트(8바이트, 리틀 엔디언)를 이었습니다. */
             static void makeKeyConfirmAad( uint32 serverIndex, uint64 serverSalt, uint8* pOutAad )
             {
                 for ( int32 index = 0; index < 4; ++index )
@@ -61,7 +61,7 @@ namespace sw
                 }
             }
 
-            /** @brief 데이터 · 끊기 패킷의 AAD — 프로토콜 id 4 LE ‖ 몸의 머리(종류 · 연결 값 · 패킷 번호). */
+            /** @brief 데이터 패킷과 끊기 패킷의 AAD입니다. 프로토콜 ID(4바이트, 리틀 엔디언)와 본문 헤더(종류, 연결 값, 패킷 번호)를 이었습니다. */
             static void makePacketAad( uint32 protocolID, const uint8* pBodyHead, uint8* pOutAad )
             {
                 for ( int32 index = 0; index < 4; ++index )
@@ -81,7 +81,7 @@ namespace sw
 
             static uint64 makeAddressKey( const NetAddress& address ) { return ( static_cast<uint64>( address._ipv4 ) << 16 ) | address._port; }
 
-            /** @brief 운영체제 난수 64 비트 — 도전 값이 다른 실행 · 다른 호스트와 겹치지 않고 미리 알 수 없게. */
+            /** @brief 운영체제 난수 64비트를 반환합니다. 챌린지 값이 다른 실행이나 다른 호스트와 겹치지 않고 미리 알 수 없게 합니다. */
             static uint64 makeRandomSeed()
             {
                 std::random_device randomDevice;
@@ -95,7 +95,7 @@ namespace sw
                        ( static_cast<uint32>( pData[3] ) << 24 );
             }
 
-            /** @brief 거절 패킷이 싣는 이유입니다. 모르는 값은 Rejected 로 읽는다(다른 판이 이유를 늘려도 클라이언트는 끊긴다). */
+            /** @brief 거절 패킷이 싣는 이유를 읽습니다. 모르는 값은 Rejected 로 읽으므로, 다른 버전이 이유를 늘려도 클라이언트는 연결이 끊깁니다. */
             static NetDisconnectReason readDeniedReason( uint64 value )
             {
                 switch ( static_cast<NetDisconnectReason>( value & 0xFFu ) )
@@ -191,7 +191,7 @@ namespace sw
             _nextDebuggerPollTime       = 0.0;
             _credentials                = NetConnectCredentials{};
             _plainWriter.reserve( kNetMaxPacketSize );
-            _protocolID = NetProtocol::makeProtocolID( settings._gameID, settings._wireVersion, computeFeatureMask() ); // listen · connect 가 역할에 맞춰 다시 셈한다
+            _protocolID = NetProtocol::makeProtocolID( settings._gameID, settings._wireVersion, computeFeatureMask() ); // `listen` 과 `connect` 가 역할에 맞춰 다시 계산한다.
             listFinished.swap( _listFinished );
         }
         deliverFinished( listFinished );
@@ -208,7 +208,7 @@ namespace sw
 
     uint32 NetHost::computePacketChecksum( uint32 headerID, const uint8* pBody, int32 size )
     {
-        // FNV-1a 32 — 머리 값(프로토콜 id)을 먼저 섞어 다른 게임 · 판의 패킷은 체크섬부터 틀린다.
+        // FNV-1a 32비트. 헤더 값(프로토콜 ID)을 먼저 섞으므로, 다른 게임이나 버전의 패킷은 체크섬부터 맞지 않는다.
         uint32 hash = HashUtil::kFnvOffset32;
         for ( int32 shift = 0; shift < 32; shift += 8 )
         {
@@ -225,7 +225,7 @@ namespace sw
     {
         if ( isEncrypted() == false )
             return 0;
-        // 토큰 결속 — 서버는 인증기가 있을 때, 클라이언트는 자격을 내밀 때. 한쪽만이면 프로토콜 id 가 달라 SecurityMismatch 로 갈린다.
+        // 토큰 결속은 서버에 인증기가 있을 때, 클라이언트가 자격을 제시할 때 켠다. 한쪽만 켜면 프로토콜 ID가 달라져 SecurityMismatch 가 된다.
         const bool bTokenBound = _bServer == SW_TRUE ? _settings._security._pAuthenticator != nullptr : _bHasCredentials == SW_TRUE;
         return NetProtocolFeature::kEncrypted | ( bTokenBound ? NetProtocolFeature::kTokenBound : 0u );
     }
@@ -237,7 +237,7 @@ namespace sw
         uint64 value = HashUtil::mix64( _challengeSecret ^ NetHostInternal::makeAddressKey( address ) );
         value        = HashUtil::mix64( value ^ clientSalt );
         value        = HashUtil::mix64( value ^ static_cast<uint64>( window ) ^ ( _challengeSecret << 1 ) );
-        return value | 1u; // 0 은 "아직 도전을 못 받았다" 의 뜻
+        return value | 1u; // 0은 "아직 챌린지를 받지 못했다"는 뜻이라 쓰지 않는다.
     }
 
     uint64 NetHost::nextSalt()
@@ -258,7 +258,7 @@ namespace sw
 #if defined( SW_SHIPPING )
         if ( isEncrypted() && _settings._security._pAuthenticator == nullptr )
         {
-            // 인증기 없는 암호화(일회 키)는 도청만 막고 중간자는 못 막는다 — 개발 빌드 전용이다.
+            // 인증기 없는 암호화(일회용 키)는 도청만 막고 중간자 공격은 막지 못하므로 개발 빌드에서만 쓴다.
             SW_LOG_ERROR( "NetHost: a shipping server must bind encrypted connections to session tokens (set NetSecuritySettings::_pAuthenticator)" );
             return false;
         }
@@ -282,7 +282,7 @@ namespace sw
         bool                    bStarted = false;
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            finishConnect( NetDisconnectReason::Requested ); // 앞의 비동기 연결은 끝난다
+            finishConnect( NetDisconnectReason::Requested ); // 앞의 비동기 연결은 여기서 끝난다.
             _credentials     = pCredentials != nullptr ? *pCredentials : NetConnectCredentials{};
             _bHasCredentials = pCredentials != nullptr && pCredentials->_tokenSize > 0 ? SW_TRUE : SW_FALSE;
             bStarted         = startConnect( serverAddress );
@@ -338,7 +338,7 @@ namespace sw
         slot._address          = serverAddress;
         slot._clientSalt       = nextSalt();
         slot._state            = NetConnectionState::Connecting;
-        slot._connectStartTime = -1.0; // 첫 update 에서 시각을 잡는다
+        slot._connectStartTime = -1.0; // 첫 update 에서 시각을 정한다.
         slot._lastSendTime     = -1.0;
         if ( isEncrypted() )
         {
@@ -383,7 +383,7 @@ namespace sw
 
     void NetHost::sendFramed( const NetAddress& to, uint32 headerID )
     {
-        // 보낼 묶음의 바이트 뒤에 바로 짓는다(헤더 + 몸) — 보내기는 잠금을 푼 뒤 `sendBatch` 가.
+        // 보낼 배치의 바이트 뒤에 바로 만든다(헤더와 본문). 잠금을 푼 뒤 `sendBatch` 가 보낸다.
         const vector<uint8>& body     = _packetWriter.getBytes();
         const int32          bodySize = _packetWriter.getByteCount();
         const size_t         offset   = _pendingBatch._bytes.size();
@@ -472,7 +472,7 @@ namespace sw
             if ( _bHasCredentials == SW_TRUE )
             {
                 writer.writeBlob( _credentials._arrToken, _credentials._tokenSize );
-                // 증명 — 세션 비밀로 유도한 키의 빈 봉인. AAD 가 이 응답의 소금 · 도전 값 · 공개 키 · 토큰이라 다른 응답에 옮겨 붙이지 못한다.
+                // 증명은 세션 비밀로 유도한 키로 빈 데이터를 봉인한 태그다. AAD가 이 응답의 솔트, 챌린지 값, 공개 키, 토큰이라 다른 응답에 옮겨 붙일 수 없다.
                 uint8                 arrProofKey[NetSecurityConstant::kAeadKeySize]{};
                 uint8                 arrTag[NetSecurityConstant::kAeadTagSize]{};
                 const uint8           arrZeroNonce[NetSecurityConstant::kAeadNonceSize]{};
@@ -551,7 +551,7 @@ namespace sw
                            provider.computeX25519SharedSecret( security->_keyPair._arrPrivateKey, arrClientPublic, arrShared ) &&
                            NetSessionKeyUtil::computeSessionKeys( provider, arrShared, bTokenBound ? &secret : nullptr, clientSalt, challenge, _protocolID, security->_keys );
         std::memset( arrShared, 0, sizeof( arrShared ) );
-        security->_keyPair.wipe(); // 서버는 공개 키만 남긴다(수락 재전송)
+        security->_keyPair.wipe(); // 서버는 수락을 다시 보낼 때 쓰도록 공개 키만 남긴다.
         if ( bKeys )
         {
             security->_sendAead    = provider.createAead( _settings._security._algorithm, security->_keys._serverToClient._arrKey );
@@ -559,7 +559,7 @@ namespace sw
         }
         if ( bKeys == false || security->_sendAead == nullptr || security->_receiveAead == nullptr )
         {
-            ++_authenticationFailureCount; // 작은 차수 공개 키 등
+            ++_authenticationFailureCount; // 작은 차수 공개 키 같은 경우.
             sendDenied( from, NetDisconnectReason::AuthenticationFailed, clientSalt );
             return false;
         }
@@ -589,7 +589,7 @@ namespace sw
         }
         if ( bOk )
         {
-            // 키 확인 — 서버가 같은 키(같은 세션 비밀 · 같은 공유 비밀)를 가졌는지. 다르면 중간자이거나 비밀이 틀렸다.
+            // 키 확인으로 서버가 같은 키(같은 세션 비밀과 같은 공유 비밀)를 가졌는지 본다. 다르면 중간자이거나 비밀이 틀린 것이다.
             uint8 arrNonce[NetSecurityConstant::kAeadNonceSize]{};
             uint8 arrAad[NetHostInternal::kKeyConfirmAadSize]{};
             NetSessionKeyUtil::makeNonce( security._keys._serverToClient._arrIv, NetSessionKeyUtil::kKeyConfirmPacketNumber, arrNonce );
@@ -613,7 +613,7 @@ namespace sw
         const uint64  packetNumber = security._sendPacketNumber++;
         const uint32  token        = static_cast<uint32>( slot._clientSalt ^ slot._serverSalt );
         uint8         arrHead[NetHostInternal::kSecureHeadSize]{};
-        arrHead[0] = static_cast<uint8>( type ); // 종류 3 비트 + 0 5 비트 — BitWriter 는 낮은 비트부터라 받는 쪽 readBits( 3 ) · peekPacketType 이 그대로 읽는다
+        arrHead[0] = static_cast<uint8>( type ); // 종류 3비트와 0 5비트다. BitWriter 는 낮은 비트부터 쓰므로 받는 쪽의 readBits( 3 )과 peekPacketType 이 그대로 읽는다.
         for ( int32 index = 0; index < 4; ++index )
         {
             arrHead[1 + index] = static_cast<uint8>( token >> ( index * 8 ) );
@@ -668,7 +668,7 @@ namespace sw
             ++_authenticationFailureCount;
             return false;
         }
-        security._replayWindow.markReceived( packetNumber ); // 복호가 통과한 뒤에만 — 먼저 표시하면 위조 패킷이 진짜 번호를 태운다
+        security._replayWindow.markReceived( packetNumber ); // 복호가 성공한 뒤에만 표시한다. 먼저 표시하면 위조 패킷이 진짜 번호를 소모시킨다.
         return true;
     }
 
@@ -676,9 +676,9 @@ namespace sw
     {
         if ( slot._security != nullptr )
         {
-            // 암호화 — NetConnection 패킷을 평문으로 짓고 봉인한다. 예산에서 암호화 머리 · 태그 몫을 뺀다.
+            // 암호화 방식에서는 NetConnection 패킷을 평문으로 만들어 봉인한다. 예산에서 암호화 헤더와 태그 크기를 뺀다.
             _plainWriter.clear();
-            _plainWriter.writeBits( _bDebugHold == SW_TRUE ? 1u : 0u, 1 ); // 디버거 대기 — 평문 첫 비트(봉인된다)
+            _plainWriter.writeBits( _bDebugHold == SW_TRUE ? 1u : 0u, 1 ); // 디버거 대기 비트. 평문 첫 비트이므로 함께 봉인된다.
             const int32 maxBytes =
                 slot._sendCredit > 0.0 ? kNetMaxPacketSize - NetHostInternal::kHeaderSize - NetHostInternal::kSecureHeadSize - NetSecurityConstant::kAeadTagSize : 0;
             slot._connection.writePacket( nowSeconds, _plainWriter, maxBytes, _settings._keepAliveInterval );
@@ -690,11 +690,11 @@ namespace sw
         BitWriter& writer = _packetWriter;
         writer.clear();
         writer.writeBits( static_cast<uint32>( PacketType::Payload ), NetHostInternal::kTypeBits );
-        // 연결 값(두 소금의 섞음) — 같은 주소의 옛 연결 · 위조 패킷을 거른다.
+        // 연결 값(두 솔트를 섞은 값)으로 같은 주소의 옛 연결이나 위조 패킷을 걸러 낸다.
         const uint64 token = slot._clientSalt ^ slot._serverSalt;
         writer.writeBits( static_cast<uint32>( token ), 32 );
-        writer.writeBits( _bDebugHold == SW_TRUE ? 1u : 0u, 1 ); // 디버거 대기
-        // 대역폭 몫을 다 썼으면 머리(확인 · 유지)만 — 메시지는 다음 차례에 간다.
+        writer.writeBits( _bDebugHold == SW_TRUE ? 1u : 0u, 1 ); // 디버거 대기 비트.
+        // 대역폭 토큰을 다 썼으면 헤더(확인과 연결 유지)만 보내고, 메시지는 다음 전송으로 미룬다.
         const int32 maxBytes = slot._sendCredit > 0.0 ? kNetMaxPacketSize - NetHostInternal::kHeaderSize : 0;
         slot._connection.writePacket( nowSeconds, writer, maxBytes, _settings._keepAliveInterval );
         sendFramed( slot._address, _protocolID );
@@ -705,7 +705,7 @@ namespace sw
     void NetHost::refillSendCredit( float64 nowSeconds, Slot& slot ) const
     {
         const float64 rate = static_cast<float64>( MathUtil::max( kNetMaxPacketSize, _settings._maxBytesPerSecond ) );
-        // 쌓아 둘 수 있는 몫은 보내기 간격 두 번어치(최소 패킷 하나) — 한가했다고 몰아 보내 회선을 넘치게 하지 않는다.
+        // 쌓아 둘 수 있는 토큰은 보내기 간격 두 번어치(최소 패킷 하나)다. 한가했다고 한꺼번에 몰아 보내 회선을 넘치게 하지 않기 위해서다.
         const float64 capacity = MathUtil::max( static_cast<float64>( kNetMaxPacketSize ), rate * _settings._sendInterval * 2.0 );
         if ( slot._lastCreditTime < 0.0 )
             slot._sendCredit = capacity;
@@ -741,8 +741,8 @@ namespace sw
                 break;
             }
         }
-        // 가상 시계 — 알리는 중에 update 사이가 크게 벌어졌으면 프로세스가 멈췄던 것이다(중단점 · 일시정지). 그동안 상대가 보낸 것을 못 받은 것은
-        // 상대 탓이 아니므로, 멈춘 시간만큼 받은 시각 · 연결 시작 시각을 민다(재개한 쪽이 상대를 시간 초과로 끊지 않는다).
+        // 가상 시계. 알리는 중에 update 사이가 크게 벌어졌다면 프로세스가 중단점이나 일시정지로 멈췄던 것이다. 그동안 상대가 보낸 것을 받지 못한 것은
+        // 상대 탓이 아니므로, 멈춘 시간만큼 마지막 수신 시각과 연결 시작 시각을 민다. 그러면 재개한 쪽이 상대를 타임아웃으로 끊지 않는다.
         const float64 stalledSeconds = _lastUpdateTime < 0.0 ? 0.0 : nowSeconds - _lastUpdateTime;
         if ( _bDebugHold == SW_TRUE && stalledSeconds > NetHostInternal::kDebugStallSeconds )
         {
@@ -761,7 +761,7 @@ namespace sw
     {
 #if defined( SW_SHIPPING )
         (void)slot;
-        return _settings._timeoutSeconds; // 배포 빌드는 알림을 믿지 않는다 — 클라이언트가 비트를 켜 자리를 붙잡지 못하게
+        return _settings._timeoutSeconds; // 배포 빌드는 알림을 믿지 않는다. 클라이언트가 비트를 켜서 슬롯을 붙잡는 것을 막기 위해서다.
 #else
         return slot._bRemoteDebugHold == SW_TRUE ? MathUtil::max( _settings._timeoutSeconds, _settings._debugHoldTimeoutSeconds ) : _settings._timeoutSeconds;
 #endif
@@ -798,7 +798,7 @@ namespace sw
         }
         if ( pTransport != nullptr )
         {
-            // 1) 받기 — 잠금 밖. 받은 버퍼는 다시 쓴다.
+            // 1) 받기(잠금 밖). 받은 버퍼는 다시 쓴다.
             pTransport->update( nowSeconds );
             int32 receivedCount = 0;
             while ( receivedCount < kMaxDatagramPerUpdate )
@@ -810,7 +810,7 @@ namespace sw
                     break;
                 ++receivedCount;
             }
-            // 2) 처리 · 타임아웃 · 보낼 패킷 — 잠금 안.
+            // 2) 처리, 타임아웃, 보낼 패킷 생성(잠금 안).
             {
                 std::scoped_lock<mutex> lock{ _mutex };
                 updateDebugHold( nowSeconds );
@@ -822,7 +822,7 @@ namespace sw
                 updateSlots( nowSeconds );
                 takePending( _flushBatch, _listDeliver );
             }
-            // 3) 보내기 · 비동기 연결 결과 — 잠금 밖.
+            // 3) 보내기와 비동기 연결 결과 전달(잠금 밖).
             sendBatch( _flushBatch );
             deliverFinished( _listDeliver );
         }
@@ -847,7 +847,7 @@ namespace sw
                     }
                     if ( slot._lastSendTime < 0.0 || nowSeconds - slot._lastSendTime >= _settings._connectRetryInterval )
                     {
-                        // 도전을 받았으면 응답을, 아니면 요청을 되풀이한다.
+                        // 챌린지를 받았으면 응답을, 아니면 요청을 다시 보낸다.
                         if ( slot._serverSalt != 0 )
                             sendChallengeResponse( slot );
                         else
@@ -864,8 +864,8 @@ namespace sw
                         closeSlot( static_cast<int32>( index ), NetDisconnectReason::Timeout, false );
                         break;
                     }
-                    // 보낼 것이 있으면 `_sendInterval` 마다, 없으면 `_keepAliveInterval` 마다만(유지 · RTT · 상대의 확인용). 대역폭 몫을 다 썼으면
-                    // 메시지는 기다리고 확인할 것만 "보낼 것" 이다.
+                    // 보낼 것이 있으면 `_sendInterval` 마다, 없으면 `_keepAliveInterval` 마다만 보낸다(연결 유지, RTT, 상대의 확인용). 대역폭 토큰을 다 썼으면
+                    // 메시지는 기다리고 확인할 것만 "보낼 것"으로 센다.
                     refillSendCredit( nowSeconds, slot );
                     const bool    bCanCarry = slot._sendCredit > 0.0;
                     const bool    bHasData  = bCanCarry ? slot._connection.hasDataToSend( nowSeconds ) : slot._connection.isAckPending();
@@ -874,7 +874,7 @@ namespace sw
                     if ( bDue == false )
                         break;
                     sendPayload( nowSeconds, slot );
-                    // 몫이 남고 실을 것이 더 있으면 같은 차례에 더 — 큰 신뢰 메시지 · 몰린 스냅샷의 속도는 상한이 정한다.
+                    // 토큰이 남고 실을 것이 더 있으면 같은 전송에서 더 보낸다. 큰 신뢰 메시지나 몰린 스냅샷의 전송 속도는 대역폭 상한이 정한다.
                     for ( int32 packetCount = 1; packetCount < kMaxPacketsPerSend && slot._sendCredit > 0.0 && slot._connection.hasDataToSend( nowSeconds );
                           ++packetCount )
                     {
@@ -898,7 +898,7 @@ namespace sw
              NetHostInternal::readUint32( pData + 4 ) !=
                  computePacketChecksum( headerID, pData + NetHostInternal::kHeaderSize, size - NetHostInternal::kHeaderSize ) )
         {
-            ++_rejectedPacketCount; // 다른 판 · 다른 게임 · 깨진 패킷
+            ++_rejectedPacketCount; // 다른 버전, 다른 게임, 깨진 패킷.
             return;
         }
         BitReader        reader( pData + NetHostInternal::kHeaderSize, size - NetHostInternal::kHeaderSize );
@@ -919,8 +919,8 @@ namespace sw
             const uint32 token = reader.readBits( 32 );
             if ( isValidSlot( slotIndex ) == false || _listSlot[static_cast<size_t>( slotIndex )]._state != NetConnectionState::Connected )
             {
-                // 서버는 수락했지만 클라이언트가 Accepted 를 잃었다 — 데이터 패킷으로는 연결로 치지 않는다(수락에만 서버가 준 번호가 있다).
-                // 응답을 바로 다시 보내면 서버가 수락을 다시 보낸다. 이 패킷의 신뢰 메시지는 확인하지 않았으니 서버가 다시 보낸다.
+                // 서버는 수락했지만 클라이언트가 Accepted 를 받지 못한 경우다. 수락에만 서버가 지정한 번호가 있으므로, 데이터 패킷으로는 연결로 인정하지 않는다.
+                // 응답을 바로 다시 보내면 서버가 수락을 다시 보낸다. 이 패킷에 든 신뢰 메시지는 확인하지 않았으므로 서버가 다시 보낸다.
                 Slot* pSlot = isValidSlot( slotIndex ) ? &_listSlot[static_cast<size_t>( slotIndex )] : nullptr;
                 if ( _bServer == SW_FALSE && pSlot != nullptr && pSlot->_state == NetConnectionState::Connecting && pSlot->_serverSalt != 0 &&
                      token == static_cast<uint32>( pSlot->_clientSalt ^ pSlot->_serverSalt ) )
@@ -965,7 +965,7 @@ namespace sw
                 {
                     const uint32        requestGameID = static_cast<uint32>( valueB >> 32 );
                     NetDisconnectReason reason        = requestGameID == _settings._gameID ? NetDisconnectReason::VersionMismatch : NetDisconnectReason::Rejected;
-                    // 같은 게임 · 같은 판인데 기능 마스크만 다르면 — 한쪽만 암호화 · 토큰 결속이다.
+                    // 같은 게임, 같은 버전인데 기능 마스크만 다르면 한쪽만 암호화나 토큰 결속을 켠 것이다.
                     for ( uint32 mask = 0; reason == NetDisconnectReason::VersionMismatch && mask <= NetProtocolFeature::kAllMask; ++mask )
                     {
                         if ( NetProtocol::makeProtocolID( _settings._gameID, _settings._wireVersion, mask ) == requestProtocolID )
@@ -981,7 +981,7 @@ namespace sw
                 }
                 if ( isValidSlot( slotIndex ) )
                 {
-                    // 이 주소는 이미 연결돼 있다 — 같은 요청의 늦은 재전송이면 수락을 다시, 다른 소금(새로 시작한 클라이언트)이면 옛 연결이 끝날 때까지 답하지 않는다.
+                    // 이 주소는 이미 연결돼 있다. 같은 요청의 늦은 재전송이면 수락을 다시 보내고, 솔트가 다르면(새로 시작한 클라이언트) 옛 연결이 끝날 때까지 답하지 않는다.
                     const Slot& slot = _listSlot[static_cast<size_t>( slotIndex )];
                     if ( slot._clientSalt == valueA )
                         sendAccepted( slotIndex );
@@ -992,7 +992,7 @@ namespace sw
                     sendDenied( from, NetDisconnectReason::ServerFull, valueA );
                     return;
                 }
-                // 자리를 잡지 않는다 — 도전 값만 돌려준다. 그 값은 이 주소로 간 패킷에만 있으므로, 되돌려 준 응답이 와야 주소가 진짜다.
+                // 슬롯을 할당하지 않고 챌린지 값만 돌려준다. 그 값은 이 주소로 보낸 패킷에만 있으므로, 되돌려 준 응답이 와야 주소가 진짜임이 확인된다.
                 sendControl( from, PacketType::Challenge, valueA, makeChallengeToken( from, valueA, computeChallengeWindow( nowSeconds ) ) );
                 return;
             }
@@ -1014,21 +1014,21 @@ namespace sw
                     return;
                 if ( isValidSlot( slotIndex ) )
                 {
-                    // 이미 연결됐다 — 수락을 잃은 클라이언트의 되풀이다.
+                    // 이미 연결됐다. 수락을 받지 못한 클라이언트가 요청을 반복한 경우다.
                     Slot& slot = _listSlot[static_cast<size_t>( slotIndex )];
                     if ( slot._clientSalt == valueA && slot._serverSalt == valueB )
                     {
-                        // 확장 바이트(공개 키 · 토큰)는 다시 읽지 않는다 — 기억한 키 확인 태그로 같은 수락을 보낸다.
+                        // 확장 바이트(공개 키와 토큰)는 다시 읽지 않고, 보관해 둔 키 확인 태그로 같은 수락을 보낸다.
                         slot._lastReceiveTime = nowSeconds;
                         sendAccepted( slotIndex );
                     }
                     return;
                 }
-                // 도전 값을 다시 만들어 맞춰 본다 — 이번 칸이나 바로 앞 칸에 만든 것만(5~10 초).
+                // 챌린지 값을 다시 만들어 비교한다. 이번 윈도우나 바로 앞 윈도우에서 만든 값만 유효하다(5~10초).
                 const int64 window = computeChallengeWindow( nowSeconds );
                 if ( valueB != makeChallengeToken( from, valueA, window ) && valueB != makeChallengeToken( from, valueA, window - 1 ) )
                 {
-                    ++_rejectedPacketCount; // 위조 · 만료된 응답
+                    ++_rejectedPacketCount; // 위조되었거나 만료된 응답.
                     return;
                 }
                 const int32 freeIndex = findFreeSlot();
@@ -1037,10 +1037,10 @@ namespace sw
                     sendDenied( from, NetDisconnectReason::ServerFull, valueA );
                     return;
                 }
-                // 암호화 — 주소가 확인된(도전을 통과한) 응답에만 X25519 를 계산한다. 토큰 결속이면 증명이 맞아야 자리를 잡는다.
+                // 암호화 방식에서는 주소가 확인된(챌린지를 통과한) 응답에만 X25519 를 계산한다. 토큰 결속이면 증명이 맞아야 슬롯을 할당한다.
                 unique_ptr<SlotSecurity> security;
                 if ( isEncrypted() && acceptSecureResponse( reader, from, valueA, valueB, security ) == false )
-                    return; // 거절은 그 안에서 보냈다
+                    return; // 거절은 그 함수 안에서 이미 보냈다.
                 Slot& slot    = _listSlot[static_cast<size_t>( freeIndex )];
                 slot          = Slot{};
                 slot._address = from;
@@ -1054,7 +1054,7 @@ namespace sw
                 slot._security = std::move( security );
                 if ( slot._security != nullptr )
                 {
-                    // 키 확인 태그 — 서버 → 클라이언트 키의 빈 봉인. 수락을 다시 보낼 때도 같은 태그.
+                    // 키 확인 태그는 서버에서 클라이언트로 가는 키로 빈 데이터를 봉인한 값이다. 수락을 다시 보낼 때도 같은 태그를 쓴다.
                     uint8 arrNonce[NetSecurityConstant::kAeadNonceSize]{};
                     uint8 arrAad[NetHostInternal::kKeyConfirmAadSize]{};
                     NetSessionKeyUtil::makeNonce( slot._security->_keys._serverToClient._arrIv, NetSessionKeyUtil::kKeyConfirmPacketNumber, arrNonce );
@@ -1073,7 +1073,7 @@ namespace sw
                 if ( slot._state != NetConnectionState::Connecting || valueB != slot._serverSalt )
                     return;
                 if ( slot._security != nullptr && acceptSecureAccepted( reader, slot, slotIndex, static_cast<uint32>( valueA ) ) == false )
-                    return; // 키 확인이 틀렸다 — 그 안에서 닫았다
+                    return; // 키 확인이 틀렸다. 연결은 그 함수 안에서 닫았다.
                 slot._state           = NetConnectionState::Connected;
                 slot._lastReceiveTime = nowSeconds;
                 slot._lastSendTime    = -1.0;
@@ -1088,7 +1088,7 @@ namespace sw
                     return;
                 const Slot& slot = _listSlot[static_cast<size_t>( slotIndex )];
                 if ( slot._state != NetConnectionState::Connecting || valueB != slot._clientSalt )
-                    return; // 이 요청에 대한 거절이 아니다(옛 요청 · 위조)
+                    return; // 이 요청에 대한 거절이 아니다(옛 요청이나 위조).
                 const NetDisconnectReason reason = NetHostInternal::readDeniedReason( valueA );
                 if ( reason != NetDisconnectReason::ServerFull )
                     SW_LOG_WARNING( "NetHost: server %# refused the connection (%#) — it speaks protocol 0x%08x, this client 0x%08x (game 0x%08x)",
@@ -1115,14 +1115,14 @@ namespace sw
 
     void NetHost::handleSealedPacket( float64 nowSeconds, PacketType type, int32 slotIndex, const uint8* pBody, int32 bodySize )
     {
-        // 몸 = [종류 · 0][연결 값 4][패킷 번호 8][AEAD + 태그] — 바이트 정렬이라 BitReader 를 거치지 않는다.
+        // 본문 형식은 [종류와 0][연결 값 4바이트][패킷 번호 8바이트][AEAD + 태그]다. 바이트 정렬이므로 BitReader 를 거치지 않는다.
         const uint32 token  = bodySize >= 5 ? NetHostInternal::readUint32( pBody + 1 ) : 0u;
         Slot*        pSlot  = isValidSlot( slotIndex ) ? &_listSlot[static_cast<size_t>( slotIndex )] : nullptr;
         const bool   bReady = pSlot != nullptr && pSlot->_state == NetConnectionState::Connected && pSlot->_security != nullptr &&
                             pSlot->_security->_bKeysReady == SW_TRUE && token == static_cast<uint32>( pSlot->_clientSalt ^ pSlot->_serverSalt );
         if ( bReady == false )
         {
-            // 평문 갈래와 같다 — 클라이언트가 Accepted 를 잃었으면 응답을 다시 보낸다(서버가 수락을 다시 보낸다), 아니면 버린다.
+            // 평문 방식과 같다. 클라이언트가 Accepted 를 받지 못했으면 응답을 다시 보내(서버가 수락을 다시 보낸다), 아니면 버린다.
             if ( type == PacketType::Payload && _bServer == SW_FALSE && pSlot != nullptr && pSlot->_state == NetConnectionState::Connecting && pSlot->_serverSalt != 0 &&
                  token == static_cast<uint32>( pSlot->_clientSalt ^ pSlot->_serverSalt ) )
             {
@@ -1134,7 +1134,7 @@ namespace sw
             return;
         }
         if ( openSealed( *pSlot, pBody, bodySize ) == false )
-            return; // 변조 · 재전송 — 세고 버린다(연결은 산다)
+            return; // 변조나 재전송이므로 세고 버린다. 연결은 유지한다.
         if ( type == PacketType::Disconnect )
         {
             if ( _listOpenScratch.empty() )
@@ -1157,7 +1157,7 @@ namespace sw
             return;
         if ( bNotifyRemote && slot._state == NetConnectionState::Connected )
         {
-            // 끊김 알림은 잃을 수 있으니 몇 번 보낸다(못 받아도 저쪽은 타임아웃으로 안다). 암호화면 빈 평문의 봉인이라 엿본 소금으로 위조하지 못한다.
+            // 끊김 알림은 유실될 수 있으므로 몇 번 보낸다(못 받아도 상대는 타임아웃으로 안다). 암호화 방식에서는 빈 평문을 봉인하므로, 엿본 솔트로 위조할 수 없다.
             for ( int32 repeat = 0; repeat < 3; ++repeat )
             {
                 if ( slot._security == nullptr )
@@ -1224,7 +1224,7 @@ namespace sw
                 {
                     outConnectionID = index;
                     outChannel      = static_cast<NetChannelType>( channel );
-                    _receiveCursor  = index; // 같은 연결부터 이어서 비운다
+                    _receiveCursor  = index; // 다음에는 같은 연결부터 이어서 비운다.
                     return true;
                 }
             }
@@ -1235,7 +1235,7 @@ namespace sw
 
     void NetHost::disconnect( int32 connectionID )
     {
-        // 끊김 알림은 바로 보낸다(곧 호스트를 없앨 수 있다) — 이 스레드의 사본으로, 잠금 밖에서.
+        // 끊김 알림은 바로 보낸다(곧 호스트를 없앨 수 있다). 이 스레드의 사본으로 잠금 밖에서 보낸다.
         OutgoingBatch           batch;
         vector<FinishedConnect> listFinished;
         INetTransport*          pTransport = nullptr;

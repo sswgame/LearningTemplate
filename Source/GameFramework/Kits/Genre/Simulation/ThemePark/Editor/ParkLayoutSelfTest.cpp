@@ -1,6 +1,6 @@
 /**
  * @file ParkLayoutSelfTest.cpp
- * @brief ThemePark 확장의 에디터 자체 테스트 — 확장 패널이 에디터의 ImGui 컨텍스트에 그려지고(결속기), 배치 파일이 키트 로더로 읽힌다.
+ * @brief ThemePark 확장의 에디터 셀프 테스트입니다. 확장 패널이 에디터의 ImGui 컨텍스트에 그려지는지(바인더), 배치 파일이 키트 로더로 읽히는지 확인합니다.
  */
 #include "pch.h"
 
@@ -19,7 +19,7 @@ namespace sw::editor
     {
         struct ParkLayoutSelfTestInternal
         {
-            /** @brief 확장 패널이 등록 목록에 올라 그려진다 — 결속기가 틀리면 확장의 ImGui::Begin 이 다른 컨텍스트로 가 이 창이 에디터에 없다. */
+            /** @brief 확장 패널이 등록 목록에 올라 그려지는지 확인합니다. 바인더가 틀리면 확장의 ImGui::Begin 이 다른 컨텍스트로 가서 이 창이 에디터에 없습니다. */
             static EditorSelfTestStep runExtensionPanelDraws( EditorSelfTestContext& context )
             {
                 EditorContext* pContext = EditorContext::get();
@@ -38,11 +38,11 @@ namespace sw::editor
                 return EditorSelfTestStep::Done;
             }
 
-            /** @brief 배치 파일을 읽어 놀이기구가 하나 이상이고 선분이 나온다(키트 로더 · 트랙 빌더가 확장 안에서 돈다). */
+            /** @brief 배치 파일을 읽어 놀이기구가 하나 이상이고 선분이 나오는지 확인합니다. 키트 로더와 트랙 빌더가 확장 안에서 동작해야 합니다. */
             static EditorSelfTestStep runLayoutPreviewLoads( EditorSelfTestContext& context )
             {
                 ParkLayoutPreview preview;
-                (void)preview.refresh(); // 결과는 아래 isLoaded 로 본다
+                (void)preview.refresh(); // 결과는 아래 isLoaded 로 확인한다
                 context.expect( preview.isLoaded() && preview.getRides().empty() == false, "rides.xml did not load through the ThemePark kit" );
                 vector<EditorWorldSegment> listSegment;
                 preview.appendSegments( listSegment );

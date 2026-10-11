@@ -36,7 +36,7 @@ namespace sw
         const size_t newCount = static_cast<size_t>( MathUtil::max( 0, slotCount ) );
         if ( newCount < _listSlot.size() )
         {
-            // 줄어드는 칸의 것은 남는 빈 칸으로 먼저 옮긴다.
+            // 줄어드는 슬롯의 아이템은 남는 빈 슬롯으로 먼저 옮긴다.
             for ( size_t index = newCount; index < _listSlot.size(); ++index )
             {
                 if ( _listSlot[index].isEmpty() )
@@ -126,7 +126,7 @@ namespace sw
                 return false;
             return addItem( stack._itemID, stack._count ) == stack._count;
         }
-        // 닳는 아이템 · 인스턴스 상태가 있는 아이템은 그것을 지닌 채 빈 칸 하나에.
+        // 닳는 아이템과 인스턴스 상태가 있는 아이템은 그 상태를 유지한 채 빈 슬롯 하나에 넣는다.
         if ( computeWeightRoom( stack._itemID, 1 ) < 1 )
             return false;
         for ( InventorySlot& slot : _listSlot )
@@ -404,7 +404,7 @@ namespace sw
         float32 maxWeight = 0.0f;
         uint32  slotCount = 0;
         archive >> maxWeight;
-        // 칸마다 이름(4) + 개수 · 내구도 · 피해(12) + 꾸미기 수 · 부품 수(8)
+        // 슬롯마다 이름(4) + 개수, 내구도, 피해(12) + 꾸미기 수, 부품 수(8)
         if ( archive.isError() || ( 0.0f <= maxWeight ) == false || StateArchiveUtil::readCount( archive, 24, slotCount ) == false || slotCount != _listSlot.size() )
             return false;
         vector<InventorySlot> listSlot( slotCount );
@@ -416,7 +416,7 @@ namespace sw
             archive >> slot._count;
             archive >> slot._durability;
             archive >> slot._damage;
-            // 값마다 이름 둘(8) + 숫자 넷(16)
+            // 값마다 이름 두 개(8) + 숫자 네 개(16)
             if ( StateArchiveUtil::readCount( archive, 24, valueCount ) == false )
                 return false;
             for ( uint32 valueIndex = 0; valueIndex < valueCount; ++valueIndex )

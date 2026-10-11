@@ -146,7 +146,7 @@ namespace sw
                 pushEvent( rule._event, cell );
                 return 1;
             }
-            // 너비 우선으로 이어진 칸(네 이웃, 이웃 순서 고정 — 알림 순서도 늘 같다)에 상태를 붙인다.
+            // 너비 우선으로 이어진 셀(네 이웃, 이웃 순서 고정)에 상태를 붙인다. 이웃 순서가 고정이므로 알림 순서도 항상 같다.
             _floodSearch.begin( _topology.getCellCount() );
             _floodSearch.visit( toIndex( cell ), -1 );
             while ( _floodSearch.hasNext() )
@@ -206,7 +206,7 @@ namespace sw
         if ( _pTable == nullptr )
             return;
         const vector<ElementStatusDef>& listStatus = _pTable->getStatuses();
-        // 1) 상태의 시간 — 칸마다 따로라 순서와 상관없다.
+        // 1) 상태의 시간: 셀마다 따로 처리하므로 순서와 상관없다.
         for ( Cell& cell : _listCell )
         {
             for ( size_t status = 0; status < listStatus.size(); ++status )
@@ -229,7 +229,7 @@ namespace sw
             }
         }
 
-        // 2) 걸음 규칙을 지금 상태만 보고 모은다(규칙 순서 → 행 우선).
+        // 2) 스텝 규칙을 지금 상태만 보고 모은다. 규칙 순서가 먼저이고 그다음이 행 우선이다.
         const vector<ElementStepRule>& listRule = _pTable->getStepRules();
         _listPending.clear();
         for ( size_t ruleIndex = 0; ruleIndex < listRule.size(); ++ruleIndex )
@@ -273,7 +273,7 @@ namespace sw
             }
         }
 
-        // 3) 모은 순서대로 적용한다. 앞의 것이 바꾼 칸은 뒤의 것이 다시 확인한다(두 불이 같은 얼음을 녹였다).
+        // 3) 모은 순서대로 적용한다. 앞의 것이 바꾼 셀은 뒤의 것이 다시 확인한다. 이렇게 하지 않으면 두 불이 같은 얼음을 녹이는 일이 생긴다.
         for ( const PendingChange& change : _listPending )
         {
             if ( isInside( change._cell ) == false )
@@ -351,7 +351,7 @@ namespace sw
             outArchive << cell._statusBits;
             for ( const uint8 value : cell._arrStatusValue )
             {
-                outArchive << value; // 상태 값(남은 시간 · 세기) — 비트만 실으면 복원한 불이 처음부터 탄다
+                outArchive << value; // 상태 값(남은 시간, 세기). 비트만 실으면 복원한 불이 처음부터 다시 탄다
             }
         }
         StateArchiveUtil::writeInt2( outArchive, _wind );
@@ -366,7 +366,7 @@ namespace sw
         archive >> width;
         archive >> height;
         const uint64 cellCount = static_cast<uint64>( MathUtil::max( 0, width ) ) * static_cast<uint64>( MathUtil::max( 0, height ) );
-        // 크기는 initialize 의 것이어야 한다 — 칸마다 재질 · 상태 비트(2) + 상태 값
+        // 크기는 initialize 의 것이어야 한다. 셀마다 재질, 상태 비트(2), 상태 값을 쓴다
         const uint64 cellBytes = 2u + ElementRuleTable::kMaxStatusCount;
         if ( archive.isError() || width != _topology._width || height != _topology._height || archive.hasBytesAvailable( cellCount * cellBytes ) == false )
             return false;

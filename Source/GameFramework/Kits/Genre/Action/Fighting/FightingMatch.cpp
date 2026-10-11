@@ -16,9 +16,9 @@ namespace sw
         {
             static constexpr uint32  kStateTag      = FourCcUtil::make( "FGHT" );
             static constexpr int32   kStateVersion  = 2;
-            static constexpr uint16  kButtonMask    = 0x0F; ///< 1 바이트 입력에 싣는 버튼 4 개
+            static constexpr uint16  kButtonMask    = 0x0F; ///< 1바이트 입력에 담는 버튼 4개
             static constexpr int32   kMaxCounter    = 1 << 20;
-            static constexpr float32 kRoundingSlack = 1.0e-3f; ///< 0.55 × 10 같은 반올림 경계가 부동소수 오차로 내려가지 않게
+            static constexpr float32 kRoundingSlack = 1.0e-3f; ///< 0.55 × 10 같은 반올림 경계가 부동소수 오차 때문에 내려가지 않게 하는 여유값
             static constexpr int32   kStateCount    = static_cast<int32>( FighterState::Knockout ) + 1;
 
             static bool isGuardDirectionBack( uint8 relativeDirection ) { return relativeDirection == 4 || relativeDirection == 7; }
@@ -33,7 +33,7 @@ namespace sw
                 return static_cast<int32>( MathUtil::clamp<int64>( value, -kMaxCounter, kMaxCounter ) );
             }
 
-            /** @brief 타임라인을 쓰고(기술은 캐릭터의 기술 자리로 따로) 읽습니다. */
+            /** @brief 타임라인을 쓰고 읽습니다. 기술은 캐릭터의 기술 인덱스로 따로 저장합니다. */
             static void writeTimeline( BitWriter& writer, const MoveTimeline& timeline )
             {
                 writer.writeBool( timeline.isPlaying() );
@@ -43,7 +43,7 @@ namespace sw
                 writeCounter( writer, timeline.getHitstopRemaining() );
             }
 
-            /** @brief 타임라인을 복원합니다(기반 `MoveTimeline::restoreState` — 기술은 쓰는 쪽이 찾아 넘긴다). */
+            /** @brief 타임라인을 복원합니다. 기술은 기반 `MoveTimeline::restoreState` 가 다루지 않으므로 호출하는 쪽이 찾아서 넘깁니다. */
             [[nodiscard]] static bool readTimeline( BitReader& reader, const FighterMove* pMove, MoveTimeline& outTimeline )
             {
                 const bool  bPlaying = reader.readBool();
@@ -57,7 +57,7 @@ namespace sw
                 return pMove != nullptr && outTimeline.restoreState( pMove->_frame, frame, hitstop, bContact, bBlocked );
             }
 
-            /** @brief 격투의 라운드 규칙 — 라운드 승 = 1 위 1 점(순위 점수 목록 없음), 둘이 함께 선승에 닿으면 무승부, 시간 · 대기는 최소 1 프레임입니다. */
+            /** @brief 격투의 라운드 규칙입니다. 라운드 승은 1위가 1점이고(순위 점수 목록은 없다), 둘이 함께 선승 조건에 닿으면 무승부입니다. 시간과 대기는 최소 1프레임입니다. */
             static RoundSeriesSettings makeSeriesSettings( const FightingSettings& settings )
             {
                 RoundSeriesSettings series;
@@ -112,7 +112,7 @@ namespace sw
             _arrFighter[player]._inputBuffer.clear();
         }
         _series.initialize( FightingMatchInternal::makeSeriesSettings( settings ) );
-        (void)_series.start( kPlayerCount ); // 참가자 둘 — 실패하지 않는다
+        (void)_series.start( kPlayerCount ); // 참가자는 둘이라 실패하지 않는다
         startRound();
     }
 
@@ -278,7 +278,7 @@ namespace sw
             }
             case FighterState::Sidestep:
             {
-                // 상대를 축으로 돈다 — 상대의 직선 기술은 시작 방향에 묶여 있어 옆으로 벌어진 각만큼 빗나간다.
+                // 상대를 축으로 돈다. 상대의 직선 기술은 시작 방향에 묶여 있어서 옆으로 벌어진 각도만큼 빗나간다.
                 const FighterRuntime& other = _arrFighter[opponent];
                 const float32         step  = MathUtil::toRadian( fighter._pDef->_sidestepAngle ) / static_cast<float32>( fighter._pDef->_sidestepFrames );
                 const float32         angle = step * static_cast<float32>( fighter._sidestepSign );
@@ -303,7 +303,7 @@ namespace sw
             case FighterState::Blockstun:
             case FighterState::Hitstun:
             {
-                // 경직은 닿은 다음 프레임부터 센다 — 0 이 된 다음 프레임에 움직인다(이득 = 경직 − 남은 프레임).
+                // 경직은 닿은 다음 프레임부터 센다. 0이 된 다음 프레임에 움직일 수 있다(이득 = 경직 − 남은 프레임).
                 if ( fighter._stateFrames > 0 )
                 {
                     --fighter._stateFrames;
@@ -326,7 +326,7 @@ namespace sw
                 }
                 else if ( bAtWall && fighter._bWallSplatUsed == SW_FALSE )
                 {
-                    // 저글로 벽까지 날라 왔다 — 벽꽝.
+                    // 저글로 벽까지 밀려왔으므로 벽꽝 상태로 만든다.
                     fighter._bWallSplatUsed = SW_TRUE;
                     fighter._bAirborne      = SW_FALSE;
                     fighter._y              = 0.0f;
@@ -378,7 +378,7 @@ namespace sw
                 const uint16 pressed = static_cast<uint16>( pressedButtons & FightingMatchInternal::kButtonMask );
                 if ( pressed != 0 && fighter._bThrowAttempted == SW_FALSE )
                 {
-                    fighter._bThrowAttempted = SW_TRUE; // 첫 시도만 — 틀린 버튼이면 더 못 푼다
+                    fighter._bThrowAttempted = SW_TRUE; // 첫 시도만 인정한다. 틀린 버튼을 눌렀으면 더 풀 수 없다
                     if ( fighter._breakButtons != 0 && pressed == fighter._breakButtons )
                     {
                         enterState( player, FighterState::Blockstun, _settings._throwBreakRecovery );
@@ -468,7 +468,7 @@ namespace sw
 
         if ( fighter._state == FighterState::Attacking && bAsIfFree == false )
         {
-            // 스트링 · 캔슬 — 지금 기술의 캔슬 창 안에서만.
+            // 스트링과 캔슬은 지금 기술의 캔슬 창 안에서만 가능하다.
             if ( fighter._timeline.canCancelInto( move._frame._id ) == false )
                 return false;
         }
@@ -517,7 +517,7 @@ namespace sw
                 bestIndex = moveIndex;
                 continue;
             }
-            // 기반 `InputCommandBuffer::findCompleted` 와 같은 규칙 — 우선도, 같으면 단계가 많은 것.
+            // 기반 `InputCommandBuffer::findCompleted` 와 같은 규칙이다. 우선도가 높은 것을 고르고, 같으면 단계가 많은 것을 고른다.
             const InputCommand& best = fighter._pDef->_listMove[static_cast<size_t>( bestIndex )]._command;
             if ( move._command._priority > best._priority ||
                  ( move._command._priority == best._priority && move._command._listStep.size() > best._listStep.size() ) )
@@ -542,7 +542,7 @@ namespace sw
         if ( fighter._bAirborne == SW_FALSE )
             fighter._posture = move.allowsPosture( FighterPosture::Crouching ) && fighter._posture == FighterPosture::Crouching ? FighterPosture::Crouching
                                                                                                                                 : FighterPosture::Standing;
-        aimAtOpponent( player ); // 공격 방향은 여기서 고정(추적 기술만 다시 겨눈다)
+        aimAtOpponent( player ); // 공격 방향은 여기서 고정한다(추적 기술만 다시 겨눈다)
         pushEvent( FightingEvent::Kind::MoveStarted, player, moveIndex, move._frame._id );
         if ( move._bRageArt == SW_TRUE )
         {
@@ -564,7 +564,7 @@ namespace sw
         if ( fighter._state == FighterState::Knockout || fighter._hitstop > 0 )
             return;
 
-        // 1) 지금 낼 수 있는 기술 — 없으면 못 움직이는 동안의 커맨드를 선입력에 담는다.
+        // 1) 지금 낼 수 있는 기술을 실행한다. 없으면 움직일 수 없는 동안 입력한 커맨드를 선입력 버퍼에 담는다.
         int32 moveIndex = findCompletedMove( player, false );
         if ( moveIndex < 0 )
         {
@@ -591,7 +591,7 @@ namespace sw
         if ( fighter._state != FighterState::Neutral )
             return;
 
-        // 2) 횡이동 · 점프.
+        // 2) 횡이동과 점프를 처리한다.
         const uint8 relative = InputCommandBuffer::mirrorDirection( input._direction, fighter._side );
         const bool  bFloor   = fighter._posture != FighterPosture::Airborne;
         if ( bFloor && fighter._inputBuffer.isCompleted( fighter._pDef->_sidestepUp, fighter._side ) )
@@ -626,7 +626,7 @@ namespace sw
             return;
         }
 
-        // 3) 자세 · 가드 · 걷기.
+        // 3) 자세, 가드, 걷기를 처리한다.
         if ( FightingMatchInternal::isCrouchDirection( relative ) )
         {
             fighter._posture     = FighterPosture::Crouching;
@@ -777,9 +777,9 @@ namespace sw
             }
         }
         if ( pMove->_frame._height == AttackHeight::Throw && ( other._bAirborne == SW_TRUE || other._state == FighterState::Juggle ) )
-            return false; // 공중은 잡지 못한다
+            return false; // 공중에 있는 상대는 잡을 수 없다
 
-        // 허트 캡슐 — 바닥 원(반지름) × 높이 구간. 높이는 자세 · 상태로.
+        // 허트 캡슐은 바닥 원(반지름)과 높이 구간으로 만든다. 높이는 자세와 상태로 정한다.
         float32 bodyHeight = other._pDef->_standHeight;
         if ( other._state == FighterState::Juggle )
             bodyHeight = _settings._juggleBodyHeight;
@@ -791,7 +791,7 @@ namespace sw
         const float32 bodyTop    = other._y + bodyHeight;
         const float32 radius     = other._pDef->_hurtRadius;
 
-        // 공격 방향 기준 앞 거리 · 옆 거리(옆으로 벌어진 각이 크면 옆 거리가 반지름을 넘는다).
+        // 공격 방향 기준으로 앞 거리와 옆 거리를 구한다. 옆으로 벌어진 각이 크면 옆 거리가 반지름을 넘는다.
         const float32 relX    = other._x - fighter._x;
         const float32 relZ    = other._z - fighter._z;
         const float32 forward = relX * fighter._dirX + relZ * fighter._dirZ;
@@ -838,7 +838,7 @@ namespace sw
 
     void FightingMatch::resolveHits()
     {
-        // 두 쪽을 먼저 다 보고 함께 적용한다 — 같은 프레임에 닿으면 상쇄(둘 다 맞는다).
+        // 두 쪽을 먼저 모두 판정한 뒤 함께 적용한다. 같은 프레임에 닿으면 상쇄되어 둘 다 맞는다.
         bool arrContact[kPlayerCount] = { false, false };
         for ( int32 player = 0; player < kPlayerCount; ++player )
         {
@@ -868,7 +868,7 @@ namespace sw
         const GuardOutcome outcome =
             bInCombo ? GuardOutcome::Hit : MoveTimeline::computeGuardOutcome( frameData._height, stance, frameData._bUnblockable == SW_TRUE );
         if ( outcome == GuardOutcome::Evaded )
-            return; // 높이로 헛쳤다(앉아서 상단 · 잡기) — 지속 프레임 동안 다시 본다
+            return; // 높이가 맞지 않아 헛쳤다(앉은 상대에게 상단 기술이나 잡기). 지속 프레임 동안 다시 판정한다
 
         const float32 pushX = fighter._dirX * move._pushback;
         const float32 pushZ = fighter._dirZ * move._pushback;
@@ -890,7 +890,7 @@ namespace sw
 
         if ( frameData._height == AttackHeight::Throw )
         {
-            // 잡았다 — 풀기 창을 연다. 피해는 창이 닫힐 때.
+            // 잡기에 성공했다. 풀기 입력 창을 열고, 피해는 창이 닫힐 때 준다.
             enterState( defender, FighterState::ThrowBreak, _settings._throwBreakFrames );
             other._breakButtons    = move._breakButtons;
             other._bThrowAttempted = SW_FALSE;
@@ -914,7 +914,7 @@ namespace sw
         {
             if ( move._bScrew == SW_TRUE && other._bScrewUsed == SW_FALSE )
             {
-                // 스크류 — 다시 띄워 멀리 나른다. 한 콤보에 한 번.
+                // 스크류는 상대를 다시 띄워 멀리 밀어낸다. 한 콤보에 한 번만 쓸 수 있다.
                 other._bScrewUsed = SW_TRUE;
                 other._velocityY  = _settings._screwVelocity;
                 other._carryX     = fighter._dirX * _settings._screwCarrySpeed;
@@ -938,11 +938,11 @@ namespace sw
         }
         else if ( other._state == FighterState::WallSplat || other._state == FighterState::Down )
         {
-            ++other._airHits; // 벽꽝 · 다운 추가타도 콤보 감쇠를 이어 간다
+            ++other._airHits; // 벽꽝이나 다운 상태의 추가타도 콤보 감쇠를 이어 간다
         }
         else if ( frameData._bLauncher == SW_TRUE || other._bAirborne == SW_TRUE )
         {
-            // 띄우기 — 또는 점프 중에 맞아 떨어진다.
+            // 띄우기, 또는 점프 중에 맞아 떨어지는 경우다.
             const bool bLaunch = frameData._bLauncher == SW_TRUE;
             enterState( defender, FighterState::Juggle, 0 );
             other._bAirborne = SW_TRUE;
@@ -978,7 +978,7 @@ namespace sw
     {
         const int32     attacker = 1 - defender;
         FighterRuntime& fighter  = _arrFighter[attacker];
-        // 잡은 쪽은 `Throwing` 에서 기술 자리를 버렸으므로 피해는 잡힐 때 기억한 기술에서 — 잡은 쪽 타임라인의 기술입니다.
+        // 잡은 쪽은 `Throwing` 상태에서 기술 인덱스를 버렸으므로, 피해는 잡힐 때 기억해 둔 기술(잡은 쪽 타임라인의 기술)에서 가져온다.
         const MoveFrameData& frameData = fighter._timeline.getMove();
         const int32          damage    = computeDamage( attacker, frameData._damage, false );
         applyDamage( defender, damage );
@@ -1016,7 +1016,7 @@ namespace sw
 
         if ( _series.advanceTick() != RoundSeriesTick::TimeUp )
             return;
-        // 시간 초과 — 체력 비율(정수 교차 곱으로 정확히)이 높은 쪽.
+        // 시간이 초과되면 체력 비율이 높은 쪽이 이긴다(정수 교차 곱으로 정확히 비교한다).
         const int64 left  = static_cast<int64>( _arrFighter[0]._health ) * MathUtil::max( 1, _arrFighter[1]._pDef->_health );
         const int64 right = static_cast<int64>( _arrFighter[1]._health ) * MathUtil::max( 1, _arrFighter[0]._pDef->_health );
         endRound( left > right ? 0 : ( left < right ? 1 : kDraw ), FightingEvent::Kind::TimeOut );
@@ -1026,7 +1026,7 @@ namespace sw
     {
         pushEvent( reason, winner, 0 );
         _lastRoundWinner = winner;
-        // 무승부 라운드는 둘 다 1 위 — 둘 다 1 승이다. 라운드 중에만 불리므로 거절되지 않는다.
+        // 무승부 라운드는 둘 다 1위라서 둘 다 1승이다. 라운드 중에만 호출되므로 거절되지 않는다.
         const RoundSeriesOutcome outcome = _series.reportRoundWinner( winner == kDraw ? RoundSeries::kNoWinner : winner );
         pushEvent( FightingEvent::Kind::RoundEnd, winner, winner );
         if ( outcome != RoundSeriesOutcome::Finished )
@@ -1082,7 +1082,7 @@ namespace sw
 
     void FightingMatch::saveState( vector<uint8>& outBuffer ) const
     {
-        // 롤백은 프레임마다 · 되감아 다시 돌 때마다 저장한다 — 링 슬롯의 버퍼를 이어받아 쓰고 돌려준다(새로 잡지 않는다).
+        // 롤백은 프레임마다, 되감아 다시 돌 때마다 상태를 저장한다. 링 슬롯의 버퍼를 이어받아 쓰고 돌려주므로 새로 할당하지 않는다.
         BitWriter writer{ std::move( outBuffer ) };
         writer.writeUint32( FightingMatchInternal::kStateTag );
         writer.writeVarInt( FightingMatchInternal::kStateVersion );
@@ -1090,7 +1090,7 @@ namespace sw
         FightingMatchInternal::writeCounter( writer, _lastRoundWinner );
         for ( const FighterRuntime& fighter : _arrFighter )
         {
-            writer.writeVarUint( fighter._pDef != nullptr ? fighter._pDef->_listMove.size() : 0 ); // 같은 캐릭터인지 대 보는 값
+            writer.writeVarUint( fighter._pDef != nullptr ? fighter._pDef->_listMove.size() : 0 ); // 같은 캐릭터인지 대조하는 값
             writer.writeFloat( fighter._x );
             writer.writeFloat( fighter._z );
             writer.writeFloat( fighter._y );
@@ -1117,14 +1117,14 @@ namespace sw
                 writer.writeBool( flag == SW_TRUE );
             }
             FightingMatchInternal::writeTimeline( writer, fighter._timeline );
-            // 입력 버퍼 — 오래된 것부터(복원할 때 그 순서로 다시 쌓는다).
+            // 입력 버퍼는 오래된 것부터 쓴다(복원할 때 같은 순서로 다시 쌓는다).
             FightingMatchInternal::writeCounter( writer, fighter._inputBuffer.getFrameCount() );
             for ( int32 framesAgo = fighter._inputBuffer.getFrameCount() - 1; framesAgo >= 0; --framesAgo )
             {
                 writer.writeBits( encodeInput( fighter._inputBuffer.getFrame( framesAgo ) ), 8 );
             }
         }
-        // 라운드 묶음은 맨 뒤 — 복원할 때 마지막에 읽어, 맞을 때만 바뀌는 묶음 덕에 loadState 가 통째로 원자적이다.
+        // 라운드 상태는 맨 뒤에 쓴다. 복원할 때 마지막에 읽으므로, 모두 맞을 때만 바뀌어서 `loadState` 가 통째로 원자적이다.
         _series.writeState( writer );
         outBuffer = writer.releaseBytes();
     }
@@ -1192,7 +1192,7 @@ namespace sw
         }
         if ( reader.hasOverflowed() )
             return false;
-        // 라운드 묶음은 맨 뒤 — 맞을 때만 바뀌므로 이 뒤에는 실패할 일이 없다.
+        // 라운드 상태는 맨 뒤에 있고 맞을 때만 바뀌므로, 이 뒤에는 실패할 일이 없다.
         if ( _series.readState( reader ) == false )
             return false;
 
@@ -1204,7 +1204,7 @@ namespace sw
         return true;
     }
 
-    // 세이브(Archive)는 롤백 코덱의 바이트를 그대로 싣는다(같은 상태를 두 형식으로 따로 쓰지 않는다).
+    // 세이브(Archive)는 롤백 코덱의 바이트를 그대로 쓴다. 같은 상태를 두 형식으로 따로 쓰지 않기 위해서다.
     void FightingMatch::writeState( Archive& outArchive ) const
     {
         vector<uint8> bytes;
@@ -1217,6 +1217,6 @@ namespace sw
         vector<uint8> bytes;
         if ( archive.readSection( bytes ) == false )
             return false;
-        return loadState( bytes ); // 롤백 코덱의 읽기(임시에 읽어 끝까지 맞을 때만 바꿈)
+        return loadState( bytes ); // 롤백 코덱으로 읽는다(임시 객체에 읽어서 끝까지 맞을 때만 바꾼다)
     }
 } // namespace sw

@@ -1,6 +1,7 @@
 /**
  * @file WeatherSystem.h
- * @brief 날씨 — 계절마다 가중치로 다음 날씨를 고르고, 정한 시간 동안 이어지다 부드럽게 넘어가며, 젖음 · 바람 · 안개 같은 값을 섞어 줍니다.
+ * @brief 날씨를 정의합니다.
+ * @details 계절마다 가중치로 다음 날씨를 고르고, 정한 시간 동안 이어지다가 부드럽게 넘어간다. 젖음, 바람, 안개 같은 값을 섞어 준다.
  */
 #pragma once
 #include "Core/Common/FourCcUtil.h"
@@ -48,8 +49,11 @@ namespace sw
 {
     /**
      * @class WeatherCatalog
-     * @brief `<WeatherCatalog transition="60"><Weather id="rain" weight="1" seasons="Spring:3,Summer:1" minDuration="600" maxDuration="1800">
-     *        <Values wetness="1" wind="0.4"/></Weather></WeatherCatalog>` 를 읽습니다.
+     * @brief 날씨 카탈로그(`<WeatherCatalog>`)를 읽습니다.
+     * @code
+     *     <WeatherCatalog transition="60"><Weather id="rain" weight="1" seasons="Spring:3,Summer:1" minDuration="600" maxDuration="1800">
+     *         <Values wetness="1" wind="0.4"/></Weather></WeatherCatalog>
+     * @endcode
      */
     class SW_GF_API WeatherCatalog : public XMLCatalog<WeatherCatalog>
     {
@@ -73,7 +77,7 @@ namespace sw
 {
     /**
      * @class WeatherSystem
-     * @brief 지금 날씨와 넘어가는 중인 이전 날씨입니다. 시간은 게임 초(`WorldClock` 과 같은 배율)로 넘깁니다. 씨앗이 같으면 같은 날씨가 이어집니다.
+     * @brief 지금 날씨와 넘어가는 중인 이전 날씨를 들고 있습니다. 시간은 게임 초(`WorldClock` 과 같은 배율)로 넘기며, 씨앗이 같으면 같은 날씨가 이어집니다.
      */
     class SW_GF_API WeatherSystem
     {
@@ -86,12 +90,12 @@ namespace sw
         void initialize( const WeatherCatalog* pCatalog, uint32 seed, const hashed_string& season );
         /** @brief 시간을 흘립니다. 날씨가 바뀌었으면 true 입니다. */
         bool update( float32 gameSeconds, const hashed_string& season );
-        /** @brief 날씨를 정합니다(이벤트 · 퀘스트). @p duration 0 이면 정의의 범위에서 고른다. */
+        /** @brief 날씨를 정합니다. 이벤트와 퀘스트가 씁니다. @p duration 이 0 이면 정의의 범위에서 고릅니다. */
         void forceWeather( const hashed_string& weatherID, float32 duration = 0.0f, bool bImmediate = false );
-        /** @brief 앞으로 올 날씨 @p count 개를 미리 봅니다(일기 예보 — 상태를 바꾸지 않는다). */
+        /** @brief 앞으로 올 날씨 @p count 개를 미리 봅니다. 일기 예보이며 상태는 바꾸지 않습니다. */
         void forecast( const hashed_string& season, int32 count, vector<hashed_string>& outListWeather ) const;
 
-        /** @brief 이전 → 지금 섞은 값입니다(넘어가는 중이면 사이). */
+        /** @brief 이전 날씨와 지금 날씨를 섞은 값입니다. 넘어가는 중이면 그 사이 값입니다. */
         float32       computeValue( const hashed_string& name ) const;
         hashed_string getCurrent() const { return _pCurrent != nullptr ? _pCurrent->_id : hashed_string{}; }
         hashed_string getPrevious() const { return _pPrevious != nullptr ? _pPrevious->_id : hashed_string{}; }
@@ -99,9 +103,9 @@ namespace sw
         float32 getBlend() const;
         float32 getRemaining() const { return _remaining; }
 
-        /** @brief 지금 · 이전 날씨 id · 난수 · 남은 시간 · 전환 경과를 씁니다. 카탈로그는 `initialize` 의 것이라 싣지 않습니다. */
+        /** @brief 지금과 이전 날씨 id, 난수, 남은 시간, 전환 경과를 씁니다. 카탈로그는 `initialize` 의 것이라 싣지 않습니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 바꿉니다. 날씨 id 가 지금 카탈로그에 없거나 깨졌으면 false 이고 그대로입니다. */
+        /** @brief `writeState` 의 바이트로 상태를 바꿉니다. 날씨 id 가 지금 카탈로그에 없거나 바이트가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
     private:

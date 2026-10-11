@@ -1,9 +1,9 @@
 /**
  * @file AdventureTargeting.h
- * @brief 젤다의 주목(Z 주목) — 버튼을 누르면 대상을 잡고(없으면 카메라만 앞으로 맞추는 평행 주목), 잡은 동안 옆 입력은 대상을 도는 옆걸음,
- *        점프 + 뒤 입력은 뒤로 공중제비, 점프 + 옆 입력은 옆 뛰기 회피입니다.
- * @details 대상 고르기 · 넘기기 · 놓치기는 기반 `LockOnSelector` 입니다. 이 파일은 그 위의 "주목 중 몸놀림" 상태 기계만 듭니다.
- *          좌표는 +Y 위, 오른쪽은 앞 × 위의 반대(앞이 +Z 면 오른쪽이 +X)입니다.
+ * @brief 젤다의 주목(Z 주목)입니다. 버튼을 누르면 대상을 잡고(대상이 없으면 카메라만 앞으로 맞추는 평행 주목), 잡은 동안 옆 입력은 대상을 도는 옆걸음이 됩니다.
+ *        점프와 뒤 입력은 뒤로 공중제비, 점프와 옆 입력은 옆 뛰기 회피입니다.
+ * @details 대상을 고르고, 넘기고, 놓치는 일은 기반 `LockOnSelector` 가 맡는다. 이 파일은 그 위의 "주목 중 몸놀림" 상태 기계만 가진다.
+ *          좌표는 +Y가 위이고, 오른쪽은 앞 × 위의 반대 방향이다(앞이 +Z면 오른쪽이 +X).
  */
 #pragma once
 #include "Core/Common/FourCcUtil.h"
@@ -22,7 +22,7 @@ namespace sw
     enum class AdventureTargetingState : uint8
     {
         Free = 0,    ///< 주목하지 않는다
-        Parallel,    ///< 버튼은 누르고 있지만 대상이 없다 — 카메라가 앞을 본다(옆걸음은 된다)
+        Parallel,    ///< 버튼은 누르고 있지만 대상이 없다. 카메라가 앞을 본다(옆걸음은 된다)
         Locked,      ///< 대상을 보고 선다
         StrafeLeft,  ///< 대상을 왼쪽으로 돈다
         StrafeRight, ///< 대상을 오른쪽으로 돈다
@@ -33,14 +33,14 @@ namespace sw
 
     SW_GF_API const utf8* toString( AdventureTargetingState state );
 
-    /** @brief 주목 설정입니다. 시간은 초입니다. */
+    /** @brief 주목 설정입니다. 시간 단위는 초입니다. */
     struct AdventureTargetingSettings
     {
         LockOnSettings _lockOn{};
-        float32        _deadZone{ 0.3f };         ///< 이 아래 입력은 없는 것으로 본다
+        float32        _deadZone{ 0.3f };         ///< 이 값 아래의 입력은 없는 것으로 본다
         float32        _backflipDuration{ 0.6f }; ///< 회피 동작 동안은 다른 입력을 받지 않는다
         float32        _sideHopDuration{ 0.4f };
-        float32        _evadeInvulnerable{ 0.25f }; ///< 회피 시작부터 이만큼은 무적(게임이 `isInvulnerable` 로 본다)
+        float32        _evadeInvulnerable{ 0.25f }; ///< 회피를 시작하고 이 시간 동안은 무적이다(게임이 `isInvulnerable` 로 확인한다)
     };
 } // namespace sw
 
@@ -50,7 +50,7 @@ namespace sw
 
     /**
      * @class AdventureTargeting
-     * @brief 플레이어 한 명의 주목입니다. 매 틱 `update` 에 대상 후보 · 이동 입력(x 오른쪽 · y 앞, −1..1) · 점프를 넘깁니다.
+     * @brief 플레이어 한 명의 주목 상태입니다. 매 틱 `update` 에 대상 후보, 이동 입력(x는 오른쪽, y는 앞, −1..1), 점프를 넘깁니다.
      */
     class SW_GF_API AdventureTargeting
     {
@@ -62,16 +62,16 @@ namespace sw
 
         void initialize( const AdventureTargetingSettings& settings );
 
-        /** @brief 주목 버튼을 눌렀습니다. 대상을 잡았으면 true(아니면 평행 주목)입니다. */
+        /** @brief 주목 버튼을 눌렀을 때 호출합니다. 대상을 잡았으면 true 를 반환하고, 못 잡았으면 평행 주목이 됩니다. */
         bool press( const float3& eye, const float3& forward, const vector<LockOnCandidate>& listCandidate );
-        /** @brief 주목 버튼을 뗐습니다. */
+        /** @brief 주목 버튼을 뗐을 때 호출합니다. */
         void release();
-        /** @brief 잡은 채로 다음 대상으로 넘깁니다(@p direction 1 오른쪽 · −1 왼쪽). */
+        /** @brief 잡은 채로 다음 대상으로 넘깁니다(@p direction 이 1이면 오른쪽, −1이면 왼쪽). */
         uint64 cycleTarget( const float3& eye, const float3& forward, const vector<LockOnCandidate>& listCandidate, int32 direction );
-        /** @brief 한 틱 — 대상 유지 판정과 몸놀림 상태입니다. */
+        /** @brief 한 틱 진행합니다. 대상 유지 여부와 몸놀림 상태를 갱신합니다. */
         AdventureTargetingState update( const float3& eye, const vector<LockOnCandidate>& listCandidate, const float2& moveInput, bool bJumpPressed, float32 deltaTime );
         /**
-         * @brief 이동 입력을 월드 방향(XZ, 길이는 입력 크기)으로 바꿉니다. 대상을 잡았으면 대상 쪽이 앞이라 옆 입력이 대상을 도는 원의 접선이 되고,
+         * @brief 이동 입력을 월드 방향(XZ, 길이는 입력 크기)으로 바꿉니다. 대상을 잡았으면 대상 쪽이 앞이 되어 옆 입력이 대상을 도는 원의 접선이 되고,
          *        아니면 @p cameraForward 가 앞입니다.
          */
         float3 computeMoveDirection( const float3& position, const float3& cameraForward, const float2& moveInput ) const;
@@ -84,9 +84,9 @@ namespace sw
         bool                    isEvading() const { return _evade.isActive(); }
         bool                    isInvulnerable() const { return _invulnerable.isActive(); }
 
-        /** @brief 표적 고르기(표적 · 숨은 시간) · 표적 위치 · 회피 · 무적 남은 시간 · 몸놀림 상태 · 버튼 쥠을 씁니다. 설정은 `initialize` 의 것이라 싣지 않습니다. */
+        /** @brief 표적 선택 상태(표적, 숨은 시간), 표적 위치, 회피, 무적 남은 시간, 몸놀림 상태, 버튼 누름 여부를 씁니다. 설정은 `initialize` 에서 받은 것이라 싣지 않습니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
     private:

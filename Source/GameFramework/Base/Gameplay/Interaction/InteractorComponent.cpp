@@ -20,8 +20,8 @@ namespace sw
         {
 
             /**
-             * @brief 하는 쪽에 모션 워핑이 있으면 대상의 맞춤 지점을 마커 이름(없으면 "Interaction")의 워프 목표로 넣습니다 — 상호작용 클립의
-             *        `MotionWarp` 창이 그 자리 · 방향에 닿게 휩니다.
+             * @brief 하는 쪽에 모션 워핑이 있으면 대상의 맞춤 지점을 마커 이름(없으면 "Interaction")의 워프 목표로 넣습니다. 상호작용 클립의
+             *        `MotionWarp` 창이 그 위치와 방향에 닿도록 이동을 보정합니다.
              */
             static void setAlignmentWarpTarget( GameObject& interactor, const InteractableComponent& target, const InteractionDef& def )
             {
@@ -100,7 +100,7 @@ namespace sw
     {
         _listCandidate.clear();
         _listCandidateComponent.clear();
-        // 씬 전체를 훑지 않고 등록된 상호작용 대상만 본다(`ComponentRegistry`). 닿지 않는 것(거리 · 시야각)은 여기서 거른다 — 고르기와 같은 판정이다.
+        // 씬 전체를 순회하지 않고 등록된 상호작용 대상만 본다(`ComponentRegistry`). 닿지 않는 것(거리, 시야각)은 여기서 거르며, 고르기와 같은 판정이다.
         for ( InteractableComponent* pInteractable : manager.getComponentRegistry().getAll<InteractableComponent>() )
         {
             const GameObject*     pObject = pInteractable != nullptr ? pInteractable->getOwner() : nullptr;
@@ -170,7 +170,7 @@ namespace sw
 
         if ( _session.isActive() )
         {
-            // 진행 중에는 대상을 바꾸지 않는다 — 쓸 수 없게 됐거나 멀어지면 취소.
+            // 진행 중에는 대상을 바꾸지 않는다. 쓸 수 없게 됐거나 멀어지면 취소한다.
             InteractableComponent* pTarget = static_cast<InteractableComponent*>( pManager->resolveComponent( _focusComponent ) );
             bool                   bKeep   = pTarget != nullptr && pTarget->isActive() && pTarget->getDefinition() != nullptr;
             if ( bKeep )

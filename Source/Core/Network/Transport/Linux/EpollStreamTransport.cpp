@@ -46,8 +46,8 @@ namespace sw
             static constexpr int32  kEventBatch               = 64;
             static constexpr int32  kLoopWaitMilli            = 100;
             static constexpr int64  kSweepIntervalNanoseconds = 100 * 1000 * 1000;
-            static constexpr uint64 kListenTag                = ~0ull;      ///< epoll 데이터 — 리슨 소켓(연결은 핸들 packed — 세대가 0xFFFFFFFF 에 닿기 전엔 겹치지 않는다)
-            static constexpr uint64 kWakeTag                  = ~0ull - 1u; ///< epoll 데이터 — eventfd
+            static constexpr uint64 kListenTag                = ~0ull;      ///< epoll 데이터. 리슨 소켓이다(연결은 핸들 packed 값이며, 세대가 0xFFFFFFFF 에 닿기 전에는 겹치지 않는다).
+            static constexpr uint64 kWakeTag                  = ~0ull - 1u; ///< epoll 데이터. eventfd 이다.
 
             static int64       toNanoseconds( float64 seconds ) { return static_cast<int64>( seconds * 1.0e9 ); }
             static NetAddress  makeNetAddress( const sockaddr_in& native ) { return NetAddress{ ntohl( native.sin_addr.s_addr ), ntohs( native.sin_port ) }; }
@@ -91,17 +91,17 @@ namespace sw
             uint8                _bReceivePaused{ SW_FALSE };
             uint8                _bShutdownSent{ SW_FALSE };
             uint8                _bRemoteFinished{ SW_FALSE };
-            uint8                _bReadPending{ SW_FALSE }; ///< 멈춘 동안 에지를 받았다 — 다시 읽을 때 EAGAIN 까지 읽는다
+            uint8                _bReadPending{ SW_FALSE }; ///< 멈춘 동안 에지를 받았다. 다시 읽을 때 EAGAIN 까지 읽는다.
             uint8                _bAbortRequested{ SW_FALSE };
-            uint8                _bOpenPending{ SW_FALSE }; ///< 연결이 즉시 성공 — 루프가 연다
+            uint8                _bOpenPending{ SW_FALSE }; ///< 연결이 즉시 성공했다. 루프가 연다.
         };
 
         struct EpollLoop
         {
             mutex          _commandMutex;
-            vector<uint32> _listCommandIndex;   ///< 다른 스레드가 맡긴 할 일(닫기 · 읽기 재개 · 열기)
-            vector<uint32> _listWorkIndex;      ///< 루프 스레드 전용 — 할 일을 맞바꿔 꺼낸다
-            vector<uint8>  _listReceiveScratch; ///< 루프 스레드 전용 읽기 버퍼(`_receiveChunkBytes`)
+            vector<uint32> _listCommandIndex;   ///< 다른 스레드가 맡긴 할 일(닫기, 읽기 재개, 열기).
+            vector<uint32> _listWorkIndex;      ///< 루프 스레드 전용. 할 일을 맞바꿔서 꺼낸다.
+            vector<uint8>  _listReceiveScratch; ///< 루프 스레드 전용 읽기 버퍼(`_receiveChunkBytes`).
             std::thread    _thread;
             int32          _epollFd{ -1 };
             int32          _wakeFd{ -1 };
@@ -122,7 +122,7 @@ namespace sw
         int32                               _loopCount{ 0 };
         StreamTransportSettings             _settings{};
         IStreamHandler*                     _pHandler{ nullptr };
-        int64                               _manualNextSweepNanoseconds{ 0 }; ///< `pollIO` 로 도는 루프 0 의 다음 시한 훑기
+        int64                               _manualNextSweepNanoseconds{ 0 }; ///< `pollIO` 로 도는 루프 0 의 다음 시한 점검 시각.
         int32                               _listenFd{ -1 };
         atomic<uint32>                      _nextLoop{ 0 };
         atomic<int32>                       _openCount{ 0 };
@@ -139,8 +139,8 @@ namespace sw
         uint8                               _bInitialized{ SW_FALSE };
 
         /**
-         * @brief 루프 하나입니다. 표(`_listLoop`)는 initialize 뒤 바뀌지 않으므로 const 로 읽는다.
-         * @note 비 const `operator[]` 는 경합 검출기에 쓰기로 잡힌다 — 루프 스레드 여럿과 부르는 스레드가 같이 읽으면 경합 보고가 난다.
+         * @brief 루프 하나를 반환합니다. 루프 테이블(`_listLoop`)은 initialize 뒤 바뀌지 않으므로 const 로 읽습니다.
+         * @note 비 const `operator[]` 는 경합 검출기에 쓰기로 잡힌다. 루프 스레드 여럿과 부르는 스레드가 함께 읽으면 경합 보고가 난다.
          */
         EpollLoop& getLoop( int32 loopIndex ) const { return *_listLoop[static_cast<size_t>( loopIndex )]; }
 
@@ -233,7 +233,7 @@ namespace sw
             if ( connection._closeReason == StreamCloseReason::None )
                 connection._closeReason = reason;
             if ( bAbortive )
-                Internal::closeAbortive( connection._fd ); // close 가 epoll 등록도 지운다(dup 하지 않았다)
+                Internal::closeAbortive( connection._fd ); // close 가 epoll 등록도 지운다(dup 하지 않았다).
             else
                 ::close( connection._fd );
             connection._fd    = -1;
@@ -241,7 +241,7 @@ namespace sw
             connection._sendQueue.clear();
         }
 
-        /** @brief 줄을 EAGAIN 까지 보냅니다. 높은 물금을 넘었던 줄이 내려오면 true. */
+        /** @brief 큐를 EAGAIN 까지 보냅니다. 높은 워터마크를 넘었던 큐가 내려오면 true 를 반환합니다. */
         bool flushLocked( EpollConnection& connection )
         {
             bool bWritable = false;
@@ -263,7 +263,7 @@ namespace sw
                 {
                     if ( Internal::isWouldBlock( errno ) == false && errno != EINTR )
                         closeFdLocked( connection, StreamCloseReason::Reset, true );
-                    break; // EAGAIN — EPOLLOUT 이 이어 보낸다
+                    break; // EAGAIN 이다. EPOLLOUT 이 이어서 보낸다.
                 }
                 bWritable = connection._sendQueue.consume( static_cast<int32>( sent ) ) || bWritable;
                 _sentBytes.fetch_add( static_cast<uint64>( sent ), std::memory_order_relaxed );
@@ -284,7 +284,7 @@ namespace sw
 
         // ---- 루프 스레드 ----
 
-        /** @brief 닫혔으면 콜백을 내고 자리를 돌려줍니다(루프 스레드만 — 연결의 소유자). */
+        /** @brief 닫혔으면 콜백을 내고 슬롯을 반환합니다(루프 스레드만 호출합니다. 연결의 소유자이기 때문입니다). */
         void retireIfClosed( EpollConnection& connection, uint32 index )
         {
             StreamConnectionHandle handle{};
@@ -392,7 +392,7 @@ namespace sw
             bool bWritable = false;
             {
                 std::scoped_lock<mutex> lock{ connection._mutex };
-                bWritable = flushLocked( connection ); // 연결 중에 쌓인 것
+                bWritable = flushLocked( connection ); // 연결 중에 쌓인 것을 보낸다.
             }
             if ( bWritable )
                 _pHandler->onStreamWritable( handle );
@@ -406,7 +406,7 @@ namespace sw
             EpollConnectionState state      = EpollConnectionState::Free;
             {
                 std::scoped_lock<mutex> lock{ connection._mutex };
-                // 같은 묶음 앞에서 닫혀 자리가 다른 연결(다른 루프일 수도)로 다시 쓰였으면 이 사건은 옛 fd 의 것이다.
+                // 같은 배치의 앞에서 닫혀 슬롯이 다른 연결(다른 루프일 수도 있다)로 다시 쓰였으면, 이 사건은 옛 fd 의 것이다.
                 if ( connection._generation != eventHandle._generation || connection._loopIndex != loopIndex )
                     return;
                 state = connection._state;
@@ -481,7 +481,7 @@ namespace sw
                 {
                     if ( errno == EINTR || errno == ECONNABORTED )
                         continue;
-                    return; // EAGAIN · 그 밖(EMFILE 은 로그)
+                    return; // EAGAIN 이나 그 밖의 오류다(EMFILE 은 로그를 남긴다).
                 }
                 if ( _bStopping.load( std::memory_order_acquire ) || _openCount.load( std::memory_order_relaxed ) >= _settings._maxConnections )
                 {
@@ -493,13 +493,13 @@ namespace sw
                 const NetAddress             address     = Internal::makeNetAddress( remote );
                 const StreamConnectionHandle handle      = allocateConnection( fd, address, true, EpollConnectionState::Open, pConnection );
                 _acceptedCount.fetch_add( 1, std::memory_order_relaxed );
-                _pHandler->onStreamOpened( handle, address, true ); // 등록 전 — 열림이 첫 콜백
+                _pHandler->onStreamOpened( handle, address, true ); // 등록 전이다. 열림이 첫 콜백이어야 한다.
                 if ( registerFd( pConnection->_loopIndex, fd, handle.packed() ) == false )
                 {
                     std::scoped_lock<mutex> lock{ pConnection->_mutex };
                     closeFdLocked( *pConnection, StreamCloseReason::Reset, true );
                 }
-                // 열림 콜백 안에서 쌓인 보내기 · 등록 실패의 닫힘은 그 루프가 처리한다.
+                // 열림 콜백 안에서 쌓인 보내기와 등록 실패에 따른 닫힘은 그 루프가 처리한다.
                 scheduleCommand( pConnection->_loopIndex, handle._index );
             }
         }
@@ -524,7 +524,7 @@ namespace sw
                     std::scoped_lock<mutex> lock{ connection._mutex };
                     const bool              bLive = connection._state != EpollConnectionState::Free && connection._state != EpollConnectionState::Closed;
                     if ( bStopping && bLive )
-                        closeFdLocked( connection, StreamCloseReason::Shutdown, true ); // shutdown 이 표를 훑은 뒤에 받은 연결
+                        closeFdLocked( connection, StreamCloseReason::Shutdown, true ); // shutdown 이 테이블을 훑은 뒤에 받은 연결이다.
                     switch ( connection._state )
                     {
                         case EpollConnectionState::Open:
@@ -639,7 +639,7 @@ namespace sw
             if ( loop._epollFd < 0 || loop._wakeFd < 0 || state.registerFd( index, loop._wakeFd, EpollStreamTransportInternal::kWakeTag ) == false )
             {
                 SW_LOG_ERROR( "epoll_create1 / eventfd failed (%#)", errno );
-                return false; // shutdown 이 연 것을 닫는다
+                return false; // shutdown 이 연 것을 닫는다.
             }
         }
         state._bStopping.store( false, std::memory_order_release );
@@ -659,7 +659,7 @@ namespace sw
         State& state = *_state;
         if ( state._listLoop.empty() )
             return;
-        // 듣기 소켓은 루프를 다 멈춘 뒤에 닫는다 — 루프 0 이 acceptAvailable 에서 `_listenFd` 를 읽고 있다. 멈추는 동안 받은 연결은 acceptAvailable 이 바로 끊는다.
+        // 리슨 소켓은 루프를 모두 멈춘 뒤에 닫는다. 루프 0 이 acceptAvailable 에서 `_listenFd` 를 읽고 있기 때문이다. 멈추는 동안 받은 연결은 acceptAvailable 이 바로 끊는다.
         state._bStopping.store( true, std::memory_order_release );
         {
             std::scoped_lock<mutex> lock{ state._tableMutex };
@@ -693,7 +693,7 @@ namespace sw
             {
                 EpollLoop& loop = state.getLoop( index );
                 if ( loop._thread.joinable() )
-                    loop._thread.join(); // 루프는 열린 연결이 0 이 될 때까지 돈다
+                    loop._thread.join(); // 루프는 열린 연결이 0이 될 때까지 돈다.
             }
         }
         else
@@ -730,7 +730,7 @@ namespace sw
         const int32 fd = socket( AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, IPPROTO_TCP );
         if ( fd < 0 )
             return false;
-        const int32 reuse = 1; // TIME_WAIT 에 남은 이전 서버의 포트를 바로 다시 연다(SO_REUSEPORT 는 아니다 — 다른 프로세스와 나누지 않는다)
+        const int32 reuse = 1; // TIME_WAIT 에 남은 이전 서버의 포트를 바로 다시 연다(SO_REUSEPORT 가 아니므로 다른 프로세스와 포트를 나누지 않는다).
         (void)setsockopt( fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof( reuse ) );
         sockaddr_in local  = EpollStreamTransportInternal::makeNativeAddress( bindAddress );
         socklen_t   length = sizeof( local );
@@ -741,7 +741,7 @@ namespace sw
             ::close( fd );
             return false;
         }
-        // 등록 전에 적는다 — 등록하는 순간 루프 0 이 받기 사건으로 `_listenFd` 를 읽는다(epoll_ctl 이 그 순서를 넘겨준다).
+        // 등록하기 전에 적는다. 등록하는 순간 루프 0 이 받기 사건으로 `_listenFd` 를 읽는다(epoll_ctl 이 그 순서를 보장한다).
         state._listenFd   = fd;
         state._listenPort = ntohs( local.sin_port );
         if ( state.registerFd( 0, fd, EpollStreamTransportInternal::kListenTag ) == false )
@@ -772,7 +772,7 @@ namespace sw
         {
             std::scoped_lock<mutex> lock{ pConnection->_mutex };
             if ( result == 0 )
-                pConnection->_bOpenPending = SW_TRUE; // 바로 됐다 — 열림은 루프에서
+                pConnection->_bOpenPending = SW_TRUE; // 바로 연결됐다. 열림은 루프에서 처리한다.
             else if ( errno != EINPROGRESS )
                 state.closeFdLocked( *pConnection, StreamCloseReason::ConnectFailed, true );
         }
@@ -781,7 +781,7 @@ namespace sw
             std::scoped_lock<mutex> lock{ pConnection->_mutex };
             state.closeFdLocked( *pConnection, StreamCloseReason::ConnectFailed, true );
         }
-        state.scheduleCommand( pConnection->_loopIndex, handle._index ); // 즉시 성공 · 즉시 실패를 루프가 처리한다(콜백은 루프 스레드)
+        state.scheduleCommand( pConnection->_loopIndex, handle._index ); // 즉시 성공이나 즉시 실패를 루프가 처리한다(콜백은 루프 스레드에서 나간다).
         return handle;
     }
 
@@ -797,9 +797,9 @@ namespace sw
         const bool             bWasEmpty = pConnection->_sendQueue.isEmpty();
         const StreamSendResult result    = pConnection->_sendQueue.append( pData, size );
         if ( result != StreamSendResult::QueueFull && bWasEmpty && pConnection->_state == EpollConnectionState::Open )
-            (void)_state->flushLocked( *pConnection ); // 줄이 비어 있었다 — 바로 보낸다(쓰기 가능 알림은 넘친 적이 없으니 없다)
+            (void)_state->flushLocked( *pConnection ); // 큐가 비어 있었으므로 바로 보낸다(쓰기 가능 알림은 큐가 넘친 적이 없으면 오지 않는다).
         if ( pConnection->_state == EpollConnectionState::Closed )
-            _state->scheduleCommand( pConnection->_loopIndex, handle._index ); // 보내다 RST — 닫힘은 루프가 낸다
+            _state->scheduleCommand( pConnection->_loopIndex, handle._index ); // 보내다가 RST 가 났다. 닫힘은 루프가 낸다.
         return result;
     }
 
@@ -822,7 +822,7 @@ namespace sw
                 pConnection->_closeReason         = StreamCloseReason::LocalClose;
                 pConnection->_deadlineNanoseconds = MonotonicClock::nowNanoseconds() + EpollStreamTransportInternal::toNanoseconds( _state->_settings._closeLingerSeconds );
                 pConnection->_bReceivePaused      = SW_FALSE;
-                pConnection->_bReadPending        = SW_TRUE; // 저쪽 FIN 을 읽어야 끝난다
+                pConnection->_bReadPending        = SW_TRUE; // 상대의 FIN 을 읽어야 끝난다.
             }
         }
         _state->scheduleCommand( pConnection->_loopIndex, handle._index );
@@ -840,7 +840,7 @@ namespace sw
             pConnection->_bReceivePaused = bPaused ? SW_TRUE : SW_FALSE;
         }
         if ( bPaused == false )
-            _state->scheduleCommand( pConnection->_loopIndex, handle._index ); // 에지 트리거 — 멈춘 동안 온 것은 다시 알리지 않으니 루프가 읽는다
+            _state->scheduleCommand( pConnection->_loopIndex, handle._index ); // 에지 트리거라 멈춘 동안 온 것은 다시 알리지 않으므로 루프가 읽는다.
     }
 
     int32 EpollStreamTransport::pollIO( int32 timeoutMilli )

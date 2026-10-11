@@ -48,7 +48,7 @@ namespace sw
 
         ResourceGaugeSettings magic;
         magic._max       = MathUtil::max( 1.0f, _settings._magicMax );
-        magic._regenRate = 0.0f; // 마법은 저절로 차지 않는다(항아리 · 물약)
+        magic._regenRate = 0.0f; // 마법은 저절로 차지 않는다(항아리나 물약으로 채운다)
         _magic.initialize( magic );
 
         ResourceGaugeSettings stamina;
@@ -97,7 +97,7 @@ namespace sw
         if ( _heartCount >= _settings._maxHeartCount )
             return false;
         ++_heartCount;
-        _health.setMaxHealth( static_cast<float32>( _heartCount * kQuartersPerHeart ), true ); // 새 그릇은 가득 찬다(알림 · 상태는 그대로)
+        _health.setMaxHealth( static_cast<float32>( _heartCount * kQuartersPerHeart ), true ); // 새 그릇은 가득 찬 상태로 시작한다(알림과 상태는 그대로 둔다)
         return true;
     }
 
@@ -152,7 +152,7 @@ namespace sw
             }
             case AdventureStaminaAction::Swim:
             {
-                (void)applyDamage( _settings._drownDamage ); // 죽었는지는 체력이 들고 있다 — 여기선 빠졌다는 결과만 알린다
+                (void)applyDamage( _settings._drownDamage ); // 죽었는지는 체력이 판단한다. 여기서는 빠졌다는 결과만 알린다
                 _stamina.refill();                           // 물가로 돌아가면 다시 헤엄칠 수 있다
                 return AdventureStaminaOutcome::Drown;
             }
@@ -186,7 +186,7 @@ namespace sw
 
     bool AdventureVitals::readState( Archive& archive )
     {
-        // 사본에 읽고 끝까지 맞으면 바꾼다 — 설정은 사본이 그대로 든다.
+        // 사본에 읽고 끝까지 맞으면 바꾼다. 설정은 사본이 그대로 가지고 있다.
         AdventureVitals restored = *this;
         archive >> restored._heartCount;
         archive >> restored._heartPieceCount;
@@ -195,7 +195,7 @@ namespace sw
                                 restored._heartPieceCount < _settings._piecesPerHeart && restored._bMagicUpgraded <= SW_TRUE;
         if ( bHeadValid == false )
             return false;
-        restored.resetHealth(); // 체력 최대는 하트 수가 정한다 — 값은 아래에서 읽는다
+        restored.resetHealth(); // 체력 최대값은 하트 수가 정한다. 현재 값은 아래에서 읽는다
         const bool bBodyRead = restored._health.readState( archive ) && restored._magic.readState( archive ) && restored._stamina.readState( archive );
         if ( bBodyRead == false )
             return false;
