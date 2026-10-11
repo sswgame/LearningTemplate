@@ -15,6 +15,7 @@
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Resource/Cache/BuiltInAssetCache.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -730,4 +731,9 @@ namespace sw
         }
         return writtenCount;
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_BUILT_IN_ASSET_CACHE( PrefabCache );
 } // namespace sw

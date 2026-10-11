@@ -11,6 +11,7 @@
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Resource/AssetLoadProfiler.h"
+#include "Engine/Resource/Cache/BuiltInAssetCache.h"
 #include "Engine/Resource/Cache/WeakInternTable.h"
 
 namespace sw
@@ -138,4 +139,9 @@ namespace sw
         std::scoped_lock<mutex>           lock{ warned._mutex };
         warned._uniquePath = unordered_set<string>{};
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_BUILT_IN_ASSET_CACHE( MeshCache );
 } // namespace sw

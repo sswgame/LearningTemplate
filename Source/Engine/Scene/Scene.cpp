@@ -12,6 +12,7 @@
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/Component/Navigation/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
@@ -77,7 +78,7 @@ namespace sw
                     if ( pMeshComp->getMaterial() == nullptr && pMeshComp->getRawMaterialInstance() == nullptr && pDefaultMaterial != nullptr )
                         pMeshComp->setMaterial( pDefaultMaterial );
                 } );
-                engine::getAssetManager().getMaterialCache().initializePending( pRHIDevice );
+                engine::getAssetManager().getAssetCache<MaterialCache>().initializePending( pRHIDevice );
                 pObjectManager->flushSceneTransforms();
             }
 
@@ -114,7 +115,7 @@ namespace sw
                     return cachedIt->second.empty() ? nullptr : &cachedIt->second;
 
                 string             baseState;
-                const PrefabAsset* pPrefab = engine::getAssetManager().getPrefabCache().loadPrefab( prefabPath );
+                const PrefabAsset* pPrefab = engine::getAssetManager().getAssetCache<PrefabCache>().loadPrefab( prefabPath );
                 if ( pPrefab != nullptr && PrefabOverrides::makeBaseState( *pPrefab, baseState ) == false )
                 {
                     SW_LOG_WARNING( "Prefab '%#' could not be built as a base state", prefabPath );
@@ -159,7 +160,7 @@ namespace sw
             {
                 releaseDefaultMaterial();
                 _defaultMaterialPath = materialPath;
-                _pMaterial           = engine::getAssetManager().getMaterialCache().acquire( materialPath, pRHIDevice );
+                _pMaterial           = engine::getAssetManager().getAssetCache<MaterialCache>().acquire( materialPath, pRHIDevice );
                 if ( _pMaterial == nullptr )
                 {
                     SW_LOG_ERROR( "Failed to acquire Material from %#", materialPath );
@@ -202,7 +203,7 @@ namespace sw
                 bool       bStateMade     = false;
                 if ( bHasSavedState )
                 {
-                    bStateMade = engine::getAssetManager().getPrefabCache().loadPrefab( entity._prefab ) != nullptr;
+                    bStateMade = engine::getAssetManager().getAssetCache<PrefabCache>().loadPrefab( entity._prefab ) != nullptr;
                 }
                 else
                 {
@@ -478,7 +479,7 @@ namespace sw
     void Scene::releaseDefaultMaterial()
     {
         if ( _defaultMaterialPath.empty() == false )
-            engine::getAssetManager().getMaterialCache().release( _defaultMaterialPath );
+            engine::getAssetManager().getAssetCache<MaterialCache>().release( _defaultMaterialPath );
         _pMaterial = nullptr;
         _defaultMaterialPath.clear();
     }

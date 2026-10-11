@@ -12,6 +12,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Resource/Cache/BuiltInAssetCache.h"
 
 namespace sw
 {
@@ -227,4 +228,9 @@ namespace sw
             _impl->_mapEntry.clear();
         }
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_BUILT_IN_ASSET_CACHE( MaterialCache );
 } // namespace sw

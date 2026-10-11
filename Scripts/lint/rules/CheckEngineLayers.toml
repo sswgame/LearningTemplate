@@ -97,4 +97,3 @@ UI = 11
 "prelude:Engine/Resource/ResourcePaths.h" = "리소스 경로 해석 static 헬퍼(Core 만 include) — loadFromResource 진입점이 쓴다"
 "prelude:Engine/Resource/ResourceIO.h" = "리소스 읽기 static 창구(Core 만 include) — loadFromResource 진입점이 쓴다"
 "wiring:Source/Engine/Reflection/ReflectGenerated.h" = ".gen.cpp 전용 preamble — 생성 코드가 쓰는 모든 형식을 모은다"
-"wiring:Source/Engine/Resource/AssetManager.cpp" = "리소스 파사드 구현 — 캐릭터 · 파괴 · 그래픽스 캐시를 소유하는 조립점(UE 의 에셋 매니저 자리)"

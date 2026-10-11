@@ -45,7 +45,7 @@ namespace sw
                     return pObject != nullptr ? pObject->addComponent<AIControllerComponent>() : nullptr;
                 }
                 AssetManager*          pAssetManager = game::getService<AssetManager>();
-                GameObject*            pObject       = pAssetManager != nullptr ? pAssetManager->getPrefabCache().spawn( &manager, prefabPath, "AIController" ) : nullptr;
+                GameObject*            pObject       = pAssetManager != nullptr ? pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, prefabPath, "AIController" ) : nullptr;
                 AIControllerComponent* pAI           = pObject != nullptr ? pObject->getComponent<AIControllerComponent>() : nullptr;
                 if ( pAI == nullptr )
                 {

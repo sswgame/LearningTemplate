@@ -64,7 +64,7 @@
 티어가 아닌 파일이 두 종류 있고, 게이트도 이 둘을 예외로 둡니다.
 
 - **prelude와 경로 헬퍼**(`EngineMinimal.h`, `Resource/ResourcePaths.h`)는 어느 티어에서든 씁니다. 타입 별칭과 전방 선언을 모은 헤더, 리소스 경로를 해석하는 헬퍼이기 때문입니다. `Common/Common.h` 는 티어 0 이라 예외가 필요 없습니다.
-- **배선 파일**(`Reflection/ReflectGenerated.h`, `Resource/AssetManager.cpp`)은 노출하는 모든 서브시스템을 알아야 하는 곳입니다.
+- **배선 파일**(`Reflection/ReflectGenerated.h`)은 노출하는 모든 서브시스템을 알아야 하는 곳입니다. 생성 코드가 쓰는 모든 형식을 모읍니다.
 - 두 목록은 `Scripts/lint/rules/CheckEngineLayers.toml` 의 `[exemption]` 이 정본입니다. 더는 위 티어를 include 하지 않는 줄은 낡은 예외로 실패합니다.
 
 ## 따라 해 보기 — 새 코드가 들어갈 폴더 고르기
@@ -175,11 +175,12 @@ py -3 Scripts/lint/gate/CheckEngineLayers.py
 "같은 키면 같은 객체이고, 마지막 사용자가 놓으면 사라지는" 캐시는 `WeakInternTable` 하나로 만듭니다.
 경로로 읽는 에셋은 `SharedAssetTable` 로 보관합니다. 스켈레톤, 클립, 리그, 스프라이트 클립, 캐릭터 데이터가 여기에 속합니다.
 코드로 만드는 값은 `WeakInternCache` 로 보관합니다. 내장 도형, 9-슬라이스 메시, 스프라이트 텍스처 인스턴스가 여기에 속합니다. 둘 다 `WeakInternTable` 위에 있습니다.
-`WeakInternCache` 는 `IAssetCache` 이므로 `AssetManager` 가 생성자에서 내장 캐시(`_listBuiltInAssetCache`)로 등록하고, 종료할 때 약한 참조 항목까지 지웁니다.
+`WeakInternCache` 는 `IAssetCache` 이므로 그 표를 가진 .cpp 가 `SW_BUILT_IN_SHARED_ASSET_CACHE` 로 내장 캐시에 올리고, `AssetManager` 는 종료할 때 약한 참조 항목까지 지웁니다.
 
 기능 에셋 캐시는 자기 기능 폴더에 있고 `Resource` 의 `IAssetCache` 를 구현합니다. 스켈레톤 · 클립 · 리그는 `Animation/AnimationAssetCache`, 스프라이트 클립은 `Animation/Sprite/SpriteClipCache` 입니다.
 `Localization/LocalizationReloadCache` 는 로컬라이제이션 파일의 핫 리로드 진입점입니다. 글 자체는 `LocalizationManager` 가 가지고, 이 캐시의 `clear()` 는 아무것도 지우지 않습니다.
-`AssetManager.cpp` 는 이 캐시들을 소유하는 배선 파일이라 티어 예외입니다. `PackCompressionUtil` 은 팩 타입(`ResourcePackTypes.h`)을 쓰므로 Compression(티어 0)이 아니라 여기 있습니다.
+기능 캐시는 자기 .cpp 에서 `SW_BUILT_IN_ASSET_CACHE( 타입 )` 한 줄로 등록합니다(`Resource/Cache/BuiltInAssetCache.h`). `AssetManager` 는 생성자에서 그 표를 훑어 매니저마다 소유 캐시를 만들고 종류 이름 순으로 올립니다 — `Resource` 는 기능 캐시 타입을 모르고, 타입으로 찾을 때는 부르는 쪽이 `getAssetCache<MaterialCache>()` 로 고릅니다.
+등록표는 Engine 이미지 안에서만 채웁니다. 모듈의 캐시는 `registerAssetCache` · `unregisterAssetCache` 로 올리고 내립니다(표 항목은 내리지 않으므로 모듈이 쓰면 언로드 뒤 죽은 함수를 가리킵니다). `PackCompressionUtil` 은 팩 타입(`ResourcePackTypes.h`)을 쓰므로 Compression(티어 0)이 아니라 여기 있습니다.
 
 ### 개발 콘솔과 개발 명령
 

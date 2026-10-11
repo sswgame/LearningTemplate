@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Object/GameObject/SceneNavigation.h"
+#include "Engine/Object/Component/Navigation/SceneNavigation.h"
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"

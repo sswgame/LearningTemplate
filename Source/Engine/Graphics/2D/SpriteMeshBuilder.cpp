@@ -7,6 +7,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Resource/Cache/BuiltInAssetCache.h"
 #include "Engine/Resource/Cache/WeakInternCache.h"
 
 namespace sw
@@ -219,4 +220,9 @@ namespace sw
     {
         return SpriteMeshBuilderInternal::getSlicedMeshCache();
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_BUILT_IN_SHARED_ASSET_CACHE( SlicedSpriteMesh, &SpriteMeshBuilder::getSlicedMeshCache );
 } // namespace sw

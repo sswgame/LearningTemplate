@@ -198,7 +198,7 @@ namespace sw
         AssetManager* pAssetManager = game::getService<AssetManager>();
         if ( pAssetManager == nullptr || prefabPath.empty() )
             return nullptr;
-        GameObject* pObject = pAssetManager->getPrefabCache().spawn( &manager, prefabPath, pName );
+        GameObject* pObject = pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, prefabPath, pName );
         if ( pObject != nullptr )
             trackSpawned( *pObject );
         return pObject;

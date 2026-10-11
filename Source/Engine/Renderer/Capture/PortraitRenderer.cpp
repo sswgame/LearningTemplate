@@ -112,14 +112,14 @@ namespace sw
         // 스튜디오 — 씬 매니저에 등록하지 않는 씬이라 틱하지 않고 게임 화면에 나오지 않는다.
         Scene              studio( "PortraitStudio" );
         GameObjectManager* pManager = studio.getObjectManager();
-        GameObject*        pSubject = engine::getAssetManager().getPrefabCache().spawn( pManager, request._prefabPath, "PortraitSubject" );
+        GameObject*        pSubject = engine::getAssetManager().getAssetCache<PrefabCache>().spawn( pManager, request._prefabPath, "PortraitSubject" );
         if ( pSubject == nullptr )
         {
             SW_LOG_ERROR( "Portrait: prefab '%#' could not be spawned", request._prefabPath.c_str() );
             return false;
         }
         // 스폰이 경로로 잡은 머티리얼을 GPU 에 올린다 — 게임 루프에서는 틱마다 하는 일(`MaterialCache::initializePending`)인데 스튜디오는 틱하지 않는다.
-        engine::getAssetManager().getMaterialCache().initializePending( _pDevice );
+        engine::getAssetManager().getAssetCache<MaterialCache>().initializePending( _pDevice );
         float3  center{};
         float32 radius = 1.0f;
         if ( PortraitRendererInternal::computeSubjectSphere( *pManager, center, radius ) == false )

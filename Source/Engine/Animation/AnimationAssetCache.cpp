@@ -8,6 +8,7 @@
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
+#include "Engine/Resource/Cache/BuiltInAssetCache.h"
 #include "Engine/Resource/Cache/SharedAssetTable.h"
 
 namespace sw
@@ -175,4 +176,12 @@ namespace sw
     {
         AnimationAssetCacheInternal::getRigTable().clear();
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_BUILT_IN_ASSET_CACHE( SkeletonCache );
+    SW_BUILT_IN_ASSET_CACHE( AnimClipCache );
+    SW_BUILT_IN_ASSET_CACHE( SkeletonBoneLODCache );
+    SW_BUILT_IN_ASSET_CACHE( RigAssetCache );
 } // namespace sw

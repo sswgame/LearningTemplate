@@ -9,12 +9,12 @@
 #include "Engine/Object/Component/Navigation/NavMeshAgentComponent.h"
 #include "Engine/Object/Component/Navigation/NavMeshModifierComponent.h"
 #include "Engine/Object/Component/Navigation/NavMeshSurfaceComponent.h"
+#include "Engine/Object/Component/Navigation/SceneNavigation.h"
 #include "Engine/Object/Component/Physics/CharacterControllerComponent.h"
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/SceneNavigation.h"
 
 #include "EngineTest/NavMeshTestUtil.h"
 

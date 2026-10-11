@@ -440,7 +440,7 @@ namespace
         {
             outMeanRedMinusBlue           = 0;
             outDrawnCount                 = 0;
-            const sw::Texture2D* pTexture = sw::engine::getAssetManager().getTextureCache().find( pPath );
+            const sw::Texture2D* pTexture = sw::engine::getAssetManager().getAssetCache<sw::TextureCache>().find( pPath );
             if ( pTexture == nullptr || pTexture->isRHIValid() == false )
                 return false;
             sw::vector<uint8>     bytes;
@@ -1337,7 +1337,7 @@ SW_TEST_CASE( RenderPassGPUTest, SpriteDrawsWithTheSpriteShader )
                 pSprite->setTextureName( "engine/textures/perlin.dds" );
                 pSprite->resolveRenderAssets();
                 // 엔진 루프가 패킷을 내기 전에 하는 일 — 컴포넌트가 디바이스 없이 잡은 머티리얼을 올린다.
-                sw::engine::getAssetManager().getMaterialCache().initializePending( device.get() );
+                sw::engine::getAssetManager().getAssetCache<sw::MaterialCache>().initializePending( device.get() );
                 bOk = pSprite->getMaterial() != nullptr && pSprite->getMaterial()->isRHIValid();
                 SW_EXPECT_TRUE_MSG( bOk, ( label + ": 스프라이트 머티리얼이 올라가지 않았다" ).c_str() );
             }
@@ -3684,7 +3684,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialRequestedWithoutADeviceIsUploadedLater 
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     constexpr const utf8* kPath = "engine/materials/benchtextured.material";
-    sw::MaterialCache&    cache = sw::engine::getAssetManager().getMaterialCache();
+    sw::MaterialCache&    cache = sw::engine::getAssetManager().getAssetCache<sw::MaterialCache>();
 
     test::RHIBackendSweep sweep( { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } );
     for ( test::RHITestDevice& device : sweep )
@@ -3749,7 +3749,7 @@ SW_TEST_CASE( RenderPassGPUTest, ReloadedTextureIsReboundToMaterialsAndBatches )
             builder.populateFromScene( &scene, camPos );
             SW_ASSERT_EQUAL( size_t( 1 ), builder.getOpaqueBatches().size() );
 
-            sw::TextureCache& textures = sw::engine::getAssetManager().getTextureCache();
+            sw::TextureCache& textures = sw::engine::getAssetManager().getAssetCache<sw::TextureCache>();
             textures.reload( kTexturePath, device.get() );
             const sw::Texture2D* pTexture = textures.find( kTexturePath );
             SW_ASSERT_NOT_NULL( pTexture );
@@ -4433,7 +4433,7 @@ SW_TEST_CASE( RenderPassGPUTest, InstanceOverridesReachTheGPUOnEveryBackend )
                     sw::Memory::copy( &value, instance->getBuffer().data() + pProp->_offset, sizeof( value ) );
                 return value;
             };
-            sw::TextureCache& textures = sw::engine::getAssetManager().getTextureCache();
+            sw::TextureCache& textures = sw::engine::getAssetManager().getAssetCache<sw::TextureCache>();
             // 텍스처가 셰이더에 닿았는가 — 네이티브는 인스턴스 바이트의 SRV 인덱스, 슬롯 바인딩 백엔드는 배치 슬롯(부모의 albedoMap 자리 0).
             auto expectTextureReachesShader = [&]( sw::RHIDescriptorIndex expectedSrv, const utf8* pWhen )
             {
@@ -4495,7 +4495,7 @@ SW_TEST_CASE( RenderPassGPUTest, MissingTextureSamplesTheChecker )
     for ( test::RHITestDevice& device : sweep )
     {
         const sw::string             label       = sw::string( device->getBackendName() ) + ": ";
-        sw::TextureCache&            textures    = sw::engine::getAssetManager().getTextureCache();
+        sw::TextureCache&            textures    = sw::engine::getAssetManager().getAssetCache<sw::TextureCache>();
         const bool                   bHeldBefore = textures.find( missingTexture ) != nullptr;
         sw::shared_ptr<sw::Material> material    = sw::Material::create();
         SW_ASSERT_TRUE( material->initialize( device.get(), "engine/materials/benchtextured.material" ) );
@@ -4935,7 +4935,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialTexturesAreSampledLinearWrap )
             if ( bOk )
             {
                 renderer.setViewMode( sw::RenderViewMode::Unlit );
-                sw::engine::getAssetManager().getMaterialCache().initializePending( device.get() );
+                sw::engine::getAssetManager().getAssetCache<sw::MaterialCache>().initializePending( device.get() );
                 constexpr uint32 kWarmupFrameCount = 4;
                 for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount && bOk; ++frameIndex )
                 {
@@ -5215,7 +5215,7 @@ SW_TEST_CASE( RenderPassGPUTest, SpriteFramesAndTintsArePerInstance )
             if ( bOk )
             {
                 scene.getObjectManager()->flushSceneTransforms();
-                sw::engine::getAssetManager().getMaterialCache().initializePending( device.get() );
+                sw::engine::getAssetManager().getAssetCache<sw::MaterialCache>().initializePending( device.get() );
                 // 첫 프레임에는 GPUScene 업로드 · 텍스처가 아직이라 몇 장 돌린다.
                 constexpr uint32 kWarmupFrameCount = 4;
                 for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount && bOk; ++frameIndex )
@@ -6188,7 +6188,7 @@ SW_TEST_CASE( RenderPassGPUTest, ExtraViewSortsTransparencyFromItsOwnEye )
         test::RHITestImage viewImage;
         if ( bOk )
         {
-            const sw::Texture2D*  pTexture = sw::engine::getAssetManager().getTextureCache().find( "rendertarget/test_extraviewtransparency" );
+            const sw::Texture2D*  pTexture = sw::engine::getAssetManager().getAssetCache<sw::TextureCache>().find( "rendertarget/test_extraviewtransparency" );
             sw::vector<uint8>     bytes;
             sw::RHITextureMipSpan layout{};
             bOk = pTexture != nullptr && device->getResourceFactory()->readbackTexture2D( pTexture->getHandle(), 0, 0, bytes, layout );
@@ -6832,7 +6832,7 @@ SW_TEST_CASE( RenderPassGPUTest, PixelArtSpritesSnapToTheAssetPixelGrid )
             pSprite->setMaterialPath( "engine/materials/sprite2dpixel.material" );
             pSprite->setTextureName( kStripeTexture );
             pSprite->resolveRenderAssets();
-            sw::engine::getAssetManager().getMaterialCache().initializePending( device.get() );
+            sw::engine::getAssetManager().getAssetCache<sw::MaterialCache>().initializePending( device.get() );
             // 첫 프레임으로 그리는 크기를 안다 — 배율 4 가 되게 기준 해상도를 그 크기의 4 분의 1 로 둔다.
             bOk = renderSceneFrame( renderer, device.get(), scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
         }
@@ -6856,7 +6856,7 @@ SW_TEST_CASE( RenderPassGPUTest, PixelArtSpritesSnapToTheAssetPixelGrid )
         {
             pSprite->setLocalPosition( sw::float3{ assetPixelX / kPixelsPerUnit, 0.0f, 0.0f } );
             scene.getObjectManager()->flushSceneTransforms();
-            sw::engine::getAssetManager().getMaterialCache().initializePending( device.get() );
+            sw::engine::getAssetManager().getAssetCache<sw::MaterialCache>().initializePending( device.get() );
             for ( uint32 frame = 0; frame < 3; ++frame )
             {
                 (void)renderSceneFrame( renderer, device.get(), scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
@@ -6991,7 +6991,7 @@ SW_TEST_CASE( RenderPassGPUTest, Light2DFalloffAndShadowOnEveryBackend )
 
             bOk = scene.ensureDefaultCameras();
             scene.getObjectManager()->flushSceneTransforms();
-            sw::engine::getAssetManager().getMaterialCache().initializePending( device.get() );
+            sw::engine::getAssetManager().getAssetCache<sw::MaterialCache>().initializePending( device.get() );
         }
 
         // 가운데 줄을 그려 읽고, 픽셀 X → 월드 X 로 옮긴 값의 빨강을 돌려준다.
@@ -7628,7 +7628,7 @@ SW_TEST_CASE( RenderPassGPUTest, WorldWidgetRenderTextureIsSampled )
         renderer.setPresentCaptureEnabled( true );
 
         // 카메라 앞 1.5 m 에 카메라와 같은 방향으로 선 1 m 사각형. 렌더 텍스처 크기는 위젯 컴포넌트처럼 먼저 알린다(먼저 빌리는 쪽이 크기를 정한다).
-        sw::engine::getAssetManager().getTextureCache().declareRenderTarget( kTargetPath, 64, 64 );
+        sw::engine::getAssetManager().getAssetCache<sw::TextureCache>().declareRenderTarget( kTargetPath, 64, 64 );
         sw::shared_ptr<sw::Material> sprite = sw::Material::create();
         bOk                                 = bOk && sprite->loadFromFile( "engine/materials/sprite2d.material" );
         const sw::CameraComponent* pCamera  = stage._scene.getObjectManager()->getCameraRegistry().selectCamera( sw::CameraRole::Game );

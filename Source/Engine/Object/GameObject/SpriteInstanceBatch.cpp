@@ -45,7 +45,7 @@ namespace sw
         if ( engine::areEngineServicesBound() )
         {
             const hashed_string resolvedPath = materialPath.empty() ? SpriteRenderUtil::getSpriteMaterialPath() : hashed_string( materialPath );
-            MaterialCache&      cache        = engine::getAssetManager().getMaterialCache();
+            MaterialCache&      cache        = engine::getAssetManager().getAssetCache<MaterialCache>();
             pMaterial                        = cache.acquire( resolvedPath.c_str(), nullptr );
             if ( pMaterial != nullptr )
             {
@@ -91,7 +91,7 @@ namespace sw
         if ( _acquiredMaterialPath.empty() )
             return;
         if ( engine::areEngineServicesBound() )
-            engine::getAssetManager().getMaterialCache().release( _acquiredMaterialPath.c_str() );
+            engine::getAssetManager().getAssetCache<MaterialCache>().release( _acquiredMaterialPath.c_str() );
         _acquiredMaterialPath = hashed_string{};
     }
 

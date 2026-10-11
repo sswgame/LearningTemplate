@@ -759,7 +759,7 @@ namespace sw
         AssetManager*      pAssets  = game::getService<AssetManager>();
         if ( pManager == nullptr || pAssets == nullptr || _bodyPrefab.empty() || pManager->resolveGameObject( _body ) != nullptr )
             return;
-        GameObject*             pBody   = pAssets->getPrefabCache().spawn( pManager, _bodyPrefab, "PlayerBody" );
+        GameObject*             pBody   = pAssets->getAssetCache<PrefabCache>().spawn( pManager, _bodyPrefab, "PlayerBody" );
         ShooterAvatarComponent* pAvatar = pBody != nullptr ? pBody->getComponent<ShooterAvatarComponent>() : nullptr;
         if ( pAvatar == nullptr )
         {

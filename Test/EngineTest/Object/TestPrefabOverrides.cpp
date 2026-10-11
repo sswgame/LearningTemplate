@@ -54,7 +54,7 @@ namespace sw
             {
                 if ( asset.saveToXMLFile( path ) == false || asset.saveToBinaryFile( AssetCookPath::toCookedPath( path ) ) == false )
                     return false;
-                engine::getAssetManager().getPrefabCache().reload( path );
+                engine::getAssetManager().getAssetCache<sw::PrefabCache>().reload( path );
                 return true;
             }
 

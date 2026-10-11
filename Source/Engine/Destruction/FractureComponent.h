@@ -10,7 +10,7 @@
 #include "Core/Container/string.h"
 
 #include "Engine/Destruction/FractureComponentBase.h"
-#include "Engine/Object/GameObject/SceneNavigation.h"
+#include "Engine/Object/Component/Navigation/SceneNavigation.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

@@ -9,6 +9,7 @@
 #include "Core/Common/StdHeaders.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Object/Component/Navigation/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -106,14 +107,14 @@ namespace sw
         , _overlapWorld2D{}
         , _scenePhysics{}
         , _sceneAudio{}
-        , _sceneNavigation{}
+        , _pSceneNavigation{ make_unique<SceneNavigation>() }
         , _frameStepObserver{}
         , _listFrameSystem{}
         , _listRetiredFrameSystem{}
         , _bRunningFrameSystems{ false }
     {
         _animationSystem.setObjectManager( this );
-        _sceneNavigation.setObjectManager( this );
+        _pSceneNavigation->setObjectManager( this );
     }
 
     GameObjectManager::~GameObjectManager()
@@ -134,7 +135,7 @@ namespace sw
         markTickStagesDirty();
         // 컴포넌트가 바디를 놓았다 — 빈 물리 씬과 쌓인 시간을 버린다(다음 씬은 처음 쓸 때 새로 만든다).
         _scenePhysics.shutdown();
-        _sceneNavigation.shutdown();
+        _pSceneNavigation->shutdown();
     }
 
     ISceneFrameSystem* GameObjectManager::findFrameSystem( const hashed_string& key ) const

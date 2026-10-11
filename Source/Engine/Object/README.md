@@ -455,7 +455,7 @@ id를 보존하며 다시 만들 때는 `createGameObjectWithID` 를 쓰고, 컴
 ```cpp
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 
-GameObject* pBullet = game::getService<AssetManager>()->getPrefabCache().spawn(
+GameObject* pBullet = game::getService<AssetManager>()->getAssetCache<PrefabCache>().spawn(
     pManager, "game/<팩>/prefabs/bullet.prefab.json", "Bullet" );
 ```
 

@@ -2,10 +2,10 @@
 
 #include "Engine/Object/Component/Navigation/NavMeshAgentComponent.h"
 
+#include "Engine/Object/Component/Navigation/SceneNavigation.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/SceneNavigation.h"
 
 namespace sw
 {

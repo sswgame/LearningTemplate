@@ -13,7 +13,7 @@ Recast가 베이크를, Detour가 경로 질의를, DetourCrowd가 군중 이동
 격자 기반 내비게이션(RTS, 도시 건설)은 이 모듈이 아니라 `GameFramework/Base/Actor/Navigation` 의 `NavGrid` 와 `NavAgent` 에 있습니다.
 두 방식은 공통 이동 인터페이스 `INavMover` 를 함께 구현하므로, 행동 트리 같은 상위 코드는 어느 쪽인지 몰라도 됩니다.
 
-엔진 계층으로는 4층(Resource, Spatial과 같은 층)입니다. 물리의 충돌 모양 서술과 `AABB` 를 읽어 베이크하고, 씬 쪽 코드(`Object/GameObject/SceneNavigation` 과 `Object/Component/Navigation`, 6층)가 이 모듈을 씁니다.
+엔진 계층으로는 4층(Resource, Spatial과 같은 층)입니다. 물리의 충돌 모양 서술과 `AABB` 를 읽어 베이크하고, 씬 쪽 코드(`Object/Component/Navigation` 의 `SceneNavigation` 과 컴포넌트, 6층)가 이 모듈을 씁니다.
 
 ## 머릿속 그림
 
@@ -249,7 +249,7 @@ Recast와 Detour의 메모리 할당은 `rcAllocSetCustom` 과 `dtAllocSetCustom
 |---|---|
 | `INavMesh.h` | 베이크, 교체, 질의, 군중 인터페이스 |
 | `INavMover.h` | 격자와 내비메시 공통 이동 인터페이스 |
-| `Object/GameObject/SceneNavigation.h` | 씬의 내비게이션, 쿠킹 항목 |
+| `Object/Component/Navigation/SceneNavigation.h` | 씬의 내비게이션, 쿠킹 항목 |
 | `Object/Component/Navigation/` | 표면, 수정자, 에이전트, 장애물 컴포넌트 |
 | `Resource/engine/navigation/navmeshsettings.xml` | 에이전트 종류, 영역, 재베이크 예산 |
 

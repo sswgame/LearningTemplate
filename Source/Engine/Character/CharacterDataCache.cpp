@@ -7,6 +7,7 @@
 #include "Engine/Character/AnimNotify/AnimNotifyTable.h"
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
+#include "Engine/Resource/Cache/BuiltInAssetCache.h"
 #include "Engine/Resource/Cache/SharedAssetTable.h"
 
 namespace sw
@@ -151,4 +152,11 @@ namespace sw
     {
         CharacterDataCacheInternal::getPhysicsAssetTable().clear();
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_BUILT_IN_ASSET_CACHE( SocketSetCache );
+    SW_BUILT_IN_ASSET_CACHE( AnimNotifyTableCache );
+    SW_BUILT_IN_ASSET_CACHE( PhysicsAssetCache );
 } // namespace sw

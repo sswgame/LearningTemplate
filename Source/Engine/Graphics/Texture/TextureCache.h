@@ -35,8 +35,10 @@ namespace sw
         TextureCache( const TextureCache& )            = delete;
         TextureCache& operator=( const TextureCache& ) = delete;
 
+        /** @brief 등록부의 종류 이름 — `AssetManager::getAssetCache<T>()` 가 이것으로 찾습니다. */
+        static constexpr const utf8* kAssetKindName = "Texture";
         /** @brief 이 캐시가 다루는 에셋 종류의 이름입니다. */
-        const utf8* getAssetKindName() const override { return "Texture"; }
+        const utf8* getAssetKindName() const override { return kAssetKindName; }
         /// @brief 렌더 텍스처 경로의 머리입니다.
         static constexpr const utf8* kRenderTargetPrefix = "rendertarget/";
         /// @brief 크기를 알리지 않은 렌더 텍스처의 한 변(px)입니다.

@@ -58,6 +58,7 @@
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
+#include "Engine/Object/Component/Navigation/SceneNavigation.h"
 #include "Engine/Object/GameObject/CameraRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
@@ -1341,7 +1342,7 @@ namespace sw
         // 처음 쓰는 머티리얼의 스폰)만 렌더 스레드를 기다린다.
         if ( _rhi != nullptr && _rhi->hasDevice() )
         {
-            MaterialCache& materials = _owned._pAssetManager->getMaterialCache();
+            MaterialCache& materials = _owned._pAssetManager->getAssetCache<MaterialCache>();
             if ( materials.hasPendingInitialize() && _renderThread != nullptr )
                 _renderThread->waitIdle();
             materials.initializePending( &_rhi->getDevice() );
