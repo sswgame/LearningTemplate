@@ -1,10 +1,10 @@
 /**
  * @file RenderPassTypeInfo.h
- * @brief 패스 종류(`RenderPassType`) 하나에 대한 사실을 한 줄에 모은 표입니다.
- * @details 기본 셰이더 · PSO 상태 · 패스 define · 그리는 대상(씬 메시 · 풀스크린 · 컴퓨트) · 입력 계약이 여기 있습니다.
+ * @brief 패스 종류(`RenderPassType`) 하나에 대한 사실을 한 줄에 모은 테이블입니다.
+ * @details 기본 셰이더, PSO 상태, 패스 define, 그리는 대상(씬 메시, 풀스크린, 컴퓨트), 입력 계약이 여기 있다.
  *          엔진 PSO 등록(`FrameRenderer::ensurePassResources`), 셰이더 쿠킹 요청(`ShaderCookDriver`), 패스 실행
- *          (`FrameRenderer::executePass`), 파이프라인 검증(`RenderPipelineAsset::validate`)이 모두 이 표를 enum 으로 읽습니다.
- *          패스 종류를 하나 더하는 일은 enum 한 줄 + 이 표의 case 하나입니다(전용 실행 코드가 필요한 패스만 executePass 에 case 를 더합니다).
+ *          (`FrameRenderer::executePass`), 파이프라인 검증(`RenderPipelineAsset::validate`)이 모두 이 테이블을 enum 으로 읽는다.
+ *          패스 종류를 하나 추가하려면 enum 에 한 줄을 더하고 이 테이블에 case 를 하나 추가한다(전용 실행 코드가 필요한 패스만 executePass 에 case 를 추가한다).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -21,36 +21,36 @@
 namespace sw
 {
     /**
-     * @brief G버퍼 패스가 머티리얼 셰이더에 얹는 define 입니다. 픽셀 출력 서명을 MRT 로 바꿉니다.
-     * @details 머티리얼이 셰이더 경로를 정하므로 디퍼드의 G버퍼 패스도 머티리얼의 `.hlsl` 로 그립니다. 그 셰이더가
-     *          `SV_TARGET` 하나만 내면 노멀 타깃이 클리어 값 그대로 남고, 디퍼드 조명은 화면 전체를 같은 노멀로 계산합니다.
-     *          언리얼이 같은 머티리얼을 패스별 셰이더 **타입**으로 감싸는 자리를 이 엔진에서는 define 이 맡습니다.
-     * @note 이 문자열과 `binding.hlsli` 의 `#if defined( SW_PASS_GBUFFER )` 가 어긋나면 컴파일은 되고 화면만 틀립니다.
+     * @brief G버퍼 패스가 머티리얼 셰이더에 추가하는 define 입니다. 픽셀 출력 서명을 MRT 로 바꿉니다.
+     * @details 머티리얼이 셰이더 경로를 정하므로 디퍼드의 G버퍼 패스도 머티리얼의 `.hlsl` 로 그린다. 그 셰이더가
+     *          `SV_TARGET` 하나만 내면 노멀 타깃이 클리어 값 그대로 남고, 디퍼드 조명은 화면 전체를 같은 노멀로 계산한다.
+     *          언리얼이 같은 머티리얼을 패스별 셰이더 **타입**으로 감싸는 역할을 이 엔진에서는 define 이 맡는다.
+     * @note 이 문자열과 `binding.hlsli` 의 `#if defined( SW_PASS_GBUFFER )` 가 어긋나면 컴파일은 되고 화면만 틀린다.
      */
     inline constexpr const utf8* kPassGBufferDefine = "SW_PASS_GBUFFER=1";
 
     /**
      * @brief 깊이 프리패스가 그림자와 같은 셰이더 파일(shadowdepth.hlsl)을 **카메라** 행렬로 그리게 하는 define 입니다.
-     * @details 이 define 이 없으면 프리패스가 광원 행렬(`g_LightViewProj`)로 그려 장면 깊이에 광원 공간의 깊이가 들어갑니다.
-     *          언리얼의 EarlyZ 패스 · 유니티 URP 의 Depth Priming 자리입니다.
+     * @details 이 define 이 없으면 프리패스가 광원 행렬(`g_LightViewProj`)로 그려 장면 깊이에 광원 공간의 깊이가 들어간다.
+     *          언리얼의 EarlyZ 패스, 유니티 URP 의 Depth Priming 에 해당한다.
      */
     inline constexpr const utf8* kPassDepthPrepassDefine = "SW_PASS_DEPTH_PREPASS=1";
 
     /**
-     * @brief 메시 외곽선 패스가 머티리얼 셰이더에 얹는 define 입니다. 정점을 노멀 방향으로 밀고 외곽선 색 하나를 내는 퍼뮤테이션을 고릅니다(toon.hlsl).
+     * @brief 메시 외곽선 패스가 머티리얼 셰이더에 추가하는 define 입니다. 정점을 노멀 방향으로 밀고 외곽선 색 하나를 내는 퍼뮤테이션을 고릅니다(toon.hlsl).
      */
     inline constexpr const utf8* kPassMeshOutlineDefine = "SW_PASS_MESH_OUTLINE=1";
 
     /**
      * @brief 메시 외곽선 패스가 그리는 배치의 머티리얼 define 입니다. 퍼뮤테이션에 이것이 없는 배치는 그 패스에서 빠집니다.
-     * @details 머티리얼의 정적 스위치(`Outline`)가 켭니다. 외곽선을 아는 셰이더만 이 스위치를 가지므로 다른 셰이더가 외곽선 define 으로
-     *          그려질 일이 없습니다(언리얼이 메시 패스 프로세서에서 머티리얼의 성질로 드로우를 거르는 자리입니다).
+     * @details 머티리얼의 정적 스위치(`Outline`)가 켠다. 외곽선을 아는 셰이더만 이 스위치를 가지므로 다른 셰이더가 외곽선 define 으로
+     *          그려질 일이 없다(언리얼이 메시 패스 프로세서에서 머티리얼의 성질로 드로우를 거르는 것에 해당한다).
      */
     inline constexpr const utf8* kMaterialOutlineDefine = "MATERIAL_OUTLINE";
 
     /**
      * @brief 양면 머티리얼의 define 입니다. 머티리얼 변형 PSO 가 후면 컬링을 끕니다(언리얼 머티리얼의 Two Sided).
-     * @details 앞면 컬링을 쓰는 패스(메시 외곽선)는 그대로 둡니다 — 껍질은 양면이어도 뒤집어 그려야 외곽선이 됩니다.
+     * @details 앞면 컬링을 쓰는 패스(메시 외곽선)는 그대로 둔다. 껍질은 양면이어도 뒤집어 그려야 외곽선이 된다.
      */
     inline constexpr const utf8* kMaterialTwoSidedDefine = "MATERIAL_TWO_SIDED";
 
@@ -63,20 +63,20 @@ namespace sw
      */
     struct RenderPassTraitFlag
     {
-        static constexpr uint32 kDepthTest             = SW_BIT( 0 );  ///< PSO 기본값: 깊이 테스트(XML 로 끌 수는 있어도 켤 수는 없다)
-        static constexpr uint32 kDepthWrite            = SW_BIT( 1 );  ///< PSO 기본값: 깊이 쓰기
-        static constexpr uint32 kBlend                 = SW_BIT( 2 );  ///< PSO 기본값: 블렌드(패스 서술이 있으면 그 값이 이긴다)
-        static constexpr uint32 kDepthOnly             = SW_BIT( 3 );  ///< 깊이만 쓴다. 출력 선언이 없을 때 컬러 RT 수가 0 이 되는 근거다
-        static constexpr uint32 kDrawsSceneMeshes      = SW_BIT( 4 );  ///< 씬 메시(GPUScene 배치)를 그린다. 머티리얼 변형 PSO 를 만들 대상이다
-        static constexpr uint32 kDrawsTransparentBatch = SW_BIT( 5 );  ///< 씬 메시 중 반투명 배치 목록을 그린다(아니면 불투명 목록)
-        static constexpr uint32 kUsesMaterialShader    = SW_BIT( 6 );  ///< 머티리얼이 선언한 `.hlsl` 로 갈아탄다(아니면 패스 셰이더에 define 만)
-        static constexpr uint32 kAppliesViewMode       = SW_BIT( 7 );  ///< 뷰 모드(Unlit · Wireframe)를 받는다
-        static constexpr uint32 kGenericFullscreen     = SW_BIT( 8 );  ///< 선언한 입력을 역할로 걸고 첫 출력에 풀스크린 삼각형 하나를 그린다
-        static constexpr uint32 kCompute               = SW_BIT( 9 );  ///< 컴퓨트 PSO 다(`CSMain`)
-        static constexpr uint32 kRequiresGPUCulling    = SW_BIT( 10 ); ///< 컴퓨트 PSO 를 `_bGPUCulling` 일 때만 만든다(아니면 `_bCompute`)
-        static constexpr uint32 kHasInputContract      = SW_BIT( 11 ); ///< `_inputContract` 가 이 패스의 입력을 검사한다
-        static constexpr uint32 kCullFront             = SW_BIT( 12 ); ///< PSO 기본값: 앞면 컬링(뒤집은 껍질 외곽선). XML 은 None 으로만 바꿀 수 있다
-        static constexpr uint32 kPremultipliedAlpha    = SW_BIT( 13 ); ///< 블렌드가 켜지면 원본 색이 이미 알파를 곱한 값이다(One/InvSrcAlpha — `_bPremultipliedAlpha`)
+        static constexpr uint32 kDepthTest             = SW_BIT( 0 );  ///< PSO 기본값으로 깊이 테스트를 쓴다(XML 로 끌 수는 있어도 켤 수는 없다).
+        static constexpr uint32 kDepthWrite            = SW_BIT( 1 );  ///< PSO 기본값으로 깊이 쓰기를 한다.
+        static constexpr uint32 kBlend                 = SW_BIT( 2 );  ///< PSO 기본값으로 블렌드를 쓴다(패스 서술이 있으면 그 값이 우선한다).
+        static constexpr uint32 kDepthOnly             = SW_BIT( 3 );  ///< 깊이만 쓴다. 출력 선언이 없을 때 컬러 RT 수가 0이 되는 근거다.
+        static constexpr uint32 kDrawsSceneMeshes      = SW_BIT( 4 );  ///< 씬 메시(GPUScene 배치)를 그린다. 머티리얼 변형 PSO 를 만들 대상이다.
+        static constexpr uint32 kDrawsTransparentBatch = SW_BIT( 5 );  ///< 씬 메시 중 반투명 배치 목록을 그린다(아니면 불투명 목록을 그린다).
+        static constexpr uint32 kUsesMaterialShader    = SW_BIT( 6 );  ///< 머티리얼이 선언한 `.hlsl` 로 교체한다(아니면 패스 셰이더에 define 만 적용한다).
+        static constexpr uint32 kAppliesViewMode       = SW_BIT( 7 );  ///< 뷰 모드(Unlit, Wireframe)를 받는다.
+        static constexpr uint32 kGenericFullscreen     = SW_BIT( 8 );  ///< 선언한 입력을 역할로 바인딩하고 첫 출력에 풀스크린 삼각형 하나를 그린다.
+        static constexpr uint32 kCompute               = SW_BIT( 9 );  ///< 컴퓨트 PSO 다(`CSMain`).
+        static constexpr uint32 kRequiresGPUCulling    = SW_BIT( 10 ); ///< 컴퓨트 PSO 를 `_bGPUCulling` 일 때만 만든다(아니면 `_bCompute`).
+        static constexpr uint32 kHasInputContract      = SW_BIT( 11 ); ///< `_inputContract` 가 이 패스의 입력을 검사한다.
+        static constexpr uint32 kCullFront             = SW_BIT( 12 ); ///< PSO 기본값으로 앞면 컬링을 쓴다(인버티드 헐 외곽선). XML 은 None 으로만 바꿀 수 있다.
+        static constexpr uint32 kPremultipliedAlpha    = SW_BIT( 13 ); ///< 블렌드가 켜지면 원본 색이 이미 알파를 곱한 값이다(One/InvSrcAlpha, `_bPremultipliedAlpha`).
     };
 } // namespace sw
 
@@ -88,24 +88,24 @@ namespace sw
      */
     struct RenderPassTypeInfo
     {
-        /** @brief 파이프라인 XML 이 `_shaderPath` 를 적지 않았을 때 쓰는 셰이더입니다(EngineDefaultAssets 의 칸). nullptr 이면 엔진 PSO 가 없습니다. */
+        /** @brief 파이프라인 XML 이 `_shaderPath` 를 적지 않았을 때 쓰는 셰이더입니다(EngineDefaultAssets 의 항목). nullptr 이면 엔진 PSO 가 없습니다. */
         string EngineDefaultAssets::* _pDefaultShader{ nullptr };
-        /** @brief 패스가 셰이더에 얹는 define 입니다. 파이프라인 XML 의 `_listPermutation` 뒤에 붙습니다. nullptr 이면 없습니다. */
+        /** @brief 패스가 셰이더에 추가하는 define 입니다. 파이프라인 XML 의 `_listPermutation` 뒤에 붙습니다. nullptr 이면 없습니다. */
         const utf8* _pPassDefine{ nullptr };
         /**
          * @brief 이 패스가 그리는 배치의 머티리얼 퍼뮤테이션에 있어야 하는 define 입니다. nullptr 이면 모든 배치를 그립니다.
-         * @details 없는 배치(머티리얼 없는 배치 포함)는 드로우 · 머티리얼 PSO 변형 · 셰이더 쿠킹에서 함께 빠집니다(`FrameRendererUtil::drawsBatchInPass`).
+         * @details 없는 배치(머티리얼 없는 배치 포함)는 드로우, 머티리얼 PSO 변형, 셰이더 쿠킹에서 함께 빠진다(`FrameRendererUtil::drawsBatchInPass`).
          */
         const utf8* _pRequiredMaterialDefine{ nullptr };
         /** @brief 고정 컬러 포맷(`_colorTargetCount` 개)입니다. nullptr 이면 패스가 선언한 출력의 포맷을 씁니다. */
         const RHIFormat* _pColorFormat{ nullptr };
-        /** @brief 풀스크린 패스가 타깃 첨부의 클리어 색 선언이 없을 때 쓰는 색입니다. nullptr 이면 렌더러의 클리어 색입니다. */
+        /** @brief 풀스크린 패스가 타깃 첨부의 클리어 색 선언이 없을 때 쓰는 색입니다. nullptr 이면 렌더러의 클리어 색을 씁니다. */
         const float4* _pDefaultClear{ nullptr };
-        /** @brief 이 패스 타입이 읽는 입력의 역할입니다. `kHasInputContract` 일 때만 뜻이 있습니다. */
+        /** @brief 이 패스 타입이 읽는 입력의 역할입니다. `kHasInputContract` 일 때만 의미가 있습니다. */
         RenderPassInputSignature _inputContract{};
-        /** @brief 표의 줄 순서 검사용입니다. 줄 번호 = 이 값입니다. */
+        /** @brief 테이블의 항목 순서를 검사하는 용도입니다. 항목 번호가 이 값입니다. */
         RenderPassType _type{ RenderPassType::Invalid };
-        /** @brief 이 패스의 엔진 PSO 가 없을 때 대신 쓸 패스 타입입니다. Invalid 면 대신하지 않습니다. */
+        /** @brief 이 패스의 엔진 PSO 가 없을 때 대신 쓸 패스 타입입니다. Invalid 면 대체하지 않습니다. */
         RenderPassType _psoFallbackType{ RenderPassType::Invalid };
         /** @brief `RenderPassTraitFlag` 의 합입니다. */
         uint32 _flags{ 0 };
@@ -119,7 +119,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 패스 종류의 사실을 반환합니다. 표에 없는 값이면 Invalid 줄입니다. */
+    /** @brief 패스 종류의 사실을 반환합니다. 테이블에 없는 값이면 Invalid 항목을 반환합니다. */
     SW_API const RenderPassTypeInfo& getRenderPassTypeInfo( RenderPassType type );
 
     /**
@@ -134,10 +134,10 @@ namespace sw
 
     /**
      * @brief 패스 PSO 의 셰이더 경로와 define 을 정합니다. 런타임 PSO 생성과 셰이더 쿠커가 함께 부릅니다.
-     * @details 경로는 패스 서술의 `_shaderPath` 가 먼저이고 비어 있으면 표의 기본 셰이더입니다. define 은 패스 서술의
-     *          `_listPermutation` 뒤에 표의 패스 define 을 (겹치지 않게) 붙인 것입니다. 둘이 어긋나면 런타임이 찾는 해시를
-     *          아무도 쿠킹하지 않아 Shipping 에서 그 패스의 드로우가 사라집니다.
-     * @param pPassDesc 파이프라인의 패스 서술(nullptr 이면 표의 기본값만 씁니다)
+     * @details 경로는 패스 서술의 `_shaderPath` 가 우선이고, 비어 있으면 테이블의 기본 셰이더를 쓴다. define 은 패스 서술의
+     *          `_listPermutation` 뒤에 테이블의 패스 define 을 (겹치지 않게) 붙인 것이다. 둘이 어긋나면 런타임이 찾는 해시를
+     *          아무도 쿠킹하지 않아 Shipping 에서 그 패스의 드로우가 사라진다.
+     * @param pPassDesc 파이프라인의 패스 서술입니다. nullptr 이면 테이블의 기본값만 씁니다.
      */
     SW_API RenderPassShaderSelection selectRenderPassShader( RenderPassType type, const RenderGraphPassDesc* pPassDesc, const EngineDefaultAssets& engineDefaultAssets );
 } // namespace sw

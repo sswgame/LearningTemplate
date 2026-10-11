@@ -16,7 +16,7 @@ namespace sw
     {
         struct CreatureLifeCatalogInternal
         {
-            /** @brief 패턴 기호 하나의 뜻입니다. */
+            /** @brief 패턴 기호 하나의 뜻을 나타냅니다. */
             struct SymbolKey
             {
                 hashed_string _object{};
@@ -41,14 +41,14 @@ namespace sw
                 { outListID.push_back( hashed_string( token ) ); } );
             }
 
-            /** @brief 오브젝트 이름입니다 — `empty` 는 빈 칸(빈 id)입니다. */
+            /** @brief 오브젝트 이름을 반환합니다. `empty` 는 빈 셀(빈 id)입니다. */
             static hashed_string parseObject( string_view text )
             {
                 const hashed_string object( text );
                 return object == hashed_string( "empty" ) ? hashed_string{} : object;
             }
 
-            /** @brief `<Key>` · `<Row>` 로 패턴을 읽습니다. 행 길이가 다르거나 모르는 기호면 false 입니다. */
+            /** @brief `<Key>` 와 `<Row>` 로 패턴을 읽습니다. 행 길이가 다르거나 모르는 기호이면 false 를 반환합니다. */
             [[nodiscard]] static bool parsePattern( const XMLNode& node, string_view sourceName, const utf8* pHabitatID, HabitatDef& outHabitat )
             {
                 vector<SymbolKey> listKey;

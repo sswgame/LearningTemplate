@@ -4,23 +4,26 @@
 @file CiFailureReport.py
 @brief CI 실패를 GitHub 주석(::error)으로 올립니다 — 작업 로그 · 아티팩트는 저장소 관리자만 받을 수 있어(공개 저장소도 API 가 403) 밖에서 보이는 곳은 주석뿐입니다.
 
-    python Scripts/dev/CiFailureReport.py tests --ctest-dir build/CI-Debug            # 진 테스트: 실패 줄 · 마지막 [ RUN ] · 끝 25 줄 · 크래시 스택
+    python Scripts/dev/CiFailureReport.py tests --ctest-dir build/CI-Debug            # 진 테스트: 결과(Timeout · 경과 시간 · 종료 코드) · 실패 줄 · 마지막 [ RUN ] · 끝 25 줄 · 크래시 스택
     python Scripts/dev/CiFailureReport.py configure --log build/configure.log         # 구성 실패: vcpkg 가 가리킨 로그들의 끝
     python Scripts/dev/CiFailureReport.py build --log build/build.log                 # 빌드 실패: 오류 줄(컴파일 · 링크)과 앞뒤 몇 줄, 없으면 끝 60 줄
 
 크래시 스택은 테스트 실행 파일의 크래시 핸들러가 로그 폴더(`Bin/Saved/Logs/crash_<세션>.stack.txt`)에 남긴 것입니다.
+진 테스트마다 제목에 결과를 붙입니다. `Timeout` 은 ctest 가 한도(`TIMEOUT` 속성, `ctest --show-only=json-v1` 로 읽음)에서 죽인 것이고,
+`exit N` 은 TestHost 가 스스로 끝내며 남긴 종료 코드, `no exit line` 은 한도 전에 끝났지만 종료 줄이 없는 것(크래시)입니다.
 주석은 단계마다 error 10 개 · 잡마다 50 개까지 보인다(GitHub 한도) — 테스트는 20 개, 로그 파일은 8 개까지만 올린다.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
+import common  # noqa: E402 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 
 kNewline = "\n"
 _kAnsi = re.compile(r"\x1b\[[0-9;]*m")
@@ -41,6 +44,11 @@ _kLogTailLineCount = 60
 _kBuildErrorMarker = re.compile(r"\berror\b[:\s]|\bundefined (reference|symbol)\b|duplicate symbol|^FAILED:|ninja: build stopped|\bfatal error\b")
 _kMaxBuildErrorCount = 10  # 주석은 단계마다 error 10 개까지 보인다
 _kBuildContextLines = 2
+# ctest 가 LastTest.log 에 남기는 경과 시간과 TestHost 가 끝낼 때 찍는 종료 코드.
+_kTestTime = re.compile(r"^Test time =\s*([0-9.]+) sec", re.M)
+_kTestHostExit = re.compile(r"\[TestHost\] shut down - exit code (-?\d+)")
+# 한도에서 죽인 테스트의 경과 시간은 한도를 조금 넘는다. 시계 오차를 감안해 한도의 98 % 부터 Timeout 으로 본다.
+_kTimeoutRatio = 0.98
 
 
 def escapeAnnotationInternal(text: str) -> str:
@@ -68,19 +76,57 @@ def collectCrashStacksInternal(ctestDir: Path) -> list[str]:
     return [f"{path.name}:{kNewline}{readTextInternal(path)[:_kMaxStackChars]}" for path in listStack[:_kMaxStackCount]]
 
 
+def readTestTimeouts(ctestDir: Path) -> dict[str, float]:
+    """테스트 이름 → `TIMEOUT` 속성(초)입니다. ctest 를 못 부르거나 속성이 없는 테스트는 빠집니다."""
+    result = common.runProcess(["ctest", "--test-dir", ctestDir, "--show-only=json-v1"], timeoutSeconds=60)
+    if not result.bSucceeded:
+        return {}
+    try:
+        payload = json.loads(result.stdout)
+    except ValueError:
+        return {}
+    mapTimeout: dict[str, float] = {}
+    for test in payload.get("tests", []):
+        for prop in test.get("properties", []):
+            if prop.get("name") == "TIMEOUT" and isinstance(prop.get("value"), (int, float)):
+                mapTimeout[test.get("name", "")] = float(prop["value"])
+    return mapTimeout
+
+
+def describeTestResult(section: str, limitSeconds: float | None) -> str:
+    """LastTest.log 의 한 테스트 구간에서 결과 한 줄 — `Timeout 180.0 s / 180 s` · `exit 1 after 12.3 s` · `no exit line after 4.0 s`."""
+    timeMatch = _kTestTime.search(section)
+    elapsed = float(timeMatch.group(1)) if timeMatch else None
+    limit = f" / {limitSeconds:g} s" if limitSeconds is not None else ""
+    if elapsed is None:
+        return "no elapsed time"
+    if limitSeconds is not None and elapsed >= limitSeconds * _kTimeoutRatio:
+        return f"Timeout {elapsed:.1f} s{limit}"
+    listExit = _kTestHostExit.findall(section)
+    if listExit:
+        return f"exit {listExit[-1]} after {elapsed:.1f} s{limit}"
+    return f"no exit line after {elapsed:.1f} s{limit}"
+
+
 def reportTests(ctestDir: Path) -> int:
     tempDir = ctestDir / "Testing" / "Temporary"
     listFailed = [line.split(":", 1)[1].strip() for line in readTextInternal(tempDir / "LastTestsFailed.log").splitlines() if ":" in line]
     log = readTextInternal(tempDir / "LastTest.log")
     if not listFailed:
         print("::warning title=ctest::LastTestsFailed.log is empty or missing - no test result to report")
+    mapTimeout = readTestTimeouts(ctestDir) if listFailed else {}
     for name in listFailed[:_kMaxTestCount]:
         match = re.search(r"Test: " + re.escape(name) + r"\s*$(.*?)^\"" + re.escape(name) + r"\" end time", log, re.S | re.M)
-        listLine = [_kAnsi.sub("", line) for line in match.group(1).splitlines()] if match else []
-        listMarked = [line[:300] for line in listLine if _kTestMarker.search(line)][:40]
-        listRun = [line for line in listLine if line.startswith("[ RUN")]
-        listTail = [line[:300] for line in listLine[-_kTailLineCount:]]
-        emitErrorInternal("ctest " + name, kNewline.join(listMarked + ["--- last RUN: " + (listRun[-1] if listRun else "(none)"), "--- tail:"] + listTail))
+        section = _kAnsi.sub("", match.group(1)) if match else ""
+        listLine = section.splitlines()
+        # 꼬리는 테스트 출력까지만 — ctest 가 덧붙이는 경과 시간 · 구분선은 결과 줄에 들어간다.
+        listOutput = listLine[:next((index for index, line in enumerate(listLine) if line.startswith("<end of output>")), len(listLine))]
+        listMarked = [line[:300] for line in listOutput if _kTestMarker.search(line)][:40]
+        listRun = [line for line in listOutput if line.startswith("[ RUN")]
+        listTail = [line[:300] for line in listOutput[-_kTailLineCount:]]
+        result = describeTestResult(section, mapTimeout.get(name))
+        emitErrorInternal(f"ctest {name} [{result}]",
+                          kNewline.join(["--- result: " + result] + listMarked + ["--- last RUN: " + (listRun[-1] if listRun else "(none)"), "--- tail:"] + listTail))
     for stack in collectCrashStacksInternal(ctestDir):
         emitErrorInternal("crash stack", stack)
     return 0
@@ -136,7 +182,7 @@ def reportBuild(logPath: Path) -> int:
 def main(listArgument: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="CI 실패를 GitHub 주석으로 올린다")
     listSub = parser.add_subparsers(dest="kind", required=True)
-    tests = listSub.add_parser("tests", help="진 시험 · 크래시 스택")
+    tests = listSub.add_parser("tests", help="진 테스트 · 크래시 스택")
     tests.add_argument("--ctest-dir", type=Path, required=True)
     configure = listSub.add_parser("configure", help="구성(vcpkg 설치) 실패")
     configure.add_argument("--log", type=Path, required=True)

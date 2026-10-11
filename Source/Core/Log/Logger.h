@@ -23,11 +23,11 @@
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 2) ILogSink — 매크로가 말을 거는 전역 파사드(출력 장치는 ILogOutput 이다)
+    // 2) ILogSink. 매크로가 호출하는 전역 파사드이며, 출력 장치는 ILogOutput 이다.
     // ------------------------------------------------------------------------------
     /**
      * @class ILogSink
-     * @brief 로깅 파사드입니다. 포맷 · 리스너 · 로그 폴더까지 책임지는 "로거 전체" 의 연결 지점입니다.
+     * @brief 로깅 파사드입니다. 포맷, 리스너, 로그 폴더까지 책임지는 "로거 전체"의 연결 지점입니다.
      * @details **출력 장치 인터페이스가 아닙니다.** 한 줄이 실제로 나가는 곳은 `ILogOutput`(`ConsoleLogOutput` ·
      *          `FileLogOutput`)이고, 그것들을 여러 개 들고 있는 것이 기본 싱크 `AsyncLogSink` 입니다. 이 인터페이스는 **로거 전체를 감싸거나
      *          바꿔 끼우는** 곳입니다. 테스트 프레임워크가 로그를 가로채려고 이것을 구현해 기존 싱크를 감쌉니다(`TestFramework.h`).
@@ -51,11 +51,11 @@ namespace sw
         virtual void writeLog( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line ) = 0;
         /** @brief 한 줄이 쓰일 때 호출할 리스너를 붙입니다. */
         virtual DelegateHandle addLogWrittenListener( const LogWrittenDelegate& listener ) = 0;
-        /** @brief 핸들로 리스너를 뗍니다. */
+        /** @brief 핸들로 리스너를 해제합니다. */
         virtual void removeLogWrittenListener( const DelegateHandle& handle ) = 0;
-        /** @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 리스너를 모두 떼고, 뗀 수를 반환합니다(핫 리로드가 모듈을 내리기 전에 부른다). */
+        /** @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 리스너를 모두 해제하고, 해제한 수를 반환합니다(핫 리로드가 모듈을 언로드하기 전에 부릅니다). */
         virtual uint32 releaseListenerCodeWithin( const void* pBegin, const void* pEnd ) = 0;
-        /** @brief 로그 파일이 있는 폴더의 경로입니다. */
+        /** @brief 로그 파일이 있는 폴더의 경로를 반환합니다. */
         virtual string_view getLogFolderPath() = 0;
         /**
          * @brief 크래시 경로에서 부릅니다: 큐에 남은 줄과 장치 버퍼를 **지금 이 스레드에서** 내보냅니다. 락을 바로 잡지 못하면 포기합니다.
@@ -68,14 +68,14 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 3) Logger — 매크로가 부르는 전역 창구(전역 싱크 · 상세도 · 호출자 이름 표). 인스턴스는 없다
-    //    기본 싱크(비동기 큐 · 출력 장치)는 `AsyncLogSink`(Core/LogSink)이고, 만들면 전역 싱크가 비어 있을 때 자신을 건다
+    // 3) Logger. 매크로가 부르는 전역 진입점이며 전역 싱크, 상세도, 호출자 이름 테이블을 가진다. 인스턴스는 없다.
+    //    기본 싱크(비동기 큐와 출력 장치)는 `AsyncLogSink`(Core/LogSink)이고, 생성되면 전역 싱크가 비어 있을 때 자신을 등록한다.
     // ------------------------------------------------------------------------------
     /**
      * @class Logger
-     * @brief 로그 매크로가 말을 거는 전역 창구입니다. 한 줄은 전역 싱크(`ILogSink`)에 넘기고, 싱크가 없으면 버립니다.
-     * @details 이 창구는 파일 · 크래시 · 모듈을 모르므로 Core 의 아래층(Container · Memory · String …)이 로그를 쓸 수 있습니다.
-     *          포맷 · 타임스탬프 · 리스너 · 비동기 큐 · 출력 장치는 싱크(`AsyncLogSink`)의 몫입니다.
+     * @brief 로그 매크로가 호출하는 전역 진입점입니다. 한 줄은 전역 싱크(`ILogSink`)에 넘기고, 싱크가 없으면 버립니다.
+     * @details 이 진입점은 파일, 크래시, 모듈을 모르므로 Core 의 아래 계층(Container, Memory, String 등)이 로그를 쓸 수 있습니다.
+     *          포맷, 타임스탬프, 리스너, 비동기 큐, 출력 장치는 싱크(`AsyncLogSink`)가 맡습니다.
      */
     class SW_API Logger final
     {
@@ -96,26 +96,26 @@ namespace sw
         static void flushGlobalForCrash();
         /** @brief 매크로가 쓸 전역 싱크를 바꿉니다. */
         static void setGlobalSink( ILogSink* pSink );
-        /** @brief 전역 싱크가 비어 있으면 @p pSink 를 겁니다(기본 싱크가 만들어질 때 부릅니다). */
+        /** @brief 전역 싱크가 비어 있으면 @p pSink 를 등록합니다(기본 싱크가 만들어질 때 부릅니다). */
         static void registerGlobalSink( ILogSink* pSink );
-        /** @brief 전역 싱크가 @p pSink 이면 뗍니다(기본 싱크가 파괴될 때 부릅니다). */
+        /** @brief 전역 싱크가 @p pSink 이면 해제합니다(기본 싱크가 파괴될 때 부릅니다). */
         static void unregisterGlobalSink( ILogSink* pSink );
         /** @brief 전역 싱크로 한 줄을 남깁니다. 싱크가 없으면 무시합니다. */
         static void writeLogGlobal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line );
         /** @brief 전역 싱크에 리스너를 붙입니다. */
         static DelegateHandle addGlobalListener( const LogWrittenDelegate& listener );
-        /** @brief 전역 싱크에서 리스너를 뗍니다. */
+        /** @brief 전역 싱크에서 리스너를 해제합니다. */
         static void removeGlobalListener( const DelegateHandle& handle );
-        /** @brief 전역 싱크에서 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 리스너를 모두 떼고, 뗀 수를 반환합니다. 싱크가 없으면 0 입니다. */
+        /** @brief 전역 싱크에서 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 리스너를 모두 해제하고, 해제한 수를 반환합니다. 싱크가 없으면 0 입니다. */
         static uint32 releaseGlobalListenerCodeWithin( const void* pBegin, const void* pEnd );
-        /** @brief 현재 전역 싱크입니다. 없으면 nullptr 입니다. */
+        /** @brief 현재 전역 싱크를 반환합니다. 없으면 nullptr 입니다. */
         static ILogSink* getGlobalSink();
 
         /**
          * @brief 런타임 상세도를 정합니다. 이 수준보다 덜 심각한 줄은 버려집니다.
-         * @details 컴파일 타임 상한(SW_LOG_COMPILED_VERBOSITY)이 "무엇을 남길 수 있나" 를 정하고, 이 값이 "지금 무엇을 남길까"
-         *          를 정합니다. 언리얼의 카테고리 기본 상세도와 같은 역할입니다. 명령줄 인자 · 전역 변수로는 바꿀 수
-         *          없고 코드에서 부릅니다.
+         * @details 컴파일 타임 상한(SW_LOG_COMPILED_VERBOSITY)이 "무엇을 남길 수 있나"를 정하고, 이 값이 "지금 무엇을 남길까"
+         *          를 정합니다. 언리얼의 카테고리 기본 상세도와 같은 역할입니다. 명령줄 인자나 전역 변수로는 바꿀 수
+         *          없고 코드에서 호출합니다.
          */
         static void setRuntimeVerbosity( LogLevel level );
         /** @brief setRuntimeVerbosity 로 정한 값입니다(기본값 Info). */
@@ -124,22 +124,22 @@ namespace sw
         static bool shouldLog( LogLevel level ) { return static_cast<int32>( level ) <= static_cast<int32>( getRuntimeVerbosity() ); }
 
         /**
-         * @brief 이후 모든 줄(모든 스레드)에 `[tick=N] ` 꼬리표를 붙입니다 — 고정 틱을 도는 호스트(전용 서버)가 틱마다 부릅니다.
-         * @details 언리얼 로그 줄의 프레임 번호(`[123]LogNet:`)와 같은 자리입니다. 서버 · 클라이언트 로그를 모아 볼 때 한 사건이 몇 번째 틱인지 짚습니다.
-         *          프로세스 전역 값이라 틱 밖의 스레드(네트워크 · 로더) 줄에도 지금 틱이 붙습니다. 정하지 않으면(기본) 줄은 바이트 하나 다르지 않습니다.
+         * @brief 이후 모든 줄(모든 스레드)에 `[tick=N] ` 태그를 붙입니다. 고정 틱을 도는 호스트(전용 서버)가 틱마다 부릅니다.
+         * @details 언리얼 로그 줄의 프레임 번호(`[123]LogNet:`)에 해당합니다. 서버와 클라이언트 로그를 모아 볼 때 한 사건이 몇 번째 틱인지 알 수 있습니다.
+         *          프로세스 전역 값이라 틱 밖의 스레드(네트워크, 로더) 줄에도 지금 틱이 붙습니다. 정하지 않으면(기본) 줄은 바이트 하나 다르지 않습니다.
          */
         static void setTickNumber( uint64 tickNumber );
-        /** @brief 틱 꼬리표를 뗍니다(기본 상태). */
+        /** @brief 틱 태그를 해제합니다(기본 상태). */
         static void clearTickNumber();
-        /** @brief 지금 틱 번호입니다. 정하지 않았으면 false 이고 @p outTickNumber 는 0 입니다. */
+        /** @brief 현재 틱 번호를 반환합니다. 정하지 않았으면 false 를 반환하고 @p outTickNumber 는 0 입니다. */
         [[nodiscard]] static bool getTickNumber( uint64& outTickNumber );
     };
 } // namespace sw
 
 // ------------------------------------------------------------------------------
-// 4) SW_LOG_* — 빌드 구성으로 통째로 끄지 않고 **상세도 상한**으로 자른다
+// 4) SW_LOG_*. 빌드 구성으로 통째로 끄지 않고 **상세도 상한**으로 자른다.
 //
-//    SW_DEBUG 가 아니면 매크로 전체를 빈 껍데기로 만들면 배포본에서 문제가 생겼을 때 남는 것이 하나도
+//    SW_DEBUG 가 아닐 때 매크로 전체를 빈 껍데기로 만들면 배포본에서 문제가 생겼을 때 남는 것이 하나도
 //    없어서 덤프만으로 원인을 찾아야 한다. 그래서 언리얼처럼 **카테고리 상세도**로 자른다. 상한을 넘는 호출만 컴파일에서 사라지고, 그 아래는 Shipping 에도 남는다. 관례대로 Warning
 //    이상은 어떤 빌드에서도 남긴다.
 //

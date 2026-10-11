@@ -9,16 +9,16 @@ namespace sw
 {
     class RigNodeRegistry;
 
-    /** @brief 엔진 노드 등록 함수 묶음입니다(`RigNodeRegistry::getInstance` 가 처음 한 번 부릅니다). */
+    /** @brief 엔진 노드 등록 함수 모음입니다(`RigNodeRegistry::getInstance` 가 처음 한 번 호출합니다). */
     struct RigNodeLibrary
     {
         /** @brief 아래 모두를 등록합니다. 늘 true 입니다(정적 초기화에 쓰려고 값을 돌려줍니다). */
         static bool registerEngineNodes( RigNodeRegistry& registry );
-        /** @brief IK — `TwoBoneIK` · `FabrikChain` · `CcdChain` · `Aim` · `FootPlacement`. */
+        /** @brief IK 노드(`TwoBoneIK`, `FabrikChain`, `CcdChain`, `Aim`, `FootPlacement`)를 등록합니다. */
         static void registerIKNodes( RigNodeRegistry& registry );
-        /** @brief 제약 — `CopyTransform` · `Position` · `Rotation` · `ParentSwitch` · `Distance` · `LimitRotation` · `TwistDistribution`. */
+        /** @brief 제약 노드(`CopyTransform`, `Position`, `Rotation`, `ParentSwitch`, `Distance`, `LimitRotation`, `TwistDistribution`)를 등록합니다. */
         static void registerConstraintNodes( RigNodeRegistry& registry );
-        /** @brief 2 차 움직임 · 보정 — `SpringChain` · `PoseDriver`. */
+        /** @brief 2 차 움직임과 보정 노드(`SpringChain`, `PoseDriver`)를 등록합니다. */
         static void registerSecondaryNodes( RigNodeRegistry& registry );
     };
 } // namespace sw

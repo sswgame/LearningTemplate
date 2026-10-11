@@ -1,6 +1,6 @@
 /**
  * @file Mesh.h
- * @brief CPU 메시 데이터와 GPU 정점 버퍼 업로드입니다(씬 지오메트리용이고 RHI 데모가 아닙니다).
+ * @brief CPU 메시 데이터와 GPU 정점 버퍼 업로드를 정의합니다. 씬 지오메트리용이며 RHI 데모용이 아닙니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -22,8 +22,8 @@ namespace sw
 
     /**
      * @struct MeshSkinVertex
-     * @brief 스킨드 메시 정점 하나의 본 영향(본 번호 넷 · 가중치 넷)입니다. 가중치 합은 1 이고, 쓰지 않는 칸은 가중치 0 입니다.
-     * @details 본 번호는 메시가 따르는 스켈레톤의 본 순서입니다(`Skeleton`). 정점과 같은 순서 · 같은 길이로 `Mesh` 가 듭니다.
+     * @brief 스킨드 메시 정점 하나의 본 영향(본 번호 4개와 가중치 4개)입니다. 가중치 합은 1이고, 쓰지 않는 슬롯의 가중치는 0입니다.
+     * @details 본 번호는 메시가 따르는 스켈레톤의 본 순서다(`Skeleton`). `Mesh` 가 정점과 같은 순서, 같은 길이로 가지고 있다.
      */
     struct MeshSkinVertex
     {
@@ -36,7 +36,7 @@ namespace sw
 {
     /**
      * @struct MeshMorphDelta
-     * @brief 모프 타깃 하나가 정점 하나를 옮기는 양(위치 · 노멀 차이)입니다. 가중치 1 에서 레스트 + 차이가 됩니다.
+     * @brief 모프 타깃 하나가 정점 하나를 옮기는 양(위치와 노멀 차이)입니다. 가중치가 1이면 레스트에 차이를 더한 값이 됩니다.
      */
     struct MeshMorphDelta
     {
@@ -50,7 +50,7 @@ namespace sw
 {
     /**
      * @struct MeshMorphTarget
-     * @brief 이름 붙은 모프 타깃(블렌드 셰이프)입니다. 움직이는 정점만 담습니다(얼굴 타깃은 메시의 작은 일부만 옮긴다).
+     * @brief 이름이 붙은 모프 타깃(블렌드 셰이프)입니다. 움직이는 정점만 담습니다(얼굴 타깃은 메시의 작은 일부만 옮깁니다).
      */
     struct MeshMorphTarget
     {
@@ -63,16 +63,16 @@ namespace sw
 {
     /**
      * @class Mesh
-     * @brief 삼각형 리스트 메시입니다(정점 = 위치 · 노멀 · UV · 색). initRHI() 로 올린 GPU 정점 버퍼를 소유합니다.
+     * @brief 삼각형 리스트 메시입니다(정점은 위치, 노멀, UV, 색). initRHI() 로 올린 GPU 정점 버퍼를 소유합니다.
      */
     class SW_API Mesh final : public RHIRenderResource
     {
     public:
         /**
-         * @brief 생성 열쇠입니다. create() 만 만들 수 있습니다.
-         * @details 생성자가 이 열쇠를 요구하므로 `make_shared<Mesh>()` 도 스택의 `Mesh x;` 도 **컴파일되지 않습니다.**
-         *          모든 Mesh 가 Engine 안에서 shared_ptr 로 태어난다는 것을 컴파일러가 보장합니다. 렌더 패킷이
-         *          소유를 빌릴 수 있고, 제어 블록이 모듈 DLL 에 사는 일이 없습니다. 린트가 아니라 타입이 지킵니다.
+         * @brief 생성 키입니다. create() 만 만들 수 있습니다.
+         * @details 생성자가 이 키를 요구하므로 `make_shared<Mesh>()` 도 스택의 `Mesh x;` 도 **컴파일되지 않는다.**
+         *          모든 Mesh 가 Engine 안에서 shared_ptr 로 만들어진다는 것을 컴파일러가 보장한다. 그래서 렌더 패킷이
+         *          소유권을 가질 수 있고, 제어 블록이 모듈 DLL 에 있는 일이 없다. 린트가 아니라 타입이 지킨다.
          */
         struct CreateKey
         {
@@ -80,18 +80,18 @@ namespace sw
             CreateKey() = default;
             friend class Mesh;
         };
-        /** @brief create() 전용 생성자입니다. 빈 메시로 만듭니다. */
+        /** @brief create() 전용 생성자입니다. 빈 메시를 만듭니다. */
         explicit Mesh( CreateKey ) noexcept {}
         /**
-         * @brief 정점 버퍼를 놓습니다. 디바이스가 살아 있으면 돌려주고, 이미 없으면 핸들만 잊습니다.
-         * @note 디바이스가 먼저 죽었다면 통보(`releaseRHI` · `forgetRHI`)가 먼저 와서 핸들을 비워 두므로,
+         * @brief 정점 버퍼를 해제합니다. 디바이스가 살아 있으면 반환하고, 이미 없으면 핸들만 버립니다.
+         * @note 디바이스가 먼저 죽었다면 통보(`releaseRHI`, `forgetRHI`)가 먼저 와서 핸들을 비워 두므로,
          *       소멸 순서와 상관없이 죽은 디바이스로 destroy 하지 않습니다.
          */
         ~Mesh() override;
 
-        /** @brief (RHIRenderResource) 살아 있는 디바이스에 정점 버퍼를 돌려줍니다. */
+        /** @brief (RHIRenderResource) 살아 있는 디바이스에 정점 버퍼를 반환합니다. */
         void releaseRHI( IRHIDevice* pDevice ) override;
-        /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 부릅니다. 핸들만 잊습니다. */
+        /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 부릅니다. 핸들만 버립니다. */
         void forgetRHI( IRHIDevice* pDevice ) override;
 
         /** @brief 복사를 금지합니다. */
@@ -101,78 +101,78 @@ namespace sw
 
         /**
          * @brief 빈 메시를 Engine.dll 안에서 shared_ptr 로 만듭니다.
-         * @details 도형을 만드는 것은 이 클래스의 일이 아닙니다. `MeshUtil` 이 이것으로 만들어 정점을 채웁니다.
-         *          Mesh 가 책임지는 것은 **정점 버퍼와 그 수명**뿐입니다.
+         * @details 도형을 만드는 것은 이 클래스의 일이 아니다. `MeshUtil` 이 이 함수로 메시를 만들어 정점을 채운다.
+         *          Mesh 가 책임지는 것은 **정점 버퍼와 그 수명**뿐이다.
          */
         static shared_ptr<Mesh> create();
         /**
-         * @brief 스킨드 메시의 그릴 사본을 만듭니다(정점 · 스킨을 복사하고 **스킨 데이터 번호를 원본과 나눕니다**).
-         * @details GPU 스키닝 결과(모프 풀의 결과 구간)는 메시 객체마다 하나라, 포즈가 다른 캐릭터 · 군중 묶음은 사본을 그립니다. 사본은 원본과
-         *          레스트 정점 · 가중치가 같으므로 모프 풀은 스킨 데이터 번호(`getSkinDataID`)로 원본 데이터를 **한 번만** 올리고 사본은 결과 구간만 받습니다.
+         * @brief 스킨드 메시의 그릴 사본을 만듭니다(정점과 스킨을 복사하고 **스킨 데이터 번호는 원본과 공유합니다**).
+         * @details GPU 스키닝 결과(모프 풀의 결과 구간)는 메시 객체마다 하나라, 포즈가 다른 캐릭터와 군중 묶음은 사본을 그린다. 사본은 원본과
+         *          레스트 정점과 가중치가 같으므로 모프 풀은 스킨 데이터 번호(`getSkinDataID`)로 원본 데이터를 **한 번만** 올리고 사본은 결과 구간만 받는다.
          */
         static shared_ptr<Mesh> createSkinInstance( const Mesh& source );
 
         /** @brief CPU 정점 배열을 설정합니다. */
         void setVertices( const vector<RHIVertex>& listVertex );
         void setVertices( vector<RHIVertex>&& listVertex );
-        /** @brief CPU 정점 배열입니다. `setVertices` 의 짝이고, GPU 업로드 뒤에도 원본은 여기 남습니다. */
+        /** @brief CPU 정점 배열입니다. `setVertices` 와 짝을 이루며, GPU 업로드 뒤에도 원본은 여기 남습니다. */
         const vector<RHIVertex>& getVertices() const { return _listVertex; }
 
         /**
-         * @brief 이 메시의 정점을 GPU 가 변형해도 되는지 표시합니다(기본 꺼짐).
-         * @details 유니티의 `Mesh.vertexBufferTarget |= Raw` 옵트인과 같은 자리입니다. 켠 메시만 모프 풀에
-         *          들어갑니다. 모두 넣으면 풀이 쓸데없이 커지고, 예산을 넘긴 메시는 어차피 레스트로 그려집니다.
-         * @note **GPU 쪽 변형은 CPU 사본(`getVertices`)에 반영되지 않습니다.** 유니티 문서도 같은 주의를 줍니다.
-         *       CPU 는 레스트 포즈만 압니다(피킹 · 바운드는 그 값을 봅니다).
+         * @brief 이 메시의 정점을 GPU 가 변형해도 되는지 표시합니다(기본은 꺼짐).
+         * @details 유니티의 `Mesh.vertexBufferTarget |= Raw` 옵트인에 해당한다. 켠 메시만 모프 풀에
+         *          들어간다. 모두 넣으면 풀이 쓸데없이 커지고, 예산을 넘긴 메시는 어차피 레스트로 그려진다.
+         * @note **GPU 쪽 변형은 CPU 사본(`getVertices`)에 반영되지 않는다.** 유니티 문서도 같은 주의를 준다.
+         *       CPU 는 레스트 포즈만 안다(피킹과 바운드는 그 값을 본다).
          */
         void setGPUMorphEnabled( bool bEnabled ) { _bGPUMorph = bEnabled ? SW_TRUE : SW_FALSE; }
         /** @brief GPU 모프를 요청했는지 반환합니다. */
         bool isGPUMorphEnabled() const { return _bGPUMorph != SW_FALSE; }
 
         /**
-         * @brief 스킨(정점마다 본 영향)을 겁니다. 길이는 정점 수와 같아야 하고, 아니면 스킨을 지웁니다. 내용 번호가 바뀝니다.
-         * @details 스킨이 있는 메시는 GPU 스키닝 풀(모프 풀의 스킨 구간)에 들어가 정점 셰이더가 변형된 정점을 읽습니다. 팔레트(본 행렬)는
-         *          메시가 아니라 그것을 그리는 컴포넌트가 프레임마다 냅니다(`SkeletalMeshComponent`). 그래서 포즈가 다른 캐릭터는 메시 객체를 따로 둡니다.
-         * @param boneCount 메시가 따르는 스켈레톤의 본 수입니다(팔레트 길이).
+         * @brief 스킨(정점마다의 본 영향)을 설정합니다. 길이는 정점 수와 같아야 하고, 아니면 스킨을 지웁니다. 내용 번호가 바뀝니다.
+         * @details 스킨이 있는 메시는 GPU 스키닝 풀(모프 풀의 스킨 구간)에 들어가 정점 셰이더가 변형된 정점을 읽는다. 팔레트(본 행렬)는
+         *          메시가 아니라 그것을 그리는 컴포넌트가 프레임마다 낸다(`SkeletalMeshComponent`). 그래서 포즈가 다른 캐릭터는 메시 객체를 따로 둔다.
+         * @param boneCount 메시가 따르는 스켈레톤의 본 수(팔레트 길이)입니다.
          */
         void setSkin( vector<MeshSkinVertex> listSkinVertex, uint32 boneCount );
-        /** @brief 정점마다의 본 영향입니다. 스킨이 없으면 비었습니다. */
+        /** @brief 정점마다의 본 영향입니다. 스킨이 없으면 비어 있습니다. */
         const vector<MeshSkinVertex>& getSkinVertices() const { return _listSkinVertex; }
         /** @brief 스킨이 있으면 true 입니다. */
         bool hasSkin() const { return _skinBoneCount > 0 && _listSkinVertex.size() == _listVertex.size(); }
         /** @brief 스켈레톤 본 수(팔레트 길이)입니다. 스킨이 없으면 0 입니다. */
         uint32 getSkinBoneCount() const { return _skinBoneCount; }
         /**
-         * @brief 모프 타깃(블렌드 셰이프)을 겁니다. 정점 번호가 범위 밖인 차이는 버립니다. 내용 번호가 바뀝니다.
-         * @details 타깃은 GPU 스키닝 컴퓨트가 스키닝 앞에 가중치만큼 더합니다(모프 풀의 원본 데이터 — 사본은 나눈다). 가중치는 메시가 아니라 그리는 유닛이 냅니다
-         *          (`SkeletalMeshComponent::setMorphWeight`). 그래서 모프 타깃이 있는 메시는 스킨 구간으로 갑니다(스킨이 없으면 임포트가 고정 본 하나를 준다).
+         * @brief 모프 타깃(블렌드 셰이프)을 설정합니다. 정점 번호가 범위 밖인 차이는 버립니다. 내용 번호가 바뀝니다.
+         * @details 타깃은 GPU 스키닝 컴퓨트가 스키닝 앞에 가중치만큼 더한다(모프 풀의 원본 데이터이며 사본은 공유한다). 가중치는 메시가 아니라 그리는 유닛이 낸다
+         *          (`SkeletalMeshComponent::setMorphWeight`). 그래서 모프 타깃이 있는 메시는 스킨 구간으로 간다(스킨이 없으면 임포트가 고정 본 하나를 준다).
          */
         void setMorphTargets( vector<MeshMorphTarget> listTarget );
         /** @brief 모프 타깃들입니다. */
         const vector<MeshMorphTarget>& getMorphTargets() const { return _listMorphTarget; }
         /** @brief 모프 타깃 수입니다. */
         uint32 getMorphTargetCount() const { return static_cast<uint32>( _listMorphTarget.size() ); }
-        /** @brief 이름의 모프 타깃 번호입니다. 없으면 -1 입니다. */
+        /** @brief 이름으로 모프 타깃 번호를 찾습니다. 없으면 -1 입니다. */
         int32 findMorphTargetIndex( const hashed_string& name ) const;
         /**
-         * @brief 스킨 데이터(레스트 정점 · 가중치)의 정체성입니다. 보통은 내용 번호이고, `createSkinInstance` 의 사본은 원본의 번호를 나눕니다.
-         * @details 모프 풀이 같은 번호의 메시들을 한 원본 구간으로 묶습니다(언리얼 스킨 캐시가 같은 스켈레탈 메시의 정점 팩토리를 나누는 자리).
+         * @brief 스킨 데이터(레스트 정점과 가중치)의 식별자입니다. 보통은 내용 번호이고, `createSkinInstance` 의 사본은 원본의 번호를 공유합니다.
+         * @details 모프 풀이 같은 번호의 메시들을 한 원본 구간으로 묶는다(언리얼 스킨 캐시가 같은 스켈레탈 메시의 정점 팩토리를 공유하는 것과 같은 방식이다).
          */
         uint64 getSkinDataID() const { return _sharedSkinDataID != 0 ? _sharedSkinDataID : _contentID; }
 
         /**
-         * @brief 정점 애니메이션 표(VAT)를 겁니다. 걸린 메시는 스키닝 대신 정점 셰이더가 표를 인스턴스마다의 시각으로 읽습니다(먼 군중). 내용 번호가 바뀝니다.
-         * @details 표는 같은 원본 · 같은 클립을 쓰는 모든 캐릭터가 나눕니다(메시 객체 하나 — 그래서 한 배치 · 한 드로우). 스킨은 걸지 않습니다.
+         * @brief 정점 애니메이션 테이블(VAT)을 설정합니다. 설정한 메시는 스키닝 대신 정점 셰이더가 테이블을 인스턴스마다의 시각으로 읽습니다(먼 군중). 내용 번호가 바뀝니다.
+         * @details 테이블은 같은 원본과 같은 클립을 쓰는 모든 캐릭터가 공유한다(메시 객체 하나이므로 배치 하나, 드로우 하나다). 스킨은 설정하지 않는다.
          */
         void setVertexAnimation( shared_ptr<const MeshVertexAnimation> animation );
-        /** @brief 정점 애니메이션 표입니다. 없으면 nullptr 입니다. */
+        /** @brief 정점 애니메이션 테이블입니다. 없으면 nullptr 입니다. */
         const MeshVertexAnimation* findVertexAnimation() const { return _vertexAnimation.get(); }
         /** @brief 정점 개수를 반환합니다. */
         uint32 getVertexCount() const { return static_cast<uint32>( _listVertex.size() ); }
         /**
          * @brief 메시 공간 원점에서 가장 먼 정점까지의 거리입니다(원점 중심 경계 구의 반지름). `setVertices` 가 구합니다.
-         * @details 컴포넌트의 경계(`MeshComponent::getBoundsRadius`)와 GPU 컬링이 이것을 덮는다. 고정 반지름(단위 상자의 0.866)을 쓰면
-         *          그보다 큰 도형(캡슐 끝 · 평면)이 화면 가장자리에서 보이는데도 잘린다.
+         * @details 컴포넌트의 경계(`MeshComponent::getBoundsRadius`)와 GPU 컬링이 이 값을 쓴다. 고정 반지름(단위 상자의 0.866)을 쓰면
+         *          그보다 큰 도형(캡슐 끝, 평면)이 화면 가장자리에서 보이는데도 잘린다.
          */
         float32 getBoundingRadius() const { return _boundingRadius; }
         /** @brief 메시 공간의 축 정렬 경계(최소)입니다. 정점이 없으면 원점입니다. `setVertices` 가 구합니다. */
@@ -181,51 +181,51 @@ namespace sw
         const float3& getLocalBoundsMax() const { return _localBoundsMax; }
         /**
          * @brief 이 메시 **내용**의 프로세스 고유 번호입니다. 만들 때와 `setVertices` 때마다 새 번호를 받습니다.
-         * @details 정점 · 모프 풀은 메시 집합이 그대로인지를 이것으로 봅니다. 포인터만 보면 메시가 지워진 자리에 새 메시가
-         *          생기거나(할당기는 같은 크기의 자리를 곧바로 다시 준다) 같은 메시의 정점을 바꿀 때 "같은 집합" 으로 보여 옛 정점을 그립니다.
+         * @details 정점 풀과 모프 풀은 메시 집합이 그대로인지를 이 번호로 판단한다. 포인터만 보면 메시가 지워진 위치에 새 메시가
+         *          생기거나(할당기는 같은 크기의 공간을 곧바로 다시 준다) 같은 메시의 정점을 바꿀 때 "같은 집합" 으로 보여 옛 정점을 그린다.
          */
         uint64 getContentID() const { return _contentID; }
 
-        /** @brief 디바이스에 업로드(또는 재업로드)합니다. 같은 디바이스면 멱등입니다. */
+        /** @brief 디바이스에 업로드(또는 재업로드)합니다. 같은 디바이스면 여러 번 불러도 결과가 같습니다. */
         bool initRHI( IRHIDevice* pDevice ) override;
 
         /** @brief GPU 정점 버퍼 핸들을 반환합니다. */
         RHIBufferHandle getVertexBuffer() const { return _vertex._buffer; }
         /**
          * @brief 살아 있는 디바이스에 올라가 있는지 반환합니다.
-         * @details 옛 디바이스가 죽으면 통보(`RHIRenderResource`)가 먼저 와서 핸들을 비웁니다. 그래서 값이 남아
-         *          있다는 것만으로 "살아 있는 디바이스의 것" 임이 보장됩니다(업로드 큐가 백엔드 교체 뒤 다시 올릴 것을 이것으로 고릅니다).
+         * @details 옛 디바이스가 죽으면 통보(`RHIRenderResource`)가 먼저 와서 핸들을 비운다. 그래서 값이 남아
+         *          있다는 것만으로 "살아 있는 디바이스의 것" 임이 보장된다(업로드 큐는 백엔드 교체 뒤 다시 올릴 메시를 이 값으로 고른다).
          */
         bool isRHIValid() const { return _vertex.isResident(); }
 
     private:
-        /** @brief 정점 버퍼를 실제로 놓습니다. 살아 있는 디바이스면 돌려주고, 아니면 잊습니다. */
+        /** @brief 정점 버퍼를 실제로 해제합니다. 살아 있는 디바이스면 반환하고, 아니면 버립니다. */
         void releaseVertexBuffer();
-        /** @brief 새 내용 번호를 냅니다(프로세스 전역, 0 은 쓰지 않습니다). */
+        /** @brief 새 내용 번호를 발급합니다(프로세스 전역이며 0은 쓰지 않습니다). */
         static uint64 allocateContentID();
         /** @brief 정점에서 경계 반지름을 다시 구합니다. */
         void refreshBoundingRadius();
 
         vector<RHIVertex> _listVertex;
-        /// @brief setSkin 참고. 비었거나 `_listVertex` 와 같은 길이입니다.
+        /// @brief setSkin 을 참고하세요. 비어 있거나 `_listVertex` 와 길이가 같습니다.
         vector<MeshSkinVertex> _listSkinVertex;
-        /// @brief 스켈레톤 본 수입니다. 0 이면 스킨이 없습니다.
+        /// @brief 스켈레톤 본 수입니다. 0이면 스킨이 없습니다.
         uint32 _skinBoneCount{ 0 };
-        /// @brief setMorphTargets 참고.
+        /// @brief setMorphTargets 를 참고하세요.
         vector<MeshMorphTarget> _listMorphTarget;
-        /// @brief `createSkinInstance` 사본이 나눈 원본의 스킨 데이터 번호입니다. 0 이면 자기 내용 번호입니다(정점 · 스킨을 바꾸면 0 으로 돌아간다).
+        /// @brief `createSkinInstance` 사본이 공유하는 원본의 스킨 데이터 번호입니다. 0이면 자기 내용 번호를 씁니다(정점이나 스킨을 바꾸면 0으로 돌아갑니다).
         uint64 _sharedSkinDataID{ 0 };
-        /// @brief setVertexAnimation 참고.
+        /// @brief setVertexAnimation 을 참고하세요.
         shared_ptr<const MeshVertexAnimation> _vertexAnimation;
-        /// @brief getBoundingRadius 참고. setVertices 가 구합니다.
+        /// @brief getBoundingRadius 를 참고하세요. setVertices 가 구합니다.
         float32 _boundingRadius{ 0.0f };
         float3  _localBoundsMin{};
         float3  _localBoundsMax{};
-        /// @brief getContentID 참고. 만들 때와 setVertices 때 새로 받습니다.
+        /// @brief getContentID 를 참고하세요. 만들 때와 setVertices 때 새로 받습니다.
         uint64 _contentID{ allocateContentID() };
-        /// @brief setGPUMorphEnabled 참고. 이 메시가 모프 풀에 들어갈지 여부입니다.
+        /// @brief setGPUMorphEnabled 를 참고하세요. 이 메시가 모프 풀에 들어갈지 여부입니다.
         uint8 _bGPUMorph{ SW_FALSE };
-        /** @brief 정점 버퍼입니다. 어느 디바이스의 것인지를 함께 듭니다(RHIResidentBuffer). */
+        /** @brief 정점 버퍼입니다. 어느 디바이스의 것인지를 함께 가지고 있습니다(RHIResidentBuffer). */
         RHIResidentBuffer _vertex;
     };
 } // namespace sw

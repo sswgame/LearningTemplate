@@ -14,7 +14,7 @@ namespace sw
     MonsterCatalog::MonsterCatalog()
         : _mapMonster{}
     {
-        // 읽기 전에도 비어 있지 않다 — 데이터가 늦게 오거나 못 와도 `findMonster` 가 널만 돌려주지 않는다.
+        // 읽기 전에도 비어 있지 않게 한다. 데이터가 늦게 오거나 오지 않아도 `findMonster` 가 널만 반환하지 않는다.
         seedFallback();
     }
 
@@ -49,7 +49,7 @@ namespace sw
         clear();
         if ( XMLCatalog<MonsterCatalog>::loadFromResource( assetRelativePath ) )
             return true;
-        // 파일 · 루트가 없거나 `<Monster>` 가 하나도 없다(읽기 쪽이 이미 까닭을 알렸다) — 폴백을 심는다.
+        // 파일이나 루트가 없거나 `<Monster>` 가 하나도 없는 경우다(읽는 쪽이 이미 원인을 알렸다). 폴백을 채운다.
         SW_LOG_WARNING( "%# gave no monster definitions — using fallback monster definitions.", assetRelativePath );
         seedFallback();
         return false;
@@ -101,7 +101,7 @@ namespace sw
                     monsterDef._projectilePrefab = pProj;
             }
 
-            // 사격은 줄마다 한 발이다 — 한 번에 쏘는 패턴(겨냥 · 옆 · 부채)을 코드 없이 적는다.
+            // 사격은 줄마다 한 발이다. 한 번에 쏘는 패턴(겨냥, 옆, 부채)을 코드 없이 적을 수 있다.
             for ( XMLNode shotNode = node.findChild( "Shot" ); shotNode; shotNode = shotNode.findNextSibling( "Shot" ) )
             {
                 MonsterShotDef shot;
@@ -138,8 +138,8 @@ namespace sw
             _mapMonster[hashed_string( monsterDef._id.c_str() )] = monsterDef;
         }
 
-        // **읽었는데 하나도 없으면 실패다**(0 — 부르는 쪽이 폴백을 심는다). 주의: 성공으로 넘기면 `<Monster>` 를 `<monster>` 로 적은 오타 하나가
-        // **텅 빈 카탈로그**가 되고, 모든 `findMonster` 가 nullptr 이라 그 널을 다루는 쪽이 조용히 아무것도 안 한다.
+        // **읽었는데 하나도 없으면 실패로 본다**(0을 반환하면 호출한 쪽이 폴백을 채운다). 성공으로 넘기면 `<Monster>` 를 `<monster>` 로 잘못 적은 오타 하나가
+        // **텅 빈 카탈로그**가 되고, 모든 `findMonster` 가 nullptr 을 반환해서 그 널을 다루는 쪽이 조용히 아무것도 하지 않는다.
         if ( _mapMonster.empty() )
         {
             SW_LOG_WARNING( "No <Monster> entries in %#", sourceName );
@@ -173,7 +173,7 @@ namespace sw
         if ( pStr == nullptr )
             return MonsterArchetype::MeleePatrol;
 
-        // 이름은 리플렉션된 열거자 하나다(대소문자 무시). 열거자를 늘리면 여기는 고치지 않는다.
+        // 이름은 리플렉션된 열거자 하나로 찾는다(대소문자는 무시한다). 열거자를 늘려도 여기는 고치지 않는다.
         MonsterArchetype archetype{ MonsterArchetype::MeleePatrol };
         if ( engine::getTypeRegistry().enumFromString( pStr, archetype ) )
             return archetype;

@@ -52,7 +52,7 @@ namespace
             sw::Scene scene{ "NavBench" };
             if ( instantiate( scene, pPath ) == false )
                 return false;
-            sw::SceneNavigation&       navigation = scene.getObjectManager()->getSceneNavigation();
+            sw::SceneNavigation&       navigation = scene.getObjectManager()->getSceneService<sw::SceneNavigation>();
             const sw::NavMeshSettings& settings   = navigation.getSettings();
             const sw::NavAgentTypeDef* pType      = settings.findAgentType( sw::hashed_string{} );
             if ( pType == nullptr )
@@ -103,7 +103,7 @@ SW_TEST_CASE( NavMeshBenchTest, ThousandQueriesOnTheShooterArena )
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::Scene scene{ "NavBenchQuery" };
     SW_ASSERT_TRUE( Internal::instantiate( scene, Internal::kArenaPath ) );
-    sw::SceneNavigation& navigation = scene.getObjectManager()->getSceneNavigation();
+    sw::SceneNavigation& navigation = scene.getObjectManager()->getSceneService<sw::SceneNavigation>();
     const sw::INavMesh*  pNavMesh   = navigation.ensureNavMesh( sw::hashed_string{} );
     SW_ASSERT_NOT_NULL( pNavMesh );
     const sw::NavQueryFilter filter = navigation.getSettings().makeDefaultFilter();
@@ -157,13 +157,13 @@ SW_TEST_CASE( NavMeshBenchTest, CrowdUpdateWithHundredAndFiveHundredAgents )
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::Scene scene{ "NavBenchCrowd" };
     SW_ASSERT_TRUE( Internal::instantiate( scene, Internal::kArenaPath ) );
-    sw::INavMesh* pNavMesh = scene.getObjectManager()->getSceneNavigation().ensureNavMesh( sw::hashed_string{} );
+    sw::INavMesh* pNavMesh = scene.getObjectManager()->getSceneService<sw::SceneNavigation>().ensureNavMesh( sw::hashed_string{} );
     SW_ASSERT_NOT_NULL( pNavMesh );
     for ( const uint32 agentCount : { 100u, 500u } )
     {
         sw::unique_ptr<sw::INavCrowd> pCrowd = pNavMesh->createCrowd( agentCount, 1.0f );
         SW_ASSERT_NOT_NULL( pCrowd.get() );
-        pCrowd->setQueryFilter( scene.getObjectManager()->getSceneNavigation().getSettings().makeDefaultFilter() );
+        pCrowd->setQueryFilter( scene.getObjectManager()->getSceneService<sw::SceneNavigation>().getSettings().makeDefaultFilter() );
         Internal::Random        random;
         sw::NavCrowdAgentParams params;
         params._radius   = 0.4f;

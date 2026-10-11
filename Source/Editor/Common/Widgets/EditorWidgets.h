@@ -19,13 +19,13 @@ namespace sw
 namespace sw::editor
 {
     // ------------------------------------------------------------------------------
-    // 1) 드래그 페이로드 (색 타입 Color · style 은 EditorColor.h)
+    // 1) 드래그 페이로드 (색 타입 Color 와 style 은 EditorColor.h)
     // ------------------------------------------------------------------------------
-    /** @brief 콘텐츠 브라우저 → 뷰포트/인스펙터 애셋 드래그 페이로드 */
+    /** @brief 콘텐츠 브라우저에서 뷰포트나 인스펙터로 애셋을 드래그할 때 쓰는 페이로드 이름입니다. */
     inline constexpr const utf8* kAssetPathPayload = "SW_ASSET_PATH";
 
     // ------------------------------------------------------------------------------
-    // 2) 공유 위젯 클래스 — Vec3 / 컴포넌트 카드 / 헤더 / 칩 / 프로퍼티 행
+    // 2) 공유 위젯 클래스: Vec3, 컴포넌트 카드, 헤더, 칩, 프로퍼티 행
     // ------------------------------------------------------------------------------
     class SW_EDITOR_API EditorWidgets
     {
@@ -51,35 +51,35 @@ namespace sw::editor
          */
         static void drawSectionHeader( const utf8* pTitle, const utf8* pSubtitle = nullptr );
 
-        /** @brief 툴바 컨트롤 사이의 `|` 구분선입니다. SameLine 뒤에 이어서 그립니다. */
+        /** @brief 툴바 컨트롤 사이에 `|` 구분선을 그립니다. SameLine 뒤에 이어서 그립니다. */
         static void drawToolbarSeparator();
 
         /**
-         * @brief 기즈모 조작 모드(이동 · 회전 · 크기)와 로컬 공간 토글을 한 줄로 그립니다.
-         * @details 뷰포트 툴바와 인스펙터가 함께 씁니다 — 각자 그리면 한쪽만 고쳤을 때 **두 화면이 서로 다른 모드를
-         *          가리킵니다.** 값은 워크스페이스가 들고 있으므로(`getGizmoOperation`), 그리는 방법만 여기로 모읍니다.
+         * @brief 기즈모 조작 모드(이동, 회전, 크기)와 로컬 공간 토글을 한 줄로 그립니다.
+         * @details 뷰포트 툴바와 인스펙터가 함께 쓴다. 각자 그리면 한쪽만 고쳤을 때 두 화면이 서로 다른 모드를 가리킨다.
+         *          값은 워크스페이스가 보관하므로(`getGizmoOperation`) 여기에는 그리는 방법만 모은다.
          */
         static void drawGizmoOperationControls( bool bVertical = false );
 
         /**
-         * @brief 활성 · 비활성 색이 바뀌는 토글 · 필터 칩 버튼입니다. 클릭되면 true 입니다.
+         * @brief 활성과 비활성에 따라 색이 바뀌는 토글 및 필터 칩 버튼을 그립니다. 클릭되면 true 를 반환합니다.
          */
         static bool drawToggleButton( const utf8* pLabel, bool bActive, const Color& activeColor = style::kToggleActive );
         /**
-         * @brief 켬/끔 아이콘 단추(정사각, 한 줄 높이)입니다. 눌렸으면 true 입니다. 툴팁은 상태에 따라 @p pTooltipOn · @p pTooltipOff 입니다.
-         * @details 한 변은 `GetFrameHeight()` 라 글꼴 · DPI 배율을 함께 받는다. 픽셀 상수로 폭을 주면 150 % 에서 글자가 잘린다.
+         * @brief 켬/끔 아이콘 버튼(정사각, 한 줄 높이)을 그립니다. 눌렸으면 true 입니다. 툴팁은 상태에 따라 @p pTooltipOn 과 @p pTooltipOff 중 하나입니다.
+         * @details 한 변이 `GetFrameHeight()` 이므로 글꼴과 DPI 배율이 함께 반영된다. 픽셀 상수로 폭을 주면 150 % 배율에서 글자가 잘린다.
          */
         static bool drawToggleIconButton( const utf8* pID, bool bOn, const utf8* pIconOn, const utf8* pIconOff, const utf8* pTooltipOn,
                                           const utf8* pTooltipOff );
         /**
-         * @brief 켜진 상태를 색으로 보이는 아이콘 단추(정사각, 한 줄 높이)입니다. 눌렸으면 true 입니다(상태는 부르는 쪽이 바꾼다).
-         * @details 기즈모 모드 · 뷰포트 토글처럼 "지금 켜졌나" 가 색으로 보여야 하는 자리에 씁니다. 툴팁은 @p pTooltip 입니다.
+         * @brief 켜진 상태를 색으로 보여 주는 아이콘 버튼(정사각, 한 줄 높이)을 그립니다. 눌렸으면 true 입니다. 상태는 호출하는 쪽이 바꿉니다.
+         * @details 기즈모 모드나 뷰포트 토글처럼 켜졌는지가 색으로 보여야 할 때 쓴다. 툴팁은 @p pTooltip 이다.
          */
         static bool drawIconToggle( const utf8* pID, const utf8* pIcon, bool bActive, const utf8* pTooltip );
         /**
-         * @brief @p width 안에 이름을 최대 @p maxLineCount 줄로 그립니다. 넘치면 마지막 줄 끝을 말줄임으로 줄이고 툴팁에 전체를 보입니다.
-         * @details 줄 바꿈은 공백 · '_' · '-' · '.' 뒤에서 먼저 찾고, 없을 때만 글자 단위다(`EditorLabelLayoutUtil::breakLines`).
-         *          높이는 늘 @p maxLineCount 줄이다 — 타일 격자의 줄 높이가 이름마다 달라지지 않게.
+         * @brief @p width 안에 이름을 최대 @p maxLineCount 줄로 그립니다. 넘치면 마지막 줄 끝을 말줄임표로 줄이고 툴팁에 전체를 보여 줍니다.
+         * @details 줄 바꿈은 공백, '_', '-', '.' 뒤에서 먼저 찾고, 없을 때만 글자 단위로 나눈다(`EditorLabelLayoutUtil::breakLines`).
+         *          높이는 항상 @p maxLineCount 줄이다. 이름마다 높이가 달라져 타일 격자가 흐트러지는 것을 막는다.
          */
         static void drawClampedLabel( string_view text, float32 width, uint32 maxLineCount );
 
@@ -88,14 +88,14 @@ namespace sw::editor
 
         /**
          * @brief 검색 결과가 0건일 때의 안내를 그립니다.
-         * @details **데이터가 없는 것과 필터가 걸러낸 것은 다릅니다.** 아무것도 맞지 않는 검색어를 쳤을 때 설명 없는 빈 상자만
-         *          남으면 고장처럼 보입니다. 필터를 되짚어 주면 무엇을 지워야 하는지 바로 압니다.
-         * @param filter 현재 걸린 검색 문자열. 비어 있으면 필터 언급 없이 안내합니다.
+         * @details 데이터가 없는 것과 필터가 걸러 낸 것은 다르다. 맞는 항목이 없는 검색어를 입력했을 때 설명 없는 빈 상자만 남으면 고장처럼 보인다.
+         *          현재 필터를 알려 주면 무엇을 지워야 하는지 바로 알 수 있다.
+         * @param filter 현재 걸려 있는 검색 문자열입니다. 비어 있으면 필터를 언급하지 않고 안내합니다.
          */
         static void drawNoSearchResultHint( string_view filter );
-        /** @brief 0 건 안내를 그린 횟수입니다(에디터 자체 테스트가 "그렸다" 를 본다). */
+        /** @brief 0건 안내를 그린 횟수를 반환합니다. 에디터 자체 테스트가 안내가 그려졌는지 확인할 때 씁니다. */
         static uint32 getNoSearchResultHintCount();
-        /** @brief 검색어가 있는 0 건 안내를 이번 프레임이나 지난 프레임에 그렸으면 true 입니다(자동화 시나리오 탐침 `Editor.NoSearchResultHintShown`). */
+        /** @brief 검색어가 있는 0건 안내를 이번 프레임이나 지난 프레임에 그렸으면 true 입니다. 자동화 시나리오의 프로브 `Editor.NoSearchResultHintShown` 이 씁니다. */
         static bool wasFilteredNoResultHintDrawnRecently();
 
         /**
@@ -107,8 +107,8 @@ namespace sw::editor
         static void drawPanelStatus( const utf8* pText );
 
         /**
-         * @brief C 버퍼를 쓰는 검색 필드입니다. width 가 0 이면 사용 가능한 너비, 음수면 한 줄 전체입니다.
-         * @details @p pHint 가 nullptr 이면 지금 문화권의 "Search..." 입니다.
+         * @brief C 버퍼를 쓰는 검색 필드를 그립니다. width 가 0 이면 사용 가능한 너비, 음수면 한 줄 전체입니다.
+         * @details @p pHint 가 nullptr 이면 현재 로케일의 "Search..." 를 쓴다.
          */
         static bool drawSearchField( const utf8* pID, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint = nullptr,
                                      float32 width = 0.0f, bool bShowClear = true );
@@ -129,23 +129,23 @@ namespace sw::editor
         static void drawChip( const utf8* pLabel, const Color& color );
 
         /**
-         * @brief 프로퍼티 행의 라벨을 왼쪽에 그리고, 다음 항목이 @p labelWidth 부터 남은 폭을 다 쓰게 합니다.
-         * @details 라벨이 붙는 위젯(`drawAssetSlot` · `drawColorEdit`)이 이것으로 라벨 열을 맞춥니다. 행을 닫는 짝은 없습니다 — 다음 항목이 행의 끝입니다.
+         * @brief 프로퍼티 행의 라벨을 왼쪽에 그리고, 다음 항목이 @p labelWidth 부터 남은 폭을 모두 쓰게 합니다.
+         * @details 라벨이 붙는 위젯(`drawAssetSlot`, `drawColorEdit`)이 이 함수로 라벨 열을 맞춘다. 행을 닫는 함수는 없다. 다음 항목이 행의 끝이다.
          */
         static void drawPropertyRowBegin( const utf8* pLabel, float32 labelWidth = 120.0f );
 
         /**
-         * @brief `string` 을 직접 편집하는 한 줄 텍스트 입력입니다. 값이 바뀌면 true 입니다.
-         * @note **`string&` 을 받는 입력은 이것 하나입니다.** 검색창이 필요하면 `drawSearchField`(호출부가 버퍼를 소유합니다)나
-         *       이 함수를 쓰십시오.
-         * @details ImGui 의 크기 변경 콜백으로 `string` 자체를 버퍼로 쓰므로 길이 제한이 없습니다. 주의: `fixed_string<N>` 임시
-         *          버퍼에 베껴 편집하고 되쓰면 **그 크기를 넘는 문자열이 잘려서** 긴 대사 한 줄의 뒷부분이 사라집니다.
-         * @param pLabel ImGui 라벨(`##` 접두면 라벨을 감춥니다)
-         * @param text   편집 대상. 바뀔 때만 갱신됩니다.
-         * @param width  0 이면 ImGui 기본, 음수면 남는 자리 전부, 양수면 그 폭
+         * @brief `string` 을 직접 편집하는 한 줄 텍스트 입력을 그립니다. 값이 바뀌면 true 입니다.
+         * @note `string&` 을 받는 입력은 이 함수 하나입니다. 검색창이 필요하면 `drawSearchField`(호출하는 쪽이 버퍼를 소유한다)나
+         *       이 함수를 쓰세요.
+         * @details ImGui 의 크기 변경 콜백으로 `string` 자체를 버퍼로 쓰므로 길이 제한이 없다. `fixed_string<N>` 임시 버퍼에
+         *          복사해 편집한 뒤 되쓰면 그 크기를 넘는 문자열이 잘려서 긴 대사의 뒷부분이 사라진다.
+         * @param pLabel ImGui 라벨입니다. `##` 로 시작하면 라벨을 감춥니다.
+         * @param text   편집 대상입니다. 값이 바뀔 때만 갱신됩니다.
+         * @param width  0 이면 ImGui 기본 폭, 음수면 남은 폭 전부, 양수면 그 폭입니다.
          */
         static bool drawTextField( const utf8* pLabel, string& text, float32 width = 0.0f );
-        /** @brief `drawTextField` 의 여러 줄 판입니다(`PROPERTY( Multiline )`). 높이는 글 줄 수 @p lineCount 만큼, 폭은 남는 자리 전부입니다. */
+        /** @brief `drawTextField` 의 여러 줄 버전입니다(`PROPERTY( Multiline )`). 높이는 @p lineCount 줄만큼이고 폭은 남은 폭 전부입니다. */
         static bool drawTextFieldMultiline( const utf8* pLabel, string& text, uint32 lineCount = 4 );
 
         /**

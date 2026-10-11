@@ -15,7 +15,7 @@ namespace sw
             static constexpr uint16 kWaveFormatIeeeFloat  = 0x0003;
             static constexpr uint16 kWaveFormatExtensible = 0xFFFE;
 
-            /** @brief 확장형 하위 형식 GUID 에서 "PCM · IEEE float" 뒤 12 바이트입니다(KSDATAFORMAT_SUBTYPE_* 공통 꼬리). */
+            /** @brief 확장형 하위 형식 GUID 에서 "PCM, IEEE float" 뒤에 오는 12 바이트입니다(KSDATAFORMAT_SUBTYPE_* 공통 꼬리). */
             inline static constexpr uint8 kArrSubFormatTail[12] = { 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 };
 
             static uint16 readUint16LE( const uint8* pBytes ) { return static_cast<uint16>( pBytes[0] | ( pBytes[1] << 8 ) ); }
@@ -44,7 +44,7 @@ namespace sw
         const uint8* pData  = nullptr;
         uint32       dataSize{ 0 };
         bool         bHaveFmt{ false };
-        uint16       baseFormatTag{ 0 }; ///< PCM · IEEE float — 확장형이면 하위 형식에서 읽는다
+        uint16       baseFormatTag{ 0 }; ///< PCM 이나 IEEE float 이다. 확장형이면 하위 형식에서 읽는다.
 
         while ( offset + 8 <= byteCount )
         {
@@ -61,7 +61,7 @@ namespace sw
                 pcm._channelCount  = Internal::readUint16LE( pFmt + 2 );
                 pcm._sampleRate    = Internal::readUint32LE( pFmt + 4 );
                 pcm._bitsPerSample = Internal::readUint16LE( pFmt + 14 );
-                // 확장형: 유효 비트 · 채널 마스크 · 하위 형식 GUID 가 뒤에 온다. 하위 형식이 PCM · IEEE float 일 때만 받는다.
+                // 확장형이면 유효 비트, 채널 마스크, 하위 형식 GUID 가 뒤에 온다. 하위 형식이 PCM 이나 IEEE float 일 때만 받는다.
                 if ( baseFormatTag == Internal::kWaveFormatExtensible )
                 {
                     baseFormatTag = 0;

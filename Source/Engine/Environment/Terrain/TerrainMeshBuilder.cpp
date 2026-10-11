@@ -13,7 +13,7 @@ namespace sw
     {
         struct TerrainMeshBuilderInternal
         {
-            /** @brief 접은 뒤의 격자 자리(청크 안 칸 번호)입니다. */
+            /** @brief 접은 뒤의 격자 위치입니다(청크 안의 셀 번호). */
             struct GridPoint
             {
                 uint32 _x{ 0 };
@@ -23,7 +23,7 @@ namespace sw
             };
 
             /**
-             * @brief 청크 안 격자 자리 (x, z)(기본 칸 단위)를 변 접기에 맞춰 옮깁니다.
+             * @brief 청크 안 격자 위치 (x, z)(기본 셀 단위)를 변 접기에 맞춰 옮깁니다.
              * @details 이웃이 더 거친 변 위의 점은 그 변을 따라 아래쪽 거친 격자 점으로 내린다. 모서리 점은 두 변 모두의 거친 격자에 있다.
              */
             static GridPoint collapse( uint32 x, uint32 z, uint32 chunkCells, const uint32 ( &arrSideStep )[4] )
@@ -51,7 +51,7 @@ namespace sw
                 const float3  normal   = heightfield.computeSampleNormal( sampleX, sampleZ );
                 const float32 last     = static_cast<float32>( heightfield.getResolution() - 1 );
                 const float2  cellSize = heightfield.getCellSize();
-                // x · z 는 (정수 칸 차) × 칸 크기다 — (원점 + 칸 × 크기) − 이동 으로 빼면 청크마다 반올림이 달라져 이웃의 같은 정점이 어긋난다.
+                // x 와 z 는 (정수 셀 차이) × 셀 크기다. (원점 + 셀 × 크기) - 이동 으로 빼면 청크마다 반올림이 달라져 이웃의 같은 정점이 어긋난다.
                 const float32 localX = static_cast<float32>( static_cast<int32>( sampleX ) - static_cast<int32>( centerSampleX ) ) * cellSize._x;
                 const float32 localZ = static_cast<float32>( static_cast<int32>( sampleZ ) - static_cast<int32>( centerSampleZ ) ) * cellSize._y;
                 RHIVertex     vertex{};
@@ -70,7 +70,7 @@ namespace sw
                 return vertex;
             }
 
-            /** @brief 기본 칸 [x0, x0+step) × [z0, z0+step) 에 구멍이 하나라도 있으면 true 입니다. */
+            /** @brief 기본 셀 [x0, x0+step) × [z0, z0+step) 에 구멍이 하나라도 있으면 true 를 반환합니다. */
             static bool hasHole( const TerrainHeightfield& heightfield, uint32 cellX0, uint32 cellZ0, uint32 step )
             {
                 if ( heightfield.getHoleCells().empty() )
@@ -154,7 +154,7 @@ namespace sw
             return;
         lod               = MathUtil::min( lod, layout._maxLOD );
         const uint32 step = 1u << lod;
-        // 변마다 접는 간격(기본 칸 단위). 이웃이 더 고우면 그쪽이 이쪽에 맞춰 접으므로 이쪽은 자기 간격이다.
+        // 변마다 접는 간격(기본 셀 단위)이다. 이웃이 더 고우면 그쪽이 이쪽에 맞춰 접으므로 이쪽은 자기 간격을 쓴다.
         uint32 arrSideStep[4]{};
         for ( uint32 side = 0; side < 4; ++side )
         {

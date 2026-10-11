@@ -16,7 +16,7 @@ namespace sw
                 return pHooks != nullptr ? pHooks->getMaterialGroup( source ) : source._material;
             }
 
-            /** @brief 부품 하나를 병합 직전 꼴로 — 피팅 델타 · 쉬는 변환 · 소켓 본 묶음 · UV 옮김을 건 뒤 보이는 삼각형만 남긴다. */
+            /** @brief 부품 하나를 병합 직전 형태로 만듭니다. 피팅 델타, 쉬는 변환, 소켓 본 연결, UV 이동을 적용한 뒤 보이는 삼각형만 남깁니다. */
             static void prepareSource( const MeshMergeSource& source, const IMeshMergeHooks* pHooks, AppearanceGeometry& outPrepared )
             {
                 AppearanceGeometry transformed = *source._pGeometry;
@@ -90,7 +90,7 @@ namespace sw
             }
             if ( source._skeletonID != skeletonID )
             {
-                // 애니메이션 단위가 다르면 포즈 버퍼가 다르다 — 한 형상으로 그릴 수 없다.
+                // 애니메이션 단위가 다르면 포즈 버퍼가 다르므로 한 형상으로 그릴 수 없다.
                 if ( pOutError != nullptr )
                     *pOutError = string( "merge part '" ) + source._name.c_str() + "' belongs to another skeleton (animation unit); parts merge within one unit only";
                 return false;
@@ -98,7 +98,7 @@ namespace sw
         }
         outMerged._skeletonID = skeletonID;
 
-        // 머티리얼 묶음은 처음 나온 순서. 묶음 안의 부품은 입력 순서.
+        // 머티리얼 그룹은 처음 나온 순서이고, 그룹 안의 부품은 입력 순서다.
         vector<hashed_string> listGroup;
         vector<hashed_string> listSourceGroup( listSource.size() );
         for ( size_t sourceIndex = 0; sourceIndex < listSource.size(); ++sourceIndex )
@@ -155,7 +155,7 @@ namespace sw
         const MergedPartRange& range = merged._listPart[partIndex];
         if ( range._socketBone < 0 )
             return true;
-        // 강체 부품 — 쉬는 변환의 역으로 부품 공간에 돌려놓고 소켓 본 묶음을 푼다.
+        // 강체 부품은 쉬는 변환의 역으로 부품 공간에 되돌려 놓고 소켓 본 연결을 푼다.
         const float4x4 inverseRest = range._restTransform.invert();
         for ( float3& position : outGeometry._listPosition )
         {

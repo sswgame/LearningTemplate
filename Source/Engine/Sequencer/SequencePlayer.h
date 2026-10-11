@@ -13,7 +13,7 @@ namespace sw
 {
     /**
      * @class SequencePlayer
-     * @brief fps 로 프레임을 진행하고 collectActiveItems 로 현재 클립 · 이벤트를 찾습니다.
+     * @brief fps 로 프레임을 진행하고 collectActiveItems 로 현재 클립과 이벤트를 찾습니다.
      */
     class SW_API SequencePlayer
     {
@@ -40,7 +40,7 @@ namespace sw
         static constexpr int32 kNoLoopWrap = ( -2147483647 - 1 );
         /**
          * @brief 이번 `update` 가 루프를 되감았으면 되감기 **직전**의 프레임을, 아니면 `kNoLoopWrap` 을 반환합니다.
-         * @details 되감으면 이전 프레임이 `_frameMin - 1` 로 돌아가 (직전 프레임, `_frameMax`] 구간을 아무도 보지 않게 된다 — 끝쪽 이벤트가
+         * @details 되감으면 이전 프레임이 `_frameMin - 1` 로 돌아가 (직전 프레임, `_frameMax`] 구간을 아무도 보지 않게 된다. 끝쪽 이벤트가
          *          루프마다 빠지고, `_frameMax` 의 이벤트는 루프 중에 한 번도 뜨지 않는다. `SequenceTimelineUtil::applyPlayback` 이 이 값으로
          *          그 구간을 먼저 본다.
          */

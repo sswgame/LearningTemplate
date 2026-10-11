@@ -122,7 +122,7 @@ namespace sw
                 }
                 pick -= entry._weight;
             }
-            // 남은 pick 은 "없음" 몫이다.
+            // 남은 pick 은 "없음" 에 해당한다.
         }
     }
 

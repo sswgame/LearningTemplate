@@ -1,6 +1,6 @@
 /**
  * @file WindComponent.h
- * @brief 씬의 바람 — 방향 · 세기 · 돌풍입니다. 식생(`FoliageComponent`)이 틱마다 읽어 머티리얼에 싣고, 나중에 천 · 파티클 · 소리가 같은 값을 읽습니다.
+ * @brief 씬의 바람입니다. 방향, 세기, 돌풍을 담습니다. 식생(`FoliageComponent`)이 틱마다 읽어 머티리얼에 싣고, 나중에 천, 파티클, 소리가 같은 값을 읽습니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -16,9 +16,9 @@ namespace sw
     /** @brief 바람 값 한 벌입니다. 씬에 `WindComponent` 가 없으면 기본값(약한 바람)입니다. */
     struct WindSettings
     {
-        float2  _direction{ 1.0f, 0.0f }; ///< 정규화된 xz 방향
+        float2  _direction{ 1.0f, 0.0f }; ///< 정규화된 xz 방향이다.
         float32 _strength{ 0.35f };       ///< 기본 흔들림 세기(m, 높이 1 m 의 끝이 밀리는 양)
-        float32 _gustStrength{ 0.25f };   ///< 돌풍이 더하는 세기
+        float32 _gustStrength{ 0.25f };   ///< 돌풍이 더하는 세기다.
         float32 _gustFrequency{ 0.25f };  ///< 돌풍 주파수(Hz)
         float32 _swayFrequency{ 1.2f };   ///< 흔들림 주파수(Hz)
     };
@@ -39,7 +39,7 @@ namespace sw
         WindComponent();
         virtual ~WindComponent() override = default;
 
-        /** @brief 씬의 바람 목록(`ComponentRegistry`)에 듭니다 — `findWind` 가 씬 전체를 훑지 않고 이 목록을 봅니다. */
+        /** @brief 씬의 바람 목록(`ComponentRegistry`)에 등록합니다. `findWind` 가 씬 전체를 훑지 않고 이 목록을 봅니다. */
         void onRegister( GameObjectManager& manager ) override;
         void onUnregister( GameObjectManager& manager ) override;
         /** @brief 지금 값입니다. */

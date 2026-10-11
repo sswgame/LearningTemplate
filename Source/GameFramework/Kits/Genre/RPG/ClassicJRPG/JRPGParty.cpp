@@ -14,7 +14,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 틱마다 쓰는 이름 — 리터럴을 매번 intern 하지 않게 한 번만 만든다. */
+        /** @brief 틱마다 쓰는 이름입니다. 리터럴을 매번 intern 하지 않도록 한 번만 만듭니다. */
         struct JRPGPartyInternal
         {
             static const hashed_string& getAttackName()
@@ -266,7 +266,7 @@ namespace sw
                 StateArchiveUtil::writeName( outArchive, progress._manualID );
                 outArchive << progress._proficiency;
             }
-            // 장비는 칸 순서대로 아이템 id 만(빈 칸은 빈 이름) — 칸 구성은 `initialize` 의 것이다.
+            // 장비는 슬롯 순서대로 아이템 id 만 쓴다(빈 슬롯은 빈 이름). 슬롯 구성은 `initialize` 에서 받은 것이다.
             const vector<EquipSlot>& listSlot = member._equipment.getSlots();
             outArchive << static_cast<uint32>( listSlot.size() );
             for ( const EquipSlot& slot : listSlot )
@@ -287,7 +287,7 @@ namespace sw
     bool JRPGParty::readState( Archive& archive )
     {
         uint32 memberCount = 0;
-        // 멤버마다 id · 직업 · 이름(12) + 주문 · 비급 · 칸 수(12) + 레벨(20) + 능력치(28) + HP · MP · 내공(12) 이상
+        // 멤버마다 id, 직업, 이름(12) + 주문, 비급, 슬롯 수(12) + 레벨(20) + 능력치(28) + HP, MP, 내공(12) 바이트 이상
         if ( _pCatalog == nullptr || StateArchiveUtil::readCount( archive, 84, memberCount ) == false || memberCount > static_cast<uint32>( kMaxMembers ) )
             return false;
         vector<JRPGMember> listMember( memberCount );
@@ -306,7 +306,7 @@ namespace sw
                 if ( StateArchiveUtil::readName( archive, spellID ) == false )
                     return false;
             }
-            // 비급마다 이름(4) + 숙련(4)
+            // 비급마다 이름(4) + 숙련(4) 바이트
             if ( StateArchiveUtil::readCount( archive, 8, count ) == false )
                 return false;
             member._listManual.resize( count );
@@ -426,7 +426,7 @@ namespace sw
         {
             member._arrStat[index] += classDef._arrGrowth[index];
         }
-        // 오른 최대치만큼 지금 HP · MP 도 오른다(쓰러진 멤버는 그대로).
+        // 오른 최대치만큼 지금 HP 와 MP 도 오른다(쓰러진 멤버는 그대로 둔다).
         if ( member.isAlive() )
         {
             member._hp = MathUtil::min( member.getStat( JRPGStat::MaxHp ), member._hp + classDef._arrGrowth[static_cast<size_t>( JRPGStat::MaxHp )] );

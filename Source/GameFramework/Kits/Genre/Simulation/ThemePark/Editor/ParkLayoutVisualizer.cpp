@@ -1,6 +1,6 @@
 /**
  * @file ParkLayoutVisualizer.cpp
- * @brief 뷰포트 시각화 themepark.layout(툴바 "Park") — 배치 파일의 놀이기구 발자국 · 입구 · 코스터 트랙을 씬 뷰에 겹쳐 그립니다.
+ * @brief 뷰포트 시각화 themepark.layout(툴바 "Park")을 구현합니다. 배치 파일의 놀이기구 영역, 입구, 코스터 트랙을 씬 뷰에 겹쳐 그립니다.
  */
 #include "pch.h"
 
@@ -21,7 +21,7 @@ namespace sw::editor
             static void draw( const EditorViewportVisualizerArgs& args )
             {
                 ParkLayoutPreview& preview = ParkLayoutPreview::get();
-                (void)preview.refresh(); // 바뀌었을 때만 다시 읽는다 — 읽기 실패는 refresh 가 알린다
+                (void)preview.refresh(); // 바뀌었을 때만 다시 읽는다. 읽기 실패는 refresh 가 알린다
                 if ( preview.isLoaded() == false )
                     return;
                 static vector<EditorWorldSegment> s_listSegment; // 프레임마다 다시 채우는 재사용 버퍼

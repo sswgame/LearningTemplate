@@ -1,8 +1,10 @@
 /**
  * @file AIDirectorProfile.h
- * @brief 페이싱 감독의 데이터(`*.director.xml`) — 긴장도 모델 · 단계(쌓기 · 절정 · 쉼)와 넘어가는 조건 · 단계 곡선 · 조우/보상 풀입니다.
- * @details 장르를 모릅니다. 레프트 4 데드 AI 디렉터(긴장도 → 쌓기 · 절정 유지 · 쉼), RDR2 무작위 조우(시각 · 장소 · 플레이어 상태 조건 · 쿨다운),
- *          로그라이크 방 감독(가중 풀 · 보상 밀도)의 공통 부분을 데이터로 적습니다. 무엇을 낼지(조우 id 의 뜻)는 게임이 정합니다.
+ * @brief 페이싱 감독의 데이터(`*.director.xml`)를 정의합니다.
+ * @details 긴장도 모델, 단계(쌓기, 절정, 쉼)와 단계를 넘어가는 조건, 단계 곡선, 조우와 보상 풀을 담는다.
+ *          장르는 모른다. 레프트 4 데드의 AI 디렉터(긴장도에 따라 쌓기, 절정 유지, 쉼),
+ *          RDR2 의 무작위 조우(시각, 장소, 플레이어 상태 조건, 쿨다운), 로그라이크의 방 감독(가중 풀, 보상 밀도)이 공통으로 갖는 부분을 데이터로 적는다.
+ *          무엇을 낼지(조우 id 의 뜻)는 게임이 정한다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -19,7 +21,7 @@ namespace sw
 {
     class XMLNode;
 
-    /** @brief 긴장도 신호가 긴장도에 들어가는 방식입니다. */
+    /** @brief 긴장도 신호를 긴장도에 반영하는 방식입니다. */
     enum class AIDirectorSignalKind : uint8
     {
         Impulse = 0, ///< `addSignal( 양 )` 한 번에 양 × scale 이 더해진다(입은 피해 · 가까이서 쓰러뜨림)
@@ -57,7 +59,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 단계에서 나가는 길 하나입니다. 적은 절이 모두 참이어야 나갑니다(적지 않은 절은 늘 참). */
+    /** @brief 단계에서 나가는 길 하나입니다. 적은 절이 모두 참이어야 나가며, 적지 않은 절은 늘 참으로 봅니다. */
     struct AIDirectorExitDef
     {
         hashed_string _to{};
@@ -71,7 +73,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 페이싱 단계 하나입니다(쌓기 · 절정 · 쉼 — 이름과 수는 데이터가 정한다). */
+    /** @brief 페이싱 단계 하나입니다. 쌓기, 절정, 쉼 같은 이름과 단계의 수는 데이터가 정합니다. */
     struct AIDirectorPhaseDef
     {
         hashed_string             _id{};
@@ -85,14 +87,14 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 풀이 내는 것의 종류입니다 — 게임이 받는 사건의 갈래입니다. */
+    /** @brief 풀이 내는 것의 종류입니다. 게임이 받는 이벤트의 종류와 같습니다. */
     enum class AIDirectorPoolKind : uint8
     {
         Encounter = 0, ///< 조우 · 사건(호드 · 매복 · 길가의 낯선 이)
         Reward         ///< 보상 · 보급(탄약 · 회복 · 상자) — 예산 풀은 단계의 rewardScale 로 쌓인다
     };
 
-    /** @brief 풀이 고르는 때입니다. */
+    /** @brief 풀이 항목을 고르는 때입니다. */
     enum class AIDirectorPoolTrigger : uint8
     {
         PhaseEnter = 0, ///< 단계(`phase`)에 들어설 때 `picks` 번
@@ -106,7 +108,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 풀의 항목 하나 — 조우 · 사건 · 보상입니다. id 의 뜻은 게임이 압니다. */
+    /** @brief 풀의 항목 하나입니다. 조우, 이벤트, 보상 중 하나이며 id 의 뜻은 게임이 압니다. */
     struct SW_GF_API AIDirectorEncounterDef
     {
         hashed_string         _id{};
@@ -153,7 +155,8 @@ namespace sw
 {
     /**
      * @class AIDirectorProfile
-     * @brief `*.director.xml` 하나입니다. 모르는 원소 · 속성 · 종류 · 단계 · 신호, 겹친 id, 단계 없음은 로드 오류입니다(경고하고 false).
+     * @brief `*.director.xml` 하나입니다.
+     * @details 모르는 원소, 속성, 종류, 단계, 신호와 겹친 id, 단계 없음은 로드 오류이며, 경고하고 false 를 반환한다.
      * @code
      *     <AIDirector startPhase="BuildUp">
      *       <Calendar weathers="sunny,rain"/>                                         <!-- 조건 이름 검사(선택) -->
@@ -196,7 +199,7 @@ namespace sw
         const vector<AIDirectorPhaseDef>& getPhases() const { return _listPhase; }
         const vector<AIDirectorPoolDef>&  getPools() const { return _listPool; }
         int32                             getStartPhaseIndex() const { return _startPhaseIndex; }
-        /** @brief 이 프로필이 내는 모든 조우 · 보상 id 를 @p outListID 에 붙입니다(겹치지 않게) — 게임이 아는 id 인지 검사할 때 씁니다. */
+        /** @brief 이 프로필이 내는 모든 조우와 보상 id 를 @p outListID 에 겹치지 않게 붙입니다. 게임이 아는 id 인지 검사할 때 씁니다. */
         void collectEncounterIDs( vector<hashed_string>& outListID ) const;
 
     private:

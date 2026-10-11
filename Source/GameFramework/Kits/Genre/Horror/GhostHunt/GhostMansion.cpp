@@ -120,7 +120,7 @@ namespace sw
     void GhostMansion::update( float32 deltaTime )
     {
         _encounter.update( deltaTime );
-        // 게임에 넘길 목록에 바로 꺼내고, 이번에 들어온 구간만 훑는다(지역 목록 · 복사 없음).
+        // 게임에 넘길 목록에 바로 꺼내고, 이번에 들어온 구간만 훑는다(지역 목록과 복사가 없다).
         const size_t firstNew = _listGhostEvent.size();
         _encounter.drainEvents( _listGhostEvent );
         bool bCaughtAny = false;
@@ -186,7 +186,7 @@ namespace sw
         _listSearched[static_cast<size_t>( furnitureIndex )] = SW_TRUE;
         if ( _pLoot != nullptr && furniture._lootTable.empty() == false )
         {
-            // 가구마다 따로 씨앗을 내어 — 어느 가구부터 뒤져도 같은 것이 나온다.
+            // 가구마다 따로 시드를 내므로, 어느 가구부터 뒤져도 같은 것이 나온다.
             GameRandom random( GameHash::mix32( _seed ^ static_cast<uint32>( furnitureID.getHash() ) ) );
             (void)_pLoot->roll( furniture._lootTable, random, outLoot );
         }
@@ -225,7 +225,7 @@ namespace sw
     {
         const GhostRoomDef* pRoom = _pCatalog != nullptr ? _pCatalog->findRoom( roomID ) : nullptr;
         if ( pRoom == nullptr )
-            return true; // 유령이 정해지지 않은 방(복도)은 늘 밝다
+            return true; // 유령이 정해지지 않은 방(복도)은 항상 밝다
         return _pFlags != nullptr && _pFlags->hasFlag( pRoom->_lightFlag );
     }
 
@@ -274,7 +274,7 @@ namespace sw
         pushEvent( GhostMansionEventType::RoomLit, roomID, roomID );
         if ( pRoom->_keyReward.empty() )
             return;
-        // 가방이 없거나 차면 열쇠를 받지 못한다(알림도 없다) — 칸 수는 게임이 정한다.
+        // 가방이 없거나 가득 차면 열쇠를 받지 못한다(이벤트도 없다). 슬롯 수는 게임이 정한다.
         if ( _pInventory == nullptr || _pInventory->addItem( pRoom->_keyReward, 1 ) == 0 )
             return;
         pushEvent( GhostMansionEventType::KeyAwarded, pRoom->_keyReward, roomID );
@@ -291,7 +291,7 @@ namespace sw
     void GhostMansion::moveBooAway( size_t booIndex )
     {
         GhostBooRuntime& boo = _listBoo[booIndex];
-        // 이웃 방 — 유령은 벽을 지나므로 잠긴 문 · 일방통행을 가리지 않는다. 연결을 읽은 순서라 늘 같은 목록이다.
+        // 이웃 방을 찾는다. 유령은 벽을 지나므로 잠긴 문과 일방통행을 가리지 않는다. 연결을 읽은 순서대로이므로 항상 같은 목록이다.
         vector<hashed_string> listNeighbor;
         if ( _pAreaGraph != nullptr )
         {
@@ -315,7 +315,7 @@ namespace sw
         }
         if ( listNeighbor.empty() == false )
             boo._room = listNeighbor[static_cast<size_t>( _random.nextInt( 0, static_cast<int32>( listNeighbor.size() ) - 1 ) )];
-        // 새 방의 가구 중 다른 부가 숨지 않은 것 하나에 숨는다 — 없으면 방 어딘가.
+        // 새 방의 가구 중 다른 부가 숨지 않은 것 하나에 숨는다. 없으면 방 어딘가에 숨는다.
         vector<hashed_string> listHideout;
         for ( const GhostFurnitureDef& furniture : _pCatalog->getFurniture() )
         {
@@ -370,10 +370,10 @@ namespace sw
 
     bool GhostMansion::readState( Archive& archive )
     {
-        // 사본에 읽고 끝까지 맞으면 바꾼다 — 카탈로그 · 빌린 포인터는 사본이 그대로 든다.
+        // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 카탈로그와 빌린 포인터는 사본도 그대로 가지고 있다.
         GhostMansion restored = *this;
         uint32       booCount = 0;
-        // 부마다 이름 둘(8) + 체력 · 시간(8) + 상태(1) 이상
+        // 부마다 이름 둘(8) + 체력, 시간(8) + 상태(1) 이상
         const bool bHeadRead =
             restored._encounter.readState( archive ) && StateArchiveUtil::readRandom( archive, restored._random ) && StateArchiveUtil::readCount( archive, 17, booCount );
         if ( bHeadRead == false || booCount != _listBoo.size() )

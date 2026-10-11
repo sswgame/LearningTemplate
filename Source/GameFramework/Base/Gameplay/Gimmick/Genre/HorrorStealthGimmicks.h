@@ -1,6 +1,6 @@
 /**
  * @file HorrorStealthGimmicks.h
- * @brief 공포 · 잠입 기믹 — 놀래기 트리거, 깜빡이는 빛(퀘이크 빛 스타일 문자열), 숨는 곳(스마트 오브젝트 자리 + 숨음 태그), 소리 내는 것, 빛 노출 질의입니다.
+ * @brief 공포와 잠입 기믹입니다. 놀래기 트리거, 깜빡이는 라이트(퀘이크 라이트 스타일 문자열), 숨는 곳(스마트 오브젝트 슬롯과 숨음 태그), 소리 내는 것, 빛 노출 질의를 다룹니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -21,7 +21,7 @@ namespace sw
 
     /**
      * @class ScareTriggerComponent
-     * @brief 태그(보통 `Player`)를 가진 것이 처음 들어오면 연출 신호(`GimmickCueEvent` — `_cue`)와 소리를 냅니다. `_bOnce` 가 아니면 `_cooldown` 뒤에 다시 됩니다.
+     * @brief 태그(보통 `Player`)를 가진 것이 처음 들어오면 연출 신호(`GimmickCueEvent`, `_cue`)와 소리를 냅니다. `_bOnce` 가 꺼져 있으면 `_cooldown` 뒤에 다시 작동합니다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Scare Trigger", Tooltip = "Fires a scripted scare cue and sound when a tagged object enters" )
     class SW_GF_API ScareTriggerComponent : public Component
@@ -58,8 +58,8 @@ namespace sw
 {
     /**
      * @class FlickerLightComponent
-     * @brief 같은 오브젝트의 `LightComponent` 세기를 문자열 무늬로 깜빡입니다 — 퀘이크 빛 스타일('a' = 0, 'm' = 1, 'z' = 2배), `_rate` 글자/초.
-     * @details 걸음 수로 글자를 고르므로 결정적입니다(같은 걸음 = 같은 밝기). 처음 세기를 기준으로 곱하고, 바뀔 때만 틱 뒤에 씁니다.
+     * @brief 같은 오브젝트의 `LightComponent` 세기를 문자열 패턴으로 깜빡입니다. 퀘이크 라이트 스타일이며 'a' 는 0, 'm' 은 1, 'z' 는 2배이고, 속도는 `_rate` 글자/초입니다.
+     * @details 스텝 수로 글자를 고르므로 결정적이다. 같은 스텝이면 같은 밝기가 나온다. 처음 세기를 기준으로 곱하고, 바뀔 때만 틱 뒤에 쓴다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Flicker Light", Tooltip = "Drives the light intensity from a Quake-style pattern string" )
     class SW_GF_API FlickerLightComponent : public Component
@@ -72,7 +72,7 @@ namespace sw
 
         void onBeginPlay() override;
         void onTick( float32 deltaTime ) override;
-        /** @brief 걸음 @p step 의 밝기 배율입니다(무늬가 비면 1). */
+        /** @brief 스텝 @p step 의 밝기 배율입니다. 패턴이 비어 있으면 1 입니다. */
         float32 computeScaleAtStep( int32 step ) const;
 
     private:
@@ -93,8 +93,8 @@ namespace sw
 {
     /**
      * @class HidingSpotComponent
-     * @brief 숨는 곳(사물함 · 옷장 · 침대 밑) — 같은 오브젝트의 `SmartObjectComponent` 자리(Activity.Hide)를 차지하면 `State.Hidden` 태그를 붙입니다.
-     *        AI 감각은 그 태그를 보고 보지 않습니다(`isHidden`). 상호작용(Hide)을 끝내면 들어가고 다시 끝내면 나옵니다(센서의 사용 알림).
+     * @brief 숨는 곳입니다(사물함, 옷장, 침대 밑). 같은 오브젝트의 `SmartObjectComponent` 슬롯(Activity.Hide)을 차지하면 `State.Hidden` 태그를 붙입니다.
+     *        AI 감각은 그 태그를 보고 대상을 보지 않습니다(`isHidden`). 상호작용(Hide)을 끝내면 들어가고, 다시 끝내면 나옵니다. 센서의 사용 알림을 읽어서 처리합니다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Hiding Spot", Tooltip = "Claims a smart object slot and tags the occupant as hidden" )
     class SW_GF_API HidingSpotComponent : public Component
@@ -106,11 +106,11 @@ namespace sw
         virtual ~HidingSpotComponent() override = default;
 
         void onTick( float32 deltaTime ) override;
-        /** @brief 숨깁니다. 자리가 없으면 false 입니다. */
+        /** @brief 숨깁니다. 슬롯이 없으면 false 입니다. */
         [[nodiscard]] bool enter( GameObject& who );
         /** @brief 나옵니다. 숨어 있지 않았으면 false 입니다. */
         bool exit( GameObject& who );
-        /** @brief 숨은 태그를 가졌는가입니다(AI 감각이 묻는다). */
+        /** @brief 숨음 태그를 가지고 있으면 true 입니다. AI 감각이 이 값을 묻습니다. */
         static bool isHidden( const GameObject& object );
     };
 } // namespace sw
@@ -119,8 +119,8 @@ namespace sw
 {
     /**
      * @class NoiseEmitterComponent
-     * @brief 소리를 냅니다 — `emit` 로 직접, `_interval` 마다(기계), 같은 오브젝트의 센서에 새로 올라선 것이 있을 때(삐걱이는 마루). `GimmickNoiseEvent` 와
-     *        마지막 반경(`getNoiseRadius` — `AIStimulus::_noiseRadius` 로 넘긴다)을 남깁니다.
+     * @brief 소리를 냅니다. `emit` 로 직접 낼 수 있고, `_interval` 마다 낼 수 있으며(기계), 같은 오브젝트의 센서에 새로 올라선 것이 있을 때도 냅니다(삐걱이는 마루). `GimmickNoiseEvent` 와
+     *        마지막 반경(`getNoiseRadius`)을 남기며, 반경은 `AIStimulus::_noiseRadius` 로 넘깁니다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Noise Emitter", Tooltip = "Emits noise events AI hearing can use (periodic, on step, or scripted)" )
     class SW_GF_API NoiseEmitterComponent : public Component
@@ -162,8 +162,8 @@ namespace sw
 {
     /**
      * @struct LightExposure
-     * @brief 잠입의 빛 노출 — 한 자리가 씬의 빛(점 · 스폿 · 방향)에 얼마나 드러나는가(0 = 어둠). 점 · 스폿은 반경 안 (1 − d/r)² × 세기(스폿은 원뿔 밖 0),
-     *        방향광은 세기 그대로입니다. @p bOcclusion 이면 빛까지 광선이 막히면 빼고(방향광은 빛 반대쪽 100 m), 다른 경우는 가림을 보지 않습니다.
+     * @brief 잠입의 빛 노출입니다. 한 위치가 씬의 라이트(점, 스폿, 방향)에 얼마나 드러나는지 계산하며, 0 이면 어둠입니다. 점 라이트와 스폿 라이트는 반경 안에서 (1 − d/r)² × 세기이고(스폿은 원뿔 밖이면 0),
+     *        방향광은 세기 그대로입니다. @p bOcclusion 이 켜져 있으면 라이트까지 광선이 막힐 때 그 라이트를 뺍니다(방향광은 라이트 반대쪽 100 m 까지 검사). 꺼져 있으면 가림을 검사하지 않습니다.
      */
     struct SW_GF_API LightExposure
     {

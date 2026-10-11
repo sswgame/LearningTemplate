@@ -11,14 +11,14 @@ namespace sw
         struct BlendCurveInternal
         {
 
-            /** @brief 0 에서 출발해 1 로 다가가는 스프링의 자리입니다(속도 0 출발, 감쇠비 ≥ 1 이라 넘치지 않는다). */
+            /** @brief 0 에서 출발해 1 로 다가가는 스프링의 값을 구합니다(속도 0 에서 출발하고, 감쇠비 ≥ 1 이라 넘치지 않습니다). */
             static float32 computeSpringPosition( float32 seconds, float32 angularFrequency, float32 dampingRatio )
             {
                 const float32 omegaTime = angularFrequency * seconds;
                 const float32 root      = MathUtil::sqrt( MathUtil::max( 0.0f, dampingRatio * dampingRatio - 1.0f ) );
                 if ( root < 1.0e-3f )
                     return 1.0f - ( 1.0f + omegaTime ) * ::expf( -omegaTime );
-                // 과감쇠 — 두 실근 r1 · r2 의 지수 합.
+                // 과감쇠: 두 실근 r1, r2 의 지수 합이다.
                 const float32 rootSlow = -( dampingRatio - root );
                 const float32 rootFast = -( dampingRatio + root );
                 const float32 decay    = ( rootFast * ::expf( rootSlow * omegaTime ) - rootSlow * ::expf( rootFast * omegaTime ) ) / ( rootFast - rootSlow );
@@ -32,7 +32,7 @@ namespace sw
                 const float32 endPosition      = computeSpringPosition( spec._duration, angularFrequency, dampingRatio );
                 if ( endPosition < 1.0e-6f )
                     return normalizedTime;
-                // 끝의 자리로 나눠 1 에서 1 — 스프링이 다 붙기 전에 블렌드가 끝나도 튀지 않는다.
+                // 끝 값으로 나눠 1 에서 1 이 되게 한다. 스프링이 다 붙기 전에 블렌드가 끝나도 튀지 않는다.
                 return computeSpringPosition( normalizedTime * spec._duration, angularFrequency, dampingRatio ) / endPosition;
             }
 

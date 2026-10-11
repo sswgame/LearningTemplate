@@ -1,11 +1,11 @@
 /**
  * @file PhysicsAsset.h
- * @brief 물리 에셋(`*.physics.xml`) — 뼈마다 바디(셰이프 · 질량 · 재질 · 레이어) · 부모 뼈와의 관절(스윙 · 비틀림 한계) · 충돌을 끈 쌍 · 히트 존입니다.
- * @details 래그돌 · 히트박스 · 천 충돌체가 함께 쓰는 하나의 에셋입니다(언리얼 Physics Asset). 스켈레톤 타입을 모릅니다 — 뼈를 이름으로 적고,
- *          쓰는 쪽이 이름 배열로 검사합니다(`validateAgainstSkeleton` — 모르는 뼈는 오류). 래그돌로 세우는 것은 `PhysicsRagdollBuilder` 입니다.
+ * @brief 물리 에셋(`*.physics.xml`)입니다. 뼈마다 바디(셰이프, 질량, 재질, 레이어), 부모 뼈와의 관절(스윙과 비틀림 한계), 충돌을 끈 쌍, 히트 존을 담습니다.
+ * @details 래그돌, 히트박스, 천 충돌체가 함께 쓰는 하나의 에셋이다(언리얼의 Physics Asset). 스켈레톤 타입을 모르므로 뼈를 이름으로 적고,
+ *          쓰는 쪽이 이름 배열로 검사한다(`validateAgainstSkeleton`, 모르는 뼈는 오류). 래그돌로 만드는 일은 `PhysicsRagdollBuilder` 가 한다.
  *
- *          셰이프 · 관절 축은 **뼈 로컬**입니다(바디의 틀 = 뼈의 틀). 관절은 그 뼈의 바디와, 부모 사슬에서 가장 가까운 바디가 있는 뼈를 잇고,
- *          자리는 이 뼈의 원점입니다. 루트 바디(부모 쪽 바디가 없는 것)의 관절은 쓰지 않습니다.
+ *          셰이프와 관절 축은 **뼈 로컬**이다(바디의 좌표계가 뼈의 좌표계다). 관절은 그 뼈의 바디와, 부모 체인에서 가장 가까운 바디가 있는 뼈를 연결하고,
+ *          위치는 이 뼈의 원점이다. 루트 바디(부모 쪽 바디가 없는 것)의 관절은 쓰지 않는다.
  * @code
  *     <PhysicsAsset _defaultLayer="Ragdoll" _bCollideJointedBodies="false">
  *         <_listBody>
@@ -34,7 +34,7 @@
 
 namespace sw
 {
-    /** @brief 뼈의 바디를 부모 쪽 바디에 잇는 관절입니다. 축은 뼈 로컬, 각은 라디안입니다. */
+    /** @brief 뼈의 바디를 부모 쪽 바디에 연결하는 관절입니다. 축은 뼈 로컬이고, 각은 라디안입니다. */
     REFLECT()
     struct SW_API PhysicsAssetJointDef
     {
@@ -59,7 +59,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 바디의 히트 존 — 맞은 바디로 부위와 피해 배율을 고릅니다(히트박스). 이름이 비면 히트 존이 아닙니다. */
+    /** @brief 바디의 히트 존입니다. 맞은 바디로 부위와 피해 배율을 고릅니다(히트박스). 이름이 비어 있으면 히트 존이 아닙니다. */
     REFLECT()
     struct SW_API PhysicsHitZoneDef
     {
@@ -99,7 +99,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 충돌을 끈 뼈 쌍입니다(관절로 잇지 않은 이웃 — 골반과 허벅지 반대쪽 등). */
+    /** @brief 충돌을 끈 뼈 쌍입니다(관절로 연결하지 않은 이웃, 예를 들어 골반과 반대쪽 허벅지). */
     REFLECT()
     struct SW_API PhysicsAssetPairDef
     {
@@ -129,7 +129,7 @@ namespace sw
         PROPERTY( Tooltip = "Bodies connected by a joint collide with each other" )
         bool _bCollideJointedBodies{ false };
 
-        /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 모르는 키 · 열거자 · 겹친 뼈 · 셰이프 없는 바디 · 모르는 쌍 뼈는 오류이고 false 입니다. */
+        /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 모르는 키나 열거자, 겹친 뼈, 셰이프 없는 바디, 모르는 쌍 뼈는 오류이며 false 를 반환합니다. */
         [[nodiscard]] bool loadFromResource( string_view resourcePath );
         /** @brief XML 문자열을 읽고 검사합니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );

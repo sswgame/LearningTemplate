@@ -1,9 +1,9 @@
 /**
  * @file ProfilerPanel.h
- * @brief 프로파일링 창입니다 — 엔진 프로파일러의 실시간 구간 표 · GPU 패스 표 · 프레임 그래프, 메모리, "Tracy 열기".
- * @details 상태 · 집계는 ImGui 없는 `ProfilerScopeHistory` 가 맡고(EditorTest), 여기는 그리기만 합니다. 엔진 표만 읽으므로 Tracy 가 없는 빌드에서도 같습니다.
- *          Timeline 탭은 최근 몇 프레임의 계측 구간을 스레드마다 펼칩니다(`ProfilerTimeline`, 배치는 ImGui 없는 `ProfilerTimelineLayout`) — 빠른 확인용이고,
- *          긴 시간축 분석(GPU 큐 · 잠금 · 컨텍스트 전환)은 외부 Tracy 뷰어가 맡습니다(`EditorTracyLauncher`).
+ * @brief 엔진 프로파일러의 실시간 구간 테이블, GPU 패스 테이블, 프레임 그래프, 메모리, "Tracy 열기" 를 보여 주는 프로파일링 창입니다.
+ * @details 상태와 집계는 ImGui 에 의존하지 않는 `ProfilerScopeHistory` 가 맡고(EditorTest), 이 창은 그리기만 한다. 엔진 테이블만 읽으므로 Tracy 가 없는 빌드에서도 같게 동작한다.
+ *          Timeline 탭은 최근 몇 프레임의 계측 구간을 스레드별로 펼친다(`ProfilerTimeline`, 배치는 ImGui 에 의존하지 않는 `ProfilerTimelineLayout`). 빠른 확인용이다.
+ *          긴 시간축 분석(GPU 큐, 락, 컨텍스트 전환)은 외부 Tracy 뷰어가 맡는다(`EditorTracyLauncher`).
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -20,83 +20,83 @@
 
 namespace sw::editor
 {
-    /** @brief 메모리 · 성능 프로파일러 탭을 보여 주는 에디터 도구 창입니다. */
+    /** @brief 메모리와 성능 프로파일러 탭을 보여 주는 에디터 도구 창입니다. */
     class ProfilerPanel : public IEditorPanel
     {
     public:
         /** @brief 프로파일러 창을 만듭니다. */
         ProfilerPanel();
-        /** @brief 추가 해제할 GPU 리소스는 없습니다. */
+        /** @brief 해제할 GPU 리소스가 없으므로 아무것도 하지 않습니다. */
         virtual ~ProfilerPanel() override = default;
 
         // ------------------------------------------------------------------------------
-        // 1) IEditorPanel — 제목/그리기
+        // 1) IEditorPanel: 제목과 그리기
         // ------------------------------------------------------------------------------
         /** @brief 창 제목을 반환합니다. */
         const utf8* getPanelTitle() const override { return "Profiler"; }
         /** @brief 프로파일러 UI를 그립니다. */
         void drawContent() override;
-        /** @brief 필요할 때 여는 도구라 닫힌 채 시작합니다. */
+        /** @brief 필요할 때 여는 도구이므로 닫힌 채로 시작합니다. */
         bool isToolPanel() const override { return true; }
 
     private:
         /** @brief 메모리 프로파일 탭을 그립니다. */
         void drawMemoryTab();
-        /** @brief GPU 메모리 탭을 그립니다 — `-gv_profileFrames` 보고의 GPU 표와 같은 숫자(장부 줄별 · 드라이버 · 엔진 밖)입니다. */
+        /** @brief GPU 메모리 탭을 그립니다. `-gv_profileFrames` 보고의 GPU 테이블과 같은 수치(장부 항목별, 드라이버, 엔진 밖)를 보여 줍니다. */
         void drawGPUMemoryTab();
-        /** @brief 실시간 FPS 및 씬 성능 진단 탭을 그립니다. */
+        /** @brief 실시간 FPS 와 씬 성능 진단 탭을 그립니다. */
         void drawPerformanceTab();
-        /** @brief 구간 표 탭입니다(CPU 구간 · 카운터 또는 GPU 패스). 위에 프레임 그래프와 계측 · Tracy 줄이 있습니다. */
+        /** @brief 구간 테이블 탭을 그립니다. CPU 구간과 카운터 또는 GPU 패스를 보여 주며, 위쪽에 프레임 그래프와 계측, Tracy 행이 있습니다. */
         void drawScopeTab( ProfilerScopeKind kind );
-        /** @brief 계측 켜기 · 창 크기 · Tracy 상태와 "Open Tracy" 버튼 줄을 그립니다. */
+        /** @brief 계측 켜기, 창 크기, Tracy 상태, "Open Tracy" 버튼이 있는 행을 그립니다. */
         void drawCaptureControls();
         /** @brief 최근 N 프레임의 GT.Frame · RT.Frame · GPU.Frame 그래프를 그립니다. */
         void drawFrameGraph();
-        /** @brief 지금 조건으로 구간 표를 그립니다(정렬은 머리줄을 눌러 바꾼다). */
+        /** @brief 현재 조건으로 구간 테이블을 그립니다. 헤더를 눌러 정렬을 바꿉니다. */
         void drawScopeTable( ProfilerScopeKind kind );
-        /** @brief 스레드 미니 타임라인 탭입니다 — 녹화 · 최근 프레임 수 · Freeze · 확대(휠) · 이동(끌기) · 툴팁 · 프레임 경계선. */
+        /** @brief 스레드 미니 타임라인 탭을 그립니다. 녹화, 최근 프레임 수, Freeze, 휠 확대, 드래그 이동, 툴팁, 프레임 경계선을 지원합니다. */
         void drawTimelineTab();
         /**
-         * @brief 타임라인 캔버스(스레드 줄 · 사각형 · 프레임 경계선 · 툴팁)를 그립니다.
-         * @param listThread 그릴 스레드(살아 있는 기록 + 불러온 트레이스를 겹친 목록)
-         * @param pLoadedSlotName 불러온 트레이스의 구간 이름 표(없으면 nullptr) — `kLoadedSlotBase` 이상인 슬롯이 이 표를 가리킨다
+         * @brief 타임라인 캔버스를 그립니다. 스레드 행, 사각형, 프레임 경계선, 툴팁이 포함됩니다.
+         * @param listThread 그릴 스레드 목록입니다. 살아 있는 기록에 불러온 트레이스를 겹친 것입니다.
+         * @param pLoadedSlotName 불러온 트레이스의 구간 이름 테이블입니다. 없으면 nullptr 이며, `kLoadedSlotBase` 이상인 슬롯이 이 테이블을 가리킵니다.
          */
         void drawTimelineCanvas( const vector<ProfilerTimelineThread>& listThread, const vector<string>* pLoadedSlotName );
 #if SW_PROFILER_TRACE_ENABLED
-        /** @brief 저장한 트레이스를 불러오고 지우는 줄과 구간 이름 검색 칸을 그립니다. */
+        /** @brief 저장한 트레이스를 불러오고 지우는 행과 구간 이름 검색란을 그립니다. */
         void drawTraceControls();
-        /** @brief 불러온 트레이스를 살아 있는 기록 아래에 겹쳐(첫 시각을 맞춰) 그릴 목록으로 만듭니다. */
+        /** @brief 불러온 트레이스를 살아 있는 기록 아래에 겹쳐 그릴 목록으로 만듭니다. 첫 시각을 맞춰 겹칩니다. */
         void composeTimelineDraw();
 #endif
 
-        /** @brief 호출 트리 탭입니다 — 타임라인 녹화의 사건을 경로로 접어 합 · 자기 시간 · 횟수를 보인다(유니티 Profiler Hierarchy). */
+        /** @brief 호출 트리 탭을 그립니다. 타임라인 녹화의 이벤트를 경로별로 합쳐 총 시간, 자기 시간, 호출 횟수를 보여 줍니다(유니티의 Profiler Hierarchy 에 해당). */
         void drawCallTreeTab();
-        /** @brief 호출 트리 노드 하나와 그 자식을 표 줄로 그립니다. */
+        /** @brief 호출 트리 노드 하나와 그 자식을 테이블 행으로 그립니다. */
         void drawCallTreeNode( uint32 nodeIndex );
-        /** @brief 새로 담은 프레임의 GT.Frame 이 임계값을 넘었으면 담기를 멈추고 플레이를 일시정지합니다(Pause on spike). */
+        /** @brief 새로 수집한 프레임의 GT.Frame 이 임계값을 넘었으면 수집을 멈추고 플레이를 일시정지합니다(Pause on spike). */
         void pauseOnSpike();
         /** @brief 캡처 파일 경로(`Saved/Profiler/ProfilerCapture.txt`)입니다. */
         static string getCaptureFilePath();
 
     public:
-        /** @brief 탐침 — 표가 보이는 프레임(0 = 가장 최근)입니다. */
+        /** @brief 프로브용입니다. 테이블이 보여 주는 프레임을 반환합니다. 0 이 가장 최근입니다. */
         uint32 getSelectedFrameOffset() const { return _rowQuery._frameOffset; }
-        /** @brief 탐침 — 담기를 멈췄으면(스파이크 · 캡처 열기) true 입니다. */
+        /** @brief 프로브용입니다. 수집을 멈췄으면 true 입니다. 스파이크를 잡았거나 캡처 파일을 열었을 때 멈춥니다. */
         bool isCapturePaused() const { return _bCapturePaused == SW_TRUE; }
-        /** @brief 탐침 — 담은 프레임 수입니다. */
+        /** @brief 프로브용입니다. 수집한 프레임 수를 반환합니다. */
         uint64 getCapturedFrameCount() const { return _scopeHistory.getCapturedFrameCount(); }
-        /** @brief 탐침 — 마지막으로 그린 호출 트리의 노드 수입니다. */
+        /** @brief 프로브용입니다. 마지막으로 그린 호출 트리의 노드 수를 반환합니다. */
         uint32 getCallTreeNodeCount() const { return static_cast<uint32>( _listCallNode.size() ); }
 #if SW_PROFILER_TRACE_ENABLED
-        /** @brief 탐침 — 불러온 트레이스의 스레드 수(없으면 0)입니다. */
+        /** @brief 프로브용입니다. 불러온 트레이스의 스레드 수를 반환합니다. 없으면 0 입니다. */
         uint32 getLoadedTraceThreadCount() const { return _bLoadedTrace == SW_TRUE ? static_cast<uint32>( _loadedTrace._listThread.size() ) : 0; }
-        /** @brief 탐침 — 마지막으로 그린 타임라인에서 검색어와 맞은 사건 수입니다(검색어가 없으면 모든 사건). */
+        /** @brief 프로브용입니다. 마지막으로 그린 타임라인에서 검색어와 일치한 이벤트 수를 반환합니다. 검색어가 없으면 모든 이벤트입니다. */
         uint32 getTraceSearchMatchCount() const { return _traceSearchMatched; }
-        /** @brief 구간 이름 검색어를 정합니다(자동화가 입력 흉내 없이 쓴다). */
+        /** @brief 구간 이름 검색어를 정합니다. 자동화가 입력을 흉내 내지 않고 바로 설정할 때 씁니다. */
         void setTraceSearch( const utf8* pText );
-        /** @brief 저장 폴더의 가장 최근 트레이스를 불러옵니다. 성공하면 true. */
+        /** @brief 저장 폴더의 가장 최근 트레이스를 불러옵니다. 성공하면 true 입니다. */
         [[nodiscard]] bool loadLatestTrace();
-        /** @brief 지정한 파일을 불러옵니다. 성공하면 true. */
+        /** @brief 지정한 파일을 불러옵니다. 성공하면 true 입니다. */
         [[nodiscard]] bool loadTraceFile( string_view path );
 #endif
 
@@ -109,37 +109,37 @@ namespace sw::editor
         uint32                         _historyOffset;
         EditorResourceCatalogJob       _catalogJob;
         EditorResourceCatalogCounts    _catalogCounts;
-        ProfilerScopeHistory           _scopeHistory;      ///< 최근 N 프레임 고리(ImGui 없음)
-        ProfilerRowQuery               _rowQuery;          ///< 검색어 · 정렬(종류는 탭이 정한다)
-        vector<ProfilerScopeRow>       _listScratchRow;    ///< 표 줄(프레임마다 다시 쓴다)
-        vector<float32>                _listScratchSeries; ///< 그래프 값(프레임마다 다시 쓴다)
+        ProfilerScopeHistory           _scopeHistory;      ///< 최근 N 프레임을 담는 링 버퍼(ImGui 에 의존하지 않는다)
+        ProfilerRowQuery               _rowQuery;          ///< 검색어와 정렬(종류는 탭이 정한다)
+        vector<ProfilerScopeRow>       _listScratchRow;    ///< 테이블 행(프레임마다 다시 채운다)
+        vector<float32>                _listScratchSeries; ///< 그래프 값(프레임마다 다시 채운다)
         utf8                           _arrFilter[constant::kMaxBuffer128];
         EditorTracyLaunchResult        _lastTracyResult;        ///< 마지막 "Open Tracy" 결과(패널에 한 줄로 보인다)
-        vector<ProfilerTimelineThread> _listTimelineThread;     ///< 타임라인 사건(Freeze 면 그대로 둔다)
-        vector<ProfilerTimelineRect>   _listTimelineRect;       ///< 배치 결과(프레임마다 다시 쓴다)
-        vector<uint16>                 _listTimelineLaneCount;  ///< 스레드마다 겹 수
+        vector<ProfilerTimelineThread> _listTimelineThread;     ///< 타임라인 이벤트(Freeze 면 그대로 둔다)
+        vector<ProfilerTimelineRect>   _listTimelineRect;       ///< 배치 결과(프레임마다 다시 채운다)
+        vector<uint16>                 _listTimelineLaneCount;  ///< 스레드마다 겹친 레인 수
         vector<uint64>                 _listTimelineFrameBegin; ///< 보이는 범위의 프레임 경계
-        uint64                         _timelineWindowBegin;    ///< 모은 구간(최근 N 프레임)
+        uint64                         _timelineWindowBegin;    ///< 수집한 구간(최근 N 프레임)
         uint64                         _timelineWindowEnd;
-        uint64                         _timelineViewBegin; ///< 보이는 범위(확대 · 이동)
+        uint64                         _timelineViewBegin; ///< 보이는 범위(확대와 이동의 결과)
         uint64                         _timelineViewEnd;
         uint32                         _timelineFrameCount; ///< 최근 프레임 수(1 · 4 · 16)
-        vector<ProfilerCallNode>       _listCallNode;       ///< 호출 트리(녹화에서 다시 접는다)
-        vector<uint32>                 _listCallRoot;       ///< 호출 트리 뿌리(스레드 순 · 큰 순)
-        vector<ProfilerTimelineThread> _listCallThread;     ///< 호출 트리가 접은 사건(Freeze 면 그대로)
+        vector<ProfilerCallNode>       _listCallNode;       ///< 호출 트리(녹화에서 다시 합친다)
+        vector<uint32>                 _listCallRoot;       ///< 호출 트리의 루트(스레드 순서, 큰 것 먼저)
+        vector<ProfilerTimelineThread> _listCallThread;     ///< 호출 트리가 합친 이벤트(Freeze 면 그대로)
         float32                        _spikeThresholdMs;   ///< Pause on spike 임계값(GT.Frame, ms)
         uint8                          _bCatalogDirty   : 1;
-        uint8                          _bCollect        : 1; ///< 엔진 프로파일러를 켜 두고 담는다
+        uint8                          _bCollect        : 1; ///< 엔진 프로파일러를 켜 두고 수집한다
         uint8                          _bTracyTried     : 1; ///< "Open Tracy" 를 한 번이라도 눌렀다
-        uint8                          _bTimelineFrozen : 1; ///< Freeze — 녹화는 계속하고 보기만 멈춘다
-        uint8                          _bTimelineZoomed : 1; ///< 사용자가 확대 · 이동했다(아니면 보이는 범위가 모은 구간을 따라간다)
+        uint8                          _bTimelineFrozen : 1; ///< Freeze 상태다. 녹화는 계속하고 화면만 멈춘다
+        uint8                          _bTimelineZoomed : 1; ///< 사용자가 확대하거나 이동했다. 아니면 보이는 범위가 수집한 구간을 따라간다
         uint8                          _bPauseOnSpike   : 1; ///< GT.Frame 이 임계값을 넘으면 멈춘다
-        uint8                          _bCapturePaused  : 1; ///< 담기를 멈췄다 — 스파이크를 잡았거나 캡처 파일을 열었다
-        uint8                          _bCallTreeFrozen : 1; ///< 호출 트리를 다시 접지 않는다
+        uint8                          _bCapturePaused  : 1; ///< 수집을 멈췄다. 스파이크를 잡았거나 캡처 파일을 열었을 때다
+        uint8                          _bCallTreeFrozen : 1; ///< 호출 트리를 다시 합치지 않는다
 #if SW_PROFILER_TRACE_ENABLED
-        ProfilerLoadedTrace            _loadedTrace;         ///< 불러온 트레이스(`_bLoadedTrace` 일 때만 뜻이 있다)
-        vector<ProfilerTimelineThread> _listTimelineDraw;    ///< 이번 프레임에 그릴 스레드(살아 있는 것 + 불러온 것, 프레임마다 다시 쓴다)
-        vector<uint64>                 _listLoadedFrameDraw; ///< 불러온 트레이스의 프레임 경계(살아 있는 기록의 시각으로 옮긴 것)
+        ProfilerLoadedTrace            _loadedTrace;         ///< 불러온 트레이스. `_bLoadedTrace` 일 때만 의미가 있다
+        vector<ProfilerTimelineThread> _listTimelineDraw;    ///< 이번 프레임에 그릴 스레드(살아 있는 것과 불러온 것, 프레임마다 다시 채운다)
+        vector<uint64>                 _listLoadedFrameDraw; ///< 불러온 트레이스의 프레임 경계(살아 있는 기록의 시각으로 변환한 것)
         string                         _traceStatus;         ///< 마지막 불러오기 결과 한 줄
         utf8                           _arrTraceSearch[constant::kMaxBuffer128];
         uint32                         _traceSearchMatched;

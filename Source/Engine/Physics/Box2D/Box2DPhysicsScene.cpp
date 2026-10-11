@@ -72,7 +72,7 @@ namespace sw
 
     Box2DPhysicsScene::~Box2DPhysicsScene()
     {
-        // 월드를 지우면 바디 · 셰이프 · 관절이 함께 사라진다.
+        // 월드를 지우면 바디, 셰이프, 관절이 함께 사라진다.
         b2DestroyWorld( _worldID );
         _bodies.clear();
         _joints.clear();
@@ -133,7 +133,7 @@ namespace sw
         } );
     }
 
-    // --- 셰이프 · 거름 ----------------------------------------------------------------------------------------------------
+    // --- 셰이프와 필터 ----------------------------------------------------------------------------------------------------
 
     const PhysicsMaterialDef& Box2DPhysicsScene::resolveMaterial( const hashed_string& name, const hashed_string& fallback ) const
     {
@@ -312,7 +312,7 @@ namespace sw
             SW_LOG_ERROR( "createCompoundShape: no child shapes" );
             return PhysicsShapeHandle{};
         }
-        // Box2D 바디는 셰이프를 여럿 붙이므로 자식 서술자를 이어 붙인다 — 재질을 적지 않은 자식 셰이프에는 그 자식의 재질을 적어 둔다.
+        // Box2D 바디는 셰이프를 여럿 붙일 수 있으므로 자식 서술자를 이어 붙인다. 재질을 지정하지 않은 자식 셰이프에는 그 자식의 재질을 적어 둔다.
         ShapeDescList listDesc;
         for ( const PhysicsShapeHandle& child : listChild )
         {
@@ -431,7 +431,7 @@ namespace sw
 
     void Box2DPhysicsScene::createBodies( span<const PhysicsBodyDesc2D> listDesc, vector<PhysicsBodyHandle>& outListBody )
     {
-        // Box2D 는 바디를 넣을 때 넓은 단계 트리를 늘 고쳐 묶음 경로가 따로 없다 — 하나씩 만든다.
+        // Box2D 는 바디를 넣을 때 넓은 단계 트리를 항상 고치므로 배치 경로가 따로 없다. 하나씩 만든다.
         outListBody.reserve( outListBody.size() + listDesc.size() );
         for ( const PhysicsBodyDesc2D& desc : listDesc )
         {
@@ -463,7 +463,7 @@ namespace sw
             BodyRecord record;
             if ( _bodies.take( body.getSlot(), record ) == false )
                 continue;
-            // Box2D 가 바디에 붙은 관절을 함께 지운다 — 엔진 쪽 관절 기록도 지운다.
+            // Box2D 가 바디에 붙은 관절을 함께 지운다. 엔진 쪽 관절 기록도 지운다.
             vector<PhysicsJointHandle> listDoomed;
             _joints.forEachHandle( [&]( SlotHandle slot, const JointRecord& joint )
             {
@@ -716,7 +716,7 @@ namespace sw
                 impulse += contact.manifold.points[pointIndex].normalImpulse;
             }
         }
-        // `normalImpulse` 는 마지막 서브 스텝의 것이다 — 한 스텝의 충격량은 서브 스텝 수를 곱한 값이다(`totalNormalImpulse` 는 이완 반복까지 더해 약 두 배다).
+        // `normalImpulse` 는 마지막 서브 스텝의 값이다. 한 스텝의 충격량은 서브 스텝 수를 곱한 값이다(`totalNormalImpulse` 는 이완 반복까지 더해서 약 두 배가 된다).
         return impulse * static_cast<float32>( _settings._subStepCount2D );
     }
 
@@ -743,8 +743,8 @@ namespace sw
             const b2ContactEndTouchEvent& event = contactEvents.endEvents[eventIndex];
             _contactTracker.endSubContact( findHandleOfShape( event.shapeIdA ), findHandleOfShape( event.shapeIdB ) );
         }
-        // 부딪힘(hit) — 다가오던 속도로 충격량을 어림한다: 유효 질량 × 속도 × (1 + 반발)(Jolt `EstimateCollisionResponse` 와 같은 자리). Box2D 의 시작은
-        // 투기적 접촉(아직 떨어져 있다)에서도 나고 그 매니폴드는 풀기 전이라, 충돌의 크기는 이 이벤트가 가장 정확하다.
+        // 부딪힘(hit): 다가오던 속도로 충격량을 어림한다. 유효 질량 × 속도 × (1 + 반발)이며, Jolt 의 `EstimateCollisionResponse` 에 해당한다. Box2D 의 시작은
+        // 투기적 접촉(아직 떨어져 있다)에서도 발생하고 그 매니폴드는 풀기 전이라, 충돌의 크기는 이 이벤트가 가장 정확하다.
         for ( int32 eventIndex = 0; eventIndex < contactEvents.hitCount; ++eventIndex )
         {
             const b2ContactHitEvent& event    = contactEvents.hitEvents[eventIndex];
@@ -784,7 +784,7 @@ namespace sw
         }
 
         _contactTracker.finishStep( _listContactEvent );
-        // 유지의 충격량은 그 스텝에 푼 접촉 충격량이다(쉬는 상자는 무게 × 스텝) — 3D(Jolt 의 유지 어림값)와 같은 뜻이다.
+        // 유지의 충격량은 그 스텝에 푼 접촉 충격량이다(쉬는 상자는 무게 × 스텝). 3D(Jolt 의 유지 어림값)와 같은 의미다.
         for ( PhysicsContactEvent2D& event : _listContactEvent )
         {
             if ( event._phase == PhysicsContactPhase::Stay && event.involvesTrigger() == false )

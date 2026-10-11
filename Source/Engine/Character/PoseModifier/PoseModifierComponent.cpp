@@ -27,7 +27,7 @@ namespace sw
     {
         struct PoseModifierComponentInternal
         {
-            /** @brief 행렬의 회전 · 이동(스케일은 버림)입니다. */
+            /** @brief 행렬의 회전과 이동을 구합니다(스케일은 버립니다). */
             static void decomposeRigid( const float4x4& matrix, float3& outPosition, quaternion& outRotation )
             {
                 float3 scale{};
@@ -107,7 +107,7 @@ namespace sw
 
     float32 PoseModifierBinding::getCurveValue( const hashed_string& curveName ) const
     {
-        // 같은 유닛의 애니메이터 — 시간 단계(같은 유닛, 앞 단계)가 이번 프레임 커브를 적었다.
+        // 같은 유닛의 애니메이터다. 시간 단계(같은 유닛, 앞 단계)가 이번 프레임 커브를 기록했다.
         return ( _owner._pFrameAnimator != nullptr ) ? _owner._pFrameAnimator->getCurveValue( curveName ) : 0.0f;
     }
 
@@ -299,7 +299,7 @@ namespace sw
         if ( bEnabled )
             _instance.reset();
         if ( _pUnit != nullptr )
-            _pUnit->markPoseDirty(); // 끈 프레임에 리그 없는 포즈를 한 번 다시 만든다
+            _pUnit->markPoseDirty(); // 끈 프레임에 리그 없는 포즈를 한 번 다시 만든다.
     }
 
     bool PoseModifierComponent::isTargetBound( const hashed_string& targetName ) const
@@ -328,7 +328,7 @@ namespace sw
 
     void PoseModifierComponent::bindRig()
     {
-        // 시작 전의 세터(리그 · 소켓 · 유닛 걸기)는 값만 적는다 — 묶기는 onBeginPlay 가 한 번에 한다(순서에 따른 가짜 오류가 없게).
+        // 시작 전의 세터(리그, 소켓, 유닛 등록)는 값만 적는다. 바인딩은 onBeginPlay 가 한 번에 한다(순서에 따른 가짜 오류가 없게 하려는 것이다).
         if ( hasBegunPlay() == false )
             return;
         releaseDependencies();
@@ -378,7 +378,7 @@ namespace sw
                 return castTo<SkeletalMeshComponent>( pManager->resolveComponent( binding._unit ) );
             }
         }
-        // 이름으로 찾기 — 자식(장비 부품)부터, 없으면 매니저 전체.
+        // 이름으로 찾는다. 자식(장비 부품)부터 찾고, 없으면 매니저 전체에서 찾는다.
         vector<GameObject*> listChild;
         pOwner->getChildren( listChild );
         for ( GameObject* pChild : listChild )
@@ -461,13 +461,13 @@ namespace sw
             {
                 GameObject* pObject = findObjectByName( def._object );
                 if ( pObject == nullptr )
-                    continue; // 아직 없다 — bindObject 가 다시 묶는다
+                    continue; // 아직 없다. bindObject 가 다시 바인딩한다.
                 external._object = pObject->getHandle();
                 external._bBound = SW_TRUE;
                 continue;
             }
 
-            // 다른 유닛의 본 · 소켓. 유닛 이름이 없으면 해석된 소켓 표의 다른 유닛 소켓이다.
+            // 다른 유닛의 본이나 소켓이다. 유닛 이름이 없으면 해석된 소켓 테이블의 다른 유닛 소켓이다.
             SkeletalMeshComponent*      pTargetUnit = nullptr;
             shared_ptr<const SocketSet> sockets;
             hashed_string               boneName = def._bone;
@@ -505,7 +505,7 @@ namespace sw
                 }
             }
             if ( pTargetUnit == nullptr || pTargetUnit == _pUnit )
-                continue; // 아직 없다 — bindUnit 이 다시 묶는다
+                continue; // 아직 없다. bindUnit 이 다시 바인딩한다.
             external._unitBone = bSocketRoot ? -1 : pTargetUnit->getSkeleton().findBoneIndex( boneName );
             if ( bSocketRoot == false && external._unitBone < 0 )
             {
@@ -513,12 +513,12 @@ namespace sw
                               pTargetUnit->getOwner() != nullptr ? pTargetUnit->getOwner()->getName().c_str() : "" );
                 continue;
             }
-            // 데이터 오프셋은 소켓 공간에서 먼저 걸린다(행벡터: 오프셋 × 소켓 로컬).
+            // 데이터 오프셋은 소켓 공간에서 먼저 적용된다(행 벡터: 오프셋 × 소켓 로컬).
             external._socketLocal = BoneTransform::makeFromMatrix( def._offset.toMatrix() * socketLocal.toMatrix() );
             external._unit        = pTargetUnit->getHandle();
             if ( external._spaceBone >= 0 )
             {
-                external._bBound = SW_TRUE; // 프레임 시작에 찍어 자기 본에 얹는다 — 의존을 걸지 않는다
+                external._bBound = SW_TRUE; // 프레임 시작에 기록해 자기 본에 적용한다. 의존은 등록하지 않는다.
                 continue;
             }
             if ( wouldCreateCycle( pTargetUnit ) )
@@ -566,7 +566,7 @@ namespace sw
                     }
                     else
                     {
-                        continue; // 상자 · 볼록 · 메시는 스프링 충돌체가 아니다
+                        continue; // 상자, 볼록, 메시는 스프링 충돌체가 아니다.
                     }
                     listCollider.push_back( collider );
                 }
@@ -631,7 +631,7 @@ namespace sw
             PoseModifierComponentInternal::decomposeRigid( targetInModel, value._position, value._rotation );
             if ( 0 <= external._spaceBone && static_cast<size_t>( external._spaceBone ) < listOwnModel.size() )
             {
-                // 지난 프레임의 그 본 기준으로 바꿔 두면 평가 때 이번 프레임의 그 본에 다시 얹힌다.
+                // 지난 프레임의 그 본 기준으로 바꿔 두면 평가할 때 이번 프레임의 그 본에 다시 적용된다.
                 float3     spacePosition{};
                 quaternion spaceRotation{};
                 PoseModifierComponentInternal::decomposeRigid( listOwnModel[static_cast<size_t>( external._spaceBone )], spacePosition, spaceRotation );
@@ -655,10 +655,10 @@ namespace sw
 
     void PoseModifierComponent::evaluateFrame( SkeletalMeshComponent& unit )
     {
-        // 꺼졌어도 유닛은 다른 일(애니메이터)로 돌 수 있다 — 그때 리그는 아무것도 하지 않는다.
+        // 꺼졌어도 유닛은 다른 일(애니메이터)로 돌 수 있다. 그때 리그는 아무것도 하지 않는다.
         if ( _bRigEnabled == SW_FALSE || _instance.isInitialized() == false )
             return;
-        // 의존을 건 유닛은 앞 레벨에서 이번 프레임 포즈를 끝냈다 — 그 본을 읽어 대상 값을 채운다(워커, 그 유닛은 읽기만).
+        // 의존을 등록한 유닛은 앞 레벨에서 이번 프레임 포즈를 끝냈다. 그 본을 읽어 대상 값을 채운다(워커에서 하며, 그 유닛은 읽기만 한다).
         for ( uint32 targetIndex = 0; targetIndex < static_cast<uint32>( _listExternal.size() ); ++targetIndex )
         {
             const ExternalTarget&        external    = _listExternal[targetIndex];
@@ -674,7 +674,7 @@ namespace sw
             _instance.setExternalTarget( targetIndex, value );
         }
         _instance.evaluate( unit.getLocalPose(), unit.getSkeleton().getParentIndices(), _worldFromModel );
-        // 포즈 구동의 보정 모프 — 이름이 그리는 메시의 모프 타깃과 같으면 그 가중치에 더한다(GPU 모프 풀이 스키닝 앞에 건다). 기본 포즈 단계가 비운 뒤다.
+        // 포즈 구동의 보정 모프는 이름이 그리는 메시의 모프 타깃과 같으면 그 가중치에 더한다(GPU 모프 풀이 스키닝 앞에서 적용한다). 기본 포즈 단계가 비운 뒤다.
         for ( const RigMorphWeight& morph : _instance.getMorphWeights() )
         {
             const int32 targetIndex = unit.findMorphTargetIndex( morph._name );

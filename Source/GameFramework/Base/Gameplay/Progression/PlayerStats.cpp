@@ -238,7 +238,7 @@ namespace sw
         change._oldValue = oldValue;
         change._newValue = newValue;
         change._kind     = def._kind;
-        // 듣는 쪽이 등록 · 해제할 수 있으므로 사본을 돈다.
+        // 듣는 쪽이 순회 중에 등록하거나 해제할 수 있으므로 사본을 순회한다.
         const vector<Listener> listListener = _listListener;
         for ( const Listener& listener : listListener )
         {
@@ -251,7 +251,7 @@ namespace sw
     void PlayerStats::writeState( Archive& outArchive ) const
     {
         StateArchiveUtil::writeHeader( outArchive, PlayerStatsInternal::kStateTag, PlayerStatsInternal::kStateVersion );
-        // 카탈로그 순서로 적는다(같은 값이면 같은 바이트) — 카탈로그에 없는 값은 이미 들 수 없다.
+        // 카탈로그 순서대로 쓴다. 같은 값이면 같은 바이트가 나온다. 카탈로그에 없는 값은 애초에 보관하지 않는다.
         uint32 count = 0;
         if ( _pCatalog != nullptr )
         {

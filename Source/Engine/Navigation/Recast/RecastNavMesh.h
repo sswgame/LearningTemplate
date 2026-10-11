@@ -1,10 +1,10 @@
 /**
  * @file RecastNavMesh.h
- * @brief Recast(베이크) · Detour(타일 내비메시 · 질의)로 구현한 `INavMesh` 입니다. 라이브러리 헤더는 .cpp 에서만 include 합니다.
- * @details 타일 하나 베이크는 Recast 표준 순서입니다 — 복셀화(삼각형 영역 · 경사) → 낮게 걸린 장애물 · 턱 · 낮은 천장 거름 → 압축 높이장 → 몸 반지름만큼 깎기
- *          → 볼록 부피 칠하기(뚫는 부피는 반지름만큼 넓힌다) → 분수령 영역 → 외곽선 → 폴리곤(꼭짓점 6 개까지) → 높이 디테일 → Detour 타일 바이트.
- *          영역 번호 i 는 Recast 영역 i + 1(0 은 걷지 못함)이고, 폴리곤 표시 비트는 1 << i 입니다 — 질의 거름의 영역 비트가 그대로 표시 비트입니다.
- *          폴리곤 참조는 32 비트(Detour 기본)이고 엔진 쪽 64 비트에 담습니다.
+ * @brief Recast(베이크)와 Detour(타일 내비메시와 질의)로 구현한 `INavMesh` 입니다. 라이브러리 헤더는 .cpp 에서만 include 합니다.
+ * @details 타일 하나를 베이크하는 순서는 Recast 표준이다. 복셀화(삼각형 영역과 경사), 낮게 걸린 장애물과 턱과 낮은 천장 걸러 내기, 압축 높이장, 몸 반지름만큼 깎기,
+ *          볼록 부피 칠하기(뚫는 부피는 반지름만큼 넓힌다), 분수령 영역, 외곽선, 폴리곤(꼭짓점 6 개까지), 높이 디테일, Detour 타일 바이트 순서다.
+ *          영역 번호 i 는 Recast 영역 i + 1(0 은 걷지 못함)이고, 폴리곤 표시 비트는 1 << i 다. 질의 필터의 영역 비트가 그대로 표시 비트다.
+ *          폴리곤 참조는 32 비트(Detour 기본)이고 엔진 쪽 64 비트에 담는다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -60,14 +60,14 @@ namespace sw
         static void applyQueryFilter( const NavQueryFilter& filter, dtQueryFilter& outFilter );
 
     private:
-        /** @brief 이 스레드의 질의 객체입니다(스크래치 슬롯마다 하나, 처음 쓸 때 만든다). 슬롯 밖의 스레드는 잠금 아래 하나를 나눠 쓴다. */
+        /** @brief 이 스레드의 질의 객체입니다(스크래치 슬롯마다 하나이며 처음 쓸 때 만듭니다). 슬롯 밖의 스레드는 잠금 아래 하나를 나눠 씁니다. */
         dtNavMeshQuery* acquireQuery( bool& outLocked ) const;
         void            releaseQuery( bool bLocked ) const;
         void            freeQueries();
 
         NavAgentTypeDef                 _agentType;
         NavTileGrid                     _grid;
-        mutable vector<dtNavMeshQuery*> _listQuery;    ///< 스크래치 슬롯마다(한 스레드만 자기 칸을 만진다)
+        mutable vector<dtNavMeshQuery*> _listQuery;    ///< 스크래치 슬롯마다 하나다(한 스레드만 자기 슬롯을 만진다).
         mutable dtNavMeshQuery*         _pSharedQuery; ///< 슬롯 밖 스레드용(`_sharedQueryMutex`)
         mutable mutex                   _sharedQueryMutex;
         dtNavMesh*                      _pNavMesh;

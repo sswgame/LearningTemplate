@@ -10,7 +10,7 @@ namespace sw
     {
         struct RigIKSolverInternal
         {
-            /** @brief 사슬 하나가 가질 수 있는 본 수의 상한입니다(풀이가 스택 배열을 쓴다 — 프레임마다 힙을 잡지 않게). */
+            /** @brief 사슬 하나가 가질 수 있는 본 수의 상한입니다. 풀이가 스택 배열을 쓰므로, 프레임마다 힙을 할당하지 않게 합니다. */
             static constexpr uint32 kMaxChainBone = 32;
 
             /** @brief @p direction 에 수직인 아무 단위 벡터입니다. */
@@ -41,7 +41,7 @@ namespace sw
                 return 2.0f * MathUtil::acos( w );
             }
 
-            /** @brief 사슬 위치 · 길이를 읽습니다. */
+            /** @brief 사슬의 위치와 길이를 읽습니다. */
             static void readChain( RigPoseBuffer& pose, span<const uint32> listChainBone, float3* pOutPosition, float32* pOutLength )
             {
                 const uint32 count = static_cast<uint32>( listChainBone.size() );
@@ -55,7 +55,7 @@ namespace sw
                 }
             }
 
-            /** @brief 풀어 낸 위치로 사슬을 돌리고(뿌리부터) 제한을 겁니다. */
+            /** @brief 풀어 낸 위치로 사슬을 돌리고(뿌리부터) 제한을 적용합니다. */
             static void applyChain( RigPoseBuffer& pose, span<const uint32> listChainBone, const float3* pPosition, span<const RigJointLimit> listLimit )
             {
                 const uint32 count = static_cast<uint32>( listChainBone.size() );
@@ -111,7 +111,7 @@ namespace sw
         const float3  direction = toGoal / goalDistance;
         const float32 reach     = upperLength + lowerLength;
         const bool    bReached  = goalDistance <= reach;
-        // 곧게 펴진 무릎은 굽힘 방향을 잃는다 — 아주 조금 남겨 다음 프레임도 같은 쪽으로 굽게 한다.
+        // 곧게 펴진 무릎은 굽힘 방향을 잃는다. 아주 조금 남겨 다음 프레임도 같은 쪽으로 굽게 한다.
         const float32 minDistance = MathUtil::abs( upperLength - lowerLength ) + 1e-4f;
         const float32 distance    = MathUtil::clamp( goalDistance, minDistance, reach * 0.9999f );
 
@@ -152,7 +152,7 @@ namespace sw
         const bool bLimited = RigIKSolverInternal::hasAnyLimit( listLimit );
         if ( ( goal - root ).getLength() >= total )
         {
-            // 닿지 않는다 — 목표 쪽으로 곧게 편다.
+            // 닿지 않는다. 목표 쪽으로 곧게 편다.
             const float3 direction = ( goal - root ).normalize();
             for ( uint32 index = 1; index < count; ++index )
             {
@@ -164,14 +164,14 @@ namespace sw
 
         for ( uint32 iteration = 0; iteration < settings._iterationCount; ++iteration )
         {
-            // 뒤로: 끝을 목표에 두고 뿌리 쪽으로 길이를 지킨다.
+            // 뒤로: 끝을 목표에 두고 뿌리 쪽으로 길이를 맞춘다.
             arrPosition[count - 1] = goal;
             for ( uint32 index = count - 1; index > 0; --index )
             {
                 const float3 direction = space.projectVector( arrPosition[index - 1] - arrPosition[index] ).normalize();
                 arrPosition[index - 1] = arrPosition[index] + direction * arrLength[index - 1];
             }
-            // 앞으로: 뿌리를 제자리에 두고 끝 쪽으로.
+            // 앞으로: 뿌리를 제자리에 두고 끝 쪽으로 길이를 맞춘다.
             arrPosition[0] = root;
             for ( uint32 index = 1; index < count; ++index )
             {
@@ -180,7 +180,7 @@ namespace sw
             }
             if ( bLimited )
             {
-                // 제한은 회전에 건다 — 위치를 회전으로 옮겨 제한하고, 제한된 위치에서 다음 반복을 시작한다.
+                // 제한은 회전에 적용한다. 위치를 회전으로 옮겨 제한하고, 제한된 위치에서 다음 반복을 시작한다.
                 RigIKSolverInternal::applyChain( pose, listChainBone, arrPosition, listLimit );
                 RigIKSolverInternal::readChain( pose, listChainBone, arrPosition, arrLength );
             }
@@ -249,7 +249,7 @@ namespace sw
         const float32 cosine   = fromUnit.dot( toUnit );
         if ( cosine < -0.999999f )
         {
-            // 반대 방향 — 아무 수직 축으로 180°.
+            // 반대 방향이다. 아무 수직 축으로 180° 돈다.
             float3 axis = fromUnit.cross( float3::Right );
             if ( axis.getLengthSquared() < 1e-6f )
                 axis = fromUnit.cross( float3::Up );
@@ -266,7 +266,7 @@ namespace sw
         const quaternion twist{ projected._x, projected._y, projected._z, delta._w };
         if ( twist.normSquared() < 1e-12f )
         {
-            // 축에 수직인 180° 회전 — 비틀림이 없다.
+            // 축에 수직인 180° 회전이다. 비틀림이 없다.
             outTwist = quaternion::Identity;
             outSwing = delta;
             return;

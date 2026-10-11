@@ -67,14 +67,14 @@ namespace sw
         void onBeginPlay() override;
         void onEndPlay() override;
         void onTick( float32 deltaTime ) override;
-        /** @brief 읽어 들인 `_graphPath` 로 그래프를 다시 엽니다 — 플레이 전(에디터)에도 Start Dialogue 가 그 그래프를 돌립니다. */
+        /** @brief 읽어 들인 `_graphPath` 로 그래프를 다시 엽니다. 플레이 전(에디터)에도 Start Dialogue 가 그 그래프를 돌립니다. */
         void onPostLoad() override;
         /** @brief `_graphPath` 가 바뀌면 그 그래프를 다시 엽니다. */
         void onPropertyChanged( hashed_string propertyName ) override;
 
         [[nodiscard]] bool loadGraphFile( string_view jsonPath );
         [[nodiscard]] bool loadGraphJSON( string_view jsonContent );
-        /** @brief 이미 만든 그래프를 씁니다(코드로 지은 그래프 · 에디터에서 넘긴 그래프). 진행 중인 대화는 멈추지 않습니다. */
+        /** @brief 이미 만든 그래프를 씁니다. 코드로 만든 그래프나 에디터에서 넘긴 그래프를 받으며, 진행 중인 대화는 멈추지 않습니다. */
         void setGraph( DialogueGraphAsset graph );
 
         FUNCTION( Category = "Playback", DisplayName = "Start Dialogue", CallInEditor )
@@ -85,9 +85,9 @@ namespace sw
         FUNCTION( Category = "Preview", DisplayName = "Preview Line", EditorPreview = "DialogueLine" )
         void previewLine( string speaker, string text );
 
-        /** @brief Branch 조건 · `set_flag:` 명령이 읽고 쓰는 월드 플래그입니다(빌려 씁니다 — 러너보다 오래 살아야 합니다). nullptr 이면 모든 플래그가 0 입니다. */
+        /** @brief Branch 조건과 `set_flag:` 명령이 읽고 쓰는 월드 플래그입니다. 빌려 쓰므로 러너보다 오래 살아야 하며, nullptr 이면 모든 플래그가 0 입니다. */
         void setFlags( GameFlags* pFlags );
-        /** @brief `_bPostSubtitles` 가 줄을 보낼 UI 입니다(테스트 — nullptr 이면 엔진 서비스). 빌려 씁니다. */
+        /** @brief `_bPostSubtitles` 가 줄을 보낼 UI 입니다. 테스트가 정하며 nullptr 이면 엔진 서비스를 씁니다. 빌려 씁니다. */
         void setUISystem( UISystem* pUISystem ) { _pUISystemOverride = pUISystem; }
 
         DialogueRunnerState   getState() const;
@@ -104,15 +104,15 @@ namespace sw
     private:
         /**
          * @brief Branch 노드의 조건식을 월드 플래그 조건식으로 평가합니다. 빈 식은 참입니다.
-         * @details 문법은 `GameFlags`(`a && !b || count>=3`) 하나입니다 — 이름 하나는 0 이 아니면 참, 비교 오른쪽은 정수나 다른 플래그입니다.
-         *          읽지 못한 식은 경고하고 거짓입니다. 플래그 저장소가 없으면 모든 이름이 0 입니다.
+         * @details 문법은 `GameFlags`(`a && !b || count>=3`) 하나만 쓴다. 이름 하나는 0 이 아니면 참이고, 비교의 오른쪽은 정수나 다른 플래그이다.
+         *          읽지 못한 식은 경고하고 거짓이다. 플래그 저장소가 없으면 모든 이름이 0 이다.
          */
         bool evaluateCondition( const string& condition ) const;
         /** @brief `_graphPath` 의 그래프를 엽니다. 경로가 비었으면 아무것도 하지 않고, 못 열면 경고합니다. */
         void loadGraphFromPath();
         /**
-         * @brief 노드 하나를 실행합니다. 노드 종류별 할 일은 빠짐없는 switch 이고, 다음 노드는 `DialogueCursor::step` 이 정합니다.
-         * @details 모르는 타입은 경고하고 대화를 끝냅니다(멈춘 채 남지 않습니다).
+         * @brief 노드 하나를 실행합니다. 노드 종류별 할 일은 빠짐없는 switch 로 처리하고, 다음 노드는 `DialogueCursor::step` 이 정합니다.
+         * @details 모르는 타입은 경고하고 대화를 끝낸다. 대화가 멈춘 채 남지 않게 하려는 것이다.
          */
         void executeNode( int32 nodeID, int32 recursionDepth = 0 );
         /** @brief 노드를 지나 다음 노드를 실행합니다. 노드가 그새 사라졌으면 대화를 끝냅니다. */
@@ -123,8 +123,8 @@ namespace sw
         /**
          * @brief `_bPostSubtitles` 면 줄을 자막으로 보내고, `_onLine` 을 **사본으로** 부릅니다. 핸들러가 그 안에서 진행시켜도 안전합니다.
          * @details 델리게이트가 받는 `const string&` 가 이 객체의 멤버를 그대로 가리키면,
-         *          핸들러가 `advance()` · `stopDialogue()` 를 부르는 순간 자기가 받은 참조가
-         *          바뀌거나 비워집니다. 대화 UI 에서 가장 흔한 사용법이 바로 그것입니다.
+         *          핸들러가 `advance()` 나 `stopDialogue()` 를 부르는 순간 자기가 받은 참조가 바뀌거나 비워진다.
+         *          대화 UI 에서 가장 흔한 사용법이 바로 그것이다.
          */
         void notifyLine();
         /** @brief `_onChoices` 를 사본으로 부릅니다. 핸들러가 돌면서 `selectChoice()` 를 불러도 됩니다. */

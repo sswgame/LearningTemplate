@@ -18,7 +18,7 @@ namespace sw
     {
         struct SocketSetComponentInternal
         {
-            /** @brief 유닛의 본(이름 · 레퍼런스 포즈)을 소켓 대조용 본 배열로 옮깁니다. */
+            /** @brief 유닛의 본(이름, 레퍼런스 포즈)을 소켓 대조용 본 배열로 옮깁니다. */
             static void makeBoneArray( const Skeleton& skeleton, CharacterBoneArray& outBones )
             {
                 outBones = CharacterBoneArray{};
@@ -113,7 +113,7 @@ namespace sw
             outUnitTransform = local * parent;
             return true;
         }
-        // 가상 본 — 두 본 사이를 섞은 자리다.
+        // 가상 본은 두 본 사이를 섞은 위치다.
         const VirtualBoneDef* pVirtual = _socketSet->findVirtualBone( pSocket->_parent );
         float4x4              from;
         float4x4              to;

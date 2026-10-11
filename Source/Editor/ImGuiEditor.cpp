@@ -77,17 +77,17 @@ namespace sw::editor
         {
             static constexpr Color kNotificationWindowBg{ 0.10f, 0.10f, 0.10f, 1.00f };
 
-            /// @brief 글자 배율(모니터 DPI)과 테마 배율이 이만큼 넘게 다르면 테마가 따라간다(beginFrame).
+            /// @brief 글자 배율(모니터 DPI)과 테마 배율이 이 값보다 크게 다르면 테마 배율을 글자 배율에 맞춘다(beginFrame).
             static constexpr float32 kDpiFollowTolerance = 0.001f;
 
-            /** @brief 무인 자동화가 사람의 장치 입력을 막는 중이면 true 입니다 — 플랫폼 백엔드가 ImGui 에 넣는 실제 커서 · 키를 지운다. */
+            /** @brief 무인 자동화가 사람의 장치 입력을 막는 중이면 true 입니다. 이때 플랫폼 백엔드가 ImGui 에 넣는 실제 커서와 키를 지웁니다. */
             static bool isOsDeviceInputBlocked()
             {
                 const InputManager* pInput = editor::getService<InputManager>();
                 return pInput != nullptr && pInput->isOsDeviceInputBlocked();
             }
 
-            /** @brief 뷰 RT 핸들과 크기를 C ABI 출력 인자에 씁니다. @p pView 가 없으면 0 입니다(이번 프레임에 그 뷰를 그리지 않는다). */
+            /** @brief 뷰의 렌더 타깃 핸들과 크기를 C ABI 출력 인자에 씁니다. @p pView 가 없으면 0 이며, 이번 프레임에 그 뷰를 그리지 않았다는 뜻입니다. */
             static void writeViewport( const EditorViewTarget* pView, uint64* pRenderTarget, uint32* pWidth, uint32* pHeight )
             {
                 if ( pRenderTarget != nullptr )
@@ -98,9 +98,9 @@ namespace sw::editor
                     *pHeight = ( pView != nullptr ) ? pView->_height : 0;
             }
 
-            /** @brief ImGui 할당을 sw 할당자로 보낸다 — 할당 헤더에 태그가 적혀 메모리 프로파일러의 Editor 줄로 세인다. */
+            /** @brief ImGui 할당을 sw 할당자로 보냅니다. 할당 헤더에 태그가 기록되어 메모리 프로파일러의 Editor 항목으로 집계됩니다. */
             static void* allocateForImGui( size_t size, void* /*pUserData*/ ) { return Memory::allocate( size ); }
-            /** @brief `allocateForImGui` 의 짝입니다. */
+            /** @brief `allocateForImGui` 로 할당한 메모리를 해제합니다. */
             static void freeForImGui( void* pPtr, void* /*pUserData*/ ) { Memory::free( pPtr ); }
 
             static void loadSplashDefaultRenderPass( const TaskArgs& args )
@@ -108,8 +108,8 @@ namespace sw::editor
                 shared_ptr<RenderPassAsset> pPass = args.get<shared_ptr<RenderPassAsset>>( 0 );
                 if ( pPass == nullptr )
                     return;
-                // `getService<T>()` 는 nullptr 을 반환할 수 있다. 이 둘은 **워커 스레드**에서 도는 스플래시 로드라, 서비스 연결이 아직
-                // 없거나 이미 끊긴 틈에 걸리면 조용히 죽는다.
+                // `getService<T>()` 는 nullptr 을 반환할 수 있다. 이 둘은 워커 스레드에서 도는 스플래시 로드라, 서비스 연결이 아직
+                // 없거나 이미 끊긴 시점에 걸리면 조용히 크래시한다.
                 const EngineDefaultAssets* pEngineDefaultAssets = editor::getService<const EngineDefaultAssets>();
                 if ( pEngineDefaultAssets == nullptr )
                     return;
@@ -132,9 +132,9 @@ namespace sw::editor
             }
 
             /**
-             * @brief 이 모듈이 Undo 스택에 넣은 모듈 명령(패널 람다 · 문서 편집)과 알림 처리기를 뗍니다. 오브젝트 편집(엔진 데이터 명령)은 남습니다.
-             * @details 스택은 엔진 소유라 이 모듈보다 오래 산다. 모듈 명령을 남긴 채 내려가면 리로드 뒤 Ctrl+Z 가 언맵된 코드로 뛰고, 종료할 때는
-             *          델리게이트 소멸자(`Delegate::_managerFunc`)가 그리로 뛴다. 범위는 이 함수가 든 이미지다.
+             * @brief 이 모듈이 Undo 스택에 넣은 모듈 명령(패널 람다, 문서 편집)과 알림 처리기를 제거합니다. 오브젝트 편집(엔진 데이터 명령)은 남깁니다.
+             * @details Undo 스택은 엔진이 소유하므로 이 모듈보다 오래 산다. 모듈 명령을 남긴 채 모듈을 언로드하면 리로드 뒤 Ctrl+Z 가 언맵된 코드로 점프하고,
+             *          종료할 때는 델리게이트 소멸자(`Delegate::_managerFunc`)가 그 코드로 점프한다. 제거 범위는 이 함수가 속한 이미지다.
              */
             static void releaseModuleUndoCommands()
             {
@@ -150,7 +150,7 @@ namespace sw::editor
                     SW_LOG_INFO( "Dropped %# undo commands that run editor module code; scene edits stay undoable", droppedCount );
             }
 
-            /** @brief 창 제목에 게임 · 씬 · 미저장 · 플레이 상태를 겁니다. 같은 제목이면 `IWindow::setTitle` 이 바로 돌아간다(프레임마다 불러도 된다). */
+            /** @brief 창 제목에 게임, 씬, 미저장, 플레이 상태를 반영합니다. 같은 제목이면 `IWindow::setTitle` 이 바로 반환하므로 프레임마다 불러도 됩니다. */
             static void updateWindowTitle( EditorContext* pContext )
             {
                 IWindow* pWindow = IWindow::getActiveWindow();
@@ -173,18 +173,18 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "ImGuiEditor" );
 
-    // 이 파일만 읽으므로 여기서 정의한다(헤더에 선언하지 않는다).
+    // 이 파일만 읽으므로 여기서 정의하고 헤더에는 선언하지 않는다.
     /**
      * @brief `-gv_editorStartupScene=<리소스 경로>`: 에디터가 시작할 때 이 씬을 엽니다.
-     * @details 빈 씬으로 기동 검증을 하면 오브젝트를 순회하는 코드(뷰포트 피킹 · 컴포넌트 시각화 · Hierarchy 트리 ·
-     *          Profiler 분포표 · 씬 세대 변경 훅)가 실행되지 않습니다. 이 스위치로 테스트 씬을 열면 그 경로가 모두 켜집니다.
+     * @details 빈 씬으로 기동 검증을 하면 오브젝트를 순회하는 코드가 실행되지 않습니다. 뷰포트 피킹, 컴포넌트 시각화, Hierarchy 트리,
+     *          Profiler 분포 테이블, 씬 세대 변경 훅이 그 예입니다. 이 스위치로 테스트 씬을 열면 이 경로가 모두 실행됩니다.
      *          예: `-gv_editorStartupScene=game/empty/maps/editortest.scene.xml`
      */
     SW_GLOBAL_VARIABLE( sw::string, gv_editorStartupScene, "", "에디터 시작 시 열 씬의 리소스 경로 (비우면 열지 않는다)" );
 
     /**
      * @brief `-gv_editorUiScale=<배율>`: 에디터 UI 배율입니다. 0 이면 창이 놓인 모니터의 DPI 를 따릅니다.
-     * @details 언리얼 Editor Preferences 의 UI 배율 · 유니티 UI Scaling 설정과 같은 자리입니다. 모니터 DPI 와 상관없이 크게 · 작게 보고
+     * @details 언리얼의 Editor Preferences UI 배율, 유니티의 UI Scaling 설정에 해당합니다. 모니터 DPI 와 상관없이 UI 를 크게 또는 작게 보고
      *          싶을 때, 그리고 고해상도 모니터가 없는 기계에서 배율 경로를 확인할 때 씁니다.
      */
     SW_GLOBAL_VARIABLE( float32, gv_editorUiScale, 0.0f, "에디터 UI 배율 (0 = 모니터 DPI 를 따름)" );
@@ -225,7 +225,7 @@ namespace sw::editor
 #if !defined( SW_SHIPPING )
         BLOCK( "Editor preferences load" )
         {
-            // 처음 실행이면 파일이 없다 — 기본값 그대로다.
+            // 처음 실행이면 파일이 없으므로 기본값을 그대로 쓴다.
             if ( EditorPreferencesStore::loadAll( EditorPreferencesStore::getDefaultFilePath() ) == false )
                 SW_LOG_INFO( "Editor preferences: no saved file yet - using defaults" );
             _editorToolDefaults = make_unique<EditorToolDefaults>();
@@ -239,22 +239,22 @@ namespace sw::editor
         {
             SW_LOG_TRACE( "Checking ImGui version and creating context" );
             IMGUI_CHECKVERSION();
-            // 컨텍스트보다 먼저 건다 — 이 모듈의 ImGui 할당이 모두 같은 할당자에서 잡히고 풀린다(컨텍스트는 shutdown 이 이 모듈 안에서 지운다).
+            // 컨텍스트보다 먼저 등록한다. 그래야 이 모듈의 ImGui 할당과 해제가 모두 같은 할당자를 거친다. 컨텍스트는 shutdown 이 이 모듈 안에서 지운다.
             ImGui::SetAllocatorFunctions( &ImGuiEditorInternal::allocateForImGui, &ImGuiEditorInternal::freeForImGui, nullptr );
             ImGui::CreateContext();
             ImPlot::CreateContext();
-            // 확장 DLL 의 ImGui 사본에 이 컨텍스트를 건다(확장마다 CMake 가 만든 결속기). EditorModule 자신은 여기서 CreateContext 했다.
+            // 확장 DLL 의 ImGui 사본에 이 컨텍스트를 바인딩한다. 확장마다 CMake 가 만든 바인더를 쓴다. EditorModule 자신은 여기서 CreateContext 를 호출했다.
             EditorUIContext::publish( EditorUIContextState{ ImGui::GetCurrentContext(), ImPlot::GetCurrentContext() } );
 
             SW_LOG_TRACE( "Configuring ImGui IO" );
             ImGuiIO& io = ImGui::GetIO();
             io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
             io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-            // 멀티 뷰포트는 네 백엔드 모두에 렌더러 백엔드가 있어 항상 켠다. 렌더러 백엔드가 없는 백엔드라면 아래
+            // 멀티 뷰포트는 네 백엔드 모두에 렌더러 백엔드가 있으므로 항상 켠다. 렌더러 백엔드가 없는 백엔드라면 아래
             // createRendererBackend 가 nullptr 을 반환하고 초기화가 거기서 멈춘다.
             io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
-            // 자체 테스트는 저장된 레이아웃을 읽지도 쓰지도 않는다 — 도킹은 자체 테스트를 모르므로 셸이 알린다.
+            // 자체 테스트는 저장된 레이아웃을 읽지도 쓰지도 않는다. 도킹은 자체 테스트를 모르므로 셸이 알려 준다.
             EditorDockLayout::setPanelOverrideRequested( EditorSelfTestRunner::isRequested() );
             _dockLayout.initializePersistencePaths();
             _dockLayout.applyIniFilename();
@@ -333,28 +333,28 @@ namespace sw::editor
             _editorContext = make_unique<EditorContext>();
             _editorContext->initialize();
             _editorContext->setDockLayout( &_dockLayout );
-            // 테마는 **컨텍스트가 활성화된 뒤에** 읽는다. 테마 상태를 컨텍스트가 들고 있으므로, 앞에서 부르면 적용한 테마가 갈 곳이
-            // 없어 조용히 버려진다(실측: stored preset 이 0 에 머문다).
+            // 테마는 컨텍스트가 활성화된 뒤에 읽어야 한다. 테마 상태를 컨텍스트가 보관하므로, 그 전에 부르면 적용한 테마가 갈 곳이
+            // 없어 조용히 버려진다. 이때 stored preset 이 0 에 머문다.
             EditorThemeUtil::loadFromConfig();
             _editorContext->setRHIDevice( pRHIDevice );
             _editorContext->setRendererBackend( _rendererBackend.get() );
 
             _editorContext->getPanelManager().registerDefaultPanels();
-            // 사용자 단축키(Saved/Editor/Shortcuts.json)는 레지스트리를 만들 때 입힌다 — 처음이면 파일이 없다.
+            // 사용자 단축키(Saved/Editor/Shortcuts.json)는 레지스트리를 만들 때 적용한다. 처음 실행이면 파일이 없다.
             if ( EditorCommandGUI::loadShortcutOverrides() == false )
                 SW_LOG_TRACE( "No shortcut overrides yet - default shortcuts" );
             EditorCommandGUI::registerDefaults();
-            // 리로드 전에 기록한 오브젝트 편집도 되돌리면 이 모듈이 선택 · 씬 dirty 를 맞춘다.
+            // 리로드 전에 기록한 오브젝트 편집을 되돌려도 이 모듈이 선택과 씬 dirty 상태를 맞춘다.
             CommandStack* pCommandStack = editor::getService<CommandStack>();
             if ( pCommandStack != nullptr )
                 EditorTransaction::bindObjectEditListener( *pCommandStack );
             EditorRegistryDump::dumpIfRequested();
             _dockLayout.loadPanelVisibility();
 
-            // 모니터 DPI 로 스타일 · 글자를 키운다(테마를 읽은 **뒤** — 테마가 96 DPI 기준 크기를 적는다). 모니터를 옮기면 글자와 플랫폼 창이
-            // 따라간다(ImGui 1.92 동적 폰트).
+            // 모니터 DPI 에 맞춰 스타일과 글자를 키운다. 테마를 읽은 뒤에 해야 한다. 테마가 96 DPI 기준 크기를 기록하기 때문이다.
+            // 모니터를 옮기면 글자와 플랫폼 창이 따라간다(ImGui 1.92 동적 폰트).
             // 배율을 직접 정했으면(`gv_editorUiScale`) 모니터를 옮겨도 글자 배율을 덮어쓰지 않는다.
-            // 스위치가 이기고(자동화), 없으면 환경설정(General 의 UI 배율), 그것도 0 이면 모니터 DPI 다.
+            // 우선순위는 스위치(자동화), 환경설정(General 의 UI 배율), 모니터 DPI 순이다. 배율이 0 이면 다음 순위로 넘어간다.
             const float32 fixedUIScale  = gv_editorUiScale > 0.0f ? static_cast<float32>( gv_editorUiScale ) : getPreferences<EditorGeneralPreferences>()._uiScale;
             const bool    bFixedUIScale = fixedUIScale > 0.0f;
             EditorThemeUtil::setDpiScale( bFixedUIScale ? fixedUIScale : _platformBackend->getDpiScale() );
@@ -363,8 +363,8 @@ namespace sw::editor
             SW_LOG_INFO( "Editor UI scale %# (%#, frame padding %#x%#)", EditorThemeUtil::getDpiScale(), bFixedUIScale ? "fixed" : "monitor DPI",
                          ImGui::GetStyle().FramePadding.x, ImGui::GetStyle().FramePadding.y );
 
-            // `-gv_editorStartupScene=<경로>`: 검증용이다 — 기동 검증이 오브젝트를 순회하는 코드까지 다루게 한다. 정의는 이 파일 위에 있다.
-            // 스위치가 이기고, 없으면 환경설정(General 의 시작 씬)이다.
+            // `-gv_editorStartupScene=<경로>` 는 검증용이다. 기동 검증이 오브젝트를 순회하는 코드까지 실행하게 한다. 정의는 이 파일 위쪽에 있다.
+            // 스위치가 있으면 그 값을 쓰고, 없으면 환경설정(General 의 시작 씬)을 쓴다.
             const string startupScene = gv_editorStartupScene.empty() == false ? string( gv_editorStartupScene ) : getPreferences<EditorGeneralPreferences>()._startupScene;
             if ( startupScene.empty() == false )
             {
@@ -383,18 +383,18 @@ namespace sw::editor
 
     void ImGuiEditor::shutdownPartialInitialization()
     {
-        // 세운 역순이다(헤더의 단계 목록). 각 단계는 세워지지 않았으면 아무것도 하지 않는다.
+        // 초기화의 역순으로 정리한다(헤더의 단계 목록). 각 단계는 초기화되지 않았으면 아무것도 하지 않는다.
 
-        // 7) 창 닫기 질의 처리기 — 이 DLL 의 메서드를 가리킨다.
+        // 7) 창 닫기 질의 처리기. 이 DLL 의 메서드를 가리키므로 먼저 해제한다.
         IWindow* pActiveWindow = IWindow::getActiveWindow();
         if ( pActiveWindow != nullptr )
         {
             pActiveWindow->setCloseQueryHandler( {} );
-            // 에디터가 내려가면 창 제목은 게임 프리셋 그대로다(창 제목의 출처는 그것 하나다).
+            // 에디터를 종료하면 창 제목은 게임 프리셋 그대로 돌아간다. 창 제목의 출처는 게임 프리셋 하나뿐이다.
             pActiveWindow->setTitle( GameConfig::getActive()._windowTitle.c_str() );
         }
 
-        // 6) 에디터 컨텍스트 · 패널. Undo 스택에서는 이 모듈의 코드를 쥔 명령과 편집 리스너만 뗀다(오브젝트 편집은 엔진 데이터 명령이라 남는다).
+        // 6) 에디터 컨텍스트와 패널. Undo 스택에서는 이 모듈의 코드를 가진 명령과 편집 리스너만 제거한다. 오브젝트 편집은 엔진 데이터 명령이므로 남는다.
         ImGuiEditorInternal::releaseModuleUndoCommands();
         if ( _editorContext != nullptr )
         {
@@ -419,7 +419,7 @@ namespace sw::editor
             _platformBackend.reset();
         }
 
-        // 2) ImPlot · ImGui 컨텍스트(글꼴 아틀라스는 컨텍스트가 든다) — 확장 DLL 의 사본에서 먼저 뗀다
+        // 2) ImPlot 과 ImGui 컨텍스트. 글꼴 아틀라스는 컨텍스트가 보관한다. 확장 DLL 의 사본에서 먼저 분리한다
         EditorUIContext::publish( EditorUIContextState{} );
         if ( ImPlot::GetCurrentContext() != nullptr )
             ImPlot::DestroyContext();
@@ -436,13 +436,13 @@ namespace sw::editor
         if ( _bInitialized == SW_FALSE && _editorContext == nullptr && _rendererBackend == nullptr && _platformBackend == nullptr && ImGui::GetCurrentContext() == nullptr )
             return;
 
-        // 열려 있는 파일 대화 상자의 결과 델리게이트를 끊는다. 모듈이 내려가기 전에 걷어 내야 하는 이 DLL 안의 주소다(전역 변수는
-        // 모듈을 내리는 쪽이 모듈 이름으로 걷는다). 그 델리게이트는 이 DLL 안의 함수와 `this` 를 잡고
-        // 있고, 네이티브 대화 상자는 사용자가 닫을 때까지 떠 있다. Undo 스택과 같은 종류의 함정이다.
+        // 열려 있는 파일 대화상자의 결과 델리게이트를 해제한다. 모듈을 언로드하기 전에 제거해야 하는 이 DLL 안의 주소다.
+        // 전역 변수는 모듈을 언로드하는 쪽이 모듈 이름으로 정리한다. 그 델리게이트는 이 DLL 안의 함수와 `this` 를 참조하고,
+        // 네이티브 대화상자는 사용자가 닫을 때까지 떠 있다. Undo 스택과 같은 종류의 함정이다.
         FileUtil::cancelFileDialogResults();
 
-        // 기다리지 않는다. 여기로 오는 경로(ModuleHost::suspendModules)는 이미 drainRenderWorkers 로 렌더 워커를 비운 뒤라
-        // 기다릴 상대가 없다.
+        // 기다리지 않는다. 여기로 오는 경로(ModuleHost::suspendModules)는 이미 drainRenderWorkers 로 렌더 워커를 비운 뒤이므로
+        // 기다릴 대상이 없다.
         abandonPendingDraw();
         for ( EditorDrawDataSnapshot& snapshot : _arrDrawSnapshot )
         {
@@ -451,7 +451,7 @@ namespace sw::editor
 
         _dockLayout.save();
 
-        // 초기화 단계의 내리기는 실패 경로와 같은 본문 하나다.
+        // 초기화 단계의 정리 코드는 실패 경로와 같은 본문을 쓴다.
         shutdownPartialInitialization();
 
         _bInitialized = SW_FALSE;
@@ -470,16 +470,16 @@ namespace sw::editor
         if ( _bInitialized == SW_FALSE )
             return;
 
-        // 하위 구간 — `GT.Editor.updateUI`(App) 가 무엇에 쓰이는지 가른다. 패널마다의 시간은 `-gv_editorPanelTimes=N`.
+        // 하위 구간은 `GT.Editor.updateUI`(App) 의 시간이 어디에 쓰이는지 나눠 보여 준다. 패널별 시간은 `-gv_editorPanelTimes=N` 으로 본다.
         {
-            // 지난 UI 프레임을 렌더 스레드가 다 그릴(postPresent) 때까지 기다린다 — 큰 값은 UI 일이 아니라 RT · GPU · Present 대기다.
+            // 지난 UI 프레임을 렌더 스레드가 다 그릴 때(postPresent)까지 기다린다. 이 값이 크면 UI 작업이 아니라 RT, GPU, Present 대기가 길다는 뜻이다.
             SW_EDITOR_PROFILE_SCOPE( "GT.Editor.waitDrawSnapshot" );
             waitForDrawSnapshotIdle();
         }
 
         if ( _editorContext != nullptr )
         {
-            // 확장 모듈은 에디터가 뜬 뒤에도 로드되고 언로드된다 — 등록 세대가 바뀌었으면 인스턴스를 맞춘다(같으면 비교 하나로 끝).
+            // 확장 모듈은 에디터가 뜬 뒤에도 로드되고 언로드된다. 등록 세대가 바뀌었으면 인스턴스를 맞추고, 같으면 비교 한 번으로 끝난다.
             _editorContext->syncExtensionRegistrations();
             _editorContext->setGameViewFocused( false );
             _editorContext->setGameViewHovered( false );
@@ -491,7 +491,7 @@ namespace sw::editor
             beginFrame();
             EditorMenuBar::drawThemeDialog();
             EditorMenuBar::draw( _dockLayout );
-            EditorPlayToolbar::draw(); // 메뉴 막대 아래 — 도크스페이스보다 먼저 서야 도크 영역이 그만큼 줄어든다
+            EditorPlayToolbar::draw(); // 메뉴 바 아래에 둔다. 도크스페이스보다 먼저 그려야 도크 영역이 그만큼 줄어든다
             _dockLayout.beginDockspace();
         }
 
@@ -501,7 +501,7 @@ namespace sw::editor
             EditorMenuBar::processOpenPanelRequests();
             EditorMenuBar::processSceneSession();
 
-            // 에셋 파일 감시는 **에디터 프레임에서만** 돈다. 리로드가 패널 그리기보다
+            // 에셋 파일 감시는 에디터 프레임에서만 돈다. 리로드가 패널 그리기보다
             // 앞에 있어야 이번 프레임에 바뀐 머티리얼이 그대로 보인다.
             if ( _editorContext != nullptr )
             {
@@ -517,13 +517,13 @@ namespace sw::editor
             if ( _editorContext != nullptr )
             {
                 _editorContext->getPanelManager().drawOpenPanels();
-                _dockLayout.updateDefaultTabSelection(); // 패널이 처음 나타나며 가져간 포커스보다 뒤여야 한다
+                _dockLayout.updateDefaultTabSelection(); // 패널이 처음 나타나며 가져간 포커스보다 나중에 실행해야 한다
                 _editorContext->getPopupManager().drawOpenPopups();
                 EditorNotificationManager& notificationManager = _editorContext->getNotificationManager();
                 notificationManager.update( ImGui::GetIO().DeltaTime );
                 EditorNotificationView::draw( notificationManager, 1920.0f, 1080.0f );
             }
-            // 자체 테스트 실행(-gv_editorSelfTest · Test Runner 창)이 없으면 아무것도 하지 않는다. 패널을 그린 뒤라 테스트가 이번 프레임의 패널 상태를 본다.
+            // 자체 테스트 실행(-gv_editorSelfTest, Test Runner 창)이 없으면 아무것도 하지 않는다. 패널을 그린 뒤에 실행하므로 테스트가 이번 프레임의 패널 상태를 본다.
             EditorSelfTestRunner::runFrame();
             ImGuiEditorInternal::updateWindowTitle( _editorContext.get() );
             EditorScreenshotCommands::update();
@@ -536,26 +536,26 @@ namespace sw::editor
                 endFrame();
             }
 
-            // EndFrame 이후여야 창의 DrawList 가 이번 프레임의 최종 내용을 담는다.
+            // EndFrame 이후에 호출해야 창의 DrawList 에 이번 프레임의 최종 내용이 담긴다.
             // -gv_editorPanelDump=N 이 없으면 아무것도 하지 않는다.
             EditorPanelDump::dumpIfRequested();
 
-            // GL 처럼 컨텍스트가 렌더 스레드 전용이면 GPU 작업(텍스처 갱신·보조 뷰포트 렌더)을
+            // GL 처럼 컨텍스트가 렌더 스레드 전용이면 GPU 작업(텍스처 갱신, 보조 뷰포트 렌더)을
             // present 훅으로 옮긴다. 그 외 백엔드는 여기 UI 스레드에서 처리한다.
             const bool bRenderThreadContext =
                 _rendererBackend != nullptr && _rendererBackend->requiresRenderThreadContext();
 
-            // ImGui 1.92 동적 아틀라스: 폰트/텍스처 생성·갱신을 그리기 전에 마친다.
-            // (메인 스냅샷은 Textures==nullptr 로 넘겨 렌더 스레드가 이 리스트를 만지지 않는다)
+            // ImGui 1.92 동적 아틀라스는 폰트와 텍스처의 생성과 갱신을 그리기 전에 마쳐야 한다.
+            // 메인 스냅샷은 Textures==nullptr 로 넘겨, 렌더 스레드가 이 리스트를 건드리지 않게 한다.
             if ( _rendererBackend != nullptr && bRenderThreadContext == false )
                 _rendererBackend->processTextureUpdates();
 
             ImGuiIO& io = ImGui::GetIO();
             if ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable )
             {
-                // 플랫폼(OS 창) 갱신은 항상 UI 스레드에서 한다. imgui 1.92 뷰포트 관리는 단일 스레드 호출을 전제하므로 보조(플로팅)
-                // 뷰포트의 GPU 렌더 · present 는 한 스레드에서만 돌려야 하고, GL 이면 그 스레드는 렌더 스레드다(아래 render() 에서 처리).
-                // 창 생성 · 크기 변경 · 파괴와 렌더가 GPU 큐에 제출 · 대기하므로 렌더러 백엔드의 큐 잠금 안에서 한다.
+                // 플랫폼(OS 창) 갱신은 항상 UI 스레드에서 한다. imgui 1.92 뷰포트 관리는 단일 스레드 호출을 전제하므로, 보조(플로팅)
+                // 뷰포트의 GPU 렌더와 present 는 한 스레드에서만 실행해야 한다. GL 에서는 그 스레드가 렌더 스레드다(아래 render() 에서 처리).
+                // 창 생성, 크기 변경, 파괴와 렌더가 GPU 큐에 제출하고 대기하므로 렌더러 백엔드의 큐 락 안에서 실행한다.
                 SW_EDITOR_PROFILE_SCOPE( "GT.Editor.platformWindows" );
                 const std::unique_lock<mutex> queueLock =
                     ( _rendererBackend != nullptr ) ? _rendererBackend->lockSubmissionQueue() : std::unique_lock<mutex>{};
@@ -571,7 +571,7 @@ namespace sw::editor
                 std::this_thread::yield();
             }
 
-            // 번호는 내기 전에 알린다. 이 뒤에 놓는 자원은 이 스냅샷이 그릴 수 있으므로 다음 번호를 받아야 한다.
+            // 스냅샷을 내기 전에 번호를 알린다. 이 뒤에 해제하는 자원은 이 스냅샷이 그릴 수 있으므로 다음 번호를 받아야 한다.
             ++_lastDrawSnapshotSequence;
             {
                 SW_EDITOR_PROFILE_SCOPE( "GT.Editor.captureDrawSnapshot" );
@@ -581,10 +581,10 @@ namespace sw::editor
                 _rendererBackend->getDrawReleaseQueue().markSnapshotPublished( _lastDrawSnapshotSequence );
             _publishedDrawSlot.store( writeSlot, std::memory_order_release );
 
-            // 이 프레임을 "렌더 대기" 상태로 표시한다. 다음 updateUI 는 상단 waitForDrawSnapshotIdle
-            // 에서 postPresent 까지 막히므로, 렌더 스레드가 present 훅에서 ImGui 공유 상태
-            // (텍스처 리스트·뷰포트)를 만지는 GL 경로에서도 UI 스레드와 겹치지 않는다.
-            // (렌더 스레드 render() 도 같은 값을 다시 저장하지만 값이 같아 무해하다)
+            // 이 프레임을 "렌더 대기" 상태로 표시한다. 다음 updateUI 는 상단의 waitForDrawSnapshotIdle
+            // 에서 postPresent 까지 막힌다. 그래서 렌더 스레드가 present 훅에서 ImGui 공유 상태
+            // (텍스처 리스트, 뷰포트)를 건드리는 GL 경로에서도 UI 스레드와 겹치지 않는다.
+            // 렌더 스레드의 render() 도 같은 값을 다시 저장하지만 값이 같으므로 문제없다.
             _inFlightDrawSlot.store( writeSlot, std::memory_order_release );
         }
     }
@@ -594,7 +594,7 @@ namespace sw::editor
         if ( _bInitialized == SW_FALSE || pRHIDevice == nullptr )
             return;
 
-        // GL: 컨텍스트가 이 스레드(렌더 스레드)에 바인딩된 지금이 프레임 GPU 작업을 할 유일한 지점이다.
+        // GL 에서는 컨텍스트가 이 스레드(렌더 스레드)에 바인딩된 지금이 프레임 GPU 작업을 할 수 있는 유일한 지점이다.
         const bool bRenderThreadContext =
             _rendererBackend != nullptr && _rendererBackend->requiresRenderThreadContext();
         if ( bRenderThreadContext )
@@ -611,13 +611,13 @@ namespace sw::editor
             if ( pDrawData != nullptr )
                 renderBackend( pRHIDevice, pDrawData );
 
-            // 이 프레임이 그린 스냅샷보다 먼저 놓인 자원은 앞 프레임들만 그렸다. 이 프레임의 GPU 완료 뒤에 놓이도록 디바이스로 넘긴다.
+            // 이 프레임의 스냅샷보다 먼저 해제 요청된 자원은 앞 프레임들만 그렸다. 이 프레임의 GPU 작업이 끝난 뒤에 해제되도록 디바이스로 넘긴다.
             if ( _rendererBackend != nullptr )
                 _rendererBackend->getDrawReleaseQueue().handOverToDevice( *pRHIDevice, _arrDrawSnapshot[slot].getSequence() );
         }
 
-        // 보조(플로팅) 뷰포트도 GL 이면 여기 렌더 스레드에서 렌더·present 한다.
-        // (UI 스레드는 updateUI 상단 waitForDrawSnapshotIdle 에서 막혀 있어 ImGui 상태가 안정적이다)
+        // 보조(플로팅) 뷰포트도 GL 이면 여기 렌더 스레드에서 렌더하고 present 한다.
+        // UI 스레드는 updateUI 상단의 waitForDrawSnapshotIdle 에서 막혀 있으므로 ImGui 상태가 안정적이다.
         if ( bRenderThreadContext )
         {
             const ImGuiIO& io = ImGui::GetIO();
@@ -629,16 +629,16 @@ namespace sw::editor
     void ImGuiEditor::postPresent( IRHIDevice* pRHIDevice )
     {
         std::ignore = pRHIDevice;
-        // 메인 스냅샷 렌더가 끝났으니 UI 스레드가 다음 슬롯을 쓰도록 해제한다.
-        // 보조 뷰포트는 updateUI 에서 UI 스레드가 이미 렌더·present 했다.
+        // 메인 스냅샷 렌더가 끝났으므로 UI 스레드가 다음 슬롯을 쓸 수 있게 해제한다.
+        // 보조 뷰포트는 updateUI 에서 UI 스레드가 이미 렌더하고 present 했다.
         _inFlightDrawSlot.store( _s_kInvalidDrawSlot, std::memory_order_release );
     }
 
     void ImGuiEditor::abandonPendingDraw()
     {
-        // in-flight 표시는 "렌더 스레드가 이 슬롯을 읽고 postPresent 에서 풀어 준다" 는 약속이다. 렌더 워커를 비워 세우면 그
-        // 약속을 지킬 쪽이 사라지므로, 비운 쪽이 여기로 알려 준다. 이것이 없으면 다음 waitForDrawSnapshotIdle 이 영원히 돌아오지
-        // 않는다(에디터 모듈 핫 리로드: destroyEditorInstance → shutdown → 무한 대기).
+        // in-flight 표시는 "렌더 스레드가 이 슬롯을 읽고 postPresent 에서 해제한다" 는 약속이다. 렌더 워커를 비우면 그
+        // 약속을 지킬 쪽이 사라지므로, 워커를 비운 쪽이 여기로 알려 준다. 이 호출이 없으면 다음 waitForDrawSnapshotIdle 이 영원히 반환하지
+        // 않는다. 에디터 모듈을 핫 리로드할 때 destroyEditorInstance, shutdown 을 거쳐 무한 대기에 빠진다.
         _inFlightDrawSlot.store( _s_kInvalidDrawSlot, std::memory_order_release );
     }
 
@@ -649,17 +649,17 @@ namespace sw::editor
 
         if ( _platformBackend != nullptr )
         {
-            // 셸이 이미 장치 사건을 버리지만(`InputManager::shouldDropNativeEvent`), 비클라이언트 · 떠남 사건(WM_NCMOUSEMOVE · WM_MOUSELEAVE)도 커서 자리를 넣는다.
+            // 셸이 이미 장치 이벤트를 버리지만(`InputManager::shouldDropNativeEvent`), 비클라이언트 이벤트와 떠남 이벤트(WM_NCMOUSEMOVE, WM_MOUSELEAVE)도 커서 위치를 넣는다.
             const ScopedImGuiOsInputFilter osInputFilter{ ImGuiEditorInternal::isOsDeviceInputBlocked() };
             _platformBackend->processEvent( event );
         }
 
-        // ImGui 가 차지한 입력은 게임으로 넘기지 않는다. 게임 뷰 위에서는 예외다(씬 뷰 위의 입력은 에디터 카메라 몫이다).
+        // ImGui 가 가져간 입력은 게임으로 넘기지 않는다. 게임 뷰 위에서는 예외다. 씬 뷰 위의 입력은 에디터 카메라가 처리한다.
         const ImGuiIO& io               = ImGui::GetIO();
         const bool     bGameViewHovered = _editorContext != nullptr && _editorContext->isGameViewHovered();
         const bool     bGameViewFocused = _editorContext != nullptr && _editorContext->isGameViewFocused();
 
-        // Simulate 는 월드만 돈다 — 게임 입력을 주지 않는다(에디터 카메라 · 패널은 위의 ImGui 처리로 이미 받았다).
+        // Simulate 는 월드만 실행하므로 게임 입력을 주지 않는다. 에디터 카메라와 패널은 위의 ImGui 처리에서 이미 입력을 받았다.
         if ( EditorPlaySession::isSimulating() && ( event.isMouseInput() || event.isKeyboardInput() ) )
             return true;
 
@@ -707,13 +707,13 @@ namespace sw::editor
 
     CameraComponent* ImGuiEditor::getSceneViewCamera() const
     {
-        // 씬 뷰는 Play · Simulate 중에도 에디터 카메라다 — 게임 카메라 출력은 게임 뷰가 그린다.
+        // 씬 뷰는 Play 와 Simulate 중에도 에디터 카메라를 쓴다. 게임 카메라 출력은 게임 뷰가 그린다.
         return EditorCamera::ensure( editor::getActiveScene() );
     }
 
     bool ImGuiEditor::isPlaying() const
     {
-        // 호스트는 이 답으로 게임 모듈 업데이트를 켠다. Simulate 는 씬 틱만 하고(isPaused 가 false) 게임 모듈은 돌리지 않는다.
+        // 호스트는 이 반환값으로 게임 모듈 업데이트를 켠다. Simulate 는 씬 틱만 실행하고(isPaused 가 false) 게임 모듈은 실행하지 않는다.
         return EditorPlaySession::isPlayerActive();
     }
 
@@ -729,10 +729,10 @@ namespace sw::editor
 
     void ImGuiEditor::onHostFrameEnd()
     {
-        // 씬을 여는 중에 누른 Play 는 미뤄져 있다 — 로드가 끝난 프레임에 여기서 시작한다.
+        // 씬을 여는 중에 누른 Play 는 미뤄 둔다. 로드가 끝난 프레임에 여기서 시작한다.
         EditorPlaySession::update();
         EditorPlaySession::consumePendingStep();
-        EditorPlayCommands::tick(); // Maximize On Play — 시작 · 정지가 어디서 왔든 상태 전이를 여기서 본다
+        EditorPlayCommands::tick(); // Maximize On Play. 시작과 정지가 어디서 왔든 상태 전이를 여기서 확인한다
     }
 
     bool ImGuiEditor::onWindowCloseQuery()
@@ -751,20 +751,20 @@ namespace sw::editor
 
         if ( _platformBackend != nullptr )
         {
-            // 무인 자동화면 플랫폼이 물은 실제 커서(Win32 GetCursorPos · 커서 아래 뷰포트, X11 XQueryPointer 의 위치 · 단추)를 지운다 — 테스트가 커서를
-            // 놓은 프레임(단추를 떼는 프레임)에 실제 커서가 마지막 위치가 되면 ImGui 가 뗌을 다음 프레임으로 미뤄 뷰포트 비행이 그 차이만큼 돈다.
+            // 무인 자동화 중이면 플랫폼이 조회한 실제 커서를 지운다. Win32 는 GetCursorPos 와 커서 아래 뷰포트, X11 은 XQueryPointer 의 위치와 버튼이 해당한다.
+            // 테스트가 커서를 놓은 프레임(버튼을 떼는 프레임)에 실제 커서가 마지막 위치가 되면 ImGui 가 버튼 뗌을 다음 프레임으로 미뤄 뷰포트 비행이 그 차이만큼 돈다.
             const ScopedImGuiOsInputFilter osInputFilter{ ImGuiEditorInternal::isOsDeviceInputBlocked() };
             _platformBackend->newFrame();
         }
-        // 자체 테스트가 흉내 낸 입력 — 플랫폼 백엔드가 넣은 실제 커서보다 뒤에 넣어야 이긴다(ImGui 는 큐를 순서대로 처리한다).
+        // 자체 테스트가 만든 가상 입력은 플랫폼 백엔드가 넣은 실제 커서보다 뒤에 넣어야 우선한다. ImGui 는 큐를 순서대로 처리하기 때문이다.
         EditorSelfTestInput::flushIntoImGui();
 
-        // 이름 붙인 레이아웃은 프레임 밖에서 읽어야 이미 있는 창 · 도킹 노드에 적용된다.
+        // 이름 붙인 레이아웃은 프레임 밖에서 읽어야 이미 있는 창과 도킹 노드에 적용된다.
         _dockLayout.applyPendingNamedLayout();
         ImGui::NewFrame();
-        // 모니터를 옮기면 ImGui 가 글자 배율(FontScaleDpi)만 새 DPI 로 덮는다(ConfigDpiScaleFonts). 테마의 여백 · 둥글기는 옛 배율이라 따라가게 한다 —
-        // 안 그러면 150 % 모니터에서 글자만 커지고 칸은 그대로다. 배율을 직접 정했으면(gv_editorUiScale) ImGui 가 덮지 않으므로 여기도 같다.
-        // 이 프레임의 위젯은 아직 안 그렸다 — 스타일 크기는 그릴 때 읽힌다.
+        // 모니터를 옮기면 ImGui 가 글자 배율(FontScaleDpi)만 새 DPI 로 덮어쓴다(ConfigDpiScaleFonts). 테마의 여백과 둥글기는 이전 배율이 남으므로 따라가게 한다.
+        // 그러지 않으면 150 % 모니터에서 글자만 커지고 위젯 크기는 그대로다. 배율을 직접 정했으면(gv_editorUiScale) ImGui 가 덮어쓰지 않으므로 여기서도 건드리지 않는다.
+        // 이 프레임의 위젯은 아직 그리지 않았다. 스타일 크기는 그릴 때 읽힌다.
         {
             const float32 fontScaleDpi = ImGui::GetStyle().FontScaleDpi;
             const bool    bDpiMoved    = ImGui::GetIO().ConfigDpiScaleFonts && fontScaleDpi > 0.0f &&
@@ -772,7 +772,7 @@ namespace sw::editor
             if ( bDpiMoved )
                 EditorThemeUtil::setDpiScale( fontScaleDpi );
         }
-        // 실행 중에 `gv_editorUiScale` 을 바꾸면(콘솔 · 시나리오 `<Variable>` · gv 패널) 바로 따른다 — 0 으로 돌리면 다시 모니터 DPI 를 따른다.
+        // 실행 중에 `gv_editorUiScale` 을 바꾸면(콘솔, 시나리오 `<Variable>`, gv 패널) 바로 반영한다. 0 으로 되돌리면 다시 모니터 DPI 를 따른다.
         {
             const bool    bFixedUIScale = gv_editorUiScale > 0.0f;
             const float32 wantedScale   = bFixedUIScale ? static_cast<float32>( gv_editorUiScale ) : _platformBackend != nullptr ? _platformBackend->getDpiScale()
@@ -788,8 +788,8 @@ namespace sw::editor
             }
         }
         ImGuizmo::BeginFrame();
-        // 기즈모를 띄우는 패널이, 캔버스가 입력을 받을 수 있을 때 다시 켠다. 끌고 있는 동안은 끄지 않는다 — Enable( false ) 는 끌기 상태(mbUsing)까지
-        // 지워서, 프레임마다 끄면 누른 프레임 다음에 끌기가 끊겨 기즈모가 아무것도 움직이지 못한다.
+        // 기즈모를 띄우는 패널이, 캔버스가 입력을 받을 수 있을 때 다시 켠다. 끌고 있는 동안은 끄지 않는다. Enable( false ) 는 끌기 상태(mbUsing)까지
+        // 지우므로, 프레임마다 끄면 누른 다음 프레임에 끌기가 끊겨 기즈모가 움직이지 못한다.
         if ( ImGuizmo::IsUsing() == false )
             ImGuizmo::Enable( false );
     }

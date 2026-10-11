@@ -29,7 +29,7 @@ namespace sw
                 }
             }
 
-            /** @brief 결과를 모두 넣을 자리가 있는가 — 재료를 뺀 뒤를 가정하지 않는다(보수적). */
+            /** @brief 결과를 모두 넣을 공간이 있는지 확인합니다. 재료를 뺀 뒤의 상태를 가정하지 않고 보수적으로 판정합니다. */
             static bool hasRoomForOutputs( const Inventory& inventory, const ItemStackList& outputs, int32 count )
             {
                 for ( const auto& item : outputs.getItems() )
@@ -189,7 +189,7 @@ namespace sw
         const RecipeDef* pRecipe = _pCatalog->findRecipe( recipeID );
         if ( _consumeInputs.isBound() )
         {
-            // 재료는 다른 곳에서 거둔다 — 되돌릴 길이 없으니 결과 자리를 먼저 본다.
+            // 재료는 다른 곳에서 가져온다. 되돌릴 방법이 없으므로 결과를 넣을 공간을 먼저 확인한다.
             if ( CraftingInternal::hasRoomForOutputs( inventory, pRecipe->_outputs, count ) == false )
                 return CraftResult::NoRoom;
             if ( _consumeInputs( pRecipe->_inputs, count ) == false )
@@ -267,11 +267,11 @@ namespace sw
                     return;
             }
             if ( CraftingInternal::hasRoomForOutputs( inventory, pRecipe->_outputs, 1 ) == false )
-                return; // 자리가 날 때까지 기다린다
+                return; // 공간이 생길 때까지 기다린다
             CraftingInternal::giveItems( inventory, pRecipe->_outputs, 1 );
             outListFinished.push_back( job._recipeID );
             if ( --job._count > 0 )
-                job._remaining = pRecipe->_time; // 남은 시간으로 다음 것을 이어 만든다
+                job._remaining = pRecipe->_time; // 남은 횟수가 있으면 다음 것을 이어서 만든다
             else
                 _listJob.pop_front();
         }

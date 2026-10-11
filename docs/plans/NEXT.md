@@ -32,7 +32,11 @@
 4. **중복 정리 — 끝.** 결정적 난수 · 격자 사본 여섯 · 타이머(남은 7곳은 엔진 · 에디터라 그대로)는 끝났고, 키트 체력 직접 관리의 `Vitality` 이전은 하지 않기로 했다(결정 기록 5-8). 남은 격자 손셈(`Habitat` · `Overworld` 타일맵 · 게임 코드)은 파일 스키마가 얽혀 키트가 `getTopology()` 를 열 때 같이.
 5. **엔진 분할.** 계획 [엔진 분할](EnginePartition.md) 0 단계(기준 측정) · 2 ~ 5 단계(작은 고리의 남은 `Resource → Animation`, `Object` 코어 / 기능 가르기, `OBJECT` 라이브러리 → DLL 승격, 월드를 값으로, 모듈 창구).
 6. **서버 디버깅.** 계획 [서버 디버깅](ServerDebug.md) — S2(디버거 대기 · 서버 `pause`/`step`)는 들어갔다. 다음 S1 은 `Server` 에서 네트워크 서버를 여는 테스트 게임이 먼저 있어야 접속을 확인할 수 있다.
-7. **6 차(주석을 새 문체로).**
+7. **6 차(주석을 새 문체로) — 진행 중(2026-10-12).** 워크트리 에이전트가 영역별로 `wt/c6*` 에서 문장 단위로 다시 쓴다. 검증은 주석을 뺀 토큰열 비교(빌드 없음), 병합 뒤 전체 빌드 · 린트는 끝에 한 번.
+   - 병합 끝: Genre(Action · RPG · 나머지), GameFramework Base(Gameplay · 나머지 일부), Core · App · Games 일부, Engine 시뮬레이션류(Animation · Audio · Character · Destruction · Physics · Navigation · Sequencer · Dialogue · TileMap · Environment), Graphics · Renderer 주석 많은 28개.
+   - 진행 중이던 브랜치: `wt/c6gfx`(남은 .cpp 인라인 주석 · Shader · RHI 하위), `wt/c6kfeat`(Kits/Feature), `wt/c6ui`(UI · Input · Window 등), `wt/c6editor`, `wt/c6obj`(Object · Reflection · Serialization 등). `git log main..wt/<이름>` 으로 병합 안 된 커밋을 보고, 병합은 `git merge wt/<이름>` 뒤 `BASE=<병합 전 HEAD> py -3 <commentverify.py> verify .` 로 bad 0 을 확인한다(검증 스크립트는 `termpass.py` 의 verify, 주석을 뺀 토큰열 비교).
+   - 남긴 것: 주석이 짧고 이미 좋은 파일(Base 헤더 약 230개, Core Math · File · Container 등)은 건드리지 않았다. Scripts · Test · docs/Config 의 '시험' 278곳과 셰이더 주석 2곳(`waterwaveprobe.hlsl` · `lighting2d.hlsli`, 재쿠킹 `App --cook-shaders` 필요)은 아직 '테스트' 로 바꾸지 않았다.
+   - 끝나면 Debug `all AllTests` 경고 0 · `ctest -L lint` · `-L nogpu` 를 돌리고 push 한다. 그 뒤 8번(빌드 속도) 이후를 잇는다.
 
 ### 알아 둘 함정
 

@@ -155,7 +155,7 @@ namespace sw
 
     float3 CharacterGeometryUtil::findClosestPointOnTriangle( const float3& point, const float3& a, const float3& b, const float3& c, float32& outU, float32& outV )
     {
-        // Ericson, Real-Time Collision Detection 5.1.5 — 보로노이 영역으로 나눠 가장 가까운 점을 고른다.
+        // Ericson, Real-Time Collision Detection 5.1.5 를 따른다. 보로노이 영역으로 나눠 가장 가까운 점을 고른다.
         const float3  ab = b - a;
         const float3  ac = c - a;
         const float3  ap = point - a;
@@ -218,7 +218,7 @@ namespace sw
     bool CharacterGeometryUtil::intersectRayTriangle( const float3& origin, const float3& direction, const float3& a, const float3& b, const float3& c,
                                                       float32& outDistance, float32& outU, float32& outV, bool& outFrontFace )
     {
-        // Möller–Trumbore, 양면. 무게중심 경계에 작은 여유를 둔다 — 광선이 두 삼각형이 나누는 모서리를 정확히 지나면 부동소수 오차로
+        // Möller-Trumbore 알고리즘이며 양면을 검사한다. 무게중심 경계에 작은 여유를 둔다. 광선이 두 삼각형이 나누는 모서리를 정확히 지나면 부동소수 오차로
         // 양쪽 다 빗나갈 수 있다(같은 각도로 나뉜 원기둥 두 겹에서 실제로 났다). 여유 안의 값은 경계로 묶는다.
         constexpr float32 kBarycentricSlack = 1.0e-5f;
         const float3      edge1             = b - a;

@@ -14,7 +14,7 @@ namespace sw
     {
         struct PlacementRuleInternal
         {
-            /** @brief 후보 하나가 꺼내는 난수 칸입니다. 칸을 더할 때는 끝에 붙인다 — 앞 칸의 값이 바뀌면 같은 씨앗의 배치가 바뀐다. */
+            /** @brief 후보 하나가 꺼내는 난수 슬롯입니다. 슬롯을 추가할 때는 끝에 붙입니다. 앞 슬롯의 값이 바뀌면 같은 시드의 배치가 바뀝니다. */
             enum Lane : uint32
             {
                 kLaneU = 0,
@@ -25,14 +25,14 @@ namespace sw
                 kLaneYaw,
             };
 
-            /** @brief 최소 거리 격자의 칸 키입니다. 칸 크기가 최소 거리 / √2 라 칸 하나에 점은 많아야 하나입니다. */
+            /** @brief 최소 거리 격자의 셀 키입니다. 셀 크기가 최소 거리 / √2 라 셀 하나에 점이 많아야 하나입니다. */
             static int64 makeCellKey( int32 cellU, int32 cellV )
             {
-                // 음수 칸(-1 …)을 부호 있는 채로 밀면 정의되지 않은 동작이다 — 부호 없는 32 비트로 바꿔 민다(값은 같다).
+                // 음수 셀(-1 등)을 부호 있는 채로 밀면 정의되지 않은 동작이다. 부호 없는 32 비트로 바꿔서 민다(값은 같다).
                 return static_cast<int64>( ( static_cast<uint64>( static_cast<uint32>( cellU ) ) << 32 ) | static_cast<uint64>( static_cast<uint32>( cellV ) ) );
             }
 
-            /** @brief @p position 에서 @p minDistance 안에 이미 놓인 점이 있으면 true 입니다. 칸 반경 2 까지 봅니다. */
+            /** @brief @p position 에서 @p minDistance 안에 이미 놓인 점이 있으면 true 를 반환합니다. 셀 반경 2 까지 봅니다. */
             static bool isTooClose( const unordered_map<int64, int32>& mapCellToPoint, const vector<float2>& listPoint, const float2& position,
                                     float32 cellSize, float32 minDistance )
             {
@@ -63,7 +63,7 @@ namespace sw
 {
     uint32 PlacementScatter::hashCandidate( uint32 seed, uint32 candidateIndex, uint32 lane )
     {
-        // murmur3 의 마무리 섞기를 세 값에 차례로 건다. 이웃한 번호 · 칸이 이웃한 값을 받지 않는다.
+        // murmur3 의 마무리 섞기를 세 값에 차례로 적용한다. 이웃한 번호와 셀이 이웃한 값을 받지 않는다.
         uint32 hash = seed * 0x9E3779B1u ^ candidateIndex * 0x85EBCA77u ^ lane * 0xC2B2AE3Du;
         hash ^= hash >> 16;
         hash *= 0x85EBCA6Bu;
@@ -155,7 +155,7 @@ namespace sw
         else
             SW_LOG_WARNING( "Placement asks for %# candidates - clamped to %#", static_cast<uint64>( wantedCount ), kMaxCandidateCount );
 
-        // 최소 거리 격자: 칸 = 최소 거리 / √2 라 칸 하나에 점이 많아야 하나다. 칸 반경 2 를 보면 최소 거리 안의 모든 점을 본다.
+        // 최소 거리 격자: 셀 = 최소 거리 / √2 라 셀 하나에 점이 많아야 하나다. 셀 반경 2 를 보면 최소 거리 안의 모든 점을 본다.
         const bool                  bPoisson = rule._minDistance > 0.0f;
         const float32               cellSize = bPoisson ? rule._minDistance * MathUtil::kInvSqrt2 : 1.0f;
         unordered_map<int64, int32> mapCellToPoint;
@@ -191,7 +191,7 @@ namespace sw
 
             const int32 entryIndex = pickEntry( listEntryWeight, toUnit( hashCandidate( rule._seed, candidateIndex, Internal::kLaneEntry ) ) );
             if ( entryIndex < 0 )
-                return; // 비중 합이 0 — 놓을 것이 없다
+                return; // 비중 합이 0 이면 놓을 것이 없다.
 
             if ( bPoisson )
             {
@@ -221,7 +221,7 @@ namespace sw
         if ( instance._alignToNormal <= 0.0f )
             return yawScale * float4x4::makeTranslation( position );
 
-        // 위쪽을 (위쪽 → 노멀) 로 alignToNormal 만큼 돌린다. 요는 기울이기 전에 건다(기울어진 축이 아니라 표면 위에서 돈다).
+        // 위쪽을 (위쪽에서 노멀로 가는 회전)만큼 alignToNormal 로 돌린다. 요는 기울이기 전에 적용한다(기울어진 축이 아니라 표면 위에서 돈다).
         const float3  normal = instance._normal.normalize();
         const float3  target = ( float3::Up * ( 1.0f - instance._alignToNormal ) + normal * instance._alignToNormal ).normalize();
         const float3  axis   = float3::Up.cross( target );

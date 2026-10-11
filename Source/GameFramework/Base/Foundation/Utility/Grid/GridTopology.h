@@ -1,6 +1,6 @@
 /**
  * @file GridTopology.h
- * @brief 2D 칸 격자의 모양(칸 번호 · 경계 · 이웃 순서)과 너비 우선 탐색 · 표시용 재사용 스크래치입니다.
+ * @brief 2D 칸 격자의 모양(칸 번호, 경계, 이웃 순서)과, 너비 우선 탐색과 표시에 쓰는 재사용 스크래치를 정의합니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -11,11 +11,12 @@ namespace sw
 {
     /**
      * @struct GridTopology
-     * @brief 너비 × 높이 칸 격자의 칸 번호(`y × 너비 + x`) · 경계 · 이웃 순서입니다.
-     * @details 이웃 순서는 하나로 고정입니다 — 앞 넷이 직교(+x, −x, +y, −y), 뒤 넷이 대각선(+x+y, +x−y, −x+y, −x−y). 탐색 결과(경로 ·
-     *          흐름장 · 번짐 알림 순서)가 이 순서에 매이므로 바꾸면 결정적 시뮬레이션의 결과가 바뀝니다. 내비 · 기믹 · 키트가 같은 표를 씁니다.
-     *          칸 격자를 든 클래스는 `_width` · `_height` 를 따로 두지 않고 이것 하나를 멤버로 들며, `y × 너비 + x` 를 손으로 적지 않습니다.
-     * @note 칸 번호는 int32 입니다 — 칸 수가 int32 를 넘는 격자는 저장소부터 만들 수 없습니다(타일맵은 `TileMapXMLData::kMaxTileCount` 로 막는다).
+     * @brief 너비 × 높이 칸 격자의 칸 번호(`y × 너비 + x`), 경계, 이웃 순서를 담습니다.
+     * @details 이웃 순서는 하나로 고정이다. 앞 넷이 직교(+x, −x, +y, −y)이고, 뒤 넷이 대각선(+x+y, +x−y, −x+y, −x−y)이다.
+     *          탐색 결과(경로, 흐름장, 번짐 알림 순서)가 이 순서에 매이므로, 바꾸면 결정적 시뮬레이션의 결과가 바뀐다.
+     *          내비, 기믹, 키트가 같은 표를 쓴다.
+     *          칸 격자를 든 클래스는 `_width` 와 `_height` 를 따로 두지 않고 이것 하나를 멤버로 들며, `y × 너비 + x` 를 손으로 적지 않는다.
+     * @note 칸 번호는 int32 이다. 칸 수가 int32 를 넘는 격자는 저장소부터 만들 수 없다. 타일맵은 `TileMapXMLData::kMaxTileCount` 로 막는다.
      */
     struct GridTopology
     {
@@ -34,12 +35,12 @@ namespace sw
         {
         }
 
-        /** @brief @p cell 의 @p direction 번째 이웃입니다(경계는 보지 않는다). */
+        /** @brief @p cell 의 @p direction 번째 이웃을 반환합니다. 경계는 보지 않습니다. */
         static constexpr int2 getNeighbor( const int2& cell, int32 direction ) { return int2{ cell._x + kArrOffsetX[direction], cell._y + kArrOffsetY[direction] }; }
 
         constexpr bool isInside( int32 x, int32 y ) const { return 0 <= x && x < _width && 0 <= y && y < _height; }
         constexpr bool isInside( const int2& cell ) const { return isInside( cell._x, cell._y ); }
-        /** @brief @p origin(왼쪽 아래)에서 @p size 칸 사각형(발자국)이 모두 격자 안인지입니다. 크기는 1 이상을 넘깁니다. */
+        /** @brief @p origin(왼쪽 아래)에서 @p size 칸 사각형(발자국)이 모두 격자 안이면 true 입니다. 크기는 1 이상을 넘겨야 합니다. */
         constexpr bool isRectInside( const int2& origin, const int2& size ) const
         {
             return 0 <= origin._x && 0 <= origin._y && origin._x + size._x <= _width && origin._y + size._y <= _height;
@@ -55,9 +56,9 @@ namespace sw
 {
     /**
      * @class GridSearchScratch
-     * @brief 칸 번호 위의 너비 우선 탐색 · "한 번만" 표시에 쓰는 스크래치입니다. 호출마다 W × H 를 새로 잡거나 지우지 않습니다.
-     * @details `begin` 이 세대 번호만 올려 지난 표시를 한 번에 무효로 만듭니다(용량이 모자랄 때만 늘린다 — 세대가 한 바퀴 돌면 그때 한 번 지운다).
-     *          큐는 머리 위치가 앞으로만 가는 배열이라 꺼낸 칸도 남습니다(`getVisitOrder` — 방문 순서 그대로).
+     * @brief 칸 번호 위의 너비 우선 탐색과 "한 번만" 표시에 쓰는 스크래치입니다. 호출마다 W × H 를 새로 잡거나 지우지 않습니다.
+     * @details `begin` 은 세대 번호만 올려서 지난 표시를 한 번에 무효로 만든다. 용량이 모자랄 때만 늘리고, 세대가 한 바퀴 돌면 그때 한 번 지운다.
+     *          큐는 머리 위치가 앞으로만 가는 배열이라 꺼낸 칸도 남는다. `getVisitOrder` 가 방문 순서를 그대로 돌려준다.
      * @code
      *     _search.begin( topology.getCellCount() );
      *     _search.visit( topology.toIndex( start ), -1 );
@@ -72,7 +73,7 @@ namespace sw
     class GridSearchScratch
     {
     public:
-        /** @brief 새 탐색을 시작합니다 — 표시 · 큐를 비우고 @p cellCount 칸을 담을 수 있게 합니다. */
+        /** @brief 새 탐색을 시작합니다. 표시와 큐를 비우고 @p cellCount 칸을 담을 수 있게 합니다. */
         void begin( int32 cellCount )
         {
             const size_t count = static_cast<size_t>( cellCount > 0 ? cellCount : 0 );
@@ -84,7 +85,7 @@ namespace sw
             ++_generation;
             if ( _generation == 0u )
             {
-                // 세대가 한 바퀴 돌았다 — 옛 표시가 새 세대와 겹치지 않게 지운다.
+                // 세대가 한 바퀴 돌았으므로, 옛 표시가 새 세대와 겹치지 않게 지운다.
                 for ( uint32& stamp : _listStamp )
                 {
                     stamp = 0u;
@@ -95,7 +96,7 @@ namespace sw
             _head = 0;
         }
 
-        /** @brief 처음 보는 칸이면 표시 · 부모를 적고 큐에 넣은 뒤 true 입니다. 이미 봤으면 false 입니다. */
+        /** @brief 처음 보는 칸이면 표시와 부모를 적고 큐에 넣은 뒤 true 를 반환합니다. 이미 봤으면 false 입니다. */
         bool visit( int32 index, int32 parentIndex )
         {
             uint32& stamp = _listStamp[static_cast<size_t>( index )];
@@ -108,11 +109,11 @@ namespace sw
         }
 
         bool isVisited( int32 index ) const { return _listStamp[static_cast<size_t>( index )] == _generation; }
-        /** @brief 이번 탐색에서 @p index 를 연 칸입니다(시작 칸은 −1). 보지 않은 칸이면 안 됩니다. */
+        /** @brief 이번 탐색에서 @p index 를 연 칸을 반환합니다. 시작 칸은 −1 입니다. 보지 않은 칸을 넘기면 안 됩니다. */
         int32 getParent( int32 index ) const { return _listParent[static_cast<size_t>( index )]; }
         bool  hasNext() const { return _head < _listQueue.size(); }
         int32 popNext() { return _listQueue[_head++]; }
-        /** @brief 이번 탐색에서 본 칸을 본 순서대로 돌려줍니다. */
+        /** @brief 이번 탐색에서 본 칸을 본 순서대로 반환합니다. */
         const vector<int32>& getVisitOrder() const { return _listQueue; }
 
     private:

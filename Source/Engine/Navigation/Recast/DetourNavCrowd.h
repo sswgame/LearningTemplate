@@ -1,8 +1,8 @@
 /**
  * @file DetourNavCrowd.h
- * @brief DetourCrowd 로 구현한 `INavCrowd` 입니다 — 경로 통로(corridor) 따라가기 · 모퉁이 미리 돌기 · 표본 회피(RVO 계열) · 떨어지기를 한 번의 `update` 로.
- * @details 회피 품질 넷(Low · Medium · Good · High)은 Detour 의 적응 표본 설정 넷이고 에이전트마다 고릅니다. 목적지를 내비메시에서 찾지 못한 요청은
- *          이 클래스가 `Failed` 로 기억합니다(Detour 는 요청 자체를 받지 않는다).
+ * @brief DetourCrowd 로 구현한 `INavCrowd` 입니다. 경로 통로(corridor) 따라가기, 모퉁이 미리 돌기, 샘플 회피(RVO 계열), 떨어지기를 한 번의 `update` 로 처리합니다.
+ * @details 회피 품질 넷(Low, Medium, Good, High)은 Detour 의 적응 샘플 설정 넷이고 에이전트마다 고른다. 목적지를 내비메시에서 찾지 못한 요청은
+ *          이 클래스가 `Failed` 로 기억한다(Detour 는 그런 요청 자체를 받지 않는다).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -28,7 +28,7 @@ namespace sw
         DetourNavCrowd( const DetourNavCrowd& )            = delete;
         DetourNavCrowd& operator=( const DetourNavCrowd& ) = delete;
 
-        /** @brief @p navMesh 위에 @p maxAgentCount 자리의 군중을 만듭니다. */
+        /** @brief @p navMesh 위에 에이전트 @p maxAgentCount 개를 담을 수 있는 군중을 만듭니다. */
         [[nodiscard]] bool initialize( RecastNavMesh& navMesh, uint32 maxAgentCount, float32 maxAgentRadius );
         void               shutdown();
 
@@ -50,9 +50,9 @@ namespace sw
         bool isActiveAgent( NavCrowdAgentID agentID ) const;
 
         dtCrowd*        _pCrowd;
-        dtNavMeshQuery* _pQuery;     ///< 군중 밖 질의(목적지 붙이기 · 자리 맞추기) — 게임 스레드만
-        vector<uint8>   _listFailed; ///< 에이전트마다 — 마지막 요청의 목적지를 찾지 못했다
-        vector<float3>  _listTarget; ///< 에이전트마다 — 마지막으로 건 목적지(붙이기 전)
+        dtNavMeshQuery* _pQuery;     ///< 군중 밖 질의(목적지 붙이기, 위치 맞추기)에 쓴다. 게임 스레드만 쓴다.
+        vector<uint8>   _listFailed; ///< 에이전트마다 기록한다. 마지막 요청의 목적지를 찾지 못했다.
+        vector<float3>  _listTarget; ///< 에이전트마다 기록한다. 마지막으로 지정한 목적지다(붙이기 전의 값).
         uint32          _maxAgentCount;
     };
 } // namespace sw

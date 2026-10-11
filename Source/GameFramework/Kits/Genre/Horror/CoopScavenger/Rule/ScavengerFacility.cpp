@@ -61,7 +61,7 @@ namespace sw
                 inoutText += "\"/>";
             }
 
-            /** @brief 방 번호가 음수면 바깥(`outside`)입니다. */
+            /** @brief 방 번호가 음수이면 바깥(`outside`)입니다. */
             static void appendLink( string& inoutText, int32 fromRoom, int32 toRoom, const utf8* pKind, bool bLocked )
             {
                 inoutText += "<Link from=\"";
@@ -83,7 +83,7 @@ namespace sw
 
             static const ScavengerScrapDef* pickScrap( const ScavengerCatalog& catalog, const ScavengerMoonDef& moon, GameRandom& random )
             {
-                // 달이 목록을 주면 그 안에서, 아니면 카탈로그 전체에서 — 가중치 뽑기 하나(`nextFloat` 한 번)를 같이 쓴다.
+                // 위성이 목록을 주면 그 안에서, 아니면 카탈로그 전체에서 고른다. 가중치 뽑기 하나(`nextFloat` 한 번)를 같이 쓴다.
                 if ( moon._listScrap.empty() )
                 {
                     const vector<ScavengerScrapDef>& listScrap = catalog.getScraps();
@@ -157,7 +157,7 @@ namespace sw
                 if ( other != listParent[static_cast<size_t>( room )] )
                     ScavengerFacilityInternal::appendLink( xml, other, room, "Door", false );
             }
-            // 화재 출구 — 정문에서 가장 깊은 방부터(같으면 번호 순).
+            // 화재 출구는 정문에서 가장 깊은 방부터 만든다(같으면 번호 순).
             vector<int32> listExitCandidate;
             for ( int32 room = 1; room < _roomCount; ++room )
             {
@@ -203,7 +203,7 @@ namespace sw
 
     void ScavengerFacility::clear()
     {
-        // 빌린 플래그는 나눠 쓴다 — 이 시설이 둔 잠금 해제만 지운다.
+        // 빌린 플래그는 나눠 쓴다. 이 시설이 둔 잠금 해제만 지운다.
         for ( const hashed_string& flag : _listUnlockedFlag )
         {
             if ( _pFlags != nullptr )
@@ -238,7 +238,7 @@ namespace sw
 
     const GameFlags& ScavengerFacility::getFlags() const
     {
-        static const GameFlags kNoFlags; // 빌리지 않은 시설 — 잠긴 문은 닫힌 채다
+        static const GameFlags kNoFlags; // 빌리지 않은 시설이므로 잠긴 문은 닫힌 채이다
         return _pFlags != nullptr ? *_pFlags : kNoFlags;
     }
 
@@ -307,7 +307,7 @@ namespace sw
 
     bool ScavengerFacility::readState( Archive& archive )
     {
-        // 사본에 읽고 끝까지 맞으면 바꾼다 — 빌린 플래그 포인터는 사본이 그대로 든다.
+        // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 빌린 플래그 포인터는 사본도 그대로 가지고 있다.
         ScavengerFacility restored = *this;
         if ( StateArchiveUtil::readName( archive, restored._layoutMoonID ) == false )
             return false;
@@ -339,7 +339,7 @@ namespace sw
         if ( bValid == false )
             return false;
 
-        // 그래프는 같은 위성 · 같은 씨앗으로 다시 짓는다(고철 배치는 버리고 읽은 바닥을 쓴다).
+        // 그래프는 같은 위성과 같은 시드로 다시 만든다(고철 배치는 버리고 읽은 바닥을 쓴다).
         restored._graph.clear();
         if ( restored._layoutMoonID.empty() == false )
         {

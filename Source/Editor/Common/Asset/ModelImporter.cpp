@@ -1,6 +1,6 @@
 /**
  * @file ModelImporter.cpp
- * @brief 모델 임포트의 스킨드 모델 · 클립 읽기와 공개 API(`ModelImporter`) · 일괄 임포트입니다.
+ * @brief 모델 임포트에서 스킨드 모델과 클립 읽기, 공개 API(`ModelImporter`), 일괄 임포트를 구현합니다.
  */
 #include "pch.h"
 
@@ -45,15 +45,15 @@ namespace sw::editor
     {
         /**
          * @struct ModelImporterInternal
-         * @brief 스킨드 모델 · 클립 읽기입니다. 나머지 도우미는 `ModelImportUtil`(조각 파일들)에 있습니다.
+         * @brief 스킨드 모델과 클립 읽기를 담당합니다. 나머지 도우미는 `ModelImportUtil`(조각 파일들)에 있습니다.
          */
         struct ModelImporterInternal : public ModelImportUtil
         {
             /**
-             * @brief 모든 스킨의 관절(노드가 같으면 한 본)로 스켈레톤을 만듭니다 — 부모가 앞이 되게 깊이 우선 순서로 정렬하고, 관절 위 비관절 조상의
-             *        변환은 뿌리 본에 접어 넣습니다. 역 바인드는 그 관절을 처음 가진 스킨의 것입니다(스킨끼리 다르면 경고).
-             * @param outMapJointBone 관절 노드 → 본 번호입니다.
-             * @param outListRootParent 본마다 뿌리 접기 행렬(엔진 공간)입니다. 뿌리가 아니면 단위입니다(클립 표본에도 같은 것을 곱합니다).
+             * @brief 모든 스킨의 관절(노드가 같으면 한 본)로 스켈레톤을 만듭니다. 부모가 앞에 오도록 깊이 우선 순서로 정렬하고, 관절 위의 비관절 조상의
+             *        변환은 루트 본에 합칩니다. 역 바인드는 그 관절을 처음 가진 스킨의 것입니다. 스킨끼리 다르면 경고합니다.
+             * @param outMapJointBone 관절 노드에서 본 번호로의 대응입니다.
+             * @param outListRootParent 본마다 루트에 합친 행렬(엔진 공간)입니다. 루트가 아니면 단위 행렬이며, 클립 샘플에도 같은 행렬을 곱합니다.
              */
             static bool buildSkeleton( const cgltf_data& data, Skeleton& outSkeleton, unordered_map<const cgltf_node*, int32>& outMapJointBone,
                                        vector<float4x4>& outListRootParent, string_view sourcePath )
@@ -81,7 +81,7 @@ namespace sw::editor
                             listInverseBind.push_back( inverseBind );
                             continue;
                         }
-                        // 한 관절을 두 스킨이 다른 바인드로 쓰면 한 팔레트로 둘 다 맞출 수 없다 — 알린다(대개 같다).
+                        // 한 관절을 두 스킨이 다른 바인드로 쓰면 한 팔레트로 둘 다 맞출 수 없으므로 알린다. 대개는 같다.
                         const float4x4& existing  = listInverseBind[it->second];
                         float32         maxDiffer = 0.0f;
                         for ( uint32 element = 0; element < 16; ++element )
@@ -94,7 +94,7 @@ namespace sw::editor
                     }
                 }
 
-                // 깊이 우선 — 관절이 아닌 노드도 지나가되 본은 관절만 만든다. 부모 본은 가장 가까운 관절 조상이다.
+                // 깊이 우선으로 순회한다. 관절이 아닌 노드도 지나가지만 본은 관절만 만든다. 부모 본은 가장 가까운 관절 조상이다.
                 vector<const cgltf_node*> listStack;
                 for ( size_t jointIndex = listJoint.size(); jointIndex > 0; --jointIndex )
                 {
@@ -146,8 +146,8 @@ namespace sw::editor
             }
 
             /**
-             * @brief 스킨드 모델을 읽습니다(모든 스킨이 한 스켈레톤 — 관절 노드가 같으면 한 본).
-             * @param listToon VRM 이면 glTF 머티리얼마다의 툰 머티리얼 — 본 메시를 머티리얼 구간으로도 나눕니다.
+             * @brief 스킨드 모델을 읽습니다. 모든 스킨이 한 스켈레톤을 쓰며, 관절 노드가 같으면 한 본입니다.
+             * @param listToon VRM 이면 glTF 머티리얼마다의 툰 머티리얼입니다. 본 메시를 머티리얼 구간으로도 나눕니다.
              */
             [[nodiscard]] static bool readSkinnedModel( const cgltf_data& data, const vector<const cgltf_node*>& listRoot, const ModelImportRule& rule, string_view sourcePath,
                                                         const vector<ToonMaterialDesc>& listToon, ModelImportResult& outResult )
@@ -170,10 +170,10 @@ namespace sw::editor
                         binding._listJointToBone[jointIndex] = mapJointBone[skin.joints[jointIndex]];
                     }
                 }
-                // 스킨 없는 메시를 몸에 합칠 때 쓰는 고정 본 풀이(뿌리 본 0 에 가중치 1)입니다.
+                // 스킨 없는 메시를 몸에 합칠 때 쓰는 고정 본 매핑이다. 루트 본 0 에 가중치 1 을 준다.
                 SkinBinding rigidBinding{};
 
-                // 노드를 훑어 메시를 나눈다: 이 스킨을 쓰는 메시 → 몸, 관절 아래 스킨 없는 메시 → 부착, 그 밖의 스킨 없는 메시 → 몸(뿌리 본에 가중치 1).
+                // 노드를 순회하며 메시를 나눈다. 이 스킨을 쓰는 메시는 몸, 관절 아래의 스킨 없는 메시는 부착, 그 밖의 스킨 없는 메시는 몸(루트 본에 가중치 1)이다.
                 MergedMesh body;
                 body._bBakeMaterialColor = listToon.empty();
                 vector<const cgltf_node*>     listStack( listRoot.rbegin(), listRoot.rend() );
@@ -192,7 +192,7 @@ namespace sw::editor
                         continue;
                     if ( pNode->skin != nullptr )
                     {
-                        // glTF 규약: 스킨드 메시는 노드 변환을 쓰지 않는다 — 정점은 바인드 공간이다.
+                        // glTF 규약상 스킨드 메시는 노드 변환을 쓰지 않는다. 정점은 바인드 공간에 있다.
                         const SkinBinding& binding = listBinding[static_cast<size_t>( pNode->skin - data.skins )];
                         for ( cgltf_size primitiveIndex = 0; primitiveIndex < pNode->mesh->primitives_count; ++primitiveIndex )
                         {
@@ -212,7 +212,7 @@ namespace sw::editor
                         continue;
                     }
 
-                    // 부착: 메시는 노드 로컬 공간, 변환은 가장 가까운 관절 기준(사이의 비관절 노드는 곱해 넣는다).
+                    // 부착은 메시가 노드 로컬 공간에 있고, 변환은 가장 가까운 관절을 기준으로 한다. 사이의 비관절 노드는 곱해서 합친다.
                     ModelImportAttachment attachment{};
                     attachment._name       = makeNodeName( data, *pNode );
                     attachment._parentBone = outResult._skeleton.getBone( static_cast<uint32>( mapJointBone[pJoint] ) )._name;
@@ -278,7 +278,7 @@ namespace sw::editor
                         return false;
                     }
                 }
-                // 관절의 레스트 TRS(glTF 공간, 뿌리 접기 전) — 채널이 없는 성분은 이 값이다.
+                // 관절의 레스트 TRS(glTF 공간, 루트에 합치기 전)다. 채널이 없는 성분은 이 값을 쓴다.
                 vector<BoneTransform> listRest( skeleton.getBoneCount() );
                 for ( const auto& [pNode, boneIndex] : mapJointBone )
                 {
@@ -302,7 +302,7 @@ namespace sw::editor
                         listRequestedFound[static_cast<size_t>( itRequested - rule._listClipName.begin() )] = SW_TRUE;
                     }
 
-                    // 모프 가중치 채널은 타깃 이름의 커브가 된다 — 가중치만 움직이는 클립(말하기)도 그 길이를 갖는다.
+                    // 모프 가중치 채널은 타깃 이름의 커브가 된다. 가중치만 움직이는 클립(말하기)도 그 길이를 가진다.
                     vector<AnimCurve> listMorphCurve;
                     const float32     morphDuration = readMorphWeightCurves( animation, rule._animationSampleRate, listMorphCurve );
                     AnimRawClip       rawClip;
@@ -348,7 +348,7 @@ namespace sw::editor
                     SW_LOG_ERROR( "glTF '%#': import rule asks for clip '%#' which the source does not have", sourcePath, rule._listClipName[requestIndex].c_str() );
                     bValid = false;
                 }
-                // 곁 데이터에 남은 이름은 원본(또는 규칙이 고른 클립)에 없는 클립이다 — 철자가 틀린 알림이 조용히 사라지지 않게 오류로 본다.
+                // 부가 데이터에 남은 이름은 원본(또는 규칙이 고른 클립)에 없는 클립이다. 철자가 틀린 알림이 조용히 사라지지 않도록 오류로 처리한다.
                 for ( const auto& [clipName, extra] : mapExtra )
                 {
                     SW_LOG_ERROR( "Clip data for '%#' names clip '%#' which is not imported", sourcePath, clipName.c_str() );
@@ -360,7 +360,7 @@ namespace sw::editor
 
         /**
          * @class ModelRawImporter
-         * @brief 모델 원본이 일괄 임포트에 답하는 것들입니다.
+         * @brief 모델 원본이 일괄 임포트에 제공하는 함수들입니다.
          */
         class ModelRawImporter final : public IRawAssetImporter
         {
@@ -420,7 +420,7 @@ namespace sw::editor
             SW_LOG_WARNING( "glTF '%#': %# scene root node(s) have a parent (non-conforming exporter) - using their top-most ancestor instead", sourcePath,
                             promotedCount );
 
-        // cgltf 는 GLB 의 JSON · BIN 청크를 @p bytes 안에서 가리킨다 — cgltf_free 까지 bytes 가 살아 있어야 한다.
+        // cgltf 는 GLB 의 JSON 청크와 BIN 청크를 @p bytes 안에서 가리킨다. cgltf_free 까지 bytes 가 살아 있어야 한다.
         const string        path    = string( sourcePath );
         const cgltf_options options = ModelImporterInternal::makeOptions();
         cgltf_data*         pData   = nullptr;
@@ -496,7 +496,7 @@ namespace sw::editor
         if ( readModelAsset( sourcePath, rule, result ) == false )
             return false;
 
-        // 옆 폴더는 임포트마다 새로 쓴다 — 규칙에서 빠진 클립 · 사라진 부착 메시가 옛 파일로 남지 않게.
+        // 옆 폴더는 임포트할 때마다 새로 쓴다. 규칙에서 빠진 클립과 사라진 부착 메시가 이전 파일로 남지 않게 하기 위해서다.
         const string sideFolder = makeImportedSideFolder( outputPath );
         if ( FileUtil::removeDirectory( sideFolder ) == false )
         {
@@ -510,7 +510,7 @@ namespace sw::editor
         }
         if ( ModelImporterInternal::writeMaterialSections( result, sourcePath, sideFolder ) == false )
             return false;
-        // 파쇄 — 규칙에 `fracture` 가 있으면 `.mesh` 옆에 `.fracture` 를 쓰고, 없으면 옛 것을 지운다(규칙에서 빠진 파쇄가 남지 않게).
+        // 파쇄는 규칙에 `fracture` 가 있으면 `.mesh` 옆에 `.fracture` 를 쓰고, 없으면 이전 파일을 지운다. 규칙에서 빠진 파쇄가 남지 않게 하기 위해서다.
         const string fracturePath = FractureAsset::makePathForMesh( outputPath );
         if ( rule._bFracture == SW_TRUE )
         {
@@ -601,10 +601,10 @@ namespace sw::editor
             return true;
         }
 
-        // 스탬프를 적는 길이 하나여야 에디터에서 임포트된 것과 `App --import-models` 로 임포트된 것이 같은 판정을 받는다.
+        // 스탬프를 기록하는 경로가 하나여야 에디터에서 임포트한 것과 `App --import-models` 로 임포트한 것이 같은 판정을 받는다.
         // 설정 파일이 없으면 규칙 없이 임포트한다. 깨졌으면 로드가 알린다.
         ModelImportConfig config{};
-        (void)config.loadFromFile( ModelImportConfig::makeDefaultConfigPath() ); // 없으면 규칙 없이, 깨졌으면 로드가 알린다
+        (void)config.loadFromFile( ModelImportConfig::makeDefaultConfigPath() ); // 없으면 규칙 없이 임포트하고, 깨졌으면 로드가 알린다
         const AssetImportSummary summary = importAllModels( resourceRoot, config, AssetImportMode::ImportStale );
         for ( const string& problem : summary._listProblem )
         {
@@ -647,7 +647,7 @@ namespace sw::editor
                                   static_cast<uint32>( rule._recenter ), AnimClip::kVersion );
         uint64 hash = StringUtil::computeHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
         hash        = StringUtil::computeHash64( versionText.c_str(), versionText.size(), false, hash );
-        // 이동은 비트 그대로 섞는다 — 글자로 반올림하면 작은 변경이 같은 해시가 된다.
+        // 이동은 비트 그대로 섞는다. 문자열로 반올림하면 작은 변경이 같은 해시가 된다.
         hash                       = StringUtil::computeHash64( reinterpret_cast<const utf8*>( rule._arrTranslation ), sizeof( rule._arrTranslation ), false, hash );
         const string animationText = rule.makeAnimationHashText();
         hash                       = StringUtil::computeHash64( animationText.c_str(), animationText.size(), false, hash );
@@ -657,13 +657,13 @@ namespace sw::editor
             const string fractureVersion = fractureText + ";format=" + to_string( FractureAsset::kVersion ) + ";algorithm=" + to_string( MeshFractureUtil::kAlgorithmVersion );
             hash                         = StringUtil::computeHash64( fractureVersion.c_str(), fractureVersion.size(), false, hash );
         }
-        // 곁 데이터(클립 반복 · 알림 · 커브)를 고쳐도 다시 임포트해야 한다.
+        // 부가 데이터(클립 반복, 알림, 커브)를 고쳐도 다시 임포트해야 한다.
         vector<uint8> clipDataBytes;
         const string  clipDataPath = makeClipDataPath( sourcePath );
         if ( FileUtil::exists( clipDataPath ) && FileUtil::readFile( clipDataPath, clipDataBytes ) && clipDataBytes.empty() == false )
             hash = StringUtil::computeHash64( reinterpret_cast<const utf8*>( clipDataBytes.data() ), clipDataBytes.size(), false, hash );
 
-        // `.gltf` 는 버퍼를 옆 파일로 둘 수 있다 — 그 바이트가 바뀌어도 어긋남이어야 한다. data URI 는 이미 본문에 있다.
+        // `.gltf` 는 버퍼를 옆 파일로 둘 수 있다. 그 바이트가 바뀌어도 어긋남이어야 한다. data URI 는 이미 본문에 있다.
         if ( FileUtil::hasExtension( sourcePath, ".gltf" ) == false )
             return hash;
         const string        path    = string( sourcePath );
@@ -693,14 +693,14 @@ namespace sw::editor
         uint64 hash = AssetImportStampUtil::computeFileHash( importedMeshPath );
         if ( hash == 0 )
             return 0;
-        // 옆의 `.fracture` 도 결과다 — 지워지거나 바뀌면 어긋남이다.
+        // 옆의 `.fracture` 도 결과다. 지워지거나 바뀌면 어긋남이다.
         const string fracturePath = FractureAsset::makePathForMesh( importedMeshPath );
         if ( FileUtil::exists( fracturePath ) )
         {
             const uint64 fractureHash = AssetImportStampUtil::computeFileHash( fracturePath );
             hash                      = StringUtil::computeHash64( reinterpret_cast<const utf8*>( &fractureHash ), sizeof( fractureHash ), false, hash );
         }
-        // 옆 폴더의 파일을 이름순으로 섞는다 — 이름도 섞어 파일이 사라지거나 바뀌면 다른 값이 된다.
+        // 옆 폴더의 파일을 이름 순서로 섞는다. 이름도 섞으므로 파일이 사라지거나 바뀌면 다른 값이 된다.
         const string sideFolder = FileUtil::normalizeSeparators( makeImportedSideFolder( importedMeshPath ) );
         if ( FileUtil::isDirectory( sideFolder ) == false )
             return hash;

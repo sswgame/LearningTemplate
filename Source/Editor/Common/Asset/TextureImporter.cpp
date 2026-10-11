@@ -67,14 +67,14 @@ namespace sw::editor
         /**
          * @struct BandCompressJobInternal
          * @brief 밉 체인을 BC 형식으로 압축하는 일을 가로 띠로 나눠 작업 시스템에 넘깁니다.
-         * @details BC 블록은 4×4 화소마다 독립이라, 높이가 4 의 배수인 띠로 잘라 따로 압축해 이어 붙이면 통째로 압축한 것과 같은 바이트입니다
-         *          (`TEX_COMPRESS_DEFAULT` — 디더링 · 오차 확산을 켜면 블록 사이가 이어져 이 성질이 깨진다). DirectXTex 의 `TEX_COMPRESS_PARALLEL` 은
-         *          OpenMP 로만 돌고 vcpkg 빌드는 OpenMP 없이(`BC_USE_OPENMP` 꺼짐) 지어져 효과가 없어서 엔진 작업 시스템으로 나눕니다.
-         *          띠 높이(`kBandRows`)보다 낮은 밉은 띠 하나라 나누지 않고, 모든 밉의 띠를 한 목록으로 펼쳐 한 번에 나눕니다.
+         * @details BC 블록은 4×4 화소마다 독립이므로, 높이가 4 의 배수인 띠로 잘라 따로 압축해 이어 붙이면 통째로 압축한 것과 같은 바이트가 나온다.
+         *          `TEX_COMPRESS_DEFAULT` 를 쓸 때만 그렇다. 디더링이나 오차 확산을 켜면 블록 사이가 이어져 이 성질이 깨진다. DirectXTex 의 `TEX_COMPRESS_PARALLEL` 은
+         *          OpenMP 로만 동작하고 vcpkg 빌드는 OpenMP 없이(`BC_USE_OPENMP` 꺼짐) 빌드되어 효과가 없으므로 엔진 작업 시스템으로 나눈다.
+         *          띠 높이(`kBandRows`)보다 낮은 밉은 띠가 하나뿐이라 나누지 않고, 모든 밉의 띠를 한 목록으로 펼쳐 한 번에 나눈다.
          */
         struct BandCompressJobInternal
         {
-            /** @brief 띠 하나의 화소 줄 수입니다. 4 의 배수여야 합니다(BC 블록 높이). */
+            /** @brief 띠 하나의 화소 행 수입니다. BC 블록 높이이므로 4 의 배수여야 합니다. */
             static constexpr uint32 kBandRows = 64;
             static_assert( kBandRows % 4 == 0, "BC bands must cover whole 4x4 block rows" );
 
@@ -106,7 +106,7 @@ namespace sw::editor
                     if ( FAILED( band._result ) )
                         continue;
 
-                    // 같은 폭이라 블록 줄의 바이트 수(rowPitch)가 같다 — 띠의 블록 줄을 결과의 제자리(firstRow / 4)에 그대로 놓는다.
+                    // 폭이 같으므로 블록 행의 바이트 수(rowPitch)가 같다. 띠의 블록 행을 결과의 해당 위치(firstRow / 4)에 그대로 놓는다.
                     const DirectX::Image& packed = *compressed.GetImage( 0, 0, 0 );
                     if ( packed.rowPitch != band._pDest->rowPitch )
                     {
@@ -118,7 +118,7 @@ namespace sw::editor
                 }
             }
 
-            /** @brief @p mipChain(2D 한 장의 밉들)을 @p format 으로 압축해 @p outImage 에 담습니다. 결과는 `DirectX::Compress` 를 통째로 부른 것과 같은 바이트입니다. */
+            /** @brief @p mipChain(2D 한 장의 밉들)을 @p format 으로 압축해 @p outImage 에 담습니다. 결과는 `DirectX::Compress` 를 통째로 호출한 것과 같은 바이트입니다. */
             [[nodiscard]] static HRESULT compress( const DirectX::ScratchImage& mipChain, DXGI_FORMAT format, DirectX::ScratchImage& outImage )
             {
                 const DirectX::TexMetadata& metadata = mipChain.GetMetadata();
@@ -154,7 +154,7 @@ namespace sw::editor
                 BandCompressJobInternal job;
                 job._pBand  = listBand.data();
                 job._format = format;
-                // 작업 시스템이 없으면(테스트 하니스 · 서비스 연결 전) 현재 스레드가 띠를 차례로 압축한다 — 결과 바이트는 같다.
+                // 작업 시스템이 없으면(테스트 하니스, 서비스 연결 전) 현재 스레드가 띠를 차례로 압축한다. 결과 바이트는 같다.
                 const uint32                bandCount    = static_cast<uint32>( listBand.size() );
                 TaskManager*                pTaskManager = editor::getService<TaskManager>();
                 const ParallelBlockDelegate body         = SW_DELEGATE_METHOD( ParallelBlockDelegate, &BandCompressJobInternal::run, &job );
@@ -176,7 +176,7 @@ namespace sw::editor
             }
         };
 
-        /** @brief 임포트 결과(밉까지 끝난 이미지)를 DDS 로 쓰고 결과를 채웁니다. 8 비트 · HDR 두 갈래가 같이 씁니다. */
+        /** @brief 임포트 결과(밉까지 끝난 이미지)를 DDS 로 쓰고 결과를 채웁니다. 8비트 경로와 HDR 경로가 함께 씁니다. */
         [[nodiscard]] bool saveImportedDDSInternal( const DirectX::ScratchImage& finalImage, [[maybe_unused]] string_view sourcePath, string_view outputPath, TextureImportResult* pOutResult )
         {
             const string outputDir = FileUtil::getDirectoryPart( outputPath );
@@ -211,7 +211,7 @@ namespace sw::editor
 
         /**
          * @brief `.hdr`(Radiance RGBE)을 부동소수점으로 읽어 BC6H_UF16 또는 R16G16B16A16_FLOAT 로 임포트합니다.
-         * @details 규칙의 포맷이 다른 것(8 비트)이면 실패로 알린다 — 1 을 넘는 값을 자르지 않는다. 밉은 선형 값 그대로 섞는다(sRGB 가 아니다).
+         * @details 규칙의 포맷이 다른 것(8비트)이면 실패로 알린다. 1 을 넘는 값을 자르지 않기 위해서다. 밉은 선형 값 그대로 섞으며 sRGB 가 아니다.
          */
         [[nodiscard]] bool importHdrTextureInternal( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, TextureImportResult* pOutResult )
         {
@@ -231,7 +231,7 @@ namespace sw::editor
                               sourcePath );
                 return false;
             }
-            // 8 비트 갈래와 같은 자체 필터 — 어디서 임포트해도 같은 바이트다.
+            // 8비트 경로와 같은 자체 필터를 쓴다. 어디서 임포트해도 같은 바이트가 나온다.
             constexpr DirectX::TEX_FILTER_FLAGS kFilterFlags = DirectX::TEX_FILTER_DEFAULT | DirectX::TEX_FILTER_FORCE_NON_WIC;
             DirectX::ScratchImage               mipChain;
             hr = ( rule._bGenerateMips == SW_TRUE ) ? DirectX::GenerateMipMaps( *sourceImage.GetImage( 0, 0, 0 ), kFilterFlags, 0, mipChain )
@@ -255,15 +255,15 @@ namespace sw::editor
 
         /**
          * @struct SwizzleLayoutInternal
-         * @brief 스위즐 하나가 정하는 두 가지, **바이트를 어떻게 놓는가와 그것을 무슨 이름으로 부르는가**입니다.
-         * @details 이 둘이 따로 있으면 반드시 어긋납니다 — 섞기 쪽만 아는 스위즐은 바이트는 옮겨지는데 결과물에 "RGBA" 라고
-         *          적혀 나가 색이 깨집니다. 스위즐을 하나 더하려면 **이 표에 한 줄**만 더하면 됩니다.
+         * @brief 스위즐 하나가 정하는 두 가지, 바이트를 어떻게 놓는지와 그것을 무슨 이름으로 부르는지입니다.
+         * @details 이 둘을 따로 두면 반드시 어긋난다. 섞기 쪽만 아는 스위즐은 바이트는 옮겨지는데 결과물에 "RGBA" 라고
+         *          기록되어 색이 깨진다. 스위즐을 추가하려면 이 테이블에 항목 하나만 추가하면 된다.
          */
         struct SwizzleLayoutInternal
         {
-            /** @brief 결과의 n 번째 바이트를 원본(언제나 RGBA)의 몇 번째 바이트에서 가져올지입니다. */
+            /** @brief 결과의 n 번째 바이트를 원본(항상 RGBA)의 몇 번째 바이트에서 가져올지 정합니다. */
             uint8 _arrSourceChannel[4];
-            /** @brief 알파를 255 로 덮을지 여부입니다(RGB1). */
+            /** @brief 알파를 255 로 덮을지 정합니다(RGB1). */
             uint8 _bForceOpaqueAlpha;
             /** @brief 그렇게 놓인 바이트 배열의 DXGI 이름입니다. */
             DXGI_FORMAT _format;
@@ -271,9 +271,9 @@ namespace sw::editor
 
         const SwizzleLayoutInternal& swizzleLayoutInternal( TextureSwizzle swizzle )
         {
-            // **BGRA 와 ARGB 는 같은 것이다.** D3D9 의 `D3DFMT_A8R8G8B8` 은 메모리에서 B,G,R,A 순서이고 DXGI 는 그것을 `B8G8R8A8`
-            // 이라 부른다. 열거형 주석의 "레거시 ARGB" 가 그 뜻이다. 주의: RGBA 를 왼쪽으로 한 칸 돌린 GBAR 은 어떻게 읽어도
-            // ARGB 가 아니다.
+            // BGRA 와 ARGB 는 같은 것이다. D3D9 의 `D3DFMT_A8R8G8B8` 은 메모리에서 B, G, R, A 순서이고 DXGI 는 그것을 `B8G8R8A8`
+            // 이라 부른다. 열거형 주석의 "레거시 ARGB" 가 그 뜻이다. RGBA 를 왼쪽으로 한 칸 돌린 GBAR 은 어떻게 읽어도
+            // ARGB 가 아니므로 주의한다.
             static constexpr SwizzleLayoutInternal kRgba{
                 { 0, 1, 2, 3 },
                 SW_FALSE,
@@ -304,26 +304,26 @@ namespace sw::editor
 
         /**
          * @struct TextureImporterInternal
-         * @brief 원본(`textures_raw/`)과 임포트된 DDS(`textures/`)를 잇는 이름과 버전입니다. 스탬프 절차는 `AssetImportStampUtil` 이 합니다.
+         * @brief 원본(`textures_raw/`)과 임포트된 DDS(`textures/`)를 연결하는 이름과 버전입니다. 스탬프 절차는 `AssetImportStampUtil` 이 합니다.
          */
         struct TextureImporterInternal
         {
-            /** @brief 원본 이미지를 두는 폴더 이름입니다. 쿠킹이 팩에서 뺍니다(`Config/Engine/PackConfig.json`). */
+            /** @brief 원본 이미지를 두는 폴더 이름입니다. 쿠킹은 이 폴더를 팩에서 뺍니다(`Config/Engine/PackConfig.json`). */
             static constexpr string_view kRawTextureFolder = "textures_raw";
-            /** @brief 임포트된 DDS 가 가는, 원본 폴더 옆 폴더 이름입니다. 런타임은 여기의 DDS 만 읽습니다. */
+            /** @brief 원본 폴더 옆에 임포트된 DDS 를 두는 폴더 이름입니다. 런타임은 여기의 DDS 만 읽습니다. */
             static constexpr string_view kImportedTextureFolder = "textures";
-            /** @brief 스탬프 머리 줄입니다. 형식이나 판정이 바뀌면 올립니다 — 옛 스탬프는 전부 어긋남이 되어 한 번 다시 임포트합니다. */
+            /** @brief 스탬프의 헤더 줄입니다. 형식이나 판정이 바뀌면 올립니다. 이전 스탬프는 모두 어긋남이 되어 한 번 다시 임포트합니다. */
             static constexpr string_view kImportStampHeader = "SWTEXIMPORT 1";
-            /** @brief 같은 원본 · 규칙에서 다른 바이트를 내게 임포트를 바꾸면 올립니다. 원본 해시에 섞입니다. */
+            /** @brief 임포터 버전입니다. 같은 원본과 규칙에서 다른 바이트가 나오게 바꿨다면 올립니다. 원본 해시에 섞입니다. */
             static constexpr uint32 kImporterVersion = 1;
 
-            /** @brief 임포트하는 원본 이미지 확장자인지 봅니다. `.dds` · `import.stamp` · `.meta` 같은 것은 원본이 아닙니다. */
+            /** @brief 임포트하는 원본 이미지 확장자인지 확인합니다. `.dds`, `import.stamp`, `.meta` 같은 파일은 원본이 아닙니다. */
             static bool isSourceImage( string_view path ) { return FileUtil::hasAnyExtension( path, { ".png", ".jpg", ".jpeg", ".tga", ".bmp", ".hdr" } ); }
         };
 
         /**
          * @class TextureRawImporter
-         * @brief 텍스처 원본이 일괄 임포트에 답하는 것들입니다. 원본마다 임포트 설정에서 규칙을 고릅니다.
+         * @brief 텍스처 원본이 일괄 임포트에 제공하는 함수들입니다. 원본마다 임포트 설정에서 규칙을 고릅니다.
          */
         class TextureRawImporter final : public IRawAssetImporter
         {
@@ -353,7 +353,7 @@ namespace sw::editor
             }
 
         private:
-            /** @brief 리소스 루트 기준 경로에 맞는 규칙입니다. 없으면 기본 규칙입니다. */
+            /** @brief 리소스 루트 기준 경로에 맞는 규칙을 반환합니다. 없으면 기본 규칙입니다. */
             TextureImportRule findRule( string_view resourcePath ) const
             {
                 TextureImportRule rule;
@@ -378,11 +378,11 @@ namespace sw::editor
             pOutResult->_sourceSizeBytes = FileUtil::getFileSize( sourcePath );
         }
 
-        // `.hdr`(Radiance RGBE)은 1 을 넘는 값을 지닌다 — 8 비트 디코더(stb)를 거치지 않고 부동소수점으로 읽어 HDR 포맷으로만 임포트한다.
+        // `.hdr`(Radiance RGBE)은 1 을 넘는 값을 가진다. 8비트 디코더(stb)를 거치지 않고 부동소수점으로 읽어 HDR 포맷으로만 임포트한다.
         if ( FileUtil::hasExtension( sourcePath, ".hdr" ) )
             return importHdrTextureInternal( sourcePath, outputPath, rule, pOutResult );
 
-        // 1) ImageUtil 로 소스 이미지 디코딩
+        // 1) ImageUtil 로 소스 이미지를 디코딩한다
         RawImageData rawImage;
         if ( ImageUtil::loadImage( sourcePath, rawImage ) == false || rawImage.isValid() == false )
         {
@@ -400,20 +400,20 @@ namespace sw::editor
         DirectX::Image baseImage{};
         baseImage.width  = static_cast<size_t>( rawImage._width );
         baseImage.height = static_cast<size_t>( rawImage._height );
-        // 채널 섞기와 같은 표에서 가져온다. 둘이 어긋날 여지를 아예 없앤다.
-        // 원본 이미지 바이트는 이미 sRGB 인코딩이다. 결과가 sRGB 형식이면 바이트에 **이름만** sRGB 를 붙인다 — UNORM 으로 두면
-        // 아래 변환 · 압축이 선형 → sRGB 곡선을 한 번 더 적용한다. 밉 필터도 이 이름을 보고 선형 공간에서 섞는다.
+        // 채널 섞기와 같은 테이블에서 가져온다. 둘이 어긋날 여지를 아예 없앤다.
+        // 원본 이미지 바이트는 이미 sRGB 로 인코딩되어 있다. 결과가 sRGB 형식이면 바이트에 이름만 sRGB 를 붙인다. UNORM 으로 두면
+        // 아래의 변환과 압축이 선형에서 sRGB 로 가는 곡선을 한 번 더 적용한다. 밉 필터도 이 이름을 보고 선형 공간에서 섞는다.
         const DXGI_FORMAT layoutFormat = swizzleLayoutInternal( rule._swizzle )._format;
         baseImage.format               = DirectX::IsSRGB( targetFormat ) ? DirectX::MakeSRGB( layoutFormat ) : layoutFormat;
         baseImage.rowPitch             = static_cast<size_t>( rawImage._width ) * 4;
         baseImage.slicePitch           = baseImage.rowPitch * static_cast<size_t>( rawImage._height );
         baseImage.pixels               = rawImage._bytes.data();
 
-        // WIC 필터는 Windows 에만 있고 결과가 OS 구현에 달렸다. 임포트된 DDS 를 커밋하고 그 해시를 스탬프에 적으므로, 어디서 임포트하든 같은
+        // WIC 필터는 Windows 에만 있고 결과가 OS 구현에 따라 달라진다. 임포트된 DDS 를 커밋하고 그 해시를 스탬프에 기록하므로, 어디서 임포트하든 같은
         // 바이트가 나오는 DirectXTex 자체 필터만 쓴다.
         constexpr DirectX::TEX_FILTER_FLAGS kFilterFlags = DirectX::TEX_FILTER_DEFAULT | DirectX::TEX_FILTER_FORCE_NON_WIC;
 
-        // 3) 켜져 있으면 밉맵 생성
+        // 3) 켜져 있으면 밉맵을 생성한다
         DirectX::ScratchImage mipChain;
         if ( rule._bGenerateMips == SW_TRUE )
         {
@@ -479,7 +479,7 @@ namespace sw::editor
             finalImage = std::move( mipChain );
         }
 
-        // 5) DDS 파일로 저장
+        // 5) DDS 파일로 저장한다
         return saveImportedDDSInternal( finalImage, sourcePath, outputPath, pOutResult );
     }
 
@@ -491,8 +491,8 @@ namespace sw::editor
         uint8*                       pData  = rawImage._bytes.data();
         const SwizzleLayoutInternal& layout = swizzleLayoutInternal( rule._swizzle );
 
-        // **그린 반전이 먼저다.** 입력은 언제나 RGBA 이므로 이 시점의 초록 자리는 1번으로 정해져 있다. 섞은 뒤에 뒤집으려면
-        // "결과의 1번이 초록" 이라는 가정이 필요한데, 그것은 지금 스위즐들에서 우연히 맞을 뿐 새 스위즐을 더하는 순간 조용히 틀린다.
+        // 그린 반전을 먼저 한다. 입력은 항상 RGBA 이므로 이 시점의 초록 채널 위치는 1번으로 정해져 있다. 섞은 뒤에 뒤집으려면
+        // "결과의 1번이 초록" 이라는 가정이 필요한데, 이는 현재 스위즐에서 우연히 맞을 뿐이고 새 스위즐을 추가하는 순간 조용히 틀린다.
         if ( rule._bInvertGreen == SW_TRUE )
         {
             for ( size_t index = 0; index < totalPixels; ++index )
@@ -529,11 +529,11 @@ namespace sw::editor
             return true;
         }
 
-        // 바뀐 파일 하나가 아니라 어긋난 것 전부를 일괄 임포트로 임포트한다 — 스탬프를 적는 길이 하나여야 에디터에서 임포트된 것과
-        // `App --import-textures` 로 임포트된 것이 같은 판정을 받는다. 내용이 그대로면(저장만 다시 했다) 임포트하지 않는다.
-        // 설정 파일이 없으면 기본 규칙이다. 깨졌으면 로드가 알리고 기본 규칙으로 임포트한다.
+        // 바뀐 파일 하나가 아니라 어긋난 것 전부를 일괄 임포트로 처리한다. 스탬프를 기록하는 경로가 하나여야 에디터에서 임포트한 것과
+        // `App --import-textures` 로 임포트한 것이 같은 판정을 받는다. 내용이 그대로이면(저장만 다시 했다) 임포트하지 않는다.
+        // 설정 파일이 없으면 기본 규칙을 쓴다. 파일이 깨졌으면 로드가 알리고 기본 규칙으로 임포트한다.
         TextureImportConfig config{};
-        (void)config.loadFromFile( makeDefaultImportConfigPath() ); // 없으면 기본 규칙, 깨졌으면 로드가 알린다
+        (void)config.loadFromFile( makeDefaultImportConfigPath() ); // 없으면 기본 규칙이고, 깨졌으면 로드가 알린다
         const AssetImportSummary summary = importAllTextures( resourceRoot, config, AssetImportMode::ImportStale );
         for ( const string& problem : summary._listProblem )
         {
@@ -562,7 +562,7 @@ namespace sw::editor
         if ( FileUtil::readFile( sourcePath, bytes ) == false || bytes.empty() )
             return 0;
 
-        // 규칙은 **해석한 결과**로 섞는다. "bc7" 과 "BC7_UNORM", BGRA 와 ARGB 처럼 같은 결과를 내는 표기는 같은 해시다.
+        // 규칙은 해석한 결과로 섞는다. "bc7" 과 "BC7_UNORM", BGRA 와 ARGB 처럼 같은 결과를 내는 표기는 같은 해시가 된다.
         const SwizzleLayoutInternal&           layout = swizzleLayoutInternal( rule._swizzle );
         StringBuilder<constant::kMaxBuffer256> ruleText;
         ruleText.appendFormat( "importer=%#;format=%#;channel=%#%#%#%#;opaque=%#;mips=%#;srgb=%#;invertGreen=%#",

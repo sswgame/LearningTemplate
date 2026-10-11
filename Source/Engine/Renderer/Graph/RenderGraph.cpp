@@ -44,17 +44,17 @@ namespace sw
     SW_LOG_CALLER( "RenderGraph" );
 
     /**
-     * @brief 병렬 기록 한 레벨의 패스와 그것을 기록할 리스트입니다. 리스트는 노드가 들고 있는 것을 빌립니다(소유하지 않습니다).
-     * @details 태스크는 이 엔트리의 메서드에 묶입니다(`record`). 메서드 델리게이트는 포인터 둘이라 힙도 노드 팽창도 없습니다.
-     *          주의: `MakeTaskArgs` 로 인자를 실으면 패스마다 프레임마다 힙이고, 인자를 노드 안에 인라인으로 넣으면 노드가 두 배로
-     *          부풀어 렌더 그래프 기록이 122 → 196 us 로 느려집니다.
-     *          엔트리 목록은 태스크를 넣기 전에 모두 채우므로 기록 중에 옮겨지지 않습니다.
+     * @brief 병렬 기록 한 레벨의 패스와 그것을 기록할 리스트입니다. 리스트는 노드가 가지고 있는 것을 빌립니다(소유하지 않습니다).
+     * @details 태스크는 이 엔트리의 메서드에 묶인다(`record`). 메서드 델리게이트는 포인터 둘이라 힙도 노드 팽창도 없다.
+     *          주의: `MakeTaskArgs` 로 인자를 실으면 패스마다 프레임마다 힙 할당이 생기고, 인자를 노드 안에 인라인으로 넣으면 노드가 두 배로
+     *          부풀어 렌더 그래프 기록이 122µs 에서 196µs 로 느려진다.
+     *          엔트리 목록은 태스크를 넣기 전에 모두 채우므로 기록 중에 옮겨지지 않는다.
      */
     struct ParallelPassEntry
     {
         RenderGraphNode* _pNode{ nullptr };
         IRHICommandList* _pPassCmdList{ nullptr };
-        /// @brief 렌더 스레드가 이미 열고 레벨 배리어를 기록한 리스트인지 여부입니다(레벨의 첫 엔트리).
+        /// @brief 렌더 스레드가 이미 열고 레벨 배리어를 기록한 리스트인지 나타냅니다(레벨의 첫 엔트리입니다).
         bool _bAlreadyBegun{ false };
 
         void record() { RenderGraphInternal::recordRenderPass( _pNode, _pPassCmdList, _bAlreadyBegun ); }
@@ -66,9 +66,9 @@ namespace sw
     struct RenderGraph::ParallelScratch
     {
         vector<ParallelPassEntry> _listPassEntry;
-        /// @brief 노드 인덱스 → 그 패스가 프레임마다 다시 여는 커맨드 리스트입니다. 처음 쓸 때 만들고 그 뒤로 다시 씁니다.
+        /// @brief 노드 인덱스에서 그 패스가 프레임마다 다시 여는 커맨드 리스트를 찾는 목록입니다. 처음 쓸 때 만들고 그 뒤로 다시 씁니다.
         vector<unique_ptr<IRHICommandList>> _listNodeCmdList;
-        /// @brief 리스트를 만든 디바이스입니다. 다른 디바이스가 오면 먼저 놓습니다(백엔드 교체).
+        /// @brief 리스트를 만든 디바이스입니다. 다른 디바이스가 오면 먼저 해제합니다(백엔드 교체).
         IRHIDevice* _pCmdListDevice{ nullptr };
     };
 
@@ -96,8 +96,8 @@ namespace sw
     bool RenderGraph::addPass( hashed_string passName, vector<hashed_string> listInput, vector<hashed_string> listOutput,
                                RenderGraphPassExecuteFn execute )
     {
-        // 이름은 패스의 열쇠다(실행 순서 · 레벨 · 이름→노드 표). 같은 이름을 받으면 이름→노드 표가 뒤의 것으로 덮여 한 패스는 두 번,
-        // 다른 하나는 한 번도 안 돌고, 병렬 기록에서는 두 작업 스레드가 같은 커맨드 리스트에 쓴다. 그래서 거절한다.
+        // 이름은 패스의 키다(실행 순서, 레벨, 이름에서 노드를 찾는 테이블). 같은 이름을 받으면 그 테이블이 뒤의 것으로 덮여 한 패스는 두 번,
+        // 다른 하나는 한 번도 돌지 않고, 병렬 기록에서는 두 작업 스레드가 같은 커맨드 리스트에 쓴다. 그래서 거절한다.
         for ( const RenderGraphNode& existing : _listNode )
         {
             if ( existing._name == passName )
@@ -142,7 +142,7 @@ namespace sw
         if ( listActiveIndex.empty() )
             return false;
 
-        // 1. 리소스마다 그것을 쓰는 패스를 활성 등록 순서대로 모두 모은다
+        // 1. 리소스마다 그것을 쓰는 패스를 활성 등록 순서대로 모두 모은다.
         unordered_map<hashed_string, vector<size_t>> mapResourceWriter;
         for ( size_t nodeIndex : listActiveIndex )
         {
@@ -152,7 +152,7 @@ namespace sw
             }
         }
 
-        // 인접 목록: 생산자 → 소비자. 진입 차수는 활성 노드 기준이다
+        // 인접 목록은 생산자에서 소비자로 향한다. 진입 차수는 활성 노드 기준이다.
         unordered_map<size_t, vector<size_t>> adjacency;
         unordered_map<size_t, uint32>         mapInDegree;
         adjacency.reserve( listActiveIndex.size() );
@@ -175,7 +175,7 @@ namespace sw
             }
         };
 
-        // 2. 같은 리소스를 잇따라 쓰는 패스들을 사슬로 잇는다(Write-after-Write 순서)
+        // 2. 같은 리소스를 잇따라 쓰는 패스들을 사슬로 연결한다(Write-after-Write 순서).
         for ( const auto& [resource, listWriter] : mapResourceWriter )
         {
             for ( size_t writerIndex = 0; writerIndex + 1 < listWriter.size(); ++writerIndex )
@@ -184,7 +184,7 @@ namespace sw
             }
         }
 
-        // 3. 입력을 읽는 소비자마다 맞는 생산자를 찾는다
+        // 3. 입력을 읽는 소비자마다 맞는 생산자를 찾는다.
         for ( size_t consumerIndex : listActiveIndex )
         {
             for ( const hashed_string& input : _listNode[consumerIndex]._listInput )
@@ -204,10 +204,10 @@ namespace sw
 
                 addEdge( producerIndex, consumerIndex );
 
-                // 이 읽기가 본 판(생산자) **다음에** 같은 자원을 덮어쓰는 패스는 이 읽기 뒤에 와야 한다(Write-after-Read). 이
-                // 간선이 없으면 W 가 쓰고 A 가 읽고 B 가 다시 쓸 때 A 와 B 가 같은 레벨에 들어간다 — 직렬로는 B 가 먼저 돌아 A 가 B 의 출력을
-                // 읽고, 병렬로는 둘이 겨룬다. 기준은 선언 순서가 아니라 **쓰기 사슬에서 생산자
-                // 다음**이다 — 소비자를 생산자보다 먼저 선언해도 되는 그래프라(앞에 쓰는 이가 없으면 첫 쓰기가 생산자), 선언 순서로 고르면
+                // 이 읽기가 본 버전(생산자) **다음에** 같은 자원을 덮어쓰는 패스는 이 읽기 뒤에 와야 한다(Write-after-Read). 이
+                // 간선이 없으면 W 가 쓰고 A 가 읽고 B 가 다시 쓸 때 A 와 B 가 같은 레벨에 들어간다. 직렬로는 B 가 먼저 돌아 A 가 B 의 출력을
+                // 읽고, 병렬로는 둘이 경합한다. 기준은 선언 순서가 아니라 **쓰기 사슬에서 생산자
+                // 다음**이다. 소비자를 생산자보다 먼저 선언해도 되는 그래프라(앞에 쓰는 이가 없으면 첫 쓰기가 생산자), 선언 순서로 고르면
                 // 생산자 자신을 골라 순환이 된다.
                 for ( size_t chainIndex = 0; chainIndex + 1 < listWriter.size(); ++chainIndex )
                 {
@@ -229,7 +229,7 @@ namespace sw
 
         _listCompiledExecutionOrder.reserve( listActiveIndex.size() );
         // Kahn 위상 정렬을 BFS 레벨 단위로 묶어 처리한다. 같은 레벨에 들어온 노드들은
-        // 서로 입출력 의존이 없어(동시에 in-degree 0 이 됨) 안전하게 병렬 기록할 수 있다.
+        // 서로 입출력 의존이 없어(동시에 in-degree 가 0이 됨) 안전하게 병렬 기록할 수 있다.
         while ( queueReady.empty() == false )
         {
             const size_t           levelSize = queueReady.size();
@@ -261,7 +261,7 @@ namespace sw
         if ( _listCompiledExecutionOrder.size() != listActiveIndex.size() )
         {
             // 무엇이 무엇을 기다리다 남았는지 이름으로 적는다("몇 개 중 몇 개" 만으로는 파이프라인 XML 의 입출력을 손으로 따라가야
-            // 한다). 남은 패스는 진입 차수가 0 이 되지 못한 것이고, 그 사이의 간선이 순환(과 그 뒤에 매달린 패스)이다.
+            // 한다). 남은 패스는 진입 차수가 0이 되지 못한 것이고, 그 사이의 간선이 순환(과 그 뒤에 매달린 패스)이다.
             StringBuilder<constant::kMaxBuffer4096> waits;
             for ( const auto& [producerIndex, listConsumer] : adjacency )
             {
@@ -288,7 +288,7 @@ namespace sw
             _mapNameToIndex[_listNode[nodeIndex]._name] = nodeIndex;
         }
 
-        // 수명은 실행 순서가 정해진 **뒤에야** 뜻이 있다. "몇 번째 패스에서 처음 · 마지막으로 쓰이나" 이므로.
+        // 수명은 실행 순서가 정해진 **뒤에야** 의미가 있다. "몇 번째 패스에서 처음 또는 마지막으로 쓰이나" 이기 때문이다.
         computeResourceLifetimes();
 
         return true;
@@ -320,8 +320,8 @@ namespace sw
             if ( node._bCulled )
                 continue;
 
-            // 직렬 경로도 **같은 추론**을 쓴다. 상태만 적고 배리어를 내지 않으면 전이가 패스 콜백 안 여기저기에서
-            // 즉흥적으로 일어난다. 경로가 둘이면 한쪽에만 고쳐진다.
+            // 직렬 경로도 **같은 추론**을 쓴다. 상태만 기록하고 배리어를 내지 않으면 전이가 패스 콜백 안 여기저기에서
+            // 즉흥적으로 일어난다. 경로가 둘이면 한쪽에만 수정이 들어간다.
             // 배리어는 이 패스가 기록하는 것과 **같은 리스트**에 들어가야 한다(레벨처럼 앞으로 몰 수 없다).
             _listLevelBarrier.clear();
             _mapLevelBarrierIndex.clear();
@@ -354,13 +354,13 @@ namespace sw
 
         context.reset();
 
-        // 엔트리 목록과 노드별 커맨드 리스트는 프레임을 넘어 다시 쓴다(`ParallelScratch`, 완전한 타입은 이 파일에만).
+        // 엔트리 목록과 노드별 커맨드 리스트는 프레임을 넘어 다시 쓴다(`ParallelScratch`, 완전한 타입은 이 파일에만 있다).
         // 패스마다 프레임마다 새로 만들면 래퍼 하나에 백엔드 할당까지 프레임당 패스 수의 몇 배가 된다.
         if ( _pParallelScratch == nullptr )
             _pParallelScratch = make_unique<ParallelScratch>();
         if ( _pParallelScratch->_pCmdListDevice != pDevice )
         {
-            releaseCommandLists(); // 지난 디바이스의 리스트다. 새 디바이스에서 다시 만든다
+            releaseCommandLists(); // 지난 디바이스의 리스트다. 새 디바이스에서 다시 만든다.
             _pParallelScratch->_pCmdListDevice = pDevice;
         }
         ParallelScratch&           scratch       = *_pParallelScratch;
@@ -368,9 +368,9 @@ namespace sw
         if ( scratch._listNodeCmdList.size() < _listNode.size() )
             scratch._listNodeCmdList.resize( _listNode.size() );
 
-        // 모든 레벨의 커맨드 리스트를 **기록 · 제출 전에** 마련한다. 만들 수 없으면 아무것도 내지 않고 이 프레임을 실패로 돌려준다.
-        // 주의: 레벨을 돌며 만들다 실패했을 때 직렬 `execute` 로 넘어가면, 앞 레벨이 이미 기록 · 제출된 뒤라 그 패스들이 **두 번** 돌고
-        // 직렬 경로는 커맨드 리스트 없이 기록한다(부르는 쪽 `FrameRenderer` 가 병렬로 오기 전에 프레임 리스트를 닫아 제출했다).
+        // 모든 레벨의 커맨드 리스트를 **기록과 제출 전에** 마련한다. 만들 수 없으면 아무것도 내지 않고 이 프레임을 실패로 돌려준다.
+        // 주의: 레벨을 돌며 만들다 실패했을 때 직렬 `execute` 로 넘어가면, 앞 레벨이 이미 기록과 제출을 마친 뒤라 그 패스들이 **두 번** 돌고
+        // 직렬 경로는 커맨드 리스트 없이 기록한다(호출하는 쪽 `FrameRenderer` 가 병렬로 오기 전에 프레임 리스트를 닫아 제출했다).
         for ( const vector<hashed_string>& level : _listCompiledLevel )
         {
             for ( const hashed_string& passName : level )
@@ -390,7 +390,7 @@ namespace sw
                     passCmd = pDevice->createCommandList();
                 if ( passCmd == nullptr )
                 {
-                    // 디바이스가 죽으면 매 프레임 여기로 온다 — 같은 오류를 끝없이 되풀이하지 않는다.
+                    // 디바이스가 죽으면 매 프레임 여기로 온다. 같은 오류를 끝없이 되풀이하지 않는다.
                     static bool s_bCreateFailureLogged = false;
                     if ( s_bCreateFailureLogged == false )
                     {
@@ -407,7 +407,7 @@ namespace sw
         // 레벨 경계마다 태스크를 기다린 뒤 그 레벨의 커맨드 리스트를 먼저 GPU 큐에 제출한다.
         // 그래야 레벨 N+1 이 참조할 수도 있는 레벨 N 의 출력(예: DepthPrepass → ForwardOpaque)이
         // 커맨드 기록 순서와 무관하게 GPU 타임라인에서도 먼저 끝난다(같은 큐에 대한
-        // ExecuteCommandLists 호출 순서 = 실행 순서). 패스 콜백이 참조하는 FrameRenderer 쪽 프레임
+        // ExecuteCommandLists 호출 순서가 곧 실행 순서다). 패스 콜백이 참조하는 FrameRenderer 쪽 프레임
         // 공유 상태(예: "직전 패스가 이 리소스를 이미 클리어했는가")도 이 순서 보장 덕에 안전하다.
         // 같은 자원을 놓고 경합하는 두 패스는 compile() 의 Write-after-Write/Read-after-Write 엣지로
         // 이미 서로 다른 레벨에 배치되어 있다.
@@ -444,19 +444,19 @@ namespace sw
                 continue;
 
             // 이 레벨이 만질 자원의 배리어를 **여기서 미리**, 레벨 **첫 패스 리스트의 앞머리**에 발행한다
-            // (언리얼 RDG 가 패스 리스트 앞머리에 배리어를 두는 자리). 판단과 기록 모두 렌더 스레드가 병렬 기록
+            // (언리얼 RDG 가 패스 리스트 앞머리에 배리어를 두는 방식이다). 판단과 기록 모두 렌더 스레드가 병렬 기록
             // 전에 끝내므로 패스 콜백은 이미 맞는 상태를 보고, 기록 중에 리소스 상태를 바꾸지 않는다. 배리어를
             // 병렬 기록 스레드가 정하던 구조는 실제로 여러 번 깨졌다. 같은 레벨의 다른 리스트는 큐 순서상 첫
             // 리스트 뒤에 실행되므로 배리어가 앞선다.
             //
             // 프레임 스트림에 기록하면 레벨마다 스트림을 잘라야 하고, 잘린 조각이 큐에 리스트 하나로 나간다
-            // (DX12 에서 리스트당 제출 ~7 us).
+            // (DX12 에서 리스트당 제출 약 7µs).
             ParallelPassEntry& firstEntry = listPassEntry[0];
             firstEntry._pPassCmdList->beginCommandList();
             firstEntry._bAlreadyBegun = true;
             issueBarriers( firstEntry._pPassCmdList );
 
-            // 이 구간 동안 bindless 레지스트리는 불변이어야 한다. 기록 중 등록 · 해제가 일어나면
+            // 이 구간 동안 bindless 레지스트리는 불변이어야 한다. 기록 중 등록과 해제가 일어나면
             // 읽는 쪽이 dangling 을 잡는다. 디바이스가 규칙 위반을 감시할 수 있게 알려 준다.
             pDevice->setParallelRecording( true );
 
@@ -468,7 +468,7 @@ namespace sw
 
                 if ( handle.isValid() )
                 {
-                    // 렌더 스레드는 이 스테이지를 곧바로 기다린다. 게임 스레드의 대량 잡(트랜스폼 플러시 · 씬 수집)
+                    // 렌더 스레드는 이 스테이지를 곧바로 기다린다. 게임 스레드의 대량 잡(트랜스폼 플러시, 씬 수집)
                     // 뒤에 줄을 서면 그 줄이 그대로 프레임 지연이다. High 레인은 모든 워커가 자기 덱보다 먼저 본다.
                     handle.setPriority( TaskPriority::High );
                     stage.addTask( handle );
@@ -477,8 +477,8 @@ namespace sw
                 }
                 else
                 {
-                    // 작업을 넣지 못했다(풀이 바닥났거나 내리는 중). 여기서(렌더 스레드) 직접 기록한다. 그냥 넘어가면 그 리스트가 기록 없이
-                    // 아래에서 제출된다 — 레벨의 첫 리스트는 **열린 채로**, 나머지는 지난 프레임의 명령 그대로.
+                    // 작업을 넣지 못했다(풀이 바닥났거나 종료 중이다). 여기서(렌더 스레드) 직접 기록한다. 그냥 넘어가면 그 리스트가 기록 없이
+                    // 아래에서 제출된다. 레벨의 첫 리스트는 **열린 채로**, 나머지는 지난 프레임의 명령 그대로 제출된다.
                     entry.record();
                 }
             }
@@ -543,7 +543,7 @@ namespace sw
             }
         }
 
-        (void)compile(); // 실패(순환)는 compile 이 패스 이름으로 알리고 실행 목록이 빈다
+        (void)compile(); // 실패(순환)는 compile 이 패스 이름으로 알리고 실행 목록이 빈다.
     }
 
     /**
@@ -597,7 +597,7 @@ namespace sw
                 out.append( "]\n" );
             }
         }
-        // 컬링된 패스도 적는다 — "왜 이 패스가 안 도나" 의 답이다.
+        // 컬링된 패스도 적는다. "왜 이 패스가 안 도나" 의 답이다.
         for ( const RenderGraphNode& node : _listNode )
         {
             if ( node._bCulled )
@@ -657,7 +657,7 @@ namespace sw
     void RenderGraph::appendPassBarriers( RenderGraphExecutionContext& context, const RenderGraphNode& node )
     {
         // 같은 자원을 여러 패스가 요구하면 **한 번만** 낸다(SceneDepth 처럼 여러 패스가 읽는 자원이 레벨마다 읽기 전이를
-        // 여러 번 받지 않게).
+        // 여러 번 받지 않게 한다).
         auto request = [this, &context]( hashed_string resource, RenderGraphResourceState desired )
         {
             const RenderGraphResourceState before = context.transitionTo( resource, desired );
@@ -695,7 +695,7 @@ namespace sw
     void RenderGraph::issueBarriers( IRHICommandList* pCmdList )
     {
         // 커맨드 리스트가 없어도 콜백은 부른다. 기록할 수 있는지는 받는 쪽의 사정이고, 그래프의 일은
-        // "무엇을 바꿔야 하는가" 를 내는 데까지다. GPU 없는 테스트가 추론만 따로 볼 수 있는 자리이기도 하다.
+        // "무엇을 바꿔야 하는가" 를 내는 데까지다. GPU 없는 테스트가 추론만 따로 볼 수 있게 하는 이유이기도 하다.
         if ( _listLevelBarrier.empty() || _levelPrologue.isBound() == false )
             return;
 
@@ -750,7 +750,7 @@ namespace sw
             }
         }
 
-        // 아무도 쓰지 않은 것을 읽는 패스는 **지난 프레임 내용이나 0** 을 읽는다. 그림은 그럴듯하게 나오고
+        // 아무도 쓰지 않은 것을 읽는 패스는 **지난 프레임 내용이나 0** 을 읽는다. 이미지는 그럴듯하게 나오고
         // 로그는 조용하다. 파이프라인 XML 과 코드가 어긋났을 때 실제로 이렇게 조용히 틀렸다.
         for ( const RenderGraphResourceLifetime& life : _listResourceLifetime )
         {

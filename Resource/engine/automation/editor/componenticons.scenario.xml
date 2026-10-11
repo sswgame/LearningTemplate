@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  에디터 시나리오 — 컴포넌트 · 오브젝트 아이콘(R3): 시험 씬(editortest)의 빛 오브젝트 줄은 방향광 아이콘, 카메라 줄은 카메라 아이콘,
+  에디터 시나리오 — 컴포넌트 · 오브젝트 아이콘(R3): 테스트 씬(editortest)의 빛 오브젝트 줄은 방향광 아이콘, 카메라 줄은 카메라 아이콘,
   메시만 있는 줄은 오브젝트 아이콘이다(탐침 Editor.HierarchyRowIcon = 코드 포인트). Hierarchy 화면을 찍어 둔다.
   실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/componenticons.scenario.xml -dx12
 -->

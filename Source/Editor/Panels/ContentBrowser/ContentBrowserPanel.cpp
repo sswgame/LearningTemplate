@@ -51,13 +51,13 @@ namespace sw::editor
             static constexpr Color kLockBadgeLocked{ Color::fromBytes( 255, 160, 40, 255 ) };
             static constexpr Color kLockBadgeReadOnly{ Color::fromBytes( 170, 170, 170, 255 ) };
 
-            /** @brief 타일 이름 줄 수 — 넘치면 마지막 줄을 말줄임한다(`EditorWidgets::drawClampedLabel`). */
+            /** @brief 타일 이름의 줄 수입니다. 넘치면 마지막 줄을 말줄임표로 줄입니다(`EditorWidgets::drawClampedLabel`). */
             static constexpr uint32 kTileLabelLineCount = 2;
 
-            /** @brief 삭제 확인 모달의 팝업 이름입니다(OpenPopup 과 BeginPopupModal 이 같은 글을 써야 한다). */
+            /** @brief 삭제 확인 모달의 팝업 이름입니다. OpenPopup 과 BeginPopupModal 이 같은 문자열을 써야 합니다. */
             static constexpr const utf8* kDeleteConfirmPopupName = "Delete Asset##ConfirmDeleteAsset";
 
-            /** @brief 참조 삭제 경고 글자 · 참조 조회 ID 글자 색입니다. */
+            /** @brief 참조 삭제 경고 문구와 참조 조회 ID 문구의 색입니다. */
             static constexpr Color kReferrerWarningText{ 1.0f, 0.7f, 0.25f, 1.0f };
             static constexpr Color kReferenceQueryText{ 0.55f, 0.8f, 1.0f, 1.0f };
 
@@ -78,12 +78,12 @@ namespace sw::editor
             static constexpr const utf8* kReferenceResultsPopupName = "References##ContentBrowserReferences";
             /** @brief 게임 팩 루트의 표시 이름 접두입니다(`game/<팩>`). */
             static constexpr const utf8* kGameDomainPrefix = "game/";
-            /** @brief 그림 썸네일이 없는 종류의 아이콘 크기(썸네일 짧은 변 대비)입니다. */
+            /** @brief 이미지 썸네일이 없는 종류의 아이콘 크기입니다. 썸네일 짧은 변에 대한 비율입니다. */
             static constexpr float32 kFallbackGlyphSizeRatio = 0.5f;
-            /** @brief 참조 결과 표가 스크롤 없이 보이는 최대 줄 수입니다. */
+            /** @brief 참조 결과 테이블이 스크롤 없이 보이는 최대 행 수입니다. */
             static constexpr size_t kReferenceVisibleRowCount = 12;
 
-            /** @brief 테스트가 켜졌을 때 바로 앞 위젯에 `<접두><이름>` 이름을 남깁니다(꺼져 있으면 글을 만들지 않는다). */
+            /** @brief 테스트가 켜져 있으면 바로 앞 위젯에 `<접두><이름>` 이름을 남깁니다. 꺼져 있으면 문자열을 만들지 않습니다. */
             static void noteMark( const utf8* pPrefix, string_view name )
             {
                 if ( EditorSelfTestMarks::isEnabled() == false )
@@ -92,7 +92,7 @@ namespace sw::editor
                 EditorSelfTestMarks::note( key.c_str() );
             }
 
-            /** @brief 콘텐츠 브라우저 패널입니다. 없으면 nullptr. */
+            /** @brief 콘텐츠 브라우저 패널을 반환합니다. 없으면 nullptr 입니다. */
             static const ContentBrowserPanel* findPanel()
             {
                 EditorContext* pContext = EditorContext::get();
@@ -119,7 +119,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief `content.open <리소스 폴더>` — 콘텐츠 브라우저를 열고 그 폴더로 갑니다(언리얼 Sync to Content Browser 와 같다). */
+            /** @brief `content.open <리소스 폴더>` 명령입니다. 콘텐츠 브라우저를 열고 그 폴더로 이동합니다. 언리얼의 Sync to Content Browser 와 같습니다. */
             static bool runContentOpen( const vector<string>& listArgument, string& outReply )
             {
                 EditorContext* pContext = EditorContext::get();
@@ -154,7 +154,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief `-gv_editorProbeAsset` 을 적은 텍스트 에셋 파일 수입니다. 역색인이 아직이면 값을 내지 않는다. */
+            /** @brief `-gv_editorProbeAsset` 을 참조하는 텍스트 에셋 파일 수입니다. 역색인이 아직 없으면 값을 내지 않습니다. */
             [[nodiscard]] static bool readReferenceCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const ContentBrowserPanel* pPanel = findPanel();
@@ -214,7 +214,7 @@ namespace sw::editor
         }
         else
         {
-            // 종류별 그림은 그 종류의 동작이 그린다(`IEditorAssetTypeActions`). 이미지 미리보기가 있는 종류(텍스처)는 썸네일 캐시의 그 이미지가 먼저다.
+            // 종류별 그림은 그 종류의 동작(`IEditorAssetTypeActions`)이 그린다. 이미지 미리보기가 있는 종류(텍스처)는 썸네일 캐시의 이미지가 우선한다.
             // 둘 다 없으면 종류 아이콘을 종류 색으로 가운데에 그린다.
             const IEditorAssetTypeActions* pActions = EditorAssetTypeActionsRegistry::findActionsForPath( pPath );
             bool                           bDrawn   = false;
@@ -223,7 +223,7 @@ namespace sw::editor
                 void* pTextureID = _thumbnailCache.findTexture( entry._relativePath );
                 if ( pTextureID != nullptr )
                 {
-                    // 정사각형으로 가운데에 — 썸네일 칸은 가로가 길다. 텍스처 비율은 보지 않는다(대부분 정사각형이고, 아니면 늘어난 채 보인다).
+                    // 정사각형으로 가운데에 그린다. 썸네일 영역은 가로가 길다. 텍스처 비율은 보지 않으며, 정사각형이 아니면 늘어난 채 보인다.
                     const float32 side    = MathUtil::min( maxPos._x - minPos._x, maxPos._y - minPos._y );
                     const float32 centerX = ( minPos._x + maxPos._x ) * 0.5f;
                     const float32 centerY = ( minPos._y + maxPos._y ) * 0.5f;
@@ -312,7 +312,7 @@ namespace sw::editor
         const string statusText = describeSourceControlStatus( entry );
         if ( statusText.empty() )
             return;
-        // 잠금(남이든 나든)은 주황, 읽기 전용(잠그기 전)은 회색 자물쇠 — 바로 아래 버튼의 도구 설명이 이유를 말한다.
+        // 잠금은 누가 걸었든 주황 자물쇠로, 읽기 전용(잠그기 전)은 회색 자물쇠로 그린다. 바로 아래 버튼의 툴팁이 이유를 설명한다.
         EditorContext* pContext = EditorContext::get();
         const bool     bLocked  = pContext != nullptr && pContext->getSourceControl().findLock( entry._absolutePath ) != nullptr;
         const ImU32    color    = bLocked ? EditorColorUtil::toImU32( ContentBrowserPanelInternal::kLockBadgeLocked ) : EditorColorUtil::toImU32( ContentBrowserPanelInternal::kLockBadgeReadOnly );
@@ -335,7 +335,7 @@ namespace sw::editor
             if ( ImGui::MenuItem( "Copy Absolute Path" ) )
                 ImGui::SetClipboardText( entry._absolutePath.c_str() );
 
-            // 참조 — 텍스트 에셋을 훑은 역색인으로 찾는다. 결과 창은 이 메뉴 밖, 창 단위에서 연다.
+            // 참조는 텍스트 에셋을 스캔한 역색인으로 찾는다. 결과 창은 이 메뉴 밖의 창 단위에서 연다.
             if ( entry._bIsDirectory == false )
             {
                 ImGui::Separator();
@@ -347,7 +347,7 @@ namespace sw::editor
                 EditorSelfTestMarks::note( "contentBrowser.menu.showDependencies" );
             }
 
-            // 버전 관리 — 사용자가 고른 파일만 잠그고 푼다(공급자가 없으면 메뉴가 꺼져 있다).
+            // 버전 관리는 사용자가 선택한 파일만 잠그고 푼다. 공급자가 없으면 메뉴가 꺼져 있다.
             EditorContext* pContext = EditorContext::get();
             if ( pContext != nullptr && entry._bIsDirectory == false )
             {
@@ -370,7 +370,7 @@ namespace sw::editor
             if ( ImGui::MenuItem( "Duplicate", "Ctrl+D", false, entry._bIsDirectory == false ) )
                 (void)duplicateAsset( entry._absolutePath ); // 실패는 copyFile 이 알린다
             EditorSelfTestMarks::note( "contentBrowser.menu.duplicate" );
-            // 지우기 전에 확인한다(휴지통으로 보낸다). 모달은 이 메뉴 밖, 창 단위에서 연다.
+            // 지우기 전에 확인한다. 파일은 휴지통으로 보낸다. 모달은 이 메뉴 밖의 창 단위에서 연다.
             if ( ImGui::MenuItem( "Delete...", "Del", false, entry._bIsDirectory == false ) )
                 requestDeleteAsset( entry._absolutePath );
             ImGui::EndPopup();
@@ -432,7 +432,7 @@ namespace sw::editor
         const bool bDeleted = EditorAssetFileCommands::moveToTrash( _pendingDeleteAbs );
         if ( bDeleted )
         {
-            // 지운 파일이 목록 · 선택에 남지 않게 지금 폴더를 다시 읽는다. 파일 감시도 같은 변경을 알리지만 한두 프레임 늦다.
+            // 지운 파일이 목록과 선택에 남지 않도록 현재 폴더를 다시 읽는다. 파일 감시도 같은 변경을 알리지만 한두 프레임 늦다.
             _selectedAssetAbs.clear();
             _bFolderDirty = SW_TRUE;
             _folderCache.clear();
@@ -452,7 +452,7 @@ namespace sw::editor
             return;
 
         ImGui::Text( "Move '%s' to the Recycle Bin?", FileUtil::getFileNamePart( _pendingDeleteAbs ).c_str() );
-        // 지우기 전에 이것을 쓰는 곳을 보인다(언리얼 Delete Assets 대화상자의 참조 수와 같다).
+        // 지우기 전에 이 에셋을 쓰는 곳을 보여 준다. 언리얼의 Delete Assets 대화상자가 보여 주는 참조 수와 같다.
         if ( _referenceIndex.isReady() )
         {
             const uint32 referrerCount = _referenceIndex.countReferrerFiles( ResourcePaths::toResourceID( _pendingDeleteAbs ) );
@@ -512,7 +512,7 @@ namespace sw::editor
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr || _referenceIndexJob.isPending() )
             return;
-        // 훑는 동안 바뀐 것은 끝난 뒤 번호가 달라 다시 훑는다. 저장이 몰려도 훑기는 하나씩 돈다.
+        // 스캔하는 동안 바뀐 것은 스캔이 끝난 뒤 번호가 달라지므로 다시 스캔한다. 저장이 몰려도 스캔은 하나씩 실행한다.
         const uint64 serial = pContext->getAssetHotReload().getContentChangeSerial();
         if ( _bReferenceIndexRequested == SW_TRUE && serial == _referenceIndexSerial )
             return;
@@ -523,11 +523,11 @@ namespace sw::editor
 
     void ContentBrowserPanel::selectAfterFileChange( string_view absolutePath )
     {
-        // 감시도 같은 변경을 알리지만 한두 프레임 늦다 — 결과를 아는 자리에서 바로 다시 읽는다.
+        // 감시도 같은 변경을 알리지만 한두 프레임 늦다. 결과를 아는 위치에서 바로 다시 읽는다.
         _selectedAssetAbs = FileUtil::normalizeSeparators( absolutePath );
         _bFolderDirty     = SW_TRUE;
         _folderCache.clear();
-        // 이 변경 전에 시작한 훑기는 옮기기가 고친 색인을 낡은 결과로 덮는다. 다시 요청해 그 세대의 결과를 버린다.
+        // 이 변경 전에 시작한 스캔은 이동이 고친 색인을 오래된 결과로 덮어쓴다. 다시 요청해서 그 세대의 결과를 버린다.
         if ( _referenceIndexJob.isPending() )
             _referenceIndexJob.request( ResourcePaths::getRootFolderPath() );
     }
@@ -580,7 +580,7 @@ namespace sw::editor
         string stem;
         string suffix;
         EditorAssetFileCommands::splitAssetName( FileUtil::getFileNamePart( renamingAbs ), stem, suffix );
-        // 확장자는 그대로 둔다 — 확장자까지 적었으면 그것을 쓴다.
+        // 확장자는 그대로 둔다. 확장자까지 입력했으면 그것을 쓴다.
         string fileName = FileUtil::normalizePath( newName );
         if ( suffix.empty() == false && StringUtil::endsWith( fileName, suffix ) == false )
             fileName += suffix;
@@ -660,7 +660,7 @@ namespace sw::editor
 
     void ContentBrowserPanel::handleAssetShortcuts()
     {
-        // 다른 패널과 같은 규칙 — 이 창에 포커스가 있고 글 입력 중이 아닐 때만(Hierarchy 의 F2 · Ctrl+D · Delete 와 같은 자리).
+        // 다른 패널과 같은 규칙이다. 이 창에 포커스가 있고 텍스트를 입력 중이 아닐 때만 처리한다. Hierarchy 의 F2, Ctrl+D, Delete 와 같다.
         const bool bFocused = ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
         if ( bFocused == false || ImGui::GetIO().WantTextInput || _renamingAbs.empty() == false || _selectedAssetAbs.empty() )
             return;
@@ -691,7 +691,7 @@ namespace sw::editor
         {
             ImGui::OpenPopup( ContentBrowserPanelInternal::kReferenceResultsPopupName );
             _bOpenReferenceResults = SW_FALSE;
-            // 마우스 위치에 열면 아래 도킹 칸에서 표가 화면 밖으로 나간다. 주 뷰포트 가운데에 연다.
+            // 마우스 위치에 열면 아래쪽 도킹 노드에서 테이블이 화면 밖으로 나간다. 주 뷰포트 가운데에 연다.
             ImGui::SetNextWindowPos( ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Always, ImVec2( 0.5f, 0.5f ) );
         }
         if ( ImGui::BeginPopup( ContentBrowserPanelInternal::kReferenceResultsPopupName ) == false )
@@ -755,7 +755,7 @@ namespace sw::editor
 
     void ContentBrowserPanel::drawContent()
     {
-        // 마우스 X1/X2 버튼(뒤로/앞으로)과 단축키(Alt+Left/Right, Backspace)로 폴더를 이동한다
+        // 마우스 X1, X2 버튼(뒤로, 앞으로)과 단축키(Alt+Left, Alt+Right, Backspace)로 폴더를 이동한다
         if ( ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows ) )
         {
             if ( ImGui::IsKeyPressed( ImGuiKey_MouseX1 ) )
@@ -778,7 +778,7 @@ namespace sw::editor
         _thumbnailCache.update();
 
         handleAssetShortcuts();
-        // 검색어가 있으면 하위 폴더의 파일까지 본다(언리얼 · 유니티 프로젝트 검색과 같다).
+        // 검색어가 있으면 하위 폴더의 파일까지 본다. 언리얼과 유니티의 프로젝트 검색과 같다.
         const bool bWantRecursive = EditorListFilter{ _searchBuffer.c_str() }.isActive();
         if ( bWantRecursive != ( _bListingRecursive == SW_TRUE ) )
         {
@@ -823,7 +823,7 @@ namespace sw::editor
             _listRoot.push_back( std::move( root ) );
         };
 
-        // 기본은 활성 게임 팩 하나다(언리얼 Content Browser 가 프로젝트 콘텐츠만 보이는 것과 같다). All packs 를 켜면 game/ 의 팩마다 루트 하나.
+        // 기본은 활성 게임 팩 하나다. 언리얼의 Content Browser 가 프로젝트 콘텐츠만 보이는 것과 같다. All packs 를 켜면 game/ 의 팩마다 루트가 하나씩 생긴다.
         if ( _bShowAllPacksInitialized == SW_FALSE )
         {
             _bShowAllPacks            = getPreferences<EditorContentBrowserPreferences>()._bShowAllPacksByDefault ? SW_TRUE : SW_FALSE;
@@ -848,7 +848,7 @@ namespace sw::editor
         addRoot( "common", ResourcePaths::getDomainFolderPath( "common" ) );
         addRoot( "editor", ResourcePaths::getDomainFolderPath( "editor" ) );
 
-        // 지금 폴더가 숨긴 팩 안이면 첫 루트로 간다.
+        // 현재 폴더가 숨긴 팩 안에 있으면 첫 루트로 이동한다.
         bool bSelectedIsUnderRoot = false;
         for ( const ContentRoot& root : _listRoot )
         {
@@ -904,7 +904,7 @@ namespace sw::editor
 
     void ContentBrowserPanel::applyFolderListing( vector<EditorFolderListingEntry>& listEntry )
     {
-        // 목록을 보기만 한다 — `.meta` 를 쓰지 않는다. GUID 는 그 에셋을 쓰는 시스템(머티리얼 캐시 · 프리팹 · 씬 저장 · 임포트)이 만든다.
+        // 목록을 보기만 하고 `.meta` 를 쓰지 않는다. GUID 는 그 에셋을 쓰는 시스템(머티리얼 캐시, 프리팹, 씬 저장, 임포트)이 만든다.
         _listEntry = std::move( listEntry );
 
         std::sort( _listEntry.begin(), _listEntry.end(), []( const AssetEntry& entryA, const AssetEntry& entryB )
@@ -1058,7 +1058,7 @@ namespace sw::editor
         sourcesDesc._pID       = "##cb_sources";
         sourcesDesc._kind      = editor::EditorSectionKind::Child;
         sourcesDesc._childSize = float2{ 220.0f, 0.0f };
-        // 오른쪽 Assets 칸과 같은 높이로 — 아래 개수 줄(drawCountLabel)이 창 안에 남는다. 높이 0(남은 전부)이면 그 줄이 창 밖으로 밀려 패널 전체가 스크롤된다.
+        // 오른쪽 Assets 영역과 같은 높이로 맞춰서 아래의 개수 행(drawCountLabel)이 창 안에 남게 한다. 높이가 0(남은 전부)이면 그 행이 창 밖으로 밀려 패널 전체가 스크롤된다.
         sourcesDesc._flags = editor::EditorSectionFlags::Border | editor::EditorSectionFlags::ResizeX | editor::EditorSectionFlags::FillRemaining;
         EditorChrome::beginSection( sourcesDesc );
 
@@ -1118,7 +1118,7 @@ namespace sw::editor
         if ( depth == 0 )
             flags |= ImGuiTreeNodeFlags_DefaultOpen;
 
-        // 하위 폴더는 처음 그릴 때 한 번만 디스크에서 읽는다(Refresh · 파일 감시가 비운다). 참조는 재귀 중에도 산다.
+        // 하위 폴더는 처음 그릴 때 한 번만 디스크에서 읽는다. Refresh 와 파일 감시가 캐시를 비운다. 참조는 재귀 중에도 유효하다.
         const vector<string>& listChild    = _folderCache.getOrScanChildFolders( absPath );
         const bool            hasChildDirs = listChild.empty() == false;
         if ( hasChildDirs == false )
@@ -1156,9 +1156,9 @@ namespace sw::editor
 
     void ContentBrowserPanel::drawAssetView()
     {
-        // **엔트리를 복사하지 않는다.** `AssetEntry` 는 `string` 이 넷이라, 복사하면 애셋이
-        // 수백 개일 때 프레임마다 문자열 수천 개를 복사한다. 보는 쪽 둘은 읽기만 하므로 포인터로
-        // 충분하고, 버퍼도 멤버로 올려 두면 첫 프레임 뒤로는 할당이 없다.
+        // 엔트리를 복사하지 않는다. `AssetEntry` 는 `string` 이 네 개라서 복사하면 애셋이
+        // 수백 개일 때 프레임마다 문자열 수천 개를 복사한다. 이 목록을 쓰는 두 곳은 읽기만 하므로 포인터로
+        // 충분하고, 버퍼도 멤버로 두면 첫 프레임 이후로는 할당이 없다.
         vector<const AssetEntry*>& listVisible = _listVisibleEntry;
         listVisible.clear();
         listVisible.reserve( _listEntry.size() );
@@ -1178,7 +1178,7 @@ namespace sw::editor
         drawBreadcrumbs();
         ImGui::Separator();
 
-        // 걸러져서 0건인 것과 폴더가 정말 빈 것은 다르게 말해 준다.
+        // 필터에 걸러져서 0건인 것과 폴더가 정말 비어 있는 것은 다르게 안내한다.
         const EditorListFilter filter{ _searchBuffer.c_str() };
         if ( listVisible.empty() && filter.isActive() )
             EditorWidgets::drawNoSearchResultHint( filter.getText() );
@@ -1210,7 +1210,7 @@ namespace sw::editor
             return;
         }
 
-        // 조각마다 절대 경로를 든다 — 누르면 그 조각까지의 경로 줄과 함께 그 폴더로 간다. 경로가 빈 조각("Favorites")은 누를 수 없다.
+        // 조각마다 절대 경로를 가진다. 누르면 그 조각까지의 브레드크럼 경로와 함께 그 폴더로 이동한다. 경로가 비어 있는 조각("Favorites")은 누를 수 없다.
         size_t clickedIndex = _listCrumb.size();
         for ( size_t crumbIndex = 0; crumbIndex < _listCrumb.size(); ++crumbIndex )
         {
@@ -1261,7 +1261,7 @@ namespace sw::editor
 
         const int32 itemCount = static_cast<int32>( listVisible.size() );
         const int32 rowCount  = ( itemCount + columns - 1 ) / columns;
-        // 버튼과 이름 줄(셀 + 이름 줄 수 — drawClampedLabel 은 늘 그 줄 수만큼 자리를 잡는다)
+        // 버튼과 이름 행이다. 셀 높이에 이름 줄 수를 더한 크기이며, drawClampedLabel 은 항상 그 줄 수만큼 공간을 잡는다
         const float32 rowHeight = cell + ImGui::GetTextLineHeight() * static_cast<float32>( ContentBrowserPanelInternal::kTileLabelLineCount ) +
                                   ImGui::GetStyle().ItemSpacing.y + paddingY;
 
@@ -1439,7 +1439,7 @@ namespace sw::editor
                 newEntry._listCrumb     = listCrumb;
                 _listHistory.push_back( std::move( newEntry ) );
 
-                // **가장 오래된 것부터 버린다.** 상한이 없으면 세션이 길수록 계속 쌓인다.
+                // 가장 오래된 것부터 버린다. 상한이 없으면 세션이 길수록 계속 쌓인다.
                 if ( _listHistory.size() > kMaxHistoryCount )
                 {
                     const size_t dropCount = _listHistory.size() - kMaxHistoryCount;
@@ -1449,7 +1449,7 @@ namespace sw::editor
             }
         }
 
-        // 탐색 · I/O 는 실제 파일 시스템의 대소문자를 쓰고, 저장 경로는 ResourcePaths::makeSavePath 가 상대 경로 조각을 소문자로 바꾼다.
+        // 탐색과 I/O 는 실제 파일 시스템의 대소문자를 쓰고, 저장 경로는 ResourcePaths::makeSavePath 가 상대 경로 조각을 소문자로 바꾼다.
         _selectedFolderAbs = normalizedPath;
         _listCrumb         = listCrumb;
         _selectedAssetAbs.clear();

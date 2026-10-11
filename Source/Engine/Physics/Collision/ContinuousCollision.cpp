@@ -10,15 +10,15 @@ namespace sw
     namespace
     {
         /**
-         * @brief 축 하나의 슬랩으로 [tNear, tFar] 구간을 좁힙니다. 이 축에서 이미 빗나갔으면 false 입니다.
-         * @details 슬랩 검사는 축마다 똑같아 두 함수 × 세 축이 이것 하나를 씁니다. 벌마다 적으면 한 축의 부호나 첨자 실수가 보이지 않고,
-         *          증상은 "특정 방향에서만 안 맞는다" 라서 가장 찾기 어렵습니다.
-         * @param origin 이동 시작점의 이 축 좌표
-         * @param delta 이 축의 변위
-         * @param slabMin 슬랩(확장된 대상 상자)의 이 축 최소값
-         * @param slabMax 슬랩의 이 축 최대값
-         * @param negativeNormal 이 축의 최소면 법선
-         * @param positiveNormal 이 축의 최대면 법선
+         * @brief 축 하나의 슬랩으로 [tNear, tFar] 구간을 좁힙니다. 이 축에서 이미 빗나갔으면 false 를 반환합니다.
+         * @details 슬랩 검사는 축마다 똑같아서 함수 둘과 세 축이 이 함수 하나를 쓴다. 축마다 따로 적으면 한 축의 부호나 첨자 실수가 보이지 않고,
+         *          증상은 "특정 방향에서만 안 맞는다"라서 가장 찾기 어렵다.
+         * @param origin 이동 시작점의 이 축 좌표입니다.
+         * @param delta 이 축의 변위입니다.
+         * @param slabMin 슬랩(확장된 대상 상자)의 이 축 최솟값입니다.
+         * @param slabMax 슬랩의 이 축 최댓값입니다.
+         * @param negativeNormal 이 축의 최소면 법선입니다.
+         * @param positiveNormal 이 축의 최대면 법선입니다.
          */
         bool clipSlab( float32 origin, float32 delta, float32 slabMin, float32 slabMax,
                        const float3& negativeNormal, const float3& positiveNormal,
@@ -88,8 +88,8 @@ namespace sw
 {
     bool ContinuousCollision::sweepAABB( const AABB& movingBox, const float3& displacement, const AABB& targetBox, SweepHit& outHit )
     {
-        // **빗나가면 outHit 은 비어 있다**(형제 `sweepSphere` 와 같은 약속) — 결과 구조체를 재사용하는 쪽이 false 를 받고
-        // 이전 호출의 `_bHit` 을 읽지 않게.
+        // **빗나가면 outHit 은 비어 있다**(형제 `sweepSphere` 와 같은 약속). 결과 구조체를 재사용하는 쪽이 false 를 받고도
+        // 이전 호출의 `_bHit` 을 읽지 않게 하려는 것이다.
         outHit = SweepHit{};
 
         const float3 movingHalfExtents = movingBox.getExtents();
@@ -144,7 +144,7 @@ namespace sw
         if ( displacementLengthSq < 0.000001f )
             return false;
 
-        // 3) 반지름만큼 부풀린 AABB(TargetBox + Radius)에 대해 슬랩으로 쓸어 본다
+        // 3) 반지름만큼 부풀린 AABB(TargetBox + Radius)에 대해 슬랩으로 쓸어 본다.
         const AABB expandedBox = expandBox( targetBox, float3{ radius, radius, radius } );
 
         float32 tNear{ 0.0f };
@@ -171,7 +171,7 @@ namespace sw
             return true;
         }
 
-        // 모서리 · 꼭짓점 영역은 광선-구 교차로 다시 보정한다
+        // 모서리와 꼭짓점 영역은 광선-구 교차로 다시 보정한다.
         const float3  rayToClosest      = closestOnBox - startCenter;
         const float32 dotVal            = rayToClosest.dot( displacement );
         const float32 proj              = dotVal / displacementLengthSq;

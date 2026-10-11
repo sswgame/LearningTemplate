@@ -24,7 +24,7 @@ namespace sw
     void WesternHorseMountComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        // 걸음새는 PrePhysics 의 탈것 이동이 고른다 — 그 뒤에 스태미나를 쓴다.
+        // 걸음새는 PrePhysics 의 탈것 이동이 고른다. 그 뒤에 스태미나를 쓴다.
         setTickGroup( TickGroup::PostPhysics );
     }
 
@@ -68,7 +68,7 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return;
-        // 좌석 레지스트리에서 이 말의 것만 — 내리기는 레지스트리를 바꾸지 않지만, 내린 탑승자를 먼저 모은 뒤 내린다.
+        // 좌석 레지스트리에서 이 말의 좌석만 고른다. 내리기는 레지스트리를 바꾸지 않지만, 내린 탑승자를 먼저 모은 뒤에 내린다.
         vector<GameObjectHandle> listRider;
         for ( const VehicleSeatComponent* pSeat : pManager->getComponentRegistry().getAll<VehicleSeatComponent>() )
         {

@@ -1,13 +1,13 @@
 /**
  * @file DismembermentComponent.h
- * @brief 절단 런타임 — 치명적 맞음이 잘라 낼 수 있는 몸 영역에 들면 그 영역을 몸 메시에서 빼고(+ 자른 자리 캡), 떨어진 조각을 자기 강체(볼록 껍질)를 가진
+ * @brief 절단 런타임입니다. 치명적 맞음이 잘라 낼 수 있는 몸 영역에 들면 그 영역을 몸 메시에서 빼고(자른 단면에는 캡을 붙입니다), 떨어진 조각을 자기 강체(볼록 껍질)를 가진
  *        오브젝트로 띄우고, 그 영역의 표면 상태에 피를 올립니다.
- * @details 형상은 `DismembermentUtil::severRegions`(영역 → 잘린 삼각형 마스크 · 캡 둘)가 하고, 이 컴포넌트는 메시 · 포즈 · 물리와의 이음입니다:
- *          1. 유닛의 지금 스킨드 메시(인덱스 없는 삼각형 목록)를 자리로 이어(용접) 위상을 얻고, 몸 영역 표(`*.fit.xml` 의 `<Region>` — 본 가중치)로 정점마다 영역을 매깁니다.
- *          2. 잘린 삼각형은 유닛 메시에서 빼고(남은 삼각형은 원래 정점 그대로 — UV 이음매를 지킨다) 남은 몸 캡을 스킨 정점으로 붙입니다(보임 마스크 길).
- *          3. 떨어진 조각(삼각형 + 조각 캡)은 지금 포즈로 CPU 스키닝해 정적 메시로 만들고, 그 정점의 볼록 껍질을 셰이프로 한 동적 강체 오브젝트로 띄웁니다
- *             (같은 머티리얼, 레이어 `_pieceLayer`, 충격량 = 맞음 방향 × 충격량). 래그돌이 있으면 그 영역 뼈의 바디는 끕니다(보이지 않는 바디가 남지 않게).
- *          4. 표면 상태(`CharacterSurfaceState` — 엔진 기본 채널 표)의 그 영역에 `_bloodChannel` 을 1 로.
+ * @details 형상 계산은 `DismembermentUtil::severRegions`(영역에서 잘린 삼각형 마스크와 캡 둘로)가 하고, 이 컴포넌트는 메시, 포즈, 물리를 잇는 연결부다.
+ *          1. 유닛의 현재 스킨드 메시(인덱스 없는 삼각형 목록)를 위치로 이어(용접) 위상을 얻고, 몸 영역 테이블(`*.fit.xml` 의 `<Region>`, 본 가중치)로 정점마다 영역을 매긴다.
+ *          2. 잘린 삼각형은 유닛 메시에서 빼고(남은 삼각형은 원래 정점 그대로이므로 UV 이음매가 유지된다) 남은 몸 캡을 스킨 정점으로 붙인다(보임 마스크 경로).
+ *          3. 떨어진 조각(삼각형과 조각 캡)은 현재 포즈로 CPU 스키닝해 정적 메시로 만들고, 그 정점의 볼록 껍질을 셰이프로 한 동적 강체 오브젝트로 띄운다
+ *             (같은 머티리얼, 레이어 `_pieceLayer`, 충격량 = 맞음 방향 × 충격량). 래그돌이 있으면 그 영역 뼈의 바디는 끈다(보이지 않는 바디가 남지 않게 하려는 것이다).
+ *          4. 표면 상태(`CharacterSurfaceState`, 엔진 기본 채널 테이블)의 그 영역에서 `_bloodChannel` 을 1 로 올린다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -27,7 +27,7 @@ namespace sw
 {
     /**
      * @class DismembermentComponent
-     * @brief 파일 머리말 참고. 같은 오브젝트의 `SkeletalMeshComponent`(스킨드 메시 · 스켈레톤)를 씁니다.
+     * @brief 파일 머리말을 참고하세요. 같은 오브젝트의 `SkeletalMeshComponent`(스킨드 메시, 스켈레톤)를 씁니다.
      */
     REFLECT( Category = "Character", DisplayName = "Dismemberment", Tooltip = "Severs body regions on fatal hits: hides the triangles, caps the cut and spawns a physics piece" )
     class SW_API DismembermentComponent : public Component
@@ -43,24 +43,24 @@ namespace sw
         /** @brief 치명적 맞음(`HitInfo::_bFatal`)이 잘라 낼 수 있는 영역의 뼈에 들면 그 영역을 자릅니다. */
         void onHitReceived( const HitInfo& hit ) override;
 
-        /** @brief 몸 영역 표 경로를 바꾸고 다시 읽습니다. */
+        /** @brief 몸 영역 테이블 경로를 바꾸고 다시 읽습니다. */
         void setRegionTablePath( string_view path );
         /** @brief 잘라 낼 수 있는 영역 이름들을 정합니다. */
         void setSeverableRegions( const vector<hashed_string>& listRegion ) { _listSeverableRegion = listRegion; }
         /**
          * @brief 영역 하나를 자릅니다(게임 스레드, 틱 밖). 떨어진 조각에 @p impulse 를 줍니다.
-         * @return 자른 삼각형이 없거나(이미 잘림 · 영역이 비었다) 유닛 · 메시 · 표가 없으면 false 입니다.
+         * @return 자른 삼각형이 없거나(이미 잘렸거나 영역이 비었음) 유닛, 메시, 테이블이 없으면 false 를 반환합니다.
          */
         bool severRegion( const hashed_string& region, const float3& impulse );
-        /** @brief 뼈가 든 영역 이름입니다(표의 본 목록). 없으면 빈 이름입니다. */
+        /** @brief 뼈가 속한 영역 이름을 반환합니다(테이블의 본 목록 기준). 없으면 빈 이름입니다. */
         hashed_string findRegionOfBone( const hashed_string& bone ) const;
         /** @brief 잘린 영역들입니다. */
         const vector<hashed_string>& getSeveredRegions() const { return _listSeveredRegion; }
         /** @brief 마지막으로 띄운 조각 오브젝트입니다. */
         GameObjectHandle getLastPiece() const { return _lastPiece; }
-        /** @brief 표면 상태(영역 × 채널)입니다 — 머티리얼 파라미터가 읽을 자리입니다. */
+        /** @brief 표면 상태(영역 × 채널)를 반환합니다. 머티리얼 파라미터가 읽는 값입니다. */
         const CharacterSurfaceState& getSurfaceState() const { return _surfaceState; }
-        /** @brief 이름의 영역 번호입니다(표 순서). 없으면 -1 입니다. */
+        /** @brief 이름의 영역 번호를 반환합니다(테이블 순서). 없으면 -1 입니다. */
         int32 findRegionIndex( const hashed_string& region ) const;
 
     private:
