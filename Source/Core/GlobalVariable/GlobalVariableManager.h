@@ -24,7 +24,7 @@ namespace sw
     SW_DECLARE_DELEGATE( bool, GlobalVariableEnumTextParser, string_view, string_view, int32& );
 
     // ------------------------------------------------------------------------------
-    // 1) GlobalVariableType / GlobalVariableInfo — 이름 · 타입 · 기본값 · 콜백
+    // 1) GlobalVariableType / GlobalVariableInfo. 이름, 타입, 기본값, 콜백을 정의한다.
     // ------------------------------------------------------------------------------
     /** @brief 전역 변수의 저장 타입입니다. Enum 은 int32 로 저장합니다. */
     enum class GlobalVariableType : uint8
@@ -136,9 +136,9 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 2) GlobalVariableManager — 등록 · 커맨드라인 동기화 · 모듈 단위 해제
+    // 2) GlobalVariableManager. 등록, 커맨드라인 동기화, 모듈 단위 해제를 맡는다.
     // ------------------------------------------------------------------------------
-    /** @brief 이름 → Info 맵을 소유하고, 모듈을 핫 리로드할 때 그 모듈의 변수를 떼어 냅니다. */
+    /** @brief 이름에서 Info 로 가는 맵을 소유하고, 모듈을 핫 리로드할 때 그 모듈의 변수를 해제합니다. */
     class SW_API GlobalVariableManager
     {
     public:
@@ -163,15 +163,15 @@ namespace sw
 
         /**
          * @brief 커맨드라인 인자 값으로 전역 변수들을 갱신합니다.
-         * @details enum 변수는 숫자 또는 열거자 이름을 받습니다. 이름은 파서가 걸린 뒤에 적용하므로(`applyPendingEnumText`) 그때까지 받아만 둡니다 —
-         *          명령줄은 리플렉션 등록보다 먼저 파싱됩니다.
+         * @details enum 변수는 숫자 또는 열거자 이름을 받는다. 이름은 파서가 등록된 뒤에 적용하므로(`applyPendingEnumText`) 그때까지 받아만 둔다.
+         *          명령줄은 리플렉션 등록보다 먼저 파싱되기 때문이다.
          */
         void updateFromCommandLine( const CommandLineManager* pCmdLineManager );
 
         /**
-         * @brief enum 변수의 글 값(열거자 이름)을 정수로 바꾸는 파서를 겁니다. 빈 델리게이트를 주면 뗍니다.
-         * @details Core 는 리플렉션을 모르므로 enum 표를 든 쪽(Engine — `engine::bindGlobalVariableEnumNames`)이 겁니다. 걸기 전에는 enum
-         *          변수가 숫자만 받습니다. 프로세스에 하나이고 기동 · 종료 단계에서만 바꿉니다.
+         * @brief enum 변수의 문자열 값(열거자 이름)을 정수로 바꾸는 파서를 등록합니다. 빈 델리게이트를 주면 해제합니다.
+         * @details Core 는 리플렉션을 모르므로 enum 테이블을 가진 쪽(Engine 의 `engine::bindGlobalVariableEnumNames`)이 등록한다. 등록하기 전에는 enum
+         *          변수가 숫자만 받는다. 프로세스에 하나이고 기동과 종료 단계에서만 바꾼다.
          */
         static void setEnumTextParser( const GlobalVariableEnumTextParser& parser );
 
@@ -203,9 +203,9 @@ namespace sw
          * @brief 이름으로 전역 변수 정보를 찾습니다.
          * @details **반환한 포인터는 그 변수가 등록 해제될 때까지 유효합니다.** 다른 변수를 등록하거나 해제해도 옮겨지지
          *          않습니다. 그래서 패널처럼 "이름을 훑으며 포인터를 모아 두었다가 한 번에 그리는" 방식이 안전합니다.
-         * @note 이 보장이 맵에서 나오지 않는다는 점이 중요합니다. `sw::unordered_map` 은 밀집 배열이라 삽입하면 재할당으로
-         *       **모든** 원소가, 삭제하면 swap-and-pop 으로 **마지막 원소가** 옮겨 갑니다. 그래서 값을 `unique_ptr` 로 들고
-         *       있습니다. 맵이 흔들려도 가리키는 객체는 제자리에 있습니다(값으로 담고 그 주소를 내주면 안 됩니다).
+         * @note 이 보장은 맵이 주는 것이 아닙니다. `sw::unordered_map` 은 밀집 배열이라 삽입하면 재할당으로
+         *       **모든** 원소가, 삭제하면 swap-and-pop 으로 **마지막 원소가** 옮겨 갑니다. 그래서 값을 `unique_ptr` 로 보관합니다.
+         *       맵이 흔들려도 가리키는 객체는 제자리에 있습니다(값으로 담고 그 주소를 내주면 안 됩니다).
          */
         GlobalVariableInfo* findVariable( string_view name );
 
@@ -235,17 +235,17 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 3) GlobalVariableRegistrar — 정적 초기화 때 하나뿐인 전역 리스트에 연결된다(타입 등록자와 같다)
+    // 3) GlobalVariableRegistrar. 정적 초기화 때 하나뿐인 전역 리스트에 연결된다(타입 등록자와 같다).
     // ------------------------------------------------------------------------------
     /**
-     * @brief 정적 객체가 전역 리스트(`getHead()`)에 자신을 붙입니다. 어느 이미지(Engine · 모듈 · App · 테스트)에서 정의해도 같습니다.
-     * @details 리스트를 떼어 등록하는 쪽이 이미지마다 정해져 있어서, 정의하는 쪽은 아무것도 고를 필요가 없습니다.
-     *          - Engine(과 함께 링크된 App · 테스트 · 배포본의 모든 것): 기동할 때 `EngineLoop` · 테스트 main 이 "Engine" 으로 등록하고 비운다.
-     *          - 핫 리로드 모듈(EditorModule · SWGame …): 로드 직후 `LiveReloadManager` 가 타입 등록자와 함께 떼어 **모듈 이름으로** 등록하고
-     *            (`engine::registerModuleTypes`), 내리기 전에 그 이름으로 걷는다(`engine::unregisterModuleTypes`). 모듈 코드는 등록 · 해제를
+     * @brief 정적 객체가 전역 리스트(`getHead()`)에 자신을 붙입니다. 어느 이미지(Engine, 모듈, App, 테스트)에서 정의해도 같습니다.
+     * @details 리스트를 가져와 등록하는 쪽이 이미지마다 정해져 있어서, 정의하는 쪽은 아무것도 고를 필요가 없다.
+     *          - Engine(과 함께 링크된 App, 테스트, 배포본의 모든 것): 기동할 때 `EngineLoop` 와 테스트 main 이 "Engine" 으로 등록하고 비운다.
+     *          - 핫 리로드 모듈(EditorModule, SWGame 등): 로드 직후 `LiveReloadManager` 가 타입 등록자와 함께 가져와 **모듈 이름으로** 등록하고
+     *            (`engine::registerModuleTypes`), 언로드하기 전에 그 이름으로 해제한다(`engine::unregisterModuleTypes`). 모듈 코드는 등록과 해제를
      *            부르지 않는다.
-     *          주의: 헤더 매크로로 모듈 로컬 헤드를 갈아 끼우는 방식은 그 헤더를 include 하지 않은 .cpp 의 변수를 조용히 Engine 리스트에
-     *          붙여, 모듈이 내려간 뒤 매니저가 언맵된 주소를 가리키게 한다.
+     *          주의: 헤더 매크로로 모듈 로컬 헤드를 바꿔 끼우는 방식은 그 헤더를 include 하지 않은 .cpp 의 변수를 조용히 Engine 리스트에
+     *          붙여, 모듈이 언로드된 뒤 매니저가 언맵된 주소를 가리키게 한다.
      */
     struct SW_API GlobalVariableRegistrar
     {
@@ -264,9 +264,9 @@ namespace sw
         GlobalVariableRegistrar( const utf8* pName, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* pDescription, const utf8* pEnumType = "", const utf8* pModuleName = "", uint32 typeSize = 4, bool bTestOnly = false );
 
         /**
-         * @brief 정의 매크로가 부르는 판입니다. 저장 타입 · 크기는 `GlobalVariableTraits<T>` 가, 기본값은 지금 @p variable 의 값이 정합니다.
-         * @details 매크로가 변수를 기본값으로 초기화한 바로 다음 줄에서 만들어지므로(같은 TU 의 정적 초기화는 선언 순서다) 읽는 값이 곧 기본값입니다.
-         *          @p pTypeName 은 매크로 첫 인자의 글(`#type`)이고 enum 일 때만 남깁니다 — 에디터 · 명령줄이 그 이름으로 리플렉션 enum 표를 찾습니다.
+         * @brief 정의 매크로가 부르는 오버로드입니다. 저장 타입과 크기는 `GlobalVariableTraits<T>` 가, 기본값은 지금 @p variable 의 값이 정합니다.
+         * @details 매크로가 변수를 기본값으로 초기화한 바로 다음 줄에서 만들어지므로(같은 TU 의 정적 초기화는 선언 순서다) 읽는 값이 곧 기본값이다.
+         *          @p pTypeName 은 매크로 첫 인자의 문자열(`#type`)이고 enum 일 때만 남긴다. 에디터와 명령줄이 그 이름으로 리플렉션 enum 테이블을 찾는다.
          */
         template <typename T>
         GlobalVariableRegistrar( const utf8* pName, T& variable, const utf8* pTypeName, const utf8* pDescription, bool bTestOnly )
@@ -277,13 +277,13 @@ namespace sw
         {
         }
 
-        /** @brief 아직 아무도 떼어 가지 않은 등록자들의 리스트 헤드입니다(Engine.dll 이 가진다). 떼어 등록한 쪽이 nullptr 로 비웁니다. */
+        /** @brief 아직 아무도 가져가지 않은 등록자들의 리스트 헤드입니다(Engine.dll 이 가집니다). 가져가서 등록한 쪽이 nullptr 로 비웁니다. */
         static GlobalVariableRegistrar*& getHead();
     };
 } // namespace sw
 
 // ------------------------------------------------------------------------------
-// 4) 정의 · 참조 매크로 — 첫 인자가 타입이고, 종류는 매크로 이름이 정한다
+// 4) 정의와 참조 매크로. 첫 인자가 타입이고, 종류는 매크로 이름이 정한다.
 // ------------------------------------------------------------------------------
 // `SW_GLOBAL_VARIABLE`              일반: 에디터 목록 · 프리셋 · 실행 인자 모두에 나온다. 런타임에 바꿔 볼 설정(`gv_viewMode` …).
 // `SW_TEST_GLOBAL_VARIABLE`         테스트용: 벤치 · 자동화 · 진단 스위치. 에디터 목록 · 프리셋에서 빠지고(`_bTestOnly`), **Shipping 에서는
@@ -298,8 +298,8 @@ namespace sw
 //     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_profileFrames, 0, "…" );
 //     SW_EXTERN_GLOBAL_VARIABLE( int32, gv_viewMode );
 //
-// 타입은 `bool` · `int32` · `float32` · `sw::string` · enum 이다(`GlobalVariableTraits`). enum 은 리플렉션에 등록된 이름 그대로 적는다
-// (`#type` 이 그 글이 된다 — `sw::RHIBackend` 처럼 한정하면 찾지 못한다). 기본값은 변수 초기화에만 쓰고, 등록자는 그 변수에서 읽는다.
+// 타입은 `bool`, `int32`, `float32`, `sw::string`, enum 이다(`GlobalVariableTraits`). enum 은 리플렉션에 등록된 이름 그대로 적는다
+// (`#type` 이 그 문자열이 된다. `sw::RHIBackend` 처럼 한정하면 찾지 못한다). 기본값은 변수 초기화에만 쓰고, 등록자는 그 변수에서 읽는다.
 // Shipping 에서 빠진 테스트용 변수를 `const` 로 만들지 않는다: 같은 TU 에서 컴파일 시간 상수가 되면 그 값을 루프 상한으로 쓰는 벤치
 // 코드가 Shipping 에서만 `-Wtautological-unsigned-zero-compare` 경고를 낸다. 등록만 빼고 보통 변수로 둔다.
 //
