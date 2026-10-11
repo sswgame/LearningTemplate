@@ -68,6 +68,7 @@ vcpkg_cmake_configure(
         -DCMAKE_DISABLE_FIND_PACKAGE_Git=ON # embeds a git hash in the binaries; see build-tools.patch
         -DCMAKE_CXX_STANDARD=17
         -DCMAKE_CXX_STANDARD_REQUIRED=ON
+        -DTRACY_NO_BROADCAST=ON # UDP 탐색 소켓(0.0.0.0)이 Windows 방화벽 허용 창을 띄운다. 뷰어는 주소를 직접 넣어 연결한다.
         ${FEATURE_OPTIONS}
     OPTIONS_RELEASE
         ${TOOLS_OPTIONS}

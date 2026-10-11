@@ -103,6 +103,8 @@ Tracy는 기본으로 꺼져 있고, 인자로 켜면 시작부터 기록합니�
 한 번 켜면 프로세스가 끝날 때까지 켜져 있습니다. 중간에 끄면 뷰어의 타임라인이 깨집니다.
 Tracy를 켜면 `FrameProfiler` 도 함께 켜집니다. 카운터의 프레임 합을 Tracy 그래프로 보내는 경로가 `FrameProfiler` 이기 때문입니다.
 
+**Tracy는 같은 PC의 뷰어만 받습니다.** 켜기 전에 `TRACY_ONLY_LOCALHOST=1` 을 정해 연결 대기 소켓(TCP 8086)을 loopback에 묶고, 뷰어 탐색용 UDP 브로드캐스트는 포트를 빌드할 때 끕니다(`TRACY_NO_BROADCAST`). 둘 다 Windows 방화벽의 허용 창을 막기 위해서입니다. 이 창은 EngineTest 의 `ProfilerBackendTest` 처럼 Tracy를 켜는 테스트를 돌릴 때 떴습니다. 뷰어는 목록에서 고르지 못하고 주소(`localhost:8086`)를 직접 입력해 연결합니다. 다른 PC의 뷰어가 붙어야 하면 실행 전에 환경 변수 `TRACY_ONLY_LOCALHOST=0` 을 정합니다. 이때도 브로드캐스트는 꺼져 있으므로 주소를 직접 입력합니다.
+
 ### Tracy로 나가는 것
 
 | Tracy | 엔진 쪽 |

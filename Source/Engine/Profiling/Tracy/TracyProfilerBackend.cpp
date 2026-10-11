@@ -115,6 +115,10 @@ namespace sw
             {
                 TracyClientAPI api{};
     #if defined( SW_PLATFORM_WINDOWS )
+                // Tracy 는 DLL 이 올라올 때 모든 인터페이스에서 연결을 기다려 Windows 방화벽 허용 창이 뜬다. 같은 PC 의 뷰어만 받도록 loopback 에 묶는다.
+                // 다른 PC 의 뷰어를 받으려면 실행 전에 환경 변수 TRACY_ONLY_LOCALHOST=0 을 정한다. CRT 환경 복사본을 쓰므로 _putenv_s 로 정한다.
+                if ( std::getenv( "TRACY_ONLY_LOCALHOST" ) == nullptr )
+                    (void)_putenv_s( "TRACY_ONLY_LOCALHOST", "1" );
                 const HMODULE hClient = LoadLibraryExW( L"TracyClient.dll", nullptr, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS );
                 if ( hClient == nullptr )
                     return api;
