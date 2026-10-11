@@ -27,7 +27,6 @@
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Object/GameObject/SceneAudio.h"
 #include "Engine/Object/GameObject/SceneFrameStep.h"
-#include "Engine/Object/GameObject/SceneNavigation.h"
 #include "Engine/Object/GameObject/SceneOverlapWorld2D.h"
 #include "Engine/Object/GameObject/ScenePhysics.h"
 #include "Engine/Object/GameObject/SceneTickScheduler.h"
@@ -38,6 +37,7 @@ namespace sw
     class Component;
     class GameObjectManager;
     class SceneComponent;
+    class SceneNavigation;
 
     /// @brief 씬 하나의 얼굴입니다 — 저장소(`GameObjectStore`) · 틱 디스패치(`SceneTickScheduler`) · 틱 중 규칙(`StructuralChangeBuffer`) · 등록부 · 물리를 소유하고
     ///        `tick` 의 단계를 정합니다. 게임이 부르는 API 는 같은 이름으로 각 단위에 전달합니다.
@@ -317,9 +317,9 @@ namespace sw
          * @brief 이 씬의 내비게이션(에이전트 종류마다 내비메시 · 군중, 베이크 · 재베이크, 에이전트 갱신)입니다. 물리처럼 소유만 하고 `tick` 의 한 줄만 정합니다 —
          *        물리 앞 틱 결과를 적용한 뒤, 애니메이션 · 물리 앞(에이전트가 캐릭터 컨트롤러에 넘긴 속도가 이번 물리 프레임에 든다).
          */
-        SceneNavigation& getSceneNavigation() { return _sceneNavigation; }
+        SceneNavigation& getSceneNavigation() { return *_pSceneNavigation; }
         /** @brief 이 씬의 내비게이션입니다. */
-        const SceneNavigation& getSceneNavigation() const { return _sceneNavigation; }
+        const SceneNavigation& getSceneNavigation() const { return *_pSceneNavigation; }
 
         /** @brief 이 씬의 겹침 월드입니다(AABB 질의 월드 · 2D 콜라이더 등록 · 겹침 이벤트). 질의는 `getOverlapWorld2D().getPhysicsWorld()` 입니다. */
         SceneOverlapWorld2D& getOverlapWorld2D() { return _overlapWorld2D; }
@@ -439,8 +439,8 @@ namespace sw
         ScenePhysics _scenePhysics;
         /** @brief 오디오 컴포넌트 등록부와 엔진 묶기입니다. */
         SceneAudio _sceneAudio;
-        /** @brief 내비게이션입니다. 컴포넌트(에이전트 · 장애물 · 표면)의 해제가 등록을 뺀다. */
-        SceneNavigation _sceneNavigation;
+        /** @brief 내비게이션입니다. 컴포넌트(에이전트 · 장애물 · 표면)의 해제가 등록을 뺀다. 기능 쪽 타입이라 헤더는 전방 선언만 든다(코어 헤더가 Navigation 을 퍼뜨리지 않게). */
+        unique_ptr<SceneNavigation> _pSceneNavigation;
         /** @brief 단계마다 돌기 직전에 부르는 관찰자(`setFrameStepObserver`)입니다. 보통 비어 있습니다. */
         FrameStepObserver _frameStepObserver;
         /** @brief `FrameSystems` 단계가 붙인 순서대로 부르는 시스템입니다. 오브젝트보다 먼저 비웁니다(시스템이 컴포넌트를 가리킬 수 있다). */

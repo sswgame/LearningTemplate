@@ -11,6 +11,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/Navigation/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -100,7 +101,7 @@ namespace sw
     {
         // 끝난 타일 재베이크를 끼우는 것도 여기다 — 컴포넌트 틱이 질의하지 않는 구간이다.
         SW_PROFILE_SCOPE( "GT.Scene.tick.navigation" );
-        _sceneNavigation.tick( deltaTime );
+        _pSceneNavigation->tick( deltaTime );
     }
 
     void GameObjectManager::runFrameStepAnimation( float32 deltaTime )

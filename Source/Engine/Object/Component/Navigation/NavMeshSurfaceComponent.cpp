@@ -2,8 +2,8 @@
 
 #include "Engine/Object/Component/Navigation/NavMeshSurfaceComponent.h"
 
+#include "Engine/Object/Component/Navigation/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/SceneNavigation.h"
 
 namespace sw
 {
