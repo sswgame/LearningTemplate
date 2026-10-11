@@ -91,7 +91,7 @@ namespace sw
 
         /** @brief 크기, 셀, 아이템(id, 번호, 개수, 위치, 회전 여부), 다음 번호를 씁니다. 모양 조회 함수는 `initialize` 가 받은 것이므로 저장하지 않습니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        /** @brief `writeState` 가 쓴 바이트로 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
     private:

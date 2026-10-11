@@ -1,6 +1,6 @@
 /**
  * @file MountMovementComponent.h
- * @brief 말 이동 — 의도 → 걸음새(서기 · 걷기 · 속보 · 구보 · 질주) · 조향 · 루트 모션. 탈것 폰(말 캡슐 캐릭터 컨트롤러)의 이동 규칙입니다.
+ * @brief 말의 이동입니다. 의도를 걸음새(서기, 걷기, 속보, 구보, 질주), 조향, 루트 모션으로 바꿉니다. 탈것 폰(말 캡슐 캐릭터 컨트롤러)의 이동 규칙입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -14,15 +14,15 @@
 
 namespace sw
 {
-    /** @brief 네발 탈것의 걸음새입니다(애니메이터 `Gait` 파라미터 값 = 이 순서). */
+    /** @brief 네발 탈것의 걸음새입니다. 애니메이터 `Gait` 파라미터 값이 이 순서와 같습니다. */
     ENUM()
     enum class MountGait : uint8
     {
-        Idle = 0, ///< 서 있다(제자리에서 돈다)
+        Idle = 0, ///< 서 있다. 제자리에서 돈다
         Walk,     ///< 평보
         Trot,     ///< 속보
         Canter,   ///< 구보
-        Gallop,   ///< 습보(질주) — 질주 버튼 + 앞 절반 이상, 허용될 때만(스태미나)
+        Gallop,   ///< 습보(질주). 질주 버튼을 누르고 앞 방향 입력이 절반 이상이며 허용될 때만 쓴다(스태미나)
     };
 } // namespace sw
 
@@ -30,14 +30,14 @@ namespace sw
 {
     /**
      * @class MountMovementComponent
-     * @brief 말 오브젝트(폰 + 캐릭터 컨트롤러 + 외형 · 애니메이터 + 좌석)에 붙어 의도를 걸음새로 바꿉니다. 의도의 월드 이동(조종 요 기준 — 3인칭과 같다)의
-     *        크기가 걸음새를 정하고, 말은 그 방향으로 걸음새마다의 조향 속도만큼 몸을 돌리며 **자기 요 방향으로** 갑니다(옆걸음 · 제자리 뒷걸음 없음 —
-     *        말은 돌아서 간다). 플레이어가 W 로 몰든 AI 가 목적지로 몰든 같은 규칙입니다.
-     * @details 걸음새 사이는 `_acceleration` · `_deceleration` 으로 속도가 이어집니다. 조향 속도는 걸음새마다 표(PROPERTY)입니다. `_bUseRootMotion` 이면
-     *          애니메이터 파라미터(`Gait` 0..4 · `Turn` −1..1)만 쓰고 이동은 애니메이션 루트 모션이 합니다(`CharacterControllerComponent::addRootMotionDisplacement`
-     *          — 애니메이션 단계가 넣는다). 캐릭터 컨트롤러가 없으면 루트를 직접 옮깁니다(물리 없는 탈것). 질주 허용(`setGallopAllowed`)과
-     *          걸음새 상한(`setMaxGait`)은 키트가 정합니다(스태미나 · 유대).
-     *          언리얼 Red Dead 류 말 이동과 같은 모양 — 같은 의도면 플레이어가 타든 AI 가 몰든 같은 궤적입니다.
+     * @brief 말 오브젝트(폰, 캐릭터 컨트롤러, 외형과 애니메이터, 좌석)에 붙어서 의도를 걸음새로 바꿉니다. 의도의 월드 이동(조종 요 기준이며 3인칭과 같음)의
+     *        크기가 걸음새를 정하고, 말은 그 방향으로 걸음새마다의 조향 속도만큼 몸을 돌리며 **자기 요 방향으로** 갑니다. 옆걸음과 제자리 뒷걸음은 없고,
+     *        말은 돌아서 갑니다. 플레이어가 W 로 몰든 AI 가 목적지로 몰든 같은 규칙입니다.
+     * @details 걸음새 사이의 속도는 `_acceleration` 과 `_deceleration` 으로 이어진다. 조향 속도는 걸음새마다 테이블(PROPERTY)로 둔다. `_bUseRootMotion` 이 켜져 있으면
+     *          애니메이터 파라미터(`Gait` 0..4, `Turn` −1..1)만 쓰고 이동은 애니메이션 루트 모션이 한다(`CharacterControllerComponent::addRootMotionDisplacement` 를
+     *          애니메이션 단계가 부른다). 캐릭터 컨트롤러가 없으면 루트를 직접 옮긴다(물리 없는 탈것). 질주 허용(`setGallopAllowed`)과
+     *          걸음새 상한(`setMaxGait`)은 키트가 정한다(스태미나, 유대).
+     *          언리얼의 Red Dead 류 말 이동과 같은 구조이다. 같은 의도이면 플레이어가 타든 AI 가 몰든 같은 궤적이 나온다.
      */
     REFLECT( Category = "Vehicle", DisplayName = "Mount Movement", Tooltip = "Control intent -> gait (idle, walk, trot, canter, gallop), steering and root motion for a ridden animal" )
     class SW_GF_API MountMovementComponent : public Component
@@ -48,25 +48,25 @@ namespace sw
         MountMovementComponent();
         ~MountMovementComponent() override = default;
 
-        /** @brief 질주 버튼 자리를 풀고 PrePhysics 에서 틱합니다. */
+        /** @brief 질주 버튼 인덱스를 찾고 PrePhysics 에서 틱합니다. */
         void onBeginPlay() override;
         void onTick( float32 deltaTime ) override;
 
         MountGait getGait() const { return _gait; }
-        /** @brief 몸이 향한 쪽으로의 속도입니다(m/s). */
+        /** @brief 몸이 향한 방향의 속도입니다(m/s). */
         float32 getForwardSpeed() const { return _forwardSpeed; }
         float32 getFacingYaw() const { return _facingYaw; }
-        /** @brief 질주를 허용합니다(키트가 스태미나로 정한다). 허용되지 않으면 질주 요청은 구보입니다. */
+        /** @brief 질주를 허용합니다. 키트가 스태미나로 정합니다. 허용되지 않으면 질주 요청은 구보로 처리합니다. */
         void setGallopAllowed( bool bAllowed ) { _bGallopAllowed = bAllowed ? SW_TRUE : SW_FALSE; }
         bool isGallopAllowed() const { return _bGallopAllowed == SW_TRUE; }
-        /** @brief 걸음새 상한입니다(유대가 낮은 말 · 짐 실은 말). */
+        /** @brief 걸음새 상한입니다. 유대가 낮은 말이나 짐을 실은 말에 씁니다. */
         void      setMaxGait( MountGait gait ) { _maxGait = gait; }
         MountGait getMaxGait() const { return _maxGait; }
         /** @brief 걸음새의 목표 속도입니다(m/s). */
         float32 computeGaitSpeed( MountGait gait ) const;
         /** @brief 걸음새의 조향 속도입니다(rad/s). */
         float32 computeGaitTurnRate( MountGait gait ) const;
-        /** @brief 이동 크기(0..1) · 질주 버튼 → 걸음새입니다(상한 · 질주 허용 적용 전). */
+        /** @brief 이동 크기(0..1)와 질주 버튼을 걸음새로 바꿉니다. 상한과 질주 허용은 아직 적용하지 않은 값입니다. */
         static MountGait computeRequestedGait( float32 moveAmount, bool bSprint );
 
     private:

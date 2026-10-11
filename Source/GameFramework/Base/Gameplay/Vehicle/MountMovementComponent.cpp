@@ -19,11 +19,11 @@ namespace sw
     {
         struct MountMovementComponentInternal
         {
-            /** @brief 이동 크기가 이 안이면 서 있다(스틱 떨림). */
+            /** @brief 이동 크기가 이 값 안이면 서 있는 것으로 봅니다. 스틱 떨림을 무시하기 위한 값입니다. */
             static constexpr float32 kMoveDeadzone = 0.05f;
-            /** @brief 이동 크기가 이 아래면 걷기, 그 위는 속보입니다. */
+            /** @brief 이동 크기가 이 값 아래이면 걷기이고, 이 값 위이면 속보입니다. */
             static constexpr float32 kTrotThreshold = 0.5f;
-            /** @brief 이동 크기가 이 위면 구보입니다. */
+            /** @brief 이동 크기가 이 값 위이면 구보입니다. */
             static constexpr float32 kCanterThreshold = 0.95f;
         };
     } // namespace
@@ -130,7 +130,7 @@ namespace sw
         const float3         worldMove  = intent.computeWorldMove();
         const float32        moveAmount = MathUtil::min( 1.0f, MathUtil::sqrt( worldMove._x * worldMove._x + worldMove._z * worldMove._z ) );
 
-        // 걸음새 — 요청에 질주 허용 · 상한을 씌운다.
+        // 걸음새: 요청에 질주 허용과 상한을 적용한다.
         MountGait gait = computeRequestedGait( moveAmount, intent.isDown( _sprintIndex ) );
         if ( gait == MountGait::Gallop && _bGallopAllowed == SW_FALSE )
             gait = MountGait::Canter;
@@ -138,7 +138,7 @@ namespace sw
             gait = _maxGait;
         _gait = gait;
 
-        // 의도의 월드 방향으로 몸을 돌린다(걸음새마다의 조향 속도). 서 있으면 돌지 않는다.
+        // 의도의 월드 방향으로 몸을 돌린다. 걸음새마다 조향 속도가 다르다. 서 있으면 돌지 않는다.
         float32 turn = 0.0f;
         if ( moveAmount > Internal::kMoveDeadzone )
         {
@@ -151,7 +151,7 @@ namespace sw
         const float32 rate        = targetSpeed > _forwardSpeed ? _acceleration : _deceleration;
         _forwardSpeed             = MathUtil::moveToward( _forwardSpeed, targetSpeed, rate * deltaTime );
 
-        // 자기 요 방향으로 간다(+Z 에서 +X 쪽). 루트 모션이면 애니메이션이 옮긴다.
+        // 자기 요 방향으로 간다. 요가 0 이면 +Z 쪽이고 +X 쪽으로 돈다. 루트 모션이면 애니메이션이 옮긴다.
         const float3                  velocity{ MathUtil::sin( _facingYaw ) * _forwardSpeed, 0.0f, MathUtil::cos( _facingYaw ) * _forwardSpeed };
         CharacterControllerComponent* pController = pOwner->getComponent<CharacterControllerComponent>();
         SceneComponent*               pRoot       = pOwner->getPrimarySceneComponent();
