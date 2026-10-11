@@ -1,6 +1,566 @@
 {
     "culture": "ko",
     "entries": {
+        "EdCommon.AlignSelected": {
+            "text": "선택한 오브젝트를 정렬하고 분배합니다(둘 이상 선택).",
+            "sourceHash": "3f15212ccdd0c0e5"
+        },
+        "EdCommon.AssetSlotClear": {
+            "text": "이 에셋 참조를 비웁니다.",
+            "sourceHash": "30e0a24ca2206473"
+        },
+        "EdCommon.AssetSlotDrop": {
+            "text": "콘텐츠 브라우저에서 에셋을 끌어 여기에 놓으면 지정됩니다.",
+            "sourceHash": "71429bd20c83e194"
+        },
+        "EdCommon.AutoplayToggle": {
+            "text": "{game} 자동 플레이: {description} ({variable}, 콘솔: autoplay on|off)",
+            "sourceHash": "af46f08b4cd7b767"
+        },
+        "EdCommon.BoneNoSelection": {
+            "text": "선택한 것이 없습니다. Hierarchy 에서 오브젝트를 고르십시오.",
+            "sourceHash": "9ba818d250fa414f"
+        },
+        "EdCommon.BoneObjectNotFound": {
+            "text": "활성 씬에서 오브젝트를 찾지 못했습니다.",
+            "sourceHash": "27098a2c05699b45"
+        },
+        "EdCommon.BuildCompiling": {
+            "text": "현재 백그라운드에서 모듈을 빌드하고 있습니다",
+            "sourceHash": "2d0386d89cff533f"
+        },
+        "EdCommon.BuildFailed": {
+            "text": "빌드에 실패했습니다. 콘솔 창에서 상세 오류를 확인하세요.",
+            "sourceHash": "766583519f931c4f"
+        },
+        "EdCommon.BuildReady": {
+            "text": "라이브 코딩 빌드 준비 완료",
+            "sourceHash": "7a449b2439b90107"
+        },
+        "EdCommon.BuildSucceeded": {
+            "text": "마지막 빌드가 성공적으로 완료되었습니다",
+            "sourceHash": "a6b009fd88d499e7"
+        },
+        "EdCommon.CameraBookmarkPosition": {
+            "text": "위치: {position}",
+            "sourceHash": "1a01a56e079520f1"
+        },
+        "EdCommon.CameraBookmarks": {
+            "text": "카메라 북마크: 저장한 카메라 위치로 뷰를 옮깁니다 (Ctrl+1~9)",
+            "sourceHash": "e045d92bb5f37a9e"
+        },
+        "EdCommon.CameraSpeed": {
+            "text": "카메라 비행 속도(0.5 ~ 20)입니다. 오른쪽 마우스 단추를 누른 채 휠을 돌려도 바뀝니다.",
+            "sourceHash": "e50c929d3ef59d92"
+        },
+        "EdCommon.CommandPaletteHint": {
+            "text": "명령을 입력하거나 오브젝트를 검색합니다... (Esc 로 닫기)",
+            "sourceHash": "e794d7aabc9c57b7"
+        },
+        "EdCommon.CompileGame": {
+            "text": "라이브 코딩: SWGame 모듈을 즉시 컴파일하고 핫리로드합니다 (Ctrl+Alt+F11)",
+            "sourceHash": "3991b864eabd1355"
+        },
+        "EdCommon.ComponentCardActive": {
+            "text": "컴포넌트 활성화/비활성화",
+            "sourceHash": "96e1e92b2a70ba04"
+        },
+        "EdCommon.ComponentCardOptions": {
+            "text": "컴포넌트 추가 옵션 및 삭제",
+            "sourceHash": "c76873c8e77c32cb"
+        },
+        "EdCommon.CurveEditorHint": {
+            "text": "키를 클릭하면 편집합니다. 오른쪽 클릭으로 키를 더합니다. F 를 누르면 뷰를 곡선에 맞춥니다.",
+            "sourceHash": "7c7be95f880c3262"
+        },
+        "EdCommon.CurveNoKeys": {
+            "text": "(키 없음)",
+            "sourceHash": "ea810e2305d393cb"
+        },
+        "EdCommon.CurvePreviewEdit": {
+            "text": "클릭하면 곡선을 편집합니다",
+            "sourceHash": "d2457db110d81830"
+        },
+        "EdCommon.DebugHUDNotRunning": {
+            "text": "디버그 HUD 가 실행 중이 아닙니다",
+            "sourceHash": "1595c29b79061b0d"
+        },
+        "EdCommon.DebugHUDNotRunningHost": {
+            "text": "디버그 HUD 가 실행 중이 아닙니다(Shipping 이거나 시험 호스트입니다).",
+            "sourceHash": "d4935f02e428954e"
+        },
+        "EdCommon.DebugHUDSavedIn": {
+            "text": "엔진 사용자 설정에 저장됩니다 (debug.hud, debug.hudSections, debug.hudCorner, debug.hudOpacity)",
+            "sourceHash": "c3b58fffcdef40ed"
+        },
+        "EdCommon.DebugHUDShow": {
+            "text": "게임 뷰에 디버그 HUD 를 아래에서 고른 섹션과 함께 보입니다 (Ctrl+F3)",
+            "sourceHash": "04c524ce71da88e4"
+        },
+        "EdCommon.DeleteLayout": {
+            "text": "저장된 레이아웃을 지웁니다.",
+            "sourceHash": "782a22c6dee51d55"
+        },
+        "EdCommon.DocumentOpen": {
+            "text": "이 종류의 에셋을 찾아 엽니다(Quick Open · 콘텐츠 브라우저 더블클릭과 같다)",
+            "sourceHash": "0a8943f8b887493d"
+        },
+        "EdCommon.GizmoLocalSpace": {
+            "text": "로컬 공간: 기즈모가 오브젝트의 회전을 따릅니다. 클릭하면 월드 공간으로 바뀝니다.",
+            "sourceHash": "539686bcd0122dbd"
+        },
+        "EdCommon.GizmoRotate": {
+            "text": "회전: 선택한 오브젝트를 축을 중심으로 돌립니다 (E)",
+            "sourceHash": "bc300d11bcfb8c71"
+        },
+        "EdCommon.GizmoScale": {
+            "text": "크기: 선택한 오브젝트의 크기를 축 방향이나 중심에서 고르게 바꿉니다 (R)",
+            "sourceHash": "afc771a31c404714"
+        },
+        "EdCommon.GizmoTranslate": {
+            "text": "이동: 선택한 오브젝트를 축이나 평면을 따라 옮깁니다 (W)",
+            "sourceHash": "c375f9d0cb1beb7d"
+        },
+        "EdCommon.GizmoWorldSpace": {
+            "text": "월드 공간: 기즈모가 월드 축을 따릅니다. 클릭하면 로컬 공간으로 바뀝니다.",
+            "sourceHash": "031bf3180a4fbfe5"
+        },
+        "EdCommon.GridSnap": {
+            "text": "그리드 스냅: 옮기는 오브젝트가 오른쪽의 그리드 크기 단위로 움직입니다.",
+            "sourceHash": "08f774ea618f6e95"
+        },
+        "EdCommon.GridSnapSize": {
+            "text": "그리드 스냅 간격(월드 단위)입니다.",
+            "sourceHash": "2a18e079aec6080b"
+        },
+        "EdCommon.LayoutNameHint": {
+            "text": "레이아웃 이름",
+            "sourceHash": "88251c1878d7640e"
+        },
+        "EdCommon.LiveCodingAllModules": {
+            "text": "모든 모듈",
+            "sourceHash": "530e5432e93d2db5"
+        },
+        "EdCommon.LiveCodingFailed": {
+            "text": "{target} 빌드에 실패했습니다(종료 코드 {code}). Output Log 를 확인하십시오.",
+            "sourceHash": "df743bd939409947"
+        },
+        "EdCommon.LiveCodingFailedTitle": {
+            "text": "라이브 코딩 실패",
+            "sourceHash": "5d6cf7081ed1958c"
+        },
+        "EdCommon.LiveCodingSucceeded": {
+            "text": "{target} 을(를) {seconds}초 만에 컴파일하고 다시 불러왔습니다",
+            "sourceHash": "46617b93d619f047"
+        },
+        "EdCommon.LiveCodingSucceededTitle": {
+            "text": "라이브 코딩 성공",
+            "sourceHash": "019da6611ce3355a"
+        },
+        "EdCommon.NetMode": {
+            "text": "Net Mode — Standalone 은 에디터 안에서 재생하고, 나머지는 서버와 클라이언트를 따로 띄운다 (Window > Multiplayer)",
+            "sourceHash": "d4d5ffb9615b6ca5"
+        },
+        "EdCommon.NetPlayClients": {
+            "text": "붙은 클라이언트 / 띄운 클라이언트 — 프로세스 목록 · 서버 일시정지는 Window > Multiplayer",
+            "sourceHash": "562508778b4e9d52"
+        },
+        "EdCommon.NetPlayStart": {
+            "text": "서버와 클라이언트를 따로 띄워 붙입니다 — 로그는 Output Log 에 [Server] · [Client1] 로 모이고, Stop 이 모두 끕니다",
+            "sourceHash": "af6db7c4c97f4031"
+        },
+        "EdCommon.NetPlayStop": {
+            "text": "모든 프로세스를 정상 종료시키고, 트레이스를 켰으면 한 파일로 합칩니다",
+            "sourceHash": "150dc07ed710ecff"
+        },
+        "EdCommon.NetPlayerCount": {
+            "text": "플레이어 수 — 전용 서버면 클라이언트 수, 리슨 호스트면 호스트를 넣은 수",
+            "sourceHash": "d0cc12d17911d7a8"
+        },
+        "EdCommon.NoActiveScene": {
+            "text": "활성 씬이 없습니다.",
+            "sourceHash": "554770b7cdf6d60a"
+        },
+        "EdCommon.NoAssetsOfKind": {
+            "text": "Resource/ 아래에 이 종류의 에셋이 없습니다.",
+            "sourceHash": "2c502052b3964f45"
+        },
+        "EdCommon.NoComponentTypes": {
+            "text": "등록된 컴포넌트 타입이 없습니다.",
+            "sourceHash": "bb8c3df9928f7722"
+        },
+        "EdCommon.NoDocument": {
+            "text": "(문서 없음)",
+            "sourceHash": "25de43d0bb5bb034"
+        },
+        "EdCommon.NoMatches": {
+            "text": "일치하는 항목이 없습니다.",
+            "sourceHash": "5b2f40c57a52fcb3"
+        },
+        "EdCommon.NoMatchesForFilter": {
+            "text": "\"{filter}\" 와 일치하는 항목이 없습니다.",
+            "sourceHash": "698710cf9db7979c"
+        },
+        "EdCommon.NoMatchingComponents": {
+            "text": "일치하는 컴포넌트가 없습니다.",
+            "sourceHash": "d164e857573dfafb"
+        },
+        "EdCommon.NoNodeMatches": {
+            "text": "일치하는 노드가 없습니다.",
+            "sourceHash": "b103ae9e4745b453"
+        },
+        "EdCommon.NoRecentDocuments": {
+            "text": "최근에 연 문서가 없습니다",
+            "sourceHash": "63f6cbe8cd4c94ab"
+        },
+        "EdCommon.NoSavedLayouts": {
+            "text": "저장된 레이아웃이 없습니다.",
+            "sourceHash": "fea9b0fdcf6f768c"
+        },
+        "EdCommon.NotifyBugReportFailed": {
+            "text": "버그 리포트를 저장하지 못했습니다(로그를 확인하십시오)",
+            "sourceHash": "a03b71340cf4641b"
+        },
+        "EdCommon.NotifyBugReportSaved": {
+            "text": "버그 리포트를 저장했습니다",
+            "sourceHash": "1c3f8eb80020292e"
+        },
+        "EdCommon.NotifyBugReportTitle": {
+            "text": "버그 리포트",
+            "sourceHash": "7c81b2aaacf28eb1"
+        },
+        "EdCommon.NotifyClipboardEmpty": {
+            "text": "클립보드가 비어 있습니다",
+            "sourceHash": "64d1bb1da097bc5e"
+        },
+        "EdCommon.NotifyDocumentSaveFailed": {
+            "text": "문서를 저장하지 못했습니다",
+            "sourceHash": "73efae625f17e836"
+        },
+        "EdCommon.NotifyEditorTitle": {
+            "text": "에디터",
+            "sourceHash": "a75b95980cd80e78"
+        },
+        "EdCommon.NotifyKeepSimulation": {
+            "text": "선택한 오브젝트는 Stop 뒤에도 상태를 유지합니다",
+            "sourceHash": "babd428a24d7b863"
+        },
+        "EdCommon.NotifyKeepSimulationTitle": {
+            "text": "시뮬레이션 변경 유지",
+            "sourceHash": "2eafcb6b3964d6ea"
+        },
+        "EdCommon.NotifyNewScene": {
+            "text": "새 씬",
+            "sourceHash": "46e3ebbedf187661"
+        },
+        "EdCommon.NotifyPasteTitle": {
+            "text": "붙여넣기",
+            "sourceHash": "d374c80e17e18808"
+        },
+        "EdCommon.NotifyPlayNewWindowSaveFirst": {
+            "text": "먼저 씬을 저장하십시오. 새 창은 저장된 파일을 엽니다.",
+            "sourceHash": "cd49c67e41fb33d5"
+        },
+        "EdCommon.NotifyPlayNewWindowTitle": {
+            "text": "새 창에서 플레이",
+            "sourceHash": "630e98fc6320e934"
+        },
+        "EdCommon.NotifyPlayNewWindowUnsaved": {
+            "text": "저장하지 않은 씬 편집은 새 창에 없습니다",
+            "sourceHash": "ef6bd1365ad78869"
+        },
+        "EdCommon.NotifyPlayTitle": {
+            "text": "플레이",
+            "sourceHash": "cd105819b5a10243"
+        },
+        "EdCommon.NotifyPlayUnsaved": {
+            "text": "씬에 저장하지 않은 변경이 있습니다. 툴바의 Play 로 확인하십시오.",
+            "sourceHash": "51edd313f7fcc502"
+        },
+        "EdCommon.NotifyPrefabIsolated": {
+            "text": "현재 씬에서 프리팹을 격리했습니다",
+            "sourceHash": "c9674114fd5c67ca"
+        },
+        "EdCommon.NotifyPrefabIsolationExited": {
+            "text": "프리팹 격리를 마쳤습니다",
+            "sourceHash": "31b7126a789468fe"
+        },
+        "EdCommon.NotifyPrefabSaveFirst": {
+            "text": "프리팹 격리를 열기 전에 씬을 저장하십시오",
+            "sourceHash": "4e9f4c46465c6008"
+        },
+        "EdCommon.NotifyPrefabTitle": {
+            "text": "프리팹",
+            "sourceHash": "a2d5fac94c77c683"
+        },
+        "EdCommon.NotifyPresetApplyFailed": {
+            "text": "이 컴포넌트에 프리셋을 적용하지 못했습니다",
+            "sourceHash": "bd2ea24cc6186605"
+        },
+        "EdCommon.NotifyPresetTitle": {
+            "text": "프리셋",
+            "sourceHash": "57ce5bc9b2b4287e"
+        },
+        "EdCommon.NotifyPresetWriteFailed": {
+            "text": "프리셋 파일을 쓰지 못했습니다",
+            "sourceHash": "18f898bdd9f97186"
+        },
+        "EdCommon.NotifySaveFailed": {
+            "text": "저장하지 못했습니다",
+            "sourceHash": "61de646c0ea33e4d"
+        },
+        "EdCommon.NotifySaveTitle": {
+            "text": "저장",
+            "sourceHash": "33f85f24c0f5f008"
+        },
+        "EdCommon.NotifySaved": {
+            "text": "저장했습니다",
+            "sourceHash": "44fa1773e1e78784"
+        },
+        "EdCommon.NotifySceneOpenFailed": {
+            "text": "씬을 열지 못했습니다",
+            "sourceHash": "7a20093ff8131340"
+        },
+        "EdCommon.NotifySceneReadOnly": {
+            "text": "씬 파일이 읽기 전용입니다. 먼저 콘텐츠 브라우저에서 Check Out(잠금)하십시오.",
+            "sourceHash": "08bb20d11ff115fc"
+        },
+        "EdCommon.NotifySceneTitle": {
+            "text": "씬",
+            "sourceHash": "4a9a31623ab5f213"
+        },
+        "EdCommon.NotifyScreenshotFailed": {
+            "text": "스크린샷을 쓰지 못했습니다(로그를 확인하십시오)",
+            "sourceHash": "4731f1e050b82052"
+        },
+        "EdCommon.NotifyScreenshotNoSceneView": {
+            "text": "씬 뷰가 그려지지 않았습니다. 먼저 Scene 탭을 여십시오.",
+            "sourceHash": "3708b2b94b98ecf4"
+        },
+        "EdCommon.NotifyScreenshotSaved": {
+            "text": "스크린샷을 저장했습니다",
+            "sourceHash": "7cec13a6241006ee"
+        },
+        "EdCommon.NotifyScreenshotTitle": {
+            "text": "스크린샷",
+            "sourceHash": "12e9c9d9d9b94cf1"
+        },
+        "EdCommon.NotifySelectComponent": {
+            "text": "먼저 컴포넌트를 고르십시오",
+            "sourceHash": "b993c6fa37b3228b"
+        },
+        "EdCommon.NotifySelectObject": {
+            "text": "먼저 오브젝트를 고르십시오",
+            "sourceHash": "3b6a11e1516494f5"
+        },
+        "EdCommon.NotifyStopPlayFirst": {
+            "text": "씬을 열거나 만들기 전에 플레이를 멈추십시오",
+            "sourceHash": "c8205624983ba16f"
+        },
+        "EdCommon.OverlayCollapse": {
+            "text": "접기",
+            "sourceHash": "4993444bfd3f3e5e"
+        },
+        "EdCommon.OverlayExpand": {
+            "text": "펼치기",
+            "sourceHash": "3b151ca64eb26ec1"
+        },
+        "EdCommon.OverlayGrip": {
+            "text": "끌어서 옮깁니다. 가장자리 가까이 놓으면 거기에 붙습니다(왼쪽 · 오른쪽은 세로로 쌓입니다). 오른쪽 클릭으로 오버레이 메뉴를 엽니다.",
+            "sourceHash": "e76f4de6fd1c8924"
+        },
+        "EdCommon.OverlaysMenu": {
+            "text": "씬 뷰의 오버레이 바를 보이거나 숨기고, 처음 자리로 되돌립니다",
+            "sourceHash": "b251c54e98a28136"
+        },
+        "EdCommon.PlayPause": {
+            "text": "게임 실행을 일시 정지합니다",
+            "sourceHash": "02b1445f308bb0f6"
+        },
+        "EdCommon.PlayPaused": {
+            "text": "게임 일시 정지됨",
+            "sourceHash": "74b200490f97f772"
+        },
+        "EdCommon.PlayRunning": {
+            "text": "현재 게임 실행 중 — 게임 뷰가 게임 카메라를 그리고, 씬 뷰는 에디터 카메라로 둘러볼 수 있습니다",
+            "sourceHash": "bd3b94366ed416db"
+        },
+        "EdCommon.PlayStart": {
+            "text": "게임 플레이 모드를 시작합니다 (게임 뷰 입력 및 플레이어 컨트롤 활성화)",
+            "sourceHash": "4c8a88c2c2e5d1b7"
+        },
+        "EdCommon.PlayStartAtCamera": {
+            "text": "Play 를 에디터 카메라 위치에서 시작합니다 ('Player' 태그 오브젝트, 없으면 게임 카메라를 든 오브젝트를 옮깁니다)",
+            "sourceHash": "281d72fc6cff6035"
+        },
+        "EdCommon.PlayStarting": {
+            "text": "씬을 여는 중 — 로드가 끝나면 플레이를 시작합니다 (Stop 으로 취소)",
+            "sourceHash": "33aff696457cb37d"
+        },
+        "EdCommon.PlayStepFrameCount": {
+            "text": "'Step N' 이 진행할 프레임 수",
+            "sourceHash": "ee7cef6e4abdc452"
+        },
+        "EdCommon.PlayStepFrames": {
+            "text": "왼쪽 칸의 프레임 수만큼 진행한 뒤 일시 정지합니다",
+            "sourceHash": "d74f81aeae449854"
+        },
+        "EdCommon.PlayStepOnce": {
+            "text": "게임을 정확히 1프레임 전진시킵니다",
+            "sourceHash": "24ff830ebbcf3252"
+        },
+        "EdCommon.PlayStop": {
+            "text": "게임을 중지하고 초기 씬 상태로 복원합니다",
+            "sourceHash": "0edecdc99c558bdd"
+        },
+        "EdCommon.PlayTimeScale": {
+            "text": "게임 시간 배율 (gv_timeScale) — 끌어서 바꾸고, 오른쪽 클릭으로 x1.00 으로 되돌립니다",
+            "sourceHash": "2efa1b3f4c4ce135"
+        },
+        "EdCommon.QuickOpenHint": {
+            "text": "에셋 · 씬 · 게임 오브젝트를 검색합니다(ESC 로 취소)...",
+            "sourceHash": "511de9419287d1a7"
+        },
+        "EdCommon.QuickOpenIndexing": {
+            "text": "에셋을 인덱싱하는 중...",
+            "sourceHash": "2adf9a52093ac2d4"
+        },
+        "EdCommon.QuickOpenNoMatches": {
+            "text": "일치하는 에셋이나 게임 오브젝트가 없습니다.",
+            "sourceHash": "ef05f81b002c5333"
+        },
+        "EdCommon.RHIBackend": {
+            "text": "현재 그래픽스 RHI 백엔드: {backend} ({fps} FPS)",
+            "sourceHash": "da35d617039bb661"
+        },
+        "EdCommon.RHISwitch": {
+            "text": "실행 인수로 RHI 전환: -dx11 / -dx12 / -vk / -gl",
+            "sourceHash": "51a7ab368734cf53"
+        },
+        "EdCommon.RecentDocuments": {
+            "text": "최근에 연 문서",
+            "sourceHash": "0bcb69880f1d1e0d"
+        },
+        "EdCommon.RenderDocCapture": {
+            "text": "다음 프레임을 RenderDoc 으로 캡처합니다 (Saved/RenderDoc/, Ctrl+F12)",
+            "sourceHash": "82df3d35b81e6e4b"
+        },
+        "EdCommon.RenderDocUnavailable": {
+            "text": "RenderDoc 이 이 프로세스에 붙어 있지 않습니다. -renderdoc 으로 시작하거나 RenderDoc 에서 실행하십시오.",
+            "sourceHash": "979d523dfdc7f061"
+        },
+        "EdCommon.ResetLayout": {
+            "text": "도킹 창 배치를 기본 에디터 레이아웃으로 초기화합니다",
+            "sourceHash": "507d074041abde3a"
+        },
+        "EdCommon.RotationSnap": {
+            "text": "회전 스냅: 회전이 오른쪽의 각도 단위로 움직입니다.",
+            "sourceHash": "237f0943fb5f11d9"
+        },
+        "EdCommon.RotationSnapSize": {
+            "text": "회전 스냅 간격(도)입니다.",
+            "sourceHash": "28342e291a633a2b"
+        },
+        "EdCommon.SaveLayout": {
+            "text": "지금 도킹 배치와 패널 가시성을 이 이름으로 저장합니다 (Saved/Editor/Layouts, 영숫자 · 공백 · _ · -)",
+            "sourceHash": "5c3e8cae3ce7dbc3"
+        },
+        "EdCommon.SearchAssetsHint": {
+            "text": "에셋 검색",
+            "sourceHash": "2dbac932ba536d9a"
+        },
+        "EdCommon.SearchClear": {
+            "text": "검색어를 지웁니다.",
+            "sourceHash": "5b5e9f79d6ab0be0"
+        },
+        "EdCommon.SearchHint": {
+            "text": "검색...",
+            "sourceHash": "ffa721bb6aa3128d"
+        },
+        "EdCommon.SearchNodesHint": {
+            "text": "노드 검색...",
+            "sourceHash": "d0626fcb7a391f1e"
+        },
+        "EdCommon.SimulateRunning": {
+            "text": "월드만 도는 중 — 게임 모듈 업데이트 · 게임 입력 없음",
+            "sourceHash": "bc307bb30086530b"
+        },
+        "EdCommon.SimulateStart": {
+            "text": "시뮬레이션 모드를 시작합니다 (씬만 틱 — 게임 모듈 업데이트 · 게임 입력 없음)",
+            "sourceHash": "3ecf4c78224a5d1c"
+        },
+        "EdCommon.SurfaceSnap": {
+            "text": "표면 스냅: 끄는 오브젝트가 커서 아래 표면에 놓입니다.",
+            "sourceHash": "e88799e4d30d707e"
+        },
+        "EdCommon.ThemeAccentColor": {
+            "text": "버튼, 선택 하이라이트, 폴더 및 활성 항목에 적용할 대표 액센트 색상",
+            "sourceHash": "2fc0f3f8e79d7909"
+        },
+        "EdCommon.ThemeAccentSwatch": {
+            "text": "추천 액센트 색상 팔레트입니다. 클릭하면 적용됩니다.",
+            "sourceHash": "e8eca4d6ec834be6"
+        },
+        "EdCommon.ThemeFrameRounding": {
+            "text": "버튼, 입력 필드 및 컨트롤 프레임의 모서리 둥글기(px, 0 ~ 8)",
+            "sourceHash": "40e8eb7597a7ce09"
+        },
+        "EdCommon.ThemePreset": {
+            "text": "에디터 전체의 테마 프리셋(Modern Dark, Deep Charcoal, Midnight Blue 등)을 선택합니다",
+            "sourceHash": "ad97232ad2bda000"
+        },
+        "EdCommon.ThemeReset": {
+            "text": "모든 테마 설정을 Modern Dark 기본값으로 복원합니다",
+            "sourceHash": "c3a7d4dd4bfbbb12"
+        },
+        "EdCommon.ThemeTabRounding": {
+            "text": "도킹 탭 및 상단 패널 탭 모서리의 둥글기(px, 0 ~ 8)",
+            "sourceHash": "f863f93a6310484d"
+        },
+        "EdCommon.ThemeWindowRounding": {
+            "text": "에디터 창 및 팝업 대화상자 모서리의 둥글기(px, 0 ~ 12)",
+            "sourceHash": "4061346b602e4e7a"
+        },
+        "EdCommon.UnknownPin": {
+            "text": "알 수 없는 핀",
+            "sourceHash": "8c88f0a533c2f8d2"
+        },
+        "EdCommon.Vec3AxisDrag": {
+            "text": "마우스 드래그 또는 더블 클릭으로 값 수정",
+            "sourceHash": "06c8792100a07230"
+        },
+        "EdCommon.Vec3AxisReset": {
+            "text": "클릭하여 기본값으로 초기화합니다",
+            "sourceHash": "df3bf1a092349c15"
+        },
+        "EdCommon.View2D": {
+            "text": "2D 뷰(XY 평면 그리드)입니다. 클릭하면 3D 로 바뀝니다.",
+            "sourceHash": "daefed149a58fd8b"
+        },
+        "EdCommon.View3D": {
+            "text": "3D 뷰(XZ 평면 그리드)입니다. 클릭하면 2D 로 바뀝니다.",
+            "sourceHash": "6ed8bd7f0f0ff95e"
+        },
+        "EdCommon.ViewMode": {
+            "text": "씬 뷰 보기 모드 — Lit / Unlit / Wireframe / Normals / Depth / Overdraw (게임 뷰는 늘 Lit)",
+            "sourceHash": "d2d4085479af2f56"
+        },
+        "EdCommon.ViewModeNoRenderer": {
+            "text": "렌더러가 아직 붙지 않았습니다",
+            "sourceHash": "ceb2cdca9d8fc47c"
+        },
+        "EdCommon.ViewportGrid": {
+            "text": "바닥 그리드를 보이거나 숨깁니다.",
+            "sourceHash": "956af8e9f5b45049"
+        },
+        "EdCommon.ViewportHUD": {
+            "text": "이 뷰에 디버그 HUD 상자(뷰 크기 · HUD 섹션)를 보입니다. 오른쪽 클릭으로 섹션을 고릅니다.",
+            "sourceHash": "ff7b7c1f3dc82638"
+        },
+        "EdCommon.ViewportOrientationCube": {
+            "text": "카메라가 어느 쪽을 보는지 나타내는 방향 큐브를 보이거나 숨깁니다.",
+            "sourceHash": "c994648fc818bbf2"
+        },
         "EditorTip.CameraFar": {
             "text": "카메라가 그리는 가장 먼 거리입니다. 이보다 먼 지오메트리는 잘려 나갑니다.",
             "sourceHash": "74bb571efcaa556e"

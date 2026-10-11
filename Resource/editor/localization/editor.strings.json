@@ -1,6 +1,847 @@
 {
     "culture": "en",
     "entries": {
+        "EdCommon.AlignSelected": {
+            "source": "Align and distribute the selected objects (select two or more).",
+            "origins": [
+                "Source/Editor/Viewport/EditorViewportToolbar.cpp"
+            ]
+        },
+        "EdCommon.AssetSlotClear": {
+            "source": "Clear this asset reference.",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorWidgets.cpp"
+            ]
+        },
+        "EdCommon.AssetSlotDrop": {
+            "source": "Drag an asset from the Content Browser and drop it here to assign it.",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorWidgets.cpp"
+            ]
+        },
+        "EdCommon.AutoplayToggle": {
+            "source": "{game} autoplay: {description} ({variable}, console: autoplay on|off)",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorPlayToolbar.cpp"
+            ]
+        },
+        "EdCommon.BoneNoSelection": {
+            "source": "No selection. Select an object in the Hierarchy.",
+            "origins": [
+                "Source/Editor/Popups/BoneHierarchyPopup.cpp"
+            ]
+        },
+        "EdCommon.BoneObjectNotFound": {
+            "source": "Object not found in the active scene.",
+            "origins": [
+                "Source/Editor/Popups/BoneHierarchyPopup.cpp"
+            ]
+        },
+        "EdCommon.BuildCompiling": {
+            "source": "Modules are being built in the background.",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorMenuBar.cpp"
+            ]
+        },
+        "EdCommon.BuildFailed": {
+            "source": "The build failed. See the console window for the detailed errors.",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorMenuBar.cpp"
+            ]
+        },
+        "EdCommon.BuildReady": {
+            "source": "Live Coding is ready to build.",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorMenuBar.cpp"
+            ]
+        },
+        "EdCommon.BuildSucceeded": {
+            "source": "The last build finished successfully.",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorMenuBar.cpp"
+            ]
+        },
+        "EdCommon.CameraBookmarkPosition": {
+            "source": "Position: {position}",
+            "origins": [
+                "Source/Editor/Viewport/EditorViewportToolbar.cpp"
+            ]
+        },
+        "EdCommon.CameraBookmarks": {
+            "source": "Camera bookmarks: move the view to a saved camera position (Ctrl+1~9)",
+            "origins": [
+                "Source/Editor/Viewport/EditorViewportToolbar.cpp"
+            ]
+        },
+        "EdCommon.CameraSpeed": {
+            "source": "Camera fly speed (0.5 to 20). Turning the mouse wheel while holding the right mouse button also changes it.",
+            "origins": [
+                "Source/Editor/Viewport/EditorViewportToolbar.cpp"
+            ]
+        },
+        "EdCommon.CommandPaletteHint": {
+            "source": "Type a command or search objects... (Esc to close)",
+            "origins": [
+                "Source/Editor/Popups/CommandPalettePopup.cpp"
+            ]
+        },
+        "EdCommon.CompileGame": {
+            "source": "Live Coding: compile the SWGame module now and hot-reload it (Ctrl+Alt+F11)",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorMenuBar.cpp"
+            ]
+        },
+        "EdCommon.ComponentCardActive": {
+            "source": "Enable or disable this component.",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorWidgets.cpp"
+            ]
+        },
+        "EdCommon.ComponentCardOptions": {
+            "source": "More options for this component, including removing it.",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorWidgets.cpp"
+            ]
+        },
+        "EdCommon.CurveEditorHint": {
+            "source": "Click a key to edit it. Right-click to add a key. F fits the view.",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorCurveEditor.cpp"
+            ]
+        },
+        "EdCommon.CurveNoKeys": {
+            "source": "(no keys)",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorCurveEditor.cpp"
+            ]
+        },
+        "EdCommon.CurvePreviewEdit": {
+            "source": "Click to edit the curve",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorCurveEditor.cpp"
+            ]
+        },
+        "EdCommon.DebugHUDNotRunning": {
+            "source": "Debug HUD is not running",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp"
+            ]
+        },
+        "EdCommon.DebugHUDNotRunningHost": {
+            "source": "Debug HUD is not running (Shipping or a test host).",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp"
+            ]
+        },
+        "EdCommon.DebugHUDSavedIn": {
+            "source": "Saved in the engine user settings (debug.hud, debug.hudSections, debug.hudCorner, debug.hudOpacity)",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp"
+            ]
+        },
+        "EdCommon.DebugHUDShow": {
+            "source": "Show the in-game Debug HUD in the game view, with the sections chosen below (Ctrl+F3)",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp"
+            ]
+        },
+        "EdCommon.DeleteLayout": {
+            "source": "Delete this saved layout.",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorMenuBar.cpp"
+            ]
+        },
+        "EdCommon.DocumentOpen": {
+            "source": "Find and open an asset of this type (the same as Quick Open or double-clicking it in the Content Browser).",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorDocumentPanel.cpp"
+            ]
+        },
+        "EdCommon.GizmoLocalSpace": {
+            "source": "Local space: the gizmo follows the object's rotation. Click to switch to world space.",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorWidgets.cpp"
+            ]
+        },
+        "EdCommon.GizmoRotate": {
+            "source": "Rotate: turn the selection around an axis (E)",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorWidgets.cpp"
+            ]
+        },
+        "EdCommon.GizmoScale": {
+            "source": "Scale: resize the selection along an axis, or uniformly from the center (R)",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorWidgets.cpp"
+            ]
+        },
+        "EdCommon.GizmoTranslate": {
+            "source": "Translate: move the selection along an axis or plane (W)",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorWidgets.cpp"
+            ]
+        },
+        "EdCommon.GizmoWorldSpace": {
+            "source": "World space: the gizmo follows the world axes. Click to switch to local space.",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorWidgets.cpp"
+            ]
+        },
+        "EdCommon.GridSnap": {
+            "source": "Grid snap: moved objects jump in steps of the grid size on the right.",
+            "origins": [
+                "Source/Editor/Viewport/EditorViewportToolbar.cpp"
+            ]
+        },
+        "EdCommon.GridSnapSize": {
+            "source": "Grid snap step, in world units.",
+            "origins": [
+                "Source/Editor/Viewport/EditorViewportToolbar.cpp"
+            ]
+        },
+        "EdCommon.LayoutNameHint": {
+            "source": "layout name",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorMenuBar.cpp"
+            ]
+        },
+        "EdCommon.LiveCodingAllModules": {
+            "source": "All Modules",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorMenuBar.cpp"
+            ]
+        },
+        "EdCommon.LiveCodingFailed": {
+            "source": "{target} build failed (exit code {code}). See the Output Log.",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorMenuBar.cpp"
+            ]
+        },
+        "EdCommon.LiveCodingFailedTitle": {
+            "source": "Live Coding Failed",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorMenuBar.cpp"
+            ]
+        },
+        "EdCommon.LiveCodingSucceeded": {
+            "source": "{target} compiled and reloaded in {seconds}s",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorMenuBar.cpp"
+            ]
+        },
+        "EdCommon.LiveCodingSucceededTitle": {
+            "source": "Live Coding Succeeded",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorMenuBar.cpp"
+            ]
+        },
+        "EdCommon.NetMode": {
+            "source": "Net Mode: Standalone plays inside the editor; the other modes launch a separate server and clients (Window > Multiplayer).",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorNetModeCombo.cpp"
+            ]
+        },
+        "EdCommon.NetPlayClients": {
+            "source": "Connected clients / launched clients. The process list and server pause are in Window > Multiplayer.",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorPlayToolbar.cpp"
+            ]
+        },
+        "EdCommon.NetPlayStart": {
+            "source": "Launch a separate server and clients and connect them. Logs gather in the Output Log as [Server] and [Client1], and Stop shuts them all down.",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorPlayToolbar.cpp"
+            ]
+        },
+        "EdCommon.NetPlayStop": {
+            "source": "Shut down every process cleanly and, if tracing is on, merge the traces into one file.",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorPlayToolbar.cpp"
+            ]
+        },
+        "EdCommon.NetPlayerCount": {
+            "source": "Number of players: the client count for a dedicated server, or the count including the host for a listen host.",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorNetModeCombo.cpp"
+            ]
+        },
+        "EdCommon.NoActiveScene": {
+            "source": "No active scene.",
+            "origins": [
+                "Source/Editor/Popups/BoneHierarchyPopup.cpp"
+            ]
+        },
+        "EdCommon.NoAssetsOfKind": {
+            "source": "No assets of this kind under Resource/.",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorDocumentPanel.cpp"
+            ]
+        },
+        "EdCommon.NoComponentTypes": {
+            "source": "No registered component types.",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorComponentMenu.cpp"
+            ]
+        },
+        "EdCommon.NoDocument": {
+            "source": "(no document)",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorDocumentPanel.cpp"
+            ]
+        },
+        "EdCommon.NoMatches": {
+            "source": "No matches.",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorWidgets.cpp"
+            ]
+        },
+        "EdCommon.NoMatchesForFilter": {
+            "source": "No matches for \"{filter}\".",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorWidgets.cpp"
+            ]
+        },
+        "EdCommon.NoMatchingComponents": {
+            "source": "No matching components.",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorComponentMenu.cpp"
+            ]
+        },
+        "EdCommon.NoNodeMatches": {
+            "source": "No node matches.",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorNodeGraph.cpp"
+            ]
+        },
+        "EdCommon.NoRecentDocuments": {
+            "source": "No recent documents",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorDocumentPanel.cpp"
+            ]
+        },
+        "EdCommon.NoSavedLayouts": {
+            "source": "No saved layouts.",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorMenuBar.cpp"
+            ]
+        },
+        "EdCommon.NotifyBugReportFailed": {
+            "source": "The bug report could not be saved (see the log)",
+            "origins": [
+                "Source/Editor/Common/Commands/EditorBugItCommands.cpp"
+            ]
+        },
+        "EdCommon.NotifyBugReportSaved": {
+            "source": "Bug report saved",
+            "origins": [
+                "Source/Editor/Common/Commands/EditorBugItCommands.cpp"
+            ]
+        },
+        "EdCommon.NotifyBugReportTitle": {
+            "source": "Bug report",
+            "origins": [
+                "Source/Editor/Common/Commands/EditorBugItCommands.cpp"
+            ]
+        },
+        "EdCommon.NotifyClipboardEmpty": {
+            "source": "Clipboard is empty",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorCommandGUI.cpp"
+            ]
+        },
+        "EdCommon.NotifyDocumentSaveFailed": {
+            "source": "Document save failed",
+            "origins": [
+                "Source/Editor/Common/Commands/EditorAssetCommands.cpp"
+            ]
+        },
+        "EdCommon.NotifyEditorTitle": {
+            "source": "Editor",
+            "origins": [
+                "Source/Editor/Common/Commands/EditorAssetCommands.cpp"
+            ]
+        },
+        "EdCommon.NotifyKeepSimulation": {
+            "source": "The selected objects keep their state after Stop",
+            "origins": [
+                "Source/Editor/Common/Commands/EditorPlayCommands.cpp"
+            ]
+        },
+        "EdCommon.NotifyKeepSimulationTitle": {
+            "source": "Keep Simulation Changes",
+            "origins": [
+                "Source/Editor/Common/Commands/EditorPlayCommands.cpp"
+            ]
+        },
+        "EdCommon.NotifyNewScene": {
+            "source": "New scene",
+            "origins": [
+                "Source/Editor/Common/Commands/EditorAssetCommands.cpp"
+            ]
+        },
+        "EdCommon.NotifyPasteTitle": {
+            "source": "Paste",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorCommandGUI.cpp"
+            ]
+        },
+        "EdCommon.NotifyPlayNewWindowSaveFirst": {
+            "source": "Save the scene first. The new window opens the saved file.",
+            "origins": [
+                "Source/Editor/Common/Commands/EditorPlayCommands.cpp"
+            ]
+        },
+        "EdCommon.NotifyPlayNewWindowTitle": {
+            "source": "Play in New Window",
+            "origins": [
+                "Source/Editor/Common/Commands/EditorPlayCommands.cpp"
+            ]
+        },
+        "EdCommon.NotifyPlayNewWindowUnsaved": {
+            "source": "Unsaved scene edits are not in the new window",
+            "origins": [
+                "Source/Editor/Common/Commands/EditorPlayCommands.cpp"
+            ]
+        },
+        "EdCommon.NotifyPlayTitle": {
+            "source": "Play",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorCommandGUI.cpp"
+            ]
+        },
+        "EdCommon.NotifyPlayUnsaved": {
+            "source": "The scene has unsaved changes. Use Play on the toolbar to confirm.",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorCommandGUI.cpp"
+            ]
+        },
+        "EdCommon.NotifyPrefabIsolated": {
+            "source": "Isolated the prefab in the current scene",
+            "origins": [
+                "Source/Editor/Common/Commands/EditorAssetCommands.cpp"
+            ]
+        },
+        "EdCommon.NotifyPrefabIsolationExited": {
+            "source": "Exited prefab isolation",
+            "origins": [
+                "Source/Editor/Common/Commands/EditorAssetCommands.cpp"
+            ]
+        },
+        "EdCommon.NotifyPrefabSaveFirst": {
+            "source": "Save the scene before opening prefab isolation",
+            "origins": [
+                "Source/Editor/Common/Commands/EditorAssetCommands.cpp"
+            ]
+        },
+        "EdCommon.NotifyPrefabTitle": {
+            "source": "Prefab",
+            "origins": [
+                "Source/Editor/Common/Commands/EditorAssetCommands.cpp"
+            ]
+        },
+        "EdCommon.NotifyPresetApplyFailed": {
+            "source": "Failed to apply the preset to this component",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorCommandGUI.cpp"
+            ]
+        },
+        "EdCommon.NotifyPresetTitle": {
+            "source": "Preset",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorCommandGUI.cpp"
+            ]
+        },
+        "EdCommon.NotifyPresetWriteFailed": {
+            "source": "Failed to write the preset file",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorCommandGUI.cpp"
+            ]
+        },
+        "EdCommon.NotifySaveFailed": {
+            "source": "Save failed",
+            "origins": [
+                "Source/Editor/Common/Commands/EditorAssetCommands.cpp"
+            ]
+        },
+        "EdCommon.NotifySaveTitle": {
+            "source": "Save",
+            "origins": [
+                "Source/Editor/Common/Commands/EditorAssetCommands.cpp"
+            ]
+        },
+        "EdCommon.NotifySaved": {
+            "source": "Saved",
+            "origins": [
+                "Source/Editor/Common/Commands/EditorAssetCommands.cpp"
+            ]
+        },
+        "EdCommon.NotifySceneOpenFailed": {
+            "source": "Failed to open the scene",
+            "origins": [
+                "Source/Editor/Common/Commands/EditorAssetCommands.cpp"
+            ]
+        },
+        "EdCommon.NotifySceneReadOnly": {
+            "source": "The scene file is read-only. Check it out (lock it) in the Content Browser first.",
+            "origins": [
+                "Source/Editor/Common/Commands/EditorAssetCommands.cpp"
+            ]
+        },
+        "EdCommon.NotifySceneTitle": {
+            "source": "Scene",
+            "origins": [
+                "Source/Editor/Common/Commands/EditorAssetCommands.cpp"
+            ]
+        },
+        "EdCommon.NotifyScreenshotFailed": {
+            "source": "The screenshot was not written (see the log)",
+            "origins": [
+                "Source/Editor/Common/Commands/EditorScreenshotCommands.cpp"
+            ]
+        },
+        "EdCommon.NotifyScreenshotNoSceneView": {
+            "source": "The scene view is not drawn. Open the Scene tab first.",
+            "origins": [
+                "Source/Editor/Common/Commands/EditorScreenshotCommands.cpp"
+            ]
+        },
+        "EdCommon.NotifyScreenshotSaved": {
+            "source": "Screenshot saved",
+            "origins": [
+                "Source/Editor/Common/Commands/EditorScreenshotCommands.cpp"
+            ]
+        },
+        "EdCommon.NotifyScreenshotTitle": {
+            "source": "Screenshot",
+            "origins": [
+                "Source/Editor/Common/Commands/EditorScreenshotCommands.cpp"
+            ]
+        },
+        "EdCommon.NotifySelectComponent": {
+            "source": "Select a component first",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorCommandGUI.cpp"
+            ]
+        },
+        "EdCommon.NotifySelectObject": {
+            "source": "Select an object first",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorCommandGUI.cpp"
+            ]
+        },
+        "EdCommon.NotifyStopPlayFirst": {
+            "source": "Stop play before opening or creating a scene",
+            "origins": [
+                "Source/Editor/Common/Commands/EditorAssetCommands.cpp"
+            ]
+        },
+        "EdCommon.OverlayCollapse": {
+            "source": "Collapse",
+            "origins": [
+                "Source/Editor/Viewport/EditorViewportOverlays.cpp"
+            ]
+        },
+        "EdCommon.OverlayExpand": {
+            "source": "Expand",
+            "origins": [
+                "Source/Editor/Viewport/EditorViewportOverlays.cpp"
+            ]
+        },
+        "EdCommon.OverlayGrip": {
+            "source": "Drag to move. Near an edge it docks there (left and right stack vertically). Right-click for the overlay menu.",
+            "origins": [
+                "Source/Editor/Viewport/EditorViewportOverlays.cpp"
+            ]
+        },
+        "EdCommon.OverlaysMenu": {
+            "source": "Show or hide the scene view overlay bars, or put them back where they started",
+            "origins": [
+                "Source/Editor/Viewport/EditorViewportOverlays.cpp"
+            ]
+        },
+        "EdCommon.PlayPause": {
+            "source": "Pause the game.",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorPlayToolbar.cpp"
+            ]
+        },
+        "EdCommon.PlayPaused": {
+            "source": "The game is paused.",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorPlayToolbar.cpp"
+            ]
+        },
+        "EdCommon.PlayRunning": {
+            "source": "The game is running. The game view draws the game camera, and the scene view lets you look around with the editor camera.",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorPlayToolbar.cpp"
+            ]
+        },
+        "EdCommon.PlayStart": {
+            "source": "Start play mode (enables game view input and player control).",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorPlayToolbar.cpp"
+            ]
+        },
+        "EdCommon.PlayStartAtCamera": {
+            "source": "Start Play at the editor camera position (moves the object tagged 'Player', or else the object holding the game camera).",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorPlayToolbar.cpp"
+            ]
+        },
+        "EdCommon.PlayStarting": {
+            "source": "Opening the scene. Play starts when loading finishes (Stop cancels it).",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorPlayToolbar.cpp"
+            ]
+        },
+        "EdCommon.PlayStepFrameCount": {
+            "source": "Number of frames 'Step N' advances (1 or more).",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorPlayToolbar.cpp"
+            ]
+        },
+        "EdCommon.PlayStepFrames": {
+            "source": "Advance by the number of frames in the box on the left, then pause.",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorPlayToolbar.cpp"
+            ]
+        },
+        "EdCommon.PlayStepOnce": {
+            "source": "Advance the game by exactly one frame.",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorPlayToolbar.cpp"
+            ]
+        },
+        "EdCommon.PlayStop": {
+            "source": "Stop the game and restore the scene to its state before Play.",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorPlayToolbar.cpp"
+            ]
+        },
+        "EdCommon.PlayTimeScale": {
+            "source": "Game time scale (gv_timeScale). Drag to change it; right-click to reset it to x1.00.",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorPlayToolbar.cpp"
+            ]
+        },
+        "EdCommon.QuickOpenHint": {
+            "source": "Type to search assets, scenes, game objects (ESC to cancel)...",
+            "origins": [
+                "Source/Editor/Popups/QuickLauncherPopup.cpp"
+            ]
+        },
+        "EdCommon.QuickOpenIndexing": {
+            "source": "Indexing assets...",
+            "origins": [
+                "Source/Editor/Popups/QuickLauncherPopup.cpp"
+            ]
+        },
+        "EdCommon.QuickOpenNoMatches": {
+            "source": "No matching assets or game objects found.",
+            "origins": [
+                "Source/Editor/Popups/QuickLauncherPopup.cpp"
+            ]
+        },
+        "EdCommon.RHIBackend": {
+            "source": "Current graphics RHI backend: {backend} ({fps} FPS)",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorMenuBar.cpp"
+            ]
+        },
+        "EdCommon.RHISwitch": {
+            "source": "Switch the RHI with a command-line argument: -dx11 / -dx12 / -vk / -gl",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorMenuBar.cpp"
+            ]
+        },
+        "EdCommon.RecentDocuments": {
+            "source": "Recently opened documents. Pick one to open it again.",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorDocumentPanel.cpp"
+            ]
+        },
+        "EdCommon.RenderDocCapture": {
+            "source": "Capture the next frame with RenderDoc (Saved/RenderDoc/, Ctrl+F12)",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorPlayToolbar.cpp"
+            ]
+        },
+        "EdCommon.RenderDocUnavailable": {
+            "source": "RenderDoc is not attached to this process. Start with -renderdoc or launch from RenderDoc.",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorPlayToolbar.cpp"
+            ]
+        },
+        "EdCommon.ResetLayout": {
+            "source": "Reset the docked windows to the default editor layout.",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorMenuBar.cpp"
+            ]
+        },
+        "EdCommon.RotationSnap": {
+            "source": "Rotation snap: rotations jump in steps of the angle on the right.",
+            "origins": [
+                "Source/Editor/Viewport/EditorViewportToolbar.cpp"
+            ]
+        },
+        "EdCommon.RotationSnapSize": {
+            "source": "Rotation snap step, in degrees.",
+            "origins": [
+                "Source/Editor/Viewport/EditorViewportToolbar.cpp"
+            ]
+        },
+        "EdCommon.SaveLayout": {
+            "source": "Save the current dock layout and panel visibility under this name (Saved/Editor/Layouts; letters, digits, spaces, _ and - only).",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorMenuBar.cpp"
+            ]
+        },
+        "EdCommon.SearchAssetsHint": {
+            "source": "Search assets",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorDocumentPanel.cpp"
+            ]
+        },
+        "EdCommon.SearchClear": {
+            "source": "Clear the search text.",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorWidgets.cpp"
+            ]
+        },
+        "EdCommon.SearchHint": {
+            "source": "Search...",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorComponentMenu.cpp",
+                "Source/Editor/Common/Widgets/EditorWidgets.cpp"
+            ]
+        },
+        "EdCommon.SearchNodesHint": {
+            "source": "Search nodes...",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorNodeGraph.cpp"
+            ]
+        },
+        "EdCommon.SimulateRunning": {
+            "source": "Only the world is ticking: no game module update and no game input.",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorPlayToolbar.cpp"
+            ]
+        },
+        "EdCommon.SimulateStart": {
+            "source": "Start simulate mode (ticks the scene only: no game module update and no game input).",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorPlayToolbar.cpp"
+            ]
+        },
+        "EdCommon.SurfaceSnap": {
+            "source": "Surface snap: objects you drag land on the surface under the cursor.",
+            "origins": [
+                "Source/Editor/Viewport/EditorViewportToolbar.cpp"
+            ]
+        },
+        "EdCommon.ThemeAccentColor": {
+            "source": "The accent color used for buttons, selection highlights, folders and active items.",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorThemeUtil.cpp"
+            ]
+        },
+        "EdCommon.ThemeAccentSwatch": {
+            "source": "A recommended accent color. Click to apply it.",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorThemeUtil.cpp"
+            ]
+        },
+        "EdCommon.ThemeFrameRounding": {
+            "source": "Corner rounding of buttons, input fields and control frames, in pixels (0 to 8).",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorThemeUtil.cpp"
+            ]
+        },
+        "EdCommon.ThemePreset": {
+            "source": "Choose the theme preset for the whole editor (Modern Dark, Deep Charcoal, Midnight Blue and more).",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorThemeUtil.cpp"
+            ]
+        },
+        "EdCommon.ThemeReset": {
+            "source": "Restore every theme setting to the Modern Dark defaults.",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorThemeUtil.cpp"
+            ]
+        },
+        "EdCommon.ThemeTabRounding": {
+            "source": "Corner rounding of dock tabs and panel tabs, in pixels (0 to 8).",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorThemeUtil.cpp"
+            ]
+        },
+        "EdCommon.ThemeWindowRounding": {
+            "source": "Corner rounding of editor windows and popup dialogs, in pixels (0 to 12).",
+            "origins": [
+                "Source/Editor/Common/GUI/EditorThemeUtil.cpp"
+            ]
+        },
+        "EdCommon.UnknownPin": {
+            "source": "Unknown pin",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorNodeGraph.cpp"
+            ]
+        },
+        "EdCommon.Vec3AxisDrag": {
+            "source": "Drag to change the value, or double-click to type a number.",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorWidgets.cpp"
+            ]
+        },
+        "EdCommon.Vec3AxisReset": {
+            "source": "Click to reset this axis to its default value.",
+            "origins": [
+                "Source/Editor/Common/Widgets/EditorWidgets.cpp"
+            ]
+        },
+        "EdCommon.View2D": {
+            "source": "2D view (XY plane grid). Click to switch to 3D.",
+            "origins": [
+                "Source/Editor/Viewport/EditorViewportToolbar.cpp"
+            ]
+        },
+        "EdCommon.View3D": {
+            "source": "3D view (XZ plane grid). Click to switch to 2D.",
+            "origins": [
+                "Source/Editor/Viewport/EditorViewportToolbar.cpp"
+            ]
+        },
+        "EdCommon.ViewMode": {
+            "source": "Scene view mode: Lit / Unlit / Wireframe / Normals / Depth / Overdraw (the game view always draws Lit)",
+            "origins": [
+                "Source/Editor/Viewport/EditorViewportToolbar.cpp"
+            ]
+        },
+        "EdCommon.ViewModeNoRenderer": {
+            "source": "The renderer is not attached yet.",
+            "origins": [
+                "Source/Editor/Viewport/EditorViewportToolbar.cpp"
+            ]
+        },
+        "EdCommon.ViewportGrid": {
+            "source": "Show or hide the ground grid.",
+            "origins": [
+                "Source/Editor/Viewport/EditorViewportToolbar.cpp"
+            ]
+        },
+        "EdCommon.ViewportHUD": {
+            "source": "Show the Debug HUD box in this view (view size and HUD sections). Right-click to choose sections.",
+            "origins": [
+                "Source/Editor/Viewport/EditorViewportToolbar.cpp"
+            ]
+        },
+        "EdCommon.ViewportOrientationCube": {
+            "source": "Show or hide the orientation cube that shows which way the camera faces.",
+            "origins": [
+                "Source/Editor/Viewport/EditorViewportToolbar.cpp"
+            ]
+        },
         "EditorTip.CameraFar": {
             "source": "Farthest distance the camera draws. Geometry beyond this is clipped.",
             "origins": [

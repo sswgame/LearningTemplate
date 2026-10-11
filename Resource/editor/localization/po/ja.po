@@ -8,6 +8,707 @@ msgstr ""
 "X-Message-Format: ICU\n"
 "X-Generator: SWEngine LocalizationTools\n"
 
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.AlignSelected"
+msgid "Align and distribute the selected objects (select two or more)."
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.AssetSlotClear"
+msgid "Clear this asset reference."
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.AssetSlotDrop"
+msgid "Drag an asset from the Content Browser and drop it here to assign it."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.AutoplayToggle"
+msgid "{game} autoplay: {description} ({variable}, console: autoplay on|off)"
+msgstr ""
+
+#: Source/Editor/Popups/BoneHierarchyPopup.cpp
+msgctxt "EdCommon.BoneNoSelection"
+msgid "No selection. Select an object in the Hierarchy."
+msgstr ""
+
+#: Source/Editor/Popups/BoneHierarchyPopup.cpp
+msgctxt "EdCommon.BoneObjectNotFound"
+msgid "Object not found in the active scene."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.BuildCompiling"
+msgid "Modules are being built in the background."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.BuildFailed"
+msgid "The build failed. See the console window for the detailed errors."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.BuildReady"
+msgid "Live Coding is ready to build."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.BuildSucceeded"
+msgid "The last build finished successfully."
+msgstr ""
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.CameraBookmarkPosition"
+msgid "Position: {position}"
+msgstr ""
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.CameraBookmarks"
+msgid "Camera bookmarks: move the view to a saved camera position (Ctrl+1~9)"
+msgstr ""
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.CameraSpeed"
+msgid "Camera fly speed (0.5 to 20). Turning the mouse wheel while holding the right mouse button also changes it."
+msgstr ""
+
+#: Source/Editor/Popups/CommandPalettePopup.cpp
+msgctxt "EdCommon.CommandPaletteHint"
+msgid "Type a command or search objects... (Esc to close)"
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.CompileGame"
+msgid "Live Coding: compile the SWGame module now and hot-reload it (Ctrl+Alt+F11)"
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.ComponentCardActive"
+msgid "Enable or disable this component."
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.ComponentCardOptions"
+msgid "More options for this component, including removing it."
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+msgctxt "EdCommon.CurveEditorHint"
+msgid "Click a key to edit it. Right-click to add a key. F fits the view."
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+msgctxt "EdCommon.CurveNoKeys"
+msgid "(no keys)"
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+msgctxt "EdCommon.CurvePreviewEdit"
+msgid "Click to edit the curve"
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp
+msgctxt "EdCommon.DebugHUDNotRunning"
+msgid "Debug HUD is not running"
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp
+msgctxt "EdCommon.DebugHUDNotRunningHost"
+msgid "Debug HUD is not running (Shipping or a test host)."
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp
+msgctxt "EdCommon.DebugHUDSavedIn"
+msgid "Saved in the engine user settings (debug.hud, debug.hudSections, debug.hudCorner, debug.hudOpacity)"
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp
+msgctxt "EdCommon.DebugHUDShow"
+msgid "Show the in-game Debug HUD in the game view, with the sections chosen below (Ctrl+F3)"
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.DeleteLayout"
+msgid "Delete this saved layout."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorDocumentPanel.cpp
+msgctxt "EdCommon.DocumentOpen"
+msgid "Find and open an asset of this type (the same as Quick Open or double-clicking it in the Content Browser)."
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.GizmoLocalSpace"
+msgid "Local space: the gizmo follows the object's rotation. Click to switch to world space."
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.GizmoRotate"
+msgid "Rotate: turn the selection around an axis (E)"
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.GizmoScale"
+msgid "Scale: resize the selection along an axis, or uniformly from the center (R)"
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.GizmoTranslate"
+msgid "Translate: move the selection along an axis or plane (W)"
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.GizmoWorldSpace"
+msgid "World space: the gizmo follows the world axes. Click to switch to local space."
+msgstr ""
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.GridSnap"
+msgid "Grid snap: moved objects jump in steps of the grid size on the right."
+msgstr ""
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.GridSnapSize"
+msgid "Grid snap step, in world units."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.LayoutNameHint"
+msgid "layout name"
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.LiveCodingAllModules"
+msgid "All Modules"
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.LiveCodingFailed"
+msgid "{target} build failed (exit code {code}). See the Output Log."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.LiveCodingFailedTitle"
+msgid "Live Coding Failed"
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.LiveCodingSucceeded"
+msgid "{target} compiled and reloaded in {seconds}s"
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.LiveCodingSucceededTitle"
+msgid "Live Coding Succeeded"
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorNetModeCombo.cpp
+msgctxt "EdCommon.NetMode"
+msgid "Net Mode: Standalone plays inside the editor; the other modes launch a separate server and clients (Window > Multiplayer)."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.NetPlayClients"
+msgid "Connected clients / launched clients. The process list and server pause are in Window > Multiplayer."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.NetPlayStart"
+msgid "Launch a separate server and clients and connect them. Logs gather in the Output Log as [Server] and [Client1], and Stop shuts them all down."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.NetPlayStop"
+msgid "Shut down every process cleanly and, if tracing is on, merge the traces into one file."
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorNetModeCombo.cpp
+msgctxt "EdCommon.NetPlayerCount"
+msgid "Number of players: the client count for a dedicated server, or the count including the host for a listen host."
+msgstr ""
+
+#: Source/Editor/Popups/BoneHierarchyPopup.cpp
+msgctxt "EdCommon.NoActiveScene"
+msgid "No active scene."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorDocumentPanel.cpp
+msgctxt "EdCommon.NoAssetsOfKind"
+msgid "No assets of this kind under Resource/."
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorComponentMenu.cpp
+msgctxt "EdCommon.NoComponentTypes"
+msgid "No registered component types."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorDocumentPanel.cpp
+msgctxt "EdCommon.NoDocument"
+msgid "(no document)"
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.NoMatches"
+msgid "No matches."
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.NoMatchesForFilter"
+msgid "No matches for \"{filter}\"."
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorComponentMenu.cpp
+msgctxt "EdCommon.NoMatchingComponents"
+msgid "No matching components."
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.NoNodeMatches"
+msgid "No node matches."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorDocumentPanel.cpp
+msgctxt "EdCommon.NoRecentDocuments"
+msgid "No recent documents"
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.NoSavedLayouts"
+msgid "No saved layouts."
+msgstr ""
+
+#: Source/Editor/Common/Commands/EditorBugItCommands.cpp
+msgctxt "EdCommon.NotifyBugReportFailed"
+msgid "The bug report could not be saved (see the log)"
+msgstr ""
+
+#: Source/Editor/Common/Commands/EditorBugItCommands.cpp
+msgctxt "EdCommon.NotifyBugReportSaved"
+msgid "Bug report saved"
+msgstr ""
+
+#: Source/Editor/Common/Commands/EditorBugItCommands.cpp
+msgctxt "EdCommon.NotifyBugReportTitle"
+msgid "Bug report"
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorCommandGUI.cpp
+msgctxt "EdCommon.NotifyClipboardEmpty"
+msgid "Clipboard is empty"
+msgstr ""
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifyDocumentSaveFailed"
+msgid "Document save failed"
+msgstr ""
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifyEditorTitle"
+msgid "Editor"
+msgstr ""
+
+#: Source/Editor/Common/Commands/EditorPlayCommands.cpp
+msgctxt "EdCommon.NotifyKeepSimulation"
+msgid "The selected objects keep their state after Stop"
+msgstr ""
+
+#: Source/Editor/Common/Commands/EditorPlayCommands.cpp
+msgctxt "EdCommon.NotifyKeepSimulationTitle"
+msgid "Keep Simulation Changes"
+msgstr ""
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifyNewScene"
+msgid "New scene"
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorCommandGUI.cpp
+msgctxt "EdCommon.NotifyPasteTitle"
+msgid "Paste"
+msgstr ""
+
+#: Source/Editor/Common/Commands/EditorPlayCommands.cpp
+msgctxt "EdCommon.NotifyPlayNewWindowSaveFirst"
+msgid "Save the scene first. The new window opens the saved file."
+msgstr ""
+
+#: Source/Editor/Common/Commands/EditorPlayCommands.cpp
+msgctxt "EdCommon.NotifyPlayNewWindowTitle"
+msgid "Play in New Window"
+msgstr ""
+
+#: Source/Editor/Common/Commands/EditorPlayCommands.cpp
+msgctxt "EdCommon.NotifyPlayNewWindowUnsaved"
+msgid "Unsaved scene edits are not in the new window"
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorCommandGUI.cpp
+msgctxt "EdCommon.NotifyPlayTitle"
+msgid "Play"
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorCommandGUI.cpp
+msgctxt "EdCommon.NotifyPlayUnsaved"
+msgid "The scene has unsaved changes. Use Play on the toolbar to confirm."
+msgstr ""
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifyPrefabIsolated"
+msgid "Isolated the prefab in the current scene"
+msgstr ""
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifyPrefabIsolationExited"
+msgid "Exited prefab isolation"
+msgstr ""
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifyPrefabSaveFirst"
+msgid "Save the scene before opening prefab isolation"
+msgstr ""
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifyPrefabTitle"
+msgid "Prefab"
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorCommandGUI.cpp
+msgctxt "EdCommon.NotifyPresetApplyFailed"
+msgid "Failed to apply the preset to this component"
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorCommandGUI.cpp
+msgctxt "EdCommon.NotifyPresetTitle"
+msgid "Preset"
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorCommandGUI.cpp
+msgctxt "EdCommon.NotifyPresetWriteFailed"
+msgid "Failed to write the preset file"
+msgstr ""
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifySaveFailed"
+msgid "Save failed"
+msgstr ""
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifySaveTitle"
+msgid "Save"
+msgstr ""
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifySaved"
+msgid "Saved"
+msgstr ""
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifySceneOpenFailed"
+msgid "Failed to open the scene"
+msgstr ""
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifySceneReadOnly"
+msgid "The scene file is read-only. Check it out (lock it) in the Content Browser first."
+msgstr ""
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifySceneTitle"
+msgid "Scene"
+msgstr ""
+
+#: Source/Editor/Common/Commands/EditorScreenshotCommands.cpp
+msgctxt "EdCommon.NotifyScreenshotFailed"
+msgid "The screenshot was not written (see the log)"
+msgstr ""
+
+#: Source/Editor/Common/Commands/EditorScreenshotCommands.cpp
+msgctxt "EdCommon.NotifyScreenshotNoSceneView"
+msgid "The scene view is not drawn. Open the Scene tab first."
+msgstr ""
+
+#: Source/Editor/Common/Commands/EditorScreenshotCommands.cpp
+msgctxt "EdCommon.NotifyScreenshotSaved"
+msgid "Screenshot saved"
+msgstr ""
+
+#: Source/Editor/Common/Commands/EditorScreenshotCommands.cpp
+msgctxt "EdCommon.NotifyScreenshotTitle"
+msgid "Screenshot"
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorCommandGUI.cpp
+msgctxt "EdCommon.NotifySelectComponent"
+msgid "Select a component first"
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorCommandGUI.cpp
+msgctxt "EdCommon.NotifySelectObject"
+msgid "Select an object first"
+msgstr ""
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifyStopPlayFirst"
+msgid "Stop play before opening or creating a scene"
+msgstr ""
+
+#: Source/Editor/Viewport/EditorViewportOverlays.cpp
+msgctxt "EdCommon.OverlayCollapse"
+msgid "Collapse"
+msgstr ""
+
+#: Source/Editor/Viewport/EditorViewportOverlays.cpp
+msgctxt "EdCommon.OverlayExpand"
+msgid "Expand"
+msgstr ""
+
+#: Source/Editor/Viewport/EditorViewportOverlays.cpp
+msgctxt "EdCommon.OverlayGrip"
+msgid "Drag to move. Near an edge it docks there (left and right stack vertically). Right-click for the overlay menu."
+msgstr ""
+
+#: Source/Editor/Viewport/EditorViewportOverlays.cpp
+msgctxt "EdCommon.OverlaysMenu"
+msgid "Show or hide the scene view overlay bars, or put them back where they started"
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.PlayPause"
+msgid "Pause the game."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.PlayPaused"
+msgid "The game is paused."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.PlayRunning"
+msgid "The game is running. The game view draws the game camera, and the scene view lets you look around with the editor camera."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.PlayStart"
+msgid "Start play mode (enables game view input and player control)."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.PlayStartAtCamera"
+msgid "Start Play at the editor camera position (moves the object tagged 'Player', or else the object holding the game camera)."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.PlayStarting"
+msgid "Opening the scene. Play starts when loading finishes (Stop cancels it)."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.PlayStepFrameCount"
+msgid "Number of frames 'Step N' advances (1 or more)."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.PlayStepFrames"
+msgid "Advance by the number of frames in the box on the left, then pause."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.PlayStepOnce"
+msgid "Advance the game by exactly one frame."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.PlayStop"
+msgid "Stop the game and restore the scene to its state before Play."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.PlayTimeScale"
+msgid "Game time scale (gv_timeScale). Drag to change it; right-click to reset it to x1.00."
+msgstr ""
+
+#: Source/Editor/Popups/QuickLauncherPopup.cpp
+msgctxt "EdCommon.QuickOpenHint"
+msgid "Type to search assets, scenes, game objects (ESC to cancel)..."
+msgstr ""
+
+#: Source/Editor/Popups/QuickLauncherPopup.cpp
+msgctxt "EdCommon.QuickOpenIndexing"
+msgid "Indexing assets..."
+msgstr ""
+
+#: Source/Editor/Popups/QuickLauncherPopup.cpp
+msgctxt "EdCommon.QuickOpenNoMatches"
+msgid "No matching assets or game objects found."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.RHIBackend"
+msgid "Current graphics RHI backend: {backend} ({fps} FPS)"
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.RHISwitch"
+msgid "Switch the RHI with a command-line argument: -dx11 / -dx12 / -vk / -gl"
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorDocumentPanel.cpp
+msgctxt "EdCommon.RecentDocuments"
+msgid "Recently opened documents. Pick one to open it again."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.RenderDocCapture"
+msgid "Capture the next frame with RenderDoc (Saved/RenderDoc/, Ctrl+F12)"
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.RenderDocUnavailable"
+msgid "RenderDoc is not attached to this process. Start with -renderdoc or launch from RenderDoc."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.ResetLayout"
+msgid "Reset the docked windows to the default editor layout."
+msgstr ""
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.RotationSnap"
+msgid "Rotation snap: rotations jump in steps of the angle on the right."
+msgstr ""
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.RotationSnapSize"
+msgid "Rotation snap step, in degrees."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.SaveLayout"
+msgid "Save the current dock layout and panel visibility under this name (Saved/Editor/Layouts; letters, digits, spaces, _ and - only)."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorDocumentPanel.cpp
+msgctxt "EdCommon.SearchAssetsHint"
+msgid "Search assets"
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.SearchClear"
+msgid "Clear the search text."
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorComponentMenu.cpp
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.SearchHint"
+msgid "Search..."
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.SearchNodesHint"
+msgid "Search nodes..."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.SimulateRunning"
+msgid "Only the world is ticking: no game module update and no game input."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.SimulateStart"
+msgid "Start simulate mode (ticks the scene only: no game module update and no game input)."
+msgstr ""
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.SurfaceSnap"
+msgid "Surface snap: objects you drag land on the surface under the cursor."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorThemeUtil.cpp
+msgctxt "EdCommon.ThemeAccentColor"
+msgid "The accent color used for buttons, selection highlights, folders and active items."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorThemeUtil.cpp
+msgctxt "EdCommon.ThemeAccentSwatch"
+msgid "A recommended accent color. Click to apply it."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorThemeUtil.cpp
+msgctxt "EdCommon.ThemeFrameRounding"
+msgid "Corner rounding of buttons, input fields and control frames, in pixels (0 to 8)."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorThemeUtil.cpp
+msgctxt "EdCommon.ThemePreset"
+msgid "Choose the theme preset for the whole editor (Modern Dark, Deep Charcoal, Midnight Blue and more)."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorThemeUtil.cpp
+msgctxt "EdCommon.ThemeReset"
+msgid "Restore every theme setting to the Modern Dark defaults."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorThemeUtil.cpp
+msgctxt "EdCommon.ThemeTabRounding"
+msgid "Corner rounding of dock tabs and panel tabs, in pixels (0 to 8)."
+msgstr ""
+
+#: Source/Editor/Common/GUI/EditorThemeUtil.cpp
+msgctxt "EdCommon.ThemeWindowRounding"
+msgid "Corner rounding of editor windows and popup dialogs, in pixels (0 to 12)."
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.UnknownPin"
+msgid "Unknown pin"
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.Vec3AxisDrag"
+msgid "Drag to change the value, or double-click to type a number."
+msgstr ""
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.Vec3AxisReset"
+msgid "Click to reset this axis to its default value."
+msgstr ""
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.View2D"
+msgid "2D view (XY plane grid). Click to switch to 3D."
+msgstr ""
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.View3D"
+msgid "3D view (XZ plane grid). Click to switch to 2D."
+msgstr ""
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.ViewMode"
+msgid "Scene view mode: Lit / Unlit / Wireframe / Normals / Depth / Overdraw (the game view always draws Lit)"
+msgstr ""
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.ViewModeNoRenderer"
+msgid "The renderer is not attached yet."
+msgstr ""
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.ViewportGrid"
+msgid "Show or hide the ground grid."
+msgstr ""
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.ViewportHUD"
+msgid "Show the Debug HUD box in this view (view size and HUD sections). Right-click to choose sections."
+msgstr ""
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.ViewportOrientationCube"
+msgid "Show or hide the orientation cube that shows which way the camera faces."
+msgstr ""
+
 #: Source/Editor/Panels/Inspector/CameraComponentInspector.cpp
 msgctxt "EditorTip.CameraFar"
 msgid "Farthest distance the camera draws. Geometry beyond this is clipped."

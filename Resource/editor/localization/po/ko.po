@@ -8,6 +8,707 @@ msgstr ""
 "X-Message-Format: ICU\n"
 "X-Generator: SWEngine LocalizationTools\n"
 
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.AlignSelected"
+msgid "Align and distribute the selected objects (select two or more)."
+msgstr "선택한 오브젝트를 정렬하고 분배합니다(둘 이상 선택)."
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.AssetSlotClear"
+msgid "Clear this asset reference."
+msgstr "이 에셋 참조를 비웁니다."
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.AssetSlotDrop"
+msgid "Drag an asset from the Content Browser and drop it here to assign it."
+msgstr "콘텐츠 브라우저에서 에셋을 끌어 여기에 놓으면 지정됩니다."
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.AutoplayToggle"
+msgid "{game} autoplay: {description} ({variable}, console: autoplay on|off)"
+msgstr "{game} 자동 플레이: {description} ({variable}, 콘솔: autoplay on|off)"
+
+#: Source/Editor/Popups/BoneHierarchyPopup.cpp
+msgctxt "EdCommon.BoneNoSelection"
+msgid "No selection. Select an object in the Hierarchy."
+msgstr "선택한 것이 없습니다. Hierarchy 에서 오브젝트를 고르십시오."
+
+#: Source/Editor/Popups/BoneHierarchyPopup.cpp
+msgctxt "EdCommon.BoneObjectNotFound"
+msgid "Object not found in the active scene."
+msgstr "활성 씬에서 오브젝트를 찾지 못했습니다."
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.BuildCompiling"
+msgid "Modules are being built in the background."
+msgstr "현재 백그라운드에서 모듈을 빌드하고 있습니다"
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.BuildFailed"
+msgid "The build failed. See the console window for the detailed errors."
+msgstr "빌드에 실패했습니다. 콘솔 창에서 상세 오류를 확인하세요."
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.BuildReady"
+msgid "Live Coding is ready to build."
+msgstr "라이브 코딩 빌드 준비 완료"
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.BuildSucceeded"
+msgid "The last build finished successfully."
+msgstr "마지막 빌드가 성공적으로 완료되었습니다"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.CameraBookmarkPosition"
+msgid "Position: {position}"
+msgstr "위치: {position}"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.CameraBookmarks"
+msgid "Camera bookmarks: move the view to a saved camera position (Ctrl+1~9)"
+msgstr "카메라 북마크: 저장한 카메라 위치로 뷰를 옮깁니다 (Ctrl+1~9)"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.CameraSpeed"
+msgid "Camera fly speed (0.5 to 20). Turning the mouse wheel while holding the right mouse button also changes it."
+msgstr "카메라 비행 속도(0.5 ~ 20)입니다. 오른쪽 마우스 단추를 누른 채 휠을 돌려도 바뀝니다."
+
+#: Source/Editor/Popups/CommandPalettePopup.cpp
+msgctxt "EdCommon.CommandPaletteHint"
+msgid "Type a command or search objects... (Esc to close)"
+msgstr "명령을 입력하거나 오브젝트를 검색합니다... (Esc 로 닫기)"
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.CompileGame"
+msgid "Live Coding: compile the SWGame module now and hot-reload it (Ctrl+Alt+F11)"
+msgstr "라이브 코딩: SWGame 모듈을 즉시 컴파일하고 핫리로드합니다 (Ctrl+Alt+F11)"
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.ComponentCardActive"
+msgid "Enable or disable this component."
+msgstr "컴포넌트 활성화/비활성화"
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.ComponentCardOptions"
+msgid "More options for this component, including removing it."
+msgstr "컴포넌트 추가 옵션 및 삭제"
+
+#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+msgctxt "EdCommon.CurveEditorHint"
+msgid "Click a key to edit it. Right-click to add a key. F fits the view."
+msgstr "키를 클릭하면 편집합니다. 오른쪽 클릭으로 키를 더합니다. F 를 누르면 뷰를 곡선에 맞춥니다."
+
+#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+msgctxt "EdCommon.CurveNoKeys"
+msgid "(no keys)"
+msgstr "(키 없음)"
+
+#: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
+msgctxt "EdCommon.CurvePreviewEdit"
+msgid "Click to edit the curve"
+msgstr "클릭하면 곡선을 편집합니다"
+
+#: Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp
+msgctxt "EdCommon.DebugHUDNotRunning"
+msgid "Debug HUD is not running"
+msgstr "디버그 HUD 가 실행 중이 아닙니다"
+
+#: Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp
+msgctxt "EdCommon.DebugHUDNotRunningHost"
+msgid "Debug HUD is not running (Shipping or a test host)."
+msgstr "디버그 HUD 가 실행 중이 아닙니다(Shipping 이거나 시험 호스트입니다)."
+
+#: Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp
+msgctxt "EdCommon.DebugHUDSavedIn"
+msgid "Saved in the engine user settings (debug.hud, debug.hudSections, debug.hudCorner, debug.hudOpacity)"
+msgstr "엔진 사용자 설정에 저장됩니다 (debug.hud, debug.hudSections, debug.hudCorner, debug.hudOpacity)"
+
+#: Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp
+msgctxt "EdCommon.DebugHUDShow"
+msgid "Show the in-game Debug HUD in the game view, with the sections chosen below (Ctrl+F3)"
+msgstr "게임 뷰에 디버그 HUD 를 아래에서 고른 섹션과 함께 보입니다 (Ctrl+F3)"
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.DeleteLayout"
+msgid "Delete this saved layout."
+msgstr "저장된 레이아웃을 지웁니다."
+
+#: Source/Editor/Common/GUI/EditorDocumentPanel.cpp
+msgctxt "EdCommon.DocumentOpen"
+msgid "Find and open an asset of this type (the same as Quick Open or double-clicking it in the Content Browser)."
+msgstr "이 종류의 에셋을 찾아 엽니다(Quick Open · 콘텐츠 브라우저 더블클릭과 같다)"
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.GizmoLocalSpace"
+msgid "Local space: the gizmo follows the object's rotation. Click to switch to world space."
+msgstr "로컬 공간: 기즈모가 오브젝트의 회전을 따릅니다. 클릭하면 월드 공간으로 바뀝니다."
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.GizmoRotate"
+msgid "Rotate: turn the selection around an axis (E)"
+msgstr "회전: 선택한 오브젝트를 축을 중심으로 돌립니다 (E)"
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.GizmoScale"
+msgid "Scale: resize the selection along an axis, or uniformly from the center (R)"
+msgstr "크기: 선택한 오브젝트의 크기를 축 방향이나 중심에서 고르게 바꿉니다 (R)"
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.GizmoTranslate"
+msgid "Translate: move the selection along an axis or plane (W)"
+msgstr "이동: 선택한 오브젝트를 축이나 평면을 따라 옮깁니다 (W)"
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.GizmoWorldSpace"
+msgid "World space: the gizmo follows the world axes. Click to switch to local space."
+msgstr "월드 공간: 기즈모가 월드 축을 따릅니다. 클릭하면 로컬 공간으로 바뀝니다."
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.GridSnap"
+msgid "Grid snap: moved objects jump in steps of the grid size on the right."
+msgstr "그리드 스냅: 옮기는 오브젝트가 오른쪽의 그리드 크기 단위로 움직입니다."
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.GridSnapSize"
+msgid "Grid snap step, in world units."
+msgstr "그리드 스냅 간격(월드 단위)입니다."
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.LayoutNameHint"
+msgid "layout name"
+msgstr "레이아웃 이름"
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.LiveCodingAllModules"
+msgid "All Modules"
+msgstr "모든 모듈"
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.LiveCodingFailed"
+msgid "{target} build failed (exit code {code}). See the Output Log."
+msgstr "{target} 빌드에 실패했습니다(종료 코드 {code}). Output Log 를 확인하십시오."
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.LiveCodingFailedTitle"
+msgid "Live Coding Failed"
+msgstr "라이브 코딩 실패"
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.LiveCodingSucceeded"
+msgid "{target} compiled and reloaded in {seconds}s"
+msgstr "{target} 을(를) {seconds}초 만에 컴파일하고 다시 불러왔습니다"
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.LiveCodingSucceededTitle"
+msgid "Live Coding Succeeded"
+msgstr "라이브 코딩 성공"
+
+#: Source/Editor/Common/Widgets/EditorNetModeCombo.cpp
+msgctxt "EdCommon.NetMode"
+msgid "Net Mode: Standalone plays inside the editor; the other modes launch a separate server and clients (Window > Multiplayer)."
+msgstr "Net Mode — Standalone 은 에디터 안에서 재생하고, 나머지는 서버와 클라이언트를 따로 띄운다 (Window > Multiplayer)"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.NetPlayClients"
+msgid "Connected clients / launched clients. The process list and server pause are in Window > Multiplayer."
+msgstr "붙은 클라이언트 / 띄운 클라이언트 — 프로세스 목록 · 서버 일시정지는 Window > Multiplayer"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.NetPlayStart"
+msgid "Launch a separate server and clients and connect them. Logs gather in the Output Log as [Server] and [Client1], and Stop shuts them all down."
+msgstr "서버와 클라이언트를 따로 띄워 붙입니다 — 로그는 Output Log 에 [Server] · [Client1] 로 모이고, Stop 이 모두 끕니다"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.NetPlayStop"
+msgid "Shut down every process cleanly and, if tracing is on, merge the traces into one file."
+msgstr "모든 프로세스를 정상 종료시키고, 트레이스를 켰으면 한 파일로 합칩니다"
+
+#: Source/Editor/Common/Widgets/EditorNetModeCombo.cpp
+msgctxt "EdCommon.NetPlayerCount"
+msgid "Number of players: the client count for a dedicated server, or the count including the host for a listen host."
+msgstr "플레이어 수 — 전용 서버면 클라이언트 수, 리슨 호스트면 호스트를 넣은 수"
+
+#: Source/Editor/Popups/BoneHierarchyPopup.cpp
+msgctxt "EdCommon.NoActiveScene"
+msgid "No active scene."
+msgstr "활성 씬이 없습니다."
+
+#: Source/Editor/Common/GUI/EditorDocumentPanel.cpp
+msgctxt "EdCommon.NoAssetsOfKind"
+msgid "No assets of this kind under Resource/."
+msgstr "Resource/ 아래에 이 종류의 에셋이 없습니다."
+
+#: Source/Editor/Common/Widgets/EditorComponentMenu.cpp
+msgctxt "EdCommon.NoComponentTypes"
+msgid "No registered component types."
+msgstr "등록된 컴포넌트 타입이 없습니다."
+
+#: Source/Editor/Common/GUI/EditorDocumentPanel.cpp
+msgctxt "EdCommon.NoDocument"
+msgid "(no document)"
+msgstr "(문서 없음)"
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.NoMatches"
+msgid "No matches."
+msgstr "일치하는 항목이 없습니다."
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.NoMatchesForFilter"
+msgid "No matches for \"{filter}\"."
+msgstr "\"{filter}\" 와 일치하는 항목이 없습니다."
+
+#: Source/Editor/Common/Widgets/EditorComponentMenu.cpp
+msgctxt "EdCommon.NoMatchingComponents"
+msgid "No matching components."
+msgstr "일치하는 컴포넌트가 없습니다."
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.NoNodeMatches"
+msgid "No node matches."
+msgstr "일치하는 노드가 없습니다."
+
+#: Source/Editor/Common/GUI/EditorDocumentPanel.cpp
+msgctxt "EdCommon.NoRecentDocuments"
+msgid "No recent documents"
+msgstr "최근에 연 문서가 없습니다"
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.NoSavedLayouts"
+msgid "No saved layouts."
+msgstr "저장된 레이아웃이 없습니다."
+
+#: Source/Editor/Common/Commands/EditorBugItCommands.cpp
+msgctxt "EdCommon.NotifyBugReportFailed"
+msgid "The bug report could not be saved (see the log)"
+msgstr "버그 리포트를 저장하지 못했습니다(로그를 확인하십시오)"
+
+#: Source/Editor/Common/Commands/EditorBugItCommands.cpp
+msgctxt "EdCommon.NotifyBugReportSaved"
+msgid "Bug report saved"
+msgstr "버그 리포트를 저장했습니다"
+
+#: Source/Editor/Common/Commands/EditorBugItCommands.cpp
+msgctxt "EdCommon.NotifyBugReportTitle"
+msgid "Bug report"
+msgstr "버그 리포트"
+
+#: Source/Editor/Common/GUI/EditorCommandGUI.cpp
+msgctxt "EdCommon.NotifyClipboardEmpty"
+msgid "Clipboard is empty"
+msgstr "클립보드가 비어 있습니다"
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifyDocumentSaveFailed"
+msgid "Document save failed"
+msgstr "문서를 저장하지 못했습니다"
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifyEditorTitle"
+msgid "Editor"
+msgstr "에디터"
+
+#: Source/Editor/Common/Commands/EditorPlayCommands.cpp
+msgctxt "EdCommon.NotifyKeepSimulation"
+msgid "The selected objects keep their state after Stop"
+msgstr "선택한 오브젝트는 Stop 뒤에도 상태를 유지합니다"
+
+#: Source/Editor/Common/Commands/EditorPlayCommands.cpp
+msgctxt "EdCommon.NotifyKeepSimulationTitle"
+msgid "Keep Simulation Changes"
+msgstr "시뮬레이션 변경 유지"
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifyNewScene"
+msgid "New scene"
+msgstr "새 씬"
+
+#: Source/Editor/Common/GUI/EditorCommandGUI.cpp
+msgctxt "EdCommon.NotifyPasteTitle"
+msgid "Paste"
+msgstr "붙여넣기"
+
+#: Source/Editor/Common/Commands/EditorPlayCommands.cpp
+msgctxt "EdCommon.NotifyPlayNewWindowSaveFirst"
+msgid "Save the scene first. The new window opens the saved file."
+msgstr "먼저 씬을 저장하십시오. 새 창은 저장된 파일을 엽니다."
+
+#: Source/Editor/Common/Commands/EditorPlayCommands.cpp
+msgctxt "EdCommon.NotifyPlayNewWindowTitle"
+msgid "Play in New Window"
+msgstr "새 창에서 플레이"
+
+#: Source/Editor/Common/Commands/EditorPlayCommands.cpp
+msgctxt "EdCommon.NotifyPlayNewWindowUnsaved"
+msgid "Unsaved scene edits are not in the new window"
+msgstr "저장하지 않은 씬 편집은 새 창에 없습니다"
+
+#: Source/Editor/Common/GUI/EditorCommandGUI.cpp
+msgctxt "EdCommon.NotifyPlayTitle"
+msgid "Play"
+msgstr "플레이"
+
+#: Source/Editor/Common/GUI/EditorCommandGUI.cpp
+msgctxt "EdCommon.NotifyPlayUnsaved"
+msgid "The scene has unsaved changes. Use Play on the toolbar to confirm."
+msgstr "씬에 저장하지 않은 변경이 있습니다. 툴바의 Play 로 확인하십시오."
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifyPrefabIsolated"
+msgid "Isolated the prefab in the current scene"
+msgstr "현재 씬에서 프리팹을 격리했습니다"
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifyPrefabIsolationExited"
+msgid "Exited prefab isolation"
+msgstr "프리팹 격리를 마쳤습니다"
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifyPrefabSaveFirst"
+msgid "Save the scene before opening prefab isolation"
+msgstr "프리팹 격리를 열기 전에 씬을 저장하십시오"
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifyPrefabTitle"
+msgid "Prefab"
+msgstr "프리팹"
+
+#: Source/Editor/Common/GUI/EditorCommandGUI.cpp
+msgctxt "EdCommon.NotifyPresetApplyFailed"
+msgid "Failed to apply the preset to this component"
+msgstr "이 컴포넌트에 프리셋을 적용하지 못했습니다"
+
+#: Source/Editor/Common/GUI/EditorCommandGUI.cpp
+msgctxt "EdCommon.NotifyPresetTitle"
+msgid "Preset"
+msgstr "프리셋"
+
+#: Source/Editor/Common/GUI/EditorCommandGUI.cpp
+msgctxt "EdCommon.NotifyPresetWriteFailed"
+msgid "Failed to write the preset file"
+msgstr "프리셋 파일을 쓰지 못했습니다"
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifySaveFailed"
+msgid "Save failed"
+msgstr "저장하지 못했습니다"
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifySaveTitle"
+msgid "Save"
+msgstr "저장"
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifySaved"
+msgid "Saved"
+msgstr "저장했습니다"
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifySceneOpenFailed"
+msgid "Failed to open the scene"
+msgstr "씬을 열지 못했습니다"
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifySceneReadOnly"
+msgid "The scene file is read-only. Check it out (lock it) in the Content Browser first."
+msgstr "씬 파일이 읽기 전용입니다. 먼저 콘텐츠 브라우저에서 Check Out(잠금)하십시오."
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifySceneTitle"
+msgid "Scene"
+msgstr "씬"
+
+#: Source/Editor/Common/Commands/EditorScreenshotCommands.cpp
+msgctxt "EdCommon.NotifyScreenshotFailed"
+msgid "The screenshot was not written (see the log)"
+msgstr "스크린샷을 쓰지 못했습니다(로그를 확인하십시오)"
+
+#: Source/Editor/Common/Commands/EditorScreenshotCommands.cpp
+msgctxt "EdCommon.NotifyScreenshotNoSceneView"
+msgid "The scene view is not drawn. Open the Scene tab first."
+msgstr "씬 뷰가 그려지지 않았습니다. 먼저 Scene 탭을 여십시오."
+
+#: Source/Editor/Common/Commands/EditorScreenshotCommands.cpp
+msgctxt "EdCommon.NotifyScreenshotSaved"
+msgid "Screenshot saved"
+msgstr "스크린샷을 저장했습니다"
+
+#: Source/Editor/Common/Commands/EditorScreenshotCommands.cpp
+msgctxt "EdCommon.NotifyScreenshotTitle"
+msgid "Screenshot"
+msgstr "스크린샷"
+
+#: Source/Editor/Common/GUI/EditorCommandGUI.cpp
+msgctxt "EdCommon.NotifySelectComponent"
+msgid "Select a component first"
+msgstr "먼저 컴포넌트를 고르십시오"
+
+#: Source/Editor/Common/GUI/EditorCommandGUI.cpp
+msgctxt "EdCommon.NotifySelectObject"
+msgid "Select an object first"
+msgstr "먼저 오브젝트를 고르십시오"
+
+#: Source/Editor/Common/Commands/EditorAssetCommands.cpp
+msgctxt "EdCommon.NotifyStopPlayFirst"
+msgid "Stop play before opening or creating a scene"
+msgstr "씬을 열거나 만들기 전에 플레이를 멈추십시오"
+
+#: Source/Editor/Viewport/EditorViewportOverlays.cpp
+msgctxt "EdCommon.OverlayCollapse"
+msgid "Collapse"
+msgstr "접기"
+
+#: Source/Editor/Viewport/EditorViewportOverlays.cpp
+msgctxt "EdCommon.OverlayExpand"
+msgid "Expand"
+msgstr "펼치기"
+
+#: Source/Editor/Viewport/EditorViewportOverlays.cpp
+msgctxt "EdCommon.OverlayGrip"
+msgid "Drag to move. Near an edge it docks there (left and right stack vertically). Right-click for the overlay menu."
+msgstr "끌어서 옮깁니다. 가장자리 가까이 놓으면 거기에 붙습니다(왼쪽 · 오른쪽은 세로로 쌓입니다). 오른쪽 클릭으로 오버레이 메뉴를 엽니다."
+
+#: Source/Editor/Viewport/EditorViewportOverlays.cpp
+msgctxt "EdCommon.OverlaysMenu"
+msgid "Show or hide the scene view overlay bars, or put them back where they started"
+msgstr "씬 뷰의 오버레이 바를 보이거나 숨기고, 처음 자리로 되돌립니다"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.PlayPause"
+msgid "Pause the game."
+msgstr "게임 실행을 일시 정지합니다"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.PlayPaused"
+msgid "The game is paused."
+msgstr "게임 일시 정지됨"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.PlayRunning"
+msgid "The game is running. The game view draws the game camera, and the scene view lets you look around with the editor camera."
+msgstr "현재 게임 실행 중 — 게임 뷰가 게임 카메라를 그리고, 씬 뷰는 에디터 카메라로 둘러볼 수 있습니다"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.PlayStart"
+msgid "Start play mode (enables game view input and player control)."
+msgstr "게임 플레이 모드를 시작합니다 (게임 뷰 입력 및 플레이어 컨트롤 활성화)"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.PlayStartAtCamera"
+msgid "Start Play at the editor camera position (moves the object tagged 'Player', or else the object holding the game camera)."
+msgstr "Play 를 에디터 카메라 위치에서 시작합니다 ('Player' 태그 오브젝트, 없으면 게임 카메라를 든 오브젝트를 옮깁니다)"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.PlayStarting"
+msgid "Opening the scene. Play starts when loading finishes (Stop cancels it)."
+msgstr "씬을 여는 중 — 로드가 끝나면 플레이를 시작합니다 (Stop 으로 취소)"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.PlayStepFrameCount"
+msgid "Number of frames 'Step N' advances (1 or more)."
+msgstr "'Step N' 이 진행할 프레임 수"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.PlayStepFrames"
+msgid "Advance by the number of frames in the box on the left, then pause."
+msgstr "왼쪽 칸의 프레임 수만큼 진행한 뒤 일시 정지합니다"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.PlayStepOnce"
+msgid "Advance the game by exactly one frame."
+msgstr "게임을 정확히 1프레임 전진시킵니다"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.PlayStop"
+msgid "Stop the game and restore the scene to its state before Play."
+msgstr "게임을 중지하고 초기 씬 상태로 복원합니다"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.PlayTimeScale"
+msgid "Game time scale (gv_timeScale). Drag to change it; right-click to reset it to x1.00."
+msgstr "게임 시간 배율 (gv_timeScale) — 끌어서 바꾸고, 오른쪽 클릭으로 x1.00 으로 되돌립니다"
+
+#: Source/Editor/Popups/QuickLauncherPopup.cpp
+msgctxt "EdCommon.QuickOpenHint"
+msgid "Type to search assets, scenes, game objects (ESC to cancel)..."
+msgstr "에셋 · 씬 · 게임 오브젝트를 검색합니다(ESC 로 취소)..."
+
+#: Source/Editor/Popups/QuickLauncherPopup.cpp
+msgctxt "EdCommon.QuickOpenIndexing"
+msgid "Indexing assets..."
+msgstr "에셋을 인덱싱하는 중..."
+
+#: Source/Editor/Popups/QuickLauncherPopup.cpp
+msgctxt "EdCommon.QuickOpenNoMatches"
+msgid "No matching assets or game objects found."
+msgstr "일치하는 에셋이나 게임 오브젝트가 없습니다."
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.RHIBackend"
+msgid "Current graphics RHI backend: {backend} ({fps} FPS)"
+msgstr "현재 그래픽스 RHI 백엔드: {backend} ({fps} FPS)"
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.RHISwitch"
+msgid "Switch the RHI with a command-line argument: -dx11 / -dx12 / -vk / -gl"
+msgstr "실행 인수로 RHI 전환: -dx11 / -dx12 / -vk / -gl"
+
+#: Source/Editor/Common/GUI/EditorDocumentPanel.cpp
+msgctxt "EdCommon.RecentDocuments"
+msgid "Recently opened documents. Pick one to open it again."
+msgstr "최근에 연 문서"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.RenderDocCapture"
+msgid "Capture the next frame with RenderDoc (Saved/RenderDoc/, Ctrl+F12)"
+msgstr "다음 프레임을 RenderDoc 으로 캡처합니다 (Saved/RenderDoc/, Ctrl+F12)"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.RenderDocUnavailable"
+msgid "RenderDoc is not attached to this process. Start with -renderdoc or launch from RenderDoc."
+msgstr "RenderDoc 이 이 프로세스에 붙어 있지 않습니다. -renderdoc 으로 시작하거나 RenderDoc 에서 실행하십시오."
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.ResetLayout"
+msgid "Reset the docked windows to the default editor layout."
+msgstr "도킹 창 배치를 기본 에디터 레이아웃으로 초기화합니다"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.RotationSnap"
+msgid "Rotation snap: rotations jump in steps of the angle on the right."
+msgstr "회전 스냅: 회전이 오른쪽의 각도 단위로 움직입니다."
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.RotationSnapSize"
+msgid "Rotation snap step, in degrees."
+msgstr "회전 스냅 간격(도)입니다."
+
+#: Source/Editor/Common/GUI/EditorMenuBar.cpp
+msgctxt "EdCommon.SaveLayout"
+msgid "Save the current dock layout and panel visibility under this name (Saved/Editor/Layouts; letters, digits, spaces, _ and - only)."
+msgstr "지금 도킹 배치와 패널 가시성을 이 이름으로 저장합니다 (Saved/Editor/Layouts, 영숫자 · 공백 · _ · -)"
+
+#: Source/Editor/Common/GUI/EditorDocumentPanel.cpp
+msgctxt "EdCommon.SearchAssetsHint"
+msgid "Search assets"
+msgstr "에셋 검색"
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.SearchClear"
+msgid "Clear the search text."
+msgstr "검색어를 지웁니다."
+
+#: Source/Editor/Common/Widgets/EditorComponentMenu.cpp
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.SearchHint"
+msgid "Search..."
+msgstr "검색..."
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.SearchNodesHint"
+msgid "Search nodes..."
+msgstr "노드 검색..."
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.SimulateRunning"
+msgid "Only the world is ticking: no game module update and no game input."
+msgstr "월드만 도는 중 — 게임 모듈 업데이트 · 게임 입력 없음"
+
+#: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+msgctxt "EdCommon.SimulateStart"
+msgid "Start simulate mode (ticks the scene only: no game module update and no game input)."
+msgstr "시뮬레이션 모드를 시작합니다 (씬만 틱 — 게임 모듈 업데이트 · 게임 입력 없음)"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.SurfaceSnap"
+msgid "Surface snap: objects you drag land on the surface under the cursor."
+msgstr "표면 스냅: 끄는 오브젝트가 커서 아래 표면에 놓입니다."
+
+#: Source/Editor/Common/GUI/EditorThemeUtil.cpp
+msgctxt "EdCommon.ThemeAccentColor"
+msgid "The accent color used for buttons, selection highlights, folders and active items."
+msgstr "버튼, 선택 하이라이트, 폴더 및 활성 항목에 적용할 대표 액센트 색상"
+
+#: Source/Editor/Common/GUI/EditorThemeUtil.cpp
+msgctxt "EdCommon.ThemeAccentSwatch"
+msgid "A recommended accent color. Click to apply it."
+msgstr "추천 액센트 색상 팔레트입니다. 클릭하면 적용됩니다."
+
+#: Source/Editor/Common/GUI/EditorThemeUtil.cpp
+msgctxt "EdCommon.ThemeFrameRounding"
+msgid "Corner rounding of buttons, input fields and control frames, in pixels (0 to 8)."
+msgstr "버튼, 입력 필드 및 컨트롤 프레임의 모서리 둥글기(px, 0 ~ 8)"
+
+#: Source/Editor/Common/GUI/EditorThemeUtil.cpp
+msgctxt "EdCommon.ThemePreset"
+msgid "Choose the theme preset for the whole editor (Modern Dark, Deep Charcoal, Midnight Blue and more)."
+msgstr "에디터 전체의 테마 프리셋(Modern Dark, Deep Charcoal, Midnight Blue 등)을 선택합니다"
+
+#: Source/Editor/Common/GUI/EditorThemeUtil.cpp
+msgctxt "EdCommon.ThemeReset"
+msgid "Restore every theme setting to the Modern Dark defaults."
+msgstr "모든 테마 설정을 Modern Dark 기본값으로 복원합니다"
+
+#: Source/Editor/Common/GUI/EditorThemeUtil.cpp
+msgctxt "EdCommon.ThemeTabRounding"
+msgid "Corner rounding of dock tabs and panel tabs, in pixels (0 to 8)."
+msgstr "도킹 탭 및 상단 패널 탭 모서리의 둥글기(px, 0 ~ 8)"
+
+#: Source/Editor/Common/GUI/EditorThemeUtil.cpp
+msgctxt "EdCommon.ThemeWindowRounding"
+msgid "Corner rounding of editor windows and popup dialogs, in pixels (0 to 12)."
+msgstr "에디터 창 및 팝업 대화상자 모서리의 둥글기(px, 0 ~ 12)"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.UnknownPin"
+msgid "Unknown pin"
+msgstr "알 수 없는 핀"
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.Vec3AxisDrag"
+msgid "Drag to change the value, or double-click to type a number."
+msgstr "마우스 드래그 또는 더블 클릭으로 값 수정"
+
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.Vec3AxisReset"
+msgid "Click to reset this axis to its default value."
+msgstr "클릭하여 기본값으로 초기화합니다"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.View2D"
+msgid "2D view (XY plane grid). Click to switch to 3D."
+msgstr "2D 뷰(XY 평면 그리드)입니다. 클릭하면 3D 로 바뀝니다."
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.View3D"
+msgid "3D view (XZ plane grid). Click to switch to 2D."
+msgstr "3D 뷰(XZ 평면 그리드)입니다. 클릭하면 2D 로 바뀝니다."
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.ViewMode"
+msgid "Scene view mode: Lit / Unlit / Wireframe / Normals / Depth / Overdraw (the game view always draws Lit)"
+msgstr "씬 뷰 보기 모드 — Lit / Unlit / Wireframe / Normals / Depth / Overdraw (게임 뷰는 늘 Lit)"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.ViewModeNoRenderer"
+msgid "The renderer is not attached yet."
+msgstr "렌더러가 아직 붙지 않았습니다"
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.ViewportGrid"
+msgid "Show or hide the ground grid."
+msgstr "바닥 그리드를 보이거나 숨깁니다."
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.ViewportHUD"
+msgid "Show the Debug HUD box in this view (view size and HUD sections). Right-click to choose sections."
+msgstr "이 뷰에 디버그 HUD 상자(뷰 크기 · HUD 섹션)를 보입니다. 오른쪽 클릭으로 섹션을 고릅니다."
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.ViewportOrientationCube"
+msgid "Show or hide the orientation cube that shows which way the camera faces."
+msgstr "카메라가 어느 쪽을 보는지 나타내는 방향 큐브를 보이거나 숨깁니다."
+
 #: Source/Editor/Panels/Inspector/CameraComponentInspector.cpp
 msgctxt "EditorTip.CameraFar"
 msgid "Farthest distance the camera draws. Geometry beyond this is clipped."
