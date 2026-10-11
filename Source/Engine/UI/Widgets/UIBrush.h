@@ -1,6 +1,6 @@
 /**
  * @file UIBrush.h
- * @brief 위젯 칸에 적는 겉모습 하나입니다(리플렉션 — 문서 · 인스펙터가 쓴다). 칠할 때 캔버스 브러시로 바꿉니다.
+ * @brief 위젯 필드에 적는 겉모습 하나입니다(리플렉션을 쓰므로 문서와 인스펙터가 씁니다). 칠할 때 캔버스 브러시로 바꿉니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -17,8 +17,8 @@ namespace sw
 
     /**
      * @struct UIBrush
-     * @brief 사각형 하나의 겉모습입니다 — 색 · 테두리 · 둥근 모서리 · 9-슬라이스 여백(언리얼 FSlateBrush · 유니티 배경 스타일 · Godot StyleBoxFlat).
-     * @details 길이는 UI 단위입니다. 그림은 위젯이 따로 들고(`ImageWidget::setImage`) 칠할 때 `makeCanvasBrush` 에 넘깁니다.
+     * @brief 사각형 하나의 겉모습입니다. 색, 테두리, 둥근 모서리, 9-슬라이스 여백을 가집니다(언리얼 FSlateBrush, 유니티 배경 스타일, Godot StyleBoxFlat 에 해당).
+     * @details 길이는 UI 단위다. 이미지는 위젯이 따로 가지고(`ImageWidget::setImage`) 칠할 때 `makeCanvasBrush` 에 넘긴다.
      */
     REFLECT()
     struct SW_API UIBrush
@@ -36,11 +36,11 @@ namespace sw
         PROPERTY( DisplayName = "Border Width", Min = 0.0, Meta = "Units=ui" )
         float32 _borderWidth{ 0.0f };
 
-        /** @brief 다 투명이라 칠할 것이 없으면 true 입니다(색 · 테두리 알파가 0). */
+        /** @brief 모두 투명이라 칠할 것이 없으면 true 입니다(색과 테두리 알파가 0). */
         bool isInvisible() const { return _color._w <= 0.0f && ( _borderWidth <= 0.0f || _borderColor._w <= 0.0f ); }
-        /** @brief 캔버스 브러시로 바꿉니다. @p image 가 있으면 그림 브러시(색을 곱한다)입니다. */
+        /** @brief 캔버스 브러시로 바꿉니다. @p image 가 있으면 이미지 브러시이며 색을 곱합니다. */
         CanvasBrush makeCanvasBrush( const shared_ptr<const Texture2D>& image = {} ) const;
-        /** @brief 단색 · 둥근 모서리 브러시를 만듭니다(코드로 짓는 위젯 · 테스트 화면). */
+        /** @brief 단색 둥근 모서리 브러시를 만듭니다(코드로 만드는 위젯과 테스트 화면용). */
         static UIBrush makeSolid( const float4& color, float32 cornerRadius = 0.0f );
     };
 } // namespace sw

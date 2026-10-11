@@ -27,7 +27,7 @@ namespace sw
             static constexpr utf8 kSelectorKey[]     = "_selector";
             static constexpr utf8 kVariablePrefix    = '$';
 
-            /** @brief 특정도 자리(이름 · 클래스와 상태 · 타입)의 비트 이동입니다. */
+            /** @brief 특정도 항목(이름, 클래스와 상태, 타입)의 비트 이동량입니다. */
             static constexpr uint32 kNameShift  = 16;
             static constexpr uint32 kClassShift = 8;
 
@@ -128,7 +128,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 위젯의 스타일 클래스(빈 칸으로 나눈 이름들)에 @p className 이 있는가입니다. */
+            /** @brief 위젯의 스타일 클래스(공백으로 나눈 이름들)에 @p className 이 있으면 true 입니다. */
             static bool hasStyleClass( const string& styleClass, const hashed_string& className )
             {
                 const string_view wanted( className.c_str() );
@@ -166,7 +166,7 @@ namespace sw
                 return false;
             }
 
-            /** @brief 값 글의 `$변수` 를 풉니다. 모르는 변수면 false 입니다. */
+            /** @brief 값 텍스트의 `$변수` 를 해석합니다. 모르는 변수면 false 입니다. */
             [[nodiscard]] static bool resolveValue( const ParseContext& context, const utf8* pValue, string& outText )
             {
                 if ( pValue == nullptr || pValue[0] != kVariablePrefix )
@@ -198,7 +198,7 @@ namespace sw
                 return nullptr;
             }
 
-            /** @brief 칸 하나를 만들고 값이 그 타입으로 읽히는지 본다(빈 스타일에 써 본다). */
+            /** @brief 필드 하나를 만들고 값이 그 타입으로 읽히는지 확인합니다(빈 스타일에 써 봅니다). */
             [[nodiscard]] static bool addAssignment( const ParseContext& context, const XMLNode& node, UIStyleRule& inoutRule, UIStyleField field,
                                                      const PropertyInfo& property, const PropertyInfo* pNested, const utf8* pName, const utf8* pValue )
             {
@@ -378,7 +378,7 @@ namespace sw
         if ( bVersioned == false )
             return Internal::fail( context, root, "UiStyleSheet needs _schemaVersion" );
 
-        // 변수는 시트 안 어디에 적든 쓴다 — 먼저 모은다.
+        // 변수는 시트 안 어디에 적든 쓸 수 있으므로 먼저 모은다.
         for ( XMLNode child = root.findChild( Internal::kVariableElement ); child.isValid(); child = child.findNextSibling( Internal::kVariableElement ) )
         {
             const utf8* pName  = child.findAttribute( Internal::kNameAttribute );
@@ -407,10 +407,10 @@ namespace sw
             return;
         if ( assignment._pNestedProperty == nullptr )
         {
-            (void)SerializerUtil::applyPropertyText( *assignment._pProperty, &inoutStyle, assignment._text, SerializeContext::getDefault() ); // 읽을 때 확인했다
+            (void)SerializerUtil::applyPropertyText( *assignment._pProperty, &inoutStyle, assignment._text, SerializeContext::getDefault() ); // 읽을 때 이미 확인했다
             return;
         }
         void* pNested = assignment._pProperty->getRawPtr( &inoutStyle );
-        (void)SerializerUtil::applyPropertyText( *assignment._pNestedProperty, pNested, assignment._text, SerializeContext::getDefault() ); // 읽을 때 확인했다
+        (void)SerializerUtil::applyPropertyText( *assignment._pNestedProperty, pNested, assignment._text, SerializeContext::getDefault() ); // 읽을 때 이미 확인했다
     }
 } // namespace sw

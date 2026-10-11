@@ -16,9 +16,9 @@ namespace sw
 {
     namespace
     {
-        /** @brief 레이아웃 걷기 번호입니다(0 은 "측정한 적 없음"). 게임 스레드만 — 걷기마다 하나 늘어 같은 걷기 안의 다시 재기를 막는다. */
+        /** @brief 레이아웃 순회 번호입니다(0 은 "측정한 적 없음"). 게임 스레드에서만 쓰며, 순회마다 하나씩 늘려 같은 순회 안의 중복 측정을 막습니다. */
         uint32 s_layoutSerial = 0;
-        /** @brief `computeDesiredSize` 호출 수(누적) — `update` 가 앞뒤 차로 이번 걷기의 수를 낸다. */
+        /** @brief `computeDesiredSize` 호출 수(누적)입니다. `update` 가 앞뒤 차이로 이번 순회의 호출 수를 냅니다. */
         uint32 s_measureCount = 0;
 
         struct UILayoutPassInternal
@@ -26,7 +26,7 @@ namespace sw
             static constexpr uint32 kLayoutBits = WidgetDirty::kLayout | WidgetDirty::kChildLayout;
             static constexpr uint32 kClearBits  = WidgetDirty::kLayout | WidgetDirty::kChildLayout | WidgetDirty::kArrange | WidgetDirty::kLayoutRoot;
 
-            /** @brief 한 축의 슬롯 적용 — 크기와 앞쪽 띄움을 정합니다. */
+            /** @brief 한 축에 슬롯을 적용해 크기와 앞쪽 띄움을 정합니다. */
             static void applySlotAxis( UIAlignment alignment, float32 overrideLength, float32 maxLength, float32 desired, float32 inner, float32& outOffset,
                                        float32& outLength )
             {
@@ -41,7 +41,7 @@ namespace sw
                 outLength                        = length;
             }
 
-            /** @brief 오른쪽에서 왼쪽 부모가 읽는 슬롯입니다 — 여백 왼 ↔ 오, 가로 정렬 Start ↔ End(위치 거울은 `PanelWidget::arrangeChild` 가 한다). */
+            /** @brief 오른쪽에서 왼쪽 부모가 읽는 슬롯입니다. 여백은 왼쪽과 오른쪽을, 가로 정렬은 Start 와 End 를 맞바꿉니다(위치 거울 처리는 `PanelWidget::arrangeChild` 가 합니다). */
             static WidgetLayoutSlot makeMirroredSlot( const WidgetLayoutSlot& slot )
             {
                 WidgetLayoutSlot mirrored = slot;
@@ -54,7 +54,7 @@ namespace sw
                 return mirrored;
             }
 
-            /** @brief 물리 픽셀에 맞춘 변 두 개로 한 축을 고칩니다(@p origin 은 부모 로컬 원점의 화면 좌표). */
+            /** @brief 물리 픽셀에 맞춘 변 두 개로 한 축을 보정합니다(@p origin 은 부모 로컬 원점의 화면 좌표). */
             static void snapAxis( float32 origin, float32 uiScale, float32& inoutPosition, float32& inoutLength )
             {
                 const float32 begin = MathUtil::round( ( origin + inoutPosition ) * uiScale ) / uiScale;
@@ -101,12 +101,12 @@ namespace sw
             tree._listLayoutDirtyRoot.clear();
             return 0;
         }
-        // 문화권 방향이 바뀌어 루트의 방향이 달라지면 트리 전체를 다시 놓는다(크기는 그대로 — measure 는 캐시).
+        // 문화권 방향이 바뀌어 루트의 방향이 달라지면 트리 전체를 다시 배치한다(크기는 그대로이며 measure 는 캐시를 쓴다).
         if ( pRoot->_layoutSerial != 0 && pRoot->_bRightToLeft != resolveRightToLeft( pRoot->getFlowDirection(), context._bRightToLeft ) )
             pRoot->_dirtyFlags |= WidgetDirty::kArrange;
 
-        // 뿌리 목록을 먼저 떼어 둔다 — 걷는 동안 그리기 더러움만 생긴다(arrange 의 기하 변경). 목록 순서대로 처리하고, 이미 위에서 다시 측정한 뿌리는
-        // 비트가 지워져 건너뛴다. 처리 순서가 어떻든 마지막에 놓인 쪽이 맞다 — 조상이 나중이면 조상이 다시 놓는다.
+        // 루트 목록을 먼저 떼어 둔다. 순회하는 동안에는 arrange 의 기하 변경으로 그리기 더티만 생긴다. 목록 순서대로 처리하고, 이미 위에서 다시 측정한 루트는
+        // 비트가 지워져 건너뛴다. 처리 순서와 상관없이 마지막에 배치한 쪽이 맞다. 조상이 나중이면 조상이 다시 배치한다.
         vector<WidgetID> listRoot;
         listRoot.swap( tree._listLayoutDirtyRoot );
 
@@ -123,7 +123,7 @@ namespace sw
             if ( pWidget == nullptr || pWidget == pRoot || ( pWidget->_dirtyFlags & WidgetDirty::kLayoutRoot ) == 0 )
                 continue;
             if ( pWidget->_layoutSerial == 0 || pWidget->getParent() == nullptr )
-                continue; // 아직 놓인 적이 없다 — 조상의 걷기가 처음 측정한다
+                continue; // 아직 배치된 적이 없다. 조상의 순회가 처음 측정한다
             measure( *pWidget, context, pWidget->_lastAvailableSize );
             arrange( *pWidget, context, pWidget->getParent()->getGeometry(), pWidget->_lastSlotPosition, pWidget->_lastSlotSize );
             clearLayoutFlags( *pWidget );
@@ -175,21 +175,21 @@ namespace sw
     {
         if ( widget.getVisibility() == WidgetVisibility::Collapsed )
             return;
-        // 이번 걷기에서 측정하지 않은 더러운 위젯(배치만 다시 하는 조상 아래의 경계)은 놓기 전에 지난 가용 크기로 다시 측정한다.
+        // 이번 순회에서 측정하지 않은 더티 위젯(배치만 다시 하는 조상 아래의 경계)은 배치하기 전에 지난 가용 크기로 다시 측정한다.
         if ( isMeasureStale( widget ) )
             measure( widget, context, widget._layoutSerial == 0 ? slotSize : widget._lastAvailableSize );
 
         widget._lastSlotPosition = slotPosition;
         widget._lastSlotSize     = slotSize;
 
-        // 흐름 방향: 자기 슬롯(여백 · 정렬)은 부모의 방향으로 읽고, 자기 방향은 자식을 놓을 때 쓴다.
+        // 흐름 방향: 자기 슬롯(여백과 정렬)은 부모의 방향으로 읽고, 자기 방향은 자식을 배치할 때 쓴다.
         const PanelWidget* const pParent            = widget.getParent();
         const bool               bParentRightToLeft = pParent != nullptr ? pParent->isRightToLeft() : context._bRightToLeft;
         const bool               bRightToLeft       = resolveRightToLeft( widget.getFlowDirection(), bParentRightToLeft );
         if ( widget._bRightToLeft != bRightToLeft )
         {
             widget._bRightToLeft = bRightToLeft;
-            widget.invalidate( WidgetDirty::kPaint ); // 기하가 그대로여도 그림이 방향을 따른다(글 문단 방향 · 거울 그림)
+            widget.invalidate( WidgetDirty::kPaint ); // 기하가 그대로여도 그리기가 방향을 따른다(텍스트 문단 방향, 거울 이미지)
         }
 
         float2 position{};
@@ -237,8 +237,8 @@ namespace sw
     {
         if ( widget.getVisibility() == WidgetVisibility::Collapsed )
         {
-            // 접힌 위젯은 측정하지 않았다 — 자기 kLayout 은 지워(다시 보이게 될 때 위로 번지게) 두고, kChildLayout 을 남겨 그때 그 아래를 다시 재게 한다.
-            // 접힌 동안 자손이 바뀌면 번짐이 여기서 멈춘다(이미 kChildLayout).
+            // 접힌 위젯은 측정하지 않았다. 자기 kLayout 은 지우고(다시 보이게 될 때 위로 번지게 한다) kChildLayout 을 남겨 그때 그 아래를 다시 측정하게 한다.
+            // 접힌 동안 자손이 바뀌면 번짐이 여기서 멈춘다(이미 kChildLayout 이기 때문이다).
             if ( ( widget._dirtyFlags & UILayoutPassInternal::kClearBits ) != 0 )
                 widget._dirtyFlags = ( widget._dirtyFlags & ~UILayoutPassInternal::kClearBits ) | WidgetDirty::kChildLayout;
             return;

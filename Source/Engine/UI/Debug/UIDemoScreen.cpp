@@ -29,7 +29,7 @@ namespace sw
             /** @brief 패널 크기(UI 단위)입니다. */
             static constexpr float32 kPanelWidth  = 560.0f;
             static constexpr float32 kPanelHeight = 720.0f;
-            /** @brief 그리기 견본 칸 하나의 크기(UI 단위)입니다. */
+            /** @brief 그리기 샘플 칸 하나의 크기(UI 단위)입니다. */
             static constexpr float32 kSampleWidth  = 96.0f;
             static constexpr float32 kSampleHeight = 48.0f;
 
@@ -62,8 +62,8 @@ namespace sw
             }
 
             /**
-             * @brief 그리기 견본 줄 — 둥근 상자(`RoundBox`) · 자르기(`ClipBox` — 넓은 빨간 자식을 자른다) · 9-슬라이스(`NineSlice`) · 오른쪽에서 왼쪽 글(`RtlSample`).
-             * @details `AppUITest` 가 레이아웃 덤프의 이름으로 사각형을 찾아 픽셀을 본다 — 이름을 바꾸면 그 테스트도 바꾼다.
+             * @brief 그리기 샘플 줄입니다. 둥근 상자(`RoundBox`), 자르기(`ClipBox`, 넓은 빨간 자식을 자릅니다), 9-슬라이스(`NineSlice`), 오른쪽에서 왼쪽 텍스트(`RtlSample`)를 둡니다.
+             * @details `AppUITest` 가 레이아웃 덤프의 이름으로 사각형을 찾아 픽셀을 확인하므로, 이름을 바꾸면 그 테스트도 바꿔야 한다.
              */
             static unique_ptr<BoxPanel> makeSamples()
             {
@@ -85,7 +85,7 @@ namespace sw
                 overflow->setBackground( UIBrush::makeSolid( float4{ 0.9f, 0.1f, 0.1f, 1.0f } ) );
                 WidgetLayoutSlot overflowSlot = overflow->getLayoutSlot();
                 overflowSlot._offsetMin       = float2{ 0.0f, 0.0f };
-                overflowSlot._offsetMax       = float2{ kSampleWidth * 4.0f, kSampleHeight }; // 상자 밖으로 세 칸 더 — 잘려야 한다
+                overflowSlot._offsetMax       = float2{ kSampleWidth * 4.0f, kSampleHeight }; // 상자 밖으로 세 칸 더 나가므로 잘려야 한다
                 overflow->setLayoutSlot( overflowSlot );
                 (void)clip->addChild( std::move( overflow ) );
                 (void)row->addChild( std::move( clip ) );
@@ -165,7 +165,7 @@ namespace sw
             unique_ptr<ButtonWidget> button = make_unique<ButtonWidget>();
             button->setName( hashed_string( pLabel ) );
             if ( pLabel == arrButton[0] )
-                button->setStyleClass( "primary" ); // 주 단추 — 테마의 강조색(AppUITest 가 가운데 색을 본다)
+                button->setStyleClass( "primary" ); // 주 버튼이며 테마의 강조색을 쓴다(AppUITest 가 가운데 색을 확인한다)
             Internal::setHeight( *button, 44.0f );
             unique_ptr<TextWidget> label     = Internal::makeText( pLabel, 20.0f, float4{ 1.0f, 1.0f, 1.0f, 1.0f } );
             WidgetLayoutSlot       labelSlot = label->getLayoutSlot();

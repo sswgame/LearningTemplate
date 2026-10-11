@@ -1,6 +1,6 @@
 /**
  * @file UIStyleSheetCache.h
- * @brief 읽어 둔 스타일 시트를 경로로 나눠 주는 캐시입니다(에셋 종류 `UIStyleSheet`).
+ * @brief 읽어 둔 스타일 시트를 경로별로 나눠 주는 캐시입니다(에셋 종류 `UIStyleSheet`).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -16,8 +16,8 @@ namespace sw
 
     /**
      * @class UIStyleSheetCache
-     * @brief 스타일 시트(`*.uistyle.xml`)를 경로로 들고 나눠 줍니다. `UISystem` 이 소유하고 기동 단계 `UI` 가 에셋 캐시 레지스트리에 올립니다.
-     * @details 찾는 순서 · 실패 · 다시 읽기 규칙은 `UITextAssetCache` 입니다. 게임 스레드만.
+     * @brief 스타일 시트(`*.uistyle.xml`)를 경로별로 보관하고 나눠 줍니다. `UISystem` 이 소유하고 기동 단계 `UI` 가 에셋 캐시 레지스트리에 등록합니다.
+     * @details 찾는 순서, 실패, 다시 읽기 규칙은 `UITextAssetCache` 를 따른다. 게임 스레드에서만 쓴다.
      */
     class SW_API UIStyleSheetCache final : public UITextAssetCache
     {

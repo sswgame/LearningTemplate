@@ -1,6 +1,6 @@
 /**
  * @file TextInputWidget.h
- * @brief 한 줄 글 입력 칸입니다(UMG EditableTextBox · 유니티 TextField · Godot LineEdit).
+ * @brief 한 줄 텍스트 입력 필드입니다(UMG 의 EditableTextBox, 유니티의 TextField, Godot 의 LineEdit 에 해당).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -18,10 +18,10 @@ namespace sw
 
     /**
      * @class TextInputWidget
-     * @brief 포커스를 쥐면 키보드 포커스 `UI` 를 잡아(게임은 키를 보지 못한다) 글자 사건을 받습니다. 확정 글은 끝에 붙이고, IME 조합 중인 글은 그 뒤에
-     *        이어 보입니다. `UI.TextBackspace` 는 끝 글자(코드 포인트) 하나를 지우고, 줄 바꿈(Enter)은 `getOnCommitted()` 를 부릅니다.
-     * @details 겉은 테두리 패널(배경)이고 안의 글 위젯이 글을 그립니다(비면 `_hintText` 를 흐리게). 커서는 글 끝(포커스일 때 세로 막대).
-     *          커서 이동 · 선택 · 붙여넣기는 백로그입니다.
+     * @brief 포커스를 가지면 키보드 포커스 `UI` 를 잡아(게임은 키를 보지 못합니다) 글자 이벤트를 받습니다. 확정한 텍스트는 끝에 붙이고, IME 조합 중인 텍스트는 그 뒤에
+     *        이어서 보여 줍니다. `UI.TextBackspace` 는 끝 글자(코드 포인트) 하나를 지우고, 줄 바꿈(Enter)은 `getOnCommitted()` 를 부릅니다.
+     * @details 겉은 테두리 패널(배경)이고 안의 텍스트 위젯이 텍스트를 그린다(비어 있으면 `_hintText` 를 흐리게 보인다). 커서는 텍스트 끝에 있다(포커스일 때 세로 막대).
+     *          커서 이동, 선택, 붙여넣기는 백로그에 있다.
      */
     REFLECT( Category = "UI", DisplayName = "Text Input", Tooltip = "Single-line editable text field" )
     class SW_API TextInputWidget : public BorderPanel
@@ -29,25 +29,25 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        /** @brief 글 알림입니다(바뀐 글 · 확정한 글). */
+        /** @brief 텍스트 알림입니다(바뀐 텍스트와 확정한 텍스트). */
         using TextDelegate = MulticastDelegate<void( const string& )>;
 
         TextInputWidget();
         ~TextInputWidget() override;
 
         const TypeInfo* getTypeInfo() const override;
-        /** @brief 바인딩이 쓴 칸에 맞춰 무효화합니다(글 · 힌트는 보이는 글을 다시). */
+        /** @brief 바인딩이 쓴 필드에 맞춰 무효화합니다(텍스트와 힌트는 보이는 텍스트를 다시 만듭니다). */
         void onBoundPropertyChanged( const PropertyInfo& property ) override;
 
         bool supportsFocus() const override { return true; }
         bool supportsTextInput() const override { return true; }
 
-        /** @brief 글을 바꿉니다(알림은 부르지 않는다 — 코드가 정한 값). */
+        /** @brief 텍스트를 바꿉니다(알림은 부르지 않으며, 코드가 정한 값입니다). */
         void          setText( string_view text );
         const string& getText() const { return _text; }
-        /** @brief 조합 중인 글(IME — 확정 전)입니다. */
+        /** @brief 조합 중인 텍스트(IME, 확정 전)입니다. */
         const string& getComposition() const { return _composition; }
-        /** @brief 빈 칸에 흐리게 보일 글입니다. */
+        /** @brief 비어 있을 때 흐리게 보일 텍스트입니다. */
         void          setHintText( string_view hintText );
         TextDelegate& getOnTextChanged() { return _onTextChanged; }
         TextDelegate& getOnCommitted() { return _onCommitted; }
@@ -61,14 +61,14 @@ namespace sw
         void paintOverChildren( CanvasPainter& painter, const UIPaintContext& context ) const override;
 
     private:
-        /** @brief 안의 글 위젯에 보일 글(글 + 조합, 비면 힌트)을 넣습니다. */
+        /** @brief 안의 텍스트 위젯에 보일 텍스트(확정 + 조합이며, 비면 힌트)를 넣습니다. */
         void refreshDisplay();
 
     private:
         TextDelegate _onTextChanged;
         TextDelegate _onCommitted;
         string       _composition;
-        TextWidget*  _pDisplay; ///< 글을 그리는 자식(이 패널이 만들고 소유한다)
+        TextWidget*  _pDisplay; ///< 텍스트를 그리는 자식입니다(이 패널이 만들고 소유합니다).
         PROPERTY( DisplayName = "Text" )
         string _text;
         PROPERTY( DisplayName = "Hint Text", Tooltip = "Shown dimmed while the field is empty" )

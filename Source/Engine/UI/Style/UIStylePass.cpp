@@ -37,7 +37,7 @@ namespace sw
     {
         if ( tree._listStyleDirty.empty() )
             return 0;
-        // 목록을 떼어 걷는다 — 다시 맞추며 거는 무효화(kLayout · kPaint)가 목록을 건드리지 않게.
+        // 목록을 떼어 순회한다. 다시 맞추며 거는 무효화(kLayout, kPaint)가 목록을 건드리지 않게 하기 위해서다.
         vector<WidgetID> listDirty;
         listDirty.swap( tree._listStyleDirty );
         uint32 restyledCount = 0;
@@ -46,7 +46,7 @@ namespace sw
             Widget* pWidget = tree.findWidgetByID( id );
             if ( pWidget == nullptr || ( pWidget->_dirtyFlags & WidgetDirty::kStyle ) == 0 )
                 continue; // 떨어졌거나 이미 조상과 함께 맞췄다
-            // 가장 위의 스타일 더러운 조상부터 — 부모 스타일이 먼저 정해져야 한다.
+            // 가장 위의 스타일 더티 조상부터 처리한다. 부모 스타일이 먼저 정해져야 하기 때문이다.
             Widget* pStart = pWidget;
             for ( Widget* pAncestor = pWidget->getParent(); pAncestor != nullptr; pAncestor = pAncestor->getParent() )
             {
@@ -61,7 +61,7 @@ namespace sw
     uint32 UIStylePass::restyle( Widget& widget, UIStyleSet& styleSet, bool bNavigationMode )
     {
         const bool bSelfDirty = ( widget._dirtyFlags & WidgetDirty::kStyle ) != 0;
-        // 부모는 목표(나눠 쓰는) 스타일로 — 전환 중인 보간 값을 물려받으면 나눠 쓰기 열쇠가 프레임마다 바뀐다.
+        // 부모는 목표(공유하는) 스타일로 쓴다. 전환 중인 보간 값을 물려받으면 공유 키가 프레임마다 바뀐다.
         const UIComputedStyle*                  pParentStyle = widget.getParent() != nullptr ? widget.getParent()->_computedStyle.get() : nullptr;
         uint64                                  ancestorKey{ 0 };
         const shared_ptr<const UIComputedStyle> style         = styleSet.computeStyle( widget, pParentStyle, bNavigationMode, ancestorKey );

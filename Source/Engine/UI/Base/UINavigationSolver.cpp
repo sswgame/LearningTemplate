@@ -15,10 +15,10 @@ namespace sw
     {
         struct UINavigationSolverInternal
         {
-            /** @brief 공간 점수에서 "그 방향으로 나아갔다" 고 보는 최소 변 이동입니다(UI 단위 — 같은 열의 1 px 어긋남은 옆으로 보지 않는다). */
+            /** @brief 공간 점수에서 "그 방향으로 나아갔다" 고 보는 최소 변 이동입니다(UI 단위이며, 같은 열의 1 px 어긋남은 옆으로 보지 않습니다). */
             static constexpr float32 kMinimumEdgeAdvance = 1.0f;
 
-            /** @brief @p widget 아래(자기 포함)의 받을 수 있는 위젯을 문서 순서로 모읍니다. 안 보이거나 꺼진 갈래는 내려가지 않습니다. */
+            /** @brief @p widget 아래(자기 포함)의 받을 수 있는 위젯을 문서 순서로 모읍니다. 안 보이거나 꺼진 분기는 내려가지 않습니다. */
             static void collectFocusable( const Widget& widget, vector<const Widget*>& inoutListWidget )
             {
                 if ( widget.isVisible() == false || widget.isEnabled() == false )
@@ -36,7 +36,7 @@ namespace sw
 
             /**
              * @brief 자르는 조상 밖으로 완전히 나간 위젯이면 true 입니다.
-             * @details 스크롤 패널(`canScrollIntoView`)이 자른 것은 빼지 않는다 — 포커스가 가면 그 패널이 보이게 옮긴다(목록 아래로 내려가기).
+             * @details 스크롤 패널(`canScrollIntoView`)이 자른 것은 제외하지 않는다. 포커스가 가면 그 패널이 보이게 옮긴다(목록 아래로 내려가는 경우).
              */
             static bool isClippedOut( const Widget& widget )
             {
@@ -92,7 +92,7 @@ namespace sw
                         break;
                     }
                 }
-                if ( current == count ) // 범위 밖에서 왔다 — 처음(앞으로) · 끝(뒤로)
+                if ( current == count ) // 범위 밖에서 왔다. 처음(앞으로) 또는 끝(뒤로)으로 간다
                     return bForward ? listCandidate[0]->getID() : listCandidate[count - 1]->getID();
                 const uint32 next = bForward ? ( current + 1 ) % count : ( current + count - 1 ) % count;
                 return listCandidate[next]->getID();
@@ -114,7 +114,7 @@ namespace sw
                     if ( score < 0.0f )
                         continue;
                     const float32 distance = float2::getDistanceSquared( fromCenter, rect.getCenter() );
-                    // 문서 순서로 돌며 "더 작을 때만" 바꾼다 — 같으면 앞의 것이 남는다(결정적).
+                    // 문서 순서로 돌며 "더 작을 때만" 바꾼다. 같으면 앞의 것이 남는다(결정적).
                     const bool bBetter = pBest == nullptr || score < bestScore || ( score == bestScore && distance < bestDistance );
                     if ( bBetter )
                     {
@@ -126,7 +126,7 @@ namespace sw
                 return pBest != nullptr ? pBest->getID() : kInvalidWidgetID;
             }
 
-            /** @brief Wrap: 반대 방향으로 가장 먼 후보입니다 — 수직 틈이 0 인 후보가 있으면 그 안에서만. */
+            /** @brief Wrap 에서 반대 방향으로 가장 먼 후보입니다. 수직 틈이 0 인 후보가 있으면 그 안에서만 고릅니다. */
             static WidgetID findWrapNeighbor( const vector<const Widget*>& listCandidate, const Widget& from, UINavigationDirection direction )
             {
                 const UINavigationDirection opposite     = getOpposite( direction );
@@ -251,7 +251,7 @@ namespace sw
         if ( pFrom == nullptr || tree.getRoot() == nullptr )
             return kInvalidWidgetID;
 
-        // (1) 조상으로 올라가며 규칙을 본다 — 첫 Explicit(받을 수 있으면) · 첫 Stop/Wrap 이 범위.
+        // (1) 조상으로 올라가며 규칙을 본다. 첫 Explicit(받을 수 있으면)이나 첫 Stop/Wrap 이 범위가 된다.
         const Widget*    pScope = tree.getRoot();
         UINavigationRule rule   = UINavigationRule::Escape;
         for ( const Widget* pWidget = pFrom; pWidget != nullptr; pWidget = pWidget->getParent() )

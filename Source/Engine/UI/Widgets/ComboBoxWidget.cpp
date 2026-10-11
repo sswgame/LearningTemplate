@@ -18,7 +18,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 팝업 화면의 루트 — 뷰포트 전체를 덮어, 항목 밖 클릭을 받으면 팝업을 닫는다. */
+        /** @brief 팝업 화면의 루트입니다. 뷰포트 전체를 덮어 항목 밖 클릭을 받으면 팝업을 닫습니다. */
         class ComboBoxPopupRoot final : public CanvasPanel
         {
         public:
@@ -31,7 +31,7 @@ namespace sw
             }
         };
 
-        /** @brief 콤보 상자의 팝업 화면 — 상자를 화면 핸들 · 위젯 번호로 다시 찾아 고른 값을 넘긴다. */
+        /** @brief 콤보 상자의 팝업 화면입니다. 상자를 화면 핸들과 위젯 번호로 다시 찾아 고른 값을 넘깁니다. */
         class ComboBoxPopupScreen final : public UIScreen
         {
         public:
@@ -60,10 +60,10 @@ namespace sw
 
         struct ComboBoxWidgetInternal
         {
-            /** @brief 항목 버튼 하나의 높이 · 목록과 상자 사이 틈(UI 단위)입니다. */
+            /** @brief 항목 버튼 하나의 높이와 목록과 상자 사이 틈(UI 단위)입니다. */
             static constexpr float32 kOptionHeight = 32.0f;
             static constexpr float32 kPopupGap     = 2.0f;
-            /** @brief 오른쪽 화살표 자리(안쪽 여백)입니다. */
+            /** @brief 오른쪽 화살표 영역(안쪽 여백)입니다. */
             static constexpr float32 kArrowSpace = 32.0f;
 
             static hashed_string makeOptionName( uint32 index ) { return hashed_string( "option" + to_string( index ) ); }
@@ -160,7 +160,7 @@ namespace sw
 
         using Internal                     = ComboBoxWidgetInternal;
         const UIRect                  rect = getGeometry().computeScreenBounds();
-        unique_ptr<ComboBoxPopupRoot> root = make_unique<ComboBoxPopupRoot>(); // 화면 루트 — 뷰포트 전체
+        unique_ptr<ComboBoxPopupRoot> root = make_unique<ComboBoxPopupRoot>(); // 화면 루트이며 뷰포트 전체를 덮는다
 
         unique_ptr<BorderPanel> list      = make_unique<BorderPanel>();
         UIBrush                 listBrush = UIBrush::makeSolid( float4{ 0.1f, 0.11f, 0.14f, 0.98f }, 6.0f );
@@ -196,7 +196,7 @@ namespace sw
         (void)root->addChild( std::move( list ) );
 
         UIScreenDesc desc{};
-        desc._layer                            = UILayer::Modal; // 메뉴 위 — 막지는 않는다(밖 클릭은 루트가 받아 닫는다)
+        desc._layer                            = UILayer::Modal; // 메뉴 위에 놓되 입력은 막지 않는다(밖 클릭은 루트가 받아 닫는다)
         desc._bModal                           = false;
         desc._defaultFocus                     = Internal::makeOptionName( _selectedIndex != invalid_index::kUint32 ? _selectedIndex : 0 );
         unique_ptr<ComboBoxPopupScreen> popup  = sw::make_unique<ComboBoxPopupScreen>( desc, std::move( root ), pScreen->getHandle(), getID() );
@@ -212,7 +212,7 @@ namespace sw
     void ComboBoxWidget::paintOverChildren( CanvasPainter& painter, const UIPaintContext& context ) const
     {
         (void)context;
-        // 아래 화살표 — 가로 막대 셋을 줄여 쌓은 삼각형(오른쪽 끝, 오른쪽에서 왼쪽이면 왼쪽 끝).
+        // 아래 화살표: 가로 막대 셋을 줄여 쌓은 삼각형이다(오른쪽 끝에 놓으며, 오른쪽에서 왼쪽이면 왼쪽 끝).
         const float2& size    = getGeometry()._size;
         const float32 centerX = isRightToLeft() ? ComboBoxWidgetInternal::kArrowSpace * 0.5f : size._x - ComboBoxWidgetInternal::kArrowSpace * 0.5f;
         const float32 top     = size._y * 0.5f - 3.0f;

@@ -25,7 +25,7 @@ namespace sw
                 }
             };
 
-            /** @brief 1 분의 초입니다(Seconds 변환기 — m:ss). */
+            /** @brief 1 분의 초입니다(Seconds 변환기에서 m:ss 로 바꿀 때 씁니다). */
             static constexpr int64 kSecondsPerMinute = 60;
             /** @brief 비율 → 백분율 배수입니다(Percent 변환기). */
             static constexpr float64 kPercentScale = 100.0;
@@ -57,7 +57,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 초를 "m:ss" 로 씁니다(음수는 0, 소수는 올린다 — 카운트다운이 0 에 닿기 전까지 1 을 보인다). */
+            /** @brief 초를 "m:ss" 로 씁니다(음수는 0 이고, 소수는 올립니다. 카운트다운이 0 에 닿기 전까지 1 을 보여 줍니다). */
             [[nodiscard]] static bool convertSeconds( const UIBindingValue& in, UIBindingValue& outValue )
             {
                 const int64 totalSeconds = static_cast<int64>( MathUtil::ceil( MathUtil::max( 0.0, in.toNumber() ) ) );

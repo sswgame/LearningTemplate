@@ -1,6 +1,6 @@
 /**
  * @file CheckBoxWidget.h
- * @brief 체크 상자입니다(UMG CheckBox · 유니티 Toggle · Godot CheckBox).
+ * @brief 체크 상자입니다(UMG 의 CheckBox, 유니티의 Toggle, Godot 의 CheckBox 에 해당).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -15,7 +15,7 @@ namespace sw
 {
     /**
      * @class CheckBoxWidget
-     * @brief 클릭하면 켜짐 · 꺼짐이 바뀌는 버튼입니다. 왼쪽(오른쪽에서 왼쪽이면 오른쪽)에 상자를 그리고 자식(글)은 그 옆입니다.
+     * @brief 클릭하면 켜짐과 꺼짐이 바뀌는 버튼입니다. 왼쪽(오른쪽에서 왼쪽이면 오른쪽)에 상자를 그리고, 자식(텍스트)은 그 옆에 놓습니다.
      */
     REFLECT( Category = "UI", DisplayName = "Check Box", Tooltip = "Button that toggles a checked state" )
     class SW_API CheckBoxWidget : public ButtonWidget
@@ -35,10 +35,10 @@ namespace sw
         ~CheckBoxWidget() override;
 
         const TypeInfo* getTypeInfo() const override;
-        /** @brief 바인딩이 쓴 칸에 맞춰 무효화합니다(체크는 그리기만). */
+        /** @brief 바인딩이 쓴 필드에 맞춰 무효화합니다(체크는 그리기만 다시 합니다). */
         void onBoundPropertyChanged( const PropertyInfo& property ) override;
 
-        /** @brief 값을 바꿉니다(알림은 부르지 않는다 — 코드가 정한 값). kPaint. */
+        /** @brief 값을 바꿉니다(알림은 부르지 않으며, 코드가 정한 값입니다). kPaint 입니다. */
         void             setChecked( bool bChecked );
         bool             isChecked() const { return _bChecked; }
         CheckedDelegate& getOnCheckedChanged() { return _onCheckedChanged; }

@@ -15,7 +15,7 @@ namespace sw
 
     UIViewModel::~UIViewModel()
     {
-        // 묶인 화면이 남아 있으면 이 뷰모델을 놓게 한다 — 관찰자가 스스로 떼므로 사본을 돈다.
+        // 묶인 화면이 남아 있으면 이 뷰모델을 해제하게 한다. 관찰자가 스스로 제거하므로 사본을 순회한다.
         const vector<UIBindingSet*> listObserver = _listObserver;
         for ( UIBindingSet* pBindingSet : listObserver )
         {

@@ -29,9 +29,9 @@ namespace sw
             static constexpr utf8   kAnimationListElement[]  = "_listAnimation";
             static constexpr utf8   kItemElement[]           = "item";
             static constexpr utf8   kFragmentProperty[]      = "_document";
-            static constexpr uint32 kMaxFragmentDepth        = 16; ///< 조각 안의 조각 깊이 상한(자기를 다시 부르는 사슬은 그 전에 잡는다 — 이것은 안전망)
+            static constexpr uint32 kMaxFragmentDepth        = 16; ///< 조각 안의 조각 깊이 상한입니다(자기를 다시 부르는 연쇄는 그 전에 잡으므로 이것은 안전망입니다).
 
-            /** @brief 파싱 한 번의 문맥입니다 — 원문(줄 번호) · 경로 · 결과 · 오류. */
+            /** @brief 파싱 한 번의 컨텍스트입니다. 원문(줄 번호), 경로, 결과, 오류를 가집니다. */
             struct ParseContext
             {
                 string_view      _text;
@@ -40,7 +40,7 @@ namespace sw
                 string*          _pError;
             };
 
-            /** @brief 짓기 한 번의 문맥입니다 — 조각 캐시 · 지금 지나는 조각 사슬(자기를 다시 부름 판정) · 바인딩 · 오류. */
+            /** @brief 생성 한 번의 컨텍스트입니다. 조각 캐시, 지금 지나는 조각 연쇄(자기를 다시 부르는지 판정), 바인딩, 오류를 가집니다. */
             struct InstantiateContext
             {
                 UIDocumentCache*       _pCache;
@@ -49,7 +49,7 @@ namespace sw
                 string*                _pError;
             };
 
-            /** @brief `<경로>:<줄>: <이유>` 문구입니다. 줄을 모르면(0) 경로만 적습니다. */
+            /** @brief `<경로>:<줄>: <이유>` 형식의 문구입니다. 줄을 모르면(0) 경로만 적습니다. */
             static string makeError( string_view path, uint32 line, string_view message )
             {
                 string error( path );
@@ -68,10 +68,10 @@ namespace sw
                 return false;
             }
 
-            /** @brief 속성 값이 바인딩 식(`{` 로 시작)인가입니다. 식은 값으로 읽지 않고 뗀다. */
+            /** @brief 속성 값이 바인딩 식(`{` 로 시작)인지 판정합니다. 식은 값으로 읽지 않고 분리합니다. */
             static bool isBindingValue( const utf8* pValue ) { return pValue != nullptr && pValue[0] == '{'; }
 
-            /** @brief 원소 이름 @p pName 이 지을 수 있는 위젯 타입이면 그 타입입니다. 파일의 이름을 전역 이름 표에 넣지 않는다(찾기만). */
+            /** @brief 요소 이름 @p pName 으로 만들 수 있는 위젯 타입이면 그 타입을 반환합니다. 파일의 이름을 전역 이름 테이블에 넣지 않고 찾기만 합니다. */
             static const TypeInfo* findWidgetType( const utf8* pName )
             {
                 if ( StringUtil::isNullOrEmpty( pName ) )
@@ -85,7 +85,7 @@ namespace sw
                 return pType;
             }
 
-            /** @brief @p pName 이 타입(상속 포함)의 프로퍼티 이름 · 별칭인가입니다(대소문자 무시 — 직렬화의 이름 맞춤과 같다). */
+            /** @brief @p pName 이 타입(상속 포함)의 프로퍼티 이름이나 별칭인지 판정합니다(대소문자 무시이며, 직렬화의 이름 맞춤과 같습니다). */
             static bool isKnownProperty( const TypeInfo& type, const utf8* pName )
             {
                 if ( StringUtil::isNullOrEmpty( pName ) )
@@ -99,7 +99,7 @@ namespace sw
                 return false;
             }
 
-            /** @brief 구조체 · 컨테이너 칸 원소 @p source 를 @p destinationParent 아래로 옮겨 적고, 그 안의 바인딩 속성은 떼어 @p inoutNode 에 모읍니다. */
+            /** @brief 구조체나 컨테이너 필드 요소 @p source 를 @p destinationParent 아래로 옮겨 적고, 그 안의 바인딩 속성은 분리해 @p inoutNode 에 모읍니다. */
             static void copyPropertyElement( const ParseContext& context, const XMLNode& source, const XMLNode& destinationParent, const string& path,
                                              UIDocumentNode& inoutNode )
             {
@@ -123,10 +123,10 @@ namespace sw
                 }
             }
 
-            /** @brief 고르게 경로를 적습니다(캐시 열쇠 · 조각 사슬 비교). */
+            /** @brief 경로를 정규화해 적습니다(캐시 키와 조각 연쇄 비교용). */
             static string normalizeDocumentPath( string_view path ) { return FileUtil::normalizePath( path ); }
 
-            /** @brief 위젯 원소 @p element 를 노드로 파싱해 문서 끝에 붙이고(자식은 그 뒤에) 그 자리를 @p outIndex 에 적습니다. */
+            /** @brief 위젯 요소 @p element 를 노드로 파싱해 문서 끝에 붙이고(자식은 그 뒤에), 그 인덱스를 @p outIndex 에 적습니다. */
             [[nodiscard]] static bool parseWidget( const ParseContext& context, const XMLNode& element, uint32& outIndex )
             {
                 const utf8*     pTag  = element.getName();
@@ -138,7 +138,7 @@ namespace sw
                 node._typeName   = pType->_name;
                 node._sourceLine = findLine( context, element );
 
-                // 위젯 PROPERTY 로 읽을 원소만 남긴 사본 — 자식 위젯 · 바인딩 식은 뗀다.
+                // 위젯 PROPERTY 로 읽을 요소만 남긴 사본이다. 자식 위젯과 바인딩 식은 분리한다.
                 XMLDocument   propertyDocument;
                 const XMLNode propertyRoot = propertyDocument.appendRoot( pType->_name.c_str() );
                 for ( XMLAttribute attribute = element.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
@@ -196,7 +196,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 화면 서술 원소를 읽습니다. 모르는 속성 · 읽지 못한 값은 오류입니다. */
+            /** @brief 화면 서술 요소를 읽습니다. 모르는 속성이나 읽지 못한 값은 오류입니다. */
             [[nodiscard]] static bool parseScreenDesc( const ParseContext& context, const XMLNode& element )
             {
                 vector<SchemaOrphanValue> listOrphan;
@@ -223,7 +223,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 애니메이션 목록(`<UIAnimation>` 원소들)을 읽습니다. 모르는 칸 · 읽지 못한 값 · 이름 없음 · 겹친 이름은 오류입니다. */
+            /** @brief 애니메이션 목록(`<UIAnimation>` 요소들)을 읽습니다. 모르는 필드, 읽지 못한 값, 이름 없음, 겹친 이름은 오류입니다. */
             [[nodiscard]] static bool parseAnimationList( const ParseContext& context, const XMLNode& element )
             {
                 UIAnimationList           list{};
@@ -249,7 +249,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief orphan 하나를 `이름 = '글'` 로 적습니다(안쪽 원소면 타입 이름이 앞에 붙는다). */
+            /** @brief orphan 하나를 `이름 = '텍스트'` 로 적습니다(안쪽 요소면 타입 이름이 앞에 붙습니다). */
             static string describeOrphan( const SchemaOrphanValue& orphan )
             {
                 string description = orphan._writtenName.empty() ? string( orphan._name.c_str() ) : orphan._writtenName;
@@ -264,7 +264,7 @@ namespace sw
                 return {};
             }
 
-            /** @brief 노드 @p nodeIndex 와 그 아래를 짓습니다. @p namePrefix 가 있으면(조각 안) 이름을 `접두.이름` 으로 감쌉니다. */
+            /** @brief 노드 @p nodeIndex 와 그 아래를 만듭니다. @p namePrefix 가 있으면(조각 안) 이름을 `접두.이름` 으로 감쌉니다. */
             static unique_ptr<Widget> instantiateNode( InstantiateContext& context, const UIDocumentAsset& document, uint32 nodeIndex, const string& namePrefix )
             {
                 const UIDocumentNode& node  = document._listNode[nodeIndex];
@@ -317,7 +317,7 @@ namespace sw
                     const shared_ptr<const UIDocumentAsset> fragment = context._pCache->findOrLoad( node._fragment, fragmentError );
                     if ( fragment == nullptr )
                         return failInstantiate( context, document, node, "fragment '" + node._fragment + "' is not loaded: " + fragmentError );
-                    // 조각 안의 이름은 이 위젯의 (감싼) 이름으로 감싼다. 이름 없는 조각 자리는 바깥 접두를 그대로 넘긴다.
+                    // 조각 안의 이름은 이 위젯의 (감싼) 이름으로 감싼다. 이름 없는 조각은 바깥 접두를 그대로 넘긴다.
                     string childPrefix = namePrefix;
                     if ( widget->getName().empty() == false )
                         childPrefix = widget->getName().c_str();
@@ -365,7 +365,7 @@ namespace sw
             return false;
         }
 
-        // 루트 속성은 판 번호 하나 — 옛 형식 리더는 없다.
+        // 루트 속성은 버전 번호 하나뿐이다. 이전 형식 리더는 없다.
         bool bVersioned{ false };
         for ( XMLAttribute attribute = root.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
         {
@@ -423,7 +423,7 @@ namespace sw
 
     unique_ptr<Widget> UIDocumentLoader::createWidget( const TypeInfo& type )
     {
-        // `Widget` 이 첫 기반이라(단일 상속 사슬) 블록 시작이 곧 `Widget*` 다.
+        // `Widget` 이 첫 기반(단일 상속 연쇄)이므로 블록 시작이 곧 `Widget*` 이다.
         static const hashed_string s_ctor( "$ctor" );
         if ( type.canConstruct() == false || type._size == 0 || type.isDerivedFrom( Widget::StaticType() ) == false )
             return {};

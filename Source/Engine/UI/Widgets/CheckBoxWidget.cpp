@@ -15,7 +15,7 @@ namespace sw
         , _onCheckedChanged{}
         , _bChecked{ false }
     {
-        // 상자가 겉모습이다 — 바탕은 투명, 호버 · 누름만 옅게.
+        // 상자가 겉모습이다. 바탕은 투명하고 호버와 누름에서만 옅게 칠한다.
         setBackground( UIBrush::makeSolid( float4{}, 0.0f ) );
         setStateBrushes( UIBrush::makeSolid( float4{ 1.0f, 1.0f, 1.0f, 0.06f }, 4.0f ), UIBrush::makeSolid( float4{ 1.0f, 1.0f, 1.0f, 0.12f }, 4.0f ),
                          UIBrush::makeSolid( float4{}, 0.0f ) );
@@ -74,14 +74,14 @@ namespace sw
     {
         if ( getChildCount() == 0 )
             return;
-        // 왼쪽에서 오른쪽으로 놓는다 — 오른쪽에서 왼쪽이면 arrangeChild 가 거울로 놓아 글이 상자 왼쪽에 간다.
+        // 왼쪽에서 오른쪽으로 배치한다. 오른쪽에서 왼쪽이면 arrangeChild 가 거울 배치해 텍스트가 상자 왼쪽에 간다.
         const float32 boxSpan = kBoxSize + kBoxGap;
         arrangeChild( context, *getChild( 0 ), float2{ boxSpan, 0.0f }, float2{ MathUtil::max( 0.0f, size._x - boxSpan ), size._y } );
     }
 
     void CheckBoxWidget::paint( CanvasPainter& painter, const UIPaintContext& context ) const
     {
-        ButtonWidget::paint( painter, context ); // 호버 · 누름 바탕
+        ButtonWidget::paint( painter, context ); // 호버와 누름 바탕
         const float2& size = getGeometry()._size;
         const float2  boxPosition{ isRightToLeft() ? size._x - kBoxSize : 0.0f, ( size._y - kBoxSize ) * 0.5f };
         const bool    bEnabled = isEnabledInHierarchy();

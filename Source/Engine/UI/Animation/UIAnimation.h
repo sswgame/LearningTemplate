@@ -1,6 +1,6 @@
 /**
  * @file UIAnimation.h
- * @brief UI 애니메이션 에셋 — 트랙(위젯 이름 · 프로퍼티 경로 · 키)과 사건(시각 · 명령)입니다. UI 문서의 `<_listAnimation>` 에 적습니다.
+ * @brief UI 애니메이션 에셋입니다. 트랙(위젯 이름, 프로퍼티 경로, 키)과 이벤트(시각, 명령)로 이루어지며 UI 문서의 `<_listAnimation>` 에 적습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -14,7 +14,7 @@
 
 namespace sw
 {
-    /** @struct UIAnimationKey @brief 트랙의 키 하나 — 시각 · 값 · 이 키**까지** 가는 곡선입니다. */
+    /** @struct UIAnimationKey @brief 트랙의 키 하나입니다. 시각, 값, 이 키까지 가는 곡선을 가집니다. */
     REFLECT()
     struct SW_API UIAnimationKey
     {
@@ -34,7 +34,7 @@ namespace sw
     /**
      * @struct UIAnimationTrack
      * @brief 위젯 하나의 프로퍼티 하나를 키로 움직이는 트랙입니다.
-     * @details 값 타입이 실수 · `float2` · `float3` · `float4` 면 키 사이를 곡선으로 보간하고, 그 밖(정수 · 불리언 · 열거형 · 글)은 계단입니다(지난 키의 값).
+     * @details 값 타입이 실수, `float2`, `float3`, `float4` 면 키 사이를 곡선으로 보간하고, 그 밖(정수, 불리언, 열거형, 텍스트)은 계단식으로 바꾼다(지난 키의 값을 유지).
      */
     REFLECT()
     struct SW_API UIAnimationTrack
@@ -52,7 +52,7 @@ namespace sw
 
 namespace sw
 {
-    /** @struct UIAnimationEvent @brief 재생이 그 시각을 지날 때 화면에 보내는 명령입니다(`UIScreen::onCommand` — 버튼 명령과 같은 길). */
+    /** @struct UIAnimationEvent @brief 재생이 그 시각을 지날 때 화면에 보내는 명령입니다(`UIScreen::onCommand`, 버튼 명령과 같은 경로). */
     REFLECT()
     struct SW_API UIAnimationEvent
     {
@@ -69,17 +69,17 @@ namespace sw
 {
     /**
      * @struct UIAnimation
-     * @brief 이름 붙은 애니메이션 하나입니다(UMG 위젯 애니메이션 · 유니티 UI 애니메이션 클립의 자리). 길이는 키 · 사건의 가장 늦은 시각입니다.
-     * @details 이름 `Open` · `Close` 는 화면 스택이 재생합니다(올릴 때 · 닫을 때 — 닫기는 끝난 뒤 실제로 지운다). 움직이기는 렌더 변환 · 불투명도 · 색으로 —
-     *          크기 · 여백을 움직이면 매 프레임 레이아웃이 돈다.
+     * @brief 이름 붙은 애니메이션 하나입니다(UMG 위젯 애니메이션과 유니티 UI 애니메이션 클립에 해당). 길이는 키와 이벤트의 가장 늦은 시각입니다.
+     * @details 이름 `Open` 과 `Close` 는 화면 스택이 재생한다(올릴 때와 닫을 때이며, 닫기는 끝난 뒤 실제로 지운다). 움직임은 렌더 변환, 불투명도, 색으로 주는 것이 좋다.
+     *          크기나 여백을 움직이면 매 프레임 레이아웃이 돈다.
      */
     REFLECT()
     struct SW_API UIAnimation
     {
         REFLECT_BODY();
 
-        static constexpr utf8 kOpenName[]  = "Open";  ///< 화면을 올릴 때 재생한다
-        static constexpr utf8 kCloseName[] = "Close"; ///< 화면을 닫을 때 재생하고, 끝난 뒤 지운다
+        static constexpr utf8 kOpenName[]  = "Open";  ///< 화면을 올릴 때 재생합니다.
+        static constexpr utf8 kCloseName[] = "Close"; ///< 화면을 닫을 때 재생하고, 끝난 뒤 지웁니다.
 
         PROPERTY( DisplayName = "Name" )
         hashed_string _name{};
@@ -88,14 +88,14 @@ namespace sw
         PROPERTY( DisplayName = "Events" )
         vector<UIAnimationEvent> _listEvent{};
 
-        /** @brief 길이(초) — 키와 사건의 가장 늦은 시각입니다. */
+        /** @brief 길이(초)입니다. 키와 이벤트의 가장 늦은 시각입니다. */
         float32 computeDuration() const;
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @struct UIAnimationList @brief 문서의 `<_listAnimation>` 원소를 읽고 쓰는 그릇입니다. */
+    /** @struct UIAnimationList @brief 문서의 `<_listAnimation>` 요소를 읽고 쓰는 컨테이너입니다. */
     REFLECT()
     struct SW_API UIAnimationList
     {

@@ -17,7 +17,7 @@ namespace sw
     {
         struct UIAnimatedPropertyInternal
         {
-            /** @brief 실수 칸의 성분 수입니다. 실수 칸이 아니면 0 입니다. */
+            /** @brief 실수 필드의 성분 수입니다. 실수 필드가 아니면 0 입니다. */
             static uint8 findComponentCount( int32 builtinIndex )
             {
                 if ( builtinIndex == ReflectBuiltinIndex::kfloat32 || builtinIndex == ReflectBuiltinIndex::kfloat64 )
@@ -137,7 +137,7 @@ namespace sw
         }
         if ( _kind != UIAnimatedValueKind::Float )
             return false;
-        // 잎 타입의 값으로 읽고 성분으로 옮긴다(XML 속성과 같은 글 — "0.5" · "0,12" · "1,0,0,1").
+        // 잎 타입의 값으로 읽고 성분으로 옮긴다(XML 속성과 같은 텍스트이며 "0.5", "0,12", "1,0,0,1" 같은 형식이다).
         float4              scratch{};
         const PropertyInfo& leaf = _path.getLeafProperty();
         if ( SerializerUtil::parseTextValue( &scratch, leaf._typeName, text, SerializeContext::getDefault() ) == false )

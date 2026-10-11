@@ -21,7 +21,7 @@ namespace sw
         {
             /** @brief 이보다 짧은 길이는 0 으로 본다(한 번에 끝). */
             static constexpr float32 kMinDuration = 1.0e-5f;
-            /** @brief 한 틱에 넘길 수 있는 바퀴 수 — 아주 긴 프레임이 짧은 반복 애니메이션을 끝없이 돌리지 않게. */
+            /** @brief 한 틱에 넘길 수 있는 반복 횟수입니다. 아주 긴 프레임이 짧은 반복 애니메이션을 끝없이 돌리지 않게 합니다. */
             static constexpr uint32 kMaxPassesPerTick = 64;
         };
     } // namespace
@@ -131,7 +131,7 @@ namespace sw
                 active._listTrack.push_back( std::move( resolved ) );
         }
 
-        // 움직임 줄이기 · 길이 0 — 끝 값을 바로 쓰고 사건을 모두 보낸다(닫기 애니메이션의 명령도 그대로 간다).
+        // 움직임 줄이기이거나 길이가 0 이면 끝 값을 바로 쓰고 이벤트를 모두 보낸다(닫기 애니메이션의 명령도 그대로 간다).
         if ( gv_uiReduceMotion || active._duration < UIAnimationPlayerInternal::kMinDuration )
         {
             const float32 end = bReverse ? 0.0f : active._duration;
@@ -202,7 +202,7 @@ namespace sw
             SW_LOG_WARNING( "[UI] Tween: '%#' cannot be read as '%#'", string( endValue ).c_str(), string( propertyPath ).c_str() );
             return false;
         }
-        // 같은 위젯 · 경로의 옛 트윈은 지금 값에서 새 끝값으로 대신한다.
+        // 같은 위젯과 경로의 기존 트윈은 지금 값에서 새 끝값으로 대체한다.
         for ( size_t index = 0; index < _listTween.size(); ++index )
         {
             if ( _listTween[index]._widget == widget && _listTween[index]._path == propertyPath )
@@ -213,7 +213,7 @@ namespace sw
         }
         if ( gv_uiReduceMotion || duration < UIAnimationPlayerInternal::kMinDuration )
         {
-            (void)tween._property.writeValue( *pWidget, tween._to ); // false 는 값이 같거나 경로가 사라진 것 — 쓸 것이 없다
+            (void)tween._property.writeValue( *pWidget, tween._to ); // false 는 값이 같거나 경로가 사라진 경우이므로 쓸 것이 없다
             return true;
         }
         tween._from     = tween._property.readValue( *pWidget );
@@ -259,7 +259,7 @@ namespace sw
             if ( pWidget != nullptr )
             {
                 const float32 weight = bFinished ? 1.0f : evaluateUICurve( tween._curve, tween._elapsed / tween._duration );
-                // false 는 값이 같거나 경로가 사라진 것 — 쓸 것이 없다
+                // false 는 값이 같거나 경로가 사라진 경우이므로 쓸 것이 없다
                 (void)tween._property.writeValue( *pWidget, UIAnimatedValue::blend( tween._from, tween._to, weight, tween._property._componentCount ) );
             }
             if ( bFinished )
@@ -267,7 +267,7 @@ namespace sw
             else
                 ++index;
         }
-        // 사건은 진행이 끝난 뒤 보낸다 — 명령 처리가 애니메이션을 틀거나 화면을 닫아도 위 목록을 건드리지 않게.
+        // 이벤트는 진행이 끝난 뒤 보낸다. 명령 처리가 애니메이션을 재생하거나 화면을 닫아도 위 목록을 건드리지 않게 하기 위해서다.
         dispatchPendingEvents();
     }
 
@@ -318,7 +318,7 @@ namespace sw
         {
             Widget* pWidget = _pTree->findWidgetByID( track._widget );
             if ( pWidget != nullptr )
-                (void)track._property.writeValue( *pWidget, evaluateTrack( track, active._time ) ); // false 는 값이 같거나 경로가 사라진 것 — 쓸 것이 없다
+                (void)track._property.writeValue( *pWidget, evaluateTrack( track, active._time ) ); // false 는 값이 같거나 경로가 사라진 경우이므로 쓸 것이 없다
         }
     }
 

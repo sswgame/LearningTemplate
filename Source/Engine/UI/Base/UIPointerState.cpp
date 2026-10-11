@@ -21,7 +21,7 @@ namespace sw
     UIPointerResult UIPointerState::process( WidgetTree& tree, const UIPointerEvent& event )
     {
         UIPointerResult result{};
-        // 잡은 위젯이 떨어졌으면 잡기를 푼다.
+        // 잡은 위젯이 떨어졌으면 잡기를 해제한다.
         if ( _captured != kInvalidWidgetID && ( _pCaptureTree == nullptr || _pCaptureTree->findWidgetByID( _captured ) == nullptr ) )
         {
             _captured     = kInvalidWidgetID;

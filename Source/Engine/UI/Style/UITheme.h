@@ -1,6 +1,6 @@
 /**
  * @file UITheme.h
- * @brief UI 테마 — 이름 하나에 스타일 시트 묶음입니다(`engine/ui/uithemes.xml`, 게임 프리셋 `_uiThemes` 가 덮어쓴다).
+ * @brief UI 테마를 정의합니다. 이름 하나에 스타일 시트 목록이 붙으며(`engine/ui/uithemes.xml`), 게임 프리셋 `_uiThemes` 가 덮어씁니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    /** @struct UIThemeDesc @brief 테마 하나 — 모든 화면의 문서 시트 앞에 거는 시트들입니다. */
+    /** @struct UIThemeDesc @brief 테마 하나입니다. 모든 화면의 문서 시트 앞에 적용할 시트들을 가집니다. */
     REFLECT()
     struct SW_API UIThemeDesc
     {
@@ -29,7 +29,7 @@ namespace sw
 {
     /**
      * @struct UIThemeCatalog
-     * @brief 고를 수 있는 테마들과 기본 테마입니다(언리얼 Slate 스타일 세트 · Godot Theme 의 자리). `UISystem::setTheme` 이 이름으로 고릅니다.
+     * @brief 선택할 수 있는 테마들과 기본 테마입니다(언리얼 Slate 스타일 세트, Godot Theme 에 해당). `UISystem::setTheme` 이 이름으로 고릅니다.
      */
     REFLECT()
     struct SW_API UIThemeCatalog
@@ -41,7 +41,7 @@ namespace sw
         PROPERTY( DisplayName = "Themes" )
         vector<UIThemeDesc> _listTheme{};
 
-        /** @brief 리소스 경로의 XML 을 읽습니다. 실패하면(파일 없음 · 모르는 키) 오류를 남기고 false 입니다. */
+        /** @brief 리소스 경로의 XML 을 읽습니다. 실패하면(파일이 없거나 모르는 키) 오류를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromResource( string_view resourcePath );
         /** @brief 이름의 테마입니다. 없으면 nullptr 입니다. */
         const UIThemeDesc* findTheme( const hashed_string& name ) const;

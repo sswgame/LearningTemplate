@@ -76,7 +76,7 @@ namespace sw
     void SettingsConfirmScreen::onTick( float32 deltaSeconds )
     {
         (void)deltaSeconds;
-        // 시간은 매니저가 센다(호스트의 update) — 확인 대기가 끝나면(유지 · 시간 다 됨 · 다른 곳의 되돌림) 창도 끝이다.
+        // 시간은 매니저가 센다(호스트의 update). 확인 대기가 끝나면(유지, 시간 만료, 다른 곳의 되돌림) 창도 끝난다.
         if ( _pSettings == nullptr || _pSettings->isAwaitingConfirm() == false )
         {
             close();

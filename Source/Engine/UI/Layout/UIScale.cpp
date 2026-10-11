@@ -17,7 +17,7 @@ namespace sw
     {
         struct UIScaleInternal
         {
-            /** @brief 안전 영역 비율의 위 한계입니다(각 변 10 % — 언리얼 r.DebugSafeZone 과 같은 범위). */
+            /** @brief 안전 영역 비율의 상한입니다(각 변 10 %이며, 언리얼 r.DebugSafeZone 과 같은 범위입니다). */
             static constexpr float32 kMaxSafeZoneRatio = 0.1f;
         };
     } // namespace

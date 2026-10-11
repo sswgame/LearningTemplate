@@ -100,7 +100,7 @@ namespace sw
         if ( _bEnabled == bEnabled )
             return;
         _bEnabled = bEnabled;
-        invalidate( WidgetDirty::kStyle | WidgetDirty::kPaint ); // 꺼짐 상태 스타일
+        invalidate( WidgetDirty::kStyle | WidgetDirty::kPaint ); // 꺼짐 상태 스타일이 바뀐다
     }
 
     bool Widget::isEnabledInHierarchy() const
@@ -127,7 +127,7 @@ namespace sw
         if ( _renderTransform == transform )
             return;
         _renderTransform = transform;
-        // 기하에 얹히는 값이다 — 이 위젯을 지난 슬롯 자리에 다시 놓아(measure 0) 자기와 자손 기하에 새 변환을 얹는다.
+        // 기하에 덧씌워지는 값이다. 이 위젯을 지난 슬롯 위치에 다시 배치(measure 0)해 자기와 자손 기하에 새 변환을 적용한다.
         invalidate( WidgetDirty::kTransform | WidgetDirty::kArrange );
     }
 
@@ -142,7 +142,7 @@ namespace sw
     void Widget::setLayoutSlot( const WidgetLayoutSlot& slot )
     {
         _slot = slot;
-        invalidate( WidgetDirty::kLayout | WidgetDirty::kPaint ); // z 순서도 슬롯이다 — 기하가 그대로여도 그리기 순서가 바뀐다
+        invalidate( WidgetDirty::kLayout | WidgetDirty::kPaint ); // z 순서도 슬롯이다. 기하가 그대로여도 그리기 순서가 바뀐다
     }
 
     void Widget::invalidate( uint32 dirtyReason )
@@ -255,11 +255,11 @@ namespace sw
     void Widget::onBoundPropertyChanged( const PropertyInfo& property )
     {
         const hashed_string& name = property._name;
-        _opacity                  = MathUtil::clamp( _opacity, 0.0f, 1.0f ); // 세터와 같은 묶기(불투명도 칸이 아니면 그대로다)
+        _opacity                  = MathUtil::clamp( _opacity, 0.0f, 1.0f ); // 세터와 같은 제한을 적용한다(불투명도 필드가 아니면 그대로다)
         if ( name == hashed_string( "_opacity" ) )
             invalidate( WidgetDirty::kTransform );
         else if ( name == hashed_string( "_renderTransform" ) )
-            invalidate( WidgetDirty::kTransform | WidgetDirty::kArrange ); // 세터와 같다 — 지난 슬롯 자리에 다시 놓는다
+            invalidate( WidgetDirty::kTransform | WidgetDirty::kArrange ); // 세터와 같다. 지난 슬롯 위치에 다시 배치한다
         else if ( name == hashed_string( "_visibility" ) )
             invalidate( WidgetDirty::kVisibility );
         else if ( name == hashed_string( "_bEnabled" ) )
@@ -294,8 +294,8 @@ namespace sw
         if ( pTree == nullptr )
             return;
         pTree->registerWidget( *this );
-        // 떨어져 있는 동안 쌓인 무효화를 트리의 목록으로 옮긴다(새 위젯은 생성자에서 레이아웃 · 그리기 · 스타일이 더럽다).
-        // 스타일은 늘 다시 맞춘다 — 선택자가 조상을 보므로 다른 자리에 붙으면 결과가 달라진다.
+        // 떨어져 있는 동안 쌓인 무효화를 트리의 목록으로 옮긴다(새 위젯은 생성자에서 레이아웃, 그리기, 스타일이 더티다).
+        // 스타일은 항상 다시 맞춘다. 선택자가 조상을 보므로 다른 위치에 붙으면 결과가 달라지기 때문이다.
         const uint32 pendingDirty = ( _dirtyFlags & ~( WidgetDirty::kChildLayout | WidgetDirty::kLayoutRoot ) ) | WidgetDirty::kStyle;
         _dirtyFlags               = WidgetDirty::kNone;
         pTree->notifyDirty( *this, pendingDirty );

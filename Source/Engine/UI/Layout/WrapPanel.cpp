@@ -12,7 +12,7 @@ namespace sw
     {
         struct WrapPanelInternal
         {
-            /** @brief 자식의 (원하는 크기 + 여백) 주축 · 교차축 길이입니다. */
+            /** @brief 자식의 (원하는 크기 + 여백)에서 주축과 교차축 길이를 구합니다. */
             static void computeExtent( UIOrientation orientation, const Widget& child, float32& outMain, float32& outCross )
             {
                 const float4& padding = child.getLayoutSlot()._padding;

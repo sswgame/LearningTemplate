@@ -1,6 +1,6 @@
 /**
  * @file UIBenchScreen.h
- * @brief 런타임 UI 성능 벤치 화면입니다(`-gv_benchUiWidgets=N -gv_benchUiChurn=M`) — 위젯 N 칸 격자와 프레임마다 M 칸의 글 바꿈.
+ * @brief 런타임 UI 성능 벤치 화면입니다(`-gv_benchUiWidgets=N -gv_benchUiChurn=M`). 위젯 N 개짜리 격자를 만들고 프레임마다 M 개의 텍스트를 바꿉니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -19,19 +19,19 @@ namespace sw
 {
     /**
      * @class UIBenchScreen
-     * @brief 스크롤 패널 안 줄 바꿈 격자 — 칸마다 테두리(바탕) + 아이콘 상자 + 글, 고정 크기(칸이 레이아웃 경계). 대부분은 스크롤 밖(잘린다).
-     * @details `onTick` 이 프레임마다 앞쪽(보이는) 칸 `gv_benchUiChurn` 개의 글을 바꾼다 — 무효화 · 그림 캐시가 비용을 그 칸으로 가두는지 측정한다.
-     *          측정할 구간은 `GT.UI.*` · `RT.Canvas.*`, 카운터 `UI.LayoutWidgets` · `UI.PaintWidgets` · `Text.GlyphsRasterized`(값은 per_frame 열).
-     *          `UISystem::update` 가 `gv_benchUiWidgets` 를 보고 열고 닫는다(HUD 층 — 포커스 · 입력을 받지 않는다).
+     * @brief 스크롤 패널 안에 줄 바꿈 격자를 두는 벤치 화면입니다. 칸마다 테두리(바탕), 아이콘 상자, 텍스트를 놓고 크기를 고정합니다(칸이 레이아웃 경계). 대부분은 스크롤 밖이라 잘립니다.
+     * @details `onTick` 이 프레임마다 앞쪽(보이는) 칸 `gv_benchUiChurn` 개의 텍스트를 바꾼다. 무효화와 그리기 캐시가 비용을 그 칸으로 가두는지 측정한다.
+     *          측정할 구간은 `GT.UI.*`, `RT.Canvas.*` 이고, 카운터는 `UI.LayoutWidgets`, `UI.PaintWidgets`, `Text.GlyphsRasterized` 다(값은 per_frame 열에 있다).
+     *          `UISystem::update` 가 `gv_benchUiWidgets` 를 보고 열고 닫는다(HUD 레이어이며 포커스와 입력을 받지 않는다).
      */
     class SW_API UIBenchScreen final : public UIScreen
     {
     public:
-        static constexpr float32 kCellWidth   = 140.0f; ///< 칸 크기(UI 단위)
+        static constexpr float32 kCellWidth   = 140.0f; ///< 칸 하나의 크기입니다(UI 단위).
         static constexpr float32 kCellHeight  = 44.0f;
-        static constexpr uint32  kChurnWindow = 128; ///< 글을 바꾸는 칸은 앞쪽 이만큼 안에서 돈다(보이는 칸 — 칠하기까지 측정한다)
+        static constexpr uint32  kChurnWindow = 128; ///< 텍스트를 바꾸는 칸은 앞쪽 이만큼 안에서 돕니다(보이는 칸이며, 칠하기까지 측정합니다).
 
-        /** @brief 칸 @p cellCount 개의 벤치 화면을 짓습니다. */
+        /** @brief 칸 @p cellCount 개의 벤치 화면을 만듭니다. */
         static unique_ptr<UIBenchScreen> create( uint32 cellCount );
 
         UIBenchScreen( const UIScreenDesc& desc, unique_ptr<Widget> root, vector<WidgetID> listCellText );
@@ -40,8 +40,8 @@ namespace sw
         uint32 getCellCount() const { return static_cast<uint32>( _listCellText.size() ); }
 
     private:
-        vector<WidgetID> _listCellText; ///< 칸마다 글 위젯 번호(칸 순서)
-        uint32           _churnCursor;  ///< 다음에 바꿀 칸
-        uint32           _frameIndex;   ///< 바꾼 글에 넣는 프레임 번호
+        vector<WidgetID> _listCellText; ///< 칸마다 텍스트 위젯 번호입니다(칸 순서).
+        uint32           _churnCursor;  ///< 다음에 바꿀 칸입니다.
+        uint32           _frameIndex;   ///< 바꾼 텍스트에 넣는 프레임 번호입니다.
     };
 } // namespace sw

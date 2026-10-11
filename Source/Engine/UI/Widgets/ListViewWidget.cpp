@@ -36,7 +36,7 @@ namespace sw
         _itemCount = itemCount;
         for ( uint32& item : _listRowItem )
         {
-            item = invalid_index::kUint32; // 모두 다시 묶는다
+            item = invalid_index::kUint32; // 모두 다시 연결한다
         }
         _scrollOffset = MathUtil::clamp( _scrollOffset, 0.0f, getMaxScrollOffset() );
         invalidate( WidgetDirty::kLayout );
@@ -141,7 +141,7 @@ namespace sw
         for ( uint32 rowIndex = 0; rowIndex < rowCount; ++rowIndex )
         {
             Widget& row = *getChild( rowIndex );
-            // 항목 k 는 줄 k % 줄 수가 맡는다 — 보이는 창 [first, first + 줄 수) 안에서 이 줄이 맡을 항목.
+            // 항목 k 는 줄 k % 줄 수가 맡는다. 보이는 창 [first, first + 줄 수) 안에서 이 줄이 맡을 항목이다.
             const uint32 offsetInWindow = ( rowIndex + rowCount - firstItem % rowCount ) % rowCount;
             const uint32 itemIndex      = firstItem + offsetInWindow;
             if ( itemIndex >= _itemCount )

@@ -58,7 +58,7 @@ namespace sw
                 return false;
             }
 
-            /** @brief 상대 경로면 시나리오 산출물 폴더(`Saved/Automation/<이름>/`) 아래 — 스크린샷과 같은 자리입니다. */
+            /** @brief 상대 경로면 시나리오 산출물 폴더(`Saved/Automation/<이름>/`) 아래에 둡니다. 스크린샷과 같은 위치입니다. */
             static bool runLayoutDump( AutomationRunner& runner, const AutomationStep& step )
             {
                 const string& file = *step.findAttribute( "file" );
@@ -69,7 +69,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 로딩 화면이 떠 있으면 게임 입력이 막혀 있다 — `ScenePlaying` 시나리오는 걷힐 때까지 시작하지 않습니다. */
+            /** @brief 로딩 화면이 떠 있으면 게임 입력이 막혀 있습니다. `ScenePlaying` 시나리오는 로딩 화면이 사라질 때까지 시작하지 않습니다. */
             static bool isLoadingScreenBlocking()
             {
                 const UISystem* pUISystem = engine::areEngineServicesBound() ? engine::getBoundEngineServices()._pUISystem : nullptr;
@@ -88,7 +88,7 @@ namespace sw
 {
     void UIAutomationSteps::ensureLinked()
     {
-        // 등록자는 이 번역 단위의 정적 객체다 — 이 함수를 부르는 쪽이 있으면 링커가 단위를 버리지 않는다.
+        // 등록자는 이 번역 단위의 정적 객체다. 이 함수를 부르는 쪽이 있으면 링커가 이 단위를 버리지 않는다.
     }
 
     bool UIAutomationSteps::validateExpectUI( const AutomationStep& step, string& outError )
@@ -142,7 +142,7 @@ namespace sw
         if ( const string* pCount = step.findAttribute( "screens" ); pCount != nullptr )
         {
             int32 expected = 0;
-            (void)StringUtil::parseInt( string_view{ *pCount }, expected ); // validateExpectUI 가 이미 봤다
+            (void)StringUtil::parseInt( string_view{ *pCount }, expected ); // validateExpectUI 가 이미 확인했다
             if ( ui.getScreenCount() != static_cast<uint32>( expected ) )
             {
                 outFailure += "screen count is " + to_string( ui.getScreenCount() ) + ", expected " + *pCount + ". ";

@@ -12,7 +12,7 @@ namespace sw
     {
         struct CanvasPanelInternal
         {
-            /** @brief 자동 크기의 변을 정합니다 — End 는 왼쪽(위) 변을 두고 오른쪽(아래)을, Begin 은 반대로, Both 는 가운데를 두고 양쪽으로. */
+            /** @brief 자동 크기의 변을 정합니다. End 는 왼쪽(위) 변을 고정해 오른쪽(아래)으로, Begin 은 반대로, Both 는 가운데를 고정해 양쪽으로 커집니다. */
             static void growEdges( UIGrowDirection direction, float32 length, float32& inoutBegin, float32& inoutEnd )
             {
                 switch ( direction )
@@ -37,7 +37,7 @@ namespace sw
                 }
             }
 
-            /** @brief 앵커 · 오프셋이 주는 한 축의 길이입니다. 패널 크기가 무한이고 앵커가 벌어져 있으면 무한입니다. */
+            /** @brief 앵커와 오프셋이 주는 한 축의 길이입니다. 패널 크기가 무한이고 앵커가 벌어져 있으면 무한입니다. */
             static float32 computeSpan( float32 anchorMin, float32 anchorMax, float32 offsetMin, float32 offsetMax, float32 panelLength )
             {
                 const bool bStretched = anchorMin != anchorMax;
@@ -67,7 +67,7 @@ namespace sw
     void CanvasPanel::collectPaintOrder( vector<uint32>& outListIndex ) const
     {
         outListIndex.clear();
-        // 삽입 정렬 — 안정 정렬이고 자식 수가 작다.
+        // 삽입 정렬이다. 안정 정렬이고 자식 수가 작다.
         for ( uint32 index = 0; index < getChildCount(); ++index )
         {
             const int16 zOrder = getChild( index )->getLayoutSlot()._zOrder;
@@ -126,13 +126,13 @@ namespace sw
             float32                 bottom = slot._anchorMax._y * size._y + slot._offsetMax._y;
             if ( slot._bAutoSize )
             {
-                // 자동 크기는 패널보다 커지지 않는다 — 원하는 크기가 화면보다 크면(작은 해상도 × 큰 배율) 패널에 맞춰 줄이고, 안쪽 스크롤이 나머지를 받는다.
+                // 자동 크기는 패널보다 커지지 않는다. 원하는 크기가 화면보다 크면(작은 해상도 × 큰 배율) 패널에 맞춰 줄이고, 안쪽 스크롤이 나머지를 받는다.
                 const float2  desired = child.getDesiredSize();
                 const float32 width   = MathUtil::min( desired._x + slot._padding._x + slot._padding._z, size._x );
                 const float32 height  = MathUtil::min( desired._y + slot._padding._y + slot._padding._w, size._y );
                 CanvasPanelInternal::growEdges( slot._growHorizontal, width, left, right );
                 CanvasPanelInternal::growEdges( slot._growVertical, height, top, bottom );
-                // 줄인 상자가 패널 밖으로 나가지 않게 민다(가운데 · 끝 기준으로 커진 상자가 변을 넘을 수 있다).
+                // 줄인 상자가 패널 밖으로 나가지 않게 민다(가운데나 끝 기준으로 커진 상자가 변을 넘을 수 있다).
                 const float32 shiftX = MathUtil::max( 0.0f, -left ) - MathUtil::max( 0.0f, right - size._x );
                 const float32 shiftY = MathUtil::max( 0.0f, -top ) - MathUtil::max( 0.0f, bottom - size._y );
                 left += shiftX;
