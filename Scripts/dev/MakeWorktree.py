@@ -28,8 +28,9 @@ from common import getProjectRoot, runGit, runProcess  # noqa: E402
 #: main 체크아웃과 나눠 쓰는 폴더(저장소 루트 기준). 내려받은 도구와 vcpkg 설치 트리 · 바이너리 캐시다.
 kSharedFolders: tuple[str, ...] = ("Tools/LLVM", "Tools/Ninja", "Tools/Sccache", "Tools/vcpkg", "Tools/_cache",
                                    "build/vcpkg_installed", "build/vcpkg_cache")
-#: 워크트리를 모아 두는 폴더 이름(main 체크아웃의 부모 아래).
+#: 워크트리를 모아 두는 폴더 이름(main 체크아웃의 부모 아래). Windows 는 드라이브 루트 아래의 짧은 이름을 쓴다 — 경로가 길면 오브젝트 경로(260)와 명령 줄(32767)이 한도를 넘는다.
 kWorktreeFolderName = "LT-wt"
+kShortWorktreeFolderName = "w"
 #: 워크트리 브랜치 이름의 접두.
 kBranchPrefix = "wt/"
 #: 바이트가 main 과 다르면 vcpkg 스탬프가 어긋나 configure 마다 설치가 도는 파일(`docs/08_Verification.md` 3절).
@@ -54,11 +55,18 @@ def findMainRoot(start: Path) -> Path:
     return Path(result.stdout.strip()).resolve().parent
 
 
+def getDefaultWorktreeRoot(mainRoot: Path) -> Path:
+    """워크트리 기본 위치 — Windows 는 `<드라이브>/w`(짧게), 그 밖은 main 의 부모/LT-wt 입니다."""
+    if os.name == "nt" and mainRoot.drive:
+        return Path(mainRoot.drive + "\\") / kShortWorktreeFolderName
+    return mainRoot.parent / kWorktreeFolderName
+
+
 def makePlan(mainRoot: Path, name: str, base: str, worktreeRoot: Path | None) -> WorktreePlan:
     """이름에서 워크트리 경로와 브랜치를 정합니다. 이름은 폴더 · 브랜치에 그대로 쓰이므로 영숫자 · `-` · `_` 만 받습니다."""
     if not name or any(not (ch.isalnum() or ch in "-_") for ch in name):
         raise ValueError(f"워크트리 이름은 영숫자 · '-' · '_' 만 씁니다: '{name}'")
-    root = worktreeRoot if worktreeRoot is not None else mainRoot.parent / kWorktreeFolderName
+    root = worktreeRoot if worktreeRoot is not None else getDefaultWorktreeRoot(mainRoot)
     return WorktreePlan(mainRoot=mainRoot, worktreePath=root / name, branch=kBranchPrefix + name, base=base)
 
 
@@ -97,7 +105,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="작업 단위용 git 워크트리를 만들고 도구 · vcpkg 폴더를 main 체크아웃과 나눠 쓰게 연결한다.")
     parser.add_argument("name", help="워크트리 이름 — 폴더 <워크트리 루트>/<이름>, 브랜치 wt/<이름>")
     parser.add_argument("--base", default="origin/main", help="갈라 나올 기준(기본 origin/main — origin/ 이면 먼저 fetch 한다)")
-    parser.add_argument("--worktree-root", type=Path, default=None, help=f"워크트리를 둘 폴더(기본: main 체크아웃의 부모/{kWorktreeFolderName})")
+    parser.add_argument("--worktree-root", type=Path, default=None, help=f"워크트리를 둘 폴더(기본: Windows 는 드라이브 루트의 w, 그 밖은 main 의 부모/{kWorktreeFolderName})")
     parser.add_argument("--dry-run", action="store_true", help="만들지 않고 할 일만 보인다")
     args = parser.parse_args(argv)
 
