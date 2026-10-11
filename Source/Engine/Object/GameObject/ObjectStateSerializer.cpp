@@ -31,9 +31,9 @@ namespace sw
         struct ObjectStateSerializerInternal
         {
             /**
-             * @brief 이 오브젝트의 씬 컴포넌트에 붙어 있던 **다른 오브젝트의** 자식 하나입니다 — 제자리에 다시 읽는 동안 떨어졌다가 되붙습니다.
-             * @details 부모는 핸들이 아니라 안정 키(`타입#n`)로 적습니다. 식별 목록 없이 다시 읽으면 컴포넌트 id 가 바뀌고, 이름 기반
-             *          부착 필드는 이름을 되돌리는 되돌리기에서 틀립니다. 자식은 핸들입니다(그쪽 오브젝트는 그대로 산다).
+             * @brief 이 오브젝트의 씬 컴포넌트에 붙어 있던 **다른 오브젝트의** 자식 하나입니다. 제자리에서 다시 읽는 동안 분리되었다가 다시 붙습니다.
+             * @details 부모는 핸들이 아니라 안정 키(`타입#n`)로 기록한다. 식별 목록 없이 다시 읽으면 컴포넌트 id 가 바뀌고, 이름 기반
+             *          부착 필드는 이름을 되돌리는 되돌리기에서 틀린다. 자식은 핸들로 기록한다(그쪽 오브젝트는 그대로 살아 있다).
              */
             struct ChildLink
             {
@@ -42,10 +42,10 @@ namespace sw
             };
 
             /**
-             * @brief 다시 읽기 전에 다른 오브젝트의 자식 연결을 적습니다.
-             * @details 제자리에서 다시 읽으면(되돌리기 · 다시 하기 · 프리팹으로 되돌리기 · 플레이 종료 복원) 컴포넌트를 모두 지우고 새로
-             *          만드는데, 씬 컴포넌트의 소멸자가 자식을 떼어 **다른 오브젝트의 자식들이 루트가 됩니다.** 로드는 이 오브젝트 **안의**
-             *          부착만 되붙이므로, 이것이 없으면 부모 속성 하나를 고치고 되돌릴 때 자식이 떨어집니다.
+             * @brief 다시 읽기 전에 다른 오브젝트의 자식 연결을 기록합니다.
+             * @details 제자리에서 다시 읽으면(되돌리기, 다시 하기, 프리팹으로 되돌리기, 플레이 종료 복원) 컴포넌트를 모두 지우고 새로
+             *          만드는데, 씬 컴포넌트의 소멸자가 자식을 분리해서 **다른 오브젝트의 자식들이 루트가 된다.** 로드는 이 오브젝트 **안의**
+             *          부착만 다시 붙이므로, 이 기록이 없으면 부모 속성 하나를 고치고 되돌릴 때 자식이 떨어진다.
              */
             static void captureChildLinks( const GameObject* pGameObject, vector<ChildLink>& outListLink )
             {
@@ -65,8 +65,8 @@ namespace sw
             }
 
             /**
-             * @brief 적어 둔 자식을 새로 만든 같은 자리의 부모(안정 키)에 되붙입니다. 그 자리가 없으면 primary 에, 그것도 없으면 루트로 둡니다.
-             * @details 자식의 로컬 트랜스폼은 그대로라 부모가 같은 값으로 돌아오면 월드도 그대로입니다. 붙이는 자리가 계층 활성도 맞춥니다.
+             * @brief 기록해 둔 자식을 새로 만든 같은 위치의 부모(안정 키)에 다시 붙입니다. 그 위치가 없으면 primary 에, 그것도 없으면 루트로 둡니다.
+             * @details 자식의 로컬 트랜스폼은 그대로라 부모가 같은 값으로 돌아오면 월드도 그대로다. 붙이는 함수가 계층 활성도 맞춘다.
              */
             static void restoreChildLinks( GameObject* pGameObject, const vector<ChildLink>& listLink )
             {
@@ -94,10 +94,10 @@ namespace sw
             }
 
             /**
-             * @brief 상태를 읽은 오브젝트를 주변에 다시 맞춥니다. 이름이 바뀌었으면 매니저의 이름 표를, 그리고 활성 계층을 맞춥니다.
-             * @details XML · JSON · 바이너리 세 로더가 함께 씁니다. 한 포맷만 빠뜨리면 그 포맷으로 되돌린 오브젝트만
-             *          이름으로 찾을 수 없게 됩니다. 부모 연결 · 핸들 · 컴포넌트 알림(`onPostLoad`)은 여기서 하지 않습니다 — 묶음
-             *          (`ObjectStateBatch::finish`)이 모두 읽은 뒤 합니다.
+             * @brief 상태를 읽은 오브젝트를 주변 상태에 다시 맞춥니다. 이름이 바뀌었으면 매니저의 이름 테이블을, 그리고 활성 계층을 맞춥니다.
+             * @details XML, JSON, 바이너리 세 로더가 함께 쓴다. 한 포맷만 빠뜨리면 그 포맷으로 되돌린 오브젝트만
+             *          이름으로 찾을 수 없게 된다. 부모 연결, 핸들, 컴포넌트 알림(`onPostLoad`)은 여기서 하지 않는다. 배치
+             *          (`ObjectStateBatch::finish`)가 모두 읽은 뒤에 처리한다.
              */
             static void finishLoad( GameObject* pGameObject, hashed_string oldName )
             {
@@ -107,7 +107,7 @@ namespace sw
                 pGameObject->setActive( pGameObject->isActive() );
             }
 
-            /** @brief 상태가 이 오브젝트를 부를 때의 id 입니다. 문맥이 따로 주지 않았으면 복원하는 원래 id 입니다. */
+            /** @brief 상태가 이 오브젝트를 가리킬 때 쓰는 id 입니다. 컨텍스트가 따로 주지 않았으면 복원하는 원래 id 입니다. */
             static uint64 resolveSavedID( const ObjectLoadContext& context )
             {
                 if ( context._savedID != 0 )
@@ -117,7 +117,7 @@ namespace sw
 
             /**
              * @brief 이름으로 컴포넌트를 만들어 소유자에 붙입니다(역직렬화 팩토리).
-             * @details 모르는 타입(게임 모듈이 안 올라왔다 · 이름을 바꿨는데 별칭이 없다)은 만들지 못한다 — 어느 오브젝트의 어느 타입인지 경고하고,
+             * @details 모르는 타입(게임 모듈이 로드되지 않았거나, 이름을 바꿨는데 별칭이 없는 경우)은 만들지 못한다. 어느 오브젝트의 어느 타입인지 경고하고,
              *          원문은 `keepMissingComponent` 가 맡는다.
              */
             static void* createOwnedComponent( void* pOuter, hashed_string typeName )
@@ -130,7 +130,7 @@ namespace sw
             }
 
             /**
-             * @brief 모르는 타입의 컴포넌트 원문을 `MissingComponent` 로 맡습니다. 건너뛰면 그대로 저장할 때 그 값이 영영 사라진다.
+             * @brief 모르는 타입의 컴포넌트 원문을 `MissingComponent` 에 보관합니다. 건너뛰면 그대로 저장할 때 그 값이 영영 사라집니다.
              */
             static bool keepMissingComponent( void* pOuter, const SerializeContext::OpaqueElementView& element )
             {
@@ -146,7 +146,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 원소가 `MissingComponent` 면 맡은 원문을 돌려줍니다 — 직렬화기가 같은 형식이면 그대로 다시 씁니다. */
+            /** @brief 원소가 `MissingComponent` 이면 보관한 원문을 반환합니다. 직렬화기가 같은 형식이면 그대로 다시 씁니다. */
             static bool queryMissingComponent( const void* pElement, SerializeContext::OpaqueElementView& outElement )
             {
                 const Component* pComp = static_cast<const Component*>( pElement );
@@ -163,7 +163,7 @@ namespace sw
                 return pComp->getTypeInfo();
             }
 
-            /** @brief 프로세스 토큰을 새로 정합니다(`UUID` 의 무작위 바이트 8 개). 0 은 "토큰 없음" 과 구분되지 않아 피합니다. */
+            /** @brief 프로세스 토큰을 새로 정합니다(`UUID` 의 무작위 바이트 8 개). 0 은 "토큰 없음"과 구분되지 않아 피합니다. */
             static uint64 makeProcessToken()
             {
                 const UUID uuid  = UUID::generate();
@@ -179,25 +179,25 @@ namespace sw
                 serializeContext.setOwnedPointerFactory( &createOwnedComponent );
                 serializeContext.setRuntimeTypeInfoFn( &getComponentRuntimeTypeInfo );
                 serializeContext.setOpaqueElementHandlers( &keepMissingComponent, &queryMissingComponent );
-                // 지금 타입에 없는 칸은 건너뛰고 읽는다 — 세 형식이 같은 규칙이다. 바이너리가 실패하면 컴포넌트 PROPERTY 하나를 지웠을 때 그
-                // 컴포넌트를 가진 모든 오브젝트의 세이브 · 플레이 스냅샷(핫 리로드 뒤 Stop)을 읽지 못한다.
+                // 현재 타입에 없는 필드는 건너뛰고 읽는다. 세 형식이 같은 규칙이다. 바이너리가 실패하면 컴포넌트 PROPERTY 하나를 지웠을 때 그
+                // 컴포넌트를 가진 모든 오브젝트의 세이브와 플레이 스냅샷(핫 리로드 뒤 Stop)을 읽지 못한다.
                 serializeContext.setAllowUnknownProperties( true );
                 return serializeContext;
             }
 
             /**
-             * @brief 오브젝트 자기 칸 가운데 지금 타입에 없는 것(지운 필드)을 넘깁니다. 스키마 버전이 같을 때만 받습니다.
-             * @details 바이너리의 판 붙은 읽기는 남는 칸이 있으면 이관 함수를 부르고, 없으면 실패합니다. 오브젝트 상태에는 이관할 것이 없다 —
-             *          지운 칸은 버리고 나머지를 읽는 것이 XML · JSON 과 같은 규칙입니다. 버전이 다르면 받지 않습니다(진짜 이관이 필요하다).
-             *          버린 칸은 여기서 알리지 않습니다 — 세 형식이 같이 지나는 `runSchemaMigrateStep` 이 이관이 찾아 보지 않은 칸을
-             *          이름과 함께 로드마다 한 번 알립니다(여기서도 알리면 같은 일이 두 줄이 됩니다).
+             * @brief 오브젝트 자기 필드 가운데 현재 타입에 없는 것(지운 필드)을 넘깁니다. 스키마 버전이 같을 때만 받습니다.
+             * @details 바이너리의 버전 붙은 읽기는 남는 필드가 있으면 이관 함수를 부르고, 없으면 실패한다. 오브젝트 상태에는 이관할 것이 없다.
+             *          지운 필드는 버리고 나머지를 읽는 것이 XML, JSON 과 같은 규칙이다. 버전이 다르면 받지 않는다(진짜 이관이 필요하기 때문이다).
+             *          버린 필드는 여기서 알리지 않는다. 세 형식이 같이 지나는 `runSchemaMigrateStep` 이 이관이 찾아 보지 않은 필드를
+             *          이름과 함께 로드마다 한 번 알린다(여기서도 알리면 같은 경고가 두 번 나온다).
              */
             static bool skipFieldsTheTypeNoLongerHas( const SchemaMigrateContext& migrateContext )
             {
                 return migrateContext._fromVersion == migrateContext._toVersion;
             }
 
-            /** @brief `GameObjectHandle` 의 타입 이름입니다 — 리플렉션 PROPERTY 의 타입 · 글 처리기의 이름이 같습니다. */
+            /** @brief `GameObjectHandle` 의 타입 이름입니다. 리플렉션 PROPERTY 의 타입 이름과 텍스트 핸들러 이름이 같습니다. */
             static const hashed_string& getObjectHandleTypeName()
             {
                 static const hashed_string s_typeName{ "GameObjectHandle" };
@@ -212,9 +212,9 @@ namespace sw
             }
 
             /**
-             * @brief 묶음이 저장된 id 를 옮길 표가 없는 `ComponentHandle` 을 담는 프로퍼티인지 봅니다(단일 값 · 컨테이너의 어느 단계든).
-             * @details `GameObjectHandle` 은 어디에 들었든 옮긴다(`ObjectStateBatch::remapContainerHandles`). `ComponentHandle` 은 저장된
-             *          컴포넌트 id 를 이 실행의 컴포넌트로 옮길 표가 없다.
+             * @brief 배치가 저장된 id 를 옮길 테이블이 없는 `ComponentHandle` 을 담은 프로퍼티인지 확인합니다(단일 값, 컨테이너의 어느 단계든).
+             * @details `GameObjectHandle` 은 어디에 있든 옮긴다(`ObjectStateBatch::remapContainerHandles`). `ComponentHandle` 은 저장된
+             *          컴포넌트 id 를 이 실행의 컴포넌트로 옮길 테이블이 없다.
              */
             static bool holdsComponentHandle( const PropertyInfo& prop )
             {
@@ -229,7 +229,7 @@ namespace sw
                 return false;
             }
 
-            /** @brief 컨테이너의 어느 단계(키 · 원소)에 `GameObjectHandle` 이 드는지 봅니다. */
+            /** @brief 컨테이너의 어느 단계(키, 원소)에 `GameObjectHandle` 이 들어 있는지 확인합니다. */
             static bool holdsObjectHandle( const NestedContainerInfo& shape )
             {
                 for ( const NestedContainerInfo* pLevel = &shape; pLevel != nullptr; pLevel = pLevel->_elementNested.get() )
@@ -241,10 +241,10 @@ namespace sw
             }
 
             /**
-             * @brief 저장할 때 `GameObjectHandle` 값을 저장할 id 로 옮겨 적는 글 · 바이너리 처리기입니다 — 부착과 같은 규칙(`ObjectSaveOptions::getSavedObjectID`).
-             * @details 세 형식이 모두 이 처리기를 지납니다. 런타임 id 를 그대로 적으면 씬 파일을 다시 열 때 같은 값을 받은 다른 오브젝트를 가리킬 수 있다.
-             *          주의: 핸들은 내장 타입이라 기본 문맥에 8 바이트 바이너리 처리기가 있다 — 글 처리기만 바꾸면 바이너리(쿠킹한 씬 · 세이브)는 런타임
-             *          id 를 그대로 싣고, 읽는 묶음이 그 id 를 파일 id 로 찾지 못해 핸들이 비게 된다. 바이너리도 같은 8 바이트 모양으로 바꿔 적는다.
+             * @brief 저장할 때 `GameObjectHandle` 값을 저장할 id 로 바꿔 쓰는 텍스트와 바이너리 처리기입니다. 부착과 같은 규칙입니다(`ObjectSaveOptions::getSavedObjectID`).
+             * @details 세 형식이 모두 이 처리기를 거친다. 런타임 id 를 그대로 적으면 씬 파일을 다시 열 때 같은 값을 받은 다른 오브젝트를 가리킬 수 있다.
+             *          핸들은 내장 타입이라 기본 컨텍스트에 8 바이트 바이너리 처리기가 있다. 텍스트 처리기만 바꾸면 바이너리(쿠킹한 씬, 세이브)는 런타임
+             *          id 를 그대로 싣고, 읽는 배치가 그 id 를 파일 id 로 찾지 못해 핸들이 비게 된다. 바이너리도 같은 8 바이트 형태로 바꿔 적는다.
              */
             struct ReferenceWriter
             {
@@ -259,7 +259,7 @@ namespace sw
 
                 string write( const void* pValue ) const { return sw::to_string( computeSavedID( pValue ) ); }
 
-                /** @brief 기본 바이너리 처리기와 같은 모양(핸들 하나의 바이트)으로 저장할 id 를 적습니다 — 읽기는 기본 처리기 그대로다. */
+                /** @brief 기본 바이너리 처리기와 같은 형태(핸들 하나의 바이트)로 저장할 id 를 씁니다. 읽기는 기본 처리기를 그대로 씁니다. */
                 void writeBinary( const void* pValue, vector<uint8>& outListBuffer ) const
                 {
                     const GameObjectHandle savedHandle = GameObjectHandle::make( computeSavedID( pValue ) );
@@ -268,7 +268,7 @@ namespace sw
                 }
             };
 
-            /** @brief 오브젝트 상태를 쓰는 문맥에 핸들 글 · 바이너리 처리기를 겁니다. 읽기는 기본 그대로다 — 옮기는 일은 묶음이 모두 읽은 뒤 한다(`ObjectStateBatch::finish`). */
+            /** @brief 오브젝트 상태를 쓰는 컨텍스트에 핸들 텍스트와 바이너리 처리기를 등록합니다. 읽기는 기본 처리기를 그대로 쓰며, 옮기는 일은 배치가 모두 읽은 뒤 합니다(`ObjectStateBatch::finish`). */
             static void registerReferenceWriter( SerializeContext& serializeContext, const ReferenceWriter& writer )
             {
                 const SerializeContext::TextReadFn* pReader = SerializeContext::getDefault().findTextReader( getObjectHandleTypeName() );
@@ -299,7 +299,7 @@ namespace sw
         if ( pTypeInfo == nullptr )
             return {};
 
-        // 글로 저장하는 길(씬 · 프리팹 저작)은 쓰기 전에 검증한다 — 결과만 남기고 저장은 그대로 한다. 바이너리(플레이 · 되돌리기 스냅숏)는 보지 않는다.
+        // 텍스트로 저장하는 경로(씬과 프리팹 저작)는 쓰기 전에 검증한다. 결과만 남기고 저장은 그대로 한다. 바이너리(플레이, 되돌리기 스냅샷)는 검증하지 않는다.
         (void)ObjectValidation::reportGameObject( *pGameObject, true );
 
         SerializeContext                                     serializeContext = ObjectStateSerializerInternal::makeGameObjectXMLContext( const_cast<GameObject*>( pGameObject ) );
@@ -311,7 +311,7 @@ namespace sw
     template <typename DeserializeStateFunc>
     bool ObjectStateSerializer::loadStateInPlace( GameObject* pGameObject, const ObjectLoadContext& context, DeserializeStateFunc&& deserializeState )
     {
-        // 제자리 읽기는 컴포넌트를 모두 비우고 다시 만든다 — 컴포넌트 틱 중에는 할 수 없다(다른 워커가 그 컴포넌트를 틱한다). 결과를 바로 돌려줘야
+        // 제자리 읽기는 컴포넌트를 모두 비우고 다시 만든다. 컴포넌트 틱 중에는 할 수 없다(다른 워커가 그 컴포넌트를 틱한다). 결과를 바로 반환해야
         // 하므로 미루지 않고 거절한다. 틱 안에서는 `GameObjectManager::executeOrDeferPostTick` 으로 감싸 부를 것.
         const GameObjectManager* pManager = pGameObject->getManager();
         if ( pManager != nullptr && pManager->isStructuralMutationFrozen() )
@@ -324,7 +324,7 @@ namespace sw
         vector<ObjectStateSerializerInternal::ChildLink> listChildLink;
         ObjectStateSerializerInternal::captureChildLinks( pGameObject, listChildLink );
 
-        // 읽기 전 상태를 찍어 둔다 — 실패하면 그것으로 되돌린다. 컴포넌트가 없는 오브젝트(새로 만든 것 — 씬 로드 · 복제)는 찍을 것이 없다.
+        // 읽기 전 상태를 기록해 둔다. 실패하면 그 상태로 되돌린다. 컴포넌트가 없는 오브젝트(새로 만든 것, 씬 로드, 복제)는 기록할 것이 없다.
         vector<uint8>  previousBytes;
         ObjectIdentity previousIdentity;
         if ( context._bRestorePreviousOnFailure && pGameObject->getComponents().empty() == false )
@@ -341,7 +341,7 @@ namespace sw
         const bool                                bLoaded = deserializeState( version, serializeContext );
         if ( bLoaded )
         {
-            // 상태에 적힌 이름 — 매니저가 유일하게 바꾸기(`finishLoad`) 전에 잡는다. 같은 묶음의 이름만 남은 참조가 이 이름으로 찾는다.
+            // 상태에 적힌 이름이다. 매니저가 유일하게 바꾸기(`finishLoad`) 전에 잡는다. 같은 배치의 이름만 남은 참조가 이 이름으로 찾는다.
             const hashed_string savedName = pGameObject->getName();
             ObjectStateSerializerInternal::finishLoad( pGameObject, oldName );
             const uint64 savedID = ObjectStateSerializerInternal::resolveSavedID( context );
@@ -351,7 +351,7 @@ namespace sw
             }
             else
             {
-                // 혼자 읽는 상태도 같은 규칙으로 잇는다 — 같은 실행의 상태라 다른 오브젝트는 매니저의 런타임 id 로 찾는다.
+                // 혼자 읽는 상태도 같은 규칙으로 연결한다. 같은 실행의 상태라 다른 오브젝트는 매니저의 런타임 id 로 찾는다.
                 ObjectStateBatch single( ObjectIDSpace::Live );
                 single.addLoadedState( pGameObject, savedID, savedName, context._bExternalParentAllowed );
                 single.finish();
@@ -409,7 +409,7 @@ namespace sw
 
         BinaryStreamWriter writer( outBuffer );
 
-        // 부모는 따로 적지 않는다 — 씬 컴포넌트의 부착 필드(`_attachOwnerID` · `_attachComponent`)로 상태 안에 든다.
+        // 부모는 따로 적지 않는다. 씬 컴포넌트의 부착 필드(`_attachOwnerID`, `_attachComponent`)로 상태 안에 들어 있다.
         // 본문 크기를 앞에 둔다. 세이브 게임은 오브젝트를 이어 붙여 놓고 하나씩 끊어 읽는다.
         const size_t sizeHeaderPos = writer.getOffset();
         writer.write( static_cast<uint32>( 0 ) );
@@ -472,7 +472,7 @@ namespace sw
         {
             if ( pComp == nullptr || pComp->isPendingDestroy() )
                 continue;
-            // 타입 이름으로 적는다 — 복원할 때(`takeRestoredComponentID`) 새 컴포넌트의 타입 이름과 견준다. 이름을 적으면 이름을 단
+            // 타입 이름으로 적는다. 복원할 때(`takeRestoredComponentID`) 새 컴포넌트의 타입 이름과 비교한다. 이름을 적으면 이름을 붙인
             // 컴포넌트는 id 를 되찾지 못해 되돌리기 뒤 핸들이 끊긴다.
             identity._listComponent.push_back( ObjectIdentity::ComponentEntry{ pComp->getTypeName(), pComp->getComponentID() } );
         }
@@ -502,7 +502,7 @@ namespace sw
         if ( reader.read( outIdentity._objectID ) == false || reader.read( componentCount ) == false )
             return 0;
 
-        // 항목 하나는 적어도 이름 길이(4) + ID(8) 바이트다. 남은 바이트로 담을 수 없는 개수는 망가진 데이터다.
+        // 항목 하나는 적어도 이름 길이(4)와 ID(8)를 합친 바이트다. 남은 바이트로 담을 수 없는 개수는 망가진 데이터다.
         // 그대로 `reserve` 하면 그 한 줄이 먼저 터진다(`GameInstanceBase::deserializeSceneObjects` 가 같은 이유로 같은 계산을 한다).
         constexpr size_t kMinBytesPerEntry = sizeof( uint32 ) + sizeof( uint64 );
         if ( componentCount > ( size - reader.getOffset() ) / kMinBytesPerEntry )
@@ -528,7 +528,7 @@ namespace sw
     }
 
     // ======================================================================
-    // ObjectStateBatch: 모두 읽은 뒤 부착을 한 번에 잇는다
+    // ObjectStateBatch: 모두 읽은 뒤 부착을 한 번에 연결한다
     // ======================================================================
 
     ObjectStateBatch::ObjectStateBatch( ObjectIDSpace idSpace )
@@ -542,7 +542,7 @@ namespace sw
 
     ObjectStateBatch::~ObjectStateBatch()
     {
-        // 적어 놓고 잇지 않으면 그 오브젝트들은 루트로 남는다 — 부른 쪽이 `finish` 를 빠뜨렸다.
+        // 기록만 하고 연결하지 않으면 그 오브젝트들은 루트로 남는다. 부른 쪽이 `finish` 를 빠뜨린 것이다.
         SW_ASSERT( _listEntry.empty() || _bFinished );
     }
 
@@ -564,7 +564,7 @@ namespace sw
 
         const uint32 entryIndex = static_cast<uint32>( _listEntry.size() );
         _listEntry.push_back( Entry{ pObject, savedID, savedName, bExternalParentAllowed, bLoadedState } );
-        // 같은 id · 이름이 둘이면 먼저 적힌 것이다(문서에 이름이 겹친 엔티티가 있을 수 있다).
+        // 같은 id 나 이름이 둘이면 먼저 기록된 것을 쓴다(문서에 이름이 겹친 엔티티가 있을 수 있다).
         if ( savedID != 0 )
             _mapSavedIDToObject.emplace( savedID, pObject );
         if ( savedName.empty() == false )
@@ -577,14 +577,14 @@ namespace sw
             return;
         _bFinished = true;
 
-        // 1) 이름. 읽는 동안 다른 오브젝트가 잠시 쥐고 있던 저장된 이름이 이제 비었으면 되찾는다 — 플레이 중 이름을 서로 바꾼 오브젝트를
-        //    되돌리면 앞의 것이 뒤의 것 이름을 잠시 쥐고 있어, 이것이 없으면 앞의 것이 영영 `Left_2` 로 남는다. 아직 쥔 오브젝트가 있으면 그대로다.
+        // 1) 이름. 읽는 동안 다른 오브젝트가 잠시 차지하고 있던 저장된 이름이 이제 비었으면 되찾는다. 플레이 중 이름을 서로 바꾼 오브젝트를
+        //    되돌리면 앞의 것이 뒤의 것 이름을 잠시 차지하고 있어서, 이 단계가 없으면 앞의 것이 영영 `Left_2` 로 남는다. 아직 차지한 오브젝트가 있으면 그대로 둔다.
         for ( const Entry& entry : _listEntry )
         {
             GameObject* pObject = entry._pObject;
             if ( pObject->getManager() == nullptr || pObject->isPendingDestroy() || entry._savedName.empty() || pObject->getName() == entry._savedName )
                 continue;
-            pObject->setName( entry._savedName ); // 아직 다른 오브젝트가 쥐고 있으면 매니저가 지금 이름(번호)을 그대로 둔다
+            pObject->setName( entry._savedName ); // 아직 다른 오브젝트가 사용 중이면 매니저가 현재 이름(번호)을 그대로 둔다
         }
 
         // 2) 부착. 모든 오브젝트가 생긴 뒤라 자식이 부모보다 먼저 읽혔어도 부모를 찾는다.
@@ -593,14 +593,14 @@ namespace sw
             resolveEntry( entry );
         }
 
-        // 3) 핸들 PROPERTY. 부착과 같은 규칙으로 저장된 id 를 이 실행의 오브젝트로 옮긴다 — 가리키던 오브젝트가 뒤에 읽혔어도 찾는다.
+        // 3) 핸들 PROPERTY. 부착과 같은 규칙으로 저장된 id 를 이 실행의 오브젝트로 옮긴다. 가리키던 오브젝트가 나중에 읽혔어도 찾는다.
         for ( const Entry& entry : _listEntry )
         {
             resolveObjectReferences( entry );
         }
 
-        // 4) 값을 다 읽고 이었다 — 컴포넌트가 값을 자원으로 바꾼다(`Component::onPostLoad`, 편집 중에도). 부착 · 핸들이 풀린 뒤라 그것을 읽어도
-        //    이 실행의 오브젝트다(언리얼 `PostLoad` 도 패키지의 오브젝트를 모두 읽고 이은 뒤에 온다). 상태 없이 지은 항목(프리팹 스폰)은 스폰이 이미 불렀다.
+        // 4) 값을 다 읽고 연결했다. 컴포넌트가 값을 리소스로 바꾼다(`Component::onPostLoad`, 편집 중에도). 부착과 핸들이 해석된 뒤라 그것을 읽어도
+        //    이 실행의 오브젝트다(언리얼의 `PostLoad` 도 패키지의 오브젝트를 모두 읽고 연결한 뒤에 온다). 상태 없이 만든 항목(프리팹 스폰)은 스폰이 이미 불렀다.
         for ( const Entry& entry : _listEntry )
         {
             if ( entry._bLoadedState == false || entry._pObject->isPendingDestroy() )
@@ -612,7 +612,7 @@ namespace sw
             }
         }
 
-        // 5) 읽은 값을 검증한다(`Validate = fn`) — 결과는 `ValidationIssueLog` 로 간다(맵 검사). 값을 고치거나 로드를 멈추지 않는다.
+        // 5) 읽은 값을 검증한다(`Validate = fn`). 결과는 `ValidationIssueLog` 로 간다(맵 검사). 값을 고치거나 로드를 멈추지 않는다.
         for ( const Entry& entry : _listEntry )
         {
             if ( entry._bLoadedState == true && entry._pObject->isPendingDestroy() == false )
@@ -634,10 +634,10 @@ namespace sw
                 continue;
             for ( const PropertyInfo& prop : pTypeInfo->getPropertiesWithBase() )
             {
-                // 읽지 않은 칸(Transient)은 지금 실행의 값이다 — 옮기면 살아 있는 참조를 망친다.
+                // 읽지 않은 필드(Transient)는 현재 실행의 값이다. 옮기면 살아 있는 참조를 망친다.
                 if ( prop._metadata._bTransient == SW_TRUE )
                     continue;
-                // 같은 실행의 상태면 런타임 id 그대로가 맞다. 파일 id 는 이 실행에서 다른 오브젝트일 수 있으므로 옮기지 못하는 자리는 비우고 알린다.
+                // 같은 실행의 상태면 런타임 id 그대로가 맞다. 파일 id 는 이 실행에서 다른 오브젝트일 수 있으므로 옮기지 못하는 위치는 비우고 알린다.
                 const bool bComponentHandle = ObjectStateSerializerInternal::holdsComponentHandle( prop );
                 if ( bComponentHandle == false && prop._bIsContainer == SW_FALSE )
                 {
@@ -679,7 +679,7 @@ namespace sw
             const size_t elementCount = pSequence->getSize( pContainer );
             if ( shape._elementNested != nullptr )
             {
-                // 원소가 곧 정렬 키인 set 은 원소를 제자리에서 고칠 수 없다 — 컨테이너를 원소로 든 set 은 옮기지 못한다.
+                // 원소가 곧 정렬 키인 set 은 원소를 제자리에서 고칠 수 없다. 컨테이너를 원소로 가진 set 은 옮기지 못한다.
                 if ( pSequence->allowsInPlaceElementWrite() == false )
                     return ObjectStateSerializerInternal::holdsObjectHandle( *shape._elementNested ) == false;
                 for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
@@ -700,7 +700,7 @@ namespace sw
                 }
                 return true;
             }
-            // set — 옮긴 값으로 빼고 다시 넣는다(자리는 컨테이너가 정한다).
+            // set 은 옮긴 값으로 빼고 다시 넣는다(위치는 컨테이너가 정한다).
             vector<GameObjectHandle> listHandle;
             listHandle.reserve( elementCount );
             for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
@@ -723,7 +723,7 @@ namespace sw
         IMapContainerWrapper* pMap = shape._wrapper->asMap();
         if ( pMap == nullptr )
             return true;
-        // 값부터 제자리에서 옮긴다(핸들 값 · 중첩 컨테이너).
+        // 값부터 제자리에서 옮긴다(핸들 값, 중첩 컨테이너).
         bool bValueRemapped = true;
         if ( shape._elementNested != nullptr || shape._elementTypeName == handleTypeName )
         {
@@ -738,7 +738,7 @@ namespace sw
         if ( bValueRemapped == false || shape._keyTypeName != handleTypeName )
             return bValueRemapped;
 
-        // 키는 정렬 · 해시 자리라 제자리에서 고칠 수 없다 — 값을 밖에 복사해 두고, 비운 뒤 옮긴 키로 다시 넣는다.
+        // 키는 정렬과 해시의 기준이라 제자리에서 고칠 수 없다. 값을 밖에 복사해 두고, 비운 뒤 옮긴 키로 다시 넣는다.
         constexpr size_t kAlignment  = 64;
         const size_t     valueStride = ( pMap->getValueSize() + kAlignment - 1 ) / kAlignment * kAlignment;
         const size_t     entryCount  = pMap->getSize( pContainer );
@@ -780,10 +780,10 @@ namespace sw
         const GameObject* pReferent = findBySavedID( savedHandle.objectID() );
         if ( pReferent != nullptr )
             return pReferent->getHandle();
-        // 같은 실행의 상태면 묶음 밖의 런타임 id 그대로다 — 그 오브젝트가 살아 있으면 그것이고, 사라졌으면 id 가 다시 쓰이지 않으므로 아무것도 아니다.
+        // 같은 실행의 상태면 배치 밖의 런타임 id 그대로다. 그 오브젝트가 살아 있으면 그것이고, 사라졌으면 id 가 다시 쓰이지 않으므로 아무것도 아니다.
         if ( _idSpace == ObjectIDSpace::Live )
             return savedHandle;
-        // 파일 id 가 이 묶음에 없다 — 이 실행에서 같은 값은 다른 오브젝트다(언리얼의 Instigator 처럼 파일 밖을 가리키는 런타임 참조는 남지 않는다).
+        // 파일 id 가 이 배치에 없다. 이 실행에서 같은 값은 다른 오브젝트다(언리얼의 Instigator 처럼 파일 밖을 가리키는 런타임 참조는 남지 않는다).
         return GameObjectHandle{};
     }
 
@@ -803,11 +803,11 @@ namespace sw
     {
         if ( ownerID == 0 )
         {
-            // 소유자 칸이 비었으면 자기다(같은 오브젝트 안의 부착은 소유자 칸을 비워 쓴다).
+            // 소유자 필드가 비었으면 자기 자신이다(같은 오브젝트 안의 부착은 소유자 필드를 비워 쓴다).
             if ( ownerName.empty() )
                 return entry._pObject;
-            // 이름만 남은 다른 오브젝트의 부모다 — 찾지 못한 참조를 다른 id 공간으로 옮겨 적으면 id 를 비운다(`SceneComponent::syncAttachSerializeFields`).
-            // **이 묶음의 저장된 이름**에서만 찾는다 — 매니저에서 찾으면 유일하게 바뀐 이름 때문에 다른 오브젝트에 붙는다.
+            // 이름만 남은 다른 오브젝트의 부모다. 찾지 못한 참조를 다른 id 공간으로 옮겨 적으면 id 를 비운다(`SceneComponent::syncAttachSerializeFields`).
+            // **이 배치의 저장된 이름**에서만 찾는다. 매니저에서 찾으면 유일하게 바뀐 이름 때문에 다른 오브젝트에 붙는다.
             return findBySavedName( ownerName );
         }
         if ( ownerID == entry._savedID )
@@ -816,7 +816,7 @@ namespace sw
         GameObject* pOwner = findBySavedID( ownerID );
         if ( pOwner != nullptr )
             return pOwner;
-        // 같은 실행의 상태면 묶음 밖(이미 살아 있는 부모 — 되돌리기 · 복제)도 런타임 id 로 찾는다. 파일 id 는 이 실행의 id 와 우연히 같을 수 있어 찾지 않는다.
+        // 같은 실행의 상태면 배치 밖(이미 살아 있는 부모, 되돌리기, 복제)도 런타임 id 로 찾는다. 파일 id 는 이 실행의 id 와 우연히 같을 수 있어 찾지 않는다.
         if ( _idSpace == ObjectIDSpace::Live && entry._pObject->getManager() != nullptr )
             return entry._pObject->getManager()->findGameObjectByID( ownerID );
         return nullptr;
@@ -842,7 +842,7 @@ namespace sw
             const bool  bExternal = pOwner != pObject;
             if ( bExternal && entry._bExternalParentAllowed == false )
             {
-                // 프리팹 루트에는 부모가 없다 — 프리팹을 쓰는 쪽은 다른 오브젝트로의 부착을 싣지 않는다(`ObjectSaveOptions::_bOmitExternalParent`).
+                // 프리팹 루트에는 부모가 없다. 프리팹을 쓰는 쪽은 다른 오브젝트로의 부착을 싣지 않는다(`ObjectSaveOptions::_bOmitExternalParent`).
                 SW_LOG_WARNING( "Prefab state of '%#' carries a parent reference to '%#' (id %#, %#) - a prefab root has no parent, the reference is dropped",
                                 pObject->getName().c_str(), reference._ownerName.empty() ? "?" : reference._ownerName.c_str(), reference._ownerID,
                                 reference._componentKey.c_str() );
@@ -854,7 +854,7 @@ namespace sw
             if ( pParent != nullptr && pParent != pScene && pScene->attachToComponent( pParent ) )
                 continue;
 
-            // 찾지 못했다 — 지우지 않고 남긴다. 다음 저장이 그대로 다시 쓰고, 부모가 돌아오면(프리팹을 되찾았다) 다음 로드가 붙인다.
+            // 찾지 못했다. 지우지 않고 남긴다. 다음 저장이 그대로 다시 쓰고, 부모가 돌아오면(프리팹을 되찾은 경우) 다음 로드가 붙인다.
             SW_LOG_WARNING( "'%#' keeps its parent reference to '%#' (id %#, %#) - the parent is not loaded", pObject->getName().c_str(),
                             reference._ownerName.empty() ? "self" : reference._ownerName.c_str(), reference._ownerID, reference._componentKey.c_str() );
             pScene->keepUnresolvedAttach( reference );

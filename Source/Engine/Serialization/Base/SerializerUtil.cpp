@@ -34,7 +34,7 @@ namespace sw
         if ( versionSource == SchemaVersionSource::Payload )
             outVersion = 0;
 
-        // 옛 TypeInfo 가 주어지면 그쪽으로도 한 벌 읽어 둔다. migrate 가 옛 필드를 그대로 보게 된다.
+        // 옛 TypeInfo 가 주어지면 그쪽으로도 한 벌 읽어 둔다. migrate 가 옛 필드를 그대로 볼 수 있게 하려는 것이다.
         if ( pLegacyTypeInfo != nullptr && pLegacyTypeInfo->_size > 0 )
         {
             uint32 legacyVersion{ 0 };
@@ -52,7 +52,7 @@ namespace sw
         if ( versionSource == SchemaVersionSource::Payload && ( pLegacyPtr == nullptr || softVersion != 0 ) )
             outVersion = softVersion;
 
-        // 포맷마다 갈리는 한 줄이다 — 텍스트는 orphan 을 버리고 통과, 바이너리는 이관 함수 없이는 거절(`SchemaOrphanPolicy` 의 계약).
+        // 포맷마다 갈리는 한 줄이다. 텍스트는 orphan 을 버리고 통과시키고, 바이너리는 이관 함수 없이는 거절한다(`SchemaOrphanPolicy` 의 계약).
         const bool bOrphanBlocks = ( orphanPolicy == SchemaOrphanPolicy::Reject ) && ( listOrphan.empty() == false );
         const bool bNeedsMigrate = ( outVersion != currentVersion ) || bOrphanBlocks;
 
@@ -99,8 +99,8 @@ namespace sw
             }
 
             /**
-             * @brief 열거자 항목 하나를 적습니다 — 이름 해시. 이름이 없으면(해시 0) 그 뒤에 int64 값을 잇습니다.
-             * @details 값으로 싣는 것은 이름이 없는 값 · 비트뿐입니다(이름이 없으니 정체성도 값 말고는 없다).
+             * @brief 열거자 항목 하나를 적습니다. 이름 해시를 적고, 이름이 없으면(해시 0) 그 뒤에 int64 값을 이어 적습니다.
+             * @details 값으로 싣는 것은 이름이 없는 값과 비트뿐이다(이름이 없으니 정체성도 값 말고는 없다).
              */
             static void appendEnumEntry( vector<uint8>& buffer, uint32 nameHash, int64 unnamedValue )
             {
@@ -111,8 +111,8 @@ namespace sw
 
             /**
              * @brief enum 값 하나를 열거자 정체성으로 적습니다(`SerializerUtil::serializeValueBinary` 설명의 형식).
-             * @details 비트플래그의 이름은 글(`toStringFlags`)과 같은 규칙으로 모으고(`EnumInfo::collectFlagNames`) 해시 오름차순으로 적습니다 — 같은 값은
-             *          같은 바이트라 바이트 비교(`arePropertyValuesEqual` · diff)가 맞습니다. 이름의 해시가 0 이면(사실상 없다) 값 전체를 값으로 싣습니다.
+             * @details 비트플래그의 이름은 텍스트(`toStringFlags`)와 같은 규칙으로 모으고(`EnumInfo::collectFlagNames`) 해시 오름차순으로 적는다. 같은 값은
+             *          같은 바이트라 바이트 비교(`arePropertyValuesEqual`, diff)가 맞는다. 이름의 해시가 0 이면(사실상 없다) 값 전체를 값으로 싣는다.
              */
             static void writeEnumBinary( const EnumInfo& enumInfo, const void* pValuePtr, vector<uint8>& buffer )
             {
@@ -149,7 +149,7 @@ namespace sw
                     appendEnumEntry( buffer, 0, unnamedBits );
             }
 
-            /** @brief 모르는 열거자 이름을 알립니다 — enum · 이름마다 한 번(같은 세이브의 오브젝트 천 개가 천 줄을 쓰지 않게). */
+            /** @brief 모르는 열거자 이름을 알립니다. enum 과 이름마다 한 번만 알립니다(같은 세이브의 오브젝트 천 개가 천 줄을 쓰지 않게 하려는 것입니다). */
             static void warnUnknownEnumeratorOnce( const EnumInfo& enumInfo, uint32 nameHash )
             {
                 static mutex                 s_mutex;
@@ -181,13 +181,13 @@ namespace sw
 
             /**
              * @brief enum 값 하나를 열거자 정체성(이름 해시)으로 읽습니다.
-             * @return 바이트가 모자라면 false. 모르는 열거자 이름이면 **값은 그대로 두고** false 입니다(바이트는 끝까지 읽었다 — XML 의 모르는 이름과 같은 칸
-             *         실패).
+             * @return 바이트가 모자라면 false 입니다. 모르는 열거자 이름이면 **값은 그대로 두고** false 입니다(바이트는 끝까지 읽었으며, XML 의 모르는 이름과 같은 필드
+             *         실패입니다).
              */
             [[nodiscard]] static bool readEnumBinary( const EnumInfo& enumInfo, void* pValuePtr, const uint8* pData, size_t dataSize, size_t& inoutOffset,
                                                       BinaryWireVersion wireVersion )
             {
-                (void)wireVersion; // 읽는 판은 지금 판 하나다(`BinaryWireVersion`) — 판이 늘면 여기서 갈린다
+                (void)wireVersion; // 현재 읽는 버전은 하나뿐이다(`BinaryWireVersion`). 버전이 늘면 여기서 분기한다
                 int64 value{ 0 };
 
                 bool bKnown = true;
@@ -201,7 +201,7 @@ namespace sw
                     uint32 entryCount{ 0 };
                     if ( readUint32( pData, dataSize, inoutOffset, entryCount ) == false )
                         return false;
-                    // 항목은 적어도 4 바이트다 — 남은 바이트로 담을 수 없는 수는 망가진 스트림이다.
+                    // 항목은 적어도 4 바이트다. 남은 바이트로 담을 수 없는 수는 망가진 스트림이다.
                     if ( entryCount > ( dataSize - inoutOffset ) / sizeof( uint32 ) )
                         return false;
                     for ( uint32 entryIndex = 0; entryIndex < entryCount; ++entryIndex )
@@ -222,7 +222,7 @@ namespace sw
 
             /**
              * @brief uint32 길이 머리와 그 길이만큼의 본문을 건너뜁니다. 본문 시작은 `outBlockStart`, 길이는 `outBlockSize` 이고 오프셋은 본문 뒤로 옮깁니다.
-             * @return 머리나 본문이 버퍼를 넘으면 false 입니다. 구조체 · 텍스트 리더 값의 바이너리 읽기가 함께 씁니다.
+             * @return 머리나 본문이 버퍼를 넘으면 false 입니다. 구조체와 텍스트 리더 값의 바이너리 읽기가 함께 씁니다.
              */
             [[nodiscard]] static bool readSizedBlock( const uint8* pData, size_t dataSize, size_t& inoutOffset, size_t& outBlockStart, uint32& outBlockSize )
             {
@@ -239,14 +239,14 @@ namespace sw
             /**
              * @brief 다형 소유 포인터 원소 하나를 `[이름][본문크기][본문]` 으로 적습니다.
              *
-             * XML · JSON 은 태그 · 키 이름이 곧 런타임 타입이라 따로 적을 자리가 필요 없지만, 바이너리에는
-             * 그런 자리가 없어 이름을 값으로 싣습니다. **본문 크기를 같이 적는 이유는 모르는 타입을
+             * XML, JSON 은 태그와 키 이름이 곧 런타임 타입이라 따로 적을 위치가 필요 없지만, 바이너리에는
+             * 그런 위치가 없어 이름을 값으로 싣습니다. **본문 크기를 같이 적는 이유는 모르는 타입을
              * 건너뛰기 위해서입니다.** 없으면 낯선 컴포넌트 하나가 그 뒤 스트림을 통째로 어긋나게 합니다.
-             * 빈 이름은 빈 자리를 뜻합니다(원소 개수를 앞에서 이미 적었으므로 자리는 남겨야 합니다).
+             * 빈 이름은 빈 슬롯을 뜻합니다(원소 개수를 앞에서 이미 적었으므로 슬롯은 남겨야 합니다).
              */
             static void writeOwnedPointerBinary( const void* pObject, vector<uint8>& buffer, const SerializeContext& context )
             {
-                // 맡아 둔 원소(모르는 타입)는 읽은 이름 · 본문 그대로 다시 쓴다.
+                // 보관해 둔 원소(모르는 타입)는 읽은 이름과 본문 그대로 다시 쓴다.
                 SerializeContext::OpaqueElementView opaque{};
                 if ( context.queryOpaqueElement( pObject, opaque ) && opaque._format == SerializeContext::OpaqueFormat::Binary )
                 {
@@ -262,7 +262,7 @@ namespace sw
 
                 if ( pRuntimeType == nullptr )
                 {
-                    appendUint32( buffer, 0 ); // 이름 길이 0 = 빈 자리
+                    appendUint32( buffer, 0 ); // 이름 길이 0 은 빈 슬롯을 뜻한다
                     appendUint32( buffer, 0 ); // 본문 길이 0
                     return;
                 }
@@ -289,7 +289,7 @@ namespace sw
              * @brief `writeOwnedPointerBinary` 가 적은 원소 하나를 되읽습니다.
              *
              * 컨테이너에 넣는 것은 **팩토리가** 합니다(`createOwnedPointer` 가 소유자에 붙입니다).
-             * XML · JSON 도 같은 약속이라 여기서 `appendElement` 를 부르지 않습니다.
+             * XML, JSON 도 같은 약속이라 여기서 `appendElement` 를 부르지 않습니다.
              */
             [[nodiscard]] static bool readOwnedPointerBinary( const uint8* pData, size_t dataSize, size_t& inoutOffset, const SerializeContext& context )
             {
@@ -310,18 +310,18 @@ namespace sw
                     return false;
 
                 const size_t bodyStart = inoutOffset;
-                inoutOffset += bodySize; // 어떤 갈래로 빠지든 다음 원소 자리는 여기다.
+                inoutOffset += bodySize; // 어떤 경우로 빠지든 다음 원소 위치는 여기다.
 
                 if ( nameLen == 0 )
                     return true;
 
-                // 찾기만 한다 — 파일의 이름을 intern 하면 전역 표가 파일 크기만큼 는다(`hashed_string::findInterned`).
+                // 찾기만 한다. 파일의 이름을 intern 하면 전역 테이블이 파일 크기만큼 늘어난다(`hashed_string::findInterned`).
                 const hashed_string typeName = hashed_string::findInterned( typeNameText );
                 const TypeInfo*     pType    = typeName.empty() ? nullptr : engine::getTypeRegistry().findType( typeName );
                 void*               pObj     = ( pType != nullptr ) ? context.createOwnedPointer( typeName ) : nullptr;
                 if ( pObj == nullptr )
                 {
-                    // 모르는(만들 수 없는) 타입이다 — 이름 · 본문을 맡긴다(다음 저장이 그대로 다시 쓴다). 맡을 곳이 없으면 건너뛴다(위에서 이미 그만큼 밀어 두었다).
+                    // 모르는(만들 수 없는) 타입이다. 이름과 본문을 보관한다(다음 저장이 그대로 다시 쓴다). 보관할 곳이 없으면 건너뛴다(위에서 이미 그만큼 밀어 두었다).
                     SerializeContext::OpaqueElementView opaque{};
                     opaque._typeName  = typeNameText;
                     opaque._format    = SerializeContext::OpaqueFormat::Binary;
@@ -335,7 +335,7 @@ namespace sw
             }
 
             /**
-             * @brief 텍스트(JSON · XML)를 임시 인스턴스로 읽어 바이너리로 다시 씁니다. `deserializeText` 가 텍스트 형식을 고릅니다.
+             * @brief 텍스트(JSON, XML)를 임시 인스턴스로 읽어 바이너리로 다시 씁니다. `deserializeText` 가 텍스트 형식을 고릅니다.
              * @return 텍스트를 읽지 못하면 false 이고, 그때 `outBinary` 는 건드리지 않습니다.
              */
             template <typename DeserializeTextFunc>
@@ -371,7 +371,7 @@ namespace sw
                 return serializeText( scratch.get() );
             }
 
-            /** @brief 컨테이너를 바이너리로 적습니다 — 원소 수(uint32) 뒤에 원소, 맵은 항목마다 키 · 값. 소유 포인터 원소는 `[이름][본문크기][본문]` 입니다. */
+            /** @brief 컨테이너를 바이너리로 적습니다. 원소 수(uint32) 뒤에 원소를 적고, 맵은 항목마다 키와 값을 적습니다. 소유 포인터 원소는 `[이름][본문크기][본문]` 입니다. */
             class ContainerWriter final : public IContainerWriter
             {
             public:
@@ -391,7 +391,7 @@ namespace sw
                 void endNestedContainer( ContainerSlot ) override {}
                 void writeOwnedPointer( const void* pObject ) override { writeOwnedPointerBinary( pObject, _listBuffer, _context ); }
 
-                // 값 구조체도 값 하나의 길로 적는다 — 등록된 바이너리 핸들러가 구조체보다 먼저다(`serializeValueBinary` 의 순서).
+                // 값 구조체도 값 하나를 적는 경로로 적는다. 등록된 바이너리 핸들러가 구조체보다 먼저다(`serializeValueBinary` 의 순서).
                 void writeValueObject( const void* pValue, const hashed_string& typeName, const TypeInfo&, ContainerSlot ) override
                 {
                     SerializerUtil::serializeValueBinary( pValue, typeName, _listBuffer, _context );
@@ -407,7 +407,7 @@ namespace sw
                 const SerializeContext& _context;
             };
 
-            /** @brief 바이너리 컨테이너를 읽습니다. 신뢰할 수 없는 바이트의 경계 검사가 이 안에 있습니다(원소 수 · 값 · 소유 포인터 본문). */
+            /** @brief 바이너리 컨테이너를 읽습니다. 신뢰할 수 없는 바이트의 경계 검사가 이 안에 있습니다(원소 수, 값, 소유 포인터 본문). */
             class ContainerReader final : public IContainerReader
             {
             public:
@@ -450,7 +450,7 @@ namespace sw
                 ContainerReadResult readValueObject( void* pValue, const hashed_string& typeName, const TypeInfo&, ContainerSlot ) override { return readValue( pValue, typeName ); }
                 ContainerReadResult readScalar( void* pValue, const hashed_string& typeName, ContainerSlot ) override { return readValue( pValue, typeName ); }
 
-                // 바이너리는 원소 크기를 적지 않는다 — 넣을 칸이 없는 원소는 지나갈 수 없다.
+                // 바이너리는 원소 크기를 적지 않는다. 넣을 슬롯이 없는 원소는 지나갈 수 없다.
                 ContainerReadResult skipElement( size_t ) override { return ContainerReadResult::StreamBroken; }
 
             private:
@@ -459,7 +459,7 @@ namespace sw
                     uint32 count{ 0 };
                     if ( readUint32( _pData, _dataSize, *_pInOutOffset, count ) == false )
                         return ContainerReadResult::StreamBroken;
-                    // 원소마다 적어도 한 바이트다 — 남은 바이트보다 많은 원소 수는 거짓이다(손상된 개수 칸 하나로 큰 할당을 하지 않는다).
+                    // 원소마다 적어도 한 바이트다. 남은 바이트보다 많은 원소 수는 거짓이다(손상된 개수 필드 하나로 큰 할당을 하지 않는다).
                     if ( _dataSize - *_pInOutOffset < count )
                         return ContainerReadResult::StreamBroken;
                     _listOpenCount.push_back( count );
@@ -467,7 +467,7 @@ namespace sw
                     return ContainerReadResult::Read;
                 }
 
-                /** @brief 값 하나를 읽습니다. 모르는 열거자는 바이트를 끝까지 읽고 실패하므로 그 원소만 빼고(FieldFailed), 그 밖의 실패는 자리를 모릅니다. */
+                /** @brief 값 하나를 읽습니다. 모르는 열거자는 바이트를 끝까지 읽고 실패하므로 그 원소만 빼고(FieldFailed), 그 밖의 실패는 위치를 알 수 없습니다. */
                 ContainerReadResult readValue( void* pValue, const hashed_string& typeName ) const
                 {
                     const size_t valueStart = *_pInOutOffset;
@@ -509,7 +509,7 @@ namespace sw
         if ( context.findBinaryWriter( typeName ) != nullptr || context.findTextWriter( typeName ) != nullptr )
             return typeName;
 
-        // 없으면 리플렉션이 아는 원본 이름(`_name`)으로 한 번 더 물어본다. Alias · 옛 이름으로 들어온 경우다.
+        // 없으면 리플렉션이 아는 원본 이름(`_name`)으로 한 번 더 물어본다. Alias 나 옛 이름으로 들어온 경우다.
         TypeRegistry&   registry  = engine::getTypeRegistry();
         const TypeInfo* pTypeInfo = registry.findType( typeName );
         if ( pTypeInfo != nullptr && pTypeInfo->_name.empty() == false &&
@@ -548,7 +548,7 @@ namespace sw
         const EnumInfo* pEnumInfo = engine::getTypeRegistry().findEnum( typeName );
         if ( pEnumInfo != nullptr )
         {
-            // 값이 아니라 열거자 정체성(이름 해시)으로 싣는다 — 값으로 실으면 열거자 순서가 바뀔 때 세이브 · 스냅샷의 뜻이 바뀐다.
+            // 값이 아니라 열거자 정체성(이름 해시)으로 싣는다. 값으로 실으면 열거자 순서가 바뀔 때 세이브와 스냅샷의 뜻이 바뀐다.
             SerializerUtilInternal::writeEnumBinary( *pEnumInfo, pValuePtr, listBuffer );
             return;
         }
@@ -696,7 +696,7 @@ namespace sw
             string_view flagsText = valStr;
             if ( flagsText.size() >= 2 && flagsText.front() == '"' && flagsText.back() == '"' )
                 flagsText = flagsText.substr( 1, flagsText.size() - 2 );
-            // 모르는 이름이면 쓰지 않고 실패를 돌려준다(값은 그대로 — 대개 멤버 초기값). 읽는 쪽이 orphan 으로 남기거나 실패로 알린다.
+            // 모르는 이름이면 쓰지 않고 실패를 반환한다(값은 그대로이며 대개 멤버 초기값이다). 읽는 쪽이 orphan 으로 남기거나 실패로 알린다.
             int64 parsedValue{ 0 };
             if ( pEnumInfo->tryParseText( flagsText, parsedValue ) == false )
             {
@@ -814,8 +814,8 @@ namespace sw
     {
         if ( typeName.empty() )
             return false;
-        // 바이너리는 글 처리기로 물러나므로(`serializeValueBinary` 의 마지막 갈래) 글 처리기 짝이 있으면 세 형식 모두 된다. 바이너리 처리기만 있는
-        // 타입은 XML · JSON 에 "null" 로 나간다 — 실어 나르지 못한다.
+        // 바이너리는 텍스트 처리기로 물러나므로(`serializeValueBinary` 의 마지막 분기) 텍스트 처리기 짝이 있으면 세 형식 모두 된다. 바이너리 처리기만 있는
+        // 타입은 XML, JSON 에 "null" 로 나간다. 실어 나르지 못한다.
         const hashed_string resolved = resolveHandlerTypeName( typeName, context );
         if ( context.findTextWriter( resolved ) != nullptr && context.findTextReader( resolved ) != nullptr )
             return true;

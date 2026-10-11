@@ -20,7 +20,7 @@ namespace sw
     {
         struct ReflectionCoreInternal
         {
-            /** @brief `describeType` 의 인자 목록 — `타입 이름 = 기본값` 꼴입니다. */
+            /** @brief `describeType` 의 인자 목록입니다. `타입 이름 = 기본값` 형태입니다. */
             template <typename TBuilder>
             static void appendParameterList( TBuilder& out, const vector<FunctionParameterInfo>& listParameter )
             {
@@ -37,10 +37,10 @@ namespace sw
 
             /**
              * @brief 이름 해시가 같은데 값이 다른 열거자 둘을 찾습니다. 없으면 false 입니다.
-             * @details 바이너리는 enum 을 열거자 **이름 해시**로 싣는다(대소문자 무시). 같은 해시의 두 이름(`Red` · `RED`, 드물게 FNV 충돌)이 다른 값을
-             *          가리키면 저장된 데이터가 어느 쪽으로 읽힐지 정해지지 않는다 — 글 읽기도 대소문자를 무시하므로 같은 모호함이다.
-             *          같은 값을 가리키는 별칭은 괜찮다. 두 표를 다 본다 — 대소문자만 다른 두 이름은 intern 에서 한 이름이 되어 이름 → 값 표에는
-             *          하나만 남고(뒤의 값이 이긴다), 값 → 이름 표에서만 두 값이 같은 이름을 가리킨다.
+             * @details 바이너리는 enum 을 열거자 **이름 해시**로 싣는다(대소문자 무시). 같은 해시의 두 이름(`Red` 와 `RED`, 드물게 FNV 충돌)이 다른 값을
+             *          가리키면 저장된 데이터가 어느 쪽으로 읽힐지 정해지지 않는다. 텍스트 읽기도 대소문자를 무시하므로 같은 모호함이다.
+             *          같은 값을 가리키는 별칭은 괜찮다. 두 테이블을 모두 본다. 대소문자만 다른 두 이름은 intern 에서 한 이름이 되어 이름 → 값 테이블에는
+             *          하나만 남고(뒤의 값이 이긴다), 값 → 이름 테이블에서만 두 값이 같은 이름을 가리킨다.
              */
             [[nodiscard]] static bool tryFindNameHashClash( const EnumInfo& info, hashed_string& outFirstName, int64& outFirstValue, hashed_string& outSecondName,
                                                             int64& outSecondValue )
@@ -70,7 +70,7 @@ namespace sw
                 return false;
             }
 
-            /** @brief 조상 표에 적는 이름입니다. FQN 의 intern 인덱스, 없으면 짧은 이름의 인덱스입니다. 둘 다 없으면 None 입니다. */
+            /** @brief 조상 테이블에 적는 이름입니다. FQN 의 intern 인덱스이고, 없으면 짧은 이름의 인덱스입니다. 둘 다 없으면 None 입니다. */
             static uint32 canonicalNameIndex( const TypeInfo& type )
             {
                 constexpr PredefinedNameType kNone = PredefinedNameType::NameType_None;
@@ -79,15 +79,15 @@ namespace sw
 
             /**
              * @brief 두 TypeInfo 가 같은 타입을 말하는지 판단합니다. 포인터가 달라도 이름이 같으면 같은 타입입니다.
-             * @details 레지스트리는 FQN 하나당 항목 하나지만, 레지스트리 **밖**에 사본이 있을 수 있습니다
-             *          (테스트 목의 손으로 만든 `StaticType()` 이 자기 사본을 반환합니다). 포인터 걷기가
-             *          그 사본을 만나면 이름으로 한 번 더 봅니다. intern 인덱스 정수 비교 한 번입니다.
+             * @details 레지스트리는 FQN 하나당 항목 하나지만, 레지스트리 **밖**에 사본이 있을 수 있다
+             *          (테스트 목의 손으로 만든 `StaticType()` 이 자기 사본을 반환한다). 포인터를 따라가다가
+             *          그 사본을 만나면 이름으로 한 번 더 본다. intern 인덱스 정수 비교 한 번이다.
              */
             static bool isSameTypeName( const TypeInfo& lhs, const TypeInfo& rhs )
             {
-                // 걸음마다 부르는 자리라 intern 테이블은 만지지 않는다. `empty()` 는 길이를 보려고 테이블을
-                // 읽는다(걸음당 캐시 라인 둘). 인덱스가 None 이 아니면 이름이 있는 것으로 보고, 인덱스가
-                // 같을 때(사슬이 끝나는 적중)만 빈 이름을 걸러 낸다.
+                // 단계마다 부르는 곳이라 intern 테이블은 만지지 않는다. `empty()` 는 길이를 보려고 테이블을
+                // 읽는다(단계당 캐시 라인 둘). 인덱스가 None 이 아니면 이름이 있는 것으로 보고, 인덱스가
+                // 같을 때(체인이 끝나는 적중)만 빈 이름을 걸러 낸다.
                 constexpr PredefinedNameType kNone = PredefinedNameType::NameType_None;
                 if ( lhs._fullyQualifiedName.isPredefinedType( kNone ) == false )
                     return lhs._fullyQualifiedName == rhs._fullyQualifiedName && lhs._fullyQualifiedName.empty() == false;
@@ -96,7 +96,7 @@ namespace sw
 
             /**
              * @brief canonical FQN 의 네임스페이스를 alias 앞에 붙입니다.
-             * @details REFLECT(Alias=Foo) 는 리프 이름만 적으므로, registerClass 가 FQN · 리프를
+             * @details REFLECT(Alias=Foo) 는 리프 이름만 적으므로, registerClass 가 FQN 과 리프를
              *          모두 등록하는 것과 맞추려면 별칭도 FQN 형태를 함께 등록해야 합니다.
              * @return 네임스페이스가 없거나 alias 가 이미 한정되어 있으면 빈 문자열입니다.
              */
@@ -232,11 +232,11 @@ namespace sw
         _bIsBitField = SW_TRUE;
         _offset      = 0;
         _bitOffset   = 0;
-        _bitMask     = 0; // 못 찾으면 읽기 false · 쓰기 무시
+        _bitMask     = 0; // 못 찾으면 읽기는 false 이고 쓰기는 무시한다
         if ( pSetBit == nullptr || ownerSize == 0 )
             return false;
 
-        // 그 타입이 요구할 수 있는 어떤 정렬보다 넉넉하게 — 비트필드의 저장 단위(uint32 · uint64)를 통째로 읽고 쓰는 코드가 나온다.
+        // 그 타입이 요구할 수 있는 어떤 정렬보다 넉넉하게. 비트필드의 저장 단위(uint32, uint64)를 통째로 읽고 쓰는 코드가 나온다.
         constexpr size_t kAlignment = 64;
         uint8*           pZeroed    = static_cast<uint8*>( Memory::allocateAligned( ownerSize, kAlignment ) );
         if ( pZeroed == nullptr )
@@ -411,7 +411,7 @@ namespace sw
 
     void TypeInfo::clearInheritedProperties() const
     {
-        // 등록마다 모든 타입에 불린다(배치 동안 타입 수의 제곱) — 빈 것은 건드리지 않는다.
+        // 등록마다 모든 타입에 불린다(배치 동안 타입 수의 제곱). 빈 것은 건드리지 않는다.
         if ( _listPropertyWithBase.empty() == false )
             _listPropertyWithBase.clear();
         if ( _mapNameToPropertyWithBase.empty() == false )
@@ -524,11 +524,11 @@ namespace sw
             hashed_string{ PredefinedNameType::NameType_hashed_string },
         };
 
-        // 부모의 프로퍼티까지 본다. 자기 것만 보면 부모가 문자열 · 컨테이너를 든 타입도 통째 복사로 간다.
+        // 부모의 프로퍼티까지 본다. 자기 것만 보면 부모가 문자열이나 컨테이너를 가진 타입도 통째 복사로 간다.
         _bIsPODFastPath = SW_TRUE;
         for ( const PropertyInfo& prop : getPropertiesWithBase() )
         {
-            // 값이 객체 밖에 있는 프로퍼티는 객체를 통째로 복사해도 따라오지 않는다(그 자리를 찾는 칸 번호가 복사돼 두 객체가 한 자리를 나눠 쓴다).
+            // 값이 객체 밖에 있는 프로퍼티는 객체를 통째로 복사해도 따라오지 않는다(그 위치를 찾는 슬롯 번호가 복사돼 두 객체가 한 위치를 나눠 쓴다).
             if ( prop._bIsContainer == SW_TRUE || prop._containerKind != ContainerKind::None || prop.hasValueAccessor() )
             {
                 _bIsPODFastPath = SW_FALSE;
@@ -563,7 +563,7 @@ namespace sw
         if ( _bListPropertyWithBaseBuilt == SW_TRUE )
             return _listPropertyWithBase;
 
-        // **순환에서 멈춘다.** 이 타입에서 이미 짓는 중인데 다시 들어왔다는 것은 부모 체인이
+        // **순환에서 멈춘다.** 이 타입에서 이미 만드는 중인데 다시 들어왔다는 것은 부모 체인이
         // 돌아왔다는 뜻이다. 더 올라가면 스택이 넘친다. 자기 것만 반환하고 끊는다.
         if ( _bBuildingPropertyWithBase == SW_TRUE )
         {
@@ -599,7 +599,7 @@ namespace sw
                 _listPropertyWithBase.push_back( prop );
         }
 
-        // 이름 · 별칭 → 항목 맵을 목록과 함께 짓는다. `findPropertyInHierarchy` 가 단계마다 맵을 따로 보지 않도록.
+        // 이름과 별칭에서 항목으로 가는 맵을 목록과 함께 만든다. `findPropertyInHierarchy` 가 단계마다 맵을 따로 보지 않게 하려는 것이다.
         // 뒤의 항목(파생)이 앞(기반)을 덮는다.
         _mapNameToPropertyWithBase.clear();
         _mapNameToPropertyWithBase.reserve( _listPropertyWithBase.size() * 2 );
@@ -659,8 +659,8 @@ namespace sw
         else if ( stored._moduleName.empty() )
             stored._moduleName = hashed_string( constant::reflection::kDefaultModuleName );
 
-        // 타입 하나가 곧 TypeInfo 하나다. 짧은 이름 키는 복사본이 아니라 FQN 을 가리킨다 — 복사본을 두면
-        // `findType("sw::Foo")` 와 `findType("Foo")` 가 서로 다른 포인터를 돌려주고, `const TypeInfo*` 를 키로 쓰는 쪽이
+        // 타입 하나가 곧 TypeInfo 하나다. 짧은 이름 키는 복사본이 아니라 FQN 을 가리킨다. 복사본을 두면
+        // `findType("sw::Foo")` 와 `findType("Foo")` 가 서로 다른 포인터를 반환하고, `const TypeInfo*` 를 키로 쓰는 쪽이
         // 그 둘을 다른 타입으로 본다.
         const hashed_string canonicalKey =
             stored._fullyQualifiedName.empty() == false ? stored._fullyQualifiedName : stored._name;
@@ -674,8 +674,8 @@ namespace sw
         const hashed_string canonicalName = stored._name.empty() == false ? stored._name : stored._fullyQualifiedName;
         const hashed_string shortName     = stored._name; // 아래에서 `stored` 를 옮긴다
 
-        // **주소는 고정이다.** 같은 FQN 이 있으면(재등록 · 묘비) 그 객체에 덮어써 복원한다. 밖에서 든 포인터
-        // (`TypeLookupCache` · `_pParentType` · 컴포넌트 풀 키)가 모두 그대로 맞는다. 새 타입은 새 객체다.
+        // **주소는 고정이다.** 같은 FQN 이 있으면(재등록, 묘비) 그 객체에 덮어써 복원한다. 밖에서 가진 포인터
+        // (`TypeLookupCache`, `_pParentType`, 컴포넌트 풀 키)가 모두 그대로 맞는다. 새 타입은 새 객체다.
         // 캐시는 배치 끝(`populateLookupCaches`)이 단일 스레드에서 만든다.
         if ( existingIt != _mapFqnToClassType.end() )
         {
@@ -687,8 +687,8 @@ namespace sw
             _mapFqnToClassType.emplace( canonicalKey, make_unique<TypeInfo>( std::move( stored ) ) );
         }
         _mapHashToCanonicalName.insert_or_assign( canonicalKey.getHash(), canonicalName );
-        // 사슬이 바뀌었을 수 있다. 재등록은 부모를 바꿀 수 있고, 새 타입은 누군가의 비어 있던 부모일 수 있다.
-        // 조상 표와 부모에게서 복사해 온 프로퍼티 목록을 모두 비운다. 배치 끝의 populateLookupCaches 나 첫 조회가 다시 세운다.
+        // 체인이 바뀌었을 수 있다. 재등록은 부모를 바꿀 수 있고, 새 타입은 누군가의 비어 있던 부모일 수 있다.
+        // 조상 테이블과 부모에게서 복사해 온 프로퍼티 목록을 모두 비운다. 배치 끝의 populateLookupCaches 나 첫 조회가 다시 만든다.
         for ( const auto& [storedFqn, pStoredInfo] : _mapFqnToClassType )
         {
             (void)storedFqn;
@@ -698,7 +698,7 @@ namespace sw
         hashed_string shadowedFqn;
         if ( shortName.empty() == false && shortName != canonicalKey )
         {
-            // 짧은 이름이 이미 **다른 살아 있는** 타입을 가리키면 그 타입을 가린다. 씬 · 프리팹 · `addComponentByName` 은 짧은 이름으로
+            // 짧은 이름이 이미 **다른 살아 있는** 타입을 가리키면 그 타입을 가린다. 씬, 프리팹, `addComponentByName` 은 짧은 이름으로
             // 찾으므로 그 뒤로는 다른 타입이 만들어진다. 나중 것이 이기되 알린다.
             const auto previousIt = _mapAliasToFqn.find( shortName );
             if ( previousIt != _mapAliasToFqn.end() && previousIt->second != canonicalKey )
@@ -710,10 +710,10 @@ namespace sw
             _mapAliasToFqn.insert_or_assign( shortName, canonicalKey );
             _mapHashToCanonicalName.insert_or_assign( shortName.getHash(), canonicalName );
         }
-        // 표가 바뀌었으니 세대를 올린다. 적어 둔 빈 답(`TypeLookupCache` 의 미등록 · 풀지 못한 부모)을 다음 조회가 다시 찾는다.
+        // 테이블이 바뀌었으니 세대를 올린다. 기록해 둔 빈 결과(`TypeLookupCache` 의 미등록, 찾지 못한 부모)를 다음 조회가 다시 찾는다.
         gv_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
 
-        // 로그는 잠금 밖에서 — 리스너가 레지스트리를 다시 물어도 멈추지 않게.
+        // 로그는 잠금 밖에서 남긴다. 리스너가 레지스트리를 다시 물어도 멈추지 않게 하려는 것이다.
         lock.unlock();
         if ( shadowedFqn.empty() == false )
             SW_LOG_WARNING( "Reflected type name '%#' now means %# and no longer %# - short names must be unique (scenes, prefabs and "
@@ -730,7 +730,7 @@ namespace sw
         else if ( stored._moduleName.empty() )
             stored._moduleName = hashed_string( constant::reflection::kDefaultModuleName );
 
-        // 같은 FQN 이면 그 객체에 덮어쓴다(주소 고정 — 별칭 · 밖에서 든 포인터가 새 내용을 본다). 새 enum 은 새 객체다.
+        // 같은 FQN 이면 그 객체에 덮어쓴다(주소 고정이라 별칭과 밖에서 가진 포인터가 새 내용을 본다). 새 enum 은 새 객체다.
         unique_ptr<EnumInfo>& pOwned = _mapFqnToEnum[stored._fullyQualifiedName];
         if ( pOwned == nullptr )
             pOwned = make_unique<EnumInfo>( std::move( stored ) );
@@ -741,7 +741,7 @@ namespace sw
         hashed_string shadowedFqn;
         if ( pEnumInfo->_name.empty() == false && pEnumInfo->_name != pEnumInfo->_fullyQualifiedName )
         {
-            // 타입과 같은 규칙 — 짧은 이름이 다른 enum 을 가리키고 있었으면 알린다(에셋의 enum 필드는 짧은 이름으로 찾기도 한다).
+            // 타입과 같은 규칙이다. 짧은 이름이 다른 enum 을 가리키고 있었으면 알린다(에셋의 enum 필드는 짧은 이름으로 찾기도 한다).
             const auto previousIt = _mapNameToEnum.find( pEnumInfo->_name );
             if ( previousIt != _mapNameToEnum.end() && previousIt->second != pEnumInfo )
                 shadowedFqn = previousIt->second->_fullyQualifiedName;
@@ -797,7 +797,7 @@ namespace sw
         if ( pType == nullptr )
             return string( "TYPE '" ) + nameOrFqn.c_str() + "' is not registered (no REFLECT, its module is not loaded, or a typo)\n";
 
-        // 부모 사슬 — 기반부터 찍으려고 모은다. 풀리지 않는 부모 이름도 그대로 적는다(부모가 늦게 등록된 경우가 여기서 보인다).
+        // 부모 체인은 기반부터 찍으려고 모은다. 찾을 수 없는 부모 이름도 그대로 적는다(부모가 늦게 등록된 경우가 여기서 보인다).
         vector<const TypeInfo*> listChain;
         hashed_string           unresolvedParent;
         for ( const TypeInfo* pCurrent = pType; pCurrent != nullptr && listChain.size() < 64; )
@@ -895,7 +895,7 @@ namespace sw
         out.appendFormat( "ENUM %# (module %#, %# bytes, %#%#)\n", pEnum->_fullyQualifiedName.c_str(),
                           pEnum->_moduleName.empty() ? "?" : pEnum->_moduleName.c_str(), static_cast<uint32>( pEnum->_size ),
                           pEnum->_bIsSigned != SW_FALSE ? "signed" : "unsigned", pEnum->_bIsBitFlag != SW_FALSE ? ", Flags" : "" );
-        // 값 순으로 — 이름은 밀집 해시라 등록 순서가 남지 않는다.
+        // 값 순으로 정렬한다. 이름은 밀집 해시라 등록 순서가 남지 않는다.
         vector<pair<int64, const utf8*>> listEntry;
         for ( const auto& [value, name] : pEnum->_mapValueToName )
         {
@@ -934,18 +934,18 @@ namespace sw
         {
             if ( pType == nullptr )
                 continue;
-            // 부모 포인터부터 푼다. 아래 두 캐시가 부모를 따라가고, 캐스트의 핫패스는 이것만 본다.
+            // 부모 포인터부터 찾는다. 아래 두 캐시가 부모를 따라가고, 캐스트의 핫패스는 이것만 본다.
             pType->resolveParentType();
             pType->populateLookupCache();
             (void)pType->getPropertiesWithBase();
         }
-        // 부모 포인터가 **모두** 풀린 뒤에 조상 표를 세운다. 표는 사슬 끝까지 따라가므로 한 바퀴 뒤여야 한다.
+        // 부모 포인터가 **모두** 찾아진 뒤에 조상 테이블을 만든다. 테이블은 체인 끝까지 따라가므로 한 바퀴 뒤여야 한다.
         for ( const TypeInfo* pType : listType )
         {
             if ( pType != nullptr )
                 (void)pType->computeAncestorDisplay();
         }
-        // 지연 판정(세이브 옵트인 · 검증 함수 유무)도 여기서 한 번 — 로드 워커가 처음 물을 때 같은 바이트의 캐시 비트를 함께 쓰지 않게.
+        // 지연 판정(세이브 옵트인, 검증 함수 유무)도 여기서 한 번 처리한다. 로드 워커가 처음 물을 때 같은 바이트의 캐시 비트를 함께 쓰지 않게 하려는 것이다.
         for ( const TypeInfo* pType : listType )
         {
             if ( pType == nullptr )
@@ -961,20 +961,20 @@ namespace sw
         std::unique_lock<std::shared_mutex> lock{ _mutex };
         hashed_string                       hashModule( moduleName.data(), static_cast<uint32>( moduleName.size() ) );
 
-        // 지우지 않고 **묘비**를 세운다. 밖에서 든 포인터(`TypeLookupCache` 의 정적 칸 · 다른 모듈 타입의 부모 포인터)가
+        // 지우지 않고 **묘비**를 남긴다. 밖에서 가진 포인터(`TypeLookupCache` 의 정적 슬롯, 다른 모듈 타입의 부모 포인터)가
         // 허공을 가리키지 않도록 객체는 그 자리에 둔다. `findType` 은 해제된 타입을 nullptr 로 답하고, 같은 FQN 이
-        // 다시 올라오면 같은 객체를 복원한다.
+        // 다시 로드되면 같은 객체를 복원한다.
         for ( auto& [fqn, pInfo] : _mapFqnToClassType )
         {
             (void)fqn;
             if ( pInfo->_moduleName != hashModule )
                 continue;
-            // 내용은 지금 비운다. 모듈 코드를 가리키는 델리게이트를 모듈이 내려간 뒤에 파괴하면 안 된다.
+            // 내용은 지금 비운다. 모듈 코드를 가리키는 델리게이트를 모듈이 언로드된 뒤에 파괴하면 안 된다.
             pInfo->clearContent();
             pInfo->_bAlive.store( SW_FALSE, std::memory_order_release );
         }
 
-        // 사라진 타입을 가리키던 별칭도 같이 걷어낸다. 남겨두면 조회가 빈 항목을 타고 nullptr 를 낸다.
+        // 사라진 타입을 가리키던 별칭도 같이 정리한다. 남겨 두면 조회가 빈 항목을 따라가 nullptr 를 반환한다.
         for ( auto it = _mapAliasToFqn.begin(); it != _mapAliasToFqn.end(); )
         {
             const auto typeIt = _mapFqnToClassType.find( it->second );
@@ -984,7 +984,7 @@ namespace sw
                 ++it;
         }
 
-        // enum 은 이름만 걷는다. 객체는 `_mapFqnToEnum` 에 남는다(묘비) — 건넨 포인터가 허공을 가리키지 않고, 다시 오르면 그 자리에 덮어쓴다.
+        // enum 은 이름만 정리한다. 객체는 `_mapFqnToEnum` 에 남는다(묘비). 반환한 포인터가 허공을 가리키지 않고, 다시 로드되면 그 위치에 덮어쓴다.
         for ( auto it = _mapNameToEnum.begin(); it != _mapNameToEnum.end(); )
         {
             if ( it->second->_moduleName == hashModule )
@@ -1010,9 +1010,9 @@ namespace sw
             const hashed_string canonicalName = info._name.empty() == false ? info._name : info._fullyQualifiedName;
             _mapHashToCanonicalName.insert_or_assign( alias.getHash(), canonicalName );
         }
-        // 부모 포인터는 옮겨지지 않지만 **해제된 부모**를 가리킬 수 있다. 비워서 다음 조회가 이름으로 다시 풀게 한다
-        // (해제된 타입은 `findType` 이 nullptr 를 주므로 사슬은 거기서 끝난다). 조상 표도, 부모에게서 복사해 온 프로퍼티도 같이 비운다 —
-        // 그 사본의 접근자는 지금 내려가는 모듈의 코드를 가리킨다(모듈이 아직 살아 있는 지금 버려야 한다, `clearContent` 와 같은 이유).
+        // 부모 포인터는 옮겨지지 않지만 **해제된 부모**를 가리킬 수 있다. 비워서 다음 조회가 이름으로 다시 찾게 한다
+        // (해제된 타입은 `findType` 이 nullptr 를 반환하므로 체인은 거기서 끝난다). 조상 테이블도, 부모에게서 복사해 온 프로퍼티도 같이 비운다.
+        // 그 사본의 접근자는 지금 언로드되는 모듈의 코드를 가리킨다(모듈이 아직 살아 있는 지금 버려야 한다. `clearContent` 와 같은 이유다).
         for ( const auto& [fqn, pInfo] : _mapFqnToClassType )
         {
             (void)fqn;
@@ -1033,7 +1033,7 @@ namespace sw
 
         std::unique_lock<std::shared_mutex> lock{ _mutex };
 
-        // pCanonicalName 자체가 짧은 이름(=별칭)일 수 있으니 FQN 까지 한 번 더 따라간다.
+        // pCanonicalName 자체가 짧은 이름(별칭)일 수 있으므로 FQN 까지 한 번 더 따라간다.
         hashed_string canonicalKey{ pCanonicalName };
         const auto    directIt = _mapFqnToClassType.find( canonicalKey );
         if ( directIt == _mapFqnToClassType.end() || directIt->second->isAlive() == false )
@@ -1092,7 +1092,7 @@ namespace sw
     {
         std::shared_lock<std::shared_mutex> lock{ _mutex };
 
-        // 해제된 타입(모듈 해제 · 묘비)은 없는 것으로 답한다. 객체는 남아 있어도 이름 조회는 살아 있는 것만 낸다.
+        // 해제된 타입(모듈 해제, 묘비)은 없는 것으로 답한다. 객체는 남아 있어도 이름 조회는 살아 있는 것만 반환한다.
         const auto it = _mapFqnToClassType.find( nameOrFqn );
         if ( it != _mapFqnToClassType.end() )
             return it->second->isAlive() ? it->second.get() : nullptr;
@@ -1109,7 +1109,7 @@ namespace sw
 
     const TypeInfo* TypeLookupCache::findSlow( const hashed_string& fqn ) const
     {
-        // 레지스트리가 아직 없으면 캐시를 건드리지 않고 nullptr 를 낸다(다음 호출이 다시 본다).
+        // 레지스트리가 아직 없으면 캐시를 건드리지 않고 nullptr 를 반환한다(다음 호출이 다시 본다).
         if ( engine::areEngineServicesBound() == false )
             return nullptr;
         // 세대는 찾기 **전에** 읽는다. 찾는 사이 등록이 끼면 옛 세대가 남아 다음 호출이 다시 찾는다(그 반대는 없다).
@@ -1234,8 +1234,8 @@ namespace sw
         if ( pParent != nullptr || _parentFQN.empty() )
             return pParent;
 
-        // 풀지 못한 이름은 세대가 같은 동안 다시 찾지 않는다. 등록되지 않는 기반(`Component`)을 부모로 둔 타입은 모두
-        // 여기로 오므로 그때마다 레지스트리를 잠그고 찾지 않는다. 등록 · 해제가 세대를 올리면 한 번 더 찾는다.
+        // 찾지 못한 이름은 세대가 같은 동안 다시 찾지 않는다. 등록되지 않는 기반(`Component`)을 부모로 둔 타입은 모두
+        // 여기로 오므로 그때마다 레지스트리를 잠그고 찾지 않는다. 등록이나 해제가 세대를 올리면 한 번 더 찾는다.
         const uint32 generation = gv_typeTableGeneration.load( std::memory_order_acquire );
         if ( _parentMissGeneration.load( std::memory_order_acquire ) == generation )
             return nullptr;
@@ -1259,8 +1259,8 @@ namespace sw
     bool TypeInfo::isDerivedFrom( const hashed_string& targetFqn ) const
     {
         // **순환에서 멈춘다.** 걸음 수를 세는 것이 방문 목록보다 싸고(할당 없음), 체인은 보통 다섯을
-        // 넘지 않는다. 부모가 미등록이어도 `_parentFQN` 이 같으면 파생으로 본다 — 모듈이 아직 안
-        // 올라온 동안 이름으로 묻는 쪽(직렬화)이 그것에 기댄다.
+        // 넘지 않는다. 부모가 미등록이어도 `_parentFQN` 이 같으면 파생으로 본다. 모듈이 아직 로드되지
+        // 않은 동안 이름으로 묻는 쪽(직렬화)이 그것에 기댄다.
         const TypeInfo* pCurrent = this;
         for ( uint32 depth = 0; depth < constant::reflection::kMaxParentChainDepth && pCurrent != nullptr; ++depth )
         {
@@ -1277,8 +1277,8 @@ namespace sw
 
     bool TypeInfo::isDerivedFromSlow( const TypeInfo* pTarget ) const
     {
-        // 헤더의 인라인 버전이 nullptr · 자기 자신 · 양쪽 모두 표가 있는 경우를 걸렀다. 아직 세우지 않은 쪽은 여기서
-        // 세운다(배치 밖에서 등록된 타입 · 레지스트리 밖 사본 · 해제 뒤 첫 조회). 세울 수 없는 쪽은 아래 걷기가 답한다.
+        // 헤더의 인라인 버전이 nullptr, 자기 자신, 양쪽 모두 테이블이 있는 경우를 걸렀다. 아직 만들지 않은 쪽은 여기서
+        // 만든다(배치 밖에서 등록된 타입, 레지스트리 밖 사본, 해제 뒤 첫 조회). 만들 수 없는 쪽은 아래 순회가 답한다.
         uint8 selfDepth = _ancestorDepth.load( std::memory_order_acquire );
         if ( selfDepth == constant::reflection::kAncestorDepthUnknown && computeAncestorDisplay() )
             selfDepth = _ancestorDepth.load( std::memory_order_acquire );
@@ -1287,12 +1287,12 @@ namespace sw
             targetDepth = pTarget->_ancestorDepth.load( std::memory_order_acquire );
         if ( selfDepth < constant::reflection::kAncestorDisplayDepth && targetDepth < constant::reflection::kAncestorDisplayDepth )
         {
-            // pTarget 의 자기 칸이 곧 pTarget 의 이름이다 — 이름을 다시 계산하지 않는다.
+            // pTarget 의 자기 슬롯이 곧 pTarget 의 이름이다. 이름을 다시 계산하지 않는다.
             return targetDepth <= selfDepth && _arrAncestorNameIndex[targetDepth].load( std::memory_order_relaxed ) ==
                                                    pTarget->_arrAncestorNameIndex[targetDepth].load( std::memory_order_relaxed );
         }
 
-        // 표가 없는 쪽(이름 없음 · 순환 · 표보다 깊은 사슬)은 부모 포인터를 걷는다.
+        // 테이블이 없는 쪽(이름 없음, 순환, 테이블보다 깊은 체인)은 부모 포인터를 따라간다.
         const TypeInfo* pCurrent = this;
         for ( uint32 depth = 0; depth < constant::reflection::kMaxParentChainDepth && pCurrent != nullptr; ++depth )
         {
@@ -1329,9 +1329,9 @@ namespace sw
         constexpr uint32 kDepth = constant::reflection::kAncestorDisplayDepth;
         constexpr uint32 kNone  = static_cast<uint32>( PredefinedNameType::NameType_None );
 
-        // 자기부터 위로 이름을 모은다. 순환은 표 깊이에서 걸린다. **풀리지 않는 부모는 사슬의 끝이다.** `Component`
-        // 처럼 등록되지 않은 기반은 이름만 적혀 있으므로, 그 이름을 실패 캐스트마다 잠그고 레지스트리에서 찾지 않는다.
-        // 부모가 나중에 등록되면 registerClass 가 표를 모두 비우므로 그때 다시 이어진다.
+        // 자기부터 위로 이름을 모은다. 순환은 테이블 깊이에서 걸린다. **찾을 수 없는 부모는 체인의 끝이다.** `Component`
+        // 처럼 등록되지 않은 기반은 이름만 적혀 있으므로, 그 이름을 실패한 캐스트마다 잠그고 레지스트리에서 찾지 않는다.
+        // 부모가 나중에 등록되면 registerClass 가 테이블을 모두 비우므로 그때 다시 이어진다.
         uint32          arrChain[kDepth];
         uint32          chainCount = 0;
         const TypeInfo* pCurrent   = this;
@@ -1349,7 +1349,7 @@ namespace sw
             pCurrent = pCurrent->getParentType();
         }
 
-        // 루트가 0 번 칸이 되도록 뒤집어 적고, 깊이는 마지막에 publish 한다. 깊이를 본 쪽은 칸이 다 채워진 뒤에 보게 된다.
+        // 루트가 0 번 슬롯이 되도록 뒤집어 적고, 깊이는 마지막에 publish 한다. 깊이를 본 쪽은 슬롯이 다 채워진 뒤에 보게 된다.
         for ( uint32 index = 0; index < chainCount; ++index )
         {
             _arrAncestorNameIndex[index].store( arrChain[chainCount - 1 - index], std::memory_order_relaxed );
@@ -1400,12 +1400,12 @@ namespace sw
 
     const PropertyInfo* TypeInfo::findPropertyInHierarchy( const hashed_string& propNameOrAlias ) const
     {
-        // 부모가 없거나(또는 순환으로 자기 것만 돌려주는 경우) 자기 목록만 본다.
+        // 부모가 없거나(또는 순환으로 자기 것만 반환하는 경우) 자기 목록만 본다.
         const vector<PropertyInfo>& listWithBase = getPropertiesWithBase();
         if ( &listWithBase == &_listProperty )
             return findProperty( propNameOrAlias );
 
-        // 작으면 선형으로 찾는다. 뒤(파생)부터 보아 병합 규칙(파생이 이긴다)과 같은 답을 낸다.
+        // 작으면 선형으로 찾는다. 뒤(파생)부터 보아 병합 규칙(파생이 이긴다)과 같은 결과를 낸다.
         if ( listWithBase.size() <= constant::reflection::kLinearSearchThreshold )
         {
             for ( size_t index = listWithBase.size(); index > 0; --index )

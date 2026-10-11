@@ -20,27 +20,27 @@ namespace sw
         {
             /**
              * @brief 프로퍼티 중복 검사를 **비트마스크로 할 수 있는 한계**입니다. `uint64` 의 비트 수입니다.
-             * @details 이보다 많으면 해시 집합으로 넘어갑니다. 엄격 · 소프트 두 역직렬화 경로가 **같은 값을
-             *          써야 합니다.** 한쪽만 바꾸면 그 경로만 다른 자료구조로 중복을 세게 되고, 프로퍼티가
-             *          64개 언저리인 타입에서만 갈리는 재현하기 어려운 차이가 됩니다.
+             * @details 이보다 많으면 해시 집합으로 넘어간다. 엄격 역직렬화와 소프트 역직렬화 경로가 **같은 값을
+             *          써야 한다.** 한쪽만 바꾸면 그 경로만 다른 자료구조로 중복을 세게 되고, 프로퍼티가
+             *          64개 언저리인 타입에서만 갈리는 재현하기 어려운 차이가 된다.
              */
             static constexpr size_t kFastPropBitmaskThreshold = 64;
 
             /**
-             * @brief 태그 스트림 머리(uint32)의 짜임입니다 — 아래 24비트는 프로퍼티 수, 위 8비트는 값 인코딩의 판(`BinaryWireVersion`).
-             * @details 위 8비트가 지금 판이 아니면 읽지 않습니다(판이 없던 스트림은 0 이다 — 프로퍼티가 1600만 개인 타입은 없다). 머리는 스트림마다 있어
-             *          중첩 구조체 · 소유 포인터 본문도 제 판을 말합니다. 판을 올리는 변경은 이 자리 하나만 고치면 모든 바이너리 길(세이브 · 스냅샷 · 쿠킹 씬 ·
-             *          복사 · RPC)에 실립니다.
+             * @brief 태그 스트림 머리(uint32)의 구성입니다. 아래 24비트는 프로퍼티 수, 위 8비트는 값 인코딩의 버전(`BinaryWireVersion`)입니다.
+             * @details 위 8비트가 현재 버전이 아니면 읽지 않는다(버전이 없던 스트림은 0 이다. 프로퍼티가 1600만 개인 타입은 없다). 머리는 스트림마다 있어
+             *          중첩 구조체와 소유 포인터 본문도 자기 버전을 말한다. 버전을 올리는 변경은 이 위치 하나만 고치면 모든 바이너리 경로(세이브, 스냅샷, 쿠킹 씬,
+             *          복사, RPC)에 반영된다.
              */
             static constexpr uint32 kTaggedVersionShift = 24;
             static constexpr uint32 kTaggedCountMask    = ( 1u << kTaggedVersionShift ) - 1;
-            /** @brief 컴팩트 스트림 모드 바이트의 짜임입니다 — 아래 4비트는 모드(밀집 · 희소), 위 4비트는 판. 판이 없던 스트림은 위가 0 이다. */
+            /** @brief 컴팩트 스트림 모드 바이트의 구성입니다. 아래 4비트는 모드(밀집, 희소), 위 4비트는 버전입니다. 버전이 없던 스트림은 위가 0 입니다. */
             static constexpr uint8 kCompactVersionShift = 4;
             static constexpr uint8 kCompactModeMask     = ( 1u << kCompactVersionShift ) - 1;
 
             /**
-             * @brief 이 빌드가 읽을 수 있는 판인지 봅니다 — 지금 판 하나뿐입니다. 더 높은 판은 앞선 빌드가 쓴 것이고, 낮은 판을 올리는 단계는 없습니다
-             *        (값을 다른 뜻으로 읽게 된다).
+             * @brief 이 빌드가 읽을 수 있는 버전인지 확인합니다. 현재 버전 하나뿐입니다. 더 높은 버전은 앞선 빌드가 쓴 것이고, 낮은 버전을 올리는 단계는 없습니다
+             *        (값을 다른 뜻으로 읽게 되기 때문입니다).
              */
             static bool isReadableWireVersion( uint32 wireVersion )
             {
@@ -49,9 +49,9 @@ namespace sw
 
             /**
              * @brief 프로퍼티 하나의 페이로드를 인스턴스에 씁니다. 실패하면 false 입니다.
-             * @details 비트필드 · 컨테이너 · 그 외 값의 세 분기로 나눕니다. 아카이브 경로 둘이 함께 씁니다 — 따로 들면
-             *          분기를 하나 더할 때(예: 새 컨테이너 모양) 한쪽만 고치기 쉽고,
-             *          그러면 **그 경로로 읽은 객체만 필드가 비는** 재현하기 어려운 차이가 됩니다.
+             * @details 비트필드, 컨테이너, 그 외 값의 세 분기로 나눈다. 아카이브 경로 둘이 함께 쓴다. 따로 두면
+             *          분기를 하나 추가할 때(예: 새 컨테이너 구조) 한쪽만 고치기 쉽고,
+             *          그러면 **그 경로로 읽은 객체만 필드가 비는** 재현하기 어려운 차이가 된다.
              */
             [[nodiscard]] static bool applyPropertyPayload( void* pInstance, const PropertyInfo& prop, const uint8* pData,
                                                             size_t payloadStart, size_t payloadSize, const SerializeContext& context,
@@ -70,8 +70,8 @@ namespace sw
                     return true;
                 }
 
-                // `bRequireExactConsume`: 엄격 역직렬화는 페이로드를 한 바이트도 남기지 않고 읽었는지까지 본다(남으면 스트림이
-                // 이 필드를 다른 모양으로 적은 것이다). 소프트 · 아카이브 경로는 읽힌 만큼만 믿는다.
+                // `bRequireExactConsume`: 엄격 역직렬화는 페이로드를 한 바이트도 남기지 않고 읽었는지까지 확인한다(남으면 스트림이
+                // 이 필드를 다른 형태로 적은 것이다). 소프트와 아카이브 경로는 읽힌 만큼만 믿는다.
                 size_t local = payloadStart;
                 bool   bRead = false;
                 if ( prop._bIsContainer && prop.hasContainerWrapper() )
@@ -84,8 +84,8 @@ namespace sw
             }
 
             /**
-             * @brief 엄격한 읽기가 타입에 없는 칸을 건너뛸 때(`allowsUnknownProperties`) 알립니다 — 타입 · 칸마다 한 번.
-             * @details 바이너리는 칸 이름이 아니라 해시를 싣는다. 오브젝트마다 알리면 같은 타입 천 개가 천 줄을 쓴다.
+             * @brief 엄격한 읽기가 타입에 없는 필드를 건너뛸 때(`allowsUnknownProperties`) 알립니다. 타입과 필드마다 한 번만 알립니다.
+             * @details 바이너리는 필드 이름이 아니라 해시를 싣는다. 오브젝트마다 알리면 같은 타입 천 개가 천 줄을 쓴다.
              */
             static void warnSkippedFieldOnce( const TypeInfo& typeInfo, uint32 nameHash )
             {
@@ -101,8 +101,8 @@ namespace sw
             }
 
             /**
-             * @brief 엄격한 읽기가 읽지 못한 칸을 건너뛸 때(`allowsUnknownProperties`) 알립니다 — 타입 · 칸마다 한 번.
-             * @details 지금 타입에 있는 칸인데 값을 읽지 못했다(모르는 열거자 이름 · 바뀐 타입). XML · JSON 과 같이 그 칸만 남기고 나머지를 읽는다 —
+             * @brief 엄격한 읽기가 읽지 못한 필드를 건너뛸 때(`allowsUnknownProperties`) 알립니다. 타입과 필드마다 한 번만 알립니다.
+             * @details 현재 타입에 있는 필드인데 값을 읽지 못한 경우다(모르는 열거자 이름, 바뀐 타입). XML, JSON 과 같이 그 필드만 남기고 나머지를 읽는다.
              *          컴포넌트째 실패하면 소유 포인터 목록의 **뒤 컴포넌트까지** 버린다.
              */
             static void warnUnreadableFieldOnce( const TypeInfo& typeInfo, const PropertyInfo& prop )
@@ -134,16 +134,16 @@ namespace sw
             }
 
             /**
-             * @brief 태그 스트림(개수 · [태그 해시 · 기록 타입 해시 · 크기 · 페이로드]…)을 읽어 인스턴스에 쓰는 **하나의** 루프입니다.
-             * @details 엄격(`deserialize`)과 소프트(`deserializeSoft`)가 함께 씁니다. 둘이 다른 것은 정책 셋뿐입니다.
-             *          (1) 모르는 프로퍼티: 엄격은 `allowsUnknownProperties` 면 건너뛰고 아니면 실패, 소프트는 orphan 으로 싣습니다.
-             *          (2) 읽지 못한 프로퍼티: 엄격은 `allowsUnknownProperties` 면 그 칸만 건너뛰고(XML · JSON 과 같다) 아니면 실패, 소프트는 orphan.
-             *          (3) 페이로드를 끝까지 읽었는지: 엄격만 봅니다.
-             *          기록 타입이 다르면 둘 다 이관(`tryCoerceBinaryPayload`)으로 갑니다. 기록 타입을 아는 스칼라는 이관이 값으로
-             *          옮기고, 나머지는 제 타입으로 끝까지 읽히는지부터 봅니다. 소프트는 이관도 안 되면 끝까지 읽히지
-             *          않아도 읽힌 만큼은 받습니다(레거시 관용은 남깁니다). 다만 값으로만 옮기는 쌍(`isValueOnlyCoercion` — 스칼라 · 다른 enum)은
-             *          예외입니다. 제 타입으로 다시 읽으면 비트가 재해석되므로(float32 1.5 → int32 1069547520, 열거자 이름 해시 → 수) orphan 으로 남깁니다.
-             *          신뢰할 수 없는 스트림의 경계 검사가 이 안에 있습니다. 사본이 하나여야 그 검사가 한쪽에서만 빠지는 일이 없습니다.
+             * @brief 태그 스트림(개수, [태그 해시, 기록 타입 해시, 크기, 페이로드]…)을 읽어 인스턴스에 쓰는 **하나의** 루프입니다.
+             * @details 엄격(`deserialize`)과 소프트(`deserializeSoft`)가 함께 쓴다. 둘이 다른 것은 정책 세 가지뿐이다.
+             *          (1) 모르는 프로퍼티: 엄격은 `allowsUnknownProperties` 이면 건너뛰고 아니면 실패하며, 소프트는 orphan 으로 담는다.
+             *          (2) 읽지 못한 프로퍼티: 엄격은 `allowsUnknownProperties` 이면 그 필드만 건너뛰고(XML, JSON 과 같다) 아니면 실패하며, 소프트는 orphan 으로 담는다.
+             *          (3) 페이로드를 끝까지 읽었는지: 엄격만 확인한다.
+             *          기록 타입이 다르면 둘 다 이관(`tryCoerceBinaryPayload`)으로 간다. 기록 타입을 아는 스칼라는 이관이 값으로
+             *          옮기고, 나머지는 제 타입으로 끝까지 읽히는지부터 본다. 소프트는 이관도 안 되면 끝까지 읽히지
+             *          않아도 읽힌 만큼은 받는다(레거시 관용은 남긴다). 다만 값으로만 옮기는 쌍(`isValueOnlyCoercion`: 스칼라와 다른 enum)은
+             *          예외다. 제 타입으로 다시 읽으면 비트가 재해석되므로(float32 1.5 → int32 1069547520, 열거자 이름 해시 → 수) orphan 으로 남긴다.
+             *          신뢰할 수 없는 스트림의 경계 검사가 이 안에 있다. 사본이 하나여야 그 검사가 한쪽에서만 빠지는 일이 없다.
              */
             [[nodiscard]] static bool deserializeTagged( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
                                                          const SerializeContext& context, vector<SchemaOrphanValue>* pOutListOrphan, bool bStrict )
@@ -152,7 +152,7 @@ namespace sw
                 uint32             header{ 0 };
                 if ( reader.read( header ) == false )
                     return false;
-                // 머리가 판을 말한다 — 이 스트림 안의 값(컨테이너 원소 · 맵 키 포함)은 그 판으로 읽는다. 지금 판이 아니면 읽지 않는다.
+                // 머리가 버전을 말한다. 이 스트림 안의 값(컨테이너 원소, 맵 키 포함)은 그 버전으로 읽는다. 현재 버전이 아니면 읽지 않는다.
                 const uint32 wireVersionNumber = header >> kTaggedVersionShift;
                 if ( isReadableWireVersion( wireVersionNumber ) == false )
                 {
@@ -214,14 +214,14 @@ namespace sw
                     else
                         uniqueMatchedPropHashes.insert( prop.getNameHash() );
 
-                    // 세이브 읽기에서 옵트인 타입의 SaveGame 이 아닌 칸은 읽지 않는다 — 세이브가 지금 값을 덮지 않는다(쓰기도 적지 않는다).
+                    // 세이브 읽기에서 옵트인 타입의 SaveGame 이 아닌 필드는 읽지 않는다. 세이브가 현재 값을 덮지 않는다(쓰기도 적지 않는다).
                     if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
                     {
                         reader.skip( payloadSize );
                         continue;
                     }
 
-                    // **기록 타입을 같이 넘긴다.** 태그가 그것을 들고 있는데 넘기지 않으면 POD -> string 이관이 크기로만
+                    // **기록 타입을 같이 넘긴다.** 태그가 그것을 가지고 있는데 넘기지 않으면 POD -> string 이관이 크기로만
                     // 타입을 짐작한다(정수와 실수를 가르지 못한다).
                     const bool bWireMismatch = ( wireTypeHash != 0 && wireTypeHash != prop._typeName.getHash() );
                     bool       bApplied      = false;
@@ -229,8 +229,8 @@ namespace sw
                     {
                         void*               pPropPtr     = prop.getRawPtr( pInstance );
                         const hashed_string wireTypeName = findWireTypeName( wireTypeHash );
-                        // 기록 타입을 모르면(지운 enum · 타입) 바이트의 뜻을 모른다 — 크기로 짐작해 읽지 않는다(지운 enum 의 열거자 이름 해시
-                        // 4 바이트가 int32 로 바뀐 칸에 그대로 읽히게 된다).
+                        // 기록 타입을 모르면(지운 enum, 지운 타입) 바이트의 뜻을 모른다. 크기로 짐작해 읽지 않는다(지운 enum 의 열거자 이름 해시
+                        // 4 바이트가 int32 로 바뀐 필드에 그대로 읽히게 된다).
                         if ( wireTypeName.empty() == false )
                         {
                             bApplied = tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, context, wireTypeName, wireVersion );
@@ -251,8 +251,8 @@ namespace sw
 
                     if ( bApplied == false )
                     {
-                        // 엄격한 읽기도 모르는 칸을 받는 문맥(오브젝트 상태)이면 **이 칸만** 건너뛴다 — 크기를 알아 다음 칸 자리는 맞다. 모르는 열거자 하나가
-                        // 컴포넌트를, 그래서 그 뒤 컴포넌트까지 버리던 자리다.
+                        // 엄격한 읽기도 모르는 필드를 받는 컨텍스트(오브젝트 상태)이면 **이 필드만** 건너뛴다. 크기를 알아 다음 필드 위치는 맞다. 모르는 열거자 하나가
+                        // 컴포넌트를, 그래서 그 뒤 컴포넌트까지 버리던 경로다.
                         if ( bStrict && context.allowsUnknownProperties() == false )
                             return false;
                         if ( bStrict )
@@ -272,7 +272,7 @@ namespace sw
                         bMatched = ( matchedBitmask & ( 1ULL << propIdx ) ) != 0;
                     else
                         bMatched = uniqueMatchedPropHashes.find( listProp[propIdx].getNameHash() ) != uniqueMatchedPropHashes.end();
-                    // 세이브 읽기가 다루지 않는 칸(옵트인 타입의 SaveGame 이 아닌 것)은 지금 값 그대로다 — 기본값으로 되돌리지 않는다.
+                    // 세이브 읽기가 다루지 않는 필드(옵트인 타입의 SaveGame 이 아닌 것)는 현재 값 그대로다. 기본값으로 되돌리지 않는다.
                     const bool bOutsideSaveGame = context.isSaveGameOnly() && SerializerUtil::shouldSerializeProperty( typeInfo, listProp[propIdx], context ) == false;
                     if ( bMatched == false && bOutsideSaveGame == false )
                         SerializerUtil::applyPropertyDefault( listProp[propIdx], pInstance, context );
@@ -282,11 +282,11 @@ namespace sw
 
             /**
              * @brief 프로퍼티 하나의 페이로드를 읽어 인스턴스에 쓰고, 스트림을 그 뒤로 넘깁니다.
-             * @details 컴팩트 스트림의 두 모드(비트마스크 · 희소)가 함께 씁니다.
-             *          다른 것은 `propIndex` 를 어디서 얻는가뿐입니다(비트 검사 vs varint 읽기).
-             *          그런데 이 안에는 **신뢰할 수 없는 스트림에 대한 경계 검사**가 들어 있습니다.
-             *          한쪽이 그것을 잃으면 손상된 파일 하나로 버퍼 밖을 읽습니다. 저장소에서 가장
-             *          위험한 파싱 코드를 두 벌로 두지 않습니다.
+             * @details 컴팩트 스트림의 두 모드(비트마스크, 희소)가 함께 쓴다.
+             *          다른 것은 `propIndex` 를 어디서 얻는가뿐이다(비트 검사 vs varint 읽기).
+             *          그런데 이 안에는 **신뢰할 수 없는 스트림에 대한 경계 검사**가 들어 있다.
+             *          한쪽이 그것을 잃으면 손상된 파일 하나로 버퍼 밖을 읽는다. 저장소에서 가장
+             *          위험한 파싱 코드를 두 벌로 두지 않는다.
              */
             [[nodiscard]] static bool readAndApplyProperty( void* pInstance, uint64 propIndex, const vector<PropertyInfo>& listProp,
                                                             BinaryStreamReader& reader, const uint8* pData, size_t dataSize,
@@ -301,8 +301,8 @@ namespace sw
                 if ( payloadSize > dataSize - payloadStart )
                     return false;
 
-                // 프로퍼티가 더 많은 새 스키마로 쓴 스트림도 읽는다. 모르는 인덱스는 건너뛴다. 쓰는 쪽이 적지 않는 프로퍼티(Transient ·
-                // 직렬화 제외)를 가리키는 페이로드도 건너뛴다 — 망가진 스트림이 런타임 전용 값을 덮지 않게.
+                // 프로퍼티가 더 많은 새 스키마로 쓴 스트림도 읽는다. 모르는 인덱스는 건너뛴다. 쓰는 쪽이 적지 않는 프로퍼티(Transient,
+                // 직렬화 제외)를 가리키는 페이로드도 건너뛴다. 망가진 스트림이 런타임 전용 값을 덮지 않게 하려는 것이다.
                 if ( propIndex < listProp.size() && SerializerUtil::shouldSerializeProperty( listProp[static_cast<size_t>( propIndex )] ) )
                 {
                     if ( applyPropertyPayload( pInstance, listProp[static_cast<size_t>( propIndex )],
@@ -315,7 +315,7 @@ namespace sw
             }
 
             /**
-             * @brief `serializeRaw` 가 쓴 바이트를 `codecType` 으로 압축해 `outListBuffer` 에 담습니다. 압축 판 직렬화 둘이 함께 씁니다.
+             * @brief `serializeRaw` 가 쓴 바이트를 `codecType` 으로 압축해 `outListBuffer` 에 담습니다. 압축 버전 직렬화 두 함수가 함께 씁니다.
              * @return 인스턴스가 없거나, 쓴 바이트가 없거나, 압축에 실패하면 false 입니다.
              */
             template <typename SerializeRawFunc>
@@ -334,7 +334,7 @@ namespace sw
                 return CompressionStream::compressBuffer( listRawBinary.data(), listRawBinary.size(), outListBuffer, codecType );
             }
 
-            /** @brief 압축을 풀어 나온 바이트를 `deserializeRaw` 로 읽습니다. 압축 판 역직렬화 둘이 함께 씁니다. */
+            /** @brief 압축을 풀어 나온 바이트를 `deserializeRaw` 로 읽습니다. 압축 버전 역직렬화 두 함수가 함께 씁니다. */
             template <typename DeserializeRawFunc>
             static bool decompressThenDeserialize( void* pInstance, const uint8* pData, size_t dataSize, DeserializeRawFunc&& deserializeRaw )
             {
@@ -349,17 +349,17 @@ namespace sw
                 return deserializeRaw( listRawBinary.data(), listRawBinary.size() );
             }
 
-            /** @brief 비어 있지 않은 버퍼를 아카이브 끝에 씁니다. Archive 판 직렬화는 모두 버퍼 판으로 쓴 뒤 이것으로 옮깁니다. */
+            /** @brief 비어 있지 않은 버퍼를 아카이브 끝에 씁니다. Archive 버전 직렬화는 모두 버퍼 버전으로 쓴 뒤 이 함수로 옮깁니다. */
             static void writeBufferToArchive( const vector<uint8>& buffer, Archive& outArchive )
             {
                 if ( buffer.empty() == false )
                     outArchive.writeBytes( buffer.data(), buffer.size() );
             }
 
-            /** @brief 스트림 하나의 바이트 수를 값을 읽지 않고 셉니다. 잘렸거나 모양이 틀리면 false 입니다. */
+            /** @brief 스트림 하나의 바이트 수를 값을 읽지 않고 셉니다. 잘렸거나 구조가 틀리면 false 입니다. */
             using MeasureStreamFn = bool ( * )( const uint8* pData, size_t dataSize, size_t& outStreamSize );
 
-            /** @brief 태그 스트림 — 머리 뒤에 칸마다 이름 해시 · 타입 해시 · 값 크기 · 값. */
+            /** @brief 태그 스트림입니다. 머리 뒤에 필드마다 이름 해시, 타입 해시, 값 크기, 값이 이어집니다. */
             static bool measureTaggedStream( const uint8* pData, size_t dataSize, size_t& outStreamSize )
             {
                 BinaryStreamReader reader( pData, dataSize );
@@ -381,7 +381,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 버전 스트림 — 버전(uint32) + 태그 스트림. */
+            /** @brief 버전 스트림입니다. 버전(uint32) 뒤에 태그 스트림이 이어집니다. */
             static bool measureVersionedStream( const uint8* pData, size_t dataSize, size_t& outStreamSize )
             {
                 constexpr size_t kVersionSize = sizeof( uint32 );
@@ -392,7 +392,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 압축 스트림 — `CompressionHeader` 가 압축된 본문 크기를 든다. */
+            /** @brief 압축 스트림입니다. `CompressionHeader` 가 압축된 본문 크기를 가집니다. */
             static bool measureCompressedStream( const uint8* pData, size_t dataSize, size_t& outStreamSize )
             {
                 CompressionHeader header{};
@@ -405,7 +405,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 컴팩트 스트림 — 모드 바이트 뒤에 밀집(수 · 비트마스크 · 켜진 칸마다 크기 · 값)이나 희소(수 · 칸마다 번호 · 크기 · 값). */
+            /** @brief 컴팩트 스트림입니다. 모드 바이트 뒤에 밀집(수, 비트마스크, 켜진 필드마다 크기와 값) 또는 희소(수, 필드마다 번호, 크기, 값)가 이어집니다. */
             static bool measureCompactStream( const uint8* pData, size_t dataSize, size_t& outStreamSize )
             {
                 BinaryStreamReader reader( pData, dataSize );
@@ -453,9 +453,9 @@ namespace sw
             }
 
             /**
-             * @brief 아카이브의 현재 자리에서 스트림 하나를 `deserializeBytes` 로 읽고, 성공하면 읽기 자리를 그 끝으로 옮깁니다. Archive 판 역직렬화가 모두 씁니다.
-             * @details 스트림의 끝은 @p measure 가 값을 읽지 않고 셉니다 — 그래서 같은 Archive 에 이어 쓴 객체 · 값을 차례로 읽을 수 있습니다.
-             *          오류 상태이거나 남은 바이트가 없거나 스트림이 잘렸으면 false 이고 자리는 그대로입니다.
+             * @brief 아카이브의 현재 위치에서 스트림 하나를 `deserializeBytes` 로 읽고, 성공하면 읽기 위치를 그 끝으로 옮깁니다. Archive 버전 역직렬화가 모두 씁니다.
+             * @details 스트림의 끝은 @p measure 가 값을 읽지 않고 센다. 그래서 같은 Archive 에 이어 쓴 객체와 값을 차례로 읽을 수 있다.
+             *          오류 상태이거나 남은 바이트가 없거나 스트림이 잘렸으면 false 이고 위치는 그대로다.
              */
             template <typename DeserializeBytesFunc>
             [[nodiscard]] static bool deserializeArchiveStream( Archive& inArchive, MeasureStreamFn measure, DeserializeBytesFunc&& deserializeBytes )
@@ -493,7 +493,7 @@ namespace sw
         }
         outListBuffer.reserve( outListBuffer.size() + sizeof( uint32 ) + static_cast<size_t>( propCount ) * 32 );
         SW_ASSERT( propCount <= BinarySerializerInternal::kTaggedCountMask );
-        // 머리의 위 8비트가 판이다(`kTaggedVersionShift` 설명) — 읽는 쪽이 이 스트림의 enum 을 이름으로 읽을지 값으로 읽을지 여기서 안다.
+        // 머리의 위 8비트가 버전이다(`kTaggedVersionShift` 설명 참고). 읽는 쪽이 이 스트림의 enum 을 이름으로 읽을지 값으로 읽을지 여기서 안다.
         writer.write( propCount | ( static_cast<uint32>( kCurrentBinaryWireVersion ) << BinarySerializerInternal::kTaggedVersionShift ) );
 
         for ( const PropertyInfo& prop : listProp )
@@ -584,7 +584,7 @@ namespace sw
         const uint8* pBody    = pData + reader.getOffset();
         const size_t bodySize = dataSize - reader.getOffset();
 
-        // 절차는 JSON · XML 과 공통이다(`runVersionedDeserialize`). 바이너리만 다른 것은 두 가지다.
+        // 절차는 JSON, XML 과 공통이다(`runVersionedDeserialize`). 바이너리만 다른 것은 두 가지다.
         // 버전을 **본문 앞에서 이미 읽었고**(위 `reader.read`), orphan 이 하나라도 있으면 migrate 없이는
         // 거절한다. 바이너리는 손으로 고치는 포맷이 아니라, 모르는 필드가 있다는 것은 스키마가
         // 바뀌었다는 뜻이기 때문이다.
@@ -739,7 +739,7 @@ namespace sw
         const size_t modifiedCount = t_listRecord.size();
         const bool   bUseDense     = PresenceMaskUtil::shouldUseDenseMode( modifiedCount, totalProps );
 
-        // 모드 바이트의 위 4비트가 판이다(`kCompactVersionShift` 설명).
+        // 모드 바이트의 위 4비트가 버전이다(`kCompactVersionShift` 설명 참고).
         const uint8 versionBits = static_cast<uint8>( static_cast<uint8>( kCurrentBinaryWireVersion ) << BinarySerializerInternal::kCompactVersionShift );
         if ( bUseDense )
         {

@@ -51,8 +51,8 @@ namespace sw
             }
 
             /**
-             * @brief 스칼라(정수 · 실수 · bool) 타입 이름인지 묻습니다. `formatWirePodToString` 이 텍스트로 만들 수 있는 타입과 같습니다.
-             * @details 미리 정의된 이름만 봅니다. 타입 레지스트리에 기대지 않으므로 원시 타입 등록 전에도 같은 답을 냅니다.
+             * @brief 스칼라(정수, 실수, bool) 타입 이름인지 확인합니다. `formatWirePodToString` 이 텍스트로 만들 수 있는 타입과 같습니다.
+             * @details 미리 정의된 이름만 본다. 타입 레지스트리에 기대지 않으므로 원시 타입을 등록하기 전에도 같은 결과를 낸다.
              */
             static bool isScalarTypeName( hashed_string typeName )
             {
@@ -69,7 +69,7 @@ namespace sw
                 return false;
             }
 
-            /** @brief 기록 타입이 대상과 **다른** enum 이면 그 EnumInfo 입니다. 같은 enum 을 다른 이름(FQN · 짧은 이름 · 별칭)으로 부른 것이면 nullptr 입니다. */
+            /** @brief 기록 타입이 대상과 **다른** enum 이면 그 EnumInfo 를 반환합니다. 같은 enum 을 다른 이름(FQN, 짧은 이름, 별칭)으로 부른 것이면 nullptr 입니다. */
             static const EnumInfo* findOtherWireEnum( hashed_string targetTypeName, hashed_string wireTypeName )
             {
                 if ( wireTypeName.empty() )
@@ -82,8 +82,8 @@ namespace sw
             }
 
             /**
-             * @brief 기록 enum 의 payload 를 열거자 이름(글)으로 만듭니다 — XML 이 그 칸에 적었을 글입니다(비트플래그는 `A | B`).
-             * @details payload 를 끝까지 읽지 못하거나 모르는 열거자면 false 입니다. enum 은 제 크기만큼만 쓰이므로 0 으로 둔 int64 자리에 읽습니다.
+             * @brief 기록 enum 의 payload 를 열거자 이름(텍스트)으로 만듭니다. XML 이 그 필드에 적었을 텍스트입니다(비트플래그는 `A | B`).
+             * @details payload 를 끝까지 읽지 못하거나 모르는 열거자면 false 다. enum 은 자기 크기만큼만 쓰이므로 0 으로 둔 int64 위치에 읽는다.
              */
             static bool formatWireEnumToString( const uint8* pPayload, size_t payloadSize, hashed_string wireTypeName, const SerializeContext& context,
                                                 BinaryWireVersion wireVersion, string& outText )
@@ -122,7 +122,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief `ReadType` 으로 읽어 `PrintType` 으로 넓혀 적습니다(`to_string` 오버로드가 넷뿐이기 때문입니다). */
+            /** @brief `ReadType` 으로 읽어 `PrintType` 으로 넓혀 적습니다(`to_string` 오버로드가 네 개뿐이기 때문입니다). */
             template <typename ReadType, typename PrintType>
             static bool formatPodAs( const uint8* pPayload, size_t payloadSize, string& out )
             {
@@ -135,10 +135,10 @@ namespace sw
 
             /**
              * @brief 기록 타입(wire type)을 아는 POD payload 를 **그 타입의** 텍스트로 만듭니다.
-             * @details **크기만으로는 타입을 가를 수 없습니다.** `sizeof(float32) == sizeof(int32)` 이고
-             *          `sizeof(float64) == sizeof(int64)` 입니다. 크기로만 고르면 `float32` 분기가 돌지 않아(앞의 int32 분기가
-             *          먼저 걸린다) `float32` 프로퍼티를 문자열로 바꾸는 스키마 이관이 `1.5f` 를 비트값 `"1069547520"` 으로 적습니다.
-             *          기록 타입은 바이너리 태그(`wireTypeHash`)와 `SchemaOrphanValue._wireTypeHash` 가 들고 있습니다.
+             * @details **크기만으로는 타입을 가를 수 없다.** `sizeof(float32) == sizeof(int32)` 이고
+             *          `sizeof(float64) == sizeof(int64)` 이다. 크기로만 고르면 `float32` 분기가 돌지 않아(앞의 int32 분기가
+             *          먼저 걸린다) `float32` 프로퍼티를 문자열로 바꾸는 스키마 이관이 `1.5f` 를 비트값 `"1069547520"` 으로 적는다.
+             *          기록 타입은 바이너리 태그(`wireTypeHash`)와 `SchemaOrphanValue._wireTypeHash` 가 가지고 있다.
              * @return 기록 타입을 모르거나, 스칼라가 아니거나, payload 크기가 그 타입과 다르면 false 입니다.
              */
             static bool formatWirePodToString( const uint8* pPayload, size_t payloadSize, hashed_string wireTypeName, string& out )
@@ -152,7 +152,7 @@ namespace sw
                     return formatPodAs<float64, float64>( pPayload, payloadSize, out );
                 if ( wireTypeName.isPredefinedType( PredefinedNameType::NameType_bool ) )
                 {
-                    // 바이트로 읽어 0 · 1 로 접는다. bool 로 memcpy 하면 0 · 1 이 아닌 바이트가 정의되지 않은 값이 된다.
+                    // 바이트로 읽어 0 과 1 로 접는다. bool 로 memcpy 하면 0 과 1 이 아닌 바이트가 정의되지 않은 값이 된다.
                     uint8 byteValue{ 0 };
                     if ( readPod( pPayload, payloadSize, byteValue ) == false )
                         return false;
@@ -209,10 +209,10 @@ namespace sw
             }
 
             /**
-             * @brief orphan 의 바이너리 값을 프로퍼티 자리에 적용합니다. `applyOrphanTo` 와 `applyOrphanToPath` 가 함께 씁니다.
-             * @details 기록 타입이 프로퍼티 타입과 **같을 때만** 제자리로 읽습니다. 다르면 곧바로 이관(`tryCoerceBinaryPayload`)으로
-             *          보냅니다. 본 역직렬화 경로(`BinarySerializer` 의 태그 루프)와 같은 규칙입니다. 주의: 기록 타입으로 프로퍼티 자리에
-             *          먼저 읽으면 모양이 다른 타입(int32 → int16 · string 등)에서 그 자리와 이웃 필드를 덮어쓴다.
+             * @brief orphan 의 바이너리 값을 프로퍼티 위치에 적용합니다. `applyOrphanTo` 와 `applyOrphanToPath` 가 함께 씁니다.
+             * @details 기록 타입이 프로퍼티 타입과 **같을 때만** 제자리로 읽는다. 다르면 곧바로 이관(`tryCoerceBinaryPayload`)으로
+             *          보낸다. 본 역직렬화 경로(`BinarySerializer` 의 태그 루프)와 같은 규칙이다. 기록 타입으로 프로퍼티 위치에
+             *          먼저 읽으면 구조가 다른 타입(int32 → int16, string 등)에서 그 위치와 이웃 필드를 덮어쓴다.
              * @param wireTypeName 기록 타입. 모르면 비웁니다(그때는 이관이 제 타입 읽기부터 합니다).
              */
             [[nodiscard]] static bool applyOrphanBinary( void* pPropPtr, hashed_string propTypeName, const SchemaOrphanValue& orphan,
@@ -220,7 +220,7 @@ namespace sw
             {
                 const uint8* pPayload    = orphan._listBinary.data();
                 const size_t payloadSize = orphan._listBinary.size();
-                // 적힌 판으로 읽는다 — orphan 은 그것을 읽은 스트림의 판을 든다.
+                // 기록된 버전으로 읽는다. orphan 은 그것을 읽은 스트림의 버전을 가지고 있다.
                 if ( wireTypeName == propTypeName )
                 {
                     size_t offset{ 0 };
@@ -232,9 +232,9 @@ namespace sw
 
             /**
              * @brief orphan 값을 경로 `pPath` 의 프로퍼티에 적용합니다. `applyOrphanTo` 와 `applyOrphanToPath` 는 orphan 을 찾는 법만 다릅니다.
-             * @details 텍스트가 있으면 텍스트로, 없으면 바이너리로 적용합니다. 바이너리의 기록 타입은 `wireTypeHint`, 비었으면 orphan 에
-             *          남은 기록 타입 해시로 정합니다. 프로퍼티 타입을 기록 타입으로 가정하면 타입이 바뀐 orphan(int32 → float32 등)을
-             *          그 비트 그대로 제자리에 읽게 됩니다.
+             * @details 텍스트가 있으면 텍스트로, 없으면 바이너리로 적용한다. 바이너리의 기록 타입은 `wireTypeHint` 로 정하고, 비었으면 orphan 에
+             *          남은 기록 타입 해시로 정한다. 프로퍼티 타입을 기록 타입으로 가정하면 타입이 바뀐 orphan(int32 → float32 등)을
+             *          그 비트 그대로 제자리에 읽게 된다.
              */
             [[nodiscard]] static bool applyOrphanAt( void* pInstance, const TypeInfo& typeInfo, const utf8* pPath, const SchemaOrphanValue& orphan,
                                                      hashed_string wireTypeHint, const SerializeContext& context )
@@ -252,19 +252,19 @@ namespace sw
                 hashed_string hint = wireTypeHint;
                 if ( hint.empty() )
                     hint = findWireTypeName( orphan._wireTypeHash );
-                // 기록 타입이 적혀 있는데 모르면(지운 enum · 타입) 바이트의 뜻을 모른다 — 크기로 짐작해 옮기지 않는다(바이너리 칸 읽기와 같은 규칙).
+                // 기록 타입이 적혀 있는데 모르면(지운 enum, 지운 타입) 바이트의 뜻을 모른다. 크기로 짐작해 옮기지 않는다(바이너리 필드 읽기와 같은 규칙이다).
                 if ( hint.empty() && orphan._wireTypeHash != 0 )
                     return false;
                 return applyOrphanBinary( pPtr, pProp->_typeName, orphan, hint, context );
             }
 
-            /** @brief orphan 의 이름 해시입니다. 이름을 intern 하지 않은 orphan 은 해시만 듭니다. */
+            /** @brief orphan 의 이름 해시입니다. 이름을 intern 하지 않은 orphan 은 해시만 가집니다. */
             static uint32 getOrphanNameHash( const SchemaOrphanValue& orphan )
             {
                 return orphan._nameHash != 0 ? orphan._nameHash : orphan._name.getHash();
             }
 
-            /** @brief 타입(상속 포함)의 프로퍼티 이름 · 별칭 가운데 orphan 의 이름이 있는지 묻습니다. */
+            /** @brief 타입(상속 포함)의 프로퍼티 이름과 별칭 가운데 orphan 의 이름이 있는지 확인합니다. */
             static bool isOrphanNameKnownTo( const TypeInfo& typeInfo, const SchemaOrphanValue& orphan )
             {
                 const uint32 nameHash = getOrphanNameHash( orphan );
@@ -277,11 +277,11 @@ namespace sw
             }
 
             /**
-             * @brief 로드가 성공으로 끝난 뒤 아무 데도 가지 않은 orphan — 읽지 못한 값 · 타입에 없는 칸 — 을 **로드마다 한 번** 알립니다.
-             * @details 이관 함수가 찾아 본 orphan(`_bClaimed`)은 그 함수가 처리했으므로 뺍니다. 옛 TypeInfo 를 스테이징했으면 같은 본문을
-             *          두 타입으로 읽어 한쪽만 아는 칸은 반드시 다른 쪽의 orphan 이 되므로, 두 타입 중 하나라도 아는 이름은 스테이징된
-             *          인스턴스가 실어 날랐다고 보고 뺍니다. 이름은 칸마다 한 번만 적습니다(컨테이너 원소가 여럿 실패해도 칸 하나).
-             *          JSON · XML 의 Ignore 정책도 여기서 알립니다 — 숫자 칸의 "abc" 가 말없이 기본값으로 남지 않게.
+             * @brief 로드가 성공으로 끝난 뒤 아무 데도 쓰이지 않은 orphan(읽지 못한 값, 타입에 없는 필드)을 **로드마다 한 번** 알립니다.
+             * @details 이관 함수가 찾아 본 orphan(`_bClaimed`)은 그 함수가 처리했으므로 뺀다. 옛 TypeInfo 를 스테이징했으면 같은 본문을
+             *          두 타입으로 읽어 한쪽만 아는 필드는 반드시 다른 쪽의 orphan 이 되므로, 두 타입 중 하나라도 아는 이름은 스테이징된
+             *          인스턴스가 처리했다고 보고 뺀다. 이름은 필드마다 한 번만 적는다(컨테이너 원소가 여럿 실패해도 필드 하나로 센다).
+             *          JSON, XML 의 Ignore 정책도 여기서 알린다. 숫자 필드의 "abc" 가 말없이 기본값으로 남지 않게 하려는 것이다.
              */
             static void warnDroppedOrphans( const TypeInfo& typeInfo, const TypeInfo* pLegacyTypeInfo, const vector<SchemaOrphanValue>& listOrphan )
             {
@@ -295,7 +295,7 @@ namespace sw
                         pLegacyTypeInfo != nullptr && ( isOrphanNameKnownTo( typeInfo, orphan ) || isOrphanNameKnownTo( *pLegacyTypeInfo, orphan ) );
                     if ( bStagedElsewhere )
                         continue;
-                    // 적힌 글이 먼저다 — 파일의 모르는 이름은 intern 하지 않고, 안쪽 원소의 이름은 타입 이름이 붙어 있다(`SpriteComponent._x`).
+                    // 적힌 텍스트가 먼저다. 파일의 모르는 이름은 intern 하지 않고, 안쪽 원소의 이름은 타입 이름이 붙어 있다(`SpriteComponent._x`).
                     const uint32 nameHash = getOrphanNameHash( orphan );
                     string       shownName;
                     if ( orphan._writtenName.empty() == false )
@@ -403,10 +403,10 @@ namespace sw
         const SchemaOrphanValue* pFirst   = nullptr;
         for ( const SchemaOrphanValue& orphanValue : *_pOrphans )
         {
-            // 파일에서 읽은 고아는 이름을 intern 하지 않고 해시만 들 수 있다(XML · JSON 읽기) — 그때는 해시로 맞춰 본다.
+            // 파일에서 읽은 orphan 은 이름을 intern 하지 않고 해시만 가질 수 있다(XML, JSON 읽기). 그때는 해시로 맞춰 본다.
             if ( orphanValue._name != name && ( orphanValue._name.empty() == false || orphanValue._nameHash != nameHash ) )
                 continue;
-            // 같은 이름은 모두 이관이 처리한 것이다 — 컨테이너 원소가 여럿 실패하면 같은 칸 이름의 orphan 이 여럿 생긴다.
+            // 같은 이름은 모두 이관이 처리한 것이다. 컨테이너 원소가 여럿 실패하면 같은 필드 이름의 orphan 이 여럿 생긴다.
             orphanValue._bClaimed = true;
             if ( pFirst == nullptr )
                 pFirst = &orphanValue;
@@ -508,7 +508,7 @@ namespace sw
     {
         if ( wireTypeName.empty() || wireTypeName == targetTypeName )
             return false;
-        // 기록 타입이 다른 enum 이면 열거자 이름으로만 옮긴다 — 제 타입으로 다시 읽으면 이름 해시가 수로 읽힌다.
+        // 기록 타입이 다른 enum 이면 열거자 이름으로만 옮긴다. 제 타입으로 다시 읽으면 이름 해시가 수로 읽힌다.
         if ( SchemaMigrateInternal::findOtherWireEnum( targetTypeName, wireTypeName ) != nullptr )
             return true;
         if ( SchemaMigrateInternal::isScalarTypeName( wireTypeName ) == false )
@@ -532,11 +532,11 @@ namespace sw
         if ( pPropPtr == nullptr || pPayload == nullptr )
             return false;
 
-        // 값으로만 옮기는 쌍이면(`isValueOnlyCoercion`) 기록 값을 글로 만들어 대상 타입으로 다시 읽는다(JSON · XML 과 같은 규칙이다).
-        //  - 기록 타입을 아는 스칼라 → 다른 스칼라 · 문자열. 아래의 제 타입 읽기를 먼저 하면 크기가 같은 스칼라는 비트가 그대로 재해석되고
+        // 값으로만 옮기는 쌍이면(`isValueOnlyCoercion`) 기록 값을 텍스트로 만들어 대상 타입으로 다시 읽는다(JSON, XML 과 같은 규칙이다).
+        //  - 기록 타입을 아는 스칼라 → 다른 스칼라나 문자열. 아래의 제 타입 읽기를 먼저 하면 크기가 같은 스칼라는 비트가 그대로 재해석되고
         //    (int32 100 → float32 1.4e-43), 문자열은 int32 0 을 길이 0 으로 읽어 "" 가 된다. 값으로 못 옮기면(float32 1.5 → int32) 실패다.
         //  - 기록 타입이 다른 enum → 열거자 이름. 문자열은 이름을, 같은 이름이 있는 enum 은 그 열거자를 받고, 수는 받지 않는다(XML 에 적힌 이름과 같다).
-        //    제 타입 읽기로 가면 열거자 이름 해시(4 바이트)가 int32 · float32 로 그대로 읽힌다.
+        //    제 타입 읽기로 가면 열거자 이름 해시(4 바이트)가 int32, float32 로 그대로 읽힌다.
         // payload 크기가 기록 타입과 안 맞아도(손상) 재해석하지 않고 실패로 끝낸다.
         if ( isValueOnlyCoercion( targetTypeName, wireTypeName ) )
         {
@@ -705,7 +705,7 @@ namespace sw
                             listOrphan.empty() ? "" : listOrphan[0]._name.c_str() );
             return false;
         }
-        // 이관 없이 받아 주는 로드다(JSON · XML 의 Ignore 정책). orphan 은 모두 버려진다.
+        // 이관 없이 받아 주는 로드다(JSON, XML 의 Ignore 정책). orphan 은 모두 버려진다.
         SchemaMigrateInternal::warnDroppedOrphans( typeInfo, pLegacyTypeInfo, listOrphan );
         return true;
     }
