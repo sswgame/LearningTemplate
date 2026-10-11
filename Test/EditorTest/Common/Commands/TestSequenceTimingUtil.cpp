@@ -4,12 +4,12 @@
 
 #include "TestFramework/TestFramework.h"
 
-// SequenceTimingUtilTest — 시퀀서 타임라인 끌기가 dirty · 되돌리기에 남는지 가르는 배치 비교(패널 점검 D17). ImGui 없음.
+// SequenceTimingUtilTest — 시퀀서 타임라인 끌기가 dirty · 되돌리기에 남는지 가르는 배치 비교. ImGui 없음.
 
 /**
  * @brief [SequenceTimingUtilTest] 클립을 옮기거나(시작 · 끝) 종류를 바꾸거나 더하거나 지우면 바뀐 것이고, 그대로면 바뀌지 않은 것이다
- * @details 패널은 ImSequencer 를 부른 뒤 `ImGui::IsItemEdited()` 로 편집을 판정했다 — 여러 항목을 그리는 위젯의 "마지막 항목" 은 클립 끌기가 아니라
- *          끌어 옮긴 클립이 dirty 표시 · History 에 남지 않았다. 부르기 전후의 배치를 비교한다.
+ * @details ImSequencer 를 부른 뒤 `ImGui::IsItemEdited()` 로 편집을 판정하면 안 된다. 여러 항목을 그리는 위젯의 "마지막 항목" 은 클립 끌기가 아니어서
+ *          끌어 옮긴 클립이 dirty 표시 · History 에 남지 않는다. 그래서 부르기 전후의 배치를 비교한다.
  */
 SW_TEST_CASE( SequenceTimingUtilTest, DetectsMovedAddedAndRemovedClips )
 {

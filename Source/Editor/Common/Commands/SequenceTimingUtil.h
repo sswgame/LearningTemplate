@@ -25,7 +25,7 @@ namespace sw::editor
      * @struct SequenceTimingUtil
      * @brief 타임라인 위젯(ImSequencer)을 부르기 전후의 배치를 비교합니다.
      * @details ImSequencer 는 여러 항목을 그리는 위젯이라 `ImGui::IsItemEdited()`("마지막 항목") 가 클립 끌기 · 더하기 · 지우기를 뜻하지 않는다.
-     *          그래서 끌어 옮긴 클립이 dirty 표시 · 되돌리기에 남지 않았다. 부르기 전 배치를 떠 두고 뒤와 비교한다.
+     *          그것으로 판정하면 끌어 옮긴 클립이 dirty 표시 · 되돌리기에 남지 않는다. 부르기 전 배치를 떠 두고 뒤와 비교한다.
      */
     struct SequenceTimingUtil
     {

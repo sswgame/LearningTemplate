@@ -170,7 +170,7 @@ namespace sw::editor
                         }
                         probe._waitFrames = 0;
                         // 글자가 든 프레임에 패널이 칸 → 트리 순으로 그렸다. 칸에 닿았는지 · 필터가 탐침을 찾았는지 본다.
-                        // 실패하면 이유에 누른 뒤 · 지금의 입력 대상을 붙인다 — 실행 한 번으로 "클릭이 칸을 못 잡았다" 와 "글자가 안 들어갔다" 가 갈린다(패널 점검 D26).
+                        // 실패하면 이유에 누른 뒤 · 지금의 입력 대상을 붙인다 — 실행 한 번으로 "클릭이 칸을 못 잡았다" 와 "글자가 안 들어갔다" 가 갈린다.
                         string what{ "typing did not reach the search field [after press: " };
                         what += probe._pressDiagnosis;
                         what += " | now: ";

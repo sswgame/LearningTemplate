@@ -127,7 +127,7 @@ namespace sw::editor
         {
             windowSize.x = MathUtil::min( windowSize.x, pViewport->WorkSize.x * EditorChromeInternal::kMaxPanelViewportRatio );
             windowSize.y = MathUtil::min( windowSize.y, pViewport->WorkSize.y * EditorChromeInternal::kMaxPanelViewportRatio );
-            // 떠 있는 창은 모두 같은 자리(왼쪽 위)에 열려 Hierarchy 를 덮었다 — 처음에는 주 뷰포트 가운데에 연다. 도킹된 창에는 둘 다 걸리지 않는다.
+            // 처음 여는 떠 있는 창은 주 뷰포트 가운데에 연다. 위치를 정하지 않으면 모두 왼쪽 위에 열려 Hierarchy 를 덮는다. 도킹된 창에는 둘 다 걸리지 않는다.
             const ImVec2 center{ pViewport->WorkPos.x + pViewport->WorkSize.x * 0.5f, pViewport->WorkPos.y + pViewport->WorkSize.y * 0.5f };
             ImGui::SetNextWindowPos( center, ImGuiCond_FirstUseEver, ImVec2{ 0.5f, 0.5f } );
         }

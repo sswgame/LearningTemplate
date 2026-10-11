@@ -6,7 +6,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// EditorToolDefaultsTest — 에디터 도구 시드 파일(editortooldefaults.json) 읽기(패널 점검 D25). ImGui 없음.
+// EditorToolDefaultsTest — 에디터 도구 시드 파일(editortooldefaults.json) 읽기. ImGui 없음.
 
 /**
  * @brief [EditorToolDefaultsTest] 파일이 없는 것은 실패가 아니다 — 기본값을 쓰고 true 를 돌려준다. 깨진 파일만 false 이고 값을 바꾸지 않는다

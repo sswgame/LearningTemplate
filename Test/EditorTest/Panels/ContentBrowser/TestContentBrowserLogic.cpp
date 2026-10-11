@@ -4,7 +4,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// ContentBrowserLogicTest — 콘텐츠 브라우저의 판단(패널 점검 D12 · D15): 경로 줄 조각이 저마다 절대 경로를 든다, 폴더 트리는 폴더마다 한 번만
+// ContentBrowserLogicTest — 콘텐츠 브라우저의 판단: 경로 줄 조각이 저마다 절대 경로를 든다, 폴더 트리는 폴더마다 한 번만
 // 디스크를 읽는다. ImGui 없음.
 
 namespace
@@ -81,7 +81,7 @@ SW_TEST_CASE( ContentBrowserLogicTest, FolderTrailHasOneSegmentPerFolderBelowThe
 
 /**
  * @brief [ContentBrowserLogicTest] 폴더 트리 캐시는 폴더마다 처음 물을 때 한 번만 디스크를 읽고(정렬해 둔다), 표가 커져도 먼저 준 참조가 살며, clear 뒤에 다시 읽는다
- * @details 트리를 그릴 때마다 보이는 노드마다 하위 폴더를 디스크에서 읽어 콘텐츠 브라우저 하나가 Debug 16.8 ms 였다(패널 점검 D15).
+ * @details 트리를 그릴 때마다 보이는 노드마다 하위 폴더를 디스크에서 읽으면 콘텐츠 브라우저 하나가 Debug 에서 16.8 ms 를 쓴다.
  */
 SW_TEST_CASE( ContentBrowserLogicTest, FolderCacheReadsEachFolderOnce )
 {

@@ -680,8 +680,8 @@ namespace sw::editor
             uint32                 drawnRootCount{ 0 };
             uint64                 lastDrawnRootID{ 0 };
 
-            // 화면 밖의 접힌 루트는 그리지 않고 같은 높이의 빈자리만 둔다 — 스크롤 막대와 다음 줄 위치는 그대로다. 큐브 8000 이면 노드 8000 개
-            // (버튼 · 뱃지 문자열 · 트리 노드 · 드래그 드롭)를 프레임마다 다 그리던 자리다. 이어진 빈 줄은 빈자리 하나로 모은다.
+            // 화면 밖의 접힌 루트는 그리지 않고 같은 높이의 빈자리만 둔다 — 스크롤 막대와 다음 줄 위치는 그대로다. 모두 그리면 큐브 8000 개 씬에서 노드 8000 개
+            // (버튼 · 뱃지 문자열 · 트리 노드 · 드래그 드롭)를 프레임마다 그린다. 이어진 빈 줄은 빈자리 하나로 모은다.
             // 접힌 루트 줄의 높이는 프레임 높이(버튼 · 트리 노드) + 줄 간격이다.
             const float32 rowStride        = ImGui::GetFrameHeightWithSpacing();
             const float32 rowSpacing       = rowStride - ImGui::GetFrameHeight();

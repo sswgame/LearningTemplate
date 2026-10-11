@@ -248,7 +248,7 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, FileFilterAndHdrColor )
 
 /**
  * @brief [InspectorPropertyLayoutTest] 되돌리기 이름은 프로퍼티 표시 이름이고, 위젯 라벨 조각("##value")이나 빈 이름은 "Edit Property" 다
- * @details 위젯 라벨을 이름으로 쓰면 History 목록이 "##" 뒤를 숨겨 모든 항목이 "Edit" 로 보였다.
+ * @details 위젯 라벨을 이름으로 쓰면 History 목록이 "##" 뒤를 숨겨 모든 항목이 "Edit" 로 보인다.
  */
 SW_TEST_CASE( InspectorPropertyLayoutTest, UndoLabelNamesTheProperty )
 {

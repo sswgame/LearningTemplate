@@ -24,7 +24,7 @@ namespace sw::editor
 
             /**
              * @brief 그리기 목록을 스냅샷에 복사합니다. 목록 객체와 버퍼는 프레임마다 다시 쓴다(풀 — `outListOwned`).
-             * @details `ImDrawList::CloneOutput` 으로 매 프레임 새로 만들면 목록 수 × 버퍼 넷을 프레임마다 잡고 놓는다 — 에디터 할당의 대부분이었다
+             * @details `ImDrawList::CloneOutput` 으로 매 프레임 새로 만들면 목록 수 × 버퍼 넷을 프레임마다 잡고 놓아 에디터 할당의 대부분을 차지한다
              *          (프레임당 ~260 KB, 6 분에 20 GB). 버퍼 크기는 거의 그대로라 한 번 자란 뒤로는 할당이 없다.
              */
             static void cloneDrawData( const ImDrawData* pSrc, ImDrawData& outDrawData, vector<ImDrawList*>& outListOwned )

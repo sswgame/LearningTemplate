@@ -39,7 +39,7 @@ namespace sw::editor
      * @struct EditorViewportBillboard
      * @brief 언리얼 UBillboardComponent(에디터 전용 스프라이트) · 유니티 Gizmo 아이콘 · Godot 3D 기즈모 아이콘의 자리입니다.
      * @details 그리기(시각화 `billboard`, 툴바 "Icons")와 클릭 선택(`EditorViewportClient::processPicking` 이 레이 피킹보다 먼저)이 같은 `collect` 를 씁니다.
-     *          씬 전체를 훑지 않고 등록부(카메라 · 빛 · 바람)만 봅니다 — 오브젝트 8000 개 벤치에서 모든 컴포넌트를 훑으면 Debug 로 프레임마다 약 10 ms 였다.
+     *          씬 전체를 훑지 않고 등록부(카메라 · 빛 · 바람)만 봅니다 — 오브젝트 8000 개 벤치에서 모든 컴포넌트를 훑으면 Debug 로 프레임마다 약 10 ms 가 든다.
      *          그래서 등록부가 없는 종류(오디오 · 2D 빛)는 아직 빌보드가 없다. 씬 뷰 카메라 자신은 화면 가운데를 가리므로 건너뜁니다.
      */
     struct SW_EDITOR_API EditorViewportBillboard

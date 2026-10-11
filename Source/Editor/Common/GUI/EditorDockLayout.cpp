@@ -35,7 +35,7 @@ namespace sw::editor
             /** @brief 이보다 작은 뷰포트(최소화한 창의 0×0)는 비율의 기준으로 삼지 않습니다. 비율이 0 이 되면 되돌릴 수 없습니다. */
             static constexpr float32 kMinScaledDockspaceSize = 64.0f;
 
-            /** @brief 씬 뷰 / 게임 뷰 분리 전의 배치가 든 창 줄입니다. 이 줄만 있고 새 창(Scene)이 없으면 옛 배치입니다. */
+            /** @brief Scene 창이 없는 배치를 알아보는 창 줄입니다. 이 줄만 있고 Scene 창 줄이 없으면 지금 도크스페이스와 맞지 않는 배치입니다. */
             static constexpr const utf8* kLegacyGameViewWindow = "[Window][Game View]";
             static constexpr const utf8* kSceneViewWindow      = "[Window][Scene]";
 
@@ -189,15 +189,15 @@ namespace sw::editor
         // 읽은 레이아웃은 저장할 때의 도크스페이스 크기와 그 크기의 SizeRef 를 든다. 다음 프레임이 그 크기를 기준으로 지금 창에 비율을 맞춘다.
         _lastDockspaceWidth  = 0.0f;
         _lastDockspaceHeight = 0.0f;
-        // 기본 배치를 다시 덮지 않게 한다(읽은 도킹 노드가 비어 보여도 그것이 사용자의 배치다). 단, 씬 뷰 / 게임 뷰 분리 전에 저장한 배치는
-        // 새 창(Scene · Game)과 지금 도크스페이스를 모른다 — 기본 배치로 다시 짓는다.
+        // 기본 배치를 다시 덮지 않게 한다(읽은 도킹 노드가 비어 보여도 그것이 사용자의 배치다). 단, Game View 창만 있고 Scene 창이 없는 배치는
+        // Scene · Game 창과 지금 도크스페이스를 모른다 — 기본 배치로 다시 짓는다.
         const bool bLegacyLayout = _pendingLayoutIni.find( EditorDockLayoutInternal::kLegacyGameViewWindow ) != string::npos &&
                                    _pendingLayoutIni.find( EditorDockLayoutInternal::kSceneViewWindow ) == string::npos;
         if ( bLegacyLayout )
             SW_LOG_WARNING( "The layout predates the Scene / Game view split - applying the default dock layout" );
         _bApplied      = bLegacyLayout ? SW_FALSE : SW_TRUE;
         _bResetDefault = bLegacyLayout ? SW_TRUE : SW_FALSE;
-        // 다시 연 패널의 창은 처음 나타나며 포커스를 받아 그 탭이 앞에 선다(씬 뷰 최대화를 풀면 Prefab Editor 가 앞에 섰다) — 기본 배치처럼 Scene 탭을 앞으로.
+        // 다시 연 패널의 창은 처음 나타나며 포커스를 받아 그 탭이 앞에 선다(그대로 두면 씬 뷰 최대화를 풀 때 Prefab Editor 가 앞에 선다) — 기본 배치처럼 Scene 탭을 앞으로.
         _bFrontTabPending   = SW_TRUE;
         _frontTabFrameCount = 0;
         _pendingLayoutIni.clear();
@@ -343,7 +343,7 @@ namespace sw::editor
             return;
 
         const ImGuiViewport* pViewport = ImGui::GetMainViewport();
-        // 이름의 판 번호는 기본 배치의 창이 바뀔 때 올린다 — 저장된 imgui.ini 의 옛 도크 트리를 버리고 기본 배치를 다시 짓는다(v7: Game View → Scene · Game).
+        // 이름의 판 번호는 기본 배치의 창이 바뀔 때 올린다 — 저장된 imgui.ini 의 옛 도크 트리를 버리고 기본 배치를 다시 짓는다.
         const ImGuiID dockspaceID = ImGui::GetID( "EditorMainDockSpace_v7" );
         // 도크스페이스가 이번 프레임 크기를 나누기 전에 기준 크기를 새 뷰포트 비율로 맞춘다.
         scaleDockSizeToViewport( dockspaceID );

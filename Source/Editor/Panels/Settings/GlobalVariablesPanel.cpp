@@ -34,7 +34,7 @@ namespace sw::editor
             /**
              * @brief 모듈별 묶음 표의 플래그입니다 — 스크롤(ScrollY)이 없어 행 수만큼만 차지합니다.
              * @details ScrollY 표에 바깥 높이 0 을 주면 ImGui 는 남은 높이를 모두 준다. 그러면 첫 묶음이 패널을 다 차지해 다음 모듈은 바깥을 한참
-             *          스크롤해야 보였다. 스크롤은 패널(바깥 창)이 한다. 평면 표만 ScrollY 로 남은 높이를 채운다.
+             *          스크롤해야 보인다. 스크롤은 패널(바깥 창)이 한다. 평면 표만 ScrollY 로 남은 높이를 채운다.
              */
             static constexpr ImGuiTableFlags kGroupedTableFlags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable;
 

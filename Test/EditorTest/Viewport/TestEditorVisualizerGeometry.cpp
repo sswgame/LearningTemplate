@@ -106,7 +106,7 @@ SW_TEST_CASE( EditorVisualizerGeometryTest, DebugDrawQueueBecomesWorldSegments )
 
 /**
  * @brief [EditorVisualizerGeometryTest] 2D 뷰에서 구는 XY 평면의 원 하나다
- * @details 다른 두 대원은 Z 축을 보는 직교 뷰에서 중심을 지나는 선분으로 겹쳐 보일 뿐이라, 2D 게임의 원 디버그가 십자 모양으로 나왔다.
+ * @details 다른 두 대원은 Z 축을 보는 직교 뷰에서 중심을 지나는 선분으로 겹쳐 보일 뿐이다. 셋을 다 그리면 2D 게임의 원 디버그가 십자 모양으로 보인다.
  */
 SW_TEST_CASE( EditorVisualizerGeometryTest, DebugDrawSphereIsOneCircleInA2DView )
 {

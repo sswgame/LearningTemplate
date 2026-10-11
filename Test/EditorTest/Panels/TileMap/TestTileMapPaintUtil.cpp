@@ -6,11 +6,11 @@
 
 #include "TestFramework/TestFramework.h"
 
-// TileMapPaintUtilTest — 타일맵 칠하기가 빠른 드래그에서 칸을 건너뛰지 않는다(패널 점검 D18). ImGui 없음.
+// TileMapPaintUtilTest — 타일맵 칠하기가 빠른 드래그에서 칸을 건너뛰지 않는다. ImGui 없음.
 
 /**
  * @brief [TileMapPaintUtilTest] 한 프레임에 지나간 두 칸 사이는 빈틈 없는 선분이다 — 두 끝 포함, 이웃 칸은 x · y 가 1 이하로 다르다
- * @details 패널이 마우스가 눌린 프레임마다 그 자리 칸 하나만 칠해, 빠르게 끌면 지운 칸 사이에 지워지지 않은 칸이 남았다.
+ * @details 마우스가 눌린 프레임마다 그 자리 칸 하나만 칠하면, 빠르게 끌 때 지운 칸 사이에 지워지지 않은 칸이 남는다.
  */
 SW_TEST_CASE( TileMapPaintUtilTest, LineCellsHaveNoGaps )
 {

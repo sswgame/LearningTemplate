@@ -100,7 +100,7 @@ namespace sw::editor
         /**
          * @brief 요청이 있으면 캔버스 안에서 한 번 NavigateToContent 를 호출합니다 — 캔버스 크기가 앞 프레임과 같을 때만(아니면 요청을 남겨 다음 프레임에).
          * @details 캔버스 크기가 막 정해진 프레임(처음 열기 · Reload 와 함께 옆 인스펙터가 붙거나 떨어짐)에 맞추면 노드 편집기가 옛 크기의 보이는
-         *          사각형으로 맞춘다는 가설(패널 점검 D21 — Dialogue Graph 캔버스가 일부만 덮고 링크가 패널 밖에 그려짐)에 따른 것이다.
+         *          사각형으로 맞춘다는 가설에 따른다. 그렇게 맞추면 Dialogue Graph 캔버스가 패널 일부만 덮고 링크가 패널 밖에 그려진다.
          */
         void applyContentFitIfNeeded();
         /** @brief 캔버스를 열어도 되는 크기인지 묻습니다. 한 변이라도 `kMinCanvasExtent` 보다 작으면 false 입니다. */

@@ -100,7 +100,7 @@ namespace sw::editor
             if ( pName == nullptr || pVal == nullptr )
                 continue;
 
-            // 테스트용을 담은 옛 프리셋(이 필터 전에 저장한 것)도 그 값은 적용하지 않는다.
+            // 프리셋 파일에 테스트용 변수가 들어 있어도 그 값은 적용하지 않는다.
             GlobalVariableInfo* pInfo = pGvm->findVariable( pName );
             if ( pInfo == nullptr || pInfo->_bTestOnly )
                 continue;

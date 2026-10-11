@@ -24,8 +24,8 @@ namespace sw::editor
     /**
      * @struct QuickLauncherLayoutUtil
      * @brief 결과 줄의 열 자리를 글자 크기 · 배율에서 정합니다.
-     * @details 고정 위치(이름 x 95, 경로 x 300, 줄 높이 34)는 글자 크기 · UI 배율을 보지 않아 `[GameObject]` 와 이름이 겹쳐
-     *          `[GameObjectGameCamera` 처럼 보였고, 긴 에셋 이름이 경로 글과 겹쳤다.
+     * @details 열 위치를 고정하면(이름 x 95, 경로 x 300, 줄 높이 34) 글자 크기와 UI 배율을 따라가지 못해 `[GameObject]` 와 이름이 겹쳐
+     *          `[GameObjectGameCamera` 처럼 보이고, 긴 에셋 이름이 경로 글과 겹친다.
      */
     struct QuickLauncherLayoutUtil
     {

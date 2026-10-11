@@ -4,11 +4,11 @@
 
 #include "TestFramework/TestFramework.h"
 
-// QuickLauncherLayoutTest — Quick Open 결과 줄의 종류 표시 · 이름 · 경로가 겹치지 않는다(패널 점검 D23). ImGui 없음.
+// QuickLauncherLayoutTest — Quick Open 결과 줄의 종류 표시 · 이름 · 경로가 겹치지 않는다. ImGui 없음.
 
 /**
  * @brief [QuickLauncherLayoutTest] 종류 표시 열은 가장 넓은 표시보다 넓고, 이름은 경로 열 앞에서 잘리며, 줄 높이는 프레임 높이를 따른다
- * @details 고정 위치(이름 x 95, 경로 x 300)는 `[GameObject]` 가 95 px 보다 넓은 글자 크기 · 배율에서 이름과 겹쳤다.
+ * @details 열 위치를 고정하면(이름 x 95, 경로 x 300) `[GameObject]` 가 95 px 보다 넓어지는 글자 크기와 배율에서 이름과 겹친다.
  */
 SW_TEST_CASE( QuickLauncherLayoutTest, ColumnsDoNotOverlap )
 {

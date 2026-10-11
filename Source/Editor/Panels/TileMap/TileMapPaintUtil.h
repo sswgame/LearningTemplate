@@ -12,7 +12,7 @@ namespace sw::editor
     /**
      * @struct TileMapPaintUtil
      * @brief 칠하기 획 하나를 칸으로 바꿉니다.
-     * @details 마우스가 눌린 프레임마다 그 자리 칸 하나만 칠하면, 빠르게 끌 때 한 프레임에 여러 칸을 지나가 그 사이 칸이 비었다.
+     * @details 마우스가 눌린 프레임마다 그 자리 칸 하나만 칠하면, 빠르게 끌 때 한 프레임에 여러 칸을 지나가 그 사이 칸이 빈다.
      *          지난 프레임에 칠한 칸에서 이번 칸까지 선분으로 잇는다(유니티 Tile Palette · 그림 도구의 획과 같다).
      */
     struct TileMapPaintUtil

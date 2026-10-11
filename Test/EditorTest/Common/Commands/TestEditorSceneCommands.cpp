@@ -240,7 +240,7 @@ SW_TEST_CASE( EditorSceneCommandsTest, AddComponentIsUndoableAndResolvesItsMesh 
 
 /**
  * @brief [EditorSceneCommandsTest] 활성 바꾸기(계층 창 눈 · 인스펙터 Active)는 되돌릴 수 있다
- * @details 계층 창의 눈 단추가 `setActive` 를 바로 불러 되돌리기도 dirty 도 남지 않았다 — 다른 씬을 열면 묻지 않고 사라졌다.
+ * @details 계층 창의 눈 단추가 `setActive` 를 바로 부르면 되돌리기도 dirty 도 남지 않아, 다른 씬을 열 때 묻지 않고 변경이 사라진다.
  */
 SW_TEST_CASE( EditorSceneCommandsTest, SetActiveIsUndoable )
 {

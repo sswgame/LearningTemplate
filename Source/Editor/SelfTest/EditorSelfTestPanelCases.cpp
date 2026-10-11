@@ -30,7 +30,7 @@ namespace sw::editor
     namespace
     {
         /**
-         * @brief 패널 점검(2026-10-07)에서 찾은 결함의 재현 시험입니다 — 콘텐츠 브라우저 · 도구 창 · 오버레이.
+         * @brief 콘텐츠 브라우저, 도구 창, 오버레이의 결함 재현 시험입니다.
          * @details 시험이 디스크에 만드는 것(시험 폴더)은 끝나는 단계에서 지운다. 실패로 일찍 끝나도 같은 정리 단계를 지난다.
          */
         struct EditorSelfTestPanelCasesInternal
@@ -98,7 +98,7 @@ namespace sw::editor
             static bool hasPhaseTimedOut( const ContentBrowserProbe& probe, uint32 stepIndex ) { return stepIndex - probe._phaseStartStep > kMaxWaitStepCount; }
 
             // ------------------------------------------------------------------------------
-            // contentBrowser.deleteRefreshesTheList — 삭제는 확인을 거쳐 지우고 목록에서 바로 빠진다. 에디터 밖에서 더한 파일은 파일 감시로 목록에 들어온다(D13)
+            // contentBrowser.deleteRefreshesTheList — 삭제는 확인을 거쳐 지우고 목록에서 바로 빠진다. 에디터 밖에서 더한 파일은 파일 감시로 목록에 들어온다
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runDeleteRefreshesTheList( EditorSelfTestContext& context )
             {
@@ -189,7 +189,7 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // contentBrowser.browsingWritesNoMeta — 폴더를 보기만 해서는 `.meta` 가 생기지 않는다(D14). GUID 는 그 에셋을 쓰는 시스템이 만든다
+            // contentBrowser.browsingWritesNoMeta — 폴더를 보기만 해서는 `.meta` 가 생기지 않는다. GUID 는 그 에셋을 쓰는 시스템이 만든다
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runBrowsingWritesNoMeta( EditorSelfTestContext& context )
             {
@@ -228,7 +228,7 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // contentBrowser.treeDoesNotReadTheDiskEveryFrame — 폴더 트리는 처음 그릴 때만 하위 폴더를 디스크에서 읽는다(D15, Debug 16.8 ms 의 원인)
+            // contentBrowser.treeDoesNotReadTheDiskEveryFrame — 폴더 트리는 처음 그릴 때만 하위 폴더를 디스크에서 읽는다(프레임마다 읽으면 Debug 에서 16.8 ms 가 든다)
             // ------------------------------------------------------------------------------
             /** @brief 폴더 트리 시험의 진행 상태입니다. 앞 시험이 지운 폴더의 파일 감시 사건이 캐시를 비울 수 있어 변경 번호가 멎을 때까지 기다린다. */
             struct FolderTreeProbe
@@ -436,8 +436,8 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // prefab.ignoresOtherFocusedAssets — 프리팹이 아닌 오브젝트의 오버라이드를 모을 때 포커스된 머티리얼을 프리팹으로 읽지 않는다(D16)
-            // Prefab Editor 가 그 경로로 `Missing <Prefab> root` · `Prefab source could not be loaded` 두 [Error] 를 남겼다.
+            // prefab.ignoresOtherFocusedAssets — 프리팹이 아닌 오브젝트의 오버라이드를 모을 때 포커스된 머티리얼을 프리팹으로 읽지 않는다
+            // 프리팹으로 읽으면 Prefab Editor 가 `Missing <Prefab> root` · `Prefab source could not be loaded` 두 [Error] 를 남긴다.
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runPrefabIgnoresOtherFocusedAssets( EditorSelfTestContext& context )
             {
@@ -469,8 +469,8 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // globalVariables.groupsStack — 모듈별 묶음 표는 자기 행 수만큼만 차지한다(D19). 묶음 표가 혼자 스크롤하면 패널 높이를 다 차지해
-            // 다음 모듈이 바깥 스크롤 아래로 밀려났다. 이 프레임에 그려진 변수 표(Pin … Reset 다섯 열)가 둘 이상이고, 어느 것도 자기 스크롤 창이 없어야 한다.
+            // globalVariables.groupsStack — 모듈별 묶음 표는 자기 행 수만큼만 차지한다. 묶음 표가 혼자 스크롤하면 패널 높이를 다 차지해
+            // 다음 모듈이 바깥 스크롤 아래로 밀려난다. 이 프레임에 그려진 변수 표(Pin … Reset 다섯 열)가 둘 이상이고, 어느 것도 자기 스크롤 창이 없어야 한다.
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runGlobalVariableGroupsStack( EditorSelfTestContext& context )
             {
@@ -512,8 +512,8 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // panels.toolWindowsOpenAtAUsableSize — 기본 도킹이 없는 도구 창은 닫힌 채 시작하고, 열면 쓸 수 있는 크기로 주 뷰포트 안에 뜬다(D20)
-            // 크기를 정하지 않은 도구 창은 내용 크기로 열려 Data Table 은 높이 100 px, User Settings 는 값 칸 0 폭이었고, Input Map Editor 는 처음부터 열렸다.
+            // panels.toolWindowsOpenAtAUsableSize — 기본 도킹이 없는 도구 창은 닫힌 채 시작하고, 열면 쓸 수 있는 크기로 주 뷰포트 안에 뜬다
+            // 크기를 정하지 않은 도구 창은 내용 크기로 열려 Data Table 은 높이 100 px, User Settings 는 값 칸 폭이 0 이 된다. Input Map Editor 도 시작할 때 닫혀 있어야 한다.
             // 자체 시험은 레이아웃을 저장 · 복원하지 않으므로 이 실행에서 처음 만드는 창에 처음 크기가 걸린다.
             // ------------------------------------------------------------------------------
             static constexpr const utf8* kArrFloatingToolPanelID[] = { "history", "global_variables", "render_targets", "ui_preview",
@@ -609,8 +609,8 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // sceneView.overlaysStayInsideTheCanvas — 씬 뷰의 격자 · 시각화 선은 캔버스(씬 뷰 이미지) 사각형으로 잘린다(D22)
-            // 창 그리기 목록에 자르지 않고 그려 카메라 절두체 선이 탭 · 툴바 위까지 뻗었다. 이미지 명령 뒤에 캔버스와 같은 ClipRect 의 명령이 있어야
+            // sceneView.overlaysStayInsideTheCanvas — 씬 뷰의 격자 · 시각화 선은 캔버스(씬 뷰 이미지) 사각형으로 잘린다
+            // 창 그리기 목록에 자르지 않고 그리면 카메라 절두체 선이 탭 · 툴바 위까지 뻗는다. 이미지 명령 뒤에 캔버스와 같은 ClipRect 의 명령이 있어야
             // 한다(격자는 기본으로 켜져 있다).
             // ------------------------------------------------------------------------------
             /** @brief @p pDrawList 에서 텍스처가 @p textureID 인 명령의 순번과 그 정점이 덮는 사각형을 찾습니다. 없으면 false. */
