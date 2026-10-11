@@ -50,7 +50,7 @@
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
-| `gv_editorProbeAsset` | `string` | — | 시험 | 탐침 Editor.ReferenceCount 가 볼 에셋의 리소스 id (시나리오용) | [ContentBrowserPanel.cpp](../../Source/Editor/Panels/ContentBrowserPanel.cpp) |
+| `gv_editorProbeAsset` | `string` | — | 시험 | 탐침 Editor.ReferenceCount 가 볼 에셋의 리소스 id (시나리오용) | [ContentBrowserPanel.cpp](../../Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp) |
 
 ## `Source/Editor/SelfTest`
 

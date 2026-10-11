@@ -144,7 +144,7 @@ class CheckEditorLayersGate(LintGate):
         {
             # README 의 약속 — Commands 는 ImGui 없는 동작이고 패널을 모른다.
             "name": "Commands 가 패널을 include",
-            "files": {"Source/Editor/Common/Commands/Probe.cpp": '#include "pch.h"\n\n#include "Editor/Panels/HierarchyPanel.h"\n'},
+            "files": {"Source/Editor/Common/Commands/Probe.cpp": '#include "pch.h"\n\n#include "Editor/Panels/Scene/HierarchyPanel.h"\n'},
         },
         {
             "name": "Workspace 가 GUI 를 include",

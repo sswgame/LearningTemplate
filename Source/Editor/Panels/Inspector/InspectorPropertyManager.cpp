@@ -20,7 +20,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Panels/ContentBrowserPanel.h"
+#include "Editor/Panels/ContentBrowser/ContentBrowserPanel.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
 #include "Editor/Panels/Inspector/InspectorBuiltinValue.h"

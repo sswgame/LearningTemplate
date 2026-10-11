@@ -303,4 +303,4 @@ Win32는 BMP 밖의 글자(이모지, 확장 한자)를 서로게이트 `WM_CHAR
 | `Virtual/VirtualInputScript.h` | 프레임 번호에 적은 가상 사건 |
 | `Virtual/InputReplay.h` | 입력 층 녹화와 재생 |
 | `Test/EngineTest/Input/` | 기능별 사용 예(테스트) |
-| `Source/Editor/Panels/InputMapPanel.cpp` | 액션 바인딩을 편집하고 시험하는 에디터 패널 |
+| `Source/Editor/Panels/InputMap/InputMapPanel.cpp` | 액션 바인딩을 편집하고 시험하는 에디터 패널 |

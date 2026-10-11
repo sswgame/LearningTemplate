@@ -141,7 +141,7 @@ ImGui 의 할당은 sw 할당자로 보냅니다. `ImGuiEditor::initialize` 가 
 아래부터 `Common` 루트 · `Backend` · `Config` → `Asset` · `Localization` · `SourceControl` → `Workspace` → `Commands` → `GUI` · `Widgets` · `Popups` → `Viewport` → `Panels` · `AssetActions` → `SelfTest` → 셸(`ImGuiEditor`) 입니다.
 티어 표와 예외(어디서나 include 해도 되는 잎 헤더, 조립 파일)는 `Scripts/lint/rules/CheckEditorLayers.toml` 에 있습니다.
 아래 층이 위 층을 불러야 하면 세 가지 중 하나를 씁니다. 틀(인터페이스 · 매니저 · 등록부)을 아래로 내리거나, 아래 층에 창구 인터페이스를 두고 위 층이 구현하거나(`IEditorPanelHost` — 커맨드가 패널을 열고 도구 문서를 저장한다),
-UI 를 만지는 명령의 등록 줄을 그 UI 의 .cpp 에 둡니다(레이아웃 · 패널 · 테마 개발 명령은 `Common/GUI/EditorUIDevCommands.cpp`, 씬 뷰 오버레이는 `Panels/SceneViewDevCommands.cpp`).
+UI 를 만지는 명령의 등록 줄을 그 UI 의 .cpp 에 둡니다(레이아웃 · 패널 · 테마 개발 명령은 `Common/GUI/EditorUIDevCommands.cpp`, 씬 뷰 오버레이는 `Panels/Scene/SceneViewDevCommands.cpp`).
 
 판단을 ImGui 밖으로 빼 두는 이유는 시험입니다. `Test/EditorTest` 는 ImGui 없이 도는 코드만 시험하므로, 판단이 그리기 코드 안에 있으면 시험이 닿지 않습니다.
 그래서 도구 창마다 ImGui 없는 짝(`ProfilerScopeHistory`, `InputMapConflicts`, `EditorViewportOverlayLayout` 같은)을 두고 패널은 그리기만 합니다.

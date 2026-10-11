@@ -12,8 +12,8 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Panels/ContentBrowserPanel.h"
-#include "Editor/Panels/MapCheckPanel.h"
+#include "Editor/Panels/ContentBrowser/ContentBrowserPanel.h"
+#include "Editor/Panels/MapCheck/MapCheckPanel.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
 #include "Engine/Config/GameConfig.h"

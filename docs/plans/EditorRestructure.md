@@ -101,4 +101,12 @@ UI 를 조작하는 명령(탭 열기 · 레이아웃)은 그 UI 를 가진 모�
 
 - 1 단계(2026-10-11): 게이트와 위반 37 줄 예외. RunLintSuite 63 개 OK.
 - 2 단계(2026-10-11): 위반 37 → 0(예외는 prelude 넷 · wiring 둘만 남음). Debug all + AllTests 경고 0, ctest -L editor 3/3,
-  AppTest `*Editor*`(에디터 시나리오 네 백엔드 · `EditorRegistriesKeepTheirOrder` — 상태 막대 등록 줄 한 줄 추가) 통과.
+  AppTest `*Editor*`(에디터 시나리오 네 백엔드 · `EditorRegistriesKeepTheirOrder` — 상태 막대 등록 줄 한 줄 추가) 통과(GL sequencerkeys 는 부하 중 한 번 졌고 단독 3/3 통과).
+- 3 단계(2026-10-11): `get()` 이중 조회 제거(호출당 550 → 8 ns, Debug). 주입 확대와 5 단계 분리는 하지 않기로 했다(위 결론).
+- 4 단계(2026-10-11): Panels 하위 폴더로 81 개 이동. Debug 경고 0, ctest -L editor 3/3, RunLintSuite OK.
+
+## 남은 일
+
+- 3 · 4 단계 뒤에는 네 백엔드 에디터 시나리오(`AppTest --test_filter=*Editor*`)를 다시 돌리지 않았다(2 단계 뒤에는 돌렸다). 배치 끝 검증에서 본다.
+- Shipping 빌드 · `-L hostgpu` · 게임별 프리셋 빌드(ThemePark 밖의 에디터 확장 모듈)는 확인하지 않았다.
+- 패널 · 커맨드의 `EditorContext::get()` 224 곳은 그대로 둔다(3b). 시험할 판단이 생기면 그 함수만 필요한 서비스를 인자로 받는다.

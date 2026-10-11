@@ -99,7 +99,7 @@
   ⑩ UI 문서 디자이너(⑨ 뒤). 에디터에 이미 있는 것(전역 변수 표, 커맨드 팔레트, 핫 리로드, Undo, Play 와 Step, InputReplay, 기즈모, RenderTargetPanel, 프로파일러와 Tracy)은 다시 만들지 않는다.
 - **Hierarchy 형제 순서 끌어 바꾸기 · 정리용 폴더(에디터 보강 N2 에서 남김).** 루트 줄은 오브젝트 id 순이고(`EditorSceneCommands::collectRootsInOrder`) 씬 파일에 순서 칸이 없다.
   끌어 바꾸려면 씬 형식에 형제 순서를 적고(유니티 sibling index) 그 순서로 그려야 한다 — 형식을 바꾸니 데이터를 다시 쓴다. 폴더는 저장되지 않는 빈 오브젝트(언리얼 Outliner 폴더)로 같이.
-- **UI 미리보기 패널의 남은 것(runtime-ui 8-5 뒤, `Editor/Panels/UIPreviewPanel`).** (1) 언어 고르기(의사 문화권 `qps-ploc` · `qps-plocm` 포함) — 문화권이 전역이라
+- **UI 미리보기 패널의 남은 것(runtime-ui 8-5 뒤, `Editor/Panels/UIPreview/UIPreviewPanel`).** (1) 언어 고르기(의사 문화권 `qps-ploc` · `qps-plocm` 포함) — 문화권이 전역이라
   미리보기 화면에만 거는 길(화면별 `LocalizationManager` 출처)이 필요하다. (2) 고른 위젯의 PROPERTY 를 인스펙터로 고치고 `UIDocumentWriter` 로 저장(되돌리기 —
   `CommandStack`) — 지금은 이름 · 사각형만 보인다. (3) 미리보기 안 입력 흉내(마우스 · 탐색 방향). (4) 콘텐츠 브라우저에서 `*.ui.xml` 두 번 누르면 이 패널로 —
   에셋 종류 `UIDocument` 의 열기 동작. (5) 애니메이션 미리 보기(재생 · 시간 막대 — 미리보기 화면은 Open 을 틀지 않아 문서 값 그대로다). (6) UI 문서 디자이너(팔레트 → 끌어 놓기 · 슬롯 손잡이) — 미리보기 패널 위에.
@@ -116,6 +116,8 @@
   있지 않다, X11 그리기는 `XDrawString`(Latin-1)이라 한글이 깨진다.
 
 - **입력 흉내 창구(`EditorSelfTestInput` · `EditorSelfTestMarks::note`)로 아직 안 덮은 것** — 그래프 패널 ↔ 저장 커맨드 배선, 인스펙터 콤보 직접 편집, 드래그 드롭.
+- **`editor/sequencerkeys` 시나리오가 부하 중 OpenGL 에서 한 번 졌다**(2026-10-11, 다른 에이전트의 클린 빌드와 겹친 `AppScenarioTest.EditorScenariosPassOnOpenGL`).
+  280 프레임에 시퀀서 대상이 없고 `sequencer.addKey` 표식이 안 그려졌다 — 단독 재실행은 3/3 통과. 시나리오가 고정 프레임을 기다리는 곳을 조건 대기로 바꿀지 본다.
 
 ### 1-5. 핫 리로드 · 모듈
 
