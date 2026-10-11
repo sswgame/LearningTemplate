@@ -4,7 +4,7 @@
  * @details `SW_BUILD_CONFIG_NAME` 은 `cmake/Engine/BuildLayout.cmake`(Shipping 이면 "Shipping", 아니면 구성 이름),
  *          `SW_PLATFORM_NAME` 은 `cmake/Modules/Platform/` 의 플랫폼 파일(그 플랫폼의 `SW_PLATFORM_*` 매크로 옆)가 정의합니다.
  *          `SW_TARGET_NAME` · `SW_WITH_CLIENT_CODE` · `SW_WITH_SERVER_CODE` 는 `cmake/Engine/BuildLayout.cmake`(빌드 타깃 종류 `SW_TARGET_TYPE`)가 정의합니다.
- *          이름을 코드에서 `#if` 사슬로 다시 만들지 말 것 — 정본은 CMake 한 곳입니다.
+ *          이름을 코드에서 `#if` 사슬로 다시 만들지 말 것 — 원본은 CMake 한 곳입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"

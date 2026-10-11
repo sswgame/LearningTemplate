@@ -18,7 +18,7 @@ namespace sw
     /**
      * @brief std::unordered_set 에 밀집 구현과 같은 조회 API(이종 키 `find` · `count` · `contains`)를 더한 것입니다(`SW_ENABLE_STL_CONTAINER`).
      * @details C++17 의 std 해시 컨테이너에는 이종 조회와 `contains` 가 없다. 이종 키(`string_view` 등)는 키 타입으로 바꿔 찾는다 — 임시 키 하나가
-     *          생기지만 STL 모드는 할당자 · 레이스 탐지를 빼고 표준 구현과 견주는 진단 구성이다.
+     *          생기지만 STL 모드는 할당자 · 레이스 탐지를 빼고 표준 구현과 비교하는 진단 구성이다.
      */
     template <typename Key, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<>, typename Allocator = std::allocator<Key>>
     class unordered_set : public std::unordered_set<Key, Hash, KeyEqual, Allocator>

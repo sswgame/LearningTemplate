@@ -11,7 +11,7 @@
  *          조각은 패킷을 거의 채우므로, 앞 패킷이 순서만 · 비신뢰를 남겼으면 다음 패킷은 그쪽부터 싣는다(번갈아 — 큰 전송이 스냅샷을 굶기지 않는다).
  *          신뢰 순서 없음은 신뢰 순서와 id · 창 · 재전송을 같이 쓴다 — 받는 쪽은 받는 대로 건네고 그 자리에 "건넸다" 표만 남겨, 순서 커서는 표를 지나가고 늦게 온 중복은 표가 거른다.
  *          패킷 끝의 1 비트가 "확인을 바로 돌려 달라" 입니다. 메시지를 실었거나 확인할 것이 없던(유지) 패킷만 켜고, 확인만 담은 답은 끈다 — 그래야 한가할 때
- *          두 쪽이 확인에 확인으로 끝없이 주고받지 않고 `NetHostSettings::_keepAliveInterval` 마다만 오간다. RTT · 손실률도 이 비트를 켠 패킷으로만 잰다.
+ *          두 쪽이 확인에 확인으로 끝없이 주고받지 않고 `NetHostSettings::_keepAliveInterval` 마다만 오간다. RTT · 손실률도 이 비트를 켠 패킷으로만 측정한다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -80,7 +80,7 @@ namespace sw
         /**
          * @brief 패킷 몸을 씁니다 — 헤더(시퀀스 · ack · ack 비트) + 들어가는 만큼의 메시지 + 확인 요청 비트.
          * @param ackRequestInterval 확인만 담은 답이라도 마지막 확인 요청에서 이만큼 지났으면 확인을 바란다 — 양쪽 유지 시각이 맞물려
-         *                           한쪽이 늘 답만 보내게 되어도 그쪽 RTT 를 잴 수 있게(`NetHostSettings::_keepAliveInterval`).
+         *                           한쪽이 늘 답만 보내게 되어도 그쪽 RTT 를 측정할 수 있게(`NetHostSettings::_keepAliveInterval`).
          */
         void writePacket( float64 time, BitWriter& writer, int32 maxBytes, float64 ackRequestInterval = kDefaultAckRequestInterval );
         /** @brief 패킷 몸을 읽습니다. 깨졌거나 오래된 중복이면 false 입니다. */

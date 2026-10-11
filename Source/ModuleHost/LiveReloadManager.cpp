@@ -80,7 +80,7 @@ namespace sw
              * @param pOutActual   모듈이 실제로 묶인 쪽입니다(로그용). 아직 묶이지 않았으면 nullptr 입니다.
              * @param pOutExpected 비교한 기준입니다(로그용).
              * @return 아직 묶이지 않았거나 @p pExpected 에 묶였으면 true 입니다.
-             * @details 리눅스는 import 표에서 결속을 읽을 수 없어서, 의존 모듈마다 박힌 도장 상수를 모듈의 검색 범위(자기 + 자기 의존)에서
+             * @details 리눅스는 import 표에서 결속을 읽을 수 없어서, 의존 모듈마다 박힌 스탬프 상수를 모듈의 검색 범위(자기 + 자기 의존)에서
              *          찾습니다. `dlsym( pModule, ... )` 이 돌려주는 주소는 그 모듈이 **실제로 묶인** 의존의 것입니다.
              */
             static bool isBoundTo( void* pModule, string_view dependencyName, void* pExpected, const void*& pOutActual, const void*& pOutExpected )
@@ -93,7 +93,7 @@ namespace sw
                 const string stampSymbolName = string{ "sw_moduleEngineAbiStamp_" } + string{ dependencyName };
                 pOutExpected                 = ModuleImageUtil::getDynamicSymbol( pExpected, stampSymbolName );
                 pOutActual                   = nullptr;
-                // 도장이 없는 모듈(정적 링크 · 도장을 박기 전 빌드)은 가릴 방법이 없다. 어긋남으로 보지 않는다.
+                // 스탬프가 없는 모듈(정적 링크 · 스탬프를 박기 전 빌드)은 가릴 방법이 없다. 어긋남으로 보지 않는다.
                 if ( pOutExpected == nullptr )
                     return true;
                 pOutActual = ModuleImageUtil::getDynamicSymbol( pModule, stampSymbolName );
@@ -227,7 +227,7 @@ namespace sw
             return true;
         }
 
-        // 섀도 복사본과 같은 이유로 올리기 **전에** 도장을 본다. 도장이 없거나 다르면 정적 초기화가 돌기 전에 거절한다.
+        // 섀도 복사본과 같은 이유로 올리기 **전에** 스탬프를 본다. 스탬프가 없거나 다르면 정적 초기화가 돌기 전에 거절한다.
         vector<uint8> bytes;
         if ( LiveReloadManagerInternal::readFileWithRetry( modulePath, bytes ) == false )
         {
@@ -592,8 +592,8 @@ namespace sw
             }
 
             // 올리기 **전에** 본다. 올리면 정적 초기화가 돌므로, 돌고 있는 엔진과 다른 헤더로 빌드된 모듈은 그 전에 거절해야 한다.
-            // 도장이 **없는** 모듈도 거절한다 — 도장을 박지 않는 빌드 규칙으로 만든 모듈이 대조 없이 올라오지 않게(동적 모듈은 모두
-            // `sw_registerDynamicModule` 이 도장을 박는다).
+            // 스탬프가 **없는** 모듈도 거절한다 — 스탬프를 박지 않는 빌드 규칙으로 만든 모듈이 대조 없이 올라오지 않게(동적 모듈은 모두
+            // `sw_registerDynamicModule` 이 스탬프를 박는다).
             string     moduleStamp;
             const bool bEngineAbiMismatch = ModuleImagePatch::findEngineAbiStamp( bytes, moduleStamp ) == false || moduleStamp != engine::getEngineAbiStamp();
             if ( bEngineAbiMismatch )

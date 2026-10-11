@@ -48,7 +48,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 끝점이 보는 연결 하나 — I/O 스레드가 열고 닫고, 보내는 스레드는 shared_ptr 로 붙든다(닫힌 뒤 지워져도 안전). */
+    /** @brief 엔드포인트가 보는 연결 하나 — I/O 스레드가 열고 닫고, 보내는 스레드는 shared_ptr 로 붙든다(닫힌 뒤 지워져도 안전). */
     struct StreamMessageEndpoint::Connection
     {
         mutex                   _mutex; ///< 해독기 · 보낼 프레임 버퍼 · TLS 세션
@@ -63,7 +63,7 @@ namespace sw
         StreamConnectionHandle  _handle{};
         atomic<int64>           _roundTripNanoseconds{ -1 };
         atomic<int32>           _pendingBytes{ 0 };                      ///< 줄에 쌓였지만 아직 pump 가 넘기지 않은 몸 바이트
-        StreamCloseReason       _errorReason{ StreamCloseReason::None }; ///< 끝점이 끊은 까닭(ProtocolError · SendQueueOverflow · SecurityFailure) — 전송의 까닭보다 앞선다
+        StreamCloseReason       _errorReason{ StreamCloseReason::None }; ///< 엔드포인트가 끊은 까닭(ProtocolError · SendQueueOverflow · SecurityFailure) — 전송의 까닭보다 앞선다
         uint8                   _bAccepted{ SW_FALSE };
         uint8                   _bOpenAnnounced{ SW_FALSE };
         uint8                   _bReceivePaused{ SW_FALSE };
@@ -254,7 +254,7 @@ namespace sw
             {
                 case StreamFrameKind::Ping:
                 {
-                    // 끝점이 스스로 답한다 — 게임 스레드를 거치지 않으니 RTT 에 프레임 길이가 섞이지 않는다.
+                    // 엔드포인트가 스스로 답한다 — 게임 스레드를 거치지 않으니 RTT 에 프레임 길이가 섞이지 않는다.
                     connection._frameScratch.clear();
                     if ( StreamFrameEncoder::appendFrame( connection._frameScratch, StreamFrameKind::Pong, 0, frame._pBody, frame._bodySize, _settings._maxFrameBodySize ) )
                         (void)writeOutgoingLocked( connection, connection._frameScratch ); // Pong 실패는 writeOutgoingLocked 가 연결을 닫아 알린다

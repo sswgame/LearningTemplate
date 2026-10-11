@@ -233,7 +233,7 @@ namespace sw
         [[nodiscard]] static bool writeFile( string_view fileName, const uint8* pData, uint64 size );
         /**
          * @brief 파일의 [offset, offset + maxReadCount) 를 outBytes 에 담습니다.
-         * @details 잰 크기만큼 읽지 못하면(읽기 오류 · 읽는 도중 파일이 줄어듦) false 입니다. 인자는 64비트라 4 GB 이상의 파일도 다룹니다.
+         * @details 측정한 크기만큼 읽지 못하면(읽기 오류 · 읽는 도중 파일이 줄어듦) false 입니다. 인자는 64비트라 4 GB 이상의 파일도 다룹니다.
          */
         [[nodiscard]] static bool readFile( string_view fileName, vector<uint8>& outBytes, uint64 offset = 0, uint64 maxReadCount = MathUtil::kMaxUInt64 );
         /** @brief 파일 전체를 UTF-8 텍스트로 읽습니다(UTF-8 BOM 은 자동으로 뗍니다). 잘린 읽기는 false 입니다. */

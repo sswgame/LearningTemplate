@@ -1,6 +1,6 @@
 /**
  * @file StreamMessageEndpoint.h
- * @brief 스트림 전송 위의 프레임 끝점 — I/O 스레드에서 프레임을 잘라 연결마다의 받은 줄에 쌓고, 게임(서비스) 스레드의 `pump` 가 한 잠금에 꺼내 줍니다.
+ * @brief 스트림 전송 위의 프레임 엔드포인트 — I/O 스레드에서 프레임을 잘라 연결마다의 받은 줄에 쌓고, 게임(서비스) 스레드의 `pump` 가 한 잠금에 꺼내 줍니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -20,7 +20,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 스트림 끝점의 TLS 설정 — 컨텍스트(인증서 · 신뢰)는 `INetSecurityProvider::createTLSContext` 로 만들어 끝점보다 오래 둔다. 없으면 평문. */
+    /** @brief 스트림 엔드포인트의 TLS 설정 — 컨텍스트(인증서 · 신뢰)는 `INetSecurityProvider::createTLSContext` 로 만들어 엔드포인트보다 오래 둔다. 없으면 평문. */
     struct StreamSecuritySettings
     {
         ITLSContext* _pTLSContext{ nullptr };
@@ -34,7 +34,7 @@ namespace sw
         int32                  _maxFrameBodySize{ StreamFrameConstant::kDefaultMaxFrameSize };
         int32                  _maxPendingReceiveBytes{ 4 * 1024 * 1024 }; ///< 연결 하나가 `pump` 를 기다리는 바이트 — 넘으면 읽기를 멈춘다
         float64                _pingIntervalSeconds{ 15.0 };               ///< 0 = 끈다. 전송의 유휴 시한보다 짧게
-        NetCompressionSettings _compression{};                             ///< 보내는 프레임 몸의 압축(기본 꺼짐). 받는 쪽은 설정과 상관없이 등록부에 있는 코덱이면 푼다
+        NetCompressionSettings _compression{};                             ///< 보내는 프레임 몸의 압축(기본 꺼짐). 받는 쪽은 설정과 상관없이 레지스트리에 있는 코덱이면 푼다
         StreamSecuritySettings _security{};                                ///< TLS 컨텍스트가 있으면 모든 연결이 TLS — 열림은 핸드셰이크 뒤
     };
 } // namespace sw
@@ -67,8 +67,8 @@ namespace sw
 {
     /**
      * @class StreamMessageEndpoint
-     * @brief 스트림 전송 위의 프레임 끝점 — 전송의 처리기가 되어 I/O 스레드에서 프레임을 잘라 연결마다의 받은 줄에 쌓고, `pump` 가 한 잠금에 꺼내 줍니다.
-     * @details 받은 줄이 `_maxPendingReceiveBytes` 를 넘으면 읽기를 멈춘다(TCP 창이 닫혀 상대가 멈춘다). 핑 · 퐁은 끝점이 I/O 스레드에서 스스로 답한다.
+     * @brief 스트림 전송 위의 프레임 엔드포인트 — 전송의 처리기가 되어 I/O 스레드에서 프레임을 잘라 연결마다의 받은 줄에 쌓고, `pump` 가 한 잠금에 꺼내 줍니다.
+     * @details 받은 줄이 `_maxPendingReceiveBytes` 를 넘으면 읽기를 멈춘다(TCP 창이 닫혀 상대가 멈춘다). 핑 · 퐁은 엔드포인트가 I/O 스레드에서 스스로 답한다.
      *          보낼 줄이 넘치면 메시지를 버리지 않고 끊는다(SendQueueOverflow) — 버리면 그 위의 순서가 깨진다. 보내기는 아무 스레드에서나.
      *          `_security._pTLSContext` 가 있으면 연결마다 TLS 세션을 두고 모든 바이트가 그것을 지난다 — 열림은 핸드셰이크가 끝난 뒤, 핸드셰이크 · 레코드 검증
      *          실패는 SecurityFailure 로 끊어 열림 없이 닫힘만 간다. 핸드셰이크 중에 보낸 프레임은 세션이 모았다가 끝나면 보낸다. 위 층은 TLS 를 모른다.
@@ -109,7 +109,7 @@ namespace sw
         void close( StreamConnectionHandle handle, StreamCloseMode mode );
 
         IStreamTransport* getTransport() const;
-        /** @brief 연결의 RTT(핑으로 잰 마지막 값, 초)입니다. 모르면 −1. */
+        /** @brief 연결의 RTT(핑으로 측정한 마지막 값, 초)입니다. 모르면 −1. */
         float64 getRoundTripSeconds( StreamConnectionHandle handle ) const;
 
         // IStreamHandler — I/O 스레드

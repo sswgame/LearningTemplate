@@ -197,7 +197,7 @@ namespace sw
      * @brief 메서드마다 처리기 하나 — 요청 머리를 읽고, 멱등 키를 보고(이미 끝난 키면 기억한 응답, 진행 중이면 그 응답을 같이 받게), 처리기를 부릅니다.
      * @details 멱등 범위는 (주체, 메서드, 키)다. 주체는 로그인 키트가 `setPrincipal` 로 붙인다 — 그래야 끊기고 다시 붙은 연결의 재시도가 같은 키로 잡힌다.
      *          주체가 0 이면 범위는 연결이다(재접속 뒤에는 잡히지 않는다 — 상태를 바꾸는 메서드는 로그인 뒤에만 열 것).
-     *          잠금 순서: `_mutex` 를 푼 뒤에 끝점의 연결 잠금. `sendResponse` 는 `_writerMutex` → 끝점 잠금.
+     *          잠금 순서: `_mutex` 를 푼 뒤에 엔드포인트의 연결 잠금. `sendResponse` 는 `_writerMutex` → 엔드포인트 잠금.
      */
     class SW_API NetRequestServer
     {

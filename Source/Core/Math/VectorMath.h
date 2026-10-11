@@ -170,7 +170,7 @@ namespace sw
      * @struct int2
      * @brief 2차원 정수 벡터입니다(타일 좌표, 화면 픽셀 좌표, 정수 경계).
      *
-     * @details **float2 로 대신하지 않는 이유.** 타일과 픽셀은 세는 값이지 재는 값이 아닙니다. float2 에 담으면 정수가 아닌
+     * @details **float2 로 대신하지 않는 이유.** 타일과 픽셀은 세는 값이지 측정하는 값이 아닙니다. float2 에 담으면 정수가 아닌
      *          값이 섞여 들 수 있고, 비교가 오차에 걸립니다. 언리얼도 같은 이유로 `FVector2D` 와 별개로 `FIntPoint` 를 둡니다.
      *
      * @note **일부러 얇게 두었습니다.** 정규화 · 길이 · 보간 · 행렬 변환은 넣지 않았습니다. 정수 좌표에서는 뜻이 없거나 실수로
@@ -210,7 +210,7 @@ namespace sw
             return int2{ lhs._x > rhs._x ? lhs._x : rhs._x, lhs._y > rhs._y ? lhs._y : rhs._y };
         }
 
-        /** @brief 실수 벡터로 넓힙니다. 재는 값으로 넘어갈 때만 씁니다. */
+        /** @brief 실수 벡터로 넓힙니다. 측정하는 값으로 넘어갈 때만 씁니다. */
         constexpr float2 toFloat2() const noexcept { return float2{ static_cast<float32>( _x ), static_cast<float32>( _y ) }; }
 
         /** @brief 같은지 비교합니다. 정수라 오차가 없습니다. */

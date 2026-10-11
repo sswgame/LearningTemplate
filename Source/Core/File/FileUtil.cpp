@@ -92,8 +92,8 @@ namespace sw
 
 #if !defined( SW_PLATFORM_WINDOWS )
             /**
-             * @brief 읽기용으로 열고 크기를 잽니다(처음으로 되감긴 상태). 실패하면 로그를 남기고 nullptr 입니다. 연 파일은 호출하는 쪽이 닫습니다.
-             * @details `readFile` · `readTextFile` 이 함께 씁니다(크기를 재지 못했을 때 둘 다 같은 로그를 남깁니다).
+             * @brief 읽기용으로 열고 크기를 측정합니다(처음으로 되감긴 상태). 실패하면 로그를 남기고 nullptr 입니다. 연 파일은 호출하는 쪽이 닫습니다.
+             * @details `readFile` · `readTextFile` 이 함께 씁니다(크기를 측정하지 못했을 때 둘 다 같은 로그를 남깁니다).
              */
             static FILE* openForReading( string_view fileName, int64& outFileSize )
             {
@@ -120,9 +120,9 @@ namespace sw
              * @brief 파일의 [offset, offset + maxReadCount) 를 @p outBuffer 에 읽습니다(버퍼 크기는 실제로 읽은 만큼입니다). 실패하면 로그를 남기고 false 입니다.
              * @details `readFile` · `readTextFile` 의 본체입니다. **Windows 에서는 Win32 API 로 바로 읽습니다.** 열기 · 크기 · 읽기 · 닫기의
              *          시스템 호출 네 번입니다. stdio 경로(`fopen_s` → 끝으로 이동 → 위치 질의 → 처음으로 되감기 → `fread`)는 크기를
-             *          재려고 파일 위치를 세 번 옮기고, UCRT 의 잠금과 버퍼 준비를 거칩니다. 게다가 `fopen_s` 는 좁은 문자 경로를
+             *          측정하려고 파일 위치를 세 번 옮기고, UCRT 의 잠금과 버퍼 준비를 거칩니다. 게다가 `fopen_s` 는 좁은 문자 경로를
              *          **ANSI 코드 페이지**로 해석해서 UTF-8 경로의 한글이 깨집니다(앱 매니페스트가 UTF-8 코드 페이지를 켜지 않습니다).
-             *          여기서는 UTF-16 으로 바꿔 엽니다. `readFile` 은 시작 시간에 큰 몫입니다(셰이더 쿠킹 도장이 소스를 읽어 해시합니다).
+             *          여기서는 UTF-16 으로 바꿔 엽니다. `readFile` 은 시작 시간에 큰 몫입니다(셰이더 쿠킹 스탬프가 소스를 읽어 해시합니다).
              *          공유 모드는 stdio(`_SH_DENYNO`)와 같이 읽기 · 쓰기를 허용하므로, 에디터가 쓰고 있는 파일도 열립니다.
              */
             template <typename BufferType>
@@ -174,7 +174,7 @@ namespace sw
                     readTotal += readNow;
                 }
                 CloseHandle( hFile );
-                // 잰 크기만큼 읽지 못했으면 실패다: 읽기 오류이거나, 읽는 도중 누가 파일을 줄였다(에디터 저장 · 핫 리로드). 버퍼를 줄이고
+                // 측정한 크기만큼 읽지 못했으면 실패다: 읽기 오류이거나, 읽는 도중 누가 파일을 줄였다(에디터 저장 · 핫 리로드). 버퍼를 줄이고
                 // true 를 돌려주면 잘린 JSON · XML · 설정이 "정상으로 읽은 것" 이 되고, 체크섬이 없는 호출부는 알 길이 없다.
                 if ( readTotal != dataSize )
                 {
@@ -209,7 +209,7 @@ namespace sw
                 if ( dataSize > 0 )
                     readBytes = std::fread( outBuffer.data(), 1, static_cast<size_t>( dataSize ), pFile );
                 std::fclose( pFile );
-                // Windows 갈래와 같은 규칙: 잰 크기만큼 읽지 못했으면 실패다.
+                // Windows 갈래와 같은 규칙: 측정한 크기만큼 읽지 못했으면 실패다.
                 if ( readBytes != static_cast<size_t>( dataSize ) )
                 {
                     outBuffer.clear();
