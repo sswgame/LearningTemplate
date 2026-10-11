@@ -193,7 +193,6 @@ namespace sw
         /** @brief 세션 토큰을 내밀며 연결합니다(토큰 결속 서버용). 토큰과 비밀은 로그인 키트가 TLS 로 받은 값입니다. */
         [[nodiscard]] bool connect( const NetAddress& serverAddress, const NetConnectCredentials& credentials );
         /**
-        /**
          * @brief 비동기로 연결하고, 연결되거나 실패(거절, 정원 초과, 타임아웃, 끊김)하면 채워지는 future 를 돌려줍니다.
          * @details 시작부터 실패하면 이미 채워진 future(Rejected)를 돌려준다.
          *          결과와 `then` 후속 작업은 그 일을 처리한 스레드(`update` 나 `disconnect` 를 부른 쪽)에서 잠금을 푼 뒤에 채운다.
@@ -219,7 +218,6 @@ namespace sw
         void               disconnectAll();
         void               drainEvents( vector<NetHostEvent>& outListEvent );
         /**
-        /**
          * @brief 쌓인 연결 사건과 받은 메시지를 **잠금 한 번에** 모두 꺼냅니다. @p outInbound 를 비운 뒤 채우며, 사건이 메시지보다 앞에 옵니다.
          * @details 닫힌 연결의 받은 메시지는 연결을 닫을 때 지워지므로, 꺼낸 메시지는 모두 지금 그 슬롯에 있는 연결의 것이다.
          *          사건을 먼저 처리하면 같은 슬롯에 새로 연결된 클라이언트의 메시지를 옛 연결의 상태로 읽지 않는다.
@@ -231,7 +229,6 @@ namespace sw
         NetConnectionState getConnectionState( int32 connectionID ) const;
         /** @brief 연결 통계의 사본입니다. 연결돼 있지 않으면 false 를 반환합니다. 다른 스레드가 `update` 하는 중에도 안전합니다. */
         [[nodiscard]] bool getConnectionStats( int32 connectionID, NetConnectionStats& outStats ) const;
-        /**
         /**
          * @brief 연결 객체를 그대로 빌려줍니다.
          * @warning 잠금 밖으로 나가는 포인터이므로 `update` 를 도는 다른 스레드가 없을 때만(한 스레드에서 쓰거나 테스트에서) 쓴다. 스레드가 돌고 있으면 `getConnectionStats` 를 쓴다.
