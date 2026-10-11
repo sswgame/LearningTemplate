@@ -1,6 +1,6 @@
 # 트레이스 내보내기 계획 — Chrome Tracing 형식으로 저장하고 열기
 
-상태: 계획만 있습니다(2026-10-11, 사용자 결정 — 구현은 에디터 보강과 전체 검증이 끝난 뒤에 시작합니다).
+상태: X1(변환기와 저장 — `ProfilerTraceExport`, 개발 명령 `profile.trace save`, 에디터 Save Trace)은 2026-10-11 에 들어갔다. 남은 단위는 아래 순서대로 진행한다.
 
 ## 왜 필요한가
 
@@ -20,21 +20,11 @@ Chrome Tracing 의 Trace Event 형식(JSON)은 사양이 공개돼 있고 `chrom
 |---|---|---|
 | 기록 | `ProfilerTimeline`(`Source/Engine/Profiling/ProfilerTimeline.h`) — 스레드마다 링 버퍼(8192 사건), 프레임 시작 시각 링 64 개, 스레드 이름 | 최근 몇 프레임만 남는다 |
 | 보기 | 에디터 프로파일러 패널(`Source/Editor/Panels/ProfilerPanel.h`)의 Timeline · Call Tree 탭 | 저장 · 불러오기 없음 |
+| 저장 | `ProfilerTraceExport` — 최근 프레임을 Trace Event JSON 으로 저장 | 긴 구간 · 불러오기는 아직 |
 | 외부 | Tracy(`Source/Engine/Profiling/README.md`) | 뷰어 설치 · 같은 PC · Shipping 없음 |
 | GPU | 패스마다 GPU 시간, Tracy 로 내는 `GPUTimelineExporter` | JSON 으로는 안 나간다 |
 
 ## 단위 (위가 아래의 바닥)
-
-### X1 변환기와 저장 — Trace Event JSON
-
-`ProfilerTimeline` 의 스레드별 사건을 Trace Event 형식으로 바꾸는 순수 함수(엔진, ImGui 없음)와 저장 창구입니다.
-
-- 구간은 완전 이벤트 `X`(시작 · 길이, 마이크로초), 스레드 이름은 메타 이벤트(`thread_name`), 프로세스 이름은 `process_name`, 프레임 경계는 인스턴트 이벤트 `i`, 카운터는 `C`.
-- GPU 패스 시간은 가상 스레드 줄 하나(`GPU`)로 낸다.
-- 시계는 단조 시계 나노초를 마이크로초로 바꾼다. 파일 머리말에 기록 시작의 벽시계와 단조 시계 쌍을 남겨 프로세스끼리 맞출 수 있게 한다(X4).
-- 창구: 개발 명령 `profile.trace save <경로> [초]` 와 에디터 프로파일러 패널의 "Save Trace" 단추. 경로를 주지 않으면 `Saved/Traces/<시각>.trace.json`.
-- 프레임당 비용은 없다. 저장하는 순간에만 링 버퍼를 복사해 변환한다. 쓰는 중 덮인 사건은 지금 읽기 규칙(쓰기 수로 다시 고름)을 그대로 쓴다.
-- 확인: 단위 시험(변환 결과의 형식 · 정렬 · 이름 · 마이크로초 단위), 시나리오로 저장 후 파일을 읽어 사건 수 · 스레드 수가 탐침과 같은지.
 
 ### X2 긴 캡처 — N 초 모으기
 
@@ -71,7 +61,7 @@ Timeline 탭이 `.trace.json` 을 불러와 보여 줍니다.
 
 ## 순서
 
-X1 → X2 → X3 → X5 → X4. X1 은 작은 일이고 나머지의 바닥이다. X4 는 서버 디버깅 계획(`docs/plans/ServerDebug.md`) S1 · S5 와 함께 정한다.
+X2 → X3 → X5 → X4(X1 은 끝났다). X4 는 서버 디버깅 계획(`docs/plans/ServerDebug.md`) S1 · S5 와 함께 정한다.
 
 ## 정한 것 · 지키는 것
 

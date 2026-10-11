@@ -31,6 +31,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackend.h"
+#include "Engine/Profiling/ProfilerTraceExport.h"
 #include "Engine/Renderer/Capture/RenderDocCapture.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -359,6 +360,19 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ImGui::SmallButton( "Fit" ) )
             _bTimelineZoomed = SW_FALSE;
+        ImGui::SameLine();
+        if ( ImGui::SmallButton( "Save Trace" ) )
+        {
+            string     savedPath;
+            string     reply;
+            const bool bSaved = ProfilerTraceExport::saveRecentFrames( *pProfiler, _timelineFrameCount, {}, "Editor", savedPath, reply );
+            if ( bSaved )
+                SW_LOG_INFO( "Timeline trace: %#", reply );
+            else
+                SW_LOG_WARNING( "Timeline trace not saved: %#", reply );
+        }
+        EditorSelfTestMarks::note( "profiler.timeline.saveTrace" );
+        EditorWidgets::drawTooltip( "Save the frames shown as Saved/Traces/trace_<time>.trace.json (Chrome Trace Event - open in Perfetto UI or chrome://tracing)" );
         ImGui::SameLine();
         ImGui::TextDisabled( "| wheel = zoom, drag = pan, deep analysis: Tracy" );
 

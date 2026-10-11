@@ -71,6 +71,7 @@ VSync는 기본이 꺼짐이지만, 사용자 파일에 켜 둔 값이 있으면
 |---|---|
 | `FrameProfiler` | 프로세스 안의 구간 집계와 카운터 |
 | `ProfilerTimeline` | 켤 때만 계측 구간을 스레드마다 링(8192 사건)에 남기는 미니 타임라인. `FrameProfiler` 가 소유한다 |
+| `ProfilerTraceExport` | 타임라인 사건을 Chrome Trace Event JSON 으로 바꾸고 저장한다(`profile.trace save [<경로>] [<프레임 수>]`, 에디터 Timeline 탭의 Save Trace). `chrome://tracing` · Perfetto UI 가 읽는다. 머리말에 벽시계 · 단조 시계 쌍을 남겨 프로세스끼리 시간을 맞출 수 있다 |
 | `FrameProfileSession` | `-gv_profileFrames=N` 한 번의 측정 |
 | `MemoryBudgetMonitor` | 메모리 태그 예산(`Config/Engine/MemoryBudget.json`), 프레임 끝 예산 검사, `-gv_memoryReport` 표 |
 | `IProfilerBackend.h` | 출력 하나의 인터페이스 |
