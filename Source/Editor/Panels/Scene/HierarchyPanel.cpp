@@ -402,8 +402,8 @@ namespace sw::editor
 
                 // 1) 눈 — 에디터에서만 숨김(저장 · 되돌리기 · 게임 동작에 남지 않는다 — 언리얼 · 유니티). 활성 비트는 인스펙터의 Active 체크박스다.
                 const bool bVisible = pObj->isHiddenInEditor() == false;
-                if ( EditorWidgets::drawToggleIconButton( "##visible", bVisible, editoricon::kEye, editoricon::kEyeSlash, SW_LOCTEXT( "EditorScene", "VisibleInEditor", "Visible in the editor - click to hide (not saved)" ),
-                                                          SW_LOCTEXT( "EditorScene", "HiddenInEditor", "Hidden in the editor - click to show" ) ) )
+                if ( EditorWidgets::drawToggleIconButton( "##visible", bVisible, editoricon::kEye, editoricon::kEyeSlash, SW_LOCKEY( "EditorScene", "VisibleInEditor" ),
+                                                          SW_LOCKEY( "EditorScene", "HiddenInEditor" ) ) )
                     EditorSceneCommands::setHiddenInEditor( pObj, bVisible );
                 EditorSelfTestMarks::note( "hierarchy.activeToggle" );
                 if ( EditorSelfTestMarks::isEnabled() )
@@ -411,8 +411,8 @@ namespace sw::editor
                 ImGui::SameLine();
                 // 2) 자물쇠 — 뷰포트에서 고르지 못하게(Hierarchy 에서는 고른다). 저장하지 않는다.
                 const bool bLocked = pContext->getWorkspace().isObjectLocked( objectID );
-                if ( EditorWidgets::drawToggleIconButton( "##lock", bLocked, editoricon::kLock, editoricon::kUnlock, SW_LOCTEXT( "EditorScene", "LockedInViewport", "Locked - the viewport does not pick it; click to unlock" ),
-                                                          SW_LOCTEXT( "EditorScene", "PickableInViewport", "Pickable in the viewport - click to lock" ) ) )
+                if ( EditorWidgets::drawToggleIconButton( "##lock", bLocked, editoricon::kLock, editoricon::kUnlock, SW_LOCKEY( "EditorScene", "LockedInViewport" ),
+                                                          SW_LOCKEY( "EditorScene", "PickableInViewport" ) ) )
                     pContext->getWorkspace().setObjectLocked( objectID, bLocked == false );
                 if ( EditorSelfTestMarks::isEnabled() )
                     EditorSelfTestMarks::note( ( string( "hierarchy.lock." ) + pObj->getName().c_str() ).c_str() );
@@ -617,7 +617,7 @@ namespace sw::editor
         Scene* pScene = editor::getActiveScene();
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
         {
-            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorScene", "HierarchyNoActiveScene", "No active scene." ) );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorScene", "HierarchyNoActiveScene" ) );
             return;
         }
 
@@ -645,7 +645,7 @@ namespace sw::editor
             if ( bEditsAllowed == false )
             {
                 EditorWidgets::drawChip( "Play Mode", editor::style::kWarn );
-                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorScene", "PlayModeRunning", "Play mode is running (scene edits are restricted)" ) );
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "PlayModeRunning" ) );
                 ImGui::SameLine();
             }
             if ( bEditsAllowed == false )
@@ -653,15 +653,15 @@ namespace sw::editor
             if ( ImGui::Button( "+ Create" ) )
                 EditorSceneCommands::create( pManager, nullptr );
             EditorSelfTestMarks::note( "hierarchy.create" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorScene", "CreateGameObject", "Create a new GameObject at the root of the current scene" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "CreateGameObject" ) );
             if ( bEditsAllowed == false )
                 ImGui::EndDisabled();
 
             ImGui::SameLine();
             EditorWidgets::drawSearchField( "##HierarchyFilter", _filterBuffer,
-                                            SW_LOCTEXT( "EditorScene", "HierarchySearchHint", "Search (t:Mesh, tag:Player)..." ), 0.0f, false );
+                                            SW_LOCKEY( "EditorScene", "HierarchySearchHint" ), 0.0f, false );
             EditorSelfTestMarks::note( "hierarchy.filter" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorScene", "HierarchySearch", "Search by object name, or filter by component type (t:Mesh) or tag (tag:Player)" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "HierarchySearch" ) );
         }
         EditorChrome::endToolbar();
 

@@ -59,18 +59,18 @@ namespace sw::editor
         ImGui::InputText( "Atlas", _atlasPath.data(), _atlasPath.capacity() );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             notifyDocumentEdited( "Edit Sprite Clip", "sprite-clip" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSpriteClip", "AtlasTip", "Path of the texture the frames are cut from. The UV rectangles below are fractions of this image." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AtlasTip" ) );
         if ( ImGui::Button( "Load" ) )
             reloadDocument();
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSpriteClip", "LoadTip", "Reload the clip from disk, discarding unsaved edits." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "LoadTip" ) );
         ImGui::SameLine();
         if ( ImGui::Button( "Save" ) )
         {
             saveJSON();
             const string savedPath = getLoadedAssetPath().empty() ? string{ EditorPaths::kSpriteClipDocumentFileName } : getLoadedAssetPath();
-            _status                = SW_LOCFORMAT( "EditorSpriteClip", "SavedStatus", "Saved {path}", TextArgumentList().addText( "path", savedPath ) );
+            _status                = SW_LOCKEYFORMAT( "EditorSpriteClip", "SavedStatus", TextArgumentList().addText( "path", savedPath ) );
         }
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSpriteClip", "SaveTip", "Write the frames, animations and keys to the clip file." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "SaveTip" ) );
         ImGui::TextDisabled( "%s/%s (separate from AnimGraph)", config::kDirSavedEditor, EditorPaths::kSpriteClipDocumentFileName );
 
         ImGui::Separator();
@@ -107,23 +107,23 @@ namespace sw::editor
             ImGui::DragFloat( "u", &f._uvRect._x, 0.01f );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sprite Frame", "sprite-clip-frame" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSpriteClip", "FrameUTip", "Left edge of the frame in the atlas, as a fraction of its width (0-1)." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "FrameUTip" ) );
             ImGui::DragFloat( "v", &f._uvRect._y, 0.01f );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sprite Frame", "sprite-clip-frame" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSpriteClip", "FrameVTip", "Top edge of the frame in the atlas, as a fraction of its height (0-1)." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "FrameVTip" ) );
             ImGui::DragFloat( "w", &f._uvRect._z, 0.01f );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sprite Frame", "sprite-clip-frame" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSpriteClip", "FrameWTip", "Frame width as a fraction of the atlas width (0-1)." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "FrameWTip" ) );
             ImGui::DragFloat( "h", &f._uvRect._w, 0.01f );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sprite Frame", "sprite-clip-frame" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSpriteClip", "FrameHTip", "Frame height as a fraction of the atlas height (0-1)." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "FrameHTip" ) );
             ImGui::InputInt( "durationMs", &f._durationMs );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sprite Frame", "sprite-clip-frame" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSpriteClip", "FrameDurationTip", "How long this frame stays on screen, in milliseconds." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "FrameDurationTip" ) );
         }
 
         drawAtlasPicker();
@@ -164,7 +164,7 @@ namespace sw::editor
             ImGui::DragFloat( "time", &k._time, 0.01f );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sprite Key", "sprite-clip-key" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSpriteClip", "KeyTimeTip", "When this key applies, in seconds from the start of the clip." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "KeyTimeTip" ) );
             ImGui::DragFloat( "x", &k._position._x, 0.1f );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sprite Key", "sprite-clip-key" );
@@ -174,7 +174,7 @@ namespace sw::editor
             ImGui::DragFloat( "angleDeg", &k._angleDeg, 0.5f );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sprite Key", "sprite-clip-key" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSpriteClip", "KeyAngleTip", "Rotation of the sprite at this key, in degrees." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "KeyAngleTip" ) );
         }
 
         EditorWidgets::drawPanelStatus( _status.c_str() );
@@ -216,18 +216,18 @@ namespace sw::editor
         ImGui::TextUnformatted( "Atlas cells (click: selected frame, Shift+click: new frame)" );
         ImGui::SetNextItemWidth( 90.0f * EditorThemeUtil::getDpiScale() );
         ImGui::InputInt( "Columns", &_sliceColumns );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSpriteClip", "SliceColumnsTip", "Number of grid columns the atlas is cut into, 1 to 64." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "SliceColumnsTip" ) );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( 90.0f * EditorThemeUtil::getDpiScale() );
         ImGui::InputInt( "Rows", &_sliceRows );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSpriteClip", "SliceRowsTip", "Number of grid rows the atlas is cut into, 1 to 64." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "SliceRowsTip" ) );
         _sliceColumns = MathUtil::clamp( _sliceColumns, 1, 64 );
         _sliceRows    = MathUtil::clamp( _sliceRows, 1, 64 );
 
         void* pTexture = _atlasPath.empty() ? nullptr : _atlasThumbnail.findTexture( _atlasPath.c_str() );
         if ( pTexture == nullptr )
         {
-            ImGui::TextDisabled( "%s", _atlasPath.empty() ? SW_LOCTEXT( "EditorSpriteClip", "NoAtlas", "No atlas" ) : SW_LOCTEXT( "EditorSpriteClip", "LoadingAtlas", "Loading atlas..." ) );
+            ImGui::TextDisabled( "%s", _atlasPath.empty() ? SW_LOCKEY( "EditorSpriteClip", "NoAtlas" ) : SW_LOCKEY( "EditorSpriteClip", "LoadingAtlas" ) );
             return;
         }
 
@@ -235,7 +235,7 @@ namespace sw::editor
         const ImVec2  imageMin = ImGui::GetCursorScreenPos();
         ImGui::Image( reinterpret_cast<ImTextureID>( pTexture ), ImVec2( side, side ) );
         const bool bHovered = ImGui::IsItemHovered();
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSpriteClip", "AtlasCellTip", "Click a cell to set the selected frame's rectangle to it. Shift+click adds a new frame." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AtlasCellTip" ) );
 
         // 칸 격자와 고른 프레임 사각형을 그림 위에 그린다.
         ImDrawList* pDrawList = ImGui::GetWindowDrawList();
@@ -323,22 +323,22 @@ namespace sw::editor
                 animation._name = _animationName.c_str();
                 notifyDocumentEdited( "Edit Sprite Animation", "sprite-clip-animation" );
             }
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSpriteClip", "AnimationNameTip", "Name game code uses to play this animation." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AnimationNameTip" ) );
             ImGui::InputInt( "first frame", &animation._firstFrame );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sprite Animation", "sprite-clip-animation" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSpriteClip", "AnimationFirstFrameTip", "Index of the frame this animation starts on, counting from 0." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AnimationFirstFrameTip" ) );
             ImGui::InputInt( "frame count", &animation._frameCount );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sprite Animation", "sprite-clip-animation" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSpriteClip", "AnimationFrameCountTip", "How many consecutive frames, from the first frame, this animation plays." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AnimationFrameCountTip" ) );
             bool bLoop = animation._bLoop == SW_TRUE;
             if ( ImGui::Checkbox( "loop", &bLoop ) )
             {
                 animation._bLoop = bLoop ? SW_TRUE : SW_FALSE;
                 notifyDocumentEdited( "Edit Sprite Animation", "sprite-clip-animation" );
             }
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSpriteClip", "AnimationLoopTip", "Repeat from the first frame after the last one; off stops on the last frame." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AnimationLoopTip" ) );
         }
     }
 

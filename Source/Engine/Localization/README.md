@@ -48,6 +48,10 @@ const string count = SW_LOCFORMAT( "Menu", "Count", "{n} items", TextArgumentLis
 실제 키는 `Menu.Start` 입니다. 테이블에 키가 없으면 원문을 그대로 돌려주고, 빠진 키로 한 번 경고합니다.
 세 인자는 문자열 리터럴이어야 합니다. 수집기가 소스를 읽어 원문을 모으기 때문입니다.
 
+**원문을 코드에 두고 싶지 않다면** `SW_LOCKEY( "Menu", "Start" )` · `SW_LOCKEYFORMAT( "Menu", "Count", arguments )` 를 씁니다. 코드는 키만 가리키고, 영어 원문은 원문 표(`*.strings.json`)에만 둡니다
+(언리얼 `LOCTABLE` 과 같은 자리). 코드 · 원문 표 · 번역 표에 같은 글이 흩어지지 않고, 글을 고치려고 다시 빌드하지 않아도 됩니다. 대신 코드만 읽어서는 글을 알 수 없고,
+원문 표에 없는 키는 수집이 오류로 알리며 실행 중에는 키 자체가 보입니다. 에디터의 UI 글(`Resource/editor/localization`)이 이 방식입니다 — 수집은 원문을 쓰지 않고 자리(`origins`)만 갱신합니다.
+
 **2단계 — 원문을 수집합니다.**
 
 ```powershell
@@ -102,7 +106,7 @@ cd build/Ninja-Debug/Bin
 
 `--gather-text` 는 세 곳에서 글을 모읍니다.
 
-- **코드.** `codeRoots` 의 `.h`, `.cpp`, `.inl` 에서 `SW_LOCTEXT` 와 `SW_LOCFORMAT` 을 찾습니다. 인자가 리터럴이 아니면 `파일:줄` 오류를 냅니다.
+- **코드.** `codeRoots` 의 `.h`, `.cpp`, `.inl` 에서 `SW_LOCTEXT` 와 `SW_LOCFORMAT`(원문 포함), `SW_LOCKEY` 와 `SW_LOCKEYFORMAT`(키 참조만)을 찾습니다. 인자가 리터럴이 아니면 `파일:줄` 오류를 냅니다.
   리터럴 이어 붙이기, 이스케이프, raw 문자열은 읽을 수 있고, 주석과 문자열, `#define` 줄 안에 있는 것은 건너뜁니다. 같은 키에 원문이 두 개면 오류입니다.
 - **리플렉션 데이터.** `PROPERTY( Meta = "Localizable" )` 가 붙은 문자열 프로퍼티의 값을 모읍니다. 최대 길이는 `Meta = "Localizable, MaxLength=24"` 로 정합니다.
   값은 키이거나 글 그 자체입니다. 어느 테이블에 같은 키가 있으면 참조로, 없으면 글이 곧 키가 됩니다. gettext와 같은 방식입니다.

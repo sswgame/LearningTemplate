@@ -250,7 +250,7 @@ namespace sw::editor
             if ( filter.isActive() )
                 EditorWidgets::drawNoSearchResultHint( filter.getText() );
             else
-                EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorSettings", "NoGlobalVariables", "No global variables registered." ) );
+                EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorSettings", "NoGlobalVariables" ) );
             return;
         }
 
@@ -263,13 +263,13 @@ namespace sw::editor
         if ( EditorChrome::beginToolbar( "##GvToolbar" ) )
         {
             EditorWidgets::drawSearchField( "##GvSearch", _searchFilter,
-                                            SW_LOCTEXT( "EditorSettings", "FilterVariablesHint", "Filter variables..." ), 200.0f, true );
+                                            SW_LOCKEY( "EditorSettings", "FilterVariablesHint" ), 200.0f, true );
 
             ImGui::SameLine();
             bool bGroup = ( _bGroupByModule == SW_TRUE );
             if ( ImGui::Checkbox( "Group by Module", &bGroup ) )
                 _bGroupByModule = bGroup ? SW_TRUE : SW_FALSE;
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSettings", "GroupByModule", "Group the variables by the module that defines them" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "GroupByModule" ) );
 
             ImGui::SameLine();
             if ( ImGui::Button( "Reset All" ) )
@@ -277,24 +277,24 @@ namespace sw::editor
                 gvm.resetAllToDefault();
                 markSessionDirty();
             }
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSettings", "ResetAllVariables", "Reset every global variable to its default value" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "ResetAllVariables" ) );
 
             ImGui::SameLine();
             if ( ImGui::Button( "Save Session" ) )
                 (void)trySaveDirtyDocument(); // 실패는 저장이 알리고 dirty 가 남는다
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSettings", "SaveSession", "Save the current values to the session file" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "SaveSession" ) );
 
             ImGui::SameLine();
             if ( ImGui::Button( "Presets..." ) )
                 ImGui::OpenPopup( "##GvPresetsPopup" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSettings", "Presets", "Save or load named sets of global variable values" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "Presets" ) );
 
             if ( ImGui::BeginPopup( "##GvPresetsPopup" ) )
             {
                 ImGui::Text( "Global Variable Presets" );
                 ImGui::Separator();
 
-                ImGui::InputTextWithHint( "##PresetNameInput", SW_LOCTEXT( "EditorSettings", "PresetNameHint", "Preset Name..." ), _presetNameBuf.data(),
+                ImGui::InputTextWithHint( "##PresetNameInput", SW_LOCKEY( "EditorSettings", "PresetNameHint" ), _presetNameBuf.data(),
                                           _presetNameBuf.capacity() );
                 ImGui::SameLine();
                 if ( ImGui::Button( "Save" ) && _presetNameBuf.empty() == false )
@@ -329,11 +329,11 @@ namespace sw::editor
 
                 if ( _presetJob.isPending() )
                 {
-                    ImGui::TextDisabled( "%s", SW_LOCTEXT( "EditorSettings", "ScanningPresets", "Scanning presets..." ) );
+                    ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorSettings", "ScanningPresets" ) );
                 }
                 else if ( _listPresetFile.empty() )
                 {
-                    EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorSettings", "NoPresets", "No presets found." ) );
+                    EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorSettings", "NoPresets" ) );
                 }
                 else
                 {
@@ -475,7 +475,7 @@ namespace sw::editor
             if ( bPinned )
                 ImGui::PopStyleColor();
 
-            EditorWidgets::drawTooltip( bPinned ? SW_LOCTEXT( "EditorSettings", "UnpinVariable", "Unpin from favorites" ) : SW_LOCTEXT( "EditorSettings", "PinVariable", "Pin to favorites" ) );
+            EditorWidgets::drawTooltip( bPinned ? SW_LOCKEY( "EditorSettings", "UnpinVariable" ) : SW_LOCKEY( "EditorSettings", "PinVariable" ) );
         }
 
         // Name 컬럼 (툴팁 표시)
@@ -483,10 +483,10 @@ namespace sw::editor
         ImGui::TextUnformatted( info._name.c_str() );
         if ( ImGui::IsItemHovered() )
         {
-            const utf8*  pDescription    = info._description.empty() ? SW_LOCTEXT( "EditorSettings", "NoDescription", "(no description)" ) : info._description.c_str();
+            const utf8*  pDescription    = info._description.empty() ? SW_LOCKEY( "EditorSettings", "NoDescription" ) : info._description.c_str();
             const utf8*  pModuleName     = info._moduleName.empty() ? "Core" : info._moduleName.c_str();
-            const string descriptionLine = SW_LOCFORMAT( "EditorSettings", "VariableDescription", "Description: {description}", TextArgumentList().addText( "description", pDescription ) );
-            const string moduleLine      = SW_LOCFORMAT( "EditorSettings", "VariableModule", "Module: {module}", TextArgumentList().addText( "module", pModuleName ) );
+            const string descriptionLine = SW_LOCKEYFORMAT( "EditorSettings", "VariableDescription", TextArgumentList().addText( "description", pDescription ) );
+            const string moduleLine      = SW_LOCKEYFORMAT( "EditorSettings", "VariableModule", TextArgumentList().addText( "module", pModuleName ) );
             ImGui::BeginTooltip();
             ImGui::TextUnformatted( descriptionLine.c_str() );
             ImGui::TextUnformatted( moduleLine.c_str() );
@@ -509,6 +509,6 @@ namespace sw::editor
             info.resetToDefault();
             markSessionDirty();
         }
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSettings", "ResetVariable", "Reset this variable to its default value" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "ResetVariable" ) );
     }
 } // namespace sw::editor

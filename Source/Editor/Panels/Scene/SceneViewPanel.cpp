@@ -50,12 +50,12 @@ namespace sw::editor
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kCamera, "##SceneViewScreenshot" ) ) )
                 EditorScreenshotCommands::captureSceneView();
             EditorSelfTestMarks::note( "sceneView.screenshot" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorScene", "SceneViewScreenshot", "Save the scene view image (editor camera) to Saved/Screenshots/<time>.png - the grid and gizmos are ImGui overlays and are not included" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "SceneViewScreenshot" ) );
             EditorWidgets::drawToolbarSeparator();
 
             if ( ImGui::Button( "Dbg Cat" ) )
                 ImGui::OpenPopup( "##DebugDrawCategories" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorScene", "DebugDrawCategories", "Turn DebugDrawQueue categories on or off" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "DebugDrawCategories" ) );
             drawDebugCategoryPopup();
             EditorWidgets::drawToolbarSeparator();
             _viewportClient.drawOverlaysMenu(); // 보기 · 표시 · 도구 · 트랜스폼 바는 씬 뷰 위에 떠 있다(`EditorViewportOverlays`)

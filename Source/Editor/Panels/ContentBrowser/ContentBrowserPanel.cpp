@@ -692,13 +692,13 @@ namespace sw::editor
         ImGui::TextColored( ImVec4( 0.55f, 0.8f, 1.0f, 1.0f ), "%s", _referenceQueryID.c_str() );
         if ( _referenceIndex.isReady() == false )
         {
-            ImGui::TextDisabled( "%s", SW_LOCTEXT( "EditorContentBrowser", "IndexingReferences", "Indexing references. Try again in a moment." ) );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorContentBrowser", "IndexingReferences" ) );
             ImGui::EndPopup();
             return;
         }
         if ( _listReferenceResult.empty() )
         {
-            EditorWidgets::drawEmptyHint( bDependencies ? SW_LOCTEXT( "EditorContentBrowser", "NoDependencies", "This asset names no other asset." ) : SW_LOCTEXT( "EditorContentBrowser", "NoReferencers", "No text asset names this asset." ) );
+            EditorWidgets::drawEmptyHint( bDependencies ? SW_LOCKEY( "EditorContentBrowser", "NoDependencies" ) : SW_LOCKEY( "EditorContentBrowser", "NoReferencers" ) );
             ImGui::EndPopup();
             return;
         }
@@ -723,7 +723,7 @@ namespace sw::editor
                 ImGui::Selectable( shownPath.c_str(), false, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick );
                 if ( ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked( ImGuiMouseButton_Left ) )
                     openPath = shownPath;
-                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorContentBrowser", "OpenOnDoubleClick", "Double-click to open" ) );
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "OpenOnDoubleClick" ) );
                 ImGui::TableSetColumnIndex( 1 );
                 ImGui::Text( "%u", reference._line );
                 ImGui::PopID();
@@ -940,7 +940,7 @@ namespace sw::editor
                 navigateBack();
             if ( bCanBack == false )
                 ImGui::EndDisabled();
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorContentBrowser", "NavigateBack", "Go to the previous folder (Mouse Back button / Alt+Left / Backspace)" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "NavigateBack" ) );
 
             ImGui::SameLine();
             const bool bCanForward = canNavigateForward();
@@ -950,19 +950,19 @@ namespace sw::editor
                 navigateForward();
             if ( bCanForward == false )
                 ImGui::EndDisabled();
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorContentBrowser", "NavigateForward", "Go to the next folder (Mouse Forward button / Alt+Right)" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "NavigateForward" ) );
 
             ImGui::SameLine();
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlus, "Add" ) ) )
                 ImGui::OpenPopup( "##cb_add" );
             EditorSelfTestMarks::note( "contentBrowser.add" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorContentBrowser", "AddAsset", "Create a new folder or asset (material, scene, prefab) in the current folder" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "AddAsset" ) );
             drawAddMenu();
 
             ImGui::SameLine();
-            EditorWidgets::drawSearchField( "##cb_search", _searchBuffer, SW_LOCTEXT( "EditorContentBrowser", "SearchHint", "Search Content" ), 160.0f, false );
+            EditorWidgets::drawSearchField( "##cb_search", _searchBuffer, SW_LOCKEY( "EditorContentBrowser", "SearchHint" ), 160.0f, false );
             EditorSelfTestMarks::note( "contentBrowser.search" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorContentBrowser", "SearchTooltip", "Filter assets by name or extension" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "SearchTooltip" ) );
 
             ImGui::SameLine();
             uint32                          filterCount{ 0 };
@@ -983,24 +983,24 @@ namespace sw::editor
                 }
                 ImGui::EndCombo();
             }
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorContentBrowser", "TypeFilter", "Filter by asset type (texture, scene, prefab, sound, ...)" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "TypeFilter" ) );
 
             ImGui::SameLine();
             if ( ImGui::RadioButton( "Tiles", _viewMode == ViewMode::Tiles ) )
                 _viewMode = ViewMode::Tiles;
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorContentBrowser", "TilesView", "Show assets as square thumbnail cards (tiles)" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "TilesView" ) );
 
             ImGui::SameLine();
             if ( ImGui::RadioButton( "List", _viewMode == ViewMode::List ) )
                 _viewMode = ViewMode::List;
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorContentBrowser", "ListView", "Show assets as a detailed list of name, type and path" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "ListView" ) );
 
             if ( _viewMode == ViewMode::Tiles )
             {
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth( 80.0f * EditorThemeUtil::getDpiScale() );
                 ImGui::SliderFloat( "##cb_tile", &_tileSize, 64.0f, 160.0f, "%.0f" );
-                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorContentBrowser", "TileSize", "Adjust the tile thumbnail size (64px to 160px)" ) );
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "TileSize" ) );
             }
 
             ImGui::SameLine();
@@ -1011,11 +1011,11 @@ namespace sw::editor
             if ( canImport == false )
             {
                 ImGui::EndDisabled();
-                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorContentBrowser", "ImportNeedsFolder", "Select a target folder to import assets into first" ) );
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "ImportNeedsFolder" ) );
             }
             else
             {
-                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorContentBrowser", "Import", "Import external files (textures, shaders, sounds, ...) into the current folder" ) );
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "Import" ) );
             }
             if ( importClicked )
                 importFilesFromDialog();
@@ -1029,14 +1029,14 @@ namespace sw::editor
                 refreshRoots();
                 refreshCurrentFolder();
             }
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorContentBrowser", "Refresh", "Refresh the disk files and the resource root list" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "Refresh" ) );
 
             ImGui::SameLine();
             bool bShowAllPacks = _bShowAllPacks == SW_TRUE;
             if ( ImGui::Checkbox( "All packs", &bShowAllPacks ) )
                 setShowAllPacks( bShowAllPacks );
             EditorSelfTestMarks::note( "contentBrowser.allPacks" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorContentBrowser", "AllPacks", "Off shows only the active game pack; on shows every pack under game/ (default: Preferences > Content Browser)" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "AllPacks" ) );
         }
         EditorChrome::endToolbar();
     }
@@ -1091,7 +1091,7 @@ namespace sw::editor
         }
 
         if ( _listRoot.empty() )
-            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorContentBrowser", "NoResourceRoots", "No resource roots found." ) );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorContentBrowser", "NoResourceRoots" ) );
 
         EditorChrome::endSection();
     }
@@ -1195,7 +1195,7 @@ namespace sw::editor
     {
         if ( _listCrumb.empty() )
         {
-            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorContentBrowser", "SelectFolder", "Select a folder" ) );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorContentBrowser", "SelectFolder" ) );
             return;
         }
 

@@ -38,7 +38,7 @@ namespace sw::editor
         DebugHUD* pHUD = DebugHUD::findActive();
         if ( pHUD == nullptr )
         {
-            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EdCommon", "DebugHUDNotRunning", "Debug HUD is not running" ) );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "DebugHUDNotRunning" ) );
             return;
         }
         for ( const DebugHUDSectionRegistration* pSection : DebugHUDRegistry::get().getSections() )
@@ -47,7 +47,7 @@ namespace sw::editor
             ImGui::PushID( pSection->_pName );
             if ( ImGui::Checkbox( pSection->_pTitle, &bShown ) && pHUD->setSectionShown( pSection->_pName, bShown ) == false )
                 SW_LOG_WARNING( "Debug HUD section '%#' is not registered any more", pSection->_pName );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTip", "DebugHUDSection", "Show or hide this section of the in-game Debug HUD. The grey text is the section's registration name." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "DebugHUDSection" ) );
             if ( EditorSelfTestMarks::isEnabled() )
                 EditorSelfTestMarks::note( ( string{ "debugHUD.section." } + pSection->_pName ).c_str() );
             ImGui::SameLine();
@@ -71,14 +71,14 @@ namespace sw::editor
             }
             ImGui::EndCombo();
         }
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTip", "DebugHUDCorner", "Which screen corner the Debug HUD is anchored to." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "DebugHUDCorner" ) );
         float32 opacity = DebugHUD::getOpacity();
         if ( ImGui::SliderFloat( "Opacity", &opacity, DebugHUD::kMinOpacity, DebugHUD::kMaxOpacity, "%.2f" ) )
             pHUD->setOpacity( opacity );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTip", "DebugHUDOpacity", "Background opacity of the Debug HUD panels." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "DebugHUDOpacity" ) );
         if ( ImGui::Button( "Open in-game settings window" ) && pHUD->openWindow() == false )
             SW_LOG_WARNING( "The Debug HUD settings window could not be opened (%#)", DebugHUD::kWindowDocumentPath );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTip", "DebugHUDOpenWindow", "The same checklist as a runtime UI window (shows in the game view while playing)" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "DebugHUDOpenWindow" ) );
     }
 
     void EditorDebugHUDControls::drawPreferencesPage()
@@ -86,14 +86,14 @@ namespace sw::editor
         DebugHUD* pHUD = DebugHUD::findActive();
         if ( pHUD == nullptr )
         {
-            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EdCommon", "DebugHUDNotRunningHost", "Debug HUD is not running (Shipping or a test host)." ) );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "DebugHUDNotRunningHost" ) );
             return;
         }
-        ImGui::TextDisabled( "%s", SW_LOCTEXT( "EdCommon", "DebugHUDSavedIn", "Saved in the engine user settings (debug.hud, debug.hudSections, debug.hudCorner, debug.hudOpacity)" ) );
+        ImGui::TextDisabled( "%s", SW_LOCKEY( "EdCommon", "DebugHUDSavedIn" ) );
         bool bShown = pHUD->isShown();
         if ( ImGui::Checkbox( "Show Debug HUD (Ctrl+F3)", &bShown ) )
             pHUD->setShown( bShown );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "DebugHUDShow", "Show the in-game Debug HUD in the game view, with the sections chosen below (Ctrl+F3)" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "DebugHUDShow" ) );
         EditorSelfTestMarks::note( "preferences.debugHUD.shown" );
         ImGui::SeparatorText( "Sections" );
         drawSectionChecklist();

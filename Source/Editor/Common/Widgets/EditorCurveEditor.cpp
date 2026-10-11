@@ -119,7 +119,7 @@ namespace sw::editor
                 FloatCurve& curve = state._working;
                 if ( state._selectedKey >= curve._listKey.size() )
                 {
-                    ImGui::TextDisabled( "%s", SW_LOCTEXT( "EdCommon", "CurveEditorHint", "Click a key to edit it. Right-click to add a key. F fits the view." ) );
+                    ImGui::TextDisabled( "%s", SW_LOCKEY( "EdCommon", "CurveEditorHint" ) );
                     return false;
                 }
                 FloatCurveKey& key       = curve._listKey[state._selectedKey];
@@ -131,7 +131,7 @@ namespace sw::editor
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth( width );
                 ImGui::InputFloat( "##time", &key._time, 0.0f, 0.0f, "%.3f" );
-                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTip", "CurveKeyTime", "When the key sits on the curve's time axis. It stays between its neighbouring keys." ) );
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CurveKeyTime" ) );
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
                 {
                     key._time = clampKeyTime( curve, state._selectedKey, key._time );
@@ -142,7 +142,7 @@ namespace sw::editor
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth( width );
                 ImGui::InputFloat( "##value", &key._value, 0.0f, 0.0f, "%.3f" );
-                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTip", "CurveKeyValue", "The curve's value at this key." ) );
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CurveKeyValue" ) );
                 bFinished = bFinished || ImGui::IsItemDeactivatedAfterEdit();
                 ImGui::SameLine();
                 ImGui::TextUnformatted( "Interpolation" );
@@ -155,7 +155,7 @@ namespace sw::editor
                     key._interpolation = static_cast<CurveInterpolation>( current );
                     bFinished          = true;
                 }
-                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTip", "CurveKeyInterpolation", "How the curve moves from this key to the next: Constant holds the value, Linear is a straight line, Cubic is a smooth spline." ) );
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CurveKeyInterpolation" ) );
                 if ( bFinished )
                     curve.sortAndComputeAutoTangents();
                 return bFinished;
@@ -303,7 +303,7 @@ namespace sw::editor
                                 ImGui::GetStyle().FrameRounding );
         if ( curve._listKey.empty() )
         {
-            drawList.AddText( ImVec2{ minPoint.x + 4.0f, minPoint.y + 2.0f }, ImGui::GetColorU32( ImGuiCol_TextDisabled ), SW_LOCTEXT( "EdCommon", "CurveNoKeys", "(no keys)" ) );
+            drawList.AddText( ImVec2{ minPoint.x + 4.0f, minPoint.y + 2.0f }, ImGui::GetColorU32( ImGuiCol_TextDisabled ), SW_LOCKEY( "EdCommon", "CurveNoKeys" ) );
             return bClicked;
         }
         EditorCurveView view{};
@@ -312,7 +312,7 @@ namespace sw::editor
         view.fitToCurve( curve, 0.0f );
         EditorCurveEditorInternal::drawCurveLine( drawList, view, curve, ImGui::GetColorU32( ImGuiCol_PlotLines ), 1.5f,
                                                   MathUtil::max( view._frameSize._x / EditorCurveEditorInternal::kPreviewSamples, 1.0f ) );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "CurvePreviewEdit", "Click to edit the curve" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "CurvePreviewEdit" ) );
         return bClicked;
     }
 

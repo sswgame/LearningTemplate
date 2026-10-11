@@ -632,7 +632,7 @@ namespace sw::editor
                     editorConfig = EditorThemeInternal::activeTheme();
                 }
             }
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "ThemePreset", "Choose the theme preset for the whole editor (Modern Dark, Deep Charcoal, Midnight Blue and more)." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemePreset" ) );
 
             ImGui::Separator();
             ImGui::TextDisabled( "Color Palette Customization" );
@@ -645,7 +645,7 @@ namespace sw::editor
                 applyTheme( editorConfig );
                 saveToConfig();
             }
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "ThemeAccentColor", "The accent color used for buttons, selection highlights, folders and active items." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeAccentColor" ) );
 
             // 3) 빠른 액센트 팔레트 스와치
             ImGui::Text( "Accent Swatches:" );
@@ -670,7 +670,7 @@ namespace sw::editor
                 }
                 if ( index == 2 )
                     EditorSelfTestMarks::note( "theme.swatch.violet" ); // 에디터 자체 시험(input.classicDarkSwatch)이 누른다
-                EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "ThemeAccentSwatch", "A recommended accent color. Click to apply it." ) );
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeAccentSwatch" ) );
                 ImGui::PopID();
             }
 
@@ -680,11 +680,11 @@ namespace sw::editor
             // 4) 라운딩 슬라이더
             bool bMetricsChanged = false;
             bMetricsChanged |= ImGui::SliderFloat( "Window Rounding", &editorConfig._windowRounding, 0.0f, 12.0f, "%.0f px" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "ThemeWindowRounding", "Corner rounding of editor windows and popup dialogs, in pixels (0 to 12)." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeWindowRounding" ) );
             bMetricsChanged |= ImGui::SliderFloat( "Frame Rounding", &editorConfig._frameRounding, 0.0f, 8.0f, "%.0f px" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "ThemeFrameRounding", "Corner rounding of buttons, input fields and control frames, in pixels (0 to 8)." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeFrameRounding" ) );
             bMetricsChanged |= ImGui::SliderFloat( "Tab Rounding", &editorConfig._tabRounding, 0.0f, 8.0f, "%.0f px" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "ThemeTabRounding", "Corner rounding of dock tabs and panel tabs, in pixels (0 to 8)." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeTabRounding" ) );
 
             if ( bMetricsChanged )
             {
@@ -703,7 +703,7 @@ namespace sw::editor
                 applyPreset( EditorThemePreset::ModernDark );
                 saveToConfig();
             }
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "ThemeReset", "Restore every theme setting to the Modern Dark defaults." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeReset" ) );
         }
         ImGui::End();
     }

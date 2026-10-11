@@ -195,9 +195,9 @@ namespace sw::editor
         ImGui::SameLine();
         ImGui::BeginDisabled( session.isRunning() );
         ImGui::Checkbox( "Record traces", &settings._bRecordTraces );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorMultiplayer", "RecordTraces", "Record a timeline per process and merge them into one file (merged.trace.json) on Stop - open it with Load Trace in the Profiler window or with Perfetto" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "RecordTraces" ) );
         ImGui::SetNextItemWidth( -1.0f );
-        if ( ImGui::InputTextWithHint( "##ClientArguments", SW_LOCTEXT( "EditorMultiplayer", "ClientArgumentsHint", "client arguments (e.g. -vulkan -width=960 -height=540)" ), _clientArguments.data(), _clientArguments.capacity() ) )
+        if ( ImGui::InputTextWithHint( "##ClientArguments", SW_LOCKEY( "EditorMultiplayer", "ClientArgumentsHint" ), _clientArguments.data(), _clientArguments.capacity() ) )
             settings._clientArguments = _clientArguments.c_str();
         ImGui::EndDisabled();
 
@@ -207,7 +207,7 @@ namespace sw::editor
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlay, "Play" ) ) )
                 (void)session.start( session.getSettings() ); // 실패 이유는 세션이 로그에 남긴다
             EditorSelfTestMarks::note( "multiplayer.play" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorMultiplayer", "Play", "Start the server and clients for the selected Net Mode" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "Play" ) );
             ImGui::EndDisabled();
         }
         else
@@ -215,26 +215,26 @@ namespace sw::editor
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kStop, "Stop" ) ) )
                 (void)session.stop(); // 합친 경로는 로그와 아래 줄에 남는다
             EditorSelfTestMarks::note( "multiplayer.stop" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorMultiplayer", "Stop", "Stop every process and merge the recorded traces" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "Stop" ) );
             ImGui::SameLine();
             ImGui::TextDisabled( "UDP %u", static_cast<uint32>( session.getPort() ) );
             ImGui::SameLine();
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPause, "Pause server" ) ) )
                 (void)session.sendServerCommand( "pause" ); // 답은 서버 로그 줄로 온다
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorMultiplayer", "PauseServer", "Pause the dedicated server's game tick" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "PauseServer" ) );
             ImGui::SameLine();
             ImGui::SetNextItemWidth( ImGui::GetFontSize() * 3.0f );
             ImGui::InputInt( "##StepTicks", &_stepTickCount, 0, 0 );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorMultiplayer", "StepTickCount", "Number of server ticks that Step runs (1 or more)" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "StepTickCount" ) );
             _stepTickCount = MathUtil::clamp( _stepTickCount, 1, MultiplayerPanelInternal::kMaxStepTickCount );
             ImGui::SameLine();
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kStepForward, "Step" ) ) )
                 (void)session.sendServerCommand( "step " + to_string( _stepTickCount ) ); // 답은 서버 로그 줄로 온다
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorMultiplayer", "StepServer", "Run the server game tick as many times as the field on the left says, then pause again (dedicated server Dev command step N)" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "StepServer" ) );
             ImGui::SameLine();
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlay, "Resume server" ) ) )
                 (void)session.sendServerCommand( "resume" ); // 답은 서버 로그 줄로 온다
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorMultiplayer", "ResumeServer", "Resume the paused server's game tick" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ResumeServer" ) );
         }
         if ( session.getMergedTracePath().empty() == false )
         {
@@ -253,7 +253,7 @@ namespace sw::editor
         const int32 processCount = session.getProcessCount();
         if ( processCount == 0 )
         {
-            ImGui::TextDisabled( "%s", SW_LOCTEXT( "EditorMultiplayer", "NoProcesses", "No processes - pick a Net Mode and press Play (toolbar or here)." ) );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorMultiplayer", "NoProcesses" ) );
             return;
         }
         if ( ImGui::BeginTable( "##NetPlayProcesses", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_SizingStretchProp ) == false )
@@ -309,10 +309,10 @@ namespace sw::editor
             }
             ImGui::EndCombo();
         }
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorMultiplayer", "LogSource", "Show the log of one process or of every process" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "LogSource" ) );
         ImGui::SameLine();
         ImGui::Checkbox( "Follow", &_bFollowLog );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorMultiplayer", "FollowLog", "Keep scrolling to the newest log line" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "FollowLog" ) );
         if ( ImGui::BeginChild( "##NetPlayLog", ImVec2( 0.0f, 0.0f ), ImGuiChildFlags_Borders ) )
         {
             for ( const EditorNetPlayLogLine& line : session.getLogLines() )

@@ -28,9 +28,9 @@ namespace sw::editor
                 if ( pContext == nullptr )
                     return;
                 if ( bCaptured )
-                    pContext->getNotificationManager().push( SW_LOCTEXT( "EdCommon", "NotifyBugReportSaved", "Bug report saved" ), directory, NotificationType::Success );
+                    pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifyBugReportSaved" ), directory, NotificationType::Success );
                 else
-                    pContext->getNotificationManager().push( SW_LOCTEXT( "EdCommon", "NotifyBugReportTitle", "Bug report" ), SW_LOCTEXT( "EdCommon", "NotifyBugReportFailed", "The bug report could not be saved (see the log)" ), NotificationType::Error );
+                    pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifyBugReportTitle" ), SW_LOCKEY( "EdCommon", "NotifyBugReportFailed" ), NotificationType::Error );
             }
         };
     } // namespace

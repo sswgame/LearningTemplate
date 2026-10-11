@@ -200,7 +200,7 @@ namespace sw::editor
         if ( EditorChrome::beginSearchOverlay( overlayDesc ) )
         {
             EditorWidgets::drawSearchField( "##PaletteSearch", _searchBuffer,
-                                            SW_LOCTEXT( "EdCommon", "CommandPaletteHint", "Type a command or search objects... (Esc to close)" ), -1.0f, false );
+                                            SW_LOCKEY( "EdCommon", "CommandPaletteHint" ), -1.0f, false );
 
             ImGui::Separator();
 

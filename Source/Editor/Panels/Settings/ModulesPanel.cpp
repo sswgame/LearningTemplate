@@ -115,7 +115,7 @@ namespace sw::editor
         }
         if ( _bChangedSinceStart )
         {
-            EditorThemeUtil::textWarning( SW_LOCTEXT( "EditorSettings", "ModuleSetChanged", "Module set changed - build to apply, then restart the editor." ) );
+            EditorThemeUtil::textWarning( SW_LOCKEY( "EditorSettings", "ModuleSetChanged" ) );
             ImGui::SameLine();
             if ( ImGui::SmallButton( "Build" ) )
             {
@@ -123,13 +123,13 @@ namespace sw::editor
                 if ( pContext != nullptr )
                     (void)pContext->getCommandRegistry().execute( "build.compileAll" ); // 막혀 있으면 빌드 상태 표시가 알린다
             }
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSettings", "BuildModules", "Compile every module with the changed module set" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "BuildModules" ) );
         }
         if ( ImGui::SmallButton( "Refresh" ) )
             reloadCatalog();
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSettings", "RefreshModules", "Read the module catalog from the module folder again" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "RefreshModules" ) );
         ImGui::SameLine();
-        EditorWidgets::drawSearchField( "##ModuleFilter", _filter, SW_LOCTEXT( "EditorSettings", "SearchModulesHint", "Search modules..." ), 0.0f, false );
+        EditorWidgets::drawSearchField( "##ModuleFilter", _filter, SW_LOCKEY( "EditorSettings", "SearchModulesHint" ), 0.0f, false );
         EditorSelfTestMarks::note( "modules.search" );
         const EditorListFilter filter{ _filter.c_str() };
 
@@ -173,7 +173,7 @@ namespace sw::editor
                 EditorSelfTestMarks::note( mark.c_str() );
                 ImGui::EndDisabled();
                 if ( ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_DelayShort ) )
-                    ImGui::SetTooltip( "%s", bLocked ? SW_LOCTEXT( "EditorSettings", "ModuleLocked", "Editor and game modules cannot be turned off here" ) : SW_LOCTEXT( "EditorSettings", "ModuleToggle", "Turn this module on or off (the affected modules are shown before it applies)" ) );
+                    ImGui::SetTooltip( "%s", bLocked ? SW_LOCKEY( "EditorSettings", "ModuleLocked" ) : SW_LOCKEY( "EditorSettings", "ModuleToggle" ) );
                 ImGui::TableSetColumnIndex( 1 );
                 ImGui::TextUnformatted( manifest._name.c_str() );
                 EditorWidgets::drawTooltip( manifest._description.c_str() );

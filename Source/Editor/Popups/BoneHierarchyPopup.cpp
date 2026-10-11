@@ -152,7 +152,7 @@ namespace sw::editor
         const string     name = ws.getSelectedObjectName();
         if ( name.empty() || ws.getSelectedObjectID() == 0 )
         {
-            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EdCommon", "BoneNoSelection", "No selection. Select an object in the Hierarchy." ) );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "BoneNoSelection" ) );
             EditorChrome::endPanel();
             return;
         }
@@ -167,10 +167,10 @@ namespace sw::editor
             if ( pSelectedObj != nullptr )
                 BoneHierarchyPopupInternal::drawGameObjectHierarchy( pSelectedObj );
             else
-                EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EdCommon", "BoneObjectNotFound", "Object not found in the active scene." ) );
+                EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "BoneObjectNotFound" ) );
         }
         else
-            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EdCommon", "NoActiveScene", "No active scene." ) );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "NoActiveScene" ) );
 
         EditorChrome::endPanel();
     }

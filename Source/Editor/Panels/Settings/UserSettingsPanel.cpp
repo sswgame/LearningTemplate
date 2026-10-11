@@ -33,7 +33,7 @@ namespace sw::editor
         UserSettingsManager* pSettings = editor::getService<UserSettingsManager>();
         if ( pSettings == nullptr || pSettings->getCategories().empty() )
         {
-            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorSettings", "UserSettingsNotLoaded", "User settings are not loaded." ) );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorSettings", "UserSettingsNotLoaded" ) );
             return;
         }
         UserSettingsManager& settings = *pSettings;

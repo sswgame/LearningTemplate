@@ -323,18 +323,22 @@ namespace sw
                 if ( _position >= _text.size() || _text[_position] != '(' )
                     return; // 매크로 이름만 쓴 자리(문서 · 다른 매크로의 인자)
                 ++_position;
-                string arrArgument[3];
-                for ( uint32 argumentIndex = 0; argumentIndex < 3; ++argumentIndex )
+                // `SW_LOCKEY` · `SW_LOCKEYFORMAT` 은 원문을 코드에 두지 않는다 — 키만 읽어 "표에 있어야 하는 참조" 로 모은다.
+                const bool   bKeyOnly     = macroName == "SW_LOCKEY" || macroName == "SW_LOCKEYFORMAT";
+                const uint32 literalCount = bKeyOnly ? 2u : 3u;
+                string       arrArgument[3];
+                for ( uint32 argumentIndex = 0; argumentIndex < literalCount; ++argumentIndex )
                 {
                     if ( readConcatenatedLiteral( arrArgument[argumentIndex] ) == false )
                     {
                         _pGatherer->addIssue( makeLocation( callLine ), string( macroName ) + " arguments must be string literals - the text is not gathered", true );
                         return;
                     }
-                    const bool bLast = argumentIndex == 2;
+                    const bool bLast = argumentIndex + 1 == literalCount;
                     if ( _position >= _text.size() || ( bLast == false && _text[_position] != ',' ) )
                     {
-                        _pGatherer->addIssue( makeLocation( callLine ), string( macroName ) + " needs ( \"Namespace\", \"Key\", \"Source\" )", true );
+                        _pGatherer->addIssue( makeLocation( callLine ),
+                                              string( macroName ) + ( bKeyOnly ? " needs ( \"Namespace\", \"Key\" )" : " needs ( \"Namespace\", \"Key\", \"Source\" )" ), true );
                         return;
                     }
                     if ( bLast == false )
@@ -343,6 +347,11 @@ namespace sw
                 if ( arrArgument[1].empty() )
                 {
                     _pGatherer->addIssue( makeLocation( callLine ), string( macroName ) + " has an empty key", true );
+                    return;
+                }
+                if ( bKeyOnly )
+                {
+                    _pGatherer->addKeyReference( LocalizationTextUtil::makeFullKey( arrArgument[0], arrArgument[1] ), _originName );
                     return;
                 }
                 string error;

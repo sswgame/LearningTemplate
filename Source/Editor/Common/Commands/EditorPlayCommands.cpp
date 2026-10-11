@@ -42,7 +42,7 @@ namespace sw::editor
                 const uint32   keptCount = EditorPlayCommands::keepSelectedChanges();
                 EditorContext* pContext  = EditorContext::get();
                 if ( pContext != nullptr && keptCount > 0 )
-                    pContext->getNotificationManager().push( SW_LOCTEXT( "EdCommon", "NotifyKeepSimulationTitle", "Keep Simulation Changes" ), SW_LOCTEXT( "EdCommon", "NotifyKeepSimulation", "The selected objects keep their state after Stop" ), NotificationType::Info );
+                    pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifyKeepSimulationTitle" ), SW_LOCKEY( "EdCommon", "NotifyKeepSimulation" ), NotificationType::Info );
             }
 
             static void runLaunchStandalone() { (void)EditorPlayCommands::launchStandalone(); } // 실패는 알림 · 로그가 알린다
@@ -142,12 +142,12 @@ namespace sw::editor
         if ( pContext == nullptr || pScene == nullptr || pScene->getSourcePath().empty() )
         {
             if ( pContext != nullptr )
-                pContext->getNotificationManager().push( SW_LOCTEXT( "EdCommon", "NotifyPlayNewWindowTitle", "Play in New Window" ), SW_LOCTEXT( "EdCommon", "NotifyPlayNewWindowSaveFirst", "Save the scene first. The new window opens the saved file." ), NotificationType::Warning );
+                pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowTitle" ), SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowSaveFirst" ), NotificationType::Warning );
             return false;
         }
         // 새 창은 디스크의 씬을 연다(언리얼 Standalone 처럼) — 저장하지 않은 편집은 들어가지 않는다고 알린다.
         if ( pContext->getWorkspace().isSceneDirty() )
-            pContext->getNotificationManager().push( SW_LOCTEXT( "EdCommon", "NotifyPlayNewWindowTitle", "Play in New Window" ), SW_LOCTEXT( "EdCommon", "NotifyPlayNewWindowUnsaved", "Unsaved scene edits are not in the new window" ), NotificationType::Warning );
+            pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowTitle" ), SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowUnsaved" ), NotificationType::Warning );
         const string command = makeStandaloneCommand( FileUtil::getExecutablePath(), pScene->getSourcePath(), getPreferences<EditorPlayPreferences>()._standaloneArguments );
         if ( Process::launchDetached( command ) == false )
         {

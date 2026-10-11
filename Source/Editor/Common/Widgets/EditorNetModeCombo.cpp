@@ -34,7 +34,7 @@ namespace sw::editor
             ImGui::EndCombo();
         }
         EditorSelfTestMarks::note( "toolbar.netMode" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "NetMode", "Net Mode: Standalone plays inside the editor; the other modes launch a separate server and clients (Window > Multiplayer)." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "NetMode" ) );
         if ( settings._mode != EditorNetMode::Standalone )
         {
             ImGui::SameLine();
@@ -42,7 +42,7 @@ namespace sw::editor
             if ( ImGui::InputInt( "##PlayerCount", &settings._clientCount, 1, 1 ) )
                 bChanged = true;
             settings._clientCount = MathUtil::clamp( settings._clientCount, 1, kMaxPlayerCount );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "NetPlayerCount", "Number of players: the client count for a dedicated server, or the count including the host for a listen host." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "NetPlayerCount" ) );
         }
         ImGui::EndDisabled();
         return bChanged;

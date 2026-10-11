@@ -115,7 +115,7 @@ namespace sw::editor
         }
         if ( _pSelected == nullptr || _pSelected->_pfnGetType() == nullptr )
         {
-            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorSettings", "NoSectionMatches", "No section matches the search." ) );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorSettings", "NoSectionMatches" ) );
             ImGui::EndChild();
             savePendingChanges( false );
             return;
@@ -142,7 +142,7 @@ namespace sw::editor
             if ( _pendingSaveNanoseconds == 0 )
                 _pendingSaveNanoseconds = MonotonicClock::nowNanoseconds();
         }
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSettings", "ResetSection", "Reset every value in this section to its default" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "ResetSection" ) );
         ImGui::EndChild();
         savePendingChanges( false );
     }

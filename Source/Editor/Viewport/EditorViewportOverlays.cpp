@@ -155,7 +155,7 @@ namespace sw::editor
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kLayout, "Overlays" ) ) )
             ImGui::OpenPopup( "##ViewportOverlaysMenu" );
         EditorSelfTestMarks::note( "sceneView.overlays" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "OverlaysMenu", "Show or hide the scene view overlay bars, or put them back where they started" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "OverlaysMenu" ) );
         if ( ImGui::BeginPopup( "##ViewportOverlaysMenu" ) )
         {
             drawBarMenuItems();
@@ -274,7 +274,7 @@ namespace sw::editor
             }
         }
         EditorSelfTestMarks::note( ( "overlay.grip." + state._id ).c_str() );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "OverlayGrip", "Drag to move. Near an edge it docks there (left and right stack vertically). Right-click for the overlay menu." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "OverlayGrip" ) );
         if ( ImGui::IsItemActivated() )
         {
             runtime._bDragging    = true;
@@ -309,7 +309,7 @@ namespace sw::editor
             save();
         }
         EditorSelfTestMarks::note( ( "overlay.collapse." + state._id ).c_str() );
-        EditorWidgets::drawTooltip( state._bCollapsed ? SW_LOCTEXT( "EdCommon", "OverlayExpand", "Expand" ) : SW_LOCTEXT( "EdCommon", "OverlayCollapse", "Collapse" ) );
+        EditorWidgets::drawTooltip( state._bCollapsed ? SW_LOCKEY( "EdCommon", "OverlayExpand" ) : SW_LOCKEY( "EdCommon", "OverlayCollapse" ) );
         if ( state._bCollapsed )
         {
             ImGui::SameLine();

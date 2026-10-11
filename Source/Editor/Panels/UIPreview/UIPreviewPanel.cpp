@@ -106,7 +106,7 @@ namespace sw::editor
             _openedDocument = _documentPath;
             _targetPath     = targetPath;
             _selected       = kInvalidWidgetID;
-            _error          = _screen == kInvalidUIScreenHandle ? SW_LOCTEXT( "EditorUIPreview", "BuildFailed", "Could not build the document (see the log)." ) : "";
+            _error          = _screen == kInvalidUIScreenHandle ? SW_LOCKEY( "EditorUIPreview", "BuildFailed" ) : "";
         }
         if ( _screen != kInvalidUIScreenHandle )
             ui.setOffscreenView( _screen, _viewport, _textScale, _theme );
@@ -136,18 +136,18 @@ namespace sw::editor
             _documentPath = path;
             _error.clear();
         }
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorUIPreview", "DocumentPathTip", "Resource path of the UI document (*.ui.xml) to preview. The preview rebuilds when it changes." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "DocumentPathTip" ) );
         ImGui::SameLine();
         if ( ImGui::Button( "Reload" ) )
         {
             closePreview();
             _error.clear();
         }
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorUIPreview", "ReloadTip", "Rebuild the preview from the file, for example after editing the XML outside the editor." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "ReloadTip" ) );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( 190.0f * EditorThemeUtil::getDpiScale() );
         const bool bResolutionOpen = ImGui::BeginCombo( "##uipreviewres", UIPreviewLogic::getResolution( _resolutionIndex )._pName );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorUIPreview", "ResolutionTip", "Screen size to lay the document out for. Check layouts at several aspect ratios before shipping." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "ResolutionTip" ) );
         if ( bResolutionOpen )
         {
             for ( uint32 index = 0; index < UIPreviewLogic::getResolutionCount(); ++index )
@@ -160,7 +160,7 @@ namespace sw::editor
         ImGui::SameLine();
         ImGui::SetNextItemWidth( 150.0f * EditorThemeUtil::getDpiScale() );
         const bool bThemeOpen = ImGui::BeginCombo( "##uipreviewtheme", _theme.empty() ? "(game theme)" : _theme.c_str() );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorUIPreview", "ThemeTip", "UI theme to preview with. (game theme) uses the theme the game selects." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "ThemeTip" ) );
         if ( bThemeOpen )
         {
             if ( ImGui::Selectable( "(game theme)", _theme.empty() ) )
@@ -174,18 +174,18 @@ namespace sw::editor
         }
         ImGui::SetNextItemWidth( 140.0f * EditorThemeUtil::getDpiScale() );
         ImGui::SliderFloat( "UI scale", &_uiScale, 0.5f, 2.0f, "%.2f" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorUIPreview", "UIScaleTip", "Player UI scale setting to simulate, 0.5 to 2." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "UIScaleTip" ) );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( 140.0f * EditorThemeUtil::getDpiScale() );
         ImGui::SliderFloat( "Text scale", &_textScale, 0.75f, 2.0f, "%.2f" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorUIPreview", "TextScaleTip", "Player text size setting to simulate, 0.75 to 2. Use it to find labels that overflow." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "TextScaleTip" ) );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( 140.0f * EditorThemeUtil::getDpiScale() );
         ImGui::SliderFloat( "Safe zone", &_safeZone, 0.0f, 0.1f, "%.3f" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorUIPreview", "SafeZoneTip", "Fraction of the screen trimmed from each edge, 0 to 0.1, as on TVs that cut off the border. The red frame shows the safe area." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "SafeZoneTip" ) );
         ImGui::SameLine();
         ImGui::Checkbox( "Layout rects", &_bShowLayout );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorUIPreview", "LayoutRectsTip", "Outline every visible widget's layout rectangle over the preview." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "LayoutRectsTip" ) );
     }
 
     void UIPreviewPanel::drawWidgetList( const UIScreen& screen )
@@ -225,13 +225,13 @@ namespace sw::editor
             formatstring( width.data(), width.capacity(), "%#", Fmt( static_cast<float64>( _viewport._size._x ), Format().precision( 0 ) ) );
             formatstring( height.data(), height.capacity(), "%#", Fmt( static_cast<float64>( _viewport._size._y ), Format().precision( 0 ) ) );
             formatstring( scale.data(), scale.capacity(), "%#", Fmt( static_cast<float64>( _viewport._uiScale ), Format().precision( 2 ) ) );
-            const string hint = SW_LOCFORMAT( "EditorUIPreview", "SelectWidgetHint", "{width} x {height} UI units, scale {scale} - click the image or the tree to select a widget",
-                                              TextArgumentList().addText( "width", width.c_str() ).addText( "height", height.c_str() ).addText( "scale", scale.c_str() ) );
+            const string hint = SW_LOCKEYFORMAT( "EditorUIPreview", "SelectWidgetHint",
+                                                 TextArgumentList().addText( "width", width.c_str() ).addText( "height", height.c_str() ).addText( "scale", scale.c_str() ) );
             ImGui::TextDisabled( "%s", hint.c_str() );
         }
         if ( _pTextureID == nullptr )
         {
-            ImGui::TextDisabled( "%s", SW_LOCTEXT( "EditorUIPreview", "WaitingForTexture", "Waiting for the render thread to create the preview texture..." ) );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorUIPreview", "WaitingForTexture" ) );
             ImGui::EndChild();
             return;
         }
@@ -279,7 +279,7 @@ namespace sw::editor
         UISystem* pUI = editor::getService<UISystem>();
         if ( pUI == nullptr || pUI->isInitialized() == false )
         {
-            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorUIPreview", "UINotRunning", "Runtime UI is not running." ) );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorUIPreview", "UINotRunning" ) );
             return;
         }
         drawToolbar( *pUI );
@@ -289,7 +289,7 @@ namespace sw::editor
         const UIScreen* pScreen = pUI->findOffscreenScreen( _screen );
         if ( pScreen == nullptr )
         {
-            EditorWidgets::drawEmptyHint( _error.empty() ? SW_LOCTEXT( "EditorUIPreview", "EnterPathHint", "Enter a UI document path (*.ui.xml)." ) : _error.c_str() );
+            EditorWidgets::drawEmptyHint( _error.empty() ? SW_LOCKEY( "EditorUIPreview", "EnterPathHint" ) : _error.c_str() );
             return;
         }
         drawWidgetList( *pScreen );

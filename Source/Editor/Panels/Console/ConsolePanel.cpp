@@ -322,27 +322,27 @@ namespace sw::editor
                 bNewLogs = false;
             }
             EditorSelfTestMarks::note( "console.clear" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorConsole", "Clear", "Clear all console log output" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "Clear" ) );
 
             ImGui::SameLine();
             ImGui::Checkbox( "Auto-scroll", &_bAutoScroll );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorConsole", "AutoScroll", "Follow new logs while scrolled to the bottom. Scrolling up to read pauses it; scrolling back to the bottom resumes it" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "AutoScroll" ) );
 
             ImGui::SameLine();
             if ( EditorWidgets::drawToggleButton( "Collapse", _bCollapse == SW_TRUE, editor::style::kOk ) )
                 _bCollapse = _bCollapse == SW_TRUE ? SW_FALSE : SW_TRUE;
             EditorSelfTestMarks::note( "console.collapse" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorConsole", "Collapse", "Fold identical log lines into one and show the count in front" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "Collapse" ) );
 
             ImGui::SameLine();
             if ( EditorWidgets::drawToggleButton( "Clear on Play", _bClearOnPlay == SW_TRUE, editor::style::kOk ) )
                 _bClearOnPlay = _bClearOnPlay == SW_TRUE ? SW_FALSE : SW_TRUE;
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorConsole", "ClearOnPlay", "Clear the log when Play starts" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ClearOnPlay" ) );
 
             ImGui::SameLine();
             if ( EditorWidgets::drawToggleButton( "Error Pause", _bErrorPause == SW_TRUE, editor::style::kError ) )
                 _bErrorPause = _bErrorPause == SW_TRUE ? SW_FALSE : SW_TRUE;
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorConsole", "ErrorPause", "Pause Play when an error log appears during Play" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ErrorPause" ) );
 
             fixed_string<constant::kMaxBuffer32> arrErrLabel;
             formatstring( arrErrLabel.data(), arrErrLabel.capacity(), "Error (%zu)", errorCount );
@@ -358,23 +358,23 @@ namespace sw::editor
             ImGui::SameLine();
             if ( EditorWidgets::drawToggleButton( arrErrLabel.c_str(), _arrLevelEnabled[0], editor::style::kError ) )
                 _arrLevelEnabled[0] = ( _arrLevelEnabled[0] == false );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorConsole", "ShowErrors", "Toggle showing Error-level logs" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ShowErrors" ) );
 
             ImGui::SameLine();
             if ( EditorWidgets::drawToggleButton( arrWarnLabel.c_str(), _arrLevelEnabled[1], editor::style::kWarn ) )
                 _arrLevelEnabled[1] = ( _arrLevelEnabled[1] == false );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorConsole", "ShowWarnings", "Toggle showing Warning-level logs" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ShowWarnings" ) );
 
             ImGui::SameLine();
             if ( EditorWidgets::drawToggleButton( arrInfoLabel.c_str(), _arrLevelEnabled[2], editor::style::kOk ) )
                 _arrLevelEnabled[2] = ( _arrLevelEnabled[2] == false );
             EditorSelfTestMarks::note( "console.level.info" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorConsole", "ShowInfo", "Toggle showing Info-level logs" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ShowInfo" ) );
 
             ImGui::SameLine();
             if ( EditorWidgets::drawToggleButton( arrTraceLabel.c_str(), _arrLevelEnabled[3], kTraceChip ) )
                 _arrLevelEnabled[3] = ( _arrLevelEnabled[3] == false );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorConsole", "ShowTrace", "Toggle showing Trace-level logs" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "ShowTrace" ) );
 
             ImGui::SameLine();
             if ( ImGui::Button( "Copy All" ) && _listVisible.empty() == false )
@@ -387,12 +387,12 @@ namespace sw::editor
                 }
                 ImGui::SetClipboardText( allLogs.c_str() );
             }
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorConsole", "CopyAll", "Copy every filtered console log to the clipboard" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "CopyAll" ) );
 
             ImGui::SameLine();
             if ( ImGui::Button( "Open Log File" ) )
                 showLogFileInExplorer();
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorConsole", "OpenLogFile", "Open the most recent saved log file in the file explorer" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "OpenLogFile" ) );
 
             ImGui::SameLine();
             fixed_string<constant::kMaxBuffer32> tagLabel;
@@ -402,12 +402,12 @@ namespace sw::editor
                 formatstring( tagLabel.data(), tagLabel.capacity(), "Tags" );
             if ( ImGui::Button( tagLabel.c_str() ) )
                 ImGui::OpenPopup( "##LogTagFilter" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorConsole", "TagFilter", "Show or hide each log tag (category)" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "TagFilter" ) );
             drawTagFilterPopup();
 
-            EditorWidgets::drawSearchField( "##log_filter", _filterBuffer, SW_LOCTEXT( "EditorConsole", "FilterHint", "Filter (tag / message / file)" ), -1.0f, false );
+            EditorWidgets::drawSearchField( "##log_filter", _filterBuffer, SW_LOCKEY( "EditorConsole", "FilterHint" ), -1.0f, false );
             EditorSelfTestMarks::note( "console.filter" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorConsole", "FilterTooltip", "Filter by log message, module tag or file name" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "FilterTooltip" ) );
         }
 
         EditorChrome::endToolbar();
@@ -428,11 +428,11 @@ namespace sw::editor
         {
             const EditorListFilter filter{ _cachedFilter };
             if ( _listDrawSnapshot.empty() )
-                EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorConsole", "NoLogOutput", "No log output yet." ) );
+                EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorConsole", "NoLogOutput" ) );
             else if ( filter.isActive() )
                 EditorWidgets::drawNoSearchResultHint( filter.getText() );
             else
-                EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorConsole", "AllLevelsHidden", "All log levels are hidden. Re-enable one in the toolbar." ) );
+                EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorConsole", "AllLevelsHidden" ) );
         }
 
         // 맨 아래에 붙어 있을 때만 새 로그를 따라간다 — 값은 지난 프레임 배치 기준이다(스크롤은 다음 Begin 에 적용된다).
@@ -489,7 +489,7 @@ namespace sw::editor
 
                 if ( entry._file.empty() == false && ImGui::IsItemHovered( ImGuiHoveredFlags_DelayShort ) )
                 {
-                    const string tooltipText = SW_LOCFORMAT( "EditorConsole", "EntrySource", "{file}({line}) - double-click to open in IDE", TextArgumentList().addText( "file", entry._file.c_str() ).addInteger( "line", entry._line ) );
+                    const string tooltipText = SW_LOCKEYFORMAT( "EditorConsole", "EntrySource", TextArgumentList().addText( "file", entry._file.c_str() ).addInteger( "line", entry._line ) );
                     EditorWidgets::drawTooltip( tooltipText.c_str() );
                 }
                 if ( ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked( ImGuiMouseButton_Left ) )
@@ -552,7 +552,7 @@ namespace sw::editor
     {
         ImGui::SetNextItemWidth( -1.0f );
         constexpr ImGuiInputTextFlags kFlags     = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CallbackCompletion;
-        const bool                    bSubmitted = ImGui::InputTextWithHint( "##ConsoleCommand", SW_LOCTEXT( "EditorConsole", "CommandHint", "> command or gv_name [value] (Tab completes, Up/Down history, help)" ), _commandBuffer.data(),
+        const bool                    bSubmitted = ImGui::InputTextWithHint( "##ConsoleCommand", SW_LOCKEY( "EditorConsole", "CommandHint" ), _commandBuffer.data(),
                                                                              _commandBuffer.capacity(), kFlags, &ConsolePanelInternal::onCommandLineEdit, &_devConsole );
         if ( bSubmitted )
         {

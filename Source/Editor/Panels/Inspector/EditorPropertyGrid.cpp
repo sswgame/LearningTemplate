@@ -115,11 +115,11 @@ namespace sw::editor
     {
         if ( pMarkKey != nullptr )
         {
-            EditorWidgets::drawSearchField( "##propFilter", _propertyFilter, SW_LOCTEXT( "EditorInspector", "SearchPropertiesHint", "Search properties..." ), 0.0f, false );
+            EditorWidgets::drawSearchField( "##propFilter", _propertyFilter, SW_LOCKEY( "EditorInspector", "SearchPropertiesHint" ), 0.0f, false );
             EditorSelfTestMarks::note( pMarkKey );
             return;
         }
-        EditorWidgets::drawSearchField( "##propFilter", _propertyFilter, SW_LOCTEXT( "EditorInspector", "SearchPropertiesHint", "Search properties..." ) );
+        EditorWidgets::drawSearchField( "##propFilter", _propertyFilter, SW_LOCKEY( "EditorInspector", "SearchPropertiesHint" ) );
     }
 
     void EditorPropertyGrid::drawProperties( const EditorPropertyGridTarget& target, const utf8* pSectionTitle, const vector<hashed_string>& listDrawnName )
@@ -233,7 +233,7 @@ namespace sw::editor
                     if ( _isMixed.isBound() && _isMixed( *prop ) )
                     {
                         ImGui::TextDisabled( "\xe2\x80\x94" ); // — (혼합)
-                        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInspector", "MultipleValues", "Multiple values" ) );
+                        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "MultipleValues" ) );
                         ImGui::SameLine();
                     }
                     ImGui::TextUnformatted( InspectorPropertyLayout::getPropertyLabel( *prop ) );
@@ -261,7 +261,7 @@ namespace sw::editor
                         ImGui::SameLine();
                         if ( ImGui::SmallButton( editoricon::kRefresh ) )
                             resetPropertyToDefault( pInstance, *prop, pDefaultInstance );
-                        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInspector", "ResetToDefaultTooltip", "Reset to the default value" ) );
+                        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "ResetToDefaultTooltip" ) );
                         fixed_string<constant::kMaxBuffer128> resetMark;
                         formatstring( resetMark.data(), resetMark.capacity(), "inspector.reset.%#.%#", pTypeInfo->_name.c_str(), prop->_name.c_str() );
                         EditorSelfTestMarks::note( resetMark.c_str() );
@@ -271,7 +271,7 @@ namespace sw::editor
                     {
                         ImGui::SameLine();
                         ImGui::TextDisabled( "(T)" );
-                        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInspector", "TransientProperty", "Transient property: not saved to disk" ) );
+                        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "TransientProperty" ) );
                     }
 
                     ImGui::TableNextColumn();
@@ -609,7 +609,7 @@ namespace sw::editor
         }
 
         string keyText;
-        if ( bReadOnly == false && drawContainerAddRow( SW_LOCTEXT( "EditorInspector", "NewKeyHint", "new key (Enter)" ), keyText ) )
+        if ( bReadOnly == false && drawContainerAddRow( SW_LOCKEY( "EditorInspector", "NewKeyHint" ), keyText ) )
         {
             // 키를 키 타입으로 읽어 본다. 같은 키(글이 같다)가 이미 있으면 값을 덮어쓰지 않는다.
             void* pKey   = Memory::allocateAligned( mapWrapper.getKeySize(), alignof( std::max_align_t ) );
@@ -690,7 +690,7 @@ namespace sw::editor
         }
 
         string addText;
-        if ( bReadOnly == false && drawContainerAddRow( SW_LOCTEXT( "EditorInspector", "NewElementHint", "new element (Enter)" ), addText ) )
+        if ( bReadOnly == false && drawContainerAddRow( SW_LOCKEY( "EditorInspector", "NewElementHint" ), addText ) )
         {
             EditorPropertyGridInternal::applyContainerEdit( getEditOwner(), "Add Set Element", [&]()
             {
@@ -760,7 +760,7 @@ namespace sw::editor
     {
         if ( pInstance == nullptr || pTypeInfo == nullptr || pTypeInfo->_listMethod.empty() )
         {
-            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorInspector", "NoFunctionMethods", "No FUNCTION() methods." ) );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorInspector", "NoFunctionMethods" ) );
             return;
         }
 

@@ -111,9 +111,9 @@ namespace sw::editor
                 ImGui::EndCombo();
             }
             ImGui::EndDisabled();
-            const utf8* pViewModeTooltip = SW_LOCTEXT( "EdCommon", "ViewModeNoRenderer", "The renderer is not attached yet." );
+            const utf8* pViewModeTooltip = SW_LOCKEY( "EdCommon", "ViewModeNoRenderer" );
             if ( pRenderer != nullptr )
-                pViewModeTooltip = SW_LOCTEXT( "EdCommon", "ViewMode", "Scene view mode: Lit / Unlit / Wireframe / Normals / Depth / Overdraw (the game view always draws Lit)" );
+                pViewModeTooltip = SW_LOCKEY( "EdCommon", "ViewMode" );
             EditorWidgets::drawTooltip( pViewModeTooltip );
         }
 
@@ -121,8 +121,8 @@ namespace sw::editor
         {
             const bool b2D = settings._bIs2DMode;
             if ( EditorWidgets::drawToggleIconButton( "##viewDimension", b2D, editoricon::kSprite, editoricon::kCube,
-                                                      SW_LOCTEXT( "EdCommon", "View2D", "2D view (XY plane grid). Click to switch to 3D." ),
-                                                      SW_LOCTEXT( "EdCommon", "View3D", "3D view (XZ plane grid). Click to switch to 2D." ) ) )
+                                                      SW_LOCKEY( "EdCommon", "View2D" ),
+                                                      SW_LOCKEY( "EdCommon", "View3D" ) ) )
                 settings._bIs2DMode = ( settings._bIs2DMode == false );
             EditorSelfTestMarks::note( "viewport.dimension" );
         }
@@ -130,23 +130,23 @@ namespace sw::editor
         nextItem( bVertical );
         ImGui::SetNextItemWidth( 70.0f * EditorThemeUtil::getDpiScale() );
         ImGui::SliderFloat( "##CamSpeed", &settings._cameraSpeed, 0.5f, 20.0f, "%.1f" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "CameraSpeed", "Camera fly speed (0.5 to 20). Turning the mouse wheel while holding the right mouse button also changes it." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "CameraSpeed" ) );
     }
 
     void EditorViewportToolbar::drawDisplayBar( ViewportToolbarSettings& settings, bool bVertical )
     {
         // 씬 뷰 HUD — 게임 HUD 와 같은 섹션(언리얼 뷰포트 stat 자리). 켜고 끄기는 뷰마다, 섹션은 오른쪽 클릭 팝업(게임 HUD 와 같은 설정).
         if ( EditorWidgets::drawIconToggle( "##hud", editoricon::kChart, settings._bShowHUD,
-                                            SW_LOCTEXT( "EdCommon", "ViewportHUD", "Show the Debug HUD box in this view (view size and HUD sections). Right-click to choose sections." ) ) )
+                                            SW_LOCKEY( "EdCommon", "ViewportHUD" ) ) )
             settings._bShowHUD = ( settings._bShowHUD == false );
         EditorSelfTestMarks::note( "viewport.hud" );
         EditorDebugHUDControls::drawSectionPopupOnRightClick( "##sceneHUDSections" );
         nextItem( bVertical );
-        if ( EditorWidgets::drawIconToggle( "##grid", editoricon::kGrid, settings._bShowGrid, SW_LOCTEXT( "EdCommon", "ViewportGrid", "Show or hide the ground grid." ) ) )
+        if ( EditorWidgets::drawIconToggle( "##grid", editoricon::kGrid, settings._bShowGrid, SW_LOCKEY( "EdCommon", "ViewportGrid" ) ) )
             settings._bShowGrid = ( settings._bShowGrid == false );
         nextItem( bVertical );
         if ( EditorWidgets::drawIconToggle( "##cube", editoricon::kAxes, settings._bShowOrientationCube,
-                                            SW_LOCTEXT( "EdCommon", "ViewportOrientationCube", "Show or hide the orientation cube that shows which way the camera faces." ) ) )
+                                            SW_LOCKEY( "EdCommon", "ViewportOrientationCube" ) ) )
             settings._bShowOrientationCube = ( settings._bShowOrientationCube == false );
 
         // 컴포넌트 시각화 토글은 시각화 등록부에서 만든다. 시각화를 더해도 여기는 그대로다.
@@ -173,7 +173,7 @@ namespace sw::editor
 
         nextItem( bVertical );
         if ( EditorWidgets::drawIconToggle( "##surfaceSnap", editoricon::kMagnet, settings._bSurfaceSnap,
-                                            SW_LOCTEXT( "EdCommon", "SurfaceSnap", "Surface snap: objects you drag land on the surface under the cursor." ) ) )
+                                            SW_LOCKEY( "EdCommon", "SurfaceSnap" ) ) )
             settings._bSurfaceSnap = ( settings._bSurfaceSnap == false );
     }
 
@@ -182,7 +182,7 @@ namespace sw::editor
         const float32 side = ImGui::GetFrameHeight();
         if ( ImGui::Button( editoricon::kBookmark, ImVec2{ side, side } ) )
             ImGui::OpenPopup( "##ViewportBookmarksPopup" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "CameraBookmarks", "Camera bookmarks: move the view to a saved camera position (Ctrl+1~9)" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "CameraBookmarks" ) );
 
         if ( ImGui::BeginPopup( "##ViewportBookmarksPopup" ) )
         {
@@ -207,7 +207,7 @@ namespace sw::editor
                             fixed_string<constant::kMaxBuffer128> positionText;
                             formatstring( positionText.data(), positionText.capacity(), "(%.1f, %.1f, %.1f)", static_cast<float64>( pBm->_position._x ),
                                           static_cast<float64>( pBm->_position._y ), static_cast<float64>( pBm->_position._z ) );
-                            const string tooltipText = SW_LOCFORMAT( "EdCommon", "CameraBookmarkPosition", "Position: {position}", TextArgumentList().addText( "position", positionText.c_str() ) );
+                            const string tooltipText = SW_LOCKEYFORMAT( "EdCommon", "CameraBookmarkPosition", TextArgumentList().addText( "position", positionText.c_str() ) );
                             EditorWidgets::drawTooltip( tooltipText.c_str() );
                         }
                     }
@@ -224,7 +224,7 @@ namespace sw::editor
         if ( ImGui::Button( editoricon::kAlign, ImVec2{ side, side } ) )
             ImGui::OpenPopup( "##ViewportAlignPopup" );
         ImGui::EndDisabled();
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "AlignSelected", "Align and distribute the selected objects (select two or more)." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "AlignSelected" ) );
         if ( ImGui::BeginPopup( "##ViewportAlignPopup" ) )
         {
             ImGui::Text( "Multi-Object Alignment" );
@@ -245,16 +245,16 @@ namespace sw::editor
         const utf8*   arrSnapLabel[] = { "0.1", "0.5", "1.0", "5.0", "10.0" };
         EditorViewportToolbarInternal::drawSnapToggleCombo( "Grid Snap", "##GridSnapVal", settings._bGridSnap, settings._gridSnapValue, arrSnapValue, arrSnapLabel, 5,
                                                             65.0f, 2, bVertical,
-                                                            SW_LOCTEXT( "EdCommon", "GridSnap", "Grid snap: moved objects jump in steps of the grid size on the right." ),
-                                                            SW_LOCTEXT( "EdCommon", "GridSnapSize", "Grid snap step, in world units." ) );
+                                                            SW_LOCKEY( "EdCommon", "GridSnap" ),
+                                                            SW_LOCKEY( "EdCommon", "GridSnapSize" ) );
 
         nextItem( bVertical );
         const float32 arrRotValue[] = { 5.0f, 15.0f, 45.0f, 90.0f };
         const utf8*   arrRotLabel[] = { "5 deg", "15 deg", "45 deg", "90 deg" };
         EditorViewportToolbarInternal::drawSnapToggleCombo( "Rot Snap", "##RotSnapVal", settings._bRotationSnap, settings._rotationSnapValue, arrRotValue, arrRotLabel,
                                                             4, 60.0f, 1, bVertical,
-                                                            SW_LOCTEXT( "EdCommon", "RotationSnap", "Rotation snap: rotations jump in steps of the angle on the right." ),
-                                                            SW_LOCTEXT( "EdCommon", "RotationSnapSize", "Rotation snap step, in degrees." ) );
+                                                            SW_LOCKEY( "EdCommon", "RotationSnap" ),
+                                                            SW_LOCKEY( "EdCommon", "RotationSnapSize" ) );
         ImGui::EndDisabled();
     }
 } // namespace sw::editor

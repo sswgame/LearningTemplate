@@ -256,7 +256,7 @@ namespace sw::editor
 
     void RenderTargetPanel::drawToolbar()
     {
-        EditorWidgets::drawSearchField( "##rtsearch", _searchFilter, SW_LOCTEXT( "EditorRenderTarget", "SearchHint", "Search render targets..." ), 260.0f );
+        EditorWidgets::drawSearchField( "##rtsearch", _searchFilter, SW_LOCKEY( "EditorRenderTarget", "SearchHint" ), 260.0f );
         ImGui::SameLine();
         ImGui::TextDisabled( "%d targets", static_cast<int32>( _listTarget.size() ) );
 
@@ -264,21 +264,20 @@ namespace sw::editor
         ImGui::SetNextItemWidth( 160.0f * EditorThemeUtil::getDpiScale() );
         // 0 = 창에 맞춤. 원본 해상도로 보고 싶을 때만 배율을 준다(1:1 픽셀 검사).
         ImGui::SliderFloat( "Zoom", &_previewZoom, 0.0f, 2.0f, _previewZoom <= 0.0f ? "fit" : "%.2fx" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorRenderTarget", "ZoomTip", "Preview scale, 0 to 2. At 0 the image fits the panel; set 1 to inspect pixels at native resolution." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "ZoomTip" ) );
 
         // 채널 · 깊이 · 픽셀 값은 CPU 로 읽은 스냅샷이다. 다시 읽기는 GPU 를 기다리므로 누를 때(또는 Auto 간격)만 한다.
         ImGui::SameLine();
         if ( ImGui::Button( "Refresh" ) )
             _bRefreshRequested = SW_TRUE;
         EditorSelfTestMarks::note( "renderTargets.refresh" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorRenderTarget", "RefreshTip",
-                                                "Read the selected target back to the CPU again. Channel views, depth views and pixel values use this snapshot; reading waits for the GPU." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "RefreshTip" ) );
         ImGui::SameLine();
         bool bAuto = _bAutoRefresh != SW_FALSE;
         if ( ImGui::Checkbox( "Auto", &bAuto ) )
             _bAutoRefresh = bAuto ? SW_TRUE : SW_FALSE;
         EditorSelfTestMarks::note( "renderTargets.auto" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorRenderTarget", "AutoRefreshTip", "Refresh the snapshot every 30 editor frames. Costs a GPU wait each time." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "AutoRefreshTip" ) );
     }
 
     void RenderTargetPanel::drawTargetList()
@@ -314,9 +313,9 @@ namespace sw::editor
         }
 
         if ( _listTarget.empty() )
-            ImGui::TextDisabled( "%s", SW_LOCTEXT( "EditorRenderTarget", "NoTargets", "Renderer has not published any targets yet." ) );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorRenderTarget", "NoTargets" ) );
         else if ( shownCount == 0 )
-            ImGui::TextDisabled( "%s", SW_LOCTEXT( "EditorRenderTarget", "NoFilterMatch", "No target matches the filter." ) );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorRenderTarget", "NoFilterMatch" ) );
         ImGui::EndChild();
     }
 
@@ -334,8 +333,7 @@ namespace sw::editor
                 bChanged                       = true;
             }
             EditorSelfTestMarks::note( "renderTargets.linearize" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorRenderTarget", "LinearizeTip",
-                                                    "Convert stored depth back to view distance using Near/Far. Perspective depth crowds near 1, so the raw image looks almost white." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "LinearizeTip" ) );
             ImGui::SameLine();
             if ( ImGui::Checkbox( "Auto range", &bAutoRange ) )
             {
@@ -343,7 +341,7 @@ namespace sw::editor
                 bChanged                       = true;
             }
             EditorSelfTestMarks::note( "renderTargets.autoRange" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorRenderTarget", "AutoRangeTip", "Stretch the depth values present in the image to the full black-to-white range." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "AutoRangeTip" ) );
             if ( bLinearize )
             {
                 ImGui::SameLine();
@@ -355,7 +353,7 @@ namespace sw::editor
                     _viewSettings._farPlane  = MathUtil::max( arrPlane[1], _viewSettings._nearPlane + 0.001f );
                     bChanged                 = true;
                 }
-                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorRenderTarget", "NearFarTip", "Near and far clip planes of the camera that rendered the depth, in world units. Match them to that camera for correct distances." ) );
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "NearFarTip" ) );
             }
             if ( hasSnapshot() )
             {
@@ -377,7 +375,7 @@ namespace sw::editor
                 _viewSettings._channel = channel;
                 _bSnapshotImageDirty   = SW_TRUE;
             }
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorRenderTarget", "ChannelTip", "Show all channels, or one channel as grayscale. RGBA shows the live GPU texture; a single channel uses the CPU snapshot." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "ChannelTip" ) );
             if ( EditorSelfTestMarks::isEnabled() )
                 EditorSelfTestMarks::note( ( string{ "renderTargets.channel." } + RenderTargetViewUtil::getChannelLabel( channel ) ).c_str() );
         }
@@ -405,8 +403,8 @@ namespace sw::editor
         ImGui::Text( "(%d, %d)", texel._x, texel._y );
         if ( bDepth )
         {
-            ImGui::Text( "%s %.6f", SW_LOCTEXT( "EditorRenderTarget", "DepthLabel", "depth" ), static_cast<float64>( value._x ) );
-            ImGui::Text( "%s %.3f", SW_LOCTEXT( "EditorRenderTarget", "LinearLabel", "linear" ),
+            ImGui::Text( "%s %.6f", SW_LOCKEY( "EditorRenderTarget", "DepthLabel" ), static_cast<float64>( value._x ) );
+            ImGui::Text( "%s %.3f", SW_LOCKEY( "EditorRenderTarget", "LinearLabel" ),
                          static_cast<float64>( RenderTargetViewUtil::linearizeDepth( value._x, _viewSettings._nearPlane, _viewSettings._farPlane ) ) );
         }
         else
@@ -429,7 +427,7 @@ namespace sw::editor
         const RenderTargetInfo* pSelected = findByName( _listTarget, _selectedName );
         if ( pSelected == nullptr )
         {
-            ImGui::TextDisabled( "%s", SW_LOCTEXT( "EditorRenderTarget", "PickTargetHint", "Pick a render target on the left." ) );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorRenderTarget", "PickTargetHint" ) );
             ImGui::EndChild();
             return;
         }
@@ -464,11 +462,11 @@ namespace sw::editor
         if ( pTextureID == nullptr )
         {
             if ( bLive )
-                ImGui::TextDisabled( "%s", SW_LOCTEXT( "EditorRenderTarget", "RegisterFailed", "Could not register this target as an ImGui texture." ) );
+                ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorRenderTarget", "RegisterFailed" ) );
             else if ( bDecodable == false )
-                ImGui::TextDisabled( "%s", SW_LOCTEXT( "EditorRenderTarget", "FormatNotReadable", "This format cannot be read back." ) );
+                ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorRenderTarget", "FormatNotReadable" ) );
             else
-                ImGui::TextDisabled( "%s", SW_LOCTEXT( "EditorRenderTarget", "ReadingTarget", "Reading the target..." ) );
+                ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorRenderTarget", "ReadingTarget" ) );
             ImGui::EndChild();
             return;
         }

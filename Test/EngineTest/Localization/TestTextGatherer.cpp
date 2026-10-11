@@ -181,6 +181,43 @@ SW_TEST_CASE( TextGathererTest, MergeReportsAddedChangedRemovedAndKeepsManualRow
 }
 
 /**
+ * @brief [TextGathererTest] 코드의 `SW_LOCKEY` · `SW_LOCKEYFORMAT` 은 키만 모은다 — 원문은 표에서 오고, 표에 없는 키는 오류, 표의 원문은 바꾸지 않는다
+ */
+SW_TEST_CASE( TextGathererTest, KeyOnlyMacrosGatherReferencesAndNeverWriteSource )
+{
+    const sw::string_view kSource = R"code(
+        tip   = SW_LOCKEY( "EditorTip", "Known" );
+        line  = SW_LOCKEYFORMAT( "EditorTip", "Counted", args );
+        gone  = SW_LOCKEY( "EditorTip", "Missing" );
+        bad   = SW_LOCKEY( "EditorTip", kKey );
+    )code";
+
+    sw::TextGatherer gatherer;
+    gatherer.gatherCodeText( kSource, "Source/Test/Probe.cpp" );
+    SW_EXPECT_EQUAL( size_t( 3 ), gatherer.getTexts().size() );
+    const sw::GatheredText* pKnown = TextGathererTestInternal::findText( gatherer, "EditorTip.Known" );
+    SW_ASSERT_NOT_NULL( pKnown );
+    SW_EXPECT_TRUE( pKnown->_kind == sw::GatheredTextKind::KeyReference );
+    SW_EXPECT_TRUE( TextGathererTestInternal::findText( gatherer, "EditorTip.Counted" ) != nullptr );
+
+    sw::SourceStringTable table;
+    sw::string            error;
+    SW_ASSERT_TRUE( table.loadFromJSONText( R"({ "culture": "en", "entries": {
+        "EditorTip.Known": { "source": "Hand written text" },
+        "EditorTip.Counted": { "source": "{n} items" } } })",
+                                            "gather", &error ) );
+    const sw::TextGatherReport report = gatherer.mergeInto( table, {} );
+    SW_EXPECT_TRUE( report._listAdded.empty() );
+    SW_EXPECT_TRUE( report._listChanged.empty() );
+    SW_EXPECT_TRUE( TextGathererTestInternal::hasIssueContaining( report._listIssue, "EditorTip.Missing", true ) );       // 표가 정의하지 않은 키
+    SW_EXPECT_TRUE( TextGathererTestInternal::hasIssueContaining( report._listIssue, "must be string literals", true ) ); // 동적 키
+    const sw::SourceTextEntry* pEntry = table.findEntry( "EditorTip.Known" );
+    SW_ASSERT_NOT_NULL( pEntry );
+    SW_EXPECT_STREQ( "Hand written text", pEntry->_source.c_str() ); // 코드가 원문을 덮지 않는다
+    SW_EXPECT_STREQ( "Source/Test/Probe.cpp", pEntry->_listOrigin.front().c_str() );
+}
+
+/**
  * @brief [TextGathererTest] 리플렉션 XML — `Localizable` 프로퍼티의 값을 모으고(최대 길이 메타 포함), 표시 없는 프로퍼티의 문장은 하드코딩 의심으로 경고한다
  */
 SW_TEST_CASE( TextGathererTest, ReflectedXMLGathersLocalizablePropertiesAndFlagsHardcodedText )

@@ -135,37 +135,37 @@ namespace sw::editor
                 addNamedNode( "Idle" );
                 notifyDocumentEdited( "Add Animation Graph Node" );
             }
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorAnimGraph", "AddIdleTip", "Add an Idle state node. Its name is the clip it plays; rename it in the inspector." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimGraph", "AddIdleTip" ) );
             ImGui::SameLine();
             if ( ImGui::Button( "Add Walk" ) )
             {
                 addNamedNode( "Walk" );
                 notifyDocumentEdited( "Add Animation Graph Node" );
             }
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorAnimGraph", "AddWalkTip", "Add a Walk state node. Its name is the clip it plays; rename it in the inspector." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimGraph", "AddWalkTip" ) );
             ImGui::SameLine();
             if ( ImGui::Button( "Add Attack" ) )
             {
                 addNamedNode( "Attack" );
                 notifyDocumentEdited( "Add Animation Graph Node" );
             }
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorAnimGraph", "AddAttackTip", "Add an Attack state node. Its name is the clip it plays; rename it in the inspector." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimGraph", "AddAttackTip" ) );
             ImGui::SameLine();
             // 고른 노드 둘(고른 순서)을 잇는다 — 캔버스에서 노드를 누르고 Ctrl 로 둘째를 고른다.
             if ( ImGui::Button( "Link Selected" ) )
                 linkSelectedNodes();
             EditorSelfTestMarks::note( "animGraph.linkSelected" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorAnimGraph", "LinkSelectedTip", "Add a transition between the two selected nodes, from the first selected to the second. Click one node, then Ctrl+click the other." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimGraph", "LinkSelectedTip" ) );
             ImGui::SameLine();
             if ( ImGui::Button( "Load" ) )
                 reloadDocument();
             EditorSelfTestMarks::note( "animGraph.load" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorAnimGraph", "LoadTip", "Reload the graph from disk, discarding unsaved edits." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimGraph", "LoadTip" ) );
             ImGui::SameLine();
             if ( ImGui::Button( "Save" ) )
                 (void)saveGraphData(); // 실패는 저장 커맨드가 알린다
             EditorSelfTestMarks::note( "animGraph.save" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorAnimGraph", "SaveTip", "Write the graph and its node layout to the asset file." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimGraph", "SaveTip" ) );
             ImGui::SameLine();
             if ( ImGui::Button( "Play" ) )
             {
@@ -176,7 +176,7 @@ namespace sw::editor
                 EditorViewportPreview::applyAnimationNode( _previewPlayer.getCurrentStateName().c_str(), getLoadedAssetPath() );
                 notePreviewTransition();
             }
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorAnimGraph", "PlayTip", "Preview the graph from the entry state, stepping to the next state every 0.75 seconds. Use it to check the transition order." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimGraph", "PlayTip" ) );
             ImGui::SameLine();
             if ( ImGui::Button( "Advance" ) )
             {
@@ -187,14 +187,14 @@ namespace sw::editor
                     EditorViewportPreview::applyAnimationNode( _previewPlayer.getCurrentStateName().c_str(), getLoadedAssetPath() );
                 notePreviewTransition();
             }
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorAnimGraph", "AdvanceTip", "Step the preview to the next state by one transition." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimGraph", "AdvanceTip" ) );
             ImGui::SameLine();
             if ( ImGui::Button( "Stop" ) )
             {
                 _previewPlayer.stop();
                 _bPreviewPlaying = SW_FALSE;
             }
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorAnimGraph", "StopTip", "Stop the preview." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimGraph", "StopTip" ) );
 
             ImGui::SameLine();
             if ( _previewPlayer.getCurrentStateName().empty() == false )
@@ -212,7 +212,7 @@ namespace sw::editor
         if ( beginGraphCanvas( "AnimGraphCanvas", EditorPaths::kAnimGraphCanvasFileName ) == false )
         {
             if ( _nodeGraph.hasContext() == false )
-                ImGui::TextUnformatted( SW_LOCTEXT( "EditorAnimGraph", "ContextCreateFailed", "Failed to create Animation Graph editor context." ) );
+                ImGui::TextUnformatted( SW_LOCKEY( "EditorAnimGraph", "ContextCreateFailed" ) );
             return;
         }
 
@@ -563,7 +563,7 @@ namespace sw::editor
             ImGui::SetNextItemWidth( -FLT_MIN );
             EditorWidgets::drawTextField( "##stateName", _nameEditBuffer );
             EditorSelfTestMarks::note( "animGraph.state.name" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorAnimGraph", "StateClipTip", "The state's clip name - the player plays the clip with this name" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimGraph", "StateClipTip" ) );
             if ( ImGui::IsItemDeactivatedAfterEdit() && _nameEditBuffer.empty() == false && _nameEditBuffer != pNode->_name )
             {
                 pNode->_name = _nameEditBuffer;
@@ -579,7 +579,7 @@ namespace sw::editor
                 pNode->_loopOverride = loopIndex == 0 ? int8{ -1 } : ( loopIndex == 1 ? int8{ 1 } : int8{ 0 } );
                 notifyDocumentEdited( "Edit Animation State" );
             }
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorAnimGraph", "StateLoopTip", "Whether this state's clip repeats. Default keeps the clip's own loop setting." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimGraph", "StateLoopTip" ) );
         }
 
         // 전이 목록 — 누르면 그 전이를 고른다(캔버스에서 링크를 눌러도 된다).
@@ -622,7 +622,7 @@ namespace sw::editor
         ImGui::SetNextItemWidth( -FLT_MIN );
         EditorWidgets::drawTextField( "##conditionParam", _parameterEditBuffer );
         EditorSelfTestMarks::note( "animGraph.condition.param" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorAnimGraph", "ConditionParamTip", "Graph parameter the condition reads (set by game code through the player)" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimGraph", "ConditionParamTip" ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
         {
             pLink->_parameter = hashed_string( _parameterEditBuffer.c_str() );
@@ -635,8 +635,7 @@ namespace sw::editor
         ImGui::SetNextItemWidth( -FLT_MIN );
         const bool bOpOpen = ImGui::BeginCombo( "##conditionOp", pLink->_op == AnimConditionOp::None ? "(on finish)" : AnimGraphAsset::getConditionOpText( pLink->_op ) );
         EditorSelfTestMarks::note( "animGraph.condition.op" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorAnimGraph", "ConditionOpTip",
-                                                "How the parameter is compared with Value. (on finish) moves on when the clip ends; Trigger fires once when the parameter is set." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimGraph", "ConditionOpTip" ) );
         if ( bOpOpen )
         {
             for ( int32 op = 0; op <= static_cast<int32>( AnimConditionOp::Trigger ); ++op )
@@ -657,14 +656,14 @@ namespace sw::editor
         ImGui::SetNextItemWidth( -FLT_MIN );
         ImGui::DragFloat( "##conditionValue", &pLink->_threshold, 0.05f );
         EditorSelfTestMarks::note( "animGraph.condition.value" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorAnimGraph", "ConditionValueTip", "The threshold the parameter is compared against." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimGraph", "ConditionValueTip" ) );
         bEdited = ImGui::IsItemDeactivatedAfterEdit() || bEdited;
         ImGui::TextUnformatted( "Blend" );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( -FLT_MIN );
         ImGui::DragFloat( "##transitionBlend", &pLink->_blendSeconds, 0.01f, -1.0f, 10.0f, pLink->_blendSeconds < 0.0f ? "(player default)" : "%.2f s" );
         EditorSelfTestMarks::note( "animGraph.condition.blend" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorAnimGraph", "TransitionBlendTip", "Crossfade seconds; below zero uses the player default" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimGraph", "TransitionBlendTip" ) );
         bEdited = ImGui::IsItemDeactivatedAfterEdit() || bEdited;
         if ( bEdited )
             notifyDocumentEdited( "Edit Animation Transition" );

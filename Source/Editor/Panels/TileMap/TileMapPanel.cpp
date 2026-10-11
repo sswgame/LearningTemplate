@@ -160,10 +160,10 @@ namespace sw::editor
         };
         // 툴팁은 지금 문화권의 글이라 상수 표에 두지 않는다.
         const ToolButton arrToolButton[] = {
-            { "Brush",  "tileMap.tool.brush", SW_LOCTEXT( "EditorTileMap",  "BrushTip",                               "Paint every cell you press and drag over (B)" ),  PaintTool::Brush},
-            {  "Rect",   "tileMap.tool.rect", SW_LOCTEXT( "EditorTileMap",   "RectTip",            "Paint the rectangle you drag out when you release the mouse (U)" ),   PaintTool::Rect},
-            {  "Fill",   "tileMap.tool.fill", SW_LOCTEXT( "EditorTileMap",   "FillTip", "Paint every connected cell that has the same value as the pressed cell (G)" ),   PaintTool::Fill},
-            {"Picker", "tileMap.tool.picker", SW_LOCTEXT( "EditorTileMap", "PickerTip",                    "Take the pressed cell's value as the value to paint (I)" ), PaintTool::Picker},
+            { "Brush",  "tileMap.tool.brush", SW_LOCKEY( "EditorTileMap",  "BrushTip" ),  PaintTool::Brush},
+            {  "Rect",   "tileMap.tool.rect", SW_LOCKEY( "EditorTileMap",   "RectTip" ),   PaintTool::Rect},
+            {  "Fill",   "tileMap.tool.fill", SW_LOCKEY( "EditorTileMap",   "FillTip" ),   PaintTool::Fill},
+            {"Picker", "tileMap.tool.picker", SW_LOCKEY( "EditorTileMap", "PickerTip" ), PaintTool::Picker},
         };
         for ( const ToolButton& button : arrToolButton )
         {
@@ -175,14 +175,14 @@ namespace sw::editor
         }
         ImGui::Checkbox( "Erase", &_bErase );
         EditorSelfTestMarks::note( "tileMap.erase" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTileMap", "EraseTip", "Make the paint tools clear cells instead of painting them." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "EraseTip" ) );
         ImGui::SameLine();
         if ( ImGui::SmallButton( "Reset View" ) )
         {
             _canvasPan  = float2{ TileMapPanelInternal::kCanvasMargin, TileMapPanelInternal::kCanvasMargin };
             _canvasZoom = 1.0f;
         }
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTileMap", "ResetViewTip", "Reset zoom and pan to the start (wheel: zoom, middle or right drag: pan)" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "ResetViewTip" ) );
         ImGui::SameLine();
         ImGui::TextDisabled( "%dx%d  %.0f%%", _map._width, _map._height, static_cast<float64>( _canvasZoom * 100.0f ) );
 
@@ -506,22 +506,22 @@ namespace sw::editor
             ImGui::TextDisabled( "Focused: %s", focused.c_str() );
 
         ImGui::InputText( "Path", _pathBuffer.data(), _pathBuffer.capacity() );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTileMap", "PathTip", "Resource path of the tile map file that Load and Save use." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "PathTip" ) );
         ImGui::InputText( "Name", _nameBuffer.data(), _nameBuffer.capacity() );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             notifyDocumentEdited( "Edit Tile Map Name", "tilemap-name" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTileMap", "NameTip", "Display name stored in the map file." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "NameTip" ) );
         ImGui::InputInt( "Width", &_inputWidth );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTileMap", "WidthTip", "Map width in cells. Takes effect when you press Apply Size." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "WidthTip" ) );
         ImGui::SameLine();
         ImGui::InputInt( "Height", &_inputHeight );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTileMap", "HeightTip", "Map height in cells. Takes effect when you press Apply Size." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "HeightTip" ) );
         if ( ImGui::Button( "Apply Size" ) )
         {
             resize( MathUtil::max( 1, _inputWidth ), MathUtil::max( 1, _inputHeight ) );
             notifyDocumentEdited( "Resize Tile Map" );
         }
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTileMap", "ApplySizeTip", "Resize the map to the width and height above. This clears every layer." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "ApplySizeTip" ) );
 
         ImGui::SameLine();
         if ( ImGui::Button( "Load" ) )
@@ -532,19 +532,19 @@ namespace sw::editor
             else
                 SW_LOG_WARNING( "No tile map at '%#'", _pathBuffer.c_str() );
         }
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTileMap", "LoadTip", "Read the map at Path, discarding unsaved edits. Nothing changes if no file is there." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "LoadTip" ) );
         ImGui::SameLine();
         if ( ImGui::Button( "Save" ) )
         {
             if ( saveXML( _pathBuffer.c_str() ) )
             {
-                _status = SW_LOCFORMAT( "EditorTileMap", "SavedStatus", "Saved {path}", TextArgumentList().addText( "path", _pathBuffer.c_str() ) );
+                _status = SW_LOCKEYFORMAT( "EditorTileMap", "SavedStatus", TextArgumentList().addText( "path", _pathBuffer.c_str() ) );
                 clearDocumentDirty();
             }
             else
-                _status = SW_LOCTEXT( "EditorTileMap", "SaveFailedStatus", "Save failed" );
+                _status = SW_LOCKEY( "EditorTileMap", "SaveFailedStatus" );
         }
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTileMap", "SaveTip", "Write the map to Path." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "SaveTip" ) );
     }
 
     void TileMapPanel::drawLayerControls()
@@ -558,31 +558,30 @@ namespace sw::editor
         int32 layerIndex = getPaintLayerIndex();
         if ( ImGui::Combo( "Layer", &layerIndex, arrLayerName, static_cast<int32>( SW_COUNT_OF( arrLayerName ) ) ) )
             selectPaintLayer( layerIndex );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTileMap", "LayerTip",
-                                                "Layer the canvas shows and the tools paint: Visual (height and tint), Warp (exits to other maps), Tile (tile set brushes) or one of the gameplay flag layers." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "LayerTip" ) );
 
         if ( _layer == PaintLayer::Visual )
         {
             ImGui::InputInt( "Height", &_paintHeight );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTileMap", "PaintHeightTip", "Height level to paint, 0 to 255." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "PaintHeightTip" ) );
             ImGui::InputInt( "Atlas ID", &_atlasID );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTileMap", "AtlasIdTip", "Atlas cell index to paint, 0 to 255." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "AtlasIdTip" ) );
             ImGui::ColorEdit3( "Tint", _arrTint );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTileMap", "TintTip", "Color to paint into the cells' tint." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "TintTip" ) );
         }
         else if ( _layer == PaintLayer::Warp )
         {
             ImGui::InputText( "Warp Target", _warpTarget.data(), _warpTarget.capacity() );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTileMap", "WarpTargetTip", "Map a painted warp cell sends the player to. Painted warp cells also become walkable." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "WarpTargetTip" ) );
             ImGui::InputInt( "Target TX", &_warpTx );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTileMap", "WarpTargetXTip", "Cell column the player arrives at in the target map." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "WarpTargetXTip" ) );
             ImGui::InputInt( "Target TY", &_warpTy );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTileMap", "WarpTargetYTip", "Cell row the player arrives at in the target map." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "WarpTargetYTip" ) );
         }
         else if ( _layer == PaintLayer::Tile )
         {
             ImGui::InputText( "Tile Set", _tileSetBuffer.data(), _tileSetBuffer.capacity() );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTileMap", "TileSetTip", "Resource path of the tile set whose brushes this map paints with. Press Use to apply it." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "TileSetTip" ) );
             ImGui::SameLine();
             if ( ImGui::Button( "Use" ) )
             {
@@ -590,7 +589,7 @@ namespace sw::editor
                 refreshTileSet();
                 notifyDocumentEdited( "Set Tile Set", "tilemap-tileset" );
             }
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTileMap", "UseTileSetTip", "Make this map use the tile set on the left and load its brushes." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "UseTileSetTip" ) );
             drawTilePalette();
         }
 
@@ -603,19 +602,19 @@ namespace sw::editor
             ImGui::PushID( edgeIndex );
             ImGui::SetNextItemWidth( 180.0f * EditorThemeUtil::getDpiScale() );
             ImGui::InputText( edges[edgeIndex], bufs[edgeIndex]->data(), bufs[edgeIndex]->capacity() );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTileMap", "EdgeTargetTip", "Map that walking off this edge (north, east, south or west) leads to." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "EdgeTargetTip" ) );
             ImGui::SameLine();
             ImGui::SetNextItemWidth( 50.0f * EditorThemeUtil::getDpiScale() );
             ImGui::InputInt( "##tx", &_arrEdgeTx[edgeIndex] );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTileMap", "EdgeTargetXTip", "Cell column the player arrives at in the target map." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "EdgeTargetXTip" ) );
             ImGui::SameLine();
             ImGui::SetNextItemWidth( 50.0f * EditorThemeUtil::getDpiScale() );
             ImGui::InputInt( "##ty", &_arrEdgeTy[edgeIndex] );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTileMap", "EdgeTargetYTip", "Cell row the player arrives at in the target map." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "EdgeTargetYTip" ) );
             ImGui::SameLine();
             if ( ImGui::Button( "Apply" ) )
                 paintEdgeWarp( edgeIndex );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorTileMap", "ApplyEdgeTip", "Turn every cell on this edge into a walkable warp to the target map." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "ApplyEdgeTip" ) );
             ImGui::PopID();
         }
 
@@ -627,7 +626,7 @@ namespace sw::editor
         // 크기는 Width/Height 칸에서 그대로 온다. 상한과 그 이유는 `TileMapXMLData::kMaxTileCount` 에 있다.
         if ( _map.resetTiles( width, height ) == false )
         {
-            _status = SW_LOCTEXT( "EditorTileMap", "SizeOutOfRange", "Size is out of range." );
+            _status = SW_LOCKEY( "EditorTileMap", "SizeOutOfRange" );
             SW_LOG_WARNING( "TileMap resize %#x%# is beyond the supported tile count (%#)",
                             width, height, TileMapXMLData::kMaxTileCount );
             return;
@@ -697,7 +696,7 @@ namespace sw::editor
         _tileSet       = TileSetAsset{};
         _brushIndex    = 0;
         if ( _map._tileSetPath.empty() == false && _tileSet.loadFromResource( _map._tileSetPath ) == false )
-            _status = SW_LOCFORMAT( "EditorTileMap", "TileSetReadFailed", "Tile set could not be read: {path}", TextArgumentList().addText( "path", _map._tileSetPath ) );
+            _status = SW_LOCKEYFORMAT( "EditorTileMap", "TileSetReadFailed", TextArgumentList().addText( "path", _map._tileSetPath ) );
     }
 
     void TileMapPanel::drawTilePalette()
@@ -705,7 +704,7 @@ namespace sw::editor
         const vector<TileBrush>& listBrush = _tileSet.getBrushes();
         if ( listBrush.empty() )
         {
-            ImGui::TextDisabled( "%s", SW_LOCTEXT( "EditorTileMap", "NoTileSet", "No tile set loaded" ) );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorTileMap", "NoTileSet" ) );
             return;
         }
         // 브러시마다 아틀라스 그림의 그 칸을 보인다(유니티 Tile Palette). 그림을 아직 못 읽었으면 이름만.

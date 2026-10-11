@@ -178,7 +178,7 @@ namespace sw::editor
         }
 
         EditorWidgets::drawSearchField( "##qlSearch", _searchBuffer,
-                                        SW_LOCTEXT( "EdCommon", "QuickOpenHint", "Type to search assets, scenes, game objects (ESC to cancel)..." ), -1.0f, true );
+                                        SW_LOCKEY( "EdCommon", "QuickOpenHint" ), -1.0f, true );
 
         vector<const QuickLauncherItem*> listFiltered;
         listFiltered.reserve( _listAllItem.size() );
@@ -273,9 +273,9 @@ namespace sw::editor
             if ( filteredCount == 0 )
             {
                 if ( _fileIndexJob.isPending() )
-                    EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EdCommon", "QuickOpenIndexing", "Indexing assets..." ) );
+                    EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "QuickOpenIndexing" ) );
                 else
-                    EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EdCommon", "QuickOpenNoMatches", "No matching assets or game objects found." ) );
+                    EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "QuickOpenNoMatches" ) );
             }
         }
         EditorChrome::endSection();

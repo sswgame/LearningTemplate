@@ -114,16 +114,16 @@ namespace sw::editor
             ImGui::OpenPopup( "##DocumentOpen" );
         }
         EditorSelfTestMarks::note( markOpen.c_str() );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "DocumentOpen", "Find and open an asset of this type (the same as Quick Open or double-clicking it in the Content Browser)." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "DocumentOpen" ) );
         drawOpenDocumentPopup( pMarkPrefix );
 
         ImGui::SameLine();
-        const utf8* pPreview = _loadedAssetPath.empty() ? SW_LOCTEXT( "EdCommon", "NoDocument", "(no document)" ) : _loadedAssetPath.c_str();
+        const utf8* pPreview = _loadedAssetPath.empty() ? SW_LOCKEY( "EdCommon", "NoDocument" ) : _loadedAssetPath.c_str();
         ImGui::SetNextItemWidth( -1.0f );
         if ( ImGui::BeginCombo( "##RecentDocuments", pPreview ) )
         {
             if ( _listRecentPath.empty() )
-                EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EdCommon", "NoRecentDocuments", "No recent documents" ) );
+                EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "NoRecentDocuments" ) );
             string openPath;
             for ( const string& path : _listRecentPath )
             {
@@ -134,7 +134,7 @@ namespace sw::editor
             if ( openPath.empty() == false )
                 requestOpenDocument( openPath );
         }
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "RecentDocuments", "Recently opened documents. Pick one to open it again." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "RecentDocuments" ) );
     }
 
     void EditorDocumentPanel::drawOpenDocumentPopup( const utf8* pMarkPrefix )
@@ -144,7 +144,7 @@ namespace sw::editor
         const string markPrefix = string{ pMarkPrefix } + ".open.";
         if ( ImGui::IsWindowAppearing() )
             ImGui::SetKeyboardFocusHere();
-        EditorWidgets::drawSearchField( "##DocumentOpenSearch", _openFilter, SW_LOCTEXT( "EdCommon", "SearchAssetsHint", "Search assets" ), 360.0f * EditorThemeUtil::getDpiScale(), false );
+        EditorWidgets::drawSearchField( "##DocumentOpenSearch", _openFilter, SW_LOCKEY( "EdCommon", "SearchAssetsHint" ), 360.0f * EditorThemeUtil::getDpiScale(), false );
         EditorSelfTestMarks::note( ( markPrefix + "search" ).c_str() );
 
         const EditorListFilter filter{ _openFilter.c_str() };
@@ -164,7 +164,7 @@ namespace sw::editor
             if ( filter.isActive() )
                 EditorWidgets::drawNoSearchResultHint( filter.getText() );
             else
-                EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EdCommon", "NoAssetsOfKind", "No assets of this kind under Resource/." ) );
+                EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "NoAssetsOfKind" ) );
         }
         if ( openPath.empty() == false )
         {

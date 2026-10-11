@@ -104,11 +104,11 @@ namespace sw::editor
 
                 if ( EditorAssetCommands::saveActiveScene( listPath[0] ) == false )
                 {
-                    pContext->getNotificationManager().push( SW_LOCTEXT( "EdCommon", "NotifySceneTitle", "Scene" ), SW_LOCTEXT( "EdCommon", "NotifySaveFailed", "Save failed" ), NotificationType::Error );
+                    pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaveFailed" ), NotificationType::Error );
                     return;
                 }
 
-                pContext->getNotificationManager().push( SW_LOCTEXT( "EdCommon", "NotifySceneTitle", "Scene" ), SW_LOCTEXT( "EdCommon", "NotifySaved", "Saved" ), NotificationType::Success );
+                pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaved" ), NotificationType::Success );
                 if ( pContext->getWorkspace().getPendingSceneAction() != EditorPendingSceneAction::None )
                     EditorAssetCommands::applyUnsavedSceneChoice( EditorUnsavedChoice::Discard );
             }
@@ -119,7 +119,7 @@ namespace sw::editor
                     return true;
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext != nullptr )
-                    pContext->getNotificationManager().push( SW_LOCTEXT( "EdCommon", "NotifySceneTitle", "Scene" ), SW_LOCTEXT( "EdCommon", "NotifyStopPlayFirst", "Stop play before opening or creating a scene" ),
+                    pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifyStopPlayFirst" ),
                                                              NotificationType::Warning );
                 return false;
             }
@@ -301,7 +301,7 @@ namespace sw::editor
             EditorContext* pFailContext = EditorContext::get();
             if ( pFailContext != nullptr )
             {
-                pFailContext->getNotificationManager().push( SW_LOCTEXT( "EdCommon", "NotifySceneTitle", "Scene" ), SW_LOCTEXT( "EdCommon", "NotifySceneOpenFailed", "Failed to open the scene" ),
+                pFailContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySceneOpenFailed" ),
                                                              NotificationType::Error );
             }
             return false;
@@ -349,7 +349,7 @@ namespace sw::editor
             return false;
         syncAfterSceneGenerationChange();
         if ( pContext != nullptr )
-            pContext->getNotificationManager().push( SW_LOCTEXT( "EdCommon", "NotifySceneTitle", "Scene" ), SW_LOCTEXT( "EdCommon", "NotifyNewScene", "New scene" ), NotificationType::Info );
+            pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifyNewScene" ), NotificationType::Info );
         return true;
     }
 
@@ -374,7 +374,7 @@ namespace sw::editor
         {
             if ( pContext->getPanelHost().saveAllDirtyDocuments() == false )
             {
-                pContext->getNotificationManager().push( SW_LOCTEXT( "EdCommon", "NotifyEditorTitle", "Editor" ), SW_LOCTEXT( "EdCommon", "NotifyDocumentSaveFailed", "Document save failed" ), NotificationType::Error );
+                pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifyEditorTitle" ), SW_LOCKEY( "EdCommon", "NotifyDocumentSaveFailed" ), NotificationType::Error );
                 return;
             }
             if ( ws.isSceneDirty() )
@@ -384,7 +384,7 @@ namespace sw::editor
                 {
                     if ( saveActiveScene( {} ) == false )
                     {
-                        pContext->getNotificationManager().push( SW_LOCTEXT( "EdCommon", "NotifySceneTitle", "Scene" ), SW_LOCTEXT( "EdCommon", "NotifySaveFailed", "Save failed" ), NotificationType::Error );
+                        pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaveFailed" ), NotificationType::Error );
                         return;
                     }
                 }
@@ -528,7 +528,7 @@ namespace sw::editor
         if ( targetPath.empty() == false && FileUtil::isReadOnlyFile( targetAbs ) )
         {
             if ( pContext != nullptr )
-                pContext->getNotificationManager().push( SW_LOCTEXT( "EdCommon", "NotifySaveTitle", "Save" ), SW_LOCTEXT( "EdCommon", "NotifySceneReadOnly", "The scene file is read-only. Check it out (lock it) in the Content Browser first." ),
+                pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifySaveTitle" ), SW_LOCKEY( "EdCommon", "NotifySceneReadOnly" ),
                                                          NotificationType::Warning );
             SW_LOG_WARNING( "Scene '%#' is read-only (not checked out) - not saved", targetAbs.c_str() );
             return false;
@@ -556,10 +556,10 @@ namespace sw::editor
             if ( saveActiveScene( {} ) )
             {
                 if ( pContext != nullptr )
-                    pContext->getNotificationManager().push( SW_LOCTEXT( "EdCommon", "NotifySceneTitle", "Scene" ), SW_LOCTEXT( "EdCommon", "NotifySaved", "Saved" ), NotificationType::Success );
+                    pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaved" ), NotificationType::Success );
             }
             else if ( pContext != nullptr )
-                pContext->getNotificationManager().push( SW_LOCTEXT( "EdCommon", "NotifySceneTitle", "Scene" ), SW_LOCTEXT( "EdCommon", "NotifySaveFailed", "Save failed" ), NotificationType::Error );
+                pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaveFailed" ), NotificationType::Error );
             return;
         }
 
@@ -720,7 +720,7 @@ namespace sw::editor
         if ( ws.isPrefabIsolationActive() == false && ws.isSceneDirty() &&
              EditorSessionPolicy::requiresCleanSceneForPrefabIsolation() )
         {
-            pContext->getNotificationManager().push( SW_LOCTEXT( "EdCommon", "NotifyPrefabTitle", "Prefab" ), SW_LOCTEXT( "EdCommon", "NotifyPrefabSaveFirst", "Save the scene before opening prefab isolation" ),
+            pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifyPrefabTitle" ), SW_LOCKEY( "EdCommon", "NotifyPrefabSaveFirst" ),
                                                      NotificationType::Warning );
             return false;
         }
@@ -754,7 +754,7 @@ namespace sw::editor
         ws.selectGameObject( pRoot );
         ws.setFocusedAssetPath( pathStr.c_str() );
         ws.requestOpenPanel( "Prefab Editor" );
-        pContext->getNotificationManager().push( SW_LOCTEXT( "EdCommon", "NotifyPrefabTitle", "Prefab" ), SW_LOCTEXT( "EdCommon", "NotifyPrefabIsolated", "Isolated the prefab in the current scene" ), NotificationType::Info );
+        pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifyPrefabTitle" ), SW_LOCKEY( "EdCommon", "NotifyPrefabIsolated" ), NotificationType::Info );
         return true;
     }
 
@@ -802,7 +802,7 @@ namespace sw::editor
 
         if ( bFullyExit )
         {
-            pContext->getNotificationManager().push( SW_LOCTEXT( "EdCommon", "NotifyPrefabTitle", "Prefab" ), SW_LOCTEXT( "EdCommon", "NotifyPrefabIsolationExited", "Exited prefab isolation" ), NotificationType::Info );
+            pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "NotifyPrefabTitle" ), SW_LOCKEY( "EdCommon", "NotifyPrefabIsolationExited" ), NotificationType::Info );
             return true;
         }
 

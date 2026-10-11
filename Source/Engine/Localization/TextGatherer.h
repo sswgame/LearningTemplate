@@ -80,8 +80,8 @@ namespace sw
     class SW_API TextGatherer
     {
     public:
-        /** @brief 코드에서 이 이름의 매크로 호출을 모읍니다(세 인자 모두 문자열 리터럴). */
-        static constexpr const utf8* kArrCodeMacro[] = { "SW_LOCTEXT", "SW_LOCFORMAT" };
+        /** @brief 코드에서 이 이름의 매크로 호출을 모읍니다. 앞의 둘은 (네임스페이스, 키, 원문) 세 리터럴, 뒤의 둘은 (네임스페이스, 키) 두 리터럴이다. */
+        static constexpr const utf8* kArrCodeMacro[] = { "SW_LOCTEXT", "SW_LOCFORMAT", "SW_LOCKEY", "SW_LOCKEYFORMAT" };
         /** @brief 리플렉션 프로퍼티의 커스텀 메타 — 번역할 글(`Localizable`) · 사람이 읽는 글이 아님(`NotLocalizable`) · 최대 길이(`MaxLength=N`). */
         static constexpr const utf8* kMetaLocalizable    = "Localizable";
         static constexpr const utf8* kMetaNotLocalizable = "NotLocalizable";

@@ -183,22 +183,22 @@ namespace sw::editor
         {
             if ( ImGui::Button( "Load" ) )
                 reloadDocument();
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSequencer", "LoadTip", "Reload the focused .seq file from disk, discarding unsaved edits." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "LoadTip" ) );
             ImGui::SameLine();
             if ( ImGui::Button( "Save" ) )
                 saveToLoadedPath();
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSequencer", "SaveTip", "Write the sequence to the focused .seq file." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "SaveTip" ) );
             ImGui::SameLine();
             if ( ImGui::Button( "Play" ) )
             {
                 syncPreviewPlayer();
                 _previewPlayer->playFromFrame( _currentFrame );
             }
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSequencer", "PlayTip", "Play the sequence in the viewport from the current frame, looping at the end." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "PlayTip" ) );
             ImGui::SameLine();
             if ( ImGui::Button( "Pause" ) )
                 _previewPlayer->pause();
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSequencer", "PauseTip", "Pause playback at the current frame." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "PauseTip" ) );
             ImGui::SameLine();
             if ( ImGui::Button( "Stop" ) )
             {
@@ -207,7 +207,7 @@ namespace sw::editor
                 previewCurrentFrame();
                 SequenceTimelineUtil::releaseCameraCut( editor::getActiveObjectManager(), _previewPlayer->getAsset() );
             }
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSequencer", "StopTip", "Stop playback, return to the first frame and give the camera back from any camera cut." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "StopTip" ) );
             ImGui::SameLine();
             if ( getLoadedAssetPath().empty() )
                 ImGui::TextDisabled( "No .seq file focused" );
@@ -227,7 +227,7 @@ namespace sw::editor
             previewCurrentFrame();
         }
         EditorSelfTestMarks::note( "sequencer.scrub" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSequencer", "ScrubTip", "Drag to move the current frame; the viewport follows so you can check any moment of the sequence." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "ScrubTip" ) );
 
         // 키 트랙이 위, 구간 항목이 아래다 — 자주 고치는 쪽(키 · 커브)이 패널이 낮아도 보인다.
         drawKeyTracks();
@@ -248,7 +248,7 @@ namespace sw::editor
         ImGui::InputTextMultiline( "Cinematic Note", _cinematicNote.data(), _cinematicNote.capacity(), ImVec2( -1.0f, 40.0f * EditorThemeUtil::getDpiScale() ) );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             notifyDocumentEdited( "Edit Sequence Note", "sequence-note" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSequencer", "CinematicNoteTip", "Free-form notes saved with the sequence. It does not affect playback." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "CinematicNoteTip" ) );
     }
 
     void SequencerPanel::drawItemFields()
@@ -269,11 +269,11 @@ namespace sw::editor
             EditorWidgets::drawTextField( "Target Object", item._targetObject );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sequence Item", "sequence-item" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSequencer", "ItemTargetTip", "Name of the scene object this clip, event or camera cut acts on." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "ItemTargetTip" ) );
         }
         else
         {
-            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorSequencer", "SelectItemHint", "Select a clip, event or camera cut on the timeline to edit it." ) );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorSequencer", "SelectItemHint" ) );
         }
         EditorChrome::endSection();
     }
@@ -284,12 +284,12 @@ namespace sw::editor
         if ( ImGui::Button( "+ Transform Track" ) )
             addKeyTrack( SequenceTrackKind::Transform );
         EditorSelfTestMarks::note( "sequencer.addTransformTrack" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSequencer", "AddTransformTrackTip", "Add a track that keys the selected object's position, rotation and scale." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "AddTransformTrackTip" ) );
         ImGui::SameLine();
         if ( ImGui::Button( "+ Property Track" ) )
             addKeyTrack( SequenceTrackKind::Property );
         EditorSelfTestMarks::note( "sequencer.addPropertyTrack" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSequencer", "AddPropertyTrackTip", "Add a track that keys one numeric property of a component on the selected object." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "AddPropertyTrackTip" ) );
         ImGui::SameLine();
         ImGui::BeginDisabled( _selectedTrack < 0 );
         if ( ImGui::Button( "Delete Track" ) && 0 <= _selectedTrack && _selectedTrack < static_cast<int32>( _listTrack.size() ) )
@@ -300,11 +300,11 @@ namespace sw::editor
             notifyDocumentEdited( "Delete Sequence Track" );
         }
         ImGui::EndDisabled();
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSequencer", "DeleteTrackTip", "Remove the selected key track and all of its keys." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "DeleteTrackTip" ) );
 
         if ( _listTrack.empty() )
         {
-            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorSequencer", "NoKeyTracksHint", "No key tracks. Select an object and add a transform or property track." ) );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorSequencer", "NoKeyTracksHint" ) );
             return;
         }
 
@@ -375,7 +375,7 @@ namespace sw::editor
         if ( track._kind == SequenceTrackKind::Property )
         {
             EditorWidgets::drawTextField( "Property", track._propertyPath );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSequencer", "PropertyPathTip", "<ComponentType>.<Property> - a float32 or int32 property (for example CameraComponent._fov)" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "PropertyPathTip" ) );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
             {
                 notifyDocumentEdited( "Edit Sequence Track", "sequence-track" );
@@ -396,7 +396,7 @@ namespace sw::editor
         }
         ImGui::EndDisabled();
         EditorSelfTestMarks::note( "sequencer.addKey" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSequencer", "AddKeyTip", "Key the target's current values on every channel at this frame." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "AddKeyTip" ) );
         ImGui::SameLine();
         ImGui::BeginDisabled( track.hasKeyAt( frame ) == false );
         if ( ImGui::Button( "Delete Key" ) && track.removeKeysAt( frame ) )
@@ -405,7 +405,7 @@ namespace sw::editor
             previewCurrentFrame();
         }
         ImGui::EndDisabled();
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSequencer", "DeleteKeyTip", "Remove this track's keys at the current frame on every channel." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "DeleteKeyTip" ) );
         ImGui::SameLine();
         track.collectKeyFrames( _listKeyFrame );
         if ( ImGui::ArrowButton( "##previousKey", ImGuiDir_Left ) )
@@ -420,7 +420,7 @@ namespace sw::editor
                 }
             }
         }
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSequencer", "PreviousKeyTip", "Go to the previous key" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "PreviousKeyTip" ) );
         ImGui::SameLine();
         if ( ImGui::ArrowButton( "##nextKey", ImGuiDir_Right ) )
         {
@@ -434,13 +434,13 @@ namespace sw::editor
                 }
             }
         }
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSequencer", "NextKeyTip", "Go to the next key" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "NextKeyTip" ) );
         if ( bTargetFound == false )
         {
             ImGui::SameLine();
-            const utf8* pMissing = SW_LOCTEXT( "EditorSequencer", "TargetNotFound", "Target object not found" );
+            const utf8* pMissing = SW_LOCKEY( "EditorSequencer", "TargetNotFound" );
             if ( track._kind == SequenceTrackKind::Property )
-                pMissing = SW_LOCTEXT( "EditorSequencer", "PropertyTargetNotFound", "Target or numeric property not found" );
+                pMissing = SW_LOCKEY( "EditorSequencer", "PropertyTargetNotFound" );
             ImGui::TextDisabled( "%s", pMissing );
         }
 
@@ -477,7 +477,7 @@ namespace sw::editor
                 _curveState._working     = track._listChannel[channelIndex];
                 _curveState._bFitPending = true;
             }
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSequencer", "OpenCurveTip", "Open this channel in the curve editor to shape the interpolation between keys." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "OpenCurveTip" ) );
             formatstring( mark.data(), mark.capacity(), "sequencer.curve.%#", channelIndex );
             EditorSelfTestMarks::note( mark.c_str() );
             ImGui::PopID();

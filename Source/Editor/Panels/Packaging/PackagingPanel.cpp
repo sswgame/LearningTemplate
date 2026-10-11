@@ -194,7 +194,7 @@ namespace sw::editor
             }
             ImGui::EndCombo();
         }
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorPackaging", "Target", "Package the client (game) or the dedicated server" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "Target" ) );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( 160.0f * dpiScale );
         const utf8* pGamePreview = _gameIndex < _listGame.size() ? _listGame[_gameIndex].c_str() : "(none)";
@@ -207,7 +207,7 @@ namespace sw::editor
             }
             ImGui::EndCombo();
         }
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorPackaging", "Game", "Game to package" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "Game" ) );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( 150.0f * dpiScale );
         if ( ImGui::BeginCombo( "RHI", Internal::kArrBackend[_rhiIndex] ) )
@@ -219,30 +219,30 @@ namespace sw::editor
             }
             ImGui::EndCombo();
         }
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorPackaging", "RHIBackend", "Backend that Shipping links statically (client only). The server does not render" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "RHIBackend" ) );
 
         ImGui::SetNextItemWidth( 320.0f * dpiScale );
         (void)EditorWidgets::drawTextField( "Output Folder", _outputFolder ); // 바뀐 값은 다음 Package 가 쓴다
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorPackaging", "OutputFolder", "Folder the packaged build is staged into" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "OutputFolder" ) );
 
         bool bSkipBuild = _bSkipBuild == SW_TRUE;
         if ( ImGui::Checkbox( "Skip build", &bSkipBuild ) )
             _bSkipBuild = bSkipBuild ? SW_TRUE : SW_FALSE;
         EditorSelfTestMarks::note( "packaging.skipBuild" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorPackaging", "SkipBuild", "Skip configure and build, and stage this editor's Bin" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "SkipBuild" ) );
         ImGui::SameLine();
         bool bSkipCook = _bSkipCook == SW_TRUE;
         if ( ImGui::Checkbox( "Skip cook", &bSkipCook ) )
             _bSkipCook = bSkipCook ? SW_TRUE : SW_FALSE;
         EditorSelfTestMarks::note( "packaging.skipCook" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorPackaging", "SkipCook", "Skip cooking the resource packs (a build cooks them itself)" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "SkipCook" ) );
         ImGui::EndDisabled();
 
         ImGui::BeginDisabled( bBusy );
         const bool bPackage = ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kBuildAll, "Package" ) );
         ImGui::EndDisabled();
         EditorSelfTestMarks::note( "packaging.package" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorPackaging", "Package", "Configure, build, cook and stage the selected game into the output folder" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "Package" ) );
         if ( bPackage )
             (void)startPackaging(); // 이미 돌면 단추가 꺼져 있다
         ImGui::SameLine();
@@ -251,7 +251,7 @@ namespace sw::editor
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kFolderOpen, "Open Folder" ) ) )
             (void)EditorAssetCommands::showInFileExplorer( _progress._outputFolder ); // 탐색기를 못 띄우면 경고가 남는다
         ImGui::EndDisabled();
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorPackaging", "OpenFolder", "Open the output folder of the last successful package in the file explorer" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "OpenFolder" ) );
 
         // 진행 — 단계 줄은 끝난 뒤 한꺼번에 오므로 도는 동안은 움직이는 막대다.
         fixed_string<constant::kMaxBuffer256> overlay;

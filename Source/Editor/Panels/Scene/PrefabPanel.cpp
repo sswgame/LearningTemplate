@@ -90,17 +90,17 @@ namespace sw::editor
                                 pContext->getWorkspace().getPrefabIsolationPrefabPath().c_str() );
             if ( ImGui::Button( "Save Prefab & Exit Isolation" ) )
                 EditorAssetCommands::exitPrefabIsolation( true );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorScene", "SavePrefabExitIsolation", "Save the prefab and leave isolation mode" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "SavePrefabExitIsolation" ) );
             ImGui::SameLine();
             if ( ImGui::Button( "Exit Isolation" ) )
                 EditorAssetCommands::exitPrefabIsolation( false );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorScene", "ExitIsolation", "Leave isolation mode without saving the prefab" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "ExitIsolation" ) );
         }
         else if ( _selectedPrefabPath.empty() == false )
         {
             if ( ImGui::Button( "Open Prefab Isolation" ) )
                 EditorAssetCommands::enterPrefabIsolation( _selectedPrefabPath );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorScene", "OpenPrefabIsolation", "Edit the selected prefab on its own in isolation mode" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "OpenPrefabIsolation" ) );
         }
 
         ImGui::Separator();
@@ -114,7 +114,7 @@ namespace sw::editor
         const bool bEditsAllowed = EditorPlaySession::areSceneEditsAllowed();
         if ( bEditsAllowed == false )
         {
-            ImGui::TextDisabled( "%s", SW_LOCTEXT( "EditorScene", "SceneEditsLocked", "Scene edits locked until Stop." ) );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorScene", "SceneEditsLocked" ) );
             ImGui::BeginDisabled();
         }
 
@@ -126,7 +126,7 @@ namespace sw::editor
                 SW_LOG_ERROR( "Could not apply overrides to template %s", _selectedPrefabPath.c_str() );
             scanPrefabOverrides( _selectedPrefabPath.c_str() );
         }
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorScene", "ApplyAllOverrides", "Write every override of this instance back to the prefab template" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "ApplyAllOverrides" ) );
 
         ImGui::SameLine();
         if ( ImGui::Button( "Revert All Overrides", ImVec2( 160.0f * EditorThemeUtil::getDpiScale(), 0.0f ) ) )
@@ -137,7 +137,7 @@ namespace sw::editor
                 SW_LOG_ERROR( "Could not revert overrides on %s", _selectedInstanceName.c_str() );
             scanPrefabOverrides( _selectedPrefabPath.c_str() );
         }
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorScene", "RevertAllOverrides", "Discard every override of this instance and match the prefab template" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "RevertAllOverrides" ) );
 
         if ( bEditsAllowed == false )
             ImGui::EndDisabled();
@@ -154,7 +154,7 @@ namespace sw::editor
                 ImGui::SameLine();
                 if ( ImGui::SmallButton( "Edit" ) )
                     EditorAssetCommands::enterPrefabIsolation( _listNestedPrefab[prefabIndex] );
-                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorScene", "EditNestedPrefab", "Open this nested prefab in isolation mode" ) );
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "EditNestedPrefab" ) );
                 ImGui::PopID();
             }
         }
@@ -162,11 +162,11 @@ namespace sw::editor
         ImGui::Separator();
 
         ImGui::Checkbox( "Show Modified Properties Only", &_bShowOnlyModified );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorScene", "ShowModifiedOnly", "Show only the properties that differ from the prefab" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "ShowModifiedOnly" ) );
         ImGui::SameLine();
         if ( ImGui::SmallButton( "Refresh Overrides" ) )
             scanPrefabOverrides( _selectedPrefabPath.c_str() );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorScene", "RefreshOverrides", "Scan the instance for overrides again" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "RefreshOverrides" ) );
     }
 
     void PrefabPanel::drawOverrideTable()
@@ -222,7 +222,7 @@ namespace sw::editor
                         SW_LOG_TRACE( "Reverted %s.%s to %s", item._componentName.c_str(), item._propertyName.c_str(), item._defaultValue.c_str() );
                         scanPrefabOverrides( _selectedPrefabPath.c_str() );
                     }
-                    EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorScene", "RevertOverride", "Revert this property to the prefab value" ) );
+                    EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "RevertOverride" ) );
                     ImGui::PopID();
                 }
             }

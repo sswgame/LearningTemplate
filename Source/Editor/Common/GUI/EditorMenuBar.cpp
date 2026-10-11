@@ -115,7 +115,7 @@ namespace sw::editor
             ImGui::Separator();
             if ( ImGui::MenuItem( EditorThemeUtil::makeIconLabel( editoricon::kLayout, "Reset Default Layout" ) ) )
                 dockLayout.requestResetDefault();
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "ResetLayout", "Reset the docked windows to the default editor layout." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ResetLayout" ) );
             drawNamedLayoutMenu( dockLayout );
 
             ImGui::EndMenu();
@@ -129,16 +129,16 @@ namespace sw::editor
 
         static fixed_string<constant::kMaxBuffer64> s_layoutName;
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * 12.0f );
-        const bool bEnter = ImGui::InputTextWithHint( "##LayoutName", SW_LOCTEXT( "EdCommon", "LayoutNameHint", "layout name" ), s_layoutName.data(), s_layoutName.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
+        const bool bEnter = ImGui::InputTextWithHint( "##LayoutName", SW_LOCKEY( "EdCommon", "LayoutNameHint" ), s_layoutName.data(), s_layoutName.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
         ImGui::SameLine();
         if ( ( ImGui::Button( "Save" ) || bEnter ) && dockLayout.saveNamedLayout( s_layoutName.c_str() ) )
             s_layoutName.clear();
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "SaveLayout", "Save the current dock layout and panel visibility under this name (Saved/Editor/Layouts; letters, digits, spaces, _ and - only)." ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "SaveLayout" ) );
 
         vector<string> listName;
         EditorLayoutStore::collectNames( EditorLayoutStore::getDefaultFolder(), listName );
         if ( listName.empty() )
-            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EdCommon", "NoSavedLayouts", "No saved layouts." ) );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "NoSavedLayouts" ) );
         for ( const string& name : listName )
         {
             ImGui::PushID( name.c_str() );
@@ -147,7 +147,7 @@ namespace sw::editor
             ImGui::SameLine( ImGui::GetContentRegionAvail().x + ImGui::GetCursorPosX() - ImGui::GetFontSize() * 1.5f );
             if ( ImGui::SmallButton( "x" ) && EditorLayoutStore::remove( EditorLayoutStore::getDefaultFolder(), name ) == false )
                 SW_LOG_WARNING( "Could not delete layout '%#'", name.c_str() );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "DeleteLayout", "Delete this saved layout." ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "DeleteLayout" ) );
             ImGui::PopID();
         }
         ImGui::EndMenu();
@@ -184,7 +184,7 @@ namespace sw::editor
         if ( s_lastObservedState == BuildState::Compiling && bCompiling == false )
         {
             const string   targetName  = compiler.getTargetName();
-            const string   displayName = targetName.empty() ? string{ SW_LOCTEXT( "EdCommon", "LiveCodingAllModules", "All Modules" ) } : targetName;
+            const string   displayName = targetName.empty() ? string{ SW_LOCKEY( "EdCommon", "LiveCodingAllModules" ) } : targetName;
             const float32  duration    = compiler.getLastDurationSec();
             EditorContext* pContext    = EditorContext::get();
             if ( pContext == nullptr )
@@ -194,13 +194,13 @@ namespace sw::editor
             {
                 fixed_string<constant::kMaxBuffer32> secondsBuf;
                 formatstring( secondsBuf.data(), secondsBuf.capacity(), "%#", Fmt( static_cast<float64>( duration ), Format().precision( 2 ) ) );
-                const string content = SW_LOCFORMAT( "EdCommon", "LiveCodingSucceeded", "{target} compiled and reloaded in {seconds}s", TextArgumentList().addText( "target", displayName ).addText( "seconds", secondsBuf.c_str() ) );
-                pContext->getNotificationManager().push( SW_LOCTEXT( "EdCommon", "LiveCodingSucceededTitle", "Live Coding Succeeded" ), content, NotificationType::Success, 4.0f );
+                const string content = SW_LOCKEYFORMAT( "EdCommon", "LiveCodingSucceeded", TextArgumentList().addText( "target", displayName ).addText( "seconds", secondsBuf.c_str() ) );
+                pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "LiveCodingSucceededTitle" ), content, NotificationType::Success, 4.0f );
             }
             else if ( state == BuildState::Failed )
             {
-                const string content = SW_LOCFORMAT( "EdCommon", "LiveCodingFailed", "{target} build failed (exit code {code}). See the Output Log.", TextArgumentList().addText( "target", displayName ).addInteger( "code", compiler.getLastExitCode() ) );
-                pContext->getNotificationManager().push( SW_LOCTEXT( "EdCommon", "LiveCodingFailedTitle", "Live Coding Failed" ), content, NotificationType::Error, 6.0f );
+                const string content = SW_LOCKEYFORMAT( "EdCommon", "LiveCodingFailed", TextArgumentList().addText( "target", displayName ).addInteger( "code", compiler.getLastExitCode() ) );
+                pContext->getNotificationManager().push( SW_LOCKEY( "EdCommon", "LiveCodingFailedTitle" ), content, NotificationType::Error, 6.0f );
             }
         }
 
@@ -230,31 +230,31 @@ namespace sw::editor
                 if ( ImGui::SmallButton( EditorThemeUtil::makeIconLabel( editoricon::kHammer, "Compile" ) ) )
                     pCompiler->compileModule( "SWGame" );
 
-                EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "CompileGame", "Live Coding: compile the SWGame module now and hot-reload it (Ctrl+Alt+F11)" ) );
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "CompileGame" ) );
             }
 
             ImGui::SameLine();
             if ( state == BuildState::Compiling )
             {
                 EditorThemeUtil::textWarning( EditorThemeUtil::makeIconLabel( editoricon::kSpinner, "Compiling..." ) );
-                EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "BuildCompiling", "Modules are being built in the background." ) );
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "BuildCompiling" ) );
             }
             else if ( state == BuildState::Success )
             {
                 EditorThemeUtil::pushTextColor( EditorThemeUtil::getSuccessColor() );
                 ImGui::Text( "%s  Built (%.1fs)", editoricon::kSuccess, static_cast<float64>( pCompiler->getLastDurationSec() ) );
                 EditorThemeUtil::popTextColor();
-                EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "BuildSucceeded", "The last build finished successfully." ) );
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "BuildSucceeded" ) );
             }
             else if ( state == BuildState::Failed )
             {
                 EditorThemeUtil::textError( EditorThemeUtil::makeIconLabel( editoricon::kError, "Build Failed" ) );
-                EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "BuildFailed", "The build failed. See the console window for the detailed errors." ) );
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "BuildFailed" ) );
             }
             else
             {
                 ImGui::TextDisabled( "%s  Ready", editoricon::kCheck );
-                EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "BuildReady", "Live Coding is ready to build." ) );
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "BuildReady" ) );
             }
 
             ImGui::SameLine();
@@ -278,11 +278,11 @@ namespace sw::editor
         if ( ImGui::IsItemHovered() )
         {
             const int64  fps     = static_cast<int64>( ImGui::GetIO().Framerate + 0.5f );
-            const string backend = SW_LOCFORMAT( "EdCommon", "RHIBackend", "Current graphics RHI backend: {backend} ({fps} FPS)", TextArgumentList().addText( "backend", pBackend ).addInteger( "fps", fps ) );
+            const string backend = SW_LOCKEYFORMAT( "EdCommon", "RHIBackend", TextArgumentList().addText( "backend", pBackend ).addInteger( "fps", fps ) );
             ImGui::BeginTooltip();
             ImGui::TextUnformatted( backend.c_str() );
             ImGui::Separator();
-            ImGui::TextUnformatted( SW_LOCTEXT( "EdCommon", "RHISwitch", "Switch the RHI with a command-line argument: -dx11 / -dx12 / -vk / -gl" ) );
+            ImGui::TextUnformatted( SW_LOCKEY( "EdCommon", "RHISwitch" ) );
             ImGui::EndTooltip();
         }
     }

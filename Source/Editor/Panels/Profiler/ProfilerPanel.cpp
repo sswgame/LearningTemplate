@@ -245,7 +245,7 @@ namespace sw::editor
                 _bCapturePaused        = SW_FALSE;
                 _rowQuery._frameOffset = 0;
             }
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorProfiler", "ResumeCapture", "Capturing is paused (a spike or an opened capture) - resume live capture" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "ResumeCapture" ) );
         }
         else if ( ImGui::SmallButton( "Pause" ) )
             _bCapturePaused = SW_TRUE;
@@ -255,12 +255,12 @@ namespace sw::editor
         if ( ImGui::Checkbox( "Pause on spike", &bPauseOnSpike ) )
             _bPauseOnSpike = bPauseOnSpike ? SW_TRUE : SW_FALSE;
         EditorSelfTestMarks::note( "profiler.capture.pauseOnSpike" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorProfiler", "PauseOnSpike", "Pause capturing automatically on a frame slower than the threshold on the right" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "PauseOnSpike" ) );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( ImGui::GetFontSize() * 4.0f );
         ImGui::DragFloat( "##spikeMs", &_spikeThresholdMs, 0.1f, 0.1f, 1000.0f, "%.1f ms" );
         EditorSelfTestMarks::note( "profiler.capture.spikeMs" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorProfiler", "SpikeThreshold", "GT.Frame above this pauses capturing (and a running play session) on that frame" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "SpikeThreshold" ) );
         ImGui::SameLine();
         if ( ImGui::SmallButton( "Save" ) )
         {
@@ -271,7 +271,7 @@ namespace sw::editor
                 SW_LOG_WARNING( "Profiler capture could not be saved: %#", path.c_str() );
         }
         EditorSelfTestMarks::note( "profiler.capture.save" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorProfiler", "SaveCapture", "Save the captured window to Saved/Profiler/ProfilerCapture.txt (long captures: Tracy)" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "SaveCapture" ) );
         ImGui::SameLine();
         if ( ImGui::SmallButton( "Load" ) )
         {
@@ -286,7 +286,7 @@ namespace sw::editor
                 SW_LOG_WARNING( "Profiler capture could not be loaded: %#", path.c_str() );
         }
         EditorSelfTestMarks::note( "profiler.capture.load" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorProfiler", "LoadCapture", "Open Saved/Profiler/ProfilerCapture.txt (pauses live capture)" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "LoadCapture" ) );
 
         // Tracy — 시간축 분석은 외부 뷰어가 한다. 상태 한 줄과 여는 버튼.
         ImGui::SameLine();
@@ -319,14 +319,14 @@ namespace sw::editor
         ImGui::BeginDisabled( bRenderDoc == false );
         if ( ImGui::SmallButton( "RenderDoc Capture" ) )
             RenderDocCapture::triggerCapture();
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorProfiler", "RenderDocCapture", "Capture the next frame with RenderDoc" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "RenderDocCapture" ) );
         ImGui::SameLine();
         if ( ImGui::SmallButton( "Open UI" ) && RenderDocCapture::launchReplayUI() == false )
             SW_LOG_WARNING( "RenderDoc replay UI could not be started" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorProfiler", "RenderDocOpenUI", "Open the RenderDoc replay UI to inspect captures" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "RenderDocOpenUI" ) );
         ImGui::EndDisabled();
         if ( bRenderDoc == false && ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_DelayShort ) )
-            ImGui::SetTooltip( "%s", SW_LOCTEXT( "EditorProfiler", "RenderDocNotAttached", "RenderDoc is not attached to this process - start with -renderdoc or launch from RenderDoc" ) );
+            ImGui::SetTooltip( "%s", SW_LOCKEY( "EditorProfiler", "RenderDocNotAttached" ) );
     }
 
     void ProfilerPanel::drawTimelineTab()
@@ -352,7 +352,7 @@ namespace sw::editor
             timeline.setRecording( bRecording == false );
         }
         EditorSelfTestMarks::note( "profiler.timeline.record" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorProfiler", "TimelineRecord", "Record profile scopes per thread into a ring (8192 events per thread) - only while recording" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "TimelineRecord" ) );
 
         ImGui::SameLine();
         ImGui::TextUnformatted( "Frames:" );
@@ -371,11 +371,11 @@ namespace sw::editor
         bool bFrozen = _bTimelineFrozen == SW_TRUE;
         if ( ImGui::Checkbox( "Freeze", &bFrozen ) )
             _bTimelineFrozen = bFrozen ? SW_TRUE : SW_FALSE;
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorProfiler", "Freeze", "Keep recording but stop updating the view" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "Freeze" ) );
         ImGui::SameLine();
         if ( ImGui::SmallButton( "Fit" ) )
             _bTimelineZoomed = SW_FALSE;
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorProfiler", "Fit", "Reset the zoom so the recorded frames fit the view" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "Fit" ) );
 #if SW_PROFILER_TRACE_ENABLED
         ImGui::SameLine();
         if ( ImGui::SmallButton( "Save Trace" ) )
@@ -389,7 +389,7 @@ namespace sw::editor
                 SW_LOG_WARNING( "Timeline trace not saved: %#", reply );
         }
         EditorSelfTestMarks::note( "profiler.timeline.saveTrace" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorProfiler", "SaveTrace", "Save the frames shown as Saved/Traces/trace_<time>.trace.json (Chrome Trace Event - open in Perfetto UI or chrome://tracing)" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "SaveTrace" ) );
         ImGui::NewLine();
         drawTraceControls();
 #endif
@@ -473,7 +473,7 @@ namespace sw::editor
             if ( loadLatestTrace() == false )
                 SW_LOG_WARNING( "%#", _traceStatus );
         EditorSelfTestMarks::note( "profiler.timeline.loadTrace" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorProfiler", "LoadTrace", "Load the newest Saved/Traces/*.trace.json under the live threads (first times aligned) - a failing run next to a healthy one" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "LoadTrace" ) );
         if ( _bLoadedTrace == SW_TRUE )
         {
             ImGui::SameLine();
@@ -484,10 +484,10 @@ namespace sw::editor
                 _bTimelineZoomed = SW_FALSE;
             }
             EditorSelfTestMarks::note( "profiler.timeline.unloadTrace" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorProfiler", "UnloadTrace", "Remove the loaded trace from the timeline" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "UnloadTrace" ) );
         }
         ImGui::SameLine();
-        EditorWidgets::drawSearchField( "##traceSearch", _arrTraceSearch, constant::kMaxBuffer128, SW_LOCTEXT( "EditorProfiler", "FindScopeHint", "Find scope..." ), 140.0f * EditorThemeUtil::getDpiScale(), false );
+        EditorWidgets::drawSearchField( "##traceSearch", _arrTraceSearch, constant::kMaxBuffer128, SW_LOCKEY( "EditorProfiler", "FindScopeHint" ), 140.0f * EditorThemeUtil::getDpiScale(), false );
         EditorSelfTestMarks::note( "profiler.timeline.traceSearch" );
         if ( _traceStatus.empty() == false )
             ImGui::TextDisabled( "%s", _traceStatus.c_str() );
@@ -731,7 +731,7 @@ namespace sw::editor
 
     void ProfilerPanel::drawScopeTable( ProfilerScopeKind kind )
     {
-        EditorWidgets::drawSearchField( "##profilerScopeFilter", _arrFilter, constant::kMaxBuffer128, SW_LOCTEXT( "EditorProfiler", "FilterScopesHint", "Filter scopes..." ) );
+        EditorWidgets::drawSearchField( "##profilerScopeFilter", _arrFilter, constant::kMaxBuffer128, SW_LOCKEY( "EditorProfiler", "FilterScopesHint" ) );
         _rowQuery._kind       = kind;
         _rowQuery._filterText = _arrFilter;
 
@@ -866,7 +866,7 @@ namespace sw::editor
             }
             else
             {
-                EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorProfiler", "TaskManagerInactive", "TaskManager is not active." ) );
+                EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorProfiler", "TaskManagerInactive" ) );
             }
         }
     }
@@ -887,7 +887,7 @@ namespace sw::editor
                 ImGui::BulletText( "Total Attached Components: %u", stats._componentCount );
 
                 if ( stats._listDistribution.empty() )
-                    EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorProfiler", "NoComponents", "No components in the active scene." ) );
+                    EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorProfiler", "NoComponents" ) );
                 else if ( ImGui::BeginTable( "CompDistributionTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg ) )
                 {
                     ImGui::TableSetupColumn( "Component Type" );
@@ -908,7 +908,7 @@ namespace sw::editor
             }
             else
             {
-                EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorProfiler", "NoActiveScene", "No active scene loaded." ) );
+                EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorProfiler", "NoActiveScene" ) );
             }
         }
 
@@ -921,7 +921,7 @@ namespace sw::editor
         IRHIDevice*    pDevice  = ( pContext != nullptr ) ? pContext->getRHIDevice() : nullptr;
         if ( pDevice == nullptr )
         {
-            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorProfiler", "NoRHIDevice", "No RHI device." ) );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorProfiler", "NoRHIDevice" ) );
             return;
         }
         const RHIMemoryLedger& ledger  = pDevice->getMemoryLedger();
@@ -997,7 +997,7 @@ namespace sw::editor
         MemoryProfiler* pProfiler = editor::getService<MemoryProfiler>();
         if ( pProfiler == nullptr )
         {
-            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorProfiler", "MemoryProfilerInactive", "MemoryProfiler is not active." ) );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorProfiler", "MemoryProfilerInactive" ) );
             return;
         }
         MemoryProfiler& profiler = *pProfiler;
@@ -1142,7 +1142,7 @@ namespace sw::editor
             timeline.setRecording( bRecording == false );
         }
         EditorSelfTestMarks::note( "profiler.callTree.record" );
-        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorProfiler", "CallTreeRecord", "The call tree folds the timeline recording (same recording as the Timeline tab)" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "CallTreeRecord" ) );
         ImGui::SameLine();
         ImGui::TextUnformatted( "Frames:" );
         for ( const uint32 frameChoice : ProfilerPanelInternal::kArrTimelineFrameChoice )

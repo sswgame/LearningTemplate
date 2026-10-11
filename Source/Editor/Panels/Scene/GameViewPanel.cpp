@@ -124,7 +124,7 @@ namespace sw::editor
                 ImGui::EndCombo();
             }
             EditorSelfTestMarks::note( "gameView.aspect" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorScene", "GameViewAspect", "Game view aspect ratio - Free (whole panel) or 16:9 (letterboxed on the spare side)" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "GameViewAspect" ) );
 
             ImGui::SameLine();
             // 유니티 게임 뷰의 Maximize On Play 자리 — 값은 환경설정(Editor/Play)이고 바꾸면 바로 저장한다.
@@ -132,7 +132,7 @@ namespace sw::editor
             if ( ImGui::Checkbox( "Max", &playPreferences._bMaximizeOnPlay ) && EditorPreferencesStore::saveAll( EditorPreferencesStore::getDefaultFilePath() ) == false )
                 SW_LOG_WARNING( "Editor preferences could not be saved" );
             EditorSelfTestMarks::note( "gameView.maximizeOnPlay" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorScene", "MaximizeOnPlay", "Maximize On Play - keep only the game view while playing and restore the layout on Stop" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "MaximizeOnPlay" ) );
 
             ImGui::SameLine();
             // 게임 HUD(`DebugHUD`) — 런타임 UI 라 게임 뷰에 그대로 그려진다(멈춤 · 일시정지에는 숨는다). 게임 값(`DebugOverlayState`)은 HUD 의 overlay 섹션이다.
@@ -142,7 +142,7 @@ namespace sw::editor
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kCamera, "##GameViewScreenshot" ) ) )
                 EditorScreenshotCommands::captureGameView();
             EditorSelfTestMarks::note( "gameView.screenshot" );
-            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorScene", "GameViewScreenshot", "Save the game view image to Saved/Screenshots/<time>.png (F9 - the focused view)" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "GameViewScreenshot" ) );
         }
         EditorChrome::endToolbar();
     }
