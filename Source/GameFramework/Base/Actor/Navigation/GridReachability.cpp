@@ -17,10 +17,10 @@ namespace sw
     void GridReachability::collectReachable( vector<int2>& outListCell ) const
     {
         outListCell.clear();
-        for ( int32 index = 0; index < _width * _height; ++index )
+        for ( int32 index = 0; index < _topology.getCellCount(); ++index )
         {
             if ( _listCost[static_cast<size_t>( index )] != kUnreached && _listStoppable[static_cast<size_t>( index )] != SW_FALSE )
-                outListCell.push_back( int2{ index % _width, index / _width } );
+                outListCell.push_back( _topology.toCell( index ) );
         }
     }
 
@@ -31,7 +31,7 @@ namespace sw
             return false;
         for ( int32 index = computeIndex( cell ); index >= 0; index = _listParent[static_cast<size_t>( index )] )
         {
-            outListCell.push_back( int2{ index % _width, index / _width } );
+            outListCell.push_back( _topology.toCell( index ) );
         }
         std::reverse( outListCell.begin(), outListCell.end() );
         return true;
@@ -57,13 +57,13 @@ namespace sw
     {
         outListCell.clear();
         // 한 칸을 한 번만 — 표시는 재사용 스크래치에(호출마다 W × H 를 잡지 않는다).
-        _cellMarks.begin( _width * _height );
+        _cellMarks.begin( _topology.getCellCount() );
         vector<int2> listStand;
         vector<int2> listRange;
         collectReachable( listStand );
         for ( const int2& stand : listStand )
         {
-            collectRangeCells( stand, minRange, maxRange, _width, _height, listRange );
+            collectRangeCells( stand, minRange, maxRange, _topology._width, _topology._height, listRange );
             for ( const int2& cell : listRange )
             {
                 if ( _cellMarks.visit( computeIndex( cell ), -1 ) )

@@ -26,17 +26,16 @@ namespace sw
     // ------------------------------------------------------------------------------
     void PlatformTileMap::initialize( int32 width, int32 height, float32 tileSize, const float2& origin )
     {
-        _width    = MathUtil::max( 0, width );
-        _height   = MathUtil::max( 0, height );
+        _topology = GridTopology( width, height );
         _tileSize = MathUtil::max( 1.0e-3f, tileSize );
         _origin   = origin;
-        _listTile.assign( static_cast<size_t>( _width * _height ), PlatformTile::Empty );
+        _listTile.assign( static_cast<size_t>( _topology.getCellCount() ), PlatformTile::Empty );
     }
 
     void PlatformTileMap::setTile( int32 x, int32 y, PlatformTile tile )
     {
-        if ( x >= 0 && y >= 0 && x < _width && y < _height )
-            _listTile[static_cast<size_t>( y * _width + x )] = tile;
+        if ( _topology.isInside( x, y ) )
+            _listTile[static_cast<size_t>( _topology.toIndex( x, y ) )] = tile;
     }
 
     void PlatformTileMap::fillTiles( int32 minX, int32 minY, int32 maxX, int32 maxY, PlatformTile tile )
@@ -74,7 +73,7 @@ namespace sw
         initialize( width, static_cast<int32>( listLine.size() ), tileSize, origin );
         for ( size_t row = 0; row < listLine.size(); ++row )
         {
-            const int32 y = _height - 1 - static_cast<int32>( row );
+            const int32 y = _topology._height - 1 - static_cast<int32>( row );
             for ( size_t column = 0; column < listLine[row].size(); ++column )
             {
                 const utf8   symbol = listLine[row][column];
@@ -96,9 +95,9 @@ namespace sw
     {
         if ( y < 0 )
             return PlatformTile::Empty; // 구덩이
-        if ( x < 0 || x >= _width || y >= _height )
+        if ( x < 0 || x >= _topology._width || y >= _topology._height )
             return PlatformTile::Solid;
-        return _listTile[static_cast<size_t>( y * _width + x )];
+        return _listTile[static_cast<size_t>( _topology.toIndex( x, y ) )];
     }
 
     int32 PlatformTileMap::computeTileX( float32 worldX ) const { return static_cast<int32>( MathUtil::floor( ( worldX - _origin._x ) / _tileSize ) ); }

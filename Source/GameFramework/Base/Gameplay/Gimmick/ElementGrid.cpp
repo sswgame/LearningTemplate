@@ -32,20 +32,18 @@ namespace sw
         , _pTable{ nullptr }
         , _timer{}
         , _wind{}
-        , _width{ 0 }
-        , _height{ 0 }
+        , _topology{}
         , _stepCount{ 0 }
     {
     }
 
     void ElementGrid::initialize( int32 width, int32 height, const ElementRuleTable* pTable )
     {
-        _pTable = pTable;
-        _width  = MathUtil::max( 1, width );
-        _height = MathUtil::max( 1, height );
-        _timer  = FixedStepTimer( MathUtil::max( 0.001f, pTable != nullptr ? pTable->getStepTime() : 0.25f ), 1.0f );
+        _pTable   = pTable;
+        _topology = GridTopology( MathUtil::max( 1, width ), MathUtil::max( 1, height ) );
+        _timer    = FixedStepTimer( MathUtil::max( 0.001f, pTable != nullptr ? pTable->getStepTime() : 0.25f ), 1.0f );
         _listCell.clear();
-        _listCell.resize( static_cast<size_t>( _width ) * static_cast<size_t>( _height ) );
+        _listCell.resize( static_cast<size_t>( _topology.getCellCount() ) );
         _eventBuffer.clear();
         _wind      = int2{};
         _stepCount = 0;
@@ -81,9 +79,9 @@ namespace sw
     int32 ElementGrid::countStatus( int32 status ) const
     {
         int32 count = 0;
-        for ( int32 y = 0; y < _height; ++y )
+        for ( int32 y = 0; y < _topology._height; ++y )
         {
-            for ( int32 x = 0; x < _width; ++x )
+            for ( int32 x = 0; x < _topology._width; ++x )
             {
                 count += hasStatus( int2{ x, y }, status ) ? 1 : 0;
             }
@@ -149,13 +147,12 @@ namespace sw
                 return 1;
             }
             // 너비 우선으로 이어진 칸(네 이웃, 이웃 순서 고정 — 알림 순서도 늘 같다)에 상태를 붙인다.
-            const GridTopology topology{ _width, _height };
-            _floodSearch.begin( topology.getCellCount() );
+            _floodSearch.begin( _topology.getCellCount() );
             _floodSearch.visit( toIndex( cell ), -1 );
             while ( _floodSearch.hasNext() )
             {
                 const int32 index   = _floodSearch.popNext();
-                const int2  current = topology.toCell( index );
+                const int2  current = _topology.toCell( index );
                 addStatus( getCell( current ), rule._floodStatus );
                 pushEvent( rule._event, current );
                 for ( int32 neighbor = 0; neighbor < GridTopology::kOrthogonalCount; ++neighbor )
@@ -238,9 +235,9 @@ namespace sw
         for ( size_t ruleIndex = 0; ruleIndex < listRule.size(); ++ruleIndex )
         {
             const ElementStepRule& rule = listRule[ruleIndex];
-            for ( int32 y = 0; y < _height; ++y )
+            for ( int32 y = 0; y < _topology._height; ++y )
             {
-                for ( int32 x = 0; x < _width; ++x )
+                for ( int32 x = 0; x < _topology._width; ++x )
                 {
                     const int2 position{ x, y };
                     if ( hasStatus( position, rule._status ) == false )
@@ -346,8 +343,8 @@ namespace sw
 
     void ElementGrid::writeState( Archive& outArchive ) const
     {
-        outArchive << _width;
-        outArchive << _height;
+        outArchive << _topology._width;
+        outArchive << _topology._height;
         for ( const Cell& cell : _listCell )
         {
             outArchive << cell._material;
@@ -371,7 +368,7 @@ namespace sw
         const uint64 cellCount = static_cast<uint64>( MathUtil::max( 0, width ) ) * static_cast<uint64>( MathUtil::max( 0, height ) );
         // 크기는 initialize 의 것이어야 한다 — 칸마다 재질 · 상태 비트(2) + 상태 값
         const uint64 cellBytes = 2u + ElementRuleTable::kMaxStatusCount;
-        if ( archive.isError() || width != _width || height != _height || archive.hasBytesAvailable( cellCount * cellBytes ) == false )
+        if ( archive.isError() || width != _topology._width || height != _topology._height || archive.hasBytesAvailable( cellCount * cellBytes ) == false )
             return false;
         vector<Cell> listCell( static_cast<size_t>( cellCount ) );
         for ( Cell& cell : listCell )
@@ -391,8 +388,7 @@ namespace sw
         archive >> stepCount;
         if ( bTimerRead == false || archive.isError() )
             return false;
-        _width     = width;
-        _height    = height;
+        _topology  = GridTopology( width, height );
         _listCell  = std::move( listCell );
         _wind      = wind;
         _timer     = timer;

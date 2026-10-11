@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
+#include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -37,12 +38,12 @@ namespace sw
         /** @brief 사각 영역(양 끝 포함)의 값을 한꺼번에 바꿉니다 — 건물 자리. 리비전은 한 번만 오릅니다. */
         void setAreaCost( int32 minX, int32 minY, int32 maxX, int32 maxY, uint8 cost );
 
-        bool isInside( int32 x, int32 y ) const { return x >= 0 && y >= 0 && x < _width && y < _height; }
+        bool isInside( int32 x, int32 y ) const { return _topology.isInside( x, y ); }
         bool isInside( const int2& cell ) const { return isInside( cell._x, cell._y ); }
-        bool isWalkable( int32 x, int32 y ) const { return isInside( x, y ) && _listCost[static_cast<size_t>( y * _width + x )] != kNavBlockedCost; }
+        bool isWalkable( int32 x, int32 y ) const { return isInside( x, y ) && _listCost[static_cast<size_t>( _topology.toIndex( x, y ) )] != kNavBlockedCost; }
         bool isWalkable( const int2& cell ) const { return isWalkable( cell._x, cell._y ); }
         /** @brief 칸 값입니다. 밖은 막힘입니다. */
-        uint8 getCost( int32 x, int32 y ) const { return isInside( x, y ) ? _listCost[static_cast<size_t>( y * _width + x )] : kNavBlockedCost; }
+        uint8 getCost( int32 x, int32 y ) const { return isInside( x, y ) ? _listCost[static_cast<size_t>( _topology.toIndex( x, y ) )] : kNavBlockedCost; }
 
         /** @brief 월드 자리가 든 칸입니다(밖이어도 계산한다 — `isInside` 로 확인). */
         int2 computeCell( const float3& worldPosition ) const;
@@ -56,19 +57,18 @@ namespace sw
         /** @brief @p cell 에서 @p maxRadius 칸 안의 가장 가까운 걸을 칸입니다. 없으면 false 입니다(목적지가 건물 안일 때). */
         [[nodiscard]] bool findNearestWalkable( const int2& cell, int32 maxRadius, int2& outCell ) const;
 
-        int32         getWidth() const { return _width; }
-        int32         getHeight() const { return _height; }
+        int32         getWidth() const { return _topology._width; }
+        int32         getHeight() const { return _topology._height; }
         float32       getCellSize() const { return _cellSize; }
         const float3& getOrigin() const { return _origin; }
         uint32        getRevision() const { return _revision; }
-        int32         computeIndex( const int2& cell ) const { return cell._y * _width + cell._x; }
+        int32         computeIndex( const int2& cell ) const { return _topology.toIndex( cell ); }
 
     private:
         vector<uint8> _listCost; ///< 행 우선(y × width + x)
         float3        _origin;
         float32       _cellSize;
-        int32         _width;
-        int32         _height;
+        GridTopology  _topology; ///< 너비 · 높이 · 칸 번호
         uint32        _revision;
     };
 } // namespace sw

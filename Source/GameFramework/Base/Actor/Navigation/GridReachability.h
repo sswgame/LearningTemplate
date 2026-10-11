@@ -37,9 +37,8 @@ namespace sw
         template <typename TStepCost, typename TCanStop>
         void compute( int32 width, int32 height, const int2& start, int32 movePoints, TStepCost&& stepCost, TCanStop&& canStop, bool bDiagonal = false )
         {
-            _width                 = width > 0 ? width : 0;
-            _height                = height > 0 ? height : 0;
-            const size_t cellCount = static_cast<size_t>( _width * _height );
+            _topology              = GridTopology( width, height );
+            const size_t cellCount = static_cast<size_t>( _topology.getCellCount() );
             _listCost.assign( cellCount, kUnreached );
             _listParent.assign( cellCount, -1 );
             _listStoppable.assign( cellCount, SW_FALSE );
@@ -58,7 +57,7 @@ namespace sw
                 _listOpen.pop_back();
                 if ( entry._cost != _listCost[static_cast<size_t>( entry._index )] )
                     continue; // 더 싼 길로 이미 펼쳤다
-                const int2 cell{ entry._index % _width, entry._index / _width };
+                const int2 cell = _topology.toCell( entry._index );
                 for ( int32 direction = 0; direction < directionCount; ++direction )
                 {
                     const int2 next = GridTopology::getNeighbor( cell, direction );
@@ -102,8 +101,8 @@ namespace sw
 
         static bool isWorse( const OpenEntry& lhs, const OpenEntry& rhs ) { return lhs._cost > rhs._cost; }
 
-        bool  isInside( const int2& cell ) const { return cell._x >= 0 && cell._y >= 0 && cell._x < _width && cell._y < _height; }
-        int32 computeIndex( const int2& cell ) const { return cell._y * _width + cell._x; }
+        bool  isInside( const int2& cell ) const { return _topology.isInside( cell ); }
+        int32 computeIndex( const int2& cell ) const { return _topology.toIndex( cell ); }
         void  pushOpen( int32 cost, int32 index )
         {
             _listOpen.push_back( OpenEntry{ cost, index } );
@@ -115,7 +114,6 @@ namespace sw
         vector<uint8>             _listStoppable{};
         vector<OpenEntry>         _listOpen{};
         mutable GridSearchScratch _cellMarks{}; ///< `collectAttackCells` 의 "한 칸 한 번" 표시
-        int32                     _width{ 0 };
-        int32                     _height{ 0 };
+        GridTopology              _topology{};  ///< 너비 · 높이 · 칸 번호
     };
 } // namespace sw

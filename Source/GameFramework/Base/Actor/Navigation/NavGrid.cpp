@@ -10,19 +10,17 @@ namespace sw
         : _listCost{}
         , _origin{ 0.0f, 0.0f, 0.0f }
         , _cellSize{ 1.0f }
-        , _width{ 0 }
-        , _height{ 0 }
+        , _topology{}
         , _revision{ 0 }
     {
     }
 
     void NavGrid::initialize( int32 width, int32 height, float32 cellSize, const float3& origin )
     {
-        _width    = MathUtil::max( 1, width );
-        _height   = MathUtil::max( 1, height );
+        _topology = GridTopology( MathUtil::max( 1, width ), MathUtil::max( 1, height ) );
         _cellSize = cellSize > 0.0f ? cellSize : 1.0f;
         _origin   = origin;
-        _listCost.assign( static_cast<size_t>( _width * _height ), kNavDefaultCost );
+        _listCost.assign( static_cast<size_t>( _topology.getCellCount() ), kNavDefaultCost );
         ++_revision;
     }
 
@@ -30,7 +28,7 @@ namespace sw
     {
         if ( isInside( x, y ) == false )
             return;
-        uint8& slot = _listCost[static_cast<size_t>( y * _width + x )];
+        uint8& slot = _listCost[static_cast<size_t>( _topology.toIndex( x, y ) )];
         if ( slot == cost )
             return;
         slot = cost == 0 ? 1 : cost; // 0 은 휴리스틱을 깨뜨린다(공짜 칸)
@@ -41,11 +39,11 @@ namespace sw
     {
         const uint8 safeCost = cost == 0 ? 1 : cost;
         bool        bChanged = false;
-        for ( int32 y = MathUtil::max( 0, minY ); y <= MathUtil::min( _height - 1, maxY ); ++y )
+        for ( int32 y = MathUtil::max( 0, minY ); y <= MathUtil::min( _topology._height - 1, maxY ); ++y )
         {
-            for ( int32 x = MathUtil::max( 0, minX ); x <= MathUtil::min( _width - 1, maxX ); ++x )
+            for ( int32 x = MathUtil::max( 0, minX ); x <= MathUtil::min( _topology._width - 1, maxX ); ++x )
             {
-                uint8& slot = _listCost[static_cast<size_t>( y * _width + x )];
+                uint8& slot = _listCost[static_cast<size_t>( _topology.toIndex( x, y ) )];
                 bChanged    = bChanged || slot != safeCost;
                 slot        = safeCost;
             }

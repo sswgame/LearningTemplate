@@ -10,6 +10,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -84,8 +85,8 @@ namespace sw
         bool                    hasItem( const hashed_string& itemID, int32 count = 1 ) const { return getItemCount( itemID ) >= count; }
         int32                   countFreeCells() const;
         const vector<GridItem>& getItems() const { return _listItem; }
-        int32                   getWidth() const { return _width; }
-        int32                   getHeight() const { return _height; }
+        int32                   getWidth() const { return _topology._width; }
+        int32                   getHeight() const { return _topology._height; }
         uint32                  getRevision() const { return _revision; }
 
         /** @brief 크기 · 칸 · 아이템(id · 번호 · 개수 · 자리 · 돌림) · 다음 번호을 씁니다. 모양 조회는 `initialize` 의 것이라 싣지 않습니다. */
@@ -103,8 +104,7 @@ namespace sw
         vector<int32>    _listCell; ///< 칸마다 차지한 번호(−1 = 빔), 줄 단위
         vector<GridItem> _listItem; ///< 놓은 순서
         ShapeDelegate    _shapeLookup;
-        int32            _width;
-        int32            _height;
+        GridTopology     _topology; ///< 가방 칸의 너비 · 높이 · 칸 번호
         int32            _nextInstanceID;
         uint32           _revision;
     };

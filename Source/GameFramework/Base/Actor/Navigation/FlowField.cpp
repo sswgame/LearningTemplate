@@ -33,8 +33,7 @@ namespace sw
         : _listDistance{}
         , _listDirection{}
         , _listOpen{}
-        , _width{ 0 }
-        , _height{ 0 }
+        , _topology{}
         , _pGrid{ nullptr }
         , _gridRevision{ 0xffffffffu }
     {
@@ -42,11 +41,10 @@ namespace sw
 
     int32 FlowField::compute( const NavGrid& grid, const vector<int2>& listGoal )
     {
-        _width                 = grid.getWidth();
-        _height                = grid.getHeight();
+        _topology              = GridTopology( grid.getWidth(), grid.getHeight() );
         _pGrid                 = &grid;
         _gridRevision          = grid.getRevision();
-        const size_t cellCount = static_cast<size_t>( _width * _height );
+        const size_t cellCount = static_cast<size_t>( _topology.getCellCount() );
         _listDistance.assign( cellCount, FlowFieldInternal::kUnreached );
         _listDirection.assign( cellCount, kNoDirection );
         _listOpen.clear();
@@ -72,7 +70,7 @@ namespace sw
             if ( current._distance > _listDistance[static_cast<size_t>( current._index )] )
                 continue;
             ++reachedCount;
-            const int2    cell{ current._index % _width, current._index / _width };
+            const int2    cell      = _topology.toCell( current._index );
             const float32 enterCost = static_cast<float32>( grid.getCost( cell._x, cell._y ) );
             for ( int32 direction = 0; direction < 8; ++direction )
             {
@@ -91,11 +89,11 @@ namespace sw
         }
 
         // 방향 — 거리가 가장 작은 이웃(갈 수 있는 걸음만).
-        for ( int32 y = 0; y < _height; ++y )
+        for ( int32 y = 0; y < _topology._height; ++y )
         {
-            for ( int32 x = 0; x < _width; ++x )
+            for ( int32 x = 0; x < _topology._width; ++x )
             {
-                const int32   index    = y * _width + x;
+                const int32   index    = _topology.toIndex( x, y );
                 const float32 distance = _listDistance[static_cast<size_t>( index )];
                 if ( distance <= 0.0f )
                     continue; // 목적지이거나 닿지 못했다
@@ -105,7 +103,7 @@ namespace sw
                 {
                     if ( FlowFieldInternal::canStep( grid, int2{ x, y }, direction ) == false )
                         continue;
-                    const float32 neighborDistance = _listDistance[static_cast<size_t>( ( y + GridTopology::kArrOffsetY[direction] ) * _width + x + GridTopology::kArrOffsetX[direction] )];
+                    const float32 neighborDistance = _listDistance[static_cast<size_t>( _topology.toIndex( x + GridTopology::kArrOffsetX[direction], y + GridTopology::kArrOffsetY[direction] ) )];
                     if ( neighborDistance >= 0.0f && neighborDistance < bestDistance )
                     {
                         bestDistance  = neighborDistance;
@@ -135,16 +133,16 @@ namespace sw
 
     float32 FlowField::getDistance( const int2& cell ) const
     {
-        if ( cell._x < 0 || cell._y < 0 || cell._x >= _width || cell._y >= _height )
+        if ( _topology.isInside( cell ) == false )
             return FlowFieldInternal::kUnreached;
-        return _listDistance[static_cast<size_t>( cell._y * _width + cell._x )];
+        return _listDistance[static_cast<size_t>( _topology.toIndex( cell ) )];
     }
 
     int8 FlowField::getDirectionIndex( const int2& cell ) const
     {
-        if ( cell._x < 0 || cell._y < 0 || cell._x >= _width || cell._y >= _height )
+        if ( _topology.isInside( cell ) == false )
             return kNoDirection;
-        return _listDirection[static_cast<size_t>( cell._y * _width + cell._x )];
+        return _listDirection[static_cast<size_t>( _topology.toIndex( cell ) )];
     }
 
     int2 FlowField::getNextCell( const int2& cell ) const
@@ -170,6 +168,6 @@ namespace sw
 
     bool FlowField::isStale( const NavGrid& grid ) const
     {
-        return &grid != _pGrid || grid.getRevision() != _gridRevision || grid.getWidth() != _width || grid.getHeight() != _height;
+        return &grid != _pGrid || grid.getRevision() != _gridRevision || grid.getWidth() != _topology._width || grid.getHeight() != _topology._height;
     }
 } // namespace sw

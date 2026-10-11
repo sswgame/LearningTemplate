@@ -14,8 +14,7 @@ namespace sw
         : _listCell{}
         , _listItem{}
         , _shapeLookup{}
-        , _width{ 0 }
-        , _height{ 0 }
+        , _topology{}
         , _nextInstanceID{ 1 }
         , _revision{ 0 }
     {
@@ -24,20 +23,18 @@ namespace sw
     void GridInventory::initialize( const ShapeDelegate& shapeLookup, int32 width, int32 height )
     {
         _shapeLookup = shapeLookup;
-        _width       = MathUtil::max( 1, width );
-        _height      = MathUtil::max( 1, height );
+        _topology    = GridTopology( MathUtil::max( 1, width ), MathUtil::max( 1, height ) );
         _listItem.clear();
-        _listCell.assign( static_cast<size_t>( _width * _height ), -1 );
+        _listCell.assign( static_cast<size_t>( _topology.getCellCount() ), -1 );
         ++_revision;
     }
 
     bool GridInventory::growGrid( int32 width, int32 height )
     {
-        if ( width < _width || height < _height )
+        if ( width < _topology._width || height < _topology._height )
             return false;
-        _width  = width;
-        _height = height;
-        _listCell.assign( static_cast<size_t>( _width * _height ), -1 );
+        _topology = GridTopology( width, height );
+        _listCell.assign( static_cast<size_t>( _topology.getCellCount() ), -1 );
         for ( const GridItem& item : _listItem )
         {
             stampItem( item, item._instanceID );
@@ -61,13 +58,13 @@ namespace sw
         int32 footWidth  = 0;
         int32 footHeight = 0;
         computeFootprint( shape, bRotated, footWidth, footHeight );
-        if ( x < 0 || y < 0 || x + footWidth > _width || y + footHeight > _height )
+        if ( x < 0 || y < 0 || x + footWidth > _topology._width || y + footHeight > _topology._height )
             return false;
         for ( int32 cellY = y; cellY < y + footHeight; ++cellY )
         {
             for ( int32 cellX = x; cellX < x + footWidth; ++cellX )
             {
-                const int32 occupant = _listCell[static_cast<size_t>( cellY * _width + cellX )];
+                const int32 occupant = _listCell[static_cast<size_t>( _topology.toIndex( cellX, cellY ) )];
                 if ( occupant >= 0 && occupant != ignoreInstanceID )
                     return false;
             }
@@ -80,9 +77,9 @@ namespace sw
         for ( int32 rotation = 0; rotation < 2; ++rotation )
         {
             const bool bRotated = rotation == 1;
-            for ( int32 y = 0; y < _height; ++y )
+            for ( int32 y = 0; y < _topology._height; ++y )
             {
-                for ( int32 x = 0; x < _width; ++x )
+                for ( int32 x = 0; x < _topology._width; ++x )
                 {
                     if ( canPlace( itemID, x, y, bRotated ) )
                     {
@@ -209,9 +206,9 @@ namespace sw
 
     int32 GridInventory::findInstanceAt( int32 x, int32 y ) const
     {
-        if ( x < 0 || y < 0 || x >= _width || y >= _height )
+        if ( _topology.isInside( x, y ) == false )
             return -1;
-        return _listCell[static_cast<size_t>( y * _width + x )];
+        return _listCell[static_cast<size_t>( _topology.toIndex( x, y ) )];
     }
 
     const GridItem* GridInventory::findInstance( int32 instanceID ) const
@@ -276,11 +273,11 @@ namespace sw
         int32 footWidth  = 0;
         int32 footHeight = 0;
         computeFootprint( shape, item._bRotated == SW_TRUE, footWidth, footHeight );
-        for ( int32 cellY = item._y; cellY < item._y + footHeight && cellY < _height; ++cellY )
+        for ( int32 cellY = item._y; cellY < item._y + footHeight && cellY < _topology._height; ++cellY )
         {
-            for ( int32 cellX = item._x; cellX < item._x + footWidth && cellX < _width; ++cellX )
+            for ( int32 cellX = item._x; cellX < item._x + footWidth && cellX < _topology._width; ++cellX )
             {
-                _listCell[static_cast<size_t>( cellY * _width + cellX )] = value;
+                _listCell[static_cast<size_t>( _topology.toIndex( cellX, cellY ) )] = value;
             }
         }
     }
@@ -293,8 +290,8 @@ namespace sw
 
     void GridInventory::writeState( Archive& outArchive ) const
     {
-        outArchive << _width;
-        outArchive << _height;
+        outArchive << _topology._width;
+        outArchive << _topology._height;
         outArchive << _nextInstanceID;
         for ( const int32 cell : _listCell )
         {
@@ -346,8 +343,7 @@ namespace sw
             if ( bValid == false )
                 return false;
         }
-        _width          = width;
-        _height         = height;
+        _topology       = GridTopology( width, height );
         _nextInstanceID = nextInstanceID;
         _listCell       = std::move( listCell );
         _listItem       = std::move( listItem );

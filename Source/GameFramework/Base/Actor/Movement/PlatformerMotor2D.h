@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
+#include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
 #include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -44,15 +45,14 @@ namespace sw
         float32      getTileLeft( int32 x ) const { return _origin._x + static_cast<float32>( x ) * _tileSize; }
         float32      getTileBottom( int32 y ) const { return _origin._y + static_cast<float32>( y ) * _tileSize; }
         float32      getTileSize() const { return _tileSize; }
-        int32        getWidth() const { return _width; }
-        int32        getHeight() const { return _height; }
+        int32        getWidth() const { return _topology._width; }
+        int32        getHeight() const { return _topology._height; }
 
     private:
         vector<PlatformTile> _listTile{};
         float2               _origin{};
         float32              _tileSize{ 1.0f };
-        int32                _width{ 0 };
-        int32                _height{ 0 };
+        GridTopology         _topology{}; ///< 타일 격자의 너비 · 높이 · 칸 번호
     };
 } // namespace sw
 

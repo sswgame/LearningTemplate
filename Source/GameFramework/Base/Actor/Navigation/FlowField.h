@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
+#include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -45,8 +46,8 @@ namespace sw
         /** @brief 구한 뒤 격자가 바뀌었거나 다른 격자면 true 입니다. */
         bool isStale( const NavGrid& grid ) const;
 
-        int32 getWidth() const { return _width; }
-        int32 getHeight() const { return _height; }
+        int32 getWidth() const { return _topology._width; }
+        int32 getHeight() const { return _topology._height; }
 
     private:
         struct OpenEntry
@@ -58,9 +59,8 @@ namespace sw
         vector<float32>   _listDistance;
         vector<int8>      _listDirection;
         vector<OpenEntry> _listOpen;
-        int32             _width;
-        int32             _height;
-        const NavGrid*    _pGrid; ///< 구한 격자 — 리비전만으로는 다른 격자를 가리지 못한다
+        GridTopology      _topology; ///< 구한 격자의 너비 · 높이 · 칸 번호
+        const NavGrid*    _pGrid;    ///< 구한 격자 — 리비전만으로는 다른 격자를 가리지 못한다
         uint32            _gridRevision;
     };
 } // namespace sw

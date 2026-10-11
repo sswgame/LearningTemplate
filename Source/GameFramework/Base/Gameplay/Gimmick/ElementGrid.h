@@ -65,15 +65,15 @@ namespace sw
         /** @brief 쌓인 알림을 @p outListEvent 뒤에 붙이고 비웁니다. */
         void drainEvents( vector<ElementEvent>& outListEvent );
 
-        bool  isInside( const int2& cell ) const { return 0 <= cell._x && cell._x < _width && 0 <= cell._y && cell._y < _height; }
+        bool  isInside( const int2& cell ) const { return _topology.isInside( cell ); }
         bool  hasStatus( const int2& cell, int32 status ) const;
         int32 getStatusValue( const int2& cell, int32 status ) const;
         bool  hasFlag( const int2& cell, int32 flag ) const;
         int32 countStatus( int32 status ) const;
         /** @brief 모든 칸 상태 · 바람 · 걸음 수의 해시입니다. */
         uint32                  computeStateHash() const;
-        int32                   getWidth() const { return _width; }
-        int32                   getHeight() const { return _height; }
+        int32                   getWidth() const { return _topology._width; }
+        int32                   getHeight() const { return _topology._height; }
         uint32                  getStepCount() const { return _stepCount; }
         const ElementRuleTable* getTable() const { return _pTable; }
 
@@ -98,7 +98,7 @@ namespace sw
             int32 _rule{ 0 };
         };
 
-        int32 toIndex( const int2& cell ) const { return cell._y * _width + cell._x; }
+        int32 toIndex( const int2& cell ) const { return _topology.toIndex( cell ); }
         Cell& getCell( const int2& cell ) { return _listCell[static_cast<size_t>( toIndex( cell ) )]; }
         bool  matchesRule( const Cell& cell, const ElementStimulusRule& rule ) const;
         void  addStatus( Cell& cell, int32 status ) const;
@@ -113,8 +113,7 @@ namespace sw
         const ElementRuleTable*   _pTable;
         FixedStepTimer            _timer;
         int2                      _wind;
-        int32                     _width;
-        int32                     _height;
+        GridTopology              _topology; ///< 칸 격자의 너비 · 높이 · 칸 번호
         uint32                    _stepCount;
     };
 } // namespace sw
