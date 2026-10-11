@@ -32,7 +32,7 @@
 | 11 | `Telemetry`, `Renderer`, `UI`, `Automation` |
 | 12 | `EngineLoop` 등 루트 파일 |
 
-표의 숫자는 include 그래프에서 계산한 값입니다(`py -3 Scripts/dev/MoveEngineFolders.py --sync-tier` 가 게이트 표와 이 표를 함께 고칩니다). 폴더마다의 뜻은 아래 목록에 있습니다.
+표의 숫자는 include 그래프에서 계산한 값입니다(`py -3 Scripts/lint/report/RunEngineLayerGraph.py --apply` 가 게이트 표와 이 표를 함께 고칩니다). 폴더마다의 뜻은 아래 목록에 있습니다.
 
 **아래 티어는 위 티어를 include하지 않습니다.** 같은 티어끼리는 include할 수 있습니다. `CheckEngineLayers.py` 게이트가 이 규칙을 확인하고, 위반은 경고가 아니라 실패입니다.
 

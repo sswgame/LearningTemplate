@@ -179,7 +179,7 @@ Scripts/
   │     │     ├── RunPaddingReport.py         # 레코드별 패딩 · 필드 재배치로 줄일 수 있는 크기 (libclang, `--preset` · `--define SW_SHIPPING`)
   │     │     ├── RunForwardDeclarationCandidates.py # 전방 선언으로 바꿀 수 있는 include (`--apply` 는 고쳐 쓴다)
   │     │     ├── RunDuplicateCode.py         # 복사돼 있는 코드 블록 (C++ · `--language py` · `--language cmake`)
-  │     │     ├── RunEngineLayerGraph.py      # Engine 폴더 간 include 그래프 · 강결합 묶음
+  │     │     ├── RunEngineLayerGraph.py      # Engine 폴더 간 include 그래프 · 강결합 묶음 · 티어 (`--apply` 는 티어 표 둘을 고쳐 쓴다)
   │     │     ├── RunCoreLayerGraph.py        # Core 폴더 간 include 그래프 · 묶음 · 거꾸로 가는 include(파일 단위)
   │     │     ├── RunFolderFileCount.py       # 너무 큰 평면 폴더 · 파일 하나짜리 폴더
   │     │     ├── RunRepeatedConstants.py     # 같은 뜻이 여러 곳에 따로 적힌 상수 · 리터럴
@@ -209,8 +209,6 @@ Scripts/
   │     ├── ListCiJobs.py             # GitHub Actions 실행 · 잡 · 실패 주석을 공개 API 로(로그인 없이)
   │     ├── ListOutdatedDeps.py       # vcpkg 의존성의 지금 판 · 레지스트리 최신 판(오버레이 포함, docs/09 5-2)
   │     ├── MoveEditorState.py        # 체크아웃마다 한 번: 옛 자리(Config/Editor · 팩 gv 프리셋)의 에디터 로컬 상태를 Saved/Editor 로
-  │     ├── MoveEngineFolders.py      # Engine 폴더 재배치의 이동 표(git mv + 경로 치환)와 티어 표 맞추기(--sync-tier) — 다시 돌릴 수 있다
-  │     ├── MoveGameFrameworkLayout.py # GameFramework 폴더 재배치(끝남)의 이동 표와 경로 치환 — 다시 돌릴 수 있다
   │     ├── RunTests.py               # 스위트 · 케이스 이름으로 테스트 실행 — 시험까지 지은 뒤(`all` · `AllTests`) 그 케이스가 사는 실행 파일을 `Bin` 에서
   │     ├── RunBuildBaseline.py       # 빌드 시간 기준선(풀 · 헤더 수정 · .cpp 수정 · 워크트리 콜드, 각 3 회 중앙값, 머리에 PC · CPU)
   │     ├── SampleStacks.py           # 살아 있는 프로세스의 스레드 스택을 여러 번 떠 함수별로(DbgHelp) — 프로파일러가 닿지 않는 곳
@@ -466,7 +464,7 @@ git config diff.swasset.command  "py -3 Scripts/asset/AssetMerge.py git-diff"
   그 셀프테스트가 조각 전에 게이트 클래스의 읽기 오류(`_ruleDataError`)를 따로 본다. 모듈 수준에서 읽는 목록이 깨지면 import 가 트레이스백으로 진다.
 - **`rules/*.toml` 만 바꾼 커밋은 훅이 그 게이트를 돌리지 않는다**(게이트의 `preCommitPattern` 은 소스 경로다) — 예외 · 목록을 고쳤으면
   그 게이트를 직접 돌리거나 `ctest -L lint` 로 본다. 옛 철자를 일부러 적는 데이터 파일(약어 등록부 · 제품 이름 · 함수 어휘)은
-  `FormatAcronymSpelling._kTextExcludedRel` 에 있어 글 치환이 건드리지 않는다. 엔진 티어 표는 `dev/MoveEngineFolders.py --sync-tier` 가 TOML 을 고쳐 쓴다.
+  `FormatAcronymSpelling._kTextExcludedRel` 에 있어 글 치환이 건드리지 않는다. 엔진 티어 표는 `report/RunEngineLayerGraph.py --apply` 가 TOML 과 `Source/Engine/README.md` 표를 고쳐 쓴다.
 - **"헤더 혼자 빼도 선다" 는 "아무도 안 쓴다" 가 아니다** — `RunForwardDeclarationCandidates --verify-unused` 가 고른 120 건을 지우자 소비자 TU 에서 오류 2790 개가
   났다(거쳐 받던 `RHIBackend` · `IRHIResourceFactory`, NOMINMAX 가 `windows.h` 보다 먼저 오던 순서가 깨져 `std::max` 가 매크로에 먹힘). 보고는 "후보" 로만 쓰고, 지울 때는
   그 헤더를 include 하는 TU 전부를 다시 지어 본다.
