@@ -529,6 +529,9 @@ namespace sw
         _standardInput.reset();                             // 읽기 스레드를 멈추고 기다린다
         vector<string>{}.swap( _listStandardInputCommand ); // 엔진 종료의 누수 보고 전에 놓는다(기동 뒤에 잡은 용량)
 #endif
+        // 창은 엔진(RHI) 뒤에 부순다. 기동 뒤에 바꾼 제목(에디터)의 사본은 엔진 종료의 누수 보고 전에 놓는다.
+        if ( _window != nullptr )
+            _window->releaseTitleStorage();
         _engineLoop.shutdown();
 
         if ( _window != nullptr )

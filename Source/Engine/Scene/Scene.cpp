@@ -35,6 +35,13 @@ namespace sw
         struct SceneInternal
         {
             /**
+             * @brief 프리팹 출처가 없는 엔티티가 돌려받는 빈 경로입니다.
+             * @details 함수 안 정적 객체로 두지 않는다 — 처음 부른 자리(기동 뒤 에디터 · 씬 로드)의 태그로 Debug STL 의 컨테이너 프록시(16 B)를 잡아
+             *          프로세스 끝까지 남고, 종료 보고(`AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline`)에 그 태그의 증가로 나온다.
+             */
+            static inline const string kEmptyPrefabPath{};
+
+            /**
              * @brief 기본 머티리얼 경로를 반환합니다(-gv_defaultMaterial 이 있으면 그것, 없으면 엔진 데이터 설정).
              */
             static string resolveDefaultMaterialPath()
@@ -500,10 +507,9 @@ namespace sw
 
     const string& Scene::getEntityPrefabPath( uint64 objectID ) const
     {
-        static const string s_emptyString{};
-        const auto          it = _mapPrefabSource.find( objectID );
+        const auto it = _mapPrefabSource.find( objectID );
         if ( it != _mapPrefabSource.end() )
             return it->second;
-        return s_emptyString;
+        return SceneInternal::kEmptyPrefabPath;
     }
 } // namespace sw

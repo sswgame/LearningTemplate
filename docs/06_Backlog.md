@@ -103,11 +103,6 @@
   미리보기 화면에만 거는 길(화면별 `LocalizationManager` 출처)이 필요하다. (2) 고른 위젯의 PROPERTY 를 인스펙터로 고치고 `UIDocumentWriter` 로 저장(되돌리기 —
   `CommandStack`) — 지금은 이름 · 사각형만 보인다. (3) 미리보기 안 입력 흉내(마우스 · 탐색 방향). (4) 콘텐츠 브라우저에서 `*.ui.xml` 두 번 누르면 이 패널로 —
   에셋 종류 `UIDocument` 의 열기 동작. (5) 애니메이션 미리 보기(재생 · 시간 막대 — 미리보기 화면은 Open 을 틀지 않아 문서 값 그대로다). (6) UI 문서 디자이너(팔레트 → 끌어 놓기 · 슬롯 손잡이) — 미리보기 패널 위에.
-- **AbilityArena 자동 전투 실행은 종료 보고에 `Scene` 태그 232 B(1 블록)가 남는다**(2026-10-06, `Ninja-Debug-AbilityArena` 네 백엔드 모두 `-gv_arenaAutoPlay=1
-  -gv_profileFrames=300`). 다른 게임 여섯 · Empty 는 0. 같은 진단(기준선 뒤 상세 추적 · 종료 직전 `getTopCallStacks`)으로 자리를 찾는다.
-- **에디터를 켠 실행은 종료 보고에 `Editor` 태그 256 B(1 블록)가 남는다**(2026-10-06, `App.exe -dx12 -EnableEditor -gv_profileFrames=5`). 에디터 없는 실행은 0 이고
-  `AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline` 이 지킨다. 프로세스 정적 저장소가 기동 뒤 자란 몫일 것 — 기준선 직후 `setDetailedTrackingEnabled( true )` ·
-  종료 보고 직전 `getTopCallStacks( LiveBytes )` 임시 진단으로 자리를 찾아 종료 끝에서 놓는다.
 
 - **콘솔 · 치트의 남은 것(옛 "에디터 · 개발 편의 기능" 의 D)** — 게임 · 키트의 치트 명령(무적 · 아이템 주기 · 돈 …)을 각 게임 · 킷에 `SW_DEV_COMMAND` 로 단다(등록부 · 콘솔 ·
   엔진 명령은 들어갔다 — `Source/Engine/README.md` "개발 콘솔"). 리눅스 오버레이(`X11DevConsoleWindow`)는 실기로 띄워 보지 않았다.

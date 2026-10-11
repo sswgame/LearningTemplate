@@ -27,6 +27,13 @@ namespace sw
         struct PrefabAssetInternal
         {
             /**
+             * @brief 스폰 중인 프리팹 경로 스택(순환 참조 검사)이 힙 없이 담는 깊이입니다.
+             * @details 스레드 지역 스택이라 힙에 잡으면 처음 스폰한 자리의 태그(Scene)로 스레드가 끝날 때까지 남는다 — 종료 보고
+             *          (`AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline`)는 스레드보다 먼저 온다. 더 깊게 중첩하면 그때만 힙을 쓴다.
+             */
+            static constexpr size_t kInlineSpawnDepth = 8;
+
+            /**
              * @brief 프리팹 참조(경로 또는 GUID 문자열)를 경로로 풉니다. GUID 가 아니거나 데이터베이스에 없으면 받은 그대로 반환합니다.
              * @details 로드와 스폰이 함께 씁니다 — 한쪽만 GUID 를 풀면 같은 참조가 로드는 되고 스폰은 안 됩니다.
              */
@@ -599,9 +606,9 @@ namespace sw
 
         const string resolvedPath = PrefabAssetInternal::resolvePrefabPath( assetRelativePath );
 
-        const string                       cacheKey = PrefabAssetInternal::makePrefabCacheKey( resolvedPath );
-        const hashed_string                pathKey( cacheKey.data(), static_cast<uint32>( cacheKey.size() ) );
-        thread_local vector<hashed_string> t_listSpawnStack;
+        const string                                                                     cacheKey = PrefabAssetInternal::makePrefabCacheKey( resolvedPath );
+        const hashed_string                                                              pathKey( cacheKey.data(), static_cast<uint32>( cacheKey.size() ) );
+        thread_local small_vector<hashed_string, PrefabAssetInternal::kInlineSpawnDepth> t_listSpawnStack;
 
         if ( std::find( t_listSpawnStack.begin(), t_listSpawnStack.end(), pathKey ) != t_listSpawnStack.end() )
         {
@@ -613,7 +620,7 @@ namespace sw
         t_listSpawnStack.push_back( pathKey );
         struct StackGuard
         {
-            vector<hashed_string>& _stack;
+            small_vector<hashed_string, PrefabAssetInternal::kInlineSpawnDepth>& _stack;
             ~StackGuard()
             {
                 _stack.pop_back();

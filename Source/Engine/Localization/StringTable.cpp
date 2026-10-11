@@ -11,7 +11,7 @@ namespace sw
     {
         /**
          * @struct LocalizedTextArena
-         * @brief 번역 문자열의 저장소입니다. **추가만 하고 프로세스가 끝날 때까지 풀지 않습니다.** 같은 내용은 한 번만 둡니다.
+         * @brief 번역 문자열의 저장소입니다. **추가만 하고 엔진 종료 끝(`StringTable::releaseTextStorage`)까지 풀지 않습니다.** 같은 내용은 한 번만 둡니다.
          * @details `StringTable` · `LocalizationManager` 의 조회는 `const utf8*` 를 돌려주고 UI · 워커가 그것을 들고 있습니다. 표가 문자열을
          *          값으로 가지면 락을 놓은 뒤 `setString` · 다시 읽기 · 언어 내리기가 그 저장소를 바꿀 때 들고 있던 포인터가 해제된 메모리를
          *          가리킵니다(조밀 해시 표라 **다른 키를 넣기만 해도** 짧은 문자열이 옮겨집니다). 언리얼 FText 가 공유 문자열을 들고
@@ -28,12 +28,20 @@ namespace sw
                 return s_arena;
             }
 
-            ~LocalizedTextArena()
+            ~LocalizedTextArena() { release(); }
+
+            /** @brief 블록과 내용 색인을 모두 놓습니다. 빈 객체를 대입해 용량까지 돌려준다. */
+            void release()
             {
+                std::scoped_lock<mutex> lock{ _mutex };
                 for ( utf8* pBlock : _listBlock )
                 {
                     Memory::free( pBlock );
                 }
+                _listBlock      = vector<utf8*>{};
+                _mapByContent   = unordered_map<uint64, const utf8*>{};
+                _pCursor        = nullptr;
+                _remainingBytes = 0;
             }
 
             /** @brief @p text 와 같은 내용의 안정된 C 문자열을 돌려줍니다(없으면 복사해 둡니다). */
@@ -122,6 +130,11 @@ namespace sw
         const utf8* const                   pStored = LocalizedTextArena::get().store( value );
         std::unique_lock<std::shared_mutex> lock( _mutex );
         _mapTable[keyHash] = pStored;
+    }
+
+    void StringTable::releaseTextStorage()
+    {
+        LocalizedTextArena::get().release();
     }
 
     void StringTable::clear()
