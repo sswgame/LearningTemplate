@@ -2533,6 +2533,14 @@
    "source": "Source/Engine/EngineLoop.cpp"
   },
   {
+   "name": "gv_netConnectAddress",
+   "type": "string",
+   "default": "",
+   "kind": "시험",
+   "description": "클라이언트로 붙을 게임 서버 주소 (주소:포트, 비면 끄기)",
+   "source": "Source/GameFramework/Base/Foundation/Framework/Net/GameNetSession.cpp"
+  },
+  {
    "name": "gv_netEmuBandwidthKilobytesPerSecond",
    "type": "int32",
    "default": "0",
@@ -2579,6 +2587,14 @@
    "kind": "시험",
    "description": "네트워크 흉내: 순서 뒤바뀜(%) — PktOrder",
    "source": "Source/Core/Network/Transport/NetEmulation.cpp"
+  },
+  {
+   "name": "gv_netListenPort",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "게임 네트워크 서버로 열 UDP 포트 (0=끄기)",
+   "source": "Source/GameFramework/Base/Foundation/Framework/Net/GameNetSession.cpp"
   },
   {
    "name": "gv_nileAutoPlay",
@@ -2821,6 +2837,14 @@
    "source": "Source/Games/StarSkirmish/SkirmishDirectorComponent.cpp"
   },
   {
+   "name": "gv_standardInputCommands",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "표준 입력의 줄을 명령으로 받는다 (quit=종료, 1=켜기)",
+   "source": "Source/App/App.cpp"
+  },
+  {
    "name": "gv_subtitleBackgroundOpacity",
    "type": "float32",
    "default": "0.5",
@@ -2867,6 +2891,14 @@
    "kind": "일반",
    "description": "게임 시간 배율 (1=실시간, 0.25=슬로 모션, 0=멈춤)",
    "source": "Source/Engine/Utility/GameTimeScale.cpp"
+  },
+  {
+   "name": "gv_traceSaveOnExit",
+   "type": "string",
+   "default": "",
+   "kind": "시험",
+   "description": "종료할 때 최근 프레임의 타임라인을 이 경로에 트레이스로 저장 (비면 끄기)",
+   "source": "Source/Engine/Profiling/ProfilerTraceExport.cpp"
   },
   {
    "name": "gv_traceSlowTickMs",

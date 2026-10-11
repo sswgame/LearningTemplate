@@ -9,7 +9,9 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
+#include "Core/LogSink/ConsoleLogOutput.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Process/StandardInputReader.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/string_splitter.h"
 #include "Core/Time/MonotonicClock.h"
@@ -253,6 +255,11 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_devConsoleExec, "", "시작 씬이 열린 뒤 개발 콘솔로 돌릴 명령 (; 로 나눔)" );
     /** @brief `-gv_devConsoleOpen=1`: 에디터 없이 띄울 때 게임 창의 개발 콘솔을 연 채로 시작합니다(화면 확인용). */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_devConsoleOpen, 0, "게임 창 개발 콘솔을 연 채로 시작 (1=열기)" );
+    /**
+     * @brief `-gv_standardInputCommands=1`: 표준 입력의 줄을 명령으로 받습니다 — `quit` · `stop` 은 정상 종료, 나머지는 개발 콘솔 명령입니다.
+     * @details 부모 프로세스(에디터의 멀티 프로세스 재생)가 클라이언트를 띄울 때 켠다. 켜면 로그를 줄마다 내보낸다(부모가 줄을 바로 모은다).
+     */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_standardInputCommands, 0, "표준 입력의 줄을 명령으로 받는다 (quit=종료, 1=켜기)" );
 #endif
 
     App::App()
@@ -519,6 +526,8 @@ namespace sw
         // 콘솔은 입력 관리자에 글자 콜백을 걸고 키보드 포커스를 쥔다 — 엔진(입력 관리자)보다 먼저 내린다. 콘솔 창은 게임 창이 소유한 팝업이라
         // 게임 창보다도 먼저다.
         _devConsoleController.reset();
+        _standardInput.reset();                             // 읽기 스레드를 멈추고 기다린다
+        vector<string>{}.swap( _listStandardInputCommand ); // 엔진 종료의 누수 보고 전에 놓는다(기동 뒤에 잡은 용량)
 #endif
         _engineLoop.shutdown();
 
@@ -552,8 +561,8 @@ namespace sw
 #if !defined( SW_SHIPPING )
             runPendingDevConsoleExec();
 #endif
-            // 프로파일 실행(-gv_profileFrames=N) · 자동화 시나리오(-scenario)는 스스로 끝난다(종료 코드는 `getExitCode`).
-            if ( _engineLoop.isQuitRequested() )
+            // 프로파일 실행(-gv_profileFrames=N) · 자동화 시나리오(-scenario)는 스스로 끝난다(종료 코드는 `getExitCode`). 부모 프로세스는 표준 입력 quit 으로 끝낸다.
+            if ( _engineLoop.isQuitRequested() || pollStandardInputCommands() )
             {
                 _window->requestClose();
                 break;
@@ -688,6 +697,38 @@ namespace sw
         _bDevConsoleExecPending = gv_devConsoleExec.empty() ? SW_FALSE : SW_TRUE;
         if ( gv_devConsoleOpen != 0 && _bEnableEditor == SW_FALSE )
             _devConsoleController->setOpen( true );
+        if ( gv_standardInputCommands != 0 )
+        {
+            ConsoleLogOutput::setFlushEveryLine( true ); // 부모가 줄을 바로 모은다(접속 · 종료 줄을 기다리는 쪽)
+            _standardInput = make_unique<StandardInputReader>();
+            _standardInput->start();
+        }
+#endif
+    }
+
+    bool App::pollStandardInputCommands()
+    {
+#if !defined( SW_SHIPPING )
+        if ( _standardInput == nullptr )
+            return false;
+        _standardInput->drainLines( _listStandardInputCommand );
+        bool bQuitRequested = false;
+        for ( const string& line : _listStandardInputCommand )
+        {
+            const string_view command = StringUtil::trim( line );
+            if ( command == "quit" || command == "stop" )
+            {
+                SW_LOG_INFO( "App quit requested on standard input" );
+                bQuitRequested = true;
+                break;
+            }
+            if ( command.empty() == false && _devConsoleController != nullptr )
+                (void)_devConsoleController->getConsole().submit( command ); // 답 · 실패는 로그에 남는다
+        }
+        _listStandardInputCommand.clear();
+        return bQuitRequested;
+#else
+        return false;
 #endif
     }
 

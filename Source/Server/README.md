@@ -63,7 +63,11 @@ Dev 빌드는 게임 틱을 멈추는 명령도 받습니다. `pause` 는 틱을
 디버거 없이 중단점처럼 서버를 세우는 길입니다. 멈춘 동안에도 콘솔, 종료 신호, 상태 확인 박동, 네트워크 스레드(`NetHostThread`)는 돌므로 클라이언트는 끊기지 않고 지연이 커진 것처럼 봅니다.
 디버거로 멈추면 네트워크 스레드도 서는데, 그때는 `NetHost` 의 디버거 대기가 연결을 지킵니다([Network README](../Core/Network/README.md) "디버거 대기").
 
-**4단계 — 배포 서버를 빌드합니다.** `Ninja-Shipping-Server` 프리셋은 서버만 빌드하고, 쿠킹도 서버 패키지 규칙으로 합니다.
+**4단계 — 네트워크 서버로 띄웁니다.** `-gv_netListenPort=7777` 을 주면 게임 인스턴스가 그 UDP 포트를 열고 클라이언트를 받습니다(`GameNetSession` — 키트가 없는 Empty 도).
+클라이언트는 `App.exe "-gv_netConnectAddress=127.0.0.1:7777"` 이고, 로그에 `Net session client 0 connected from …` 가 남습니다. Dev 서버의 `net.status` 가 역할 · 연결 수를 답합니다.
+에디터는 툴바의 Net Mode(전용 서버 + 클라이언트 N)로 이 둘을 자식 프로세스로 띄우고 로그 · 트레이스를 모읍니다([Editor README](../Editor/README.md) "멀티 프로세스 재생").
+
+**5단계 — 배포 서버를 빌드합니다.** `Ninja-Shipping-Server` 프리셋은 서버만 빌드하고, 쿠킹도 서버 패키지 규칙으로 합니다.
 
 ```powershell
 build/Ninja-Shipping-Server/Bin/Server.exe -server-config=Config/Server/Empty.json
@@ -77,7 +81,7 @@ build/Ninja-Shipping-Server/Bin/Server.exe -server-config=Config/Server/Empty.js
    건너뛴 단계는 로그에 한 줄로 남깁니다. 오디오는 장치를 열지 않는 `NullAudioSystem` 을 쓰고, 모듈은 `Server` 대상 모듈만 로드합니다. Game 빌드에서도 에디터와 RHI 모듈은 로드하지 않습니다.
 2. 서버 설정(`ServerConfig`)을 읽습니다.
 3. `ModuleHost::initializeDedicatedServer` 가 창과 디바이스 없이(`nullptr`) 게임 인스턴스를 만듭니다.
-4. 종료 신호 처리기(`Core/Process/ShutdownSignal`)와 표준 입력 명령 스레드(`ServerConsole`)를 띄우고 `Dedicated server ready` 를 남깁니다.
+4. 종료 신호 처리기(`Core/Process/ShutdownSignal`)와 표준 입력 명령 스레드(`Core/Process/StandardInputReader` — App 의 `-gv_standardInputCommands` 와 같은 것)를 띄우고 `Dedicated server ready` 를 남깁니다.
 5. 고정 틱 루프를 돕니다. `_maxCatchUpTicks` 보다 많이 밀리면 밀린 시간을 버리고 경고합니다. 느린 서버가 따라잡으려다 더 밀리는 일을 막기 위해서입니다.
 6. 종료 요청을 받으면 `Dedicated server shutdown requested (<사유>)` 를 남기고 게임, 모듈, 엔진 순서로 종료한 뒤 `Dedicated server shutdown complete` 를 남기고 종료 코드 0으로 끝납니다.
 
@@ -190,7 +194,7 @@ WantedBy=multi-user.target
 | 파일 | 내용 |
 |---|---|
 | `ServerApp.h` | 시작, 틱 루프, 콘솔 명령, 종료 |
-| `ServerConsole.h` | 표준 입력 명령 스레드 |
+| `Core/Process/StandardInputReader.h` | 표준 입력 명령 스레드(App 과 같이 쓴다) |
 | `Windows/WindowsServiceHost.h` | Windows 서비스 |
 | `Engine/Config/Server/ServerConfig.h` | 서버 설정 |
 | `Core/Process/ShutdownSignal.h` | 종료 신호 처리 |

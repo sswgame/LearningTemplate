@@ -1,12 +1,14 @@
 /**
- * @file ServerConsole.h
- * @brief 전용 서버의 표준 입력 명령 줄입니다 — 읽기 스레드가 줄을 모으고, 게임 스레드가 틱마다 꺼내 처리합니다.
- * @details 표준 입력이 닫혀도(EOF — systemd · 서비스 · `< /dev/null`) 서버를 끝내지 않습니다(그 환경에서 서버가 기동 직후 내려간다).
+ * @file StandardInputReader.h
+ * @brief 표준 입력의 명령 줄을 읽습니다 — 읽기 스레드가 줄을 모으고, 게임 스레드가 틱 · 프레임마다 꺼내 처리합니다.
+ * @details 전용 서버의 콘솔 명령과, 부모 프로세스(에디터의 멀티 프로세스 재생)가 띄운 App 의 명령 통로가 같이 씁니다.
+ *          표준 입력이 닫혀도(EOF — systemd · 서비스 · `< /dev/null`) 읽기 스레드만 끝나고 프로세스는 계속 돕니다(그 환경에서 서버가 기동 직후 내려간다).
  *          읽기 스레드는 멈출 수 있어야 합니다: POSIX 는 `poll( 0, 100 ms )` 뒤 `read`, Windows 는 표준 입력 종류마다 —
  *          콘솔이면 `WaitForSingleObject( 입력, 100 ms )` 로 키 입력이 있을 때만 읽고, 파이프면 `PeekNamedPipe` 를 50 ms 마다,
  *          그 밖(파일 · NUL)은 끝까지 읽고 스레드를 끝냅니다.
  */
 #pragma once
+#include "Core/Common/Macros.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
@@ -17,17 +19,17 @@
 namespace sw
 {
     /**
-     * @class ServerConsole
+     * @class StandardInputReader
      * @brief 표준 입력의 줄을 읽기 스레드에서 모아 게임 스레드에 넘깁니다.
      */
-    class ServerConsole
+    class SW_API StandardInputReader
     {
     public:
-        ServerConsole();
-        ~ServerConsole();
+        StandardInputReader();
+        ~StandardInputReader();
 
-        ServerConsole( const ServerConsole& )            = delete;
-        ServerConsole& operator=( const ServerConsole& ) = delete;
+        StandardInputReader( const StandardInputReader& )            = delete;
+        StandardInputReader& operator=( const StandardInputReader& ) = delete;
 
         /** @brief 읽기 스레드를 띄웁니다. 두 번 불러도 한 번입니다. */
         void start();

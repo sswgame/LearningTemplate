@@ -1039,6 +1039,9 @@ namespace sw
         }
 
         _profileSession.begin();
+#if SW_PROFILER_TRACE_ENABLED
+        ProfilerTraceExport::startExitCapture( engine::getFrameProfiler() ); // `-gv_traceSaveOnExit` — 없으면 아무것도 하지 않는다
+#endif
 
         MemoryProfiler::captureMemoryLeakBaseline();
 
@@ -1047,6 +1050,11 @@ namespace sw
 
     void EngineLoop::shutdown()
     {
+#if SW_PROFILER_TRACE_ENABLED
+        // 종료 트레이스(`-gv_traceSaveOnExit`)는 서비스 · 프로파일러가 아직 있을 때 쓴다. 기동이 서비스 표 전에 멈췄으면 쓸 것이 없다.
+        if ( engine::areEngineServicesBound() && _bHeadless == false )
+            ProfilerTraceExport::finishExitCapture( engine::getFrameProfiler(), _hostRole == EngineHostRole::DedicatedServer ? "Server" : "App" );
+#endif
         // 시나리오 실행기는 로그 리스너 · 입력을 빌려 쓴다 — 서비스보다 먼저 내린다.
         _pAutomationRunner.reset();
         AssetLoadProfiler::get().reportIfRequested( "session" );

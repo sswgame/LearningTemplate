@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Server/ServerConsole.h"
+#include "Core/Process/StandardInputReader.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Common/PlatformOsHeaders.h"
@@ -10,7 +10,7 @@ namespace sw
 {
     namespace
     {
-        struct ServerConsoleWindowsInternal
+        struct WindowsStandardInputReaderInternal
         {
             /** @brief 표준 입력 핸들이 무엇인가 — 기다리는 방법이 종류마다 다르다. */
             enum class InputKind : uint8
@@ -36,10 +36,10 @@ namespace sw
         };
     } // namespace
 
-    bool ServerConsole::readLinePlatform( string& outLine )
+    bool StandardInputReader::readLinePlatform( string& outLine )
     {
-        const HANDLE                                  hInput = GetStdHandle( STD_INPUT_HANDLE );
-        const ServerConsoleWindowsInternal::InputKind kind   = ServerConsoleWindowsInternal::classify( hInput );
+        const HANDLE                                        hInput = GetStdHandle( STD_INPUT_HANDLE );
+        const WindowsStandardInputReaderInternal::InputKind kind   = WindowsStandardInputReaderInternal::classify( hInput );
         for ( ;; )
         {
             if ( takeLine( outLine ) )
@@ -48,12 +48,12 @@ namespace sw
                 return false;
             switch ( kind )
             {
-                case ServerConsoleWindowsInternal::InputKind::None:
+                case WindowsStandardInputReaderInternal::InputKind::None:
                 {
                     _endOfInput.store( 1 );
                     return false;
                 }
-                case ServerConsoleWindowsInternal::InputKind::Console:
+                case WindowsStandardInputReaderInternal::InputKind::Console:
                 {
                     // 입력 레코드가 오면 신호가 선다. 키 누름이 아닌 레코드(포커스 · 마우스 · 창 크기)는 버리고, 키가 있을 때만 줄 읽기로 간다 —
                     // ReadConsoleW 는 Enter 까지 막히므로, 키를 친 뒤의 멈춤은 그 줄이 끝날 때까지 늦어진다(서버 종료는 정상 종료 요청이 먼저 온다).
@@ -79,7 +79,7 @@ namespace sw
                     _partialLine += StringUtil::utf16ToUtf8( arrBuffer );
                     break;
                 }
-                case ServerConsoleWindowsInternal::InputKind::Pipe:
+                case WindowsStandardInputReaderInternal::InputKind::Pipe:
                 {
                     DWORD available = 0;
                     if ( PeekNamedPipe( hInput, nullptr, 0, nullptr, &available, nullptr ) == FALSE )
@@ -103,7 +103,7 @@ namespace sw
                     _partialLine.append( arrBuffer, readCount );
                     break;
                 }
-                case ServerConsoleWindowsInternal::InputKind::File:
+                case WindowsStandardInputReaderInternal::InputKind::File:
                 {
                     utf8  arrBuffer[512];
                     DWORD readCount = 0;

@@ -446,6 +446,7 @@ namespace sw
     void ServerApp::shutdown()
     {
         _console.stop();
+        vector<string>{}.swap( _listPendingCommand ); // 엔진 종료의 누수 보고 전에 놓는다(기동 뒤에 잡은 용량)
 #if SW_DEV_COMMANDS_ENABLED
         _devConsole.reset();
 #endif
