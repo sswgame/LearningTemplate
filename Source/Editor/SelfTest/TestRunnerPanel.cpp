@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/TestRunnerPanel.h"
+#include "Editor/SelfTest/TestRunnerPanel.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"

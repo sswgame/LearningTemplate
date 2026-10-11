@@ -26,7 +26,7 @@
 #include "Editor/Common/GUI/EditorCommandGUI.h"
 #include "Editor/Common/GUI/EditorFontSetup.h"
 #include "Editor/Common/GUI/EditorMenuBar.h"
-#include "Editor/Common/GUI/EditorNotificationManager.h"
+#include "Editor/Common/GUI/EditorNotificationView.h"
 #include "Editor/Common/GUI/EditorPanelDump.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorPlayToolbar.h"
@@ -36,7 +36,9 @@
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
 #include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/ConfigHotReload.h"
+#include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
@@ -45,7 +47,6 @@
 #include "Editor/SelfTest/EditorRegistryDump.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
-#include "Editor/Viewport/EditorCamera.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
@@ -250,6 +251,8 @@ namespace sw::editor
             // createRendererBackend 가 nullptr 을 반환하고 초기화가 거기서 멈춘다.
             io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
+            // 자체 시험은 저장된 레이아웃을 읽지도 쓰지도 않는다 — 도킹은 자체 시험을 모르므로 셸이 알린다.
+            EditorDockLayout::setPanelOverrideRequested( EditorSelfTestRunner::isRequested() );
             _dockLayout.initializePersistencePaths();
             _dockLayout.applyIniFilename();
         }
@@ -513,7 +516,9 @@ namespace sw::editor
                 _editorContext->getPanelManager().drawOpenPanels();
                 _dockLayout.updateDefaultTabSelection(); // 패널이 처음 나타나며 가져간 포커스보다 뒤여야 한다
                 _editorContext->getPopupManager().drawOpenPopups();
-                _editorContext->getNotificationManager().updateAndDraw( ImGui::GetIO().DeltaTime, 1920.0f, 1080.0f );
+                EditorNotificationManager& notificationManager = _editorContext->getNotificationManager();
+                notificationManager.update( ImGui::GetIO().DeltaTime );
+                EditorNotificationView::draw( notificationManager, 1920.0f, 1080.0f );
             }
             // 자체 시험 실행(-gv_editorSelfTest · Test Runner 창)이 없으면 아무것도 하지 않는다. 패널을 그린 뒤라 시험이 이번 프레임의 패널 상태를 본다.
             EditorSelfTestRunner::runFrame();

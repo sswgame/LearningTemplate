@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/EditorTestOutputParser.h"
+#include "Editor/SelfTest/EditorTestOutputParser.h"
 
 #include "Core/Container/StringUtil.h"
 

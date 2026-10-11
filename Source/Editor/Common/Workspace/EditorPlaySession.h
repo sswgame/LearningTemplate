@@ -122,6 +122,8 @@ namespace sw::editor
         static bool isPaused();
         /** @brief 정지(편집 모드) 상태인지 여부를 반환합니다. */
         static bool isStopped();
+        /** @brief 플레이 세션이 정지(Stop) 상태일 때만 씬 오브젝트를 편집할 수 있습니다(`EditorSessionPolicy`). */
+        static bool areSceneEditsAllowed();
         /** @brief 이번 프레임에 Step이 예약되어 있는지 반환합니다. */
         static bool hasPendingStep();
         /** @brief Simulate(월드만 도는 세션)이면 true 입니다. 멈춤이면 false 입니다. */

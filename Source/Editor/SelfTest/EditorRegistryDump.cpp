@@ -8,6 +8,7 @@
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorPopupManager.h"
+#include "Editor/Common/GUI/EditorStatusBar.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Panels/Inspector/InspectorComponentManager.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
@@ -71,6 +72,7 @@ namespace sw::editor
         EditorRegistryDumpInternal::dumpIDs<EditorPopupRegistration>();
         EditorRegistryDumpInternal::dumpIDs<EditorInspectorRegistration>();
         EditorRegistryDumpInternal::dumpIDs<EditorVisualizerRegistration>();
+        EditorRegistryDumpInternal::dumpIDs<EditorStatusBarItemRegistration>();
 
         const EditorCommandRegistry& registry = pContext->getCommandRegistry();
         for ( const EditorMenu& menu : registry.getMenus() )

@@ -641,6 +641,7 @@ SW_TEST_CASE( AppSmokeTest, EditorRegistriesKeepTheirOrder )
         "EditorRegistry|inspector|TagComponent",
         "EditorRegistry|visualizer|box_collider_2d",
         "EditorRegistry|visualizer|camera_frustum",
+        "EditorRegistry|statusBarItem|map_check",
         "EditorRegistry|menu|Viewport/Align|transform.snapToGround,-,transform.alignX,transform.alignY,transform.alignZ,-,"
         "transform.distributeX,transform.distributeY,transform.distributeZ",
         "EditorRegistry|menu|MainMenu/File|scene.new,scene.open,asset.save,scene.saveScene,-,editor.quickOpen,editor.commandPalette,-,"

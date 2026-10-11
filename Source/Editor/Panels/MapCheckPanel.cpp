@@ -2,23 +2,28 @@
 
 #include "Editor/Panels/MapCheckPanel.h"
 
+#include "Core/String/fixed_string.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/EditorStatusBar.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Panels/EditorSceneViewUtil.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
-#include "Editor/Viewport/EditorSceneViewUtil.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectValidation.h"
+#include "Engine/Scene/SceneManager.h"
 
 #include <imgui.h>
 
@@ -33,6 +38,66 @@ namespace sw::editor
             /** @brief 오브젝트를 화면에 담는 기본 반지름(m)입니다 — 더블클릭 초점. */
             static constexpr float32 kFocusRadius = 2.0f;
 
+            /** @brief 상태줄 맵 검사 수 — 결과 번호가 바뀔 때만 다시 센다. */
+            inline static MapCheckCounts _s_statusCounts{};
+            inline static uint32         _s_statusRevision = 0;
+            inline static bool           _s_bStatusCounted = false;
+            /** @brief 씬을 열었을 때 한 번 띄우는 "Map Check: N errors" 토스트의 기준 씬입니다(이름이 바뀌면 새 씬이다). */
+            inline static uint64 _s_toastSceneGeneration = 0;
+
+            /** @brief 결과 번호가 바뀌었으면 무게별 수를 다시 셉니다. */
+            static const MapCheckCounts& syncStatusCounts()
+            {
+                const uint32 revision = ValidationIssueLog::get().getRevision();
+                if ( _s_bStatusCounted && revision == _s_statusRevision )
+                    return _s_statusCounts;
+                vector<ValidationIssue> listIssue;
+                ValidationIssueLog::get().collectIssues( listIssue );
+                _s_statusCounts   = MapCheckRows::countIssues( listIssue );
+                _s_statusRevision = revision;
+                _s_bStatusCounted = true;
+                return _s_statusCounts;
+            }
+
+            /** @brief 활성 씬이 바뀐 첫 프레임에 오류가 있으면 토스트를 한 번 띄웁니다(언리얼은 맵을 열 때 Map Check 를 띄운다). */
+            static void notifyOnSceneChange( EditorContext& context, const MapCheckCounts& counts )
+            {
+                SceneManager* pSceneManager = editor::getService<SceneManager>();
+                if ( pSceneManager == nullptr )
+                    return;
+                const uint64 generation = pSceneManager->getSceneGeneration();
+                if ( generation == _s_toastSceneGeneration )
+                    return;
+                _s_toastSceneGeneration = generation;
+                if ( counts._errorCount == 0 )
+                    return;
+                fixed_string<constant::kMaxBuffer128> message;
+                formatstring( message.data(), message.capacity(), "%# error(s), %# warning(s). Open Map Check from the status bar.", counts._errorCount, counts._warningCount );
+                context.getNotificationManager().push( "Map Check", message.c_str(), NotificationType::Warning, 6.0f );
+            }
+
+            /** @brief 상태줄의 맵 검사 수 — 오류가 있으면 빨강, 경고만 있으면 주황, 없으면 흐리게. 누르면 Map Check 창. */
+            static void drawStatusItem()
+            {
+                EditorContext*        pContext = EditorContext::get();
+                const MapCheckCounts& counts   = syncStatusCounts();
+                if ( pContext != nullptr )
+                    notifyOnSceneChange( *pContext, counts );
+                const Color4                         color = counts._errorCount > 0   ? EditorThemeUtil::getErrorColor()
+                                                           : counts._warningCount > 0 ? EditorThemeUtil::getWarningColor()
+                                                                                      : EditorThemeUtil::getTextMutedColor();
+                fixed_string<constant::kMaxBuffer64> label;
+                formatstring( label.data(), label.capacity(), "%# %###statusMapCheck", editoricon::kWarning, counts._errorCount + counts._warningCount );
+                ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( color._r, color._g, color._b, color._a ) );
+                const bool bOpen = ImGui::SmallButton( label.c_str() );
+                ImGui::PopStyleColor();
+                EditorSelfTestMarks::note( "statusBar.mapCheck" );
+                if ( bOpen && pContext != nullptr )
+                    pContext->getWorkspace().requestOpenPanel( "Map Check" );
+                if ( ImGui::IsItemHovered() )
+                    ImGui::SetTooltip( "Map Check: %u error(s), %u warning(s)", counts._errorCount, counts._warningCount );
+            }
+
             /** @brief 줄 @p issue 의 오브젝트를 활성 씬에서 찾습니다. 없으면 nullptr 입니다(지운 오브젝트 · 다른 씬의 결과). */
             static GameObject* findIssueObject( const ValidationIssue& issue )
             {
@@ -46,6 +111,7 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_EDITOR_PANEL( MapCheckPanel, MapCheckPanel::kPanelID, EditorPanelCategory::Tool, 2040 );
+    SW_EDITOR_STATUS_BAR_ITEM( MapCheck, MapCheckPanel::kPanelID, 100, &MapCheckPanelInternal::drawStatusItem );
 
     MapCheckPanel::MapCheckPanel()
         : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다

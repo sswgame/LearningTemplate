@@ -14,7 +14,7 @@
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/GUI/EditorCommandGUI.h"
-#include "Editor/Common/GUI/EditorNotificationManager.h"
+#include "Editor/Common/GUI/EditorPanelHost.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorPopupManager.h"
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
@@ -23,6 +23,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorDefaultObjects.h"
 #include "Editor/Common/Workspace/EditorModuleUnloadListener.h"
+#include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -85,6 +86,7 @@ namespace sw::editor
         _pNotificationManager       = make_unique<EditorNotificationManager>();
         _pCommandRegistry           = make_unique<EditorCommandRegistry>();
         _pPanelManager              = make_unique<EditorPanelManager>();
+        _pPanelHost                 = make_unique<EditorPanelHost>( *this, *_pPanelManager );
         _pPopupManager              = make_unique<EditorPopupManager>();
         _pAssetHotReload            = make_unique<AssetHotReload>();
         _pConfigHotReload           = make_unique<ConfigHotReload>();
@@ -128,6 +130,7 @@ namespace sw::editor
         _pAssetValidation.reset();
         _pAssetHotReload.reset();
         _pPopupManager.reset();
+        _pPanelHost.reset();
         _pPanelManager.reset();
         _pCommandRegistry.reset();
         _pNotificationManager.reset();

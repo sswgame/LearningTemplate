@@ -4,7 +4,6 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "Editor/Common/Commands/EditorTransformCommands.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -257,26 +256,6 @@ namespace sw::editor
     bool EditorWorkspace::hasCopiedComponent() const
     {
         return _copiedComponentBytes.empty() == false || _copiedComponentXML.empty() == false;
-    }
-
-    bool EditorWorkspace::pasteComponentValues( Component* pTargetComp )
-    {
-        return EditorTransformCommands::pasteComponentValues( pTargetComp, _copiedComponentBytes, _copiedComponentXML );
-    }
-
-    Component* EditorWorkspace::pasteComponentAsNew( GameObject* pTargetObj )
-    {
-        return EditorTransformCommands::pasteComponentAsNew( pTargetObj, _copiedComponentTypeName, _copiedComponentBytes, _copiedComponentXML );
-    }
-
-    bool EditorWorkspace::saveComponentPreset( const Component* pComp, string_view presetName )
-    {
-        return EditorTransformCommands::saveComponentPreset( pComp, presetName );
-    }
-
-    bool EditorWorkspace::loadComponentPreset( Component* pComp, string_view presetFilePath )
-    {
-        return EditorTransformCommands::loadComponentPreset( pComp, presetFilePath );
     }
 
     const string& EditorWorkspace::getPrefabIsolationPrefabPath() const

@@ -2,8 +2,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Editor/Common/Config/EditorThemeConfig.h"
 #include "Editor/Common/EditorExports.h"
-#include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorViewTargetUtil.h"
 
@@ -27,6 +27,7 @@ namespace sw::editor
     class EditorSelection;
     class EditorSourceControl;
     class EditorWorkspace;
+    class IEditorPanelHost;
     class IImGuiRendererBackend;
     class InspectorComponentManager;
     class InspectorPropertyManager;
@@ -74,8 +75,10 @@ namespace sw::editor
         EditorNotificationManager& getNotificationManager() { return *_pNotificationManager; }
         EditorCommandRegistry&     getCommandRegistry() { return *_pCommandRegistry; }
         EditorPanelManager&        getPanelManager() { return *_pPanelManager; }
-        EditorPopupManager&        getPopupManager() { return *_pPopupManager; }
-        AssetHotReload&            getAssetHotReload() { return *_pAssetHotReload; }
+        /** @brief 패널 열기 · 최대화 · 도구 문서 저장 창구입니다. 커맨드 · 뷰포트처럼 패널 매니저(GUI)를 모르는 층이 씁니다. */
+        IEditorPanelHost&   getPanelHost() { return *_pPanelHost; }
+        EditorPopupManager& getPopupManager() { return *_pPopupManager; }
+        AssetHotReload&     getAssetHotReload() { return *_pAssetHotReload; }
         /** @brief `Config/` 설정 파일 감시입니다. */
         ConfigHotReload& getConfigHotReload() { return *_pConfigHotReload; }
         /** @brief 에디터 셸의 도킹 레이아웃입니다(소유는 `ImGuiEditor`). 셸이 서기 전이면 nullptr 입니다. */
@@ -128,6 +131,7 @@ namespace sw::editor
         unique_ptr<EditorNotificationManager>  _pNotificationManager;
         unique_ptr<EditorCommandRegistry>      _pCommandRegistry;
         unique_ptr<EditorPanelManager>         _pPanelManager;
+        unique_ptr<IEditorPanelHost>           _pPanelHost; ///< 패널 매니저 뒤에 만들고 앞에 지운다
         unique_ptr<EditorPopupManager>         _pPopupManager;
         unique_ptr<AssetHotReload>             _pAssetHotReload;
         unique_ptr<ConfigHotReload>            _pConfigHotReload;

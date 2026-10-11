@@ -2,8 +2,8 @@
 
 #include "Editor/Common/Commands/EditorScreenshotCommands.h"
 
-#include "Editor/Common/GUI/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorNotificationManager.h"
 
 #include "Engine/Renderer/Capture/ScreenshotPathUtil.h"
 #include "Engine/Renderer/RenderThread.h"

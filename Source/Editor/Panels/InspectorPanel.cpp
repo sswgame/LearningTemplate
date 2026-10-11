@@ -10,7 +10,6 @@
 #include "Editor/Common/Commands/EditorMultiEdit.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Commands/EditorTransformCommands.h"
-#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/GUI/EditorComponentIcon.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
@@ -19,6 +18,7 @@
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
@@ -67,7 +67,7 @@ namespace sw::editor
             {
                 if ( pObj == nullptr )
                     return;
-                if ( EditorUtil::areSceneEditsAllowed() == false )
+                if ( EditorPlaySession::areSceneEditsAllowed() == false )
                 {
                     edit();
                     return;
@@ -165,7 +165,7 @@ namespace sw::editor
 
         // 플레이 중에도 값은 고친다(유니티 플레이 모드 편집) — Stop 이 스냅샷으로 되돌리고, 남기려면 Keep Simulation Changes.
         // 구조 편집(컴포넌트 더하기 · 프리팹)은 씬 명령이 플레이 중에 스스로 거절한다.
-        if ( EditorUtil::areSceneEditsAllowed() == false )
+        if ( EditorPlaySession::areSceneEditsAllowed() == false )
         {
             EditorWidgets::drawChip( "Play Mode", editor::style::kWarn );
             ImGui::SameLine();
@@ -203,7 +203,7 @@ namespace sw::editor
         ImGui::TextColored( ImVec4{ 0.4f, 0.7f, 1.0f, 1.0f }, "%u objects selected", static_cast<uint32>( listObject.size() ) );
         ImGui::TextDisabled( "Primary: %s", pPrimary->getName().c_str() );
 
-        const bool bEditsAllowed = EditorUtil::areSceneEditsAllowed();
+        const bool bEditsAllowed = EditorPlaySession::areSceneEditsAllowed();
         if ( bEditsAllowed == false )
             ImGui::BeginDisabled();
 
@@ -367,7 +367,7 @@ namespace sw::editor
                 GameObjectManager* pGameObjectManager = pObj->getManager();
                 if ( pGameObjectManager == nullptr )
                     (void)pObj->removeComponent( pComp ); // 실패는 removeComponent 가 알리고 카드가 남는다
-                else if ( EditorUtil::areSceneEditsAllowed() )
+                else if ( EditorPlaySession::areSceneEditsAllowed() )
                     EditorSceneCommands::destroyComponent( pGameObjectManager, pObj, pComp ); // 기록 · dirty
                 else
                     pGameObjectManager->destroyComponent( pComp ); // 플레이 사본 — Stop 이 되돌린다
@@ -411,7 +411,7 @@ namespace sw::editor
                 if ( bCanPaste )
                 {
                     if ( ImGui::MenuItem( "Paste Component Values" ) )
-                        workspace.pasteComponentValues( pComp );
+                        (void)EditorTransformCommands::pasteCopiedComponentValues( workspace, pComp ); // 실패는 붙여넣기가 로그로 알린다
                 }
                 else
                 {
@@ -423,7 +423,7 @@ namespace sw::editor
                 if ( workspace.hasCopiedComponent() )
                 {
                     if ( ImGui::MenuItem( "Paste as New Component" ) )
-                        workspace.pasteComponentAsNew( pObj );
+                        (void)EditorTransformCommands::pasteCopiedComponentAsNew( workspace, pObj ); // 실패는 붙여넣기가 로그로 알린다
                 }
                 ImGui::Separator();
                 // 주 씬 컴포넌트(뿌리 트랜스폼)는 옮기지 않고, 그 자리로 옮겨 들어가지도 않는다(`GameObject::moveComponent`).
@@ -456,7 +456,7 @@ namespace sw::editor
                     ImGui::SameLine();
                     if ( ImGui::Button( "Save" ) && s_presetNameBuf.empty() == false )
                     {
-                        if ( workspace.saveComponentPreset( pComp, s_presetNameBuf.c_str() ) )
+                        if ( EditorTransformCommands::saveComponentPreset( pComp, s_presetNameBuf.c_str() ) )
                         {
                             s_presetNameBuf.clear();
                             _bComponentPresetDirty = SW_TRUE;
@@ -489,7 +489,7 @@ namespace sw::editor
                         {
                             bFoundPresets = true;
                             if ( ImGui::MenuItem( displayPreset.c_str() ) )
-                                if ( workspace.loadComponentPreset( pComp, presetFile ) == false )
+                                if ( EditorTransformCommands::loadComponentPreset( pComp, presetFile ) == false )
                                     SW_LOG_ERROR( "Could not apply component preset '%#'", presetFile.c_str() );
                         }
                     }

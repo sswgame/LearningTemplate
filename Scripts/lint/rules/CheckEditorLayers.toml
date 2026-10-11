@@ -21,12 +21,13 @@ Common = 0
 "Common/Workspace" = 2
 # ImGui 없는 동작과 커맨드 등록부(EditorTest 가 화면 없이 시험한다).
 "Common/Commands" = 3
-# 패널 · 팝업 틀과 매니저, 도킹 · 메뉴 · 알림 그리기 · 테마, 공용 위젯.
+# 패널 · 팝업 틀과 매니저, 도킹 · 메뉴 · 알림 그리기 · 테마, 공용 위젯, 그리고 셸이 띄우는 팝업(커맨드 팔레트 · 빠른 열기 —
+# 기본 커맨드 표가 그 토글을 가리킨다). 팝업은 패널 · 뷰포트를 모른다.
 "Common/GUI" = 4
 "Common/Widgets" = 4
-# 뷰포트 클라이언트 · 시각화 · 팝업.
+Popups = 4
+# 뷰포트 클라이언트 · 시각화.
 Viewport = 5
-Popups = 5
 # 구체 패널 · 에셋 종류별 동작(열기 · 썸네일 · 뷰포트에 놓기).
 Panels = 6
 AssetActions = 6
@@ -43,30 +44,3 @@ SelfTest = 7
 "prelude:Editor/SelfTest/EditorSelfTestInput.h" = "입력 흉내 표식(EditorSelfTestMarks::note) — 위젯이 그린 자리를 남기는 잎 헤더(Core 만 include)"
 "wiring:Source/Editor/Common/Workspace/EditorContextLifecycle.cpp" = "EditorContext 의 생성 · 종료 — 패널 · 팝업 · 인스펙터 매니저를 소유하는 조립점(언리얼 UnrealEdEngine 초기화 자리)"
 "wiring:Source/Editor/Common/Workspace/EditorModuleUnloadListener.cpp" = "확장 모듈 언로드 전에 모든 매니저에서 그 모듈의 등록 인스턴스를 지우는 조립점"
-"violation:Source/Editor/Common/Commands/EditorAssetCommands.cpp -> Editor/Common/GUI/EditorNotificationManager.h" = "알림 큐(ImGui 없음)와 그리기가 한 클래스다 — 모델은 Workspace, 그리기는 GUI 로 나눈다(2 단계)"
-"violation:Source/Editor/Common/Commands/EditorAssetCommands.cpp -> Editor/Common/GUI/EditorPanelManager.h" = "패널 매니저가 구체 패널 폴더에 있다 — 틀은 GUI 로, 아래 층은 IEditorPanelHost 로(2 단계)"
-"violation:Source/Editor/Common/Commands/EditorBugItCommands.cpp -> Editor/Common/GUI/EditorNotificationManager.h" = "알림 큐(ImGui 없음)와 그리기가 한 클래스다 — 모델은 Workspace, 그리기는 GUI 로 나눈다(2 단계)"
-"violation:Source/Editor/Common/Commands/EditorDevCommands.cpp -> Editor/Common/GUI/EditorDockLayout.h" = "UI(도킹)를 만지는 명령이 Commands 에 있다 — 등록 줄을 GUI 로 옮긴다(2 단계)"
-"violation:Source/Editor/Common/Commands/EditorDevCommands.cpp -> Editor/Common/GUI/EditorThemeUtil.h" = "테마 설정 값 · 테마 명령이 GUI 에 묶여 있다 — 값은 Config 로, 명령은 GUI 로(2 단계)"
-"violation:Source/Editor/Common/Commands/EditorDevCommands.cpp -> Editor/Common/GUI/EditorPanelManager.h" = "패널 매니저가 구체 패널 폴더에 있다 — 틀은 GUI 로, 아래 층은 IEditorPanelHost 로(2 단계)"
-"violation:Source/Editor/Common/Commands/EditorDevCommands.cpp -> Editor/Panels/SceneViewPanel.h" = "씬 뷰 패널을 아래 층이 직접 찾는다 — 그 명령 · 도우미를 패널 옆으로 옮긴다(2 단계)"
-"violation:Source/Editor/Common/Commands/EditorDevCommands.cpp -> Editor/Viewport/EditorCamera.h" = "에디터 카메라(Viewport)를 아래 층이 쓴다 — 명령을 Viewport 로 옮기거나 창구로 뒤집는다(2 단계)"
-"violation:Source/Editor/Common/Commands/EditorPlayCommands.cpp -> Editor/Common/GUI/EditorDockLayout.h" = "UI(도킹)를 만지는 명령이 Commands 에 있다 — 등록 줄을 GUI 로 옮긴다(2 단계)"
-"violation:Source/Editor/Common/Commands/EditorPlayCommands.cpp -> Editor/Common/GUI/EditorNotificationManager.h" = "알림 큐(ImGui 없음)와 그리기가 한 클래스다 — 모델은 Workspace, 그리기는 GUI 로 나눈다(2 단계)"
-"violation:Source/Editor/Common/Commands/EditorPlayCommands.cpp -> Editor/Common/GUI/EditorPanelManager.h" = "패널 매니저가 구체 패널 폴더에 있다 — 틀은 GUI 로, 아래 층은 IEditorPanelHost 로(2 단계)"
-"violation:Source/Editor/Common/Commands/EditorScreenshotCommands.cpp -> Editor/Common/GUI/EditorNotificationManager.h" = "알림 큐(ImGui 없음)와 그리기가 한 클래스다 — 모델은 Workspace, 그리기는 GUI 로 나눈다(2 단계)"
-"violation:Source/Editor/Common/EditorUtil.cpp -> Editor/Common/Workspace/EditorAssetType.h" = "Common 루트의 EditorUtil 이 편집 상태를 쓴다 — 그 함수를 Workspace 로 옮긴다(2 단계)"
-"violation:Source/Editor/Common/EditorUtil.cpp -> Editor/Common/Workspace/EditorContext.h" = "Common 루트의 EditorUtil 이 편집 상태를 쓴다 — 그 함수를 Workspace 로 옮긴다(2 단계)"
-"violation:Source/Editor/Common/EditorUtil.cpp -> Editor/Common/Workspace/EditorPlaySession.h" = "Common 루트의 EditorUtil 이 편집 상태를 쓴다 — 그 함수를 Workspace 로 옮긴다(2 단계)"
-"violation:Source/Editor/Common/EditorUtil.cpp -> Editor/Common/Workspace/EditorSessionPolicy.h" = "Common 루트의 EditorUtil 이 편집 상태를 쓴다 — 그 함수를 Workspace 로 옮긴다(2 단계)"
-"violation:Source/Editor/Common/EditorUtil.cpp -> Editor/Common/Workspace/EditorWorkspace.h" = "Common 루트의 EditorUtil 이 편집 상태를 쓴다 — 그 함수를 Workspace 로 옮긴다(2 단계)"
-"violation:Source/Editor/Common/GUI/EditorCommandGUI.cpp -> Editor/Popups/CommandPalettePopup.h" = "커맨드 GUI 표가 팝업 토글을 직접 가리킨다 — 팝업 명령 등록을 팝업 옆으로 옮긴다(2 단계)"
-"violation:Source/Editor/Common/GUI/EditorCommandGUI.cpp -> Editor/Popups/QuickLauncherPopup.h" = "커맨드 GUI 표가 팝업 토글을 직접 가리킨다 — 팝업 명령 등록을 팝업 옆으로 옮긴다(2 단계)"
-"violation:Source/Editor/Common/GUI/EditorDockLayout.cpp -> Editor/SelfTest/EditorSelfTest.h" = "자체 시험 요청 여부를 아래 층이 묻는다 — 창구로 뒤집는다(2 단계)"
-"violation:Source/Editor/Common/GUI/EditorMenuBar.cpp -> Editor/Panels/MapCheckPanel.h" = "메뉴 막대가 맵 검사 패널의 집계를 직접 쓴다 — 집계를 아래로 내리거나 창구로(2 단계)"
-"violation:Source/Editor/Common/GUI/EditorPlayToolbar.cpp -> Editor/Viewport/EditorCamera.h" = "에디터 카메라(Viewport)를 아래 층이 쓴다 — 명령을 Viewport 로 옮기거나 창구로 뒤집는다(2 단계)"
-"violation:Source/Editor/Common/Workspace/EditorContext.h -> Editor/Common/GUI/EditorThemeUtil.h" = "테마 설정 값 · 테마 명령이 GUI 에 묶여 있다 — 값은 Config 로, 명령은 GUI 로(2 단계)"
-"violation:Source/Editor/Common/Workspace/EditorWorkspace.cpp -> Editor/Common/Commands/EditorTransformCommands.h" = "작업 공간이 변환 명령 헤더를 include 한다 — 쓰는 타입을 Workspace 로 내린다(2 단계)"
-"violation:Source/Editor/Common/Workspace/EditorWorkspace.h -> Editor/Common/Commands/EditorTransformCommands.h" = "작업 공간이 변환 명령 헤더를 include 한다 — 쓰는 타입을 Workspace 로 내린다(2 단계)"
-"violation:Source/Editor/Panels/TestRunnerPanel.cpp -> Editor/SelfTest/EditorSelfTest.h" = "자체 시험 요청 여부를 아래 층이 묻는다 — 창구로 뒤집는다(2 단계)"
-"violation:Source/Editor/Viewport/EditorSceneViewUtil.cpp -> Editor/Panels/SceneViewPanel.h" = "씬 뷰 패널을 아래 층이 직접 찾는다 — 그 명령 · 도우미를 패널 옆으로 옮긴다(2 단계)"

@@ -51,14 +51,18 @@
 상용 엔진의 선: 언리얼은 탭 매니저(`FTabManager`)가 Slate 틀에 있고 구체 탭은 모듈이 등록한다. 에셋 종류 동작(`IAssetTypeActions`)은 AssetTools 의 등록부이고 편집기는 그 위다.
 UI 를 조작하는 명령(탭 열기 · 레이아웃)은 그 UI 를 가진 모듈이 등록한다. 그래서 여기서도 "틀은 아래, 구체는 위, UI 를 만지는 명령의 등록 줄은 그 UI 의 .cpp" 로 한다.
 
-- 2a. 틀을 제자리로: `EditorPanelManager` · `EditorPopupManager` 를 `Common/GUI` 로(인터페이스 옆). `EditorViewTargetUtil`(ImGui 없는 뷰 RT 판정)을 `Common/Workspace` 로.
-  `EditorThemeConfig` 를 `Common/Config/EditorThemeConfig.h` 로. `EditorAssetTypeActions`(인터페이스 + 등록부)를 `Common/Workspace` 로. `EditorExternalToolJob` 을 `Common` 루트로.
-- 2b. 알림을 모델 · 뷰로: `EditorNotificationManager`(큐 · `push` · 시간 진행, ImGui 없음)는 `Common/Workspace`, 그리기는 `Common/GUI/EditorNotificationView`.
-- 2c. 패널 창구 인터페이스 `IEditorPanelHost`(`Common/Workspace`): 열림 확인 · 열고 닫기 · 앞으로 · 더러운 문서 저장 · 버리기 · 세기. `EditorPanelManager` 가 구현하고 `EditorContext::getPanelHost()` 가 돌려준다.
-  Commands · Viewport · Popups 는 이것만 본다.
-- 2d. UI 를 만지는 개발 명령을 그 UI 옆으로: 레이아웃 · 패널 열고 닫기 · 최대화(`EditorDevCommands` · `EditorPlayCommands`) → `Common/GUI`, 테마 → `EditorThemeUtil.cpp`,
-  씬 뷰 오버레이 → `SceneViewPanel.cpp`, 디버그 그리기 데모(에디터 카메라) → `Viewport`.
-- 2e. 남은 위 방향(메뉴 막대의 맵 검사 수, 커맨드 GUI 의 팝업 토글, 플레이 툴바의 카메라, 도킹의 자체 시험 요청, `EditorUtil.cpp`, `EditorWorkspace.h` → 변환 명령)은 하나씩 보고 옮기거나 인터페이스로 뒤집는다.
+- 2a. 틀을 제자리로(파일 이동): `EditorPanelManager` · `EditorPopupManager` → `Common/GUI`(인터페이스 옆), `EditorViewTargetUtil`(ImGui 없는 뷰 RT 판정) ·
+  `EditorAssetTypeActions`(인터페이스 + 등록부) · `EditorCamera`(씬 안 에디터 카메라 오브젝트, ImGui 없음) → `Common/Workspace`, `EditorExternalToolJob` · `EditorBackgroundTask` → `Common` 루트,
+  `EditorSceneViewUtil`(씬 뷰 패널에 초점) → `Panels`, `TestRunnerPanel` · `EditorTestOutputParser`(자체 시험 실행 창) → `SelfTest`.
+- 2b. 알림을 모델 · 뷰로: `EditorNotificationManager`(큐 · `push` · `update`, ImGui 없음)는 `Common/Workspace`, 그리기는 `Common/GUI/EditorNotificationView`.
+  테마 값(`EditorThemePreset` · `EditorThemeConfig`)은 `Common/Config/EditorThemeConfig.h` — `EditorContext.h` 가 GUI 를 include 하지 않는다.
+- 2c. 패널 창구 `IEditorPanelHost`(`Common/Workspace`): 패널 앞으로 · 최대화 · 최대화 되돌리기 · dirty 문서 저장 · 버리기 · 세기. 구현 `EditorPanelHost`(GUI)가 패널 매니저와 도킹으로 하고
+  `EditorContext::getPanelHost()` 가 돌려준다. `EditorPlayCommands::maximizePanel` · `restoreMaximizedLayout` 은 여기로 옮겼다(플레이 때 최대화 · 씬 뷰 Shift+Space 가 쓴다).
+- 2d. UI 를 만지는 개발 명령을 그 UI 옆으로: `layout.*` · `panel.focus` · `panel.close` · `editor.theme` → `Common/GUI/EditorUIDevCommands.cpp`, `overlay.*` → `Panels/SceneViewDevCommands.cpp`.
+- 2e. 나머지: 메뉴 막대의 맵 검사 수는 상태 막대 등록 줄(`SW_EDITOR_STATUS_BAR_ITEM`, `Common/GUI/EditorStatusBar.h`)로 뒤집어 `MapCheckPanel.cpp` 가 등록한다.
+  도킹은 자체 시험을 묻지 않고 셸이 `EditorDockLayout::setPanelOverrideRequested` 로 알린다. `EditorUtil::areSceneEditsAllowed` → `EditorPlaySession::areSceneEditsAllowed`,
+  `spawnPrefabFromAssetPath` → `EditorAssetCommands` 내부. 작업 공간의 붙여넣기 · 프리셋 전달자는 지우고 `EditorTransformCommands::pasteCopiedComponent*` 가 클립보드를 읽는다.
+  `Popups` 는 GUI 와 같은 티어(4)로 — 셸 팝업(커맨드 팔레트 · 빠른 열기)은 기본 커맨드 표가 토글을 가리키고, 팝업은 패널 · 뷰포트를 모른다.
 - 위험: 중간. 등록 줄을 옮기면 정적 등록 순서가 바뀔 수 있다(등록부는 순서 키로 정렬하므로 메뉴 순서는 그대로여야 한다 — `EditorRegistryDump` 로 전후 비교).
   검증: Debug 경고 0, EditorTest, `-L nogpu`, 에디터 시나리오(레이아웃 · 패널 · 테마 명령을 쓰는 것).
 
@@ -80,3 +84,7 @@ UI 를 조작하는 명령(탭 열기 · 레이아웃)은 그 UI 를 가진 모�
 - 결론은 이 절에 적는다(아래 "5 단계 결론").
 
 ## 진행 기록
+
+- 1 단계(2026-10-11): 게이트와 위반 37 줄 예외. RunLintSuite 63 개 OK.
+- 2 단계(2026-10-11): 위반 37 → 0(예외는 prelude 넷 · wiring 둘만 남음). Debug all + AllTests 경고 0, ctest -L editor 3/3,
+  AppTest `*Editor*`(에디터 시나리오 네 백엔드 · `EditorRegistriesKeepTheirOrder` — 상태 막대 등록 줄 한 줄 추가) 통과.

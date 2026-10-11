@@ -126,18 +126,22 @@ ImGui 의 할당은 sw 할당자로 보냅니다. `ImGuiEditor::initialize` 가 
 
 | 폴더 | 담는 것 |
 |---|---|
-| `Common/Workspace/` | ImGui 없는 상태 — 컨텍스트, 선택, 되돌리기, 플레이 세션, 레지스트리의 공통 모양, 파일 감시 |
-| `Common/Commands/` | ImGui 없는 동작 — 씬과 에셋 변이, 파일 IO, 커맨드 레지스트리, 외부 도구 잡 |
-| `Common/GUI/` · `Common/Widgets/` | ImGui 를 그리는 공용 셸과 위젯 |
+| `Common/` 루트 · `Common/Config/` | 경로, 내보내기 매크로, 외부 도구 잡 · 백그라운드 작업, 설정 표(테마 값 포함) |
+| `Common/Workspace/` | ImGui 없는 상태 — 컨텍스트, 선택, 되돌리기, 플레이 세션, 알림 큐, 에디터 카메라, 뷰 RT 판정, 레지스트리의 공통 모양, 파일 감시, 아래 층이 위 층을 부르는 창구(`IEditorPanelHost`), 에셋 종류 동작 등록부 |
+| `Common/Commands/` | ImGui 없는 동작 — 씬과 에셋 변이, 파일 IO, 커맨드 레지스트리 |
+| `Common/GUI/` · `Common/Widgets/` · `Popups/` | ImGui 를 그리는 셸 — 패널 · 팝업 틀과 매니저, 도킹, 메뉴, 상태 막대, 알림 그리기, 테마, 공용 위젯, 셸 팝업(커맨드 팔레트 · 빠른 열기) |
 | `Common/Backend/` | ImGui 플랫폼 · 렌더 백엔드, draw 스냅샷, 해제 큐 |
 | `Common/Asset/` | 원본 임포트(텍스처, 모델, 높이장)와 저장 직후 검증 |
-| `Panels/` · `Popups/` · `Viewport/` | 창, 팝업, 씬 뷰 |
+| `Viewport/` | 뷰포트 클라이언트, 기즈모, 오버레이, 시각화 |
+| `Panels/` | 구체 창(씬 뷰 · 게임 뷰 · 계층 · 인스펙터 · 도구 창)과 씬 뷰 초점 도우미 |
 | `AssetActions/` | 에셋 종류마다의 썸네일, 열기, 뷰포트 드롭 |
-| `SelfTest/` | 에디터 안 시험, 시나리오 단계와 탐침 |
+| `SelfTest/` | 에디터 안 시험, 시나리오 단계와 탐침, 시험 실행 창(Test Runner) |
 
 폴더는 층입니다. 아래 층은 위 층을 include 하지 않고, `Scripts/lint/gate/CheckEditorLayers.py` 가 이를 검사합니다(위반은 실패).
-아래부터 `Common` 루트 · `Backend` · `Config` → `Asset` · `Localization` · `SourceControl` → `Workspace` → `Commands` → `GUI` · `Widgets` → `Viewport` · `Popups` → `Panels` · `AssetActions` → `SelfTest` → 셸(`ImGuiEditor`) 입니다.
-티어 표와 예외(어디서나 include 해도 되는 잎 헤더, 조립 파일, 아직 고치지 않은 위반)는 `Scripts/lint/rules/CheckEditorLayers.toml` 에 있습니다.
+아래부터 `Common` 루트 · `Backend` · `Config` → `Asset` · `Localization` · `SourceControl` → `Workspace` → `Commands` → `GUI` · `Widgets` · `Popups` → `Viewport` → `Panels` · `AssetActions` → `SelfTest` → 셸(`ImGuiEditor`) 입니다.
+티어 표와 예외(어디서나 include 해도 되는 잎 헤더, 조립 파일)는 `Scripts/lint/rules/CheckEditorLayers.toml` 에 있습니다.
+아래 층이 위 층을 불러야 하면 세 가지 중 하나를 씁니다. 틀(인터페이스 · 매니저 · 등록부)을 아래로 내리거나, 아래 층에 창구 인터페이스를 두고 위 층이 구현하거나(`IEditorPanelHost` — 커맨드가 패널을 열고 도구 문서를 저장한다),
+UI 를 만지는 명령의 등록 줄을 그 UI 의 .cpp 에 둡니다(레이아웃 · 패널 · 테마 개발 명령은 `Common/GUI/EditorUIDevCommands.cpp`, 씬 뷰 오버레이는 `Panels/SceneViewDevCommands.cpp`).
 
 판단을 ImGui 밖으로 빼 두는 이유는 시험입니다. `Test/EditorTest` 는 ImGui 없이 도는 코드만 시험하므로, 판단이 그리기 코드 안에 있으면 시험이 닿지 않습니다.
 그래서 도구 창마다 ImGui 없는 짝(`ProfilerScopeHistory`, `InputMapConflicts`, `EditorViewportOverlayLayout` 같은)을 두고 패널은 그리기만 합니다.
@@ -224,6 +228,7 @@ VRM 은 같은 길로 임포트하고, MToon 머티리얼이 있으면 머티리
 | 컴포넌트 인스펙터 | `SW_EDITOR_INSPECTOR( MyComponent, MyComponentInspector );` | 타입 계층이 정함 |
 | 뷰포트 시각화 | `SW_EDITOR_VISUALIZER( Name, "id", 300, editoricon::kBug, "Lbl", "툴팁", true, &draw );` | 툴바 토글 순서 |
 | 프로퍼티 타입 그리기 | `SW_EDITOR_PROPERTY_DRAWER( Name, "TypeName", Drawer );` | 타입 이름이 정함 |
+| 상태 막대 항목 | `SW_EDITOR_STATUS_BAR_ITEM( Name, "id", 100, &draw );` (`Common/GUI/EditorStatusBar.h`) | 메뉴 막대 오른쪽 상태 영역의 순서 |
 
 1. 순서 키는 지금 100 간격입니다. 사이에 끼우려면 그 사이 값을 씁니다.
 2. 패널 id 는 `windows.ini` 의 가시성 키이고 `-gv_editorOpenPanel` 의 값입니다. 바꾸면 저장된 배치가 그 창을 잊습니다.

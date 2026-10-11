@@ -6,10 +6,10 @@
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
-#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
@@ -106,7 +106,7 @@ namespace sw::editor
 
         ImGui::Separator();
 
-        const bool bEditsAllowed = EditorUtil::areSceneEditsAllowed();
+        const bool bEditsAllowed = EditorPlaySession::areSceneEditsAllowed();
         if ( bEditsAllowed == false )
         {
             ImGui::TextDisabled( "Scene edits locked until Stop." );

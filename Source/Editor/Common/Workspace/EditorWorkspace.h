@@ -12,7 +12,6 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Editor/Common/Commands/EditorTransformCommands.h"
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
@@ -161,16 +160,16 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 9) 컴포넌트 복사/붙여넣기 & 프리셋 (에디터 클립보드)
         // ------------------------------------------------------------------------------
-        void               copyComponent( const Component* pComp );
-        bool               hasCopiedComponent() const;
-        const string&      getCopiedComponentTypeName() const { return _copiedComponentTypeName; }
-        bool               pasteComponentValues( Component* pTargetComp );
-        Component*         pasteComponentAsNew( GameObject* pTargetObj );
-        [[nodiscard]] bool saveComponentPreset( const Component* pComp, string_view presetName );
-        [[nodiscard]] bool loadComponentPreset( Component* pComp, string_view presetFilePath );
+        void          copyComponent( const Component* pComp );
+        bool          hasCopiedComponent() const;
+        const string& getCopiedComponentTypeName() const { return _copiedComponentTypeName; }
+        /** @brief 복사한 컴포넌트의 바이너리 값입니다(붙여넣기는 `EditorTransformCommands::pasteCopiedComponentValues`). */
+        const vector<uint8>& getCopiedComponentBytes() const { return _copiedComponentBytes; }
+        /** @brief 바이너리로 옮기지 못하는 값의 XML 대체본입니다. */
+        const string& getCopiedComponentXML() const { return _copiedComponentXML; }
 
-        // 정렬 · 분배 · 바닥 스냅은 여기 전달자를 두지 않는다. 커맨드 레지스트리(transform.*)를 거치고,
-        // 로직은 EditorTransformCommands 에 있다.
+        // 붙여넣기 · 프리셋 · 정렬 · 분배 · 바닥 스냅은 여기 전달자를 두지 않는다. 로직은 EditorTransformCommands 에 있고(작업 공간은 클립보드만 든다),
+        // 커맨드 레지스트리(transform.*)를 거친다.
 
         bool                        isPrefabIsolationActive() const { return _bPrefabIsolation == SW_TRUE; }
         const string&               getPrefabIsolationPrefabPath() const;

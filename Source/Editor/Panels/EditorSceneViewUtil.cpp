@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Viewport/EditorSceneViewUtil.h"
+#include "Editor/Panels/EditorSceneViewUtil.h"
 
 #include "Core/Math/VectorMath.h"
 

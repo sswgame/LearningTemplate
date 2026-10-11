@@ -1,0 +1,103 @@
+/**
+ * @file EditorUIDevCommands.cpp
+ * @brief 에디터 UI 를 만지는 개발 명령(레이아웃 저장 · 읽기 · 초기화, 패널 앞으로 · 닫기, 테마)입니다.
+ * @details 도킹 · 패널 매니저 · 테마는 GUI 층이라 ImGui 없는 동작(`Common/Commands`)이 아니라 여기서 등록합니다.
+ */
+#include "pch.h"
+
+#include "Editor/Common/GUI/EditorDockLayout.h"
+#include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/GUI/IEditorPanel.h"
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
+
+#include "Engine/Console/DevCommandRegistry.h"
+
+namespace sw::editor
+{
+    namespace
+    {
+        struct EditorUIDevCommandsInternal
+        {
+            static bool runTheme( const vector<string>& listArgument, string& outReply )
+            {
+                EditorThemePreset preset = EditorThemePreset::ModernDark;
+                if ( listArgument.size() != 1 )
+                    return false;
+                if ( EditorThemeUtil::findPresetByConfigID( listArgument[0], preset ) == false )
+                {
+                    outReply = "unknown theme preset '" + listArgument[0] + "' (ModernDark, DeepCharcoal, MidnightBlue, ClassicDark)";
+                    return false;
+                }
+                // 적용만 한다 — 설정 파일에 쓰지 않는다(시험 · 시나리오가 사용자 설정을 바꾸지 않게). 대화상자에서 고르면 저장된다.
+                EditorThemeUtil::applyPreset( preset );
+                outReply = "theme " + listArgument[0];
+                return true;
+            }
+
+            static bool runLayoutSave( const vector<string>& listArgument, string& outReply )
+            {
+                EditorContext*    pContext = EditorContext::get();
+                EditorDockLayout* pDock    = pContext != nullptr ? pContext->findDockLayout() : nullptr;
+                if ( listArgument.size() != 1 || pDock == nullptr || pDock->saveNamedLayout( listArgument[0] ) == false )
+                    return false;
+                outReply = "saved layout " + listArgument[0];
+                return true;
+            }
+
+            static bool runLayoutLoad( const vector<string>& listArgument, string& outReply )
+            {
+                EditorContext*    pContext = EditorContext::get();
+                EditorDockLayout* pDock    = pContext != nullptr ? pContext->findDockLayout() : nullptr;
+                if ( listArgument.size() != 1 || pDock == nullptr || pDock->requestLoadNamedLayout( listArgument[0] ) == false )
+                    return false;
+                outReply = "loading layout " + listArgument[0];
+                return true;
+            }
+
+            /** @brief 패널을 열고 그 창을 앞으로 가져옵니다(같은 도크 영역의 탭이면 그 탭이 선택된다). 다음 프레임 시작에 적용됩니다. */
+            static bool runPanelFocus( const vector<string>& listArgument, string& outReply )
+            {
+                EditorContext*      pContext = EditorContext::get();
+                const IEditorPanel* pPanel   = ( listArgument.size() == 1 && pContext != nullptr ) ? pContext->getPanelManager().findPanel( listArgument[0] ) : nullptr;
+                if ( pPanel == nullptr )
+                    return false;
+                pContext->getWorkspace().requestOpenPanel( pPanel->getPanelTitle() );
+                outReply = string{ "focusing " } + pPanel->getPanelTitle();
+                return true;
+            }
+
+            static bool runPanelClose( const vector<string>& listArgument, string& outReply )
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( listArgument.size() != 1 || pContext == nullptr || pContext->getPanelManager().setPanelOpen( listArgument[0], false ) == false )
+                    return false;
+                outReply = "closed " + listArgument[0];
+                return true;
+            }
+
+            static bool runLayoutReset( const vector<string>& listArgument, string& outReply )
+            {
+                EditorContext*    pContext = EditorContext::get();
+                EditorDockLayout* pDock    = pContext != nullptr ? pContext->findDockLayout() : nullptr;
+                if ( listArgument.empty() == false || pDock == nullptr )
+                    return false;
+                pDock->requestResetDefault();
+                outReply = "resetting to the default layout";
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_DEV_COMMAND( Theme, "editor.theme", "editor.theme <preset>", "Apply an editor theme preset for this session (ModernDark, DeepCharcoal, MidnightBlue, ClassicDark)",
+                    &EditorUIDevCommandsInternal::runTheme );
+    SW_DEV_COMMAND( LayoutSave, "layout.save", "layout.save <name>", "Save the dock layout and panel visibility under a name",
+                    &EditorUIDevCommandsInternal::runLayoutSave );
+    SW_DEV_COMMAND( LayoutLoad, "layout.load", "layout.load <name>", "Load a named layout on the next frame", &EditorUIDevCommandsInternal::runLayoutLoad );
+    SW_DEV_COMMAND( PanelFocus, "panel.focus", "panel.focus <panelID>", "Open a panel and bring its window (its tab) to the front on the next frame",
+                    &EditorUIDevCommandsInternal::runPanelFocus );
+    SW_DEV_COMMAND( PanelClose, "panel.close", "panel.close <panelID>", "Close a panel", &EditorUIDevCommandsInternal::runPanelClose );
+    SW_DEV_COMMAND( LayoutReset, "layout.reset", "layout.reset", "Reset the dock layout to the default editor layout on the next frame (scenarios that click by position)",
+                    &EditorUIDevCommandsInternal::runLayoutReset );
+} // namespace sw::editor

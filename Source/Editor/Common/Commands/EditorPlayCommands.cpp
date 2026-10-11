@@ -9,16 +9,14 @@
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
-#include "Editor/Common/EditorPaths.h"
-#include "Editor/Common/GUI/EditorDockLayout.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
-#include "Editor/Common/GUI/EditorNotificationManager.h"
-#include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Workspace/IEditorPanelHost.h"
 
 #include "Engine/Scene/Scene.h"
 
@@ -28,14 +26,6 @@ namespace sw::editor
     {
         struct EditorPlayCommandsInternal
         {
-            /** @brief 패널을 열고 그 창(탭)을 앞으로 둡니다. */
-            static void focusPanel( EditorContext& context, string_view panelID )
-            {
-                const IEditorPanel* pPanel = context.getPanelManager().findPanel( panelID );
-                if ( pPanel != nullptr )
-                    context.getWorkspace().requestOpenPanel( pPanel->getPanelTitle() );
-            }
-
             static bool isSessionRunning() { return EditorPlaySession::isStopped() == false; }
 
             static bool canKeepChanges()
@@ -75,45 +65,11 @@ namespace sw::editor
                        "저장된 활성 씬을 에디터 없이 새 창(별도 프로세스)으로 띄웁니다",
                        "Run the saved active scene in a separate game process", {}, &EditorPlayCommandsInternal::runLaunchStandalone, nullptr, "MainMenu/Play" );
 
-    bool EditorPlayCommands::maximizePanel( string_view keepPanelID )
-    {
-        EditorContext*    pContext = EditorContext::get();
-        EditorDockLayout* pDock    = pContext != nullptr ? pContext->findDockLayout() : nullptr;
-        if ( pDock == nullptr )
-            return false;
-        // 직전 배치는 에디터 상태 폴더의 임시 레이아웃으로 둔다(이름 붙인 레이아웃 목록에 섞이지 않게).
-        const string folder = FileUtil::joinPath( EditorPaths::getEditorStateDirectory(), "Temp" );
-        if ( pDock->saveNamedLayout( kMaximizeLayoutName, folder ) == false )
-            return false;
-        EditorPanelManager& panelManager = pContext->getPanelManager();
-        vector<string>      listCloseID;
-        for ( const EditorPanelEntry& entry : panelManager.getPanels() )
-        {
-            if ( entry._id != keepPanelID && entry._pInstance != nullptr && entry._pInstance->isOpen() )
-                listCloseID.push_back( entry._id );
-        }
-        for ( const string& panelID : listCloseID )
-        {
-            (void)panelManager.setPanelOpen( panelID, false ); // 이미 닫혔으면 할 일이 없다
-        }
-        EditorPlayCommandsInternal::focusPanel( *pContext, keepPanelID );
-        return true;
-    }
-
-    bool EditorPlayCommands::restoreMaximizedLayout()
-    {
-        EditorContext*    pContext = EditorContext::get();
-        EditorDockLayout* pDock    = pContext != nullptr ? pContext->findDockLayout() : nullptr;
-        if ( pDock == nullptr )
-            return false;
-        const string folder = FileUtil::joinPath( EditorPaths::getEditorStateDirectory(), "Temp" );
-        return pDock->requestLoadNamedLayout( kMaximizeLayoutName, folder );
-    }
-
     void EditorPlayCommands::tick()
     {
-        PlaySessionData* pData = EditorPlaySession::findData();
-        if ( pData == nullptr )
+        PlaySessionData* pData    = EditorPlaySession::findData();
+        EditorContext*   pContext = EditorContext::get();
+        if ( pData == nullptr || pContext == nullptr )
             return;
         if ( pData->_state == PlaySessionState::Stopped )
         {
@@ -122,7 +78,7 @@ namespace sw::editor
             if ( pData->_bMaximizedForPlay == SW_TRUE )
             {
                 pData->_bMaximizedForPlay = SW_FALSE;
-                if ( restoreMaximizedLayout() == false )
+                if ( pContext->getPanelHost().restoreMaximizedLayout() == false )
                     SW_LOG_WARNING( "The layout before Maximize On Play is gone - use Panel > Reset Layout" );
             }
             return;
@@ -132,7 +88,7 @@ namespace sw::editor
         pData->_bOptionsApplied = SW_TRUE;
         // Simulate 는 씬 뷰로 지켜보는 세션이라 게임 뷰를 키우지 않는다(유니티 Maximize On Play 도 게임 뷰의 플레이에만).
         if ( getPreferences<EditorPlayPreferences>()._bMaximizeOnPlay && pData->_bSimulate == SW_FALSE )
-            pData->_bMaximizedForPlay = maximizePanel( "game_view" ) ? SW_TRUE : SW_FALSE;
+            pData->_bMaximizedForPlay = pContext->getPanelHost().maximizePanel( "game_view" ) ? SW_TRUE : SW_FALSE;
     }
 
     void EditorPlayCommands::toggleEject()
@@ -147,18 +103,18 @@ namespace sw::editor
             if ( pData->_bMaximizedForPlay == SW_TRUE )
             {
                 pData->_bMaximizedForPlay = SW_FALSE;
-                (void)restoreMaximizedLayout(); // 없으면 지금 배치 그대로 씬 뷰를 연다
+                (void)pContext->getPanelHost().restoreMaximizedLayout(); // 없으면 지금 배치 그대로 씬 뷰를 연다
             }
             EditorPlaySession::simulate();
             pData->_bEjected = SW_TRUE;
-            EditorPlayCommandsInternal::focusPanel( *pContext, "scene_view" );
+            (void)pContext->getPanelHost().focusPanel( "scene_view" ); // 패널이 없으면 세션만 바뀐다
             return;
         }
         if ( pData->_bEjected == SW_TRUE )
         {
             EditorPlaySession::play();
             pData->_bEjected = SW_FALSE;
-            EditorPlayCommandsInternal::focusPanel( *pContext, "game_view" );
+            (void)pContext->getPanelHost().focusPanel( "game_view" ); // 패널이 없으면 세션만 바뀐다
         }
     }
 

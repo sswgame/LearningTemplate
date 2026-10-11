@@ -2,8 +2,8 @@
 
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 
-#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
@@ -109,7 +109,7 @@ namespace sw::editor
     {
         vector<PendingEdit>& listFinished = getFinishedEdits();
         // 플레이 중 편집은 기록하지 않는다 — 편집 내역은 맡겨 두었고(`CommandStack::parkHistory`) Stop 이 스냅샷으로 되돌린다.
-        if ( EditorUtil::areSceneEditsAllowed() == false )
+        if ( EditorPlaySession::areSceneEditsAllowed() == false )
         {
             listFinished.clear();
             return;

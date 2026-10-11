@@ -17,12 +17,13 @@
 #include "Editor/Common/Widgets/EditorComponentMenu.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
-#include "Editor/Viewport/EditorCamera.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -206,7 +207,7 @@ namespace sw::editor
                 if ( ImGui::MenuItem( "Select Owner GameObject" ) )
                     pContext->getWorkspace().selectGameObject( pObj );
 
-                const bool bEditsAllowed = EditorUtil::areSceneEditsAllowed();
+                const bool bEditsAllowed = EditorPlaySession::areSceneEditsAllowed();
                 if ( bEditsAllowed == false )
                     ImGui::BeginDisabled();
                 if ( ImGui::MenuItem( "Remove Component" ) && pComp != nullptr && pManager != nullptr )
@@ -265,7 +266,7 @@ namespace sw::editor
                 if ( ImGui::BeginPopupContextItem( "GOCtx" ) == false )
                     return;
 
-                const bool bEditsAllowed = EditorUtil::areSceneEditsAllowed();
+                const bool bEditsAllowed = EditorPlaySession::areSceneEditsAllowed();
                 if ( bEditsAllowed == false )
                     ImGui::BeginDisabled();
 
@@ -512,7 +513,7 @@ namespace sw::editor
                 }
 
                 // 제자리 이름 바꾸기 입력
-                if ( renamingObjectID == objectID && EditorUtil::areSceneEditsAllowed() )
+                if ( renamingObjectID == objectID && EditorPlaySession::areSceneEditsAllowed() )
                 {
                     ImGui::SameLine();
                     ImGui::SetNextItemWidth( 160.0f * EditorThemeUtil::getDpiScale() );
@@ -639,7 +640,7 @@ namespace sw::editor
         // 상단 툴바: 생성 버튼 + 검색창
         if ( EditorChrome::beginToolbar( "##HierarchyToolbar" ) )
         {
-            const bool bEditsAllowed = EditorUtil::areSceneEditsAllowed();
+            const bool bEditsAllowed = EditorPlaySession::areSceneEditsAllowed();
             if ( bEditsAllowed == false )
             {
                 EditorWidgets::drawChip( "Play Mode", editor::style::kWarn );

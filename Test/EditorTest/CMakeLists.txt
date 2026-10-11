@@ -63,7 +63,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/ProfilerScopeHistory.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/ProfilerTimelineLayout.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/RenderTargetViewUtil.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/EditorTestOutputParser.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/SelfTest/EditorTestOutputParser.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/TileMapPaintUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Popups/QuickLauncherLayout.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/UIPreviewLogic.cpp"

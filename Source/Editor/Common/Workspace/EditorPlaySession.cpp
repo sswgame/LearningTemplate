@@ -7,6 +7,7 @@
 
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
@@ -271,6 +272,11 @@ namespace sw::editor
     bool EditorPlaySession::isStopped()
     {
         return getState() == PlaySessionState::Stopped;
+    }
+
+    bool EditorPlaySession::areSceneEditsAllowed()
+    {
+        return EditorSessionPolicy::areSceneEditsAllowed( isStopped() );
     }
 
     bool EditorPlaySession::hasPendingStep()

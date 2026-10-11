@@ -15,6 +15,8 @@ namespace sw
 
 namespace sw::editor
 {
+    class EditorWorkspace;
+
     /** @brief 정렬 축 */
     enum class AlignAxis : uint8
     {
@@ -41,9 +43,13 @@ namespace sw::editor
         /** @brief 복사한 컴포넌트 바이너리/XML 값을 대상에 덮어씁니다. */
         static bool pasteComponentValues( Component* pTargetComp, const vector<uint8>& bytes, string_view xmlFallback = {} );
         static bool pasteComponentValues( Component* pTargetComp, string_view xml );
+        /** @brief 작업 공간 클립보드(`EditorWorkspace::copyComponent`)의 값을 @p pTargetComp 에 붙여 넣습니다. */
+        static bool pasteCopiedComponentValues( const EditorWorkspace& workspace, Component* pTargetComp );
         /** @brief 복사한 타입으로 새 컴포넌트를 붙이고 바이너리/XML을 적용합니다. */
         static Component* pasteComponentAsNew( GameObject* pTargetObj, string_view typeName, const vector<uint8>& bytes, string_view xmlFallback = {} );
         static Component* pasteComponentAsNew( GameObject* pTargetObj, string_view typeName, string_view xml );
+        /** @brief 작업 공간 클립보드의 컴포넌트를 @p pTargetObj 에 새로 답니다. */
+        static Component* pasteCopiedComponentAsNew( const EditorWorkspace& workspace, GameObject* pTargetObj );
         /**
          * @brief 이름으로 저장하는 프리셋의 파일 이름입니다: `<타입>_<이름>.preset.xml`(프리셋 폴더 안). 인스펙터의 프리셋 목록이 이 규칙으로 찾습니다.
          * @details 저장하는 쪽과 목록을 읽는 쪽이 이 함수 하나를 씁니다.

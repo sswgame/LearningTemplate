@@ -13,7 +13,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"
-#include "Editor/Panels/EditorTestOutputParser.h"
+#include "Editor/SelfTest/EditorTestOutputParser.h"
 
 namespace sw::editor
 {

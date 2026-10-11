@@ -1,6 +1,6 @@
 /**
  * @file EditorDevCommands.cpp
- * @brief 에디터가 내주는 개발 명령(에디터 커맨드 실행 · 플레이 세션 · 선택 · 레이아웃)입니다. 에디터 모듈과 함께 올라오고 내려갑니다.
+ * @brief 에디터가 내주는 개발 명령(에디터 커맨드 실행 · 플레이 세션 · 씬 열고 저장 · 선택 · 디버그 그리기 데모)입니다. 에디터 모듈과 함께 올라오고 내려갑니다.
  */
 #include "pch.h"
 
@@ -11,16 +11,12 @@
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
-#include "Editor/Common/GUI/EditorDockLayout.h"
-#include "Editor/Common/GUI/EditorPanelManager.h"
-#include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Panels/SceneViewPanel.h"
-#include "Editor/Viewport/EditorCamera.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
@@ -163,22 +159,6 @@ namespace sw::editor
                 return true;
             }
 
-            static bool runTheme( const vector<string>& listArgument, string& outReply )
-            {
-                EditorThemePreset preset = EditorThemePreset::ModernDark;
-                if ( listArgument.size() != 1 )
-                    return false;
-                if ( EditorThemeUtil::findPresetByConfigID( listArgument[0], preset ) == false )
-                {
-                    outReply = "unknown theme preset '" + listArgument[0] + "' (ModernDark, DeepCharcoal, MidnightBlue, ClassicDark)";
-                    return false;
-                }
-                // 적용만 한다 — 설정 파일에 쓰지 않는다(시험 · 시나리오가 사용자 설정을 바꾸지 않게). 대화상자에서 고르면 저장된다.
-                EditorThemeUtil::applyPreset( preset );
-                outReply = "theme " + listArgument[0];
-                return true;
-            }
-
             static bool runSelectType( const vector<string>& listArgument, string& outReply )
             {
                 GameObjectManager* pManager  = editor::getActiveObjectManager();
@@ -252,85 +232,6 @@ namespace sw::editor
                 outReply = "debug draw demo for " + to_string( seconds ) + " s";
                 return true;
             }
-
-            static bool runLayoutSave( const vector<string>& listArgument, string& outReply )
-            {
-                EditorContext*    pContext = EditorContext::get();
-                EditorDockLayout* pDock    = pContext != nullptr ? pContext->findDockLayout() : nullptr;
-                if ( listArgument.size() != 1 || pDock == nullptr || pDock->saveNamedLayout( listArgument[0] ) == false )
-                    return false;
-                outReply = "saved layout " + listArgument[0];
-                return true;
-            }
-
-            /** @brief 씬 뷰 오버레이입니다(씬 뷰 패널이 없으면 nullptr). */
-            static EditorViewportOverlays* findSceneOverlays()
-            {
-                EditorContext*  pContext = EditorContext::get();
-                SceneViewPanel* pPanel   = pContext != nullptr ? static_cast<SceneViewPanel*>( pContext->getPanelManager().findPanel( "scene_view" ) ) : nullptr;
-                return pPanel != nullptr ? &pPanel->getViewportClient().getOverlays() : nullptr;
-            }
-
-            static bool runOverlayReset( const vector<string>& /*listArgument*/, string& outReply )
-            {
-                EditorViewportOverlays* pOverlays = findSceneOverlays();
-                if ( pOverlays == nullptr )
-                    return false;
-                pOverlays->resetToDefault();
-                outReply = "scene view overlays reset";
-                return true;
-            }
-
-            static bool runOverlayShow( const vector<string>& listArgument, string& outReply )
-            {
-                EditorViewportOverlays* pOverlays = findSceneOverlays();
-                if ( listArgument.size() != 2 || pOverlays == nullptr || pOverlays->setBarVisible( listArgument[0], listArgument[1] != "0" ) == false )
-                    return false;
-                outReply = "overlay " + listArgument[0] + ( listArgument[1] != "0" ? " shown" : " hidden" );
-                return true;
-            }
-
-            static bool runLayoutLoad( const vector<string>& listArgument, string& outReply )
-            {
-                EditorContext*    pContext = EditorContext::get();
-                EditorDockLayout* pDock    = pContext != nullptr ? pContext->findDockLayout() : nullptr;
-                if ( listArgument.size() != 1 || pDock == nullptr || pDock->requestLoadNamedLayout( listArgument[0] ) == false )
-                    return false;
-                outReply = "loading layout " + listArgument[0];
-                return true;
-            }
-
-            /** @brief 패널을 열고 그 창을 앞으로 가져옵니다(같은 도크 영역의 탭이면 그 탭이 선택된다). 다음 프레임 시작에 적용됩니다. */
-            static bool runPanelFocus( const vector<string>& listArgument, string& outReply )
-            {
-                EditorContext*      pContext = EditorContext::get();
-                const IEditorPanel* pPanel   = ( listArgument.size() == 1 && pContext != nullptr ) ? pContext->getPanelManager().findPanel( listArgument[0] ) : nullptr;
-                if ( pPanel == nullptr )
-                    return false;
-                pContext->getWorkspace().requestOpenPanel( pPanel->getPanelTitle() );
-                outReply = string{ "focusing " } + pPanel->getPanelTitle();
-                return true;
-            }
-
-            static bool runPanelClose( const vector<string>& listArgument, string& outReply )
-            {
-                EditorContext* pContext = EditorContext::get();
-                if ( listArgument.size() != 1 || pContext == nullptr || pContext->getPanelManager().setPanelOpen( listArgument[0], false ) == false )
-                    return false;
-                outReply = "closed " + listArgument[0];
-                return true;
-            }
-
-            static bool runLayoutReset( const vector<string>& listArgument, string& outReply )
-            {
-                EditorContext*    pContext = EditorContext::get();
-                EditorDockLayout* pDock    = pContext != nullptr ? pContext->findDockLayout() : nullptr;
-                if ( listArgument.empty() == false || pDock == nullptr )
-                    return false;
-                pDock->requestResetDefault();
-                outReply = "resetting to the default layout";
-                return true;
-            }
         };
     } // namespace
 
@@ -346,8 +247,6 @@ namespace sw::editor
     SW_DEV_COMMAND( OpenScene, "scene.open", "scene.open <path>",
                     "Open a scene file without the unsaved-changes prompt (a resource id, or a path relative to the working folder)",
                     &EditorDevCommandsInternal::runOpenScene );
-    SW_DEV_COMMAND( Theme, "editor.theme", "editor.theme <preset>", "Apply an editor theme preset for this session (ModernDark, DeepCharcoal, MidnightBlue, ClassicDark)",
-                    &EditorDevCommandsInternal::runTheme );
     SW_DEV_COMMAND( Step, "step", "step [frames]", "Advance the play session by N frames, then pause", &EditorDevCommandsInternal::runStep );
     SW_DEV_COMMAND( SelectType, "select.type", "select.type <ComponentType>", "Select every object with that component type (or a derived one)",
                     &EditorDevCommandsInternal::runSelectType );
@@ -356,16 +255,4 @@ namespace sw::editor
     SW_DEV_COMMAND( SelectTag, "select.tag", "select.tag <Tag>", "Select every object with that tag (or a child tag)", &EditorDevCommandsInternal::runSelectTag );
     SW_DEV_COMMAND( DebugDrawDemo, "debugdraw.demo", "debugdraw.demo [seconds]", "Draw a box, sphere, arrow and text in front of the scene view camera",
                     &EditorDevCommandsInternal::runDebugDrawDemo );
-    SW_DEV_COMMAND( LayoutSave, "layout.save", "layout.save <name>", "Save the dock layout and panel visibility under a name",
-                    &EditorDevCommandsInternal::runLayoutSave );
-    SW_DEV_COMMAND( OverlayReset, "overlay.reset", "overlay.reset", "Put the scene view overlay bars back where they start (and show them all)",
-                    &EditorDevCommandsInternal::runOverlayReset );
-    SW_DEV_COMMAND( OverlayShow, "overlay.show", "overlay.show <view|transform|display|tools> <0|1>", "Show or hide a scene view overlay bar",
-                    &EditorDevCommandsInternal::runOverlayShow );
-    SW_DEV_COMMAND( LayoutLoad, "layout.load", "layout.load <name>", "Load a named layout on the next frame", &EditorDevCommandsInternal::runLayoutLoad );
-    SW_DEV_COMMAND( PanelFocus, "panel.focus", "panel.focus <panelID>", "Open a panel and bring its window (its tab) to the front on the next frame",
-                    &EditorDevCommandsInternal::runPanelFocus );
-    SW_DEV_COMMAND( PanelClose, "panel.close", "panel.close <panelID>", "Close a panel", &EditorDevCommandsInternal::runPanelClose );
-    SW_DEV_COMMAND( LayoutReset, "layout.reset", "layout.reset", "Reset the dock layout to the default editor layout on the next frame (scenarios that click by position)",
-                    &EditorDevCommandsInternal::runLayoutReset );
 } // namespace sw::editor
