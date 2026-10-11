@@ -29,7 +29,7 @@ namespace sw
     /**
      * @class FreeTypeRasterizer
      * @brief FreeType 로 면을 열고 SDF 를 래스터화합니다. SDF 는 FreeType 2.11+ 의 `sdf` 렌더러(윤곽에서 정확한 거리)입니다.
-     * @details 헤더가 없다 — 밖은 `IFontRasterizer::createDefault()` 로만 본다(FreeType 타입이 이 파일 밖으로 새지 않는다).
+     * @details 헤더가 없다. 밖에서는 `IFontRasterizer::createDefault()` 로만 본다(FreeType 타입이 이 파일 밖으로 새지 않는다).
      */
     class FreeTypeRasterizer final : public IFontRasterizer
     {
@@ -56,7 +56,7 @@ namespace sw
                 return false;
             }
             _pLibrary = pLibrary;
-            // 거리값을 담는 폭 — SdfRasterParams 기본값과 같다(셰이더의 거리 환산이 같은 값을 쓴다).
+            // 거리값을 담는 폭이다. SdfRasterParams 기본값과 같다(셰이더의 거리 환산이 같은 값을 쓴다).
             FT_Int spread = static_cast<FT_Int>( SdfRasterParams{}._spreadPx );
             (void)FT_Property_Set( _pLibrary, "sdf", "spread", &spread );  // 윤곽 → SDF
             (void)FT_Property_Set( _pLibrary, "bsdf", "spread", &spread ); // 비트맵 → SDF(윤곽 없는 경우의 대체)
@@ -137,7 +137,7 @@ namespace sw
             const FaceEntry* pEntry = findEntry( face );
             if ( pEntry == nullptr )
                 return false;
-            // 크기 없이 글꼴 단위로 읽어 em 비율로 나눈다 — 래스터 크기와 무관한 배치 값이다.
+            // 크기 없이 폰트 단위로 읽어 em 비율로 나눈다. 래스터 크기와 무관한 배치 값이다.
             if ( FT_Load_Glyph( pEntry->_pFace, glyphIndex, FT_LOAD_NO_SCALE | FT_LOAD_NO_HINTING ) != 0 )
                 return false;
             const FT_Glyph_Metrics& metrics = pEntry->_pFace->glyph->metrics;
@@ -186,7 +186,7 @@ namespace sw
             outBitmap._bearingPx     = float2{};
             const bool bEmptyOutline = pSlot->format == FT_GLYPH_FORMAT_OUTLINE && pSlot->outline.n_points == 0;
             if ( bEmptyOutline )
-                return true; // 공백 — 전진만 있다
+                return true; // 공백이라 전진만 있다
             const FT_Error error = FT_Render_Glyph( pSlot, FT_RENDER_MODE_SDF );
             if ( error != 0 )
             {
@@ -211,8 +211,8 @@ namespace sw
         struct FaceEntry
         {
             vector<uint8> _bytes{};            ///< FreeType 가 읽는 동안 살아 있어야 하는 파일 바이트(메모리 면)
-            FT_Face       _pFace{ nullptr };   ///< 면 핸들
-            float32       _unitsPerEm{ 1.0f }; ///< 글꼴 단위 → em 비율
+            FT_Face       _pFace{ nullptr };   ///< 면 핸들입니다.
+            float32       _unitsPerEm{ 1.0f }; ///< 폰트 단위에서 em 비율로 바꾸는 값입니다.
         };
 
         const FaceEntry* findEntry( FontFaceID face ) const

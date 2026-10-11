@@ -17,12 +17,12 @@ namespace sw
     {
         /**
          * @class TextGathererCodeScanner
-         * @brief C++ 글을 한 번 훑으며 주석 · 문자열 · 전처리 줄을 건너뛰고 매크로 호출의 문자열 리터럴 인자를 읽습니다.
+         * @brief C++ 텍스트를 한 번 훑으며 주석, 문자열, 전처리 줄을 건너뛰고 매크로 호출의 문자열 리터럴 인자를 읽습니다.
          */
         class TextGathererCodeScanner
         {
         public:
-            static constexpr utf8 kDoubleQuote = 0x22; ///< `"` — 문자 리터럴로 적으면 린트의 글 토큰이 어긋난다
+            static constexpr utf8 kDoubleQuote = 0x22; ///< `"` 입니다. 문자 리터럴로 적으면 린트의 텍스트 토큰이 어긋납니다.
             static constexpr utf8 kSingleQuote = 0x27;
 
             TextGathererCodeScanner( string_view text, string_view originName, TextGatherer& gatherer )
@@ -74,7 +74,7 @@ namespace sw
                     if ( character == kDoubleQuote || character == kSingleQuote || isRawStringStart() )
                     {
                         string ignored;
-                        (void)readLiteral( ignored ); // 건너뛰는 리터럴 — 닫히지 않았으면 그 줄 끝에서 멈추고 훑기를 이어 간다
+                        (void)readLiteral( ignored ); // 건너뛰는 리터럴이다. 닫히지 않았으면 그 줄 끝에서 멈추고 훑기를 이어 간다
                         continue;
                     }
                     if ( isIdentifierStart( character ) )
@@ -108,7 +108,7 @@ namespace sw
             }
 
             bool startsWith( string_view prefix ) const { return _text.substr( _position, prefix.size() ) == prefix; }
-            /** @brief 지금 자리의 두 글자가 @p first · @p second 인지(주석 표시 — 글로 적으면 린트가 그것을 주석으로 읽는다)입니다. */
+            /** @brief 지금 위치의 두 글자가 @p first 와 @p second 인지 확인합니다(주석 표시이며, 텍스트로 적으면 린트가 그것을 주석으로 읽습니다). */
             bool isPair( utf8 first, utf8 second ) const { return _position + 1 < _text.size() && _text[_position] == first && _text[_position + 1] == second; }
 
             void advanceLine()
@@ -170,7 +170,7 @@ namespace sw
                 return _position < _text.size() && ( _text[_position] == kDoubleQuote || startsWith( "u8\"" ) || startsWith( "L\"" ) || isRawStringStart() );
             }
 
-            /** @brief 지금 자리의 문자열 · 문자 리터럴 하나를 읽어 풀린 글을 @p outValue 에 붙입니다. */
+            /** @brief 지금 위치의 문자열이나 문자 리터럴 하나를 읽어 해석한 텍스트를 @p outValue 에 붙입니다. */
             [[nodiscard]] bool readLiteral( string& outValue )
             {
                 if ( startsWith( "u8" ) )
@@ -185,7 +185,7 @@ namespace sw
                 {
                     const utf8 character = _text[_position];
                     if ( character == '\n' )
-                        return false; // 닫히지 않은 리터럴
+                        return false; // 닫히지 않은 리터럴이다
                     if ( character != '\\' )
                     {
                         outValue.push_back( character );
@@ -321,9 +321,9 @@ namespace sw
                 const uint32 callLine = _line;
                 skipSpaceAndComments();
                 if ( _position >= _text.size() || _text[_position] != '(' )
-                    return; // 매크로 이름만 쓴 자리(문서 · 다른 매크로의 인자)
+                    return; // 매크로 이름만 쓴 경우다(문서나 다른 매크로의 인자)
                 ++_position;
-                // `SW_LOCKEY` · `SW_LOCKEYFORMAT` 은 원문을 코드에 두지 않는다 — 키만 읽어 "표에 있어야 하는 참조" 로 모은다.
+                // `SW_LOCKEY` 와 `SW_LOCKEYFORMAT` 은 원문을 코드에 두지 않는다. 키만 읽어 "테이블에 있어야 하는 참조" 로 모은다.
                 const bool   bKeyOnly     = macroName == "SW_LOCKEY" || macroName == "SW_LOCKEYFORMAT";
                 const uint32 literalCount = bKeyOnly ? 2u : 3u;
                 string       arrArgument[3];
@@ -372,7 +372,7 @@ namespace sw
 
         struct TextGathererInternal
         {
-            /** @brief 사람이 읽는 글로 보이는지 — 글자 둘 이상인 낱말이 둘 이상이고, 경로 · 식별자 · 숫자 목록이 아닙니다. 싼 추정이라 경고만 합니다. */
+            /** @brief 사람이 읽는 텍스트로 보이는지 판정합니다. 글자 둘 이상인 단어가 둘 이상이고, 경로, 식별자, 숫자 목록이 아니어야 합니다. 싼 추정이라 경고만 합니다. */
             static bool looksLikeUserFacingText( string_view value )
             {
                 const bool bPathLike = value.find( '/' ) != string_view::npos || value.find( '\\' ) != string_view::npos || value.find( '_' ) != string_view::npos;
@@ -423,7 +423,7 @@ namespace sw
                         if ( isStringProperty( property ) == false )
                             return;
                         const string_view value = readPropertyValue( node, property );
-                        // `{` 로 시작하는 값은 UI 문서의 바인딩 식이다(`{bind:_health}`) — 글이 아니다.
+                        // `{` 로 시작하는 값은 UI 문서의 바인딩 식이다(`{bind:_health}`). 텍스트가 아니다.
                         if ( value.empty() || value.front() == '{' )
                             return;
                         const string context = string( pType->_name.c_str() ) + "." + property._name.c_str();
@@ -591,7 +591,7 @@ namespace sw
             const bool bInOther = TextGathererInternal::hasKey( listOtherTable, text._key );
             if ( bInOther )
             {
-                // 손으로 쓴 다른 표의 키 — 참조일 뿐이다. 코드가 다른 원문을 적었으면 알린다.
+                // 손으로 쓴 다른 테이블의 키는 참조일 뿐이다. 코드가 다른 원문을 적었으면 알린다.
                 for ( const SourceStringTable* pTable : listOtherTable )
                 {
                     const SourceTextEntry* pEntry   = pTable != nullptr ? pTable->findEntry( text._key ) : nullptr;
@@ -638,7 +638,7 @@ namespace sw
             std::sort( pEntry->_listOrigin.begin(), pEntry->_listOrigin.end() );
         }
 
-        // 수집기가 넣었던 줄(자리가 있는 줄)이 이번에 나오지 않았으면 지운다. 손으로 넣은 줄은 둔다.
+        // 수집기가 넣었던 줄(위치가 있는 줄)이 이번에 나오지 않았으면 지운다. 손으로 넣은 줄은 둔다.
         vector<string> listStale;
         for ( const auto& [key, entry] : inoutGatherTable.getEntries() )
         {
@@ -647,7 +647,7 @@ namespace sw
         }
         for ( const string& key : listStale )
         {
-            (void)inoutGatherTable.removeEntry( key ); // 방금 표에서 찾은 키라 늘 지워진다
+            (void)inoutGatherTable.removeEntry( key ); // 방금 테이블에서 찾은 키라 항상 지워진다
             report._listRemoved.push_back( key );
         }
         return report;

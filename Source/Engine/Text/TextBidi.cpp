@@ -11,17 +11,17 @@ namespace sw
     {
         struct TextBidiInternal
         {
-            /** @brief LRO — 덮어쓰기(왼쪽에서 오른쪽)의 시작. RLO · PDF 는 의사 로컬라이저의 것을 쓴다. */
+            /** @brief LRO 는 덮어쓰기(왼쪽에서 오른쪽)의 시작입니다. RLO 와 PDF 는 의사 로컬라이저의 것을 씁니다. */
             static constexpr uint32 kLeftToRightOverride = 0x202D;
 
-            /** @brief 단순판의 양방향 분류입니다(UAX #9 의 L · R · EN/AN · NI · BN · B). */
+            /** @brief 단순 버전의 양방향 분류입니다(UAX #9 의 L, R, EN/AN, NI, BN, B). */
             enum class BidiClass : uint8
             {
-                Left,     ///< 강한 왼쪽에서 오른쪽
-                Right,    ///< 강한 오른쪽에서 왼쪽
-                Number,   ///< 숫자(유럽 · 아랍 숫자를 가르지 않는다)
-                Neutral,  ///< 공백 · 구두점 · 기호
-                Boundary, ///< 폭 없는 문자 · 방향 제어(앞 글자의 수준)
+                Left,     ///< 강한 왼쪽에서 오른쪽입니다.
+                Right,    ///< 강한 오른쪽에서 왼쪽입니다.
+                Number,   ///< 숫자입니다(유럽 숫자와 아랍 숫자를 가르지 않습니다).
+                Neutral,  ///< 공백, 구두점, 기호입니다.
+                Boundary, ///< 폭 없는 문자와 방향 제어입니다(앞 글자의 수준을 따릅니다).
                 Separator ///< 단락 구분(문단 수준, 앞뒤를 끊는다)
             };
 
@@ -47,7 +47,7 @@ namespace sw
                 return BidiClass::Left;
             }
 
-            /** @brief 중립 판정에서 보는 강한 방향입니다 — 숫자는 R 처럼 본다(N1). L 이면 false. */
+            /** @brief 중립 판정에서 보는 강한 방향입니다. 숫자는 R 처럼 봅니다(N1). L 이면 false 입니다. */
             static bool isRightForNeutrals( BidiClass bidiClass ) { return bidiClass == BidiClass::Right || bidiClass == BidiClass::Number; }
 
             static bool isStrongOrNumber( BidiClass bidiClass )
@@ -55,7 +55,7 @@ namespace sw
                 return bidiClass == BidiClass::Left || bidiClass == BidiClass::Right || bidiClass == BidiClass::Number;
             }
 
-            /** @brief 해결된 분류의 수준입니다(I1 · I2). */
+            /** @brief 해석이 끝난 분류의 수준입니다(I1, I2). */
             static uint8 computeLevel( BidiClass bidiClass, uint8 paragraphLevel )
             {
                 const bool bRightParagraph = TextBidi::isRightToLeftLevel( paragraphLevel );
@@ -89,9 +89,9 @@ namespace sw
         const bool   bRightPara = isRightToLeftLevel( paragraph );
         outListLevel.assign( count, paragraph );
 
-        // 1) 분류 + 덮어쓰기 한 겹(X4 · X5 의 단순판) + W7(앞 강한 문자가 L 인 숫자는 L). 단락 구분에서 상태를 되돌린다.
+        // 1) 분류 + 덮어쓰기 한 겹(X4, X5 의 단순 버전) + W7(앞 강한 문자가 L 인 숫자는 L). 단락 구분에서 상태를 되돌린다.
         vector<BidiClass> listClass( count, BidiClass::Neutral );
-        BidiClass         overrideClass = BidiClass::Neutral; // Neutral = 덮어쓰기 없음
+        BidiClass         overrideClass = BidiClass::Neutral; // Neutral 이면 덮어쓰기 없음
         bool              bPreviousLeft = bRightPara == false;
         for ( size_t index = 0; index < count; ++index )
         {
@@ -121,7 +121,7 @@ namespace sw
             listClass[index] = bidiClass;
         }
 
-        // 2) 중립 구간(N1 · N2): 앞뒤 강한 방향(숫자는 R, 단락 끝 · 글 끝은 문단 방향)이 같으면 그 방향, 다르면 문단 방향. 폭 없는 문자는 구간을 끊지 않는다.
+        // 2) 중립 구간(N1, N2): 앞뒤 강한 방향(숫자는 R, 단락 끝과 텍스트 끝은 문단 방향)이 같으면 그 방향, 다르면 문단 방향이다. 폭 없는 문자는 구간을 끊지 않는다.
         size_t index = 0;
         while ( index < count )
         {
@@ -157,7 +157,7 @@ namespace sw
             }
         }
 
-        // 3) 수준(I1 · I2). 폭 없는 문자는 앞 글자의 수준(X9 로 지운 것과 같은 자리).
+        // 3) 수준(I1, I2). 폭 없는 문자는 앞 글자의 수준이다(X9 로 지운 것과 같은 효과).
         for ( size_t position = 0; position < count; ++position )
         {
             const BidiClass bidiClass = listClass[position];
@@ -180,14 +180,14 @@ namespace sw
             highest             = listLevel[index] > highest ? listLevel[index] : highest;
             lowest              = listLevel[index] < lowest ? listLevel[index] : lowest;
         }
-        // 가장 낮은 홀수 수준 = 가장 낮은 수준을 홀수로 올린 것. 짝수(2)만 있는 줄은 뒤집지 않는다(두 번 뒤집혀 제자리).
+        // 가장 낮은 홀수 수준은 가장 낮은 수준을 홀수로 올린 것이다. 짝수(2)만 있는 줄은 뒤집지 않는다(두 번 뒤집혀 제자리가 된다).
         const uint8 lowestOdd = static_cast<uint8>( lowest | 1u );
         for ( uint32 level = highest; level >= lowestOdd; --level )
         {
             uint32 index = 0;
             while ( index < count )
             {
-                // 눈에 보이는 자리 index 의 수준은 그 자리에 놓인 논리 번호의 수준이다.
+                // 눈에 보이는 위치 index 의 수준은 그 위치에 놓인 논리 번호의 수준이다.
                 if ( listLevel[outListIndex[index]] < level )
                 {
                     ++index;

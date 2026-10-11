@@ -10,7 +10,7 @@ namespace sw
 {
     /**
      * @class StringTable
-     * @brief 문화권 하나의 실행 표(키 해시 → 글)입니다. 파일을 읽지 않습니다 — `LocalizationManager` 가 원문 · 번역 표 문서에서 채웁니다.
+     * @brief 문화권 하나의 실행 테이블(키 해시 → 텍스트)입니다. 파일을 읽지 않으며, `LocalizationManager` 가 원문과 번역 테이블 문서에서 채웁니다.
      */
     class SW_API StringTable
     {
@@ -19,9 +19,9 @@ namespace sw
         const utf8* getString( const hashed_string& key, const utf8* pDefaultText ) const;
         /**
          * @brief 키를 **intern 하지 않고** 조회합니다. 없으면 nullptr 입니다.
-         * @details 표는 해시로만 열리므로 조회에 intern 이 필요 없습니다. 키가 아닐 수도 있는 텍스트로
-         *          물어보는 자리(대사 원문 등)는 반드시 이쪽을 씁니다. `hashed_string` 을 만들면
-         *          그 텍스트가 intern 아레나에 **영구히** 남습니다.
+         * @details 테이블은 해시로만 열리므로 조회에 intern 이 필요 없다. 키가 아닐 수도 있는 텍스트로
+         *          물어보는 곳(대사 원문 등)은 반드시 이쪽을 쓴다. `hashed_string` 을 만들면
+         *          그 텍스트가 intern 아레나에 **영구히** 남는다.
          */
         const utf8* findStringByText( string_view keyText ) const;
         /**
@@ -32,22 +32,22 @@ namespace sw
         const utf8* findByHash( uint64 keyHash ) const;
         bool        contains( const hashed_string& key ) const;
         void        setString( const hashed_string& key, const string& value );
-        /** @brief 키 해시로 넣습니다 — 키를 intern 하지 않습니다(`hashed_string::computeHash` 와 같은 해시). */
+        /** @brief 키 해시로 넣습니다. 키를 intern 하지 않습니다(`hashed_string::computeHash` 와 같은 해시). */
         void   setStringByHash( uint64 keyHash, string_view value );
         void   clear();
         size_t size() const;
         bool   empty() const;
 
         /**
-         * @brief 모든 표가 함께 쓰는 번역 문자열 저장소(`LocalizedTextArena`)를 놓습니다. 그 뒤로 앞서 돌려준 문자열 포인터는 모두 무효입니다.
-         * @details 엔진 종료 끝(`EngineBootstrap::shutdown`)이 지역화 서비스와 모듈을 모두 내린 뒤 부릅니다. 기동 뒤에 오른 모듈(에디터)이 채운 몫이
-         *          종료 보고에 그 태그의 증가로 남지 않게 합니다. 놓은 뒤에 다시 넣으면 저장소를 새로 잡습니다.
+         * @brief 모든 테이블이 함께 쓰는 번역 문자열 저장소(`LocalizedTextArena`)를 해제합니다. 그 뒤로 앞서 돌려준 문자열 포인터는 모두 무효입니다.
+         * @details 엔진 종료 끝(`EngineBootstrap::shutdown`)이 지역화 서비스와 모듈을 모두 언로드한 뒤 부른다. 기동 뒤에 로드한 모듈(에디터)이 채운 부분이
+         *          종료 보고에 그 태그의 증가로 남지 않게 한다. 해제한 뒤에 다시 넣으면 저장소를 새로 잡는다.
          */
         static void releaseTextStorage();
 
     private:
         mutable std::shared_mutex _mutex;
-        /// @brief 키 해시 → 번역 문자열. 문자열은 추가 전용 저장소(StringTable.cpp 의 `LocalizedTextArena`)에 있어 표가 바뀌어도 엔진 종료까지 사라지지 않는다.
+        /// @brief 키 해시 → 번역 문자열 테이블입니다. 문자열은 추가 전용 저장소(StringTable.cpp 의 `LocalizedTextArena`)에 있어 테이블이 바뀌어도 엔진 종료까지 사라지지 않습니다.
         unordered_map<uint64, const utf8*> _mapTable;
     };
 } // namespace sw

@@ -1,9 +1,9 @@
 /**
  * @file FontCatalog.h
- * @brief 글꼴 카탈로그입니다 — 가족 이름 → 면 파일(저장소 글꼴)과, 시스템 가족 이름 → 플랫폼별 파일 이름(OS 글꼴 폴더)입니다.
- * @details 기본 표는 `engine/fonts/fontcatalog.xml`(`EngineDefaultAssets::_fontCatalog`)입니다. 문화권 표(`engine.cultures.json`)의 `fonts` 가족 이름은
- *          이 표의 가족 · 시스템 가족에 있어야 쓰입니다(없으면 `FontSystem` 이 처음 한 번 경고하고 건너뛴다).
- *          저장소에는 CC0 라틴 글꼴만 둡니다 — 한글 · CJK · 아랍 문자는 시스템 가족이 맡습니다(런타임 UI 결정 R1).
+ * @brief 폰트 카탈로그를 정의합니다. 패밀리 이름에서 저장소 폰트 면 파일을 찾고, 시스템 패밀리 이름에서 플랫폼별 파일 이름(OS 폰트 폴더)을 찾습니다.
+ * @details 기본 테이블은 `engine/fonts/fontcatalog.xml`(`EngineDefaultAssets::_fontCatalog`)이다. 문화권 테이블(`engine.cultures.json`)의 `fonts` 패밀리 이름은
+ *          이 테이블의 패밀리나 시스템 패밀리에 있어야 쓰인다(없으면 `FontSystem` 이 처음 한 번 경고하고 건너뛴다).
+ *          저장소에는 CC0 라틴 폰트만 둔다. 한글, CJK, 아랍 문자는 시스템 패밀리가 맡는다(런타임 UI 결정 R1).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -17,7 +17,7 @@
 namespace sw
 {
     /**
-     * @brief 저장소 글꼴 면 하나 — 굵기 · 기울기 · 파일입니다.
+     * @brief 저장소 폰트 면 하나입니다. 굵기, 기울기, 파일을 가집니다.
      * @code
      *     <FontFaceDesc _weight="Regular" _slant="Upright" _path="engine/fonts/kenney_future.ttf" />
      * @endcode
@@ -39,7 +39,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 저장소 글꼴 가족 하나 — 이름과 면들입니다(언리얼 `FCompositeFont` 의 서체 하나 · 유니티 Font Asset 하나). */
+    /** @brief 저장소 폰트 패밀리 하나입니다. 이름과 면들을 가집니다(언리얼 `FCompositeFont` 의 서체 하나, 유니티 Font Asset 하나에 해당). */
     REFLECT()
     struct SW_API FontFamilyDesc
     {
@@ -54,8 +54,8 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief OS 시스템 글꼴 가족 하나 — 플랫폼마다 일반 · 굵은 면의 파일 이름입니다. 빈 칸은 그 플랫폼에 없음입니다.
-     * @details 파일은 `SystemFontLocator` 가 OS 글꼴 폴더에서 찾습니다(리눅스는 하위 폴더까지). 기운 면은 적지 않습니다 — 기울임은 배치가 기울여 그린다.
+     * @brief OS 시스템 폰트 패밀리 하나입니다. 플랫폼마다 일반 면과 굵은 면의 파일 이름을 가지며, 비어 있으면 그 플랫폼에 없다는 뜻입니다.
+     * @details 파일은 `SystemFontLocator` 가 OS 폰트 폴더에서 찾는다(리눅스는 하위 폴더까지). 기운 면은 적지 않는다. 기울임은 배치가 기울여 그린다.
      */
     REFLECT()
     struct SW_API SystemFontFamilyDesc
@@ -80,7 +80,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 글꼴 카탈로그 한 장입니다. */
+    /** @brief 폰트 카탈로그 한 벌입니다. */
     REFLECT()
     struct SW_API FontCatalogDesc
     {
@@ -92,11 +92,11 @@ namespace sw
         PROPERTY( Tooltip = "Families looked up in the operating system font folders" )
         vector<SystemFontFamilyDesc> _listSystemFamily;
 
-        /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면(파일 없음 · 모르는 키 · 검사 실패) 오류를 남기고 false 입니다. */
+        /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면(파일 없음, 모르는 키, 검사 실패) 오류를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromResource( string_view resourcePath );
         /** @brief XML 문자열을 읽고 검사합니다(테스트용). */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText );
-        /** @brief 가족 이름이 비지 않고 겹치지 않고(저장소 · 시스템 합쳐), 저장소 가족마다 면이 있고 경로가 비지 않고, 기본 가족이 저장소 가족인지 봅니다. */
+        /** @brief 패밀리 이름이 비지 않고 겹치지 않는지(저장소와 시스템 합쳐), 저장소 패밀리마다 면이 있고 경로가 비지 않는지, 기본 패밀리가 저장소 패밀리인지 검사합니다. */
         [[nodiscard]] bool validate() const;
 
         /** @brief 이름의 저장소 가족입니다(대소문자 무시). 없으면 nullptr. */

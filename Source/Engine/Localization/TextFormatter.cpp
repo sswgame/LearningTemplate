@@ -9,12 +9,12 @@ namespace sw
 {
     namespace
     {
-        /** @brief 패턴을 한 번 훑는 동안의 일입니다. 포맷 · 검사 · 이름 모으기 · 글자 조각 바꾸기가 같은 파서를 씁니다. */
+        /** @brief 패턴을 한 번 훑는 동안 하는 일입니다. 포맷, 검사, 이름 모으기, 텍스트 조각 바꾸기가 같은 파서를 씁니다. */
         enum class TextWalkMode : uint8
         {
-            Format = 0, ///< 고른 갈래만 풀어 쓴다
-            Validate,   ///< 쓰지 않고 구문만 본다
-            Rebuild     ///< 구문은 그대로, 글자 조각만 바꿔 모든 갈래를 다시 쓴다
+            Format = 0, ///< 고른 분기만 풀어 씁니다.
+            Validate,   ///< 쓰지 않고 구문만 봅니다.
+            Rebuild     ///< 구문은 그대로 두고 텍스트 조각만 바꿔 모든 분기를 다시 씁니다.
         };
 
         /**
@@ -66,7 +66,7 @@ namespace sw
                 return false;
             }
 
-            /** @brief 인자 오류 — 구문은 맞으니 계속 훑는다. */
+            /** @brief 인자 오류입니다. 구문은 맞으므로 계속 훑습니다. */
             void noteArgumentError( string_view reason )
             {
                 if ( _error.empty() )
@@ -98,7 +98,7 @@ namespace sw
                 return _pattern.substr( start, _position - start );
             }
 
-            /** @brief 글자 조각을 내보냅니다 — Rebuild 면 바꾼 원문, Format 이면 풀린 글자입니다. */
+            /** @brief 텍스트 조각을 내보냅니다. Rebuild 면 바꾼 원문, Format 이면 해석한 텍스트입니다. */
             void emitLiteral( bool bEmit, string_view rawText, string_view resolvedText, string& outText ) const
             {
                 if ( bEmit == false || rawText.empty() )
@@ -110,8 +110,8 @@ namespace sw
             }
 
             /**
-             * @brief 메시지 하나(최상위 또는 갈래 몸통)를 `}` 또는 끝까지 훑습니다.
-             * @param bInPlural `#` 이 숫자 자리인지(복수형 갈래 안)
+             * @brief 메시지 하나(최상위 또는 분기 본문)를 `}` 또는 끝까지 훑습니다.
+             * @param bInPlural `#` 이 숫자 위치인지(복수형 분기 안)를 나타냅니다.
              */
             bool walkMessage( uint32 depth, bool bInPlural, bool bEmit, string& outText )
             {
@@ -164,7 +164,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 작은따옴표 하나를 처리합니다. 풀린 글자는 @p inoutResolved 에 붙습니다. */
+            /** @brief 작은따옴표 하나를 처리합니다. 해석한 텍스트는 @p inoutResolved 에 붙습니다. */
             void walkQuote( bool bInPlural, string& inoutResolved )
             {
                 const size_t next = _position + 1;
@@ -258,7 +258,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief plural · select 의 갈래들을 훑고, Format 이면 맞는 갈래 하나만 씁니다. */
+            /** @brief plural 과 select 의 분기들을 훑고, Format 이면 맞는 분기 하나만 씁니다. */
             bool walkOptions( uint32 depth, string_view name, bool bPlural, size_t openPos, bool bEmit, string& outText )
             {
                 const bool          bFormat   = _mode == TextWalkMode::Format && bEmit;
@@ -298,7 +298,7 @@ namespace sw
                     const size_t selectorStart = _position;
                     if ( _pattern[_position] == '=' )
                         ++_position;
-                    (void)readWord(); // 이름 글자를 건너뛸 뿐이다 — 고른 말은 아래 selector 로 다시 잘라 본다
+                    (void)readWord(); // 이름 글자를 건너뛸 뿐이다. 고른 말은 아래 selector 로 다시 잘라 본다
                     const string_view selector = _pattern.substr( selectorStart, _position - selectorStart );
                     if ( selector.empty() || selector == "=" )
                         return fail( "plural/select keyword expected" );
@@ -357,7 +357,7 @@ namespace sw
                 return bWritten;
             }
 
-            /** @brief 쓸 갈래의 번호입니다 — 복수형은 `=N` → 범주 → other, select 는 값 → other. 인자가 맞지 않으면 other 입니다. */
+            /** @brief 쓸 분기의 번호입니다. 복수형은 `=N`, 범주, other 순서이고 select 는 값, other 순서입니다. 인자가 맞지 않으면 other 입니다. */
             size_t chooseBranch( const TextArgument& argument, bool bPlural, float64 offset, const vector<string>& listSelector, float64& outValue )
             {
                 string wanted;
@@ -495,7 +495,7 @@ namespace sw
         private:
             string_view             _pattern;
             string                  _error;
-            vector<string>          _listPluralNumber; ///< 바깥에서 안쪽으로 — `#` 은 가장 안쪽 복수형의 수
+            vector<string>          _listPluralNumber; ///< 바깥에서 안쪽 순서이며, `#` 은 가장 안쪽 복수형의 수입니다.
             set<string>             _uniqueName;
             const TextArgumentList* _pArguments;
             const CultureInfo*      _pCulture;
@@ -570,7 +570,7 @@ namespace sw
         walker.bindFormat( &arguments, &culture );
         const bool bParsed = walker.walk( outText );
         if ( bParsed == false )
-            outText = string( pattern ); // 구문이 틀린 번역은 원문 그대로 — 반쯤 풀린 글보다 낫다
+            outText = string( pattern ); // 구문이 틀린 번역은 원문 그대로 쓴다. 반쯤 해석된 텍스트보다 낫다
         if ( pOutError != nullptr )
             *pOutError = walker.getError();
         return bParsed && walker.getError().empty();

@@ -18,15 +18,15 @@ namespace sw
     {
         struct TextLayoutInternal
         {
-            /** @brief 측정 캐시가 이만큼 차면 통째로 비운다(문화권 · 글이 바뀌며 쌓이는 낡은 칸을 오래 들지 않게). */
+            /** @brief 측정 캐시가 이만큼 차면 통째로 비웁니다(문화권과 텍스트가 바뀌며 쌓이는 낡은 항목을 오래 가지고 있지 않게 합니다). */
             static constexpr size_t kMaxMeasureCacheEntryCount = 4096;
-            /** @brief 너비 비교의 여유(UI 단위) — 글리프 폭 합의 부동소수 오차로 딱 맞는 줄이 넘치지 않게. */
+            /** @brief 너비 비교의 여유(UI 단위)입니다. 글리프 폭 합의 부동소수 오차로 딱 맞는 줄이 넘치지 않게 합니다. */
             static constexpr float32 kWidthTolerance = 1e-3f;
-            /** @brief 줄임표 문자(…). 사슬에 없으면 마침표 셋이다. */
+            /** @brief 줄임표 문자(…)입니다. 연쇄에 없으면 마침표 셋을 씁니다. */
             static constexpr uint32 kEllipsisCodepoint     = 0x2026u;
             static constexpr uint32 kEllipsisFallbackCount = 3;
 
-            /** @brief 글리프 뒤에서 끊어도 되는가 · 반드시 끊는가입니다. */
+            /** @brief 글리프 뒤에서 끊어도 되는지, 반드시 끊는지 나타냅니다. */
             enum class BreakKind : uint8
             {
                 None,
@@ -36,7 +36,7 @@ namespace sw
 
             static bool isSpace( uint32 codepoint ) { return codepoint == 0x20u || codepoint == 0x09u || codepoint == 0x3000u; }
             static bool isLineBreakCharacter( uint32 codepoint ) { return codepoint == '\n' || codepoint == '\r'; }
-            /** @brief 줄 끝에서 너비에 넣지 않는 문자(공백 · 줄 바꿈)입니다. */
+            /** @brief 줄 끝에서 너비에 넣지 않는 문자(공백, 줄 바꿈)입니다. */
             static bool isTrailingBlank( uint32 codepoint ) { return isSpace( codepoint ) || isLineBreakCharacter( codepoint ); }
 
             static bool isIdeographicOrHangul( uint32 codepoint )
@@ -45,7 +45,7 @@ namespace sw
                        ( 0x3040u <= codepoint && codepoint <= 0x30FFu ) || ( 0xAC00u <= codepoint && codepoint <= 0xD7AFu );
             }
 
-            /** @brief 앞에서 끊으면 안 되는 문자(닫는 괄호 · 마침표 · 쉼표 · 물음표 · 느낌표 · 쌍점 · 일본 · 중국 구두점). */
+            /** @brief 앞에서 끊으면 안 되는 문자(닫는 괄호, 마침표, 쉼표, 물음표, 느낌표, 쌍점, 일본과 중국 구두점)입니다. */
             static bool forbidsBreakBefore( uint32 codepoint )
             {
                 switch ( codepoint )
@@ -73,7 +73,7 @@ namespace sw
                 }
             }
 
-            /** @brief 뒤에서 끊으면 안 되는 문자(여는 괄호 · 따옴표). */
+            /** @brief 뒤에서 끊으면 안 되는 문자(여는 괄호, 따옴표)입니다. */
             static bool forbidsBreakAfter( uint32 codepoint )
             {
                 switch ( codepoint )
@@ -90,7 +90,7 @@ namespace sw
                 }
             }
 
-            /** @brief @p current 뒤 · @p next 앞 자리의 기회입니다. */
+            /** @brief @p current 뒤와 @p next 앞 위치의 줄 바꿈 기회입니다. */
             static BreakKind classifyBreakAfter( uint32 current, uint32 next, TextWordBreak wordBreak )
             {
                 if ( current == '\n' )
@@ -102,7 +102,7 @@ namespace sw
                 const bool bCjkBoundary = isIdeographicOrHangul( current ) || isIdeographicOrHangul( next );
                 if ( bCjkBoundary == false )
                     return BreakKind::None;
-                // KeepAll 이면 한글 음절끼리는 끊지 않는다. 한자 · 가나도 KeepAll 에서는 CSS 처럼 공백에서만 끊는다.
+                // KeepAll 이면 한글 음절끼리는 끊지 않는다. 한자와 가나도 KeepAll 에서는 CSS 처럼 공백에서만 끊는다.
                 return wordBreak == TextWordBreak::Normal ? BreakKind::Allowed : BreakKind::None;
             }
 
@@ -129,7 +129,7 @@ namespace sw
                 return HashUtil::combine( hash, style._bWrap ? 1u : 0u );
             }
 
-            /** @brief 줄 하나의 글리프 범위([첫, 끝))와 줄임표를 붙일지입니다. */
+            /** @brief 줄 하나의 글리프 범위([첫, 끝))와 줄임표를 붙일지 나타냅니다. */
             struct LineRange
             {
                 uint32 _begin{ 0 };
@@ -137,7 +137,7 @@ namespace sw
                 bool   _bEllipsis{ false };
             };
 
-            /** @brief 줄 하나의 가장 큰 면 메트릭을 모읍니다 — 대체 면이 섞인 줄이 겹치지 않게. */
+            /** @brief 줄 하나의 가장 큰 면 메트릭을 모읍니다. 대체 면이 섞인 줄이 겹치지 않게 합니다. */
             struct LineFaceMetrics
             {
                 float32 _maxAscender{ 0.0f };
@@ -145,7 +145,7 @@ namespace sw
                 float32 _maxLineGap{ 0.0f };
                 bool    _bHasMetrics{ false };
 
-                /** @brief 면 하나를 그 글꼴 크기로 더합니다(값은 UI 단위). */
+                /** @brief 면 하나를 그 폰트 크기로 더합니다(값은 UI 단위). */
                 void accumulate( const IFontRasterizer& rasterizer, FontFaceID face, float32 fontSize )
                 {
                     FontFaceMetrics metrics{};
@@ -171,7 +171,7 @@ namespace sw
                 return static_cast<uint8>( bold | italic );
             }
 
-            /** @brief 리치 텍스트 구간이 바꾼 글꼴(굵게 · 기울임)입니다. */
+            /** @brief 리치 텍스트 구간이 바꾼 폰트(굵게, 기울임)입니다. */
             static FontSpec makeSpanFont( const FontSpec& base, const RichTextSpan& span )
             {
                 FontSpec font = base;
@@ -182,7 +182,7 @@ namespace sw
                 return font;
             }
 
-            /** @brief 줄임표 글리프입니다(면 · 글리프 · 폭). */
+            /** @brief 줄임표 글리프입니다(면, 글리프, 폭). */
             struct EllipsisGlyph
             {
                 FontFaceID _face{ kInvalidFontFaceID };
@@ -229,7 +229,7 @@ namespace sw
         const IFontRasterizer& rasterizer = _fontSystem.getRasterizer();
         for ( ShapingRun& run : _listRunScratch )
         {
-            run._byteOffset += static_cast<uint32>( segmentStart ); // 클러스터를 전체 글 기준으로
+            run._byteOffset += static_cast<uint32>( segmentStart ); // 클러스터를 전체 텍스트 기준으로 맞춘다
             _shaper.shape( rasterizer, run, _listShapedScratch );
         }
         for ( size_t index = firstGlyph; index < _listShapedScratch.size(); ++index )
@@ -253,7 +253,7 @@ namespace sw
         }
         else
         {
-            // 구간 경계에서 끊는다 — 구간 밖은 기본 스타일, 구간 안은 그 구간의 글꼴 · 크기 · 색.
+            // 구간 경계에서 끊는다. 구간 밖은 기본 스타일, 구간 안은 그 구간의 폰트, 크기, 색을 쓴다.
             size_t cursor = 0;
             for ( const RichTextSpan& span : *pListSpan )
             {
@@ -279,14 +279,14 @@ namespace sw
             const uint32        next      = index + 1 < glyphCount ? _listShapedScratch[index + 1]._codepoint : 0u;
             Internal::BreakKind kind      = Internal::classifyBreakAfter( glyph._codepoint, next, style._wordBreak );
             if ( index + 1 == glyphCount && kind == Internal::BreakKind::Allowed )
-                kind = Internal::BreakKind::None; // 글 끝 뒤에는 끊을 것이 없다
+                kind = Internal::BreakKind::None; // 텍스트 끝 뒤에는 끊을 것이 없다
             _listBreakScratch[index] = static_cast<uint8>( kind );
         }
     }
 
     bool TextLayoutEngine::resolveGlyphLevels( string_view text, TextDirection paragraphDirection )
     {
-        // 수준은 원문 코드 포인트로 정한다 — 셰이퍼가 버린 폭 없는 방향 제어(RLO · PDF)도 수준을 바꾼다. 글리프는 클러스터(원문 바이트)로 짝짓는다.
+        // 수준은 원문 코드 포인트로 정한다. 셰이퍼가 버린 폭 없는 방향 제어(RLO, PDF)도 수준을 바꾼다. 글리프는 클러스터(원문 바이트)로 짝짓는다.
         _listGlyphLevelScratch.assign( _listShapedScratch.size(), 0 );
         _listCodepointScratch.clear();
         bool   bAnyRightToLeft = paragraphDirection == TextDirection::RightToLeft;
@@ -298,10 +298,10 @@ namespace sw
             _listCodepointScratch.push_back( codepoint );
         }
         if ( bAnyRightToLeft == false )
-            return false; // LTR 문단에 RTL 문자 · RLO 가 없으면 모든 수준이 0 이다
+            return false; // LTR 문단에 RTL 문자나 RLO 가 없으면 모든 수준이 0 이다
         TextBidi::resolveLevels( _listCodepointScratch, paragraphDirection, _listLevelScratch );
 
-        // 클러스터는 논리 순서라 줄지 않는다 — 코드 포인트를 앞으로만 민다. codepointEnd = 지금 코드 포인트 다음 바이트.
+        // 클러스터는 논리 순서라 줄어들지 않는다. 코드 포인트를 앞으로만 민다. codepointEnd 는 지금 코드 포인트 다음 바이트다.
         size_t codepointIndex = 0;
         size_t codepointEnd   = 0;
         (void)StringUtil::decodeUtf8( text, codepointEnd );
@@ -362,7 +362,7 @@ namespace sw
                 }
                 else
                 {
-                    // 기회가 없다(한 낱말이 줄보다 길다) — 그 자리에서 끊되, 닫는 부호를 줄 머리로 · 여는 부호를 줄 끝으로 보내지 않게 물린다.
+                    // 기회가 없다(한 단어가 줄보다 길다). 그 위치에서 끊되, 닫는 부호를 줄 머리로, 여는 부호를 줄 끝으로 보내지 않게 한 글자 물린다.
                     while ( lineEnd > lineStart + 1 && ( Internal::forbidsBreakBefore( _listShapedScratch[lineEnd]._codepoint ) ||
                                                          Internal::forbidsBreakAfter( _listShapedScratch[lineEnd - 1]._codepoint ) ) )
                     {
@@ -403,7 +403,7 @@ namespace sw
         if ( lineStart < glyphCount )
             listLine.push_back( Internal::LineRange{ lineStart, glyphCount, false } );
 
-        // 2) 줄 수 · 너비 제한 — 넘치면 자르고, 줄임표면 마지막(넘친) 줄에 붙인다.
+        // 2) 줄 수와 너비 제한: 넘치면 자르고, 줄임표면 마지막(넘친) 줄에 붙인다.
         const bool bEllipsis = style._overflow == TextOverflow::Ellipsis;
         if ( style._maxLines > 0 && listLine.size() > style._maxLines )
         {
@@ -445,7 +445,7 @@ namespace sw
                 ellipsis._width = ( metrics._advance + style._letterSpacing ) * style._fontSize;
         }
 
-        // 3) 줄마다 글리프 · 메트릭 · 기준선(정렬 전, x 는 줄 왼쪽 기준).
+        // 3) 줄마다 글리프, 메트릭, 기준선(정렬 전이며 x 는 줄 왼쪽 기준)을 정한다.
         float32 lineTop      = 0.0f;
         float32 maxLineWidth = 0.0f;
         for ( size_t lineIndex = 0; lineIndex < listLine.size(); ++lineIndex )
@@ -454,7 +454,7 @@ namespace sw
             uint32                     end        = range._end;
             float32                    trimmed    = 0.0f;
             uint32                     visibleEnd = end;
-            // 끝 공백 · 줄 바꿈은 너비에서 뺀다(글리프는 남긴다 — 커서 · 선택이 쓴다).
+            // 끝 공백과 줄 바꿈은 너비에서 뺀다(글리프는 남기며, 커서와 선택이 쓴다).
             while ( visibleEnd > range._begin && Internal::isTrailingBlank( _listShapedScratch[visibleEnd - 1]._codepoint ) )
             {
                 --visibleEnd;
@@ -480,7 +480,7 @@ namespace sw
                 end = visibleEnd;
             }
 
-            // 줄의 가장 큰 면 메트릭 — 대체 면이 섞인 줄이 겹치지 않게.
+            // 줄의 가장 큰 면 메트릭을 구한다. 대체 면이 섞인 줄이 겹치지 않게 한다.
             Internal::LineFaceMetrics faceMetrics{};
             faceMetrics.accumulate( rasterizer, chain._arrFace[0], style._fontSize );
             for ( uint32 index = range._begin; index < end; ++index )
@@ -528,7 +528,7 @@ namespace sw
                 }
             }
 
-            // RTL 문단의 끝 공백은 왼쪽 끝으로 간다 — 너비에서 뺀 만큼 왼쪽 밖에서 시작해 보이는 글리프가 [0, 너비] 에 놓이게.
+            // RTL 문단의 끝 공백은 왼쪽 끝으로 간다. 너비에서 뺀 만큼 왼쪽 밖에서 시작해 보이는 글리프가 [0, 너비] 에 놓이게 한다.
             float32 pen = 0.0f;
             if ( TextBidi::isRightToLeftLevel( paragraphLevel ) )
             {
@@ -588,7 +588,7 @@ namespace sw
         }
         outResult._size = float2{ maxLineWidth, lineTop };
 
-        // 4) 정렬 — 상자 너비는 maxWidth(무한이면 가장 넓은 줄). Start · End 는 문단 방향을 따른다(RTL 이면 Start = 오른쪽).
+        // 4) 정렬: 상자 너비는 maxWidth 이다(무한이면 가장 넓은 줄). Start 와 End 는 문단 방향을 따른다(RTL 이면 Start 가 오른쪽).
         const float32 boxWidth   = maxWidth > 0.0f ? maxWidth : maxLineWidth;
         const bool    bRightPara = TextBidi::isRightToLeftLevel( paragraphLevel );
         const bool    bCenter    = style._alignment == TextAlignment::Center;

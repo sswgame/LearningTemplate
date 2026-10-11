@@ -1,6 +1,6 @@
 /**
  * @file LocalizationManager.h
- * @brief 다국어(로컬라이제이션) 관리자입니다(싱글톤이 아닙니다 — 엔진 서비스 `engine::getLocalizationManager()`).
+ * @brief 다국어(로컬라이제이션) 관리자를 정의합니다. 싱글톤이 아니라 엔진 서비스 `engine::getLocalizationManager()` 로 얻습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -22,21 +22,21 @@ namespace sw
     class StringTable;
     class TextArgumentList;
 
-    /** @brief 프로젝트를 누가 올렸는지입니다. 게임을 다시 올려도 엔진 문자열은 남습니다. */
+    /** @brief 프로젝트를 누가 로드했는지 나타냅니다. 게임을 다시 로드해도 엔진 문자열은 남습니다. */
     enum class LocalizationScope : uint8
     {
         Engine = 0,
         Game,
-        Editor ///< 에디터 UI 문구 — 에디터 모듈이 올리고 내린다(배포본에는 없다)
+        Editor ///< 에디터 UI 문구입니다. 에디터 모듈이 로드하고 언로드하며 배포본에는 없습니다.
     };
 
-    /** @brief 문화권 하나의 번역 상태 수입니다(올린 프로젝트 전체). */
+    /** @brief 문화권 하나의 번역 상태 개수입니다(로드한 프로젝트 전체). */
     struct LocalizationCultureStatistics
     {
-        uint32 _currentCount{ 0 }; ///< 화면에 나오는 번역
+        uint32 _currentCount{ 0 }; ///< 화면에 나오는 번역입니다.
         uint32 _staleCount{ 0 };   ///< 원문이 바뀐 뒤의 번역(나오지 않는다)
         uint32 _reviewCount{ 0 };  ///< 검토 표시(나오지 않는다)
-        uint32 _orphanCount{ 0 };  ///< 원문 표에 없는 키의 번역
+        uint32 _orphanCount{ 0 };  ///< 원문 테이블에 없는 키의 번역입니다.
     };
 } // namespace sw
 
@@ -44,11 +44,11 @@ namespace sw
 {
     /**
      * @class LocalizationManager
-     * @brief 문화권 표 · 로컬라이제이션 프로젝트(원문 표 + 문화권 번역 표)를 올려 키를 지금 문화권의 글로 바꾸고, 문화권에 맞춰 메시지를 포맷합니다.
-     * @details 조회 사슬은 지금 문화권 → 그 부모(`ko_kr` → `ko`) → 폴백 문화권 → 그 부모 → 올린 프로젝트들의 원문 문화권입니다(언리얼 culture fallback ·
-     *          유니티 Locale fallback). 낡은(stale) · 검토(review) 번역은 화면에 내지 않고 사슬의 다음으로 떨어집니다.
-     *          의사 문화권(`qps_ploc` · `qps_plocm`, 문화권 표의 `pseudo`)은 원문을 변환해 만든 표이고 Dev 빌드에서만 고를 수 있습니다.
-     *          조회가 돌려주는 `const utf8*` 는 추가 전용 저장소(`StringTable.cpp`)에 있어 다시 읽기 · 언어 변경 뒤에도 유효합니다.
+     * @brief 문화권 테이블과 로컬라이제이션 프로젝트(원문 테이블 + 문화권 번역 테이블)를 로드해 키를 지금 문화권의 텍스트로 바꾸고, 문화권에 맞춰 메시지를 포맷합니다.
+     * @details 조회 순서는 지금 문화권, 그 부모(`ko_kr` → `ko`), 폴백 문화권, 그 부모, 로드한 프로젝트들의 원문 문화권입니다(언리얼 culture fallback,
+     *          유니티 Locale fallback). 낡은(stale) 번역과 검토(review) 번역은 화면에 내지 않고 순서의 다음으로 넘어갑니다.
+     *          의사 문화권(`qps_ploc`, `qps_plocm`, 문화권 테이블의 `pseudo`)은 원문을 변환해 만든 테이블이고 Dev 빌드에서만 고를 수 있습니다.
+     *          조회가 돌려주는 `const utf8*` 는 추가 전용 저장소(`StringTable.cpp`)에 있어 다시 읽기와 언어 변경 뒤에도 유효합니다.
      */
     class SW_API LocalizationManager
     {
@@ -61,58 +61,58 @@ namespace sw
         LocalizationManager( const LocalizationManager& )            = delete;
         LocalizationManager& operator=( const LocalizationManager& ) = delete;
 
-        /** @brief 언어 코드의 원본 철자입니다 — 소문자, `-` 는 `_`(`ko-KR` · `ko_KR` → `ko_kr`). 표에 넣고 찾는 모든 길이 이것을 지납니다. */
+        /** @brief 언어 코드의 정규 표기입니다. 소문자로 쓰고 `-` 는 `_` 로 바꿉니다(`ko-KR`, `ko_KR` → `ko_kr`). 테이블에 넣고 찾는 모든 경로가 이 함수를 거칩니다. */
         static string normalizeLanguageCode( string_view languageCode );
 
         // ------------------------------------------------------------------------------
-        // 1) 초기화 · 해제
+        // 1) 초기화와 해제
         // ------------------------------------------------------------------------------
-        /** @brief 프로젝트 · 낱개 표 · 지금 언어 · 콜백 · 빠진 키 기록을 비웁니다. 문화권 표는 남깁니다. */
+        /** @brief 프로젝트, 낱개 테이블, 지금 언어, 콜백, 빠진 키 기록을 비웁니다. 문화권 테이블은 남깁니다. */
         void clear();
 
         // ------------------------------------------------------------------------------
-        // 2) 데이터 — 문화권 표 · 프로젝트 · 낱개 표
+        // 2) 데이터: 문화권 테이블, 프로젝트, 낱개 테이블
         // ------------------------------------------------------------------------------
-        /** @brief 문화권 표(`*.cultures.json`)를 읽습니다. 의사 문화권의 표도 다시 만듭니다. */
+        /** @brief 문화권 테이블(`*.cultures.json`)을 읽습니다. 의사 문화권의 테이블도 다시 만듭니다. */
         [[nodiscard]] bool loadCultureTable( string_view resourcePath );
-        /** @brief 문화권 표를 JSON 글에서 읽습니다(테스트 · 도구). */
+        /** @brief 문화권 테이블을 JSON 텍스트에서 읽습니다(테스트와 도구). */
         [[nodiscard]] bool loadCultureTableJSON( string_view jsonText );
-        /** @brief @p culture 의 형식 데이터(없으면 부모, 끝까지 없으면 기본값)를 값으로 돌려줍니다. */
+        /** @brief @p culture 의 형식 데이터를 값으로 반환합니다(없으면 부모, 끝까지 없으면 기본값). */
         CultureInfo resolveCulture( string_view culture ) const;
 
         /**
-         * @brief 로컬라이제이션 프로젝트(`*.locproject.json`, 리소스 경로 또는 절대 경로)를 올립니다 — 원문 표들과 문화권 번역 표들을 읽습니다.
-         * @details 같은 이름의 프로젝트가 이미 있으면 바꿉니다. 원문 표 두 개에 같은 키가 있으면 오류이고 앞의 것을 씁니다.
+         * @brief 로컬라이제이션 프로젝트(`*.locproject.json`, 리소스 경로 또는 절대 경로)를 로드합니다. 원문 테이블들과 문화권 번역 테이블들을 읽습니다.
+         * @details 같은 이름의 프로젝트가 이미 있으면 바꾼다. 원문 테이블 두 개에 같은 키가 있으면 오류이고 앞의 것을 쓴다.
          */
         [[nodiscard]] bool mountProject( string_view projectPath, LocalizationScope scope );
         /** @brief 그 범위의 프로젝트를 내립니다. */
         void unmountProjects( LocalizationScope scope );
-        /** @brief 올린 프로젝트 이름입니다(올린 순서). */
+        /** @brief 로드한 프로젝트 이름입니다(로드한 순서). */
         vector<string> getMountedProjectNames() const;
-        /** @brief 올린 프로젝트를 모두 디스크에서 다시 읽습니다. 하나라도 못 읽으면 false 이고 그 프로젝트는 예전 내용을 지킵니다. */
+        /** @brief 로드한 프로젝트를 모두 디스크에서 다시 읽습니다. 하나라도 읽지 못하면 false 이고 그 프로젝트는 기존 내용을 유지합니다. */
         [[nodiscard]] bool reloadProjects();
-        /** @brief 바뀐 파일이 올린 프로젝트의 것이면 그 프로젝트를 다시 읽고 true 입니다(핫 리로드). 아니면 아무것도 안 하고 false 입니다. */
+        /** @brief 바뀐 파일이 로드한 프로젝트의 것이면 그 프로젝트를 다시 읽고 true 를 반환합니다(핫 리로드). 아니면 아무것도 하지 않고 false 입니다. */
         [[nodiscard]] bool reloadChangedFile( string_view changedPath );
-        /** @brief 그 경로가 올린 프로젝트의 파일(프로젝트 · 원문 표 · 번역 표)인지입니다. */
+        /** @brief 그 경로가 로드한 프로젝트의 파일(프로젝트, 원문 테이블, 번역 테이블)인지 확인합니다. */
         bool isProjectFile( string_view path ) const;
 
-        /** @brief 번역 표 JSON(`TranslationTable` 형식)을 낱개 표로 올립니다. 원문 확인 없이 프로젝트 위에 덮입니다(테스트 · 도구). */
+        /** @brief 번역 테이블 JSON(`TranslationTable` 형식)을 낱개 테이블로 로드합니다. 원문 확인 없이 프로젝트 위에 덮어씁니다(테스트와 도구). */
         [[nodiscard]] bool loadLanguageJSON( string_view languageCode, string_view jsonText );
-        /** @brief 낱개 표에 문자열 하나를 넣습니다. */
+        /** @brief 낱개 테이블에 문자열 하나를 넣습니다. */
         void setString( string_view languageCode, const hashed_string& key, string_view value );
-        /** @brief 그 언어의 낱개 표를 내립니다(프로젝트의 글은 남는다). */
+        /** @brief 그 언어의 낱개 테이블을 언로드합니다(프로젝트의 텍스트는 남습니다). */
         void unloadLanguage( string_view languageCode );
 
         /**
-         * @brief 게임 프로젝트를 올리고(앞의 게임 프로젝트는 내린다) 활성 · 폴백 언어를 정합니다 — 명령줄 `-lang` → @p defaultLanguage → 폴백 → 아무 언어.
-         * @return 프로젝트를 올렸으면 true 입니다.
+         * @brief 게임 프로젝트를 로드하고(앞의 게임 프로젝트는 언로드합니다) 활성 언어와 폴백 언어를 정합니다. 순서는 명령줄 `-lang`, @p defaultLanguage, 폴백, 아무 언어입니다.
+         * @return 프로젝트를 로드했으면 true 입니다.
          */
         bool initialize( string_view projectPath, string_view defaultLanguage = "ko_KR", string_view fallbackLanguage = "en_US" );
 
         // ------------------------------------------------------------------------------
         // 3) 언어 설정 및 조회
         // ------------------------------------------------------------------------------
-        /** @brief 현재 활성 언어를 설정합니다. 언어가 바뀌면 글 판(revision)을 올리고 등록된 콜백을 부릅니다. */
+        /** @brief 현재 활성 언어를 설정합니다. 언어가 바뀌면 텍스트 버전(revision)을 올리고 등록된 콜백을 부릅니다. */
         bool setCurrentLanguage( string_view languageCode );
         /** @brief 현재 활성 언어 코드를 값으로 반환합니다(락을 놓은 뒤의 참조는 사라진 버퍼를 가리킬 수 있다). */
         string getCurrentLanguage() const;
@@ -120,7 +120,7 @@ namespace sw
         void setFallbackLanguage( string_view languageCode );
         /** @brief 폴백 언어 코드를 값으로 반환합니다. */
         string getFallbackLanguage() const;
-        /** @brief 그 언어의 글이 있는지(원문 · 번역 · 낱개 표 · 의사 문화권) 확인합니다. */
+        /** @brief 그 언어의 텍스트(원문, 번역, 낱개 테이블, 의사 문화권)가 있는지 확인합니다. */
         bool hasLanguage( string_view languageCode ) const;
         /** @brief 고를 수 있는 언어 코드입니다(사전 순). 의사 문화권은 Dev 빌드에서만 들어 있습니다. */
         vector<string> getAvailableLanguages() const;
@@ -132,21 +132,21 @@ namespace sw
         CultureInfo getCurrentCulture() const;
         /** @brief 지금 문화권이 오른쪽→왼쪽인지입니다(UI 배치를 뒤집는다). */
         bool isRightToLeft() const;
-        /** @brief 그 문화권(빈 값이면 지금 문화권)의 글꼴 대체 목록입니다. 적힌 것이 없으면 폴백 문화권의 것입니다. */
+        /** @brief 그 문화권(빈 값이면 지금 문화권)의 폰트 대체 목록입니다. 적힌 것이 없으면 폴백 문화권의 것입니다. */
         vector<string> getFontFallback( string_view languageCode = {} ) const;
         /** @brief 문화권 하나의 번역 상태 수입니다. */
         LocalizationCultureStatistics getStatistics( string_view languageCode ) const;
-        /** @brief 글이 바뀔 때마다(언어 변경 · 다시 읽기 · 올리기) 오르는 판 번호입니다. UI 는 이것이 바뀌면 다시 묻습니다(언리얼 TextRevision). */
+        /** @brief 텍스트가 바뀔 때마다(언어 변경, 다시 읽기, 로드) 오르는 버전 번호입니다. UI 는 이 번호가 바뀌면 다시 묻습니다(언리얼 TextRevision). */
         uint32 getTextRevision() const;
 
         // ------------------------------------------------------------------------------
-        // 4) 문자열 조회 · 포맷
+        // 4) 문자열 조회와 포맷
         // ------------------------------------------------------------------------------
         /** @brief 조회 사슬에서 키를 찾습니다. 어디에도 없으면 빠진 키로 알리고 @p pDefaultText 입니다. */
         const utf8* getString( const hashed_string& key, const utf8* pDefaultText = "" ) const;
         /**
          * @brief 키를 **intern 하지 않고** 조회합니다. 빠진 키로 알리지 않습니다.
-         * @details 물어보는 글이 키가 아닐 수도 있는 자리(대사 원문 등)에서 씁니다. `hashed_string` 을 만들면 그 텍스트가 intern 아레나에 영구히 남습니다.
+         * @details 물어보는 텍스트가 키가 아닐 수도 있는 곳(대사 원문 등)에서 쓴다. `hashed_string` 을 만들면 그 텍스트가 intern 아레나에 영구히 남는다.
          */
         const utf8* getStringByText( string_view keyText, const utf8* pDefaultText = "" ) const;
         /** @brief 지정한 언어에서만 찾습니다(사슬 없음). */
@@ -155,15 +155,15 @@ namespace sw
         bool hasString( const hashed_string& key ) const;
         /** @brief 지정한 언어에 그 키가 있는지 확인합니다. */
         bool hasStringInLanguage( string_view languageCode, const hashed_string& key ) const;
-        /** @brief 지정한 언어의 실행 표입니다(없으면 nullptr). 표 객체는 언어가 사는 동안 같은 주소입니다. */
+        /** @brief 지정한 언어의 실행 테이블입니다(없으면 nullptr). 테이블 객체는 언어가 사는 동안 같은 주소입니다. */
         const StringTable* getLanguageTable( string_view languageCode ) const;
 
-        /** @brief 메시지 패턴을 지금 문화권으로 포맷합니다(`TextFormatter`). 오류는 경고로 알리고, 글은 그래도 돌려줍니다. */
+        /** @brief 메시지 패턴을 지금 문화권으로 포맷합니다(`TextFormatter`). 오류는 경고로 알리고, 텍스트는 그래도 돌려줍니다. */
         string formatText( string_view pattern, const TextArgumentList& arguments ) const;
         /** @brief 키의 글을 찾아 포맷합니다. */
         string getFormattedString( const hashed_string& key, const TextArgumentList& arguments, const utf8* pDefaultText = "" ) const;
 
-        /** @brief 빠진 키를 기록합니다(처음 한 번 경고). 올린 글이 하나도 없으면 기록하지 않습니다. `SW_LOCTEXT` 가 부릅니다. */
+        /** @brief 빠진 키를 기록합니다(처음 한 번 경고). 로드한 텍스트가 하나도 없으면 기록하지 않습니다. `SW_LOCTEXT` 가 부릅니다. */
         void reportMissingKey( string_view key ) const;
         /** @brief 지금까지 빠진 키입니다(사전 순). */
         vector<string> getMissingKeys() const;
@@ -173,34 +173,34 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 5) 언어 변경 이벤트 알림
         // ------------------------------------------------------------------------------
-        /** @brief 글이 바뀔 때(언어 변경 · 같은 언어의 다시 읽기 — 그때는 두 인자가 같다) 부를 콜백을 등록하고 ID 를 반환합니다. */
+        /** @brief 텍스트가 바뀔 때(언어 변경, 같은 언어의 다시 읽기이며 이때는 두 인자가 같습니다) 부를 콜백을 등록하고 ID 를 반환합니다. */
         uint32 registerLanguageChangedCallback( LanguageChangedCallback callback );
         /** @brief 등록된 콜백을 해제합니다. */
         void unregisterLanguageChangedCallback( uint32 callbackID );
 
     private:
-        /** @brief 올린 프로젝트 하나 — 읽은 문서와 그 파일 경로입니다. */
+        /** @brief 로드한 프로젝트 하나입니다. 읽은 문서와 그 파일 경로를 가집니다. */
         struct MountedProject
         {
             LocalizationProject          _project;
             string                       _projectPath;
-            vector<string>               _listFilePath; ///< 프로젝트 · 원문 표 · 번역 표(있든 없든 — 새로 생긴 번역 표도 다시 읽는다)
-            map<string, SourceTextEntry> _mapSource;    ///< 원문 표들을 합친 것
+            vector<string>               _listFilePath; ///< 프로젝트, 원문 테이블, 번역 테이블의 경로입니다(있든 없든 포함하며, 새로 생긴 번역 테이블도 다시 읽습니다).
+            map<string, SourceTextEntry> _mapSource;    ///< 원문 테이블들을 합친 것입니다.
             vector<TranslationTable>     _listTranslation;
             LocalizationScope            _scope{ LocalizationScope::Game };
         };
 
-        /** @brief 프로젝트 파일 셋을 읽어 @p outProject 를 채웁니다. 프로젝트 · 원문 표를 못 읽으면 false 입니다. */
+        /** @brief 프로젝트 파일 세트를 읽어 @p outProject 를 채웁니다. 프로젝트나 원문 테이블을 읽지 못하면 false 입니다. */
         [[nodiscard]] static bool readProject( string_view projectPath, MountedProject& outProject );
-        /** @brief 읽은 문서들로 실행 표를 다시 채웁니다(`_mutex` 를 쥔 채). */
+        /** @brief 읽은 문서들로 실행 테이블을 다시 채웁니다(`_mutex` 를 잡은 상태에서 부릅니다). */
         void rebuildTablesLocked();
-        /** @brief 조회 사슬을 다시 셉니다(`_mutex` 를 쥔 채). */
+        /** @brief 조회 순서를 다시 계산합니다(`_mutex` 를 잡은 상태에서 부릅니다). */
         void rebuildLookupChainLocked();
-        /** @brief 그 코드의 실행 표입니다. 없으면 만듭니다(`_mutex` 를 쥔 채). */
+        /** @brief 그 코드의 실행 테이블입니다. 없으면 만듭니다(`_mutex` 를 잡은 상태에서 부릅니다). */
         StringTable& getOrCreateTableLocked( const string& code );
         /** @brief 미리 구한 해시로 조회 사슬을 한 번 훑습니다. */
         const utf8* findByHash( uint64 keyHash ) const;
-        /** @brief 글 판을 올리고 콜백을 부릅니다. */
+        /** @brief 텍스트 버전을 올리고 콜백을 부릅니다. */
         void notifyLanguageChanged( string_view oldLanguage, string_view newLanguage );
 
     private:
