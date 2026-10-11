@@ -145,7 +145,7 @@ namespace sw
             if ( _state._waste.isEmpty() || bRecycleLeft == false )
                 return false;
             pushHistory();
-            // 웨이스트를 뒤집어 스톡으로 — 먼저 나왔던 패가 다시 먼저 나온다.
+            // 웨이스트를 뒤집어 스톡으로 되돌린다. 먼저 나왔던 패가 다시 먼저 나온다.
             (void)_state._waste.drawInto( _state._stock, _state._waste.getCount() );
             ++_state._recycleCount;
             return true;
@@ -196,7 +196,7 @@ namespace sw
         if ( count > faceUp )
             return false; // 뒤집힌 패는 옮길 수 없다
         const int32 baseIndex = from.getCount() - count;
-        // 옮기는 묶음 자체도 색 번갈이 · 하나씩 내려가야 한다(앞면이면 늘 그렇지만 상태를 그대로 받은 판을 위해 본다).
+        // 옮기는 묶음도 색이 번갈아 가며 하나씩 내려가야 한다. 앞면이면 항상 그렇지만, 상태를 그대로 받은 판을 위해 확인한다.
         for ( int32 index = baseIndex + 1; index < from.getCount(); ++index )
         {
             const Card& upper = from.getAt( index );
@@ -214,7 +214,7 @@ namespace sw
         }
         while ( source.getCount() > baseIndex )
         {
-            (void)source.removeAt( source.getCount() - 1 ); // 카드는 위에서 옮겼다 — 뺀 카드는 버린다
+            (void)source.removeAt( source.getCount() - 1 ); // 카드는 위에서 이미 옮겼으므로 뺀 카드는 버린다
         }
         revealColumnTop( fromColumn );
         return true;
@@ -285,7 +285,7 @@ namespace sw
             }
         }
         if ( movedCount == 0 )
-            (void)undo(); // 아무것도 못 올렸으면 기록을 남기지 않는다
+            (void)undo(); // 아무것도 올리지 못했으면 기록을 남기지 않는다
         return movedCount;
     }
 
@@ -305,7 +305,7 @@ namespace sw
         if ( KlondikeGameInternal::readBoard( archive, state ) == false )
             return false;
         uint32 historyCount = 0;
-        // 판마다 열 일곱(더미 4 + 뒤집힌 수 4) + 파운데이션 넷 · 스톡 · 웨이스트(더미 4) + 되돌린 수 · 옮긴 수(8)
+        // 판마다 열 7개(더미 4 + 뒤집힌 수 4) + 파운데이션 4개, 스톡, 웨이스트(더미 4) + 되돌린 수, 옮긴 수(8)
         if ( StateArchiveUtil::readCount( archive, 88, historyCount ) == false )
             return false;
         vector<KlondikeState> listHistory( historyCount, KlondikeState{} );

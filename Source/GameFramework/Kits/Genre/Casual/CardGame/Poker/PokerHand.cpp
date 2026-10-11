@@ -10,7 +10,7 @@ namespace sw
         {
             static constexpr int32 kHandSize = 5;
 
-            /** @brief 숫자별 장수를 (장수 내림, 숫자 내림)으로 늘어놓습니다. 서로 다른 숫자의 개수입니다. */
+            /** @brief 숫자별 장수를 (장수 내림, 숫자 내림) 순서로 늘어놓고, 서로 다른 숫자의 개수를 반환합니다. */
             static int32 makeGroups( const uint8* pRank, uint8* pOutGroupRank, uint8* pOutGroupCount )
             {
                 uint8 arrCount[PokerHandEvaluator::kAceHigh + 1]{};
@@ -33,7 +33,7 @@ namespace sw
                 return groupCount;
             }
 
-            /** @brief 스트레이트의 높은 카드입니다(휠 = 5). 아니면 0 입니다. @p pRank 는 서로 다른 숫자 5 개(내림차순). */
+            /** @brief 스트레이트의 높은 카드를 반환합니다(휠은 5). 스트레이트가 아니면 0 입니다. @p pRank 는 서로 다른 숫자 5개(내림차순)입니다. */
             static uint8 findStraightHigh( const uint8* pSortedRank )
             {
                 if ( pSortedRank[0] - pSortedRank[4] == 4 )
@@ -112,7 +112,7 @@ namespace sw
         PokerHandValue best;
         if ( count < PokerHandInternal::kHandSize )
             return best;
-        // 7 장이면 21 가지 — 고를 5 장을 비트로 센다.
+        // 7장이면 21가지 조합이므로, 고를 5장을 비트로 센다.
         const uint32 maskEnd = 1u << count;
         bool         bFound  = false;
         for ( uint32 mask = 0; mask < maskEnd; ++mask )

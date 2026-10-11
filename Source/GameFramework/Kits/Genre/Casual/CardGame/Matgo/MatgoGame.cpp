@@ -17,7 +17,7 @@ namespace sw
             static constexpr int32 kDealAttemptCount = 16;
             static constexpr int32 kRibbonCount      = 4;
 
-            /** @brief 같은 월 바닥 패 중 먼저 먹을 값입니다(광 > 열끗 > 띠 > 쌍피 > 피). */
+            /** @brief 같은 월 바닥 패 중 먼저 먹을 우선순위 값을 반환합니다(광 > 열끗 > 띠 > 쌍피 > 피). */
             static int32 computeCapturePriority( const Card& card )
             {
                 const HwatuCardInfo& info = HwatuDeck::getInfo( card._id );
@@ -81,7 +81,7 @@ namespace sw
             (void)deck.drawInto( layout._floor, settings._floorSize );
             layout._drawPile = deck;
             if ( MatgoGameInternal::hasFourOfMonth( layout._floor ) == false )
-                break; // 바닥에 같은 월 넷이면 다시 섞는다
+                break; // 바닥에 같은 월 넷이 나오면 다시 섞는다
         }
         initializeFromLayout( settings, layout );
     }
@@ -132,14 +132,14 @@ namespace sw
         {
             if ( matchCount == 1 )
             {
-                // 뻑 — 셋이 바닥에 남는다.
+                // 뻑: 셋이 바닥에 남는다.
                 _floor.push( played );
                 _floor.push( flipped );
                 _eventBuffer.push( MatgoEvent{ player, 0, played._id, MatgoEvent::Kind::Ppeok } );
             }
             else
             {
-                // 쪽(바닥에 없었다) · 따닥(바닥에 둘) — 다 먹고 피를 뺏는다.
+                // 쪽(바닥에 없었다)과 따닥(바닥에 둘): 다 먹고 피를 뺏는다.
                 for ( const uint16 floorCardID : listSameMonth )
                 {
                     captureFloorCard( player, floorCardID );
@@ -192,7 +192,7 @@ namespace sw
             captureCard( player, card );
             return;
         }
-        // 한 장이면 그것, 셋(뻑)이면 다 먹고 피를 뺏는다.
+        // 한 장이면 그것을, 셋(뻑)이면 다 먹고 피를 뺏는다.
         for ( const uint16 floorCardID : listSameMonth )
         {
             captureFloorCard( player, floorCardID );
@@ -226,7 +226,7 @@ namespace sw
                 continue;
             CardPile& captured  = _listPlayer[static_cast<size_t>( other )]._captured;
             int32     bestIndex = -1;
-            // 홑피를 먼저 — 없으면 쌍피.
+            // 홑피를 먼저 뺏고, 없으면 쌍피를 뺏는다.
             for ( int32 index = 0; index < captured.getCount(); ++index )
             {
                 const HwatuCardInfo& info = HwatuDeck::getInfo( captured.getAt( index )._id );
@@ -267,7 +267,7 @@ namespace sw
         {
             if ( areHandsEmpty() )
             {
-                finishGame( player ); // 마지막 패 — 고할 수 없으니 스톱
+                finishGame( player ); // 마지막 패라 고를 할 수 없으므로 스톱으로 끝낸다
                 return;
             }
             _phase = MatgoPhase::GoStopChoice;
@@ -445,7 +445,7 @@ namespace sw
         archive >> playerCount;
         if ( archive.isError() || playerCount != _listPlayer.size() )
             return false;
-        // 사본에 읽고 끝까지 맞으면 바꾼다 — 설정은 사본이 그대로 든다.
+        // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 설정은 사본도 그대로 가지고 있다.
         MatgoGame game = *this;
         for ( size_t player = 0; player < game._listPlayer.size(); ++player )
         {
