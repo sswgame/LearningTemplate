@@ -14,35 +14,35 @@ namespace sw
     class GameObjectManager;
 
     /**
-     * @brief 카메라 역할(용도)입니다. 플레이어 시점 후보(`Game`) · 보조(`Custom` — 직접 고르거나 뷰 타깃으로 바꿀 때만) · 캡처(`Capture` — 자기 출력
-     *        (렌더 텍스처 · 화면 사각형)으로만 그리고 플레이어 시점으로 뽑히지 않는다) · 에디터 뷰포트입니다.
+     * @brief 카메라 역할(용도)입니다. `Game` 은 플레이어 시점 후보이고, `Custom` 은 직접 고르거나 뷰 타깃으로 바꿀 때만 쓰는 보조 카메라입니다.
+     *        `Capture` 는 자기 출력(렌더 텍스처 또는 화면 사각형)으로만 그리며 플레이어 시점으로 뽑히지 않습니다. `Editor` 는 에디터 뷰포트용입니다.
      */
     ENUM()
     enum class CameraRole : uint8
     {
         Game    = 0, ///< 플레이 중에 활성(플레이어 시점 후보)
         Editor  = 1, ///< 에디터 뷰포트에서 활성
-        Custom  = 2, ///< 보조 — 직접 고르거나 뷰 타깃으로 바꿀 때만 쓰임
-        Capture = 3, ///< 캡처 — 자기 출력(`CameraRenderOutput`)으로만 그린다(CCTV · 백미러 · 미니맵)
+        Custom  = 2, ///< 보조 카메라다. 직접 고르거나 뷰 타깃으로 바꿀 때만 쓴다
+        Capture = 3, ///< 캡처 카메라다. 자기 출력(`CameraRenderOutput`)으로만 그린다(CCTV, 백미러, 미니맵)
     };
 
-    /** @brief 카메라가 그린 그림이 가는 곳입니다. */
+    /** @brief 카메라가 그린 이미지가 가는 곳입니다. */
     ENUM()
     enum class CameraOutputTarget : uint8
     {
-        MainView = 0,  ///< 주 시점 — 활성 게임 카메라면 화면 전체(사각형을 주면 그 안)에 그린다. 아니면 그리지 않는다
-        ScreenRect,    ///< 화면의 사각형(분할 화면 · PiP) — 주 시점 위에 겹쳐 그린다
-        RenderTexture, ///< 렌더 텍스처(`rendertarget/<이름>`) — 머티리얼이 텍스처로 읽는다(CCTV 모니터 · 백미러 · 미니맵)
+        MainView = 0,  ///< 주 시점이다. 활성 게임 카메라면 화면 전체(사각형을 주면 그 안)에 그리고, 아니면 그리지 않는다
+        ScreenRect,    ///< 화면의 사각형이다(분할 화면, PiP). 주 시점 위에 겹쳐 그린다
+        RenderTexture, ///< 렌더 텍스처(`rendertarget/<이름>`)다. 머티리얼이 텍스처로 읽는다(CCTV 모니터, 백미러, 미니맵)
     };
 } // namespace sw
 
 namespace sw
 {
     /**
-     * @brief 카메라의 출력 설정입니다 — 어디로(화면 사각형 · 렌더 텍스처), 얼마나 자주(갱신 주기), 얼마나 크게(해상도 배율), 무엇을 끄고(그림자 · 후처리),
-     *        언제만(보일 때) 그릴지입니다. 언리얼 SceneCapture2D · 유니티 `Camera.targetTexture` · `Camera.rect` 의 자리입니다.
-     * @details 렌더 텍스처 경로는 `rendertarget/` 로 시작합니다(`TextureCache` 가 그 경로를 렌더 타깃으로 만든다). 머티리얼의 텍스처 프로퍼티 ·
-     *          `MaterialInstance::setTextureParameter` 에 같은 경로를 적으면 그 그림을 읽는다.
+     * @brief 카메라의 출력 설정입니다. 어디로(화면 사각형, 렌더 텍스처), 얼마나 자주(갱신 주기), 얼마나 크게(해상도 배율), 무엇을 끄고(그림자, 후처리),
+     *        언제만(보일 때) 그릴지 정합니다. 언리얼의 SceneCapture2D, 유니티의 `Camera.targetTexture` 와 `Camera.rect` 에 해당합니다.
+     * @details 렌더 텍스처 경로는 `rendertarget/` 로 시작한다(`TextureCache` 가 그 경로를 렌더 타깃으로 만든다). 머티리얼의 텍스처 프로퍼티나
+     *          `MaterialInstance::setTextureParameter` 에 같은 경로를 적으면 그 이미지를 읽는다.
      */
     REFLECT()
     struct SW_API CameraRenderOutput
@@ -76,7 +76,7 @@ namespace sw
 {
     /**
      * @class CameraComponent
-     * @brief GameObject 에 붙는 카메라입니다. 트랜스폼은 SceneComponent 에서 옵니다.
+     * @brief GameObject 에 붙는 카메라입니다. 트랜스폼은 SceneComponent 에서 가져옵니다.
      */
     REFLECT( Category = "Camera", DisplayName = "Camera Component", Tooltip = "Perspective / Orthographic Viewport Camera" )
     class SW_API CameraComponent : public SceneComponent
@@ -93,10 +93,10 @@ namespace sw
         CameraComponent();
 
         /**
-         * @brief 그 이름의 오브젝트에 카메라가 있게 하고(없으면 오브젝트 · 컴포넌트를 만듭니다) 역할 · 위치 · 시선 · 기본 렌즈를 맞춥니다.
-         * @details 엔진의 기본 게임 카메라(`Scene::ensureDefaultCameras`)와 에디터 카메라가 함께 씁니다(기본 렌즈 값
-         *          `kDefaultFovY` · `kDefaultNearZ` · `kDefaultFarZ` 를 리터럴로 다시 적지 않게).
-         * @return 매니저가 없거나 만들 수 없으면(틱 중에는 `addComponent` 가 지연됩니다) nullptr 입니다.
+         * @brief 그 이름의 오브젝트에 카메라가 있게 하고(없으면 오브젝트와 컴포넌트를 만듭니다) 역할, 위치, 시선, 기본 렌즈를 맞춥니다.
+         * @details 엔진의 기본 게임 카메라(`Scene::ensureDefaultCameras`)와 에디터 카메라가 함께 쓴다(기본 렌즈 값
+         *          `kDefaultFovY`, `kDefaultNearZ`, `kDefaultFarZ` 를 리터럴로 다시 적지 않게 하려는 것이다).
+         * @return 매니저가 없거나 만들 수 없으면(틱 중에는 `addComponent` 가 지연된다) nullptr 입니다.
          */
         static CameraComponent* findOrCreateNamed( GameObjectManager* pObjectManager, hashed_string objectName, CameraRole role,
                                                    const float3& position, const float3& lookTarget );
@@ -153,27 +153,27 @@ namespace sw
         /** @brief 뷰-투영 행렬을 반환합니다. */
         float4x4 getViewProjectionMatrix( float32 aspectRatio ) const;
 
-        /** @brief 카메라가 그리는 눈의 월드 위치입니다 — 월드 위치에 그리기 전용 오프셋(`setViewOffset`)을 더한 것입니다. 뷰 행렬이 이 점을 씁니다. */
+        /** @brief 카메라가 그리는 눈의 월드 위치입니다. 월드 위치에 그리기 전용 오프셋(`setViewOffset`)을 더한 것이며, 뷰 행렬이 이 점을 씁니다. */
         float3 getCameraPosition() const { return getWorldPosition() + _viewOffset; }
         /**
          * @brief 그리기에만 쓰는 눈 위치 오프셋(월드)입니다. 트랜스폼은 그대로 둡니다. 저장하지 않습니다.
-         * @details 픽셀 퍼펙트 카메라가 눈을 화면 픽셀 격자에 붙일 때 씁니다(`PixelPerfectCameraComponent`). 트랜스폼을 반올림하면 감쇠로 따라가는
-         *          카메라가 반 픽셀 아래의 움직임을 영영 잃어 멈춥니다 — 그래서 그리는 눈만 옮깁니다(유니티도 렌더 직전에만 붙입니다).
+         * @details 픽셀 퍼펙트 카메라가 눈을 화면 픽셀 격자에 붙일 때 쓴다(`PixelPerfectCameraComponent`). 트랜스폼을 반올림하면 감쇠로 따라가는
+         *          카메라가 반 픽셀 아래의 움직임을 영영 잃어 멈춘다. 그래서 그리는 눈만 옮긴다(유니티도 렌더 직전에만 붙인다).
          */
         void setViewOffset( const float3& offset ) { _viewOffset = offset; }
         /** @brief 그리기 전용 눈 위치 오프셋입니다. */
         const float3& getViewOffset() const { return _viewOffset; }
-        /** @brief 카메라가 보는 방향(월드, 정규화)입니다 — 로컬 +Z 를 월드 회전으로 돌린 것으로 뷰 행렬과 같은 축입니다. */
+        /** @brief 카메라가 보는 방향(월드, 정규화)입니다. 로컬 +Z 를 월드 회전으로 돌린 것이며 뷰 행렬과 같은 축입니다. */
         float3 getCameraForward() const;
 
-        /** @brief 출력 설정(렌더 텍스처 · 화면 사각형 · 갱신 주기 · 끌 기능)입니다. */
+        /** @brief 출력 설정(렌더 텍스처, 화면 사각형, 갱신 주기, 끌 기능)입니다. */
         const CameraRenderOutput& getRenderOutput() const { return _renderOutput; }
         /** @brief 출력 설정을 바꿉니다. 렌더 텍스처면 그 크기를 텍스처 캐시에 알립니다. */
         void setRenderOutput( const CameraRenderOutput& output );
 
         /**
-         * @brief 이 카메라의 화면이 이번 프레임에 **끊어** 바뀌었다고 표시합니다(언리얼 `bCameraCut`). 렌더러가 시간 누적(TAA 기록)을 버린다.
-         * @details 블렌드 없는 프리셋 · 뷰 타깃 전환이 부릅니다. 게임 스레드에서 쓰고 패킷을 만드는 쪽이 `consumeCut` 으로 한 번 읽어 지웁니다.
+         * @brief 이 카메라의 화면이 이번 프레임에 **끊어** 바뀌었다고 표시합니다(언리얼의 `bCameraCut`). 렌더러가 시간 누적(TAA 기록)을 버립니다.
+         * @details 블렌드 없는 프리셋과 뷰 타깃 전환이 부른다. 게임 스레드에서 쓰고 패킷을 만드는 쪽이 `consumeCut` 으로 한 번 읽어 지운다.
          */
         void markCut() { _bCutPending = SW_TRUE; }
         /** @brief 컷 표시를 읽고 지웁니다. */
@@ -206,6 +206,6 @@ namespace sw
         CameraRenderOutput _renderOutput;
         PROPERTY( Category = "Projection", DisplayName = "Orthographic", Tooltip = "Toggle orthographic projection" )
         bool  _bOrthographic;
-        uint8 _bCutPending; ///< `markCut` 이 세우고 `consumeCut` 이 지운다(저장하지 않는다)
+        uint8 _bCutPending; ///< `markCut` 이 켜고 `consumeCut` 이 지운다(저장하지 않는다)
     };
 } // namespace sw
