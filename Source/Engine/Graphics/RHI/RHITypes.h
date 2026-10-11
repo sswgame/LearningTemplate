@@ -414,7 +414,7 @@ namespace sw
     {
         uint32 _srcOffset{ 0 }; ///< 넘긴 원본 포인터 기준 바이트 오프셋
         uint32 _dstOffset{ 0 }; ///< 목적 버퍼 안의 바이트 오프셋
-        uint32 _size{ 0 };      ///< 옮길 바이트 수
+        uint32 _sizeBytes{ 0 }; ///< 옮길 바이트 수
     };
 } // namespace sw
 

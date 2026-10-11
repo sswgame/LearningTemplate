@@ -382,7 +382,7 @@ namespace sw
         {
             VkBuffer       _buffer{ nullptr };
             VkDeviceMemory _memory{ nullptr };
-            uint32         _size{ 0 };
+            uint32         _sizeBytes{ 0 };
             uint32         _usage{ 0 }; ///< VkBufferUsageFlags
             RHIBufferState _state = RHIBufferState::Common;
         };

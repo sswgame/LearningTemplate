@@ -602,7 +602,7 @@ namespace sw
             return false;
         if ( ( attribute.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ) != 0 )
             return false;
-        outStamp._size      = ( static_cast<uint64>( attribute.nFileSizeHigh ) << 32 ) | attribute.nFileSizeLow;
+        outStamp._sizeBytes = ( static_cast<uint64>( attribute.nFileSizeHigh ) << 32 ) | attribute.nFileSizeLow;
         outStamp._writeTime = ( static_cast<uint64>( attribute.ftLastWriteTime.dwHighDateTime ) << 32 ) | attribute.ftLastWriteTime.dwLowDateTime;
         return true;
 #else
@@ -610,7 +610,7 @@ namespace sw
         struct stat fileStat{};
         if ( ::stat( filePath.c_str(), &fileStat ) != 0 || S_ISREG( fileStat.st_mode ) == 0 )
             return false;
-        outStamp._size      = static_cast<uint64>( fileStat.st_size );
+        outStamp._sizeBytes = static_cast<uint64>( fileStat.st_size );
         outStamp._writeTime = static_cast<uint64>( fileStat.st_mtim.tv_sec ) * 1'000'000'000ull + static_cast<uint64>( fileStat.st_mtim.tv_nsec );
         return true;
 #endif

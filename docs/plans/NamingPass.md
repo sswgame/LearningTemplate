@@ -31,8 +31,10 @@
 `HorrorItemKind::Misc` → `None`, `CameraShakeRequest` 를 `CameraShakeRequest.h` 로 분리, `ResourceUtil` → `ResourcePaths`(경로 해석 · 저장 경로) + `ResourceIO`(읽기 · 존재 확인 · 팩 매니저; 참조 200 파일), `EditorUtil` 의 경로 · 상태 파일 이름 → `EditorPaths`,
 두 린트 예외 표의 "개명 예정" 59 줄(`build*` · `generateNewID` · `Attr` · 맨이름 `out`). 예외 표에는 "도메인 용어" 일곱 줄만 남았다.
 
-### 채택 — 남은 치환 (건별 판단)
-- 바이트 크기: 버퍼·메모리 필드만 `sizeBytes` 로(맨 `size` 354 곳은 컨테이너 크기라 대상 아님). 시간 필드는 단위 없는 것 약 66 개 가운데 초·밀리초가 모호한 것만 접미사를 붙인다 — 사전 목록을 뽑아 건별 판단.
+### 끝난 것 (2026-10-11 건별 판단)
+시간 필드: 정수는 이미 `Ms` · `Frames` · `Steps` · `Minutes` 접미사가 붙어 있고, `float32` 시간(`_time` · `_duration` · `_elapsed` …)은 엔진 전체가 초라서 접미사를 붙이지 않는다(AGENTS.md 관례).
+바이트 크기: 맨 `_size` 482 곳은 대부분 컨테이너 크기나 화면 크기라 대상이 아니고, 바이트가 분명한 구조체 필드만 `_sizeBytes` 로 바꿨다(`RHIBufferCopyRegion` · `VulkanBufferRecord` · `FileStamp`).
+셰이더 리플렉션 · 머티리얼 패킹의 `_size` · `_offset` 은 레이아웃 계산 전체에 걸쳐 있어 그대로 둔다.
 
 ### 채택 — 구조와 얽힌 큰 이름 (건별 결정 뒤)
 - `MathUtil::getRandom` 은 중복 정리 계획의 "결정적 난수를 Core 로" 단계와 함께 옮긴다.

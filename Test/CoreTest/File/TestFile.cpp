@@ -125,7 +125,7 @@ SW_TEST_CASE( FileTest, FileStampReportsSizeAndNoticesChanges )
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( path, reinterpret_cast<const uint8*>( shortText.data() ), shortText.size() ) );
     sw::FileStamp first{};
     SW_ASSERT_TRUE( sw::FileUtil::getFileStamp( path, first ) );
-    SW_EXPECT_EQUAL( uint64( 10 ), first._size );
+    SW_EXPECT_EQUAL( uint64( 10 ), first._sizeBytes );
     SW_EXPECT_TRUE( first._writeTime != 0u );
 
     sw::FileStamp again{};
@@ -136,7 +136,7 @@ SW_TEST_CASE( FileTest, FileStampReportsSizeAndNoticesChanges )
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( path, reinterpret_cast<const uint8*>( longText.data() ), longText.size() ) );
     sw::FileStamp second{};
     SW_ASSERT_TRUE( sw::FileUtil::getFileStamp( path, second ) );
-    SW_EXPECT_EQUAL( uint64( 20 ), second._size );
+    SW_EXPECT_EQUAL( uint64( 20 ), second._sizeBytes );
     SW_EXPECT_TRUE( first != second );
 
     sw::FileStamp none{};

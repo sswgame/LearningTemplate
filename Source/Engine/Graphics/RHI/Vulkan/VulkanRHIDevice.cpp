@@ -625,11 +625,11 @@ namespace sw
         }
 
         VulkanBufferRecord record{};
-        record._buffer = buffer;
-        record._memory = memory;
-        record._size   = sizeBytes;
-        record._usage  = usageFlags;
-        record._state  = RHIBufferState::Common;
+        record._buffer    = buffer;
+        record._memory    = memory;
+        record._sizeBytes = sizeBytes;
+        record._usage     = usageFlags;
+        record._state     = RHIBufferState::Common;
 
         // GPU 메모리 장부의 Buffer 줄에 올리는 유일한 자리다. 크기는 드라이버가 요구한 할당 크기(정렬 포함)다.
         const RHIBufferHandle handle = _gpuBuffers.insert( record );

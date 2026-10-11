@@ -48,11 +48,11 @@ namespace sw
      */
     struct FileStamp
     {
-        uint64 _size{ 0 };      ///< 바이트 수
+        uint64 _sizeBytes{ 0 }; ///< 바이트 수
         uint64 _writeTime{ 0 }; ///< 마지막 쓰기 시각(플랫폼 고유 단위 — Windows 100 ns, 리눅스 ns. 같은지만 비교한다)
 
         /** @brief 크기와 시각이 모두 같은지 확인합니다. */
-        bool operator==( const FileStamp& other ) const { return _size == other._size && _writeTime == other._writeTime; }
+        bool operator==( const FileStamp& other ) const { return _sizeBytes == other._sizeBytes && _writeTime == other._writeTime; }
         /** @brief 크기나 시각이 다른지 확인합니다. */
         bool operator!=( const FileStamp& other ) const { return ( *this == other ) == false; }
     };

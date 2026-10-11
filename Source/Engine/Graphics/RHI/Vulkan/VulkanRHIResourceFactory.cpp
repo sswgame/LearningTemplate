@@ -211,9 +211,9 @@ namespace sw
         for ( uint32 regionIndex = 0; regionIndex < regionCount; ++regionIndex )
         {
             const RHIBufferCopyRegion& region = pRegions[regionIndex];
-            if ( region._size == 0 || region._dstOffset >= pRecord->_size )
+            if ( region._sizeBytes == 0 || region._dstOffset >= pRecord->_sizeBytes )
                 continue;
-            totalSize += MathUtil::align( region._size, kCopyAlignment );
+            totalSize += MathUtil::align( region._sizeBytes, kCopyAlignment );
         }
         if ( totalSize == 0 )
             return;
@@ -229,13 +229,13 @@ namespace sw
         for ( uint32 regionIndex = 0; regionIndex < regionCount; ++regionIndex )
         {
             const RHIBufferCopyRegion& region = pRegions[regionIndex];
-            if ( region._size == 0 || region._dstOffset >= pRecord->_size )
+            if ( region._sizeBytes == 0 || region._dstOffset >= pRecord->_sizeBytes )
                 continue;
 
             // 클램프는 **오프셋을 포함해서** 해야 한다(크기만 보면 앞에서부터 쓸 때만 맞는다).
-            uint32 copySize = region._size;
-            if ( copySize > pRecord->_size - region._dstOffset )
-                copySize = static_cast<uint32>( pRecord->_size - region._dstOffset );
+            uint32 copySize = region._sizeBytes;
+            if ( copySize > pRecord->_sizeBytes - region._dstOffset )
+                copySize = static_cast<uint32>( pRecord->_sizeBytes - region._dstOffset );
 
             Memory::copy( pStage + cursor, pBase + region._srcOffset, copySize );
 
@@ -245,7 +245,7 @@ namespace sw
             vkRegion.size      = copySize;
             listRegion.push_back( vkRegion );
 
-            cursor += MathUtil::align( region._size, kCopyAlignment );
+            cursor += MathUtil::align( region._sizeBytes, kCopyAlignment );
         }
         if ( listRegion.empty() )
             return;

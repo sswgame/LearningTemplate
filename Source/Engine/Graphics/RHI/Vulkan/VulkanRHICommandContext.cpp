@@ -618,7 +618,7 @@ namespace sw
         VulkanSlotBinding candidate{};
         candidate._buffer = pRecord->_buffer;
         candidate._offset = 0;
-        candidate._range  = pRecord->_size;
+        candidate._range  = pRecord->_sizeBytes;
         if ( bConstantBuffer )
         {
             // 링 상수버퍼(createConstantBuffer)는 프레임 슬롯마다 slotSize 만큼 떨어진 자리에 쓴다. updateConstantBuffer 가

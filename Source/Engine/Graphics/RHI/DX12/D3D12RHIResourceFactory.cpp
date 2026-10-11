@@ -258,7 +258,7 @@ namespace sw
         uint32           totalSize      = 0;
         for ( uint32 regionIndex = 0; regionIndex < regionCount; ++regionIndex )
         {
-            totalSize += MathUtil::align( pRegions[regionIndex]._size, kCopyAlignment );
+            totalSize += MathUtil::align( pRegions[regionIndex]._sizeBytes, kCopyAlignment );
         }
         if ( totalSize == 0 )
             return;
@@ -274,10 +274,10 @@ namespace sw
         for ( uint32 regionIndex = 0; regionIndex < regionCount; ++regionIndex )
         {
             const RHIBufferCopyRegion& region = pRegions[regionIndex];
-            if ( region._size == 0 )
+            if ( region._sizeBytes == 0 )
                 continue;
-            Memory::copy( static_cast<uint8*>( pMapped ) + cursor, pBase + region._srcOffset, region._size );
-            cursor += MathUtil::align( region._size, kCopyAlignment );
+            Memory::copy( static_cast<uint8*>( pMapped ) + cursor, pBase + region._srcOffset, region._sizeBytes );
+            cursor += MathUtil::align( region._sizeBytes, kCopyAlignment );
         }
 
         D3D12RHIDevice::StructuredUploadSlot& slot  = _pDevice->_arrStructuredUploadSlot[slotIndex];
@@ -306,10 +306,10 @@ namespace sw
         for ( uint32 regionIndex = 0; regionIndex < regionCount; ++regionIndex )
         {
             const RHIBufferCopyRegion& region = pRegions[regionIndex];
-            if ( region._size == 0 )
+            if ( region._sizeBytes == 0 )
                 continue;
-            pList->CopyBufferRegion( pDest, region._dstOffset, slot._uploadHeap.Get(), cursor, region._size );
-            cursor += MathUtil::align( region._size, kCopyAlignment );
+            pList->CopyBufferRegion( pDest, region._dstOffset, slot._uploadHeap.Get(), cursor, region._sizeBytes );
+            cursor += MathUtil::align( region._sizeBytes, kCopyAlignment );
         }
 
         // 올린 뒤에는 **셰이더 읽기** 상태로 둔다. 주의: UAV 로 끝내면 그래픽스가 SRV 로만 읽는 버퍼(배치 정보 · 머티리얼 데이터 · 라이트, 회전

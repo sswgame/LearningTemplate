@@ -161,7 +161,7 @@ namespace sw
         for ( uint32 regionIndex = 0; regionIndex < regionCount; ++regionIndex )
         {
             const RHIBufferCopyRegion& region = pRegions[regionIndex];
-            if ( region._size == 0 )
+            if ( region._sizeBytes == 0 )
                 continue;
 
             // 상자 없는 UpdateSubresource 는 버퍼 **전체**(ByteWidth)를 원본에서 읽는다 — 원본이 버퍼보다 짧으면(용량을 남겨 둔 풀이 줄었을 때)
@@ -170,9 +170,9 @@ namespace sw
             {
                 D3D11_BUFFER_DESC desc{};
                 pResource->GetDesc( &desc );
-                if ( region._size >= desc.ByteWidth )
+                if ( region._sizeBytes >= desc.ByteWidth )
                 {
-                    _pDevice->_deviceContext->UpdateSubresource( pResource, 0, nullptr, pBase, region._size, 0 );
+                    _pDevice->_deviceContext->UpdateSubresource( pResource, 0, nullptr, pBase, region._sizeBytes, 0 );
                     continue;
                 }
             }
@@ -180,12 +180,12 @@ namespace sw
             // 부분 갱신은 상자로 준다. 버퍼는 1차원이므로 x 만 쓰고 y · z 는 1 이다.
             D3D11_BOX box{};
             box.left   = region._dstOffset;
-            box.right  = region._dstOffset + region._size;
+            box.right  = region._dstOffset + region._sizeBytes;
             box.top    = 0;
             box.bottom = 1;
             box.front  = 0;
             box.back   = 1;
-            _pDevice->_deviceContext->UpdateSubresource( pResource, 0, &box, pBase + region._srcOffset, region._size, 0 );
+            _pDevice->_deviceContext->UpdateSubresource( pResource, 0, &box, pBase + region._srcOffset, region._sizeBytes, 0 );
         }
     }
 

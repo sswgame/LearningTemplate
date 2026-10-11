@@ -18,7 +18,7 @@
 
 - **엔진 분할 — 계획은 [docs/plans/EnginePartition.md](plans/EnginePartition.md).** `Engine.dll` 을 티어 경계로 나누기 전에 의존 방향의 약한 고리를 푼다. 단위를 끝내면 계획 문서에서 지운다.
 - **GameFramework 폴더 재배치 — 계획은 [docs/plans/GameFrameworkLayout.md](plans/GameFrameworkLayout.md).** `Base` 24 개 폴더를 층으로 묶고, 평평한 폴더와 키트 안을 나눈다. 엔진 분할 0-3 뒤에 한다. 단위를 끝내면 계획 문서에서 지운다.
-- **이름 정리 — 계획은 [docs/plans/NamingPass.md](plans/NamingPass.md).** 큰 이름(`ResourceUtil` · `EditorUtil` 경로)과 파일 · 타입 어긋남은 끝났다. 남은 것은 건별 판단인 바이트 · 시간 단위 접미사(버퍼 · 메모리 필드는 `sizeBytes`, 초 · 밀리초가 모호한 시간 필드만 접미사)와 `MathUtil::getRandom`(결정적 난수를 Core 로 옮길 때 같이)이다.
+- **이름 정리 — 계획은 [docs/plans/NamingPass.md](plans/NamingPass.md).** 남은 것은 `MathUtil::getRandom` 뿐이다(결정적 난수를 Core 로 옮기는 중복 정리와 함께).
 - **빌드 속도 — 계획은 [docs/plans/BuildSpeed.md](plans/BuildSpeed.md).** 사용자 결정(2026-10-10): 1 ~ 6 단계까지 하고 7 ~ 9 는 필요할 때만. 컴파일이 CPU 시간의 85 %, 헤더 파싱이 한 TU 의 57 %, PCH 가 타깃마다 86 개. 1 단계(시험 빌드 분리)와 0 단계 도구(`RunBuildBaseline` · `RunIncludeCost`)는 끝났고, 기준선 측정은 다른 빌드가 없을 때 남았다.
 
 ### 1-1. 직렬화 · 리플렉션

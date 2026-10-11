@@ -164,10 +164,10 @@ namespace sw
         for ( uint32 regionIndex = 0; regionIndex < regionCount; ++regionIndex )
         {
             const RHIBufferCopyRegion& region = pRegions[regionIndex];
-            if ( region._size == 0 )
+            if ( region._sizeBytes == 0 )
                 continue;
             glBufferSubData( GL_SHADER_STORAGE_BUFFER, static_cast<GLintptr>( region._dstOffset ),
-                             static_cast<GLsizeiptr>( region._size ), pBase + region._srcOffset );
+                             static_cast<GLsizeiptr>( region._sizeBytes ), pBase + region._srcOffset );
         }
         glBindBuffer( GL_SHADER_STORAGE_BUFFER, 0 );
     }
