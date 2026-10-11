@@ -842,6 +842,2371 @@
                 "Source/Editor/Viewport/EditorViewportToolbar.cpp"
             ]
         },
+        "EditorAnimGraph.AddAttackTip": {
+            "source": "Add an Attack state node. Its name is the clip it plays; rename it in the inspector.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+            ]
+        },
+        "EditorAnimGraph.AddIdleTip": {
+            "source": "Add an Idle state node. Its name is the clip it plays; rename it in the inspector.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+            ]
+        },
+        "EditorAnimGraph.AddWalkTip": {
+            "source": "Add a Walk state node. Its name is the clip it plays; rename it in the inspector.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+            ]
+        },
+        "EditorAnimGraph.AdvanceTip": {
+            "source": "Step the preview to the next state by one transition.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+            ]
+        },
+        "EditorAnimGraph.ConditionOpTip": {
+            "source": "How the parameter is compared with Value. (on finish) moves on when the clip ends; Trigger fires once when the parameter is set.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+            ]
+        },
+        "EditorAnimGraph.ConditionParamTip": {
+            "source": "Graph parameter the condition reads (set by game code through the player)",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+            ]
+        },
+        "EditorAnimGraph.ConditionValueTip": {
+            "source": "The threshold the parameter is compared against.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+            ]
+        },
+        "EditorAnimGraph.ContextCreateFailed": {
+            "source": "Failed to create Animation Graph editor context.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+            ]
+        },
+        "EditorAnimGraph.LinkSelectedTip": {
+            "source": "Add a transition between the two selected nodes, from the first selected to the second. Click one node, then Ctrl+click the other.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+            ]
+        },
+        "EditorAnimGraph.LoadTip": {
+            "source": "Reload the graph from disk, discarding unsaved edits.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+            ]
+        },
+        "EditorAnimGraph.PlayTip": {
+            "source": "Preview the graph from the entry state, stepping to the next state every 0.75 seconds. Use it to check the transition order.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+            ]
+        },
+        "EditorAnimGraph.SaveTip": {
+            "source": "Write the graph and its node layout to the asset file.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+            ]
+        },
+        "EditorAnimGraph.StateClipTip": {
+            "source": "The state's clip name - the player plays the clip with this name",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+            ]
+        },
+        "EditorAnimGraph.StateLoopTip": {
+            "source": "Whether this state's clip repeats. Default keeps the clip's own loop setting.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+            ]
+        },
+        "EditorAnimGraph.StopTip": {
+            "source": "Stop the preview.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+            ]
+        },
+        "EditorAnimGraph.TransitionBlendTip": {
+            "source": "Crossfade seconds; below zero uses the player default",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+            ]
+        },
+        "EditorAnimationRewind.AllTracksTip": {
+            "source": "Draw every recorded character's skeleton, not only the selected one.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimationRewindPanel.cpp"
+            ]
+        },
+        "EditorAnimationRewind.NoActiveScene": {
+            "source": "No active scene.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimationRewindPanel.cpp"
+            ]
+        },
+        "EditorAnimationRewind.NothingRecorded": {
+            "source": "Nothing recorded yet. Turn recording on and play (PIE) - or 'anim.rewind on' in the console.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimationRewindPanel.cpp"
+            ]
+        },
+        "EditorAnimationRewind.RecordTip": {
+            "source": "Record every animated character's pose and state each frame while the game plays, so you can scrub back and inspect them. Same as 'anim.rewind on'.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimationRewindPanel.cpp"
+            ]
+        },
+        "EditorAnimationRewind.ResumeTip": {
+            "source": "Return to the live state and resume Play In Editor if scrubbing paused it.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimationRewindPanel.cpp"
+            ]
+        },
+        "EditorAnimationRewind.SelectCharacter": {
+            "source": "Select a character (Hierarchy or Scene view) to see its recorded state.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimationRewindPanel.cpp"
+            ]
+        },
+        "EditorAnimationRewind.SkeletonTip": {
+            "source": "Draw the recorded skeleton in the viewport at the time being viewed.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimationRewindPanel.cpp"
+            ]
+        },
+        "EditorAnimationRewind.TimelineTip": {
+            "source": "Drag to scrub through the recorded history; the left end is the oldest frame. Scrubbing pauses Play In Editor.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimationRewindPanel.cpp"
+            ]
+        },
+        "EditorAnimationRewind.WindowTip": {
+            "source": "How many seconds of history to keep, 1 to 60. Older frames are dropped; longer windows use more memory.",
+            "origins": [
+                "Source/Editor/Panels/Animation/AnimationRewindPanel.cpp"
+            ]
+        },
+        "EditorConsole.AllLevelsHidden": {
+            "source": "All log levels are hidden. Re-enable one in the toolbar.",
+            "origins": [
+                "Source/Editor/Panels/Console/ConsolePanel.cpp"
+            ]
+        },
+        "EditorConsole.AutoScroll": {
+            "source": "Follow new logs while scrolled to the bottom. Scrolling up to read pauses it; scrolling back to the bottom resumes it",
+            "origins": [
+                "Source/Editor/Panels/Console/ConsolePanel.cpp"
+            ]
+        },
+        "EditorConsole.Clear": {
+            "source": "Clear all console log output",
+            "origins": [
+                "Source/Editor/Panels/Console/ConsolePanel.cpp"
+            ]
+        },
+        "EditorConsole.ClearOnPlay": {
+            "source": "Clear the log when Play starts",
+            "origins": [
+                "Source/Editor/Panels/Console/ConsolePanel.cpp"
+            ]
+        },
+        "EditorConsole.Collapse": {
+            "source": "Fold identical log lines into one and show the count in front",
+            "origins": [
+                "Source/Editor/Panels/Console/ConsolePanel.cpp"
+            ]
+        },
+        "EditorConsole.CommandHint": {
+            "source": "> command or gv_name [value] (Tab completes, Up/Down history, help)",
+            "origins": [
+                "Source/Editor/Panels/Console/ConsolePanel.cpp"
+            ]
+        },
+        "EditorConsole.CopyAll": {
+            "source": "Copy every filtered console log to the clipboard",
+            "origins": [
+                "Source/Editor/Panels/Console/ConsolePanel.cpp"
+            ]
+        },
+        "EditorConsole.EntrySource": {
+            "source": "{file}({line}) - double-click to open in IDE",
+            "origins": [
+                "Source/Editor/Panels/Console/ConsolePanel.cpp"
+            ]
+        },
+        "EditorConsole.ErrorPause": {
+            "source": "Pause Play when an error log appears during Play",
+            "origins": [
+                "Source/Editor/Panels/Console/ConsolePanel.cpp"
+            ]
+        },
+        "EditorConsole.FilterHint": {
+            "source": "Filter (tag / message / file)",
+            "origins": [
+                "Source/Editor/Panels/Console/ConsolePanel.cpp"
+            ]
+        },
+        "EditorConsole.FilterTooltip": {
+            "source": "Filter by log message, module tag or file name",
+            "origins": [
+                "Source/Editor/Panels/Console/ConsolePanel.cpp"
+            ]
+        },
+        "EditorConsole.NoLogOutput": {
+            "source": "No log output yet.",
+            "origins": [
+                "Source/Editor/Panels/Console/ConsolePanel.cpp"
+            ]
+        },
+        "EditorConsole.OpenLogFile": {
+            "source": "Open the most recent saved log file in the file explorer",
+            "origins": [
+                "Source/Editor/Panels/Console/ConsolePanel.cpp"
+            ]
+        },
+        "EditorConsole.ShowErrors": {
+            "source": "Toggle showing Error-level logs",
+            "origins": [
+                "Source/Editor/Panels/Console/ConsolePanel.cpp"
+            ]
+        },
+        "EditorConsole.ShowInfo": {
+            "source": "Toggle showing Info-level logs",
+            "origins": [
+                "Source/Editor/Panels/Console/ConsolePanel.cpp"
+            ]
+        },
+        "EditorConsole.ShowTrace": {
+            "source": "Toggle showing Trace-level logs",
+            "origins": [
+                "Source/Editor/Panels/Console/ConsolePanel.cpp"
+            ]
+        },
+        "EditorConsole.ShowWarnings": {
+            "source": "Toggle showing Warning-level logs",
+            "origins": [
+                "Source/Editor/Panels/Console/ConsolePanel.cpp"
+            ]
+        },
+        "EditorConsole.TagFilter": {
+            "source": "Show or hide each log tag (category)",
+            "origins": [
+                "Source/Editor/Panels/Console/ConsolePanel.cpp"
+            ]
+        },
+        "EditorContentBrowser.AddAsset": {
+            "source": "Create a new folder or asset (material, scene, prefab) in the current folder",
+            "origins": [
+                "Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp"
+            ]
+        },
+        "EditorContentBrowser.AllPacks": {
+            "source": "Off shows only the active game pack; on shows every pack under game/ (default: Preferences > Content Browser)",
+            "origins": [
+                "Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp"
+            ]
+        },
+        "EditorContentBrowser.Import": {
+            "source": "Import external files (textures, shaders, sounds, ...) into the current folder",
+            "origins": [
+                "Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp"
+            ]
+        },
+        "EditorContentBrowser.ImportNeedsFolder": {
+            "source": "Select a target folder to import assets into first",
+            "origins": [
+                "Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp"
+            ]
+        },
+        "EditorContentBrowser.IndexingReferences": {
+            "source": "Indexing references. Try again in a moment.",
+            "origins": [
+                "Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp"
+            ]
+        },
+        "EditorContentBrowser.ListView": {
+            "source": "Show assets as a detailed list of name, type and path",
+            "origins": [
+                "Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp"
+            ]
+        },
+        "EditorContentBrowser.NavigateBack": {
+            "source": "Go to the previous folder (Mouse Back button / Alt+Left / Backspace)",
+            "origins": [
+                "Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp"
+            ]
+        },
+        "EditorContentBrowser.NavigateForward": {
+            "source": "Go to the next folder (Mouse Forward button / Alt+Right)",
+            "origins": [
+                "Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp"
+            ]
+        },
+        "EditorContentBrowser.NoDependencies": {
+            "source": "This asset names no other asset.",
+            "origins": [
+                "Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp"
+            ]
+        },
+        "EditorContentBrowser.NoReferencers": {
+            "source": "No text asset names this asset.",
+            "origins": [
+                "Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp"
+            ]
+        },
+        "EditorContentBrowser.NoResourceRoots": {
+            "source": "No resource roots found.",
+            "origins": [
+                "Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp"
+            ]
+        },
+        "EditorContentBrowser.OpenOnDoubleClick": {
+            "source": "Double-click to open",
+            "origins": [
+                "Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp"
+            ]
+        },
+        "EditorContentBrowser.Refresh": {
+            "source": "Refresh the disk files and the resource root list",
+            "origins": [
+                "Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp"
+            ]
+        },
+        "EditorContentBrowser.SearchHint": {
+            "source": "Search Content",
+            "origins": [
+                "Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp"
+            ]
+        },
+        "EditorContentBrowser.SearchTooltip": {
+            "source": "Filter assets by name or extension",
+            "origins": [
+                "Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp"
+            ]
+        },
+        "EditorContentBrowser.SelectFolder": {
+            "source": "Select a folder",
+            "origins": [
+                "Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp"
+            ]
+        },
+        "EditorContentBrowser.TileSize": {
+            "source": "Adjust the tile thumbnail size (64px to 160px)",
+            "origins": [
+                "Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp"
+            ]
+        },
+        "EditorContentBrowser.TilesView": {
+            "source": "Show assets as square thumbnail cards (tiles)",
+            "origins": [
+                "Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp"
+            ]
+        },
+        "EditorContentBrowser.TypeFilter": {
+            "source": "Filter by asset type (texture, scene, prefab, sound, ...)",
+            "origins": [
+                "Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp"
+            ]
+        },
+        "EditorDataTable.AddKeyTip": {
+            "source": "Add a string with the key typed on the left. Keys already in the table are ignored.",
+            "origins": [
+                "Source/Editor/Panels/Data/DataTablePanel.cpp"
+            ]
+        },
+        "EditorDataTable.DeleteKeyTip": {
+            "source": "Remove this key from the source table and every translation table when you save.",
+            "origins": [
+                "Source/Editor/Panels/Data/DataTablePanel.cpp"
+            ]
+        },
+        "EditorDataTable.KeyTip": {
+            "source": "Context: {context}\nComment: {comment}\nMax length: {maxLength}",
+            "origins": [
+                "Source/Editor/Panels/Data/DataTablePanel.cpp"
+            ]
+        },
+        "EditorDataTable.LoadingLocalization": {
+            "source": "Loading localization...",
+            "origins": [
+                "Source/Editor/Panels/Data/DataTablePanel.cpp"
+            ]
+        },
+        "EditorDataTable.NewKeyHint": {
+            "source": "New string key...",
+            "origins": [
+                "Source/Editor/Panels/Data/DataTablePanel.cpp"
+            ]
+        },
+        "EditorDataTable.NoProject": {
+            "source": "(no project)",
+            "origins": [
+                "Source/Editor/Panels/Data/DataTablePanel.cpp"
+            ]
+        },
+        "EditorDataTable.NoRecordsHint": {
+            "source": "No localization records. Add a key or run App --gather-text.",
+            "origins": [
+                "Source/Editor/Panels/Data/DataTablePanel.cpp"
+            ]
+        },
+        "EditorDataTable.OverMaxLength": {
+            "source": " (over the maximum length)",
+            "origins": [
+                "Source/Editor/Panels/Data/DataTablePanel.cpp"
+            ]
+        },
+        "EditorDataTable.ProjectTip": {
+            "source": "Localization project whose string tables are shown. Save or reload before switching; a project with unsaved edits stays selected.",
+            "origins": [
+                "Source/Editor/Panels/Data/DataTablePanel.cpp"
+            ]
+        },
+        "EditorDataTable.RefreshFilesTip": {
+            "source": "Scan the game data folders again for XML tables added or removed outside the editor.",
+            "origins": [
+                "Source/Editor/Panels/Data/DataTablePanel.cpp"
+            ]
+        },
+        "EditorDataTable.ReloadTip": {
+            "source": "Read the project's tables from disk again, discarding unsaved edits.",
+            "origins": [
+                "Source/Editor/Panels/Data/DataTablePanel.cpp"
+            ]
+        },
+        "EditorDataTable.RevertTip": {
+            "source": "Discard the edits and read the file from disk again.",
+            "origins": [
+                "Source/Editor/Panels/Data/DataTablePanel.cpp"
+            ]
+        },
+        "EditorDataTable.SaveFileTip": {
+            "source": "Write the edited XML text back to this file. The text is saved as typed, without validation.",
+            "origins": [
+                "Source/Editor/Panels/Data/DataTablePanel.cpp"
+            ]
+        },
+        "EditorDataTable.SaveLocalizationTip": {
+            "source": "Write the source table and every translation table of this project.",
+            "origins": [
+                "Source/Editor/Panels/Data/DataTablePanel.cpp"
+            ]
+        },
+        "EditorDataTable.SearchHint": {
+            "source": "Search keys, source or translations...",
+            "origins": [
+                "Source/Editor/Panels/Data/DataTablePanel.cpp"
+            ]
+        },
+        "EditorDataTable.SelectTableHint": {
+            "source": "Select an XML data table from the list on the left.",
+            "origins": [
+                "Source/Editor/Panels/Data/DataTablePanel.cpp"
+            ]
+        },
+        "EditorDataTable.StateMissing": {
+            "source": "missing",
+            "origins": [
+                "Source/Editor/Panels/Data/DataTablePanel.cpp"
+            ]
+        },
+        "EditorDataTable.StateReview": {
+            "source": "needs review (translation memory suggestion or fuzzy import)",
+            "origins": [
+                "Source/Editor/Panels/Data/DataTablePanel.cpp"
+            ]
+        },
+        "EditorDataTable.StateStale": {
+            "source": "stale - the source changed after this translation",
+            "origins": [
+                "Source/Editor/Panels/Data/DataTablePanel.cpp"
+            ]
+        },
+        "EditorDataTable.StateTranslated": {
+            "source": "translated",
+            "origins": [
+                "Source/Editor/Panels/Data/DataTablePanel.cpp"
+            ]
+        },
+        "EditorDataTable.TranslationCellTip": {
+            "source": "{context}\nState: {state}\nLength: {length}{overflow}",
+            "origins": [
+                "Source/Editor/Panels/Data/DataTablePanel.cpp"
+            ]
+        },
+        "EditorDialogueGraph.AddChoiceTip": {
+            "source": "Add an option the player can pick. Each option gets its own output pin.",
+            "origins": [
+                "Source/Editor/Panels/Data/DialogueGraphPanel.cpp"
+            ]
+        },
+        "EditorDialogueGraph.AddNodeTip": {
+            "source": "Add a node of this type to the graph. You can also right-click empty canvas to search for one.",
+            "origins": [
+                "Source/Editor/Panels/Data/DialogueGraphPanel.cpp"
+            ]
+        },
+        "EditorDialogueGraph.AdvancePreviewTip": {
+            "source": "Move the preview to the next node without waiting.",
+            "origins": [
+                "Source/Editor/Panels/Data/DialogueGraphPanel.cpp"
+            ]
+        },
+        "EditorDialogueGraph.CommandExample": {
+            "source": "Ex: give_item:potion:3",
+            "origins": [
+                "Source/Editor/Panels/Data/DialogueGraphPanel.cpp"
+            ]
+        },
+        "EditorDialogueGraph.CommandTip": {
+            "source": "Command the game runs when the conversation passes this node, written as name:argument:argument.",
+            "origins": [
+                "Source/Editor/Panels/Data/DialogueGraphPanel.cpp"
+            ]
+        },
+        "EditorDialogueGraph.ConditionExample": {
+            "source": "Ex: boss_defeated && gold >= 10",
+            "origins": [
+                "Source/Editor/Panels/Data/DialogueGraphPanel.cpp"
+            ]
+        },
+        "EditorDialogueGraph.ConditionTip": {
+            "source": "Expression the game evaluates when the conversation reaches this node; true follows the True link, false the False link.",
+            "origins": [
+                "Source/Editor/Panels/Data/DialogueGraphPanel.cpp"
+            ]
+        },
+        "EditorDialogueGraph.ContextCreateFailed": {
+            "source": "Failed to create Dialogue Node Editor context.",
+            "origins": [
+                "Source/Editor/Panels/Data/DialogueGraphPanel.cpp"
+            ]
+        },
+        "EditorDialogueGraph.NoSpeaker": {
+            "source": "(No Speaker)",
+            "origins": [
+                "Source/Editor/Panels/Data/DialogueGraphPanel.cpp"
+            ]
+        },
+        "EditorDialogueGraph.PlayPreviewTip": {
+            "source": "Run the conversation from the Start node and show each line in the viewport. Lines advance on their own; choices and conditions wait for the buttons that appear.",
+            "origins": [
+                "Source/Editor/Panels/Data/DialogueGraphPanel.cpp"
+            ]
+        },
+        "EditorDialogueGraph.PreviewChoiceTip": {
+            "source": "Pick this choice and follow its link.",
+            "origins": [
+                "Source/Editor/Panels/Data/DialogueGraphPanel.cpp"
+            ]
+        },
+        "EditorDialogueGraph.PreviewFalseTip": {
+            "source": "Treat the condition as not met and follow the False link.",
+            "origins": [
+                "Source/Editor/Panels/Data/DialogueGraphPanel.cpp"
+            ]
+        },
+        "EditorDialogueGraph.PreviewTrueTip": {
+            "source": "Treat the condition as met and follow the True link.",
+            "origins": [
+                "Source/Editor/Panels/Data/DialogueGraphPanel.cpp"
+            ]
+        },
+        "EditorDialogueGraph.ReloadTip": {
+            "source": "Reload the graph from disk, discarding unsaved edits.",
+            "origins": [
+                "Source/Editor/Panels/Data/DialogueGraphPanel.cpp"
+            ]
+        },
+        "EditorDialogueGraph.RemoveChoiceTip": {
+            "source": "Remove this choice option.",
+            "origins": [
+                "Source/Editor/Panels/Data/DialogueGraphPanel.cpp"
+            ]
+        },
+        "EditorDialogueGraph.ResetDefaultTip": {
+            "source": "Replace the whole graph with the sample conversation.",
+            "origins": [
+                "Source/Editor/Panels/Data/DialogueGraphPanel.cpp"
+            ]
+        },
+        "EditorDialogueGraph.SaveTip": {
+            "source": "Write the dialogue graph and its node layout to the asset file.",
+            "origins": [
+                "Source/Editor/Panels/Data/DialogueGraphPanel.cpp"
+            ]
+        },
+        "EditorDialogueGraph.SpeakerTip": {
+            "source": "Name shown as the speaker of this line.",
+            "origins": [
+                "Source/Editor/Panels/Data/DialogueGraphPanel.cpp"
+            ]
+        },
+        "EditorDialogueGraph.StopPreviewTip": {
+            "source": "End the preview.",
+            "origins": [
+                "Source/Editor/Panels/Data/DialogueGraphPanel.cpp"
+            ]
+        },
+        "EditorDialogueGraph.TextTip": {
+            "source": "The line the player reads. On a Choice node it is the prompt shown above the options.",
+            "origins": [
+                "Source/Editor/Panels/Data/DialogueGraphPanel.cpp"
+            ]
+        },
+        "EditorDialogueGraph.ZoomFitTip": {
+            "source": "Zoom and pan the canvas so every node is visible.",
+            "origins": [
+                "Source/Editor/Panels/Data/DialogueGraphPanel.cpp"
+            ]
+        },
+        "EditorInputMap.ActionConflictTip": {
+            "source": "Shares a key with another action on the same layer - see the details",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.CaptureInstruction": {
+            "source": "Press any keyboard key, or click a button below to bind...",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.ConflictCount": {
+            "source": "{count, plural, one {# conflict} other {# conflicts}}",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.CreateActionTip": {
+            "source": "Add the action with no bindings; select it in the list to add keys.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.FilterActionsHint": {
+            "source": "Filter actions...",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.InjectKeyDownTip": {
+            "source": "Send a key-press event for the chosen key, as if it were pressed and held. Send KeyUp to release it.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.InjectKeyUpTip": {
+            "source": "Send a key-release event for the chosen key.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.InjectStickTip": {
+            "source": "Hold gamepad 0's left stick at the tilt set above until you reset it.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.InjectorHint": {
+            "source": "Inject virtual key, mouse, or stick events directly into the engine without physical hardware.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.LayerEnabledTip": {
+            "source": "Whether this layer starts enabled. The enabled layer with the highest priority receives input first.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.LeftMotorTip": {
+            "source": "Strength of the left (low-frequency) motor for the test pulse, 0 to 1.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.LoadReplayTip": {
+            "source": "Read frames from the replay file, replacing the current recording. Stops any playback first.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.MapPathTip": {
+            "source": "Resource path of the input map (*.input.xml) to edit. Press Reload after changing it.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.NewActionNameTip": {
+            "source": "Name game code uses to query the new action, for example Jump or Move.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.NewActionTypeTip": {
+            "source": "Value the action reports: Boolean for buttons, Axis 1D for a trigger or one axis, Vector 2D for a stick or WASD.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.NoBindings": {
+            "source": "No bindings",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.NoGamepad": {
+            "source": "No Gamepad Connected on Port 0.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.NoInputManager": {
+            "source": "InputManager service is not available.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.NotRebindableTip": {
+            "source": "This binding kind (axis, stick, mouse delta ...) is not one key - edit the XML",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.OverlayAnchorTip": {
+            "source": "Viewport corner the overlay is drawn in.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.OverlayEnableTip": {
+            "source": "Draw a live controller display over the game viewport. Useful for recording videos or checking input while playing.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.OverlayHistoryTip": {
+            "source": "List the most recent inputs and triggered actions, as in fighting-game training modes.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.OverlayOpacityTip": {
+            "source": "Overlay opacity, 0.1 (faint) to 1 (solid).",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.OverlayScaleTip": {
+            "source": "Overlay size multiplier, 0.5 to 2.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.PatternExample": {
+            "source": "236P = down, down-right, right + punch (the map's command history, 0.8 s window)",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.PatternTip": {
+            "source": "Fighting-game command to test, in numpad directions (2 down, 6 right, 3 down-right ...) followed by a button letter. Perform it on the gamepad or keyboard to see it match.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.PauseGraphTip": {
+            "source": "Freeze the graphs so you can read a past spike.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.PauseReplayTip": {
+            "source": "Stop playback at the current frame, keeping the input state of that frame.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.PlayReplayTip": {
+            "source": "Feed the recorded frames to the engine in place of real devices, starting from the current frame.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.RebindThisTip": {
+            "source": "Give this action's binding a different key to resolve the conflict.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.RebindTip": {
+            "source": "Replace this binding's key: press a key or pick one from the list that opens.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.ReloadTip": {
+            "source": "Read the input map from the path on the left, discarding unsaved edits.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.ReplayFileTip": {
+            "source": "Resource path of the .swreplay file that Save and Load use.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.ReplayHint": {
+            "source": "Playback attaches the replay as exclusive virtual input: recorded frame n is applied on the n-th input frame.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.ResetActionTip": {
+            "source": "Put this action's bindings back to the ones it was loaded with.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.ResetStickTip": {
+            "source": "Return the injected stick to the center.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.RevertAllTip": {
+            "source": "Put every action back to the bindings it was loaded with.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.RightMotorTip": {
+            "source": "Strength of the right (high-frequency) motor for the test pulse, 0 to 1.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.SaveReplayTip": {
+            "source": "Write the recorded frames to the replay file.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.SaveTip": {
+            "source": "Write the default bindings to the input map file. Player remaps are stored separately in user settings.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.SelectActionHint": {
+            "source": "Select an action to edit its bindings and triggers.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.SimStickXTip": {
+            "source": "Horizontal tilt to inject on gamepad 0's left stick, -1 (left) to 1 (right).",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.SimStickYTip": {
+            "source": "Vertical tilt to inject on gamepad 0's left stick, -1 (down) to 1 (up).",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.StartRecordingTip": {
+            "source": "Record every input event, frame by frame, to replay later for bug reproduction or QA. Replaces the current recording.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.StepBackTip": {
+            "source": "Go back one recorded frame.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.StepForwardTip": {
+            "source": "Apply the next recorded frame.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.StopRecordingTip": {
+            "source": "Stop recording. The frames stay in memory until you save or record again.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.StopReplayTip": {
+            "source": "Stop playback and rewind to the first frame.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.StopVibrationTip": {
+            "source": "Stop any vibration on gamepad 0.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.TapKeyTip": {
+            "source": "Send a press and a release in the same frame, like a quick tap.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.TestPulseTip": {
+            "source": "Vibrate gamepad 0 for 0.3 seconds with the motor strengths on the left.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.TimelineFrameTip": {
+            "source": "Drag to jump to any recorded frame; the input state is rebuilt up to that frame.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.TriggerTip": {
+            "source": "When the action fires (Pressed, Hold, Tap, Double Tap ...) - Unreal Enhanced Input triggers",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.UnbindOtherTip": {
+            "source": "Clear the key from the other action's binding so this action keeps it.",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.UnsavedChanges": {
+            "source": "* Unsaved changes",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInputMap.WaitingForInput": {
+            "source": "Waiting for input...",
+            "origins": [
+                "Source/Editor/Panels/InputMap/InputMapPanel.cpp"
+            ]
+        },
+        "EditorInspector.ApplyToPrefab": {
+            "source": "Save this object's changes to the source prefab file",
+            "origins": [
+                "Source/Editor/Panels/Inspector/InspectorPanel.cpp"
+            ]
+        },
+        "EditorInspector.ClearAssetReference": {
+            "source": "Clear asset reference",
+            "origins": [
+                "Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp"
+            ]
+        },
+        "EditorInspector.FollowingSelection": {
+            "source": "Following the selection - click to lock to this object",
+            "origins": [
+                "Source/Editor/Panels/Inspector/InspectorPanel.cpp"
+            ]
+        },
+        "EditorInspector.LockedToObject": {
+            "source": "Locked to this object - click to follow the selection",
+            "origins": [
+                "Source/Editor/Panels/Inspector/InspectorPanel.cpp"
+            ]
+        },
+        "EditorInspector.MultipleValues": {
+            "source": "Multiple values",
+            "origins": [
+                "Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp",
+                "Source/Editor/Panels/Inspector/InspectorPanel.cpp"
+            ]
+        },
+        "EditorInspector.NewElementHint": {
+            "source": "new element (Enter)",
+            "origins": [
+                "Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp"
+            ]
+        },
+        "EditorInspector.NewKeyHint": {
+            "source": "new key (Enter)",
+            "origins": [
+                "Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp"
+            ]
+        },
+        "EditorInspector.NoActiveScene": {
+            "source": "No active scene.",
+            "origins": [
+                "Source/Editor/Panels/Inspector/InspectorPanel.cpp"
+            ]
+        },
+        "EditorInspector.NoFunctionMethods": {
+            "source": "No FUNCTION() methods.",
+            "origins": [
+                "Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp"
+            ]
+        },
+        "EditorInspector.NoMatchingAssets": {
+            "source": "No matching assets.",
+            "origins": [
+                "Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp"
+            ]
+        },
+        "EditorInspector.NoTypeInfo": {
+            "source": "No TypeInfo registered for this component.",
+            "origins": [
+                "Source/Editor/Panels/Inspector/InspectorPanel.cpp"
+            ]
+        },
+        "EditorInspector.NothingSelected": {
+            "source": "Nothing selected. Pick in the Scene view or use Hierarchy.",
+            "origins": [
+                "Source/Editor/Panels/Inspector/InspectorPanel.cpp"
+            ]
+        },
+        "EditorInspector.ObjectActive": {
+            "source": "Toggle whether the GameObject is active",
+            "origins": [
+                "Source/Editor/Panels/Inspector/InspectorPanel.cpp"
+            ]
+        },
+        "EditorInspector.ObjectName": {
+            "source": "Unique name of the GameObject (Enter to apply)",
+            "origins": [
+                "Source/Editor/Panels/Inspector/InspectorPanel.cpp"
+            ]
+        },
+        "EditorInspector.PickAsset": {
+            "source": "Pick an asset",
+            "origins": [
+                "Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp"
+            ]
+        },
+        "EditorInspector.PrefabInstance": {
+            "source": "This is a prefab instance",
+            "origins": [
+                "Source/Editor/Panels/Inspector/InspectorPanel.cpp"
+            ]
+        },
+        "EditorInspector.PresetNameHint": {
+            "source": "Preset Name...",
+            "origins": [
+                "Source/Editor/Panels/Inspector/InspectorPanel.cpp"
+            ]
+        },
+        "EditorInspector.ResetToDefaultTooltip": {
+            "source": "Reset to the default value",
+            "origins": [
+                "Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp"
+            ]
+        },
+        "EditorInspector.RevertToPrefab": {
+            "source": "Revert this object to the contents of the source prefab file",
+            "origins": [
+                "Source/Editor/Panels/Inspector/InspectorPanel.cpp"
+            ]
+        },
+        "EditorInspector.SearchAssetsHint": {
+            "source": "Search assets...",
+            "origins": [
+                "Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp"
+            ]
+        },
+        "EditorInspector.SearchPropertiesHint": {
+            "source": "Search properties...",
+            "origins": [
+                "Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp"
+            ]
+        },
+        "EditorInspector.SearchTooltip": {
+            "source": "Filter by property and component name",
+            "origins": [
+                "Source/Editor/Panels/Inspector/InspectorPanel.cpp"
+            ]
+        },
+        "EditorInspector.SelectionGone": {
+            "source": "Selected object no longer exists.",
+            "origins": [
+                "Source/Editor/Panels/Inspector/InspectorPanel.cpp"
+            ]
+        },
+        "EditorInspector.ShowInContentBrowser": {
+            "source": "Show in the Content Browser",
+            "origins": [
+                "Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp"
+            ]
+        },
+        "EditorInspector.TransientProperty": {
+            "source": "Transient property: not saved to disk",
+            "origins": [
+                "Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp"
+            ]
+        },
+        "EditorInspector.UnlinkPrefab": {
+            "source": "Break the link to the prefab and turn this into a standalone object",
+            "origins": [
+                "Source/Editor/Panels/Inspector/InspectorPanel.cpp"
+            ]
+        },
+        "EditorInspector.Unparent": {
+            "source": "Detach from the parent object and move to the scene root",
+            "origins": [
+                "Source/Editor/Panels/Inspector/InspectorPanel.cpp"
+            ]
+        },
+        "EditorMapCheck.CheckMap": {
+            "source": "Validate every object of the active scene again",
+            "origins": [
+                "Source/Editor/Panels/MapCheck/MapCheckPanel.cpp"
+            ]
+        },
+        "EditorMapCheck.NoIssues": {
+            "source": "No validation issues. Check Map validates every object of the active scene.",
+            "origins": [
+                "Source/Editor/Panels/MapCheck/MapCheckPanel.cpp"
+            ]
+        },
+        "EditorMapCheck.NotInActiveScene": {
+            "source": "This object is not in the active scene",
+            "origins": [
+                "Source/Editor/Panels/MapCheck/MapCheckPanel.cpp"
+            ]
+        },
+        "EditorMapCheck.SceneIssuesToast": {
+            "source": "{errorCount} error(s), {warningCount} warning(s). Open Map Check from the status bar.",
+            "origins": [
+                "Source/Editor/Panels/MapCheck/MapCheckPanel.cpp"
+            ]
+        },
+        "EditorMapCheck.SearchHint": {
+            "source": "Search",
+            "origins": [
+                "Source/Editor/Panels/MapCheck/MapCheckPanel.cpp"
+            ]
+        },
+        "EditorMapCheck.ShowErrors": {
+            "source": "Show error rows",
+            "origins": [
+                "Source/Editor/Panels/MapCheck/MapCheckPanel.cpp"
+            ]
+        },
+        "EditorMapCheck.ShowWarnings": {
+            "source": "Show warning rows",
+            "origins": [
+                "Source/Editor/Panels/MapCheck/MapCheckPanel.cpp"
+            ]
+        },
+        "EditorMapCheck.StatusTooltip": {
+            "source": "Map Check: {errorCount} error(s), {warningCount} warning(s)",
+            "origins": [
+                "Source/Editor/Panels/MapCheck/MapCheckPanel.cpp"
+            ]
+        },
+        "EditorMaterial.ApplyToSelectionTip": {
+            "source": "Show the edited material on the selected object in the viewport without saving, to judge it with the real shader and lighting.",
+            "origins": [
+                "Source/Editor/Panels/Material/MaterialPanel.cpp"
+            ]
+        },
+        "EditorMaterial.LoadFailedStatus": {
+            "source": "Load failed - saving is disabled so the file is not overwritten",
+            "origins": [
+                "Source/Editor/Panels/Material/MaterialPanel.cpp"
+            ]
+        },
+        "EditorMaterial.LoadedStatus": {
+            "source": "Loaded",
+            "origins": [
+                "Source/Editor/Panels/Material/MaterialPanel.cpp"
+            ]
+        },
+        "EditorMaterial.NameTip": {
+            "source": "Display name stored in the material file.",
+            "origins": [
+                "Source/Editor/Panels/Material/MaterialPanel.cpp"
+            ]
+        },
+        "EditorMaterial.OpenMaterialHint": {
+            "source": "Open a material (Open..., Quick Open or a Content Browser double-click) to edit.",
+            "origins": [
+                "Source/Editor/Panels/Material/MaterialPanel.cpp"
+            ]
+        },
+        "EditorMaterial.PreviewTip": {
+            "source": "Preview computed from the material values (base color, roughness, metallic, emissive). It does not run the shader code - use Apply to Selection to check it in the scene.",
+            "origins": [
+                "Source/Editor/Panels/Material/MaterialPanel.cpp"
+            ]
+        },
+        "EditorMaterial.ReloadTip": {
+            "source": "Read the material from disk again, discarding unsaved edits.",
+            "origins": [
+                "Source/Editor/Panels/Material/MaterialPanel.cpp"
+            ]
+        },
+        "EditorMaterial.SaveFailedStatus": {
+            "source": "Save failed",
+            "origins": [
+                "Source/Editor/Panels/Material/MaterialPanel.cpp"
+            ]
+        },
+        "EditorMaterial.SaveTip": {
+            "source": "Write the material file and reload it in the running scene.",
+            "origins": [
+                "Source/Editor/Panels/Material/MaterialPanel.cpp"
+            ]
+        },
+        "EditorMaterial.SavedStatus": {
+            "source": "Saved",
+            "origins": [
+                "Source/Editor/Panels/Material/MaterialPanel.cpp"
+            ]
+        },
+        "EditorMaterial.ShaderTip": {
+            "source": "HLSL shader this material renders with. Drop a .hlsl file here or pick one from the Content Browser.",
+            "origins": [
+                "Source/Editor/Panels/Material/MaterialPanel.cpp"
+            ]
+        },
+        "EditorMultiplayer.ClientArgumentsHint": {
+            "source": "client arguments (e.g. -vulkan -width=960 -height=540)",
+            "origins": [
+                "Source/Editor/Panels/MultiplayerPanel.cpp"
+            ]
+        },
+        "EditorMultiplayer.FollowLog": {
+            "source": "Keep scrolling to the newest log line",
+            "origins": [
+                "Source/Editor/Panels/MultiplayerPanel.cpp"
+            ]
+        },
+        "EditorMultiplayer.LogSource": {
+            "source": "Show the log of one process or of every process",
+            "origins": [
+                "Source/Editor/Panels/MultiplayerPanel.cpp"
+            ]
+        },
+        "EditorMultiplayer.NoProcesses": {
+            "source": "No processes - pick a Net Mode and press Play (toolbar or here).",
+            "origins": [
+                "Source/Editor/Panels/MultiplayerPanel.cpp"
+            ]
+        },
+        "EditorMultiplayer.PauseServer": {
+            "source": "Pause the dedicated server's game tick",
+            "origins": [
+                "Source/Editor/Panels/MultiplayerPanel.cpp"
+            ]
+        },
+        "EditorMultiplayer.Play": {
+            "source": "Start the server and clients for the selected Net Mode",
+            "origins": [
+                "Source/Editor/Panels/MultiplayerPanel.cpp"
+            ]
+        },
+        "EditorMultiplayer.RecordTraces": {
+            "source": "Record a timeline per process and merge them into one file (merged.trace.json) on Stop - open it with Load Trace in the Profiler window or with Perfetto",
+            "origins": [
+                "Source/Editor/Panels/MultiplayerPanel.cpp"
+            ]
+        },
+        "EditorMultiplayer.ResumeServer": {
+            "source": "Resume the paused server's game tick",
+            "origins": [
+                "Source/Editor/Panels/MultiplayerPanel.cpp"
+            ]
+        },
+        "EditorMultiplayer.StepServer": {
+            "source": "Run the server game tick as many times as the field on the left says, then pause again (dedicated server Dev command step N)",
+            "origins": [
+                "Source/Editor/Panels/MultiplayerPanel.cpp"
+            ]
+        },
+        "EditorMultiplayer.StepTickCount": {
+            "source": "Number of server ticks that Step runs (1 or more)",
+            "origins": [
+                "Source/Editor/Panels/MultiplayerPanel.cpp"
+            ]
+        },
+        "EditorMultiplayer.Stop": {
+            "source": "Stop every process and merge the recorded traces",
+            "origins": [
+                "Source/Editor/Panels/MultiplayerPanel.cpp"
+            ]
+        },
+        "EditorPackaging.Game": {
+            "source": "Game to package",
+            "origins": [
+                "Source/Editor/Panels/Packaging/PackagingPanel.cpp"
+            ]
+        },
+        "EditorPackaging.OpenFolder": {
+            "source": "Open the output folder of the last successful package in the file explorer",
+            "origins": [
+                "Source/Editor/Panels/Packaging/PackagingPanel.cpp"
+            ]
+        },
+        "EditorPackaging.OutputFolder": {
+            "source": "Folder the packaged build is staged into",
+            "origins": [
+                "Source/Editor/Panels/Packaging/PackagingPanel.cpp"
+            ]
+        },
+        "EditorPackaging.Package": {
+            "source": "Configure, build, cook and stage the selected game into the output folder",
+            "origins": [
+                "Source/Editor/Panels/Packaging/PackagingPanel.cpp"
+            ]
+        },
+        "EditorPackaging.RHIBackend": {
+            "source": "Backend that Shipping links statically (client only). The server does not render",
+            "origins": [
+                "Source/Editor/Panels/Packaging/PackagingPanel.cpp"
+            ]
+        },
+        "EditorPackaging.SkipBuild": {
+            "source": "Skip configure and build, and stage this editor's Bin",
+            "origins": [
+                "Source/Editor/Panels/Packaging/PackagingPanel.cpp"
+            ]
+        },
+        "EditorPackaging.SkipCook": {
+            "source": "Skip cooking the resource packs (a build cooks them itself)",
+            "origins": [
+                "Source/Editor/Panels/Packaging/PackagingPanel.cpp"
+            ]
+        },
+        "EditorPackaging.Target": {
+            "source": "Package the client (game) or the dedicated server",
+            "origins": [
+                "Source/Editor/Panels/Packaging/PackagingPanel.cpp"
+            ]
+        },
+        "EditorProfiler.CallTreeRecord": {
+            "source": "The call tree folds the timeline recording (same recording as the Timeline tab)",
+            "origins": [
+                "Source/Editor/Panels/Profiler/ProfilerPanel.cpp"
+            ]
+        },
+        "EditorProfiler.FilterScopesHint": {
+            "source": "Filter scopes...",
+            "origins": [
+                "Source/Editor/Panels/Profiler/ProfilerPanel.cpp"
+            ]
+        },
+        "EditorProfiler.FindScopeHint": {
+            "source": "Find scope...",
+            "origins": [
+                "Source/Editor/Panels/Profiler/ProfilerPanel.cpp"
+            ]
+        },
+        "EditorProfiler.Fit": {
+            "source": "Reset the zoom so the recorded frames fit the view",
+            "origins": [
+                "Source/Editor/Panels/Profiler/ProfilerPanel.cpp"
+            ]
+        },
+        "EditorProfiler.Freeze": {
+            "source": "Keep recording but stop updating the view",
+            "origins": [
+                "Source/Editor/Panels/Profiler/ProfilerPanel.cpp"
+            ]
+        },
+        "EditorProfiler.LoadCapture": {
+            "source": "Open Saved/Profiler/ProfilerCapture.txt (pauses live capture)",
+            "origins": [
+                "Source/Editor/Panels/Profiler/ProfilerPanel.cpp"
+            ]
+        },
+        "EditorProfiler.LoadTrace": {
+            "source": "Load the newest Saved/Traces/*.trace.json under the live threads (first times aligned) - a failing run next to a healthy one",
+            "origins": [
+                "Source/Editor/Panels/Profiler/ProfilerPanel.cpp"
+            ]
+        },
+        "EditorProfiler.MemoryProfilerInactive": {
+            "source": "MemoryProfiler is not active.",
+            "origins": [
+                "Source/Editor/Panels/Profiler/ProfilerPanel.cpp"
+            ]
+        },
+        "EditorProfiler.NoActiveScene": {
+            "source": "No active scene loaded.",
+            "origins": [
+                "Source/Editor/Panels/Profiler/ProfilerPanel.cpp"
+            ]
+        },
+        "EditorProfiler.NoComponents": {
+            "source": "No components in the active scene.",
+            "origins": [
+                "Source/Editor/Panels/Profiler/ProfilerPanel.cpp"
+            ]
+        },
+        "EditorProfiler.NoRHIDevice": {
+            "source": "No RHI device.",
+            "origins": [
+                "Source/Editor/Panels/Profiler/ProfilerPanel.cpp"
+            ]
+        },
+        "EditorProfiler.PauseOnSpike": {
+            "source": "Pause capturing automatically on a frame slower than the threshold on the right",
+            "origins": [
+                "Source/Editor/Panels/Profiler/ProfilerPanel.cpp"
+            ]
+        },
+        "EditorProfiler.RenderDocCapture": {
+            "source": "Capture the next frame with RenderDoc",
+            "origins": [
+                "Source/Editor/Panels/Profiler/ProfilerPanel.cpp"
+            ]
+        },
+        "EditorProfiler.RenderDocNotAttached": {
+            "source": "RenderDoc is not attached to this process - start with -renderdoc or launch from RenderDoc",
+            "origins": [
+                "Source/Editor/Panels/Profiler/ProfilerPanel.cpp"
+            ]
+        },
+        "EditorProfiler.RenderDocOpenUI": {
+            "source": "Open the RenderDoc replay UI to inspect captures",
+            "origins": [
+                "Source/Editor/Panels/Profiler/ProfilerPanel.cpp"
+            ]
+        },
+        "EditorProfiler.ResumeCapture": {
+            "source": "Capturing is paused (a spike or an opened capture) - resume live capture",
+            "origins": [
+                "Source/Editor/Panels/Profiler/ProfilerPanel.cpp"
+            ]
+        },
+        "EditorProfiler.SaveCapture": {
+            "source": "Save the captured window to Saved/Profiler/ProfilerCapture.txt (long captures: Tracy)",
+            "origins": [
+                "Source/Editor/Panels/Profiler/ProfilerPanel.cpp"
+            ]
+        },
+        "EditorProfiler.SaveTrace": {
+            "source": "Save the frames shown as Saved/Traces/trace_<time>.trace.json (Chrome Trace Event - open in Perfetto UI or chrome://tracing)",
+            "origins": [
+                "Source/Editor/Panels/Profiler/ProfilerPanel.cpp"
+            ]
+        },
+        "EditorProfiler.SpikeThreshold": {
+            "source": "GT.Frame above this pauses capturing (and a running play session) on that frame",
+            "origins": [
+                "Source/Editor/Panels/Profiler/ProfilerPanel.cpp"
+            ]
+        },
+        "EditorProfiler.TaskManagerInactive": {
+            "source": "TaskManager is not active.",
+            "origins": [
+                "Source/Editor/Panels/Profiler/ProfilerPanel.cpp"
+            ]
+        },
+        "EditorProfiler.TimelineRecord": {
+            "source": "Record profile scopes per thread into a ring (8192 events per thread) - only while recording",
+            "origins": [
+                "Source/Editor/Panels/Profiler/ProfilerPanel.cpp"
+            ]
+        },
+        "EditorProfiler.UnloadTrace": {
+            "source": "Remove the loaded trace from the timeline",
+            "origins": [
+                "Source/Editor/Panels/Profiler/ProfilerPanel.cpp"
+            ]
+        },
+        "EditorRenderTarget.AutoRangeTip": {
+            "source": "Stretch the depth values present in the image to the full black-to-white range.",
+            "origins": [
+                "Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp"
+            ]
+        },
+        "EditorRenderTarget.AutoRefreshTip": {
+            "source": "Refresh the snapshot every 30 editor frames. Costs a GPU wait each time.",
+            "origins": [
+                "Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp"
+            ]
+        },
+        "EditorRenderTarget.ChannelTip": {
+            "source": "Show all channels, or one channel as grayscale. RGBA shows the live GPU texture; a single channel uses the CPU snapshot.",
+            "origins": [
+                "Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp"
+            ]
+        },
+        "EditorRenderTarget.DepthLabel": {
+            "source": "depth",
+            "origins": [
+                "Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp"
+            ]
+        },
+        "EditorRenderTarget.FormatNotReadable": {
+            "source": "This format cannot be read back.",
+            "origins": [
+                "Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp"
+            ]
+        },
+        "EditorRenderTarget.LinearLabel": {
+            "source": "linear",
+            "origins": [
+                "Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp"
+            ]
+        },
+        "EditorRenderTarget.LinearizeTip": {
+            "source": "Convert stored depth back to view distance using Near/Far. Perspective depth crowds near 1, so the raw image looks almost white.",
+            "origins": [
+                "Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp"
+            ]
+        },
+        "EditorRenderTarget.NearFarTip": {
+            "source": "Near and far clip planes of the camera that rendered the depth, in world units. Match them to that camera for correct distances.",
+            "origins": [
+                "Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp"
+            ]
+        },
+        "EditorRenderTarget.NoFilterMatch": {
+            "source": "No target matches the filter.",
+            "origins": [
+                "Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp"
+            ]
+        },
+        "EditorRenderTarget.NoTargets": {
+            "source": "Renderer has not published any targets yet.",
+            "origins": [
+                "Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp"
+            ]
+        },
+        "EditorRenderTarget.PickTargetHint": {
+            "source": "Pick a render target on the left.",
+            "origins": [
+                "Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp"
+            ]
+        },
+        "EditorRenderTarget.ReadingTarget": {
+            "source": "Reading the target...",
+            "origins": [
+                "Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp"
+            ]
+        },
+        "EditorRenderTarget.RefreshTip": {
+            "source": "Read the selected target back to the CPU again. Channel views, depth views and pixel values use this snapshot; reading waits for the GPU.",
+            "origins": [
+                "Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp"
+            ]
+        },
+        "EditorRenderTarget.RegisterFailed": {
+            "source": "Could not register this target as an ImGui texture.",
+            "origins": [
+                "Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp"
+            ]
+        },
+        "EditorRenderTarget.SearchHint": {
+            "source": "Search render targets...",
+            "origins": [
+                "Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp"
+            ]
+        },
+        "EditorRenderTarget.ZoomTip": {
+            "source": "Preview scale, 0 to 2. At 0 the image fits the panel; set 1 to inspect pixels at native resolution.",
+            "origins": [
+                "Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp"
+            ]
+        },
+        "EditorScene.ApplyAllOverrides": {
+            "source": "Write every override of this instance back to the prefab template",
+            "origins": [
+                "Source/Editor/Panels/Scene/PrefabPanel.cpp"
+            ]
+        },
+        "EditorScene.CommandStackUnavailable": {
+            "source": "CommandStack service is not available.",
+            "origins": [
+                "Source/Editor/Panels/Scene/HistoryPanel.cpp"
+            ]
+        },
+        "EditorScene.CreateGameObject": {
+            "source": "Create a new GameObject at the root of the current scene",
+            "origins": [
+                "Source/Editor/Panels/Scene/HierarchyPanel.cpp"
+            ]
+        },
+        "EditorScene.DebugDrawCategories": {
+            "source": "Turn DebugDrawQueue categories on or off",
+            "origins": [
+                "Source/Editor/Panels/Scene/SceneViewPanel.cpp"
+            ]
+        },
+        "EditorScene.EditNestedPrefab": {
+            "source": "Open this nested prefab in isolation mode",
+            "origins": [
+                "Source/Editor/Panels/Scene/PrefabPanel.cpp"
+            ]
+        },
+        "EditorScene.ExitIsolation": {
+            "source": "Leave isolation mode without saving the prefab",
+            "origins": [
+                "Source/Editor/Panels/Scene/PrefabPanel.cpp"
+            ]
+        },
+        "EditorScene.GameViewAspect": {
+            "source": "Game view aspect ratio - Free (whole panel) or 16:9 (letterboxed on the spare side)",
+            "origins": [
+                "Source/Editor/Panels/Scene/GameViewPanel.cpp"
+            ]
+        },
+        "EditorScene.GameViewScreenshot": {
+            "source": "Save the game view image to Saved/Screenshots/<time>.png (F9 - the focused view)",
+            "origins": [
+                "Source/Editor/Panels/Scene/GameViewPanel.cpp"
+            ]
+        },
+        "EditorScene.HiddenInEditor": {
+            "source": "Hidden in the editor - click to show",
+            "origins": [
+                "Source/Editor/Panels/Scene/HierarchyPanel.cpp"
+            ]
+        },
+        "EditorScene.HierarchyNoActiveScene": {
+            "source": "No active scene.",
+            "origins": [
+                "Source/Editor/Panels/Scene/HierarchyPanel.cpp"
+            ]
+        },
+        "EditorScene.HierarchySearch": {
+            "source": "Search by object name, or filter by component type (t:Mesh) or tag (tag:Player)",
+            "origins": [
+                "Source/Editor/Panels/Scene/HierarchyPanel.cpp"
+            ]
+        },
+        "EditorScene.HierarchySearchHint": {
+            "source": "Search (t:Mesh, tag:Player)...",
+            "origins": [
+                "Source/Editor/Panels/Scene/HierarchyPanel.cpp"
+            ]
+        },
+        "EditorScene.HistoryClear": {
+            "source": "Clear the whole undo history. This cannot be undone",
+            "origins": [
+                "Source/Editor/Panels/Scene/HistoryPanel.cpp"
+            ]
+        },
+        "EditorScene.HistoryRedo": {
+            "source": "Redo the edit that was undone. Ctrl+Y",
+            "origins": [
+                "Source/Editor/Panels/Scene/HistoryPanel.cpp"
+            ]
+        },
+        "EditorScene.HistoryUndo": {
+            "source": "Undo the last edit. Ctrl+Z",
+            "origins": [
+                "Source/Editor/Panels/Scene/HistoryPanel.cpp"
+            ]
+        },
+        "EditorScene.LockedInViewport": {
+            "source": "Locked - the viewport does not pick it; click to unlock",
+            "origins": [
+                "Source/Editor/Panels/Scene/HierarchyPanel.cpp"
+            ]
+        },
+        "EditorScene.MaximizeOnPlay": {
+            "source": "Maximize On Play - keep only the game view while playing and restore the layout on Stop",
+            "origins": [
+                "Source/Editor/Panels/Scene/GameViewPanel.cpp"
+            ]
+        },
+        "EditorScene.OpenPrefabIsolation": {
+            "source": "Edit the selected prefab on its own in isolation mode",
+            "origins": [
+                "Source/Editor/Panels/Scene/PrefabPanel.cpp"
+            ]
+        },
+        "EditorScene.PickableInViewport": {
+            "source": "Pickable in the viewport - click to lock",
+            "origins": [
+                "Source/Editor/Panels/Scene/HierarchyPanel.cpp"
+            ]
+        },
+        "EditorScene.PlayModeRunning": {
+            "source": "Play mode is running (scene edits are restricted)",
+            "origins": [
+                "Source/Editor/Panels/Scene/HierarchyPanel.cpp"
+            ]
+        },
+        "EditorScene.RefreshOverrides": {
+            "source": "Scan the instance for overrides again",
+            "origins": [
+                "Source/Editor/Panels/Scene/PrefabPanel.cpp"
+            ]
+        },
+        "EditorScene.RevertAllOverrides": {
+            "source": "Discard every override of this instance and match the prefab template",
+            "origins": [
+                "Source/Editor/Panels/Scene/PrefabPanel.cpp"
+            ]
+        },
+        "EditorScene.RevertOverride": {
+            "source": "Revert this property to the prefab value",
+            "origins": [
+                "Source/Editor/Panels/Scene/PrefabPanel.cpp"
+            ]
+        },
+        "EditorScene.SavePrefabExitIsolation": {
+            "source": "Save the prefab and leave isolation mode",
+            "origins": [
+                "Source/Editor/Panels/Scene/PrefabPanel.cpp"
+            ]
+        },
+        "EditorScene.SceneEditsLocked": {
+            "source": "Scene edits locked until Stop.",
+            "origins": [
+                "Source/Editor/Panels/Scene/PrefabPanel.cpp"
+            ]
+        },
+        "EditorScene.SceneViewScreenshot": {
+            "source": "Save the scene view image (editor camera) to Saved/Screenshots/<time>.png - the grid and gizmos are ImGui overlays and are not included",
+            "origins": [
+                "Source/Editor/Panels/Scene/SceneViewPanel.cpp"
+            ]
+        },
+        "EditorScene.ShowModifiedOnly": {
+            "source": "Show only the properties that differ from the prefab",
+            "origins": [
+                "Source/Editor/Panels/Scene/PrefabPanel.cpp"
+            ]
+        },
+        "EditorScene.VisibleInEditor": {
+            "source": "Visible in the editor - click to hide (not saved)",
+            "origins": [
+                "Source/Editor/Panels/Scene/HierarchyPanel.cpp"
+            ]
+        },
+        "EditorSequencer.AddKeyTip": {
+            "source": "Key the target's current values on every channel at this frame.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SequencerPanel.cpp"
+            ]
+        },
+        "EditorSequencer.AddPropertyTrackTip": {
+            "source": "Add a track that keys one numeric property of a component on the selected object.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SequencerPanel.cpp"
+            ]
+        },
+        "EditorSequencer.AddTransformTrackTip": {
+            "source": "Add a track that keys the selected object's position, rotation and scale.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SequencerPanel.cpp"
+            ]
+        },
+        "EditorSequencer.CinematicNoteTip": {
+            "source": "Free-form notes saved with the sequence. It does not affect playback.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SequencerPanel.cpp"
+            ]
+        },
+        "EditorSequencer.DeleteKeyTip": {
+            "source": "Remove this track's keys at the current frame on every channel.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SequencerPanel.cpp"
+            ]
+        },
+        "EditorSequencer.DeleteTrackTip": {
+            "source": "Remove the selected key track and all of its keys.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SequencerPanel.cpp"
+            ]
+        },
+        "EditorSequencer.ItemTargetTip": {
+            "source": "Name of the scene object this clip, event or camera cut acts on.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SequencerPanel.cpp"
+            ]
+        },
+        "EditorSequencer.LoadTip": {
+            "source": "Reload the focused .seq file from disk, discarding unsaved edits.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SequencerPanel.cpp"
+            ]
+        },
+        "EditorSequencer.NextKeyTip": {
+            "source": "Go to the next key",
+            "origins": [
+                "Source/Editor/Panels/Animation/SequencerPanel.cpp"
+            ]
+        },
+        "EditorSequencer.NoKeyTracksHint": {
+            "source": "No key tracks. Select an object and add a transform or property track.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SequencerPanel.cpp"
+            ]
+        },
+        "EditorSequencer.OpenCurveTip": {
+            "source": "Open this channel in the curve editor to shape the interpolation between keys.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SequencerPanel.cpp"
+            ]
+        },
+        "EditorSequencer.PauseTip": {
+            "source": "Pause playback at the current frame.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SequencerPanel.cpp"
+            ]
+        },
+        "EditorSequencer.PlayTip": {
+            "source": "Play the sequence in the viewport from the current frame, looping at the end.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SequencerPanel.cpp"
+            ]
+        },
+        "EditorSequencer.PreviousKeyTip": {
+            "source": "Go to the previous key",
+            "origins": [
+                "Source/Editor/Panels/Animation/SequencerPanel.cpp"
+            ]
+        },
+        "EditorSequencer.PropertyPathTip": {
+            "source": "<ComponentType>.<Property> - a float32 or int32 property (for example CameraComponent._fov)",
+            "origins": [
+                "Source/Editor/Panels/Animation/SequencerPanel.cpp"
+            ]
+        },
+        "EditorSequencer.PropertyTargetNotFound": {
+            "source": "Target or numeric property not found",
+            "origins": [
+                "Source/Editor/Panels/Animation/SequencerPanel.cpp"
+            ]
+        },
+        "EditorSequencer.SaveTip": {
+            "source": "Write the sequence to the focused .seq file.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SequencerPanel.cpp"
+            ]
+        },
+        "EditorSequencer.ScrubTip": {
+            "source": "Drag to move the current frame; the viewport follows so you can check any moment of the sequence.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SequencerPanel.cpp"
+            ]
+        },
+        "EditorSequencer.SelectItemHint": {
+            "source": "Select a clip, event or camera cut on the timeline to edit it.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SequencerPanel.cpp"
+            ]
+        },
+        "EditorSequencer.StopTip": {
+            "source": "Stop playback, return to the first frame and give the camera back from any camera cut.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SequencerPanel.cpp"
+            ]
+        },
+        "EditorSequencer.TargetNotFound": {
+            "source": "Target object not found",
+            "origins": [
+                "Source/Editor/Panels/Animation/SequencerPanel.cpp"
+            ]
+        },
+        "EditorSettings.BuildModules": {
+            "source": "Compile every module with the changed module set",
+            "origins": [
+                "Source/Editor/Panels/Settings/ModulesPanel.cpp"
+            ]
+        },
+        "EditorSettings.FilterVariablesHint": {
+            "source": "Filter variables...",
+            "origins": [
+                "Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp"
+            ]
+        },
+        "EditorSettings.GroupByModule": {
+            "source": "Group the variables by the module that defines them",
+            "origins": [
+                "Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp"
+            ]
+        },
+        "EditorSettings.ModuleLocked": {
+            "source": "Editor and game modules cannot be turned off here",
+            "origins": [
+                "Source/Editor/Panels/Settings/ModulesPanel.cpp"
+            ]
+        },
+        "EditorSettings.ModuleSetChanged": {
+            "source": "Module set changed - build to apply, then restart the editor.",
+            "origins": [
+                "Source/Editor/Panels/Settings/ModulesPanel.cpp"
+            ]
+        },
+        "EditorSettings.ModuleToggle": {
+            "source": "Turn this module on or off (the affected modules are shown before it applies)",
+            "origins": [
+                "Source/Editor/Panels/Settings/ModulesPanel.cpp"
+            ]
+        },
+        "EditorSettings.NoDescription": {
+            "source": "(no description)",
+            "origins": [
+                "Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp"
+            ]
+        },
+        "EditorSettings.NoGlobalVariables": {
+            "source": "No global variables registered.",
+            "origins": [
+                "Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp"
+            ]
+        },
+        "EditorSettings.NoPresets": {
+            "source": "No presets found.",
+            "origins": [
+                "Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp"
+            ]
+        },
+        "EditorSettings.NoSectionMatches": {
+            "source": "No section matches the search.",
+            "origins": [
+                "Source/Editor/Panels/Settings/PreferencesPanel.cpp"
+            ]
+        },
+        "EditorSettings.PinVariable": {
+            "source": "Pin to favorites",
+            "origins": [
+                "Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp"
+            ]
+        },
+        "EditorSettings.PresetNameHint": {
+            "source": "Preset Name...",
+            "origins": [
+                "Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp"
+            ]
+        },
+        "EditorSettings.Presets": {
+            "source": "Save or load named sets of global variable values",
+            "origins": [
+                "Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp"
+            ]
+        },
+        "EditorSettings.PressKeyCombo": {
+            "source": "Press a key combo (Esc cancels, Backspace clears)",
+            "origins": [
+                "Source/Editor/Panels/Settings/ShortcutsPanel.cpp"
+            ]
+        },
+        "EditorSettings.RefreshModules": {
+            "source": "Read the module catalog from the module folder again",
+            "origins": [
+                "Source/Editor/Panels/Settings/ModulesPanel.cpp"
+            ]
+        },
+        "EditorSettings.ReplaceShortcut": {
+            "source": "Give this combo to the selected command and remove it from the other command",
+            "origins": [
+                "Source/Editor/Panels/Settings/ShortcutsPanel.cpp"
+            ]
+        },
+        "EditorSettings.ResetAllShortcuts": {
+            "source": "Restore every shortcut to its default binding",
+            "origins": [
+                "Source/Editor/Panels/Settings/ShortcutsPanel.cpp"
+            ]
+        },
+        "EditorSettings.ResetAllVariables": {
+            "source": "Reset every global variable to its default value",
+            "origins": [
+                "Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp"
+            ]
+        },
+        "EditorSettings.ResetSection": {
+            "source": "Reset every value in this section to its default",
+            "origins": [
+                "Source/Editor/Panels/Settings/PreferencesPanel.cpp"
+            ]
+        },
+        "EditorSettings.ResetShortcut": {
+            "source": "Restore this command's default shortcut",
+            "origins": [
+                "Source/Editor/Panels/Settings/ShortcutsPanel.cpp"
+            ]
+        },
+        "EditorSettings.ResetVariable": {
+            "source": "Reset this variable to its default value",
+            "origins": [
+                "Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp"
+            ]
+        },
+        "EditorSettings.SaveSession": {
+            "source": "Save the current values to the session file",
+            "origins": [
+                "Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp"
+            ]
+        },
+        "EditorSettings.ScanningPresets": {
+            "source": "Scanning presets...",
+            "origins": [
+                "Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp"
+            ]
+        },
+        "EditorSettings.SearchModulesHint": {
+            "source": "Search modules...",
+            "origins": [
+                "Source/Editor/Panels/Settings/ModulesPanel.cpp"
+            ]
+        },
+        "EditorSettings.SearchShortcutsHint": {
+            "source": "Search commands or keys (Ctrl+S)...",
+            "origins": [
+                "Source/Editor/Panels/Settings/ShortcutsPanel.cpp"
+            ]
+        },
+        "EditorSettings.SetShortcut": {
+            "source": "Record a new shortcut for this command",
+            "origins": [
+                "Source/Editor/Panels/Settings/ShortcutsPanel.cpp"
+            ]
+        },
+        "EditorSettings.ShortcutInUse": {
+            "source": "This combo is already used. Replace clears it from the other command.",
+            "origins": [
+                "Source/Editor/Panels/Settings/ShortcutsPanel.cpp"
+            ]
+        },
+        "EditorSettings.UnpinVariable": {
+            "source": "Unpin from favorites",
+            "origins": [
+                "Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp"
+            ]
+        },
+        "EditorSettings.UserSettingsNotLoaded": {
+            "source": "User settings are not loaded.",
+            "origins": [
+                "Source/Editor/Panels/Settings/UserSettingsPanel.cpp"
+            ]
+        },
+        "EditorSettings.VariableDescription": {
+            "source": "Description: {description}",
+            "origins": [
+                "Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp"
+            ]
+        },
+        "EditorSettings.VariableModule": {
+            "source": "Module: {module}",
+            "origins": [
+                "Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp"
+            ]
+        },
+        "EditorSpriteClip.AnimationFirstFrameTip": {
+            "source": "Index of the frame this animation starts on, counting from 0.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SpriteClipPanel.cpp"
+            ]
+        },
+        "EditorSpriteClip.AnimationFrameCountTip": {
+            "source": "How many consecutive frames, from the first frame, this animation plays.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SpriteClipPanel.cpp"
+            ]
+        },
+        "EditorSpriteClip.AnimationLoopTip": {
+            "source": "Repeat from the first frame after the last one; off stops on the last frame.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SpriteClipPanel.cpp"
+            ]
+        },
+        "EditorSpriteClip.AnimationNameTip": {
+            "source": "Name game code uses to play this animation.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SpriteClipPanel.cpp"
+            ]
+        },
+        "EditorSpriteClip.AtlasCellTip": {
+            "source": "Click a cell to set the selected frame's rectangle to it. Shift+click adds a new frame.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SpriteClipPanel.cpp"
+            ]
+        },
+        "EditorSpriteClip.AtlasTip": {
+            "source": "Path of the texture the frames are cut from. The UV rectangles below are fractions of this image.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SpriteClipPanel.cpp"
+            ]
+        },
+        "EditorSpriteClip.FrameDurationTip": {
+            "source": "How long this frame stays on screen, in milliseconds.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SpriteClipPanel.cpp"
+            ]
+        },
+        "EditorSpriteClip.FrameHTip": {
+            "source": "Frame height as a fraction of the atlas height (0-1).",
+            "origins": [
+                "Source/Editor/Panels/Animation/SpriteClipPanel.cpp"
+            ]
+        },
+        "EditorSpriteClip.FrameUTip": {
+            "source": "Left edge of the frame in the atlas, as a fraction of its width (0-1).",
+            "origins": [
+                "Source/Editor/Panels/Animation/SpriteClipPanel.cpp"
+            ]
+        },
+        "EditorSpriteClip.FrameVTip": {
+            "source": "Top edge of the frame in the atlas, as a fraction of its height (0-1).",
+            "origins": [
+                "Source/Editor/Panels/Animation/SpriteClipPanel.cpp"
+            ]
+        },
+        "EditorSpriteClip.FrameWTip": {
+            "source": "Frame width as a fraction of the atlas width (0-1).",
+            "origins": [
+                "Source/Editor/Panels/Animation/SpriteClipPanel.cpp"
+            ]
+        },
+        "EditorSpriteClip.KeyAngleTip": {
+            "source": "Rotation of the sprite at this key, in degrees.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SpriteClipPanel.cpp"
+            ]
+        },
+        "EditorSpriteClip.KeyTimeTip": {
+            "source": "When this key applies, in seconds from the start of the clip.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SpriteClipPanel.cpp"
+            ]
+        },
+        "EditorSpriteClip.LoadTip": {
+            "source": "Reload the clip from disk, discarding unsaved edits.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SpriteClipPanel.cpp"
+            ]
+        },
+        "EditorSpriteClip.LoadingAtlas": {
+            "source": "Loading atlas...",
+            "origins": [
+                "Source/Editor/Panels/Animation/SpriteClipPanel.cpp"
+            ]
+        },
+        "EditorSpriteClip.NoAtlas": {
+            "source": "No atlas",
+            "origins": [
+                "Source/Editor/Panels/Animation/SpriteClipPanel.cpp"
+            ]
+        },
+        "EditorSpriteClip.SaveTip": {
+            "source": "Write the frames, animations and keys to the clip file.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SpriteClipPanel.cpp"
+            ]
+        },
+        "EditorSpriteClip.SavedStatus": {
+            "source": "Saved {path}",
+            "origins": [
+                "Source/Editor/Panels/Animation/SpriteClipPanel.cpp"
+            ]
+        },
+        "EditorSpriteClip.SliceColumnsTip": {
+            "source": "Number of grid columns the atlas is cut into, 1 to 64.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SpriteClipPanel.cpp"
+            ]
+        },
+        "EditorSpriteClip.SliceRowsTip": {
+            "source": "Number of grid rows the atlas is cut into, 1 to 64.",
+            "origins": [
+                "Source/Editor/Panels/Animation/SpriteClipPanel.cpp"
+            ]
+        },
+        "EditorTileMap.ApplyEdgeTip": {
+            "source": "Turn every cell on this edge into a walkable warp to the target map.",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.ApplySizeTip": {
+            "source": "Resize the map to the width and height above. This clears every layer.",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.AtlasIdTip": {
+            "source": "Atlas cell index to paint, 0 to 255.",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.BrushTip": {
+            "source": "Paint every cell you press and drag over (B)",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.EdgeTargetTip": {
+            "source": "Map that walking off this edge (north, east, south or west) leads to.",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.EdgeTargetXTip": {
+            "source": "Cell column the player arrives at in the target map.",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.EdgeTargetYTip": {
+            "source": "Cell row the player arrives at in the target map.",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.EraseTip": {
+            "source": "Make the paint tools clear cells instead of painting them.",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.FillTip": {
+            "source": "Paint every connected cell that has the same value as the pressed cell (G)",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.HeightTip": {
+            "source": "Map height in cells. Takes effect when you press Apply Size.",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.LayerTip": {
+            "source": "Layer the canvas shows and the tools paint: Visual (height and tint), Warp (exits to other maps), Tile (tile set brushes) or one of the gameplay flag layers.",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.LoadTip": {
+            "source": "Read the map at Path, discarding unsaved edits. Nothing changes if no file is there.",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.NameTip": {
+            "source": "Display name stored in the map file.",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.NoTileSet": {
+            "source": "No tile set loaded",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.PaintHeightTip": {
+            "source": "Height level to paint, 0 to 255.",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.PathTip": {
+            "source": "Resource path of the tile map file that Load and Save use.",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.PickerTip": {
+            "source": "Take the pressed cell's value as the value to paint (I)",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.RectTip": {
+            "source": "Paint the rectangle you drag out when you release the mouse (U)",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.ResetViewTip": {
+            "source": "Reset zoom and pan to the start (wheel: zoom, middle or right drag: pan)",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.SaveFailedStatus": {
+            "source": "Save failed",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.SaveTip": {
+            "source": "Write the map to Path.",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.SavedStatus": {
+            "source": "Saved {path}",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.SizeOutOfRange": {
+            "source": "Size is out of range.",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.TileSetReadFailed": {
+            "source": "Tile set could not be read: {path}",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.TileSetTip": {
+            "source": "Resource path of the tile set whose brushes this map paints with. Press Use to apply it.",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.TintTip": {
+            "source": "Color to paint into the cells' tint.",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.UseTileSetTip": {
+            "source": "Make this map use the tile set on the left and load its brushes.",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.WarpTargetTip": {
+            "source": "Map a painted warp cell sends the player to. Painted warp cells also become walkable.",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.WarpTargetXTip": {
+            "source": "Cell column the player arrives at in the target map.",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.WarpTargetYTip": {
+            "source": "Cell row the player arrives at in the target map.",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
+        "EditorTileMap.WidthTip": {
+            "source": "Map width in cells. Takes effect when you press Apply Size.",
+            "origins": [
+                "Source/Editor/Panels/TileMap/TileMapPanel.cpp"
+            ]
+        },
         "EditorTip.CameraFar": {
             "source": "Farthest distance the camera draws. Geometry beyond this is clipped.",
             "origins": [
@@ -912,6 +3277,84 @@
             "source": "Show or hide this section of the in-game Debug HUD. The grey text is the section's registration name.",
             "origins": [
                 "Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp"
+            ]
+        },
+        "EditorUIPreview.BuildFailed": {
+            "source": "Could not build the document (see the log).",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.DocumentPathTip": {
+            "source": "Resource path of the UI document (*.ui.xml) to preview. The preview rebuilds when it changes.",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.EnterPathHint": {
+            "source": "Enter a UI document path (*.ui.xml).",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.LayoutRectsTip": {
+            "source": "Outline every visible widget's layout rectangle over the preview.",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.ReloadTip": {
+            "source": "Rebuild the preview from the file, for example after editing the XML outside the editor.",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.ResolutionTip": {
+            "source": "Screen size to lay the document out for. Check layouts at several aspect ratios before shipping.",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SafeZoneTip": {
+            "source": "Fraction of the screen trimmed from each edge, 0 to 0.1, as on TVs that cut off the border. The red frame shows the safe area.",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.SelectWidgetHint": {
+            "source": "{width} x {height} UI units, scale {scale} - click the image or the tree to select a widget",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.TextScaleTip": {
+            "source": "Player text size setting to simulate, 0.75 to 2. Use it to find labels that overflow.",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.ThemeTip": {
+            "source": "UI theme to preview with. (game theme) uses the theme the game selects.",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.UINotRunning": {
+            "source": "Runtime UI is not running.",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.UIScaleTip": {
+            "source": "Player UI scale setting to simulate, 0.5 to 2.",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
+            ]
+        },
+        "EditorUIPreview.WaitingForTexture": {
+            "source": "Waiting for the render thread to create the preview texture...",
+            "origins": [
+                "Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp"
             ]
         }
     }
