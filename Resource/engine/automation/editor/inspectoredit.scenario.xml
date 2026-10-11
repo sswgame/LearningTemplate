@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   에디터 시나리오 — 인스펙터(EditorPropertyGrid)로 컴포넌트 값을 고치면 Undo 에 하나 쌓이고, Ctrl+Z 로 값이 돌아온다.
-  시험 씬의 GameCamera 를 Hierarchy 에서 고르고 CameraComponent 의 _priority 칸(이름표 inspector.property.CameraComponent._priority)에 7 을 친다(드래그 칸은 Ctrl+클릭이 글 입력이다).
+  테스트 씬의 GameCamera 를 Hierarchy 에서 고르고 CameraComponent 의 _priority 칸(이름표 inspector.property.CameraComponent._priority)에 7 을 친다(드래그 칸은 Ctrl+클릭이 글 입력이다).
   실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/inspectoredit.scenario.xml -dx12
 -->
 <Scenario name="editor.inspectoredit" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">

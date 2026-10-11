@@ -291,7 +291,9 @@ namespace sw
 
 namespace sw
 {
-    SceneNavigation::SceneNavigation()
+    SW_SCENE_SERVICE( SceneNavigation, Navigation )
+
+    SceneNavigation::SceneNavigation( GameObjectManager& manager )
         : _settings{}
         , _sourcePath{}
         , _pCookedAsset{}
@@ -302,7 +304,7 @@ namespace sw
         , _listGeometrySource{}
         , _listDirtyArea{}
         , _listFailedAgentType{}
-        , _pManager{ nullptr }
+        , _pManager{ &manager }
         , _debugView{}
         , _rebakedTileCount{ 0 }
         , _dirtyLock{}
@@ -714,7 +716,7 @@ namespace sw
         return count;
     }
 
-    void SceneNavigation::tick( float32 deltaTime )
+    void SceneNavigation::update( float32 deltaTime )
     {
         const bool bAnything = _listAgent.empty() == false || _listObstacle.empty() == false || _listSurface.empty() == false || _listRuntime.empty() == false;
         if ( bAnything == false || _pManager == nullptr )

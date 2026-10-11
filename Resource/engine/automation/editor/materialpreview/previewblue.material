@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 시나리오 editor/materialpreview 의 시험 머티리얼 — 기본색만 다르다. -->
+<!-- 시나리오 editor/materialpreview 의 테스트 머티리얼 — 기본색만 다르다. -->
 <MaterialDesc formatVersion="0" name="Previewblue" shaderPath="engine/shaders/forwardlit.hlsl" blendMode="Opaque">
 	<_properties>
 		<item name="color" type="Color" shaderType="Float4" defaultValue="0.0 0.0 1.0 1.0" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>

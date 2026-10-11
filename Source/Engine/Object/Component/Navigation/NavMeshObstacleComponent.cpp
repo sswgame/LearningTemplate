@@ -40,12 +40,12 @@ namespace sw
     void NavMeshObstacleComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
-        manager.getSceneNavigation().registerObstacle( this );
+        manager.getSceneService<SceneNavigation>().registerObstacle( this );
     }
 
     void NavMeshObstacleComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getSceneNavigation().unregisterObstacle( this );
+        manager.getSceneService<SceneNavigation>().unregisterObstacle( this );
         Component::onUnregister( manager );
     }
 
