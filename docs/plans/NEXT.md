@@ -45,7 +45,6 @@
      - GameFramework Base: 짧은 헤더 약 230개와 .cpp · .inl. Kits/Feature: 끝낸 파일 안에 옛 어휘(꼬리표 · 그새 · 거두다 · 짓)가 남은 파일 약 35개(`NetSimHarness.h`, `TurnRelay.h`, `AccountTypes.h`, `LoginStoreLogic.h`, `SocialService.h`, `VoxelMesher.*`, `VoxelTerrain.*`, `LeaderboardService.cpp`, `RespConnection.*` 등), Kits/Feature/Online 중 Account 등을 뺀 나머지 폴더 확인.
      - Core: Math, File, Process, Delegate, Memory, Diagnostics, CommandLine, Container, Task, Network 나머지(`NetHostSecurity.h`, `NetParallel.h`, `INetSecurityProvider.h`, `NetTransport.h`, `BitStream.h`), LogSink, String. RuntimeAPI 는 손대지 않았다. Games: `BenchScene.cpp` 일부, `BenchSceneRig.cpp`, VoxelCraft 전체, 나머지 컴포넌트.
      - '시험' → '테스트': `Scripts/**` · `Test/**` · `docs/Config/**` 278곳, 셰이더 주석 2곳(`waterwaveprobe.hlsl` · `lighting2d.hlsli`, 바꾸면 `App --cook-shaders` 재쿠킹 필요).
-   - 병합 전 에이전트가 쓰던 워크트리(`D:\w\c6*`, `delayroot` 등)는 전부 병합됐으므로 `worktree-remove <이름>` 으로 지운다.
    - 끝난 뒤 8번(빌드 속도) 이후를 잇는다.
 
 ### 알아 둘 함정
