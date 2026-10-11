@@ -1,6 +1,6 @@
 /**
  * @file PostgresTestSchema.h
- * @brief PostgreSQL 시험의 무작위 스키마 — 실행 · 픽스처마다 `sw_test_<16 진 8 자리>` 스키마를 만들고 접속 글에 search_path 를 붙여, 끝나면 `DROP SCHEMA … CASCADE`.
+ * @brief PostgreSQL 테스트의 무작위 스키마 — 실행 · 픽스처마다 `sw_test_<16 진 8 자리>` 스키마를 만들고 접속 글에 search_path 를 붙여, 끝나면 `DROP SCHEMA … CASCADE`.
  * @details 서버 주소는 환경 변수 `SW_TEST_POSTGRES_URL`(libpq 키워드 글 또는 URI)이다. 로컬에서 돌리는 법:
  *          `docker run -e POSTGRES_PASSWORD=sw -p 5432:5432 postgres:17` 뒤 `set SW_TEST_POSTGRES_URL=postgresql://postgres:sw@127.0.0.1:5432/postgres`.
  */
@@ -15,7 +15,7 @@
 
 namespace test
 {
-    /** @brief 시험 스키마 하나 — 만들 때 스키마를 만들고, 없앨 때 지운다. */
+    /** @brief 테스트 스키마 하나 — 만들 때 스키마를 만들고, 없앨 때 지운다. */
     class PostgresTestSchema
     {
     public:

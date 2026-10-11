@@ -358,7 +358,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, DeepHierarchyMultiComponentMultiSubTic
     sw::GameObject* pGrandparent = manager.createGameObject( sw::hashed_string( "Grandparent" ) );
     sw::GameObject* pParent      = manager.createGameObject( sw::hashed_string( "Parent" ) );
     sw::GameObject* pChild       = manager.createGameObject( sw::hashed_string( "Child" ) );
-    // 계층은 씬 컴포넌트 사이에서 맺어진다(위 시험과 같다).
+    // 계층은 씬 컴포넌트 사이에서 맺어진다(위 테스트와 같다).
     for ( sw::GameObject* pObj : { pGrandparent, pParent, pChild } )
     {
         SW_ASSERT_NOT_NULL( pObj->addComponent<sw::SceneComponent>() );

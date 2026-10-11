@@ -23,7 +23,7 @@
 
 namespace
 {
-    // 모듈 코드 정리 시험이 다는 콜백들이다. 몸통을 서로 다르게 둔다 — 같으면 링커가 접어 스텁 주소가 겹칠 수 있다.
+    // 모듈 코드 정리 테스트가 다는 콜백들이다. 몸통을 서로 다르게 둔다 — 같으면 링커가 접어 스텁 주소가 겹칠 수 있다.
     int32 s_inputProbeValue{ 0 };
 
     void onProbeActiveDeviceChanged( sw::InputGlyphStyle )

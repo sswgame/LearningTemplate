@@ -82,7 +82,7 @@ namespace
         ShopCatalog      _shopCatalog;
         Inventory        _shipStorage; ///< 우주선 창고(원정이 빌린다)
         Wallet           _wallet;      ///< 회사 돈(원정이 빌린다)
-        WorldClock       _clock;       ///< 공유 시계(원정이 빌린다 — 흘리는 것은 시험)
+        WorldClock       _clock;       ///< 공유 시계(원정이 빌린다 — 흘리는 것은 테스트)
         WeatherSystem    _weather;     ///< 공유 날씨(원정이 빌린다)
         GameFlags        _flags;       ///< 공유 플래그(시설 문 잠금)
 

@@ -136,7 +136,7 @@ namespace sw
         static const IAnimCodec* findCodec( AnimCodecID id );
         /** @brief 이름으로 찾습니다(대소문자 무시). */
         static const IAnimCodec* findCodecByName( string_view name );
-        /** @brief 압축하고 오차를 잽니다(임포트 · 시험). */
+        /** @brief 압축하고 오차를 잽니다(임포트 · 테스트). */
         [[nodiscard]] static bool compressAndMeasure( const IAnimCodec& codec, const AnimRawClip& rawClip, const AnimCodecSettings& settings,
                                                       vector<uint8>& outBytes, AnimCodecStats& outStats );
         /**

@@ -71,11 +71,11 @@ namespace sw
 
         /** @brief 지금 들고 있는 아틀라스 페이지 수입니다(거울 기준). */
         uint32 getAtlasPageCount() const { return static_cast<uint32>( _listAtlasPage.size() ); }
-        /** @brief 마지막 `prepareFrame` 이 올린 아틀라스 업로드 호출 수입니다(전체 페이지 · 구간 합 — 진단 · 시험). */
+        /** @brief 마지막 `prepareFrame` 이 올린 아틀라스 업로드 호출 수입니다(전체 페이지 · 구간 합 — 진단 · 테스트). */
         uint32 getLastUploadCallCount() const { return _lastUploadCallCount; }
 
         /**
-         * @brief 한 페이지의 구간 목록이 @p maxRegionCount 를 넘으면 그 경계 상자 하나로 바꿉니다(순수 함수 — 시험이 직접 부른다).
+         * @brief 한 페이지의 구간 목록이 @p maxRegionCount 를 넘으면 그 경계 상자 하나로 바꿉니다(순수 함수 — 테스트가 직접 부른다).
          * @details 구간이 적으면 그대로 둔다 — 작은 구간 여럿을 따로 올리는 것이 경계 상자 하나를 올리는 것보다 바이트가 적고, 넘으면 호출 수가 더 비싸다.
          */
         static void mergeUploadRegions( vector<GlyphAtlasRect>& inoutListRegion, uint32 maxRegionCount );
@@ -104,7 +104,7 @@ namespace sw
 
         /** @brief 일괄 텍스처 하나의 SRV 입니다. 없으면 kInvalidDescriptorIndex. */
         RHIDescriptorIndex findTextureSrv( const CanvasTextureRef& texture ) const;
-        /** @brief 목록의 경로 그림을 `TextureCache` 에서 빌립니다(처음 보는 경로만). 엔진 서비스가 없으면(시험 하네스 밖) 아무것도 하지 않는다. */
+        /** @brief 목록의 경로 그림을 `TextureCache` 에서 빌립니다(처음 보는 경로만). 엔진 서비스가 없으면(테스트 하네스 밖) 아무것도 하지 않는다. */
         void acquirePathTextures( IRHIDevice& device, const CanvasDrawList& list );
 
         vector<AtlasPage>       _listAtlasPage;

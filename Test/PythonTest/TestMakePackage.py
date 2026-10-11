@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-패키징 진입점(`Scripts/dev/MakePackage.py`)의 단위 시험 — 빌드와 쿠킹을 건너뛰고 스테이징과 검사만 돌린다.
+패키징 진입점(`Scripts/dev/MakePackage.py`)의 단위 테스트 — 빌드와 쿠킹을 건너뛰고 스테이징과 검사만 돌린다.
 
 가짜 Bin(실행 파일 둘 · DLL · 팩 · Dev 산출물)을 임시 폴더에 깔고, 패키지에 그 타깃의 실행 파일 · DLL · 팩 · 고지만 들고
 Dev 산출물(`Saved/` · `Symbols/` · `Modules/`)과 다른 타깃의 실행 파일은 들지 않는지 본다. 단계 줄과 끝 줄의 모양은 에디터 창이 읽는 계약이다.

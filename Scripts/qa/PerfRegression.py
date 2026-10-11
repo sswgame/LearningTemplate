@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-성능 회귀 — Release App 으로 시험 게임의 자동 플레이를 여러 판 재고, 구간별 p50 · p99 를 이 기계의 기준과 견준다.
+성능 회귀 — Release App 으로 테스트 게임의 자동 플레이를 여러 판 재고, 구간별 p50 · p99 를 이 기계의 기준과 견준다.
 
     py -3 -m Scripts perf --app build/Ninja-Release/Bin/App.exe                    # 비교(기준이 없으면 77 = 건너뜀)
     py -3 -m Scripts perf --app build/Ninja-Release/Bin/App.exe --record           # 이 기계의 기준을 새로 뜬다

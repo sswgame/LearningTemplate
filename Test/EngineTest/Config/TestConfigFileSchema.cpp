@@ -87,7 +87,7 @@ namespace
 
 /**
  * @brief [ConfigFileSchemaTest] Config/ 의 설정 파일은 모두 실제 로더로 엄격하게 읽힌다 — 모르는 키 · 읽지 못한 값 · 범위 밖 값 · 기본값을 다시 적은 키가 하나도 없다
- * @details 기동은 틀린 설정에서 멈춘다(`ConfigManager::ensureConfig`). 이 시험은 그것을 실행 없이 — 게임 프리셋 모두 — 본다.
+ * @details 기동은 틀린 설정에서 멈춘다(`ConfigManager::ensureConfig`). 이 테스트는 그것을 실행 없이 — 게임 프리셋 모두 — 본다.
  *          표에 없는 파일도 실패다(새 설정 파일이 검사를 비켜 가지 않게). 표의 짝은 `Scripts/common/ConfigCatalog.py`(문서용 목록)다.
  */
 SW_TEST_CASE( ConfigFileSchemaTest, EveryConfigFileLoadsStrictly )
@@ -116,6 +116,6 @@ SW_TEST_CASE( ConfigFileSchemaTest, EveryConfigFileLoadsStrictly )
         SW_EXPECT_TRUE_MSG( pKind->_pLoad( filePath ), relative + " 를 엄격하게 읽지 못했습니다:" + logs.joined() );
         ++loadedCount;
     }
-    // 엔진 설정 + 메모리 예산 + 게임 프리셋 — 경로를 못 찾아 0 이면 이 시험은 아무것도 보지 않은 것이다.
+    // 엔진 설정 + 메모리 예산 + 게임 프리셋 — 경로를 못 찾아 0 이면 이 테스트는 아무것도 보지 않은 것이다.
     SW_EXPECT_TRUE_MSG( loadedCount >= 10u, "읽은 설정 파일이 " + sw::to_string( loadedCount ) + " 개뿐입니다" );
 }

@@ -112,7 +112,7 @@ namespace sw::editor
         [[nodiscard]] bool sendServerCommand( string_view command );
 
         bool isRunning() const { return _listProcess.empty() == false; }
-        /** @brief 서버에 붙었다고 로그에 남긴 클라이언트 수입니다(`Net session connected to` 줄 — 탐침 · 시험이 접속을 이것으로 본다). */
+        /** @brief 서버에 붙었다고 로그에 남긴 클라이언트 수입니다(`Net session connected to` 줄 — 탐침 · 테스트가 접속을 이것으로 본다). */
         int32 getConnectedClientCount() const;
         /** @brief 패널 · 툴바가 고치는 다음 세션의 구성입니다(`start` 는 받은 구성을 따로 복사한다). */
         EditorNetPlaySettings&     getSettings() { return _pendingSettings; }

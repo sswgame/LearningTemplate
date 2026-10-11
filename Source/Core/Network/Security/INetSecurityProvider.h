@@ -133,9 +133,9 @@ namespace sw
          * @details ES256 서명은 JWS 형식(r ‖ s, 64 B)이다. RSA 는 2048 비트 미만 키를 거절한다.
          */
         [[nodiscard]] virtual bool verifySignature( const NetPublicKey& publicKey, const uint8* pData, int32 dataSize, const uint8* pSignature, int32 signatureSize ) = 0;
-        /** @brief 서명 키 쌍을 만듭니다 — 비밀 키는 PEM(PKCS#8), 공개 키는 구성 요소. 시험의 가짜 발급자 · 개발 서버가 쓴다. */
+        /** @brief 서명 키 쌍을 만듭니다 — 비밀 키는 PEM(PKCS#8), 공개 키는 구성 요소. 테스트의 가짜 발급자 · 개발 서버가 쓴다. */
         [[nodiscard]] virtual bool createSigningKeyPair( NetSignatureAlgorithm algorithm, string& outPrivateKeyPem, NetPublicKey& outPublicKey ) = 0;
-        /** @brief PEM 비밀 키로 서명합니다(ES256 은 r ‖ s 64 B) — 클라이언트 비밀 JWT(애플) · 시험 발급자. */
+        /** @brief PEM 비밀 키로 서명합니다(ES256 은 r ‖ s 64 B) — 클라이언트 비밀 JWT(애플) · 테스트 발급자. */
         [[nodiscard]] virtual bool signData( NetSignatureAlgorithm algorithm, const string& privateKeyPem, const uint8* pData, int32 dataSize, vector<uint8>& outSignatureBytes ) = 0;
     };
 } // namespace sw

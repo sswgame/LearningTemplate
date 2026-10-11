@@ -109,7 +109,7 @@ namespace sw
         /** @brief @p kind 가 이 처리기의 영역 · 마스크 안이면 true 입니다. */
         bool isMessageKindHandled( uint8 kind ) const;
         /**
-         * @brief 손 배달 — 메시지 하나(첫 바이트 = 종류)를 라우터 없이 넘깁니다(라우터를 쓰지 않는 게임 · 시험). 맡은 종류가 아니면 NotMine 입니다.
+         * @brief 손 배달 — 메시지 하나(첫 바이트 = 종류)를 라우터 없이 넘깁니다(라우터를 쓰지 않는 게임 · 테스트). 맡은 종류가 아니면 NotMine 입니다.
          * @details 손 배달하는 쪽은 연결 사건도 `onConnectionOpened` · `onConnectionClosed` 로 직접 넘긴다.
          */
         NetHandleResult handleMessage( int32 connectionID, const uint8* pData, int32 size, NetChannelType channel = NetChannelType::ReliableOrdered );

@@ -141,7 +141,7 @@ namespace sw::editor
         /** @brief 플레이 세션 상태를 변경합니다 (스냅샷 캡처 및 롤백 복구 처리). */
         static void setState( PlaySessionState state );
         /**
-         * @brief `setState` 의 본체입니다. 상태를 인자로 받아 에디터 컨텍스트 없이도 시험할 수 있습니다.
+         * @brief `setState` 의 본체입니다. 상태를 인자로 받아 에디터 컨텍스트 없이도 테스트할 수 있습니다.
          * @details 정지에서 시작할 때 씬을 여는 중이면(`SceneManager::isTransitioning`) **시작을 미룹니다** — 언리얼 `RequestPlaySession` 이 요청을
          *          걸어 두고 다음 틱에 시작하듯, 로드가 끝난 프레임에 `update` 가 시작합니다. 지금 시작하면 스냅샷이 곧 내려갈 씬을 찍고, 플레이 중에
          *          로드가 끝나 씬이 바뀝니다. Stop 은 미룬 시작도 거둡니다.
@@ -190,7 +190,7 @@ namespace sw::editor
 
         /**
          * @brief 활성 씬을 스냅샷으로 찍습니다(Play 시작). 활성 씬의 세대 · 이름 · 소스 경로와 오브젝트의 프리팹 연결도 함께 적습니다.
-         * @details `setState` 가 정지를 떠날 때 부릅니다. 상태(`PlaySessionData`)를 인자로 받아 에디터 컨텍스트 없이도 시험할 수 있습니다.
+         * @details `setState` 가 정지를 떠날 때 부릅니다. 상태(`PlaySessionData`)를 인자로 받아 에디터 컨텍스트 없이도 테스트할 수 있습니다.
          */
         static void captureSnapshot( PlaySessionData& data );
         /**

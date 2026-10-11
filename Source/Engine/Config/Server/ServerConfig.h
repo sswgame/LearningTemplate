@@ -87,7 +87,7 @@ namespace sw
         int32 _servicePort{ 7780 };
         /**
          * @brief 운영 HTTP 엔드포인트(`/metrics`, `/healthz`, `/readyz`. 평문이고 인증 없음) 포트입니다. 0 이면 열지 않습니다.
-         * @details 기본은 끔 — 한 기계에 서버 여럿(시험 · 개발)이 뜨면 고정 포트가 부딪친다. 운영 설정 파일이 켠다(Prometheus 관례 9100 대).
+         * @details 기본은 끔 — 한 기계에 서버 여럿(테스트 · 개발)이 뜨면 고정 포트가 부딪친다. 운영 설정 파일이 켠다(Prometheus 관례 9100 대).
          */
         PROPERTY( Min = 0, Max = 65535 )
         int32 _opsPort{ 0 };

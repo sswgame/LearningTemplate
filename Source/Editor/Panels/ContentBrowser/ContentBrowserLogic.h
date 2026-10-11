@@ -1,6 +1,6 @@
 /**
  * @file ContentBrowserLogic.h
- * @brief 콘텐츠 브라우저 패널(`ContentBrowserPanel`)의 판단입니다 — 경로 줄 조각 · 폴더 트리 캐시. ImGui 를 모릅니다(EditorTest 가 시험합니다).
+ * @brief 콘텐츠 브라우저 패널(`ContentBrowserPanel`)의 판단입니다 — 경로 줄 조각 · 폴더 트리 캐시. ImGui 를 모릅니다(EditorTest 가 테스트합니다).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -60,7 +60,7 @@ namespace sw::editor
     class ContentBrowserFolderCache
     {
     public:
-        /** @brief 디스크를 읽는 함수를 받습니다(시험은 세는 함수를 넘긴다). */
+        /** @brief 디스크를 읽는 함수를 받습니다(테스트는 세는 함수를 넘긴다). */
         explicit ContentBrowserFolderCache( ContentBrowserFolderScanFunc pfnScan );
 
         /**

@@ -32,7 +32,7 @@ namespace
         }
     };
 
-    /** @brief 누구나 언제든 — 차례를 바꾸지 않습니다(보낼 줄 시험에서 한 사람이 행동을 몰아 낸다). */
+    /** @brief 누구나 언제든 — 차례를 바꾸지 않습니다(보낼 줄 테스트에서 한 사람이 행동을 몰아 낸다). */
     class AnyoneMayActPolicy final : public ITurnPolicy
     {
     public:
@@ -52,7 +52,7 @@ namespace
         }
     };
 
-    /** @brief 하니스 위 턴 중계 — 서버 월드는 게임의 `TurnRelayServer` 를 걸고 틱마다 `update` 하고, 클라이언트 월드는 시험이 가진 `TurnRelayClient` 를 그 월드 호스트에 붙인다. */
+    /** @brief 하니스 위 턴 중계 — 서버 월드는 게임의 `TurnRelayServer` 를 걸고 틱마다 `update` 하고, 클라이언트 월드는 테스트가 가진 `TurnRelayClient` 를 그 월드 호스트에 붙인다. */
     class TurnRelayNetSimSession final : public INetSimSession
     {
     public:

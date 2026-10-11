@@ -84,7 +84,7 @@ namespace
         return -1.0;
     }
 
-    /** @brief 시험용 처리기 — 맡은 영역에서 @p acceptedKind 만 맡고(가변 정수 하나가 몸) 받은 수를 셉니다. */
+    /** @brief 테스트용 처리기 — 맡은 영역에서 @p acceptedKind 만 맡고(가변 정수 하나가 몸) 받은 수를 셉니다. */
     class CountingHandler : public INetMessageHandler
     {
     public:
@@ -118,7 +118,7 @@ namespace
         int32 _lastConnectionID;
     };
 
-    /** @brief 시험용 의사 난수(xorshift) — 시드가 같으면 같은 수열입니다. */
+    /** @brief 테스트용 의사 난수(xorshift) — 시드가 같으면 같은 수열입니다. */
     uint32 nextRandom( uint32& inOutState )
     {
         inOutState ^= inOutState << 13;
@@ -1013,7 +1013,7 @@ SW_TEST_CASE( NetworkTest, LostPacketIsResentBeforeTheResendDelay )
         if ( bDeliver == false )
             return;
         BitReader reader( packet.getBytes().data(), packet.getByteCount() );
-        (void)to.readPacket( receiveTime, reader ); // 버린 · 중복 패킷이면 false — 결과는 시험 단언이 본다
+        (void)to.readPacket( receiveTime, reader ); // 버린 · 중복 패킷이면 false — 결과는 테스트 단언이 본다
     };
     // RTT 1 초를 익힌다 — 한쪽 0.5 초.
     float64 time = 0.0;

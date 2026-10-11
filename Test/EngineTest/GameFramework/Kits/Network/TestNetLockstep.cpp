@@ -402,7 +402,7 @@ namespace
         return true;
     }
 
-    /** @brief 락스텝 떠남 시험의 결과 — 남은 둘(서버 · 클라이언트 A)의 틱 해시와 떠남 틱입니다. */
+    /** @brief 락스텝 떠남 테스트의 결과 — 남은 둘(서버 · 클라이언트 A)의 틱 해시와 떠남 틱입니다. */
     struct LockstepLeaveResult
     {
         vector<uint32> _arrHashByTick[2];

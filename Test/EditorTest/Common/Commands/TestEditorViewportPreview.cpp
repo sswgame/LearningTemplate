@@ -1,6 +1,6 @@
 #include "pch.h"
 
-// 미리보기 메타(`EditorPreview`)는 에디터 메타데이터라 Shipping 빌드에는 없다 — 이 시험도 없다.
+// 미리보기 메타(`EditorPreview`)는 에디터 메타데이터라 Shipping 빌드에는 없다 — 이 테스트도 없다.
 
 #if !defined( SW_SHIPPING )
 

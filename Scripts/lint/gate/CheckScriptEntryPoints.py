@@ -14,7 +14,7 @@ Scripts/lint/gate/CheckScriptEntryPoints.py
   `--verify-unused` 갈래에서만 `common` 을 끌어와 `--apply` 끝에서 죽었다).
 
 진입점은 또 **인자를 받는다**: 모듈 수준 `def main()` 은 첫 인자(`argv`)가 있어야 하고, `parse_args()` 를 인자 없이 부르지 않는다 —
-그러면 프로그램에서 인자를 넘길 수 없어 `py -3 -m Scripts` · 시험이 부를 수 없다(`main = XxxGate.run` 은 기반이 받는다).
+그러면 프로그램에서 인자를 넘길 수 없어 `py -3 -m Scripts` · 테스트가 부를 수 없다(`main = XxxGate.run` 은 기반이 받는다).
 
   python Scripts/lint/gate/CheckScriptEntryPoints.py [--root <repo>] [--files a.py b.py]
 """

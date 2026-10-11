@@ -1,9 +1,9 @@
 /**
  * @file LoadBotRunner.h
  * @brief 봇 실행기 — 전송 하나 · 끝점 하나 · 요청 클라이언트 하나에 봇(연결) 여럿. 늘리는 시간 동안 봇을 고르게 띄우고, 틱마다 봇의 다음 단계를 낸다.
- * @details - 전송은 빌려 쓴다(시험은 루프백 망의 전송, 실제는 `StreamTransportFactory::createPlatformTransport()` — Main 이 만든다). I/O 스레드 없이
+ * @details - 전송은 빌려 쓴다(테스트는 루프백 망의 전송, 실제는 `StreamTransportFactory::createPlatformTransport()` — Main 이 만든다). I/O 스레드 없이
  *            `tick` 이 `pollIO` 를 돈다 — 실행기 스레드 하나.
- *          - 시계: 기본은 `MonotonicClock`(지연은 마이크로초). 시험은 `setManualClock` 으로 바깥이 밀리초를 정한다(결정적 — 지연도 그 밀리초).
+ *          - 시계: 기본은 `MonotonicClock`(지연은 마이크로초). 테스트는 `setManualClock` 으로 바깥이 밀리초를 정한다(결정적 — 지연도 그 밀리초).
  *          - 받은 Message 프레임(알림)은 종류(첫 2 바이트)별로 센 뒤 그 봇에 넘긴다.
  *          - 시나리오를 다 돌았거나(모든 봇이 끝남) 늘린 뒤 `_durationSeconds` 가 지나면 `tick` 이 false 다.
  */
@@ -51,7 +51,7 @@ namespace sw
         [[nodiscard]] bool initialize( IStreamTransport* pTransport, const LoadBotScenario& scenario, const LoadBotRunnerSettings& settings, string& outError );
         void               shutdown();
 
-        /** @brief 시험 — 시계를 바깥이 정한다(밀리초, 처음 값이 시작). 한 번이라도 부르면 그 뒤로 이 값만 쓴다. */
+        /** @brief 테스트 — 시계를 바깥이 정한다(밀리초, 처음 값이 시작). 한 번이라도 부르면 그 뒤로 이 값만 쓴다. */
         void setManualClock( int64 nowMs );
 
         /** @brief 한 틱 — 전송 · 끝점 · 요청 시한을 돌고, 늘리는 중이면 봇을 더 띄우고, 봇마다 다음 단계를 본다. 시나리오가 끝났으면 false. */

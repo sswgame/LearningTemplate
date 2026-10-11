@@ -55,7 +55,7 @@ namespace
     {
         static constexpr float32 kFrame = 1.0f / 60.0f;
 
-        /** @class RecordingHandler @brief 불린 순서를 "단계:알림" 으로 적는 시험 처리기입니다. */
+        /** @class RecordingHandler @brief 불린 순서를 "단계:알림" 으로 적는 테스트 처리기입니다. */
         class RecordingHandler final : public IAnimNotifyHandler
         {
         public:

@@ -76,7 +76,7 @@ namespace sw
 {
     /**
      * @class ILoginCrypto
-     * @brief 로그인 키트가 쓰는 암호 원시 연산의 창구입니다. 실제 구현은 `INetSecurityProvider`(OpenSSL)를 감싼 `NetSecurityLoginCrypto`, 시험은 결정적 가짜.
+     * @brief 로그인 키트가 쓰는 암호 원시 연산의 창구입니다. 실제 구현은 `INetSecurityProvider`(OpenSSL)를 감싼 `NetSecurityLoginCrypto`, 테스트는 결정적 가짜.
      * @details 모두 스레드 안전이어야 한다(해시는 저장소 워커에서, 접속 표 확인은 네트워크 스레드에서 부른다). 실패하면 false — 부르는 쪽은 `StoreUnavailable` 처럼 다룬다.
      */
     class SW_GF_API ILoginCrypto

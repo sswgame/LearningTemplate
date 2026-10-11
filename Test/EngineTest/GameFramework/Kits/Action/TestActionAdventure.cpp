@@ -459,8 +459,8 @@ SW_TEST_CASE( ActionAdventureTest, FireSpreadsDownwindAndBurnsOut )
     AdventureElementGrid gridB;
     fillMeadow( gridA, int2{ 1, 0 } );
     fillMeadow( gridB, int2{ 1, 0 } );
-    (void)gridA.applyFire( int2{ 0, 1 } ); // 시험 준비 — 결과는 아래 상태 해시 비교가 본다
-    (void)gridB.applyFire( int2{ 0, 1 } ); // 시험 준비 — 결과는 아래 상태 해시 비교가 본다
+    (void)gridA.applyFire( int2{ 0, 1 } ); // 테스트 준비 — 결과는 아래 상태 해시 비교가 본다
+    (void)gridB.applyFire( int2{ 0, 1 } ); // 테스트 준비 — 결과는 아래 상태 해시 비교가 본다
     for ( int32 stepIndex = 0; stepIndex < 6; ++stepIndex )
     {
         gridA.step();
@@ -477,7 +477,7 @@ SW_TEST_CASE( ActionAdventureTest, FireSpreadsDownwindAndBurnsOut )
     // 바람이 없으면 불은 사방 — 거슬러 오는 쪽 풀도 옆의 나무도 탄다.
     AdventureElementGrid calm;
     fillMeadow( calm, int2{ 0, 0 } );
-    (void)calm.applyFire( int2{ 3, 1 } ); // 시험 준비 — 결과는 아래 isBurning 단언이 본다
+    (void)calm.applyFire( int2{ 3, 1 } ); // 테스트 준비 — 결과는 아래 isBurning 단언이 본다
     calm.step();
     SW_EXPECT_TRUE( calm.isBurning( int2{ 2, 1 } ) );
     SW_EXPECT_TRUE( calm.isBurning( int2{ 3, 2 } ) );

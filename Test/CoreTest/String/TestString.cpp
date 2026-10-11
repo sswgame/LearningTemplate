@@ -107,7 +107,7 @@ SW_TEST_CASE( StringTest, InternPoolMemoryIsTaggedEngineMisc )
         SW_TEST_SKIP( "no tracking memory profiler in this host" );
 
     constexpr uint32 kNameCount = 2048;
-    // `--test_repeat` 의 다음 판도 새 이름을 넣어야 시험이 헛돌지 않는다.
+    // `--test_repeat` 의 다음 판도 새 이름을 넣어야 테스트가 헛돌지 않는다.
     static uint32 s_round{ 0 };
     ++s_round;
     sw::vector<sw::string> listName;
@@ -1702,7 +1702,7 @@ namespace
             (void)pFile;
             (void)line;
             ++_writeCount;
-            // 가드가 없으면 아래 대입이 경고 → 이 함수 → 대입 … 으로 끝없이 돈다. 시험이 스택을 넘기지 않도록 여기서 끊는다.
+            // 가드가 없으면 아래 대입이 경고 → 이 함수 → 대입 … 으로 끝없이 돈다. 테스트가 스택을 넘기지 않도록 여기서 끊는다.
             if ( _writeCount > kMaxWriteCount )
                 return;
             sw::fixed_string<4> tiny;
@@ -1868,7 +1868,7 @@ SW_TEST_CASE( StringTest, FixedStringTruncatesOnCharacterBoundary )
 /**
  * @brief [StringTest] fixed_string 에 자기 버퍼 안쪽(포인터 · 뷰)을 대입해도 맞게 옮긴다
  * @details 시작 주소가 같은 자기 대입만 거르면 `s = s.c_str() + 2` 는 겹친 memcpy(정의되지 않은 동작)가 된다. Windows 의 memcpy 는 우연히 맞게 옮겨
- *          이 시험은 여기서 늘 통과한다 — 겹침은 리눅스 ASan CI(`memcpy-param-overlap`)가 잡는다.
+ *          이 테스트는 여기서 늘 통과한다 — 겹침은 리눅스 ASan CI(`memcpy-param-overlap`)가 잡는다.
  */
 SW_TEST_CASE( StringTest, FixedStringAssignFromItsOwnInterior )
 {

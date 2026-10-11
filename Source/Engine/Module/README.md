@@ -16,9 +16,9 @@ Engine 이 아는 것은 지연 로드 훅이 묻는 창구(`ModuleHandleProvide
   `push rcx … r9; sub rsp,48h; movdqa [rsp],xmm0; movdqa [rsp+10h],xmm1; …; call __delayLoadHelper2` — `[rsp..rsp+1Fh]` 가 그 호출의 홈 공간이라 헬퍼가
   rcx · rdx 를 흘려 저장된 xmm0 을 덮는다(키트의 `DamageMath::applyArmor( 25, 5, 0, 1 )` 첫 호출이 damage = 0 을 받았다). 지연 로드 훅 TU 가
   `bindDelayLoadImports`(이미지의 지연 import 를 `__HrLoadAllImportsForDll` 로 전부)를 내보내고, `LiveReloadManager` 의 커밋 · `ModuleHost` · 엔진 기동
-  (`bindDelayLoadImportsOfLoadedModules` — 시험 실행 파일이 링크한 키트)이 모듈 코드가 돌기 전에 부른다. `/DELAYLOAD` 는 `DelayLoad.cmake` 의 두 함수로만
+  (`bindDelayLoadImportsOfLoadedModules` — 테스트 실행 파일이 링크한 키트)이 모듈 코드가 돌기 전에 부른다. `/DELAYLOAD` 는 `DelayLoad.cmake` 의 두 함수로만
   (`CheckDelayLoadSites`) — Engine 의 시스템 DLL(D3DCompiler · MF · XAudio2 · Tracy)은 미리 묶지 않으니 첫 인자가 float 인 함수를 부르지 않는다.
-  Shipping 은 키트 · 게임을 정적으로 링크해 모듈 지연 로드가 없다. 시험: `DelayLoadBindTest` · `ArchitectureTest.ReloadedDependentsBindToTheCurrentImages`.
+  Shipping 은 키트 · 게임을 정적으로 링크해 모듈 지연 로드가 없다. 테스트: `DelayLoadBindTest` · `ArchitectureTest.ReloadedDependentsBindToTheCurrentImages`.
 - **게임 인스턴스는 핫 리로드 · 백엔드 교체마다 다시 선다 — `onInitialize` 의 "처음 한 번" 일은 되살린 월드를 덮는다.** 첫 씬 요청이 그랬다(되살린 씬을 몇 프레임
   뒤 새 첫 씬이 바꿔 디렉터 상태가 사라졌다) — `requestFirstScene` 은 살아 있는 씬 위에서는 아무것도 하지 않는다. PROPERTY 가 아닌 디렉터 상태는
   `ComponentStateStore`(봉투 v3 의 세 번째 섹션)로 넘기고, 손 없이 확인은 `App -gv_reloadGameAtFrame=N`.
@@ -43,7 +43,7 @@ Engine 이 아는 것은 지연 로드 훅이 묻는 창구(`ModuleHandleProvide
 - **에디터 확장 모듈(종류 `EditorExtension`)은 EditorModule 과 자기 키트에 의존해 리로드 그래프에 오른다.** 인스턴스가 없고(정적 등록자),
   에디터를 켤 때만 로드한다(`EditorModuleHost::registerEditorExtensions`). 하나가 실패해도 에디터는 뜬다. 매니페스트는 Dev 전용 · EditorModule 의존이 필수이고
   (`ModuleCatalog::parseManifest` 와 CMake 가 같은 검사), 의존이 꺼지면 확장도 오류 없이 함께 꺼진다(쓰지 않아 뺀 키트의 확장은 매니페스트도 복사하지 않는다).
-- **`ModuleImageUtil::releaseModuleCode` 는 델리게이트 스텁 주소로** 그 이미지가 단 등록을 뗀다. 뗀 것이 있다는 경고는 모듈의 손 정리가 빠졌다는 뜻이고 늘 0 이어야 한다. 시험 함정: 몸통이 같은
+- **`ModuleImageUtil::releaseModuleCode` 는 델리게이트 스텁 주소로** 그 이미지가 단 등록을 뗀다. 뗀 것이 있다는 경고는 모듈의 손 정리가 빠졌다는 뜻이고 늘 0 이어야 한다. 테스트 함정: 몸통이 같은
   람다는 ICF 가 접어 주소가 겹친다.
 - **엔진 ABI 도장**(`Scripts/generate/GenerateEngineAbiStamp.py`, 엔진 헤더 + `.xxx` + RuntimeAPI + GameFramework 의 SHA-1)은 섀도 복사본을 올리기 **전에** 파일 바이트에서 대조한다. 주석만
   바꿔도 바뀌는 것은 의도다. 도장 없는 모듈은 거절한다. RHI 모듈은 `kRHIModuleAbiVersion` == 도장 `v<N>`(static_assert), GameAPI · EditorAPI 표를 바꾸면 `kModuleAbiVersion` 을 올리고

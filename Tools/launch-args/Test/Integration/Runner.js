@@ -2,7 +2,7 @@
 
 /**
  * @file Runner.js
- * @brief 실제 VS Code 확장 호스트 안에서 도는 통합 시험입니다(`--extensionTestsPath`).
+ * @brief 실제 VS Code 확장 호스트 안에서 도는 통합 테스트입니다(`--extensionTestsPath`).
  * @details `Scripts/ExtensionTool.py test --integration` 이 임시 작업 폴더(`Fixture/` 사본 — 엔진과 무관한 프로필)를 만들고
  *          격리된 VS Code 를 띄워 이 파일의 `run()` 을 부릅니다. 보는 것:
  *          - 프로필대로 카탈로그가 만들어지는가(`--` 접두사 · 다른 매크로).
@@ -30,13 +30,13 @@ async function waitUntil(predicate, description, timeoutMs = 10000) {
     throw new Error(`timed out waiting for: ${description}`);
 }
 
-/** @brief 시험 작업 폴더의 settings.json 글입니다. */
+/** @brief 테스트 작업 폴더의 settings.json 글입니다. */
 function readSettingsText() {
     const workspacePath = vscode.workspace.workspaceFolders[0].uri.fsPath;
     return fs.readFileSync(path.join(workspacePath, '.vscode', 'settings.json'), 'utf8');
 }
 
-/** @brief 통합 시험 본체입니다. */
+/** @brief 통합 테스트 본체입니다. */
 async function run() {
     const extension = vscode.extensions.getExtension(kExtensionId);
     assert.ok(extension !== undefined, `${kExtensionId} is not loaded`);

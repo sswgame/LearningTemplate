@@ -282,7 +282,7 @@ SW_TEST_CASE( SurvivalHorrorTest, SanityFallsInDarknessAndSightingsWhileTheFlash
     SW_EXPECT_NEAR_EQUAL( 42.5f, session.getSanity().getValue(), 1.0e-4f );
     SW_EXPECT_FALSE( session.isHallucinating() );
 
-    // 어둠: 빛이 없으면 초당 10. 손전등을 켜면 깎이지 않는다(규칙을 끄면 — 손전등이 없으면 — 이 시험은 진다).
+    // 어둠: 빛이 없으면 초당 10. 손전등을 켜면 깎이지 않는다(규칙을 끄면 — 손전등이 없으면 — 이 테스트는 진다).
     session.update( 1.0f, true );
     SW_EXPECT_NEAR_EQUAL( 32.5f, session.getSanity().getValue(), 1.0e-4f );
     SW_EXPECT_TRUE( session.trySetFlashlight( true ) );

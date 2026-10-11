@@ -15,7 +15,7 @@ namespace test
     /**
      * @class RecordingProfilerBackend
      * @brief 받은 호출을 순서대로 적습니다. 구간 · 프레임 · 그래프는 이름을, GPU 구간은 "+이름@시각" · "-@시각" 으로 적습니다.
-     * @details 시험 중에도 다른 스레드(워커 · 로거)가 활성 출력을 지날 수 있으므로 기록은 잠금으로 지키고, 시험은 자기가 낸 이름만 찾습니다.
+     * @details 테스트 중에도 다른 스레드(워커 · 로거)가 활성 출력을 지날 수 있으므로 기록은 잠금으로 지키고, 테스트는 자기가 낸 이름만 찾습니다.
      */
     class RecordingProfilerBackend final : public sw::IProfilerBackend
     {
@@ -27,7 +27,7 @@ namespace test
         {
             std::scoped_lock<sw::mutex> lock{ _mutex };
             _listEvent.push_back( sw::string( "begin " ) + site._pName );
-            // 토큰은 이름 표의 번호다 — 닫을 때 어느 구간인지 이름으로 적는다(다른 스레드의 구간과 섞여도 시험이 제 것을 찾는다).
+            // 토큰은 이름 표의 번호다 — 닫을 때 어느 구간인지 이름으로 적는다(다른 스레드의 구간과 섞여도 테스트가 제 것을 찾는다).
             _listZoneName.push_back( site._pName );
             return _listZoneName.size() - 1;
         }

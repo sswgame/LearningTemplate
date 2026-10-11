@@ -3,7 +3,7 @@
 #include "Engine/UserSettings/UserSettingsVariables.h"
 
 // 기본값은 스키마(`engine/settings/engine.settings.xml`)의 기본값과 같게 둔다 — 사용자 설정이 기동 때 다시 넣으므로 실행 중 값은 스키마가 정하지만,
-// 설정 서비스 없이 도는 시험 · 도구는 이 값을 본다.
+// 설정 서비스 없이 도는 테스트 · 도구는 이 값을 본다.
 SW_GLOBAL_VARIABLE( float32, gv_renderScale, 1.0f, "3D 렌더 해상도 배율 0.5~1 (사용자 설정 graphics.renderScale, 렌더러 미구현)" );
 SW_GLOBAL_VARIABLE( int32, gv_upscaler, 0, "업스케일러 (0 끔, 사용자 설정 graphics.upscaler)" );
 SW_GLOBAL_VARIABLE( int32, gv_shadowQuality, 2, "그림자 품질 0~3 (사용자 설정 graphics.shadowQuality)" );

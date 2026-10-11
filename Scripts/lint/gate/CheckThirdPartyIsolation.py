@@ -13,7 +13,7 @@
      `<openssl/...>` 는 `Source/GameFramework/Base/Online/Security/OpenSSL/` 안에서만,
      `<ft2build.h>` · `<freetype/...>` 는 `Source/Engine/Text/FreeType/` 안에서만, `<sqlite3.h>` 는 키트 드라이버 폴더 `Source/GameFramework/Kits/Feature/Storage/SQLStore/Shared/Driver/SQLite/`
      안에서만, `<libpq-fe.h>` 는 서버 키트 드라이버 폴더 `Source/GameFramework/Kits/Feature/Storage/SQLStore/Server/Driver/Postgres/` 안에서만 쓴다
-     (시험 · 도구 · 게임도 예외 없이 인터페이스를 쓴다 — Tracy 는 `IProfilerBackend` · `SW_PROFILE_SCOPE`, Recast 는 `INavMesh`).
+     (테스트 · 도구 · 게임도 예외 없이 인터페이스를 쓴다 — Tracy 는 `IProfilerBackend` · `SW_PROFILE_SCOPE`, Recast 는 `INavMesh`).
   2) 그 라이브러리 타깃(`joltphysics` · `Jolt::Jolt` · `box2d` · `box2d::box2d` · `acl` · `tracy` · `Tracy::TracyClient` · `recastnavigation` · `RecastNavigation::*` · `openssl` · `OpenSSL::SSL` · `OpenSSL::Crypto` · `freetype` · `Freetype::Freetype`)을 `target_link_libraries` 로 링크하는 것은
      규칙의 링크 주인 하나다(엔진 백엔드는 `Source/Engine/CMakeLists.txt`, 키트 안 드라이버는 그 키트의 CMakeLists) — 다른 타깃이 링크하면 헤더 경로 · 정의가 그 타깃으로 번진다. 라이브러리를 정의하는
      `ThirdParty/` 는 보지 않는다.
@@ -88,7 +88,7 @@ _kListLibraryRule: tuple[LibraryRule, ...] = (
     # 에디터 쪽 — 가져오기(에셋 파이프라인)와 UI.
     LibraryRule("cgltf", ("cgltf",), ("Source/Editor/Common/Asset/",), ()),
     LibraryRule("meshoptimizer", ("meshoptimizer.h",), ("Source/Editor/Common/Asset/",), ()),
-    # 시험은 엔진 DDS 읽기를 독립된 디코더로 대조한다(같은 코드로 같은 코드를 시험하지 않으려고).
+    # 테스트는 엔진 DDS 읽기를 독립된 디코더로 대조한다(같은 코드로 같은 코드를 테스트하지 않으려고).
     LibraryRule("DirectXTex", ("DirectXTex",), ("Source/Editor/Common/Asset/", "Test/EditorTest/Common/Asset/"), ()),
     LibraryRule("ImGui", ("imgui", "implot", "ImGuizmo", "imgui_node_editor", "ImGuiNotify"), ("Source/Editor/", "Test/EditorUITest/"), ()),
 )

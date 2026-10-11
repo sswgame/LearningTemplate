@@ -122,7 +122,7 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE( int32, gv_rhiSwapAtFrame, 0, "이 프레임에 백엔드 교체를 요청한다 (0=사용 안 함)" );
     SW_TEST_GLOBAL_VARIABLE( RHIBackend, gv_rhiSwapTo, RHIBackend::DirectX12, "gv_rhiSwapAtFrame 에 바꿀 백엔드" );
     /**
-     * @brief `-gv_canvasTestPattern=1`: 주 출력에 캔버스 시험 그림(둥근 · 테두리 · 반투명 겹침 · 가위 · 둥근 자르기 · 그림자 · 글자)을 그립니다.
+     * @brief `-gv_canvasTestPattern=1`: 주 출력에 캔버스 테스트 그림(둥근 · 테두리 · 반투명 겹침 · 가위 · 둥근 자르기 · 그림자 · 글자)을 그립니다.
      * @details 위젯(UI 단계)이 생기기 전에 Canvas 패스 · canvas.hlsl · 글리프 아틀라스를 네 백엔드에서 눈으로 보는 길이다(스크린샷에도 들어간다).
      */
     SW_TEST_GLOBAL_VARIABLE( bool, gv_canvasTestPattern, false, "주 출력에 캔버스(화면 2D) 시험 그림을 그린다 — 사각형 · 자르기 · 그림자 · 글자" );
@@ -949,7 +949,7 @@ namespace sw
 
     bool EngineLoop::initialize( int32 argc, utf8* pArgv[], EngineHostRole role )
     {
-        // 이름 풀 · 로거 · 크래시 핸들러 · 리소스 루트 · 진단 도구(Debug) · 명령줄 · 전역 변수 — 시험 하네스와 같은 부트스트랩이다.
+        // 이름 풀 · 로거 · 크래시 핸들러 · 리소스 루트 · 진단 도구(Debug) · 명령줄 · 전역 변수 — 테스트 하네스와 같은 부트스트랩이다.
 #if defined( SW_DEBUG )
         constexpr bool kDiagnostics = true;
 #else
@@ -1025,7 +1025,7 @@ namespace sw
             return false;
         if ( bDedicatedServer )
         {
-            // 실제 바이너리에서 단계가 빠졌는지 시험(ServerBootTest)이 이 줄로 본다.
+            // 실제 바이너리에서 단계가 빠졌는지 테스트(ServerBootTest)이 이 줄로 본다.
             string skipped;
             for ( uint32 stepIndex = 0; stepIndex < static_cast<uint32>( EngineInitStep::Count ); ++stepIndex )
             {
@@ -1087,7 +1087,7 @@ namespace sw
         _startup.destroyAll();
         // 할당 관찰을 떼고 출력을 비운다. 출력 객체(Tracy)는 프로세스 수명이라 남아 있는 구간을 닫을 수 있다.
         ProfilerBackend::shutdown();
-        // 표 밖 부트스트랩을 세운 역순으로 내린다(시험 하네스와 같은 끝 정리).
+        // 표 밖 부트스트랩을 세운 역순으로 내린다(테스트 하네스와 같은 끝 정리).
         _bootstrap.shutdown();
 
         MemoryProfiler::reportMemoryLeaks( "EngineLoop::shutdown" );
@@ -1320,7 +1320,7 @@ namespace sw
             if ( _debugHUD != nullptr )
                 _debugHUD->update( _mapDebugAction.get() );
 #endif
-            // 뷰포트 0 은 "백버퍼 전체"(게임 창 — 패킷 · 캔버스 시험 그림과 같은 규칙)다.
+            // 뷰포트 0 은 "백버퍼 전체"(게임 창 — 패킷 · 캔버스 테스트 그림과 같은 규칙)다.
             const IWindow* const pWindow      = IWindow::getActiveWindow();
             const float32        contentScale = pWindow != nullptr ? pWindow->getContentScale() : 1.0f;
             const bool           bHasDevice   = _rhi != nullptr && _rhi->hasDevice();
@@ -1468,7 +1468,7 @@ namespace sw
                 }
             }
 
-            // 캔버스(화면 2D) — 런타임 UI 가 칠한 목록(내용 번호가 같으면 렌더러가 사각형을 다시 올리지 않는다), 개발 시험 그림은 그 위에.
+            // 캔버스(화면 2D) — 런타임 UI 가 칠한 목록(내용 번호가 같으면 렌더러가 사각형을 다시 올리지 않는다), 개발 테스트 그림은 그 위에.
             // 글리프 아틀라스의 새 구간은 칠한 것이 없어도 늘 넘긴다(렌더러의 거울이 게임 스레드의 페이지와 어긋나지 않게).
             // 씬 뷰가 주 출력인 프레임은 화면 UI 를 싣지 않는다 — UI 는 게임 화면(게임 뷰 · 백버퍼)에만 있다.
             if ( bSceneMain == false && _owned._pUISystem != nullptr && _owned._pUISystem->isInitialized() && _owned._pUISystem->getCanvas().isEmpty() == false )
@@ -1480,7 +1480,7 @@ namespace sw
                 _owned._pUISystem->collectWorldCanvases( packet._canvas._listTarget ); // 월드 공간 UI 의 렌더 텍스처
             if ( bSceneMain == false && gv_canvasTestPattern && _rhi != nullptr && _rhi->hasDevice() )
             {
-                packet._canvas._contentRevision = 0; // 시험 그림은 내용 번호가 없다 — 늘 올린다
+                packet._canvas._contentRevision = 0; // 테스트 그림은 내용 번호가 없다 — 늘 올린다
                 const uint32 canvasWidth        = packet._viewportWidth > 0 ? packet._viewportWidth : _rhi->getDevice().getBackBufferWidth();
                 const uint32 canvasHeight       = packet._viewportHeight > 0 ? packet._viewportHeight : _rhi->getDevice().getBackBufferHeight();
                 CanvasTestPattern::paint( packet._canvas._mainOutput, float2{ static_cast<float32>( canvasWidth ), static_cast<float32>( canvasHeight ) },

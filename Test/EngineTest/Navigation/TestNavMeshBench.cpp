@@ -27,7 +27,7 @@ namespace
         static constexpr uint32      kBakeRound    = 5;
         static constexpr uint32      kQueryCount   = 1000;
 
-        /** @brief 같은 씨앗이면 같은 수열(시험이 기계마다 같은 점을 쓴다). */
+        /** @brief 같은 씨앗이면 같은 수열(테스트가 기계마다 같은 점을 쓴다). */
         struct Random
         {
             uint64 _state{ sw::HashUtil::kGoldenRatio64 };

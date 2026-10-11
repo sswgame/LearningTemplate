@@ -637,7 +637,7 @@ namespace
         }
 
         /**
-         * @brief 검증 결과를 일부러 내는 시험 데이터입니다(맵 검사 시나리오가 연다). 이 파일만 검증 경고 줄을 받고, 그 줄이 없으면 진다.
+         * @brief 검증 결과를 일부러 내는 테스트 데이터입니다(맵 검사 시나리오가 연다). 이 파일만 검증 경고 줄을 받고, 그 줄이 없으면 진다.
          * @details 검증 결과 말고 다른 경고(모르는 이름)는 다른 파일과 똑같이 진다.
          */
         static constexpr const utf8* kArrValidationFixture[] = { "engine/automation/editor/mapcheck/mapcheck.scene.xml" };
@@ -674,7 +674,7 @@ namespace
             return result;
         }
 
-        /** @brief 데이터로 보는 확장자입니다. 이 확장자인데 표의 어느 줄에도 맞지 않는 파일은 시험이 집니다(새 종류가 검사를 비켜 가지 않게). */
+        /** @brief 데이터로 보는 확장자입니다. 이 확장자인데 표의 어느 줄에도 맞지 않는 파일은 테스트가 집니다(새 종류가 검사를 비켜 가지 않게). */
         static bool isDataFile( sw::string_view resourceID )
         {
             return endsWith( resourceID, ".xml" ) || endsWith( resourceID, ".json" ) || endsWith( resourceID, ".material" );
@@ -696,7 +696,7 @@ namespace
 /**
  * @brief [ResourceDataSchemaTest] Resource/ 아래 데이터 파일은 모두 실제 로더로 읽히고, 모르는 키 · 타입 · 열거자 경고가 하나도 나지 않는다
  * @details 이름은 하나만 쓴다 — 코드의 이름을 바꾸면 데이터를 그 이름으로 다시 쓴다(별칭으로 옛 이름을 남기지 않는다). 텍스트 로더는 모르는 키를
- *          버리고 성공하므로(`SchemaOrphanPolicy::Ignore`) 데이터를 빠뜨려도 다른 시험은 초록이다. 이 시험은 그 버린 것을 경고로 잡는다.
+ *          버리고 성공하므로(`SchemaOrphanPolicy::Ignore`) 데이터를 빠뜨려도 다른 테스트는 초록이다. 이 테스트는 그 버린 것을 경고로 잡는다.
  *          데이터 확장자(.xml · .json · .material)인데 종류 표에 없는 파일도 실패다.
  */
 SW_TEST_CASE( ResourceDataSchemaTest, EveryResourceDataFileLoadsWithoutUnknownNames )
@@ -723,7 +723,7 @@ SW_TEST_CASE( ResourceDataSchemaTest, EveryResourceDataFileLoadsWithoutUnknownNa
         if ( ResourceDataSchemaInternal::isDataFile( resourceID ) == false )
             continue;
 #if defined( SW_SHIPPING )
-        // 에디터 팩(`editor/`)은 배포본에 없다 — 그 데이터는 Dev 빌드의 이 시험이 읽는다.
+        // 에디터 팩(`editor/`)은 배포본에 없다 — 그 데이터는 Dev 빌드의 이 테스트가 읽는다.
         if ( sw::StringUtil::startsWith( resourceID, "editor/" ) )
             continue;
 #endif
@@ -746,12 +746,12 @@ SW_TEST_CASE( ResourceDataSchemaTest, EveryResourceDataFileLoadsWithoutUnknownNa
         SW_EXPECT_TRUE_MSG( warnings.empty(), ( resourceID + " 를 읽으며 경고가 났습니다:" + warnings ).c_str() );
         ++loadedCount;
     }
-    // 장면 · 프리팹 · 파이프라인 · 렌더 패스 · 엔진 데이터가 실제로 훑였는지 — 경로를 못 찾아 0 개면 이 시험은 아무것도 보지 않은 것이다.
+    // 장면 · 프리팹 · 파이프라인 · 렌더 패스 · 엔진 데이터가 실제로 훑였는지 — 경로를 못 찾아 0 개면 이 테스트는 아무것도 보지 않은 것이다.
     SW_EXPECT_TRUE_MSG( loadedCount >= 10u, ( "읽은 데이터 파일이 " + std::to_string( loadedCount ) + " 개뿐입니다" ).c_str() );
 }
 
 /**
- * @brief [ResourceDataSchemaTest] 컴포넌트 원소의 모르는 속성은 버려지고 이름으로 알린다 — 위 시험이 기대는 경고 경로
+ * @brief [ResourceDataSchemaTest] 컴포넌트 원소의 모르는 속성은 버려지고 이름으로 알린다 — 위 테스트가 기대는 경고 경로
  * @details XML 이 루트 원소의 모르는 속성만 orphan 으로 올리고 안쪽 원소(컴포넌트 · 구조체 칸)의 모르는 속성을 말없이 버리면, 이름을 바꾸고
  *          씬 데이터를 빠뜨려도 로드가 조용하다.
  */

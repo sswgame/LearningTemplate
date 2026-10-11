@@ -85,7 +85,7 @@ namespace sw
     /**
      * @struct AudioRandom
      * @brief 씨앗으로 정해지는 난수(SplitMix64)입니다. 컨테이너의 클립 고르기 · 볼륨 · 피치 범위가 씁니다.
-     * @details 오프라인 렌더 시험이 같은 출력을 내도록 엔진이 씨앗을 듭니다(`AudioEngine::setRandomSeed`). 전역 난수(`MathUtil::getRandom`)는
+     * @details 오프라인 렌더 테스트가 같은 출력을 내도록 엔진이 씨앗을 듭니다(`AudioEngine::setRandomSeed`). 전역 난수(`MathUtil::getRandom`)는
      *          스레드마다 씨앗이 달라 쓰지 않습니다.
      */
     struct AudioRandom

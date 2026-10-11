@@ -2,7 +2,7 @@
  * @file CameraCollisionProbe.h
  * @brief 카메라 암(피벗 → 카메라)을 장면에 쓸어 보는 질의의 창구 — 스프링 암 · 가림 피하기가 이것만 압니다.
  * @details 물리 백엔드가 바뀌어도(지금 `PhysicsWorld` 의 AABB 바디, 다음은 Jolt 질의) 카메라 쪽은 이 인터페이스 하나만 봅니다. 구현은 둘 —
- *          상자 목록(시험 · 게임이 아는 막는 상자)과 매니저의 `PhysicsWorld` 바디입니다.
+ *          상자 목록(테스트 · 게임이 아는 막는 상자)과 매니저의 `PhysicsWorld` 바디입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -42,7 +42,7 @@ namespace sw
 {
     /**
      * @class CameraBoxCollisionProbe
-     * @brief 막는 상자 목록에 대한 질의입니다. 게임이 이미 아는 벽 · 엄폐물 상자(슈터의 차단 상자)와 시험이 씁니다.
+     * @brief 막는 상자 목록에 대한 질의입니다. 게임이 이미 아는 벽 · 엄폐물 상자(슈터의 차단 상자)와 테스트가 씁니다.
      */
     class SW_GF_API CameraBoxCollisionProbe final : public ICameraCollisionProbe
     {

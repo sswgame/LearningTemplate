@@ -266,7 +266,7 @@ namespace sw
         unique_ptr<CoasterRuntime> pCoaster;
         if ( placement._layoutID.empty() == false )
         {
-            // 코스터 — 짓고 시험 운행으로 평가를 받는다. 못 돌면(언덕을 못 넘는다) 짓지 않는다.
+            // 코스터 — 짓고 테스트 운행으로 평가를 받는다. 못 돌면(언덕을 못 넘는다) 짓지 않는다.
             const CoasterLayoutDef* pLayout = _layoutCatalog.findLayout( placement._layoutID );
             CoasterRideStats        stats{};
             pCoaster = createCoaster( placementIndex, stats );

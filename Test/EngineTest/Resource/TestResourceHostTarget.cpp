@@ -20,7 +20,7 @@ namespace
 /**
  * @brief [ResourceHostTargetTest] 전용 서버 호스트는 텍스처 · 셰이더 바이너리를 없는 것으로 친다 — 읽기는 조용히 false, 경고 · 오류가 없다
  * @details 서버 패키지에는 그 종류가 없다(쿠킹 표 target_excluded_asset_kinds — CookAssets --build-target Server). 서버 로더가 그것을 찾으면
- *          "파일 없음" 오류가 난다 — 그래서 런타임도 같은 표로 그 종류를 요청 단계에서 막는다. `readResourceCommon` 의 호스트 검사를 빼면 이 시험이 진다
+ *          "파일 없음" 오류가 난다 — 그래서 런타임도 같은 표로 그 종류를 요청 단계에서 막는다. `readResourceCommon` 의 호스트 검사를 빼면 이 테스트가 진다
  *          (디스크의 파일이 읽힌다).
  */
 SW_TEST_CASE( ResourceHostTargetTest, DedicatedServerDoesNotReadExcludedKinds )
@@ -50,7 +50,7 @@ SW_TEST_CASE( ResourceHostTargetTest, DedicatedServerDoesNotReadExcludedKinds )
 }
 
 /**
- * @brief [ResourceHostTargetTest] 클라이언트 호스트(표에 빼는 종류가 없다)와 시험 하네스는 모든 종류를 읽는다
+ * @brief [ResourceHostTargetTest] 클라이언트 호스트(표에 빼는 종류가 없다)와 테스트 하네스는 모든 종류를 읽는다
  */
 SW_TEST_CASE( ResourceHostTargetTest, ClientReadsEveryKind )
 {

@@ -1,6 +1,6 @@
 /**
  * @file UILayoutDump.h
- * @brief 배치 결과를 사각형 목록 글로 씁니다 — 레이아웃 시험 · 결정성 골든이 견주는 형식입니다.
+ * @brief 배치 결과를 사각형 목록 글로 씁니다 — 레이아웃 테스트 · 결정성 골든이 견주는 형식입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

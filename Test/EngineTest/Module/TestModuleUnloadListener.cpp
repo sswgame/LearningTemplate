@@ -139,7 +139,7 @@ SW_TEST_CASE( ModuleUnloadListenerTest, ListenerMayDestroyAndCreateListenersDuri
  * @brief [ModuleUnloadListenerTest] RHI 백엔드 모듈을 내릴 때도 그 이미지의 코드를 쥔 등록을 뗀다
  * @details 게임 · 에디터 모듈과 같은 창구(`ModuleImageUtil::unloadModuleImage`)를 지나는지 본다. 실행 파일 옆의 RHI 모듈 하나를
  *          레지스트리로 올리고, 그 모듈의 `createRHIDevice` 주소를 쥔 가짜 리스너를 세운 뒤 `unloadModules` 로 내린다. 이미지를 바로 내리면
- *          리스너는 내려간 코드를 쥔 채 남는다. 시험이 따로 올린 핸들이 이미지를 붙들어 두므로 주소는 끝까지 유효하다.
+ *          리스너는 내려간 코드를 쥔 채 남는다. 테스트가 따로 올린 핸들이 이미지를 붙들어 두므로 주소는 끝까지 유효하다.
  */
 SW_TEST_CASE( ModuleUnloadListenerTest, RHIModuleUnloadReleasesItsCode )
 {

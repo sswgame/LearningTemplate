@@ -56,7 +56,7 @@ from common import (  # noqa: E402
 )
 from LintFixer import FixerFileKind, FixPass, LintFixer, addFileArguments, selectFixerTargetFiles  # noqa: E402
 
-#: 이번 실행이 고르는 약어(`--acronym`) — 변환(FixPass)이 읽는다. 조각 시험은 기본값(전체)으로 돈다.
+#: 이번 실행이 고르는 약어(`--acronym`) — 변환(FixPass)이 읽는다. 조각 테스트는 기본값(전체)으로 돈다.
 _kState: dict[str, tuple[str, ...]] = {"acronyms": registry.kSelectable}
 
 #: 셰이더 — 고치지 않지만, C++ 과 같은 이름이 셰이더에도 있으면 사전 실행이 알린다(`bindingslots.hlsli` 는 양쪽이 include 한다).
@@ -389,7 +389,7 @@ def applyFiles(repositoryRoot: Path, acronyms: tuple[str, ...], bDryRun: bool) -
 #: `--apply-text` 가 고치는 글 파일(코드 파일은 주석 · 문자열만). 셰이더는 이름을 문자열로 묶어 쓰므로 고치지 않는다(`--report` 가 알린다).
 _kProseSuffix: tuple[str, ...] = (".md", ".cmake", ".py", ".txt", ".natvis", ".yml", ".yaml", ".in", ".json", ".xml", ".ps1", ".toml")
 
-#: 옛 철자를 일부러 적는 파일 — 규칙 · 도구 · 시험 · 계획 문서.
+#: 옛 철자를 일부러 적는 파일 — 규칙 · 도구 · 테스트 · 계획 문서.
 _kTextExcludedRel: frozenset[str] = frozenset({
     "Scripts/lint/AcronymRegistry.py", "Scripts/lint/fixer/FormatAcronymSpelling.py", "Scripts/lint/gate/CheckAcronymSpelling.py",
     "Test/PythonTest/TestAcronymSpelling.py", "docs/04_CodingGuidelines.md",

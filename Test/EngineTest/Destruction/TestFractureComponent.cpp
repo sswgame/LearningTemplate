@@ -49,11 +49,11 @@ namespace
             return asset.saveToFile( path ) ? path : sw::string{};
         }
 
-        /** @brief 시험용 표 — 문턱이 낮고 파편이 빨리 쉰다. */
+        /** @brief 테스트용 표 — 문턱이 낮고 파편이 빨리 쉰다. */
         static sw::string writeProfile( const utf8* pName )
         {
             const sw::string path = test::makeTempPath( pName );
-            // 시험 준비 — 실패는 writeTextFile 이 오류로 남기고 프로필 읽기 단언이 깨진다
+            // 테스트 준비 — 실패는 writeTextFile 이 오류로 남기고 프로필 읽기 단언이 깨진다
             (void)sw::FileUtil::writeTextFile( path, R"(<DestructionProfile density="1500" physicsMaterial="Stone">
   <Strain thresholds="20 30 25"/>
   <Links strength="100" supportStrength="30000"/>
@@ -63,11 +63,11 @@ namespace
             return path;
         }
 
-        /** @brief 파편 예산 시험용 표 — 잎 하나도 문턱을 넘는 센 폭발에 모두 떨어지고, 오브젝트 상한은 넉넉하고 오래 남는다. */
+        /** @brief 파편 예산 테스트용 표 — 잎 하나도 문턱을 넘는 센 폭발에 모두 떨어지고, 오브젝트 상한은 넉넉하고 오래 남는다. */
         static sw::string writeShatterProfile( const utf8* pName )
         {
             const sw::string path = test::makeTempPath( pName );
-            // 시험 준비 — 실패는 writeTextFile 이 오류로 남기고 프로필 읽기 단언이 깨진다
+            // 테스트 준비 — 실패는 writeTextFile 이 오류로 남기고 프로필 읽기 단언이 깨진다
             (void)sw::FileUtil::writeTextFile( path, R"(<DestructionProfile density="1500" physicsMaterial="Stone">
   <Strain thresholds="1 1 1"/>
   <Links strength="1" supportStrength="30000"/>

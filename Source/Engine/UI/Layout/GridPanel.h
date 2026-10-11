@@ -68,7 +68,7 @@ namespace sw
         const float2& getCellSpacing() const { return _cellSpacing; }
         /** @brief 칸 사이 간격(열 · 행, UI 단위)을 바꿉니다. kLayout. */
         void setCellSpacing( const float2& cellSpacing );
-        /** @brief 마지막 measure 에서 트랙 밖이라 마지막 트랙으로 옮긴 자식 수입니다(시험 · 진단). */
+        /** @brief 마지막 measure 에서 트랙 밖이라 마지막 트랙으로 옮긴 자식 수입니다(테스트 · 진단). */
         uint32 getOutOfRangeCellCount() const { return _outOfRangeCellCount; }
 
     protected:

@@ -1,6 +1,6 @@
 /**
  * @file FakePlatformLoginProvider.h
- * @brief 시험 · 개발 서버용 가짜 외부 로그인 제공자 — 표 글 `subject:<id>[:<표시 이름>]` 은 그 주체로 통과, `reject` 는 거절, `down` 은 제공자 없음.
+ * @brief 테스트 · 개발 서버용 가짜 외부 로그인 제공자 — 표 글 `subject:<id>[:<표시 이름>]` 은 그 주체로 통과, `reject` 는 거절, `down` 은 제공자 없음.
  * @details 확인은 다음 `tick` 에 끝난다(실제 제공자처럼 맡기고 거두는 흐름을 지나게).
  */
 #pragma once

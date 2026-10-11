@@ -18,7 +18,7 @@ namespace
 {
     struct WaterTestUtil
     {
-        static constexpr float32 kGravity = 9.81f; ///< 시험의 파도 분산 중력(m/s²) — 엔진 설정 표의 기본값과 같다
+        static constexpr float32 kGravity = 9.81f; ///< 테스트의 파도 분산 중력(m/s²) — 엔진 설정 표의 기본값과 같다
 
         static void makeWaves( float4 ( &outArrWave )[shaderslot::kGerstnerWaveCount] )
         {

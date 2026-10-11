@@ -151,7 +151,7 @@ namespace sw
         vector<GlyphAtlasUpload>     _listAtlasUpload{}; ///< 지난 프레임 뒤 바뀐 글리프 아틀라스 구간(`GlyphAtlas::takeUploads`)
         /**
          * @brief 사각형 · 일괄 내용이 바뀔 때만 오르는 번호입니다. 렌더러는 지난 프레임과 같으면 사각형 버퍼를 다시 올리지 않습니다.
-         * @details 0 은 "모른다" 라 늘 올립니다(시험 · 개발 시험 그림).
+         * @details 0 은 "모른다" 라 늘 올립니다(테스트 · 개발 테스트 그림).
          */
         uint64 _contentRevision{ 0 };
         /**

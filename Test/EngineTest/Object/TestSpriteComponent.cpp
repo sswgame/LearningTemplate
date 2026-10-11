@@ -24,7 +24,7 @@
 namespace
 {
     constexpr const utf8* kSpriteMaterialPath = "engine/materials/sprite2d.material";
-    // 런타임은 DDS 만 읽는다 — 시험도 실제로 있는 DDS 두 장을 쓴다.
+    // 런타임은 DDS 만 읽는다 — 테스트도 실제로 있는 DDS 두 장을 쓴다.
     constexpr const utf8* kTextureA = "engine/textures/test/checker.dds";
     constexpr const utf8* kTextureB = "engine/textures/perlin.dds";
 

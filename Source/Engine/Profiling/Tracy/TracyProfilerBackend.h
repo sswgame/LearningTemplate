@@ -60,9 +60,9 @@ namespace sw
         static bool isCompiled();
         /** @brief Tracy 데이터 포트입니다(`TRACY_PORT` 환경 변수가 있으면 그 값, 없으면 8086). */
         static uint16 getDataPort();
-        /** @brief 지금까지 낸 GPU 구간 수입니다(시험 · 에디터 표시). */
+        /** @brief 지금까지 낸 GPU 구간 수입니다(테스트 · 에디터 표시). */
         uint64 getGPUZoneCount() const { return _gpuZoneCount.load( std::memory_order_relaxed ); }
-        /** @brief 지금까지 연 CPU 구간 수입니다(시험 · 에디터 표시). */
+        /** @brief 지금까지 연 CPU 구간 수입니다(테스트 · 에디터 표시). */
         uint64 getZoneCount() const { return _zoneCount.load( std::memory_order_relaxed ); }
 
     private:

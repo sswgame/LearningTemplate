@@ -916,7 +916,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, LayoutNumbersAreDefinedOnlyInBindingSl
         for ( const sw::string& path : listFile )
         {
             sw::string text;
-            // 다른 샤드의 시험이 엔진 셰이더 폴더에 임시 셰이더를 만들었다 지운다 — 훑는 사이 사라진 파일은 건너뛴다(그 파일은 계약 정의 후보가 아니다).
+            // 다른 샤드의 테스트가 엔진 셰이더 폴더에 임시 셰이더를 만들었다 지운다 — 훑는 사이 사라진 파일은 건너뛴다(그 파일은 계약 정의 후보가 아니다).
             if ( sw::FileUtil::readTextFile( path, text ) == false )
                 continue;
             if ( text.find( define ) == sw::string::npos )

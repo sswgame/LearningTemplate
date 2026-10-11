@@ -95,7 +95,7 @@ SW_TEST_CASE( ElementRuleTest, FireSpreadsToAdjacentGrassAfterSteps )
         windy.setMaterial( int2{ x, 0 }, grass );
     }
     windy.setWind( int2{ -1, 0 } );
-    (void)windy.applyStimulus( int2{ 2, 0 }, fire ); // 시험 준비 — 결과는 아래 단언이 번진 칸으로 확인한다
+    (void)windy.applyStimulus( int2{ 2, 0 }, fire ); // 테스트 준비 — 결과는 아래 단언이 번진 칸으로 확인한다
     windy.step();
     SW_EXPECT_TRUE( windy.hasStatus( int2{ 1, 0 }, burning ) );
     SW_EXPECT_FALSE( windy.hasStatus( int2{ 3, 0 }, burning ) );

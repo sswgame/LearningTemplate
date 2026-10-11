@@ -1,6 +1,6 @@
 /**
  * @file JSONWebToken.h
- * @brief JWT(JWS 압축 형식) 읽기 · 서명 · JWKS 키 캐시 — OIDC ID 토큰 확인과 클라이언트 비밀 JWT(애플) · 시험 발급자가 씁니다.
+ * @brief JWT(JWS 압축 형식) 읽기 · 서명 · JWKS 키 캐시 — OIDC ID 토큰 확인과 클라이언트 비밀 JWT(애플) · 테스트 발급자가 씁니다.
  * @details 받아들이는 알고리즘은 RS256 · ES256 뿐이다(`none` · HS256 거절 — 알고리즘 바꿔치기 공격). 서명 확인은 네트워크 보안 제공자(OpenSSL).
  */
 #pragma once
@@ -61,7 +61,7 @@ namespace sw
         /** @brief @p payloadJSON 을 몸으로 서명한 압축 JWT 를 만듭니다(머리 `alg` · `typ` · `kid`). */
         [[nodiscard]] static bool makeSigned( INetSecurityProvider& provider, NetSignatureAlgorithm algorithm, string_view keyID, string_view payloadJSON,
                                               const string& privateKeyPem, string& outCompact );
-        /** @brief 공개 키를 JWK(JSON 객체 글)로 씁니다 — 시험의 가짜 JWKS. */
+        /** @brief 공개 키를 JWK(JSON 객체 글)로 씁니다 — 테스트의 가짜 JWKS. */
         static string writeJwk( const NetPublicKey& publicKey, string_view keyID );
     };
 } // namespace sw

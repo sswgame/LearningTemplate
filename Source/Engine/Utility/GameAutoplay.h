@@ -28,7 +28,7 @@ namespace sw
      * @class GameAutoplay
      * @brief 지금 올라온 게임의 자동 플레이 스위치입니다. 게임 코드는 `isOn()` 하나만 묻습니다.
      * @details 등록은 게임 .cpp 의 `SW_GAME_AUTOPLAY` 한 줄이고, 모듈을 내리면(핫 리로드) 등록도 빠집니다. 등록부는 Engine 에 있습니다. 둘 이상이
-     *          등록돼 있으면 마지막 것을 씁니다(시험 게임은 한 번에 하나다). 게임 스레드에서만 씁니다.
+     *          등록돼 있으면 마지막 것을 씁니다(테스트 게임은 한 번에 하나다). 게임 스레드에서만 씁니다.
      */
     class SW_API GameAutoplay
     {

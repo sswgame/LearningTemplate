@@ -72,7 +72,7 @@ namespace sw
 
         /**
          * @brief 모듈 폴더에 남은 @p pModuleName 의 섀도 복사본 파일(DLL · 디버그 심볼) 가운데 **이 프로세스가 만든 것**의 수를 셉니다.
-         * @details 그 폴더는 나란히 도는 다른 시험 프로세스(App 을 띄우는 AppTest 등)도 쓰므로 그쪽 복사본은 세지 않습니다.
+         * @details 그 폴더는 나란히 도는 다른 테스트 프로세스(App 을 띄우는 AppTest 등)도 쓰므로 그쪽 복사본은 세지 않습니다.
          */
         uint32 countShadowCopies( const utf8* pModuleName )
         {
@@ -1365,7 +1365,7 @@ SW_TEST_CASE( ArchitectureTest, ModuleCompilerAndLiveReloadE2E )
 SW_TEST_CASE( ArchitectureTest, MaterialCacheAcquireReleaseNoGPU )
 {
     // 디스크에 없는 경로를 잡는다 — 디바이스 없이는 파일을 읽지 않는다. 리소스 루트 밖의 임시 경로라 에셋 데이터베이스가
-    // `.meta` 사이드카를 쓰지 않는다(루트 안의 없는 경로를 잡으면 시험을 돌릴 때마다 Resource 에 `.meta` 가 생긴다).
+    // `.meta` 사이드카를 쓰지 않는다(루트 안의 없는 경로를 잡으면 테스트를 돌릴 때마다 Resource 에 `.meta` 가 생긴다).
     const sw::string   materialPath = test::makeTempPath( "does_not_need_gpu.material" );
     sw::MaterialCache& cache        = sw::engine::getAssetManager().getMaterialCache();
     cache.clear();

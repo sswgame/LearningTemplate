@@ -1,6 +1,6 @@
 /**
  * @file TestGameDirector.cpp
- * @brief 디렉터 베이스(`GameDirectorComponent`)와 게임 인스턴스의 상태 컴포넌트 등록(`GameInstanceBase::registerDirector`) 시험입니다.
+ * @brief 디렉터 베이스(`GameDirectorComponent`)와 게임 인스턴스의 상태 컴포넌트 등록(`GameInstanceBase::registerDirector`) 테스트입니다.
  */
 #include "pch.h"
 
@@ -140,7 +140,7 @@ namespace
 {
     /**
      * @brief 게임 서비스에 씬 매니저만 겁니다 — 어서션이 빠져나가도 풀리게 RAII 로 둡니다.
-     * @details `EngineTest/GameTestUtil.h` 의 같은 가드는 `sw::test` 를 들여와 시험 매크로의 `test::` 와 이름이 부딪힌다.
+     * @details `EngineTest/GameTestUtil.h` 의 같은 가드는 `sw::test` 를 들여와 테스트 매크로의 `test::` 와 이름이 부딪힌다.
      */
     struct ScopedDirectorSceneService
     {

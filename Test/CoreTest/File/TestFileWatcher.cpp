@@ -12,7 +12,7 @@
 
 namespace
 {
-    /** @brief OS 를 쓰지 않는 시험용 워처 — 공유 큐 규칙만 드러낸다. */
+    /** @brief OS 를 쓰지 않는 테스트용 워처 — 공유 큐 규칙만 드러낸다. */
     class StubFileWatcher final : public sw::IFileWatcher
     {
     public:

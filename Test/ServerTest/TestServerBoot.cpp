@@ -117,7 +117,7 @@ namespace
 
 /**
  * @brief [ServerBootTest] 전용 서버가 창 · GPU 없이 서고, 정한 틱을 돌고, 정상 종료한다 — 기동 표의 클라이언트 단계(RHI · 렌더러 · 플레이어 설정)는 돌지 않는다
- * @details CI(nogpu)에서 도는 "실제 서버 프로세스" 시험이다. 시작 씬을 읽어도 `[Error]` 가 0 이어야 한다 — 서버는 텍스처 · 셰이더 바이너리 ·
+ * @details CI(nogpu)에서 도는 "실제 서버 프로세스" 테스트다. 시작 씬을 읽어도 `[Error]` 가 0 이어야 한다 — 서버는 텍스처 · 셰이더 바이너리 ·
  *          오디오를 읽지 않고 없는 것으로 친다(쿠킹 표 target_excluded_asset_kinds).
  */
 SW_TEST_CASE( ServerBootTest, StartsTicksAndExitsWithoutWindowOrGPU )
@@ -232,7 +232,7 @@ SW_TEST_CASE( ServerBootTest, StopRequestShutsDownGracefully )
 }
 
 /**
- * @brief [ServerBootTest] `-gv_netListenPort` 로 띄운 서버의 게임 인스턴스가 UDP 포트를 열고, 다른 프로세스(이 시험)의 클라이언트를 받는다(서버 디버깅 S1 의 선행)
+ * @brief [ServerBootTest] `-gv_netListenPort` 로 띄운 서버의 게임 인스턴스가 UDP 포트를 열고, 다른 프로세스(이 테스트)의 클라이언트를 받는다(서버 디버깅 S1 의 선행)
  * @details 키트가 없는 게임(Empty)도 네트워크 서버가 된다 — 역할은 게임 코드가 아니라 실행 인자가 정한다(`GameNetSession`). 접속을 서버 로그 ·
  *          개발 명령 `net.status`(Dev) 로 확인하고, quit 뒤에 세션을 닫은 줄이 남는지 본다.
  */

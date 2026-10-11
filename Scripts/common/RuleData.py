@@ -29,7 +29,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
-#: 규칙 데이터 폴더(저장소 기준). 검사 대상 트리(`--root`)가 아니라 **이 스크립트 트리**의 것을 읽는다 — 자기 시험의 임시 트리에도 같은 규칙이 든다.
+#: 규칙 데이터 폴더(저장소 기준). 검사 대상 트리(`--root`)가 아니라 **이 스크립트 트리**의 것을 읽는다 — 자기 테스트의 임시 트리에도 같은 규칙이 든다.
 kRuleDataRelDir = "Scripts/lint/rules"
 kRuleDataDir = Path(__file__).resolve().parents[1] / "lint" / "rules"
 

@@ -11,12 +11,12 @@
 # `ctest -L "nogpu|lint" -j 4` 의 끝을 이 둘(EngineTest_NoGPU · SmokeTest)이 혼자 돌아 전체가 거의 두 배로 늘어난다.
 # GPU 를 잡는 `_HostOnly` 조각은 직렬이다(`sw_addTestExecutable`).
 # ------------------------------------------------------------------------------
-# 키트 목록을 적지 않는다 — 켜진 키트는 레지스트리가 답하고, 꺼진 키트의 헤더를 include 하는 시험 파일은 빠진다
-# (`sw_excludeSourcesOfInactiveKits`, 프로젝트 매니페스트가 키트를 끄면 그 키트의 시험도 짓지 않는다).
+# 키트 목록을 적지 않는다 — 켜진 키트는 레지스트리가 답하고, 꺼진 키트의 헤더를 include 하는 테스트 파일은 빠진다
+# (`sw_excludeSourcesOfInactiveKits`, 프로젝트 매니페스트가 키트를 끄면 그 키트의 테스트도 짓지 않는다).
 file(GLOB_RECURSE swEngineTestSource CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
 sw_excludeSourcesOfInactiveKits(swEngineTestSource)
 sw_getDynamicModules(swEngineTestKit KINDS kit)
-# 부하 시험 봇(Tools/OnlineLoadBot)은 개발 · Game 타깃에서만 지어진다 — 없는 구성에서는 그 시험을 뺀다.
+# 부하 테스트 봇(Tools/OnlineLoadBot)은 개발 · Game 타깃에서만 지어진다 — 없는 구성에서는 그 테스트를 뺀다.
 set(swEngineTestTool "")
 if(TARGET OnlineLoadBotCore)
 	list(APPEND swEngineTestTool OnlineLoadBotCore)
@@ -73,8 +73,8 @@ sw_addDynamicModuleDependencies(EngineTest KINDS rhi)
 #
 #   ctest --test-dir build/Ninja-Shipping -L hostgpu --output-on-failure
 #
-# 스위트 이름을 이 파일에 적지 않는다 — 이름 목록은 새 GPU 시험이 비켜 가 그대로 CI 로 들어간다. 리눅스는 X11
+# 스위트 이름을 이 파일에 적지 않는다 — 이름 목록은 새 GPU 테스트가 비켜 가 그대로 CI 로 들어간다. 리눅스는 X11
 # 디스플레이가 없어 조용히 스킵되지만, Windows 는 DX11/DX12 가 Basic Render Driver(WARP)로 **초기화에 성공해서**
-# 픽셀 검증이 실제로 돌고 진다. CI 는 `hostgpu` 를 돌리지 못하고 Shipping 에서만 지는 GPU 시험도 있으니,
+# 픽셀 검증이 실제로 돌고 진다. CI 는 `hostgpu` 를 돌리지 못하고 Shipping 에서만 지는 GPU 테스트도 있으니,
 # 일을 마치기 전에 GPU 가 있는 기계에서 위 명령(Shipping)으로 `hostgpu` 를 돌릴 것.
 # ------------------------------------------------------------------------------

@@ -36,14 +36,14 @@ namespace sw
 
         /** @brief 글 · 활성자 태그를 둡니다(코드로 세운 볼륨). 발동 표시를 지운다. */
         void configure( string_view text, TagID activatorTag );
-        /** @brief 활성자가 들어온 것으로 칩니다(겹침 이벤트 · 시험). 띄웠으면 true 입니다. */
+        /** @brief 활성자가 들어온 것으로 칩니다(겹침 이벤트 · 테스트). 띄웠으면 true 입니다. */
         bool activate( const GameObject* pActivator );
-        /** @brief 띄울 UI 시스템을 정합니다(시험 — 없으면 게임 서비스). */
+        /** @brief 띄울 UI 시스템을 정합니다(테스트 — 없으면 게임 서비스). */
         void setUISystem( UISystem* pUISystem ) { _pUISystem = pUISystem; }
         bool hasFired() const { return _bFired; }
 
     private:
-        UISystem* _pUISystem; ///< 시험이 넘긴 UI(없으면 게임 서비스)
+        UISystem* _pUISystem; ///< 테스트가 넘긴 UI(없으면 게임 서비스)
         PROPERTY( Category = "Hint", DisplayName = "Text", Meta = "Localizable", Tooltip = "Hint text or localization key; [action=Name] shows the current input glyph" )
         string _text;
         PROPERTY( Category = "Hint", DisplayName = "Duration", Min = 0.5, Units = s )

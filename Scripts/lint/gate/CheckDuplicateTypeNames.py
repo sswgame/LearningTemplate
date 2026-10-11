@@ -3,7 +3,7 @@
 """
 같은 네임스페이스에 같은 이름의 class · struct 정의가 두 파일에 있으면 막는다.
 
-  키트(`GF_*`) · 게임 모듈은 각자 DLL 이지만 시험 실행 파일 · 배포본(정적 링크)은 그것들을 한 프로그램에 함께 올린다. 그때 같은
+  키트(`GF_*`) · 게임 모듈은 각자 DLL 이지만 테스트 실행 파일 · 배포본(정적 링크)은 그것들을 한 프로그램에 함께 올린다. 그때 같은
   `sw::MonsterCatalog` 가 둘이면 ODR 위반이다 — 링커는 아무 말이 없고, 한쪽 생성자로 만든 객체를 다른 쪽 멤버 함수가 다른 배치로 읽어
   메모리가 깨진다(병합 때 ActionCombat 의 `MonsterCatalog` 와 MonsterCollector 의 `MonsterCatalog` 가 이렇게 부딪쳤다). 키트마다 이름에 키트를
   붙인다(`MonsterCollectorCatalog`).

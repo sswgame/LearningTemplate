@@ -187,7 +187,7 @@ namespace sw
         bool setObject( int32 x, int32 y, const hashed_string& object );
         /** @brief 시계 · 날씨로 이번 시의 방문을 굴립니다. 찾아온 수입니다. */
         int32 attractVisitors( const WorldClock& clock, const WeatherSystem& weather );
-        /** @brief 날 · 시 · 때 · 날씨를 직접 줍니다(시험 · 서버). */
+        /** @brief 날 · 시 · 때 · 날씨를 직접 줍니다(테스트 · 서버). */
         int32 attractVisitorsAt( int32 day, int32 hour, DayPhase phase, const hashed_string& weatherID );
 
         CreatureInteractResult talkTo( const hashed_string& speciesID );

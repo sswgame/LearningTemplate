@@ -273,7 +273,7 @@ Python 파일의 모양입니다. 괄호 안 낱말은 `CheckPythonConventions` 
 | `os.path.join(root, "Resource")` · `os.path.isfile(p)` · `os.makedirs(os.path.dirname(p))` | `root / "Resource"` · `p.is_file()` · `p.parent.mkdir(parents=True, exist_ok=True)` (`osPath`) |
 | `os.path.dirname(os.path.abspath(__file__))` | `Path(__file__).resolve().parent` — `..` 를 글자로 접어야 하면 `os.path.normpath` 는 쓴다 |
 | `raise SystemExit("git mv 실패")` | `sys.exit("git mv 실패")` (`exit`) |
-| `raise SystemExit(main())` · `main()` · `sys.exit(unittest.main())` | `sys.exit(main())` · 시험은 `unittest.main()` (`mainGuard`) |
+| `raise SystemExit(main())` · `main()` · `sys.exit(unittest.main())` | `sys.exit(main())` · 테스트는 `unittest.main()` (`mainGuard`) |
 | `argparse.ArgumentParser()` | `argparse.ArgumentParser(description="서드파티 고지 파일을 씁니다.")` (`argparse`) |
 
 ---

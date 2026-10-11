@@ -39,7 +39,7 @@ namespace sw
          * @details 이 파일의 테스트들은 우선순위·오버라이드를 보려고 `unmountAll()` 로 판을 비운다.
          *          그런데 그 판은 **프로세스 전체가 쓰는 것**이라, 되돌리지 않으면 뒤에 도는 테스트가
          *          팩을 통째로 잃는다. Dev 에서는 느슨한 `Resource/` 트리가 가려 주지만 배포본은 팩이
-         *          전부다 — 쿠킹된 씬 바이너리를 찾는 뒤 시험(`SceneTest.EditorTestSceneResolvesMovedPrefabByGuid` 등)이
+         *          전부다 — 쿠킹된 씬 바이너리를 찾는 뒤 테스트(`SceneTest.EditorTestSceneResolvesMovedPrefabByGuid` 등)이
          *          **Shipping 에서만** 지고, 단독으로 돌리면 통과해 원인을 짚기 어렵다. 검색 우선순위도 같은 이유로 되돌린다.
          */
         struct GlobalVfsScope

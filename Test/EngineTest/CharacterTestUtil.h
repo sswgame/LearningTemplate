@@ -1,6 +1,6 @@
 /**
  * @file CharacterTestUtil.h
- * @brief 캐릭터 형상 시험의 합성 형상 — Y 축 원기둥(소매 · 팔 · 팔찌) · 상자 · 본 사슬입니다.
+ * @brief 캐릭터 형상 테스트의 합성 형상 — Y 축 원기둥(소매 · 팔 · 팔찌) · 상자 · 본 사슬입니다.
  */
 #pragma once
 #include "Core/Math/MathUtil.h"

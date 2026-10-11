@@ -30,11 +30,11 @@ namespace
             , _currencies{}
             , _offers{}
         {
-            // 시험 준비 — 깨진 항목은 카탈로그가 경고로 남기고, 상품 · 통화가 없으면 아래 단언이 실패한다
+            // 테스트 준비 — 깨진 항목은 카탈로그가 경고로 남기고, 상품 · 통화가 없으면 아래 단언이 실패한다
             (void)_currencies.loadFromXMLText( R"(<CurrencyCatalog><Currency id="cur.gold"/><Currency id="cur.gem_free"/><Currency id="cur.gem_paid" paid="true"/>
                 <Currency id="cur.gem"><Funding asset="cur.gem_free"/><Funding asset="cur.gem_paid"/></Currency></CurrencyCatalog>)",
                                                "currency" );
-            // 시험 준비 — 깨진 항목은 카탈로그가 경고로 남기고, 상품 · 통화가 없으면 아래 단언이 실패한다
+            // 테스트 준비 — 깨진 항목은 카탈로그가 경고로 남기고, 상품 · 통화가 없으면 아래 단언이 실패한다
             (void)_offers.loadFromXMLText( R"(<OfferCatalog>
                 <Offer id="potion" maxCount="10"><Price currency="cur.gold" amount="20"/><Grant asset="item.potion" amount="1"/></Offer>
                 <Offer id="elixir"><Price currency="cur.gem" amount="20"/><Grant asset="item.elixir" amount="1"/></Offer>

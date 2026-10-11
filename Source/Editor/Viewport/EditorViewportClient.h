@@ -59,7 +59,7 @@ namespace sw::editor
         void focusOnPoint( const float3& target, float32 radius );
 
         const float3& getCameraPosition() const { return _cameraPos; }
-        /** @brief 기즈모를 마지막으로 그린 ImGui 프레임 번호입니다(-1 = 아직 없음). 에디터 자체 시험(`sceneView.gridAndGizmoDraw`)이 읽습니다. */
+        /** @brief 기즈모를 마지막으로 그린 ImGui 프레임 번호입니다(-1 = 아직 없음). 에디터 자체 테스트(`sceneView.gridAndGizmoDraw`)이 읽습니다. */
         int32 getLastGizmoFrame() const { return _lastGizmoFrame; }
         /** @brief 그 프레임에 기즈모를 단 오브젝트 수입니다. */
         uint32 getLastGizmoObjectCount() const { return _lastGizmoObjectCount; }

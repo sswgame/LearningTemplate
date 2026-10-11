@@ -23,7 +23,7 @@ namespace sw
 
         /** @brief 리소스 경로의 XML 을 열어 @p pRootName 루트를 @p pReadRoot 에 넘깁니다. */
         [[nodiscard]] static bool loadFile( void* pCatalog, ReadRootFunction pReadRoot, string_view path, const utf8* pRootName );
-        /** @brief XML 글 판입니다(시험 · 에디터 미리보기). */
+        /** @brief XML 글 판입니다(테스트 · 에디터 미리보기). */
         [[nodiscard]] static bool loadText( void* pCatalog, ReadRootFunction pReadRoot, string_view xmlText, string_view sourceName, const utf8* pRootName );
     };
 } // namespace sw
@@ -54,7 +54,7 @@ namespace sw
     public:
         /** @brief 리소스 경로의 XML 을 읽습니다. 문서 · 루트가 없거나 읽은 것이 없으면 false 입니다. */
         [[nodiscard]] bool loadFromResource( string_view path ) { return XMLCatalogLoader::loadFile( this, &XMLCatalog::readRoot, path, TCatalog::kXMLRootName ); }
-        /** @brief XML 글을 읽습니다(시험 · 에디터 미리보기). @p sourceName 은 경고에 쓰는 이름입니다. */
+        /** @brief XML 글을 읽습니다(테스트 · 에디터 미리보기). @p sourceName 은 경고에 쓰는 이름입니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} )
         {
             return XMLCatalogLoader::loadText( this, &XMLCatalog::readRoot, xmlText, sourceName, TCatalog::kXMLRootName );

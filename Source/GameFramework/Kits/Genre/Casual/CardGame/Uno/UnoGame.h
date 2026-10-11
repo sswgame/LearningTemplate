@@ -88,7 +88,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 판의 시작 모양입니다(시험 · 리플레이). */
+    /** @brief 판의 시작 모양입니다(테스트 · 리플레이). */
     struct UnoLayout
     {
         vector<CardPile> _listHand{};

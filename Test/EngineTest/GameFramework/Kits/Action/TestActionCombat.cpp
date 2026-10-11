@@ -33,7 +33,7 @@
 #include <thread>
 
 // ActionCombat 킷의 피해 — 투사체 · 공격 판정이 `UnitStatsComponent::takeDamage` 한 길로 피해를 주고 `DamageAppliedEvent` 를 내며, 액션 룸이
-// 상태가 바뀔 때 룸 이벤트를 낸다. 다른 단위들이 `GameFrameworkTest` 의 끝에 시험을 더하므로, 병합이 같은 자리에서 부딪히지 않게 킷의 시험을
+// 상태가 바뀔 때 룸 이벤트를 낸다. 다른 단위들이 `GameFrameworkTest` 의 끝에 테스트를 더하므로, 병합이 같은 자리에서 부딪히지 않게 킷의 테스트를
 // 따로 둔다.
 
 namespace sw
@@ -72,7 +72,7 @@ using namespace sw;
 
 namespace
 {
-    /** @brief 이 시험 동안만 이벤트 버스를 게임 서비스로 겁니다 — 피해 · 룸 이벤트가 여기로 온다. 어서션이 빠져나가도 풀린다. */
+    /** @brief 이 테스트 동안만 이벤트 버스를 게임 서비스로 겁니다 — 피해 · 룸 이벤트가 여기로 온다. 어서션이 빠져나가도 풀린다. */
     struct ScopedEventDispatcherService
     {
         explicit ScopedEventDispatcherService( EventDispatcher& dispatcher ) { game::bindLocalService<EventDispatcher>( &dispatcher ); }
@@ -82,7 +82,7 @@ namespace
         ScopedEventDispatcherService& operator=( const ScopedEventDispatcherService& ) = delete;
     };
 
-    /** @brief 이 시험 동안만 몬스터 카탈로그를 게임 서비스로 겁니다 — 액션 룸이 여기서 적을 읽는다. 어서션이 빠져나가도 풀린다. */
+    /** @brief 이 테스트 동안만 몬스터 카탈로그를 게임 서비스로 겁니다 — 액션 룸이 여기서 적을 읽는다. 어서션이 빠져나가도 풀린다. */
     struct ScopedMonsterCatalogService
     {
         explicit ScopedMonsterCatalogService( MonsterCatalog& catalog ) { game::bindLocalService<MonsterCatalog>( &catalog ); }
@@ -149,7 +149,7 @@ namespace
     {
         for ( int32 frameIndex = 0; frameIndex < maxFrame && room.isCleared() == false; ++frameIndex )
         {
-            (void)room.update( 0.02f, input ); // 이 시험은 룸 이벤트를 본다 — 프레임 결과는 쓰지 않는다
+            (void)room.update( 0.02f, input ); // 이 테스트는 룸 이벤트를 본다 — 프레임 결과는 쓰지 않는다
         }
         return room.isCleared();
     }

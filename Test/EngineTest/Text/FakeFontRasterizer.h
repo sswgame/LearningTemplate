@@ -1,6 +1,6 @@
 /**
  * @file FakeFontRasterizer.h
- * @brief 글자 시험이 쓰는 결정적인 가짜 래스터라이저입니다(스위트 아님).
+ * @brief 글자 테스트가 쓰는 결정적인 가짜 래스터라이저입니다(스위트 아님).
  * @details 면은 `loadFace` 의 debugName(= 글꼴 경로)으로 미리 적은 설정을 찾습니다. 글리프 번호 = 코드 포인트(가진 범위 안일 때), 전진 0.5 em
  *          (공백 0.25 em), 상승 0.8 · 하강 -0.2(설정으로 바꾼다), 커닝은 적은 쌍만, SDF 는 4×4 의 128 입니다. 래스터화 횟수를 셉니다.
  */
@@ -64,7 +64,7 @@ namespace sw::test
         void setFaceConfig( const string& path, const FakeFontFaceConfig& config ) { _mapConfigByPath[path] = config; }
         /** @brief 두 코드 포인트 사이 커닝(em)을 적습니다(모든 면 공통). */
         void setKerning( uint32 leftCodepoint, uint32 rightCodepoint, float32 kerning ) { _mapKerning[makePairKey( leftCodepoint, rightCodepoint )] = kerning; }
-        /** @brief SDF 비트맵 한 변을 바꿉니다(아틀라스를 빨리 채우는 시험). */
+        /** @brief SDF 비트맵 한 변을 바꿉니다(아틀라스를 빨리 채우는 테스트). */
         void setSdfSize( uint32 size ) { _sdfSize = size; }
         /** @brief 지금까지 래스터화한 횟수입니다. */
         uint32 getRasterizeCount() const { return _rasterizeCount; }
@@ -172,7 +172,7 @@ namespace sw::test
     struct FakeFontSystemFixture
     {
         FakeFontRasterizer*    _pRasterizer; ///< FontSystem 이 소유한 가짜(설정을 고칠 때)
-        unique_ptr<FontSystem> _fontSystem;  ///< 시험 대상
+        unique_ptr<FontSystem> _fontSystem;  ///< 테스트 대상
 
         explicit FakeFontSystemFixture( const LocalizationManager* pLocalization = nullptr )
             : _pRasterizer{ nullptr }

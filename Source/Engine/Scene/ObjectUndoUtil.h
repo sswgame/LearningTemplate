@@ -44,9 +44,9 @@ namespace sw
      *          undo · redo 의 코드는 이 파일(Engine)에 있으므로 명령을 만든 모듈이 내려가도 스택에 남아 같은 결과를 냅니다.
      *          대상은 실행할 때마다 @p sceneManager 의 **활성 씬**에서 id 로 찾고, 없으면 기록할 때의 이름으로 찾습니다.
      *          적용한 뒤에는 `CommandStack::notifyObjectEdit` 로 알려, 에디터가 선택 · 씬 dirty 를 맞춥니다.
-     * @warning @p stack · @p sceneManager 는 명령보다 오래 살아야 합니다(엔진 소유 서비스 · 같은 스코프의 시험 객체).
+     * @warning @p stack · @p sceneManager 는 명령보다 오래 살아야 합니다(엔진 소유 서비스 · 같은 스코프의 테스트 객체).
      * @warning 이름 조회는 한 프레임 안에서 없애고 되살린 경우를 위한 것입니다. 옛 오브젝트가 지연 파괴를 기다리는 동안에는 그 id 가 아직 등록돼 있어
-     *          `GameObjectManager::createGameObjectWithID` 가 새 id 를 줍니다(히스토리 점프 · 시험처럼 프레임 없이 연달아 되돌릴 때).
+     *          `GameObjectManager::createGameObjectWithID` 가 새 id 를 줍니다(히스토리 점프 · 테스트처럼 프레임 없이 연달아 되돌릴 때).
      */
     struct SW_API ObjectUndoUtil
     {

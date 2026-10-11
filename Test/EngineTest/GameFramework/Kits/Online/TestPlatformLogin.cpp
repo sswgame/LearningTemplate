@@ -27,7 +27,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr int64 kNowMs = 1000000; ///< 시험 벽시계(초로 1000)
+    constexpr int64 kNowMs = 1000000; ///< 테스트 벽시계(초로 1000)
 
     /** @brief 가짜 제공자 서버 — `/jwks`(바꿀 수 있다) · `/profile`(Bearer good | bad) · `/token`(PKCE 확인 뒤 정한 토큰). `_bDown` 이면 모두 503. */
     class FakeIssuerHandler final : public IHTTPRequestHandler
@@ -474,7 +474,7 @@ SW_TEST_CASE( PlatformLoginTest, LoginServiceCreatesAnAccountFromAVerifiedIDToke
     MemoryServiceStore     store{ &database };
     NetSecurityLoginCrypto crypto{ &NetSecurity::getProvider() };
     LoginSettings          settings;
-    settings._passwordHashParams._memoryKiB = 64; // 이 시험은 비밀번호를 쓰지 않는다 — 없는 계정 해시를 가볍게
+    settings._passwordHashParams._memoryKiB = 64; // 이 테스트는 비밀번호를 쓰지 않는다 — 없는 계정 해시를 가볍게
     const uint8  arrMasterKey[LoginTicketAuthority::kMasterKeySize]{};
     LoginService service;
     service.initialize( &store, &crypto, settings, arrMasterKey );

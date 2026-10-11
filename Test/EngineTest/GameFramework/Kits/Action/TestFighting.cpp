@@ -78,7 +78,7 @@ namespace
         </Fighter>
       </FighterCatalog>)";
 
-    /** @brief 시험용 카탈로그 둘입니다(대전이 빌려 쓰므로 시험 동안 산다). */
+    /** @brief 테스트용 카탈로그 둘입니다(대전이 빌려 쓰므로 테스트 동안 산다). */
     struct FightingFixture
     {
         MoveCatalog    _moveCatalog;
@@ -161,7 +161,7 @@ namespace
     }
 
     /**
-     * @brief 롤백 상태 바이트를 시험 쪽에서 따로 적습니다(버전 2) — `saveState` 와 바이트가 같아야 합니다.
+     * @brief 롤백 상태 바이트를 테스트 쪽에서 따로 적습니다(버전 2) — `saveState` 와 바이트가 같아야 합니다.
      * @details 라운드 사이 대기의 남은 프레임은 시나리오가 아는 값(@p roundOverFramesRemaining)으로 넣습니다. 라운드 묶음(`RoundSeries`)은 맨 뒤입니다.
      */
     vector<uint8> writeExpectedFightingState( const FightingMatch& match, int32 roundOverFramesRemaining )
@@ -222,7 +222,7 @@ namespace
         return writer.releaseBytes();
     }
 
-    /** @brief 240 프레임 라운드 · 2 선승 · 대기 10 프레임 — 아래 두 시험이 같은 수치를 씁니다. */
+    /** @brief 240 프레임 라운드 · 2 선승 · 대기 10 프레임 — 아래 두 테스트가 같은 수치를 씁니다. */
     FightingSettings makeRoundPinSettings()
     {
         FightingSettings settings;
@@ -704,7 +704,7 @@ SW_TEST_CASE( FightingTest, RollbackSaveLoadResimulatesIdentically )
 }
 
 /**
- * @brief [FightingTest] 롤백 상태 바이트의 형식 — 머리는 바이트 그대로, 전체는 시험이 따로 적은 형식과 같다(라운드 중 · 대기 중 · 다음 라운드 · 대전 끝)
+ * @brief [FightingTest] 롤백 상태 바이트의 형식 — 머리는 바이트 그대로, 전체는 테스트가 따로 적은 형식과 같다(라운드 중 · 대기 중 · 다음 라운드 · 대전 끝)
  * @details 형식을 바꾸면 `writeExpectedFightingState` 와 머리 바이트를 같은 커밋에서 고치고 `kStateVersion` 을 올린다.
  */
 SW_TEST_CASE( FightingTest, RollbackStateBytesKeepTheirLayout )

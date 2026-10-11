@@ -35,7 +35,7 @@ namespace sw::editor
     {
         struct EditorSelfTestCasesInternal
         {
-            /** @brief 시험이 위젯을 그리는 창 이름입니다. 위젯은 창 안에서만 그릴 수 있습니다. */
+            /** @brief 테스트가 위젯을 그리는 창 이름입니다. 위젯은 창 안에서만 그릴 수 있습니다. */
             static constexpr const utf8* kProbeWindowName = "##EditorSelfTestProbe";
 
             static bool isNear( float32 left, float32 right, float32 tolerance ) { return ( left - right ) <= tolerance && ( right - left ) <= tolerance; }
@@ -67,7 +67,7 @@ namespace sw::editor
                 return pManager;
             }
 
-            /** @brief 시험이 만든 오브젝트를 지우고 선택을 비웁니다. */
+            /** @brief 테스트가 만든 오브젝트를 지우고 선택을 비웁니다. */
             static void destroyProbeObject( uint64 objectID )
             {
                 EditorContext*     pContext = EditorContext::get();
@@ -668,7 +668,7 @@ namespace sw::editor
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return EditorSelfTestStep::Done;
 
-                // 씬 뷰 패널은 닫아 둔다. 패널은 그리기 전에 자기 크기로 다시 맞추므로, 열어 두면 이 시험이 바꾼 크기를 되돌리며 이미 그린 텍스처를
+                // 씬 뷰 패널은 닫아 둔다. 패널은 그리기 전에 자기 크기로 다시 맞추므로, 열어 두면 이 테스트가 바꾼 크기를 되돌리며 이미 그린 텍스처를
                 // 같은 프레임에 놓는다. 패널이 닫히는 것은 다음 프레임이라 첫 단계는 닫기만 한다.
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
@@ -863,7 +863,7 @@ namespace sw::editor
                         (void)context.expect( bGrew == false || ( windowRect.right - windowRect.left ) == ( probe._suggestedRect.right - probe._suggestedRect.left ),
                                               "WM_DPICHANGED did not move the window to the suggested rectangle" );
                         (void)context.expect( bMatchesBb, "after WM_DPICHANGED the back buffer does not match the window client area" );
-                        // 원래 창 크기 · DPI 로 되돌린다 — 다음 시험이 커진 창에서 돌지 않게.
+                        // 원래 창 크기 · DPI 로 되돌린다 — 다음 테스트가 커진 창에서 돌지 않게.
                         SendMessageW( hWnd, WM_DPICHANGED, MAKEWPARAM( static_cast<WORD>( 96.0f * probe._baseScale ), static_cast<WORD>( 96.0f * probe._baseScale ) ), reinterpret_cast<LPARAM>( &probe._originalRect ) );
                     }
 #endif

@@ -25,7 +25,7 @@ namespace sw
 
     /**
      * @struct AnimNotifyAction
-     * @brief 처리기가 한 일 하나의 기록입니다(진단 · 시험 · 디버그 표시 — 이번 디스패치의 것만 남는다).
+     * @brief 처리기가 한 일 하나의 기록입니다(진단 · 테스트 · 디버그 표시 — 이번 디스패치의 것만 남는다).
      */
     struct AnimNotifyAction
     {
@@ -85,18 +85,18 @@ namespace sw
         /** @brief 알림 표 경로를 바꾸고 다시 받습니다. */
         void          setNotifyTablePath( string_view path );
         const string& getNotifyTablePath() const { return _notifyTablePath; }
-        /** @brief 표를 직접 정합니다(시험 · 절차 생성, 저장되지 않음). */
+        /** @brief 표를 직접 정합니다(테스트 · 절차 생성, 저장되지 않음). */
         void setNotifyTable( shared_ptr<const AnimNotifyTable> table );
         /** @brief 지금 표입니다. 없으면 nullptr 입니다. */
         const AnimNotifyTable* getNotifyTable() const { return _table.get(); }
 
-        /** @brief 한 프레임의 알림을 처리합니다(게임 스레드). 애니메이터가 받는 쪽으로 부르고, 시험이 직접 부를 수도 있습니다. */
+        /** @brief 한 프레임의 알림을 처리합니다(게임 스레드). 애니메이터가 받는 쪽으로 부르고, 테스트가 직접 부를 수도 있습니다. */
         void processFrame( const AnimNotifyFrame& frame );
         /** @brief 열린 구간을 모두 닫습니다(끝 처리기를 부릅니다). */
         void closeAllStates();
         /** @brief 열린 구간 수입니다. */
         uint32 getActiveStateCount() const { return static_cast<uint32>( _listActiveState.size() ); }
-        /** @brief 마지막 처리에서 처리기가 한 일입니다(진단 · 시험). */
+        /** @brief 마지막 처리에서 처리기가 한 일입니다(진단 · 테스트). */
         const vector<AnimNotifyAction>& getActions() const { return _listAction; }
 
         // --- 처리기가 쓰는 창구 ---

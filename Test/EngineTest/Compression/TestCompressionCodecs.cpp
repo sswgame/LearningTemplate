@@ -21,7 +21,7 @@
 
 namespace
 {
-    /** @brief 엔진 데이터를 닮은 시험 버퍼 — 반복 구조 + 부동소수 잡음이 섞인다. */
+    /** @brief 엔진 데이터를 닮은 테스트 버퍼 — 반복 구조 + 부동소수 잡음이 섞인다. */
     sw::vector<uint8> makeSampleBuffer( size_t byteSize )
     {
         sw::vector<uint8> byteBuffer;

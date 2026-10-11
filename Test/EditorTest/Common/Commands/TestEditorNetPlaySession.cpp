@@ -20,7 +20,7 @@ namespace
     /** @brief 접속 · 일시정지를 기다리는 시한(초) — 프로세스 셋이 Debug 로 기동한다. 횟수가 아니라 시간이다. */
     constexpr int64 kWaitTimeoutMilliseconds = 60000;
 
-    /** @brief 빌드한 Server 실행 파일 — 작업 폴더(Bin), 없으면 시험 바이너리 옆. 없으면 빈 글. */
+    /** @brief 빌드한 Server 실행 파일 — 작업 폴더(Bin), 없으면 테스트 바이너리 옆. 없으면 빈 글. */
     string findServerPath()
     {
 #if defined( SW_PLATFORM_WINDOWS )
@@ -65,7 +65,7 @@ namespace
 /**
  * @brief [EditorNetPlaySessionTest] 전용 서버 + 클라이언트 둘을 띄우면 둘 다 붙고, 서버 일시정지가 표준 입력으로 닿고, Stop 이 모두를 정상 종료시키고
  *        프로세스마다의 트레이스를 이름표(Server · Client1 · Client2)를 단 한 파일로 합친다(서버 디버깅 S1)
- * @details 창 · GPU 가 없는 시험이라 클라이언트도 `Server` 실행 파일로 띄운다(헤드리스 클라이언트 — 게임 인스턴스의 네트워크 역할은 실행 인자가 정한다).
+ * @details 창 · GPU 가 없는 테스트라 클라이언트도 `Server` 실행 파일로 띄운다(헤드리스 클라이언트 — 게임 인스턴스의 네트워크 역할은 실행 인자가 정한다).
  *          에디터가 `App` 클라이언트로 같은 일을 하는 것은 에디터 시나리오 `netplay_dedicated` 가 본다.
  */
 SW_TEST_CASE( EditorNetPlaySessionTest, DedicatedServerAndTwoClientsConnectPauseAndMergeTraces )
@@ -109,7 +109,7 @@ SW_TEST_CASE( EditorNetPlaySessionTest, DedicatedServerAndTwoClientsConnectPause
     SW_EXPECT_TRUE( merged.find( "\"label\":\"Client1\"" ) != string::npos );
     SW_EXPECT_TRUE( merged.find( "\"label\":\"Client2\"" ) != string::npos );
     SW_EXPECT_TRUE_MSG( merged.find( "same host (exact)" ) != string::npos, "the traces were not aligned by the shared monotonic clock" );
-    (void)FileUtil::removeDirectory( traceDirectory ); // 임시 폴더 — 못 지워도 시험 결과와 상관없다
+    (void)FileUtil::removeDirectory( traceDirectory ); // 임시 폴더 — 못 지워도 테스트 결과와 상관없다
 }
 
 /**

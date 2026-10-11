@@ -77,7 +77,7 @@ namespace sw
         float32 getStrideScale() const { return _strideScale; }
         /** @brief 마지막으로 잰 수평 속도(월드, m/s)입니다. */
         const float3& getMeasuredVelocity() const { return _measuredVelocity; }
-        /** @brief 뼈 목록을 정합니다(코드 · 시험). */
+        /** @brief 뼈 목록을 정합니다(코드 · 테스트). */
         void setOrientationBones( const vector<LocomotionOrientationBone>& listBone ) { _listOrientationBone = listBone; }
 
     private:

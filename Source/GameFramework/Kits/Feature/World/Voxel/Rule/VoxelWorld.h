@@ -78,7 +78,7 @@ namespace sw
         int32                    getSizeX() const { return _chunkCountX * kVoxelChunkSize; }
         int32                    getSizeY() const { return kVoxelChunkHeight; }
         int32                    getSizeZ() const { return _chunkCountZ * kVoxelChunkSize; }
-        /** @brief 번호가 @p block 인 블록 수입니다(시험 · 디버그). */
+        /** @brief 번호가 @p block 인 블록 수입니다(테스트 · 디버그). */
         uint32 countBlocks( VoxelBlockIndex block ) const;
 
         /** @brief 청크마다 블록을 같은 블록이 이어지는 구간(번호 · 길이)으로 씁니다(핫 리로드 · 세이브). 지형이 대부분 공기 · 돌이라 작게 남는다. */

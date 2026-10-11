@@ -13,7 +13,7 @@ namespace sw
 {
     /**
      * @class RenderViewScheduler
-     * @brief 뷰마다 마지막으로 그린 시각을 들고, 후보 목록에서 이번 프레임에 그릴 것을 표시합니다. 렌더러를 모르는 순수 계산이라 씬 없이 시험합니다.
+     * @brief 뷰마다 마지막으로 그린 시각을 들고, 후보 목록에서 이번 프레임에 그릴 것을 표시합니다. 렌더러를 모르는 순수 계산이라 씬 없이 테스트합니다.
      * @details 규칙 — 보이지 않는 뷰는 그리지 않는다. 갱신 주기가 0 이면 매 프레임, 아니면 지난 그림에서 1/주기 가 지나야 "때가 된" 것이다(처음 보는 뷰는 늘
      *          때가 됐다). 때가 된 뷰가 예산보다 많으면 가장 오래 기다린(늦은 정도가 큰) 것부터 고르고, 고르지 못한 뷰는 다음 프레임에 더 늦은 채로 다시 겨룬다
      *          (굶지 않는다 — 늦은 정도가 같으면 덜 그린 뷰가 먼저다). 그린 뷰만 시각을 새로 적는다. 이번 후보에 없는 뷰는 잊는다(카메라가 사라졌다).
@@ -40,7 +40,7 @@ namespace sw
         uint32 schedule( float64 now, const Candidate* pCandidate, uint32 candidateCount, uint32 budget, uint8* pOutRender );
         /** @brief 모든 기록을 잊습니다. */
         void clear() { _listEntry.clear(); }
-        /** @brief 기억하는 뷰 수입니다(진단 · 시험). */
+        /** @brief 기억하는 뷰 수입니다(진단 · 테스트). */
         uint32 getTrackedCount() const { return static_cast<uint32>( _listEntry.size() ); }
 
     private:

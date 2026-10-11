@@ -1,6 +1,6 @@
 /**
  * @file GameSound.h
- * @brief 게임 코드가 소리를 내는 한 줄 창구입니다. 오디오 서비스가 없는 구성(헤드리스 · 시험)에서는 조용히 false · 0 입니다.
+ * @brief 게임 코드가 소리를 내는 한 줄 창구입니다. 오디오 서비스가 없는 구성(헤드리스 · 테스트)에서는 조용히 false · 0 입니다.
  * @details 소리는 이벤트 이름으로 냅니다(`postEvent` · `postEventAt`) — 무슨 클립을 어떻게 낼지는 게임의 이벤트 라이브러리(`*.audioevents.xml`)가 정합니다.
  *          오브젝트에 붙은 소리(따라 움직이는 · 루프)는 `AudioEmitterComponent` 를 씁니다.
  */

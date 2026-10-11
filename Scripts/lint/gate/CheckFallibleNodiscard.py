@@ -58,7 +58,7 @@ _kNameOnlyRe = re.compile(r"^\s*" + _kFallibleNamePattern + r"\s*\(")
 # `[[nodiscard]]` 를 찾을 때 건너뛰는 윗줄 — 주석과 템플릿 머리.
 _kSkippedAboveRe = re.compile(r"^\s*(?://|/\*|\*|template\s*<)")
 
-#: 린트 대상 전체(Source · Tools · Test 의 C++) — 시험 도우미의 false 를 버리면 시험이 통과한 척 한다.
+#: 린트 대상 전체(Source · Tools · Test 의 C++) — 테스트 도우미의 false 를 버리면 테스트가 통과한 척 한다.
 _kListScanRoot = kLintTargetRelDirs
 _kListScanSuffix = (".h", ".cpp", ".inl")
 

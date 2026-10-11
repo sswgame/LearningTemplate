@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file cmake/Engine/ModuleActivation.cmake
-# @brief 모듈 켜짐 조회 — 모듈을 만드는 함수가 꺼진 모듈을 건너뛰고, 시험이 꺼진 키트를 쓰는 소스를 뺀다(답은 ModuleManifest.cmake 의 해석 결과)
+# @brief 모듈 켜짐 조회 — 모듈을 만드는 함수가 꺼진 모듈을 건너뛰고, 테스트가 꺼진 키트를 쓰는 소스를 뺀다(답은 ModuleManifest.cmake 의 해석 결과)
 # ==============================================================================
 
 # 모듈 NAME 이 이 구성에서 켜져 있으면 OUT_VAR 를 ON 으로 둔다. 매니페스트가 없는 모듈은 구성을 세운다(모든 동적 모듈은 매니페스트를 갖는다).
@@ -30,7 +30,7 @@ function(sw_skipInactiveModule NAME OUT_VAR)
 	set(${OUT_VAR} ON PARENT_SCOPE)
 endfunction()
 
-# 소스 목록 LIST_VAR 에서 꺼진 키트의 헤더(`GameFramework/Kits/<묶음>/<키트>/…`)를 include 하는 파일을 뺀다 — 시험 실행 파일이 꺼진 키트를 링크하지 않게.
+# 소스 목록 LIST_VAR 에서 꺼진 키트의 헤더(`GameFramework/Kits/<묶음>/<키트>/…`)를 include 하는 파일을 뺀다 — 테스트 실행 파일이 꺼진 키트를 링크하지 않게.
 # 뺀 것은 "이 구성이 짓지 않는 소스" 로 적는다.
 function(sw_excludeSourcesOfInactiveKits LIST_VAR)
 	get_property(swNames GLOBAL PROPERTY SW_MODULE_NAMES)

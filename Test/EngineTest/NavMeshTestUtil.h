@@ -1,6 +1,6 @@
 /**
  * @file NavMeshTestUtil.h
- * @brief 내비메시 시험들이 같이 쓰는 도우미 — 시험용 설정 표, 상자 기하, 베이크입니다.
+ * @brief 내비메시 테스트들이 같이 쓰는 도우미 — 테스트용 설정 표, 상자 기하, 베이크입니다.
  */
 #pragma once
 #include "Core/Math/Math.h"
@@ -94,7 +94,7 @@ namespace navtest
 
     /**
      * @brief 강체 바닥(30 × 30, 윗면 y = 0) · 가운데 상자 벽(x −1..1, z −4..4)과 그것을 강체 기하로 베이크하는 표면입니다 — 에이전트가 벽을 돌아가는 장면.
-     * @details 씬 내비게이션의 설정을 시험 표(`makeSettings`)로 바꿉니다.
+     * @details 씬 내비게이션의 설정을 테스트 표(`makeSettings`)로 바꿉니다.
      */
     inline void spawnPhysicsCrateScene( sw::GameObjectManager& manager )
     {

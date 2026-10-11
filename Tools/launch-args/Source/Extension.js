@@ -47,7 +47,7 @@ function registerCommandInternal(context, controller) {
 
 /**
  * @brief VS Code 가 확장을 켤 때 부릅니다.
- * @return 시험이 쓰는 내부 손잡이 `{ controller, initialization, injector }` 입니다. 작업 폴더가 없으면 undefined 입니다.
+ * @return 테스트가 쓰는 내부 손잡이 `{ controller, initialization, injector }` 입니다. 작업 폴더가 없으면 undefined 입니다.
  */
 async function activate(context) {
     const workspaceFolder = findWorkspaceFolderInternal();

@@ -14,7 +14,7 @@
 FNV 기저값 하나는 끝 자리가 빠진 채(`1469598103934665603`) 세 파일에 복사돼 있었다. float 로는 같은 값이어도 다음 사람은 어느 것이
 정본인지 모른다.
 
-예외: 리플렉션 메타데이터(`PROPERTY( ... Max = 6.2831853 )`)는 파서가 리터럴만 읽으므로 그 줄은 보지 않는다. 시험(`Test/`)은 기대값을
+예외: 리플렉션 메타데이터(`PROPERTY( ... Max = 6.2831853 )`)는 파서가 리터럴만 읽으므로 그 줄은 보지 않는다. 테스트(`Test/`)은 기대값을
 리터럴로 적는 곳이라 보지 않는다. 주석 · 문자열 안은 보지 않는다.
 
   python Scripts/lint/gate/CheckWellKnownConstants.py [--root <repo>] [--files a.cpp b.hlsl]
@@ -34,7 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint �
 from common import blankCommentsAndLiterals, kLintProductRelDirs, normalizePath  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
-# 시험은 기대값을 리터럴로 적는 곳이라 뺀다(kLintProductRelDirs).
+# 테스트는 기대값을 리터럴로 적는 곳이라 뺀다(kLintProductRelDirs).
 _kListScanRoot = kLintProductRelDirs + ("Resource/engine/shaders", "Resource/common/shaders")
 _kSuffixes = (".h", ".hpp", ".inl", ".cpp", ".xxx", ".hlsl", ".hlsli")
 
@@ -126,7 +126,7 @@ class CheckWellKnownConstantsGate(LintGate):
         self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 시험을 뺀 린트 대상 · 셰이더 전체)")
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        # 집이 사라지면(옮기면) 예외도 함께 낡는다 — 조용히 넘기지 않는다. 시험용 가짜 저장소(자기 시험)는 집이 없어도 된다.
+        # 집이 사라지면(옮기면) 예외도 함께 낡는다 — 조용히 넘기지 않는다. 테스트용 가짜 저장소(자기 테스트)는 집이 없어도 된다.
         if (repositoryRoot / "Source/Core").is_dir():
             for rule in _kListRule:
                 for home in rule.homes:

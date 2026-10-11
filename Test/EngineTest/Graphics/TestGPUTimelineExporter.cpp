@@ -13,7 +13,7 @@
 
 namespace
 {
-    /** @brief 시험용 지점입니다(문자열은 리터럴 — 기록용 출력은 이름만 읽는다). */
+    /** @brief 테스트용 지점입니다(문자열은 리터럴 — 기록용 출력은 이름만 읽는다). */
     sw::ProfileZoneSite makeSiteInternal( const utf8* pName )
     {
         return sw::ProfileZoneSite{ pName, "test", "Test/EngineTest", 0u, 0u };

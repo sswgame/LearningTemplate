@@ -63,7 +63,7 @@ namespace
 
         /**
          * @brief 캔버스 루트를 채우는 세로 스크롤 패널(200×100) 안에 세로 상자 하나 · 높이 40 줄 다섯(내용 높이 200)을 짓습니다.
-         * @details 스크롤 패널을 루트가 아닌 자리에 둔다 — 루트면 뷰포트 걷기가 늘 다시 놓아 kArrange 뿌리 경로를 시험하지 못한다.
+         * @details 스크롤 패널을 루트가 아닌 자리에 둔다 — 루트면 뷰포트 걷기가 늘 다시 놓아 kArrange 뿌리 경로를 테스트하지 못한다.
          */
         static sw::ScrollPanel* makeScrollList( sw::test::UILayoutFixture& fixture, sw::vector<sw::test::TestFixedWidget*>& outListItem )
         {

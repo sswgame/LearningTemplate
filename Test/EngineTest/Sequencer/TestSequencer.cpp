@@ -423,7 +423,7 @@ SW_TEST_CASE( SequencerTest, ItemKindTableCoversEveryKind )
 
 /**
  * @brief [SequencerTest] 시퀀스 파일이 같은 바이트로 왕복한다(종류는 정수 그대로, 키 트랙은 채널마다 키 배열)
- * @details 아래 문서는 `toJSON` 출력이다(저장소에 시퀀스 파일이 하나뿐이라 시험 안에 둔다). 세 번째 항목의 종류 7 은 이 버전이 모르는
+ * @details 아래 문서는 `toJSON` 출력이다(저장소에 시퀀스 파일이 하나뿐이라 테스트 안에 둔다). 세 번째 항목의 종류 7 은 이 버전이 모르는
  *          값이다 — 경고하고, 지우지 않고 다시 쓴다.
  */
 SW_TEST_CASE( SequencerTest, SequenceFileRoundTripKeepsIntegerKinds )

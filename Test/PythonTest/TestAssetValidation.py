@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-에셋 검증 규칙(`Scripts/common/AssetValidation.py`)의 단위 시험.
+에셋 검증 규칙(`Scripts/common/AssetValidation.py`)의 단위 테스트.
 
 검사마다 **잡아야 하는 조각**과 **잡으면 안 되는 조각**을 둘 다 둔다 — 잡지 못하는 검사는 아무것도 지키지 않고, 지나치게 잡는 검사는
 아무도 안 돌리게 된다. 마지막으로 저장소의 규칙 표가 읽히고 `Resource/` 에 오류가 없는지 본다(게이트와 같은 판정).

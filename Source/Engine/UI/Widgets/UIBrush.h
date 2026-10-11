@@ -40,7 +40,7 @@ namespace sw
         bool isInvisible() const { return _color._w <= 0.0f && ( _borderWidth <= 0.0f || _borderColor._w <= 0.0f ); }
         /** @brief 캔버스 브러시로 바꿉니다. @p image 가 있으면 그림 브러시(색을 곱한다)입니다. */
         CanvasBrush makeCanvasBrush( const shared_ptr<const Texture2D>& image = {} ) const;
-        /** @brief 단색 · 둥근 모서리 브러시를 만듭니다(코드로 짓는 위젯 · 시험 화면). */
+        /** @brief 단색 · 둥근 모서리 브러시를 만듭니다(코드로 짓는 위젯 · 테스트 화면). */
         static UIBrush makeSolid( const float4& color, float32 cornerRadius = 0.0f );
     };
 } // namespace sw

@@ -95,13 +95,13 @@ namespace sw
         void setMaxDistance( float32 maxDistance ) { _maxDistance = maxDistance; }
         void setScaleWithDistance( bool bScale, float32 referenceDistance );
 
-        /** @brief 마지막 갱신의 자리입니다(시험 · 방향 화살표). */
+        /** @brief 마지막 갱신의 자리입니다(테스트 · 방향 화살표). */
         const WidgetMarkerPlacement& getLastPlacement() const { return _lastPlacement; }
         /** @brief World 일 때 위젯을 그리는 렌더 텍스처 경로입니다(`rendertarget/widget_<컴포넌트 id>`). */
         string getRenderTargetPath() const;
 
         /**
-         * @brief 화면 마커의 자리를 셉니다(순수 함수 — 시험이 직접 부른다).
+         * @brief 화면 마커의 자리를 셉니다(순수 함수 — 테스트가 직접 부른다).
          * @param viewProjection 게임 카메라의 뷰 · 투영(행 벡터 — `float4::transform`)
          * @param cameraPosition 카메라 월드 위치(거리 · 배율)
          * @param worldPosition  마커를 띄울 월드 점
@@ -111,11 +111,11 @@ namespace sw
                                                       const float2& viewportSize ) const;
         /** @brief 이번 프레임의 마커 자리를 적용합니다(`UISystem::update` 가 부른다 — 카메라 · 오브젝트 위치를 스스로 찾는다). */
         void updateScreenMarker( const UIViewport& viewport );
-        /** @brief 계산한 자리를 마커 위젯 슬롯에 적습니다(시험이 카메라 없이 부른다). 보이면 끝에 `onMarkerPlaced` 를 부릅니다. */
+        /** @brief 계산한 자리를 마커 위젯 슬롯에 적습니다(테스트가 카메라 없이 부른다). 보이면 끝에 `onMarkerPlaced` 를 부릅니다. */
         void applyPlacement( const WidgetMarkerPlacement& placement );
         /**
          * @brief 등록할 UI 시스템을 바꿉니다(옛 쪽에서 마커를 떼고 등록을 풀고, 새 쪽에 등록하고 마커를 붙인다). nullptr 이면 풀기만.
-         * @details 시작할 때 엔진의 UI 시스템으로(서버처럼 없으면 아무것도 하지 않는다), 끝날 때 nullptr 로 부른다. 시험은 자기 UI 시스템을 넘긴다.
+         * @details 시작할 때 엔진의 UI 시스템으로(서버처럼 없으면 아무것도 하지 않는다), 끝날 때 nullptr 로 부른다. 테스트는 자기 UI 시스템을 넘긴다.
          */
         void      bindUISystem( UISystem* pUISystem );
         UISystem* getUISystem() const { return _pUISystem; }
@@ -132,7 +132,7 @@ namespace sw
         void updateWorldCanvas( const UILayoutContext& baseLayout, const UIPaintContext& basePaint );
         /** @brief World 목록을 렌더 텍스처 대상으로 덧붙입니다(`UISystem::collectWorldCanvases`). World 가 아니거나 트리가 없으면 아무것도 하지 않는다. */
         void appendWorldCanvas( vector<CanvasTargetDrawList>& inoutListTarget ) const;
-        /** @brief World 목록의 내용 번호입니다(시험). */
+        /** @brief World 목록의 내용 번호입니다(테스트). */
         uint64 getWorldCanvasRevision() const { return _worldRevision; }
         /** @brief World 사각형 오브젝트입니다(없으면 무효 — 시작할 때 오브젝트 밑에 만든다). */
         GameObjectHandle getWorldQuad() const { return _worldQuad; }

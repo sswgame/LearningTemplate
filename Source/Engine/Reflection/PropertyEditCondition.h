@@ -46,7 +46,7 @@ namespace sw
     {
         /**
          * @brief @p prop 의 EditCondition 식을 @p type(기반 포함)에 대해 풉니다.
-         * @param outError 풀지 못한 이유(로그 · 시험용). 식이 없으면 비어 있고 true 입니다.
+         * @param outError 풀지 못한 이유(로그 · 테스트용). 식이 없으면 비어 있고 true 입니다.
          * @return 식이 없거나 풀었으면 true. 이름이 없거나 · 열거자가 없거나 · 꼴이 틀리면 false
          */
         [[nodiscard]] static bool parse( const TypeInfo& type, const PropertyInfo& prop, PropertyEditConditionExpr& outExpr, string& outError );

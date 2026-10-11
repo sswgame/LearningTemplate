@@ -156,7 +156,7 @@ kLintTargetRelDirs: tuple[str, ...] = (
     "Tools/OnlineLoadBot",
 )
 
-#: `kLintTargetRelDirs` 에서 시험을 뺀 뿌리 — 제품 코드(엔진 · 도구)만 보는 규칙이 쓴다.
+#: `kLintTargetRelDirs` 에서 테스트를 뺀 뿌리 — 제품 코드(엔진 · 도구)만 보는 규칙이 쓴다.
 kLintProductRelDirs: tuple[str, ...] = tuple(root for root in kLintTargetRelDirs if root != "Test")
 
 #: `kLintTargetRelDirs` 의 맨 앞 폴더 이름(`Source` · `Test` · `Tools`) — include 경로의 기준 폴더를 찾는 게이트가 쓴다.

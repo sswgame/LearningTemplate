@@ -51,7 +51,7 @@ namespace
 
         const PartyLobbyCompletion& last() const { return _listCompletion.back(); }
 
-        /** @brief 캐시에 키가 있는가입니다(시험이 기록 · 색인을 직접 본다). */
+        /** @brief 캐시에 키가 있는가입니다(테스트가 기록 · 색인을 직접 본다). */
         bool hasKey( string_view key )
         {
             MemoryEphemeralStore probe{ _pCacheDatabase }; // 따로 앞 하나 — 라우터의 답을 가져가지 않는다

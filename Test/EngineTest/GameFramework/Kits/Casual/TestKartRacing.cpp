@@ -108,7 +108,7 @@ namespace
         return count;
     }
 
-    /** @brief 사람 차를 AI 운전수의 입력으로 몰고(고스트 시험), 이벤트를 모읍니다. 차가 들어오면 멈춥니다. */
+    /** @brief 사람 차를 AI 운전수의 입력으로 몰고(고스트 테스트), 이벤트를 모읍니다. 차가 들어오면 멈춥니다. */
     void driveHumanWithAI( KartRace& race, int32 racer, KartAIDriver& driver, int32 maxSteps, vector<KartRaceEvent>& outListEvent )
     {
         for ( int32 stepIndex = 0; stepIndex < maxSteps; ++stepIndex )

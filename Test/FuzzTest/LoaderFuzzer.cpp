@@ -11,7 +11,7 @@
 #include <cstdlib>
 
 // libFuzzer 진입점 — 대상은 환경 변수 SW_FUZZ_TARGET(LoaderFuzzTargets.cpp 의 표 이름). SW_FUZZ_LIST=1 이면 대상 이름을 줄마다 찍고 끝나고,
-// SW_FUZZ_DUMP_SEEDS=<폴더> 면 그 대상의 씨앗을 파일로 쓰고 끝난다(fuzz.yml 이 말뭉치 첫 판으로 쓴다). 엔진은 시험 하네스와 같은 기동으로 한 번만 세운다.
+// SW_FUZZ_DUMP_SEEDS=<폴더> 면 그 대상의 씨앗을 파일로 쓰고 끝난다(fuzz.yml 이 말뭉치 첫 판으로 쓴다). 엔진은 테스트 하네스와 같은 기동으로 한 번만 세운다.
 // 엔진 단언(`SW_ASSERT`)이 멈추면 libFuzzer 는 그것을 크래시로 본다 — 원하는 판정이다(죽지 않고 · 단언하지 않고). 종료 정리는 libFuzzer 의 exit 에 맡긴다.
 
 namespace

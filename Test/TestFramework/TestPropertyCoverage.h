@@ -1,7 +1,7 @@
 /**
  * @file Test/TestFramework/TestPropertyCoverage.h
- * @brief 지금 등록된 모든 PROPERTY 가 직렬화기가 실어 나를 수 있는 타입인지 — 이 판정을 부르는 시험이 둘이라 한 자리에 둔다.
- * @details ReflectionTest 는 엔진과 자기 시험 타입을, SmokeTest 는 모듈(GameFramework · 킷 · 게임 · 에디터)을 올린 뒤 같은 판정을 돈다 —
+ * @brief 지금 등록된 모든 PROPERTY 가 직렬화기가 실어 나를 수 있는 타입인지 — 이 판정을 부르는 테스트가 둘이라 한 자리에 둔다.
+ * @details ReflectionTest 는 엔진과 자기 테스트 타입을, SmokeTest 는 모듈(GameFramework · 킷 · 게임 · 에디터)을 올린 뒤 같은 판정을 돈다 —
  *          모듈 타입의 PROPERTY 는 모듈을 올리는 실행 파일에서만 보인다.
  */
 #pragma once

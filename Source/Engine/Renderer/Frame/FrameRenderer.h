@@ -126,7 +126,7 @@ namespace sw
         /**
          * @brief 시간 구동 컴퓨트(인스턴스 애니메이션 · 메시 모프)가 읽는 절대 시간(초)을 고정합니다. 음수면 렌더러 시계(`_animTimer`)를 따릅니다(기본).
          * @details 테스트가 씁니다. 모프 변위는 sin(시간) 이라 벽시계로 찍으면 찍은 시각에 따라 그림이 달라지고, 부하가 걸린 실행에서 픽셀 단언이 흔들립니다.
-         *          배포본에는 없습니다 — 시험 전용 시계 고정이라 배포본에서 바꿀 수 없게 합니다.
+         *          배포본에는 없습니다 — 테스트 전용 시계 고정이라 배포본에서 바꿀 수 없게 합니다.
          */
         void setAnimationTimeOverride( float32 seconds ) { _animationTimeOverride = seconds; }
 #endif
@@ -179,11 +179,11 @@ namespace sw
         bool dumpPresentCaptureToFile( string_view outFilePath );
         /**
          * @brief 다음 프레임부터 그릴 캔버스(화면 2D)를 받습니다 — 렌더러가 든 것과 **바꿔치기**합니다(용량이 돈다).
-         * @details 패킷 경로는 `executePacket` 이 패킷의 `_canvas` 로 같은 일을 합니다. 씬 직접 경로(에디터 · 시험)는 이것으로 넣고, 바꿀 때까지 매 프레임
+         * @details 패킷 경로는 `executePacket` 이 패킷의 `_canvas` 로 같은 일을 합니다. 씬 직접 경로(에디터 · 테스트)는 이것으로 넣고, 바꿀 때까지 매 프레임
          *          그 목록을 그립니다. 아틀라스 업로드는 한 번만 반영합니다(반영하면 비운다).
          */
         void setCanvasFrame( CanvasFrameData& inoutFrame );
-        /** @brief 마지막 프레임에 다시 그린 캔버스 렌더 텍스처 대상 수입니다(내용 번호가 같은 대상은 다시 그리지 않는다 — 시험 · 진단). */
+        /** @brief 마지막 프레임에 다시 그린 캔버스 렌더 텍스처 대상 수입니다(내용 번호가 같은 대상은 다시 그리지 않는다 — 테스트 · 진단). */
         uint32 getLastDrawnCanvasTargetCount() const { return _lastDrawnCanvasTargetCount; }
 
     private:
@@ -216,7 +216,7 @@ namespace sw
         bool readbackTransient( string_view attachmentName, vector<uint8>& outBytes, RHITextureMipSpan& outLayout, RHIFormat& outFormat );
 
         /**
-         * @brief 주 출력(게임 창 · 에디터 게임 뷰)의 보기 모드를 정합니다(`-gv_viewMode`, 시험).
+         * @brief 주 출력(게임 창 · 에디터 게임 뷰)의 보기 모드를 정합니다(`-gv_viewMode`, 테스트).
          * @details 보기 모드는 뷰마다의 설정(`RenderViewSettings::_viewMode`)입니다. 이 값은 주 출력 뷰의 설정에 실리고,
          *          에디터 씬 뷰는 `setSceneViewMode` 의 값을 씁니다. 다음 프레임의 `ensureMaterialPSOs` 가 이번 프레임 뷰들의 모드로
          *          PSO 변형을 만들고 드로우가 그리는 뷰의 모드로 고릅니다. 모드를 바꾼 프레임에 셰이더 컴파일이 한 번 낍니다.
@@ -253,7 +253,7 @@ namespace sw
          *          차이(알파 경로가 컴파일됐는가 같은)를 테스트가 여기서 확인합니다.
          */
         bool findPSODesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const;
-        /** @brief 주 시점의 TAA 히스토리 텍스처입니다. 파이프라인에 TAA 패스가 없거나 아직 만들지 않았으면 0 입니다(진단 · 시험용). */
+        /** @brief 주 시점의 TAA 히스토리 텍스처입니다. 파이프라인에 TAA 패스가 없거나 아직 만들지 않았으면 0 입니다(진단 · 테스트용). */
         RHITextureHandle getTaaHistory() const { return _mainView._taaHistory; }
         /**
          * @brief 씬 직접 경로(`execute( pScene )`)의 출력 크기를 정합니다(0 이면 백버퍼). 초상화 굽기처럼 창과 다른 크기로 그릴 때 씁니다.
@@ -264,7 +264,7 @@ namespace sw
             _directOutputWidth  = width;
             _directOutputHeight = height;
         }
-        /** @brief 마지막 프레임에 실제로 그린 추가 뷰 수입니다(갱신 주기 · 예산으로 쉰 뷰는 빠진다 — 진단 · 시험). */
+        /** @brief 마지막 프레임에 실제로 그린 추가 뷰 수입니다(갱신 주기 · 예산으로 쉰 뷰는 빠진다 — 진단 · 테스트). */
         uint32 getLastRenderedExtraViewCount() const { return _lastRenderedExtraViewCount; }
         /** @brief 들고 있는 추가 뷰 수입니다(쉬는 뷰 포함). */
         uint32 getExtraViewCount() const { return static_cast<uint32>( _listExtraView.size() ); }

@@ -15,7 +15,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 하드웨어가 없는 게임패드 슬롯입니다 — 가상 입력 · 시험이 넣는 이벤트만 받는다. */
+        /** @brief 하드웨어가 없는 게임패드 슬롯입니다 — 가상 입력 · 테스트가 넣는 이벤트만 받는다. */
         class HeadlessGamepadDevice final : public GamepadDevice
         {
         public:
@@ -43,7 +43,7 @@ namespace sw
 
     void InputManager::registerPlatformGamepads()
     {
-        // 하드웨어는 없지만 슬롯은 둔다 — 가상 입력(재생 · 시험)이 게임패드 이벤트를 넣는 길이 Windows 서버 빌드와 같아야 한다.
+        // 하드웨어는 없지만 슬롯은 둔다 — 가상 입력(재생 · 테스트)이 게임패드 이벤트를 넣는 길이 Windows 서버 빌드와 같아야 한다.
         registerGamepadSlots<HeadlessGamepadDevice>();
     }
 
@@ -65,7 +65,7 @@ namespace sw
 
     bool InputManager::isWindowFocusedPlatform() const
     {
-        // 창이 없으면 포커스 값 그대로다(Win32 · X11 구현의 "창 없음" 규칙과 같다 — 시험 · 서버는 참).
+        // 창이 없으면 포커스 값 그대로다(Win32 · X11 구현의 "창 없음" 규칙과 같다 — 테스트 · 서버는 참).
         return _bWindowFocused == SW_TRUE;
     }
 

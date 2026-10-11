@@ -1,6 +1,6 @@
 /**
  * @file EditorCurveView.h
- * @brief 커브 편집기의 화면 ↔ 커브 좌표 계산입니다(ImGui 없음 — EditorTest 가 시험합니다).
+ * @brief 커브 편집기의 화면 ↔ 커브 좌표 계산입니다(ImGui 없음 — EditorTest 가 테스트합니다).
  */
 #pragma once
 #include "Core/Common/Types.h"

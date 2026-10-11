@@ -180,7 +180,7 @@ namespace sw
         bool                 hasOwner( const hashed_string& owner ) const;
         bool                 isRegionHidden( const hashed_string& region ) const;
         const ResolvedMorph* findMorph( const hashed_string& owner, const hashed_string& name ) const;
-        /** @brief @p source 가 남긴 설명 줄 수입니다(시험 · 편집 창). */
+        /** @brief @p source 가 남긴 설명 줄 수입니다(테스트 · 편집 창). */
         uint32 countTrace( const hashed_string& source ) const;
     };
 } // namespace sw

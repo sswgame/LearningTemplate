@@ -6,7 +6,7 @@ SW Engine glTF 내보내기 — 고른 오브젝트 · 아마추어 · 애니메
 설치: Blender → Edit → Preferences → Add-ons → Install… 에서 이 폴더를 zip 으로 묶어 고르거나, 이 폴더를 Blender 의
 `scripts/addons/` 에 링크한다. 자세한 것은 Tools/DCC/Blender/README.md.
 
-이 파일만 bpy 를 쓴다. 규약 · 소켓 XML · 임포트 명령은 bpy 없는 모듈(`Conventions` · `SocketXml` · `EngineImport`)에 있고 CI 가 시험한다.
+이 파일만 bpy 를 쓴다. 규약 · 소켓 XML · 임포트 명령은 bpy 없는 모듈(`Conventions` · `SocketXml` · `EngineImport`)에 있고 CI 가 테스트한다.
 """
 
 from __future__ import annotations

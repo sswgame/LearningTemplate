@@ -45,7 +45,7 @@ namespace sw
 
     void MouseDevice::onEventsDispatched( float32 deltaTime )
     {
-        // 흐른 시간이 없는 프레임(0 이나 음수로 부른 시험 · 재동기화)은 기준 시간 한 칸으로 친다.
+        // 흐른 시간이 없는 프레임(0 이나 음수로 부른 테스트 · 재동기화)은 기준 시간 한 칸으로 친다.
         const float32 frameSeconds = deltaTime > 0.0f ? deltaTime : kSmoothingReferenceSeconds;
         const float2  movement     = getMovementDelta();
         float32       velocityX    = movement._x / frameSeconds;

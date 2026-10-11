@@ -1,6 +1,6 @@
 /**
  * @file TestHostRuntime.h
- * @brief 시험 하네스의 엔진 기동 · 종료입니다 — 시험 실행 파일의 `main` 과 퍼저(`Test/FuzzTest/LoaderFuzzer`)가 같은 기동을 쓴다.
+ * @brief 테스트 하네스의 엔진 기동 · 종료입니다 — 테스트 실행 파일의 `main` 과 퍼저(`Test/FuzzTest/LoaderFuzzer`)가 같은 기동을 쓴다.
  * @details 부트스트랩(이름 풀 · 로거 · 크래시 핸들러 · 명령줄) → 서비스 → `EngineLoop` 과 같은 기동 표(`EngineInitStepList.xxx`). 하네스는 창 · RHI ·
  *          렌더러를 세우지 않는다. `stop` 은 기동이 중간에 졌어도 세운 만큼 역순으로 내린다.
  * @code
@@ -27,7 +27,7 @@ namespace test
         TestHostRuntime& operator=( const TestHostRuntime& ) = delete;
 
         /**
-         * @brief 엔진을 세웁니다(명령줄의 시험 플래그는 `TestRegistry` 가 먼저 가져간다). 모두 섰으면 true. 지면 `stop` 으로 내린다.
+         * @brief 엔진을 세웁니다(명령줄의 테스트 플래그는 `TestRegistry` 가 먼저 가져간다). 모두 섰으면 true. 지면 `stop` 으로 내린다.
          * @details 도움말을 요청했으면(`TestRegistry::isHelpRequested`) 도움말만 찍고 엔진을 세우지 않은 채 false 다.
          */
         [[nodiscard]] bool start( int32 argc, utf8* argv[] );

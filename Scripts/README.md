@@ -28,7 +28,7 @@ CMake는 빌드만 담당하고, 도구 탐색·설정·보조 생성 및 코드
 | `lint/report/` | `Run*` | `LintReport` |
 | `generate/` | `Generate*` · `Cook*` | 빌드 · configure 가 부르는 생성기(`runGenerator`) |
 | `setup/` | `Setup*` · `Install*` · `Add*` | 외부 도구 찾기 · 설치(`__main__` 이 없는 파일은 라이브러리 — `HostTools`) |
-| `dev/` | 동사로 시작(`Run*` · `Compare*` · `Make*` · `Move*` · `Remove*` · `Configure*` · `Sample*` · `List*` …) | 사람이 가끔 — 시험 데이터를 만드는 것은 `Make*`(`generate/` 와 겹치지 않게) |
+| `dev/` | 동사로 시작(`Run*` · `Compare*` · `Make*` · `Move*` · `Remove*` · `Configure*` · `Sample*` · `List*` …) | 사람이 가끔 — 테스트 데이터를 만드는 것은 `Make*`(`generate/` 와 겹치지 않게) |
 | `qa/` | 명사(`GoldenImages` · `Soak` …) | App 을 돌려 견주기 |
 
 `gate/CheckScriptLayout.py` 가 이 표를 지킨다(린트 폴더는 기반 클래스까지). 진입점은 모두 `main(argv)` 로 인자를 받는다(`CheckScriptEntryPoints`).
@@ -198,9 +198,9 @@ Scripts/
   │
   ├── dev/                            # [개발 실험] 사람이 가끔 손으로 돌린다 — 빌드 · CI 가 부르지 않는다
   │     ├── RunBackendSmoke.py        # 네 백엔드로 같은 씬을 그려 SceneColor 를 비교
-  │     ├── CiFailureReport.py        # CI 실패(시험 · 구성 · 크래시 스택)를 GitHub 주석으로 — ci.yml 이 부른다
+  │     ├── CiFailureReport.py        # CI 실패(테스트 · 구성 · 크래시 스택)를 GitHub 주석으로 — ci.yml 이 부른다
   │     ├── ConfigureSnapshot.py      # CMake 구성 결과 스냅숏 · 비교(리팩터 전후) · 구성 시간 요약
-  │     ├── MakeStressScene.py        # 로드 경로를 재기 위한 큰 씬(사람이 시험 데이터를 만든다 — `Make*`, 빌드가 만드는 것은 generate/)
+  │     ├── MakeStressScene.py        # 로드 경로를 재기 위한 큰 씬(사람이 테스트 데이터를 만든다 — `Make*`, 빌드가 만드는 것은 generate/)
   │     ├── MakeTerrainShowcase.py    # 지형 쇼케이스의 절차 생성 원본(heightfields_raw · textures_raw)
   │     ├── MakeNoiseTexture.py       # 엔진 잡음 텍스처 원본(engine/textures_raw/perlin.png — 이음매 없는 Perlin fBm)
   │     ├── MakeBrandImages.py        # 에디터 스플래시 원본과 앱 아이콘(app.ico)을 같은 SW 모노그램에서 그린다
@@ -210,14 +210,14 @@ Scripts/
   │     ├── ListCiJobs.py             # GitHub Actions 실행 · 잡 · 실패 주석을 공개 API 로(로그인 없이)
   │     ├── ListOutdatedDeps.py       # vcpkg 의존성의 지금 판 · 레지스트리 최신 판(오버레이 포함, docs/09 5-2)
   │     ├── MoveEditorState.py        # 체크아웃마다 한 번: 옛 자리(Config/Editor · 팩 gv 프리셋)의 에디터 로컬 상태를 Saved/Editor 로
-  │     ├── RunTests.py               # 스위트 · 케이스 이름으로 테스트 실행 — 시험까지 지은 뒤(`all` · `AllTests`) 그 케이스가 사는 실행 파일을 `Bin` 에서
+  │     ├── RunTests.py               # 스위트 · 케이스 이름으로 테스트 실행 — 테스트까지 지은 뒤(`all` · `AllTests`) 그 케이스가 사는 실행 파일을 `Bin` 에서
   │     ├── RunBuildBaseline.py       # 빌드 시간 기준선(풀 · 헤더 수정 · .cpp 수정 · 워크트리 콜드, 각 3 회 중앙값, 머리에 PC · CPU)
   │     ├── SampleStacks.py           # 살아 있는 프로세스의 스레드 스택을 여러 번 떠 함수별로(DbgHelp) — 프로파일러가 닿지 않는 곳
   │     └── StoreSymbols.py           # 빌드의 PDB · .debug 를 심볼 저장소 배치(GUID+age · .build-id)로
   │
   ├── qa/                             # [QA] 빌드된 App 을 돌려 기준과 견주거나(hostgpu · soak · perf CTest 와 사람이 부른다) 에셋을 규칙으로 훑는다
   │     ├── ValidateAssets.py         # 에셋 검증 표(파일 · 규칙 · 심각도 · 메시지) — 게이트와 같은 코드, 경고까지 · JSON 출력
-  │     ├── GoldenImages.py           # 시험 게임 자동 플레이 × 네 백엔드 캡처를 Test/QA/Golden 기준과 지표로 비교(`--record` 로 기준을 뜬다)
+  │     ├── GoldenImages.py           # 테스트 게임 자동 플레이 × 네 백엔드 캡처를 Test/QA/Golden 기준과 지표로 비교(`--record` 로 기준을 뜬다)
   │     ├── Soak.py                   # 자동 플레이 장시간 실행 — 메모리 · 핸들 증가 기울기, 프레임 p50 · p99
   │     └── PerfRegression.py         # Release 프레임 p50 · p99 를 이 기계의 기준(Test/QA/Perf)과 비교
   │
@@ -257,7 +257,7 @@ py -3 -m Scripts stacks <pid> --samples 200                   # 스택 샘플러
 
 ## 게이트 추가
 
-`lint/gate/Check<무엇>.py` 에 `LintGate` 하위 클래스 하나를 두고 `main = XxxGate.run` 으로 내보낸다 — CMake 타깃 · CTest · 커밋 훅 · 자기 시험은
+`lint/gate/Check<무엇>.py` 에 `LintGate` 하위 클래스 하나를 두고 `main = XxxGate.run` 으로 내보낸다 — CMake 타깃 · CTest · 커밋 훅 · 자기 테스트는
 폴더를 훑어 알아서 집는다(틀은 `lint/LintGate.py` 머리말). 게이트가 쓰는 것은 두 곳에서만 온다:
 
 | 필요한 것 | 자리 |
@@ -270,7 +270,7 @@ py -3 -m Scripts stacks <pid> --samples 200                   # 스택 샘플러
 | 파일마다 무거운 정규식 | `common.flatMapInProcesses`(스레드는 GIL 에 막힌다) |
 
 예: `CheckCoreNetworkLayers` 는 `selectTargetFiles` → `readFiles` → `iterIncludes` · `firstFolderAfter` 로 층 표 하나를 대조하고,
-`CheckModuleTargets` 는 `IncludeResolver` 로 include 를 소속 모듈로 푼다. 자기 시험 조각(`selfTestCases`)이 없으면 `CheckLintsAreAlive` 가 실패한다.
+`CheckModuleTargets` 는 `IncludeResolver` 로 include 를 소속 모듈로 푼다. 자기 테스트 조각(`selfTestCases`)이 없으면 `CheckLintsAreAlive` 가 실패한다.
 
 ## 규칙 데이터 — `lint/rules/` 와 `RuleData`
 
@@ -341,7 +341,7 @@ git config diff.swasset.command  "py -3 Scripts/asset/AssetMerge.py git-diff"
 
 ## 함정 · 계약
 
-- **약어 코드모드(`FormatAcronymSpelling`)는 도구 자신과 견주는 글도 고친다.** `--apply-files` · `--apply-text` 는 트리 전체를 돌고 `--files` 를 받지 않는다 — 치환 뒤 등록부 · 코드모드 · 시험 · `AGENTS.md` 의 옛↔새 철자 예시와 인계 문서를 diff 로 보고 되돌린다(`_kTextExcludedRel` 에 오른 파일은 건너뛴다). `--check` 로 목록을 먼저 본다.
+- **약어 코드모드(`FormatAcronymSpelling`)는 도구 자신과 견주는 글도 고친다.** `--apply-files` · `--apply-text` 는 트리 전체를 돌고 `--files` 를 받지 않는다 — 치환 뒤 등록부 · 코드모드 · 테스트 · `AGENTS.md` 의 옛↔새 철자 예시와 인계 문서를 diff 로 보고 되돌린다(`_kTextExcludedRel` 에 오른 파일은 건너뛴다). `--check` 로 목록을 먼저 본다.
 - **코드모드를 다시 돌리면 남의 이름도 다시 바뀐다**(Vulkan `samplerInfo.maxLod`, Tracy `queryId`, Box2D `bodyIdA`) — 앞머리 규칙은 구조체 이름만 가리고 멤버는 못 가린다. 컴파일로 드러나면 `AcronymRegistry.kExternalName` 에 올린다. `--strings` 는 파일 · 전송 형식 키(`"buildId"` · 크래시 텍스트)도 바꾸니 그 자리는 되돌린다.
 - **이름 길이 · 대소문자가 바뀌면 include 정렬과 clang-format 정렬이 달라진다** — 치환 뒤 `fixer/FormatIncludeOrder` · `FormatModified` 를 돌린다. 에디터 아이콘 상수(`EditorIconGlyphs.h`)는 생성물이라 `generate/GenerateEditorIcons.py` 로 다시 만든다(생성기가 등록부의 강제 약어로 쓴다).
 - **약어를 줄기 여럿으로 나눠 치환한 뒤의 병합은 손으로 풀지 않는다** — 충돌 파일은 한쪽을 고르고(`git checkout --ours`) 다른 쪽 약어의 코드모드를 다시 돌린 뒤 그쪽 커밋 본문의 손 맞춤을 다시 적용한다. 옛 폴더 철자가 남은 include 는 대소문자만 다르므로 Windows 에서는 컴파일되고 리눅스에서만 깨진다 — 실제 파일 철자와 맞는지 따로 본다. 대소문자만 바뀐 리플렉션 헤더는 `generated/` 의 낡은 스탬프(옛 철자 경로)가 "Generated file name collision" 을 낸다 — 그 스탬프와 `.gen.*` 를 지운다.
@@ -366,7 +366,7 @@ git config diff.swasset.command  "py -3 Scripts/asset/AssetMerge.py git-diff"
   `FormatCmakeIndent`(탭, 문자열 안 · vcpkg 툴체인 영역 제외) — 다른 묶음을 받은 뒤 공백 충돌이 나면 `--all` 을 다시 돌린다.
 - **설정 참조 문서(`docs/Config/`)는 생성물이다** — `GenerateConfigReference.py` 가 PROPERTY · `ConfigKeyDoc` · 전역 변수 · `ArgumentList.xxx` ·
   CMake 옵션 · `*.settings.xml` 에서 만들고 `CheckConfigReference` 가 낡음 · 목록 밖 설정 파일 · 빈 설명을 막는다. 파서는 선언 모양을 읽으므로 칸 대조는
-  `ConfigReferenceTest.FieldsMatchReflection` 이 리플렉션으로 한다. 새 설정 파일 = `ConfigCatalog.py` 한 줄 + 시험 표 한 줄. PROPERTY · gv · 명령줄 ·
+  `ConfigReferenceTest.FieldsMatchReflection` 이 리플렉션으로 한다. 새 설정 파일 = `ConfigCatalog.py` 한 줄 + 테스트 표 한 줄. PROPERTY · gv · 명령줄 ·
   `SW_*` 옵션을 더하는 커밋은 같은 커밋에서 생성기를 다시 돌린다(커밋 훅이 알린다).
 - **린트 CTest 는 프리셋이 4 개씩 동시에 돌린다**(`Ninja-Debug-lint` 의 `execution.jobs`) — 린트끼리 공유하는 출력이 없어야 한다: 셀프테스트는 `mkdtemp`,
   게이트는 읽기만. 새 린트가 저장소 안에 파일을 쓰면 이 전제가 깨진다. 8 · 16 은 4 와 같거나 느리다(`CheckCodeConventions` · `CheckLintsAreAlive` 가 스스로 여럿을 쓴다).
@@ -381,22 +381,22 @@ git config diff.swasset.command  "py -3 Scripts/asset/AssetMerge.py git-diff"
   전체 내용 규칙은 HEAD · staged 어느 쪽이든 맞으면 돈다(토큰을 **지우는** 커밋도 잡는다). 바뀐 줄 규칙은 위반이 그 줄 하나로 생기는 게이트에만 쓴다(`CheckDuplicateTypeNames`:
   `class` · `struct` · `namespace` 줄 — 중괄호 깊이는 균형이 맞는 편집에서 안 바뀐다). 좁혀도 같은 결과인지는 건너뛴 커밋마다 부모 · 자식 트리에서 `buildConfigReference` 를 돌려
   바이트가 같은지로 봤다(최근 80 커밋 중 12 가 건너뛰기, 표본 4 개 모두 같음). git 이 답하지 못하면 도는 쪽으로 틀린다. 함정: 훅의 staged 목록은 `--diff-filter=ACM` 이라
-  **삭제만 든 커밋은 어느 게이트도 보지 못한다**(내용 규칙 이전부터) — 파일 삭제가 문서 · 짝을 낡게 하는 게이트는 별도 확인이 필요하다. `selfTestCases` 는 파일 내용을 쓰므로 내용 규칙 게이트의 시험은 그대로다.
+  **삭제만 든 커밋은 어느 게이트도 보지 못한다**(내용 규칙 이전부터) — 파일 삭제가 문서 · 짝을 낡게 하는 게이트는 별도 확인이 필요하다. `selfTestCases` 는 파일 내용을 쓰므로 내용 규칙 게이트의 테스트는 그대로다.
 - **린트 시간은 `RunLintSuite` 가 잰다**(CI 린트 잡 · 손으로 `py -3 -m Scripts lint-suite`): CTest 와 같은 목록 · 인자를 빌드 폴더 없이 돌리고, CTest TIMEOUT 의 절반을
   넘긴 린트와 훅 표본(staged 1 · 10)이 `kHookBudgetSeconds` 를 넘으면 경고, 기록은 CI 아티팩트 `lint-timing`. 새 린트의 `timeoutSeconds` 는 이 PC 시간의 3~4 배로 —
   절반 경고가 먼저 울리게.
-- **파이썬 도구의 단위 시험은 `Test/PythonTest/Test*.py`** — 파일을 놓으면 CTest 항목(`PythonTest_<이름>`, `nogpu`)이다. Blender 애드온처럼 바깥 모듈(bpy)을
-  쓰는 것은 그 import 를 한 파일에 가두고 나머지를 시험한다(`TestBlenderExporter` 가 빈 패키지 모듈을 세워 읽는다).
+- **파이썬 도구의 단위 테스트는 `Test/PythonTest/Test*.py`** — 파일을 놓으면 CTest 항목(`PythonTest_<이름>`, `nogpu`)이다. Blender 애드온처럼 바깥 모듈(bpy)을
+  쓰는 것은 그 import 를 한 파일에 가두고 나머지를 테스트한다(`TestBlenderExporter` 가 빈 패키지 모듈을 세워 읽는다).
 - **주석 정리에서 마커(예전 · 날짜 · 백로그)로만 뽑으면 과거형 경위("~를 각자 들고 있었습니다")가 영역마다 ~10 % 남는다** — `(었|았|였)(는데|다|습니다)` 로 한 번 더 훑는다.
   빌드가 도는 동안 헤더를 고치면 PCH 크기 불일치("modified since the precompiled header")로 빌드가 진다 — 편집과 빌드를 겹치지 말 것.
-- **`git mv` 로 옮긴 시험 파일은 pre-commit 의 `CheckIncludeOrder` · `CheckTestSuites` 가 "변경 없음" 으로 건너뛴다** — 옮긴 뒤에는 `ctest -L lint` 로 확인할 것.
+- **`git mv` 로 옮긴 테스트 파일은 pre-commit 의 `CheckIncludeOrder` · `CheckTestSuites` 가 "변경 없음" 으로 건너뛴다** — 옮긴 뒤에는 `ctest -L lint` 로 확인할 것.
 - **같은 클래스가 `#if` / `#else` 로 헤더에 두 번 있으면 `CheckCodeConventions` 의 헤더 기본값 검사가 그 클래스를 건너뛴다** — D3D11 · D3D12 비Windows 스텁을 지우자
   숨어 있던 위반 9 건이 드러났다. 다른 플랫폼 스텁이 있는 헤더도 같은 사각일 수 있다.
 - **패딩은 `RunPaddingReport.py`(libclang + 컴파일 DB 플래그) 로 본다** — clang-cl(MS ABI)은 `-Wpadded` 를 내지 않고 `-fdump-record-layouts` 는 필드 위치를 안 준다.
   libclang 에는 `-resource-dir` 를 직접 줘야 한다(안 주면 MSVC `offsetof` 가 상수식이 아니어서 constexpr 표가 오류로 무너진다). 줄인 타입의 회귀는 "크기 ≤ 필드 합을
   정렬로 올린 값" static_assert 로 막는다(DrawCandidate · SpriteAnimatorComponent).
 - **생성자 초기화는 `Style/ConstructorInitializesEveryField` 가 막는다** — 기본값 없는 스칼라 · 포인터 · 열거형 · atomic · 비트필드만 대상(컨테이너 · 문자열은 스스로 초기화).
-  MSVC STL 은 atomic 을 값 초기화해 Windows 시험만으로는 빠뜨림이 안 드러난다.
+  MSVC STL 은 atomic 을 값 초기화해 Windows 테스트만으로는 빠뜨림이 안 드러난다.
 - **픽서는 UTF-8 로 못 읽는 파일을 고쳐 쓰지 않는다**(`errors="ignore"` 로 읽고 다시 쓰면 그 바이트가 사라진다 — `PythonTest_TestLintFixer`).
   대상 파일 고르기는 `common.resolveFileArguments` 한 규칙 — 게이트 · 픽서 모두 `--files`(위치 인자 없음), 게이트의 파일 읽기 창구는 `LintGate.readFiles`.
 - **린트의 제외 폴더 비교는 저장소 아래 경로의 폴더 이름으로** — 절대 경로 부분 문자열로 비교하면 경로에 "build" 가 든 워크트리에서 파일을 하나도 안 본다
@@ -419,7 +419,7 @@ git config diff.swasset.command  "py -3 Scripts/asset/AssetMerge.py git-diff"
   모든 헤더가 첫 TU 의 플래그를 받는다). 구성만 한 폴더(`FlagOps.gen.h` 자리 표시자)는 검사 불가로 친다 — 가짜 오류 수십 건.
 - **`CheckCodeConventions` 알아 둘 것** — 명명 판정은 `kMapContainerVocabulary` × `kMapNamingSubject` 표 하나. `Style/BitfieldBoolean` · `Naming/DuplicateInternalHelper` ·
   `Style/HeaderMemberInitializer` 는 전체 스캔에서만 돈다. `Naming/OutParameter` 는 `out` 이 든 지역 변수(`arrOutput`)를 오탐한다. 게이트는 파일을 동시에 훑으니 규칙
-  객체에 상태를 들지 말 것. 자기 시험 조각은 그 검사가 **통과하는** 바탕(`_kCleanFixture`) 위에 위반 하나만 얹는다.
+  객체에 상태를 들지 말 것. 자기 테스트 조각은 그 검사가 **통과하는** 바탕(`_kCleanFixture`) 위에 위반 하나만 얹는다.
   `Style/ConstructorOrder` 는 헤더에서 읽은 멤버 순서와 비교하므로, 멤버 선언을 못 읽으면(예전엔 `Widget* const* _ppWidget`) 순서가 맞아도 위반으로 건다 —
   멤버 정규식 `_kClassMemberRe` 를 넓히면 `_kWholeScanCleanCase` 의 `RangeTable` 조각으로 확인한다.
   교차 파일 검사(`Style/BitfieldBoolean` · `Naming/Duplicate*` · `Style/HeaderMemberInitializer` · `Style/ConstructorInitializesEveryField`)는 파일별 몫을 워커가
@@ -460,7 +460,7 @@ git config diff.swasset.command  "py -3 Scripts/asset/AssetMerge.py git-diff"
 - **규칙 데이터(`lint/rules/*.toml`)는 TOML 부분 집합으로만 쓴다** — CI 린트 잡의 `python3`(ubuntu-22.04)은 3.10 이라 `tomllib` 이 없고,
   `common/RuleData.py` 의 부분 집합 읽기가 대신 읽는다(`[표]` · `키 = 값` · 문자열 · 정수 · 불 · 배열 · 주석). 점 키 · 인라인 표 · `[[표 배열]]` ·
   여러 줄 문자열은 쓰지 않는다 — `CheckExemptionTables` 가 파일마다 두 읽기의 결과를 견준다. 데이터는 `--root` 가 아니라 스크립트 트리의 것을 읽는다
-  (자기 시험의 임시 트리에도 같은 규칙이 든다).
+  (자기 테스트의 임시 트리에도 같은 규칙이 든다).
 - **규칙 데이터를 못 읽은 게이트는 모든 조각에서 종료 2 를 낸다** — 0 이 아니라서 `CheckLintsAreAlive` 에는 "살아 있다" 로 보인다. 그래서
   그 셀프테스트가 조각 전에 게이트 클래스의 읽기 오류(`_ruleDataError`)를 따로 본다. 모듈 수준에서 읽는 목록이 깨지면 import 가 트레이스백으로 진다.
 - **`rules/*.toml` 만 바꾼 커밋은 훅이 그 게이트를 돌리지 않는다**(게이트의 `preCommitPattern` 은 소스 경로다) — 예외 · 목록을 고쳤으면

@@ -12,7 +12,7 @@ CMake 리팩터는 컴파일러가 잡아 주지 않는다. 같은 일을 하는
   링크 조각(순서 그대로) · 의존 타깃 — CMake File API(codemodel-v2)의 답에서 읽는다.
 - **캐시**: INTERNAL · STATIC 이 아닌 항목 전부(`SW_*` 옵션 · 도구 경로).
 - **생성 파일**: `generated/sw/config/*` · `Bin/Modules/*`(매니페스트 · 적재 순서) · 리플렉션 입력 목록의 내용 해시.
-- **CTest**: `ctest --show-only=json-v1` 의 시험 이름 · 명령 · 속성(라벨 · 제한 시간 · 작업 폴더 · 환경).
+- **CTest**: `ctest --show-only=json-v1` 의 테스트 이름 · 명령 · 속성(라벨 · 제한 시간 · 작업 폴더 · 환경).
 
 정의 · include 는 집합으로(순서가 의미 없다), 링크 조각 · 명령은 목록으로(순서가 의미 있다) 견준다.
 

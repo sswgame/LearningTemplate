@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-XML 에셋 의미 비교 · 3-way 병합(`Scripts/common/XmlAssetMerge.py`, `Scripts/asset/AssetMerge.py`)의 시험 — 저장소의 실제 에셋으로 본다.
+XML 에셋 의미 비교 · 3-way 병합(`Scripts/common/XmlAssetMerge.py`, `Scripts/asset/AssetMerge.py`)의 테스트 — 저장소의 실제 에셋으로 본다.
 
 - 엔진이 쓴 씬 · 프리팹 · 파이프라인은 읽고 다시 쓰면 **바이트까지 같다**(병합 결과를 엔진이 다시 저장해도 줄이 안 바뀐다).
 - 서로 다른 엔티티 · 컴포넌트 · 속성을 고친 두 갈래는 충돌 없이 합쳐지고, 같은 속성을 다르게 고치면 충돌이다.
@@ -26,7 +26,7 @@ from common.XmlAssetMerge import (XmlAsset, computeChildKeys, diffAssets, kConfl
 
 #: 손으로 고친 흔적이 있어 엔진 서식과 바이트가 다른 파일 — 의미로는 같아야 한다.
 kHandEditedEngineFile = {
-    "game/empty/maps/editortest.scene.xml",  # 주석이 든 시험 씬(낡은 프리팹 경로를 일부러 둔다)
+    "game/empty/maps/editortest.scene.xml",  # 주석이 든 테스트 씬(낡은 프리팹 경로를 일부러 둔다)
     "game/empty/maps/spriteui.scene.xml",    # 짧은 줄을 손으로 접었다
 }
 

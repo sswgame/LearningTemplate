@@ -14,7 +14,7 @@
 | `Server` | `Ninja-Shipping-Server` | `Server.exe` | `CookContract.json` 의 `target_excluded_asset_kinds`(텍스처 · 셰이더 바이너리 · 오디오) |
 
 스테이징은 빌드 폴더 `Bin` 의 맨 위 DLL 과 그 타깃의 실행 파일, `Packs/`, `THIRD_PARTY_NOTICES.txt` 만 베낀다.
-Dev 산출물(`Modules/` · `Saved/` · `Symbols/`)과 다른 실행 파일(시험 · 부하 봇)은 들이지 않는다. 서버는 `Config/Server/<게임>.json` 을 함께 둔다
+Dev 산출물(`Modules/` · `Saved/` · `Symbols/`)과 다른 실행 파일(테스트 · 부하 봇)은 들이지 않는다. 서버는 `Config/Server/<게임>.json` 을 함께 둔다
 (서버는 Shipping 에서도 운영 설정을 디스크에서 읽는다).
 
 사용법:

@@ -15,7 +15,7 @@ using namespace sw;
 
 namespace
 {
-    /** @brief 시험 이름 색인 — 이름(소문자) → 신원. 게스트는 넣지 않는다(실제 색인과 같다). */
+    /** @brief 테스트 이름 색인 — 이름(소문자) → 신원. 게스트는 넣지 않는다(실제 색인과 같다). */
     class FakeNameIndex final : public IAccountNameIndex
     {
     public:
@@ -58,7 +58,7 @@ namespace
         vector<AccountIdentity> _listIdentity;
     };
 
-    /** @brief 서버 프로세스 하나의 친구 로직 — 저장소 앞 · 캐시 앞 · 라우터 · 로컬 버스. 버스 메시지는 호스트 대신 시험이 비워 넘긴다. */
+    /** @brief 서버 프로세스 하나의 친구 로직 — 저장소 앞 · 캐시 앞 · 라우터 · 로컬 버스. 버스 메시지는 호스트 대신 테스트가 비워 넘긴다. */
     struct SocialNode
     {
         MemoryServiceStore         _store;
@@ -68,7 +68,7 @@ namespace
         SocialService              _service;
         vector<SocialCompletion>   _listCompletion;
         vector<SocialNotification> _listNotification;
-        IServiceStore*             _pFront; ///< 서비스가 쓰는 저장소 앞(시험이 끼워 넣는 앞일 수 있다)
+        IServiceStore*             _pFront; ///< 서비스가 쓰는 저장소 앞(테스트가 끼워 넣는 앞일 수 있다)
 
         SocialNode( MemoryServiceDatabase* pDatabase, MemoryEphemeralDatabase* pCacheDatabase, LocalServerBusHub* pHub, uint64 serverID,
                     const IAccountNameIndex* pNameIndex = nullptr, IServiceStore* pStore = nullptr )

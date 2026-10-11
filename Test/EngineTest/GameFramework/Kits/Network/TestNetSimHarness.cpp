@@ -41,7 +41,7 @@ namespace
         return pBody;
     }
 
-    /** @brief 시험이 서버 쪽에서 본 것입니다. */
+    /** @brief 테스트가 서버 쪽에서 본 것입니다. */
     struct CrateServerRecord
     {
         vector<NetHostEvent> _listEvent;

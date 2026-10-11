@@ -54,7 +54,7 @@ namespace sw
         int32                       _comboBonusCap{ 100 };
         float32                     _globalOffset{ 0.0f }; ///< 전역 오프셋(초, 기기 · 음향 지연) — 노트의 판정 시각 = 채보 시각 + 이 값
         RhythmScrollMode            _scrollMode{ RhythmScrollMode::ConstantSpeed };
-        uint8                       _bAutoPlay{ SW_FALSE }; ///< 판정 시각에 정확히 누르고 롱노트는 끝까지 누른다(데모 · 시험)
+        uint8                       _bAutoPlay{ SW_FALSE }; ///< 판정 시각에 정확히 누르고 롱노트는 끝까지 누른다(데모 · 테스트)
     };
 } // namespace sw
 

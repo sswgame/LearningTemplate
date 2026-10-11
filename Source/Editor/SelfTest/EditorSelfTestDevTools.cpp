@@ -1,6 +1,6 @@
 /**
  * @file EditorSelfTestDevTools.cpp
- * @brief 개발 편의 기능(디버그 드로우 · 기즈모 · 디버그 오버레이 · 자동 플레이)이 씬 뷰 · 게임 뷰 · 상단 툴바에 실제로 그려지는지 보는 에디터 자체 시험입니다.
+ * @brief 개발 편의 기능(디버그 드로우 · 기즈모 · 디버그 오버레이 · 자동 플레이)이 씬 뷰 · 게임 뷰 · 상단 툴바에 실제로 그려지는지 보는 에디터 자체 테스트입니다.
  */
 #include "pch.h"
 
@@ -53,7 +53,7 @@ namespace sw::editor
     {
         struct EditorSelfTestDevToolsInternal
         {
-            /** @brief 그리기 확장 등록 줄의 본보기 — 시험 전용 타입 이름에 걸린다(그 타입의 프로퍼티는 없다). */
+            /** @brief 그리기 확장 등록 줄의 본보기 — 테스트 전용 타입 이름에 걸린다(그 타입의 프로퍼티는 없다). */
             class SelfTestPropertyDrawer final : public IInspectorProperty
             {
             public:
@@ -440,7 +440,7 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             // sceneView.gridAndGizmoDraw — 씬 뷰가 앞에 있으면 격자와 고른 오브젝트의 기즈모를 그린다
             // ------------------------------------------------------------------------------
-            /** @brief 카메라 앞 6 m 에 시험 오브젝트를 만들어 고릅니다(만들면 골라진다). 못 만들면 0 입니다. */
+            /** @brief 카메라 앞 6 m 에 테스트 오브젝트를 만들어 고릅니다(만들면 골라진다). 못 만들면 0 입니다. */
             static uint64 createSelectedProbe( GameObjectManager* pManager, const CameraComponent* pCamera )
             {
                 GameObject* pObj = EditorSceneCommands::create( pManager, nullptr );
@@ -451,7 +451,7 @@ namespace sw::editor
                 return pObj->getObjectID();
             }
 
-            /** @brief 시험 오브젝트를 지우고 선택을 비웁니다. */
+            /** @brief 테스트 오브젝트를 지우고 선택을 비웁니다. */
             static void destroyProbe( GameObjectManager* pManager, uint64 objectID )
             {
                 EditorContext* pContext = EditorContext::get();
@@ -559,7 +559,7 @@ namespace sw::editor
                 }
                 destroyProbe( pManager, _s_overlayProbeObjectID );
                 _s_overlayProbeObjectID = 0;
-                // 다음 시험이 기본 탭(씬 뷰)에서 시작하게 되돌린다.
+                // 다음 테스트가 기본 탭(씬 뷰)에서 시작하게 되돌린다.
                 ImGui::SetWindowFocus( "Scene" );
                 return EditorSelfTestStep::Done;
             }

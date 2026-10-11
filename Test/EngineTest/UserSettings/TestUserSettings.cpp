@@ -18,7 +18,7 @@
 
 // 사용자 설정(옵션 메뉴 백엔드) — 스키마 검사 · 적용기 등록부 · 품질 프리셋 · 사용자 파일 · 적용/되돌리기 · 확인 카운트다운 · 키 바인딩 · 언어 · 접근성.
 
-// 설정 대상은 등록된 전역 변수여야 한다 — Shipping 시험에서도 표에 있도록 남긴다(빠진 테스트 변수는 등록되지 않는다).
+// 설정 대상은 등록된 전역 변수여야 한다 — Shipping 테스트에서도 표에 있도록 남긴다(빠진 테스트 변수는 등록되지 않는다).
 SW_TEST_GLOBAL_VARIABLE_SHIPPED( float32, gv_userSettingsTestFloat, 1.0f, "UserSettingsTest 전용 실수 대상" );
 SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_userSettingsTestInt, 0, "UserSettingsTest 전용 정수 대상" );
 SW_TEST_GLOBAL_VARIABLE_SHIPPED( bool, gv_userSettingsTestBool, false, "UserSettingsTest 전용 불리언 대상" );
@@ -27,7 +27,7 @@ namespace
 {
     struct UserSettingsTestInternal
     {
-        /** @brief 시험 스키마 — 카테고리 둘, 전역 변수 대상 셋, 적용기 대상 하나, 품질 묶음 하나, 확인 카운트다운 하나. */
+        /** @brief 테스트 스키마 — 카테고리 둘, 전역 변수 대상 셋, 적용기 대상 하나, 품질 묶음 하나, 확인 카운트다운 하나. */
         static constexpr const utf8* kSchemaXML = R"(
 <UserSettingsSchema version="1">
     <Category id="video" text="t.video"/>
@@ -59,7 +59,7 @@ namespace
     </Scalability>
 </UserSettingsSchema>)";
 
-        /** @brief 엔진 대상(전역 변수 표 · 오디오)을 걸고 시험 스키마를 읽은 매니저를 세웁니다. */
+        /** @brief 엔진 대상(전역 변수 표 · 오디오)을 걸고 테스트 스키마를 읽은 매니저를 세웁니다. */
         static bool initializeWithSchema( sw::UserSettingsManager& outSettings, sw::IAudioSystem* pAudioSystem = nullptr )
         {
             resetTestVariables();
@@ -80,7 +80,7 @@ namespace
             gv_userSettingsTestBool  = false;
         }
 
-        /** @brief 엔진 전역 변수를 이름으로 읽습니다 — Engine.dll 밖(시험 · 게임 모듈)은 변수를 링크하지 않고 표에서 찾는다. */
+        /** @brief 엔진 전역 변수를 이름으로 읽습니다 — Engine.dll 밖(테스트 · 게임 모듈)은 변수를 링크하지 않고 표에서 찾는다. */
         static const sw::GlobalVariableInfo& findVariable( const utf8* pName )
         {
             static const sw::GlobalVariableInfo kMissing{};
@@ -139,7 +139,7 @@ SW_TEST_CASE( UserSettingsTest, CommandLineGlobalVariableWinsAtStartup )
 }
 
 /**
- * @brief [UserSettingsTest] 시험 스키마가 검사를 통과하고, 기동 적용이 기본값을 전역 변수 대상에 넣는다
+ * @brief [UserSettingsTest] 테스트 스키마가 검사를 통과하고, 기동 적용이 기본값을 전역 변수 대상에 넣는다
  */
 SW_TEST_CASE( UserSettingsTest, SchemaLoadsAndStartupAppliesDefaults )
 {
@@ -662,7 +662,7 @@ SW_TEST_CASE( UserSettingsTest, AccessibilitySettingsReachGlobalVariables )
     SW_EXPECT_FALSE( settings.isSettingEnabled( "accessibility.subtitleSize" ) );
     settings.revertPending();
 
-    // 다른 시험이 기본값을 보도록 되돌린다.
+    // 다른 테스트가 기본값을 보도록 되돌린다.
     settings.resetCategoryToDefaults( "accessibility" );
     settings.resetCategoryToDefaults( "gameplay" );
     (void)settings.applyPending(); // 적용 결과는 아래 단언이 대상 값으로 확인한다

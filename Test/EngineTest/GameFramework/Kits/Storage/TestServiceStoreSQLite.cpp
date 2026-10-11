@@ -48,7 +48,7 @@ namespace
         }
     };
 
-    /** @brief 레코드 하나를 쓰거나 읽는 일 — 결과를 시험 스레드에 돌려준다. */
+    /** @brief 레코드 하나를 쓰거나 읽는 일 — 결과를 테스트 스레드에 돌려준다. */
     class SQLiteStorePutWork final : public IServiceStoreWork
     {
     public:

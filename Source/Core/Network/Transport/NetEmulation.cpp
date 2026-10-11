@@ -253,7 +253,7 @@ namespace sw
 
     float32 NetEmulationTransport::nextRandom()
     {
-        // xorshift32 — 씨앗이 같으면 같은 수열(시험 · 재현).
+        // xorshift32 — 씨앗이 같으면 같은 수열(테스트 · 재현).
         _randomState = XorShift32::next( _randomState );
         return XorShift32::toUnit24( _randomState );
     }

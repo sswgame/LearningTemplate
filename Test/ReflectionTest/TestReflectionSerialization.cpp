@@ -85,7 +85,7 @@ namespace
         return bOk;
     }
 
-    /** @brief 열거자 정체성 시험의 enum 입니다. 레지스트리에는 시험이 손으로 올리고, **다시 올려** 열거자 순서를 바꿉니다(코드의 값은 그대로). */
+    /** @brief 열거자 정체성 테스트의 enum 입니다. 레지스트리에는 테스트가 손으로 올리고, **다시 올려** 열거자 순서를 바꿉니다(코드의 값은 그대로). */
     enum class WireShiftColor : int32
     {
         Red   = 0,
@@ -93,7 +93,7 @@ namespace
         Blue  = 2,
     };
 
-    /** @brief 같은 시험의 비트플래그 enum 입니다. */
+    /** @brief 같은 테스트의 비트플래그 enum 입니다. */
     enum class WireShiftFlags : uint16
     {
         None = 0,
@@ -139,7 +139,7 @@ namespace
         sw::engine::getTypeRegistry().registerEnum( info );
     }
 
-    /** @brief 저장하는 빌드의 열거자 순서로 두 enum 을 올립니다 — 코드의 값과 같습니다. 순서를 바꾼 시험은 끝에 이것으로 되돌립니다. */
+    /** @brief 저장하는 빌드의 열거자 순서로 두 enum 을 올립니다 — 코드의 값과 같습니다. 순서를 바꾼 테스트는 끝에 이것으로 되돌립니다. */
     void registerWireShiftEnumsAsDeclared()
     {
         registerWireShiftEnum( "WireShiftColor", "sw::WireShiftColor", static_cast<uint8>( sizeof( WireShiftColor ) ), false,
@@ -176,7 +176,7 @@ namespace
         return info;
     }
 
-    /** @brief 시험이 저장하는 값입니다 — 모든 칸이 기본값과 다릅니다. */
+    /** @brief 테스트가 저장하는 값입니다 — 모든 칸이 기본값과 다릅니다. */
     WireShiftHost makeSavedWireShiftHost()
     {
         WireShiftHost host;
@@ -188,7 +188,7 @@ namespace
         return host;
     }
 
-    /** @brief 시험이 순서를 바꾸거나 이름을 지운 두 enum 을 끝에 선언대로 되돌립니다(다른 시험이 같은 등록을 본다). */
+    /** @brief 테스트가 순서를 바꾸거나 이름을 지운 두 enum 을 끝에 선언대로 되돌립니다(다른 테스트가 같은 등록을 본다). */
     struct RestoreWireShiftEnumsOnExit
     {
         ~RestoreWireShiftEnumsOnExit() { registerWireShiftEnumsAsDeclared(); }
@@ -727,7 +727,7 @@ SW_TEST_CASE( ReflectionSerializationTest, NarrowEnumDeserializeKeepsAdjacentByt
 /**
  * @brief [ReflectionSerializationTest] 바이너리는 enum 을 **열거자**로 싣는다 — 열거자 순서를 바꾼 다음 빌드도 같은 열거자를 읽는다(값 · 비트플래그 · 원소 · 맵 키)
  * @details enum 을 int64 **값**으로 실으면 열거자를 사이에 넣거나 순서를 바꿀 때 세이브 · 핫 리로드 뒤의 플레이 스냅샷 · 되돌리기 스냅샷이 조용히
- *          다른 열거자로 읽힌다(XML · JSON 은 이름). 시험은 저장한 뒤 같은 enum 을 순서만 바꿔 다시 등록한다(핫 리로드 · 다음 빌드가 하는 일). 바이너리 길 다섯
+ *          다른 열거자로 읽힌다(XML · JSON 은 이름). 테스트는 저장한 뒤 같은 enum 을 순서만 바꿔 다시 등록한다(핫 리로드 · 다음 빌드가 하는 일). 바이너리 길 다섯
  *          (태그 · 판 붙은 · 압축 · 컴팩트 · diff)이 모두 열거자로 읽어야 한다 — 하나라도 값으로 읽으면 Green 이 Blue · Red 가 된다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, BinaryEnumsKeepTheirEnumeratorWhenTheEnumIsReordered )
@@ -2140,7 +2140,7 @@ SW_TEST_CASE( ReflectionSerializationTest, DroppedValuesWarnOncePerLoad )
     SW_EXPECT_TRUE_MSG( logs.countContaining( "could not read: _mp" ) == 1, logs.joined().c_str() );
 
     // ③ 이관이 찾아 본 orphan 은 이관이 처리한 것이다 — 줄에는 아무도 찾지 않은 칸만 남는다. 타입이 모르는 키는 전역 이름 표에
-    //    올리지 않지만(intern 하지 않는다) 적힌 이름 그대로 찍힌다 — `_dropProbeJunk` 는 이 시험의 어디서도 hashed_string 이 되지 않는다.
+    //    올리지 않지만(intern 하지 않는다) 적힌 이름 그대로 찍힌다 — `_dropProbeJunk` 는 이 테스트의 어디서도 hashed_string 이 되지 않는다.
     auto moveHealth = []( const sw::SchemaMigrateContext& context ) -> bool
     {
         const sw::SchemaOrphanValue* pHealth = context.findOrphan( sw::hashed_string( "_dropProbeHealth" ) );
@@ -3154,13 +3154,13 @@ SW_TEST_CASE( ReflectionSerializationTest, BitfieldTextThatIsNotABooleanFailsThe
  * @brief [ReflectionSerializationTest] 등록된 모든 PROPERTY 는 세 형식이 실어 나를 수 있는 타입이다
  * @details 직렬화기는 다룰 줄 모르는 타입을 조용히 텍스트 `null` · 바이너리 0 바이트로 쓰고, 읽으면 그 칸은 기본값이 된다 — 저장한 줄 알았던 값이 사라진다.
  *          새 PROPERTY 가 그런 타입이면 여기서 이름으로 진다. 저장할 수 없는
- *          런타임 값(창 핸들 같은 포인터)은 `Transient` 로 적는다. 이 실행 파일은 엔진과 자기 시험 타입만 등록한다 — 모듈(GameFramework · 킷 ·
+ *          런타임 값(창 핸들 같은 포인터)은 `Transient` 로 적는다. 이 실행 파일은 엔진과 자기 테스트 타입만 등록한다 — 모듈(GameFramework · 킷 ·
  *          게임 · 에디터)의 타입은 `ModuleAPITest.EveryModulePropertyHasATypeTheSerializersCanCarry`(SmokeTest)가 같은 판정으로 본다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, EveryPropertyHasATypeTheSerializersCanCarry )
 {
     const sw::SerializeContext& context = sw::SerializeContext::getDefault();
-    // 판정 자체가 늘 참이면 이 시험은 아무것도 지키지 않는다.
+    // 판정 자체가 늘 참이면 이 테스트는 아무것도 지키지 않는다.
     SW_EXPECT_FALSE( sw::SerializerUtil::canCarryValueType( sw::hashed_string( "void *" ), context ) );
     SW_EXPECT_TRUE( sw::SerializerUtil::canCarryValueType( sw::hashed_string( "float3" ), context ) );
     SW_EXPECT_TRUE( sw::SerializerUtil::canCarryValueType( sw::hashed_string( "sw::RHIBlendMode" ), context ) );

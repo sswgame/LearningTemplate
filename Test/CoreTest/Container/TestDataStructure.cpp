@@ -49,7 +49,7 @@ namespace
         }
     };
 
-#if !defined( SW_ENABLE_STL_CONTAINER ) // sw::pair 의 EBO 시험에만 쓴다
+#if !defined( SW_ENABLE_STL_CONTAINER ) // sw::pair 의 EBO 테스트에만 쓴다
     struct EmptyTestHasher
     {
         size_t operator()( int32 val ) const noexcept { return static_cast<size_t>( static_cast<uint32>( val ) * 2654435761u ); }

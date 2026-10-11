@@ -1,8 +1,8 @@
 /**
  * @file UIAutomationSteps.h
  * @brief 자동화 시나리오의 UI 단계 — `ExpectUI`(포커스 위젯 · 활성 화면 문서 · 화면 수)를 단언하고 `UILayoutDump` 로 위젯 사각형을 파일에 씁니다.
- * @details 단계는 시나리오 실행기(`AutomationRunner`)가 등록표로 찾고, 같은 판정 함수를 nogpu 시험(`UINavigationScriptTest`)이 실행기 없이 부릅니다 —
- *          시험의 탐색 열과 실기동 시나리오가 한 형식 · 한 판정입니다(언리얼 Automation Driver 가 위젯을 찾아 단언하는 자리).
+ * @details 단계는 시나리오 실행기(`AutomationRunner`)가 등록표로 찾고, 같은 판정 함수를 nogpu 테스트(`UINavigationScriptTest`)이 실행기 없이 부릅니다 —
+ *          테스트의 탐색 열과 실기동 시나리오가 한 형식 · 한 판정입니다(언리얼 Automation Driver 가 위젯을 찾아 단언하는 자리).
  */
 #pragma once
 #include "Core/Common/Macros.h"

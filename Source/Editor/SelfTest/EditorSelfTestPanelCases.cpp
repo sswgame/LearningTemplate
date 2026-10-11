@@ -30,17 +30,17 @@ namespace sw::editor
     namespace
     {
         /**
-         * @brief 콘텐츠 브라우저, 도구 창, 오버레이의 결함 재현 시험입니다.
-         * @details 시험이 디스크에 만드는 것(시험 폴더)은 끝나는 단계에서 지운다. 실패로 일찍 끝나도 같은 정리 단계를 지난다.
+         * @brief 콘텐츠 브라우저, 도구 창, 오버레이의 결함 재현 테스트입니다.
+         * @details 테스트가 디스크에 만드는 것(테스트 폴더)은 끝나는 단계에서 지운다. 실패로 일찍 끝나도 같은 정리 단계를 지난다.
          */
         struct EditorSelfTestPanelCasesInternal
         {
             static constexpr const utf8* kContentBrowserPanelID    = "content_browser";
             static constexpr const utf8* kContentBrowserPanelTitle = "Content Browser";
-            static constexpr const utf8* kProbeFolderName          = "__editorselftest"; ///< 활성 게임 팩 아래 시험 폴더 — 끝나면 지운다
+            static constexpr const utf8* kProbeFolderName          = "__editorselftest"; ///< 활성 게임 팩 아래 테스트 폴더 — 끝나면 지운다
             static constexpr uint32      kMaxWaitStepCount         = 180;                ///< 폴더 목록(워커) · 파일 감시를 기다리는 최대 프레임
 
-            /** @brief 콘텐츠 브라우저 시험의 진행 상태입니다. */
+            /** @brief 콘텐츠 브라우저 테스트의 진행 상태입니다. */
             struct ContentBrowserProbe
             {
                 string _folderAbs{};
@@ -68,7 +68,7 @@ namespace sw::editor
                 return pPanel;
             }
 
-            /** @brief 시험 폴더를 비운 채 새로 만들고 그 안에 파일 하나를 씁니다. */
+            /** @brief 테스트 폴더를 비운 채 새로 만들고 그 안에 파일 하나를 씁니다. */
             static bool makeProbeFolder( ContentBrowserProbe& probe, const utf8* pFileName )
             {
                 probe._folderAbs = FileUtil::joinPath( ResourcePaths::getDomainFolderPath( GameConfig::getActive()._packRoot ), kProbeFolderName );
@@ -79,7 +79,7 @@ namespace sw::editor
                 return FileUtil::writeTextFile( FileUtil::joinPath( probe._folderAbs, pFileName ), "editor self test" );
             }
 
-            /** @brief 시험 폴더를 지우고 상태를 비웁니다. */
+            /** @brief 테스트 폴더를 지우고 상태를 비웁니다. */
             static void removeProbeFolder( EditorSelfTestContext& context, ContentBrowserProbe& probe )
             {
                 if ( probe._folderAbs.empty() == false )
@@ -230,7 +230,7 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             // contentBrowser.treeDoesNotReadTheDiskEveryFrame — 폴더 트리는 처음 그릴 때만 하위 폴더를 디스크에서 읽는다(프레임마다 읽으면 Debug 에서 16.8 ms 가 든다)
             // ------------------------------------------------------------------------------
-            /** @brief 폴더 트리 시험의 진행 상태입니다. 앞 시험이 지운 폴더의 파일 감시 사건이 캐시를 비울 수 있어 변경 번호가 멎을 때까지 기다린다. */
+            /** @brief 폴더 트리 테스트의 진행 상태입니다. 앞 테스트가 지운 폴더의 파일 감시 사건이 캐시를 비울 수 있어 변경 번호가 멎을 때까지 기다린다. */
             struct FolderTreeProbe
             {
                 uint64 _contentSerial{ 0 };
@@ -414,7 +414,7 @@ namespace sw::editor
                 if ( stepIndex < kSettleStepCount )
                     return EditorSelfTestStep::Continue;
 
-                // 오류가 먼저이고 이 시험의 결과는 오류 하나다 — 첫 오류 줄들 가운데 이 오브젝트의 줄을 누른다.
+                // 오류가 먼저이고 이 테스트의 결과는 오류 하나다 — 첫 오류 줄들 가운데 이 오브젝트의 줄을 누른다.
                 bool bSelected = false;
                 for ( uint32 rowIndex = 0; rowIndex < pPanel->getRowCount() && bSelected == false; ++rowIndex )
                 {
@@ -514,12 +514,12 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             // panels.toolWindowsOpenAtAUsableSize — 기본 도킹이 없는 도구 창은 닫힌 채 시작하고, 열면 쓸 수 있는 크기로 주 뷰포트 안에 뜬다
             // 크기를 정하지 않은 도구 창은 내용 크기로 열려 Data Table 은 높이 100 px, User Settings 는 값 칸 폭이 0 이 된다. Input Map Editor 도 시작할 때 닫혀 있어야 한다.
-            // 자체 시험은 레이아웃을 저장 · 복원하지 않으므로 이 실행에서 처음 만드는 창에 처음 크기가 걸린다.
+            // 자체 테스트는 레이아웃을 저장 · 복원하지 않으므로 이 실행에서 처음 만드는 창에 처음 크기가 걸린다.
             // ------------------------------------------------------------------------------
             static constexpr const utf8* kArrFloatingToolPanelID[] = { "history", "global_variables", "render_targets", "ui_preview",
                                                                        "animation_rewind", "data_table", "input_map", "user_settings" };
 
-            /** @brief 도구 창 시험의 진행 상태입니다. */
+            /** @brief 도구 창 테스트의 진행 상태입니다. */
             struct ToolWindowProbe
             {
                 uint32 _panelIndex{ 0 };
@@ -553,7 +553,7 @@ namespace sw::editor
                 if ( stepIndex == 0 )
                 {
                     probe = ToolWindowProbe{};
-                    // 처음 열림은 등록부가 만드는 새 인스턴스로 본다 — 실행 중인 패널은 앞 시험 · 사용자가 열었을 수 있다.
+                    // 처음 열림은 등록부가 만드는 새 인스턴스로 본다 — 실행 중인 패널은 앞 테스트 · 사용자가 열었을 수 있다.
                     for ( const utf8* pPanelID : kArrFloatingToolPanelID )
                     {
                         const EditorPanelRegistration* pRegistration = EditorRegistry<EditorPanelRegistration>::find( pPanelID );

@@ -16,7 +16,7 @@ namespace sw
     {
         struct CanvasTestPatternInternal
         {
-            /** @brief 글 한 줄을 왼쪽에서 오른쪽으로 칠합니다(셰이핑 · 커닝 없음 — 배치 단계가 생기기 전의 시험 그림). */
+            /** @brief 글 한 줄을 왼쪽에서 오른쪽으로 칠합니다(셰이핑 · 커닝 없음 — 배치 단계가 생기기 전의 테스트 그림). */
             static void drawLine( CanvasPainter& painter, FontSystem& fontSystem, string_view text, const float2& origin, const CanvasGlyphStyle& style,
                                   uint64 frameIndex )
             {

@@ -19,7 +19,7 @@ namespace sw
 {
     /**
      * @class ServerDirectoryClient
-     * @brief 연결 하나의 서버 디렉터리 창구입니다. 부하 시험 봇은 봇마다 하나 둔다(가볍다).
+     * @brief 연결 하나의 서버 디렉터리 창구입니다. 부하 테스트 봇은 봇마다 하나 둔다(가볍다).
      */
     class SW_GF_API ServerDirectoryClient final : public IOnlineClientService
     {

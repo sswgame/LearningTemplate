@@ -17,7 +17,7 @@
 #include "TestFramework/TestFramework.h"
 
 // UISettingsBindingTest — 사용자 설정 바인딩(6-3): {setting:id} 가 위젯 값 · 범위 · 선택지 · 사용 가능을 채우고, 사용자 입력은 보류 값으로,
-// 다른 곳의 변경(되돌리기)은 변경 통보로 받는다. 리스너는 화면과 함께 뗀다. 설정 대상이 없는 시험 스키마(XML 글)로 매니저를 세운다. 디바이스 없음(nogpu).
+// 다른 곳의 변경(되돌리기)은 변경 통보로 받는다. 리스너는 화면과 함께 뗀다. 설정 대상이 없는 테스트 스키마(XML 글)로 매니저를 세운다. 디바이스 없음(nogpu).
 
 namespace
 {
@@ -63,7 +63,7 @@ namespace
         }
     };
 
-    /** @brief 시험 스키마의 설정 매니저 · 입력 · 그것을 쓰는 UI 시스템, 그리고 옵션 문서 화면입니다. */
+    /** @brief 테스트 스키마의 설정 매니저 · 입력 · 그것을 쓰는 UI 시스템, 그리고 옵션 문서 화면입니다. */
     struct UISettingsBindingFixture
     {
         sw::UserSettingsManager _settings;

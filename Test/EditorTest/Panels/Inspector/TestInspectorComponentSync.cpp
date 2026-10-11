@@ -12,7 +12,7 @@ using namespace sw::editor;
 
 namespace
 {
-    /** @brief 시험 전용 컴포넌트 인스펙터 — 그리는 것이 없다. */
+    /** @brief 테스트 전용 컴포넌트 인스펙터 — 그리는 것이 없다. */
     class FakeInspector final : public IInspectorComponent
     {
     };

@@ -11,7 +11,7 @@ using namespace sw::editor;
 
 namespace
 {
-    /** @brief 시험 전용 등록 줄. EditorTest 에는 실제 패널 · 시각화(ImGui 를 그린다)가 링크되지 않는다. */
+    /** @brief 테스트 전용 등록 줄. EditorTest 에는 실제 패널 · 시각화(ImGui 를 그린다)가 링크되지 않는다. */
     struct FakeRegistration : EditorRegistration
     {
         static constexpr const utf8* kKindName = "fake";

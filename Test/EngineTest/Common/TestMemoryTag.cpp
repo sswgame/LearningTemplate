@@ -101,7 +101,7 @@ SW_TEST_CASE( MemoryTagTest, DiagnosticBootstrapEnablesPlatformLeakChecks )
  * @brief [MemoryTagTest] 워커에서 짓는 씬(비동기 로드)의 할당이 Scene 으로 세인다
  * @details 로드는 `SceneManager::dispatchLoad` 가 만든 태스크가 워커에서 한다(문서 읽기 · GameObject 생성). 태스크는 만든 쪽의 태그를
  *          상속하므로 진입점(`dispatchLoad`)의 Scene 이 워커까지 간다. 씬 채택(`tickTransitions`)을 부르기 **전에** 재서 워커 몫만 본다.
- *          이 시험 스레드의 태그는 Unknown 이라, 기다리며 이 스레드가 대신 실행해도 진입점이 없으면 Scene 이 늘지 않는다.
+ *          이 테스트 스레드의 태그는 Unknown 이라, 기다리며 이 스레드가 대신 실행해도 진입점이 없으면 Scene 이 늘지 않는다.
  */
 SW_TEST_CASE( MemoryTagTest, AsyncSceneLoadOnWorkerIsTaggedScene )
 {
@@ -176,7 +176,7 @@ SW_TEST_CASE( MemoryTagTest, PrimitiveMeshIsTaggedMesh )
 
 /**
  * @brief [MemoryTagTest] 씬 트랜스폼 페이지는 sw 할당자로 잡혀 그때의 태그로 세인다
- * @details 페이지는 칸 번호가 새 페이지에 처음 닿을 때 만들어진다. 앞선 시험이 놓은 칸(빈 칸 목록)이 먼저 나가므로, 새 페이지가 생길 때까지
+ * @details 페이지는 칸 번호가 새 페이지에 처음 닿을 때 만들어진다. 앞선 테스트가 놓은 칸(빈 칸 목록)이 먼저 나가므로, 새 페이지가 생길 때까지
  *          칸을 받는다. 페이지를 CRT `new` 로 잡으면 태그 줄이 늘지 않아 상한까지 돌고 진다.
  */
 SW_TEST_CASE( MemoryTagTest, SceneTransformPageIsTagged )

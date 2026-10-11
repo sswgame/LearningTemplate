@@ -83,7 +83,7 @@ namespace sw
          */
         [[nodiscard]] bool reloadTerrain();
         /**
-         * @brief 카메라 위치 @p viewPosition 으로 청크 LOD 를 고르고, 바뀐 청크의 메시를 다시 만듭니다. 틱이 부르고 시험이 직접 부릅니다.
+         * @brief 카메라 위치 @p viewPosition 으로 청크 LOD 를 고르고, 바뀐 청크의 메시를 다시 만듭니다. 틱이 부르고 테스트가 직접 부릅니다.
          * @return 메시를 다시 만든 청크 수입니다.
          */
         uint32 updateLODs( const float3& viewPosition );
@@ -102,7 +102,7 @@ namespace sw
         const TerrainChunkLayout& getChunkLayout() const { return _layout; }
         /** @brief 청크 (x, z) 의 지금 LOD 입니다. 범위 밖이면 0 입니다. */
         uint32 getChunkLOD( uint32 chunkX, uint32 chunkZ ) const;
-        /** @brief 청크 (x, z) 의 지금 메시 정점 수입니다(시험). */
+        /** @brief 청크 (x, z) 의 지금 메시 정점 수입니다(테스트). */
         uint32 getChunkVertexCount( uint32 chunkX, uint32 chunkZ ) const;
 
         /**
@@ -141,7 +141,7 @@ namespace sw
         void rebuildChunkMesh( uint32 chunkIndex );
         /** @brief 청크 (x, z) 의 이웃 LOD 를 `TerrainChunkSide` 순서로 채웁니다(가장자리는 자기 LOD). */
         void fillNeighborLODs( uint32 chunkX, uint32 chunkZ, const vector<uint32>& listLOD, uint32 ( &outArrLOD )[4] ) const;
-        /** @brief 머티리얼을 잡고 인스턴스에 레이어 · 텍스처 값을 싣습니다. 엔진 서비스가 없으면(CPU 시험) 건너뜁니다. */
+        /** @brief 머티리얼을 잡고 인스턴스에 레이어 · 텍스처 값을 싣습니다. 엔진 서비스가 없으면(CPU 테스트) 건너뜁니다. */
         void acquireMaterial();
         /** @brief 스플랫 DDS 를 CPU 로 읽어 높이장에 줍니다. 비압축 RGBA8/BGRA8 만 읽습니다. */
         void loadSplatWeights();

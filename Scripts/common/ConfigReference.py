@@ -33,7 +33,7 @@ from .ConfigCatalog import (ConfigFileEntry, kKeyStyleJsonMember, kKeyStyleKeyTa
 
 #: 생성 문서 폴더(저장소 상대).
 kConfigReferenceDir = "docs/Config"
-#: 기계가 읽는 메타데이터(시험 · 에디터 설정 브라우저).
+#: 기계가 읽는 메타데이터(테스트 · 에디터 설정 브라우저).
 kConfigReferenceJson = "ConfigReference.json"
 #: 손으로 쓰는 색인 한 장 — 생성 페이지가 거기로 고리를 건다.
 kHandWrittenIndex = "docs/07_Configuration.md"
@@ -629,7 +629,7 @@ def listCandidateFilesInternal(repositoryRoot: Path) -> list[str]:
     """`Config/` · `Resource/` · `Source/` 의 파일(저장소 상대)입니다.
 
     git 저장소면 추적하거나 추적 대상이 될 파일만 본다(`git ls-files --cached --others --exclude-standard`) — git 이 무시하는 로컬 파일
-    (`imgui.ini` · `toolchain_config.json`)은 머신마다 달라 결과를 흔든다. git 이 아니면(린트 자가 시험의 임시 트리) 폴더를 훑는다.
+    (`imgui.ini` · `toolchain_config.json`)은 머신마다 달라 결과를 흔든다. git 이 아니면(린트 자가 테스트의 임시 트리) 폴더를 훑는다.
     """
     if (repositoryRoot / ".git").exists():
         result = subprocess.run(["git", "ls-files", "--cached", "--others", "--exclude-standard", "--", "Config", "Resource", "Source"],

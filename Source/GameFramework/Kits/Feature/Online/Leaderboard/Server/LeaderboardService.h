@@ -132,7 +132,7 @@ namespace sw
         void               readAchievements( AccountID accountID, uint64 requestTag );
         /** @brief 시즌 결과 하나(점수 · 순위 — 완료의 항목 하나, 기간 id = 시즌)입니다. 정산 전이거나 점수가 없었으면 NotRanked. */
         void readSeasonResult( string_view boardID, uint32 seasonID, AccountID accountID, uint64 requestTag );
-        /** @brief 시즌 하나를 정산합니다(예약 작업이 부른다 — 시험 · 운영은 직접). 끝나면 @p onDone( 모두 정산했나 ). */
+        /** @brief 시즌 하나를 정산합니다(예약 작업이 부른다 — 테스트 · 운영은 직접). 끝나면 @p onDone( 모두 정산했나 ). */
         void settleSeason( string_view boardID, uint32 seasonID, int64 nowMs, const SettlementDelegate& onDone );
         void drainAchievementUnlocks( vector<AchievementUnlock>& outListUnlock ) { _unlockBuffer.drainTo( outListUnlock ); }
         /** @brief 시즌 정산 작업 id 입니다(`lb.settle.<표>.<시즌 16 진 8>`). */

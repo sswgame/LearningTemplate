@@ -129,7 +129,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     /**
      * @brief 어빌리티 발동이 왜 실패했는지입니다. `AbilitySystemComponent::tryActivateAbility` 가 돌려줍니다.
-     * @details 언리얼은 실패 이유를 태그로 돌려줍니다. 여기서는 UI · 시험이 바로 읽게 열거로 둡니다(이름은 `TypeRegistry::enumToString`).
+     * @details 언리얼은 실패 이유를 태그로 돌려줍니다. 여기서는 UI · 테스트가 바로 읽게 열거로 둡니다(이름은 `TypeRegistry::enumToString`).
      */
     ENUM()
     enum class AbilityActivationResult : uint8

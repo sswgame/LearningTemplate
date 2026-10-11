@@ -36,7 +36,7 @@ namespace sw::editor
                 EditorSelfTestMark _mark;
             };
 
-            /** @brief 시험이 돈다(이름표를 적는다)는 표시와 큐 · 이름표입니다. 에디터 모듈 안의 정적이라 핫 리로드면 비워진다 — 시험 중에는 리로드하지 않는다. */
+            /** @brief 테스트가 돈다(이름표를 적는다)는 표시와 큐 · 이름표입니다. 에디터 모듈 안의 정적이라 핫 리로드면 비워진다 — 테스트 중에는 리로드하지 않는다. */
             struct State
             {
                 vector<PendingEvent> _listEvent;

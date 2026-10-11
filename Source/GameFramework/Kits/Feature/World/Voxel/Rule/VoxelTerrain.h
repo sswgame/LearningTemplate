@@ -37,7 +37,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 생성 결과(시험 · 로그)입니다. */
+    /** @brief 생성 결과(테스트 · 로그)입니다. */
     struct VoxelTerrainReport
     {
         int32  _minHeight{ 0 };

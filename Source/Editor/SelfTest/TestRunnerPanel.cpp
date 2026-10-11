@@ -40,7 +40,7 @@ namespace sw::editor
             static const ImVec4 kPassColor;
             static const ImVec4 kFailColor;
 
-            /** @brief 이 실행 파일이 있는 폴더(Bin)입니다. 시험 실행 파일 · 시나리오 실행의 작업 폴더입니다. */
+            /** @brief 이 실행 파일이 있는 폴더(Bin)입니다. 테스트 실행 파일 · 시나리오 실행의 작업 폴더입니다. */
             static string getBinDirectory() { return FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ); }
 
             /** @brief 출력의 `[Error]` 줄 수입니다. */
@@ -104,7 +104,7 @@ namespace sw::editor
     void TestRunnerPanel::drawContent()
     {
         pollExternalRun();
-        // 자체 시험이 도는 동안은 이 창이 입력을 받지 않는다 — 시험이 패널을 열고 닫고 누르므로 여기서 누르면 시험 결과를 해친다.
+        // 자체 테스트가 도는 동안은 이 창이 입력을 받지 않는다 — 테스트가 패널을 열고 닫고 누르므로 여기서 누르면 테스트 결과를 해친다.
         const bool bSelfTestRunning = EditorSelfTestRunner::isRunning();
         ImGui::BeginDisabled( bSelfTestRunning );
         if ( ImGui::BeginTabBar( "TestRunnerTabs" ) )
@@ -334,7 +334,7 @@ namespace sw::editor
                     listCase.push_back( name );
             }
             const string filter = EditorTestOutputParser::makeFilter( listCase );
-            // 작업 폴더는 Bin 이다 — 시험은 거기서 위로 올라가며 Resource/ 를 찾는다(CLAUDE.md 의 시험 실행 규칙).
+            // 작업 폴더는 Bin 이다 — 테스트는 거기서 위로 올라가며 Resource/ 를 찾는다(CLAUDE.md 의 테스트 실행 규칙).
             if ( _pJob->request( "\"" + _listTestExecutablePath[_selectedExecutableIndex] + "\" --test_filter=" + filter, binDirectory ) )
             {
                 _externalRunKind = ExternalRunKind::UnitTestRun;

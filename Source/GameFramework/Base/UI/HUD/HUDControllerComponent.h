@@ -28,7 +28,7 @@ namespace sw
      *          화면을 열 때 뷰모델을 걸고 닫을 때 뗍니다. 뷰모델은 화면보다 오래 살므로 다시 열어도 마지막 값이 바로 보입니다.
      *          `findWidget` 은 바인딩으로 닿지 않는 일(포커스 · 애니메이션)에만 씁니다 — 포인터는 그 호출 안에서만(화면은 UI 시스템이 소유한다 — 모듈 내리기 ·
      *          문서 핫 리로드에서 다시 지어질 수 있다).
-     *          UI 시스템이 없으면(전용 서버 · 헤드리스 시험) 아무것도 띄우지 않고 `findWidget` 은 nullptr 입니다. 게임 스레드만(틱 안이면 틱 뒤 큐에서).
+     *          UI 시스템이 없으면(전용 서버 · 헤드리스 테스트) 아무것도 띄우지 않고 `findWidget` 은 nullptr 입니다. 게임 스레드만(틱 안이면 틱 뒤 큐에서).
      */
     REFLECT( Category = "UI", DisplayName = "HUD Controller", Tooltip = "Opens a HUD document on the HUD layer while this object plays" )
     class SW_GF_API HUDControllerComponent : public Component
@@ -44,7 +44,7 @@ namespace sw
         /** @brief HUD 화면을 닫습니다. */
         void onEndPlay() override;
 
-        /** @brief 쓸 UI 시스템을 바꿉니다(옛 쪽의 화면을 닫고 새 쪽에 연다). nullptr 이면 닫기만 합니다. 시험은 자기 것을 넘긴다. */
+        /** @brief 쓸 UI 시스템을 바꿉니다(옛 쪽의 화면을 닫고 새 쪽에 연다). nullptr 이면 닫기만 합니다. 테스트는 자기 것을 넘긴다. */
         void      bindUISystem( UISystem* pUISystem );
         UISystem* getUISystem() const { return _pUISystem; }
 

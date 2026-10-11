@@ -648,7 +648,7 @@ namespace sw
             pMainCamera = pScene->getActiveGameCamera();
         }
         _mainView._settings           = RenderViewCollector::makeMainSettings( pMainCamera );
-        _mainView._settings._viewMode = getViewMode(); // 직접 경로(시험)는 주 출력 모드 — 패킷 경로는 EngineLoop 가 싣는다
+        _mainView._settings._viewMode = getViewMode(); // 직접 경로(테스트)는 주 출력 모드 — 패킷 경로는 EngineLoop 가 싣는다
         // 씬 직접 경로(에디터 · 테스트)도 패킷 경로와 **같은 라이트 버퍼**를 쓴다. 경로마다 조명이
         // 다르면 에디터에서 본 그림과 게임 화면이 갈린다.
         collectSceneLights( pScene, _listScratchLight );
@@ -701,7 +701,7 @@ namespace sw
         if ( pMainCamera != nullptr )
             cameraPos = pMainCamera->getCameraPosition();
         view( RenderViewType::Main )._position = cameraPos; // 정렬 키(카메라까지의 거리)와 컬링이 같은 값을 본다
-        // 추가 뷰(캡처 카메라 · 화면 사각형) — 패킷 경로(EngineLoop)와 같은 수집기 · 스케줄러로 고른다. 시각은 렌더러 시계(시험은 고정할 수 있다).
+        // 추가 뷰(캡처 카메라 · 화면 사각형) — 패킷 경로(EngineLoop)와 같은 수집기 · 스케줄러로 고른다. 시각은 렌더러 시계(테스트는 고정할 수 있다).
         _listDirectViewScratch.clear();
         if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
         {

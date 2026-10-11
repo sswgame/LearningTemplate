@@ -126,7 +126,7 @@ namespace
 /**
  * @brief [EngineInitSequenceTest] 씬을 읽는 단계(헤드리스 씬 쿠킹)는 모든 타입 공급자가 등록을 끝낸 뒤(`ModuleTypes`)에만 선다
  * @details `Headless` 의 의존 칸이 `ModuleTypes` 를 적고, 그 단계가 실패하면 쿠킹은 돌지 않는다. 쿠킹이 GameFramework · 킷 · 게임 모듈의 타입이
- *          오르기 전에 씬을 읽으면 그 컴포넌트를 `MissingComponent` 로 쿠킹한다. 의존을 빼면 이 시험이 진다.
+ *          오르기 전에 씬을 읽으면 그 컴포넌트를 `MissingComponent` 로 쿠킹한다. 의존을 빼면 이 테스트가 진다.
  */
 SW_TEST_CASE( EngineInitSequenceTest, SceneReadingStepWaitsForModuleTypes )
 {
@@ -153,7 +153,7 @@ SW_TEST_CASE( EngineInitSequenceTest, SceneReadingStepWaitsForModuleTypes )
 /**
  * @brief [EngineInitSequenceTest] 표(`EngineInitStepList.xxx`)가 실제 기동 순서대로 적혀 있는지 검증
  * @details 정렬은 의존 칸만 본다(동점은 이름 순, 줄 위치는 보지 않는다). 그 결과가 표의 줄 순서와 같아야 표를 위에서 아래로 기동 순서로
- *          읽을 수 있다. 의존을 빼먹어 계산 순서가 바뀌면(예: Config 의 Reflection) 이 시험이 진다 — 줄을 의존보다 위로 옮기는 것은
+ *          읽을 수 있다. 의존을 빼먹어 계산 순서가 바뀌면(예: Config 의 Reflection) 이 테스트가 진다 — 줄을 의존보다 위로 옮기는 것은
  *          컴파일 오류다(static_assert).
  */
 SW_TEST_CASE( EngineInitSequenceTest, TableIsWrittenInStartupOrder )
@@ -377,7 +377,7 @@ SW_TEST_CASE( EngineInitSequenceTest, FailedRestartLeavesTheRestStopped )
 
 /**
  * @brief [EngineInitSequenceTest] 단계 초기화(기동 · 재시작)는 표의 메모리 태그 칸 아래에서 돈다
- * @details 단계 초기화가 잡는 메모리(태스크 큐 · 타입 표 · 디바이스 · 렌더러)가 용도 줄로 세이는 근거다. 시험 스레드의 태그(Unknown)가
+ * @details 단계 초기화가 잡는 메모리(태스크 큐 · 타입 표 · 디바이스 · 렌더러)가 용도 줄로 세이는 근거다. 테스트 스레드의 태그(Unknown)가
  *          아니라 단계마다 표에 적힌 태그여야 하고, 백엔드 교체처럼 단계를 다시 세울 때(`restartStoppedSteps`)도 같다.
  */
 SW_TEST_CASE( EngineInitSequenceTest, InitializeRunsUnderTheStepMemoryTag )
@@ -436,7 +436,7 @@ SW_TEST_CASE( EngineInitSequenceTest, DedicatedServerSkipsClientSteps )
 }
 
 /**
- * @brief [EngineInitSequenceTest] 클라이언트(App · 시험 하네스)는 모든 단계를 돌린다 — 대상 칸이 기본 기동을 바꾸지 않는다
+ * @brief [EngineInitSequenceTest] 클라이언트(App · 테스트 하네스)는 모든 단계를 돌린다 — 대상 칸이 기본 기동을 바꾸지 않는다
  */
 SW_TEST_CASE( EngineInitSequenceTest, ClientRunsEveryStep )
 {
@@ -448,7 +448,7 @@ SW_TEST_CASE( EngineInitSequenceTest, ClientRunsEveryStep )
 }
 
 /**
- * @brief [EngineInitSequenceTest] 단계가 도는 대상마다 그 의존도 돈다(컴파일 검사 `areTargetsCovered` 를 실행 시간에 다시 본다 — 검사가 빠져도 이 시험이 남는다)
+ * @brief [EngineInitSequenceTest] 단계가 도는 대상마다 그 의존도 돈다(컴파일 검사 `areTargetsCovered` 를 실행 시간에 다시 본다 — 검사가 빠져도 이 테스트가 남는다)
  */
 SW_TEST_CASE( EngineInitSequenceTest, EveryStepRunsWhereItsDependenciesRun )
 {

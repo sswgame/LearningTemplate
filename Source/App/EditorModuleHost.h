@@ -97,8 +97,8 @@ namespace sw
         /**
          * @brief 이미 만든 에디터 인스턴스와 그 API 표를 호스트에 붙입니다.
          * @details 정상 경로는 `bindEditorAPI` → `createEditorInstance` 다. 이 창구는 모듈 DLL · 디바이스 없이 가짜 API 표로 호스트의 순서
-         *          (시뮬레이션 멈춤 → shutdown → destroy)를 시험하려고 둔다. 에디터 모드(`initialize` 의 bEnableEditor)일 때만 에디터로 쓰인다.
-         *          시험 전용 창구라 배포본에는 없다 — 배포본에서 호스트의 API 표를 바꿔 끼울 길을 남기지 않는다.
+         *          (시뮬레이션 멈춤 → shutdown → destroy)를 테스트하려고 둔다. 에디터 모드(`initialize` 의 bEnableEditor)일 때만 에디터로 쓰인다.
+         *          테스트 전용 함수라 배포본에는 없다 — 배포본에서 호스트의 API 표를 바꿔 끼울 길을 남기지 않는다.
          */
         void attachEditorInstance( const EditorAPI& editorAPI, EditorHandle editor );
 #endif

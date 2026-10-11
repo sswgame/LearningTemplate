@@ -262,7 +262,7 @@ namespace
             OnlineServiceHostSettings settings;
             settings._transportSettings._ioThreadCount = 0;
             settings._listenAddress                    = NetAddress::makeLoopback( 0 );
-            settings._requestBurstPerRemote            = 1000; // 시험 클라이언트는 모두 127.0.0.1 — 도배 제한 시험만 낮춘다
+            settings._requestBurstPerRemote            = 1000; // 테스트 클라이언트는 모두 127.0.0.1 — 도배 제한 테스트만 낮춘다
             settings._requestBurstPerAccount           = 1000;
             return settings;
         }
@@ -370,7 +370,7 @@ namespace
             _requestClient.onConnectionClosed( handle );
         }
     };
-    /** @brief 공유 끝점 — 끝점 · 요청 클라이언트 하나에 연결 둘(부하 시험 봇 모양). 리스너가 응답은 요청 클라이언트로, 나머지는 그 연결의 클라이언트로. */
+    /** @brief 공유 끝점 — 끝점 · 요청 클라이언트 하나에 연결 둘(부하 테스트 봇 모양). 리스너가 응답은 요청 클라이언트로, 나머지는 그 연결의 클라이언트로. */
     struct SharedEndpointBots final : public IStreamEndpointListener
     {
         unique_ptr<IStreamTransport> _transport;

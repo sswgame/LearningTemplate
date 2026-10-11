@@ -34,7 +34,7 @@ namespace sw
                         return reinterpret_cast<FARPROC>( pHandle );
                 }
 
-                // 폴백: 제공자가 없거나(Shipping · 리로드 비활성) 그래프가 깨졌으면 — 같은 이름이 이미 올라와 있으면(시험 실행 파일이 TestBin 옆 사본을
+                // 폴백: 제공자가 없거나(Shipping · 리로드 비활성) 그래프가 깨졌으면 — 같은 이름이 이미 올라와 있으면(테스트 실행 파일이 TestBin 옆 사본을
                 // 링크했다) 그 이미지를 쓰고, 아니면 Bin/Modules(키트) · Bin(GameFramework)에서 DLL 을 직접 로드한다. 경로로 올리면 같은 이름의 두 번째 이미지가 생긴다.
                 const HMODULE hAlreadyLoaded = GetModuleHandleW( StringUtil::utf8ToUtf16( string{ dllName }.c_str() ).c_str() );
                 if ( hAlreadyLoaded != nullptr )

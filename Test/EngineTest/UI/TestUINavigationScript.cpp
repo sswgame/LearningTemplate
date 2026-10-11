@@ -51,7 +51,7 @@ namespace
 </UserSettingsSchema>)";
     };
 
-    /** @brief 설정(시험 스키마) · 입력 · UI 행동 맵을 든 UI 시스템 — 1920×1080 뷰포트로 프레임을 돌립니다. */
+    /** @brief 설정(테스트 스키마) · 입력 · UI 행동 맵을 든 UI 시스템 — 1920×1080 뷰포트로 프레임을 돌립니다. */
     struct UINavigationFixture
     {
         sw::InputMap            _bindingMap;

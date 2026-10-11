@@ -1292,7 +1292,7 @@ namespace sw::editor
 
             [[nodiscard]] static bool readGameViewMode( const GameObjectManager* /*pManager*/, float64& outValue ) { return readViewMode( false, outValue ); }
 
-            /** @brief 마지막(또는 지금) 자체 시험 실행에서 통과한 시험 수입니다(Test Runner 창 · 명령줄 실행 모두). */
+            /** @brief 마지막(또는 지금) 자체 테스트 실행에서 통과한 테스트 수입니다(Test Runner 창 · 명령줄 실행 모두). */
             [[nodiscard]] static bool readTestRunnerPassCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 uint32 passedCount{ 0 };

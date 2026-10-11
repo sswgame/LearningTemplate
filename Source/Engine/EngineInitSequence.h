@@ -3,7 +3,7 @@
  * @brief 엔진 기동 단계를 의존 선언(`EngineInitStepList.xxx`)으로 위상 정렬해 초기화하고, 그 역순으로 종료 · 해제합니다. 표는 그 순서대로 적힙니다.
  * @details 언리얼 `FSubsystemCollectionBase::InitializeDependency` 와 같은 자리입니다 — 각 단계가 먼저 서야 하는 단계를
  *          적고, 초기화는 그 그래프의 위상 순서, 종료(`Deinitialize`)와 객체 해제는 역순입니다. 순서 지식은 표의 의존 칸 하나에 있고
- *          호스트(`EngineLoop` · 시험 하네스)는 단계마다 구조체 하나(`<단계>StartupStep`)로 본문만 줍니다.
+ *          호스트(`EngineLoop` · 테스트 하네스)는 단계마다 구조체 하나(`<단계>StartupStep`)로 본문만 줍니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -26,7 +26,7 @@ namespace sw
     /** @brief 기동 단계가 도는 호스트입니다(표의 셋째 칸). 비트라 `All` 은 둘 다입니다. */
     enum class EngineInitTarget : uint8
     {
-        Client = 1 << 0, ///< 창 · 렌더러 · 플레이어 설정이 있는 호스트(App · 에디터 · 시험 하네스)
+        Client = 1 << 0, ///< 창 · 렌더러 · 플레이어 설정이 있는 호스트(App · 에디터 · 테스트 하네스)
         Server = 1 << 1, ///< 전용 서버(Server 실행 파일)
         All    = Client | Server,
     };
@@ -63,7 +63,7 @@ namespace sw
      * @brief 단계 본문의 기본값입니다. 아무것도 하지 않고 성공합니다.
      * @details 호스트는 표의 줄마다 `<단계>StartupStep` 구조체를 두고, 이것을 상속해 필요한 함수만 다시 정의합니다(이름 가림).
      *          언리얼 subsystem 의 `Initialize` / `Deinitialize` 와 같은 자리이고, 해제(`destroy`)가 하나 더 있습니다.
-     * @tparam THost 본문을 돌리는 호스트(`EngineLoop` · 시험 하네스)입니다.
+     * @tparam THost 본문을 돌리는 호스트(`EngineLoop` · 테스트 하네스)입니다.
      */
     template <class THost>
     struct EngineInitStepDefaults
@@ -145,7 +145,7 @@ namespace sw
          * @details `Failed` 면 거기서 멈추고 false 입니다. `SkipDependents` 면 그 단계에 의존하는 단계를 건너뜁니다.
          *          @p target 과 겹치지 않는 대상의 단계는 부르지 않고 건너뜁니다(전용 서버의 RHI · 렌더러 · 플레이어 설정).
          *          @p host 를 기억해 두었다가 `shutdownAll` · `destroyAll` 이 같은 호스트로 부릅니다. 호스트는 그때까지 살아 있어야 합니다.
-         * @param target 이 호스트의 대상. App · 시험 하네스는 `Client`, 전용 서버는 `Server` 입니다.
+         * @param target 이 호스트의 대상. App · 테스트 하네스는 `Client`, 전용 서버는 `Server` 입니다.
          * @return 표가 유효하고 실패한 단계가 없으면 true 입니다.
          */
         template <class THost>

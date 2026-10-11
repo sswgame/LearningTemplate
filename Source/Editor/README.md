@@ -25,7 +25,7 @@ flowchart TB
 ```
 
 **셸과 상태.** `ImGuiEditor` 는 App 이 부르는 진입점이고 프레임마다 ImGui 프레임을 열고 닫습니다. 편집 상태(선택, 되돌리기 기록, 플레이 세션, 서비스 조회)는 `EditorContext` 가 들고 있습니다.
-상태를 든 코드는 ImGui 를 모르므로 `Test/EditorTest` 가 화면 없이 시험합니다.
+상태를 든 코드는 ImGui 를 모르므로 `Test/EditorTest` 가 화면 없이 테스트합니다.
 
 **레지스트리.** 패널, 팝업, 인스펙터, 뷰포트 시각화, 커맨드, 환경설정 섹션은 모두 자기 .cpp 의 등록 한 줄(`SW_EDITOR_*`)로 생깁니다. 중앙 목록 파일은 없습니다.
 에디터 확장 모듈의 등록 줄도 같은 목록에 오르고, 모듈을 내리면 그 줄로 만든 것이 먼저 지워집니다.
@@ -112,7 +112,7 @@ flowchart TB
 
 App 은 프레임마다 `IEditor` 를 거쳐 에디터를 부릅니다. 순서는 이렇습니다.
 
-1. `beginFrame` 이 플랫폼 백엔드와 렌더 백엔드의 새 프레임을 열고, 시험 입력(`EditorSelfTestInput`)을 넣습니다.
+1. `beginFrame` 이 플랫폼 백엔드와 렌더 백엔드의 새 프레임을 열고, 테스트 입력(`EditorSelfTestInput`)을 넣습니다.
 2. `updateUI` 가 레지스트리와 매니저를 맞추고(`syncWithRegistry`), 메뉴 막대와 상단 재생 툴바, 도킹 공간, 패널, 팝업을 그립니다.
 3. 그린 결과를 draw 스냅샷(`EditorDrawDataSnapshot`)으로 떠서 렌더 스레드에 넘깁니다. 스냅샷의 그리기 목록은 풀로 두고 버퍼만 옮겨 담습니다.
 4. `onHostFrameEnd` 가 미뤄 둔 플레이 시작과 Step 을 처리하고, 플레이 옵션(Maximize On Play)의 상태 전이를 봅니다(`EditorPlayCommands::tick`).
@@ -135,7 +135,7 @@ ImGui 의 할당은 sw 할당자로 보냅니다. `ImGuiEditor::initialize` 가 
 | `Viewport/` | 뷰포트 클라이언트, 기즈모, 오버레이, 시각화 |
 | `Panels/` | 구체 창(씬 뷰 · 게임 뷰 · 계층 · 인스펙터 · 도구 창)과 씬 뷰 초점 도우미 |
 | `AssetActions/` | 에셋 종류마다의 썸네일, 열기, 뷰포트 드롭 |
-| `SelfTest/` | 에디터 안 시험, 시나리오 단계와 탐침, 시험 실행 창(Test Runner) |
+| `SelfTest/` | 에디터 안 테스트, 시나리오 단계와 탐침, 테스트 실행 창(Test Runner) |
 
 폴더는 층입니다. 아래 층은 위 층을 include 하지 않고, `Scripts/lint/gate/CheckEditorLayers.py` 가 이를 검사합니다(위반은 실패).
 아래부터 `Common` 루트 · `Backend` · `Config` → `Asset` · `Localization` · `SourceControl` → `Workspace` → `Commands` → `GUI` · `Widgets` · `Popups` → `Viewport` → `Panels` · `AssetActions` → `SelfTest` → 셸(`ImGuiEditor`) 입니다.
@@ -143,7 +143,7 @@ ImGui 의 할당은 sw 할당자로 보냅니다. `ImGuiEditor::initialize` 가 
 아래 층이 위 층을 불러야 하면 세 가지 중 하나를 씁니다. 틀(인터페이스 · 매니저 · 등록부)을 아래로 내리거나, 아래 층에 창구 인터페이스를 두고 위 층이 구현하거나(`IEditorPanelHost` — 커맨드가 패널을 열고 도구 문서를 저장한다),
 UI 를 만지는 명령의 등록 줄을 그 UI 의 .cpp 에 둡니다(레이아웃 · 패널 · 테마 개발 명령은 `Common/GUI/EditorUIDevCommands.cpp`, 씬 뷰 오버레이는 `Panels/Scene/SceneViewDevCommands.cpp`).
 
-판단을 ImGui 밖으로 빼 두는 이유는 시험입니다. `Test/EditorTest` 는 ImGui 없이 도는 코드만 시험하므로, 판단이 그리기 코드 안에 있으면 시험이 닿지 않습니다.
+판단을 ImGui 밖으로 빼 두는 이유는 테스트입니다. `Test/EditorTest` 는 ImGui 없이 도는 코드만 테스트하므로, 판단이 그리기 코드 안에 있으면 테스트가 닿지 않습니다.
 그래서 도구 창마다 ImGui 없는 짝(`ProfilerScopeHistory`, `InputMapConflicts`, `EditorViewportOverlayLayout` 같은)을 두고 패널은 그리기만 합니다.
 
 ### 레지스트리
@@ -179,7 +179,7 @@ Play 는 활성 씬을 스냅샷으로 찍고 월드를 시작합니다. Stop �
 - Stop: 모든 자식의 표준 입력에 `quit` 를 보내 정상 종료시키고(15 초를 넘으면 강제 종료), Record traces 가 켜져 있으면 프로세스마다 `-gv_traceSaveOnExit` 로 쓴 파일을
   이름표를 달아 `Saved/Traces/netplay_<시각>/merged.trace.json` 으로 합칩니다 — Profiler 창 Load Trace · Perfetto 로 엽니다. 같은 PC 라 단조 시계로 정확히 맞습니다.
 - 개발 명령 `netplay.start [dedicated|listen] [<플레이어 수>]` · `netplay.stop` · `netplay.wait <클라이언트 수> [<초>]` · `netplay.server <명령>`, 탐침 `Editor.NetPlayProcessCount` · `Editor.NetPlayConnectedClients` —
-  에디터 시나리오 `engine/automation/editor/netplay.scenario.xml` 이 이것으로 확인합니다. 세션 본체(`Common/Commands/EditorNetPlaySession`)는 ImGui 가 없어 `EditorTest` 가 `Server` 를 헤드리스 클라이언트로 띄워 시험합니다.
+  에디터 시나리오 `engine/automation/editor/netplay.scenario.xml` 이 이것으로 확인합니다. 세션 본체(`Common/Commands/EditorNetPlaySession`)는 ImGui 가 없어 `EditorTest` 가 `Server` 를 헤드리스 클라이언트로 띄워 테스트합니다.
 
 ### 씬 뷰와 게임 뷰
 
@@ -216,11 +216,11 @@ VRM 은 같은 길로 임포트하고, MToon 머티리얼이 있으면 머티리
 콘텐츠 브라우저의 Check Out (Lock) 과 Release Lock 은 git LFS 잠금을 씁니다(언리얼 Source Control 을 작게 한 것). 공급자(`ISourceControlProvider`)는 명령을 만들고 출력을 읽기만 하고, 띄우고 기다리는 일은 `EditorSourceControl` 이 전용 스레드에서 합니다.
 저장이나 열기가 스스로 잠그지는 않습니다. 잠금 서버가 없는 저장소에서 저장마다 실패가 쌓이는 것을 피하려는 것입니다.
 
-### 시험 — 자체 시험과 시나리오
+### 테스트 — 자체 테스트와 시나리오
 
-패널과 위젯처럼 에디터 컨텍스트와 ImGui 프레임이 모두 서야 재현되는 동작은 두 가지로 시험합니다.
+패널과 위젯처럼 에디터 컨텍스트와 ImGui 프레임이 모두 서야 재현되는 동작은 두 가지로 테스트합니다.
 
-- **에디터 자체 시험**은 자기 .cpp 의 `SW_EDITOR_SELF_TEST( 이름, "id", 순서, &본문 )` 한 줄로 등록합니다. 본문은 패널을 그린 뒤 프레임마다 불리고 `Continue` 를 돌려주면 다음 프레임에 다시 불립니다.
+- **에디터 자체 테스트**은 자기 .cpp 의 `SW_EDITOR_SELF_TEST( 이름, "id", 순서, &본문 )` 한 줄로 등록합니다. 본문은 패널을 그린 뒤 프레임마다 불리고 `Continue` 를 돌려주면 다음 프레임에 다시 불립니다.
   `App.exe -dx12 -EnableEditor "-gv_editorSelfTest=*" -gv_profileFrames=1200` 로 돌리고, 결과는 `EditorSelfTest|PASS|<id>` 줄입니다. `AppSmokeTest.EditorSelfTestsPassInsideTheEditor` 가 기대 목록과 대조합니다.
 - **에디터 시나리오**는 `Resource/engine/automation/editor/*.scenario.xml` 입니다. 레이블(`EditorSelfTestMarks::note`)를 누르고 탐침(`SW_AUTOMATION_PROBE` — `Editor.*`)으로 결과를 봅니다.
   단계와 탐침의 목록은 [Automation README](../Engine/Automation/README.md) "에디터 시나리오" 절에 있고, `AppScenarioTest.EditorScenariosPassOn<Backend>` 가 네 백엔드에서 모두 돌립니다.
@@ -328,7 +328,7 @@ VRM 은 같은 길로 임포트하고, MToon 머티리얼이 있으면 머티리
 
 ### 뷰와 도킹
 
-- **탭 뒤의 패널은 그리지 않고 레이블도 남기지 않습니다.** 자체 시험과 시나리오는 먼저 그 탭을 앞으로 가져옵니다(`ImGui::SetWindowFocus`, `panel.focus <id>`). 씬 뷰가 보이는지는 `Editor.SceneViewDrawn` 으로 봅니다. `Editor.SceneViewRequested` 는 두 뷰가 다 가려져도 1 입니다.
+- **탭 뒤의 패널은 그리지 않고 레이블도 남기지 않습니다.** 자체 테스트와 시나리오는 먼저 그 탭을 앞으로 가져옵니다(`ImGui::SetWindowFocus`, `panel.focus <id>`). 씬 뷰가 보이는지는 `Editor.SceneViewDrawn` 으로 봅니다. `Editor.SceneViewRequested` 는 두 뷰가 다 가려져도 1 입니다.
 - **기본 배치의 앞 탭은 붙인 순서로 정해지지 않습니다.** ImGui 는 새로 붙은 탭 가운데 마지막 것을 고르므로, 열린 채 시작하는 도구 창이 가운데 영역에 붙으면 씬 뷰가 그려지지 않습니다.
   그래서 `EditorDockLayout::updateDefaultTabSelection` 이 Scene 탭이 골라질 때까지 두 프레임 이상 포커스를 줍니다. 이름 붙인 레이아웃을 읽은 뒤에도 같습니다.
 - **기본 배치의 창 이름을 바꾸면 도크스페이스 id 의 버전 번호(`EditorMainDockSpace_v7`)를 올립니다.** 저장된 `imgui.ini` 의 옛 도크 트리가 새 창을 모르면 새 창이 떠 있는 창으로 뜹니다.
@@ -369,7 +369,7 @@ VRM 은 같은 길로 임포트하고, MToon 머티리얼이 있으면 머티리
 - **팝업에 `p_open=&_bOpen` 을 넘기지 않습니다.** X 버튼이 `onClose` 를 건너뜁니다. 입력 위젯은 `drawTextField` 하나를 씁니다.
 - **`ed::EndCreate()` 는 `ed::BeginCreate()` 의 반환값과 상관없이 늘 부릅니다.** `BeginCreate` 는 false 를 돌려줘도 내부 활성 상태를 세워 두므로, if 안에서만 닫으면 다음 프레임에 단언으로 멈춥니다.
 - **노드 편집기 캔버스가 창의 첫 그리기가 되지 않게 합니다.** 캔버스는 마지막 그리기 명령이 비어 있으면 자기 클립 사각형을 그 명령에 덮어씁니다. 확대가 1 이 아니면 배경과 노드가 잘립니다. `EditorNodeGraph::beginCanvas` 가 배경을 먼저 그려 마지막 명령을 채웁니다.
-- **노드 그래프 캔버스 안의 위젯 좌표는 캔버스 좌표입니다.** 시험 레이블는 `ed::CanvasToScreen` 으로 바꿔 `EditorSelfTestMarks::noteRect` 로 적습니다.
+- **노드 그래프 캔버스 안의 위젯 좌표는 캔버스 좌표입니다.** 테스트 레이블는 `ed::CanvasToScreen` 으로 바꿔 `EditorSelfTestMarks::noteRect` 로 적습니다.
 - **에디터 아이콘은 `Scripts/common/EditorIconFont.py` 의 `kListIcon` 이 원본입니다.** 아이콘을 더하면 `GenerateEditorIcons.py` 로 폰트와 헤더를 다시 만들고 함께 커밋합니다(`CheckEditorIcons`). 코드에서는 `editoricon::k…` 상수만 씁니다.
   vcpkg 가 함께 설치하는 `IconsFontAwesome6.h` 의 `ICON_FA_*` 는 쓰지 않습니다. 그 글리프는 합친 폰트에 없어 `?` 상자로 나옵니다. 아이콘 세트도 CC0 급만 넣습니다.
 - **떠 있는 도구 창의 첫 크기는 `IEditorPanel::getInitialPanelSize` 입니다.** `EditorChrome::setNextPanelSize` 가 UI 배율로 곱하고 주 뷰포트 작업 영역의 90 % 로 자릅니다. `-gv_editorOpenPanel=all` 은 모든 창에 900×620 을 주므로 첫 크기 결함을 가립니다.
@@ -417,7 +417,7 @@ VRM 은 같은 길로 임포트하고, MToon 머티리얼이 있으면 머티리
 - **Debug App 의 `--import-textures` 는 BC7 큰 원본에 매우 느립니다**(1024² 한 장에 20 분 넘게). 큰 BC7 은 Release App 으로 굽습니다.
 - **BC 압축은 높이 64 줄의 가로 띠로 나눠 작업 시스템이 병렬로 합니다.** `TEX_COMPRESS_DEFAULT` 일 때만 결과가 통째 압축과 같은 바이트입니다. 디더링이나 오차 확산을 켜면 블록 사이가 이어져 깨집니다.
 - **`.mesh` 는 지금 형식만 읽습니다.** `RHIVertex` 를 바꾸면 `MeshAssetFormat::kVersion` 을 올리고 다시 임포트합니다.
-- **글 수집 시험(`LocalizationGatherTest.RepositoryProjectsAreUpToDate`)은 엔진 타입만 봅니다.** 게임이나 키트 타입에 `Localizable` 메타를 더하고 저장소 데이터가 쓰면 `App --check-text` 와 결과가 갈라집니다.
+- **글 수집 테스트(`LocalizationGatherTest.RepositoryProjectsAreUpToDate`)은 엔진 타입만 봅니다.** 게임이나 키트 타입에 `Localizable` 메타를 더하고 저장소 데이터가 쓰면 `App --check-text` 와 결과가 갈라집니다.
 
 ### 설정, 상태, 서비스
 
@@ -429,12 +429,12 @@ VRM 은 같은 길로 임포트하고, MToon 머티리얼이 있으면 머티리
 - **저장소 파이썬 스크립트는 `EditorUtil::kPythonCommand` 로 띄웁니다**(Windows `py -3`).
 - **창 제목(`<게임> — <씬>[*] — SW Editor`)은 셸이 프레임마다 다시 겁니다.** `setTitle` 은 빈 제목을 받지 않습니다.
 
-### 시험과 검증
+### 테스트와 검증
 
 - **에디터 동작을 바꾸면 에디터 시나리오로 확인합니다.** 창을 띄우는 실행은 반드시 저절로 끝나게 합니다(시나리오의 `<Pass/>`, `-gv_profileFrames`). `-gv_editorPanelDump` 는 스스로 끝나지 않습니다.
 - **에디터는 `-EnableEditor` 로 켜야 뜹니다.** 그 인자 없이 돌린 검증은 에디터를 끈 검증입니다.
-- **시험은 시험이 만든 것을 되돌립니다.** 설정 파일을 다시 쓰는 경로를 지나는 시험은 파일 바이트를 떠 두었다 되돌립니다. 입력 시험이 한 PC 에서만 지면 모니터 배율부터 봅니다.
-- **시험 입력은 플랫폼 newFrame 뒤, NewFrame 앞에 넣습니다**(`EditorSelfTestInput`). 클릭은 누르기와 떼기를 단계 둘로 나눕니다. ImGui 는 한 프레임의 누름과 뗌을 흘려 처리하고, 플랫폼이 실제 커서를 다시 넣습니다.
+- **테스트는 테스트가 만든 것을 되돌립니다.** 설정 파일을 다시 쓰는 경로를 지나는 테스트는 파일 바이트를 떠 두었다 되돌립니다. 입력 테스트가 한 PC 에서만 지면 모니터 배율부터 봅니다.
+- **테스트 입력은 플랫폼 newFrame 뒤, NewFrame 앞에 넣습니다**(`EditorSelfTestInput`). 클릭은 누르기와 떼기를 단계 둘로 나눕니다. ImGui 는 한 프레임의 누름과 뗌을 흘려 처리하고, 플랫폼이 실제 커서를 다시 넣습니다.
 - **배타 시나리오(`input="exclusive"`)는 사람의 마우스 · 키보드를 ImGui 에 넣지 않습니다.** 셸이 창 메시지를 버리고(`InputManager::shouldDropNativeEvent`), 플랫폼 백엔드 호출은 `ScopedImGuiOsInputFilter` 가 감쌉니다. 플랫폼은 메시지 없이도 실제 커서를 묻기 때문입니다(Win32 `GetCursorPos`, X11 `XQueryPointer`).
   막지 않으면 단추를 떼는 프레임에 실제 커서가 마지막 위치가 됩니다. 그러면 ImGui 가 뗌을 다음 프레임으로 미뤄, 뷰포트 비행이 그 차이만큼 시점을 돌립니다(`sceneviewgameview`, 커서를 창 밖에 두면 매번 졌습니다). 혼합 시나리오와 입력 리플레이는 막지 않습니다.
 - **떠 있는 창은 플랫폼이 "커서 아래 뷰포트" 를 실제 커서로 넣습니다.** 레이블가 든 뷰포트를 마우스 위치와 함께 넣어야 호버가 맞습니다(`moveMouseToMark`).

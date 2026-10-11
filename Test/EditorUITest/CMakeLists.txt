@@ -12,14 +12,14 @@
 # 이 타깃은 `nogpu` 다. 렌더러 백엔드는 RHI 디바이스가 있어야 하므로 여기서 다루지 않는다.
 # ==============================================================================
 
-# 에디터 · App 시험은 클라이언트 코드다 — 전용 서버 타깃(Server)에는 에디터 · App · 창이 없어 짓지 않는다.
+# 에디터 · App 테스트는 클라이언트 코드다 — 전용 서버 타깃(Server)에는 에디터 · App · 창이 없어 짓지 않는다.
 if(SW_TARGET_TYPE STREQUAL "Server")
 	sw_declareUnbuiltDirectory("${CMAKE_CURRENT_SOURCE_DIR}")
 	return()
 endif()
 
 sw_addTestExecutable(EditorUITest
-	# 시험 소스는 이 폴더를 훑는다. 같이 컴파일하는 에디터 백엔드 소스만 적는다.
+	# 테스트 소스는 이 폴더를 훑는다. 같이 컴파일하는 에디터 백엔드 소스만 적는다.
 	EXTRA_SOURCES
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/Platform/ImGuiWin32PlatformBackend.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/Platform/ImGuiX11PlatformBackend.cpp"

@@ -25,7 +25,7 @@ namespace sw
 
     /**
      * @struct LocText
-     * @brief `SW_LOCTEXT` · `SW_LOCFORMAT` 이 부르는 조회입니다. 엔진 서비스가 없으면(도구 · 일부 시험) 원문입니다.
+     * @brief `SW_LOCTEXT` · `SW_LOCFORMAT` 이 부르는 조회입니다. 엔진 서비스가 없으면(도구 · 일부 테스트) 원문입니다.
      */
     struct SW_API LocText
     {

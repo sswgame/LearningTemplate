@@ -211,7 +211,7 @@ SW_TEST_CASE( GimmickGenreTest, ShooterBarrelsTurretCover )
     }
     Internal::spawnBox( manager, "Wall", float3{ 102.0f, 0.0f, 0.0f }, float2{ 0.5f, 4.0f }, false ); // 가까운 쪽을 가린다
     {
-        // 표적 태그는 프리팹이 Player 로 둔다 — 시험은 같은 값을 리플렉션으로 넣는다.
+        // 표적 태그는 프리팹이 Player 로 둔다 — 테스트는 같은 값을 리플렉션으로 넣는다.
         const PropertyInfo* pTags = pTurretLogic->getTypeInfo()->findProperty( "_targetTags" );
         SW_ASSERT_NOT_NULL( pTags );
         pTags->getValuePtr<TagContainer>( static_cast<void*>( pTurretLogic ) )->addTag( TagID::request( "Player" ) );

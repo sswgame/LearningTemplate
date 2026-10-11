@@ -53,7 +53,7 @@ namespace sw::editor
          * @details 그 동안은 저장된 레이아웃을 읽지도 쓰지도 않습니다. 한 번 준 스위치가 다음 실행의 레이아웃으로 굳지 않게 합니다.
          */
         static bool isPanelOverrideActive();
-        /** @brief 셸이 저장된 레이아웃을 쓰지 않게 요청합니다(자체 시험 실행). 도킹은 자체 시험을 모르므로 셸이 시작할 때 알립니다. */
+        /** @brief 셸이 저장된 레이아웃을 쓰지 않게 요청합니다(자체 테스트 실행). 도킹은 자체 테스트를 모르므로 셸이 시작할 때 알립니다. */
         static void setPanelOverrideRequested( bool bRequested );
         /** @brief `-gv_editorOpenPanel=all` 로 등록된 패널을 전부 떠 있는 창으로 여는 중인지 반환합니다. */
         static bool isOpeningAllPanels();

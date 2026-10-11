@@ -367,7 +367,7 @@ SW_TEST_CASE( MeshPrimitiveTest, NamedPrimitivesAreWhiteUnlessDiagnosticIsAsked 
         }
     }
 
-    // 검증 색을 고르면 큐브의 면이 서로 다른 색이다(벤치 · 렌더 시험이 면을 가려 본다).
+    // 검증 색을 고르면 큐브의 면이 서로 다른 색이다(벤치 · 렌더 테스트가 면을 가려 본다).
     const sw::shared_ptr<sw::Mesh> diagnostic = sw::MeshUtil::createPrimitive( "Cube", sw::PrimitiveVertexColor::Diagnostic );
     SW_ASSERT_NOT_NULL( diagnostic.get() );
     const sw::vector<sw::RHIVertex>& listVertex = diagnostic->getVertices();

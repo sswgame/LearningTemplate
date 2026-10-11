@@ -1,6 +1,6 @@
 /**
  * @file ThemeParkTycoonGame.h
- * @brief 테마파크 키트(GF_ThemePark)를 실제로 쓰는 시험 게임 — 코스터를 짓고(시험 운행이 평가를 매긴다) 손님을 받아 돈 · 평점을 키우는 경영 게임입니다.
+ * @brief 테마파크 키트(GF_ThemePark)를 실제로 쓰는 테스트 게임 — 코스터를 짓고(테스트 운행이 평가를 매긴다) 손님을 받아 돈 · 평점을 키우는 경영 게임입니다.
  *
  * @details 빌드: `cmake --preset <preset> -DSW_ACTIVE_GAME=ThemeParkTycoon`. 조작은 `Source/Games/ThemeParkTycoon/README.md`.
  *          공원은 씬(`game/themepark/maps/park.scene.xml` — 팩의 `data/gamesettings.xml` 시작 맵)과 그 안의 `ParkDirectorComponent` 가 섭니다.

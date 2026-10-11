@@ -10,7 +10,7 @@
 #include "TestFramework/TestFramework.h"
 
 // 복제 키트를 가상 서버 하니스 위에서 — 메시지 상한 · 예산이 늘 찬 회선에서 스냅숏이 끊기지 않고 따라오는지, 숫자(틱)로 잰다.
-// 서버 세션은 시험이 채운 엔티티 표를 틱마다 그대로 복제하고, 클라이언트 세션은 받은 가장 새 스냅숏을 본다.
+// 서버 세션은 테스트가 채운 엔티티 표를 틱마다 그대로 복제하고, 클라이언트 세션은 받은 가장 새 스냅숏을 본다.
 
 using namespace sw;
 
@@ -18,7 +18,7 @@ namespace
 {
     constexpr float32 kReplicationTickSeconds = 1.0f / 60.0f;
 
-    /** @brief 시험이 틱 사이에 바꾸는 서버 쪽 엔티티 표와 설정입니다. */
+    /** @brief 테스트가 틱 사이에 바꾸는 서버 쪽 엔티티 표와 설정입니다. */
     struct ReplicationTable
     {
         vector<NetEntityState>    _listEntity{};

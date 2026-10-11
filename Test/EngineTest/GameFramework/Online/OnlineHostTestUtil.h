@@ -1,13 +1,13 @@
 /**
  * @file OnlineHostTestUtil.h
- * @brief 온라인 키트 끝단 시험 하니스 — 루프백 망 위의 서버(호스트 · 메모리 저장소 · 메모리 캐시 · 로컬 버스 · 가짜 접속 상태)와 끝점 하나에 연결 여럿인 클라이언트 묶음입니다.
- * @details - 로그인은 시험 서비스(영역 `OnlineMethodRange::kGame`)가 몸의 계정 id 로 `host.bindAccount` 한다 — 계정 키트 없이 "로그인한 연결" 을 만든다.
+ * @brief 온라인 키트 끝단 테스트 하니스 — 루프백 망 위의 서버(호스트 · 메모리 저장소 · 메모리 캐시 · 로컬 버스 · 가짜 접속 상태)와 끝점 하나에 연결 여럿인 클라이언트 묶음입니다.
+ * @details - 로그인은 테스트 서비스(영역 `OnlineMethodRange::kGame`)가 몸의 계정 id 로 `host.bindAccount` 한다 — 계정 키트 없이 "로그인한 연결" 을 만든다.
  *          - I/O 스레드 없이 `tickAll` 로 돈다(결정적). 서버 여럿은 같은 데이터(`MemoryServiceDatabase` · `MemoryEphemeralDatabase` · `LocalServerBusHub`)를 나눠 쓴다.
  *          - 클라이언트는 공유 끝점 모드(`OnlineServiceClient::initializeOnSharedEndpoint`) — 연결이 열리면 붙는다. `connect` 뒤 `tickAll` 한 번이면 Hello 까지 끝난다.
- *          - 접속 상태는 `FakeAccountPresence`(서버마다 하나 — 시험이 `setOnline` 으로 "다른 서버에 붙은 계정" 을 만든다). 결과는 서버 `tick` 에 한 번 알린다.
+ *          - 접속 상태는 `FakeAccountPresence`(서버마다 하나 — 테스트가 `setOnline` 으로 "다른 서버에 붙은 계정" 을 만든다). 결과는 서버 `tick` 에 한 번 알린다.
  *          - 내리는 순서는 실제 서버와 같다: 키트(로직 · 바인딩) → 호스트 → 저장소 · 캐시. 키트 묶음은 `IOnlineTestKit` 을 구현해 `server.addKit( this )` 로 올리면
  *            서버 소멸자가 맨 먼저 `stop` 한다 — 선언 순서에 기대지 않는다.
- *          스위트 파일이 아니다 — 키트 끝단 시험(`<Kit>StreamTest`)이 include 한다. 쓰는 법은 `ServerDirectoryStreamTest` 를 본다.
+ *          스위트 파일이 아니다 — 키트 끝단 테스트(`<Kit>StreamTest`)이 include 한다. 쓰는 법은 `ServerDirectoryStreamTest` 를 본다.
  */
 #pragma once
 #include "Core/Container/StringUtil.h"
@@ -33,7 +33,7 @@
 
 namespace test
 {
-    /** @brief 시험 로그인 — 몸 `varuint 계정 id` 로 이 연결을 그 계정에 묶습니다. 이미 다른 연결에 붙은 계정이면 kConflict. */
+    /** @brief 테스트 로그인 — 몸 `varuint 계정 id` 로 이 연결을 그 계정에 묶습니다. 이미 다른 연결에 붙은 계정이면 kConflict. */
     class TestLoginService final : public sw::IOnlineService
     {
     public:
@@ -63,7 +63,7 @@ namespace test
 
 namespace test
 {
-    /** @brief 클라이언트 쪽 시험 로그인(영역만 맞추면 되는 빈 서비스 — Hello 판 목록에 들어간다). */
+    /** @brief 클라이언트 쪽 테스트 로그인(영역만 맞추면 되는 빈 서비스 — Hello 판 목록에 들어간다). */
     class TestLoginClientService final : public sw::IOnlineClientService
     {
     public:
@@ -80,7 +80,7 @@ namespace test
 namespace test
 {
     /**
-     * @brief 가짜 접속 상태 — 시험이 계정 → 서버를 적어 두고, 찾기는 다음 `tick` 에 맡긴 델리게이트로 알린다(실제 `OnlinePresence` 와 같은 "한 번 · 나중에").
+     * @brief 가짜 접속 상태 — 테스트가 계정 → 서버를 적어 두고, 찾기는 다음 `tick` 에 맡긴 델리게이트로 알린다(실제 `OnlinePresence` 와 같은 "한 번 · 나중에").
      *        원격 알림은 받는 계정 · 종류만 적는다(`_listRemotePush`).
      */
     class FakeAccountPresence final : public sw::IAccountPresence
@@ -206,7 +206,7 @@ namespace test
 
 namespace test
 {
-    /** @brief 서버 프로세스 하나입니다. 키트 서비스는 시험이 `_host.registerService` 로 올린 뒤 `start` 하고, 키트 묶음은 `addKit` 으로 맡긴다. */
+    /** @brief 서버 프로세스 하나입니다. 키트 서비스는 테스트가 `_host.registerService` 로 올린 뒤 `start` 하고, 키트 묶음은 `addKit` 으로 맡긴다. */
     class OnlineTestServer final
     {
     public:
@@ -244,7 +244,7 @@ namespace test
                 _listKit[index - 1]->stop();
             }
             _store.shutdown();
-            _host.shutdown(); // 키트 밖(시험이 직접 올린 서비스)의 캐시 요청은 여기서 Unavailable 로 끝난다
+            _host.shutdown(); // 키트 밖(테스트가 직접 올린 서비스)의 캐시 요청은 여기서 Unavailable 로 끝난다
             (void)_store.pollCompletions();
             _cache.shutdown();
         }
@@ -280,7 +280,7 @@ namespace test
 
 namespace test
 {
-    /** @brief 클라이언트 묶음 — 끝점 하나 · 요청 클라이언트 하나에 연결 여럿(공유 끝점 모드 — 부하 시험 봇과 같은 모양). */
+    /** @brief 클라이언트 묶음 — 끝점 하나 · 요청 클라이언트 하나에 연결 여럿(공유 끝점 모드 — 부하 테스트 봇과 같은 모양). */
     class OnlineTestClients final : public sw::IStreamEndpointListener
     {
     public:
@@ -310,7 +310,7 @@ namespace test
             _endpoint.shutdown();
         }
 
-        /** @brief 연결을 열고 @p listService 를 등록합니다(시험 로그인 서비스는 언제나 함께). 연결 번호입니다 — 열리면 Hello 를 한다. */
+        /** @brief 연결을 열고 @p listService 를 등록합니다(테스트 로그인 서비스는 언제나 함께). 연결 번호입니다 — 열리면 Hello 를 한다. */
         int32 connect( uint16 port, std::initializer_list<sw::IOnlineClientService*> listService )
         {
             sw::unique_ptr<sw::OnlineServiceClient>& client = _listClient.emplace_back( sw::make_unique<sw::OnlineServiceClient>() );
@@ -323,7 +323,7 @@ namespace test
             return static_cast<int32>( _listClient.size() ) - 1;
         }
 
-        /** @brief 시험 로그인을 보냅니다(응답은 기다리지 않는다 — 다음 `tickAll` 뒤면 붙어 있다). */
+        /** @brief 테스트 로그인을 보냅니다(응답은 기다리지 않는다 — 다음 `tickAll` 뒤면 붙어 있다). */
         void login( int32 clientIndex, sw::AccountID accountID )
         {
             sw::BitWriter body;

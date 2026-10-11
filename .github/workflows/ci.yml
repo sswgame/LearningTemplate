@@ -139,7 +139,7 @@ jobs:
       run: |
         echo "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
         # 러너 이미지의 clang-cl 버전을 로그와 요약에 남긴다 — 로컬은 Tools/LLVM 20.1.8 로 고정인데 CI 는 이미지 것을 쓴다.
-        # 액션 키트 시험 넷이 Windows Debug · STL 잡에서만 지는 원인을 가를 때(컴파일러 차이 가설) 이 줄이 필요하다.
+        # 액션 키트 테스트 넷이 Windows Debug · STL 잡에서만 지는 원인을 가를 때(컴파일러 차이 가설) 이 줄이 필요하다.
         $version = (& "C:\Program Files\LLVM\bin\clang-cl.exe" --version | Select-Object -First 1)
         echo "clang-cl: $version"
         echo "clang-cl: $version" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
@@ -166,7 +166,7 @@ jobs:
           fi
         done
 
-    # vcpkg 바이너리 캐시 — 복원과 저장을 나눈다. `actions/cache` 하나로 두면 저장이 잡 끝(post)에 **잡이 성공했을 때만** 돌아, 시험 하나가
+    # vcpkg 바이너리 캐시 — 복원과 저장을 나눈다. `actions/cache` 하나로 두면 저장이 잡 끝(post)에 **잡이 성공했을 때만** 돌아, 테스트 하나가
     # 지거나 실행이 취소되면 방금 1 시간 걸려 지은 포트가 버려지고 다음 실행이 또 처음부터 짓는다(2026-10-04: Configure 50~90 분이 매번).
     # 구성이 끝난 바로 뒤에 저장한다. 키에 프리셋을 넣지 않는다 — 기본 트리플릿은 OS 하나에 하나(x64-windows · x64-linux)라 같은 OS 의 잡이 같은
     # 패키지를 쓰고, 프리셋마다 따로 두면 저장소 캐시 한도(10 GB, sccache 항목과 나눠 쓴다)를 세 배로 먹어 서로를 밀어낸다.
@@ -259,8 +259,8 @@ jobs:
       run: |
         ctest --test-dir build/${{ matrix.preset }} -L nogpu -j 4 --output-on-failure
 
-    # 진 시험을 주석(annotation)으로 올린다. 작업 로그 · 아티팩트는 저장소 관리자만 받을 수 있어(공개 저장소라도 API 는 403), 무엇이
-    # 졌는지 밖에서 보이는 곳은 주석뿐이다. 시험마다 실패 줄 · 마지막 `[ RUN ]` · 출력의 마지막 25 줄, 그리고 크래시 스택(Scripts/dev/CiFailureReport.py).
+    # 진 테스트를 주석(annotation)으로 올린다. 작업 로그 · 아티팩트는 저장소 관리자만 받을 수 있어(공개 저장소라도 API 는 403), 무엇이
+    # 졌는지 밖에서 보이는 곳은 주석뿐이다. 테스트마다 실패 줄 · 마지막 `[ RUN ]` · 출력의 마지막 25 줄, 그리고 크래시 스택(Scripts/dev/CiFailureReport.py).
     - name: Report failed tests as annotations
       if: failure() && steps.test.outcome == 'failure'
       shell: bash
@@ -269,7 +269,7 @@ jobs:
 
     # Diagnostics & Artifact Upload
     # 트레이스(`*.trace.json` — 성능 회귀 · 느린 틱 · bugit 이 남긴다)도 같이 올린다. Perfetto UI 로 연다.
-    # 시험 단계가 돌았을 때만 올린다 — 빌드에서 진 잡에는 LastTest.log 가 없어 "No files were found" 경고만 남았다.
+    # 테스트 단계가 돌았을 때만 올린다 — 빌드에서 진 잡에는 LastTest.log 가 없어 "No files were found" 경고만 남았다.
     - name: Upload test logs on failure
       if: failure() && steps.test.outcome == 'failure'
       uses: actions/upload-artifact@v6

@@ -20,7 +20,7 @@
 
 namespace
 {
-    /** @brief `releaseRHI` 를 받으면 디바이스의 종료 단계 목록에 적는 시험 자원입니다. */
+    /** @brief `releaseRHI` 를 받으면 디바이스의 종료 단계 목록에 적는 테스트 자원입니다. */
     class ShutdownStepRecordingResource final : public sw::RHIRenderResource
     {
     public:

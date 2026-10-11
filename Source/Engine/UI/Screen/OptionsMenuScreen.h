@@ -100,7 +100,7 @@ namespace sw
         vector<hashed_string> _listCategory;  ///< 탭 순서의 카테고리 id
         vector<WidgetID>      _listTabButton; ///< 탭 단추(같은 순서)
         vector<RowEntry>      _listRow;       ///< 지금 탭의 행
-        UserSettingsManager*  _pSettings;     ///< 설정 출처(엔진 서비스 · 시험 — 메뉴보다 오래 산다)
+        UserSettingsManager*  _pSettings;     ///< 설정 출처(엔진 서비스 · 테스트 — 메뉴보다 오래 산다)
         UIScreenHandle        _promptScreen;  ///< 이 메뉴가 연 확인 창
         uint32                _selectedTab;
     };

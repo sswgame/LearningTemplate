@@ -50,9 +50,9 @@ namespace sw::editor
         void drawActionList();
         /** @brief 고른 액션의 바인딩 · 발화 규칙 · 충돌 · 플랫폼 글리프입니다. */
         void drawActionDetails();
-        /** @brief Debug 탭 — 장치 상태 · 그래프 · 뷰포트 HUD · 명령 패턴 시험을 접는 절로 둔다. */
+        /** @brief Debug 탭 — 장치 상태 · 그래프 · 뷰포트 HUD · 명령 패턴 테스트를 접는 절로 둔다. */
         void drawDebugTab();
-        /** @brief 명령 패턴(숫자 패드 표기) 시험 절입니다. */
+        /** @brief 명령 패턴(숫자 패드 표기) 테스트 절입니다. */
         void drawCommandPatternTester();
         void drawDeviceMonitorTab();
 

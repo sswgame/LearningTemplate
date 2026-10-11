@@ -106,7 +106,7 @@ namespace
      * @details createTexture2D → beginRenderPass → setPipelineState → fullscreen draw → (선택) readback → destroy.
      *          pOutPixels 를 주면 그린 결과를 CPU 로 읽어 온다 — "크래시 안 났다"가 아니라 "실제로
      *          그려졌다"를 검사할 수 있다. 백엔드별 렌더타깃 경로를 같은 기준으로 비교하는 유일한 방법이다.
-     * @note 쓰는 것은 전부 공개 RHI 인터페이스라 엔진 API 로 두지 않는다 — 시험 코드가 배포 바이너리에 들어가지 않게.
+     * @note 쓰는 것은 전부 공개 RHI 인터페이스라 엔진 API 로 두지 않는다 — 테스트 코드가 배포 바이너리에 들어가지 않게.
      * @param recordCb · pRecordData · recordSize 주면 리스트를 연 뒤 드로우 전에 `IRHICommandList::updateConstantBuffer` 로 그 상수버퍼를 갱신한다.
      * @return 성공 시 true. pso==0 이면 false.
      */
@@ -1091,7 +1091,7 @@ SW_TEST_CASE( RHIDeviceTest, SceneDrawVertexIDStartsAtZeroOnlyOnD3D )
 
 /**
  * @brief [RHIDeviceTest] 인덱스 간접 드로우가 네 백엔드에서 그려지고, 인스턴스 슬롯 스트림(정점 슬롯 1)을 읽는다
- * @details 엔진은 아직 인덱스 메시를 쓰지 않아 `createIndexBuffer` · `setIndexBuffer` · `drawIndexedIndirect` 는 이 시험이 아니면
+ * @details 엔진은 아직 인덱스 메시를 쓰지 않아 `createIndexBuffer` · `setIndexBuffer` · `drawIndexedIndirect` 는 이 테스트가 아니면
  *          검증되지 않는다(안 쓰는 경로는 조용히 썩는다). 지키는 것 둘: (1) 인덱스 버퍼는 인덱스 버퍼 용도로 만든다 — 구조버퍼로 만들면
  *          Vulkan 검증 레이어가 용도 위반으로 잡는다(DX11 · DX12 는 드라이버가 받아 준다). (2) `drawIndexedIndirect` 도 정점 슬롯 1 을
  *          건다 — 빠뜨리면 새 커맨드 리스트에서 이 진입점으로 그릴 때 DX12 는 인스턴스 자리를 0 으로 읽어 화면 전체가 빨강이 된다.

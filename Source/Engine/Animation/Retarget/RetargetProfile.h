@@ -69,9 +69,9 @@ namespace sw
         const hashed_string&         getTargetPelvis() const { return _targetPelvis; }
         RetargetTranslationMode      getTranslationMode() const { return _translationMode; }
         const vector<RetargetChain>& getChains() const { return _listChain; }
-        /** @brief 사슬을 더합니다(코드로 짓는 프로필 · 시험). */
+        /** @brief 사슬을 더합니다(코드로 짓는 프로필 · 테스트). */
         void addChain( const RetargetChain& chain ) { _listChain.push_back( chain ); }
-        /** @brief 뿌리 · 골반 짝과 이동 방법을 정합니다(코드로 짓는 프로필 · 시험). */
+        /** @brief 뿌리 · 골반 짝과 이동 방법을 정합니다(코드로 짓는 프로필 · 테스트). */
         void setRootAndPelvis( const hashed_string& sourceRoot, const hashed_string& targetRoot, const hashed_string& sourcePelvis, const hashed_string& targetPelvis,
                                RetargetTranslationMode mode );
 

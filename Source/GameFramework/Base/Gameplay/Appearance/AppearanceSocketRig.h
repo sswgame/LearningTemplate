@@ -3,7 +3,7 @@
  * @brief 해석된 외형의 소켓 이름 공간 — 몸과 장비 부품의 소켓 에셋을 한 표(`ResolvedSocketTable`)로 풀고, 부품을 붙일 자리를 계산합니다.
  * @details 유닛 0 이 몸(접두어 없음), 그 뒤가 소켓 에셋을 가진 부품(접두어 = 칸 · 꾸미기 매개변수 이름 — `MainHand.Muzzle`)입니다. 외형의 소켓 덮어쓰기
  *          (`_listSocketOverride`)는 몸 소켓 위에 외형 층으로 얹습니다. 같은 이름은 다시 지어도 같은 번호라 무기를 바꾸면 같은 `MainHand.Muzzle` 번호가
- *          새 무기의 총구를 가리킵니다. 씬 · 컴포넌트를 모르는 값 타입이라 시험에서 그대로 돕니다 — 외형 컴포넌트가 이것을 들고 오브젝트에 붙입니다.
+ *          새 무기의 총구를 가리킵니다. 씬 · 컴포넌트를 모르는 값 타입이라 테스트에서 그대로 돕니다 — 외형 컴포넌트가 이것을 들고 오브젝트에 붙입니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -28,7 +28,7 @@ namespace sw
     struct AppearancePlacement;
     struct ResolvedAppearance;
 
-    /** @brief 소켓 에셋을 경로로 찾는 창구입니다(시험은 메모리 표, 게임은 리소스 캐시). */
+    /** @brief 소켓 에셋을 경로로 찾는 창구입니다(테스트는 메모리 표, 게임은 리소스 캐시). */
     class SW_GF_API IAppearanceSocketSource
     {
     public:

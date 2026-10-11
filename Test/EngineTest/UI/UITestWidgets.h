@@ -1,8 +1,8 @@
 /**
  * @file UITestWidgets.h
- * @brief UI 시험이 쓰는 위젯(스위트 아님) — 리플렉션 없는 상자 · 패널과 고정 배치 도우미.
- * @details 시험 위젯은 `REFLECT` 를 쓰지 않습니다(시험 타깃에 리플렉션 단계가 없다). `getTypeInfo()` 는 가장 가까운 리플렉션 조상(`Widget` · `PanelWidget`)의 것입니다.
- *          레이아웃 걷기 없이 짓는 시험은 `UITestUtil::placeWidget` 으로 기하를 직접 넣습니다.
+ * @brief UI 테스트가 쓰는 위젯(스위트 아님) — 리플렉션 없는 상자 · 패널과 고정 배치 도우미.
+ * @details 테스트 위젯은 `REFLECT` 를 쓰지 않습니다(테스트 타깃에 리플렉션 단계가 없다). `getTypeInfo()` 는 가장 가까운 리플렉션 조상(`Widget` · `PanelWidget`)의 것입니다.
+ *          레이아웃 걷기 없이 짓는 테스트는 `UITestUtil::placeWidget` 으로 기하를 직접 넣습니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -16,7 +16,7 @@
 
 namespace sw::uitest
 {
-    /** @brief 시험 위젯이 받은 사건 한 줄입니다("이름 단계 종류"). */
+    /** @brief 테스트 위젯이 받은 사건 한 줄입니다("이름 단계 종류"). */
     struct UIEventRecord
     {
         vector<string> _listLine{};
@@ -129,7 +129,7 @@ namespace sw::uitest
 
 namespace sw::uitest
 {
-    /** @brief 자식을 드는 시험 패널입니다. `_bLayoutBoundary` 면 크기가 고정된 패널(레이아웃 경계)로 답합니다. */
+    /** @brief 자식을 드는 테스트 패널입니다. `_bLayoutBoundary` 면 크기가 고정된 패널(레이아웃 경계)로 답합니다. */
     class TestPanelWidget : public PanelWidget
     {
     public:

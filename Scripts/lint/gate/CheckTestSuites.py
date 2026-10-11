@@ -35,12 +35,12 @@
      파일이 옮겨져 경로가 죽는 것과, ImGui 를 타는 파일이 섞여 들어오는 것
      (EditorTest 는 ImGui 를 링크하지 않으므로 그 순간 빌드가 깨진다).
 
-  6) `CoreTest` 는 **엔진 없이** Core 를 시험한다 — `Test/CoreTest` 의 파일은 Engine · GameFramework · Editor · Games · App 헤더를
-     include 하지 않고, 코드에서 `engine::` 를 부르지 않는다(주석은 보지 않는다). 엔진 타입이 필요한 시험은 EngineTest 에 둔다.
+  6) `CoreTest` 는 **엔진 없이** Core 를 테스트한다 — `Test/CoreTest` 의 파일은 Engine · GameFramework · Editor · Games · App 헤더를
+     include 하지 않고, 코드에서 `engine::` 를 부르지 않는다(주석은 보지 않는다). 엔진 타입이 필요한 테스트는 EngineTest 에 둔다.
      include 경로로는 막을 수 없다: 공용 `TestFramework` 가 Engine 을 PUBLIC 링크하고 `TestFramework.h` 가 `EngineMinimal.h` 를
      끌어온다. 그래서 이 규칙이 보는 것은 CoreTest 파일이 **직접** 쓰는 것이다.
 
-  7) 태그를 단 시험 doc 블록(`@brief [스위트] …`)은 **자기 `SW_TEST_CASE` 바로 위**에 있고, 태그는 그 케이스의 스위트 이름이다.
+  7) 태그를 단 테스트 doc 블록(`@brief [스위트] …`)은 **자기 `SW_TEST_CASE` 바로 위**에 있고, 태그는 그 케이스의 스위트 이름이다.
      블록과 케이스 사이에 빈 줄이 끼거나 블록 둘이 겹치면, 블록을 옮기거나 케이스를 지울 때 블록만 남아 다른 케이스를 설명하게 된다.
 
   python Scripts/lint/gate/CheckTestSuites.py [--root <repo>]
@@ -324,7 +324,7 @@ def check(rootDir: Path) -> tuple[list[str], int, int]:
     # 6) CoreTest 는 엔진을 직접 쓰지 않는다
     errors += checkCoreTestIsEngineFree(rootDir)
 
-    # 7) 시험 doc 블록은 제 케이스 바로 위, 태그는 그 스위트
+    # 7) 테스트 doc 블록은 제 케이스 바로 위, 태그는 그 스위트
     errors += checkTestDocBlocks(rootDir)
 
     return errors, len(homes), len(cases)

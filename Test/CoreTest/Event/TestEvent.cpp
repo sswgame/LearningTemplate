@@ -12,8 +12,8 @@
 namespace
 {
     /**
-     * @brief 고정 ID 이벤트(`SW_REGISTER_ENGINE_EVENT`) 시험용입니다 — 엔진 예약 ID 를 쓰는 값 타입의 모양(크기 페이로드)만 흉내 냅니다.
-     * @details 시험은 디스패처(Core)를 보므로 Engine 의 창 이벤트 타입을 쓰지 않습니다. 그 타입 자체는 EngineTest 의 `WindowEventTest` 가 봅니다.
+     * @brief 고정 ID 이벤트(`SW_REGISTER_ENGINE_EVENT`) 테스트용입니다 — 엔진 예약 ID 를 쓰는 값 타입의 모양(크기 페이로드)만 흉내 냅니다.
+     * @details 테스트는 디스패처(Core)를 보므로 Engine 의 창 이벤트 타입을 쓰지 않습니다. 그 타입 자체는 EngineTest 의 `WindowEventTest` 가 봅니다.
      */
     struct ResizeProbeEvent final : sw::IEvent
     {
@@ -62,7 +62,7 @@ namespace
         s_bActivateReceived = e._bActive;
     }
 
-    /** @brief 소멸 횟수를 세는 시험용 이벤트 — 큐에 남은 것이 실제로 파괴되는지 본다. */
+    /** @brief 소멸 횟수를 세는 테스트용 이벤트 — 큐에 남은 것이 실제로 파괴되는지 본다. */
     struct DestructorCountingEvent final : sw::IEvent
     {
         static int32 s_liveCount;

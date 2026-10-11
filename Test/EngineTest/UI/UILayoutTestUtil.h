@@ -1,7 +1,7 @@
 /**
  * @file UILayoutTestUtil.h
- * @brief 레이아웃 시험이 쓰는 위젯과 고정 장치(스위트 아님) — 고정 크기 위젯 · 줄 바꿈 흉내 위젯 · 트리 + 레이아웃 문맥.
- * @details 시험 위젯은 `REFLECT` 를 쓰지 않습니다(시험 타깃에 리플렉션 단계가 없다) — 덤프의 타입 이름은 `Widget` 입니다.
+ * @brief 레이아웃 테스트가 쓰는 위젯과 고정 장치(스위트 아님) — 고정 크기 위젯 · 줄 바꿈 흉내 위젯 · 트리 + 레이아웃 문맥.
+ * @details 테스트 위젯은 `REFLECT` 를 쓰지 않습니다(테스트 타깃에 리플렉션 단계가 없다) — 덤프의 타입 이름은 `Widget` 입니다.
  */
 #pragma once
 #include "Core/Container/string.h"

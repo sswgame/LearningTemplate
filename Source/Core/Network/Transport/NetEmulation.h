@@ -14,7 +14,7 @@
 namespace sw
 {
     /**
-     * @brief 흉내 거르개 — true 를 돌려준 패킷은 버립니다(손실 난수와 별개, 난수를 쓰지 않는다). 특정 패킷만 잃는 시험(핸드셰이크 `Accepted` 하나 ·
+     * @brief 흉내 거르개 — true 를 돌려준 패킷은 버립니다(손실 난수와 별개, 난수를 쓰지 않는다). 특정 패킷만 잃는 테스트(핸드셰이크 `Accepted` 하나 ·
      *        위조 주소로 간 답 전부)에 씁니다. 흉내의 잠금 안에서 불리므로 전송을 다시 부르지 않는다.
      */
     using NetEmulationDropFilter = bool ( * )( const NetAddress& to, const uint8* pData, int32 size, void* pContext );
@@ -74,7 +74,7 @@ namespace sw
      *            (목적지마다 "회선이 빌 때" 를 든다 — 큰 스냅샷 하나가 뒤 패킷을 밀어낸다). 큐가 `_maxQueuedBytes` 를 넘으면 버린다.
      *          - `update( time )` 이 때가 된 것을 안쪽 전송에 넘기고 안쪽 `update` 를 부른다. 받기는 안쪽 그대로다.
      *          - 조건은 기본값 하나와 목적지별 덮어쓰기(`setConditions( to, … )`) — 연결 하나만 나쁘게 할 수 있다.
-     *          - 난수는 씨앗 고정이라 같은 씨앗이면 같은 결과다(시험 · 재현). 깨짐 난수는 깨짐을 켰을 때만 뽑는다 — 다른 조건만 쓰는 판의 수열은 그대로다.
+     *          - 난수는 씨앗 고정이라 같은 씨앗이면 같은 결과다(테스트 · 재현). 깨짐 난수는 깨짐을 켰을 때만 뽑는다 — 다른 조건만 쓰는 판의 수열은 그대로다.
      *            스레드 안전합니다(`NetHostThread` 가 다른 스레드에서 돌린다).
      *          - 보내는 쪽 줄이라 호스트를 한 스레드에서 차례로 돌릴 때는 프레임마다 흉내를 모두 먼저 `update` 한다 — 아니면 뒤에 도는 호스트가 보낸 것이 한 프레임 늦다.
      *          언리얼 `PacketSimulationSettings`(PktLag · PktLoss · PktDup · PktOrder · PktIncomingLag) · 유니티 Network Simulator(지연 · 흔들림 · 손실)의 자리입니다.

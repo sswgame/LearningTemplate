@@ -21,7 +21,7 @@ else()
 endif()
 
 # ------------------------------------------------------------------------------
-# 출력 경로 — 산출물은 구성과 무관하게 `Bin/` · `Lib/` 에 놓인다(LiveReload · 시험의 작업 폴더가 이 경로를 안다).
+# 출력 경로 — 산출물은 구성과 무관하게 `Bin/` · `Lib/` 에 놓인다(LiveReload · 테스트의 작업 폴더가 이 경로를 안다).
 # ------------------------------------------------------------------------------
 # `$<0:>`(빈 생성기 식)는 다중 구성 생성기가 구성 하위 폴더를 붙이지 않게 한다 — 구성마다 `*_DEBUG` · `*_RELEASE` 를 따로 적지 않는다.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Bin$<0:>")
@@ -29,7 +29,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Lib$<0:>")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Lib$<0:>")
 # 링크 PDB 는 실행 파일 · DLL 옆에 두지 않는다. Shipping 은 배포 폴더(Bin) 밖 `Symbols/`(심볼 저장소에는 `py -3 -m Scripts symbols` 가 넣는다),
 # Dev(Release 포함)는 `Bin/Symbols/` 다 — 디버거는 이미지에 박힌 PDB 절대 경로로 찾고, 핫 리로드는 `ModuleImageUtil::findBuiltDebugSymbolPath` 로
-# 찾아 섀도 복사본 옆에 복사한다. 시험 실행 파일은 TestBin 옆에 둔다(`sw_addTestExecutable` — 크래시 스택이 이름을 낸다).
+# 찾아 섀도 복사본 옆에 복사한다. 테스트 실행 파일은 TestBin 옆에 둔다(`sw_addTestExecutable` — 크래시 스택이 이름을 낸다).
 # 모듈 DLL(GF_* · RHI_* · EditorModule · SWGame)은 `Bin/Modules/`(`sw_setModuleBinOutput`), Engine · GameFramework · 서드파티 DLL 은 `Bin/` 이다.
 if(SW_SHIPPING_BUILD)
 	set(CMAKE_PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Symbols")
@@ -76,7 +76,7 @@ message(STATUS "[BuildConfig] Target type: ${SW_TARGET_TYPE}")
 if(SW_SHIPPING_BUILD)
 	target_compile_definitions(sw_global_options INTERFACE SW_SHIPPING)
 	# 배포 클라이언트는 Info 로그를 컴파일하지 않는다(Core/Log/Logger.h). 전용 서버는 남긴다 — 준비 · 상태 · 종료 줄과 콘솔 명령의 답이 Info 이고,
-	# 운영(journald · docker logs · 시험 ServerBootTest)이 그 줄을 읽는다. 모든 타깃에 같게 걸어야 한다(헤더의 로그 매크로).
+	# 운영(journald · docker logs · 테스트 ServerBootTest)이 그 줄을 읽는다. 모든 타깃에 같게 걸어야 한다(헤더의 로그 매크로).
 	if(SW_TARGET_TYPE STREQUAL "Server")
 		target_compile_definitions(sw_global_options INTERFACE SW_LOG_COMPILED_VERBOSITY=SW_LOG_VERBOSITY_INFO)
 	endif()
@@ -171,7 +171,7 @@ function(sw_emitRuntimeCopies TARGET_NAME)
 endfunction()
 
 # 실행 파일 옆에 놓을 런타임 DLL — 구성마다 실제로 쓰는 것만(무조건 복사하면 배포 산출물에 셰이더 컴파일러 · 검증 레이어가 따라 들어간다).
-#   DXC        : 개발 빌드(런타임 HLSL 컴파일 · DXIL 리플렉션). ALWAYS_DXC 면 배포 구성에서도(시험 — TestBin 이라 배포물과 섞이지 않는다)
+#   DXC        : 개발 빌드(런타임 HLSL 컴파일 · DXIL 리플렉션). ALWAYS_DXC 면 배포 구성에서도(테스트 — TestBin 이라 배포물과 섞이지 않는다)
 #   검증 레이어 : Debug 만(VulkanRHIDevice 가 SW_DEBUG 에서만 켠다 — 딸려 오는 mimalloc 도 그 의존성일 뿐이다)
 #   Tracy      : 개발 빌드 · Windows · SW_ENABLE_TRACY (함수 안에서 거른다)
 function(sw_deployRuntimeDependencies TARGET_NAME)
@@ -191,9 +191,9 @@ endfunction()
 #   1) `Bin/Modules` 의 모듈 산출물(GF_* · RHI_* · EditorModule · SWGame*) 가운데 이 구성에서 꺼진 모듈의 것 — 켜진 모듈 것은 건드리지 않는다.
 #      서드파티 DLL · PDB(모듈 이름 꼴이 아닌 것 — 서드파티는 `Bin` 에 한 벌, `sw_stageModuleRuntimeDlls`)와 남은 섀도 복사본(`<모듈>_temp_p<pid>_…`).
 #      살아 있는 App 이 쓰는 섀도 복사본은 잠겨 있어 지워지지 않는다 — 아래 경고로 남는다.
-#   2) `Bin` 바로 아래의 옛 자리 산출물 — 모듈 DLL · PDB · 매니페스트(지금은 `Bin/Modules`), 시험 실행 파일(지금은 `TestBin`),
+#   2) `Bin` 바로 아래의 옛 자리 산출물 — 모듈 DLL · PDB · 매니페스트(지금은 `Bin/Modules`), 테스트 실행 파일(지금은 `TestBin`),
 #      `Bin/Symbols` 에 같은 이름이 생긴 PDB(옛 자리).
-#   실행 중인 App · 시험이 DLL 을 쥐고 있으면 지우지 못한다 — 경고만 하고 넘어간다(다음 configure 가 다시 지운다).
+#   실행 중인 App · 테스트가 DLL 을 쥐고 있으면 지우지 못한다 — 경고만 하고 넘어간다(다음 configure 가 다시 지운다).
 # ------------------------------------------------------------------------------
 function(sw_removeStaleBinaryOutputs ACTIVE_MODULES)
 	set(swBinDir "${CMAKE_BINARY_DIR}/Bin")

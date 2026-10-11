@@ -15,7 +15,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// ModelImporterTest — glTF 원본을 `.mesh` 로 임포트한다(좌표계 · 감김 · 노드 변환 · 색 · 스탬프). 시험이 glTF 를 만들어 쓴다.
+// ModelImporterTest — glTF 원본을 `.mesh` 로 임포트한다(좌표계 · 감김 · 노드 변환 · 색 · 스탬프). 테스트가 glTF 를 만들어 쓴다.
 
 namespace
 {

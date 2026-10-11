@@ -248,7 +248,7 @@ SW_TEST_CASE( UIScreenStackTest, ModuleUnloadClosesScreensWithItsWidgets )
     using Util = UIScreenTestUtil;
     UIScreenFixture          fixture;
     const sw::UIScreenHandle menu = fixture._ui.pushScreen( Util::makeScreen( Util::makeDesc( sw::UILayer::Menu ), 0.0f, 0.0f, 800.0f, 600.0f, "menu", 1 ) );
-    // 버튼 없는 화면(시험 패널만) — 시험 상자의 vtable 범위에 들지 않아 남는다.
+    // 버튼 없는 화면(테스트 패널만) — 테스트 상자의 vtable 범위에 들지 않아 남는다.
     const sw::UIScreenHandle other   = fixture._ui.pushScreen( Util::makeScreen( Util::makeDesc( sw::UILayer::HUD ), 0.0f, 0.0f, 800.0f, 600.0f, "other", 0 ) );
     const sw::Widget*        pButton = fixture.find( menu, "menu0" );
     const uint8*             pVtable = static_cast<const uint8*>( sw::IModuleUnloadListener::findVtableAddress( pButton ) );

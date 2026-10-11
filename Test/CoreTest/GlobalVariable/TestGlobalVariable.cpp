@@ -9,8 +9,8 @@
 namespace
 {
     /**
-     * @brief 지역 `GlobalVariableManager` 하나에 네 종류(불리언 · 정수 · 실수 · 문자열) 변수를 등록한 시험 바탕입니다.
-     * @details 프로세스의 매니저(Engine 이 든다)를 쓰지 않으므로 시험끼리 값을 나누지 않습니다. 정의 매크로가 정적 등록자를 거쳐 기동 때
+     * @brief 지역 `GlobalVariableManager` 하나에 네 종류(불리언 · 정수 · 실수 · 문자열) 변수를 등록한 테스트 바탕입니다.
+     * @details 프로세스의 매니저(Engine 이 든다)를 쓰지 않으므로 테스트끼리 값을 나누지 않습니다. 정의 매크로가 정적 등록자를 거쳐 기동 때
      *          등록되는 경로는 EngineTest 의 `GlobalVariableMacroTest` 가 봅니다.
      */
     struct GlobalVariableFixture
@@ -246,7 +246,7 @@ SW_TEST_CASE( GlobalVariableTest, NonExistentVariableHandling )
 
 /**
  * @brief [GlobalVariableTest] 멀티스레드 환경에서 문자열 전역 변수 동시 읽기/쓰기 스레드 안전성 검증
- * @details 읽는 스레드가 늦게 뜨면 쓰기 1000 번이 먼저 끝나 읽기가 한 번도 겹치지 않는다 — 그러면 아무것도 시험하지 않고 통과한다.
+ * @details 읽는 스레드가 늦게 뜨면 쓰기 1000 번이 먼저 끝나 읽기가 한 번도 겹치지 않는다 — 그러면 아무것도 테스트하지 않고 통과한다.
  *          읽는 쪽이 돌기 시작한 뒤에 쓰고, 쓰는 동안 겹친 읽기를 세어 모자라면 더 쓰며, 겹친 횟수를 단언한다(`FileTest.ReadersNeverObserveHalfWrittenFile` 와 같은 모양).
  */
 SW_TEST_CASE( GlobalVariableTest, MultithreadedStringReadWriteThreadSafety )

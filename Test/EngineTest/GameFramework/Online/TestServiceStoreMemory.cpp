@@ -38,7 +38,7 @@ namespace
         static vector<uint8> makeBytes( uint8 value ) { return vector<uint8>{ value }; }
     };
 
-    /** @brief 레코드 "k" 를 읽는 일 — 완료 수와 결과를 시험 스레드에 돌려준다. */
+    /** @brief 레코드 "k" 를 읽는 일 — 완료 수와 결과를 테스트 스레드에 돌려준다. */
     class MemoryStoreCountingWork final : public IServiceStoreWork
     {
     public:

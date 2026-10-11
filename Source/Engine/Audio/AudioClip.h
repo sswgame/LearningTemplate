@@ -61,7 +61,7 @@ namespace sw
     /**
      * @class AudioClipStore
      * @brief 경로 → 디코드된 클립 캐시입니다. 모든 함수는 어느 스레드에서 불러도 됩니다.
-     * @details 요청(`requestClip`)은 엔진 태스크가 있으면 워커에서, 없으면(시험 · 헤드리스) 그 자리에서 디코드합니다. 같은 경로를 두 번 요청해도
+     * @details 요청(`requestClip`)은 엔진 태스크가 있으면 워커에서, 없으면(테스트 · 헤드리스) 그 자리에서 디코드합니다. 같은 경로를 두 번 요청해도
      *          디코드는 한 번입니다. 클립은 `shared_ptr<const>` 라 재생 중인 보이스가 쥔 클립은 `clear` 뒤에도 살아 있습니다.
      */
     class SW_API AudioClipStore
@@ -91,7 +91,7 @@ namespace sw
          */
         void requestClip( const hashed_string& path );
 
-        /** @brief 만든 클립을 경로 이름으로 넣습니다(시험 · 절차적 소리). 같은 이름이 있으면 바꿉니다. */
+        /** @brief 만든 클립을 경로 이름으로 넣습니다(테스트 · 절차적 소리). 같은 이름이 있으면 바꿉니다. */
         void addClip( const hashed_string& path, shared_ptr<const AudioClipData> pClip );
 
         /** @brief 캐시를 비웁니다. 디코드 중인 요청의 결과는 도착하면 다시 들어갑니다. */

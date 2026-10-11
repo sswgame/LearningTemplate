@@ -28,7 +28,7 @@ namespace sw::editor
 {
     /**
      * @struct EditorTracyLauncher
-     * @brief 뷰어 경로 찾기 · 명령 만들기 · 띄우기입니다. 찾기와 명령은 순수 함수라 `EditorTest` 가 시험합니다.
+     * @brief 뷰어 경로 찾기 · 명령 만들기 · 띄우기입니다. 찾기와 명령은 순수 함수라 `EditorTest` 가 테스트합니다.
      */
     struct EditorTracyLauncher
     {

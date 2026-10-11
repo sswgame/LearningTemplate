@@ -1,6 +1,6 @@
 /**
  * @file TestGameService.cpp
- * @brief 게임 로컬 서비스(`game::bindLocalService`)의 겹침 규칙 시험입니다 — 키트 둘이 같은 타입을 서비스로 걸면 나중 것이 앞 것을 소리 없이 덮지 않는다.
+ * @brief 게임 로컬 서비스(`game::bindLocalService`)의 겹침 규칙 테스트입니다 — 키트 둘이 같은 타입을 서비스로 걸면 나중 것이 앞 것을 소리 없이 덮지 않는다.
  */
 #include "pch.h"
 
@@ -12,13 +12,13 @@ using namespace sw;
 
 namespace
 {
-    /** @brief 로컬 서비스로 걸 시험 전용 타입입니다(다른 시험의 서비스와 타입이 겹치지 않게). */
+    /** @brief 로컬 서비스로 걸 테스트 전용 타입입니다(다른 테스트의 서비스와 타입이 겹치지 않게). */
     struct GameServiceProbeCatalog
     {
         int32 _id{ 0 };
     };
 
-    /** @brief 시험이 끝나면 걸어 둔 것을 풉니다(어서션이 빠져나가도). */
+    /** @brief 테스트가 끝나면 걸어 둔 것을 풉니다(어서션이 빠져나가도). */
     struct ScopedProbeServiceUnbind
     {
         ScopedProbeServiceUnbind() = default;

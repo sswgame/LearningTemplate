@@ -42,7 +42,7 @@ namespace sw
         void onTick( float32 deltaTime ) override;
 
         /**
-         * @brief 레이어의 X · Y 를 구합니다(순수 함수 — 시험이 직접 부릅니다).
+         * @brief 레이어의 X · Y 를 구합니다(순수 함수 — 테스트가 직접 부릅니다).
          * @param origin      저작한 자리(카메라가 기준점에 있을 때의 자리)
          * @param camera      카메라의 X · Y
          * @param reference   기준점
@@ -61,7 +61,7 @@ namespace sw
         const float2& getReferencePoint() const { return _referencePoint; }
         void          setReferencePoint( const float2& reference ) { _referencePoint = reference; }
 
-        /** @brief 카메라 X · Y 를 주고 자리를 맞춥니다(틱이 게임 카메라로 부릅니다. 시험은 직접 부릅니다). 시작 전이면 지금 자리를 저작한 자리로 잡습니다. */
+        /** @brief 카메라 X · Y 를 주고 자리를 맞춥니다(틱이 게임 카메라로 부릅니다. 테스트는 직접 부릅니다). 시작 전이면 지금 자리를 저작한 자리로 잡습니다. */
         void applyCamera( const float2& camera );
 
     private:

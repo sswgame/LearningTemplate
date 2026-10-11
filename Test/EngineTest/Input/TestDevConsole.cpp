@@ -22,7 +22,7 @@ using namespace sw;
 
 namespace
 {
-    /** @brief 시험 명령의 본문입니다 — 인자를 이어 답하고, 인자가 없으면 실패(사용법)입니다. */
+    /** @brief 테스트 명령의 본문입니다 — 인자를 이어 답하고, 인자가 없으면 실패(사용법)입니다. */
     bool runEchoForTest( const vector<string>& listArgument, string& outReply )
     {
         if ( listArgument.empty() )
@@ -36,7 +36,7 @@ namespace
 
     const DevCommandRegistration kEchoCommand{ "test.echo", "test.echo <words...>", "Echo the arguments (test)", &runEchoForTest };
 
-    /** @brief 시험용 전역 변수 표입니다(프로세스 표를 건드리지 않는다). */
+    /** @brief 테스트용 전역 변수 표입니다(프로세스 표를 건드리지 않는다). */
     struct ConsoleVariableFixture
     {
         GlobalVariableManager _manager;
@@ -51,7 +51,7 @@ namespace
     };
 
     /**
-     * @brief 게임 창 콘솔의 시험 자리입니다 — 입력 관리자 · 셸 맵(실제 `default.input.xml`) · 컨트롤러를 앱과 같은 순서로 돌립니다.
+     * @brief 게임 창 콘솔의 테스트 자리입니다 — 입력 관리자 · 셸 맵(실제 `default.input.xml`) · 컨트롤러를 앱과 같은 순서로 돌립니다.
      * @details 플랫폼 창 없이 `RawInputEvent` 만 넣습니다(InputReplay 재생과 같은 길). 멤버 순서가 소멸 순서다 — 컨트롤러가 입력 관리자보다 먼저 내린다.
      */
     struct DevConsoleRig

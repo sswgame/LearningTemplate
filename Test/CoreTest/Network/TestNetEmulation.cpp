@@ -150,7 +150,7 @@ SW_TEST_CASE( NetEmulationTest, BandwidthQueuesPerLinkAndOverridesOneConnection 
 }
 
 /**
- * @brief [NetEmulationTest] 깨짐은 정한 비율 근처로 패킷마다 한 바이트를 뒤집어 넘기고(버리지 않는다) 그 수를 센다 — 받는 쪽 체크섬 시험이 이것을 쓴다
+ * @brief [NetEmulationTest] 깨짐은 정한 비율 근처로 패킷마다 한 바이트를 뒤집어 넘기고(버리지 않는다) 그 수를 센다 — 받는 쪽 체크섬 테스트가 이것을 쓴다
  */
 SW_TEST_CASE( NetEmulationTest, CorruptionFlipsOneBytePerPacket )
 {

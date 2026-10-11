@@ -29,7 +29,7 @@
 
 namespace test
 {
-    using namespace sw; // 이 이름공간 안에서만 — 시험 공용 헤더
+    using namespace sw; // 이 이름공간 안에서만 — 테스트 공용 헤더
 
     /** @brief 월드 하나의 파괴 오브젝트 — 이름순 번호가 네트워크 id 다(같은 씬 문서라 월드마다 같다). 오브젝트를 지우지 않으므로 포인터를 든다. */
     struct ShowcaseObjects

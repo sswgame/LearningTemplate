@@ -8,7 +8,7 @@
  *          - erase: `DELETE … [AND version = ?]` — 조건이 있고 0 이면 Conflict
  *          - require · erase 없어야 함: `SELECT version …` 비교(PostgreSQL 은 SERIALIZABLE 이 읽은 행의 동시 변경을 직렬화 실패로 막는다)
  *          하나라도 어긋나면 ROLLBACK. 직렬화 실패는 Conflict(번호 −1), 연결 끊김 · COMMIT 실패는 Unavailable(적용됐는지 모른다).
- *          메모리 구현과 같은 계약 시험(`ServiceStoreContract.h`)을 같은 결과로 통과한다.
+ *          메모리 구현과 같은 계약 테스트(`ServiceStoreContract.h`)을 같은 결과로 통과한다.
  */
 #pragma once
 #include "Core/Common/Types.h"

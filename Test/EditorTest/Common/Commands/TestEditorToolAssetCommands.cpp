@@ -70,7 +70,7 @@ namespace
         {
             _handle = Logger::addGlobalListener( SW_DELEGATE_LAMBDA( LogWrittenDelegate, [this]( const LogEntry& entry )
             {
-                // 커맨드가 남긴 것만 본다 — 파일 계층의 오류 · 시험 프레임워크의 실패 보고는 모양을 비교할 대상이 아니다.
+                // 커맨드가 남긴 것만 본다 — 파일 계층의 오류 · 테스트 프레임워크의 실패 보고는 모양을 비교할 대상이 아니다.
                 if ( entry._caller != "EditorToolAssetCommands" )
                     return;
                 if ( entry._level == LogLevel::Error )
@@ -87,7 +87,7 @@ namespace
 
         const vector<string>& getErrors() const { return _listError; }
 
-        /** @brief @p text 가 든 경고가 있는지입니다(방어 시험 범위에서는 문구 앞에 표식이 붙는다). */
+        /** @brief @p text 가 든 경고가 있는지입니다(방어 테스트 범위에서는 문구 앞에 표식이 붙는다). */
         bool hasWarningContaining( const string& text ) const
         {
             for ( const string& message : _listWarning )

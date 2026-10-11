@@ -54,7 +54,7 @@ namespace sw
 
         /** @brief 리소스 경로의 `<ParkLayout>` 을 읽습니다. 놀이기구가 하나도 없으면 false 입니다. */
         [[nodiscard]] bool loadFromResource( string_view path, const CoasterLayoutCatalog& layouts );
-        /** @brief XML 글에서 읽습니다(시험 · 도구). */
+        /** @brief XML 글에서 읽습니다(테스트 · 도구). */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, const CoasterLayoutCatalog& layouts, string_view sourceName = {} );
 
         const float3&                    getGatePosition() const { return _gatePosition; }

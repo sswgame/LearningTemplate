@@ -30,7 +30,7 @@ class HostToolsTest(unittest.TestCase):
         self.assertEqual(sorted(["llvm-21", "llvm-9", "llvm-14"], key=naturalVersionKey), ["llvm-9", "llvm-14", "llvm-21"])
 
     def testHostToolsUsesTheSharedSelection(self) -> None:
-        # 버전 고르기는 common 한 자리 — HostTools 가 자기 정렬을 다시 들면 이 시험이 아니라 이 줄이 진다.
+        # 버전 고르기는 common 한 자리 — HostTools 가 자기 정렬을 다시 들면 이 테스트가 아니라 이 줄이 진다.
         self.assertIs(HostTools.selectLatestVersion, selectLatestVersion)
 
 

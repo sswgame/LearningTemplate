@@ -73,7 +73,7 @@ namespace sw
         friend class XMLCatalog<OfferCatalog>;
 
     public:
-        /** @brief 더합니다(시험). 규칙(가격 xor 상품, 지급 하나 이상, id 글자, 같은 id 없음)을 어기면 false 입니다. */
+        /** @brief 더합니다(테스트). 규칙(가격 xor 상품, 지급 하나 이상, id 글자, 같은 id 없음)을 어기면 false 입니다. */
         [[nodiscard]] bool addOffer( const OfferDef& def );
 
         const OfferDef*         findOffer( string_view id ) const;

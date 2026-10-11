@@ -1,7 +1,7 @@
 /**
  * @file EditorViewTargetUtil.h
  * @brief 씬 뷰 · 게임 뷰 렌더 타깃의 판정(호스트에 무엇을 요청하나 · 크기를 다시 맞추나 · 게임 뷰 이미지 사각형)입니다.
- * @details ImGui 없이 계산만 해서 `Test/EditorTest` 가 시험합니다. 패널은 그린 크기를 이 판정에 넘기고, 셸(`ImGuiEditor`)은 보인 뷰만 호스트에 알립니다.
+ * @details ImGui 없이 계산만 해서 `Test/EditorTest` 가 테스트합니다. 패널은 그린 크기를 이 판정에 넘기고, 셸(`ImGuiEditor`)은 보인 뷰만 호스트에 알립니다.
  */
 #pragma once
 #include "Core/Common/Types.h"

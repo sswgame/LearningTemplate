@@ -46,7 +46,7 @@ namespace sw
     {
         static constexpr const utf8* kScopeAll = "all";
 
-        vector<AccountID> _listAllowedAccount{}; ///< 점검 중에도 들어가는 계정(GM · 시험자) — 클라이언트에는 보내지 않는다
+        vector<AccountID> _listAllowedAccount{}; ///< 점검 중에도 들어가는 계정(GM · 테스터) — 클라이언트에는 보내지 않는다
         string            _scope{};
         string            _messageKey{}; ///< 안내 글의 로컬라이제이션 키
         int64             _startMs{ 0 };

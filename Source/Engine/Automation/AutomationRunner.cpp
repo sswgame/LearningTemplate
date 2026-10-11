@@ -46,7 +46,7 @@ namespace sw
             /**
              * @brief 이 구성에 없는 단계가 든 시나리오면 그 첫 단계를 돌려줍니다 — 개발 명령(`DevCommand`)은 Shipping 에서 빠진다.
              * @details 그런 시나리오는 이 구성에서 돌 수 없는 것이지 틀린 것이 아니다 — 읽기 오류(11)가 아니라 건너뜀(13)이다
-             *          (언리얼 자동화 시험이 구성에 없는 문맥의 시험을 목록에서 빼는 것과 같은 자리).
+             *          (언리얼 자동화 테스트가 구성에 없는 문맥의 테스트를 목록에서 빼는 것과 같은 자리).
              */
             static const AutomationStep* findStepMissingFromThisBuild( [[maybe_unused]] const AutomationScenario& scenario )
             {

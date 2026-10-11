@@ -1,6 +1,6 @@
 /**
  * @file TileMapPaintUtil.h
- * @brief 2D 도구(`TileMapPanel` · `SpriteClipPanel`)의 칸 판단입니다 — 획 선분, 사각형, 채우기, 화면 ↔ 칸, 아틀라스 칸. ImGui 를 모릅니다(EditorTest 가 시험합니다).
+ * @brief 2D 도구(`TileMapPanel` · `SpriteClipPanel`)의 칸 판단입니다 — 획 선분, 사각형, 채우기, 화면 ↔ 칸, 아틀라스 칸. ImGui 를 모릅니다(EditorTest 가 테스트합니다).
  */
 #pragma once
 #include "Core/Common/Types.h"

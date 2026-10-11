@@ -1,6 +1,6 @@
 /**
  * @file TestWindowsFileDialog.cpp
- * @brief Windows 파일 대화상자의 필터 글(`WindowsFileDialog::makeFilterText`) 시험입니다. 대화상자는 띄우지 않습니다.
+ * @brief Windows 파일 대화상자의 필터 글(`WindowsFileDialog::makeFilterText`) 테스트입니다. 대화상자는 띄우지 않습니다.
  */
 #include "pch.h"
 

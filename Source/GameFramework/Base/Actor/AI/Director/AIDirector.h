@@ -122,7 +122,7 @@ namespace sw
         void update( float32 deltaTime );
         /** @brief 게임 쪽 스폰 개체가 사라졌음을 알립니다(스폰 감독으로). 모르는 id 면 false 입니다. */
         bool notifyDespawned( uint32 spawnID );
-        /** @brief 단계를 바로 바꿉니다(스크립트 사건 · 시험). 모르는 단계면 false 입니다. */
+        /** @brief 단계를 바로 바꿉니다(스크립트 사건 · 테스트). 모르는 단계면 false 입니다. */
         bool forcePhase( const hashed_string& phaseID );
         /** @brief 쌓인 일을 @p outListEvent 뒤에 붙이고 비웁니다. */
         void drainEvents( vector<AIDirectorEvent>& outListEvent );

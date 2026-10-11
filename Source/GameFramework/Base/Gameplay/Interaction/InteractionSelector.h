@@ -53,7 +53,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 눈에서 대상이 보이는가를 묻는 창구입니다(물리 백엔드 · 시험 가짜). */
+    /** @brief 눈에서 대상이 보이는가를 묻는 창구입니다(물리 백엔드 · 테스트 가짜). */
     class ILineOfSightQuery
     {
     public:

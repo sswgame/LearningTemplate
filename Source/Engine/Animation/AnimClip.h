@@ -89,13 +89,13 @@ namespace sw
         void setName( const hashed_string& name ) { _name = name; }
         void setLooping( bool bLoop ) { _bLoop = bLoop ? SW_TRUE : SW_FALSE; }
         void setRootMotionTrack( int32 trackIndex ) { _rootMotionTrack = trackIndex; }
-        /** @brief 알림을 하나 더합니다(임포트 · 시험). */
+        /** @brief 알림을 하나 더합니다(임포트 · 테스트). */
         void addNotify( const AnimNotifyEvent& event ) { _notifyTrack.addEvent( event ); }
-        /** @brief 커브를 하나 더합니다(임포트 · 시험). */
+        /** @brief 커브를 하나 더합니다(임포트 · 테스트). */
         void addCurve( const AnimCurve& curve ) { _listCurve.push_back( curve ); }
 
         /**
-         * @brief 원본 표본을 @p codec 으로 압축해 이 클립의 트랙 · 길이 · 블롭으로 삼습니다(임포트 · 시험). 이름 · 알림 · 커브는 그대로입니다.
+         * @brief 원본 표본을 @p codec 으로 압축해 이 클립의 트랙 · 길이 · 블롭으로 삼습니다(임포트 · 테스트). 이름 · 알림 · 커브는 그대로입니다.
          * @param pOutStats 압축률 · 최대 오차를 받습니다(선택).
          */
         [[nodiscard]] bool compressFrom( const AnimRawClip& rawClip, const IAnimCodec& codec, const AnimCodecSettings& settings, AnimCodecStats* pOutStats );

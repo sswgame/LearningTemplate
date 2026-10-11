@@ -55,7 +55,7 @@ namespace sw
      *          4. 게임은 델리게이트(어트리뷰트 · 태그 · 큐 · 이벤트)나 "game" 채널(`GameplayCueEvent` · `AbilityOwnerDiedEvent`)로 반응합니다.
      *
      *          **시간**: 컴포넌트 틱이 `advanceTime( 프레임 시간 )` 을 부릅니다. 턴제는 틱을 끄고(`setCanEverTick( false )`) 턴마다 `advanceTime( 1 )`
-     *          을 부르면 지속 · 주기 · 쿨다운이 턴 단위가 됩니다. 시험도 이 길로 시간을 돌립니다.
+     *          을 부르면 지속 · 주기 · 쿨다운이 턴 단위가 됩니다. 테스트도 이 길로 시간을 돌립니다.
      *
      *          **스레드**: 컴포넌트 틱은 오브젝트마다 병렬 워커에서 돕니다. 자기 상태(시간 · 자기 이펙트 · 자기 어빌리티)는 그 자리에서 바꾸고,
      *          **다른 오브젝트에** 이펙트를 걸거나 이벤트를 보내면(`applyGameplayEffectSpecToTarget` · `sendGameplayEventToTarget`) 틱 직후로

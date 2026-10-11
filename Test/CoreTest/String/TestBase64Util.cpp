@@ -1,4 +1,4 @@
-// Base64 — RFC 4648 시험 벡터(표준 · URL 안전), 채움 있고 없음, 알파벳 밖 글자 · 남는 비트 거절, 왕복.
+// Base64 — RFC 4648 테스트 벡터(표준 · URL 안전), 채움 있고 없음, 알파벳 밖 글자 · 남는 비트 거절, 왕복.
 #include "pch.h"
 
 #include "Core/String/Base64Util.h"

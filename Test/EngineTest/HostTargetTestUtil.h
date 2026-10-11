@@ -1,6 +1,6 @@
 /**
  * @file HostTargetTestUtil.h
- * @brief 빌드 타깃 · 호스트 타깃에 따라 달라지는 리소스를 다루는 시험 도우미입니다(전용 서버 패키지에는 텍스처 · 셰이더 바이너리 · 오디오가 없다).
+ * @brief 빌드 타깃 · 호스트 타깃에 따라 달라지는 리소스를 다루는 테스트 도우미입니다(전용 서버 패키지에는 텍스처 · 셰이더 바이너리 · 오디오가 없다).
  */
 #pragma once
 #include "Engine/Module/ModuleCatalog.h"
@@ -9,7 +9,7 @@
 
 namespace test
 {
-    /** @brief 빌드 타깃 · 호스트 타깃 시험 도우미입니다. */
+    /** @brief 빌드 타깃 · 호스트 타깃 테스트 도우미입니다. */
     struct HostTargetTestUtil
     {
         /**
@@ -21,7 +21,7 @@ namespace test
         /**
          * @brief 전용 서버 빌드에서 @p resourceID 를 찾을 수 없으면 true 입니다.
          * @details 서버 패키지는 쿠킹 표 `target_excluded_asset_kinds` 의 종류(텍스처 · 셰이더 바이너리 · 오디오)를 담지 않는다. 클라이언트 코드가 든
-         *          빌드에서 파일이 없으면 결함이므로 false 다 — 그 시험은 돌아서 진다.
+         *          빌드에서 파일이 없으면 결함이므로 false 다 — 그 테스트는 돌아서 진다.
          */
         static bool isLeftOutOfServerPackage( sw::string_view resourceID ) { return isServerOnlyBuild() && sw::ResourceIO::hasResource( resourceID ) == false; }
     };
@@ -29,7 +29,7 @@ namespace test
 
 namespace test
 {
-    /** @brief 시험 동안 호스트 타깃(`ResourcePaths::setHostTarget`)을 바꾸고 끝에 하네스 값(빈 값 — 아무것도 빼지 않는다)으로 되돌립니다. */
+    /** @brief 테스트 동안 호스트 타깃(`ResourcePaths::setHostTarget`)을 바꾸고 끝에 하네스 값(빈 값 — 아무것도 빼지 않는다)으로 되돌립니다. */
     struct ScopedHostTarget
     {
         explicit ScopedHostTarget( sw::string_view buildTargetName ) { sw::ResourcePaths::setHostTarget( buildTargetName ); }

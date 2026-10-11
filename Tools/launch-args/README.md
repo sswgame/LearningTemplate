@@ -131,9 +131,9 @@ py -3 Tools/launch-args/Scripts/ExtensionTool.py install
 |---|---|
 | App (CodeLLDB · 사이드바 인자) | 지금 CMake Tools 구성 프리셋의 빌드 폴더에서 App을 띄웁니다(`replace`) |
 | CMake 실행 대상 (CodeLLDB · 사이드바 인자) | CMake Tools 상태 표시줄에서 고른 실행 대상을 띄웁니다. 필요하면 먼저 빌드합니다 |
-| 시험 (CodeLLDB) | 테스트 실행 파일을 고르고 `--test_filter` 를 묻습니다. 사이드바 인자는 넣지 않습니다 |
+| 테스트 (CodeLLDB) | 테스트 실행 파일을 고르고 `--test_filter` 를 묻습니다. 사이드바 인자는 넣지 않습니다 |
 | App 에 붙기 (CodeLLDB) | 떠 있는 App 프로세스를 골라 붙습니다 |
-| App (WSL · 사이드바 인자), 시험 (WSL) | WSL 창에서 쓰는 같은 구성 |
+| App (WSL · 사이드바 인자), 테스트 (WSL) | WSL 창에서 쓰는 같은 구성 |
 
 <!-- snippet: .vscode/launch.json 의 App 구성 — 5b U7 에서 대조 -->
 ```jsonc

@@ -39,7 +39,7 @@ namespace sw
 
         int32                      getTicketCount() const { return static_cast<int32>( _listTicket.size() ); }
         const MatchModeDefinition& getDefinition() const { return _definition; }
-        /** @brief 표의 지금 실력 창입니다(시험 · 클라이언트의 "넓히는 중" 표시). */
+        /** @brief 표의 지금 실력 창입니다(테스트 · 클라이언트의 "넓히는 중" 표시). */
         int32 computeRatingWindow( const MatchTicket& ticket, int64 nowMs ) const;
 
     private:

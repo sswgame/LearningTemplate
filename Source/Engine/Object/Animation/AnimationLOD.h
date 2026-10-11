@@ -124,7 +124,7 @@ namespace sw
 {
     /**
      * @struct AnimationLODUtil
-     * @brief LOD 의 순수 식입니다(시험이 그대로 부릅니다).
+     * @brief LOD 의 순수 식입니다(테스트가 그대로 부릅니다).
      */
     struct SW_API AnimationLODUtil
     {

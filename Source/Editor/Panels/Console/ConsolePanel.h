@@ -48,9 +48,9 @@ namespace sw::editor
         EditorLogTagFilter& getTagFilter() { return _tagFilter; }
         /** @brief 입력 줄이 쓰는 개발 콘솔입니다(기록을 듭니다). 답은 로그로 남아 이 패널에 보입니다. */
         DevConsole& getDevConsole() { return _devConsole; }
-        /** @brief 마지막으로 그린 로그(걸러지기 전)에 이 메시지가 있으면 true 입니다(에디터 자체 시험용). */
+        /** @brief 마지막으로 그린 로그(걸러지기 전)에 이 메시지가 있으면 true 입니다(에디터 자체 테스트용). */
         bool isMessageInSnapshot( string_view message ) const;
-        /** @brief 마지막으로 그린, 걸러진 목록에 이 메시지가 있으면 true 입니다(에디터 자체 시험용). */
+        /** @brief 마지막으로 그린, 걸러진 목록에 이 메시지가 있으면 true 입니다(에디터 자체 테스트용). */
         bool isMessageVisible( string_view message ) const;
 
         // ------------------------------------------------------------------------------

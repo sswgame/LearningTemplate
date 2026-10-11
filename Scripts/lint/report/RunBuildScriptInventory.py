@@ -15,7 +15,7 @@ CMake
   - 손 목록 — 소스 경로를 글자로 적은 줄 수(`"${CMAKE_CURRENT_SOURCE_DIR}/….cpp"`).
   - `add_library( … SHARED|MODULE )` 를 모듈 팩토리 밖에서 직접 부르는 곳.
 파이썬
-  - 진입점마다 `main(argv)` 인가 · 모듈 수준에서 `common` 을 import 하나 · `Test/PythonTest` 에 시험이 있나.
+  - 진입점마다 `main(argv)` 인가 · 모듈 수준에서 `common` 을 import 하나 · `Test/PythonTest` 에 테스트가 있나.
   - `common` 밖에서 공통부를 비켜 가는 호출 수 — `subprocess.*` · `"compile_commands.json"` · `/ "build" /` · `.reconfigure(` · `read_text(...) != ` 쓰기 비교.
 
 종료 코드는 늘 0 이다(보고서). 숫자를 기준으로 두려면 `--json` 으로 떠서 견준다.
@@ -147,7 +147,7 @@ def mainSignatureInternal(tree: ast.Module) -> str:
 
 
 def inventoryPython(repositoryRoot: Path) -> dict[str, Any]:
-    """진입점 · common 사용 · 시험 유무 · 공통부를 비켜 간 호출."""
+    """진입점 · common 사용 · 테스트 유무 · 공통부를 비켜 간 호출."""
     scriptsRoot = repositoryRoot / "Scripts"
     testText = "\n".join(path.read_text(encoding="utf-8", errors="replace")
                          for path in sorted((repositoryRoot / "Test" / "PythonTest").glob("Test*.py")))

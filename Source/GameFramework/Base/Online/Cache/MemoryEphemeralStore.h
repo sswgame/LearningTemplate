@@ -1,7 +1,7 @@
 /**
  * @file MemoryEphemeralStore.h
- * @brief 메모리 휘발성 저장 — 서버 한 대 · 시험용입니다. 데이터(`MemoryEphemeralDatabase` — 시계 고정 가능 · 게으른 만료 · 채널 받은편지함)와 앞(`MemoryEphemeralStore`)이 나뉩니다.
- * @details - 앞의 `submit` 은 그 자리에서 실행해 답을 큐에 넣는다(메모리 서비스 저장소와 같은 약속 — 결정적이다). "서버 둘" 시험은 앞 둘이 데이터 하나를 쓴다.
+ * @brief 메모리 휘발성 저장 — 서버 한 대 · 테스트용입니다. 데이터(`MemoryEphemeralDatabase` — 시계 고정 가능 · 게으른 만료 · 채널 받은편지함)와 앞(`MemoryEphemeralStore`)이 나뉩니다.
+ * @details - 앞의 `submit` 은 그 자리에서 실행해 답을 큐에 넣는다(메모리 서비스 저장소와 같은 약속 — 결정적이다). "서버 둘" 테스트는 앞 둘이 데이터 하나를 쓴다.
  *          - 만료는 읽을 때 지운다(게으른 만료 — Valkey 와 같은 관측). `nowMs >= 만료 시각` 이면 없는 것이다.
  *          - 발행은 그 채널을 구독한 앞마다 받은편지함에 넣고, 앞의 `pollMessages` 가 꺼낸다.
  */
@@ -39,11 +39,11 @@ namespace sw
         /** @brief @p inboxID 에 온 메시지를 @p outListMessage 뒤에 붙이고 비웁니다. 붙인 수입니다. */
         int32 takeMessages( uint64 inboxID, vector<EphemeralMessage>& outListMessage );
 
-        /** @brief 시계를 @p nowMs 에 고정합니다(시험). 그 뒤로는 `advanceTimeMs` 로만 흐른다. */
+        /** @brief 시계를 @p nowMs 에 고정합니다(테스트). 그 뒤로는 `advanceTimeMs` 로만 흐른다. */
         void  setManualTimeMs( int64 nowMs );
         void  advanceTimeMs( int64 deltaMs );
         int64 getNowMs() const;
-        /** @brief 값 · 정렬 집합을 모두 지웁니다(구독은 남긴다) — 시험의 "캐시 서버가 재시작해 비었다". */
+        /** @brief 값 · 정렬 집합을 모두 지웁니다(구독은 남긴다) — 테스트의 "캐시 서버가 재시작해 비었다". */
         void clearData();
 
     private:

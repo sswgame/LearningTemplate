@@ -33,7 +33,7 @@ namespace sw
         void write( const LogRecord& record ) override;
 
         /**
-         * @brief 줄마다 표준 출력을 비울지 정합니다(기본 꺼짐 — Error 만 비운다). 전용 서버가 켭니다: 자식 프로세스로 띄운 시험 · journald ·
+         * @brief 줄마다 표준 출력을 비울지 정합니다(기본 꺼짐 — Error 만 비운다). 전용 서버가 켭니다: 자식 프로세스로 띄운 테스트 · journald ·
          *        `docker logs` 가 "Dedicated server ready" 같은 줄을 바로 봐야 한다. 프로세스 전역입니다.
          */
         static void setFlushEveryLine( bool bFlushEveryLine );

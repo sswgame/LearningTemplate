@@ -6,7 +6,7 @@
  *          - 답은 맡긴 순서대로 거둔다(계약). 끊기거나 시한(`_timeoutMs`)을 넘기면 기다리던 요청은 모두 `Unavailable` 로 정확히 한 번 — 다음 요청이 다시 연결한다(물러남).
  *          - 키 · 채널 앞에 `_keyPrefix` 를 붙인다(한 서버를 배포 여럿이 나눠 쓰기 — DB 번호 대신). 받은 메시지의 채널에서는 뗀다.
  *          - 쓰지 않는 것: Lua · `SELECT` · RESP3 · Redis 6.2+ 옵션(`SET … GET` · `GETEX` · `PEXPIRE NX`) — Garnet 과 갈린다.
- *          - 전송의 `_ioThreadCount` 가 0 이면(루프백 시험) `pollReplies` · `pollMessages` · 구독 기다림이 전송을 직접 돈다.
+ *          - 전송의 `_ioThreadCount` 가 0 이면(루프백 테스트) `pollReplies` · `pollMessages` · 구독 기다림이 전송을 직접 돈다.
  */
 #pragma once
 #include "Core/Common/Types.h"

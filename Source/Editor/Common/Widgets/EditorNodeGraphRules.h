@@ -1,6 +1,6 @@
 /**
  * @file EditorNodeGraphRules.h
- * @brief 노드 그래프 틀의 판단(찾아 넣기 검색 · 핀 연결 규칙 · 닿지 않는 노드)입니다. ImGui 가 없어 EditorTest 가 시험합니다.
+ * @brief 노드 그래프 틀의 판단(찾아 넣기 검색 · 핀 연결 규칙 · 닿지 않는 노드)입니다. ImGui 가 없어 EditorTest 가 테스트합니다.
  */
 #pragma once
 #include "Core/Common/Types.h"

@@ -1,6 +1,6 @@
 /**
  * @file EditorPreviewProbe.h
- * @brief 뷰포트 미리보기가 메서드 메타(`EditorPreview`)로 컴포넌트를 찾는지 보는 시험용 컴포넌트 둘입니다(코드젠을 탑니다).
+ * @brief 뷰포트 미리보기가 메서드 메타(`EditorPreview`)로 컴포넌트를 찾는지 보는 테스트용 컴포넌트 둘입니다(코드젠을 탑니다).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -54,7 +54,7 @@ namespace sw::editortest
 
 namespace sw::editortest
 {
-    /** @brief 환경설정 저장소 시험용 섹션입니다(EditorPreferencesStoreTest). */
+    /** @brief 환경설정 저장소 테스트용 섹션입니다(EditorPreferencesStoreTest). */
     REFLECT()
     struct EditorPreferencesProbe
     {

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-헤더 단독 컴파일(`common/HeaderSelfContained.py`)의 컴파일러 없이 시험할 수 있는 부분 — 빌려 온 명령줄에서 무엇을 떼는가, 어느 TU 를
+헤더 단독 컴파일(`common/HeaderSelfContained.py`)의 컴파일러 없이 테스트할 수 있는 부분 — 빌려 온 명령줄에서 무엇을 떼는가, 어느 TU 를
 씨앗으로 고르는가, 빌드 폴더가 쓸 수 있는 상태인가 — 와 CTest 등록에서 빠지는 게이트(`ctestSkipReason`).
 
 명령줄 떼기가 PCH 하나를 놓치면 pch 가 미리 넣어 준 이름이 누락을 가려 **검사가 조용히 통과한다**. 그래서 플랫폼마다 CMake 가 쓰는 철자를

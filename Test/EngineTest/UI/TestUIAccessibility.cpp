@@ -29,7 +29,7 @@
 
 namespace
 {
-    /** @brief 전역 변수 하나를 이름으로 바꾸고 스코프 끝에 되돌립니다(시험 DLL 은 Engine 의 gv_* 를 extern 으로 못 읽는다). */
+    /** @brief 전역 변수 하나를 이름으로 바꾸고 스코프 끝에 되돌립니다(테스트 DLL 은 Engine 의 gv_* 를 extern 으로 못 읽는다). */
     class ScopedVariable
     {
     public:

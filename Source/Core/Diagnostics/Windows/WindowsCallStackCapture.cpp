@@ -25,7 +25,7 @@ namespace sw
         /**
          * @brief 실행 파일 폴더와 `<Bin>/Symbols` 를 심볼 검색 경로에 더합니다.
          * @details Release · Shipping 은 PDB 이름만 적어 링크한다(`/PDBALTPATH:%_PDB%` — 빌드 기계 경로가 배포물에 새지 않게). 그러면 DbgHelp 는 기본 검색 경로
-         *          (작업 폴더 · `_NT_SYMBOL_PATH`)에서만 찾는데, 시험 실행 파일은 `TestBin` 에 있고 작업 폴더는 `Bin` 이라 스택이 주소로만 남는다.
+         *          (작업 폴더 · `_NT_SYMBOL_PATH`)에서만 찾는데, 테스트 실행 파일은 `TestBin` 에 있고 작업 폴더는 `Bin` 이라 스택이 주소로만 남는다.
          */
         void appendExecutableFolderToSymbolPath( HANDLE process )
         {

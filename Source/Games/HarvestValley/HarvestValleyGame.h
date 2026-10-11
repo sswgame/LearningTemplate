@@ -1,6 +1,6 @@
 /**
  * @file HarvestValleyGame.h
- * @brief 농장 키트(GF_Farming)를 실제로 쓰는 시험 게임 — 밭을 갈고 물 주고 심어 거두고 출하하며 날 · 계절을 넘깁니다(하베스트 문 장르).
+ * @brief 농장 키트(GF_Farming)를 실제로 쓰는 테스트 게임 — 밭을 갈고 물 주고 심어 거두고 출하하며 날 · 계절을 넘깁니다(하베스트 문 장르).
  *
  * @details 빌드: `cmake --preset Ninja-Debug-HarvestValley`. 조작은 `Source/Games/HarvestValley/README.md`.
  *          농장은 씬(`game/harvestvalley/maps/farm.scene.xml` — 팩의 `data/gamesettings.xml` 시작 맵)과 그 안의 `FarmDirectorComponent` 가 섭니다.

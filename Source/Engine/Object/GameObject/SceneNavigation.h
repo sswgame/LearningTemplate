@@ -105,9 +105,9 @@ namespace sw
         /** @brief 씬 소스 경로 — 쿠킹본(`<씬>.navmesh`)을 찾는 데 씁니다(`Scene::instantiate`). */
         void          setSourcePath( string_view path ) { _sourcePath = string{ path }; }
         const string& getSourcePath() const { return _sourcePath; }
-        /** @brief 쿠킹본을 직접 줍니다(시험 · 도구). 주면 리소스(`<씬>.navmesh`)를 찾지 않고 이것을 씁니다. */
+        /** @brief 쿠킹본을 직접 줍니다(테스트 · 도구). 주면 리소스(`<씬>.navmesh`)를 찾지 않고 이것을 씁니다. */
         void setCookedAsset( shared_ptr<const NavMeshAsset> pAsset ) { _pCookedAsset = std::move( pAsset ); }
-        /** @brief 설정 표를 덮습니다(시험 · 게임). 정하지 않으면 처음 쓸 때 `NavMeshSettings::kResourcePath` 를 읽습니다. 이미 베이크한 내비메시는 버린다. */
+        /** @brief 설정 표를 덮습니다(테스트 · 게임). 정하지 않으면 처음 쓸 때 `NavMeshSettings::kResourcePath` 를 읽습니다. 이미 베이크한 내비메시는 버린다. */
         void setSettings( const NavMeshSettings& settings );
         /** @brief 설정 표입니다(없으면 읽는다). */
         const NavMeshSettings& getSettings();
@@ -134,7 +134,7 @@ namespace sw
 
         /**
          * @brief 에이전트 종류의 내비메시를 지금 마련합니다(쿠킹본 또는 베이크). 게임 스레드에서만 부릅니다. 모르는 종류 · 기하 없음이면 nullptr 입니다.
-         * @details 갱신이 플레이 시작에 부르는 것과 같습니다 — 시험 · 도구가 갱신을 기다리지 않을 때 씁니다.
+         * @details 갱신이 플레이 시작에 부르는 것과 같습니다 — 테스트 · 도구가 갱신을 기다리지 않을 때 씁니다.
          */
         INavMesh* ensureNavMesh( const hashed_string& agentType );
         /** @brief 이미 마련한 내비메시입니다. 없으면 nullptr 입니다. */
@@ -160,7 +160,7 @@ namespace sw
 
         /** @brief 베이크하는 중이거나 줄에 선 타일 수입니다. */
         uint32 getPendingTileCount() const;
-        /** @brief 베이크하는 중 · 줄에 선 타일을 모두 지금 베이크하고 끼웁니다(게임 스레드 — 시험 · 쿠킹). */
+        /** @brief 베이크하는 중 · 줄에 선 타일을 모두 지금 베이크하고 끼웁니다(게임 스레드 — 테스트 · 쿠킹). */
         void flushTileBakes();
         /** @brief 재베이크로 끼운 타일 수(누적, 진단)입니다. */
         uint32 getRebakedTileCount() const { return _rebakedTileCount; }

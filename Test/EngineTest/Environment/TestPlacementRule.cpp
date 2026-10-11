@@ -13,7 +13,7 @@ using namespace sw;
 
 namespace
 {
-    /** @brief 시험용 해석 표면 — x < 50 은 기울기 0.5(경사 약 26.6 도), 그 밖은 평평하다. 높이는 x × 0.5 (x < 50) 또는 25. 레이어 1 은 z > 50 이다. */
+    /** @brief 테스트용 해석 표면 — x < 50 은 기울기 0.5(경사 약 26.6 도), 그 밖은 평평하다. 높이는 x × 0.5 (x < 50) 또는 25. 레이어 1 은 z > 50 이다. */
     class AnalyticSlopeSurface final : public IPlacementSurface
     {
     public:

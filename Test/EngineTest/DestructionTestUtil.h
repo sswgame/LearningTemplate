@@ -1,6 +1,6 @@
 /**
  * @file DestructionTestUtil.h
- * @brief 파괴 시험이 함께 쓰는 형상 — 닫힌 상자 · L 자 기둥(오목) 삼각형 목록입니다(엔진 앞면 규약: (b-a)×(c-a) 가 바깥).
+ * @brief 파괴 테스트가 함께 쓰는 형상 — 닫힌 상자 · L 자 기둥(오목) 삼각형 목록입니다(엔진 앞면 규약: (b-a)×(c-a) 가 바깥).
  */
 #pragma once
 #include "Core/Container/vector.h"

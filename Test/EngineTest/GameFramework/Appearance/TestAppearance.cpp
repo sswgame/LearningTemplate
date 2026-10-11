@@ -26,12 +26,12 @@ namespace
         /** @brief 규칙 표 하나만 바꿔 읽고 오류 보고를 돌려줍니다. */
         [[nodiscard]] static bool loadWithRules( const utf8* pRuleXML, Fixture& outFixture ) { return outFixture.load( pRuleXML ); }
 
-        /** @brief 한 덩이를 더 읽고 검사한 결과입니다(모르는 이름 시험). */
+        /** @brief 한 덩이를 더 읽고 검사한 결과입니다(모르는 이름 테스트). */
         [[nodiscard]] static bool loadWithExtra( const utf8* pExtraXML, Fixture& outFixture )
         {
             if ( outFixture.load() == false )
                 return false;
-            (void)outFixture._database.loadSectionFromXMLText( pExtraXML, "AppearanceTest.extra" ); // 깨진 구역도 그대로 둔다 — 판정은 finishLoad 와 각 시험이 한다
+            (void)outFixture._database.loadSectionFromXMLText( pExtraXML, "AppearanceTest.extra" ); // 깨진 구역도 그대로 둔다 — 판정은 finishLoad 와 각 테스트가 한다
             return outFixture._database.finishLoad( &outFixture._items );
         }
 

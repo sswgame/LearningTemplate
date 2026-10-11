@@ -36,7 +36,7 @@ namespace
 </BlockCatalog>
 )";
 
-    /** @brief 시험 카탈로그와 그것을 빌려 쓰는 월드입니다. */
+    /** @brief 테스트 카탈로그와 그것을 빌려 쓰는 월드입니다. */
     struct VoxelTestScene
     {
         VoxelBlockCatalog _catalog;

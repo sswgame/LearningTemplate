@@ -75,7 +75,7 @@ SW_TEST_CASE( ServiceClientCallTableTest, ResponsesFindTheirOwnDelegateOverLoopb
     BitWriter    goodBody;
     goodBody.writeVarUint( 42 );
     BitWriter badBody;
-    badBody.writeVarUint( 0 ); // 계정 0 — 시험 로그인이 거절한다
+    badBody.writeVarUint( 0 ); // 계정 0 — 테스트 로그인이 거절한다
     (void)tableClient.send( test::TestLoginService::kLoginMethod, badBody, DoneDelegate::create<&DoneRecorder::onDone>( &badRecorder ) );
     (void)tableClient.send( test::TestLoginService::kLoginMethod, goodBody, DoneDelegate::create<&DoneRecorder::onDone>( &goodRecorder ) );
     SW_EXPECT_EQUAL( tableClient._callTable.getCount(), size_t( 2 ) );

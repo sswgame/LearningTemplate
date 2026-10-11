@@ -662,7 +662,7 @@ namespace sw
                     static_cast<GLint>( originY ),
                     static_cast<GLsizei>( viewport._width ),
                     static_cast<GLsizei>( viewport._height ) );
-        // 가위 = 뷰포트(IRHICommandList 규약). 삼각형은 이미 뷰포트로 잘리므로 가위 시험을 끄는 것이 같은 결과다.
+        // 가위 = 뷰포트(IRHICommandList 규약). 삼각형은 이미 뷰포트로 잘리므로 가위 테스트를 끄는 것이 같은 결과다.
         glDisable( GL_SCISSOR_TEST );
         _pDevice->_recordingState._bScissorEnabled = SW_FALSE;
     }

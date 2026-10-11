@@ -254,7 +254,7 @@ namespace sw::editor
             // createRendererBackend 가 nullptr 을 반환하고 초기화가 거기서 멈춘다.
             io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
-            // 자체 시험은 저장된 레이아웃을 읽지도 쓰지도 않는다 — 도킹은 자체 시험을 모르므로 셸이 알린다.
+            // 자체 테스트는 저장된 레이아웃을 읽지도 쓰지도 않는다 — 도킹은 자체 테스트를 모르므로 셸이 알린다.
             EditorDockLayout::setPanelOverrideRequested( EditorSelfTestRunner::isRequested() );
             _dockLayout.initializePersistencePaths();
             _dockLayout.applyIniFilename();
@@ -523,7 +523,7 @@ namespace sw::editor
                 notificationManager.update( ImGui::GetIO().DeltaTime );
                 EditorNotificationView::draw( notificationManager, 1920.0f, 1080.0f );
             }
-            // 자체 시험 실행(-gv_editorSelfTest · Test Runner 창)이 없으면 아무것도 하지 않는다. 패널을 그린 뒤라 시험이 이번 프레임의 패널 상태를 본다.
+            // 자체 테스트 실행(-gv_editorSelfTest · Test Runner 창)이 없으면 아무것도 하지 않는다. 패널을 그린 뒤라 테스트가 이번 프레임의 패널 상태를 본다.
             EditorSelfTestRunner::runFrame();
             ImGuiEditorInternal::updateWindowTitle( _editorContext.get() );
             EditorScreenshotCommands::update();
@@ -751,12 +751,12 @@ namespace sw::editor
 
         if ( _platformBackend != nullptr )
         {
-            // 무인 자동화면 플랫폼이 물은 실제 커서(Win32 GetCursorPos · 커서 아래 뷰포트, X11 XQueryPointer 의 위치 · 단추)를 지운다 — 시험이 커서를
+            // 무인 자동화면 플랫폼이 물은 실제 커서(Win32 GetCursorPos · 커서 아래 뷰포트, X11 XQueryPointer 의 위치 · 단추)를 지운다 — 테스트가 커서를
             // 놓은 프레임(단추를 떼는 프레임)에 실제 커서가 마지막 위치가 되면 ImGui 가 뗌을 다음 프레임으로 미뤄 뷰포트 비행이 그 차이만큼 돈다.
             const ScopedImGuiOsInputFilter osInputFilter{ ImGuiEditorInternal::isOsDeviceInputBlocked() };
             _platformBackend->newFrame();
         }
-        // 자체 시험이 흉내 낸 입력 — 플랫폼 백엔드가 넣은 실제 커서보다 뒤에 넣어야 이긴다(ImGui 는 큐를 순서대로 처리한다).
+        // 자체 테스트가 흉내 낸 입력 — 플랫폼 백엔드가 넣은 실제 커서보다 뒤에 넣어야 이긴다(ImGui 는 큐를 순서대로 처리한다).
         EditorSelfTestInput::flushIntoImGui();
 
         // 이름 붙인 레이아웃은 프레임 밖에서 읽어야 이미 있는 창 · 도킹 노드에 적용된다.

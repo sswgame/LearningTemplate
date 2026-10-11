@@ -41,7 +41,7 @@ namespace
         }
     };
 
-    /** @brief 서버 하나의 라이브 운영 — 저장소 앞 · 로컬 버스 · 로직. 버스 메시지는 호스트 대신 시험이 비워 notifyChanged 로 넘긴다. */
+    /** @brief 서버 하나의 라이브 운영 — 저장소 앞 · 로컬 버스 · 로직. 버스 메시지는 호스트 대신 테스트가 비워 notifyChanged 로 넘긴다. */
     struct LiveOpsNode
     {
         MemoryServiceStore        _store;

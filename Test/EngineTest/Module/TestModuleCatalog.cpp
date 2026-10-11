@@ -15,7 +15,7 @@
 
 namespace
 {
-    /** @brief 시험용 매니페스트 하나입니다(모든 플랫폼 · 구성, 기본 켜짐). */
+    /** @brief 테스트용 매니페스트 하나입니다(모든 플랫폼 · 구성, 기본 켜짐). */
     sw::ModuleManifest makeManifest( const utf8* pName, sw::ModuleKind kind, std::initializer_list<const utf8*> listDependency )
     {
         sw::ModuleManifest manifest{};
@@ -235,7 +235,7 @@ SW_TEST_CASE( ModuleCatalogTest, ParsesManifestsStrictly )
  */
 SW_TEST_CASE( ModuleCatalogTest, BuildAndRuntimeAgree )
 {
-    // 시험 실행 파일은 TestBin 에 있다 — `Bin/Modules` 는 getBinaryDirectory 기준으로 찾는다.
+    // 테스트 실행 파일은 TestBin 에 있다 — `Bin/Modules` 는 getBinaryDirectory 기준으로 찾는다.
     const sw::string directory    = sw::ModuleImageUtil::getModuleDirectory();
     const sw::string resolvedPath = sw::FileUtil::joinPath( directory, "ResolvedModules.txt" );
     if ( sw::FileUtil::exists( resolvedPath ) == false )
@@ -290,7 +290,7 @@ SW_TEST_CASE( ModuleCatalogTest, EveryRepositoryManifestParses )
 /**
  * @brief [ModuleCatalogTest] 대상이 호스트 역할과 겹치지 않는 모듈은 꺼진다 — 전용 서버는 에디터 · RHI 를, 클라이언트는 서버 전용 모듈을 올리지 않는다
  * @details 서버 전용 모듈이 플레이어 실행 파일에 들어가면 안 되고(DB 드라이버 · 서비스 서버 로직), 전용 서버가 에디터 · RHI 백엔드를 올리면 창 · GPU 를 찾는다.
- *          `findUnavailableReason` 의 대상 검사를 빼면 이 시험이 진다.
+ *          `findUnavailableReason` 의 대상 검사를 빼면 이 테스트가 진다.
  */
 SW_TEST_CASE( ModuleCatalogTest, TargetMaskSeparatesClientAndServerModules )
 {

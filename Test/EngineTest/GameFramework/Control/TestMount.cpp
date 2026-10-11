@@ -46,7 +46,7 @@
 
 namespace sw
 {
-    /** @brief 시험용 탈것 이동 — 의도의 월드 이동 × 10 m/s 로 루트를 옮긴다(물리 없음). 말 · 차 이동 규칙의 자리를 가장 작게 채운다. */
+    /** @brief 테스트용 탈것 이동 — 의도의 월드 이동 × 10 m/s 로 루트를 옮긴다(물리 없음). 말 · 차 이동 규칙의 자리를 가장 작게 채운다. */
     class MountTestVehicleMoverComponent : public Component
     {
     public:
@@ -103,7 +103,7 @@ namespace
             return pObject;
         }
 
-        /** @brief 상자 차 — 루트 · 폰(버튼 Exit) · 운전석(위 1 m, 하차 왼쪽 2 m) · 내리기 버튼 · 시험 이동(10 m/s)입니다. */
+        /** @brief 상자 차 — 루트 · 폰(버튼 Exit) · 운전석(위 1 m, 하차 왼쪽 2 m) · 내리기 버튼 · 테스트 이동(10 m/s)입니다. */
         static GameObject* spawnVehicle( GameObjectManager& manager, const utf8* pName, const float3& position )
         {
             GameObject*     pObject = manager.createGameObject( hashed_string( pName ) );
@@ -162,7 +162,7 @@ namespace
 
     struct MountHorseTestInternal
     {
-        /** @brief 캡슐 말 — 캐릭터 컨트롤러(반지름 0.5) · 폰(버튼 Sprint · Exit) · 말 이동 · 운전석 · 내리기 버튼입니다(모델 없음 — 기본 도형으로 시험). */
+        /** @brief 캡슐 말 — 캐릭터 컨트롤러(반지름 0.5) · 폰(버튼 Sprint · Exit) · 말 이동 · 운전석 · 내리기 버튼입니다(모델 없음 — 기본 도형으로 테스트). */
         static GameObject* spawnHorse( GameObjectManager& manager, const utf8* pName, const float3& feet )
         {
             GameObject*                   pObject     = manager.createGameObject( hashed_string( pName ) );

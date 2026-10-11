@@ -1,6 +1,6 @@
 /**
  * @file VoxelCraftGame.h
- * @brief 복셀 키트(GF_Voxel)를 실제로 쓰는 시험 게임 — 씨앗으로 지은 섬을 걸어 다니며 블록을 부수고 쌓는 마인크래프트 장르입니다.
+ * @brief 복셀 키트(GF_Voxel)를 실제로 쓰는 테스트 게임 — 씨앗으로 지은 섬을 걸어 다니며 블록을 부수고 쌓는 마인크래프트 장르입니다.
  *
  * @details 빌드: `cmake --preset Ninja-Debug-VoxelCraft`. 조작은 `Source/Games/VoxelCraft/README.md`. `-gv_voxelAutoPlay=1` 이면 걷기 · 점프 · 부수기 · 놓기를 AI 가 한다.
  *          섬은 씬(`game/voxelcraft/maps/island.scene.xml` — 팩의 `data/gamesettings.xml` 시작 맵)과 그 안의 `VoxelDirectorComponent` · `VoxelPlayerComponent`

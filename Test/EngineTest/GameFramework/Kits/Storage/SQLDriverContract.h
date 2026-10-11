@@ -1,6 +1,6 @@
 /**
  * @file SQLDriverContract.h
- * @brief SQL 드라이버 계약 시험 — SQLite · PostgreSQL 드라이버가 같은 케이스를 같은 결과로 통과해야 합니다(풀 없이 시험 스레드에서 연결을 직접 쓴다).
+ * @brief SQL 드라이버 계약 테스트 — SQLite · PostgreSQL 드라이버가 같은 케이스를 같은 결과로 통과해야 합니다(풀 없이 테스트 스레드에서 연결을 직접 쓴다).
  * @details 스위트 파일이 픽스처를 주고 `SW_SQL_DRIVER_CONTRACT_SUITE( 스위트, 픽스처 )` 를 부른다. 픽스처는
  *          `bool isReady()` · `ISQLConnection& getConnection()` · `string makeTableName( const utf8* )` 를 준다. 케이스마다 새 DB(또는 새 스키마)다.
  */

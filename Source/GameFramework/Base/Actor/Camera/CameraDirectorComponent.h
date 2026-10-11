@@ -67,7 +67,7 @@ namespace sw
         void setGroupTargets( const vector<GameObjectHandle>& listTarget ) { _listGroupTarget = listTarget; }
         /** @brief 암 충돌 질의를 정합니다(부르는 쪽이 수명을 쥔다). nullptr 이면 매니저의 `PhysicsWorld` 를 쓴다. */
         void setCollisionProbe( const ICameraCollisionProbe* pProbe ) { _pExternalProbe = pProbe; }
-        /** @brief 입력을 읽을지입니다(자동 플레이 · 시험은 끈다). */
+        /** @brief 입력을 읽을지입니다(자동 플레이 · 테스트는 끈다). */
         void setInputEnabled( bool bEnabled ) { _bReadInput = bEnabled; }
         /** @brief 충격을 더합니다(원점 · 모양) — 폭발 · 착지. */
         void addImpulse( const CameraImpulseDef& def, const float3& origin ) { _director.addImpulse( def, origin ); }
@@ -75,9 +75,9 @@ namespace sw
         const hashed_string& getActivePresetID() const { return _director.getActivePresetID(); }
         bool                 isBlending() const { return _director.isBlending(); }
         const CameraPose&    getPose() const { return _director.getPose(); }
-        /** @brief 켠 프리셋의 모드 상태입니다(입력이 돌린 각 · 줌 · 팬 · 암 길이 — 시험 · 진단). */
+        /** @brief 켠 프리셋의 모드 상태입니다(입력이 돌린 각 · 줌 · 팬 · 암 길이 — 테스트 · 진단). */
         const CameraModeState& getModeState() const { return _director.getModeState(); }
-        /** @brief 카탈로그입니다. 코드로 프리셋을 더하거나 시험이 XML 글을 읽을 때 씁니다(경로 PROPERTY 가 비어 있으면 시작 때 다시 읽지 않는다). */
+        /** @brief 카탈로그입니다. 코드로 프리셋을 더하거나 테스트가 XML 글을 읽을 때 씁니다(경로 PROPERTY 가 비어 있으면 시작 때 다시 읽지 않는다). */
         CameraPresetCatalog&       getCatalog() { return _catalog; }
         const CameraPresetCatalog& getCatalog() const { return _catalog; }
 

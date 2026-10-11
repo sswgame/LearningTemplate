@@ -1000,7 +1000,7 @@ SW_TEST_CASE( RenderPassTest, AttachmentRoleIsDeclaredNotNamed )
 
 namespace
 {
-    /** @brief `FrameRenderer::setAnimationTimeOverride` 가 이 구성에 있는가 — 시험 전용 시계 고정이라 배포본에는 없어야 한다. */
+    /** @brief `FrameRenderer::setAnimationTimeOverride` 가 이 구성에 있는가 — 테스트 전용 시계 고정이라 배포본에는 없어야 한다. */
     template <typename T, typename = void>
     struct HasAnimationTimeOverride : std::false_type
     {
@@ -1012,8 +1012,8 @@ namespace
 } // namespace
 
 /**
- * @brief [RenderPassTest] 시험 전용 시계 고정(`setAnimationTimeOverride`)은 배포본에서 컴파일되지 않는다
- * @details 시험이 모프 시각을 고정하려고 둔 창구다. 배포본에 남으면 배포본의 애니메이션 시계를 밖에서 바꿀 수 있고 필드 하나만큼 렌더러가 커진다.
+ * @brief [RenderPassTest] 테스트 전용 시계 고정(`setAnimationTimeOverride`)은 배포본에서 컴파일되지 않는다
+ * @details 테스트가 모프 시각을 고정하려고 둔 창구다. 배포본에 남으면 배포본의 애니메이션 시계를 밖에서 바꿀 수 있고 필드 하나만큼 렌더러가 커진다.
  */
 SW_TEST_CASE( RenderPassTest, AnimationTimeOverrideIsCompiledOutOfShipping )
 {
@@ -1069,7 +1069,7 @@ SW_TEST_CASE( RenderPassTest, EmptyEntryPointsResolveToStageTable )
 
 /**
  * @brief [RenderPassTest] 엔진 파이프라인 여섯 모두 Swapchain 을 쓰는 마지막 패스가 Canvas 다 — UI 가 장면 위에 · 스크린샷 캡처 안에 그려진다
- * @details Canvas 를 빠뜨린 엔진 파이프라인은 UI 가 없는 화면을 낸다(게임 파이프라인은 UI 가 없을 수 있어 검증 오류로 하지 않는다 — 이 시험이 엔진 것을 지킨다).
+ * @details Canvas 를 빠뜨린 엔진 파이프라인은 UI 가 없는 화면을 낸다(게임 파이프라인은 UI 가 없을 수 있어 검증 오류로 하지 않는다 — 이 테스트가 엔진 것을 지킨다).
  */
 SW_TEST_CASE( RenderPassTest, EngineGraphicsPipelinesEndWithCanvas )
 {

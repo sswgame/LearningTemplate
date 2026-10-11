@@ -119,7 +119,7 @@ namespace sw
         /** @brief 52 장(무늬 순 · 숫자 순, 번호 0..51)과 조커 @p jokerCount 장(번호 52..)을 @p outPile 에 채웁니다. 섞지 않습니다. */
         static void makeStandardDeck( CardPile& outPile, int32 jokerCount = 0 );
         static bool isRedSuit( uint8 suit ) { return suit == StandardSuit::kDiamonds || suit == StandardSuit::kHearts; }
-        /** @brief @p listCardInDrawOrder 의 첫 카드가 가장 먼저 뽑히는 더미를 만듭니다(시험 · 리플레이용 덱). */
+        /** @brief @p listCardInDrawOrder 의 첫 카드가 가장 먼저 뽑히는 더미를 만듭니다(테스트 · 리플레이용 덱). */
         static void makePileInDrawOrder( const vector<Card>& listCardInDrawOrder, CardPile& outPile );
     };
 } // namespace sw

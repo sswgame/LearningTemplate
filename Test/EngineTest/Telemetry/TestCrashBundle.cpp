@@ -181,7 +181,7 @@ SW_TEST_CASE( CrashBundleTest, ConsentDecidesWhatLeavesTheMachine )
     SW_EXPECT_FALSE( service.decide( "localcrash", true ) ); // local 로 모인 것은 묻지 않는다
     SW_EXPECT_TRUE( Internal::stateOf( reportsFolder, "askno" ) == "declined" );
     SW_EXPECT_EQUAL( 1u, service.countPendingUploads() );
-    // 보고 실행 파일을 정하지 않은 호스트(이 시험 실행 파일)는 보낼 것이 있어도 자기를 다시 띄우지 않는다.
+    // 보고 실행 파일을 정하지 않은 호스트(이 테스트 실행 파일)는 보낼 것이 있어도 자기를 다시 띄우지 않는다.
     SW_EXPECT_FALSE( service.launchReporterProcess() );
 
     // 보고 프로세스 일: 보낼 줄 하나만 올리고 Sent, 덤프는 지운다.

@@ -193,7 +193,7 @@ def fixText(text: str) -> tuple[str, bool]:
     return newText, bool(listSplit)
 
 
-#: 픽서의 조각 — 게이트의 첫 자가 시험 조각(한 블록에 클래스 둘)과 정의마다 나눈 결과.
+#: 픽서의 조각 — 게이트의 첫 자가 테스트 조각(한 블록에 클래스 둘)과 정의마다 나눈 결과.
 kFixBadSample = "#pragma once\n\nnamespace sw\n{\n    class Alpha\n    {\n    };\n\n    class Beta\n    {\n    };\n} // namespace sw\n"
 kFixGoodSample = ("#pragma once\n\nnamespace sw\n{\n    class Alpha\n    {\n    };\n} // namespace sw\n\nnamespace sw\n{\n"
                   "    class Beta\n    {\n    };\n} // namespace sw\n")

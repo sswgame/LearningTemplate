@@ -34,7 +34,7 @@ namespace sw
 
         /** @brief 까닭 · 이름 · 활성자 태그를 둡니다(코드로 세운 볼륨 — 씬에 놓은 것은 PROPERTY 가 채운다). 발동 표시를 지운다. */
         void configure( AutosaveTrigger trigger, const hashed_string& label, TagID activatorTag );
-        /** @brief 활성자가 들어온 것으로 칩니다(겹침 이벤트 · 시험이 부른다). 넘겼으면 true 입니다. */
+        /** @brief 활성자가 들어온 것으로 칩니다(겹침 이벤트 · 테스트가 부른다). 넘겼으면 true 입니다. */
         bool activate( const GameObject* pActivator );
         bool hasFired() const { return _bFired == SW_TRUE; }
 

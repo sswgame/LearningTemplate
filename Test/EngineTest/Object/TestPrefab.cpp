@@ -224,7 +224,7 @@ SW_TEST_CASE( PrefabTest, InMemoryJSONPrefabCreationAndSpawn )
  * @brief [PrefabTest] 스폰이 같은 프리팹의 스폰을 부르면(순환) 안쪽 스폰만 거절되고 바깥 스폰은 끝난다 — 스택을 넘기지 않는다
  * @details 상태를 다 읽으면(`onPostLoad`) 같은 프리팹을 스폰하는 컴포넌트를 프리팹 안에 둔다 — 엔진에서 스폰이 스폰을 부르는 경로는 이것(컴포넌트
  *          수명 훅)뿐이다. 오브젝트의 프로퍼티가 아닌 칸으로 순환을 꾸미면 그 칸은 읽을 때 버려져 순환이 **한 번도** 일어나지 않고, 순환 방어를
- *          지워도 시험이 통과한다.
+ *          지워도 테스트가 통과한다.
  */
 SW_TEST_CASE( PrefabTest, CircularReferenceSpawnProtection )
 {
@@ -261,7 +261,7 @@ SW_TEST_CASE( PrefabTest, CircularReferenceSpawnProtection )
 /**
  * @brief [PrefabTest] 프리팹을 다른 형식으로 저장해도(XML ↔ JSON) 컴포넌트가 남는다
  * @details 변환은 쓰고 버리는 매니저 안에서 읽고 쓴다. 매니저 없는 `GameObject` 를 거치면 컴포넌트를 이름으로 만드는 팩토리가 없어 변환한 본문에서
- *          **컴포넌트가 모두 빠진다**(컴포넌트 없는 프리팹으로 하는 라운드트립 시험은 이것을 못 잡는다).
+ *          **컴포넌트가 모두 빠진다**(컴포넌트 없는 프리팹으로 하는 라운드트립 테스트는 이것을 못 잡는다).
  */
 SW_TEST_CASE( PrefabTest, ConvertingAPrefabKeepsItsComponents )
 {

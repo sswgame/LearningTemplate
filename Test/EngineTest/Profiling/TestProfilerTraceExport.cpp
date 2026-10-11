@@ -180,7 +180,7 @@ SW_TEST_CASE( ProfilerTraceExportTest, ParseRejectsBrokenAndEmptyInput )
 
 namespace
 {
-    /** @brief 합치기 시험용 — 이름 · 호스트 · pid · 시계 쌍만 다른 트레이스 하나. */
+    /** @brief 합치기 테스트용 — 이름 · 호스트 · pid · 시계 쌍만 다른 트레이스 하나. */
     sw::string makeProcessTrace( const sw::string& processName, const sw::string& hostName, int32 processID, int64 wallMilliseconds,
                                  uint64 monotonicNanoseconds )
     {

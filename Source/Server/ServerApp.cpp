@@ -38,7 +38,7 @@
 
 namespace sw
 {
-    /** @brief `-gv_serverExitAfterTicks=N`: N 틱을 돈 뒤 스스로 정상 종료합니다(기동 · 종료 시험). Shipping 에도 등록합니다 — 배포 서버 산출물을 같은 시험이 띄운다. */
+    /** @brief `-gv_serverExitAfterTicks=N`: N 틱을 돈 뒤 스스로 정상 종료합니다(기동 · 종료 테스트). Shipping 에도 등록합니다 — 배포 서버 산출물을 같은 테스트가 띄운다. */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_serverExitAfterTicks, 0, "이 틱 수를 돈 뒤 정상 종료 (0=끄기)" );
 } // namespace sw
 
@@ -110,7 +110,7 @@ namespace sw
 
     int32 ServerApp::runMain( int32 argc, utf8* pArgv[] )
     {
-        // 줄마다 내보낸다 — 시험 · journald · docker logs 가 "ready" 줄을 바로 본다. 엔진(로거)을 세우기 전에 켠다.
+        // 줄마다 내보낸다 — 테스트 · journald · docker logs 가 "ready" 줄을 바로 본다. 엔진(로거)을 세우기 전에 켠다.
         ConsoleLogOutput::setFlushEveryLine( true );
         ServerApp  server{};
         const bool bStarted = server.initialize( argc, pArgv );
@@ -458,7 +458,7 @@ namespace sw
         }
         // 운영 끝점은 게임을 내리는 동안에도 비우는 중(/readyz 503)을 알리다 마지막에 닫는다 — 로그를 남기므로 엔진(로거)보다 먼저.
         shutdownObservability();
-        // 로거는 엔진 종료와 함께 내려간다 — 마지막 줄은 그 앞에 남긴다(시험 · 운영 도구가 이 줄로 정상 종료를 본다).
+        // 로거는 엔진 종료와 함께 내려간다 — 마지막 줄은 그 앞에 남긴다(테스트 · 운영 도구가 이 줄로 정상 종료를 본다).
         SW_LOG_INFO( "Dedicated server shutdown complete" );
         _engineLoop.shutdown();
         if ( _bSignalHandlerInstalled == SW_TRUE )

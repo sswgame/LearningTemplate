@@ -13,7 +13,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 자동화 시나리오 — 씬 · 창 없이 실행기를 손으로 돌린다(EngineLoop 의 프레임 앞뒤 자리를 시험이 대신 부른다).
+// 자동화 시나리오 — 씬 · 창 없이 실행기를 손으로 돌린다(EngineLoop 의 프레임 앞뒤 자리를 테스트가 대신 부른다).
 SW_LOG_CALLER( "TestAutomationScenario" );
 
 namespace
@@ -225,7 +225,7 @@ SW_TEST_CASE( AutomationScenarioTest, UnknownStepOrAttributeIsALoadError )
         SW_EXPECT_TRUE( runner.getResult() == sw::AutomationResult::LoadError );
     }
 
-    // <MousePosition> 은 엔진 단계다(등록표의 엔진 단계 목록에 있어야 "모르는 단계" 가 아니다) — 창이 없는 시험에서는 커서를 놓을 자리가 없다는 오류.
+    // <MousePosition> 은 엔진 단계다(등록표의 엔진 단계 목록에 있어야 "모르는 단계" 가 아니다) — 창이 없는 테스트에서는 커서를 놓을 자리가 없다는 오류.
     {
         sw::AutomationRunner runner;
         SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately"><At frame="0"><MousePosition x="0.5" y="0.5"/></At></Scenario>)" ) );
@@ -289,7 +289,7 @@ SW_TEST_CASE( AutomationScenarioTest, TimeoutWithoutPass )
         SW_EXPECT_EQUAL( 9u, runner.getFrameIndex() );
     }
     {
-        // 시험 하네스에는 플레이를 시작한 씬이 없다(있어도 이 시험 동안 플레이를 시작하지 않는다) — 단계는 하나도 돌지 않는다.
+        // 테스트 하네스에는 플레이를 시작한 씬이 없다(있어도 이 테스트 동안 플레이를 시작하지 않는다) — 단계는 하나도 돌지 않는다.
         sw::AutomationRunner runner;
         SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startTimeoutFrames="4"><At frame="0"><TestMark/></At></Scenario>)" ) );
         const sw::AutomationResult result = Internal::run( runner, input, 50 );

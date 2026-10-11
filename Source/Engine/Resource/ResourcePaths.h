@@ -83,7 +83,7 @@ namespace sw
          *        (`Config/Engine/CookContract.json` 의 `target_excluded_asset_kinds` — 서버: 텍스처 · 셰이더 바이너리 · 오디오)는 이제부터
          *        **없는 것**으로 칩니다 — 읽기는 조용히 false, `hasResource` 도 false 입니다("파일 없음" 경고 · 오류를 남기지 않는다).
          * @details 쿠커(`CookAssets.py --build-target`)가 같은 표로 그 파일을 팩에서 뺀다. 엔진 기동 첫머리(`EngineLoop::initialize`)에서
-         *          한 번 부르고, 그 뒤로는 읽기만 한다. 비우면(`""`) 아무것도 빼지 않는다(시험 하네스).
+         *          한 번 부르고, 그 뒤로는 읽기만 한다. 비우면(`""`) 아무것도 빼지 않는다(테스트 하네스).
          */
         static void setHostTarget( string_view buildTargetName );
         /** @brief @p resourcePath(리소스 id · 팩 상대 키 · 절대 경로)가 이 호스트가 읽지 않는 에셋 종류면 true 입니다(`setHostTarget`). */
@@ -115,7 +115,7 @@ namespace sw
 
         /**
          * @brief 리소스 루트(`Resource/` 폴더)를 바꾸고 검색 폴더 · 경로 캐시를 다시 짓습니다. 앞의 루트를 돌려줍니다(되돌릴 때 넘긴다).
-         * @details 시험이 임시 폴더에 낱개 파일을 두고 같은 키의 팩과 겨루게 할 때 씁니다(검색 폴더는 루트에서만 채워진다).
+         * @details 테스트가 임시 폴더에 낱개 파일을 두고 같은 키의 팩과 겨루게 할 때 씁니다(검색 폴더는 루트에서만 채워진다).
          * @warning 실행 중 게임에서 부르지 않는다 — 다른 스레드의 경로 풀이와 겹치면 반쪽 상태를 본다.
          */
         static string exchangeRootFolderPath( string_view resourceRootFolderPath );

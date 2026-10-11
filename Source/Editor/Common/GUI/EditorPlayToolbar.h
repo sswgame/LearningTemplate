@@ -17,7 +17,7 @@ namespace sw::editor
     public:
         /** @brief 툴바를 그립니다. 메뉴 막대 뒤 · 도크스페이스 앞에서 부릅니다. */
         static void draw();
-        /** @brief 마지막 프레임에 자동 플레이 단추를 그렸으면 true 입니다(에디터 자체 시험 `toolbar.autoplayButton` 이 읽습니다). */
+        /** @brief 마지막 프레임에 자동 플레이 단추를 그렸으면 true 입니다(에디터 자체 테스트 `toolbar.autoplayButton` 이 읽습니다). */
         static bool wasAutoplayButtonDrawn();
     };
 } // namespace sw::editor

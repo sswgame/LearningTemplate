@@ -20,7 +20,7 @@ namespace sw
     /** @brief UDP 보안 방식입니다 — 양쪽이 같아야 한다(다르면 `SecurityMismatch` 로 거절, 협상 없음 = 다운그레이드 없음). */
     enum class NetSecurityMode : uint8
     {
-        Off = 0,  ///< 평문(시험 · LAN)
+        Off = 0,  ///< 평문(테스트 · LAN)
         Encrypted ///< X25519 + AEAD. 인증기가 있으면 세션 비밀에 묶이고(중간자 불가), 없으면 일회 키만(도청만 막는다 — 개발 빌드 전용, Shipping 서버는 listen 실패)
     };
 } // namespace sw

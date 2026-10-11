@@ -5,7 +5,7 @@
 #include "TestFramework/TestFramework.h"
 
 // 단언 대화상자는 Debug 의 멈추는 단언에만 있다(`Core/Common/Macros.h` 9 절). 대화상자 자체(Windows MessageBoxW)는 App 이 걸고, 여기서는
-// 대화상자 자리에 시험 함수를 걸어 세 가지 답(이번만 · 늘 무시 · 멈춤)과 가로채기가 먼저인지를 본다.
+// 대화상자 자리에 테스트 함수를 걸어 세 가지 답(이번만 · 늘 무시 · 멈춤)과 가로채기가 먼저인지를 본다.
 #if defined( SW_DEBUG )
 namespace
 {
@@ -35,7 +35,7 @@ namespace
         static void failAtOneSite( bool bCondition ) { SW_ASSERT( bCondition ); }
     };
 
-    /** @brief 시험이 건 대화상자를 끝에 뗀다(다른 시험이 멈추는 단언을 기대한다). */
+    /** @brief 테스트가 건 대화상자를 끝에 뗀다(다른 테스트가 멈추는 단언을 기대한다). */
     struct ScopedAssertDialog
     {
         explicit ScopedAssertDialog( sw::internal::AssertDialogFunc pfnDialog )
@@ -87,7 +87,7 @@ SW_TEST_CASE( AssertDialogTest, BreakWithoutDialogOrWhenChosen )
 }
 
 /**
- * @brief [AssertDialogTest] 시험의 단언 가로채기가 먼저다 — 걸려 있으면 대화상자를 부르지 않는다
+ * @brief [AssertDialogTest] 테스트의 단언 가로채기가 먼저다 — 걸려 있으면 대화상자를 부르지 않는다
  */
 SW_TEST_CASE( AssertDialogTest, CaptureComesBeforeTheDialog )
 {

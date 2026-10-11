@@ -1,6 +1,6 @@
 /**
  * @file ResourcePackTestUtil.h
- * @brief 시험 · 벤치가 함께 쓰는 팩(SWPK) 파일 만들기입니다.
+ * @brief 테스트 · 벤치가 함께 쓰는 팩(SWPK) 파일 만들기입니다.
  */
 #pragma once
 #include "Core/Container/pair.h"
@@ -11,7 +11,7 @@
 
 namespace sw::test
 {
-    /** @brief 시험용 팩 파일을 쓰는 도우미입니다(쿠커와 같은 배치 — 헤더 · 4096 정렬 페이로드 · FAT · 스트링 풀). */
+    /** @brief 테스트용 팩 파일을 쓰는 도우미입니다(쿠커와 같은 배치 — 헤더 · 4096 정렬 페이로드 · FAT · 스트링 풀). */
     struct ResourcePackTestUtil
     {
         /**

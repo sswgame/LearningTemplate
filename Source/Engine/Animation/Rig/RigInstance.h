@@ -2,7 +2,7 @@
  * @file RigInstance.h
  * @brief 리그 에셋 하나를 유닛 하나에 묶은 실행 상태 — 복제한 노드 · 대상 값 · 가중치(커브 · 시퀀서 칸) · 모프 출력입니다.
  * @details 오브젝트를 모르는 순수 실행기입니다. 호스트(`PoseModifierComponent`)가 게임 스레드에서 `prepare`, 워커에서 `evaluate` 를 부르고,
- *          바깥 대상(다른 유닛 · 오브젝트) 값을 프레임마다 넣습니다. 그래서 오브젝트 없이 시험할 수 있습니다.
+ *          바깥 대상(다른 유닛 · 오브젝트) 값을 프레임마다 넣습니다. 그래서 오브젝트 없이 테스트할 수 있습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -123,7 +123,7 @@ namespace sw
         void evaluate( Pose& inoutLocalPose, const vector<int32>& listParent, const float4x4& worldFromModel );
         /** @brief 노드 상태를 모두 버립니다(순간이동 · 다시 켬). */
         void reset();
-        /** @brief 평가한 횟수입니다(시험 · 진단). */
+        /** @brief 평가한 횟수입니다(테스트 · 진단). */
         uint32 getEvaluationCount() const { return _evaluationCount; }
 
     private:

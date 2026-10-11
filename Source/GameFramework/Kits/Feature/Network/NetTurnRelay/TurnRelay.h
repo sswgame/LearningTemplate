@@ -158,7 +158,7 @@ namespace sw
 
         TurnRelayServer();
 
-        /** @param tokenSeed 자리 표 비밀 — 0 이면 운영체제 난수. 시험은 고정해도 된다. */
+        /** @param tokenSeed 자리 표 비밀 — 0 이면 운영체제 난수. 테스트는 고정해도 된다. */
         void initialize( NetHost* pHost, int32 seatCount, const ITurnPolicy* pPolicy = nullptr, uint64 tokenSeed = 0 );
         /** @brief 매 틱(호스트 `update` 뒤) — 신뢰 창이 차서 못 보낸 행동 · 알림을 이어 보냅니다. */
         void  update();

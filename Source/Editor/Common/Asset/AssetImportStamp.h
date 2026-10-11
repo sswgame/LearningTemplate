@@ -19,7 +19,7 @@ namespace sw::editor
     enum class AssetImportMode : uint8
     {
         ImportStale = 0, ///< 스탬프와 어긋난 원본만 다시 임포트하고 `import.stamp` 를 갱신합니다.
-        CheckOnly,       ///< 아무 파일도 쓰지 않고 어긋난 것만 보고합니다(시험 · CI).
+        CheckOnly,       ///< 아무 파일도 쓰지 않고 어긋난 것만 보고합니다(테스트 · CI).
     };
 
     /**

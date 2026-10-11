@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-봇 플레이 장시간 실행(soak) — 시험 게임의 자동 플레이를 오래 돌리며 메모리 · 핸들 증가와 프레임 p99 를 본다.
+봇 플레이 장시간 실행(soak) — 테스트 게임의 자동 플레이를 오래 돌리며 메모리 · 핸들 증가와 프레임 p99 를 본다.
 
     py -3 -m Scripts soak --app build/Ninja-Debug-NileCity/Bin/App.exe --minutes 10
     py -3 -m Scripts soak --app <App> --backend vk --minutes 30 --out soak.json
@@ -11,7 +11,7 @@ App 은 `-gv_profileSeconds=<분 × 60>` 으로 그 시간을 재고 스스로 �
   - 종료 코드 0, `[Error]` 0 줄
   - 워밍업 뒤 사유 메모리 증가 기울기 ≤ `--max-private-mb-per-minute`, 핸들 증가 기울기 ≤ `--max-handles-per-minute`
   - (`--max-p99-ms` 를 주면) GT.Frame · RT.Frame 의 p99 ≤ 그 값
-기울기는 최소제곱이다 — 처음 · 끝 두 점만 보면 GC · 캐시 채우기 같은 한 번의 계단을 누수로 읽는다. 언리얼 Gauntlet 의 soak 시험
+기울기는 최소제곱이다 — 처음 · 끝 두 점만 보면 GC · 캐시 채우기 같은 한 번의 계단을 누수로 읽는다. 언리얼 Gauntlet 의 soak 테스트
 (`-ExecCmds` 로 봇을 돌리고 `memreport` 로 비교)과 같은 자리이고, 여기서는 표본을 밖에서 계속 뜨는 것이 다르다.
 """
 

@@ -2,7 +2,7 @@
 
 /**
  * @file LaunchArgumentUtilTest.js
- * @brief 선택 ↔ 명령줄 규칙 시험입니다. 프로필의 명령줄 모양(접두사 · 구분자)과 규칙(`rules`)을 따르는지 봅니다.
+ * @brief 선택 ↔ 명령줄 규칙 테스트입니다. 프로필의 명령줄 모양(접두사 · 구분자)과 규칙(`rules`)을 따르는지 봅니다.
  */
 
 const assert = require('node:assert/strict');
@@ -14,7 +14,7 @@ const { ValueKind, kGeneralGroup } = require('../Source/CatalogScanner');
 
 const kOptions = Object.freeze({ commandLine: { prefix: '-', separator: '=' }, namePrefix: 'gv_', mapCacheValue: {} });
 
-/** @brief 시험용 작은 카탈로그입니다. */
+/** @brief 테스트용 작은 카탈로그입니다. */
 function makeCatalog() {
     const makeVariable = (name, valueKind, defaultText, extra) => ({
         name, typeName: valueKind, valueKind, defaultText, description: '', tag: '', moduleName: 'Engine', variantName: '', variantCacheVariable: '',

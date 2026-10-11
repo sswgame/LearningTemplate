@@ -11,7 +11,7 @@ using namespace sw::editor;
 
 namespace
 {
-    /** @brief 시험마다 비운 임시 리소스 루트입니다. 소멸자가 지운다. */
+    /** @brief 테스트마다 비운 임시 리소스 루트입니다. 소멸자가 지운다. */
     struct ScopedResourceRoot
     {
         string _path;

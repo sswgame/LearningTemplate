@@ -11,7 +11,7 @@ Windows 빌드는 아무 일 없이 지나가고, 리눅스 체크아웃만 그 
 `openssl/unix/configure` 가 그래서 리눅스 vcpkg 설치를 `Permission denied` 로 세웠다(리눅스 CI 잡 전부가 Configure 에서 짐).
 
 [무엇을 보는가]
-git 저장소면 인덱스의 모드(`git ls-files -s` — 커밋 훅에서는 staged 모드), 저장소가 아니면(자체 시험 조각) 파일 시스템의 실행 비트.
+git 저장소면 인덱스의 모드(`git ls-files -s` — 커밋 훅에서는 staged 모드), 저장소가 아니면(자체 테스트 조각) 파일 시스템의 실행 비트.
 심볼릭 링크 · 서브모듈은 보지 않는다.
 
 [고치는 법]
@@ -55,7 +55,7 @@ def readGitModesInternal(repositoryRoot: Path) -> dict[str, str] | None:
 
 
 def readFileModeInternal(path: Path) -> str:
-    """git 밖(자체 시험 조각)의 모드 — 실행 비트가 하나라도 있으면 100755."""
+    """git 밖(자체 테스트 조각)의 모드 — 실행 비트가 하나라도 있으면 100755."""
     return kExecutableMode if os.stat(path).st_mode & (stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH) else "100644"
 
 

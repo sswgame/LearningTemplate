@@ -71,9 +71,9 @@ namespace sw::editor
 
         /** @brief 절대 경로를 저장소 기준 `/` 경로로 바꿉니다. 저장소 밖이면 빈 문자열입니다. */
         static string makeRepositoryPath( string_view repositoryRoot, string_view absolutePath );
-        /** @brief 공급자를 바꿉니다(시험 · 공급자 탐지 결과). 잠금 목록은 비웁니다. */
+        /** @brief 공급자를 바꿉니다(테스트 · 공급자 탐지 결과). 잠금 목록은 비웁니다. */
         void setProvider( unique_ptr<ISourceControlProvider> pProvider );
-        /** @brief 잠금 목록을 바꿉니다(시험 · 갱신 결과). */
+        /** @brief 잠금 목록을 바꿉니다(테스트 · 갱신 결과). */
         void setLocks( vector<SourceControlLock>&& listLock ) { _listLock = std::move( listLock ); }
 
     private:

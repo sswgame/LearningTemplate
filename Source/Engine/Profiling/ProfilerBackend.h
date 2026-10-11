@@ -67,12 +67,12 @@ namespace sw
         /** @brief 활성 출력입니다. 없으면 nullptr 입니다. 어느 스레드에서나 부를 수 있습니다. */
         static IProfilerBackend* getActiveBackend();
         /**
-         * @brief 활성 출력을 바꿉니다. 시험이 기록용 가짜 출력을 꽂을 때 씁니다.
+         * @brief 활성 출력을 바꿉니다. 테스트가 기록용 가짜 출력을 꽂을 때 씁니다.
          * @note @p pBackend 는 그것으로 열린 마지막 구간이 닫힐 때까지 살아 있어야 합니다(구간은 연 출력으로 닫는다).
          */
         static void setActiveBackend( IProfilerBackend* pBackend );
 #if SW_PROFILER_BACKEND_COMPILED
-        /** @brief Tracy 가 켜질 때 `TaskManager::setProfileHook` 에 꽂는 훅입니다(시험이 같은 것을 꽂는다). 태스크 · 스테이지 이름이 구간 이름이 됩니다. */
+        /** @brief Tracy 가 켜질 때 `TaskManager::setProfileHook` 에 꽂는 훅입니다(테스트가 같은 것을 꽂는다). 태스크 · 스테이지 이름이 구간 이름이 됩니다. */
         static const TaskProfileHook* getTaskProfileHook();
 #endif
 

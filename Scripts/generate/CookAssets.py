@@ -542,7 +542,7 @@ class PackWriter:
 def collectPackFiles(sourceDir: Path, packConfig: dict | None, targetRhi: str = "dx12",
                      buildTarget: str = "") -> tuple[list[tuple[str, Path]], list[str]]:
     """
-    도메인 폴더에서 팩에 넣을 낱개 파일(상대 경로, 경로)과, 소스 트리에 남은 낡은 쿠킹 산출물 목록을 고릅니다 — `cookPack` 과 시험이 같은 판단을 쓴다.
+    도메인 폴더에서 팩에 넣을 낱개 파일(상대 경로, 경로)과, 소스 트리에 남은 낡은 쿠킹 산출물 목록을 고릅니다 — `cookPack` 과 테스트가 같은 판단을 쓴다.
     """
     listPackFile: list[tuple[str, Path]] = []
     staleCooked: list[str] = []

@@ -105,7 +105,7 @@ namespace sw::editor
             }
 
 #if SW_DEV_COMMANDS_ENABLED
-            /** @brief `log.repeat <count> <warning|info> <text...>` — 같은 줄을 여러 번 남깁니다(Output Log 접기 시험). */
+            /** @brief `log.repeat <count> <warning|info> <text...>` — 같은 줄을 여러 번 남깁니다(Output Log 접기 테스트). */
             static bool runLogRepeat( const vector<string>& listArgument, string& outReply )
             {
                 if ( listArgument.size() < 3 )

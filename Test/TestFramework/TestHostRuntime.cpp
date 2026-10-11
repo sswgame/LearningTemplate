@@ -105,7 +105,7 @@ namespace
                 host._configManager = sw::make_unique<sw::ConfigManager>();
                 host._configManager->setRootDirectory( sw::ResourcePaths::getProjectFolderPath() );
 #if defined( SW_SHIPPING )
-                // 배포 구성은 생성된 JSON 만 읽는다. 그것이 역직렬화되지 않으면(정적 링크에서 리플렉션 등록기가 빠졌다) 모든 시험이 C++ 기본값
+                // 배포 구성은 생성된 JSON 만 읽는다. 그것이 역직렬화되지 않으면(정적 링크에서 리플렉션 등록기가 빠졌다) 모든 테스트가 C++ 기본값
                 // 설정으로 돈다 — 기동 실패로 드러낸다(`sw_addTestExecutable` 의 통째 링크).
                 {
                     sw::EngineConfig probe;
@@ -205,7 +205,7 @@ namespace
         {
             static sw::EngineInitResult initialize( TestHost& host )
             {
-                // 하네스의 타입 공급자(엔진 · GameFramework · 시험 타입)는 시험 실행 파일과 함께 올라와 리플렉션 단계가 이미 모았다.
+                // 하네스의 타입 공급자(엔진 · GameFramework · 테스트 타입)는 테스트 실행 파일과 함께 올라와 리플렉션 단계가 이미 모았다.
                 // 앱과 같이 이 단계가 끝나야 씬을 읽는다(`SceneManager::requestLoadFuture` · `SceneCooker::cookAllScenes`).
                 host._pOwned->_pTypeRegistry->markAllModuleTypesRegistered();
                 return sw::EngineInitResult::Succeeded;
@@ -240,7 +240,7 @@ namespace
         // 하네스가 세우지 않는 단계다(모듈 이미지 · 헤드리스 작업 · 창 · RHI · 렌더러).
         using ModuleImagesStartupStep  = Defaults;
         using HeadlessStartupStep      = Defaults;
-        using FontsStartupStep         = Defaults; // 글꼴 시험은 자기 FontSystem 을 만든다(가짜 래스터라이저 · 시험 카탈로그)
+        using FontsStartupStep         = Defaults; // 글꼴 테스트는 자기 FontSystem 을 만든다(가짜 래스터라이저 · 테스트 카탈로그)
         using UserSettingsStartupStep  = Defaults;
         using RHIStartupStep           = Defaults;
         using FrameRendererStartupStep = Defaults;
@@ -248,7 +248,7 @@ namespace
         using LiveShaderStartupStep    = Defaults;
         using SceneRHIStartupStep      = Defaults;
         using TelemetryStartupStep     = Defaults;
-        using UIStartupStep            = Defaults; // UI 시험은 자기 UISystem 을 만든다(자기 입력 관리자)
+        using UIStartupStep            = Defaults; // UI 테스트는 자기 UISystem 을 만든다(자기 입력 관리자)
     };
 } // namespace
 
@@ -292,7 +292,7 @@ namespace test
         // ------------------------------------------------------------------------------
         // 0) 부트스트랩 — `EngineLoop` 과 같은 것(이름 풀 · 로거 · 크래시 핸들러 · 리소스 루트 · 진단 도구 · 명령줄 · 전역 변수)
         // ------------------------------------------------------------------------------
-        // 목록(`EngineServiceList.xxx`)의 `EngineCreated` 서비스는 저장소가 만든다. 시험 실행 파일은 진단 도구(교착 감지기 · 메모리 프로파일러)를 늘 켠다.
+        // 목록(`EngineServiceList.xxx`)의 `EngineCreated` 서비스는 저장소가 만든다. 테스트 실행 파일은 진단 도구(교착 감지기 · 메모리 프로파일러)를 늘 켠다.
         // 프레임워크 전용 플래그를 먼저 소비해 CommandLineManager 가 미지 인자를 경고하지 않게 한다(부트스트랩이 나머지를 파싱한다).
         sw::vector<utf8*> listApplicationArg = TestRegistry::getInstance().configureFromArgs( argc, argv );
         if ( TestRegistry::getInstance().isHelpRequested() )

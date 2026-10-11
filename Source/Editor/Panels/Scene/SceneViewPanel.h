@@ -30,7 +30,7 @@ namespace sw::editor
         /** @brief 뷰포트 툴바 · 씬 뷰 캔버스 · 기즈모를 그립니다. */
         void drawContent() override;
 
-        /** @brief 뷰포트 클라이언트입니다(에디터 자체 시험이 기즈모 · 카메라 상태를 읽습니다). */
+        /** @brief 뷰포트 클라이언트입니다(에디터 자체 테스트가 기즈모 · 카메라 상태를 읽습니다). */
         const EditorViewportClient& getViewportClient() const { return _viewportClient; }
         /** @brief 뷰포트 클라이언트입니다(카메라를 옮기는 쪽 — `EditorSceneViewUtil::focusOn`). */
         EditorViewportClient& getViewportClient() { return _viewportClient; }

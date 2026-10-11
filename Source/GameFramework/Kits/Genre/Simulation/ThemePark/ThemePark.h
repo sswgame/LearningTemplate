@@ -3,9 +3,9 @@
  * @brief 테마파크 경영 시뮬레이션(롤러코스터 타이쿤의 손님 · 놀이기구 · 돈 · 공원 평가)입니다.
  *
  * @details 놀이기구는 평가 셋(흥분 · 강도 · 멀미)과 운행 정보(한 번 도는 시간 · 정원 · 값 · 운영비)를 가진 칸입니다. 코스터는 `CoasterRideAnalyzer`
- *          의 시험 운행 결과로 만들고(`makeRideFromCoaster`), 회전목마 같은 평면 놀이기구는 데이터가 평가를 줍니다.
+ *          의 테스트 운행 결과로 만들고(`makeRideFromCoaster`), 회전목마 같은 평면 놀이기구는 데이터가 평가를 줍니다.
  *          손님은 저마다 견딜 수 있는 강도 범위 · 멀미 내성 · 돈 · 행복 · 기력을 갖고, 놀이기구를 골라 걸어가 줄 서고 타고 내립니다.
- *          화면은 시뮬레이션을 그리기만 합니다 — 손님 자리(`ParkGuest::_position`)도 시뮬레이션이 정합니다. 난수는 씨앗이 같으면 같습니다(시험).
+ *          화면은 시뮬레이션을 그리기만 합니다 — 손님 자리(`ParkGuest::_position`)도 시뮬레이션이 정합니다. 난수는 씨앗이 같으면 같습니다(테스트).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -186,11 +186,11 @@ namespace sw
         void setRideOpen( int32 rideIndex, bool bOpen );
         void setRidePrice( int32 rideIndex, int32 price );
         void setEntryFee( int32 entryFee ) { _settings._entryFee = entryFee < 0 ? 0 : entryFee; }
-        /** @brief 손님 하나를 정문에 바로 들입니다(시험 · 이벤트). 입장료를 받는다. 정원이 찼으면 false 입니다. */
+        /** @brief 손님 하나를 정문에 바로 들입니다(테스트 · 이벤트). 입장료를 받는다. 정원이 찼으면 false 입니다. */
         [[nodiscard]] bool admitGuest( int32 cash, float32 minIntensity, float32 maxIntensity, float32 nauseaTolerance );
 
         /**
-         * @brief 코스터 시험 운행 결과로 놀이기구를 만듭니다. 한 번 도는 시간은 한 바퀴 시간 + @p loadTime 입니다.
+         * @brief 코스터 테스트 운행 결과로 놀이기구를 만듭니다. 한 번 도는 시간은 한 바퀴 시간 + @p loadTime 입니다.
          * @details 한 바퀴를 못 도는 코스터(`_bCompleted` 가 아님)는 흥분 0 이라 아무도 타려 하지 않는다 — 타이쿤과 같다.
          */
         static ParkRide makeRideFromCoaster( const hashed_string& id, const string& name, const CoasterRideStats& stats, int32 capacity, float32 loadTime );

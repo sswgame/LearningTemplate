@@ -170,7 +170,7 @@ namespace sw
         /** @brief 건물에서 병종을 훈련합니다(값은 지금 낸다, 인구 한도는 대기열까지 센다). */
         ConquestResult trainUnit( int32 buildingIndex, const hashed_string& unitID );
         /**
-         * @brief 병사를 바로 세웁니다(스크립트 · 시험). 플레이어 병사는 지휘관 부대에 듭니다.
+         * @brief 병사를 바로 세웁니다(스크립트 · 테스트). 플레이어 병사는 지휘관 부대에 듭니다.
          * @return 병사 번호. 모르는 병종이면 −1 입니다.
          */
         int32 spawnUnit( const hashed_string& unitID, ConquestTeam team, float32 x, ConquestOrder order );

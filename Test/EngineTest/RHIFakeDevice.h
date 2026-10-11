@@ -2,7 +2,7 @@
  * @file Test/EngineTest/RHIFakeDevice.h
  * @brief GPU 없이 도는 가짜 RHI 디바이스 · 커맨드 리스트 — 렌더 그래프의 병렬 기록 · 제출 순서를 nogpu 로 본다.
  * @details `RenderGraph::executeParallel` 은 디바이스가 있어야 돌아서, 그 경로(레벨마다 리스트를 열고 · 기록하고 · 제출하는 순서, 리스트를 만들지
- *          못할 때)는 실제 디바이스로는 GPU 시험(`RenderPassGPUTest`)에서만 지나간다. 그리기는 하지 않고 기록 범위와 제출 순서만 적는다.
+ *          못할 때)는 실제 디바이스로는 GPU 테스트(`RenderPassGPUTest`)에서만 지나간다. 그리기는 하지 않고 기록 범위와 제출 순서만 적는다.
  */
 #pragma once
 #include "Core/Delegate/Delegate.h"
@@ -71,7 +71,7 @@ namespace test
         uint32            _beginCount{ 0 }; /**< `beginCommandList` 횟수 */
         uint32            _endCount{ 0 };   /**< `endCommandList` 횟수 */
         bool              _bOpen{ false };  /**< 열려 있는가(닫지 않고 제출하면 실제 백엔드는 실패한다) */
-        sw::hashed_string _passName;        /**< 이 리스트에 기록한 패스 — 시험의 패스 콜백이 적는다 */
+        sw::hashed_string _passName;        /**< 이 리스트에 기록한 패스 — 테스트의 패스 콜백이 적는다 */
     };
 } // namespace test
 
@@ -114,7 +114,7 @@ namespace test
 
         void executeCommandList( sw::IRHICommandList* pCmdList ) override { _listExecuted.push_back( static_cast<FakeRHICommandList*>( pCmdList ) ); }
 
-        /** @brief 부르지 않고 쌓기만 합니다. 시험이 "GPU 가 그 프레임을 끝냈다" 를 흉내 내어 `_listGPURelease` 를 부릅니다. */
+        /** @brief 부르지 않고 쌓기만 합니다. 테스트가 "GPU 가 그 프레임을 끝냈다" 를 흉내 내어 `_listGPURelease` 를 부릅니다. */
         void enqueueGPURelease( const sw::RHIResourceReleaseDelegate& releaseDelegate ) override { _listGPURelease.push_back( releaseDelegate ); }
 
         [[nodiscard]] bool queryNativeHandlesInternal( sw::RHINativeHandles& outHandles ) const override
@@ -126,7 +126,7 @@ namespace test
         uint32                                     _maxCreatable{ 0xFFFFFFFFu }; /**< 이만큼 만든 뒤로는 만들지 못한다 */
         uint32                                     _createdCount{ 0 };           /**< 지금까지 만든 리스트 수 */
         sw::vector<FakeRHICommandList*>            _listExecuted;                /**< 제출된 순서 그대로의 리스트 */
-        sw::vector<const utf8*>                    _listShutdownStep;            /**< 불린 종료 단계 훅 이름(부른 순서) — 시험 자원의 `releaseRHI` 도 여기 적는다 */
+        sw::vector<const utf8*>                    _listShutdownStep;            /**< 불린 종료 단계 훅 이름(부른 순서) — 테스트 자원의 `releaseRHI` 도 여기 적는다 */
         void*                                      _pNativeDevice{ nullptr };    /**< `getNativeDevice` 가 돌려줄 값 */
         mutable uint32                             _nativeHandleQueryCount{ 0 }; /**< 백엔드 훅 `queryNativeHandlesInternal` 이 불린 횟수 */
         sw::vector<sw::RHIResourceReleaseDelegate> _listGPURelease;              /**< `enqueueGPURelease` 로 받은 콜백(받은 순서) */

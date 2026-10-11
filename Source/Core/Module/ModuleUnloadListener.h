@@ -67,7 +67,7 @@ namespace sw
          */
         static void releaseAllWithin( const void* pBegin, const void* pEnd, vector<ReleaseResult>& outListResult );
 
-        /** @brief 지금 목록에 오른 리스너 수입니다(진단 · 시험). */
+        /** @brief 지금 목록에 오른 리스너 수입니다(진단 · 테스트). */
         static uint32 getListenerCount();
         /** @brief 기동 뒤에 만든 리스너(모듈 · 컴포넌트)가 키운 목록 용량을 놓습니다. 엔진 종료 끝(`EngineBootstrap::shutdown`)이 모듈을 모두 내린 뒤 부릅니다. */
         static void releaseUnusedStorage();

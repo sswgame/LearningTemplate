@@ -135,7 +135,7 @@ namespace sw::editor
     {
         /**
          * @brief glTF 파일 하나를 엔진 좌표계의 삼각형 목록으로 읽습니다(스킨은 버립니다). 삼각형이 하나도 없으면 false 입니다.
-         * @details 시험과 `importModel` 이 같은 길(`readModelAsset`)을 씁니다(파일을 쓰지 않습니다).
+         * @details 테스트와 `importModel` 이 같은 길(`readModelAsset`)을 씁니다(파일을 쓰지 않습니다).
          */
         [[nodiscard]] static bool readModel( string_view sourcePath, const ModelImportRule& rule, vector<RHIVertex>& outListVertex );
 

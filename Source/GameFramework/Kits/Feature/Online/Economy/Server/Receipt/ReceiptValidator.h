@@ -51,7 +51,7 @@ namespace sw
         uint64        _accountID{ 0 };
         int64         _purchaseTimeMs{ 0 };
         ReceiptStatus _status{ ReceiptStatus::Invalid };
-        uint8         _bSandbox{ SW_FALSE }; ///< 시험 결제(샌드박스 · 테스트 카드)
+        uint8         _bSandbox{ SW_FALSE }; ///< 테스트 결제(샌드박스 · 테스트 카드)
     };
 } // namespace sw
 
@@ -69,7 +69,7 @@ namespace sw
 
         /** @brief 스토어 이름(`[0-9a-z_]`, 27 자 이하 — 분개 범위 `rcpt.<이름>` 에 든다)입니다. */
         virtual const utf8* getStoreName() const = 0;
-        /** @brief 개발 · 시험 전용 제공자인가입니다(서명 없음 — Shipping 서비스가 거절한다). */
+        /** @brief 개발 · 테스트 전용 제공자인가입니다(서명 없음 — Shipping 서비스가 거절한다). */
         virtual bool isDevelopmentOnly() const { return false; }
         /** @brief 검증을 맡깁니다. 결과는 정확히 한 번 `pollCompletions` 로 나온다(내릴 때 남은 것은 Retry 로). */
         virtual void submitValidation( const ReceiptValidationRequest& request ) = 0;

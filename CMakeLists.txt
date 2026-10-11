@@ -100,7 +100,7 @@ else()
 	sw_declareUnbuiltDirectory("${CMAKE_SOURCE_DIR}/Source/Games")
 endif()
 
-# 온라인 부하 시험 봇 — 개발 도구. 클라이언트 · 서버 키트가 함께 있는 개발 구성(Game 타깃)에서만 짓는다(배포물 · Client · Server 타깃에 없다).
+# 온라인 부하 테스트 봇 — 개발 도구. 클라이언트 · 서버 키트가 함께 있는 개발 구성(Game 타깃)에서만 짓는다(배포물 · Client · Server 타깃에 없다).
 if(NOT SW_SHIPPING_BUILD AND SW_TARGET_TYPE STREQUAL "Game" AND (SW_BUILD_GAMEFRAMEWORK OR SW_BUILD_GAME))
 	add_subdirectory(Tools/OnlineLoadBot)
 endif()
@@ -123,10 +123,10 @@ if(SW_ENABLE_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Test")
 	include(CTest)
 	set(CTEST_TEST_TIMEOUT 180)
 	enable_testing()
-	# 시험 실행 파일은 기본 `all` 에 넣지 않는다 — 개발 빌드가 시험 TU 까지 짓지 않게. `AllTests` 타깃 · 시험 프리셋(build 프리셋의 `targets`) ·
+	# 테스트 실행 파일은 기본 `all` 에 넣지 않는다 — 개발 빌드가 테스트 TU 까지 짓지 않게. `AllTests` 타깃 · 테스트 프리셋(build 프리셋의 `targets`) ·
 	# ctest 의 빌드 픽스처가 짓는다(`sw_registerTestBuildFixture`, 이유는 docs/09_Decisions.md).
 	add_subdirectory(Test EXCLUDE_FROM_ALL)
 	sw_registerTestBuildFixture()
-	# 린트 시험 — 목록은 `Scripts/lint/gate/` · `selftest/` 폴더다(GenerateLintTargets.py 가 만든 LintTargets.cmake 의 등록 함수).
+	# 린트 테스트 — 목록은 `Scripts/lint/gate/` · `selftest/` 폴더다(GenerateLintTargets.py 가 만든 LintTargets.cmake 의 등록 함수).
 	sw_registerGeneratedLintTests()
 endif()

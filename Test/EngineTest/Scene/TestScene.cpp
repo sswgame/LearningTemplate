@@ -99,7 +99,7 @@ namespace sw
             }
         };
 
-        /** @brief 그림자 볼륨 맞춤 시험의 도우미입니다(ThemePark 의 직교 리그 · 해와 같은 모양). */
+        /** @brief 그림자 볼륨 맞춤 테스트의 도우미입니다(ThemePark 의 직교 리그 · 해와 같은 모양). */
         struct ShadowFitTestInternal
         {
             static constexpr uint32  kResolution = 2048;

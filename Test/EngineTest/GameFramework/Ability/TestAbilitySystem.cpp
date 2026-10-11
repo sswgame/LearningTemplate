@@ -26,7 +26,7 @@
 
 namespace sw
 {
-    /** @brief 커밋하고 바로 끝나는 시험 어빌리티입니다 — 발동 수 · 받은 트리거 크기를 셉니다. */
+    /** @brief 커밋하고 바로 끝나는 테스트 어빌리티입니다 — 발동 수 · 받은 트리거 크기를 셉니다. */
     class AbilityTestInstantAbility : public GameplayAbility
     {
     public:
@@ -57,7 +57,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 1 초를 기다렸다가 끝나는 시험 어빌리티입니다 — 입력 · 취소를 셉니다. */
+    /** @brief 1 초를 기다렸다가 끝나는 테스트 어빌리티입니다 — 입력 · 취소를 셉니다. */
     class AbilityTestLatentAbility : public GameplayAbility
     {
     public:
@@ -97,7 +97,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief "Event.Combo" 이벤트를 두 번 받으면 끝나는 시험 어빌리티입니다. */
+    /** @brief "Event.Combo" 이벤트를 두 번 받으면 끝나는 테스트 어빌리티입니다. */
     class AbilityTestComboAbility : public GameplayAbility
     {
     public:
@@ -160,7 +160,7 @@ using namespace sw;
 
 namespace
 {
-    /** @brief 이 시험 동안만 이벤트 버스를 게임 서비스로 겁니다. */
+    /** @brief 이 테스트 동안만 이벤트 버스를 게임 서비스로 겁니다. */
     struct AbilityTestScopedDispatcher
     {
         explicit AbilityTestScopedDispatcher( EventDispatcher& dispatcher ) { game::bindLocalService<EventDispatcher>( &dispatcher ); }
@@ -236,7 +236,7 @@ namespace
         }
     }
 
-    /** @brief 시험 카탈로그 — 비용 · 쿨다운 · 피해 · 회복 · 세트. */
+    /** @brief 테스트 카탈로그 — 비용 · 쿨다운 · 피해 · 회복 · 세트. */
     constexpr const utf8* kAbilityTestCatalogXML = R"(
 <AbilityCatalog>
   <Ability id="GA_Heal" class="ApplyEffects" cost="GE_Cost_Mana20" cooldown="GE_Cooldown_Heal">
@@ -717,7 +717,7 @@ SW_TEST_CASE( AbilitySystemTest, GameplayEventsTriggerAbilitiesAndWakeWaitingTas
 
 /**
  * @brief [AbilitySystemTest] 어빌리티 · 어트리뷰트 셋 클래스 이름은 만들 때 풀린다 — 데이터를 클래스 등록보다 먼저 읽어도 조용하다
- * @details 클래스는 게임 모듈이 등록한다. 읽을 때 "아직 등록되지 않았다" 고 경고하면 데이터만 읽는 도구 · 시험과 모듈이 나중에 오르는 순서에서
+ * @details 클래스는 게임 모듈이 등록한다. 읽을 때 "아직 등록되지 않았다" 고 경고하면 데이터만 읽는 도구 · 테스트와 모듈이 나중에 오르는 순서에서
  *          맞는 데이터가 경고를 낸다(언리얼 GAS 도 클래스 참조는 쓸 때 푼다). 없는 클래스는 만들 때 nullptr 과 경고다.
  */
 SW_TEST_CASE( AbilitySystemTest, ClassNamesResolveWhenCreatedNotWhenLoaded )

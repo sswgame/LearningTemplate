@@ -97,7 +97,7 @@ SW_TEST_CASE( MaterialTest, MaterialPermutationDefines )
 
 /**
  * @brief [MaterialTest] 꺼진 정적 스위치는 `keywordOff` 를, 켜면 `keyword` 를 define 으로 낸다
- * @details 지금 이 경로를 쓰는 에셋이 없다 — 안 쓰이는 경로가 조용히 썩지 않게 시험이 든다.
+ * @details 지금 이 경로를 쓰는 에셋이 없다 — 안 쓰이는 경로가 조용히 썩지 않게 테스트가 든다.
  */
 SW_TEST_CASE( MaterialTest, StaticSwitchOffKeywordWhenDisabled )
 {
@@ -1043,7 +1043,7 @@ SW_TEST_CASE( MaterialTest, UnknownEnumTextKeepsTheValueAndSaysSo )
 /**
  * @brief [MaterialTest] 머티리얼 · 인스턴스의 형식 판정은 `AssetManager` 서비스 없이 돈다 — 이 빌드보다 새 판은 서비스가 없어도 assert 없이 거절한다
  * @details 형식 판정은 씬 · 프리팹과 같은 `AssetFormatRegistry::upgradeXMLWithActiveRegistry`, 판 번호 쓰기 · 읽기는 상태 없는 정적 함수다.
- *          머티리얼 본문의 enum 글 해석은 리플렉션(`TypeRegistry`)이 필요하므로 이 시험은 그 앞에서 끝나는 경로만 본다.
+ *          머티리얼 본문의 enum 글 해석은 리플렉션(`TypeRegistry`)이 필요하므로 이 테스트는 그 앞에서 끝나는 경로만 본다.
  */
 SW_TEST_CASE( MaterialTest, FormatCheckDoesNotNeedTheAssetManager )
 {

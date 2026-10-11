@@ -55,11 +55,11 @@ namespace sw
         // 메모리 프로파일러가 맨 먼저 선다. 그 앞에서 잡은 sw 블록(로거의 큐 · 이름 풀)은 태그에 세이지 않고 "sw 할당자 밖" 몫으로 보인다.
         // 플랫폼 누수 추적은 그보다도 먼저 켠다(Windows Debug CRT: 할당 추적 + 보고를 stderr 로). `EngineLoop` 가 기동 뒤 기준선을 찍고
         // 종료 뒤 `reportMemoryLeaks` 로 비교한다 — 켜지 않으면 누수 덤프가 디버거 출력으로만 나가 콘솔 · CI 에서 보이지 않는다.
-        // 메모리 프로파일러는 배포본이 아닌 모든 구성에 선다(태그 · 최고치 · 예산 · 보고). 추적은 진단 구성(Debug · 시험)에서 켜 두고, Release 는 꺼 둔 채
+        // 메모리 프로파일러는 배포본이 아닌 모든 구성에 선다(태그 · 최고치 · 예산 · 보고). 추적은 진단 구성(Debug · 테스트)에서 켜 두고, Release 는 꺼 둔 채
         // `-gv_memoryTracking=1` 로 켠다 — 꺼져 있으면 할당마다 분기 하나다. 플랫폼 누수 검사는 진단 구성만.
         if ( bDiagnostics )
             MemoryProfiler::enableMemoryLeakChecks();
-        // 배포본에는 할당 헤더가 없어 셀 것이 없다 — 시험 하네스(진단 구성)만 같은 API 를 쓰려고 세운다.
+        // 배포본에는 할당 헤더가 없어 셀 것이 없다 — 테스트 하네스(진단 구성)만 같은 API 를 쓰려고 세운다.
 #if defined( SW_SHIPPING )
         const bool bCreateMemoryProfiler = bDiagnostics;
 #else
@@ -76,7 +76,7 @@ namespace sw
         _logger = make_unique<AsyncLogSink>();
         _logger->initialize();
 
-        // OS 로더가 실행 파일과 함께 올린 모듈(시험 실행 파일이 링크한 키트 · 게임)의 지연 import 를 그 코드가 돌기 전에 묶는다 — 첫 호출이 묶으면
+        // OS 로더가 실행 파일과 함께 올린 모듈(테스트 실행 파일이 링크한 키트 · 게임)의 지연 import 를 그 코드가 돌기 전에 묶는다 — 첫 호출이 묶으면
         // 그 호출의 첫 float 인자가 망가진다(`ModuleImageUtil::bindDelayLoadImports`). 명시적으로 올리는 모듈은 올리는 자리가 묶는다.
         (void)ModuleImageUtil::bindDelayLoadImportsOfLoadedModules(); // 못 묶으면 경고했다
 

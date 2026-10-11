@@ -1,6 +1,6 @@
 /**
  * @file EditorViewportOverlayLayout.h
- * @brief 씬 뷰 위에 떠 있는 오버레이 바(유니티 씬 뷰 Overlays)의 자리 · 붙은 쪽 · 접힘 · 보임과 그 저장입니다(ImGui 없음 — EditorTest 가 시험합니다).
+ * @brief 씬 뷰 위에 떠 있는 오버레이 바(유니티 씬 뷰 Overlays)의 자리 · 붙은 쪽 · 접힘 · 보임과 그 저장입니다(ImGui 없음 — EditorTest 가 테스트합니다).
  */
 #pragma once
 #include "Core/Common/Types.h"

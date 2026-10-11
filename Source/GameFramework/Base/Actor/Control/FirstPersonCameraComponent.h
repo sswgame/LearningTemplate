@@ -21,7 +21,7 @@ namespace sw
 
     /**
      * @struct FirstPersonCameraMath
-     * @brief 1인칭 카메라의 계산입니다 — 씬 없이 시험합니다.
+     * @brief 1인칭 카메라의 계산입니다 — 씬 없이 테스트합니다.
      * @details 시점(`FirstPersonLook`)은 피치가 위로 + 이고, 엔진 오일러(`SceneComponent::setLocalRotation`)는 피치가 아래로 + 입니다.
      */
     struct SW_GF_API FirstPersonCameraMath

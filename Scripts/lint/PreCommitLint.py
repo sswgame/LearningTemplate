@@ -177,7 +177,7 @@ class GateRunPlan:
 def selectGatesForStaged(projectRoot: Path, listStaged: list[Path], listFileScoped: list[Path],
                          listScript: list[LintScript] | None = None, probe: StagedContentProbe | None = None) -> list[GateRunPlan]:
     """
-    staged 파일 목록 → 게이트마다의 계획(건너뜀 이유 또는 넘길 인자). 아무것도 돌리거나 찍지 않는다 — 판정만(시험이 이것을 본다).
+    staged 파일 목록 → 게이트마다의 계획(건너뜀 이유 또는 넘길 인자). 아무것도 돌리거나 찍지 않는다 — 판정만(테스트가 이것을 본다).
 
     무엇이 staged 되었을 때 도는지, staged 부분집합을 어떻게 받는지는 게이트가 스스로 선언한다
     (`LintGate.preCommitPattern` · `preCommitFileArgument`). 여기에는 게이트 이름이 없다.
@@ -185,7 +185,7 @@ def selectGatesForStaged(projectRoot: Path, listStaged: list[Path], listFileScop
     파일을 인자로 받는 게이트는 `listFileScoped`(병합 커밋이면 새 내용인 파일만)에서, 트리 전체 게이트는 `listStaged` 에서 고른다.
     파일 인자 게이트에 넘길 파일이 하나도 없으면 돌리지 않는다 — 빈 `--files` 는 "전체를 훑어라" 로 읽힌다.
     게이트 클래스가 없는 파일은 계획에 넣지 않는다.
-    내용 규칙(`preCommitContentPattern` · `preCommitChangedLinePattern`)은 `probe` 가 답한다 — `probe` 가 없으면(시험) 글롭에 맞는 파일이 있는 것으로 본다.
+    내용 규칙(`preCommitContentPattern` · `preCommitChangedLinePattern`)은 `probe` 가 답한다 — `probe` 가 없으면(테스트) 글롭에 맞는 파일이 있는 것으로 본다.
     """
     listPlan: list[GateRunPlan] = []
     for script in discoverLintScripts("gate") if listScript is None else listScript:

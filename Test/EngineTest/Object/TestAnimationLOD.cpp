@@ -39,7 +39,7 @@ namespace
 
         /**
          * @class CountingTask
-         * @brief 기본 포즈 단계마다 루트를 Y 축으로 `_step` 씩 더 돌리는 시험용 일입니다(평가할 때마다 포즈가 달라진다).
+         * @brief 기본 포즈 단계마다 루트를 Y 축으로 `_step` 씩 더 돌리는 테스트용 일입니다(평가할 때마다 포즈가 달라진다).
          */
         class CountingTask final : public IAnimationPhaseTask
         {

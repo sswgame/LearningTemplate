@@ -21,7 +21,7 @@ from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 
 class _FixedGate(LintGate):
-    """시험용 게이트 — 받은 결과를 그대로 돌려준다. 본 루트를 남긴다."""
+    """테스트용 게이트 — 받은 결과를 그대로 돌려준다. 본 루트를 남긴다."""
 
     description = "시험용"
     selfTestSkipReason = "시험용 — 등록되지 않는다"
@@ -103,7 +103,7 @@ class LintGateShellTest(unittest.TestCase):
 
 
 class _ExemptGate(LintGate):
-    """시험용 — 표 한 줄, 훑기가 무엇을 보고 쓰는지 바깥에서 정한다."""
+    """테스트용 — 표 한 줄, 훑기가 무엇을 보고 쓰는지 바깥에서 정한다."""
 
     description = "시험용"
     selfTestSkipReason = "시험용 — 등록되지 않는다"

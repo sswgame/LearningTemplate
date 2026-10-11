@@ -94,7 +94,7 @@ namespace sw
         static void* allocateAligned( size_t size, size_t alignment, MemoryTag tag );
 #if !defined( SW_SHIPPING )
         /**
-         * @brief 이 스레드의 다음 @p count 번 할당을 실패(nullptr)로 돌립니다 — 할당 실패 경로를 시험하는 창구입니다. 0 이면 끕니다. 배포본에는 없습니다.
+         * @brief 이 스레드의 다음 @p count 번 할당을 실패(nullptr)로 돌립니다 — 할당 실패 경로를 테스트용 함수입니다. 0 이면 끕니다. 배포본에는 없습니다.
          * @details 스레드 국소라 다른 스레드(로거 워커 · 태스크)의 할당은 영향을 받지 않는다. `allocate` · `allocateAligned` 가 센다.
          */
         static void injectAllocationFailures( uint32 count );

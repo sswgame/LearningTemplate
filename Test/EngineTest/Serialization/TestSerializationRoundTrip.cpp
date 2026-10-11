@@ -144,7 +144,7 @@ namespace
 
 /**
  * @brief [SerializationRoundTripTest] Resource/ 의 씬 · 프리팹에서 만든 컴포넌트는 세 형식 모두 쓴 것을 다시 읽어 다시 쓰면 같은 바이트다
- * @details 손으로 만든 시험 타입만 왕복하면 실제 데이터가 지나는 모양(중첩 컨테이너 · 맵 · 고정 배열 · enum · 값 구조체)을 놓친다.
+ * @details 손으로 만든 테스트 타입만 왕복하면 실제 데이터가 지나는 모양(중첩 컨테이너 · 맵 · 고정 배열 · enum · 값 구조체)을 놓친다.
  *          소유 포인터 컨테이너가 있는 타입은 뺀다(`_listComponent` 는 덤프 케이스가 오브젝트 상태로 본다).
  */
 SW_TEST_CASE( SerializationRoundTripTest, EveryResourceComponentRewritesToTheSameBytes )
