@@ -17,17 +17,17 @@ namespace sw
             static constexpr float64 kLossSmoothing = 0.1;
             static constexpr float64 kStatsInterval = 0.25;
 
-            /** @brief 통계 한 칸(`float32`)을 표본 쪽으로 @p factor 만큼 옮깁니다. 계산은 `float64`(시각과 같은 정밀도)로 합니다. */
+            /** @brief 통계 값 하나(`float32`)를 표본 쪽으로 @p factor 만큼 옮깁니다. 계산은 `float64`(시각과 같은 정밀도)로 합니다. */
             static float32 smoothTowards( float32 current, float64 sample, float64 factor )
             {
                 const float64 value = static_cast<float64>( current );
                 return static_cast<float32>( value + ( sample - value ) * factor );
             }
             static constexpr int32   kMessageCountMax = 255;
-            static constexpr float64 kMinLostAge      = 0.5; ///< 확인이 이보다 늦으면 잃은 것으로 센다 — 유지 간격(0.25 초)보다 길게(답을 잃으면 다음 교환의 묶음이 확인한다)
-            static constexpr float64 kBandwidthWindow = 1.0; ///< 대역폭 통계의 창(초)
+            static constexpr float64 kMinLostAge      = 0.5; ///< 확인이 이보다 늦으면 잃은 것으로 센다. 유지 간격(0.25초)보다 길게 잡는다(답을 잃으면 다음 교환의 묶음이 확인한다).
+            static constexpr float64 kBandwidthWindow = 1.0; ///< 대역폭 통계의 윈도우(초).
 
-            /** @brief 메시지 하나가 차지할 비트(채널 · id · 조각 비트 · 길이 · 몸)입니다. */
+            /** @brief 메시지 하나가 차지하는 비트 수입니다(채널, ID, 조각 비트, 길이, 본문). */
             static int32 computeMessageBits( NetChannelType channel, int32 size )
             {
                 const int32 idBits   = channel == NetChannelType::Unreliable ? 0 : 16;
@@ -104,7 +104,7 @@ namespace sw
         _listOutgoingSequenced.clear();
         _listOutgoingUnreliable.clear();
         _listSequencedReceive.clear();
-        _listReliableAssembly.clear(); // 끊긴 연결의 반쪽 메시지가 같은 자리의 새 연결 메시지 앞에 붙지 않게
+        _listReliableAssembly.clear(); // 끊긴 연결의 반쪽 메시지가 같은 슬롯의 새 연결 메시지 앞에 붙지 않게 한다.
         _stats                   = NetConnectionStats{};
         _lastStatsTime           = 0.0;
         _lastAckRequestTime      = -1.0e9;
@@ -126,7 +126,7 @@ namespace sw
             return false;
         if ( size > getMaxMessageSize( channel ) )
         {
-            // 부른 쪽의 실수다(키트 예산 · 상한 상수) — 조용히 버리면 받는 쪽은 영영 모른다.
+            // 부른 쪽의 실수다(키트 예산이나 상한 상수). 조용히 버리면 받는 쪽은 영영 모른다.
             SW_LOG_ERROR( "NetConnection: a %# byte message exceeds the %# byte limit of channel %# - not sent", size, getMaxMessageSize( channel ),
                           static_cast<int32>( channel ) );
             return false;
@@ -141,7 +141,7 @@ namespace sw
             case NetChannelType::UnreliableSequenced:
             {
                 vector<uint8> buffer( pData, pData + size );
-                // 흐름은 메시지 첫 바이트(종류)마다 — 같은 종류의 아직 안 나간 옛것만 새것으로 바꾼다(다른 종류는 서로 지우지 않는다).
+                // 흐름은 메시지 첫 바이트(종류)마다 따로 둔다. 같은 종류의 아직 나가지 않은 옛 메시지만 새 메시지로 바꾸고, 다른 종류는 서로 지우지 않는다.
                 for ( vector<uint8>& pending : _listOutgoingSequenced )
                 {
                     const bool bSameStream = pending.empty() == buffer.empty() && ( buffer.empty() || pending[0] == buffer[0] );
@@ -174,11 +174,11 @@ namespace sw
 
     bool NetConnection::queueReliable( NetChannelType channel, const uint8* pData, int32 size )
     {
-        // 조각 하나가 신뢰 id 하나다 — 재전송 · 확인도 조각마다. 창이 메시지 전체를 받을 수 없으면 조각 하나도 넣지 않는다.
-        // 신뢰 순서 없음은 조각나지 않는다(`getMaxMessageSize` 가 이미 1 KB 로 막았다). 조각은 잇달아 id 를 받는다 — 사이에 다른 메시지가 끼지 않는다.
+        // 조각 하나가 신뢰 ID 하나다. 재전송과 확인도 조각마다 한다. 창이 메시지 전체를 받을 수 없으면 조각을 하나도 넣지 않는다.
+        // 신뢰 순서 없음은 조각나지 않는다(`getMaxMessageSize` 가 이미 1KB 로 막았다). 조각은 연속으로 ID를 받으므로 사이에 다른 메시지가 끼지 않는다.
         const int32 fragmentCount = MathUtil::max( 1, ( size + kMaxSingleMessageSize - 1 ) / kMaxSingleMessageSize );
         if ( getPendingReliableCount() + fragmentCount > kReliableWindow - 1 )
-            return false; // 상대가 확인하지 않는다 — 막힘(게임이 보내는 속도를 줄인다)
+            return false; // 상대가 확인하지 않아 막힌 상태다(게임이 보내는 속도를 줄인다).
         for ( int32 fragment = 0; fragment < fragmentCount; ++fragment )
         {
             const int32       offset   = fragment * kMaxSingleMessageSize;
@@ -249,7 +249,7 @@ namespace sw
         pSent->_time          = time;
         pSent->_reliableCount = 0;
 
-        // 메시지 수를 먼저 쓰지 않고, 메시지마다 "더 있다" 1 비트를 앞에 둔다(몇 개가 들어갈지 쓰면서 정한다).
+        // 메시지 수를 먼저 쓰지 않고, 메시지마다 "더 있다" 1비트를 앞에 둔다. 몇 개가 들어갈지는 쓰면서 정한다.
         const int32   budgetBits   = maxBytes * 8 - writer.getBitCount() - 8;
         int32         usedBits     = 0;
         int32         written      = 0;
@@ -272,7 +272,7 @@ namespace sw
             ++written;
             return true;
         };
-        // 신뢰 — 오래된 것부터, 처음 보내거나 재전송 시각이 된 것(조각 하나가 메시지 하나다).
+        // 신뢰 메시지는 오래된 것부터 싣는다. 처음 보내거나 재전송 시각이 된 것이 대상이며, 조각 하나가 메시지 하나다.
         const auto writeReliable = [&]()
         {
             for ( uint16 messageID = _oldestUnackedReliableID; messageID != _nextReliableSendID; ++messageID )
@@ -291,7 +291,7 @@ namespace sw
                 pSent->_arrReliableID[pSent->_reliableCount++] = messageID;
             }
         };
-        // 순서만 — 종류마다 가장 새 것 하나씩(쌓을 때 옛것은 이미 바뀌었다). 들어가지 않은 것은 다음 패킷에.
+        // 순서만 채널은 종류마다 가장 새 것 하나씩 싣는다(쌓을 때 옛것은 이미 바뀌었다). 들어가지 않은 것은 다음 패킷에 싣는다.
         const auto writeSequenced = [&]()
         {
             size_t sequencedWritten = 0;
@@ -303,7 +303,7 @@ namespace sw
             }
             _listOutgoingSequenced.erase( _listOutgoingSequenced.begin(), _listOutgoingSequenced.begin() + static_cast<std::ptrdiff_t>( sequencedWritten ) );
         };
-        // 비신뢰 — 들어가는 만큼, 못 들어간 것은 다음 패킷으로.
+        // 비신뢰 메시지는 들어가는 만큼 싣고, 못 들어간 것은 다음 패킷으로 넘긴다.
         const auto writeUnreliable = [&]()
         {
             while ( _listOutgoingUnreliable.empty() == false )
@@ -313,8 +313,8 @@ namespace sw
                 _listOutgoingUnreliable.pop_front();
             }
         };
-        // 조각(1 KB)은 패킷을 거의 채운다 — 앞 패킷이 순서만 · 비신뢰를 남겼으면 이번은 그쪽부터 실어 번갈아 간다(큰 신뢰 전송 동안 스냅샷이 굶지 않고,
-        // 비신뢰가 많아도 신뢰가 굶지 않는다). 한 번 앞섰으면 다음은 신뢰부터다.
+        // 조각(1KB)은 패킷을 거의 채운다. 앞 패킷이 순서만과 비신뢰 메시지를 남겼으면 이번에는 그쪽부터 싣고 번갈아 간다.
+        // 그러면 큰 신뢰 전송 동안 스냅샷이 굶지 않고, 비신뢰가 많아도 신뢰가 굶지 않는다. 한 번 앞섰으면 다음은 신뢰부터 싣는다.
         const bool bUnreliableFirst = _bUnreliableFirst != SW_FALSE;
         if ( bUnreliableFirst )
         {
@@ -331,7 +331,7 @@ namespace sw
         const bool bUnreliableLeft = _listOutgoingSequenced.empty() == false || _listOutgoingUnreliable.empty() == false;
         _bUnreliableFirst          = bUnreliableFirst == false && bUnreliableLeft ? SW_TRUE : SW_FALSE;
         writer.writeBool( false );
-        // 확인만 담은 답은 확인을 바라지 않는다(답에 답이 꼬리를 물지 않게) — 마지막 요청에서 유지 간격이 지났으면 답이라도 바란다.
+        // 확인만 담은 답은 확인을 요청하지 않는다(답에 답이 꼬리를 물지 않게). 다만 마지막 요청에서 유지 간격이 지났으면 답이라도 요청한다.
         const bool bAckRequested = written > 0 || bReplyOnly == false || time - _lastAckRequestTime >= ackRequestInterval;
         if ( bAckRequested )
             _lastAckRequestTime = time;
@@ -350,10 +350,10 @@ namespace sw
         if ( reader.hasOverflowed() )
             return false;
         if ( _receivedPackets.exists( sequence ) || _receivedPackets.isStale( sequence ) )
-            return false; // 중복 · 너무 오래된 패킷
+            return false; // 중복이거나 너무 오래된 패킷.
 
-        // 메시지 — 먼저 모두 읽어 깨진 패킷이면 아무것도 넣지 않는다. 시퀀스도 몸을 다 읽은 뒤에 적는다 — 깨진 패킷을 확인하면 보낸 쪽이
-        // 그 안의 신뢰 메시지를 전달된 것으로 지운다.
+        // 메시지를 먼저 모두 읽어서 깨진 패킷이면 아무것도 넣지 않는다. 시퀀스도 본문을 다 읽은 뒤에 기록한다.
+        // 깨진 패킷을 확인해 버리면 보낸 쪽이 그 안의 신뢰 메시지를 전달된 것으로 알고 지운다.
         vector<ParsedMessage>& listParsed = _listParsedScratch;
         listParsed.clear();
         while ( reader.readBool() )
@@ -361,7 +361,7 @@ namespace sw
             ParsedMessage message;
             message._channel = static_cast<NetChannelType>( reader.readBits( NetConnectionInternal::kChannelBits ) );
             if ( message._channel >= NetChannelType::Count )
-                return false; // 채널 칸이 넷을 모두 쓰면 닿지 않지만, 채널이 늘어도 깨진 값을 거르게 둔다
+                return false; // 채널 슬롯 넷을 모두 쓰면 닿지 않는 분기다. 채널이 늘어도 깨진 값을 거르도록 남겨 둔다.
             message._id      = message._channel != NetChannelType::Unreliable ? static_cast<uint16>( reader.readBits( 16 ) ) : static_cast<uint16>( 0 );
             message._bMore   = message._channel == NetChannelType::ReliableOrdered && reader.readBool() ? SW_TRUE : SW_FALSE;
             const int32 size = static_cast<int32>( reader.readBits( kMessageSizeBits ) );
@@ -392,7 +392,7 @@ namespace sw
             {
                 case NetChannelType::ReliableOrdered:
                 {
-                    // 이미 건넨 것 · 창 밖은 버리고, 나머지는 자리에 두었다가 순서대로 건넨다.
+                    // 이미 넘긴 것과 창 밖의 것은 버리고, 나머지는 슬롯에 두었다가 순서대로 넘긴다.
                     const int32 ahead = NetSequence::computeDifference( message._id, _nextReliableReceiveID );
                     if ( ahead < 0 || ahead >= kReliableWindow || _incomingReliable.exists( message._id ) )
                         break;
@@ -406,7 +406,7 @@ namespace sw
                 }
                 case NetChannelType::ReliableUnordered:
                 {
-                    // 받는 대로 건넨다 — 앞 신뢰 메시지를 기다리지 않는다. 자리에는 "건넸다" 표만 남겨 순서 커서가 지나가고 늦게 온 중복을 거른다.
+                    // 받는 대로 넘긴다. 앞의 신뢰 메시지를 기다리지 않는다. 슬롯에는 "넘겼다" 표시만 남겨 순서 커서가 지나가게 하고, 늦게 온 중복을 거른다.
                     const int32 ahead = NetSequence::computeDifference( message._id, _nextReliableReceiveID );
                     if ( ahead < 0 || ahead >= kReliableWindow || _incomingReliable.exists( message._id ) )
                         break;
@@ -419,7 +419,7 @@ namespace sw
                 }
                 case NetChannelType::UnreliableSequenced:
                 {
-                    // 번호는 연결 하나에서 늘기만 하므로 종류마다 마지막 번호와 비교한다 — 늦게 온 같은 종류의 옛것만 버린다.
+                    // 번호는 연결 하나에서 증가하기만 하므로 종류마다 마지막 번호와 비교한다. 늦게 온 같은 종류의 옛 메시지만 버린다.
                     const uint8      kind    = message._buffer.empty() ? static_cast<uint8>( 0 ) : message._buffer[0];
                     SequencedStream* pStream = nullptr;
                     for ( SequencedStream& stream : _listSequencedReceive )
@@ -428,7 +428,7 @@ namespace sw
                             pStream = &stream;
                     }
                     if ( pStream != nullptr && NetSequence::isGreater( message._id, pStream->_lastID ) == false )
-                        break; // 늦게 온 옛것
+                        break; // 늦게 온 옛 메시지.
                     if ( pStream == nullptr )
                     {
                         _listSequencedReceive.push_back( SequencedStream{ message._id, kind } );
@@ -464,7 +464,7 @@ namespace sw
     {
         if ( incoming._bDelivered != SW_FALSE )
         {
-            // 순서 없음 — 받을 때 이미 건넸다, 커서만 지나간다. 순서 메시지의 조각 사이에 끼었으면 상대가 규약을 어겼다(보내는 쪽은 조각을 잇달아 둔다).
+            // 신뢰 순서 없음은 받을 때 이미 넘겼으므로 커서만 지나간다. 순서 메시지의 조각 사이에 끼어들었다면 상대가 규약을 어긴 것이다(보내는 쪽은 조각을 연속으로 둔다).
             if ( _listReliableAssembly.empty() == false && _bDiscardingAssembly == SW_FALSE )
             {
                 SW_LOG_ERROR( "NetConnection: an unordered reliable message sits between the fragments of an ordered one - the peer breaks the protocol, dropping the ordered message" );
@@ -475,7 +475,7 @@ namespace sw
         }
         deque<vector<uint8>>& listIncoming = _arrIncoming[static_cast<int32>( NetChannelType::ReliableOrdered )];
         const bool            bLast        = incoming._bMore == SW_FALSE;
-        // 조각 하나짜리(대부분) — 모으지 않고 그대로 건넨다.
+        // 조각이 하나뿐인 경우(대부분)는 모으지 않고 그대로 넘긴다.
         if ( bLast && _listReliableAssembly.empty() && _bDiscardingAssembly == SW_FALSE )
         {
             listIncoming.push_back( std::move( incoming._buffer ) );
@@ -485,7 +485,7 @@ namespace sw
         {
             if ( _listReliableAssembly.size() + incoming._buffer.size() > static_cast<size_t>( kMaxReliableMessageSize ) )
             {
-                // 보내는 쪽은 상한을 넘겨 나누지 않는다 — 상대가 규약을 어겼다. 이 메시지는 마지막 조각까지 버린다(받는 쪽 메모리를 지킨다).
+                // 보내는 쪽은 상한을 넘겨 나누지 않으므로, 상한을 넘으면 상대가 규약을 어긴 것이다. 이 메시지는 마지막 조각까지 버려 받는 쪽 메모리를 지킨다.
                 SW_LOG_ERROR( "NetConnection: a reliable message grew past %# bytes while reassembling - the peer breaks the protocol, dropping the message",
                               kMaxReliableMessageSize );
                 _listReliableAssembly.clear();
@@ -500,7 +500,7 @@ namespace sw
             return;
         if ( _bDiscardingAssembly == SW_FALSE )
             listIncoming.push_back( std::move( _listReliableAssembly ) );
-        _listReliableAssembly.clear(); // 옮긴 뒤의 빈 버퍼 — 다음 메시지가 새로 잡는다
+        _listReliableAssembly.clear(); // 옮긴 뒤의 빈 버퍼다. 다음 메시지가 새로 할당한다.
         _bDiscardingAssembly = SW_FALSE;
     }
 
@@ -516,7 +516,7 @@ namespace sw
                 continue;
             pSent->_bAcked = SW_TRUE;
             ++_stats._ackedPacketCount;
-            // RTT 표본 — 확인을 바란 패킷이 가장 새 확인으로 돌아왔을 때만(묶음으로 늦게 확인된 것 · 답 패킷은 상대가 기다렸다 보냈을 수 있다).
+            // RTT 표본은 확인을 요청한 패킷이 가장 새 확인으로 돌아왔을 때만 잡는다. 묶음으로 늦게 확인된 패킷이나 답 패킷은 상대가 기다렸다가 보냈을 수 있기 때문이다.
             if ( bitIndex < 0 && pSent->_bAckRequested )
             {
                 const float64 sample = time - pSent->_time;
@@ -529,7 +529,7 @@ namespace sw
             }
         }
         detectLostPackets( ack );
-        // 가장 오래된 미확인 신뢰 id 를 앞으로.
+        // 가장 오래된 미확인 신뢰 ID를 앞으로 옮긴다.
         while ( _oldestUnackedReliableID != _nextReliableSendID && _outgoingReliable.exists( _oldestUnackedReliableID ) == false )
         {
             ++_oldestUnackedReliableID;
@@ -538,7 +538,7 @@ namespace sw
 
     void NetConnection::detectLostPackets( uint16 ack )
     {
-        // 확인된 가장 새 패킷보다 kFastResendGap 개 넘게 앞인데 확인이 없는 패킷 — 잃었다(그 사이 순서 바뀜은 기다린다). 확인 묶음(32) 안만 본다.
+        // 확인된 가장 새 패킷보다 kFastResendGap 개를 넘게 앞서는데 확인이 없는 패킷은 잃은 것으로 본다(그 사이의 순서 바뀜은 기다린다). 확인 비트(32) 안만 본다.
         if ( _sentPackets.exists( ack ) == false || _sentPackets.find( ack )->_bAcked == SW_FALSE )
             return;
         for ( int32 offset = kFastResendGap; offset <= 33; ++offset )
@@ -561,7 +561,7 @@ namespace sw
         if ( time - _lastStatsTime < NetConnectionInternal::kStatsInterval )
             return;
         _lastStatsTime = time;
-        // 손실 — RTT 두 배 넘게 확인이 없는 패킷의 몫(최근 64 패킷).
+        // 손실은 RTT 두 배를 넘게 확인이 없는 패킷의 비율로 센다(최근 64패킷).
         const float64 lostAge   = MathUtil::max( NetConnectionInternal::kMinLostAge, static_cast<float64>( _stats._rtt ) * 2.0 );
         int32         lostCount = 0;
         int32         sentCount = 0;
@@ -574,7 +574,7 @@ namespace sw
                 lostCount += pSent->_bAcked ? 0 : 1;
             }
         }
-        // 대역폭 — 최근 1 초의 패킷 모두(기록 고리 크기만큼, 초당 256 패킷까지). 패킷 수로 자르면 보내기 간격이 짧을 때 1 초의 일부만 센다.
+        // 대역폭은 최근 1초의 패킷 전부로 센다(기록 링 크기만큼, 초당 256패킷까지). 패킷 수로 자르면 보내기 간격이 짧을 때 1초의 일부만 세게 된다.
         int32 sentBytes = 0;
         int32 recvBytes = 0;
         for ( int32 offset = 1; offset <= _sentPackets.getSize(); ++offset )
