@@ -31,7 +31,7 @@ namespace sw
             Accept
         };
 
-        /** @brief 걸어 둔 비동기 작업 하나입니다. OVERLAPPED 가 맨 앞이라 완료 통지의 포인터에서 바로 되찾을 수 있습니다. 슬롯은 움직이지 않습니다(연결과 수락 슬롯이 unique_ptr 이거나 고정 배열입니다). */
+        /** @brief 요청해 둔 비동기 작업 하나입니다. OVERLAPPED 가 맨 앞이라 완료 통지의 포인터에서 바로 되찾을 수 있습니다. 슬롯은 움직이지 않습니다(연결과 수락 슬롯이 unique_ptr 이거나 고정 배열입니다). */
         struct IocpOperation
         {
             OVERLAPPED        _overlapped;

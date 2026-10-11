@@ -516,7 +516,7 @@ namespace sw
                 continue;
             pSent->_bAcked = SW_TRUE;
             ++_stats._ackedPacketCount;
-            // RTT 표본은 확인을 요청한 패킷이 가장 새 확인으로 돌아왔을 때만 잡는다. 묶음으로 늦게 확인된 패킷이나 답 패킷은 상대가 기다렸다가 보냈을 수 있기 때문이다.
+            // RTT 표본은 확인을 요청한 패킷이 가장 새 확인으로 돌아왔을 때만 잡는다. ack 비트로 늦게 확인된 패킷이나 답 패킷은 상대가 기다렸다가 보냈을 수 있기 때문이다.
             if ( bitIndex < 0 && pSent->_bAckRequested )
             {
                 const float64 sample = time - pSent->_time;
