@@ -97,7 +97,6 @@ namespace sw::editor
         _pDefaultObjects            = make_unique<EditorDefaultObjects>();
 
         setActive( this );
-        bindLocalService( this );
 
         _pInspectorComponentManager->registerDefaults();
         _pInspectorPropertyManager->registerDefaults();
@@ -138,7 +137,6 @@ namespace sw::editor
         _pEditorSelection.reset();
         _pRendererBackend = nullptr;
         _pRHIDevice       = nullptr;
-        unbindLocalService<EditorContext>();
     }
 
     void EditorContext::syncExtensionRegistrations()

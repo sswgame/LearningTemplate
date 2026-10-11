@@ -65,7 +65,11 @@ namespace sw::editor
          */
         void syncExtensionRegistrations();
 
-        /** @brief 현재 활성화된 전역 에디터 컨텍스트 포인터를 반환합니다. */
+        /**
+         * @brief 현재 활성화된 전역 에디터 컨텍스트 포인터를 반환합니다(셸이 `initialize` 에서 걸고 `shutdown` 에서 푼다). 없으면 nullptr 입니다.
+         * @details 창구는 이것 하나입니다 — 로컬 서비스(`getService<EditorContext>`)로 다시 걸지 않습니다. 호스트(엔진) 서비스는 `EditorService.h` 의
+         *          `getService<T>()` 가, 에디터가 소유한 하위 시스템은 이 컨텍스트의 접근자가 돌려줍니다.
+         */
         static EditorContext* get();
         /** @brief 활성 에디터 컨텍스트 포인터를 설정합니다. */
         static void setActive( EditorContext* pContext ) { s_pActiveContext = pContext; }

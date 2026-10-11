@@ -58,7 +58,7 @@ UI 를 조작하는 명령(탭 열기 · 레이아웃)은 그 UI 를 가진 모�
   테마 값(`EditorThemePreset` · `EditorThemeConfig`)은 `Common/Config/EditorThemeConfig.h` — `EditorContext.h` 가 GUI 를 include 하지 않는다.
 - 2c. 패널 창구 `IEditorPanelHost`(`Common/Workspace`): 패널 앞으로 · 최대화 · 최대화 되돌리기 · dirty 문서 저장 · 버리기 · 세기. 구현 `EditorPanelHost`(GUI)가 패널 매니저와 도킹으로 하고
   `EditorContext::getPanelHost()` 가 돌려준다. `EditorPlayCommands::maximizePanel` · `restoreMaximizedLayout` 은 여기로 옮겼다(플레이 때 최대화 · 씬 뷰 Shift+Space 가 쓴다).
-- 2d. UI 를 만지는 개발 명령을 그 UI 옆으로: `layout.*` · `panel.focus` · `panel.close` · `editor.theme` → `Common/GUI/EditorUIDevCommands.cpp`, `overlay.*` → `Panels/SceneViewDevCommands.cpp`.
+- 2d. UI 를 만지는 개발 명령을 그 UI 옆으로: `layout.*` · `panel.focus` · `panel.close` · `editor.theme` → `Common/GUI/EditorUIDevCommands.cpp`, `overlay.*` → `Panels/Scene/SceneViewDevCommands.cpp`.
 - 2e. 나머지: 메뉴 막대의 맵 검사 수는 상태 막대 등록 줄(`SW_EDITOR_STATUS_BAR_ITEM`, `Common/GUI/EditorStatusBar.h`)로 뒤집어 `MapCheckPanel.cpp` 가 등록한다.
   도킹은 자체 시험을 묻지 않고 셸이 `EditorDockLayout::setPanelOverrideRequested` 로 알린다. `EditorUtil::areSceneEditsAllowed` → `EditorPlaySession::areSceneEditsAllowed`,
   `spawnPrefabFromAssetPath` → `EditorAssetCommands` 내부. 작업 공간의 붙여넣기 · 프리셋 전달자는 지우고 `EditorTransformCommands::pasteCopiedComponent*` 가 클립보드를 읽는다.
@@ -67,21 +67,35 @@ UI 를 조작하는 명령(탭 열기 · 레이아웃)은 그 UI 를 가진 모�
   검증: Debug 경고 0, EditorTest, `-L nogpu`, 에디터 시나리오(레이아웃 · 패널 · 테마 명령을 쓰는 것).
 
 ### 3. `EditorContext` 의존 줄이기 — 비용 대비 효과가 큰 곳만
-- 3a. `EditorContext::get()` 의 이중 조회를 없앤다: 정적 포인터 하나로 돌려주고 로컬 서비스 등록을 지운다(창구가 하나가 된다).
-  비용은 **잰다**: 에디터 프레임당 `get()` 호출 수(Debug 계수기)와 호출당 시간(Release) — 숫자가 작으면 "단순화" 로만 적고 최적화라 부르지 않는다.
-- 3b. 생성자 · 인자 주입은 Commands 의 정적 함수에서 효과가 크다(EditorTest 가 전역 없이 부른다). 패널은 등록부가 인자 없이 만들고 상용 엔진도 전역 창구를 쓴다
-  (언리얼 `GEditor->GetEditorSubsystem<T>()`, 유니티 `Selection.activeObject` · `EditorWindow.GetWindow<T>()`) — 패널 225곳을 바꾸는 효과는 작다. 그래서 패널은 하지 않는다.
-- 3c. `EditorService` 와의 역할: `EditorService` = 호스트(엔진) 서비스와 시험용 로컬 바인딩, `EditorContext` = 에디터가 소유한 하위 시스템. 3a 로 겹침(자기 등록)이 사라진다.
-- 위험: 낮다. 검증: EditorTest(로컬 서비스 바인딩을 쓰는 시험), 에디터 시나리오.
+- 3a. `EditorContext::get()` 의 이중 조회를 없앴다: 정적 포인터 하나를 돌려주고, `initialize` 의 로컬 서비스 자기 등록(`bindLocalService( this )`)을 지웠다.
+  두 경로는 늘 같은 값이었다(같은 `this` 로 걸고 같이 푼다). 잰 값(Debug, DX12 에디터 기본 배치 600 프레임, 계수기 · 반복 100 만 번은 측정용 임시 코드):
+  프레임당 `get()` 57 회, 호출당 550 ns → 8 ns. 프레임당 약 31 us → 무시할 만한 값이 된다. Debug 값이라 Release 이득은 이보다 훨씬 작다 — **최적화가 아니라 창구 하나로 줄인 단순화**로 적는다.
+- 3b. 생성자 · 인자 주입은 하지 않는다. 호출 224 곳(62 파일) 가운데 SelfTest 52 · Panels 51 · Commands 43 · GUI 38 · Popups 17 · Viewport 13 · Workspace 9 다.
+  패널은 등록부가 인자 없이 만들고(`createEditorPanel<T>`), 상용 엔진도 에디터 하위 시스템을 전역 창구로 준다(언리얼 `GEditor->GetEditorSubsystem<T>()`,
+  유니티 `Selection.activeObject` · `EditorWindow.GetWindow<T>()`). 시험이 닿아야 하는 곳은 이미 상태를 인자로 받는다(`EditorPlaySession::update( data )` ·
+  `EditorTransformCommands::pasteCopiedComponentValues( workspace, … )` · `EditorSceneGenerationSync::apply( workspace, … )`) — EditorTest 는 UI 매니저 때문에
+  `EditorContext` 를 만들 수 없으므로, 컨텍스트를 인자로 바꿔도 시험이 늘지 않는다. 시험할 판단이 생기면 그 함수가 필요한 서비스 하나(작업 공간 · 선택)를 인자로 받는다.
+- 3c. `EditorService` 와의 역할: `EditorService.h` = 호스트(엔진) 서비스 창구(`getService<T>()`)와 시험용 로컬 바인딩 · 활성 씬 바로가기,
+  `EditorContext` = 에디터가 소유한 하위 시스템(작업 공간 · 선택 · 패널 매니저 · 알림 …). 3a 로 겹침(컨텍스트의 자기 등록)이 사라졌다. 둘을 합치지 않는다 —
+  엔진 서비스는 호스트가 C-ABI 표로 넘기고(수명은 엔진), 에디터 하위 시스템은 컨텍스트가 소유한다(수명은 에디터). 언리얼도 `GEngine` 서브시스템과 `GEditor` 서브시스템을 가른다.
+- 위험: 낮다. 검증: EditorTest, 에디터 시나리오.
 
 ### 4. `Panels/` 를 큰 패널별 하위 폴더로
-- 도우미 파일이 딸린 패널은 자기 폴더(`Profiler/` · `InputMap/` · `MapCheck/` · `ContentBrowser/` · `Console/` · `Material/` · `Packaging/` · `RenderTarget/` · `TestRunner/` · `TileMap/` · `UIPreview/`),
-  `InspectorPanel` 은 `Inspector/` 로, 혼자인 패널은 영역 폴더(`Scene/` · `Animation/` · `Data/` · `Settings/`)로.
-- `git mv` → include 경로 일괄 갱신 → CMake 글롭 · `Test/EditorTest/CMakeLists.txt` 소스 목록 갱신 → 재구성. 옮긴 헤더의 `.gen.cpp` 는 mtime 판정이 낡을 수 있으니 생성 폴더를 지우고 다시 만든다.
-- 위험: 낮다(기계적). 다른 에디터 작업과 충돌이 크다 — 적용 담당이 먼저 넣는다. 검증: Debug 경고 0 · EditorTest · `-L nogpu` · 린트(include 순서).
+- 도우미 파일이 딸린 패널은 자기 폴더: `Profiler/` · `InputMap/` · `MapCheck/` · `ContentBrowser/` · `Console/` · `Material/` · `Packaging/` · `RenderTarget/` · `TileMap/` · `UIPreview/`,
+  `InspectorPanel` 은 `Inspector/` 로. 혼자인 패널은 영역 폴더: `Scene/`(씬 뷰 · 게임 뷰 · 계층 · 프리팹 · 되돌리기 기록 · 씬 뷰 초점 도우미 · 씬 뷰 개발 명령),
+  `Animation/`(애니메이션 그래프 · 되감기 · 시퀀서 · 스프라이트 클립), `Data/`(데이터 테이블 · 대화 그래프), `Settings/`(전역 변수 · 환경설정 · 단축키 · 사용자 설정 · 모듈).
+  Test Runner 는 2 단계에서 `SelfTest/` 로 갔다(자체 시험을 부르는 창이라 그 아래 층에 둘 수 없다). `Panels/` 바로 아래 파일은 없다.
+- `git mv` 81 개 → include · `Test/EditorTest/CMakeLists.txt` · ThemePark 확장 · 문서 · 린트 표(`CheckProductNames`)의 경로를 일괄 갱신. 시험 파일도 같은 하위 폴더로(`Test/EditorTest/Panels/<폴더>/`).
+  `Panels/` 에 리플렉션 헤더가 없어 `.gen.cpp` 스테일 함정은 해당하지 않는다. CMake 는 `GLOB_RECURSE ... CONFIGURE_DEPENDS` 라 목록을 고칠 곳이 없다.
+- 위험: 낮다(기계적). 다른 에디터 작업과 충돌이 크다 — 적용 담당이 먼저 넣고, 겹친 단위는 새 경로로 다시 적용한다.
 
-### 5. 임포터(`Common/Asset`)를 라이브러리로 뗄 가치 — 조사만
-- 결론은 이 절에 적는다(아래 "5 단계 결론").
+### 5. 임포터(`Common/Asset`)를 라이브러리로 뗄 가치 — 조사 결론: 떼지 않는다
+- 쓸 곳: 명령 줄 임포트(`App --import-textures` · `--import-models` · `--import-heightfields` 와 `--check-*`)는 이미 있다 — App 이 에디터 모듈을 인스턴스 없이 올려
+  C-ABI 진입점 `importEditorAssets`(`Common/Asset/AssetImportEntry.cpp`)를 부른다(`EditorModuleHost::importAssetsWithEditorModule`). 쿠킹(`CookAssets`)은 임포트 산출물(`.dds` · `.mesh`)을
+  읽을 뿐 임포터를 부르지 않는다. 전용 서버 · Shipping 은 임포트하지 않는다.
+- 상용 엔진도 임포트는 에디터 바이너리가 머리 없이 돈다(언리얼 `UnrealEditor-Cmd -run=…` 커맨드릿 · Interchange 가 에디터 모듈, 유니티 `-batchmode`, Godot `--headless --import`).
+- 이미 층이 떨어져 있다: `Common/Asset` 은 티어 1 이고 ImGui 를 include 하지 않으며, 위로는 잎 헤더(`EditorService.h`)와 `Common` 루트만 본다(`CheckEditorLayers` 가 지킨다).
+  쓸 곳이 생기면(에디터 없는 빌드 팜 · 쿠킹 서버에서 임포트) 그때 폴더를 정적 라이브러리 타깃으로 묶는 비용이 작다. 지금 떼면 타깃 · 내보내기 매크로 · 시험 링크만 늘고 쓰는 곳은 그대로다.
 
 ## 진행 기록
 

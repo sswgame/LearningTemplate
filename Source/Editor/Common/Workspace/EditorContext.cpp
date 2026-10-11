@@ -8,15 +8,12 @@
 
 #include "Editor/Common/Workspace/EditorContext.h"
 
-#include "Editor/Common/Workspace/EditorService.h"
-
 namespace sw::editor
 {
     EditorContext* EditorContext::s_pActiveContext = nullptr;
 
     EditorContext* EditorContext::get()
     {
-        EditorContext* pLocalContext = getService<EditorContext>();
-        return pLocalContext != nullptr ? pLocalContext : s_pActiveContext;
+        return s_pActiveContext;
     }
 } // namespace sw::editor
