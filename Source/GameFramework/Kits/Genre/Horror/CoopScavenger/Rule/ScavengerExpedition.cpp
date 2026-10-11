@@ -134,9 +134,9 @@ namespace sw
         _bDuskAnnounced                 = SW_FALSE;
         const float32 arrivalHour       = catalog.getDaySettings()._arrivalHour;
         if ( _pClock != nullptr && MathUtil::abs( _pClock->getHour() - arrivalHour ) > 0.01f )
-            _pClock->advanceToHour( arrivalHour ); // 아침 — 지났으면 다음 날
+            _pClock->advanceToHour( arrivalHour ); // 아침이다. 이미 지났으면 다음 날로 넘긴다
         const int32 dayIndex = getDayIndex();
-        // 위성 = 날씨 표의 계절. 그날의 씨앗으로 굴린 위성 날씨를 공유 날씨에 바로 건다.
+        // 위성은 날씨 테이블의 계절이다. 그날의 시드로 굴린 위성 날씨를 공유 날씨에 바로 적용한다.
         if ( _pWeather != nullptr && _data._pWeatherCatalog != nullptr )
         {
             WeatherSystem moonWeather;
@@ -427,12 +427,12 @@ namespace sw
         }
         pushEvent( ScavengerEvent::Kind::PlayerDied, player, bLeftBehind ? 1 : 0 );
         if ( bLeftBehind == false && countAlive() == 0 && _phase == ScavengerPhase::Landed )
-            departShip( true ); // 모두 죽었다 — 자동 이륙
+            departShip( true ); // 모두 죽었으므로 자동으로 이륙한다
     }
 
     void ScavengerExpedition::departShip( bool bAuto )
     {
-        _phase = ScavengerPhase::InOrbit; // 남겨진 사람의 죽음이 다시 이륙을 부르지 않게 먼저 바꾼다
+        _phase = ScavengerPhase::InOrbit; // 남겨진 사람의 죽음이 다시 이륙을 부르지 않도록 먼저 바꾼다
         // 우주선 안의 사람이 든 것은 실리고, 밖에 남은 사람은 죽는다.
         for ( size_t index = 0; index < _listCrew.size(); ++index )
         {
@@ -489,7 +489,7 @@ namespace sw
             pushEvent( ScavengerEvent::Kind::GameOver, -1, _quota.getFulfilled() );
         }
         if ( _pClock != nullptr && _data._pCatalog != nullptr )
-            _pClock->advanceToHour( _data._pCatalog->getDaySettings()._arrivalHour ); // 다음 날 아침
+            _pClock->advanceToHour( _data._pCatalog->getDaySettings()._arrivalHour ); // 다음 날 아침이다
         _shop.advanceDay();
         _facility.clear();
         _indoorDirector.initialize( nullptr, 1u );
@@ -506,7 +506,7 @@ namespace sw
         if ( penalty._allDeadMaxKept > 0 )
             loseCount = MathUtil::min( loseCount, MathUtil::max( 0, total - penalty._allDeadMaxKept ) );
         loseCount = MathUtil::clamp( loseCount, 0, total );
-        // 잃을 것을 씨앗으로 고른다(섞은 앞쪽) — 남는 것은 실은 순서를 지킨다.
+        // 잃을 것을 시드로 고른다(섞은 앞쪽). 남는 것은 실은 순서를 지킨다.
         vector<int32> listOrder;
         for ( int32 index = 0; index < total; ++index )
         {
@@ -611,7 +611,7 @@ namespace sw
         archive >> crewCount;
         if ( archive.isError() || crewCount != _listCrew.size() )
             return false;
-        // 사본에 읽고 끝까지 맞으면 바꾼다 — 데이터 · 빌린 포인터 · 사람마다의 설정은 사본이 그대로 든다.
+        // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 데이터, 빌린 포인터, 사람마다의 설정은 사본도 그대로 가지고 있다.
         ScavengerExpedition restored = *this;
         for ( ScavengerCrewMember& member : restored._listCrew )
         {
@@ -652,7 +652,7 @@ namespace sw
         if ( restored._phase == ScavengerPhase::Landed && restored._pMoon == nullptr )
             return false;
 
-        // 위협 감독은 내려 있는 동안만 표를 든다(궤도 · 회사에서는 비어 있다) — 같은 표로 열고 나머지를 읽는다.
+        // 위협 감독은 내려 있는 동안만 테이블을 가진다(궤도와 회사에서는 비어 있다). 같은 테이블로 열고 나머지를 읽는다.
         const bool bThreatActive = restored._phase == ScavengerPhase::Landed && restored._pMoon->_bCompany == SW_FALSE && _data._pThreatTable != nullptr;
         restored._indoorDirector.initialize( bThreatActive ? _data._pThreatTable : nullptr, 1u );
         restored._outdoorDirector.initialize( bThreatActive ? _data._pThreatTable : nullptr, 1u );

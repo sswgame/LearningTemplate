@@ -10,7 +10,7 @@ namespace sw
     {
         struct SRPGCombatInternal
         {
-            /** @brief 기대 피해(명중률 × 피해)입니다 — 무기 · 지원자 고르기의 점수입니다. */
+            /** @brief 기대 피해(명중률 x 피해)를 반환합니다. 무기와 지원자를 고르는 점수로 씁니다. */
             static int32 computeExpected( const SRPGStrikePreview& preview ) { return preview._hit * preview._damage; }
 
             static SRPGPilotStat findWeaponStat( SRPGWeaponKind kind )
@@ -27,7 +27,7 @@ namespace sw
                 return SRPGPilotStat::Shooting;
             }
 
-            /** @brief @p unitIndex 가 @p targetCell 을 지금 자리에서 칠 가장 좋은 무기의 타격입니다(MAP 병기 제외). */
+            /** @brief @p unitIndex 가 @p targetCell 을 지금 위치에서 칠 때 가장 좋은 무기의 타격을 반환합니다(MAP 병기 제외). */
             static SRPGStrikePreview findBestStrike( const SRPGBattlefield& field, int32 unitIndex, int32 targetIndex, int32 damagePercent )
             {
                 SRPGStrikePreview best{};
@@ -50,7 +50,7 @@ namespace sw
                 return best;
             }
 
-            /** @brief 방어자와 이웃한 아군 중 대신 맞아도 쓰러지지 않는, HP 가 가장 많은 유닛입니다. */
+            /** @brief 방어자와 이웃한 아군 중, 대신 맞아도 쓰러지지 않고 HP 가 가장 많은 유닛을 반환합니다. */
             static int32 findSupportDefender( const SRPGBattlefield& field, int32 attackerIndex, const int2& attackerCell, int32 weaponIndex, int32 defenderIndex )
             {
                 const SRPGSettings& settings  = field.getSettings();
@@ -69,7 +69,7 @@ namespace sw
                     const SRPGStrikePreview preview = SRPGCombat::computeStrike( field, attackerIndex, attackerCell, weaponIndex, index, ally._cell,
                                                                                  100 - settings._supportDefenseReduction );
                     if ( preview._critDamage >= ally._hp )
-                        continue; // 대신 맞다 쓰러질 수 있으면 나서지 않는다
+                        continue; // 대신 맞다가 쓰러질 수 있으면 나서지 않는다
                     if ( bestIndex < 0 || ally._hp > bestHp )
                     {
                         bestIndex = index;
@@ -79,7 +79,7 @@ namespace sw
                 return bestIndex;
             }
 
-            /** @brief 공격자와 이웃한 아군 중 방어자에게 기대 피해가 가장 큰 지원 공격입니다. */
+            /** @brief 공격자와 이웃한 아군 중, 방어자에게 기대 피해가 가장 큰 지원 공격을 반환합니다. */
             static SRPGStrikePreview findSupportAttack( const SRPGBattlefield& field, int32 attackerIndex, const int2& attackerCell, int32 defenderIndex )
             {
                 SRPGStrikePreview best{};
@@ -100,7 +100,7 @@ namespace sw
                 return best;
             }
 
-            /** @brief 같은 적을 사거리에 둔 아군마다 동기 공격 하나입니다(공격자 · 지원 공격자 제외). */
+            /** @brief 같은 적을 사거리에 둔 아군마다 동기 공격 하나를 만듭니다(공격자와 지원 공격자는 제외). */
             static void collectSyncStrikes( const SRPGBattlefield& field, int32 attackerIndex, int32 supportIndex, int32 defenderIndex, vector<SRPGStrikePreview>& outListStrike )
             {
                 outListStrike.clear();
@@ -123,7 +123,7 @@ namespace sw
                 return MathUtil::max<int64>( 1, static_cast<int64>( base ) + static_cast<int64>( defenderLevel - attackerLevel ) * levelStep );
             }
 
-            /** @brief 타격 하나를 굴립니다 — 명중 · 크리티컬 판정, 피해, 기력, 경험치, 알림. */
+            /** @brief 타격 하나를 굴립니다. 명중과 크리티컬을 판정하고 피해, 기력, 경험치, 이벤트를 처리합니다. */
             static void resolveStrike( SRPGBattlefield& field, const SRPGStrikePreview& preview, SRPGStrikeRole role, SRPGCombatResult& outResult )
             {
                 const SRPGUnit* pAttacker = field.findUnit( preview._attacker );
@@ -300,7 +300,7 @@ namespace sw
         SRPGCombatInternal::resolveStrike( field, forecast._attack, SRPGStrikeRole::Main, outResult );
         for ( const SRPGStrikePreview& sync : forecast._listSync )
         {
-            SRPGCombatInternal::resolveStrike( field, sync, SRPGStrikeRole::Sync, outResult ); // 동기 공격은 EN · 탄을 쓰지 않는다
+            SRPGCombatInternal::resolveStrike( field, sync, SRPGStrikeRole::Sync, outResult ); // 동기 공격은 EN 과 탄을 쓰지 않는다
         }
         if ( forecast._supportAttack.isValid() && field.findUnit( defenderIndex )->_bAlive == SW_TRUE )
         {

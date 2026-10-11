@@ -56,7 +56,7 @@ namespace sw
     bool PartyItemSpawner::readState( Archive& archive )
     {
         uint32 instanceCount = 0;
-        // 놓인 것마다 자리(12) + 이름(4) + 나이(4) + 번호(4)
+        // 놓인 것마다 위치(12) + 이름(4) + 나이(4) + 번호(4)
         if ( StateArchiveUtil::readCount( archive, 24, instanceCount ) == false )
             return false;
         vector<PartyItemInstance> listInstance( instanceCount, PartyItemInstance{} );
@@ -114,14 +114,14 @@ namespace sw
         }
         _listInstance.resize( writeIndex );
 
-        // 2) 새로 놓기 — 자리가 차 있으면 시계는 멈춰 있다(빈 자리가 나면 곧 나온다).
+        // 2) 새로 놓기: 슬롯이 차 있으면 타이머는 멈춰 있고, 빈 슬롯이 나면 곧 나온다.
         if ( _catalog.isEmpty() || static_cast<int32>( _listInstance.size() ) >= _settings._maxActive )
             return;
         _spawnTimer.tick( deltaTime );
         if ( _spawnTimer.isActive() )
             return;
         spawnOne();
-        _spawnTimer.restart( rollInterval() ); // 늦음을 잇는다 — 스폰 빈도가 fps 에 매이지 않는다
+        _spawnTimer.restart( rollInterval() ); // 늦은 만큼을 이어받아, 스폰 빈도가 fps 에 매이지 않게 한다
     }
 
     const PartyItemDef* PartyItemSpawner::pickWeighted()
@@ -137,7 +137,7 @@ namespace sw
         const PartyItemDef* pDef = pickWeighted();
         if ( pDef == nullptr )
             return;
-        // 원판 안 고르게 — 반지름에 제곱근.
+        // 원판 안에 고르게 놓으려고 반지름에 제곱근을 쓴다.
         const float32     radius = _settings._spawnRadius * MathUtil::sqrt( _random.nextFloat() );
         const float32     angle  = _random.nextRange( 0.0f, 2.0f * MathUtil::kPi );
         PartyItemInstance instance;
@@ -205,7 +205,7 @@ namespace sw
             const utf8* pEffect = itemNode.findAttribute( "effect" );
             def._effect         = hashed_string( pEffect != nullptr ? pEffect : pID );
             def._weight         = itemNode.getAttributeFloat( "weight", def._weight );
-            (void)def._stats.loadFromAttributes( itemNode, "id,effect,weight" ); // 읽은 속성 수만 돌려준다 — 없으면 빈 스탯이다
+            (void)def._stats.loadFromAttributes( itemNode, "id,effect,weight" ); // 읽은 속성 수만 돌려주므로, 속성이 없으면 빈 스탯이다
             addItem( def );
             ++loadedCount;
         }

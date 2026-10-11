@@ -16,7 +16,7 @@ namespace sw
     {
         struct RTSSelectionInternal
         {
-            /** @brief 유닛이 사각형과 겹치는가입니다(유닛은 몸, 건물은 자리 가운데). */
+            /** @brief 유닛이 사각형과 겹치는지 반환합니다. 유닛은 몸 기준이고 건물은 중심 기준입니다. */
             static bool isInRect( const RTSUnit& unit, const float3& minCorner, const float3& maxCorner )
             {
                 const float32 radius = unit.isMobile() ? unit._pDef->_radius : 0.0f;
@@ -119,7 +119,7 @@ namespace sw
             else if ( unit._owner != _player && otherUnit.isValid() == false && world.isVisibleTo( _player, unit._id ) )
                 otherUnit = unit._id;
         } );
-        // 더하기는 내 움직이는 유닛끼리만 — 건물 · 남의 것은 혼자 고른다.
+        // 추가 선택은 내 움직이는 유닛끼리만 한다. 건물과 남의 유닛은 혼자만 고른다.
         if ( bAdd && listMobile.empty() == false && isCommandable( world ) )
         {
             const RTSUnit* pPrimary = world.findUnit( getPrimary() );
@@ -133,7 +133,7 @@ namespace sw
             }
         }
         if ( listMobile.empty() && ownBuilding.isValid() == false && otherUnit.isValid() == false )
-            return; // 빈 땅을 끌면 그대로 둔다
+            return; // 빈 땅을 끌면 선택을 그대로 둔다
         _listSelected.clear();
         if ( listMobile.empty() == false )
         {

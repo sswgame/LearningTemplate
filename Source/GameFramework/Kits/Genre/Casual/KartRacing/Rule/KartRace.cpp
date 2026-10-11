@@ -17,7 +17,7 @@ namespace sw
     {
         struct KartRaceInternal
         {
-            static constexpr float32 kAheadPriority = 100.0f; ///< 빨간 껍질 — 바로 앞 순위의 차를 먼저 잡는다
+            static constexpr float32 kAheadPriority = 100.0f; ///< 빨간 껍질은 바로 앞 순위의 차를 먼저 잡는다
 
             static float32 computeFlatDistanceSq( const float3& lhs, const float3& rhs )
             {
@@ -26,7 +26,7 @@ namespace sw
                 return deltaX * deltaX + deltaZ * deltaZ;
             }
 
-            /** @brief @p direction 을 @p target 쪽으로 @p maxTurn(라디안)까지 돌린 수평 단위 벡터입니다. */
+            /** @brief @p direction 을 @p target 쪽으로 @p maxTurn(라디안)까지 돌린 수평 단위 벡터를 반환합니다. */
             static float3 turnToward( const float3& direction, const float3& from, const float3& target, float32 maxTurn )
             {
                 const float32 currentYaw = MathUtil::atan2( direction._x, direction._z );
@@ -36,7 +36,7 @@ namespace sw
                 return float3{ MathUtil::sin( newYaw ), 0.0f, MathUtil::cos( newYaw ) };
             }
 
-            static constexpr uint8 kLastItemKind = static_cast<uint8>( KartItemKind::LeaderShell ); ///< 상태 읽기의 종류 범위
+            static constexpr uint8 kLastItemKind = static_cast<uint8>( KartItemKind::LeaderShell ); ///< 상태 읽기에서 허용하는 종류의 상한이다
 
             static void writeRacer( Archive& outArchive, const KartRacer& kart )
             {
@@ -199,7 +199,7 @@ namespace sw
     {
         if ( _phase != KartRacePhase::Setup || _listRacer.empty() || _pTrack == nullptr )
             return;
-        // 격자 — 결승선 뒤로 두 줄씩, 왼쪽 · 오른쪽 번갈아.
+        // 격자: 결승선 뒤로 두 줄씩, 왼쪽과 오른쪽을 번갈아 세운다.
         const float32 laneOffset = _pTrack->getWidth() * 0.25f;
         for ( size_t racerIndex = 0; racerIndex < _listRacer.size(); ++racerIndex )
         {
@@ -213,7 +213,7 @@ namespace sw
             kart._previousPosition = position;
             kart._distance         = _pTrack->project( position )._distance;
             kart._lap              = 0;
-            kart._nextCheckpoint   = _pTrack->getCheckpointCount(); // 출발선 전은 "체크포인트를 다 지난" 것으로 본다
+            kart._nextCheckpoint   = _pTrack->getCheckpointCount(); // 출발선 전에는 "체크포인트를 다 지난" 것으로 본다
             kart._ai.reset();
             kart._progress = computeProgress( kart );
         }
@@ -232,7 +232,7 @@ namespace sw
     {
         if ( isValidRacer( racer ) == false )
             return;
-        // 눌림은 다음 걸음까지 남긴다(프레임 안에 걸음이 없어도 사라지지 않게).
+        // 눌림은 다음 걸음까지 남긴다(프레임 안에 걸음이 없어도 사라지지 않게 하려는 것이다).
         KartRacerInput& stored         = _listRacer[static_cast<size_t>( racer )]._input;
         const uint8     bBoostPressed  = stored._vehicle._bBoostPressed;
         const uint8     bJumpPressed   = stored._vehicle._bJumpPressed;
@@ -271,7 +271,7 @@ namespace sw
         if ( _phase == KartRacePhase::Racing )
             _raceTime += deltaTime;
 
-        // 1) 차 — 입력 → 아이템 → 러버밴딩 → 걸음 → 부스트 패드 → 진행.
+        // 1) 차: 입력, 아이템, 러버밴딩, 걸음, 부스트 패드, 진행 순서로 처리한다.
         const int32 racerCount = static_cast<int32>( _listRacer.size() );
         for ( int32 racer = 0; racer < racerCount; ++racer )
         {
@@ -289,7 +289,7 @@ namespace sw
             kart._motor.update( input, deltaTime );
             if ( _pTrack->applyBoostPad( kart._motor, kart._lastBoostPad ) )
                 pushEvent( KartRaceEvent::Kind::BoostPad, racer, -1, kart._lastBoostPad, _raceTime );
-            kart._motor.discardEvents(); // 경기는 차 알림을 쓰지 않는다 — 쌓이지 않게 비운다
+            kart._motor.discardEvents(); // 경기는 차 이벤트를 쓰지 않으므로 쌓이지 않게 비운다
 
             kart._spinTime.tick( deltaTime );
             kart._shieldTime.tick( deltaTime );
@@ -298,7 +298,7 @@ namespace sw
             updateProgress( racer );
         }
 
-        // 2) 상자 · 아이템 · 순위 · 끝.
+        // 2) 상자, 아이템, 순위, 종료 순서로 처리한다.
         updateItemBoxes( deltaTime );
         updateProjectiles( deltaTime );
         updatePlaces();
@@ -332,7 +332,7 @@ namespace sw
             outUseItem = kart._ai.shouldUseItem( context );
             return kart._ai.computeInput( *_pTrack, kart._motor, kart._distance );
         }
-        // 사람 — 양자화한 입력으로 달린다(고스트 · 락스텝이 같은 경로를 내게).
+        // 사람은 양자화한 입력으로 달린다(고스트와 락스텝이 같은 경로를 내게 하려는 것이다).
         const ArcadeVehicleInput input      = KartGhost::quantizeInput( kart._input._vehicle );
         outUseItem                          = kart._input._bUseItem != SW_FALSE;
         kart._input._vehicle._bBoostPressed = SW_FALSE;
@@ -348,7 +348,7 @@ namespace sw
         const KartTrackProjection projection = _pTrack->project( position, kart._distance, _settings._projectionRange );
         kart._distance                       = projection._distance;
 
-        // 문 — 다음 체크포인트(앞) · 지난 체크포인트(뒤) · 결승선.
+        // 문: 다음 체크포인트(앞), 지난 체크포인트(뒤), 결승선 순서로 확인한다.
         const int32 checkpointCount = _pTrack->getCheckpointCount();
         if ( kart._nextCheckpoint < checkpointCount && _pTrack->computeGateCrossing( kart._nextCheckpoint + 1, kart._previousPosition, position ) > 0 )
         {
@@ -369,7 +369,7 @@ namespace sw
         }
         else if ( finishCrossing < 0 && kart._nextCheckpoint == 0 && kart._lap > 0 && kart._bFinished == SW_FALSE )
         {
-            // 결승선을 뒤로 넘었다 — 바퀴를 되돌리고 그 바퀴 기록을 지운다.
+            // 결승선을 뒤로 넘었다. 바퀴를 되돌리고 그 바퀴 기록을 지운다.
             --kart._lap;
             kart._nextCheckpoint = checkpointCount;
             if ( kart._listLapTime.empty() == false && kart._lap >= 1 )
@@ -385,7 +385,7 @@ namespace sw
             pushEvent( KartRaceEvent::Kind::LapRevoked, racer, -1, kart._lap, _raceTime );
         }
 
-        // 역주행 — 트랙 방향 속도가 이어서 음수다.
+        // 역주행: 트랙 방향 속도가 계속 음수이면 역주행이다.
         const float3& velocity   = kart._motor.getVelocity();
         const float32 alongSpeed = velocity._x * projection._tangent._x + velocity._z * projection._tangent._z;
         if ( alongSpeed < -_settings._wrongWaySpeed && kart._spinTime.isActive() == false )
@@ -458,7 +458,7 @@ namespace sw
     {
         const float32 length          = _pTrack->getLength();
         const int32   checkpointCount = _pTrack->getCheckpointCount();
-        // 지금 있어야 할 두 문 사이로 자른다 — 문을 건너뛴 차는 다음 문보다 앞설 수 없다.
+        // 지금 있어야 할 두 문 사이로 자른다. 문을 건너뛴 차는 다음 문보다 앞설 수 없다.
         const float32 lower = kart._nextCheckpoint <= 0 ? 0.0f : _pTrack->getGate( kart._nextCheckpoint )._distance;
         const float32 upper = kart._nextCheckpoint >= checkpointCount ? length : _pTrack->getGate( kart._nextCheckpoint + 1 )._distance;
         const float32 along = MathUtil::clamp( kart._distance, lower, upper );
@@ -483,7 +483,7 @@ namespace sw
                 KartRacer& kart = _listRacer[racerIndex];
                 if ( kart._bFinished == SW_TRUE || KartRaceInternal::computeFlatDistanceSq( kart._motor.getPosition(), listBox[boxIndex] ) > reach * reach )
                     continue;
-                // 상자는 들고 있어도 깨진다 — 빈 손이면 순위 표로 굴린다.
+                // 상자는 들고 있어도 깨진다. 빈 손이면 순위 테이블로 뽑는다.
                 _listItemBoxTimer[boxIndex].start( _settings._itemBoxRespawn );
                 hashed_string itemID;
                 if ( kart._itemID.empty() )
@@ -576,7 +576,7 @@ namespace sw
 
     int32 KartRace::pickRedShellTarget( int32 owner ) const
     {
-        // 기반 록온 — 앞 콘 안의 차를 고르되, 바로 앞 순위의 차에 큰 우선도를 준다(없으면 콘 안에서 가장 좋은 차, 그것도 없으면 곧게).
+        // 기반 록온: 앞쪽 원뿔 안의 차를 고르되, 바로 앞 순위의 차에 큰 우선도를 준다(없으면 원뿔 안에서 가장 좋은 차, 그것도 없으면 곧게 나간다).
         const KartRacer&        shooter = _listRacer[static_cast<size_t>( owner )];
         const int32             ahead   = findRacerAtPlace( shooter._place - 1 );
         vector<LockOnCandidate> listCandidate;
@@ -622,7 +622,7 @@ namespace sw
                 continue;
             }
 
-            // 1) 움직임 — 바나나는 멈춰 있고, 1 등 공격은 늘 지금의 1 등을 쫓는다.
+            // 1) 움직임: 바나나는 멈춰 있고, 1등 공격은 항상 지금의 1등을 쫓는다.
             if ( projectile._kind == KartItemKind::LeaderShell )
                 projectile._target = findRacerAtPlace( 1 );
             if ( projectile._kind != KartItemKind::Banana )
@@ -638,7 +638,7 @@ namespace sw
                 projectile._position._y = _pTrack->sampleHeight( projectile._position._x, projectile._position._z );
             }
 
-            // 2) 맞음 — 쏜 차는 잠깐 맞지 않는다. 1 등 공격은 대상에게만 터진다.
+            // 2) 맞음: 쏜 차는 잠깐 맞지 않는다. 1등 공격은 대상에게만 터진다.
             const float32 reach = pItem->_radius + kartRadius;
             for ( size_t racerIndex = 0; racerIndex < _listRacer.size(); ++racerIndex )
             {
@@ -654,7 +654,7 @@ namespace sw
                 if ( projectile._kind == KartItemKind::LeaderShell )
                     explode( projectile, *pItem );
                 else
-                    (void)applyHit( racer, projectile._owner, *pItem ); // 방어막이 막으면 false — 맞지 않았을 뿐이다
+                    (void)applyHit( racer, projectile._owner, *pItem ); // 방어막이 막으면 false 이며, 맞지 않았을 뿐이다
                 break;
             }
         }
@@ -676,7 +676,7 @@ namespace sw
             const bool  bTarget  = racer == projectile._target;
             const bool  bInBlast = KartRaceInternal::computeFlatDistanceSq( _listRacer[racerIndex]._motor.getPosition(), projectile._position ) <= reach * reach;
             if ( bTarget || bInBlast )
-                (void)applyHit( racer, projectile._owner, def ); // 방어막이 막으면 false — 맞지 않았을 뿐이다
+                (void)applyHit( racer, projectile._owner, def ); // 방어막이 막으면 false 이며, 맞지 않았을 뿐이다
         }
     }
 
@@ -694,7 +694,7 @@ namespace sw
             _eventBuffer.getLast()._itemID = def._id;
             return false;
         }
-        // 감속은 충격으로 — 차의 드리프트가 보상 없이 끊긴다.
+        // 감속은 충격으로 처리하므로 차의 드리프트가 보상 없이 끊긴다.
         const float3& velocity = kart._motor.getVelocity();
         const float32 cut      = 1.0f - MathUtil::saturate( def._hitSpeedScale );
         kart._motor.addImpulse( float3{ -velocity._x * cut, 0.0f, -velocity._z * cut } );
@@ -712,7 +712,7 @@ namespace sw
         {
             _listPlaceOrder[static_cast<size_t>( racer )] = racer;
         }
-        // 들어온 차는 들어온 순서, 나머지는 진행값 — 같으면 번호(결정적).
+        // 들어온 차는 들어온 순서로, 나머지는 진행값 순으로 정렬한다. 같으면 번호 순이다(결정적).
         std::stable_sort( _listPlaceOrder.begin(), _listPlaceOrder.end(), [this]( int32 lhs, int32 rhs )
         {
             const KartRacer& left  = _listRacer[static_cast<size_t>( lhs )];
@@ -754,7 +754,7 @@ namespace sw
             if ( other._bAI == SW_FALSE )
                 bestHumanProgress = MathUtil::max( bestHumanProgress, other._progress );
         }
-        // 뒤처진 AI 는 1 등과 벌어진 만큼 빨라지고, 사람보다 앞선 AI 1 등은 조금 느려진다.
+        // 뒤처진 AI 는 1등과 벌어진 만큼 빨라지고, 사람보다 앞선 AI 1등은 조금 느려진다.
         const float32 behind = leaderProgress - kart._progress;
         if ( behind > 0.0f )
             return 1.0f + _settings._rubberBandMaxBonus * MathUtil::saturate( behind / _settings._rubberBandDistance );
@@ -891,21 +891,21 @@ namespace sw
         archive >> racerCount;
         if ( archive.isError() || racerCount != _listRacer.size() )
             return false;
-        // 사본에 읽고 끝까지 맞으면 바꾼다 — 설정 · 트랙 · 카탈로그 · 고스트 · 차마다 기본 차 설정 · AI 설정은 사본이 그대로 든다.
+        // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 설정, 트랙, 카탈로그, 고스트, 차마다의 기본 차 설정과 AI 설정은 사본도 그대로 가지고 있다.
         KartRace    race  = *this;
         const int32 count = static_cast<int32>( racerCount );
         for ( KartRacer& kart : race._listRacer )
         {
             if ( KartRaceInternal::readRacer( archive, count, kart ) == false || race.isKnownItem( kart._itemID ) == false )
                 return false;
-            // 러버밴딩 배율이 바꾼 최고 속도를 기본 설정에서 다시 만든다(`updateRubberBand` 와 같은 식).
+            // 러버밴딩 배율이 바꾼 최고 속도를 기본 설정에서 다시 계산한다(`updateRubberBand` 와 같은 식이다).
             ArcadeVehicleSettings settings = kart._baseSettings;
             settings._maxSpeed *= kart._speedScale;
             kart._motor.setSettings( settings );
         }
 
         uint32 projectileCount = 0;
-        // 탄마다 자리 · 방향(24) + 이름(4) + 나이 · 쏜 차 · 대상(12) + 종류 · 켜짐(2)
+        // 탄마다 슬롯, 방향(24) + 이름(4) + 나이, 쏜 차, 대상(12) + 종류, 켜짐(2)
         if ( StateArchiveUtil::readCount( archive, 42, projectileCount ) == false )
             return false;
         race._listProjectile.assign( projectileCount, KartProjectile{} );

@@ -102,7 +102,7 @@ namespace sw
         const vector<RhythmNote>& listNote = _pChart->getNotes();
         while ( _state == RhythmPlayState::Playing )
         {
-            // 레인마다 다음 일 하나 — 가장 이른 것부터 처리해 콤보 순서가 시각 순이 되게 한다.
+            // 레인마다 다음 일 하나를 보고 가장 이른 것부터 처리해, 콤보 순서가 시각 순이 되게 한다.
             RhythmPlaySessionInternal::DueKind dueKind = RhythmPlaySessionInternal::DueKind::None;
             int32                              dueLane = -1;
             float32                            dueTime = 0.0f;
@@ -210,7 +210,7 @@ namespace sw
             return;
         const int32 noteIndex = queue._holdingNote;
         queue._holdingNote    = -1;
-        // 끝보다 먼저 뗐다 — 끝 시각에 판정하고, 창 밖으로 이르면 Miss.
+        // 끝보다 먼저 뗐다. 끝 시각에 판정하고, 창 밖으로 이르면 Miss 이다.
         const RhythmNote&  note   = _pChart->getNotes()[static_cast<size_t>( noteIndex )];
         const TimingResult result = _pJudge->judge( computeTargetEndTime( note ), time );
         applyJudgment( noteIndex, result._pWindow, result.isHit() ? result._offset : 0.0f, true );
@@ -263,7 +263,7 @@ namespace sw
         uint32                    laneCount = 0;
         archive >> noteCount;
         archive >> laneCount;
-        // 같은 채보(노트 수 · 레인 수)로 `initialize` 한 판이어야 한다 — 레인 대기열은 채보에서 다시 만든 것을 쓴다.
+        // 같은 채보(노트 수와 레인 수)로 `initialize` 한 판이어야 한다. 레인 대기열은 채보에서 다시 만든 것을 쓴다.
         if ( archive.isError() || noteCount != listNote.size() || laneCount != _listLane.size() )
             return false;
         vector<LaneQueue> listLane = _listLane;
@@ -420,7 +420,7 @@ namespace sw
         const TimingResult result    = _pJudge->judge( computeTargetTime( note ), time );
         if ( result.isHit() == false )
         {
-            // 가장 넓은 창의 이른 폭(`getEarliestWidth`)보다 이르다 — 이 노트에 쓰지 않는다. 늦은 쪽은 update 가 이미 Miss 로 넘겼다.
+            // 가장 넓은 창의 이른 폭(`getEarliestWidth`)보다 이르다. 이 노트에 쓰지 않는다. 늦은 쪽은 update 가 이미 Miss 로 넘겼다.
             emptyPress._offset = result._offset;
             _eventBuffer.push( emptyPress );
             return;
@@ -465,7 +465,7 @@ namespace sw
                 ++_combo;
                 _maxCombo                 = MathUtil::max( _maxCombo, _combo );
                 const float64 bonusFactor = static_cast<float64>( MathUtil::min( _combo, _settings._comboBonusCap ) ) * static_cast<float64>( _settings._comboBonusPerCombo );
-                _score += static_cast<int64>( static_cast<float64>( pWindow->_score ) * bonusFactor + 0.5 ); // 반올림 — 0.01 같은 float32 는 조금 모자라다
+                _score += static_cast<int64>( static_cast<float64>( pWindow->_score ) * bonusFactor + 0.5 ); // 반올림한다. 0.01 같은 float32 는 조금 모자란다
             }
 
             const RhythmGradeRule* pRule = findGradeRule( pWindow->_grade );

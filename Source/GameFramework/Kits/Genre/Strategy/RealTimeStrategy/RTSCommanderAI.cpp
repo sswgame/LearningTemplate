@@ -141,7 +141,7 @@ namespace sw
         int2 cell{};
         if ( _pWorld->findBuildSite( buildingID, pDepot->_position, 3, 12, cell ) == false )
             return false;
-        // 짐 없이 노는 일꾼 → 광물로 가는 일꾼 순으로.
+        // 짐 없이 노는 일꾼을 먼저, 광물로 가는 일꾼을 그다음에 고른다.
         RTSUnitID workerID{};
         int32     bestScore = 3;
         _pWorld->forEachUnit( [&]( const RTSUnit& unit )
@@ -226,7 +226,7 @@ namespace sw
         const RTSPlayer* pPlayer = world.findPlayer( self._player );
         if ( pPlayer->_supplyCap >= world.getCatalog()->getSupplyMax() || pPlayer->_supplyCap - pPlayer->_supplyUsed > self._settings._supplyMargin )
             return BehaviorStatus::Failure;
-        // 짓는 중인(또는 지으러 가는) 보급 건물이 있으면 기다린다.
+        // 짓고 있거나 지으러 가는 보급 건물이 있으면 기다린다.
         if ( world.countPlanned( self._player, self._settings._supplyID ) > world.countUnits( self._player, self._settings._supplyID, false ) )
             return BehaviorStatus::Failure;
         return self.orderConstruction( self._settings._supplyID ) ? BehaviorStatus::Success : BehaviorStatus::Failure;
@@ -238,7 +238,7 @@ namespace sw
         RTSWorld&       world = *self._pWorld;
         if ( world.countPlanned( self._player, self._settings._productionID ) >= self._settings._productionTarget )
             return BehaviorStatus::Failure;
-        // 일꾼을 어느 정도 모은 뒤에.
+        // 일꾼을 어느 정도 모은 뒤에 시작한다.
         if ( world.countUnits( self._player, self._settings._workerID, false ) < self._settings._workerTarget / 2 )
             return BehaviorStatus::Failure;
         return self.orderConstruction( self._settings._productionID ) ? BehaviorStatus::Success : BehaviorStatus::Failure;
@@ -277,7 +277,7 @@ namespace sw
         }
         if ( static_cast<int32>( listIdle.size() ) < self._settings._attackArmySize )
             return BehaviorStatus::Failure;
-        // 가장 가까운 적 플레이어의 시작 지점으로.
+        // 가장 가까운 적 플레이어의 시작 지점으로 간다.
         const RTSPlayer* pSelf        = world.findPlayer( self._player );
         float32          bestDistance = MathUtil::kMaxFloat;
         float3           target{};

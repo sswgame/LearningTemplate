@@ -1,6 +1,6 @@
 /**
  * @file ScavengerCatalog.h
- * @brief 협동 수집 공포(리썰 컴퍼니 장르)의 데이터 — 할당량 주기 · 매입률 · 하루 시각 · 운반 · 벌금 · 시설 생성 · 고철 · 위성(달)입니다.
+ * @brief 협동 수집 공포(리썰 컴퍼니 장르)의 데이터를 담습니다. 할당량 주기, 매입률, 하루 시각, 운반, 벌금, 시설 생성, 고철, 위성(달)을 정의합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -21,18 +21,18 @@ namespace sw
     struct ScavengerQuotaSettings
     {
         float32 _increase{ 100.0f };      ///< 다음 할당량에 더하는 기본 양
-        float32 _steepness{ 16.0f };      ///< 늘어남 = 기본 × (1 + 주기² / 이 값) — 주기가 갈수록 가파르다
-        float32 _randomness{ 0.5f };      ///< 늘어남에 곱하는 (1 + 이 값 × (r − 0.5)), r ∈ [0, 1)
-        float32 _overtimeDivisor{ 5.0f }; ///< 넘긴 양 / 이 값 = 마감 보너스(0 = 없음)
+        float32 _steepness{ 16.0f };      ///< 늘어나는 양은 기본 x (1 + 주기^2 / 이 값)이다. 주기가 갈수록 가파르게 오른다
+        float32 _randomness{ 0.5f };      ///< 늘어나는 양에 곱하는 (1 + 이 값 x (r - 0.5))이다. r 은 [0, 1) 범위의 난수
+        float32 _overtimeDivisor{ 5.0f }; ///< 넘긴 양 / 이 값이 마감 보너스이다(0 이면 보너스 없음)
         int32   _startQuota{ 130 };
-        int32   _daysPerCycle{ 3 }; ///< 마감 전 남은 날(이것이 0 인 날이 마감 날)
+        int32   _daysPerCycle{ 3 }; ///< 마감 전 남은 날이다(이 값이 0 인 날이 마감 날)
         int32   _startCredits{ 60 };
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 남은 날 → 매입률 점 하나입니다(사이는 선형). */
+    /** @brief 남은 날에 대한 매입률 점 하나입니다. 점 사이는 선형으로 보간합니다. */
     struct ScavengerBuyRatePoint
     {
         int32   _daysLeft{ 0 };
@@ -42,13 +42,13 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 하루 시각입니다(0..24 시). */
+    /** @brief 하루 시각입니다(0..24시). */
     struct ScavengerDaySettings
     {
-        float32 _secondsPerDay{ 720.0f }; ///< 실제 초로 하루 24 시간
-        float32 _arrivalHour{ 7.0f };     ///< 내리는 시각
-        float32 _duskHour{ 18.0f };       ///< 해 질 녘 알림
-        float32 _departHour{ 24.0f };     ///< 이 시각(자정)에 우주선이 저절로 떠난다 — 밖에 남은 사람은 죽는다
+        float32 _secondsPerDay{ 720.0f }; ///< 실제 초로 잰 하루 24시간의 길이
+        float32 _arrivalHour{ 7.0f };     ///< 위성에 내리는 시각
+        float32 _duskHour{ 18.0f };       ///< 해 질 녘 알림 시각
+        float32 _departHour{ 24.0f };     ///< 이 시각(자정)에 우주선이 저절로 떠난다. 밖에 남은 사람은 죽는다
     };
 } // namespace sw
 
@@ -57,22 +57,22 @@ namespace sw
     /** @brief 들고 다니기 규칙입니다. */
     struct ScavengerCarrySettings
     {
-        float32 _speedPerWeight{ 0.004f }; ///< 무게 1 마다 줄어드는 이동 속도 몫
+        float32 _speedPerWeight{ 0.004f }; ///< 무게 1 마다 줄어드는 이동 속도 비율
         float32 _minSpeedScale{ 0.4f };
-        float32 _bodyWeight{ 60.0f }; ///< 동료 시신 무게(양손)
+        float32 _bodyWeight{ 60.0f }; ///< 동료 시신의 무게이다(양손)
         int32   _slotCount{ 4 };
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 죽음 · 전멸 규칙입니다. */
+    /** @brief 죽음과 전멸 규칙입니다. */
     struct ScavengerPenaltySettings
     {
-        float32 _deathFine{ 0.2f };        ///< 시신을 못 가져온 사람마다 크레딧의 이 몫
-        float32 _recoveredFine{ 0.05f };   ///< 시신을 가져온 사람마다
-        float32 _allDeadLossRatio{ 1.0f }; ///< 모두 죽으면 우주선 고철의 이 몫을 잃는다
-        int32   _allDeadMaxKept{ 0 };      ///< 그래도 이만큼은 남긴다(0 = 몫 그대로)
+        float32 _deathFine{ 0.2f };        ///< 시신을 못 가져온 사람마다 크레딧에서 이 비율을 벌금으로 낸다
+        float32 _recoveredFine{ 0.05f };   ///< 시신을 가져온 사람마다 내는 벌금 비율
+        float32 _allDeadLossRatio{ 1.0f }; ///< 모두 죽으면 우주선 고철의 이 비율을 잃는다
+        int32   _allDeadMaxKept{ 0 };      ///< 그래도 최소한 이만큼은 남긴다(0 이면 비율 그대로 잃는다)
     };
 } // namespace sw
 
@@ -82,7 +82,7 @@ namespace sw
     struct ScavengerFacilitySettings
     {
         float32 _lockedChance{ 0.2f }; ///< 방으로 들어가는 문이 잠겨 있을 확률
-        float32 _loopChance{ 0.15f };  ///< 나무에 더하는 고리 통로 확률(방마다)
+        float32 _loopChance{ 0.15f };  ///< 나무 구조에 더하는 고리 통로의 확률이다(방마다 적용)
         int32   _minRooms{ 8 };
         int32   _maxRooms{ 14 };
         int32   _fireExits{ 1 }; ///< 바깥으로 이어진 화재 출구 수
@@ -99,7 +99,7 @@ namespace sw
         float32       _spawnWeight{ 1.0f };
         int32         _minValue{ 20 };
         int32         _maxValue{ 60 };
-        uint8         _bTwoHanded{ SW_FALSE }; ///< 양손 — 드는 동안 다른 것을 줍지 못한다
+        uint8         _bTwoHanded{ SW_FALSE }; ///< 양손 아이템이다. 드는 동안 다른 것을 줍지 못한다
     };
 } // namespace sw
 
@@ -110,14 +110,14 @@ namespace sw
     {
         hashed_string         _id{};
         string                _name{};
-        vector<hashed_string> _listScrap{};           ///< 나오는 고철(비면 모두)
+        vector<hashed_string> _listScrap{};           ///< 나오는 고철이다(비어 있으면 모두)
         float32               _risk{ 1.0f };          ///< 위협 예산이 쌓이는 배율
-        float32               _minValueScale{ 1.0f }; ///< 고철 가치 배율 범위
+        float32               _minValueScale{ 1.0f }; ///< 고철 가치 배율 범위이다
         float32               _maxValueScale{ 1.0f };
         int32                 _routeCost{ 0 }; ///< 가는 데 드는 크레딧
         int32                 _minScrap{ 8 };
         int32                 _maxScrap{ 12 };
-        uint8                 _bCompany{ SW_FALSE }; ///< 회사 — 시설 · 위협이 없고 고철을 판다
+        uint8                 _bCompany{ SW_FALSE }; ///< 회사 위성이다. 시설과 위협이 없고 고철을 판다
     };
 } // namespace sw
 
@@ -142,7 +142,7 @@ namespace sw
         const vector<ScavengerMoonDef>&  getMoons() const { return _moonCatalog.getAll(); }
         const ScavengerScrapDef*         findScrap( const hashed_string& id ) const { return _scrapCatalog.find( id ); }
         const vector<ScavengerScrapDef>& getScraps() const { return _scrapCatalog.getAll(); }
-        /** @brief 마감까지 @p daysLeft 일 남았을 때의 매입률입니다(점 사이는 선형, 끝 밖은 끝 값, 점이 없으면 1). */
+        /** @brief 마감까지 @p daysLeft 일 남았을 때의 매입률을 계산합니다. 점 사이는 선형으로 보간하고, 끝 밖은 끝 값을 쓰며, 점이 없으면 1 입니다. */
         float32                          computeBuyRate( int32 daysLeft ) const;
         const ScavengerQuotaSettings&    getQuotaSettings() const { return _quota; }
         const ScavengerDaySettings&      getDaySettings() const { return _day; }
@@ -154,12 +154,12 @@ namespace sw
         float32                          getCrewHealth() const { return _crewHealth; }
 
     private:
-        static constexpr const utf8* kXMLRootName = "ScavengerCatalog"; ///< 루트 원소(`XMLCatalog`)
+        static constexpr const utf8* kXMLRootName = "ScavengerCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
         GameCatalog<ScavengerMoonDef>  _moonCatalog;
         GameCatalog<ScavengerScrapDef> _scrapCatalog;
-        vector<ScavengerBuyRatePoint>  _listBuyRate; ///< 남은 날 오름차순
+        vector<ScavengerBuyRatePoint>  _listBuyRate; ///< 남은 날 오름차순이다
         ScavengerQuotaSettings         _quota;
         ScavengerDaySettings           _day;
         ScavengerCarrySettings         _carry;
