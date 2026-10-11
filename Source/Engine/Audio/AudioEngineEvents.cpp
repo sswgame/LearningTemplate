@@ -157,7 +157,7 @@ namespace sw
         EventState&           state = stateIt->second;
         const AudioEventDesc& event = *state._pDesc;
 
-        // 쿨다운 — 오디오 시각(렌더한 프레임)으로 측정한다.
+        // 쿨다운은 오디오 시각(렌더한 프레임)으로 측정한다.
         const uint64 cooldownFrames = static_cast<uint64>( event._cooldownSeconds * static_cast<float32>( audio::kSampleRate ) );
         if ( cooldownFrames > 0 && state._bPostedOnce && _renderedFrameCount - state._lastPostFrame < cooldownFrames )
         {
@@ -239,7 +239,7 @@ namespace sw
         instance._emitterID     = command._emitterID;
         instance._startFrame    = _renderedFrameCount;
 
-        // 재생 한 번의 볼륨 · 피치(레이어 보이스는 같은 값을 나눈다).
+        // 재생 한 번의 볼륨과 피치다(레이어 보이스는 같은 값을 나눠 쓴다).
         const float32 volumeDb  = _random.nextRange( event._volumeDbMin, event._volumeDbMax );
         const float32 semitones = _random.nextRange( event._pitchMin, event._pitchMax );
 
@@ -250,7 +250,7 @@ namespace sw
         {
             case AudioContainerType::Random:
             {
-                // 가중치로 하나 — 클립이 둘 이상이면 바로 앞의 것을 뺀다.
+                // 가중치로 하나를 고른다. 클립이 둘 이상이면 바로 앞에 낸 것은 뺀다.
                 const bool bSkipLast = event._bAvoidRepeat && clipCount > 1 && state._lastRandomIndex >= 0;
                 float32    total     = 0.0f;
                 for ( uint32 clipIndex = 0; clipIndex < clipCount; ++clipIndex )
@@ -429,7 +429,7 @@ namespace sw
             }
         }
 
-        // 센드 · 이펙트 파라미터: 어느 스냅샷이든 가리키는 칸은 데이터 값에서 시작해 켠 순서대로 세기만큼 보간한다(다 빠지면 데이터 값으로 돌아온다).
+        // 센드와 이펙트 파라미터: 어느 스냅샷이든 가리키는 슬롯은 데이터 값에서 시작해 켠 순서대로 세기만큼 보간한다(모두 빠지면 데이터 값으로 돌아온다).
         for ( const AudioSnapshotDesc& anySnapshot : desc._listSnapshot )
         {
             for ( const AudioSnapshotSendDesc& sendItem : anySnapshot._listSend )
@@ -502,7 +502,7 @@ namespace sw
             }
             if ( slot._audibility < inaudible )
             {
-                // 들리지 않는다 — 가상(시간만 흐름)이거나, 짧은 원샷이면 멈춘다.
+                // 들리지 않는다. 가상(시간만 흐름)으로 두거나, 짧은 원샷이면 멈춘다.
                 if ( slot._virtualMode == AudioVirtualMode::Stop )
                     freeVoice( slot );
                 else
@@ -532,7 +532,7 @@ namespace sw
             VoiceSlot& slot = _listVoice[_listVoiceOrder[orderIndex]];
             if ( slot._virtualMode == AudioVirtualMode::Stop )
             {
-                // 들리는 원샷을 뺏을 때는 한 블록 동안 줄여 끊는다(클릭 없음) — 이 블록은 섞는다.
+                // 들리는 원샷을 뺏을 때는 한 블록 동안 줄여서 끊는다(클릭 없음). 이 블록은 그대로 섞는다.
                 slot._voice.setFade( 0.0f, audio::kBlockFrameCount, 0, true );
                 continue;
             }

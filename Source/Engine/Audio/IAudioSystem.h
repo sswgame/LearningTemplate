@@ -1,11 +1,11 @@
 /**
  * @file IAudioSystem.h
- * @brief 오디오 서비스 — 엔진(`AudioEngine`: 믹서 그래프 · 보이스 · 이벤트 · 음악)을 하나 들고, 플랫폼 백엔드는 출력 장치만 맡습니다.
+ * @brief 오디오 서비스입니다. 엔진(`AudioEngine`: 믹서 그래프, 보이스, 이벤트, 음악)을 하나 가지고 있고, 플랫폼 백엔드는 출력 장치만 맡습니다.
  *
- * @note **볼륨과 음소거는 이 서비스가 들고 있습니다.** 값 범위(0~1 클램프)와 "음소거는 master 버스 한 자리에만 건다" 는 규칙은 여기
- *       한 번만 적고, 값은 같은 이름의 믹서 버스 사용자 볼륨으로 엔진에 갑니다.
- * @note **장치가 없으면**(Null 백엔드 · 장치를 못 연 Windows · 테스트) `update` 가 흐른 시간만큼 엔진을 버퍼에 렌더합니다 — 재생 상태
- *       (끝남 · 음악 박자 · 가상 보이스)는 장치가 있을 때와 같이 진행합니다.
+ * @note **볼륨과 음소거는 이 서비스가 관리합니다.** 값 범위(0~1 클램프)와 "음소거는 master 버스에만 건다"는 규칙은 여기에만 적습니다.
+ *       값은 같은 이름의 믹서 버스 사용자 볼륨으로 엔진에 전달됩니다.
+ * @note **장치가 없으면**(Null 백엔드, 장치를 열지 못한 Windows, 테스트) `update` 가 흐른 시간만큼 엔진을 버퍼에 렌더합니다.
+ *       재생 상태(끝남, 음악 박자, 가상 보이스)는 장치가 있을 때와 같이 진행합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -22,8 +22,8 @@ namespace sw
     class AudioEngine;
 
     /**
-     * @brief 이름 붙인 볼륨 버스입니다. 세 버스(`master` · `music` · `sfx`)는 기존 볼륨 칸으로 가고, 나머지 이름은 `IAudioSystem` 의 표에 남습니다.
-     * @details 어느 이름이든 같은 이름의 믹서 버스 사용자 볼륨으로도 갑니다(`AudioEngine::setBusUserVolume`). 그래프에 없는 이름은 값만 남습니다.
+     * @brief 이름을 붙인 볼륨 버스입니다. 세 버스(`master`, `music`, `sfx`)는 기존 볼륨 필드로 가고, 나머지 이름은 `IAudioSystem` 의 테이블에 남습니다.
+     * @details 어느 이름이든 같은 이름의 믹서 버스 사용자 볼륨에도 반영된다(`AudioEngine::setBusUserVolume`). 그래프에 없는 이름은 값만 남는다.
      */
     struct AudioBusVolume
     {
@@ -36,7 +36,7 @@ namespace sw
 {
     /**
      * @class IAudioSystem
-     * @brief 오디오 재생과 관리를 위한 서비스입니다. 백엔드(XAudio2 · Null)는 출력 장치를 열고 닫는 일만 재정의합니다.
+     * @brief 오디오 재생과 관리를 위한 서비스입니다. 백엔드(XAudio2, Null)는 출력 장치를 열고 닫는 일만 재정의합니다.
      */
     class SW_API IAudioSystem
     {
@@ -46,7 +46,7 @@ namespace sw
 
         /** @brief 현재 플랫폼에 맞는 오디오 시스템 인스턴스를 생성합니다. */
         static unique_ptr<IAudioSystem> create();
-        /** @brief 장치를 열지 않는 오디오 시스템입니다(전용 서버 · 테스트). 소리 요청을 받아 버리고, 믹서 · 음량 상태는 그대로 듭니다. */
+        /** @brief 장치를 열지 않는 오디오 시스템입니다(전용 서버, 테스트). 소리 요청은 받아서 버리고, 믹서와 음량 상태는 그대로 유지합니다. */
         static unique_ptr<IAudioSystem> createNull();
 
         IAudioSystem();
@@ -57,7 +57,7 @@ namespace sw
         IAudioSystem( IAudioSystem&& )                 = delete;
         IAudioSystem& operator=( IAudioSystem&& )      = delete;
 
-        /** @brief 엔진을 만들고(기본 믹서 그래프) 출력 장치를 엽니다. 장치를 못 열어도 성공입니다(오프라인 진행). */
+        /** @brief 엔진을 만들고(기본 믹서 그래프) 출력 장치를 엽니다. 장치를 열지 못해도 성공이며, 오프라인으로 진행합니다. */
         bool initialize();
         /** @brief 출력 장치를 닫고 엔진을 내립니다. */
         void shutdown();
@@ -70,23 +70,23 @@ namespace sw
         void update( float32 deltaSeconds );
 
         /**
-         * @brief 클립 하나를 비동기로 재생합니다(디코드는 워커).
-         * @param bus 보낼 버스입니다. 비었으면 `sfx` 입니다(`voice` · `ambient` · `ui` …).
-         * @return 경로가 비었거나 리소스가 없으면 false 입니다.
+         * @brief 클립 하나를 비동기로 재생합니다. 디코드는 워커에서 합니다.
+         * @param bus 보낼 버스입니다. 비어 있으면 `sfx` 입니다(`voice`, `ambient`, `ui` 등).
+         * @return 경로가 비었거나 리소스가 없으면 false 를 반환합니다.
          */
         bool play( string_view path, const hashed_string& bus = hashed_string{} );
 
         /**
-         * @brief 소리를 **지금** 디코드해 캐시에 올립니다(언리얼 사운드 프리캐시 · 유니티 `AudioClip.LoadAudioData`).
-         * @details 디코드할 수 없는 형식 · 없는 파일이면 false 입니다.
+         * @brief 소리를 **지금** 디코드해 캐시에 올립니다. 언리얼의 사운드 프리캐시, 유니티의 `AudioClip.LoadAudioData` 에 해당합니다.
+         * @details 디코드할 수 없는 형식이거나 파일이 없으면 false 를 반환한다.
          */
         bool preload( string_view path );
 
         /** @brief 배경음악(BGM)을 `music` 버스에서 루프로 재생합니다. 같은 곡이 재생 중이면 다시 시작하지 않고, 다른 곡이면 짧게 크로스페이드합니다. */
         bool playMusic( string_view path );
         /**
-         * @brief 적응형 음악(`*.music.xml` — 구간 · 레이어 · 전환)을 시작합니다. 구간은 `getEngine().setMusicSegment`, 레이어는 게임 파라미터가 움직입니다.
-         * @return 파일을 못 읽거나 검사를 통과하지 못하면 false 입니다.
+         * @brief 적응형 음악(`*.music.xml`: 구간, 레이어, 전환)을 시작합니다. 구간은 `getEngine().setMusicSegment` 로 바꾸고, 레이어는 게임 파라미터로 조절합니다.
+         * @return 파일을 읽지 못하거나 검사를 통과하지 못하면 false 를 반환합니다.
          */
         bool playAdaptiveMusic( string_view path );
         /** @brief 현재 재생 중인 배경음악(BGM)을 중지합니다. */
@@ -98,10 +98,10 @@ namespace sw
         /** @brief 마지막으로 요청된 배경음악 경로입니다. 재생 중이 아니면 비어 있습니다. 요청 시점에 정해집니다. */
         string getMusicPath() const { return _musicPath; }
 
-        /** @brief 믹서 그래프를 리소스에서 읽어 바꿉니다(게임이 자기 그래프를 쓸 때). 읽기 · 검사에 실패하면 false 이고 지금 그래프를 그대로 씁니다. */
+        /** @brief 믹서 그래프를 리소스에서 읽어 교체합니다(게임이 자기 그래프를 쓸 때). 읽기나 검사에 실패하면 false 를 반환하고 현재 그래프를 그대로 씁니다. */
         [[nodiscard]] bool loadMixer( string_view resourcePath );
 
-        /** @brief 엔진입니다 — 이벤트 · 파라미터 · 스냅샷 · 음악 · 공간화는 여기서 씁니다. */
+        /** @brief 엔진을 반환합니다. 이벤트, 파라미터, 스냅샷, 음악, 공간화는 여기서 씁니다. */
         AudioEngine& getEngine() { return *_pEngine; }
         /** @brief 엔진입니다. */
         const AudioEngine& getEngine() const { return *_pEngine; }
@@ -123,8 +123,8 @@ namespace sw
 
         /**
          * @brief 전체 음소거 여부를 설정합니다.
-         * @details 음소거는 **master 버스 한 자리에만** 겁니다. 다른 버스는 자기 볼륨만 들고 있으므로, 음소거 중에 볼륨을 바꿔도 음소거를 풀면
-         *          그대로 돌아옵니다.
+         * @details 음소거는 **master 버스에만** 건다. 다른 버스는 자기 볼륨만 가지고 있으므로, 음소거 중에 볼륨을 바꿔도 음소거를 풀면
+         *          그 값으로 돌아온다.
          */
         void setMute( bool bMute );
         /** @brief 현재 음소거 상태인지 반환합니다. */
@@ -140,8 +140,8 @@ namespace sw
 
     protected:
         /**
-         * @brief 출력 장치를 열어 엔진의 `render` 를 장치 스레드에서 당기기 시작합니다.
-         * @return 장치가 없으면 false 입니다 — 그때는 `update` 가 렌더합니다.
+         * @brief 출력 장치를 열어, 장치 스레드에서 엔진의 `render` 를 호출하기 시작합니다.
+         * @return 장치가 없으면 false 를 반환합니다. 그때는 `update` 가 렌더합니다.
          */
         [[nodiscard]] virtual bool openOutput() { return false; }
         /** @brief 출력 장치를 닫습니다. 돌아온 뒤에는 장치 스레드가 `render` 를 부르지 않습니다. */

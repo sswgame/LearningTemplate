@@ -1,10 +1,10 @@
 /**
  * @file AudioVorbisDecode.cpp
- * @brief `AudioClipDecoder::decodeOgg` — stb_vorbis 구현을 이 TU 하나에만 넣습니다.
- * @note stb_vorbis.c 는 `L` · `C` · `R` · `CHECK` · `TRUE` 같은 짧은 매크로를 남깁니다. 유니티 빌드에서 뒤에 붙는 TU 를 오염시키지 않게
- *       include 바로 뒤에서 모두 지웁니다. stb_vorbis 를 다른 파일에서 include 하지 말 것.
- *       주의: `TRUE` · `FALSE` 는 stb_vorbis 가 없을 때만 정의한다 — Windows 에서는 `windows.h` 의 것이라 지우면 유니티 묶음의 뒤 파일
- *       (d3d11.h 를 처음 include 하는 XAudio2System.cpp)이 PCH 없는 빌드에서 깨진다. 이 TU 가 정의한 경우에만 지운다.
+ * @brief `AudioClipDecoder::decodeOgg` 입니다. stb_vorbis 구현을 이 TU 하나에만 넣습니다.
+ * @note stb_vorbis.c 는 `L`, `C`, `R`, `CHECK`, `TRUE` 같은 짧은 매크로를 남깁니다. 유니티 빌드에서 뒤에 붙는 TU 가 오염되지 않게
+ *       include 바로 뒤에서 모두 지웁니다. stb_vorbis 를 다른 파일에서 include 하지 마세요.
+ *       주의: `TRUE` 와 `FALSE` 는 stb_vorbis 가 없을 때만 정의합니다. Windows 에서는 `windows.h` 의 정의라서 지우면, 유니티 묶음의 뒤쪽 파일
+ *       (d3d11.h 를 처음 include 하는 XAudio2System.cpp)이 PCH 없는 빌드에서 깨집니다. 이 TU 가 정의한 경우에만 지웁니다.
  */
 #include "pch.h"
 
@@ -66,10 +66,10 @@ namespace sw
     namespace
     {
         /**
-         * @brief stb_vorbis 에 넘기기 전에 Vorbis 주석 헤더(두 번째 패킷)의 길이 칸들이 패킷 안에 들어오는지 봅니다.
-         * @details stb_vorbis 1.22 는 주석 헤더의 공급자 길이 · 주석 수 · 주석 길이를 패킷 크기와 대조하지 않는다. 큰 값이면 할당이 실패하고,
-         *          실패한 뒤 정리(`vorbis_deinit`)가 아직 채우지 않은 주석 칸까지 `free` 해 프로세스가 죽는다(CVE-2023-45675 · 45676 · 45677 계열,
-         *          `LoaderFuzzTest` 가 찾았다). 서드파티를 고치지 않고 입구에서 막는다 — 길이가 패킷 밖을 가리키는 파일은 어차피 망가진 파일이다.
+         * @brief stb_vorbis 에 넘기기 전에, Vorbis 주석 헤더(두 번째 패킷)의 길이 필드들이 패킷 안에 들어오는지 확인합니다.
+         * @details stb_vorbis 1.22 는 주석 헤더의 공급자 길이, 주석 수, 주석 길이를 패킷 크기와 대조하지 않는다. 값이 크면 할당이 실패하고,
+         *          실패 뒤 정리(`vorbis_deinit`)가 아직 채우지 않은 주석 필드까지 `free` 해서 프로세스가 죽는다(CVE-2023-45675, 45676, 45677 계열이며 `LoaderFuzzTest` 가 찾았다).
+         *          서드파티를 고치지 않고 입구에서 막는다. 길이가 패킷 밖을 가리키는 파일은 어차피 망가진 파일이다.
          */
         struct OggCommentHeaderGuard
         {
@@ -115,7 +115,7 @@ namespace sw
                 return false;
             }
 
-            /** @brief 주석 헤더의 길이 칸이 모두 패킷 안이면 true 입니다. */
+            /** @brief 주석 헤더의 길이 필드가 모두 패킷 안에 있으면 true 를 반환합니다. */
             static bool isCommentHeaderSane( const uint8* pBytes, size_t byteCount )
             {
                 vector<uint8> packetBytes;
@@ -158,9 +158,9 @@ namespace sw
         if ( OggCommentHeaderGuard::isCommentHeaderSane( pBytes, byteCount ) == false )
             return false;
 
-        // 디코더 메모리를 우리 버퍼 한 덩어리에서 나눠 준다(`stb_vorbis_alloc`). stb 는 깨진 헤더의 오류 길에서 `setup_temp_malloc` 으로 잡은
-        // 임시 버퍼를 놓지 않는데(변이 Ogg 로 재현), 우리 버퍼 안이면 함께 버려진다. 모자라면(VORBIS_outofmem) 두 배로 다시 열고, 상한을 넘으면
-        // 실패다 — 조작한 헤더가 수백 MB 를 요구하는 길도 여기서 막힌다.
+        // 디코더 메모리를 우리 버퍼 한 덩어리에서 나눠 준다(`stb_vorbis_alloc`). stb 는 깨진 헤더의 오류 경로에서 `setup_temp_malloc` 으로 잡은
+        // 임시 버퍼를 해제하지 않는데(변이한 Ogg 로 재현된다), 우리 버퍼 안이면 함께 버려진다. 모자라면(VORBIS_outofmem) 두 배로 다시 열고, 상한을 넘으면
+        // 실패한다. 조작한 헤더가 수백 MB 를 요구하는 경우도 여기서 막힌다.
         constexpr size_t kInitialArenaBytes = 256 * 1024;
         constexpr size_t kMaxArenaBytes     = 64 * 1024 * 1024;
         vector<uint8>    listArena;
@@ -184,7 +184,7 @@ namespace sw
             return false;
         }
 
-        // stb_vorbis_decode_memory 와 같은 길 — 채널을 섞어 짧은 정수로 끝까지 읽는다.
+        // stb_vorbis_decode_memory 와 같은 경로다. 채널을 섞어 16 비트 정수로 끝까지 읽는다.
         constexpr int32 kChunkFrames = 4096;
         vector<int16>   listSample;
         vector<int16>   listChunk( static_cast<size_t>( kChunkFrames ) * static_cast<size_t>( info.channels ) );

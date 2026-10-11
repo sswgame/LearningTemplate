@@ -1,9 +1,9 @@
 /**
  * @file AudioMixerDesc.h
- * @brief 믹서 그래프 데이터 — 버스(서브믹스)의 계층 · 볼륨 · 음소거 · 솔로 · 센드입니다(`*.audiomixer.xml`).
- * @details 언리얼 서브믹스 · Wwise 버스 계층 · FMOD 그룹 버스의 자리입니다. 루트는 `master` 하나이고, 모든 버스는 부모를 이름으로 적습니다.
- *          센드는 같은 신호를 다른 버스(리버브 같은 이펙트 리턴 버스)에도 보냅니다. 부모 · 센드가 고리를 만들면 읽을 때 오류입니다.
- *          엔진의 기본 그래프는 `engine/audio/default.audiomixer.xml` — 사용자 설정의 버스 볼륨(`audio.busVolume`)은 그 이름으로 찾아갑니다.
+ * @brief 믹서 그래프 데이터입니다(`*.audiomixer.xml`). 버스(서브믹스)의 계층, 볼륨, 음소거, 솔로, 센드를 담습니다.
+ * @details 언리얼의 서브믹스, Wwise 의 버스 계층, FMOD 의 그룹 버스에 해당한다. 루트는 `master` 하나이고, 모든 버스는 부모를 이름으로 적는다.
+ *          센드는 같은 신호를 다른 버스(리버브 같은 이펙트 리턴 버스)에도 보낸다. 부모나 센드가 고리를 만들면 읽을 때 오류다.
+ *          엔진의 기본 그래프는 `engine/audio/default.audiomixer.xml` 이다. 사용자 설정의 버스 볼륨(`audio.busVolume`)은 그 이름으로 버스를 찾는다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -19,7 +19,7 @@
 namespace sw
 {
     /**
-     * @brief 버스 하나에서 다른 버스로 보내는 센드입니다(Wwise aux send · 언리얼 submix send).
+     * @brief 버스 하나에서 다른 버스로 보내는 센드입니다. Wwise 의 aux send, 언리얼의 submix send 에 해당합니다.
      * @code
      *     <AudioSendDesc _bus="reverb" _levelDb="-12" />
      * @endcode
@@ -83,7 +83,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 버스(서브믹스) 하나입니다. 입력은 이 버스로 보낸 보이스 · 자식 버스 · 센드의 합이고, 이펙트 체인을 지나 페이더 뒤 부모로 갑니다.
+     * @brief 버스(서브믹스) 하나입니다. 입력은 이 버스로 보낸 보이스, 자식 버스, 센드의 합이며, 이펙트 체인을 지나 페이더를 거친 뒤 부모로 갑니다.
      * @code
      *     <AudioBusDesc _name="sfx" _parent="master" _volumeDb="0">
      *         <_listSend><AudioSendDesc _bus="reverb" _levelDb="-12" /></_listSend>
@@ -166,9 +166,9 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 믹스 스냅샷 하나입니다(Wwise State/Mix · FMOD Snapshot · 언리얼 Sound Mix). 켜면 세기 0 → 1 로 들어오고, 끄면 1 → 0 으로 빠집니다.
-     * @details 세기는 시간(`startSnapshot` · `stopSnapshot`)이나 게임 값(`setSnapshotIntensity` — 리버브 존의 경계 블렌드)이 정합니다. 버스 오프셋은 세기 × dB 를
-     *          더하고, 센드 · 이펙트 파라미터는 켠 순서대로 지금 값 → 스냅샷 값을 세기만큼 보간합니다.
+     * @brief 믹스 스냅샷 하나입니다. Wwise 의 State/Mix, FMOD 의 Snapshot, 언리얼의 Sound Mix 에 해당합니다. 켜면 세기가 0 에서 1 로 올라오고, 끄면 1 에서 0 으로 내려갑니다.
+     * @details 세기는 시간(`startSnapshot`, `stopSnapshot`)이나 게임 값(`setSnapshotIntensity`, 예: 리버브 존의 경계 블렌드)이 정한다.
+     *          버스 오프셋은 세기 × dB 를 더하고, 센드와 이펙트 파라미터는 켠 순서대로 현재 값에서 스냅샷 값으로 세기만큼 보간한다.
      * @code
      *     <AudioSnapshotDesc _name="Underwater" _fadeInSeconds="0.3" _fadeOutSeconds="0.6">
      *         <_listEffectParameter><AudioSnapshotEffectDesc _bus="master" _effect="Muffle" _parameter="frequencyHz" _value="600" /></_listEffectParameter>
@@ -198,9 +198,9 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 믹서 그래프 하나입니다. 버스 목록과 보이스 상한입니다.
-     * @details 버스 이름은 겹치지 않고, `master` 가 유일한 루트이며, 부모 · 센드 대상은 표에 있는 이름이고, 부모 · 센드가 고리를 만들지 않아야 합니다.
-     *          어긋나면 오류를 남기고 읽기가 실패합니다.
+     * @brief 믹서 그래프 하나입니다. 버스 목록과 보이스 상한을 담습니다.
+     * @details 버스 이름은 겹치지 않아야 하고, `master` 가 유일한 루트여야 한다. 부모와 센드 대상은 테이블에 있는 이름이어야 하며, 부모와 센드가 고리를 만들면 안 된다.
+     *          어긋나면 오류를 남기고 읽기가 실패한다.
      */
     REFLECT()
     struct SW_API AudioMixerDesc
@@ -226,7 +226,7 @@ namespace sw
         [[nodiscard]] bool loadFromResource( string_view resourcePath );
         /** @brief XML 문자열을 읽고 검사합니다(테스트용). */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = "<text>" );
-        /** @brief 이름 · 루트 · 부모 · 센드 · 고리를 검사합니다. 어긋나면 오류를 남기고 false 입니다. */
+        /** @brief 이름, 루트, 부모, 센드, 고리를 검사합니다. 어긋나면 오류를 남기고 false 를 반환합니다. */
         [[nodiscard]] bool validate( string_view sourceName ) const;
 
         /** @brief 버스 번호입니다. 없으면 -1 입니다. */
@@ -238,19 +238,19 @@ namespace sw
         /** @brief 감쇠 프리셋입니다. 없으면 nullptr 입니다. */
         const AudioAttenuationDesc* findAttenuation( const hashed_string& name ) const;
         /**
-         * @brief 처리 순서(보내는 버스가 받는 버스보다 앞)를 만듭니다 — 부모와 센드를 간선으로 본 위상 정렬입니다.
-         * @return 고리가 있으면 false 입니다.
+         * @brief 처리 순서(보내는 버스가 받는 버스보다 앞)를 만듭니다. 부모와 센드를 간선으로 본 위상 정렬입니다.
+         * @return 고리가 있으면 false 를 반환합니다.
          */
         [[nodiscard]] bool makeProcessingOrder( vector<uint32>& outListBusIndex ) const;
 
-        /** @brief 감쇠 프리셋 목록을 검사합니다(이름 · 거리 · 곡선 점 순서). 이벤트 라이브러리도 같은 검사를 씁니다. */
+        /** @brief 감쇠 프리셋 목록을 검사합니다(이름, 거리, 곡선 점 순서). 이벤트 라이브러리도 같은 검사를 씁니다. */
         [[nodiscard]] static bool validateAttenuations( const vector<AudioAttenuationDesc>& listAttenuation, string_view sourceName );
-        /** @brief 스냅샷이 가리키는 버스 · 센드 · 이펙트 · 파라미터가 그래프에 있는지 검사합니다. */
+        /** @brief 스냅샷이 가리키는 버스, 센드, 이펙트, 파라미터가 그래프에 있는지 검사합니다. */
         [[nodiscard]] bool validateSnapshots( string_view sourceName ) const;
         /** @brief 곡선 점이 입력 오름차순인지입니다. */
         static bool isCurveSorted( const vector<AudioCurvePoint>& listPoint );
 
-        /** @brief 파일 없이 쓰는 기본 그래프입니다 — master 아래 music · sfx · voice · ambient · ui, 센드 없음. */
+        /** @brief 파일 없이 쓰는 기본 그래프입니다. master 아래에 music, sfx, voice, ambient, ui 버스가 있고 센드는 없습니다. */
         static AudioMixerDesc makeDefault();
     };
 } // namespace sw
