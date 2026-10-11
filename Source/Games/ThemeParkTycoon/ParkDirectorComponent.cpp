@@ -52,7 +52,7 @@ namespace sw
             static constexpr const utf8* kSoundBuilt  = "game/themepark/sounds/confirmation_001.ogg";
             static constexpr const utf8* kSoundSelect = "game/themepark/sounds/select_001.ogg";
 
-            /** @brief 오브젝트의 메시를 자리 · 회전 · 크기로 둡니다. 메시가 없으면 nullptr 입니다. */
+            /** @brief 오브젝트의 메시를 위치, 회전, 크기로 둡니다. 메시가 없으면 nullptr 입니다. */
             static MeshComponent* placeMesh( GameObject* pObject, const float3& position, const float3& rotation )
             {
                 MeshComponent* pMesh = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
@@ -64,7 +64,7 @@ namespace sw
             }
         };
 
-        /** @brief 시나리오 탐침 — 첫 공원 디렉터의 손님 수(그림자 장면이 비어 있지 않다는 전제)입니다. */
+        /** @brief 시나리오 프로브입니다. 첫 공원 디렉터의 손님 수를 반환하며, 그림자 장면이 비어 있지 않다는 전제를 확인합니다. */
         struct ParkDirectorProbeInternal
         {
             [[nodiscard]] static bool readGuestCount( const GameObjectManager* pManager, float64& outValue )
@@ -85,7 +85,7 @@ namespace sw
         };
     } // namespace
 
-    /** @brief `-gv_parkAutoBuild=1` — 디렉터의 자동 짓기를 켭니다(씬의 `_bAutoBuild` 가 꺼져 있어도). 배포본 실행으로 입력 없이 공원이 크는 확인. */
+    /** @brief `-gv_parkAutoBuild=1`: 디렉터의 자동 건설을 켭니다(씬의 `_bAutoBuild` 가 꺼져 있어도 켭니다). 배포본 실행으로 입력 없이 공원이 커지는지 확인합니다. */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_parkAutoBuild, 0, "ThemeParkTycoon: 돈이 모이면 자동으로 짓기 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_parkAutoBuild, "ThemeParkTycoon", "Build the next ride whenever cash allows" );
 } // namespace sw
@@ -181,7 +181,7 @@ namespace sw
     {
         if ( coasterIndex < 0 || coasterIndex >= static_cast<int32>( _listCoaster.size() ) )
             return nullptr;
-        // 뷰가 워커에서 부른다 — 컨테이너 첨자 대신 포인터로 읽는다.
+        // 뷰가 워커에서 부른다. 컨테이너 인덱스 대신 포인터로 읽는다.
         const CoasterRuntime* pCoaster = _listCoaster.data()[coasterIndex].get();
         return pCoaster != nullptr ? &pCoaster->_train : nullptr;
     }
@@ -194,7 +194,7 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 데이터 · 짓기
+    // 데이터와 건설
     // ------------------------------------------------------------------------------
     bool ParkDirectorComponent::startGame()
     {
@@ -207,7 +207,7 @@ namespace sw
         _settings._gatePosition = layout.getGatePosition();
         _settings._entryFee     = layout.getEntryFee();
         _startingCash           = layout.getStartingCash();
-        // 씬에 놓인 정문이 있으면 그 자리가 정문이다 — 에디터에서 옮기면 손님 길이 따라온다.
+        // 씬에 놓인 정문이 있으면 그 위치가 정문이다. 에디터에서 옮기면 손님 경로가 따라온다.
         GameObjectManager*    pManager   = getObjectManager();
         const GameObject*     pGate      = pManager != nullptr ? pManager->resolveGameObject( _gate ) : nullptr;
         const SceneComponent* pGateScene = pGate != nullptr ? pGate->getPrimarySceneComponent() : nullptr;
@@ -231,7 +231,7 @@ namespace sw
         _simulation.initialize( _settings, makeRefs() );
         _listCoaster.clear();
 
-        // 처음 공원 — 가장 싼 평지 놀이기구 하나와 가장 싼 코스터 하나.
+        // 처음 공원에는 가장 싼 평지 놀이기구 하나와 가장 싼 코스터 하나를 둔다.
         int32 cheapestFlat    = -1;
         int32 cheapestCoaster = -1;
         for ( int32 placementIndex = 0; placementIndex < static_cast<int32>( _listPlacement.size() ); ++placementIndex )
@@ -266,7 +266,7 @@ namespace sw
         unique_ptr<CoasterRuntime> pCoaster;
         if ( placement._layoutID.empty() == false )
         {
-            // 코스터 — 짓고 테스트 운행으로 평가를 받는다. 못 돌면(언덕을 못 넘는다) 짓지 않는다.
+            // 코스터는 건설하고 테스트 운행으로 평가를 받는다. 못 돌면(언덕을 못 넘는다) 건설하지 않는다.
             const CoasterLayoutDef* pLayout = _layoutCatalog.findLayout( placement._layoutID );
             CoasterRideStats        stats{};
             pCoaster = createCoaster( placementIndex, stats );
@@ -278,7 +278,7 @@ namespace sw
                 return false;
             }
             ride = ThemeParkSimulation::makeRideFromCoaster( placement._layoutID, pLayout->_name, stats, placement._ride._capacity, placement._loadTime );
-            // 줄 입구 — 스테이션 가운데 옆(바깥쪽).
+            // 줄 입구는 스테이션 중앙 옆(바깥쪽)이다.
             const CoasterTrackFrame stationFrame = pCoaster->_pTrack->sample( 6.0f );
             ride._entrance                       = stationFrame._position - stationFrame._right * 5.0f;
             ride._entrance._y                    = 0.0f;
@@ -355,7 +355,7 @@ namespace sw
         if ( simulation.readState( archive ) == false || StateArchiveUtil::readCount( archive, sizeof( int32 ), placementCount ) == false )
             return false;
         if ( placementCount != static_cast<uint32>( _listPlacement.size() ) )
-            return false; // 배치 데이터가 바뀌었다 — 지은 것을 맞출 수 없다
+            return false; // 배치 데이터가 바뀌었다. 건설한 것을 맞출 수 없다.
         const int32   rideCount = static_cast<int32>( simulation.getRides().size() );
         vector<int32> listRideIndex( placementCount );
         for ( int32& rideIndex : listRideIndex )
@@ -450,7 +450,7 @@ namespace sw
     {
         if ( bRespawnViews )
         {
-            // 처음(또는 걷은 뒤) — 손님 풀과 지은 것 모두. 쌓인 개별 요청은 여기에 들어 있다.
+            // 처음이거나 정리한 뒤다. 손님 풀과 건설한 것을 모두 스폰한다. 쌓인 개별 요청은 여기에 들어 있다.
             spawnGuestPool( manager );
             for ( int32 placementIndex = 0; placementIndex < static_cast<int32>( _listPlacement.size() ); ++placementIndex )
             {
@@ -470,7 +470,7 @@ namespace sw
 
     void ParkDirectorComponent::spawnGuestPool( GameObjectManager& manager )
     {
-        // 최대 손님 수만큼 미리 세우고 숨긴다(오브젝트를 매 프레임 만들고 지우지 않는다). 손님 하나는 뷰 컴포넌트 하나가 시뮬레이션의 같은 번호를 따라간다.
+        // 최대 손님 수만큼 미리 스폰하고 숨긴다(오브젝트를 매 프레임 만들고 지우지 않는다). 손님 하나는 뷰 컴포넌트 하나가 시뮬레이션의 같은 번호를 따라간다.
         const GameObjectHandle director = getOwner()->getHandle();
         for ( int32 guestIndex = 0; guestIndex < _settings._maxGuests; ++guestIndex )
         {
@@ -530,7 +530,7 @@ namespace sw
         const CoasterRuntime& coaster = *_listCoaster[static_cast<size_t>( coasterIndex )];
         const CoasterTrack&   track   = *coaster._pTrack;
 
-        // 레일 — 2 m 마다 트랙 좌표계로 돌린 직선 레일 조각(조각 시작점이 원점). 기둥 — 8 m 마다 레일 밑에서 땅까지(뒤집힌 구간은 없다).
+        // 레일은 2m 마다 트랙 좌표계로 돌린 직선 레일 조각이다(조각 시작점이 원점). 기둥은 8m 마다 레일 밑에서 땅까지 세운다(뒤집힌 구간은 없다).
         // 스테이션 구간은 레일 옆에 승강장을 깐다.
         const float3 railScale{ _modelScale, _modelScale, Internal::kRailSpacing * 1.05f / Internal::kRailPieceLength };
         const float3 stationScale{ 2.0f, 2.0f, Internal::kRailSpacing * 1.05f };
@@ -586,7 +586,7 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 갱신(PrePhysics — 워커)
+    // 갱신(PrePhysics, 워커)
     // ------------------------------------------------------------------------------
     void ParkDirectorComponent::updateInput( const InputManager& input )
     {
@@ -661,7 +661,7 @@ namespace sw
 
     void ParkDirectorComponent::updateCameraOverride()
     {
-        // 리그는 PostUpdate 에서 돈다 — 이 그룹(PrePhysics)에서 넣은 시점을 같은 프레임에 읽는다. 리그의 오브젝트에는 다른 쓰기가 없다.
+        // 리그는 PostUpdate 에서 돈다. 이 그룹(PrePhysics)에서 넣은 시점을 같은 프레임에 읽는다. 리그의 오브젝트에는 다른 쓰기가 없다.
         const bool bRiding = 0 <= _ridingCoaster && _ridingCoaster < static_cast<int32>( _listCoaster.size() );
         if ( bRiding == false && _bWasRiding == SW_FALSE )
             return;
@@ -676,7 +676,7 @@ namespace sw
             pRig->clearViewOverride();
             return;
         }
-        // 맨 앞 차량에 탄 시점 — 롤까지 따라간다(루프에서 하늘이 아래로 온다).
+        // 맨 앞 차량에 탄 시점이다. 롤까지 따라간다(루프에서 하늘이 아래로 온다).
         const CoasterTrackFrame frame = _listCoaster[static_cast<size_t>( _ridingCoaster )]->_train.getFrame();
         pRig->setViewOverride( frame._position + frame._up * _rideEyeHeight,
                                OrientationUtil::computeEulerFromForwardUp( frame._forward, frame._up ), _rideFieldOfView,
