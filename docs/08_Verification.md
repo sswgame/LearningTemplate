@@ -166,6 +166,9 @@ cd build/Ninja-Debug/Bin
 - **OS 헤더를 PCH 에서 뺀 효과**(2026-10-11, PC `SW`, Debug, `EngineMinimal.h` 가 `Windows.h` 묶음을 더는 넣지 않음): PCH 없이 `-fsyntax-only` 한 번역 단위의 중앙값(5 회)이 `GameObjectManager.cpp` 2.63 → 2.18 s ·
   `Scene.cpp` 2.74 → 2.24 s · `AudioClip.cpp` 2.56 → 2.11 s · `AnimClip.cpp` 2.66 → 2.06 s(약 −19 %, TU 하나에 −0.5 s). PCH 를 켠 개발 풀 빌드는 131.5 → 127 s(−3 %)로 작다 — 이득은 PCH 를 끄는 구성(Windows CI)에서 크다.
   `Scripts` 없이 재는 법: `compile_commands.json` 의 명령에서 `/Yu` · `/Fp` · PCH 강제 포함 · `/Fo` 를 빼고 `-fsyntax-only -include Source/Engine/pch.h` 를 붙여 5 회 돌린다.
+- **킷 PCH 공유 효과**(2026-10-11, PC `SW`, Debug, 풀 빌드 `--clean-first` 를 같은 트리에서 변경 유무로 교차 3 쌍, 다른 빌드 없음): 공유 120.4 · 112.7 · 113.0 s(중앙값 **113.0**) ·
+  기준선 130.7 · 131.1 · 131.9 s(중앙값 **131.1**) — 약 −18 s(−14 %). PCH 컴파일 154 → 94 개. 에이전트 빌드가 겹친 측정은 편차가 ±40 s 라 쓸 수 없었다(`busy_before` 로 겹침을 먼저 센다).
+  `.ninja_log` 는 `--clean-first` 뒤에도 이전 실행 항목이 남아 CPU 합을 그대로 더하면 틀린다.
 - **헤더 파싱 비용 상위 20 개는 `Scripts/lint/report/RunIncludeCost.py --preset Ninja-Debug --jobs 8` 로 뽑는다.**
   0 단계 집계(2026-10-10, 위와 같은 PC · 커밋, `RunIncludeCost.py --preset Ninja-Debug --jobs 8`, 다른 빌드와 겹쳐 돌았으므로 순위만 믿는다):
   TU 1936 개 중 헤더 파싱 합 2619.9 s / 컴파일러 합 3190.5 s = **82 %**(구문 검사만이라 진짜 빌드 비율보다 높다).

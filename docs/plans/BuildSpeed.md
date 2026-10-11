@@ -31,7 +31,10 @@
 
 ### 3. PCH 공유 (GameFramework 폴더 재배치 뒤)
 타깃마다 따로 만드는 PCH 86 개(370 CPU 초)를 `REUSE_PRECOMPILE_HEADERS_FROM` 으로 층마다 하나로(Core · Engine · 킷). 공유하려면 컴파일 정의가 같아야 한다 — 타깃마다 다른 `SW_LOG_TAG` · 내보내기 매크로를 PCH 가 읽는 정의에서 빼고 소스 쪽 매크로(`SW_LOG_CALLER`)와 헤더로 옮긴다.
-확인: 모든 타깃의 `compile_commands.json` 정의 차이 목록(스크립트로)을 먼저 뽑는다.
+**킷은 끝났다**(풀 빌드 131.1 → 113.0 s, [검증과 측정](../08_Verification.md) "빌드 속도"): clang 은 PCH 와 `-D` 가 하나라도 다르면 거부하므로(`definition of macro 'SW_LOG_TAG' differs`) 타깃 고유 정의(`SW_LOG_TAG` · `SW_GF_EXPORTS`)를
+PCH 뒤에 강제 포함하는 생성 헤더로 옮기고(`sw_setTargetDefsHeader`), 자동 정의 `<타깃>_EXPORTS` 는 끄고, 정의 없는 중립 소유자 `sw_kit_pch`(`sw_addSharedPchOwner`)가 PCH 를 만든다. 특정 킷이 소유하면 그 킷의 정의가 PCH 에 구워져 샌다.
+남은 것: 게임 모듈(`SWGame`) · 에디터 확장 · RHI 백엔드 · 시험 묶음. 정의 차이는 `SW_IMPORTS` 유무 · `SW_*_INTERNAL`(App · Engine · Test 가 서로 다름) · 서드파티 정의(Jolt · Tracy)뿐이므로 같은 방식으로 묶음마다 소유자를 하나 둔다.
+`SW_*_INTERNAL` 은 `EngineServices.h` 가 읽는 헤더 조건이라 PCH 에 영향을 줄 수 있다 — 묶음 안에서 같아야 한다. 차이 목록은 `compile_commands.json` 의 `-D` 를 타깃별로 모아 뽑는다(`SW_LOG_TAG="…"` 처럼 값이 붙은 것은 이름만 비교).
 
 ### 4. sccache 와 PCH 의 충돌 (Windows `/Yu` 는 캐시되지 않는다)
 구성을 둘로 나눈다: **개발 증분**(PCH ON, 유니티 OFF)과 **콜드 · 워크트리 · CI**(PCH OFF + 유니티 + sccache 웜). 프리셋 이름은 `Ninja-Debug`(개발) · `Ninja-Debug-Cold`(콜드). 0 단계 표에서 세 구성(PCH · PCH 없이 sccache · 유니티)의 풀 빌드와 워크트리 콜드를 비교해 쓸 가치가 있는 조합만 남긴다.
