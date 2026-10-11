@@ -39,11 +39,15 @@ PCH 없는 TU 넷의 구문 검사 합이 5.02 → 4.08 s(−19 %)다([검증과
 sccache 웜이면 개발 44.7 s · 유니티만 45.4 s. PCH 를 쓰는 TU 는 캐시되지 않아도 TU 하나 0.2 ~ 0.4 s 라 웜 캐시에서 차이가 없다 — `Ninja-Debug-Cold` 는 만들지 않았다([결정 기록](../09_Decisions.md) 3절).
 Windows CI 는 이미 PCH 끔 + 유니티 + sccache 다(코어가 적은 러너에서는 캐시가 맞는 TU 의 비율이 더 중요하다).
 
-### 5. 유니티 범위 확대
-지금은 게임 모듈만 `UNITY_BATCH 8` 이다. 헤더 파싱이 57 % 이므로 Engine · GameFramework 킷에 4 단계의 콜드 구성에서만 켠다(증분에는 불리하다). 배치 크기는 4 · 8 · 16 을 재서 정한다. 리플렉션 등록기와 이름 충돌(익명 네임스페이스 · `static` 중복)은 유니티에서 터지므로 `sw_skipUnitySources` 의 예외 목록을 같이 본다.
+### 5. 유니티 범위 확대 — 남음(측정 한 쌍뿐이라 되돌림)
+유니티(`SW_ENABLE_UNITY_BUILD`, Windows CI 구성)는 지금 Engine 12 · GameFramework 8 · Editor 8 · 게임 8 이다. Core(`sw_setUnityBuild(Core_objects BATCH_SIZE 12)`)와
+킷(`sw_addGameFrameworkKit` 에 `UNITY_BATCH 8`)을 더하면 Windows 에서 이름 충돌 없이 지어졌고, PCH 끔 + 유니티 · 캐시 없음 풀 빌드가 139.9 → 115.0 s(한 쌍)였다.
+두 번째 쌍과 배치 4 · 16(전역 덮어쓰기 캐시 변수로 재려 했다)은 다른 쪽의 vcpkg 설치가 공유 설치 폴더를 흔들어(`TracyClient.dll` 없음) 재지 못했다 — 커밋하지 않았다.
+남은 일: 공유 설치가 조용할 때 교차 3 쌍 + 배치 4 · 8 · 16 을 재고, 리눅스 유니티(CI)에서 킷 · Core 이름 충돌을 확인한 뒤 넣는다.
+주의: `SW_USE_SCCACHE=OFF` 로 다시 구성해도 캐시된 `CMAKE_CXX_COMPILER_LAUNCHER` 가 남아 sccache 가 계속 붙는다(`DetectToolchain.cmake` 가 끌 때 지우지 않는다) — 캐시 없는 측정은 새 폴더에서.
 
-### 6. 무거운 단일 TU — `EngineLoop.cpp` 남음
-`EngineLoop.cpp`(6.5 초, 1.6 천 줄)는 헤더 정리와 함께 본다(Jolt 래퍼는 끝났다 — [검증과 측정](../08_Verification.md) "빌드 속도").
+### 6. 무거운 단일 TU — `EngineLoop.cpp` 남음(시작하지 않음)
+`EngineLoop.cpp`(6.5 초, 1.6 천 줄, include 101 개 — 엔진 구성 루트)는 풀 빌드에서는 644 TU 와 나란히 돌아 벽시계에 거의 안 보인다. 볼 것은 그 파일을 고친 뒤의 증분 시간이다(나누기 전후를 `-ftime-trace` 로).
 
 ## 하지 않는 것 — 필요할 때만 (사용자 결정)
 7. 헤더 영향 범위(팬아웃) 감시 보고서, 8. Debug 디버그 정보 줄이기(`-gline-tables-only` 계열), 9. 링크 단위 분할(엔진 분할 계획 1 단계 이후).
