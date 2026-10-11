@@ -118,6 +118,7 @@ Scripts/
   │     │     ├── CheckIncludeOrder.py        # 인클루드 순서·중복 (검사만 — 고치기는 fixer/FormatIncludeOrder.py)
   │     │     ├── CheckEngineLayers.py        # 아키텍처 레이어 침범
   │     │     ├── CheckCoreLayers.py          # Core 폴더 티어(Common → … → LogSink), 아래 층의 pch 로그 사용
+  │     │     ├── CheckEditorLayers.py        # Editor 폴더 층(Common → Workspace → Commands → GUI → Viewport · Popups → Panels → SelfTest → 셸)
   │     │     ├── CheckCoreNetworkLayers.py   # Core/Network 폴더 층(뿌리 ← Transport · Security ← Connection ← Message ← Replication)
   │     │     ├── CheckEngineServiceBinding.py # 엔진 서비스 표와 바인딩 호스트 대조
   │     │     ├── CheckNullableServiceUse.py  # nullptr 가능 서비스 조회를 확인 없이 역참조

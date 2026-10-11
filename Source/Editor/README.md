@@ -135,6 +135,10 @@ ImGui 의 할당은 sw 할당자로 보냅니다. `ImGuiEditor::initialize` 가 
 | `AssetActions/` | 에셋 종류마다의 썸네일, 열기, 뷰포트 드롭 |
 | `SelfTest/` | 에디터 안 시험, 시나리오 단계와 탐침 |
 
+폴더는 층입니다. 아래 층은 위 층을 include 하지 않고, `Scripts/lint/gate/CheckEditorLayers.py` 가 이를 검사합니다(위반은 실패).
+아래부터 `Common` 루트 · `Backend` · `Config` → `Asset` · `Localization` · `SourceControl` → `Workspace` → `Commands` → `GUI` · `Widgets` → `Viewport` · `Popups` → `Panels` · `AssetActions` → `SelfTest` → 셸(`ImGuiEditor`) 입니다.
+티어 표와 예외(어디서나 include 해도 되는 잎 헤더, 조립 파일, 아직 고치지 않은 위반)는 `Scripts/lint/rules/CheckEditorLayers.toml` 에 있습니다.
+
 판단을 ImGui 밖으로 빼 두는 이유는 시험입니다. `Test/EditorTest` 는 ImGui 없이 도는 코드만 시험하므로, 판단이 그리기 코드 안에 있으면 시험이 닿지 않습니다.
 그래서 도구 창마다 ImGui 없는 짝(`ProfilerScopeHistory`, `InputMapConflicts`, `EditorViewportOverlayLayout` 같은)을 두고 패널은 그리기만 합니다.
 
