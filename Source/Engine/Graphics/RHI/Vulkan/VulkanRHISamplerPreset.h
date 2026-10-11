@@ -14,6 +14,7 @@
  * @note 조리법에는 **쓰이는 값만** 담습니다(예: 주소 모드가 `CLAMP_TO_EDGE` 라 `borderColor` 는 쓰이지 않으므로 세우지 않습니다).
  */
 #pragma once
+#include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Common/Types.h"
 
 #include <vulkan/vulkan.h>

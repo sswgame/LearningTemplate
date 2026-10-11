@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
+
 #include "Engine/Input/InputManager.h"
 
 #if defined( SW_PLATFORM_WINDOWS )

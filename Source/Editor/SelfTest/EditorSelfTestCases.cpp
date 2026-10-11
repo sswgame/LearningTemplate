@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/String/TagID.h"
 

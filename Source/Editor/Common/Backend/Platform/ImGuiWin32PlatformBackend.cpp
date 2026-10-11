@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
+
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 
 #if defined( SW_PLATFORM_WINDOWS )

@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/FrameArenaAllocator.h"
 #include "Core/Container/StringUtil.h"

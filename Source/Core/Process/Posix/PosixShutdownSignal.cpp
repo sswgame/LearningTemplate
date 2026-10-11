@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Process/ShutdownSignal.h"
 
 #if !defined( SW_PLATFORM_WINDOWS )

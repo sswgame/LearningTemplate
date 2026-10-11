@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"

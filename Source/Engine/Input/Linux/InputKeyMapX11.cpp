@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
+
 #include "Engine/Input/Map/InputKeyMap.h"
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )

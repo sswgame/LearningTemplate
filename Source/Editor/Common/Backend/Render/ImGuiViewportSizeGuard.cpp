@@ -2,6 +2,8 @@
 
 #include "Editor/Common/Backend/Render/ImGuiViewportSizeGuard.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
+
 #if defined( SW_PLATFORM_WINDOWS )
 
     #include <imgui.h>

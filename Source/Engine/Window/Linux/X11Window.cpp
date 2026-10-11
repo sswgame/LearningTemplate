@@ -2,6 +2,8 @@
 
 #include "Engine/Window/Linux/X11Window.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
+
 #include "Engine/Window/NativeWindowEvent.h"
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )

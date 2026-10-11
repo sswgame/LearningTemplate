@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandList.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
+
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 
 #include <vulkan/vulkan.h>

@@ -474,10 +474,8 @@
 - **Windows CI Debug · STL 잡의 키트 시험 22 건 실패**(run 37251047781, `a380e2ee3` — 유니티 켬 + PCH 끔 Debug 에서만): 재현 안 됨 — 이 PC 의 같은 구성
   (`CI-Debug -DSW_ENABLE_PCH=OFF`)에서 통과했다. B4 로 실패 보고(`CiFailureReport.py`)가 나아진 뒤 다음 CI 주석으로 본다.
 - **imgui-node-editor vcpkg 오버레이**(`ThirdParty/imgui-node-editor/vcpkg-port/`, `<exception>` 패치)는 업스트림이 같은 고침을 받으면 지운다(2026-10-06 확인: 업스트림 vcpkg port-version 4 · 원본 master · develop 모두 아직 없음. vcpkg PR 은 내지 않는다 — 사용자 결정, 외부 공개).
-- **include · 전방 선언 남은 후보.** ① OS 헤더(`Core/Common/PlatformOsHeaders.h` — `Windows.h` · `DbgHelp.h` · `Xinput.h` …)가 `EngineMinimal.h` 를 거쳐
-  PCH 에 남아 있다(TU 2746 · `windows.h` 1671). `NOMINMAX` · `WIN32_LEAN_AND_MEAN` 은 이제 CMake 정의다(`cmake/Modules/Platform/Windows.cmake` — 서드파티가 먼저
-  `windows.h` 를 include 해도 min/max 매크로가 안 생긴다). 남은 일은 Win32 · POSIX API 를 쓰는 파일이 직접 include 하는 것이다 — 글자 그래프로 찾은 후보 26 개(`Core/Common/Macros.h` · `ModuleCompiler.cpp` ·
-  `WindowsFileWatcher.h` · `InputManagerWin32.cpp` · `XInputGamepadDevice.h` · `TestFramework.cpp` …, 오탐 섞임)를 빌드로 하나씩 확인하는 단계다.
+- **include · 전방 선언 남은 후보.** ① (끝) OS 헤더는 `EngineMinimal.h` 에서 뺐다(2026-10-11 — Win32 · POSIX API 를 쓰는 파일이 `Core/Common/PlatformOsHeaders.h` 를 직접 include,
+  효과는 [검증과 측정](08_Verification.md)). Windows 는 전 구성이 빌드로 확인됐고 리눅스 쪽 직접 include 는 CI 로 확인한다 — 빠진 파일이 나오면 그 파일에 include 를 더한다.
   ② `GameObjectManager.h` 의 값 멤버 서브시스템 8 개(`ScenePhysics` · `SceneNavigation` · `SceneAudio` · `SceneOverlapWorld2D` · `PrimitiveRegistry` ·
   `ComponentRegistry` · `CameraRegistry` · `AnimationSystem`)를 `unique_ptr` 로 바꾸면 GOM 을 include 하는 234 TU 에서 헤더 32 개(약 4,700 줄, 서드파티 없음 —
   Physics/* · Navigation/* · Animation 보조)가 빠지지만, getter 를 쓰는 85 파일이 직접 include 해야 해 실제로 덜어지는 것은 약 150 TU × 4.7k 줄이다 — 보류

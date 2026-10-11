@@ -163,6 +163,9 @@ cd build/Ninja-Debug/Bin
   헤더 시나리오가 풀 빌드와 같다 — Core 기본 헤더 하나를 고치면 사실상 전 TU 를 다시 컴파일한다(2 단계 헤더 다이어트의 근거).
   워크트리 콜드가 풀 빌드보다 느린 것은 PCH 를 켠 Windows 빌드가 sccache 에 거의 맞지 않기 때문이다(`/Yu` 캐시 불가, `Scripts/setup/README.md`). Release 는 재지 않았다(풀 1 회 192.3 s 만 있다).
 
+- **OS 헤더를 PCH 에서 뺀 효과**(2026-10-11, PC `SW`, Debug, `EngineMinimal.h` 가 `Windows.h` 묶음을 더는 넣지 않음): PCH 없이 `-fsyntax-only` 한 번역 단위의 중앙값(5 회)이 `GameObjectManager.cpp` 2.63 → 2.18 s ·
+  `Scene.cpp` 2.74 → 2.24 s · `AudioClip.cpp` 2.56 → 2.11 s · `AnimClip.cpp` 2.66 → 2.06 s(약 −19 %, TU 하나에 −0.5 s). PCH 를 켠 개발 풀 빌드는 131.5 → 127 s(−3 %)로 작다 — 이득은 PCH 를 끄는 구성(Windows CI)에서 크다.
+  `Scripts` 없이 재는 법: `compile_commands.json` 의 명령에서 `/Yu` · `/Fp` · PCH 강제 포함 · `/Fo` 를 빼고 `-fsyntax-only -include Source/Engine/pch.h` 를 붙여 5 회 돌린다.
 - **헤더 파싱 비용 상위 20 개는 `Scripts/lint/report/RunIncludeCost.py --preset Ninja-Debug --jobs 8` 로 뽑는다.**
   0 단계 집계(2026-10-10, 위와 같은 PC · 커밋, `RunIncludeCost.py --preset Ninja-Debug --jobs 8`, 다른 빌드와 겹쳐 돌았으므로 순위만 믿는다):
   TU 1936 개 중 헤더 파싱 합 2619.9 s / 컴파일러 합 3190.5 s = **82 %**(구문 검사만이라 진짜 빌드 비율보다 높다).

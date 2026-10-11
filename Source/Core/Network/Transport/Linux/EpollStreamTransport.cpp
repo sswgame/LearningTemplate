@@ -2,6 +2,7 @@
 
 #include "Core/Network/Transport/Linux/EpollStreamTransport.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"

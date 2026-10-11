@@ -2,6 +2,8 @@
 
 #include "Editor/Common/Backend/Render/ImGuiOpenGLRendererBackend.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
+
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 
 #include <imgui.h>

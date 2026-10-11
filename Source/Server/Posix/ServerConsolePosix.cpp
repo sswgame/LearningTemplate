@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
+
 #include "Server/ServerConsole.h"
 
 #if !defined( SW_PLATFORM_WINDOWS )

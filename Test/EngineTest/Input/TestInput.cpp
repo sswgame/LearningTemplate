@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Container/ConcurrentQueue.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"

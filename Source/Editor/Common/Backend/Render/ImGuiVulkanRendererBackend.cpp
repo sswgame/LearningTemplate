@@ -2,6 +2,8 @@
 
 #include "Editor/Common/Backend/Render/ImGuiVulkanRendererBackend.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
+
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHISamplerPreset.h"
 

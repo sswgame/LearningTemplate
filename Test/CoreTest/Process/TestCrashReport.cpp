@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Diagnostics/CrashContext.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"

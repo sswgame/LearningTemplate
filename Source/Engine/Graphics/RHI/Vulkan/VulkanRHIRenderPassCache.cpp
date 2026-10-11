@@ -3,6 +3,7 @@
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIRenderPassCache.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Common/PlatformOsHeaders.h"
 
 #include <vulkan/vulkan.h>
 

@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Diagnostics/MemoryProfiler.h"

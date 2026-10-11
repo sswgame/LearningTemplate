@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIResourceFactory.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"

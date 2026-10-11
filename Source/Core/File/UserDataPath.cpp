@@ -1,5 +1,8 @@
 #include "pch.h"
 
+#if defined( SW_PLATFORM_LINUX )
+    #include "Core/Common/PlatformOsHeaders.h"
+#endif
 #include "Core/File/UserDataPath.h"
 
 #include "Core/Container/StringUtil.h"

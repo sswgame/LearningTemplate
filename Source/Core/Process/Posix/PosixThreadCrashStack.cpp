@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Process/ThreadCrashStack.h"
