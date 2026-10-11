@@ -23,7 +23,7 @@ namespace sw
             for ( size_t otherIndex = 0; otherIndex < legIndex; ++otherIndex )
             {
                 if ( listLeg[otherIndex]._assetID == leg._assetID )
-                    return TradeResult::Invalid; // 같은 자산은 한 다리로
+                    return TradeResult::Invalid; // 같은 자산은 한 항목으로 합쳐야 한다
             }
         }
         return TradeResult::Ok;
@@ -103,7 +103,7 @@ namespace sw
                     return TradeResult::WrongState;
                 if ( command._seenOwnRevision != own._offerRevision || command._seenPeerRevision != peer._offerRevision )
                     return TradeResult::StaleOffer;
-                own._bConfirmed       = SW_TRUE; // 이미 확정이면 그대로 Ok(멱등 — 재시도)
+                own._bConfirmed       = SW_TRUE; // 이미 확정이면 그대로 Ok 이다. 멱등이며 재시도를 위한 것이다
                 inoutTrade._updatedMs = nowMs;
                 return TradeResult::Ok;
             }

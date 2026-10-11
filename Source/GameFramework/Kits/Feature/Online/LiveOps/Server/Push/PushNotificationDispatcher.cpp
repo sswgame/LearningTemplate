@@ -37,7 +37,7 @@ namespace sw
                 return reader.readBits( 8 ) == LiveOpsProtocol::kRecordFormat && LiveOpsProtocol::readDevice( reader, outRegistration );
             }
 
-            /** @brief 계정의 기기 레코드를 모두 읽습니다(한도 + 1 — 넘친 것도 보이게). */
+            /** @brief 계정의 기기 레코드를 모두 읽습니다. 한도보다 하나 더 읽어서 넘친 것도 보이게 합니다. */
             static ServiceStoreResult listDevices( IServiceStoreConnection& connection, AccountID accountID, vector<ServiceRecord>& outListRecord )
             {
                 return connection.listRecords( getDeviceTable(), PushNotificationDispatcher::makeAccountPrefix( accountID ), "", PushLimit::kMaxDevicePerAccount + 1, false,
@@ -49,7 +49,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 계정의 기기 목록을 읽는 일입니다(알림 하나). */
+    /** @brief 계정의 기기 목록을 읽는 작업입니다. 알림 하나에 해당합니다. */
     class PushDeviceReadWork final : public IServiceStoreWork
     {
     public:
@@ -66,7 +66,7 @@ namespace sw
         {
             vector<ServiceRecord> listRecord;
             if ( PushNotificationDispatcherInternal::listDevices( connection, _accountID, listRecord ) != ServiceStoreResult::Ok )
-                return; // 저장소가 아프다 — 이 알림은 버린다(최대 한 번)
+                return; // 저장소에 문제가 있으므로 이 알림은 버린다. 배달은 최대 한 번이다
             for ( const ServiceRecord& record : listRecord )
             {
                 PushDeviceRegistration registration;
@@ -88,7 +88,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 기기 등록(덮기 + 넘친 가장 오래된 것 지우기) · 해지를 한 트랜잭션으로 쓰는 일입니다. */
+    /** @brief 기기 등록(덮어쓰기와 넘친 가장 오래된 기기 지우기)과 해지를 한 트랜잭션으로 쓰는 작업입니다. */
     class PushDeviceWriteWork final : public IServiceStoreWork
     {
     public:
@@ -152,7 +152,7 @@ namespace sw
                     }
                 }
                 if ( bReplacing == false && deviceCount >= PushLimit::kMaxDevicePerAccount && pOldestKey != nullptr )
-                    transaction.erase( table, *pOldestKey ); // 한도 — 가장 오래 등록된 기기를 밀어낸다
+                    transaction.erase( table, *pOldestKey ); // 한도를 넘었으므로 가장 오래 등록된 기기를 밀어낸다
                 transaction.put( table, _key, Internal::encodeDevice( _registration ) );
             }
             _result = connection.commit( transaction ) == ServiceStoreResult::Ok ? LiveOpsResult::Ok : LiveOpsResult::Unavailable;
@@ -199,7 +199,7 @@ namespace sw
 
     string PushNotificationDispatcher::makeDeviceKey( AccountID accountID, string_view providerID, string_view token )
     {
-        // 토큰은 키 규칙 밖 글자를 가질 수 있다 — 키에는 해시만, 토큰은 값에
+        // 토큰은 키 규칙 밖의 글자를 가질 수 있다. 그래서 키에는 해시만 쓰고 토큰은 값에 둔다
         return makeAccountPrefix( accountID ) + string( providerID ) + "." + ServiceKeyUtil::makeHex64( StringUtil::computeHash64( token.data(), token.size(), false ) );
     }
 
@@ -232,7 +232,7 @@ namespace sw
         for ( PushDeviceRegistration& device : listDevice )
         {
             if ( findProvider( device._providerID ) == nullptr )
-                continue; // 이 서버 빌드에 없는 제공자
+                continue; // 이 서버 빌드에 없는 제공자이다
             const uint64 deliveryID = _nextDeliveryID++;
             Delivery&    delivery   = _mapDelivery[deliveryID];
             delivery._message       = message;
@@ -274,7 +274,7 @@ namespace sw
                     case PushDeliveryStatus::InvalidToken:
                     {
                         ++_stats._invalidTokenCount;
-                        unregisterDevice( delivery._accountID, delivery._device._providerID, delivery._device._token, 0 ); // 꼬리표 0 — 완료 없음
+                        unregisterDevice( delivery._accountID, delivery._device._providerID, delivery._device._token, 0 ); // 요청 태그 0은 완료가 없다
                         _mapDelivery.erase( deliveryIt );
                         break;
                     }
@@ -300,7 +300,7 @@ namespace sw
                 }
             }
         }
-        for ( auto& [deliveryID, delivery] : _mapDelivery ) // 물러남이 끝난 것을 다시
+        for ( auto& [deliveryID, delivery] : _mapDelivery ) // 백오프가 끝난 배달을 다시 보낸다
         {
             if ( delivery._bInFlight == SW_FALSE && nowMs >= delivery._nextAttemptMs )
                 sendDelivery( deliveryID, delivery );

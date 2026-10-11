@@ -62,7 +62,7 @@ namespace sw
         (void)body;
         if ( kind != LiveOpsMethod::kPushLiveState || _bRequested == SW_FALSE )
             return;
-        (void)requestLiveState( _region, _buildVersion, ReplyDelegate{} ); // 알림에는 내용이 없다 — 이 계정의 대상으로 다시 받는다
+        (void)requestLiveState( _region, _buildVersion, ReplyDelegate{} ); // 알림에는 내용이 없으므로 이 계정의 대상에 맞는 이벤트를 다시 받는다
     }
 
     uint64 LiveOpsClient::send( uint16 method, const BitWriter& body, const ReplyDelegate& onReply )

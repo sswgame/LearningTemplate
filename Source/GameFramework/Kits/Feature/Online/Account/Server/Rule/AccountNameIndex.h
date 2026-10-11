@@ -1,7 +1,7 @@
 /**
  * @file AccountNameIndex.h
- * @brief 계정 이름 색인 — 기반 `IAccountNameIndex` 를 계정 표(`login_account` 소문자 이름 → 계정, `login_account_id` 계정 → 프로필)로 구현합니다.
- * @details 상태가 없다(연결만 쓴다) — 게임 조립이 하나 만들어 친구 · 우편 같은 서버 키트에 빌려준다. 표 형식은 `LoginStoreLogic` 이 원본이다.
+ * @brief 계정 이름 인덱스입니다. 기반 계층의 `IAccountNameIndex` 를 계정 테이블(`login_account` 의 소문자 이름에서 계정으로, `login_account_id` 의 계정에서 프로필로)로 구현합니다.
+ * @details 상태가 없고 연결만 쓴다. 게임 조립 단계에서 하나를 만들어 친구나 우편 같은 서버 키트에 빌려준다. 테이블 형식의 원본은 `LoginStoreLogic` 이다.
  */
 #pragma once
 #include "GameFramework/Base/Online/Identity/AccountNameIndex.h"
@@ -11,7 +11,7 @@ namespace sw
 {
     /**
      * @class AccountNameIndex
-     * @brief 계정 이름 색인입니다.
+     * @brief 계정 이름 인덱스입니다.
      */
     class SW_GF_API AccountNameIndex final : public IAccountNameIndex
     {

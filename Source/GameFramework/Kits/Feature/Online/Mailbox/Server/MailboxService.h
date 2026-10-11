@@ -1,10 +1,10 @@
 /**
  * @file MailboxService.h
- * @brief 우편함 서비스(서버) — 목록 · 읽음 · 수령 · 모두 받기 · 지우기를 저장소 일로 맡기고 완료에서 답하며, 주기마다 만료 쓸기 · 캠페인 다시 읽기를 맡깁니다.
- * @details - 경제 서비스와 같은 모양: 입구 둘(서비스 틀 `onServiceRequest` · 전송과 무관한 `submitCall`), 일 하나 = 요청 하나, 저장소 완료는 호스트가 서비스 틱 전에 거둔다.
- *          - 수령 · 모두 받기는 멱등 키 필수(전송 층의 응답 기억이 재시도를 받고, 원장 쪽은 우편 토큰 분개 키가 막는다).
- *          - 만료 쓸기는 서버가 여럿이어도 된다 — 우편마다 판 조건 + 분개 키라 하나만 이기고 진 쪽은 실패 수에 든다.
- *          - 캠페인 목록은 메모리에 두고 `_campaignRefreshMs` 마다 다시 읽는다(서버 둘이면 그만큼 늦게 보인다 — 수령은 저장소가 막는다).
+ * @brief 우편함 서비스(서버)입니다. 목록, 읽음, 수령, 모두 받기, 지우기를 저장소 작업으로 맡기고 완료에서 응답하며, 주기마다 만료 정리와 캠페인 다시 읽기를 맡깁니다.
+ * @details - 경제 서비스와 같은 구조이다. 요청 경로는 둘이며 서비스 프레임워크의 `onServiceRequest` 와 전송과 무관한 `submitCall` 이다. 작업 하나가 요청 하나이고, 저장소 완료는 호스트가 서비스 틱 전에 회수한다.
+ *          - 수령과 모두 받기에는 멱등 키가 필수이다. 전송 계층의 응답 기억이 재시도를 받아 주고, 원장 쪽은 우편 토큰 분개 키가 중복을 막는다.
+ *          - 만료 정리는 서버가 여러 대여도 된다. 우편마다 버전 조건과 분개 키를 쓰므로 하나만 이기고, 진 쪽은 실패 수에 들어간다.
+ *          - 캠페인 목록은 메모리에 두고 `_campaignRefreshMs` 마다 다시 읽는다. 서버가 둘이면 그만큼 늦게 보일 수 있으며, 수령은 저장소가 막는다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -27,12 +27,12 @@ namespace sw
     class MetricCounter;
     class MetricRegistry;
 
-    /** @brief 우편함 서비스 설정 — 포인터는 빌려 쓴다. */
+    /** @brief 우편함 서비스 설정입니다. 포인터는 빌려 씁니다. */
     struct MailboxServiceSettings
     {
-        const ILedgerPolicy* _pPolicy{ nullptr }; ///< 계정 상한(게임이 CurrencyCatalog 를 — 기반 계약이라 키트끼리 몰라도 된다)
+        const ILedgerPolicy* _pPolicy{ nullptr }; ///< 계정 상한이다. 게임이 CurrencyCatalog 를 넘기며, 기반 계층의 계약이라 키트끼리 몰라도 된다
         MetricRegistry*      _pMetricRegistry{ nullptr };
-        int64                _sweepIntervalMs{ 60000 }; ///< 만료 쓸기 주기(0 = 끈다 — 예약 작업이 `requestSweep` 을 부른다)
+        int64                _sweepIntervalMs{ 60000 }; ///< 만료 정리 주기이다. 0이면 끄며 이때는 예약 작업이 `requestSweep` 을 부른다
         int64                _campaignRefreshMs{ 60000 };
         int32                _sweepBatchCount{ 256 };
     };
@@ -46,14 +46,14 @@ namespace sw
         MailboxRequest    _request{};
         NetIdempotencyKey _idempotencyKey{};
         AccountID         _accountID{ kInvalidAccountID };
-        int64             _nowMs{ 0 }; ///< 0 이면 마지막 `tick` 의 시각
+        int64             _nowMs{ 0 }; ///< 0이면 마지막 `tick` 의 시각을 쓴다
         uint16            _method{ 0 };
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @class MailboxService @brief 우편함 요청 처리기입니다(서비스 스레드). */
+    /** @class MailboxService @brief 우편함 요청 처리기입니다. 서비스 스레드에서 씁니다. */
     class SW_GF_API MailboxService final : public IOnlineService
     {
     public:
@@ -65,15 +65,15 @@ namespace sw
         MailboxService( const MailboxService& )            = delete;
         MailboxService& operator=( const MailboxService& ) = delete;
 
-        /** @brief 저장소가 없으면 false 입니다. 첫 `tick` 이 캠페인 읽기를 맡긴다. */
+        /** @brief 저장소가 없으면 false 를 반환합니다. 첫 `tick` 이 캠페인 읽기를 맡깁니다. */
         [[nodiscard]] bool initialize( IServiceStore* pStore, const MailboxServiceSettings& settings );
-        /** @brief 맡긴 일(요청 · 쓸기 · 캠페인)이 끝날 때까지 저장소를 거둡니다(상한 5 초) — 저장소를 내리기 전에. */
+        /** @brief 맡긴 작업(요청, 만료 정리, 캠페인)이 끝날 때까지 저장소를 회수합니다. 상한은 5초이며 저장소를 종료하기 전에 부릅니다. */
         void shutdown();
 
         void submitCall( const MailboxCall& call, ReplyDelegate onReply );
-        /** @brief 주기가 되면 만료 쓸기 · 캠페인 다시 읽기 일을 맡긴다(앞의 것이 끝나지 않았으면 건너뛴다). */
+        /** @brief 주기가 되면 만료 정리와 캠페인 다시 읽기 작업을 맡깁니다. 앞의 작업이 끝나지 않았으면 건너뜁니다. */
         void tick( int64 nowMs );
-        /** @brief 예약 작업이 부르는 쓸기 한 번(주기와 별개) — 다음 `tick` 에 맡긴다. 이미 돌고 있으면 무시한다. */
+        /** @brief 예약 작업이 부르는 만료 정리 한 번입니다. 주기와 별개이며 다음 `tick` 에 맡기고, 이미 돌고 있으면 무시합니다. */
         void requestSweep();
 
         // IOnlineService
@@ -82,11 +82,11 @@ namespace sw
         void   onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
         void   onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
 
-        /** @brief 일의 `complete` 가 부릅니다. */
+        /** @brief 작업의 `complete` 가 호출합니다. */
         void completeCall( uint64 callID, const MailboxReply& reply );
-        /** @brief 쓸기 일의 `complete` — 지표 `mailbox_expired_total{action}`, `_bMore` 면 다음 틱에 바로 또. */
+        /** @brief 만료 정리 작업의 `complete` 입니다. 지표 `mailbox_expired_total{action}` 을 갱신하며 `_bMore` 이면 다음 틱에 바로 다시 정리합니다. */
         void completeSweep( const MailboxSweepStats& stats );
-        /** @brief 캠페인 일의 `complete` — 활성 · 곧 열릴 캠페인만 남겨 캐시를 바꾼다. */
+        /** @brief 캠페인 작업의 `complete` 입니다. 활성 캠페인과 곧 열릴 캠페인만 남겨 캐시를 바꿉니다. */
         void completeCampaignRefresh( ServiceStoreResult result, vector<ServiceMailCampaign>& inoutListCampaign );
 
         const vector<ServiceMailCampaign>& getCampaigns() const { return _listCampaign; }

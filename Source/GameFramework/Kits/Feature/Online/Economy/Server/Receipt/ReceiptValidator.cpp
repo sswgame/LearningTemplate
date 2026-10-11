@@ -14,7 +14,7 @@ namespace sw
         {
             static constexpr const utf8* kScopePrefix = "rcpt.";
 
-            /** @brief 스토어 이름이 `[0-9a-z_]` 이고 분개 범위 `rcpt.<이름>` 이 범위 규칙 안인가입니다. */
+            /** @brief 스토어 이름이 `[0-9a-z_]` 형식이고 분개 범위 `rcpt.<이름>` 이 범위 규칙을 만족하면 true 입니다. */
             static bool isValidStoreName( string_view storeName )
             {
                 if ( storeName.empty() || storeName.find( '.' ) != string_view::npos )

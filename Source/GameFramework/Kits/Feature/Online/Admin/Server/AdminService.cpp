@@ -31,7 +31,7 @@ namespace sw
             static constexpr int64 kShutdownWaitMs = 5000;
         };
 
-        /** @brief GM 명령 하나의 저장 왕복입니다. */
+        /** @brief GM 명령 하나의 저장소 왕복입니다. */
         class AdminCommandWork final : public IServiceStoreWork
         {
         public:
@@ -158,13 +158,13 @@ namespace sw
         else if ( adminID == kInvalidAccountID )
             refused._result = AdminResult::NotSignedIn;
         else if ( pending._methodIndex < 0 )
-            refused._result = AdminResult::Forbidden; // 모르는 명령 — 누구도 갖지 못한 등급
+            refused._result = AdminResult::Forbidden; // 모르는 명령이므로 누구도 가질 수 없는 등급이 필요하다
         const bool bByName = method == AdminMethod::kLookupAccount && request._displayName.empty() == false && request._accountID == kInvalidAccountID;
         if ( refused._result == AdminResult::Ok && bByName )
         {
             AccountIdentity identity;
             if ( _settings._pDirectory == nullptr || _settings._pDirectory->findIdentityByDisplayName( request._displayName, identity ) == false )
-                refused._result = AdminResult::UnknownAccount; // 이 프로세스에 붙은 계정만 이름으로 찾는다
+                refused._result = AdminResult::UnknownAccount; // 이 프로세스에 접속한 계정만 이름으로 찾는다
             else
                 command._request._accountID = identity._accountID;
             _listPendingCall[pendingIndex]._targetID = command._request._accountID;

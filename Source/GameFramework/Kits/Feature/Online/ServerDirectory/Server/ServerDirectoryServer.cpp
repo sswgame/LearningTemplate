@@ -30,7 +30,7 @@ namespace sw
     void ServerDirectoryServer::onHostShutdown( OnlineServiceHost& host )
     {
         (void)host;
-        _pHost = nullptr; // 구독은 호스트가 이어서 모두 푼다
+        _pHost = nullptr; // 구독은 호스트가 이어서 모두 해제한다
     }
 
     uint32 ServerDirectoryServer::getProtocolVersion() const { return ServerDirectoryMethod::kWireVersion; }
@@ -118,7 +118,7 @@ namespace sw
         if ( _pService == nullptr || message._topic != ServerDirectoryBus::kChangedTopic )
             return;
         if ( pBus != nullptr && message._originServerID == pBus->getServerID() )
-            return; // 이 서버가 낸 것 — 쓰기 완료 때 이미 다시 읽기를 걸었다
+            return; // 이 서버가 낸 것이다. 쓰기 완료 때 이미 다시 읽기를 걸었다
         _pService->notifyChanged();
     }
 

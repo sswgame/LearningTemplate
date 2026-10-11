@@ -12,7 +12,7 @@ namespace sw
     {
         struct VoxelWorldInternal
         {
-            /** @brief 청크 안 블록 자리입니다. */
+            /** @brief 청크 안 블록의 인덱스입니다. */
             static constexpr int32 computeLocalIndex( int32 localX, int32 y, int32 localZ )
             {
                 return ( y * kVoxelChunkSize + localZ ) * kVoxelChunkSize + localX;
@@ -134,7 +134,7 @@ namespace sw
         outArchive << _chunkCountZ;
         for ( const VoxelChunk& chunk : _listChunk )
         {
-            // 구간 수를 먼저 세지 않고 끝에 0 길이 구간으로 닫는다.
+            // 구간 수를 먼저 세지 않고 끝에 길이 0인 구간을 넣어 닫는다.
             size_t index = 0;
             while ( index < chunk._listBlock.size() )
             {
@@ -161,7 +161,7 @@ namespace sw
         archive >> chunkCountZ;
         if ( archive.isError() || chunkCountX != _chunkCountX || chunkCountZ != _chunkCountZ || _pCatalog == nullptr )
             return false;
-        const size_t       blockLimit = _pCatalog->getBlocks().size(); // 0 은 공기, 1 부터 카탈로그 순
+        const size_t       blockLimit = _pCatalog->getBlocks().size(); // 0은 공기이고 1부터 카탈로그 순서이다
         vector<VoxelChunk> listChunk( _listChunk.size() );
         for ( VoxelChunk& chunk : listChunk )
         {
@@ -185,7 +185,7 @@ namespace sw
         }
         for ( size_t chunkIndex = 0; chunkIndex < listChunk.size(); ++chunkIndex )
         {
-            listChunk[chunkIndex]._revision = _listChunk[chunkIndex]._revision + 1; // 지은 메시가 낡았다
+            listChunk[chunkIndex]._revision = _listChunk[chunkIndex]._revision + 1; // 이미 만든 메시가 오래된 것이 된다
             listChunk[chunkIndex]._bDirty   = SW_TRUE;
         }
         _listChunk = std::move( listChunk );

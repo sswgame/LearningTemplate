@@ -48,7 +48,7 @@ namespace sw
             static constexpr int32 kRedeemIndex    = EconomyMethod::toIndex( EconomyMethod::kRedeemReceipt );
         };
 
-        /** @brief 경제 요청 하나의 저장 왕복입니다. 입력은 공개 칸에 값으로 채워 맡기고, 결과는 `complete` 에서 서비스에 넘긴다. */
+        /** @brief 경제 요청 하나의 저장소 왕복입니다. 입력은 공개 필드에 값으로 채워 맡기고, 결과는 `complete` 에서 서비스에 넘깁니다. */
         class EconomyRequestWork final : public IServiceStoreWork
         {
         public:
@@ -252,9 +252,9 @@ namespace sw
         if ( pending._methodIndex < 0 || _pStore == nullptr )
             refused._result = EconomyResult::InvalidRequest;
         else if ( call._accountID == kInvalidAccountID )
-            refused._result = EconomyResult::NotSignedIn; // 호스트가 이미 막지만 submitCall 경로도 같은 규칙
+            refused._result = EconomyResult::NotSignedIn; // 호스트가 이미 막지만 submitCall 경로도 같은 규칙을 따른다
         else if ( call._method == EconomyMethod::kPurchase && call._idempotencyKey.isValid() == false )
-            refused._result = EconomyResult::InvalidRequest; // 상태를 바꾸는 요청은 멱등 키 필수
+            refused._result = EconomyResult::InvalidRequest; // 상태를 바꾸는 요청에는 멱등 키가 필수이다
         if ( refused._result != EconomyResult::Ok )
         {
             finishCall( pendingIndex, refused );
@@ -271,7 +271,7 @@ namespace sw
                 finishCall( pendingIndex, refused );
                 return;
             }
-            _listPendingCall[pendingIndex]._receiptTicket = ticket; // 지급 일은 검증 결과가 오면(pollReceipts)
+            _listPendingCall[pendingIndex]._receiptTicket = ticket; // 지급 작업은 검증 결과가 오면 맡긴다(pollReceipts)
             return;
         }
         const int64                    nowMs = call._nowMs != 0 ? call._nowMs : _nowMs;

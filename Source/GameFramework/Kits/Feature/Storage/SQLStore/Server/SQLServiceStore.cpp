@@ -52,7 +52,7 @@ namespace sw
 
             static SQLValue makeBytesValue( const vector<uint8>& bytes ) { return SQLValue::makeBlob( bytes.data(), static_cast<int32>( bytes.size() ) ); }
 
-            /** @brief 워커의 SQL 연결을 `IServiceStoreConnection` 으로 보입니다(일 하나 동안). */
+            /** @brief 워커의 SQL 연결을 일 하나가 도는 동안 `IServiceStoreConnection` 으로 보이게 합니다. */
             class SQLServiceStoreConnection final : public IServiceStoreConnection
             {
             public:
@@ -83,7 +83,7 @@ namespace sw
                 {
                     if ( table.empty() || maxCount <= 0 )
                         return ServiceStoreResult::Invalid;
-                    // 키는 ASCII(키 규칙)라 접두어 + 0x7F 가 범위 끝이다.
+                    // 키는 ASCII(키 규칙)이므로 접두어 + 0x7F 가 범위의 끝이다.
                     string upperKey{ keyPrefix };
                     upperKey.push_back( static_cast<utf8>( 0x7F ) );
                     SQLResult result = SQLResult::Ok;
@@ -131,13 +131,13 @@ namespace sw
                     const SQLResult commitResult = _connection.executeScript( "COMMIT" );
                     if ( commitResult == SQLResult::SerializationFailure )
                     {
-                        result              = ServiceStoreResult::Conflict; // PostgreSQL 은 COMMIT 에서 직렬화 실패를 낼 수 있다 — 적용되지 않았다
+                        result              = ServiceStoreResult::Conflict; // PostgreSQL 은 COMMIT 에서 직렬화 실패를 낼 수 있으며, 이때는 적용되지 않은 것이다
                         info._conflictIndex = -1;
                         info._commitVersion = 0;
                     }
                     else if ( commitResult != SQLResult::Ok )
                     {
-                        result = ServiceStoreResult::Unavailable; // 적용됐는지 모른다
+                        result = ServiceStoreResult::Unavailable; // 적용됐는지 알 수 없다
                     }
                     if ( pOutInfo != nullptr )
                         *pOutInfo = info;
@@ -184,7 +184,7 @@ namespace sw
                             result                    = _connection.execute( kDeleteVersionedSQL, arrParam, 3, &_rowSet );
                             bMatched                  = _rowSet._affectedRowCount == 1;
                         }
-                        else if ( bAny == false ) // Require · Erase(없어야 함) — 판만 본다
+                        else if ( bAny == false ) // Require 와 Erase(없어야 함)는 버전만 확인한다
                         {
                             const SQLValue arrParam[]   = { table, key };
                             result                      = _connection.execute( kVersionSQL, arrParam, 2, &_rowSet );
@@ -211,7 +211,7 @@ namespace sw
                 ISQLConnection& _connection;
             };
 
-            /** @brief `IServiceStoreWork` 를 풀의 일로 감쌉니다. 맡긴 스레드의 로그 문맥을 잡아 워커의 `run` · 서비스 스레드의 `complete` 에 다시 건다. */
+            /** @brief `IServiceStoreWork` 를 풀의 일로 감쌉니다. 맡긴 스레드의 로그 컨텍스트를 저장해 두었다가 워커의 `run` 과 서비스 스레드의 `complete` 에서 다시 적용합니다. */
             class SQLServiceStoreJob final : public ISQLJob
             {
             public:

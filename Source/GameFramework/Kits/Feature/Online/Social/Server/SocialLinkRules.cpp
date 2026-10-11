@@ -15,7 +15,7 @@ namespace sw
                 return decision;
             }
 
-            /** @brief 받은 신청을 받아 친구가 되는 결정(수락 · 서로 신청)입니다 — 친구 상한을 본다. */
+            /** @brief 받은 신청을 받아 친구가 되는 결정입니다. 수락과 서로 신청이 해당하며 친구 상한을 확인합니다. */
             static SocialLinkDecision makeFriends( const SocialCounts& selfCounts, const SocialCounts& otherCounts )
             {
                 if ( selfCounts._friendCount >= SocialLimit::kMaxFriend || otherCounts._friendCount >= SocialLimit::kMaxFriend )
@@ -32,7 +32,7 @@ namespace sw
                 return decision;
             }
 
-            /** @brief 지금 두 줄을 지울 때의 개수 차이를 더합니다. */
+            /** @brief 지금 두 줄을 지울 때의 개수 변화를 더합니다. */
             static void subtractExisting( SocialLinkState selfState, SocialLinkDecision& inoutDecision )
             {
                 if ( selfState == SocialLinkState::Friend )
@@ -57,13 +57,13 @@ namespace sw
                 if ( selfState == SocialLinkState::Blocked )
                     return makeResult( SocialResult::YouBlocked );
                 if ( otherState == SocialLinkState::Blocked )
-                    return makeResult( SocialResult::Ok ); // 나를 막은 사람 — 아무것도 하지 않고 성공처럼
+                    return makeResult( SocialResult::Ok ); // 나를 막은 사람이다. 아무것도 하지 않고 성공한 것처럼 처리한다
                 if ( selfState == SocialLinkState::Friend )
                     return makeResult( SocialResult::AlreadyFriend );
                 if ( selfState == SocialLinkState::Outgoing )
                     return makeResult( SocialResult::AlreadyRequested );
                 if ( selfState == SocialLinkState::Incoming )
-                    return makeFriends( selfCounts, otherCounts ); // 서로 신청 — 바로 친구
+                    return makeFriends( selfCounts, otherCounts ); // 서로 신청했으므로 바로 친구가 된다
                 const bool bPendingFull = selfCounts._outgoingCount >= SocialLimit::kMaxOutgoing || otherCounts._incomingCount >= SocialLimit::kMaxIncoming;
                 if ( bPendingFull )
                     return makeResult( SocialResult::PendingLimit );
@@ -99,7 +99,7 @@ namespace sw
                 SocialLinkDecision decision;
                 decision._bWrite                  = SW_TRUE;
                 decision._newSelfState            = SocialLinkState::Blocked;
-                decision._newOtherState           = otherState == SocialLinkState::Blocked ? SocialLinkState::Blocked : SocialLinkState::None; // 서로 막음은 둔다
+                decision._newOtherState           = otherState == SocialLinkState::Blocked ? SocialLinkState::Blocked : SocialLinkState::None; // 서로 막은 상태는 그대로 둔다
                 decision._selfDelta._blockedCount = 1;
                 decision._bNotifyOtherRemoved     = selfState == SocialLinkState::Friend ? SW_TRUE : SW_FALSE;
                 subtractExisting( selfState, decision );
@@ -113,7 +113,7 @@ namespace sw
                 SocialLinkDecision decision;
                 decision._bWrite                  = SW_TRUE;
                 decision._newSelfState            = SocialLinkState::None;
-                decision._newOtherState           = otherState; // 상대 줄(상대가 나를 막았으면 그대로)은 손대지 않는다
+                decision._newOtherState           = otherState; // 상대 줄은 손대지 않는다. 상대가 나를 막았으면 그대로 둔다
                 decision._selfDelta._blockedCount = -1;
                 return decision;
             }

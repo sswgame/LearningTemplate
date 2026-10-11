@@ -13,7 +13,7 @@ namespace sw
     {
         struct ServiceStoreFactoryInternal
         {
-            /** @brief "memory" 저장소의 데이터 — 같은 프로세스의 앞들이 나눠 쓴다. */
+            /** @brief "memory" 저장소의 데이터입니다. 같은 프로세스의 저장소끼리 나눠 씁니다. */
             static MemoryServiceDatabase& getMemoryDatabase()
             {
                 static MemoryServiceDatabase s_database;
@@ -30,7 +30,7 @@ namespace sw
     {
         if ( driverName == kMemoryDriverName )
             return make_unique<MemoryServiceStore>( &ServiceStoreFactoryInternal::getMemoryDatabase() );
-        // 이 모듈의 드라이버(PostgreSQL)를 처음 쓸 때 올린다 — 같은 객체를 두 번 올리면 레지스트리가 조용히 무시한다.
+        // 이 모듈의 드라이버(PostgreSQL)를 처음 쓸 때 등록한다. 같은 객체를 두 번 등록하면 레지스트리가 조용히 무시한다.
         SQLDriverRegistry::registerDriver( &PostgresDriver::getInstance() );
         SQLConnectionPoolSettings settings;
         settings._connection              = string( connection );

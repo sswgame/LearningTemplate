@@ -32,7 +32,7 @@ namespace sw
         _pendingSendBytes.clear();
         _bAuthRejected = SW_FALSE;
         _tlsSession.reset();
-        // 세션은 연결을 걸기 전에 — 열림 콜백이 다른 스레드에서 먼저 와도 평문이 선에 나가지 않게.
+        // TLS 세션은 연결을 시작하기 전에 만든다. 열림 콜백이 다른 스레드에서 먼저 와도 평문이 그대로 전송되지 않게 하려는 것이다.
         if ( pTLSContext != nullptr )
         {
             _tlsSession = pTLSContext->createSession();
@@ -94,7 +94,7 @@ namespace sw
         if ( handle != _handle || _state != RespConnectionState::Connecting )
             return false;
         _state = RespConnectionState::Open;
-        // TLS 세션은 핸드셰이크 전 평문을 모았다가 끝나면 보낸다 — 클라이언트 Hello 와 함께 지금 넘긴다.
+        // TLS 세션은 핸드셰이크 전의 평문을 모았다가 핸드셰이크가 끝나면 보낸다. 클라이언트 Hello 와 함께 지금 넘긴다.
         const vector<uint8> pendingBytes = std::move( _pendingSendBytes );
         _pendingSendBytes.clear();
         const bool bWritten = pendingBytes.empty() ? ( _tlsSession == nullptr || flushCiphertext( transport ) )
@@ -115,7 +115,7 @@ namespace sw
         else
         {
             const bool bFed = _tlsSession->feedCiphertext( pData, size );
-            (void)flushCiphertext( transport ); // 핸드셰이크 답 · 세션 표
+            (void)flushCiphertext( transport ); // 핸드셰이크 답과 세션 티켓을 보낸다
             _plainBytes.clear();
             const bool bRead = bFed && _tlsSession->getState() != TLSSessionState::Failed && _tlsSession->readPlaintext( _plainBytes );
             if ( bRead == false )
@@ -195,7 +195,7 @@ namespace sw
                 return true;
             if ( result == RespParseResult::Error )
                 return false;
-            // AUTH 답은 두 모드 모두 첫 꼬리표다(구독 연결도 AUTH 는 꼬리표로 짝짓는다).
+            // AUTH 답은 두 모드 모두 첫 태그이다. 구독 연결도 AUTH 는 태그로 짝짓는다.
             const bool bAuthReply = _listAwaitTag.empty() == false && _listAwaitTag.front()._step == kAuthStep;
             if ( bAuthReply )
             {
@@ -214,7 +214,7 @@ namespace sw
                 continue;
             }
             if ( _listAwaitTag.empty() )
-                return false; // 보낸 적 없는 답 — 순서가 어긋났다
+                return false; // 보낸 적 없는 답이므로 순서가 어긋난 것이다
             RespReplyRecord& record = _listReplyRecord.emplace_back();
             record._tag             = _listAwaitTag.front();
             record._value           = std::move( value );

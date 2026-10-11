@@ -54,7 +54,7 @@ namespace sw
     void OnlinePresence::attach( OnlineServiceHost* pHost )
     {
         if ( pHost == nullptr || pHost->getEphemeralRouter() == nullptr || pHost->getServerBus() == nullptr )
-            return; // 서버 한 대 — 이 프로세스의 계정 디렉터리로 충분하다
+            return; // 서버가 한 대이므로 이 프로세스의 계정 디렉터리로 충분하다
         _pHost    = pHost;
         _serverID = pHost->getServerBus()->getServerID();
         for ( const auto& [accountID, identity] : _mapAccountToIdentity )
@@ -65,7 +65,7 @@ namespace sw
 
     void OnlinePresence::shutdown()
     {
-        if ( _pHost != nullptr ) // 호스트가 살아 있다 — 라우터에 맡긴 요청이 이 객체를 부르지 않게 거둔다
+        if ( _pHost != nullptr ) // 호스트가 살아 있으면 라우터에 맡긴 요청을 회수해서, 그 요청이 이 객체를 부르지 않게 한다
         {
             EphemeralStoreRouter* pRouter = _pHost->getEphemeralRouter();
             for ( const auto& [requestID, pending] : _mapRequestToPending )
@@ -89,7 +89,7 @@ namespace sw
         for ( auto& [routerRequestID, pending] : _mapRequestToPending )
         {
             if ( pending._lookupID == requestID && ( pending._pendingKind == PendingKind::FindName || pending._pendingKind == PendingKind::FindAccount ) )
-                pending._onFound = AccountPresenceDelegate{}; // 캐시 답은 그대로 받아 버린다
+                pending._onFound = AccountPresenceDelegate{}; // 캐시 응답은 그대로 받아서 버린다
         }
         for ( size_t index = 0; index < _listDeferred.size(); )
         {
@@ -105,7 +105,7 @@ namespace sw
         const auto identityIt = _mapAccountToIdentity.find( identity._accountID );
         if ( identityIt != _mapAccountToIdentity.end() && identityIt->second._displayName != identity._displayName && _pHost != nullptr )
         {
-            // 표시 이름이 바뀌었다(연동) — 옛 이름 표시를 지운다(내 것일 때만).
+            // 표시 이름이 바뀌었으면(연동) 이전 이름의 기록을 지운다. 내 것일 때만 지운다.
             const AccountIdentity& previous = identityIt->second;
             (void)_pHost->getEphemeralRouter()->submit( EphemeralRequest::makeCompareAndErase( makeNameKey( previous._displayName ), makeNameBytes( previous ) ),
                                                         EphemeralStoreRouter::ReplyDelegate{} );
@@ -124,7 +124,7 @@ namespace sw
         _mapAccountToIdentity.erase( identityIt );
         if ( _pHost == nullptr )
             return;
-        // 내 것일 때만 지운다 — 같은 계정이 다른 서버에 새로 붙었으면 그쪽 표시가 남는다.
+        // 내 것일 때만 지운다. 같은 계정이 다른 서버에 새로 접속했으면 그쪽 기록이 남는다.
         EphemeralStoreRouter* pRouter = _pHost->getEphemeralRouter();
         (void)pRouter->submit( EphemeralRequest::makeCompareAndErase( makeAccountKey( accountID ), makeServerBytes() ), EphemeralStoreRouter::ReplyDelegate{} );
         (void)pRouter->submit( EphemeralRequest::makeCompareAndErase( makeNameKey( identity._displayName ), makeNameBytes( identity ) ),
@@ -156,7 +156,7 @@ namespace sw
         BitWriter body;
         if ( bodyBytes.empty() == false )
             body.writeBytes( bodyBytes.data(), static_cast<int32>( bodyBytes.size() ) );
-        (void)_pHost->sendPush( accountID, kind, body ); // 그새 떠났으면 버린다(최대 한 번)
+        (void)_pHost->sendPush( accountID, kind, body ); // 그사이 떠났으면 버린다. 배달은 최대 한 번이다
         return true;
     }
 
@@ -166,7 +166,7 @@ namespace sw
 
     string OnlinePresence::makeNameKey( string_view displayName )
     {
-        // 이름은 키 규칙(`[0-9a-z_.:/-]`) 밖의 글자를 가질 수 있다 — 대소문자 무시 해시로 적고, 값의 이름으로 다시 견준다.
+        // 이름은 키 규칙(`[0-9a-z_.:/-]`) 밖의 글자를 가질 수 있다. 그래서 대소문자를 무시한 해시로 기록하고, 값에 든 이름으로 다시 비교한다.
         return string( OnlinePresenceInternal::kNameKeyPrefix ) + ServiceKeyUtil::makeHex64( StringUtil::computeHash64( displayName.data(), displayName.size() ) );
     }
 
@@ -270,7 +270,7 @@ namespace sw
         const string        nameKey     = makeNameKey( identity._displayName );
         if ( bRefresh == false )
         {
-            // 새로 붙었다 — 다른 서버의 옛 표시를 덮는다(새 로그인이 이긴다).
+            // 새로 접속했으므로 다른 서버의 이전 기록을 덮는다. 새 로그인이 이긴다.
             EphemeralStoreRouter* pRouter = _pHost->getEphemeralRouter();
             (void)pRouter->submit( EphemeralRequest::makeSet( accountKey, serverBytes, _settings._ttlMs ), EphemeralStoreRouter::ReplyDelegate{} );
             (void)pRouter->submit( EphemeralRequest::makeSet( nameKey, nameBytes, _settings._ttlMs ), EphemeralStoreRouter::ReplyDelegate{} );
@@ -298,7 +298,7 @@ namespace sw
             const uint64 server = reader.readVarUint();
             identity._bGuest    = reader.readBool() ? SW_TRUE : SW_FALSE;
             const bool bNameOk  = ServiceKeyUtil::readString( reader, LoginConstant::kMaxDisplayNameSize, identity._displayName );
-            // 해시가 같은 다른 이름이면 없는 것이다.
+            // 해시는 같지만 다른 이름이면 없는 것으로 본다.
             if ( bNameOk && reader.hasOverflowed() == false && StringUtil::toLower( identity._displayName.c_str() ) == pending._nameKey )
                 found = AccountPresenceResult{ std::move( identity ), pending._lookupID, server };
         }
@@ -323,7 +323,7 @@ namespace sw
     {
         if ( _listDeferred.empty() )
             return;
-        // 델리게이트 안에서 다시 찾기를 맡길 수 있다 — 지금 목록을 떼어 낸 뒤 부른다.
+        // 델리게이트 안에서 다시 찾기를 맡길 수 있다. 그래서 지금 목록을 분리한 뒤 델리게이트를 부른다.
         vector<DeferredFound> listDeferred = std::move( _listDeferred );
         _listDeferred.clear();
         for ( const DeferredFound& deferred : listDeferred )
@@ -337,13 +337,13 @@ namespace sw
     {
         uint64 serverID = 0;
         if ( reply._result != EphemeralResult::Ok || OnlinePresenceInternal::readServerID( reply._value, serverID ) == false || _pHost == nullptr )
-            return; // 접속해 있지 않다 — 알림은 버린다(다시 붙으면 저장소에서 다시 읽는다)
+            return; // 접속해 있지 않으므로 알림은 버린다. 다시 접속하면 저장소에서 다시 읽는다
         BitWriter body;
         if ( pending._bodyBytes.empty() == false )
             body.writeBytes( pending._bodyBytes.data(), static_cast<int32>( pending._bodyBytes.size() ) );
         if ( serverID == _serverID )
         {
-            (void)_pHost->sendPush( pending._accountID, pending._kind, body ); // 그새 이 서버로 옮겨 왔다
+            (void)_pHost->sendPush( pending._accountID, pending._kind, body ); // 그사이 이 서버로 옮겨 왔다
             return;
         }
         BitWriter message;
@@ -357,11 +357,11 @@ namespace sw
     {
         const bool bMissingOrMoved = reply._result == EphemeralResult::NotFound || reply._result == EphemeralResult::Conflict;
         if ( bMissingOrMoved == false || _pHost == nullptr )
-            return; // Ok — 늘렸다
+            return; // Ok 이므로 시한을 늘린 것이다
         const auto identityIt = _mapAccountToIdentity.find( pending._accountID );
         if ( identityIt == _mapAccountToIdentity.end() )
             return;
-        // 비교가 어긋났다 — 키가 없거나(캐시가 비었다 · 시한이 지났다) 다른 서버의 값이다. "없을 때만" 다시 적어 다른 서버의 것은 덮지 않는다.
+        // 비교가 어긋났다. 키가 없거나(캐시가 비었거나 시한이 지났다) 다른 서버의 값이다. "없을 때만" 다시 기록해서 다른 서버의 값은 덮지 않는다.
         const AccountIdentity& identity = identityIt->second;
         if ( pending._pendingKind == PendingKind::RefreshAccount )
             (void)_pHost->getEphemeralRouter()->submit(

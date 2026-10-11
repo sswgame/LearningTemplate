@@ -16,7 +16,7 @@ namespace sw
     {
         struct CurrencyCatalogInternal
         {
-            /** @brief 재원이 모두 정의된 비가상 화폐인가입니다. */
+            /** @brief 재원이 모두 정의된 비가상 화폐이면 true 입니다. */
             static bool hasValidFunding( const CurrencyCatalog& catalog, const CurrencyDef& def )
             {
                 for ( const string& funding : def._listFundingAsset )
@@ -90,7 +90,7 @@ namespace sw
             }
             addCurrency( def );
         }
-        // 가상 화폐의 재원은 정의된 비가상 화폐여야 한다 — 모두 읽은 뒤에 본다(적힌 순서와 무관하게).
+        // 가상 화폐의 재원은 정의된 비가상 화폐여야 한다. 적힌 순서와 상관없이 모두 읽은 뒤에 확인한다.
         uint32 loadedCount = 0;
         for ( size_t defIndex = 0; defIndex < _listCurrency.size(); )
         {

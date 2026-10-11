@@ -1,7 +1,7 @@
 /**
  * @file SQLiteDriver.h
- * @brief SQLite 드라이버 — 이 키트 폴더(`Driver/SQLite/`)만 sqlite3 를 압니다. 접속 글은 DB 파일 경로입니다(작업 폴더 기준 상대 경로 · 절대 경로).
- * @details 연결마다 WAL · synchronous FULL · busy_timeout 5 초. 준비문은 SQL 글마다 캐시한다. 비밀은 쓰지 않는다(파일 권한이 접근 제어).
+ * @brief SQLite 드라이버입니다. 이 키트 폴더(`Driver/SQLite/`)만 sqlite3 를 압니다. 접속 문자열은 DB 파일 경로이며 작업 폴더 기준 상대 경로와 절대 경로를 모두 쓸 수 있습니다.
+ * @details 연결마다 WAL, synchronous FULL, busy_timeout 5초를 설정한다. 준비된 문장은 SQL 문마다 캐시한다. 비밀은 쓰지 않으며 접근 제어는 파일 권한이 맡는다.
  */
 #pragma once
 #include "GameFramework/GameFrameworkExports.h"
@@ -11,7 +11,7 @@ namespace sw
 {
     /**
      * @class SQLiteDriver
-     * @brief SQLite 드라이버입니다. 상태가 없어 하나를 모든 워커가 같이 씁니다.
+     * @brief SQLite 드라이버입니다. 상태가 없으므로 모든 워커가 하나를 같이 씁니다.
      */
     class SW_GF_API SQLiteDriver final : public ISQLDriver
     {

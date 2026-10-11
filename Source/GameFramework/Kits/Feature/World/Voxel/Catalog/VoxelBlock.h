@@ -1,6 +1,6 @@
 /**
  * @file VoxelBlock.h
- * @brief 블록 종류 — 면마다의 아틀라스 칸 · 색 · 단단함 · 통과 여부입니다(blocks.xml).
+ * @brief 블록 종류를 정의합니다(blocks.xml). 면마다 아틀라스 타일, 색, 단단함, 통과 여부를 가집니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -24,7 +24,7 @@ namespace sw
     /** @brief 공기 블록 번호입니다. */
     constexpr VoxelBlockIndex kVoxelAirBlock = 0;
 
-    /** @brief 블록 면입니다. 순서가 곧 `VoxelBlockDef::_arrFaceTile` 의 칸입니다. */
+    /** @brief 블록 면입니다. 순서가 곧 `VoxelBlockDef::_arrFaceTile` 의 인덱스입니다. */
     enum class VoxelFace : uint8
     {
         PositiveX = 0,
@@ -38,7 +38,7 @@ namespace sw
     /** @brief 면의 개수입니다. */
     constexpr int32 kVoxelFaceCount = 6;
 
-    /** @brief 정수 블록 좌표입니다(월드 단위, 블록 하나 = 1). */
+    /** @brief 정수 블록 좌표입니다. 월드 단위이며 블록 하나가 1입니다. */
     struct VoxelCoord
     {
         int32 _x{ 0 };
@@ -58,8 +58,9 @@ namespace sw
 
     /**
      * @brief 블록 한 종입니다.
-     * @details 면마다 아틀라스의 칸 번호를 따로 가집니다(풀 블록은 윗면이 풀, 옆면이 풀 섞인 흙, 아랫면이 흙). 색은 정점 색으로 곱해지는 틴트입니다 —
-     *          같은 회색 칸을 돌 · 자갈에 다른 색으로 나눠 쓸 수 있습니다. `_bOpaque` 가 아니면 이웃 면을 가리지 않습니다(잎 · 유리).
+     * @details 면마다 아틀라스의 타일 번호를 따로 가집니다. 풀 블록은 윗면이 풀, 옆면이 풀 섞인 흙, 아랫면이 흙입니다.
+     *          색은 정점 색에 곱해지는 틴트입니다. 그래서 같은 회색 타일을 돌과 자갈에 다른 색으로 나눠 쓸 수 있습니다.
+     *          `_bOpaque` 가 아니면 이웃 면을 가리지 않습니다. 잎과 유리가 해당합니다.
      */
     struct VoxelBlockDef
     {
@@ -68,7 +69,7 @@ namespace sw
         VoxelBlockIndex _index{ kVoxelAirBlock };
         int32           _arrFaceTile[kVoxelFaceCount]{ 0, 0, 0, 0, 0, 0 };
         float4          _color{ 1.0f, 1.0f, 1.0f, 1.0f };
-        float32         _hardness{ 0.5f };   ///< 맨손으로 부수는 데 걸리는 초
+        float32         _hardness{ 0.5f };   ///< 맨손으로 부수는 데 걸리는 시간(초)
         uint8           _bSolid{ SW_TRUE };  ///< 몸이 통과하지 못한다
         uint8           _bOpaque{ SW_TRUE }; ///< 이웃 면을 가린다
         uint8           _bBreakable{ SW_TRUE };
@@ -79,9 +80,10 @@ namespace sw
 {
     /**
      * @class VoxelBlockCatalog
-     * @brief `<BlockCatalog atlasColumns="8" atlasRows="8"><Block id="grass" name="Grass" tile="2" top="0" bottom="2" side="1" hardness="0.6"
-     *        color="1 1 1 1" solid="true" opaque="true" breakable="true"/></BlockCatalog>` 를 읽습니다.
-     * @details 블록 번호는 읽은 순서로 1 부터 붙습니다(최대 255). `tile` 은 여섯 면의 기본, `top` · `bottom` · `side` 가 그 면을 덮어씁니다.
+     * @brief 블록 카탈로그입니다. 아래 형식의 XML 을 읽습니다.
+     *        `<BlockCatalog atlasColumns="8" atlasRows="8"><Block id="grass" name="Grass" tile="2" top="0" bottom="2" side="1" hardness="0.6"
+     *        color="1 1 1 1" solid="true" opaque="true" breakable="true"/></BlockCatalog>`
+     * @details 블록 번호는 읽은 순서대로 1부터 붙으며 최대 255입니다. `tile` 은 여섯 면의 기본값이고, `top`, `bottom`, `side` 가 해당 면의 값을 덮어씁니다.
      */
     class SW_GF_API VoxelBlockCatalog : public XMLCatalog<VoxelBlockCatalog>
     {
@@ -90,31 +92,31 @@ namespace sw
     public:
         VoxelBlockCatalog();
 
-        /** @brief 블록을 더하고 번호를 돌려줍니다. 같은 id 는 바꾸고 번호를 유지합니다. 255 개가 넘으면 공기(0)입니다. */
+        /** @brief 블록을 추가하고 번호를 반환합니다. 같은 id 는 내용을 바꾸고 번호를 유지합니다. 255개를 넘으면 공기(0)를 반환합니다. */
         VoxelBlockIndex addBlock( const VoxelBlockDef& block );
 
-        /** @brief 번호로 찾습니다. 공기 · 모르는 번호는 nullptr 입니다. */
+        /** @brief 번호로 찾습니다. 공기이거나 모르는 번호이면 nullptr 입니다. */
         const VoxelBlockDef* findBlock( VoxelBlockIndex index ) const;
-        /** @brief id 로 번호를 찾습니다. 모르면 공기(0)입니다. */
+        /** @brief id 로 번호를 찾습니다. 모르는 id 이면 공기(0)를 반환합니다. */
         VoxelBlockIndex findBlockIndex( const hashed_string& blockID ) const;
-        /** @brief 몸이 통과하지 못하는 블록이면 true 입니다(공기 · 모르는 번호는 false). */
+        /** @brief 몸이 통과하지 못하는 블록이면 true 입니다. 공기이거나 모르는 번호이면 false 입니다. */
         bool isSolid( VoxelBlockIndex index ) const;
         /** @brief 이웃 면을 가리는 블록이면 true 입니다. */
         bool isOpaque( VoxelBlockIndex index ) const;
-        /** @brief 면의 아틀라스 칸 UV 사각형(왼위 · 오른아래)입니다. 칸 가장자리에서 반 텍셀 안으로 들여 이웃 칸이 번지지 않게 합니다. */
+        /** @brief 면의 아틀라스 타일 UV 사각형(왼쪽 위와 오른쪽 아래)입니다. 타일 가장자리에서 반 텍셀 안쪽으로 들여 이웃 타일의 색이 번지지 않게 합니다. */
         void computeTileUv( int32 tile, float2& outMin, float2& outMax ) const;
 
         const vector<VoxelBlockDef>& getBlocks() const { return _catalog.getAll(); }
         int32                        getAtlasColumns() const { return _atlasColumns; }
         int32                        getAtlasRows() const { return _atlasRows; }
-        /** @brief 아틀라스 칸 한 변의 텍셀 수입니다(UV 들여쓰기에 씁니다). */
+        /** @brief 아틀라스 타일 한 변의 텍셀 수입니다. UV 를 안쪽으로 들일 때 씁니다. */
         int32 getTileTexels() const { return _tileTexels; }
 
     private:
-        static constexpr const utf8* kXMLRootName = "BlockCatalog"; ///< 루트 원소(`XMLCatalog`)
+        static constexpr const utf8* kXMLRootName = "BlockCatalog"; ///< 루트 요소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
-        GameCatalog<VoxelBlockDef> _catalog; ///< 번호 - 1 자리(id 조회는 해시 한 번)
+        GameCatalog<VoxelBlockDef> _catalog; ///< 인덱스가 블록 번호 - 1 이다. id 조회는 해시 한 번으로 끝난다
         int32                      _atlasColumns;
         int32                      _atlasRows;
         int32                      _tileTexels;

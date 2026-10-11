@@ -17,7 +17,7 @@ namespace sw
     {
         struct SQLLocalSlotStorageInternal
         {
-            /** @brief 로컬 슬롯이 쓰는 드라이버의 등록 이름 — 제품은 드라이버 폴더만 안다(레지스트리 `SQLDriverRegistry` 가 고른다). */
+            /** @brief 로컬 슬롯이 쓰는 드라이버의 등록 이름입니다. 제품 이름은 드라이버 폴더만 알며, 레지스트리(`SQLDriverRegistry`)가 드라이버를 고릅니다. */
             static constexpr string_view kLocalSlotDriverName = "sqlite";
 
             static int64 makeNowMs() { return FileUtil::getCurrentFileWriteTime() / ( FileUtil::kFileTimeTicksPerSecond / 1000 ); }
@@ -90,7 +90,7 @@ namespace sw
 
     LocalStoreResult SQLLocalSlotStorage::listSlots( const string& groupPrefix, vector<LocalSlotInfo>& outListSlotInfo )
     {
-        // 접두는 슬롯 규칙의 글자뿐이라 LIKE 의 와일드카드(% _)를 피해 범위로 묻는다: [접두, 접두 + 0x7F).
+        // 접두어는 슬롯 규칙에 맞는 글자뿐이므로 LIKE 의 와일드카드(% _)를 피해 범위로 조회한다: [접두어, 접두어 + 0x7F).
         const string   upperBound  = groupPrefix + static_cast<utf8>( 0x7F );
         const SQLValue arrParam[2] = { SQLValue::makeText( groupPrefix ), SQLValue::makeText( upperBound ) };
         SQLRowSet      rowSet;

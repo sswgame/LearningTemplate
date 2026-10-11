@@ -65,7 +65,7 @@ namespace sw
                 return key;
             }
 
-            /** @brief 이름 키 — ASCII 는 소문자로 바꾼 뒤 모든 바이트를 16 진(한글 이름도 키 규칙 안, 24 바이트 → 48 글자). */
+            /** @brief 이름 키를 만듭니다. ASCII 는 소문자로 바꾼 뒤 모든 바이트를 16진 문자열로 바꾸므로 한글 이름도 키 규칙 안에 들어옵니다. 24바이트는 48글자가 됩니다. */
             static string makeNameKey( string_view name )
             {
                 static constexpr utf8 kHexDigit[] = "0123456789abcdef";
@@ -158,13 +158,13 @@ namespace sw
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
                 if ( reader.readBits( 8 ) != kFormatVersion )
                     return false;
-                (void)reader.readVarUint(); // 초대한 사람 칸은 건너뛴다 — 넘침은 아래 hasOverflowed 가 본다
+                (void)reader.readVarUint(); // 초대한 사람 필드는 건너뛴다. 읽기가 넘쳤는지는 아래 hasOverflowed 가 확인한다
                 outExpiresMs = reader.readVarInt();
                 return reader.hasOverflowed() == false;
             }
         };
 
-        /** @brief 길드 요청 하나 — 읽기 → 규칙 → 판 조건 쓰기, 충돌이면 다시. */
+        /** @brief 길드 요청 하나를 처리합니다. 읽기, 규칙 검사, 버전 조건 쓰기 순서로 진행하며 충돌이 나면 다시 시도합니다. */
         class GuildWork final : public IServiceStoreWork
         {
         public:
@@ -201,14 +201,14 @@ namespace sw
             void complete() override { _pService->applyOutcome( _request, _requestTag, std::move( _outcome ) ); }
 
         private:
-            /** @brief 규칙 실패 — 결과를 적고 Invalid(다시 하지 않는다)를 돌려준다. */
+            /** @brief 규칙 실패를 처리합니다. 결과를 적고 Invalid 를 반환하며 다시 시도하지 않습니다. */
             ServiceStoreResult fail( SocialResult result )
             {
                 _outcome._result = result;
                 return ServiceStoreResult::Invalid;
             }
 
-            /** @brief 계정의 길드를 읽습니다 — Ok(있음) · NotFound(없음) · Unavailable. */
+            /** @brief 계정의 길드를 읽습니다. 길드가 있으면 Ok, 없으면 NotFound, 저장소를 쓸 수 없으면 Unavailable 입니다. */
             static ServiceStoreResult readAccountGuild( IServiceStoreConnection& connection, AccountID accountID, uint64& outGuildID, ServiceRecord& outRecord )
             {
                 outGuildID                    = 0;
@@ -288,7 +288,7 @@ namespace sw
                     _outcome._guildID  = nextID;
                     _outcome._joinedID = _request._accountID;
                 }
-                return commitResult; // 이름이 그새 잡혔으면 다시 읽어 GuildNameTaken
+                return commitResult; // 이름이 그사이 선점됐으면 다시 읽어 GuildNameTaken 으로 끝낸다
             }
 
             ServiceStoreResult runAccept( IServiceStoreConnection& connection )
@@ -309,7 +309,7 @@ namespace sw
                 const bool bGuildOk = connection.readRecord( Internal::getGuildTable(), guildKey, guildRecord ) == ServiceStoreResult::Ok &&
                                       Internal::decodeGuild( guildRecord._bytes, _request._guildID, info );
                 if ( bGuildOk == false )
-                    return fail( SocialResult::NotFound ); // 해산된 길드
+                    return fail( SocialResult::NotFound ); // 해산된 길드이다
                 if ( info._memberCount >= GuildLimit::kMaxMember )
                     return fail( SocialResult::GuildFull );
                 ++info._memberCount;
@@ -329,7 +329,7 @@ namespace sw
                 return commitResult;
             }
 
-            /** @brief "내 길드" 위의 요청(조회 · 초대 · 떠나기 · 내보내기 · 역할 · 공지)입니다. */
+            /** @brief "내 길드" 에 대한 요청입니다. 조회, 초대, 떠나기, 내보내기, 역할, 공지가 해당합니다. */
             ServiceStoreResult runInGuild( IServiceStoreConnection& connection, uint64 guildID, const ServiceRecord& selfGuildRecord )
             {
                 using Internal = GuildServiceInternal;
@@ -353,7 +353,7 @@ namespace sw
                     case GuildOperation::Get:
                     {
                         _outcome._info = info;
-                        return ServiceStoreResult::Ok; // 회원 목록은 collectMembers 가 채운다
+                        return ServiceStoreResult::Ok; // 멤버 목록은 collectMembers 가 채운다
                     }
                     case GuildOperation::Invite:
                     {
@@ -369,17 +369,17 @@ namespace sw
                         if ( targetRead == ServiceStoreResult::Ok )
                             return fail( SocialResult::AlreadyInGuild );
                         transaction.put( Internal::getInviteTable(), Internal::makePairKey( _request._targetID, guildID ),
-                                         Internal::encodeInvite( _request._accountID, _request._nowMs + GuildLimit::kInviteLifetimeMs ) ); // 다시 보내면 덮는다
+                                         Internal::encodeInvite( _request._accountID, _request._nowMs + GuildLimit::kInviteLifetimeMs ) ); // 다시 보내면 덮어쓴다
                         _outcome._invitedID = _request._targetID;
                         return connection.commit( transaction );
                     }
                     case GuildOperation::Leave:
                     {
                         if ( selfMember._role == GuildRole::Master && info._memberCount > 1 )
-                            return fail( SocialResult::NotAllowed ); // 넘기고 떠난다
+                            return fail( SocialResult::NotAllowed ); // 길드장을 넘기고 떠난다
                         transaction.erase( Internal::getMemberTable(), Internal::makePairKey( guildID, _request._accountID ), selfMemberRecord._version );
                         transaction.erase( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( _request._accountID ), selfGuildRecord._version );
-                        if ( selfMember._role == GuildRole::Master ) // 혼자 남은 길드장 — 해산
+                        if ( selfMember._role == GuildRole::Master ) // 혼자 남은 길드장이면 길드를 해산한다
                         {
                             transaction.erase( Internal::getGuildTable(), guildKey, guildRecord._version );
                             transaction.erase( Internal::getNameTable(), Internal::makeNameKey( info._name ) );
@@ -414,7 +414,7 @@ namespace sw
                 }
             }
 
-            /** @brief 내보내기 · 역할 바꾸기(길드장 넘기기 포함)입니다. */
+            /** @brief 내보내기와 역할 바꾸기(길드장 넘기기 포함)입니다. */
             ServiceStoreResult runMemberChange( IServiceStoreConnection& connection, uint64 guildID, GuildInfo& inoutInfo, const ServiceRecord& guildRecord,
                                                 const GuildMember& selfMember, const ServiceRecord& selfMemberRecord )
             {
@@ -448,7 +448,7 @@ namespace sw
                 if ( selfMember._role != GuildRole::Master )
                     return fail( SocialResult::NotAllowed );
                 transaction.put( Internal::getMemberTable(), targetMemberKey, Internal::encodeMember( _request._role, targetMember._joinedMs ), targetMemberRecord._version );
-                if ( _request._role == GuildRole::Master ) // 길드장 넘기기 — 나는 임원으로
+                if ( _request._role == GuildRole::Master ) // 길드장을 넘기면 나는 임원이 된다
                 {
                     transaction.put( Internal::getMemberTable(), Internal::makePairKey( guildID, _request._accountID ),
                                      Internal::encodeMember( GuildRole::Officer, selfMember._joinedMs ), selfMemberRecord._version );
@@ -458,7 +458,7 @@ namespace sw
                 return connection.commit( transaction );
             }
 
-            /** @brief 성공 뒤 회원 목록을 읽습니다 — 조회는 정보로, 바꾸기는 알림 대상으로. */
+            /** @brief 성공한 뒤 멤버 목록을 읽습니다. 조회이면 정보로, 변경이면 알림 대상으로 씁니다. */
             void collectMembers( IServiceStoreConnection& connection )
             {
                 const bool bSkip = _outcome._guildID == 0 || _request._operation == GuildOperation::Attach || _request._operation == GuildOperation::Invite;
@@ -467,7 +467,7 @@ namespace sw
                 vector<ServiceRecord> listRecord;
                 const string          prefix = ServiceKeyUtil::makeHex64( _outcome._guildID ) + "/";
                 if ( connection.listRecords( GuildServiceInternal::getMemberTable(), prefix, "", GuildLimit::kMaxMember, false, listRecord ) != ServiceStoreResult::Ok )
-                    return; // 알림만 빠진다(클라이언트가 다시 조회)
+                    return; // 알림만 빠지며 클라이언트가 다시 조회한다
                 for ( const ServiceRecord& record : listRecord )
                 {
                     GuildMember member;
@@ -564,7 +564,7 @@ namespace sw
         if ( outcome._leftID != kInvalidAccountID )
         {
             raiseEvent( outcome._leftID, outcome._guildID, GuildEvent::Kind::Left );
-            if ( outcome._leftID != request._accountID ) // 내보내진 사람 — 이제 회원 목록에 없다
+            if ( outcome._leftID != request._accountID ) // 내보내진 사람이다. 이제 멤버 목록에 없다
                 _notificationBuffer.push( SocialNotification{ SocialPresence{}, outcome._leftID, request._accountID, outcome._guildID, SocialNotificationKind::GuildChanged } );
         }
         if ( outcome._invitedID != kInvalidAccountID )

@@ -47,7 +47,7 @@ namespace sw
                 return prefix;
             }
 
-            /** @brief 우편 하나를 읽어 해독합니다(받는 계정 확인 포함). */
+            /** @brief 우편 하나를 읽어 해독합니다. 받는 계정 확인도 포함합니다. */
             static MailboxResult readMail( IServiceStoreConnection& connection, uint64 accountID, string_view mailKey, ServiceMailRecord& outRecord )
             {
                 uint64 recipient = 0;
@@ -155,7 +155,7 @@ namespace sw
                 return MailboxResult::Busy;
             }
 
-            /** @brief 만료 색인 하나를 처리할 트랜잭션을 붙입니다. 실패면 false(그 색인은 다음 쓸기가 다시 본다). */
+            /** @brief 만료 인덱스 하나를 처리할 트랜잭션을 붙입니다. 실패하면 false 를 반환하며 그 인덱스는 다음 정리가 다시 봅니다. */
             static bool stageExpiry( IServiceStoreConnection& connection, const ServiceRecord& index, string_view mailKey, int64 nowMs, ServiceTransaction& inoutTransaction,
                                      bool& outbReturned, bool& outbDiscarded )
             {
@@ -169,7 +169,7 @@ namespace sw
                 ServiceMailRecord mail;
                 const bool        bLive = read == ServiceStoreResult::Ok && ServiceMail::decodeRecord( record._bytes, mail ) && mail._state != ServiceMailState::Claimed;
                 if ( bLive == false )
-                    return true; // 없거나 받은 우편 — 색인만 지운다
+                    return true; // 없거나 이미 받은 우편이므로 인덱스만 지운다
                 inoutTransaction.erase( ServiceMail::getMailTable(), mailKey, record._version );
                 const bool bEscrowed = mail._message._fundingHolder._kind != LedgerHolderKind::Mint && mail._message._listAttachment.empty() == false;
                 if ( bEscrowed == false )
@@ -184,7 +184,7 @@ namespace sw
                 request._reason    = outbReturned ? "mail.return" : "mail.expire";
                 request._timeMs    = nowMs;
                 request._actorKind = LedgerActorKind::System;
-                request._pPolicy   = nullptr; // 돌려주기는 상한을 보지 않는다 — 보낸 쪽이 가득 차도 재화가 사라지면 안 된다
+                request._pPolicy   = nullptr; // 돌려주기는 상한을 보지 않는다. 보낸 쪽이 가득 차도 재화가 사라지면 안 되기 때문이다
                 for ( const ServiceMailAttachment& attachment : mail._message._listAttachment )
                 {
                     request._listPosting.push_back( LedgerPosting{ escrow, target, attachment._assetID, attachment._amount } );
@@ -241,7 +241,7 @@ namespace sw
                 continue;
             }
             if ( MailboxStoreLogicInternal::isExpired( mail._message, nowMs ) )
-                continue; // 쓸기가 곧 치운다 — 목록에는 보이지 않는다
+                continue; // 곧 정리될 우편이므로 목록에는 보이지 않는다
             mail._mailKey = record._key;
             outReply._listMail.push_back( MailboxStoreLogicInternal::makeView( mail ) );
         }
@@ -261,7 +261,7 @@ namespace sw
         transaction.put( ServiceMail::getMailTable(), mail._mailKey, ServiceMail::encodeRecord( mail ), mail._version );
         const ServiceStoreResult committed = connection.commit( transaction );
         if ( committed == ServiceStoreResult::Conflict )
-            return MailboxResult::Ok; // 그새 받았거나 읽었다 — 읽음 표시는 덮지 않는다
+            return MailboxResult::Ok; // 그사이 받았거나 읽었으므로 읽음 표시는 덮어쓰지 않는다
         return committed == ServiceStoreResult::Ok ? MailboxResult::Ok : MailboxResult::Unavailable;
     }
 
@@ -314,7 +314,7 @@ namespace sw
                     return MailboxStoreLogicInternal::toMailboxResult( staged );
                 }
                 if ( outcome._bReplayed == SW_TRUE )
-                    return MailboxResult::AlreadyClaimed; // 분개와 상태는 한 트랜잭션이라 여기 오지 않는다 — 방어
+                    return MailboxResult::AlreadyClaimed; // 분개와 상태는 한 트랜잭션이라 여기에 올 수 없다. 방어 코드이다
             }
             mail._state = ServiceMailState::Claimed;
             transaction.put( ServiceMail::getMailTable(), mail._mailKey, ServiceMail::encodeRecord( mail ), mail._version );
@@ -334,7 +334,7 @@ namespace sw
                 const LedgerResult resolved = Ledger::resolveConflict( connection, request, outcome );
                 if ( resolved == LedgerResult::Ok )
                 {
-                    // 응답만 잃었거나(이번 수령이 들어갔다) 다른 기기가 먼저 받았다 — 어느 쪽이든 원장은 한 번이다.
+                    // 응답만 잃었거나(이번 수령이 들어갔다) 다른 기기가 먼저 받았다. 어느 쪽이든 원장은 한 번만 움직인다.
                     MailboxStoreLogicInternal::collectAccountBalances( outcome, input._accountID, outReply._listBalance );
                     return MailboxResult::Ok;
                 }
@@ -345,7 +345,7 @@ namespace sw
             {
                 return MailboxResult::Unavailable;
             }
-            // Conflict — 그새 읽음 표시 등으로 판이 바뀌었다: 다시 읽어 다시
+            // Conflict 이다. 그사이 읽음 표시 등으로 버전이 바뀌었으므로 다시 읽고 다시 시도한다
         }
         return MailboxResult::Busy;
     }
@@ -375,7 +375,7 @@ namespace sw
             input._pPolicy             = pPolicy;
             const MailboxResult result = claim( connection, input, outReply );
             if ( result != MailboxResult::Ok && result != MailboxResult::AlreadyClaimed && firstFailure == MailboxResult::Ok )
-                firstFailure = result; // 하나가 상한에 걸려도 나머지는 받는다 — 첫 실패를 알린다
+                firstFailure = result; // 하나가 상한에 걸려도 나머지는 받는다. 첫 실패를 알린다
         }
         return MailboxStoreLogicInternal::finish( outReply, outReply._claimedCount > 0 ? MailboxResult::Ok : firstFailure );
     }
@@ -417,7 +417,7 @@ namespace sw
                 continue;
             }
             if ( static_cast<int64>( expiresMs ) > nowMs )
-                return; // 색인은 시각 순 — 나머지는 아직이다
+                return; // 인덱스가 시각 순서이므로 나머지는 아직 정리할 때가 아니다
             const string_view  mailKey = string_view( index._key ).substr( width + 1 );
             ServiceTransaction transaction;
             bool               bReturned  = false;

@@ -29,7 +29,7 @@ namespace sw
                 outBytes.push_back( '\n' );
             }
 
-            /** @brief RESP 길이 · 정수 줄을 읽습니다(부호 · 숫자만 — `StringUtil` 보다 엄격하다). */
+            /** @brief RESP 의 길이 줄과 정수 줄을 읽습니다. 부호와 숫자만 허용하므로 `StringUtil` 보다 엄격합니다. */
             [[nodiscard]] static bool parseLineInteger( const uint8* pBegin, const uint8* pEnd, int64& outValue )
             {
                 const utf8* pTextBegin = reinterpret_cast<const utf8*>( pBegin );
@@ -71,7 +71,7 @@ namespace sw
             outValue = integerValue;
             return true;
         }
-        // 서버는 점수를 배정밀도 글로 준다("1e+16" · "2.5") — 정수이고 정확한 범위 안일 때만 받는다.
+        // 서버는 점수를 배정밀도 문자열로 준다("1e+16", "2.5"). 정수이고 정확히 표현되는 범위 안일 때만 받는다.
         float64 floatValue = 0.0;
         if ( StringUtil::parseDouble( text, floatValue ) == false || std::isfinite( floatValue ) == false )
             return false;
@@ -136,7 +136,7 @@ namespace sw
     {
         if ( _bFailed == SW_TRUE || size == 0 )
             return;
-        // 앞쪽에 다 읽은 바이트가 쌓이면 당겨 온다(버퍼가 끝없이 자라지 않게).
+        // 앞쪽에 다 읽은 바이트가 쌓이면 뒤의 바이트를 앞으로 당겨 온다. 버퍼가 끝없이 커지지 않게 하려는 것이다.
         const bool bShouldCompact = _readOffset > 4096 && _readOffset * 2 > _buffer.size();
         if ( bShouldCompact )
         {

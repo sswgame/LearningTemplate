@@ -57,7 +57,7 @@ namespace sw
 
             static string makeActor( AccountID actorID ) { return actorID == kInvalidAccountID ? string( "system" ) : "gm." + ServiceKeyUtil::makeHex64( actorID ); }
 
-            /** @brief 공지 정렬 — 우선순위 내림차순, 같으면 시작 시각 내림차순, 같으면 id 오름차순(결정적). */
+            /** @brief 공지 정렬 기준입니다. 우선순위 내림차순, 같으면 시작 시각 내림차순, 그래도 같으면 id 오름차순이며 결과가 결정적입니다. */
             struct NoticeOrder
             {
                 bool operator()( const ServiceNotice& left, const ServiceNotice& right ) const
@@ -75,7 +75,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 점검 · 공지 두 표를 읽는 일입니다. */
+    /** @brief 점검과 공지 두 테이블을 읽는 작업입니다. */
     class ServerDirectoryReloadWork final : public IServiceStoreWork
     {
     public:
@@ -127,12 +127,12 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 점검 · 공지 바꾸기 하나 — 레코드 쓰기(또는 지우기) + 감사 줄을 한 트랜잭션으로 씁니다(판 조건 — 그새 바뀌었으면 Unavailable, 다시 하면 된다). */
+    /** @brief 점검이나 공지 변경 하나를 처리합니다. 레코드 쓰기(또는 지우기)와 감사 기록을 한 트랜잭션으로 씁니다. 버전 조건을 쓰므로 그사이 바뀌었으면 Unavailable 이며 다시 하면 됩니다. */
     class ServerDirectoryWriteWork final : public IServiceStoreWork
     {
     public:
         ServiceAuditEntry       _auditEntry;
-        vector<uint8>           _bytes; ///< 비면 지우기
+        vector<uint8>           _bytes; ///< 비어 있으면 지우기이다
         string                  _key;
         hashed_string           _table;
         NetIdempotencyKey       _auditUnique;
@@ -170,7 +170,7 @@ namespace sw
                 transaction.put( _table, _key, _bytes, current._version );
             ServiceAuditLog::stageEntry( transaction, _auditEntry, _auditUnique._high, _auditUnique._low );
             const ServiceStoreResult commitResult = connection.commit( transaction );
-            _result                               = commitResult == ServiceStoreResult::Ok ? ServerDirectoryResult::Ok : ServerDirectoryResult::Unavailable; // Conflict 도 "다시 하라"
+            _result                               = commitResult == ServiceStoreResult::Ok ? ServerDirectoryResult::Ok : ServerDirectoryResult::Unavailable; // Conflict 도 "다시 하라" 는 뜻으로 Unavailable 로 처리한다
         }
 
         void complete() override { _pService->applyWrite( _requestTag, _result ); }
@@ -209,7 +209,7 @@ namespace sw
             reader->initialize( dependencies._pRouter, kind, settings._registryRefreshPeriodMs );
         }
         _bReloadRequested = SW_TRUE;
-        _lastVisibleHash  = computeVisibleHash( 0 ); // 빈 상태는 알리지 않는다 — 처음 읽은 내용이 있을 때부터
+        _lastVisibleHash  = computeVisibleHash( 0 ); // 빈 상태는 알리지 않는다. 처음 읽은 내용이 있을 때부터 알린다
     }
 
     void ServerDirectoryService::shutdown()
@@ -234,7 +234,7 @@ namespace sw
         const bool bPeriodic = nowMs - _lastReloadMs >= _settings._reloadPeriodMs;
         if ( _bReloading == SW_FALSE && ( _bReloadRequested == SW_TRUE || bPeriodic ) )
             startReload( nowMs );
-        markStatusIfChanged( nowMs ); // 기간 경계(공지 시작 · 끝, 점검 시작 · 끝)는 다시 읽지 않아도 보이는 것이 바뀐다
+        markStatusIfChanged( nowMs ); // 기간 경계(공지 시작과 끝, 점검 시작과 끝)는 다시 읽지 않아도 보이는 내용이 바뀐다
     }
 
     void ServerDirectoryService::startReload( int64 nowMs )
@@ -251,7 +251,7 @@ namespace sw
         --_pendingCount;
         _bReloading = SW_FALSE;
         if ( bReadOk == false )
-            return; // 저장소가 아프다 — 옛 것을 두고 다음 주기에
+            return; // 저장소에 문제가 있으므로 이전 값을 두고 다음 주기에 다시 읽는다
         _listMaintenance = std::move( listMaintenance );
         _listNotice      = std::move( listNotice );
         std::sort( _listNotice.begin(), _listNotice.end(), ServerDirectoryServiceInternal::NoticeOrder{} );
@@ -296,7 +296,7 @@ namespace sw
         if ( hash == _lastVisibleHash )
             return;
         _lastVisibleHash = hash;
-        _bStatusChanged  = SW_TRUE; // 바인딩이 takeStatusChange 로 보고 모두에게 알린다
+        _bStatusChanged  = SW_TRUE; // 바인딩이 takeStatusChange 로 확인해 모든 클라이언트에 알린다
         ++_statusRevision;
     }
 
@@ -308,7 +308,7 @@ namespace sw
             if ( window.isActive( nowMs ) == false || static_cast<int32>( status._listMaintenance.size() ) >= ServerDirectoryLimit::kMaxWindowCount )
                 continue;
             MaintenanceWindow& visible = status._listMaintenance.emplace_back( window );
-            visible._listAllowedAccount.clear(); // 허용 목록은 보내지 않는다
+            visible._listAllowedAccount.clear(); // 허용 목록은 클라이언트에 보내지 않는다
         }
         for ( const ServiceNotice& notice : _listNotice )
         {
@@ -349,7 +349,7 @@ namespace sw
             assignment._messageKey       = window._messageKey;
             return assignment;
         }
-        // 막히지 않았는데 이 종류에 점검이 걸려 있다 — 허용 계정이다. 점검 상태 서버도 후보.
+        // 막히지 않았는데 이 종류에 점검이 걸려 있다면 허용 계정이다. 이때는 점검 상태의 서버도 후보가 된다.
         bool bAllowedDuringMaintenance = false;
         for ( const MaintenanceWindow& active : _listMaintenance )
         {

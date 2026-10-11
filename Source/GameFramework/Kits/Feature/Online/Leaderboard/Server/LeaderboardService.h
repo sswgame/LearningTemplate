@@ -1,15 +1,17 @@
 /**
  * @file LeaderboardService.h
- * @brief 순위표 로직 — 점수 · 통계는 영속(판 조건, 충돌이면 다시), 순위는 캐시 정렬 집합(잃으면 영속에서 다시 채움). 전송을 모릅니다(서비스 스레드 하나).
- * @details - 원본은 영속 `lb_score`(`<표>/<기간 16 진>/<계정 16 진>` → 점수 · 시각 · 이름). 순위는 캐시 `lb/<표>/<기간>`(멤버 = 계정 16 진, 오름차순 표는 부호를 뒤집는다).
- *            준비 표시(`lb/<표>/<기간>/ready`)가 없으면 영속에서 모두 읽어 다시 채운 뒤 답한다 — 그동안 온 읽기는 줄을 서고, 그동안 쓴 점수는 다시 채운 뒤 한 번 더 싣는다.
- *          - 갱신 Best · Latest · Sum, 기간 None · Daily · Weekly(`ServiceScheduler::computeLatestOccurrence` — 같은 규칙 하나, 기간 id = 기간 시작 시각).
- *          - 통계 `lb_stat`(`<계정>/<이름>`) — 바뀌면 그 통계에 건 표에 같은 값을 낸다.
- *          - 상위 · 내 둘레 조회는 표시 이름을 캐시 `lb/name/<계정>`(30 일)에서 함께 읽는다.
- *          - 업적: 통계가 임계값을 넘으면 `lb_achievement` 를 "없어야 함" 으로 + 보상 우편(`ServiceMail::stageSend` — 재원 발행, 멱등 키 `ach.<계정>.<업적>`)을
- *            한 트랜잭션에 — 두 번 넘어도 한 번. 시즌 정산: 예약 작업(`lb.settle.<표>.<시즌 16 진 8>`, 창 [끝, 끝 + 7 일))이 점수를 모두 읽어 순위(같은 점수는
- *            계정 id 오름차순)대로 결과 `lb_season_result`("없어야 함") + 구간 보상 우편을 15 명씩 한 트랜잭션에 — 결과가 있는 사람은 건너뛴다(다시 돌아도 한 번).
- *          PlayFab Statistics + Leaderboards · EOS Stats → Leaderboards · Nakama Leaderboards(best · set · incr)와 같은 자리다.
+ * @brief 순위표 로직입니다. 점수와 통계는 영속 저장소에 버전 조건으로 쓰며 충돌이 나면 다시 시도합니다. 순위는 캐시 정렬 집합에 두며 잃으면 영속 저장소에서 다시 채웁니다. 전송은 모르며 서비스 스레드 하나에서 씁니다.
+ * @details - 원본은 영속 테이블 `lb_score` 이다. 키는 `<보드>/<기간 16진>/<계정 16진>` 이고 값은 점수, 시각, 이름이다.
+ *            순위는 캐시 `lb/<보드>/<기간>` 에 두며 멤버는 계정 16진 문자열이다. 오름차순 보드는 부호를 뒤집어 저장한다.
+ *            준비 표시(`lb/<보드>/<기간>/ready`)가 없으면 영속 저장소에서 모두 읽어 다시 채운 뒤 응답한다. 그동안 온 읽기는 대기시키고, 그동안 쓴 점수는 다시 채운 뒤 한 번 더 싣는다.
+ *          - 갱신 방식은 Best, Latest, Sum 이고 기간은 None, Daily, Weekly 이다. 기간은 `ServiceScheduler::computeLatestOccurrence` 라는 같은 규칙 하나로 구하며 기간 id 는 기간 시작 시각이다.
+ *          - 통계 `lb_stat`(`<계정>/<이름>`)이 바뀌면 그 통계에 연결된 보드에 같은 값을 낸다.
+ *          - 상위와 내 주변 조회는 표시 이름을 캐시 `lb/name/<계정>`(30일)에서 함께 읽는다.
+ *          - 업적은 통계가 임계값을 넘으면 `lb_achievement` 를 "없어야 함" 조건으로 쓰고 보상 우편(`ServiceMail::stageSend`, 재원 발행, 멱등 키 `ach.<계정>.<업적>`)을 한 트랜잭션에 넣는다. 두 번 넘어도 한 번만 처리된다.
+ *          - 시즌 정산은 예약 작업(`lb.settle.<보드>.<시즌 16진 8자리>`, 창 [끝, 끝 + 7일))이 한다. 점수를 모두 읽어 순위(같은 점수는 계정 id 오름차순)대로 결과 `lb_season_result`("없어야 함")와 구간 보상 우편을 15명씩 한 트랜잭션에 쓴다.
+ *            결과가 이미 있는 사람은 건너뛰므로 다시 돌아도 한 번만 처리된다.
+ *
+ *          PlayFab Statistics 와 Leaderboards, EOS Stats 와 Leaderboards, Nakama Leaderboards(best, set, incr)에 해당한다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -30,17 +32,17 @@ namespace sw
     class EphemeralStoreRouter;
     class IServiceStore;
 
-    /** @brief 빌려 쓰는 것들입니다. */
+    /** @brief 빌려 쓰는 객체들입니다. */
     struct LeaderboardServiceDependencies
     {
         IServiceStore*        _pStore{ nullptr };  ///< 필수
-        EphemeralStoreRouter* _pRouter{ nullptr }; ///< 필수 — 순위
+        EphemeralStoreRouter* _pRouter{ nullptr }; ///< 필수이다. 순위에 쓴다
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 요청 종류입니다(완료가 어느 요청의 것인지). */
+    /** @brief 요청 종류입니다. 완료가 어느 요청의 것인지 나타냅니다. */
     enum class LeaderboardOperation : uint8
     {
         Submit = 0,
@@ -63,7 +65,7 @@ namespace sw
         vector<AchievementState> _listAchievement{};
         uint64                   _periodID{ 0 };
         uint64                   _requestTag{ 0 };
-        int64                    _score{ 0 }; ///< Submit · StatChange — 적용 뒤 값
+        int64                    _score{ 0 }; ///< Submit 과 StatChange 의 적용 뒤 값이다
         LeaderboardResult        _result{ LeaderboardResult::Ok };
         LeaderboardOperation     _operation{ LeaderboardOperation::Submit };
     };
@@ -71,7 +73,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 계정 하나의 점수입니다(다시 채우기 · 정산). */
+    /** @brief 계정 하나의 점수입니다. 다시 채우기와 정산에서 씁니다. */
     struct LeaderboardScoreRow
     {
         AccountID _accountID{ kInvalidAccountID };
@@ -81,7 +83,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 업적 달성 하나(서버가 알림으로 보낸다)입니다. */
+    /** @brief 업적 달성 하나입니다. 서버가 알림으로 보냅니다. */
     struct AchievementUnlock
     {
         AchievementState _state{};
@@ -95,7 +97,7 @@ namespace sw
 {
     /**
      * @class LeaderboardService
-     * @brief 순위표 로직입니다(서비스 스레드).
+     * @brief 순위표 로직입니다. 서비스 스레드에서 씁니다.
      */
     class SW_GF_API LeaderboardService final : public IScheduledJobHandler
     {
@@ -107,35 +109,35 @@ namespace sw
         LeaderboardService& operator=( const LeaderboardService& ) = delete;
 
         void initialize( const LeaderboardServiceDependencies& dependencies );
-        /** @brief 기다리는 캐시 요청을 취소하고 메모리를 비웁니다. 맡긴 저장소 일은 부르는 쪽이 먼저 거둔다. */
+        /** @brief 기다리는 캐시 요청을 취소하고 메모리를 비웁니다. 맡긴 저장소 작업은 호출하는 쪽이 먼저 회수합니다. */
         void shutdown();
 
-        /** @brief 표를 올립니다(기동 때 — 게임 데이터). 규칙 밖이면 false. */
+        /** @brief 보드를 등록합니다. 기동할 때 게임 데이터로 부르며, 규칙에 맞지 않으면 false 를 반환합니다. */
         [[nodiscard]] bool           registerBoard( const LeaderboardDefinition& definition );
         const LeaderboardDefinition* findBoard( string_view boardID ) const;
-        /** @brief 지금 기간 id(기간 시작 시각 — None 은 0)입니다. */
+        /** @brief 현재 기간 id 를 반환합니다. 기간 시작 시각이며 None 이면 0입니다. */
         uint64 computePeriodID( const LeaderboardDefinition& definition, int64 nowMs ) const;
 
-        /** @brief 점수를 냅니다(서버 게임 로직 — 클라이언트 제출은 바인딩이 `_bClientSubmit` 표만 넘긴다). 꼬리표 0 이면 완료가 없다. */
+        /** @brief 점수를 냅니다. 서버 게임 로직이 부르며, 클라이언트 제출은 바인딩이 `_bClientSubmit` 보드만 넘깁니다. 요청 태그가 0이면 완료가 없습니다. */
         void submitScore( string_view boardID, AccountID accountID, string_view displayName, int64 score, int64 nowMs, uint64 requestTag );
         void readTop( string_view boardID, int32 offset, int32 count, int64 nowMs, uint64 requestTag );
-        /** @brief 내 순위 둘레(위 · 아래 @p radius 명, 나 포함)입니다. 점수가 없으면 NotRanked. */
+        /** @brief 내 순위 주변을 조회합니다. 위아래로 @p radius 명씩이며 나를 포함합니다. 점수가 없으면 NotRanked 입니다. */
         void readAround( string_view boardID, AccountID accountID, int32 radius, int64 nowMs, uint64 requestTag );
-        /** @brief 통계를 바꿉니다(@p update 방식 — Best 는 큰 값). 그 통계에 건 표에 같은 값을 낸다. */
+        /** @brief 통계를 바꿉니다. @p update 방식을 따르며 Best 는 큰 값을 씁니다. 그 통계에 연결된 보드에 같은 값을 냅니다. */
         void changeStat( AccountID accountID, string_view displayName, string_view statName, int64 value, LeaderboardUpdate update, int64 nowMs, uint64 requestTag );
         void readStats( AccountID accountID, uint64 requestTag );
 
-        /** @brief 시즌 정산 작업을 올릴 예약 표입니다(빌려 쓴다 — `registerBoard` 전에. 없으면 정산은 `settleSeason` 을 부르는 쪽이). */
+        /** @brief 시즌 정산 작업을 등록할 예약 테이블을 지정합니다. 빌려 쓰며 `registerBoard` 전에 지정합니다. 없으면 `settleSeason` 을 부르는 쪽이 정산합니다. */
         void setScheduler( ServiceScheduler* pScheduler ) { _pScheduler = pScheduler; }
-        /** @brief 업적을 올립니다(기동 때 — 게임 데이터). 규칙 밖이면 false. */
+        /** @brief 업적을 등록합니다. 기동할 때 게임 데이터로 부르며, 규칙에 맞지 않으면 false 를 반환합니다. */
         [[nodiscard]] bool registerAchievement( const AchievementDefinition& definition );
         void               readAchievements( AccountID accountID, uint64 requestTag );
-        /** @brief 시즌 결과 하나(점수 · 순위 — 완료의 항목 하나, 기간 id = 시즌)입니다. 정산 전이거나 점수가 없었으면 NotRanked. */
+        /** @brief 시즌 결과 하나를 조회합니다. 점수와 순위이며 완료의 항목 하나이고 기간 id 가 시즌입니다. 정산 전이거나 점수가 없었으면 NotRanked 입니다. */
         void readSeasonResult( string_view boardID, uint32 seasonID, AccountID accountID, uint64 requestTag );
-        /** @brief 시즌 하나를 정산합니다(예약 작업이 부른다 — 테스트 · 운영은 직접). 끝나면 @p onDone( 모두 정산했나 ). */
+        /** @brief 시즌 하나를 정산합니다. 예약 작업이 부르며 테스트와 운영은 직접 부릅니다. 끝나면 @p onDone 을 부르며 인자는 모두 정산했는지 여부입니다. */
         void settleSeason( string_view boardID, uint32 seasonID, int64 nowMs, const SettlementDelegate& onDone );
         void drainAchievementUnlocks( vector<AchievementUnlock>& outListUnlock ) { _unlockBuffer.drainTo( outListUnlock ); }
-        /** @brief 시즌 정산 작업 id 입니다(`lb.settle.<표>.<시즌 16 진 8>`). */
+        /** @brief 시즌 정산 작업 id 를 만듭니다. `lb.settle.<보드>.<시즌 16진 8자리>` 형식입니다. */
         static string makeSettlementJobID( string_view boardID, uint32 seasonID );
 
         // IScheduledJobHandler
@@ -144,11 +146,11 @@ namespace sw
         void  drainCompletions( vector<LeaderboardCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
         int32 getPendingCount() const { return _pendingCount; }
 
-        /** @brief 캐시 점수 — 오름차순 표는 부호를 뒤집는다(두 번 부르면 원래 값). */
+        /** @brief 캐시 점수를 구합니다. 오름차순 보드는 부호를 뒤집으며 두 번 부르면 원래 값이 됩니다. */
         static int64  toCacheScore( LeaderboardOrder order, int64 score ) { return order == LeaderboardOrder::Ascending ? -score : score; }
         static string makeRankKey( string_view boardID, uint64 periodID );
 
-        /** @brief 일의 `complete` 가 부릅니다(키트 안). */
+        /** @brief 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
         void applyScoreWrite( const string& boardID, uint64 periodID, AccountID accountID, const string& displayName, int64 finalScore, bool bChanged,
                               LeaderboardResult result, uint64 requestTag, LeaderboardOperation operation, int64 nowMs );
         void applyStats( uint64 requestTag, LeaderboardResult result, vector<LeaderboardStat>&& listStat );
@@ -188,14 +190,14 @@ namespace sw
         void submitCacheScore( const string& rankKey, AccountID accountID, int64 cacheScore );
 
         unordered_map<string, LeaderboardDefinition>       _mapBoard;
-        unordered_map<string, vector<PendingRead>>         _mapRankKeyToWaitingRead; ///< 다시 채우는 동안 줄 선 읽기
-        unordered_map<string, vector<LeaderboardScoreRow>> _mapRankKeyToLateWrite;   ///< 다시 채우는 동안 쓴 점수(캐시 점수) — 채운 뒤 한 번 더
+        unordered_map<string, vector<PendingRead>>         _mapRankKeyToWaitingRead; ///< 다시 채우는 동안 대기 중인 읽기이다
+        unordered_map<string, vector<LeaderboardScoreRow>> _mapRankKeyToLateWrite;   ///< 다시 채우는 동안 쓴 점수(캐시 점수)이다. 채운 뒤 한 번 더 싣는다
         unordered_map<uint64, PendingRead>                 _mapReadyRequestToRead;
-        unordered_map<uint64, uint64>                      _mapRequestToQuery; ///< 캐시 요청 → 질의(순위 · 범위 · 이름)
+        unordered_map<uint64, uint64>                      _mapRequestToQuery; ///< 캐시 요청에서 질의(순위, 범위, 이름)로 가는 맵이다
         unordered_map<uint64, int32>                       _mapNameRequestToIndex;
         unordered_map<uint64, RankQuery>                   _mapQuery;
         unordered_map<string, AchievementDefinition>       _mapAchievement;
-        unordered_map<string, ScheduledRun>                _mapJobToRun; ///< 정산 작업 id → 차지한 회차(끝나면 completeRun)
+        unordered_map<string, ScheduledRun>                _mapJobToRun; ///< 정산 작업 id 에서 차지한 회차로 가는 맵이다. 끝나면 completeRun 을 부른다
         EventBuffer<AchievementUnlock>                     _unlockBuffer;
         EventBuffer<LeaderboardCompletion>                 _completionBuffer;
         LeaderboardServiceDependencies                     _dependencies;

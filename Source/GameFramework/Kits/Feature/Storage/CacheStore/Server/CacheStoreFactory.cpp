@@ -16,7 +16,7 @@ namespace sw
     {
         struct CacheStoreFactoryInternal
         {
-            /** @brief "memory" 캐시의 데이터 — 같은 프로세스의 앞들이 나눠 쓴다. */
+            /** @brief "memory" 캐시의 데이터입니다. 같은 프로세스의 저장소끼리 나눠 씁니다. */
             static MemoryEphemeralDatabase& getMemoryDatabase()
             {
                 static MemoryEphemeralDatabase s_database;
@@ -109,7 +109,7 @@ namespace sw
         StreamTransportSettings transportSettings;
         transportSettings._ioThreadCount      = 1;
         transportSettings._maxConnections     = 4;
-        transportSettings._idleTimeoutSeconds = 0.0; // 캐시 연결은 조용해도 산다(구독 연결)
+        transportSettings._idleTimeoutSeconds = 0.0; // 캐시 연결은 조용해도 유지한다. 구독 연결이 그렇다
         unique_ptr<RespEphemeralStore> store  = make_unique<RespEphemeralStore>();
         if ( store->initialize( std::move( transport ), transportSettings, settings, std::move( tlsContext ), outError ) == false )
             return nullptr;

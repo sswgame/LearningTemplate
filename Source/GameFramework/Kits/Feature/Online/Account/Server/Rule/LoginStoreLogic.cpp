@@ -21,7 +21,7 @@ namespace sw
         struct LoginStoreLogicInternal
         {
             static constexpr uint8 kRecordFormat       = 1;
-            static constexpr int32 kStoreRetryLimit    = 4; ///< 조건부 쓰기가 다른 쓰기와 부딪혔을 때 다시 읽는 수
+            static constexpr int32 kStoreRetryLimit    = 4; ///< 조건부 쓰기가 다른 쓰기와 부딪혔을 때 다시 읽는 횟수이다
             static constexpr int32 kMaxLinkCount       = 16;
             static constexpr int32 kDigestHexSize      = LoginConstant::kDigestSize * 2;
             static constexpr utf8  kDigestLabel[]      = "sw-login-token-digest-v1";
@@ -91,12 +91,12 @@ namespace sw
                 uint8                 _arrPasswordHash[LoginConstant::kPasswordHashSize]{};
             };
 
-            /** @brief 계정 프로필 — 모든 계정(이름 · 게스트 · 외부)에 하나. */
+            /** @brief 계정 프로필입니다. 이름, 게스트, 외부 계정을 가리지 않고 모든 계정에 하나씩 있습니다. */
             struct ProfileRecord
             {
-                string _nameKey{}; ///< 이름 · 비밀번호가 있으면 소문자 이름 키, 아니면 빈 글
+                string _nameKey{}; ///< 이름과 비밀번호가 있으면 소문자 이름 키이고, 아니면 빈 문자열이다
                 string _displayName{};
-                string _guestDigestHex{}; ///< 게스트 장치 다이제스트(지울 때 그 레코드를 찾는다), 없으면 빈 글
+                string _guestDigestHex{}; ///< 게스트 장치 다이제스트이다. 지울 때 그 레코드를 찾는 데 쓰며, 없으면 빈 문자열이다
                 int64  _deletionDueMs{ 0 };
                 uint64 _version{ 0 };
                 uint8  _bGuest{ SW_FALSE };
@@ -107,10 +107,10 @@ namespace sw
                 uint64            _accountID{ 0 };
                 int64             _issuedAtMs{ 0 };
                 int64             _expiresAtMs{ 0 };
-                int64             _resumeDeadlineMs{ 0 }; ///< 0 = 붙어 있다
+                int64             _resumeDeadlineMs{ 0 }; ///< 0이면 접속해 있다
                 uint32            _rotation{ 0 };
                 uint8             _arrTokenDigest[LoginConstant::kDigestSize]{};
-                LoginRevokeReason _revokeReason{ LoginRevokeReason::None }; ///< None 이 아니면 묘비
+                LoginRevokeReason _revokeReason{ LoginRevokeReason::None }; ///< None 이 아니면 묘비이다
             };
 
             static vector<uint8> encodeAccount( const AccountRecord& record )
@@ -233,7 +233,7 @@ namespace sw
                 return reader.hasOverflowed() ? 0 : id;
             }
 
-            /** @brief ASCII 영숫자 · _ 3..16 자를 소문자 키로 바꿉니다. 아니면 false 입니다. */
+            /** @brief ASCII 영숫자와 `_` 로 이루어진 3~16자 이름을 소문자 키로 바꿉니다. 규칙에 맞지 않으면 false 를 반환합니다. */
             [[nodiscard]] static bool normalizeLoginName( string_view loginName, string& outKey )
             {
                 const int32 size = static_cast<int32>( loginName.size() );
@@ -258,7 +258,7 @@ namespace sw
                 return LoginConstant::kMinPasswordSize <= size && size <= LoginConstant::kMaxPasswordSize;
             }
 
-            /** @brief 상수 시간 비교 — 첫 다른 바이트에서 멈추지 않는다. */
+            /** @brief 상수 시간으로 비교합니다. 처음 다른 바이트에서 멈추지 않습니다. */
             static bool isEqualConstantTime( const uint8* pFirst, const uint8* pSecond, int32 size )
             {
                 uint8 difference = 0;
@@ -298,7 +298,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 외부 주체 다이제스트 — 키 = 주체 글, 정보 = 라벨 ‖ 제공자 이름(제공자가 다르면 같은 주체 글도 다른 다이제스트). */
+            /** @brief 외부 주체의 다이제스트를 계산합니다. 키는 주체 문자열이고 정보는 라벨 뒤에 제공자 이름을 붙인 것이므로, 제공자가 다르면 같은 주체 문자열도 다른 다이제스트가 나옵니다. */
             [[nodiscard]] static bool computeSubjectDigestHex( ILoginCrypto& crypto, string_view provider, string_view subject, string& outHex )
             {
                 string info{ kSubjectLabel };
@@ -335,7 +335,7 @@ namespace sw
                 return key;
             }
 
-            /** @brief 표시 이름 끝에 붙이는 계정 id 꼬리 — 16 진 뒤 @p digitCount 자리입니다. */
+            /** @brief 표시 이름 끝에 붙이는 계정 id 꼬리입니다. 16진 문자열의 뒤쪽 @p digitCount 자리입니다. */
             static string makeIDSuffix( uint64 accountID, int32 digitCount )
             {
                 const string hex = ServiceKeyUtil::makeHex64( accountID );
@@ -344,7 +344,7 @@ namespace sw
 
             static string makeGuestDisplayName( uint64 accountID ) { return string( kGuestNamePrefix ) + makeIDSuffix( accountID, 6 ); }
 
-            /** @brief 제공자가 준 이름의 ASCII 영숫자 · _ 만 12 자까지 + "-" + 계정 id 꼬리 4 자리입니다(없으면 "Player"). */
+            /** @brief 제공자가 준 이름에서 ASCII 영숫자와 `_` 만 12자까지 남기고, "-" 와 계정 id 꼬리 4자리를 붙입니다. 이름이 없으면 "Player" 를 씁니다. */
             static string makePlatformDisplayName( string_view hint, uint64 accountID )
             {
                 string name;
@@ -364,7 +364,7 @@ namespace sw
                 return name;
             }
 
-            /** @brief 0 이 아닌 64 비트 난수입니다(0 은 "없음"). */
+            /** @brief 0이 아닌 64비트 난수를 반환합니다. 0은 "없음" 을 뜻하기 때문입니다. */
             [[nodiscard]] static bool makeNonZeroID( ILoginCrypto& crypto, uint64& outID )
             {
                 for ( int32 attempt = 0; attempt < 4; ++attempt )
@@ -386,7 +386,7 @@ namespace sw
                 return false;
             }
 
-            /** @brief 세션이 지금 쓸 수 있는가입니다. 아니면 그 결과입니다. */
+            /** @brief 세션을 지금 쓸 수 있는지 판정합니다. 쓸 수 없으면 그 이유를 결과로 반환합니다. */
             static LoginResult evaluateSession( const SessionRecord& session, int64 nowMs )
             {
                 if ( session._revokeReason != LoginRevokeReason::None )
@@ -398,7 +398,7 @@ namespace sw
                 return LoginResult::Ok;
             }
 
-            /** @brief 프로필을 읽습니다. 없으면 NotFound. */
+            /** @brief 프로필을 읽습니다. 없으면 NotFound 를 반환합니다. */
             static ServiceStoreResult readProfile( IServiceStoreConnection& connection, uint64 accountID, ProfileRecord& outProfile )
             {
                 ServiceRecord            raw;
@@ -413,7 +413,7 @@ namespace sw
                 return ServiceStoreResult::Ok;
             }
 
-            /** @brief 계정의 외부 연결(제공자 → 주체 다이제스트)을 읽습니다. */
+            /** @brief 계정의 외부 연결(제공자에서 주체 다이제스트로 가는 맵)을 읽습니다. */
             static ServiceStoreResult listAccountLinks( IServiceStoreConnection& connection, uint64 accountID, vector<ServiceRecord>& outListLink )
             {
                 string prefix = ServiceKeyUtil::makeHex64( accountID );
@@ -498,7 +498,7 @@ namespace sw
             if ( result == ServiceStoreResult::Conflict && info._conflictIndex == 0 )
                 return LoginResult::NameTaken;
             if ( result == ServiceStoreResult::Conflict )
-                continue; // 계정 id 가 겹쳤다(2^-64) — 새 id 로. SQL 의 직렬화 실패(번호 −1)도 다시 본다
+                continue; // 계정 id 가 겹쳤으므로(확률 2^-64) 새 id 로 다시 시도한다. SQL 의 직렬화 실패(버전 -1)도 다시 본다
             if ( result != ServiceStoreResult::Ok )
                 return LoginResult::StoreUnavailable;
             if ( pOutAccountID != nullptr )
@@ -556,7 +556,7 @@ namespace sw
                 return LoginResult::StoreUnavailable;
 
             ServiceTransaction transaction;
-            // 매개변수가 바뀌었으면 새 소금 · 새 값으로 다시 해시한다(비밀번호를 아는 지금만 할 수 있다).
+            // 매개변수가 바뀌었으면 새 솔트와 새 값으로 다시 해시한다. 비밀번호를 아는 지금만 할 수 있다.
             const bool bRehash         = account._params != _settings._passwordHashParams;
             const bool bAccountChanged = bRehash || account._failedCount != 0 || account._lockedUntilMs != 0;
             if ( bRehash )
@@ -583,9 +583,9 @@ namespace sw
                 return staged;
             const ServiceStoreResult commitResult = _connection.commit( transaction );
             if ( commitResult == ServiceStoreResult::Conflict )
-                continue; // 같은 계정이 그새 다른 곳에서 로그인했거나 실패 수가 바뀌었다 — 다시 읽는다
+                continue; // 같은 계정이 그사이 다른 곳에서 로그인했거나 실패 횟수가 바뀌었으므로 다시 읽는다
             if ( commitResult != ServiceStoreResult::Ok )
-                return LoginResult::StoreUnavailable; // 적용됐는지 모른다 — 클라이언트가 다시 로그인하면 그 세션을 밀어낸다
+                return LoginResult::StoreUnavailable; // 적용됐는지 알 수 없다. 클라이언트가 다시 로그인하면 그 세션을 밀어낸다
 
             recordSessionOpened( account._accountID, token, replacedSessionID );
             Internal::fillGrantIdentity( account._accountID, profile, token, expiresAtMs, replacedSessionID, outGrant );
@@ -642,7 +642,7 @@ namespace sw
                 return staged;
             const ServiceStoreResult commitResult = _connection.commit( transaction );
             if ( commitResult == ServiceStoreResult::Conflict )
-                continue; // 같은 장치가 그새 계정을 만들었거나 다른 곳에서 로그인했다 — 다시 읽는다
+                continue; // 같은 장치가 그사이 계정을 만들었거나 다른 곳에서 로그인했으므로 다시 읽는다
             if ( commitResult != ServiceStoreResult::Ok )
                 return LoginResult::StoreUnavailable;
 
@@ -748,12 +748,12 @@ namespace sw
             const LoginResult sanction = evaluateSanction( session._accountID, nowMs, outGrant );
             if ( sanction != LoginResult::Ok )
                 return sanction;
-            // 신원은 비밀을 바꾸기 **전에** 읽는다 — 못 읽으면 빈 신원으로 Ok 를 주지 않고, 클라이언트가 든 토큰도 살려 둔다(validateSession 과 같은 결과).
+            // 신원은 비밀을 바꾸기 **전에** 읽는다. 못 읽었는데 빈 신원으로 Ok 를 주면 안 되고, 클라이언트가 가진 토큰도 살려 둬야 하기 때문이다. validateSession 과 같은 결과이다.
             Internal::ProfileRecord profile;
             if ( Internal::readProfile( _connection, session._accountID, profile ) != ServiceStoreResult::Ok )
                 return LoginResult::StoreUnavailable;
 
-            // 재접속마다 비밀을 돌려 바꾼다 — 옛 토큰은 이 커밋으로 죽는다.
+            // 재접속할 때마다 비밀을 새로 바꾼다. 이전 토큰은 이 커밋으로 무효가 된다.
             LoginSessionToken rotated;
             rotated._sessionID     = token._sessionID;
             const bool bSecretMade = _crypto.fillRandom( rotated._arrSecret, LoginConstant::kTokenSecretSize );
@@ -765,7 +765,7 @@ namespace sw
             transaction.put( Internal::getSessionTable(), sessionKey, Internal::encodeSession( session ), sessionRaw._version );
             const ServiceStoreResult commitResult = _connection.commit( transaction );
             if ( commitResult == ServiceStoreResult::Conflict )
-                continue; // 같은 토큰으로 그새 돌아온 쪽이 있다 — 다시 읽으면 비밀이 달라 InvalidToken 이 된다
+                continue; // 같은 토큰으로 그사이 돌아온 쪽이 있다. 다시 읽으면 비밀이 달라서 InvalidToken 이 된다
             if ( commitResult != ServiceStoreResult::Ok )
                 return LoginResult::StoreUnavailable;
 
@@ -934,7 +934,7 @@ namespace sw
             ServiceCommitInfo        info;
             const ServiceStoreResult commitResult = _connection.commit( transaction, &info );
             if ( commitResult == ServiceStoreResult::Conflict && info._conflictIndex == 0 )
-                return LoginResult::AlreadyLinked; // 이름이 다른 계정 것이다 — 합치지 않는다
+                return LoginResult::AlreadyLinked; // 이름이 다른 계정의 것이므로 합치지 않는다
             if ( commitResult == ServiceStoreResult::Conflict )
                 continue;
             if ( commitResult != ServiceStoreResult::Ok )
@@ -978,7 +978,7 @@ namespace sw
             const ServiceStoreResult commitResult = _connection.commit( transaction, &info );
             const bool               bTaken       = commitResult == ServiceStoreResult::Conflict && ( info._conflictIndex == 0 || info._conflictIndex == 1 );
             if ( bTaken )
-                return LoginResult::AlreadyLinked; // 그 주체가 다른 계정 것이거나 이 계정에 그 제공자가 이미 있다
+                return LoginResult::AlreadyLinked; // 그 주체가 다른 계정의 것이거나 이 계정에 그 제공자가 이미 있다
             if ( commitResult == ServiceStoreResult::Conflict )
                 continue;
             if ( commitResult != ServiceStoreResult::Ok )
@@ -1146,7 +1146,7 @@ namespace sw
                 continue;
             }
             if ( static_cast<int64>( dueMs ) > nowMs )
-                break; // 키 순서 = 예약 시각 순서 — 뒤는 모두 아직이다
+                break; // 키 순서가 예약 시각 순서이므로 뒤의 항목은 모두 아직 지울 때가 아니다
             const LoginResult purged = purgeAccount( accountID, due._key, nowMs );
             if ( purged == LoginResult::StoreUnavailable )
                 break;
@@ -1163,7 +1163,7 @@ namespace sw
         const bool               bStale      = profileRead == ServiceStoreResult::NotFound || ( profileRead == ServiceStoreResult::Ok && profile._deletionDueMs == 0 );
         if ( bStale )
         {
-            // 취소했거나 이미 지운 계정의 낡은 색인 — 색인만 지운다.
+            // 취소했거나 이미 지운 계정의 낡은 인덱스이므로 인덱스만 지운다.
             ServiceTransaction cleanup;
             cleanup.erase( Internal::getDeletionTable(), deletionKey );
             return _connection.commit( cleanup ) == ServiceStoreResult::Unavailable ? LoginResult::StoreUnavailable : LoginResult::NotLinked;
@@ -1202,7 +1202,7 @@ namespace sw
         ServiceAuditLog::stageEntry( transaction, audit, accountID, static_cast<uint64>( profile._deletionDueMs ) );
         const ServiceStoreResult commitResult = _connection.commit( transaction );
         if ( commitResult == ServiceStoreResult::Conflict )
-            return LoginResult::NotLinked; // 그새 취소 · 로그인 — 다음 쓸기에서 다시 본다
+            return LoginResult::NotLinked; // 그사이 취소했거나 로그인했으므로 다음 정리에서 다시 본다
         return commitResult == ServiceStoreResult::Ok ? LoginResult::Ok : LoginResult::StoreUnavailable;
     }
 
@@ -1214,7 +1214,7 @@ namespace sw
             ServiceRecord            sessionRaw;
             const ServiceStoreResult readResult = _connection.readRecord( Internal::getSessionTable(), ServiceKeyUtil::makeHex64( online._sessionID ), sessionRaw );
             if ( readResult == ServiceStoreResult::Unavailable )
-                return; // 저장소가 아프면 아무도 끊지 않는다
+                return; // 저장소에 문제가 있으면 아무도 끊지 않는다
             Internal::SessionRecord session;
             const bool              bReadable = readResult == ServiceStoreResult::Ok && Internal::decodeSession( sessionRaw._bytes, session );
             if ( bReadable && Internal::evaluateSession( session, nowMs ) == LoginResult::Ok )
@@ -1270,7 +1270,7 @@ namespace sw
         }
         ServiceTransaction transaction;
         transaction.put( Internal::getAccountTable(), nameKey, Internal::encodeAccount( account ), accountVersion );
-        // 동시에 틀린 시도가 겹치면 하나는 세지 못한다(Conflict) — 시도 제한(버킷)이 따로 막으므로 다시 읽지 않는다.
+        // 틀린 시도가 동시에 겹치면 하나는 세지 못한다(Conflict). 시도 제한(버킷)이 따로 막으므로 다시 읽지 않는다.
         (void)_connection.commit( transaction );
         return result;
     }

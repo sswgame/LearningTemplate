@@ -26,7 +26,7 @@ namespace sw
             static constexpr int64 kShutdownWaitMs = 5000;
         };
 
-        /** @brief 우편함 요청 하나의 저장 왕복입니다. */
+        /** @brief 우편함 요청 하나의 저장소 왕복입니다. */
         class MailboxRequestWork final : public IServiceStoreWork
         {
         public:
@@ -87,14 +87,14 @@ namespace sw
 
         private:
             MailboxCall                 _call;
-            vector<ServiceMailCampaign> _listCampaign; ///< 목록 첫 쪽에 끼울 활성 캠페인(복사 — 서비스 멤버를 만지지 않는다)
+            vector<ServiceMailCampaign> _listCampaign; ///< 목록 첫 페이지에 끼울 활성 캠페인이다. 복사한 값이며 서비스 멤버를 건드리지 않는다
             MailboxReply                _reply;
             MailboxService*             _pService;
             const ILedgerPolicy*        _pPolicy;
             uint64                      _callID;
         };
 
-        /** @brief 만료 쓸기 한 번입니다. */
+        /** @brief 만료 정리 한 번입니다. */
         class MailboxSweepWork final : public IServiceStoreWork
         {
         public:
@@ -269,7 +269,7 @@ namespace sw
         else if ( call._accountID == kInvalidAccountID )
             refused._result = MailboxResult::NotSignedIn;
         else if ( MailboxMethod::isClaim( call._method ) && call._idempotencyKey.isValid() == false )
-            refused._result = MailboxResult::InvalidRequest; // 수령은 멱등 키 필수
+            refused._result = MailboxResult::InvalidRequest; // 수령에는 멱등 키가 필수이다
         if ( refused._result != MailboxResult::Ok )
         {
             finishCall( pendingIndex, refused );
@@ -306,7 +306,7 @@ namespace sw
         if ( stats._failedCount > 0 )
             SW_LOG_WARNING( "Mail sweep left %# expired mails for the next pass", stats._failedCount );
         if ( stats._bMore == SW_TRUE )
-            _bSweepRequested = SW_TRUE; // 상한까지 채웠다 — 다음 틱에 바로 또
+            _bSweepRequested = SW_TRUE; // 상한까지 채웠으므로 다음 틱에 바로 다시 정리한다
     }
 
     void MailboxService::completeCampaignRefresh( ServiceStoreResult result, vector<ServiceMailCampaign>& inoutListCampaign )

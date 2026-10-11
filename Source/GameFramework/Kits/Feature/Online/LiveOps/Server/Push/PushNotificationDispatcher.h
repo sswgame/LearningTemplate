@@ -1,12 +1,13 @@
 /**
  * @file PushNotificationDispatcher.h
- * @brief 푸시 발송기 — 계정마다 도배 제한, 기기 목록 읽기(영속 `liveops_device`), 기기마다 배달, 결과에 따라 지우기 · 물러났다 다시. 서비스 스레드 하나.
- * @details - 기기 레코드 키 `<계정 16 진>/<제공자>.<토큰 해시 16 진>`(같은 토큰 다시 등록 = 덮음), 값 `[판 1][제공자 · 토큰 · 언어 · 등록 시각]`. 계정마다 10 개 — 넘으면
- *            가장 오래 등록된 것을 같은 트랜잭션에서 지운다.
- *          - 결과: InvalidToken 은 기기를 지우고, Transient · RateLimited 는 1 · 2 · 4 · 8 초 물러났다(제공자가 준 시간이 더 길면 그만큼) 다섯 번까지, Rejected 는 버린다(경고).
- *            이 서버 빌드에 없는 제공자의 기기(개발 서버의 실제 제공자)는 건너뛴다.
- *          - 붙어 있는 계정에게는 게임 알림이 먼저다 — "오프라인이면 푸시" 는 부르는 쪽(게임 · 우편 · 이벤트)이 정한다.
- *          PlayFab Push 의 등록 + FCM 관례(무효 토큰이면 등록을 지운다)와 같다.
+ * @brief 푸시 발송기입니다. 계정마다 도배를 제한하고, 기기 목록(영속 테이블 `liveops_device`)을 읽어 기기마다 배달하며, 결과에 따라 기기를 지우거나 백오프 뒤 다시 보냅니다. 서비스 스레드 하나에서 씁니다.
+ * @details - 기기 레코드의 키는 `<계정 16진>/<제공자>.<토큰 해시 16진>` 이며 같은 토큰을 다시 등록하면 덮어쓴다. 값은 `[버전 1][제공자, 토큰, 언어, 등록 시각]` 이다.
+ *            계정마다 10개까지 두며 넘으면 가장 오래 등록된 것을 같은 트랜잭션에서 지운다.
+ *          - 결과에 따른 처리는 다음과 같다. InvalidToken 은 기기를 지운다. Transient 와 RateLimited 는 1, 2, 4, 8초 백오프로 최대 다섯 번까지 다시 보내며, 제공자가 준 시간이 더 길면 그 시간을 쓴다.
+ *            Rejected 는 경고를 남기고 버린다. 이 서버 빌드에 없는 제공자의 기기(개발 서버의 실제 제공자)는 건너뛴다.
+ *          - 접속해 있는 계정에게는 게임 알림이 먼저이다. "오프라인이면 푸시" 는 호출하는 쪽(게임, 우편, 이벤트)이 정한다.
+ *
+ *          PlayFab Push 의 등록과 FCM 관례(무효 토큰이면 등록을 지운다)와 같다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -25,28 +26,28 @@ namespace sw
     /** @brief 발송기 설정입니다. */
     struct PushDispatcherSettings
     {
-        int64 _accountRefillIntervalMs{ 600000 }; ///< 계정마다 10 분에 하나 다시 채움
-        int32 _accountBurst{ 6 };                 ///< 몰아 보내기 상한
-        int32 _maxTrackedAccountCount{ 100000 };  ///< 도배 제한이 들고 있는 계정 수 상한
+        int64 _accountRefillIntervalMs{ 600000 }; ///< 계정마다 10분에 하나씩 다시 채운다
+        int32 _accountBurst{ 6 };                 ///< 한꺼번에 보낼 수 있는 상한이다
+        int32 _maxTrackedAccountCount{ 100000 };  ///< 도배 제한이 보관하는 계정 수의 상한이다
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 발송 수치입니다(관측 · 테스트). */
+    /** @brief 발송 통계입니다. 관측과 테스트에 씁니다. */
     struct PushDispatcherStats
     {
         uint64 _sentCount{ 0 };
         uint64 _deliveredCount{ 0 };
-        uint64 _droppedCount{ 0 }; ///< 다시 하기를 다 썼거나 Rejected
+        uint64 _droppedCount{ 0 }; ///< 재시도를 모두 소진했거나 Rejected 인 횟수이다
         uint64 _invalidTokenCount{ 0 };
-        uint64 _rateLimitedCount{ 0 }; ///< 계정 도배 제한으로 보내지 않음
+        uint64 _rateLimitedCount{ 0 }; ///< 계정 도배 제한 때문에 보내지 않은 횟수이다
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 기기 등록 · 해지 요청의 완료입니다. */
+    /** @brief 기기 등록과 해지 요청의 완료입니다. */
     struct PushDeviceCompletion
     {
         uint64        _requestTag{ 0 };
@@ -68,17 +69,17 @@ namespace sw
         PushNotificationDispatcher( const PushNotificationDispatcher& )            = delete;
         PushNotificationDispatcher& operator=( const PushNotificationDispatcher& ) = delete;
 
-        /** @brief @p pStore 는 빌려 쓴다 — 맡긴 일은 저장소의 `shutdown` · `pollCompletions` 가 거두므로 이 객체는 그때까지 살아 있어야 한다. */
+        /** @brief @p pStore 는 빌려 씁니다. 맡긴 작업은 저장소의 `shutdown` 과 `pollCompletions` 가 회수하므로 이 객체는 그때까지 살아 있어야 합니다. */
         void initialize( IServiceStore* pStore, const PushDispatcherSettings& settings );
-        /** @brief 제공자를 올립니다(빌려 쓴다). 같은 id 가 있으면 false. */
+        /** @brief 제공자를 등록합니다. 빌려 쓰는 포인터이며 같은 id 가 있으면 false 를 반환합니다. */
         [[nodiscard]] bool registerProvider( IPushNotificationProvider* pProvider );
 
-        /** @brief 계정의 모든 기기에 보냅니다. 도배 제한에 걸리면 false(보내지 않음). */
+        /** @brief 계정의 모든 기기에 보냅니다. 도배 제한에 걸리면 보내지 않고 false 를 반환합니다. */
         bool notifyAccount( AccountID accountID, const PushNotificationMessage& message, int64 nowMs );
-        /** @brief 제공자 결과 거두기 · 물러남이 끝난 배달 다시. 저장소 완료는 호스트(또는 서버 루프)가 비운다. */
+        /** @brief 제공자의 결과를 회수하고, 백오프가 끝난 배달을 다시 보냅니다. 저장소 완료는 호스트(또는 서버 루프)가 비웁니다. */
         void tick( int64 nowMs );
 
-        // 기기 등록(바인딩이 부른다 — 완료는 꼬리표, 0 이면 완료 없음)
+        // 기기 등록 함수들이며 바인딩이 부른다. 완료는 요청 태그로 받고, 태그가 0이면 완료가 없다
         void registerDevice( AccountID accountID, const PushDeviceRegistration& registration, uint64 requestTag );
         void unregisterDevice( AccountID accountID, string_view providerID, string_view token, uint64 requestTag );
         void drainCompletions( vector<PushDeviceCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
@@ -91,7 +92,7 @@ namespace sw
         static string makeDeviceKey( AccountID accountID, string_view providerID, string_view token );
         static string makeAccountPrefix( AccountID accountID );
 
-        /** @brief 저장소 일의 `complete` 가 부른다(키트 안). */
+        /** @brief 저장소 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
         void applyDevices( AccountID accountID, const PushNotificationMessage& message, vector<PushDeviceRegistration>&& listDevice, int64 nowMs );
         void applyWrite( uint64 requestTag, LiveOpsResult result );
 
@@ -102,7 +103,7 @@ namespace sw
             PushDeviceRegistration  _device{};
             AccountID               _accountID{ kInvalidAccountID };
             int64                   _nextAttemptMs{ 0 };
-            int32                   _attempt{ 0 }; ///< 실패한 횟수
+            int32                   _attempt{ 0 }; ///< 실패한 횟수이다
             uint8                   _bInFlight{ SW_FALSE };
         };
 

@@ -23,16 +23,16 @@ namespace sw
             static constexpr const utf8* kReadHistorySQL   = "SELECT version, checksum FROM sw_schema_migration";
             static constexpr const utf8* kInsertHistorySQL = "INSERT INTO sw_schema_migration ( version, name, checksum, applied_at_ms ) VALUES ( ?, ?, ?, ? )";
 
-            /** @brief 파일 이름 하나를 읽은 것입니다. */
+            /** @brief 파일 이름 하나를 해석한 결과입니다. */
             struct MigrationFile
             {
                 string _path{};
                 string _name{};
-                string _driverName{}; ///< 비면 공통 파일
+                string _driverName{}; ///< 비면 공통 파일이다
                 int32  _version{ 0 };
             };
 
-            /** @brief `NNNN_이름.sql` · `NNNN_이름.<드라이버>.sql` 을 읽습니다. 형식이 아니면 false 입니다. */
+            /** @brief `NNNN_이름.sql` 과 `NNNN_이름.<드라이버>.sql` 을 해석합니다. 형식이 아니면 false 를 반환합니다. */
             [[nodiscard]] static bool parseFileName( string_view fileName, MigrationFile& outFile )
             {
                 const string_view suffix = ".sql";
@@ -91,7 +91,7 @@ namespace sw
             outError = "cannot read the migration folder '" + string( folderPath ) + "'";
             return false;
         }
-        // 번호 → (공통 파일, 이 드라이버 갈래). 다른 드라이버의 갈래는 번호를 차지만 하고 쓰지 않는다.
+        // 번호별로 (공통 파일, 이 드라이버의 방언 파일)을 모은다. 다른 드라이버의 방언 파일은 번호만 차지하고 쓰지 않는다.
         map<int32, SQLMigrationRunnerInternal::MigrationFile> mapCommon;
         map<int32, SQLMigrationRunnerInternal::MigrationFile> mapDriver;
         map<int32, bool>                                      mapSeen;

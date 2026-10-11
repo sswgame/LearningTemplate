@@ -83,7 +83,7 @@ namespace sw
 
     void EconomyClient::onServicePush( uint16 kind, BitReader& body )
     {
-        (void)kind; // 경제 서비스는 아직 알림을 보내지 않는다(잔액은 응답에 실린다)
+        (void)kind; // 경제 서비스는 아직 알림을 보내지 않는다. 잔액은 응답에 실린다
         (void)body;
     }
 
@@ -110,7 +110,7 @@ namespace sw
         const uint64 clientID   = _pClient->sendRequest( method, body, options, OnlineResponseDelegate::create<&EconomyClient::onResponse>( this ) );
         _bSending               = SW_FALSE;
         if ( _sendingCall._requestID != 0 )
-            _mapClientIDToCall[clientID] = _sendingCall; // 그 자리에서 끝나지 않았다 — 응답을 기다린다
+            _mapClientIDToCall[clientID] = _sendingCall; // 그 자리에서 끝나지 않았으므로 응답을 기다린다
         _sendingCall = PendingCall{};
         return requestID;
     }

@@ -104,7 +104,7 @@ namespace sw
                 transfer._timeMs     = command._nowMs;
                 transfer._actorID    = command._adminID;
                 transfer._actorKind  = LedgerActorKind::Admin;
-                transfer._bAllowDebt = bRefund ? SW_TRUE : SW_FALSE; // 환불 회수만 빚 허용 — 이미 쓴 재화도 거둔다
+                transfer._bAllowDebt = bRefund ? SW_TRUE : SW_FALSE; // 환불 회수만 빚을 허용한다. 이미 쓴 재화도 회수한다
                 if ( bGrant )
                     transfer._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), account, request._assetID, magnitude } );
                 else
@@ -152,7 +152,7 @@ namespace sw
                 const AdminRequest& request = command._request;
                 for ( const AccountID recipient : request._listAccountID )
                 {
-                    // 받는 계정마다 배치 키 — 끊긴 뒤 다시 돌리면 이미 보낸 계정은 건너뛴다.
+                    // 받는 계정마다 배치 키를 둔다. 중간에 끊긴 뒤 다시 돌리면 이미 보낸 계정은 건너뛴다.
                     string             key = "bulk." + ServiceKeyUtil::makeHex64( request._batchID ) + "." + ServiceKeyUtil::makeHex64( recipient );
                     string             mailKey;
                     bool               bReplayed = false;
@@ -171,7 +171,7 @@ namespace sw
             {
                 const AdminRequest& request = command._request;
                 if ( request._accountID == command._adminID )
-                    return AdminResult::Forbidden; // 자기 등급은 못 바꾼다(마지막 Super 가 스스로 잠그지 않게)
+                    return AdminResult::Forbidden; // 자기 등급은 바꿀 수 없다. 마지막 Super 가 스스로 권한을 잃지 않게 하려는 것이다
                 AdminRole current = AdminRole::None;
                 uint64    version = 0;
                 if ( AdminStoreLogic::readRole( connection, request._accountID, current, version ) != ServiceStoreResult::Ok )
@@ -192,7 +192,7 @@ namespace sw
                 return AdminResult::Ok;
             }
 
-            /** @brief 바꾸는 명령 하나의 효과를 @p inoutTransaction 에 붙입니다(감사 줄 포함). */
+            /** @brief 상태를 바꾸는 명령 하나의 효과를 @p inoutTransaction 에 붙입니다. 감사 기록도 포함합니다. */
             static AdminResult stageEffect( IServiceStoreConnection& connection, const AdminCommand& command, ServiceTransaction& inoutTransaction, AdminReply& outReply )
             {
                 const AdminRequest& request = command._request;
@@ -382,7 +382,7 @@ namespace sw
             const ServiceStoreResult found = ServiceIdempotency::findReply( connection, scope, command._keyHigh, command._keyLow, listStoredReply );
             if ( found == ServiceStoreResult::Ok )
             {
-                // 지난 결과 — 멱등 기록에는 결과 한 바이트만 있다(세션 끊기 표시는 실리지 않아 재시도가 두 번 끊지 않는다).
+                // 지난 결과이다. 멱등 기록에는 결과 한 바이트만 있고 세션 끊기 표시는 실리지 않으므로 재시도가 두 번 끊지 않는다.
                 outReply._bReplayed  = SW_TRUE;
                 const bool bStoredOk = listStoredReply.size() == 1 && listStoredReply[0] < static_cast<uint8>( AdminResult::Count );
                 return AdminStoreLogicInternal::finish( outReply, bStoredOk ? static_cast<AdminResult>( listStoredReply[0] ) : AdminResult::Ok );
@@ -409,7 +409,7 @@ namespace sw
                 return AdminStoreLogicInternal::finish( outReply, AdminResult::InvalidRequest );
             if ( committed == ServiceStoreResult::Unavailable )
             {
-                // 적용됐는지 모른다 — 멱등 기록이 있으면 들어간 것이다.
+                // 적용됐는지 알 수 없다. 멱등 기록이 있으면 적용된 것이다.
                 const ServiceStoreResult recheck = ServiceIdempotency::findReply( connection, scope, command._keyHigh, command._keyLow, listStoredReply );
                 if ( recheck != ServiceStoreResult::Ok )
                     return AdminStoreLogicInternal::finish( outReply, AdminResult::Unavailable );
@@ -417,7 +417,7 @@ namespace sw
                 outReply._bReplayed = SW_TRUE;
                 return AdminStoreLogicInternal::finish( outReply, AdminResult::Ok );
             }
-            // Conflict — 다음 돌기의 멱등 기록 확인이 "이미 됐다" 를 가린다
+            // Conflict 이다. 다음 반복의 멱등 기록 확인이 "이미 됐다" 를 가려 준다
         }
         return AdminStoreLogicInternal::finish( outReply, AdminResult::Busy );
     }
@@ -429,7 +429,7 @@ namespace sw
         if ( readRole( connection, accountID, current, version ) != ServiceStoreResult::Ok )
             return AdminResult::Unavailable;
         if ( version != 0 )
-            return AdminResult::Ok; // 이미 있다 — 설정 파일이 운영 중 바뀐 등급을 덮지 않는다
+            return AdminResult::Ok; // 이미 있으므로 설정 파일이 운영 중에 바뀐 등급을 덮어쓰지 않는다
         ServiceTransaction transaction;
         transaction.put( getRoleTable(), ServiceKeyUtil::makeHex64( accountID ), vector<uint8>{ static_cast<uint8>( role ) }, ServiceRecord::kAbsentVersion );
         ServiceAuditEntry audit;

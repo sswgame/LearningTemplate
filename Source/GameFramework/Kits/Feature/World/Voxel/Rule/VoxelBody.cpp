@@ -12,7 +12,7 @@ namespace sw
     {
         struct VoxelBodyInternal
         {
-            /** @brief 몸 상자가 경계에 딱 붙어 있어도 겹침으로 치지 않게 줄이는 여유입니다. */
+            /** @brief 몸 상자가 경계에 딱 붙어 있어도 겹친 것으로 보지 않게 상자를 줄이는 여유입니다. */
             static constexpr float32 kSkin = 1.0e-3f;
 
             static float32 getAxis( const float3& value, int32 axis ) { return axis == 0 ? value._x : ( axis == 1 ? value._y : value._z ); }
@@ -101,7 +101,7 @@ namespace sw
                                ? SW_TRUE
                                : SW_FALSE;
 
-        // 수평 — 원하는 속도로 다가간다(땅에서 빠르게, 공중에서 느리게).
+        // 수평 이동은 원하는 속도로 다가간다. 땅에서는 빠르게, 공중에서는 느리게 다가간다.
         float3        wish{ wishDirection._x, 0.0f, wishDirection._z };
         const float32 wishLength = wish.getLength();
         if ( wishLength > 1.0f )
@@ -113,7 +113,7 @@ namespace sw
         _velocity._x               = MathUtil::moveToward( _velocity._x, wish._x * speed, acceleration * deltaTime );
         _velocity._z               = MathUtil::moveToward( _velocity._z, wish._z * speed, acceleration * deltaTime );
 
-        // 수직 — 중력 · 점프 · 헤엄.
+        // 수직 이동은 중력, 점프, 헤엄을 처리한다.
         if ( _bInWater != SW_FALSE )
         {
             _velocity._y -= _settings._gravity * 0.2f * deltaTime;
@@ -140,7 +140,7 @@ namespace sw
         if ( moveAxis( world, 2, _velocity._z * deltaTime ) )
             _velocity._z = 0.0f;
 
-        // 서 있는지 — 움직이지 않아도 발밑을 본다(점프 판정이 한 걸음 늦지 않게).
+        // 서 있는지 확인한다. 움직이지 않아도 발밑을 봐야 점프 판정이 한 걸음 늦어지지 않는다.
         if ( _bOnGround == SW_FALSE && _velocity._y <= 0.0f )
         {
             float3 probe = _position;
@@ -161,7 +161,7 @@ namespace sw
             _position = target;
             return false;
         }
-        // 막혔다 — 닿는 칸 경계에 붙인다. 몸의 앞쪽 면이 다음 정수 경계에 오도록.
+        // 막혔으므로 닿는 블록 경계에 붙인다. 몸의 앞쪽 면이 다음 정수 경계에 오게 한다.
         const float32 current    = VoxelBodyInternal::getAxis( _position, axis );
         const float32 lowExtent  = ( axis == 1 ) ? 0.0f : _settings._halfWidth;
         const float32 highExtent = ( axis == 1 ) ? _settings._height : _settings._halfWidth;
@@ -170,7 +170,7 @@ namespace sw
             snapped = MathUtil::floor( current + highExtent + delta ) - highExtent - VoxelBodyInternal::kSkin * 0.5f;
         else
             snapped = MathUtil::floor( current - lowExtent + delta ) + 1.0f + lowExtent + VoxelBodyInternal::kSkin * 0.5f;
-        // 붙인 자리가 처음보다 뒤로 가거나 그 자리도 막혔으면 움직이지 않는다.
+        // 붙인 위치가 처음보다 뒤로 가거나 그 위치도 막혔으면 움직이지 않는다.
         const bool bForward = ( delta > 0.0f ) ? ( snapped >= current ) : ( snapped <= current );
         VoxelBodyInternal::setAxis( target, axis, snapped );
         if ( bForward && isBlockedAt( world, target ) == false )

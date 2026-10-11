@@ -14,7 +14,7 @@ namespace sw
     {
         struct NetSimHarnessInternal
         {
-            /** @brief 씨앗 하나에서 엔드포인트마다 다른 씨앗을 냅니다(splitmix64 한 걸음). */
+            /** @brief 시드 하나에서 엔드포인트마다 다른 시드를 만듭니다(splitmix64 한 단계). */
             static uint64 mixSeed( uint64 seed, uint64 salt )
             {
                 uint64 value = seed + HashUtil::kGoldenRatio64 * ( salt + 1u );
@@ -128,7 +128,7 @@ namespace sw
             }
             _pSession->onTickBegin( *this, deltaTime );
         }
-        // 씬의 `tick` 이 아니라 매니저를 바로 — 씬은 오디오 리스너 · 에미터를 프로세스에 하나인 오디오 엔진에 넣는다(월드가 여럿이면 서로 덮는다).
+        // 씬의 `tick` 이 아니라 매니저를 직접 틱한다. 씬은 오디오 리스너와 에미터를 프로세스에 하나뿐인 오디오 엔진에 넣으므로, 월드가 여럿이면 서로 덮어쓴다.
         getObjectManager().tick( deltaTime );
         if ( _pSession != nullptr )
             _pSession->onTickEnd( *this, deltaTime );
@@ -145,7 +145,7 @@ namespace sw
         if ( manager.hasBegunPlay() )
         {
             manager.endPlay();
-            manager.tick( 0.0f ); // 끝난 플레이의 물리 바디를 놓는다
+            manager.tick( 0.0f ); // 끝난 플레이의 물리 바디를 해제한다
         }
         _pSession.reset();
         _pScene.reset();
@@ -240,7 +240,7 @@ namespace sw
     {
         NetHostSettings hostSettings = _settings._hostSettings;
         hostSettings._saltSeed       = NetSimHarnessInternal::mixSeed( _settings._seed, 0x10000u + static_cast<uint64>( worldIndex ) ) | 1u;
-        // 보내기 간격이 틱의 배수면 틱 시각(틱 × 간격)의 반올림 때문에 한 틱 늦게 나갈 수 있다 — 반 틱 당겨 "k 틱마다 한 번" 이 정확히 지켜지게.
+        // 송신 간격이 틱의 배수일 때 틱 시각(틱 × 간격)의 반올림 오차로 한 틱 늦게 나갈 수 있다. 반 틱 앞당겨서 "k 틱마다 한 번" 이 정확히 지켜지게 한다.
         hostSettings._sendInterval = MathUtil::max( 0.0, hostSettings._sendInterval - _settings._tickInterval * 0.5 );
         return sw_new NetSimWorld( role, worldIndex, link._pEmulation.get(), hostSettings );
     }
@@ -275,7 +275,7 @@ namespace sw
             NetSimWorld& world = *_listClient[index];
             if ( world.getWorldIndex() != worldIndex )
                 continue;
-            // 끊김 알림을 흉내 줄에 넣는다 — 엔드포인트(Link)은 남아 다음 망 단계들이 마저 내보낸다.
+            // 끊김 알림을 흉내 큐에 넣는다. 엔드포인트(Link)는 남아 있으므로 이후 망 단계에서 마저 내보낸다.
             world.getHost().disconnectAll();
             world.getHost().update( _time );
             _listClient.erase( _listClient.begin() + static_cast<std::ptrdiff_t>( index ) );
@@ -353,19 +353,19 @@ namespace sw
 
     void NetSimHarness::updateNetwork()
     {
-        // 1) 보내기 — 이번 틱에 쌓인 메시지가 패킷이 되어 흉내 줄로 간다.
+        // 1) 송신: 이번 틱에 쌓인 메시지가 패킷이 되어 흉내 큐로 간다.
         _pServer->getHost().update( _time );
         for ( unique_ptr<NetSimWorld>& pWorld : _listClient )
         {
             pWorld->getHost().update( _time );
         }
-        // 2) 흉내 줄에서 때가 된 것을 망에 싣고 망이 배달한다(떠난 클라이언트의 엔드포인트도 — 끊김 알림이 아직 줄에 있을 수 있다).
+        // 2) 흉내 큐에서 전달 시각이 된 패킷을 망에 싣고 망이 배달한다. 떠난 클라이언트의 엔드포인트도 처리한다. 끊김 알림이 아직 큐에 있을 수 있기 때문이다.
         for ( unique_ptr<Link>& pLink : _listLink )
         {
             pLink->_pEmulation->update( _time );
         }
         _pNetwork->deliverInFlight();
-        // 3) 받기 — 같은 시각이라 보내기 간격이 막아 다시 보내지는 않는다.
+        // 3) 수신: 같은 시각이므로 송신 간격에 막혀 다시 보내지는 않는다.
         _pServer->getHost().update( _time );
         for ( unique_ptr<NetSimWorld>& pWorld : _listClient )
         {

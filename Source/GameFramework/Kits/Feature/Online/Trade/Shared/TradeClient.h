@@ -1,9 +1,9 @@
 /**
  * @file TradeClient.h
- * @brief 거래 키트의 클라이언트 — `OnlineServiceClient` 에 올리는 `IOnlineClientService`. 신청 · 수락 · 제시 · 잠금 · 확정 · 취소를 보내고 응답 · 알림(스냅숏)을 꺼냅니다.
- * @details - 모든 요청에 멱등 키 — 같은 버튼 두 번 · 다시 연결한 뒤의 재시도가 두 번 적용되지 않는다(정산은 분개 키로도 막힌다). 재시도는 응답에 실린 키를 다시 넘긴다.
- *          - 화면이 비추는 스냅숏 하나(`getSnapshot`)를 든다 — 확정은 그 스냅숏의 두 판을 싣는다(내가 본 것만 확정).
- *          - 정산 잔액(`TradeBalance`)은 게임이 지갑 · 인벤토리 거울에 넣는다(키트끼리 모른다 — 원장이 소유의 원본, 사용자 결정 5).
+ * @brief 거래 키트의 클라이언트입니다. `OnlineServiceClient` 에 등록하는 `IOnlineClientService` 이며, 신청, 수락, 제시, 잠금, 확정, 취소를 보내고 응답과 알림(스냅샷)을 꺼냅니다.
+ * @details - 모든 요청에 멱등 키를 싣는다. 같은 버튼을 두 번 누르거나 다시 연결한 뒤 재시도해도 두 번 적용되지 않는다. 정산은 분개 키로도 막힌다. 재시도할 때는 응답에 실린 키를 다시 넘긴다.
+ *          - 화면이 비추는 스냅샷 하나(`getSnapshot`)를 보관한다. 확정은 그 스냅샷의 두 버전을 싣는다. 내가 본 것만 확정한다는 뜻이다.
+ *          - 정산 잔액(`TradeBalance`)은 게임이 지갑과 인벤토리 미러에 넣는다. 키트끼리는 서로 모르며 원장이 소유의 원본이다. 사용자가 정한 정책이다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -24,10 +24,10 @@ namespace sw
     {
         TradeSnapshot        _snapshot{};
         vector<TradeBalance> _listBalance{};
-        NetIdempotencyKey    _idempotencyKey{}; ///< 재시도할 때 그대로 다시 넘긴다
+        NetIdempotencyKey    _idempotencyKey{}; ///< 재시도할 때 그대로 다시 넘기는 키이다
         uint64               _requestID{ 0 };
         uint16               _method{ 0 };
-        uint16               _errorCode{ 0 }; ///< 전송 · 공통 오류(`OnlineError`) — 0 이 아니면 `_result` 는 Unavailable 또는 Invalid
+        uint16               _errorCode{ 0 }; ///< 전송 오류나 공통 오류(`OnlineError`)이다. 0이 아니면 `_result` 는 Unavailable 이나 Invalid 이다
         TradeResult          _result{ TradeResult::Ok };
     };
 } // namespace sw
@@ -39,7 +39,7 @@ namespace sw
     {
         TradeSnapshot        _snapshot{};
         vector<TradeBalance> _listBalance{};
-        uint16               _kind{ 0 }; ///< kPushInvited · kPushUpdate · kPushClosed
+        uint16               _kind{ 0 }; ///< kPushInvited, kPushUpdate, kPushClosed 중 하나이다
     };
 } // namespace sw
 
@@ -54,23 +54,23 @@ namespace sw
     public:
         TradeClient();
 
-        /** @brief @p pClient 는 빌려 쓴다 — `registerClientService( this )` 는 부르는 쪽이. */
+        /** @brief @p pClient 는 빌려 씁니다. `registerClientService( this )` 는 호출하는 쪽이 부릅니다. */
         void initialize( OnlineServiceClient* pClient );
 
         uint64 invite( string_view peerDisplayName, const NetIdempotencyKey& key = NetIdempotencyKey{} );
         uint64 respond( uint64 tradeID, bool bAccept, const NetIdempotencyKey& key = NetIdempotencyKey{} );
         uint64 setOffer( uint64 tradeID, const vector<TradeLeg>& listLeg, const NetIdempotencyKey& key = NetIdempotencyKey{} );
         uint64 lock( uint64 tradeID, const NetIdempotencyKey& key = NetIdempotencyKey{} );
-        /** @brief 지금 비추는 스냅숏의 (내 판, 상대 판)으로 확정합니다. */
+        /** @brief 지금 비추는 스냅샷의 (내 버전, 상대 버전)으로 확정합니다. */
         uint64 confirm( uint64 tradeID, const NetIdempotencyKey& key = NetIdempotencyKey{} );
-        /** @brief 판을 직접 주어 확정합니다(재시도 — 처음 본 판 그대로). */
+        /** @brief 버전을 직접 지정해 확정합니다. 재시도할 때 처음 본 버전 그대로 씁니다. */
         uint64 confirmSeen( uint64 tradeID, uint32 seenOwnRevision, uint32 seenPeerRevision, const NetIdempotencyKey& key );
         uint64 cancel( uint64 tradeID, const NetIdempotencyKey& key = NetIdempotencyKey{} );
 
         int32 pollReplies( vector<TradeClientReply>& outListReply );
         int32 pollUpdates( vector<TradeClientUpdate>& outListUpdate );
 
-        /** @brief 내 계정 id — 스냅숏에서 내 쪽을 찾는다(로그인한 뒤 게임이 넣는다). */
+        /** @brief 내 계정 id 입니다. 스냅샷에서 내 쪽을 찾는 데 쓰며 로그인한 뒤 게임이 넣습니다. */
         void                 setAccountID( AccountID accountID ) { _accountID = accountID; }
         const TradeSnapshot& getSnapshot() const { return _snapshot; }
 

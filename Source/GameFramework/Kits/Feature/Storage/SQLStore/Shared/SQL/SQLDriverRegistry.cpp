@@ -22,14 +22,14 @@ namespace sw
                 bool                _bBuiltInRegistered{ false };
             };
 
-            /** @brief 등록 표 — 처음 부를 때 이 키트의 드라이버(SQLite)를 올린다. 잠근 채로 돌려주지 않는다(부르는 쪽이 잠근다). */
+            /** @brief 등록 테이블입니다. 처음 부를 때 이 키트의 드라이버(SQLite)를 등록합니다. 락을 잡은 채로 돌려주지 않으며 호출한 쪽이 락을 잡습니다. */
             static State& getState()
             {
                 static State s_state;
                 return s_state;
             }
 
-            /** @brief 잠금 안에서 — 이 키트의 드라이버를 한 번 올립니다. */
+            /** @brief 락을 잡은 상태에서 이 키트의 드라이버를 한 번 등록합니다. */
             static void registerBuiltInDrivers( State& state )
             {
                 if ( state._bBuiltInRegistered )

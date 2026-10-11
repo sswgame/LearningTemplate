@@ -1,8 +1,9 @@
 /**
  * @file SQLConnectionPool.h
- * @brief SQL 연결 풀 — 전용 워커 스레드 N 개가 각자 연결 하나를 열어 일 큐를 비우고, 끝난 일은 완료 큐에 쌓습니다(`pollCompletions` 를 부른 스레드가 complete).
- * @details DB 를 기다리는 일이라 TaskManager 워커가 아니라 전용 스레드다(로그 · 파일 감시 · 네트워크 스레드와 같은 규칙). 연결이 끊기면 그 워커가 다음 일 전에
- *          다시 연다(지수 물러남, 최대 5 초) — 다시 열 동안의 일은 닫힌 연결로 돌아 `ConnectionLost` 를 본다(멈춰 기다리지 않는다).
+ * @brief SQL 연결 풀입니다. 전용 워커 스레드 N개가 각자 연결 하나를 열어 작업 큐를 비우고, 끝난 작업은 완료 큐에 쌓습니다. `pollCompletions` 를 부른 스레드가 complete 를 실행합니다.
+ * @details DB 를 기다리는 작업이라 TaskManager 워커가 아니라 전용 스레드를 쓴다. 로그, 파일 감시, 네트워크 스레드와 같은 규칙이다.
+ *          연결이 끊기면 그 워커가 다음 작업 전에 다시 연다. 이때 지수 백오프를 쓰며 최대 5초까지 늘어난다.
+ *          다시 여는 동안의 작업은 닫힌 연결로 실행되어 `ConnectionLost` 를 받으며, 멈춰서 기다리지 않는다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -24,7 +25,7 @@ namespace sw
 
     /**
      * @class ISQLJob
-     * @brief 풀의 일 하나 — `run` 은 워커, `complete` 는 거두는 스레드입니다.
+     * @brief 풀의 작업 하나입니다. `run` 은 워커에서, `complete` 는 완료를 회수하는 스레드에서 실행합니다.
      */
     class SW_GF_API ISQLJob
     {
@@ -45,9 +46,9 @@ namespace sw
     /** @brief 풀 설정입니다. */
     struct SQLConnectionPoolSettings
     {
-        string _connection{};     ///< 드라이버 고유 접속 글(비밀 없음)
-        string _secret{};         ///< 비밀번호 — 연결을 다시 열 때도 쓰므로 풀이 들고 있다
-        int32  _workerCount{ 2 }; ///< 연결 수(SQLite 는 쓰기가 하나뿐이라 2 로 충분 — 읽기 하나 · 쓰기 하나)
+        string _connection{};     ///< 드라이버 고유의 접속 문자열이다. 비밀은 포함하지 않는다
+        string _secret{};         ///< 비밀번호이다. 연결을 다시 열 때도 쓰므로 풀이 보관한다
+        int32  _workerCount{ 2 }; ///< 연결 수이다. SQLite 는 쓰기가 하나뿐이므로 읽기 하나와 쓰기 하나, 즉 2면 충분하다
     };
 } // namespace sw
 
@@ -55,7 +56,7 @@ namespace sw
 {
     /**
      * @class SQLConnectionPool
-     * @brief 연결 풀입니다. `submit` 은 아무 스레드, `pollCompletions` 는 맡긴 서비스 스레드 하나.
+     * @brief 연결 풀입니다. `submit` 은 어느 스레드에서나 부를 수 있고, `pollCompletions` 는 작업을 맡긴 서비스 스레드 하나에서만 부릅니다.
      */
     class SW_GF_API SQLConnectionPool
     {
@@ -66,14 +67,14 @@ namespace sw
         SQLConnectionPool( const SQLConnectionPool& )            = delete;
         SQLConnectionPool& operator=( const SQLConnectionPool& ) = delete;
 
-        /** @brief 이 스레드에서 연결 하나를 열어 보고(기동 오류를 바로 알린다) 워커를 띄웁니다. 열지 못하면 false 와 까닭(폴백 없음). */
+        /** @brief 이 스레드에서 연결 하나를 먼저 열어 보고(기동 오류를 바로 알린다) 워커를 시작합니다. 열지 못하면 false 와 실패 이유를 반환하며 폴백은 없습니다. */
         [[nodiscard]] bool initialize( ISQLDriver* pDriver, const SQLConnectionPoolSettings& settings, string& outError );
-        /** @brief 새 일을 막고, 남은 일은 닫힌 연결로 돌려 완료 큐에 넣은 뒤 워커를 합류합니다. 그 뒤 `pollCompletions` 한 번이 모두 거둔다. */
+        /** @brief 새 작업을 막고, 남은 작업은 닫힌 연결로 실행해 완료 큐에 넣은 뒤 워커를 합류시킵니다. 그 뒤 `pollCompletions` 한 번이 모두 회수합니다. */
         void shutdown();
 
         void  submit( unique_ptr<ISQLJob> job );
         int32 pollCompletions();
-        /** @brief 맡았지만 아직 거두지 않은 일의 수입니다. */
+        /** @brief 맡았지만 아직 회수하지 않은 작업의 수입니다. */
         int32 getPendingCount() const;
 
     private:

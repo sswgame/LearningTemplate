@@ -10,7 +10,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 면 하나의 기하 — 원점 칸 꼭짓점과 두 접선(u × v = 노멀)입니다. 꼭짓점 순서 o, o+u, o+u+v, o+v 가 바깥에서 본 앞면 감김입니다. */
+        /** @brief 면 하나의 기하입니다. 원점 셀의 꼭짓점과 두 접선(u × v = 노멀)을 가집니다. 꼭짓점 순서 o, o+u, o+u+v, o+v 가 바깥에서 본 앞면 감김 순서입니다. */
         struct VoxelFaceFrame
         {
             VoxelCoord _origin;
@@ -36,7 +36,7 @@ namespace sw
                 return float3{ static_cast<float32>( coord._x ), static_cast<float32>( coord._y ), static_cast<float32>( coord._z ) };
             }
 
-            /** @brief 면이 드러나는지 봅니다. */
+            /** @brief 면이 드러나는지 확인합니다. */
             static bool isFaceVisible( const VoxelWorld& world, VoxelBlockIndex block, const VoxelCoord& neighbor )
             {
                 const VoxelBlockIndex neighborBlock = world.getBlock( neighbor );
@@ -47,10 +47,10 @@ namespace sw
                 return neighborBlock != block;
             }
 
-            /** @brief 면 앞 칸이 빛을 막는지(그늘을 만드는지) 봅니다 — 불투명 블록만 그늘을 만든다. */
+            /** @brief 면 앞 블록이 빛을 막는지(그늘을 만드는지) 확인합니다. 불투명 블록만 그늘을 만듭니다. */
             static int32 occludes( const VoxelWorld& world, const VoxelCoord& coord ) { return world.isOpaque( coord._x, coord._y, coord._z ) ? 1 : 0; }
 
-            /** @brief 꼭짓점 그늘 단계(0..3)입니다. 옆 둘이 다 막히면 모서리와 상관없이 0 이다. */
+            /** @brief 꼭짓점 그늘 단계(0~3)입니다. 옆 둘이 다 막히면 모서리와 상관없이 0입니다. */
             static int32 computeOcclusion( int32 side1, int32 side2, int32 corner )
             {
                 if ( side1 != 0 && side2 != 0 )
@@ -58,7 +58,7 @@ namespace sw
                 return 3 - ( side1 + side2 + corner );
             }
 
-            /** @brief 면 UV — 옆면은 위가 v 0(텍스처 윗줄이 블록 위), 윗 · 아랫면은 X → u · Z → v 입니다. */
+            /** @brief 면 UV 입니다. 옆면은 위쪽이 v 0이어서 텍스처의 윗줄이 블록의 위쪽이 되고, 윗면과 아랫면은 X 가 u, Z 가 v 입니다. */
             static float2 computeCornerUv( VoxelFace face, const VoxelCoord& corner, const float2& uvMin, const float2& uvMax )
             {
                 float32 u = 0.0f;
@@ -70,7 +70,7 @@ namespace sw
                 }
                 else
                 {
-                    // 바깥에서 볼 때 u 가 오른쪽으로 늘게 — 글자 · 무늬가 거울에 비치지 않는다.
+                    // 바깥에서 볼 때 u 가 오른쪽으로 늘어나게 한다. 글자와 무늬가 거울에 비친 것처럼 뒤집히지 않게 하려는 것이다.
                     if ( face == VoxelFace::PositiveX )
                         u = 1.0f - static_cast<float32>( corner._z );
                     else if ( face == VoxelFace::NegativeX )
@@ -95,7 +95,7 @@ namespace sw
                 world.getCatalog()->computeTileUv( block._arrFaceTile[static_cast<int32>( face )], uvMin, uvMax );
                 const float32 faceShade = getFaceShadeValue( face );
 
-                // 꼭짓점 0..3 = (u, v) 의 (0,0) (1,0) (1,1) (0,1).
+                // 꼭짓점 0~3은 (u, v) 의 (0,0), (1,0), (1,1), (0,1) 에 해당한다.
                 constexpr int32 kArrCornerU[4] = { 0, 1, 1, 0 };
                 constexpr int32 kArrCornerV[4] = { 0, 0, 1, 1 };
                 VoxelMeshVertex arrVertex[4];
@@ -114,7 +114,7 @@ namespace sw
                     vertex._uv              = computeCornerUv( face, cornerOffset, uvMin, uvMax );
                     vertex._color           = float4{ block._color._x * shade, block._color._y * shade, block._color._z * shade, block._color._w };
                 }
-                // 그늘이 0–2 대각선 쪽으로 쏠렸으면 1–3 대각선으로 자른다(순환 순서라 감김은 그대로).
+                // 그늘이 0-2 대각선 쪽으로 쏠렸으면 1-3 대각선으로 자른다. 순환 순서라 감김 방향은 그대로이다.
                 const int32     firstCorner           = ( arrOcclusion[0] + arrOcclusion[2] < arrOcclusion[1] + arrOcclusion[3] ) ? 1 : 0;
                 constexpr int32 kArrTriangleCorner[6] = { 0, 1, 2, 0, 2, 3 };
                 for ( const int32 corner : kArrTriangleCorner )

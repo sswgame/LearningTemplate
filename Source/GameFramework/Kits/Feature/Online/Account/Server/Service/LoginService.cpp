@@ -23,7 +23,7 @@ namespace sw
             static constexpr utf8 kRecommendedBuildKey[] = "account.recommended_build.";
             static constexpr utf8 kStoreURLKey[]         = "account.store_url.";
 
-            /** @brief 돌아가며 다시 읽는 차례가 해시맵 순서에 기대지 않게(결정적) 계정 id 로 정렬한다. */
+            /** @brief 돌아가며 다시 읽는 차례가 해시 맵의 순서에 기대지 않게(결정적이게) 계정 id 로 정렬합니다. */
             struct SessionRefLess
             {
                 bool operator()( const LoginSessionRef& left, const LoginSessionRef& right ) const { return left._accountID < right._accountID; }
@@ -38,7 +38,7 @@ namespace sw
                 return key;
             }
 
-            /** @brief 로그인 요청 하나를 저장소 스레드에서 돌리고, 결과를 서비스에 돌려줍니다. 입력은 모두 복사해 든다. */
+            /** @brief 로그인 요청 하나를 저장소 스레드에서 실행하고 결과를 서비스에 돌려줍니다. 입력은 모두 복사해 보관합니다. */
             class LoginWork final : public IServiceStoreWork
             {
             public:
@@ -166,7 +166,7 @@ namespace sw
                         _completion._grant._bUpdateRecommended = SW_TRUE;
                         _completion._grant._storeURL           = _storeURL;
                     }
-                    // 워커를 떠나면 비밀번호 · 장치 비밀 · 외부 주체를 들고 있지 않는다(지우기 · wipe 는 하지 않는다 — 서버 관례).
+                    // 워커를 떠나면 비밀번호, 장치 비밀, 외부 주체를 보관하지 않는다. 별도로 지우기(wipe)는 하지 않으며 서버의 관례를 따른다.
                     _credential._password.clear();
                     _subject.clear();
                     Memory::set( _arrDeviceSecret, 0, sizeof( _arrDeviceSecret ) );
@@ -177,13 +177,13 @@ namespace sw
             private:
                 LoginStoreOutcome _outcome;
                 LoginCompletion   _completion;
-                LoginSettings     _settings; ///< 복사 — 서비스 설정이 바뀌어도 이 일은 맡긴 때의 값으로 돈다
+                LoginSettings     _settings; ///< 복사한 값이다. 서비스 설정이 바뀌어도 이 작업은 맡길 때의 값으로 실행한다
                 LoginService*     _pService;
                 ILoginCrypto*     _pCrypto;
                 int64             _nowMs;
             };
 
-            /** @brief 끊김 · 세션 다시 읽기 · 탈퇴 쓸기 — 완료가 없고 부작용만 있는 일입니다. */
+            /** @brief 끊김, 세션 다시 읽기, 탈퇴 정리 작업입니다. 완료가 없고 부작용만 있습니다. */
             class LoginMaintenanceWork final : public IServiceStoreWork
             {
             public:
@@ -217,7 +217,7 @@ namespace sw
                 void complete() override
                 {
                     LoginCompletion none;
-                    none._requestTag = 0; // 꼬리표 0 은 완료 목록에 쌓지 않는다(applyCompletion)
+                    none._requestTag = 0; // 요청 태그 0은 완료 목록에 쌓지 않는다(applyCompletion)
                     _pService->applyCompletion( std::move( none ), _outcome );
                 }
 
@@ -546,7 +546,7 @@ namespace sw
     {
         const auto onlineIt = _mapAccountToSession.find( accountID );
         if ( onlineIt == _mapAccountToSession.end() || onlineIt->second != sessionID )
-            return; // 이 프로세스의 세션이 아니다(이미 새 세션으로 바뀌었다)
+            return; // 이 프로세스의 세션이 아니다. 이미 새 세션으로 바뀌었다
         _mapAccountToSession.erase( onlineIt );
         _eventBuffer.push( LoginEvent{ accountID, sessionID, reason, LoginEvent::Kind::Revoked } );
         removeOfflineIdentities();
@@ -581,7 +581,7 @@ namespace sw
             const auto onlineIt = _mapAccountToSession.find( revoked._accountID );
             if ( onlineIt == _mapAccountToSession.end() || onlineIt->second != revoked._sessionID )
             {
-                // 다른 서버(또는 재접속 유예)의 세션이다 — 바인딩이 버스로 알린다.
+                // 다른 서버(또는 재접속 유예 중)의 세션이므로 바인딩이 버스로 알린다.
                 _remoteRevokeBuffer.push( LoginEvent{ revoked._accountID, revoked._sessionID, revoked._reason, LoginEvent::Kind::Revoked } );
                 continue;
             }
@@ -613,7 +613,7 @@ namespace sw
         {
             _eventBuffer.push( event );
         }
-        // 신원 캐시 — 붙어 있는 계정만.
+        // 신원 캐시는 접속해 있는 계정만 가진다.
         const bool bGrantOperation = completion._operation == LoginOperation::Login || completion._operation == LoginOperation::Resume ||
                                      completion._operation == LoginOperation::GuestLogin || completion._operation == LoginOperation::PlatformLogin;
         const bool bLinkOperation = completion._operation == LoginOperation::LinkCredential || completion._operation == LoginOperation::LinkPlatform;
@@ -625,7 +625,7 @@ namespace sw
         }
         if ( completion._result == LoginResult::Ok && bLinkOperation && isAccountOnline( completion._identity._accountID ) )
         {
-            // 연동이 표시 이름 · 게스트 깃발을 바꿨다 — 옛 이름 색인을 지우고 새 것으로.
+            // 연동이 표시 이름과 게스트 플래그를 바꿨으므로 이전 이름 인덱스를 지우고 새 것으로 바꾼다.
             const AccountIdentity& identity = completion._identity;
             const auto             oldIt    = _mapAccountToIdentity.find( identity._accountID );
             if ( oldIt != _mapAccountToIdentity.end() )
@@ -655,7 +655,7 @@ namespace sw
         if ( _pRemoteConfig == nullptr )
             return LoginResult::Ok;
         if ( AccountUtil::isValidLowerToken( clientInfo._platform, LoginConstant::kMaxPlatformTextSize ) == false )
-            return LoginResult::Ok; // 플랫폼을 모르면 판 확인을 할 수 없다 — 프로토콜 판(Hello)이 따로 막는다
+            return LoginResult::Ok; // 플랫폼을 모르면 빌드 버전을 확인할 수 없다. 프로토콜 버전(Hello)이 따로 막는다
         string minimumBuild;
         string recommendedBuild;
         (void)_pRemoteConfig->findText( LoginServiceInternal::makeConfigKey( LoginServiceInternal::kStoreURLKey, clientInfo._platform ), outGrant._storeURL );

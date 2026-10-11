@@ -8,7 +8,7 @@ namespace sw
     {
         struct ZoneTrackerInternal
         {
-            /** @brief 태그 글을 나누는 글자입니다(쉼표 · 공백 · 탭 · 줄바꿈). */
+            /** @brief 태그 문자열을 나누는 구분자입니다. 쉼표, 공백, 탭, 줄바꿈이 해당합니다. */
             static constexpr string_view kTagSeparator = ", \t\r\n";
         };
     } // namespace
@@ -64,7 +64,7 @@ namespace sw
         zone._bounds._max._x = width > 0 ? width - 1 : 0;
         zone._bounds._max._y = height > 0 ? height - 1 : 0;
 
-        // 태그는 맵 데이터가 붙인다 — 경로 이름에서 역할을 짐작하지 않는다.
+        // 태그는 맵 데이터가 붙인다. 경로 이름에서 역할을 짐작하지 않는다.
         size_t tagStart = tagText.find_first_not_of( ZoneTrackerInternal::kTagSeparator );
         while ( tagStart != string_view::npos )
         {

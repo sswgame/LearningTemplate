@@ -23,7 +23,7 @@ namespace sw
                 return result;
             }
 
-            /** @brief 구매 분개를 찾는 요청(키 · 사유 · 상품만)입니다. */
+            /** @brief 구매 분개를 찾는 요청입니다. 키, 사유, 상품만 담습니다. */
             static LedgerTransferRequest makePurchaseProbe( const EconomyPurchaseInput& input, string_view offerID )
             {
                 LedgerTransferRequest probe;
@@ -41,7 +41,7 @@ namespace sw
                 return key;
             }
 
-            /** @brief 가격 다리를 붙입니다. 가상 화폐면 재원 잔액을 순서대로 쓴다 — 모자라거나 재원에 빚이 있으면 InsufficientFunds. */
+            /** @brief 가격 항목을 붙입니다. 가상 화폐이면 재원 잔액을 순서대로 씁니다. 모자라거나 재원에 빚이 있으면 InsufficientFunds 입니다. */
             static EconomyResult appendPriceLegs( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const OfferPrice& price, int64 totalAmount,
                                                   const LedgerHolder& account, LedgerTransferRequest& inoutRequest )
             {
@@ -59,7 +59,7 @@ namespace sw
                     if ( read != ServiceStoreResult::Ok )
                         return EconomyResult::Unavailable;
                     if ( balance.isDebt() )
-                        return EconomyResult::InsufficientFunds; // 빚이 있는 동안 그 재원의 가상 화폐는 쓰지 못한다
+                        return EconomyResult::InsufficientFunds; // 빚이 있는 동안은 그 재원의 가상 화폐를 쓸 수 없다
                     const int64 take = balance._amount < remaining ? balance._amount : remaining;
                     if ( take > 0 )
                     {
@@ -71,8 +71,8 @@ namespace sw
             }
 
             /**
-             * @brief 같은 분개 키의 분개가 이미 있으면 그 결과를 @p outReply 에 넣고 true 입니다(`_result` 는 Ok, 다른 구매의 키면 InvalidRequest).
-             * @details 다리는 지금 잔액으로 다시 짤 수 없으므로(재원이 비었을 수 있다) 저장된 분개의 다리로 재생한다.
+             * @brief 같은 분개 키의 분개가 이미 있으면 그 결과를 @p outReply 에 넣고 true 를 반환합니다. `_result` 는 Ok 이며 다른 구매의 키이면 InvalidRequest 입니다.
+             * @details 지금 잔액으로 분개 항목을 다시 짤 수 없다. 재원이 비었을 수 있기 때문이다. 그래서 저장된 분개의 항목으로 재생한다.
              */
             static bool findReplay( IServiceStoreConnection& connection, const LedgerTransferRequest& request, uint64 accountID, EconomyReply& outReply )
             {
@@ -81,7 +81,7 @@ namespace sw
                     return false;
                 if ( entry._reason != request._reason || entry._memo != request._memo )
                 {
-                    outReply._result = EconomyResult::InvalidRequest; // 다른 구매에 쓴 멱등 키
+                    outReply._result = EconomyResult::InvalidRequest; // 다른 구매에 쓴 멱등 키이다
                     return true;
                 }
                 LedgerTransferRequest stored = request;
@@ -158,7 +158,7 @@ namespace sw
 
         const LedgerHolder account = LedgerHolder::makeAccount( input._accountID );
         const int64        count   = input._count;
-        // 재시도는 잔액 · 한도 판정보다 먼저 지난 결과를 본다 — 가상 화폐 다리는 지금 잔액으로 짜므로 다시 짜면 처음과 다를 수 있다.
+        // 재시도는 잔액과 한도 판정보다 먼저 지난 결과를 확인한다. 가상 화폐 분개 항목은 지금 잔액으로 짜므로 다시 짜면 처음과 다를 수 있다.
         if ( EconomyStoreLogicInternal::findReplay( connection, EconomyStoreLogicInternal::makePurchaseProbe( input, pOffer->_id ), input._accountID, outReply ) )
             return EconomyStoreLogicInternal::finish( outReply, outReply._result );
         for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
@@ -178,7 +178,7 @@ namespace sw
                 const EconomyResult priced = EconomyStoreLogicInternal::appendPriceLegs( connection, currencies, price, price._amount * count, account, request );
                 if ( priced == EconomyResult::Ok )
                     continue;
-                // 모자람 판정 전에 같은 키로 이미 산 것인지 본다 — 첫 구매로 잔액이 준 뒤의 재시도가 "모자람" 을 받으면 안 된다.
+                // 부족 판정 전에 같은 키로 이미 산 것인지 확인한다. 첫 구매로 잔액이 줄어든 뒤의 재시도가 "부족" 을 받으면 안 되기 때문이다.
                 if ( EconomyStoreLogicInternal::findReplay( connection, request, input._accountID, outReply ) )
                     return EconomyStoreLogicInternal::finish( outReply, outReply._result );
                 return EconomyStoreLogicInternal::finish( outReply, priced );
@@ -242,8 +242,8 @@ namespace sw
             if ( resolved != LedgerResult::Conflict )
                 return EconomyStoreLogicInternal::finish( outReply, toEconomyResult( resolved ) );
             if ( committed == ServiceStoreResult::Unavailable )
-                return EconomyStoreLogicInternal::finish( outReply, EconomyResult::Unavailable ); // 적용됐는지 모른다 — 같은 키로 다시 하면 가려진다
-            // Conflict — 잔액 · 구매 수가 그새 바뀌었다: 다시 읽어 다시 짠다
+                return EconomyStoreLogicInternal::finish( outReply, EconomyResult::Unavailable ); // 적용됐는지 알 수 없다. 같은 키로 다시 하면 중복이 가려진다
+            // Conflict 이다. 잔액이나 구매 수가 그사이 바뀌었으므로 다시 읽어 다시 짠다
         }
         return EconomyStoreLogicInternal::finish( outReply, EconomyResult::Busy );
     }
@@ -293,7 +293,7 @@ namespace sw
         LedgerTransferOutcome outcome;
         const LedgerResult    result = Ledger::executeTransfer( connection, request, outcome );
         if ( result == LedgerResult::JournalKeyReused )
-            return EconomyStoreLogicInternal::finish( outReply, EconomyResult::AlreadyRedeemed ); // 받는 계정이 달라 분개 내용이 다르다
+            return EconomyStoreLogicInternal::finish( outReply, EconomyResult::AlreadyRedeemed ); // 받는 계정이 달라서 분개 내용이 다르다
         if ( result != LedgerResult::Ok )
             return EconomyStoreLogicInternal::finish( outReply, toEconomyResult( result ) );
         collectAccountBalances( outcome, input._accountID, outReply._listBalance );

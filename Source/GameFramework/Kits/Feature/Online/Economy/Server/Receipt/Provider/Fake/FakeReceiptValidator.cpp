@@ -10,7 +10,7 @@ namespace sw
         {
             static constexpr int32 kFieldCount = 4;
 
-            /** @brief `a|b|c|d` 를 넷으로 자릅니다. 칸 수가 다르면 false 입니다. */
+            /** @brief `a|b|c|d` 를 네 부분으로 자릅니다. 부분의 수가 다르면 false 를 반환합니다. */
             static bool splitFields( string_view payload, string_view* pOutFields )
             {
                 int32  fieldIndex = 0;

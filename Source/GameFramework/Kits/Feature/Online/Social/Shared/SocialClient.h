@@ -1,11 +1,12 @@
 /**
  * @file SocialClient.h
- * @brief 친구 키트의 클라이언트 — `OnlineServiceClient` 에 올리는 `IOnlineClientService`. 친구 · 차단 · 접속 상태 · 길드 요청을 보내고 알림을 쌓습니다.
- * @details - 요청마다 결과 델리게이트를 정확히 한 번(`OnlineServiceClient::tick` 스레드) — 업무 결과는 `_reply._result`, 전송 · 공통 오류는 `_errorCode`
- *            (그때 `_reply._result` 는 `SocialProtocol::fromErrorCode` 로 맞춘다).
- *          - 관계 · 길드를 바꾸는 요청에는 멱등 키를 싣는다(다시 연결한 뒤의 재전송이 두 번 적용되지 않는다).
- *          - 로그인 뒤 `listLinks` 를 먼저 부른다 — 서버가 그때 이 계정의 관계를 메모리에 올려 친구의 접속 상태 알림이 온다.
- *          언리얼 Online Services 의 비동기 호출 + 완료 델리게이트와 같은 모양이다.
+ * @brief 친구 키트의 클라이언트입니다. `OnlineServiceClient` 에 등록하는 `IOnlineClientService` 이며, 친구, 차단, 접속 상태, 길드 요청을 보내고 알림을 쌓아 둡니다.
+ * @details - 요청마다 결과 델리게이트를 `OnlineServiceClient::tick` 스레드에서 정확히 한 번 부른다. 업무 결과는 `_reply._result` 에, 전송 오류와 공통 오류는 `_errorCode` 에 있으며
+ *            이때 `_reply._result` 는 `SocialProtocol::fromErrorCode` 로 맞춘다.
+ *          - 관계나 길드를 바꾸는 요청에는 멱등 키를 싣는다. 다시 연결한 뒤 재전송해도 두 번 적용되지 않게 하려는 것이다.
+ *          - 로그인한 뒤 `listLinks` 를 먼저 부른다. 서버가 그때 이 계정의 관계를 메모리에 올려야 친구의 접속 상태 알림이 온다.
+ *
+ *          언리얼 Online Services 의 비동기 호출과 완료 델리게이트에 해당한다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -28,7 +29,7 @@ namespace sw
         SocialReply _reply{};
         uint64      _requestID{ 0 };
         uint16      _method{ 0 };
-        uint16      _errorCode{ 0 }; ///< 전송 · 공통 오류(`OnlineError`)
+        uint16      _errorCode{ 0 }; ///< 전송 오류나 공통 오류(`OnlineError`)이다
     };
 
     using SocialReplyDelegate = Delegate<void( const SocialClientReply& )>;
@@ -38,14 +39,14 @@ namespace sw
 {
     /**
      * @class SocialClient
-     * @brief 연결 하나의 친구 · 길드 창구입니다.
+     * @brief 연결 하나의 친구와 길드 클라이언트입니다.
      */
     class SW_GF_API SocialClient final : public IOnlineClientService
     {
     public:
         SocialClient();
 
-        /** @brief @p pClient 는 빌려 쓴다 — `registerClientService( this )` 는 부르는 쪽이(초기화 전에). */
+        /** @brief @p pClient 는 빌려 씁니다. `registerClientService( this )` 는 호출하는 쪽이 초기화하기 전에 부릅니다. */
         void initialize( OnlineServiceClient* pClient );
 
         // 친구

@@ -14,7 +14,7 @@ namespace sw
     {
         struct PostgresDriverInternal
         {
-            // PostgreSQL 형 OID(pg_type) — 이진 결과를 읽는 데 쓰는 것만.
+            // PostgreSQL 타입 OID(pg_type)이다. 이진 결과를 읽는 데 쓰는 것만 둔다.
             static constexpr Oid kBoolOid    = 16;
             static constexpr Oid kInt8Oid    = 20;
             static constexpr Oid kInt2Oid    = 21;
@@ -40,7 +40,7 @@ namespace sw
                 (void)pMessage;
             }
 
-            /** @brief `?` 를 `$1..$n` 으로 바꿉니다(작은따옴표 · 큰따옴표 안은 건너뛴다). @p outParamCount 는 자리 수. */
+            /** @brief `?` 를 `$1..$n` 으로 바꿉니다. 작은따옴표와 큰따옴표 안은 건너뜁니다. @p outParamCount 는 매개변수 개수입니다. */
             static string convertPlaceholders( string_view sql, int32& outParamCount )
             {
                 string text;
@@ -105,7 +105,7 @@ namespace sw
                 return SQLResult::Error;
             }
 
-            /** @brief 결과 하나를 거둬 내놓고 지웁니다. */
+            /** @brief 결과 하나를 꺼내 반환하고 지웁니다. */
             class ScopedResult
             {
             public:
@@ -125,7 +125,7 @@ namespace sw
                 PGresult* _pResult;
             };
 
-            /** @brief 연결 하나 — 연 워커 스레드 하나가 쓴다. */
+            /** @brief 연결 하나입니다. 연 워커 스레드 하나만 씁니다. */
             class PostgresConnection final : public ISQLConnection
             {
             public:
@@ -148,7 +148,7 @@ namespace sw
                     const PreparedStatement* pStatement = findOrPrepare( sql );
                     if ( pStatement == nullptr )
                         return SQLResult::Error;
-                    // 매개변수 — 정수 · 글은 글 형식(0, NUL 로 끝남), 바이트는 이진(1). 덜 주면 NULL 로 채운다.
+                    // 매개변수는 정수와 문자열을 텍스트 형식(0, NUL 로 끝남)으로, 바이트를 이진 형식(1)으로 보낸다. 덜 주면 NULL 로 채운다.
                     const int32         placeholderCount = pStatement->_paramCount;
                     vector<string>      listText( static_cast<size_t>( placeholderCount ) );
                     vector<const utf8*> listValuePointer( static_cast<size_t>( placeholderCount ), nullptr );
@@ -264,7 +264,7 @@ namespace sw
                             const bool   bInteger = type == kInt8Oid || type == kInt4Oid || type == kInt2Oid || type == kBoolOid;
                             if ( bInteger )
                             {
-                                // 이진 정수는 빅엔디언, 부호는 크기만큼에서 늘린다.
+                                // 이진 정수는 빅엔디언이며, 부호는 크기만큼 확장한다.
                                 const uint64 raw   = readBigEndian( pData, size );
                                 const int32  shift = 64 - size * 8;
                                 value._type        = SQLValueType::Int64;
@@ -307,7 +307,7 @@ namespace sw
 
     unique_ptr<ISQLConnection> PostgresDriver::openConnection( string_view connection, string_view secret, string& outError )
     {
-        // 접속 글을 dbname 자리에 펼치고(expand_dbname) 비밀번호는 따로 넘긴다 — 비밀이 접속 글 · 로그에 남지 않는다.
+        // 접속 문자열은 dbname 에 펼쳐 넘기고(expand_dbname) 비밀번호는 따로 넘긴다. 그래서 비밀이 접속 문자열이나 로그에 남지 않는다.
         const string connectionText( connection );
         const string secretText( secret );
         const utf8*  arrKeyword[] = { "dbname", secretText.empty() ? nullptr : "password", nullptr };

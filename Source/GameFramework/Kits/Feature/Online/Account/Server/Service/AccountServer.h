@@ -1,13 +1,13 @@
 /**
  * @file AccountServer.h
- * @brief 계정 서비스의 스트림 바인딩 — `IOnlineService`(영역 `kAccount`)로 요청을 받아 `LoginService` 에 맡기고, 완료를 응답으로 돌려주며, 로그인 · 재접속 성공이면
- *        호스트에 계정을 붙입니다. 밀려남 · 운영 끊기는 알림(`kPushRevoked`) 뒤 연결을 닫고, 연결이 닫히면 재접속 유예를 시작합니다.
- * @details - 연결의 세션 토큰은 이 객체가 메모리에 든다(로그인 응답으로 클라이언트에 준 것) — 로그아웃 · 연동 · 표 발급은 연결의 주체로 하고 클라이언트가 비밀을 다시 보내지 않는다.
- *          - 이미 로그인한 연결의 로그인 · 게스트 · 외부 · 재접속은 `kInvalidRequest`(한 연결에 계정 하나 — 다른 계정은 새 연결로).
- *          - 저장소 완료는 호스트 `tick` 이 거둔다. 탈퇴 쓸기 · 세션 다시 읽기는 이 객체의 틱이 주기로 맡긴다.
- *          - `IAccountSessionControl` 구현 — GM · 제재가 계정의 세션을 끊는다(사유 코드를 알림에 싣는다).
- *          - 서버 여럿(호스트에 캐시 · 버스가 있으면): 접속 상태(`OnlinePresence` — 다른 키트는 `getPresence`)를 소유하고, 다른 서버에 붙은 세션을 끊으면
- *            버스 `account.revoke` 로 알린다(받은 서버가 그 연결을 닫는다). 버스를 놓쳐도 세션 다시 읽기가 줍는다.
+ * @brief 계정 서비스의 스트림 바인딩입니다. `IOnlineService`(영역 `kAccount`)로 요청을 받아 `LoginService` 에 맡기고, 완료를 응답으로 돌려줍니다.
+ * @details 로그인이나 재접속에 성공하면 호스트에 계정을 연결한다. 세션이 밀려나거나 운영 조치로 끊기면 알림(`kPushRevoked`)을 보낸 뒤 연결을 닫고, 연결이 닫히면 재접속 유예를 시작한다.
+ *          - 연결의 세션 토큰은 이 객체가 메모리에 보관한다. 로그인 응답으로 클라이언트에 준 토큰이다. 로그아웃, 연동, 티켓 발급은 연결의 주체로 처리하므로 클라이언트가 비밀을 다시 보내지 않는다.
+ *          - 이미 로그인한 연결이 로그인, 게스트 로그인, 외부 로그인, 재접속을 요청하면 `kInvalidRequest` 로 거절한다. 한 연결에는 계정 하나만 쓰고, 다른 계정은 새 연결로 접속해야 한다.
+ *          - 저장소 완료는 호스트 `tick` 이 회수한다. 탈퇴 정리와 세션 다시 읽기는 이 객체의 틱이 주기적으로 작업을 맡긴다.
+ *          - `IAccountSessionControl` 을 구현한다. GM 과 제재가 계정의 세션을 끊을 수 있고, 사유 코드를 알림에 싣는다.
+ *          - 서버가 여러 대일 때(호스트에 캐시와 버스가 있으면) 접속 상태(`OnlinePresence`)를 소유한다. 다른 키트는 `getPresence` 로 접근한다.
+ *            다른 서버에 접속한 세션을 끊으면 버스 `account.revoke` 로 알리고, 받은 서버가 그 연결을 닫는다. 버스를 놓쳐도 세션 다시 읽기가 찾아낸다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -29,8 +29,8 @@ namespace sw
     /** @brief 계정 바인딩 설정입니다. */
     struct AccountServerSettings
     {
-        int64                  _purgeIntervalMs{ 60000 };   ///< 탈퇴 쓸기 간격
-        int64                  _refreshIntervalMs{ 10000 }; ///< 붙어 있는 세션 다시 읽기 간격(서버 여럿 — 버스 알림을 놓친 것을 줍는다)
+        int64                  _purgeIntervalMs{ 60000 };   ///< 탈퇴 계정을 정리하는 간격이다
+        int64                  _refreshIntervalMs{ 10000 }; ///< 접속해 있는 세션을 다시 읽는 간격이다. 서버가 여러 대일 때 버스 알림을 놓친 변경을 찾아낸다
         int32                  _refreshCount{ 64 };
         int32                  _purgeCount{ 32 };
         OnlinePresenceSettings _presence{};
@@ -41,14 +41,14 @@ namespace sw
 {
     /**
      * @class AccountServer
-     * @brief 계정 서비스 바인딩입니다(호스트 `tick` 스레드).
+     * @brief 계정 서비스 바인딩입니다. 호스트 `tick` 스레드에서 씁니다.
      */
     class SW_GF_API AccountServer final : public IOnlineService, public IAccountSessionControl
     {
     public:
         AccountServer();
 
-        /** @brief @p pLoginService 는 빌려 쓴다(이 객체보다 오래 산다). 호스트에 올리기 전에. */
+        /** @brief @p pLoginService 는 빌려 씁니다. 이 객체보다 오래 살아야 하며 호스트에 등록하기 전에 지정합니다. */
         void initialize( LoginService* pLoginService, const AccountServerSettings& settings );
         void shutdown();
 
@@ -65,9 +65,9 @@ namespace sw
         // IAccountSessionControl
         void revokeAccountSessions( AccountID accountID, string_view reasonCode, int64 nowMs ) override;
 
-        /** @brief 이 연결 계정의 지금 세션 id 입니다(테스트 · 진단). 없으면 0. */
+        /** @brief 이 연결 계정의 현재 세션 id 입니다. 테스트와 진단에 씁니다. 없으면 0입니다. */
         uint64 findSessionID( AccountID accountID ) const;
-        /** @brief 접속 상태 창구입니다(거래 · 채팅이 빌려 쓴다 — 서버 한 대면 찾기는 "없음"). 이 객체와 같이 산다. */
+        /** @brief 접속 상태 관리자입니다. 거래와 채팅이 빌려 쓰며, 서버 한 대이면 찾기는 "없음" 으로 끝납니다. 이 객체와 수명이 같습니다. */
         IAccountPresence* getPresence() { return &_presence; }
 
         static constexpr const utf8* kRevokeTopic = "account.revoke";
@@ -88,13 +88,13 @@ namespace sw
 
         void handleCompletion( OnlineServiceHost& host, const LoginCompletion& completion );
         void handleEvent( OnlineServiceHost& host, const LoginEvent& event );
-        /** @brief 업무 결과가 공통 오류(시도 제한 · 저장소 · 빌드 판)면 그것으로 답하고 true 입니다. */
+        /** @brief 업무 결과가 공통 오류(시도 제한, 저장소, 빌드 버전)이면 그 오류로 응답하고 true 를 반환합니다. */
         bool respondCommonError( OnlineServiceHost& host, const NetRequestToken& token, LoginResult result, const LoginGrant& grant );
-        /** @brief 세션의 연결에 알림을 보내고 끊습니다(세션 표에서 먼저 빼 `onAccountLeft` 가 유예를 걸지 않게). */
+        /** @brief 세션의 연결에 알림을 보내고 끊습니다. 세션 테이블에서 먼저 빼서 `onAccountLeft` 가 유예를 걸지 않게 합니다. */
         void revokeBound( OnlineServiceHost& host, AccountID accountID, LoginRevokeReason reason );
-        /** @brief 처음 틱 — 호스트의 캐시 · 버스를 붙이고 주제를 구독합니다. */
+        /** @brief 처음 틱에서 호스트의 캐시와 버스를 연결하고 주제를 구독합니다. */
         void attachHost( OnlineServiceHost& host );
-        /** @brief 다른 서버에 붙은 세션을 끊은 기록을 버스로 알립니다. */
+        /** @brief 다른 서버에 접속한 세션을 끊은 기록을 버스로 알립니다. */
         void publishRemoteRevocations( OnlineServiceHost& host );
 
         unordered_map<uint64, PendingCall>     _mapTagToCall;

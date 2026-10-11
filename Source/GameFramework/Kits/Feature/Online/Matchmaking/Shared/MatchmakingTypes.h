@@ -1,6 +1,6 @@
 /**
  * @file MatchmakingTypes.h
- * @brief 매칭 키트의 타입 — 결과 · 모드 정의 · 표 · 만든 경기 · 파티 · 로비 · 배정 결과입니다.
+ * @brief 매칭 키트의 타입입니다. 결과, 모드 정의, 대기열 티켓, 만들어진 경기, 파티, 로비, 배정 결과를 정의합니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -12,16 +12,16 @@
 
 namespace sw
 {
-    /** @brief 매칭 요청의 결과입니다(키트 오류 코드 = `OnlineMethodRange::kMatchmaking` + 값 — 0 은 성공). 와이어 형식이다. */
+    /** @brief 매칭 요청의 결과입니다. 키트 오류 코드는 `OnlineMethodRange::kMatchmaking` 에 값을 더한 것이며 0은 성공입니다. 와이어 형식입니다. */
     enum class MatchmakingResult : uint8
     {
         Ok = 0,
         UnknownMode,
         AlreadyQueued,
         NotQueued,
-        PartyTooLarge, ///< 표의 인원이 0 이거나 팀 인원을 넘는다
+        PartyTooLarge, ///< 티켓의 인원이 0이거나 팀 인원을 넘는다
         NotPartyLeader,
-        // 파티 · 로비
+        // 파티와 로비
         PartyFull,
         NotInParty,
         AlreadyInParty,
@@ -43,25 +43,25 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 모드 하나의 규칙입니다(데이터 — 게임이 올린다). */
+    /** @brief 모드 하나의 규칙입니다. 게임이 등록하는 데이터입니다. */
     struct MatchModeDefinition
     {
-        string _modeID{};               ///< `[0-9a-z_]`, 32 바이트 이하 — 버스 주제 · 캐시 키에 들어간다
-        string _serverKind{ "game" };   ///< 전용 서버 종류(기반 서버 고르기)
-        int64  _regionRelaxMs{ 30000 }; ///< 닻이나 후보가 이만큼 기다렸으면 지역을 가리지 않는다
-        int64  _maxWaitMs{ 120000 };    ///< 넘으면 표를 뺀다(매칭 실패 — 다시 줄 선다)
+        string _modeID{};               ///< `[0-9a-z_]` 형식이며 32바이트 이하이다. 버스 주제와 캐시 키에 들어간다
+        string _serverKind{ "game" };   ///< 전용 서버 종류이다. 기반 계층의 서버 선택에 쓴다
+        int64  _regionRelaxMs{ 30000 }; ///< 앵커나 후보가 이만큼 기다렸으면 지역을 따지지 않는다
+        int64  _maxWaitMs{ 120000 };    ///< 넘으면 티켓을 뺀다. 매칭에 실패한 것이며 다시 줄을 서야 한다
         int32  _teamCount{ 2 };
         int32  _teamSize{ 3 };
-        int32  _baseRatingWindow{ 100 }; ///< 실력 창 = 기본 + 초당 넓힘 × 기다린 초(상한)
+        int32  _baseRatingWindow{ 100 }; ///< 실력 허용 범위는 기본값에 초당 넓힘을 기다린 초만큼 곱해 더한 값이며 상한이 있다
         int32  _ratingWindowPerSecond{ 25 };
         int32  _maxRatingWindow{ 1000 };
-        uint32 _buildVersion{ 0 }; ///< 전용 서버 빌드 판(0 = 무관)
+        uint32 _buildVersion{ 0 }; ///< 전용 서버 빌드 버전이다. 0이면 상관없다
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 표의 한 사람입니다. */
+    /** @brief 티켓에 든 한 사람입니다. */
     struct MatchMember
     {
         AccountID _accountID{ kInvalidAccountID };
@@ -71,30 +71,30 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 대기열 표 하나 — 혼자 또는 파티(한 팀에 같이 간다). */
+    /** @brief 대기열 티켓 하나입니다. 혼자이거나 파티이며, 파티는 같은 팀에 함께 배정합니다. */
     struct MatchTicket
     {
         vector<MatchMember> _listMember{};
         string              _region{};
         uint64              _ticketID{ 0 };
-        uint64              _partyID{ 0 };        ///< 0 = 혼자
-        uint64              _originServerID{ 0 }; ///< 표를 낸 서버(결과를 그 서버로 돌려보낸다)
+        uint64              _partyID{ 0 };        ///< 0이면 혼자이다
+        uint64              _originServerID{ 0 }; ///< 티켓을 낸 서버이다. 결과를 그 서버로 돌려보낸다
         int64               _enqueuedMs{ 0 };
 
-        /** @brief 멤버 실력의 평균입니다. 비면 0. */
+        /** @brief 멤버 실력의 평균입니다. 멤버가 없으면 0입니다. */
         SW_GF_API int32 computeAverageRating() const;
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 만든 경기 하나입니다. */
+    /** @brief 만들어진 경기 하나입니다. */
     struct MatchFormed
     {
         vector<vector<MatchMember>> _listTeam{};
         vector<MatchTicket>         _listTicket{};
         string                      _modeID{};
-        string                      _region{}; ///< 닻(가장 오래 기다린 표)의 지역 — 전용 서버 배정이 먼저 본다
+        string                      _region{}; ///< 앵커(가장 오래 기다린 티켓)의 지역이다. 전용 서버 배정이 먼저 확인한다
         uint64                      _matchID{ 0 };
         int32                       _averageRating{ 0 };
     };
@@ -102,7 +102,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 매칭의 상한입니다. */
+    /** @brief 매칭의 상한 값들입니다. */
     struct MatchmakingLimit
     {
         static constexpr int32 kMaxTeamCount = 16;
@@ -113,18 +113,18 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 모드 id 규칙(`[0-9a-z_]`, 1..32 바이트)인가입니다 — 캐시 키 · 버스 주제에 그대로 들어간다. */
+    /** @brief 모드 id 규칙(`[0-9a-z_]`, 1~32바이트)에 맞으면 true 입니다. 캐시 키와 버스 주제에 그대로 들어가기 때문입니다. */
     SW_GF_API bool isValidMatchModeID( string_view modeID );
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 파티 하나의 스냅숏입니다(캐시 기록 · 알림 · 응답이 같은 모양). 실력은 두지 않는다 — 줄 설 때 `IMatchRatingSource` 가 모드마다 준다. */
+    /** @brief 파티 하나의 스냅샷입니다. 캐시 기록, 알림, 응답이 같은 형식을 씁니다. 실력은 두지 않으며, 줄을 설 때 `IMatchRatingSource` 가 모드마다 줍니다. */
     struct PartySnapshot
     {
-        vector<AccountID> _listMemberID{}; ///< 첫째가 장
+        vector<AccountID> _listMemberID{}; ///< 첫 항목이 파티장이다
         uint64            _partyID{ 0 };
-        uint64            _queuedTicketID{ 0 }; ///< 줄 서 있으면 그 표(낸 서버 id << 32 | 순번)
+        uint64            _queuedTicketID{ 0 }; ///< 줄을 서 있으면 그 티켓이다. 낸 서버 id 를 32비트 왼쪽으로 민 값에 순번을 합친 것이다
         int32             _maxMemberCount{ 4 };
 
         AccountID      getLeaderID() const { return _listMemberID.empty() ? kInvalidAccountID : _listMemberID.front(); }
@@ -134,7 +134,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 로비 회원 한 사람입니다. */
+    /** @brief 로비 멤버 한 명입니다. */
     struct LobbyMember
     {
         AccountID _accountID{ kInvalidAccountID };
@@ -145,31 +145,31 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 로비 설정 한 줄(맵 · 규칙)입니다. */
+    /** @brief 로비 설정 한 줄입니다. 맵이나 규칙을 담습니다. */
     struct LobbySetting
     {
-        string _key{};   ///< `[0-9a-z_.]`, 16 바이트 이하
-        string _value{}; ///< 64 바이트 이하
+        string _key{};   ///< `[0-9a-z_.]` 형식이며 16바이트 이하이다
+        string _value{}; ///< 64바이트 이하이다
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 로비 상태입니다. 와이어 값이다. */
+    /** @brief 로비 상태입니다. 와이어 값입니다. */
     enum class LobbyState : uint8
     {
         Open = 0,
-        Starting, ///< 방장이 시작했다 — 전용 서버 배정 중(실패하면 Open 으로 돌아온다)
+        Starting, ///< 방장이 시작했고 전용 서버를 배정하는 중이다. 실패하면 Open 으로 돌아온다
         Count
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 로비 하나의 스냅숏입니다. */
+    /** @brief 로비 하나의 스냅샷입니다. */
     struct LobbySnapshot
     {
-        vector<LobbyMember>  _listMember{}; ///< 첫째가 방장
+        vector<LobbyMember>  _listMember{}; ///< 첫 항목이 방장이다
         vector<LobbySetting> _listSetting{};
         string               _name{};
         string               _modeID{};
@@ -180,55 +180,55 @@ namespace sw
 
         AccountID      getOwnerID() const { return _listMember.empty() ? kInvalidAccountID : _listMember.front()._accountID; }
         SW_GF_API bool hasMember( AccountID accountID ) const;
-        /** @brief 방장을 빼고 모두 준비했고 둘 이상인가입니다. */
+        /** @brief 방장을 뺀 모두가 준비했고 인원이 둘 이상이면 true 입니다. */
         SW_GF_API bool isEveryoneReady() const;
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 파티 · 로비의 상한입니다. */
+    /** @brief 파티와 로비의 상한 값들입니다. */
     struct PartyLobbyLimit
     {
         static constexpr int32 kMaxPartySize        = 8;
         static constexpr int32 kMaxLobbySize        = 32;
         static constexpr int32 kMinLobbySize        = 2;
-        static constexpr int32 kLobbyTeamCount      = 2; ///< 로비는 두 편(들어오면 인원이 적은 편)
+        static constexpr int32 kLobbyTeamCount      = 2; ///< 로비는 두 팀이며, 들어오면 인원이 적은 팀에 들어간다
         static constexpr int32 kMaxLobbySetting     = 8;
         static constexpr int32 kMaxSettingKeySize   = 16;
         static constexpr int32 kMaxSettingValueSize = 64;
         static constexpr int32 kMaxLobbyNameSize    = 48;
         static constexpr int32 kMaxLobbyList        = 50;
-        static constexpr int64 kPartyTtlMs          = 1800000; ///< 30 분 — 바뀔 때마다 연장
-        static constexpr int64 kLobbyTtlMs          = 7200000; ///< 2 시간
+        static constexpr int64 kPartyTtlMs          = 1800000; ///< 30분이며 바뀔 때마다 연장한다
+        static constexpr int64 kLobbyTtlMs          = 7200000; ///< 2시간이다
         static constexpr int64 kInviteTtlMs         = 300000;  ///< 5 분
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 줄 선 표의 끝입니다. 와이어 값이다. */
+    /** @brief 줄을 선 티켓이 끝난 이유입니다. 와이어 값입니다. */
     enum class MatchQueueOutcome : uint8
     {
         Found = 0,
-        Timeout,   ///< 모드 시한 · 권한 서버가 넘어가 표를 잃었다 — 다시 줄 선다
-        NoServer,  ///< 경기는 만들었지만 전용 서버 자리가 끝내 없었다
-        Cancelled, ///< 빠졌다(본인 · 파티가 바뀜)
+        Timeout,   ///< 모드 시한을 넘었거나 권한 서버가 바뀌어 티켓을 잃었다. 다시 줄을 선다
+        NoServer,  ///< 경기는 만들었지만 전용 서버에 끝내 자리가 없었다
+        Cancelled, ///< 대기열에서 빠졌다. 본인이 뺐거나 파티가 바뀐 경우이다
         Count
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 클라이언트가 받는 매칭 결과입니다(`Found` 면 게임은 계정 클라이언트로 접속 표를 받아 그 서버에 UDP 로 붙는다). */
+    /** @brief 클라이언트가 받는 매칭 결과입니다. `Found` 이면 게임이 계정 클라이언트로 접속 티켓을 받아 그 서버에 UDP 로 접속합니다. */
     struct MatchAssignment
     {
         vector<AccountID> _listTeammate{};
         string            _address{};
         string            _modeID{};
         uint64            _matchID{ 0 };
-        uint64            _serverID{ 0 }; ///< 계정 키트 접속 표의 서버 id(16 진 글로)
-        uint64            _ticketID{ 0 }; ///< 로비 시작이면 0
+        uint64            _serverID{ 0 }; ///< 계정 키트 접속 티켓의 서버 id 이다. 16진 문자열로 쓴다
+        uint64            _ticketID{ 0 }; ///< 로비 시작이면 0이다
         int32             _team{ 0 };
         uint16            _port{ 0 };
         MatchQueueOutcome _outcome{ MatchQueueOutcome::Found };

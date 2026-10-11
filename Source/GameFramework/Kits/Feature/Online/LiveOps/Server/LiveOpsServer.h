@@ -1,9 +1,10 @@
 /**
  * @file LiveOpsServer.h
- * @brief 라이브 운영의 스트림 바인딩 — `IOnlineService`(영역 `kLiveOps`). 열린 이벤트 요청에 바로 답하고, 열린 묶음이 바뀌면 이 프로세스의 모두에게 알리고,
- *        버스 `liveops.changed` 를 로직에 전합니다. 푸시 기기 등록 · 해지는 발송기에 꼬리표로 맡기고 완료를 응답으로 보냅니다.
- * @details - 모든 메서드는 로그인 뒤(출시 비율 · 기기가 계정을 본다). 알림은 몸이 없다 — 클라이언트가 자기 대상으로 다시 받는다.
- *          - 호스트에 올리는 것은 부르는 쪽이(`host.registerService( &server )` — 호스트 `initialize` 전에). 버스 구독은 첫 서비스 틱에.
+ * @brief 라이브 운영의 스트림 바인딩입니다. `IOnlineService`(영역 `kLiveOps`)를 구현합니다.
+ * @details 열린 이벤트 요청에는 바로 응답하고, 열린 이벤트 목록이 바뀌면 이 프로세스의 모든 클라이언트에 알리며, 버스 `liveops.changed` 를 로직에 전달한다.
+ *          푸시 기기 등록과 해지는 발송기에 요청 태그와 함께 맡기고 완료를 응답으로 보낸다.
+ *          - 모든 메서드는 로그인한 뒤에만 쓸 수 있다. 출시 비율과 기기가 계정을 보기 때문이다. 알림에는 본문이 없으며 클라이언트가 자기 대상에 맞게 다시 받는다.
+ *          - 호스트에 등록하는 일은 호출하는 쪽이 한다(`host.registerService( &server )`, 호스트 `initialize` 전에). 버스 구독은 첫 서비스 틱에서 한다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -21,16 +22,16 @@ namespace sw
 
     /**
      * @class LiveOpsServer
-     * @brief 라이브 운영 바인딩입니다(호스트 `tick` 스레드).
+     * @brief 라이브 운영 바인딩입니다. 호스트 `tick` 스레드에서 씁니다.
      */
     class SW_GF_API LiveOpsServer final : public IOnlineService
     {
     public:
         LiveOpsServer();
 
-        /** @brief 넘긴 것은 빌려 쓴다(첫 서비스 틱 전에). @p pDispatcher 가 없으면 기기 메서드는 kUnavailable. 발송기의 틱도 바인딩이 돈다. */
+        /** @brief 넘긴 객체는 빌려 씁니다. 첫 서비스 틱 전에 지정합니다. @p pDispatcher 가 없으면 기기 메서드는 kUnavailable 입니다. 발송기의 틱도 바인딩이 돌립니다. */
         void initialize( LiveOpsService* pService, PushNotificationDispatcher* pDispatcher = nullptr );
-        /** @brief 버스 구독을 풉니다. 로직은 부르는 쪽이 내린다. */
+        /** @brief 버스 구독을 해제합니다. 로직은 호출하는 쪽이 종료합니다. */
         void shutdown();
 
         // IOnlineService
@@ -49,6 +50,6 @@ namespace sw
         vector<PushDeviceCompletion> _listDeviceCompletionScratch;
         LiveOpsService*              _pService;
         PushNotificationDispatcher*  _pDispatcher;
-        OnlineServiceHost*           _pHost; ///< 버스를 구독한 호스트(풀 때)
+        OnlineServiceHost*           _pHost; ///< 버스를 구독한 호스트이다. 구독을 해제할 때 쓴다
     };
 } // namespace sw

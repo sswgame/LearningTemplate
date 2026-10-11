@@ -12,7 +12,7 @@ namespace sw
     {
         struct VoxelRaycastInternal
         {
-            /** @brief 한 축의 걸음 준비 — 다음 칸 경계까지의 t 와 칸 하나를 건너는 t 입니다. */
+            /** @brief 한 축의 걸음 준비 값입니다. 다음 셀 경계까지의 t 와 셀 하나를 건너는 t 를 가집니다. */
             static void prepareAxis( float32 origin, float32 direction, int32 cell, int32& outStep, float32& outNextT, float32& outDeltaT )
             {
                 if ( MathUtil::abs( direction ) < 1.0e-8f )
@@ -99,7 +99,7 @@ namespace sw
                 nextZ += deltaZ;
                 normal = VoxelCoord{ 0, 0, -stepZ };
             }
-            // 월드 위 · 아래로 완전히 빠져나가면 더 볼 것이 없다.
+            // 월드의 위쪽이나 아래쪽으로 완전히 빠져나가면 더 볼 것이 없다.
             if ( ( cell._y < 0 && stepY < 0 ) || ( cell._y >= world.getSizeY() && stepY > 0 ) )
                 return false;
         }

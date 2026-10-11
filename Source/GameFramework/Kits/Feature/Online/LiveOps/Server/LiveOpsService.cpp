@@ -37,7 +37,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 이벤트 표를 읽는 일입니다. */
+    /** @brief 이벤트 테이블을 읽는 작업입니다. */
     class LiveOpsReloadWork final : public IServiceStoreWork
     {
     public:
@@ -75,12 +75,12 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 이벤트 하나 쓰기 · 지우기 + 감사 줄을 한 트랜잭션으로(판 조건 — 그새 바뀌었으면 Unavailable, 다시 하면 된다). */
+    /** @brief 이벤트 하나의 쓰기나 지우기를 감사 기록과 함께 한 트랜잭션으로 처리합니다. 버전 조건을 쓰므로 그사이 바뀌었으면 Unavailable 이며 다시 하면 됩니다. */
     class LiveOpsWriteWork final : public IServiceStoreWork
     {
     public:
         ServiceAuditEntry _auditEntry;
-        vector<uint8>     _bytes; ///< 비면 지우기
+        vector<uint8>     _bytes; ///< 비어 있으면 지우기이다
         string            _key;
         NetIdempotencyKey _auditUnique;
         LiveOpsService*   _pService;
@@ -116,7 +116,7 @@ namespace sw
             else
                 transaction.put( table, _key, _bytes, current._version );
             ServiceAuditLog::stageEntry( transaction, _auditEntry, _auditUnique._high, _auditUnique._low );
-            _result = connection.commit( transaction ) == ServiceStoreResult::Ok ? LiveOpsResult::Ok : LiveOpsResult::Unavailable; // Conflict 도 "다시 하라"
+            _result = connection.commit( transaction ) == ServiceStoreResult::Ok ? LiveOpsResult::Ok : LiveOpsResult::Unavailable; // Conflict 도 "다시 하라" 는 뜻으로 Unavailable 로 처리한다
         }
 
         void complete() override { _pService->applyWrite( _requestTag, _result ); }
@@ -157,7 +157,7 @@ namespace sw
         const bool bPeriodic = nowMs - _lastReloadMs >= LiveOpsBus::kReloadPeriodMs;
         if ( _bReloading == SW_FALSE && ( _bReloadRequested == SW_TRUE || bPeriodic ) )
             startReload( nowMs );
-        markIfChanged( nowMs ); // 시작 · 끝 · 회차 경계는 다시 읽지 않아도 열린 묶음이 바뀐다
+        markIfChanged( nowMs ); // 시작, 끝, 회차 경계는 다시 읽지 않아도 열린 이벤트 목록이 바뀐다
     }
 
     void LiveOpsService::startReload( int64 nowMs )
@@ -174,7 +174,7 @@ namespace sw
         --_pendingCount;
         _bReloading = SW_FALSE;
         if ( bReadOk == false )
-            return; // 저장소가 아프다 — 옛 것을 두고 다음 주기에
+            return; // 저장소에 문제가 있으므로 이전 값을 두고 다음 주기에 다시 읽는다
         _listEvent = std::move( listEvent );
         markIfChanged( nowMs );
     }
@@ -202,14 +202,14 @@ namespace sw
         if ( isKillSwitchOff() )
             return hash;
         if ( _dependencies._pRemoteConfig != nullptr )
-            hash = HashUtil::combine( hash, _dependencies._pRemoteConfig->getSnapshotHash() ); // '@' 값이 바뀌어도 다시 받게
+            hash = HashUtil::combine( hash, _dependencies._pRemoteConfig->getSnapshotHash() ); // '@' 값이 바뀌어도 클라이언트가 다시 받게 한다
         for ( const LiveEventDefinition& definition : _listEvent )
         {
             int64 windowEndMs = 0;
             if ( LiveEventRules::isWindowOpen( definition, nowMs, windowEndMs ) == false )
                 continue;
             hash = Internal::combineText( hash, definition._eventID );
-            hash = HashUtil::combine( hash, static_cast<uint64>( windowEndMs ) ); // 반복 회차가 바뀌어도 바뀐다
+            hash = HashUtil::combine( hash, static_cast<uint64>( windowEndMs ) ); // 반복 회차가 바뀌어도 해시가 바뀐다
             for ( const LiveEventParameter& parameter : definition._listParameter )
             {
                 hash = Internal::combineText( Internal::combineText( hash, parameter._key ), parameter._value );

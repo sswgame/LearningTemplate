@@ -19,7 +19,7 @@ namespace sw
         struct ChatServiceInternal
         {
             static constexpr int64       kShutdownWaitMs = 5000;
-            static constexpr int32       kTrimBatchCount = 64; ///< 정리 한 번에 지우는 지난 기록
+            static constexpr int32       kTrimBatchCount = 64; ///< 정리 한 번에 지우는 지난 기록 수이다
             static constexpr const utf8* kWhisperPrefix  = "whisper.";
 
             static const hashed_string& getHistoryTable()
@@ -45,7 +45,7 @@ namespace sw
             static uint16 toMethod( bool bWhisper ) { return bWhisper ? ChatMethod::kWhisper : ChatMethod::kSend; }
         };
 
-        /** @brief 제재 상태를 읽는 일입니다. */
+        /** @brief 제재 상태를 읽는 작업입니다. */
         class ChatSanctionWork final : public IServiceStoreWork
         {
         public:
@@ -122,11 +122,11 @@ namespace sw
                     uint64 sentMs = 0;
                     if ( ServiceKeyUtil::parseHex64( string_view( record._key ).substr( prefix.size(), ServiceKeyUtil::kHexWidth ), sentMs ) == false ||
                          static_cast<int64>( sentMs ) >= _trimBeforeMs )
-                        break; // 키 순서 = 시간 순 — 첫 새 기록에서 멈춘다
+                        break; // 키 순서가 시간 순서이므로 첫 새 기록에서 멈춘다
                     trim.erase( ChatServiceInternal::getHistoryTable(), record._key, record._version );
                 }
                 if ( trim.isEmpty() == false )
-                    (void)connection.commit( trim ); // 정리는 다음 기회에 다시 해도 된다(Conflict · Unavailable 은 버린다)
+                    (void)connection.commit( trim ); // 정리는 다음 기회에 다시 해도 되므로 Conflict 와 Unavailable 은 버린다
             }
 
             vector<ChatMessage> _listMessage;
@@ -136,7 +136,7 @@ namespace sw
             uint8               _bCommitted;
         };
 
-        /** @brief 기록을 최근 것부터 읽는 일입니다. 커서는 앞 쪽의 마지막 키(그보다 이전부터)입니다. */
+        /** @brief 기록을 최근 것부터 읽는 작업입니다. 커서는 앞 응답의 마지막 키이며 그보다 이전 기록부터 읽습니다. */
         class ChatHistoryReadWork final : public IServiceStoreWork
         {
         public:
@@ -221,8 +221,8 @@ namespace sw
             SW_LOG_WARNING( "ChatService: banned word file '%#' not found - chat is not filtered", settings._bannedWordsPath );
         if ( dependencies._pBus != nullptr )
         {
-            _busTopicBuffer.push( ChatBusTopicChange{ _serverTopic, SW_TRUE } );                                // 다른 서버가 보낸 귓속말
-            _busTopicBuffer.push( ChatBusTopicChange{ string( ServiceSanctionBus::kChangedTopic ), SW_TRUE } ); // GM 이 제재를 바꿨다(자기 서버 것도)
+            _busTopicBuffer.push( ChatBusTopicChange{ _serverTopic, SW_TRUE } );                                // 다른 서버가 보낸 귓속말을 받는다
+            _busTopicBuffer.push( ChatBusTopicChange{ string( ServiceSanctionBus::kChangedTopic ), SW_TRUE } ); // GM 이 제재를 바꿨을 때 받는다. 자기 서버가 낸 것도 포함한다
         }
         return true;
     }
@@ -238,7 +238,7 @@ namespace sw
         }
         if ( _pendingStoreCount > 0 )
             SW_LOG_ERROR( "ChatService shut down with %# store works still pending", _pendingStoreCount );
-        if ( _dependencies._pPresence != nullptr ) // 맡긴 찾기를 거둔다 — 접속 상태 창구가 이 객체보다 오래 살아도 부르지 않게(저장 일을 거둔 뒤 — 그 완료가 찾기를 낼 수 있다)
+        if ( _dependencies._pPresence != nullptr ) // 맡긴 찾기를 회수한다. 접속 상태 관리자가 이 객체보다 오래 살아도 이 객체를 부르지 않게 하려는 것이다. 저장 작업을 회수한 뒤에 한다. 그 완료가 찾기를 낼 수 있기 때문이다
         {
             for ( const auto& [requestID, pending] : _mapPresenceRequestToWhisper )
             {
@@ -265,7 +265,7 @@ namespace sw
             return &memberIt->second;
         AccountIdentity identity;
         if ( _dependencies._pDirectory == nullptr || _dependencies._pDirectory->findIdentity( accountID, identity ) == false )
-            return nullptr; // 이 서버에 붙지 않은 계정 — 호스트가 인증했다면 생기지 않는다
+            return nullptr; // 이 서버에 접속하지 않은 계정이다. 호스트가 인증했다면 생기지 않는다
         Member& member      = _mapAccountToMember[accountID];
         member._displayName = identity._displayName;
         startSanctionRead( accountID, member, nowMs );
@@ -291,7 +291,7 @@ namespace sw
         --_pendingStoreCount;
         const auto memberIt = _mapAccountToMember.find( accountID );
         if ( memberIt == _mapAccountToMember.end() )
-            return; // 그새 떠났다
+            return; // 그사이 떠났다
         Member& member           = memberIt->second;
         member._bSanctionReading = SW_FALSE;
         if ( bReadOk )
@@ -469,7 +469,7 @@ namespace sw
             return;
         }
         if ( isSanctionFresh( *pMember, send._nowMs ) == false )
-            startSanctionRead( accountID, *pMember, send._nowMs ); // 묵은 값으로 지금 처리하고 뒤에서 새로 읽는다
+            startSanctionRead( accountID, *pMember, send._nowMs ); // 캐시된 이전 값으로 지금 처리하고, 뒤에서 새로 읽는다
         processSend( accountID, *pMember, send );
     }
 
@@ -535,7 +535,7 @@ namespace sw
 
         if ( bWhisper == false )
         {
-            deliverToChannel( message ); // 보낸 이도 알림으로 받는다(되울림과 별개로 — 다른 창이 같은 채널을 보고 있을 수 있다)
+            deliverToChannel( message ); // 보낸 사람도 알림으로 받는다. 되울림과는 별개이며 다른 창이 같은 채널을 보고 있을 수 있기 때문이다
             publishMessage( ChatProtocol::makeChannelTopic( message._channelID ), message );
             queueHistory( message );
             completeMessage( method, send._requestTag, std::move( message ) );
@@ -553,7 +553,7 @@ namespace sw
             completeSimple( method, send._requestTag, ChatResult::TargetOffline );
             return;
         }
-        // 다른 서버 — 접속 상태로 서버를 찾는다(결과는 onPresenceFound, 늘 나중에)
+        // 다른 서버에 있으면 접속 상태로 서버를 찾는다. 결과는 항상 나중에 onPresenceFound 로 온다
         const uint64 requestID = _dependencies._pPresence->submitFindByAccount( send._recipientID, AccountPresenceDelegate::create<&ChatService::onPresenceFound>( this ) );
         _mapPresenceRequestToWhisper.emplace( requestID, PendingWhisper{ std::move( message ), send._requestTag } );
     }
@@ -562,17 +562,17 @@ namespace sw
     {
         const auto whisperIt = _mapPresenceRequestToWhisper.find( result._requestID );
         if ( whisperIt == _mapPresenceRequestToWhisper.end() )
-            return; // 내린 뒤에 온 결과
+            return; // 종료한 뒤에 온 결과이다
         PendingWhisper pending = std::move( whisperIt->second );
         _mapPresenceRequestToWhisper.erase( whisperIt );
         if ( result.isOnline() == false || result._serverID == _dependencies._serverID )
         {
-            completeSimple( ChatMethod::kWhisper, pending._requestTag, ChatResult::TargetOffline ); // 이 서버라면 그새 떠났다
+            completeSimple( ChatMethod::kWhisper, pending._requestTag, ChatResult::TargetOffline ); // 이 서버였다면 그사이 떠난 것이다
             return;
         }
         publishMessage( ChatProtocol::makeServerTopic( result._serverID ), pending._message );
         queueHistory( pending._message );
-        completeMessage( ChatMethod::kWhisper, pending._requestTag, std::move( pending._message ) ); // 받는 서버가 차단으로 버려도 보낸 이에게는 보낸 것으로 보인다
+        completeMessage( ChatMethod::kWhisper, pending._requestTag, std::move( pending._message ) ); // 받는 서버가 차단으로 버려도 보낸 사람에게는 보낸 것으로 보인다
     }
 
     void ChatService::publishMessage( const string& topic, const ChatMessage& message )
@@ -592,7 +592,7 @@ namespace sw
         for ( const AccountID recipientID : channelIt->second )
         {
             if ( _dependencies._pPolicy != nullptr && recipientID != message._senderID && _dependencies._pPolicy->isBlocked( recipientID, message._senderID ) )
-                continue; // 막은 사람의 채널 말은 받는 쪽에서 안 보인다
+                continue; // 막은 사람의 채널 말은 받는 쪽에게 보이지 않는다
             _deliveryBuffer.push( ChatDelivery{ message, recipientID } );
         }
     }
@@ -666,7 +666,7 @@ namespace sw
 
     bool ChatService::isWhisperParticipant( AccountID accountID, string_view channelID ) const
     {
-        // 기록 키 `whisper.<작은 계정 16 진>.<큰 계정 16 진>` — 두 id 중 하나가 나여야 한다
+        // 기록 키는 `whisper.<작은 계정 16진>.<큰 계정 16진>` 형식이며, 두 id 중 하나가 나여야 한다
         const size_t prefixSize = string_view( ChatServiceInternal::kWhisperPrefix ).size();
         const size_t hexWidth   = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
         if ( channelID.size() != prefixSize + hexWidth + 1 + hexWidth || channelID[prefixSize + hexWidth] != '.' )

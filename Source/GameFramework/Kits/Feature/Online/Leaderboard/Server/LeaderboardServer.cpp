@@ -62,7 +62,7 @@ namespace sw
             if ( pBoard == nullptr || pBoard->_bClientSubmit == SW_FALSE )
             {
                 LeaderboardReply reply;
-                reply._result = pBoard == nullptr ? LeaderboardResult::UnknownBoard : LeaderboardResult::NotAllowed; // 점수는 서버가 낸다
+                reply._result = pBoard == nullptr ? LeaderboardResult::UnknownBoard : LeaderboardResult::NotAllowed; // 점수는 서버가 낸다. 클라이언트가 낼 수 있는 보드가 아니면 거절한다
                 BitWriter replyBody;
                 LeaderboardProtocol::writeReply( replyBody, reply );
                 (void)host.respondOk( context._token, replyBody );
@@ -120,7 +120,7 @@ namespace sw
         {
             NetRequestToken token;
             if ( _pendingTable.take( completion._requestTag, token ) == false )
-                continue; // 꼬리표 0(안에서 건 일) · 이미 답함
+                continue; // 요청 태그가 0이거나(내부에서 건 작업) 이미 응답했다
             LeaderboardReply reply;
             reply._result          = completion._result;
             reply._periodID        = completion._periodID;
@@ -130,7 +130,7 @@ namespace sw
             reply._listAchievement = std::move( completion._listAchievement );
             BitWriter body;
             LeaderboardProtocol::writeReply( body, reply );
-            (void)host.respondOk( token, body ); // 닫힌 연결이면 호스트가 버린다
+            (void)host.respondOk( token, body ); // 연결이 닫혔으면 호스트가 버린다
         }
 
         _listUnlockScratch.clear();
@@ -140,7 +140,7 @@ namespace sw
             BitWriter body;
             LeaderboardProtocol::writeAchievement( body, unlock._state );
             if ( host.sendPush( unlock._accountID, LeaderboardMethod::kPushAchievement, body ) == false && _pPresence != nullptr )
-                (void)_pPresence->sendRemotePush( unlock._accountID, LeaderboardMethod::kPushAchievement, body ); // 다른 서버에 붙어 있다
+                (void)_pPresence->sendRemotePush( unlock._accountID, LeaderboardMethod::kPushAchievement, body ); // 다른 서버에 접속해 있다
         }
     }
 } // namespace sw

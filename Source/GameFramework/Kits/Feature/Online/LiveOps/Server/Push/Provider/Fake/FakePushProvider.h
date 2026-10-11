@@ -1,6 +1,6 @@
 /**
  * @file FakePushProvider.h
- * @brief 가짜 푸시 제공자 — 보낸 것을 기록하고, 토큰마다 정해 둔 결과를 다음 `pollResults` 에 돌려줍니다(기본 Delivered). 테스트 · 개발 서버용입니다.
+ * @brief 가짜 푸시 제공자입니다. 보낸 것을 기록하고, 토큰마다 정해 둔 결과를 다음 `pollResults` 에 돌려줍니다. 기본 결과는 Delivered 이며 테스트와 개발 서버에서 씁니다.
  */
 #pragma once
 #include "Core/Container/unordered_map.h"
@@ -12,7 +12,7 @@ namespace sw
 {
     /**
      * @class FakePushProvider
-     * @brief 가짜 제공자입니다(id "fake").
+     * @brief id 가 "fake" 인 가짜 제공자입니다.
      */
     class SW_GF_API FakePushProvider final : public IPushNotificationProvider
     {
@@ -26,7 +26,7 @@ namespace sw
 
         FakePushProvider();
 
-        /** @brief @p deviceToken 에 다음 @p count 번 @p status 를 돌려줍니다(그 뒤 Delivered). */
+        /** @brief @p deviceToken 에 다음 @p count 번 @p status 를 돌려줍니다. 그 뒤에는 Delivered 를 돌려줍니다. */
         void scriptResult( string_view deviceToken, PushDeliveryStatus status, int32 count = 1, int64 retryAfterMs = 0 );
 
         string_view getProviderID() const override { return "fake"; }

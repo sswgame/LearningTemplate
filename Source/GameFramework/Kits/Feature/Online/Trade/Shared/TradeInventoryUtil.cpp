@@ -17,7 +17,7 @@ namespace sw
             for ( size_t previousIndex = 0; previousIndex < slotIndex; ++previousIndex )
             {
                 if ( listSlot[previousIndex] == slot )
-                    return TradeResult::Invalid; // 같은 칸 두 번
+                    return TradeResult::Invalid; // 같은 슬롯을 두 번 지정했다
             }
             if ( slot < 0 || slot >= inventory.getSlotCount() )
                 return TradeResult::Invalid;

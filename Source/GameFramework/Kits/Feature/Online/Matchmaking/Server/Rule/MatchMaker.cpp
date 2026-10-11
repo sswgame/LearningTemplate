@@ -11,14 +11,14 @@ namespace sw
     {
         struct MatchMakerInternal
         {
-            /** @brief 닻의 후보 하나 — 표 번호와 닻까지의 실력 거리입니다. */
+            /** @brief 앵커의 후보 하나입니다. 티켓 번호와 앵커까지의 실력 거리를 가집니다. */
             struct Candidate
             {
                 int32 _ticketIndex{ 0 };
                 int32 _ratingDistance{ 0 };
             };
 
-            /** @brief 닻에 가까운 실력 순, 같으면 오래 기다린 순, 같으면 표 id 순 — 결정적이다. */
+            /** @brief 앵커에 가까운 실력 순, 같으면 오래 기다린 순, 그래도 같으면 티켓 id 순으로 정렬합니다. 결과가 결정적입니다. */
             struct CandidateOrder
             {
                 const vector<MatchTicket>* _pListTicket{ nullptr };
@@ -35,7 +35,7 @@ namespace sw
                 }
             };
 
-            /** @brief 오래 기다린 순, 같으면 표 id 순입니다. */
+            /** @brief 오래 기다린 순, 같으면 티켓 id 순으로 정렬합니다. */
             struct AgeOrder
             {
                 bool operator()( const MatchTicket& left, const MatchTicket& right ) const
@@ -46,7 +46,7 @@ namespace sw
                 }
             };
 
-            /** @brief 인원이 많은 표부터입니다(stable_sort 와 함께 — 같은 인원은 후보 순서 그대로). */
+            /** @brief 인원이 많은 티켓부터 정렬합니다. stable_sort 와 함께 쓰므로 같은 인원은 후보 순서를 그대로 유지합니다. */
             struct TicketSizeOrder
             {
                 const vector<MatchTicket>* _pListTicket{ nullptr };
@@ -120,7 +120,7 @@ namespace sw
 
     void MatchMaker::process( int64 nowMs, vector<MatchFormed>& outListMatch, vector<MatchTicket>& outListTimedOut )
     {
-        // 1) 시한 — 넣은 순서를 지켜 돌려준다.
+        // 1) 시한을 넘긴 티켓을 넣은 순서대로 돌려준다.
         vector<MatchTicket> listWaiting;
         listWaiting.reserve( _listTicket.size() );
         for ( MatchTicket& ticket : _listTicket )
@@ -132,7 +132,7 @@ namespace sw
         }
         _listTicket.swap( listWaiting );
 
-        // 2) 오래 기다린 순으로 닻
+        // 2) 오래 기다린 순으로 앵커를 잡는다
         std::sort( _listTicket.begin(), _listTicket.end(), MatchMakerInternal::AgeOrder{} );
         vector<uint8> listUsed( _listTicket.size(), 0 );
         for ( int32 anchorIndex = 0; anchorIndex < static_cast<int32>( _listTicket.size() ); ++anchorIndex )
@@ -146,7 +146,7 @@ namespace sw
             outListMatch.push_back( std::move( match ) );
         }
 
-        // 3) 쓴 표를 뺀다
+        // 3) 경기에 쓴 티켓을 뺀다
         vector<MatchTicket> listRemaining;
         listRemaining.reserve( _listTicket.size() );
         for ( size_t index = 0; index < _listTicket.size(); ++index )
@@ -217,7 +217,7 @@ namespace sw
 
     bool MatchMaker::partitionIntoTeams( const vector<int32>& listTicketIndex, MatchFormed& outMatch ) const
     {
-        // 큰 표부터 — 작은 표가 먼저 자리를 나눠 가지면 파티가 들어갈 팀이 남지 않는다.
+        // 큰 티켓부터 넣는다. 작은 티켓이 먼저 자리를 나눠 가지면 파티가 들어갈 팀이 남지 않기 때문이다.
         vector<int32> listOrder = listTicketIndex;
         std::stable_sort( listOrder.begin(), listOrder.end(), MatchMakerInternal::TicketSizeOrder{ &_listTicket } );
         outMatch._listTeam.assign( static_cast<size_t>( _definition._teamCount ), vector<MatchMember>{} );

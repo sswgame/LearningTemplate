@@ -1,11 +1,13 @@
 /**
  * @file TradeService.h
- * @brief 거래 서비스 — 상태 기계는 저장소 위(거래 레코드), 요청마다 저장 일 하나(읽기 → 상태 기계 → 판 조건 쓰기, 정산이면 원장 분개를 같은 커밋에). 서버 프로세스마다 하나.
- * @details - 서비스 스레드 하나에서 부른다. 결과는 꼬리표와 함께 `drainCompletions`, 바뀐 거래는 `drainUpdates`(바인딩이 두 당사자에게 알린다 — 다른 서버의 상대는 버스로).
- *          - 상태가 저장소에 있으므로 상대가 다른 서버에 붙어 있어도 상대 서버의 서비스가 같은 레코드를 판 조건으로 바꾼다(주인 서버를 거치지 않는다).
- *          - 기동 때 `recoverOwnedTrades` 가 이 서버가 연 열린 거래를 ServerRestart 로 닫는다(아무것도 안 움직였으니 안전).
- *          - 시한은 이 서비스가 본 거래의 마지막 바뀜 + 시한이 지나면 `tick` 이 닫기를 맡긴다(다른 서버가 연 것도 다음 신청 때 게으르게 닫힌다).
- *          자체 MMO 서버가 거래 확정을 DB 트랜잭션 하나(두 인벤토리 + 거래 기록)로 하는 것과 같은 모양 — 언리얼에는 거래 시스템이 없다.
+ * @brief 거래 서비스입니다. 상태 기계는 저장소 위의 거래 레코드에서 동작하고, 요청마다 저장 작업 하나를 만듭니다. 서버 프로세스마다 하나입니다.
+ * @details 저장 작업은 읽기, 상태 기계, 버전 조건 쓰기 순서로 진행하며 정산이면 원장 분개를 같은 커밋에 넣는다.
+ *          - 서비스 스레드 하나에서 부른다. 결과는 요청 태그와 함께 `drainCompletions` 로, 바뀐 거래는 `drainUpdates` 로 회수한다. 바인딩이 두 당사자에게 알리며 다른 서버의 상대에게는 버스로 알린다.
+ *          - 상태가 저장소에 있으므로 상대가 다른 서버에 접속해 있어도 그 서버의 서비스가 같은 레코드를 버전 조건으로 바꾼다. 주인 서버를 거치지 않는다.
+ *          - 기동할 때 `recoverOwnedTrades` 가 이 서버가 연 열린 거래를 ServerRestart 로 닫는다. 아무것도 움직이지 않았으므로 안전하다.
+ *          - 시한은 이 서비스가 본 거래의 마지막 변경 시각에 시한을 더한 값이다. 지나면 `tick` 이 닫기를 맡긴다. 다른 서버가 연 거래도 다음 신청 때 지연해서 닫힌다.
+ *
+ *          자체 MMO 서버가 거래 확정을 DB 트랜잭션 하나(두 인벤토리와 거래 기록)로 처리하는 것과 같은 구조이다. 언리얼에는 거래 시스템이 없다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -39,7 +41,7 @@ namespace sw
     struct TradeCompletion
     {
         TradeSnapshot         _snapshot{};
-        LedgerTransferOutcome _ledger{}; ///< 정산 — 이동 뒤 잔액(게임이 거울에 넣는다)
+        LedgerTransferOutcome _ledger{}; ///< 정산 결과이다. 이동 뒤 잔액이며 게임이 미러에 넣는다
         uint64                _requestTag{ 0 };
         TradeResult           _result{ TradeResult::Ok };
         TradeOperation        _operation{ TradeOperation::Invite };
@@ -57,10 +59,10 @@ namespace sw
     public:
         TradeService();
 
-        /** @brief 넘긴 것은 모두 빌려 쓴다. @p serverID 는 이 서버 프로세스의 id(0 아님 — 재시작 복구 색인). */
+        /** @brief 넘긴 객체는 모두 빌려 씁니다. @p serverID 는 이 서버 프로세스의 id 이며 0이 아니어야 합니다. 재시작 복구 인덱스에 씁니다. */
         void initialize( IServiceStore* pStore, const ITradePolicy* pPolicy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID, const TradeSettings& settings );
         void shutdown();
-        /** @brief 이 서버가 연 열린 거래를 모두 닫습니다(기동 때 한 번). 닫힌 거래는 `drainUpdates` 로. */
+        /** @brief 이 서버가 연 열린 거래를 모두 닫습니다. 기동할 때 한 번 부르며 닫힌 거래는 `drainUpdates` 로 회수합니다. */
         void recoverOwnedTrades( int64 nowMs );
 
         void invite( AccountID fromID, AccountID toID, int64 nowMs, uint64 requestTag );
@@ -69,9 +71,9 @@ namespace sw
         void lock( AccountID actorID, uint64 tradeID, int64 nowMs, uint64 requestTag );
         void confirm( AccountID actorID, uint64 tradeID, uint32 seenOwnRevision, uint32 seenPeerRevision, int64 nowMs, uint64 requestTag );
         void cancel( AccountID actorID, uint64 tradeID, int64 nowMs, uint64 requestTag );
-        /** @brief 계정이 떠났다 · 제재됐다 — 그 계정의 열린 거래를 닫는다(완료 없음, 바뀜만). */
+        /** @brief 계정이 떠나거나 제재됐을 때 부릅니다. 그 계정의 열린 거래를 닫으며 완료는 없고 변경만 발생합니다. */
         void closeForAccount( AccountID accountID, TradeCloseReason reason, int64 nowMs );
-        /** @brief 아는 거래의 시한을 봅니다. */
+        /** @brief 아는 거래의 시한을 확인합니다. */
         void tick( int64 nowMs );
 
         void drainCompletions( vector<TradeCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
@@ -79,7 +81,7 @@ namespace sw
 
         int32                getPendingCount() const { return _pendingCount; }
         const TradeSettings& getSettings() const { return _settings; }
-        /** @brief 일의 `complete` 가 부른다(키트 안). */
+        /** @brief 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
         void applyCompletion( TradeCompletion&& completion, const vector<TradeSnapshot>& listChanged );
 
     private:
@@ -88,7 +90,7 @@ namespace sw
 
         EventBuffer<TradeCompletion> _completionBuffer;
         EventBuffer<TradeSnapshot>   _updateBuffer;
-        unordered_map<uint64, int64> _mapTradeToDeadline; ///< 이 서비스가 본 열린 거래 → 시한
+        unordered_map<uint64, int64> _mapTradeToDeadline; ///< 이 서비스가 본 열린 거래에서 시한으로 가는 맵이다
         TradeSettings                _settings;
         IServiceStore*               _pStore;
         const ITradePolicy*          _pPolicy;
