@@ -86,7 +86,7 @@ namespace sw
             settings._poiseBreakDuration = MathUtil::max( 0.0f, health.getAttributeFloat( "poiseBreakDuration", settings._poiseBreakDuration ) );
             settings._healthRegenRate    = MathUtil::max( 0.0f, health.getAttributeFloat( "regenRate", settings._healthRegenRate ) );
         }
-        _rules._health._bDownedEnabled = SW_FALSE; // 소울라이크는 기절이 없다 — 0 이면 죽는다
+        _rules._health._bDownedEnabled = SW_FALSE; // 소울라이크는 기절이 없다. 체력이 0이 되면 죽는다
 
         const XMLNode stamina = root.findChild( "Stamina" );
         if ( stamina )
@@ -128,7 +128,7 @@ namespace sw
             ability._flag       = MetroidvaniaCatalogInternal::readName( node, "flag" );
             const XMLNode motor = node.findChild( "Motor" );
             if ( motor )
-                (void)ability._motor.loadFromAttributes( motor ); // 읽은 속성 수만 돌려준다 — 없으면 빈 스탯이다
+                (void)ability._motor.loadFromAttributes( motor ); // 읽은 속성 수만 반환한다. 속성이 없으면 빈 스탯이다
             for ( const StatValue& value : ability._motor.getValues() )
             {
                 if ( MetroAbilitySet::isMotorSettingName( value._name ) == false )
@@ -149,7 +149,7 @@ namespace sw
             charm._cost         = MathUtil::max( 0, node.getAttributeInt( "cost", charm._cost ) );
             const XMLNode stats = node.findChild( "Stats" );
             if ( stats )
-                (void)charm._stats.loadFromAttributes( stats ); // 읽은 속성 수만 돌려준다 — 없으면 빈 스탯이다
+                (void)charm._stats.loadFromAttributes( stats ); // 읽은 속성 수만 반환한다. 속성이 없으면 빈 스탯이다
             (void)_charmCatalog.add( charm );
             ++loadedCount;
         }

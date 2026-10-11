@@ -25,7 +25,7 @@ namespace sw
                 return hashed_string( pValue != nullptr && pValue[0] != '\0' ? pValue : pFallback );
             }
 
-            /** @brief 레시피의 재료가 냄비와 꼭 같은가(종류도 개수도)입니다. */
+            /** @brief 레시피의 재료가 냄비와 똑같은지(종류와 개수 모두) 확인합니다. */
             static bool isSameItems( const ItemStackList& lhs, const ItemStackList& rhs )
             {
                 if ( lhs.getItems().size() != rhs.getItems().size() )
@@ -147,7 +147,7 @@ namespace sw
         }
         if ( bMixed )
         {
-            // 서로 다른 효과는 서로를 지운다 — 효과도 회복 배율도 없는 수상한 요리.
+            // 서로 다른 효과는 서로를 지운다. 효과도 회복 배율도 없는 수상한 요리가 된다.
             outDish._itemID        = _dubiousDish;
             outDish._heartQuarters = _dubiousHeartQuarters;
             outDish._bDubious      = SW_TRUE;
@@ -187,7 +187,7 @@ namespace sw
         if ( inventory.hasItems( pot ) == false )
             return AdventureCookResult::MissingIngredients;
 
-        // 이름 붙은 요리 — 재료가 꼭 같은 냄비 레시피가 있으면 기반 제작으로 만든다(수상한 요리는 이름이 없다).
+        // 이름이 있는 요리를 만든다. 재료가 똑같은 냄비 레시피가 있으면 기반 제작으로 만든다(수상한 요리는 이름이 없다).
         if ( outDish._bDubious == SW_FALSE )
         {
             for ( const RecipeDef& recipe : recipes.getRecipes() )
@@ -199,7 +199,7 @@ namespace sw
                 if ( craftResult == CraftResult::NoRoom )
                     return AdventureCookResult::NoRoom;
                 if ( craftResult != CraftResult::Ok )
-                    break; // 아직 모르는 레시피 · 레벨 부족 — 일반 요리로
+                    break; // 아직 모르는 레시피이거나 레벨이 부족하면 일반 요리로 넘어간다
                 outDish._itemID       = recipe._outputs.getItems().front()._itemID;
                 outDish._bNamedRecipe = SW_TRUE;
                 return AdventureCookResult::Ok;
@@ -208,7 +208,7 @@ namespace sw
 
         for ( const auto& [itemID, count] : pot.getItems() )
         {
-            (void)inventory.removeItem( itemID, count ); // 재료는 위 hasItems 가 확인했다
+            (void)inventory.removeItem( itemID, count ); // 재료는 위의 hasItems 가 확인했다
         }
         if ( inventory.addItem( outDish._itemID, 1 ) == 1 )
             return AdventureCookResult::Ok;

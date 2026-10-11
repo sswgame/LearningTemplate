@@ -75,7 +75,7 @@ namespace sw
     void NavMeshAgentComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
-        _pSceneNavigation = &manager.getSceneNavigation();
+        _pSceneNavigation = &manager.getSceneService<SceneNavigation>();
         _pSceneNavigation->registerAgent( this );
     }
 

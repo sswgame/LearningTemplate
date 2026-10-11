@@ -15,7 +15,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 틱마다 쓰는 이름 — 리터럴을 매번 intern 하지 않게 한 번만 만든다. */
+        /** @brief 틱마다 쓰는 이름입니다. 리터럴을 매번 intern 하지 않도록 한 번만 만듭니다. */
         struct BrGearInternal
         {
             static const hashed_string& getHelmetName()
@@ -130,7 +130,7 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return false;
-        // 헬멧 · 조끼 순서 — 방어구는 그 칸의 것이어야 한다
+        // 헬멧, 조끼 순서로 읽는다. 방어구는 그 슬롯의 것이어야 한다
         BrArmorSlot arrSlot[2] = {};
         for ( int32 slotIndex = 0; slotIndex < 2; ++slotIndex )
         {

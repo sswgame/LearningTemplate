@@ -4,7 +4,7 @@
   실행: App.exe -scenario=engine/automation/runner.scenario.xml -dx12   (AppScenarioTest 가 백엔드마다 돈다)
 -->
 <Scenario name="engine.runner" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
-	<!-- 게임에 가지 않는 키(ScrollLock)를 가상 키보드로 누르고 뗀다 — 입력 단계가 프레임 번호대로 들어가는지는 단위 시험(VirtualInputTest)이 본다 -->
+	<!-- 게임에 가지 않는 키(ScrollLock)를 가상 키보드로 누르고 뗀다 — 입력 단계가 프레임 번호대로 들어가는지는 단위 테스트(VirtualInputTest)이 본다 -->
 	<At frame="5"><Tap slot="Key.ScrollLock" hold="2"/></At>
 	<At frame="30"><Screenshot file="frame30.ppm"/></At>
 	<!-- 화면에 무언가 나갔다(완전히 검지 않다) — 첫 프레임에 그릴 것이 없는 백엔드 결함의 그물 -->

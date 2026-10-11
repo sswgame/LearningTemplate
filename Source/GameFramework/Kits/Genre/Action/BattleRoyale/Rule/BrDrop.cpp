@@ -12,7 +12,7 @@ namespace sw
     {
         struct BrDropInternal
         {
-            /** @brief 길이를 1 로 자른 조종 방향입니다. */
+            /** @brief 길이를 1로 자른 조종 방향을 반환합니다. */
             static float2 clampSteer( const float2& steer )
             {
                 const float32 length = MathUtil::sqrt( steer._x * steer._x + steer._y * steer._y );
@@ -114,7 +114,7 @@ namespace sw
     void BrSkydiver::update( float32 deltaTime, const float2& steer )
     {
         const float2 direction = BrDropInternal::clampSteer( steer );
-        // 단계 경계(낙하산이 펴지는 높이 · 땅)에서 걸음을 나눠 예측과 같은 자리에 내린다.
+        // 단계 경계(낙하산이 펴지는 높이, 땅)에서 걸음을 나눠, 예측과 같은 위치에 내리게 한다.
         while ( deltaTime > 0.0f && _stage != BrFallStage::Landed )
         {
             const bool    bFreeFall       = _stage == BrFallStage::FreeFall;

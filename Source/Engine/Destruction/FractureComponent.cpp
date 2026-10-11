@@ -26,7 +26,7 @@ namespace sw
     void FractureComponent::onRegister( GameObjectManager& manager )
     {
         FractureComponentBase::onRegister( manager );
-        _pSceneNavigation = &manager.getSceneNavigation();
+        _pSceneNavigation = &manager.getSceneService<SceneNavigation>();
         _pSceneNavigation->registerGeometrySource( &_navGeometrySource );
     }
 

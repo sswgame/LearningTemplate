@@ -99,7 +99,7 @@ namespace navtest
      */
     inline void spawnPhysicsCrateScene( sw::GameObjectManager& manager )
     {
-        manager.getSceneNavigation().setSettings( makeSettings() );
+        manager.getSceneService<sw::SceneNavigation>().setSettings( makeSettings() );
         spawnStaticBody( manager, "Floor", sw::float3{ 0.0f, -0.5f, 0.0f }, sw::float3{ 15.0f, 0.5f, 15.0f } );
         spawnStaticBody( manager, "Crates", sw::float3{ 0.0f, 1.0f, 0.0f }, sw::float3{ 1.0f, 1.0f, 4.0f } );
         spawnSurface( manager, sw::NavGeometrySource::PhysicsColliders );
