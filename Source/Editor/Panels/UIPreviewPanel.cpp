@@ -5,11 +5,11 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
+#include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"

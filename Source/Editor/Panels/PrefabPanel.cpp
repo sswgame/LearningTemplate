@@ -7,11 +7,11 @@
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 

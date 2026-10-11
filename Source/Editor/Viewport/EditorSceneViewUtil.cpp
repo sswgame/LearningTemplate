@@ -4,8 +4,8 @@
 
 #include "Core/Math/VectorMath.h"
 
+#include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Panels/SceneViewPanel.h"
 
 namespace sw::editor

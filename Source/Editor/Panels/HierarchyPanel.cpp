@@ -12,6 +12,7 @@
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorComponentIcon.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
+#include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorComponentMenu.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
@@ -20,7 +21,6 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorCamera.h"
 

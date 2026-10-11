@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Popups/EditorPopupManager.h"
+#include "Editor/Common/GUI/EditorPopupManager.h"
 
 #include "Core/Module/ModuleUnloadListener.h"
 

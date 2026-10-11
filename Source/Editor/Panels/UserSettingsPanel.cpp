@@ -6,10 +6,10 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/UserSettings/UserSettingsManager.h"

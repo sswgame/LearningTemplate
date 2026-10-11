@@ -12,12 +12,12 @@
 
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Commands/EditorTracyLauncher.h"
+#include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"

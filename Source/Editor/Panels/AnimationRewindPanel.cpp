@@ -4,13 +4,13 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Animation/AnimationRewind.h"

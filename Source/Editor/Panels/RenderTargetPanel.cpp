@@ -5,12 +5,12 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
+#include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"

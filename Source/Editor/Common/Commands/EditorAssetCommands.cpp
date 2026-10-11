@@ -9,13 +9,14 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Process/Process.h"
 
-#include "Editor/AssetActions/EditorAssetTypeActions.h"
 #include "Editor/Common/Asset/EditorAssetValidation.h"
 #include "Editor/Common/Commands/EditorInspectorCommands.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/GUI/EditorNotificationManager.h"
+#include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
+#include "Editor/Common/Workspace/EditorAssetTypeActions.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSceneGenerationSync.h"
@@ -23,7 +24,6 @@
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/GameConfig.h"

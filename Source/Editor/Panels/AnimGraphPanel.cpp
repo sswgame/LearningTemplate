@@ -9,12 +9,12 @@
 #include "Editor/Common/Commands/EditorViewportPreview.h"
 #include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorNodeGraphID.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
-#include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Animation/AnimClip.h"

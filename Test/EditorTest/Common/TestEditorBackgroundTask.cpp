@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Commands/EditorBackgroundTask.h"
+#include "Editor/Common/EditorBackgroundTask.h"
 
 #include "TestFramework/TestFramework.h"
 

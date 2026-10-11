@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/EditorPanelManager.h"
+#include "Editor/Common/GUI/EditorPanelManager.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"

@@ -6,14 +6,14 @@
 #include "Core/File/FileUtil.h"
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
-#include "Editor/Common/Commands/EditorExternalToolJob.h"
+#include "Editor/Common/EditorExternalToolJob.h"
 #include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
+#include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/AutomationProbe.h"

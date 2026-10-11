@@ -2322,7 +2322,7 @@
    "default": "0",
    "kind": "시험",
    "description": "N 프레임 동안 에디터 패널마다 그리기 시간을 모아 한 번 로그로 찍는다 (0=끄기)",
-   "source": "Source/Editor/Panels/EditorPanelManager.cpp"
+   "source": "Source/Editor/Common/GUI/EditorPanelManager.cpp"
   },
   {
    "name": "gv_editorProbeAsset",

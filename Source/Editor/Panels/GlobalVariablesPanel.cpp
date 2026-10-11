@@ -11,12 +11,12 @@
 
 #include "Editor/Common/Commands/EditorGlobalVariableCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
-#include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/TypeRegistry.h"

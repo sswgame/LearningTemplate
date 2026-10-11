@@ -8,11 +8,11 @@
 
 #include "Editor/Common/Commands/EditorDataTableCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
-#include "Editor/Panels/EditorPanelManager.h"
 
 #include <imgui.h>
 

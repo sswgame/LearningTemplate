@@ -6,12 +6,12 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Commands/EditorExternalToolJob.h"
+#include "Editor/Common/EditorExternalToolJob.h"
+#include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorRegistry.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 

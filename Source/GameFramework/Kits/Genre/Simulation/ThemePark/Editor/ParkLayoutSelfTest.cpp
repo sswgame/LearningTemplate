@@ -4,8 +4,8 @@
  */
 #include "pch.h"
 
+#include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPreview.h"

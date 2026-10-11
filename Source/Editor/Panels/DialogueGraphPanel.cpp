@@ -13,10 +13,10 @@
 #include "Editor/Common/Commands/EditorViewportPreview.h"
 #include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/Widgets/EditorNodeGraphID.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
-#include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Dialogue/DialogueCursor.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"

@@ -6,7 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Editor/Common/Commands/EditorExternalToolJob.h"
+#include "Editor/Common/EditorExternalToolJob.h"
 
 namespace sw::editor
 {

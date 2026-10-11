@@ -6,10 +6,10 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
+#include "Editor/Common/GUI/EditorPanelManager.h"
+#include "Editor/Common/GUI/EditorPopupManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Panels/Inspector/InspectorComponentManager.h"
-#include "Editor/Popups/EditorPopupManager.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
 namespace sw::editor

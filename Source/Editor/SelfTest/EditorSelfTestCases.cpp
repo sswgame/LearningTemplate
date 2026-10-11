@@ -6,12 +6,12 @@
 
 #include "Editor/Common/Commands/EditorViewportPreview.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
+#include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Panels/HierarchyPanel.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 

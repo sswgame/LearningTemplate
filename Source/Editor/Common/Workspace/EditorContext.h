@@ -5,7 +5,7 @@
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
-#include "Editor/Viewport/EditorViewTargetUtil.h"
+#include "Editor/Common/Workspace/EditorViewTargetUtil.h"
 
 namespace sw
 {

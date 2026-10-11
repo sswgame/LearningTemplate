@@ -7,7 +7,7 @@
 #include "Core/Container/vector.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"
-#include "Editor/Viewport/EditorViewTargetUtil.h"
+#include "Editor/Common/Workspace/EditorViewTargetUtil.h"
 
 namespace sw::editor
 {

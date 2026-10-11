@@ -8,12 +8,12 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/EditorPaths.h"
+#include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorLayoutStore.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
 #include "Engine/Utility/KeyValueFile.h"

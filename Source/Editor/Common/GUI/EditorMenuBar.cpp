@@ -10,6 +10,7 @@
 #include "Editor/Common/GUI/EditorDockLayout.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorNotificationManager.h"
+#include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -19,7 +20,6 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Panels/MapCheckPanel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
