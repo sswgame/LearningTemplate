@@ -120,7 +120,7 @@ namespace sw
 
     int32 WitcherCombat::getAdrenalinePoints() const
     {
-        // 0.1 씩 열 번 더한 값이 0.9999… 가 되어 포인트를 놓치지 않게 아주 조금 올려 자른다.
+        // 0.1씩 열 번 더한 값이 0.9999…가 되어 포인트를 놓치지 않도록, 아주 조금 올려서 자른다.
         return static_cast<int32>( MathUtil::floor( _adrenaline + 1.0e-4f ) );
     }
 
@@ -152,7 +152,7 @@ namespace sw
 
     bool WitcherCombat::readState( Archive& archive )
     {
-        ResourceGauge stamina = _stamina; // 게이지 설정은 `initialize` 의 것 — 값만 읽는다
+        ResourceGauge stamina = _stamina; // 게이지 설정은 `initialize` 에서 받은 것이므로 값만 읽는다
         GameRandom    random;
         float32       adrenaline = 0.0f;
         if ( stamina.readState( archive ) == false || StateArchiveUtil::readRandom( archive, random ) == false )

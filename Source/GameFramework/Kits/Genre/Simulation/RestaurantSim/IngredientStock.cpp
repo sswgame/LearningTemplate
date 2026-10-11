@@ -16,7 +16,7 @@ namespace sw
     {
         struct IngredientStockInternal
         {
-            /** @brief 정렬 키 — 상하지 않는 묶음(−1)은 가장 뒤입니다. */
+            /** @brief 정렬 키입니다. 상하지 않는 배치(-1)는 가장 뒤입니다. */
             static int32 makeExpiryKey( const IngredientBatch& batch ) { return batch._daysLeft < 0 ? 0x7fffffff : batch._daysLeft; }
         };
     } // namespace
@@ -72,7 +72,7 @@ namespace sw
             remaining -= takenCount;
             outCost += batch._unitCost * takenCount;
         }
-        // 묶음 없이 인벤토리에만 있던 것은 원가 0 이다.
+        // 배치 없이 인벤토리에만 있던 것은 원가 0 이다.
         _listBatch.erase( std::remove_if( _listBatch.begin(), _listBatch.end(), []( const IngredientBatch& batch )
         { return batch._count <= 0; } ),
                           _listBatch.end() );
@@ -83,7 +83,7 @@ namespace sw
     {
         if ( _pInventory == nullptr || times <= 0 )
             return false;
-        // 이름 순으로 돌아 결과(원가 합 · 로그)가 해시 순서에 기대지 않게 한다.
+        // 이름 순으로 돌아서, 결과(원가 합과 로그)가 해시 순서에 기대지 않게 한다.
         vector<hashed_string> listItem;
         items.getItemIDs( listItem );
         std::sort( listItem.begin(), listItem.end(), HashedStringLexicalLess{} );
@@ -180,7 +180,7 @@ namespace sw
     bool IngredientStock::readState( Archive& archive )
     {
         uint32 count = 0;
-        // 묶음마다 이름(4) + 원가(8) + 개수 · 남은 날(8)
+        // 배치마다 이름(4) + 원가(8) + 개수, 남은 날(8)
         if ( StateArchiveUtil::readCount( archive, 20, count ) == false )
             return false;
         vector<IngredientBatch> listBatch( count );

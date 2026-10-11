@@ -17,7 +17,7 @@ namespace sw
     {
         struct ActionCombatRigInternal
         {
-            static constexpr float32 kDefaultBulletSpeed = 30.0f; ///< 무기 탄속이 0(히트스캔)일 때 2D 탄의 속도
+            static constexpr float32 kDefaultBulletSpeed = 30.0f; ///< 무기 탄속이 0(히트스캔)일 때 2D 탄이 쓰는 속도
         };
     } // namespace
 } // namespace sw
@@ -93,7 +93,7 @@ namespace sw
         const float32    speed = def._projectileSpeed > 0.0f ? def._projectileSpeed : ActionCombatRigInternal::kDefaultBulletSpeed;
         for ( const GameRay& pellet : shot._listRay )
         {
-            // 퍼짐 원뿔은 3D 라 화면 평면(z = 0)으로 눌러 2D 방향으로 쓴다.
+            // 퍼짐 원뿔은 3D 이므로 화면 평면(z = 0)으로 눌러서 2D 방향으로 쓴다.
             float2        pelletDirection{ pellet._direction._x, pellet._direction._y };
             const float32 length = pelletDirection.getLength();
             pelletDirection      = length > 1.0e-4f ? pelletDirection * ( 1.0f / length ) : direction;
@@ -127,7 +127,7 @@ namespace sw
 
     void ActionCombatRig::advanceFrame( const PlatformTileMap* pMap, const float2& playerPosition )
     {
-        // 히트스톱 — 세상이 멈춘다. 기술은 자기 히트스톱만 같이 줄인다(남은 수가 같으면 함께 풀린다).
+        // 히트스톱은 세상을 멈춘다. 기술은 자기 히트스톱만 같이 줄인다(남은 수가 같으면 함께 풀린다).
         if ( _hitstopFrames > 0 )
         {
             --_hitstopFrames;
@@ -136,7 +136,7 @@ namespace sw
             return;
         }
 
-        // 근접 — 쉬고 있으면 첫 기술, 기술 중이면 다음 기술의 캔슬 창이 열렸을 때 이어 낸다.
+        // 근접 공격이다. 쉬고 있으면 첫 기술을 내고, 기술 중이면 다음 기술의 캔슬 창이 열렸을 때 이어서 낸다.
         bool bStarted = false;
         if ( _attackBufferFrames > 0 && _pCombo != nullptr && _pMoves != nullptr )
         {
@@ -169,7 +169,7 @@ namespace sw
         if ( _bGunEquipped == SW_TRUE )
             _gun.update( kFrameTime );
 
-        // 패리 — 창 안이면 가까운 적 탄을 왔던 쪽으로 되받아친다(내 편 탄이 되고 더 세다).
+        // 패리다. 창 안이면 가까운 적 탄을 왔던 쪽으로 되받아친다(내 편 탄이 되고 더 세진다).
         if ( _parryFrames > 0 && _pCatalog != nullptr )
         {
             const ActionParryRules& rules      = _pCatalog->getParryRules();
@@ -190,7 +190,7 @@ namespace sw
                 startHitstop( rules._hitstopFrames );
         }
 
-        // 투사체 — 움직이고, 시간이 다 했거나 벽에 닿으면 없앤다.
+        // 투사체는 움직이다가, 시간이 다 되거나 벽에 닿으면 없앤다.
         for ( size_t index = _listProjectile.size(); index > 0; --index )
         {
             ActionProjectile& projectile = _listProjectile[index - 1];
@@ -282,7 +282,7 @@ namespace sw
     {
         if ( _pCatalog == nullptr || _pMoves == nullptr )
             return false;
-        // 사본에 읽고 끝까지 맞으면 바꾼다 — 카탈로그 · 기술 표 · 무기 정의는 사본이 그대로 든다.
+        // 사본에 읽고 끝까지 맞으면 바꾼다. 카탈로그, 기술 테이블, 무기 정의는 사본이 그대로 가지고 있다.
         ActionCombatRig restored = *this;
         hashed_string   comboID;
         uint8           bGunEquipped = SW_FALSE;
@@ -306,7 +306,7 @@ namespace sw
             return false;
 
         uint32 projectileCount = 0;
-        // 투사체마다 자리(8) + 속도(8) + 피해(4) + 남은 시간(4) + id(4) + 편(1) + 되받아침(1)
+        // 투사체마다 위치(8) + 속도(8) + 피해(4) + 남은 시간(4) + id(4) + 편(1) + 되받아침(1) 바이트
         if ( StateArchiveUtil::readCount( archive, 30, projectileCount ) == false )
             return false;
         restored._listProjectile.assign( projectileCount, ActionProjectile{} );

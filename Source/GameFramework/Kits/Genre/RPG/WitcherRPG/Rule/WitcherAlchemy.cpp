@@ -68,7 +68,7 @@ namespace sw
             return result;
         for ( const auto& output : pRecipe->_outputs.getItems() )
         {
-            refill( output._itemID ); // 갓 만든 것은 가득 — 모르는 아이템(재료)은 `refill` 이 건너뛴다
+            refill( output._itemID ); // 갓 만든 것은 가득 채운다(모르는 아이템인 재료는 `refill` 이 건너뛴다)
         }
         return result;
     }
@@ -104,7 +104,7 @@ namespace sw
             effect._lockedToxicity = pDef->_toxicity;
         else
             _floatingToxicity += pDef->_toxicity;
-        // 같은 물약을 다시 마시면 시간만 새로 — 효과는 겹치지 않는다(독성은 다시 오른다).
+        // 같은 물약을 다시 마시면 시간만 새로 시작한다. 효과는 겹치지 않는다(독성은 다시 오른다).
         for ( WitcherActiveEffect& active : _listEffect )
         {
             if ( active._itemID == itemID )
@@ -300,10 +300,10 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return false;
-        // 사본에 읽고 끝까지 맞으면 바꾼다 — 카탈로그 · 레시피 카탈로그는 사본이 그대로 든다.
+        // 사본에 읽고 끝까지 맞으면 바꾼다. 카탈로그와 레시피 카탈로그는 사본이 그대로 가지고 있다.
         WitcherAlchemy restored = *this;
         uint32         count    = 0;
-        // 충전마다 이름(4) + 횟수(4)
+        // 충전마다 이름(4) + 횟수(4) 바이트
         if ( restored._crafter.readState( archive ) == false || StateArchiveUtil::readCount( archive, 8, count ) == false )
             return false;
         restored._listCharge.assign( count, ChargeEntry{} );
@@ -313,7 +313,7 @@ namespace sw
                 return false;
             archive >> charge._charges;
         }
-        // 효과마다 이름(4) + 남은 시간(4) + 묶인 독성(4)
+        // 효과마다 이름(4) + 남은 시간(4) + 묶인 독성(4) 바이트
         if ( StateArchiveUtil::readCount( archive, 12, count ) == false )
             return false;
         restored._listEffect.assign( count, WitcherActiveEffect{} );

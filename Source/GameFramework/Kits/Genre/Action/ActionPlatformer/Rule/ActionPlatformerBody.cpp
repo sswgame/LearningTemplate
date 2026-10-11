@@ -15,9 +15,9 @@ namespace sw
         struct ActionPlatformerBodyInternal
         {
             static constexpr float32 kSkin       = 1.0e-3f; ///< 칸 가장자리에 붙일 때 남기는 틈
-            static constexpr float32 kProbeExtra = 0.2f;    ///< 드릴 진입 — 몸 가장자리에서 이만큼 더 앞을 본다
+            static constexpr float32 kProbeExtra = 0.2f;    ///< 드릴 진입 때 몸 가장자리에서 이만큼 더 앞을 본다
 
-            /** @brief 몸 상자가 벽 칸에 걸치는가입니다(한쪽 발판 · 사다리는 보지 않는다). */
+            /** @brief 몸 상자가 벽 칸에 걸치는지 확인합니다(한쪽 발판과 사다리는 보지 않습니다). */
             static bool isBoxBlocked( const PlatformTileMap& map, const float2& center, const float2& half )
             {
                 const int32 minX = map.computeTileX( center._x - half._x + kSkin );
@@ -35,7 +35,7 @@ namespace sw
                 return false;
             }
 
-            /** @brief 길이가 있으면 단위 벡터, 없으면 @p fallback 입니다. */
+            /** @brief 길이가 있으면 단위 벡터를, 없으면 @p fallback 을 반환합니다. */
             static float2 normalizeOr( const float2& value, const float2& fallback )
             {
                 const float32 lengthSquared = value.getLengthSquared();
@@ -44,7 +44,7 @@ namespace sw
                 return value * ( 1.0f / MathUtil::sqrt( lengthSquared ) );
             }
 
-            /** @brief `PlatformTileMap::loadFromText` 와 같은 줄 나누기(빈 줄 · 끝 CR 무시)입니다. */
+            /** @brief `PlatformTileMap::loadFromText` 와 같은 방식으로 줄을 나눕니다(빈 줄과 끝의 CR 을 무시합니다). */
             static void splitLines( string_view text, vector<string_view>& outListLine )
             {
                 outListLine.clear();
@@ -205,7 +205,7 @@ namespace sw
             return;
         }
 
-        // 보통 · 활공 — 갈고리 → 드릴 → 활공 순으로 본다.
+        // 일반 모드와 활공 모드는 갈고리, 드릴, 활공 순서로 확인한다.
         if ( input._bGrapplePressed == SW_TRUE && tryAttachGrapple( terrain ) )
         {
             updateGrapple( map, input, deltaTime );
@@ -237,7 +237,7 @@ namespace sw
 
     void ActionPlatformerBody::setGlide( bool bGlide )
     {
-        // 기반 몸의 설정을 바꿔 낙하 상한 · 중력을 줄인다. 모드가 바뀔 때만 둔다(setSettings 는 공중 점프 · 대시 횟수를 다시 채운다).
+        // 기반 몸의 설정을 바꿔 낙하 상한과 중력을 줄인다. 모드가 바뀔 때만 적용한다(setSettings 는 공중 점프와 대시 횟수를 다시 채운다).
         const PlatformerSettings settings = makeMotorSettings( bGlide );
         if ( bGlide )
         {
@@ -296,7 +296,7 @@ namespace sw
     {
         if ( input._bGrappleHeld == SW_FALSE )
         {
-            // 놓기 — 진자의 속도를 그대로 들고 기반 몸으로.
+            // 놓을 때는 진자의 속도를 그대로 가지고 기반 몸으로 돌아간다.
             returnToMotor( _velocity );
             _events |= ActionBodyEvent::kGrappleReleased;
             return;
@@ -307,7 +307,7 @@ namespace sw
         const float32 length = rope.getLength();
         if ( length > 1.0e-4f )
         {
-            // 좌우 입력은 줄에 수직인 접선으로 민다(오른쪽 입력 = +X 쪽 접선).
+            // 좌우 입력은 줄에 수직인 접선 방향으로 민다(오른쪽 입력이 +X 쪽 접선이다).
             const float2 radial = rope * ( 1.0f / length );
             float2       tangent{ -radial._y, radial._x };
             if ( tangent._x < 0.0f )
@@ -318,7 +318,7 @@ namespace sw
         if ( speed > _settings._grappleMaxSpeed )
             velocity = velocity * ( _settings._grappleMaxSpeed / speed );
 
-        // 줄은 늘어나지 않는다 — 넘친 위치를 줄 길이로 되돌리고 바깥으로 가는 속도를 뺀다(접선 속도만 남는다).
+        // 줄은 늘어나지 않는다. 넘친 위치를 줄 길이로 되돌리고 바깥으로 향하는 속도를 뺀다(접선 속도만 남는다).
         float2        next      = _position + velocity * deltaTime;
         const float2  toNext    = next - _anchor;
         const float32 nextRange = toNext.getLength();
@@ -332,7 +332,7 @@ namespace sw
         }
         if ( ActionPlatformerBodyInternal::isBoxBlocked( map, next, _motorSettings._halfExtents ) )
         {
-            velocity = float2{ 0.0f, 0.0f }; // 벽에 부딪혔다 — 그 자리에 매달린다
+            velocity = float2{ 0.0f, 0.0f }; // 벽에 부딪혔으므로 그 자리에 매달린다
             next     = _position;
         }
         _position = next;
@@ -341,7 +341,7 @@ namespace sw
 
     void ActionPlatformerBody::updateDrill( const PlatformTileMap& map, const ActionTerrainGrid& terrain, const ActionBodyInput& input, float32 deltaTime )
     {
-        // 방향은 입력(없으면 지금 진행 방향) — 속도는 늘 일정하다.
+        // 방향은 입력으로 정한다(입력이 없으면 지금 진행 방향을 쓴다). 속도는 항상 일정하다.
         const float2 heading   = ActionPlatformerBodyInternal::normalizeOr( _velocity, float2{ static_cast<float32>( _motor.getFacing() ), 0.0f } );
         const float2 direction = ActionPlatformerBodyInternal::normalizeOr( input._motor._move, heading );
         _velocity              = direction * _settings._drillSpeed;
@@ -351,7 +351,7 @@ namespace sw
         const int32  nextY     = map.computeTileY( next._y );
         const bool   bDirt     = terrain.isDirtAt( next );
         if ( bDirt == false && map.getTile( nextX, nextY ) == PlatformTile::Solid )
-            return; // 바위 — 파지 못한다(방향을 바꿀 때까지 멈춘다)
+            return; // 바위는 팔 수 없다(방향을 바꿀 때까지 멈춘다)
         _position = next;
         if ( bDirt )
         {
@@ -369,7 +369,7 @@ namespace sw
             return;
         }
 
-        // 튀어나왔다 — 몸 상자가 흙에 걸치지 않게 빠져나온 쪽 칸 가장자리 밖으로 옮긴다.
+        // 튀어나왔다. 몸 상자가 흙에 걸치지 않게, 빠져나온 쪽 칸 가장자리 밖으로 옮긴다.
         const float2 half      = _motorSettings._halfExtents;
         const int32  previousX = map.computeTileX( previous._x );
         const int32  previousY = map.computeTileY( previous._y );
@@ -419,7 +419,7 @@ namespace sw
         archive >> mode;
         if ( archive.isError() || mode > static_cast<uint8>( ActionMoveMode::Drill ) )
             return false;
-        // 사본에 읽고 끝까지 맞으면 바꾼다. 기반 몸의 설정은 모드가 정한다(활공이면 활공 설정) — 설정을 먼저 걸고 몸의 값을 읽는다.
+        // 사본에 읽고 끝까지 맞으면 바꾼다. 기반 몸의 설정은 모드가 정하므로(활공이면 활공 설정) 설정을 먼저 적용한 뒤 몸의 값을 읽는다.
         ActionPlatformerBody restored = *this;
         restored._mode                = static_cast<ActionMoveMode>( mode );
         restored._motor.setSettings( makeMotorSettings( restored._mode == ActionMoveMode::Glide ) );

@@ -3,15 +3,17 @@
  * @brief 해시 기반 intern 문자열(basic_hashed_string)과 미리 정의된 이름의 열거형입니다.
  *
  * **규칙은 언리얼 FName 과 같습니다.**
- * - 같음은 **대소문자를 무시**합니다(`"Hero" == "hero"`) — 비교 인덱스(FName 의 ComparisonIndex) 정수 비교.
- * - 표시는 **적은 철자 그대로**입니다(`c_str()` 은 "hero" 로 만든 것이면 "hero") — 표시 인덱스(FName 의 DisplayIndex). 처음
- *   intern 된 철자를 모두에게 보이면 에디터에서 `hero` → `Hero` 로 고치는 이름 바꾸기가 아무 일도 하지 않는다. 철자까지 묻는 곳은
- *   `isEqual( other, NameCase::CaseSensitive )`(FName 의 `IsEqual( …, ENameCase::CaseSensitive )`).
- * - 순서는 고른다 — `lexicalLess`(대소문자 무시 사전순, `FNameLexicalLess`) · `fastLess`(비교 인덱스 순, `FNameFastLess` — intern 순서라
- *   실행마다 달라질 수 있다).
- * - FName 과 다른 둘: 해시는 대소문자를 무시한 **FNV**(실행이 바뀌어도 같다 — 바이너리 칸 이름 · 열거자 · 지역화 표가 이 값을 저장한다),
- *   철자 보존은 **모든 구성**에서다(언리얼은 에디터만 — 여기서는 저장되는 철자가 빌드에 따라 달라지지 않게 한다). FName 의 숫자 꼬리
- *   (`Actor_12` = "Actor" + 13)는 두지 않았다 — `c_str()` 의 영구 포인터를 쥔 곳이 많고, 같은 이름의 번호는 `GameObjectManager` 가 다시 쓴다.
+ * - 같음은 **대소문자를 무시**합니다(`"Hero" == "hero"`). 비교 인덱스(FName 의 ComparisonIndex)를 정수로 비교합니다.
+ * - 표시는 **적은 철자 그대로**입니다. "hero" 로 만든 이름의 `c_str()` 은 "hero" 입니다(FName 의 DisplayIndex).
+ *   처음 intern 된 철자를 모두에게 보여 주면, 에디터에서 `hero` 를 `Hero` 로 고치는 이름 바꾸기가 아무 일도 하지 않습니다.
+ *   철자까지 비교하려면 `isEqual( other, NameCase::CaseSensitive )` 를 씁니다(FName 의 `IsEqual( …, ENameCase::CaseSensitive )`).
+ * - 순서는 용도에 맞게 고릅니다. `lexicalLess` 는 대소문자를 무시한 사전순(`FNameLexicalLess`)이고,
+ *   `fastLess` 는 비교 인덱스 순(`FNameFastLess`)입니다. 후자는 intern 순서라 실행마다 달라질 수 있습니다.
+ * - FName 과 다른 점이 둘 있습니다.
+ *   첫째, 해시는 대소문자를 무시한 **FNV** 이며 실행이 바뀌어도 같습니다. 바이너리 필드 이름, 열거자, 지역화 테이블이 이 값을 저장하기 때문입니다.
+ *   둘째, 철자 보존은 **모든 빌드 구성**에서 합니다(언리얼은 에디터에서만 합니다). 저장되는 철자가 빌드에 따라 달라지지 않게 하려는 것입니다.
+ * - FName 의 숫자 꼬리(`Actor_12` = "Actor" + 13)는 두지 않았습니다.
+ *   `c_str()` 의 영구 포인터를 보관하는 곳이 많고, 같은 이름의 번호는 `GameObjectManager` 가 다시 쓰기 때문입니다.
  *
  * lock-free 청크 테이블과 문자열 아레나 위에 만든 intern 문자열입니다.
  * - c_str() · size() · getHash() 는 락 없이 O(1) 포인터 역참조로 바로 반환합니다.
@@ -44,7 +46,7 @@ namespace sw
         Count
     };
 
-    /** @brief REGISTER_NAME 번호를 줄 순서대로 늘어놓은 표입니다(아래 static_assert 전용). */
+    /** @brief REGISTER_NAME 번호를 줄 순서대로 늘어놓은 테이블입니다(아래 static_assert 전용). */
     inline constexpr uint32 kArrPredefinedNameIndex[] = {
 #define REGISTER_NAME( index, name ) static_cast<uint32>( PredefinedNameType::NameType_##name ),
 #include "Core/Predefined/PredefinedNameType.xxx"
@@ -76,12 +78,12 @@ namespace sw
     /** @brief 이름을 비교할 때 대소문자를 볼지입니다(FName 의 ENameCase). 기본 비교(`==`)는 `IgnoreCase` 입니다. */
     enum class NameCase : uint8
     {
-        CaseSensitive, ///< 철자까지 같아야 같다
-        IgnoreCase     ///< 대소문자는 무시한다(`==` 와 같다)
+        CaseSensitive, ///< 철자까지 같아야 같다.
+        IgnoreCase     ///< 대소문자는 무시한다(`==` 와 같다).
     };
 
     // ------------------------------------------------------------------------------
-    // 1) basic_hashed_string — 비교 인덱스 · 표시 인덱스를 들고 있고, 같음은 비교 인덱스 정수 비교(FName)
+    // 1) basic_hashed_string. 비교 인덱스와 표시 인덱스를 가지며, 같음은 비교 인덱스의 정수 비교다(FName).
     // ------------------------------------------------------------------------------
     template <typename T, typename N = uint32>
     /**
@@ -134,11 +136,10 @@ namespace sw
 
         /**
          * @brief 리터럴 배열을 intern 하고 그 인덱스를 가집니다. **암시적 변환**이라 `isActionDown( "Jump" )` 처럼 쓸 수 있습니다.
-         * @details 리터럴은 컴파일 타임에 정해진 유한 집합이라 intern 이 계속 늘어날 수 없습니다. 포인터 · `string_view` · `string`
-         *          에서의 변환은 그대로 explicit 입니다. 동적 텍스트를 이름으로 올리는 곳은 눈에 보여야 하기 때문입니다(StringTable
-         *          처럼 조회만 하려는 텍스트를 intern 하면 그것이 곧 누수입니다). 같은 이름의 함수에 `string_view` 판과
-         *          `hashed_string` 판을 **둘 다** 두면 리터럴 호출이 모호해지므로, 그런 쌍은 두지 않습니다(InputMap 의 쌍 37개를
-         *          이 규칙으로 걷어 냈습니다).
+         * @details 리터럴은 컴파일 타임에 정해진 유한 집합이라 intern 이 계속 늘어날 수 없다. 포인터, `string_view`, `string` 에서의 변환은 그대로 explicit 이다.
+         *          동적 텍스트를 이름으로 올리는 곳은 눈에 보여야 하기 때문이다(StringTable 처럼 조회만 하려는 텍스트를 intern 하면 그것이 곧 누수다).
+         *          같은 이름의 함수에 `string_view` 오버로드와 `hashed_string` 오버로드를 **둘 다** 두면 리터럴 호출이 모호해지므로 그런 쌍은 두지 않는다
+         *          (InputMap 의 쌍 37개를 이 규칙으로 제거했다).
          */
         template <size_type U>
         basic_hashed_string( const value_type ( &str )[U] ) noexcept
@@ -170,9 +171,8 @@ namespace sw
 
         /**
          * @brief 문자열을 **intern 하지 않고** 해시만 계산합니다.
-         * @details `getHash()` 와 같은 값이 나옵니다. intern 여부와 상관없이 같은 해시 규칙을 씁니다. 해시로만 여는 표(`StringTable`
-         *          등)를 **조회**할 때 씁니다. 조회하려고 intern 하면 그 문자열이 아레나에 영원히 남습니다. 대사 원문처럼 키가 아닌
-         *          텍스트로 묻는 곳에서는 그것이 곧 계속 늘어나는 누수입니다.
+         * @details `getHash()` 와 같은 값이 나온다. intern 여부와 상관없이 같은 해시 규칙을 쓴다. 해시로만 여는 테이블(`StringTable` 등)을 **조회**할 때 쓴다.
+         *          조회하려고 intern 하면 그 문자열이 아레나에 영원히 남는다. 대사 원문처럼 키가 아닌 텍스트로 묻는 곳에서는 그것이 계속 늘어나는 누수가 된다.
          */
         static constexpr hash_type computeHash( std::basic_string_view<value_type> text ) noexcept
         {
@@ -185,38 +185,37 @@ namespace sw
         }
 
         /**
-         * @brief 이미 intern 된 문자열이면 그 이름을, 아니면 None 을 반환합니다. **표에 넣지 않습니다.**
-         * @details 파일에서 읽은 이름으로 무엇을 **찾기만** 할 때 씁니다(타입 · 메서드). 등록된 것의 이름은 이미 표에 있으므로 표에 없으면
-         *          찾는 대상도 없습니다. 찾으려고 intern 하면 파일 하나가 서로 다른 이름 수만 개로 전역 표를 채울 수 있고, 차면
-         *          그 뒤 **엔진의 모든** 새 이름이 None 이 됩니다.
+         * @brief 이미 intern 된 문자열이면 그 이름을, 아니면 None 을 반환합니다. **테이블에 넣지 않습니다.**
+         * @details 파일에서 읽은 이름으로 무엇을 **찾기만** 할 때 쓴다(타입, 메서드). 등록된 것의 이름은 이미 테이블에 있으므로 없으면 찾는 대상도 없다.
+         *          찾으려고 intern 하면 파일 하나가 서로 다른 이름 수만 개로 전역 테이블을 채울 수 있다. 테이블이 차면 그 뒤 **엔진의 모든** 새 이름이 None 이 된다.
          */
         static basic_hashed_string findInterned( std::basic_string_view<value_type> text ) noexcept;
 
-        /** @brief 전역 표에 intern 된 문자열 수입니다(진단 · 테스트). 줄지 않습니다. */
+        /** @brief 전역 테이블에 intern 된 문자열 수입니다(진단과 테스트용). 줄지 않습니다. */
         static uint32 getInternedCount() noexcept { return getAllocationInfo()._entryCount.load( std::memory_order_acquire ); }
 
         /** @brief 비어 있는지 반환합니다. */
         bool empty() const noexcept { return _comparisonIndex == static_cast<uint32>( PredefinedNameType::NameType_None ) || size() == 0; }
 
-        /** @brief 비교 인덱스(대소문자를 무시한 이름의 번호 — FName 의 ComparisonIndex)입니다. 같은 이름이면 철자가 달라도 같습니다. */
+        /** @brief 비교 인덱스를 반환합니다. 대소문자를 무시한 이름의 번호이며(FName 의 ComparisonIndex), 같은 이름이면 철자가 달라도 같습니다. */
         uint32 getIndex() const noexcept { return _comparisonIndex; }
 
-        /** @brief 표시 인덱스(적은 철자의 번호 — FName 의 DisplayIndex)입니다. 철자까지 같아야 같습니다. */
+        /** @brief 표시 인덱스를 반환합니다. 적은 철자의 번호이며(FName 의 DisplayIndex), 철자까지 같아야 같습니다. */
         uint32 getDisplayIndex() const noexcept { return _displayIndex; }
 
-        /** @brief 같은 이름인지 봅니다(FName 의 `IsEqual`). 기본은 `==` 와 같이 대소문자를 무시하고, `CaseSensitive` 면 철자까지 봅니다. */
+        /** @brief 같은 이름인지 확인합니다(FName 의 `IsEqual`). 기본은 `==` 와 같이 대소문자를 무시하고, `CaseSensitive` 면 철자까지 봅니다. */
         bool isEqual( const basic_hashed_string& other, NameCase nameCase = NameCase::IgnoreCase ) const noexcept
         {
             return nameCase == NameCase::CaseSensitive ? _displayIndex == other._displayIndex : _comparisonIndex == other._comparisonIndex;
         }
 
-        /** @brief 대소문자를 무시한 사전순으로 앞인지 봅니다(FName 의 `LexicalLess`). 정렬 결과를 사람이 보거나 파일에 쓸 때 씁니다. */
+        /** @brief 대소문자를 무시한 사전순으로 앞인지 확인합니다(FName 의 `LexicalLess`). 정렬 결과를 사람이 보거나 파일에 쓸 때 씁니다. */
         bool lexicalLess( const basic_hashed_string& other ) const noexcept
         {
             return _comparisonIndex != other._comparisonIndex && StringUtil::compare( view(), other.view(), true ) < 0;
         }
 
-        /** @brief 비교 인덱스 순으로 앞인지 봅니다(FName 의 `FastLess`). 빠르지만 순서에 뜻이 없고 실행마다 다릅니다 — 찾기용 정렬에만 씁니다. */
+        /** @brief 비교 인덱스 순으로 앞인지 확인합니다(FName 의 `FastLess`). 빠르지만 순서에 의미가 없고 실행마다 다르므로 찾기용 정렬에만 씁니다. */
         bool fastLess( const basic_hashed_string& other ) const noexcept { return _comparisonIndex < other._comparisonIndex; }
 
         /** @brief 지정한 미리 정의된 이름 타입인지 확인합니다. */
@@ -253,7 +252,7 @@ namespace sw
         static InternedIndex helper( const T* pStr, size_type length ) noexcept;
 
     public:
-        /** @brief intern 맵 · 청크 테이블 · 아레나 저장소입니다. */
+        /** @brief intern 맵, 청크 테이블, 아레나 저장소입니다. */
         struct AllocationInfo;
 
     private:
@@ -264,26 +263,26 @@ namespace sw
         basic_hashed_string( AllocationInfo& info, const T* pStr ) noexcept
             : basic_hashed_string{ helper_internal( info, pStr, StringUtil::strlen( pStr ) ) } {}
 
-        /** @brief info 테이블에서 찾거나 사본을 넣어 인덱스를 반환합니다. 새 철자면 표시 엔트리를 더하고, 새 이름이면 비교 엔트리도 그것이다. */
+        /** @brief info 테이블에서 찾거나 사본을 넣어 인덱스를 반환합니다. 새 철자면 표시 엔트리를 더하고, 새 이름이면 그 엔트리가 비교 엔트리도 됩니다. */
         static InternedIndex helper_internal( AllocationInfo& info, const T* pStr, size_type length ) noexcept;
 
         /** @brief 전역 intern 테이블입니다. */
         static AllocationInfo& getAllocationInfo() noexcept;
 
-        /** @brief 청크 엔트리입니다(정의는 아래 — 이 자리에서는 완전할 필요가 없다). */
+        /** @brief 청크 엔트리입니다(정의는 아래에 있으므로 여기서는 불완전 타입이어도 됩니다). */
         struct Entry;
 
         /** @brief 엔트리를 락 없이 O(1) 로 찾습니다. 없는 인덱스면 nullptr 입니다. */
         static const Entry* findEntry( uint32 entryIndex ) noexcept;
 
-        uint32 _comparisonIndex; ///< 대소문자를 무시한 이름의 엔트리(같음 · 해시 · 미리 정의된 이름)
-        uint32 _displayIndex;    ///< 적은 철자의 엔트리(`c_str()` · `size()`)
+        uint32 _comparisonIndex; ///< 대소문자를 무시한 이름의 엔트리(같음 비교, 해시, 미리 정의된 이름에 쓴다).
+        uint32 _displayIndex;    ///< 적은 철자의 엔트리(`c_str()` 과 `size()` 에 쓴다).
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 같은 이름인지 비교합니다(비교 인덱스 정수 비교 — 대소문자 무시). 철자까지는 `isEqual( other, NameCase::CaseSensitive )`. */
+    /** @brief 같은 이름인지 비교합니다. 비교 인덱스를 정수로 비교하므로 대소문자를 무시합니다. 철자까지 비교하려면 `isEqual( other, NameCase::CaseSensitive )` 를 씁니다. */
     template <typename T>
     bool operator==( const basic_hashed_string<T>& lhs, const basic_hashed_string<T>& rhs ) noexcept { return lhs.getIndex() == rhs.getIndex(); }
 
@@ -291,12 +290,12 @@ namespace sw
     template <typename T>
     bool operator!=( const basic_hashed_string<T>& lhs, const basic_hashed_string<T>& rhs ) noexcept { return lhs.getIndex() != rhs.getIndex(); }
 
-    // 순서 연산자(<, <=, >, >=)는 두지 않는다 — FName 처럼 고른다. 사람이 보는 순서는 `HashedStringLexicalLess`, 찾기용은 `HashedStringFastLess`.
+    // 순서 연산자(<, <=, >, >=)는 두지 않는다. FName 처럼 용도에 맞게 고른다. 사람이 보는 순서는 `HashedStringLexicalLess`, 찾기용은 `HashedStringFastLess` 를 쓴다.
 
     using hashed_string = basic_hashed_string<utf8>;
 
     // ------------------------------------------------------------------------------
-    // 2) intern 테이블 — Engine.dll(Core OBJECT)만 소유하고, 모든 모듈은 이 export 만 쓴다
+    // 2) intern 테이블. Engine.dll(Core OBJECT)만 소유하고, 모든 모듈은 이 export 만 쓴다.
     // ------------------------------------------------------------------------------
     /** @brief hashed_string 의 intern 테이블입니다. */
     struct SW_API HashedStringPool
@@ -309,8 +308,8 @@ namespace sw
         /**
          * @struct ScopedPoolMemoryTag
          * @brief 스코프 동안 이 스레드의 할당을 이름 풀의 태그(`MemoryTag::EngineMisc`)로 셉니다.
-         * @details 풀의 블록(청크 · 문자열 아레나 · 샤드 맵)은 이름을 처음 넣은 하위 시스템의 것이 아닙니다. 둘러싼 스코프 태그로 세면 같은 몫이
-         *          "누가 먼저 넣었나" 에 따라 태그를 옮겨 다닙니다. 새 이름을 넣는 느린 길과 저장소를 세우는 자리에서만 겁니다.
+         * @details 풀의 블록(청크, 문자열 아레나, 샤드 맵)은 이름을 처음 넣은 하위 시스템의 것이 아니다. 둘러싼 스코프의 태그로 세면 같은 메모리가
+         *          "누가 먼저 넣었나"에 따라 태그를 옮겨 다닌다. 새 이름을 넣는 느린 경로와 저장소를 만드는 곳에서만 건다.
          *          배포본(`kMemoryTagScopesEnabled` 가 아닌 구성)에서는 아무것도 하지 않습니다.
          */
         struct SW_API ScopedPoolMemoryTag
@@ -337,7 +336,7 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 3) StringKey — 샤드 맵 검색용 키(비소유 포인터)
+    // 3) StringKey. 샤드 맵 검색용 키다(비소유 포인터).
     // ------------------------------------------------------------------------------
     template <typename T, typename N>
     struct basic_hashed_string<T, N>::StringKey final
@@ -355,7 +354,7 @@ namespace sw
             }
         };
 
-        /** @brief 대소문자를 무시하고 같은지 비교합니다(해시 → 길이 → 문자열 순서로 빠르게 검사). 비교 엔트리 표의 같음입니다. */
+        /** @brief 대소문자를 무시하고 같은지 비교합니다(해시, 길이, 문자열 순서로 빠르게 검사합니다). 비교 엔트리 테이블의 같음입니다. */
         struct EqualIgnoreCase
         {
             bool operator()( const StringKey& lhs, const StringKey& rhs ) const noexcept
@@ -367,7 +366,7 @@ namespace sw
             }
         };
 
-        /** @brief 철자까지 같은지 비교합니다. 표시 엔트리 표의 같음입니다(해시는 대소문자를 무시하므로 철자만 다른 것은 같은 버킷이다). */
+        /** @brief 철자까지 같은지 비교합니다. 표시 엔트리 테이블의 같음이며, 해시는 대소문자를 무시하므로 철자만 다른 것은 같은 버킷에 들어갑니다. */
         struct EqualExact
         {
             bool operator()( const StringKey& lhs, const StringKey& rhs ) const noexcept
@@ -380,7 +379,7 @@ namespace sw
     };
 
     // ------------------------------------------------------------------------------
-    // 4) AllocationInfo — 청크 테이블 + 64KB 문자열 아레나 + 32개 샤드 뮤텍스
+    // 4) AllocationInfo. 청크 테이블, 64KB 문자열 아레나, 32개 샤드 뮤텍스로 이루어진다.
     // ------------------------------------------------------------------------------
     /** @brief 청크 엔트리입니다. 락 없이 읽을 수 있도록 바뀌지 않는 데이터 슬롯입니다. */
     template <typename T, typename N>
@@ -388,8 +387,8 @@ namespace sw
     {
         const value_type* _pStr{ nullptr };      ///< 아레나에 적재된 불변 C 문자열 포인터
         size_type         _stringLength{ 0 };    ///< 문자열 길이(널 제외)
-        hash_type         _hash{ 0 };            ///< 미리 계산한 FNV 해시 값(대소문자 무시 — 철자가 달라도 같다)
-        uint32            _comparisonIndex{ 0 }; ///< 이 철자가 속한 이름의 비교 엔트리(처음 intern 된 철자면 자기 자신)
+        hash_type         _hash{ 0 };            ///< 미리 계산한 FNV 해시 값(대소문자 무시, 철자가 달라도 같다).
+        uint32            _comparisonIndex{ 0 }; ///< 이 철자가 속한 이름의 비교 엔트리(처음 intern 된 철자면 자기 자신).
     };
 
     /**
@@ -398,7 +397,7 @@ namespace sw
      * @details
      * - **청크 테이블(`_arrChunk`)**:
      *   1024개 단위의 Entry 청크 배열(`atomic<Entry*> _arrChunk[64]`)을 관리합니다. 인덱스를 `chunkIndex = id / 1024`,
-     *   `offset = id % 1024` 로 나누기만 하면 되므로, 뮤텍스 없이 **O(1) 포인터 역참조**로 문자열 포인터 · 길이 · 해시를
+     *   `offset = id % 1024` 로 나누기만 하면 되므로, 뮤텍스 없이 **O(1) 포인터 역참조**로 문자열 포인터, 길이, 해시를
      *   바로 반환합니다.
      * - **문자열 아레나(`_listArenaBlock`)**:
      *   짧은 문자열마다 `new[]` 를 따로 부르면 힙 단편화가 생기므로, 64KB 연속 메모리 블록을 미리 할당하고 차례로 채워 넣어
@@ -421,8 +420,8 @@ namespace sw
             using SpellingIndexMap = unordered_map<StringKey, uint32, typename StringKey::HashFunc, typename StringKey::EqualExact>;
 
             mutable std::shared_mutex _mutex;              ///< 이 샤드 전용 읽기/쓰기 락
-            NameIndexMap              _mapKeyToIndex;      ///< 이름(대소문자 무시) → 비교 엔트리 인덱스
-            SpellingIndexMap          _mapExactKeyToIndex; ///< 철자 → 표시 엔트리 인덱스
+            NameIndexMap              _mapKeyToIndex;      ///< 이름(대소문자 무시)에서 비교 엔트리 인덱스로 가는 맵
+            SpellingIndexMap          _mapExactKeyToIndex; ///< 철자에서 표시 엔트리 인덱스로 가는 맵
         };
 
         atomic<Entry*> _arrChunk[kMaxChunks]{}; /**< 1024 단위 엔트리 청크의 원자 포인터 배열(락 없는 O(1) 조회) */
@@ -444,15 +443,15 @@ namespace sw
 
         /**
          * @brief 0번 청크를 잡고 미리 정의된 이름을 적재합니다. **빈 테이블에서만 부릅니다.**
-         * @details 생성자와 `HashedStringPool::initialize` 가 함께 씁니다. 후자가 필요한 이유는 그 인스턴스가 **함수 지역 static**
-         *          이라서 두 번째 initialize 에서는 생성자가 돌지 않기 때문입니다. `clear()` 가 0번 청크까지 돌려준 뒤라 그대로 두면
-         *          빈 테이블을 가리키게 됩니다.
+         * @details 생성자와 `HashedStringPool::initialize` 가 함께 쓴다. 후자가 필요한 이유는 그 인스턴스가 **함수 지역 static** 이라
+         *          두 번째 initialize 에서는 생성자가 돌지 않기 때문이다. `clear()` 가 0번 청크까지 돌려준 뒤라 그대로 두면
+         *          빈 테이블을 가리키게 된다.
          */
         void initializeStorage()
         {
             const HashedStringPool::ScopedPoolMemoryTag poolMemoryTag;
 
-            // 0번 청크를 미리 할당해 미리 정의된 이름을 적재한다
+            // 0번 청크를 미리 할당해 미리 정의된 이름을 적재한다.
             constexpr size_t chunkSize   = sizeof( Entry ) * kChunkSize;
             Entry*           pFirstChunk = static_cast<Entry*>( Memory::allocate( chunkSize ) );
             Memory::set( pFirstChunk, 0, chunkSize );
@@ -465,14 +464,14 @@ namespace sw
             SW_ASSERT( _entryCount.load( std::memory_order_relaxed ) == static_cast<uint32>( PredefinedNameType::Count ) );
         }
 
-        /** @brief 모든 메모리 블록 · 청크 · 맵을 한꺼번에 해제합니다. 맵 · 목록은 저장소(버킷 · 밀집 배열 · 용량)까지 돌려줍니다. */
+        /** @brief 모든 메모리 블록, 청크, 맵을 한꺼번에 해제합니다. 맵과 목록은 저장소(버킷, 밀집 배열, 용량)까지 돌려줍니다. */
         void clear() noexcept
         {
             std::unique_lock<std::shared_mutex> arrShardLock[kNumShards];
             for ( uint32 shardIndex = 0; shardIndex < kNumShards; ++shardIndex )
             {
                 arrShardLock[shardIndex] = std::unique_lock<std::shared_mutex>( _arrShard[shardIndex]._mutex );
-                // `clear()` 는 버킷 · 밀집 배열을 남긴다 — 빈 맵을 대입해야 종료 뒤 남는 블록이 없다. `= {}` 는 쓰지 않는다(STL 구성에서 initializer_list 대입이 골라져 버킷이 남는다).
+                // `clear()` 는 버킷과 밀집 배열을 남긴다. 빈 맵을 대입해야 종료 뒤 남는 블록이 없다. `= {}` 는 쓰지 않는다(STL 구성에서 initializer_list 대입이 선택되어 버킷이 남는다).
                 _arrShard[shardIndex]._mapKeyToIndex      = typename Shard::NameIndexMap{};
                 _arrShard[shardIndex]._mapExactKeyToIndex = typename Shard::SpellingIndexMap{};
             }
@@ -509,7 +508,7 @@ namespace sw
             const size_t requiredChars = static_cast<size_t>( length ) + 1;
             const size_t requiredBytes = requiredChars * sizeof( value_type );
 
-            // 64KB 를 넘는 큰 문자열은 따로 할당한다
+            // 64KB 를 넘는 큰 문자열은 따로 할당한다.
             if ( requiredBytes > kArenaBlockSize )
             {
                 value_type* pLargeBuf = static_cast<value_type*>( Memory::allocate( requiredBytes ) );
@@ -519,7 +518,7 @@ namespace sw
                 return pLargeBuf;
             }
 
-            // 현재 블록의 공간이 모자라면 새 64KB 블록을 할당한다
+            // 현재 블록의 공간이 모자라면 새 64KB 블록을 할당한다.
             if ( _pCurrentArenaBlock == nullptr || ( _arenaOffset + requiredChars ) * sizeof( value_type ) > kArenaBlockSize )
             {
                 _pCurrentArenaBlock = static_cast<value_type*>( Memory::allocate( kArenaBlockSize ) );
@@ -596,7 +595,7 @@ namespace sw
         StringKey       lookupKey{ hash, text.data(), static_cast<size_type>( text.size() ) };
 
         std::shared_lock<std::shared_mutex> readLock{ shard._mutex };
-        // 그 철자가 있으면 그것을, 없고 이름만 있으면 이름의 첫 철자를 돌려준다(철자를 새로 넣지 않는다 — 찾기만 한다).
+        // 그 철자가 있으면 그것을, 없고 이름만 있으면 이름의 첫 철자를 반환한다(철자를 새로 넣지 않고 찾기만 한다).
         const auto exactIter = shard._mapExactKeyToIndex.find( lookupKey );
         if ( exactIter != shard._mapExactKeyToIndex.end() )
         {
@@ -624,9 +623,9 @@ namespace sw
 
     /**
      * @brief 32개 샤드의 공유 락으로 빠르게 조회하고, 새 철자만 아레나에 적재해 청크에 등록합니다.
-     * @details 철자 표에 있으면 그 철자의 엔트리와 그것이 속한 이름의 비교 엔트리를 돌려준다. 없으면 엔트리를 하나 더한다 — 이름이 처음이면
-     *          그 엔트리가 비교 엔트리이기도 하고, 이름은 있고 철자만 새로우면 표시 엔트리만 더해 기존 비교 엔트리를 가리킨다(FName 의
-     *          DisplayIndex 가 다른 철자를, ComparisonIndex 가 같은 이름을 말하는 것과 같다).
+     * @details 철자 테이블에 있으면 그 철자의 엔트리와 그것이 속한 이름의 비교 엔트리를 반환한다. 없으면 엔트리를 하나 더한다.
+     *          이름이 처음이면 그 엔트리가 비교 엔트리도 된다. 이름은 있고 철자만 새로우면 표시 엔트리만 더해 기존 비교 엔트리를 가리킨다
+     *          (FName 에서 DisplayIndex 가 다른 철자를, ComparisonIndex 가 같은 이름을 가리키는 것과 같다).
      */
     template <typename T, typename N>
     typename basic_hashed_string<T, N>::InternedIndex basic_hashed_string<T, N>::helper_internal( AllocationInfo& info, const T* str,
@@ -651,7 +650,7 @@ namespace sw
             return InternedIndex{ ( pEntry != nullptr ) ? pEntry->_comparisonIndex : displayIndex, displayIndex };
         };
 
-        // 1단계: 샤드 공유 락으로 빠르게 조회한다(이미 등록된 철자는 대부분 여기서 끝난다)
+        // 1단계: 샤드 공유 락으로 빠르게 조회한다(이미 등록된 철자는 대부분 여기서 끝난다).
         {
             std::shared_lock<std::shared_mutex> readLock{ shard._mutex };
             const auto                          iter = shard._mapExactKeyToIndex.find( lookupKey );
@@ -659,11 +658,11 @@ namespace sw
                 return makeResult( iter->second );
         }
 
-        // 2단계: 새 철자 등록. 샤드 배타 락 + 전역 할당 락
+        // 2단계: 새 철자를 등록한다. 샤드 배타 락과 전역 할당 락을 잡는다.
         std::unique_lock<std::shared_mutex>         writeLock{ shard._mutex };
         const HashedStringPool::ScopedPoolMemoryTag poolMemoryTag;
 
-        // 다시 확인한다(double-check)
+        // 다시 확인한다(double-check).
         const auto exactIter = shard._mapExactKeyToIndex.find( lookupKey );
         if ( exactIter != shard._mapExactKeyToIndex.end() )
             return makeResult( exactIter->second );
@@ -720,7 +719,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 비교 인덱스 순 비교 함수 객체입니다(FName 의 `FNameFastLess`). 순서에 뜻이 없고 실행마다 다릅니다. */
+    /** @brief 비교 인덱스 순 비교 함수 객체입니다(FName 의 `FNameFastLess`). 순서에 의미가 없고 실행마다 다릅니다. */
     struct HashedStringFastLess
     {
         bool operator()( const hashed_string& lhs, const hashed_string& rhs ) const noexcept { return lhs.fastLess( rhs ); }
@@ -741,7 +740,7 @@ namespace std
     /** @brief intern 인덱스가 같으면 같은 이름으로 보는 std::equal_to 특수화입니다. */
     struct equal_to<sw::basic_hashed_string<T, N>>
     {
-        /** @brief 인덱스가 같으면 true 입니다. */
+        /** @brief 인덱스가 같으면 true 를 반환합니다. */
         bool operator()( const sw::basic_hashed_string<T, N>& lhs, const sw::basic_hashed_string<T, N>& rhs ) const noexcept { return lhs.getIndex() == rhs.getIndex(); }
     };
 } // namespace std

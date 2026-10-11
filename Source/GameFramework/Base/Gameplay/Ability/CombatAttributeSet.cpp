@@ -111,8 +111,8 @@ namespace sw
     {
         AttributeSet::postAttributeChange( name, oldValue, newValue );
 
-        // 최대치가 줄면(버프가 풀리면) 현재치를 따라 줄인다 — 현재치의 base 를 자르면 current 도 다시 집계된다. 늘 때는 그대로 둔다
-        // (최대 체력 버프로 체력이 차오르지 않는다 — 언리얼 Lyra 와 같다).
+        // 최대치가 줄면(버프가 해제되면) 현재치도 따라서 줄인다. 현재치의 base 를 자르면 current 도 다시 집계된다. 최대치가 늘 때는 그대로 둔다.
+        // 최대 체력 버프로 체력이 차오르지 않는다(언리얼 Lyra 와 같음).
         AbilitySystemComponent* pAbilitySystem = getOwningAbilitySystem();
         if ( pAbilitySystem == nullptr || newValue >= oldValue )
             return;
@@ -127,7 +127,7 @@ namespace sw
 
         const float32 currentBase = pAbilitySystem->getAttributeBaseValue( currentName );
         if ( currentBase > newValue )
-            (void)pAbilitySystem->setAttributeBaseValue( currentName, newValue ); // 이 묶음이 가진 어트리뷰트라 실패하지 않는다
+            (void)pAbilitySystem->setAttributeBaseValue( currentName, newValue ); // 이 세트가 가진 어트리뷰트이므로 실패하지 않는다
     }
 
     void CombatAttributeSet::postGameplayEffectExecute( const AttributeModCallbackData& data )
@@ -167,7 +167,7 @@ namespace sw
         if ( pAbilitySystem == nullptr )
             return;
 
-        // 메타 어트리뷰트는 받자마자 비운다 — 다음 피해가 이 값 위에 쌓이지 않는다.
+        // 메타 어트리뷰트는 받자마자 비운다. 다음 피해가 이 값 위에 쌓이지 않게 하기 위해서다.
         const float32 damage = pAbilitySystem->getAttributeBaseValue( CombatAttributes::incomingDamage() );
         (void)pAbilitySystem->setAttributeBaseValue( CombatAttributes::incomingDamage(), 0.0f );
         if ( damage <= 0.0f || pAbilitySystem->hasMatchingTag( getDeadTag() ) )
@@ -214,7 +214,7 @@ namespace sw
         if ( pAbilitySystem == nullptr || pAbilitySystem->hasMatchingTag( getDeadTag() ) )
             return;
 
-        // 순서: 태그(그 뒤로 발동 · 피해가 막힌다) → 어빌리티 취소 → 컴포넌트 안의 반응(이벤트) → 바깥(채널).
+        // 순서는 다음과 같다. 태그를 먼저 붙이고(이후 발동과 피해가 막힌다), 어빌리티를 취소하고, 컴포넌트 안의 반응(이벤트)을 처리한 뒤, 바깥(채널)에 알린다.
         pAbilitySystem->addLooseTag( getDeadTag() );
         pAbilitySystem->cancelAllAbilities();
 

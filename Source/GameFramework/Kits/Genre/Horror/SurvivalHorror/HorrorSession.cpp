@@ -40,7 +40,7 @@ namespace sw
                 return settings;
             }
 
-            /** @brief 이름 집합을 이름 순으로 씁니다 — 같은 집합이면 같은 바이트입니다. */
+            /** @brief 이름 집합을 이름 순으로 씁니다. 같은 집합이면 같은 바이트가 나옵니다. */
             static void writeSortedSet( Archive& outArchive, const unordered_set<hashed_string>& uniqueName )
             {
                 vector<hashed_string> listName( uniqueName.begin(), uniqueName.end() );
@@ -67,7 +67,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 이름 → 수 맵을 이름 순으로 씁니다 — 같은 맵이면 같은 바이트입니다. */
+            /** @brief 이름에서 수로 가는 맵을 이름 순으로 씁니다. 같은 맵이면 같은 바이트가 나옵니다. */
             static void writeSortedMap( Archive& outArchive, const unordered_map<hashed_string, int32>& mapNameToCount )
             {
                 vector<hashed_string> listName;
@@ -196,9 +196,9 @@ namespace sw
             _bFlashlightOn = SW_FALSE;
             pushEvent( SurvivalHorrorEvent::Kind::FlashlightDied, hashed_string() );
         }
-        // 어둠은 매 프레임 조금씩이라 알림을 내지 않는다(환각 시작 · 끝만 알린다).
+        // 어둠은 매 프레임 조금씩 깎이므로 이벤트를 내지 않는다(환각 시작과 끝만 알린다).
         if ( bInDarkness && _bFlashlightOn == SW_FALSE )
-            (void)_sanity.drain( deltaTime ); // 0 에 붙어 있어도 계속 깎는 중 — 회복 지연이 다시 센다
+            (void)_sanity.drain( deltaTime ); // 0 에 붙어 있어도 계속 깎는 중이므로 회복 지연이 다시 센다
         _sanity.update( deltaTime );
         _battery.update( deltaTime );
         refreshHallucination();
@@ -224,7 +224,7 @@ namespace sw
             return 0;
         const int32 added = _pInventory->addItem( itemID, wanted );
         if ( added > 0 )
-            (void)_pItemBox->removeItem( itemID, added ); // added 는 상자에 있던 수 이하라 늘 빠진다
+            (void)_pItemBox->removeItem( itemID, added ); // added 는 상자에 있던 수 이하이므로 항상 빠진다
         return added;
     }
 
@@ -260,11 +260,11 @@ namespace sw
         }
         if ( bAllFit == false )
         {
-            // 결과가 다 들어가지 않으면 없던 일로 — 넣은 결과를 빼고 재료를 돌려놓는다(재료가 비운 자리라 늘 들어간다).
+            // 결과가 다 들어가지 않으면 없던 일로 한다. 넣은 결과를 빼고 재료를 돌려놓는다(재료가 비운 슬롯이므로 항상 들어간다).
             for ( size_t outputIndex = 0; outputIndex < listOutput.size(); ++outputIndex )
             {
                 if ( listAdded[outputIndex] > 0 )
-                    (void)_pInventory->removeItem( listOutput[outputIndex], listAdded[outputIndex] ); // 방금 넣은 수라 늘 빠진다
+                    (void)_pInventory->removeItem( listOutput[outputIndex], listAdded[outputIndex] ); // 방금 넣은 수이므로 항상 빠진다
             }
             (void)_pInventory->addItem( firstItem, 1 );
             (void)_pInventory->addItem( secondItem, 1 );
@@ -313,7 +313,7 @@ namespace sw
             return HorrorSaveResult::NoSavesLeft;
         if ( rules._saveMode == HorrorSaveMode::InkRibbon )
         {
-            // 가방에서 처음 찾은 SaveItem 하나를 쓴다(놓은 순서 — 결정적).
+            // 가방에서 처음 찾은 SaveItem 하나를 쓴다(놓은 순서이므로 결정적이다).
             int32 ribbonInstance = -1;
             for ( const GridItem& item : _pInventory->getItems() )
             {
@@ -378,7 +378,7 @@ namespace sw
         if ( _pInventory->hasItem( pLock->_keyItem ) == false )
             return HorrorPuzzleResult::MissingItem;
         if ( pLock->_bConsumeKey == SW_TRUE )
-            (void)_pInventory->removeItem( pLock->_keyItem, 1 ); // 열쇠는 위 hasItem 이 확인했다
+            (void)_pInventory->removeItem( pLock->_keyItem, 1 ); // 열쇠는 위의 hasItem 이 확인했다
         (void)markSolved( lockID, pLock->_flag );
         pushEvent( SurvivalHorrorEvent::Kind::DoorUnlocked, lockID );
         return HorrorPuzzleResult::Solved;
@@ -428,7 +428,7 @@ namespace sw
 
     bool HorrorSession::tryMoveTo( const hashed_string& areaID )
     {
-        static const GameFlags kNoFlags; // 빌리지 않은 세션 — 조건 있는 길은 닫힌 채다
+        static const GameFlags kNoFlags; // 빌리지 않은 세션이므로 조건 있는 길은 닫힌 채이다
         if ( _pAreaGraph == nullptr || _pAreaGraph->canTraverse( _currentArea, areaID, _pFlags != nullptr ? *_pFlags : kNoFlags ) == false )
             return false;
         (void)_pAreaGraph->enterArea( areaID );
@@ -558,7 +558,7 @@ namespace sw
 
     bool HorrorSession::readState( Archive& archive )
     {
-        // 사본에 읽고 끝까지 맞으면 바꾼다 — 카탈로그 · 빌린 포인터 · 게이지 설정은 사본이 그대로 든다.
+        // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 카탈로그, 빌린 포인터, 게이지 설정은 사본도 그대로 가지고 있다.
         HorrorSession restored = *this;
         const bool    bPartRead =
             restored._sanity.readState( archive ) && restored._battery.readState( archive ) && HorrorSessionInternal::readSet( archive, restored._uniqueSeenMonster ) &&
@@ -586,7 +586,7 @@ namespace sw
                             restored._bHallucinating <= SW_TRUE;
         if ( bValid == false )
             return false;
-        // 순서 퍼즐 진행은 다음 걸음의 자리라 그 퍼즐의 걸음 수 안이어야 한다.
+        // 순서 퍼즐 진행은 다음 걸음의 index 이므로 그 퍼즐의 걸음 수 안이어야 한다.
         for ( const auto& [puzzleID, progress] : restored._mapSequenceProgress )
         {
             const HorrorSequenceDef* pSequence = _pCatalog != nullptr ? _pCatalog->findSequence( puzzleID ) : nullptr;

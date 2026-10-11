@@ -16,8 +16,8 @@ namespace sw
     {
         struct MetroDuelistInternal
         {
-            static constexpr float32 kNeverPressed    = -1.0e9f; ///< 패리를 누른 적 없음(어느 창에도 닿지 않는 과거)
-            static constexpr float32 kGuardPoiseRatio = 0.5f;    ///< 막으면 강인도 피해는 반
+            static constexpr float32 kNeverPressed    = -1.0e9f; ///< 패리를 누른 적이 없을 때의 값(어느 창에도 닿지 않는 먼 과거)
+            static constexpr float32 kGuardPoiseRatio = 0.5f;    ///< 막으면 강인도 피해가 절반이 된다
         };
     } // namespace
 } // namespace sw
@@ -77,7 +77,7 @@ namespace sw
         }
         const MetroRules& rules = _pCatalog->getRules();
 
-        // 패리 — 누른 시각이 공격이 닿는 순간의 창 안이면 피해 없이 반격 창을 연다. 누름은 한 번만 쓴다.
+        // 패리다. 누른 시각이 공격이 닿는 순간의 창 안이면 피해 없이 반격 창을 연다. 누름은 한 번만 쓴다.
         const TimingResult parry = rules._parryJudge.judge( _time, _parryPressTime );
         if ( parry.isHit() )
         {
@@ -101,7 +101,7 @@ namespace sw
             }
             else
             {
-                // 가드 붕괴 — 남은 스태미나를 모두 잃고 그대로 맞는다.
+                // 가드 붕괴다. 남은 스태미나를 모두 잃고 그대로 맞는다.
                 outcome._result = MetroDefenseResult::GuardBroken;
                 (void)_stamina.reduce( _stamina.getValue() );
             }
@@ -140,7 +140,7 @@ namespace sw
 
     bool MetroDuelist::readState( Archive& archive )
     {
-        // 사본에 읽고 끝까지 맞으면 바꾼다 — 카탈로그 · 체력 · 지구력 설정은 사본이 그대로 든다.
+        // 사본에 읽고 끝까지 맞으면 바꾼다. 카탈로그, 체력, 지구력 설정은 사본이 그대로 가지고 있다.
         MetroDuelist restored  = *this;
         const bool   bBodyRead = restored._vitality.readState( archive ) && restored._stamina.readState( archive );
         archive >> restored._time;

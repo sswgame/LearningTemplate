@@ -69,7 +69,7 @@ namespace
         static void tickAndFlush( sw::GameObjectManager& manager )
         {
             manager.tick( kFrame );
-            manager.getSceneNavigation().flushTileBakes();
+            manager.getSceneService<sw::SceneNavigation>().flushTileBakes();
             manager.tick( kFrame );
         }
     };
@@ -82,7 +82,7 @@ SW_TEST_CASE( NavMeshDynamicTest, ObstacleRebakesOnlyTheTouchedTilesAndPathsFoll
 {
     using Internal = NavMeshDynamicTestInternal;
     sw::GameObjectManager manager;
-    sw::SceneNavigation&  navigation = manager.getSceneNavigation();
+    sw::SceneNavigation&  navigation = manager.getSceneService<sw::SceneNavigation>();
     navigation.setSettings( navtest::makeSettings() );
     Internal::spawnFloorAndSurface( manager );
     manager.beginPlay();
@@ -132,7 +132,7 @@ SW_TEST_CASE( NavMeshDynamicTest, GeometrySourceChangeRebakesThatArea )
 {
     using Internal = NavMeshDynamicTestInternal;
     sw::GameObjectManager manager;
-    sw::SceneNavigation&  navigation = manager.getSceneNavigation();
+    sw::SceneNavigation&  navigation = manager.getSceneService<sw::SceneNavigation>();
     navigation.setSettings( navtest::makeSettings() );
     Internal::spawnFloorAndSurface( manager );
     sw::GameObject*              pPillar = manager.createGameObject( sw::hashed_string( "Pillar" ) );
@@ -166,7 +166,7 @@ SW_TEST_CASE( NavMeshDynamicTest, DestructionRebakesTheBrokenWallTiles )
     sw::Scene scene{ "NavDestruction" };
     SW_ASSERT_TRUE( scene.instantiate( doc ) );
     sw::GameObjectManager& manager    = *scene.getObjectManager();
-    sw::SceneNavigation&   navigation = manager.getSceneNavigation();
+    sw::SceneNavigation&   navigation = manager.getSceneService<sw::SceneNavigation>();
     manager.beginPlay();
     for ( uint32 frame = 0; frame < 60; ++frame )
     {

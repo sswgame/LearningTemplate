@@ -33,7 +33,7 @@ namespace sw
     PhysicsCarInput PhysicsCarComponent::toCarInput( const ControlIntent& intent, const float3& carForward, float32 forwardSpeed, float32 reverseSpeed,
                                                      int32 handBrakeIndex )
     {
-        // 차 앞(XZ)과 오른쪽(앞을 시계 방향으로 90°) — 요 0 이면 앞 +Z · 오른쪽 +X.
+        // 차의 앞(XZ)과 오른쪽(앞을 시계 방향으로 90° 돌린 방향)이다. 요가 0 이면 앞은 +Z 이고 오른쪽은 +X 이다.
         const float32   forwardLength = MathUtil::sqrt( carForward._x * carForward._x + carForward._z * carForward._z );
         const float32   forwardX      = forwardLength > 0.0f ? carForward._x / forwardLength : 0.0f;
         const float32   forwardZ      = forwardLength > 0.0f ? carForward._z / forwardLength : 1.0f;
@@ -43,7 +43,7 @@ namespace sw
         input._right     = MathUtil::clamp( worldMove._x * forwardZ - worldMove._z * forwardX, -1.0f, 1.0f );
         input._handBrake = intent.isDown( handBrakeIndex ) ? 1.0f : 0.0f;
         if ( pedal < 0.0f && forwardSpeed > reverseSpeed )
-            input._brake = -pedal; // 앞으로 가는 중 — 먼저 선다
+            input._brake = -pedal; // 앞으로 가는 중이므로 먼저 멈춘다
         else
             input._forward = pedal;
         return input;

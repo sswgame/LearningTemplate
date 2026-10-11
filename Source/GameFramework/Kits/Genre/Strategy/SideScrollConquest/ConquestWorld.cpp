@@ -16,9 +16,9 @@ namespace sw
         {
             static constexpr float32 kFarAway        = 1.0e9f;
             static constexpr float32 kGateStandOff   = 0.5f;  ///< 성문 앞에서 멈추는 거리
-            static constexpr float32 kLadderReach    = 1.0f;  ///< 사다리가 이 거리 안이면 그 성문을 넘는다
-            static constexpr float32 kPlantTolerance = 0.05f; ///< 사다리가 걸칠 자리에 이만큼 가까우면 걸친다
-            static constexpr float32 kApproachRatio  = 0.9f;  ///< 사거리의 이 비율까지 다가간다(경계에서 떨지 않게)
+            static constexpr float32 kLadderReach    = 1.0f;  ///< 사다리가 이 거리 안에 있으면 그 성문을 넘는다
+            static constexpr float32 kPlantTolerance = 0.05f; ///< 사다리가 걸칠 위치에 이만큼 가까우면 걸친 것으로 본다
+            static constexpr float32 kApproachRatio  = 0.9f;  ///< 사거리의 이 비율까지만 다가간다(경계에서 떨지 않게 하려는 값이다)
 
             static float32 computeDirection( ConquestTeam team ) { return team == ConquestTeam::Enemy ? -1.0f : 1.0f; }
 
@@ -118,7 +118,7 @@ namespace sw
             {
                 for ( int32 count = 0; count < garrison._count; ++count )
                 {
-                    (void)spawnUnit( garrison._unitID, def._owner, def._x, ConquestOrder::Hold ); // 모르는 유닛이면 -1 — 카탈로그 로드가 이미 경고했다
+                    (void)spawnUnit( garrison._unitID, def._owner, def._x, ConquestOrder::Hold ); // 모르는 유닛이면 -1 이다. 카탈로그 로드가 이미 경고했다
                 }
             }
         }
@@ -183,7 +183,7 @@ namespace sw
             return ConquestResult::NoBuildSlot;
         if ( _resource.canAfford( pDef->_cost ) == false )
             return ConquestResult::NotEnoughResources;
-        (void)_resource.trySpend( pDef->_cost ); // 바로 위 canAfford 를 지나 늘 성공한다
+        (void)_resource.trySpend( pDef->_cost ); // 바로 위의 canAfford 를 통과했으므로 항상 성공한다
         ConquestBuilding building;
         building._pDef      = pDef;
         building._siteIndex = siteIndex;
@@ -226,7 +226,7 @@ namespace sw
             return ConquestResult::PopulationCap;
         if ( _resource.canAfford( pUnit->_cost ) == false )
             return ConquestResult::NotEnoughResources;
-        (void)_resource.trySpend( pUnit->_cost ); // 바로 위 canAfford 를 지나 늘 성공한다
+        (void)_resource.trySpend( pUnit->_cost ); // 바로 위의 canAfford 를 통과했으므로 항상 성공한다
         building._listQueue.push_back( unitID );
         return ConquestResult::Ok;
     }
@@ -317,10 +317,10 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return false;
-        // 사본에 읽고 끝까지 맞으면 바꾼다 — 카탈로그는 사본이 그대로 든다.
+        // 사본에 읽고, 끝까지 맞으면 그때 바꾼다. 카탈로그는 사본도 그대로 가지고 있다.
         ConquestWorld restored = *this;
         uint32        count    = 0;
-        // 거점은 카탈로그 거점마다 하나다 — 이름(4) + 성문 · 성벽 · 점령(12) + 주인 · 점령 편(2)
+        // 거점은 카탈로그의 거점마다 하나이다. 이름(4) + 성문, 성벽, 점령(12) + 주인, 점령 편(2)
         if ( StateArchiveUtil::readCount( archive, 18, count ) == false || count != _listSite.size() )
             return false;
         for ( ConquestSite& site : restored._listSite )
@@ -344,7 +344,7 @@ namespace sw
             site._captureTeam = static_cast<ConquestTeam>( captureTeam );
         }
 
-        // 건물마다 이름(4) + 대기열 수(4) + 진행 둘(8) + 자리 · 일꾼(8)
+        // 건물마다 이름(4) + 대기열 수(4) + 진행 둘(8) + 슬롯, 일꾼(8)
         if ( StateArchiveUtil::readCount( archive, 24, count ) == false )
             return false;
         const int32 siteCount = static_cast<int32>( restored._listSite.size() );
@@ -371,7 +371,7 @@ namespace sw
                 return false;
         }
 
-        // 병사마다 이름(4) + 자리 · 체력 · 쿨다운 · 대기 자리 · 준 피해(20) + 번호 · 부대 자리(8) + 편 · 명령 · 삶 · 사다리(4)
+        // 병사마다 이름(4) + 위치, 체력, 쿨다운, 대기 위치, 준 피해(20) + 번호, 부대 슬롯(8) + 편, 명령, 생존, 사다리(4)
         if ( StateArchiveUtil::readCount( archive, 36, count ) == false )
             return false;
         restored._listUnit.assign( count, ConquestUnit{} );
@@ -585,7 +585,7 @@ namespace sw
             return;
         float32 dealt = 0.0f;
         applyAttack( ConquestTeam::Player, rules._commanderDamage, rules._commanderStructureRate, target, dealt );
-        _commander._attackCooldown.restart( rules._commanderAttackInterval ); // 늦음을 잇는다 — 빈도가 걸음 크기에 매이지 않는다
+        _commander._attackCooldown.restart( rules._commanderAttackInterval ); // 늦은 만큼을 이어받아, 공격 빈도가 걸음 크기에 매이지 않게 한다
     }
 
     void ConquestWorld::stepUnit( int32 unitIndex, float32 deltaTime )
@@ -606,7 +606,7 @@ namespace sw
 
         if ( def._siegeRole == ConquestSiegeRole::Ladder )
         {
-            // 사다리: 돌격이면(적은 늘) 앞쪽의 가장 가까운 성문에 가서 걸친다. 싸우지 않는다.
+            // 사다리: 돌격 명령이면(적은 항상) 앞쪽의 가장 가까운 성문에 가서 걸친다. 싸우지 않는다.
             if ( unit._order == ConquestOrder::Charge || unit._team == ConquestTeam::Enemy )
             {
                 float32 bestDistance = ConquestWorldInternal::kFarAway;
@@ -651,7 +651,7 @@ namespace sw
         {
             if ( unit._order == ConquestOrder::Charge )
             {
-                // 싸울 상대가 없으면 앞쪽의 가장 가까운 남의 거점으로 간다(점령하러). 그마저 없으면 그 자리.
+                // 싸울 상대가 없으면 앞쪽의 가장 가까운 남의 거점으로 점령하러 간다. 그것도 없으면 그 자리에 있는다.
                 float32 goalX = unit._x;
                 float32 best  = ConquestWorldInternal::kFarAway;
                 for ( const ConquestSite& site : _listSite )
@@ -678,7 +678,7 @@ namespace sw
             return;
         const float32 damage = def._damage * computeMoraleScale( unit._team, unit._x );
         applyAttack( unit._team, damage, def._structureScale, target, unit._damageDealt );
-        unit._attackCooldown.restart( def._attackInterval ); // 늦음을 잇는다 — 빈도가 걸음 크기에 매이지 않는다
+        unit._attackCooldown.restart( def._attackInterval ); // 늦은 만큼을 이어받아, 공격 빈도가 걸음 크기에 매이지 않게 한다
     }
 
     void ConquestWorld::stepCapture( float32 deltaTime )
@@ -722,7 +722,7 @@ namespace sw
             site._captureTeam                = ConquestTeam::Neutral;
             if ( previousOwner == ConquestTeam::Player )
             {
-                // 잃은 거점의 건물은 멈춘다 — 일꾼은 풀려나고 대기열은 사라진다.
+                // 잃은 거점의 건물은 멈춘다. 일꾼은 풀려나고 대기열은 사라진다.
                 for ( ConquestBuilding& building : _listBuilding )
                 {
                     if ( building._siteIndex != siteIndex )
@@ -808,7 +808,7 @@ namespace sw
         const int32 waveSize = computeWaveSize();
         for ( int32 index = 0; index < waveSize; ++index )
         {
-            // 모르는 waveUnit 이면 -1 — 카탈로그 로드가 이미 경고했다
+            // 모르는 waveUnit 이면 -1 이다. 카탈로그 로드가 이미 경고했다
             (void)spawnUnit( rules._waveUnit, ConquestTeam::Enemy, pSpawnSite->_pDef->_x + static_cast<float32>( index ) * rules._formationSpacing, ConquestOrder::Charge );
         }
         pushEvent( ConquestEvent::Kind::WaveSpawned, pSpawnSite->_pDef->_id, waveSize, ConquestTeam::Enemy );
@@ -884,7 +884,7 @@ namespace sw
                 const ConquestSite& site = _listSite[static_cast<size_t>( siteIndex )];
                 if ( ConquestWorldInternal::isHostile( team, site._owner ) == false )
                     continue;
-                // 성문은 누구나(사다리가 걸쳐 있으면 넘으므로 노리지 않는다), 성벽은 충차만(`bUnits` 가 거짓인 구조물 전용 탐색).
+                // 성문은 누구나 노린다(사다리가 걸쳐 있으면 넘으므로 노리지 않는다). 성벽은 충차만 노리며, `bUnits` 가 거짓인 구조물 전용 탐색이다.
                 const bool bGate = site._gateHealth > 0.0f && isLaddered( siteIndex, team ) == false;
                 const bool bWall = site._gateHealth <= 0.0f && site._wallHealth > 0.0f && bUnits == false;
                 if ( bGate == false && bWall == false )
@@ -932,7 +932,7 @@ namespace sw
             if ( ConquestWorldInternal::isHostile( team, site._owner ) == false || site._gateHealth <= 0.0f || isLaddered( siteIndex, team ) )
                 continue;
             const float32 stopX = computeGateX( site, team ) - direction * ConquestWorldInternal::kGateStandOff;
-            // 성문 앞(공격하는 쪽)에 있던 것만 막는다 — 이미 안쪽에 있는 것은 그대로 둔다.
+            // 성문 앞(공격하는 쪽)에 있던 것만 막는다. 이미 안쪽에 있는 것은 그대로 둔다.
             if ( ( stopX - fromX ) * direction >= -1.0e-4f && ( result - stopX ) * direction > 0.0f )
                 result = stopX;
         }

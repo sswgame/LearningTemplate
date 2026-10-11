@@ -67,7 +67,7 @@ namespace sw
 
     void CardPile::shuffle( GameRandom& random )
     {
-        random.shuffle( _listCard ); // 기반 Fisher-Yates
+        random.shuffle( _listCard ); // 기반의 Fisher-Yates 를 쓴다
     }
 
     bool CardPile::deal( vector<CardPile>& inoutListHand, int32 cardsEach )

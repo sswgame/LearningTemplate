@@ -1,6 +1,6 @@
 /**
  * @file ShooterPlayerComponent.h
- * @brief 슈터 플레이어(폰) — 무기 셋(연사 · 탄창 · 재장전 · 퍼짐 · 반동), 히트스캔, 체력(`Vitality`), HUD(조준선 · 맞음 표시 · 체력 · 탄약 · 무기 이름), 몸(KayKit 캐릭터) · 탄도선. 의도만 읽는다.
+ * @brief 슈터 플레이어(폰)를 구현합니다. 무기 세 종류(연사, 탄창, 재장전, 퍼짐, 반동), 히트스캔, 체력(`Vitality`), HUD(조준선, 맞음 표시, 체력, 탄약, 무기 이름), 몸(KayKit 캐릭터), 탄도선을 맡으며 입력은 의도만 읽습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -28,25 +28,25 @@ namespace sw
 
     /**
      * @class ShooterPlayerComponent
-     * @brief 플레이어 오브젝트(카메라 · `FirstPersonCameraComponent` · `PawnComponent` · `ShooterBodyMovementComponent` · 1인칭 손에 든 총 · HUD(`HUDControllerComponent`)와
-     *        같은 오브젝트)의 게임 규칙입니다.
-     * @details 기본 틱 그룹(`DuringPhysics`)에서 돕니다 — 같은 오브젝트의 1인칭 카메라가 `PrePhysics` 에서 폰의 조종 회전으로 시점을 둔 뒤라, 그 시점으로
-     *          걷고 쏘고 `setEyePosition` 으로 눈 자리를 넣습니다. **폰의 의도만 읽습니다**(버튼 Jump · Sprint · Fire · Reload · SwitchWeapon · Weapon1..3, 아날로그
-     *          SwitchWeapon) — 사람(플레이어 조종자가 입력 맵 `data/shooter.input.xml` 에서 만든다)이든 자동 플레이 AI(`ShooterAutoAimControllerComponent`)든 같다.
-     *          걷기 · 점프는 몸 이동(`ShooterBodyMovementComponent` — 적과 같은 코드)이 한다. 막는 상자 · 적 자리는 디렉터가 `PrePhysics` 에서 적은 것을 읽기만 합니다.
+     * @brief 플레이어 오브젝트의 게임 규칙입니다. 같은 오브젝트에 카메라, `FirstPersonCameraComponent`, `PawnComponent`, `ShooterBodyMovementComponent`,
+     *        1인칭 손에 든 총, HUD(`HUDControllerComponent`)가 있습니다.
+     * @details 기본 틱 그룹(`DuringPhysics`)에서 돈다. 같은 오브젝트의 1인칭 카메라가 `PrePhysics` 에서 폰의 조종 회전으로 시점을 정한 뒤라, 그 시점으로
+     *          걷고 쏘고 `setEyePosition` 으로 눈 위치를 넣는다. **폰의 의도만 읽는다**(버튼 Jump, Sprint, Fire, Reload, SwitchWeapon, Weapon1..3, 아날로그
+     *          SwitchWeapon). 사람(플레이어 조종자가 입력 맵 `data/shooter.input.xml` 에서 만든다)이든 자동 플레이 AI(`ShooterAutoAimControllerComponent`)든 같다.
+     *          걷기와 점프는 몸 이동(`ShooterBodyMovementComponent`, 적과 같은 코드)이 한다. 막는 상자와 적 위치는 디렉터가 `PrePhysics` 에서 기록한 것을 읽기만 한다.
      *
-     *          **몸**: 플레이 시작에 몸 프리팹(`_bodyPrefab` — 스킨드 메시 · 애니메이터 · 외형 · `ShooterAvatarComponent`)을 세웁니다. 몸이 이 컴포넌트의
-     *          상태(발 · 요 · 속도 · 사격 · 맞음 · 쓰러짐 · 무기)를 읽어 스스로 움직이고, 무기는 외형의 MainHand 칸 아이템(`_listWeaponItem`)이 됩니다.
-     *          시점 카메라의 프리셋이 1인칭(`CameraPresetMode::FirstPerson`)이면 몸을 숨기고 손에 든 총 · 조준선을 보이고, 아니면 반대입니다. 눈높이는 몸 소켓
-     *          `Eyes` 의 바인드 포즈 높이입니다(없으면 `_eyeHeight`).
+     *          **몸**: 플레이가 시작되면 몸 프리팹(`_bodyPrefab`, 스킨드 메시, 애니메이터, 외형, `ShooterAvatarComponent`)을 스폰한다. 몸이 이 컴포넌트의
+     *          상태(발, 요, 속도, 사격, 맞음, 쓰러짐, 무기)를 읽어 스스로 움직이고, 무기는 외형의 MainHand 슬롯 아이템(`_listWeaponItem`)이 된다.
+     *          시점 카메라의 프리셋이 1인칭(`CameraPresetMode::FirstPerson`)이면 몸을 숨기고 손에 든 총과 조준선을 보이며, 아니면 반대로 한다. 눈높이는 몸 소켓
+     *          `Eyes` 의 바인드 포즈 높이다(없으면 `_eyeHeight`).
      *
-     *          **HUD**: 같은 오브젝트의 `HUDControllerComponent` 의 뷰모델(`HUDViewModel`)에 틱 뒤에 값을 넣습니다 — 조준선(1인칭 · 살아 있을 때) ·
-     *          맞음 표시(맞힌 직후 · 1인칭) · 체력 · 탄약(탄창 · 예비) · 무기 이름(무기 표의 이름 = 현지화 키). 위젯은 문서(`game/shooter3d/ui/hud.ui.xml`)의
-     *          `{bind:필드}` 가 잇는다 — 이 컴포넌트는 위젯 이름을 모른다.
+     *          **HUD**: 같은 오브젝트의 `HUDControllerComponent` 의 뷰모델(`HUDViewModel`)에 틱이 끝난 뒤 값을 넣는다. 조준선(1인칭이고 살아 있을 때),
+     *          맞음 표시(맞힌 직후, 1인칭), 체력, 탄약(탄창과 예비), 무기 이름(무기 테이블의 이름이 곧 현지화 키)이 대상이다. 위젯은 문서(`game/shooter3d/ui/hud.ui.xml`)의
+     *          `{bind:필드}` 가 연결한다. 이 컴포넌트는 위젯 이름을 모른다.
      *
-     *          **탄도선 · 총구 섬광**: 총구(1인칭이면 손에 든 총 × 무기 소켓 `Muzzle`, 아니면 몸 외형의 `MainHand.Muzzle`)에서 맞은 자리까지의 상자 ·
-     *          섬광 구를 디렉터의 풀에서 꺼냅니다 — 에디터 없이 App 에서도 보입니다.
-     *          적에 주는 피해 · 효과 · 효과음 · 손에 든 총 바꾸기는 쌓아 두고 틱 뒤 한 번에 합니다(게임 스레드).
+     *          **탄도선과 총구 섬광**: 총구(1인칭이면 손에 든 총과 무기 소켓 `Muzzle`, 아니면 몸 외형의 `MainHand.Muzzle`)에서 맞은 위치까지의 상자와
+     *          섬광 구를 디렉터의 풀에서 꺼낸다. 에디터 없이 App 에서도 보인다.
+     *          적에게 주는 피해, 효과, 효과음, 손에 든 총 교체는 쌓아 두었다가 틱이 끝난 뒤 한 번에 처리한다(게임 스레드).
      */
     REFLECT( Category = "Shooter3D", DisplayName = "Shooter Player", Tooltip = "Movement, weapons, hitscan, health, the body and the tracers of the shooter player" )
     class ShooterPlayerComponent : public Component
@@ -63,27 +63,27 @@ namespace sw
         void onEndPlay() override;
         void onTick( float32 deltaTime ) override;
 
-        /** @brief 적에 맞았다(틱 뒤 게임 스레드). 디렉터의 긴장도 신호가 되고, 쓰러지면 쓰러짐 클립 뒤에 판을 처음부터 다시 시작한다. */
+        /** @brief 적에게 맞았습니다(틱이 끝난 뒤 게임 스레드에서 부릅니다). 디렉터의 긴장도 신호가 되고, 쓰러지면 쓰러짐 클립이 끝난 뒤 판을 처음부터 다시 시작합니다. */
         void takeDamage( float32 amount );
-        /** @brief 탄 보상 — 무기마다 탄창 두 개를 채운다(틱 뒤 게임 스레드). */
+        /** @brief 탄 보상입니다. 무기마다 탄창 두 개를 채웁니다(틱이 끝난 뒤 게임 스레드에서 부릅니다). */
         void addWaveAmmo();
-        /** @brief 수리 보상 — 체력을 채운다(틱 뒤 게임 스레드). */
+        /** @brief 수리 보상입니다. 체력을 채웁니다(틱이 끝난 뒤 게임 스레드에서 부릅니다). */
         void restoreHealth( float32 amount );
-        /** @brief 세운 몸을 지웁니다(상태 저장 전). 다음 틱 뒤에 다시 세운다. */
+        /** @brief 스폰한 몸을 지웁니다(상태를 저장하기 전). 다음 틱이 끝난 뒤 다시 스폰합니다. */
         void despawnViews();
 
-        // ---- 디렉터 · 몸 · 조종자가 읽는 것(이 컴포넌트가 쓰지 않는 그룹) ----
+        // ---- 디렉터, 몸, 조종자가 읽는 것(이 컴포넌트가 쓰지 않는 그룹) ----
         float3 getEyePosition() const;
-        /** @brief 발 자리입니다(몸 이동의 자리 — 없으면 처음 자리). */
+        /** @brief 발 위치입니다(몸 이동의 위치이며, 없으면 처음 위치). */
         float3             getFeetPosition() const;
         float32            getHealth() const { return _vitality.getHealth(); }
         bool               isAlive() const { return _vitality.isAlive(); }
         const WeaponState& getCurrentWeapon() const { return _arrWeapon[_weaponIndex]; }
-        /** @brief 무기 칸 @p weaponIndex(0 소총 · 1 산탄총 · 2 권총)입니다. */
+        /** @brief 무기 슬롯 @p weaponIndex(0 소총, 1 산탄총, 2 권총)의 무기입니다. */
         const WeaponState& getWeapon( int32 weaponIndex ) const { return _arrWeapon[weaponIndex]; }
         int32              getWeaponIndex() const { return _weaponIndex; }
         GameObjectHandle   getDirector() const { return _director; }
-        /** @brief 무기의 외형 아이템(외형의 MainHand 칸)입니다. */
+        /** @brief 무기의 외형 아이템(외형의 MainHand 슬롯)입니다. */
         hashed_string getWeaponItem( int32 weaponIndex ) const;
         /** @brief 지금 보는 요(라디안, +Z 에서 +X 쪽)입니다. */
         float32 getLookYaw() const { return _lookYaw; }
@@ -92,33 +92,33 @@ namespace sw
         bool   isOnGround() const;
         /** @brief 마지막으로 쏜 뒤 지난 시간(s)입니다. */
         float32 getTimeSinceShot() const { return _timeSinceShot; }
-        /** @brief 맞을 때마다 하나 오르는 수(몸이 움찔 클립을 트는 신호)입니다. */
+        /** @brief 맞을 때마다 하나씩 오르는 수입니다(몸이 움찔 클립을 트는 신호). */
         uint32 getHitReactionCount() const { return _hitReactionCount; }
         /** @brief 시점 카메라가 1인칭 프리셋이면 true 입니다. */
         bool isFirstPerson() const { return _bFirstPerson == SW_TRUE; }
-        /** @brief 지금 무기의 탄(탄창 + 예비)이 탄창 네 개에 얼마나 모자란가 — 0(넉넉) .. 1(없음). 디렉터의 "탄 부족" 신호입니다. */
+        /** @brief 지금 무기의 탄(탄창과 예비)이 탄창 네 개에 비해 얼마나 모자란지 반환합니다. 0(넉넉)부터 1(없음)까지이며 디렉터의 "탄 부족" 신호입니다. */
         float32 computeAmmoShortage() const;
         uint32  getShotCount() const { return _shotCount; }
-        /** @brief 세워 둔 몸 오브젝트입니다. 없으면 nullptr 입니다. */
+        /** @brief 스폰해 둔 몸 오브젝트입니다. 없으면 nullptr 입니다. */
         GameObject* findBodyObject() const;
         uint32      getHitCount() const { return _hitCount; }
 
     private:
-        /** @brief 이번 발의 탄도선 하나 — 틱 뒤에 디렉터의 풀에서 꺼낸다. */
+        /** @brief 이번 발의 탄도선 하나입니다. 틱이 끝난 뒤 디렉터의 풀에서 꺼냅니다. */
         struct TracerRequest
         {
             float3 _from{};
             float3 _to{};
         };
 
-        /** @brief 적에 줄 피해 하나 — 틱 뒤에 건다. */
+        /** @brief 적에게 줄 피해 하나입니다. 틱이 끝난 뒤 적용합니다. */
         struct EnemyHit
         {
             GameObjectHandle _enemy{};
             float32          _damage{ 0.0f };
         };
 
-        /** @brief 낼 탄착 효과 하나 — 틱 뒤에 디렉터의 풀에서 꺼낸다. */
+        /** @brief 낼 탄착 효과 하나입니다. 틱이 끝난 뒤 디렉터의 풀에서 꺼냅니다. */
         struct EffectRequest
         {
             float4  _color{};
@@ -129,27 +129,27 @@ namespace sw
 
     private:
         void equipWeapons();
-        /** @brief 의도의 무기 버튼(Weapon1..3 · SwitchWeapon 과 그 아날로그의 부호 — 다음 / 이전) · Reload 를 무기에 넣습니다. */
+        /** @brief 의도의 무기 버튼(Weapon1..3, SwitchWeapon 과 그 아날로그의 부호로 다음과 이전을 구분)과 Reload 를 무기에 반영합니다. */
         void applyWeaponIntent( const PawnComponent& pawn );
         /** @brief 같은 오브젝트의 몸 이동입니다. 없으면 nullptr 입니다. */
         ShooterBodyMovementComponent* findMovement() const;
         void                          fireWeapon( const ShooterDirectorComponent& director, FirstPersonCameraComponent& camera, bool bJustPressed );
-        /** @brief 광선 하나 — 가장 가까운 적 · 상자 · 바닥을 찾습니다. 적이면 피해를 쌓습니다. 맞은 거리입니다. */
+        /** @brief 광선 하나를 쏴 가장 가까운 적, 상자, 바닥을 찾습니다. 적이면 피해를 쌓습니다. 반환값은 맞은 거리입니다. */
         float32 traceShot( const ShooterDirectorComponent& director, const GameRay& ray, float32 damage, bool& outHitEnemy );
-        /** @brief 총구의 월드 자리입니다 — 1인칭이면 손에 든 총, 아니면 몸 외형의 `MainHand.Muzzle`. 못 찾으면 눈 아래입니다. */
+        /** @brief 총구의 월드 위치를 반환합니다. 1인칭이면 손에 든 총, 아니면 몸 외형의 `MainHand.Muzzle` 입니다. 찾지 못하면 눈 아래입니다. */
         float3 findMuzzlePosition();
         void   switchWeapon( int32 weaponIndex );
-        /** @brief 시점 카메라(대상이 이 오브젝트인 게임 카메라 디렉터)의 프리셋이 1인칭인지 봅니다. */
+        /** @brief 시점 카메라(대상이 이 오브젝트인 게임 카메라 디렉터)의 프리셋이 1인칭인지 확인합니다. */
         bool queryFirstPerson() const;
-        /** @brief 같은 오브젝트의 HUD 뷰모델에 조준선 · 맞음 표시 보임과 체력 · 탄약 · 무기 이름을 넣습니다(게임 스레드 — 틱 뒤). HUD 가 없으면 아무것도 하지 않는다. */
+        /** @brief 같은 오브젝트의 HUD 뷰모델에 조준선과 맞음 표시의 가시성, 체력, 탄약, 무기 이름을 넣습니다(틱이 끝난 뒤 게임 스레드에서). HUD 가 없으면 아무것도 하지 않습니다. */
         void updateHUD();
         void resetRound();
         void scheduleFlush();
         void flushPending();
         bool hasPending() const;
-        /** @brief 몸을 세웁니다(게임 스레드, 틱 밖). */
+        /** @brief 몸을 스폰합니다(게임 스레드, 틱 밖). */
         void spawnBody();
-        /** @brief 1인칭 / 그 밖 — 손에 든 총 · 몸 보임을 맞춥니다(게임 스레드). 조준선은 `updateHUD` 가 맞춘다. */
+        /** @brief 1인칭인지 아닌지에 따라 손에 든 총과 몸의 가시성을 맞춥니다(게임 스레드). 조준선은 `updateHUD` 가 맞춥니다. */
         void applyViewMode();
 
     private:
@@ -180,27 +180,27 @@ namespace sw
 
         WeaponState              _arrWeapon[kWeaponCount];
         Vitality                 _vitality;
-        AppearanceSocketSetCache _weaponSockets; ///< 1인칭 총구 — 무기 외형의 소켓 에셋
+        AppearanceSocketSetCache _weaponSockets; ///< 1인칭 총구. 무기 외형의 소켓 에셋.
         vector<EnemyHit>         _listPendingHit;
         vector<EffectRequest>    _listPendingEffect;
         vector<TracerRequest>    _listPendingTracer;
-        GameSoundQueue           _soundQueue; ///< 낼 소리(틱 뒤 — 오디오는 게임 스레드에서)
+        GameSoundQueue           _soundQueue; ///< 낼 소리(틱이 끝난 뒤 처리한다. 오디오는 게임 스레드에서 다룬다).
         GameObjectHandle         _body;
         float32                  _hitMarkerTimer;
         float32                  _timeSinceShot;
-        float32                  _downTimer;     ///< 쓰러진 뒤 지난 시간(쓰러졌을 때만)
-        float32                  _bodyEyeHeight; ///< 몸 소켓 Eyes 의 높이(0 = 아직 모름)
+        float32                  _downTimer;     ///< 쓰러진 뒤 지난 시간(쓰러졌을 때만).
+        float32                  _bodyEyeHeight; ///< 몸 소켓 Eyes 의 높이(0은 아직 모른다는 뜻).
         float32                  _lookYaw;
         int32                    _weaponIndex;
         uint32                   _shotCount;
         uint32                   _hitCount;
         uint32                   _hitReactionCount;
-        uint8                    _bWeaponModelDirty   : 1; ///< 틱 뒤에 손에 든 총 모델 · 몸의 무기를 바꾼다
+        uint8                    _bWeaponModelDirty   : 1; ///< 틱이 끝난 뒤 손에 든 총 모델과 몸의 무기를 바꾼다.
         uint8                    _bFlushScheduled     : 1;
-        uint8                    _bRoundJustRestarted : 1; ///< 쓰러져 다시 시작한 프레임 — 같은 틱 뒤에 남은 공격은 무시한다
+        uint8                    _bRoundJustRestarted : 1; ///< 쓰러져 다시 시작한 프레임. 같은 틱이 끝난 뒤에 남은 공격은 무시한다.
         uint8                    _bFirstPerson        : 1;
-        uint8                    _bViewModeDirty      : 1; ///< 틱 뒤에 1인칭 / 그 밖 보임을 맞춘다
-        uint8                    _bBodyRequested      : 1; ///< 틱 뒤에 몸을 세운다
+        uint8                    _bViewModeDirty      : 1; ///< 틱이 끝난 뒤 1인칭 여부에 따른 가시성을 맞춘다.
+        uint8                    _bBodyRequested      : 1; ///< 틱이 끝난 뒤 몸을 스폰한다.
         uint8                    _reserved            : 2;
     };
 } // namespace sw

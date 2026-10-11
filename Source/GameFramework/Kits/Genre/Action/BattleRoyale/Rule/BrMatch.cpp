@@ -78,7 +78,7 @@ namespace sw
         vitality._reviveHealthRatio       = playerSettings._reviveHealthRatio;
         vitality._invulnerableAfterRevive = 0.0f;
         vitality._bDownedEnabled          = SW_TRUE;
-        vitality._bDamageInterruptsRevive = SW_FALSE; // 끊기는 이 키트가 정한다(자기장 피해는 끊지 않는다)
+        vitality._bDamageInterruptsRevive = SW_FALSE; // 부활이 끊기는 조건은 이 키트가 정한다(자기장 피해는 부활을 끊지 않는다)
         player._vitality.initialize( vitality );
 
         InteractionConfig revive;
@@ -134,7 +134,7 @@ namespace sw
         }
         else if ( target._revive.getParticipantCount() > 0 && isValidPlayer( attacker ) )
         {
-            interruptRevive( victim, true ); // 기절한 사람이 적에게 맞으면 부활이 처음부터
+            interruptRevive( victim, true ); // 기절한 사람이 적에게 맞으면 부활이 처음부터 다시 시작된다
         }
         const VitalityDamageResult result = target._vitality.applyDamage( bodyDamage, 0.0f, attacker );
         const float32              dealt  = result._shieldAbsorbed + result._healthDamage;
@@ -156,7 +156,7 @@ namespace sw
         helper._revivingTarget = target;
         if ( downed._revive.getParticipantCount() == 1 )
         {
-            // 살리는 동안 출혈을 멈춘다 — 진행은 InteractionProgress 가 들고, Vitality 의 부활 시계는 배율 0 으로 세워 둔다.
+            // 살리는 동안 출혈을 멈춘다. 진행은 InteractionProgress 가 가지고 있고, Vitality 의 부활 시계는 배율 0으로 멈춰 둔다.
             (void)downed._vitality.startRevive( reviver, 0.0f );
             pushEvent( BrEvent::Kind::ReviveStarted, target, reviver, downed._team, 0 );
         }
@@ -246,7 +246,7 @@ namespace sw
     void BrMatch::processVitality( int32 player )
     {
         BrPlayer& target = _listPlayer[static_cast<size_t>( player )];
-        // 지역 목록 — 처리 중에 다른 사람의 알림을 다시 꺼낸다(팀 전멸).
+        // 지역 목록에 복사해 둔다. 처리 중에 다른 사람의 알림을 다시 꺼내기 때문이다(팀 전멸).
         vector<VitalityEvent> listEvent;
         target._vitality.drainEvents( listEvent );
         for ( const VitalityEvent& event : listEvent )
@@ -273,7 +273,7 @@ namespace sw
     void BrMatch::handleDeath( int32 player, int32 instigator )
     {
         BrPlayer& target = _listPlayer[static_cast<size_t>( player )];
-        // 기절한 뒤의 죽음(출혈 · 자기장 · 전멸)은 기절시킨 사람의 처치다.
+        // 기절한 뒤의 죽음(출혈, 자기장, 전멸)은 기절시킨 사람의 처치로 센다.
         const int32 killer = isValidPlayer( instigator ) ? instigator : target._downedBy;
         endRevive( player );
         for ( BrPlayer& other : _listPlayer )
@@ -318,7 +318,7 @@ namespace sw
                 _listPlayer[index]._revivingTarget = -1;
             }
         }
-        // 진행이 다 찼다 — 세워 둔 Vitality 의 부활 시계를 한 번에 끝까지 돌린다.
+        // 진행이 다 찼다. 멈춰 둔 Vitality 의 부활 시계를 한 번에 끝까지 돌린다.
         (void)downed._vitality.startRevive( reviver, 1.0f );
         downed._vitality.update( downed._vitality.getSettings()._reviveTime );
         downed._vitality.discardEvents();
@@ -334,7 +334,7 @@ namespace sw
             if ( player._team == team && player.isAlive() )
                 return;
         }
-        // 서 있는 팀원이 없다 — 기절한 팀원은 모두 죽는다.
+        // 서 있는 팀원이 없으면 기절한 팀원은 모두 죽는다.
         for ( size_t index = 0; index < _listPlayer.size(); ++index )
         {
             BrPlayer& player = _listPlayer[index];
@@ -400,7 +400,7 @@ namespace sw
             const BrPlayer& player = _listPlayer[index];
             outArchive << player._team;
             player._vitality.writeState( outArchive );
-            player._revive.writeState( outArchive ); // 부활 진행 — 붙은 팀원(붙은 순서) · 진행량 · 시계
+            player._revive.writeState( outArchive ); // 부활 진행(붙은 팀원과 붙은 순서, 진행량, 시계)
             player._inventory.writeState( outArchive );
             player._loadout.writeState( outArchive );
             outArchive << player._position;
@@ -429,7 +429,7 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return false;
-        // 지역에 읽고 끝까지 맞으면 바꾼다 — 카탈로그 · 지형은 그대로 둔다.
+        // 지역 변수에 읽고 끝까지 맞으면 바꾼다. 카탈로그와 지형은 그대로 둔다.
         MatchState     matchState     = _matchState;
         BrZone         zone           = _zone;
         GameRandom     random         = _random;
@@ -441,7 +441,7 @@ namespace sw
                                StateArchiveUtil::readStepTimer( archive, stepTimer );
         archive >> time;
         archive >> nextSupplyDrop;
-        // 사람마다 팀(4) + 부활 수(4) + 진행(4) + 자리(8) + 정수 넷(16) 이상
+        // 사람마다 팀(4) + 부활 수(4) + 진행(4) + 위치(8) + 정수 4개(16) 바이트 이상
         const bool bHeadValid = bHeadRead && archive.isOk() && 0.0f <= time && 0 <= nextSupplyDrop && StateArchiveUtil::readCount( archive, 36, playerCount ) &&
                                 playerCount == static_cast<uint32>( matchState.getParticipantCount() );
         if ( bHeadValid == false )
@@ -481,14 +481,14 @@ namespace sw
         }
 
         uint32 dropCount = 0;
-        // 상자마다 무더기 수(4) + 자리(8) + 시각(4) 이상
+        // 상자마다 무더기 수(4) + 위치(8) + 시각(4) 바이트 이상
         if ( StateArchiveUtil::readCount( archive, 16, dropCount ) == false )
             return false;
         vector<BrSupplyDrop> listSupplyDrop( dropCount );
         for ( BrSupplyDrop& drop : listSupplyDrop )
         {
             uint32 itemCount = 0;
-            // 무더기마다 자리(8) + 이름(4) + 개수(4) + 지점(4)
+            // 무더기마다 위치(8) + 이름(4) + 개수(4) + 지점(4) 바이트
             if ( StateArchiveUtil::readCount( archive, 20, itemCount ) == false )
                 return false;
             drop._listItem.resize( itemCount );

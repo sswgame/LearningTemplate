@@ -17,7 +17,7 @@ namespace sw
     {
         struct PartyRoundSeriesInternal
         {
-            /** @brief 파티 기본 — 순위 점수 3 · 2 · 1 · 0, 먼저 5 점, 함께 닿아 총점까지 같으면 서든 데스, 라운드 시간 · 대기는 묶음이 세지 않는다. */
+            /** @brief 파티 기본 설정입니다. 순위 점수는 3, 2, 1, 0 이고, 먼저 5점을 얻으면 우승합니다. 함께 닿아 총점까지 같으면 서든 데스이며, 라운드 시간과 대기는 시리즈가 세지 않습니다. */
             static RoundSeriesSettings makeDefaultSettings()
             {
                 RoundSeriesSettings settings;
@@ -58,13 +58,13 @@ namespace sw
         if ( _series.getPhase() != RoundSeriesPhase::RoundActive || listRoundScore.size() != static_cast<size_t>( playerCount ) )
             return false;
 
-        // 순위 알림은 라운드를 넘기기 전에 — 끝난 라운드의 id 를 싣는다.
+        // 순위 이벤트는 라운드를 넘기기 전에 보낸다. 끝난 라운드의 id 를 실어야 하기 때문이다.
         for ( int32 player = 0; player < playerCount; ++player )
         {
             const int32 rank = RoundSeries::computeRank( listRoundScore, player );
             pushEvent( PartySeriesEvent::Kind::RoundRanked, player, rank, _series.getPlacementPoint( rank ) );
         }
-        // 위에서 같은 조건을 봤다 — 거절되지 않는다. 대기가 0 이라 끝나지 않으면 바로 다음 라운드다.
+        // 위에서 같은 조건을 확인했으므로 거절되지 않는다. 대기가 0 이라 끝나지 않으면 바로 다음 라운드이다.
         const RoundSeriesOutcome outcome = _series.reportRound( listRoundScore );
         if ( outcome == RoundSeriesOutcome::Finished )
         {

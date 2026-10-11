@@ -120,3 +120,20 @@ SW_TEST_CASE( Render2DSettingsTest, EngineTableHasWorldUIAboveDefault )
     SW_ASSERT_TRUE( worldUI >= 0 );
     SW_EXPECT_TRUE( static_cast<uint32>( worldUI ) > settings.getDefaultSortingLayer() );
 }
+
+/**
+ * @brief [Render2DSettingsTest] 엔진 종료가 활성 표를 놓아도(`releaseActive`) 다음 `getActive` 는 파일을 다시 읽는다
+ * @details 같은 프로세스에서 엔진이 다시 서면(테스트 호스트 · 앱 스모크) 놓은 뒤의 빈 표를 쓰면 안 된다.
+ */
+SW_TEST_CASE( Render2DSettingsTest, ReleasedActiveTableReloadsOnNextUse )
+{
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    const uint32 layerCount = sw::Render2DSettings::getActive().getSortingLayerCount();
+    SW_ASSERT_TRUE( layerCount > 1u );
+
+    sw::Render2DSettings::releaseActive();
+    const sw::Render2DSettings& reloaded = sw::Render2DSettings::getActive();
+    SW_EXPECT_EQUAL( layerCount, reloaded.getSortingLayerCount() );
+    SW_EXPECT_TRUE( reloaded.findSortingLayer( sw::hashed_string( "Default" ) ) >= 0 );
+    SW_EXPECT_EQUAL( static_cast<uint32>( reloaded.findSortingLayer( sw::hashed_string( "Default" ) ) ), reloaded.getDefaultSortingLayer() );
+}

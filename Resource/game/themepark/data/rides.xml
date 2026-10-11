@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- ThemePark 의 평지 놀이기구와 코스터 배치. 평가(excitement · intensity · nausea, 0..10)는 손으로 매긴 값이고 코스터는 시험 운행이 매긴다.
+<!-- ThemePark 의 평지 놀이기구와 코스터 배치. 평가(excitement · intensity · nausea, 0..10)는 손으로 매긴 값이고 코스터는 테스트 운행이 매긴다.
      x · z 는 놀이기구 자리(m), entranceX · entranceZ 는 줄 입구(없으면 자리 앞 4 m). cost 는 짓는 값, runningCost 는 분당 운영비. -->
 <ParkLayout gateX="20" gateZ="-40" startingCash="14000" entryFee="0">
   <FlatRide id="carousel" name="Merry-Go-Round" excitement="2.5" intensity="1.2" nausea="0.8" cycleTime="40" capacity="16" price="2"

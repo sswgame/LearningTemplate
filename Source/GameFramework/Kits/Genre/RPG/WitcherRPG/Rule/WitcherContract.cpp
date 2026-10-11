@@ -132,7 +132,7 @@ namespace sw
         if ( computeOpenOrder() >= 0 )
             return WitcherClueResult::Found;
 
-        // 단계의 단서를 모두 찾았다 — 일지에 알리고 다음 단계로. 단서가 없는 단계는 바로 넘긴다.
+        // 단계의 단서를 모두 찾았다. 일지에 알리고 다음 단계로 넘어간다. 단서가 없는 단계는 바로 넘긴다.
         while ( _stepIndex < static_cast<int32>( _pContract->_listStep.size() ) && computeOpenOrder() < 0 )
         {
             const hashed_string       stepID = _pContract->_listStep[static_cast<size_t>( _stepIndex )]._id;

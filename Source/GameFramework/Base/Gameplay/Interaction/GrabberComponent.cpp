@@ -29,7 +29,7 @@ namespace sw
         SceneComponent* pTargetScene = target.getPrimarySceneComponent();
         if ( pTargetScene != nullptr )
             pTargetScene->detachFromComponent( AttachRule::KeepWorld );
-        // 강체가 없다 — 수직 속도만 중력 컴포넌트에 넘긴다(수평 속도는 강체 백엔드가 생기면 쓴다).
+        // 강체가 없으므로 수직 속도만 중력 컴포넌트에 넘긴다. 수평 속도는 강체 백엔드를 쓸 때만 적용한다.
         GravityComponent* pGravity = target.getComponent<GravityComponent>();
         if ( pGravity != nullptr && velocity._y != 0.0f )
             pGravity->jump( velocity._y );
@@ -39,7 +39,7 @@ namespace sw
     {
         if ( _transform.attach( holder, target, localOffset ) == false )
             return false;
-        // 강체는 손을 따르는 키네마틱 — 동적으로 남으면 중력 · 접촉이 계층과 싸운다.
+        // 강체는 손을 따르는 키네마틱으로 둔다. 동적으로 남겨 두면 중력과 접촉이 계층 구조와 충돌한다.
         RigidBodyComponent* pBody3D = target.getComponent<RigidBodyComponent>();
         if ( pBody3D != nullptr )
             pBody3D->setBodyType( PhysicsBodyType::Kinematic );

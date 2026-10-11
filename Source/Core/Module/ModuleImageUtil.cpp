@@ -69,7 +69,7 @@ namespace sw
                 return ( pNt->Signature == IMAGE_NT_SIGNATURE ) ? pNt : nullptr;
             }
 
-            /** @brief 이름이 @p pDllName 인 DLL 이 올라와 있으면 프로세스 끝까지 내려가지 않게 고정합니다. 고정했으면 true 입니다. */
+            /** @brief 이름이 @p pDllName 인 DLL 이 로드돼 있으면 프로세스 끝까지 언로드되지 않게 고정합니다. 고정했으면 true 를 반환합니다. */
             static bool pinLoadedModule( const utf8* pDllName )
             {
                 HMODULE       hModule  = nullptr;
@@ -77,7 +77,7 @@ namespace sw
                 return GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_PIN, wideName.c_str(), &hModule ) != FALSE;
             }
 
-            /** @brief `Bin` 과 `Bin/Modules` 를 DLL 사용자 검색 폴더로 한 번 더합니다(`LOAD_LIBRARY_SEARCH_USER_DIRS` — 프로세스 전체에 남는다). */
+            /** @brief `Bin` 과 `Bin/Modules` 를 DLL 사용자 검색 폴더에 한 번 더 추가합니다(`LOAD_LIBRARY_SEARCH_USER_DIRS`, 프로세스 전체에 남습니다). */
             static void addBinarySearchDirectories()
             {
                 static const bool s_bAdded = []()
@@ -94,7 +94,7 @@ namespace sw
                 (void)s_bAdded;
             }
 
-            /** @brief 올라온 이미지 목록을 다시 읽는 시간 한도(ms)입니다 — 다른 스레드가 DLL 을 올리고 내리는 동안 열거가 드물게 진다. */
+            /** @brief 로드된 이미지 목록을 다시 읽는 시간 한도(ms)입니다. 다른 스레드가 DLL 을 로드하고 언로드하는 동안 열거가 드물게 실패합니다. */
             static constexpr uint64 kEnumerateModulesRetryMs = 1000;
 #endif
         };
@@ -174,7 +174,7 @@ namespace sw
             // ERROR_MOD_NOT_FOUND(126) 오류가 나므로, 네이티브 구분자('\')로 바꾼다.
             const string nativePath = FileUtil::toNativeSeparators( absPath );
 
-            // 경로는 UTF-8 이다 — W 판에 UTF-16 으로 넘긴다(A 판은 ANSI 코드 페이지로 읽어, 매니페스트가 UTF-8 로 바꿔 두지 않은 호스트에서 한글 경로가 깨진다).
+            // 경로는 UTF-8 이다. W 버전 함수에 UTF-16 으로 넘긴다(A 버전은 ANSI 코드 페이지로 읽어, 매니페스트가 UTF-8 로 바꿔 두지 않은 호스트에서 한글 경로가 깨진다).
             const wstring widePath = StringUtil::utf8ToUtf16( nativePath.c_str() );
             const wstring wideDir  = StringUtil::utf8ToUtf16( FileUtil::getDirectoryPart( nativePath ).c_str() );
             utf16         arrPreviousDllDir[constant::kMaxPathSize]{};
@@ -182,8 +182,8 @@ namespace sw
             if ( wideDir.empty() == false )
                 SetDllDirectoryW( wideDir.c_str() );
 
-            // 0) 모듈은 `Bin/Modules` 에 있고 그 의존(서드파티 · GameFramework DLL)은 `Bin` 에 있다. 실행 파일이 `TestBin` 이면 `Bin` 은 응용 프로그램
-            //    폴더도 아니다 — 두 폴더를 사용자 검색 폴더로 한 번 더해 두고, DLL 폴더 + 기본 폴더(응용 프로그램 · System32 · 사용자 폴더)로 찾는다.
+            // 0) 모듈은 `Bin/Modules` 에 있고 그 의존(서드파티, GameFramework DLL)은 `Bin` 에 있다. 실행 파일이 `TestBin` 이면 `Bin` 은 응용 프로그램
+            //    폴더도 아니다. 그래서 두 폴더를 사용자 검색 폴더에 한 번 더 추가하고, DLL 폴더와 기본 폴더(응용 프로그램, System32, 사용자 폴더)로 찾는다.
             ModuleImageUtilInternal::addBinarySearchDirectories();
             HMODULE hModule = LoadLibraryExW( widePath.c_str(), nullptr, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS );
             // 1) LOAD_WITH_ALTERED_SEARCH_PATH 로 대상 DLL 의 위치를 가장 먼저 검색해 로드한다
@@ -205,7 +205,7 @@ namespace sw
         const HMODULE hModule    = LoadLibraryW( StringUtil::utf8ToUtf16( nativeName.c_str() ).c_str() );
         if ( hModule == nullptr )
         {
-            // 실패 이유는 GetLastError 하나뿐이다 — 남기지 않으면 부르는 쪽은 "로드 실패" 밖에 모른다(126 의존 DLL 없음, 1114 DllMain 실패 등).
+            // 실패 이유는 GetLastError 하나뿐이다. 남기지 않으면 부르는 쪽은 "로드 실패"밖에 모른다(126 의존 DLL 없음, 1114 DllMain 실패 등).
             const DWORD errorCode = GetLastError();
             SW_LOG_WARNING( "LoadLibrary failed for %# (Win32 error %#)", nativeName.c_str(), static_cast<uint32>( errorCode ) );
         }
@@ -256,7 +256,7 @@ namespace sw
 
     uint32 ModuleImageUtil::bindDelayLoadImportsOfLoadedModules()
     {
-        // 묶기가 지연 로드 DLL 을 새로 올린다(서버 키트 → 공유 키트) — 새로 올라온 이미지의 지연 import 도 묶어야 하므로, 새 이미지가 없을 때까지 돈다.
+        // 바인딩이 지연 로드 DLL 을 새로 로드한다(서버 키트에서 공유 키트로). 새로 로드된 이미지의 지연 import 도 바인딩해야 하므로, 새 이미지가 없을 때까지 돈다.
         vector<void*> listBound;
         vector<void*> listHandle;
         uint32        failedCount{ 0 };
@@ -264,7 +264,7 @@ namespace sw
         {
             if ( collectLoadedModuleHandles( listHandle ) == false )
             {
-                // 목록을 못 읽으면 어떤 이미지도 묶이지 않는다 — 그 모듈들의 첫 float 인자 호출이 쓰레기 값을 받는다. 조용히 넘기지 않는다.
+                // 목록을 읽지 못하면 어떤 이미지도 바인딩되지 않는다. 그 모듈들의 첫 float 인자 호출이 쓰레기 값을 받는다. 조용히 넘기지 않는다.
                 SW_LOG_ERROR( "Could not enumerate the loaded modules - their delay-loaded imports stay unbound and bind on their first call" );
                 return failedCount + 1;
             }
@@ -286,7 +286,7 @@ namespace sw
     {
         outListHandle.clear();
 #if defined( SW_PLATFORM_WINDOWS )
-        // DbgHelp 의 `EnumerateLoadedModulesW64` 는 쓰지 않는다 — 다른 스레드가 DLL 을 올리고 내리는 동안 몇 % 확률로 실패한다(엔진 기동에는 로거 ·
+        // DbgHelp 의 `EnumerateLoadedModulesW64` 는 쓰지 않는다. 다른 스레드가 DLL 을 로드하고 언로드하는 동안 몇 % 확률로 실패한다(엔진 기동에는 로거와
         // 작업 스레드가 함께 선다). `K32EnumProcessModules` 도 같은 순간에 드물게 질 수 있어(ERROR_PARTIAL_COPY) 시간 한도 안에서 다시 읽는다.
         const HANDLE hProcess   = GetCurrentProcess();
         const uint64 deadlineMs = GetTickCount64() + ModuleImageUtilInternal::kEnumerateModulesRetryMs;
@@ -428,7 +428,7 @@ namespace sw
         }
         if ( stringTable == 0 )
             return 0;
-        // glibc 는 동적 섹션의 주소 칸을 적재 주소로 고쳐 두지만, 동적 섹션이 읽기 전용이면 파일 기준 값 그대로다.
+        // glibc 는 동적 섹션의 주소 필드를 적재 주소로 고쳐 두지만, 동적 섹션이 읽기 전용이면 파일 기준 값 그대로다.
         if ( stringTable < static_cast<uintptr_t>( pLinkMap->l_addr ) )
             stringTable += static_cast<uintptr_t>( pLinkMap->l_addr );
 
@@ -436,7 +436,7 @@ namespace sw
         {
             if ( pEntry->d_tag != DT_NEEDED )
                 continue;
-            // NOLOAD 는 이미 올라온 것만 찾는다(SONAME 으로 맞춘다). NODELETE 는 그 이미지를 프로세스 끝까지 남긴다 — 찾느라 올린 참조는 바로 돌려준다.
+            // NOLOAD 는 이미 로드된 것만 찾는다(SONAME 으로 맞춘다). NODELETE 는 그 이미지를 프로세스 끝까지 남긴다. 찾느라 늘린 참조는 바로 돌려준다.
             const utf8* pName       = reinterpret_cast<const utf8*>( stringTable + static_cast<uintptr_t>( pEntry->d_un.d_val ) );
             void*       pDependency = dlopen( pName, RTLD_LAZY | RTLD_NOLOAD | RTLD_NODELETE );
             if ( pDependency == nullptr )
@@ -453,8 +453,8 @@ namespace sw
         if ( pOutKeepImageMapped != nullptr )
             *pOutKeepImageMapped = false;
 
-        // 모듈은 자기가 단 것을 스스로 떼야 한다(에디터는 ImGuiEditor::shutdown · ~ConsolePanel 에서 뗀다). 여기서 뗀 것이 있으면
-        // 그 정리가 빠졌다는 뜻이라 경고로 남긴다. 늘 0 이어야 한다.
+        // 모듈은 자기가 등록한 것을 스스로 해제해야 한다(에디터는 ImGuiEditor::shutdown 과 ~ConsolePanel 에서 해제한다). 여기서 해제한 것이 있으면
+        // 그 정리가 빠졌다는 뜻이라 경고로 남긴다. 항상 0 이어야 한다.
         vector<IModuleUnloadListener::ReleaseResult> listResult;
         IModuleUnloadListener::releaseAllWithin( pBegin, pEnd, listResult );
 
@@ -466,7 +466,7 @@ namespace sw
                 SW_LOG_INFO( "Module %#: released %# %# before unloading its image", moduleName, result._releasedCount, result._pListenerName );
             else if ( result._releasedCount > 0 )
                 SW_LOG_WARNING( "Module %# left %# %# behind — released them before unloading its image", moduleName, result._releasedCount, result._pListenerName );
-            // 떼어 낼 수 없는 것(다른 코드가 아직 구독하는 이 이미지의 이벤트 채널)이 남았다. 내리면 다음 발행 · 종료 때 내려간 코드로 뛴다.
+            // 해제할 수 없는 것(다른 코드가 아직 구독하는 이 이미지의 이벤트 채널)이 남았다. 언로드하면 다음 발행이나 종료 때 언로드된 코드로 점프한다.
             if ( result._bKeepImageMapped )
             {
                 SW_LOG_WARNING( "Module %# is still referenced by %# that other code uses — keeping its image mapped until exit", moduleName, result._pListenerName );
@@ -521,7 +521,7 @@ namespace sw
         }
         return nullptr;
 #else
-        (void)pHandle; // 리눅스는 import 표에서 결속을 읽을 수 없다 — 부르는 쪽이 심볼로 가린다
+        (void)pHandle; // 리눅스는 import 테이블에서 바인딩을 읽을 수 없다. 부르는 쪽이 심볼로 판단한다.
         (void)dependencyFileName;
         return nullptr;
 #endif
@@ -545,7 +545,7 @@ namespace sw
         if ( releaseImageCode( moduleName, pHandle ) == false )
             return false;
 
-        // 이 이미지가 끌어온 의존 이미지가 함께 내려가지 않게 한다. 그 이미지의 코드를 쥔 등록은 여기서 뗄 수 없다.
+        // 이 이미지가 끌어온 의존 이미지가 함께 언로드되지 않게 한다. 그 이미지의 코드를 가리키는 등록은 여기서 해제할 수 없다.
         (void)pinDynamicLibraryDependencies( pHandle );
         unloadDynamicLibrary( pHandle );
         return true;
