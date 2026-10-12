@@ -46,6 +46,24 @@ PSInput VSMain(SwVertexInput input, uint vertexId : SV_VertexID)
 	return output;
 }
 
+#if defined( MATERIAL_WORLD_UV )
+// 월드 좌표 UV(트라이플래너) — 메시 UV 대신 월드 위치로 텍스처를 읽는다. 텍스처 한 장이 1 m 이고 면의 방향(노멀)에 따라 세 축 투영을 섞는다.
+// 언리얼 WorldGridMaterial 과 같은 블록아웃용이다 — 메시 크기와 상관없이 한 칸이 1 m 라 거리 · 높이를 눈으로 잴 수 있다(prototypegrid_*.material).
+static const float kWorldUvTilesPerMeter = 1.0f;
+static const float kTriplanarSharpness   = 4.0f; // 노멀 성분의 거듭제곱 — 클수록 축 사이 섞이는 띠가 좁다
+float4 sampleWorldTriplanar(uint textureIndex, float3 worldPosition, float3 worldNormal)
+{
+	float3 weight = pow(abs(worldNormal), kTriplanarSharpness);
+	weight /= max(weight.x + weight.y + weight.z, 1e-4f);
+	const float3 scaledPosition = worldPosition * kWorldUvTilesPerMeter;
+	// 옆면은 위(+Y)가 텍스처 위(v 가 작은 쪽)가 되게 v 를 뒤집는다.
+	const float4 alongX = swSampleMaterialTexture(textureIndex, float2(scaledPosition.z, -scaledPosition.y));
+	const float4 alongY = swSampleMaterialTexture(textureIndex, float2(scaledPosition.x, scaledPosition.z));
+	const float4 alongZ = swSampleMaterialTexture(textureIndex, float2(scaledPosition.x, -scaledPosition.y));
+	return alongX * weight.x + alongY * weight.y + alongZ * weight.z;
+}
+#endif
+
 // 반환 타입이 **패스에 따라 갈린다** — 포워드는 SV_TARGET 하나, G버퍼 패스는 알베도·노멀 둘.
 // 머티리얼이 셰이더 경로를 정하므로 디퍼드의 G버퍼 패스도 이 파일로 그린다. float4 하나로 고정하면 **G버퍼의 노멀
 // 타깃이 클리어 값 그대로** 남는다(binding.hlsli 4 절).
@@ -57,7 +75,12 @@ SW_SURFACE_OUTPUT PSMain(PSInput input)
 	// 텍스처 인덱스가 없거나(kInvalidIndex) 백엔드가 bindless 에뮬(DX11/GL)이면 흰색이 곱해진다 —
 	// 자세한 이유는 binding.hlsli 의 swSampleMaterialTexture 주석 참고.
 	SwMaterialData material = SW_MATERIAL(input.materialIndex);
-	float4 albedo = input.color * material.color * swSampleMaterialTexture(material.albedoMap, input.uv);
+#if defined( MATERIAL_WORLD_UV )
+	const float4 surfaceTexture = sampleWorldTriplanar(material.albedoMap, input.worldPosition, normal);
+#else
+	const float4 surfaceTexture = swSampleMaterialTexture(material.albedoMap, input.uv);
+#endif
+	float4 albedo = input.color * material.color * surfaceTexture;
 
 #if defined( SW_PASS_GBUFFER )
 	// G버퍼 패스는 **조명을 계산하지 않는다** — 표면만 적어 두고 셰이딩은 디퍼드 조명 패스가 한다.

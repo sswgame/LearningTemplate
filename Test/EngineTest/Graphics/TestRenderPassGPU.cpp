@@ -5890,6 +5890,79 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasDrawsOverScreenRectView )
 }
 
 /**
+ * @brief [RenderPassGPUTest] 프로토타입 격자 머티리얼은 월드에 붙어 있다 — 바닥을 정확히 1 m 옮겨도 화면의 격자가 그대로다(4 백엔드, Unlit 캡처)
+ * @details `MATERIAL_WORLD_UV`(forwardlit.hlsl 트라이플래너)는 월드 위치로 텍스처를 읽고 한 장이 1 m 다. 그래서 12 m 바닥을 1 m 옮기면 화면 가운데
+ *          아래(바닥이 덮는 곳)의 픽셀이 같다. 변이: 메시 UV 로 읽으면 바닥과 함께 격자가 1/12 장 움직여 그 창의 픽셀이 바뀐다. 언리얼 WorldGridMaterial 과 같은 동작이다.
+ */
+SW_TEST_CASE( RenderPassGPUTest, PrototypeGridMaterialIsAnchoredToTheWorld )
+{
+    test::RHIBackendSweep sweep;
+    uint32                comparedCount{ 0 };
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string             label = sw::string( device->getBackendName() ) + ": ";
+        sw::shared_ptr<sw::Material> grid  = sw::Material::create();
+        sw::shared_ptr<sw::Mesh>     plane = sw::MeshUtil::createPlane();
+        bool                         bOk   = grid->loadFromFile( "engine/materials/prototypegrid_light.material" ) && plane != nullptr;
+        sw::vector<uint8>            arrBytes[2];
+        sw::RHITextureMipSpan        arrLayout[2]{};
+        for ( uint32 shiftIndex = 0; shiftIndex < 2 && bOk; ++shiftIndex )
+        {
+            sw::Scene scene{ "PrototypeGridScene" };
+            bOk                       = scene.ensureDefaultCameras();
+            sw::GameObject*    pFloor = bOk ? scene.getObjectManager()->createGameObject( sw::hashed_string( "Floor" ) ) : nullptr;
+            sw::MeshComponent* pMesh  = pFloor != nullptr ? pFloor->addComponent<sw::MeshComponent>() : nullptr;
+            bOk                       = pMesh != nullptr;
+            if ( bOk )
+            {
+                pMesh->setMesh( plane );
+                pMesh->setMaterial( grid.get() );
+                pMesh->setLocalScale( sw::float3{ 12.0f, 1.0f, 12.0f } );
+                pMesh->setLocalPosition( sw::float3{ static_cast<float32>( shiftIndex ), 0.0f, 0.0f } ); // 0 m · 1 m
+                scene.getObjectManager()->flushSceneTransforms();
+            }
+            bOk = bOk && renderPresentCaptureOf( device.get(), scene, "engine/pipeline/forwardpipeline.xml", arrBytes[shiftIndex], arrLayout[shiftIndex],
+                                                 sw::RenderViewMode::Unlit );
+        }
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "격자 바닥 그리기 · 캡처" ).c_str() );
+        if ( bOk == false )
+            continue;
+        test::RHITestImage before;
+        test::RHITestImage after;
+        before.assign( std::move( arrBytes[0] ), arrLayout[0], sw::constant::kBackBufferFormat );
+        after.assign( std::move( arrBytes[1] ), arrLayout[1], sw::constant::kBackBufferFormat );
+        // 화면 가운데 아래(가로 30..70 %, 세로 70..90 %) — 바닥이 덮는 곳이다.
+        const uint32 left   = before.getWidth() * 3 / 10;
+        const uint32 right  = before.getWidth() * 7 / 10;
+        const uint32 top    = before.getHeight() * 7 / 10;
+        const uint32 bottom = before.getHeight() * 9 / 10;
+        uint64       differenceSum{ 0 };
+        uint32       darkest{ 255 };
+        uint32       brightest{ 0 };
+        uint32       sampleCount{ 0 };
+        for ( uint32 y = top; y < bottom; ++y )
+        {
+            for ( uint32 x = left; x < right; ++x )
+            {
+                const test::Rgba8 pixelBefore = before.getPixel( x, y );
+                const test::Rgba8 pixelAfter  = after.getPixel( x, y );
+                differenceSum += static_cast<uint64>( test::RHITestImage::getColorDistance( pixelBefore, pixelAfter ) );
+                darkest   = sw::MathUtil::min( darkest, static_cast<uint32>( pixelBefore._g ) );
+                brightest = sw::MathUtil::max( brightest, static_cast<uint32>( pixelBefore._g ) );
+                ++sampleCount;
+            }
+        }
+        const float64 meanDifference = sampleCount > 0 ? static_cast<float64>( differenceSum ) / static_cast<float64>( sampleCount ) : 0.0;
+        SW_LOG_INFO( "%#prototype grid: mean difference after a 1 m shift %#, window green %#..%#", label, meanDifference, darkest, brightest );
+        SW_EXPECT_TRUE_MSG( brightest >= darkest + 16u, ( label + "창 안에 격자 무늬가 없다 — 비교가 뜻이 없다 (" + sw::to_string( darkest ) + ".." + sw::to_string( brightest ) + ")" ).c_str() );
+        SW_EXPECT_TRUE_MSG( meanDifference < 2.0, ( label + "바닥을 1 m 옮기자 격자가 따라 움직였다(월드 좌표가 아니다) — 평균 차이 " + sw::to_string( meanDifference ) ).c_str() );
+        ++comparedCount;
+    }
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could render the prototype grid test" );
+}
+
+/**
  * @brief [RenderPassGPUTest] 창으로 나간 그림(백버퍼)이 Present 캡처와 같다 — 4 백엔드
  * @details 스크린샷(`-gv_screenshot`)은 오프스크린 캡처를 읽으므로 캡처 → 창 블릿의 반전 · 잘림은 거기서 보이지 않는다(GL 창은 0 행이 아래).
  *          캡처를 켜고 그린 프레임의 백버퍼를 읽어 캡처와 픽셀로 견준다 — 위아래가 뒤집히면 큐브 · 바닥 자리가 갈린다.
