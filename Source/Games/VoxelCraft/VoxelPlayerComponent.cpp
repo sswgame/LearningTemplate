@@ -30,11 +30,13 @@ namespace sw
     {
         struct VoxelPlayerComponentInternal
         {
-            static constexpr const utf8* kSoundLand    = "game/voxelcraft/sounds/footstep_grass_000.ogg";
-            static constexpr uint32      kStateTag     = FourCcUtil::make( "PLYR" );
-            static constexpr uint32      kStateVersion = 1;
-            static constexpr const utf8* kSoundBreak   = "game/voxelcraft/sounds/impact_soft_medium_000.ogg";
-            static constexpr const utf8* kSoundPlace   = "game/voxelcraft/sounds/impact_plank_medium_001.ogg";
+            static constexpr uint32 kStateTag     = FourCcUtil::make( "PLYR" );
+            static constexpr uint32 kStateVersion = 1;
+
+            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 voxelcraft.audioevents.xml 이 정한다.
+            static constexpr const utf8* kEventLand  = "Land";
+            static constexpr const utf8* kEventBreak = "BlockBreak";
+            static constexpr const utf8* kEventPlace = "BlockPlace";
 
             /** @brief 부순 블록에서 얻는 블록입니다(풀 → 흙, 돌 → 조약돌, 기반암 · 물은 없음). */
             static VoxelBlockIndex findDrop( const VoxelBlockCatalog& catalog, VoxelBlockIndex block )
@@ -274,7 +276,7 @@ namespace sw
         const bool bWasOnGround = _body.isOnGround();
         _body.step( pDirector->getWorld(), wish, bJump, bSprint, step );
         if ( bWasOnGround == false && _body.isOnGround() )
-            _soundQueue.queueClip( VoxelPlayerComponentInternal::kSoundLand );
+            _soundQueue.queueEvent( VoxelPlayerComponentInternal::kEventLand );
         // 월드 밖으로 떨어지면 처음 자리로.
         if ( _body.getPosition()._y < -10.0f )
             _body.setPosition( pDirector->findSpawnPosition() );
@@ -383,7 +385,7 @@ namespace sw
         // 월드는 틱 뒤에 바뀐다(디렉터) — 여기서는 손에 든 것과 셈만 바로 바꾼다.
         const VoxelBlockIndex drop = VoxelPlayerComponentInternal::findDrop( catalog, _target._blockIndex );
         _listPendingEdit.push_back( BlockEdit{ _target._block, kVoxelAirBlock } );
-        _soundQueue.queueClip( VoxelPlayerComponentInternal::kSoundBreak );
+        _soundQueue.queueEvent( VoxelPlayerComponentInternal::kEventBreak );
         ++_brokenCount;
         _breakProgress = 0.0f;
         if ( drop != kVoxelAirBlock && _hotbar.addBlock( drop, 1 ) > 0 )
@@ -406,7 +408,7 @@ namespace sw
         if ( _hotbar.consumeSelected( block ) == false )
             return;
         _listPendingEdit.push_back( BlockEdit{ cell, block } );
-        _soundQueue.queueClip( VoxelPlayerComponentInternal::kSoundPlace );
+        _soundQueue.queueEvent( VoxelPlayerComponentInternal::kEventPlace );
         ++_placedCount;
     }
 

@@ -1,0 +1,23 @@
+<!--
+	VoxelCraft 사운드 이벤트(AudioEventLibrary). 플레이어 자신의 동작(착지 · 블록 부수기 · 놓기)이라 모두 2D(공간화 없음)다.
+	블록을 연달아 부수고 놓아도 겹치지 않게 쿨다운을 두고, 볼륨과 피치를 조금씩 흔들어 같은 소리가 반복되는 느낌을 줄인다.
+-->
+<AudioEventLibrary>
+	<_listEvent>
+		<AudioEventDesc _name="Land" _bus="sfx" _priority="40" _cooldownSeconds="0.15" _maxInstances="2" _steal="Oldest" _volumeDbMin="-4" _volumeDbMax="0" _pitchMin="-1.5" _pitchMax="1">
+			<_listClip>
+				<AudioClipEntry _path="game/voxelcraft/sounds/footstep_grass_000.ogg" />
+			</_listClip>
+		</AudioEventDesc>
+		<AudioEventDesc _name="BlockBreak" _bus="sfx" _priority="55" _cooldownSeconds="0.05" _maxInstances="3" _steal="Oldest" _volumeDbMin="-3" _volumeDbMax="0" _pitchMin="-2" _pitchMax="1">
+			<_listClip>
+				<AudioClipEntry _path="game/voxelcraft/sounds/impact_soft_medium_000.ogg" />
+			</_listClip>
+		</AudioEventDesc>
+		<AudioEventDesc _name="BlockPlace" _bus="sfx" _priority="55" _cooldownSeconds="0.05" _maxInstances="3" _steal="Oldest" _volumeDbMin="-3" _volumeDbMax="0" _pitchMin="-1" _pitchMax="2">
+			<_listClip>
+				<AudioClipEntry _path="game/voxelcraft/sounds/impact_plank_medium_001.ogg" />
+			</_listClip>
+		</AudioEventDesc>
+	</_listEvent>
+</AudioEventLibrary>

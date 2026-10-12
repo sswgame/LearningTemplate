@@ -71,7 +71,7 @@ cd build/Ninja-Debug-VoxelCraft/Bin
 
 - `Resource/game/voxelcraft/data/blocks.xml` 이 블록 카탈로그이고, 게임 인스턴스가 게임 서비스로 등록합니다.
 - `textures_raw/blocks.png` 는 Kenney Voxel Pack 타일(128px)로 만든 4 × 4 아틀라스이고, `App --import-textures` 가 `textures/blocks.dds` 로 만듭니다. 출처는 `credits.md` 입니다.
-- `sounds/` 에 부수기, 놓기, 착지 효과음이 있습니다.
+- `sounds/` 에 부수기, 놓기, 착지 효과음이 있고, 사운드 이벤트(`audio/voxelcraft.audioevents.xml`의 `Land`, `BlockBreak`, `BlockPlace`)가 이를 2D 로 냅니다.
 
 ## 더 볼 곳
 
