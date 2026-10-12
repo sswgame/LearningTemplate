@@ -235,6 +235,34 @@ SW_TEST_CASE( CameraModeTest, FramingDeadZoneHoldsAndSoftZoneLimits )
 }
 
 /**
+ * @brief [CameraModeTest] 프레이밍의 가로 존은 대상이 실어 온 화면 비율로 센다 — 정사각형 화면은 16:9 보다 가로 소프트존이 좁다
+ * @details 비율을 16:9 로 고정하면 세로로 긴 화면(휴대폰 세로, 렌더 텍스처)에서 대상이 화면 밖으로 나가도 카메라가 돌지 않는다.
+ */
+SW_TEST_CASE( CameraModeTest, FramingHorizontalZonesFollowTheAspectRatio )
+{
+    CameraPresetDef def;
+    def._view._mode         = CameraPresetMode::Fixed;
+    def._view._aim          = CameraAimMode::Target;
+    def._lens._fieldOfViewY = 60.0f * MathUtil::kDegreeToRadian;
+    def._framing._bCompose  = true;
+    def._framing._deadZone  = float2{ 0.0f, 0.0f };
+    def._framing._softZone  = float2{ 0.5f, 0.5f };
+    def._framing._damping   = 10.0f;
+    for ( const float32 aspect : { 1.0f, 2.0f } )
+    {
+        CameraTarget target;
+        target._aspectRatio = aspect;
+        target._focus       = float3{ 0.0f, 0.0f, 10.0f };
+        CameraModeState state;
+        (void)evaluateCameraMode( def, target, 0.0f, state, nullptr );
+        target._focus = float3{ 10.0f, 0.0f, 10.0f }; // 45°
+        (void)evaluateCameraMode( def, target, 0.1f, state, nullptr );
+        const float32 softHalf = MathUtil::atan2( 0.5f * MathUtil::tan( 30.0f * MathUtil::kDegreeToRadian ) * aspect, 1.0f );
+        SW_EXPECT_NEAR_EQUAL( MathUtil::kPi * 0.25f - softHalf, state._aimYaw, 1.0e-4f );
+    }
+}
+
+/**
  * @brief [CameraModeTest] look-ahead 는 대상이 가는 쪽으로 조준을 미리 옮기고, 그룹 맞추기는 묶음이 화면에 들어올 만큼 물러난다
  */
 SW_TEST_CASE( CameraModeTest, LookAheadLeadsAndGroupFramingBacksOff )

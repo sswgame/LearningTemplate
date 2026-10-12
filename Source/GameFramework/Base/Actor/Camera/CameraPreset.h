@@ -330,16 +330,21 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 카메라가 따라가는 대상입니다.
+     * @brief 카메라가 따라가는 대상과 그 카메라가 그리는 화면의 비율입니다.
      * @details 월드 초점, 대상이 보는 요와 피치(라디안, 피치는 +가 아래), 대상 묶음의 반지름을 담는다.
      *          여러 대상을 담을 때는 `makeGroupCameraTarget` 이 초점을 묶음의 가운데로, 반지름을 묶음을 감싸는 구의 반지름으로 채운다.
+     *          화면 비율은 프레이밍의 가로 위치와 존을 각으로 바꿀 때 쓴다. 디렉터가 카메라의 출력(렌더 텍스처, 창, 화면 사각형)에서 채운다.
      */
     struct CameraTarget
     {
+        /** @brief 화면 비율을 모를 때(창이 없는 테스트, 서버) 쓰는 가로/세로 값입니다. */
+        static constexpr float32 kDefaultAspectRatio = 16.0f / 9.0f;
+
         float3  _focus{};
         float32 _yaw{ 0.0f };
         float32 _pitch{ 0.0f };
-        float32 _groupRadius{ 0.0f }; ///< 0 이면 대상 하나
+        float32 _groupRadius{ 0.0f };                ///< 0 이면 대상 하나
+        float32 _aspectRatio{ kDefaultAspectRatio }; ///< 카메라 화면의 가로/세로
     };
 
     /**

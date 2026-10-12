@@ -242,6 +242,9 @@ namespace sw
         CameraTarget             target;
         const GameObject*        pOwner   = getOwner();
         const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const CameraComponent*   pCamera  = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;
+        if ( pCamera != nullptr )
+            target._aspectRatio = CameraPoseUtil::computeAspectRatio( *pCamera );
         if ( pManager == nullptr )
             return target;
         if ( _listGroupTarget.empty() == false )

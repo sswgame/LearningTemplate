@@ -12,8 +12,8 @@ namespace sw
     {
         struct CameraModeInternal
         {
-            /** @brief 프레이밍이 화면 가로를 셀 때의 비율입니다. 모드는 화면을 모르므로 흔한 16:9 로 셉니다(세로 위치 · 존은 정확하다). */
-            static constexpr float32 kComposeAspect = 16.0f / 9.0f;
+            /** @brief 화면 비율의 하한입니다. 0 이나 음수(크기가 0 인 창)로 나누지 않게 합니다. */
+            static constexpr float32 kMinAspectRatio = 0.01f;
 
             static float3 rotateByYaw( const float3& value, float32 yaw ) { return float3::transform( value, quaternion::makeFromYawPitchRoll( yaw, 0.0f, 0.0f ) ); }
 
@@ -297,7 +297,7 @@ namespace sw
         {
             // 대상이 화면 위치에 오도록 조준을 비튼다. 데드존 안의 움직임은 카메라를 돌리지 않고, 소프트존 밖으로는 나가지 않는다.
             const float32 tanHalfY     = MathUtil::tan( pose._fieldOfViewY * 0.5f );
-            const float32 tanHalfX     = tanHalfY * CameraModeInternal::kComposeAspect;
+            const float32 tanHalfX     = tanHalfY * MathUtil::max( CameraModeInternal::kMinAspectRatio, target._aspectRatio );
             const float2  toAim        = computeLookAngles( pose._position, aimPoint );
             const float32 screenYaw    = CameraModeInternal::computeAtan( ( framing._screenPosition._x - 0.5f ) * 2.0f * tanHalfX );
             const float32 screenPitch  = CameraModeInternal::computeAtan( ( framing._screenPosition._y - 0.5f ) * 2.0f * tanHalfY );
