@@ -1,73 +1,58 @@
 # 다음 세션 인계
 
 새 세션은 이 문서를 먼저 읽습니다. 배치 경계마다 적용 담당이 고쳐 씁니다. 끝난 항목은 지웁니다(한 일은 `git log`, 교훈은 영역 README · 결정 기록 · 검증 문서에 있다).
-작업 방식은 [작업 방식](../11_Workflow.md), 남은 일 전체는 [백로그](../06_Backlog.md)입니다.
+작업 방식은 [작업 방식](../11_Workflow.md), 남은 일 전체는 [백로그](../06_Backlog.md)(분류 A~H)입니다.
 
-## 통합 3 (2026-10-12, 브랜치 `wt/integ3`, 워크트리 `C:\w\integ3`, `main` 으로 fast-forward 하고 push 했다 — `6f3373831`)
+## 지금 상태 (2026-10-13 새벽, 사용자가 자는 동안의 자율 진행)
 
-검증할 것은 [통합 3 검증 체크리스트](VerifyIntegration3.md)에 모았다. 검증을 마치면 그 문서와 이 절을 지운다.
+사용자 지시: 작업자가 모두 끝나면 → 검증 → 발견 결함 + 잠재 결함 수정 → SOLID 위반 수정 → 재사용성 · 성능 · 유지보수 기준 구조 리팩토링 → **한 줄 함수 금지 서식(`AllowShortFunctionsOnASingleLine: InlineOnly`)** → push.
 
-- **병합**: `main`(8fce26aaf) 위에 1 차 여섯(tcore → tgfs → tinv → tcombat → tposttick → tgfd, 충돌 없음)과 2 차 아홉(uinc → utex → uxml → uaud → uonl → umod → ugfa → ugfb → upipe)을 병합했다.
-  uonl 은 `TestServiceClientCallTable.cpp` 에서 충돌(양쪽 테스트를 모두 남김). upipe 의 8021b9337(쿠킹 스탬프 SWCOOK 3 → 4)은 병합 뒤 되돌렸다 — 다시 쿠킹이 필요하다(아래 검증). 사용자가 `main` 에 넣고 push 하라고 해서 fast-forward 로 넣었다. 이 PC 에서는 테스트 · 실행을 하지 않았으므로 검증은 아직이다.
-- **빌드(마지막)**: `cmake --preset` 재구성 뒤 Debug · Shipping `all AllTests` 각 한 번 — 오류 0 · 링크 오류 0 · 경고 0. 처음부터 지은 1 차 빌드의 `-Wnrvo` 약 50 곳 · `-Wunique-object-duplication` 3 곳은 원인에서 고쳤다(억제 없음).
-  게임 프리셋 Shooter3D · StarSkirmish · HarvestValley · VoxelCraft 는 1 차 병합 직후 `SWGame` 만 지었고(오류 0, 게임 파일 `-Wnrvo` 3 곳은 고침) 2 차 병합 뒤에는 다시 짓지 않았다.
-- **린트**: `lint-suite` 통과, 바뀐 헤더 76 개 `CheckHeaderSelfContained` 통과, `CheckSourceGlob` 통과, 2 차 병합분 C++ 139 개는 고정 clang-format 20.1.8 로 차이 없음. 새 게이트 `CheckPostTickThisBinding`(틱 뒤 실행에 `this` 메서드 델리게이트 금지).
-- **이번 세션에 고친 결함 · 구조**(커밋마다 문제점/해결방안/결과): `CameraRole` 옛 이름을 기대한 테스트, 틱 뒤 실행 도우미가 삭제 대기 컴포넌트를 부르던 것 + Debug 타입 단언, `this` 를 묶은 틱 뒤 실행 여섯 곳, 모듈 언로드 전 틱 뒤 큐 비우기,
-  호출 표의 id 대조 없는 '보내는 중' 응답 · 버리는 `clear`, `OnlineReplyUtil` · `ServiceClientCallTable` 의 `OnlineServiceClient.h` include, 씬 무효화 구독 해제, 개발 명령 · HUD 레지스트리 잠금과 include 정리(`DevCommandsEnabled.h` · `DebugHUDSectionFormat.h`),
-  `SW_GF_API` 한 곳 + 게임 서비스 연결 함수 C 링크(`RuntimeAPI/Export/GameFrameworkAPI.h`), `isServiceBound<T>()` 일반화, 리플렉션 생성 이름 충돌 검사 · 구성 뒤 매크로가 생긴 헤더 검사(`cmake/Engine/CheckReflectionCandidates.cmake`), 엔진 층 티어 표.
-- **통합 4(로컬, push 안 함)**: 잠재 결함 점검 뒤 수정 여섯 브랜치(tfx1~6)를 `wt/integ3` 에 병합했다(충돌 없음). 재구성 뒤 Debug · Shipping `all AllTests` 경고 0 · 오류 0 · 링크 0, lint-suite · 바뀐 헤더 7 개 자립 · `CheckSourceGlob` · clang-format 20.1.8 통과. 테스트 · 실행은 안 했다.
-- **남은 위험**:
-  - `MaterialInstance` 는 리로드 세대가 바뀌면 쥔 포인터의 `getSrv()` 로 다시 패킹한다. 다른 텍스처가 아직 리로드 중이면 그 SRV 를 한 프레임 읽을 수 있다(다음 세대에 다시 패킹돼 회복). `Material::refreshTextureBindings` 는 `find` 를 써서 해당 없다.
-  - `SW_DELEGATE_METHOD(this)` 를 다른 지연 경로(틱 뒤 실행 밖)에 넘기는 곳은 여전히 핸들을 거치지 않는다. 게이트는 `deferPostTick` · `executeOrDeferPostTick` 만 본다.
-  - Shooter 적 체력이 `Vitality` 로 바뀌어 최대 체력 1 하한 · 음수 피해 0 처리가 생겼다(데이터에서 체력 0 을 주면 예전에는 바로 죽고 지금은 1 로 산다).
-  - 키트 DLL 이 Base 클래스의 암시적 멤버를 내보낸다(백로그 `C-3`).
-  - tgfd 가 일부러 남긴 것: 대체값을 받는 `readName`(AdventureDungeon · AdventureCooking), trim 하는 `AppearanceXMLUtil::readName`, 공개 API 인 `ScheduleCondition::parseNameList` · `AppearanceXMLUtil::readNameList`(본문만 위임).
-  - `GameDataXML.h` 개선은 71 곳 중 5 곳만 `XMLDocument.h` 를 끊었다 — 나머지 66 곳은 노드를 직접 읽어, 호출부를 읽기 인터페이스로 바꿔야 완전히 풀린다.
-  - DX11 · GL 의 bindless 인덱스 즉시 재사용 — 다른 해제 경로에도 지연 해제가 필요한지 아직 보지 않았다.
-  - umod 의 리눅스 `__builtin_return_address` 분기는 이 PC 에서 짓지 못했다(CI).
-- **옮기지 않기로 한 것(C 묶음 판정)**: 장비 피팅 규칙 · Gimmick/Genre · CommandStack · Observability · Dialogue/Sequencer/Localization/GameAutoplay · 리플렉션 에디터 메타 이름 — 언리얼 · 유니티도 이것들을 엔진 쪽(또는 에디터 공용)에 두고 게임 프레임워크로 내리지 않는다(Sequencer · Localization · Dialogue 는 엔진 모듈, 되돌리기는 에디터 트랜잭션, 메타 이름은 UPROPERTY 메타처럼 리플렉션 소유).
-  **보류를 풀어 처리했다(2026-10-13, rfP10)**: 맞음 · 히트 존 배율은 `CharacterHitUtil::makeHitInfo` 하나, `FixedTimestep` → `Core/Time`, `KeyValueFile` → `Core/File`, 지연 해제 큐의 키 기준 골격은 `Core/Container/KeyedPendingList`. Ballistics 는 이미 `GameFramework/Base` 한 벌이고 키트의 투사체(2D 직선 · 결정적 걸음)는 다른 계산이라 그대로다.
-- **사용자가 할 검증**: Debug `-L lint` · `-L nogpu` · `-L hostgpu`, Shipping `-L nogpu`. 새 · 바뀐 테스트 — `ReflectionEnumInfoTest`, `GameObjectManagerTest.PostTickOnComponentSkipsPendingDestroy`, `GameObjectManagerPoolTest.ModuleUnloadDrainsDeferredPostTickWork`,
-  `ServiceClientCallTableTest.ForeignResponseDuringSendDoesNotTakeTheSendingDelegate`, 옮긴 `TestDismemberment` · `TestWitcherRPG` · `TestTacticsSRPG` · `TestProgression` · `TestSpatial` · `TestProfilerTimeline`, 온라인 키트 테스트, umod 의 `TestGameService` 회수 · `ModuleHostTest.SharedModuleCannotBeRegisteredForReload`,
-  utex 의 새 GPU 테스트(작업 스레드 안 `SW_TEST_DEFENSIVE_SCOPE` 가 스레드별로 동작하는지). 게임 프리셋 넷을 2 차 병합 뒤 다시 짓기.
-  **쿠킹 가능한 환경에서**: 8021b9337 을 다시 적용하고 `App --cook-shaders` 로 다시 쿠킹해 쿠킹 셰이더 · `cook.stamp` 와 함께 커밋.
-  실기동: 에디터(`-EnableEditor`, 씬 바꾸기 뒤 되돌리기 기록이 비는지 · 뷰포트 카메라 · 디버그 HUD 섹션), Shooter3D(적 체력 · HP 바 · 쓰러짐 · 절단), VoxelCraft · HarvestValley · StarSkirmish 한 판, 모듈 리로드.
+- **병합 완료(main, push 안 함)**: 개명 A · B · C(Manager/Registry/Service 접미어 정리, `Anim` → `Animation`), 리팩터 P1~P11(전방 선언 정리 포함), 백로그 1-1~1-8 작업자 17명(wvSer wvPhys wvPerf wvGfMisc wvAnim wvEnv wvPrefab wvNav wvCamSeq wvShadow wvGfx wvEdA wvEdB wvEdC wvUI wvSys wvNet) 전부 병합됨. 로컬 `main` 이 `origin/main` 보다 **약 300 커밋** 앞선다.
+- **빌드**: Debug `all AllTests` 오류 0 · 경고 0 · 링크 통과(재구성 필요했음: 새 모듈 `GF_Editor_Admin` `GF_Editor_Base`, 새 소스). 셰이더는 `App --cook-shaders` 로 구움(`40c13f841`). 아바타 재임포트(`0ea44446e`).
+- **테스트**: 마지막 Debug `-L lint|nogpu` 실행은 113건 중 10건 실패 → 5건 원인을 고침(`ad1a78d8a`). **다시 돌려야 한다**: 먼저 `cmake --build --preset Ninja-Debug --target all AllTests`, 그다음 `ctest --test-dir build/Ninja-Debug -L "lint|nogpu" -j 4`.
+  남은 알려진 실패(조사 필요):
+  1. `EditorNavigationCommandsTest.BakesTheEditedSceneBeforePlay` — 기하가 없는 씬에서 `bakeAll` 이 0 이어야 하는데 1. `SceneNavigation::createRuntime` 이 `pGeometry->isEmpty()` 여도 경고만 하고 계속 `initialize`/베이크한다. wvNav 가 바꾼 부분이 원인인지 `git diff b4f2301e6 HEAD -- Source/Engine/Navigation Source/Engine/Object/Component/Navigation` 로 본다.
+  2. `EditorSiblingOrderTest.DropZoneFollowsTheCursorInsideTheRow`(wvEdA): `computeDropZone( 105, 100, 120 ) == Onto` 가정 — 행 위/아래 30 % 경계 계산 확인.
+  3. `EditorAssetTypeTest.UIDocumentOpensTheUIPreviewPanel`(wvEdB): `EditorAssetTypeRegistry::matches( Data, "engine/ui/pause.ui.xml" )` 가 참으로 나옴(UIDocument 가 Data 보다 먼저 맞아야 한다).
+  4. `ProjectSettingsCatalogTest.ExpandsWildcardsToFiles`(wvEdA): 임시 폴더에 `Config/Game/Beta.json` 쓰기 실패 — 테스트의 임시 폴더 사용법 확인. 같은 파일의 `document.open( …EngineConfig…) == ConfigReadResult::Missing` 가정도 실패.
+  5. `AppTest_NoGPU`(`AppCookTest.SceneCook*`), `EngineTest_NoGPU_Shard1~6`, `CheckCodeConventions`, `PythonTest_TestXmlAssetMerge`, `InputMapTest.EditorSavedDefinitionReloadsWithTheSameBindings`, `CatalogDocumentTest.BrokenText…` 는 고쳤다 — 다시 돌려 확인.
+  6. 아직 안 돌린 것: Debug `-L hostgpu`(약 17분, 직렬), Shipping 전체 빌드 · `nogpu`/`hostgpu`, 게임 프리셋 8개(`Ninja-Debug-<Game>`) 빌드, 네 백엔드 스크린샷 비교.
+- **미완료(사용자 지시)**: ① 한 줄 함수 `InlineOnly` 서식 적용(250개 파일 · 약 1,300곳; `.clang-format` 수정 + 전체 `clang-format -i`(고정 20.1.8) + `AGENTS.md`/`docs/04_CodingGuidelines.md` 규칙 + 린트 확인; 클래스 밖 `inline` 자유 함수(예: `VectorMath.h` 의 연산자)도 펼쳐진다는 점을 사용자에게 알릴 것) ② 구조 리팩토링 2차 점검(잠재 결함 · SOLID · 재사용성 · 성능) ③ Release 성능 측정 ④ push(검증이 초록일 때만).
 
-## 지금 상태 (2026-10-12 세션 끝)
+## 백로그 정리 목록 (작업자가 끝낸 것 — 병합했으니 같은 커밋으로 지울 것)
 
-- **SOLID 계획 단위 S1 ~ S22 가 모두 끝났다**([StructureRefactor](StructureRefactor.md)). 옮기지 않기로 한 것(S3 · S8 · S5 의 실행 함수 칸 등)은 그 문서에 이유와 함께 있다. 남은 후보는 "`ProfilerPanel` 을 탭 상태 객체로 나누기" 하나.
-- 이 세션의 병합 규칙(사용자 지시): **구현이 끝나면 바로 `main` 에 병합 · push, 빌드는 하되 `ctest` · 측정은 사용자가 따로 한다.** 도우미는 코드만 고치고(빌드 금지) 적용 담당이 `D:\w\integ2` 에서 병합 · 빌드한다.
-- **빌드 상태**: 마지막 병합(S13 ~ S17 + 앞서 빌드 없이 올린 S21 · S22)을 `integ2` 에서 Debug 로 지었다 — 경고 0 · 링크 오류 0. Shipping 도 같은 병합을 지었고 경고 0 · 링크 통과.
-- **테스트는 S18 ~ S22 와 S13 ~ S17 에 대해 돌리지 않았다**(S18 ~ S20 은 Debug `-L lint` 63/63 · `-L nogpu` 49/49 · `-L hostgpu` 7/7 까지 통과). 새 단위 테스트가 약 30 건 더해졌고 한 번도 실행되지 않았다.
+새 번호 기준(`docs/06_Backlog.md` 분류표, 옛 번호 대응은 문서 맨 아래 표).
 
-## 다음 할 일 (순서대로)
+- **A**: A-1(XML 끝 공백) · A-2(JSON 소유 포인터) · A-3(머티리얼 폴백 원소) · A-6(명령줄 전역 변수가 설정에 덮임) 지움. A-4(materialpreview GL)는 가설로 고쳐 씀(CPU 셰이딩이라 "렌더 타깃 미갱신" 설명이 틀림). A-5(에디터 체인) ①③ 지움.
+- **B-1**(8000 무버): 구조 변경 들어감, Release 전/후 측정 남음. **B-2**(직렬화 · 로드 비용): 하니스 `Scripts/qa/SceneLoadBench.py` 있음, 측정 남음.
+- **C-6**(파괴 잎 셰이프): 시간 예산 500us 로 나눠 짓기 구현, Release 측정 남음, 쿠킹 직렬화 안은 Physics 에 셰이프 직렬화 창구가 생기면. C-8 · C-9: 벤치 있음, 측정 남음. C-10(진단 세터 Shipping 제외) 지움.
+- **D1**: D1-1(중첩 프리팹) 지움 + 새 항목(에디터 훅 · `PrefabInstanceRegistry` 정리 · `AssetValidation.py` prefab_guid · 부품 오버라이드 저장). D1-2(강체 물리) (1)(4)(5) 지움 (6) 남김. D1-3(내비메시) (1)(4)(5) 지움, (2)는 식생만, (3) TileCache 남김(조건 미충족), (6) 고쳐 씀.
+- **D2**: D2-1(2D) (1)(2)(4)(5) 지움 (3) 남김. D2-2(방향광 그림자) · D2-3(점광 · 스폿) 지움(새 항목: 캐스케이드별 컬링 · 아틀라스 우선순위 · 여드름 눈 확인). D2-5(환경) (1)(2) 고쳐 씀. D2-7(VRM) 고쳐 씀. D2-8(캔버스) · D2-10(월드 UV) 지움, D2-9(반해상도)는 측정 남음.
+- **D3**: D3-1(에디터 로드맵) ①~⑥ 지움 · ⑦ 중 카탈로그 계약 · 편집기 · Data Table 탭 지움 · ⑧⑨⑩ 남김. D3-2(Hierarchy) 지움. D3-3(UI 미리보기) (1)~(5) 지움, (6)은 "시작 단계까지". D3-4(콘솔) 패드 · 재배치 지움. D3-5(입력 흉내) 콤보 · 드래그 지움. D3-6(백엔드 교체) 지움.
+- **D4**: D4-1(GameCurve) 지움. D4-2(사용자 설정) (4)(5) 지움. D4-3(패드 스틱) 절반 지움. D4-5(카메라) 2~6단계 대부분 지움. D4-6(애니메이션) 블렌드 스페이스 · 동기 그룹 · 소켓 보정 · LOD · 리타깃 지움, ⑦ 고쳐 씀. D4-11(어빌리티)은 조건 미충족으로 유지. D4-12(기믹) · D4-13(의도 기록) 재생 진입점 지움.
+- **D5**: 오디오 (1)(3)(4)(5)(6)(7) 지움, 현지화 대부분 지움(아이템 이름 HUD 표시만), NPC 일정 (1)(2)(5) 지움.
+- **D6**: UI 항목들 대부분 지움(남김: 에디터 게임 뷰 포인터 좌표, UI 맵 키 리바인딩, 음성 자막 키 필드, 전환 "곡선 위 사건"(뜻이 불분명 → 풀어 정하거나 지움), 운영체제 클립보드 연결, `ReturnToTitle`/`QuitGame` 등록하는 쪽).
+- **D7**: 서버 서비스 레지스트리 · 프로세스 지표 · 크래시 묶기 · S4 코어 · 포화 연결 · 버스 라우터 · 서버 조립 · 정산 페이지 · 길드 창고 · TLS 배선 지움. 남김: `GameNetSession` 에 `NetEmulationTransport` · `net.emulation`, `ServerConfig::_gamePort` 자동 열기 · 크래시 전송 동의, Storage 키트 `OnlineStoreDriverTable` 팩토리, 파괴 UDP 서버, 매칭 backfill, 인스턴스 아이템, 게임별 기동 스크립트.
+- **새로 적을 일**: 오디오 데이터 핫 리로드가 엔진(`findEventLibraryName`)과 에디터(`AudioDataHotReload` · `hasEventLibrary`)에 **중복**(합칠 것); 정점 위치 합치기 세 벌(`PhysicsMeshShapeCache` · `MeshFracture::PositionWelder` · `GeometryCut`) → Core 도우미; `PhysicsMeshShapeCache::setLoadFunction` 을 엔진 조립 지점에서 `MeshAssetFormat::loadFromResource` 로 넣기(넣기 전까지 `_meshPath` 셰이프는 오류) + `MeshCache` 리로드 때 `clear()`; 모프 풀 준비 프로파일 구간 없음; `PerfCompare.py`/`SceneLoadBench.py` 를 `Scripts/__main__.py` 서브커맨드로 등록 + 08_Verification 2절에 새 측정 명령; `[SceneLoad]` 로그 판별 확인; `LoopbackStreamTransport.cpp:306` 프리리스트 패턴; `AutomationScenarioChain::splitList` 직접 짠 토큰 루프; `IPhysicsScene3D/2D` 전방 선언용 `*Fwd.h`; Core→Log 예외 5개 파일(티어마다 필요한 것이 달라 함수 포인터 하나로 안 풀림); 프렐류드 예외 제거(184 파일); `UserSettingType` 처리 표(Engine 파일 3곳). 결정 기록에 쓸 것: 점광 · 스폿은 2D 아틀라스, 시퀀서는 신호만 · GF 가 카메라를 움직임, 중첩 프리팹은 펼쳐 쿠킹, 종류 단위 내비 기하는 레지스트리, UI 가 먹은 입력은 `UIInputMapView`, `GameCurve` → `FloatCurve`, 카탈로그 표 편집은 원문 구간 직접 편집, `GF_Editor_Base`.
 
-0. **검증과 측정(사용자 몫으로 맡겨 둔 것)** — 아래 "검증할 것".
-1. **CI 확인.** 확인할 테스트 목록은 백로그 `E-1` "다음 CI 실행으로 확인할 것". push 뒤 결과를 기다리지 않는다([작업 방식](../11_Workflow.md) 4절).
-2. **R4 남은 파일 · R7(체인 후속)** — [StructureRefactor](StructureRefactor.md). 파일마다 한 단위, 서로 충돌하지 않는다.
-3. **빌드 속도 5 · 6 단계** — [BuildSpeed](BuildSpeed.md). S13 로 `EngineLoop.cpp` include 가 17 개 줄었으니 `-ftime-trace` 전후도 같이.
-4. **엔진 분할** — [EnginePartition](EnginePartition.md) 0 단계(기준 측정)와 2 ~ 5 단계.
-5. **서버 디버깅** — [ServerDebug](ServerDebug.md), 다음은 S4(회선 조절).
-6. **6 차 주석 작업의 남은 구역** — 백로그 `C-16`.
-7. **SOLID 후속 메모**(각 항목은 StructureRefactor 에 근거가 있다): `UIAutomationSteps::ensureLinked` 호출(`UISystem::initialize`)은 Engine 통째 링크라 불필요해 보인다, `Joint2DComponent` 는 Cone 을 고르면 `createJoint` 를 프레임마다 다시 시도해 오류 로그를 반복한다,
-   S10 범위 밖의 `getBoundEngineServices()` 직접 호출(`FacialAnimationComponent` · `WidgetComponent` · `UISystem` · `FontService`, `SceneCooker` · `SceneNavigationCooker` · `PortraitRenderer` 의 인자 없는 `Scene` 생성).
+## 검증 명령 (작업자가 남긴 것, 기대 결과)
 
-## 검증할 것
-
-- **Shipping**: 이 세션 끝에 `integ2` 에서 `Ninja-Shipping` 전체(`all AllTests`)를 지었다 — 경고 0 · 오류 0 · 링크 통과. 안 돌린 것: Shipping `-L nogpu` · `-L hostgpu`.
-- **Debug `ctest`**: `-L lint`, `-L nogpu`, `-L hostgpu`. 새 테스트 가운데 **기대 숫자가 틀릴 수 있는 것**: `TestFractureAnchor`(4 × 3 조각 벽이 12 개로 나오고 허용 1.5 m 에서 8 개, 배율 3 에서 4 개라고 가정), `TestFractureNetworkSync`(스냅샷 끝 5 바이트를 자르면 자세가 잘린다고 가정),
-  `TestUserSettingsFile`(`dump(4)` 가 콜론 뒤 공백 하나), `TestEditorAssetFileCommands` 의 임포트 테스트(임시 폴더가 리소스 루트 밖이라는 가정), `UIInputRouterTest` 포커스 복원(레이아웃 없이 포커스를 받는다는 가정), `TestFrameRendererParts`(`FrameProfiler::registerScope` 가 엔진 서비스 없이 도는지).
-- **S21 · S22 에서 먼저 볼 곳**: SmokeTest 소스 목록에 `EditorModuleHostHeadless.cpp` 가 없는 점, `NavMesh*` 테스트(`NavMeshDynamicTest` · `NavMeshAgentTest` · `NavMeshCookTest` · `NavMeshRebakeQueueTest`), `AppHeadlessTasksTest`, `OpenGLRHICommandList.cpp`(compile_commands 에 없어 문법 검사도 못 했다), Linux(GLX 컨텍스트 · 다중 상속 경고 · `SceneNavigation` 의 `NavDebugView` 값 멤버가 내보내지 않은 타입).
-- **실기동**: 에디터 켜고(`-EnableEditor`) Present 훅 · 씬 뷰 조작(S18) · 콘텐츠 브라우저(S19) · 모듈 리로드(S20), `assertdialog.scenario.xml`, `-gv_reloadGameAtFrame`, `-gv_standardInputCommands`, 게임 프리셋(`Ninja-Debug-<Game>`) 여덟 · 네 백엔드 대표 실행 — 지연 로드 제거(6 차)와 S10 · S13 · S14 가 모듈 로드 · 씬 기동 경로를 바꿨다.
-- **측정(Release, `-gv_profileFrames=600` · 3 회, VSync 에 안 붙었는지 먼저, 셰이더는 `App.exe --cook-shaders` 로 다시 구운 뒤)**: `GT.GPUScene.build`(S17) · `GT.Editor.updateUI`(S12) · `EngineLoop.tick` · `UISystem` · `FrameRenderer` 구간. S13 은 `tick` 이 `engine::getDebugDrawQueue()` 를 매 프레임 부르게 됐다.
-  측정이 나쁘면 그 단위를 되돌리거나 훅을 합친다(결정 기록 2절에 숫자와 함께 적을 것).
-- 다른 PC 에서 vcpkg 포트 `tracy`(port-version 2)를 받으면 `cmake --preset` 이 Tracy 를 다시 빌드한다.
+- 그림 불변(그림자/블룸 변경 후): `App.exe -<dx11|dx12|vk|gl> -gv_benchMeshes=8 -gv_benchGround=1 -gv_benchAnimate=0 -gv_profileFrames=20 "-gv_screenshot=s.ppm"` 병합 전/후 sha 동일. `-gv_screenshotAttachment=ShadowMap` → 회색 PPM.
+- Release 측정(VSync 끔, 3회 번갈아): `py -3 Scripts/qa/PerfCompare.py --app build/Ninja-Release/Bin/App.exe --app-before <변경 전 App> --runs 3` (케이스: tickBatch · fractureWarm · fractureDefer · physicsStep · netHostCopy · morphPool · uiPaintOrder · uiNameplates · hangulGlyphs); `py -3 Scripts/qa/SceneLoadBench.py --app ... --count 8000 --asset-report`; 파괴 `FractureBenchTest.*` 를 `-gv_fractureShapeWarmMicroseconds=-1/0/기본` 로; 물리 `PhysicsBenchTest.Box2DStepByWorkerCount`; 블룸 `GPU.PostBloom` vs `GPU.BloomDownsample`; `NetUDPBenchTest`(NetHost 분리 전/후). 나쁘면 해당 변경을 되돌린다(결정 기록 2절에 숫자와 함께).
+- 에디터 시나리오(한 번도 실행하지 않았다 — 가정이 틀릴 수 있다): `AppTest --test_filter=*EditorScenariosPassOn*` 4백엔드. 새 시나리오: projectconfigedit · physicsnavview · colliderhandle · audiomixer · hierarchyorder · uipreview · uipreviewdesigner · inspectorcombo · hierarchydrag · admintool · catalogeditor · gimmickgraph · nilecity `pause` · `rhiswap/swapbackends`(네 백엔드 PC).
+- 지역화: `App.exe --check-text`(wvUI 가 `engine.strings.json` · `ko.po` · `ja.po` 를 손으로 끼움).
 
 ## 알아 둘 함정 (이 세션에서)
 
-- 도우미가 낮은 우선순위로 `clang-cl -Zs` 만 돌렸고 PCH · 링크 · 코드젠(`.gen.cpp`)은 확인하지 못한다 — 새 `SW_API` 클래스가 여럿이라 링크 오류가 가장 먼저 나올 곳이다. 빌드는 `cmake --preset` 으로 다시 구성한 뒤(새 소스 파일) 한다.
-- `Co-Authored-By` 줄은 실제로 일한 모델 이름이다. 통합 3 이력에는 `Opus 5.5` 27 개와 `Sonnet 5.5` 24 개가 섞여 있고, 사용자가 **실제 모델 기록을 우선하라고 정해 고치지 않았다**(이전 세션처럼 `filter-branch` 로 `Sonnet 5.5` 로 통일하지 않는다).
-- `ninja` 는 `-k 0` 으로 지으면 오류가 나도 끝까지 가서 오류를 모아 준다. ctest 프리셋 이름은 `Ninja-Debug-lint` · `Ninja-Debug-nogpu` 이고 `hostgpu` 프리셋은 없어 `ctest --test-dir build/Ninja-Debug -L hostgpu -j 1`(약 16 분) 으로 돌린다.
-- 병합용 워크트리 `D:\w\integ2`(브랜치 `wt/integ2`)는 Debug · Shipping 빌드 폴더를 들고 있어 남겨 뒀다. 다음 병합은 `git merge --ff-only main` 으로 맞춘 뒤 시작하면 증분 빌드가 된다.
-- 스크립트는 heredoc 대신 Write 도구로(AGENTS.md "Editing traps"). 임시 파일은 scratchpad 에서 에이전트 이름을 앞에 붙인다(도우미끼리 `syntax_check.py` 를 덮어썼다).
-- 작업 워크트리 이름은 같은 영역 단위를 한 사람이 맡도록 `s<글자>` 로 지었다. 끝나면 `py -3 -m Scripts worktree-remove <이름>`.
+- **`castTo<Component>( Component*, 타입 )` 은 항상 성공한다**(To == From). 컴포넌트 목록에서 종류를 거를 때는 `forEachComponentOfType<Component>( 타입, … )` 를 쓰지 말고 `pComponent->getTypeInfo()->isDerivedFrom( 타입 )` 으로 직접 검사한다(`NavGeometryCollector` 에서 고침).
+- thread_local 스크래치는 종료 보고 뒤에야 해제돼 메모리 태그가 "기준선보다 늘었다"로 보인다 → 종료 때 비우는 `releaseScratch` 를 둔다(`UIPaintPass`). 새 스크래치(물리 step, 모프 풀 해시 셋, NetHost 아레나 …)도 `AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline` 로 확인.
+- 새 `SW_API`/`SW_GF_API` 클래스가 테스트나 다른 모듈에서 쓰이면 선언에 매크로를 붙이고 `Core/Common/Macros.h` 를 직접 include 한다(`NetChallenge` · `NetSlotTable` · `NetPacketSealer` · `GimmickNodeKind` · `MaterialUtil` 에서 링크 오류).
+- 전방 선언 정리 뒤에는 그 헤더로 완전한 정의를 받던 `.cpp` 가 직접 include 를 가져야 한다(`SocialServer.cpp`).
+- 인터페이스에 순수 가상을 더하면 가짜 구현(테스트)을 모두 고쳐야 한다(`IPhysicsQueryScene2D` → `TestAudioOcclusion`).
+- 같은 액션의 입력 바인딩은 저장 형식에서 종류별로(`<stick>` 먼저, `<mouseDelta>` 나중) 묶이므로 다시 읽으면 순서가 바뀐다.
+- 엔진 서식이어야 하는 XML(`engine/pipeline/*.xml`, `*.audioevents.xml` …)은 정본 직렬화와 바이트가 같아야 `PythonTest_TestXmlAssetMerge` 가 통과한다(`Scripts/common/XmlAssetMerge.serializeXmlAsset`).
+- 같은 기능을 두 작업자가 따로 만들 수 있다(오디오 핫 리로드): 병렬 지시 때 소유 범위가 겹치는 기능은 한 명에게만.
+- 커밋 훅(clang-format 포함)은 우회하지 않는다. 실패하면 `Tools/LLVM/bin/clang-format.exe -i <파일>` 후 다시 `git add`.
+- Git Bash `sed -i` 는 CRLF 를 LF 로 바꾼다. 스크립트는 Write 도구로 파일에 쓴다(heredoc 금지, AGENTS.md "Editing traps").
+- 병합용 워크트리 `D:\w\integ2` 는 오래된 빌드 폴더를 들고 있어 남겨 뒀다. 작업자 워크트리 `D:\w\wv*` · `D:\w\rfP11` 은 병합이 끝났으니 `py -3 -m Scripts worktree-remove <이름>` 으로 지울 것.
+- API 한도: opus 주간 한도(10/16 오후 3시 초기화)에 한 번 닿았다 — 작업자를 많이 띄우면 끊긴다. 끊긴 작업자는 `SendMessage` 로 재개한다.
