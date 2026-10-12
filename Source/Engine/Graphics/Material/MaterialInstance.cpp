@@ -229,9 +229,9 @@ namespace sw
         if ( _bytes.empty() )
             return false;
 
-        for ( const auto& [name, value] : _listValueOverride )
+        for ( const auto& [name, valueText] : _listValueOverride )
         {
-            _pParentMaterial->packNamedValueIntoBuffer( name, value, _bytes );
+            _pParentMaterial->packNamedValueIntoBuffer( name, valueText, _bytes );
         }
 
         // 덮어쓴 텍스처: 네이티브 bindless 는 지금 SRV 인덱스를, 슬롯 바인딩 백엔드(DX11 · GL)는 슬롯 서수를 넣는다(부모와 같은 규칙).
@@ -240,9 +240,9 @@ namespace sw
         {
             if ( texture._pTexture == nullptr )
                 continue;
-            const uint32 value = bNativeBindless ? texture._pTexture->getSrv() : findTextureSlot( texture._name );
-            if ( value != kInvalidDescriptorIndex && value != Material::kInvalidTextureSlot )
-                _pParentMaterial->packTextureIntoBuffer( texture._name, value, _bytes );
+            const uint32 textureBinding = bNativeBindless ? texture._pTexture->getSrv() : findTextureSlot( texture._name );
+            if ( textureBinding != kInvalidDescriptorIndex && textureBinding != Material::kInvalidTextureSlot )
+                _pParentMaterial->packTextureIntoBuffer( texture._name, textureBinding, _bytes );
         }
 
         const uint32 size = static_cast<uint32>( _bytes.size() );
@@ -518,9 +518,9 @@ namespace sw
             return *pVal;
         if ( _pParentMaterial != nullptr )
         {
-            float32 value = defaultValue;
-            if ( _pParentMaterial->getScalarParameter( name, value ) )
-                return value;
+            float32 parentScalar = defaultValue;
+            if ( _pParentMaterial->getScalarParameter( name, parentScalar ) )
+                return parentScalar;
         }
         return defaultValue;
     }
@@ -709,11 +709,11 @@ namespace sw
     {
         auto self = const_cast<MaterialInstance*>( this );
         self->_desc._listOverride.clear();
-        for ( const auto& [name, value] : _listValueOverride )
+        for ( const auto& [name, valueText] : _listValueOverride )
         {
             MaterialInstanceDesc::Override overrideItem{};
             overrideItem._name  = name.c_str() ? name.c_str() : "";
-            overrideItem._value = value;
+            overrideItem._value = valueText;
             self->_desc._listOverride.push_back( std::move( overrideItem ) );
         }
         // 텍스처 덮어쓰기는 값이 아니라 에셋 경로다(`assetPath`). 날 인덱스는 다시 올리면 낡으므로 저장하지 않는다.

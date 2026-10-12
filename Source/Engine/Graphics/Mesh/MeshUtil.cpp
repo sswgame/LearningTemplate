@@ -136,11 +136,11 @@ namespace sw
 
         RevolvedQuad makeRevolvedQuad( uint32 slice, uint32 sliceCount, float32 radius, float32 halfY )
         {
-            const float32 angle0 = sliceAngle( slice, sliceCount );
-            const float32 angle1 = sliceAngle( slice + 1, sliceCount );
+            const float32 angleStart = sliceAngle( slice, sliceCount );
+            const float32 angleEnd   = sliceAngle( slice + 1, sliceCount );
             RevolvedQuad  quad{};
-            quad._lower0 = float3{ radius * MathUtil::cos( angle0 ), -halfY, radius * MathUtil::sin( angle0 ) };
-            quad._lower1 = float3{ radius * MathUtil::cos( angle1 ), -halfY, radius * MathUtil::sin( angle1 ) };
+            quad._lower0 = float3{ radius * MathUtil::cos( angleStart ), -halfY, radius * MathUtil::sin( angleStart ) };
+            quad._lower1 = float3{ radius * MathUtil::cos( angleEnd ), -halfY, radius * MathUtil::sin( angleEnd ) };
             quad._upper0 = float3{ quad._lower0._x, halfY, quad._lower0._z };
             quad._upper1 = float3{ quad._lower1._x, halfY, quad._lower1._z };
             return quad;
@@ -472,10 +472,10 @@ namespace sw
         const float3      apex{ 0.0f, kHalfY, 0.0f };
         for ( uint32 slice = 0; slice < sliceCount; ++slice )
         {
-            const float32 angle0 = sliceAngle( slice, sliceCount );
-            const float32 angle1 = sliceAngle( slice + 1, sliceCount );
-            const float3  base0{ kRadius * MathUtil::cos( angle0 ), -kHalfY, kRadius * MathUtil::sin( angle0 ) };
-            const float3  base1{ kRadius * MathUtil::cos( angle1 ), -kHalfY, kRadius * MathUtil::sin( angle1 ) };
+            const float32 angleStart = sliceAngle( slice, sliceCount );
+            const float32 angleEnd   = sliceAngle( slice + 1, sliceCount );
+            const float3  base0{ kRadius * MathUtil::cos( angleStart ), -kHalfY, kRadius * MathUtil::sin( angleStart ) };
+            const float3  base1{ kRadius * MathUtil::cos( angleEnd ), -kHalfY, kRadius * MathUtil::sin( angleEnd ) };
 
             // 옆면 노멀은 **기울기를 반영한다.** 높이 h, 밑반지름 r 인 원뿔의 옆면 노멀은
             // normalize( h*cosθ, r, h*sinθ ) 다. 방사 방향(수평)으로 두면 원뿔이 원통처럼 칠해진다.

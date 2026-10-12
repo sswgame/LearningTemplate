@@ -78,10 +78,10 @@ namespace sw
 
     void GPUScene::setVertexPoolEnabled( bool bEnabled )
     {
-        const uint8 value = bEnabled ? SW_TRUE : SW_FALSE;
-        if ( _bVertexPoolEnabled == value )
+        const uint8 enabledFlag = bEnabled ? SW_TRUE : SW_FALSE;
+        if ( _bVertexPoolEnabled == enabledFlag )
             return;
-        _bVertexPoolEnabled = value;
+        _bVertexPoolEnabled = enabledFlag;
         _bBatchTablesDirty  = SW_TRUE; // startVertex 가 바뀐다. 표와 간접 인자를 다시 올린다
     }
 

@@ -129,9 +129,9 @@ namespace sw
                     pRtv = ( attachmentIndex == 0 ) ? _pDevice->_swapChain.getBackBufferRtv() : nullptr;
                 else
                 {
-                    D3D11RHIDevice::TextureRecord* pTex = _pDevice->resolveTexture( colorHandle );
-                    if ( pTex != nullptr )
-                        pRtv = pTex->findSliceRtv( beginInfo._arrColorTargetSlice[attachmentIndex] );
+                    D3D11RHIDevice::TextureRecord* pTexture = _pDevice->resolveTexture( colorHandle );
+                    if ( pTexture != nullptr )
+                        pRtv = pTexture->findSliceRtv( beginInfo._arrColorTargetSlice[attachmentIndex] );
                 }
                 if ( pRtv == nullptr && attachmentIndex > 0 )
                     break;
@@ -264,9 +264,9 @@ namespace sw
         if ( _pContext == nullptr || texture == 0 )
             return;
         ID3D11ShaderResourceView*      pSrv{ nullptr };
-        D3D11RHIDevice::TextureRecord* pTex = _pDevice->resolveTexture( texture );
-        if ( pTex != nullptr )
-            pSrv = pTex->_srv.Get();
+        D3D11RHIDevice::TextureRecord* pTexture = _pDevice->resolveTexture( texture );
+        if ( pTexture != nullptr )
+            pSrv = pTexture->_srv.Get();
         _pContext->PSSetShaderResources( slot, 1, &pSrv );
         if ( _pState != nullptr && slot < D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT )
             _pState->_arrPixelSrvTexture[slot] = ( pSrv != nullptr ) ? texture : 0;

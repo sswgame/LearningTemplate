@@ -36,7 +36,7 @@ namespace sw
             if ( nanos < FrameProfiler::kSubBucketCount )
                 return static_cast<uint32>( nanos );
             uint32 octave = 0;
-            for ( uint64 value = nanos; value > 1u; value >>= 1 )
+            for ( uint64 remaining = nanos; remaining > 1u; remaining >>= 1 )
             {
                 ++octave;
             }
