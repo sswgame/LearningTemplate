@@ -197,7 +197,7 @@ namespace sw
 namespace sw
 {
     AnimNotifyHandlerRegistry::AnimNotifyHandlerRegistry()
-        : _listEntry{}
+        : _registry{}
     {
     }
 
@@ -215,33 +215,21 @@ namespace sw
     {
         if ( name.empty() || handler == nullptr )
             return;
-        for ( Entry& entry : _listEntry )
-        {
-            if ( entry._name == name )
-            {
-                entry._handler = std::move( handler );
-                return;
-            }
-        }
-        _listEntry.push_back( Entry{ name, std::move( handler ) } );
+        _registry.addOrReplace( name, std::move( handler ) );
     }
 
     const IAnimNotifyHandler* AnimNotifyHandlerRegistry::findHandler( const hashed_string& name ) const
     {
-        for ( const Entry& entry : _listEntry )
-        {
-            if ( entry._name == name )
-                return entry._handler.get();
-        }
-        return nullptr;
+        const unique_ptr<IAnimNotifyHandler>* pHandler = _registry.find( name );
+        return pHandler == nullptr ? nullptr : pHandler->get();
     }
 
     void AnimNotifyHandlerRegistry::collectHandlerNames( vector<hashed_string>& outListName ) const
     {
         outListName.clear();
-        for ( const Entry& entry : _listEntry )
+        for ( uint32 index = 0; index < _registry.getCount(); ++index )
         {
-            outListName.push_back( entry._name );
+            outListName.push_back( _registry.getNameAt( index ) );
         }
     }
 } // namespace sw

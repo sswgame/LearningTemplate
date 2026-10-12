@@ -21,6 +21,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/RegistrationList.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/AnimPlayback.h"
@@ -206,11 +207,6 @@ namespace sw
         void collectHandlerNames( vector<hashed_string>& outListName ) const;
 
     private:
-        struct Entry
-        {
-            hashed_string                  _name;
-            unique_ptr<IAnimNotifyHandler> _handler;
-        };
-        vector<Entry> _listEntry;
+        NameRegistry<unique_ptr<IAnimNotifyHandler>> _registry; ///< 이름 → 처리기(등록 순서)
     };
 } // namespace sw

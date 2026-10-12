@@ -227,6 +227,10 @@ SW_TEST_CASE( AnimNotifyTest, DispatchRunsStateHandlersOnceAndClosesInterruptedS
     vector<string>            listLog;
     AnimNotifyHandlerRegistry registry;
     registry.registerHandler( hashed_string( "Record" ), sw::make_unique<TestAnimNotifyInternal::RecordingHandler>( &listLog ) );
+    // 같은 이름으로 다시 올리면 그 자리에서 교체한다(이름은 하나로 남는다).
+    const IAnimNotifyHandler* pFirstHandler = registry.findHandler( hashed_string( "Record" ) );
+    registry.registerHandler( hashed_string( "Record" ), sw::make_unique<TestAnimNotifyInternal::RecordingHandler>( &listLog ) );
+    SW_EXPECT_TRUE( registry.findHandler( hashed_string( "Record" ) ) != pFirstHandler );
     shared_ptr<AnimNotifyTable> table = make_shared<AnimNotifyTable>();
     SW_ASSERT_TRUE( table->loadFromXMLText( R"(<AnimNotifies><Notify name="Swing" handler="Record"/><Notify name="Ping" handler="Record" tag="x"/></AnimNotifies>)",
                                             "record", registry ) );
