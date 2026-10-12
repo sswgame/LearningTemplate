@@ -9,6 +9,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Graphics/Material/MaterialUtil.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
@@ -143,11 +144,12 @@ namespace sw
         _deform._meshMorphPool.release( _pDevice );
         _deform._vertexAnimationPool.release( _pDevice );
         _lightBuffer.release( _pDevice );
-        for ( auto& [fallbackStride, fallbackSlot] : _mapMaterialFallback )
+        for ( MaterialFallback& fallback : _listMaterialFallback )
         {
-            fallbackSlot.release( _pDevice );
+            fallback._buffer.release( _pDevice );
         }
-        _mapMaterialFallback.clear();
+        _listMaterialFallback.clear();
+        _mapLayoutMaterialFallback.clear();
         _bPassResourcesReady = SW_FALSE;
     }
 
@@ -191,48 +193,52 @@ namespace sw
         if ( _pDevice == nullptr || _pDevice->getResourceFactory() == nullptr )
             return;
 
-        // 등록된 PSO 레이아웃이 선언한 머티리얼 원소 stride 를 모은다. 셰이더 타입마다 다를 수 있고, 레이아웃은
-        // 이 디바이스의 백엔드로 빌드된 것이다(SPIR-V 도 지금은 `-fvk-use-dx-layout` 으로 DX 규칙을 따른다).
-        vector<uint32>                           listStride;
+        // 등록된 PSO 레이아웃마다 머티리얼 폴백 원소를 만든다. stride 와 텍스처 인덱스 필드 위치는 셰이더 타입마다 다를 수 있고, 레이아웃은
+        // 이 디바이스의 백엔드로 빌드된 것이다(SPIR-V 도 지금은 `-fvk-use-dx-layout` 으로 DX 규칙을 따른다). 내용이 같은 원소는 버퍼 하나를 나눠 쓴다.
         vector<RenderPSOCache::RegisteredLayout> listLayout;
         _psoCache.collectLayouts( listLayout );
+        for ( const RenderPSOCache::RegisteredLayout& registered : listLayout )
         {
-            for ( const RenderPSOCache::RegisteredLayout& registered : listLayout )
+            const RHIPipelineStateHandle     pso     = registered._pso;
+            const ShaderBindingLayout* const pLayout = registered._pLayout;
+            if ( pLayout == nullptr || _mapLayoutMaterialFallback.find( pLayout ) != _mapLayoutMaterialFallback.end() )
+                continue;
+            const ShaderBindingSlot* pSlot = pLayout->find( passConstantNames()._swMaterials );
+            if ( pSlot == nullptr )
+                continue; // 이 셰이더는 머티리얼 버퍼를 선언하지 않는다(풀스크린 등). 걸 것이 없다.
+            if ( pSlot->_elementStride == 0 )
             {
-                const RHIPipelineStateHandle     pso     = registered._pso;
-                const ShaderBindingLayout* const pLayout = registered._pLayout;
-                if ( pLayout == nullptr )
-                    continue;
-                const ShaderBindingSlot* pSlot = pLayout->find( passConstantNames()._swMaterials );
-                if ( pSlot == nullptr )
-                    continue; // 이 셰이더는 머티리얼 버퍼를 선언하지 않는다(풀스크린 등). 걸 것이 없다.
-                if ( pSlot->_elementStride == 0 )
+                // 선언은 있는데 원소 레이아웃이 없다 = 리플렉션 공백. 그대로 두면 머티리얼 없는 배치가 슬롯을 비운 채
+                // 그리게 되고(Vulkan 은 partially-bound 슬롯을 읽으면 정의되지 않는다) 원인을 찾기 어렵다.
+                SW_LOG_ERROR( "PSO %# 의 머티리얼 버퍼 원소 stride 가 0 입니다 — 리플렉션이 g_SwMaterials 원소 레이아웃을 주지 않았습니다.", pso );
+                continue;
+            }
+
+            vector<uint8> bytes         = MaterialUtil::makeFallbackElement( pSlot->_listElementMember, pSlot->_elementStride );
+            uint32        fallbackIndex = static_cast<uint32>( _listMaterialFallback.size() );
+            for ( uint32 index = 0; index < static_cast<uint32>( _listMaterialFallback.size() ); ++index )
+            {
+                if ( _listMaterialFallback[index]._bytes == bytes )
                 {
-                    // 선언은 있는데 원소 레이아웃이 없다 = 리플렉션 공백. 그대로 두면 머티리얼 없는 배치가 슬롯을 비운 채
-                    // 그리게 되고(Vulkan 은 partially-bound 슬롯을 읽으면 정의되지 않는다) 원인을 찾기 어렵다.
-                    SW_LOG_ERROR( "PSO %# 의 머티리얼 버퍼 원소 stride 가 0 입니다 — 리플렉션이 g_SwMaterials 원소 레이아웃을 주지 않았습니다.", pso );
+                    fallbackIndex = index;
+                    break;
+                }
+            }
+            if ( fallbackIndex == _listMaterialFallback.size() )
+            {
+                const uint32            stride = pSlot->_elementStride;
+                RHIStructuredBufferSlot buffer{};
+                if ( buffer.ensureCapacity( _pDevice, stride, 1, RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource, true, false, bytes.data() ) == false )
+                {
+                    SW_LOG_ERROR( "머티리얼 폴백 버퍼 생성 실패 (stride %#).", stride );
                     continue;
                 }
-                if ( std::find( listStride.begin(), listStride.end(), pSlot->_elementStride ) == listStride.end() )
-                    listStride.push_back( pSlot->_elementStride );
+                buffer.upload( _pDevice, bytes.data(), stride );
+                MaterialFallback& fallback = _listMaterialFallback.emplace_back();
+                fallback._bytes            = std::move( bytes );
+                fallback._buffer           = buffer;
             }
-        }
-
-        for ( const uint32 stride : listStride )
-        {
-            if ( _mapMaterialFallback.find( stride ) != _mapMaterialFallback.end() )
-                continue;
-
-            const vector<uint8>     zeroBytes( stride, 0 );
-            RHIStructuredBufferSlot fallback{};
-            if ( fallback.ensureCapacity( _pDevice, stride, 1, RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource, true, false,
-                                          zeroBytes.data() ) == false )
-            {
-                SW_LOG_ERROR( "머티리얼 폴백 버퍼 생성 실패 (stride %#).", stride );
-                continue;
-            }
-            fallback.upload( _pDevice, zeroBytes.data(), stride );
-            _mapMaterialFallback.insert_or_assign( stride, fallback );
+            _mapLayoutMaterialFallback.insert_or_assign( pLayout, fallbackIndex );
         }
     }
 

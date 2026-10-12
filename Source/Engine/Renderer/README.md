@@ -333,7 +333,9 @@ C++가 막지 못하는 것은 옮겨지는 구조체에 원시 포인터 필드
   버퍼 하나를 드로우들이 나눠 쓰면 GPU는 제출 뒤에 읽으므로 모두 마지막 값을 봅니다. `RenderPassGPUTest.MultiBatchPassKeepsPerBatchConstants` 가 메시 두 개로 이것을 확인합니다.
 - **머티리얼 원소는 영속 ID를 가집니다.** 처음 본 조합에만 슬롯을 주고, 쓰이지 않으면 나중에 회수하지만 슬롯을 옮기지 않습니다.
   옮기면 인스턴스에 적힌 `materialIndex` 가 엉뚱한 원소를 가리킵니다(`GPUSceneTest.MaterialElementIDsPersistAcrossBuildsAndAreFreed`).
-- **머티리얼 폴백 버퍼는 stride마다 하나입니다**(`ensureMaterialFallbackBuffers`, stride는 `ShaderBindingSlot::_elementStride`). SRV의 구조체 stride는 셰이더 선언과 같아야 하기 때문입니다. 언리얼 RDG의 더미 버퍼와 같은 규칙입니다.
+- **머티리얼 폴백 버퍼는 셰이더의 원소 레이아웃을 따릅니다**(`ensureMaterialFallbackBuffers`, stride는 `ShaderBindingSlot::_elementStride`). SRV의 구조체 stride는 셰이더 선언과 같아야 하기 때문입니다. 언리얼 RDG의 더미 버퍼와 같은 규칙입니다.
+  원소는 0 이지만 텍스처 인덱스 필드(이름이 `Map` 으로 끝나는 uint, `MaterialUtil::isTextureIndexMember`)는 `kInvalidDescriptorIndex` 입니다. 0 은 Vulkan bindless 의 첫 실제 텍스처이고
+  DX11 · GL 에서는 머티리얼 텍스처 서수 0 이라, 0 으로 두면 백엔드마다 다른 텍스처를 읽습니다. 내용이 같은 원소는 버퍼 하나를 나눠 씁니다.
 - **스프라이트의 프레임과 색은 인스턴스 필드입니다**(`GPUInstance::_sprite`, 16바이트 `GPUSpriteInstanceData`). 언리얼의 Custom Primitive Data에 해당합니다.
   배치 키를 건드리지 않으므로 같은 텍스처의 스프라이트는 한 번에 그려집니다(`RenderPassGPUTest.SpriteFramesAndTintsArePerInstance`). 스프라이트 메시는 양면 사각형(`MeshUtil::createSpriteQuad`)입니다.
 - **값이 실제로 바뀔 때만 일합니다.** 상수 버퍼와 바인딩 상태는 내용이 달라질 때만 버전을 올리고 다시 만듭니다. 같은 값을 다시 넣는 호출이 흔하기 때문입니다.

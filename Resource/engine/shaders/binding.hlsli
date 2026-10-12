@@ -394,6 +394,9 @@ float4x4 swLoadInstanceWorld( uint instanceSlot )
 //      원소 레이아웃은 네 백엔드가 같다 — SPIR-V 도 DX 패킹(-fvk-use-dx-layout, ShaderCompiler.cpp)으로 쿠킹하고
 //      ShaderBindingValidatorTest.ReflectionNamesAreUniformAcrossBackends 가 쿠킹된 바이너리로 확인한다.
 //      인덱스는 g_SwMaterialCount 로 클램프한다 — 잘못된 인덱스가 백엔드마다 다른 OOB 결과를 내지 않도록.
+//      **텍스처 인덱스 필드는 uint 이고 이름이 Map 으로 끝난다**(albedoMap · normalMap · splatMap). 리플렉션은 그 필드도 그냥 uint 라
+//      이름이 표식이다(MaterialUtil::isTextureIndexMember). 머티리얼 없는 배치의 폴백 원소는 그 필드를 kInvalidIndex 로 채운다 — 0 은
+//      Vulkan 의 첫 실제 텍스처 · DX11 · GL 의 서수 0 이다. 텍스처가 아닌 uint(pointFilter)는 Map 으로 끝나는 이름을 쓰지 않는다.
 //      **머티리얼은 픽셀 단계에서만 읽는다.** 정점 · 픽셀 두 단계가 g_SwMaterials 를 함께 읽으면 GL(ARB_gl_spirv) 드라이버가 구조 버퍼의
 //      이름 없는 멤버를 단계마다 다른 SPIR-V id 로 이름 짓고("_struct14_member0" · "_struct19_member0") 링크를 거절한다 — 그 배치는 패스
 //      셰이더로 물러나 그려진다. 정점에서 필요한 값(sprite2d 의 uvRect)은 픽셀에서 적용한다(아핀이면 결과가 같다).

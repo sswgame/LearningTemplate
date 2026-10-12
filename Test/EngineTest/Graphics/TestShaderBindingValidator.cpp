@@ -6,10 +6,13 @@
  */
 #include "pch.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
 
+#include "Engine/Graphics/Material/MaterialUtil.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/RHI/Support/RHIShaderRequest.h"
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
@@ -518,6 +521,105 @@ SW_TEST_CASE( ShaderBindingValidatorTest, Dx12RootSignatureFitsBudget )
     SW_EXPECT_EQUAL( dx12::kRootSignatureDwords, withDoubledSrvSlots );
     // 루트 상수(16) + CBV 셋(6) + 테이블 셋(3) = 25 — 계약 값이 바뀌면 여기서 먼저 걸린다.
     SW_EXPECT_EQUAL( 3u * 2u + 3u * 1u + 16u, dx12::kRootSignatureDwords );
+}
+
+/**
+ * @brief [ShaderBindingValidatorTest] 머티리얼 폴백 원소는 텍스처 인덱스 필드(`…Map` 이름의 uint)만 kInvalidDescriptorIndex 로, 나머지는 0 으로 채운다
+ * @details 합성 레이아웃 — sprite2d 와 같은 모양(색 · 텍스처 인덱스 · 텍스처가 아닌 uint 플래그 둘). 0 은 Vulkan 의 첫 실제 텍스처 ·
+ *          DX11 · GL 의 서수 0 이라 텍스처 필드에 0 이 남으면 백엔드마다 다른 텍스처를 읽는다.
+ */
+SW_TEST_CASE( ShaderBindingValidatorTest, MaterialFallbackElementMarksOnlyTextureIndexFields )
+{
+    sw::vector<sw::ShaderVariableInfo> listMember;
+    listMember.push_back( { "color", "Float4", 0, 16 } );
+    listMember.push_back( { "albedoMap", "Uint", 16, 4 } );
+    listMember.push_back( { "pointFilter", "Uint", 20, 4 } );
+    listMember.push_back( { "premultipliedTexture", "Uint", 24, 4 } );
+    listMember.push_back( { "roughnessMap", "Float", 28, 4 } ); // 이름은 맞지만 uint 가 아니다 — 텍스처 인덱스가 아니다
+    const sw::vector<uint8> bytes = sw::MaterialUtil::makeFallbackElement( listMember, 32 );
+    SW_ASSERT_EQUAL( size_t{ 32 }, bytes.size() );
+    auto readUint = [&bytes]( uint32 offset )
+    {
+        uint32 value{ 0 };
+        sw::Memory::copy( &value, bytes.data() + offset, sizeof( value ) );
+        return value;
+    };
+    SW_EXPECT_EQUAL( 0u, readUint( 0 ) );
+    SW_EXPECT_EQUAL( static_cast<uint32>( sw::kInvalidDescriptorIndex ), readUint( 16 ) );
+    SW_EXPECT_EQUAL( 0u, readUint( 20 ) );
+    SW_EXPECT_EQUAL( 0u, readUint( 24 ) );
+    SW_EXPECT_EQUAL( 0u, readUint( 28 ) );
+}
+
+/**
+ * @brief [ShaderBindingValidatorTest] 쿠킹된 머티리얼 원소의 `…Map` 필드를 네 백엔드 모두 텍스처 인덱스로 알아본다(sprite2d 픽셀 셰이더, nogpu)
+ * @details 텍스처 인덱스 표식은 이름(`Map` 꼬리)과 리플렉션 타입(uint)의 둘이다. 한 백엔드의 리플렉터가 uint 를 다른 이름으로 보고하면 그 백엔드만
+ *          폴백 원소가 0 으로 남는다 — 그것을 쿠킹된 바이너리로 잡는다. 텍스처가 아닌 uint(`pointFilter`)는 아니라고 읽어야 한다.
+ */
+SW_TEST_CASE( ShaderBindingValidatorTest, MaterialTextureIndexFieldsAreRecognizedOnEveryBackend )
+{
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    const sw::string shaderDir = sw::ResourcePaths::getDomainFolderPath( "engine", "shaders" );
+    if ( shaderDir.empty() )
+        SW_TEST_SKIP( "engine/shaders 를 찾지 못했습니다" );
+
+    constexpr uint32             kFormatCount            = 4;
+    const sw::ShaderTargetFormat arrFormat[kFormatCount] = {
+        sw::ShaderTargetFormat::DXBC_D3D11, sw::ShaderTargetFormat::DXIL_D3D12, sw::ShaderTargetFormat::SPIRV_Vulkan, sw::ShaderTargetFormat::SPIRV_OpenGL };
+    const utf8* arrFormatName[kFormatCount] = { "dx11", "dx12", "vulkan", "opengl" };
+    uint32      arrChecked[kFormatCount]    = {};
+    uint32      checkedCount{ 0 };
+    for ( uint32 formatIndex = 0; formatIndex < kFormatCount; ++formatIndex )
+    {
+        const sw::ShaderTargetFormat format = arrFormat[formatIndex];
+        const sw::string             binDir = sw::FileUtil::joinPath( sw::FileUtil::joinPath( shaderDir, "bin" ),
+                                                                      sw::string( sw::ShaderCooker::getSubfolderForFormat( format ) ) );
+        sw::vector<sw::string>       listFile;
+        if ( sw::FileUtil::isDirectory( binDir ) )
+            sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderCooker::getExtensionForFormat( format ) ), listFile, false );
+        for ( const sw::string& path : listFile )
+        {
+            const sw::string fileName = sw::FileUtil::getFileNamePart( path );
+            if ( sw::StringUtil::startsWith( fileName, "sprite2d_ps" ) == false )
+                continue;
+            sw::vector<uint8> bytecode;
+            if ( sw::FileUtil::readFile( path, bytecode ) == false || bytecode.empty() )
+                continue;
+            const sw::ShaderReflectionData reflection = sw::ShaderReflection::reflect( bytecode, format );
+            for ( const sw::ShaderBufferInfo& element : reflection._listStructuredElement )
+            {
+                if ( element._name != sw::shaderslot::resname::kMaterials )
+                    continue;
+                const sw::string        label = sw::string( arrFormatName[formatIndex] ) + "/" + fileName + " ";
+                const sw::vector<uint8> bytes = sw::MaterialUtil::makeFallbackElement( element._listVariable, element._totalSize );
+                bool                    bHasAlbedo{ false };
+                for ( const sw::ShaderVariableInfo& var : element._listVariable )
+                {
+                    const bool bTexture = sw::MaterialUtil::isTextureIndexMember( var._name, var._type, var._size );
+                    if ( var._name == "albedoMap" )
+                    {
+                        bHasAlbedo = true;
+                        SW_EXPECT_TRUE_MSG( bTexture, ( label + "albedoMap 을 텍스처 인덱스로 읽지 못했다 (타입 " + var._type + ")" ).c_str() );
+                        uint32 value{ 0 };
+                        if ( var._offset + sizeof( value ) <= bytes.size() )
+                            sw::Memory::copy( &value, bytes.data() + var._offset, sizeof( value ) );
+                        SW_EXPECT_EQUAL( static_cast<uint32>( sw::kInvalidDescriptorIndex ), value );
+                    }
+                    if ( var._name == "pointFilter" )
+                        SW_EXPECT_FALSE_MSG( bTexture, ( label + "pointFilter 를 텍스처 인덱스로 읽었다" ).c_str() );
+                }
+                SW_EXPECT_TRUE_MSG( bHasAlbedo, ( label + "머티리얼 원소에 albedoMap 이 없다 — 이름이 바뀌어 검사가 눈을 감았다" ).c_str() );
+                ++arrChecked[formatIndex];
+                ++checkedCount;
+            }
+        }
+    }
+    if ( checkedCount == 0 )
+        SW_TEST_SKIP( "sprite2d 픽셀 셰이더를 쿠킹한 바이너리가 없습니다 (--cook-shaders 를 먼저 돌리세요)" );
+    for ( uint32 formatIndex = 0; formatIndex < kFormatCount; ++formatIndex )
+    {
+        SW_EXPECT_TRUE_MSG( arrChecked[formatIndex] > 0, ( sw::string( arrFormatName[formatIndex] ) + " 의 sprite2d 픽셀 셰이더 머티리얼 원소를 찾지 못했다" ).c_str() );
+    }
 }
 
 /**

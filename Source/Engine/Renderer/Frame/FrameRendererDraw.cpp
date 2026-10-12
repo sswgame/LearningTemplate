@@ -123,16 +123,17 @@ namespace sw
         if ( batch._materialBuffer == 0 || batch._materialSrv == kInvalidDescriptorIndex )
         {
             // 머티리얼 없는 배치. 빈 슬롯으로 그리지 않는다(Vulkan 은 partially-bound 슬롯을 실제로 읽으면 정의되지 않는다).
-            // 폴백은 **이 PSO 셰이더가 선언한 stride** 의 것을 고른다. 공용 256 바이트를 걸면 DX11 이 드로우마다
+            // 폴백은 **이 PSO 셰이더의 레이아웃**(stride · 텍스처 인덱스 필드)으로 만든 것을 고른다. 공용 256 바이트를 걸면 DX11 이 드로우마다
             // "structure stride 256 vs 24" 를 낸다(SRV 의 구조 stride 는 셰이더 선언과 같아야 한다).
             const ShaderBindingLayout* pLayout = ( context._lastLayoutPSO == pso ) ? context._pLastLayout : layoutForPSO( pso );
             const ShaderBindingSlot*   pSlot   = ( pLayout != nullptr ) ? pLayout->find( passConstantNames()._swMaterials ) : nullptr;
             if ( pSlot == nullptr || pSlot->_elementStride == 0 )
                 return; // 셰이더가 머티리얼 버퍼를 선언하지 않았다. 걸 것도 없다.
-            const auto it = _mapMaterialFallback.find( pSlot->_elementStride );
-            if ( it != _mapMaterialFallback.end() && it->second.isValid() && it->second._srv != kInvalidDescriptorIndex )
+            const auto                     it        = _mapLayoutMaterialFallback.find( pLayout );
+            const RHIStructuredBufferSlot* pFallback = ( it != _mapLayoutMaterialFallback.end() ) ? &_listMaterialFallback[it->second]._buffer : nullptr;
+            if ( pFallback != nullptr && pFallback->isValid() && pFallback->_srv != kInvalidDescriptorIndex )
             {
-                context._resourceRegistry.registerBuffer( passConstantNames()._swMaterials, it->second._buffer, it->second._srv );
+                context._resourceRegistry.registerBuffer( passConstantNames()._swMaterials, pFallback->_buffer, pFallback->_srv );
                 context._drawMaterialCount = 1u;
             }
             else if ( _bMaterialFallbackMissingLogged.exchange( 1, std::memory_order_relaxed ) == 0 )

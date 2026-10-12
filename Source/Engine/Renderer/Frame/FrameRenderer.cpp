@@ -86,7 +86,8 @@ namespace sw
         , _gpuPassTimeline{}
         , _lastIndirectDrawCallCount{ 0 }
         , _disabledInputRoleMask{ 0 }
-        , _mapMaterialFallback{}
+        , _listMaterialFallback{}
+        , _mapLayoutMaterialFallback{}
         , _transparentRankPlaceholder{}
         , _psoCache{}
         , _outputRenderTarget{ 0 }

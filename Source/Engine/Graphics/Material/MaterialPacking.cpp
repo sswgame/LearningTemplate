@@ -1,10 +1,13 @@
 #include "pch.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialUtil.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
@@ -376,6 +379,26 @@ namespace sw
         if ( typeSize == 64 )
             align = 16;
         return MathUtil::align( offset, align );
+    }
+
+    bool MaterialUtil::isTextureIndexMember( string_view memberName, string_view reflectedType, uint32 byteSize )
+    {
+        return shaderTypeFromReflectionName( reflectedType, byteSize ) == MaterialPropertyType::Uint &&
+               StringUtil::endsWith( memberName, string_view{ kTextureIndexMemberSuffix } );
+    }
+
+    vector<uint8> MaterialUtil::makeFallbackElement( const vector<ShaderVariableInfo>& listMember, uint32 stride )
+    {
+        vector<uint8> bytes( stride, 0 );
+        const uint32  noTexture = kInvalidDescriptorIndex;
+        const uint32  indexSize = static_cast<uint32>( sizeof( noTexture ) );
+        for ( const ShaderVariableInfo& member : listMember )
+        {
+            const bool bFits = member._offset + indexSize <= stride;
+            if ( bFits && isTextureIndexMember( member._name, member._type, member._size ) )
+                Memory::copy( bytes.data() + member._offset, &noTexture, indexSize );
+        }
+        return bytes;
     }
 
     bool MaterialUtil::parseBoolToken( string_view token, string_view name, bool fallback )
