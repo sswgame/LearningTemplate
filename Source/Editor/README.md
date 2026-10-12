@@ -113,7 +113,9 @@ flowchart TB
 App 은 프레임마다 `IEditor` 를 거쳐 에디터를 부릅니다. 순서는 이렇습니다.
 
 1. `beginFrame` 이 플랫폼 백엔드와 렌더 백엔드의 새 프레임을 열고, 테스트 입력(`EditorSelfTestInput`)을 넣습니다.
-2. `updateUI` 가 레지스트리와 매니저를 맞추고(`syncWithRegistry`), 메뉴 막대와 상단 재생 툴바, 도킹 공간, 패널, 팝업을 그립니다.
+2. `updateUI` 가 레지스트리와 매니저를 맞추고(`syncWithRegistry`), 메뉴 막대와 상단 재생 툴바, 도킹 공간을 엽니다. 그 안의 일은 등록된 프레임 단계(`SW_EDITOR_FRAME_STEP`, `Common/Workspace/EditorFrameStep.h`)가
+   `_order` 순서로 합니다. 셸이 아는 단계는 단축키 → 에셋 리로드 → 패널 · 팝업 → 자체 테스트 → 창 제목 → 스크린샷이고(`EditorFrameSteps.cpp`), 확장 모듈은 사이 값으로 끼어듭니다.
+   프레임 열기와 닫기(Render · draw 스냅샷 인계)는 순서가 곧 뜻이라 셸에 그대로 둡니다.
 3. 그린 결과를 draw 스냅샷(`EditorDrawDataSnapshot`)으로 떠서 렌더 스레드에 넘깁니다. 스냅샷의 그리기 목록은 풀로 두고 버퍼만 옮겨 담습니다.
 4. `onHostFrameEnd` 가 미뤄 둔 플레이 시작과 Step 을 처리하고, 플레이 옵션(Maximize On Play)의 상태 전이를 봅니다(`EditorPlayCommands::tick`).
 

@@ -9,14 +9,12 @@
 #include "Core/Module/ModuleImageUtil.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Editor/Common/Asset/EditorAssetValidation.h"
 #include "Editor/Common/Backend/EditorDrawDataSnapshot.h"
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Backend/ImGuiOsInputFilter.h"
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorPlayCommands.h"
-#include "Editor/Common/Commands/EditorScreenshotCommands.h"
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
@@ -27,24 +25,17 @@
 #include "Editor/Common/GUI/EditorCommandGUI.h"
 #include "Editor/Common/GUI/EditorFontSetup.h"
 #include "Editor/Common/GUI/EditorMenuBar.h"
-#include "Editor/Common/GUI/EditorNotificationView.h"
 #include "Editor/Common/GUI/EditorPanelDump.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorPlayToolbar.h"
-#include "Editor/Common/GUI/EditorPopupManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/GUI/EditorUIContext.h"
-#include "Editor/Common/SourceControl/EditorSourceControl.h"
-#include "Editor/Common/Workspace/AssetHotReload.h"
-#include "Editor/Common/Workspace/ConfigHotReload.h"
 #include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorNotificationManager.h"
+#include "Editor/Common/Workspace/EditorFrameStep.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
-#include "Editor/Common/Workspace/EditorWindowTitle.h"
-#include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/SelfTest/EditorRegistryDump.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -148,22 +139,6 @@ namespace sw::editor
                 const uint32 droppedCount = pCommandStack->releaseCodeWithin( pBegin, pEnd );
                 if ( droppedCount > 0 )
                     SW_LOG_INFO( "Dropped %# undo commands that run editor module code; scene edits stay undoable", droppedCount );
-            }
-
-            /** @brief 창 제목에 게임, 씬, 미저장, 플레이 상태를 반영합니다. 같은 제목이면 `IWindow::setTitle` 이 바로 반환하므로 프레임마다 불러도 됩니다. */
-            static void updateWindowTitle( EditorContext* pContext )
-            {
-                IWindow* pWindow = IWindow::getActiveWindow();
-                if ( pWindow == nullptr || pContext == nullptr )
-                    return;
-                const Scene* pScene    = editor::getActiveScene();
-                const string scenePath = pScene == nullptr ? string{} : ( pScene->getSourcePath().empty() ? pScene->getName() : pScene->getSourcePath() );
-                const bool   bDirty    = pContext->getWorkspace().isSceneDirty() || pContext->getPanelManager().countDirtyDocuments() > 0;
-                const utf8*  pPlayState{ nullptr };
-                if ( EditorPlaySession::isStopped() == false )
-                    pPlayState = EditorPlaySession::isSimulating() ? "Simulating" : ( EditorPlaySession::isPaused() ? "Paused" : "Playing" );
-                const string title = EditorWindowTitleUtil::makeTitle( GameConfig::getActive()._windowTitle, scenePath, bDirty, pPlayState );
-                pWindow->setTitle( title.c_str() );
             }
         };
     } // namespace
@@ -478,6 +453,7 @@ namespace sw::editor
 
         if ( _editorContext != nullptr )
         {
+            // 프레임 앞의 상태 정리는 단계로 옮기지 않는다. 메뉴 · 패널이 이번 프레임에 읽을 값이라 프레임을 열기 전이어야 한다.
             // 확장 모듈은 에디터가 뜬 뒤에도 로드되고 언로드된다. 등록 세대가 바뀌었으면 인스턴스를 맞추고, 같으면 비교 한 번으로 끝난다.
             _editorContext->syncExtensionRegistrations();
             _editorContext->setGameViewFocused( false );
@@ -485,6 +461,8 @@ namespace sw::editor
             _editorContext->clearViewDrawnMarks();
         }
 
+        // 프레임 열기는 단계로 옮기지 않는다. 메뉴 · 툴바는 도크스페이스보다 먼저 그려야 도크 영역이 그만큼 줄고, 도크스페이스는 어느 단계보다 먼저 열려야
+        // 패널이 그 안에 도킹된다. 그래서 순서가 ImGui 가 정한 것이고 셸이 소유한 도킹 레이아웃(`_dockLayout`)을 쓴다.
         {
             SW_EDITOR_PROFILE_SCOPE( "GT.Editor.newFrame" );
             beginFrame();
@@ -494,40 +472,15 @@ namespace sw::editor
             _dockLayout.beginDockspace();
         }
 
+        // 프레임 안의 일(단축키 → 에셋 리로드 → 패널 → 자체 테스트 → 창 제목 → 스크린샷)은 등록된 단계가 `_order` 순서로 한다(`EditorFrameStep.h`).
+        // 셸은 단계를 모른다. 새 단계는 자기 .cpp 의 `SW_EDITOR_FRAME_STEP` 한 줄이다. 셸이 아는 단계는 `EditorFrameSteps.cpp` 에 있다.
+        if ( _editorContext != nullptr )
         {
-            SW_EDITOR_PROFILE_SCOPE( "GT.Editor.commandsAndWatchers" );
-            EditorCommandGUI::processHotkeys();
-            EditorMenuBar::processOpenPanelRequests();
-            EditorMenuBar::processSceneSession();
-
-            // 에셋 파일 감시는 에디터 프레임에서만 돈다. 리로드가 패널 그리기보다
-            // 앞에 있어야 이번 프레임에 바뀐 머티리얼이 그대로 보인다.
-            if ( _editorContext != nullptr )
-            {
-                _editorContext->getAssetHotReload().update();
-                _editorContext->getConfigHotReload().update();
-                _editorContext->getAssetValidation().update();
-                _editorContext->getSourceControl().update();
-            }
+            SW_EDITOR_PROFILE_SCOPE( "GT.Editor.frameSteps" );
+            EditorFrameStepUtil::runAll( *_editorContext );
         }
 
-        {
-            SW_EDITOR_PROFILE_SCOPE( "GT.Editor.panels" );
-            if ( _editorContext != nullptr )
-            {
-                _editorContext->getPanelManager().drawOpenPanels();
-                _dockLayout.updateDefaultTabSelection(); // 패널이 처음 나타나며 가져간 포커스보다 나중에 실행해야 한다
-                _editorContext->getPopupManager().drawOpenPopups();
-                EditorNotificationManager& notificationManager = _editorContext->getNotificationManager();
-                notificationManager.update( ImGui::GetIO().DeltaTime );
-                EditorNotificationView::draw( notificationManager, 1920.0f, 1080.0f );
-            }
-            // 자체 테스트 실행(-gv_editorSelfTest, Test Runner 창)이 없으면 아무것도 하지 않는다. 패널을 그린 뒤에 실행하므로 테스트가 이번 프레임의 패널 상태를 본다.
-            EditorSelfTestRunner::runFrame();
-            ImGuiEditorInternal::updateWindowTitle( _editorContext.get() );
-            EditorScreenshotCommands::update();
-        }
-
+        // 아래는 단계로 옮기지 않는다. ImGui 프레임을 닫고(Render) draw 스냅샷을 렌더 스레드에 넘기는 셸의 약속이라, 위치가 곧 뜻이다.
         {
             SW_EDITOR_PROFILE_SCOPE( "GT.Editor.endFrame" );
             {

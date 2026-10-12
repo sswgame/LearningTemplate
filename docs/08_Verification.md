@@ -89,7 +89,7 @@ cd build/Ninja-Debug/Bin
 - **물리 벤치: `PhysicsBenchTest`**(Release) — 먼 이동 바디가 있는 step p50 1124~2468 → 319~330 us(없는 step 은 319~328 us 그대로).
 - **에디터 모듈의 계측은 `SW_EDITOR_PROFILE_SCOPE`**(`Editor/Common/EditorProfile.h`) — 엔진 `SW_PROFILE_SCOPE` 는 엔진 서비스 표(`engine::getFrameProfiler`)를
   불러 에디터 모듈에서 쓸 수 없다. 같은 표에 쌓이고 이름은 엔진이 복사해 든다(모듈을 다시 올려도 매달리지 않는다). `GT.Editor.updateUI` 의 하위 구간은
-  `GT.Editor.waitDrawSnapshot · newFrame · commandsAndWatchers · panels · endFrame(render · platformWindows · captureDrawSnapshot)`, 패널별 시간은 `-gv_editorPanelTimes=N`.
+  `GT.Editor.waitDrawSnapshot · newFrame · frameSteps · endFrame(render · platformWindows · captureDrawSnapshot)` 이고, `frameSteps` 는 단계마다 `GT.Editor.step.<id>`(commands · assetReload · panels · selfTest · windowTitle · screenshot)로 나뉜다. 패널별 시간은 `-gv_editorPanelTimes=N`.
 - **Hierarchy 는 화면 밖의 접힌 루트를 빈자리로 둔다**(이어진 것은 빈자리 하나) — 큐브 8000 Release `GT.Editor.updateUI` p50 4.2~4.7 → 1.3~1.4 ms, Hierarchy 패널
   평균 3.4~4.1 → 0.63~0.65 ms(큐브 100 에서는 0.12 ms). 남은 몫은 루트 8000 개를 도는 것(열림 상태 조회) — 더 줄이려면 열린 루트 목록을 들고 보이는 범위만 계산한다.
   빈자리 높이는 접힌 루트 줄(프레임 높이 + 줄 간격)과 같아야 스크롤이 튀지 않는다(`hierarchy.offscreenRootsKeepTheirPlace`).

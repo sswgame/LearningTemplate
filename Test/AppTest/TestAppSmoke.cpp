@@ -642,6 +642,13 @@ SW_TEST_CASE( AppSmokeTest, EditorRegistriesKeepTheirOrder )
         "EditorRegistry|visualizer|box_collider_2d",
         "EditorRegistry|visualizer|camera_frustum",
         "EditorRegistry|statusBarItem|map_check",
+        // UI 프레임 단계는 이 순서로 돈다(EditorFrameStepOrder) — 에셋 리로드가 패널보다, 패널이 자체 테스트보다 앞이다.
+        "EditorRegistry|frameStep|commands",
+        "EditorRegistry|frameStep|assetReload",
+        "EditorRegistry|frameStep|panels",
+        "EditorRegistry|frameStep|selfTest",
+        "EditorRegistry|frameStep|windowTitle",
+        "EditorRegistry|frameStep|screenshot",
         "EditorRegistry|menu|Viewport/Align|transform.snapToGround,-,transform.alignX,transform.alignY,transform.alignZ,-,"
         "transform.distributeX,transform.distributeY,transform.distributeZ",
         "EditorRegistry|menu|MainMenu/File|scene.new,scene.open,asset.save,scene.saveScene,-,editor.quickOpen,editor.commandPalette,-,"

@@ -10,6 +10,7 @@
 #include "Editor/Common/GUI/EditorPopupManager.h"
 #include "Editor/Common/GUI/EditorStatusBar.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorFrameStep.h"
 #include "Editor/Panels/Inspector/InspectorComponentManager.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
@@ -51,7 +52,7 @@ namespace sw::editor
     SW_LOG_CALLER( "EditorRegistryDump" );
 
     // 이 파일만 읽으므로 여기서 정의한다(헤더에 선언하지 않는다).
-    /** @brief `-gv_editorRegistryDump=1`: 시작할 때 에디터 레지스트리(패널 · 팝업 · 인스펙터 · 시각화 · 커맨드 메뉴)를 한 줄씩 덤프합니다. */
+    /** @brief `-gv_editorRegistryDump=1`: 시작할 때 에디터 레지스트리(패널 · 팝업 · 인스펙터 · 시각화 · 프레임 단계 · 커맨드 메뉴)를 한 줄씩 덤프합니다. */
     SW_TEST_GLOBAL_VARIABLE( bool, gv_editorRegistryDump, false, "시작할 때 에디터 레지스트리(패널 · 팝업 · 인스펙터 · 시각화 · 메뉴)를 로그로 덤프" );
 
     void EditorRegistryDump::dumpIfRequested()
@@ -73,6 +74,7 @@ namespace sw::editor
         EditorRegistryDumpInternal::dumpIDs<EditorInspectorRegistration>();
         EditorRegistryDumpInternal::dumpIDs<EditorVisualizerRegistration>();
         EditorRegistryDumpInternal::dumpIDs<EditorStatusBarItemRegistration>();
+        EditorRegistryDumpInternal::dumpIDs<EditorFrameStepRegistration>();
 
         const EditorCommandRegistry& registry = pContext->getCommandRegistry();
         for ( const EditorMenu& menu : registry.getMenus() )
