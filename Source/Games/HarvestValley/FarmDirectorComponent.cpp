@@ -23,6 +23,7 @@
 #include "GameFramework/Base/Actor/Control/Intent/ControlIntent.h"
 #include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
+#include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
@@ -563,7 +564,7 @@ namespace sw
         {
             for ( int32 x = 0; x < kFieldWidth; ++x )
             {
-                const int32  tileIndex = y * kFieldWidth + x;
+                const int32  tileIndex = GridTopology( kFieldWidth, kFieldHeight ).toIndex( x, y );
                 const float3 center    = computeTileCenter( x, y );
                 GameObject*  pSoil     = spawnPrefab( manager, _soilPrefab, "FarmSoil" );
                 GameObject*  pCrop     = spawnPrefab( manager, _cropPrefab, "FarmCrop" );

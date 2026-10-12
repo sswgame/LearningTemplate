@@ -12,6 +12,8 @@
 
 namespace sw
 {
+    struct float3;
+
     /**
      * @struct BitMath
      * @brief 비트 수 계산입니다.
@@ -72,6 +74,8 @@ namespace sw
         void writeFloat( float32 value );
         /** @brief [@p minValue, @p maxValue] 를 @p resolution 간격으로 양자화합니다(위치 0.01 m, 각도 0.1°). */
         void writeQuantizedFloat( float32 value, float32 minValue, float32 maxValue, float32 resolution );
+        /** @brief x, y, z 순서로 축마다 `writeQuantizedFloat` 를 부릅니다. 범위는 축마다 따로, 간격은 셋이 같습니다. */
+        void writeQuantizedFloat3( const float3& value, const float3& minValue, const float3& maxValue, float32 resolution );
         /** @brief 작은 수일수록 짧게(7 비트씩) 씁니다. */
         void writeVarUint( uint64 value );
         void writeVarInt( int64 value );
@@ -112,8 +116,10 @@ namespace sw
         uint32             readUint32() { return readBits( 32 ); }
         float32            readFloat();
         float32            readQuantizedFloat( float32 minValue, float32 maxValue, float32 resolution );
-        uint64             readVarUint();
-        int64              readVarInt();
+        /** @brief `writeQuantizedFloat3` 로 쓴 값을 x, y, z 순서로 읽습니다. */
+        float3 readQuantizedFloat3( const float3& minValue, const float3& maxValue, float32 resolution );
+        uint64 readVarUint();
+        int64  readVarInt();
         /** @brief @p byteCount 바이트를 읽습니다. 모자라면 false 이고 읽지 않습니다. */
         [[nodiscard]] bool readBytes( uint8* pOutData, int32 byteCount );
         /** @brief @p byteCount 바이트를 읽지 않고 넘깁니다(필요 없는 페이로드 — 받을 버퍼를 잡지 않는다). 모자라면 false 이고 움직이지 않습니다. */

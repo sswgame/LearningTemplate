@@ -12,6 +12,7 @@
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCondition.h"
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
+#include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
 #include "GameFramework/Base/World/Environment/WorldClock.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -42,7 +43,7 @@ namespace sw
         int32               _height{ 0 };
         int32               _capacity{ 1 }; ///< 이 서식지 하나에 머무는 생물 수
 
-        const HabitatCell& getCell( int32 x, int32 y ) const { return _listCell[static_cast<size_t>( y * _width + x )]; }
+        const HabitatCell& getCell( int32 x, int32 y ) const { return _listCell[static_cast<size_t>( GridTopology( _width, _height ).toIndex( x, y ) )]; }
         /** @brief 차지하는 셀 수를 반환합니다(무엇이든 되는 셀은 제외합니다). 큰 서식지를 먼저 맞춥니다. */
         int32 countClaimedCells() const;
     };

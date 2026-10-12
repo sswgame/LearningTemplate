@@ -11,6 +11,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Actor/Combat/Health/HealthSourceComponent.h"
+#include "GameFramework/Base/Actor/Combat/Health/Vitality.h"
 #include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 
 namespace sw
@@ -58,8 +59,8 @@ namespace sw
         void applyDamage( float32 amount );
 
         bool isLaunched() const { return _bLaunched == SW_TRUE; }
-        bool isAlive() const { return _bLaunched == SW_TRUE && _health > 0.0f; }
-        bool isDead() const { return _bLaunched == SW_TRUE && _health <= 0.0f; }
+        bool isAlive() const { return _bLaunched == SW_TRUE && _vitality.isAlive(); }
+        bool isDead() const { return _bLaunched == SW_TRUE && _vitality.isAlive() == false; }
         /** @brief 체력 원천의 읽기입니다 — 쓰러짐은 `isDead()`. */
         HealthReading getHealthReading() const override;
         /** @brief 쓰러진 뒤 시체 시간이 지나 걷어도 되면 true 입니다. */
@@ -112,8 +113,7 @@ namespace sw
 
         float3            _position; ///< 발
         float32           _yaw;
-        float32           _health;
-        float32           _maxHealth;
+        Vitality          _vitality; ///< 체력(플레이어와 같은 Base 체력 — 실드 · 회복 · 기절은 쓰지 않는다)
         float32           _speed;
         float32           _phaseTime;
         Countdown         _attackCooldown; ///< 휘두르기 간격(늦음을 잇는다)

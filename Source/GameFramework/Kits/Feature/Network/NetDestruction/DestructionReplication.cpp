@@ -87,9 +87,7 @@ namespace sw
             static void writeQuantizedPose( BitWriter& writer, const float3& position, const quaternion& rotation, const DestructionReplicationSettings& settings )
             {
                 const float32 range = settings._positionRange;
-                writer.writeQuantizedFloat( position._x, -range, range, settings._positionResolution );
-                writer.writeQuantizedFloat( position._y, -range, range, settings._positionResolution );
-                writer.writeQuantizedFloat( position._z, -range, range, settings._positionResolution );
+                writer.writeQuantizedFloat3( position, float3( -range, -range, -range ), float3( range, range, range ), settings._positionResolution );
                 writer.writeQuantizedFloat( rotation._x, -1.0f, 1.0f, kQuaternionResolution );
                 writer.writeQuantizedFloat( rotation._y, -1.0f, 1.0f, kQuaternionResolution );
                 writer.writeQuantizedFloat( rotation._z, -1.0f, 1.0f, kQuaternionResolution );
@@ -99,9 +97,7 @@ namespace sw
             static void readQuantizedPose( BitReader& reader, float3& outPosition, quaternion& outRotation, const DestructionReplicationSettings& settings )
             {
                 const float32 range = settings._positionRange;
-                outPosition._x      = reader.readQuantizedFloat( -range, range, settings._positionResolution );
-                outPosition._y      = reader.readQuantizedFloat( -range, range, settings._positionResolution );
-                outPosition._z      = reader.readQuantizedFloat( -range, range, settings._positionResolution );
+                outPosition         = reader.readQuantizedFloat3( float3( -range, -range, -range ), float3( range, range, range ), settings._positionResolution );
                 outRotation._x      = reader.readQuantizedFloat( -1.0f, 1.0f, kQuaternionResolution );
                 outRotation._y      = reader.readQuantizedFloat( -1.0f, 1.0f, kQuaternionResolution );
                 outRotation._z      = reader.readQuantizedFloat( -1.0f, 1.0f, kQuaternionResolution );
