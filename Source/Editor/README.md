@@ -205,6 +205,8 @@ Play 는 활성 씬을 스냅샷으로 찍고 월드를 시작합니다. Stop �
 
 모델 임포트는 glTF(오른손, +Y 위)를 엔진 좌표(왼손, +Y 위)로 옮기려고 X 를 뒤집고 삼각형마다 감김을 뒤집습니다. 스킨이 있으면 옆 폴더 `models/<이름>/` 에 스켈레톤, 부착 메시, 클립을 씁니다.
 VRM 은 같은 길로 임포트하고, MToon 머티리얼이 있으면 머티리얼마다 구간 메시와 툰 머티리얼을 씁니다(`VrmMaterialImporter`). 대응 표는 `VrmMaterialImporter.cpp` 의 머리 주석과 `VrmMaterialImporterTest` 가 원본입니다.
+humanoid 본 표, 표정, 스프링 본, 1인칭은 옆 폴더의 `<이름>.avatar.json` 에 씁니다(`VrmAvatarImporter`). 0.x 와 1.0 을 1.0 이름 한 벌로 모으고, glTF 번호 대신 스켈레톤 본 이름과 모프 타깃 이름을 적습니다.
+런타임은 아직 이 파일을 읽지 않습니다. 표정을 모프 가중치로, 스프링 본을 시뮬레이션으로, 1인칭 메시를 숨김으로 옮기는 일이 남았습니다. 대응 표는 `VrmAvatarImporter.cpp` 의 머리 주석이 원본입니다.
 임포트 규칙은 `Config/Editor/TextureImportConfig.json` 과 `Config/Editor/ModelImportConfig.json` 의 `rules` 이고, 모르는 키는 설정 전체를 거부합니다. 철자가 틀린 키가 조용히 기본값이 되지 않게 하려는 것입니다.
 
 글 수집과 PO 교환(`App --gather-text`, `--export-po`)도 같은 길로 에디터 모듈을 올려 부르는 개발 도구입니다(`Common/Localization/`).

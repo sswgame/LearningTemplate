@@ -1,6 +1,6 @@
 /**
  * @file ModelImportUtil.h
- * @brief 모델 임포트 조각(`ModelImportGeometry`, `ModelImportAnimation`, `ModelImportMaterial`, `ModelImporter`)이 함께 쓰는 상수, 타입, 도우미를 선언합니다.
+ * @brief 모델 임포트 조각(`ModelImportGeometry`, `ModelImportAnimation`, `ModelImportMaterial`, `ModelImportVrm`, `ModelImporter`)이 함께 쓰는 상수, 타입, 도우미를 선언합니다.
  * @note 임포터 내부 전용입니다. 공개 API 는 `ModelImporter.h` 입니다.
  */
 #pragma once
@@ -13,6 +13,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Editor/Common/Asset/ModelImporter.h"
+#include "Editor/Common/Asset/VrmAvatarImporter.h"
 #include "Editor/Common/Asset/VrmMaterialImporter.h"
 
 #include "Engine/Animation/AnimationClip.h"
@@ -316,5 +317,25 @@ namespace sw::editor
          * @brief 원본 경로에서 원본 텍스처 폴더를 구합니다(`<x>/models_raw/<y>.vrm` → `<x>/textures_raw/<y>`). `models_raw/` 구간이 없으면 빈 문자열입니다.
          */
         static string makeRawTextureFolder( string_view sourcePath );
+
+        // ModelImportVrm.cpp: VRM 아바타(humanoid · 표정 · 스프링 본 · 1인칭)
+
+        /** @brief cgltf 데이터에서 glTF 번호 → 엔진 이름 표를 채웁니다(노드는 `makeNodeName`, 모프 타깃은 `makeMorphTargetName`). */
+        static void populateVrmGltfNames( const cgltf_data& data, VrmGltfNames& outNames );
+
+        /**
+         * @brief VRM 이면(0.x `extensions.VRM` · 1.0 `extensions.VRMC_vrm`) 아바타 정보를 @p inoutResult 에 읽습니다. VRM 이 아니면 아무것도 하지 않습니다.
+         * @return 번호가 범위를 벗어나는 등 잘못된 값이 있으면 오류를 남기고 false 를 반환합니다.
+         */
+        [[nodiscard]] static bool readVrmAvatar( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult );
+
+        /** @brief 아바타 정보의 본이 스켈레톤에 있는지 봅니다. 없는 본은 경고합니다(런타임이 그 본을 건너뛴다). */
+        static void warnMissingAvatarBones( const ModelImportResult& result, string_view sourcePath );
+
+        /** @brief 아바타 정보가 있으면 `<옆 폴더>/<stem>.avatar.json` 에 쓰고, 무시한 키를 경고로 알립니다. */
+        [[nodiscard]] static bool writeVrmAvatar( const ModelImportResult& result, string_view sourcePath, string_view sideFolder, string_view stem );
+
+        /** @brief 원본 바이트에 VRM 확장 이름(`"VRM"` · `VRMC_vrm`)이 있으면 true 입니다. 원본 해시에 아바타 형식 버전을 섞을지 정합니다. */
+        static bool containsVrmExtension( const vector<uint8>& bytes );
     };
 } // namespace sw::editor
