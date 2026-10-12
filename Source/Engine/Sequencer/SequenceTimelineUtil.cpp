@@ -126,20 +126,12 @@ namespace sw
                 *pValue       = static_cast<int32>( MathUtil::round( track._listChannel[0].evaluate( frame, static_cast<float32>( *pValue ) ) ) );
             }
 
-            /** @brief 그 프레임을 덮는 카메라 컷 가운데 가장 늦게 시작한 것의 카메라를 게임 카메라로 고릅니다. 덮는 컷이 없으면 풉니다. */
-            static void applyCameraCut( GameObjectManager* pManager, const vector<const SequenceTrackItem*>& listActive )
+            /** @brief 그 프레임을 덮는 카메라 컷 가운데 가장 늦게 시작한 것(`SequenceAsset::findCameraCut`)의 카메라를 게임 카메라로 고릅니다. 덮는 컷이 없으면 풉니다. */
+            static void applyCameraCut( GameObjectManager* pManager, const SequenceAsset& asset, int32 frame )
             {
-                const SequenceTrackItem* pCut = nullptr;
-                for ( const SequenceTrackItem* pItem : listActive )
-                {
-                    const SequenceItemKindInfo* pInfo = pItem != nullptr ? SequenceAsset::findItemKindInfo( pItem->_kind ) : nullptr;
-                    if ( pInfo == nullptr || pInfo->_bCutsCamera == false )
-                        continue;
-                    if ( pCut == nullptr || pItem->_start >= pCut->_start )
-                        pCut = pItem;
-                }
-                GameObject*      pTarget = pCut != nullptr ? findTarget( pManager, pCut->_targetObject ) : nullptr;
-                CameraComponent* pCamera = pTarget != nullptr ? pTarget->getComponent<CameraComponent>() : nullptr;
+                const SequenceTrackItem* pCut    = asset.findCameraCut( frame );
+                GameObject*              pTarget = pCut != nullptr ? findTarget( pManager, pCut->_targetObject ) : nullptr;
+                CameraComponent*         pCamera = pTarget != nullptr ? pTarget->getComponent<CameraComponent>() : nullptr;
                 pManager->getCameraRegistry().setCutCamera( pCamera );
             }
         };
@@ -176,7 +168,7 @@ namespace sw
         }
 
         if ( asset.hasCameraCut() )
-            SequenceTimelineUtilInternal::applyCameraCut( pManager, listActive );
+            SequenceTimelineUtilInternal::applyCameraCut( pManager, asset, frame );
 
         const float32 keyFrame = static_cast<float32>( frame );
         for ( const SequenceKeyTrack& track : asset._listTrack )
@@ -261,5 +253,90 @@ namespace sw
     {
         if ( pManager != nullptr && asset.hasCameraCut() )
             pManager->getCameraRegistry().setCutCamera( nullptr );
+    }
+
+    void SequenceTimelineUtil::collectCameraSignals( const SequenceAsset& asset, int32 previousFrame, int32 frame, vector<SequenceCameraSignal>& outListSignal )
+    {
+        const SequenceTrackItem* pPreviousCut = previousFrame == kNoPreviousFrame ? nullptr : asset.findCameraCut( previousFrame );
+        appendCameraSignals( asset, previousFrame, frame, pPreviousCut, outListSignal );
+    }
+
+    void SequenceTimelineUtil::collectPlaybackCameraSignals( const SequencePlayer& player, vector<SequenceCameraSignal>& outListSignal )
+    {
+        const SequenceAsset& asset           = player.getAsset();
+        const int32          frameBeforeWrap = player.getFrameBeforeWrap();
+        if ( frameBeforeWrap == SequencePlayer::kNoLoopWrap )
+        {
+            collectCameraSignals( asset, player.getPreviousFrame(), player.getCurrentFrame(), outListSignal );
+            return;
+        }
+        // 되감았다 — 끝 구간을 먼저 보고, 처음 구간은 끝을 덮던 컷에서 이어진 것으로 본다(같은 컷이 끝과 처음을 덮으면 시네마틱이 끊기지 않는다).
+        appendCameraSignals( asset, frameBeforeWrap, asset._frameMax, asset.findCameraCut( frameBeforeWrap ), outListSignal );
+        appendCameraSignals( asset, player.getPreviousFrame(), player.getCurrentFrame(), asset.findCameraCut( asset._frameMax ), outListSignal );
+    }
+
+    void SequenceTimelineUtil::appendCameraSignals( const SequenceAsset& asset, int32 previousFrame, int32 frame, const SequenceTrackItem* pPreviousCut,
+                                                    vector<SequenceCameraSignal>& outListSignal )
+    {
+        // 컷이 바뀌었는가 — 덮는 컷의 시작이 이번 구간에 있거나, 이전에 덮던 컷과 다르다.
+        const SequenceTrackItem* pCut = asset.findCameraCut( frame );
+        if ( pCut != nullptr && pCut != pPreviousCut )
+        {
+            SequenceCameraSignal signal;
+            signal._item = *pCut;
+            signal._kind = SequenceCameraSignalKind::CutBegin;
+            outListSignal.push_back( signal );
+        }
+        if ( pCut != nullptr && pPreviousCut == nullptr )
+        {
+            SequenceCameraSignal signal;
+            signal._item         = *pCut;
+            signal._blendSeconds = asset._cameraBlendInSeconds;
+            signal._kind         = SequenceCameraSignalKind::CinematicBegin;
+            outListSignal.push_back( signal );
+        }
+        if ( pCut == nullptr && pPreviousCut != nullptr )
+        {
+            SequenceCameraSignal signal;
+            signal._item         = *pPreviousCut;
+            signal._blendSeconds = asset._cameraBlendOutSeconds;
+            signal._kind         = SequenceCameraSignalKind::CinematicEnd;
+            outListSignal.push_back( signal );
+        }
+
+        const bool bHasPrevious = previousFrame != kNoPreviousFrame;
+        for ( const SequenceTrackItem& item : asset._listItem )
+        {
+            const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( item._kind );
+            if ( pInfo == nullptr )
+                continue;
+            // 대기 뷰 — 컷 시작 프리롤 프레임 전을 이번 구간에 지났고 컷은 아직 시작하지 않았다.
+            const int32 prerollFrames = pInfo->_bCutsCamera ? asset.getPrerollFrames( item ) : 0;
+            if ( prerollFrames > 0 && frame < item._start )
+            {
+                const int32 prewarmFrame = item._start - prerollFrames;
+                const bool  bCrossed     = bHasPrevious ? ( previousFrame < prewarmFrame && prewarmFrame <= frame ) : prewarmFrame <= frame;
+                if ( bCrossed )
+                {
+                    SequenceCameraSignal signal;
+                    signal._item        = item;
+                    signal._framesUntil = item._start - frame;
+                    signal._kind        = SequenceCameraSignalKind::CutPrewarm;
+                    outListSignal.push_back( signal );
+                }
+            }
+            // 흔들림 — 시작 프레임을 이번 구간에 지났다.
+            if ( pInfo->_bShakesCamera )
+            {
+                const bool bStarted = bHasPrevious ? ( previousFrame < item._start && item._start <= frame ) : item._start == frame;
+                if ( bStarted )
+                {
+                    SequenceCameraSignal signal;
+                    signal._item = item;
+                    signal._kind = SequenceCameraSignalKind::Shake;
+                    outListSignal.push_back( signal );
+                }
+            }
+        }
     }
 } // namespace sw

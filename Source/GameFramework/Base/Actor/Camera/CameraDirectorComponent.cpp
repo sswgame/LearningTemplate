@@ -75,6 +75,9 @@ namespace sw
         , _zoomAction{ "Camera.Zoom" }
         , _bReadInput{ true }
         , _overrideBlend{}
+        , _fieldOfViewOverride{ 0.0f }
+        , _focusDistanceOverride{ 0.0f }
+        , _exposureOffset{ 0.0f }
         , _overrideDef{}
         , _presetBeforeOverride{}
         , _bViewOverride{ false }
@@ -319,7 +322,14 @@ namespace sw
             (void)_director.step( deltaTime, target );
         }
         _director.setCollisionProbe( nullptr );
-        const CameraPose& pose = _director.getPose();
+        // 시퀀서 값 트랙(프로퍼티 트랙 `CameraDirectorComponent._fieldOfViewOverride` 등)이 키로 모는 값을 프리셋 포즈 위에 적용한다.
+        // 시퀀서는 PostUpdate 틱에서 쓰고 이 계산은 틱 뒤라 같은 프레임에 보인다.
+        CameraPose pose = _director.getPose();
+        if ( _fieldOfViewOverride > 0.0f )
+            pose._fieldOfViewY = _fieldOfViewOverride;
+        if ( _focusDistanceOverride > 0.0f )
+            pose._focusDistance = _focusDistanceOverride;
+        pose._postProcess._exposureCompensation += _exposureOffset;
         if ( pCamera == nullptr )
             return;
         CameraPoseUtil::applyToCamera( *pCamera, pose );

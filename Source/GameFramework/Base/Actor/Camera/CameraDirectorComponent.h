@@ -152,6 +152,14 @@ namespace sw
         bool _bReadInput;
         PROPERTY( Category = "Camera", DisplayName = "Override Blend", Tooltip = "Blend into and out of a view override (ride camera)" )
         BlendCurveDef _overrideBlend;
+        PROPERTY( Category = "Sequencer", DisplayName = "Field Of View Override", Min = 0.0, Max = 3.14,
+                  Tooltip = "Vertical field of view a sequencer value track keys on top of the preset; 0 keeps the preset's", Units = rad )
+        float32 _fieldOfViewOverride;
+        PROPERTY( Category = "Sequencer", DisplayName = "Focus Distance Override", Min = 0.0,
+                  Tooltip = "Focus distance a sequencer value track keys on top of the preset; 0 keeps the preset's", Units = m )
+        float32 _focusDistanceOverride;
+        PROPERTY( Category = "Sequencer", DisplayName = "Exposure Offset", Tooltip = "Exposure compensation a sequencer value track adds to the preset's", Meta = "Units=EV" )
+        float32 _exposureOffset;
 
         CameraPresetDef _overrideDef;          ///< 덮어쓴 시점의 고정 프리셋
         hashed_string   _presetBeforeOverride; ///< 덮어쓰기를 풀 때 돌아갈 프리셋

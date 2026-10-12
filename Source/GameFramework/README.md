@@ -206,6 +206,9 @@ PROPERTY 는 리플렉션이 저장하지만, 디렉터가 가진 키트 객체�
 렌즈는 시야각 대신 초점 길이와 센서(`<Lens focalLength="35" sensor="36 24">`)로도 적고, 더치 · 초점 거리 · 조리개 · 렌즈 시프트와 카메라별 후처리(`<PostProcess>`)는 포즈에 실려 섞입니다.
 렌더러가 아직 카메라별로 읽지 않아 화면에는 자리 · 시야각 · 더치만 보입니다(피사계 심도 패스와 후처리 덮어쓰기는 렌더러의 남은 일).
 돌리 레일은 `Dolly` 모드와 `<Dolly>` 곡선이고, 시야각 킥과 줌 펀치는 `addFieldOfViewKick` 입니다. 둘 다 Shooter3D 의 `dolly` 프리셋(`-gv_cameraPreset=dolly`)으로 스크린샷을 찍어 확인합니다.
+시퀀서는 카메라를 모르고 신호(`SequenceCameraSignal` — 컷 바뀜, 시네마틱 시작 · 끝, 대기 뷰, 흔들림)만 냅니다. 시퀀스 플레이어 옆의 `CinematicCameraComponent` 가 그 신호로
+컷 카메라 디렉터의 프리셋을 켜고, 시퀀스의 Blend In / Out 시간으로 게임 카메라와 섞고, 플레이어 카메라 매니저에 대기 뷰(`setPendingView`)를 등록합니다.
+시야각 · 초점 · 노출 값 트랙은 디렉터의 `_fieldOfViewOverride` · `_focusDistanceOverride` · `_exposureOffset` 를 프로퍼티 트랙으로 키합니다.
 게임 디렉터가 임시 시점(탑승 카메라)을 넣을 때는 `setViewOverride` / `clearViewOverride`, 마우스 아래 땅을 고를 때는 `findGroundPoint` 를 씁니다.
 직교 리그(`OrthoCameraRigComponent`)의 같은 이름 함수와 뜻이 같으므로, 리그를 쓰는 게임은 리그 값을 `OrthoTopDown` 프리셋 XML 로 옮기고 이 둘로 바꿉니다.
 `CameraManagerComponent` 는 플레이어마다 하나이고, 다른 오브젝트의 카메라를 뷰 타깃으로 따라갑니다. 언리얼의 `SetViewTargetWithBlend` 에 해당합니다.

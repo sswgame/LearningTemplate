@@ -87,6 +87,24 @@ namespace sw
         return _bFromLive == SW_TRUE;
     }
 
+    void CameraPoseBlender::startFromPose( const CameraPose& from, const BlendCurveDef& blend )
+    {
+        _bFromLive = SW_FALSE;
+        if ( blend._curve == BlendCurve::Cut || blend._duration <= 0.0f )
+        {
+            _bBlending = SW_FALSE;
+            _weight    = 1.0f;
+            return;
+        }
+        _fromPose   = from;
+        _outputPose = from;
+        _blend      = blend;
+        _elapsed    = 0.0f;
+        _weight     = 0.0f;
+        _bBlending  = SW_TRUE;
+        _bHasPose   = SW_TRUE;
+    }
+
     const CameraPose& CameraPoseBlender::step( float32 deltaTime, const CameraPose& incoming, const CameraPose* pLiveFrom )
     {
         if ( _bBlending == SW_TRUE )

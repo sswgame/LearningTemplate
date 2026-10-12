@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/Component.h"
@@ -22,6 +23,23 @@ namespace sw
     struct CameraShakeRequest;
 
     class GameObjectManager;
+
+    /**
+     * @brief 곧 볼 시점(대기 뷰)입니다. 컷이나 뷰 타깃 전환 몇 초 전에 등록해, 그 시점에서 보일 것을 미리 준비하게 합니다.
+     * @details 언리얼 Sequencer 의 preroll 과 스트리밍 소스(`AddViewLocation`)에 해당한다. 듣는 쪽(LOD 선택, 밉 스트리밍, PSO 미리 만들기, 그림자 캐스케이드)은
+     *          아직 없다 — 시스템이 생기면 `registerPendingViewListener` 로 붙는다.
+     */
+    struct CameraPendingView
+    {
+        GameObjectHandle _camera{};             ///< 곧 볼 카메라 오브젝트
+        float32          _secondsUntil{ 0.0f }; ///< 그 시점으로 바뀌기까지 남은 시간(초)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 대기 뷰가 바뀌었을 때(등록 · 해제) 부르는 델리게이트입니다. 해제면 `_camera` 가 빈 핸들입니다. */
+    SW_DECLARE_DELEGATE( void, OnCameraPendingViewDelegate, const CameraPendingView& view );
 
     /**
      * @class CameraManagerComponent
@@ -54,6 +72,19 @@ namespace sw
         GameObjectHandle cycleViewTarget( CameraRole role );
         /** @brief 충격을 더합니다(원점 · 모양). 듣는 자리는 이 카메라입니다. */
         void addImpulse( const CameraImpulseDef& def, const float3& origin ) { _impulseListener.addImpulse( def, origin ); }
+        /** @brief 화면이 지금 @p from 이라고 보고 뷰 타깃으로 @p blend 를 따라 섞습니다. 시네마틱 컷에서 게임 카메라로 돌아올 때 씁니다(언리얼 시퀀스 Blend Out). */
+        void blendFromPose( const CameraPose& from, const BlendCurveDef& blend );
+
+        /** @brief 곧 볼 시점을 등록합니다. 앞의 대기 뷰를 바꾸고 듣는 쪽에 알립니다. 시퀀서 컷 트랙의 프리롤과 게임의 뷰 타깃 전환이 같은 창구를 씁니다. */
+        void setPendingView( const CameraPendingView& view );
+        /** @brief 대기 뷰를 풉니다(그 시점으로 바뀌었거나 취소했다). 등록된 것이 없으면 아무것도 하지 않습니다. */
+        void                     clearPendingView();
+        bool                     hasPendingView() const { return _pendingView._camera.isValid(); }
+        const CameraPendingView& getPendingView() const { return _pendingView; }
+        /** @brief 대기 뷰가 바뀔 때 부를 델리게이트를 등록합니다. */
+        DelegateHandle registerPendingViewListener( const OnCameraPendingViewDelegate& delegate );
+        /** @brief `registerPendingViewListener` 로 건 델리게이트를 뗍니다. */
+        void unregisterPendingViewListener( DelegateHandle handle );
 
         bool              isBlending() const { return _blender.isBlending(); }
         const CameraPose& getPose() const { return _blender.getPose(); }
@@ -87,10 +118,12 @@ namespace sw
         PROPERTY( Category = "Camera", DisplayName = "Cycle Role", Tooltip = "Role of the cameras the cycle key steps through" )
         CameraRole _cycleRole;
 
-        GameObjectHandle      _previousTarget; ///< 살아 있는 나가는 쪽(블렌드가 없던 때 바꿨을 때)
-        CameraPoseBlender     _blender;
-        CameraImpulseListener _impulseListener;
-        DelegateHandle        _shakeSubscription; ///< 알림의 카메라 흔들림 요청 구독(플레이 동안)
-        float32               _pendingDeltaTime;
+        GameObjectHandle                                    _previousTarget; ///< 살아 있는 나가는 쪽(블렌드가 없던 때 바꿨을 때)
+        CameraPendingView                                   _pendingView;
+        MulticastDelegate<void( const CameraPendingView& )> _pendingViewMulticast;
+        CameraPoseBlender                                   _blender;
+        CameraImpulseListener                               _impulseListener;
+        DelegateHandle                                      _shakeSubscription; ///< 알림의 카메라 흔들림 요청 구독(플레이 동안)
+        float32                                             _pendingDeltaTime;
     };
 } // namespace sw
