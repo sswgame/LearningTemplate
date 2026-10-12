@@ -129,6 +129,8 @@ namespace sw
 
         /** @brief 요청을 보내고 id 를 반환합니다. Hello 전이거나 문이 닫혀 있으면 모아 둡니다. id 는 콜백의 `_requestID` 와 같으며, 콜백은 정확히 한 번 불립니다. */
         uint64 sendRequest( uint16 method, const BitWriter& body, const NetRequestOptions& options, OnlineResponseDelegate onResponse );
+        /** @brief 다음 `sendRequest` 가 돌려줄 id 입니다. 보내는 중에 바로 온 응답을 그 요청의 것으로 맞춰 보는 데 씁니다(`ServiceClientCallTable`). */
+        uint64 peekNextRequestID() const { return _nextRequestID; }
         /**
          * @brief 요청 문을 열고 닫습니다. 닫히면 @p ownerRange(계정 키트) 밖의 요청은 문이 열릴 때까지 모읍니다.
          * @details 다시 연결한 뒤 재접속 응답이 오기 전에 다른 키트의 요청이 서버에 닿으면 "로그인 안 됨" 으로 끝난다. 그것을 막으려고 계정 키트가 문을 닫고 연다.
