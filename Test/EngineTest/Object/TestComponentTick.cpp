@@ -2,12 +2,15 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/TickBatchRegistry.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -1098,4 +1101,136 @@ SW_TEST_CASE( ComponentDefaultsTest, DefaultsPathIsReturnedByValue )
 
     sw::Component::setDefaultGameSettingsPath( previousPath );
     sw::ComponentDefaults::reloadDefaults();
+}
+
+/**
+ * @brief 일괄 틱에 등록한 타입은 오브젝트 칸이 아니라 타입별 목록으로 돈다 — 오브젝트 안의 순서 · 파생 타입 · 꺼짐 · 파괴 · 등록 해제가 기본 경로와 같다.
+ * @details 일괄 경로(`TickBatchRegistry`)는 그 그룹에서 **정확히 그 타입의 주 틱 하나뿐인** 오브젝트만 받는다. 지켜야 할 것: (1) 항목 하나인 오브젝트는
+ *          일괄 목록에, 둘인 오브젝트는 칸 목록에 들고 붙은 순서대로 돈다 (2) 파생 타입은 기반의 등록을 물려받지 않아 자기 `onTick` 이 돈다
+ *          (3) 꺼진 컴포넌트는 돌지 않는다 (4) 파괴한 오브젝트는 목록에서 빠진다 (5) 등록을 지우면(모듈 해제) 다음 틱에 칸 목록으로 돌아가 그대로 돈다.
+ */
+SW_TEST_CASE( ComponentTickGroupTest, TickBatchRunsRegisteredTypeOutsideObjectEntries )
+{
+    auto                    registration = sw::make_unique<sw::TickBatchRegistration<MockRootComponent>>();
+    sw::GameObjectManager   manager;
+    const sw::TickRegistry& registry = manager.getTickRegistry();
+    vector<string>          listSingleLog;
+    vector<string>          listPairLog;
+    vector<string>          listInactiveLog;
+    vector<string>          listDoomedLog;
+
+    sw::GameObject*    pSingleObject = manager.createGameObject( hashed_string( "BatchSingle" ) );
+    MockRootComponent* pSingle       = pSingleObject->addComponent<MockRootComponent>();
+    pSingle->_pTickOrderLog          = &listSingleLog;
+    pSingle->_componentTag           = "Single";
+
+    sw::GameObject*    pPairObject = manager.createGameObject( hashed_string( "BatchPair" ) );
+    MockRootComponent* pFirst      = pPairObject->addComponent<MockRootComponent>();
+    MockRootComponent* pSecond     = pPairObject->addComponent<MockRootComponent>();
+    pFirst->_pTickOrderLog         = &listPairLog;
+    pFirst->_componentTag          = "First";
+    pSecond->_pTickOrderLog        = &listPairLog;
+    pSecond->_componentTag         = "Second";
+
+    sw::GameObject*        pDerivedObject = manager.createGameObject( hashed_string( "BatchDerived" ) );
+    MockBasePawnComponent* pDerived       = pDerivedObject->addComponent<MockBasePawnComponent>();
+
+    sw::GameObject*    pInactiveObject = manager.createGameObject( hashed_string( "BatchInactive" ) );
+    MockRootComponent* pInactive       = pInactiveObject->addComponent<MockRootComponent>();
+    pInactive->_pTickOrderLog          = &listInactiveLog;
+    pInactive->setActive( false );
+
+    sw::GameObject*    pDoomed     = manager.createGameObject( hashed_string( "BatchDoomed" ) );
+    MockRootComponent* pDoomedComp = pDoomed->addComponent<MockRootComponent>();
+    pDoomedComp->_pTickOrderLog    = &listDoomedLog;
+
+    manager.tick( 0.016f );
+
+    // (1) 항목 하나인 오브젝트 셋(Single · Inactive · Doomed)은 일괄 목록, 둘인 오브젝트와 파생은 칸 목록.
+    const uint32                     group     = static_cast<uint32>( pSingle->getTickGroup() );
+    const vector<sw::TickBatchList>& listBatch = registry.getBatchLists( group );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listBatch.size() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 3 ), listBatch[0]._listElement.size() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), registry.getEntries( group ).size() );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listSingleLog.size() );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 2 ), listPairLog.size() );
+    SW_EXPECT_EQUAL( "First", listPairLog[0] );
+    SW_EXPECT_EQUAL( "Second", listPairLog[1] );
+    // (2) 파생은 자기 onTick 이 돌았다.
+    SW_EXPECT_EQUAL( 1, pDerived->_pawnTickCount );
+    // (3) 꺼진 것은 돌지 않는다.
+    SW_EXPECT_TRUE( listInactiveLog.empty() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), listDoomedLog.size() );
+
+    // (4) 파괴 — 목록에서 빠지고 남은 원소의 자리가 맞다(다음 틱이 둘을 돈다).
+    manager.destroyObject( pDoomed );
+    manager.tick( 0.016f );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), registry.getBatchLists( group ).size() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), registry.getBatchLists( group )[0]._listElement.size() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), listDoomedLog.size() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), listSingleLog.size() );
+
+    // (5) 등록 해제 — 칸 목록으로 돌아가 그대로 돈다. 빈 일괄 목록은 걷힌다(내려간 함수를 들지 않는다).
+    registration.reset();
+    manager.tick( 0.016f );
+    SW_EXPECT_TRUE( registry.getBatchLists( group ).empty() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 4 ), registry.getEntries( group ).size() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 3 ), listSingleLog.size() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 6 ), listPairLog.size() );
+    SW_EXPECT_TRUE( listInactiveLog.empty() );
+}
+
+/**
+ * @brief 일괄 틱 안의 세터도 기본 경로와 같은 결과를 낸다 — 자기 오브젝트 쓰기는 대기 칸으로 가고, 틱 뒤 월드가 틱 밖 세터와 바이트까지 같다.
+ * @details 일괄 함수는 원소마다 틱 주인을 그 오브젝트로 둔다. 빠뜨리면 세터가 쓰기 큐로 가서 값은 같아도 길이 바뀐다 — 대기 칸 수(`hasQueuedWrites`
+ *          뒤의 결과)와 월드를 함께 본다. 병렬 적용 임계값을 넘는 수로 돌려 실제 워커와 고른 구간 적용을 지난다.
+ */
+SW_TEST_CASE( ComponentTickGroupTest, TickBatchSettersMatchTheObjectPath )
+{
+    constexpr uint32 kObjectCount = sw::SceneTransformHierarchy::kParallelWriteCount + 37;
+
+    const sw::TickBatchRegistration<MockTickSceneComponent> registration;
+    sw::GameObjectManager                                   manager;
+    sw::GameObjectManager                                   managerReference;
+    vector<MockTickSceneComponent*>                         listTickComp;
+    vector<sw::SceneComponent*>                             listReferenceComp;
+    for ( uint32 index = 0; index < kObjectCount; ++index )
+    {
+        const float32           base  = static_cast<float32>( index );
+        sw::GameObject*         pObj  = manager.createGameObject( hashed_string( "BatchWriter" ) );
+        MockTickSceneComponent* pComp = pObj->addComponent<MockTickSceneComponent>();
+        pComp->_tickLocalPos          = sw::float3( base, base * 0.5f, -base );
+        pComp->_tickLocalScale        = sw::float3( 1.0f + base * 0.01f, 1.0f, 1.0f );
+        pComp->_bWriteLocalOnTick     = SW_TRUE;
+        pComp->_bWriteScaleOnTick     = SW_TRUE;
+        pComp->_bWriteTwiceOnTick     = ( index % 3 == 0 ) ? SW_TRUE : SW_FALSE;
+        listTickComp.push_back( pComp );
+
+        sw::GameObject*     pReferenceObj  = managerReference.createGameObject( hashed_string( "BatchWriter" ) );
+        sw::SceneComponent* pReferenceComp = pReferenceObj->addComponent<sw::SceneComponent>();
+        pReferenceComp->setLocalPosition( pComp->_tickLocalPos );
+        pReferenceComp->setLocalScale( pComp->_tickLocalScale );
+        listReferenceComp.push_back( pReferenceComp );
+    }
+
+    manager.tick( 0.016f );
+    managerReference.flushSceneTransforms();
+
+    const uint32 group = static_cast<uint32>( listTickComp[0]->getTickGroup() );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), manager.getTickRegistry().getBatchLists( group ).size() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( kObjectCount ), manager.getTickRegistry().getBatchLists( group )[0]._listElement.size() );
+    SW_EXPECT_FALSE( manager.getTransformHierarchy().hasQueuedWrites() );
+    SW_EXPECT_FALSE( manager.hasDirtySceneTransforms() );
+
+    uint32 mismatchCount = 0;
+    for ( uint32 index = 0; index < kObjectCount; ++index )
+    {
+        const sw::float4x4 worldTick      = listTickComp[index]->getWorldMatrix();
+        const sw::float4x4 worldReference = listReferenceComp[index]->getWorldMatrix();
+        if ( sw::Memory::compare( &worldTick, &worldReference, sizeof( sw::float4x4 ) ) != 0 )
+            ++mismatchCount;
+    }
+    SW_EXPECT_EQUAL( 0u, mismatchCount );
+    // 두 번 쓴 것은 마지막 값 — 먼저 쓴 +1000 이 남아 있으면 안 된다.
+    SW_EXPECT_NEAR_EQUAL( 3.0f, listTickComp[3]->getLocalPosition()._x, 1e-4f );
 }

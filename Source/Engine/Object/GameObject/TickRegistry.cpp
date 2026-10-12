@@ -7,10 +7,12 @@
 #include "Engine/Object/GameObject/TickRegistry.h"
 
 #include "Core/Container/unordered_map.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/TickBatchRegistry.h"
 
 namespace sw
 {
@@ -251,8 +253,16 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief `-gv_tickBatch=0`: 타입별 일괄 틱(`TickBatchRegistry`)을 끄고 모든 오브젝트를 칸 목록으로 돌립니다 — 같은 바이너리로 전/후를 견줍니다.
+     * @details 기동 때 정합니다. 실행 중에 바꾸면 다음 전체 훑기(모듈 적재 · 씬 초기화)부터 따릅니다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( bool, gv_tickBatch, true, "타입별 일괄 틱 경로를 쓴다(0 이면 모든 오브젝트를 칸 목록으로 — 전/후 비교용)" );
+
     TickRegistry::TickRegistry()
         : _arrListEntry{}
+        , _arrListBatch{}
+        , _batchGeneration{ TickBatchRegistry::getGeneration() }
         , _listDirtyObjectID{}
         , _listProcessingObjectID{}
         , _dirtyMutex{}
@@ -283,6 +293,13 @@ namespace sw
 
     bool TickRegistry::refresh( GameObjectManager& manager )
     {
+        // 일괄 틱 타입이 등록 · 해제됐으면(모듈 적재 · 해제) 모두 다시 훑는다 — 오브젝트가 어느 목록에 갈지가 바뀌었고, 내려간 함수를 들고 있으면 안 된다.
+        const uint32 batchGeneration = TickBatchRegistry::getGeneration();
+        if ( batchGeneration != _batchGeneration )
+        {
+            _batchGeneration = batchGeneration;
+            _bAllDirty.store( SW_TRUE, std::memory_order_release );
+        }
         const bool bAll = _bAllDirty.exchange( SW_FALSE, std::memory_order_acq_rel ) != SW_FALSE;
         {
             std::scoped_lock<mutex> lock{ _dirtyMutex };
@@ -314,6 +331,8 @@ namespace sw
             }
             _listProcessingObjectID.clear();
         }
+        if ( bRefreshedAny )
+            removeEmptyBatchLists();
 
         // 선행 조건에 걸린 오브젝트(가진 쪽 · 가리켜진 쪽)가 바뀌었을 때만 스테이지를 다시 짓는다 — 스폰이 잦아도 사슬 밖이면 오르지 않는다.
         if ( _builtStageGeneration != _stageGeneration )
@@ -383,15 +402,17 @@ namespace sw
             {
                 ++cursor;
             }
-            TickObjectEntry entry{};
+            TickObjectEntry   entry{};
+            TickBatchFunction pBatchFunction = nullptr;
             if ( begin < end )
             {
                 entry._pObject   = pObj;
                 entry._firstItem = listItem[begin];
                 entry._pItem     = listItem.data() + begin;
                 entry._itemCount = end - begin;
+                pBatchFunction   = bActive ? findBatchFunction( entry._pItem, entry._itemCount ) : nullptr;
             }
-            setMembership( pObj, group, bActive && begin < end, entry );
+            setMembership( pObj, group, bActive && begin < end, entry, pBatchFunction );
         }
 
         _prerequisiteCount           = _prerequisiteCount - pObj->_tickPrerequisiteCount + prerequisiteCount;
@@ -404,30 +425,108 @@ namespace sw
             ++_stageGeneration;
     }
 
-    void TickRegistry::setMembership( GameObject* pObj, uint32 group, bool bMember, const TickObjectEntry& entry )
+    TickBatchFunction TickRegistry::findBatchFunction( const TickItem* pItem, uint32 itemCount )
     {
-        vector<TickObjectEntry>& listEntry = _arrListEntry[group];
-        uint32&                  index     = pObj->_arrTickIndex[group];
-        const bool               bIsMember = index != kNotInList && index < listEntry.size() && listEntry[index]._pObject == pObj;
-        if ( bMember )
+        // 그 그룹의 항목이 주 틱 하나뿐일 때만 — 둘 이상이면 오브젝트 안의 순서를 지키려고 오브젝트 칸으로 간다.
+        if ( gv_tickBatch == false || itemCount != 1 || pItem->_subTickID != 0 || pItem->_pComponent == nullptr )
+            return nullptr;
+        return TickBatchRegistry::findFunction( pItem->_pComponent->findCachedTypeInfo() );
+    }
+
+    TickBatchList* TickRegistry::findBatchMembership( const GameObject* pObj, uint32 group )
+    {
+        const uint32 index = pObj->_arrTickIndex[group];
+        if ( index == kNotInList )
+            return nullptr;
+        for ( TickBatchList& batchList : _arrListBatch[group] )
         {
-            // 이미 있으면 그 자리의 칸만 새로 쓴다(항목 버퍼가 다시 지어졌다).
-            if ( bIsMember == false )
+            if ( index < batchList._listElement.size() && batchList._listElement[index]._pObject == pObj )
+                return &batchList;
+        }
+        return nullptr;
+    }
+
+    TickBatchList& TickRegistry::getOrCreateBatchList( uint32 group, TickBatchFunction pFunction )
+    {
+        for ( TickBatchList& batchList : _arrListBatch[group] )
+        {
+            if ( batchList._pFunction == pFunction )
+                return batchList;
+        }
+        TickBatchList& created = _arrListBatch[group].emplace_back();
+        created._pFunction     = pFunction;
+        return created;
+    }
+
+    void TickRegistry::removeEmptyBatchLists()
+    {
+        for ( vector<TickBatchList>& listBatch : _arrListBatch )
+        {
+            // 목록의 자리는 아무도 들지 않는다(오브젝트는 목록 안의 위치만 든다) — 순서를 지켜 걷기만 한다.
+            size_t keptCount = 0;
+            for ( size_t listIndex = 0; listIndex < listBatch.size(); ++listIndex )
             {
-                index = static_cast<uint32>( listEntry.size() );
-                listEntry.push_back( entry );
+                if ( listBatch[listIndex]._listElement.empty() )
+                    continue;
+                if ( keptCount != listIndex )
+                    listBatch[keptCount] = std::move( listBatch[listIndex] );
+                ++keptCount;
             }
-            else
-                listEntry[index] = entry;
+            listBatch.resize( keptCount );
+        }
+    }
+
+    void TickRegistry::setMembership( GameObject* pObj, uint32 group, bool bMember, const TickObjectEntry& entry, TickBatchFunction pBatchFunction )
+    {
+        vector<TickObjectEntry>& listEntry      = _arrListEntry[group];
+        uint32&                  index          = pObj->_arrTickIndex[group];
+        const bool               bInEntryList   = index != kNotInList && index < listEntry.size() && listEntry[index]._pObject == pObj;
+        TickBatchList*           pCurrentBatch  = bInEntryList ? nullptr : findBatchMembership( pObj, group );
+        const bool               bWantsBatch    = bMember && pBatchFunction != nullptr;
+        const bool               bWantsEntry    = bMember && pBatchFunction == nullptr;
+        const bool               bSameBatchList = bWantsBatch && pCurrentBatch != nullptr && pCurrentBatch->_pFunction == pBatchFunction;
+
+        // 이미 같은 목록에 있으면 그 자리만 새로 쓴다(항목 버퍼가 다시 지어졌다).
+        if ( bWantsEntry && bInEntryList )
+        {
+            listEntry[index] = entry;
             return;
         }
-        if ( bIsMember == false )
+        if ( bSameBatchList )
+        {
+            pCurrentBatch->_listElement[index] = TickBatchElement{ entry._firstItem._pComponent, pObj };
             return;
-        const TickObjectEntry moved          = listEntry.back();
-        listEntry[index]                     = moved;
-        moved._pObject->_arrTickIndex[group] = index;
-        listEntry.pop_back();
+        }
+
+        // 지금 목록에서 뺀다(끝 원소를 그 자리로 옮기고 옮긴 오브젝트의 위치를 고친다).
+        if ( bInEntryList )
+        {
+            const TickObjectEntry moved          = listEntry.back();
+            listEntry[index]                     = moved;
+            moved._pObject->_arrTickIndex[group] = index;
+            listEntry.pop_back();
+        }
+        else if ( pCurrentBatch != nullptr )
+        {
+            vector<TickBatchElement>& listElement = pCurrentBatch->_listElement;
+            const TickBatchElement    moved       = listElement.back();
+            listElement[index]                    = moved;
+            moved._pObject->_arrTickIndex[group]  = index;
+            listElement.pop_back();
+        }
         index = kNotInList;
+
+        if ( bWantsEntry )
+        {
+            index = static_cast<uint32>( listEntry.size() );
+            listEntry.push_back( entry );
+        }
+        else if ( bWantsBatch )
+        {
+            vector<TickBatchElement>& listElement = getOrCreateBatchList( group, pBatchFunction )._listElement;
+            index                                 = static_cast<uint32>( listElement.size() );
+            listElement.push_back( TickBatchElement{ entry._firstItem._pComponent, pObj } );
+        }
     }
 
     void TickRegistry::unregisterObject( GameObject* pObj )
@@ -436,7 +535,7 @@ namespace sw
             return;
         for ( uint32 group = 0; group < kGroupCount; ++group )
         {
-            setMembership( pObj, group, false, TickObjectEntry{} );
+            setMembership( pObj, group, false, TickObjectEntry{}, nullptr );
         }
         const uint64 objectID = pObj->getObjectID();
         // 스테이지가 이 오브젝트의 항목을 들고 있거나(선행 조건을 가진 쪽) 이 오브젝트를 기다린다(가리켜진 쪽) — 다음 틱 전에 다시 짓는다.
@@ -452,6 +551,10 @@ namespace sw
         for ( vector<TickObjectEntry>& listEntry : _arrListEntry )
         {
             listEntry.clear();
+        }
+        for ( vector<TickBatchList>& listBatch : _arrListBatch )
+        {
+            listBatch.clear();
         }
         {
             std::scoped_lock<mutex> lock{ _dirtyMutex };

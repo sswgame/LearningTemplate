@@ -1,10 +1,12 @@
 /**
  * @file SceneTickScheduler.cpp
- * @brief 컴포넌트 틱 디스패치 — 그룹 포크-조인 · 선행 조건 스테이지 · 스테이지 경계의 트랜스폼 적용입니다.
+ * @brief 컴포넌트 틱 디스패치 — 그룹 포크-조인(오브젝트 칸 + 타입별 일괄 목록) · 선행 조건 스테이지 · 스테이지 경계의 트랜스폼 적용입니다.
  */
 #include "pch.h"
 
 #include "Engine/Object/GameObject/SceneTickScheduler.h"
+
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineParallel.h"
 #include "Engine/Common/EngineServices.h"
@@ -86,11 +88,19 @@ namespace sw
                 threadState._pPendingSlotList = nullptr;
             }
 
-            /** @brief 한 그룹의 칸 목록을 [start, end) 로 나눠 도는 잡 본문입니다. 워커는 포인터만 받습니다. 한 칸은 한 오브젝트라 나눠지지 않습니다. */
+            /**
+             * @brief 한 그룹의 보통 길을 [start, end) 로 나눠 도는 잡 본문입니다. 워커는 포인터만 받습니다.
+             * @details 번호 공간은 [0, 오브젝트 칸 수) 가 오브젝트 칸, 그 뒤가 타입별 일괄 목록을 차례로 이어 붙인 것이다(`_pBatchStart`). 한 칸 · 한 원소는
+             *          한 오브젝트라 나눠지지 않는다. 일괄 구간은 겹치는 목록마다 그 타입의 함수를 한 번 부른다.
+             */
             struct ObjectGroupTick
             {
                 const TickObjectEntry*   _pEntry{ nullptr };
+                const TickBatchList*     _pBatchList{ nullptr };
+                const uint32*            _pBatchStart{ nullptr }; ///< 일괄 목록마다 시작 번호, 끝에 전체 수(`_batchListCount + 1` 개)
                 SceneTransformHierarchy* _pHierarchy{ nullptr };
+                uint32                   _entryCount{ 0 };
+                uint32                   _batchListCount{ 0 };
                 float32                  _deltaTime{ 0.0f };
 
                 void tickRange( uint32 start, uint32 end )
@@ -98,11 +108,29 @@ namespace sw
                     // 청크 하나의 CPU 시간이다. 모든 스레드의 합이라 `GT.Scene.tick.components`(벽시계)와 견주면 병렬 효율이 보인다.
                     SW_PROFILE_SCOPE( "GT.Scene.tick.objectRange" );
                     TickThreadState& threadState = beginRange( *_pHierarchy );
-                    for ( uint32 index = start; index < end; ++index )
+                    const uint32     entryEnd    = MathUtil::min( end, _entryCount );
+                    for ( uint32 index = start; index < entryEnd; ++index )
                     {
                         tickEntry( threadState, _deltaTime, _pEntry[index] );
                     }
+                    if ( end > _entryCount )
+                        tickBatchRange( threadState, MathUtil::max( start, _entryCount ), end );
                     endRange( threadState );
+                }
+
+                /** @brief 일괄 번호 [start, end) 를 목록마다 잘라 그 타입의 함수에 넘깁니다. */
+                void tickBatchRange( TickThreadState& threadState, uint32 start, uint32 end ) const
+                {
+                    // start 를 담은 목록: 시작 번호가 start 보다 큰 첫 목록의 바로 앞(빈 목록은 시작 번호가 같아 건너뛰어진다).
+                    uint32 listIndex = static_cast<uint32>( std::upper_bound( _pBatchStart, _pBatchStart + _batchListCount, start ) - _pBatchStart ) - 1u;
+                    for ( uint32 cursor = start; cursor < end && listIndex < _batchListCount; ++listIndex )
+                    {
+                        const TickBatchList& batchList = _pBatchList[listIndex];
+                        const uint32         rangeEnd  = MathUtil::min( end, _pBatchStart[listIndex + 1] );
+                        if ( cursor < rangeEnd )
+                            batchList._pFunction( threadState, batchList._listElement.data() + ( cursor - _pBatchStart[listIndex] ), rangeEnd - cursor, _deltaTime );
+                        cursor = MathUtil::max( cursor, rangeEnd );
+                    }
                 }
             };
 
@@ -148,6 +176,7 @@ namespace sw
         , _pPrimitiveRegistry{ &primitiveRegistry }
         , _pStructuralChangeBuffer{ &structuralChangeBuffer }
         , _tickRegistry{}
+        , _listBatchStart{}
         , _stageBuildCount{ 0 }
         , _stageTransformApplyCount{ 0 }
     {
@@ -191,15 +220,31 @@ namespace sw
         size_t                   stageIndex = 0;
         for ( uint32 group = firstGroup; group < endGroup && group < TickRegistry::kGroupCount; ++group )
         {
-            const vector<TickObjectEntry>& listEntry = _tickRegistry.getEntries( group );
-            if ( listEntry.empty() == false )
+            // 오브젝트 칸과 타입별 일괄 목록은 한 번호 공간으로 이어 한 번의 포크-조인으로 돈다(일괄 목록을 따로 돌면 워커를 한 번 더 깨운다).
+            const vector<TickObjectEntry>& listEntry  = _tickRegistry.getEntries( group );
+            const vector<TickBatchList>&   listBatch  = _tickRegistry.getBatchLists( group );
+            const uint32                   entryCount = static_cast<uint32>( listEntry.size() );
+            uint32                         totalCount = entryCount;
+            _listBatchStart.clear();
+            for ( const TickBatchList& batchList : listBatch )
             {
-                SW_PROFILE_COUNT( "GT.Scene.tick.objectEntries", listEntry.size() );
+                _listBatchStart.push_back( totalCount );
+                totalCount += static_cast<uint32>( batchList._listElement.size() );
+            }
+            _listBatchStart.push_back( totalCount );
+            if ( totalCount > 0 )
+            {
+                SW_PROFILE_COUNT( "GT.Scene.tick.objectEntries", entryCount );
+                SW_PROFILE_COUNT( "GT.Scene.tick.batchElements", totalCount - entryCount );
                 SceneTickSchedulerInternal::ObjectGroupTick job{};
-                job._pEntry     = listEntry.data();
-                job._pHierarchy = _pHierarchy;
-                job._deltaTime  = deltaTime;
-                engine::runParallel( static_cast<uint32>( listEntry.size() ), SceneTickSchedulerInternal::kParallelTickThreshold,
+                job._pEntry         = listEntry.data();
+                job._pBatchList     = listBatch.data();
+                job._pBatchStart    = _listBatchStart.data();
+                job._pHierarchy     = _pHierarchy;
+                job._entryCount     = entryCount;
+                job._batchListCount = static_cast<uint32>( listBatch.size() );
+                job._deltaTime      = deltaTime;
+                engine::runParallel( totalCount, SceneTickSchedulerInternal::kParallelTickThreshold,
                                      SW_DELEGATE_METHOD( ParallelBlockDelegate, &SceneTickSchedulerInternal::ObjectGroupTick::tickRange, &job ) );
             }
 

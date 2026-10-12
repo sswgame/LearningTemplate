@@ -308,6 +308,17 @@ addSubTickPrerequisite( kRideSubTick, pVehicleComponent->getTickHandle() );
 언리얼에서 `TObjectIterator` 대신 서브시스템이 등록받은 목록을 쓰는 것과 같습니다. 측정값과 규약은 `GameObject/ComponentRegistry.h` 의 파일 주석에 있습니다.
 카메라는 `CameraRegistry`, 그릴 수 있는 것은 `PrimitiveRegistry` 에 따로 등록합니다.
 
+### 같은 타입이 수천 개 틱하는 컴포넌트 — 일괄 틱
+
+무버 · 투사체처럼 한 타입이 수천 개 틱하면 그 타입의 `.cpp` 에서 `onTick` 정의 뒤에 `SW_REGISTER_TICK_BATCH( 타입 );` 한 줄을 둡니다(`GameObject/TickBatchRegistry.h`).
+그 그룹에서 틱 항목이 그 타입의 주 틱 하나뿐인 오브젝트는 오브젝트 칸 대신 타입별 (컴포넌트, 오브젝트) 연속 목록에 들고, 디스패치는 구간을 그 타입의 함수 하나에
+넘깁니다. 칸(40 B) → 컴포넌트 → vtable 을 지나던 호출이 16 B 원소 배열 위의 직접 호출이 됩니다. 언리얼 Mass 의 프로세서 · 유니티 `IJobEntity` 가 같은 종류를
+한 번에 도는 자리이고, 타입이 자기 데이터를 연속 배열로 옮기는 다음 단계(SoA)의 입구입니다. 예는 `Games/Empty/BenchMoverComponent.cpp` 입니다.
+
+- **정확한 타입만** 갑니다. 파생 타입은 기반의 등록을 물려받지 않습니다(파생의 `onTick` 을 건너뛰지 않게). `onTick` 은 공개여야 합니다.
+- 한 오브젝트에 틱 항목이 둘 이상이면 오브젝트 칸으로 갑니다. 오브젝트 안의 순서와 "한 오브젝트는 한 스레드" 규칙은 그대로입니다.
+- `-gv_tickBatch=0` 이면 모두 오브젝트 칸으로 돕니다 — 같은 바이너리로 전/후를 잽니다.
+
 ### 프레임에 새 단계 넣기
 
 씬 전체를 한 번에 처리하는 시스템(애니메이션, 물리 동기화 같은)을 프레임 순서에 끼우려면 다음 순서로 합니다.

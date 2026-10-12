@@ -24,6 +24,10 @@
  * 만들고 보관합니다**(`rebuildStages`). 선행 조건을 가진 오브젝트와 그것이 가리키는 오브젝트가 바뀔 때만 다시 만듭니다. 체인 밖 오브젝트의 스폰과
  * 파괴는 스테이지를 건드리지 않습니다. 언리얼이 선행 조건 없는 틱 함수를 그룹 안에서 바로 실행하고 선행 조건이 있는 것만 기다리게 하는 것과 같습니다.
  *
+ * **일괄 틱 타입(`TickBatchRegistry`)은 오브젝트 칸 대신 타입별 목록으로 갑니다.** 그룹에서 항목이 등록된 타입의 주 틱 하나뿐인 오브젝트는 칸 목록이 아니라
+ * 그 타입의 (컴포넌트, 오브젝트) 연속 목록(`TickBatchList`)에 들고, 디스패치가 구간을 그 타입의 함수 하나에 넘깁니다(가상 호출 없음). 오브젝트는 그룹마다
+ * 두 목록 중 한 곳에만 있고 `_arrTickIndex` 가 그 안의 위치입니다. 오브젝트 안의 순서와 "한 오브젝트는 한 스레드" 규칙은 그대로입니다.
+ *
  * `PhysicsOverlapWorld`, `PrimitiveRegistry`, `SceneTransformHierarchy` 와 같은 구조입니다. 기능은 별도 타입이 가지고, 매니저는 순서만 정합니다.
  */
 #pragma once
@@ -37,10 +41,28 @@
 
 namespace sw
 {
+    struct TickThreadState;
+
     class Component;
     class GameObject;
     class GameObjectManager;
 
+    /**
+     * @struct TickBatchElement
+     * @brief 일괄 틱 목록의 원소 하나입니다 — 틱할 컴포넌트와 그 오브젝트(틱 주인)입니다(`TickBatchRegistry`).
+     */
+    struct TickBatchElement
+    {
+        Component*  _pComponent{ nullptr };
+        GameObject* _pObject{ nullptr };
+    };
+
+    /** @brief 같은 타입의 원소 [0, @p count) 를 차례로 틱하는 함수입니다. 원소마다 @p threadState 의 틱 주인을 그 오브젝트로 둡니다(`TickBatchOf`). */
+    using TickBatchFunction = void ( * )( TickThreadState& threadState, const TickBatchElement* pElement, uint32 count, float32 deltaTime );
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct TickItem
      * @brief 오브젝트가 낼 틱 하나입니다. 컴포넌트의 주 틱(`_subTickID` 0) 또는 서브틱이며, 오브젝트가 (그룹, 순서 키) 순으로 보관합니다.
@@ -101,6 +123,19 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct TickBatchList
+     * @brief 한 그룹에서 같은 타입의 일괄 틱 원소 목록입니다(`TickBatchRegistry`). 디스패치는 구간 하나를 그 타입의 함수에 넘깁니다.
+     */
+    struct TickBatchList
+    {
+        TickBatchFunction        _pFunction{ nullptr }; ///< 이 목록 타입의 일괄 틱 함수(목록의 키)
+        vector<TickBatchElement> _listElement;          ///< 그 타입의 주 틱 하나만 가진, 계층에서 켜진 오브젝트
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class TickRegistry
      * @brief 그룹마다의 "틱할 것이 있는 오브젝트" 목록, 멤버십 더티 표시, 오브젝트 항목 재구축, 선행 조건 스테이지를 맡습니다.
      * @note 락 순서: 이 클래스의 락(`_dirtyMutex`)은 가장 안쪽입니다. `markObjectDirty` 는 워커에서 불려도 됩니다(원자 플래그와 짧은 잠금을 씁니다).
@@ -141,8 +176,13 @@ namespace sw
         /** @brief 목록과 더티 표시를 비웁니다(매니저의 clear). */
         void clear();
 
-        /** @brief 이 그룹에서 틱할 것이 있고 계층에서 켜진 오브젝트의 항목 목록입니다. 디스패치의 유일한 입력입니다. */
+        /** @brief 이 그룹에서 틱할 것이 있고 계층에서 켜진 오브젝트의 항목 목록입니다(일괄 틱으로 간 오브젝트는 빼고). 디스패치의 입력입니다. */
         const vector<TickObjectEntry>& getEntries( uint32 group ) const { return _arrListEntry[group]; }
+        /**
+         * @brief 이 그룹의 타입별 일괄 틱 목록입니다. 디스패치의 다른 입력입니다(오브젝트 칸과 한 포크-조인으로 돈다).
+         * @details 그 그룹에서 틱 항목이 등록된 타입(`TickBatchRegistry`) 컴포넌트의 주 틱 하나뿐인 오브젝트가 여기에 온다. 빈 목록은 `refresh` 가 걷는다.
+         */
+        const vector<TickBatchList>& getBatchLists( uint32 group ) const { return _arrListBatch[group]; }
         /** @brief 선행 조건이 등록된 서브틱이 하나라도 있으면 true 입니다. */
         bool hasPrerequisites() const { return _prerequisiteCount > 0; }
         /** @brief 선행 조건을 가진 항목의 스테이지 목록입니다(그룹 순). 매니저가 그룹마다 기본 경로 뒤에 그 그룹의 스테이지를 실행합니다. */
@@ -164,10 +204,24 @@ namespace sw
         void rebuildStages( GameObjectManager& manager );
         /** @brief 오브젝트 하나의 항목을 컴포넌트에서 다시 만들고 그룹 멤버십을 맞춥니다. */
         void refreshObject( GameObject* pObj );
-        /** @brief 그룹 목록에 넣거나 뺍니다(O(1)이며, 오브젝트가 자기 위치를 가지고 있습니다). 넣을 때는 항목 내용을 @p entry 로 씁니다(이미 있으면 그 위치에 씁니다). */
-        void setMembership( GameObject* pObj, uint32 group, bool bMember, const TickObjectEntry& entry );
+        /**
+         * @brief 그룹 목록(오브젝트 칸 또는 타입별 일괄 목록)에 넣거나 뺍니다. 오브젝트가 자기 위치(`_arrTickIndex`)를 가지고 있어 O(1) 입니다(일괄 목록은 타입 수만큼 본다).
+         * @details @p pBatchFunction 이 있으면 그 타입의 일괄 목록에, 없으면 오브젝트 칸 목록에 @p entry 로 넣는다. 이미 같은 목록에 있으면 그 자리에 쓰고,
+         *          다른 목록에 있으면 거기서 빼고 옮긴다. @p bMember 가 false 면 어느 목록에서든 뺀다.
+         */
+        void setMembership( GameObject* pObj, uint32 group, bool bMember, const TickObjectEntry& entry, TickBatchFunction pBatchFunction );
+        /** @brief 오브젝트가 이 그룹의 어느 일괄 목록에 있으면 그 목록입니다. 없으면 nullptr 입니다. */
+        TickBatchList* findBatchMembership( const GameObject* pObj, uint32 group );
+        /** @brief 이 그룹에서 @p pFunction 의 일괄 목록입니다. 없으면 만듭니다. */
+        TickBatchList& getOrCreateBatchList( uint32 group, TickBatchFunction pFunction );
+        /** @brief 빈 일괄 목록을 걷습니다(모듈이 내려간 타입의 함수를 들고 있지 않게). */
+        void removeEmptyBatchLists();
+        /** @brief 오브젝트의 이 그룹 항목이 일괄 틱 대상이면 그 함수입니다(정확한 타입의 주 틱 하나). 아니면 nullptr 입니다. */
+        static TickBatchFunction findBatchFunction( const TickItem* pItem, uint32 itemCount );
 
         vector<TickObjectEntry> _arrListEntry[kGroupCount]; ///< 그룹마다 틱할 것이 있고 켜진 오브젝트의 항목이다. 오브젝트를 소유하지 않는다.
+        vector<TickBatchList>   _arrListBatch[kGroupCount]; ///< 그룹마다 타입별 일괄 틱 목록이다. 오브젝트는 칸 목록과 이 목록 중 한 곳에만 있다
+        uint32                  _batchGeneration;           ///< 마지막으로 본 `TickBatchRegistry::getGeneration` — 바뀌면 모두 다시 훑는다
         vector<uint64>          _listDirtyObjectID;         ///< 다시 훑을 오브젝트 id 다. 사라졌으면 해석 결과가 비어 건너뛴다
         vector<uint64>          _listProcessingObjectID;    ///< `refresh` 가 위 목록과 바꿔 쓰는 버퍼(할당 재사용)
         mutex                   _dirtyMutex;                ///< `_listDirtyObjectID` 의 잠금이다. 워커에서 표시할 수 있다

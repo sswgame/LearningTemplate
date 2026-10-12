@@ -5,7 +5,8 @@
  *          뒤(PostPhysics · PostUpdate)에 `tickPhase` 를 한 번씩 부릅니다. 무엇을 틱할지는 `TickRegistry` 가, 틱 중 규칙(동결 · 지연 큐)은
  *          `StructuralChangeBuffer` 가 갖습니다. 이 타입은 그 둘 사이의 순서(플러시 → 쓰기 준비 → 동결 → 그룹 → 해제)와 디스패치 루프만 갖습니다.
  *
- *          그룹마다: 보통 길(오브젝트 칸 목록을 한 번의 포크-조인 — 한 오브젝트의 칸은 한 워커가 순서대로) → 그 그룹의 선행 조건 스테이지.
+ *          그룹마다: 보통 길(오브젝트 칸 목록과 타입별 일괄 목록(`TickBatchRegistry`)을 이은 한 번의 포크-조인 — 한 오브젝트의 칸은 한 워커가
+ *          순서대로) → 그 그룹의 선행 조건 스테이지.
  *          기다리는 스테이지(`TickStage::_bApplyBefore`) 앞에서는 그때까지의 틱 중 트랜스폼 쓰기를 적용하고 플러시합니다 — 선행 조건이 옮긴
  *          자리를 같은 프레임에 읽게 합니다. 그 단계에 계층 변경이 미뤄졌으면(`StructuralChangeBuffer::hasDeferredHierarchyChange`) 앞당기지 않습니다.
  */
@@ -65,6 +66,7 @@ namespace sw
         PrimitiveRegistry*       _pPrimitiveRegistry;
         StructuralChangeBuffer*  _pStructuralChangeBuffer;
         TickRegistry             _tickRegistry;
+        vector<uint32>           _listBatchStart;           ///< 한 그룹의 디스패치에서 일괄 목록마다 시작 번호(끝에 전체 수). 할당을 재사용한다
         atomic<uint32>           _stageBuildCount;          ///< 레지스트리가 항목을 다시 지은 틱의 수(진단)
         uint32                   _stageTransformApplyCount; ///< 스테이지 경계 적용 횟수(진단)
     };

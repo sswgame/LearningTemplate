@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/TickBatchRegistry.h"
 
 namespace sw
 {
@@ -40,4 +41,7 @@ namespace sw
         _pTarget->setLocalPosition( float3{ _basePosition._x, wave * 0.75f, _basePosition._z } );
         _pTarget->setLocalScale( float3{ scale, scale, scale } );
     }
+
+    // 큐브마다 무버 하나면(`-gv_benchTickMovers=1`) 오브젝트 칸 대신 타입별 일괄 목록으로 돈다(`TickBatchRegistry`).
+    SW_REGISTER_TICK_BATCH( BenchMoverComponent );
 } // namespace sw
