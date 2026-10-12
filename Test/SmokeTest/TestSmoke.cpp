@@ -996,7 +996,7 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadOneOfTwoKitsCascadesIntoTheGameOnly )
 /**
  * @brief [ArchitectureTest] App 과 같은 사슬(GameFramework → 킷 → SWGame)을 연쇄 리로드해도, 의존 모듈은 **지금의** 복사본에 묶인다
  * @details 의존은 이름으로 묶인다. prepare 가 복사본마다 세대 이름을 주고(Windows 는 파일 이름, 리눅스는 SONAME), 의존하는 복사본의
- *          import · NEEDED 를 그 이름으로 바꾼다(`LiveReloadManager::rewriteShadowImageNames`). 빠지면 Windows 는 원본 DLL 을 한 벌 더 올리고,
+ *          import · NEEDED 를 그 이름으로 바꾼다(`ModuleShadowCopy::writeShadowCopy`). 빠지면 Windows 는 원본 DLL 을 한 벌 더 올리고,
  *          리눅스는 SONAME 이 같은 **먼저 올라온** 이미지가 이긴다 — GameFramework 가 한 프로세스에 두 벌 돌고, 옛 복사본을 내리는 순간 그리로
  *          뛰는 코드가 죽는다. 리로드가 "끝났다" 만 보면 이것을 못 잡으므로 누가 누구에게 묶였는지를 본다.
  *

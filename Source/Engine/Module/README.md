@@ -16,7 +16,7 @@ Engine 은 모듈 사이의 결속(어느 이미지가 어느 이미지에 묶�
   레지스터를 흘려 저장된 xmm0 · xmm1 을 덮는다. 처음 묶는 호출의 float 인자가 쓰레기가 된다(키트의 `DamageMath::applyArmor( 25, 5, 0, 1 )` 첫 호출이
   damage = 0 을 받아 CI 의 액션 키트 테스트가 간헐로 졌다). LLVM 21 이 썽크를 고쳤지만 도구 사슬은 20.1.8 이다.
   모듈끼리는 일반 import 이고(키트 → GameFramework · 공유 키트, SWGame → 키트, 에디터 확장 → EditorModule · 키트), 핫 리로드가 섀도 복사본에 세대 이름을
-  주고 의존하는 복사본의 import 이름을 그 이름으로 바꿔 맞춘다(`LiveReloadManager::rewriteShadowImageNames` — 리눅스 SONAME 바꾸기와 같은 장치).
+  주고 의존하는 복사본의 import 이름을 그 이름으로 바꿔 맞춘다(`ModuleShadowCopy::writeShadowCopy` — 리눅스 SONAME 바꾸기와 같은 장치).
   없을 수 있는 시스템 DLL(Media Foundation · XAudio2 · TracyClient)은 쓰는 쪽이 LoadLibrary + 함수 표로 올린다(`XAudio2System` · `TracyProfilerBackend`).
   가드: 빌드는 `CheckNoDelayLoad`(CMake 에 `/DELAYLOAD` · `delayimp` 금지), 런타임은 `LiveReloadManager` 가 지연 import 가 있는 모듈 이미지를 올리기 전에
   거절한다(Debug 는 단언). 테스트: `ArchitectureTest.NoBuiltImageHasDelayLoadedImports` · `ModuleWithDelayImportsIsRefused` · `ReloadedDependentsBindToTheCurrentImages`.

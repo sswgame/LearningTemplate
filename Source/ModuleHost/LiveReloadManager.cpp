@@ -4,11 +4,9 @@
 
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Common/StdHeaders.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/File/IFileWatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Module/ModuleImageUtil.h"
-#include "Core/Process/Process.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/Task/TaskManager.h"
 
@@ -35,87 +33,9 @@ namespace sw
     {
         struct LiveReloadManagerInternal
         {
-            inline static uint32 s_reloadCount{ 0 };
-            /** @brief 이미지 이름 세대입니다(`rewriteShadowImageNames`). 모듈과 무관하게 하나씩 오르므로 앞부분이 같은 두 모듈도 같은 이름을 받지 않습니다. */
-            inline static uint32 s_imageNameGeneration{ 0 };
-
-            static void tryDeleteFile( string_view path )
-            {
-                // 아직 매핑된 그림자 사본은 지금 지울 수 없다. 남은 것은 다음 시작 · 종료의 ShadowCopyName::removeStaleCopies 가 지운다.
-                (void)FileUtil::tryRemoveFile( path );
-            }
-
-            static void tryDeleteShadowArtifacts( string_view modulePath )
-            {
-                if ( modulePath.empty() )
-                    return;
-                tryDeleteFile( modulePath );
-                tryDeleteFile( ModuleImageUtil::getDebugSymbolPath( modulePath ) );
-#if defined( SW_PLATFORM_WINDOWS )
-                // Windows 복사본은 제 폴더(`<모듈>_temp_p<pid>_…/<세대 이름>.dll`)에 있다 — 비었으면 폴더도 지운다.
-                string_view directoryPath;
-                FileUtil::getDirectoryPart( modulePath, directoryPath );
-                int32 ownerProcessID{ 0 };
-                if ( ShadowCopyName::parse( directoryPath, ownerProcessID ) )
-                    (void)ShadowCopyName::removeStaleCopies( FileUtil::getDirectoryPart( directoryPath ) ); // 아직 매핑된 것은 다음 정리가 지운다
-#endif
-            }
-
-            /**
-             * @brief 모듈 이미지 바이트 @p bytes 에 지연 import 가 있으면 원인을 남기고 true 를 반환합니다 — 그런 이미지는 올리지 않습니다.
-             * @details 모듈 이미지는 모든 import 를 로드할 때 묶어야 한다. lld 20 의 x64 지연 로드 썽크(`__tailMerge_<dll>`)는 xmm0~3 을
-             *          `__delayLoadHelper2` 호출의 홈 공간에 저장해, 첫 호출이 묶으면 그 호출의 float 인자가 망가진다(`docs/09_Decisions.md`).
-             *          빌드는 `/DELAYLOAD` 를 쓰지 않고(`CheckNoDelayLoad`), 이것은 그 규칙을 어긴 이미지를 올리기 **전에** 거절하는 마지막 그물이다.
-             */
-            static bool rejectsDelayImports( string_view moduleName, string_view modulePath, const vector<uint8>& bytes )
-            {
-#if defined( SW_PLATFORM_WINDOWS )
-                // 지연 import 디렉터리가 있으면 서술자를 읽든 못 읽든 올리지 않는다 — 지연 import 가 없다고 말할 수 없다.
-                if ( ModuleImagePatch::hasImportDirectory( bytes, ModuleImagePatch::ImportTable::Delay ) == false )
-                    return false;
-                vector<string> listDllName;
-                (void)ModuleImagePatch::readImportDllNames( bytes, ModuleImagePatch::ImportTable::Delay, listDllName ); // 로그의 이름만 — 못 읽으면 비어 있다
-                SW_LOG_ERROR( "Module %# (%#) has delay-loaded imports (first: %#, %# DLL(s)) - module images must bind every import when they load, because the "
-                              "lld delay-load thunk corrupts the float arguments of the first call. Rebuild it without /DELAYLOAD; refusing to load it",
-                              moduleName, modulePath, listDllName.empty() ? "unreadable import table" : listDllName.front().c_str(),
-                              static_cast<uint32>( listDllName.size() ) );
-                SW_ASSERT( false && "A module image with delay-loaded imports must not be loaded" );
-                return true;
-#else
-                (void)moduleName;
-                (void)modulePath;
-                (void)bytes;
-                return false;
-#endif
-            }
-
-            /** @brief 원본을 읽습니다. 링커가 아직 쓰는 중이면 잠겨 있으므로 잠깐씩 기다려 다시 읽습니다. */
-            [[nodiscard]] static bool readFileWithRetry( string_view path, vector<uint8>& outBytes )
-            {
-                for ( int32 retryIndex = 0; retryIndex < 10; ++retryIndex )
-                {
-                    if ( FileUtil::readFile( path, outBytes ) )
-                        return true;
-                    std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-                }
-                return false;
-            }
-
-            static void copyDebugSymbolsIfPresent( string_view originalModulePath, string_view shadowModulePath )
-            {
-                // 원본 심볼은 Bin/Symbols 에, 섀도 복사본의 심볼은 그 복사본 옆에 둔다.
-                const string originalDebugPath = ModuleImageUtil::findBuiltDebugSymbolPath( originalModulePath );
-                const string shadowDebugPath   = ModuleImageUtil::getDebugSymbolPath( shadowModulePath );
-                if ( originalDebugPath.empty() )
-                    return;
-
-                if ( FileUtil::copyFile( originalDebugPath, shadowDebugPath ) == false )
-                    SW_LOG_WARNING( "Failed to copy debug symbols: %#", shadowDebugPath.c_str() );
-            }
-
             /**
              * @brief 모듈 @p pModule 이 의존 @p dependencyName 을 @p pExpected 이미지에 묶었는지 봅니다.
-             * @param dependencyFileName (Windows) 모듈의 import 표가 그 의존을 부르는 이름입니다(세대 이름 — `rewriteShadowImageNames`).
+             * @param dependencyFileName (Windows) 모듈의 import 표가 그 의존을 부르는 이름입니다(세대 이름 — `ModuleShadowCopy::writeShadowCopy`).
              * @param pOutActual   모듈이 실제로 묶인 쪽입니다(로그용). 그 의존을 import 하지 않으면 nullptr 입니다.
              * @param pOutExpected 비교한 기준입니다(로그용).
              * @return 아직 묶이지 않았거나 @p pExpected 에 묶였으면 true 입니다.
@@ -160,6 +80,7 @@ namespace sw
 
     LiveReloadManager::LiveReloadManager()
         : _mapModule{}
+        , _dependencyGraph{}
         , _listSharedModule{}
         , _fileWatcher{
 #if defined( SW_PLATFORM_WINDOWS )
@@ -174,8 +95,7 @@ namespace sw
         , _buildNotice{}
         , _onBeforeCommitBatch{}
         , _drainWorkers{}
-        , _listDeferredUnloadImage{}
-        , _reloadBatchID{ 0 }
+        , _deferredUnloadQueue{ kMaxDeferredUnloadBatchCount }
         , _completedReloadCount{ 0 }
         , _bReloadGraphBroken{ SW_FALSE }
         , _reserved{ 0 }
@@ -206,10 +126,7 @@ namespace sw
 
         // 언로드를 미룬 옛 이미지를 먼저 언로드한다. 그것들은 같은 배치의 미룬 이미지나 **지금 살아 있는** 이미지에 바인딩돼 있으므로, 살아
         // 있는 모듈을 먼저 언로드하면 옛 이미지의 정적 소멸자가 언로드된 코드로 점프할 수 있다.
-        while ( _listDeferredUnloadImage.empty() == false )
-        {
-            unloadOldestDeferredBatch();
-        }
+        _deferredUnloadQueue.unloadAll();
 
         if ( _bReloadGraphBroken == SW_TRUE )
         {
@@ -217,26 +134,22 @@ namespace sw
             {
                 unloadModule( moduleContext );
             }
-            _mapModule.clear();
+            clearContexts();
             return;
         }
 
         vector<string> listName;
-        listName.reserve( _mapModule.size() );
-        for ( const auto& [name, context] : _mapModule )
-        {
-            listName.push_back( name );
-        }
+        _dependencyGraph.getModuleNames( listName );
 
         vector<string> listOrder;
-        if ( topoSortSubgraph( listName, listOrder ) == false )
+        if ( _dependencyGraph.sortByDependency( listName, listOrder ) == false )
         {
             SW_LOG_ERROR( "Topological sort failed during shutdown — unloading in arbitrary order" );
             for ( auto& [name, context] : _mapModule )
             {
                 unloadModule( context );
             }
-            _mapModule.clear();
+            clearContexts();
             return;
         }
 
@@ -247,7 +160,7 @@ namespace sw
             if ( mapIt != _mapModule.end() )
                 unloadModule( mapIt->second );
         }
-        _mapModule.clear();
+        clearContexts();
     }
 
     bool LiveReloadManager::loadSharedModule( string_view moduleName )
@@ -267,7 +180,7 @@ namespace sw
 
         // 섀도 복사본과 같은 이유로 로드하기 **전에** 스탬프를 확인한다. 스탬프가 없거나 다르면 정적 초기화가 돌기 전에 거절한다.
         vector<uint8> bytes;
-        if ( LiveReloadManagerInternal::readFileWithRetry( modulePath, bytes ) == false )
+        if ( ModuleShadowCopy::readModuleFile( modulePath, bytes ) == false )
         {
             SW_LOG_ERROR( "Failed to read the shared module %# (locked)", modulePath );
             return false;
@@ -279,7 +192,7 @@ namespace sw
                           moduleName, moduleStamp, engine::getEngineAbiStamp() );
             return false;
         }
-        if ( LiveReloadManagerInternal::rejectsDelayImports( moduleName, modulePath, bytes ) )
+        if ( ModuleShadowCopy::rejectsDelayImports( moduleName, modulePath, bytes ) )
             return false;
 
         // 불변 조건: 여기서 전역 헤드는 비어 있다(등록할 때마다 비운다). 로드하면 이 모듈의 정적 등록기만 매달린다.
@@ -304,9 +217,10 @@ namespace sw
             return false;
         }
 
-        ModuleContext& moduleContext      = _mapModule[string( moduleName )];
+        // 의존 목록은 로드 **전에** 둔다 — 섀도 복사본이 의존 모듈의 import 를 그 의존의 지금 이름으로 바꿀 때 읽는다.
+        _dependencyGraph.setDependsOn( moduleName, listDependsOn );
+        ModuleContext& moduleContext      = getOrCreateContext( moduleName );
         moduleContext._moduleName         = moduleName;
-        moduleContext._listDependsOn      = listDependsOn;
         moduleContext._tempModulePath     = "";
         moduleContext._originalModulePath = ModuleImageUtil::findModuleLibraryPath( moduleName );
         if ( loadShadowCopyModule( moduleContext ) )
@@ -321,6 +235,7 @@ namespace sw
         if ( moduleContext._pLibraryModule != nullptr )
             unloadModule( moduleContext );
         _mapModule.erase( string( moduleName ) );
+        _dependencyGraph.removeModule( moduleName );
         return false;
     }
 
@@ -474,7 +389,7 @@ namespace sw
             vector<string> listSubgraph;
             for ( const string& root : listPendingRoot )
             {
-                collectDependentClosure( root, listSubgraph );
+                _dependencyGraph.collectDependentClosure( root, listSubgraph );
             }
             if ( listSubgraph.empty() == false )
                 reloadCascade( listSubgraph );
@@ -483,22 +398,22 @@ namespace sw
 
     void LiveReloadManager::setOnBeforeReload( string_view moduleName, OnBeforeReloadDelegate delegate )
     {
-        _mapModule[string( moduleName )]._onBeforeReload = std::move( delegate );
+        getOrCreateContext( moduleName )._onBeforeReload = std::move( delegate );
     }
 
     void LiveReloadManager::setOnAfterReload( string_view moduleName, OnAfterReloadDelegate delegate )
     {
-        _mapModule[string( moduleName )]._onAfterReload = std::move( delegate );
+        getOrCreateContext( moduleName )._onAfterReload = std::move( delegate );
     }
 
     void LiveReloadManager::setOnReloadFault( string_view moduleName, OnReloadFaultDelegate delegate )
     {
-        _mapModule[string( moduleName )]._onReloadFault = std::move( delegate );
+        getOrCreateContext( moduleName )._onReloadFault = std::move( delegate );
     }
 
     void LiveReloadManager::setOnValidateImage( string_view moduleName, OnValidateImageDelegate delegate )
     {
-        _mapModule[string( moduleName )]._onValidateImage = std::move( delegate );
+        getOrCreateContext( moduleName )._onValidateImage = std::move( delegate );
     }
 
     void LiveReloadManager::setOnBeforeCommitBatch( OnBeforeCommitBatchDelegate delegate )
@@ -537,17 +452,17 @@ namespace sw
         {
             if ( moduleContext._pLibraryModule == nullptr )
                 continue;
-            for ( const string& dependencyName : moduleContext._listDependsOn )
+            for ( const string& dependencyName : _dependencyGraph.getDependsOn( moduleName ) )
             {
                 // 이 매니저가 로드하지 않은 의존(Engine 처럼 처음부터 링크된 것)은 교체되지 않으므로 검사할 것이 없다.
                 const auto dependencyIt = _mapModule.find( dependencyName );
                 if ( dependencyIt == _mapModule.end() || dependencyIt->second._pLibraryModule == nullptr )
                     continue;
 
-                const void*           pActual{ nullptr };
-                const void*           pExpected{ nullptr };
-                const ImageNameState& dependencyImageName = dependencyIt->second._imageName;
-                const string          dependencyFileName  = dependencyImageName._loaded.empty() ? ModuleImageUtil::formatSharedLibraryName( dependencyName ) : dependencyImageName._loaded;
+                const void*                 pActual{ nullptr };
+                const void*                 pExpected{ nullptr };
+                const ShadowImageNameState& dependencyImageName = dependencyIt->second._imageName;
+                const string                dependencyFileName  = dependencyImageName._loaded.empty() ? ModuleImageUtil::formatSharedLibraryName( dependencyName ) : dependencyImageName._loaded;
                 if ( LiveReloadManagerInternal::isBoundTo( moduleContext._pLibraryModule, dependencyName, dependencyFileName, dependencyIt->second._pLibraryModule, pActual,
                                                            pExpected ) )
                     continue;
@@ -565,84 +480,37 @@ namespace sw
         return it != _mapModule.end() ? it->second._pLibraryModule : nullptr;
     }
 
-    bool LiveReloadManager::rewriteShadowImageNames( ModuleContext& context, vector<uint8>& inoutBytes )
+    LiveReloadManager::ModuleContext& LiveReloadManager::getOrCreateContext( string_view moduleName )
     {
-#if defined( SW_PLATFORM_WINDOWS )
-        // 로더가 import 를 맞추는 이름은 DLL 파일 이름이다. 복사본에 세대 이름을 주고(파일 이름 — `prepareShadowCopy`), 등록된 의존 모듈을 부르는
-        // import 를 그 의존의 지금 이름으로 바꾼다. 같은 길이라야 import 표의 문자열을 제자리에서 덮는다.
-        if ( context._imageName._original.empty() )
-            context._imageName._original = ModuleImageUtil::formatSharedLibraryName( context._moduleName );
-        const string generationName = ModuleImagePatch::makeGenerationName( context._imageName._original, ++LiveReloadManagerInternal::s_imageNameGeneration );
-        if ( generationName.empty() )
-        {
-            SW_LOG_ERROR( "Module %# cannot get a same-length generation name for its shadow copy (the name needs at least five characters before .dll)",
-                          context._moduleName );
-            return false;
-        }
-        context._imageName._current = generationName;
+        _dependencyGraph.ensureModule( moduleName );
+        return _mapModule[string( moduleName )];
+    }
 
-        vector<string> listImportName;
-        if ( ModuleImagePatch::readImportDllNames( inoutBytes, ModuleImagePatch::ImportTable::Load, listImportName ) == false )
-        {
-            SW_LOG_ERROR( "Module %# is not a PE32+ image this loader can read - refusing its shadow copy", context._moduleName );
-            return false;
-        }
-        for ( const string& dependencyName : context._listDependsOn )
+    void LiveReloadManager::clearContexts()
+    {
+        _mapModule.clear();
+        _dependencyGraph.clear();
+    }
+
+    void LiveReloadManager::populateShadowCopyParams( const ModuleContext& context, ShadowCopyParams& outParams ) const
+    {
+        outParams._moduleName            = context._moduleName;
+        outParams._originalModulePath    = context._originalModulePath;
+        outParams._bReplacingLoadedImage = context._pLibraryModule != nullptr;
+
+        // 이 매니저가 올리지 않은 의존(공용 GameFramework · Engine)은 넣지 않는다 — 원래 이름 그대로 이미 올라온 이미지에 묶인다.
+        for ( const string& dependencyName : _dependencyGraph.getDependsOn( context._moduleName ) )
         {
             const auto dependencyIt = _mapModule.find( dependencyName );
-            if ( dependencyIt == _mapModule.end() )
-                continue; // 이 매니저가 올리지 않은 의존(공용 GameFramework · Engine)은 원래 이름 그대로 이미 올라온 이미지에 묶인다
-            const ImageNameState& dependency = dependencyIt->second._imageName;
-            if ( dependency._original.empty() || dependency._current.empty() )
-                continue;
-            ModuleImagePatch::replaceImportDllName( inoutBytes, dependency._original, dependency._current );
+            if ( dependencyIt != _mapModule.end() )
+                outParams._listDependencyImage.push_back( ShadowCopyModuleImage{ dependencyIt->first, &dependencyIt->second._imageName } );
         }
 
-        // 의존 목록에 없이 등록된 모듈을 원본 이름으로 부르면 OS 로더가 원본 DLL 을 한 벌 더 올린다(같은 모듈 두 벌 — 정적 상태 · 타입 등록이 갈린다).
-        if ( ModuleImagePatch::readImportDllNames( inoutBytes, ModuleImagePatch::ImportTable::Load, listImportName ) == false )
-            return false;
-        for ( const string& importName : listImportName )
+        outParams._listRegisteredImage.reserve( _mapModule.size() );
+        for ( const auto& [registeredName, registeredContext] : _mapModule )
         {
-            for ( const auto& [registeredName, registeredContext] : _mapModule )
-            {
-                const bool bOtherModule = registeredName != context._moduleName && registeredContext._imageName._original.empty() == false;
-                if ( bOtherModule && StringUtil::equals( importName, registeredContext._imageName._original, true ) )
-                {
-                    SW_LOG_ERROR( "Module %# imports %# but does not list %# as a dependency - its shadow copy would load a second image of it", context._moduleName,
-                                  importName, registeredName );
-                    return false;
-                }
-            }
+            outParams._listRegisteredImage.push_back( ShadowCopyModuleImage{ registeredName, &registeredContext._imageName } );
         }
-        return true;
-#else
-        // 복사본은 원본에서 막 복사했으므로 SONAME 은 늘 원본 이름이다. 처음 한 번 읽어 둔다(의존 모듈의 NEEDED 가 이 이름을 적고 있다).
-        if ( context._imageName._original.empty() )
-            (void)ModuleImagePatch::readSoname( inoutBytes, context._imageName._original ); // 못 읽으면(ELF 가 아님) 이름이 비어 아래가 건너뛴다
-
-        if ( context._imageName._original.empty() == false )
-        {
-            const string generationName = ModuleImagePatch::makeGenerationName( context._imageName._original, ++LiveReloadManagerInternal::s_imageNameGeneration );
-            const bool   bRenamed       = generationName.empty() == false &&
-                                  ModuleImagePatch::replaceDynamicString( inoutBytes, ModuleImagePatch::kTagSoname, context._imageName._original, generationName ) > 0;
-            if ( bRenamed )
-                context._imageName._current = generationName;
-        }
-
-        // 의존 모듈의 NEEDED 를 그 의존의 지금 이름으로. 연쇄 리로드는 의존 순서로 prepare 하므로, 같은 연쇄에서 바뀌는 의존은 이미
-        // 새 이름을 가지고 있다(`_current`). 이 매니저가 로드하지 않은 의존(Engine 등)은 원래 이름 그대로 둔다.
-        for ( const string& dependencyName : context._listDependsOn )
-        {
-            const auto dependencyIt = _mapModule.find( dependencyName );
-            if ( dependencyIt == _mapModule.end() )
-                continue;
-            const ImageNameState& dependency = dependencyIt->second._imageName;
-            if ( dependency._original.empty() || dependency._current.empty() )
-                continue;
-            ModuleImagePatch::replaceDynamicString( inoutBytes, ModuleImagePatch::kTagNeeded, dependency._original, dependency._current );
-        }
-        return true;
-#endif
     }
 
     bool LiveReloadManager::loadShadowCopyModule( ModuleContext& context )
@@ -670,61 +538,14 @@ namespace sw
 
         outShadow._sourceMtime = FileUtil::getFileTimestamp( context._originalModulePath );
 
-        ++LiveReloadManagerInternal::s_reloadCount;
-        const string tempName = ShadowCopyName::make( context._moduleName, Process::getCurrentProcessID(), LiveReloadManagerInternal::s_reloadCount, outShadow._sourceMtime );
-        const string execDir  = FileUtil::getDirectoryPart( context._originalModulePath );
-
         BLOCK( "Create Shadow Copy" )
         {
-            // 원본을 한 번 읽어 대조하고(리눅스는 고치고) 복사본으로 쓴다. 대조에 걸리면 복사본을 만들기 전이라 치울 것이 없다.
-            vector<uint8> bytes;
-            if ( LiveReloadManagerInternal::readFileWithRetry( context._originalModulePath, bytes ) == false )
-            {
-                SW_LOG_ERROR( "Failed to read the module for a shadow copy (locked): %#", context._originalModulePath.c_str() );
+            // 원본을 대조하고 세대 이름을 붙여 복사본으로 쓴다. 로드하기 **전이라** 대조에 걸린 모듈의 정적 초기화는 돌지 않는다.
+            ShadowCopyParams params;
+            populateShadowCopyParams( context, params );
+            params._sourceMtime = outShadow._sourceMtime;
+            if ( ModuleShadowCopy::writeShadowCopy( params, context._imageName, outShadow._tempPath ) == false )
                 return false;
-            }
-
-            // 로드하기 **전에** 확인한다. 로드하면 정적 초기화가 돌므로, 돌고 있는 엔진과 다른 헤더로 빌드된 모듈은 그 전에 거절해야 한다.
-            // 스탬프가 **없는** 모듈도 거절한다. 스탬프를 박지 않는 빌드 규칙으로 만든 모듈이 대조 없이 로드되지 않게 하기 위해서다(동적 모듈은 모두
-            // `sw_registerDynamicModule` 이 스탬프를 박는다).
-            string     moduleStamp;
-            const bool bEngineAbiMismatch = ModuleImagePatch::findEngineAbiStamp( bytes, moduleStamp ) == false || moduleStamp != engine::getEngineAbiStamp();
-            if ( bEngineAbiMismatch )
-            {
-                // 첫 로드면 지킬 옛 모듈이 없다. 엔진과 모듈 중 한쪽만 다시 빌드된 것이므로 둘을 함께 빌드해야 한다.
-                const utf8* pHint = context._pLibraryModule != nullptr ? "keeping the old module; restart to pick up the engine change"
-                                                                       : "rebuild the engine and its modules together";
-                SW_LOG_ERROR( "Module %# was built against different Core/Engine headers than the running engine (module %#, engine %#) — %#",
-                              context._moduleName, moduleStamp, engine::getEngineAbiStamp(), pHint );
-                return false;
-            }
-            if ( LiveReloadManagerInternal::rejectsDelayImports( context._moduleName, context._originalModulePath, bytes ) )
-                return false;
-            if ( rewriteShadowImageNames( context, bytes ) == false )
-            {
-                context._imageName._current = context._imageName._loaded;
-                return false;
-            }
-
-#if defined( SW_PLATFORM_WINDOWS )
-            // 로더는 import 를 파일 이름으로 맞춘다 — 복사본 파일 이름이 곧 세대 이름이다. 다른 프로세스의 같은 세대 이름과 겹치지 않게 복사본마다 제 폴더에 둔다.
-            const string shadowDirectory = FileUtil::joinPath( execDir, tempName );
-            outShadow._tempPath          = FileUtil::joinPath( shadowDirectory, context._imageName._current );
-            const bool bWritten          = FileUtil::ensureDirectoryExists( shadowDirectory ) && FileUtil::writeFile( outShadow._tempPath, bytes.data(), bytes.size() );
-#else
-            outShadow._tempPath = FileUtil::joinPath( execDir, ModuleImageUtil::formatSharedLibraryName( tempName ) );
-            const bool bWritten = FileUtil::writeFile( outShadow._tempPath, bytes.data(), bytes.size() );
-#endif
-            if ( bWritten == false )
-            {
-                context._imageName._current = context._imageName._loaded;
-                SW_LOG_ERROR( "Failed to write the shadow copy: %#", outShadow._tempPath.c_str() );
-                LiveReloadManagerInternal::tryDeleteShadowArtifacts( outShadow._tempPath );
-                outShadow = {};
-                return false;
-            }
-
-            LiveReloadManagerInternal::copyDebugSymbolsIfPresent( context._originalModulePath, outShadow._tempPath );
         }
 
         BLOCK( "Load Dynamic Library" )
@@ -751,7 +572,7 @@ namespace sw
             {
                 context._imageName._current = context._imageName._loaded;
                 SW_LOG_ERROR( "Failed to load dynamic library (keeping old): %#", outShadow._tempPath.c_str() );
-                LiveReloadManagerInternal::tryDeleteShadowArtifacts( outShadow._tempPath );
+                ModuleShadowCopy::removeArtifacts( outShadow._tempPath );
                 outShadow = {};
                 return false;
             }
@@ -844,7 +665,7 @@ namespace sw
 
             // 옛 이미지는 바로 언로드하지 않고 언로드를 미룬다. 그래프가 깨진 경우도 같다(핸들을 잃지 않는다).
             if ( pPreviousHandle != nullptr )
-                deferImageUnload( context._moduleName, pPreviousHandle, previousTempModule, bKeepPreviousImage );
+                _deferredUnloadQueue.deferUnload( context._moduleName, pPreviousHandle, previousTempModule, bKeepPreviousImage );
         }
 
         if ( _bReloadGraphBroken == SW_TRUE )
@@ -911,7 +732,7 @@ namespace sw
         prepared._pPreviousTypeHead     = nullptr;
         prepared._pPreviousEnumHead     = nullptr;
         prepared._pPreviousVariableHead = nullptr;
-        LiveReloadManagerInternal::tryDeleteShadowArtifacts( prepared._tempPath );
+        ModuleShadowCopy::removeArtifacts( prepared._tempPath );
         prepared._tempPath.clear();
         prepared._sourceMtime = 0;
     }
@@ -932,57 +753,8 @@ namespace sw
             context._pLibraryModule = nullptr;
         }
 
-        LiveReloadManagerInternal::tryDeleteShadowArtifacts( context._tempModulePath );
+        ModuleShadowCopy::removeArtifacts( context._tempModulePath );
         context._tempModulePath.clear();
-    }
-
-    void LiveReloadManager::deferImageUnload( string_view moduleName, void* pHandle, string_view tempPath, bool bKeepMapped )
-    {
-        if ( pHandle == nullptr )
-            return;
-
-        DeferredUnloadImage deferredImage{};
-        deferredImage._moduleName  = string{ moduleName };
-        deferredImage._tempPath    = string{ tempPath };
-        deferredImage._pHandle     = pHandle;
-        deferredImage._batchID     = _reloadBatchID;
-        deferredImage._bKeepMapped = bKeepMapped;
-        _listDeferredUnloadImage.push_back( std::move( deferredImage ) );
-
-        // 목록은 배치 순서이고 배치 번호는 연쇄마다 하나씩 오른다. 가장 오래된 것이 마지막 N 번의 연쇄 밖이면 내린다.
-        while ( _listDeferredUnloadImage.back()._batchID - _listDeferredUnloadImage.front()._batchID >= kMaxDeferredUnloadBatchCount )
-        {
-            unloadOldestDeferredBatch();
-        }
-    }
-
-    void LiveReloadManager::unloadOldestDeferredBatch()
-    {
-        if ( _listDeferredUnloadImage.empty() )
-            return;
-
-        const uint32 oldestBatchID = _listDeferredUnloadImage.front()._batchID;
-        size_t       batchEnd{ 0 };
-        while ( batchEnd < _listDeferredUnloadImage.size() && _listDeferredUnloadImage[batchEnd]._batchID == oldestBatchID )
-        {
-            ++batchEnd;
-        }
-
-        for ( size_t imageIndex = batchEnd; imageIndex > 0; --imageIndex )
-        {
-            const DeferredUnloadImage& deferredImage = _listDeferredUnloadImage[imageIndex - 1];
-            if ( deferredImage._bKeepMapped )
-            {
-                // 다른 코드가 아직 구독하는 이벤트 채널을 이 이미지가 만들었다(`ModuleImageUtil::releaseModuleCode`). 언로드하지도, 파일을 지우지도 않는다.
-                SW_LOG_INFO( "Keeping deferred module image %# mapped (batch %#) — an event channel it created is still subscribed", deferredImage._moduleName,
-                             deferredImage._batchID );
-                continue;
-            }
-            SW_LOG_INFO( "Unloading deferred module image %# (batch %#, handle=%#)", deferredImage._moduleName, deferredImage._batchID, deferredImage._pHandle );
-            ModuleImageUtil::unloadDynamicLibrary( deferredImage._pHandle );
-            LiveReloadManagerInternal::tryDeleteShadowArtifacts( deferredImage._tempPath );
-        }
-        _listDeferredUnloadImage.erase( _listDeferredUnloadImage.begin(), _listDeferredUnloadImage.begin() + static_cast<std::ptrdiff_t>( batchEnd ) );
     }
 
     bool LiveReloadManager::drainTasksBeforeUnload()
@@ -1013,131 +785,10 @@ namespace sw
         return _bReloadGraphBroken == SW_FALSE;
     }
 
-    void LiveReloadManager::collectDependentClosure( string_view root, vector<string>& outListUnique ) const
-    {
-        unordered_set<string> uniqueVisited;
-        for ( const string& existing : outListUnique )
-        {
-            uniqueVisited.insert( existing );
-        }
-
-        vector<string> listStack;
-        listStack.push_back( string( root ) );
-        while ( listStack.empty() == false )
-        {
-            const string cur = listStack.back();
-            listStack.pop_back();
-            if ( uniqueVisited.insert( cur ).second == false )
-                continue;
-            if ( _mapModule.find( cur ) == _mapModule.end() )
-                continue;
-            outListUnique.push_back( cur );
-            for ( const auto& [moduleName, context] : _mapModule )
-            {
-                for ( const string& dep : context._listDependsOn )
-                {
-                    if ( dep == cur )
-                        listStack.push_back( moduleName );
-                }
-            }
-        }
-    }
-
-    bool LiveReloadManager::topoSortSubgraph( const vector<string>& listName, vector<string>& outListOrdered ) const
-    {
-        outListOrdered.clear();
-        unordered_set<string> uniqueSubgraph;
-        uniqueSubgraph.reserve( listName.size() );
-        for ( const string& name : listName )
-        {
-            if ( _mapModule.find( name ) != _mapModule.end() )
-                uniqueSubgraph.insert( name );
-        }
-        if ( uniqueSubgraph.empty() )
-            return true;
-
-        unordered_map<string, uint32> mapIndegree;
-        for ( const string& name : uniqueSubgraph )
-        {
-            mapIndegree[name] = 0;
-        }
-
-        for ( const string& name : uniqueSubgraph )
-        {
-            const auto found = _mapModule.find( name );
-            for ( const string& dep : found->second._listDependsOn )
-            {
-                if ( uniqueSubgraph.find( dep ) != uniqueSubgraph.end() )
-                    mapIndegree[name] += 1;
-            }
-        }
-
-        vector<string> listReady;
-        for ( const string& name : uniqueSubgraph )
-        {
-            if ( mapIndegree[name] == 0 )
-                listReady.push_back( name );
-        }
-        std::sort( listReady.begin(), listReady.end() );
-
-        vector<string> listOrder;
-        listOrder.reserve( uniqueSubgraph.size() );
-        size_t cursor{ 0 };
-        while ( cursor < listReady.size() )
-        {
-            const size_t levelBegin = cursor;
-            const size_t levelEnd   = listReady.size();
-            for ( size_t levelIndex = levelBegin; levelIndex < levelEnd; ++levelIndex )
-            {
-                const string readyModuleName = listReady[levelIndex];
-                listOrder.push_back( readyModuleName );
-                for ( const string& name : uniqueSubgraph )
-                {
-                    const auto found = _mapModule.find( name );
-                    for ( const string& dep : found->second._listDependsOn )
-                    {
-                        if ( dep != readyModuleName )
-                            continue;
-
-                        uint32& deg = mapIndegree[name];
-                        if ( deg == 0 )
-                            continue;
-                        deg -= 1;
-                        if ( deg == 0 )
-                            listReady.push_back( name );
-                    }
-                }
-            }
-            cursor = levelEnd;
-            if ( listReady.size() > levelEnd )
-                std::sort( listReady.begin() + static_cast<std::ptrdiff_t>( levelEnd ), listReady.end() );
-        }
-
-        if ( listOrder.size() != uniqueSubgraph.size() )
-        {
-            string cycleModules;
-            for ( const string& name : uniqueSubgraph )
-            {
-                if ( std::find( listOrder.begin(), listOrder.end(), name ) == listOrder.end() )
-                {
-                    if ( cycleModules.empty() == false )
-                        cycleModules += ", ";
-                    cycleModules += name;
-                }
-            }
-            SW_LOG_ERROR( "Dependency cycle in module graph (sorted %# / %#). Cyclic modules: %s",
-                          static_cast<uint32>( listOrder.size() ), static_cast<uint32>( uniqueSubgraph.size() ), cycleModules.c_str() );
-            return false;
-        }
-
-        outListOrdered = std::move( listOrder );
-        return true;
-    }
-
     void LiveReloadManager::reloadCascade( const vector<string>& listSubgraphName )
     {
         vector<string> listOrder;
-        if ( topoSortSubgraph( listSubgraphName, listOrder ) == false )
+        if ( _dependencyGraph.sortByDependency( listSubgraphName, listOrder ) == false )
         {
             markGraphBroken( "dependency cycle" );
             return;
@@ -1193,7 +844,7 @@ namespace sw
             return;
         }
 
-        ++_reloadBatchID;
+        _deferredUnloadQueue.beginBatch();
 
         size_t committed{ 0 };
         for ( size_t moduleIndex = 0; moduleIndex < listPrepared.size(); ++moduleIndex )
@@ -1250,7 +901,6 @@ namespace sw
         , _moduleName{}
         , _originalModulePath{}
         , _tempModulePath{}
-        , _listDependsOn{}
         , _imageName{}
         , _pLibraryModule{ nullptr }
         , _loadedSourceMtime{ 0 }
@@ -1270,7 +920,6 @@ namespace sw
         , _moduleName{ std::move( other._moduleName ) }
         , _originalModulePath{ std::move( other._originalModulePath ) }
         , _tempModulePath{ std::move( other._tempModulePath ) }
-        , _listDependsOn{ std::move( other._listDependsOn ) }
         , _imageName{ std::move( other._imageName ) }
         , _pLibraryModule{ other._pLibraryModule }
         , _loadedSourceMtime{ other._loadedSourceMtime }
@@ -1297,7 +946,6 @@ namespace sw
             _moduleName         = std::move( other._moduleName );
             _originalModulePath = std::move( other._originalModulePath );
             _tempModulePath     = std::move( other._tempModulePath );
-            _listDependsOn      = std::move( other._listDependsOn );
             _imageName          = std::move( other._imageName );
             _pLibraryModule     = other._pLibraryModule;
             _loadedSourceMtime  = other._loadedSourceMtime;

@@ -6,8 +6,11 @@
  *       자체를 몰라야 합니다(Engine 레이어 규칙: Engine 은 Editor, GameFramework, Games 를 모릅니다). 쓰는 쪽은 ModuleHost(ModuleHost 와
  *       ModuleCompiler)와 App 의 단축키뿐이고, Shipping 빌드에서는 **파일째 빠집니다**(`Source/ModuleHost/CMakeLists.txt` 의 제외 목록).
  *
- *       핫 리로드만 쓰는 도우미 세 개는 각자 파일에 있습니다. 섀도 복사본의 파일 바이트를 읽고 고치는 `ModuleImagePatch`, 새 모듈 코드를
- *       처음 호출하는 지점을 보호하는 `ModuleCallGuard`, 복사본 파일 이름을 만들고 남은 것을 정리하는 `ShadowCopyName` 입니다. Shipping 에서 함께 빠집니다.
+ *       이 클래스는 리로드 **순서**(prepare → 배치 콜백 → commit, 언로드 구간, 정적 등록 헤드, `RegistrationReloadScope`)를 정하고, 그 밖의 일은
+ *       값 멤버나 도우미에 맡깁니다. 연쇄 교체 대상과 순서를 계산하는 `ModuleDependencyGraph`, 섀도 복사본 파일을 쓰고 지우는 `ModuleShadowCopy`,
+ *       교체된 옛 이미지를 배치 단위로 남겨 두는 `DeferredImageUnloadQueue` 입니다.
+ *       핫 리로드만 쓰는 도우미는 그 밖에 셋이 더 있습니다. 섀도 복사본의 파일 바이트를 읽고 고치는 `ModuleImagePatch`, 새 모듈 코드를
+ *       처음 호출하는 지점을 보호하는 `ModuleCallGuard`, 복사본 파일 이름을 만들고 남은 것을 정리하는 `ShadowCopyName` 입니다. 모두 Shipping 에서 함께 빠집니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -20,6 +23,10 @@
 #include "Core/Time/GameTimer.h"
 
 #include "Engine/Common/Common.h"
+
+#include "ModuleHost/DeferredImageUnloadQueue.h"
+#include "ModuleHost/ModuleDependencyGraph.h"
+#include "ModuleHost/ModuleShadowCopy.h"
 
 namespace sw
 {
@@ -179,7 +186,7 @@ namespace sw
          * @brief 등록된 모듈마다, 의존 모듈이 **지금 이 매니저가 보관한 이미지**에 바인딩됐는지 확인합니다.
          * @return 어긋난 바인딩이 하나도 없으면 true 입니다. 어긋나면 모듈과 의존 이름, 양쪽 주소를 로그로 남기고 false 를 반환합니다.
          * @details 의존 모듈은 이름으로 바인딩되고, prepare 가 복사본마다 세대 이름을 주고 의존하는 복사본이 그 이름을 부르게 바꾼다
-         *          (`rewriteShadowImageNames`). 바꾸기가 빠지면 Windows 는 원본 DLL 을 한 벌 더 로드하고, 리눅스는 SONAME 이 같은 **먼저 로드된**
+         *          (`ModuleShadowCopy::writeShadowCopy`). 바꾸기가 빠지면 Windows 는 원본 DLL 을 한 벌 더 로드하고, 리눅스는 SONAME 이 같은 **먼저 로드된**
          *          이미지에 바인딩된다. 어긋나면 한 프로세스에서 같은 모듈이 두 벌 돌고(정적 상태와 타입 등록이 갈린다), 옛 이미지를 언로드하는 순간
          *          거기로 점프하는 코드가 죽는다. 등록과 연쇄 리로드 끝에 호출하고, 어긋나면 그래프를 막는다. 섞인 채 조용히 도는 것보다 낫기 때문이다.
          *          Windows 는 import 테이블 첫 항목이 가리키는 이미지로, 리눅스는 모듈마다 박힌 스탬프 상수(`sw_moduleEngineAbiStamp_<이름>`,
@@ -193,7 +200,7 @@ namespace sw
         /** @brief 끝까지 성공한 연쇄 리로드 수입니다(교체 · 콜백 · 바인딩 검사를 모두 마친 것). 실패하거나 적용 전에 거절된 리로드는 세지 않습니다. 자동화가 완료를 기다릴 때 읽습니다. */
         uint32 getCompletedReloadCount() const { return _completedReloadCount; }
         /** @brief 교체된 뒤 언로드를 미루고 아직 로드해 둔 옛 이미지 수입니다(`kMaxDeferredUnloadBatchCount` 배치까지). */
-        uint32 getDeferredUnloadImageCount() const { return static_cast<uint32>( _listDeferredUnloadImage.size() ); }
+        uint32 getDeferredUnloadImageCount() const { return _deferredUnloadQueue.getImageCount(); }
 
     private:
         struct ModuleContext;
@@ -221,62 +228,23 @@ namespace sw
         void invokeAfterReload( ModuleContext& context );
         /** @brief prepare 가 실패하면 새 이미지를 버리고, 바꿔 둔 SONAME 을 commit 된 이름으로 되돌립니다. */
         void abortShadowCopy( ModuleContext& context, PreparedShadow& prepared );
-        /**
-         * @brief 섀도 복사본에 세대 이름을 주고(리눅스 SONAME, Windows 파일 이름), 복사본이 부르는 의존 모듈 이름을 그 의존의 **지금** 이름으로 바꿉니다.
-         * @details 로더는 의존을 이름으로 풀고 같은 이름의 이미지가 이미 로드돼 있으면 그것을 쓴다. 복사본이 원본 이름을 그대로 가지고 있으면
-         *          리눅스는 SONAME 이 같은 **먼저 로드된** 이미지(연쇄 리로드의 prepare 에서는 아직 언로드되지 않은 옛 이미지)에 바인딩되고,
-         *          Windows 는 원본 DLL 을 한 벌 더 로드한다. 이름을 세대마다 고유하게 하면 이름이 가리키는 이미지가 하나뿐이다(`ModuleImagePatch`).
-         *          그래서 모듈끼리는 지연 로드 없이 일반 import 로 바인딩된다. 첫 호출이 썽크를 지나는 일이 없다.
-         * @return Windows 에서 세대 이름을 만들 수 없거나(이름이 너무 짧다), 복사본이 등록된 모듈을 의존 목록에 없이 원본 이름으로 부르면 false 입니다.
-         *         리눅스는 늘 true 입니다(SONAME 이 없는 이미지는 바꾸지 않는다).
-         */
-        [[nodiscard]] bool rewriteShadowImageNames( ModuleContext& context, vector<uint8>& inoutBytes );
+        /** @brief @p context 의 섀도 복사본을 쓰는 데 필요한 입력(의존 모듈과 등록된 모듈의 이미지 이름)을 채웁니다. */
+        void populateShadowCopyParams( const ModuleContext& context, ShadowCopyParams& outParams ) const;
         /** @brief 모듈 핸들을 언로드합니다. */
         void unloadModule( ModuleContext& context );
-        /** @brief 교체된 옛 이미지를 지연 언로드 목록에 추가하고, 배치가 상한을 넘으면 가장 오래된 배치를 언로드합니다. */
-        void deferImageUnload( string_view moduleName, void* pHandle, string_view tempPath, bool bKeepMapped );
-        /**
-         * @brief 언로드를 미뤄 둔 가장 오래된 배치 하나를 언로드합니다. 배치 안에서는 나중에 목록에 오른 것(의존하는 쪽)부터 언로드합니다.
-         * @details 언로드를 미룬 이미지는 **같은 배치의 미룬 이미지나 지금 살아 있는 이미지에만** 바인딩돼 있다(의존이 바뀌면 의존하는
-         *          모듈도 같은 연쇄로 바뀐다). 그래서 오래된 배치부터 언로드해도 아직 쓰이는 이미지를 먼저 언로드하는 일이 없다.
-         */
-        void unloadOldestDeferredBatch();
         /**
          * @brief 언로드하기 전에 워커와 태스크를 비웁니다.
          * @return 제한 시간 안에 비웠으면 true. 실패하면 그래프를 깨진 상태로 표시하고 false 를 반환합니다.
          */
         bool drainTasksBeforeUnload();
-        /** @brief root 와 그것에 의존하는 모듈 이름을 중복 없이 모읍니다. */
-        void collectDependentClosure( string_view root, vector<string>& outListUnique ) const;
-        /** @brief 의존 순서대로 위상 정렬합니다. 순환이 있으면 false 입니다. */
-        bool topoSortSubgraph( const vector<string>& listName, vector<string>& outListOrdered ) const;
         /** @brief 부분 그래프를, 모든 prepare 가 성공한 뒤에만 commit 합니다. */
         void reloadCascade( const vector<string>& listSubgraphName );
+        /** @brief @p moduleName 의 컨텍스트를 돌려줍니다. 없으면 만들고 의존 그래프에도 이름을 넣습니다(둘의 이름 집합을 같게 둡니다). */
+        ModuleContext& getOrCreateContext( string_view moduleName );
+        /** @brief 모든 모듈 컨텍스트와 의존 그래프를 비웁니다. */
+        void clearContexts();
 
-        /**
-         * @brief 모듈 이미지 이름 세 가지입니다 — 리눅스는 SONAME, Windows 는 DLL 파일 이름(로더가 import 를 맞추는 이름)입니다.
-         * @details `_original` 은 원본 파일의 이름이라 의존 모듈의 NEEDED · import 표가 이것을 적고 있고, `_current` 는 의존 모듈이 **지금**
-         *          적어야 할 이름(prepare 가 세대 이름으로 바꾼다), `_loaded` 는 commit 된 복사본의 이름입니다. prepare 가 실패하면
-         *          `_current` 를 `_loaded` 로 되돌립니다.
-         */
-        struct ImageNameState
-        {
-            string _original;
-            string _current;
-            string _loaded;
-        };
-
-        /** @brief 교체되어 내려갈 차례를 기다리는 옛 이미지입니다. */
-        struct DeferredUnloadImage
-        {
-            string _moduleName;
-            string _tempPath;
-            void*  _pHandle{ nullptr };
-            uint32 _batchID{ 0 };
-            bool   _bKeepMapped{ false }; ///< 다른 코드가 아직 구독하는 이벤트 채널을 만든 이미지 — 내리지 않는다(`ModuleImageUtil::releaseModuleCode`)
-        };
-
-        /// @brief 등록된 모듈입니다(경로 · 핸들 · 의존 · 리로드 예약).
+        /// @brief 등록된 모듈입니다(경로 · 핸들 · 리로드 예약). 의존 목록은 `_dependencyGraph` 에 있습니다.
         struct ModuleContext
         {
             OnBeforeReloadDelegate  _onBeforeReload;
@@ -286,8 +254,7 @@ namespace sw
             string                  _moduleName;
             string                  _originalModulePath;
             string                  _tempModulePath;
-            vector<string>          _listDependsOn;
-            ImageNameState          _imageName;
+            ShadowImageNameState    _imageName;
             void*                   _pLibraryModule;
             uint64                  _loadedSourceMtime;
             uint64                  _debounceMtime;
@@ -318,16 +285,16 @@ namespace sw
         /** @brief 끝난 빌드를 게임 스레드에서 처리합니다. 빌드가 도는 중이면 true 입니다(그동안 변경을 올리지 않는다). */
         bool consumeBuildNotice();
 
-        unordered_map<string, ModuleContext> _mapModule;
+        unordered_map<string, ModuleContext> _mapModule;        ///< 이름 집합은 `_dependencyGraph` 와 같다(`getOrCreateContext` · `clearContexts`)
+        ModuleDependencyGraph                _dependencyGraph;  ///< 모듈 이름 → 의존 모듈 이름. 연쇄 교체 대상과 순서를 계산한다
         vector<string>                       _listSharedModule; ///< `loadSharedModule` 로 올린 공용 모듈 이름(내리지 않는다)
         unique_ptr<IFileWatcher>             _fileWatcher;
         mutable mutex                        _buildMutex;
         BuildNotice                          _buildNotice;
         OnBeforeCommitBatchDelegate          _onBeforeCommitBatch;
         DrainWorkersDelegate                 _drainWorkers;
-        vector<DeferredUnloadImage>          _listDeferredUnloadImage; ///< 언로드를 미룬 옛 이미지. 오래된 것부터
-        uint32                               _reloadBatchID;           ///< 연쇄 리로드마다 오르는 배치 번호
-        uint32                               _completedReloadCount;    ///< 끝까지 성공한 연쇄 리로드 수(`getCompletedReloadCount`)
+        DeferredImageUnloadQueue             _deferredUnloadQueue;  ///< 언로드를 미룬 옛 이미지(`kMaxDeferredUnloadBatchCount` 배치까지)
+        uint32                               _completedReloadCount; ///< 끝까지 성공한 연쇄 리로드 수(`getCompletedReloadCount`)
         uint8                                _bReloadGraphBroken : 1;
         [[maybe_unused]] uint8               _reserved           : 7;
     };

@@ -13,7 +13,7 @@ file(GLOB_RECURSE MODULE_HOST_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.h
 # 코드가 실행되지 않는 것만으로는 부족하고, 바이너리에서 아예 빠져야 한다.
 # 빼는 것은 소스 검사 게이트에도 적힌다(`sw_excludeUnbuiltSources`).
 if(SW_SHIPPING_BUILD)
-	sw_excludeUnbuiltSources(MODULE_HOST_SOURCES "/Source/ModuleHost/(LiveReloadManager|ModuleImagePatch|ModuleCallGuard|ShadowCopyName)\\.(cpp|h)$")
+	sw_excludeUnbuiltSources(MODULE_HOST_SOURCES "/Source/ModuleHost/(LiveReloadManager|ModuleDependencyGraph|ModuleShadowCopy|DeferredImageUnloadQueue|ModuleImagePatch|ModuleCallGuard|ShadowCopyName)\\.(cpp|h)$")
 endif()
 
 add_library(ModuleHost STATIC ${MODULE_HOST_SOURCES})

@@ -6,7 +6,7 @@ lld 20 의 x64 지연 로드 썽크(`__tailMerge_<dll>`)는 xmm0~3 을 `__delayL
 **float 인자가 망가진다**(LLVM 21 에서 고쳐졌다 — `docs/09_Decisions.md`). 그래서
 
 - 모듈끼리(키트 → GameFramework · 공유 키트, SWGame → 키트, 에디터 확장 → EditorModule · 키트)는 일반 import 다. 핫 리로드는 섀도 복사본에
-  세대 이름을 주고 의존하는 복사본의 import 이름을 바꿔 맞춘다(`LiveReloadManager::rewriteShadowImageNames`).
+  세대 이름을 주고 의존하는 복사본의 import 이름을 바꿔 맞춘다(`ModuleShadowCopy::writeShadowCopy`).
 - 없을 수 있는 시스템 DLL(Media Foundation · XAudio2 · TracyClient)은 쓰는 쪽이 LoadLibrary + 함수 표로 올린다.
 
 런타임 그물은 `LiveReloadManager` 가 지연 import 가 있는 모듈 이미지를 올리기 전에 거절하는 것이고, 빌드된 이미지 전체는

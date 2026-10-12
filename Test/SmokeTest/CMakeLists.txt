@@ -17,6 +17,9 @@ set(swSmokeDevSources "")
 if(NOT SW_SHIPPING_BUILD)
 	set(swSmokeDevSources
 		${CMAKE_SOURCE_DIR}/Source/ModuleHost/LiveReloadManager.cpp
+		${CMAKE_SOURCE_DIR}/Source/ModuleHost/ModuleDependencyGraph.cpp
+		${CMAKE_SOURCE_DIR}/Source/ModuleHost/ModuleShadowCopy.cpp
+		${CMAKE_SOURCE_DIR}/Source/ModuleHost/DeferredImageUnloadQueue.cpp
 		${CMAKE_SOURCE_DIR}/Source/ModuleHost/ModuleCallGuard.cpp
 		${CMAKE_SOURCE_DIR}/Source/ModuleHost/ModuleImagePatch.cpp
 		${CMAKE_SOURCE_DIR}/Source/ModuleHost/ShadowCopyName.cpp
@@ -24,6 +27,9 @@ if(NOT SW_SHIPPING_BUILD)
 		TestModuleImagePatch.cpp
 		TestModuleCallGuard.cpp
 		TestShadowCopyName.cpp
+		# 의존 그래프와 지연 언로드 큐는 DLL 없이 본다.
+		TestModuleDependencyGraph.cpp
+		TestDeferredImageUnloadQueue.cpp
 	)
 endif()
 
