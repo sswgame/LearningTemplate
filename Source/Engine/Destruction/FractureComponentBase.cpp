@@ -2,19 +2,15 @@
 
 #include "Engine/Destruction/FractureComponentBase.h"
 
-#include "Core/Common/FourCcUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Network/BitStream.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Destruction/DestructionRandom.h"
+#include "Engine/Destruction/FractureAnchor.h"
 #include "Engine/Destruction/FractureAsset.h"
 #include "Engine/Destruction/FractureRenderUtil.h"
-#include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
-#include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/Physics/RigidBody2DComponent.h"
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -80,7 +76,6 @@ namespace sw
             static constexpr float32 kMoveEpsilon          = 1.0e-4f;
             static constexpr uint32  kMaxPolygonPoint2D    = 8;
             static constexpr float32 kSpawnGraceTime       = 0.3f; ///< 갓 생성된 조각끼리의 충돌을 피해로 보지 않는 시간(초)이다.
-            static constexpr uint32  kMagic                = FourCcUtil::make( "SWFS" );
 
             /** @brief 잎 껍질 점을 오브젝트 원점 기준으로 만듭니다. (무게 중심 + 축소한 껍질) × 배율입니다. */
             static void makeLeafHull( const FractureAsset& asset, uint32 leaf, float32 scale, float32 shrink, vector<float3>& outListPoint )
@@ -498,16 +493,13 @@ namespace sw
         , _eventLog{}
         , _listEventGroupPose{}
         , _pendingMutex{}
-        , _listPendingDrive{}
-        , _listRecentHash{}
+        , _networkSync{}
         , _listPendingDamage{}
         , _listLeafStaticBody{}
         , _listRuntime{}
         , _listPiecePose{}
         , _listRuntimeOfLeaf{}
-        , _arrSkinnedMesh{}
-        , _arrSkinnedUnit{}
-        , _arrBakedUnit{}
+        , _renderUnits{}
         , _intactMesh{}
         , _intactBody{}
         , _objectPosition{}
@@ -523,7 +515,6 @@ namespace sw
         , _stillFrameCount{ 0 }
         , _bStateReady{ SW_FALSE }
         , _bFractured{ SW_FALSE }
-        , _bBaked{ SW_FALSE }
         , _bPoseDirty{ SW_FALSE }
         , _bFractureMissing{ SW_FALSE }
     {
@@ -720,13 +711,13 @@ namespace sw
         }
         if ( bMoved || _bPoseDirty == SW_TRUE )
         {
-            if ( _bBaked == SW_TRUE )
+            if ( _renderUnits.isBaked() )
                 setBaked( false );
             writePiecePoses();
             _stillFrameCount = 0;
             _bPoseDirty      = SW_FALSE;
         }
-        else if ( bFading == false && _bBaked == SW_FALSE && ++_stillFrameCount >= FractureComponentBaseInternal::kBakeAfterStillFrames )
+        else if ( bFading == false && _renderUnits.isBaked() == false && ++_stillFrameCount >= FractureComponentBaseInternal::kBakeAfterStillFrames )
         {
             setBaked( true );
         }
@@ -807,29 +798,22 @@ namespace sw
     {
         (void)physics;
         const FractureAsset& asset = *_asset;
-        outListAnchor.assign( asset.getPieceCount(), 0 );
-        float3     position{};
-        quaternion rotation{};
-        float32    scale = 1.0f;
+        float3               position{};
+        quaternion           rotation{};
+        float32              scale = 1.0f;
         readObjectPose( position, rotation, scale );
-        const uint64 selfID = getOwner() != nullptr ? getOwner()->getObjectID() : 0;
-        for ( uint32 leaf = 0; leaf < asset.getPieceCount(); ++leaf )
+        // World 모드의 "정적 월드에 닿았나" 는 물리 질의라 여기서 잎마다 묻는다. 판정은 FractureAnchorUtil 이 모은다.
+        vector<uint8> listWorldContact;
+        if ( _anchorMode == FractureAnchorMode::World && _physics != nullptr )
         {
-            bool bAnchored = false;
-            if ( _anchorMode == FractureAnchorMode::Bottom )
-                bAnchored = asset._listPiece[leaf]._boundsMin._y <= asset._boundsMin._y + _anchorTolerance / scale;
-            else if ( _anchorMode == FractureAnchorMode::World && _physics != nullptr )
-                bAnchored = _physics->overlapsStaticWorld( asset, leaf, scale, position, rotation, selfID );
-            const float3& centroid = asset._graph._listNode[leaf]._centroid;
-            for ( const FractureAnchorVolume& volume : _listAnchorVolume )
+            const uint64 selfID = getOwner() != nullptr ? getOwner()->getObjectID() : 0;
+            listWorldContact.assign( asset.getPieceCount(), 0 );
+            for ( uint32 leaf = 0; leaf < asset.getPieceCount(); ++leaf )
             {
-                const float3 delta = centroid - volume._center;
-                const bool   bIn   = MathUtil::abs( delta._x ) <= volume._halfExtents._x && MathUtil::abs( delta._y ) <= volume._halfExtents._y &&
-                                 MathUtil::abs( delta._z ) <= volume._halfExtents._z;
-                bAnchored = bAnchored || bIn;
+                listWorldContact[leaf] = _physics->overlapsStaticWorld( asset, leaf, scale, position, rotation, selfID ) ? 1 : 0;
             }
-            outListAnchor[leaf] = bAnchored ? 1 : 0;
         }
+        FractureAnchorUtil::computeAnchors( asset, _anchorMode, _anchorTolerance, scale, _listAnchorVolume, listWorldContact, outListAnchor );
     }
 
     void FractureComponentBase::processPendingEvents( ScenePhysics& physics )
@@ -986,36 +970,6 @@ namespace sw
 
     // --- 쪼갠 상태 -----------------------------------------------------------------------------------------------------------------
 
-    void FractureComponentBase::createRenderUnits()
-    {
-        GameObject* pOwner = getOwner();
-        if ( pOwner == nullptr )
-            return;
-        const MeshComponent*       pIntact    = static_cast<const MeshComponent*>( resolveOwnedComponent( _intactMesh ) );
-        shared_ptr<const Skeleton> skeleton   = FractureRenderUtil::createPieceSkeleton( *_asset );
-        const FractureSurfaceSlot  arrSlot[2] = { FractureSurfaceSlot::Outer, FractureSurfaceSlot::Interior };
-        for ( uint32 slot = 0; slot < 2; ++slot )
-        {
-            _arrSkinnedMesh[slot] = FractureRenderUtil::createSkinnedMesh( *_asset, arrSlot[slot] );
-            if ( _arrSkinnedMesh[slot] == nullptr )
-                continue;
-            SkeletalMeshComponent* pUnit = pOwner->addComponent<SkeletalMeshComponent>();
-            if ( pUnit == nullptr )
-                continue;
-            pUnit->setSkeleton( skeleton );
-            pUnit->setMesh( _arrSkinnedMesh[slot] );
-            pUnit->setAnimateWhenOffscreen( true );
-            const bool bInterior = slot == 1 && _interiorMaterialPath.empty() == false;
-            if ( bInterior )
-                pUnit->setMaterialPath( _interiorMaterialPath.c_str() );
-            else if ( pIntact != nullptr && pIntact->getMaterialPath().empty() == false )
-                pUnit->setMaterialPath( pIntact->getMaterialPath().c_str() );
-            else if ( pIntact != nullptr )
-                pUnit->setMaterial( pIntact->getMaterial() );
-            _arrSkinnedUnit[slot] = pUnit->getHandle();
-        }
-    }
-
     void FractureComponentBase::prepareLeafShapes( float32 scale )
     {
         if ( _physics == nullptr || _asset == nullptr || scale == _leafShapeScale )
@@ -1071,7 +1025,7 @@ namespace sw
         }
 
         prepareLeafShapes( _objectScale );
-        createRenderUnits();
+        _renderUnits.create( *pOwner, *_asset, static_cast<const MeshComponent*>( resolveOwnedComponent( _intactMesh ) ), _interiorMaterialPath );
         _bFractured = SW_TRUE;
         _bPoseDirty = SW_TRUE;
     }
@@ -1383,23 +1337,7 @@ namespace sw
         GameObject* pOwner = getOwner();
         if ( pOwner == nullptr )
             return;
-        const float32 assetRadius = MathUtil::max( _asset->_boundsMax.getLength(), _asset->_boundsMin.getLength() );
-        for ( const ComponentHandle& handle : _arrSkinnedUnit )
-        {
-            SkeletalMeshComponent* pUnit = static_cast<SkeletalMeshComponent*>( resolveOwnedComponent( handle ) );
-            if ( pUnit == nullptr )
-                continue;
-            Pose& pose = pUnit->getLocalPose();
-            if ( pose.getBoneCount() != _listPiecePose.size() )
-                continue;
-            for ( uint32 leaf = 0; leaf < static_cast<uint32>( _listPiecePose.size() ); ++leaf )
-            {
-                pose.setBoneTransform( leaf, _listPiecePose[leaf] );
-            }
-            pUnit->applyExternalPose();
-            pUnit->setBoundsRadius( assetRadius + maxOffset );
-            pUnit->markRenderStateDirty();
-        }
+        _renderUnits.writePoses( *pOwner, *_asset, _listPiecePose, maxOffset );
     }
 
     void FractureComponentBase::setBaked( bool bBaked )
@@ -1407,40 +1345,7 @@ namespace sw
         GameObject* pOwner = getOwner();
         if ( pOwner == nullptr || _asset == nullptr )
             return;
-        const FractureSurfaceSlot arrSlot[2] = { FractureSurfaceSlot::Outer, FractureSurfaceSlot::Interior };
-        for ( uint32 slot = 0; slot < 2; ++slot )
-        {
-            SkeletalMeshComponent* pSkinned = static_cast<SkeletalMeshComponent*>( resolveOwnedComponent( _arrSkinnedUnit[slot] ) );
-            if ( pSkinned == nullptr )
-                continue;
-            MeshComponent* pBaked = static_cast<MeshComponent*>( resolveOwnedComponent( _arrBakedUnit[slot] ) );
-            if ( bBaked && pBaked == nullptr )
-            {
-                pBaked = pOwner->addComponent<MeshComponent>();
-                if ( pBaked == nullptr )
-                    continue;
-                if ( pSkinned->getMaterialPath().empty() == false )
-                    pBaked->setMaterialPath( pSkinned->getMaterialPath().c_str() );
-                else
-                    pBaked->setMaterial( pSkinned->getMaterial() );
-                _arrBakedUnit[slot] = pBaked->getHandle();
-            }
-            if ( bBaked )
-            {
-                shared_ptr<Mesh> baked = FractureRenderUtil::createBakedMesh( *_asset, arrSlot[slot], _listPiecePose );
-                pBaked->setVisible( baked != nullptr );
-                if ( baked != nullptr )
-                    pBaked->setMesh( std::move( baked ) );
-                pSkinned->setVisible( false );
-            }
-            else
-            {
-                if ( pBaked != nullptr )
-                    pBaked->setVisible( false );
-                pSkinned->setVisible( true );
-            }
-        }
-        _bBaked = bBaked ? SW_TRUE : SW_FALSE;
+        _renderUnits.setBaked( *pOwner, *_asset, _listPiecePose, bBaked );
     }
 
     // --- 질의 -------------------------------------------------------------------------------------------------------------------
@@ -1547,21 +1452,15 @@ namespace sw
 
     void FractureComponentBase::recordRecentStateHash()
     {
+        // 권한 쪽은 기록하지 않는다(해시 계산도 하지 않는다).
         if ( _bAuthority )
             return;
-        // 받는 쪽 컴포넌트만 처음 기록할 때 슬롯을 잡는다. 권한 쪽이나 파괴를 받지 않는 컴포넌트는 슬롯을 갖지 않는다.
-        if ( _listRecentHash.getCapacity() != static_cast<int32>( kRecentHashCount ) )
-            _listRecentHash.initialize( static_cast<int32>( kRecentHashCount ) );
-        _listRecentHash.acquire( _state.getEventCount() ) = _state.computeStateHash();
+        _networkSync.recordStateHash( _state.getEventCount(), _state.computeStateHash() );
     }
 
     bool FractureComponentBase::findRecentStateHash( uint32 eventCount, uint64& outHash ) const
     {
-        const uint64* pHash = _listRecentHash.find( eventCount );
-        if ( pHash == nullptr )
-            return false;
-        outHash = *pHash;
-        return true;
+        return _networkSync.findStateHash( eventCount, outHash );
     }
 
     bool FractureComponentBase::hasPendingDamage() const
@@ -1601,30 +1500,11 @@ namespace sw
 
     void FractureComponentBase::makeNetworkSnapshot( vector<uint8>& outBytes ) const
     {
-        using Internal = FractureComponentBaseInternal;
         vector<uint8> stateBytes;
         _state.writeSnapshot( stateBytes );
         vector<FractureGroupPose> listPose;
         collectGroupPoses( listPose );
-        BitWriter writer;
-        writer.writeUint32( Internal::kMagic );
-        writer.writeBlob( stateBytes.data(), static_cast<int32>( stateBytes.size() ) );
-        writer.writeVarUint( listPose.size() );
-        for ( const FractureGroupPose& pose : listPose )
-        {
-            writer.writeVarUint( pose._groupID );
-            writer.writeBits( pose._bGone == SW_TRUE ? 1u : 0u, 1 );
-            if ( pose._bGone == SW_TRUE )
-                continue;
-            writer.writeFloat( pose._position._x );
-            writer.writeFloat( pose._position._y );
-            writer.writeFloat( pose._position._z );
-            writer.writeFloat( pose._rotation._x );
-            writer.writeFloat( pose._rotation._y );
-            writer.writeFloat( pose._rotation._z );
-            writer.writeFloat( pose._rotation._w );
-        }
-        outBytes = writer.releaseBytes();
+        FractureNetworkSync::writeSnapshot( stateBytes, listPose, outBytes );
     }
 
     void FractureComponentBase::applyNetworkSnapshot( const uint8* pData, size_t size )
@@ -1644,25 +1524,13 @@ namespace sw
         target._groupID  = groupID;
         target._center   = worldCenter;
         target._rotation = rotation;
-        std::scoped_lock<mutex> lock{ _pendingMutex };
-        for ( FractureGroupPose& existing : _listPendingDrive )
-        {
-            if ( existing._groupID == groupID )
-            {
-                existing = target;
-                return;
-            }
-        }
-        _listPendingDrive.push_back( target );
+        _networkSync.queueDriveTarget( target );
     }
 
     void FractureComponentBase::applyDriveTargets()
     {
         vector<FractureGroupPose> listDrive;
-        {
-            std::scoped_lock<mutex> lock{ _pendingMutex };
-            listDrive.swap( _listPendingDrive );
-        }
+        _networkSync.takeDriveTargets( listDrive );
         if ( _physics == nullptr )
             return;
         for ( const FractureGroupPose& target : listDrive )
@@ -1693,17 +1561,17 @@ namespace sw
 
     void FractureComponentBase::applySnapshotNow( ScenePhysics& physics, const vector<uint8>& bytes )
     {
-        using Internal         = FractureComponentBaseInternal;
-        const utf8* pOwnerName = getOwner() != nullptr ? getOwner()->getName().c_str() : "?";
-        BitReader   reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-        if ( reader.readUint32() != Internal::kMagic )
+        const utf8*                                   pOwnerName = getOwner() != nullptr ? getOwner()->getName().c_str() : "?";
+        vector<uint8>                                 stateBytes;
+        vector<FractureGroupPose>                     listPose;
+        const FractureNetworkSync::SnapshotReadResult result = FractureNetworkSync::readSnapshot( bytes, stateBytes, listPose );
+        // 확인 순서는 매직 → 상태 바이트 → 그래프에 맞는지 → 그룹 자세다. 앞의 것이 실패하면 그 오류만 남긴다.
+        if ( result == FractureNetworkSync::SnapshotReadResult::WrongMagic )
         {
             SW_LOG_ERROR( "'%#': destruction snapshot has a wrong magic", pOwnerName );
             return;
         }
-        // 상태 바이트의 상한은 남은 바이트다. 받은 스냅샷 자체가 길이를 정한다(조각은 이미 모아 왔다).
-        vector<uint8> stateBytes;
-        if ( reader.readBlob( stateBytes, reader.getBitsRemaining() / 8 ) == false || stateBytes.empty() )
+        if ( result == FractureNetworkSync::SnapshotReadResult::StateTruncated )
         {
             SW_LOG_ERROR( "'%#': destruction snapshot is truncated", pOwnerName );
             return;
@@ -1714,26 +1582,7 @@ namespace sw
             SW_LOG_ERROR( "'%#': destruction snapshot does not fit this fracture", pOwnerName );
             return;
         }
-        vector<FractureGroupPose> listPose;
-        const uint64              poseCount = reader.readVarUint();
-        for ( uint64 index = 0; index < poseCount && reader.hasOverflowed() == false; ++index )
-        {
-            FractureGroupPose pose;
-            pose._groupID = static_cast<uint32>( reader.readVarUint() );
-            pose._bGone   = reader.readBits( 1 ) != 0 ? SW_TRUE : SW_FALSE;
-            if ( pose._bGone == SW_FALSE )
-            {
-                pose._position._x = reader.readFloat();
-                pose._position._y = reader.readFloat();
-                pose._position._z = reader.readFloat();
-                pose._rotation._x = reader.readFloat();
-                pose._rotation._y = reader.readFloat();
-                pose._rotation._z = reader.readFloat();
-                pose._rotation._w = reader.readFloat();
-            }
-            listPose.push_back( pose );
-        }
-        if ( reader.hasOverflowed() )
+        if ( result == FractureNetworkSync::SnapshotReadResult::PoseTruncated )
         {
             SW_LOG_ERROR( "'%#': destruction snapshot poses are truncated", pOwnerName );
             return;

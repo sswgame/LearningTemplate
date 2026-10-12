@@ -306,7 +306,10 @@ pFracture->applyRadialDamageAtWorld( center, 1.2f /*반경*/, 400.0f /*변형*/,
 | `DestructionDamage.h` | 피해 사건과 사건 기록 |
 | `DestructionProfile.h` | 파괴 재질 파일 형식 |
 | `FractureComponentBase.h` | 2D와 3D 공용 런타임, 피해와 네트워크 API |
+| `FractureAnchor.h` | `FractureAnchorUtil`. 앵커 판정(모드, 볼륨, World 닿음 표). 물리 없이 부를 수 있습니다 |
+| `FractureNetworkSync.h` | `FractureNetworkSync`, `FractureGroupPose`. 받는 쪽의 최근 해시, `driveGroup` 의 자세 목표, 스냅숏 바이트 형식 |
+| `FractureRenderUnits.h` | `FractureRenderUnits`. 스킨드 메시 둘을 붙이고 본 포즈를 쓰며, 멈추면 정적 메시로 베이크합니다 |
 
-- 테스트: `Test/EngineTest/Destruction/` 의 `FractureTest`, `DestructionStateTest`, `DestructionDamageTest`, `DestructionSnapshotTest`, `FractureComponentTest`, `Fracture2DTest`, `DestructionShowcaseTest`
+- 테스트: `Test/EngineTest/Destruction/` 의 `FractureTest`, `DestructionStateTest`, `DestructionDamageTest`, `DestructionSnapshotTest`, `FractureComponentTest`, `Fracture2DTest`, `DestructionShowcaseTest`, `FractureAnchorTest`, `FractureNetworkSyncTest`
 - 임포트 테스트: `ModelImporterTest.FractureRuleWritesFractureAssetBesideTheMesh`
 - 상위 문서: [Engine/README.md](../README.md)
