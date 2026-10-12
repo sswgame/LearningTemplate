@@ -38,10 +38,11 @@ namespace sw
             static constexpr uint32 kStateTag         = FourCcUtil::make( "NILE" );
             static constexpr uint32 kStateVersion     = 3;
 
-            static constexpr const utf8* kSoundSelect  = "game/nilecity/sounds/select_003.ogg";
-            static constexpr const utf8* kSoundBuilt   = "game/nilecity/sounds/confirmation_002.ogg";
-            static constexpr const utf8* kSoundError   = "game/nilecity/sounds/error_002.ogg";
-            static constexpr const utf8* kSoundEvolved = "game/nilecity/sounds/drop_003.ogg";
+            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 nilecity.audioevents.xml 이 정한다.
+            static constexpr const utf8* kEventSelect  = "Select";
+            static constexpr const utf8* kEventBuilt   = "Built";
+            static constexpr const utf8* kEventBlocked = "Blocked";
+            static constexpr const utf8* kEventEvolved = "Evolved";
 
             static float4 computeServiceColor( CityService service )
             {
@@ -640,7 +641,7 @@ namespace sw
         {
             [[maybe_unused]] const CityBuildingDef* pDef = _listTool[static_cast<size_t>( _selectedTool )];
             SW_LOG_INFO( "[Nile] tool: %# ($%#)", getToolName(), pDef != nullptr ? pDef->_cost : _catalog.getRoadCost() );
-            getSoundQueue().queueClip( NileDirectorComponentInternal::kSoundSelect );
+            getSoundQueue().queueEvent( NileDirectorComponentInternal::kEventSelect );
         }
         if ( inputMap.wasActionTriggered( hashed_string( "Nile.Pause" ) ) )
         {
@@ -707,12 +708,12 @@ namespace sw
         if ( result == CityPlaceResult::Ok )
         {
             SW_LOG_INFO( "[Nile] built %# at (%#, %#) - $%# left", pDef->_name.c_str(), _cursorTile._x, _cursorTile._y, _wallet.getBalance( _city.getCurrency() ) );
-            getSoundQueue().queueClip( NileDirectorComponentInternal::kSoundBuilt );
+            getSoundQueue().queueEvent( NileDirectorComponentInternal::kEventBuilt );
         }
         else
         {
             SW_LOG_INFO( "[Nile] cannot build %# at (%#, %#): %#", pDef->_name.c_str(), _cursorTile._x, _cursorTile._y, toString( result ) );
-            getSoundQueue().queueClip( NileDirectorComponentInternal::kSoundError );
+            getSoundQueue().queueEvent( NileDirectorComponentInternal::kEventBlocked );
         }
     }
 
@@ -754,7 +755,7 @@ namespace sw
         }
         // 한 프레임에 여럿이 올라도 소리는 한 번.
         if ( bHouseEvolved )
-            getSoundQueue().queueClip( NileDirectorComponentInternal::kSoundEvolved );
+            getSoundQueue().queueEvent( NileDirectorComponentInternal::kEventEvolved );
     }
 
     void NileDirectorComponent::logStatus() const
