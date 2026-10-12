@@ -135,7 +135,7 @@ ImGui 의 할당은 sw 할당자로 보냅니다. `ImGuiEditor::initialize` 가 
 | `Common/Backend/` | ImGui 플랫폼 · 렌더 백엔드, draw 스냅샷, 해제 큐 |
 | `Common/Asset/` | 원본 임포트(텍스처, 모델, 높이장)와 저장 직후 검증 |
 | `Viewport/` | 뷰포트 클라이언트, 기즈모, 오버레이, 시각화 |
-| `Panels/` | 구체 창(씬 뷰 · 게임 뷰 · 계층 · 인스펙터 · 도구 창)과 씬 뷰 초점 도우미 |
+| `Panels/` | 구체 창(씬 뷰 · 게임 뷰 · 계층 · 인스펙터 · 도구 창)과 씬 뷰 초점 도우미. `Panels/Catalog/` 는 카탈로그 편집기(아래 "카탈로그 편집기" 절) |
 | `AssetActions/` | 에셋 종류마다의 썸네일, 열기, 뷰포트 드롭 |
 | `SelfTest/` | 에디터 안 테스트, 시나리오 단계와 탐침, 테스트 실행 창(Test Runner) |
 
@@ -287,7 +287,8 @@ VRM 은 같은 길로 임포트하고, MToon 머티리얼이 있으면 머티리
 | `Editor.SelectionOutlineBoxes` | 씬 뷰가 지난 프레임에 그린 선택 상자 수 |
 | `Editor.OverlayDock`, `Editor.OverlayX`, `Editor.OverlayY`, `Editor.OverlayVertical`, `Editor.OverlayFlags` | `gv_editorProbeOverlay` 씬 뷰 오버레이 바의 붙은 쪽(0 떠 있음 · 1 위 · 2 아래 · 3 왼쪽 · 4 오른쪽), 왼쪽 위 자리(픽셀), 세로 쌓임, 보임 1 + 접힘 10 |
 | `Editor.GizmoOperation` | 기즈모 조작(0 이동 · 1 회전 · 2 크기) |
-| `Editor.GraphNodeCount` | 가장 최근에 그린 노드 그래프 캔버스(대화 · 애니메이션 · 확장의 그래프 문서)의 노드 수 |
+| `Editor.GraphNodeCount` | 가장 최근에 그린 노드 그래프 캔버스(대화 · 애니메이션 · 확장의 그래프 문서 · 기믹 그래프)의 노드 수 |
+| `Editor.CatalogFileCount`, `Editor.CatalogRowCount`, `Editor.CatalogValidation` | 카탈로그 편집기가 나열한 파일 수(스캔이 끝나기 전 0), 연 파일의 행(루트 자식) 수, 마지막 검증(0 아직 · 1 통과 · 2 실패) |
 | `Editor.PanelOpen` | `gv_editorProbePanel` 의 패널이 열려 있으면 1 |
 | `Editor.VisualizerOn` | 씬 뷰가 `gv_editorProbeVisualizer`(시나리오가 `<Variable>` 로 정한다)의 시각화를 켜 두었으면 1 |
 | `Editor.GridStep`, `Editor.GridMajorLines`, `Editor.GridMisplacedMajorLines` | 뷰포트 격자 간격(1 · 10 · 100 m), 지난 프레임에 그린 굵은 선 수, 그중 월드 5 배수 선이 아닌 수(0 이 정상) |
@@ -367,6 +368,21 @@ Tile Map Tool 은 도구 단추 `tileMap.tool.brush` · `tileMap.tool.rect` · `
 2. 확장이 쓰는 에디터 API 는 `SW_EDITOR_API` 로 내보낸 것뿐입니다. 링크 오류가 나면 그 클래스에 `SW_EDITOR_API` 를 붙입니다.
 3. 노드 그래프 문서 창은 템플릿 `EditorGraphDocumentPanel` 을 상속하고 캔버스를 `beginGraphCanvas` 와 `endGraphCanvas` 로 엽니다.
 4. 씬 뷰 카메라를 옮기려면 `EditorSceneViewUtil::focusOn` 을 부릅니다.
+5. 지금 있는 확장은 `GF_Editor_ThemePark`(Park Layout), `GF_Editor_Admin`(GM Tool — `Kits/Feature/Online/Admin/Shared/Editor/`, 서버 없이 메모리 제공자로 돕니다)과, 기반(GameFramework Base)의
+   확장 `GF_Editor_Base`(`Source/GameFramework/Base/Editor/` — 기믹 회로 그래프 창)입니다. 기반의 `Editor/` 도 키트와 같은 규칙으로 따로 지어지고(`sw_addEditorExtension`), 게이트 규칙은
+   기반 어느 층이든 보되 키트는 보지 않으며 아무도 이 폴더를 보지 않는 것입니다.
+6. 확장의 화면 없는 부분(제공자 · 모델)은 ImGui 를 몰라 EngineTest 가 직접 컴파일해 테스트합니다(`Test/EngineTest/CMakeLists.txt` 의 `swEngineTestExtensionSource`) — 확장 DLL 은 테스트가 링크하지 않습니다.
+
+### 카탈로그 편집기
+
+카탈로그(`XMLCatalog` 를 물려받은 게임 데이터 XML)는 `SW_RESOURCE_DATA_KIND`(`Engine/Resource/ResourceDataKind.h`)로 "어느 경로이고 어떤 로더로 읽는가" 를 코드 옆에 적습니다.
+`Panels/Catalog/` 의 Catalog Editor 창은 그 레지스트리에 올라온 파일을 종류별로 나열하고, 원소 이름별 표로 셀 · 행을 고치며, 저장하면 그 종류의 실제 로더로 다시 읽어 경고를 보입니다.
+새 카탈로그를 더하면 그 영역의 `*DataKind.cpp` 에 등록 줄을 두는 것으로 스키마 테스트와 이 창에 같이 나타납니다.
+
+- **XML 은 DOM 으로 읽어 다시 쓰지 않고 원문의 그 구간만 바꿉니다**(`CatalogXMLText`). `XMLDocument` 는 주석을 읽지 않아 다시 쓰면 데이터 파일의 주석과 들여쓰기가 사라집니다.
+- **셀은 입력 칸을 떠날 때 한 번 반영합니다.** 글을 칠 때마다 반영하면 되돌리기 한 칸이 글자 하나가 됩니다. 행 더하기 · 빼기는 표를 다 그린 뒤에 합니다(그리는 도중 원소 인덱스가 바뀌지 않게).
+- **검증은 저장한 파일을 읽습니다.** 로더가 경로를 받기 때문입니다. 실패해도 파일은 쓴 대로 남고, "Restore previous file" 이 저장 직전 글을 되씁니다.
+- Data Table 의 게임 데이터 탭도 같은 위젯(`CatalogTableEditor`)을 씁니다. 중첩 원소는 "Raw XML" 로 고칩니다. 카탈로그 정의는 리플렉션 구조체가 아니라 손으로 읽는 XML 이라 행은 XML 원소입니다.
 
 ### 환경설정 섹션
 
