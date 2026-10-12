@@ -112,6 +112,19 @@ Dev의 Server는 팩이 아니라 낱개 파일을 읽지만, 같은 규칙으�
 
 서버는 지표 레지스트리(`Engine/Observability/MetricRegistry`)와 상태 확인 레지스트리(`ServiceHealthRegistry`)를 항상 갖고 있습니다.
 지표에는 `server_tick_seconds` 히스토그램과 `server_dropped_ticks_total` 이 있고, 상태 확인은 틱마다 신호를 받으며 종료 요청을 받으면 드레인(draining) 상태가 됩니다.
+프로세스 지표 `process_resident_memory_bytes`, `process_resident_memory_max_bytes`, `process_start_time_seconds`(Prometheus 클라이언트 라이브러리의 표준 이름)와
+서버 서비스가 받고 있는 연결 수 `server_service_connections` 는 초에 한 번 갱신합니다. 콘솔 `status` 줄에도 서비스 수, 연결 수, 상주 메모리가 나옵니다.
+
+### 서버 서비스 — 모듈이 서버에 붙이는 일
+
+게임 틱과 따로 서버 프로세스와 함께 사는 일(온라인 서비스 호스트, 서버 등록)은 **서버 서비스**(`IServerService`)입니다.
+모듈(GameFramework, 키트, 게임)이 `.cpp` 에 `SW_REGISTER_SERVER_SERVICE( 타입, "이름", 시작 순서 )` 한 줄을 두면, 서버가 게임 인스턴스를 만든 뒤 시작 순서대로 만들어 시작하고
+서버 루프마다 `tick` 을 부르고, 종료할 때 반대 순서로 멈춥니다. 언리얼의 `UEngineSubsystem`(모듈이 로드되면 엔진이 만든다)에 해당합니다.
+
+- 서비스는 `ServerServiceContext` 로 서버 설정, 설정 테이블, 지표 레지스트리, 상태 레지스트리를 받습니다. 게임과 키트가 서버 지표와 상태를 받는 길은 이것 하나입니다.
+- 하나라도 시작에 실패하면 서버는 기동하지 않습니다. 설정상 할 일이 없는 서비스는 아무것도 하지 않고 성공으로 끝냅니다.
+- 서비스 코드는 모듈 안에 있으므로, Dev 서버는 모듈 리로드 직전에 서비스를 멈추고 리로드 뒤 다시 시작합니다.
+- 서비스는 게임 틱이 멈춘 동안(`pause`)에도 돕니다.
 설정의 `_opsPort` 가 0이 아니면 운영 HTTP 엔드포인트(`OpsHTTPEndpoint`)를 엽니다. GET 하나에 답하고 연결을 닫으며, 평문이고 인증이 없습니다.
 
 | 경로 | 응답 |
@@ -199,7 +212,7 @@ WantedBy=multi-user.target
 | `Windows/WindowsServiceHost.h` | Windows 서비스 |
 | `Engine/Config/Server/ServerConfig.h` | 서버 설정 |
 | `Core/Process/ShutdownSignal.h` | 종료 신호 처리 |
-| `Engine/Observability/` | 지표, 상태 확인, 운영 HTTP |
+| `Engine/Observability/` | 지표, 상태 확인, 운영 HTTP, 프로세스 지표, 서버 서비스 레지스트리 |
 
 - 엔진 초기화 목록: `Source/Engine/EngineInitStepList.xxx`
 - 쿠킹 규칙: `Config/Engine/CookContract.json`

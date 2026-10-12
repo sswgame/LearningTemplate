@@ -20,12 +20,15 @@
 #include "Core/Process/ShutdownSignal.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
+#include "Core/Time/WallClock.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/Server/ServerConfig.h"
 #include "Engine/Observability/MetricRegistry.h"
 #include "Engine/Observability/OpsHTTPEndpoint.h"
+#include "Engine/Observability/ProcessMetrics.h"
+#include "Engine/Observability/ServerServiceManager.h"
 #include "Engine/Observability/ServiceHealthRegistry.h"
 #include "Core/Console/DevCommandRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -57,6 +60,9 @@ namespace sw
             /** @brief 운영 HTTP 에는 스크레이퍼와 감시자 몇 개만 붙으므로 연결 상한과 유휴 시한을 작게 잡습니다. */
             static constexpr int32   kOpsMaxConnections     = 64;
             static constexpr float64 kOpsIdleTimeoutSeconds = 10.0;
+            /** @brief 프로세스 지표를 다시 읽는 간격입니다. 운영체제에 묻는 비용이 있고 스크레이퍼도 보통 15 초마다 읽으므로 초에 한 번이면 된다. */
+            static constexpr int64  kProcessSampleIntervalMs = 1000;
+            static constexpr uint64 kBytesPerMebibyte        = uint64{ 1024 } * 1024;
 
             static int64 nowMonotonicMs() { return MonotonicClock::nowNanoseconds() / 1000000; }
         };
@@ -87,10 +93,14 @@ namespace sw
         , _healthRegistry{ nullptr }
         , _opsTransport{ nullptr }
         , _opsEndpoint{ nullptr }
+        , _processMetrics{ nullptr }
+        , _serverServices{ nullptr }
+        , _serverConfigPath{}
         , _listPendingCommand{}
         , _pServerConfig{ nullptr }
         , _pTickHistogram{ nullptr }
         , _pDroppedTickCounter{ nullptr }
+        , _pServiceConnectionGauge{ nullptr }
         , _tickCount{ 0 }
         , _startNanoseconds{ 0 }
         , _tickNanoseconds{ 0 }
@@ -99,9 +109,11 @@ namespace sw
         , _statusTickSampleCount{ 0 }
         , _droppedTickCount{ 0 }
         , _pendingStepCount{ 0 }
+        , _nextProcessSampleMs{ 0 }
         , _bReady{ SW_FALSE }
         , _bSignalHandlerInstalled{ SW_FALSE }
         , _bPaused{ SW_FALSE }
+        , _bRestartServerServices{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -146,6 +158,9 @@ namespace sw
             SW_LOG_ERROR( "The game module could not be started on the dedicated server" );
             return false;
         }
+        // 게임 인스턴스 뒤에 시작한다. 서비스가 게임이 정한 상태(게임 서비스 등)를 볼 수 있게 하고, 종료는 그 반대 순서다.
+        if ( startServerServices() == false )
+            return false;
 
         _bSignalHandlerInstalled = ShutdownSignal::install() ? SW_TRUE : SW_FALSE;
         if ( _bSignalHandlerInstalled == SW_FALSE )
@@ -180,7 +195,17 @@ namespace sw
         } ) );
 #endif
         _moduleHost = make_unique<ModuleHost>();
-        return _moduleHost->loadModuleImages( getLiveReloadManager(), _moduleCatalog, _moduleResolution );
+        if ( _moduleHost->loadModuleImages( getLiveReloadManager(), _moduleCatalog, _moduleResolution ) == false )
+            return false;
+#if !defined( SW_SHIPPING )
+        // 모듈 호스트가 건 리로드 직전 콜백을 감싼다. 서버 서비스 코드가 리로드될 모듈 안에 있으므로 서비스를 먼저 멈춘다.
+        if ( _liveReloadManager != nullptr )
+        {
+            _liveReloadManager->setOnBeforeCommitBatch(
+                SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeCommitBatchDelegate, &ServerApp::onBeforeModuleReload, this ) );
+        }
+#endif
+        return true;
     }
 
     LiveReloadManager* ServerApp::getLiveReloadManager() const
@@ -207,6 +232,7 @@ namespace sw
             return false;
         // Shipping 도 디스크에서 읽는다. 운영자가 고치는 파일이므로 베이크하지 않는다. 파일이 없으면 Shipping 은 서버를 시작하지 않는다.
         // 기본 포트로 조용히 뜬 서버는 틀린 DB 와 캐시에 붙는 서버이기 때문이다.
+        _serverConfigPath = path;
         if ( pConfigManager->loadConfig<ServerConfig>( path ) )
         {
             _pServerConfig = pConfigManager->getConfig<ServerConfig>();
@@ -229,6 +255,10 @@ namespace sw
         _healthRegistry      = make_unique<ServiceHealthRegistry>();
         _pTickHistogram      = _metricRegistry->registerHistogram( "server_tick_seconds", "Dedicated server tick body duration", MetricRegistry::makeLatencyBounds() );
         _pDroppedTickCounter = _metricRegistry->registerCounter( "server_dropped_ticks_total", "Ticks dropped because the server fell too far behind" );
+        _pServiceConnectionGauge =
+            _metricRegistry->registerGauge( "server_service_connections", "Connections held by the server services (online service host and others)" );
+        _processMetrics = make_unique<ProcessMetrics>();
+        _processMetrics->initialize( _metricRegistry.get(), WallClock::nowUnixMilliseconds() - ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / 1000000 );
         if ( _pServerConfig->_opsPort == 0 )
             return true;
         OpsHTTPEndpointSettings opsSettings;
@@ -264,11 +294,50 @@ namespace sw
             _opsEndpoint->shutdown();
         _opsEndpoint.reset();
         _opsTransport.reset();
-        _pTickHistogram      = nullptr;
-        _pDroppedTickCounter = nullptr;
+        _processMetrics.reset();
+        _pTickHistogram          = nullptr;
+        _pDroppedTickCounter     = nullptr;
+        _pServiceConnectionGauge = nullptr;
         _healthRegistry.reset();
         _metricRegistry.reset();
     }
+
+    bool ServerApp::startServerServices()
+    {
+        if ( _serverServices == nullptr )
+            _serverServices = make_unique<ServerServiceManager>();
+        ServerServiceContext context;
+        context._serverConfigPath = _serverConfigPath;
+        context._pServerConfig    = _pServerConfig;
+        context._pConfigManager   = _engineLoop.getConfigManager();
+        context._pMetricRegistry  = _metricRegistry.get();
+        context._pHealthRegistry  = _healthRegistry.get();
+        return _serverServices->startAll( context );
+    }
+
+    void ServerApp::updateProcessMetrics( int64 monotonicMs )
+    {
+        if ( monotonicMs < _nextProcessSampleMs )
+            return;
+        _nextProcessSampleMs = monotonicMs + ServerAppInternal::kProcessSampleIntervalMs;
+        if ( _processMetrics != nullptr )
+            _processMetrics->update();
+        if ( _pServiceConnectionGauge != nullptr && _serverServices != nullptr )
+            _pServiceConnectionGauge->set( static_cast<float64>( _serverServices->getConnectionCount() ) );
+    }
+
+#if !defined( SW_SHIPPING )
+    bool ServerApp::onBeforeModuleReload( const vector<string>& listModuleName )
+    {
+        if ( _serverServices != nullptr && _serverServices->isRunning() )
+        {
+            SW_LOG_INFO( "Stopping %# server services for a module reload", _serverServices->getRunningCount() );
+            _serverServices->stopAll();
+            _bRestartServerServices = SW_TRUE;
+        }
+        return _moduleHost->onBeforeCommitBatch( listModuleName );
+    }
+#endif
 
     void ServerApp::run()
     {
@@ -293,6 +362,11 @@ namespace sw
                 _healthRegistry->setDraining( true ); // /readyz 는 503 을 반환한다. 부하 분산기가 새 접속을 끊는다(종료하는 동안에도 /healthz 는 살아 있다).
                 break;
             }
+
+            // 서버 서비스는 게임 틱과 따로 돈다. 일시정지(Dev `pause`) 중에도 로그인이나 채팅 요청은 처리한다.
+            if ( _serverServices != nullptr )
+                _serverServices->tick( WallClock::nowUnixMilliseconds() );
+            updateProcessMetrics( ServerAppInternal::nowMonotonicMs() );
 
             if ( _bPaused == SW_TRUE && _pendingStepCount == 0 )
             {
@@ -359,6 +433,13 @@ namespace sw
 #if !defined( SW_SHIPPING )
         if ( _liveReloadManager != nullptr )
             _liveReloadManager->update();
+        if ( _bRestartServerServices == SW_TRUE )
+        {
+            // 리로드가 끝났다(취소됐어도 서비스는 멈춰 있다). 새 모듈의 팩토리로 다시 시작한다.
+            _bRestartServerServices = SW_FALSE;
+            if ( startServerServices() == false )
+                SW_LOG_ERROR( "Server services could not be restarted after the module reload - fix the error and reload again" );
+        }
 #endif
         const ModuleFrameState& frameState = _moduleHost->getFrameState();
         _engineLoop.tick( deltaSeconds, HostViewTargets{}, ViewCameraProviderDelegate{}, frameState._bTickScene == SW_TRUE );
@@ -440,10 +521,17 @@ namespace sw
 
     void ServerApp::logStatus() const
     {
-        const int64 uptimeSeconds = ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / constant::kNanosecondsPerSecond;
-        const int64 averageMicro  = _statusTickSampleCount > 0 ? _statusTickSumNanoseconds / _statusTickSampleCount / 1000 : 0;
-        SW_LOG_INFO( "Dedicated server status - uptime %# s, tick %#%#, tick time avg %# us / max %# us (budget %# us), dropped ticks %#", uptimeSeconds, _tickCount,
-                     _bPaused == SW_TRUE ? " (paused)" : "", averageMicro, _statusTickMaxNanoseconds / 1000, _tickNanoseconds / 1000, _droppedTickCount );
+        const int64 uptimeSeconds   = ( MonotonicClock::nowNanoseconds() - _startNanoseconds ) / constant::kNanosecondsPerSecond;
+        const int64 averageMicro    = _statusTickSampleCount > 0 ? _statusTickSumNanoseconds / _statusTickSampleCount / 1000 : 0;
+        const int32 serviceCount    = _serverServices != nullptr ? _serverServices->getRunningCount() : 0;
+        const int32 connectionCount = _serverServices != nullptr ? _serverServices->getConnectionCount() : 0;
+        uint64      residentBytes   = 0;
+        uint64      peakBytes       = 0;
+        (void)ProcessMetrics::tryGetResidentBytes( residentBytes, peakBytes ); // 답하지 못하면 0 을 적는다
+        SW_LOG_INFO( "Dedicated server status - uptime %# s, tick %#%#, tick time avg %# us / max %# us (budget %# us), dropped ticks %#, services %# (connections %#), "
+                     "resident %# MiB",
+                     uptimeSeconds, _tickCount, _bPaused == SW_TRUE ? " (paused)" : "", averageMicro, _statusTickMaxNanoseconds / 1000, _tickNanoseconds / 1000,
+                     _droppedTickCount, serviceCount, connectionCount, residentBytes / ServerAppInternal::kBytesPerMebibyte );
     }
 
     void ServerApp::shutdown()
@@ -453,6 +541,12 @@ namespace sw
 #if SW_DEV_COMMANDS_ENABLED
         _devConsole.reset();
 #endif
+        // 서버 서비스는 모듈 코드다. 모듈을 언로드하기 전에, 시작의 반대 순서로 게임보다 먼저 멈춘다.
+        if ( _serverServices != nullptr )
+        {
+            _serverServices->stopAll();
+            _serverServices.reset();
+        }
         // 게임과 모듈 인스턴스를 엔진보다 먼저 종료한다(App::shutdown 과 같은 순서).
         if ( _moduleHost != nullptr )
         {
