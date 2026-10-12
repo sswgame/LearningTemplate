@@ -24,10 +24,10 @@ namespace sw
     class TextArgumentList;
 
     /**
-     * @struct LocText
+     * @struct LocalizedText
      * @brief `SW_LOCTEXT` 와 `SW_LOCFORMAT` 이 부르는 조회입니다. 엔진 서비스가 없으면(도구, 일부 테스트) 원문을 돌려줍니다.
      */
-    struct SW_API LocText
+    struct SW_API LocalizedText
     {
         /** @brief `Namespace.Key` 의 지금 문화권 글입니다. 없으면 빠진 키로 알리고 @p pSourceText 입니다. */
         static const utf8* find( string_view fullKey, const utf8* pSourceText );
@@ -37,10 +37,10 @@ namespace sw
 } // namespace sw
 
 /** @brief 코드의 사용자에게 보이는 글입니다. 세 인자 모두 문자열 리터럴이어야 수집됩니다. */
-#define SW_LOCTEXT( NamespaceLiteral, KeyLiteral, SourceLiteral ) ::sw::LocText::find( NamespaceLiteral "." KeyLiteral, SourceLiteral )
+#define SW_LOCTEXT( NamespaceLiteral, KeyLiteral, SourceLiteral ) ::sw::LocalizedText::find( NamespaceLiteral "." KeyLiteral, SourceLiteral )
 /** @brief 코드는 키만 가리키는 텍스트입니다. 원문은 원문 테이블에만 있고, 테이블에 없으면 키 자체를 돌려줍니다(화면에서 빠진 텍스트가 보입니다). 두 인자 모두 문자열 리터럴이어야 수집됩니다. */
-#define SW_LOCKEY( NamespaceLiteral, KeyLiteral ) ::sw::LocText::find( NamespaceLiteral "." KeyLiteral, NamespaceLiteral "." KeyLiteral )
+#define SW_LOCKEY( NamespaceLiteral, KeyLiteral ) ::sw::LocalizedText::find( NamespaceLiteral "." KeyLiteral, NamespaceLiteral "." KeyLiteral )
 /** @brief `SW_LOCKEY` 의 포맷 판입니다(`TextFormatter` 문법의 글을 표에서 읽는다). */
-#define SW_LOCKEYFORMAT( NamespaceLiteral, KeyLiteral, Arguments ) ::sw::LocText::format( NamespaceLiteral "." KeyLiteral, NamespaceLiteral "." KeyLiteral, Arguments )
+#define SW_LOCKEYFORMAT( NamespaceLiteral, KeyLiteral, Arguments ) ::sw::LocalizedText::format( NamespaceLiteral "." KeyLiteral, NamespaceLiteral "." KeyLiteral, Arguments )
 /** @brief 코드의 사용자에게 보이는 메시지를 인자로 포맷합니다(`TextFormatter` 문법). */
-#define SW_LOCFORMAT( NamespaceLiteral, KeyLiteral, SourceLiteral, Arguments ) ::sw::LocText::format( NamespaceLiteral "." KeyLiteral, SourceLiteral, Arguments )
+#define SW_LOCFORMAT( NamespaceLiteral, KeyLiteral, SourceLiteral, Arguments ) ::sw::LocalizedText::format( NamespaceLiteral "." KeyLiteral, SourceLiteral, Arguments )

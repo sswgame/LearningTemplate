@@ -8,7 +8,7 @@
 
 namespace sw
 {
-    const utf8* LocText::find( string_view fullKey, const utf8* pSourceText )
+    const utf8* LocalizedText::find( string_view fullKey, const utf8* pSourceText )
     {
         if ( engine::areEngineServicesBound() == false )
             return pSourceText;
@@ -20,7 +20,7 @@ namespace sw
         return pSourceText;
     }
 
-    string LocText::format( string_view fullKey, const utf8* pSourceText, const TextArgumentList& arguments )
+    string LocalizedText::format( string_view fullKey, const utf8* pSourceText, const TextArgumentList& arguments )
     {
         const utf8* pPattern = find( fullKey, pSourceText );
         if ( engine::areEngineServicesBound() == false )
