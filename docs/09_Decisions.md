@@ -59,7 +59,32 @@
 - **SOLID 리팩토링에서 핫 경로라 손대지 않는 것**(2026-10-12 감사). `IRHICommandList` · `IRHIResourceFactory` 의 가상 호출 구조, `GPUSceneBuilder` 내부 병렬 루프, `PhysicsOverlapWorld` 셀 해시,
   Box2D · Jolt 어댑터의 switch(외부 라이브러리 경계), RHI 백엔드 `CommandContext` 큰 파일(백엔드 하나의 기록이라 한 이유로 바뀐다), `AbilitySystemComponent` 의 modifier switch(닫힌 열거 + `-Wswitch`)입니다.
   의도된 예외는 `App.cpp` 의 `kArrHeadlessTask` 표, `EditorPanelManager::syncWithRegistry`, 에디터 `getService<T>()`(모듈 경계 주입), `EngineInitSequence` 단계 표입니다.
-  나머지 단위는 [구조 리팩토링 계획](plans/StructureRefactor.md)에 있습니다.
+- **구조 리팩토링 후보를 옮길지 가르는 기준**(2026-10-12). 줄 수가 줄어서가 아니라 앞으로 고칠 곳이 줄어서 옮깁니다. 하나라도 걸리면 옮기지 않고 이유를 남깁니다.
+  - **반쪽 이전 금지**: 한 클래스 안에 옛 방식과 새 방식이 섞이면 더 헷갈립니다(예: UserSettings 공급자만 옮기고 적용기는 남기는 것). 통째로 옮기거나 통째로 둡니다.
+  - **훅 · 인터페이스는 쓰는 곳이 둘 이상일 때**: 쓰는 곳이 하나뿐인 일반화는 호출 시점 순서를 숨기고 읽는 비용만 늘립니다. 순서에 뜻이 있으면 호출 자리에 두고 이유를 주석으로 적습니다.
+    다만 SOLID 와 부딪히면 SOLID 가 이깁니다(구체 의존을 남기는 쪽이 더 큰 부채).
+  - **동작이 같으면 코드를 늘리지 않습니다**: 한도 없는 대기에 시한 · 경고를 붙이는 식으로 상수와 분기만 느는 변경은 하지 않습니다.
+  - **의미가 조금씩 다른 복붙은 합치지 않습니다**: 조건이 콜백 · 인자로 새는 공용 함수는 복붙 넷보다 읽기 어렵습니다.
+  - **옮기면 검증 한 줄이 따라옵니다**: 공용 구조가 주는 규칙(중복 거절 · 리로드 대체 · 순서)을 지키는지 보는 단언을 그 자리의 테스트에 둡니다.
+- **SOLID 는 성능을 해치지 않는 선에서 반드시 지킵니다**(2026-10-12, 사용자 결정). 성능은 측정으로 해치지 않음을 보이거나 핫 경로가 아님(프레임당 한두 번 · 목록 순회 한 번 수준)을 코드로 보입니다.
+  S: 클래스 하나가 한 가지 이유로만 바뀝니다(일이 몰린 클래스는 나누는 쪽이 기본). O: 같은 모양의 `if`/`switch` 분기나 직접 호출이 늘어나는 자리는 레지스트리 · 관찰자 뒤로 뺍니다.
+  L: 구현이 계약을 좁히지 않고 관찰자 훅의 기본 동작은 중립(빈 함수 · `kRunning`)입니다. I: 한 훅에 무관한 일을 얹지 않습니다. D: 위 티어가 구체 클래스를 직접 알지 않습니다.
+  감사(31건)에서 L 위반은 Box2D 관절 하나뿐이고 I 는 약했습니다 — 약점은 S(큰 클래스)와 O/D(직접 호출 · 종류별 분기)였습니다. 핫 경로에는 가상 호출을 넣지 않고, 뽑은 클래스는 값 멤버로 두어 비가상으로 직접 부릅니다.
+- **SOLID 단위 S1 ~ S22 에서 옮기지 않은 것**(2026-10-12, 위 기준에 걸림).
+  - 서버 `pause`/`resume`/`step` 을 개발 명령으로(S3): Shipping 이 `quit`/`stop`/`status`/`help` 를 직접 처리해야 해 한 함수에 두 방식이 섞이고, 쓰는 곳이 `ServerApp` 하나이며,
+    에디터가 같은 이름 `pause`·`stop`·`step` 을 이미 다른 뜻(플레이 세션)으로 등록해 전역 레지스트리에서 충돌합니다. 두 `quit` 은 뜻이 달라(표준 입력 루프 bool ↔ `ShutdownSignal`) 합치지 않습니다.
+  - 패스 종류 표의 실행 함수 칸(S5): `bSkipEffect` 만 표 비트로 옮겼습니다. 실행 switch 9 case 를 표로 옮기면 쿠커 · 검증이 읽는 데이터가 `FrameRenderer` 에 의존하고(D 위반) 새 패스를 더할 때 고칠 곳도 줄지 않습니다.
+  - `ProfilerPanel` 탭 분리(S8, `IProfilerTab`): 탭들이 패널 상태(`_scopeHistory` · 타임라인 · 불러온 트레이스)를 나눠 써서 탭만 떼면 반쪽 이전이고, 함수 표만 두면 고칠 곳 수가 같습니다.
+  - 인자 없는 `Scene( name )` · `GameObjectManager()` · `SceneManager()` 생성자(S10): 호출처가 약 90 곳과 500 곳입니다. 만들 때 `makeFromBoundEngine()` 으로 묶음을 한 번 읽고 클래스 안 접근은 모두 묶음을 거치므로 반쪽 이전이 아닙니다.
+  - 에디터 셸의 프레임 앞 정리 · 프레임 열기 · 프레임 닫기(S12): ImGui 순서와 렌더 스레드 인계(`DrawSnapshotHandoff`)가 위치를 정하는 프레임 계약이라 `updateUI` 에 둡니다.
+  - 분해에서 남긴 것: 모달 · 결과 창 플래그와 이름 입력 버퍼(S19, ImGui 팝업 시점), `verifyModuleBindings` · `isBoundTo`(S20, 모든 컨텍스트 핸들을 함께 보는 검사), `ModuleShadowCopy` 인스턴스화(S20, 번호가 프로세스 전역이어야 섀도 폴더 이름이 겹치지 않음),
+    `UserSettingsManager` 의 키 바인딩 겹침 · 품질 번들 맞추기(`setPendingAt` 상태 기계와 안 떨어짐), `SceneNavigation` 의 에이전트 루프 · 런타임 찾기 · 설정 로드, `App` 의 `updateShellActions` · 모듈 카탈로그 해석,
+    `IRHIDevice` 의 `supportsNativeBindlessSampling` · `applyVSyncInternal`, `FractureComponentBase` 의 그룹 재구성 · 물리 어댑터(S15, 반쪽 이전), `FrameRenderer` 의 트랜지언트 계획(S16),
+    `EngineLoop::tick` 의 백엔드 교체 · `pollShaderReloadHotkey` · `MaterialCache::initializePending` · 관찰자 루프(S13, 수명 계약 · 순서가 뜻).
+  - S16 의 **동작 변화**: 엔진 서비스가 묶이지 않은 실행은 GPU 계측이 꺼집니다(전에는 단언).
+- **폴더 · 파일 구조는 기계적으로 합치지 않습니다**(2026-10-12 감사, R8). 25 줄 이하 파일이 97 / 2,932 개이고 큰 클래스를 나눈 가족 대부분이 파일마다 120 줄을 넘으며, 작은 조각(`EditorAssetTypeFocus.cpp` 36 줄)은 의존을 분리한 것입니다.
+  합치면 층 규칙(`CheckEngineLayers`)과 그래픽스 구조 재편의 파일 분할 기준을 해칩니다. 한다면 `Scripts/lint/report/` 에 같은 접두 `.cpp` 가족과 줄 수를 보고하는 스크립트를 두고,
+  120 줄 이하 조각이 의존 분리가 아닌 가족만 사람이 봅니다(지금 후보는 `RenderView.cpp` 13 줄 정도).
 
 ## 3. 기각한 것 — 측정값과 함께 (다시 제안하지 말 것)
 

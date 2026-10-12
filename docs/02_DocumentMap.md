@@ -40,7 +40,6 @@
 | [엔진 분할 계획](plans/EnginePartition.md) | 엔진 분할의 남은 단계와 순서 |
 | [빌드 속도 계획](plans/BuildSpeed.md) | 빌드 속도의 남은 단계(유니티 범위, 무거운 단일 TU) |
 | [서버 디버깅 계획](plans/ServerDebug.md) | 에디터에서 서버 · 멀티플레이를 보는 단위와 운영 단위 |
-| [구조 리팩토링 계획](plans/StructureRefactor.md) | 구조 리팩토링 단위(R5 ~ R8), SOLID 단위(S1 ~ S22)와 판정 기준 |
 
 `docs/plans/` 의 계획 문서는 단계가 끝나면 그 단계를 지우고, 전부 끝나면 파일을 지웁니다. 결과는 결정 기록과 검증 문서로, 남은 일은 백로그로 옮깁니다.
 

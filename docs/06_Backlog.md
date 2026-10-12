@@ -19,8 +19,8 @@
 | 분류 | 뜻 | 항목 수 |
 |---|---|---|
 | **A. 결함 · 정확성** | 재현됐거나 코드로 확인된 열린 결함. 다른 어떤 일보다 먼저 본다. | 6 |
-| **B. 검증 · 측정 대기** | 코드는 들어갔고 돌려 보는 일이 남은 것. 이 PC 에서 못 돌린 환경(리눅스 · 실기)과 사용자 눈이 필요한 것도 여기다. | 11 |
-| **C. 구조 · 성능 · 정리** | 기능이 아니라 고칠 곳을 줄이는 일: 구조 분할 계획, 중복 · 의존 정리, 측정 뒤 정할 성능 후보, 린트 · 문서 정리. | 18 |
+| **B. 검증 · 측정 대기** | 코드는 들어갔고 돌려 보는 일이 남은 것. 이 PC 에서 못 돌린 환경(리눅스 · 실기)과 사용자 눈이 필요한 것도 여기다. | 14 |
+| **C. 구조 · 성능 · 정리** | 기능이 아니라 고칠 곳을 줄이는 일: 구조 분할 계획, 중복 · 의존 정리, 측정 뒤 정할 성능 후보, 린트 · 문서 정리. | 19 |
 | **D. 기능 로드맵** | 영역별로 묶은 새 기능 · 기능의 남은 조각. 위에 있을수록 먼저 볼 것이다. | 51 |
 | **E. 관찰 중** | 간헐 실패 · 원인 미상. 다시 보이면 그때 원인을 판다. CI 읽는 법은 [검증과 측정](08_Verification.md) 4절. | 8 |
 | **F. 결정 대기** | 사용자 결정이 있어야 움직이는 질문. | 1 |
@@ -111,12 +111,44 @@
 
 ---
 
+- `B-12` **통합 3(`8fce26aaf..6f3373831`, 81 커밋)의 검증이 반쯤 남았다.** 옛 빌드 폴더는 `cmake --preset` 을 먼저 다시 돌린다(파일을 옮겨 코드젠 목록이 낡으면 `missing and no known rule`).
+  - **자동**: Debug `-L hostgpu`(`ctest -j 1`, 약 16 분), Shipping `-L nogpu` · `-L hostgpu`, 게임 프리셋 넷(`Ninja-Debug-Shooter3D` · `-StarSkirmish` · `-HarvestValley` · `-VoxelCraft`) 빌드(경고 0 · 링크 0),
+    `ctest -N` 개수를 병합 전과 견줘 옮긴 테스트(`TestDismemberment` · `TestWitcherRPG` · `TestTacticsSRPG` · `TestProgression` · `TestSpatial` · `ProfilerTimeline`)가 사라지거나 두 번 잡히지 않았는지.
+  - **처음 돌린 테스트는 기대값부터 의심한다**: `ReflectionEnumInfoTest`(`CameraRole::Editor` → `Viewport`), `GameObjectManagerTest.PostTickOnComponentSkipsPendingDestroy`, `GameObjectManagerPoolTest.ModuleUnloadDrains{Deferred,Requeued}PostTickWork`,
+    `ServiceClientCallTableTest.ForeignResponseDuringSendDoesNotTakeTheSendingDelegate`, 온라인 클라이언트 취소 테스트 둘 · `KitDestroyedWhileFailingQueuedCallsGetsNoMoreCalls` ·
+    `KitDestroyedDuringReadyNotificationIsSkipped`(후자는 테스트 서버 Hello 가 `kGame+0x100` · `+0x200` 키트를 받아 주는지에 달렸다 — 판 불일치로 Ready 에 못 가면 테스트 결함부터), `TestGameService`(회수 · `ExplicitOwnerDecidesWhichImageReleasesTheService`),
+    `ModuleHostTest.SharedModuleCannotBeRegisteredForReload`(Windows 대소문자 케이스 포함), `PrefabTest.CookedPrefabMatchesItsSource`(틀리면 쿠킹본이 어긋난 것인지 쓰기가 불안정한 것인지부터),
+    `TestRHISupport` 두 스레드 `tickCompleted`, `TestRenderPassGPU` 동시 `acquire`(DX12 · DX11 만 — 작업 스레드 안 `SW_TEST_DEFENSIVE_SCOPE` 가 스레드마다 따로 동작하는지), `EditorPreferencesStoreTest.ReloadedSectionReadsTheFileOnce`.
+  - **실기동으로 볼 동작 변화**(`-gv_profileFrames=60` 으로 스스로 끝나게): 에디터 씬 뷰 카메라가 게임 뷰 수집에서 빠지고 BugIt 캡처가 정상 · 씬을 바꾼 뒤 되돌리기 기록이 비고 종료가 깨끗 ·
+    탈것 · 말 · 카메라 감독 · 물 · 지형 · 식생 · 플레이어 청크가 틱 뒤 실행 교체 뒤에도 정상(탑승 중 내림 · 오브젝트 파괴에서 크래시 없음) · 키트 하나만 리로드했을 때 `GameService` 가 새 인스턴스를 가리킴 ·
+    에디터 복사 → 에디터 모듈 리로드 → 붙여넣기(`ObjectCopyBuffer`) · 환경설정을 고친 직후 리로드해도 값이 남음(새 섹션 읽기 포함) · `registerModule` 이 공용 모듈(대소문자만 다른 이름 포함)을 거절 ·
+    Shooter 적 체력이 `Vitality`(0 아래로 안 내려가고 최대 1 미만이면 1 — **데이터 체력 0 이 예전엔 즉사, 지금은 1 로 산다**; 쓰러짐 · 절단 확인) ·
+    텍스처 로드 중 다른 키 조회가 막히지 않고 같은 키 동시 요청이 한 번만 만듦, 리로드 직후 한 프레임 안에 머티리얼 SRV 가 새 것으로(네 백엔드) · DX12 에서 두 스레드 `tickCompleted` 안전 ·
+    온라인 응답이 보내는 중 다른 id 로 와도 현재 호출이 안 사라짐 · 로그 범주 이름 변경(`AbilitySystemComponent*` · `ScheduleSystem*` 가 파일 이름으로 — 로그 필터 도구가 있으면 맞춘다) ·
+    에디터 HUD 섹션 · 개발 콘솔 명령(락 추가, 모듈 로드 교착 없음) · 디버그 HUD 섹션을 켜고 끄면 프로파일러가 따라 켜지고 꺼짐 · `GameInstanceBase` 의 `GameSettings` 소유자가 게임 모듈 리로드 뒤 회수 · 다시 걸림 ·
+    실패 콜백 · Ready 알림 중 키트가 파괴돼도 크래시 없음 · 모듈 언로드 때 `Deferred work kept re-queueing` 오류 로그가 정상 경로에서 안 남.
+  - **정적**: `dumpbin /exports` 로 `GameFramework.dll` 이 `SW_GF_API` 심볼과 `bindGameService` · `unbindGameService`(C 링크)를 내보내고 `SWGame.dll` 이 가져오는지. 같은 이름의 반사 헤더 둘이면 구성이 `FATAL`, 구성 뒤 기존 헤더에 반사 매크로를 넣으면 빌드가 서는지
+    (`cmake/Engine/CheckReflectionCandidates.cmake`, `--target <타깃>` 만 지으면 검사가 안 돈다). `StringBuilder::append( string )` 과 `VulkanRHIRequiredVersion` include 빌드.
+  - **CI**: push 뒤 첫 전체 CI 다. 리눅스: `__builtin_return_address` 분기(`GameService` 소유자 태그), GLX 컨텍스트, 다중 상속 경고, `SceneNavigation` 의 `NavDebugView` 값 멤버(내보내지 않은 타입), `OpenGLRHICommandList.cpp`.
+  - **Release 측정**: 텍스처 로드 중 다른 스레드의 `find` · `acquire` 대기, `EngineLoop.tick` 의 틱 뒤 실행 경로 · `AudioEngine` 게시 · `GT.GPUScene.build`, `GameObject.h` 가 `TagSystem.h` 를 끌어오지 않는지(`-ftime-trace` 전후).
+  - 끝나면 워크트리를 `py -3 -m Scripts worktree-remove <이름>` 으로 지운다(`tcore` `tinv` `tcombat` `tgfs` `tgfd` `tposttick` `utex` `upipe` `uxml` `ugfa` `ugfb` `uaud` `uonl` `umod` `uinc` `integ3`), 이어서 `git branch -d wt/<이름>`.
+
+- `B-13` **구조 리팩토링 이동(S12 ~ S22)의 측정과 테스트가 남았다**(2026-10-12 측정 없이 옮김 — 사용자 결정. 나쁘게 나오면 그 단위를 되돌리거나 훅을 합친다).
+  - **측정(Release, `-gv_profileFrames`, 3 회, VSync 에 붙지 않았는지 먼저)**: `GT.GPUScene.build`(S17), `GT.Editor.updateUI` p50/p99(S12; `-EnableEditor -dx12 -gv_profileFrames=600`, 전의 `commandsAndWatchers + panels` 대 후의 `frameSteps`),
+    프레임당 `EngineLoop.tick` · `UISystem` · `FrameRenderer` 구간 전후(`tick` 은 이제 `engine::getDebugDrawQueue()` 를 매 프레임 부른다 — 비가상 호출 셋 증가).
+  - **S21 · S22 는 Debug 빌드 · 링크까지만 확인했다**: SmokeTest 소스 목록에 `EditorModuleHostHeadless.cpp` 가 있는지(새 `SW_API` 클래스 포함), `-L nogpu`(`NavMesh*` · `UserSettingsFileTest` · `AppHeadlessTasksTest` · `EditorFolderListing` 테스트),
+    Shipping(단일 백엔드 정적 링크, `SW_PROFILE_COMPILED` 꺼짐), Linux(GLX 컨텍스트 · 다중 상속 경고), `OpenGLRHICommandList.cpp`(compile_commands 에 없어 문법 검사도 못 했다), 에디터 실기동(Present 훅),
+    `assertdialog.scenario.xml`, `-gv_reloadGameAtFrame`, `-gv_standardInputCommands`. S18 의 새 클래스는 ImGui 에 의존해 단위 테스트가 없다 — 에디터 자체 테스트 · `AppScenarioTest` 에디터 케이스가 본다.
+
+- `B-14` **셰이더 쿠킹 스탬프에 컴파일러 도구 지문을 넣는 커밋 `8021b9337`(`SWCOOK 3` → `4`)이 통합에서 일부러 빠졌다**(`54b50db93` 이 되돌림). Shipping 쿠킹 단계가 `--verify-shaders`(`cmake/Engine/AssetAndToolTargets.cmake` 71 줄)로 쿠킹본과 스탬프를 대조하고,
+  체크인된 쿠킹 셰이더 약 3424 개와 `cook.stamp` 가 `SWCOOK 3` 이라 다시 쿠킹 없이는 빌드가 선다. 쿠킹 가능한 환경에서: `54b50db93` 을 되돌린다 → `App.exe --cook-shaders` → 쿠킹 셰이더와 `cook.stamp` 를 같은 커밋에 넣는다 → Shipping 빌드가 `--verify-shaders` 를 통과하는지 본다.
+
 ## C. 구조 · 성능 · 정리
 
 기능이 아니라 고칠 곳을 줄이는 일: 구조 분할 계획, 중복 · 의존 정리, 측정 뒤 정할 성능 후보, 린트 · 문서 정리.
 
 계획 문서가 있는 일: **엔진 분할** [docs/plans/EnginePartition.md](plans/EnginePartition.md) · **빌드 속도** [docs/plans/BuildSpeed.md](plans/BuildSpeed.md) ·
-**구조 리팩토링** [docs/plans/StructureRefactor.md](plans/StructureRefactor.md) · **서버 디버깅** [docs/plans/ServerDebug.md](plans/ServerDebug.md)(D7). 단위를 끝내면 계획 문서에서 지운다.
+**서버 디버깅** [docs/plans/ServerDebug.md](plans/ServerDebug.md)(D7). 단위를 끝내면 계획 문서에서 지운다.
 
 - `C-1` **엔진 분할 — 계획은 [docs/plans/EnginePartition.md](plans/EnginePartition.md).** `Engine.dll` 을 티어 경계로 나누기 전에 의존 방향의 약한 고리를 푼다. 단위를 끝내면 계획 문서에서 지운다.
 
@@ -188,6 +220,17 @@
   뽑는다(단순 정규식은 틀린다).
 
 ---
+
+- `C-19` **구조 리팩토링의 남은 후보.**
+  - **자체 포맷 로더를 리플렉션으로(R4)**: `SpriteClipAsset` · `SequenceAsset` · `Skeleton` · `AnimationGraphAsset` · `DialogueGraphAsset` · `LocalizationDocuments` · `CultureInfo`. 파일 하나가 한 단위라 서로 충돌하지 않는다.
+    먼저 판정한다 — 적지 않은 값의 의미가 필요한가(부모 상속, "없음" 과 "0" 구분)? 그렇다면 옮기지 않는다(기준은 [결정 기록](09_Decisions.md) 5-4). 옮긴다면 구조체에 `REFLECT` · `PROPERTY`,
+    `ConfigManager::readConfigJSON` 으로 읽기(모르는 키 · 읽지 못한 값 · 범위는 거기서 오류), 의미 검사만 직접. 데이터 파일은 키를 `_이름` 규약으로 다시 쓰고(옛 이름 별칭 없음) 설정 카탈로그를 `typeName` 방식으로 바꿔 문서를 생성한다.
+    검증: 그 로더의 기존 테스트, `ResourceDataSchemaTest`, 설정 · 리소스 스키마 게이트.
+  - **`getBoundEngineServices()` 직접 읽기**: `SceneEngineServices` 주입(S10)과 같은 패턴이 범위 밖에 남았다 — `FacialAnimationComponent` · `WidgetComponent` · `UISystem` · `FontService`,
+    `SceneCooker` · `SceneNavigationCooker` · `PortraitRenderer` 의 인자 없는 `Scene` 생성.
+  - `UIAutomationSteps::ensureLinked` 호출(`UISystem::initialize`)은 Engine 이 통째 링크라 불필요해 보인다 — 지울 수 있는지 확인.
+  - `Joint2DComponent` 는 Cone 을 고르면 `createJoint` 를 프레임마다 다시 시도해 오류 로그를 반복한다.
+  - 시나리오 체인의 에디터 쪽 후속(R7)은 `A-5` 의 "에디터 체인에 남은 것" ②③ 과 `D3-6` "백엔드 교체 단계" 가 원본이다. `ImGuiEditor` 는 만지지 않고 패널 파일만 다룬다.
 
 ## D. 기능 로드맵
 
