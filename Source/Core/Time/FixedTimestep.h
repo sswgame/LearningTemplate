@@ -6,6 +6,7 @@
  *          설정으로 노출하는 이유는 두 가지입니다. 프로젝트마다 시뮬레이션 주기가 다르고, 고정 스텝에는 **프레임당 상한**이
  *          반드시 필요하기 때문입니다. 상한이 없으면 느린 프레임이 더 많은 스텝을 부르고, 그래서 더 느려지는 악순환(고정 스텝
  *          스파이럴)에 빠져 영원히 따라잡지 못합니다.
+ *          기본값은 Core 가 정하지 않습니다. 값을 가진 쪽(엔진의 `EngineConfig`)이 만들 때 넘기고, `configure` 의 0 이하 값은 그 기본값으로 돌아갑니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -38,6 +39,17 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 시간 정책 값 셋입니다(최대 델타 · 고정 스텝 길이 · 프레임당 스텝 상한). */
+    struct FixedTimestepParams
+    {
+        float32 _maxFrameDeltaTime{ 0.0f };
+        float32 _fixedDeltaTime{ 0.0f };
+        uint32  _maxFixedStepPerFrame{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class FixedTimestep
      * @brief 실시간 경과를 가변 델타와 고정 스텝 수로 나눕니다.
@@ -45,10 +57,11 @@ namespace sw
     class SW_API FixedTimestep
     {
     public:
-        FixedTimestep();
+        /** @brief @p defaults 를 기본값이자 첫 정책으로 둡니다. 값은 모두 0 보다 커야 합니다. */
+        explicit FixedTimestep( const FixedTimestepParams& defaults );
 
-        /** @brief 시간 정책을 설정합니다. 0 이하의 값은 기본값으로 되돌립니다. */
-        void configure( float32 maxFrameDeltaTime, float32 fixedDeltaTime, uint32 maxFixedStepPerFrame );
+        /** @brief 시간 정책을 설정합니다. 0 이하의 값은 만들 때 받은 기본값으로 되돌립니다. */
+        void configure( const FixedTimestepParams& params );
         /** @brief 타이머와 누산기를 0 에서 다시 시작합니다. 루프 진입 직전에 한 번 부릅니다. */
         void start();
 
@@ -61,11 +74,10 @@ namespace sw
         FrameTime advance( float32 timeScale = 1.0f, float32 overrideFrameSeconds = 0.0f );
 
     private:
-        GameTimer _timer;
+        GameTimer           _timer;
+        FixedTimestepParams _defaults;
+        FixedTimestepParams _params;
         /** @brief 아직 고정 스텝으로 쓰지 못한 남은 시간(초)입니다. */
         float32 _accumulator;
-        float32 _maxFrameDeltaTime;
-        float32 _fixedDeltaTime;
-        uint32  _maxFixedStepPerFrame;
     };
 } // namespace sw
