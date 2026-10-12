@@ -3269,7 +3269,7 @@
    "default": "",
    "kind": "시험",
    "description": "Schedule: log the why-am-I-here trace and today's timeline of this NPC id (* = all) when the value changes",
-   "source": "Source/GameFramework/Base/Actor/AI/Schedule/ScheduleSystem.cpp"
+   "source": "Source/GameFramework/Base/Actor/AI/Schedule/ScheduleSystemDebug.cpp"
   },
   {
    "name": "gv_screenshot",

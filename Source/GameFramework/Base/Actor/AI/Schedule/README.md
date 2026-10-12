@@ -115,6 +115,18 @@ const ScheduleNpcView view = schedules.getNpcView( npcIndex ); // 위치, 활동
 
 `UseObject` 활동은 벤치나 작업대를 시간 창으로 예약합니다(`ScheduleLocator`). 예약은 멱등이라 같은 요청을 다시 해도 결과가 같습니다. 기본 구현은 데이터의 `<Spot>` 입니다.
 
+### 소스 파일 나눔
+
+`ScheduleSystem` 은 클래스 하나이고, 구현만 책임별로 다섯 `.cpp` 에 나눕니다. 데이터 읽기는 따로 `ScheduleCatalog` 가 맡습니다.
+
+| 파일 | 책임 |
+|---|---|
+| `ScheduleSystem.cpp` | 수명 · 연결(길 · 자리 · 플래그 · 날씨) · 시간 진행 · LOD · 끼어들기 · 조회 API |
+| `ScheduleSystemPlan.cpp` | 하루 계획 세우기와 다시 세우기 · 후보 블록 · 목표 자리 · 이동 시간 · 약속 확인 목록 |
+| `ScheduleSystemRuntime.cpp` | 평가: 분 단위 진행 · 약속 판정 · NPC 상태 새로 고침 · 깨울 시각 · 사건 발행 |
+| `ScheduleSystemSave.cpp` | 저장 상태 채우기 · 되살리기, 네트워크 요약 인코딩 · 디코딩, 상태 해시 |
+| `ScheduleSystemDebug.cpp` | "왜 여기 있나" 설명 · 시간표 덤프 · `-gv_scheduleTrace` |
+
 ## 확장하는 법
 
 아직 연결하지 않은 곳이 셋 있습니다. 쓰는 게임이 생기면 이 순서로 붙입니다.
