@@ -359,6 +359,47 @@ SW_TEST_CASE( UIAnimationTest, NewTweenReplacesOld )
     SW_EXPECT_NEAR_EQUAL( 0.75f, pBox->getOpacity(), Util::kTolerance );
 }
 
+/**
+ * @brief [UIAnimationTest] `seek` 는 애니메이션을 그 시각에서 멈춘 채 값을 쓰고(이벤트 없음), `setPaused( false )` 로 이어 재생한다 — 미리보기의 시간 막대
+ * @details 변이: 멈춘 애니메이션도 `tick` 이 진행하면 두 번째 단언(0.25 초 뒤에도 0.5)이 진다.
+ */
+SW_TEST_CASE( UIAnimationTest, SeekPausesAtTheGivenTime )
+{
+    using Util = UIAnimationTestUtil;
+    UIAnimationLayoutFixture    fixture;
+    sw::vector<sw::UIAnimation> listAnimation;
+    listAnimation.push_back( Util::makeAnimation( "Fade", "a", "_opacity", "0", "1", 1.0f ) );
+    fixture._player.setAnimations( std::move( listAnimation ) );
+
+    SW_ASSERT_TRUE( fixture._player.seek( "Fade", 0.5f ) );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, fixture._pWidget->getOpacity(), Util::kTolerance );
+    float32 time{ 0.0f };
+    float32 duration{ 0.0f };
+    SW_ASSERT_TRUE( fixture._player.getPlaybackTime( "Fade", time, duration ) );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, time, Util::kTolerance );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, duration, Util::kTolerance );
+
+    fixture._player.tick( 0.25f ); // 멈춘 동안은 시간이 가지 않는다
+    SW_EXPECT_NEAR_EQUAL( 0.5f, fixture._pWidget->getOpacity(), Util::kTolerance );
+    SW_EXPECT_TRUE( fixture._player.isPlaying( "Fade" ) );
+
+    SW_ASSERT_TRUE( fixture._player.seek( "Fade", 5.0f ) ); // 길이로 자른다
+    SW_EXPECT_NEAR_EQUAL( 1.0f, fixture._pWidget->getOpacity(), Util::kTolerance );
+    SW_ASSERT_TRUE( fixture._player.seek( "Fade", 0.25f ) );
+    fixture._player.setPaused( "Fade", false );
+    fixture._player.tick( 0.25f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, fixture._pWidget->getOpacity(), Util::kTolerance );
+    fixture._player.tick( 1.0f ); // 끝까지 가면 끝 값을 쓰고 빠진다
+    SW_EXPECT_FALSE( fixture._player.isPlaying( "Fade" ) );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, fixture._pWidget->getOpacity(), Util::kTolerance );
+
+    SW_EXPECT_FALSE( fixture._player.getPlaybackTime( "Fade", time, duration ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "seeking an animation the screen does not have warns" );
+        SW_EXPECT_FALSE( fixture._player.seek( "NoSuchAnimation", 0.0f ) );
+    }
+}
+
 /** @brief [UIAnimationTest] 문서의 애니메이션 — 이름 없음 · 겹친 이름 · 모르는 칸은 로드 오류(파일 · 줄) */
 SW_TEST_CASE( UIAnimationTest, DocumentRejectsBadAnimations )
 {

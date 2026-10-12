@@ -306,6 +306,10 @@ VRM 은 같은 길로 임포트하고, MToon 머티리얼이 있으면 머티리
 | `Editor.ReferenceIndexReady`, `Editor.ReferenceResultCount` | 참조 역색인이 다 만들어졌으면 1, 마지막 Find References 나 Show Dependencies 의 결과 줄 수 |
 | `Editor.OutputLogVisibleRows` | Output Log 가 지난 그리기에 보인 줄 수(거르기 · Collapse 뒤) |
 | `Editor.MaterialPreviewRedMinusBlue` | Material 패널의 구 미리보기 평균 (R - B)(0..255, 빨간 머티리얼이 크다). 패널이 닫혔거나 문서가 없으면 값이 없다 |
+| `Editor.UIPreviewWidgetCount`, `Editor.UIPreviewFirstTextBytes`, `Editor.UIPreviewRightToLeft` | UI Preview 트리의 위젯 수, 문서 순서로 첫 글 위젯이 화면에 보이는 글의 UTF-8 바이트 수(의사 문화권이면 늘어난다), 루트가 오른쪽에서 왼쪽으로 배치됐으면 1(`qps-plocm`). 패널이 닫혔거나 문서가 없으면 값이 없다 |
+| `Editor.UIPreviewHoveredOrdinal`, `Editor.UIPreviewHoveredFocusable`, `Editor.UIPreviewFocusedOrdinal` | 입력 흉내가 호버한 위젯의 문서 순서 번호(없으면 -1)와 그 위젯이 포커스를 받는지, 탐색 방향 단추가 옮긴 포커스 위젯의 번호(없으면 -1) |
+| `Editor.UIPreviewSelectedOpacity`, `Editor.UIPreviewDirty`, `Editor.UIPreviewReloadedAfterSave` | 고른 위젯의 불투명도(고른 것이 없으면 값이 없다), 저장하지 않은 편집이 있으면 1, 저장한 뒤 핫 리로드가 문서를 다시 읽어 트리를 새로 지었으면 1 |
+| `Editor.UIPreviewAnimationTime`, `Editor.UIPreviewAnimationPlaying`, `Editor.UIPreviewLanguageIndex`, `Editor.UIPreviewTextureReady` | 고른 애니메이션의 지금 시각(재생 중이 아니면 0)과 재생 중(멈춘 것은 제외) 여부, 언어 콤보의 줄(0 = 게임 언어), 그림이 보이면 1 |
 | `Editor.TileMapFlagCells`, `Editor.TileMapTool` | Tile Map Tool 이 고른 플래그 레이어의 켜진 칸 수(다른 레이어면 0), 칠하기 도구(0 Brush · 1 Rect · 2 Fill · 3 Picker) |
 | `Editor.SceneViewMode`, `Editor.GameViewMode` | 씬 뷰 툴바의 보기 모드, 주 출력(게임 뷰)의 보기 모드(0 Lit · 1 Unlit · 2 Wireframe · 3 Normals · 4 Depth · 5 Overdraw) |
 | `Editor.ObjectPositionX`, `Editor.SequencerKeyFrameCount` | `gv_editorProbeObject` 오브젝트의 로컬 위치 X, Sequencer 패널이 고른 키 트랙의 키 프레임 수(패널이 닫혔거나 고른 트랙이 없으면 값이 없다) |

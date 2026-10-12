@@ -297,6 +297,38 @@ namespace sw
         return listName;
     }
 
+    void LocalizationManager::copyStateFrom( const LocalizationManager& source )
+    {
+        if ( &source == this )
+            return;
+        CultureTable                  cultureTable;
+        vector<MountedProject>        listProject;
+        map<string, TranslationTable> mapLooseTable;
+        string                        currentLanguage;
+        string                        fallbackLanguage;
+        {
+            std::shared_lock<std::shared_mutex> lock( source._mutex );
+            cultureTable     = source._cultureTable;
+            listProject      = source._listProject;
+            mapLooseTable    = source._mapLooseTable;
+            currentLanguage  = source._currentLanguage;
+            fallbackLanguage = source._fallbackLanguage;
+        }
+        string oldLanguage;
+        {
+            std::unique_lock<std::shared_mutex> lock( _mutex );
+            oldLanguage       = _currentLanguage;
+            _cultureTable     = std::move( cultureTable );
+            _listProject      = std::move( listProject );
+            _mapLooseTable    = std::move( mapLooseTable );
+            _currentLanguage  = currentLanguage;
+            _fallbackLanguage = fallbackLanguage;
+            rebuildTablesLocked();
+            rebuildLookupChainLocked();
+        }
+        notifyLanguageChanged( oldLanguage, currentLanguage );
+    }
+
     bool LocalizationManager::reloadProjects()
     {
         vector<string> listPath;

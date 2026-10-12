@@ -224,8 +224,15 @@
 - `update` 끝에 화면마다 스타일, 레이아웃, 그리기를 자기 뷰포트로 실행합니다. 그리기 목록은 `collectWorldCanvases` 가 렌더 텍스처 대상(불투명 바탕)으로 내보냅니다.
   렌더러는 월드 위젯과 같은 경로로 그리고, 셰이더 읽기 상태로 둡니다. 렌더 텍스처 크기는 처음 만들 때 정해지므로, 크기가 다르면 경로를 바꿉니다.
 - 문서와 스타일 시트의 핫 리로드는 스택의 화면과 같은 경로(`onDocumentReloaded`, `onStyleSheetReloaded`)로 미리보기도 다시 만듭니다.
-- 애니메이션 단계는 실행하지 않습니다. `Open` 을 재생하지 않으므로 문서에 적힌 값 그대로 보입니다. Open의 첫 키가 투명이어도 미리보기가 비지 않는 이유입니다(`UIDocumentTest.OffscreenScreenDoesNotPlayOpenAnimation`).
+- 문서의 애니메이션은 화면을 열 때 등록하지만 `Open` 을 재생하지 않으므로 문서에 적힌 값 그대로 보입니다. Open의 첫 키가 투명이어도 미리보기가 비지 않는 이유입니다(`UIDocumentTest.OffscreenScreenDoesNotPlayOpenAnimation`).
+  미리보기가 고른 것만 `findOffscreenScreen( 핸들 )->getAnimationPlayer()` 로 틀면 `update` 가 재생 중인 동안만 진행합니다(`play`, 시간 막대는 `seek` · `setPaused`, `UIDocumentTest.OffscreenScreenPlaysAnimationsTheCallerPicks`).
   스타일 전환은 시작한 프레임에 끝 값으로 맞춥니다(`UIStyleTest.OffscreenScreenFinishesTransitionsAtOnce`).
+- **언어는 화면마다 겁니다.** 문화권이 전역(`engine::getLocalizationManager()`)이라 게임 UI의 언어를 바꾸지 않고 미리보기만 다른 언어로 보려면 관리자가 하나 더 필요합니다.
+  `LocalizationManager::copyStateFrom` 이 게임 관리자의 프로젝트와 문화권 표를 복사한 사본을 만들고(의사 문화권 `qps-ploc`, `qps-plocm` 포함), `setOffscreenLocalization( 핸들, 사본 )` 이 그 화면의 글 해석,
+  텍스트 버전, 흐름 방향(RTL)을 사본으로 겁니다. 소유는 부르는 쪽이며 화면보다 오래 둡니다(`UILocalizationTest.OffscreenScreenUsesItsOwnLocalization`).
+  글꼴 대체 사슬은 글꼴 서비스가 게임 관리자를 따르므로 미리보기 언어를 따르지 않습니다.
+- 해상도를 바꿀 때는 트리를 그대로 두고 `setOffscreenTarget` 으로 렌더 텍스처 경로만 옮깁니다. 입력 흉내가 필요하면 `UIPointerState` 와 `UIFocusManager` 를 패널이 하나씩 두고 미리보기 트리에 이벤트를 넣으며,
+  탐색 방식으로 보이려면 `setOffscreenNavigationMode` 로 `:focus-visible` 을 켭니다.
 - 미리보기 패널은 그 텍스처를 ImGui 이미지로 보여 주고, 레이아웃 사각형과 고른 위젯, 안전 영역은 ImGui 선으로 그 위에 그립니다. 캔버스는 바꾸지 않습니다.
 
 ## 확장하는 법

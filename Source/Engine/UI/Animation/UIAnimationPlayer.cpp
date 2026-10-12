@@ -116,20 +116,7 @@ namespace sw
             return false;
         }
         stop( name );
-        ActiveAnimation active{};
-        active._name           = name;
-        active._animationIndex = static_cast<uint32>( pAnimation - _listAnimation.data() );
-        active._duration       = pAnimation->computeDuration();
-        active._speed          = speed > 0.0f ? speed : 1.0f;
-        active._remainingLoops = loopCount;
-        active._bReverse       = bReverse;
-        active._time           = bReverse ? active._duration : 0.0f;
-        for ( const UIAnimationTrack& track : pAnimation->_listTrack )
-        {
-            ResolvedTrack resolved{};
-            if ( resolveTrack( *pAnimation, track, resolved ) )
-                active._listTrack.push_back( std::move( resolved ) );
-        }
+        ActiveAnimation active = makeActive( *pAnimation, speed, loopCount, bReverse );
 
         // 움직임 줄이기이거나 길이가 0 이면 끝 값을 바로 쓰고 이벤트를 모두 보낸다(닫기 애니메이션의 명령도 그대로 간다).
         if ( gv_uiReduceMotion || active._duration < UIAnimationPlayerInternal::kMinDuration )
@@ -144,6 +131,72 @@ namespace sw
         applyAnimation( active );
         _listActive.push_back( std::move( active ) );
         return true;
+    }
+
+    UIAnimationPlayer::ActiveAnimation UIAnimationPlayer::makeActive( const UIAnimation& animation, float32 speed, uint32 loopCount, bool bReverse ) const
+    {
+        ActiveAnimation active{};
+        active._name           = animation._name;
+        active._animationIndex = static_cast<uint32>( &animation - _listAnimation.data() );
+        active._duration       = animation.computeDuration();
+        active._speed          = speed > 0.0f ? speed : 1.0f;
+        active._remainingLoops = loopCount;
+        active._bReverse       = bReverse;
+        active._time           = bReverse ? active._duration : 0.0f;
+        for ( const UIAnimationTrack& track : animation._listTrack )
+        {
+            ResolvedTrack resolved{};
+            if ( resolveTrack( animation, track, resolved ) )
+                active._listTrack.push_back( std::move( resolved ) );
+        }
+        return active;
+    }
+
+    bool UIAnimationPlayer::seek( const hashed_string& name, float32 time )
+    {
+        ActiveAnimation* pActive = nullptr;
+        for ( ActiveAnimation& active : _listActive )
+        {
+            if ( active._name == name )
+                pActive = &active;
+        }
+        if ( pActive == nullptr )
+        {
+            const UIAnimation* pAnimation = findAnimation( name );
+            if ( pAnimation == nullptr )
+            {
+                SW_LOG_WARNING( "[UI] Animation '%#' is not in this screen", name.c_str() );
+                return false;
+            }
+            _listActive.push_back( makeActive( *pAnimation, 1.0f, 1, false ) );
+            pActive = &_listActive.back();
+        }
+        pActive->_time    = MathUtil::clamp( time, 0.0f, pActive->_duration );
+        pActive->_bPaused = true;
+        applyAnimation( *pActive );
+        return true;
+    }
+
+    void UIAnimationPlayer::setPaused( const hashed_string& name, bool bPaused )
+    {
+        for ( ActiveAnimation& active : _listActive )
+        {
+            if ( active._name == name )
+                active._bPaused = bPaused;
+        }
+    }
+
+    bool UIAnimationPlayer::getPlaybackTime( const hashed_string& name, float32& outTime, float32& outDuration ) const
+    {
+        for ( const ActiveAnimation& active : _listActive )
+        {
+            if ( active._name != name )
+                continue;
+            outTime     = active._time;
+            outDuration = active._duration;
+            return true;
+        }
+        return false;
     }
 
     bool UIAnimationPlayer::resolveTrack( const UIAnimation& animation, const UIAnimationTrack& track, ResolvedTrack& outTrack ) const
@@ -234,7 +287,11 @@ namespace sw
         {
             ActiveAnimation& active = _listActive[index];
             bool             bFinished{ true };
-            if ( bReduceMotion )
+            if ( active._bPaused && bReduceMotion == false )
+            {
+                bFinished = false; // 멈춘 애니메이션(시간 막대)은 시간이 가지 않고 값만 유지한다
+            }
+            else if ( bReduceMotion )
             {
                 const float32 end = active._bReverse ? 0.0f : active._duration;
                 fireEvents( active, active._time, end, true );

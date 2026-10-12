@@ -46,6 +46,7 @@ namespace sw::editor
         Heightfield,   ///< 높이장. 원본(`heightfields_raw/` 의 `.png`, `.r16`)이 바뀌면 임포트하고, 결과는 `.heightfield` 이다
         Rig,           ///< 후처리 리그(`.rig.json`). 리그 캐시가 핫 리로드하고 PoseModifierComponent 가 다시 바인딩한다
         Fracture,      ///< 임포트가 만든 파쇄 에셋(`.fracture`). 파쇄 캐시가 핫 리로드한다
+        UIDocument,    ///< 런타임 UI 문서(`.ui.xml`). 열면 UI Preview 패널이 그 문서를 보여 주고, 문서 캐시가 핫 리로드한다
         Count          ///< 종류의 개수이며 종류가 아니다. 종류 테이블(EditorAssetType.cpp)이 모든 종류를 한 번씩 담는지 컴파일 타임에 검사한다
     };
 

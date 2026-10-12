@@ -2,13 +2,25 @@
 
 #include "Editor/Panels/UIPreview/UIPreviewLogic.h"
 
+#include "Core/Common/Defines.h"
+#include "Core/Container/formatString.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Serialization/Base/SerializeContext.h"
+#include "Engine/Serialization/Base/SerializerUtil.h"
+#include "Engine/UI/Animation/UIAnimationPlayer.h"
 #include "Engine/UI/Base/PanelWidget.h"
 #include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Base/WidgetTree.h"
+#include "Engine/UI/Document/UIDocument.h"
+#include "Engine/UI/Document/UIDocumentCache.h"
+#include "Engine/UI/Document/UIDocumentWriter.h"
 #include "Engine/UI/Layout/UIScale.h"
+#include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/UISystem.h"
 
 namespace sw::editor
 {
@@ -25,6 +37,9 @@ namespace sw::editor
                 {"1080x1920 (Portrait)", 1080, 1920},
             };
             static constexpr uint32 kResolutionCount = static_cast<uint32>( sizeof( kArrResolution ) / sizeof( kArrResolution[0] ) );
+            /// 의사 문화권 코드(정규 표기)입니다. 엔진 문화권 표(`LocalizationManager::normalizeLanguageCode`)가 쓰는 이름과 같다.
+            static constexpr string_view kPseudoAccented = "qps_ploc";
+            static constexpr string_view kPseudoMirrored = "qps_plocm";
         };
     } // namespace
 
@@ -116,5 +131,90 @@ namespace sw::editor
     {
         return "rendertarget/editor_ui_preview_" + to_string( static_cast<uint32>( viewport._physicalSize._x ) ) + "x" +
                to_string( static_cast<uint32>( viewport._physicalSize._y ) );
+    }
+
+    bool UIPreviewLogic::isPseudoLanguage( string_view code )
+    {
+        return code == UIPreviewLogicInternal::kPseudoAccented || code == UIPreviewLogicInternal::kPseudoMirrored;
+    }
+
+    void UIPreviewLogic::makeLanguageChoices( const vector<string>& listAvailable, vector<string>& outListCode )
+    {
+        outListCode.clear();
+        outListCode.push_back( string( kGameLanguage ) );
+        vector<string> listReal;
+        for ( const string& code : listAvailable )
+        {
+            if ( isPseudoLanguage( code ) == false && code.empty() == false )
+                listReal.push_back( code );
+        }
+        std::sort( listReal.begin(), listReal.end() );
+        listReal.erase( std::unique( listReal.begin(), listReal.end() ), listReal.end() );
+        for ( const string& code : listReal )
+        {
+            outListCode.push_back( code );
+        }
+        outListCode.push_back( string( UIPreviewLogicInternal::kPseudoAccented ) );
+        outListCode.push_back( string( UIPreviewLogicInternal::kPseudoMirrored ) );
+    }
+
+    uint32 UIPreviewLogic::findWidgetOrdinal( const WidgetTree& tree, WidgetID id )
+    {
+        vector<Widget*> listWidget;
+        tree.collectWidgetsInDocumentOrder( listWidget );
+        for ( size_t index = 0; index < listWidget.size(); ++index )
+        {
+            if ( listWidget[index]->getID() == id )
+                return static_cast<uint32>( index );
+        }
+        return kNoOrdinal;
+    }
+
+    WidgetID UIPreviewLogic::findWidgetByOrdinal( const WidgetTree& tree, uint32 ordinal )
+    {
+        vector<Widget*> listWidget;
+        tree.collectWidgetsInDocumentOrder( listWidget );
+        return ordinal < listWidget.size() ? listWidget[ordinal]->getID() : kInvalidWidgetID;
+    }
+
+    const PropertyInfo* UIPreviewLogic::findWidgetProperty( const Widget& widget, string_view name )
+    {
+        const TypeInfo* pType = widget.getTypeInfo();
+        return pType != nullptr ? pType->findPropertyInHierarchy( hashed_string( string( name ).c_str() ) ) : nullptr;
+    }
+
+    string UIPreviewLogic::formatWidgetProperty( const Widget& widget, const PropertyInfo& prop )
+    {
+        return SerializerUtil::formatPropertyText( prop, &widget, SerializeContext::getDefault() );
+    }
+
+    bool UIPreviewLogic::applyWidgetProperty( Widget& widget, const PropertyInfo& prop, string_view text )
+    {
+        if ( SerializerUtil::applyPropertyText( prop, &widget, text, SerializeContext::getDefault() ) == false )
+            return false;
+        widget.onBoundPropertyChanged( prop );
+        return true;
+    }
+
+    bool UIPreviewLogic::makeDocumentText( UISystem& ui, const UIScreen& screen, string_view documentPath, string& outText, string& outError )
+    {
+        const Widget* pRoot = screen.getTree().getRoot();
+        if ( pRoot == nullptr )
+        {
+            outError = "the preview has no widget tree";
+            return false;
+        }
+        const shared_ptr<const UIDocumentAsset> document = ui.getDocumentCache().findOrLoad( documentPath, outError );
+        if ( document == nullptr )
+            return false;
+        outText = UIDocumentWriter::write( screen.getDesc(), document->_listStyleSheet, *pRoot, screen.getBindings(), screen.getAnimationPlayer().getAnimations() );
+        return true;
+    }
+
+    string UIPreviewLogic::makeTimeLabel( float32 time, float32 duration )
+    {
+        fixed_string<constant::kMaxBuffer64> label;
+        formatstring( label.data(), label.capacity(), "%.2f / %.2f s", static_cast<float64>( time ), static_cast<float64>( duration ) );
+        return string( label.c_str() );
     }
 } // namespace sw::editor

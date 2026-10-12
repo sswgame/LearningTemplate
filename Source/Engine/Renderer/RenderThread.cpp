@@ -641,9 +641,11 @@ namespace sw
 
         SW_PROFILE_SCOPE( "RT.ReadRenderTarget" );
         RenderTargetReadback readback{};
-        readback._texture    = texture;
-        readback._serial     = serial;
-        readback._bSucceeded = _pDevice->getResourceFactory()->readbackTexture2D( texture, 0, 0, readback._byte, readback._layout ) ? SW_TRUE : SW_FALSE;
+        readback._texture = texture;
+        readback._serial  = serial;
+        // 요청한 뒤 트랜지언트가 다시 만들어졌으면(창 크기 변경) 핸들이 죽었다 — 읽지 않고 조용한 실패로 돌려, UI 가 새 핸들로 다시 요청하게 한다.
+        const bool bReadable = pRegistry->isPublished( texture ) && _pDevice->getResourceFactory()->readbackTexture2D( texture, 0, 0, readback._byte, readback._layout );
+        readback._bSucceeded = bReadable ? SW_TRUE : SW_FALSE;
         if ( readback._bSucceeded == SW_FALSE )
             readback._byte.clear();
         pRegistry->publishReadback( std::move( readback ) );

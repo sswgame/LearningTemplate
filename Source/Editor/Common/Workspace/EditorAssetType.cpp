@@ -103,7 +103,7 @@ namespace sw::editor
             {      EditorAssetType::Fracture,      MatchMode::Extension,        kArrFractureExt,        SW_COUNT_OF( kArrFractureExt ),                             "Fracture",                                              nullptr},
             {   EditorAssetType::Heightfield,      MatchMode::Extension,     kArrHeightfieldExt,     SW_COUNT_OF( kArrHeightfieldExt ),                                nullptr,                                              nullptr},
             {          EditorAssetType::Data,       MatchMode::EndsWith, kArrLocalizationSuffix, SW_COUNT_OF( kArrLocalizationSuffix ),                          "StringTable",                                              nullptr},
-            {          EditorAssetType::Data,       MatchMode::EndsWith,   kArrUIDocumentSuffix,   SW_COUNT_OF( kArrUIDocumentSuffix ), AssetReloadRoute::kAnyCacheHoldingPath,                                              nullptr},
+            {    EditorAssetType::UIDocument,       MatchMode::EndsWith,   kArrUIDocumentSuffix,   SW_COUNT_OF( kArrUIDocumentSuffix ), AssetReloadRoute::kAnyCacheHoldingPath,                                              nullptr},
             {          EditorAssetType::Data,       MatchMode::EndsWith,      kArrUIStyleSuffix,      SW_COUNT_OF( kArrUIStyleSuffix ), AssetReloadRoute::kAnyCacheHoldingPath,                                              nullptr},
             {          EditorAssetType::Data,       MatchMode::EndsWith,   kArrModuleDataSuffix,   SW_COUNT_OF( kArrModuleDataSuffix ), AssetReloadRoute::kAnyCacheHoldingPath,                                              nullptr},
             {          EditorAssetType::Data,      MatchMode::Extension,            kArrDataExt,            SW_COUNT_OF( kArrDataExt ),                                nullptr,                                              nullptr},
@@ -129,6 +129,7 @@ namespace sw::editor
             {           EditorAssetType::Rig,            "Rig",         "Rigs",           nullptr,            editoricon::kRig, { 0.95f, 0.75f, 0.55f, 1.0f }, false,  true,  true},
             {   EditorAssetType::Heightfield,    "Heightfield", "Heightfields",           nullptr,    editoricon::kHeightfield, { 0.65f, 0.60f, 0.45f, 1.0f }, false,  true, false},
             {      EditorAssetType::Fracture,       "Fracture",    "Fractures",           nullptr,       editoricon::kFracture, { 0.85f, 0.50f, 0.40f, 1.0f }, false,  true,  true},
+            {    EditorAssetType::UIDocument,     "UIDocument", "UI Documents",      "UI Preview",         editoricon::kWidget, { 0.95f, 0.55f, 0.75f, 1.0f }, false,  true, false},
             {          EditorAssetType::Data,           "Data",         "Data",           nullptr,          editoricon::kTable, { 0.60f, 0.75f, 0.95f, 1.0f }, false, false, false},
         };
 

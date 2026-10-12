@@ -12,8 +12,12 @@
 
 namespace sw
 {
+    struct PropertyInfo;
     struct UIScaleSettings;
 
+    class UIScreen;
+    class UISystem;
+    class Widget;
     class WidgetTree;
 } // namespace sw
 
@@ -67,5 +71,41 @@ namespace sw::editor
         static WidgetID findWidgetAt( const WidgetTree& tree, const float2& point );
         /** @brief 미리보기 렌더 텍스처 경로입니다 — 크기마다 다르다(렌더 텍스처 크기는 처음 만들 때 정해진다). */
         static string makeTargetPath( const UIViewport& viewport );
+
+        // --- 언어 고르기 ---------------------------------------------------------------
+        /** @brief 미리보기 언어를 "게임 언어 그대로" 로 두는 값입니다(빈 코드). */
+        static constexpr const utf8* kGameLanguage = "";
+        /**
+         * @brief 언어 콤보의 코드 목록입니다. 첫 줄은 게임 언어 그대로(`kGameLanguage`), 이어서 @p listAvailable 의 실제 문화권을 사전순으로, 끝에 의사 문화권(`qps_ploc`,
+         *        `qps_plocm`)을 둡니다. 의사 문화권은 @p listAvailable 에 없어도 넣고 중복은 한 번만 넣습니다(Dev 빌드에서만 `getAvailableLanguages` 가 내놓는다).
+         */
+        static void makeLanguageChoices( const vector<string>& listAvailable, vector<string>& outListCode );
+        /** @brief @p code(정규 표기)가 의사 문화권(`qps_ploc`, `qps_plocm`)이면 true 입니다. 화면에서 번역이 아니라 원문 변환 글을 보인다는 표시에 씁니다. */
+        static bool isPseudoLanguage( string_view code );
+
+        // --- 위젯 고르기 · 속성 고치기 ---------------------------------------------------------------
+        /** @brief 위젯 번호 @p id 의 문서 순서 번호입니다. 없으면 `kNoOrdinal` 입니다. 문서를 다시 읽으면 위젯 번호가 바뀌므로 고른 위젯을 번호로 이어 갑니다. */
+        static constexpr uint32 kNoOrdinal = 0xFFFFFFFFu;
+        static uint32           findWidgetOrdinal( const WidgetTree& tree, WidgetID id );
+        /** @brief 문서 순서 번호 @p ordinal 의 위젯 번호입니다. 범위 밖이면 무효입니다. */
+        static WidgetID findWidgetByOrdinal( const WidgetTree& tree, uint32 ordinal );
+        /** @brief 위젯의 프로퍼티 @p name (기반 타입 것 포함)입니다. 없으면 nullptr 입니다. */
+        static const PropertyInfo* findWidgetProperty( const Widget& widget, string_view name );
+        /** @brief 프로퍼티의 지금 값을 문서에 쓰는 텍스트(XML 속성 값과 같은 형태)로 돌려줍니다. */
+        static string formatWidgetProperty( const Widget& widget, const PropertyInfo& prop );
+        /**
+         * @brief 텍스트 @p text 를 프로퍼티 값으로 쓰고 위젯에 알립니다(`Widget::onBoundPropertyChanged` — 세터와 같은 무효화). 읽지 못하면 false 이고 값은 그대로입니다.
+         * @details 되돌리기와 다시 하기가 이 함수로 값을 되돌린다. 그리드의 편집도 같은 알림을 거치므로 화면은 어느 쪽이든 같은 경로로 다시 그려진다.
+         */
+        [[nodiscard]] static bool applyWidgetProperty( Widget& widget, const PropertyInfo& prop, string_view text );
+        /**
+         * @brief 미리보기 화면 @p screen 을 문서 텍스트로 씁니다(`UIDocumentWriter`) — 저장할 파일의 내용입니다.
+         * @details 스타일 시트 목록은 화면이 아니라 문서 @p documentPath 의 것이다. 화면의 목록은 조각 문서의 시트까지 모은 것이라 그대로 쓰면 조각의 시트가 이 문서로 복사된다.
+         *          애니메이션은 화면의 재생기가 가진 문서 애니메이션을 그대로 쓴다.
+         * @return 문서나 루트가 없으면 false 이고 @p outError 에 까닭을 적습니다.
+         */
+        [[nodiscard]] static bool makeDocumentText( UISystem& ui, const UIScreen& screen, string_view documentPath, string& outText, string& outError );
+        /** @brief 시간 막대 줄입니다 — "0.25 / 1.00 s". */
+        static string makeTimeLabel( float32 time, float32 duration );
     };
 } // namespace sw::editor

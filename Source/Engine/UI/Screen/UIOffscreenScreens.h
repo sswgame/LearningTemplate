@@ -18,6 +18,8 @@ namespace sw
     struct UILayoutContext;
     struct UIPaintContext;
 
+    class LocalizationManager;
+
     /** @struct UIOffscreenScreen @brief 화면 스택 밖의 화면 하나입니다. 렌더 텍스처 경로, 뷰포트, 그리기 목록을 가집니다(에디터 미리보기). */
     struct UIOffscreenScreen
     {
@@ -29,6 +31,9 @@ namespace sw
         CanvasDrawList       _scratch{};
         uint64               _revision{ 0 };
         float32              _textScale{ 1.0f };
+        /// 이 화면의 글을 해석하는 문화권입니다(소유하지 않는다 — 부르는 쪽이 화면보다 오래 둡니다). nullptr 이면 게임 UI 와 같은 문화권입니다.
+        const LocalizationManager* _pLocalization{ nullptr };
+        bool                       _bNavigationMode{ false }; ///< 탐색 방식이면 포커스 테두리(`:focus-visible`)를 보입니다(미리보기의 탐색 흉내).
     };
 } // namespace sw
 
@@ -59,6 +64,17 @@ namespace sw
          * @return 테마가 바뀌었으면 true 입니다. 부르는 쪽이 그 화면의 스타일 세트를 새 테마로 다시 적용합니다.
          */
         [[nodiscard]] bool setView( UIScreenHandle handle, const UIViewport& viewport, float32 textScale, const hashed_string& theme );
+        /**
+         * @brief 화면 @p handle 이 글을 해석할 문화권을 정합니다(nullptr 이면 게임 UI 와 같은 문화권). 문화권이 전역이라 이 화면만 다른 언어로 보려는 길입니다.
+         * @details 문화권이 다른 텍스트 버전을 가지므로, 바꾸면 모든 텍스트 위젯이 새 글을 해석하게 루트부터 다시 맞춥니다.
+         */
+        void setLocalization( UIScreenHandle handle, const LocalizationManager* pLocalization );
+        /** @brief 화면 @p handle 이 그릴 렌더 텍스처 경로를 바꿉니다(해상도를 바꿨을 때 트리를 그대로 두고 대상만 옮긴다). */
+        void setTargetPath( UIScreenHandle handle, const hashed_string& targetPath );
+        /** @brief 화면 @p handle 의 입력 방식을 정합니다(탐색이면 `:focus-visible` 상태가 켜진다). 방식이 바뀌면 스타일을 다시 맞춥니다. */
+        void setNavigationMode( UIScreenHandle handle, bool bNavigationMode );
+        /** @brief 재생 중인 애니메이션이 있는 화면의 애니메이션을 @p deltaSeconds 만큼 진행합니다(미리보기의 애니메이션 재생). */
+        void tickAnimations( float32 deltaSeconds );
         /** @brief 목록입니다. 테마와 시트, 문서 핫 리로드가 모든 화면을 돌 때 씁니다. */
         vector<UIOffscreenScreen>&       getScreens() { return _listOffscreen; }
         const vector<UIOffscreenScreen>& getScreens() const { return _listOffscreen; }
