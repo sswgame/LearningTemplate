@@ -7,7 +7,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
-#include "Editor/Common/Commands/EditorViewportPick.h"
+#include "Editor/Common/Commands/EditorViewportRayPick.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -44,7 +44,7 @@ namespace sw::editor
         {
             const uint32 planeAxis = b2DMode ? 2u : 1u;
             float3       hitPt{};
-            if ( EditorViewportPick::rayHitsAxisPlane( mouseRay, planeAxis, hitPt ) )
+            if ( EditorViewportRayPick::rayHitsAxisPlane( mouseRay, planeAxis, hitPt ) )
                 spawnPos = hitPt;
         }
 

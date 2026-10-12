@@ -1,10 +1,10 @@
 /**
- * @file EditorViewportPick.cpp
+ * @file EditorViewportRayPick.cpp
  * @brief 뷰포트 피킹 — 컴포넌트가 선언한 월드 경계(`SceneComponent::getWorldBounds`) · 종류별 순서 표 · 기본 반지름 폴백
  */
 #include "pch.h"
 
-#include "Editor/Common/Commands/EditorViewportPick.h"
+#include "Editor/Common/Commands/EditorViewportRayPick.h"
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
@@ -23,7 +23,7 @@ namespace sw::editor
 {
     namespace
     {
-        struct EditorViewportPickInternal
+        struct EditorViewportRayPickInternal
         {
             /** @brief NDC 점을 월드 좌표로 옮깁니다. w 가 0 이면(퇴화 행렬) false 입니다. */
             static bool unproject( const float4x4& invViewProj, float32 ndcX, float32 ndcY, float32 ndcZ, float3& outWorld )
@@ -47,7 +47,7 @@ namespace sw::editor
                                        const EditorPickRay& ray, EditorPickResult& ioBest )
             {
                 float32 hitT{ 0.0f };
-                if ( EditorViewportPick::rayHitsSphere( ray._origin, ray._direction, center, radius, hitT ) == false )
+                if ( EditorViewportRayPick::rayHitsSphere( ray._origin, ray._direction, center, radius, hitT ) == false )
                     return;
                 if ( hitT >= ioBest._distance )
                     return;
@@ -141,7 +141,7 @@ namespace sw::editor
                 {
                     SceneComponent* pScene = castTo<SceneComponent>( pComp );
                     if ( pScene != nullptr && pScene->isActive() )
-                        hitTestSphere( pObj, pScene, pScene->getWorldPosition(), EditorViewportPick::kFallbackRadius, ray, ioBest );
+                        hitTestSphere( pObj, pScene, pScene->getWorldPosition(), EditorViewportRayPick::kFallbackRadius, ray, ioBest );
                 }
             }
         };
@@ -150,8 +150,8 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    bool EditorViewportPick::pick( const GameObjectManager* pManager, const EditorPickRay& ray, bool b2DMode,
-                                   EditorPickResult& outResult )
+    bool EditorViewportRayPick::pick( const GameObjectManager* pManager, const EditorPickRay& ray, bool b2DMode,
+                                      EditorPickResult& outResult )
     {
         outResult = EditorPickResult{};
         if ( pManager == nullptr )
@@ -167,7 +167,7 @@ namespace sw::editor
             const CameraComponent* pCamera = pObj != nullptr ? pObj->getComponent<CameraComponent>() : nullptr;
             if ( pCamera != nullptr && pCamera->getRole() == CameraRole::Viewport )
                 return;
-            EditorViewportPickInternal::hitTestObject( pObj, ray, b2DMode, best );
+            EditorViewportRayPickInternal::hitTestObject( pObj, ray, b2DMode, best );
         } );
 
         if ( best._pObject == nullptr )
@@ -177,8 +177,8 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorViewportPick::rayHitsSphere( const float3& origin, const float3& dir, const float3& center,
-                                            float32 radius, float32& outHitT )
+    bool EditorViewportRayPick::rayHitsSphere( const float3& origin, const float3& dir, const float3& center,
+                                               float32 radius, float32& outHitT )
     {
         const float3  toCenter = origin - center;
         const float32 b        = toCenter.dot( dir );
@@ -202,16 +202,16 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorViewportPick::makeRay( const float4x4& invViewProj, float32 u, float32 v, EditorPickRay& outRay )
+    bool EditorViewportRayPick::makeRay( const float4x4& invViewProj, float32 u, float32 v, EditorPickRay& outRay )
     {
         const float32 ndcX = u * 2.0f - 1.0f;
         const float32 ndcY = 1.0f - v * 2.0f;
 
         float3 nearPt{};
         float3 farPt{};
-        if ( EditorViewportPickInternal::unproject( invViewProj, ndcX, ndcY, 0.0f, nearPt ) == false )
+        if ( EditorViewportRayPickInternal::unproject( invViewProj, ndcX, ndcY, 0.0f, nearPt ) == false )
             return false;
-        if ( EditorViewportPickInternal::unproject( invViewProj, ndcX, ndcY, 1.0f, farPt ) == false )
+        if ( EditorViewportRayPickInternal::unproject( invViewProj, ndcX, ndcY, 1.0f, farPt ) == false )
             return false;
 
         const float3  dir    = farPt - nearPt;
@@ -224,25 +224,25 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorViewportPick::rayHitsAxisPlane( const EditorPickRay& ray, uint32 axisIndex, float3& outPoint )
+    bool EditorViewportRayPick::rayHitsAxisPlane( const EditorPickRay& ray, uint32 axisIndex, float3& outPoint )
     {
         if ( axisIndex > 2 )
             return false;
 
         float3        direction = ray._direction;
         float3        origin    = ray._origin;
-        const float32 dirAxis   = EditorViewportPickInternal::axisOf( direction, axisIndex );
+        const float32 dirAxis   = EditorViewportRayPickInternal::axisOf( direction, axisIndex );
         if ( MathUtil::abs( dirAxis ) <= 1e-4f )
             return false;
 
-        const float32 t                                           = -EditorViewportPickInternal::axisOf( origin, axisIndex ) / dirAxis;
-        outPoint                                                  = origin + direction * t;
-        EditorViewportPickInternal::axisOf( outPoint, axisIndex ) = 0.0f;
+        const float32 t                                              = -EditorViewportRayPickInternal::axisOf( origin, axisIndex ) / dirAxis;
+        outPoint                                                     = origin + direction * t;
+        EditorViewportRayPickInternal::axisOf( outPoint, axisIndex ) = 0.0f;
         return true;
     }
 
-    uint32 EditorViewportPick::getTypedProviderCount()
+    uint32 EditorViewportRayPick::getTypedProviderCount()
     {
-        return EditorViewportPickInternal::kOrderRowCount;
+        return EditorViewportRayPickInternal::kOrderRowCount;
     }
 } // namespace sw::editor

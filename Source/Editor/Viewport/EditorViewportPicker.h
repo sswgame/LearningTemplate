@@ -19,8 +19,8 @@ namespace sw::editor
 
     /**
      * @class EditorViewportPicker
-     * @brief 씬 뷰 캔버스의 피킹입니다. 빌보드를 먼저 보고 레이 피킹(`EditorViewportPick`)을 합니다.
-     * @details `EditorViewportClient` 가 값 멤버로 들고 직접 부릅니다. 어떤 컴포넌트 종류를 집는지는 ImGui 없는 `EditorViewportPick` 의 표가 정하고,
+     * @brief 씬 뷰 캔버스의 피킹입니다. 빌보드를 먼저 보고 레이 피킹(`EditorViewportRayPick`)을 합니다.
+     * @details `EditorViewportClient` 가 값 멤버로 들고 직접 부릅니다. 어떤 컴포넌트 종류를 집는지는 ImGui 없는 `EditorViewportRayPick` 의 표가 정하고,
      *          이 클래스는 마우스 · 잠금 · 숨김 · 호버 빈도만 다룹니다.
      */
     class EditorViewportPicker

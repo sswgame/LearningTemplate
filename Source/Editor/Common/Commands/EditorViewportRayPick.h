@@ -1,5 +1,5 @@
 /**
- * @file EditorViewportPick.h
+ * @file EditorViewportRayPick.h
  * @brief 뷰포트 클릭 피킹을 담당합니다. 레이와 처음 만나는 오브젝트와 컴포넌트를 찾으며, ImGui 에 의존하지 않습니다.
  */
 #pragma once
@@ -39,13 +39,13 @@ namespace sw::editor
 namespace sw::editor
 {
     /**
-     * @class EditorViewportPick
+     * @class EditorViewportRayPick
      * @brief 뷰포트 피킹 로직입니다. 경계는 컴포넌트가 선언하고(`SceneComponent::getWorldBounds`), 같은 거리에서 어느 종류가 이기는지는 이 클래스 안의 테이블이 정합니다.
      * @details 종류를 아는 제공자는 테이블의 항목 하나다. 테이블이 잡지 못한 오브젝트는 그 오브젝트의 모든 SceneComponent 를 기본
      *          반지름으로 검사한다. 주 컴포넌트(`getPrimarySceneComponent()`)만 보면 게임이 만든 컴포넌트를 클릭으로 집을 수 없다.
      *          ImGui 를 쓰지 않으므로 `Test/EditorTest` 가 실제 씬으로 검증한다.
      */
-    class EditorViewportPick
+    class EditorViewportRayPick
     {
     public:
         /** @brief 기본 반지름입니다. 고유한 경계가 없는 컴포넌트를 집을 수 있게 하는 크기입니다. */

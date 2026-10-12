@@ -9,7 +9,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Commands/EditorViewportPick.h"
+#include "Editor/Common/Commands/EditorViewportRayPick.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Viewport/EditorGridUtil.h"
 #include "Editor/Viewport/EditorViewportCamera.h"
@@ -274,7 +274,7 @@ namespace sw::editor
         EditorPickRay mouseRay{};
         float3        groundPt{};
         if ( EditorViewportProjectionUtil::makeMouseRay( viewProj.invert(), canvasPos, canvasSize, mouseRay ) &&
-             EditorViewportPick::rayHitsAxisPlane( mouseRay, 1, groundPt ) )
+             EditorViewportRayPick::rayHitsAxisPlane( mouseRay, 1, groundPt ) )
         {
             if ( ImGui::IsMouseClicked( 0 ) )
             {
