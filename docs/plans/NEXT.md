@@ -3,6 +3,32 @@
 새 세션은 이 문서를 먼저 읽습니다. 배치 경계마다 적용 담당이 고쳐 씁니다. 끝난 항목은 지웁니다(한 일은 `git log`, 교훈은 영역 README · 결정 기록 · 검증 문서에 있다).
 작업 방식은 [작업 방식](../11_Workflow.md), 남은 일 전체는 [백로그](../06_Backlog.md)입니다.
 
+## 통합 3 (2026-10-12, 브랜치 `wt/integ3`, 워크트리 `C:\w\integ3`, push 안 함)
+
+- **병합**: `main`(8fce26aaf) 위에 1 차 여섯(tcore → tgfs → tinv → tcombat → tposttick → tgfd, 충돌 없음)과 2 차 아홉(uinc → utex → uxml → uaud → uonl → umod → ugfa → ugfb → upipe)을 병합했다.
+  uonl 은 `TestServiceClientCallTable.cpp` 에서 충돌(양쪽 테스트를 모두 남김). upipe 의 8021b9337(쿠킹 스탬프 SWCOOK 3 → 4)은 병합 뒤 되돌렸다 — 다시 쿠킹이 필요하다(아래 검증). 사용자가 확인한 뒤 `main` 으로 fast-forward 하고 push 한다.
+- **빌드(마지막)**: `cmake --preset` 재구성 뒤 Debug · Shipping `all AllTests` 각 한 번 — 오류 0 · 링크 오류 0 · 경고 0. 처음부터 지은 1 차 빌드의 `-Wnrvo` 약 50 곳 · `-Wunique-object-duplication` 3 곳은 원인에서 고쳤다(억제 없음).
+  게임 프리셋 Shooter3D · StarSkirmish · HarvestValley · VoxelCraft 는 1 차 병합 직후 `SWGame` 만 지었고(오류 0, 게임 파일 `-Wnrvo` 3 곳은 고침) 2 차 병합 뒤에는 다시 짓지 않았다.
+- **린트**: `lint-suite` 통과, 바뀐 헤더 76 개 `CheckHeaderSelfContained` 통과, `CheckSourceGlob` 통과, 2 차 병합분 C++ 139 개는 고정 clang-format 20.1.8 로 차이 없음. 새 게이트 `CheckPostTickThisBinding`(틱 뒤 실행에 `this` 메서드 델리게이트 금지).
+- **이번 세션에 고친 결함 · 구조**(커밋마다 문제점/해결방안/결과): `CameraRole` 옛 이름을 기대한 테스트, 틱 뒤 실행 도우미가 삭제 대기 컴포넌트를 부르던 것 + Debug 타입 단언, `this` 를 묶은 틱 뒤 실행 여섯 곳, 모듈 언로드 전 틱 뒤 큐 비우기,
+  호출 표의 id 대조 없는 '보내는 중' 응답 · 버리는 `clear`, `OnlineReplyUtil` · `ServiceClientCallTable` 의 `OnlineServiceClient.h` include, 씬 무효화 구독 해제, 개발 명령 · HUD 레지스트리 잠금과 include 정리(`DevCommandsEnabled.h` · `DebugHUDSectionFormat.h`),
+  `SW_GF_API` 한 곳 + 게임 서비스 연결 함수 C 링크(`RuntimeAPI/Export/GameFrameworkAPI.h`), `isServiceBound<T>()` 일반화, 리플렉션 생성 이름 충돌 검사 · 구성 뒤 매크로가 생긴 헤더 검사(`cmake/Engine/CheckReflectionCandidates.cmake`), 엔진 층 티어 표.
+- **남은 위험**:
+  - `SW_DELEGATE_METHOD(this)` 를 다른 지연 경로(틱 뒤 실행 밖)에 넘기는 곳은 여전히 핸들을 거치지 않는다. 게이트는 `deferPostTick` · `executeOrDeferPostTick` 만 본다.
+  - Shooter 적 체력이 `Vitality` 로 바뀌어 최대 체력 1 하한 · 음수 피해 0 처리가 생겼다(데이터에서 체력 0 을 주면 예전에는 바로 죽고 지금은 1 로 산다).
+  - 키트 DLL 이 Base 클래스의 암시적 멤버를 내보낸다(백로그 1-6).
+  - tgfd 가 일부러 남긴 것: 대체값을 받는 `readName`(AdventureDungeon · AdventureCooking), trim 하는 `AppearanceXMLUtil::readName`, 공개 API 인 `ScheduleCondition::parseNameList` · `AppearanceXMLUtil::readNameList`(본문만 위임).
+  - `GameDataXML.h` 개선은 71 곳 중 5 곳만 `XMLDocument.h` 를 끊었다 — 나머지 66 곳은 노드를 직접 읽어, 호출부를 읽기 인터페이스로 바꿔야 완전히 풀린다.
+  - DX11 · GL 의 bindless 인덱스 즉시 재사용 — 다른 해제 경로에도 지연 해제가 필요한지 아직 보지 않았다.
+  - umod 의 리눅스 `__builtin_return_address` 분기는 이 PC 에서 짓지 못했다(CI).
+- **옮기지 않기로 한 것(C 묶음 판정)**: 장비 피팅 규칙 · Gimmick/Genre · CommandStack · Observability · Dialogue/Sequencer/Localization/GameAutoplay · 리플렉션 에디터 메타 이름 — 언리얼 · 유니티도 이것들을 엔진 쪽(또는 에디터 공용)에 두고 게임 프레임워크로 내리지 않는다(Sequencer · Localization · Dialogue 는 엔진 모듈, 되돌리기는 에디터 트랜잭션, 메타 이름은 UPROPERTY 메타처럼 리플렉션 소유).
+  **이득이 작아 보류**: CharacterHit 피해 배율 · HitWindow damage · Ballistics 키트 공유 · FixedTimestep · KeyValueFile 의 Core 이동.
+- **사용자가 할 검증**: Debug `-L lint` · `-L nogpu` · `-L hostgpu`, Shipping `-L nogpu`. 새 · 바뀐 테스트 — `ReflectionEnumInfoTest`, `GameObjectManagerTest.PostTickOnComponentSkipsPendingDestroy`, `GameObjectManagerPoolTest.ModuleUnloadDrainsDeferredPostTickWork`,
+  `ServiceClientCallTableTest.ForeignResponseDuringSendDoesNotTakeTheSendingDelegate`, 옮긴 `TestDismemberment` · `TestWitcherRPG` · `TestTacticsSRPG` · `TestProgression` · `TestSpatial` · `TestProfilerTimeline`, 온라인 키트 테스트, umod 의 `TestGameService` 회수 · `ModuleHostTest.SharedModuleCannotBeRegisteredForReload`,
+  utex 의 새 GPU 테스트(작업 스레드 안 `SW_TEST_DEFENSIVE_SCOPE` 가 스레드별로 동작하는지). 게임 프리셋 넷을 2 차 병합 뒤 다시 짓기.
+  **쿠킹 가능한 환경에서**: 8021b9337 을 다시 적용하고 `App --cook-shaders` 로 다시 쿠킹해 쿠킹 셰이더 · `cook.stamp` 와 함께 커밋.
+  실기동: 에디터(`-EnableEditor`, 씬 바꾸기 뒤 되돌리기 기록이 비는지 · 뷰포트 카메라 · 디버그 HUD 섹션), Shooter3D(적 체력 · HP 바 · 쓰러짐 · 절단), VoxelCraft · HarvestValley · StarSkirmish 한 판, 모듈 리로드.
+
 ## 지금 상태 (2026-10-12 세션 끝)
 
 - **SOLID 계획 단위 S1 ~ S22 가 모두 끝났다**([StructureRefactor](StructureRefactor.md)). 옮기지 않기로 한 것(S3 · S8 · S5 의 실행 함수 칸 등)은 그 문서에 이유와 함께 있다. 남은 후보는 "`ProfilerPanel` 을 탭 상태 객체로 나누기" 하나.
