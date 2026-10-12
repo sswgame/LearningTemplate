@@ -30,13 +30,14 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Network/Replication/TickRingBuffer.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Destruction/DestructionDamage.h"
 #include "Engine/Destruction/DestructionProfile.h"
 #include "Engine/Destruction/DestructionState.h"
+#include "Engine/Destruction/FractureNetworkSync.h"
+#include "Engine/Destruction/FractureRenderUnits.h"
 #include "Engine/Object/Component/Physics/PhysicsComponent.h"
 #include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -47,9 +48,6 @@ namespace sw
 
     class GameObjectManager;
     class IFracturePhysics;
-    class Mesh;
-    class MeshComponent;
-    class SkeletalMeshComponent;
 
     /** @brief 어느 조각을 땅에 붙은(앵커) 것으로 볼지 정합니다. 앵커 볼륨(`_listAnchorVolume`)은 항상 추가로 적용합니다. */
     ENUM()
@@ -104,24 +102,6 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 떨어진 그룹 하나의 현재 자세입니다. 네트워크 복제가 읽습니다. */
-    struct FractureGroupPose
-    {
-        float3     _position{}; ///< 그룹 자세의 위치다(오브젝트 원점이 있는 월드 위치).
-        float3     _center{};   ///< 월드 질량 중심이다. 보간과 오차는 이 값으로 본다. 원점은 덩어리에서 멀 수 있어서 회전하면 크게 움직인다.
-        quaternion _rotation{};
-        uint32     _groupID{ 0 };
-        float32    _volume{ 0.0f };       ///< 배율을 곱한 부피다. 덩어리(`isChunkVolume`)면 서버가 자세를 보낸다.
-        uint8      _bResting{ SW_FALSE }; ///< 잠들었거나 바디를 제거했다(멈췄다).
-        uint8      _bGone{ SW_FALSE };    ///< 사라졌다
-        uint8      _bDriven{ SW_FALSE };  ///< 네트워크가 자세를 정한다(클라이언트의 덩어리, 키네마틱).
-        uint8      _bHasBody{ SW_FALSE }; ///< 바디가 있다(충돌한다).
-        uint8      _layer{ 0 };           ///< 바디의 물리 레이어다.
-    };
-} // namespace sw
-
-namespace sw
-{
     /** @brief 아직 적용하지 않은 피해 하나입니다. 월드 요청은 물리 프레임에서 그 시점의 자세로 메시 공간 사건이 됩니다. */
     struct FracturePendingDamage
     {
@@ -151,8 +131,6 @@ namespace sw
     {
     public:
         REFLECT_BODY();
-
-        static constexpr uint32 kRecentHashCount = 64; ///< 받는 쪽이 사건마다 기록해 두는 최근 상태 해시 수다.
 
         FractureComponentBase();
         ~FractureComponentBase() override;
@@ -190,7 +168,7 @@ namespace sw
         /** @brief 쪼갤 때의 오브젝트 자세(메시 공간에서 월드로, 선택한 배율 포함)입니다. 붙어 있는 조각의 정적 바디가 이 자세에 놓입니다. */
         float4x4 makeFracturedObjectMatrix() const;
         /** @brief 쉬는 자세를 정적 메시에 베이크해 스킨드 메시를 숨긴 상태인지 반환합니다. */
-        bool isBaked() const { return _bBaked == SW_TRUE; }
+        bool isBaked() const { return _renderUnits.isBaked(); }
         /** @brief 파쇄 데이터를 읽었는지입니다. */
         bool                       hasFractureData() const { return _asset != nullptr; }
         const DestructionState&    getState() const { return _state; }
@@ -226,7 +204,7 @@ namespace sw
         /** @brief 이 부피(배율을 곱한 세제곱미터)의 떨어진 그룹이 덩어리인지 반환합니다. 프로필의 `keepCollisionVolume` 이상이면 덩어리이고, 서버가 자세를 보냅니다. 그보다 작으면 꾸밈용 파편입니다. */
         bool isChunkVolume( float32 volume ) const { return volume >= _profile._keepCollisionVolume; }
         /**
-         * @brief 받는 쪽(권한 없음)이 사건 수 @p eventCount 에 이르렀을 때의 상태 해시를 반환합니다(최근 `kRecentHashCount` 개). 없으면 false 를 반환합니다.
+         * @brief 받는 쪽(권한 없음)이 사건 수 @p eventCount 에 이르렀을 때의 상태 해시를 반환합니다(최근 `FractureNetworkSync::kRecentHashCount` 개). 없으면 false 를 반환합니다.
          * @details 사건은 물리 프레임마다 모아서 적용하므로, 서버가 보낸 (사건 수, 해시)와 같은 순간이 현재 상태로 오지 않을 수 있다.
          *          그래서 사건마다 해시를 기록해 둔다.
          */
@@ -293,13 +271,11 @@ namespace sw
         void convertWorldDamage( const FracturePendingDamage& pending, vector<DestructionDamageEvent>& outListEvent ) const;
         /** @brief 잎에서 런타임 슬롯으로 가는 테이블을 다시 만듭니다. */
         void rebuildLeafRuntimeMap();
-        /** @brief 렌더 유닛(스킨드 메시 둘)을 만듭니다. */
-        void createRenderUnits();
         /** @brief 떨어진 그룹의 자세를 읽고 수명, 수면, 페이드, 예산을 진행합니다. 움직인 것이 있으면 true 입니다. */
         bool updateGroups( float32 deltaTime );
-        /** @brief 잎마다 본 로컬 변환을 다시 구해 렌더링에 씁니다. */
+        /** @brief 잎마다 본 로컬 변환을 다시 구해 렌더 유닛에 씁니다. */
         void writePiecePoses();
-        /** @brief 스킨드 메시와 정적(베이크한) 메시를 전환합니다. */
+        /** @brief 렌더 유닛의 스킨드 메시와 정적(베이크한) 메시를 전환합니다. */
         void setBaked( bool bBaked );
         /** @brief 월드 점을 그룹의 메시 공간으로 옮깁니다. */
         float3 toMeshSpace( const FractureGroupRuntime& runtime, const float3& worldPoint ) const;
@@ -314,7 +290,7 @@ namespace sw
         void releaseAllBodies();
         /** @brief 쌓인 스냅샷 하나를 지금 적용합니다. 상태를 바꾸고 그룹 바디와 렌더링을 다시 만듭니다. */
         void applySnapshotNow( ScenePhysics& physics, const vector<uint8>& bytes );
-        /** @brief 쌓인 자세 목표를 그룹에 반영합니다. 처음 받은 그룹은 바디를 키네마틱으로 바꿉니다. */
+        /** @brief 쌓인 자세 목표(`FractureNetworkSync`)를 그룹에 반영합니다. 처음 받은 그룹은 바디를 키네마틱으로 바꿉니다. */
         void applyDriveTargets();
         /** @brief 씬의 파편 바디 수(예산)를 바꿉니다. */
         void changeDebrisBodyCount( int32 delta );
@@ -350,16 +326,13 @@ namespace sw
         DestructionEventLog             _eventLog;
         vector<FractureGroupPose>       _listEventGroupPose; ///< `_eventLog` 와 같은 인덱스다. 맞은 떨어진 그룹의 적용 직전 자세다.
         mutable mutex                   _pendingMutex;
-        vector<FractureGroupPose>       _listPendingDrive; ///< `driveGroup` 이 쌓은 목표다(잠금 아래).
-        TickRingBuffer<uint64>          _listRecentHash;   ///< 받는 쪽이 쓴다. 사건 수로 찾는 최근 상태 해시이며, 처음 기록할 때 `kRecentHashCount` 슬롯을 잡는다.
+        FractureNetworkSync             _networkSync; ///< 최근 상태 해시, `driveGroup` 의 자세 목표, 스냅샷 형식이다.
         vector<FracturePendingDamage>   _listPendingDamage;
         vector<PhysicsBodyHandle>       _listLeafStaticBody; ///< 잎마다 정적 바디다(앵커 그룹의 잎만).
         vector<FractureGroupRuntime>    _listRuntime;        ///< 그룹 번호 오름차순이다.
         vector<BoneTransform>           _listPiecePose;      ///< 잎마다 본 로컬 변환이다.
         vector<uint32>                  _listRuntimeOfLeaf;  ///< 잎에서 `_listRuntime` 인덱스로 가는 테이블이다(그때마다 다시 만든다).
-        shared_ptr<Mesh>                _arrSkinnedMesh[2];  ///< 슬롯(겉면, 안쪽 면)마다 스킨드 메시 원본이다.
-        ComponentHandle                 _arrSkinnedUnit[2];
-        ComponentHandle                 _arrBakedUnit[2];
+        FractureRenderUnits             _renderUnits;        ///< 스킨드 메시 둘과 베이크한 정적 메시 둘이다.
         ComponentHandle                 _intactMesh;
         ComponentHandle                 _intactBody;
         float3                          _objectPosition; ///< 쪼갤 때의 오브젝트 자세(메시 공간 → 월드)
@@ -375,7 +348,6 @@ namespace sw
         uint32                          _stillFrameCount; ///< 움직인 것이 없었던 연속 프레임 수다(베이크 판정).
         uint8                           _bStateReady;
         uint8                           _bFractured;
-        uint8                           _bBaked;
         uint8                           _bPoseDirty;
         uint8                           _bFractureMissing; ///< 데이터를 받지 못했다. 캐시 세대가 바뀔 때까지 다시 묻지 않는다.
     };
