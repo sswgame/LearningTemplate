@@ -27,7 +27,10 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
   적용 담당은 충돌을 풀지 않고 되돌려 보냅니다. 셰이더 매니페스트, 쿠킹 바이너리, `import.stamp` 같은 생성 산출물이 충돌하면 한쪽을 고르지 않고 `App --cook-shaders` 나 `--import-models` 로 다시 만듭니다.
 - 같은 파일을 건드리는 단위는 한 도우미에게 몰아 줍니다. 끝난 워크트리는 바로 지웁니다.
 - 기계적 변경(이동, 이름 바꾸기, 일괄 재작성)은 커밋만 단계별로 나누고 빌드와 테스트는 끝에 한 번 합니다.
-- 결함을 고칠 때는 재현 테스트(고치기 전에 지는 것 확인) → 고침 → 변이 검사(고침을 빼면 테스트가 지는가) 순서입니다. 자세한 규칙은 [검증과 측정](08_Verification.md) 1절입니다.
+- 결함을 고치는 순서(재현 테스트, 고침, 변이 검사)는 [검증과 측정](08_Verification.md) 1절이 원본입니다.
+- `main` 체크아웃에서는 빌드하거나 편집하지 않습니다. 도우미는 워크트리에서 일합니다.
+- vcpkg 가 갑자기 포트 전체를 다시 빌드하면(20 분 넘게) `Tools/vcpkg/packages/*/share/*/vcpkg_abi_info.txt` 의 `triplet_abi` 가 흔들리는지 봅니다. 바이너리 캐시 경로(`VCPKG_BINARY_SOURCES`)는 `Vcpkg.cmake` 가 정하므로 ninja 재구성에서도 빠지지 않습니다. 설치 도중에는 건드리지 않습니다.
+- 사용 한도(`rate_limit`)로 도우미가 끊기면 워크트리 작업은 그대로 남습니다. 한도가 풀린 뒤 `SendMessage` 로 이어서 시킵니다.
 
 ## 2. 빌드와 CPU
 
@@ -35,7 +38,8 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 - 도우미의 빌드와 테스트는 낮은 우선순위로 돌립니다. Git Bash 에서 `cmd //c "start /belownormal /wait /b cmake --build --preset Ninja-Debug -j 4"`, ctest 는 `-j 2` 입니다. 끌 때는 자기 PID 만 끕니다.
   이 빌드는 테스트를 짓지 않습니다. 테스트를 돌릴 도우미는 `--target all AllTests` 를 붙여 낮은 우선순위로 먼저 짓습니다(ctest · `py -3 -m Scripts test` 가 대신 지으면 보통 우선순위로 돈다).
 - **게임별 프리셋(`Ninja-Debug-<Game>`) 빌드는 배치 끝에 적용 담당이 한 번 합니다.** 도우미는 게임 소스를 고쳤으면 "게임 빌드 미확인" 으로 보고합니다.
-- 파이썬 조각은 heredoc 이나 `python -` 로 넘기지 않고 Write 도구로 파일을 만들어 `py -3 <파일>` 로 돌립니다(heredoc 은 파싱 실패 · 이스케이프 소실로 반복해서 깨졌습니다). 그 밖의 편집 함정은 [AGENTS.md](../AGENTS.md) "Editing traps" 에 있습니다.
+- 도우미가 동시에 빌드할 때는 `D:\Projects\Personal\LT-wt\BUILD-LOCK-README.txt` 의 슬롯 잠금(`LT-wt/.slot1` ~ `.slot3`)을 씁니다.
+- 스크립트로 파일을 고칠 때의 규칙(heredoc 금지 등)은 [AGENTS.md](../AGENTS.md) "Editing traps" 가 원본입니다. 임시 파일은 scratchpad 에 두고 이름 앞에 에이전트 이름을 붙입니다.
 - 컴파일러 경고 전체 조사(`Scripts/lint/report/RunBuildWarnings.py`, 세 프리셋)는 사용자가 요청할 때만 돌립니다. 내 변경이 만든 경고는 그 빌드가 이미 보여 줍니다.
   빌드 로그의 경고가 이상하면(sccache 가 옛 경고를 재생한 경우) 조사를 돌릴지 사용자에게 묻습니다.
 
@@ -56,12 +60,7 @@ py -3 -m Scripts shared-lock release vcpkg --owner <이름>                     
 - **검증을 마친 main 은 묻지 않고 push 합니다.** 사용자에게는 결과만 짧게 알립니다. 들어간 것, 검증 수치, 상용 엔진(언리얼, 유니티, Godot)과 비교한 위치와 빠진 것을 적습니다.
 - 도우미는 push 하지 않습니다. 검증되지 않은 브랜치가 원격에 가지 않게 하기 위해서입니다.
 - 검증이 초록이면 바로 넣고, 뒤에 문제가 드러나면 그 단위를 되돌립니다. 배치 사이에 사용자 확인을 기다리지 않고 다음 배치를 시작합니다.
-- **push 뒤 CI 결과를 기다리며 멈추지 않습니다.** 사용자가 실패를 알려 주면 그때 원인을 찾습니다. 로그와 아티팩트는 관리자만 받을 수 있으므로 공개 API 로 실행, 잡, 실패 주석을 읽습니다.
-
-```powershell
-py -3 -m Scripts ci-jobs --runs                    # main 의 최근 실행
-py -3 -m Scripts ci-jobs <실행 id> --annotations   # 실패한 잡과 실패 주석
-```
+- **push 뒤 CI 결과를 기다리며 멈추지 않습니다.** 사용자가 실패를 알려 주면 그때 원인을 찾습니다. 실패를 읽는 방법(`ci-jobs`, 실패 주석)은 [검증과 측정](08_Verification.md) 4절에 있습니다.
 
 ## 5. 결정하는 방식
 

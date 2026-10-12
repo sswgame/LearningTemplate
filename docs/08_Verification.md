@@ -1,7 +1,7 @@
 # 검증과 측정
 
 변경이 맞는지 확인하는 방법과 성능을 측정하는 방법을 모은 문서입니다. 무엇을 돌려야 일을 끝낸 것으로 보는지, 측정값을 어떻게 읽는지,
-테스트를 쓸 때 무엇을 조심하는지를 다룹니다. 한 모듈에만 해당하는 함정은 그 모듈 README 의 "함정 · 계약" 절에 있습니다.
+검증할 때 무엇을 조심하는지, CI 실패를 어떻게 읽는지를 다룹니다. 한 모듈에만 해당하는 함정은 그 모듈 README 의 "함정 · 계약" 절에, 테스트를 쓰는 규칙은 [Test README](../Test/README.md) 에 있습니다.
 
 ## 1. 손대기 전에 — 검증 규칙
 
@@ -81,6 +81,8 @@ cd build/Ninja-Debug/Bin
 - 비결정적 실패는 한 번 재현으로 "확정" 이라 부르지 않는다. 3~5 회 다시 돌려 재현율을 본다. 간헐 실패를 보면
   `--output-on-failure` 출력 전체를 파일로 남긴다(요약만 남으면 어느 케이스인지 모른다).
 - 직접 실행으로 통과해도 CTest 에서 질 수 있다(병렬 부하 · 시한). 끝내기 전 검증은 CTest 로 한다. 멈추면 `LastTest.log` 의 마지막 `[ RUN ]` 을 본다.
+- 테스트 실행 파일은 `AllTests` 를 지어야 최신이다. 옛 exe 로 돌리면 모듈 ABI 불일치로 진다.
+- 옛 대소문자 이름의 CMake 빌드 폴더(`Test/EditorUiTest` 같은 것)가 남아 있으면 `-Wnonportable-include-path` 경고가 난다 — 그 폴더를 지우고 다시 구성한다.
 
 ## 2. 측정 · 프로파일
 
@@ -145,12 +147,34 @@ cd build/Ninja-Debug/Bin
 - **성능 워크로드는 움직여야 합니다.** 정지한 씬은 "바뀐 것 없음" 빠른 경로만 측정합니다. 워크로드가 지나지 않은 경로는 "검증됨" 이 아니라 "실행된 적 없음" 으로 보고,
   최적화 대상은 프로파일 표에서 고르고 전후 숫자를 커밋 메시지에 남깁니다. 새 프로파일 구간을 넣을 때는 그 상위 구간도 함께 넣습니다. 하위 구간의 합과 전체의 차가 대개 진짜 병목입니다.
 - **렌더 성능은 디스크에서 읽은 씬으로 배치 수를 먼저 셉니다.** 인스턴스 수와 배치 수가 비슷하면 인스턴싱이 꺼진 것입니다.
+- **측정 표에는 측정한 PC 이름과 CPU 를 적습니다.** 다른 빌드가 도는 동안 잰 값은 오염되므로, 측정하는 동안은 다른 빌드를 막습니다(아래 "빌드 속도" 의 슬롯 잠금).
+
+### 영역별 측정값 (남은 일의 기준선)
+
+백로그 항목이 근거로 삼는 측정값입니다. 다시 잴 때는 같은 명령과 구성으로 잽니다.
+
+- **지형 LOD 교체**(`TerrainBenchTest.LODSweepWorstFrame`, Release, 쇼케이스 지형을 600 프레임 동안 가로지름, 3 회): 교체 프레임 111 개에서 updateLODs(청크 메시) p50 0.1 ms · 최악 4.0 ~ 5.1 ms,
+  GPUScene 수집 p50 0.95 ms · 최악 5.0 ~ 5.2 ms 입니다. 기준은 GT 2 ms 입니다.
+- **파괴 첫 프레임**(`FractureBenchTest.ShowcaseBeginPlay`, Release, beginPlay + 첫 틱 — 첫 물리 스텝 앞에서 상태와 잎 셰이프를 만든다): p50 20.2 · 27.2 · 20.7 ms 입니다.
+  쇼케이스 파괴물 여섯 · 잎 312 개이고, 200 조각 벽 하나의 볼록 껍질이 약 11 ms(잎당 약 55 us)입니다. 깨지는 프레임은 200 조각 벽에서 4 ~ 7 ms(그중 사건 처리 2 ~ 4 ms)입니다.
+- **UDP 소켓 계층**(`NetUDPBenchTest`, 호스트 스위트, 서버 20 Hz 200 B · 클라이언트 30 Hz 40 B, 서버와 클라이언트가 한 PC, Release 3 회 가운데 값, 다른 빌드로 CPU 20 ~ 46 % 부하, Windows):
+  클라이언트 500 은 받기 10.7k · 보내기 10.7k pkt/s, 서버 스레드 14 %, 패킷당 6.6 us, RTT p50 48 · p99 48 ms 입니다.
+  클라이언트 2000 은 42.1k · 42.5k pkt/s, 54 %(51 ~ 82 %), 패킷당 6.5 us, RTT p50 68 · p99 70 ms, 커널 버림 0 입니다. RTT 는 대부분 같은 PC 의 클라이언트 드라이버 지연입니다.
+- **온라인 부하 봇 참고값**(2026-10-06, Debug, `--local-server` — 봇과 서버가 한 스레드라 서로의 시간을 잰다): `quick_check` 봇 300 이 4200 동작을 28 초에 오류 0 으로 끝냈고,
+  chat_send p50 377 ms · p99 1081 ms, 채팅 알림 185548 건이었습니다. 판단 근거로 쓸 값은 Release 서버 한 대 측정입니다(백로그 1-7).
+- **Vulkan VSync 프레임 놓침**(2026-10-06 조사, Release 큐브 100, 165 Hz): 46 회 중 4 회에서 600 프레임 창 안에 한 프레임이 12 ~ 24 ms 였고, DXGI(DX12 · DX11)는 같은 조건에서 회당 한 주기 이하였습니다.
+  평소 Vulkan 은 `vkAcquireNextImageKHR` 에서 약 5.2 ms 를 기다립니다(DXGI 는 Present 안에서 기다린다). 느린 프레임은 둘로 갈렸습니다.
+  하나는 이미지가 한 주기 늦게 돌아온 것(acquire 약 10 ms)이고, 다른 하나는 GPU 일이 0.3 ms 인 프레임의 펜스가 13 ms 뒤에 신호된 것(창 모드 Vulkan 프레젠트가 합성기를 거치는 경로)입니다. 그 프레임에 엔진 CPU 일은 없었습니다.
 
 ### 빌드 속도
 
 - **빌드 시간 기준선은 `Scripts/dev/RunBuildBaseline.py`** — 풀 빌드(sccache 없는 별도 폴더) · 헤더 하나 수정 · `.cpp` 하나 수정 · 워크트리 콜드(sccache 웜)를 각 3 회 측정해서
   중앙값 표를 내고 머리에 PC 이름 · CPU 를 적는다. 다른 빌드가 돌면 멈춘다. 헤더별 누적 파싱 시간 상위는 `Scripts/lint/report/RunIncludeCost.py`(전 TU `-ftime-trace`, PCH 없이)다.
-  표는 같은 PC 의 전후만 견준다([빌드 속도 계획](plans/BuildSpeed.md) 0 단계). 측정하는 동안은 `LT-wt/.slot1` ~ `.slot3` 를 모두 잡아 다른 에이전트의 빌드를 막는다.
+  표는 같은 PC 의 전후만 견준다. 측정하는 동안은 `LT-wt/.slot1` ~ `.slot3` 를 모두 잡아 다른 에이전트의 빌드를 막는다. 남은 단계는 [빌드 속도 계획](plans/BuildSpeed.md)에 있다.
+- **CPU 시간 나눔**(빌드 속도 계획을 세울 때의 Debug `.ninja_log`, 명령 하나당 한 번 센 값이라 시점이 섞였을 수 있다): 일반 컴파일 2,435 s(2,413 TU, 약 85 %), PCH 생성 370 s(86 개, 13 %),
+  링크 23 s(85 개, 1 % 미만), 리플렉션 코드젠 40 s(28 개, 1 %)였다. 모듈별 컴파일은 Engine 688 TU 805 s, GameFramework 833 TU 671 s, Editor 143 TU 123 s, Core 84 TU 72 s, 테스트 614 TU 732 s(26 %)였다.
+  16 스레드 기준 풀 빌드의 이론 하한은 약 170 ~ 180 초였다. 가장 느린 TU 는 `EngineLoop.cpp` 6.5 초이고, `Physics/Jolt/*` 래퍼가 5.3 ~ 6.7 초로 보인 것은 다른 빌드와 겹쳐 잰 값이었다(조용할 때 각 1.9 ~ 2.5 초).
+  `GameObjectManager.cpp` 를 PCH 없이 `-ftime-trace` 로 재면 전체 2.16 초 중 헤더 파싱(`Total Source`)이 1.22 초(57 %)였다.
 - **기준선**(2026-10-10, PC `SW` · AMD Ryzen 7 6800H 논리 코어 16, 커밋 `0d054352a`(= main `8653de727` + 스크립트 수정), `Ninja-Debug`, 타깃 `all`, 테스트 제외):
 
   | 시나리오 | 1 회(s) | 2 회(s) | 3 회(s) | 중앙값(s) |
@@ -221,51 +245,23 @@ cd build/Ninja-Debug/Bin
   `EngineJolt_objects` PCH 2.9 s + TU 2.6 s = 5.5 s. 한 파일 수정 뒤 다시 짓는 시간은 TU 하나당 1.9 ~ 2.5 s → 0.3 ~ 0.8 s 다.
   측정하는 법: `/clang:-ftime-trace` 를 `-c --` 앞에 넣는다(뒤에 두면 파일 이름으로 읽힌다). 다른 빌드가 돌 때 측정한 값은 1.5 배까지 흔들린다.
 
-## 3. 검증 · 테스트 쓰기
+## 3. 검증할 때의 함정
 
-- **설정 파일 테스트는 둘이다** — `ConfigFileSchemaTest`(EngineTest, `Config/` 의 엔진 · 게임 · 서버)와 `EditorConfigFileSchemaTest`(EditorTest, `Config/Editor`).
-  둘 다 표에 없는 파일을 실패로 본다 — 새 설정 파일은 그 표와 `Scripts/common/ConfigCatalog.py` 에 한 줄씩.
-- **바깥 서버가 있어야 하는 테스트는 `SW_TEST_REQUIRES_ENVIRONMENT( 스위트, "변수", "까닭" );`** — 변수가 비면 그 스위트만 빠지고 `[ SKIP SUITE ]` 한 줄(실패도 "모두 건너뜀" 도 아님,
-  호스트 스위트와 섞이지 않는다). PostgreSQL 은 `SW_TEST_POSTGRES_URL`. 구현마다 같은 케이스는 계약 매크로로(`SW_SERVICE_STORE_CONTRACT_SUITE` · `SW_SQL_DRIVER_CONTRACT_SUITE` ·
-  `SW_EPHEMERAL_STORE_CONTRACT_SUITE`). 서버 없이 실패 길만 보려면 닿지 않는 주소(`host=127.0.0.1 port=1 connect_timeout=1`)를 준다 — 깨끗이 지고 멈추지 않아야 한다.
-- **`--test_filter` 는 gtest 모양이다** — 패턴 사이는 `:` 도 쉼표도 되고, 첫 `-` 뒤는 모두 빼는 패턴이다(`A.*:B.*-A.X`; `-A.*,B.*` 는 둘 다 뺀다).
-  고르는 패턴이 등록된 케이스 하나와도 맞지 않으면 실행이 진다(`TestFrameworkTest.FilterThatSelectsNothingFails`) — 0/0 통과는 확인한 줄 안다.
-- **광선이 두 삼각형이 나누는 모서리를 정확히 지나면 Möller–Trumbore 가 양쪽을 다 놓칠 수 있다** — 같은 각도로 나뉜 합성 원기둥 두 겹에서 실제로 났다
-  (`CharacterGeometryUtil::intersectRayTriangle` 은 무게중심 여유 1e-5 로 막는다). 합성 형상 테스트는 분할 수를 서로 다르게 하고, 면 모양(다각형)이라 반지름이 면 가운데서
-  `r · cos(π/n)` 로 준다는 것도 기댓값에 넣는다.
+테스트를 쓸 때의 규칙(스위트 이름, 도우미, 단언, 샤드, 골든 기준, EditorTest · CoreTest 의 제약)은 [Test README](../Test/README.md) "단언과 도우미" 와 "함정과 주의" 절이 원본입니다.
+이 절은 변경을 확인하고 결함을 좁힐 때의 함정만 다룹니다.
+
 - **`-gv_fixedFrameDelta=<초>` 는 프레임마다 그 시간만 흘린다**(벽시계 무시) — 시나리오 · 픽셀 비교 · 벤치 재현이 기계와 상관없이 같은 게임 시간을 본다.
   App 의 종료 코드는 `EngineLoop::requestQuit( code )` 가 정한다(0 성공, 시나리오 10 실패 · 11 읽기 오류 · 12 시간 초과 · 13 건너뜀).
 - **실기동 확인은 시나리오로 남긴다** — `Resource/<영역>/automation/*.scenario.xml` 을 두면 그 게임 프리셋의 `ctest -L hostgpu`(`AppScenarioTest`)가 백엔드마다 돈다
   (`Source/Engine/Automation/README.md`). 손 확인 목록을 백로그에 적지 말고 시나리오를 쓴다 — 못 쓰는 것만 이유와 함께 손 확인으로. 값을 보려면 `Expect probe`(게임 .cpp 의
   `SW_AUTOMATION_PROBE` 한 줄), 그림은 `Screenshot` + `ExpectImage`(지표 값은 보고 JSON 에 늘 적힌다).
-- **App 의 종료 코드 77 = 이 기계 · 빌드가 그 RHI 백엔드를 못 돌린다**(`RHIInitResult` 의 `BackendNotBuilt` · `DriverUnsupported`). 테스트 · `AppRun.py` 는 로그 문구가 아니라 이것으로 건너뛴다 —
-  환경 탓으로 물러나는 새 경로는 백엔드가 `_initResult` 를 적어야 건너뜀이 된다(안 적으면 결함으로 진다).
-- **백엔드마다 디바이스를 세우는 테스트는 `test::RHIBackendSweep`** — `for ( test::RHITestDevice& device : sweep )`, 건너뛰기는 케이스가 `sweep.getReadyCount() == 0` 으로.
-  오프스크린 · 한 프레임 도우미(`makeSingleTargetPSODesc` · `beginOffscreenRenderPass` · `countPrimaryColorPixels` · `renderSceneFrame`)를 먼저 볼 것.
-- **macOS 는 지원 대상이 아니다** — 코드는 10-04 에 지웠고 `CheckTargetMacros` 가 `SW_PLATFORM_MACOS` 를 막는다. 복원하려면 그 전 git 기록에서. `Vcpkg.cmake` 의 APPLE 갈래 ·
-  레거시 스탬프 이관과 `arm64-osx` · `x64-osx` 트리플릿은 손대지 않는 파일이라 사용자가 정리한다.
 - **ThreadSanitizer 는 이 리눅스 환경의 clang 18 에 런타임이 없다** — clang 으로 `-fsanitize=thread` 컴파일하고 링크만 gcc 의
   `/usr/lib/x86_64-linux-gnu/libtsan.so.2` 를 직접 붙이면 돈다(`setarch -R` 으로 ASLR 을 끈다). 일부러 만든 경합을 잡는 것까지 확인했다(2026-10-03,
   `NetworkThreadTest`). 잠금 · 스레드를 바꾼 뒤 그 테스트만 이렇게 돌린다.
-- **고정 틱 창 끝에서 "모두 같다" 를 보는 네트워크 테스트는 서버 물리가 그 창 안에 가라앉는다고 가정한다** — 물리 궤적은 구성마다 달라 리눅스 Shipping 에서는
-  파괴 벽의 사건이 480 틱 창 너머까지 와 수렴 단언이 졌다(Debug 는 269 틱에 멈춤). 수렴은 창 뒤 상한 안에서 같아질 때까지 돌려 본다(`ScenarioOptions::_settleTickLimit`).
-  해시가 갈리면 먼저 사건마다 적용 전 · 후 해시를 서버 · 클라이언트에 찍어 같은 (오브젝트, 번호) 끼리 맞춰 본다 — 결정성 결함인지 테스트 가정인지 한 번에 갈린다.
-- **느린 시나리오는 조건마다 한 케이스로 쪼갠다** — 조각(`SHARDS`)은 스위트 안의 케이스를 번갈아 나누므로, 한 케이스에 조건 둘을 넣으면 한 조각이 둘 다 진다
-  (`NetSimDestructionMatrixTest` 는 회선 둘을 두 케이스로 나눠 호스트 스위트에서 nogpu 로 왔다 — WSL Debug 케이스마다 17 초).
-- **CoreTest 는 엔진을 쓰지 않는다** — include 경로로는 막을 수 없다(`TestFramework` 가 Engine 을 PUBLIC 링크, `TestFramework.h` → `EngineMinimal.h`).
-  `CheckTestSuites` 규칙 6 이 CoreTest 파일의 직접 Engine · GameFramework · Editor include 와 `engine::` 호출을 막는다. 엔진 타입이 필요하면 지역 대역을 쓰거나 EngineTest 에.
 - **레이어 때문에 지금 자리가 가장 낮은 합법 자리인 파일 셋**(`PackCompressionUtil` · `ObjectUndoUtil` · `GPULight.h`)은 README 에
   이유가 있다 — 다시 "잘못 놓였다" 로 옮기지 말 것.
-- **호스트 스위트 케이스는 예상 밖 `[Error]` 로그 하나로 진다** — 아직 못 고친 엔진 Error 는 `SW_TEST_KNOWN_ERROR_LOG( 스위트, 문구, 이유 )` 로만 허용하고, 고치면 그 줄을
-  지운다(실행 끝에 남은 선언이 출력된다). 골든 이미지는 `AppSmokeTest.BenchFrameMatchesGoldenImage`(`Test/AppTest/Golden`, `SW_UPDATE_GOLDEN=1` 로 다시 뜬다).
-- **Debug 의 단언 경로는 `test::ScopedAssertCapture` 안에서 테스트한다**(멈추지 않고 센다).
-- **모듈 코드 정리 테스트에 이미지 전체를 범위로 주지 말 것** — Shipping 은 엔진까지 한 exe 다. 스텁 · vtable 하나씩으로 좁힌다.
-- **큰 `reserve` 는 실패하지 않을 수 있다** — 상한 테스트는 할당 바이트로 단언한다.
-- **시간으로 움직이는 GPU 픽셀 단언은 `FrameRenderer::setAnimationTimeOverride` 로 시각을 고정한다**(음수 = 벽시계). 단위 큐브는 모프 위상이 π 근처에 몰려
-  t ≈ π/2 + kπ 에서 변위가 다 함께 0 이 된다 — 벽시계로 찍으면 부하에 따라 간헐로 진다.
 - **에디터 확장의 순서는 등록 순서가 아니라 `SW_EDITOR_*` 의 order 키다.** 등록이 빠지거나 순서가 바뀐 것은 `AppSmokeTest.EditorRegistriesKeepTheirOrder`
   (`-gv_editorRegistryDump=1`, hostgpu)만 잡는다 — 패널 · 메뉴를 고치면 hostgpu 를 돌릴 것.
-- **`ScopedDefensiveTestLog` 범위 안의 로그는 메시지 앞에 `"[Expected Defensive Test] "` 가 붙는다** — 문구 비교는 startsWith 가 아니라 포함 여부로.
 - **워크트리와 vcpkg 스탬프:** 스탬프 해시는 트립릿 파일(`cmake/Modules/Toolchain/Vcpkg/*-{windows,linux,osx}.cmake`)의 **바이트**로 계산한다. 작업 사본의
   줄끝이 체크아웃과 다르면(git 은 같은 파일로 본다) main 과 워크트리가 서로의 스탬프를 "매니페스트 변경" 으로 보고 configure 마다 vcpkg install 이 돈다.
   워크트리를 만들기 전에 `git diff --quiet` 로 같은지 보고, 다르면 그 파일을 지우고 `git checkout` 으로 다시 받는다.
@@ -293,30 +289,14 @@ cd build/Ninja-Debug/Bin
   테스트를 돌리지 말 것.
 - **간헐 실패를 다룰 때** — `ConsoleLogOutput` 은 Error 만 flush 해서 ctest `--output-on-failure` 의 마지막 `[ RUN ]` 은 크래시 위치가 아니다. 같은 명령을 직접 돌려 파일로
   받는다. 테스트 실행 파일에도 크래시 핸들러가 있다(`Test/TestFramework/main.cpp`). 단독으로 통과하고 스위트에서만 지면 전역 상태 오염부터(VFS 는 `GlobalVfsScope`).
-- **검증은 한 번에 하나만 돌린다.** 빌드 · 스모크 · 벤치 · GPU 스위트를 겹치면 가짜 실패(파일 잠김 · CMake 프로브 레이스 `LNK1107`)와 수치 오염이 난다. 백그라운드 셸은
+- **검증은 한 번에 하나만 돌린다.** 빌드 · 스모크 · 벤치 · GPU 스위트를 겹치면 가짜 실패(파일 잠김 · CMake 프로브 레이스 `LNK1107`)와 수치 오염이 난다.
+  샤드를 동시에 돌려도(`ctest -j3`) 시간 제한이 가짜로 진다 — 의심되면 그 샤드 하나만 다시 돌린다. 백그라운드 셸은
   `taskkill /T` 로 트리째 내린다. 창을 만드는 GPU 테스트를 Bash 로 돌리면 타임아웃에 걸린 것처럼 보인다 — PowerShell `Start-Process`.
 - **Shipping 에서만 나는 것** — Info 로그 · `SW_ASSERT` 가 사라지고(반응이 로그 한 줄뿐인 기능은 배포본에서 없는 것과 같다), 리소스는 팩에만 있고 `.hlsl` 원본이 없으며,
   쿠킹한 바이너리 씬만 읽는다(씬 · 프리팹 테스트는 `SceneDocument::saveBinary` 로 `.bin` 도 쓴다). 풀 블록을 힙으로 반납하는 손상은 Shipping 에서만 터진다 — 풀 자유 목록이
   LIFO 인 것을 써서 "다음 할당이 같은 주소" 로 검사하면 Debug 에서도 잡힌다.
-- **테스트 도우미**: `test::makeTempPath` · `makeTempDirectory`(케이스 폴더, 끝나면 지우고 못 지우면 진다), `test::ScopedLogCollector`, `test::ScopedFailureCapture`,
-  `test::ScopedDefensiveTestLog`, `SW_ASSERT_TRUE_MSG`, `test::runThisExecutableAsChild`, `test::RHITestDevice`(`kArrAllRHIBackend`), `test::RHITestImage`,
-  `test::FakeRHIDevice`(병렬 기록 nogpu), `LitCubeScene` · `renderPresentCaptureOf` · `compareCaptures`(TestRenderPassGPU.cpp), 에디터 지역 서비스 `Test/EditorTest/EditorTestServices.h`, 네트워크 호스트 묶음 `test::LoopbackCluster`(`TestFramework/TestLoopbackCluster.h` — 루프백 +
-  엔드포인트마다 흉내, 손 시각 `step` · 호스트 스레드, CoreTest 도 쓴다. 씬 · 라우터까지 필요하면 `NetSimHarness`).
-- **테스트 실행기 규칙** — 필터로 고른 스위트의 케이스가 전부 스킵되면 실패다(`--allow_empty_suite`). 테스트는 `Bin` 에 쓰지 않는다. `RUN_SERIAL` 은 이유와 함께만.
-  PowerShell 에서 쉼표가 든 `--test_filter` 는 따옴표로 감싼다(안 감싸면 앞 토큰만 먹고 오류도 없다).
-- **단언 규칙** — 공개 API 는 단언 뒤에 진짜 if 가드를 둔다(Release 에서 단언이 사라진다). 그런 경로의 테스트는 Debug 에서 skip 하고 Release · Shipping 에서 측정한다.
-  작업 스레드 안의 `SW_ASSERT_*` 는 그 람다만 끝낸다. future 테스트에서 `wait()` 를 부르지 말 것(회귀가 정지가 된다) — `isValid()` 와 짧은 `waitFor`.
-- **EditorTest 는 ImGui 를 링크하지 않고 정해 둔 Editor 파일만 링크한다**(`EditorAssetCommands.cpp` 는 빠져 있다). 테스트할 로직은 ImGui 없는 함수로 꺼낸다 —
-  `alignObjects( listObject, … )`, `EditorPlaySession::captureSnapshot( PlaySessionData& )`, `EditorSessionPolicy`. `EditorContext::get()` 을 읽는 함수는 테스트할 수 없다.
-- **할당 0 을 보는 테스트는 여러 번 측정해 최솟값을 본다**(누계는 프로세스 전체 값). 누수 테스트는 `MemoryProfiler::getLiveAllocationCount` 로, 노드를 동시에 여럿 쥐고.
-- **공유 테스트 픽스처의 등록**(`makeMockComponentTypeInfo` 등)은 짝 `.cpp` 한 TU 에. 헤더에 두면 TU 마다 `TypeInfo` 가 중복 등록된다. 테스트 본문(전역 스코프)에서는 `sw::` 로 한정한다.
-- **골든 기준은 뜬 장치를 적는다**(`device` — GPU 이름 · 드라이버, 다음 `--record` 부터) — 다른 기계에서 지면 비교 메시지가 두 장치를 함께 찍는다.
-  기계별 기준(`<백엔드>.<기계>.json`)은 만들지 않는다(사용자 결정 2026-10-06) — 다른 기계에서 진 기록이 생기면 그 기계에서 `--record` 해 드라이버 차이인지 회귀인지 가른다.
-- **할당 실패 경로는 `Memory::injectAllocationFailures( count )`(Dev, 스레드 국소)로 테스트한다** — 이 스레드의 다음 count 번 `allocate` · `allocateAligned` 가 nullptr.
-- **낱개 파일 · 팩 경쟁을 테스트하려면 리소스 루트를 임시 폴더로 바꾼다**(`ResourcePaths::exchangeRootFolderPath` — 검색 폴더 · 경로 캐시를 다시 짓고 앞 루트를 돌려준다).
 - **빌드 출력을 `| head` 로 자르지 말 것** — 파이프가 닫히면 빌드가 중간에 죽고 낡은 바이너리가 남는다. 파일로 받은 뒤 본다.
 - **Windows ASan 이 `stack-overflow` 만 내고 스택을 풀지 못하면** 후보 함수마다 `fopen` · `fflush` · `fclose` 로 호출을 한 줄씩 남기고(줄 수 상한을 둡니다) 되풀이되는 모양을 봅니다.
-- **`FrameRenderer::executePacket` 은 패킷의 스냅샷을 옮겨 갑니다.** 테스트에서 같은 패킷을 두 번 내면 두 번째는 빈 프레임입니다. App 실기동으로 좁혀지지 않는 백엔드 교체 결함은 `RenderPassGPUTest.RendererSurvivesDeviceRecreate` 쪽으로 옮겨 재현합니다.
 - **변경 전후 그림이 다르면 어느 쪽이 맞는지는 네 백엔드의 일치도로 가립니다.** 변경 전 그림이 백엔드끼리 이미 어긋나 있었다면 변경 전은 기준이 아닙니다.
   네 백엔드가 같은 증상을 내면 백엔드 코드보다 그 위의 공유 호출부를 먼저 보고, 한 백엔드만 다르면 그 백엔드의 산출물과 계약부터 봅니다. 같은 변경에서 한 백엔드만 깨지면 배리어 누락(레이스)을 먼저 의심합니다.
 - **여러 번 띄우는 하니스는 프로세스를 이름(`taskkill /IM App.exe`)이 아니라 PID 로 내립니다.** 이름으로 내리면 방금 띄운 다음 회차를 죽입니다. 에디터를 켠 실행은 기동이 길어 짧은 종료 대기로는 "종료 중 멈춤" 오탐이 납니다.
@@ -328,6 +308,13 @@ cd build/Ninja-Debug/Bin
   시간에 따라 움직이는 기능은 `-gv_screenshotFrame` 을 다르게 준 두 장으로 먼저 캡처 시점이 다른지 봅니다.
 
 ## 4. CI
+
+push 뒤 결과를 기다리지 않는 것은 [작업 방식](11_Workflow.md) 4절의 규칙입니다. 실패를 알게 되면 공개 API 로 실행, 잡, 실패 주석을 읽습니다.
+
+```powershell
+py -3 -m Scripts ci-jobs --runs                    # main 의 최근 실행
+py -3 -m Scripts ci-jobs <실행 id> --annotations   # 실패한 잡과 실패 주석
+```
 
 - **CI 가 끝까지 돌게 하는 세 가지**(`.github/workflows/ci.yml`). ① main 은 `cancel-in-progress: false` — push 가 실행 시간보다 잦으면 끝나는 실행이 0 건이 된다(10-04 7 시간).
   ② vcpkg 바이너리 캐시는 구성 직후 `actions/cache/save` 로 저장한다 — `actions/cache` 의 post 저장은 잡이 성공할 때만 돌아, 테스트 하나가 지면 1 시간 지은 포트를 버렸다
@@ -347,3 +334,9 @@ cd build/Ninja-Debug/Bin
   진 테스트 주석의 제목에 결과가 붙는다. `[Timeout 180.0 s / 180 s]` 는 ctest 가 한도에서 죽인 것(멈춤이거나 느려진 것)이고, `[exit 1 after …]` 는 스스로 진 것,
   `[no exit line after …]` 는 한도 전에 종료 줄 없이 끝난 것(크래시)이다. `py -3 -m Scripts ci-jobs <실행 id> --annotations` 의 잡 표는 실패한 단계의 경과 시간 ·
   종료 코드와 ctest Timeout 수를 보인다. 응답은 임시 폴더에 캐시해 끝난 실행을 다시 물으면 API 를 쓰지 않는다(익명 한도는 시간당 60 회).
+- **리눅스 CI 에서만 드러난 결함 모양**(Windows 에서는 통과하던 것). libstdc++ 의 `file_clock` 은 기원이 2174 년이라 파일 시각을 다른 시계로 옮길 때 기원을 맞춰야 한다.
+  경로 구분자는 POSIX 쪽으로 정규화한다. 헤드리스(서버) 입력에는 게임패드 슬롯과 창 포커스가 없다.
+  테스트가 자식 셸을 띄우면 `exec` 를 붙인다 — dash 의 `sh -c` 는 SIGTERM 에 먼저 죽어 종료 코드 143 이 된다.
+  단조 시계로 잰 캐시 TTL 은 느린 빌드에서 임대를 풀어 버린다 — 서버 틱 시각을 쓴다. epoll 전송은 멈춘 동안 읽지 않으므로 전송 모델마다 테스트 기대를 나눈다.
+  경합 검출기는 비 const `operator[]` 와 공유 읽기 버퍼를 쓰기로 보므로 읽기 경로는 const 로 둔다. ASan 은 스택 객체 수명(OpenSSL 스택)과 테스트 지역 변수의 선언 순서를 잡는다.
+- **Windows STL containers 잡은 sw 할당자와 기록 해시에 기대는 테스트를 건너뛴다**(`MemoryTagTest` 둘, `DestructionDamageTest.EventLogHash…`). 기본 컨테이너 구성에서 같은 테스트가 가끔 지는지는 백로그 1-10 에서 지켜본다.

@@ -191,6 +191,19 @@ DXC가 사라지거나 쿠킹된 셰이더가 없어져도 초록으로 끝나�
 - `runThisExecutableAsChild`(`TestFramework/TestChildProcess.h`)는 프로세스마다 한 번뿐인 상태나 프로세스를 죽이는 동작을 테스트할 때 씁니다. 환경 변수는 띄우는 동안만 걸고, 출력을 모으고, **제한 시간을 넘기면 자식을 죽입니다.**
   제한 없이 기다리면 멈춘 자식 하나가 실행 파일 전체를 CTest 제한 시간까지 붙잡습니다.
 - 배포본의 `SW_LOG_ASSERT` 는 멈추지 않고 로그만 남긴 뒤 진행합니다. 그래서 `ResourcePaths::initialize()` 를 쓰는 케이스는 그 결과를 `SW_ASSERT_TRUE` 로 감싸 그 자리에서 실패하게 합니다.
+- `ScopedDefensiveTestLog` 범위 안의 로그는 메시지 앞에 `"[Expected Defensive Test] "` 가 붙습니다. 그래서 로그 문구는 startsWith 가 아니라 포함 여부로 비교합니다.
+
+그 밖의 도우미는 다음과 같습니다.
+
+- `test::makeTempPath` · `makeTempDirectory`(아래 "테스트가 남긴 상태 정리"), `test::RHITestDevice`(`kArrAllRHIBackend`) · `test::RHIBackendSweep` · `test::RHITestImage`, 병렬 기록을 nogpu 로 보는 `test::FakeRHIDevice`.
+- GPU 렌더 테스트 도우미: `makeSingleTargetPSODesc` · `beginOffscreenRenderPass` · `countPrimaryColorPixels` · `renderSceneFrame`, `LitCubeScene` · `renderPresentCaptureOf` · `compareCaptures`(`TestRenderPassGPU.cpp`). 새 GPU 케이스는 이것부터 봅니다.
+- 에디터 지역 서비스는 `Test/EditorTest/EditorTestServices.h` 에 있습니다.
+- 네트워크 호스트 묶음은 `test::LoopbackCluster`(`TestFramework/TestLoopbackCluster.h`)입니다. 루프백에 엔드포인트마다 회선 흉내를 붙이고, 손으로 진행하는 시각(`step`)과 호스트 스레드를 둘 다 쓸 수 있으며 CoreTest 도 씁니다. 씬과 라우터까지 필요하면 `NetSimHarness` 를 씁니다.
+- 할당 실패 경로는 `Memory::injectAllocationFailures( count )`(Dev, 스레드 국소)로 테스트합니다. 이 스레드의 다음 count 번 `allocate` · `allocateAligned` 가 nullptr 를 돌려줍니다.
+- 낱개 파일과 팩의 경쟁을 테스트하려면 리소스 루트를 임시 폴더로 바꿉니다(`ResourcePaths::exchangeRootFolderPath` — 검색 폴더와 경로 캐시를 다시 만들고 앞 루트를 돌려준다).
+- 바깥 서버가 있어야 하는 테스트는 `SW_TEST_REQUIRES_ENVIRONMENT( 스위트, "변수", "까닭" );` 을 둡니다. 변수가 비면 그 스위트만 빠지고 `[ SKIP SUITE ]` 한 줄이 남습니다(실패도 "모두 건너뜀" 도 아니고, 호스트 스위트와 섞이지 않는다).
+  PostgreSQL 은 `SW_TEST_POSTGRES_URL` 입니다. 구현마다 같은 케이스는 계약 매크로(`SW_SERVICE_STORE_CONTRACT_SUITE` · `SW_SQL_DRIVER_CONTRACT_SUITE` · `SW_EPHEMERAL_STORE_CONTRACT_SUITE`)로 씁니다.
+  서버 없이 실패 경로만 보려면 닿지 않는 주소(`host=127.0.0.1 port=1 connect_timeout=1`)를 줍니다. 깨끗이 실패하고 멈추지 않아야 합니다.
 
 ### 테스트가 남긴 상태 정리
 
@@ -326,6 +339,35 @@ $env:SW_FUZZ_ITERATIONS=20000; $env:SW_FUZZ_TRACE=1; cd build/Ninja-Debug/Bin; .
 - **틀을 테스트하려고 테스트 안에서 만든 `TestRegistry` 의 결과 줄은 `(nested) ` 로 시작합니다.** `TestFrameworkTest` 는 안쪽 케이스(`GpuProbeTest.LogsError`)를 일부러 지게 만듭니다.
   CI 실패 보고(`Scripts/dev/CiFailureReport.py`)는 줄 머리(`[  FAILED  ]` · `  [FAILED]`)로 실패를 고르므로, 머리가 같으면 그 조각의 진짜 실패(새니타이저 보고처럼 표시 줄이 없는 것) 대신 안쪽 줄이 보고됩니다.
 - `EditorTest` 는 Editor 소스를 손으로 나열합니다. 나열한 파일이 실제로 있는지, ImGui를 include하지 않는지는 `CheckTestSuites.py` 가 확인합니다.
+  ImGui 를 링크하지 않고 정해 둔 Editor 파일만 링크하므로(`EditorAssetCommands.cpp` 는 빠져 있다) 테스트할 로직은 ImGui 없는 함수로 꺼냅니다.
+  `alignObjects( listObject, … )`, `EditorPlaySession::captureSnapshot( PlaySessionData& )`, `EditorSessionPolicy` 가 그 예입니다. `EditorContext::get()` 을 읽는 함수는 테스트할 수 없습니다.
+  새 소스 파일을 더한 뒤에는 `cmake --preset Ninja-Debug` 로 다시 구성합니다.
+- **CoreTest 는 엔진을 쓰지 않습니다.** include 경로로는 막을 수 없습니다(`TestFramework` 가 Engine 을 PUBLIC 링크하고 `TestFramework.h` 가 `EngineMinimal.h` 를 include 한다).
+  `CheckTestSuites` 규칙 6 이 CoreTest 파일의 직접 Engine · GameFramework · Editor include 와 `engine::` 호출을 막습니다. 엔진 타입이 필요하면 지역 대역을 쓰거나 EngineTest 에 둡니다.
+- **`--test_filter` 는 gtest 형식입니다.** 패턴 사이는 `:` 도 쉼표도 되고, 첫 `-` 뒤는 모두 빼는 패턴입니다(`A.*:B.*-A.X`; `-A.*,B.*` 는 둘 다 뺀다).
+  고르는 패턴이 등록된 케이스 하나와도 맞지 않으면 실행이 실패합니다(`TestFrameworkTest.FilterThatSelectsNothingFails`) — 0/0 통과를 확인한 것으로 착각하지 않게 하기 위해서입니다.
+  PowerShell 에서 쉼표가 든 `--test_filter` 는 따옴표로 감쌉니다(안 감싸면 앞 토큰만 먹고 오류도 없다).
+- **`RUN_SERIAL` 은 이유와 함께만 씁니다.**
+- **App 의 종료 코드 77 은 "이 기계와 빌드가 그 RHI 백엔드를 못 돌린다" 입니다**(`RHIInitResult` 의 `BackendNotBuilt` · `DriverUnsupported`). 테스트와 `AppRun.py` 는 로그 문구가 아니라 이 코드로 건너뜁니다.
+  환경 탓으로 물러나는 새 경로는 백엔드가 `_initResult` 를 적어야 건너뜀이 됩니다. 안 적으면 결함으로 실패합니다.
+- **설정 파일 테스트는 둘입니다.** `ConfigFileSchemaTest`(EngineTest, `Config/` 의 엔진 · 게임 · 서버)와 `EditorConfigFileSchemaTest`(EditorTest, `Config/Editor`)입니다.
+  둘 다 테이블에 없는 파일을 실패로 보므로, 새 설정 파일은 그 테이블과 `Scripts/common/ConfigCatalog.py` 에 한 줄씩 더합니다.
+- **느린 시나리오는 조건마다 한 케이스로 쪼갭니다.** 샤드(`SHARDS`)는 스위트 안의 케이스를 번갈아 나누므로, 한 케이스에 조건 둘을 넣으면 한 샤드가 둘 다 짊어집니다
+  (`NetSimDestructionMatrixTest` 는 회선 둘을 두 케이스로 나눠 호스트 스위트에서 nogpu 로 옮겼다 — WSL Debug 에서 케이스마다 17 초).
+- **고정 틱 창 끝에서 "모두 같다" 를 보는 네트워크 테스트는 서버 물리가 그 창 안에 가라앉는다고 가정합니다.** 물리 궤적은 구성마다 달라, 리눅스 Shipping 에서는
+  파괴 벽의 사건이 480 틱 창 너머까지 와서 수렴 단언이 실패했습니다(Debug 는 269 틱에 멈춤). 수렴은 창 뒤 상한 안에서 같아질 때까지 돌려 봅니다(`ScenarioOptions::_settleTickLimit`).
+  해시가 갈리면 사건마다 적용 전후 해시를 서버와 클라이언트에 찍어 같은 (오브젝트, 번호) 끼리 맞춰 봅니다. 결정성 결함인지 테스트 가정인지 한 번에 갈립니다.
+- **공개 API 는 단언 뒤에 진짜 if 가드를 둡니다**(Release 에서 단언이 사라진다). 그런 경로의 테스트는 Debug 에서 건너뛰고 Release · Shipping 에서 봅니다.
+  작업 스레드 안의 `SW_ASSERT_*` 는 그 람다만 끝냅니다. future 테스트에서 `wait()` 를 부르지 마세요(회귀가 정지가 된다). `isValid()` 와 짧은 `waitFor` 를 씁니다.
+- **모듈 코드 정리 테스트에 이미지 전체를 범위로 주지 마세요.** Shipping 은 엔진까지 한 exe 입니다. 스텁이나 vtable 하나씩으로 좁힙니다.
+- **큰 `reserve` 는 실패하지 않을 수 있습니다.** 상한 테스트는 할당 바이트로 단언합니다.
+- **할당 0 을 보는 테스트는 여러 번 재서 최솟값을 봅니다**(누계는 프로세스 전체 값). 누수 테스트는 `MemoryProfiler::getLiveAllocationCount` 로, 노드를 동시에 여럿 쥐고 봅니다.
+- **공유 테스트 픽스처의 등록**(`makeMockComponentTypeInfo` 등)은 짝 `.cpp` 한 TU 에 둡니다. 헤더에 두면 TU 마다 `TypeInfo` 가 중복 등록됩니다. 테스트 본문(전역 스코프)에서는 `sw::` 로 한정합니다.
+- **시간으로 움직이는 GPU 픽셀 단언은 `FrameRenderer::setAnimationTimeOverride` 로 시각을 고정합니다**(음수 = 벽시계). 단위 큐브는 모프 위상이 π 근처에 몰려
+  t ≈ π/2 + kπ 에서 변위가 다 함께 0 이 됩니다. 벽시계로 찍으면 부하에 따라 간헐적으로 실패합니다.
+- **`FrameRenderer::executePacket` 은 패킷의 스냅샷을 옮겨 갑니다.** 테스트에서 같은 패킷을 두 번 내면 두 번째는 빈 프레임입니다.
+  App 실기동으로 좁혀지지 않는 백엔드 교체 결함은 `RenderPassGPUTest.RendererSurvivesDeviceRecreate` 쪽으로 옮겨 재현합니다.
+- **골든 기준은 그린 장치(GPU 이름, 드라이버)를 적습니다**(`device`, 다음 `--record` 부터). 다른 기계에서 실패하면 비교 메시지가 두 장치를 함께 찍습니다. 기계별 기준을 두지 않는 결정은 [결정 기록](../docs/09_Decisions.md) 5-2 에 있습니다.
 
 ## 더 볼 곳
 

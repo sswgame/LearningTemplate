@@ -50,6 +50,16 @@
   Config → Graphics → Config 순환이 된다. 같은 결정에서 `IRenderSurface` 는 쓰는 쪽인 `Graphics/RHI` 로, 서버 설정 둘은 `Config/Server/` 로 옮겼다.
 - **clang-tidy 의 `bugprone-throwing-static-initialization` 남은 건에 `noexcept` 를 붙이는 것.** 전역 변수 등록자 · 설정 싱글턴은
   `string` · `variant` 를 들어 실제로 던질 수 있다. 분석기를 침묵시키는 대신 정보를 지우는 거래다.
+- **네트워크에서 하지 않는 것**: NAT 통과, 리플렉션 속성 복제(언리얼 Iris), 복제용 RPC, 외부 네트워크 라이브러리입니다. 암호 라이브러리만 예외입니다(5-9 "네트워크 보안").
+  리팩토링 N13 ~ N21 · N18b 는 끝났고 N18c 는 측정으로 기각했습니다(3절).
+- **Engine 에 남겨 두는 폴더**(2026-10-10 사용 현황 조사, 엔진 분할 0-3). 에디터는 `GameFramework` 를 include 할 수 없으므로(`CheckEngineLayers` 의 Editor 금지 목록) 에디터가 쓰는 폴더
+  (`Dialogue` · `Sequencer` · `Destruction` · `Environment` · `Automation` · `UI` · `Animation` · `Scene` 등)는 Engine 말고 둘 곳이 없습니다.
+  서버 실행 파일도 `GameFramework` 를 모르므로 서버가 `MetricRegistry` · `OpsHTTPEndpoint` 를 쓰는 `Observability` 도 남습니다.
+  `Character` 는 에디터가 쓰는 `Destruction` 이 쓰고, `Spatial` 은 `Character/Fit` 이 씁니다. `Telemetry` 는 `EngineLoop` · App · 게임이 쓰고, `Compression` 은 Core 인터페이스의 코덱 공급자라 Core 가 서드파티를 몰라야 하는 규칙 때문에 남습니다.
+- **SOLID 리팩토링에서 핫 경로라 손대지 않는 것**(2026-10-12 감사). `IRHICommandList` · `IRHIResourceFactory` 의 가상 호출 구조, `GPUSceneBuilder` 내부 병렬 루프, `PhysicsWorld` 셀 해시,
+  Box2D · Jolt 어댑터의 switch(외부 라이브러리 경계), RHI 백엔드 `CommandContext` 큰 파일(백엔드 하나의 기록이라 한 이유로 바뀐다), `AbilitySystemComponent` 의 modifier switch(닫힌 열거 + `-Wswitch`)입니다.
+  의도된 예외는 `App.cpp` 의 `kArrHeadlessTask` 표, `EditorPanelManager::syncWithRegistry`, 에디터 `getService<T>()`(모듈 경계 주입), `EngineInitSequence` 단계 표입니다.
+  나머지 단위는 [구조 리팩토링 계획](plans/StructureRefactor.md)에 있습니다.
 
 ## 3. 기각한 것 — 측정값과 함께 (다시 제안하지 말 것)
 
@@ -123,6 +133,10 @@
   트리 전체 게이트(`CheckConfigReference` 5~14 s)는 이미 먼저 띄워져 있어 그 시간 안에 겹친다. 이 게이트가 홀로 남는 커밋(내용 규칙으로 트리 전체 게이트가 선 경우)에서는 겹칠 상대가
   파일 단위 게이트들(합 <0.5 s)뿐이라 벌 수 있는 것이 그만큼이고, 기동 0.2 s 를 낸다. 넣지 않았다.
 - **GPUScene 배치 키 중복 계산 제거**(투명 배치 헤드 키 재계산, 인스턴스마다 셰이더 경로 해시): `GT.GPUScene.build` 3670 → 3761 us 로 차이가 없었습니다.
+- **`CheckConfigReference` 를 파일 단위(바뀐 구조체만)로 나누기**(2026-10-11, Scripts 개편 1 단계 뒤). 커밋 훅의 바닥은 트리 전체 게이트 여섯이 각자 `Source/` 를 읽는 값(조용할 때 1 ~ 1.4 s)이 만듭니다.
+  도구 비용을 줄인 뒤 단독 실행 중앙값(5 회)은 `CheckConfigReference` 1.49 → 0.99 s, `CheckDuplicateTypeNames` 1.35 → 1.03 s, `CheckEngineLayers` 2.00 → 1.09 s, `CheckModuleTargets` 1.44 → 1.21 s,
+  커밋 훅(`REFLECT` 헤더 하나) 2.31 → 1.92 s 였습니다. 그래서 하나만 0 으로 만들어도 나머지 다섯이 같은 높이로 남습니다.
+  더 내리려면 트리 전체 게이트들이 파일 읽기를 나누는 구조(한 프로세스가 읽고 여럿이 훑기)가 필요한데, 파이썬 GIL 때문에 지금의 동시 실행을 잃습니다.
 
 ## 4. 옛 이름 → 지금 이름 (`git log` 을 읽을 때)
 
@@ -182,7 +196,7 @@
 - **약어는 대문자로 쓴다**(사용자 결정 2026-10-10 — 이미 대문자인 `AABB` · `RHI` · `TagID` 와 철자가 하나가 되고, 함수 이름에서도 약어가 보인다). 목록은 `Scripts/lint/rules/AcronymRegistry.toml` 한 자리(읽기 · 철자 판정은 `Scripts/lint/AcronymRegistry.py`), 대문자 약어가 이어 붙으면 낱말을 사이에 두거나 뜻이 같은 쪽을 뺀다(`RTSCommanderAI` · `HTTPAddress` · `kRTSCatalogXML` · `RHITimestamp` · `OpenSSLContext`). `SSL` 은 제품 이름표(`OpenSSL`)로 둔다 — 약어로 올리면 `_pSsl` 같은 OpenSSL 핸들 이름까지 바뀌고 이어 붙음은 이름 하나뿐이었다. 파이썬 · CMake 식별자는 대상이 아니다.
 - **저장소에 LICENSE 파일을 두지 않습니다**(2026-10-06). 라이선스를 정하는 것은 사용자의 일이라, README 의 MIT 배지와 develop 배지도 뺐습니다.
 - **코딩 규칙의 원본은 `AGENTS.md` 하나입니다**(2026-10-06). [04 코딩 규칙 예시](04_CodingGuidelines.md)는 규칙을 다시 적지 않는 한국어 예시 모음입니다.
-  언리얼도 Coding Standard 한 문서에 규칙을 두고 예시는 따로 둡니다. `CLAUDE.md` 는 영어 요약이고, 자주 바뀌는 목록은 링크로만 가리킵니다.
+  언리얼도 Coding Standard 한 문서에 규칙을 두고 예시는 따로 둡니다. `CLAUDE.md` 는 에이전트가 매번 읽는 한국어 요약이고, 원본이 따로 있는 규칙(에이전트 표, 편집 함정, 작업 방식)은 한 줄과 링크로만 가리킵니다.
 - **모듈 폴더마다 README 를 강제하지 않습니다**(2026-10-06). 있는 README 는 모두 [문서 지도](02_DocumentMap.md)에 있어야 하고, `CheckDocPaths` 가 이것을 확인합니다.
 - **문서만 바뀐 커밋에서도 CI 린트 잡은 돌고, 빌드 잡만 건너뜁니다**(2026-10-06). 바뀐 파일은 git 으로 직접 판정하고, 비교할 기준 커밋을 얻지 못하면 안전하게 빌드합니다.
 - **백로그는 할 일 목록만 둡니다**(2026-10-07). 끝낸 일의 교훈은 그 영역 README 의 "함정 · 계약" 절에, 결정과 기각한 안은 이 문서에, 검증 방법은 [검증과 측정](08_Verification.md)에 둡니다.
@@ -277,7 +291,20 @@
     보는 시험 · Blender 안에서 도는 애드온 · VS Code 확장 도구라 `common` 을 쓸 수 없다), 모듈 상수 위치(이미 159 파일이 모듈 수준 — 함수 안 `kSize` 는 C++ 의 지역 `const` 와 같다).
   - 예외 하나: `.claude/hooks/SessionGuard.py` 는 Claude Code 세션 설정이라 에이전트가 고치지 않고, 어떤 예외에도 세션을 막지 않게 0 으로 끝나는 모양을 따로 둡니다.
 
+- **빌드 속도 개선은 계획의 1 ~ 6 단계까지 하고, 7 ~ 9 단계는 필요할 때만 합니다**(2026-10-10, 사용자 결정). 7 은 헤더 영향 범위(팬아웃) 감시 보고서, 8 은 Debug 디버그 정보 줄이기(`-gline-tables-only` 계열),
+  9 는 링크 단위 분할(엔진 분할 계획 3 단계 뒤)입니다. Release 기준선은 측정하지 않습니다. 남은 단계는 [빌드 속도 계획](plans/BuildSpeed.md)에 있습니다.
+- **서드파티는 Jolt(3D 물리) · Box2D(2D 물리) · ACL(애니메이션 압축)**(2026-10-04, 사용자 결정), **Recast & Detour · Tracy**(2026-10-05), **OpenSSL · SQLite · libpq**(2026-10-06)입니다.
+  모두 vcpkg 로 들이고, 라이선스는 MIT · zlib(Recast) · BSD-3(Tracy) · Apache-2.0(OpenSSL) · 퍼블릭 도메인(SQLite) · PostgreSQL License(libpq, `openssl` 기능만)입니다.
+  엔진 인터페이스 뒤에 감싸고(`IPhysicsScene3D` · `IPhysicsScene2D`, ACL 은 `Engine/Animation/Codec/ACL`, OpenSSL 은 `GameFramework/Base/Online/Security/OpenSSL`) 헤더 경계는 `CheckThirdPartyIsolation.py` 가 지킵니다.
+  Recast & Detour 는 정적 링크(`RecastNavigation::Recast` · `Detour` · `DetourCrowd` · `DetourTileCache`)이고, Tracy 는 클라이언트만 쓰며 Windows 에서는 공유 `TracyClient.dll` 하나를 씁니다.
+  Tracy 는 clang-cl 트리플릿의 C++14 기본값으로 빌드되지 않아 C++17 오버레이 포트(`ThirdParty/tracy/vcpkg-port/tracy`)를 두고, Shipping 은 링크하지 않으며, 뷰어(tracy-profiler.exe)는 저장소에 넣지 않습니다.
+  OpenSSL 은 Windows 에서 지금 트리플릿대로 DLL 이고, SQLite 는 `GF_SQLStore`, libpq 는 `GF_Server_SQLStore` 의 CMakeLists 에서만 링크합니다.
+- **테스트 골든 기준은 기계별로 만들지 않습니다**(2026-10-06, 사용자 결정). 기준은 그린 장치(GPU 이름, 드라이버)를 함께 적고, 다른 기계에서 지면 그 기계에서 `--record` 해 드라이버 차이인지 회귀인지 가릅니다.
+
 ### 5-3. Core 와 플랫폼
+
+- **macOS 는 지원 대상이 아닙니다**(2026-10-04). 코드는 지웠고 `CheckTargetMacros` 가 `SW_PLATFORM_MACOS` 를 막습니다. 복원하려면 그 전 git 기록에서 찾습니다.
+  `Vcpkg.cmake` 의 APPLE 분기와 레거시 스탬프 이관, `arm64-osx` · `x64-osx` 트리플릿은 손대지 않는 파일이라 사용자가 정리합니다.
 
 - **파일 존재 술어는 `FileUtil::exists`(무엇이든), `isDirectory`, `isRegularFile` 셋입니다**(2026-10-06). `exists` 는 `std::filesystem::exists` 와 같은 뜻입니다. 경로 전용 타입(`FilePath`)은 만들지 않습니다.
   파일 오류는 그 자리에서 경고하고 `[[nodiscard]] bool` 로 돌려주며, 실패를 알리지 않는 시도는 `FileUtil::tryRemoveFile` 하나입니다. 언리얼 `IFileManager::Delete` 의 `bQuiet` 에 해당합니다.
@@ -327,6 +354,10 @@
   물리는 고정 스텝 위에 서브스텝 수(`_subStepCount`)만 둡니다. 유니티의 `Time.fixedDeltaTime` 이 하나인 것과 같습니다. 기본 RHI 도 한 곳에만 적습니다.
 - **앱이 다시 쓰는 에디터 상태는 `Saved/Editor/` 에 둡니다**(2026-10-06). `Config/Editor/` 에는 사람이 쓰는 설정만 남깁니다.
 - **텍스처와 모델 임포트 설정은 키 테이블입니다**(2026-10-06). 리플렉션 구조체로 만들지 않았고, `PROPERTY( Config )` 메타도 지웠습니다. 엔진 타입에 키트 설정 필드를 두지 않고, 키트 설정은 팩 데이터에 둡니다.
+- **자체 JSON 로더를 리플렉션 구조체로 옮기는 기준**(2026-10-12). 모듈 매니페스트, `AnimationLODSettings`, `MemoryBudgetFile`, `FacialRig`, `LipSync` 는 옮겼습니다. 다음은 옮기지 않습니다.
+  `TextureImportConfig` · `ModelImportConfig` 는 적지 않은 값이 부모 프리셋을 따르는 "적지 않음" 의미가 필요한데 리플렉션은 "없음" 과 "0" 을 가르지 못합니다.
+  `CrashReportService` 는 동적 JSON 문서이고, JWT · Chrome 트레이스 · VRM 은 외부 형식입니다.
+  enum 이름 테이블 45 곳도 그대로 둡니다. 배열 인덱스라 해시 조회보다 빠르고 `static_assert` 가 지키며, 일부는 와이어 문자열이라 열거자 이름과 다릅니다.
 - **게임플레이 튜닝 값은 컴포넌트 `PROPERTY` 나 키트 설정 구조체 필드로 둡니다**(2026-10-06). 언리얼의 UPROPERTY 와 데이터 에셋 방식입니다. 성능 임계값은 측정으로 정한 이름 붙은 상수로 두고, 언리얼처럼 실제로 조절할 것만 전역 변수로 만듭니다.
 - **중력의 출처는 물리 설정 하나입니다**(2026-10-06). 코드는 `PhysicsSystem::getConfiguredGravity` 로 읽고, 셰이더(파도)는 머티리얼 상수로 같은 값을 받습니다. 언리얼의 `UWorld::GetGravityZ` 에 해당합니다.
 - **4 글자 표식은 리틀 엔디언 FourCC 하나로 통일했습니다**(2026-10-06). 세이브와 쿠킹 바이너리를 다시 만들었습니다.
@@ -409,6 +440,23 @@
 
 - **DB 와 캐시**(2026-10-06, 사용자 결정): 영속 저장소는 PostgreSQL(서버)과 SQLite(개발용 단독 서버, 클라이언트 로컬)입니다. 캐시는 RESP 드라이버 하나로 리눅스는 Valkey, 윈도우는 Garnet 을 씁니다.
   Redis 7.4 이상은 RSAL/SSPL 이라 "오픈소스이고 무료" 조건 밖이고, Redis 8 의 AGPLv3 선택도 그 의무 때문에 택하지 않았습니다. 전용 서버는 윈도우와 리눅스 둘 다 1 급입니다. 남은 일은 [백로그](06_Backlog.md) 1-7 "네트워크 서비스 계층" 에 있습니다.
+- **네트워크 서비스 계층**(2026-10-06, 사용자 결정): 로그인, 채팅, 거래처럼 MMO 가 아니어도 쓰는 서비스는 상태 복제(UDP)와 따로, 순서 있는 신뢰 스트림 · 긴 연결 · 요청-응답 위의 키트로 만듭니다.
+  공통 기반은 GameFramework 기반 `Online/` 입니다. 서비스 틀(등록, 라우팅, 인증 문맥, 오류 코드, 버전 협상), 요청 보호(도배 제한, 멱등 키, 크기 상한), 신원 원형(`AccountID`, 세션 토큰 검증),
+  저장 계약(`IServiceStore` 영속, `IEphemeralStore` 캐시, `ILocalStore` 로컬), 마이그레이션 적용기, 감사 로그, 서버 간 버스, 예약 작업, 원격 설정과 기능 플래그, 관측(지표, 구조화 로그, 추적 id)이 여기에 있습니다.
+  로컬 저장의 파일 백엔드는 바이너리 · JSON · XML 형식, 원자적 쓰기, 체크섬, 선택적 압축과 암호화를 지원합니다.
+  DB 드라이버는 키트입니다. `GF_SQLStore`(SQLite), `GF_Server_SQLStore`(PostgreSQL), `GF_Server_CacheStore`(RESP, 메모리 구현은 기반 `Online/Cache`)가 있습니다.
+  기능도 키트입니다. `GF_Account`, `GF_ServerDirectory`, `GF_Economy`(원장, 지갑, 상점, 영수증 검증), `GF_Trade`(원장 위), `GF_Mailbox`, `GF_Chat`, `GF_Social`, `GF_Leaderboard`, `GF_Matchmaking`, `GF_LiveOps`, `GF_Admin`(GM 도구, 제재)입니다.
+  부하 테스트 봇은 테스트 도구입니다.
+  제품 이름은 드라이버와 제공자 폴더에만 쓰고(`CheckProductNames`, 조립점은 `Scripts/lint/rules/CheckProductNames.toml` 의 `[exemption]` 에 이유와 함께), 서버 전용 모듈은 클라이언트 Shipping 에 넣지 않습니다.
+  캐시를 잃어도 영속 데이터는 맞아야 합니다(거래의 원본은 영속 트랜잭션). DB 호출은 전용 워커, 연결 풀, 비동기 완료로 합니다.
+- **네트워크 보안**(2026-10-06, 사용자 결정): 스트림(서비스)은 TLS 1.3 이고, 게임 UDP 는 연결 수립 때 키를 교환(X25519)한 뒤 패킷마다 AEAD(AES-GCM 또는 ChaCha20-Poly1305)를 겁니다.
+  nonce 는 패킷 번호이고 재전송 방지 창을 둡니다. 세션 키는 로그인 키트가 발급한 토큰에 묶습니다(UDP 접속 = 토큰 제시). Valve GameNetworkingSockets, 언리얼 AESGCM PacketHandler 와 같은 구조입니다.
+  암호 구현은 직접 짜지 않고, Core 의 인터페이스(`Network/Security/`) 뒤에 라이브러리 하나를 둡니다.
+- **UDP 패킷 압축은 끕니다**(2026-10-06, 사용자 결정). 켜는 규칙은 "15 % 이상 줄고, 압축 + 해제가 패킷당 2 us 이하" 입니다. 코덱 틀은 Core `Compression`(코덱 id 레지스트리)이고 LZ4 · zstd · zlib 은 Engine 이 등록하며, Core 네트워크는 id 로만 씁니다.
+  `NetCompressionBenchTest`(Release, 3 회 가운데 값, 패킷마다 봉투 3 B, 줄지 않으면 원문)에서 레지스트리 코덱은 어느 흐름에서도 규칙을 넘지 못했습니다.
+  스냅숏(평균 1009 B)은 LZ4 1 % · 1.1 us, zstd1 15 % · 11.7 us, zstd1 + 사전 16 KB 34 % · 6.0 us 였습니다. 파괴(302 B)는 LZ4 3 % · 0.37 us, zstd1 4 % · 6.4 us, 사전 35 % · 1.6 us 였습니다.
+  채팅(43 B, 합성)은 LZ4 1 %, zstd 0 %, 사전 27 % · 0.74 us 였습니다. 규칙을 넘는 것은 학습 사전뿐(파괴, 채팅)이라, 사전 배포(버전 · id 협상, 사전 갱신)를 하게 되면 다시 봅니다.
+  스트림 프레임 압축은 있지만 기본으로 꺼져 있습니다(`StreamEndpointSettings::_compression`, 봉투 `NetCompressionUtil`). 받는 쪽은 푼 크기를 본문 상한으로 보고 풀기 전에 거절합니다.
 - **암호 라이브러리는 OpenSSL(vcpkg, Apache-2.0)입니다**(2026-10-06). Windows 에서는 지금 트리플릿대로 DLL 로 링크합니다. 비밀번호 해시는 보안 제공자의 Argon2id 이고, 기본값은 OWASP 권장(19 MiB, 반복 2)입니다.
 - **인증기 없는 UDP 암호화와 자체 서명 개발용 인증서는 개발 빌드에만 있습니다**(2026-10-06). Shipping 서버는 설정 파일의 인증서와 키 경로가 필수입니다.
 - **계정**(2026-10-06): 같은 계정으로 다시 로그인하면 새 로그인이 옛 세션을 밀어냅니다. 게스트를 정식 계정에 연동할 때 이미 쓰인 이름이나 플랫폼 계정은 거절합니다(자동 합치기 없음).
@@ -445,6 +493,10 @@
   Shipping 서버는 지표(`server_tick_seconds` 히스토그램 · 밀린 틱 경고)로 "느린 틱이 났다" 까지만 알립니다. 언리얼도 Insights 트레이스를 Shipping 에서 빼고 프로파일이 필요한 서버는 Test · Development 구성으로 띄우며, 유니티 프로파일러도 Development 빌드에만 있습니다.
 - **여러 프로세스 트레이스는 첫 파일을 기준으로, 같은 호스트면 옮기지 않고 다른 호스트면 벽시계로 맞춥니다**(2026-10-11, X4). 같은 기계의 단조 시계(QPC · `CLOCK_MONOTONIC`)는 프로세스끼리 같아 정확하고,
   벽시계는 밀리초 해상도라 같은 기계에서 쓰면 오히려 틀립니다. 다른 기계는 시계 차이(NTP 수준)만큼 틀린 것을 줄 묶음 이름에 적습니다. Perfetto 도 여러 트레이스를 시계 동기화 표식으로 맞추고, 표식이 없으면 그대로 겹칩니다.
+- **서버 디버깅의 방향**(2026-10-11, 사용자가 추천안을 받아들임). 여러 프로세스 재생(S1)을 먼저 하고, 한 프로세스 가상 서버(S8)는 다중 월드가 들어온 뒤에 합니다. 한 프로세스가 편하지만 엔진 구조 변경이 먼저 필요하기 때문입니다.
+  디버그 채널은 읽기 전용과 개발 콘솔 명령 실행까지만 엽니다. 임의 프로퍼티 쓰기를 열면 에디터가 서버 권위를 우회하므로, 값을 바꿀 일은 개발 명령으로 게임이 정한 경로를 거칩니다.
+  전용 창은 Multiplayer 창 하나에 탭으로 모읍니다(언리얼 Network Insights, 유니티 Multiplayer Play Mode 창 + Network Simulator). 디버그 채널과 원격 명령은 Dev 전용이고 루프백과 토큰을 요구하며, 서버 코드는 에디터에 의존하지 않습니다.
+  남은 단위는 [서버 디버깅 계획](plans/ServerDebug.md)에 있습니다.
 - **게임의 네트워크 역할은 게임 코드가 아니라 실행 인자가 정합니다**(2026-10-11, 서버 디버깅 S1). `GameInstanceBase` 가 `GameNetSession` 을 들고 `-gv_netListenPort`(서버 · 리슨 호스트) · `-gv_netConnectAddress`(클라이언트)로 엽니다 —
   시험 게임을 따로 세우지 않고 Empty 를 포함한 모든 게임이 서버 · 클라이언트로 뜹니다. 언리얼의 넷 드라이버(`?listen` · `open <주소>`)와 Godot 의 `SceneMultiplayer` 가 같은 자리이고, 장르별 복제는 키트가 세션의 라우터에 처리기를 답니다.
   기본은 꺼짐입니다(전용 서버도 `ServerConfig::_gamePort` 를 저절로 열지 않는다) — 한 기계에서 서버를 여럿 띄우는 시험이 포트로 부딪히지 않게. 운영 서버가 설정의 게임 포트를 여는 일은 백로그에 남깁니다.
@@ -466,7 +518,16 @@
   단축키 키 이름은 낱말(`Comma` · `0`)이고 저장 파일은 `{ "id": [ "주 조합", "보조" ] }` 입니다. 모듈 창은 매니페스트를 고치고 Build 단추만 두며 다시 시작은 손으로 합니다(실행 인자를 이어받는 재시작은 하지 않았다).
 - **에디터 폴더는 층이고 틀은 아래 · 구체는 위입니다**(2026-10-11, `CheckEditorLayers`). 패널 · 팝업 매니저는 인터페이스 옆(`Common/GUI`), 에셋 종류 동작 등록부는 `Workspace`,
   커맨드가 패널을 여는 일은 창구 `IEditorPanelHost`, UI 를 만지는 명령의 등록 줄은 그 UI 의 .cpp 입니다 — 언리얼에서 `FTabManager` 가 Slate 틀에, `IAssetTypeActions` 등록부가 AssetTools 에 있고
-  편집기 모듈이 그 위에서 등록하는 것과 같습니다. 상태 막대 항목은 등록 줄(`SW_EDITOR_STATUS_BAR_ITEM`)로 더합니다(언리얼 상태 막대 확장). 계획과 남은 판단은 [EditorRestructure](plans/EditorRestructure.md).
+  편집기 모듈이 그 위에서 등록하는 것과 같습니다. 상태 막대 항목은 등록 줄(`SW_EDITOR_STATUS_BAR_ITEM`)로 더합니다(언리얼 상태 막대 확장).
+  예외는 어느 층에서 include 해도 되는 잎 헤더(`prelude:`)와 모든 매니저를 만드는 조립 파일(`wiring:`)뿐입니다. 큰 패널은 `Panels/<패널>/`, 혼자인 패널은 영역 폴더(`Scene/` · `Animation/` · `Data/` · `Settings/`)에 둡니다.
+- **패널과 커맨드의 `EditorContext::get()`(62 파일 224 곳)은 생성자 · 인자 주입으로 바꾸지 않습니다**(2026-10-11). 패널은 레지스트리가 인자 없이 만들고(`createEditorPanel<T>`),
+  상용 엔진도 에디터 하위 시스템을 전역 창구로 줍니다(언리얼 `GEditor->GetEditorSubsystem<T>()`, 유니티 `Selection.activeObject` · `EditorWindow.GetWindow<T>()`).
+  EditorTest 는 UI 매니저 때문에 `EditorContext` 를 만들 수 없으므로 컨텍스트를 인자로 바꿔도 테스트가 늘지 않습니다. 테스트할 판단이 생기면 그 함수만 필요한 서비스 하나(작업 공간, 선택)를 인자로 받습니다.
+  `get()` 은 정적 포인터 하나를 돌려줍니다(Debug 에서 호출당 550 → 8 ns, 프레임당 57 회 — 최적화가 아니라 조회 경로를 하나로 줄인 단순화입니다).
+  `EditorService.h` 는 호스트(엔진) 서비스 창구이고 `EditorContext` 는 에디터가 소유한 하위 시스템이라 둘을 합치지 않습니다. 언리얼도 `GEngine` 서브시스템과 `GEditor` 서브시스템을 가릅니다.
+- **임포터(`Editor/Common/Asset`)를 라이브러리로 떼지 않습니다**(2026-10-11). 명령 줄 임포트(`App --import-*` · `--check-*`)는 App 이 에디터 모듈을 인스턴스 없이 로드해 C-ABI 진입점 `importEditorAssets` 를 부르고,
+  쿠킹은 임포트 산출물만 읽으며, 전용 서버와 Shipping 은 임포트하지 않습니다. 상용 엔진도 에디터 바이너리를 머리 없이 돌립니다(언리얼 커맨드릿, 유니티 `-batchmode`, Godot `--headless --import`).
+  `Common/Asset` 은 이미 ImGui 를 모르는 층 1 이라, 에디터 없는 빌드 팜이나 쿠킹 서버에서 임포트할 일이 생기면 그때 정적 라이브러리로 묶는 비용이 작습니다.
 - **imgui-node-editor 의 vcpkg 수정은 업스트림에 PR 을 내지 않고 오버레이로 유지합니다**(2026-10-06). 외부에 공개하는 일은 사용자가 요청할 때만 합니다.
 - **DPI 150 % 는 대체 테스트로 확인하고, 글자 래스터 선명도만 실제 모니터에서 확인합니다**(2026-10-06). 남은 확인은 [백로그](06_Backlog.md) 1-12 에 있습니다.
 - **에디터 보강의 결정 열다섯 개(D1 ~ D15)**(2026-10-06, 사용자 지시 "특별한 의도가 없으면 상용 엔진과 비교해 나은 쪽"으로 추천을 정함). 단위는 모두 적용했고 계획 문서는 지웠습니다(남은 로드맵은 [백로그](06_Backlog.md) 1-4).

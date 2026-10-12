@@ -1,7 +1,7 @@
 # 서버 디버깅 계획 — 에디터에서 서버 · 멀티플레이를 손쉽게 보는 길
 
-상태: 결정은 끝났고(2026-10-11, 사용자가 추천안을 받아들임) S2(중단점 친화)와 S1(멀티 프로세스 재생)이 들어갔습니다. 다음은 S4 입니다.
-S1 에서 남은 것(프리셋 저장 · 리슨 호스트 줄의 틱 · 합친 트레이스 자동 열기 · 핫 리로드 넘어 세션 유지)은 [백로그](../06_Backlog.md) "서버 디버깅" 항목에 있습니다.
+다음 단위는 S4 입니다. 방향 결정(여러 프로세스 먼저, 읽기 전용 디버그 채널, Multiplayer 창 하나)은 [결정 기록](../09_Decisions.md) 5-10 에 있습니다.
+S1 에서 남은 것(프리셋 저장, 리슨 호스트 줄의 틱, 합친 트레이스 자동 열기, 핫 리로드를 넘는 세션 유지)은 [백로그](../06_Backlog.md) "서버 디버깅" 항목에 있습니다.
 
 ## 왜 필요한가
 
@@ -13,20 +13,8 @@ S1 에서 남은 것(프리셋 저장 · 리슨 호스트 줄의 틱 · 합친 �
 - "서버에서는 어떻게 보였나"를 클라이언트 화면에서 볼 길이 없습니다.
 - 회선이 나쁜 상황은 재현하기 어렵습니다.
 
-상용 엔진의 답은 에디터 안의 재생 모드입니다. 언리얼은 PIE 의 Net Mode(Standalone · Listen · Client) · 플레이어 수 · Net Emulation 프리셋으로, 유니티는 Multiplayer Play Mode 의 가상 플레이어와 Network Simulator 로 푼다. 이 저장소에는 그 바닥이 이미 있습니다.
-
-## 지금 있는 것
-
-| 바닥 | 있는 것 | 없는 것 |
-|---|---|---|
-| 회선 흉내 | `NetEmulation`(`Source/Core/Network/Transport/NetEmulation.h`) — 지연 · 흔들림 · 손실 · 중복 · 깨짐 · 순서 바뀜 · 대역폭 | 에디터 · 실행 중 조절 창구 |
-| 한 프로세스 가상 서버 | `NetSimHarness`(`Source/GameFramework/Kits/Feature/Network/NetSimulation/NetSimHarness.h`) — 결정적, 월드마다 씬 · 물리 | 렌더러 · 에디터 연결(화면 없음) |
-| 전용 서버 | `Server`(`Source/Server/README.md`) — 고정 틱, 운영 엔드포인트, `pause` · `step N` · `resume` | — |
-| 게임의 네트워크 역할 | `GameNetSession`(`GameInstanceBase` 소유) — `-gv_netListenPort` · `-gv_netConnectAddress` 로 어느 게임이든 서버 · 클라이언트 | 핫 리로드를 넘는 세션 |
-| 멀티 프로세스 재생 | 툴바 Net Mode · Multiplayer 창 Session 탭(`EditorNetPlaySession`) — 로그 모으기(전용 서버 줄마다 `[tick=N]`) · 서버 일시정지 · 트레이스 합치기 | 프리셋 저장 |
-| 지표 | `/metrics` · 틱 시간 · 버린 틱, 연결별 트래픽 셈(`NetSimTrafficCounter`) | 패널 · 시간축 보기 |
-| 재현 | 의도 기록(`.swintent`), 롤백 세션, 파괴 해시 비교 | 에디터에서 되감기 · 어긋남 찾기 |
-| 개발 도구 | 개발 콘솔 · `bugit` · 디버그 HUD(계획) | 서버에 원격으로 명령 |
+상용 엔진의 답은 에디터 안의 재생 모드입니다. 언리얼은 PIE 의 Net Mode(Standalone · Listen · Client) · 플레이어 수 · Net Emulation 프리셋으로, 유니티는 Multiplayer Play Mode 의 가상 플레이어와 Network Simulator 로 푼다.
+이 저장소에는 회선 흉내(`NetEmulation`), 한 프로세스 가상 서버(`NetSimHarness`), 전용 서버의 `pause` · `step`, 게임마다의 `GameNetSession`, 멀티 프로세스 재생(Multiplayer 창 Session 탭)이 이미 있습니다.
 
 ## 전용 창 — Multiplayer 창
 
@@ -119,14 +107,6 @@ S1 에서 남은 것(프리셋 저장 · 리슨 호스트 줄의 틱 · 합친 �
 
 S4 → S3 → S5 → S6 → S7 → S8(S2 중단점 친화 · S1 멀티 프로세스 재생은 끝났다). 나머지는 S1 의 세션 위에서 확인한다 — 에디터 시나리오 `engine/automation/editor/netplay.scenario.xml` 이 바닥이다. S3 · S5 는 디버그 HUD 의 섹션 레지스트리와 같은 원천을 쓴다.
 
-## 정한 것 (사용자 승인 2026-10-11 — 추천안)
-
-1. **여러 프로세스(S1)를 먼저**, 한 프로세스(S8)는 다중 월드가 들어온 뒤. 한 프로세스가 편하지만 엔진 구조 변경이 선행이다.
-2. **디버그 채널은 읽기 전용 + 개발 콘솔 명령 실행까지.** 임의 프로퍼티 쓰기는 열지 않는다(서버 권위를 에디터가 우회하지 않게 — 값을 바꿀 일은 개발 명령으로 게임이 정한 길을 거친다).
-3. **전용 창은 Multiplayer 창 하나**(위 절).
-
 ## 지키는 것
 
-- 디버그 채널 · 원격 명령은 Dev 전용이다(Shipping 에 링크하지 않는다). 루프백 + 토큰.
-- 서버 코드에 에디터 의존을 만들지 않는다(에디터는 채널의 클라이언트일 뿐).
-- 단위마다 "확인 = 자동 시나리오"를 같이 한다(사람 손 확인을 돌리지 않는다).
+디버그 채널 · 원격 명령의 Dev 전용 · 루프백 · 토큰 규칙과 서버 코드가 에디터에 의존하지 않는 규칙은 결정 기록 5-10 에 있습니다. 단위마다 확인은 자동 시나리오로 합니다(사람 손 확인을 돌리지 않는다).

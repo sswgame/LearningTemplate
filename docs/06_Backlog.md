@@ -17,7 +17,7 @@
 "확인 필요" 가 붙은 항목은 열려 있는지부터 확인하고 시작한다.
 
 - **엔진 분할 — 계획은 [docs/plans/EnginePartition.md](plans/EnginePartition.md).** `Engine.dll` 을 티어 경계로 나누기 전에 의존 방향의 약한 고리를 푼다. 단위를 끝내면 계획 문서에서 지운다.
-- **빌드 속도 — 계획은 [docs/plans/BuildSpeed.md](plans/BuildSpeed.md).** 사용자 결정(2026-10-10): 1 ~ 6 단계까지 하고 7 ~ 9 는 필요할 때만. 0 ~ 4 단계는 끝났다(킷 PCH 실제 공유 −15 %, 콜드 프리셋은 기각). 남은 것은 5 단계(유니티 범위 — 한 쌍만 잼, 재측정 필요)와 6 단계(`EngineLoop.cpp`).
+- **빌드 속도 — 계획은 [docs/plans/BuildSpeed.md](plans/BuildSpeed.md).** 남은 것은 5 단계(유니티 범위 — 한 쌍만 잼, 재측정 필요)와 6 단계(`EngineLoop.cpp`)다. 범위 결정은 [결정 기록](09_Decisions.md) 5-2.
 
 ### 1-1. 직렬화 · 리플렉션
 
@@ -71,8 +71,7 @@
   `getWaveTime`)을 잇는다. (2) 강 경로가 점 목록이다 — 스플라인 컴포넌트가 들어오면 그것을 경로로 받는다. (3) 하늘 · 시간 · 높이 안개 + 물속 안개 패스(값은
   `WaterBodyComponent::findUnderwaterFog` 가 이미 준다) — 다중 뷰 병합 뒤. (4) 물의 굴절 · 화면 공간 두께는 반투명 패스가 장면 색 사본 · 장면 깊이를 입력으로 받는
   계약이 있어야 한다(지금은 지형 깊이를 정점에 굽는다). (5) 흔드는 식생의 그림자는 흔들리지 않는다(`shadowdepth.hlsl` 이 머티리얼 정점 변형을 모른다 — 풀은 그림자를 끔).
-  (6) 지형 LOD 교체 프레임 — `TerrainBenchTest.LODSweepWorstFrame`(Release, 쇼케이스 지형을 600 프레임 동안 가로지름, 3 회): 교체 프레임 111 개의
-  updateLODs(청크 메시) p50 0.1 ms · 최악 4.0~5.1 ms, GPUScene 수집 p50 0.95 ms · 최악 5.0~5.2 ms — 기준(GT 2 ms)을 넘는다. 메시 집합이 바뀌어 RT 는 정점 풀을
+  (6) 지형 LOD 교체 프레임의 최악 시간이 기준(GT 2 ms)을 넘는다(측정값은 [검증과 측정](08_Verification.md) 2절 "지형 LOD 교체"). 메시 집합이 바뀌어 RT 는 정점 풀을
   통째로 다시 만든다(`RT.GPUScene.vertexPool`, 벤치에는 없다 — App 표로). LOD 메시를 미리 만들어 두거나 청크 정점을 풀에서 부분 갱신한다. 지오모프(LOD 튐) · 레이어 다섯 이상(두 번째 스플랫 — 머티리얼 텍스처 칸이 넷이다) · 에디터 칠하기 도구가 없다.
 - **툰 머티리얼(`toon.hlsl`, MToon 1.0 체계)의 남은 것** — 노멀 맵(정점에 탄젠트가 없다) · UV 스크롤 애니메이션 · 셰이딩 시프트 / 림 곱 / 외곽선 두께 텍스처(머티리얼 텍스처 칸이 넷이라 기본 · 그림자 · 발광 · 맷캡만 받는다) · 디퍼드의 계단 셰이딩(G버퍼는 표면만 적어 램버트로 칠해진다) · 그림자 패스의 알파 컷오프
   (`shadowdepth.hlsl` 은 픽셀 스테이지가 없어 머리카락 카드가 사각형 그림자를 드리운다 — 모든 컷오프 머티리얼이 같다).
@@ -117,6 +116,12 @@
 - **에디터 체인에 남은 것**(체인 · 초기화 · 리로드 4 종은 들어갔다 — [Automation README](../Source/Engine/Automation/README.md) "에디터 시나리오를 한 프로세스로 묶기"). ① **Vulkan 에디터 체인에서 `readbackTexture2D: texture … or the device is not usable` 오류 3 줄이 난다** — 리셋 시나리오가 창 크기를 바꾼 직후, 이전 시나리오가 열어 둔 RenderTarget 패널(`RenderTargetPanel.cpp` ~203)이 다시 만들어지기 전의 옛 텍스처 핸들로 읽기를 요청한다(`RenderThread::readRequestedRenderTarget`). 실사용에서도 패널을 연 채 창 크기를 바꾸면 같은 오류가 상태바에 뜬다. 핸들이 죽었으면 요청을 건너뛰거나(패널 · 레지스트리가 크기 변경 세대를 본다) 읽기 실패를 조용한 실패로 돌려야 한다. 체인 테스트는 이 줄을 시나리오 밖 `[Error]` 로 센다.
   ② `isolated` 로 뺀 시나리오 중 **상태가 남는 것**(`graphaddnode` · `profilertimeline` · `tilemaptools` · `sequencerkeys` · `contentthumbnails`)은 씬 교체로 안 비워지는 패널 상태다 — 패널 쪽에 "문서 닫기 / 초기화" 를 두고
   `panel.closeOptional` 이 그것을 부르게 하면 체인에 합칠 수 있다(지금은 프로세스 다섯 개가 더 뜬다). ③ 체인 사이의 초기화가 프레임 50 개(≈ 체인 시간의 20 %)다 — 씬이 다 열렸는지를 탐침으로 기다리면 줄일 수 있다.
+- **에디터 구조 개편(층 게이트 · 의존 역전 · Panels 하위 폴더) 뒤에 돌리지 않은 검증.** 3 · 4 단계 뒤 네 백엔드 에디터 시나리오(`AppTest --test_filter=*Editor*`),
+  Shipping 빌드와 `-L hostgpu`, 게임별 프리셋 빌드(ThemePark 밖의 에디터 확장 모듈)를 배치 끝 검증에서 본다. 결정은 [결정 기록](09_Decisions.md) 5-11.
+- **에디터 작은 단위(E5 · G2 · G3 · H1)와 실기동으로 아직 확인하지 못한 것.** 리눅스 X11 · dlopen 분기(CI), 실제 RenderDoc 캡처(이 PC 에 RenderDoc 이 없다),
+  단언 대화상자의 세 단추(모달), Tracy 0.14.1 뷰어 연결(주소 `localhost:8086` 을 직접 입력해 연결되는지), 배율 1.5 · 2 의 에디터, Dialogue Graph 첫 열기,
+  스크린샷 토스트의 "Show in Explorer" 단추(알림 매니저에 동작 단추가 없다), `screenshotbutton` 시나리오가 `Bin/Saved/Screenshots` 에 남기는 PNG, Engine README 개발 명령 줄의 경로.
+  RenderDoc 은 RHI 단계 맨 앞에서 로드하고, `ThirdParty/renderdoc` 에 원문 헤더를 두며 그 폴더의 `.clang-format` 은 `DisableFormat` 이다.
 - **백엔드 교체 단계**(`<SwapBackend backend="vulkan"/>` 같은 것) — 체인이 한 프로세스에서 네 백엔드를 차례로 건너게 한다(지금은 백엔드마다 프로세스 하나). `gv_rhiSwapAtFrame` 의 경로(`RHI::requestBackendChange`)를 단계로 감싸고
   교체 뒤 `Module.*` · 씬 개수 탐침을 같이 본다.
 ### 1-5. 핫 리로드 · 모듈
@@ -168,16 +173,7 @@
   - 1 단계에서 미룬 것: 디렉터의 켠 프리셋 · 블렌드 진행은 저장하지 않는다(다시 읽으면 시작 프리셋부터). 블렌드 도중 재활성은 섞인 포즈를 **고정**해 출발한다 —
     Cinemachine 처럼 나가는 블렌드를 살려 둔 채 겹쳐 섞으려면 블렌드 스택이 필요하다.
 
-- **서드파티 — Jolt(3D 물리) · Box2D(2D 물리) · ACL(애니메이션 압축)(2026-10-04 사용자 결정), Recast · Tracy(2026-10-05 추가).** 모두 MIT · vcpkg 에 있다.
-  물리 둘은 감쌌다(`IPhysicsScene3D` · `IPhysicsScene2D`, `Source/Engine/Physics/README.md`) — 경계는 `CheckThirdPartyIsolation.py` 가 지킨다(ACL 도 같은 표에 있다).
-  ACL 코덱은 `Engine/Animation/Codec/ACL`(쿠킹 때 압축 → 코덱 id + 불투명 블롭). vcpkg 를 바꿀 때는 **다른 워크트리가 빌드 중이
-  아닐 때** — 설치 폴더를 나눠 써서, 옛 매니페스트의 워크트리가 configure 하면 새 패키지를 지운다. Jolt 소프트 바디(천 · 헤어 카드)는 아직 감싸지 않았다.
-  2026-10-05 사용자 결정으로 **Recast & Detour**(zlib, 정적 — `RecastNavigation::Recast` · `Detour` · `DetourCrowd` · `DetourTileCache`)와
-  **Tracy**(BSD-3, 클라이언트만 · 기능 끔 — `Tracy::TracyClient`, Windows 는 공유 TracyClient.dll)를 vcpkg 로 들였다(`ThirdParty/{recastnavigation,tracy}`).
-  Tracy 는 clang-cl 트리플릿의 C++14 기본값에 서지 못해 C++17 오버레이 포트(`ThirdParty/tracy/vcpkg-port/tracy`)를 둔다. Tracy 는 엔진 프로파일러의 두 번째
-  출력으로 감쌌다(`Source/Engine/Profiling/README.md` — 헤더 경계는 같은 게이트, Shipping 은 링크하지 않는다). 뷰어(tracy-profiler.exe)는 저장소에 넣지 않는다.
-  2026-10-06 **OpenSSL**(Apache-2.0 — 감싼 폴더 `GameFramework/Base/Online/Security/OpenSSL`, 같은 게이트) · **SQLite**(퍼블릭 도메인) · **libpq**(PostgreSQL License, `openssl` 기능만)를
-  들였다 — Windows 는 지금 트리플릿대로 DLL. OpenSSL 은 네트워크 보안, SQLite 는 `GF_SQLStore`, libpq 는 `GF_Server_SQLStore` 가 쓴다(링크도 그 CMakeLists 에서만).
+- **Jolt 소프트 바디(천 · 헤어 카드)는 아직 감싸지 않았다.** 들인 서드파티와 감싼 위치는 [결정 기록](09_Decisions.md) 5-2. vcpkg 를 바꿀 때의 잠금은 [작업 방식](11_Workflow.md) 1절.
 - **애니메이션(로드맵).** 지금 있는 것은 `Source/Engine/Animation/README.md`(임포트 · 코덱 · 재생 · 상태 기계 · AnimationSystem · GPU 스키닝 · 2D/3D 공용 재생).
   알림 디스패치(구간 알림 · 처리기 레지스트리 · `*.notifies.xml`)는 `Source/Engine/Character/README.md`.
   남은 것 — ① 그래프의 블렌드 스페이스 노드(지금 `BlendSpace` 는 행렬 하나라
@@ -258,9 +254,8 @@
   ("Game saved" · "다시 시작하면 적용")은 글 그대로라 글 수집에 들지 않는다 — 코드 글 키(`SW_LOCTEXT` 꼴)로 바꿀 것. (4) 입력 힌트 위젯을 따로 두지 않았다 —
   리치 텍스트 태그 하나로 충분한지 게임 HUD(8-1)에서 본다. (5) 항목마다 이름 `Message` · `Count` 가 트리 안에 겹쳐
   둘째 항목부터 "name is used twice" 경고가 난다 — 항목 조각을 `UserWidget` 으로 감싸 이름을 `<번호>.Message` 로.
-- **런타임 UI 그리기 성능의 남은 것(runtime-ui 10-4 뒤, `Engine/UI/README.md` "성능").** 위젯 1 만 칸 · 글 10 칸/프레임 바뀜의 `GT.UI`(Layout + Paint) p50 은 0.29 ms 로
-  목표(0.3 ms) 안이다(08 2 절). 남은 몫은 보이는 위젯 ~1150 개를 걷는 비용(Paint 걷기 ~180 us — 위젯 캐시 이어 붙이기 ~90 · 자르기 검사 ~20 · 나머지 방문)이고,
-  더 줄이려면 패널마다 하위 출력 캐시(Slate Invalidation Panel)다 — 일괄 합치기 결정이 이어 붙이는 순서에 달려 있어, 하위 목록은 합치지 않은 일괄 그대로 들어야
+- **런타임 UI 그리기 성능의 남은 것(runtime-ui 10-4 뒤, `Engine/UI/README.md` "성능").** 목표(`GT.UI` p50 0.3 ms) 안이다(측정값과 걷기 분해는 [검증과 측정](08_Verification.md) 2절 "런타임 UI 벤치").
+  남은 비용은 보이는 위젯을 걷는 비용이고, 더 줄이려면 패널마다 하위 출력 캐시(Slate Invalidation Panel)다 — 일괄 합치기 결정이 이어 붙이는 순서에 달려 있어, 하위 목록은 합치지 않은 일괄 그대로 들어야
   바이트가 같다. 창 크기 바꿈(전체 재배치) 한 프레임 · 첫 프레임 글리프 래스터화가 몇 프레임에 퍼지는지는 표 밖이다(워밍업 60 프레임이 버린다).
 - **런타임 UI 오른쪽에서 왼쪽(RTL)의 남은 것(runtime-ui 9-3 뒤, `Engine/UI/README.md`).** (3) 가로 스크롤 패널은 RTL 에서도 왼쪽부터 보인다(Slate · CSS 는 오른쪽) —
   내용 자리를 거울로 놓으려면 `scrollIntoView` 의 부호도 바꿔야 한다.
@@ -346,26 +341,15 @@
   ④ 서버 빌드에서 렌더러 코드를 아예 빼기(지금은 컴파일만 되고 돌지 않는다 — 크기 · 링크 시간을 재고). ⑤ 리눅스 서버(`WSL-*-Server`) 빌드 · `readelf -d` 로
   libX11 없음 확인 · `ServerTest` — 이 묶음은 Windows 만 확인했다.
 
-- **서버 디버깅 — 계획은 [docs/plans/ServerDebug.md](plans/ServerDebug.md).** 에디터에서 서버 · 멀티플레이를 손쉽게 보는 길(Net Mode 재생 · 서버 검사기 · 회선 조절 · 네트워크 프로파일러 · 서버 권위 겹쳐 보기 · 틱별 해시 비교). 결정은 끝났다(여러 프로세스 먼저 · 읽기 전용 + 개발 콘솔 명령 · Multiplayer 창 하나). S2(중단점 친화)와 S1(멀티 프로세스 재생 — 툴바 Net Mode · Multiplayer 창 Session 탭 · 트레이스 합치기 · 모든 게임의 `GameNetSession`)은 들어갔고 다음은 S4. 운영 단위 O1 ~ O7(사고 기록 · 로그 · 드레인 · 관리 채널 · 부하 기준선 · 배포)도 같은 문서에 있다. 단위를 끝내면 계획 문서에서 지운다.
+- **서버 디버깅 — 계획은 [docs/plans/ServerDebug.md](plans/ServerDebug.md).** 다음 단위는 S4(회선 조절)이고, 운영 단위 O1 ~ O7 도 같은 문서에 있다. 방향 결정은 [결정 기록](09_Decisions.md) 5-10. 단위를 끝내면 계획 문서에서 지운다.
   S1 에서 남은 것: ① 사용자 프리셋 저장("서버 + 클라이언트 2" 를 이름 붙여 에디터 상태에 — 지금은 마지막 구성만 세션이 들고 있고 에디터를 다시 띄우면 Standalone) ② 리슨 호스트(App)의 줄에 틱 번호(전용 서버 줄에는 `[tick=N]` 이 붙는다 — 리슨 호스트는 고정 틱 루프가 없어 프레임 번호로 정해야 한다) ③ Stop 뒤 합친 트레이스를 Profiler 창 Timeline 탭에 저절로 열기(지금은 경로를 로그 · Session 탭에 남기고 Load Trace 로 연다) ④ 게임 모듈 핫 리로드를 넘어 세션 유지 — 게임 인스턴스가 다시 서면 `GameNetSession` 도 닫고 다시 열어 클라이언트가 끊긴다(리로드가 새 인스턴스를 먼저 만들면 포트가 아직 잡혀 있어 다시 열지 못한다; 세션을 엔진 쪽 수명으로 옮긴다 — 언리얼 넷 드라이버는 월드 소유) ⑤ 운영 서버가 `ServerConfig::_gamePort` 를 저절로 여는 길(지금은 `-gv_netListenPort` 를 줄 때만 연다 — 결정 기록 5-10) ⑥ 클라이언트 창 배치(여러 App 창이 겹쳐 뜬다 — 언리얼은 창 위치를 나란히 둔다).
 
 - **네트워크 — 포화된 연결의 비신뢰 줄**(N21a 뒤). 대역폭 몫을 다 쓰면 메시지가 기다리는데, 비신뢰 줄(`NetConnection::_listOutgoingUnreliable`)에는 상한이 없어 오래 포화되면
   옛 비신뢰가 쌓였다 몰려 간다. 언리얼은 포화면(`IsNetReady` 거짓) 액터 복제를 건너뛴다 — 키트가 `NetHost` 에 "이 연결이 포화인가" 를 묻거나 줄에 나이 상한을 둔다. 재고 나서.
 
-- **네트워크 — 하지 않기로 한 것**(리팩토링 N13~N21 · N18b 는 끝남, N18c 는 측정으로 기각 — [결정 기록](09_Decisions.md) 3절):
-  하지 않기로 한 것: NAT · 리플렉션 속성 복제(Iris) · 복제용 RPC · 외부 네트워크 라이브러리(암호 라이브러리는 아래 "네트워크 보안" 항목의 예외).
-
-- **네트워크 서비스 계층(2026-10-06 사용자 결정 — 로그인 · 채팅 · 거래, MMO 가 아니어도 쓰는 키트).** 상태 복제(UDP)와 달리 순서 있는 신뢰 스트림 · 긴 연결 · 요청-응답이다.
+- **네트워크 서비스 계층(로그인 · 채팅 · 거래 키트).** 구성과 원칙(공통 기반 · 드라이버 키트 · 기능 키트, DB 와 캐시)은 [결정 기록](09_Decisions.md) 5-9. 남은 것 —
   ① 스트림 전송(Core `Network/Transport/` — IOCP · epoll · 루프백)은 있다. 리눅스 epoll(`EpollStreamTransport`)은 WSL 빌드 · `StreamTransportTest` 미확인 —
   `WSL-Debug` · `WSL-Shipping` 에서 `--test_repeat=20` 과 변이(`setReceivePaused( false )` 의 할 일 빼기 → 백프레셔 시험이 진다)를 본다. io_uring 은 측정 뒤.
-  ③ 구성은 `docs/` 가 아니라 이 항목이 정본 — **공통 기반**(GameFramework 기반 `Online/`): 서비스 틀(등록 · 라우팅 · 인증 문맥 · 오류 코드 · 판 협상) · 요청 보호(도배 제한 · 멱등 키 · 크기 상한) ·
-  신원 원형(`AccountID` · 세션 토큰 검증) · 저장 계약(`IServiceStore` 영속 · `IEphemeralStore` 캐시 · `ILocalStore` 로컬 — 파일 백엔드는 바이너리/JSON/XML · 원자적 쓰기 · 체크섬 · 선택 압축/암호화) ·
-  마이그레이션 적용기 · 감사 로그 · 서버 간 버스 · 예약 작업 · 원격 설정/기능 플래그 · 관측(지표 · 구조화 로그 · 추적 id). **드라이버 키트**: `GF_SQLStore`(SQLite) · `GF_Server_SQLStore`(PostgreSQL) ·
-  `GF_Server_CacheStore`(RESP — 메모리 구현은 기반 `Online/Cache`). **기능 키트**: `GF_Account` · `GF_ServerDirectory` · `GF_Economy`(원장 · 지갑 · 상점 · 영수증 검증) · `GF_Trade`(원장 위) · `GF_Mailbox` · `GF_Chat` · `GF_Social` ·
-  `GF_Leaderboard` · `GF_Matchmaking` · `GF_LiveOps` · `GF_Admin`(GM 도구 · 제재). 제품 이름은 드라이버 · 제공자 폴더에만(`CheckProductNames` — 조립점은 `Scripts/lint/rules/CheckProductNames.toml` 의 `[exemption]` 에 이유와 함께). 부하 시험 봇은 시험 도구.
-  ④ **DB 결정(사용자)**: 영속 PostgreSQL(서버) · SQLite(개발 단독 서버 · 클라이언트 로컬), 캐시는 RESP 드라이버 하나 — 리눅스 Valkey(BSD-3), 윈도우 Garnet(MIT)(Redis 7.4+ 는
-  RSAL/SSPL — "오픈소스 · 무료" 조건 밖). 캐시를 잃어도 영속 데이터는 맞아야 한다(거래 정본은 영속 트랜잭션). DB 호출은 전용 워커 + 연결 풀 + 비동기 완료.
-  **서버는 윈도우 · 리눅스 둘 다 1 급**, 서버 전용 모듈은 클라이언트 Shipping 에 넣지 않는다(전용 서버 타깃 — Game · Client · Server).
   **들어간 기반**(`GameFramework/Base/Online/`): `Store`(영속 계약 `IServiceStore` — 비동기 일 · 트랜잭션 · 조건부 쓰기 · 멱등 기록, 메모리 구현 · 계약 시험) ·
   `Guard`(토큰 버킷 · 크기 상한) · `Identity`(`AccountID` · `IAccountDirectory`) · `Cache`(휘발성 계약 `IEphemeralStore` — 만료 · 원자 증감 · 임대 · 정렬 집합 · 발행/구독, 메모리 구현 · 계약 시험) ·
   `Audit`(감사 줄) · `Bus`(서버 간 버스 — 캐시 위 · 프로세스 안) · `Schedule`(예약 작업 — 회차 차지 · 임대 이어받기) · `Config`(원격 설정 · 기능 플래그 출시 비율) ·
@@ -404,8 +388,7 @@
   사용자 결정 전에는 하지 않는다), A/B 실험(원격 설정 출시 비율 + 지표), 이벤트 운영 화면(GF_Admin 패널), 서버 실행 파일에 라이브 운영 조립, 우편 · 이벤트에서 "오프라인이면 푸시" 잇기(게임 조립).
   **부하 시험 봇**: `Tools/OnlineLoadBot`(키트 클라이언트 그대로 · 공유 끝점 연결 수천 · 시나리오 JSON · 지연 백분위 · `--local-server` 한 프로세스 서버 조립)이 들어갔다.
   남은 것: 첫 측정 — Release · 서버 한 대 · 봇 1000/5000 으로 `chat_and_match` · `login_storm` 을 돌려 동작별 p99 와 서버 틱 p99 를 적을 것(채팅 world 채널 수천 명의
-  알림 수 · 정산 일의 길이 · 매처 대기 p99 가 위 키트 항목의 판단 근거). 참고(2026-10-06, Debug · `--local-server` — 봇과 서버가 한 스레드라 서로의 시간을 잰다):
-  `quick_check` 봇 300 → 4200 동작 · 28 초 · 오류 0, chat_send p50 377 ms · p99 1081 ms, 채팅 알림 185548. 전용 서버(`Server`)가 온라인 서비스를 조립하면 `--server` 로
+  알림 수 · 정산 일의 길이 · 매처 대기 p99 가 위 키트 항목의 판단 근거, Debug 참고값은 [검증과 측정](08_Verification.md) 2절 "온라인 부하 봇"). 전용 서버(`Server`)가 온라인 서비스를 조립하면 `--server` 로
   같은 시나리오를 돌린다(봇 머신 따로).
   **거래**: 공유 `GF_Trade` · 서버 `GF_Server_Trade`(`TradeService` — 상태 기계 · 거래 레코드 · 원장 분개 하나로 정산 · 재시작 복구 · 시한)와 스트림 바인딩이 들어갔다.
   **서버 여럿**: 접속 상태(`OnlinePresence` — 캐시 `presence:` 키, 시한 60 초 · 30 초마다 다시 적기)와 버스(`account.revoke` 로 다른 서버의 옛 세션 닫기 · `push.<서버>` 로
@@ -422,33 +405,22 @@
   ⑥ GM: 에디터 패널(1-4 C 확장 지점 뒤), 접속하지 않은 계정 이름 찾기(계정 키트 저장 부분을 기반 계약으로), 첫 관리자 · GM 전용 호스트 포트를 서버 설정에(`AdminService::seedRole`)
   ⑦ 서버 실행 파일에 경제 · 우편함 · GM 서비스 조립(카탈로그 경로 · 영수증 등록부 · 지표 등록부를 서버 설정으로) ⑧ 발행 · 소각 총량 지표(보존 검사가 `economy_issued_total{asset}`).
   상용 비교: 언리얼은 Online Subsystem/EOS 등 외부 백엔드에 맡기고, 자체 MMO 서버는 IOCP/epoll 서비스 서버를 따로 둔다.
-- **네트워크 보안(2026-10-06 사용자 결정 — "하지 않기로 한 것" 에서 거둠).** 스트림(서비스)은 TLS 1.3, 게임 UDP 는 연결 수립 때 키 교환(X25519) 뒤 패킷마다 AEAD(AES-GCM 또는
-  ChaCha20-Poly1305 · 패킷 번호를 nonce 로 · 재전송 방지 창) — Valve GNS · 언리얼 AESGCM PacketHandler 와 같은 모양. 세션 키는 로그인 키트가 발급한 토큰에 묶는다(UDP 접속 = 토큰 제시).
-  암호 구현은 직접 짜지 않는다 — 라이브러리 하나(OpenSSL 3.6 — vcpkg 에 넣었다, 감싼 폴더는 GameFramework/Base/Online/Security/OpenSSL)를 엔진 인터페이스 뒤에 두고 격리 게이트(`CheckThirdPartyIsolation`)에
-  올렸다. Core 창구(`Network/Security/`) · OpenSSL 구현(`GameFramework/Base/Online/Security/OpenSSL`, `NetSecurity`) · 스트림 TLS 1.3(`StreamEndpointSettings::_security`) ·
+- **네트워크 보안의 남은 것**(방향은 [결정 기록](09_Decisions.md) 5-9). Core 창구(`Network/Security/`) · OpenSSL 3.6 구현(`GameFramework/Base/Online/Security/OpenSSL`, `NetSecurity`) · 스트림 TLS 1.3(`StreamEndpointSettings::_security`) ·
   UDP 보안(`NetHostSettings::_security` — X25519 + 패킷 AEAD + 재전송 창 + 토큰 결속, 인증기 없는 암호화는 개발 빌드만)은 있다. 남은 것: 암호화 켠 하니스로 서버 틱
   시간을 재어 [결정 기록](09_Decisions.md) 3절에 숫자 한 줄(N18a 벤치에 `_security` 를 켠 판), 서버 호스트가 `ServerConfig::_tlsCertificateFile` · `_tlsPrivateKeyFile` · `_tlsPrivateKeySecretEnvironment`(→ `ServerSecret::read`)를 `NetSecurity::createServerTLSContext` 에 넘기는 배선.
-- **패킷 압축(2026-10-06 사용자 결정).** 코덱 틀은 Core `Compression`(코덱 id 등록부), LZ4 · zstd · zlib 은 Engine 이 등록한다 — Core 네트워크는 id 로만 쓴다. 작은 UDP 패킷은 일반 압축의 이득이
-  작다. 측정 벤치(`NetCompressionBenchTest`, Release 3 회 가운데 값, 패킷마다 봉투 3 B · 줄지 않으면 원문): 스냅숏(평균 1009 B) LZ4 1 %/1.1 us ·
-  zstd1 15 %/11.7 us · zstd1+사전 16 KB 34 %/6.0 us, 파괴(302 B) LZ4 3 %/0.37 us · zstd1 4 %/6.4 us · 사전 35 %/1.6 us, 채팅(43 B, 합성) LZ4 1 % · zstd 0 % · 사전 27 %/0.74 us
-  (us = 압축 + 해제/패킷). 켜는 규칙(15 % 이상 줄고 2 us 이하)을 등록부 코덱(LZ4 · zstd)은 어느 흐름에서도 못 넘는다 — UDP 패킷 압축은 끈다. 넘는 것은 학습 사전뿐(파괴 · 채팅):
-  사전 배포(판 · id 협상 · 사전 갱신)를 하면 다시 본다. 채팅 숫자는 채팅 키트가 실제 기록을 내면 다시 잰다. 남은 것: WSL Release 로 같은 벤치 한 번(압축 시간은
-  컴파일러 · libc 에 따라 다르다). 스트림 프레임 압축은 있다(`StreamEndpointSettings::_compression` — 봉투 `NetCompressionUtil`, 기본 꺼짐, 받는 쪽은 푼 크기를 몸 상한으로
-  보고 풀기 전에 거절) — 채팅 기록 · 거래 내역을 실을 키트가 zstd 로 켤지 정한다.
+- **패킷 압축의 남은 것**(UDP 압축을 끈 결정과 측정값은 [결정 기록](09_Decisions.md) 5-9). WSL Release 로 `NetCompressionBenchTest` 를 한 번 돌린다(압축 시간은
+  컴파일러 · libc 에 따라 다르다). 채팅 수치는 채팅 키트가 실제 기록을 내면 다시 잰다. 스트림 프레임 압축은 채팅 기록 · 거래 내역을 실을 키트가 zstd 로 켤지 정한다.
 - **MMO 규모 서버의 UDP 소켓 계층.** 지금은 호스트당 논블로킹 UDP 소켓 하나 + 전용 스레드 하나(`poll`/`WSAPoll`), 데이터그램마다 `recvfrom`/`sendto`, `NetHost` 잠금 하나.
-  UDP 는 소켓이 하나라 IOCP · epoll 은 지렛대가 아니다. ① 측정(`NetUDPBenchTest`, 호스트 스위트 — 서버 20 Hz 200 B · 클라이언트 30 Hz 40 B, 서버 · 클라이언트가 한 PC,
-  Release 3 회 가운데 값, 다른 빌드로 CPU 20~46 % 부하): Windows 500 — 받기 10.7k · 보내기 10.7k pkt/s, 서버 스레드 14 %, 6.6 us/패킷, RTT p50 48 · p99 48 ms /
-  2000 — 42.1k · 42.5k pkt/s, 54 %(51~82 %), 6.5 us/패킷, RTT p50 68 · p99 70 ms, 커널 버림 0(RTT 는 같은 PC 의 클라이언트 드라이버 지연이 대부분). 리눅스(WSL Release,
-  `ulimit -n 8192` 뒤 같은 필터)는 아직 — 숫자를 나란히 놓는다. 패킷당 6.5 us 의 대부분이 `recvfrom`/`sendto` 라 다음 일은 ②.
+  UDP 는 소켓이 하나라 IOCP · epoll 은 지렛대가 아니다. ① Windows 측정은 [검증과 측정](08_Verification.md) 2절 "UDP 소켓 계층" 에 있다(패킷당 약 6.5 us, 대부분 `recvfrom`/`sendto`).
+  리눅스(WSL Release, `ulimit -n 8192` 뒤 같은 필터)는 아직이다 — 수치를 나란히 놓는다. 그다음 일은 ②.
   ② 시스템 호출이 지배적이면 `INetTransport` 일괄 받기 · 보내기 하나의 계약 — 리눅스 `recvmmsg`/`sendmmsg`(+ GSO/GRO), Windows RIO(+ USO/URO, 없으면 `WSARecvMsg`)
   ③ 스레드 하나가 차면 포트 샤딩(두 플랫폼 같은 계약 — 로그인 토큰이 포트를 준다, 리눅스는 `SO_REUSEPORT` 를 선택) + 샤드마다 `NetHost`. 둘 다 `NetUDPBenchTest` 숫자로 전후를 측정한다.
 
 ### 1-8. 성능 (재고 나서 정할 것)
 
-- **파괴 잎 셰이프를 플레이 첫 프레임에 짓는 비용.** `FractureBenchTest.ShowcaseBeginPlay`(Release, beginPlay + 첫 틱 — 첫 물리 스텝 앞에서 상태 · 잎 셰이프를 세운다)
-  p50 20.2 · 27.2 · 20.7 ms(쇼케이스 파괴물 여섯 · 잎 312, 200 조각 벽 하나가 볼록 껍질 ~11 ms = 잎당 ~55 us). 파괴물이 많은 맵이면 선형으로 는다.
+- **파괴 잎 셰이프를 플레이 첫 프레임에 짓는 비용**(측정값은 [검증과 측정](08_Verification.md) 2절 "파괴 첫 프레임"). 파괴물이 많은 맵이면 선형으로 는다.
   워커로 나누기는 졌다(결정 기록 3절) — 남은 후보는 쿠킹 때 Jolt 셰이프를 직렬화해 `.fracture` 에 싣기(Chaos 가 지오메트리 컬렉션에 충돌을 같이 굽는 자리) 또는
-  잎 셰이프를 처음 깨질 때까지 미루기. 지금 깨지는 프레임은 200 조각 벽 4 ~ 7 ms(그중 사건 처리 2 ~ 4 ms).
+  잎 셰이프를 처음 깨질 때까지 미루기.
 
 - **8000 무버의 `components`(onTick) ~325 us.** 남은 비용은 오브젝트 → 틱 항목 → 컴포넌트 포인터 추적이다. 더 줄이려면 오브젝트 모델 밖 배치 경로
   (언리얼 Mass · 유니티 DOTS 자리)나 트랜스폼 SoA 2 단계가 필요하다 — 큰 구조 변경이라 할지부터 정한다(1-11 의 구조 후보).
@@ -474,6 +446,7 @@
   지면 그 실행의 주석 · 아티팩트(`fuzz-findings`)로 고친다.
 - **Windows CI Debug · STL 잡의 키트 테스트 22 건 실패**(run 37251047781, `a380e2ee3` — 유니티 켬 + PCH 끔 Debug 에서만): 재현 안 됨 — 이 PC 의 같은 구성
   (`CI-Debug -DSW_ENABLE_PCH=OFF`)에서 통과했다. B4 로 실패 보고(`CiFailureReport.py`)가 나아진 뒤 다음 CI 주석으로 본다.
+  그 뒤 액션 키트 테스트 넷이 네 실행 연속으로 지는 간헐 실패가 되었다 — 일회성으로 보지 않는다.
 - **imgui-node-editor vcpkg 오버레이**(`ThirdParty/imgui-node-editor/vcpkg-port/`, `<exception>` 패치)는 업스트림이 같은 고침을 받으면 지운다(2026-10-06 확인: 업스트림 vcpkg port-version 4 · 원본 master · develop 모두 아직 없음. vcpkg PR 은 내지 않는다 — 사용자 결정, 외부 공개).
 - **include · 전방 선언 남은 후보.** ① (끝) OS 헤더는 `EngineMinimal.h` 에서 뺐다(2026-10-11 — Win32 · POSIX API 를 쓰는 파일이 `Core/Common/PlatformOsHeaders.h` 를 직접 include,
   효과는 [검증과 측정](08_Verification.md)). Windows 는 전 구성이 빌드로 확인됐고 리눅스 쪽 직접 include 는 CI 로 확인한다 — 빠진 파일이 나오면 그 파일에 include 를 더한다.
@@ -485,18 +458,30 @@
 - **CI 린트 잡이 처음으로 린트 전부를 리눅스에서 돈다**(`RunLintSuite`, 2026-10-06 — 그 전엔 `CheckCodeConventions` 하나). 첫 실행에서 지는 게이트가 있으면
   그 게이트의 결함(경로 대소문자 · 줄끝 · 외부 도구)이다 — 고치고, 급하면 그 단계에 `continue-on-error` 를 한 번 두고 여기 적는다. 훅 상한
   `kHookBudgetSeconds`(1: 8 · 10: 12 s)는 이 PC 기준 짐작이다 — 첫 `lint-timing` 아티팩트를 보고 러너 값의 1.5 배로 고친다.
-- **Scripts 정리의 남은 후보**([Scripts 개편 계획](plans/ScriptsRestructure.md)). 커밋 훅의 바닥은 트리 전체 게이트 여섯이 비슷한 높이(조용할 때 1~1.4 s,
-  대개 `Source/` 를 읽는 값)로 만든다 — `CheckConfigReference` 하나를 파일 단위로 나눠도 바닥은 그대로라 하지 않는다(계획 1 단계에 숫자). 더 내리려면
-  트리 전체 게이트가 파일 읽기를 나누는 구조가 필요하다. 남은 작은 것: `CheckFunctionVocabulary` 의 손으로 짠 주석 가리기(`common.CodeText` 로),
-  `dev/MoveEditorState.py`(PC 마다 한 번짜리 옛 자리 이동기 — 모든 PC 가 돌렸으면 지운다).
+- **Scripts 정리의 남은 후보.** `CheckFunctionVocabulary` 의 손으로 짠 주석 가리기를 `common.CodeText` 로 바꾼다.
+  `dev/MoveEditorState.py`(옛 위치의 에디터 로컬 상태를 옮기는 PC 마다 한 번짜리 이동기)는 모든 PC 가 돌렸으면 지운다 — 추적되지 않는 파일을 옮기므로 돌렸는지 저장소에서는 알 수 없다.
+  커밋 훅 바닥을 더 내리는 안은 [결정 기록](09_Decisions.md) 3절 "`CheckConfigReference` 를 파일 단위로" 에서 기각했다.
+- **6 차 주석 작업(새 문체로 다시 쓰기)에서 처리하지 못한 구역.** 같은 방식으로 `py -3 -m Scripts worktree-make c6<이름>` 후 이어서 한다.
+  Engine 은 Graphics · Renderer(`Graphics/Mesh`, RHI 하위, 작은 파일 약 220 개), Object · Scene · Resource · Serialization · Spatial · Common 대부분, UI 의 `Console`, Compression · Observability · Profiling · Telemetry 전부다.
+  `SceneNavigation.h` · `GameObjectManager.h` 는 충돌 때문에 다시 쓰지 못했다.
+  Editor 는 주석 25 줄 이상인 약 45 개(`Common/GUI`, `Commands`, `Panels/Animation` · `TileMap` · `Viewport` 등)와 그보다 짧은 파일이다. `EditorIconGlyphs.h` 는 생성 파일이라 제외한다.
+  GameFramework 는 Base 의 짧은 헤더 약 230 개와 .cpp · .inl, Kits/Feature 의 옛 어휘(꼬리표, 그새, 거두다, 짓다)가 남은 약 35 개(Network · Online · Voxel 등), Kits/Feature/Online 의 Account 밖 폴더다.
+  Core 는 Math, File, Process, Delegate, Memory, Diagnostics, CommandLine, Container, Task, Network 나머지, LogSink, String 이다. RuntimeAPI 는 손대지 않았다. Games 는 Empty 벤치 씬 일부와 VoxelCraft 전체다.
+  '시험' → '테스트' 는 `Scripts/**` · `Test/**` · `docs/Config/**` 278 곳과 셰이더 주석 2 곳(`waterwaveprobe.hlsl` · `lighting2d.hlsli` — 바꾸면 `App --cook-shaders` 로 다시 쿠킹)이 남았다.
+- **Shipping 구성에서만 나는 경고 둘** — `Source/Editor/Common/Commands/EditorNetPlaySession.cpp` 의 `unused variable 'pChild'`(344 줄 근처)와 `unused member function 'toForwardSlashes'`(65 줄 근처).
+  Shipping 에서 쓰이지 않는 경로라 고치는 방법(조건부 컴파일 범위를 넓히거나 함수를 옮기기)을 정해 반영한다.
 
 ### 1-10. 관찰 중 — 다시 보이면 원인을 판다
 
-- **Vulkan(FIFO) + VSync 에서 가끔 한 프레임이 여러 주기를 놓친다**(Release 큐브 100, 165 Hz). 2026-10-06 조사: 46 판 중 4 판에서 600 프레임 창 안에 한 프레임이
-  12~24 ms(제안서 측정의 146 ms 정지는 재현되지 않았다), DXGI(DX12 · DX11)는 같은 조건에서 판당 한 주기 이하. 평소 Vulkan 은 `vkAcquireNextImageKHR` 에서 ~5.2 ms 를
-  기다리고(DXGI 는 Present 안), 느린 프레임을 시각으로 쪼개면 둘로 갈렸다 — 이미지가 한 주기 늦게 돌아온 것(acquire ~10 ms)과, GPU 일이 0.3 ms 인 프레임의 펜스가
-  13 ms 뒤에 신호된 것(창 모드 Vulkan 프레젠트가 합성기를 거치는 길). 그 프레임에 엔진 CPU 일은 없었다. 스왑체인 이미지를 4 개로 늘리면 오히려 잦아졌다(결정 기록 3절).
-  다시 보이면 `-gv_tracy=1` 로 acquire · 펜스 · present 를 시간축으로 보고, 전체 화면(독점) · NVIDIA "Vulkan/OpenGL 프레젠트 방식" 설정을 바꿔 가른다.
+- **다음 CI 실행으로 확인할 것**(리눅스는 컴파일까지 되고 테스트 단계에서 진다, CI 읽는 법은 [검증과 측정](08_Verification.md) 4절).
+  고쳤고 통과를 확인할 것: `OnlineLoadBotTest.TwoHundredBots…`(캐시 TTL 을 서버 틱 시각으로), `EpollStreamTransport` 경합 보고, `StreamTransportTest.PlatformAbortWithNothingPendingStillCloses`(전송 모델별 기대),
+  ASan 둘(OpenSSL 스택 수명, `NetRequestTest` 선언 순서), `ServerBootTest` 접속 로그, Linux Debug `EngineTest_NoGPU` 샤드의 180 초 초과(멈춤이 아니라 느림 — 샤드를 여섯으로 늘렸다).
+  원인을 아직 모르는 것: `UIOptionsMenuTest.RebindIgnoresUIActionsWhileListening`(리눅스 Debug · Shipping · ASan, 포커스 위젯 ID 839 ≠ 823 `Tab.controls` — 창이 닫힌 뒤 탐색 Up 이 한 번 발화한 것으로 추정, 다음 실패 메시지가 포커스 위젯 이름을 보인다),
+  ASan 중단 두 건(`PlatformLoginTest.Oidc…` · `NetRequestTest.IdempotentRetry…`), TSan 샤드의 새니타이저 보고.
+  Windows STL containers 잡에서 건너뛰게 한 테스트 셋(`MemoryTagTest` 둘, `DestructionDamageTest.EventLogHash…`)이 기본 컨테이너 구성에서도 가끔 지는지 지켜본다.
+
+- **Vulkan(FIFO) + VSync 에서 가끔 한 프레임이 여러 주기를 놓친다**(Release 큐브 100, 165 Hz — 조사 결과는 [검증과 측정](08_Verification.md) 2절 "Vulkan VSync 프레임 놓침",
+  스왑체인 이미지 4 개는 결정 기록 3절에서 기각). 다시 보이면 `-gv_tracy=1` 로 acquire · 펜스 · present 를 시간축으로 보고, 전체 화면(독점) · NVIDIA "Vulkan/OpenGL 프레젠트 방식" 설정을 바꿔 가른다.
 
 - **CI Windows Debug `EngineTest_NoGPU_Shard3` 가 모두 통과한 뒤 0 이 아닌 종료 코드로 졌다**(run 37457443235 · `28d5627e3`, 한 번 — 직전 실행은 통과).
   로그는 `TaskManager Shutdown cleanly` 에서 끝나고 크래시 스택 주석이 없었다. 이 PC Debug 로 같은 조각(`--test_shard=2/3 --host_suites=exclude`) 15 회 순차 ·
@@ -516,6 +501,7 @@
 - **CI Windows 러너(WARP)의 픽셀 시험 실패**(`RenderPassGPUTest` 를 host 스위트로 빼서 우회) — 이 PC 에서 `SW_RHI_SOFTWARE_ADAPTER=1`(`-gv_rhiSoftwareAdapter=1`)로
   같은 래스터라이저를 고를 수 있다. 2026-10-06 이 PC 의 WARP(DX12 · DX11)로 `RenderPassGPUTest.*` 71 개 픽셀 시험이 모두 통과했다(Vulkan 은 CPU 디바이스가
   없어 빠지고 GL 은 하드웨어) — WARP 자체는 컴퓨트 컬링 · 인디렉트를 한다. 러너 쪽(WARP 판 · 창 없는 세션)을 다음 CI 실패의 주석으로 가른다.
+- **리눅스 RPATH 는 CI 결과로 확인한다**(사용자 결정 2026-10-10 — 로컬 WSL 빌드는 하지 않는다).
 - **리눅스에서 아직 자동으로 안 도는 것**: X11 입력(좌표 · `XkbSetDetectableAutoRepeat` — WSLg 의 `DISPLAY=:0` 이 있으니 손으로 한 번), yad 파일 대화상자의 두 번째
   `--file-filter`(man 으로만 확인), 리눅스 CI 가 초록인지 · IPO 가 실제로 켜졌는지(2026-10-05 실행은 네 잡 모두 Configure 의 vcpkg 설치에서 졌다 — 다음 실행부터
   `CiFailureReport.py configure` 가 포트 로그 끝을 주석으로 올린다). 2026-10-05 WSL-Debug 로 돌려 확인한 것(net-ci-rest 제안서 조사): POSIX `pipe2` · `close_range` ·

@@ -9,7 +9,7 @@
 |---|---|---|
 | [README.md](../README.md) | 이 엔진이 무엇인지, 빌드와 실행 명령, 폴더 소개, 다음에 읽을 문서 | 사용법, 설계, 측정값 |
 | [ARCHITECTURE.md](../ARCHITECTURE.md) | 빌드 타깃의 관계, Dev와 Shipping의 차이, C-ABI 경계, 엔진 계층 원칙 | 한 모듈 안의 규칙(그 모듈 README) |
-| [CLAUDE.md](../CLAUDE.md), [AGENTS.md](../AGENTS.md) | 에이전트가 매번 읽는 작업 규칙과 명령 요약(영어) | 원본 문서가 따로 있는 설명의 전문 |
+| [CLAUDE.md](../CLAUDE.md), [AGENTS.md](../AGENTS.md) | 에이전트가 매번 읽는 작업 규칙과 명령 요약(`CLAUDE.md` 는 한국어, `AGENTS.md` 는 영어 제목에 한국어 본문) | 원본 문서가 따로 있는 설명의 전문 |
 | `docs/` | 시작하기, 핫 리로드, 설정처럼 모듈 여럿에 걸친 주제 | 한 모듈의 규칙 |
 | 모듈 README(`Source/**/README.md` 등) | [문서 쓰기 지침](10_WritingDocs.md) 3절의 일곱 절 | 함수 레퍼런스(헤더 주석이 원본), 폴더 트리, 경위 |
 | [백로그](06_Backlog.md) | 남은 일, 결정을 기다리는 질문, 조건이 오면 할 일 | 교훈(README 함정 절), 결정([09](09_Decisions.md)), 검증([08](08_Verification.md)), 이력 |
@@ -32,14 +32,17 @@
 | [05 RHI 프레임 계약](05_RHI_FrameContract.md) | 프레임과 렌더 타깃의 순서 계약, 함정, 검증 절차 |
 | [06 백로그](06_Backlog.md) | 남은 일(할 일 목록) |
 | [07 설정](07_Configuration.md) | 설정 값을 어느 파일에 두는지, 우선순위, 배포본과 핫 리로드 |
-| [08 검증과 측정](08_Verification.md) | 작업을 끝내기 전에 돌릴 것, 측정값 읽는 법, 테스트를 쓸 때의 함정, CI |
+| [08 검증과 측정](08_Verification.md) | 작업을 끝내기 전에 돌릴 것, 측정값 읽는 법과 기준선, 검증할 때의 함정, CI 실패 읽기 |
 | [09 결정 기록](09_Decisions.md) | 정한 방향, 하지 않기로 한 것, 측정으로 기각한 안, 바뀐 이름 |
 | [10 문서 쓰기 지침](10_WritingDocs.md) | 문서 종류와 층, 모듈 README의 틀, 문장 규칙, 용어 대조표 |
 | [11 작업 방식](11_Workflow.md) | 워크트리와 적용 담당, 동시 빌드, 검증 단계, push 와 CI, 결정 권한, 커밋 메시지, 에이전트 정의와 세션 가드 |
 | [다음 세션 인계](plans/NEXT.md) | 진행 중인 배치의 상태와 다음 세션이 할 일(배치 경계마다 고쳐 쓴다) |
-| [엔진 분할 계획](plans/EnginePartition.md) | 엔진 분할 단위와 순서(끝나면 지운다) |
-| [빌드 속도 계획](plans/BuildSpeed.md) | 기준선 측정 · 테스트 빌드 분리 · 헤더 다이어트 · PCH 공유 · 유니티(끝나면 지운다) |
-| [Scripts 개편 계획](plans/ScriptsRestructure.md) | 커밋 훅 바닥 · 겹치는 게이트 · 죽은 스크립트의 우선순위와 단계(끝나면 지운다) |
+| [엔진 분할 계획](plans/EnginePartition.md) | 엔진 분할의 남은 단계와 순서 |
+| [빌드 속도 계획](plans/BuildSpeed.md) | 빌드 속도의 남은 단계(유니티 범위, 무거운 단일 TU) |
+| [서버 디버깅 계획](plans/ServerDebug.md) | 에디터에서 서버 · 멀티플레이를 보는 단위와 운영 단위 |
+| [구조 리팩토링 계획](plans/StructureRefactor.md) | 구조 리팩토링 단위(R5 ~ R8), SOLID 단위(S1 ~ S22)와 판정 기준 |
+
+`docs/plans/` 의 계획 문서는 단계가 끝나면 그 단계를 지우고, 전부 끝나면 파일을 지웁니다. 결과는 결정 기록과 검증 문서로, 남은 일은 백로그로 옮깁니다.
 
 ## 모듈 README
 
@@ -92,7 +95,7 @@
 - [Tools](../Tools/README.md) — [ReflectionParser](../Tools/ReflectionParser/README.md), [Blender 내보내기](../Tools/DCC/Blender/README.md), [VS Code 실행 인자 GUI](../Tools/launch-args/README.md), [온라인 부하 테스트 봇](../Tools/OnlineLoadBot/README.md)
 - [Config](../Config/README.md) — 설정 파일의 두 계층
 - [Resource](../Resource/README.md) — 리소스 경로, 소문자 규칙, 텍스처 규칙, [Empty 게임 팩](../Resource/game/empty/README.md)
-- [Test](../Test/README.md) — 테스트 실행 파일, 라벨, 스위트 규칙, QA 러너
+- [Test](../Test/README.md) — 테스트 실행 파일, 라벨, 스위트 규칙, 테스트를 쓰는 규칙과 도우미, QA 러너
 
 ---
 [◀ 이전: 시작하기](01_GettingStarted.md) | [🏠 위키 홈으로 돌아가기](../README.md) | [▶ 다음: 핫리로드 및 ABI 가이드](03_LiveReload_and_ABI.md)
