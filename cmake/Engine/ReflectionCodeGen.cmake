@@ -45,11 +45,14 @@ function(sw_addReflectionStep TARGET_NAME)
 			list(FILTER listCandidateHeader EXCLUDE REGEX "${ARG_EXCLUDE_REGEX}")
 		endif()
 
+		set(listNonReflectHeader "")
 		foreach(hdr IN LISTS listCandidateHeader)
 			file(STRINGS "${hdr}" listReflectLine REGEX "^[ \t]*(REFLECT\\(|ENUM\\(|REFLECT_CONTAINER\\()")
 
 			if(listReflectLine)
 				list(APPEND ARG_HEADERS "${hdr}")
+			else()
+				list(APPEND listNonReflectHeader "${hdr}")
 			endif()
 		endforeach()
 
@@ -107,8 +110,20 @@ function(sw_addReflectionStep TARGET_NAME)
 	set(generatedFiles "")
 	set(generatedCppFiles "")
 
+	# 생성 파일 이름은 헤더 이름(확장자 뺀 것)뿐이다 — 같은 타깃에 같은 이름의 반사 헤더가 둘이면 서로의 .gen.cpp 를 덮어쓴다.
+	set(listGeneratedStem "")
 	foreach(header IN LISTS ARG_HEADERS)
 		get_filename_component(stem "${header}" NAME_WE)
+		list(FIND listGeneratedStem "${stem}" stemIndex)
+		if(NOT stemIndex EQUAL -1)
+			foreach(otherHeader IN LISTS ARG_HEADERS)
+				get_filename_component(otherStem "${otherHeader}" NAME_WE)
+				if(otherStem STREQUAL stem AND NOT otherHeader STREQUAL header)
+					message(FATAL_ERROR "[Reflection] ${TARGET_NAME}: two reflected headers share the name '${stem}' and would overwrite each other's ${stem}.gen.cpp:\n  ${otherHeader}\n  ${header}\n  Rename one of them.")
+				endif()
+			endforeach()
+		endif()
+		list(APPEND listGeneratedStem "${stem}")
 		set(genFile "${ARG_OUTPUT_DIR}/${stem}.gen.cpp")
 		set(genHeader "${ARG_OUTPUT_DIR}/${stem}.gen.h")
 		list(APPEND generatedFiles "${genFile}" "${genHeader}")
@@ -180,7 +195,25 @@ function(sw_addReflectionStep TARGET_NAME)
 		target_compile_options(${TARGET_NAME} PUBLIC "SHELL:-include ${swFlagOpsHeader}")
 	endif()
 
-	add_custom_target(${TARGET_NAME}_ReflectionGen DEPENDS ${generatedFiles})
+	# 자동 훑기는 구성 때 굳는다. 매크로가 없던 헤더가 바뀌면 그것만 다시 읽어 매크로가 생겼는지 본다(바뀐 헤더가 없으면 돌지 않는다).
+	set(swReflectScanStamp "")
+	if(listNonReflectHeader)
+		set(swReflectCandidateList "${ARG_OUTPUT_DIR}/ReflectionCandidates.list")
+		string(REPLACE ";" "\n" swReflectCandidateText "${listNonReflectHeader}")
+		file(WRITE "${swReflectCandidateList}.in" "${swReflectCandidateText}\n")
+		configure_file("${swReflectCandidateList}.in" "${swReflectCandidateList}" COPYONLY)
+		set(swReflectScanStamp "${ARG_OUTPUT_DIR}/ReflectionCandidates.stamp")
+		add_custom_command(
+			OUTPUT "${swReflectScanStamp}"
+			COMMAND ${CMAKE_COMMAND} "-DCANDIDATE_LIST=${swReflectCandidateList}" "-DSTAMP=${swReflectScanStamp}" "-DTARGET_NAME=${TARGET_NAME}"
+				-P "${CMAKE_SOURCE_DIR}/cmake/Engine/CheckReflectionCandidates.cmake"
+			DEPENDS ${listNonReflectHeader} "${swReflectCandidateList}" "${CMAKE_SOURCE_DIR}/cmake/Engine/CheckReflectionCandidates.cmake"
+			COMMENT "[Reflection] Checking ${TARGET_NAME} headers for new reflection macros"
+			VERBATIM
+		)
+	endif()
+
+	add_custom_target(${TARGET_NAME}_ReflectionGen DEPENDS ${generatedFiles} ${swReflectScanStamp})
 	add_dependencies(${TARGET_NAME} ReflectionParser ${TARGET_NAME}_ReflectionGen)
 
 	# 타깃마다 두 줄씩 configure 출력을 메우지 않는다 — `cmake --log-level=VERBOSE` 로 다시 본다.

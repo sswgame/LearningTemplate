@@ -50,6 +50,7 @@ cmake/
     ├── ThirdPartyLibs.cmake      — 서드파티를 어떻게 붙이나: SYSTEM include, vcpkg CONFIG 패키지(못 찾으면 구성 실패), 헤더 전용 포트, Engine 압축 코덱
     ├── AssetAndToolTargets.cmake— 에셋 쿠킹, Doxygen 문서, 린트 타겟 및 CTest 등록 헬퍼
     ├── ReflectionCodeGen.cmake  — ReflectionParser 코드 생성 파이프라인 (sw_addReflectionStep)
+    ├── CheckReflectionCandidates.cmake — 구성 뒤 반사 매크로가 생긴 헤더를 빌드 때 잡아 다시 구성하라고 세운다(sw_addReflectionStep 이 부른다)
     ├── RuntimeDependencies.cmake— vcpkg 경로 조회, Vulkan 레이어·mimalloc 런타임 DLL 복사
     │                               (DXC 복사는 `ThirdParty/dxc/CMakeLists.txt` 의 `sw_copyDxcDlls` —
     │                                DXC 탐색 로직이 거기 있어 같이 둔다)
@@ -87,7 +88,7 @@ cmake/
 | `sw_addModuleLibrary` | 엔진 모듈 라이브러리의 기본값(종류 · Bin 출력 · 내보내기 · 등록 · PCH · 유니티 · 리플렉션) 한 자리 — 팩토리 셋 · GameFramework · 에디터가 이것을 부른다 |
 | `sw_addGameFrameworkKit` | GameFramework 장르 키트(`GF_Overworld` 등) 라이브러리 정의 및 리플렉션 자동화 |
 | `sw_registerScriptTest` | 파이썬 스크립트 하나를 CTest 항목 하나로(PythonTest · QA · 린트가 같은 속성 철자). 린트는 **목록이 여기 없다** — `Scripts/lint/gate/` · `selftest/` 폴더가 목록이고, `GenerateLintTargets.py` 가 만든 `LintTargets.cmake` 의 등록 함수가 이것을 부른다 |
-| `sw_addReflectionStep` | ReflectionParser 코드 생성 스텝 자동 연결 |
+| `sw_addReflectionStep` | ReflectionParser 코드 생성 스텝 자동 연결. 같은 타깃에 이름(확장자 뺀 것)이 같은 반사 헤더가 둘이면 구성이 실패한다. 자동 훑기는 구성 때 굳으므로, 매크로가 없던 헤더에 `REFLECT(` · `ENUM(` 을 더하면 빌드가 다시 구성하라고 세운다 |
 | `sw_addTestExecutable` | 테스트 실행 파일 하나 — 소스는 그 폴더를 훑고(`SOURCES` 를 주면 그것), 같이 컴파일할 엔진 밖 소스는 `EXTRA_SOURCES` (`TestTargets.cmake`) |
 | `sw_findEngineCompressionLibraries` | Engine 의 압축 코덱(zlib · LZ4 · Zstd) 링크 항목 — 찾기 · 진단을 한 자리에 (`ThirdPartyLibs.cmake`) |
 
