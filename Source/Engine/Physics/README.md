@@ -109,7 +109,7 @@ pBoxBody->addImpulse( float3{ 0.0f, 5.0f, 0.0f } );
 | `IPhysicsBodyScene.h` | 셰이프와 바디 |
 | `IPhysicsJointScene.h` | 관절 |
 | `IPhysicsCharacterScene.h` | 캐릭터 무버 |
-| `IPhysicsQueryScene.h` | 레이 캐스트, 셰이프 캐스트, 겹침 |
+| `IPhysicsQueryScene.h` | 레이 캐스트, 셰이프 캐스트(가장 가까운 것 하나, 모두), 겹침 |
 | `IPhysicsVehicleScene.h` | 바퀴 차(3D 만) |
 
 씬 하나가 역할을 모두 구현하지만, 한 역할만 쓰는 코드는 그 역할의 인터페이스만 받습니다. 맞힘 판정과 소리 가림은 `IPhysicsQueryScene3D`, 강체 컴포넌트는 `IPhysicsBodyScene3D` 를 받습니다.
@@ -139,6 +139,8 @@ Box2D 는 한 스레드로 돕니다. Box2D 의 솔버 워커들은 서로를 �
 
 - 쏘는 오브젝트의 바디를 모두 빼려면 `PhysicsQueryFilter::_ignoreUserData` 에 그 오브젝트 id 를 넣습니다. 자기 래그돌 본이나 들고 있는 무기를 맞히지 않게 할 때 씁니다.
 - 레이 캐스트 결과의 `_material` 은 맞은 셰이프의 재질 이름입니다. 발소리나 탄흔 종류를 고를 때 씁니다.
+- 닿는 것을 모두 찾으려면 `raycastAll` 과 `shapeCastAll` 을 씁니다. 바디마다 가장 가까운 닿음 하나를 가까운 순서로 출력 끝에 붙입니다(관통 사격, 시야를 가린 것 모두).
+  컴파운드 바디는 서브 셰이프가 여럿 닿아도 한 번이고, 거리가 같으면 바디 핸들 순서입니다. 언리얼의 `LineTraceMulti`, 유니티의 `RaycastAll` 에 해당합니다.
 - 두 바디만 예외로 충돌을 끄려면 `setPairCollision` 을 씁니다. 관절로 이은 두 바디는 관절의 `_bCollideConnectedBodies`(기본 거짓)로 정합니다.
 
 **접촉 이벤트.** 바디 쌍마다 시작, 유지, 끝이 한 번씩 납니다. 셰이프가 여러 개여도 바디 쌍당 한 번입니다.

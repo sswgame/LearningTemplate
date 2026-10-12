@@ -99,6 +99,10 @@ namespace sw
         bool   raycast( const float2& origin, const float2& direction, float32 maxDistance, const PhysicsQueryFilter& filter, PhysicsCastHit2D& outHit ) const override;
         bool   shapeCast( const PhysicsShapeDesc2D& shape, const float2& position, const float32& rotation, const float2& direction, float32 maxDistance,
                           const PhysicsQueryFilter& filter, PhysicsCastHit2D& outHit ) const override;
+        uint32 raycastAll( const float2& origin, const float2& direction, float32 maxDistance, const PhysicsQueryFilter& filter,
+                           vector<PhysicsCastHit2D>& outListHit ) const override;
+        uint32 shapeCastAll( const PhysicsShapeDesc2D& shape, const float2& position, const float32& rotation, const float2& direction, float32 maxDistance,
+                             const PhysicsQueryFilter& filter, vector<PhysicsCastHit2D>& outListHit ) const override;
         uint32 overlapShape( const PhysicsShapeDesc2D& shape, const float2& position, const float32& rotation, const PhysicsQueryFilter& filter,
                              vector<PhysicsBodyHandle>& outListBody ) const override;
 

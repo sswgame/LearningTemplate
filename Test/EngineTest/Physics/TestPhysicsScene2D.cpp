@@ -163,6 +163,40 @@ SW_TEST_CASE( PhysicsScene2DTest, RaycastReportsHitDistance )
 }
 
 /**
+ * @brief [PhysicsScene2DTest] 모든 닿음 질의는 바디마다 가장 가까운 닿음 하나를 가까운 순서로 출력 끝에 붙인다(3D 와 같은 모양)
+ */
+SW_TEST_CASE( PhysicsScene2DTest, RaycastAllAndShapeCastAllReportEveryBodyNearestFirst )
+{
+    sw::unique_ptr<sw::IPhysicsScene2D> pScene = makeScene();
+    SW_ASSERT_NOT_NULL( pScene.get() );
+    const sw::PhysicsBodyHandle farBody  = addBody( *pScene, makeBox( sw::float2{ 0.5f, 0.5f } ), sw::float2{ 12.0f, 0.0f }, sw::PhysicsBodyType::Static, 0, "Bouncy", 3 );
+    const sw::PhysicsBodyHandle nearBody = addBody( *pScene, makeBox( sw::float2{ 0.5f, 0.5f } ), sw::float2{ 4.0f, 0.0f }, sw::PhysicsBodyType::Static, 0, "", 1 );
+    addBody( *pScene, makeBox( sw::float2{ 0.5f, 0.5f } ), sw::float2{ 4.0f, 5.0f }, sw::PhysicsBodyType::Static ); // 광선 밖
+
+    sw::PhysicsQueryFilter           filter;
+    sw::vector<sw::PhysicsCastHit2D> listHit;
+    SW_ASSERT_EQUAL( 2u, pScene->raycastAll( sw::float2{}, sw::float2{ 1.0f, 0.0f }, 100.0f, filter, listHit ) );
+    SW_EXPECT_TRUE( listHit[0]._body == nearBody );
+    SW_EXPECT_TRUE( listHit[1]._body == farBody );
+    SW_EXPECT_NEAR_EQUAL( 3.5f, listHit[0]._distance, 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( 11.5f, listHit[1]._distance, 1e-3f );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 1 ), listHit[0]._userData );
+    SW_EXPECT_TRUE( listHit[1]._material == sw::hashed_string( "Bouncy" ) );
+
+    listHit.clear();
+    SW_EXPECT_EQUAL( 1u, pScene->raycastAll( sw::float2{}, sw::float2{ 1.0f, 0.0f }, 5.0f, filter, listHit ) );
+    filter._layerMask = 1u << 1;
+    SW_EXPECT_EQUAL( 0u, pScene->raycastAll( sw::float2{}, sw::float2{ 1.0f, 0.0f }, 100.0f, filter, listHit ) );
+
+    filter._layerMask  = sw::MathUtil::kMaxUInt32;
+    filter._ignoreBody = nearBody;
+    listHit.clear();
+    SW_ASSERT_EQUAL( 1u, pScene->shapeCastAll( makeCircle( 0.5f ), sw::float2{}, 0.0f, sw::float2{ 1.0f, 0.0f }, 100.0f, filter, listHit ) );
+    SW_EXPECT_TRUE( listHit[0]._body == farBody );
+    SW_EXPECT_NEAR_EQUAL( 11.0f, listHit[0]._distance, 2e-2f );
+}
+
+/**
  * @brief [PhysicsScene2DTest] 레이어 표가 막은 쌍은 지나치고 허락한 쌍은 막는다. 쌍 하나만 끄면 그 둘만 지나친다
  */
 SW_TEST_CASE( PhysicsScene2DTest, LayerFilterBlocksPair )
