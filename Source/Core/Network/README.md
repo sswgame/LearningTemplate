@@ -55,7 +55,9 @@ py -3 -m Scripts test NetworkThreadTest.*
 1. 루프백 망(`LoopbackNetwork`)을 하나 만들고, 서버와 클라이언트가 각자 그 망의 전송을 씁니다. 루프백은 보낸 순서대로 다음 `update` 에 배달만 하므로 결과가 결정적입니다.
 2. 서버 `NetHost` 가 듣고, 클라이언트 `NetHost` 가 연결합니다. 비동기로 연결하려면 `connectAsync` 가 돌려주는 `TaskFuture<NetConnectResult>` 를 씁니다.
 3. 매 프레임 두 호스트의 `update` 를 부르면 핸드셰이크가 진행되고, 연결되면 `sendMessage` 로 보낸 메시지를 반대쪽이 꺼냅니다.
-4. 회선을 나쁘게 만들려면 전송을 `NetEmulationTransport` 로 감싸고 지연, 손실, 순서 뒤바뀜을 겁니다.
+4. 회선을 나쁘게 만들려면 전송을 `NetEmulationTransport` 로 감싸고 지연, 손실, 순서 뒤바뀜을 겁니다. 보내는 쪽 조건(`setDefaultConditions`)과 받는 쪽 조건(`setIncomingConditions`)을
+   따로 걸어 올림과 내림을 다르게 하고, `startOutage( 초 )` 로 그동안 모든 패킷을 버립니다(스파이크). 이름 있는 프리셋(`tryGetPreset` — off · lan · wifi · lte · badwifi · disconnected)과
+   키-값 덮어쓰기(`parseOverrides` — `latencyMs=80 lossPercent=5`)는 회선 조절 창과 개발 명령이 같이 씁니다.
 
 스트림(TCP) 쪽은 `test::StreamEndpointPair`(`Test/TestFramework/TestStreamEndpointPair.h`)가 루프백 위의 엔드포인트 한 쌍을 한 스레드로 돌립니다.
 

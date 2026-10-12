@@ -3,6 +3,7 @@
 #include "Core/Network/Transport/NetEmulation.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/XorShift32.h"
@@ -20,6 +21,31 @@ namespace sw
             static constexpr int32   kKilobyte      = 1024;
             static constexpr uint32  kDefaultRandom = HashUtil::kGoldenRatio32;
             static constexpr uint8   kCorruptMask   = 0x5A; ///< 깨짐 — 고른 바이트에 XOR 한다
+
+            /** @brief 회선 프리셋 하나입니다(한 방향). 값은 흔한 회선의 체감값이며, 정확한 측정값이 아니라 나쁜 정도의 단계입니다. */
+            struct Preset
+            {
+                const utf8* _pName;
+                int32       _latencyMs;
+                int32       _jitterMs;
+                float32     _lossPercent;
+                float32     _duplicatePercent;
+                float32     _reorderPercent;
+                int32       _bandwidthKilobytesPerSecond;
+            };
+
+            static constexpr Preset kArrPreset[] = {
+                {         "off",  0,  0,   0.0f, 0.0f, 0.0f,    0},
+                {         "lan",  1,  0,   0.0f, 0.0f, 0.0f,    0},
+                {        "wifi", 10,  5,   0.5f, 0.0f, 0.0f,    0},
+                {         "lte", 35, 15,   1.0f, 0.0f, 0.5f, 1024},
+                {     "badwifi", 80, 40,   5.0f, 1.0f, 2.0f,  256},
+                {"disconnected",  0,  0, 100.0f, 0.0f, 0.0f,    0},
+            };
+            static constexpr const utf8* kPresetNames = "off, lan, wifi, lte, badwifi, disconnected";
+
+            /** @brief 0 이상 숫자를 읽습니다. */
+            [[nodiscard]] static bool parseNonNegative( string_view text, float32& outValue ) { return StringUtil::parseFloat( text, outValue ) && outValue >= 0.0f; }
         };
     } // namespace
 
@@ -52,17 +78,110 @@ namespace sw
         return conditions;
     }
 
+    bool NetEmulationConditions::tryGetPreset( string_view presetName, NetEmulationConditions& outConditions )
+    {
+        using Internal = NetEmulationInternal;
+        for ( const Internal::Preset& preset : Internal::kArrPreset )
+        {
+            if ( StringUtil::equals( presetName, preset._pName, true ) == false )
+                continue;
+            outConditions                          = NetEmulationConditions{};
+            outConditions._latency                 = static_cast<float64>( preset._latencyMs ) * Internal::kMillisecond;
+            outConditions._jitter                  = static_cast<float64>( preset._jitterMs ) * Internal::kMillisecond;
+            outConditions._lossRate                = preset._lossPercent * Internal::kPercent;
+            outConditions._duplicateRate           = preset._duplicatePercent * Internal::kPercent;
+            outConditions._reorderRate             = preset._reorderPercent * Internal::kPercent;
+            outConditions._bandwidthBytesPerSecond = preset._bandwidthKilobytesPerSecond * Internal::kKilobyte;
+            return true;
+        }
+        return false;
+    }
+
+    const utf8* NetEmulationConditions::getPresetNames()
+    {
+        return NetEmulationInternal::kPresetNames;
+    }
+
+    bool NetEmulationConditions::parseOverrides( string_view text, NetEmulationConditions& inoutConditions, string& outError )
+    {
+        using Internal                = NetEmulationInternal;
+        NetEmulationConditions parsed = inoutConditions; // 하나라도 틀리면 아무것도 바꾸지 않는다
+        bool                   bOk    = true;
+        StringUtil::forEachToken( text, " \t", [&parsed, &bOk, &outError]( string_view token ) -> bool
+        {
+            const size_t equals = token.find( '=' );
+            float32      value  = 0.0f;
+            if ( equals == string_view::npos || Internal::parseNonNegative( token.substr( equals + 1 ), value ) == false )
+            {
+                outError = "expected <key>=<non-negative number>, got '" + string( token ) + "'";
+                bOk      = false;
+                return false;
+            }
+            const string_view key = token.substr( 0, equals );
+            if ( key == "latencyMs" )
+                parsed._latency = static_cast<float64>( value ) * Internal::kMillisecond;
+            else if ( key == "jitterMs" )
+                parsed._jitter = static_cast<float64>( value ) * Internal::kMillisecond;
+            else if ( key == "lossPercent" )
+                parsed._lossRate = MathUtil::min( value, 100.0f ) * Internal::kPercent;
+            else if ( key == "duplicatePercent" )
+                parsed._duplicateRate = MathUtil::min( value, 100.0f ) * Internal::kPercent;
+            else if ( key == "reorderPercent" )
+                parsed._reorderRate = MathUtil::min( value, 100.0f ) * Internal::kPercent;
+            else if ( key == "bandwidthKBps" )
+                parsed._bandwidthBytesPerSecond = static_cast<int32>( value ) * Internal::kKilobyte;
+            else
+            {
+                outError = "unknown key '" + string( key ) + "' (latencyMs, jitterMs, lossPercent, duplicatePercent, reorderPercent, bandwidthKBps)";
+                bOk      = false;
+                return false;
+            }
+            return true;
+        } );
+        if ( bOk )
+            inoutConditions = parsed;
+        return bOk;
+    }
+
     NetEmulationTransport::NetEmulationTransport( INetTransport* pInner, uint32 seed )
         : _mutex{}
         , _pInner{ pInner }
         , _listPending{}
+        , _listIncoming{}
+        , _receivedBytes{}
         , _listLink{}
         , _defaultConditions{}
+        , _incomingConditions{}
         , _stats{}
         , _time{ 0.0 }
+        , _outageUntil{ 0.0 }
         , _order{ 0 }
         , _randomState{ seed != 0 ? seed : NetEmulationInternal::kDefaultRandom }
     {
+    }
+
+    void NetEmulationTransport::setIncomingConditions( const NetEmulationConditions& conditions )
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        _incomingConditions = conditions;
+    }
+
+    NetEmulationConditions NetEmulationTransport::getIncomingConditions() const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        return _incomingConditions;
+    }
+
+    void NetEmulationTransport::startOutage( float64 durationSeconds )
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        _outageUntil = durationSeconds > 0.0 ? _time + durationSeconds : 0.0;
+    }
+
+    bool NetEmulationTransport::isInOutage() const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        return _time < _outageUntil;
     }
 
     void NetEmulationTransport::setDefaultConditions( const NetEmulationConditions& conditions )
@@ -107,7 +226,14 @@ namespace sw
     {
         if ( _pInner == nullptr || pData == nullptr || size <= 0 )
             return false;
-        std::scoped_lock<mutex>       lock{ _mutex };
+        std::scoped_lock<mutex> lock{ _mutex };
+        if ( _time < _outageUntil )
+        {
+            // 끊김 — 보내는 쪽은 모른다(손실과 같다).
+            ++_stats._droppedCount;
+            ++_stats._outageDroppedCount;
+            return true;
+        }
         LinkState&                    link       = findOrAddLink( to );
         const NetEmulationConditions& conditions = link._conditions;
         if ( conditions._pDropFilter != nullptr && conditions._pDropFilter( to, pData, size, conditions._pDropFilterContext ) )
@@ -172,7 +298,62 @@ namespace sw
 
     bool NetEmulationTransport::receive( NetAddress& outFrom, vector<uint8>& outBuffer )
     {
-        return _pInner != nullptr && _pInner->receive( outFrom, outBuffer );
+        if ( _pInner == nullptr )
+            return false;
+        std::scoped_lock<mutex> lock{ _mutex };
+        // 받는 쪽 조건도 끊김도 없고 늦춘 것도 없으면 그대로 받는다(순서와 할당이 그대로다).
+        const bool bPassThrough = _incomingConditions.isActive() == false && _time >= _outageUntil && _listIncoming.empty();
+        if ( bPassThrough )
+            return _pInner->receive( outFrom, outBuffer );
+        pullIncomingLocked();
+        // 때가 된 것 가운데 가장 이른 것(같으면 도착 순서)을 넘긴다.
+        size_t dueIndex = _listIncoming.size();
+        for ( size_t index = 0; index < _listIncoming.size(); ++index )
+        {
+            const Incoming& incoming = _listIncoming[index];
+            if ( incoming._deliverTime > _time )
+                continue;
+            const bool bEarlier = dueIndex == _listIncoming.size() || incoming._deliverTime < _listIncoming[dueIndex]._deliverTime ||
+                                  ( incoming._deliverTime == _listIncoming[dueIndex]._deliverTime && incoming._order < _listIncoming[dueIndex]._order );
+            if ( bEarlier )
+                dueIndex = index;
+        }
+        if ( dueIndex == _listIncoming.size() )
+            return false;
+        Incoming& due = _listIncoming[dueIndex];
+        outFrom       = due._from;
+        outBuffer.swap( due._buffer );
+        _listIncoming.erase( _listIncoming.begin() + static_cast<ptrdiff_t>( dueIndex ) );
+        return true;
+    }
+
+    void NetEmulationTransport::pullIncomingLocked()
+    {
+        const NetEmulationConditions& conditions = _incomingConditions;
+        NetAddress                    from;
+        while ( _pInner->receive( from, _receivedBytes ) )
+        {
+            if ( _time < _outageUntil )
+            {
+                ++_stats._outageDroppedCount;
+                continue;
+            }
+            if ( nextRandom() < conditions._lossRate )
+            {
+                ++_stats._incomingDroppedCount;
+                continue;
+            }
+            float64 delay = conditions._latency + static_cast<float64>( nextRandom() * 2.0f - 1.0f ) * conditions._jitter;
+            if ( nextRandom() < conditions._reorderRate )
+                delay += conditions._reorderDelay;
+            Incoming& incoming    = _listIncoming.emplace_back();
+            incoming._buffer      = std::move( _receivedBytes );
+            incoming._from        = from;
+            incoming._deliverTime = _time + MathUtil::max( 0.0, delay );
+            incoming._order       = _order++;
+            _receivedBytes.clear();
+            _stats._incomingDelayedCount += delay > 0.0 ? 1u : 0u;
+        }
     }
 
     NetAddress NetEmulationTransport::getLocalAddress() const

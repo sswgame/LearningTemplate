@@ -192,3 +192,111 @@ SW_TEST_CASE( NetEmulationTest, CorruptionFlipsOneBytePerPacket )
     SW_EXPECT_EQUAL( static_cast<int32>( stats._corruptedCount ), corruptedCount );
     SW_EXPECT_EQUAL( 0, manyByteCount ); // 한 패킷에 한 바이트만
 }
+
+/**
+ * @brief [NetEmulationTest] 회선 프리셋을 이름으로 고르고(대소문자 무시), 키-값 덮어쓰기는 틀리면 아무것도 바꾸지 않는다(회선 조절 S4 의 개발 명령 · 에디터 패널이 쓴다)
+ */
+SW_TEST_CASE( NetEmulationTest, PresetsAndOverridesMakeConditions )
+{
+    NetEmulationConditions conditions;
+    SW_ASSERT_TRUE( NetEmulationConditions::tryGetPreset( "LTE", conditions ) );
+    SW_EXPECT_NEAR_EQUAL( conditions._latency, 0.035, 1.0e-9 );
+    SW_EXPECT_EQUAL( conditions._bandwidthBytesPerSecond, 1024 * 1024 );
+    SW_EXPECT_TRUE( conditions.isActive() );
+    SW_ASSERT_TRUE( NetEmulationConditions::tryGetPreset( "off", conditions ) );
+    SW_EXPECT_FALSE( conditions.isActive() );
+    SW_ASSERT_TRUE( NetEmulationConditions::tryGetPreset( "disconnected", conditions ) );
+    SW_EXPECT_NEAR_EQUAL( conditions._lossRate, 1.0f, 1.0e-6f );
+    SW_EXPECT_FALSE( NetEmulationConditions::tryGetPreset( "dialup", conditions ) );
+
+    NetEmulationConditions overridden;
+    string                 error;
+    SW_ASSERT_TRUE( NetEmulationConditions::parseOverrides( "latencyMs=80  jitterMs=20 lossPercent=5 bandwidthKBps=256", overridden, error ) );
+    SW_EXPECT_NEAR_EQUAL( overridden._latency, 0.08, 1.0e-9 );
+    SW_EXPECT_NEAR_EQUAL( overridden._jitter, 0.02, 1.0e-9 );
+    SW_EXPECT_NEAR_EQUAL( overridden._lossRate, 0.05f, 1.0e-6f );
+    SW_EXPECT_EQUAL( overridden._bandwidthBytesPerSecond, 256 * 1024 );
+    const NetEmulationConditions before = overridden;
+    SW_EXPECT_FALSE( NetEmulationConditions::parseOverrides( "latencyMs=10 pingMs=5", overridden, error ) );
+    SW_EXPECT_TRUE( error.find( "pingMs" ) != string::npos );
+    SW_EXPECT_NEAR_EQUAL( overridden._latency, before._latency, 1.0e-12 ); // 앞의 latencyMs 도 적용하지 않았다
+    SW_EXPECT_FALSE( NetEmulationConditions::parseOverrides( "lossPercent=-1", overridden, error ) );
+}
+
+/**
+ * @brief [NetEmulationTest] 끊김(스파이크)은 그 시간 동안 보내는 것을 모두 버리고, 끝나면 다시 그대로 보낸다
+ */
+SW_TEST_CASE( NetEmulationTest, OutageDropsEverythingUntilItEnds )
+{
+    NetEmulationTestLink link;
+    vector<int32>        listReceived;
+    link._sender.update( 1.0 );
+    link._sender.startOutage( 0.5 );
+    SW_EXPECT_TRUE( link._sender.isInOutage() );
+    for ( int32 number = 0; number < 10; ++number )
+    {
+        SW_ASSERT_TRUE( link.sendNumbered( number ) ); // 보내는 쪽은 모른다
+    }
+    link.advance( 1.2, listReceived );
+    SW_EXPECT_TRUE( listReceived.empty() );
+    link.advance( 1.5, listReceived ); // 끊김이 끝났다
+    SW_EXPECT_FALSE( link._sender.isInOutage() );
+    SW_ASSERT_TRUE( link.sendNumbered( 42 ) );
+    link.advance( 1.5, listReceived );
+    SW_ASSERT_EQUAL( size_t( 1 ), listReceived.size() );
+    SW_EXPECT_EQUAL( 42, listReceived[0] );
+    SW_EXPECT_EQUAL( uint64( 10 ), link._sender.getStats()._outageDroppedCount );
+}
+
+/**
+ * @brief [NetEmulationTest] 받는 쪽 조건은 받은 패킷을 그 지연만큼 붙잡았다 넘기고, 손실 비율만큼 버린다(올림 · 내림을 따로 나쁘게 한다)
+ */
+SW_TEST_CASE( NetEmulationTest, IncomingConditionsDelayAndDropReceivedPackets )
+{
+    NetEmulationTestLink   link;
+    NetEmulationTransport  receiver{ link._pReceiver, 29u };
+    NetEmulationConditions incoming;
+    incoming._latency = 0.1;
+    receiver.setIncomingConditions( incoming );
+    for ( int32 number = 0; number < 5; ++number )
+    {
+        SW_ASSERT_TRUE( link.sendNumbered( number ) );
+    }
+    link._sender.update( 0.0 );
+    link._network.deliverInFlight();
+    NetAddress    from{};
+    vector<uint8> buffer;
+    receiver.update( 0.0 );
+    SW_EXPECT_FALSE( receiver.receive( from, buffer ) ); // 받았지만 붙잡고 있다
+    receiver.update( 0.099 );
+    SW_EXPECT_FALSE( receiver.receive( from, buffer ) );
+    receiver.update( 0.1 );
+    int32 receivedCount = 0;
+    int32 lastNumber    = -1;
+    while ( receiver.receive( from, buffer ) )
+    {
+        SW_EXPECT_TRUE( buffer[0] > lastNumber || lastNumber < 0 ); // 흔들림이 없으면 도착 순서 그대로
+        lastNumber = buffer[0];
+        ++receivedCount;
+    }
+    SW_EXPECT_EQUAL( 5, receivedCount );
+
+    incoming           = NetEmulationConditions{};
+    incoming._lossRate = 0.5f;
+    receiver.setIncomingConditions( incoming );
+    constexpr int32 kPacketCount = 1000;
+    for ( int32 number = 0; number < kPacketCount; ++number )
+    {
+        SW_ASSERT_TRUE( link.sendNumbered( number ) );
+    }
+    link._sender.update( 1.0 );
+    link._network.deliverInFlight();
+    receiver.update( 1.0 );
+    receivedCount = 0;
+    while ( receiver.receive( from, buffer ) )
+    {
+        ++receivedCount;
+    }
+    SW_EXPECT_TRUE( 400 <= receivedCount && receivedCount <= 600 ); // 50 % ± 10 %
+    SW_EXPECT_EQUAL( static_cast<uint64>( kPacketCount - receivedCount ), receiver.getStats()._incomingDroppedCount );
+}
