@@ -18,18 +18,25 @@ namespace sw
 {
     struct AudioPcm;
 
+    class AudioStreamSource;
     class TaskArgs;
 
     /**
      * @struct AudioClipData
      * @brief 재생할 소리 하나입니다. float32 교차 샘플이며, 채널은 1(모노)이나 2(스테레오)입니다. 그보다 많으면 읽을 때 스테레오로 줄입니다.
+     * @details 긴 소리는 샘플 배열 대신 압축 바이트(`_pStream`)를 들고 보이스가 재생하는 만큼만 풉니다(`AudioStream.h`). 그때 `_listSample` 은 비어 있고
+     *          `_frameCount` · `_sampleRate` · `_channelCount` 는 전체 소리의 값입니다.
      */
     struct SW_API AudioClipData
     {
-        vector<float32> _listSample;        ///< 채널 교차 샘플([-1, 1])
-        uint32          _frameCount{ 0 };   ///< 채널당 샘플 수다.
-        uint32          _sampleRate{ 0 };   ///< 원본 샘플레이트(Hz)
-        uint16          _channelCount{ 0 }; ///< 1 또는 2 다.
+        vector<float32>                     _listSample;        ///< 채널 교차 샘플([-1, 1]). 스트리밍 클립은 비어 있다.
+        shared_ptr<const AudioStreamSource> _pStream{};         ///< 스트리밍 클립의 압축 바이트다(통째로 푼 클립은 nullptr).
+        uint32                              _frameCount{ 0 };   ///< 채널당 샘플 수다.
+        uint32                              _sampleRate{ 0 };   ///< 원본 샘플레이트(Hz)
+        uint16                              _channelCount{ 0 }; ///< 1 또는 2 다.
+
+        /** @brief 스트리밍 클립인지입니다. */
+        bool isStreamed() const { return _pStream != nullptr; }
 
         /** @brief 길이(초)입니다. */
         float32 getDurationSeconds() const { return _sampleRate == 0 ? 0.0f : static_cast<float32>( _frameCount ) / static_cast<float32>( _sampleRate ); }
@@ -39,7 +46,7 @@ namespace sw
          * @return 형식이 비었거나(채널이나 샘플레이트가 0) 비트 수를 모르면 false 를 반환합니다.
          */
         [[nodiscard]] static bool convertPcm( const AudioPcm& pcm, AudioClipData& outClip );
-        /** @brief 채널을 평균해 모노 샘플로 바꿉니다(립싱크 분석에 씁니다). */
+        /** @brief 채널을 평균해 모노 샘플로 바꿉니다(립싱크 분석에 씁니다). 스트리밍 클립은 샘플이 없어 빈 결과입니다. */
         void copyMonoSamples( vector<float32>& outListSample ) const;
     };
 } // namespace sw
@@ -73,8 +80,16 @@ namespace sw
         AudioClipCache( const AudioClipCache& )            = delete;
         AudioClipCache& operator=( const AudioClipCache& ) = delete;
 
+        /** @brief 이 초 이상 긴 소리는 통째로 풀지 않고 스트리밍합니다(기본 `kDefaultStreamMinSeconds`). 0 이면 스트리밍할 수 있는 형식은 모두 스트리밍합니다. 이미 캐시된 클립은 바뀌지 않습니다. */
+        void setStreamMinSeconds( float32 seconds ) { _streamMinSeconds = seconds; }
+        /** @brief 지금 스트리밍 기준(초)입니다. */
+        float32 getStreamMinSeconds() const { return _streamMinSeconds; }
+
         /** @brief 공통 디코더가 못 읽는 형식에 쓸 대체 디코더를 겁니다(nullptr 이면 없음). */
         void setFallbackDecoder( AudioFallbackDecodeFunction pFunction ) { _pFallbackDecoder = pFunction; }
+
+        /** @brief 스트리밍 기준의 기본값(초)입니다. 48 kHz 스테레오 float 로 풀면 약 7.7 MB 에 해당합니다. */
+        static constexpr float32 kDefaultStreamMinSeconds = 20.0f;
 
         /** @brief 준비된 클립입니다. 아직 없거나 실패했으면 nullptr 입니다. 디코드하지 않습니다. */
         shared_ptr<const AudioClipData> findClip( const hashed_string& path ) const;
@@ -115,6 +130,7 @@ namespace sw
 
         unordered_map<hashed_string, Entry, hashed_string::HashFunc> _mapPathToEntry;   /**< 경로에서 엔트리로 가는 맵입니다. */
         AudioFallbackDecodeFunction                                  _pFallbackDecoder; /**< 대체 디코더입니다(없으면 nullptr). */
+        float32                                                      _streamMinSeconds; /**< 이보다 긴 소리는 스트리밍합니다. */
         mutable mutex                                                _mutex;            /**< `_mapPathToEntry` 를 지킵니다. */
     };
 } // namespace sw

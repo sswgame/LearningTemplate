@@ -97,6 +97,13 @@ _soundQueue.playAll();                      // 틱 뒤 게임 스레드에서
 OGG 디코더(stb_vorbis)의 메모리는 엔진 아레나에서 받고, 256KB 에서 시작해 64MB 를 넘지 않습니다(`AudioVorbisDecode.cpp`). 깨진 파일이 과하게 할당하거나 누수를 내더라도 아레나 안에서 끝납니다.
 공통 디코더가 못 읽는 형식(MP3, ADPCM WAV)은 백엔드의 대체 디코더(`AudioClipCache::setFallbackDecoder`)가 풉니다. Windows 는 Media Foundation 을 씁니다.
 
+**긴 소리는 스트리밍합니다.** 3 분 스테레오 48 kHz 를 float 로 풀면 약 69 MB 인데 같은 곡의 OGG 는 3 ~ 4 MB 입니다. 클립 캐시는 길이가 `setStreamMinSeconds`(기본 20 초) 이상인 OGG(채널 1 ~ 2)와
+WAV(16 비트 · float32, 채널 1 ~ 2)를 풀지 않고 압축 바이트 한 벌(`AudioStreamSource`)만 든 클립으로 만듭니다(`AudioClipData::isStreamed()`, `_listSample` 은 비어 있음). 보이스가 시작할 때
+자기 디코더를 열고(`AudioStreamWindow`), 믹스하면서 필요한 만큼(2048 프레임 덩어리)만 앞으로 풀어 읽습니다. 같은 곡을 두 보이스가 재생해도 압축 바이트는 하나입니다.
+루프를 한 바퀴 돌 때와 위치를 옮길 때(가상 보이스가 다시 들릴 때)만 되감고, 루프 이음매 보간은 처음 읽어 둔 첫 프레임을 써서 되감기 없이 끝납니다.
+결과는 통째로 푼 소리와 샘플까지 같습니다(`TestAudioStream`). 한계: 디코드는 믹서 스레드에서 블록마다 하고(OGG 한 블록이 수 마이크로초), 보이스를 시작할 때 디코더를 여는 한 번이 가장 비쌉니다.
+팩에 부분 읽기 API 가 없어 파일 전체를 메모리에 읽습니다 — 디스크 스트리밍은 아닙니다. 3 채널 이상 OGG 와 8 · 24 비트 WAV, MP3 는 통째로 풉니다.
+
 ### 버스 그래프
 
 데이터는 `engine/audio/default.audiomixer.xml` 이고, 파일이 없으면 `AudioMixerDesc::makeDefault` 를 씁니다. 게임은 `IAudioService::loadMixer` 로 그래프를 바꿀 수 있고, 재생 중인 보이스는 같은 이름의 버스로 옮겨 갑니다.
