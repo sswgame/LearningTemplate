@@ -420,6 +420,32 @@ SW_TEST_CASE( InteractionTest, CatalogReadsStepsTagsAndSlots )
 }
 
 /**
+ * @brief [InteractionTest] 단계의 montage 는 단계 속성이고 Interaction 의 값이 단계의 기본이며, 적지 않으면 비어 있다(재생하지 않는다)
+ */
+SW_TEST_CASE( InteractionTest, CatalogReadsStepMontages )
+{
+    InteractionCatalog catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( R"(<Interactions>
+  <Interaction id="Craft" mode="Hold" duration="1" montage="CraftStart">
+    <Step prompt="a"/>
+    <Step prompt="b" mode="Mash" montage="CraftHammer"/>
+    <Step prompt="c" montage=""/>
+  </Interaction>
+  <Interaction id="Use" mode="Press"/>
+</Interactions>)",
+                                             "montage.interactions.xml" ) );
+    const InteractionDef* pCraft = catalog.findInteraction( "Craft" );
+    SW_ASSERT_NOT_NULL( pCraft );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 3 ), pCraft->_listStep.size() );
+    SW_EXPECT_TRUE( pCraft->_listStep[0]._montage == hashed_string( "CraftStart" ) ); // Interaction 의 값을 물려받는다
+    SW_EXPECT_TRUE( pCraft->_listStep[1]._montage == hashed_string( "CraftHammer" ) );
+    SW_EXPECT_TRUE( pCraft->_listStep[2]._montage.empty() ); // 빈 값으로 끌 수 있다
+    const InteractionDef* pUse = catalog.findInteraction( "Use" );
+    SW_ASSERT_NOT_NULL( pUse );
+    SW_EXPECT_TRUE( pUse->_listStep[0]._montage.empty() );
+}
+
+/**
  * @brief [InteractionTest] 상호작용을 시작하면 하는 쪽의 모션 워핑에 대상의 맞춤 지점이 정의의 마커 이름으로 워프 목표가 된다
  */
 SW_TEST_CASE( InteractionTest, BeginningInteractionSetsAlignmentWarpTarget )

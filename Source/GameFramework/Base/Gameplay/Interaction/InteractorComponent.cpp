@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Gameplay/Interaction/InteractorComponent.h"
 
 #include "Engine/Object/Animation/MotionWarpingComponent.h"
+#include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -34,6 +35,33 @@ namespace sw
                 (void)target.computeAlignmentPoint( position, yaw );
                 pWarping->setWarpTarget( def._alignmentMarker.empty() ? s_defaultTarget : def._alignmentMarker, position, yaw );
             }
+
+            /**
+             * @brief 단계에 몽타주(상태 · 클립 이름)가 있으면 하는 쪽의 애니메이터가 한 번 재생합니다. 처음 틀 때 그 전 상태를 @p inoutResumeState 에 적어 둡니다.
+             * @details 상태는 그래프에서 끝나면 나가는 전환을 가진 것이어야 합니다 — 몽타주가 끝난 뒤 돌아가는 일은 애니메이터 그래프가 한다. 취소만 `restoreMontage` 가 되돌린다.
+             */
+            static void playStepMontage( GameObject& interactor, const InteractionStepDef& step, hashed_string& inoutResumeState )
+            {
+                if ( step._montage.empty() )
+                    return;
+                SkeletalAnimatorComponent* pAnimator = interactor.getComponent<SkeletalAnimatorComponent>();
+                if ( pAnimator == nullptr )
+                    return;
+                if ( inoutResumeState.empty() )
+                    inoutResumeState = pAnimator->getCurrentStateName();
+                (void)pAnimator->play( step._montage, false ); // 그래프에 없는 이름이면 재생하지 않는다 — 상호작용은 애니메이션 없이도 간다
+            }
+
+            /** @brief 취소된 상호작용이 튼 몽타주를 끊고 그 전 상태로 돌아갑니다. */
+            static void restoreMontage( GameObject& interactor, hashed_string& inoutResumeState )
+            {
+                if ( inoutResumeState.empty() )
+                    return;
+                SkeletalAnimatorComponent* pAnimator = interactor.getComponent<SkeletalAnimatorComponent>();
+                if ( pAnimator != nullptr )
+                    (void)pAnimator->play( inoutResumeState, true ); // 돌아갈 상태가 그래프에서 사라졌으면 그대로 둔다
+                inoutResumeState = hashed_string{};
+            }
         };
     } // namespace
 } // namespace sw
@@ -47,6 +75,8 @@ namespace sw
         , _bUseLineOfSight{ true }
         , _keepDistanceScale{ 1.25f }
         , _session{}
+        , _resumeState{}
+        , _montageStep{ -1 }
         , _prompt{}
         , _listCandidate{}
         , _listCandidateComponent{}
@@ -217,10 +247,29 @@ namespace sw
 
         _listSessionEvent.clear();
         _session.drainEvents( _listSessionEvent );
+        const InteractableComponent* pEventTarget = static_cast<const InteractableComponent*>( pManager->resolveComponent( _focusComponent ) );
+        const InteractionDef*        pEventDef    = pEventTarget != nullptr ? pEventTarget->getDefinition() : nullptr;
         for ( const InteractionSessionEvent event : _listSessionEvent )
         {
+            // 몽타주는 단계가 시작될 때 튼다: 시작은 첫 단계, 마지막이 아닌 단계를 끝내면 다음 단계. 취소하면 끊고 돌아간다.
+            if ( event == InteractionSessionEvent::Started )
+                _montageStep = 0;
+            else if ( event == InteractionSessionEvent::StepCompleted )
+                ++_montageStep;
+            const bool bStepStarts = event == InteractionSessionEvent::Started || event == InteractionSessionEvent::StepCompleted;
+            if ( bStepStarts && pEventDef != nullptr && 0 <= _montageStep && _montageStep < static_cast<int32>( pEventDef->_listStep.size() ) )
+                InteractorComponentInternal::playStepMontage( *pOwner, pEventDef->_listStep[static_cast<size_t>( _montageStep )], _resumeState );
+            if ( event == InteractionSessionEvent::Cancelled )
+            {
+                InteractorComponentInternal::restoreMontage( *pOwner, _resumeState );
+                _montageStep = -1;
+            }
             if ( event == InteractionSessionEvent::Completed )
+            {
+                _resumeState = hashed_string{};
+                _montageStep = -1;
                 finishSession( *pManager, *pOwner );
+            }
         }
 
         const InteractableComponent* pFocus = static_cast<const InteractableComponent*>( pManager->resolveComponent( _focusComponent ) );

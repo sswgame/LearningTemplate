@@ -70,6 +70,7 @@ namespace sw
     struct InteractionStepDef
     {
         hashed_string        _prompt{};         ///< 안내 문구 키(지역화 테이블의 키)
+        hashed_string        _montage{};        ///< 이 단계가 시작될 때 하는 쪽의 애니메이터(`SkeletalAnimatorComponent`)가 한 번 재생하는 상태 · 클립 이름. 비면 재생하지 않는다
         float32              _duration{ 1.0f }; ///< Hold 에서 쓴다. 혼자 차오르는 데 걸리는 초
         float32              _decay{ 0.5f };    ///< Mash 에서 쓴다. 쉬는 동안 초당 줄어드는 진행량(0..1)
         int32                _presses{ 5 };     ///< Mash 에서 쓴다. 끝내는 데 필요한 누름 횟수
