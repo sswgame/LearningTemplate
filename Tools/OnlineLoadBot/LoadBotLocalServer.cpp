@@ -2,31 +2,13 @@
 
 #include "OnlineLoadBot/LoadBotLocalServer.h"
 
+#include "Core/Container/StringUtil.h"
+#include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/IStreamTransport.h"
+#include "Core/Time/WallClock.h"
 
-#include "GameFramework/Base/Online/Bus/LocalServerBus.h"
-#include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
-#include "GameFramework/Base/Online/Directory/ServerRegistration.h"
-#include "GameFramework/Base/Online/Security/NetSecurity.h"
-#include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
-#include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/Service/AccountServer.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
-#include "GameFramework/Kits/Feature/Online/Chat/Server/ChatServer.h"
-#include "GameFramework/Kits/Feature/Online/Chat/Server/ChatService.h"
-#include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardServer.h"
-#include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardService.h"
-#include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsServer.h"
-#include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsService.h"
-#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchQueueService.h"
-#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchmakingServer.h"
-#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/PartyLobbyService.h"
-#include "GameFramework/Kits/Feature/Online/ServerDirectory/Server/ServerDirectoryServer.h"
-#include "GameFramework/Kits/Feature/Online/ServerDirectory/Server/ServerDirectoryService.h"
-#include "GameFramework/Kits/Feature/Online/Social/Server/GuildService.h"
-#include "GameFramework/Kits/Feature/Online/Social/Server/SocialServer.h"
-#include "GameFramework/Kits/Feature/Online/Social/Server/SocialService.h"
+#include "GameFramework/Base/Online/Server/OnlineServerConfig.h"
+#include "GameFramework/Base/Online/Server/OnlineServerRuntime.h"
 
 namespace sw
 {
@@ -34,21 +16,60 @@ namespace sw
     {
         struct LoadBotLocalServerInternal
         {
-            static constexpr int32  kUnlimitedAttemptBurst = 1000000; ///< 봇은 한 주소에서 온다 — 주소마다 제한을 사실상 끈다
-            static constexpr uint32 kLightHashMemoryKiB    = 256;     ///< 테스트용 가벼운 Argon2id
-            static constexpr uint32 kLightHashIterations   = 1;
-            static constexpr int32  kMatchTeamCount        = 2;
-            static constexpr uint64 kGameServerID          = 0x100;
-            static constexpr uint16 kGameServerPort        = 7777;
-            static constexpr uint8  kDevTicketKeyByte      = 0x5A; ///< 개발용 표 주 키(모든 바이트 같은 값) — 이 조립 밖으로 나가지 않는다
+            static constexpr int32       kUnlimitedAttemptBurst = 1000000; ///< 봇은 한 주소에서 온다 — 주소마다 제한을 사실상 끈다
+            static constexpr uint16      kGameServerPort        = 7777;
+            static constexpr const utf8* kLoopbackAddress       = "127.0.0.1";
+            static constexpr const utf8* kDefaultBoardID        = "kills";
+            static constexpr const utf8* kArrMatchMode[]        = { "solo:2x1", "duo:2x2" };
 
-            static MatchModeDefinition makeMode( string_view modeID, int32 teamSize )
+            static void addOption( OnlineServerKitEntry& outEntry, const utf8* pKey, string value )
             {
-                MatchModeDefinition mode;
-                mode._modeID    = string( modeID );
-                mode._teamCount = kMatchTeamCount;
-                mode._teamSize  = teamSize;
-                return mode;
+                OnlineServerOption& option = outEntry._listOption.emplace_back();
+                option._key                = pKey;
+                option._value              = std::move( value );
+            }
+
+            static OnlineServerKitEntry& addKit( OnlineServerConfig& outConfig, const utf8* pName )
+            {
+                OnlineServerKitEntry& entry = outConfig._listKit.emplace_back();
+                entry._name                 = pName;
+                return entry;
+            }
+
+            /** @brief 봇이 쓰는 키트 일곱과 옵션입니다. 전용 서버라면 운영자가 `<이름>.online.json` 에 적는 내용이다. */
+            static void fillConfig( const LoadBotLocalServerSettings& settings, OnlineServerConfig& outConfig )
+            {
+                outConfig._serverID               = static_cast<int32>( settings._serverID );
+                outConfig._region                 = settings._region;
+                outConfig._serverKind             = "game";
+                outConfig._publicAddress          = kLoopbackAddress; // 이 서버를 게임 서버로 등록한다 — 매칭 배정이 그리로 간다
+                outConfig._capacity               = settings._gameServerCapacity;
+                outConfig._maxConnections         = settings._maxConnections;
+                outConfig._ioThreadCount          = 0; // `tick` 이 전송을 돈다
+                outConfig._requestBurstPerRemote  = kUnlimitedAttemptBurst;
+                outConfig._requestBurstPerAccount = kUnlimitedAttemptBurst;
+
+                OnlineServerKitEntry& account = addKit( outConfig, "account" );
+                addOption( account, "attemptBurst", sw::to_string( kUnlimitedAttemptBurst ) );
+                if ( settings._bLightPasswordHash == SW_TRUE )
+                    addOption( account, "lightPasswordHash", "1" );
+                (void)addKit( outConfig, "directory" );
+                OnlineServerKitEntry& chat = addKit( outConfig, "chat" );
+                addOption( chat, "bannedWords", "none" );
+                (void)addKit( outConfig, "social" );
+                OnlineServerKitEntry& leaderboard = addKit( outConfig, "leaderboard" );
+                if ( settings._listBoardID.empty() )
+                    addOption( leaderboard, "board", kDefaultBoardID );
+                for ( const string& boardID : settings._listBoardID )
+                {
+                    addOption( leaderboard, "board", boardID );
+                }
+                OnlineServerKitEntry& matchmaking = addKit( outConfig, "matchmaking" );
+                for ( const utf8* pMode : kArrMatchMode )
+                {
+                    addOption( matchmaking, "mode", pMode );
+                }
+                (void)addKit( outConfig, "liveops" );
             }
         };
     } // namespace
@@ -56,245 +77,47 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 조립의 부품 — 선언 순서가 만들 때 쓰는 순서다(데이터 → 앞 → 서비스 → 호스트). 내리기는 `shutdown` 이 순서를 정한다. */
-    struct LoadBotLocalServer::Parts
-    {
-        MemoryServiceDatabase   _database;
-        MemoryEphemeralDatabase _cacheDatabase;
-        LocalServerBusHub       _busHub;
-        MemoryServiceStore      _store;
-        MemoryEphemeralStore    _cache;
-        LocalServerBus          _bus;
-        NetSecurityLoginCrypto  _crypto;
-        LoginService            _loginService;
-        AccountServer           _accountServer;
-        ServerDirectoryService  _directoryService;
-        ServerDirectoryServer   _directoryServer;
-        ChatService             _chatService;
-        ChatServer              _chatServer;
-        SocialService           _socialService;
-        GuildService            _guildService;
-        SocialServer            _socialServer;
-        LeaderboardService      _leaderboardService;
-        LeaderboardServer       _leaderboardServer;
-        PartyLobbyService       _partyLobby;
-        MatchQueueService       _matchQueue;
-        MatchmakingServer       _matchmakingServer;
-        LiveOpsService          _liveOpsService;
-        LiveOpsServer           _liveOpsServer;
-        ServerRegistration      _gameServer;
-        OnlineServiceHost       _host;
-
-        explicit Parts( uint64 serverID )
-            : _database{}
-            , _cacheDatabase{}
-            , _busHub{}
-            , _store{ &_database }
-            , _cache{ &_cacheDatabase }
-            , _bus{ &_busHub, serverID }
-            , _crypto{ &NetSecurity::getProvider() }
-            , _loginService{}
-            , _accountServer{}
-            , _directoryService{}
-            , _directoryServer{}
-            , _chatService{}
-            , _chatServer{}
-            , _socialService{}
-            , _guildService{}
-            , _socialServer{}
-            , _leaderboardService{}
-            , _leaderboardServer{}
-            , _partyLobby{}
-            , _matchQueue{}
-            , _matchmakingServer{}
-            , _liveOpsService{}
-            , _liveOpsServer{}
-            , _gameServer{}
-            , _host{}
-        {
-        }
-    };
-} // namespace sw
-
-namespace sw
-{
     LoadBotLocalServer::LoadBotLocalServer()
-        : _parts{}
-        , _bInitialized{ SW_FALSE }
+        : _runtime{ make_unique<OnlineServerRuntime>() }
     {
     }
 
-    LoadBotLocalServer::~LoadBotLocalServer() { shutdown(); }
+    LoadBotLocalServer::~LoadBotLocalServer()
+    {
+        shutdown();
+    }
 
     bool LoadBotLocalServer::initialize( IStreamTransport* pTransport, const LoadBotLocalServerSettings& settings, string& outError )
     {
         using Internal = LoadBotLocalServerInternal;
-        SW_ASSERT( _bInitialized == SW_FALSE );
-        _parts        = make_unique<Parts>( settings._serverID );
-        Parts& parts  = *_parts;
-        _bInitialized = SW_TRUE; // 실패해도 `shutdown` 이 올린 것까지 내린다
-
-        LoginSettings loginSettings;
-        loginSettings._attemptBurst = Internal::kUnlimitedAttemptBurst;
-        if ( settings._bLightPasswordHash == SW_TRUE )
-        {
-            loginSettings._passwordHashParams._memoryKiB      = Internal::kLightHashMemoryKiB;
-            loginSettings._passwordHashParams._iterationCount = Internal::kLightHashIterations;
-        }
-        uint8 arrTicketKey[LoginTicketAuthority::kMasterKeySize];
-        Memory::set( arrTicketKey, Internal::kDevTicketKeyByte, sizeof( arrTicketKey ) );
-        parts._loginService.initialize( &parts._store, &parts._crypto, loginSettings, arrTicketKey );
-        parts._accountServer.initialize( &parts._loginService, AccountServerSettings{} );
-
-        // 바인딩은 호스트 initialize 전에 올린다(메서드 영역 등록).
-        const bool bRegistered = parts._host.registerHostService( &parts._accountServer ) && parts._host.registerHostService( &parts._directoryServer ) &&
-                                 parts._host.registerHostService( &parts._chatServer ) && parts._host.registerHostService( &parts._socialServer ) &&
-                                 parts._host.registerHostService( &parts._leaderboardServer ) && parts._host.registerHostService( &parts._matchmakingServer ) &&
-                                 parts._host.registerHostService( &parts._liveOpsServer );
-        if ( bRegistered == false )
-        {
-            outError = "load bot local server could not register its online services";
-            return false;
-        }
-
-        OnlineServiceHostSettings hostSettings;
-        hostSettings._transportSettings._ioThreadCount  = 0;
-        hostSettings._transportSettings._maxConnections = settings._maxConnections;
-        hostSettings._listenAddress                     = NetAddress::makeLoopback( settings._port );
-        hostSettings._pServiceStore                     = &parts._store;
-        hostSettings._pEphemeralStore                   = &parts._cache;
-        hostSettings._pServerBus                        = &parts._bus;
-        hostSettings._requestBurstPerRemote             = Internal::kUnlimitedAttemptBurst;
-        hostSettings._requestBurstPerAccount            = Internal::kUnlimitedAttemptBurst;
-        if ( parts._host.initialize( pTransport, hostSettings, outError ) == false )
-            return false;
-
-        EphemeralStoreRouter* pRouter   = parts._host.getEphemeralRouter();
-        IAccountPresence*     pPresence = parts._accountServer.getPresence();
-
-        ServerDirectoryDependencies directoryDependencies;
-        directoryDependencies._pStore  = &parts._store;
-        directoryDependencies._pRouter = pRouter;
-        directoryDependencies._pBus    = &parts._bus;
-        ServerDirectorySettings directorySettings;
-        directorySettings._listServerKind.push_back( "game" );
-        parts._directoryService.initialize( directoryDependencies, directorySettings );
-        parts._directoryServer.initialize( &parts._directoryService );
-
-        ChatServiceDependencies chatDependencies;
-        chatDependencies._pStore     = &parts._store;
-        chatDependencies._pBus       = &parts._bus;
-        chatDependencies._pPresence  = pPresence;
-        chatDependencies._pDirectory = &parts._loginService;
-        chatDependencies._serverID   = settings._serverID;
-        if ( parts._chatService.initialize( chatDependencies, ChatSettings{} ) == false )
-        {
-            outError = "load bot local server could not start the chat service";
-            return false;
-        }
-        parts._chatServer.initialize( &parts._chatService );
-
-        SocialServiceDependencies socialDependencies;
-        socialDependencies._pStore  = &parts._store;
-        socialDependencies._pRouter = pRouter;
-        socialDependencies._pBus    = &parts._bus;
-        parts._socialService.initialize( socialDependencies );
-        parts._guildService.initialize( &parts._store );
-        parts._socialServer.initialize( &parts._socialService, &parts._guildService, pPresence );
-
-        LeaderboardServiceDependencies leaderboardDependencies;
-        leaderboardDependencies._pStore  = &parts._store;
-        leaderboardDependencies._pRouter = pRouter;
-        parts._leaderboardService.initialize( leaderboardDependencies );
-        vector<string> listBoardID = settings._listBoardID;
-        if ( listBoardID.empty() )
-            listBoardID.push_back( "kills" );
-        for ( const string& boardID : listBoardID )
-        {
-            LeaderboardDefinition board;
-            board._boardID = boardID;
-            if ( parts._leaderboardService.registerBoard( board ) == false )
-            {
-                outError = "load bot local server rejected leaderboard '" + boardID + "'";
-                return false;
-            }
-        }
-        parts._leaderboardServer.initialize( &parts._leaderboardService, &parts._loginService, pPresence );
-
-        parts._partyLobby.initialize( pRouter, settings._serverID );
-        MatchQueueDependencies queueDependencies;
-        queueDependencies._pRouter     = pRouter;
-        queueDependencies._pBus        = &parts._bus;
-        queueDependencies._pPartyLobby = &parts._partyLobby;
-        queueDependencies._serverID    = settings._serverID;
-        parts._matchQueue.initialize( queueDependencies, vector<MatchModeDefinition>{ Internal::makeMode( "solo", 1 ), Internal::makeMode( "duo", 2 ) } );
-        parts._matchmakingServer.initialize( &parts._partyLobby, &parts._matchQueue, nullptr, pPresence );
-
-        LiveOpsDependencies liveOpsDependencies;
-        liveOpsDependencies._pStore = &parts._store;
-        liveOpsDependencies._pBus   = &parts._bus;
-        parts._liveOpsService.initialize( liveOpsDependencies );
-        parts._liveOpsServer.initialize( &parts._liveOpsService );
-
-        ServerDescriptor gameServer;
-        gameServer._serverID = Internal::kGameServerID;
-        gameServer._kind     = "game";
-        gameServer._region   = settings._region;
-        gameServer._address  = "127.0.0.1";
-        gameServer._port     = Internal::kGameServerPort;
-        gameServer._capacity = settings._gameServerCapacity;
-        if ( parts._gameServer.initialize( pRouter, gameServer ) == false )
-        {
-            outError = "load bot local server could not register its game server";
-            return false;
-        }
-        parts._gameServer.setState( ServerState::Open );
-        return true;
+        OnlineServerRuntimeSettings runtimeSettings;
+        Internal::fillConfig( settings, runtimeSettings._config );
+        runtimeSettings._listenAddress    = NetAddress::makeLoopback( settings._port );
+        runtimeSettings._pTransport       = pTransport;
+        runtimeSettings._gamePort         = Internal::kGameServerPort;
+        runtimeSettings._bTLS             = SW_FALSE; // 봇과 테스트는 평문 루프백이다
+        runtimeSettings._bManualCacheTime = SW_TRUE;  // 캐시 만료를 `tick` 의 서비스 시각으로 잰다(가짜 시계)
+        const int64 startMs               = settings._startMs != 0 ? settings._startMs : WallClock::nowUnixMilliseconds();
+        return _runtime->initialize( std::move( runtimeSettings ), startMs, outError );
     }
 
     void LoadBotLocalServer::shutdown()
     {
-        if ( _bInitialized == SW_FALSE )
-            return;
-        _bInitialized = SW_FALSE;
-        Parts& parts  = *_parts;
-        // 키트 — 저장 일을 거두고 캐시 · 접속 상태 요청을 취소하고 구독을 푼다(호스트 · 저장소가 살아 있을 때).
-        parts._gameServer.shutdown();
-        parts._liveOpsServer.shutdown();
-        parts._liveOpsService.shutdown();
-        parts._matchmakingServer.shutdown();
-        parts._matchQueue.shutdown();
-        parts._partyLobby.shutdown();
-        parts._leaderboardServer.shutdown();
-        parts._leaderboardService.shutdown();
-        parts._socialServer.shutdown();
-        parts._guildService.shutdown();
-        parts._socialService.shutdown();
-        parts._chatServer.shutdown();
-        parts._chatService.shutdown();
-        parts._directoryServer.shutdown();
-        parts._directoryService.shutdown();
-        // 호스트 → 저장소 → (남은 완료가 로그인 서비스를 부른다) → 계정
-        parts._host.shutdown();
-        parts._store.shutdown();
-        (void)parts._store.pollCompletions();
-        parts._accountServer.shutdown();
-        parts._loginService.shutdown();
-        parts._cache.shutdown();
-        _parts.reset();
+        _runtime->shutdown();
     }
 
     void LoadBotLocalServer::tick( int64 nowMs )
     {
-        if ( _bInitialized == SW_FALSE )
-            return;
-        // 캐시의 만료(TTL)도 서비스와 같은 시계로 측정한다 — 캐시가 제 단조 시계를 쓰면 가짜 시계 · 느린 빌드에서 게임 서버 등록 · 매칭 표가 서비스 시각보다 먼저 만료된다.
-        _parts->_cacheDatabase.setManualTimeMs( nowMs );
-        _parts->_host.tick( nowMs );
-        _parts->_gameServer.tick( nowMs );
+        _runtime->tick( nowMs );
     }
 
-    OnlineServiceHost& LoadBotLocalServer::getHost() { return _parts->_host; }
+    OnlineServiceHost& LoadBotLocalServer::getHost()
+    {
+        return _runtime->getHost();
+    }
 
-    uint16 LoadBotLocalServer::getListenPort() const { return _bInitialized == SW_TRUE ? _parts->_host.getListenPort() : 0; }
+    uint16 LoadBotLocalServer::getListenPort() const
+    {
+        return _runtime->getListenPort();
+    }
 } // namespace sw

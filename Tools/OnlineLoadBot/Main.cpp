@@ -1,9 +1,10 @@
 /**
  * @file Main.cpp
- * @brief 온라인 부하 테스트 봇 — `OnlineLoadBot --scenario=<json> (--server=<ip:port> | --local-server[=<port>]) [--bots=N] [--report=<json>]
+ * @brief 온라인 부하 테스트 봇 — `OnlineLoadBot --scenario=<json> (--server=<ip:port> [--tls[=<신뢰 PEM>]] | --local-server[=<port>]) [--bots=N] [--report=<json>]
  *        [--max-error-percent=N] [--light-hash]`.
- * @details - `--local-server` 는 같은 프로세스에 서버 조립(`LoadBotLocalServer`)을 띄우고 루프백 TCP(플랫폼 전송)로 붙는다 — 전용 서버가 온라인 서비스를
- *            조립하기 전까지 키트 · 와이어 · 전송을 함께 측정하는 길이다. 서버 시각은 UTC 벽시계, 봇 지연은 `MonotonicClock`.
+ * @details - `--local-server` 는 같은 프로세스에 서버 조립(`LoadBotLocalServer` — 전용 서버와 같은 `OnlineServerRuntime`)을 띄우고 루프백 TCP(플랫폼 전송, 평문)로 붙는다.
+ *            서버 시각은 UTC 벽시계, 봇 지연은 `MonotonicClock`.
+ *          - `--server` 는 전용 서버(`Server` 의 온라인 서비스)에 붙는다. 그 서비스 포트는 TLS 1.3 이므로 `--tls` 를 함께 준다(신뢰 PEM 을 비우면 Dev 개발용 인증서).
  *          - 끝에 동작별 지연 백분위 표를 로그로, `--report` 면 JSON 을 파일로 쓴다. 오류율이 상한(기본 1 %)을 넘으면 종료 코드 1, 인자 · 시나리오 오류는 2.
  */
 #include "pch.h"
@@ -14,10 +15,13 @@
 #include "Core/Log/Logger.h"
 #include "Core/LogSink/AsyncLogSink.h"
 #include "Core/Network/NetTypes.h"
+#include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Time/MonotonicClock.h"
 #include "Core/Time/WallClock.h"
+
+#include "GameFramework/Base/Online/Security/NetSecurity.h"
 
 #include "OnlineLoadBot/LoadBotLocalServer.h"
 #include "OnlineLoadBot/LoadBotRunner.h"
@@ -65,11 +69,13 @@ namespace sw
             string _scenarioPath{};
             string _reportPath{};
             string _serverAddress{};
+            string _tlsTrustFile{}; ///< `--tls=<PEM>` — 비면 Dev 개발용 인증서를 신뢰한다
             int32  _botCount{ 0 };
             int32  _maxErrorPercent{ 1 };
             uint16 _localServerPort{ 0 };
             uint8  _bLocalServer{ SW_FALSE };
             uint8  _bLightHash{ SW_FALSE };
+            uint8  _bTLS{ SW_FALSE }; ///< 전용 서버의 서비스 포트는 TLS 1.3 이다(`--server` 와 함께)
         };
 
         struct LoadBotMainInternal
@@ -120,6 +126,10 @@ namespace sw
                     {
                         outOptions._bLightHash = SW_TRUE;
                     }
+                    else if ( argument == "--tls" || readValue( argument, "--tls=", outOptions._tlsTrustFile ) )
+                    {
+                        outOptions._bTLS = SW_TRUE;
+                    }
                     else
                     {
                         outError = "unknown argument '" + string( argument ) + "'";
@@ -136,6 +146,11 @@ namespace sw
                 if ( outOptions._scenarioPath.empty() || bNoTarget || bTwoTarget )
                 {
                     outError = "need --scenario=<json> and exactly one of --server=<ip:port> or --local-server[=<port>]";
+                    return false;
+                }
+                if ( outOptions._bTLS == SW_TRUE && outOptions._bLocalServer == SW_TRUE )
+                {
+                    outError = "--tls goes with --server (the local server listens in plaintext)";
                     return false;
                 }
                 return true;
@@ -202,6 +217,18 @@ int32 main( int32 argc, utf8* argv[] )
     {
         SW_LOG_ERROR( "OnlineLoadBot: cannot read server address '%#'", options._serverAddress );
         return Internal::kExitUsage;
+    }
+
+    unique_ptr<ITLSContext> tlsContext;
+    if ( options._bTLS == SW_TRUE )
+    {
+        tlsContext = NetSecurity::createClientTLSContext( options._tlsTrustFile, "", error );
+        if ( tlsContext == nullptr )
+        {
+            SW_LOG_ERROR( "OnlineLoadBot: TLS client context failed: %#", error );
+            return Internal::kExitUsage;
+        }
+        runnerSettings._pTLSContext = tlsContext.get();
     }
 
     unique_ptr<IStreamTransport> botTransport = StreamTransportFactory::createPlatformTransport();

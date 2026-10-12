@@ -3,7 +3,7 @@
  * @brief 전용 서버가 띄우는 온라인 서비스(로그인, 채팅, 디렉터리, 매칭 …)의 운영 설정입니다. 서버 설정 파일 옆의 `<이름>.online.json` 에서 읽습니다.
  * @details - 서버 설정이 `Config/Server/Empty.json` 이면 온라인 설정은 `Config/Server/Empty.online.json` 입니다. 파일이 없으면 온라인 서비스를 띄우지 않습니다.
  *            서비스 포트는 서버 설정의 `_servicePort`, 저장소와 캐시 항목은 서버 설정의 `_listStore` · `_listCache` 를 이름으로 가리킵니다.
- *          - 키트 항목(`_listKit`)은 이름과 키-값 옵션입니다. 비우면 이 빌드에 올라온 키트를 모두 띄웁니다. 옵션의 뜻은 키트마다 다르고 각 키트 README 에 있습니다.
+ *          - 키트 항목(`_listKit`)은 이름과 키-값 옵션입니다. 띄울 키트는 모두 적어야 합니다(비우면 기동 실패). 옵션의 뜻은 키트마다 다르고 각 키트 조립 파일(`<키트>OnlineServerKit.cpp`) 머리에 있습니다.
  *            언리얼 ini 의 서브시스템 섹션, Nakama 설정 파일의 런타임 항목에 해당합니다.
  *          - 비밀(티켓 키, DB 비밀번호)은 이 파일에 쓰지 않습니다. 옵션에는 환경 변수 이름만 둡니다(`ServerSecret::read`).
  */
@@ -50,6 +50,15 @@ namespace sw
         const string* findOption( string_view key ) const;
         /** @brief @p key 의 값을 모두 @p outListValue 뒤에 붙입니다. */
         void collectOptions( string_view key, vector<string>& outListValue ) const;
+        /** @brief @p listKnownKey 에 없는 첫 옵션 키입니다. 모두 알면 nullptr 입니다. 키트가 철자가 틀린 옵션을 조용히 넘기지 않게 기동 때 봅니다. */
+        const string* findUnknownOption( std::initializer_list<string_view> listKnownKey ) const;
+        /**
+         * @brief @p key 가 있으면 정수로 읽어 @p inoutValue 에 넣습니다. 없으면 그대로 둡니다.
+         * @return 값이 정수가 아니면 false 와 @p outError 입니다.
+         */
+        [[nodiscard]] bool readIntOption( string_view key, int32& inoutValue, string& outError ) const;
+        /** @brief @p key 가 있으면 `1` · `true` 는 참, `0` · `false` 는 거짓으로 읽습니다. 다른 값이면 false 와 @p outError 입니다. */
+        [[nodiscard]] bool readBoolOption( string_view key, bool& inoutValue, string& outError ) const;
     };
 } // namespace sw
 
@@ -61,7 +70,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        /** @brief 띄울 키트입니다. 비우면 이 빌드에 올라온 키트를 모두 띄웁니다. */
+        /** @brief 띄울 키트입니다. 설정에 적은 순서와 상관없이 키트의 시작 순서로 붙습니다. */
         PROPERTY()
         vector<OnlineServerKitEntry> _listKit{};
         /** @brief 서버 설정 `_listStore` 에서 쓸 항목 이름입니다. 비우면 첫 항목, 항목이 없으면 프로세스 안 메모리 저장소입니다. */

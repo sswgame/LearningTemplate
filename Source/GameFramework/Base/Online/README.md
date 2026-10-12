@@ -146,7 +146,8 @@ GM 도구 키트는 운영 도구와 에디터만 의존하고, 플레이어용 
   `initialize` 에서 로직과 바인딩을 만들어 호스트에 올리고 다른 키트가 쓸 기반 인터페이스(신원, 접속 상태, 세션 끊기, 이름 찾기, 차단 목록, 원장 정책)를 문맥에 내놓습니다.
   `start` 에서 라우터와 다른 키트의 인터페이스를 받아 시작합니다. 그래서 시작 순서는 인터페이스를 내놓는 키트가 먼저입니다(`OnlineServerKitOrder`).
 - **설정**은 서버 설정 옆 `<이름>.online.json`(`OnlineServerConfig`)입니다. 키트 목록과 키트마다의 키-값 옵션, 저장소와 캐시 항목 이름, 서버 id, 지역, 공개 주소를 적습니다.
-  키트 목록을 비우면 이 빌드에 올라온 키트를 모두 붙입니다. 공개 주소가 있으면 이 서버를 디렉터리에 등록하고 하트비트를 보냅니다.
+  띄울 키트는 모두 적습니다(비우면 기동 실패 — 데이터가 필요한 키트가 막고, 생각지 않은 서비스가 열리는 것을 막는다). 키트 옵션은 키트 조립 파일(`<키트>OnlineServerKit.cpp`) 머리에 있고,
+  모르는 옵션은 기동을 멈춥니다. 공개 주소가 있으면 이 서버를 디렉터리에 등록하고 하트비트를 보냅니다.
 - **전용 서버**는 서버 서비스(`OnlineServerService`, `Engine/Observability/ServerServiceRegistry`)로 런타임을 띄웁니다. 서비스 포트는 서버 설정의 `_servicePort`,
   TLS 인증서와 키는 서버 설정의 `_tlsCertificateFile` · `_tlsPrivateKeyFile`(키 암호는 `_tlsPrivateKeySecretEnvironment` 의 환경 변수)입니다.
   지표 레지스트리와 상태 레지스트리는 서버 것을 그대로 받으며, 상태 검사 `online_services` 가 준비 여부에 들어갑니다. 쓰는 법은 [Server](../../../Server/README.md)에 있습니다.

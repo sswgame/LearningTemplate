@@ -211,15 +211,11 @@ namespace sw
         vector<OnlineServerKitFactory*> listFactory;
         OnlineServerKitRegistry::collectFactories( listFactory ); // 시작 순서대로
         vector<const OnlineServerKitEntry*> listEntryByFactory( listFactory.size(), nullptr );
-        vector<OnlineServerKitEntry>        listDefaultEntry( listFactory.size() );
         if ( parts._config._listKit.empty() )
         {
-            // 비우면 이 빌드에 올라온 키트를 모두 띄운다(개발 서버의 기본).
-            for ( size_t factoryIndex = 0; factoryIndex < listFactory.size(); ++factoryIndex )
-            {
-                listDefaultEntry[factoryIndex]._name = listFactory[factoryIndex]->_pName;
-                listEntryByFactory[factoryIndex]     = &listDefaultEntry[factoryIndex];
-            }
+            // 띄울 키트는 운영자가 고른다. 빌드에 든 키트를 모두 띄우면 데이터가 필요한 키트(경제의 카탈로그)가 기동을 막고, 띄울 생각이 없던 포트가 열린다.
+            outError = "the online service config lists no kits (_listKit)";
+            return false;
         }
         for ( const OnlineServerKitEntry& entry : parts._config._listKit )
         {
