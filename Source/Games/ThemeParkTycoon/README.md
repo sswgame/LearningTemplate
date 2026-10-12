@@ -73,6 +73,7 @@ cd build/Ninja-Debug-ThemeParkTycoon/Bin
 - `Resource/game/themepark/data/coasters.xml` 은 코스터 레이아웃(조각 목록)입니다. 세 레이아웃이 회로가 닫히고 한 바퀴를 도는지 엔진 밖 하니스로 확인했습니다.
   Thunder Loop 는 흥분 6.2와 강도 8.2, Camel Hills 는 7.1과 7.6(에어타임), Little Dipper 는 2.6과 5.7 입니다.
 - `Resource/game/themepark/data/rides.xml` 은 시작 자금, 입장료, 평지 놀이기구(손으로 매긴 평가), 코스터 배치입니다. 씬에 정문이 있으면 그 위치가 손님이 드나드는 정문입니다.
+- `Resource/game/themepark/audio/themepark.audioevents.xml` 은 사운드 이벤트(`Select`, `Built`, `Blocked`)이고 `ThemeParkTycoonGame` 이 로드합니다. 모두 `ui` 버스의 2D 소리입니다.
 - 디렉터의 PROPERTY 로 프리팹 경로, 손님 색, 카메라 리그, 정문을 정합니다. 자동 건설은 베이스의 `_bAutoPlay` 이고 `-gv_parkAutoBuild=1` 도 켭니다.
 
 ## 함정과 주의
