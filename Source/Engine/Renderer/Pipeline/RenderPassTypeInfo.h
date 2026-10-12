@@ -77,6 +77,12 @@ namespace sw
         static constexpr uint32 kHasInputContract      = SW_BIT( 11 ); ///< `_inputContract` 가 이 패스의 입력을 검사한다.
         static constexpr uint32 kCullFront             = SW_BIT( 12 ); ///< PSO 기본값으로 앞면 컬링을 쓴다(인버티드 헐 외곽선). XML 은 None 으로만 바꿀 수 있다.
         static constexpr uint32 kPremultipliedAlpha    = SW_BIT( 13 ); ///< 블렌드가 켜지면 원본 색이 이미 알파를 곱한 값이다(One/InvSrcAlpha, `_bPremultipliedAlpha`).
+        /**
+         * @brief 후처리를 끈 뷰(CCTV, 표면 값 보기)에서 효과를 적용하지 않는 효과 패스다(SSAO, 블룸, 외곽선). `kGenericFullscreen` 에만 붙는다.
+         * @details 원본 색을 읽는 효과는 원본을 그대로 넘기고(같은 포맷이면 복사), 원본이 없는 효과는 타깃을 기본 클리어로 지운다.
+         *          조명과 톤맵은 효과가 아니라 이미지를 만드는 단계라 이 비트가 없다.
+         */
+        static constexpr uint32 kSkipsWithoutPostProcess = SW_BIT( 14 );
     };
 } // namespace sw
 
