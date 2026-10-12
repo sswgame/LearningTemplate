@@ -4,6 +4,9 @@
  */
 #include "pch.h"
 
+#include "Core/Module/ModuleImageUtil.h"
+#include "Core/Module/ModuleUnloadListener.h"
+
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 
 #include "TestFramework/TestFramework.h"
@@ -51,4 +54,29 @@ SW_TEST_CASE( GameServiceTest, BindingASecondInstanceOfOneTypeIsRefused )
     SW_EXPECT_TRUE( game::getService<GameServiceProbeCatalog>() == nullptr );
     game::bindLocalService<GameServiceProbeCatalog>( &second ); // 푼 뒤에는 된다(핫 리로드의 새 인스턴스)
     SW_EXPECT_TRUE( game::getService<GameServiceProbeCatalog>() == &second );
+}
+
+/**
+ * @brief [GameServiceTest] 풀지 않고 내려간 이미지가 건 로컬 서비스는 언로드 훑기가 회수한다 — 핫 리로드의 새 인스턴스가 겹침 규칙에 걸리지 않는다
+ * @details 이 테스트 이미지가 건 칸을 그 이미지의 첫 바이트만 덮는 범위로 훑는다(다른 리스너의 등록은 코드 영역을 가리키므로 건드리지 않는다).
+ */
+SW_TEST_CASE( GameServiceTest, UnloadSweepReleasesLocalServicesOfTheImage )
+{
+    ScopedProbeServiceUnbind unbind;
+    GameServiceProbeCatalog  oldInstance{ 1 };
+    GameServiceProbeCatalog  newInstance{ 2 };
+
+    const void* pTestImageBegin = nullptr;
+    const void* pTestImageEnd   = nullptr;
+    if ( ModuleImageUtil::findLoadedImageRange( reinterpret_cast<const void*>( &game::bindLocalService<GameServiceProbeCatalog> ), pTestImageBegin, pTestImageEnd ) == false )
+        return; // 이미지 범위를 읽을 수 없는 플랫폼
+
+    // 옛 인스턴스가 풀지 않은 채 언로드 차례가 온다.
+    game::bindLocalService<GameServiceProbeCatalog>( &oldInstance );
+    vector<IModuleUnloadListener::ReleaseResult> listResult;
+    IModuleUnloadListener::releaseAllWithin( pTestImageBegin, static_cast<const uint8*>( pTestImageBegin ) + 1, listResult );
+    SW_EXPECT_TRUE( game::getService<GameServiceProbeCatalog>() == nullptr );
+
+    game::bindLocalService<GameServiceProbeCatalog>( &newInstance ); // 새 인스턴스는 거절되지 않는다
+    SW_EXPECT_TRUE( game::getService<GameServiceProbeCatalog>() == &newInstance );
 }
