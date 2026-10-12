@@ -294,6 +294,8 @@ UI 의 로딩 화면 조건이 `UIAutomationSteps.cpp` 에 있습니다. 실행�
 |---|---|
 | `AutomationScenario.h` | 시나리오 파일을 읽은 값과 루트 속성 |
 | `AutomationRunner.h` | 실행기와 종료 코드(`AutomationResult`) |
+| `AutomationLogCapture.h` | 시나리오 동안의 로그 줄 수집(`<ExpectLog>` 가 센다) |
+| `AutomationReportWriter.h` | 보고 경로 · 지표 줄 · JSON 보고 쓰기 |
 | `AutomationProbe.h` | 프로브 레지스트리와 `SW_AUTOMATION_PROBE` |
 | `AutomationStepRegistry.h` | 등록 단계 레지스트리와 `SW_AUTOMATION_STEP` |
 | `AutomationImageMetric.h` | 이미지 지표 |

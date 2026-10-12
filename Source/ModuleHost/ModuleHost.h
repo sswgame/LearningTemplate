@@ -25,6 +25,8 @@ namespace sw
     class ModuleCompiler;
     class RenderThread;
     class RHI;
+    class SceneManager;
+    class UISystem;
 
     /** @brief 모듈 인스턴스를 종료할 범위입니다. `Editor` 는 호스트 모듈(App 의 에디터)이고, 그것이 없는 호스트(전용 서버)에서는 종료할 것이 없습니다. */
     enum class ModuleScope : uint8
@@ -259,6 +261,12 @@ namespace sw
         RHI*               _pRHI;               // 소유하지 않는다.
         IWindow*           _pWindow;            // 소유하지 않는다.
         RenderThread*      _pRenderThread;      // 소유하지 않는다.
+        /**
+         * @brief 프레임 경로(`beginFrame`)가 쓰는 엔진 서비스입니다. `initializeGame` 이 바인딩된 서비스 테이블에서 한 번 읽습니다(소유하지 않음).
+         * @details 비어 있으면 그 일을 건너뜁니다. 종료 · 리로드 경로는 서비스가 이미 해제됐을 수 있어 `engine::areEngineServicesBound()` 로 확인한 뒤 전역 조회를 씁니다.
+         */
+        SceneManager* _pSceneManager;
+        UISystem*     _pUISystem;
 
         // 핫 리로드 때 게임 상태를 보존하는 재사용 버퍼.
         vector<uint8> _listGameSavedState;

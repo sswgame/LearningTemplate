@@ -6,6 +6,7 @@
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
 
 namespace sw
@@ -26,7 +27,7 @@ namespace sw
     {
         if ( pso == 0 )
             return;
-        const ShaderBindingLayout& layout = _bindingLayoutCache.getOrBuild( desc, backend );
+        const ShaderBindingLayout& layout = _bindingLayoutCache.getOrBuild( desc, RHI::getShaderTargetFormat( backend ) );
         std::scoped_lock<mutex>    lock{ _layoutMutex };
         _mapPSOLayout[pso] = &layout;
         _mapPSODesc[pso]   = desc;

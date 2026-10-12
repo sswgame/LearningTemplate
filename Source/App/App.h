@@ -16,8 +16,8 @@
 
 #include "Core/Common/Types.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Time/FixedTimestep.h"
 
-#include "Engine/Config/FixedTimestep.h"
 #include "Engine/EngineLoop.h"
 #include "Engine/Module/ModuleCatalog.h"
 
