@@ -115,29 +115,35 @@ namespace sw
 
         // 풀은 **배치가 가진 메시**에서 만든다. 스냅샷 배치가 소유권을 가지고 있으므로 이 프레임 동안 살아 있다.
         // 스킨드 메시는 스킨 구간(뒤)으로, 모프를 켠 메시는 모프 구간(앞)으로 간다.
+        SW_PROFILE_SCOPE( "RT.Deform.preparePool" );
         _deform._listScratchMorphMesh.clear();
         _deform._listScratchSkinMesh.clear();
         _deform._listScratchVertexAnimationMesh.clear();
-        for ( const GPUMeshBatch& batch : _gpuScene.getAllBatches() )
+        _deform._setScratchSeenMesh.clear();
+        const auto& listBatch = _gpuScene.getAllBatches();
+        for ( const GPUMeshBatch& batch : listBatch )
         {
             Mesh* pMesh = batch._mesh.get();
             if ( pMesh == nullptr )
                 continue;
+            // 같은 메시가 여러 배치에 나올 수 있다(불투명, 투명, 뷰). 메시의 분류(VAT · 스킨 · 모프 · 없음)는 하나뿐이므로
+            // 처음 본 배치에서만 분류한다. 목록 순서는 처음 나온 순서 그대로라 풀 배치가 예전과 같다.
+            if ( _deform._setScratchSeenMesh.insert( pMesh ).second == false )
+                continue;
             // 정점 애니메이션(VAT) 메시는 컴퓨트 없이 정점 셰이더가 테이블을 읽는다. 테이블 풀로 간다.
             if ( pMesh->findVertexAnimation() != nullptr )
             {
-                if ( std::find( _deform._listScratchVertexAnimationMesh.begin(), _deform._listScratchVertexAnimationMesh.end(), pMesh ) == _deform._listScratchVertexAnimationMesh.end() )
-                    _deform._listScratchVertexAnimationMesh.push_back( pMesh );
+                _deform._listScratchVertexAnimationMesh.push_back( pMesh );
                 continue;
             }
             const bool bSkin = pMesh->hasSkin();
             if ( bSkin == false && pMesh->isGPUMorphEnabled() == false )
                 continue;
-            // 같은 메시가 여러 배치에 나올 수 있다(불투명, 투명, 뷰). 풀에는 한 번만 넣는다.
-            vector<Mesh*>& listTarget = bSkin ? _deform._listScratchSkinMesh : _deform._listScratchMorphMesh;
-            if ( std::find( listTarget.begin(), listTarget.end(), pMesh ) == listTarget.end() )
-                listTarget.push_back( pMesh );
+            ( bSkin ? _deform._listScratchSkinMesh : _deform._listScratchMorphMesh ).push_back( pMesh );
         }
+        // 중복 제거의 규모다. 배치 수 대비 고유 메시 수를 보면 이 루프가 무엇에 비례하는지 안다.
+        SW_PROFILE_COUNT( "RT.Deform.batches", listBatch.size() );
+        SW_PROFILE_COUNT( "RT.Deform.uniqueMeshes", _deform._setScratchSeenMesh.size() );
 
         _deform._meshMorphPool.rebuild( _pDevice, _deform._listScratchMorphMesh, _deform._listScratchSkinMesh );
         _deform._meshMorphPool.uploadSkinPalettes( _pDevice, _gpuScene.getSkinPalettes(), _gpuScene.findSkinPaletteRows(), _gpuScene.findMorphWeights() );
