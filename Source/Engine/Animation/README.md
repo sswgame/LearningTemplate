@@ -273,6 +273,7 @@ Weight[i] = 1 / dist(p, p[i])^2,   NormalizedWeight[i] = Weight[i] / ΣWeight
 | `ParentSwitch` | 본의 부모를 바꿉니다. 바꾸는 순간 튀지 않습니다 |
 | `Distance`, `LimitRotation` | 거리와 회전 범위를 제한합니다 |
 | `TwistDistribution` | 손의 비틀림을 팔뚝 본들에 나눕니다 |
+| `ScaleBone` | 본의 로컬 스케일에 값을 곱합니다. 0 이면 자손까지 숨깁니다(1인칭 머리 숨기기) |
 | `PoseDriver` | 관절 각도로 보정 모프와 본을 구동합니다(RBF) |
 | `SpringChain` | 꼬리, 머리카락, 망토 같은 2차 움직임을 시뮬레이션합니다 |
 

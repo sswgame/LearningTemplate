@@ -439,6 +439,46 @@ namespace sw
             uint32            _source{ 0 };
         };
 
+        /**
+         * @brief 본 스케일입니다. 키는 `bone`, `scale`(로컬 스케일에 곱할 [x, y, z], 기본 0)입니다.
+         * @details 스케일 0 은 그 본과 자손에 스킨된 정점을 본 원점으로 모아 숨긴다. 1인칭에서 머리만 숨기는 데 쓴다(언리얼 HideBoneByName 과 같은 방식).
+         *          `weight_slot` 으로 켜고 끄면 가중치 섞기가 스케일을 1 에서 목표까지 보간한다.
+         */
+        class RigScaleBoneNode final : public RigNode
+        {
+        public:
+            unique_ptr<RigNode> clone() const override { return make_unique<RigScaleBoneNode>( *this ); }
+            const utf8*         getTypeName() const override { return "ScaleBone"; }
+
+            [[nodiscard]] bool parse( RigJSONReader& reader ) override
+            {
+                const bool bOk = reader.readName( "bone", _boneName, true ) && reader.readFloat3( "scale", _scale, false );
+                if ( bOk && ( _scale._x < 0.0f || _scale._y < 0.0f || _scale._z < 0.0f ) )
+                {
+                    reader.fail( "'scale' must not be negative" );
+                    return false;
+                }
+                return bOk;
+            }
+
+            bool bind( const RigBindContext& context ) override { return context.findBone( _boneName, _bone ); }
+
+            void evaluate( RigEvaluateContext& context ) override
+            {
+                RigPoseBuffer& pose  = *context._pPose;
+                BoneTransform  local = pose.getLocal( _bone );
+                local._scale         = float3{ local._scale._x * _scale._x, local._scale._y * _scale._y, local._scale._z * _scale._z };
+                pose.setLocal( _bone, local );
+            }
+
+            void collectWrittenBones( vector<uint32>& inoutListBone ) const override { inoutListBone.push_back( _bone ); }
+
+        private:
+            float3        _scale{ 0.0f, 0.0f, 0.0f };
+            hashed_string _boneName{};
+            uint32        _bone{ 0 };
+        };
+
         struct RigConstraintNodesFactory
         {
             static unique_ptr<RigNode> createCopyTransform() { return createCopy( RigCopyTransformNode::Mode::CopyTransform ); }
@@ -454,6 +494,7 @@ namespace sw
             static unique_ptr<RigNode> createDistance() { return make_unique<RigDistanceNode>(); }
             static unique_ptr<RigNode> createLimitRotation() { return make_unique<RigLimitRotationNode>(); }
             static unique_ptr<RigNode> createTwistDistribution() { return make_unique<RigTwistDistributionNode>(); }
+            static unique_ptr<RigNode> createScaleBone() { return make_unique<RigScaleBoneNode>(); }
         };
     } // namespace
 } // namespace sw
@@ -469,5 +510,6 @@ namespace sw
         registry.registerNode( "Distance", &RigConstraintNodesFactory::createDistance );
         registry.registerNode( "LimitRotation", &RigConstraintNodesFactory::createLimitRotation );
         registry.registerNode( "TwistDistribution", &RigConstraintNodesFactory::createTwistDistribution );
+        registry.registerNode( "ScaleBone", &RigConstraintNodesFactory::createScaleBone );
     }
 } // namespace sw

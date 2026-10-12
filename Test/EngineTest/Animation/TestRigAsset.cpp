@@ -461,8 +461,36 @@ SW_TEST_CASE( RigAssetTest, MinScreenSizeTurnsNodeOffWhenSmallOnScreen )
     SW_EXPECT_FALSE( instance.isNodeLODOff( 0 ) );
     SW_EXPECT_TRUE( listModel[2].getTranslation()._x > listReference[2].getTranslation()._x + 1e-3f ); // 중력 쪽으로 처졌다
 
-    RigAsset negative;
+    test::ScopedDefensiveTestLog expected( "negative min_screen_size is rejected" );
+    RigAsset                     negative;
     SW_EXPECT_FALSE( negative.parseJSON( R"({ "nodes": [ { "type": "SpringChain", "name": "Tail", "bones": ["bone1", "bone2"], "min_screen_size": -1 } ] })", "test" ) );
+}
+
+/**
+ * @brief [RigAssetTest] `ScaleBone` — 스케일 0 이면 자손이 그 본 원점으로 모이고(1인칭 머리 숨기기), 시퀀서 슬롯 0 이면 그대로다. 음수 스케일은 로드 오류다
+ */
+SW_TEST_CASE( RigAssetTest, ScaleBoneCollapsesDescendantsBySlot )
+{
+    const Skeleton    skeleton = test::makeChainSkeleton( 3 );
+    const string_view json     = R"({ "nodes": [ { "type": "ScaleBone", "name": "HideHead", "bone": "bone1", "weight_slot": "FirstPerson" } ] })";
+    RigInstance       instance;
+    SW_ASSERT_TRUE( instance.initialize( TestRigAssetInternal::parseRig( json ), skeleton, nullptr, "test" ) );
+
+    Pose             pose;
+    vector<float4x4> listModel;
+    instance.setSlotWeight( "FirstPerson", 0.0f );
+    instance.prepare( RigPrepareContext{} );
+    TestRigAssetInternal::evaluateReference( instance, skeleton, pose, listModel );
+    SW_EXPECT_TRUE( TestRigAssetInternal::isNear( float3{ 0.0f, 2.0f, 0.0f }, listModel[2].getTranslation(), 1e-5f ) );
+
+    instance.setSlotWeight( "FirstPerson", 1.0f );
+    instance.prepare( RigPrepareContext{} );
+    TestRigAssetInternal::evaluateReference( instance, skeleton, pose, listModel );
+    SW_EXPECT_TRUE( TestRigAssetInternal::isNear( float3{ 0.0f, 1.0f, 0.0f }, listModel[2].getTranslation(), 1e-5f ) );
+
+    test::ScopedDefensiveTestLog expected( "negative bone scale is rejected" );
+    RigAsset                     negative;
+    SW_EXPECT_FALSE( negative.parseJSON( R"({ "nodes": [ { "type": "ScaleBone", "name": "A", "bone": "bone1", "scale": [1, -1, 1] } ] })", "test" ) );
 }
 
 /**

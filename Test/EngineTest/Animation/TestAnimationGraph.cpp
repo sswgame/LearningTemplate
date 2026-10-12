@@ -281,6 +281,7 @@ SW_TEST_CASE( AnimationGraphTest, InvalidBlendSpaceIsLoadError )
         R"({ "nodes": [ { "id": 1, "name": "A", "blend_space": { "x": "Speed", "samples": [ { "x": 1 } ] } } ] })",
         R"({ "nodes": [ { "id": 1, "name": "A", "blend_space": { "samples": [ { "clip": "Idle", "x": 1 } ] } } ] })",
     };
+    test::ScopedDefensiveTestLog expected( "invalid blend space nodes are rejected" );
     for ( const string_view bad : arrBad )
     {
         AnimationGraphAsset graph;
