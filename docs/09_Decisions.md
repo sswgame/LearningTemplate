@@ -494,7 +494,8 @@
   패키징과 런타임이 같은 테이블(`Config/Engine/CookContract.json` 의 `target_excluded_asset_kinds`)을 읽습니다. 언리얼이 전용 서버에서 텍스처와 사운드 로드를 건너뛰는 것과 같은 목적입니다.
 - **App · Server 가 같이 쓰는 모듈 호스트는 최상위 폴더 `Source/ModuleHost` 입니다**(2026-10-10, 사용자 결정 — 옛 이름 `AppHost`, 같은 날 안의 클래스 `ModuleHost` 와 이름을 맞췄다). 실행 파일 폴더(`Source/App`) 안에 두고 정규식으로 골라 내던 것을 폴더째 나눴고,
   `CheckEngineLayers` 가 방향(App · Server → ModuleHost → Engine · RuntimeAPI)을 지킵니다. 언리얼이 실행 파일 진입점(`Launch`)과 모듈 관리자(`Core` 의 `FModuleManager`)를 다른 모듈에 두는 것과 같습니다.
-  고정 스텝 시간 정책 `FixedTimestep` 은 모듈 호스트가 아니라 `Engine/Config`(티어 3, 값을 가진 `EngineConfig` 옆)에 둡니다 — 언리얼도 고정 시간 값(`FApp::FixedDeltaTime`)과 프레임 시간 계산(`UEngine::UpdateTimeAndHandleMaxTickRate`)을 모듈 관리자 밖에 둡니다.
+  고정 스텝 시간 정책 `FixedTimestep` 은 모듈 호스트가 아니라 Core(`Core/Time`, `GameTimer` 옆)에 둡니다 — 언리얼도 고정 시간 값(`FApp::FixedDeltaTime`, Core 모듈)과 프레임 시간 계산(`UEngine::UpdateTimeAndHandleMaxTickRate`)을 모듈 관리자 밖에 둡니다.
+  기본값은 Core 가 정하지 않고 만들 때 받습니다(App 이 `EngineConfig` 의 초기값을 넘긴다 — 출처 하나). 2026-10-13 에 `Engine/Config` 에서 옮겼습니다(엔진 의존이 기본값 하나뿐이었다).
 - **`ModuleHost` 는 게임 모듈만 다루고, 에디터 몫은 App 의 파생 `EditorModuleHost`(`Source/App`)가 맡습니다**(2026-10-10). 전용 서버는 기반 클래스만 쓰고 모드 플래그(`_bDedicatedServer`)가 없습니다 — RHI 를 받았는지가 "디바이스가 있어야 게임을 만든다" 를 정합니다.
   에디터가 끼어드는 자리는 기반의 보호 가상 함수 다섯이고, 내리는 순서(`suspendModules`)는 기반 한 곳에 남습니다. 언리얼이 런타임 `UGameEngine` 과 `UEditorEngine` 을 파생으로 가르는 것과 같은 방향이며, 에디터 몫을 서버 바이너리에서 뺍니다.
 - **에디터 뷰포트 격자는 카메라 높이로 1 · 10 · 100 m 간격을 고르고 경계에서 섞습니다**(2026-10-10). 언리얼 · 유니티의 에디터 격자와 같은 방식이며, 굵은 선(5 칸마다)은 월드 좌표로 정하고 가장자리는 흐립니다. 화면 공간 셰이더 격자(Unity 2019+ · Godot 4)는 렌더 패스를 하나 더 들여야 해 ImGui 선 그리기를 유지합니다.

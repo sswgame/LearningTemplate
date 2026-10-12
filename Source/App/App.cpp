@@ -43,6 +43,19 @@ namespace sw
             static constexpr uint32 kEditorMinClientWidth  = 960;
             static constexpr uint32 kEditorMinClientHeight = 540;
         };
+
+        /** @brief 엔진 설정에서 프레임 시간 정책 값을 꺼냅니다(기본값의 출처는 `EngineConfig` 의 초기값 하나다). */
+        struct AppTimeInternal
+        {
+            static FixedTimestepParams makeFixedTimestepParams( const EngineConfig& config )
+            {
+                FixedTimestepParams params;
+                params._maxFrameDeltaTime    = config._maxFrameDeltaTime;
+                params._fixedDeltaTime       = config._fixedDeltaTime;
+                params._maxFixedStepPerFrame = config._maxFixedStepPerFrame;
+                return params;
+            }
+        };
     } // namespace
 
     /**
@@ -64,7 +77,7 @@ namespace sw
         , _moduleHost{ nullptr }
         , _window{ nullptr }
         , _automationSession{ nullptr }
-        , _fixedTimestep{}
+        , _fixedTimestep{ AppTimeInternal::makeFixedTimestepParams( EngineConfig{} ) }
         , _backendSwap{}
         , _userSettingsHost{}
         , _sceneViewCameraProvider{}
@@ -126,9 +139,7 @@ namespace sw
         // 자동화 시나리오는 엔진 기동이 끝난 지금, 모듈을 올리기 전에 시작한다(첫 단계의 시작 조건이 모듈 · 씬이 설 때까지 기다린다).
         startAutomationSession( *pCommandLineManager );
 
-        _fixedTimestep.configure( pEngineConfig->_maxFrameDeltaTime,
-                                  pEngineConfig->_fixedDeltaTime,
-                                  pEngineConfig->_maxFixedStepPerFrame );
+        _fixedTimestep.configure( AppTimeInternal::makeFixedTimestepParams( *pEngineConfig ) );
         // 에디터가 Config/ 를 감시해 다시 읽으면(ConfigManager::reloadConfigFile) 프레임 시간 정책도 따라간다.
         pConfigManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &App::onConfigReloaded, this ) );
 
@@ -464,7 +475,7 @@ namespace sw
         const ConfigManager* pConfigManager = _engineLoop.getConfigManager();
         const EngineConfig*  pEngineConfig  = pConfigManager != nullptr ? pConfigManager->getConfig<EngineConfig>() : nullptr;
         if ( pEngineConfig != nullptr )
-            _fixedTimestep.configure( pEngineConfig->_maxFrameDeltaTime, pEngineConfig->_fixedDeltaTime, pEngineConfig->_maxFixedStepPerFrame );
+            _fixedTimestep.configure( AppTimeInternal::makeFixedTimestepParams( *pEngineConfig ) );
     }
 
     bool App::onWindowMessage( const NativeWindowEvent& event )
