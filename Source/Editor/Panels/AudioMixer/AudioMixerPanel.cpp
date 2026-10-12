@@ -79,16 +79,10 @@ namespace sw::editor
                     (void)pContext->getPanelManager().setPanelOpen( "audiomixer", true ); // 패널은 이 파일에 등록되어 있다
             }
 
-            /** @brief 오디오 데이터 감시기입니다. 프레임 단계가 처음 돌 때 켠다. */
-            static AudioDataHotReload& getHotReload()
+            /** @brief 오디오 데이터 감시를 켭니다. 프레임 단계가 처음 돌 때 부른다. 감시기는 `EditorContext` 가 소유한다(소멸을 DLL 정리에 맡기면 종료가 매달린다). */
+            static void runHotReloadStep( EditorContext& context )
             {
-                static AudioDataHotReload s_hotReload;
-                return s_hotReload;
-            }
-
-            static void runHotReloadStep( EditorContext& /*context*/ )
-            {
-                AudioDataHotReload& hotReload = getHotReload();
+                AudioDataHotReload& hotReload = context.getAudioDataHotReload();
                 if ( hotReload.isWatching() == false )
                 {
                     static bool s_bTried = false; // 리소스 루트가 없으면(팩만 있는 실행) 한 번만 시도한다
@@ -127,7 +121,10 @@ namespace sw::editor
 
             [[nodiscard]] static bool readReloadCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = static_cast<float64>( getHotReload().getReloadCount() );
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pContext->getAudioDataHotReload().getReloadCount() );
                 return true;
             }
         };

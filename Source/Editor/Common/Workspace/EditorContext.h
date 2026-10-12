@@ -15,6 +15,7 @@ namespace sw
 namespace sw::editor
 {
     class AssetHotReload;
+    class AudioDataHotReload;
     class ConfigHotReload;
     class EditorAssetValidation;
     class EditorCommandRegistry;
@@ -86,6 +87,12 @@ namespace sw::editor
         AssetHotReload&     getAssetHotReload() { return *_pAssetHotReload; }
         /** @brief `Config/` 설정 파일 감시입니다. */
         ConfigHotReload& getConfigHotReload() { return *_pConfigHotReload; }
+        /**
+         * @brief 오디오 데이터(믹서 · 이벤트 라이브러리) 감시입니다.
+         * @details 컨텍스트가 소유한다. 모듈의 함수 정적 객체로 두면 DLL 을 내릴 때(로더 락을 쥔 채) 소멸자가 감시 스레드를 join 하는데,
+         *          그 스레드는 끝나려면 같은 로더 락이 필요해 종료가 매달린다.
+         */
+        AudioDataHotReload& getAudioDataHotReload() { return *_pAudioDataHotReload; }
         /** @brief 에디터 셸의 도킹 레이아웃을 반환합니다. 소유자는 `ImGuiEditor` 입니다. 셸이 만들어지기 전이면 nullptr 입니다. */
         EditorDockLayout* findDockLayout() const { return _pDockLayout; }
         /** @brief 셸이 도킹 레이아웃을 알립니다. 종료할 때는 nullptr 을 넘깁니다. */
@@ -142,6 +149,7 @@ namespace sw::editor
         unique_ptr<EditorPopupManager>         _pPopupManager;
         unique_ptr<AssetHotReload>             _pAssetHotReload;
         unique_ptr<ConfigHotReload>            _pConfigHotReload;
+        unique_ptr<AudioDataHotReload>         _pAudioDataHotReload;
         unique_ptr<EditorAssetValidation>      _pAssetValidation;
         unique_ptr<EditorSourceControl>        _pSourceControl;
         unique_ptr<InspectorComponentManager>  _pInspectorComponentManager;

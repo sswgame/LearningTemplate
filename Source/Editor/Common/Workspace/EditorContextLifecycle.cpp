@@ -28,6 +28,7 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Panels/AudioMixer/AudioDataHotReload.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
 #include "Editor/Panels/Inspector/InspectorComponentManager.h"
@@ -92,6 +93,7 @@ namespace sw::editor
         _pPopupManager              = make_unique<EditorPopupManager>();
         _pAssetHotReload            = make_unique<AssetHotReload>();
         _pConfigHotReload           = make_unique<ConfigHotReload>();
+        _pAudioDataHotReload        = make_unique<AudioDataHotReload>();
         _pAssetValidation           = make_unique<EditorAssetValidation>();
         _pSourceControl             = sw::make_unique<EditorSourceControl>( EditorPaths::getProjectRootPath() );
         _pInspectorComponentManager = make_unique<InspectorComponentManager>();
@@ -139,6 +141,7 @@ namespace sw::editor
         _pInspectorPropertyManager.reset();
         _pInspectorComponentManager.reset();
         _pConfigHotReload.reset();
+        _pAudioDataHotReload.reset();
         _pSourceControl.reset();
         _pAssetValidation.reset();
         _pAssetHotReload.reset();

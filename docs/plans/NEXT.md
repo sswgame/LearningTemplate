@@ -3,19 +3,9 @@
 새 세션은 이 문서를 먼저 읽습니다. 배치 경계마다 적용 담당이 고쳐 씁니다. 끝난 항목은 지웁니다(한 일은 `git log`, 교훈은 영역 README · 결정 기록 · 검증 문서에 있다).
 작업 방식은 [작업 방식](../11_Workflow.md), 남은 일 전체는 [백로그](../06_Backlog.md)(분류 A~H)입니다.
 
-## 최우선 (2026-10-13 아침 기준)
+## 최우선 (2026-10-13 기준) — 에디터 종료 교착은 풀렸다(함정 절 참고)
 
-**에디터를 켠 채(`-EnableEditor`) 종료하면 프로세스가 끝나지 않고 매달린다.** 병합 전(`b4f2301e6`)에는 정상이었고 병합 후에 생겼다 — `hostgpu` 의 에디터 시나리오가 전부 시나리오마다
-정확히 3분(감시 한도 180 초)씩 걸려 강제 종료되는 것이 증상이다. 확인한 것:
-- 에디터 **없이** `App.exe -unattended -scenario=engine/automation/uinavigation.scenario.xml -dx12` → 3.2 초에 정상 종료(exit 0).
-- 에디터를 **켜고** 시나리오 없이 `App.exe -unattended -EnableEditor -gv_profileFrames=60 -dx12` → 40 초가 넘어도 안 끝남. 즉 시나리오와 무관한 에디터 종료 경로 결함이다.
-- 종료 로그는 `AudioService Shut down` 뒤 `LiveReloadManager` 가 모듈을 알파벳 **역순**으로 내리다(`Unloading module …`) **실행마다 다른 모듈**(`GF_ClassicJRPG` 뒤, `GF_CoopScavenger` 뒤)에서 끊긴다 → 특정 모듈이 아니라 **시간에 따른 교착(경쟁)**이다.
-- `GF_Editor_Admin` · `GF_Editor_Base` 매니페스트를 치워도 여전히 매달린다 → 그 둘은 원인이 아니다.
-- 새로 스레드를 만드는 곳은 `Box2DWorkerPool` 뿐인데 `_workerCount2D` 기본이 1 이라 꺼져 있다 → 원인 아님. `Source/App` · `Source/ModuleHost` 는 병합에서 거의 안 바뀌었다(`SwapBackend` 단계 파일 하나, `EngineLoop.cpp` 2줄).
-- 디버거(cdb · windbg · procdump)가 이 PC 에 없다. 덤프를 읽을 도구가 없으니 **분기 이분법**으로 좁힌다: `b4f2301e6` 을 별도 워크트리에서 지어 정상임을 확인한 뒤 `git bisect` 로 병합 커밋 17 개(`git log --merges b4f2301e6..HEAD`) 중 첫 불량을 찾는다. 후보 우선순위: 종료 때 비동기 작업을 남기는 변경 — 오디오 핫 리로드 감시(`wvSys` 의 `findEventLibraryName` 와 `wvEdA` 의 `AudioDataHotReload` 가 **중복**으로 파일 감시를 건다), UI 미리보기(`wvEdB`), `GameObject::_siblingIndex`, 서버 서비스 레지스트리(`wvNet`), 파일 감시 디스패처. `drainTasksBeforeUnload()` 가 `_drainWorkers`(렌더 스레드)를 기다리는 곳도 의심한다.
-- 이 결함이 풀리기 전에는 `hostgpu` 를 돌려도 의미가 없다(에디터 시나리오 약 160 개가 3 분씩). 풀기 전 임시로 `AppTest` 에서 에디터 시나리오를 빼고 돌리거나, 시나리오 감시 한도를 줄여라.
-
-**그 밖에 `hostgpu` 에서 확인한 실패**(교착 때문에 일부만 봤다):
+**`hostgpu` 에서 확인한 실패**(교착 때문에 일부만 봤다 — 이제 전체를 다시 돌려 볼 수 있다):
 - `RenderPassGPUTest.TransparentOrderMatchesAcrossBackends` — Vulkan `readbackTexture2D: vkQueueSubmit failed`, 3 회 모두 재현. 병합 전에는 통과 → 그래픽스 회귀(후보: `wvShadow` PassCB 512 → 768 · 그림자 아틀라스, `wvGfx` 반해상도 블룸 · 업스케일, P1 RHI 정리). Vulkan 검증 레이어 오류는 없고 파이프라인 생성 경고(`Output at Location 6 … no corresponding Input`)만 있다.
 - DX12 그림자 테스트: `그림자 맵을 비워도 그림이 같다 — 그림자가 하나도 지지 않는다 (최대 차이 0)` — 그림자가 안 그려진다(`wvShadow`).
 - 에디터 시나리오 `editorstartup`: `Expect Editor.PanelCount == 30, got 35` — 새 패널 5 개로 옛 기대 숫자가 틀림(시나리오 숫자만 고치면 된다). 다른 시나리오의 개수 기대도 같은 이유로 틀릴 수 있다.
@@ -63,6 +53,7 @@
 
 ## 알아 둘 함정 (이 세션에서)
 
+- **모듈 안 함수 정적 객체의 소멸자에서 스레드를 join 하지 말 것.** DLL 을 내릴 때 정적 소멸자는 로더 락을 쥔 채 돈다. 감시 스레드는 끝나려면 같은 락이 필요해 종료가 영원히 매달린다(`AudioDataHotReload` 가 `static` 이던 때, 매번 다른 모듈에서 끊겨 보였다). 스레드를 가진 객체는 `EditorContext` 처럼 수명이 명시적인 소유자에 둔다. 디버거가 없어도 `Get-Process` 스레드 CPU 시간으로 교착(CPU 0)을 가리고 dbghelp `StackWalk64` 로 스택을 뽑을 수 있다.
 - **`castTo<Component>( Component*, 타입 )` 은 항상 성공한다**(To == From). 컴포넌트 목록에서 종류를 거를 때는 `forEachComponentOfType<Component>( 타입, … )` 를 쓰지 말고 `pComponent->getTypeInfo()->isDerivedFrom( 타입 )` 으로 직접 검사한다(`NavGeometryCollector` 에서 고침).
 - thread_local 스크래치는 종료 보고 뒤에야 해제돼 메모리 태그가 "기준선보다 늘었다"로 보인다 → 종료 때 비우는 `releaseScratch` 를 둔다(`UIPaintPass`). 새 스크래치(물리 step, 모프 풀 해시 셋, NetHost 아레나 …)도 `AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline` 로 확인.
 - 새 `SW_API`/`SW_GF_API` 클래스가 테스트나 다른 모듈에서 쓰이면 선언에 매크로를 붙이고 `Core/Common/Macros.h` 를 직접 include 한다(`NetChallenge` · `NetSlotTable` · `NetPacketSealer` · `GimmickNodeKind` · `MaterialUtil` 에서 링크 오류).
