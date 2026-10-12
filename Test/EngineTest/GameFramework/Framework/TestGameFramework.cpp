@@ -25,11 +25,9 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "EngineTest/StateReloadTestUtil.h"
 #include "EngineTest/TestGameObjectMocks.h"
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleSaveState.h"
-#include "GameFramework/Base/Actor/Camera/Follow2DCameraComponent.h"
 #include "GameFramework/Base/Actor/Control/Intent/ControlIntent.h"
 #include "GameFramework/Base/Foundation/Data/GameSettings.h"
 #include "GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.h"
@@ -2543,134 +2541,6 @@ SW_TEST_CASE( GameFrameworkTest, GameSettings_UnreadableValueFallsBackInsteadOfB
     // 멀쩡한 값은 그대로다.
     gameSettings._mapCustomProperty["goodInt"] = "8";
     SW_EXPECT_EQUAL( 8, gameSettings.getCustomPropertyInt( "goodInt", 6 ) );
-}
-
-/**
- * @brief [GameFrameworkTest] `shake()` 는 **실제로 떨리고** 0 으로 잦아든다
- * @details `_shakeFrequency` 의 기본은 0 이다. `shake()` 가 그것을 정하지 않으면 코드로 부른 흔들림은 `sin( t * 0 ) = 0`
- *          · `cos( t * 0 ) = 1` 이 되어 **떨리지 않고 한쪽으로 밀린 채** 있다가 툭 돌아온다. 위상을 남은 시간으로
- *          계산하면 끝나기 직전이 가장 크게 튄다.
- */
-SW_TEST_CASE( GameFrameworkTest, CameraShakeOscillatesAndDecaysToZero )
-{
-    Follow2DCameraComponent camera;
-    SW_EXPECT_TRUE( camera.isShaking() == false );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, camera.getShakeOffset()._x, 1e-5f );
-
-    camera.shake( 10.0f, 1.0f );
-    SW_ASSERT_TRUE( camera.isShaking() );
-
-    // 흔들림이 도는 동안 x 가 **부호를 바꾼다** — 밀려 있기만 하면 이것이 안 일어난다.
-    bool    bSawPositiveX{ false };
-    bool    bSawNegativeX{ false };
-    float32 maxAbsY{ 0.0f };
-    float32 lateAbsY{ 0.0f };
-    for ( int32 frameIndex = 0; frameIndex < 60; ++frameIndex )
-    {
-        camera.onTick( 1.0f / 60.0f );
-        const float2 offset = camera.getShakeOffset();
-        if ( offset._x > 0.1f )
-            bSawPositiveX = true;
-        if ( offset._x < -0.1f )
-            bSawNegativeX = true;
-        maxAbsY = MathUtil::max( maxAbsY, MathUtil::abs( offset._y ) );
-        if ( frameIndex >= 55 )
-            lateAbsY = MathUtil::max( lateAbsY, MathUtil::abs( offset._y ) );
-    }
-
-    SW_EXPECT_TRUE_MSG( bSawPositiveX && bSawNegativeX, "흔들리지 않고 한쪽으로 밀려 있기만 합니다" );
-    SW_EXPECT_TRUE_MSG( lateAbsY < maxAbsY * 0.3f, "끝날 무렵에도 크기가 안 줄었습니다" );
-
-    // 시간이 다 되면 정확히 0 이다 — 툭 끊기지 않는다.
-    camera.onTick( 1.0f );
-    SW_EXPECT_TRUE( camera.isShaking() == false );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, camera.getShakeOffset()._x, 1e-5f );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, camera.getShakeOffset()._y, 1e-5f );
-}
-
-/**
- * @brief [GameFrameworkTest] 2D 따라가기 카메라는 놓인 자리를 지키고, 흔들림은 끝나면 그 자리로 돌아오며, 따라가기는 시킬 때만 한다
- * @details 기준은 주인이 놓인 자리(지난 틱의 흔들림을 걷어 낸 자리)이고, 목표 쪽으로는 속도를 줄 때만 간다(`setTargetPosition` ·
- *          `setFollowSpeed`). 컨트롤러가 자기 위치 사본(기본 원점)을 매 틱 주인에 덮어쓰면 이 컴포넌트를 단 카메라는 놓은 자리와 상관없이
- *          **원점에 박힌다.**
- */
-SW_TEST_CASE( GameFrameworkTest, Follow2DCameraKeepsItsPlaceAndFollowsOnlyWhenAsked )
-{
-    GameObjectManager        manager;
-    GameObject*              pCamera     = manager.createGameObject( hashed_string( "Camera2D" ) );
-    SceneComponent*          pScene      = pCamera->addComponent<SceneComponent>();
-    Follow2DCameraComponent* pController = pCamera->addComponent<Follow2DCameraComponent>();
-    SW_ASSERT_TRUE( pScene != nullptr && pController != nullptr );
-    pScene->setLocalPosition( float3( 5.0f, 3.0f, -10.0f ) );
-
-    constexpr float32 kFrame = 1.0f / 60.0f;
-    for ( int32 frameIndex = 0; frameIndex < 10; ++frameIndex )
-    {
-        pController->onTick( kFrame );
-    }
-    SW_EXPECT_NEAR_EQUAL( 5.0f, pScene->getLocalPosition()._x, 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 3.0f, pScene->getLocalPosition()._y, 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( -10.0f, pScene->getLocalPosition()._z, 1e-4f );
-
-    // 흔들고 나면 놓인 자리로 돌아온다.
-    pController->shake( 2.0f, 0.25f );
-    for ( int32 frameIndex = 0; frameIndex < 30; ++frameIndex )
-    {
-        pController->onTick( kFrame );
-    }
-    SW_EXPECT_FALSE( pController->isShaking() );
-    SW_EXPECT_NEAR_EQUAL( 5.0f, pScene->getLocalPosition()._x, 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 3.0f, pScene->getLocalPosition()._y, 1e-4f );
-
-    // 시키면 따라간다.
-    pController->setTargetPosition( float2( 20.0f, 3.0f ) );
-    pController->setFollowSpeed( 10.0f );
-    for ( int32 frameIndex = 0; frameIndex < 120; ++frameIndex )
-    {
-        pController->onTick( kFrame );
-    }
-    SW_EXPECT_NEAR_EQUAL( 20.0f, pScene->getLocalPosition()._x, 0.05f );
-    SW_EXPECT_NEAR_EQUAL( 3.0f, pScene->getLocalPosition()._y, 1e-4f );
-}
-
-/**
- * @brief [GameFrameworkTest] 흔들리는 중에 상태를 다시 읽은 카메라도 흔들림이 끝나면 놓인 자리로 돌아온다
- * @details 주인 위치에는 지난 틱의 흔들림이 얹힌 채 저장된다. 얹은 흔들림(`_appliedShake`)을 저장하지 않으면 다시 읽은 컨트롤러가 그것을 걷어 내지 못해
- *          그 오프셋이 카메라 자리에 영영 남는다(플레이 중 되돌리기 · 핫 리로드).
- */
-SW_TEST_CASE( GameFrameworkTest, CameraShakeOffsetDoesNotSurviveAStateReload )
-{
-    GameObjectManager        manager;
-    GameObject*              pCamera     = manager.createGameObject( hashed_string( "Camera2D" ) );
-    SceneComponent*          pScene      = pCamera->addComponent<SceneComponent>();
-    Follow2DCameraComponent* pController = pCamera->addComponent<Follow2DCameraComponent>();
-    SW_ASSERT_TRUE( pScene != nullptr && pController != nullptr );
-    pScene->setLocalPosition( float3( 5.0f, 3.0f, -10.0f ) );
-    manager.beginPlay();
-
-    constexpr float32 kFrame = 1.0f / 60.0f;
-    pController->shake( 2.0f, 0.5f );
-    for ( int32 frameIndex = 0; frameIndex < 5; ++frameIndex )
-    {
-        pController->onTick( kFrame );
-    }
-    const float3 shaken = pScene->getLocalPosition();
-    SW_ASSERT_TRUE_MSG( MathUtil::abs( shaken._x - 5.0f ) > 1e-3f || MathUtil::abs( shaken._y - 3.0f ) > 1e-3f, "흔들림이 위치에 얹히지 않았습니다" );
-
-    SW_ASSERT_TRUE( StateReloadTestUtil::reloadInPlace( pCamera ) );
-    pScene      = pCamera->getComponent<SceneComponent>();
-    pController = pCamera->getComponent<Follow2DCameraComponent>();
-    SW_ASSERT_TRUE( pScene != nullptr && pController != nullptr );
-    SW_EXPECT_TRUE( pController->isShaking() );
-
-    for ( int32 frameIndex = 0; frameIndex < 60; ++frameIndex )
-    {
-        pController->onTick( kFrame );
-    }
-    SW_EXPECT_FALSE( pController->isShaking() );
-    SW_EXPECT_NEAR_EQUAL( 5.0f, pScene->getLocalPosition()._x, 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 3.0f, pScene->getLocalPosition()._y, 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( -10.0f, pScene->getLocalPosition()._z, 1e-4f );
 }
 
 /**

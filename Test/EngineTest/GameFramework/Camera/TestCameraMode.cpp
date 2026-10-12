@@ -473,6 +473,98 @@ SW_TEST_CASE( CameraModeTest, DirectorReportsCutsOnce )
 }
 
 /**
+ * @brief [CameraModeTest] XY 평면 따라가기(2D)는 초점의 X · Y 를 따르고 Z 는 카메라 평면에 두며, 이동 키는 화면 위(+Y) · 오른쪽(+X)으로 민다
+ * @details 땅(XZ) 기준 모드로 2D 씬을 풀면 카메라가 초점 위(+Y)로 올라가 평면을 옆에서 본다.
+ */
+SW_TEST_CASE( CameraModeTest, FollowXYTracksThePlaneAndKeepsTheCameraPlane )
+{
+    CameraPresetDef def;
+    def._view._mode          = CameraPresetMode::FollowXY;
+    def._view._offset        = float3{ 0.0f, 1.0f, -10.0f };
+    def._input._panSpeed     = 2.0f;
+    def._confiner._bBounds   = true;
+    def._confiner._boundsMin = float3{ -100.0f, -100.0f, -100.0f };
+    def._confiner._boundsMax = float3{ 8.0f, 100.0f, 100.0f };
+    CameraTarget target;
+    target._focus = float3{ 5.0f, 3.0f, 0.0f };
+
+    CameraModeState  state;
+    const CameraPose pose = evaluateCameraMode( def, target, 0.0f, state, nullptr );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, pose._position._x, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 4.0f, pose._position._y, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( -10.0f, pose._position._z, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, CameraModeTestInternal::computeForward( pose._rotation )._z, 1.0e-5f ); // 평면을 본다
+
+    CameraModeInput input;
+    input._pan = float2{ 1.0f, 0.0f }; // 앞(화면 위) 1 초
+    applyCameraInput( def, input, 1.0f, state );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, state._panOffset._y, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, state._panOffset._z, 1.0e-5f );
+
+    target._focus            = float3{ 20.0f, 3.0f, 0.0f }; // 상자 밖 — X 만 묶인다
+    const CameraPose bounded = evaluateCameraMode( def, target, 0.0f, state, nullptr );
+    SW_EXPECT_NEAR_EQUAL( 8.0f, bounded._position._x, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 6.0f, bounded._position._y, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( -10.0f, bounded._position._z, 1.0e-5f );
+}
+
+/**
+ * @brief [CameraModeTest] 2D 디렉터 — 감쇠로 대상을 따라가고, 충격은 실제로 떨리다가(부호가 바뀐다) 끝나면 따라가던 자리로 정확히 돌아온다
+ * @details 흔들림은 포즈 위에 마지막으로 얹는 오프셋이라 다음 프레임 포즈에 남지 않는다. 트랜스폼에 흔들림을 더해 두고 다음 틱에 걷어 내는 방식은
+ *          상태를 다시 읽으면(핫 리로드) 그 오프셋이 영영 남는다.
+ */
+SW_TEST_CASE( CameraModeTest, FollowXYDirectorDampsAndShakesBackToItsPlace )
+{
+    CameraPresetDef def;
+    def._id                    = hashed_string( "side" );
+    def._view._mode            = CameraPresetMode::FollowXY;
+    def._view._offset          = float3{ 0.0f, 0.0f, -10.0f };
+    def._lens._bOrthographic   = true;
+    def._damping._positionTime = 0.1f;
+    BlendCurveDef cut;
+    cut._curve = BlendCurve::Cut;
+
+    CameraDirector director;
+    director.activatePreset( def, cut );
+    CameraTarget target;
+    target._focus          = float3{ 5.0f, 3.0f, 0.0f };
+    const CameraPose start = director.step( 1.0f / 60.0f, target );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, start._position._x, 1.0e-5f ); // 새로 켠 프리셋은 그 자리에서 시작한다
+    SW_EXPECT_TRUE( start._bOrthographic == SW_TRUE );
+
+    target._focus            = float3{ 20.0f, 3.0f, 0.0f };
+    const CameraPose lagging = director.step( 1.0f / 60.0f, target );
+    SW_EXPECT_TRUE( lagging._position._x > 5.0f && lagging._position._x < 20.0f ); // 감쇠 — 한 프레임에 붙지 않는다
+    for ( int32 frameIndex = 0; frameIndex < 120; ++frameIndex )
+    {
+        (void)director.step( 1.0f / 60.0f, target );
+    }
+    SW_EXPECT_NEAR_EQUAL( 20.0f, director.getPose()._position._x, 1.0e-3f );
+
+    CameraImpulseDef impulse;
+    impulse._amplitude = 2.0f;
+    impulse._duration  = 0.5f;
+    impulse._frequency = 40.0f;
+    director.addImpulse( impulse, target._focus );
+    bool bSawPositive = false;
+    bool bSawNegative = false;
+    for ( int32 frameIndex = 0; frameIndex < 20; ++frameIndex )
+    {
+        const float32 offsetX = director.step( 1.0f / 60.0f, target )._position._x - 20.0f;
+        bSawPositive          = bSawPositive || offsetX > 0.05f;
+        bSawNegative          = bSawNegative || offsetX < -0.05f;
+    }
+    SW_EXPECT_TRUE_MSG( bSawPositive && bSawNegative, "흔들리지 않고 한쪽으로 밀려 있기만 합니다" );
+    for ( int32 frameIndex = 0; frameIndex < 30; ++frameIndex )
+    {
+        (void)director.step( 1.0f / 60.0f, target );
+    }
+    SW_EXPECT_NEAR_EQUAL( 20.0f, director.getPose()._position._x, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, director.getPose()._position._y, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( -10.0f, director.getPose()._position._z, 1.0e-4f );
+}
+
+/**
  * @brief [CameraModeTest] 직교 리그(직교 모드 + 디렉터)는 시작 요에서 바로 시작하고(0 에서 돌아 들어오지 않는다) 초점을 블렌드 없이 따라간다
  */
 SW_TEST_CASE( CameraModeTest, OrthoRigStartsAtItsYawAndFollowsTheFocus )

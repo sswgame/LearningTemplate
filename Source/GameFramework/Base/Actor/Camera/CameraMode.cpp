@@ -143,9 +143,11 @@ namespace sw
         if ( inputDef._panSpeed > 0.0f && ( input._pan._x != 0.0f || input._pan._y != 0.0f ) )
         {
             // 지금 보이는 요 기준이다 — 화면 위쪽이 앞이다. 직교는 확대할수록 느리게(화면에서 보이는 빠르기가 같다).
-            const float32 yaw = def._view._yaw + inoutState._yawOffset + inoutState._rotateYawShown;
-            const float3  forward{ MathUtil::sin( yaw ), 0.0f, MathUtil::cos( yaw ) };
-            const float3  right{ forward._z, 0.0f, -forward._x };
+            // XY 평면(2D)은 화면 위가 +Y, 오른쪽이 +X 다.
+            const float32 yaw     = def._view._yaw + inoutState._yawOffset + inoutState._rotateYawShown;
+            const bool    bPlanar = def._view._mode == CameraPresetMode::FollowXY;
+            const float3  forward = bPlanar ? float3{ 0.0f, 1.0f, 0.0f } : float3{ MathUtil::sin( yaw ), 0.0f, MathUtil::cos( yaw ) };
+            const float3  right   = bPlanar ? float3{ 1.0f, 0.0f, 0.0f } : float3{ forward._z, 0.0f, -forward._x };
             const float32 zoom    = inoutState._zoom > 0.0f ? inoutState._zoom : def._lens._orthoHeight;
             const float32 scale   = ( bOrtho && def._lens._orthoHeight > 0.0f ) ? zoom / def._lens._orthoHeight : 1.0f;
             inoutState._panOffset = inoutState._panOffset + ( forward * input._pan._x + right * input._pan._y ) * ( inputDef._panSpeed * scale * MathUtil::max( 0.0f, deltaTime ) );
@@ -282,6 +284,18 @@ namespace sw
                 bArm     = true;
                 bCompose = true;
                 break;
+            }
+            case CameraPresetMode::FollowXY:
+            {
+                // 2D 씬은 Y 가 위인 땅(XZ)이 아니라 XY 평면이다 — 카메라는 초점 위가 아니라 카메라 평면(오프셋 Z)에 서서 평면을 본다.
+                pose._position = float3{ pivot._x, pivot._y, view._offset._z };
+                if ( confiner._bBounds )
+                {
+                    const float3 clamped = CameraModeInternal::clampToBounds( confiner, pose._position );
+                    pose._position       = float3{ clamped._x, clamped._y, pose._position._z };
+                }
+                pose._rotation = quaternion::makeFromYawPitchRoll( yaw, CameraModeInternal::clampPitch( confiner, pitch ), 0.0f );
+                return pose;
             }
         }
 
