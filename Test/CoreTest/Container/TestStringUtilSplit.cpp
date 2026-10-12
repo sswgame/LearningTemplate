@@ -1,4 +1,4 @@
-// StringUtil 의 나누기 도우미 — forEachLine 의 CRLF · 빈 줄 · 끝 줄바꿈, forEachToken 의 빈 토큰, 둘 다 false 에서 멈추는지.
+// StringUtil 의 나누기 도우미 — forEachLine 의 CRLF · 빈 줄 · 끝 줄바꿈, forEachToken 의 빈 토큰, 둘 다 false 에서 멈추는지, parseFloatList 가 숫자 아닌 토큰과 개수 상한에서 멈추는지.
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
@@ -52,4 +52,20 @@ SW_TEST_CASE( StringUtilSplitTest, ForEachTokenSkipsEmptyTokensAndStops )
         return token != "b";
     } );
     SW_EXPECT_EQUAL( 2u, count );
+}
+
+SW_TEST_CASE( StringUtilSplitTest, ParseFloatListStopsAtBadTokenAndMaxCount )
+{
+    float32 arrValue[3]{ 9.0f, 9.0f, 9.0f };
+    SW_EXPECT_EQUAL( 3u, StringUtil::parseFloatList( "(1, 0.5 -2)", " ,()", arrValue, 3 ) );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, arrValue[0], 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, arrValue[1], 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( -2.0f, arrValue[2], 1e-6f );
+
+    SW_EXPECT_EQUAL( 2u, StringUtil::parseFloatList( "4 5 6 7", " ", arrValue, 2 ) );
+    SW_EXPECT_NEAR_EQUAL( -2.0f, arrValue[2], 1e-6f ); // 상한 뒤 칸은 그대로
+
+    SW_EXPECT_EQUAL( 1u, StringUtil::parseFloatList( "8 x 9", " ", arrValue, 3 ) );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, arrValue[1], 1e-6f ); // 못 읽은 칸은 그대로
+    SW_EXPECT_EQUAL( 0u, StringUtil::parseFloatList( "", " ", arrValue, 3 ) );
 }

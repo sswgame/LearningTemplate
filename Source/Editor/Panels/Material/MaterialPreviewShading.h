@@ -36,7 +36,7 @@ namespace sw::editor
      */
     struct MaterialPreviewShading
     {
-        /** @brief 글(`"1 0 0 1"` · `"1,0,0,1"`)에서 실수를 @p count 개까지 읽고 읽은 수를 돌려줍니다. 못 읽은 칸은 0 입니다. */
+        /** @brief 글(`"1 0 0 1"` · `"1,0,0,1"`)에서 실수를 @p count 개까지 읽고 읽은 수를 돌려줍니다. 먼저 모든 칸을 0 으로 채우고, 숫자가 아닌 토큰에서 멈춥니다. */
         static uint32 parseFloats( string_view text, float32* pOut, uint32 count );
         /** @brief 머티리얼 값 목록에서 미리보기 값을 모읍니다(지금 값, 비었으면 기본값). */
         static MaterialPreviewInputs readInputs( const vector<MaterialProperty>& listProperty );

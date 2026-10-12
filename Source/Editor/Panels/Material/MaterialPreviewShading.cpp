@@ -4,7 +4,6 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/string_splitter.h"
 
 #include "Engine/Graphics/Material/MaterialTypes.h"
 
@@ -76,20 +75,7 @@ namespace sw::editor
         {
             pOut[index] = 0.0f;
         }
-        if ( text.empty() )
-            return 0;
-        const string_splitter splitter( text, { ",", " ", "\t" } );
-        uint32                filled{ 0 };
-        for ( const string_view token : splitter.getSplitList() )
-        {
-            if ( filled >= count )
-                break;
-            if ( token.empty() )
-                continue;
-            (void)StringUtil::parseFloat( token, pOut[filled] ); // 화면 표시 — 못 읽은 칸은 0
-            ++filled;
-        }
-        return filled;
+        return StringUtil::parseFloatList( text, ", \t", pOut, count );
     }
 
     MaterialPreviewInputs MaterialPreviewShading::readInputs( const vector<MaterialProperty>& listProperty )

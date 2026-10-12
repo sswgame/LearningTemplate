@@ -58,26 +58,7 @@ namespace sw
             [[nodiscard]] static bool parseFloat3( string_view text, float3& outValue )
             {
                 float32 arrValue[3]{};
-                uint32  count  = 0;
-                size_t  cursor = 0;
-                while ( cursor < text.size() && count < 3 )
-                {
-                    while ( cursor < text.size() && text[cursor] == ' ' )
-                    {
-                        ++cursor;
-                    }
-                    const size_t tokenBegin = cursor;
-                    while ( cursor < text.size() && text[cursor] != ' ' )
-                    {
-                        ++cursor;
-                    }
-                    if ( cursor == tokenBegin )
-                        break;
-                    if ( StringUtil::parseFloat( text.substr( tokenBegin, cursor - tokenBegin ), arrValue[count] ) == false )
-                        return false;
-                    ++count;
-                }
-                if ( count != 3 )
+                if ( StringUtil::parseFloatList( text, " ", arrValue, 3 ) != 3 )
                     return false;
                 outValue = float3{ arrValue[0], arrValue[1], arrValue[2] };
                 return true;

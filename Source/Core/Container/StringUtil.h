@@ -292,6 +292,13 @@ namespace sw
         [[nodiscard]] static bool parseFloat( string_view token, float32& outValue );
 
         /**
+         * @brief @p separators 로 나뉜 실수(`"1 0.5 0"` · `"(1, 2, 3)"`)를 앞에서부터 최대 @p maxCount 개 읽고 읽은 개수를 반환합니다(할당 없음).
+         * @details 숫자가 아닌 토큰을 만나면 거기서 멈춥니다. @p maxCount 개를 읽은 뒤의 토큰은 보지 않습니다.
+         *          읽지 못한 칸은 바꾸지 않으므로, 개수가 꼭 맞아야 하면 반환값을 @p maxCount 와 비교합니다.
+         */
+        static uint32 parseFloatList( string_view text, string_view separators, float32* pOutValue, uint32 maxCount );
+
+        /**
          * @brief string_view 토큰을 64비트 실수로 파싱합니다(할당 없음).
          * @return 성공하면 true, 실패하면 false(outValue 는 바꾸지 않습니다)
          */
