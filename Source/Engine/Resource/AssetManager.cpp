@@ -10,7 +10,7 @@
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/Cache/BuiltInAssetCache.h"
 #include "Engine/Resource/Cache/IAssetCache.h"
-#include "Engine/Resource/Pack/ResourcePackManager.h"
+#include "Engine/Resource/Pack/ResourcePakManager.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 namespace sw
@@ -36,7 +36,7 @@ namespace sw
         : _assetDatabase{}
         , _assetFormatRegistry{}
         , _listOwnedAssetCache{}
-        , _pPackManager{ make_unique<ResourcePackManager>() }
+        , _pPackManager{ make_unique<ResourcePakManager>() }
         , _listBuiltInAssetCache{}
         , _registeredAssetCache{}
         , _contentSource{ ContentSource::Cooked }
@@ -255,12 +255,12 @@ namespace sw
         return *pCache;
     }
 
-    ResourcePackManager& AssetManager::getPackManager()
+    ResourcePakManager& AssetManager::getPackManager()
     {
         return *_pPackManager;
     }
 
-    const ResourcePackManager& AssetManager::getPackManager() const
+    const ResourcePakManager& AssetManager::getPackManager() const
     {
         return *_pPackManager;
     }

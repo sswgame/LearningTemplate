@@ -1,5 +1,5 @@
 /**
- * @file PackCompressionUtil.h
+ * @file ResourcePakCompressionUtil.h
  * @brief 팩의 압축 종류(`PackCompressionType`, 디스크 번호)를 압축 코덱 레지스트리의 종류(`CompressionCodecType`)로 잇는 표와 코덱 조회입니다.
  *
  * 두 enum 은 서로 다른 파일의 독립된 디스크 포맷이라 값이 다릅니다(팩 Zlib=2 · 스트림 LZ4=2). 숫자를 건너다니지 않고 **이 표 한 곳**에서
@@ -10,15 +10,15 @@
 #include "Core/Common/Types.h"
 #include "Core/Compression/ICompressionCodec.h"
 
-#include "Engine/Resource/Pack/ResourcePackTypes.h"
+#include "Engine/Resource/Pack/ResourcePakTypes.h"
 
 namespace sw
 {
     /**
-     * @struct PackCompressionUtil
+     * @struct ResourcePakCompressionUtil
      * @brief 팩 압축 종류 ↔ 코덱 종류 표와, 그 종류의 코덱을 레지스트리에서 찾는 창구입니다.
      */
-    struct SW_API PackCompressionUtil
+    struct SW_API ResourcePakCompressionUtil
     {
         /** @brief 표 한 줄입니다. */
         struct CodecMapping
@@ -29,7 +29,7 @@ namespace sw
 
         /**
          * @brief 팩이 아는 코덱 종류입니다. `Custom` 은 팩을 쿠킹한 쪽이 정의하는 것이라 엔진이 모르므로 줄이 없습니다.
-         * @details 팩 종류를 늘리면 여기 한 줄입니다. 빠뜨리면 `ResourcePackTest.EveryPackCodecRoundTrips` 가 리플렉션된
+         * @details 팩 종류를 늘리면 여기 한 줄입니다. 빠뜨리면 `ResourcePakTest.EveryPackCodecRoundTrips` 가 리플렉션된
          *          `PackCompressionType` 의 모든 값을 돌며 짚습니다.
          */
         static constexpr CodecMapping kArrCodecMapping[] = {

@@ -5,7 +5,7 @@
  *          파일은 방금 쓴 것이라 OS 파일 캐시에 올라 있다 — 측정하는 것은 디스크가 아니라 읽기 경로(잠금 · 시스템 호출 · 복사 · 해제)의 비용이다.
  *
  *          측정하는 것:
- *          - `ResourcePackReader::readFile` 을 한 스레드에서 항목마다(직렬 바닥).
+ *          - `ResourcePakReader::readFile` 을 한 스레드에서 항목마다(직렬 바닥).
  *          - 같은 것을 `engine::runParallel` 로 워커마다(읽기 경로가 잠금으로 줄을 서는지).
  *          - `AssetStreamingQueue::requestAssetData` 로 전부 요청하고 `update` 로 완료를 다 받을 때까지(에셋 스트리밍의 끝에서 끝).
  *          비압축 팩과 LZ4 팩을 같은 내용으로 측정한다.
@@ -24,11 +24,11 @@
 #include "Engine/Common/EngineParallel.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
-#include "Engine/Resource/Pack/ResourcePackManager.h"
-#include "Engine/Resource/Pack/ResourcePackReader.h"
+#include "Engine/Resource/Pack/ResourcePakManager.h"
+#include "Engine/Resource/Pack/ResourcePakReader.h"
 #include "Engine/Resource/ResourceIO.h"
 
-#include "EngineTest/ResourcePackTestUtil.h"
+#include "EngineTest/ResourcePakTestUtil.h"
 
 #include "TestFramework/TestBench.h"
 #include "TestFramework/TestFramework.h"
@@ -93,7 +93,7 @@ namespace
     /** @brief 벤치 한 판이 센 것 — 워커가 쓰므로 원자다. */
     sw::atomic<uint32> s_okCount{ 0 };
     /** @brief 병렬 판이 읽는 리더(워커는 이 포인터만 만진다). */
-    const sw::ResourcePackReader* s_pReader{ nullptr };
+    const sw::ResourcePakReader* s_pReader{ nullptr };
 
     struct PackReadBenchBody
     {
@@ -121,7 +121,7 @@ namespace
         }
 
         sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packreadbench" ), pName );
-        if ( sw::test::ResourcePackTestUtil::createPackFile( packPath, 0, compression, listFile ) == false )
+        if ( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, compression, listFile ) == false )
             packPath.clear();
         return packPath;
     }
@@ -129,7 +129,7 @@ namespace
     /** @brief 한 팩을 세 방법으로 재고 줄을 찍습니다. 모두 제대로 읽었으면 true. */
     bool benchPack( const sw::string& packPath, const utf8* pLabel )
     {
-        sw::ResourcePackReader reader;
+        sw::ResourcePakReader reader;
         if ( reader.open( packPath ) == false )
             return false;
         s_pReader = &reader;
@@ -141,7 +141,7 @@ namespace
         bool              bAllRead = true;
 
         // 스트리밍 큐는 전역 VFS 를 읽는다 — 이 팩을 가장 높은 우선순위로 올렸다가 내린다.
-        sw::ResourcePackManager& packManager = sw::ResourceIO::getPackManager();
+        sw::ResourcePakManager& packManager = sw::ResourceIO::getPackManager();
         if ( packManager.mountPack( packPath, 1000 ) == false )
             return false;
 

@@ -258,7 +258,7 @@ cd build/Ninja-Debug/Bin
 - **ThreadSanitizer 는 이 리눅스 환경의 clang 18 에 런타임이 없다** — clang 으로 `-fsanitize=thread` 컴파일하고 링크만 gcc 의
   `/usr/lib/x86_64-linux-gnu/libtsan.so.2` 를 직접 붙이면 돈다(`setarch -R` 으로 ASLR 을 끈다). 일부러 만든 경합을 잡는 것까지 확인했다(2026-10-03,
   `NetworkThreadTest`). 잠금 · 스레드를 바꾼 뒤 그 테스트만 이렇게 돌린다.
-- **레이어 때문에 지금 자리가 가장 낮은 합법 자리인 파일 셋**(`PackCompressionUtil` · `ObjectUndoUtil` · `GPULight.h`)은 README 에
+- **레이어 때문에 지금 자리가 가장 낮은 합법 자리인 파일 셋**(`ResourcePakCompressionUtil` · `ObjectUndoUtil` · `GPULight.h`)은 README 에
   이유가 있다 — 다시 "잘못 놓였다" 로 옮기지 말 것.
 - **에디터 확장의 순서는 등록 순서가 아니라 `SW_EDITOR_*` 의 order 키다.** 등록이 빠지거나 순서가 바뀐 것은 `AppSmokeTest.EditorRegistriesKeepTheirOrder`
   (`-gv_editorRegistryDump=1`, hostgpu)만 잡는다 — 패널 · 메뉴를 고치면 hostgpu 를 돌릴 것.

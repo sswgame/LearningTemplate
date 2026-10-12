@@ -9,7 +9,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/Pack/ResourcePackManager.h"
+#include "Engine/Resource/Pack/ResourcePakManager.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 namespace sw
@@ -71,8 +71,8 @@ namespace sw
                 return false;
             }
 
-            ResourcePackManager& packManager = ResourceIO::getPackManager();
-            const bool           bLooseFirst = packManager.isAllowLooseFiles();
+            ResourcePakManager& packManager = ResourceIO::getPackManager();
+            const bool          bLooseFirst = packManager.isAllowLooseFiles();
 
             // 낱개 경로는 **여기서 한 번만** 푼다.
             string loosePath;
@@ -170,8 +170,8 @@ namespace sw
         if ( FileUtil::isAbsolutePath( relativePath ) )
             return FileUtil::exists( relativePath );
 
-        const string         normalizedKey = FileUtil::normalizePath( relativePath );
-        ResourcePackManager& packManager   = getPackManager();
+        const string        normalizedKey = FileUtil::normalizePath( relativePath );
+        ResourcePakManager& packManager   = getPackManager();
 
         if ( packManager.hasFile( normalizedKey ) )
             return true;
@@ -188,7 +188,7 @@ namespace sw
         return false;
     }
 
-    ResourcePackManager& ResourceIO::getPackManager()
+    ResourcePakManager& ResourceIO::getPackManager()
     {
         return engine::getAssetManager().getPackManager();
     }

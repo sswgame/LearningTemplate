@@ -12,7 +12,7 @@
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/Image/DDSLoader.h"
-#include "Engine/Resource/Pack/ResourcePackManager.h"
+#include "Engine/Resource/Pack/ResourcePakManager.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -642,14 +642,14 @@ SW_TEST_CASE( ResourceTest, AssetStreamingQueueDataRequest )
 }
 
 /**
- * @brief [ResourceTest] AssetManager의 ResourcePackManager 소유권 및 라이프사이클 검증
+ * @brief [ResourceTest] AssetManager의 ResourcePakManager 소유권 및 라이프사이클 검증
  */
 SW_TEST_CASE( ResourceTest, AssetManagerPackManagerOwnership )
 {
     sw::AssetManager resManager;
     SW_ASSERT_TRUE( resManager.initialize() );
 
-    sw::ResourcePackManager& packMgr = resManager.getPackManager();
+    sw::ResourcePakManager& packMgr = resManager.getPackManager();
     SW_EXPECT_NOT_NULL( &packMgr );
 
     resManager.shutdown();
@@ -1030,8 +1030,8 @@ SW_TEST_CASE( ResourceTest, ParentDirectoryIDsAreRefused )
 SW_TEST_CASE( ResourceTest, PackOnlyModeRefusesAbsolutePathsIntoTheResourceRoot )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    sw::ResourcePackManager& packManager = sw::ResourceIO::getPackManager();
-    const bool               bWasLoose   = packManager.isAllowLooseFiles();
+    sw::ResourcePakManager& packManager = sw::ResourceIO::getPackManager();
+    const bool              bWasLoose   = packManager.isAllowLooseFiles();
 
     const sw::string insideRoot  = sw::FileUtil::joinPath( sw::ResourcePaths::getRootFolderPath(), "game/empty/maps/editortest.scene.xml" );
     const sw::string outsideRoot = test::makeTempPath( "sw_test_pack_only_outside.txt" );

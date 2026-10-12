@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Resource/Pack/ResourcePackReader.h"
+#include "Engine/Resource/Pack/ResourcePakReader.h"
 
 #include "Core/Common/Defines.h"
 #include "Core/Common/StdHeaders.h"
@@ -14,19 +14,19 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Resource/Pack/PackCompressionUtil.h"
+#include "Engine/Resource/Pack/ResourcePakCompressionUtil.h"
 
 namespace sw
 {
     namespace
     {
-        SW_LOG_CALLER( "ResourcePackReader" );
+        SW_LOG_CALLER( "ResourcePakReader" );
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    ResourcePackReader::ResourcePackReader()
+    ResourcePakReader::ResourcePakReader()
         : _fileMutex{}
         , _file{}
         , _packFilePath{}
@@ -36,12 +36,12 @@ namespace sw
     {
     }
 
-    ResourcePackReader::~ResourcePackReader()
+    ResourcePakReader::~ResourcePakReader()
     {
         close();
     }
 
-    ResourcePackReader::ResourcePackReader( ResourcePackReader&& other ) noexcept
+    ResourcePakReader::ResourcePakReader( ResourcePakReader&& other ) noexcept
         : _fileMutex{}
         , _file{}
         , _packFilePath{}
@@ -53,7 +53,7 @@ namespace sw
         takeFromLocked( other );
     }
 
-    ResourcePackReader& ResourcePackReader::operator=( ResourcePackReader&& other ) noexcept
+    ResourcePakReader& ResourcePakReader::operator=( ResourcePakReader&& other ) noexcept
     {
         if ( this != &other )
         {
@@ -64,7 +64,7 @@ namespace sw
         return *this;
     }
 
-    void ResourcePackReader::takeFromLocked( ResourcePackReader& other )
+    void ResourcePakReader::takeFromLocked( ResourcePakReader& other )
     {
         _file            = std::move( other._file );
         _packFilePath    = std::move( other._packFilePath );
@@ -74,7 +74,7 @@ namespace sw
         other._file.close();
     }
 
-    bool ResourcePackReader::open( string_view packFilePath )
+    bool ResourcePakReader::open( string_view packFilePath )
     {
         std::scoped_lock<mutex> lock( _fileMutex );
         close();
@@ -152,7 +152,7 @@ namespace sw
         return true;
     }
 
-    void ResourcePackReader::close()
+    void ResourcePakReader::close()
     {
         _file.close();
         _packFilePath.clear();
@@ -161,24 +161,24 @@ namespace sw
         _stringPoolBytes.clear();
     }
 
-    bool ResourcePackReader::isOpen() const
+    bool ResourcePakReader::isOpen() const
     {
         std::scoped_lock<mutex> lock( _fileMutex );
         return _file.isValid();
     }
 
-    bool ResourcePackReader::hasFile( uint64 pathHash ) const
+    bool ResourcePakReader::hasFile( uint64 pathHash ) const
     {
         std::scoped_lock<mutex> lock( _fileMutex );
         return _mapEntry.find( pathHash ) != _mapEntry.end();
     }
 
-    bool ResourcePackReader::hasFile( string_view relativePath ) const
+    bool ResourcePakReader::hasFile( string_view relativePath ) const
     {
         return hasFile( StringUtil::computeHash64( relativePath ) );
     }
 
-    bool ResourcePackReader::getFileEntry( uint64 pathHash, PackFileEntry& outEntry ) const
+    bool ResourcePakReader::getFileEntry( uint64 pathHash, PackFileEntry& outEntry ) const
     {
         std::scoped_lock<mutex> lock( _fileMutex );
         auto                    it = _mapEntry.find( pathHash );
@@ -189,12 +189,12 @@ namespace sw
         return true;
     }
 
-    bool ResourcePackReader::getFileEntry( string_view relativePath, PackFileEntry& outEntry ) const
+    bool ResourcePakReader::getFileEntry( string_view relativePath, PackFileEntry& outEntry ) const
     {
         return getFileEntry( StringUtil::computeHash64( relativePath ), outEntry );
     }
 
-    bool ResourcePackReader::makeReadPlan( uint64 pathHash, PackReadPlan& outPlan, AsyncFileHandle& outFile ) const
+    bool ResourcePakReader::makeReadPlan( uint64 pathHash, PackReadPlan& outPlan, AsyncFileHandle& outFile ) const
     {
         std::scoped_lock<mutex> lock( _fileMutex );
         if ( _file.isValid() == false )
@@ -215,7 +215,7 @@ namespace sw
         return true;
     }
 
-    bool ResourcePackReader::decodeStoredBytes( const PackReadPlan& plan, string_view packPath, vector<uint8>& storedBytes, vector<uint8>& outBytes )
+    bool ResourcePakReader::decodeStoredBytes( const PackReadPlan& plan, string_view packPath, vector<uint8>& storedBytes, vector<uint8>& outBytes )
     {
         // 1. 비압축(Raw) 항목은 읽은 버퍼가 곧 결과다(중간 버퍼 할당과 복사가 없다).
         if ( plan._compression == PackCompressionType::None )
@@ -250,7 +250,7 @@ namespace sw
         return true;
     }
 
-    bool ResourcePackReader::readFile( uint64 pathHash, vector<uint8>& outBytes ) const
+    bool ResourcePakReader::readFile( uint64 pathHash, vector<uint8>& outBytes ) const
     {
         PackReadPlan    plan{};
         AsyncFileHandle file;
@@ -271,12 +271,12 @@ namespace sw
         return decodeStoredBytes( plan, file.getPath(), storedBytes, outBytes );
     }
 
-    bool ResourcePackReader::readFile( string_view relativePath, vector<uint8>& outBytes ) const
+    bool ResourcePakReader::readFile( string_view relativePath, vector<uint8>& outBytes ) const
     {
         return readFile( StringUtil::computeHash64( relativePath ), outBytes );
     }
 
-    bool ResourcePackReader::readTextFile( string_view relativePath, string& outText ) const
+    bool ResourcePakReader::readTextFile( string_view relativePath, string& outText ) const
     {
         vector<uint8> bytes;
         if ( readFile( relativePath, bytes ) == false )
@@ -287,7 +287,7 @@ namespace sw
         return true;
     }
 
-    AsyncReadHandle ResourcePackReader::readFileAsync( AsyncFileIO& io, uint64 pathHash, AsyncIOPriority priority, const ResourceReadCompleteDelegate& onComplete ) const
+    AsyncReadHandle ResourcePakReader::readFileAsync( AsyncFileIO& io, uint64 pathHash, AsyncIOPriority priority, const ResourceReadCompleteDelegate& onComplete ) const
     {
         PackReadPlan    plan{};
         AsyncFileHandle file;
@@ -309,31 +309,31 @@ namespace sw
         } ) );
     }
 
-    const PackHeader& ResourcePackReader::getHeader() const
+    const PackHeader& ResourcePakReader::getHeader() const
     {
         std::scoped_lock<mutex> lock( _fileMutex );
         return _header;
     }
 
-    uint32 ResourcePackReader::getDlcAppID() const
+    uint32 ResourcePakReader::getDlcAppID() const
     {
         std::scoped_lock<mutex> lock( _fileMutex );
         return _header._dlcAppID;
     }
 
-    uint32 ResourcePackReader::getFileCount() const
+    uint32 ResourcePakReader::getFileCount() const
     {
         std::scoped_lock<mutex> lock( _fileMutex );
         return _header._fileCount;
     }
 
-    const string& ResourcePackReader::getPackPath() const
+    const string& ResourcePakReader::getPackPath() const
     {
         std::scoped_lock<mutex> lock( _fileMutex );
         return _packFilePath;
     }
 
-    bool ResourcePackReader::loadIndexTable()
+    bool ResourcePakReader::loadIndexTable()
     {
         if ( _file.isValid() == false || _header._fileCount == 0 )
             return true;
@@ -405,7 +405,7 @@ namespace sw
         return true;
     }
 
-    bool ResourcePackReader::validateHeaderGeometry( uint64& outFileSize ) const
+    bool ResourcePakReader::validateHeaderGeometry( uint64& outFileSize ) const
     {
         outFileSize            = 0;
         const uint64 sizeBytes = _file.getSize();
@@ -447,7 +447,7 @@ namespace sw
         return true;
     }
 
-    bool ResourcePackReader::validateFileEntry( const PackFileEntryOnDisk& diskEntry, uint64 fileSize ) const
+    bool ResourcePakReader::validateFileEntry( const PackFileEntryOnDisk& diskEntry, uint64 fileSize ) const
     {
         // 페이로드가 파일 안에 있어야 한다. **뺄셈으로 측정한다.** `offset + size` 는 넘칠 수 있다.
         if ( diskEntry._dataOffset > fileSize || diskEntry._compressedSize > fileSize - diskEntry._dataOffset )
@@ -479,7 +479,7 @@ namespace sw
         return true;
     }
 
-    bool ResourcePackReader::decompressData( PackCompressionType type, const uint8* pSrc, size_t srcSize, void* pDst, size_t dstSize )
+    bool ResourcePakReader::decompressData( PackCompressionType type, const uint8* pSrc, size_t srcSize, void* pDst, size_t dstSize )
     {
         // 풀 것이 없으면 둘 다 0 이어야 한다. `srcSize == 0` 만 보면 압축 크기 0 · 원본 크기 N 인 항목이 0 바이트 N 개로 읽힌다.
         if ( dstSize == 0 )
@@ -495,8 +495,8 @@ namespace sw
             return true;
         }
 
-        // 팩 종류 → 코덱 종류는 표 한 곳(`PackCompressionUtil::kArrCodecMapping`), 구현은 코덱 레지스트리가 든다.
-        ICompressionCodec* pCodec = PackCompressionUtil::findCodec( type );
+        // 팩 종류 → 코덱 종류는 표 한 곳(`ResourcePakCompressionUtil::kArrCodecMapping`), 구현은 코덱 레지스트리가 든다.
+        ICompressionCodec* pCodec = ResourcePakCompressionUtil::findCodec( type );
         if ( pCodec == nullptr )
         {
             SW_LOG_ERROR( "Unsupported compression type %# in pack", static_cast<uint32>( type ) );

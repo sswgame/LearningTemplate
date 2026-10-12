@@ -356,7 +356,7 @@ Debug 기동은 CRT 누수 보고도 stderr로 냅니다(`MemoryTagTest.Diagnost
 **4글자 표식은 `FourCcUtil::make( "...." )` 하나로 만듭니다.** 파일 바이트 순서 그대로입니다. 16진수로 손으로 적으면 바이트 순서가 갈립니다.
 형식을 바꾸면 커밋된 데이터(`Test/AppTest/Golden/*.ppm.z` 압축 스트림 등)의 앞 네 바이트도 함께 고칩니다.
 
-**팩의 압축 enum과 스트림의 압축 enum을 `static_cast` 로 오가지 마세요.** `PackCompressionType` 과 `CompressionCodecType` 은 서로 다른 디스크 형식입니다. 변환은 `PackCompressionUtil::kArrCodecMapping` 한 곳에서 합니다.
+**팩의 압축 enum과 스트림의 압축 enum을 `static_cast` 로 오가지 마세요.** `PackCompressionType` 과 `CompressionCodecType` 은 서로 다른 디스크 형식입니다. 변환은 `ResourcePakCompressionUtil::kArrCodecMapping` 한 곳에서 합니다.
 모듈이 코덱을 등록했다면 그 모듈의 shutdown에서 `unregisterCodec` 합니다. 레지스트리는 `Engine.dll` 에 있어 모듈보다 오래 삽니다. zlib은 Windows에서 4GB, LZ4는 2GB가 한계입니다.
 
 ### 수학

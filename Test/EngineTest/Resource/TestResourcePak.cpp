@@ -14,14 +14,14 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
-#include "Engine/Resource/Pack/PackCompressionUtil.h"
-#include "Engine/Resource/Pack/ResourcePackManager.h"
-#include "Engine/Resource/Pack/ResourcePackReader.h"
-#include "Engine/Resource/Pack/ResourcePackTypes.h"
+#include "Engine/Resource/Pack/ResourcePakCompressionUtil.h"
+#include "Engine/Resource/Pack/ResourcePakManager.h"
+#include "Engine/Resource/Pack/ResourcePakReader.h"
+#include "Engine/Resource/Pack/ResourcePakTypes.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
 
-#include "EngineTest/ResourcePackTestUtil.h"
+#include "EngineTest/ResourcePakTestUtil.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -51,7 +51,7 @@ namespace sw
 
             ~GlobalVfsScope()
             {
-                ResourcePackManager& packManager = ResourceIO::getPackManager();
+                ResourcePakManager& packManager = ResourceIO::getPackManager();
                 packManager.unmountAll();
                 packManager.setAllowLooseFiles( true );
                 ResourcePaths::setSearchPriority( _listSearchPriority );
@@ -204,7 +204,7 @@ namespace sw
 // ------------------------------------------------------------------------------
 // Test 1: 기본 포맷 및 단일 팩 O(1) 해시 읽기 & 무결성 검증
 // ------------------------------------------------------------------------------
-SW_TEST_CASE( ResourcePackTest, SinglePackMountAndHashLookup )
+SW_TEST_CASE( ResourcePakTest, SinglePackMountAndHashLookup )
 {
     const sw::string testPackPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_temp_pack_01.pack" );
 
@@ -214,9 +214,9 @@ SW_TEST_CASE( ResourcePackTest, SinglePackMountAndHashLookup )
         {     "data/items.json", "{\"sword\": {\"atk\": 50, \"durability\": 100}}"}
     };
 
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( testPackPath, 0, sw::PackCompressionType::RLE, listFile, false ) );
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( testPackPath, 0, sw::PackCompressionType::RLE, listFile, false ) );
 
-    sw::ResourcePackReader reader;
+    sw::ResourcePakReader reader;
     SW_ASSERT_TRUE( reader.open( testPackPath ) );
     SW_EXPECT_TRUE( reader.isOpen() );
     SW_EXPECT_EQUAL( reader.getFileCount(), 3u );
@@ -244,11 +244,11 @@ SW_TEST_CASE( ResourcePackTest, SinglePackMountAndHashLookup )
 // Test 2: VFS 우선순위 오버라이드 스택 검증 (patch > patch_dlc > dlc > game > common > engine)
 // ------------------------------------------------------------------------------
 /**
- * @brief [ResourcePackTest] 팩이 아는 압축 종류마다 왕복되는가 — 리플렉션된 `PackCompressionType` 의 모든 값(Custom 제외).
- * @details 팩은 자기 디스크 enum(`PackCompressionType`)을 표 한 곳(`PackCompressionUtil::kArrCodecMapping`)에서 스트림 쪽
+ * @brief [ResourcePakTest] 팩이 아는 압축 종류마다 왕복되는가 — 리플렉션된 `PackCompressionType` 의 모든 값(Custom 제외).
+ * @details 팩은 자기 디스크 enum(`PackCompressionType`)을 표 한 곳(`ResourcePakCompressionUtil::kArrCodecMapping`)에서 스트림 쪽
  *          `CompressionCodecType` 으로 옮기고 레지스트리에서 코덱을 찾는다. 팩 종류를 늘리고 표에 줄을 빠뜨리면 그 종류에서 여기서 진다.
  */
-SW_TEST_CASE( ResourcePackTest, EveryPackCodecRoundTrips )
+SW_TEST_CASE( ResourcePakTest, EveryPackCodecRoundTrips )
 {
     const sw::vector<sw::pair<sw::string, sw::string>> listFile = {
         { "maps/title.scene.xml", "<Scene name=\"Title\" version=\"1.0\"/>" },
@@ -267,12 +267,12 @@ SW_TEST_CASE( ResourcePackTest, EveryPackCodecRoundTrips )
         ++testedCount;
 
         sw::CompressionCodecType codecType{};
-        SW_EXPECT_TRUE_MSG( sw::PackCompressionUtil::findCodecType( type, codecType ), name.c_str() );
+        SW_EXPECT_TRUE_MSG( sw::ResourcePakCompressionUtil::findCodecType( type, codecType ), name.c_str() );
         const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), sw::string( "test_codec_" ) + name.c_str() + ".pack" );
 
-        SW_EXPECT_TRUE_MSG( sw::test::ResourcePackTestUtil::createPackFile( packPath, 0, type, listFile, false ), name.c_str() );
+        SW_EXPECT_TRUE_MSG( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, type, listFile, false ), name.c_str() );
 
-        sw::ResourcePackReader reader;
+        sw::ResourcePakReader reader;
         SW_EXPECT_TRUE_MSG( reader.open( packPath ), name.c_str() );
         if ( reader.isOpen() == false )
             continue;
@@ -290,15 +290,15 @@ SW_TEST_CASE( ResourcePackTest, EveryPackCodecRoundTrips )
         SW_EXPECT_TRUE( sw::FileUtil::removeFile( packPath ) );
     }
     // 표의 줄 수 = 엔진이 아는 팩 종류 수(Custom 제외).
-    SW_EXPECT_EQUAL( static_cast<uint32>( sizeof( sw::PackCompressionUtil::kArrCodecMapping ) / sizeof( sw::PackCompressionUtil::kArrCodecMapping[0] ) ), testedCount );
+    SW_EXPECT_EQUAL( static_cast<uint32>( sizeof( sw::ResourcePakCompressionUtil::kArrCodecMapping ) / sizeof( sw::ResourcePakCompressionUtil::kArrCodecMapping[0] ) ), testedCount );
 }
 
 /**
- * @brief [ResourcePackTest] 팩 리더는 코덱을 활성 레지스트리에서 찾는다 — 레지스트리가 바꾼 구현을 팩도 쓴다
+ * @brief [ResourcePakTest] 팩 리더는 코덱을 활성 레지스트리에서 찾는다 — 레지스트리가 바꾼 구현을 팩도 쓴다
  * @details 리더가 코덱 클래스를 직접 만들면 레지스트리에서 같은 종류를 바꿔도(엔진 · 모듈의 다른 구현) 팩만 옛 구현을 쓴다. 여기서는 RLE 자리를
  *          해제 횟수를 세는 코덱으로 바꾸고 RLE 팩을 읽는다. 끝나면 내장 RLE 로 되돌린다.
  */
-SW_TEST_CASE( ResourcePackTest, PackReaderUsesTheActiveCodecRegistry )
+SW_TEST_CASE( ResourcePakTest, PackReaderUsesTheActiveCodecRegistry )
 {
     sw::CompressionCodecRegistry* pRegistry = sw::CompressionCodecRegistry::getActive();
     SW_ASSERT_NOT_NULL( pRegistry );
@@ -311,12 +311,12 @@ SW_TEST_CASE( ResourcePackTest, PackReaderUsesTheActiveCodecRegistry )
     } ) );
 
     const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_codec_registry.pack" );
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::RLE, {
-                                                                                                                   { "text/long.txt", sw::string( 4096, 'B' ) }
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::RLE, {
+                                                                                                                  { "text/long.txt", sw::string( 4096, 'B' ) }
     },
-                                                                    false ) );
+                                                                   false ) );
 
-    sw::ResourcePackReader reader;
+    sw::ResourcePakReader reader;
     SW_ASSERT_TRUE( reader.open( packPath ) );
     sw::vector<uint8> bytes;
     SW_EXPECT_TRUE( reader.readFile( "text/long.txt", bytes ) );
@@ -326,7 +326,7 @@ SW_TEST_CASE( ResourcePackTest, PackReaderUsesTheActiveCodecRegistry )
     SW_EXPECT_TRUE_MSG( decompressCount >= 1u, "팩 리더가 등록부의 RLE 코덱을 지나가지 않았다" );
 }
 
-SW_TEST_CASE( ResourcePackTest, VFSPriorityStackAndOverrides )
+SW_TEST_CASE( ResourcePakTest, VFSPriorityStackAndOverrides )
 {
     const sw::GlobalVfsScope vfsScope;
 
@@ -336,21 +336,21 @@ SW_TEST_CASE( ResourcePackTest, VFSPriorityStackAndOverrides )
     const sw::string patchPack  = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_vfs_patch.pack" );
 
     // 1. 각 팩에 동일한 키의 파일 생성
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( enginePack, 0, sw::PackCompressionType::None, {
-                                                                                                                      { "config/gameplay.xml", "VERSION_ENGINE" }
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( enginePack, 0, sw::PackCompressionType::None, {
+                                                                                                                     { "config/gameplay.xml", "VERSION_ENGINE" }
     } ) );
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( gamePack, 0, sw::PackCompressionType::None, {
-                                                                                                                    { "config/gameplay.xml", "VERSION_GAME" }
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( gamePack, 0, sw::PackCompressionType::None, {
+                                                                                                                   { "config/gameplay.xml", "VERSION_GAME" }
     } ) );
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( dlcPack, 0, sw::PackCompressionType::None, {
-                                                                                                                   { "config/gameplay.xml", "VERSION_DLC" }
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( dlcPack, 0, sw::PackCompressionType::None, {
+                                                                                                                  { "config/gameplay.xml", "VERSION_DLC" }
     } ) );
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( patchPack, 0, sw::PackCompressionType::None, {
-                                                                                                                     { "config/gameplay.xml", "VERSION_PATCH_HOTFIX" }
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( patchPack, 0, sw::PackCompressionType::None, {
+                                                                                                                    { "config/gameplay.xml", "VERSION_PATCH_HOTFIX" }
     } ) );
 
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    sw::ResourcePackManager& packManager = sw::ResourceIO::getPackManager();
+    sw::ResourcePakManager& packManager = sw::ResourceIO::getPackManager();
     packManager.unmountAll();
 
     // 2. 엔진 & 게임 팩 마운트
@@ -382,16 +382,16 @@ SW_TEST_CASE( ResourcePackTest, VFSPriorityStackAndOverrides )
 // ------------------------------------------------------------------------------
 // Test 3: 유료 DLC 소유권 검증 (Entitlement Check) 보안 테스트
 // ------------------------------------------------------------------------------
-SW_TEST_CASE( ResourcePackTest, DlcEntitlementProtection )
+SW_TEST_CASE( ResourcePakTest, DlcEntitlementProtection )
 {
     const sw::string dlcPackPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_secure_dlc.pack" );
     constexpr uint32 kDlcAppID   = 5001;
 
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( dlcPackPath, kDlcAppID, sw::PackCompressionType::None, {
-                                                                                                                               { "dlc/secret_weapon.xml", "<Weapon name=\"Excalibur\"/>" }
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( dlcPackPath, kDlcAppID, sw::PackCompressionType::None, {
+                                                                                                                              { "dlc/secret_weapon.xml", "<Weapon name=\"Excalibur\"/>" }
     } ) );
 
-    sw::ResourcePackManager packManager;
+    sw::ResourcePakManager packManager;
 
     // 소유권 검증 콜백 등록: 5001번 미소유 상태
     packManager.setDlcEntitlementValidator( []( uint32 appID ) -> bool
@@ -423,20 +423,20 @@ SW_TEST_CASE( ResourcePackTest, DlcEntitlementProtection )
 // ------------------------------------------------------------------------------
 // Test 4: 낱개 파일(Loose File) 우선 로드 옵션 (bAllowLooseFiles) 검증
 // ------------------------------------------------------------------------------
-SW_TEST_CASE( ResourcePackTest, LooseFileOverrideOption )
+SW_TEST_CASE( ResourcePakTest, LooseFileOverrideOption )
 {
     const sw::GlobalVfsScope vfsScope;
 
     const sw::string packPath  = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_loose_opt.pack" );
     const sw::string loosePath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_loose_file.xml" );
 
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, {
-                                                                                                                    { "test_loose_file.xml", "CONTENT_IN_PACK" }
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, {
+                                                                                                                   { "test_loose_file.xml", "CONTENT_IN_PACK" }
     } ) );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( loosePath, "CONTENT_ON_DISK" ) );
 
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    sw::ResourcePackManager& packManager = sw::ResourceIO::getPackManager();
+    sw::ResourcePakManager& packManager = sw::ResourceIO::getPackManager();
     packManager.unmountAll();
     SW_ASSERT_TRUE( packManager.mountPack( packPath, 5000 ) );
 
@@ -456,14 +456,14 @@ SW_TEST_CASE( ResourcePackTest, LooseFileOverrideOption )
 }
 
 /**
- * @brief [ResourcePackTest] 텍스트 읽기와 바이너리 읽기가 **같은 것을 고른다**
+ * @brief [ResourcePakTest] 텍스트 읽기와 바이너리 읽기가 **같은 것을 고른다**
  * @details `readTextResource` 와 `readBinaryResource` 는 찾는 순서가 같아야 한다 —
  *          절대경로 → 낱개 파일 → 팩 → 낱개 폴백. 둘은 한 자리(`readResourceCommon`)를 같이 쓴다 — 순서를
  *          **두 벌로 따로** 적으면 한쪽만 고칠 때 같은 키로 텍스트와 바이너리가 서로 다른 파일을 읽는다.
  * @note 덮는 것은 "둘 중 하나가 어떤 소스를 아예 안 보게 되는" 변이다(팩을 건너뛰게 만들면 깨진다). 낱개 파일과 팩이 경쟁할 때의
  *       우선순위는 `LooseFileWinsOnlyWhenLooseFilesAreAllowed` 가 본다.
  */
-SW_TEST_CASE( ResourcePackTest, TextAndBinaryReadsPickTheSameSource )
+SW_TEST_CASE( ResourcePakTest, TextAndBinaryReadsPickTheSameSource )
 {
     const sw::GlobalVfsScope vfsScope;
 
@@ -471,12 +471,12 @@ SW_TEST_CASE( ResourcePackTest, TextAndBinaryReadsPickTheSameSource )
 
     constexpr const utf8* kKey     = "config/same_source.txt";
     constexpr const utf8* kPayload = "PAYLOAD_FROM_PACK";
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, {
-                                                                                                                    { kKey, kPayload }
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, {
+                                                                                                                   { kKey, kPayload }
     } ) );
 
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    sw::ResourcePackManager& packManager = sw::ResourceIO::getPackManager();
+    sw::ResourcePakManager& packManager = sw::ResourceIO::getPackManager();
     packManager.unmountAll();
     SW_ASSERT_TRUE( packManager.mountPack( packPath, 5000 ) );
 
@@ -512,10 +512,10 @@ SW_TEST_CASE( ResourcePackTest, TextAndBinaryReadsPickTheSameSource )
 }
 
 /**
- * @brief [ResourcePackTest] 같은 키가 팩과 낱개 파일에 다 있으면 — 낱개 허용(Dev · 쿠킹)은 낱개, 팩 전용(배포)은 팩이다. 팩에 없으면 낱개 허용일 때만 읽힌다
+ * @brief [ResourcePakTest] 같은 키가 팩과 낱개 파일에 다 있으면 — 낱개 허용(Dev · 쿠킹)은 낱개, 팩 전용(배포)은 팩이다. 팩에 없으면 낱개 허용일 때만 읽힌다
  * @details 텍스트 · 바이너리 · 있나 질의가 같은 답을 내야 한다(`readResourceCommon` 한 자리). 리소스 루트를 임시 폴더로 바꿔 그 아래 낱개 파일을 둔다.
  */
-SW_TEST_CASE( ResourcePackTest, LooseFileWinsOnlyWhenLooseFilesAreAllowed )
+SW_TEST_CASE( ResourcePakTest, LooseFileWinsOnlyWhenLooseFilesAreAllowed )
 {
     const sw::GlobalVfsScope vfsScope;
     constexpr const utf8*    kKey      = "engine/lookup_order/probe.txt";
@@ -524,13 +524,13 @@ SW_TEST_CASE( ResourcePackTest, LooseFileWinsOnlyWhenLooseFilesAreAllowed )
     SW_ASSERT_TRUE( sw::FileUtil::ensureParentDirectoryExists( loosePath ) );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( loosePath, "FROM_LOOSE" ) );
     const sw::string packPath = test::makeTempPath( "lookup_order.pack" );
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, {
-                                                                                                                    { kKey, "FROM_PACK" }
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, {
+                                                                                                                   { kKey, "FROM_PACK" }
     } ) );
 
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     const sw::ResourceRootScope rootScope( root );
-    sw::ResourcePackManager&    packManager = sw::ResourceIO::getPackManager();
+    sw::ResourcePakManager&     packManager = sw::ResourceIO::getPackManager();
     packManager.unmountAll();
     SW_ASSERT_TRUE( packManager.mountPack( packPath, 5000 ) );
     sw::string text;
@@ -562,7 +562,7 @@ SW_TEST_CASE( ResourcePackTest, LooseFileWinsOnlyWhenLooseFilesAreAllowed )
 // ------------------------------------------------------------------------------
 // Test 5: 동적 우선순위 자동 산출 (Dynamic Priority Auto-Calculation) 고도화 검증
 // ------------------------------------------------------------------------------
-SW_TEST_CASE( ResourcePackTest, DynamicPriorityAutoCalculation )
+SW_TEST_CASE( ResourcePakTest, DynamicPriorityAutoCalculation )
 {
     const sw::GlobalVfsScope vfsScope;
 
@@ -572,24 +572,24 @@ SW_TEST_CASE( ResourcePackTest, DynamicPriorityAutoCalculation )
     const sw::string patchGame  = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "patch_game_main_autotest.pack" );
     const sw::string hotfixPack = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "patch_hotfix_autotest.pack" );
 
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( enginePack, 0, sw::PackCompressionType::None, {
-                                                                                                                      { "core/version.txt", "ENGINE_1.0" }
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( enginePack, 0, sw::PackCompressionType::None, {
+                                                                                                                     { "core/version.txt", "ENGINE_1.0" }
     } ) );
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( commonPack, 0, sw::PackCompressionType::None, {
-                                                                                                                      { "core/version.txt", "COMMON_1.0" }
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( commonPack, 0, sw::PackCompressionType::None, {
+                                                                                                                     { "core/version.txt", "COMMON_1.0" }
     } ) );
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( gamePack, 0, sw::PackCompressionType::None, {
-                                                                                                                    { "core/version.txt", "GAME_1.0" }
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( gamePack, 0, sw::PackCompressionType::None, {
+                                                                                                                   { "core/version.txt", "GAME_1.0" }
     } ) );
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( patchGame, 0, sw::PackCompressionType::None, {
-                                                                                                                     { "core/version.txt", "PATCH_GAME_1.1" }
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( patchGame, 0, sw::PackCompressionType::None, {
+                                                                                                                    { "core/version.txt", "PATCH_GAME_1.1" }
     } ) );
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( hotfixPack, 0, sw::PackCompressionType::None, {
-                                                                                                                      { "core/version.txt", "HOTFIX_GLOBAL_1.2" }
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( hotfixPack, 0, sw::PackCompressionType::None, {
+                                                                                                                     { "core/version.txt", "HOTFIX_GLOBAL_1.2" }
     } ) );
 
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
-    sw::ResourcePackManager& packManager = sw::ResourceIO::getPackManager();
+    sw::ResourcePakManager& packManager = sw::ResourceIO::getPackManager();
     packManager.unmountAll();
     // 우선순위 토큰 목록 설정: game > common > engine (3개 항목)
     const sw::vector<sw::string> listPriority = { "game", "common", "engine" };
@@ -637,18 +637,18 @@ SW_TEST_CASE( ResourcePackTest, DynamicPriorityAutoCalculation )
 // ------------------------------------------------------------------------------
 // Test 6: 무복사 비압축 I/O 및 CRC32 데이터 변조 탐지 검증
 // ------------------------------------------------------------------------------
-SW_TEST_CASE( ResourcePackTest, ZeroCopyAndCrc32CorruptionDetection )
+SW_TEST_CASE( ResourcePakTest, ZeroCopyAndCrc32CorruptionDetection )
 {
     const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_crc_tamper.pack" );
 
     const sw::string originalData = "INTEGRITY_CHECK_SAMPLE_PAYLOAD_DATA_1234567890";
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, {
-                                                                                                                    { "secure/token.bin", originalData }
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, {
+                                                                                                                   { "secure/token.bin", originalData }
     } ) );
 
     // 1. 정상 상태에서 무복사 바이너리 읽기 및 CRC32 통과
     {
-        sw::ResourcePackReader reader;
+        sw::ResourcePakReader reader;
         SW_ASSERT_TRUE( reader.open( packPath ) );
 
         sw::vector<uint8> buffer;
@@ -677,7 +677,7 @@ SW_TEST_CASE( ResourcePackTest, ZeroCopyAndCrc32CorruptionDetection )
 
     // 3. 변조된 팩 오픈 후 로드 시 CRC32 불일치로 안전하게 거부(false 반환)되는지 검증
     {
-        sw::ResourcePackReader reader;
+        sw::ResourcePakReader reader;
         SW_ASSERT_TRUE( reader.open( packPath ) );
 
         sw::vector<uint8> buffer;
@@ -691,7 +691,7 @@ SW_TEST_CASE( ResourcePackTest, ZeroCopyAndCrc32CorruptionDetection )
 // ------------------------------------------------------------------------------
 // Test 7: 멀티스레드 동시 VFS I/O 안전성 (Concurrent Multi-Threaded Read)
 // ------------------------------------------------------------------------------
-SW_TEST_CASE( ResourcePackTest, ConcurrentMultiThreadedVfsRead )
+SW_TEST_CASE( ResourcePakTest, ConcurrentMultiThreadedVfsRead )
 {
     const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_concurrent_vfs.pack" );
 
@@ -702,9 +702,9 @@ SW_TEST_CASE( ResourcePackTest, ConcurrentMultiThreadedVfsRead )
                               "CONTENT_PAYLOAD_OF_FILE_" + sw::to_string( fileIndex ) } );
     }
 
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::RLE, listFile ) );
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::RLE, listFile ) );
 
-    sw::ResourcePackManager manager;
+    sw::ResourcePakManager manager;
     SW_ASSERT_TRUE( manager.mountPack( packPath, 5000 ) );
 
     std::atomic<uint32> successCount{ 0 };
@@ -745,7 +745,7 @@ SW_TEST_CASE( ResourcePackTest, ConcurrentMultiThreadedVfsRead )
 // ------------------------------------------------------------------------------
 // Test 8: 경로 캐시 64비트 정수 해시 룩업 및 무효화 (Path Cache Integrity)
 // ------------------------------------------------------------------------------
-SW_TEST_CASE( ResourcePackTest, PathCacheZeroAllocationAndInvalidation )
+SW_TEST_CASE( ResourcePakTest, PathCacheZeroAllocationAndInvalidation )
 {
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
     sw::ResourcePaths::clearPathCache();
@@ -772,9 +772,9 @@ SW_TEST_CASE( ResourcePackTest, PathCacheZeroAllocationAndInvalidation )
 }
 
 /**
- * @brief [ResourcePackTest] 도메인 한정 경로 VFS 쿼리 검증 ("test_domain_pack/file.dat")
+ * @brief [ResourcePakTest] 도메인 한정 경로 VFS 쿼리 검증 ("test_domain_pack/file.dat")
  */
-SW_TEST_CASE( ResourcePackTest, DomainQualifiedQueryInVfs )
+SW_TEST_CASE( ResourcePakTest, DomainQualifiedQueryInVfs )
 {
     const sw::string packPath = test::makeTempPath( "sw_domain_query_pack.pack" );
     // 도메인 이름은 **팩 파일 이름의 줄기**에서 온다. 여기에 이름을 다시 적으면 그것이
@@ -787,9 +787,9 @@ SW_TEST_CASE( ResourcePackTest, DomainQualifiedQueryInVfs )
         {"shaders/custom.dat", "SHADER_PAYLOAD_DATA"},
     };
 
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, listFile ) );
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, listFile ) );
 
-    sw::ResourcePackManager packManager;
+    sw::ResourcePakManager packManager;
     packManager.setAllowLooseFiles( false ); // 순수 VFS 환경
     SW_ASSERT_TRUE( packManager.mountPack( packPath, 1000 ) );
 
@@ -820,13 +820,13 @@ SW_TEST_CASE( ResourcePackTest, DomainQualifiedQueryInVfs )
 // 손상된 팩: 헤더가 말하는 구역이 파일 밖일 때
 // ------------------------------------------------------------------------------
 /**
- * @brief [ResourcePackTest] 헤더의 수를 그대로 믿지 않는다 — 인덱스가 파일 밖이면 거부한다
+ * @brief [ResourcePakTest] 헤더의 수를 그대로 믿지 않는다 — 인덱스가 파일 밖이면 거부한다
  * @details 헤더의 `_fileCount` · `_indexOffset` · `_stringPoolSize` 는 **파일에서 온 값**이다.
  *          그대로 `resize` 하면 잘리거나 손상된 팩 하나가 수 기가짜리 할당 요청이 된다.
  *          그리고 헤더는 인덱스 크기를 `_indexSize` 로도 말하므로 리더가 그 값을 대조해야
  *          쿠커와 리더가 레이아웃을 다르게 볼 때 알아챈다.
  */
-SW_TEST_CASE( ResourcePackTest, CorruptHeaderGeometryIsRejected )
+SW_TEST_CASE( ResourcePakTest, CorruptHeaderGeometryIsRejected )
 {
     const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_corrupt_geometry.pack" );
 
@@ -834,11 +834,11 @@ SW_TEST_CASE( ResourcePackTest, CorruptHeaderGeometryIsRejected )
         {"data/items.json", "{\"sword\": 1}"},
         { "maps/title.xml",       "<Scene/>"},
     };
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, listFile, false ) );
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, listFile, false ) );
 
     // 멀쩡한 상태에서는 열린다 — 아래 거부가 손상 때문임을 못 박는다.
     {
-        sw::ResourcePackReader reader;
+        sw::ResourcePakReader reader;
         SW_ASSERT_TRUE( reader.open( packPath ) );
         SW_EXPECT_EQUAL( 2u, reader.getFileCount() );
     }
@@ -854,7 +854,7 @@ SW_TEST_CASE( ResourcePackTest, CorruptHeaderGeometryIsRejected )
         SW_ASSERT_TRUE( sw::writePackHeaderToDisk( packPath, corrupted ) );
 
         test::ScopedLogSuppressor suppressor;
-        sw::ResourcePackReader    reader;
+        sw::ResourcePakReader     reader;
         SW_EXPECT_FALSE( reader.open( packPath ) );
         SW_EXPECT_FALSE( reader.isOpen() );
     }
@@ -866,7 +866,7 @@ SW_TEST_CASE( ResourcePackTest, CorruptHeaderGeometryIsRejected )
         SW_ASSERT_TRUE( sw::writePackHeaderToDisk( packPath, corrupted ) );
 
         test::ScopedLogSuppressor suppressor;
-        sw::ResourcePackReader    reader;
+        sw::ResourcePakReader     reader;
         SW_EXPECT_FALSE( reader.open( packPath ) );
     }
 
@@ -878,30 +878,30 @@ SW_TEST_CASE( ResourcePackTest, CorruptHeaderGeometryIsRejected )
         SW_ASSERT_TRUE( sw::writePackHeaderToDisk( packPath, corrupted ) );
 
         test::ScopedLogSuppressor suppressor;
-        sw::ResourcePackReader    reader;
+        sw::ResourcePakReader     reader;
         SW_EXPECT_FALSE( reader.open( packPath ) );
     }
 
     // 원래대로 돌려 두면 다시 열린다.
     SW_ASSERT_TRUE( sw::writePackHeaderToDisk( packPath, original ) );
-    sw::ResourcePackReader reader;
+    sw::ResourcePakReader reader;
     SW_EXPECT_TRUE( reader.open( packPath ) );
 }
 
 /**
- * @brief [ResourcePackTest] 스트링 풀의 마지막 문자열이 잘려 있어도 풀 밖을 읽지 않는다
+ * @brief [ResourcePakTest] 스트링 풀의 마지막 문자열이 잘려 있어도 풀 밖을 읽지 않는다
  * @details 엔트리의 디버그 경로는 풀 안의 **NUL 종료 문자열**로 저장된다. 시작 오프셋이 풀 안인지만
  *          보고 `const utf8*` 를 그대로 `string` 에 넘기면 string 이 NUL 을 찾아 **풀 밖까지** 훑는다.
  *          종결자를 지워 그 경계를 확인한다.
  */
-SW_TEST_CASE( ResourcePackTest, StringPoolReadStopsAtPoolEnd )
+SW_TEST_CASE( ResourcePakTest, StringPoolReadStopsAtPoolEnd )
 {
     const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_unterminated_pool.pack" );
 
     const sw::vector<sw::pair<sw::string, sw::string>> listFile = {
         { "data/items.json", "{\"sword\": 1}" },
     };
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, listFile, true ) );
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, listFile, true ) );
 
     // 스트링 풀은 파일 맨 끝에 온다 — 마지막 바이트(종결자)를 글자로 바꿔 종료를 없앤다.
     sw::vector<uint8> bytes;
@@ -911,7 +911,7 @@ SW_TEST_CASE( ResourcePackTest, StringPoolReadStopsAtPoolEnd )
     bytes.back() = static_cast<uint8>( 'X' );
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( packPath, bytes.data(), static_cast<uint64>( bytes.size() ) ) );
 
-    sw::ResourcePackReader reader;
+    sw::ResourcePakReader reader;
     SW_ASSERT_TRUE( reader.open( packPath ) );
 
     sw::PackFileEntry entry{};
@@ -921,7 +921,7 @@ SW_TEST_CASE( ResourcePackTest, StringPoolReadStopsAtPoolEnd )
 }
 
 /**
- * @brief [ResourcePackTest] FAT 항목이 적어 둔 크기도 파일로 검증되는지 확인
+ * @brief [ResourcePakTest] FAT 항목이 적어 둔 크기도 파일로 검증되는지 확인
  * @details `validateHeaderGeometry` 는 **헤더의 구역**(인덱스 · 스트링 풀)뿐 아니라 **항목**도 측정한다.
  *          `readFile` 은 항목이 적어 둔 크기를 그대로 `resize` 에 넣으므로 — `_uncompressedSize` 는
  *          `uint32` 라 — 측정하지 않으면 손상된 32바이트 항목 하나가 **4GB 할당 요청**이 된다.
@@ -929,7 +929,7 @@ SW_TEST_CASE( ResourcePackTest, StringPoolReadStopsAtPoolEnd )
  *          항목을 한 번 걸러 두면 `readFile` 은 그 값을 믿어도 된다 — 그래서 검사는 여는
  *          시점에 있고, 이 케이스도 `open()` 이 거부하는지를 본다.
  */
-SW_TEST_CASE( ResourcePackTest, CorruptEntrySizeIsRejected )
+SW_TEST_CASE( ResourcePakTest, CorruptEntrySizeIsRejected )
 {
     const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_corrupt_entry.pack" );
 
@@ -937,11 +937,11 @@ SW_TEST_CASE( ResourcePackTest, CorruptEntrySizeIsRejected )
         {"data/items.json", "{\"sword\": 1}"},
         { "maps/title.xml",       "<Scene/>"},
     };
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, listFile, false ) );
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, listFile, false ) );
 
     // 멀쩡한 상태에서는 열리고 읽힌다 — 아래 거부가 손상 때문임을 못 박는다.
     {
-        sw::ResourcePackReader reader;
+        sw::ResourcePakReader reader;
         SW_ASSERT_TRUE( reader.open( packPath ) );
         sw::vector<uint8> bytes;
         SW_EXPECT_TRUE( reader.readFile( sw::string_view{ "data/items.json" }, bytes ) );
@@ -958,7 +958,7 @@ SW_TEST_CASE( ResourcePackTest, CorruptEntrySizeIsRejected )
         SW_ASSERT_TRUE( sw::writePackEntryToDisk( packPath, 0, corrupted ) );
 
         test::ScopedLogSuppressor suppressor;
-        sw::ResourcePackReader    reader;
+        sw::ResourcePakReader     reader;
         SW_EXPECT_FALSE( reader.open( packPath ) );
         SW_EXPECT_FALSE( reader.isOpen() );
     }
@@ -970,22 +970,22 @@ SW_TEST_CASE( ResourcePackTest, CorruptEntrySizeIsRejected )
         SW_ASSERT_TRUE( sw::writePackEntryToDisk( packPath, 0, corrupted ) );
 
         test::ScopedLogSuppressor suppressor;
-        sw::ResourcePackReader    reader;
+        sw::ResourcePakReader     reader;
         SW_EXPECT_FALSE( reader.open( packPath ) );
     }
 
     // 원래대로 돌려 두면 다시 열린다.
     SW_ASSERT_TRUE( sw::writePackEntryToDisk( packPath, 0, original ) );
-    sw::ResourcePackReader reader;
+    sw::ResourcePakReader reader;
     SW_EXPECT_TRUE( reader.open( packPath ) );
 }
 
 /**
- * @brief [ResourcePackTest] 리더를 옮기면(이동 생성 · 이동 대입) 연 팩이 통째로 따라가고, 원래 리더는 닫힌다
+ * @brief [ResourcePakTest] 리더를 옮기면(이동 생성 · 이동 대입) 연 팩이 통째로 따라가고, 원래 리더는 닫힌다
  * @details 엔진은 리더를 `unique_ptr` 로 들어서 이동 연산을 지나는 코드가 없다. 이동 생성과 이동 대입은 같은 몸통
  *          (`takeFromLocked`)을 쓴다 — 멤버 하나를 더할 때 한 곳만 고친다. 이동 대입은 받는 쪽이 열어 둔 팩을 먼저 닫아야 한다.
  */
-SW_TEST_CASE( ResourcePackTest, MovedReaderKeepsTheOpenPack )
+SW_TEST_CASE( ResourcePakTest, MovedReaderKeepsTheOpenPack )
 {
     const sw::string packPathA = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_temp_pack_move_a.pack" );
     const sw::string packPathB = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_temp_pack_move_b.pack" );
@@ -997,14 +997,14 @@ SW_TEST_CASE( ResourcePackTest, MovedReaderKeepsTheOpenPack )
         {"data/b.txt", "pack-b"},
         {"data/c.txt", "pack-c"}
     };
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( packPathA, 0, sw::PackCompressionType::None, listFileA, false ) );
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( packPathB, 0, sw::PackCompressionType::None, listFileB, false ) );
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPathA, 0, sw::PackCompressionType::None, listFileA, false ) );
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPathB, 0, sw::PackCompressionType::None, listFileB, false ) );
 
-    sw::ResourcePackReader source;
+    sw::ResourcePakReader source;
     SW_ASSERT_TRUE( source.open( packPathA ) );
 
     // 이동 생성 — 팩 A 가 옮겨 가고 원래 리더는 닫힌다.
-    sw::ResourcePackReader moved( std::move( source ) );
+    sw::ResourcePakReader moved( std::move( source ) );
     SW_EXPECT_FALSE( source.isOpen() );
     SW_EXPECT_TRUE( moved.isOpen() );
     SW_EXPECT_EQUAL( 1u, moved.getFileCount() );
@@ -1013,7 +1013,7 @@ SW_TEST_CASE( ResourcePackTest, MovedReaderKeepsTheOpenPack )
     SW_EXPECT_EQUAL( text, "pack-a" );
 
     // 이동 대입 — 받는 쪽이 열어 둔 팩 B 는 닫히고 팩 A 로 바뀐다.
-    sw::ResourcePackReader target;
+    sw::ResourcePakReader target;
     SW_ASSERT_TRUE( target.open( packPathB ) );
     target = std::move( moved );
     SW_EXPECT_FALSE( moved.isOpen() );
@@ -1027,15 +1027,15 @@ SW_TEST_CASE( ResourcePackTest, MovedReaderKeepsTheOpenPack )
 }
 
 /**
- * @brief [ResourcePackTest] 저장된 CRC 를 0 으로 지워도 검사가 꺼지지 않는다
+ * @brief [ResourcePakTest] 저장된 CRC 를 0 으로 지워도 검사가 꺼지지 않는다
  * @details 저장된 CRC 가 0 이라고 검사를 건너뛰면 그 칸을 지우고 페이로드를 바꾸는 변조가 통과한다(쿠킹하는 쪽은 모든 항목의 CRC 를
  *          적는다 — 빈 데이터의 CRC 가 0).
  */
-SW_TEST_CASE( ResourcePackTest, ZeroedCrcDoesNotDisableTheCheck )
+SW_TEST_CASE( ResourcePakTest, ZeroedCrcDoesNotDisableTheCheck )
 {
     const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_crc_zeroed.pack" );
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, {
-                                                                                                                    { "secure/zeroed.bin", "PAYLOAD_THAT_WILL_BE_TAMPERED" }
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, {
+                                                                                                                   { "secure/zeroed.bin", "PAYLOAD_THAT_WILL_BE_TAMPERED" }
     } ) );
 
     const uint64 indexOffset = sw::readIndexOffsetInternal( packPath );
@@ -1045,7 +1045,7 @@ SW_TEST_CASE( ResourcePackTest, ZeroedCrcDoesNotDisableTheCheck )
     SW_ASSERT_TRUE( sw::patchFileBytesInternal( packPath, indexOffset + 24, &zeroCrc, sizeof( zeroCrc ) ) );
     SW_ASSERT_TRUE( sw::patchFileBytesInternal( packPath, sw::kPackSectorAlignment, &tampered, sizeof( tampered ) ) );
 
-    sw::ResourcePackReader reader;
+    sw::ResourcePakReader reader;
     SW_ASSERT_TRUE( reader.open( packPath ) );
     sw::vector<uint8> buffer;
     {
@@ -1056,14 +1056,14 @@ SW_TEST_CASE( ResourcePackTest, ZeroedCrcDoesNotDisableTheCheck )
 }
 
 /**
- * @brief [ResourcePackTest] 압축 크기 0 인 항목은 0 바이트 N 개가 아니라 실패다
+ * @brief [ResourcePakTest] 압축 크기 0 인 항목은 0 바이트 N 개가 아니라 실패다
  * @details 원본 크기가 N 인데 압축 크기 0 을 "풀 것 없음" 으로 성공시키면 CRC 가 없는 팩에서 0 으로 찬 데이터를 돌려준다.
  */
-SW_TEST_CASE( ResourcePackTest, EmptyCompressedPayloadIsNotSuccess )
+SW_TEST_CASE( ResourcePakTest, EmptyCompressedPayloadIsNotSuccess )
 {
     const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_empty_payload.pack" );
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::RLE, {
-                                                                                                                   { "secure/empty.bin", "AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB" }
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::RLE, {
+                                                                                                                  { "secure/empty.bin", "AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBB" }
     } ) );
 
     const uint64 indexOffset = sw::readIndexOffsetInternal( packPath );
@@ -1074,7 +1074,7 @@ SW_TEST_CASE( ResourcePackTest, EmptyCompressedPayloadIsNotSuccess )
     SW_ASSERT_TRUE( sw::patchFileBytesInternal( packPath, indexOffset + 16, &zero, sizeof( zero ) ) ); // _compressedSize
     SW_ASSERT_TRUE( sw::patchFileBytesInternal( packPath, 16, &noFlags, sizeof( noFlags ) ) );         // PackHeader::_flags
 
-    sw::ResourcePackReader reader;
+    sw::ResourcePakReader reader;
     SW_ASSERT_TRUE( reader.open( packPath ) );
     sw::vector<uint8> buffer;
     {
@@ -1085,20 +1085,20 @@ SW_TEST_CASE( ResourcePackTest, EmptyCompressedPayloadIsNotSuccess )
 }
 
 /**
- * @brief [ResourcePackTest] 암호화 표시가 있는 팩은 열지 않는다
+ * @brief [ResourcePakTest] 암호화 표시가 있는 팩은 열지 않는다
  * @details 풀 방법이 없으므로 플래그 · 방식을 보고 거절한다 — 보지 않으면 평문으로 푼다.
  */
-SW_TEST_CASE( ResourcePackTest, EncryptedPackIsRefused )
+SW_TEST_CASE( ResourcePakTest, EncryptedPackIsRefused )
 {
     const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_encrypted_flag.pack" );
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, {
-                                                                                                                    { "secure/enc.bin", "PLAINTEXT" }
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, {
+                                                                                                                   { "secure/enc.bin", "PLAINTEXT" }
     } ) );
 
     const uint16 flags = static_cast<uint16>( static_cast<uint16>( sw::PackFlag::HasCrc32 ) | static_cast<uint16>( sw::PackFlag::Encrypted ) );
     SW_ASSERT_TRUE( sw::patchFileBytesInternal( packPath, 16, &flags, sizeof( flags ) ) ); // PackHeader::_flags
 
-    sw::ResourcePackReader reader;
+    sw::ResourcePakReader reader;
     {
         test::ScopedLogSuppressor suppressor;
         SW_EXPECT_FALSE( reader.open( packPath ) );
@@ -1107,11 +1107,11 @@ SW_TEST_CASE( ResourcePackTest, EncryptedPackIsRefused )
 }
 
 /**
- * @brief [ResourcePackTest] 비동기 읽기는 동기 읽기와 같은 바이트를 주고(압축 해제 · CRC 포함), 걸어 둔 뒤 팩을 내려도 끝까지 읽는다
+ * @brief [ResourcePakTest] 비동기 읽기는 동기 읽기와 같은 바이트를 주고(압축 해제 · CRC 포함), 걸어 둔 뒤 팩을 내려도 끝까지 읽는다
  * @details 완료는 리더가 아니라 파일 핸들 사본과 항목 정보를 든다. 언마운트가 리더를 지워도 진행 중인 읽기는 성공해야 한다.
  *          어느 팩에도 없는 경로는 아무것도 걸지 않는다(무효 핸들, 콜백 없음).
  */
-SW_TEST_CASE( ResourcePackTest, AsyncReadMatchesSyncReadAndSurvivesUnmount )
+SW_TEST_CASE( ResourcePakTest, AsyncReadMatchesSyncReadAndSurvivesUnmount )
 {
     const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_async_read.pack" );
 
@@ -1121,9 +1121,9 @@ SW_TEST_CASE( ResourcePackTest, AsyncReadMatchesSyncReadAndSurvivesUnmount )
     {
         listFile.push_back( { "async/entry_" + sw::to_string( index ) + ".bin", sw::string( 100 + index * 997, static_cast<utf8>( 'a' + ( index % 26 ) ) ) } );
     }
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::LZ4, listFile ) );
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::LZ4, listFile ) );
 
-    sw::ResourcePackManager manager;
+    sw::ResourcePakManager manager;
     SW_ASSERT_TRUE( manager.mountPack( packPath, 5000 ) );
 
     sw::AsyncFileIO&                io = sw::engine::getAsyncFileIO();
@@ -1174,18 +1174,18 @@ SW_TEST_CASE( ResourcePackTest, AsyncReadMatchesSyncReadAndSurvivesUnmount )
 }
 
 /**
- * @brief [ResourcePackTest] 비동기 읽기도 CRC 가 어긋난 항목을 실패로 돌려준다(바이트 없음)
+ * @brief [ResourcePakTest] 비동기 읽기도 CRC 가 어긋난 항목을 실패로 돌려준다(바이트 없음)
  */
-SW_TEST_CASE( ResourcePackTest, AsyncReadRejectsCrcMismatch )
+SW_TEST_CASE( ResourcePakTest, AsyncReadRejectsCrcMismatch )
 {
     const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_async_crc.pack" );
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, {
-                                                                                                                    { "secure/async.bin", "ASYNC_INTEGRITY_PAYLOAD" }
+    SW_ASSERT_TRUE( sw::test::ResourcePakTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, {
+                                                                                                                   { "secure/async.bin", "ASYNC_INTEGRITY_PAYLOAD" }
     } ) );
     const uint8 corruptedByte = 0xFF;
     SW_ASSERT_TRUE( sw::patchFileBytesInternal( packPath, 4096, &corruptedByte, 1 ) ); // 첫 페이로드는 섹터 4096
 
-    sw::ResourcePackReader reader;
+    sw::ResourcePakReader reader;
     SW_ASSERT_TRUE( reader.open( packPath ) );
     const sw::string  entryPath = "secure/async.bin";
     bool              bCalled   = false;

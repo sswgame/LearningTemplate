@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Resource/Pack/ResourcePackManager.h"
+#include "Engine/Resource/Pack/ResourcePakManager.h"
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
@@ -15,9 +15,9 @@ namespace sw
 {
     namespace
     {
-        SW_LOG_CALLER( "ResourcePackManager" );
+        SW_LOG_CALLER( "ResourcePakManager" );
 
-        struct ResourcePackManagerInternal
+        struct ResourcePakManagerInternal
         {
             static constexpr int32 kPriorityStep       = 1000; ///< 우선순위 토큰 한 칸
             static constexpr int32 kPatchPriorityBonus = 500;  ///< patch_ 팩은 대상 모듈보다 반 칸 위
@@ -174,7 +174,7 @@ namespace sw
 
 namespace sw
 {
-    ResourcePackManager::ResourcePackManager()
+    ResourcePakManager::ResourcePakManager()
         : _vfsMutex{}
         , _listMountedPack{}
         , _dlcValidator{}
@@ -186,12 +186,12 @@ namespace sw
     {
     }
 
-    ResourcePackManager::~ResourcePackManager()
+    ResourcePakManager::~ResourcePakManager()
     {
         unmountAll();
     }
 
-    ResourcePackManager::ResourcePackManager( ResourcePackManager&& other ) noexcept
+    ResourcePakManager::ResourcePakManager( ResourcePakManager&& other ) noexcept
     {
         std::scoped_lock<mutex> lock( other._vfsMutex );
         _listMountedPack  = std::move( other._listMountedPack );
@@ -199,7 +199,7 @@ namespace sw
         _bAllowLooseFiles = other._bAllowLooseFiles;
     }
 
-    ResourcePackManager& ResourcePackManager::operator=( ResourcePackManager&& other ) noexcept
+    ResourcePakManager& ResourcePakManager::operator=( ResourcePakManager&& other ) noexcept
     {
         if ( this != &other )
         {
@@ -211,7 +211,7 @@ namespace sw
         return *this;
     }
 
-    bool ResourcePackManager::mountPack( string_view packFilePath, int32 priority )
+    bool ResourcePakManager::mountPack( string_view packFilePath, int32 priority )
     {
         if ( packFilePath.empty() )
             return false;
@@ -220,9 +220,9 @@ namespace sw
 
         int32 effectivePriority = priority;
         if ( effectivePriority <= 0 )
-            effectivePriority = ResourcePackManagerInternal::computePackDefaultPriority( packFilePath, ResourcePaths::getSearchPriority() );
+            effectivePriority = ResourcePakManagerInternal::computePackDefaultPriority( packFilePath, ResourcePaths::getSearchPriority() );
 
-        shared_ptr<ResourcePackReader> pReader = sw::make_shared<ResourcePackReader>();
+        shared_ptr<ResourcePakReader> pReader = sw::make_shared<ResourcePakReader>();
         if ( pReader->open( normalizedPath ) == false )
         {
             SW_LOG_ERROR( "Failed to open and mount pack: %#", packFilePath );
@@ -276,7 +276,7 @@ namespace sw
         return true;
     }
 
-    bool ResourcePackManager::unmountPack( string_view packFilePath )
+    bool ResourcePakManager::unmountPack( string_view packFilePath )
     {
         if ( packFilePath.empty() )
             return false;
@@ -295,7 +295,7 @@ namespace sw
         return false;
     }
 
-    void ResourcePackManager::unmountAll()
+    void ResourcePakManager::unmountAll()
     {
         std::scoped_lock<mutex> lock( _vfsMutex );
         for ( auto& mounted : _listMountedPack )
@@ -306,23 +306,23 @@ namespace sw
         _listMountedPack.clear();
     }
 
-    bool ResourcePackManager::hasFile( string_view relativePath ) const
+    bool ResourcePakManager::hasFile( string_view relativePath ) const
     {
         if ( relativePath.empty() )
             return false;
 
         std::scoped_lock<mutex> lock( _vfsMutex );
-        return ResourcePackManagerInternal::visitPacksWithFile( _listMountedPack, relativePath,
-                                                                []( const MountedPack&, uint64, string_view )
+        return ResourcePakManagerInternal::visitPacksWithFile( _listMountedPack, relativePath,
+                                                               []( const MountedPack&, uint64, string_view )
         { return true; } );
     }
 
-    shared_ptr<ResourcePackReader> ResourcePackManager::findReaderWithFile( string_view relativePath, uint64& outPathHash, string_view& outPathInPack ) const
+    shared_ptr<ResourcePakReader> ResourcePakManager::findReaderWithFile( string_view relativePath, uint64& outPathHash, string_view& outPathInPack ) const
     {
-        shared_ptr<ResourcePackReader> pFound;
-        std::scoped_lock<mutex>        lock( _vfsMutex );
-        ResourcePackManagerInternal::visitPacksWithFile( _listMountedPack, relativePath,
-                                                         [&]( const MountedPack& mounted, uint64 pathHash, string_view pathInPack )
+        shared_ptr<ResourcePakReader> pFound;
+        std::scoped_lock<mutex>       lock( _vfsMutex );
+        ResourcePakManagerInternal::visitPacksWithFile( _listMountedPack, relativePath,
+                                                        [&]( const MountedPack& mounted, uint64 pathHash, string_view pathInPack )
         {
             pFound        = mounted._pReader;
             outPathHash   = pathHash;
@@ -332,25 +332,25 @@ namespace sw
         return pFound;
     }
 
-    bool ResourcePackManager::readFile( string_view relativePath, vector<uint8>& outBytes ) const
+    bool ResourcePakManager::readFile( string_view relativePath, vector<uint8>& outBytes ) const
     {
         if ( relativePath.empty() )
             return false;
 
-        uint64                               pathHash{ 0 };
-        string_view                          pathInPack;
-        const shared_ptr<ResourcePackReader> pReader = findReaderWithFile( relativePath, pathHash, pathInPack );
+        uint64                              pathHash{ 0 };
+        string_view                         pathInPack;
+        const shared_ptr<ResourcePakReader> pReader = findReaderWithFile( relativePath, pathHash, pathInPack );
         return pReader != nullptr && pReader->readFile( pathHash, outBytes );
     }
 
-    bool ResourcePackManager::readTextFile( string_view relativePath, string& outText, string* pOutMountedPackPath ) const
+    bool ResourcePakManager::readTextFile( string_view relativePath, string& outText, string* pOutMountedPackPath ) const
     {
         if ( relativePath.empty() )
             return false;
 
-        uint64                               pathHash{ 0 };
-        string_view                          pathInPack;
-        const shared_ptr<ResourcePackReader> pReader = findReaderWithFile( relativePath, pathHash, pathInPack );
+        uint64                              pathHash{ 0 };
+        string_view                         pathInPack;
+        const shared_ptr<ResourcePakReader> pReader = findReaderWithFile( relativePath, pathHash, pathInPack );
         if ( pReader == nullptr || pReader->readTextFile( pathInPack, outText ) == false )
             return false;
         if ( pOutMountedPackPath != nullptr )
@@ -358,42 +358,42 @@ namespace sw
         return true;
     }
 
-    AsyncReadHandle ResourcePackManager::readFileAsync( AsyncFileIO& io, string_view relativePath, AsyncIOPriority priority, const ResourceReadCompleteDelegate& onComplete ) const
+    AsyncReadHandle ResourcePakManager::readFileAsync( AsyncFileIO& io, string_view relativePath, AsyncIOPriority priority, const ResourceReadCompleteDelegate& onComplete ) const
     {
         if ( relativePath.empty() )
             return AsyncReadHandle{};
 
-        uint64                               pathHash{ 0 };
-        string_view                          pathInPack;
-        const shared_ptr<ResourcePackReader> pReader = findReaderWithFile( relativePath, pathHash, pathInPack );
+        uint64                              pathHash{ 0 };
+        string_view                         pathInPack;
+        const shared_ptr<ResourcePakReader> pReader = findReaderWithFile( relativePath, pathHash, pathInPack );
         if ( pReader == nullptr )
             return AsyncReadHandle{};
         return pReader->readFileAsync( io, pathHash, priority, onComplete );
     }
 
-    void ResourcePackManager::setDlcEntitlementValidator( DlcEntitlementDelegate validator )
+    void ResourcePakManager::setDlcEntitlementValidator( DlcEntitlementDelegate validator )
     {
         std::scoped_lock<mutex> lock( _vfsMutex );
         _dlcValidator = std::move( validator );
     }
 
-    void ResourcePackManager::setAllowLooseFiles( bool bAllow )
+    void ResourcePakManager::setAllowLooseFiles( bool bAllow )
     {
         _bAllowLooseFiles = bAllow;
     }
 
-    bool ResourcePackManager::isAllowLooseFiles() const
+    bool ResourcePakManager::isAllowLooseFiles() const
     {
         return _bAllowLooseFiles;
     }
 
-    size_t ResourcePackManager::getMountedPackCount() const
+    size_t ResourcePakManager::getMountedPackCount() const
     {
         std::scoped_lock<mutex> lock( _vfsMutex );
         return _listMountedPack.size();
     }
 
-    bool ResourcePackManager::scanAndMountPacks( string_view packsDirectory, const vector<string>& listPriority )
+    bool ResourcePakManager::scanAndMountPacks( string_view packsDirectory, const vector<string>& listPriority )
     {
         if ( packsDirectory.empty() || FileUtil::isDirectory( packsDirectory ) == false )
             return false;
@@ -410,7 +410,7 @@ namespace sw
             if ( FileUtil::hasAnyExtension( packPath, { ".pack", ".swpk" } ) == false )
                 continue;
 
-            const int32 priority = ResourcePackManagerInternal::computePackDefaultPriority( packPath, listPriority );
+            const int32 priority = ResourcePakManagerInternal::computePackDefaultPriority( packPath, listPriority );
             if ( mountPack( packPath, priority ) )
                 bAnyMounted = true;
         }

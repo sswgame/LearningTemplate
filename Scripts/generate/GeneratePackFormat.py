@@ -98,7 +98,7 @@ namespace sw
 
     namespace packformat
     {{
-        // 계약 파일의 코덱/암호화/플래그 값. ResourcePackTypes.h 의 enum 이 이 값들과
+        // 계약 파일의 코덱/암호화/플래그 값. ResourcePakTypes.h 의 enum 이 이 값들과
         // 일치하는지 static_assert 로 검사한다.
 {emitConstantsInternal("Compression", spec.mapCodec)}
 

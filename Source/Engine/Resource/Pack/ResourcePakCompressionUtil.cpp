@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Resource/Pack/PackCompressionUtil.h"
+#include "Engine/Resource/Pack/ResourcePakCompressionUtil.h"
 
 #include "Core/Compression/CompressionCodecRegistry.h"
 
@@ -11,10 +11,10 @@ namespace sw
     namespace
     {
         /**
-         * @struct PackCompressionUtilInternal
+         * @struct ResourcePakCompressionUtilInternal
          * @brief 활성 레지스트리가 없을 때 쓰는, 엔진 코덱을 모두 올린 레지스트리입니다.
          */
-        struct PackCompressionUtilInternal
+        struct ResourcePakCompressionUtilInternal
         {
             /** @brief 내장 둘 + 엔진 코덱을 올린 레지스트리를 한 번 만들어 둡니다. */
             static CompressionCodecRegistry& getEngineCodecRegistry()
@@ -39,7 +39,7 @@ namespace sw
 
 namespace sw
 {
-    bool PackCompressionUtil::findCodecType( PackCompressionType packType, CompressionCodecType& outCodecType )
+    bool ResourcePakCompressionUtil::findCodecType( PackCompressionType packType, CompressionCodecType& outCodecType )
     {
         for ( const CodecMapping& mapping : kArrCodecMapping )
         {
@@ -51,7 +51,7 @@ namespace sw
         return false;
     }
 
-    ICompressionCodec* PackCompressionUtil::findCodec( PackCompressionType packType )
+    ICompressionCodec* ResourcePakCompressionUtil::findCodec( PackCompressionType packType )
     {
         CompressionCodecType codecType{ CompressionCodecType::None };
         if ( findCodecType( packType, codecType ) == false )
@@ -60,7 +60,7 @@ namespace sw
         CompressionCodecRegistry* pActive = CompressionCodecRegistry::getActive();
         ICompressionCodec*        pCodec  = ( pActive != nullptr ) ? pActive->getCodec( codecType ) : nullptr;
         if ( pCodec == nullptr )
-            pCodec = PackCompressionUtilInternal::getEngineCodecRegistry().getCodec( codecType );
+            pCodec = ResourcePakCompressionUtilInternal::getEngineCodecRegistry().getCodec( codecType );
         return pCodec;
     }
 } // namespace sw

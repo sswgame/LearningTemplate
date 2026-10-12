@@ -7,28 +7,28 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/AsyncFileIO.h"
 
-#include "Engine/Resource/Pack/ResourcePackTypes.h"
+#include "Engine/Resource/Pack/ResourcePakTypes.h"
 #include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {
     /**
-     * @class ResourcePackReader
+     * @class ResourcePakReader
      * @brief .pack(SWPK) 바이너리 아카이브 하나를 열고 64비트 해시로 O(1) 파일 읽기를 하는 VFS 리더입니다.
      * @details 파일은 `AsyncFileHandle`(위치 지정 읽기)로 엽니다. 공유 파일 위치가 없어 여러 스레드의 `readFile` 이 잠금 없이 동시에 읽고,
      *          잠금은 색인을 찾는 동안만 쥡니다(압축 해제 · CRC 는 잠금 밖). 같은 핸들로 `readFileAsync` 가 비동기 IO 에 구간 읽기를 겁니다.
      */
-    class SW_API ResourcePackReader
+    class SW_API ResourcePakReader
     {
     public:
-        ResourcePackReader();
-        ~ResourcePackReader();
+        ResourcePakReader();
+        ~ResourcePakReader();
 
-        ResourcePackReader( const ResourcePackReader& )            = delete;
-        ResourcePackReader& operator=( const ResourcePackReader& ) = delete;
+        ResourcePakReader( const ResourcePakReader& )            = delete;
+        ResourcePakReader& operator=( const ResourcePakReader& ) = delete;
 
-        ResourcePackReader( ResourcePackReader&& other ) noexcept;
-        ResourcePackReader& operator=( ResourcePackReader&& other ) noexcept;
+        ResourcePakReader( ResourcePakReader&& other ) noexcept;
+        ResourcePakReader& operator=( ResourcePakReader&& other ) noexcept;
 
         /**
          * @brief .pack 파일을 열고 헤더와 FAT 인덱스 테이블을 메모리에 로드합니다.
@@ -128,7 +128,7 @@ namespace sw
          * @brief @p other 의 파일 · 헤더 · 인덱스를 넘겨받고 @p other 의 파일 핸들을 비웁니다. 두 쪽의 `_fileMutex` 를 잡은 채로 부릅니다.
          * @details 이동 생성자와 이동 대입이 함께 씁니다. 멤버를 더하면 여기 한 곳만 고칩니다.
          */
-        void takeFromLocked( ResourcePackReader& other );
+        void takeFromLocked( ResourcePakReader& other );
 
     private:
         mutable mutex                        _fileMutex;

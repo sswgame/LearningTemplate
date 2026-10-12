@@ -23,7 +23,7 @@
         "note": [
             "키는 '팩 도메인을 제외한' 경로다. engine.pack 의 항목은 'renderpass/default.xml' 처럼",
             "도메인(engine/) 없이 저장되고, 런타임은 'engine/renderpass/default.xml' 로 조회하다 실패하면",
-            "도메인을 떼어내고 다시 조회한다(ResourcePackManager::readTextFile).",
+            "도메인을 떼어내고 다시 조회한다(ResourcePakManager::readTextFile).",
             "해시 직전에 구분자를 '/' 로 정규화하고 소문자로 낮춘다."
         ]
     },

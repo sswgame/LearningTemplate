@@ -14,7 +14,7 @@ namespace sw
     enum class AsyncIOPriority : uint8;
 
     class AsyncReadHandle;
-    class ResourcePackManager;
+    class ResourcePakManager;
 
     /** @brief 리소스 하나의 비동기 읽기가 끝났을 때 불립니다. 성공이면 다 읽은(팩이면 풀고 CRC 까지 맞춘) 바이트이고, 옮겨 가져도 됩니다. */
     using ResourceReadCompleteDelegate = Delegate<void( bool bSuccess, vector<uint8>& bytes )>;
@@ -61,6 +61,6 @@ namespace sw
         static bool hasResource( string_view relativePath );
 
         /** @brief VFS 팩 매니저를 반환합니다. */
-        static ResourcePackManager& getPackManager();
+        static ResourcePakManager& getPackManager();
     };
 } // namespace sw

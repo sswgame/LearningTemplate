@@ -20,8 +20,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Resource/Image/DDSLoader.h"
-#include "Engine/Resource/Pack/ResourcePackReader.h"
-#include "Engine/Resource/Pack/ResourcePackTypes.h"
+#include "Engine/Resource/Pack/ResourcePakReader.h"
+#include "Engine/Resource/Pack/ResourcePakTypes.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Sequencer/SequenceAsset.h"
@@ -32,7 +32,7 @@
 #include "Engine/UserSettings/UserSettingsSchema.h"
 #include "Engine/Utility/KeyValueFile.h"
 
-#include "EngineTest/ResourcePackTestUtil.h"
+#include "EngineTest/ResourcePakTestUtil.h"
 
 using namespace sw;
 
@@ -119,7 +119,7 @@ namespace test
                 const string path = makeScratchPath( "pack.pack" );
                 if ( FileUtil::writeFile( path, pData, size ) == false )
                     return;
-                ResourcePackReader reader;
+                ResourcePakReader reader;
                 if ( reader.open( path ) )
                 {
                     vector<uint8>                bytes;
@@ -276,7 +276,7 @@ namespace test
                 for ( const PackCompressionType compression : kArrCompression )
                 {
                     vector<uint8> bytes;
-                    if ( sw::test::ResourcePackTestUtil::createPackFile( path, 0, compression, listFile, true ) && FileUtil::readFile( path, bytes ) )
+                    if ( sw::test::ResourcePakTestUtil::createPackFile( path, 0, compression, listFile, true ) && FileUtil::readFile( path, bytes ) )
                         outListSeed.push_back( std::move( bytes ) );
                 }
             }

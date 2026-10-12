@@ -7,7 +7,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Resource/Pack/ResourcePackReader.h"
+#include "Engine/Resource/Pack/ResourcePakReader.h"
 
 namespace sw
 {
@@ -24,29 +24,29 @@ namespace sw
      */
     struct MountedPack
     {
-        string                         _domainName{};  ///< 팩 도메인 식별자(예: "engine", "common", "game_empty")
-        int32                          _priority{ 0 }; ///< 높을수록 우선 탐색
-        shared_ptr<ResourcePackReader> _pReader;       ///< 읽는 쪽이 잠금 밖에서 쓰는 동안 언마운트돼도 살아 있게 함께 든다
+        string                        _domainName{};  ///< 팩 도메인 식별자(예: "engine", "common", "game_empty")
+        int32                         _priority{ 0 }; ///< 높을수록 우선 탐색
+        shared_ptr<ResourcePakReader> _pReader;       ///< 읽는 쪽이 잠금 밖에서 쓰는 동안 언마운트돼도 살아 있게 함께 든다
     };
 } // namespace sw
 
 namespace sw
 {
     /**
-     * @class ResourcePackManager
+     * @class ResourcePakManager
      * @brief 여러 .pack 파일을 우선순위 스택으로 마운트하고 O(1) VFS 읽기를 제공하는 매니저입니다.
      */
-    class SW_API ResourcePackManager
+    class SW_API ResourcePakManager
     {
     public:
-        ResourcePackManager();
-        ~ResourcePackManager();
+        ResourcePakManager();
+        ~ResourcePakManager();
 
-        ResourcePackManager( const ResourcePackManager& )            = delete;
-        ResourcePackManager& operator=( const ResourcePackManager& ) = delete;
+        ResourcePakManager( const ResourcePakManager& )            = delete;
+        ResourcePakManager& operator=( const ResourcePakManager& ) = delete;
 
-        ResourcePackManager( ResourcePackManager&& ) noexcept;
-        ResourcePackManager& operator=( ResourcePackManager&& ) noexcept;
+        ResourcePakManager( ResourcePakManager&& ) noexcept;
+        ResourcePakManager& operator=( ResourcePakManager&& ) noexcept;
 
         /**
          * @brief .pack 파일을 VFS 에 마운트합니다.
@@ -88,7 +88,7 @@ namespace sw
         [[nodiscard]] bool readTextFile( string_view relativePath, string& outText, string* pOutMountedPackPath = nullptr ) const;
 
         /**
-         * @brief 마운트된 팩을 우선순위 순서대로 찾아 그 항목을 @p io 로 비동기로 읽습니다(`ResourcePackReader::readFileAsync`).
+         * @brief 마운트된 팩을 우선순위 순서대로 찾아 그 항목을 @p io 로 비동기로 읽습니다(`ResourcePakReader::readFileAsync`).
          * @return 건 읽기의 핸들. 어느 팩에도 없으면 아무것도 걸지 않고 `isValid() == false` 인 핸들입니다(@p onComplete 는 불리지 않는다).
          */
         AsyncReadHandle readFileAsync( AsyncFileIO& io, string_view relativePath, AsyncIOPriority priority, const ResourceReadCompleteDelegate& onComplete ) const;
@@ -124,7 +124,7 @@ namespace sw
          * @param outPathHash 그 팩 안에서 찾은 해시(전체 경로 또는 도메인을 뗀 경로)
          * @param outPathInPack 그 팩 안의 경로(@p relativePath 를 가리킨다)
          */
-        shared_ptr<ResourcePackReader> findReaderWithFile( string_view relativePath, uint64& outPathHash, string_view& outPathInPack ) const;
+        shared_ptr<ResourcePakReader> findReaderWithFile( string_view relativePath, uint64& outPathHash, string_view& outPathInPack ) const;
 
         mutable mutex          _vfsMutex;
         vector<MountedPack>    _listMountedPack;

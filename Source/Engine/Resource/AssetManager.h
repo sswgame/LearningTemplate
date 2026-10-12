@@ -2,7 +2,7 @@
  * @file AssetManager.h
  * @brief 팩 에셋(GUID, 스키마, Material, Texture, Prefab, Mesh)을 한곳에서 관리하는 파사드입니다. `EngineLoop` 가 `EngineServiceCollection` 으로 소유합니다.
  * @note
- *   포함: AssetDatabase, AssetFormatRegistry, ResourcePackManager, 에셋 캐시 레지스트리.
+ *   포함: AssetDatabase, AssetFormatRegistry, ResourcePakManager, 에셋 캐시 레지스트리.
  *   기능 캐시(Material, Texture, Prefab, Mesh, Skeleton, Fracture 등)는 **각 기능 폴더가 등록합니다**(`SW_BUILT_IN_ASSET_CACHE`, `Cache/BuiltInAssetCache.h`).
  *   매니저는 생성자에서 등록 테이블을 훑어 소유 캐시를 만들고, 코드로 만드는 값 테이블(`WeakInternCache`)은 빌려 와서 등록합니다. 타입으로 찾을 때는 `getAssetCache<T>()` 를 씁니다.
  *   제외(수명이 다름):
@@ -27,7 +27,7 @@
 
 namespace sw
 {
-    class ResourcePackManager;
+    class ResourcePakManager;
 
     /** @brief `AssetManager::mountContent` 가 무엇을 콘텐츠로 올릴지 정합니다. */
     enum class ContentSource : uint8
@@ -159,8 +159,8 @@ namespace sw
         uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
 
         /** @brief VFS 에 팩을 마운트하는 리소스 팩 매니저를 반환합니다. */
-        ResourcePackManager&       getPackManager();
-        const ResourcePackManager& getPackManager() const;
+        ResourcePakManager&       getPackManager();
+        const ResourcePakManager& getPackManager() const;
 
         /** @brief 경로와 GUID(.meta)를 대응시키는 테이블을 반환합니다. */
         AssetDatabase&       getAssetDatabase() { return _assetDatabase; }
@@ -179,7 +179,7 @@ namespace sw
         AssetDatabase                   _assetDatabase;
         AssetFormatRegistry             _assetFormatRegistry;
         vector<unique_ptr<IAssetCache>> _listOwnedAssetCache; ///< 기능 폴더가 등록한 소유 캐시(`SW_BUILT_IN_ASSET_CACHE`)다. 매니저마다 하나씩 가진다
-        unique_ptr<ResourcePackManager> _pPackManager;
+        unique_ptr<ResourcePakManager>  _pPackManager;
         vector<IAssetCache*>            _listBuiltInAssetCache; ///< 내장 캐시 전부다. 소유 캐시와, 빌려 온 공유 캐시(Engine.dll 의 정적 값 테이블)를 종류 이름 순으로 올린다
         /**
          * @brief 등록된 캐시 목록입니다. 소유하지 않습니다(내장 캐시는 위 멤버가, 모듈이 등록한 것은 그 모듈이 소유합니다).

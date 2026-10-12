@@ -13,7 +13,7 @@ add_executable(LoaderFuzzer
 	LoaderFuzzer.cpp
 	"${CMAKE_SOURCE_DIR}/Test/TestFramework/TestHostRuntime.cpp"
 	"${CMAKE_SOURCE_DIR}/Test/EngineTest/LoaderFuzzTargets.cpp"
-	"${CMAKE_SOURCE_DIR}/Test/EngineTest/ResourcePackTestUtil.cpp"
+	"${CMAKE_SOURCE_DIR}/Test/EngineTest/ResourcePakTestUtil.cpp"
 )
 set_target_properties(LoaderFuzzer PROPERTIES FOLDER "Test")
 add_dependencies(AllTests LoaderFuzzer)

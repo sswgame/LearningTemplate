@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "EngineTest/ResourcePackTestUtil.h"
+#include "EngineTest/ResourcePakTestUtil.h"
 
 #include "Core/Compression/ICompressionCodec.h"
 #include "Core/Container/StringUtil.h"
@@ -8,11 +8,11 @@
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Resource/Pack/PackCompressionUtil.h"
+#include "Engine/Resource/Pack/ResourcePakCompressionUtil.h"
 
 namespace sw::test
 {
-    bool ResourcePackTestUtil::createPackFile( const string& packPath, uint32 dlcAppID, PackCompressionType compression, const vector<pair<string, string>>& listFileContent, bool bIncludeDebugStringPool )
+    bool ResourcePakTestUtil::createPackFile( const string& packPath, uint32 dlcAppID, PackCompressionType compression, const vector<pair<string, string>>& listFileContent, bool bIncludeDebugStringPool )
     {
         FileUtil::ensureParentDirectoryExists( packPath );
 
@@ -47,7 +47,7 @@ namespace sw::test
 
             // 코덱은 리더와 같은 길로 찾는다(팩 종류 → 코덱 종류 표 + 레지스트리). None 은 그대로 싣는다.
             const bool         bCompressed = compression != PackCompressionType::None;
-            ICompressionCodec* pCodec      = bCompressed ? PackCompressionUtil::findCodec( compression ) : nullptr;
+            ICompressionCodec* pCodec      = bCompressed ? ResourcePakCompressionUtil::findCodec( compression ) : nullptr;
             if ( bCompressed && pCodec == nullptr )
                 return false;
 
