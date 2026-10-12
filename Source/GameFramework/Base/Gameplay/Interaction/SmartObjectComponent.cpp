@@ -217,6 +217,12 @@ namespace sw
         return _slots.countFree();
     }
 
+    hashed_string SmartObjectComponent::getDefinitionID() const
+    {
+        std::lock_guard<std::mutex> lock( _mutex );
+        return _slots.getDefinitionID();
+    }
+
     int32 SmartObjectComponent::getSlotCount() const
     {
         std::lock_guard<std::mutex> lock( _mutex );

@@ -56,6 +56,8 @@
 ## 확장하는 법
 
 - **새 상호작용 종류**는 데이터에 정의를 더합니다. 코드가 필요한 결과는 `InteractionCompletedEvent` 를 받아 처리합니다.
+- **NPC 일정과 잇기.** `SmartObjectScheduleLocator` 는 일정의 `UseObject` 가 씬의 스마트 오브젝트 슬롯을 시간 창으로 예약하게 하는 제공자이고(`claimReserved` 로 블록이 시작될 때 점유),
+  `InteractionInterruptionSystem` 은 상호작용(말 걸기) 중인 대상 NPC 에 일정의 끼어들기(`Talk`)를 쌓고 끝나면 뺍니다. 둘 다 게임 스레드에서 부릅니다. 자세한 쓰임은 [AI/Schedule](../../Actor/AI/Schedule/README.md) 의 "확장하는 법"입니다.
 - **네트워크 게임**은 `IInteractionAuthority` 를 구현해 하는 쪽에 등록합니다. 권한이 `Server` 면 시작 전에 허락을 묻고, 완료를 알립니다.
 
 ## 함정과 주의

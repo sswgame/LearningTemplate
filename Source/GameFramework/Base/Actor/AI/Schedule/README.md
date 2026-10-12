@@ -129,12 +129,14 @@ const ScheduleNpcView view = schedules.getNpcView( npcIndex ); // 위치, 활동
 
 ## 확장하는 법
 
-아직 연결하지 않은 곳이 셋 있습니다. 쓰는 게임이 생기면 이 순서로 붙입니다.
+연결은 인터페이스 셋이고, 앞의 둘은 구현이 들어 있습니다. 쓰는 게임이 생기면 붙입니다.
 
-1. **스마트 오브젝트.** 스마트 오브젝트 시스템이 `IScheduleActivityLocator` 를 구현해 `setActivityLocator` 로 끼웁니다. `reserve` 는 (NPC, 종류, 날, 시간 창)에 대해 멱등이어야 합니다.
-   지금 점유만 하는 시스템이면 어댑터가 시간 창 예약 테이블을 가지고, 블록이 시작될 때 실제로 점유합니다.
-2. **애니메이션.** `IScheduleActivityAnimator::onActivityStarted( cue )` 를 구현해, `_animation`(블록의 `animation`, 없으면 활동 종류의 기본)으로 애니메이터 상태나 클립을 고릅니다.
-   `Near` NPC 에게만 불리고, 화면 밖 NPC 는 사건(`drainEvents`)만 남습니다.
+1. **스마트 오브젝트.** `SmartObjectScheduleLocator`(`Gameplay/Interaction`)가 `IScheduleActivityLocator` 를 구현합니다. `setActivityLocator` 로 끼우면 `UseObject` 의 `objectKind`
+   (= 스마트 오브젝트 정의 id, `Bench`)에 맞는 씬의 슬롯을 시간 창으로 예약합니다. 예약만 하고 점유는 하지 않으므로, 블록이 시작될 때 게임이 사건의 예약 id 로 `claimReserved( 예약 id, NPC )` 를
+   부르고 끝나면 `releaseClaim` 을 부릅니다(플레이어가 먼저 앉았으면 점유가 실패하니 물러서는 활동을 고릅니다). 예약 저장은 `fillState` / `restoreState` 를 게임 세이브에 함께 싣습니다.
+   말 걸기는 `InteractionInterruptionSystem`(`Gameplay/Interaction`)이 상호작용 중인 대상 NPC 에 `pushInterruption( "Talk" )` 를 쌓고 끝나면 뺍니다.
+2. **애니메이션.** `ScheduleSkeletalAnimator` 가 `IScheduleActivityAnimator` 를 구현해, `_animation`(블록의 `animation`, 없으면 `setActivityState` 로 정한 활동 종류의 기본 상태)을
+   NPC 오브젝트(이름 = NPC id)의 `SkeletalAnimatorComponent::play` 로 재생하고, 활동이 끝나면 쉬는 상태(`Idle`)로 돌아갑니다. `Near` NPC 에게만 불리고, 화면 밖 NPC 는 사건(`drainEvents`)만 남습니다.
 3. **길찾기.** 내비메시가 생기면 `ISchedulePathing` 구현을 하나 더합니다.
 
 ## 함정과 주의
