@@ -47,6 +47,10 @@ namespace sw
         int32 findBusIndex( const hashed_string& name ) const;
         /** @brief 버스 이름입니다. */
         const hashed_string& getBusName( uint32 busIndex ) const { return _listBusState[busIndex]._name; }
+        /** @brief 부모 버스의 번호입니다. master 는 -1 입니다. */
+        int32 getBusParentIndex( uint32 busIndex ) const { return _listBusState[busIndex]._parentIndex; }
+        /** @brief 데이터 볼륨(dB)입니다. 사용자 볼륨 · 스냅샷 오프셋은 들어 있지 않습니다. */
+        float32 getBusVolumeDb( uint32 busIndex ) const { return _listBusState[busIndex]._volumeDb; }
         /** @brief 버스의 입력 버퍼(스테레오 교차, 블록 길이)를 반환합니다. 보이스가 여기에 더합니다. */
         float32* getBusInput( uint32 busIndex ) { return _listBusState[busIndex]._listInput.data(); }
         /** @brief 데이터가 정한 보이스 상한과 들림 임계값을 반환합니다. */

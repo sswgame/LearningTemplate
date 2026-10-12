@@ -206,6 +206,30 @@ namespace sw
         pushCommand( std::move( command ) );
     }
 
+    void AudioEngine::getBusStatuses( vector<AudioBusStatus>& outListStatus ) const
+    {
+        _published.getBusStatuses( outListStatus );
+    }
+
+    void AudioEngine::collectEventNames( vector<hashed_string>& outListName ) const
+    {
+        outListName.clear();
+        std::scoped_lock<mutex> lock{ _libraryMutex };
+        for ( const auto& entry : _mapGameLibrary )
+        {
+            for ( const AudioEventDesc& eventDesc : entry.second->_listEvent )
+            {
+                outListName.push_back( eventDesc._name );
+            }
+        }
+    }
+
+    bool AudioEngine::hasEventLibrary( const hashed_string& libraryName ) const
+    {
+        std::scoped_lock<mutex> lock{ _libraryMutex };
+        return _mapGameLibrary.find( libraryName ) != _mapGameLibrary.end();
+    }
+
     bool AudioEngine::hasEvent( const hashed_string& eventName ) const
     {
         std::scoped_lock<mutex> lock{ _libraryMutex };
@@ -1060,6 +1084,25 @@ namespace sw
                 listPlaying.push_back( slot._playingID );
             }
             return voiceCount;
+        } );
+        _published.publishBuses( [this]( vector<AudioBusStatus>& listStatus )
+        {
+            if ( _pMixer == nullptr )
+                return;
+            const uint32 busCount = _pMixer->getBusCount();
+            for ( uint32 busIndex = 0; busIndex < busCount; ++busIndex )
+            {
+                AudioBusStatus status;
+                status._name        = _pMixer->getBusName( busIndex );
+                status._parentIndex = _pMixer->getBusParentIndex( busIndex );
+                status._volumeDb    = _pMixer->getBusVolumeDb( busIndex );
+                status._userVolume  = _pMixer->getBusUserVolume( busIndex );
+                status._gain        = _pMixer->computeBusGain( busIndex );
+                status._peak        = _pMixer->getBusPeak( busIndex );
+                status._bMuted      = _pMixer->isBusMuted( busIndex );
+                status._bSolo       = _pMixer->isBusSolo( busIndex );
+                listStatus.push_back( status );
+            }
         } );
     }
 } // namespace sw
