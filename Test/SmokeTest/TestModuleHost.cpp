@@ -178,6 +178,27 @@ SW_TEST_CASE( ModuleHostTest, ShutdownDetachesEveryCallbackItRegistered )
     manager.shutdown();
 }
 
+/**
+ * @brief [ModuleHostTest] 공용 모듈(GameFramework)은 리로드 · 언로드 대상으로 등록되지 않는다
+ * @details GameFramework 의 함수 정적(데이터 표 캐시 · 카탈로그 · 게임 서비스 표)은 그 이미지가 키트 · 게임보다 오래 산다는 전제에 기댄다.
+ *          `registerModule` 이 그 전제를 지키는 단 한 곳이다 — 공용으로 올린 이름을 다시 등록하면 거절하고, 이미지는 그대로다.
+ */
+SW_TEST_CASE( ModuleHostTest, SharedModuleCannotBeRegisteredForReload )
+{
+    if ( FileUtil::exists( ModuleImageUtil::findModuleLibraryPath( "GameFramework" ) ) == false )
+        SW_TEST_SKIP( "GameFramework 모듈이 옆에 없습니다 (배포 구성 또는 빌드 산출물 없음)" );
+
+    LiveReloadManager manager;
+    SW_ASSERT_TRUE( manager.loadSharedModule( "GameFramework" ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "registering a shared module for reload" );
+        SW_EXPECT_FALSE( manager.registerModule( "GameFramework" ) );
+    }
+    SW_EXPECT_NULL( manager.getModuleHandle( "GameFramework" ) ); // 리로드 대상 목록에 오르지 않았다
+
+    manager.shutdown();
+}
+
 namespace
 {
     /** @brief 가짜 게임 API 가 불린 순서와, 상태 직렬화가 성공할지. */

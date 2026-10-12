@@ -96,6 +96,7 @@ namespace sw
 
         /**
          * @brief 모듈을 등록하고 섀도 복사본으로 로드합니다.
+         * @details 공용 모듈(`loadSharedModule` 로 올린 것)은 거절합니다 — 키트 · 게임보다 오래 산다는 전제를 지키는 단 한 곳입니다.
          * @param moduleName DLL/SO 기본 이름(확장자 없음)
          * @param listDependsOn 이 모듈이 의존하는 모듈 이름(먼저 로드됩니다)
          */

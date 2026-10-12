@@ -165,6 +165,11 @@ namespace sw
 
     bool LiveReloadManager::loadSharedModule( string_view moduleName )
     {
+        if ( _mapModule.find( string( moduleName ) ) != _mapModule.end() )
+        {
+            SW_LOG_ERROR( "Module %# is already registered for reload - it cannot also be a shared module that never unloads", moduleName );
+            return false;
+        }
         for ( const string& loadedName : _listSharedModule )
         {
             if ( loadedName == moduleName )
@@ -210,6 +215,17 @@ namespace sw
 
     bool LiveReloadManager::registerModule( string_view moduleName, const vector<string>& listDependsOn )
     {
+        // 공용 모듈(GameFramework)은 키트 · 게임보다 오래 산다는 전제가 그 함수 정적(데이터 표 캐시 · 카탈로그 · 서비스 표)의 근거다.
+        // 리로드 대상(_mapModule)에 오르는 길은 여기 하나뿐이므로, 공용 모듈을 내리거나 다시 올리는 길을 여기서 막는다.
+        for ( const string& sharedName : _listSharedModule )
+        {
+            if ( sharedName == moduleName )
+            {
+                SW_LOG_ERROR( "Shared module %# outlives the modules that link it and cannot be registered for reload or unload", moduleName );
+                return false;
+            }
+        }
+
         const string moduleDir = ModuleImageUtil::getModuleDirectory();
         if ( FileUtil::isDirectory( moduleDir ) == false )
         {
