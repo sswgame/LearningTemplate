@@ -17,6 +17,7 @@
 #include "GameFramework/Base/Actor/Camera/CameraCollisionProbe.h"
 #include "GameFramework/Base/Actor/Camera/CameraPoseUtil.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
+#include "GameFramework/Base/Foundation/Utility/Math/RayMath.h"
 
 namespace sw
 {
@@ -32,6 +33,13 @@ namespace sw
     {
         struct CameraDirectorComponentInternal
         {
+            /** @brief 덮어쓴 시점 프리셋의 id 입니다. 카탈로그에 없으므로 저장하면 고정 포즈로 돌아온다. */
+            static constexpr const utf8* kOverridePresetID = "__viewOverride";
+            /** @brief 덮어쓴 원근 시점의 가까운 면(m)입니다. 탑승 카메라가 바로 앞 레일을 자르지 않게 짧게 둔다. */
+            static constexpr float32 kOverrideNearPlane = 0.1f;
+            /** @brief 땅 고르기 광선의 길이를 먼 면의 몇 배까지 볼지입니다. 직교 시점은 카메라가 땅에서 멀리 떨어져 있어 먼 면보다 길게 본다. */
+            static constexpr float32 kGroundRayFarPlaneScale = 3.0f;
+
             /** @brief 오브젝트의 월드 자리와 보는 쪽(요 · 피치)입니다. 씬 컴포넌트가 없으면 false 입니다. */
             [[nodiscard]] static bool readFacing( const GameObject& object, float3& outPosition, float32& outYaw, float32& outPitch )
             {
@@ -66,6 +74,10 @@ namespace sw
         , _lookHoldAction{ "Camera.LookHold" }
         , _zoomAction{ "Camera.Zoom" }
         , _bReadInput{ true }
+        , _overrideBlend{}
+        , _overrideDef{}
+        , _presetBeforeOverride{}
+        , _bViewOverride{ false }
         , _catalog{}
         , _director{}
         , _pendingStateBytes{}
@@ -108,6 +120,54 @@ namespace sw
                 SW_LOG_WARNING( "Camera preset '%#' is not in '%#'", startID.c_str(), _catalogPath );
         }
         updateCamera( 0.0f );
+    }
+
+    void CameraDirectorComponent::setViewOverride( const float3& position, const float3& euler, float32 fieldOfViewY, float32 farPlane )
+    {
+        _overrideDef._id                  = hashed_string( CameraDirectorComponentInternal::kOverridePresetID );
+        _overrideDef._view._mode          = CameraPresetMode::Fixed;
+        _overrideDef._view._aim           = CameraAimMode::Angles;
+        _overrideDef._view._offset        = position;
+        _overrideDef._view._pitch         = euler._x;
+        _overrideDef._view._yaw           = euler._y;
+        _overrideDef._lens._fieldOfViewY  = fieldOfViewY;
+        _overrideDef._lens._nearPlane     = CameraDirectorComponentInternal::kOverrideNearPlane;
+        _overrideDef._lens._farPlane      = MathUtil::max( farPlane, CameraDirectorComponentInternal::kOverrideNearPlane * 2.0f );
+        _overrideDef._lens._bOrthographic = false;
+        // 덮어쓰는 동안에는 값만 바꾼다 — 매 프레임 블렌드를 새로 시작하면 영영 도착하지 못한다.
+        if ( _bViewOverride )
+        {
+            _director.refreshActivePreset( _overrideDef );
+            return;
+        }
+        _presetBeforeOverride = _director.getActivePresetID();
+        _director.activatePreset( _overrideDef, _overrideBlend );
+        _bViewOverride = true;
+    }
+
+    void CameraDirectorComponent::clearViewOverride()
+    {
+        if ( _bViewOverride == false )
+            return;
+        _bViewOverride = false;
+        if ( _director.activatePreset( _catalog, _presetBeforeOverride, _overrideBlend ) == false )
+            SW_LOG_WARNING( "Camera preset '%#' to return to after the view override is gone", _presetBeforeOverride.c_str() );
+    }
+
+    bool CameraDirectorComponent::findGroundPoint( const float2& mouseNormalized, float32 groundHeight, float3& outPoint ) const
+    {
+        if ( _director.hasPose() == false )
+            return false;
+        const GameObject*      pOwner      = getOwner();
+        const CameraComponent* pCamera     = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;
+        const float32          aspectRatio = pCamera != nullptr ? CameraPoseUtil::computeAspectRatio( *pCamera ) : CameraTarget::kDefaultAspectRatio;
+        const CameraPose&      pose        = _director.getPose();
+        const GameRay          ray         = computeCameraScreenRay( pose, aspectRatio, mouseNormalized );
+        float32                distance    = 0.0f;
+        if ( RayMath::intersectHorizontalPlane( ray, groundHeight, pose._farPlane * CameraDirectorComponentInternal::kGroundRayFarPlaneScale, distance ) == false )
+            return false;
+        outPoint = ray._origin + ray._direction * distance;
+        return true;
     }
 
     void CameraDirectorComponent::writeState( Archive& outArchive ) const

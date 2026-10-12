@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Base/Actor/Camera/CameraCollisionProbe.h"
+#include "GameFramework/Base/Foundation/Utility/Math/RayMath.h"
 
 namespace sw
 {
@@ -347,5 +348,30 @@ namespace sw
     {
         CameraModeState state;
         return evaluateCameraMode( def, target, 0.0f, state, nullptr );
+    }
+
+    GameRay computeCameraScreenRay( const CameraPose& pose, float32 aspectRatio, const float2& mouseNormalized )
+    {
+        const float3  right   = float3::transform( float3{ 1.0f, 0.0f, 0.0f }, pose._rotation );
+        const float3  up      = float3::transform( float3{ 0.0f, 1.0f, 0.0f }, pose._rotation );
+        const float3  forward = float3::transform( float3{ 0.0f, 0.0f, 1.0f }, pose._rotation );
+        const float32 aspect  = MathUtil::max( CameraModeInternal::kMinAspectRatio, aspectRatio );
+        const float32 screenX = mouseNormalized._x * 2.0f - 1.0f;
+        const float32 screenY = 1.0f - mouseNormalized._y * 2.0f;
+        GameRay       ray;
+        if ( pose._bOrthographic == SW_TRUE )
+        {
+            // 직교 — 광선은 모두 앞 방향과 나란하고, 시작점이 화면 평면 위에서 옮겨진다.
+            const float32 halfHeight = pose._orthoHeight * 0.5f;
+            ray._origin              = pose._position + right * ( screenX * halfHeight * aspect ) + up * ( screenY * halfHeight );
+            ray._direction           = forward;
+            return ray;
+        }
+        const float32 tanHalfY  = MathUtil::tan( pose._fieldOfViewY * 0.5f );
+        float3        direction = forward + right * ( screenX * tanHalfY * aspect ) + up * ( screenY * tanHalfY );
+        direction.normalize();
+        ray._origin    = pose._position;
+        ray._direction = direction;
+        return ray;
     }
 } // namespace sw

@@ -9,6 +9,7 @@
 #include "GameFramework/Base/Actor/Camera/CameraBlend.h"
 #include "GameFramework/Base/Actor/Camera/CameraCollisionProbe.h"
 #include "GameFramework/Base/Actor/Camera/CameraDirector.h"
+#include "GameFramework/Base/Actor/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Base/Actor/Camera/CameraManagerComponent.h"
 #include "GameFramework/Base/Actor/Camera/CameraMode.h"
 #include "GameFramework/Base/Actor/Camera/CameraPreset.h"
@@ -562,6 +563,83 @@ SW_TEST_CASE( CameraModeTest, FollowXYDirectorDampsAndShakesBackToItsPlace )
     SW_EXPECT_NEAR_EQUAL( 20.0f, director.getPose()._position._x, 1.0e-4f );
     SW_EXPECT_NEAR_EQUAL( 3.0f, director.getPose()._position._y, 1.0e-4f );
     SW_EXPECT_NEAR_EQUAL( -10.0f, director.getPose()._position._z, 1.0e-4f );
+}
+
+/**
+ * @brief [CameraModeTest] 포즈의 화면 광선은 직교 리그의 광선과 같고, 원근 포즈는 화면 가운데가 앞 방향이다
+ */
+SW_TEST_CASE( CameraModeTest, ScreenRayFromAPoseMatchesTheOrthoRig )
+{
+    const float32   yaw   = 30.0f * MathUtil::kDegreeToRadian;
+    const float32   pitch = 40.0f * MathUtil::kDegreeToRadian;
+    CameraPresetDef def;
+    def._view._mode        = CameraPresetMode::OrthoTopDown;
+    def._view._yaw         = yaw;
+    def._view._pitch       = pitch;
+    def._view._distance    = 100.0f;
+    def._lens._orthoHeight = 40.0f;
+    CameraTarget target;
+    target._focus          = float3{ 3.0f, 0.0f, -2.0f };
+    const CameraPose ortho = evaluatePreset( def, target );
+    const float2     mouse{ 0.8f, 0.3f };
+    const GameRay    fromPose = computeCameraScreenRay( ortho, 1.5f, mouse );
+    const GameRay    fromRig  = OrthoCameraRigMath::computeScreenRay( target._focus, yaw, pitch, 100.0f, 40.0f, 1.5f, mouse );
+    SW_EXPECT_NEAR_EQUAL( fromRig._origin._x, fromPose._origin._x, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( fromRig._origin._y, fromPose._origin._y, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( fromRig._origin._z, fromPose._origin._z, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( fromRig._direction._x, fromPose._direction._x, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( fromRig._direction._y, fromPose._direction._y, 1.0e-4f );
+
+    CameraPose perspective;
+    perspective._rotation     = quaternion::makeFromYawPitchRoll( 0.0f, 0.0f, 0.0f );
+    perspective._fieldOfViewY = MathUtil::kHalfPi;
+    const GameRay center      = computeCameraScreenRay( perspective, 1.0f, float2{ 0.5f, 0.5f } );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, center._direction._z, 1.0e-5f );
+    const GameRay rightEdge = computeCameraScreenRay( perspective, 1.0f, float2{ 1.0f, 0.5f } );
+    SW_EXPECT_NEAR_EQUAL( rightEdge._direction._x, rightEdge._direction._z, 1.0e-5f ); // 시야각 90° 의 가장자리는 45°
+}
+
+/**
+ * @brief [CameraModeTest] 디렉터 컴포넌트의 땅 고르기와 시점 덮어쓰기 — 직교 리그 네 게임이 디렉터로 옮길 때 쓰는 창구
+ * @details 위에서 내려다보는 직교 프리셋에서 화면 가운데는 초점 아래 땅이고, 덮어쓴 원근 시점은 그 시점으로 고르며, 덮어쓰기를 풀면 원래 프리셋으로 돌아간다.
+ */
+SW_TEST_CASE( CameraModeTest, DirectorComponentPicksTheGroundAndHonoursTheOverride )
+{
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "DirectedRig" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    SW_ASSERT_NOT_NULL( pObject->addComponent<CameraComponent>() );
+    CameraDirectorComponent* pDirector = pObject->addComponent<CameraDirectorComponent>();
+    SW_ASSERT_NOT_NULL( pDirector );
+    SW_ASSERT_TRUE( pDirector->getCatalog().loadFromXMLText( R"(<CameraPresets>
+        <Preset id="topdown"><View mode="OrthoTopDown" pitch="90" yaw="0" distance="50"/><Lens orthographic="true" orthoHeight="20" far="200"/></Preset>
+    </CameraPresets>)",
+                                                             "ground-pick-test" ) );
+    pDirector->setInputEnabled( false );
+    BlendCurveDef cut;
+    cut._curve = BlendCurve::Cut;
+    pDirector->setOverrideBlend( cut );
+    manager.beginPlay();
+
+    float3 point{};
+    SW_ASSERT_TRUE( pDirector->findGroundPoint( float2{ 0.5f, 0.5f }, 0.0f, point ) );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, point._x, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, point._z, 1.0e-3f );
+    SW_ASSERT_TRUE( pDirector->findGroundPoint( float2{ 0.5f, 0.0f }, 0.0f, point ) ); // 화면 위 가장자리 — 요 0 이면 +Z 쪽 반 높이
+    SW_EXPECT_NEAR_EQUAL( 10.0f, point._z, 1.0e-2f );
+
+    pDirector->setViewOverride( float3{ 0.0f, 10.0f, -10.0f }, float3{ 45.0f * MathUtil::kDegreeToRadian, 0.0f, 0.0f }, 1.0f, 300.0f );
+    SW_EXPECT_TRUE( pDirector->isViewOverridden() );
+    pDirector->updateCamera( 0.016f );
+    SW_ASSERT_TRUE( pDirector->findGroundPoint( float2{ 0.5f, 0.5f }, 0.0f, point ) );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, point._z, 1.0e-2f ); // (0, 10, −10) 에서 45° 아래 → 원점
+    pDirector->setViewOverride( float3{ 0.0f, 10.0f, -20.0f }, float3{ 45.0f * MathUtil::kDegreeToRadian, 0.0f, 0.0f }, 1.0f, 300.0f );
+    SW_EXPECT_FALSE( pDirector->isBlending() ); // 덮어쓰는 동안은 값만 바꾼다(블렌드를 새로 시작하지 않는다)
+
+    pDirector->clearViewOverride();
+    SW_EXPECT_FALSE( pDirector->isViewOverridden() );
+    SW_EXPECT_TRUE( pDirector->getActivePresetID() == hashed_string( "topdown" ) );
+    manager.endPlay();
 }
 
 /**

@@ -18,6 +18,8 @@
 
 namespace sw
 {
+    struct GameRay;
+
     class ICameraCollisionProbe;
 
     /** @brief 이번 프레임의 카메라 입력입니다. `InputManager` 를 보는 컴포넌트가 채우고, 모드는 프리셋의 `<Input>` 이 받는 것만 씁니다. */
@@ -86,4 +88,12 @@ namespace sw
 
     /** @brief @p from 에서 @p to 를 보는 요와 피치(rad, 피치는 +가 아래)입니다. 같은 점이면 0 입니다. */
     SW_GF_API float2 computeLookAngles( const float3& from, const float3& to );
+
+    /**
+     * @brief 포즈의 화면 점을 지나는 광선입니다. 화면 점 @p mouseNormalized 는 왼쪽 위가 (0, 0), 오른쪽 아래가 (1, 1) 입니다.
+     * @details 직교 포즈는 광선이 모두 카메라 앞 방향과 나란하고 시작점이 화면 평면 위에서 옮겨진다. 원근 포즈는 카메라 자리에서 시야각만큼 벌어진다.
+     *          마우스 고르기(땅 점 찾기)에 쓴다. 디렉터가 지금 낸 포즈를 넘기면 블렌드 중에도 화면에 보이는 그대로 고른다.
+     * @param aspectRatio 화면의 가로/세로이다(`CameraPoseUtil::computeAspectRatio`).
+     */
+    SW_GF_API GameRay computeCameraScreenRay( const CameraPose& pose, float32 aspectRatio, const float2& mouseNormalized );
 } // namespace sw
