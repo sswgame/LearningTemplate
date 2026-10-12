@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Physics/Collision/PhysicsMeshShapeCache.h"
 #include "Engine/Physics/Jolt/JoltJobSystem.h"
 #include "Engine/Physics/Jolt/JoltUtil.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
@@ -269,9 +270,10 @@ namespace sw
             }
             case PhysicsShapeType3D::ConvexHull:
             {
-                JPH::Array<JPH::Vec3> listPoint;
-                listPoint.reserve( shape._listPoint.size() );
-                for ( const float3& point : shape._listPoint )
+                const PhysicsShapeGeometry geometry = PhysicsMeshShapeCache::acquireGeometry( shape );
+                JPH::Array<JPH::Vec3>      listPoint;
+                listPoint.reserve( geometry._listPoint.size() );
+                for ( const float3& point : geometry._listPoint )
                 {
                     listPoint.push_back( JoltUtil::toJolt( point ) );
                 }
@@ -283,17 +285,18 @@ namespace sw
             }
             case PhysicsShapeType3D::TriangleMesh:
             {
-                JPH::VertexList listVertex;
-                listVertex.reserve( shape._listPoint.size() );
-                for ( const float3& point : shape._listPoint )
+                const PhysicsShapeGeometry geometry = PhysicsMeshShapeCache::acquireGeometry( shape );
+                JPH::VertexList            listVertex;
+                listVertex.reserve( geometry._listPoint.size() );
+                for ( const float3& point : geometry._listPoint )
                 {
                     listVertex.push_back( JPH::Float3{ point._x, point._y, point._z } );
                 }
                 JPH::IndexedTriangleList listTriangle;
-                listTriangle.reserve( shape._listIndex.size() / 3 );
-                for ( size_t index = 0; index + 2 < shape._listIndex.size(); index += 3 )
+                listTriangle.reserve( geometry._listIndex.size() / 3 );
+                for ( size_t index = 0; index + 2 < geometry._listIndex.size(); index += 3 )
                 {
-                    listTriangle.push_back( JPH::IndexedTriangle{ shape._listIndex[index], shape._listIndex[index + 1], shape._listIndex[index + 2], 0 } );
+                    listTriangle.push_back( JPH::IndexedTriangle{ geometry._listIndex[index], geometry._listIndex[index + 1], geometry._listIndex[index + 2], 0 } );
                 }
                 JPH::PhysicsMaterialList listMaterial;
                 listMaterial.push_back( pMaterial );
