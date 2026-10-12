@@ -13,6 +13,8 @@
 #include "Editor/Common/Asset/ModelImportConfig.h"
 #include "Editor/Common/Asset/ModelImportUtil.h"
 
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
+#include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include <meshoptimizer.h>

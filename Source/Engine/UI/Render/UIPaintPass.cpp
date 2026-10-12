@@ -90,6 +90,11 @@ namespace sw
                 return true;
             }
         };
+        // z 순서 패널의 그리기 순서 목록을 깊이마다 하나씩 재사용한다. 자식이 z 순서 패널이면 `paintWidget` 이 재귀하므로 목록 하나를 나눠 쓸 수 없다.
+        // 그리기는 게임 스레드에서만 돌지만 트리를 칠하는 스레드가 늘어도 깨지지 않도록 스레드마다 둔다. 첫 그리기에서 생기므로 메모리 태그 기준선 뒤에 할당된다 —
+        // 종료 때 `UIPaintPass::releaseScratch` 가 비운다(스레드 소멸자는 종료 보고 뒤라 "기준선보다 늘었다"로 보인다).
+        thread_local vector<vector<uint32>> t_listPaintOrderByDepth;
+        thread_local uint32                 t_paintOrderDepth = 0;
     } // namespace
 } // namespace sw
 
@@ -190,12 +195,8 @@ namespace sw
             }
             if ( pPanel->hasCustomPaintOrder() )
             {
-                // 순서 목록은 깊이마다 하나씩 재사용한다. 자식이 z 순서 패널이면 이 함수가 재귀하므로 목록 하나를 나눠 쓸 수 없다.
                 // 바깥 배열이 재귀 중에 커지면 안쪽 목록이 옮겨지므로 참조를 들고 있지 않고 매번 인덱스로 읽는다.
-                // 그리기는 게임 스레드에서만 돌지만 트리를 칠하는 스레드가 늘어도 깨지지 않도록 스레드마다 둔다.
-                thread_local vector<vector<uint32>> t_listPaintOrderByDepth;
-                thread_local uint32                 t_paintOrderDepth = 0;
-                const uint32                        depth             = t_paintOrderDepth;
+                const uint32 depth = t_paintOrderDepth;
                 if ( t_listPaintOrderByDepth.size() <= depth )
                     t_listPaintOrderByDepth.resize( depth + 1 );
                 pPanel->collectPaintOrder( t_listPaintOrderByDepth[depth] );
@@ -240,6 +241,12 @@ namespace sw
         painter.popOpacity();
         widget._dirtyFlags &= ~Internal::kClearBits;
         return paintedCount;
+    }
+
+    void UIPaintPass::releaseScratch()
+    {
+        t_listPaintOrderByDepth = {};
+        t_paintOrderDepth       = 0;
     }
 
     uint32 UIPaintPass::paintChild( Widget& widget, const UIPaintContext& context, CanvasPainter& painter, CanvasDrawList& outCanvas, bool bForce,

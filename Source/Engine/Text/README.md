@@ -264,7 +264,7 @@ LTR 문단에 RTL 문자와 RLO가 없으면 재배열을 통째로 건너뜁니
 ### 셰이퍼를 HarfBuzz로 바꾸기
 
 `ITextShaper` 가 교체 위치입니다. 런 하나를 받는 계약은 그대로 두고, 같은 글꼴 바이트(`IFontRasterizer::findFaceBytes`)로 HarfBuzz 면을 만들면 됩니다.
-양방향은 SheenBidi가 `TextBidi` 를 대신합니다. 둘 다 [백로그](../../../docs/06_Backlog.md) 1-12의 서드파티 후보이고, 들일 때는 다른 서드파티처럼 엔진 인터페이스 뒤에 두고 격리 게이트를 적용합니다.
+양방향은 SheenBidi가 `TextBidi` 를 대신합니다. 둘 다 [백로그](../../../docs/06_Backlog.md) `G-11` 의 서드파티 후보이고, 들일 때는 다른 서드파티처럼 엔진 인터페이스 뒤에 두고 격리 게이트를 적용합니다.
 
 ## 함정과 주의
 

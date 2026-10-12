@@ -9,8 +9,10 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Asset/ModelImportUtil.h"
+#include "Editor/Common/Asset/ModelImporter.h"
 #include "Editor/Common/Asset/VrmAvatarImporter.h"
 
+#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw::editor

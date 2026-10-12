@@ -9,7 +9,9 @@
 
 #include "GameFramework/Base/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Gameplay/Progression/Reputation.h"
 #include "GameFramework/Base/World/Environment/WorldClock.h"
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantCatalog.h"
 

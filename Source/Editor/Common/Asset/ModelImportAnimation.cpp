@@ -11,8 +11,10 @@
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/Asset/ModelImportUtil.h"
+#include "Editor/Common/Asset/ModelImporter.h"
 
 #include "Engine/Animation/AnimationJSONUtil.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw::editor
