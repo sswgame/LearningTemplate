@@ -167,6 +167,7 @@ pMesh->setMaterialInstance( std::move( tint ) );
 - GPU 버퍼 해제는 GPU가 그 버퍼를 다 쓸 때까지 미룹니다.
 - `TextureCache` 는 `Texture2D` 를 `unique_ptr` 로 들고 참조 수로 수명을 정합니다. 맵이 원소를 옮겨도 텍스처 주소는 그대로입니다.
   `acquire` 가 준 포인터는 짝이 되는 `release` 까지 살아 있습니다. `find` 는 참조를 세지 않으므로, 누군가 `acquire` 로 붙들고 있는 동안만 쓰고 저장하지 않습니다.
+  `reload` 는 **같은 객체**의 GPU 자원을 잠금 밖에서 바꿉니다. 그동안 `find` 는 `nullptr` 를 돌려주고 `acquire` 는 끝날 때까지 기다립니다. `acquire` 로 쥔 포인터는 계속 유효하지만 그 사이 핸들 · SRV 는 읽지 않습니다. 쥔 쪽은 SRV 를 복사해 두고, `getReloadGeneration()` 이 바뀐 뒤(진행 중 표시가 내려간 뒤에 올라간다) `find` 로 새 SRV 를 다시 받습니다.
   디스크 읽기 · GPU 생성 · 리로드의 `waitIdle` 은 잠금 밖에서 하고, 같은 경로를 동시에 원한 스레드는 먼저 시작한 쪽의 결과를 기다려 받습니다.
 
 이 규칙의 전체와 이유는 [Renderer 문서](../Renderer/README.md)의 "소유와 수명"에 있습니다.

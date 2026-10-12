@@ -173,8 +173,6 @@ namespace sw
         pTexture->releaseRHI( pDevice );
         if ( pTexture->loadFromResource( pDevice, key ) == false )
             SW_LOG_ERROR( "Hot-Reload failed for Texture %#", key.c_str() );
-        // 다시 올린 텍스처는 새 SRV 인덱스를 받았다(실패했으면 인덱스가 없다). 옛 인덱스는 이미 돌려줬으므로 빌려 간 머티리얼이 다시 받게 한다.
-        _impl->_reloadGeneration.fetch_add( 1u, std::memory_order_acq_rel );
 
         lock.lock();
         const auto it = _impl->_mapEntry.find( key );
@@ -187,6 +185,9 @@ namespace sw
             _impl->_mapEntry.erase( it );
         }
         lock.unlock();
+        // 다시 올린 텍스처는 새 SRV 인덱스를 받았다(실패했으면 인덱스가 없다). 옛 인덱스는 이미 돌려줬으므로 빌려 간 머티리얼이 다시 받게 한다.
+        // 세대는 진행 중 표시를 내린 **뒤에** 올린다 — 먼저 올리면 새 세대를 본 쪽의 find 가 아직 nullptr 를 받고 그 세대를 소비해 버린다.
+        _impl->_reloadGeneration.fetch_add( 1u, std::memory_order_acq_rel );
         _impl->_cvLoaded.notify_all();
     }
 
@@ -197,8 +198,10 @@ namespace sw
         const string                        key = FileUtil::normalizePath( relativePath );
         std::shared_lock<std::shared_mutex> lock{ _impl->_mutex };
         const auto                          it = _impl->_mapEntry.find( key );
-        // 처음 올리는 중인 항목은 내주지 않는다 — 올리는 스레드가 잠금 없이 그 객체를 채우고 있다.
-        return it != _impl->_mapEntry.end() && it->second._bPublished ? it->second._texture.get() : nullptr;
+        // 올리는 중(처음 acquire · reload)인 항목은 내주지 않는다 — 그 스레드가 잠금 없이 같은 객체의 핸들 · SRV 를 바꾸고 있다.
+        if ( it == _impl->_mapEntry.end() || it->second._bPublished == false || it->second._bLoading )
+            return nullptr;
+        return it->second._texture.get();
     }
 
     uint32 TextureCache::getReloadGeneration() const
