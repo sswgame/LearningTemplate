@@ -51,7 +51,7 @@ App은 모듈을 로드하면 먼저 버전과 스탬프를 자기 값과 비교
 | 폴더 | 내용 | include하는 곳 |
 |---|---|---|
 | `ABI/` | API 테이블, 불투명 핸들, ABI 버전과 스탬프 | App, 모듈, 테스트 |
-| `Service/` | 서비스 테이블과 서비스 목록 | App, 모듈 |
+| `Service/` | 서비스 테이블과 서비스 목록, 게임 서비스 연결 선언 | App, 모듈 |
 | `Export/` | 모듈 진입점을 만드는 `SW_IMPLEMENT_*_MODULE` 매크로 | 모듈의 `.cpp` 만 |
 
 게임 모듈은 `ABI/GameAPI.h`, `GameFramework/Base/Foundation/Framework/GameService.h`, `Export/GameModuleExports.h` 만 include합니다.
@@ -91,7 +91,7 @@ export 매크로는 네 가지이고 서로 바꿔 쓰지 않습니다.
 | `SW_API` | Engine.dll이 내보내는 심볼 |
 | `SW_MODULE_API` | 로드할 수 있는 모든 모듈의 C 진입점 |
 | `SW_GF_API` | GameFramework.dll이 내보내는 클래스 |
-| `SW_GAMESERVICE_API` | GameService 로케이터 |
+| `SW_GAMESERVICE_API` | GameService 로케이터(`Service/GameServiceBinding.h`) |
 
 ## 확장하는 법
 
