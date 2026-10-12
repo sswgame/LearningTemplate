@@ -260,7 +260,7 @@ namespace sw
         void executeOrDeferPostTick( PostTickDelegate func ) { _structuralChangeBuffer.executeOrDeferPostTick( std::move( func ) ); }
 
         /**
-         * @brief 컴포넌트 하나에 대한 일을 executeOrDeferPostTick 으로 넘깁니다. 실행할 때 핸들로 다시 찾고, 사라졌으면 부르지 않습니다.
+         * @brief 컴포넌트 하나에 대한 일을 executeOrDeferPostTick 으로 넘깁니다. 실행할 때 핸들로 다시 찾고, 사라졌거나 삭제 대기면 부르지 않습니다.
          * @details 틱 중이면 틱 뒤로 미루고 아니면 바로 실행하는 의미는 executeOrDeferPostTick 과 같습니다.
          *          func 는 붙잡은 값이 없는 람다여야 하며(델리게이트 인라인 버퍼를 넘지 않게) `func( TComponent& )` 또는
          *          `func( TComponent&, GameObjectManager& )` 로 부릅니다. 모양은 Object README 의 함정 절을 볼 것.
@@ -273,8 +273,11 @@ namespace sw
             executeOrDeferPostTick( [pManager, handle, func]()
             {
                 TComponent* pComponent = static_cast<TComponent*>( pManager->resolveComponent( handle ) );
-                if ( pComponent == nullptr )
+                // 삭제 대기 컴포넌트는 핸들로 아직 찾히지만 일을 받지 않는다(틱 · 이벤트와 같은 규칙).
+                if ( pComponent == nullptr || pComponent->isPendingDestroy() )
                     return;
+                // 핸들은 id 만 담는다 — 다른 타입의 칸이면 위 캐스트가 틀렸다.
+                SW_ASSERT( pComponent->findCachedTypeInfo() != nullptr && pComponent->findCachedTypeInfo()->isDerivedFrom( TComponent::StaticType() ) );
                 if constexpr ( std::is_invocable_v<const TFunc&, TComponent&, GameObjectManager&> )
                     func( *pComponent, *pManager );
                 else
