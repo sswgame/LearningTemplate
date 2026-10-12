@@ -26,7 +26,7 @@ SW_ENGINE_STARTUP_STEP( EngineDefaultAssets, EngineMisc, All,    { Reflection, R
 SW_ENGINE_STARTUP_STEP( ShaderCache,         Shader,     All,    {} )                            // 서버는 빈 캐시만(씬 쿠킹의 Headless 가 의존)
 SW_ENGINE_STARTUP_STEP( Task,                Task,       All,    {} )                           
 SW_ENGINE_STARTUP_STEP( ModuleImages,        EngineMisc, All,    { Compression, Reflection, Resource, Task } ) // 모듈을 내리며 타입 · 코덱 · 캐시를 떼고 태스크를 기다린다
-SW_ENGINE_STARTUP_STEP( Audio,               Audio,      All,    { ModuleImages, Task } )        // 음성 스트리밍이 태스크를 쓰고, 모듈 콜백을 든다 — 서버는 장치 없는 NullAudioSystem
+SW_ENGINE_STARTUP_STEP( Audio,               Audio,      All,    { ModuleImages, Task } )        // 음성 스트리밍이 태스크를 쓰고, 모듈 콜백을 든다 — 서버는 장치 없는 NullAudioBackend
 SW_ENGINE_STARTUP_STEP( FileIO,              Asset,      All,    { ModuleImages, Task } )        // 완료 콜백을 태스크로 싣는다 — 모듈을 내리기 전에 걸린 읽기를 다 끝낸다
 SW_ENGINE_STARTUP_STEP( Input,               EngineMisc, All,    { ModuleImages } )              // 모듈이 등록한 장치 · 콜백을 든다 — 서버는 이벤트가 오지 않는 장치 목록
 SW_ENGINE_STARTUP_STEP( ModuleTypes,         Reflection, All,    { Config, ModuleImages, Reflection } ) // 호스트가 타입 공급자(GF · 킷 · 게임 모듈)를 올려 등록을 끝낸다 — 씬을 읽는 일은 이 뒤

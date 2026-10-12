@@ -97,7 +97,7 @@ namespace
             sw::AudioMixerDesc mixerDesc;
             if ( mixerDesc.loadFromXMLText( kMixerXML ) == false || engine.initialize( mixerDesc ) == false )
                 return false;
-            sw::AudioClipStore& store = engine.getClipStore();
+            sw::AudioClipCache& store = engine.getClipStore();
             store.addClip( sw::hashed_string( "test/a" ), test::AudioTestUtil::makeConstantClip( 0.1f, 2048 ) );
             store.addClip( sw::hashed_string( "test/b" ), test::AudioTestUtil::makeConstantClip( 0.2f, 2048 ) );
             store.addClip( sw::hashed_string( "test/c" ), test::AudioTestUtil::makeConstantClip( 0.3f, 2048 ) );

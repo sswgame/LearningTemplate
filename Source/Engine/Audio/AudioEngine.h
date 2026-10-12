@@ -2,7 +2,7 @@
  * @file AudioEngine.h
  * @brief 플랫폼과 무관한 오디오 엔진입니다. 명령 큐, 보이스, 믹서 그래프, 이벤트, 파라미터, 스냅샷, 공간화를 보관하고, 출력 장치가 호출하는 `render` 하나로 소리를 만듭니다.
  * @details **스레드.** 게임 스레드는 명령만 쌓는다(`postEvent`, `playClip`, `setParameter` 등).
- *          오디오 스레드가 `render` 에서 블록마다 명령을 꺼내 적용한다. 오디오 스레드는 장치 콜백이고, 장치가 없으면 게임 스레드의 `IAudioSystem::update` 다.
+ *          오디오 스레드가 `render` 에서 블록마다 명령을 꺼내 적용한다. 오디오 스레드는 장치 콜백이고, 장치가 없으면 게임 스레드의 `IAudioService::update` 다.
  *          오디오 상태는 오디오 스레드만 만진다. 게임 스레드가 읽는 값(재생 중인지, 보이스 수)은 블록마다 게시한 사본이다.
  *
  *          **블록 순서.** 명령, 파라미터(seek), 스냅샷 세기와 적용, 에미터 가림 추종, 보이스 목표(볼륨, 팬, 피치, 로우패스, 들림 정도),
@@ -36,7 +36,7 @@ namespace sw
 
     class AudioMixer;
 
-    /** @brief 클립 하나를 이벤트 없이 바로 재생할 때의 설정입니다. `IAudioSystem::play` 와 `playMusic` 이 씁니다. */
+    /** @brief 클립 하나를 이벤트 없이 바로 재생할 때의 설정입니다. `IAudioService::play` 와 `playMusic` 이 씁니다. */
     struct AudioClipPlayParams
     {
         hashed_string    _attenuation{};          ///< 감쇠 프리셋 이름이다. 비었거나 에미터가 0 이면 공간화하지 않는다(2D).
@@ -55,7 +55,7 @@ namespace sw
 {
     /**
      * @class AudioEngine
-     * @brief 오디오 엔진 하나입니다. `IAudioSystem` 이 하나를 가지고 있고, 테스트는 장치 없이 직접 만들어 `render` 로 버퍼에 렌더합니다.
+     * @brief 오디오 엔진 하나입니다. `IAudioService` 이 하나를 가지고 있고, 테스트는 장치 없이 직접 만들어 `render` 로 버퍼에 렌더합니다.
      */
     class SW_API AudioEngine
     {
@@ -93,7 +93,7 @@ namespace sw
         /** @brief 로드한 라이브러리에 그 이벤트가 있는지 반환합니다. */
         bool hasEvent( const hashed_string& eventName ) const;
         /** @brief 클립 캐시입니다. */
-        AudioClipStore& getClipStore() { return _clipStore; }
+        AudioClipCache& getClipStore() { return _clipStore; }
         /** @brief 컨테이너와 범위가 쓰는 난수의 시드를 정합니다. 테스트에서 결정성을 얻으려고 씁니다. 다음 블록부터 적용됩니다. */
         void setRandomSeed( uint64 seed );
 
@@ -419,7 +419,7 @@ namespace sw
         using EventMap     = unordered_map<hashed_string, EventState, hashed_string::HashFunc>;
         using ParameterMap = unordered_map<hashed_string, ParameterState, hashed_string::HashFunc>;
 
-        AudioClipStore _clipStore; /**< 경로에서 클립으로 가는 캐시입니다. */
+        AudioClipCache _clipStore; /**< 경로에서 클립으로 가는 캐시입니다. */
         // 게임 스레드
         vector<Command>                  _listPendingCommand;  /**< 쌓인 명령입니다(`_commandMutex`). */
         vector<Command>                  _listApplyingCommand; /**< 오디오 스레드가 꺼내 적용 중인 명령입니다. */

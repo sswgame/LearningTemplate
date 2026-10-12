@@ -11,7 +11,7 @@ namespace sw
         SceneEngineServices sceneServices{};
         sceneServices._pAssetManager  = services._pAssetManager;
         sceneServices._pPhysicsSystem = services._pPhysicsSystem;
-        sceneServices._pAudioSystem   = services._pAudioSystem;
+        sceneServices._pAudioService  = services._pAudioService;
         sceneServices._pDefaultAssets = services._pEngineDefaultAssets;
         sceneServices._pTaskManager   = services._pTaskManager;
         sceneServices._pTypeRegistry  = services._pTypeRegistry;

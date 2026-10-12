@@ -1,5 +1,5 @@
 /**
- * @file IAudioSystem.h
+ * @file IAudioService.h
  * @brief 오디오 서비스입니다. 엔진(`AudioEngine`: 믹서 그래프, 보이스, 이벤트, 음악)을 하나 가지고 있고, 플랫폼 백엔드는 출력 장치만 맡습니다.
  *
  * @note **볼륨과 음소거는 이 서비스가 관리합니다.** 값 범위(0~1 클램프)와 "음소거는 master 버스에만 건다"는 규칙은 여기에만 적습니다.
@@ -22,7 +22,7 @@ namespace sw
     class AudioEngine;
 
     /**
-     * @brief 이름을 붙인 볼륨 버스입니다. 세 버스(`master`, `music`, `sfx`)는 기존 볼륨 필드로 가고, 나머지 이름은 `IAudioSystem` 의 테이블에 남습니다.
+     * @brief 이름을 붙인 볼륨 버스입니다. 세 버스(`master`, `music`, `sfx`)는 기존 볼륨 필드로 가고, 나머지 이름은 `IAudioService` 의 테이블에 남습니다.
      * @details 어느 이름이든 같은 이름의 믹서 버스 사용자 볼륨에도 반영된다(`AudioEngine::setBusUserVolume`). 그래프에 없는 이름은 값만 남는다.
      */
     struct AudioBusVolume
@@ -35,27 +35,27 @@ namespace sw
 namespace sw
 {
     /**
-     * @class IAudioSystem
+     * @class IAudioService
      * @brief 오디오 재생과 관리를 위한 서비스입니다. 백엔드(XAudio2, Null)는 출력 장치를 열고 닫는 일만 재정의합니다.
      */
-    class SW_API IAudioSystem
+    class SW_API IAudioService
     {
     public:
         /** @brief 엔진의 기본 믹서 그래프 경로입니다. 없으면 코드의 기본 그래프(`AudioMixerDesc::makeDefault`)를 씁니다. */
         static constexpr utf8 kDefaultMixerPath[] = "engine/audio/default.audiomixer.xml";
 
         /** @brief 현재 플랫폼에 맞는 오디오 시스템 인스턴스를 생성합니다. */
-        static unique_ptr<IAudioSystem> create();
+        static unique_ptr<IAudioService> create();
         /** @brief 장치를 열지 않는 오디오 시스템입니다(전용 서버, 테스트). 소리 요청은 받아서 버리고, 믹서와 음량 상태는 그대로 유지합니다. */
-        static unique_ptr<IAudioSystem> createNull();
+        static unique_ptr<IAudioService> createNull();
 
-        IAudioSystem();
-        virtual ~IAudioSystem();
+        IAudioService();
+        virtual ~IAudioService();
 
-        IAudioSystem( const IAudioSystem& )            = delete;
-        IAudioSystem& operator=( const IAudioSystem& ) = delete;
-        IAudioSystem( IAudioSystem&& )                 = delete;
-        IAudioSystem& operator=( IAudioSystem&& )      = delete;
+        IAudioService( const IAudioService& )            = delete;
+        IAudioService& operator=( const IAudioService& ) = delete;
+        IAudioService( IAudioService&& )                 = delete;
+        IAudioService& operator=( IAudioService&& )      = delete;
 
         /** @brief 엔진을 만들고(기본 믹서 그래프) 출력 장치를 엽니다. 장치를 열지 못해도 성공이며, 오프라인으로 진행합니다. */
         bool initialize();

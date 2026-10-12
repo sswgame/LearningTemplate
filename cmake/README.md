@@ -192,7 +192,7 @@ Dev 와 Shipping · Server 는 다른 갈래를 탄다 — 고친 갈래의 프�
   Windows Shipping 전체 빌드, 기계 공유 중): 오브젝트 합 146 → 262 MB, `Bin` 29.6 MB 그대로(App.exe 크기 같음), `TestBin` 81 → 257 MB(테스트 PDB), `Symbols` 31.5 MB,
   링크 App 26.7 → 30.5 s · EngineTest 68.6 → 79.9 s, 전체 빌드 벽시계는 기계 부하에 묻혀 차이 없음(7.6 · 6.8 분).
 - **유니티 묶음에서 서드파티 매크로 정리는 "내가 정의한 것만" 지운다** — `AudioVorbisDecode.cpp` 가 stb_vorbis 뒤에 `#undef TRUE` · `FALSE` 를 하자 Windows
-  `windows.h` 의 것이 지워져, 같은 묶음 뒤의 `XAudio2System.cpp`(d3d11.h)가 PCH 끈 빌드(CI Windows)에서 깨졌다. PCH 가 있으면 d3d 헤더가 먼저 들어와 가려진다.
+  `windows.h` 의 것이 지워져, 같은 묶음 뒤의 `XAudio2AudioBackend.cpp`(d3d11.h)가 PCH 끈 빌드(CI Windows)에서 깨졌다. PCH 가 있으면 d3d 헤더가 먼저 들어와 가려진다.
 - **구성을 넘어 같은 비트가 필요한 TU 는 `sw_markDeterministicSources`** — 부동소수점 축약(FMA 합치기)을 끄고 유니티 묶음에서 뺀다. Release 의
   `/arch:AVX2` 가 `a * b + c` 를 FMA 로 합쳐 파괴 해시가 Debug 와 갈렸다(파쇄 결과부터). 대상은 Engine `Destruction/` 의 시뮬레이션 TU 여덟 ·
   `GF_NetDestruction` · Core `Math/VectorMath.cpp`(거리 · 길이가 줄 밖 함수라 그쪽도 — 빼면 사건 넷째의 반경 피해에서 다시 갈린다). 새 결정성 경로는

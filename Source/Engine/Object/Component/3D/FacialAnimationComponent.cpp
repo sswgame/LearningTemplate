@@ -10,7 +10,7 @@
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/AudioClipDecoder.h"
-#include "Engine/Audio/IAudioSystem.h"
+#include "Engine/Audio/IAudioService.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
@@ -282,7 +282,7 @@ namespace sw
             SW_LOG_ERROR( "'%#': neither a viseme track nor decodable audio", string( audioPath ).c_str() );
             return false;
         }
-        IAudioSystem* pAudio = engine::getBoundEngineServices()._pAudioSystem;
+        IAudioService* pAudio = engine::getBoundEngineServices()._pAudioService;
         if ( pAudio != nullptr && pAudio->isInitialized() )
             (void)pAudio->play( audioPath );
         return true;

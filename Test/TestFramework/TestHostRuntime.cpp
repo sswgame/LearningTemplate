@@ -10,7 +10,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Engine/Audio/IAudioSystem.h"
+#include "Engine/Audio/IAudioService.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
@@ -57,7 +57,7 @@ namespace
     {
         sw::EngineServiceCollection*      _pOwned{ nullptr };
         sw::unique_ptr<sw::ConfigManager> _configManager{};
-        sw::unique_ptr<sw::IAudioSystem>  _audioSystem{};
+        sw::unique_ptr<sw::IAudioService> _audioService{};
         sw::unique_ptr<sw::CommandStack>  _commandStack{};
         sw::DelegateHandle                _sceneObjectsInvalidatedHandle{}; ///< 씬 매니저에 단 기록 비우기 구독(씬 단계 해제가 뗀다)
         const sw::EngineConfig*           _pEngineConfig{ nullptr };
@@ -189,8 +189,8 @@ namespace
 
         struct AudioStartupStep : Defaults
         {
-            static void shutdown( TestHost& host ) { host._audioSystem->shutdown(); }
-            static void destroy( TestHost& host ) { host._audioSystem.reset(); }
+            static void shutdown( TestHost& host ) { host._audioService->shutdown(); }
+            static void destroy( TestHost& host ) { host._audioService.reset(); }
         };
 
         struct InputStartupStep : Defaults
@@ -323,13 +323,13 @@ namespace test
         state._bBootstrapped = true;
 
         state._owned.createAll();
-        host._audioSystem  = sw::IAudioSystem::create();
+        host._audioService = sw::IAudioService::create();
         host._commandStack = sw::make_unique<sw::CommandStack>();
 
         sw::EngineServices services{};
         state._bootstrap.fillServices( services );
         // HostCreated 인 자리만 손으로 꽂는다(팩토리 · 구성별 조건부).
-        services._pAudioSystem  = host._audioSystem.get();
+        services._pAudioService = host._audioService.get();
         services._pCommandStack = host._commandStack.get();
         sw::engine::bindEngineServices( services );
 

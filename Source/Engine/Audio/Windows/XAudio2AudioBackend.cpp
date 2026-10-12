@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Audio/Windows/XAudio2System.h"
+#include "Engine/Audio/Windows/XAudio2AudioBackend.h"
 
 #include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Audio/AudioEngine.h"
@@ -13,7 +13,7 @@ namespace sw
 {
     namespace
     {
-        struct XAudio2SystemInternal
+        struct XAudio2AudioBackendInternal
         {
             /** @brief 스트리밍 버퍼 하나의 길이(프레임)입니다. 10.7 ms 입니다. */
             static constexpr uint32 kStreamBufferFrameCount = 512;
@@ -225,23 +225,23 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "XAudio2System" );
+    SW_LOG_CALLER( "XAudio2AudioBackend" );
 
     /**
      * @brief XAudio2 백엔드의 상태 전부입니다. 헤더가 XAudio2 헤더를 끌어오지 않도록 여기 숨깁니다.
      */
-    struct XAudio2SystemImpl
+    struct XAudio2AudioBackendImpl
     {
-        XAudio2SystemInternal::StreamCallback _callback;            /**< 스트리밍 콜백(버퍼 포함)입니다. */
-        IXAudio2*                             _pXAudio;             /**< XAudio2 엔진입니다. */
-        IXAudio2MasteringVoice*               _pMasterVoice;        /**< 마스터링 보이스입니다(볼륨은 엔진의 master 버스가 맡는다). */
-        IXAudio2SourceVoice*                  _pStreamVoice;        /**< 엔진 출력을 흘리는 소스 보이스입니다. */
-        uint8                                 _bComInitialized : 1; /**< 이 시스템이 COM 을 초기화했는지 여부입니다. */
-        uint8                                 _bMfInitialized  : 1; /**< 이 시스템이 Media Foundation 을 초기화했는지 여부입니다. */
-        [[maybe_unused]] uint8                _reservedAudio   : 6; /**< 비트필드 패딩입니다. */
+        XAudio2AudioBackendInternal::StreamCallback _callback;            /**< 스트리밍 콜백(버퍼 포함)입니다. */
+        IXAudio2*                                   _pXAudio;             /**< XAudio2 엔진입니다. */
+        IXAudio2MasteringVoice*                     _pMasterVoice;        /**< 마스터링 보이스입니다(볼륨은 엔진의 master 버스가 맡는다). */
+        IXAudio2SourceVoice*                        _pStreamVoice;        /**< 엔진 출력을 흘리는 소스 보이스입니다. */
+        uint8                                       _bComInitialized : 1; /**< 이 시스템이 COM 을 초기화했는지 여부입니다. */
+        uint8                                       _bMfInitialized  : 1; /**< 이 시스템이 Media Foundation 을 초기화했는지 여부입니다. */
+        [[maybe_unused]] uint8                      _reservedAudio   : 6; /**< 비트필드 패딩입니다. */
 
         /** @brief 아직 아무 장치도 잡지 않은 상태로 둡니다. */
-        XAudio2SystemImpl()
+        XAudio2AudioBackendImpl()
             : _callback{}
             , _pXAudio{ nullptr }
             , _pMasterVoice{ nullptr }
@@ -253,18 +253,18 @@ namespace sw
         }
     };
 
-    XAudio2System::XAudio2System()
-        : _impl{ make_unique<XAudio2SystemImpl>() }
+    XAudio2AudioBackend::XAudio2AudioBackend()
+        : _impl{ make_unique<XAudio2AudioBackendImpl>() }
     {
-        getEngine().getClipStore().setFallbackDecoder( &XAudio2SystemInternal::decodeWithMediaFoundation );
+        getEngine().getClipStore().setFallbackDecoder( &XAudio2AudioBackendInternal::decodeWithMediaFoundation );
     }
 
-    XAudio2System::~XAudio2System()
+    XAudio2AudioBackend::~XAudio2AudioBackend()
     {
         shutdown();
     }
 
-    bool XAudio2System::openOutput()
+    bool XAudio2AudioBackend::openOutput()
     {
         HRESULT hr = CoInitializeEx( nullptr, COINIT_MULTITHREADED );
         if ( hr == S_OK || hr == S_FALSE )
@@ -272,7 +272,7 @@ namespace sw
         else if ( hr != RPC_E_CHANGED_MODE )
             SW_LOG_WARNING( "CoInitializeEx failed (0x%#).", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
 
-        const XAudio2SystemInternal::SystemAudioAPI& api = XAudio2SystemInternal::getSystemAudioAPI();
+        const XAudio2AudioBackendInternal::SystemAudioAPI& api = XAudio2AudioBackendInternal::getSystemAudioAPI();
         if ( api.hasMediaFoundation() == false )
             SW_LOG_WARNING( "Media Foundation is not available (mfplat.dll / mfreadwrite.dll) - clips the built-in decoders cannot read will not play." );
         else
@@ -327,26 +327,26 @@ namespace sw
             return false;
         }
 
-        XAudio2SystemInternal::StreamCallback& callback = _impl->_callback;
-        callback._pEngine                               = &getEngine();
-        callback._pVoice                                = _impl->_pStreamVoice;
-        callback._nextBuffer                            = 0;
+        XAudio2AudioBackendInternal::StreamCallback& callback = _impl->_callback;
+        callback._pEngine                                     = &getEngine();
+        callback._pVoice                                      = _impl->_pStreamVoice;
+        callback._nextBuffer                                  = 0;
         callback._bStopping.store( false, std::memory_order_release );
-        callback._listBuffer.assign( static_cast<size_t>( XAudio2SystemInternal::kStreamBufferFrameCount ) * audio::kChannelCount *
-                                         XAudio2SystemInternal::kStreamBufferCount,
+        callback._listBuffer.assign( static_cast<size_t>( XAudio2AudioBackendInternal::kStreamBufferFrameCount ) * audio::kChannelCount *
+                                         XAudio2AudioBackendInternal::kStreamBufferCount,
                                      0.0f );
         // 처음 버퍼들은 여기서 채운다. 이후는 버퍼가 끝날 때마다 콜백이 하나씩 채운다.
-        for ( uint32 bufferIndex = 0; bufferIndex < XAudio2SystemInternal::kStreamBufferCount; ++bufferIndex )
+        for ( uint32 bufferIndex = 0; bufferIndex < XAudio2AudioBackendInternal::kStreamBufferCount; ++bufferIndex )
         {
             callback.submitNext();
         }
         _impl->_pStreamVoice->Start( 0 );
-        SW_LOG_INFO( "XAudio2 stream ready (%# Hz, %# frames x %#).", audio::kSampleRate, XAudio2SystemInternal::kStreamBufferFrameCount,
-                     XAudio2SystemInternal::kStreamBufferCount );
+        SW_LOG_INFO( "XAudio2 stream ready (%# Hz, %# frames x %#).", audio::kSampleRate, XAudio2AudioBackendInternal::kStreamBufferFrameCount,
+                     XAudio2AudioBackendInternal::kStreamBufferCount );
         return true;
     }
 
-    void XAudio2System::closeOutput()
+    void XAudio2AudioBackend::closeOutput()
     {
         if ( _impl == nullptr )
             return;
@@ -371,7 +371,7 @@ namespace sw
         }
         if ( _impl->_bMfInitialized == SW_TRUE )
         {
-            XAudio2SystemInternal::getSystemAudioAPI()._pfnMFShutdown();
+            XAudio2AudioBackendInternal::getSystemAudioAPI()._pfnMFShutdown();
             _impl->_bMfInitialized = SW_FALSE;
         }
         if ( _impl->_bComInitialized == SW_TRUE )

@@ -22,7 +22,7 @@
 
 #include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
-#include "Engine/Audio/IAudioSystem.h"
+#include "Engine/Audio/IAudioService.h"
 #include "Engine/Audio/LipSyncImport.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Compression/EngineCompressionCodecUtil.h"
@@ -301,10 +301,10 @@ namespace sw
     {
         static EngineInitResult initialize( EngineLoop& loop )
         {
-            return loop._audioSystem->initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed;
+            return loop._audioService->initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed;
         }
-        static void shutdown( EngineLoop& loop ) { loop._audioSystem->shutdown(); }
-        static void destroy( EngineLoop& loop ) { loop._audioSystem.reset(); }
+        static void shutdown( EngineLoop& loop ) { loop._audioService->shutdown(); }
+        static void destroy( EngineLoop& loop ) { loop._audioService.reset(); }
     };
 
     struct EngineLoop::InputStartupStep : EngineInitStepDefaults<EngineLoop>
@@ -553,7 +553,7 @@ namespace sw
             targets._pGlobalVariableManager = loop._owned._pGlobalVariableManager.get();
             targets._pCommandLineManager    = loop._owned._pCommandLineManager.get();
             targets._pInputMap              = &loop._owned._pInputManager->getInputMap();
-            targets._pAudioSystem           = loop._audioSystem.get();
+            targets._pAudioService          = loop._audioService.get();
             targets._pLocalizationManager   = loop._owned._pLocalizationManager.get();
             settings.initialize( targets );
 
@@ -879,7 +879,7 @@ namespace sw
         , _configManager{ nullptr }
         , _rhi{ nullptr }
         , _shellActions{}
-        , _audioSystem{ nullptr }
+        , _audioService{ nullptr }
         , _frameRenderer{ nullptr }
         , _renderThread{ nullptr }
         , _packetBuilder{}
@@ -944,7 +944,7 @@ namespace sw
             {
                 SW_MEMORY_SCOPE( Audio );
                 // 전용 서버는 장치를 열지 않는다 — 씬 컴포넌트가 드는 오디오 서비스는 그대로 있고 소리 요청을 받아 버린다.
-                _audioSystem = bDedicatedServer ? IAudioSystem::createNull() : IAudioSystem::create();
+                _audioService = bDedicatedServer ? IAudioService::createNull() : IAudioService::create();
             }
 #if !defined( SW_SHIPPING )
             {
@@ -961,7 +961,7 @@ namespace sw
             EngineServices services{};
             _bootstrap.fillServices( services );
             // HostCreated 인 자리만 손으로 연결한다.
-            services._pAudioSystem  = _audioSystem.get();
+            services._pAudioService = _audioService.get();
             services._pCommandStack = _commandStack.get();
             // 렌더러는 씬이 아니라 **호스트**가 내준다. 에디터가 뷰 모드를 바꾸려고 찾는 창구다.
             services._pFrameRenderer = _frameRenderer.get();
@@ -1191,8 +1191,8 @@ namespace sw
                 _owned._pSceneManager->tickTransitions();
             if ( _owned._pEventDispatcher != nullptr )
                 _owned._pEventDispatcher->processEvents();
-            if ( _audioSystem != nullptr )
-                _audioSystem->update( deltaTime );
+            if ( _audioService != nullptr )
+                _audioService->update( deltaTime );
         }
 
         _sceneDeltaSeconds = bTickScene ? deltaTime : 0.0f;

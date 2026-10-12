@@ -4,7 +4,7 @@
  * @note stb_vorbis.c 는 `L`, `C`, `R`, `CHECK`, `TRUE` 같은 짧은 매크로를 남깁니다. 유니티 빌드에서 뒤에 붙는 TU 가 오염되지 않게
  *       include 바로 뒤에서 모두 지웁니다. stb_vorbis 를 다른 파일에서 include 하지 마세요.
  *       주의: `TRUE` 와 `FALSE` 는 stb_vorbis 가 없을 때만 정의합니다. Windows 에서는 `windows.h` 의 정의라서 지우면, 유니티 묶음의 뒤쪽 파일
- *       (d3d11.h 를 처음 include 하는 XAudio2System.cpp)이 PCH 없는 빌드에서 깨집니다. 이 TU 가 정의한 경우에만 지웁니다.
+ *       (d3d11.h 를 처음 include 하는 XAudio2AudioBackend.cpp)이 PCH 없는 빌드에서 깨집니다. 이 TU 가 정의한 경우에만 지웁니다.
  */
 #include "pch.h"
 

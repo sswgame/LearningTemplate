@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Audio/IAudioSystem.h"
+#include "Engine/Audio/IAudioService.h"
 #include "Engine/Character/AnimNotify/AnimNotifyComponent.h"
 #include "Engine/Character/AnimNotify/AnimNotifyTable.h"
 #include "Engine/Character/Hit/CharacterHit.h"
@@ -44,10 +44,10 @@ namespace sw
              * @brief 알림을 받은 오브젝트가 사는 씬의 오디오 서비스입니다. 없으면 nullptr 입니다.
              * @details 처리기는 기본 레지스트리(프로세스 수명)에 한 번 등록되므로 서비스를 들고 있지 않는다. 씬이 받은 것을 그때그때 씬에서 읽는다.
              */
-            static IAudioSystem* findAudioSystem( const AnimNotifyContext& context )
+            static IAudioService* findAudioService( const AnimNotifyContext& context )
             {
                 GameObjectManager* pManager = context._owner.getManager();
-                return pManager != nullptr ? pManager->getSceneAudio().findAudioSystem() : nullptr;
+                return pManager != nullptr ? pManager->getSceneAudio().findAudioService() : nullptr;
             }
 
             /** @class PlaySoundHandler @brief 소켓 위치에서 소리를 냅니다(현재 오디오는 위치를 받지 않으므로, 위치는 기록에만 남깁니다). */
@@ -61,7 +61,7 @@ namespace sw
                     static const hashed_string s_socket( "socket" );
                     const string               sound    = context._entry.getTextParam( s_sound );
                     const float3               position = context._component.findSocketWorldPosition( context._entry.getNameParam( s_socket ) );
-                    IAudioSystem*              pAudio   = findAudioSystem( context );
+                    IAudioService*             pAudio   = findAudioService( context );
                     if ( pAudio != nullptr )
                         (void)pAudio->play( sound );
                     record( context, hashed_string( sound ), position, 0, AnimNotifyPhase::Instant );
@@ -139,7 +139,7 @@ namespace sw
                     static const hashed_string s_default( "Default" );
                     const hashed_string        surface = hit._material.empty() ? s_default : hit._material;
                     const string               sound   = context._entry.getTextParam( s_sound );
-                    IAudioSystem*              pAudio  = findAudioSystem( context );
+                    IAudioService*             pAudio  = findAudioService( context );
                     if ( sound.empty() == false && pAudio != nullptr )
                         (void)pAudio->play( StringUtil::replace( sound, "{surface}", StringUtil::toLower( surface.c_str() ) ) );
                     record( context, surface, hit._point, hit._pObject != nullptr ? hit._pObject->getObjectID() : 0, AnimNotifyPhase::Instant );

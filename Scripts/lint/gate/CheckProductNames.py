@@ -5,7 +5,7 @@ Scripts/lint/gate/CheckProductNames.py
 
 제품 이름(SQLite · PostgreSQL · Valkey · OpenSSL · XAudio2 · Tracy · Jolt …)은 그 제품을 감싼 드라이버 · 제공자 · 백엔드 폴더에만 있다.
 
-키트 · 엔진의 나머지는 인터페이스(`ISQLDriver` · `INetSecurityProvider` · `IAudioSystem` · `IPhysicsScene3D` …)와 레지스트리를 쓴다. 제품 이름이
+키트 · 엔진의 나머지는 인터페이스(`ISQLDriver` · `INetSecurityProvider` · `IAudioService` · `IPhysicsScene3D` …)와 레지스트리를 쓴다. 제품 이름이
 그 밖의 식별자에 새면 제품을 바꿀 때 그 자리가 모두 따라 바뀐다 — `SQLLocalSlotStorage` 가 레지스트리(`SQLDriverRegistry::findDriver`)를 두고
 `SQLiteDriver::getInstance()` 를 직접 부르고 있었다.
 
@@ -67,7 +67,7 @@ class CheckProductNamesGate(LintGate):
     preCommitPattern = tuple(f"{root}/*" for root in kLintTargetRelDirs)
     preCommitFileArgument = "--files"
     violationHeader = "드라이버 · 백엔드 폴더 밖의 제품 이름"
-    hint = ("  인터페이스(ISQLDriver · INetSecurityProvider · IAudioSystem …)와 등록부(SQLDriverRegistry::findDriver 등)로 고릅니다.\n"
+    hint = ("  인터페이스(ISQLDriver · INetSecurityProvider · IAudioService …)와 등록부(SQLDriverRegistry::findDriver 등)로 고릅니다.\n"
             "  제품을 골라 올리는 조립점이면 Scripts/lint/rules/CheckProductNames.toml 의 [exemption] 에 이유와 함께 한 줄.")
     selfTestCases = [
         {

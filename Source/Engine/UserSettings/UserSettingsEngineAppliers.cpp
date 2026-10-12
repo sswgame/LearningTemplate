@@ -4,7 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Audio/IAudioSystem.h"
+#include "Engine/Audio/IAudioService.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
@@ -120,16 +120,16 @@ namespace sw
 
     bool UserSettingsEngineAppliers::applyBusVolume( const UserSettingApplyParams& context )
     {
-        if ( _targets._pAudioSystem == nullptr )
+        if ( _targets._pAudioService == nullptr )
             return true;
-        _targets._pAudioSystem->setBusVolume( hashed_string( context._param ), UserSettingsEngineAppliersInternal::toFloat( context._value, 1.0f ) );
+        _targets._pAudioService->setBusVolume( hashed_string( context._param ), UserSettingsEngineAppliersInternal::toFloat( context._value, 1.0f ) );
         return true;
     }
 
     bool UserSettingsEngineAppliers::applyMute( const UserSettingApplyParams& context )
     {
-        if ( _targets._pAudioSystem != nullptr )
-            _targets._pAudioSystem->setMute( UserSettingsEngineAppliersInternal::toBool( context._value ) );
+        if ( _targets._pAudioService != nullptr )
+            _targets._pAudioService->setMute( UserSettingsEngineAppliersInternal::toBool( context._value ) );
         return true;
     }
 

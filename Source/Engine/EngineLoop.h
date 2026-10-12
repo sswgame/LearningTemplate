@@ -40,7 +40,7 @@ namespace sw
     class FrameProfiler;
     class FrameRenderer;
     class GlobalVariableManager;
-    class IAudioSystem;
+    class IAudioService;
     class IEngineFrameObserver;
     class InputManager;
     class InputMap;
@@ -227,7 +227,7 @@ namespace sw
         unique_ptr<RHI>           _rhi;
         /** @brief 셸 디버그 액션 맵입니다(`updateShellActions` 가 처음 부를 때 만든다). Input 단계의 해제가 입력 매니저보다 먼저 놓는다. */
         ShellInputActions         _shellActions;
-        unique_ptr<IAudioSystem>  _audioSystem;
+        unique_ptr<IAudioService> _audioService;
         unique_ptr<FrameRenderer> _frameRenderer;
         unique_ptr<RenderThread>  _renderThread;
         /**

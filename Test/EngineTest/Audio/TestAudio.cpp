@@ -5,7 +5,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Audio/AudioClipDecoder.h"
-#include "Engine/Audio/IAudioSystem.h"
+#include "Engine/Audio/IAudioService.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
@@ -15,7 +15,7 @@
 #include "TestFramework/TestFramework.h"
 
 // ------------------------------------------------------------------------------
-// AudioSystemTest — 오디오 시스템 수명주기 및 재생 기능 검증
+// AudioServiceTest — 오디오 시스템 수명주기 및 재생 기능 검증
 // ------------------------------------------------------------------------------
 
 namespace
@@ -115,47 +115,47 @@ namespace
     }
 } // namespace
 
-SW_TEST_CASE( AudioSystemTest, LifecycleAndState )
+SW_TEST_CASE( AudioServiceTest, LifecycleAndState )
 {
-    sw::unique_ptr<sw::IAudioSystem> pAudioSystem = sw::IAudioSystem::create();
-    const bool                       initOk       = pAudioSystem->initialize();
+    sw::unique_ptr<sw::IAudioService> pAudioService = sw::IAudioService::create();
+    const bool                        initOk        = pAudioService->initialize();
     SW_EXPECT_TRUE( initOk );
     // 중복 initialize 호출 안전성
-    SW_EXPECT_TRUE( pAudioSystem->initialize() );
+    SW_EXPECT_TRUE( pAudioService->initialize() );
 
     // 빈 delta time update 호출
-    pAudioSystem->update( 0.016f );
+    pAudioService->update( 0.016f );
 
-    pAudioSystem->shutdown();
+    pAudioService->shutdown();
 }
 
-SW_TEST_CASE( AudioSystemTest, PlaybackHandling )
+SW_TEST_CASE( AudioServiceTest, PlaybackHandling )
 {
     SW_TEST_DEFENSIVE_SCOPE( "Testing non-existent audio file handling" );
-    sw::unique_ptr<sw::IAudioSystem> pAudioSystem = sw::IAudioSystem::create();
-    SW_EXPECT_TRUE( pAudioSystem->initialize() );
+    sw::unique_ptr<sw::IAudioService> pAudioService = sw::IAudioService::create();
+    SW_EXPECT_TRUE( pAudioService->initialize() );
 
     // 빈 경로 또는 존재하지 않는 파일 재생 실패 처리 검증
-    SW_EXPECT_FALSE( pAudioSystem->play( "" ) );
-    SW_EXPECT_FALSE( pAudioSystem->play( "NonExistentSoundFile.wav" ) );
+    SW_EXPECT_FALSE( pAudioService->play( "" ) );
+    SW_EXPECT_FALSE( pAudioService->play( "NonExistentSoundFile.wav" ) );
 
-    SW_EXPECT_FALSE( pAudioSystem->playMusic( "" ) );
-    SW_EXPECT_FALSE( pAudioSystem->playMusic( "NonExistentMusicFile.mp3" ) );
+    SW_EXPECT_FALSE( pAudioService->playMusic( "" ) );
+    SW_EXPECT_FALSE( pAudioService->playMusic( "NonExistentMusicFile.mp3" ) );
 
     // stopMusic 호출 안전성
-    pAudioSystem->stopMusic();
+    pAudioService->stopMusic();
 
     if ( sw::engine::areEngineServicesBound() )
         sw::engine::getTaskManager().waitAll();
 
-    pAudioSystem->shutdown();
+    pAudioService->shutdown();
 }
 
-SW_TEST_CASE( AudioSystemTest, WavParsingAndMalformedData )
+SW_TEST_CASE( AudioServiceTest, WavParsingAndMalformedData )
 {
     SW_TEST_DEFENSIVE_SCOPE( "Testing malformed/truncated WAV file parsing and recovery" );
-    sw::unique_ptr<sw::IAudioSystem> pAudioSystem = sw::IAudioSystem::create();
-    SW_EXPECT_TRUE( pAudioSystem->initialize() );
+    sw::unique_ptr<sw::IAudioService> pAudioService = sw::IAudioService::create();
+    SW_EXPECT_TRUE( pAudioService->initialize() );
 
     const sw::string validWavPath  = test::makeTempPath( "test_valid.wav" );
     const sw::string malformedPath = test::makeTempPath( "test_malformed.wav" );
@@ -178,9 +178,9 @@ SW_TEST_CASE( AudioSystemTest, WavParsingAndMalformedData )
     }
 
     // 로드 검증 (비동기로 제출되므로 파일이 존재하면 true 반환)
-    SW_EXPECT_TRUE( pAudioSystem->play( validWavPath ) );
-    SW_EXPECT_TRUE( pAudioSystem->play( malformedPath ) );
-    SW_EXPECT_TRUE( pAudioSystem->play( truncatedPath ) );
+    SW_EXPECT_TRUE( pAudioService->play( validWavPath ) );
+    SW_EXPECT_TRUE( pAudioService->play( malformedPath ) );
+    SW_EXPECT_TRUE( pAudioService->play( truncatedPath ) );
 
     if ( sw::engine::areEngineServicesBound() )
         sw::engine::getTaskManager().waitAll();
@@ -190,123 +190,123 @@ SW_TEST_CASE( AudioSystemTest, WavParsingAndMalformedData )
     SW_EXPECT_TRUE( sw::FileUtil::removeFile( malformedPath ) );
     SW_EXPECT_TRUE( sw::FileUtil::removeFile( truncatedPath ) );
 
-    pAudioSystem->shutdown();
+    pAudioService->shutdown();
 }
 
 /**
- * @brief [AudioSystemTest] 볼륨 설정과 클램프를 IAudioSystem 으로 읽어 검증
- * @details getter 가 구현(XAudio2System)에만 있으면 **IAudioSystem 을 든 누구도 읽을 수 없어** "설정한 값이 실제로
+ * @brief [AudioServiceTest] 볼륨 설정과 클램프를 IAudioService 으로 읽어 검증
+ * @details getter 가 구현(XAudio2AudioBackend)에만 있으면 **IAudioService 을 든 누구도 읽을 수 없어** "설정한 값이 실제로
  *          들어갔는지" 를 확인하지 못한다. 그래서 인터페이스로 읽는다.
  */
-SW_TEST_CASE( AudioSystemTest, VolumeControls )
+SW_TEST_CASE( AudioServiceTest, VolumeControls )
 {
-    sw::unique_ptr<sw::IAudioSystem> pAudioSystem = sw::IAudioSystem::create();
-    SW_EXPECT_TRUE( pAudioSystem->initialize() );
-    SW_EXPECT_TRUE( pAudioSystem->isInitialized() );
+    sw::unique_ptr<sw::IAudioService> pAudioService = sw::IAudioService::create();
+    SW_EXPECT_TRUE( pAudioService->initialize() );
+    SW_EXPECT_TRUE( pAudioService->isInitialized() );
 
     // 기본값은 전부 1.0 이다.
-    SW_EXPECT_NEAR_EQUAL( 1.0f, pAudioSystem->getMasterVolume(), 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, pAudioSystem->getMusicVolume(), 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, pAudioSystem->getSfxVolume(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pAudioService->getMasterVolume(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pAudioService->getMusicVolume(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pAudioService->getSfxVolume(), 1e-4f );
 
-    pAudioSystem->setMasterVolume( 0.75f );
-    pAudioSystem->setMusicVolume( 0.5f );
-    pAudioSystem->setSfxVolume( 0.25f );
-    SW_EXPECT_NEAR_EQUAL( 0.75f, pAudioSystem->getMasterVolume(), 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 0.5f, pAudioSystem->getMusicVolume(), 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 0.25f, pAudioSystem->getSfxVolume(), 1e-4f );
+    pAudioService->setMasterVolume( 0.75f );
+    pAudioService->setMusicVolume( 0.5f );
+    pAudioService->setSfxVolume( 0.25f );
+    SW_EXPECT_NEAR_EQUAL( 0.75f, pAudioService->getMasterVolume(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, pAudioService->getMusicVolume(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.25f, pAudioService->getSfxVolume(), 1e-4f );
 
     // 0~1 밖의 값은 잘린다.
-    pAudioSystem->setMasterVolume( 1.5f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, pAudioSystem->getMasterVolume(), 1e-4f );
-    pAudioSystem->setMasterVolume( -0.5f );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, pAudioSystem->getMasterVolume(), 1e-4f );
-    pAudioSystem->setMusicVolume( 2.0f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, pAudioSystem->getMusicVolume(), 1e-4f );
-    pAudioSystem->setSfxVolume( -1.0f );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, pAudioSystem->getSfxVolume(), 1e-4f );
+    pAudioService->setMasterVolume( 1.5f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pAudioService->getMasterVolume(), 1e-4f );
+    pAudioService->setMasterVolume( -0.5f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pAudioService->getMasterVolume(), 1e-4f );
+    pAudioService->setMusicVolume( 2.0f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pAudioService->getMusicVolume(), 1e-4f );
+    pAudioService->setSfxVolume( -1.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pAudioService->getSfxVolume(), 1e-4f );
 
-    pAudioSystem->shutdown();
+    pAudioService->shutdown();
 }
 
 /**
- * @brief [AudioSystemTest] 음소거가 볼륨 값을 먹지 않고, 마스터 한 자리에만 걸리는지 검증
+ * @brief [AudioServiceTest] 음소거가 볼륨 값을 먹지 않고, 마스터 한 자리에만 걸리는지 검증
  * @details 음소거를 여러 자리에 걸면 푸는 쪽이 한 자리만 되돌려 나머지가 0 으로 남는다.
  *          그래서 음소거는 **마스터 볼륨에만** 걸고, 음악·효과음 볼륨은 그대로 둔다.
  */
-SW_TEST_CASE( AudioSystemTest, MuteKeepsVolumeSettings )
+SW_TEST_CASE( AudioServiceTest, MuteKeepsVolumeSettings )
 {
-    sw::unique_ptr<sw::IAudioSystem> pAudioSystem = sw::IAudioSystem::create();
-    SW_EXPECT_TRUE( pAudioSystem->initialize() );
+    sw::unique_ptr<sw::IAudioService> pAudioService = sw::IAudioService::create();
+    SW_EXPECT_TRUE( pAudioService->initialize() );
 
-    pAudioSystem->setMasterVolume( 0.8f );
-    SW_EXPECT_FALSE( pAudioSystem->isMuted() );
-    SW_EXPECT_NEAR_EQUAL( 0.8f, pAudioSystem->getEffectiveMasterVolume(), 1e-4f );
+    pAudioService->setMasterVolume( 0.8f );
+    SW_EXPECT_FALSE( pAudioService->isMuted() );
+    SW_EXPECT_NEAR_EQUAL( 0.8f, pAudioService->getEffectiveMasterVolume(), 1e-4f );
 
-    pAudioSystem->setMute( true );
-    SW_EXPECT_TRUE( pAudioSystem->isMuted() );
+    pAudioService->setMute( true );
+    SW_EXPECT_TRUE( pAudioService->isMuted() );
     // 음소거는 실제로 걸리는 볼륨만 0 으로 만든다 — 설정값은 그대로다.
-    SW_EXPECT_NEAR_EQUAL( 0.0f, pAudioSystem->getEffectiveMasterVolume(), 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 0.8f, pAudioSystem->getMasterVolume(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pAudioService->getEffectiveMasterVolume(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.8f, pAudioService->getMasterVolume(), 1e-4f );
 
     // 음소거 중에 볼륨을 바꿔도 값이 먹히지 않는다.
-    pAudioSystem->setMusicVolume( 0.4f );
-    pAudioSystem->setSfxVolume( 0.6f );
+    pAudioService->setMusicVolume( 0.4f );
+    pAudioService->setSfxVolume( 0.6f );
 
-    pAudioSystem->setMute( false );
-    SW_EXPECT_FALSE( pAudioSystem->isMuted() );
-    SW_EXPECT_NEAR_EQUAL( 0.8f, pAudioSystem->getEffectiveMasterVolume(), 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 0.4f, pAudioSystem->getMusicVolume(), 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 0.6f, pAudioSystem->getSfxVolume(), 1e-4f );
+    pAudioService->setMute( false );
+    SW_EXPECT_FALSE( pAudioService->isMuted() );
+    SW_EXPECT_NEAR_EQUAL( 0.8f, pAudioService->getEffectiveMasterVolume(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.4f, pAudioService->getMusicVolume(), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.6f, pAudioService->getSfxVolume(), 1e-4f );
 
-    pAudioSystem->shutdown();
+    pAudioService->shutdown();
 }
 
 /**
- * @brief [AudioSystemTest] 요청한 BGM 경로를 IAudioSystem 으로 되읽을 수 있는지 검증
+ * @brief [AudioServiceTest] 요청한 BGM 경로를 IAudioService 으로 되읽을 수 있는지 검증
  * @details 백엔드는 디코드를 워커로 넘기므로 재생이 실제로 시작되기 전에 이 값이 정해진다.
  *          요청 기록이 제출보다 늦으면 워커가 자기 요청을 남의 것으로 보고 버린다 — 그 순서를
  *          밖에서 확인할 수 있는 유일한 손잡이다.
  */
-SW_TEST_CASE( AudioSystemTest, MusicPathTracksRequests )
+SW_TEST_CASE( AudioServiceTest, MusicPathTracksRequests )
 {
-    sw::unique_ptr<sw::IAudioSystem> pAudioSystem = sw::IAudioSystem::create();
-    SW_EXPECT_TRUE( pAudioSystem->initialize() );
-    SW_EXPECT_TRUE( pAudioSystem->getMusicPath().empty() );
+    sw::unique_ptr<sw::IAudioService> pAudioService = sw::IAudioService::create();
+    SW_EXPECT_TRUE( pAudioService->initialize() );
+    SW_EXPECT_TRUE( pAudioService->getMusicPath().empty() );
 
     const sw::string musicPath = test::makeTempPath( "test_music_track.wav" );
     SW_EXPECT_TRUE( writeTestWav( musicPath, 64 ) );
 
-    SW_EXPECT_TRUE( pAudioSystem->playMusic( musicPath ) );
+    SW_EXPECT_TRUE( pAudioService->playMusic( musicPath ) );
     // playMusic 이 돌아온 시점에는 이미 이 곡이 요청되어 있어야 한다.
-    SW_EXPECT_EQUAL( musicPath, pAudioSystem->getMusicPath() );
+    SW_EXPECT_EQUAL( musicPath, pAudioService->getMusicPath() );
 
     // 실패한 요청은 이미 걸린 곡을 건드리지 않는다.
-    SW_EXPECT_FALSE( pAudioSystem->playMusic( "NonExistentMusicFile.mp3" ) );
-    SW_EXPECT_EQUAL( musicPath, pAudioSystem->getMusicPath() );
+    SW_EXPECT_FALSE( pAudioService->playMusic( "NonExistentMusicFile.mp3" ) );
+    SW_EXPECT_EQUAL( musicPath, pAudioService->getMusicPath() );
 
     // 일시정지·재개는 요청 상태를 바꾸지 않는다.
-    pAudioSystem->pauseMusic();
-    pAudioSystem->resumeMusic();
-    SW_EXPECT_EQUAL( musicPath, pAudioSystem->getMusicPath() );
+    pAudioService->pauseMusic();
+    pAudioService->resumeMusic();
+    SW_EXPECT_EQUAL( musicPath, pAudioService->getMusicPath() );
 
-    pAudioSystem->stopMusic();
-    SW_EXPECT_TRUE( pAudioSystem->getMusicPath().empty() );
+    pAudioService->stopMusic();
+    SW_EXPECT_TRUE( pAudioService->getMusicPath().empty() );
 
     if ( sw::engine::areEngineServicesBound() )
         sw::engine::getTaskManager().waitAll();
 
     SW_EXPECT_TRUE( sw::FileUtil::removeFile( musicPath ) );
-    pAudioSystem->shutdown();
+    pAudioService->shutdown();
 }
 
 /**
- * @brief [AudioSystemTest] 다중 워커 스레드 동시 오디오 디코딩/재생 및 COM/Media Foundation 안전성 검증
+ * @brief [AudioServiceTest] 다중 워커 스레드 동시 오디오 디코딩/재생 및 COM/Media Foundation 안전성 검증
  */
-SW_TEST_CASE( AudioSystemTest, MultithreadedAudioDecodeAndPlayback )
+SW_TEST_CASE( AudioServiceTest, MultithreadedAudioDecodeAndPlayback )
 {
-    sw::unique_ptr<sw::IAudioSystem> pAudioSystem = sw::IAudioSystem::create();
-    SW_EXPECT_TRUE( pAudioSystem->initialize() );
+    sw::unique_ptr<sw::IAudioService> pAudioService = sw::IAudioService::create();
+    SW_EXPECT_TRUE( pAudioService->initialize() );
 
     const sw::string wavA = test::makeTempPath( "test_mt_audio_a.wav" );
     const sw::string wavB = test::makeTempPath( "test_mt_audio_b.wav" );
@@ -324,7 +324,7 @@ SW_TEST_CASE( AudioSystemTest, MultithreadedAudioDecodeAndPlayback )
         {
             for ( int32 iter = 0; iter < 10; ++iter )
             {
-                pAudioSystem->play( ( workerIndex % 2 == 0 ) ? wavA : wavB );
+                pAudioService->play( ( workerIndex % 2 == 0 ) ? wavA : wavB );
             }
         } );
     }
@@ -335,7 +335,7 @@ SW_TEST_CASE( AudioSystemTest, MultithreadedAudioDecodeAndPlayback )
             t.join();
     }
 
-    pAudioSystem->update( 0.016f );
+    pAudioService->update( 0.016f );
 
     if ( sw::engine::areEngineServicesBound() )
         sw::engine::getTaskManager().waitAll();
@@ -343,13 +343,13 @@ SW_TEST_CASE( AudioSystemTest, MultithreadedAudioDecodeAndPlayback )
     SW_EXPECT_TRUE( sw::FileUtil::removeFile( wavA ) );
     SW_EXPECT_TRUE( sw::FileUtil::removeFile( wavB ) );
 
-    pAudioSystem->shutdown();
+    pAudioService->shutdown();
 }
 
 /**
- * @brief [AudioSystemTest] 디코드 태스크가 아직 도는 중에 내려도 무너지지 않는다
+ * @brief [AudioServiceTest] 디코드 태스크가 아직 도는 중에 내려도 무너지지 않는다
  * @details **실제 엔진의 순서가 이렇다.** `EngineLoop::shutdown` 은 오디오를 TaskManager 보다
- *          **먼저** 내리므로, `XAudio2System::shutdown()` 이 도는 동안 워커가 아직
+ *          **먼저** 내리므로, `XAudio2AudioBackend::shutdown()` 이 도는 동안 워커가 아직
  *          `playDecodedClipTask` 안에 있을 수 있다.
  *
  *          `shutdown()` 도 `_voiceMutex` 를 잡고 보이스 목록을 훑어야 한다. 잡지 않으면 워커의 `push_back` 이
@@ -360,7 +360,7 @@ SW_TEST_CASE( AudioSystemTest, MultithreadedAudioDecodeAndPlayback )
  *          통째로 비껴간다. 여기서는 일부러 안 기다린다.
  *          (객체 자체는 `waitAll()` 뒤에 부순다. 그건 다른 이야기이고 엔진도 그 순서다.)
  */
-SW_TEST_CASE( AudioSystemTest, ShutdownWhileDecodeTasksAreStillInFlight )
+SW_TEST_CASE( AudioServiceTest, ShutdownWhileDecodeTasksAreStillInFlight )
 {
 
     // 경쟁 구간은 좁다 — 여러 판을 돌리고(`verify-nondeterministic-repro` 의 규칙), **파일을 매번
@@ -384,34 +384,34 @@ SW_TEST_CASE( AudioSystemTest, ShutdownWhileDecodeTasksAreStillInFlight )
 
     for ( int32 round = 0; round < kRoundCount; ++round )
     {
-        sw::unique_ptr<sw::IAudioSystem> pAudioSystem = sw::IAudioSystem::create();
-        SW_ASSERT_TRUE( pAudioSystem->initialize() );
+        sw::unique_ptr<sw::IAudioService> pAudioService = sw::IAudioService::create();
+        SW_ASSERT_TRUE( pAudioService->initialize() );
 
         for ( int32 playIndex = 0; playIndex < kPlayCount; ++playIndex )
         {
-            pAudioSystem->play( listWavPath[static_cast<size_t>( playIndex )] );
+            pAudioService->play( listWavPath[static_cast<size_t>( playIndex )] );
         }
 
         // **일부러 기다리지 않는다.** 디코드 태스크가 도는 채로 내리는 것이 이 케이스의 전부다.
-        pAudioSystem->shutdown();
+        pAudioService->shutdown();
 
         // 객체를 부수기 전에는 흘려보낸다 — 태스크가 `this` 를 들고 있기 때문이다.
         if ( sw::engine::areEngineServicesBound() )
             sw::engine::getTaskManager().waitAll();
 
-        SW_EXPECT_FALSE( pAudioSystem->isInitialized() );
+        SW_EXPECT_FALSE( pAudioService->isInitialized() );
     }
 }
 
 /**
- * @brief [AudioSystemTest] 부동소수 · 확장형(24 비트 다채널) WAV 도 디코드된다
+ * @brief [AudioServiceTest] 부동소수 · 확장형(24 비트 다채널) WAV 도 디코드된다
  * @details 파서가 `WAVE_FORMAT_PCM` 태그만 받으면 DAW 가 흔히 내보내는 부동소수 · 확장형 WAV 가 "디코드 실패" 경고 하나만 남기고 소리가
  *          나지 않는다. 재생은 비동기라 결과를 볼 수 없어 `preload`(동기 디코드)로 측정한다. 소리를 내지 않는 구성(Null)은 파일이 있는지만 본다.
  */
-SW_TEST_CASE( AudioSystemTest, FloatAndExtensibleWavsDecode )
+SW_TEST_CASE( AudioServiceTest, FloatAndExtensibleWavsDecode )
 {
-    sw::unique_ptr<sw::IAudioSystem> pAudioSystem = sw::IAudioSystem::create();
-    SW_ASSERT_TRUE( pAudioSystem->initialize() );
+    sw::unique_ptr<sw::IAudioService> pAudioService = sw::IAudioService::create();
+    SW_ASSERT_TRUE( pAudioService->initialize() );
 
     const sw::string floatPath      = test::makeTempPath( "test_float32.wav" );
     const sw::string extensiblePath = test::makeTempPath( "test_ext24_6ch.wav" );
@@ -420,19 +420,19 @@ SW_TEST_CASE( AudioSystemTest, FloatAndExtensibleWavsDecode )
     SW_ASSERT_TRUE( writeFormattedWav( extensiblePath, 1u, 6u, 24u, 1u ) ); // 확장형 24 비트 PCM 5.1
     SW_ASSERT_TRUE( writeFormattedWav( extFloatPath, 3u, 2u, 32u, 3u ) );   // 확장형 float
 
-    SW_EXPECT_TRUE( pAudioSystem->preload( floatPath ) );
-    SW_EXPECT_TRUE( pAudioSystem->preload( extensiblePath ) );
-    SW_EXPECT_TRUE( pAudioSystem->preload( extFloatPath ) );
-    SW_EXPECT_FALSE( pAudioSystem->preload( "NonExistentSoundFile.wav" ) );
+    SW_EXPECT_TRUE( pAudioService->preload( floatPath ) );
+    SW_EXPECT_TRUE( pAudioService->preload( extensiblePath ) );
+    SW_EXPECT_TRUE( pAudioService->preload( extFloatPath ) );
+    SW_EXPECT_FALSE( pAudioService->preload( "NonExistentSoundFile.wav" ) );
 
-    pAudioSystem->shutdown();
+    pAudioService->shutdown();
 }
 
 /**
- * @brief [AudioSystemTest] 공통 디코더가 WAV 의 형식 칸(채널 · 비트 · float · 확장형)을 그대로 옮긴다
+ * @brief [AudioServiceTest] 공통 디코더가 WAV 의 형식 칸(채널 · 비트 · float · 확장형)을 그대로 옮긴다
  * @details 재생 백엔드는 이 칸을 자기 형식 구조체로 옮기기만 한다. 여기서 틀리면 소리가 빠르거나 찢어진 채 나고, 로그에는 아무것도 남지 않는다.
  */
-SW_TEST_CASE( AudioSystemTest, DecoderKeepsWavFormatFields )
+SW_TEST_CASE( AudioServiceTest, DecoderKeepsWavFormatFields )
 {
     const sw::string extensiblePath = test::makeTempPath( "decode_ext24_6ch.wav" );
     const sw::string floatPath      = test::makeTempPath( "decode_float32.wav" );
@@ -466,11 +466,11 @@ SW_TEST_CASE( AudioSystemTest, DecoderKeepsWavFormatFields )
 }
 
 /**
- * @brief [AudioSystemTest] OGG Vorbis 를 16 비트 PCM 으로 푼다 — 팩 안에서도 되도록 바이트에서 푼다
+ * @brief [AudioServiceTest] OGG Vorbis 를 16 비트 PCM 으로 푼다 — 팩 안에서도 되도록 바이트에서 푼다
  * @details Media Foundation 은 Vorbis 를 모른다. 게임 효과음(Kenney 팩)이 OGG 라 이 디코더가 없으면 재생이 조용히 실패한다.
  *          테스트 자료는 `game/empty/sounds/click.ogg`(Kenney CC0)다.
  */
-SW_TEST_CASE( AudioSystemTest, OggVorbisDecodesToPcm )
+SW_TEST_CASE( AudioServiceTest, OggVorbisDecodesToPcm )
 {
     if ( test::HostTargetTestUtil::isLeftOutOfServerPackage( "game/empty/sounds/click.ogg" ) )
         SW_TEST_SKIP( "the dedicated server package leaves textures, shader binaries and audio out (CookContract target_excluded_asset_kinds)" );
@@ -496,18 +496,18 @@ SW_TEST_CASE( AudioSystemTest, OggVorbisDecodesToPcm )
     SW_EXPECT_FALSE( sw::AudioClipDecoder::decodeOgg( listBytes.data(), 64, rejected ) );
 
     // 재생 시스템도 같은 파일을 읽는다(소리를 내지 않는 구성은 파일이 있는지만 본다).
-    sw::unique_ptr<sw::IAudioSystem> pAudioSystem = sw::IAudioSystem::create();
-    SW_ASSERT_TRUE( pAudioSystem->initialize() );
-    SW_EXPECT_TRUE( pAudioSystem->preload( "game/empty/sounds/click.ogg" ) );
-    pAudioSystem->shutdown();
+    sw::unique_ptr<sw::IAudioService> pAudioService = sw::IAudioService::create();
+    SW_ASSERT_TRUE( pAudioService->initialize() );
+    SW_EXPECT_TRUE( pAudioService->preload( "game/empty/sounds/click.ogg" ) );
+    pAudioService->shutdown();
 }
 
 /**
- * @brief [AudioSystemTest] 주석 헤더의 길이 칸이 패킷 밖을 가리키는 OGG 는 죽지 않고 거절한다
+ * @brief [AudioServiceTest] 주석 헤더의 길이 칸이 패킷 밖을 가리키는 OGG 는 죽지 않고 거절한다
  * @details `LoaderFuzzTest` 가 찾은 결함이다 — stb_vorbis 1.22 는 주석 수 · 길이를 패킷과 대조하지 않아, 큰 값이면 할당이 실패한 뒤 채우지 않은 칸을
  *          `free` 해 프로세스가 죽었다. 실제 리소스의 OGG 하나를 읽어 주석 수 · 공급자 길이만 바꾼다(페이지 CRC 는 stb 가 보지 않는다).
  */
-SW_TEST_CASE( AudioSystemTest, OggWithOutOfPacketCommentLengthsIsRejected )
+SW_TEST_CASE( AudioServiceTest, OggWithOutOfPacketCommentLengthsIsRejected )
 {
     const sw::string  path = sw::FileUtil::joinPath( sw::ResourcePaths::getRootFolderPath(), "game/shooter3d/sounds/footstep_concrete_000.ogg" );
     sw::vector<uint8> originalBytes;

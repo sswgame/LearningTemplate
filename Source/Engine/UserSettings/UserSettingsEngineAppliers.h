@@ -15,7 +15,7 @@ namespace sw
 {
     class CommandLineManager;
     class GlobalVariableManager;
-    class IAudioSystem;
+    class IAudioService;
     class InputMap;
     class LocalizationManager;
 
@@ -25,7 +25,7 @@ namespace sw
         GlobalVariableManager*    _pGlobalVariableManager{ nullptr };
         const CommandLineManager* _pCommandLineManager{ nullptr }; ///< 있으면 명령줄로 준 전역 변수(`-gv_*`)는 기동 적용이 덮지 않는다(명령줄이 이긴다)
         InputMap*                 _pInputMap{ nullptr };
-        IAudioSystem*             _pAudioSystem{ nullptr };
+        IAudioService*            _pAudioService{ nullptr };
         LocalizationManager*      _pLocalizationManager{ nullptr };
     };
 } // namespace sw

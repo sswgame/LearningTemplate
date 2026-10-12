@@ -4,7 +4,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
-#include "Engine/Audio/NullAudioSystem.h"
+#include "Engine/Audio/NullAudioBackend.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
@@ -60,12 +60,12 @@ namespace
 </UserSettingsSchema>)";
 
         /** @brief 엔진 대상(전역 변수 표 · 오디오)을 걸고 테스트 스키마를 읽은 매니저를 세웁니다. */
-        static bool initializeWithSchema( sw::UserSettingsManager& outSettings, sw::IAudioSystem* pAudioSystem = nullptr )
+        static bool initializeWithSchema( sw::UserSettingsManager& outSettings, sw::IAudioService* pAudioService = nullptr )
         {
             resetTestVariables();
             sw::UserSettingsTargets targets;
             targets._pGlobalVariableManager = &sw::engine::getGlobalVariableManager();
-            targets._pAudioSystem           = pAudioSystem;
+            targets._pAudioService          = pAudioService;
             outSettings.initialize( targets );
             if ( outSettings.loadSchemaFromXMLText( kSchemaXML, "test.settings.xml" ) == false )
                 return false;
@@ -385,7 +385,7 @@ SW_TEST_CASE( UserSettingsTest, UserFileUpgradeDropsUnknownAndClamps )
  */
 SW_TEST_CASE( UserSettingsTest, ApplyRevertAndResetCategory )
 {
-    sw::NullAudioSystem     audio;
+    sw::NullAudioBackend    audio;
     sw::UserSettingsManager settings;
     SW_ASSERT_TRUE( UserSettingsTestInternal::initializeWithSchema( settings, &audio ) );
 

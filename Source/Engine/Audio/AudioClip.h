@@ -1,6 +1,6 @@
 /**
  * @file AudioClip.h
- * @brief 믹서가 읽는 클립(float 샘플)과, 경로별 클립 캐시(`AudioClipStore`)입니다.
+ * @brief 믹서가 읽는 클립(float 샘플)과, 경로별 클립 캐시(`AudioClipCache`)입니다.
  * @details 디코드는 워커에서 한다(`AudioClipDecoder`는 WAV 와 OGG 를 처리하고, 백엔드가 등록하는 대체 디코더는 Windows 의 Media Foundation 이다).
  *          디코드 결과는 float 로 바꿔 캐시에 넣는다. 믹서 스레드는 캐시에서 **찾기만** 하고(`findClip`) 디코드를 기다리지 않는다.
  */
@@ -59,19 +59,19 @@ namespace sw
     using AudioFallbackDecodeFunction = bool ( * )( string_view path, AudioPcm& outPcm );
 
     /**
-     * @class AudioClipStore
+     * @class AudioClipCache
      * @brief 경로별로 디코드한 클립을 보관하는 캐시입니다. 모든 함수는 어느 스레드에서 호출해도 됩니다.
      * @details 요청(`requestClip`)은 엔진 태스크가 있으면 워커에서 디코드하고, 없으면(테스트, 헤드리스) 호출한 자리에서 바로 디코드한다.
      *          같은 경로를 두 번 요청해도 디코드는 한 번이다. 클립은 `shared_ptr<const>` 라서 재생 중인 보이스가 참조하는 클립은 `clear` 뒤에도 살아 있다.
      */
-    class SW_API AudioClipStore
+    class SW_API AudioClipCache
     {
     public:
-        AudioClipStore();
-        ~AudioClipStore();
+        AudioClipCache();
+        ~AudioClipCache();
 
-        AudioClipStore( const AudioClipStore& )            = delete;
-        AudioClipStore& operator=( const AudioClipStore& ) = delete;
+        AudioClipCache( const AudioClipCache& )            = delete;
+        AudioClipCache& operator=( const AudioClipCache& ) = delete;
 
         /** @brief 공통 디코더가 못 읽는 형식에 쓸 대체 디코더를 겁니다(nullptr 이면 없음). */
         void setFallbackDecoder( AudioFallbackDecodeFunction pFunction ) { _pFallbackDecoder = pFunction; }

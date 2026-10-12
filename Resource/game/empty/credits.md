@@ -12,6 +12,6 @@
 | `models_raw/brick_wall.gltf` · `models_raw/barrel.gltf` | 이 저장소에서 만든 상자 · 원기둥(파괴 쇼케이스) | 이 저장소 |
 | `textures/twod/*.dds` | 이 저장소에서 코드로 그린 2D 데모 픽셀 아트(스프라이트 · 타일 · 노멀 맵, 커밋 `1fb09535c`) | 이 저장소 |
 
-- `AudioSystemTest` 가 OGG 디코드를 실제 파일로 확인하는 테스트 자료입니다.
+- `AudioServiceTest` 가 OGG 디코드를 실제 파일로 확인하는 테스트 자료입니다.
 - CC0 는 표기 의무가 없지만 고마움을 적어 둡니다 — Kenney (www.kenney.nl).
 - 테스트 머리 · 음성은 얼굴 애니메이션 테스트(`FacialAnimationTest`) 자료입니다 — KayKit 캐릭터에는 모프 타깃이 없습니다.

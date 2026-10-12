@@ -1075,7 +1075,7 @@ SW_TEST_CASE( SceneTest, SceneManagerHandsItsInjectedServicesDownToScenes )
     SW_EXPECT_TRUE( pScene->getEngineServices()._pAssetManager == services._pAssetManager );
     SW_EXPECT_TRUE( pScene->getEngineServices()._pDefaultAssets == services._pDefaultAssets );
     SW_EXPECT_TRUE( pObjects->findAssetManager() == services._pAssetManager );
-    SW_EXPECT_TRUE( pObjects->getSceneAudio().findAudioSystem() == services._pAudioSystem );
+    SW_EXPECT_TRUE( pObjects->getSceneAudio().findAudioService() == services._pAudioService );
     manager.shutdown();
 
     sw::SceneManager isolated;
@@ -1085,7 +1085,7 @@ SW_TEST_CASE( SceneTest, SceneManagerHandsItsInjectedServicesDownToScenes )
     sw::GameObjectManager* pIsolatedObjects = pIsolated->getObjectManager();
     SW_ASSERT_NOT_NULL( pIsolatedObjects );
     SW_EXPECT_NULL( pIsolatedObjects->findAssetManager() );
-    SW_EXPECT_NULL( pIsolatedObjects->getSceneAudio().findAudioSystem() );
+    SW_EXPECT_NULL( pIsolatedObjects->getSceneAudio().findAudioService() );
     SW_EXPECT_NULL( pIsolatedObjects->getSceneAudio().findAudioEngine() );
     SW_EXPECT_NULL( pIsolatedObjects->getScenePhysics().getScene3D() );
     SW_EXPECT_NULL( pIsolatedObjects->getScenePhysics().findSettings() );

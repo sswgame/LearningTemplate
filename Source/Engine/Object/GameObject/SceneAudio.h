@@ -26,7 +26,7 @@ namespace sw
     class AudioReverbZoneComponent;
     class CameraComponent;
     class IAudioOcclusionQuery;
-    class IAudioSystem;
+    class IAudioService;
 
     /** @class SceneAudio @brief 씬 하나의 오디오 묶기입니다. 파일 머리말 참고. */
     class SW_API SceneAudio
@@ -36,10 +36,10 @@ namespace sw
         static constexpr uint32 kOcclusionChecksPerFrame = 16;
 
         /**
-         * @brief 오디오 서비스 @p pAudioSystem 으로 소리를 낼 씬 오디오를 둡니다(소유하지 않음). 오브젝트 매니저가 자기 서비스 묶음에서 넘깁니다.
-         * @param pAudioSystem nullptr 이면 `setAudioEngine` 으로 정한 엔진이 없는 한 아무것도 넣지 않습니다.
+         * @brief 오디오 서비스 @p pAudioService 으로 소리를 낼 씬 오디오를 둡니다(소유하지 않음). 오브젝트 매니저가 자기 서비스 묶음에서 넘깁니다.
+         * @param pAudioService nullptr 이면 `setAudioEngine` 으로 정한 엔진이 없는 한 아무것도 넣지 않습니다.
          */
-        explicit SceneAudio( IAudioSystem* pAudioSystem );
+        explicit SceneAudio( IAudioService* pAudioService );
         ~SceneAudio();
 
         SceneAudio( const SceneAudio& )            = delete;
@@ -57,7 +57,7 @@ namespace sw
         /** @brief 쓸 엔진입니다. 받은 서비스가 없거나 오디오가 내려가 있으면 nullptr 입니다. */
         AudioEngine* findAudioEngine() const;
         /** @brief 생성자로 받은 오디오 서비스입니다(빌림). 없으면 nullptr 입니다. 씬 안의 코드(애니메이션 알림)가 소리를 낼 때 씁니다. */
-        IAudioSystem* findAudioSystem() const { return _pAudioSystem; }
+        IAudioService* findAudioService() const { return _pAudioService; }
         /** @brief 가림 질의를 바꿉니다(테스트 · 게임의 다른 기하). nullptr 이면 물리 씬의 레이캐스트입니다. */
         void setOcclusionQuery( const IAudioOcclusionQuery* pQuery ) { _pOcclusionOverride = pQuery; }
         /** @brief 마지막 프레임의 첫 리스너 자리입니다(앰비언트 가장 가까운 점 · 리버브 존 판정). */
@@ -90,7 +90,7 @@ namespace sw
         vector<AudioEmitterComponent*>             _listEmitterSnapshot;     /**< 프레임마다 잠금 밖에서 도는 에미터 사본입니다. */
         vector<ZoneValue>                          _listZoneValue;           /**< 지난 프레임의 스냅샷 세기입니다. */
         vector<ZoneValue>                          _listZoneCurrent;         /**< 이번 프레임의 스냅샷 세기(작업 목록)입니다. */
-        IAudioSystem*                              _pAudioSystem;            /**< 생성자로 받은 오디오 서비스(빌림)입니다. */
+        IAudioService*                             _pAudioService;           /**< 생성자로 받은 오디오 서비스(빌림)입니다. */
         AudioEngine*                               _pEngineOverride;         /**< 테스트가 정한 엔진입니다. */
         const IAudioOcclusionQuery*                _pOcclusionOverride;      /**< 바꾼 가림 질의입니다. */
         float3                                     _primaryListenerPosition; /**< 첫 리스너 자리입니다. */

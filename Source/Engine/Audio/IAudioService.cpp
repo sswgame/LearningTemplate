@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Audio/IAudioSystem.h"
+#include "Engine/Audio/IAudioService.h"
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -8,25 +8,25 @@
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Audio/AudioMusic.h"
-#include "Engine/Audio/NullAudioSystem.h"
+#include "Engine/Audio/NullAudioBackend.h"
 #include "Engine/Resource/ResourceIO.h"
 
-// NullAudioSystem 은 Windows 에서 쓰이지 않지만 **항상 컴파일한다.** 헤더 전용이라 비용이 없고,
+// NullAudioBackend 은 Windows 에서 쓰이지 않지만 **항상 컴파일한다.** 헤더 전용이라 비용이 없고,
 // `#else` 안에만 두었을 때는 Windows 에서 한 번도 컴파일되지 않아 조용히 썩는다(FileWatcher 의
 // macOS 구현이 그랬다).
 
 // 전용 서버 빌드(SW_WITH_CLIENT_CODE 없음)에는 XAudio2 구현과 링크가 없다. 서버는 장치를 열지 않는다.
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_WITH_CLIENT_CODE )
-    #include "Engine/Audio/Windows/XAudio2System.h"
+    #include "Engine/Audio/Windows/XAudio2AudioBackend.h"
 #endif
 
 namespace sw
 {
-    SW_LOG_CALLER( "AudioSystem" );
+    SW_LOG_CALLER( "AudioService" );
 
     namespace
     {
-        struct IAudioSystemInternal
+        struct IAudioServiceInternal
         {
             /** @brief 곡을 바꿀 때의 크로스페이드 길이(초)입니다. */
             static constexpr float32 kMusicCrossfadeSeconds = 0.25f;
@@ -38,21 +38,21 @@ namespace sw
 
 namespace sw
 {
-    unique_ptr<IAudioSystem> IAudioSystem::create()
+    unique_ptr<IAudioService> IAudioService::create()
     {
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_WITH_CLIENT_CODE )
-        return make_unique<XAudio2System>();
+        return make_unique<XAudio2AudioBackend>();
 #else
-        return make_unique<NullAudioSystem>();
+        return make_unique<NullAudioBackend>();
 #endif
     }
 
-    unique_ptr<IAudioSystem> IAudioSystem::createNull()
+    unique_ptr<IAudioService> IAudioService::createNull()
     {
-        return make_unique<NullAudioSystem>();
+        return make_unique<NullAudioBackend>();
     }
 
-    IAudioSystem::IAudioSystem()
+    IAudioService::IAudioService()
         : _pEngine{ make_unique<AudioEngine>() }
         , _listBusVolume{}
         , _listOfflineBlock{}
@@ -68,9 +68,9 @@ namespace sw
     {
     }
 
-    IAudioSystem::~IAudioSystem() = default;
+    IAudioService::~IAudioService() = default;
 
-    bool IAudioSystem::initialize()
+    bool IAudioService::initialize()
     {
         if ( _bInitialized )
             return true;
@@ -98,7 +98,7 @@ namespace sw
         return true;
     }
 
-    void IAudioSystem::shutdown()
+    void IAudioService::shutdown()
     {
         if ( _bInitialized == false )
             return;
@@ -116,13 +116,13 @@ namespace sw
         SW_LOG_INFO( "Shut down." );
     }
 
-    void IAudioSystem::update( float32 deltaSeconds )
+    void IAudioService::update( float32 deltaSeconds )
     {
         SW_MEMORY_SCOPE( Audio );
         if ( _bInitialized == false || _bOutputOpen )
             return;
         // 장치가 없으면 흐른 시간만큼 바로 렌더한다. 끝남, 박자, 가상 보이스가 장치가 있을 때와 같이 진행한다.
-        const float64 seconds = MathUtil::clamp( static_cast<float64>( deltaSeconds ), 0.0, IAudioSystemInternal::kMaxOfflineSecondsPerUpdate );
+        const float64 seconds = MathUtil::clamp( static_cast<float64>( deltaSeconds ), 0.0, IAudioServiceInternal::kMaxOfflineSecondsPerUpdate );
         _offlineFrameDebt += seconds * static_cast<float64>( audio::kSampleRate );
         while ( _offlineFrameDebt >= static_cast<float64>( audio::kBlockFrameCount ) )
         {
@@ -131,7 +131,7 @@ namespace sw
         }
     }
 
-    bool IAudioSystem::play( string_view path, const hashed_string& bus )
+    bool IAudioService::play( string_view path, const hashed_string& bus )
     {
         SW_MEMORY_SCOPE( Audio );
         if ( _bInitialized == false || path.empty() )
@@ -144,7 +144,7 @@ namespace sw
         return _pEngine->playClip( hashed_string( path ), bus, AudioClipPlayParams{} ) != 0;
     }
 
-    bool IAudioSystem::preload( string_view path )
+    bool IAudioService::preload( string_view path )
     {
         SW_MEMORY_SCOPE( Audio );
         if ( path.empty() )
@@ -152,7 +152,7 @@ namespace sw
         return _pEngine->getClipStore().loadClip( hashed_string( path ) ) != nullptr;
     }
 
-    bool IAudioSystem::playMusic( string_view path )
+    bool IAudioService::playMusic( string_view path )
     {
         if ( _bInitialized == false || path.empty() )
             return false;
@@ -167,19 +167,19 @@ namespace sw
         const bool bCrossfade = _musicPlayingID != 0;
         if ( bCrossfade )
         {
-            _pEngine->stop( _musicPlayingID, IAudioSystemInternal::kMusicCrossfadeSeconds );
-            _pEngine->stopMusic( IAudioSystemInternal::kMusicCrossfadeSeconds );
+            _pEngine->stop( _musicPlayingID, IAudioServiceInternal::kMusicCrossfadeSeconds );
+            _pEngine->stopMusic( IAudioServiceInternal::kMusicCrossfadeSeconds );
         }
 
         AudioClipPlayParams params;
         params._bLoop         = true;
-        params._fadeInSeconds = bCrossfade ? IAudioSystemInternal::kMusicCrossfadeSeconds : 0.0f;
+        params._fadeInSeconds = bCrossfade ? IAudioServiceInternal::kMusicCrossfadeSeconds : 0.0f;
         _musicPath            = string( path );
         _musicPlayingID       = _pEngine->playClip( hashed_string( path ), hashed_string( AudioBusNames::kMusic ), params );
         return _musicPlayingID != 0;
     }
 
-    bool IAudioSystem::playAdaptiveMusic( string_view path )
+    bool IAudioService::playAdaptiveMusic( string_view path )
     {
         if ( _bInitialized == false || path.empty() )
             return false;
@@ -189,13 +189,13 @@ namespace sw
         if ( pMusic->loadFromResource( path ) == false )
             return false;
         if ( _musicPlayingID != 0 )
-            _pEngine->stop( _musicPlayingID, IAudioSystemInternal::kMusicCrossfadeSeconds );
+            _pEngine->stop( _musicPlayingID, IAudioServiceInternal::kMusicCrossfadeSeconds );
         _musicPath      = string( path );
-        _musicPlayingID = _pEngine->startMusic( std::move( pMusic ), IAudioSystemInternal::kMusicCrossfadeSeconds );
+        _musicPlayingID = _pEngine->startMusic( std::move( pMusic ), IAudioServiceInternal::kMusicCrossfadeSeconds );
         return _musicPlayingID != 0;
     }
 
-    void IAudioSystem::stopMusic()
+    void IAudioService::stopMusic()
     {
         if ( _musicPlayingID != 0 )
             _pEngine->stop( _musicPlayingID, 0.0f );
@@ -204,19 +204,19 @@ namespace sw
         _musicPath.clear();
     }
 
-    void IAudioSystem::pauseMusic()
+    void IAudioService::pauseMusic()
     {
         if ( _musicPlayingID != 0 )
             _pEngine->setPaused( _musicPlayingID, true );
     }
 
-    void IAudioSystem::resumeMusic()
+    void IAudioService::resumeMusic()
     {
         if ( _musicPlayingID != 0 )
             _pEngine->setPaused( _musicPlayingID, false );
     }
 
-    bool IAudioSystem::loadMixer( string_view resourcePath )
+    bool IAudioService::loadMixer( string_view resourcePath )
     {
         AudioMixerDesc mixerDesc;
         if ( mixerDesc.loadFromResource( resourcePath ) == false )
@@ -224,25 +224,25 @@ namespace sw
         return _pEngine->loadMixer( mixerDesc );
     }
 
-    void IAudioSystem::setMasterVolume( float32 volume )
+    void IAudioService::setMasterVolume( float32 volume )
     {
         _masterVolume = MathUtil::clamp( volume, 0.0f, 1.0f );
         _pEngine->setBusUserVolume( hashed_string( AudioBusNames::kMaster ), _masterVolume );
     }
 
-    void IAudioSystem::setMusicVolume( float32 volume )
+    void IAudioService::setMusicVolume( float32 volume )
     {
         _musicVolume = MathUtil::clamp( volume, 0.0f, 1.0f );
         _pEngine->setBusUserVolume( hashed_string( AudioBusNames::kMusic ), _musicVolume );
     }
 
-    void IAudioSystem::setSfxVolume( float32 volume )
+    void IAudioService::setSfxVolume( float32 volume )
     {
         _sfxVolume = MathUtil::clamp( volume, 0.0f, 1.0f );
         _pEngine->setBusUserVolume( hashed_string( AudioBusNames::kSfx ), _sfxVolume );
     }
 
-    void IAudioSystem::setBusVolume( const hashed_string& bus, float32 volume )
+    void IAudioService::setBusVolume( const hashed_string& bus, float32 volume )
     {
         if ( bus == hashed_string( AudioBusNames::kMaster ) )
         {
@@ -273,7 +273,7 @@ namespace sw
         _listBusVolume.push_back( AudioBusVolume{ bus, clamped } );
     }
 
-    float32 IAudioSystem::getBusVolume( const hashed_string& bus ) const
+    float32 IAudioService::getBusVolume( const hashed_string& bus ) const
     {
         if ( bus == hashed_string( AudioBusNames::kMaster ) )
             return _masterVolume;
@@ -289,7 +289,7 @@ namespace sw
         return 1.0f;
     }
 
-    void IAudioSystem::setMute( bool bMute )
+    void IAudioService::setMute( bool bMute )
     {
         _bMuted = bMute;
         _pEngine->setBusMuted( hashed_string( AudioBusNames::kMaster ), bMute );

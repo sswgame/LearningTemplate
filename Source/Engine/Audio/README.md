@@ -85,7 +85,7 @@ _soundQueue.playAll();                      // 틱 뒤 게임 스레드에서
 렌더는 **블록**(`audio::kBlockFrameCount`, 256프레임, 약 5.3ms) 단위입니다. 블록을 시작할 때 쌓인 명령을 적용하고, 볼륨과 팬은 블록 안에서 샘플마다 천천히 바꿔 지퍼 잡음이 나지 않게 합니다.
 장치 버퍼 길이와 블록 길이는 관계없습니다. `render` 가 블록을 잘라 이어 줍니다.
 
-오디오 스레드는 장치 콜백(XAudio2 의 버퍼 끝 콜백)입니다. 장치가 없으면 게임 스레드의 `IAudioSystem::update` 가 흐른 시간만큼 렌더합니다.
+오디오 스레드는 장치 콜백(XAudio2 의 버퍼 끝 콜백)입니다. 장치가 없으면 게임 스레드의 `IAudioService::update` 가 흐른 시간만큼 렌더합니다.
 그래서 재생이 끝나는 시각과 가상 보이스는 장치가 있을 때와 똑같이 흐릅니다.
 
 **결정적입니다.** 같은 명령과 같은 씨앗(`setRandomSeed`)이면 같은 샘플이 나옵니다.
@@ -93,13 +93,13 @@ _soundQueue.playAll();                      // 틱 뒤 게임 스레드에서
 
 ### 클립과 디코드
 
-`AudioClip` 은 float 샘플이고, `AudioClipStore` 가 경로로 클립을 캐시하고 비동기로 디코드합니다. 공통 디코더(`AudioClipDecoder`)는 WAV 와 OGG 를 읽습니다.
+`AudioClip` 은 float 샘플이고, `AudioClipCache` 가 경로로 클립을 캐시하고 비동기로 디코드합니다. 공통 디코더(`AudioClipDecoder`)는 WAV 와 OGG 를 읽습니다.
 OGG 디코더(stb_vorbis)의 메모리는 엔진 아레나에서 받고, 256KB 에서 시작해 64MB 를 넘지 않습니다(`AudioVorbisDecode.cpp`). 깨진 파일이 과하게 할당하거나 누수를 내더라도 아레나 안에서 끝납니다.
-공통 디코더가 못 읽는 형식(MP3, ADPCM WAV)은 백엔드의 대체 디코더(`AudioClipStore::setFallbackDecoder`)가 풉니다. Windows 는 Media Foundation 을 씁니다.
+공통 디코더가 못 읽는 형식(MP3, ADPCM WAV)은 백엔드의 대체 디코더(`AudioClipCache::setFallbackDecoder`)가 풉니다. Windows 는 Media Foundation 을 씁니다.
 
 ### 버스 그래프
 
-데이터는 `engine/audio/default.audiomixer.xml` 이고, 파일이 없으면 `AudioMixerDesc::makeDefault` 를 씁니다. 게임은 `IAudioSystem::loadMixer` 로 그래프를 바꿀 수 있고, 재생 중인 보이스는 같은 이름의 버스로 옮겨 갑니다.
+데이터는 `engine/audio/default.audiomixer.xml` 이고, 파일이 없으면 `AudioMixerDesc::makeDefault` 를 씁니다. 게임은 `IAudioService::loadMixer` 로 그래프를 바꿀 수 있고, 재생 중인 보이스는 같은 이름의 버스로 옮겨 갑니다.
 
 ```xml
 <AudioMixerDesc _maxVoiceCount="256" _maxRealVoiceCount="64" _inaudibleDb="-60">
@@ -115,7 +115,7 @@ OGG 디코더(stb_vorbis)의 메모리는 엔진 아레나에서 받고, 256KB �
 - 루트는 `master` 하나입니다. 부모와 센드 대상은 이름으로 적습니다. 모르는 이름, 겹친 이름, 순환은 **읽기 오류**입니다.
 - 처리 순서는 보내는 버스가 먼저인 위상 순서입니다. 각 버스는 입력(보이스, 자식 버스, 센드의 합)을 받아 프리 페이더 센드, 페이더, 포스트 페이더 센드를 거쳐 부모로 보냅니다.
 - **페이더 게인은 데이터 볼륨(dB), 사용자 볼륨, 스냅샷 오프셋(dB), 음소거와 솔로를 곱한 값입니다.**
-  사용자 볼륨은 옵션 메뉴의 `audio.busVolume` 이 `IAudioSystem::setBusVolume` 으로 넣고, 그래프를 바꿔도 버스 이름으로 유지됩니다. 음소거(`setMute`)는 `master` 한 곳에만 겁니다.
+  사용자 볼륨은 옵션 메뉴의 `audio.busVolume` 이 `IAudioService::setBusVolume` 으로 넣고, 그래프를 바꿔도 버스 이름으로 유지됩니다. 음소거(`setMute`)는 `master` 한 곳에만 겁니다.
 - 버스 하나라도 솔로면, 솔로 버스의 조상(신호가 지나는 경로)과 자손만 소리를 냅니다. DAW 와 Wwise 의 솔로와 같습니다.
 
 ### 이펙트
@@ -198,7 +198,7 @@ Wwise 의 Event, Random/Sequence/Blend 컨테이너, Playback Limit, RTPC 에 �
 ### 적응형 음악
 
 `*.music.xml`(`AudioMusicDesc`)은 템포, 구간, 레이어, 전환 규칙을 정합니다. Wwise 의 Interactive Music, FMOD 의 transition marker 에 해당합니다.
-`IAudioSystem::playAdaptiveMusic( 경로 )` 나 `AudioEngine::startMusic` 으로 시작하고, `setMusicSegment( 이름 )` 으로 구간을 바꿉니다.
+`IAudioService::playAdaptiveMusic( 경로 )` 나 `AudioEngine::startMusic` 으로 시작하고, `setMusicSegment( 이름 )` 으로 구간을 바꿉니다.
 
 **템포.** 음악의 `_tempo` 와 `_beatsPerBar` 로 박과 마디를 정하고, 구간이 덮어쓸 수 있습니다. 구간 길이는 마디 수 × 마디당 박 수 × 박 길이이고, 클립은 이 길이로 만듭니다.
 `getMusicStatus()` 가 지금 구간, 박(소수), 마디, 템포를 게시하므로 박자에 맞춘 게임플레이에 쓸 수 있습니다.
@@ -234,14 +234,14 @@ Wwise 의 Event, Random/Sequence/Blend 컨테이너, Playback Limit, RTPC 에 �
 물리 씬이 없거나 2D(Box2D) 씬이면 가림은 0 입니다. `setOcclusionQuery` 로 내비메시나 방 그래프 같은 다른 기하를 쓰는 질의로 바꿀 수 있습니다.
 
 사라진 에미터는 엔진에서 바로 지우지 않고, 그 위치의 한 번짜리 소리가 끝난 뒤 지웁니다. 위치를 잃은 소리가 2D 로 돌아가 크게 들리지 않게 하기 위해서입니다.
-엔진은 오디오 서비스(`engine::getAudioSystem`)의 것이고, 테스트는 `SceneAudio::setAudioEngine` 으로 장치 없는 엔진을 연결합니다.
+엔진은 오디오 서비스(`engine::getAudioService`)의 것이고, 테스트는 `SceneAudio::setAudioEngine` 으로 장치 없는 엔진을 연결합니다.
 
 ### 클립을 바로 재생하기
 
 이벤트 없이 클립을 바로 틀 수도 있습니다.
 
 ```cpp
-IAudioSystem* pAudio = game::getService<IAudioSystem>();
+IAudioService* pAudio = game::getService<IAudioService>();
 pAudio->play( "game/x/sounds/click.ogg", hashed_string( "ui" ) ); // 버스를 고른다. 비우면 sfx
 pAudio->playMusic( "game/x/music/theme.ogg" );                     // music 버스 루프. 곡이 바뀌면 0.25초 크로스페이드
 AudioEngine& engine = pAudio->getEngine();                         // 이벤트, 파라미터, 스냅샷, 음악, 공간화
@@ -249,10 +249,10 @@ AudioEngine& engine = pAudio->getEngine();                         // 이벤트,
 
 ### 플랫폼
 
-**Windows** 는 `XAudio2System` 입니다. 마스터링 보이스와, float32 스테레오 48kHz 소스 보이스 하나를 씁니다. 512프레임 버퍼 세 개를 돌려 쓰고, 버퍼가 끝날 때마다 XAudio2 처리 스레드에서 다음 버퍼를 렌더해 제출합니다.
+**Windows** 는 `XAudio2AudioBackend` 입니다. 마스터링 보이스와, float32 스테레오 48kHz 소스 보이스 하나를 씁니다. 512프레임 버퍼 세 개를 돌려 쓰고, 버퍼가 끝날 때마다 XAudio2 처리 스레드에서 다음 버퍼를 렌더해 제출합니다.
 지연은 약 21ms 에 블록 하나를 더한 정도입니다. 장치를 열지 못하면 오프라인으로 돌고 로그에 `offline - no device` 를 남깁니다.
 
-**Linux** 에는 출력 백엔드가 없고 `NullAudioSystem` 으로 오프라인 렌더합니다. 엔진 코드에는 플랫폼 분기가 없습니다.
+**Linux** 에는 출력 백엔드가 없고 `NullAudioBackend` 으로 오프라인 렌더합니다. 엔진 코드에는 플랫폼 분기가 없습니다.
 
 **립싱크 임포트.** `App --import-lipsync` 는 `voice/` 폴더의 음성 파일을 분석해 비즘 트랙(`.visemes.json`)을 곁에 씁니다(`LipSyncImport`). 분석기와 트랙 형식은 `Animation/Facial/LipSync` 에 있습니다.
 
@@ -268,8 +268,8 @@ AudioEngine& engine = pAudio->getEngine();                         // 이벤트,
 
 ### 새 출력 백엔드
 
-`IAudioSystem` 을 상속하고 `openOutput` 과 `closeOutput` 을 구현합니다. 장치 콜백에서 `AudioEngine::render` 로 버퍼를 채웁니다. 믹스는 모두 엔진이 하므로 백엔드는 장치만 다룹니다.
-공통 디코더가 못 읽는 형식이 있으면 `AudioClipStore::setFallbackDecoder` 로 대체 디코더를 등록합니다.
+`IAudioService` 을 상속하고 `openOutput` 과 `closeOutput` 을 구현합니다. 장치 콜백에서 `AudioEngine::render` 로 버퍼를 채웁니다. 믹스는 모두 엔진이 하므로 백엔드는 장치만 다룹니다.
+공통 디코더가 못 읽는 형식이 있으면 `AudioClipCache::setFallbackDecoder` 로 대체 디코더를 등록합니다.
 
 ## 함정과 주의
 
@@ -292,7 +292,7 @@ AudioEngine& engine = pAudio->getEngine();                         // 이벤트,
 
 | 파일 | 내용 |
 |---|---|
-| `IAudioSystem.h` | 오디오 서비스, 볼륨, 음악 |
+| `IAudioService.h` | 오디오 서비스, 볼륨, 음악 |
 | `AudioEngine.h` | 명령, 이벤트, 파라미터, 스냅샷 |
 | `AudioEngineState.h` | 엔진의 값 부품: `AudioMusicPlayback` 는 음악의 재생 위치와 전환 예약을, `AudioPublishedState` 는 게임 스레드가 읽는 게시 사본(재생 목록, 상태, 음악 위치)을 맡습니다 |
 | `AudioMixerDesc.h` | 버스 그래프 데이터 |

@@ -16,7 +16,7 @@ namespace sw
     struct EngineServices;
 
     class AssetManager;
-    class IAudioSystem;
+    class IAudioService;
     class PhysicsSystem;
     class TaskManager;
     class TypeRegistry;
@@ -26,7 +26,7 @@ namespace sw
     {
         AssetManager*              _pAssetManager{ nullptr };  ///< 머티리얼 · 프리팹 캐시와 에셋 정리
         PhysicsSystem*             _pPhysicsSystem{ nullptr }; ///< 씬마다의 3D · 2D 물리 씬을 만드는 백엔드
-        IAudioSystem*              _pAudioSystem{ nullptr };   ///< 씬 오디오 · 애니메이션 알림의 소리
+        IAudioService*             _pAudioService{ nullptr };  ///< 씬 오디오 · 애니메이션 알림의 소리
         const EngineDefaultAssets* _pDefaultAssets{ nullptr }; ///< 씬 기본 머티리얼 경로
         TaskManager*               _pTaskManager{ nullptr };   ///< 비동기 씬 로드를 띄우고 기다리는 곳
         TypeRegistry*              _pTypeRegistry{ nullptr };  ///< 씬을 읽어도 되는지(모듈 타입 등록 완료)와 타입 표 세대

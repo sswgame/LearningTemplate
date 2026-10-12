@@ -111,7 +111,7 @@ namespace sw
         , _store{ *this, _tickScheduler, _structuralChangeBuffer }
         , _overlapWorld2D{}
         , _scenePhysics{ services._pPhysicsSystem }
-        , _sceneAudio{ services._pAudioSystem }
+        , _sceneAudio{ services._pAudioService }
         , _listSceneService{}
         , _frameStepObserver{}
         , _listFrameSystem{}

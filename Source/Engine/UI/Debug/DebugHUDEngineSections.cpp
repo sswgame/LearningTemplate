@@ -16,7 +16,7 @@
     #include "Core/Memory/MemoryTag.h"
 
     #include "Engine/Audio/AudioEngine.h"
-    #include "Engine/Audio/IAudioSystem.h"
+    #include "Engine/Audio/IAudioService.h"
     #include "Engine/Common/EngineServices.h"
     #include "Engine/Input/Devices/MouseDevice.h"
     #include "Engine/Input/InputManager.h"
@@ -195,7 +195,7 @@ namespace sw
 
             static void writeAudio( DebugHUDSectionWriter& writer )
             {
-                const AudioEngineStats stats = engine::getAudioSystem().getEngine().getStats();
+                const AudioEngineStats stats = engine::getAudioService().getEngine().getStats();
                 writer.addLineFormat( "voices", "%# (%# real, %# virtual)", stats._voiceCount, stats._realVoiceCount, stats._virtualVoiceCount );
                 writer.addLineFormat( "instances", "%#", stats._instanceCount );
                 writer.addLineFormat( "dropped", "%#", stats._droppedEventCount );

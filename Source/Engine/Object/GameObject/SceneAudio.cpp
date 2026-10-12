@@ -3,7 +3,7 @@
 #include "Engine/Object/GameObject/SceneAudio.h"
 
 #include "Engine/Audio/AudioEngine.h"
-#include "Engine/Audio/IAudioSystem.h"
+#include "Engine/Audio/IAudioService.h"
 #include "Engine/Object/Component/Audio/AudioEmitterComponent.h"
 #include "Engine/Object/Component/Audio/AudioListenerComponent.h"
 #include "Engine/Object/Component/Audio/AudioReverbZoneComponent.h"
@@ -48,14 +48,14 @@ namespace sw
 
 namespace sw
 {
-    SceneAudio::SceneAudio( IAudioSystem* pAudioSystem )
+    SceneAudio::SceneAudio( IAudioService* pAudioService )
         : _listener{}
         , _emitter{}
         , _zone{}
         , _listEmitterSnapshot{}
         , _listZoneValue{}
         , _listZoneCurrent{}
-        , _pAudioSystem{ pAudioSystem }
+        , _pAudioService{ pAudioService }
         , _pEngineOverride{ nullptr }
         , _pOcclusionOverride{ nullptr }
         , _primaryListenerPosition{}
@@ -74,9 +74,9 @@ namespace sw
         if ( _pEngineOverride != nullptr )
             return _pEngineOverride;
         // 포인터는 생성할 때 받은 것이고, 오디오가 올라와 있는지는 부를 때마다 본다.
-        if ( _pAudioSystem == nullptr || _pAudioSystem->isInitialized() == false )
+        if ( _pAudioService == nullptr || _pAudioService->isInitialized() == false )
             return nullptr;
-        return &_pAudioSystem->getEngine();
+        return &_pAudioService->getEngine();
     }
 
     void SceneAudio::addListener( AudioListenerComponent* pListener )

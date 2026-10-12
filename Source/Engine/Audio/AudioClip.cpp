@@ -11,7 +11,7 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AudioClipStore" );
+    SW_LOG_CALLER( "AudioClipCache" );
 
     namespace
     {
@@ -116,16 +116,16 @@ namespace sw
         }
     }
 
-    AudioClipStore::AudioClipStore()
+    AudioClipCache::AudioClipCache()
         : _mapPathToEntry{}
         , _pFallbackDecoder{ nullptr }
         , _mutex{}
     {
     }
 
-    AudioClipStore::~AudioClipStore() = default;
+    AudioClipCache::~AudioClipCache() = default;
 
-    shared_ptr<const AudioClipData> AudioClipStore::findClip( const hashed_string& path ) const
+    shared_ptr<const AudioClipData> AudioClipCache::findClip( const hashed_string& path ) const
     {
         std::scoped_lock<mutex> lock{ _mutex };
         const auto              it = _mapPathToEntry.find( path );
@@ -134,14 +134,14 @@ namespace sw
         return it->second._pClip;
     }
 
-    AudioClipStatus AudioClipStore::getStatus( const hashed_string& path ) const
+    AudioClipStatus AudioClipCache::getStatus( const hashed_string& path ) const
     {
         std::scoped_lock<mutex> lock{ _mutex };
         const auto              it = _mapPathToEntry.find( path );
         return it == _mapPathToEntry.end() ? AudioClipStatus::Missing : it->second._status;
     }
 
-    shared_ptr<const AudioClipData> AudioClipStore::loadClip( const hashed_string& path )
+    shared_ptr<const AudioClipData> AudioClipCache::loadClip( const hashed_string& path )
     {
         {
             std::scoped_lock<mutex> lock{ _mutex };
@@ -154,7 +154,7 @@ namespace sw
         return pClip;
     }
 
-    void AudioClipStore::requestClip( const hashed_string& path )
+    void AudioClipCache::requestClip( const hashed_string& path )
     {
         if ( path.empty() )
             return;
@@ -172,23 +172,23 @@ namespace sw
             return;
         }
         engine::getTaskManager()
-            .emplaceTask( "AudioClipDecode", SW_DELEGATE_METHOD( TaskArgsDelegate, &AudioClipStore::decodeClipTask, this ),
+            .emplaceTask( "AudioClipDecode", SW_DELEGATE_METHOD( TaskArgsDelegate, &AudioClipCache::decodeClipTask, this ),
                           MakeTaskArgs( string( path.view() ) ) )
             .submit();
     }
 
-    void AudioClipStore::addClip( const hashed_string& path, shared_ptr<const AudioClipData> pClip )
+    void AudioClipCache::addClip( const hashed_string& path, shared_ptr<const AudioClipData> pClip )
     {
         storeResult( path, std::move( pClip ) );
     }
 
-    void AudioClipStore::clear()
+    void AudioClipCache::clear()
     {
         std::scoped_lock<mutex> lock{ _mutex };
         _mapPathToEntry.clear();
     }
 
-    shared_ptr<const AudioClipData> AudioClipStore::decodeClip( const hashed_string& path ) const
+    shared_ptr<const AudioClipData> AudioClipCache::decodeClip( const hashed_string& path ) const
     {
         const string_view pathView = path.view();
         AudioPcm          pcm;
@@ -219,13 +219,13 @@ namespace sw
         return pClip;
     }
 
-    void AudioClipStore::decodeClipTask( const TaskArgs& args )
+    void AudioClipCache::decodeClipTask( const TaskArgs& args )
     {
         const hashed_string path( string_view( args.get<string>( 0 ) ) );
         storeResult( path, decodeClip( path ) );
     }
 
-    void AudioClipStore::storeResult( const hashed_string& path, shared_ptr<const AudioClipData> pClip )
+    void AudioClipCache::storeResult( const hashed_string& path, shared_ptr<const AudioClipData> pClip )
     {
         std::scoped_lock<mutex> lock{ _mutex };
         Entry&                  entry = _mapPathToEntry[path];

@@ -128,7 +128,7 @@
 		<AutoDetect preset="low"/>
 	</Scalability>
 
-	<!-- 오디오 — 버스 이름은 IAudioSystem::setBusVolume 의 이름이다. voice · ambient · ui 는 재생 API 가 버스를 받기 전까지 값만 기억된다. -->
+	<!-- 오디오 — 버스 이름은 IAudioService::setBusVolume 의 이름이다. voice · ambient · ui 는 재생 API 가 버스를 받기 전까지 값만 기억된다. -->
 	<Setting id="audio.masterVolume" category="audio" type="float" default="1" min="0" max="1" step="0.05" apply="immediate" target="applier:audio.busVolume" param="master" text="settings.audio.masterVolume"/>
 	<Setting id="audio.musicVolume" category="audio" type="float" default="0.8" min="0" max="1" step="0.05" apply="immediate" target="applier:audio.busVolume" param="music" text="settings.audio.musicVolume"/>
 	<Setting id="audio.sfxVolume" category="audio" type="float" default="1" min="0" max="1" step="0.05" apply="immediate" target="applier:audio.busVolume" param="sfx" text="settings.audio.sfxVolume"/>

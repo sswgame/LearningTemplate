@@ -43,7 +43,7 @@ namespace
         {
             if ( engine.initialize( sw::AudioMixerDesc::makeDefault() ) == false )
                 return false;
-            sw::AudioClipStore& store = engine.getClipStore();
+            sw::AudioClipCache& store = engine.getClipStore();
             store.addClip( sw::hashed_string( "m/a" ), test::AudioTestUtil::makeConstantClip( 0.25f, 96000 ) );
             store.addClip( sw::hashed_string( "m/b" ), test::AudioTestUtil::makeConstantClip( 0.5f, 96000 ) );
             store.addClip( sw::hashed_string( "m/drums" ), test::AudioTestUtil::makeConstantClip( 0.3f, 96000 ) );

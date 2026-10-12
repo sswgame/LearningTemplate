@@ -3,7 +3,7 @@
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioMixer.h"
 #include "Engine/Audio/AudioMixerDesc.h"
-#include "Engine/Audio/NullAudioSystem.h"
+#include "Engine/Audio/NullAudioBackend.h"
 
 #include "EngineTest/AudioTestUtil.h"
 
@@ -199,11 +199,11 @@ SW_TEST_CASE( AudioMixerTest, PitchChangesPlaybackLength )
 
 /**
  * @brief [AudioMixerTest] 사용자 설정의 버스 볼륨(`voice` · `ambient` · `ui` 포함)이 같은 이름의 믹서 버스에 닿고, `play` 가 버스를 고른다
- * @details 설정 메뉴는 `IAudioSystem::setBusVolume( "ambient", v )` 를 부른다. 예전에는 세 기본 버스 밖의 이름은 값만 기억되고 소리에 닿지 않았다.
+ * @details 설정 메뉴는 `IAudioService::setBusVolume( "ambient", v )` 를 부른다. 예전에는 세 기본 버스 밖의 이름은 값만 기억되고 소리에 닿지 않았다.
  */
 SW_TEST_CASE( AudioMixerTest, UserSettingsBusVolumeReachesTheMixer )
 {
-    sw::NullAudioSystem system;
+    sw::NullAudioBackend system;
     SW_ASSERT_TRUE( system.initialize() );
     SW_EXPECT_FALSE( system.isOutputOpen() );
     sw::AudioEngine& engine = system.getEngine();
