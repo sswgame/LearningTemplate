@@ -27,6 +27,8 @@ flowchart TD
   Agent["NavMeshAgentComponent"] -- "목적지" --> SceneNav
   Crowd -- "속도, 위치" --> Agent
   Obstacle["NavMeshObstacleComponent<br/>FractureComponent"] -- "invalidateArea" --> SceneNav
+  Link["NavMeshLinkComponent<br/>사다리 · 점프 · 문"] -- "기하에 링크" --> Geo
+  Terrain["TerrainComponent<br/>(등록 종류)"] -- "높이장" --> Geo
 ```
 
 **에이전트 종류.** 반지름과 키, 오를 수 있는 단 높이가 다르면 걸을 수 있는 면도 다릅니다. 그래서 에이전트 종류(`Humanoid`, `Large` 등)마다 내비메시를 따로 베이크합니다.
@@ -125,6 +127,7 @@ Recast와 Detour의 메모리 할당은 `rcAllocSetCustom` 과 `dtAllocSetCustom
 | `raycast` | 걸을 수 있는 면을 따라 직선으로 가다가 경계에 막히면 그 위치와 법선을 돌려줍니다 |
 
 `findPath` 의 결과는 `NavPathStatus` 입니다. 끝까지 가면 `Complete`, 끝에 닿지 못하면 끝에 가장 가까운 점까지 가는 `Partial`, 시작이나 끝이 내비메시 밖이면 `Failed` 입니다.
+경로가 오프 메시 링크를 건너면 `NavPath::_listLinkCrossing` 에 링크에 오르는 점 번호와 링크 번호가 들어갑니다.
 
 질의 함수는 `const` 이고 아무 스레드에서나 불러도 됩니다. 스레드마다 자기 Detour 질의 객체를 쓰기 때문입니다.
 질의 객체는 스크래치 슬롯마다 하나씩 처음 쓸 때 만들고, 슬롯이 없는 스레드는 잠금 아래에서 하나를 공유합니다.
@@ -171,6 +174,26 @@ Recast와 Detour의 메모리 할당은 `rcAllocSetCustom` 과 `dtAllocSetCustom
 `NavMeshModifierComponent` 로 특정 오브젝트와 자식을 빼거나(`_bIgnoreFromBuild`) 영역을 지정할 수 있습니다(`_areaName`). 여러 조상에 붙어 있으면 가장 가까운 조상의 설정이 이깁니다.
 
 메시나 강체로 모양을 알 수 없는 오브젝트는 `INavGeometrySource` 를 등록해 기하를 직접 내놓습니다. 파괴된 벽이 그 예입니다(아래 "동적 변경").
+
+메시 컴포넌트가 아닌 방식으로 그리는 위층 컴포넌트는 **종류 단위로** 기하를 냅니다. 그 기능의 .cpp 에 `SW_NAV_GEOMETRY_CONTRIBUTOR( 타입, 함수 )` 한 줄을 두면
+(`Object/Component/Navigation/NavGeometryContributor.h`), 기하 모으기가 그 종류의 켜진 컴포넌트를 만날 때마다 함수를 부릅니다. 인스턴스가 등록하지 않아도 되므로
+플레이 전에 도는 쿠킹에도 들어갑니다. 지형(`Environment/Terrain/TerrainNavGeometry.cpp`)이 높이장을 그대로 냅니다(`NavMeshGeometry::addHeightfield`, 구멍 셀은 뺍니다).
+언리얼 `INavRelevantInterface::GetNavigationData` 에 해당합니다. `INavGeometrySource` 는 오브젝트 하나의 기하를 **대신** 내고, 이것은 메시 · 강체 기하에 **더합니다**.
+
+### 오프 메시 링크 — 사다리, 점프, 문
+
+걸을 면으로 연결되지 않은 두 곳은 `NavMeshLinkComponent` 로 연결합니다. 언리얼 NavLink Proxy(Smart Link)와 유니티 `NavMeshLink` 에 해당합니다.
+두 끝(오브젝트 기준 오프셋), 폭(끝을 걸을 면에 붙이는 거리), 양방향, 영역, 링크 종류 이름(`_linkType`, 예: `Ladder`)을 적습니다.
+
+1. **베이크.** 링크는 정적 기하처럼 기하 모으기에 들어가 시작점이 포함된 타일에 함께 베이크됩니다. 쿠킹본에도 들어 있습니다. 링크를 바꾸거나 생기고 사라지면 그 위치의 타일을 다시 베이크합니다.
+2. **번호.** 링크 번호는 두 끝의 월드 위치(센티미터로 자름)와 종류 이름의 해시입니다. 그래서 쿠킹본과 런타임 베이크가 같은 번호를 씁니다. 오브젝트를 옮긴 것은 따라가지 않습니다.
+3. **건너기.** 군중은 다음 모퉁이가 링크면 에이전트를 두 끝 사이로 옮깁니다(DetourCrowd 의 보간). 그동안 `NavMeshAgentComponent::isOnOffMeshLink` 가 참이고
+   `getOffMeshLinkType` 이 종류 이름을, `getOffMeshLinkTraversal` 이 두 끝과 진행률(0..1)을 줍니다. 애니메이션은 이것으로 동작을 고릅니다(유니티 `isOnOffMeshLink` 와 같은 폴링).
+   `Transform` 방식은 오브젝트를, `CharacterController` 방식은 컨트롤러를 그 위치로 옮기고, `SteerOnly` 는 링크를 따라가는 속도를 냅니다.
+4. **막기.** `NavMeshLinkComponent::setLinkEnabled( false )` 면 다음 갱신부터 경로가 그 링크를 지나지 않습니다(닫힌 문). 내비메시가 막힌 번호를 들고 있어 다시 끼운 타일에도 적용됩니다
+   (`INavMesh::setOffMeshLinkEnabled`).
+
+`-gv_navDebugDraw=1` 은 링크를 활로 그리고, 막힌 링크는 빨강입니다.
 
 ### 처음 쓸 때와 쿠킹
 
@@ -220,6 +243,18 @@ Recast와 Detour의 메모리 할당은 `rcAllocSetCustom` 과 `dtAllocSetCustom
 1~8은 선이라 `DebugDrawQueue` 로 보내고 에디터 뷰포트가 그립니다. 물리 디버그와 같은 어댑터(`EngineLoop`)를 씁니다.
 16은 면을 메시 하나로 만들어 씬의 `NavMeshDebugView` 오브젝트에 붙입니다. 그래서 에디터 없는 게임 화면과 `-gv_screenshot` 에도 보입니다. 이 오브젝트는 베이크 기하에서 빠집니다.
 
+### 에디터가 부르는 함수
+
+에디터의 내비메시 보기와 베이크 버튼(`navigation.bake`)은 엔진의 다음 함수만 부릅니다. 엔진은 에디터를 모릅니다.
+
+| 함수 | 하는 일 |
+|---|---|
+| `SceneNavigation::rebakeAllNavMeshes` | 마련한 내비메시를 버리고 표면이 맡은 종류를 쿠킹본 없이 지금 다시 베이크합니다. 플레이 전에도 됩니다 |
+| `SceneNavigation::collectBakedAgentTypes` | 마련한 에이전트 종류 목록(보기에서 고를 목록) |
+| `SceneNavigation::updateDebugView` · `drawDebug` | 걷는 면 메시와 디버그 선(위 표의 비트) |
+| `INavMesh::collectDebugTriangles` | 걷는 면 삼각형과 영역 번호(직접 그릴 때) |
+| `SceneNavigation::makeCookedEntry` | 쿠킹본 항목(파일로 쓸 때, `NavMeshAsset`) |
+
 ## 확장하는 법
 
 **새 에이전트 종류나 영역을 더하려면**
@@ -229,10 +264,14 @@ Recast와 Detour의 메모리 할당은 `rcAllocSetCustom` 과 `dtAllocSetCustom
 3. `NavMeshSurfaceComponent` 의 에이전트 종류 목록에 새 이름을 넣고, 에이전트에는 `setAgentType` 으로 같은 이름을 줍니다. 코드는 종류와 영역을 이름으로만 고릅니다.
 4. 베이크 값이 바뀌었으므로 쿠킹 결과는 해시가 달라져 버려집니다. 배포 전에 `App --cook-scenes` 를 다시 돌립니다.
 
-**메시나 강체가 아닌 것을 베이크에 넣으려면** `INavGeometrySource` 를 구현해 `SceneNavigation::registerGeometrySource` 로 등록합니다. `FractureNavGeometrySource` 가 참고할 구현입니다.
+**메시나 강체가 아닌 것을 베이크에 넣으려면** 종류 전체가 그렇다면(지형처럼) 그 기능의 .cpp 에 `SW_NAV_GEOMETRY_CONTRIBUTOR` 한 줄을 둡니다(`TerrainNavGeometry.cpp` 참고).
+오브젝트 하나의 모양이 플레이 중에 바뀌면(파괴) `INavGeometrySource` 를 구현해 `SceneNavigation::registerGeometrySource` 로 등록합니다. `FractureNavGeometrySource` 가 참고할 구현입니다.
 기하가 바뀌면 `invalidateArea` 로 그 영역을 알립니다.
 
-아직 없는 기능(오프 메시 링크, 지형과 식생 베이크, TileCache, 에디터 내비메시 보기)은 [백로그](../../../docs/06_Backlog.md)에 있습니다.
+**행동 트리에서 걷게 하려면** `BehaviorTree::addMoveTo( 부모, 블랙보드 벡터 키 )` 를 쓰고 러너에 `setMover( &agent->getMover() )` 를 줍니다.
+격자 행위자(`NavGridMover`)도 같은 인터페이스라 트리는 바뀌지 않습니다. 닿으면 성공, 길이 없으면 실패이고, 블랙보드 값이 움직이면 목적지를 다시 요청합니다(`BehaviorMoveToTest`).
+
+아직 없는 기능(식생 베이크, TileCache)은 [백로그](../../../docs/06_Backlog.md)에 있습니다.
 
 ## 함정과 주의
 
@@ -241,6 +280,8 @@ Recast와 Detour의 메모리 할당은 `rcAllocSetCustom` 과 `dtAllocSetCustom
 - **타일이 16,384개를 넘는 격자는 거절됩니다.** vcpkg의 Detour는 32비트 폴리곤 참조(`DT_POLYREF64` 없음)로 빌드되어, 타일 번호에 14비트까지만 쓸 수 있습니다. 레벨이 크면 `_tileSize` 를 키웁니다.
 - **`replaceTile` 을 컴포넌트 틱 안에서 부르지 마세요.** 질의는 아무 스레드에서나 불리므로, 타일 교체가 겹치면 질의가 사라진 타일을 읽습니다. 씬의 내비게이션은 교체를 내비게이션 갱신 첫머리에서만 합니다.
 - **목적지를 준 틱 안에서 상태가 바뀌기를 기대하지 마세요.** 틱에서 넣은 목적지는 모든 틱이 끝난 뒤의 내비게이션 갱신에서 군중에 들어갑니다. 상태와 속도는 그 갱신이 쓴 값이므로, 같은 틱 안에서는 이전 값을 읽습니다.
+- **링크 끝은 걸을 면 가까이 둡니다.** 끝이 깎인 가장자리(몸 반지름)에서 폭(`_width`)보다 멀면 그 끝이 버려져 링크가 연결되지 않습니다. 디버그 선에서 활이 그려지는지 봅니다.
+- **링크를 단 오브젝트를 옮겨도 링크 번호는 베이크 때 위치로 남습니다.** 막기 · 종류 찾기는 지금 위치로 번호를 다시 구하므로, 옮겼다면 그 위치를 `invalidateArea` 로 다시 베이크합니다.
 - **벤치마크는 Release로 봅니다.** `NavMeshBenchTest`(베이크, 질의 1000회, 군중 100명과 500명)는 Debug에서는 수치가 크게 부풀려집니다.
 
 ## 더 볼 곳
@@ -254,9 +295,10 @@ Recast와 Detour의 메모리 할당은 `rcAllocSetCustom` 과 `dtAllocSetCustom
 | `Object/Component/Navigation/NavTileRebaker` | 장애물 감시, 알린 영역, 타일 재베이크 줄과 워커 일 |
 | `Object/Component/Navigation/NavAgentCrowdSync` | 에이전트 요청 · 자리를 군중에 넣고 결과를 오브젝트 · 컨트롤러에 쓰기 |
 | `Object/Component/Navigation/NavDebugView` | 디버그 선과 걷는 면 메시 |
-| `Object/Component/Navigation/` | 표면, 수정자, 에이전트, 장애물 컴포넌트 |
+| `Object/Component/Navigation/NavGeometryContributor.h` | 컴포넌트 종류별 베이크 기하 레지스트리(`SW_NAV_GEOMETRY_CONTRIBUTOR`) |
+| `Object/Component/Navigation/` | 표면, 수정자, 에이전트, 장애물, 링크 컴포넌트 |
 | `Resource/engine/navigation/navmeshsettings.xml` | 에이전트 종류, 영역, 재베이크 예산 |
 
-- 테스트: `Test/EngineTest/Navigation/` 의 `NavMeshBakeTest`, `NavMeshQueryTest`, `NavMeshCrowdTest`, `NavMeshAgentTest`, `NavMeshCookTest`, `NavMeshDynamicTest`, `NavMeshRebakeQueueTest`(엔진 없이 부르는 재베이크 줄 · 경계 자르기), `NavMeshBenchTest`
+- 테스트: `Test/EngineTest/Navigation/` 의 `NavMeshBakeTest`, `NavMeshQueryTest`, `NavMeshCrowdTest`, `NavMeshAgentTest`, `NavMeshCookTest`, `NavMeshDynamicTest`, `NavMeshRebakeQueueTest`(엔진 없이 부르는 재베이크 줄 · 경계 자르기), `NavMeshLinkTest`(오프 메시 링크), `NavMeshTerrainTest`(높이장), `BehaviorMoveToTest`(행동 트리 이동 노드), `NavMeshBenchTest`
 - 격자 내비게이션: `GameFramework/Base/Actor/Navigation` (`NavigationTest.GridMoverSpeaksTheCommonMoverInterface` 가 공통 인터페이스를 확인합니다)
 - 상위 문서: [Engine/README.md](../README.md)

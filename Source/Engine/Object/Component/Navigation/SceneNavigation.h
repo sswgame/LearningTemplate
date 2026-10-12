@@ -47,6 +47,7 @@ namespace sw
     class IPhysicsDebugRenderer;
     class NavMeshAgentComponent;
     class NavMeshGeometry;
+    class NavMeshLinkComponent;
     class NavMeshObstacleComponent;
     class NavMeshSurfaceComponent;
 
@@ -134,6 +135,10 @@ namespace sw
         void unregisterObstacle( NavMeshObstacleComponent* pObstacle );
         void registerGeometrySource( INavGeometrySource* pSource );
         void unregisterGeometrySource( INavGeometrySource* pSource );
+        void registerLink( NavMeshLinkComponent* pLink );
+        void unregisterLink( NavMeshLinkComponent* pLink );
+        /** @brief 지금 자세의 번호가 @p linkID 인 링크 컴포넌트입니다(에이전트가 건너는 링크의 종류 찾기). 없으면 nullptr 입니다. 링크 수만큼 훑습니다. */
+        const NavMeshLinkComponent* findLink( uint32 linkID ) const;
 
         /**
          * @brief 월드 상자 자리의 타일을 다시 베이크하게 합니다(다음 갱신에 워커로). 아무 스레드에서 불러도 됩니다.
@@ -146,6 +151,15 @@ namespace sw
          * @details 갱신이 플레이 시작에 부르는 것과 같습니다 — 테스트 · 도구가 갱신을 기다리지 않을 때 씁니다.
          */
         INavMesh* ensureNavMesh( const hashed_string& agentType );
+        /**
+         * @brief 마련한 내비메시를 모두 버리고, 표면이 맡은 에이전트 종류(이미 마련했던 종류 포함)를 지금 다시 베이크합니다. 쿠킹본은 쓰지 않습니다. 게임 스레드에서만 부릅니다.
+         * @details 편집기의 베이크 버튼(`navigation.bake`)이 레벨을 고친 뒤 부르는 함수입니다 — 플레이 전에도 됩니다. 군중에 있던 에이전트는 다음 갱신에 다시 들어갑니다.
+         *          보기는 `updateDebugView` · `drawDebug`, 쿠킹본으로 쓰기는 `makeCookedEntry` 입니다.
+         * @return 다시 마련한 내비메시 수입니다.
+         */
+        uint32 rebakeAllNavMeshes();
+        /** @brief 지금 마련한 에이전트 종류를 @p outListAgentType 에 채웁니다(편집기 보기 목록). */
+        void collectBakedAgentTypes( vector<hashed_string>& outListAgentType ) const;
         /** @brief 이미 마련한 내비메시입니다. 없으면 nullptr 입니다. */
         const INavMesh* findNavMesh( const hashed_string& agentType ) const;
         /** @brief 이미 마련한 군중입니다. 없으면 nullptr 입니다. */
@@ -206,6 +220,8 @@ namespace sw
         /** @brief 알린 영역을 재베이크 줄로 바꿉니다(`NavTileRebaker::processDirtyAreas` 에 이 씬의 입력을 넘긴다). */
         void processDirtyAreas();
         void updateAgents( float32 deltaTime );
+        /** @brief 막기 · 풀기가 바뀐 링크를 모든 내비메시에 넣습니다(타일 교체와 같은 시점 — 질의가 없는 동안). */
+        void applyLinkStates();
 
         NavMeshSettings                      _settings;
         string                               _sourcePath;
@@ -214,11 +230,13 @@ namespace sw
         vector<NavMeshAgentComponent*>       _listAgent;
         vector<NavMeshSurfaceComponent*>     _listSurface;
         vector<NavMeshObstacleComponent*>    _listObstacle;
+        vector<NavMeshLinkComponent*>        _listLink;
         RegistrationList<INavGeometrySource> _listGeometrySource;  ///< 등록 순서(빼도 순서 유지) — 한 주인을 여러 소스가 맡으면 먼저 등록한 것이 이긴다
         vector<hashed_string>                _listFailedAgentType; ///< 모르는 종류 — 오류를 한 번만
         NavTileRebaker                       _tileRebaker;
         NavDebugView                         _debugView;
         GameObjectManager*                   _pManager;
         bool                                 _bSettingsLoaded;
+        bool                                 _bIgnoreCooked; ///< 다시 베이크하는 동안 쿠킹본을 읽지 않는다(`rebakeAllNavMeshes`)
     };
 } // namespace sw

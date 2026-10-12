@@ -85,15 +85,26 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 경로가 오프 메시 링크를 건너는 곳입니다. 점 `_pointIndex` 에서 링크에 올라 다음 점에서 내립니다. */
+    struct NavPathLinkCrossing
+    {
+        uint32 _pointIndex{ 0 };
+        uint32 _linkID{ 0 }; ///< `NavOffMeshLink::_userID`
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct NavPath
      * @brief 다듬은 경로입니다(줄 당기기로 모퉁이만 남긴 직선 경로). 첫 점은 시작이고, 마지막 점은 끝입니다(부분 경로면 닿은 곳입니다).
      */
     struct NavPath
     {
-        vector<float3> _listPoint;
-        NavPathStatus  _status{ NavPathStatus::Failed };
-        uint32         _polyCount{ 0 }; ///< 지나는 폴리곤 수(진단)
+        vector<float3>              _listPoint;
+        vector<NavPathLinkCrossing> _listLinkCrossing; ///< 오프 메시 링크를 건너는 곳(경로 순서)
+        NavPathStatus               _status{ NavPathStatus::Failed };
+        uint32                      _polyCount{ 0 }; ///< 지나는 폴리곤 수(진단)
 
         /** @brief 점을 이은 길이입니다. */
         float32 computeLength() const
@@ -167,15 +178,32 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 에이전트가 건너는 중인 오프 메시 링크입니다. 애니메이션 신호입니다 — 게임은 `_linkID` 로 링크 종류(사다리 · 점프 · 문)를 찾아 동작을 고르고,
+     *        `_progress` 로 동작을 맞춥니다. 언리얼 Smart Link 의 도착 알림 · 유니티 `NavMeshAgent.currentOffMeshLinkData` 에 해당합니다.
+     */
+    struct NavLinkTraversal
+    {
+        float3  _start{};          ///< 올라선 끝(양방향 링크를 거꾸로 건너면 링크의 끝점)
+        float3  _end{};            ///< 내릴 끝
+        float32 _progress{ 0.0f }; ///< 0(올라섬) .. 1(내림), XZ 거리 비율
+        uint32  _linkID{ 0 };      ///< `NavOffMeshLink::_userID`(찾지 못했으면 0)
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 군중 에이전트의 지금 상태입니다(군중 `update` 뒤). */
     struct NavCrowdAgentState
     {
         float3            _position{};
-        float3            _velocity{};        ///< 이번 갱신의 실제 속도다.
+        float3            _velocity{};        ///< 이번 갱신의 실제 속도다(링크를 건너는 중이면 링크를 따라 옮긴 속도).
         float3            _desiredVelocity{}; ///< 회피 전 경로가 원한 속도다.
         float3            _target{};
         float3            _nextCorner{}; ///< 다음 모퉁이(경로가 있으면)
+        NavLinkTraversal  _link{};       ///< `_bOnOffMeshLink` 일 때만 뜻이 있다
         NavCrowdMoveState _moveState{ NavCrowdMoveState::Idle };
         bool              _bOnNavMesh{ false };
+        bool              _bOnOffMeshLink{ false }; ///< 오프 메시 링크를 건너는 중이다(군중이 링크를 따라 옮긴다)
     };
 } // namespace sw

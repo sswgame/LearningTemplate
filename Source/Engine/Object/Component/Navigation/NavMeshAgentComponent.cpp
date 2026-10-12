@@ -58,6 +58,8 @@ namespace sw
         , _agentPosition{}
         , _nextCorner{}
         , _writtenPosition{}
+        , _linkTraversal{}
+        , _linkType{}
         , _crowdAgentID{ NavigationConstant::kInvalidAgentID }
         , _navIndex{ SceneNavigation::kNotRegistered }
         , _crowdIndex{ SceneNavigation::kNotRegistered }
@@ -68,6 +70,7 @@ namespace sw
         , _bOnNavMesh{ SW_FALSE }
         , _bHasWritten{ SW_FALSE }
         , _bParamsDirty{ SW_FALSE }
+        , _bOnOffMeshLink{ SW_FALSE }
         , _reserved{ 0 }
     {
     }

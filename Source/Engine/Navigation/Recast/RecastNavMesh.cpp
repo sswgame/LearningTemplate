@@ -82,6 +82,17 @@ namespace sw
                 return static_cast<uint8>( area + 1 );
             }
 
+            /** @brief Recast 영역의 폴리곤 표시 비트입니다(질의 필터의 영역 비트와 같다). 엔진 영역이 아니면 0 입니다. */
+            static uint16 toPolyFlags( uint8 recastArea )
+            {
+                const bool bEngineArea = 1 <= recastArea && recastArea <= NavigationConstant::kMaxAreaCount;
+                return bEngineArea ? static_cast<uint16>( 1u << ( recastArea - 1 ) ) : static_cast<uint16>( 0 );
+            }
+
+            /** @brief 링크 그림의 활 높이(두 끝 거리에 대한 비율)와 마디 수입니다. */
+            static constexpr float32 kLinkArcHeightRatio  = 0.25f;
+            static constexpr uint32  kLinkArcSegmentCount = 8;
+
             /** @brief 베이크 중간 결과를 보관하고 끝에서 해제합니다(실패로 빠져나가도 해제합니다). */
             struct BuildScratch
             {
@@ -114,6 +125,7 @@ namespace sw
     RecastNavMesh::RecastNavMesh()
         : _agentType{}
         , _grid{}
+        , _listDisabledLinkID{}
         , _listQuery{}
         , _pSharedQuery{ nullptr }
         , _sharedQueryMutex{}
@@ -384,9 +396,34 @@ namespace sw
         // 영역 → 표시 비트(거름의 영역 비트와 같다).
         for ( int32 polyIndex = 0; polyIndex < polyMesh.npolys; ++polyIndex )
         {
-            const uint8 recastArea    = polyMesh.areas[polyIndex];
-            const bool  bEngineArea   = 1 <= recastArea && recastArea <= NavigationConstant::kMaxAreaCount;
-            polyMesh.flags[polyIndex] = bEngineArea ? static_cast<uint16>( 1u << ( recastArea - 1 ) ) : 0;
+            polyMesh.flags[polyIndex] = Internal::toPolyFlags( polyMesh.areas[polyIndex] );
+        }
+
+        // 오프 메시 링크 — 시작점이 이 타일에 포함된 것만 싣는다(Detour 는 바깥에서 시작하는 링크를 버린다). 끝은 이웃 타일이 끼워질 때 연결된다.
+        vector<float32> listLinkVertex;
+        vector<float32> listLinkRadius;
+        vector<uint16>  listLinkFlag;
+        vector<uint8>   listLinkArea;
+        vector<uint8>   listLinkDirection;
+        vector<uint32>  listLinkUserID;
+        for ( const NavOffMeshLink& link : geometry.getOffMeshLinks() )
+        {
+            const bool bStartInTile = tileBounds._min._x <= link._start._x && link._start._x < tileBounds._max._x && tileBounds._min._z <= link._start._z &&
+                                      link._start._z < tileBounds._max._z;
+            if ( bStartInTile == false )
+                continue;
+            const uint8 recastArea = Internal::toRecastArea( link._area );
+            for ( const float3* pPoint : { &link._start, &link._end } )
+            {
+                listLinkVertex.push_back( pPoint->_x );
+                listLinkVertex.push_back( pPoint->_y );
+                listLinkVertex.push_back( pPoint->_z );
+            }
+            listLinkRadius.push_back( link._radius );
+            listLinkArea.push_back( recastArea );
+            listLinkFlag.push_back( Internal::toPolyFlags( recastArea ) );
+            listLinkDirection.push_back( link._bBidirectional == SW_TRUE ? static_cast<uint8>( DT_OFFMESH_CON_BIDIR ) : static_cast<uint8>( 0 ) );
+            listLinkUserID.push_back( link._userID );
         }
 
         dtNavMeshCreateParams params{};
@@ -402,6 +439,13 @@ namespace sw
         params.detailVertsCount = scratch._pDetail->nverts;
         params.detailTris       = scratch._pDetail->tris;
         params.detailTriCount   = scratch._pDetail->ntris;
+        params.offMeshConVerts  = listLinkVertex.data();
+        params.offMeshConRad    = listLinkRadius.data();
+        params.offMeshConFlags  = listLinkFlag.data();
+        params.offMeshConAreas  = listLinkArea.data();
+        params.offMeshConDir    = listLinkDirection.data();
+        params.offMeshConUserID = listLinkUserID.data();
+        params.offMeshConCount  = static_cast<int32>( listLinkRadius.size() );
         params.walkableHeight   = agent._height;
         params.walkableRadius   = agent._radius;
         params.walkableClimb    = agent._maxClimb;
@@ -446,7 +490,56 @@ namespace sw
             SW_LOG_ERROR( "Navmesh '%#' rejected tile (%#, %#) - the bytes are not a tile of this layout", _agentType._name.c_str(), tile._tileX, tile._tileZ );
             return false;
         }
+        // 새 타일은 베이크한 표시(모두 열림)로 들어온다 — 막힌 링크를 다시 막는다.
+        if ( _listDisabledLinkID.empty() == false )
+            applyLinkFlags( tile._tileX, tile._tileZ );
         return true;
+    }
+
+    void RecastNavMesh::applyLinkFlags( int32 tileX, int32 tileZ )
+    {
+        const dtNavMesh* const pConst = _pNavMesh;
+        const dtMeshTile*      pTile  = pConst->getTileAt( tileX, tileZ, 0 );
+        if ( pTile == nullptr || pTile->header == nullptr )
+            return;
+        const dtPolyRef base = pConst->getPolyRefBase( pTile );
+        for ( int32 linkIndex = 0; linkIndex < pTile->header->offMeshConCount; ++linkIndex )
+        {
+            const dtOffMeshConnection& link      = pTile->offMeshCons[linkIndex];
+            const dtPoly&              poly      = pTile->polys[link.poly];
+            const bool                 bDisabled = std::binary_search( _listDisabledLinkID.begin(), _listDisabledLinkID.end(), link.userId );
+            const uint16               flags     = bDisabled ? static_cast<uint16>( 0 ) : RecastNavMeshInternal::toPolyFlags( poly.getArea() );
+            (void)_pNavMesh->setPolyFlags( base | static_cast<dtPolyRef>( link.poly ), flags ); // 참조는 방금 이 타일에서 만든 것이라 실패하지 않는다
+        }
+    }
+
+    void RecastNavMesh::setOffMeshLinkEnabled( uint32 linkID, bool bEnabled )
+    {
+        if ( linkID == 0 )
+            return;
+        const auto found    = std::lower_bound( _listDisabledLinkID.begin(), _listDisabledLinkID.end(), linkID );
+        const bool bPresent = found != _listDisabledLinkID.end() && *found == linkID;
+        if ( bPresent == ( bEnabled == false ) )
+            return;
+        if ( bEnabled )
+            _listDisabledLinkID.erase( found );
+        else
+            _listDisabledLinkID.insert( found, linkID );
+        ++_revision;
+        if ( _pNavMesh == nullptr )
+            return;
+        const dtNavMesh* const pConst = _pNavMesh;
+        for ( int32 tileIndex = 0; tileIndex < pConst->getMaxTiles(); ++tileIndex )
+        {
+            const dtMeshTile* pTile = pConst->getTile( tileIndex );
+            if ( pTile != nullptr && pTile->header != nullptr && pTile->header->offMeshConCount > 0 )
+                applyLinkFlags( pTile->header->x, pTile->header->y );
+        }
+    }
+
+    bool RecastNavMesh::isOffMeshLinkEnabled( uint32 linkID ) const
+    {
+        return std::binary_search( _listDisabledLinkID.begin(), _listDisabledLinkID.end(), linkID ) == false;
     }
 
     void RecastNavMesh::collectTiles( vector<NavTileData>& outListTile ) const
@@ -578,6 +671,7 @@ namespace sw
     {
         using Internal = RecastNavMeshInternal;
         outPath._listPoint.clear();
+        outPath._listLinkCrossing.clear();
         outPath._status         = NavPathStatus::Failed;
         outPath._polyCount      = 0;
         bool            bLocked = false;
@@ -616,9 +710,11 @@ namespace sw
 
         constexpr int32 kMaxStraight = static_cast<int32>( NavigationConstant::kMaxPathPointCount );
         float32         arrStraight[kMaxStraight * 3]{};
-        int32           straightCount = 0;
-        const dtStatus  straightStatus =
-            pQuery->findStraightPath( arrStart, arrGoal, arrPoly, polyCount, arrStraight, nullptr, nullptr, &straightCount, kMaxStraight, 0 );
+        uint8           arrStraightFlag[kMaxStraight]{};
+        dtPolyRef       arrStraightPoly[kMaxStraight]{};
+        int32           straightCount  = 0;
+        const dtStatus  straightStatus = pQuery->findStraightPath( arrStart, arrGoal, arrPoly, polyCount, arrStraight, arrStraightFlag, arrStraightPoly,
+                                                                   &straightCount, kMaxStraight, 0 );
         releaseQuery( bLocked );
         if ( dtStatusFailed( straightStatus ) || straightCount == 0 )
             return NavPathStatus::Failed;
@@ -626,6 +722,11 @@ namespace sw
         for ( int32 pointIndex = 0; pointIndex < straightCount; ++pointIndex )
         {
             outPath._listPoint.push_back( Internal::toFloat3( &arrStraight[pointIndex * 3] ) );
+            // 링크에 오르는 점이다 — 그 점의 폴리곤이 링크 폴리곤이다. 링크 번호는 그 링크의 사용자 번호다.
+            if ( ( arrStraightFlag[pointIndex] & DT_STRAIGHTPATH_OFFMESH_CONNECTION ) == 0 )
+                continue;
+            const dtOffMeshConnection* pLink = _pNavMesh->getOffMeshConnectionByRef( arrStraightPoly[pointIndex] );
+            outPath._listLinkCrossing.push_back( NavPathLinkCrossing{ static_cast<uint32>( pointIndex ), pLink != nullptr ? pLink->userId : 0u } );
         }
         outPath._polyCount    = static_cast<uint32>( polyCount );
         const bool bTruncated = dtStatusDetail( straightStatus, DT_BUFFER_TOO_SMALL );
@@ -711,6 +812,24 @@ namespace sw
                     const float3 to        = RecastNavMeshInternal::toFloat3( &pTile->verts[poly.verts[nextIndex] * 3] ) + lift;
                     const bool   bBoundary = poly.neis[edgeIndex] == 0;
                     renderer.drawLine( from, to, bBoundary ? color : innerColor );
+                }
+            }
+            // 오프 메시 링크는 두 끝을 연결하는 활로 그린다. 막힌 링크(표시 0)는 빨강이다.
+            const float4 blockedColor{ 1.0f, 0.15f, 0.1f, color._w };
+            for ( int32 linkIndex = 0; linkIndex < pTile->header->offMeshConCount; ++linkIndex )
+            {
+                const dtOffMeshConnection& link   = pTile->offMeshCons[linkIndex];
+                const float3               start  = RecastNavMeshInternal::toFloat3( &link.pos[0] ) + lift;
+                const float3               end    = RecastNavMeshInternal::toFloat3( &link.pos[3] ) + lift;
+                const float32              height = ( end - start ).getLength() * RecastNavMeshInternal::kLinkArcHeightRatio;
+                const bool                 bOpen  = pTile->polys[link.poly].flags != 0;
+                float3                     from   = start;
+                for ( uint32 segment = 1; segment <= RecastNavMeshInternal::kLinkArcSegmentCount; ++segment )
+                {
+                    const float32 ratio = static_cast<float32>( segment ) / static_cast<float32>( RecastNavMeshInternal::kLinkArcSegmentCount );
+                    const float3  to    = start + ( end - start ) * ratio + float3{ 0.0f, height * 4.0f * ratio * ( 1.0f - ratio ), 0.0f };
+                    renderer.drawLine( from, to, bOpen ? color : blockedColor );
+                    from = to;
                 }
             }
         }

@@ -12,6 +12,7 @@
 #include "Engine/Object/Component/Navigation/NavAgentCrowdSync.h"
 #include "Engine/Object/Component/Navigation/NavGeometryCollector.h"
 #include "Engine/Object/Component/Navigation/NavMeshAgentComponent.h"
+#include "Engine/Object/Component/Navigation/NavMeshLinkComponent.h"
 #include "Engine/Object/Component/Navigation/NavMeshObstacleComponent.h"
 #include "Engine/Object/Component/Navigation/NavMeshRuntime.h"
 #include "Engine/Object/Component/Navigation/NavMeshSurfaceComponent.h"
@@ -57,12 +58,14 @@ namespace sw
         , _listAgent{}
         , _listSurface{}
         , _listObstacle{}
+        , _listLink{}
         , _listGeometrySource{}
         , _listFailedAgentType{}
         , _tileRebaker{}
         , _debugView{}
         , _pManager{ &manager }
         , _bSettingsLoaded{ false }
+        , _bIgnoreCooked{ false }
     {
     }
 
@@ -76,9 +79,10 @@ namespace sw
         NavTileRebaker::waitForAllBakes( _listRuntime );
         for ( NavMeshAgentComponent* pAgent : _listAgent )
         {
-            pAgent->_crowdAgentID = NavigationConstant::kInvalidAgentID;
-            pAgent->_crowdIndex   = kNotRegistered;
-            pAgent->_bOnNavMesh   = SW_FALSE;
+            pAgent->_crowdAgentID   = NavigationConstant::kInvalidAgentID;
+            pAgent->_crowdIndex     = kNotRegistered;
+            pAgent->_bOnNavMesh     = SW_FALSE;
+            pAgent->_bOnOffMeshLink = SW_FALSE;
         }
         for ( NavMeshObstacleComponent* pObstacle : _listObstacle )
         {
@@ -136,10 +140,11 @@ namespace sw
             return;
         if ( pAgent->_crowdIndex < _listRuntime.size() && _listRuntime[pAgent->_crowdIndex]->_pCrowd != nullptr )
             _listRuntime[pAgent->_crowdIndex]->_pCrowd->removeAgent( pAgent->_crowdAgentID );
-        pAgent->_crowdAgentID = NavigationConstant::kInvalidAgentID;
-        pAgent->_crowdIndex   = kNotRegistered;
-        pAgent->_bOnNavMesh   = SW_FALSE;
-        pAgent->_velocity     = float3{};
+        pAgent->_crowdAgentID   = NavigationConstant::kInvalidAgentID;
+        pAgent->_crowdIndex     = kNotRegistered;
+        pAgent->_bOnNavMesh     = SW_FALSE;
+        pAgent->_bOnOffMeshLink = SW_FALSE;
+        pAgent->_velocity       = float3{};
     }
 
     void SceneNavigation::registerSurface( NavMeshSurfaceComponent* pSurface )
@@ -192,6 +197,54 @@ namespace sw
     void SceneNavigation::unregisterGeometrySource( INavGeometrySource* pSource )
     {
         (void)_listGeometrySource.remove( pSource ); // 등록하지 않은 소스를 빼는 것은 할 일이 없다
+    }
+
+    void SceneNavigation::registerLink( NavMeshLinkComponent* pLink )
+    {
+        if ( pLink == nullptr || pLink->_navIndex != kNotRegistered )
+            return;
+        pLink->_navIndex = static_cast<uint32>( _listLink.size() );
+        // 막힌 채 들어온 링크(씬 데이터)는 다음 갱신에 막는다.
+        pLink->_bEnabledDirty = pLink->_bLinkEnabled ? SW_FALSE : SW_TRUE;
+        _listLink.push_back( pLink );
+    }
+
+    void SceneNavigation::unregisterLink( NavMeshLinkComponent* pLink )
+    {
+        if ( pLink == nullptr || pLink->_navIndex >= _listLink.size() || _listLink[pLink->_navIndex] != pLink )
+            return;
+        NavMeshLinkComponent* pMoved = _listLink.back();
+        _listLink[pLink->_navIndex]  = pMoved;
+        pMoved->_navIndex            = pLink->_navIndex;
+        _listLink.pop_back();
+        pLink->_navIndex = kNotRegistered;
+    }
+
+    const NavMeshLinkComponent* SceneNavigation::findLink( uint32 linkID ) const
+    {
+        if ( linkID == 0 )
+            return nullptr;
+        for ( const NavMeshLinkComponent* pLink : _listLink )
+        {
+            if ( pLink->computeCurrentLinkID() == linkID )
+                return pLink;
+        }
+        return nullptr;
+    }
+
+    void SceneNavigation::applyLinkStates()
+    {
+        for ( NavMeshLinkComponent* pLink : _listLink )
+        {
+            if ( pLink->_bEnabledDirty == SW_FALSE )
+                continue;
+            pLink->_bEnabledDirty = SW_FALSE;
+            const uint32 linkID   = pLink->computeCurrentLinkID();
+            for ( const unique_ptr<NavMeshRuntime>& pRuntime : _listRuntime )
+            {
+                pRuntime->_pNavMesh->setOffMeshLinkEnabled( linkID, pLink->_bLinkEnabled );
+            }
+        }
     }
 
     void SceneNavigation::invalidateArea( const AABB& bounds, bool bGeometryChanged )
@@ -309,7 +362,7 @@ namespace sw
         pRuntime->_pNavMesh = NavMeshBackend::createNavMesh();
 
         const uint64 inputHash = pGeometry->computeHash();
-        if ( installCooked( *pRuntime, *pType, inputHash ) )
+        if ( _bIgnoreCooked == false && installCooked( *pRuntime, *pType, inputHash ) )
         {
             // 쿠킹본에는 장애물이 없다 — 장애물 자리의 타일만 다시 베이크한다.
             pGeometry->rebuildSpatialIndex( MathUtil::max( 1.0f, pRuntime->_pNavMesh->getTileGrid()._tileWorldSize * 0.25f ) );
@@ -340,6 +393,12 @@ namespace sw
             SW_LOG_INFO( "Navmesh '%#' baked: %# of %# tiles, %# polygons, %# triangles in, %# ms", pType->_name.c_str(), pRuntime->_bakeStats._filledTileCount,
                          pRuntime->_bakeStats._tileCount, pRuntime->_bakeStats._polygonCount, pGeometry->getTriangleCount(), pRuntime->_bakeStats._milliseconds );
         }
+        // 막힌 링크(닫힌 문)는 새 내비메시에도 막는다.
+        for ( const NavMeshLinkComponent* pLink : _listLink )
+        {
+            if ( pLink->_bLinkEnabled == false )
+                pRuntime->_pNavMesh->setOffMeshLinkEnabled( pLink->computeCurrentLinkID(), false );
+        }
         pRuntime->_pGeometry = std::move( pGeometry );
         pRuntime->_pVolume   = std::move( pVolume );
         pRuntime->_pCrowd    = pRuntime->_pNavMesh->createCrowd( pType->_maxCrowdAgentCount, MathUtil::max( 1.0f, pType->_radius * 2.0f ) );
@@ -355,6 +414,42 @@ namespace sw
         if ( pRuntime == nullptr )
             pRuntime = createRuntime( agentType );
         return pRuntime != nullptr ? pRuntime->_pNavMesh.get() : nullptr;
+    }
+
+    void SceneNavigation::collectBakedAgentTypes( vector<hashed_string>& outListAgentType ) const
+    {
+        outListAgentType.clear();
+        for ( const unique_ptr<NavMeshRuntime>& pRuntime : _listRuntime )
+        {
+            outListAgentType.push_back( pRuntime->_agentType );
+        }
+    }
+
+    uint32 SceneNavigation::rebakeAllNavMeshes()
+    {
+        SW_PROFILE_SCOPE( "GT.Navigation.rebakeAll" );
+        vector<hashed_string> listAgentType;
+        collectBakedAgentTypes( listAgentType );
+        for ( const NavMeshSurfaceComponent* pSurface : _listSurface )
+        {
+            if ( pSurface->isActive() == false )
+                continue;
+            if ( pSurface->getAgentTypes().empty() )
+                listAgentType.push_back( hashed_string{} );
+            for ( const hashed_string& agentType : pSurface->getAgentTypes() )
+            {
+                listAgentType.push_back( agentType );
+            }
+        }
+        shutdown();
+        _listFailedAgentType.clear();
+        _bIgnoreCooked = true;
+        for ( const hashed_string& agentType : listAgentType )
+        {
+            (void)ensureNavMesh( agentType ); // 모르는 종류 · 기하 없음은 ensureNavMesh 가 이미 남긴다 — 센 수가 말해 준다
+        }
+        _bIgnoreCooked = false;
+        return static_cast<uint32>( _listRuntime.size() );
     }
 
     bool SceneNavigation::makeCookedEntry( const hashed_string& agentType, NavMeshAssetEntry& outEntry )
@@ -447,7 +542,8 @@ namespace sw
 
     void SceneNavigation::update( float32 deltaTime )
     {
-        const bool bAnything = _listAgent.empty() == false || _listObstacle.empty() == false || _listSurface.empty() == false || _listRuntime.empty() == false;
+        const bool bAnything = _listAgent.empty() == false || _listObstacle.empty() == false || _listSurface.empty() == false || _listRuntime.empty() == false ||
+                               _listLink.empty() == false;
         if ( bAnything == false || _pManager == nullptr )
             return;
         SW_MEMORY_SCOPE( Navigation );
@@ -475,6 +571,7 @@ namespace sw
         _tileRebaker.updateObstacles( _listObstacle, getSettings()._obstacleMoveThreshold );
         processDirtyAreas();
         _tileRebaker.applyFinishedBakes( _listRuntime );
+        applyLinkStates();
         NavTileRebaker::launchTileBakes( _listRuntime, _settings._maxConcurrentTileBakeCount );
         updateAgents( deltaTime );
     }

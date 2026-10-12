@@ -2,7 +2,8 @@
  * @file RecastNavMesh.h
  * @brief Recast(베이크)와 Detour(타일 내비메시와 질의)로 구현한 `INavMesh` 입니다. 라이브러리 헤더는 .cpp 에서만 include 합니다.
  * @details 타일 하나를 베이크하는 순서는 Recast 표준이다. 복셀화(삼각형 영역과 경사), 낮게 걸린 장애물과 턱과 낮은 천장 걸러 내기, 압축 높이장, 몸 반지름만큼 깎기,
- *          볼록 부피 칠하기(뚫는 부피는 반지름만큼 넓힌다), 분수령 영역, 외곽선, 폴리곤(꼭짓점 6 개까지), 높이 디테일, Detour 타일 바이트 순서다.
+ *          볼록 부피 칠하기(뚫는 부피는 반지름만큼 넓힌다), 분수령 영역, 외곽선, 폴리곤(꼭짓점 6 개까지), 높이 디테일, Detour 타일 바이트(시작점이 이 타일에 포함된
+ *          오프 메시 링크 포함) 순서다.
  *          영역 번호 i 는 Recast 영역 i + 1(0 은 걷지 못함)이고, 폴리곤 표시 비트는 1 << i 다. 질의 필터의 영역 비트가 그대로 표시 비트다.
  *          폴리곤 참조는 32 비트(Detour 기본)이고 엔진 쪽 64 비트에 담는다.
  */
@@ -45,6 +46,8 @@ namespace sw
         uint32             getLoadedTileCount() const override;
         uint32             getPolygonCount() const override;
         uint32             getRevision() const override { return _revision; }
+        void               setOffMeshLinkEnabled( uint32 linkID, bool bEnabled ) override;
+        bool               isOffMeshLinkEnabled( uint32 linkID ) const override;
 
         [[nodiscard]] bool findNearestPoint( const float3& position, const float3& searchExtent, const NavQueryFilter& filter, NavLocation& outLocation ) const override;
         NavPathStatus      findPath( const float3& start, const float3& end, const float3& searchExtent, const NavQueryFilter& filter, NavPath& outPath ) const override;
@@ -64,11 +67,14 @@ namespace sw
         dtNavMeshQuery* acquireQuery( bool& outLocked ) const;
         void            releaseQuery( bool bLocked ) const;
         void            freeQueries();
+        /** @brief 타일 하나의 오프 메시 링크 폴리곤 표시를 막힌 목록에 맞춥니다(막힘 0, 아니면 영역 비트). */
+        void applyLinkFlags( int32 tileX, int32 tileZ );
 
         NavAgentTypeDef                 _agentType;
         NavTileGrid                     _grid;
-        mutable vector<dtNavMeshQuery*> _listQuery;    ///< 스크래치 슬롯마다 하나다(한 스레드만 자기 슬롯을 만진다).
-        mutable dtNavMeshQuery*         _pSharedQuery; ///< 슬롯 밖 스레드용(`_sharedQueryMutex`)
+        vector<uint32>                  _listDisabledLinkID; ///< 막힌 링크 번호(정렬)
+        mutable vector<dtNavMeshQuery*> _listQuery;          ///< 스크래치 슬롯마다 하나다(한 스레드만 자기 슬롯을 만진다).
+        mutable dtNavMeshQuery*         _pSharedQuery;       ///< 슬롯 밖 스레드용(`_sharedQueryMutex`)
         mutable mutex                   _sharedQueryMutex;
         dtNavMesh*                      _pNavMesh;
         float32                         _minY;

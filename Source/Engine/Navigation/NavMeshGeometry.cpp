@@ -69,11 +69,26 @@ namespace sw
 
 namespace sw
 {
+    AABB NavOffMeshLink::computeBounds() const
+    {
+        const float3 reach{ _radius, _radius, _radius };
+        return AABB{
+            float3{MathUtil::min( _start._x, _end._x ), MathUtil::min( _start._y, _end._y ), MathUtil::min( _start._z, _end._z )}
+            - reach,
+            float3{MathUtil::max( _start._x, _end._x ), MathUtil::max( _start._y, _end._y ), MathUtil::max( _start._z, _end._z )}
+            + reach
+        };
+    }
+} // namespace sw
+
+namespace sw
+{
     NavMeshGeometry::NavMeshGeometry()
         : _listVertex{}
         , _listIndex{}
         , _listTriangleArea{}
         , _listVolume{}
+        , _listLink{}
         , _listCellStart{}
         , _listCellTriangle{}
         , _bounds{ AABB::empty() }
@@ -90,6 +105,7 @@ namespace sw
         _listIndex.clear();
         _listTriangleArea.clear();
         _listVolume.clear();
+        _listLink.clear();
         _listCellStart.clear();
         _listCellTriangle.clear();
         _bounds        = AABB::empty();
@@ -229,6 +245,55 @@ namespace sw
         expandBounds( bounds._max );
     }
 
+    void NavMeshGeometry::addHeightfield( const float32* pHeight, uint32 resolution, const float3& origin, const float2& cellSize, const uint8* pHoleCell, uint8 area )
+    {
+        if ( pHeight == nullptr || resolution < 2 || cellSize._x <= 0.0f || cellSize._y <= 0.0f )
+            return;
+        const uint32 base       = static_cast<uint32>( _listVertex.size() );
+        const uint32 cellPerRow = resolution - 1;
+        _listVertex.reserve( _listVertex.size() + static_cast<size_t>( resolution ) * resolution );
+        for ( uint32 sampleZ = 0; sampleZ < resolution; ++sampleZ )
+        {
+            for ( uint32 sampleX = 0; sampleX < resolution; ++sampleX )
+            {
+                const float3 point{ origin._x + static_cast<float32>( sampleX ) * cellSize._x, pHeight[static_cast<size_t>( sampleZ ) * resolution + sampleX],
+                                    origin._z + static_cast<float32>( sampleZ ) * cellSize._y };
+                _listVertex.push_back( point );
+                expandBounds( point );
+            }
+        }
+        // 윗면이 +Y 를 보게 감는다(addBox 의 윗면과 같은 순서) — 베이크하는 쪽이 법선으로 경사를 측정한다.
+        for ( uint32 cellZ = 0; cellZ < cellPerRow; ++cellZ )
+        {
+            for ( uint32 cellX = 0; cellX < cellPerRow; ++cellX )
+            {
+                if ( pHoleCell != nullptr && pHoleCell[static_cast<size_t>( cellZ ) * cellPerRow + cellX] != 0 )
+                    continue;
+                const uint32 corner00 = base + cellZ * resolution + cellX;
+                const uint32 corner10 = corner00 + 1;
+                const uint32 corner01 = corner00 + resolution;
+                const uint32 corner11 = corner01 + 1;
+                _listIndex.push_back( corner00 );
+                _listIndex.push_back( corner01 );
+                _listIndex.push_back( corner11 );
+                _listTriangleArea.push_back( area );
+                _listIndex.push_back( corner00 );
+                _listIndex.push_back( corner11 );
+                _listIndex.push_back( corner10 );
+                _listTriangleArea.push_back( area );
+            }
+        }
+    }
+
+    void NavMeshGeometry::addOffMeshLink( const NavOffMeshLink& link )
+    {
+        if ( link._radius <= 0.0f )
+            return;
+        _listLink.push_back( link );
+        expandBounds( link._start );
+        expandBounds( link._end );
+    }
+
     void NavMeshGeometry::rebuildSpatialIndex( float32 cellSize )
     {
         using Internal = NavMeshGeometryInternal;
@@ -345,6 +410,16 @@ namespace sw
             hash = Internal::mixBytes( hash, &volume._minY, sizeof( volume._minY ) );
             hash = Internal::mixBytes( hash, &volume._maxY, sizeof( volume._maxY ) );
             hash = Internal::mixBytes( hash, &volume._area, sizeof( volume._area ) );
+        }
+        // 링크는 필드마다 섞는다(구조체의 채움 바이트는 값이 정해지지 않는다).
+        for ( const NavOffMeshLink& link : _listLink )
+        {
+            hash = Internal::mixBytes( hash, &link._start, sizeof( link._start ) );
+            hash = Internal::mixBytes( hash, &link._end, sizeof( link._end ) );
+            hash = Internal::mixBytes( hash, &link._radius, sizeof( link._radius ) );
+            hash = Internal::mixBytes( hash, &link._userID, sizeof( link._userID ) );
+            hash = Internal::mixBytes( hash, &link._area, sizeof( link._area ) );
+            hash = Internal::mixBytes( hash, &link._bBidirectional, sizeof( link._bBidirectional ) );
         }
         return hash;
     }

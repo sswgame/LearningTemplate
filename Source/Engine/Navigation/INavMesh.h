@@ -144,8 +144,17 @@ namespace sw
         virtual uint32 getLoadedTileCount() const = 0;
         /** @brief 걸을 폴리곤 수입니다(진단). */
         virtual uint32 getPolygonCount() const = 0;
-        /** @brief 바뀔 때마다(타일 끼우기) 오르는 번호입니다. 경로 캐시가 낡았는지 봅니다. */
+        /** @brief 바뀔 때마다(타일 끼우기, 링크 막기) 오르는 번호입니다. 경로 캐시가 낡았는지 봅니다. */
         virtual uint32 getRevision() const = 0;
+
+        /**
+         * @brief 번호가 @p linkID 인 오프 메시 링크를 막거나 풉니다(닫힌 문, 걷힌 사다리). 막힌 링크는 경로가 지나지 않고, 그 링크를 지나던 군중 경로는 다시 구해집니다.
+         * @details 언리얼 Smart Link 의 `SetLinkEnabled` · 유니티 `NavMeshLink.activated` 에 해당한다. 상태는 내비메시가 들고 있어서 나중에 끼운 타일
+         *          (재베이크 · 쿠킹본)에도 그대로 적용된다. 타일 교체와 같이 게임 스레드에서, 질의가 없는 동안만 부른다.
+         */
+        virtual void setOffMeshLinkEnabled( uint32 linkID, bool bEnabled ) = 0;
+        /** @brief 링크가 막히지 않았으면 true 입니다(모르는 번호도 true). */
+        virtual bool isOffMeshLinkEnabled( uint32 linkID ) const = 0;
 
         /** @brief @p position 에서 반 크기 @p searchExtent 상자 안의 가장 가까운 내비메시 위 점입니다. 없으면 false 입니다. */
         [[nodiscard]] virtual bool findNearestPoint( const float3& position, const float3& searchExtent, const NavQueryFilter& filter, NavLocation& outLocation ) const = 0;
@@ -159,7 +168,7 @@ namespace sw
 
         /** @brief 이 내비메시 위의 군중을 만듭니다. */
         virtual unique_ptr<INavCrowd> createCrowd( uint32 maxAgentCount, float32 maxAgentRadius ) = 0;
-        /** @brief 폴리곤 테두리를 선으로 냅니다. */
+        /** @brief 폴리곤 테두리와 오프 메시 링크(활 모양, 막힌 링크는 빨강)를 선으로 냅니다. */
         virtual void drawDebug( IPhysicsDebugRenderer& renderer, const float4& color ) const = 0;
         /**
          * @brief 걷는 면을 삼각형으로 냅니다(높이 디테일까지 반영하므로 바닥에 붙습니다). 삼각형마다 점 셋을 @p outListCorner 에, 그 폴리곤의 영역 번호를
