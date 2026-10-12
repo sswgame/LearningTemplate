@@ -158,7 +158,7 @@ namespace sw
     {
         _listLODView  = listView;
         _bLODViewsSet = SW_TRUE;
-        // 거리 LOD(스프링 본 `lod_distance`)의 기준점도 주 시점이다 — 뷰를 넣는 쪽이 따로 넣지 않아도 같은 카메라를 본다.
+        // 주 시점 위치도 함께 기록한다. 뷰를 넣는 쪽이 따로 넣지 않아도 같은 카메라를 본다.
         if ( listView.empty() == false )
             setLODViewPosition( listView.front()._position );
     }

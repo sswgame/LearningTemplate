@@ -91,8 +91,8 @@ namespace sw
 
         /**
          * @brief 스프링 체인(꼬리, 머리 가닥, 망토)입니다. 키는 `bones`, `stiffness`, `damping`, `gravity`, `particle_radius`, `fixed_step`, `max_substeps`,
-         *        `teleport_distance`, `lod_distance`(뷰에서 이보다 멀면 끔, 0 이면 항상 켬), `colliders`(`[{ "bone", "shape", "a", "b", "radius" }]`),
-         *        `use_shared_colliders`(호스트가 준 충돌체, 즉 물리 에셋의 구와 캡슐도 사용)입니다.
+         *        `teleport_distance`, `colliders`(`[{ "bone", "shape", "a", "b", "radius" }]`),
+         *        `use_shared_colliders`(호스트가 준 충돌체, 즉 물리 에셋의 구와 캡슐도 사용)입니다. 멀리서 끄는 것은 공통 키 `min_screen_size` 입니다.
          */
         class RigSpringChainNode final : public RigNode
         {
@@ -114,7 +114,7 @@ namespace sw
                            reader.readFloat( "damping", _settings._damping, false ) && reader.readFloat3( "gravity", _settings._gravityOverride, false ) && reader.readFloat( "gravity_scale", _settings._gravityScale, false ) &&
                            reader.readFloat( "particle_radius", _settings._particleRadius, false ) && reader.readFloat( "fixed_step", _settings._fixedStep, false ) &&
                            reader.readUint( "max_substeps", _settings._maxSubStep, false ) &&
-                           reader.readFloat( "teleport_distance", _settings._teleportDistance, false ) && reader.readFloat( "lod_distance", _lodDistance, false ) &&
+                           reader.readFloat( "teleport_distance", _settings._teleportDistance, false ) &&
                            reader.readBool( "use_shared_colliders", bShared, false );
                 // "gravity" 가 적혀 있으면 월드 중력 대신 그 값(덮어쓰기), 없으면 월드 중력 × gravity_scale.
                 _settings._bUseGravityOverride = ( _settings._gravityOverride._x != MathUtil::kMaxFloat ) ? SW_TRUE : SW_FALSE;
@@ -159,24 +159,8 @@ namespace sw
                 return true;
             }
 
-            void prepare( const RigPrepareContext& context ) override
-            {
-                if ( _lodDistance <= 0.0f || context._bHasViewPosition == SW_FALSE )
-                {
-                    _bLODOff = SW_FALSE;
-                    return;
-                }
-                const float32 distance = ( context._worldFromModel.getTranslation() - context._viewPosition ).getLength();
-                const bool    bOff     = distance > _lodDistance;
-                if ( bOff && _bLODOff == SW_FALSE )
-                    _chain.reset(); // 다시 켤 때 애니메이션 자세에서 시작한다
-                _bLODOff = bOff ? SW_TRUE : SW_FALSE;
-            }
-
             void evaluate( RigEvaluateContext& context ) override
             {
-                if ( _bLODOff == SW_TRUE )
-                    return;
                 const vector<RigSpringCollider>& listShared = context._pInstance->getSharedColliders();
                 if ( _bUseSharedColliders == SW_TRUE && listShared.empty() == false )
                 {
@@ -190,11 +174,7 @@ namespace sw
 
             void collectWrittenBones( vector<uint32>& inoutListBone ) const override { inoutListBone.insert( inoutListBone.end(), _listBone.begin(), _listBone.end() ); }
 
-            void reset() override
-            {
-                _chain.reset();
-                _bLODOff = SW_FALSE;
-            }
+            void reset() override { _chain.reset(); }
 
         private:
             struct ColliderSpec
@@ -210,9 +190,7 @@ namespace sw
             vector<RigSpringCollider> _listScratchCollider{};
             RigSpringChain            _chain{};
             RigSpringSettings         _settings{};
-            float32                   _lodDistance{ 0.0f };
             uint8                     _bUseSharedColliders{ SW_FALSE };
-            uint8                     _bLODOff{ SW_FALSE };
         };
 
         /**

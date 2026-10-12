@@ -117,8 +117,13 @@ namespace sw
         const RigSolveSpace& getSolveSpace() const { return _space; }
 
         // --- 실행 ---
-        /** @brief 게임 스레드 준비 단계입니다. 프레임마다 호출하며, LOD 로 평가를 건너뛰는 프레임에도 호출합니다. 지난 평가 뒤의 시간을 모읍니다. */
+        /**
+         * @brief 게임 스레드 준비 단계입니다. 프레임마다 호출하며, LOD 로 평가를 건너뛰는 프레임에도 호출합니다. 지난 평가 뒤의 시간을 모읍니다.
+         * @details 화면 크기가 노드의 `min_screen_size` 보다 작으면 그 노드를 끄고, 꺼지는 순간 상태를 버린다(`RigNode::reset`).
+         */
         void prepare( const RigPrepareContext& context );
+        /** @brief 노드가 화면 크기 LOD 로 꺼져 있는지 반환합니다(마지막 `prepare` 기준). */
+        bool isNodeLODOff( uint32 nodeIndex ) const { return _listNodeLODOff[nodeIndex] == SW_TRUE; }
         /** @brief 노드를 순서대로 평가해 @p inoutLocalPose 를 고칩니다(워커). */
         void evaluate( Pose& inoutLocalPose, const vector<int32>& listParent, const float4x4& worldFromModel );
         /** @brief 노드 상태를 모두 버립니다(순간이동이나 다시 켤 때). */
@@ -143,6 +148,7 @@ namespace sw
         vector<BoneTransform>       _listTargetOffset; ///< 자기 유닛 대상의 본 기준 오프셋이다(소켓 로컬이나 데이터 오프셋).
         vector<unique_ptr<RigNode>> _listNode;
         vector<vector<uint32>>      _listNodeWrittenBone;
+        vector<uint8>               _listNodeLODOff; ///< 노드마다 화면 크기 LOD 로 꺼졌는지다(`_listNode` 와 인덱스가 같다).
         vector<SlotWeight>          _listSlotWeight;
         vector<RigMorphWeight>      _listMorphWeight;
         vector<RigSpringCollider>   _listSharedCollider;

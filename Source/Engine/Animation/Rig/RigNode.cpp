@@ -285,16 +285,23 @@ namespace sw
         , _weightCurve{}
         , _weightSlot{}
         , _weight{ 1.0f }
+        , _minScreenSize{ 0.0f }
     {
     }
 
     bool RigNode::parseCommon( RigJSONReader& reader )
     {
         const bool bOk = reader.readName( "name", _name, true ) && reader.readFloat( "weight", _weight, false ) &&
-                         reader.readName( "weight_curve", _weightCurve, false ) && reader.readName( "weight_slot", _weightSlot, false );
+                         reader.readName( "weight_curve", _weightCurve, false ) && reader.readName( "weight_slot", _weightSlot, false ) &&
+                         reader.readFloat( "min_screen_size", _minScreenSize, false );
         if ( bOk && ( _weight < 0.0f || 1.0f < _weight ) )
         {
             reader.fail( "'weight' must be in [0, 1]" );
+            return false;
+        }
+        if ( bOk && _minScreenSize < 0.0f )
+        {
+            reader.fail( "'min_screen_size' must not be negative" );
             return false;
         }
         return bOk;

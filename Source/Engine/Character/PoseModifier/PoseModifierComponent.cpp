@@ -648,8 +648,8 @@ namespace sw
         prepare._deltaSeconds   = context._deltaSeconds;
         prepare._worldGravity   = PhysicsSystem::getConfiguredGravity();
         prepare._pGroundQuery   = ( _pGroundQueryOverride != nullptr ) ? _pGroundQueryOverride : _groundQuery.get();
-        if ( pManager != nullptr && pManager->getAnimationSystem().findLODViewPosition( prepare._viewPosition ) )
-            prepare._bHasViewPosition = SW_TRUE;
+        // 화면 크기는 지난 LOD 판정의 결과다. 뷰를 받지 않은 시스템(테스트, 서버)에서는 기본값 1 이라 모든 노드가 켜진다.
+        prepare._screenSize = unit.getAnimationLODState()._screenSize;
         _instance.prepare( prepare );
     }
 

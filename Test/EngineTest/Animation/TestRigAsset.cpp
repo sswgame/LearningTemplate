@@ -424,6 +424,48 @@ SW_TEST_CASE( RigAssetTest, PlanarRigStaysInPlane )
 }
 
 /**
+ * @brief [RigAssetTest] 공통 키 `min_screen_size` — 화면 크기가 그보다 작으면 노드를 끄고(포즈는 애니메이션 그대로), 다시 크면 켠다. 음수는 로드 오류다
+ */
+SW_TEST_CASE( RigAssetTest, MinScreenSizeTurnsNodeOffWhenSmallOnScreen )
+{
+    const Skeleton    skeleton = test::makeChainSkeleton( 3 );
+    const string_view json     = R"({ "nodes": [
+        { "type": "SpringChain", "name": "Tail", "bones": ["bone1", "bone2"], "gravity": [4, 0, 0], "stiffness": 0, "min_screen_size": 0.2 } ] })";
+    RigInstance       instance;
+    SW_ASSERT_TRUE( instance.initialize( TestRigAssetInternal::parseRig( json ), skeleton, nullptr, "test" ) );
+
+    Pose reference;
+    reference.setToReference( skeleton );
+    vector<float4x4> listReference;
+    reference.computeModelSpace( skeleton.getParentIndices(), listReference );
+
+    RigPrepareContext prepare{};
+    prepare._deltaSeconds = 1.0f / 30.0f;
+    prepare._screenSize   = 0.1f;
+    Pose             pose;
+    vector<float4x4> listModel;
+    for ( uint32 frame = 0; frame < 10; ++frame )
+    {
+        instance.prepare( prepare );
+        TestRigAssetInternal::evaluateReference( instance, skeleton, pose, listModel );
+    }
+    SW_EXPECT_TRUE( instance.isNodeLODOff( 0 ) );
+    SW_EXPECT_TRUE( TestRigAssetInternal::isNear( listReference[2].getTranslation(), listModel[2].getTranslation(), 1e-5f ) );
+
+    prepare._screenSize = 0.5f;
+    for ( uint32 frame = 0; frame < 10; ++frame )
+    {
+        instance.prepare( prepare );
+        TestRigAssetInternal::evaluateReference( instance, skeleton, pose, listModel );
+    }
+    SW_EXPECT_FALSE( instance.isNodeLODOff( 0 ) );
+    SW_EXPECT_TRUE( listModel[2].getTranslation()._x > listReference[2].getTranslation()._x + 1e-3f ); // 중력 쪽으로 처졌다
+
+    RigAsset negative;
+    SW_EXPECT_FALSE( negative.parseJSON( R"({ "nodes": [ { "type": "SpringChain", "name": "Tail", "bones": ["bone1", "bone2"], "min_screen_size": -1 } ] })", "test" ) );
+}
+
+/**
  * @brief [RigAssetTest] 데모 리그 비용 — 기사(`knight.rig.json`, 41 본: 발 디딤 · 시선 · 왼손 IK · 팔뚝 비틀림)와 망토(스프링 사슬)를 한 번 평가하는 시간을 측정한다
  * @details 숫자를 남기는 테스트다(Release 로 돌려 읽는다). 단언은 넉넉한 상한 하나 — 회귀가 몇 배로 커졌을 때만 걸린다.
  */
