@@ -45,7 +45,7 @@ namespace sw
 
     private:
         /** @brief 이 스레드가 지금 잘림 경고 안인지입니다(스레드마다 하나, 정의는 fixed_string.cpp 한 곳). */
-        static bool& getWarningFlag();
+        SW_API static bool& getWarningFlag();
     };
 } // namespace sw
 
