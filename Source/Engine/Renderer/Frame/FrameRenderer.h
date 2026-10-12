@@ -111,6 +111,9 @@ namespace sw
         /** @brief Ready 상태면 true 입니다. */
         bool isReady() const { return _status == FrameRendererStatus::Ready; }
 
+#if !defined( SW_SHIPPING )
+        // 진단 · 테스트 세터다. 배포본에서는 빼고, 덮어쓴 값이 없으므로 전역 변수(`gv_morphDiag` · `gv_drawMerge` · `gv_vertexPool`)를 따른다.
+
         /**
          * @brief GPU 메시 모프 진단 모드를 코드에서 고릅니다. 값 체계는 `-gv_morphDiag` 와 같고, 음수면 전역 변수를 따릅니다.
          * @details 테스트가 쓴다. 모드 2는 컴퓨트 없이 레스트 버퍼를 정점 셰이더에 물리며, 정답은 레스트 포즈와 같은 이미지다.
@@ -125,7 +128,6 @@ namespace sw
         void setDrawMergeEnabled( bool bEnabled ) { _drawMergeOverride = bEnabled ? 1 : 0; }
         /** @brief 정점 풀을 쓸지 정합니다. 기본은 켬이고 전역 `gv_vertexPool` 을 덮어씁니다. 끄면 메시마다 자기 정점 버퍼를 씁니다(진단과 A/B 비교용). */
         void setVertexPoolEnabled( bool bEnabled ) { _vertexPoolOverride = bEnabled ? 1 : 0; }
-#if !defined( SW_SHIPPING )
         /**
          * @brief 시간으로 구동하는 컴퓨트(인스턴스 애니메이션, 메시 모프)가 읽는 절대 시간(초)을 고정합니다. 음수면 렌더러 시계(`_animationTimer`)를 따르며 기본값입니다.
          * @details 테스트가 쓴다. 모프 변위는 sin(시간)이라 벽시계로 캡처하면 시각에 따라 이미지가 달라지고, 부하가 걸린 실행에서 픽셀 단언이 흔들린다.
