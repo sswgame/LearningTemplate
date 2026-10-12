@@ -6,9 +6,9 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
-#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/RegistrationList.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/Rig/RigNode.h"
@@ -33,13 +33,13 @@ namespace sw
         void registerNode( const hashed_string& typeName, RigNodeFactory factory );
         /** @brief 이름의 노드를 만듭니다. 모르는 이름이면 nullptr 입니다. */
         unique_ptr<RigNode> createNode( const hashed_string& typeName ) const;
-        /** @brief 등록된 종류 이름들을 반환합니다(진단과 에디터용). */
+        /** @brief 등록된 종류 이름들을 등록 순서로 반환합니다(진단과 에디터용). */
         vector<hashed_string> getTypeNames() const;
 
     private:
         RigNodeRegistry() = default;
 
-        unordered_map<hashed_string, RigNodeFactory> _mapFactory;
+        NameRegistry<RigNodeFactory> _registry; ///< 종류 이름 → 생성 함수(등록 순서)
     };
 } // namespace sw
 

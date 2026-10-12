@@ -83,6 +83,11 @@ namespace
 
         static bool isNear( const float3& expected, const float3& actual, float32 tolerance ) { return ( expected - actual ).getLength() <= tolerance; }
 
+        /** @brief 노드를 만들지 않는 생성 함수입니다(교체 전). */
+        static unique_ptr<RigNode> createNoNode() { return nullptr; }
+        /** @brief 엔진의 `Aim` 노드를 만드는 생성 함수입니다(교체 후). */
+        static unique_ptr<RigNode> createAimNode() { return RigNodeRegistry::getInstance().createNode( hashed_string( "Aim" ) ); }
+
         /** @brief 이름 → 값 표 커브 출처입니다. */
         class TestCurveSource final : public IRigCurveSource
         {
@@ -128,6 +133,16 @@ SW_TEST_CASE( RigAssetTest, ParsesInOrderAndRejectsUnknownNames )
     SW_EXPECT_FALSE( asset->getTargets()[1].isExternal() );
     RigInstance instance;
     SW_EXPECT_TRUE( instance.initialize( asset, skeleton, nullptr, "test" ) );
+
+    // 같은 종류 이름으로 다시 등록하면 생성 함수를 교체하고 이름은 하나로 남는다.
+    RigNodeRegistry&    registry     = RigNodeRegistry::getInstance();
+    const hashed_string replacedType = hashed_string( "TestReplacedRigNode" );
+    registry.registerNode( replacedType, &TestRigAssetInternal::createNoNode );
+    const size_t typeCount = registry.getTypeNames().size();
+    SW_EXPECT_TRUE( registry.createNode( replacedType ) == nullptr );
+    registry.registerNode( replacedType, &TestRigAssetInternal::createAimNode );
+    SW_EXPECT_TRUE( registry.createNode( replacedType ) != nullptr );
+    SW_EXPECT_EQUAL( typeCount, registry.getTypeNames().size() );
 
     test::ScopedDefensiveTestLog expected( "malformed rig data is rejected with an error" );
     const string_view            listBad[] = {

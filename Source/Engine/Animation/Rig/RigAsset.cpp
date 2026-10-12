@@ -38,23 +38,24 @@ namespace sw
 
     void RigNodeRegistry::registerNode( const hashed_string& typeName, RigNodeFactory factory )
     {
-        _mapFactory[typeName] = factory;
+        _registry.addOrReplace( typeName, factory );
     }
 
     unique_ptr<RigNode> RigNodeRegistry::createNode( const hashed_string& typeName ) const
     {
-        const auto it = _mapFactory.find( typeName );
-        if ( it == _mapFactory.end() || it->second == nullptr )
+        const RigNodeFactory* pFactory = _registry.find( typeName );
+        if ( pFactory == nullptr || *pFactory == nullptr )
             return nullptr;
-        return it->second();
+        return ( *pFactory )();
     }
 
     vector<hashed_string> RigNodeRegistry::getTypeNames() const
     {
         vector<hashed_string> listName;
-        for ( const auto& [name, factory] : _mapFactory )
+        listName.reserve( _registry.getCount() );
+        for ( uint32 index = 0; index < _registry.getCount(); ++index )
         {
-            listName.push_back( name );
+            listName.push_back( _registry.getNameAt( index ) );
         }
         return listName;
     }
