@@ -1,6 +1,6 @@
 /**
  * @file MeadowFarmDirectorComponent.h
- * @brief 마을 밭 디렉터 — 공유 상태(`GameStateComponent`)를 여는 첫 디렉터. 하루가 넘어가면 밭이 자라고, 다 자란 칸을 거둬 공유 지갑에 팔고 다시 심습니다.
+ * @brief 마을 밭 디렉터 — 공유 상태(`SessionStateComponent`)를 여는 첫 디렉터. 하루가 넘어가면 밭이 자라고, 다 자란 칸을 거둬 공유 지갑에 팔고 다시 심습니다.
  */
 #pragma once
 #include "Core/Common/FourCcUtil.h"
@@ -18,11 +18,11 @@
 
 namespace sw
 {
-    class GameStateComponent;
+    class SessionStateComponent;
 
     /**
      * @class MeadowFarmDirectorComponent
-     * @brief 밭(4 × 2) 한 판입니다. 같은 오브젝트의 맨 앞 `GameStateComponent` 를 열고(새 판이면 시작 돈), 공유 시계의 하루 넘김에 밭을 돌립니다.
+     * @brief 밭(4 × 2) 한 판입니다. 같은 오브젝트의 맨 앞 `SessionStateComponent` 를 열고(새 판이면 시작 돈), 공유 시계의 하루 넘김에 밭을 돌립니다.
      * @details 상태는 밭 하나(구간 'FFLD')이고, 돈 · 시계 · 수확 수(`farm.harvested`)는 공유 상태에 있다. `Village.FastForward`(Space)를 누르는 동안,
      *          또는 자동 플레이면 시계가 8 배로 흐른다. 카메라는 이 디렉터도 마을 디렉터도 만지지 않는다(씬의 고정 카메라).
      */
@@ -56,7 +56,7 @@ namespace sw
 
     private:
         /** @brief 하루 넘김 — 밭이 자라고, 다 자란 칸을 거둬 팔고 다시 심고, 나머지는 물 준다. */
-        void startNextDay( GameStateComponent& state );
+        void startNextDay( SessionStateComponent& state );
         void replant( int32 x, int32 y, const hashed_string& season );
         void spawnField( GameObjectManager& manager );
 

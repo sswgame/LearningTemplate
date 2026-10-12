@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Base/Gameplay/GameState/GameStateComponent.h"
+#include "GameFramework/Base/Gameplay/SessionState/SessionStateComponent.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -11,11 +11,11 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "GameState" );
+    SW_LOG_CALLER( "SessionState" );
 
     namespace
     {
-        struct GameStateComponentInternal
+        struct SessionStateComponentInternal
         {
             static constexpr uint32 kSectionCount = 8;
 
@@ -42,7 +42,7 @@ namespace sw
             {
                 if ( section._version != TState::kStateVersion )
                 {
-                    SW_LOG_WARNING( "GameState: %# section version %# is not %# - it starts fresh", pName, section._version, TState::kStateVersion );
+                    SW_LOG_WARNING( "SessionState: %# section version %# is not %# - it starts fresh", pName, section._version, TState::kStateVersion );
                     return false;
                 }
                 Archive    body  = section._body;
@@ -50,7 +50,7 @@ namespace sw
                 const bool bRead = state.readState( body ) && body.getRemainingBytes() == 0;
                 if ( bRead == false )
                 {
-                    SW_LOG_WARNING( "GameState: %# section is broken - it starts fresh", pName );
+                    SW_LOG_WARNING( "SessionState: %# section is broken - it starts fresh", pName );
                     return false;
                 }
                 inoutState = std::move( state );
@@ -62,7 +62,7 @@ namespace sw
 
 namespace sw
 {
-    GameStateComponent::GameStateComponent()
+    SessionStateComponent::SessionStateComponent()
         : _wallet{}
         , _flags{}
         , _clock{}
@@ -80,12 +80,12 @@ namespace sw
     {
     }
 
-    GameStateComponent::~GameStateComponent() = default;
+    SessionStateComponent::~SessionStateComponent() = default;
 
-    GameStateInitResult GameStateComponent::initialize( const GameStateSettings& settings )
+    SessionStateInitResult SessionStateComponent::initialize( const SessionStateSettings& settings )
     {
         if ( _bInitialized == SW_TRUE )
-            return GameStateInitResult::AlreadyInitialized;
+            return SessionStateInitResult::AlreadyInitialized;
         _wallet.clear();
         _flags.clear();
         _clock.initialize( settings._clock );
@@ -99,21 +99,21 @@ namespace sw
         _bInitialized = SW_TRUE;
         _bFreshGame   = SW_TRUE;
         if ( _pendingStateBytes.empty() )
-            return GameStateInitResult::Fresh;
+            return SessionStateInitResult::Fresh;
         if ( applyPendingState() == false )
-            return GameStateInitResult::Fresh;
+            return SessionStateInitResult::Fresh;
         _bFreshGame = SW_FALSE;
-        return GameStateInitResult::Restored;
+        return SessionStateInitResult::Restored;
     }
 
-    void GameStateComponent::onBeginPlay()
+    void SessionStateComponent::onBeginPlay()
     {
         Component::onBeginPlay();
         // 디렉터와 같은 그룹이다. 같은 오브젝트 안에서는 붙은 순서대로 처리하며, 이 컴포넌트가 맨 앞이다.
         setTickGroup( TickGroup::PrePhysics );
     }
 
-    void GameStateComponent::onTick( float32 deltaTime )
+    void SessionStateComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
         _listClockEvent.clear();
@@ -131,7 +131,7 @@ namespace sw
             (void)_weather.update( deltaTime * _clock.getTimeScale() * 86400.0f / _clock.getSettings()._secondsPerDay, _clock.getSeasonName() );
     }
 
-    void GameStateComponent::writeState( Archive& outArchive ) const
+    void SessionStateComponent::writeState( Archive& outArchive ) const
     {
         // 열리기 전(복원한 직후의 두 번째 캡처)이면 받은 바이트가 곧 상태이다. 빈 판을 쓰면 세이브를 잃는다.
         if ( _bInitialized == SW_FALSE && _pendingStateBytes.empty() == false )
@@ -140,27 +140,27 @@ namespace sw
             return;
         }
         StateArchiveUtil::writeHeader( outArchive, kStateTag, kStateVersion );
-        outArchive << GameStateComponentInternal::kSectionCount;
-        GameStateComponentInternal::writeStateSection( outArchive, _wallet );
-        GameStateComponentInternal::writeStateSection( outArchive, _flags );
-        GameStateComponentInternal::writeStateSection( outArchive, _clock );
-        GameStateComponentInternal::writeStateSection( outArchive, _questLog );
-        GameStateComponentInternal::writeStateSection( outArchive, _reputation );
-        GameStateComponentInternal::writeStateSection( outArchive, _inventory );
-        GameStateComponentInternal::writeStateSection( outArchive, _weather );
-        GameStateComponentInternal::writeStateSection( outArchive, _land );
+        outArchive << SessionStateComponentInternal::kSectionCount;
+        SessionStateComponentInternal::writeStateSection( outArchive, _wallet );
+        SessionStateComponentInternal::writeStateSection( outArchive, _flags );
+        SessionStateComponentInternal::writeStateSection( outArchive, _clock );
+        SessionStateComponentInternal::writeStateSection( outArchive, _questLog );
+        SessionStateComponentInternal::writeStateSection( outArchive, _reputation );
+        SessionStateComponentInternal::writeStateSection( outArchive, _inventory );
+        SessionStateComponentInternal::writeStateSection( outArchive, _weather );
+        SessionStateComponentInternal::writeStateSection( outArchive, _land );
     }
 
-    void GameStateComponent::restoreState( vector<uint8>&& bytes )
+    void SessionStateComponent::restoreState( vector<uint8>&& bytes )
     {
         _pendingStateBytes = std::move( bytes );
         if ( _bInitialized == SW_TRUE && applyPendingState() )
             _bFreshGame = SW_FALSE;
     }
 
-    GameStateRefs GameStateComponent::makeRefs()
+    SessionStateRefs SessionStateComponent::makeRefs()
     {
-        GameStateRefs refs;
+        SessionStateRefs refs;
         refs._pWallet     = &_wallet;
         refs._pFlags      = &_flags;
         refs._pClock      = &_clock;
@@ -172,23 +172,23 @@ namespace sw
         return refs;
     }
 
-    GameStateComponent* GameStateComponent::findOnOwner( const Component& component )
+    SessionStateComponent* SessionStateComponent::findOnOwner( const Component& component )
     {
         GameObject* pOwner = component.getOwner();
-        return pOwner != nullptr ? pOwner->getComponent<GameStateComponent>() : nullptr;
+        return pOwner != nullptr ? pOwner->getComponent<SessionStateComponent>() : nullptr;
     }
 
-    bool GameStateComponent::applyPendingState()
+    bool SessionStateComponent::applyPendingState()
     {
         Archive    archive( _pendingStateBytes.data(), _pendingStateBytes.size() );
         const bool bRestored = readState( archive );
         _pendingStateBytes.clear();
         if ( bRestored == false )
-            SW_LOG_ERROR( "GameState: the saved shared state could not be read - the game state starts fresh" );
+            SW_LOG_ERROR( "SessionState: the saved shared state could not be read - the game state starts fresh" );
         return bRestored;
     }
 
-    bool GameStateComponent::readState( Archive& archive )
+    bool SessionStateComponent::readState( Archive& archive )
     {
         if ( StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) == false )
             return false;
@@ -197,9 +197,9 @@ namespace sw
         if ( StateArchiveUtil::readCount( archive, 12, sectionCount ) == false )
             return false;
         // 구조를 끝까지 먼저 읽는다. 구조가 깨졌으면 아무것도 바꾸지 않는다.
-        vector<GameStateComponentInternal::Section> listSection;
+        vector<SessionStateComponentInternal::Section> listSection;
         listSection.resize( sectionCount );
-        for ( GameStateComponentInternal::Section& section : listSection )
+        for ( SessionStateComponentInternal::Section& section : listSection )
         {
             if ( StateArchiveUtil::readSection( archive, section._tag, section._version, section._body ) == false )
                 return false;
@@ -208,58 +208,58 @@ namespace sw
             return false;
 
         // 구간 하나가 깨지면 applyStateSection 이 경고를 남기고 그 구간만 새 판으로 둔다. 반환값은 쓰지 않는다.
-        for ( const GameStateComponentInternal::Section& section : listSection )
+        for ( const SessionStateComponentInternal::Section& section : listSection )
         {
             switch ( section._tag )
             {
                 case Wallet::kStateTag:
                 {
                     // 실패는 applyStateSection 이 경고로 남기고 그 상태는 새로 시작한다
-                    (void)GameStateComponentInternal::applyStateSection( section, _wallet, "wallet" );
+                    (void)SessionStateComponentInternal::applyStateSection( section, _wallet, "wallet" );
                     break;
                 }
                 case GameFlags::kStateTag:
                 {
-                    (void)GameStateComponentInternal::applyStateSection( section, _flags, "flags" ); // 실패는 applyStateSection 이 경고로 남기고 그 상태는 새로 시작한다
+                    (void)SessionStateComponentInternal::applyStateSection( section, _flags, "flags" ); // 실패는 applyStateSection 이 경고로 남기고 그 상태는 새로 시작한다
                     break;
                 }
                 case WorldClock::kStateTag:
                 {
-                    (void)GameStateComponentInternal::applyStateSection( section, _clock, "clock" ); // 실패는 applyStateSection 이 경고로 남기고 그 상태는 새로 시작한다
+                    (void)SessionStateComponentInternal::applyStateSection( section, _clock, "clock" ); // 실패는 applyStateSection 이 경고로 남기고 그 상태는 새로 시작한다
                     break;
                 }
                 case QuestLog::kStateTag:
                 {
                     // 실패는 applyStateSection 이 경고로 남기고 그 상태는 새로 시작한다
-                    (void)GameStateComponentInternal::applyStateSection( section, _questLog, "quest log" );
+                    (void)SessionStateComponentInternal::applyStateSection( section, _questLog, "quest log" );
                     break;
                 }
                 case ReputationState::kStateTag:
                 {
                     // 실패는 applyStateSection 이 경고로 남기고 그 상태는 새로 시작한다
-                    (void)GameStateComponentInternal::applyStateSection( section, _reputation, "reputation" );
+                    (void)SessionStateComponentInternal::applyStateSection( section, _reputation, "reputation" );
                     break;
                 }
                 case Inventory::kStateTag:
                 {
                     // 실패는 applyStateSection 이 경고로 남기고 그 상태는 새로 시작한다
-                    (void)GameStateComponentInternal::applyStateSection( section, _inventory, "inventory" );
+                    (void)SessionStateComponentInternal::applyStateSection( section, _inventory, "inventory" );
                     break;
                 }
                 case WeatherSystem::kStateTag:
                 {
                     // 실패는 applyStateSection 이 경고로 남기고 그 상태는 새로 시작한다
-                    (void)GameStateComponentInternal::applyStateSection( section, _weather, "weather" );
+                    (void)SessionStateComponentInternal::applyStateSection( section, _weather, "weather" );
                     break;
                 }
                 case LandRegistry::kStateTag:
                 {
-                    (void)GameStateComponentInternal::applyStateSection( section, _land, "land" ); // 실패는 applyStateSection 이 경고로 남기고 그 상태는 새로 시작한다
+                    (void)SessionStateComponentInternal::applyStateSection( section, _land, "land" ); // 실패는 applyStateSection 이 경고로 남기고 그 상태는 새로 시작한다
                     break;
                 }
                 default:
                 {
-                    SW_LOG_WARNING( "GameState: unknown section %# skipped", section._tag );
+                    SW_LOG_WARNING( "SessionState: unknown section %# skipped", section._tag );
                     break;
                 }
             }

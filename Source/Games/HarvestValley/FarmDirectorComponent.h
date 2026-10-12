@@ -87,7 +87,7 @@ namespace sw
         FarmDirectorComponent();
         virtual ~FarmDirectorComponent() override;
 
-        /** @brief 농장 상태(밭, 출하함 구간, 농부, 날씨)를 씁니다. 달력, 가방, 돈은 공유 상태(`GameStateComponent`)가 싣습니다. `ComponentStateStore::capture` 가 부릅니다. */
+        /** @brief 농장 상태(밭, 출하함 구간, 농부, 날씨)를 씁니다. 달력, 가방, 돈은 공유 상태(`SessionStateComponent`)가 싣습니다. `ComponentStateStore::capture` 가 부릅니다. */
         void writeState( Archive& outArchive ) const override;
 
         // ---- 뷰가 읽는 것(PostUpdate. 디렉터가 쓰지 않는 그룹) ----

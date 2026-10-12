@@ -1,6 +1,6 @@
 /**
- * @file TestGameStateComponent.cpp
- * @brief 공유 판 상태(`GameStateComponent`)의 순서 · 여는 규칙 · 구간 세이브 테스트입니다.
+ * @file TestSessionStateComponent.cpp
+ * @brief 공유 판 상태(`SessionStateComponent`)의 순서 · 여는 규칙 · 구간 세이브 테스트입니다.
  */
 #include "pch.h"
 
@@ -18,7 +18,7 @@
 #include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
-#include "GameFramework/Base/Gameplay/GameState/GameStateComponent.h"
+#include "GameFramework/Base/Gameplay/SessionState/SessionStateComponent.h"
 #include "GameFramework/Base/World/Environment/WeatherSystem.h"
 
 #include "TestFramework/TestFramework.h"
@@ -29,28 +29,28 @@ namespace sw
      * @brief 공유 상태를 여는 · 읽는 순서를 적는 모의 디렉터의 몸입니다(리플렉션은 두 잎이 단다).
      * @details 매 틱 공유 플래그 `probe` 를 하나 올리고 그 값과 그때의 시계 시각을 적는다 — 같은 오브젝트의 두 디렉터는 늘 1 차이로 번갈아 본다.
      */
-    class GameStateProbeDirector : public GameDirectorComponent
+    class SessionStateProbeDirector : public GameDirectorComponent
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "GSPB" );
         static constexpr int64  kStartingGold = 100;
 
-        GameStateInitResult _initResult{ GameStateInitResult::AlreadyInitialized };
-        int32               _lastSeen{ 0 };     ///< 이번 틱에 올린 뒤 본 `probe`
-        float32             _lastHour{ -1.0f }; ///< 이번 틱에 본 시계 시각
+        SessionStateInitResult _initResult{ SessionStateInitResult::AlreadyInitialized };
+        int32                  _lastSeen{ 0 };     ///< 이번 틱에 올린 뒤 본 `probe`
+        float32                _lastHour{ -1.0f }; ///< 이번 틱에 본 시계 시각
 
         void writeState( Archive& outArchive ) const override { StateArchiveUtil::writeHeader( outArchive, kStateTag, 1 ); }
 
     protected:
         bool startGame() override
         {
-            GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
+            SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
             if ( pState == nullptr )
                 return false;
-            GameStateSettings settings;
+            SessionStateSettings settings;
             settings._clock._secondsPerDay = 24.0f; // 실제 1 초 = 게임 1 시간
             _initResult                    = pState->initialize( settings );
-            if ( _initResult == GameStateInitResult::Fresh )
+            if ( _initResult == SessionStateInitResult::Fresh )
                 pState->getWallet().add( "Gold", kStartingGold );
             return true;
         }
@@ -58,7 +58,7 @@ namespace sw
         void tickGame( float32 deltaTime ) override
         {
             (void)deltaTime;
-            GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
+            SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
             if ( pState == nullptr )
                 return;
             _lastSeen = pState->getFlags().addFlag( "probe", 1 );
@@ -75,17 +75,17 @@ namespace sw
 namespace sw
 {
     /** @brief 같은 오브젝트에 먼저 붙는 탐침입니다. */
-    class GameStateProbeFirstDirector : public GameStateProbeDirector
+    class SessionStateProbeFirstDirector : public SessionStateProbeDirector
     {
     public:
         REFLECT_BODY();
         const TypeInfo* getTypeInfo() const override { return StaticType(); }
     };
 
-    inline const TypeInfo* GameStateProbeFirstDirector::StaticType()
+    inline const TypeInfo* SessionStateProbeFirstDirector::StaticType()
     {
-        return makeMockComponentTypeInfo( &GameObject::addComponentTo<GameStateProbeFirstDirector>, hashed_string( "GameStateProbeFirstDirector" ),
-                                          hashed_string( "sw::GameStateProbeFirstDirector" ), sizeof( GameStateProbeFirstDirector ),
+        return makeMockComponentTypeInfo( &GameObject::addComponentTo<SessionStateProbeFirstDirector>, hashed_string( "SessionStateProbeFirstDirector" ),
+                                          hashed_string( "sw::SessionStateProbeFirstDirector" ), sizeof( SessionStateProbeFirstDirector ),
                                           hashed_string( "sw::GameDirectorComponent" ) );
     }
 } // namespace sw
@@ -93,17 +93,17 @@ namespace sw
 namespace sw
 {
     /** @brief 같은 오브젝트에 나중에 붙는 탐침입니다. */
-    class GameStateProbeSecondDirector : public GameStateProbeDirector
+    class SessionStateProbeSecondDirector : public SessionStateProbeDirector
     {
     public:
         REFLECT_BODY();
         const TypeInfo* getTypeInfo() const override { return StaticType(); }
     };
 
-    inline const TypeInfo* GameStateProbeSecondDirector::StaticType()
+    inline const TypeInfo* SessionStateProbeSecondDirector::StaticType()
     {
-        return makeMockComponentTypeInfo( &GameObject::addComponentTo<GameStateProbeSecondDirector>, hashed_string( "GameStateProbeSecondDirector" ),
-                                          hashed_string( "sw::GameStateProbeSecondDirector" ), sizeof( GameStateProbeSecondDirector ),
+        return makeMockComponentTypeInfo( &GameObject::addComponentTo<SessionStateProbeSecondDirector>, hashed_string( "SessionStateProbeSecondDirector" ),
+                                          hashed_string( "sw::SessionStateProbeSecondDirector" ), sizeof( SessionStateProbeSecondDirector ),
                                           hashed_string( "sw::GameDirectorComponent" ) );
     }
 } // namespace sw
@@ -111,14 +111,14 @@ namespace sw
 namespace sw
 {
     /** @brief 공유 상태와 두 탐침을 상태 스냅숏에 올린 게임 인스턴스입니다 — 공유 상태가 먼저입니다. */
-    class GameStateProbeGameInstance : public GameInstanceBase
+    class SessionStateProbeGameInstance : public GameInstanceBase
     {
     public:
-        GameStateProbeGameInstance()
+        SessionStateProbeGameInstance()
         {
-            registerStatefulComponent<GameStateComponent>();
-            registerDirector<GameStateProbeFirstDirector>();
-            registerDirector<GameStateProbeSecondDirector>();
+            registerStatefulComponent<SessionStateComponent>();
+            registerDirector<SessionStateProbeFirstDirector>();
+            registerDirector<SessionStateProbeSecondDirector>();
         }
     };
 } // namespace sw
@@ -143,35 +143,35 @@ namespace
     };
 
     /** @brief 활성 씬 하나 + 공유 상태 · 두 탐침을 (그 순서로) 붙인 오브젝트 하나입니다. */
-    struct GameStateTestScene
+    struct SessionStateTestScene
     {
         SceneManager                            _sceneManager;
         Scene*                                  _pScene;
         unique_ptr<ScopedGameStateSceneService> _pBinding;
         GameObject*                             _pStateObject;
 
-        GameStateTestScene()
+        SessionStateTestScene()
             : _sceneManager{}
             , _pScene{ nullptr }
             , _pBinding{}
             , _pStateObject{ nullptr }
         {
-            _pScene       = _sceneManager.createEmptyActiveScene( "GameStateProbe" );
+            _pScene       = _sceneManager.createEmptyActiveScene( "SessionStateProbe" );
             _pBinding     = make_unique<ScopedGameStateSceneService>( _sceneManager );
-            _pStateObject = getManager()->createGameObject( hashed_string( "GameState" ) );
-            (void)_pStateObject->addComponent<GameStateComponent>();
-            (void)_pStateObject->addComponent<GameStateProbeFirstDirector>();
-            (void)_pStateObject->addComponent<GameStateProbeSecondDirector>();
+            _pStateObject = getManager()->createGameObject( hashed_string( "SessionState" ) );
+            (void)_pStateObject->addComponent<SessionStateComponent>();
+            (void)_pStateObject->addComponent<SessionStateProbeFirstDirector>();
+            (void)_pStateObject->addComponent<SessionStateProbeSecondDirector>();
         }
 
         GameObjectManager* getManager() const { return _pScene != nullptr ? _pScene->getObjectManager() : nullptr; }
     };
 
     /** @brief 씬의 (첫) 공유 상태입니다 — 복원한 뒤에는 오브젝트가 새로 섰다. */
-    GameStateComponent* findSceneGameState( GameObjectManager& manager )
+    SessionStateComponent* findSceneGameState( GameObjectManager& manager )
     {
-        GameStateComponent* pFound = nullptr;
-        manager.forEachComponentOfType<GameStateComponent>( [&pFound]( GameStateComponent* pComponent )
+        SessionStateComponent* pFound = nullptr;
+        manager.forEachComponentOfType<SessionStateComponent>( [&pFound]( SessionStateComponent* pComponent )
         {
             if ( pFound == nullptr )
                 pFound = pComponent;
@@ -182,32 +182,32 @@ namespace
     void registerGameStateProbeTypes()
     {
         RegisterMockComponents();
-        (void)GameStateProbeFirstDirector::StaticType();
-        (void)GameStateProbeSecondDirector::StaticType();
+        (void)SessionStateProbeFirstDirector::StaticType();
+        (void)SessionStateProbeSecondDirector::StaticType();
     }
 } // namespace
 
 /**
- * @brief [GameStateComponentTest] 같은 오브젝트에서는 공유 상태(시계) → 첫 디렉터 → 둘째 디렉터 순서로 매 틱 돈다 — 첫 디렉터만 판을 열고 시작값은 한 번만 들어간다
+ * @brief [SessionStateComponentTest] 같은 오브젝트에서는 공유 상태(시계) → 첫 디렉터 → 둘째 디렉터 순서로 매 틱 돈다 — 첫 디렉터만 판을 열고 시작값은 한 번만 들어간다
  */
-SW_TEST_CASE( GameStateComponentTest, DirectorsOnTheStateObjectTickInAttachOrderAfterTheClock )
+SW_TEST_CASE( SessionStateComponentTest, DirectorsOnTheStateObjectTickInAttachOrderAfterTheClock )
 {
     registerGameStateProbeTypes();
-    GameStateTestScene scene;
-    GameObjectManager* pManager = scene.getManager();
+    SessionStateTestScene scene;
+    GameObjectManager*    pManager = scene.getManager();
     SW_ASSERT_NOT_NULL( pManager );
     pManager->beginPlay();
 
-    GameStateComponent*           pState  = scene._pStateObject->getComponent<GameStateComponent>();
-    GameStateProbeFirstDirector*  pFirst  = scene._pStateObject->getComponent<GameStateProbeFirstDirector>();
-    GameStateProbeSecondDirector* pSecond = scene._pStateObject->getComponent<GameStateProbeSecondDirector>();
+    SessionStateComponent*           pState  = scene._pStateObject->getComponent<SessionStateComponent>();
+    SessionStateProbeFirstDirector*  pFirst  = scene._pStateObject->getComponent<SessionStateProbeFirstDirector>();
+    SessionStateProbeSecondDirector* pSecond = scene._pStateObject->getComponent<SessionStateProbeSecondDirector>();
     SW_ASSERT_NOT_NULL( pState );
     SW_ASSERT_NOT_NULL( pFirst );
     SW_ASSERT_NOT_NULL( pSecond );
-    SW_EXPECT_TRUE( pFirst->_initResult == GameStateInitResult::Fresh );
-    SW_EXPECT_TRUE( pSecond->_initResult == GameStateInitResult::AlreadyInitialized );
+    SW_EXPECT_TRUE( pFirst->_initResult == SessionStateInitResult::Fresh );
+    SW_EXPECT_TRUE( pSecond->_initResult == SessionStateInitResult::AlreadyInitialized );
     SW_EXPECT_TRUE( pState->isFreshGame() );
-    SW_EXPECT_EQUAL( GameStateProbeDirector::kStartingGold, pState->getWallet().getBalance( "Gold" ) ); // 둘째가 다시 넣지 않았다
+    SW_EXPECT_EQUAL( SessionStateProbeDirector::kStartingGold, pState->getWallet().getBalance( "Gold" ) ); // 둘째가 다시 넣지 않았다
 
     for ( int32 tickIndex = 1; tickIndex <= 3; ++tickIndex )
     {
@@ -220,44 +220,44 @@ SW_TEST_CASE( GameStateComponentTest, DirectorsOnTheStateObjectTickInAttachOrder
 }
 
 /**
- * @brief [GameStateComponentTest] 스냅숏에서 복원하면 공유 상태가 먼저 돌아오고, 여는 디렉터는 시작값을 다시 넣지 않는다
+ * @brief [SessionStateComponentTest] 스냅숏에서 복원하면 공유 상태가 먼저 돌아오고, 여는 디렉터는 시작값을 다시 넣지 않는다
  */
-SW_TEST_CASE( GameStateComponentTest, SnapshotRestoresSharedStateBeforeTheDirectorsSeedIt )
+SW_TEST_CASE( SessionStateComponentTest, SnapshotRestoresSharedStateBeforeTheDirectorsSeedIt )
 {
     registerGameStateProbeTypes();
-    GameStateTestScene scene;
-    GameObjectManager* pManager = scene.getManager();
+    SessionStateTestScene scene;
+    GameObjectManager*    pManager = scene.getManager();
     SW_ASSERT_NOT_NULL( pManager );
     pManager->beginPlay();
-    GameStateComponent* pState = scene._pStateObject->getComponent<GameStateComponent>();
+    SessionStateComponent* pState = scene._pStateObject->getComponent<SessionStateComponent>();
     SW_ASSERT_NOT_NULL( pState );
     pState->getWallet().add( "Gold", 150 ); // 100 + 150
     pState->getFlags().setFlag( "village.founded", 1 );
     pManager->tick( 1.0f );
 
-    GameStateProbeGameInstance instance;
-    vector<uint8>              snapshot;
+    SessionStateProbeGameInstance instance;
+    vector<uint8>                 snapshot;
     SW_ASSERT_TRUE( instance.captureSnapshot( snapshot ) );
     SW_ASSERT_TRUE( instance.restoreSnapshot( snapshot ) );
     pManager->mergePendingAdds();
     pManager->tick( 0.0f ); // 복원한 오브젝트가 시작한다 — 시계는 흐르지 않는다
 
-    GameStateComponent* pRestored = findSceneGameState( *pManager );
+    SessionStateComponent* pRestored = findSceneGameState( *pManager );
     SW_ASSERT_NOT_NULL( pRestored );
     SW_EXPECT_FALSE( pRestored->isFreshGame() );
     SW_EXPECT_EQUAL( int64{ 250 }, pRestored->getWallet().getBalance( "Gold" ) ); // 350 이면 시작값이 덧쌓였다
     SW_EXPECT_EQUAL( 1, pRestored->getFlags().getFlag( "village.founded" ) );
     SW_EXPECT_NEAR_EQUAL( 7.0f, pRestored->getClock().getHour(), 1.0e-3f );
-    GameStateProbeFirstDirector* pFirst = pRestored->getOwner()->getComponent<GameStateProbeFirstDirector>();
+    SessionStateProbeFirstDirector* pFirst = pRestored->getOwner()->getComponent<SessionStateProbeFirstDirector>();
     SW_ASSERT_NOT_NULL( pFirst );
-    SW_EXPECT_TRUE( pFirst->_initResult == GameStateInitResult::Restored );
+    SW_EXPECT_TRUE( pFirst->_initResult == SessionStateInitResult::Restored );
     pManager->endPlay();
 }
 
 /**
- * @brief [GameStateComponentTest] 모르는 구간은 건너뛰고, 빠진 구간은 새 판, 판이 다른 구간도 새 판이다 — 아는 구간은 그대로 돌아온다
+ * @brief [SessionStateComponentTest] 모르는 구간은 건너뛰고, 빠진 구간은 새 판, 판이 다른 구간도 새 판이다 — 아는 구간은 그대로 돌아온다
  */
-SW_TEST_CASE( GameStateComponentTest, UnknownSectionIsSkippedAndMissingSectionStaysFresh )
+SW_TEST_CASE( SessionStateComponentTest, UnknownSectionIsSkippedAndMissingSectionStaysFresh )
 {
     Wallet wallet;
     wallet.add( "Gold", 42 );
@@ -271,7 +271,7 @@ SW_TEST_CASE( GameStateComponentTest, UnknownSectionIsSkippedAndMissingSectionSt
     flags.writeState( flagsBody );
 
     Archive archive;
-    StateArchiveUtil::writeHeader( archive, GameStateComponent::kStateTag, GameStateComponent::kStateVersion );
+    StateArchiveUtil::writeHeader( archive, SessionStateComponent::kStateTag, SessionStateComponent::kStateVersion );
     archive << uint32{ 3 };
     StateArchiveUtil::writeSection( archive, Wallet::kStateTag, Wallet::kStateVersion, walletBody );
     StateArchiveUtil::writeSection( archive, 0x5A5A5A5Au, 1, unknownBody );
@@ -279,12 +279,12 @@ SW_TEST_CASE( GameStateComponentTest, UnknownSectionIsSkippedAndMissingSectionSt
     vector<uint8> bytes;
     archive.writeData( bytes );
 
-    GameStateComponent state;
+    SessionStateComponent state;
     state.restoreState( std::move( bytes ) );
     SW_EXPECT_FALSE( state.isInitialized() );
-    GameStateSettings settings;
+    SessionStateSettings settings;
     settings._clock._secondsPerDay = 24.0f;
-    SW_EXPECT_TRUE( state.initialize( settings ) == GameStateInitResult::Restored );
+    SW_EXPECT_TRUE( state.initialize( settings ) == SessionStateInitResult::Restored );
     SW_EXPECT_EQUAL( int64{ 42 }, state.getWallet().getBalance( "Gold" ) );
     SW_EXPECT_EQUAL( 0, state.getFlags().getFlag( "old" ) ); // 판이 달라 새 판
     SW_EXPECT_EQUAL( 0, state.getClock().getDay() );         // 빠진 구간 — 새 판(6 시)
@@ -292,9 +292,9 @@ SW_TEST_CASE( GameStateComponentTest, UnknownSectionIsSkippedAndMissingSectionSt
 }
 
 /**
- * @brief [GameStateComponentTest] 공유 날씨는 공유 시계 뒤에 게임 초로 흐르고, 스냅숏 바이트에 실려 같은 날씨 · 같은 다음 날씨로 돌아온다
+ * @brief [SessionStateComponentTest] 공유 날씨는 공유 시계 뒤에 게임 초로 흐르고, 스냅숏 바이트에 실려 같은 날씨 · 같은 다음 날씨로 돌아온다
  */
-SW_TEST_CASE( GameStateComponentTest, WeatherFollowsTheSharedClockAndRidesTheSnapshot )
+SW_TEST_CASE( SessionStateComponentTest, WeatherFollowsTheSharedClockAndRidesTheSnapshot )
 {
     WeatherCatalog weatherCatalog;
     SW_ASSERT_TRUE( weatherCatalog.loadFromXMLText( R"(
@@ -304,14 +304,14 @@ SW_TEST_CASE( GameStateComponentTest, WeatherFollowsTheSharedClockAndRidesTheSna
   <Weather id="fog" seasons="Default:1" minDuration="3600" maxDuration="7200"><Values light="0.3"/></Weather>
 </WeatherCatalog>
 )",
-                                                    "GameStateComponentTest" ) );
-    GameStateSettings settings;
+                                                    "SessionStateComponentTest" ) );
+    SessionStateSettings settings;
     settings._clock._secondsPerDay = 24.0f; // 실제 1 초 = 게임 1 시간(3600 초)
     settings._pWeatherCatalog      = &weatherCatalog;
     settings._weatherSeed          = 7u;
 
-    GameStateComponent state;
-    SW_ASSERT_TRUE( state.initialize( settings ) == GameStateInitResult::Fresh );
+    SessionStateComponent state;
+    SW_ASSERT_TRUE( state.initialize( settings ) == SessionStateInitResult::Fresh );
     SW_ASSERT_NOT_NULL( state.makeRefs()._pWeather );
     vector<hashed_string> listSeen;
     for ( int32 tick = 0; tick < 24; ++tick ) // 하루 — 날씨 길이 1 ~ 2 시간이라 여러 번 바뀐다
@@ -327,9 +327,9 @@ SW_TEST_CASE( GameStateComponentTest, WeatherFollowsTheSharedClockAndRidesTheSna
     state.writeState( archive );
     vector<uint8> bytes;
     archive.writeData( bytes );
-    GameStateComponent restored;
+    SessionStateComponent restored;
     restored.restoreState( std::move( bytes ) );
-    SW_ASSERT_TRUE( restored.initialize( settings ) == GameStateInitResult::Restored );
+    SW_ASSERT_TRUE( restored.initialize( settings ) == SessionStateInitResult::Restored );
     SW_EXPECT_TRUE( restored.getWeather().getCurrent() == state.getWeather().getCurrent() );
     for ( int32 tick = 0; tick < 6; ++tick )
     {
@@ -340,19 +340,19 @@ SW_TEST_CASE( GameStateComponentTest, WeatherFollowsTheSharedClockAndRidesTheSna
 }
 
 /**
- * @brief [GameStateComponentTest] 공유 땅은 설정 크기가 있을 때만 빌려 주고(없으면 nullptr — 격자 키트는 단독), 칸 주인이 스냅숏 바이트에 실려 돌아온다
+ * @brief [SessionStateComponentTest] 공유 땅은 설정 크기가 있을 때만 빌려 주고(없으면 nullptr — 격자 키트는 단독), 칸 주인이 스냅숏 바이트에 실려 돌아온다
  */
-SW_TEST_CASE( GameStateComponentTest, LandIsLentOnlyWhenSizedAndRidesTheSnapshot )
+SW_TEST_CASE( SessionStateComponentTest, LandIsLentOnlyWhenSizedAndRidesTheSnapshot )
 {
-    GameStateComponent landless;
-    SW_ASSERT_TRUE( landless.initialize( GameStateSettings{} ) == GameStateInitResult::Fresh );
+    SessionStateComponent landless;
+    SW_ASSERT_TRUE( landless.initialize( SessionStateSettings{} ) == SessionStateInitResult::Fresh );
     SW_EXPECT_TRUE( landless.makeRefs()._pLand == nullptr );
 
-    GameStateSettings settings;
+    SessionStateSettings settings;
     settings._landWidth  = 8;
     settings._landHeight = 8;
-    GameStateComponent state;
-    SW_ASSERT_TRUE( state.initialize( settings ) == GameStateInitResult::Fresh );
+    SessionStateComponent state;
+    SW_ASSERT_TRUE( state.initialize( settings ) == SessionStateInitResult::Fresh );
     LandRegistry* pLand = state.makeRefs()._pLand;
     SW_ASSERT_NOT_NULL( pLand );
     SW_ASSERT_TRUE( pLand->claimRect( pLand->registerOwner( "Farming" ), 1, 1, 2, 2, true ) );
@@ -361,9 +361,9 @@ SW_TEST_CASE( GameStateComponentTest, LandIsLentOnlyWhenSizedAndRidesTheSnapshot
     state.writeState( archive );
     vector<uint8> bytes;
     archive.writeData( bytes );
-    GameStateComponent restored;
+    SessionStateComponent restored;
     restored.restoreState( std::move( bytes ) );
-    SW_ASSERT_TRUE( restored.initialize( settings ) == GameStateInitResult::Restored );
+    SW_ASSERT_TRUE( restored.initialize( settings ) == SessionStateInitResult::Restored );
     SW_EXPECT_TRUE( restored.getLand().getOwnerName( 2, 2 ) == hashed_string( "Farming" ) );
     SW_EXPECT_TRUE( restored.getLand().isBlockedFor( restored.getLand().registerOwner( "CityBuilder" ), 1, 1 ) );
 }

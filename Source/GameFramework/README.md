@@ -117,7 +117,7 @@ void FarmerBodyComponent::onTick( float32 deltaTime )
 | 2 `World` | `Environment` · `Query` · `Lifetime` · `Spline`(0), `Land`(1) | 월드 상태(시계 · 날씨 · 중력 · 땅 · 플래그 · 질의)와 곡선 |
 | 3 `Actor` | `Input` · `Movement` · `Navigation` · `Combat` · `Camera`(0), `AI` · `Control`(1) | 액터 하나: 입력, 조종, 이동, 길 찾기, AI, 카메라, 전투 수치 |
 | 4 `UI` | `HUD` · `Marker` · `Dialogue` | HUD, HP 바 · 데미지 숫자 · 목표 마커, 대화 |
-| 5 `Gameplay` | `Inventory` · `Progression` · `Match` · `Ability` · `Interaction`(0), `Quest` · `Appearance` · `Gimmick`(1), `GameState` · `Vehicle`(2) | 그 위의 규칙 |
+| 5 `Gameplay` | `Inventory` · `Progression` · `Match` · `Ability` · `Interaction`(0), `Quest` · `Appearance` · `Gimmick`(1), `SessionState` · `Vehicle`(2) | 그 위의 규칙 |
 
 표의 원본은 `Scripts/lint/rules/CheckGameFrameworkLayers.toml` 의 `[base_layer]` 와 `[base_folder_order]` 입니다.
 UI 는 게임플레이 아래에 있습니다. 언리얼에서 UMG 가 게임플레이 모듈 아래에 있고 게임 코드가 위젯을 만드는 것과 같은 방향이라, 어빌리티가 데미지 숫자를 띄웁니다.
@@ -293,7 +293,7 @@ GameFramework 최상위에는 `Base/`, `Kits/` 와 루트 파일만 둡니다. �
 | `Base/Gameplay/Vehicle` | 좌석과 탑승, 말과 차의 이동 |
 | `Base/Foundation/Framework` | 게임 인스턴스, 디렉터 베이스, 게임 서비스, 저장, 로딩 화면, 소리 |
 | `Base/Actor/Camera` | 카메라 프리셋, 모드, 블렌드, 흔들림, 직교 카메라 리그 |
-| `Base/Gameplay/GameState` | 키트 여럿이 나눠 쓰는 공유 상태(`GameStateComponent`) |
+| `Base/Gameplay/SessionState` | 키트 여럿이 나눠 쓰는 공유 상태(`SessionStateComponent`) |
 | `Base/UI` | HUD, HP 바, 데미지 숫자, 대화 러너, 튜토리얼 힌트, 목표 마커 |
 | `Base/Actor/Combat` | 무기, 피해 공식, 체력 원천과 리스너, 턴 순서, 록온, 신체 절단(`Dismemberment`) |
 | `Base/Foundation/Utility` | 씨앗 난수, 고정 스텝 타이머, `Countdown`, 격자 구조, 상태 데이터 도우미 |

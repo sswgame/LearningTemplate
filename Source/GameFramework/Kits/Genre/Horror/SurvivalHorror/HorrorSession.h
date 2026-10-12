@@ -22,7 +22,7 @@
 
 namespace sw
 {
-    struct GameStateRefs;
+    struct SessionStateRefs;
 
     class Archive;
     class AreaGraph;
@@ -99,7 +99,7 @@ namespace sw
          * @details 플래그(풀린 퍼즐과 문, 길 조건이 읽는다)는 @p refs 에서 빌린다(없으면 길 조건은 빈 플래그로 본다). 격자 가방(@p inventory, 장르 고유 그릇이라 게임이 가진다)과 아이템 상자(@p itemBox, 세계 보관함)도 빌리므로 세션보다 오래 살아야 한다.
          *          격자 가방은 여기서 카탈로그의 모양과 규칙의 크기로 다시 연다. 이 함수를 호출하기 전에는 다른 함수를 호출하지 않는다.
          */
-        void initialize( const HorrorCatalog* pCatalog, AreaGraph* pAreaGraph, const hashed_string& startArea, const GameStateRefs& refs, GridInventory& inventory,
+        void initialize( const HorrorCatalog* pCatalog, AreaGraph* pAreaGraph, const hashed_string& startArea, const SessionStateRefs& refs, GridInventory& inventory,
                          Inventory& itemBox );
 
         /** @brief 시간을 진행합니다. 손전등 배터리, 어둠에서의 정신력 감소, 밝은 곳에서의 회복을 처리합니다. */

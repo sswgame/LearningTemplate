@@ -14,7 +14,7 @@
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
-#include "GameFramework/Base/Gameplay/GameState/GameStateComponent.h"
+#include "GameFramework/Base/Gameplay/SessionState/SessionStateComponent.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
 
 #include "Games/MeadowVillage/MeadowVillageData.h"
@@ -69,15 +69,15 @@ namespace sw
 
     bool MeadowFarmDirectorComponent::startGame()
     {
-        GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
-        const CropCatalog*  pCrops = game::getService<CropCatalog>();
+        SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
+        const CropCatalog*     pCrops = game::getService<CropCatalog>();
         if ( pState == nullptr || pCrops == nullptr )
         {
-            SW_LOG_WARNING( "[Meadow] the farm cannot start - %#", pState == nullptr ? "no GameStateComponent in front of it on this object" : "the crop catalog is not loaded" );
+            SW_LOG_WARNING( "[Meadow] the farm cannot start - %#", pState == nullptr ? "no SessionStateComponent in front of it on this object" : "the crop catalog is not loaded" );
             return false;
         }
         // 이 오브젝트의 첫 디렉터가 판을 연다. 시작 돈은 새 판일 때만(복원한 판 위에 덧쌓이지 않게).
-        if ( pState->initialize( MeadowVillageData::makeStateSettings() ) == GameStateInitResult::Fresh )
+        if ( pState->initialize( MeadowVillageData::makeStateSettings() ) == SessionStateInitResult::Fresh )
             pState->getWallet().add( Wallet::getDefaultCurrency(), _startingGold );
         _field.initialize( kFieldWidth, kFieldHeight, pCrops );
         const hashed_string season = pState->getClock().getSeasonName();
@@ -118,7 +118,7 @@ namespace sw
     void MeadowFarmDirectorComponent::tickGame( float32 deltaTime )
     {
         (void)deltaTime;
-        GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
+        SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
             return;
         // 키는 입력 맵(`data/meadow.input.xml`)이 정한다. 시계를 미는 것은 밭 디렉터 하나다(마을은 읽기만).
@@ -133,7 +133,7 @@ namespace sw
         }
     }
 
-    void MeadowFarmDirectorComponent::startNextDay( GameStateComponent& state )
+    void MeadowFarmDirectorComponent::startNextDay( SessionStateComponent& state )
     {
         const hashed_string season = state.getClock().getSeasonName(); // 계절은 공유 시계의 데이터
         _field.advanceDay( season, false );

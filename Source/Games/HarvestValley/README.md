@@ -4,7 +4,7 @@
 
 하베스트 문 장르의 게임입니다. `GF_Farming` 키트의 작물 카탈로그, 밭, 출하함을 실제 게임 흐름에서 씁니다.
 
-- 키트 하나를 링크하고, 달력과 돈과 가방은 기반의 공유 상태(`GameStateComponent`)에 두는 방법
+- 키트 하나를 링크하고, 달력과 돈과 가방은 기반의 공유 상태(`SessionStateComponent`)에 두는 방법
 - 디렉터가 입력 맵을 읽지 않고 **폰의 의도**로 규칙을 처리하는 방법
 - 자동 플레이를 몸 안의 분기가 아니라 **AI 조종자의 빙의**로 만드는 방법
 - 핫 리로드 앞뒤로 같은 날과 시각이 이어지는지 확인하는 방법
@@ -57,7 +57,7 @@ cd build/Ninja-Debug-HarvestValley/Bin
 | 농부를 잡는 조종자 | 플레이어는 GameFramework `PlayerControllerComponent`, 자동 플레이는 `FarmAutoFarmerAIComponent`(`prefabs/autofarmer.prefab.xml`) |
 | 밭의 흙과 작물(12 × 8) | 프리팹 `farmsoil.prefab.xml`, `farmcrop.prefab.xml`. 디렉터가 플레이 시작에 만듭니다 |
 | 규칙과 상태 | 키트의 `FarmField`, `FarmShippingBin`, `CropCatalog` |
-| 달력, 돈, 가방 | 공유 상태 `GameStateComponent`. 디렉터 오브젝트의 맨 앞 컴포넌트이고, 하루 144초, 계절 네 개, 가방 24슬롯입니다 |
+| 달력, 돈, 가방 | 공유 상태 `SessionStateComponent`. 디렉터 오브젝트의 맨 앞 컴포넌트이고, 하루 144초, 계절 네 개, 가방 24슬롯입니다 |
 | 농부의 위치, 도구, 체력, 시간, 가게, 출하, 잠, 날씨, 빙의 바꾸기 | `FarmDirectorComponent` |
 | 모습 | 뷰 `FarmSoilComponent`, `FarmCropComponent`, `FarmerComponent`, `FarmSunComponent` |
 | 카메라 | GameFramework `OrthoCameraRigComponent`(입력 끔). 디렉터가 초점을 밭 가운데와 농부 사이에 넣습니다 |

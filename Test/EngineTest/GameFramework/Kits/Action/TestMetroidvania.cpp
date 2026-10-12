@@ -5,7 +5,7 @@
 
 #include "GameFramework/Base/Actor/Movement/PlatformerMotor2D.h"
 #include "GameFramework/Base/Foundation/Data/StatBlock.h"
-#include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Base/Gameplay/Inventory/LootTable.h"
@@ -96,9 +96,9 @@ namespace
     };
 
     /** @brief 영혼 상태가 빌릴 지갑 묶음입니다. */
-    GameStateRefs lendMetroWallet( Wallet& wallet )
+    SessionStateRefs lendMetroWallet( Wallet& wallet )
     {
-        GameStateRefs refs;
+        SessionStateRefs refs;
         refs._pWallet = &wallet;
         return refs;
     }

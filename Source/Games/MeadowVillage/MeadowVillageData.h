@@ -6,9 +6,9 @@
 #include "Core/Common/Types.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Base/Gameplay/Progression/Reputation.h"
 #include "GameFramework/Base/Gameplay/Quest/QuestCatalog.h"
+#include "GameFramework/Base/Gameplay/SessionState/SessionStateComponent.h"
 
 namespace sw
 {
@@ -21,9 +21,9 @@ namespace sw
         static constexpr const utf8* kSproutSpecies     = "sprout";
         static constexpr const utf8* kRequestQuest      = "meadow_request";
 
-        static GameStateSettings makeStateSettings()
+        static SessionStateSettings makeStateSettings()
         {
-            GameStateSettings settings;
+            SessionStateSettings settings;
             settings._clock._listSeason    = { "Spring", "Summer", "Fall", "Winter" };
             settings._clock._secondsPerDay = 120.0f;
             settings._clock._daysPerSeason = 28;

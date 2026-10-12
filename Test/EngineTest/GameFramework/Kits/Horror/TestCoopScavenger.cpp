@@ -3,7 +3,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Actor/AI/SpawnDirector.h"
-#include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
@@ -101,14 +101,14 @@ namespace
         }
 
         /** @brief 원정이 빌릴 공유 상태입니다 — 시계는 도착 시각에서, 날씨는 새로 엽니다. */
-        GameStateRefs makeRefs()
+        SessionStateRefs makeRefs()
         {
             WorldClockSettings clockSettings;
             clockSettings._secondsPerDay = _catalog.getDaySettings()._secondsPerDay;
             clockSettings._startHour     = _catalog.getDaySettings()._arrivalHour;
             _clock.initialize( clockSettings );
             _weather.initialize( &_weatherCatalog, 1u, hashed_string{} );
-            GameStateRefs refs;
+            SessionStateRefs refs;
             refs._pWallet  = &_wallet;
             refs._pClock   = &_clock;
             refs._pWeather = &_weather;
@@ -117,9 +117,9 @@ namespace
         }
 
         /** @brief 이미 연 공유 상태를 다시 열지 않고 빌려 줍니다(복원한 원정이 같은 시계 · 날씨를 본다). */
-        GameStateRefs borrowRefs()
+        SessionStateRefs borrowRefs()
         {
-            GameStateRefs refs;
+            SessionStateRefs refs;
             refs._pWallet  = &_wallet;
             refs._pClock   = &_clock;
             refs._pWeather = &_weather;

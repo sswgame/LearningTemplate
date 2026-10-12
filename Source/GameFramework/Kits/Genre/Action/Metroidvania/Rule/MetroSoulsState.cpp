@@ -7,7 +7,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Actor/Combat/Health/Vitality.h"
-#include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
@@ -32,7 +32,7 @@ namespace sw
     {
     }
 
-    void MetroSoulsState::initialize( const MetroidvaniaCatalog* pCatalog, const GameStateRefs& refs )
+    void MetroSoulsState::initialize( const MetroidvaniaCatalog* pCatalog, const SessionStateRefs& refs )
     {
         _pCatalog = pCatalog;
         _pWallet  = refs._pWallet;

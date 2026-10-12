@@ -8,8 +8,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Base/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Base/Gameplay/SessionState/SessionStateComponent.h"
 #include "GameFramework/Base/World/Environment/WorldClock.h"
 
 #include "Games/HarvestValley/FarmDirectorComponent.h"
@@ -116,7 +116,7 @@ namespace sw
         const GameObject*            pPawnOwner = pawn.getOwner();
         const GameObjectManager*     pManager   = pPawnOwner != nullptr ? pPawnOwner->getManager() : nullptr;
         const FarmDirectorComponent* pDirector  = pManager != nullptr ? GameDirectorComponent::resolve<FarmDirectorComponent>( *pManager, _director ) : nullptr;
-        const GameStateComponent*    pState     = pDirector != nullptr ? GameStateComponent::findOnOwner( *pDirector ) : nullptr;
+        const SessionStateComponent* pState     = pDirector != nullptr ? SessionStateComponent::findOnOwner( *pDirector ) : nullptr;
         if ( pState == nullptr || pDirector->isStarted() == false )
         {
             stopMoving();

@@ -6,7 +6,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/World/Environment/WeatherSystem.h"
 #include "GameFramework/Base/World/Environment/WorldClock.h"
@@ -77,7 +77,7 @@ namespace sw
     {
     }
 
-    void ScavengerExpedition::initialize( const ScavengerExpeditionData& data, const GameStateRefs& refs, Inventory& shipStorage, uint32 seed, int32 crewCount )
+    void ScavengerExpedition::initialize( const ScavengerExpeditionData& data, const SessionStateRefs& refs, Inventory& shipStorage, uint32 seed, int32 crewCount )
     {
         _data = data;
         _seed = seed;

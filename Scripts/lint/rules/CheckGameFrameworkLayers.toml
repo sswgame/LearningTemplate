@@ -54,5 +54,5 @@ Gameplay = 5
 "Gameplay/Quest" = 1
 "Gameplay/Appearance" = 1
 "Gameplay/Gimmick" = 1
-"Gameplay/GameState" = 2
+"Gameplay/SessionState" = 2
 "Gameplay/Vehicle" = 2

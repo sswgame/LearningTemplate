@@ -11,7 +11,7 @@
   3) 키트가 읽는 게임 설정의 사용자 칸(`GameSettings::getCustomProperty*`)은 `<키트>.` 로 시작한다(`Farming.startingGold`).
   4) 키트가 평판 세력 id 로 쓰는 글자 리터럴(`changeValue( "x"` · `…Faction{ "x" }` · `k…FactionID = "x"`)은 키트 이름의 소문자 낱말 접두
      `<접두>.` 로 시작한다(`restaurant.guests` · `western.honor`) — 평판을 나눠 쓰면 세력 id 가 한 이름 공간이다.
-  5) 키트 클래스는 기반 공유 상태(지갑 · 가방 · 플래그 · 일지 · 시계 · 날씨 · 평판 · 땅 · 값 목록)를 값으로 들지 않는다 — 빌린다(`GameStateRefs`).
+  5) 키트 클래스는 기반 공유 상태(지갑 · 가방 · 플래그 · 일지 · 시계 · 날씨 · 평판 · 땅 · 값 목록)를 값으로 들지 않는다 — 빌린다(`SessionStateRefs`).
      예외는 이유와 함께 예외 표(`Scripts/lint/rules/CheckKitNamespaces.toml`, `<파일>:<멤버>`)에(참가자마다의 가방 · 팔릴 목록 · 시뮬레이션 수치), 정의 구조체(`…Def` · `…Recipe` · `…Reward`) 안의 값 목록은 보지 않는다.
   6) 키트는 빌린 객체의 알림을 꺼내지 않는다(`_pWallet->drainEvents(` · `refs._pX->drainEvents(`) — 알림 버퍼는 소비자 하나라 게임 화면의 것이다.
   7) 로그 범주(`SW_LOG_CALLER( "x" )`)는 GameFramework · Games 안에서 파일 하나에만 — 키트 · 게임을 섞으면 같은 범주의 로그가 어디서 왔는지 갈리지 않는다.
@@ -77,7 +77,7 @@ class CheckKitNamespacesGate(LintGate):
     preCommitFileArgument = ""
     violationHeader = "키트 이름 공간 위반"
     hint = ("상태 표는 새 네 글자로(FourCcUtil::make), 입력은 입력 맵 액션으로(키트는 설정 칸), 키트 설정 칸은 `<키트>.` 접두로, "
-            "공유 상태는 빌린다(`GameStateRefs`) — Source/GameFramework/Kits/README.md \"키트 여럿을 한 게임에\"")
+            "공유 상태는 빌린다(`SessionStateRefs`) — Source/GameFramework/Kits/README.md \"키트 여럿을 한 게임에\"")
     selfTestCases = [
         {
             "name": "두 파일이 같은 상태 표를 쓴다",
@@ -203,7 +203,7 @@ class CheckKitNamespacesGate(LintGate):
                         self.useExemption(f"{relativePath}:{member}")
                         continue
                     listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 키트가 공유 상태 {match.group(1)} 를 값으로 듭니다({member}) — "
-                                         f"`const GameStateRefs&` 로 빌리세요(정말 제 것이면 rules/CheckKitNamespaces.toml 의 [exemption] 에 까닭과 함께)")
+                                         f"`const SessionStateRefs&` 로 빌리세요(정말 제 것이면 rules/CheckKitNamespaces.toml 의 [exemption] 에 까닭과 함께)")
             # 6) 빌린 객체의 알림
             for match in _kBorrowedDrainRe.finditer(code):
                 listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 키트가 빌린 객체의 알림을 꺼냅니다 — "

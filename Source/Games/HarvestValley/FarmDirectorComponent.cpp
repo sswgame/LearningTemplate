@@ -25,9 +25,9 @@
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
-#include "GameFramework/Base/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Base/Gameplay/SessionState/SessionStateComponent.h"
 #include "GameFramework/Base/World/Environment/WorldClock.h"
 
 #include "Games/HarvestValley/FarmAutoFarmerAIComponent.h"
@@ -290,7 +290,7 @@ namespace sw
         }
 
         // 시간은 공유 시계를 공유 상태가 흘린다. 다음 날 2시가 되면 그 위치에서 쓰러져 아침이 된다(체력 반).
-        const GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
+        const SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState != nullptr )
         {
             const WorldClock& clock = pState->getClock();
@@ -432,22 +432,22 @@ namespace sw
             SW_LOG_WARNING( "[Farm] %# could not be loaded - the farm cannot start", _cropDataPath.c_str() );
             return false;
         }
-        GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
+        SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
         {
-            SW_LOG_WARNING( "[Farm] no GameStateComponent before the director on this object - the farm cannot start" );
+            SW_LOG_WARNING( "[Farm] no SessionStateComponent before the director on this object - the farm cannot start" );
             return false;
         }
         _itemCatalog = ItemCatalog{};
         _cropCatalog.fillItemCatalog( _itemCatalog, 99 );
-        GameStateSettings settings;
+        SessionStateSettings settings;
         settings._clock._listSeason    = FarmDirectorComponentInternal::makeSeasons();
         settings._clock._secondsPerDay = _secondsPerDay;
         settings._clock._startHour     = 6.0f;
         settings._clock._daysPerSeason = 28;
         settings._pItemCatalog         = &_itemCatalog;
         settings._inventorySlotCount   = kBagSlotCount;
-        const bool bFresh              = pState->initialize( settings ) == GameStateInitResult::Fresh;
+        const bool bFresh              = pState->initialize( settings ) == SessionStateInitResult::Fresh;
         _field.initialize( kFieldWidth, kFieldHeight, &_cropCatalog );
         _shipment = FarmShippingBin{};
         _listSeed.clear();
@@ -698,8 +698,8 @@ namespace sw
             return;
         }
 
-        GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
-        FarmActionResult    result = FarmActionResult::Done;
+        SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
+        FarmActionResult       result = FarmActionResult::Done;
         switch ( _tool )
         {
             case FarmTool::Hoe:
@@ -755,7 +755,7 @@ namespace sw
             SW_LOG_INFO( "[Farm] stand next to the shipping bin to ship" );
             return 0;
         }
-        GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
+        SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
             return 0;
         Inventory& bag     = pState->getInventory();
@@ -784,7 +784,7 @@ namespace sw
         const CropDef* pCrop = _cropCatalog.findCropBySeed( getSelectedSeed() );
         if ( pCrop == nullptr )
             return false;
-        GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
+        SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
             return false;
         Inventory& bag    = pState->getInventory();
@@ -806,7 +806,7 @@ namespace sw
 
     void FarmDirectorComponent::endDay( bool bPassedOut )
     {
-        GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
+        SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
             return;
         WorldClock&                  clock        = pState->getClock();
@@ -836,8 +836,8 @@ namespace sw
         _selectedSeedIndex = ( ( _selectedSeedIndex + offset ) % count + count ) % count;
         if ( isAutoPlayOn() )
             return; // 자동 농부는 씨앗을 하나씩 넘겨 가며 고른다. 그 줄은 로그에 남기지 않는다.
-        [[maybe_unused]] const CropDef*            pCrop  = _cropCatalog.findCropBySeed( getSelectedSeed() );
-        [[maybe_unused]] const GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
+        [[maybe_unused]] const CropDef*               pCrop  = _cropCatalog.findCropBySeed( getSelectedSeed() );
+        [[maybe_unused]] const SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         SW_LOG_INFO( "[Farm] seed: %# (have %#, %#G)%#", getSelectedSeed().c_str(), pState != nullptr ? pState->getInventory().getItemCount( getSelectedSeed() ) : 0,
                      pCrop != nullptr ? pCrop->_seedPrice : 0, pCrop != nullptr && pState != nullptr && pCrop->growsIn( pState->getClock().getSeasonName() ) ? "" : " - not this season" );
     }
@@ -856,7 +856,7 @@ namespace sw
 
     void FarmDirectorComponent::logStatus( bool bForce )
     {
-        const GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
+        const SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
             return;
         const WorldClock& clock = pState->getClock();

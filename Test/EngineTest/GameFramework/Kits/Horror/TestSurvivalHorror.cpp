@@ -4,7 +4,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Base/Gameplay/Inventory/GridInventory.h"
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Base/World/Land/AreaGraph.h"
@@ -28,9 +28,9 @@ namespace
 
         HorrorTestContainers() { _box.initialize( nullptr, 32 ); }
 
-        GameStateRefs makeRefs()
+        SessionStateRefs makeRefs()
         {
-            GameStateRefs refs;
+            SessionStateRefs refs;
             refs._pFlags = &_flags;
             return refs;
         }

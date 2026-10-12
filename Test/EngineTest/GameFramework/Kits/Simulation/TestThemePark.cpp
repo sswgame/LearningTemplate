@@ -4,7 +4,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Base/World/Land/LandRegistry.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrain.h"
@@ -36,9 +36,9 @@ namespace
     }
 
     /** @brief 공원이 빌릴 지갑 하나를 든 공유 상태 묶음입니다. */
-    GameStateRefs lendWallet( Wallet& wallet )
+    SessionStateRefs lendWallet( Wallet& wallet )
     {
-        GameStateRefs refs;
+        SessionStateRefs refs;
         refs._pWallet = &wallet;
         return refs;
     }

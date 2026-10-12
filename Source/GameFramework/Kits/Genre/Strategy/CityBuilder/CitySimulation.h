@@ -21,7 +21,7 @@
 
 namespace sw
 {
-    struct GameStateRefs;
+    struct SessionStateRefs;
 
     class Archive;
     class Wallet;
@@ -174,7 +174,7 @@ namespace sw
          * @brief 빈 도시를 엽니다. 돈은 빌린 지갑(@p refs 의 지갑, 통화는 `CitySettings::_currency`)에서 나가고 들어옵니다.
          * @details 지갑이 없으면 알리고, 건설과 도로 놓기는 모두 돈 부족으로 거절된다. 달 결산에서 돈이 모자라면 지갑이 빚(`Wallet::charge`)을 진다.
          */
-        void initialize( const CityCatalog* pCatalog, int32 width, int32 height, const CitySettings& settings, const GameStateRefs& refs );
+        void initialize( const CityCatalog* pCatalog, int32 width, int32 height, const CitySettings& settings, const SessionStateRefs& refs );
         void setTerrain( int32 x, int32 y, CityTerrain terrain );
         void fillTerrain( int32 minX, int32 minY, int32 maxX, int32 maxY, CityTerrain terrain );
         /**

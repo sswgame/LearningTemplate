@@ -26,7 +26,7 @@
 namespace sw
 {
     struct DishDef;
-    struct GameStateRefs;
+    struct SessionStateRefs;
 
     class Archive;
     class ItemCatalog;
@@ -208,7 +208,7 @@ namespace sw
          * @brief 새 식당을 엽니다. 돈은 빌린 지갑(@p refs 의 지갑이며, 없으면 시장, 급여, 계산이 막힙니다)을 쓰고, 평판은 빌린 평판(세력 `_reputationFaction`)을 씁니다. 날은 빌린 시계를 따르며(디렉터가 날이 넘어갈 때 `advanceDay` 를 호출합니다), 재료는 빌린 창고(@p pantry)에 보관합니다. 창고는 식당보다 오래 살아야 합니다. 여러 장르가 섞인 게임이 플레이어 가방을 넘기면 "밭에서 식탁까지" 가 그대로 이어집니다.
          */
         void initialize( const RestaurantCatalog* pCatalog, const RecipeCatalog* pRecipeCatalog, const ItemCatalog* pItemCatalog, const ShopCatalog* pShopCatalog,
-                         const ExperienceCurve* pStaffCurve, const GameStateRefs& refs, Inventory& pantry,
+                         const ExperienceCurve* pStaffCurve, const SessionStateRefs& refs, Inventory& pantry,
                          const RestaurantSettings& settings );
         /** @brief 조리 스테이션 수를 정합니다(예: "Stove" 2개, "Oven" 1개). */
         void setStationCount( const hashed_string& station, int32 count );

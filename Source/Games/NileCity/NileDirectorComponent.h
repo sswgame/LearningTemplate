@@ -19,8 +19,8 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
-#include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Foundation/Framework/Presentation/MaterialTintCache.h"
+#include "GameFramework/Base/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Base/World/Environment/WorldClock.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
@@ -111,7 +111,7 @@ namespace sw
         const utf8* getToolName() const;
         bool        isAutoPlanOn() const;
         /** @brief 도시가 빌려 쓸 공유 상태(디렉터가 보관하는 금고)를 반환합니다. */
-        GameStateRefs makeRefs();
+        SessionStateRefs makeRefs();
 
     private:
         PROPERTY( Category = "Data", DisplayName = "City Data", AssetPath, Tooltip = "City catalog XML" )
