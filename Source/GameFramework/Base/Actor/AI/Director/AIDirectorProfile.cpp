@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Actor/AI/Director/AIDirectorProfile.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -54,16 +55,6 @@ namespace sw
                         outIndex = index;
                         return true;
                     }
-                }
-                return false;
-            }
-
-            static bool contains( const vector<hashed_string>& listName, const hashed_string& name )
-            {
-                for ( const hashed_string& entry : listName )
-                {
-                    if ( entry == name )
-                        return true;
                 }
                 return false;
             }
@@ -151,7 +142,7 @@ namespace sw
         {
             for ( const AIDirectorEncounterDef& encounter : pool._listEncounter )
             {
-                if ( AIDirectorProfileInternal::contains( outListID, encounter._id ) == false )
+                if ( VectorUtil::contains( outListID, encounter._id ) == false )
                     outListID.push_back( encounter._id );
             }
         }

@@ -17,12 +17,6 @@ namespace sw
     {
         struct WesternCatalogInternal
         {
-            static hashed_string readName( const XMLNode& node, const utf8* pAttribute )
-            {
-                const utf8* pText = node.findAttribute( pAttribute );
-                return pText != nullptr && pText[0] != '\0' ? hashed_string( pText ) : hashed_string{};
-            }
-
             static uint8 readFlag( const XMLNode& node, const utf8* pAttribute, bool bFallback )
             {
                 return node.getAttributeBool( pAttribute, bFallback ) ? SW_TRUE : SW_FALSE;
@@ -126,7 +120,7 @@ namespace sw
 
     uint32 WesternCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        const hashed_string currency = WesternCatalogInternal::readName( root, "currency" );
+        const hashed_string currency = GameDataXML::readName( root, "currency" );
         if ( currency.empty() == false )
             _currency = currency;
         _extraHitPenalty   = MathUtil::max( 0, root.getAttributeInt( "extraHitPenalty", _extraHitPenalty ) );
@@ -137,7 +131,7 @@ namespace sw
             if ( StringUtil::equals( name, string_view( "Pursuit" ), true ) )
             {
                 WesternPursuitDef pursuit;
-                pursuit._name          = WesternCatalogInternal::readName( node, "name" );
+                pursuit._name          = GameDataXML::readName( node, "name" );
                 pursuit._level         = MathUtil::max( 1, node.getAttributeInt( "level", pursuit._level ) );
                 pursuit._lawmen        = MathUtil::max( 0, node.getAttributeInt( "lawmen", pursuit._lawmen ) );
                 pursuit._bShootOnSight = WesternCatalogInternal::readFlag( node, "shootOnSight", false );
@@ -286,7 +280,7 @@ namespace sw
             {
                 WesternAnimalDef animal;
                 animal._id           = id;
-                animal._lootTable    = WesternCatalogInternal::readName( node, "loot" );
+                animal._lootTable    = GameDataXML::readName( node, "loot" );
                 animal._size         = WesternCatalogInternal::parseSize( node.getAttributeText( "size" ) );
                 animal._quality      = MathUtil::clamp( node.getAttributeInt( "quality", animal._quality ), 1, 3 );
                 animal._peltPrice    = MathUtil::max( 0.0f, node.getAttributeFloat( "pelt", animal._peltPrice ) );
@@ -344,12 +338,12 @@ namespace sw
         for ( XMLNode child = node.findChild( "Tier" ); child; child = child.findNextSibling( "Tier" ) )
         {
             ReputationTier tier;
-            tier._name     = WesternCatalogInternal::readName( child, "name" );
+            tier._name     = GameDataXML::readName( child, "name" );
             tier._minValue = child.getAttributeInt( "min", faction._minValue );
             faction._listTier.push_back( tier );
             WesternHonorTierDef effect;
             effect._name         = tier._name;
-            effect._dialogueFlag = WesternCatalogInternal::readName( child, "flag" );
+            effect._dialogueFlag = GameDataXML::readName( child, "flag" );
             effect._shopDiscount = MathUtil::clamp( child.getAttributeFloat( "discount", 0.0f ), -1.0f, 1.0f );
             _listHonorTier.push_back( effect );
         }

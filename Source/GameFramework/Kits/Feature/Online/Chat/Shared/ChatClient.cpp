@@ -4,6 +4,7 @@
 
 #include "Core/Network/BitStream.h"
 
+#include "GameFramework/Base/Online/Service/OnlineReplyUtil.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -89,19 +90,7 @@ namespace sw
         reply._requestID = response._requestID;
         reply._method    = call._method;
         reply._errorCode = response._errorCode;
-        if ( response.isOk() == false )
-        {
-            reply._reply._result = ChatProtocol::fromErrorCode( response._errorCode );
-        }
-        else
-        {
-            BitReader body( response._pBody, response._bodySize );
-            if ( ChatProtocol::readReply( body, call._method, reply._reply ) == false )
-            {
-                reply._reply         = ChatReply{};
-                reply._reply._result = ChatResult::Unavailable;
-            }
-        }
+        (void)OnlineReplyUtil::readResponse<ChatProtocol>( response, call._method, reply._reply ); // 실패도 reply._reply._result 에 담겨 콜백으로 간다
         if ( call._onReply.isBound() )
             call._onReply( reply );
     }

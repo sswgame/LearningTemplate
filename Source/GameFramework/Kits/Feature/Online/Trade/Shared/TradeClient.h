@@ -14,6 +14,7 @@
 
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceClient.h"
+#include "GameFramework/Base/Online/Service/ServiceClientCallTable.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Shared/TradeProtocol.h"
 
@@ -91,14 +92,12 @@ namespace sw
         void   onResponse( const OnlineResponse& response );
         void   observe( const TradeSnapshot& snapshot );
 
-        unordered_map<uint64, PendingCall> _mapClientIDToCall;
-        vector<TradeClientReply>           _listReply;
-        vector<TradeClientUpdate>          _listUpdate;
-        TradeSnapshot                      _snapshot;
-        PendingCall                        _sendingCall;
-        OnlineServiceClient*               _pClient;
-        AccountID                          _accountID;
-        uint64                             _nextRequestID;
-        uint8                              _bSending;
+        ServiceClientCallTable<PendingCall> _callTable;
+        vector<TradeClientReply>            _listReply;
+        vector<TradeClientUpdate>           _listUpdate;
+        TradeSnapshot                       _snapshot;
+        OnlineServiceClient*                _pClient;
+        AccountID                           _accountID;
+        uint64                              _nextRequestID;
     };
 } // namespace sw

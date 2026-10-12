@@ -15,6 +15,7 @@
 
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceClient.h"
+#include "GameFramework/Base/Online/Service/ServiceClientCallTable.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Shared/MailboxProtocol.h"
 
@@ -79,12 +80,10 @@ namespace sw
         void   onResponse( const OnlineResponse& response );
         void   applyToCache( const PendingCall& call, const MailboxReply& reply );
 
-        unordered_map<uint64, PendingCall> _mapClientIDToCall;
-        vector<MailView>                   _listMail;
-        PendingCall                        _sendingCall;
-        OnlineServiceClient*               _pClient;
-        uint64                             _nextRequestID;
-        uint32                             _revision;
-        uint8                              _bSending;
+        ServiceClientCallTable<PendingCall> _callTable;
+        vector<MailView>                    _listMail;
+        OnlineServiceClient*                _pClient;
+        uint64                              _nextRequestID;
+        uint32                              _revision;
     };
 } // namespace sw

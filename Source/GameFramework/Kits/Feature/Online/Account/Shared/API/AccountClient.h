@@ -18,6 +18,7 @@
 
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceClient.h"
+#include "GameFramework/Base/Online/Service/ServiceClientCallTable.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Shared/Protocol/AccountTypes.h"
 
@@ -135,18 +136,16 @@ namespace sw
         void   onResponse( const OnlineResponse& response );
         void   finishDeferred( LoginResult failure );
 
-        unordered_map<uint64, PendingCall> _mapClientIDToCall; ///< 서비스 클라이언트의 요청 id 에서 이 객체의 요청으로 가는 맵이다
-        vector<AccountClientReply>         _listReply;
-        vector<AccountClientEvent>         _listEvent;
-        vector<DeferredCall>               _listDeferred;
-        AccountClientInfo                  _clientInfo;
-        AccountIdentity                    _identity;
-        LoginSessionToken                  _token;
-        PendingCall                        _sendingCall; ///< `sendRequest` 가 그 자리에서 응답을 부를 때 짝이 되는 요청이다
-        OnlineServiceClient*               _pClient;
-        uint64                             _nextRequestID;
-        uint8                              _bLoggedIn;
-        uint8                              _bResuming;
-        uint8                              _bSending;
+        ServiceClientCallTable<PendingCall> _callTable;
+        vector<AccountClientReply>          _listReply;
+        vector<AccountClientEvent>          _listEvent;
+        vector<DeferredCall>                _listDeferred;
+        AccountClientInfo                   _clientInfo;
+        AccountIdentity                     _identity;
+        LoginSessionToken                   _token;
+        OnlineServiceClient*                _pClient;
+        uint64                              _nextRequestID;
+        uint8                               _bLoggedIn;
+        uint8                               _bResuming;
     };
 } // namespace sw

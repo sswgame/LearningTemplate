@@ -4,14 +4,14 @@
 
 #include "Core/Network/BitStream.h"
 
+#include "GameFramework/Base/Online/Service/OnlineReplyUtil.h"
+
 namespace sw
 {
     AdminClient::AdminClient()
-        : _mapClientIDToCall{}
-        , _sendingCall{}
+        : _callTable{}
         , _pClient{ nullptr }
         , _nextRequestID{ 1 }
-        , _bSending{ SW_FALSE }
     {
     }
 
@@ -21,7 +21,7 @@ namespace sw
     {
         const NetIdempotencyKey usedKey   = AdminMethod::isMutating( method ) && key.isValid() == false ? NetIdempotencyKey::makeRandom() : key;
         const uint64            requestID = _nextRequestID++;
-        _sendingCall                      = PendingCall{ onReply, usedKey, requestID, method };
+        const PendingCall       pendingCall{ onReply, usedKey, requestID, method };
         if ( _pClient == nullptr )
         {
             AdminClientReply reply;
@@ -30,7 +30,6 @@ namespace sw
             reply._idempotencyKey = usedKey;
             reply._errorCode      = OnlineError::kUnavailable;
             reply._reply._result  = AdminResult::Unavailable;
-            _sendingCall          = PendingCall{};
             if ( onReply.isBound() )
                 onReply( reply );
             return requestID;
@@ -39,12 +38,7 @@ namespace sw
         AdminProtocol::writeRequest( body, request );
         NetRequestOptions options;
         options._idempotencyKey = usedKey;
-        _bSending               = SW_TRUE;
-        const uint64 clientID   = _pClient->sendRequest( method, body, options, OnlineResponseDelegate::create<&AdminClient::onResponse>( this ) );
-        _bSending               = SW_FALSE;
-        if ( _sendingCall._requestID != 0 )
-            _mapClientIDToCall[clientID] = _sendingCall;
-        _sendingCall = PendingCall{};
+        (void)_callTable.send( *_pClient, method, body, options, OnlineResponseDelegate::create<&AdminClient::onResponse>( this ), pendingCall ); // 응답은 pendingCall._requestID 로 알린다
         return requestID;
     }
 
@@ -57,39 +51,14 @@ namespace sw
     void AdminClient::onResponse( const OnlineResponse& response )
     {
         PendingCall call;
-        const auto  callIt = _mapClientIDToCall.find( response._requestID );
-        if ( callIt != _mapClientIDToCall.end() )
-        {
-            call = callIt->second;
-            _mapClientIDToCall.erase( callIt );
-        }
-        else if ( _bSending == SW_TRUE && _sendingCall._requestID != 0 )
-        {
-            call                    = _sendingCall;
-            _sendingCall._requestID = 0;
-        }
-        else
-        {
+        if ( _callTable.take( response._requestID, call ) == false )
             return;
-        }
         AdminClientReply reply;
         reply._requestID      = call._requestID;
         reply._method         = call._method;
         reply._idempotencyKey = call._key;
         reply._errorCode      = response._errorCode;
-        if ( response.isOk() == false )
-        {
-            reply._reply._result = AdminProtocol::fromErrorCode( response._errorCode );
-        }
-        else
-        {
-            BitReader body( response._pBody, response._bodySize );
-            if ( AdminProtocol::readReply( body, reply._reply ) == false )
-            {
-                reply._reply         = AdminReply{};
-                reply._reply._result = AdminResult::Unavailable;
-            }
-        }
+        (void)OnlineReplyUtil::readResponse<AdminProtocol>( response, reply._reply ); // 실패도 reply._reply._result 에 담겨 콜백으로 간다
         if ( call._onReply.isBound() )
             call._onReply( reply );
     }

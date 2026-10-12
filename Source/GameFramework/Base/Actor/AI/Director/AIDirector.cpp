@@ -5,6 +5,7 @@
 #include "Core/Common/FourCcUtil.h"
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -32,21 +33,11 @@ namespace sw
             static constexpr uint32 kPoolMinBytes   = 20; ///< 풀 하나의 최소 바이트(타이머 · 예산 · 마지막 고른 시각 · 골라 둔 것 · 항목 수)
             static constexpr uint32 kEncounterBytes = 8;  ///< 항목 하나(마지막 시각 · 횟수)
 
-            static bool contains( const vector<hashed_string>& listName, const hashed_string& name )
-            {
-                for ( const hashed_string& entry : listName )
-                {
-                    if ( entry == name )
-                        return true;
-                }
-                return false;
-            }
-
             static bool containsAny( const vector<hashed_string>& listName, const vector<hashed_string>& listOther )
             {
                 for ( const hashed_string& entry : listName )
                 {
-                    if ( contains( listOther, entry ) )
+                    if ( VectorUtil::contains( listOther, entry ) )
                         return true;
                 }
                 return false;
@@ -315,7 +306,7 @@ namespace sw
 
     bool AIDirector::isPoolActive( const AIDirectorPoolDef& pool ) const
     {
-        return pool._listPacing.empty() || AIDirectorInternal::contains( pool._listPacing, getPhase() );
+        return pool._listPacing.empty() || VectorUtil::contains( pool._listPacing, getPhase() );
     }
 
     bool AIDirector::isPoolCooledDown( const AIDirectorPoolDef& pool, const PoolState& state ) const
@@ -404,7 +395,7 @@ namespace sw
         uint32 mask = 0;
         if ( encounter._weight <= 0.0f )
             mask |= AIDirectorBlock::kWeight;
-        if ( encounter._listPacing.empty() == false && AIDirectorInternal::contains( encounter._listPacing, getPhase() ) == false )
+        if ( encounter._listPacing.empty() == false && VectorUtil::contains( encounter._listPacing, getPhase() ) == false )
             mask |= AIDirectorBlock::kPacing;
         if ( state._lastTime >= 0.0f && _time - state._lastTime < encounter._cooldown )
             mask |= AIDirectorBlock::kCooldown;

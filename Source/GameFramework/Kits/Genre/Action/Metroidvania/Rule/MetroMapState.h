@@ -88,8 +88,6 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
-        static bool contains( const vector<hashed_string>& listID, const hashed_string& id );
-
         const MetroidvaniaCatalog* _pCatalog;
         AreaGraph*                 _pGraph;
         vector<hashed_string>      _listRegionMap; ///< 산 지역 지도

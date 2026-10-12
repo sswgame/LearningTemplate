@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -21,16 +22,6 @@ namespace sw
         struct ShopInternal
         {
             static int32 roundPrice( float32 value ) { return MathUtil::max( 0, static_cast<int32>( MathUtil::round( value ) ) ); }
-
-            static bool containsID( const vector<hashed_string>& listID, const hashed_string& id )
-            {
-                for ( const hashed_string& ownID : listID )
-                {
-                    if ( ownID == id )
-                        return true;
-                }
-                return false;
-            }
 
             static int32 findSaturationIndex( const ShopRuntime& runtime, const hashed_string& itemID )
             {
@@ -181,7 +172,7 @@ namespace sw
 
     bool ShopDef::refusesCategory( const hashed_string& category ) const
     {
-        return category.empty() == false && ShopInternal::containsID( _listRefusedCategory, category );
+        return category.empty() == false && VectorUtil::contains( _listRefusedCategory, category );
     }
 
     const utf8* toString( ShopResult result )
@@ -304,7 +295,7 @@ namespace sw
     void ShopState::refuseCategory( const hashed_string& shopID, const hashed_string& category )
     {
         ShopRuntime* pRuntime = findRuntime( shopID );
-        if ( pRuntime != nullptr && category.empty() == false && ShopInternal::containsID( pRuntime->_listExtraRefused, category ) == false )
+        if ( pRuntime != nullptr && category.empty() == false && VectorUtil::contains( pRuntime->_listExtraRefused, category ) == false )
             pRuntime->_listExtraRefused.push_back( category );
     }
 
@@ -541,7 +532,7 @@ namespace sw
         const ItemDef* pItem = _pItemCatalog != nullptr ? _pItemCatalog->findItem( itemID ) : nullptr;
         if ( pItem == nullptr || pItem->_category.empty() )
             return false;
-        return shop.refusesCategory( pItem->_category ) || ShopInternal::containsID( runtime._listExtraRefused, pItem->_category );
+        return shop.refusesCategory( pItem->_category ) || VectorUtil::contains( runtime._listExtraRefused, pItem->_category );
     }
 
     void ShopState::writeState( Archive& outArchive ) const

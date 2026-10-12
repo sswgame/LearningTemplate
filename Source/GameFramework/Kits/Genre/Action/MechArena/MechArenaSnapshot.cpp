@@ -26,18 +26,12 @@ namespace sw
 
             static void writePosition( BitWriter& outWriter, const float3& position, float32 halfSize, float32 ceiling )
             {
-                outWriter.writeQuantizedFloat( position._x, -halfSize, halfSize, kPositionStep );
-                outWriter.writeQuantizedFloat( position._y, 0.0f, ceiling, kPositionStep );
-                outWriter.writeQuantizedFloat( position._z, -halfSize, halfSize, kPositionStep );
+                outWriter.writeQuantizedFloat3( position, float3( -halfSize, 0.0f, -halfSize ), float3( halfSize, ceiling, halfSize ), kPositionStep );
             }
 
             static float3 readPosition( BitReader& reader, float32 halfSize, float32 ceiling )
             {
-                float3 position;
-                position._x = reader.readQuantizedFloat( -halfSize, halfSize, kPositionStep );
-                position._y = reader.readQuantizedFloat( 0.0f, ceiling, kPositionStep );
-                position._z = reader.readQuantizedFloat( -halfSize, halfSize, kPositionStep );
-                return position;
+                return reader.readQuantizedFloat3( float3( -halfSize, 0.0f, -halfSize ), float3( halfSize, ceiling, halfSize ), kPositionStep );
             }
         };
     } // namespace

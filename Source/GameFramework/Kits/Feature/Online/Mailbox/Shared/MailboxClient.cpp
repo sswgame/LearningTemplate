@@ -4,16 +4,16 @@
 
 #include "Core/Network/BitStream.h"
 
+#include "GameFramework/Base/Online/Service/OnlineReplyUtil.h"
+
 namespace sw
 {
     MailboxClient::MailboxClient()
-        : _mapClientIDToCall{}
+        : _callTable{}
         , _listMail{}
-        , _sendingCall{}
         , _pClient{ nullptr }
         , _nextRequestID{ 1 }
         , _revision{ 0 }
-        , _bSending{ SW_FALSE }
     {
     }
 
@@ -71,8 +71,8 @@ namespace sw
 
     uint64 MailboxClient::send( uint16 method, const MailboxRequest& request, const NetIdempotencyKey& key, ReplyDelegate onReply )
     {
-        const uint64 requestID = _nextRequestID++;
-        _sendingCall           = PendingCall{ onReply, request._mailKey, key, requestID, method, static_cast<uint8>( method == MailboxMethod::kList && request._cursor.empty() ? SW_TRUE : SW_FALSE ) };
+        const uint64      requestID = _nextRequestID++;
+        const PendingCall pendingCall{ onReply, request._mailKey, key, requestID, method, static_cast<uint8>( method == MailboxMethod::kList && request._cursor.empty() ? SW_TRUE : SW_FALSE ) };
         if ( _pClient == nullptr )
         {
             MailboxClientReply reply;
@@ -81,7 +81,6 @@ namespace sw
             reply._idempotencyKey = key;
             reply._errorCode      = OnlineError::kUnavailable;
             reply._reply._result  = MailboxResult::Unavailable;
-            _sendingCall          = PendingCall{};
             if ( onReply.isBound() )
                 onReply( reply );
             return requestID;
@@ -90,55 +89,22 @@ namespace sw
         MailboxProtocol::writeRequest( body, request );
         NetRequestOptions options;
         options._idempotencyKey = key;
-        _bSending               = SW_TRUE;
-        const uint64 clientID   = _pClient->sendRequest( method, body, options, OnlineResponseDelegate::create<&MailboxClient::onResponse>( this ) );
-        _bSending               = SW_FALSE;
-        if ( _sendingCall._requestID != 0 )
-            _mapClientIDToCall[clientID] = _sendingCall;
-        _sendingCall = PendingCall{};
+        (void)_callTable.send( *_pClient, method, body, options, OnlineResponseDelegate::create<&MailboxClient::onResponse>( this ), pendingCall ); // 응답은 pendingCall._requestID 로 알린다
         return requestID;
     }
 
     void MailboxClient::onResponse( const OnlineResponse& response )
     {
         PendingCall call;
-        const auto  callIt = _mapClientIDToCall.find( response._requestID );
-        if ( callIt != _mapClientIDToCall.end() )
-        {
-            call = callIt->second;
-            _mapClientIDToCall.erase( callIt );
-        }
-        else if ( _bSending == SW_TRUE && _sendingCall._requestID != 0 )
-        {
-            call                    = _sendingCall;
-            _sendingCall._requestID = 0;
-        }
-        else
-        {
+        if ( _callTable.take( response._requestID, call ) == false )
             return;
-        }
         MailboxClientReply reply;
         reply._requestID      = call._requestID;
         reply._method         = call._method;
         reply._idempotencyKey = call._key;
         reply._errorCode      = response._errorCode;
-        if ( response.isOk() == false )
-        {
-            reply._reply._result = MailboxProtocol::fromErrorCode( response._errorCode );
-        }
-        else
-        {
-            BitReader body( response._pBody, response._bodySize );
-            if ( MailboxProtocol::readReply( body, reply._reply ) == false )
-            {
-                reply._reply         = MailboxReply{};
-                reply._reply._result = MailboxResult::Unavailable;
-            }
-            else if ( reply._reply._result == MailboxResult::Ok )
-            {
-                applyToCache( call, reply._reply );
-            }
-        }
+        if ( OnlineReplyUtil::readResponse<MailboxProtocol>( response, reply._reply ) && reply._reply._result == MailboxResult::Ok )
+            applyToCache( call, reply._reply );
         if ( call._onReply.isBound() )
             call._onReply( reply );
     }

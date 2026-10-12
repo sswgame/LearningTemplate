@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionStageRun.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -76,7 +77,7 @@ namespace sw
 
     bool ActionStageRun::collectSecret( const hashed_string& secretID )
     {
-        if ( _state != ActionStageState::Playing || contains( _pStage->_listSecret, secretID ) == false || isSecretFound( secretID ) )
+        if ( _state != ActionStageState::Playing || VectorUtil::contains( _pStage->_listSecret, secretID ) == false || isSecretFound( secretID ) )
             return false;
         _listSecretPending.push_back( secretID );
         return true;
@@ -148,7 +149,7 @@ namespace sw
         return result;
     }
 
-    bool ActionStageRun::isSecretFound( const hashed_string& secretID ) const { return contains( _listSecretCommitted, secretID ) || contains( _listSecretPending, secretID ); }
+    bool ActionStageRun::isSecretFound( const hashed_string& secretID ) const { return VectorUtil::contains( _listSecretCommitted, secretID ) || VectorUtil::contains( _listSecretPending, secretID ); }
 
     void ActionStageRun::commitSecrets()
     {
@@ -157,16 +158,6 @@ namespace sw
             _listSecretCommitted.push_back( secretID );
         }
         _listSecretPending.clear();
-    }
-
-    bool ActionStageRun::contains( const vector<hashed_string>& listID, const hashed_string& id )
-    {
-        for ( const hashed_string& entry : listID )
-        {
-            if ( entry == id )
-                return true;
-        }
-        return false;
     }
 
     void ActionStageRun::writeState( Archive& outArchive ) const
@@ -224,7 +215,7 @@ namespace sw
             listSecret.assign( secretCount, hashed_string{} );
             for ( hashed_string& secretID : listSecret )
             {
-                const bool bSecretValid = StateArchiveUtil::readName( archive, secretID ) && restored._pStage != nullptr && contains( restored._pStage->_listSecret, secretID );
+                const bool bSecretValid = StateArchiveUtil::readName( archive, secretID ) && restored._pStage != nullptr && VectorUtil::contains( restored._pStage->_listSecret, secretID );
                 if ( bSecretValid == false )
                     return false;
             }

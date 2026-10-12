@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroMapState.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
@@ -47,7 +49,7 @@ namespace sw
         return MetroMapPurchase::Bought;
     }
 
-    bool MetroMapState::hasRegionMap( const hashed_string& region ) const { return contains( _listRegionMap, region ); }
+    bool MetroMapState::hasRegionMap( const hashed_string& region ) const { return VectorUtil::contains( _listRegionMap, region ); }
 
     bool MetroMapState::isShownOnMap( const hashed_string& areaID ) const
     {
@@ -68,7 +70,7 @@ namespace sw
         return pPickup;
     }
 
-    bool MetroMapState::isCollected( const hashed_string& pickupID ) const { return contains( _listPickup, pickupID ); }
+    bool MetroMapState::isCollected( const hashed_string& pickupID ) const { return VectorUtil::contains( _listPickup, pickupID ); }
 
     void MetroMapState::collectItemMarkers( vector<const MetroPickupDef*>& outListPickup ) const
     {
@@ -94,7 +96,7 @@ namespace sw
         return true;
     }
 
-    bool MetroMapState::isSiteActive( const hashed_string& siteID ) const { return contains( _listSite, siteID ); }
+    bool MetroMapState::isSiteActive( const hashed_string& siteID ) const { return VectorUtil::contains( _listSite, siteID ); }
 
     bool MetroMapState::canFastTravel( const hashed_string& fromSiteID, const hashed_string& toSiteID ) const
     {
@@ -179,16 +181,6 @@ namespace sw
         }
     }
 
-    bool MetroMapState::contains( const vector<hashed_string>& listID, const hashed_string& id )
-    {
-        for ( const hashed_string& entry : listID )
-        {
-            if ( entry == id )
-                return true;
-        }
-        return false;
-    }
-
     void MetroMapState::writeState( Archive& outArchive ) const
     {
         for ( const vector<hashed_string>* pListID : { &_listRegionMap, &_listSite, &_listPickup } )
@@ -228,7 +220,7 @@ namespace sw
                     bKnown = _pCatalog->findSite( id ) != nullptr;
                 else
                     bKnown = _pCatalog->findPickup( id ) != nullptr;
-                if ( bKnown == false || contains( listID, id ) )
+                if ( bKnown == false || VectorUtil::contains( listID, id ) )
                     return false;
                 listID.push_back( id );
             }

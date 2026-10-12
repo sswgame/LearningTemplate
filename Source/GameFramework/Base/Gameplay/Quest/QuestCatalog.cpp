@@ -16,12 +16,6 @@ namespace sw
     {
         struct QuestCatalogInternal
         {
-            static hashed_string readID( const XMLNode& node, const utf8* pName )
-            {
-                const utf8* pValue = node.findAttribute( pName );
-                return pValue != nullptr ? hashed_string( pValue ) : hashed_string{};
-            }
-
             static void readReward( const XMLNode& node, QuestReward& outReward )
             {
                 const XMLNode rewardNode = node.findChild( "Reward" );
@@ -67,8 +61,8 @@ namespace sw
             for ( XMLNode stageNode = questNode.findChild( "Stage" ); stageNode; stageNode = stageNode.findNextSibling( "Stage" ) )
             {
                 QuestStage stage;
-                stage._id         = QuestCatalogInternal::readID( stageNode, "id" );
-                stage._nextStage  = QuestCatalogInternal::readID( stageNode, "next" );
+                stage._id         = GameDataXML::readName( stageNode, "id" );
+                stage._nextStage  = GameDataXML::readName( stageNode, "next" );
                 const utf8* pText = stageNode.findAttribute( "text" );
                 stage._text       = pText != nullptr ? pText : "";
                 stage._timeLimit  = MathUtil::max( 0.0f, stageNode.getAttributeFloat( "time", 0.0f ) );
@@ -77,8 +71,8 @@ namespace sw
                 for ( XMLNode node = stageNode.findChild( "Objective" ); node; node = node.findNextSibling( "Objective" ) )
                 {
                     QuestObjective objective;
-                    objective._kind      = QuestCatalogInternal::readID( node, "kind" );
-                    objective._target    = QuestCatalogInternal::readID( node, "target" );
+                    objective._kind      = GameDataXML::readName( node, "kind" );
+                    objective._target    = GameDataXML::readName( node, "target" );
                     const utf8* pObjText = node.findAttribute( "text" );
                     objective._text      = pObjText != nullptr ? pObjText : "";
                     objective._count     = MathUtil::max( 1, node.getAttributeInt( "count", 1 ) );
@@ -87,7 +81,7 @@ namespace sw
                 }
                 for ( XMLNode node = stageNode.findChild( "Branch" ); node; node = node.findNextSibling( "Branch" ) )
                 {
-                    stage._listBranch.push_back( QuestBranch{ QuestCatalogInternal::readID( node, "choice" ), QuestCatalogInternal::readID( node, "next" ) } );
+                    stage._listBranch.push_back( QuestBranch{ GameDataXML::readName( node, "choice" ), GameDataXML::readName( node, "next" ) } );
                 }
                 QuestCatalogInternal::readReward( stageNode, stage._reward );
                 if ( stage._id.empty() )

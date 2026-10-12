@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureLifeCatalog.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -22,24 +23,6 @@ namespace sw
                 hashed_string _object{};
                 utf8          _symbol{ 0 };
             };
-
-            static bool contains( const vector<hashed_string>& listID, const hashed_string& id )
-            {
-                for ( const hashed_string& entry : listID )
-                {
-                    if ( entry == id )
-                        return true;
-                }
-                return false;
-            }
-
-            /** @brief "a,b c" 목록을 id 목록으로 읽습니다. */
-            static void parseIDList( string_view text, vector<hashed_string>& outListID )
-            {
-                outListID.clear();
-                GameDataXML::forEachToken( text, ",;| ", [&]( string_view token )
-                { outListID.push_back( hashed_string( token ) ); } );
-            }
 
             /** @brief 오브젝트 이름을 반환합니다. `empty` 는 빈 셀(빈 id)입니다. */
             static hashed_string parseObject( string_view text )
@@ -138,15 +121,15 @@ namespace sw
         return nullptr;
     }
 
-    bool CreatureSpeciesDef::likesHabitat( const hashed_string& habitatID ) const { return CreatureLifeCatalogInternal::contains( _listHabitat, habitatID ); }
+    bool CreatureSpeciesDef::likesHabitat( const hashed_string& habitatID ) const { return VectorUtil::contains( _listHabitat, habitatID ); }
 
-    bool CreatureSpeciesDef::likesFood( const hashed_string& itemID ) const { return CreatureLifeCatalogInternal::contains( _listFood, itemID ); }
+    bool CreatureSpeciesDef::likesFood( const hashed_string& itemID ) const { return VectorUtil::contains( _listFood, itemID ); }
 
-    bool CreatureSpeciesDef::likesGift( const hashed_string& itemID ) const { return CreatureLifeCatalogInternal::contains( _listGift, itemID ); }
+    bool CreatureSpeciesDef::likesGift( const hashed_string& itemID ) const { return VectorUtil::contains( _listGift, itemID ); }
 
-    bool CreatureSpeciesDef::hasAbility( const hashed_string& abilityID ) const { return CreatureLifeCatalogInternal::contains( _listAbility, abilityID ); }
+    bool CreatureSpeciesDef::hasAbility( const hashed_string& abilityID ) const { return VectorUtil::contains( _listAbility, abilityID ); }
 
-    bool CreatureSpeciesDef::offersRequest( const hashed_string& questID ) const { return CreatureLifeCatalogInternal::contains( _listRequest, questID ); }
+    bool CreatureSpeciesDef::offersRequest( const hashed_string& questID ) const { return VectorUtil::contains( _listRequest, questID ); }
 
     bool CreatureSpeciesDef::comesIn( DayPhase phase, const hashed_string& weatherID ) const
     {
@@ -251,12 +234,12 @@ namespace sw
             const utf8* pName = node.findAttribute( "name" );
             species._name     = pName != nullptr ? pName : pID;
             species._chance   = MathUtil::clamp( node.getAttributeFloat( "chance", species._chance ), 0.0f, 1.0f );
-            CreatureLifeCatalogInternal::parseIDList( node.getAttributeText( "habitats" ), species._listHabitat );
-            CreatureLifeCatalogInternal::parseIDList( node.getAttributeText( "foods" ), species._listFood );
-            CreatureLifeCatalogInternal::parseIDList( node.getAttributeText( "gifts" ), species._listGift );
+            GameDataXML::parseNameList( node.getAttributeText( "habitats" ), ",;| ", species._listHabitat );
+            GameDataXML::parseNameList( node.getAttributeText( "foods" ), ",;| ", species._listFood );
+            GameDataXML::parseNameList( node.getAttributeText( "gifts" ), ",;| ", species._listGift );
             ScheduleCondition::parseNameList( node.getAttributeText( "weathers" ), species._visitCondition._listWeather );
-            CreatureLifeCatalogInternal::parseIDList( node.getAttributeText( "abilities" ), species._listAbility );
-            CreatureLifeCatalogInternal::parseIDList( node.getAttributeText( "requests" ), species._listRequest );
+            GameDataXML::parseNameList( node.getAttributeText( "abilities" ), ",;| ", species._listAbility );
+            GameDataXML::parseNameList( node.getAttributeText( "requests" ), ",;| ", species._listRequest );
             species._visitCondition._phaseMask = ScheduleCondition::parsePhaseMask( node.getAttributeText( "phases" ), sourceName, pID );
             if ( species._listHabitat.empty() )
                 SW_LOG_WARNING( "%#: species '%#' likes no habitat - it will never come", sourceName, pID );

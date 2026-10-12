@@ -33,12 +33,6 @@ namespace sw
                 } );
             }
 
-            static void parseNameList( string_view text, vector<hashed_string>& outListName )
-            {
-                GameDataXML::forEachToken( text, ",; \t", [&]( string_view token )
-                { outListName.push_back( hashed_string( token ) ); } );
-            }
-
             [[nodiscard]] static bool parseExpGroup( string_view text, MonsterExpGroup& outGroup )
             {
                 if ( StringUtil::equals( text, string_view( "Fast" ), true ) )
@@ -261,7 +255,7 @@ namespace sw
                     SW_LOG_WARNING( "%#: StatusImmunity with an unknown status '%#' - skipped", sourceName, node.getAttributeText( "status" ) );
                     continue;
                 }
-                MonsterCollectorCatalogInternal::parseNameList( node.getAttributeText( "types" ), immunity._listType );
+                GameDataXML::appendNameList( node.getAttributeText( "types" ), ",; \t", immunity._listType );
                 _listStatusImmunity.push_back( immunity );
                 ++loadedCount;
                 continue;
@@ -310,7 +304,7 @@ namespace sw
                 def._weakenedType = hashed_string( node.getAttributeText( "weaken" ) );
                 def._chipDivisor  = MathUtil::max( 0, node.getAttributeInt( "chip", 0 ) );
                 def._turns        = node.getAttributeInt( "turns", def._turns );
-                MonsterCollectorCatalogInternal::parseNameList( node.getAttributeText( "immune" ), def._listChipImmuneType );
+                GameDataXML::appendNameList( node.getAttributeText( "immune" ), ",; \t", def._listChipImmuneType );
                 (void)_weatherCatalog.add( def );
             }
             else
@@ -397,7 +391,7 @@ namespace sw
         def._id           = hashed_string( pID );
         const utf8* pName = node.findAttribute( "name" );
         def._name         = pName != nullptr ? pName : pID;
-        MonsterCollectorCatalogInternal::parseNameList( node.getAttributeText( "types" ), def._listType );
+        GameDataXML::appendNameList( node.getAttributeText( "types" ), ",; \t", def._listType );
         if ( def._listType.empty() || def._listType.size() > 2 )
             SW_LOG_WARNING( "%#: species '%#' has %# types - expected 1 or 2", sourceName, pID, static_cast<uint32>( def._listType.size() ) );
         MonsterCollectorCatalogInternal::parseSixInts( node.getAttributeText( "stats" ), def._arrBaseStat, 1 );
@@ -451,7 +445,7 @@ namespace sw
         def._area = hashed_string( node.getAttributeText( "area" ) );
         if ( def._area.empty() )
             def._area = def._id;
-        MonsterCollectorCatalogInternal::parseNameList( node.getAttributeText( "time" ), def._listTime );
+        GameDataXML::appendNameList( node.getAttributeText( "time" ), ",; \t", def._listTime );
         for ( XMLNode child = node.findChild( "Slot" ); child; child = child.findNextSibling( "Slot" ) )
         {
             MonsterEncounterSlot slot;

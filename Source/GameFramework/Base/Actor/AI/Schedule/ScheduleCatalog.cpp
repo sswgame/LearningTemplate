@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCatalog.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -77,16 +78,6 @@ namespace sw
                 SW_LOG_WARNING( "%#: '%#' has an invalid %# time '%#' (expected H:MM in 0:00..24:00)", sourceName, ownerName, pName, pText );
                 inoutbValid = false;
                 return fallback;
-            }
-
-            static bool contains( const vector<hashed_string>& listName, const hashed_string& name )
-            {
-                for ( const hashed_string& entry : listName )
-                {
-                    if ( entry == name )
-                        return true;
-                }
-                return false;
             }
 
             static void parseTagList( string_view text, vector<TagID>& outListTag )
@@ -529,7 +520,7 @@ namespace sw
                     break;
                 for ( const ScheduleRoutineDef& routine : pArchetype->_listRoutine )
                 {
-                    if ( ScheduleCatalogInternal::contains( listRoutineID, routine._id ) )
+                    if ( VectorUtil::contains( listRoutineID, routine._id ) )
                         continue;
                     listRoutineID.push_back( routine._id );
                     npc._listRoutine.push_back( routine );
@@ -544,7 +535,7 @@ namespace sw
                     if ( block._appointment.empty() || appointmentIndex < 0 )
                         continue;
                     vector<hashed_string>& listAttendee = listAttendeePerAppointment[static_cast<size_t>( appointmentIndex )];
-                    if ( ScheduleCatalogInternal::contains( listAttendee, npc._id ) == false )
+                    if ( VectorUtil::contains( listAttendee, npc._id ) == false )
                         listAttendee.push_back( npc._id );
                 }
             }

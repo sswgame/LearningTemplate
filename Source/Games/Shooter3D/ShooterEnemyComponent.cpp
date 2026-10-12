@@ -26,6 +26,14 @@ namespace sw
         {
             static constexpr const utf8* kAttackButton = "Attack"; ///< 폰 스키마의 휘두르기 버튼(AI 조종자가 누른다)
             static constexpr float32     kStopFraction = 0.85f;    ///< 손 닿는 거리의 이 비율 — 내비메시 에이전트가 멈추는 거리
+
+            /** @brief 최대 체력만 정한 체력 설정을 만듭니다. 실드 · 회복 · 기절은 기본값(꺼짐)입니다. */
+            static VitalitySettings makeVitalitySettings( float32 maxHealth )
+            {
+                VitalitySettings settings;
+                settings._maxHealth = maxHealth;
+                return settings;
+            }
         };
     } // namespace
 } // namespace sw
@@ -49,8 +57,7 @@ namespace sw
         , _walkClipSpeed{ 0.3f }
         , _position{ 0.0f, 0.0f, 0.0f }
         , _yaw{ 0.0f }
-        , _health{ 30.0f }
-        , _maxHealth{ 30.0f }
+        , _vitality{ ShooterEnemyComponentInternal::makeVitalitySettings( 30.0f ) }
         , _speed{ 3.0f }
         , _phaseTime{ 0.0f }
         , _attackCooldown{}
@@ -66,12 +73,11 @@ namespace sw
 
     void ShooterEnemyComponent::launch( GameObjectHandle director, const float3& position, float32 yaw, float32 health, float32 speed )
     {
-        _director  = director;
-        _position  = position;
-        _yaw       = yaw;
-        _health    = health;
-        _maxHealth = health;
-        _speed     = speed;
+        _director = director;
+        _position = position;
+        _yaw      = yaw;
+        _vitality.initialize( ShooterEnemyComponentInternal::makeVitalitySettings( health ) );
+        _speed = speed;
         _attackCooldown.start( _attackInterval * 0.5f );
         _bLaunched = SW_TRUE;
         enterPhase( ShooterEnemyPhase::Rising );
@@ -110,10 +116,11 @@ namespace sw
     {
         if ( isAlive() == false )
             return;
-        _health -= amount;
+        (void)_vitality.applyDamage( amount ); // 결과는 아래 isAlive 로 읽는다
+        _vitality.discardEvents();             // 피해 알림은 notifyHealthChanged 가 맡는다
         // 체력 신호 — HP 바가 보이기 · 숨기기를 스스로 정한다(프리팹의 `_bShowWhenHurt` · `_bHideWhenDead`). 쓰러짐은 읽기(`isDead`)가 정한다.
         notifyHealthChanged( false );
-        if ( _health <= 0.0f )
+        if ( _vitality.isAlive() == false )
         {
             enterPhase( ShooterEnemyPhase::Dying );
             return;
@@ -129,8 +136,8 @@ namespace sw
     HealthReading ShooterEnemyComponent::getHealthReading() const
     {
         HealthReading reading;
-        reading._health    = _health;
-        reading._maxHealth = _maxHealth;
+        reading._health    = _vitality.getHealth();
+        reading._maxHealth = _vitality.getSettings()._maxHealth;
         reading._bDead     = isDead() ? SW_TRUE : SW_FALSE;
         return reading;
     }

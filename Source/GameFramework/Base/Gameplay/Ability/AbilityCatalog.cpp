@@ -30,19 +30,10 @@ namespace sw
                 }
             }
 
-            /** @brief 속성 @p pName 을 이름으로 읽습니다. 속성이 없거나 비어 있으면 빈 이름입니다. */
-            static hashed_string readName( const XMLNode& node, const utf8* pName )
-            {
-                const utf8* pText = node.findAttribute( pName );
-                if ( StringUtil::isNullOrEmpty( pText ) )
-                    return hashed_string{};
-                return hashed_string( pText );
-            }
-
             /** @brief `<Modifier>` 하나를 읽습니다. 어트리뷰트가 없거나 열거형 이름을 알 수 없으면 경고를 남기고 false 를 반환합니다. */
             [[nodiscard]] static bool readModifier( const XMLNode& node, const utf8* pEffectID, string_view sourceName, GameplayEffectModifier& outModifier )
             {
-                outModifier._attribute = readName( node, "attribute" );
+                outModifier._attribute = GameDataXML::readName( node, "attribute" );
                 if ( outModifier._attribute.empty() )
                 {
                     SW_LOG_WARNING( "%#: effect '%#' has a <Modifier> without an attribute - skipped", sourceName, pEffectID );
@@ -65,11 +56,11 @@ namespace sw
 
                 outModifier._scalableMagnitude._baseValue = node.getAttributeFloat( "magnitude", 0.0f );
                 outModifier._scalableMagnitude._perLevel  = node.getAttributeFloat( "perLevel", 0.0f );
-                outModifier._backingAttribute             = readName( node, "backing" );
+                outModifier._backingAttribute             = GameDataXML::readName( node, "backing" );
                 outModifier._coefficient                  = node.getAttributeFloat( "coefficient", 1.0f );
                 outModifier._preMultiplyAdditive          = node.getAttributeFloat( "pre", 0.0f );
                 outModifier._postMultiplyAdditive         = node.getAttributeFloat( "post", 0.0f );
-                outModifier._setByCallerName              = readName( node, "name" );
+                outModifier._setByCallerName              = GameDataXML::readName( node, "name" );
 
                 const utf8* pFrom        = node.findAttribute( "from" );
                 const bool  bFromTarget  = pFrom != nullptr && StringUtil::equals( pFrom, "Target", true );
@@ -328,7 +319,7 @@ namespace sw
 
         for ( XMLNode executionNode = node.findChild( "Execution" ); executionNode; executionNode = executionNode.findNextSibling( "Execution" ) )
         {
-            const hashed_string className   = AbilityCatalogInternal::readName( executionNode, "class" );
+            const hashed_string className   = GameDataXML::readName( executionNode, "class" );
             const auto          factoryIter = _mapExecutionFactory.find( className );
             if ( factoryIter == _mapExecutionFactory.end() )
             {
@@ -358,7 +349,7 @@ namespace sw
             return false;
         }
         outDef._id        = hashed_string( pID );
-        outDef._className = AbilityCatalogInternal::readName( node, "class" );
+        outDef._className = GameDataXML::readName( node, "class" );
         if ( outDef._className.empty() )
         {
             SW_LOG_WARNING( "%#: ability '%#' has no class - skipped", sourceName, pID );
@@ -383,7 +374,7 @@ namespace sw
 
         for ( XMLNode paramNode = node.findChild( "Param" ); paramNode; paramNode = paramNode.findNextSibling( "Param" ) )
         {
-            const hashed_string paramName = AbilityCatalogInternal::readName( paramNode, "name" );
+            const hashed_string paramName = GameDataXML::readName( paramNode, "name" );
             if ( paramName.empty() )
                 continue;
             const utf8* pText = paramNode.findAttribute( "text" );
@@ -408,14 +399,14 @@ namespace sw
         for ( XMLNode setNode = node.findChild( "AttributeSet" ); setNode; setNode = setNode.findNextSibling( "AttributeSet" ) )
         {
             AbilitySetAttributeSetEntry setEntry;
-            setEntry._className = AbilityCatalogInternal::readName( setNode, "class" );
+            setEntry._className = GameDataXML::readName( setNode, "class" );
             if ( setEntry._className.empty() )
                 setEntry._className = hashed_string( "Generic" );
 
             for ( XMLNode attributeNode = setNode.findChild( "Attribute" ); attributeNode; attributeNode = attributeNode.findNextSibling( "Attribute" ) )
             {
                 AbilitySetAttributeEntry attributeEntry;
-                attributeEntry._attribute = AbilityCatalogInternal::readName( attributeNode, "name" );
+                attributeEntry._attribute = GameDataXML::readName( attributeNode, "name" );
                 if ( attributeEntry._attribute.empty() )
                     continue;
                 attributeEntry._baseValue = attributeNode.getAttributeFloat( "base", 0.0f );
@@ -431,7 +422,7 @@ namespace sw
         for ( XMLNode abilityNode = node.findChild( "Ability" ); abilityNode; abilityNode = abilityNode.findNextSibling( "Ability" ) )
         {
             AbilitySetAbilityEntry abilityEntry;
-            abilityEntry._abilityID = AbilityCatalogInternal::readName( abilityNode, "id" );
+            abilityEntry._abilityID = GameDataXML::readName( abilityNode, "id" );
             if ( abilityEntry._abilityID.empty() )
                 continue;
             abilityEntry._level   = abilityNode.getAttributeInt( "level", 1 );
@@ -442,7 +433,7 @@ namespace sw
         for ( XMLNode effectNode = node.findChild( "Effect" ); effectNode; effectNode = effectNode.findNextSibling( "Effect" ) )
         {
             AbilitySetEffectEntry effectEntry;
-            effectEntry._effectID = AbilityCatalogInternal::readName( effectNode, "id" );
+            effectEntry._effectID = GameDataXML::readName( effectNode, "id" );
             if ( effectEntry._effectID.empty() )
                 continue;
             effectEntry._level = effectNode.getAttributeInt( "level", 1 );

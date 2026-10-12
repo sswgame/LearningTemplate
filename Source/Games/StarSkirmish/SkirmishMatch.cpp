@@ -6,6 +6,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
+
 namespace sw
 {
     SW_LOG_CALLER( "SkirmishMatch" );
@@ -180,7 +182,7 @@ namespace sw
                 const bool bPlateau = ( x >= 20 && x <= 23 && y >= 38 && y <= 41 ) || ( x >= kMapSize - 24 && x <= kMapSize - 21 && y >= kMapSize - 42 && y <= kMapSize - 39 );
                 if ( ( bRidge && bRamp == false ) || bPlateau )
                 {
-                    _listCliff[static_cast<size_t>( y * kMapSize + x )] = SW_TRUE;
+                    _listCliff[static_cast<size_t>( GridTopology( kMapSize, kMapSize ).toIndex( x, y ) )] = SW_TRUE;
                     _world.setTerrainBlocked( x, y, true );
                 }
             }
@@ -191,7 +193,7 @@ namespace sw
     {
         if ( x < 0 || y < 0 || x >= kMapSize || y >= kMapSize )
             return false;
-        return _listCliff[static_cast<size_t>( y * kMapSize + x )] != SW_FALSE;
+        return _listCliff[static_cast<size_t>( GridTopology( kMapSize, kMapSize ).toIndex( x, y ) )] != SW_FALSE;
     }
 
     RTSUnitID SkirmishMatch::spawnAt( const utf8* pDefID, int32 owner, int32 x, int32 y, bool bMirror )

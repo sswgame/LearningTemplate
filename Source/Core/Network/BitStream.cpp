@@ -3,6 +3,7 @@
 #include "Core/Network/BitStream.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/VectorMath.h"
 
 #include <cstring>
 
@@ -86,6 +87,13 @@ namespace sw
         const float32 clamped  = MathUtil::clamp( value, minValue, maxValue );
         const uint32  index    = MathUtil::min( maxIndex, static_cast<uint32>( ( clamped - minValue ) / step + 0.5f ) );
         writeBits( index, BitMath::computeBitsRequired( 0, maxIndex ) );
+    }
+
+    void BitWriter::writeQuantizedFloat3( const float3& value, const float3& minValue, const float3& maxValue, float32 resolution )
+    {
+        writeQuantizedFloat( value._x, minValue._x, maxValue._x, resolution );
+        writeQuantizedFloat( value._y, minValue._y, maxValue._y, resolution );
+        writeQuantizedFloat( value._z, minValue._z, maxValue._z, resolution );
     }
 
     void BitWriter::writeVarUint( uint64 value )
@@ -201,6 +209,15 @@ namespace sw
         const uint32  maxIndex = static_cast<uint32>( ( maxValue - minValue ) / step + 0.5f );
         const uint32  index    = MathUtil::min( maxIndex, readBits( BitMath::computeBitsRequired( 0, maxIndex ) ) );
         return MathUtil::min( maxValue, minValue + static_cast<float32>( index ) * step );
+    }
+
+    float3 BitReader::readQuantizedFloat3( const float3& minValue, const float3& maxValue, float32 resolution )
+    {
+        float3 value;
+        value._x = readQuantizedFloat( minValue._x, maxValue._x, resolution );
+        value._y = readQuantizedFloat( minValue._y, maxValue._y, resolution );
+        value._z = readQuantizedFloat( minValue._z, maxValue._z, resolution );
+        return value;
     }
 
     uint64 BitReader::readVarUint()

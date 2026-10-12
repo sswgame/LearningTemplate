@@ -100,8 +100,7 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
-        void        commitSecrets();
-        static bool contains( const vector<hashed_string>& listID, const hashed_string& id );
+        void commitSecrets();
 
         const ActionPlatformerCatalog* _pCatalog;
         const ActionStageDef*          _pStage;
