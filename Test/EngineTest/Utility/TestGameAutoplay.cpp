@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/String/RegistrationList.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Utility/GameAutoplay.h"
@@ -60,4 +61,31 @@ SW_TEST_CASE( GameAutoplayTest, FakeGameRegistersAndTheSwitchFlipsItsVariable )
     SW_EXPECT_FALSE( GameAutoplay::isOn() );
     variables.unregisterVariablesByModule( "GameAutoplayTest" );
     s_fakeGameAutoPlay = 0;
+}
+
+/**
+ * @brief [GameAutoplayTest] 핫 리로드의 교체 이미지가 같은 이름(전역 변수 이름)을 다시 올려도, 옛 이미지가 내려간 뒤 새 등록이 남는다
+ * @details 교체 이미지의 정적 등록자는 옛 이미지가 아직 올라 있는 동안 돈다(`RegistrationReloadScope`). 리로드 밖의 같은 이름은 거절한다.
+ */
+SW_TEST_CASE( GameAutoplayTest, ReloadImageReplacesTheSameNameAndSurvivesTheOldImageUnload )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "duplicate autoplay registration is reported" );
+    const GameAutoplayRegistration oldImage{ "FakeGame", "old image", "gv_fakeGameAutoPlay", &s_fakeGameAutoPlay };
+    const GameAutoplayRegistration newImage{ "FakeGame", "new image", "gv_fakeGameAutoPlay", &s_fakeGameAutoPlay };
+    const GameAutoplayRegistration stranger{ "FakeGame", "stranger", "gv_fakeGameAutoPlay", &s_fakeGameAutoPlay };
+
+    GameAutoplay::registerAutoplay( &oldImage );
+    GameAutoplay::registerAutoplay( &stranger ); // 리로드 밖의 같은 이름은 거절한다(오류 로그)
+    SW_EXPECT_TRUE( GameAutoplay::findActive() == &oldImage );
+    {
+        RegistrationReloadScope scope;
+        GameAutoplay::registerAutoplay( &newImage );
+    }
+    SW_EXPECT_TRUE( GameAutoplay::findActive() == &newImage );
+
+    GameAutoplay::unregisterAutoplay( &oldImage ); // 옛 이미지가 내려간다
+    SW_EXPECT_TRUE_MSG( GameAutoplay::findActive() == &newImage, "the reloaded game's autoplay is lost when the old image unloads" );
+
+    GameAutoplay::unregisterAutoplay( &newImage );
+    SW_EXPECT_TRUE( GameAutoplay::findActive() == nullptr );
 }
