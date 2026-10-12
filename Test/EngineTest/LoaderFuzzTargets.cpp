@@ -5,6 +5,7 @@
 #include "Core/Compression/CompressionStream.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/KeyValueFile.h"
 #include "Core/Process/Process.h"
 
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
@@ -30,7 +31,6 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/TileMap/TileMapXML.h"
 #include "Engine/UserSettings/UserSettingsSchema.h"
-#include "Engine/Utility/KeyValueFile.h"
 
 #include "EngineTest/ResourcePakTestUtil.h"
 

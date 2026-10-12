@@ -1,11 +1,9 @@
 #include "pch.h"
 
-#include "Engine/Utility/KeyValueFile.h"
+#include "Core/File/KeyValueFile.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-
-#include "Engine/Resource/ResourceIO.h"
 
 namespace sw
 {
@@ -46,31 +44,6 @@ namespace sw
         if ( FileUtil::readTextFile( absPath, text ) == false )
             return false;
         return parse( text, outMap, opt );
-    }
-
-    bool KeyValueFile::loadResource( string_view relativePath, KeyValueMap& outMap, KeyValueParseOptions opt,
-                                     string* pOutAbsPath )
-    {
-        string text;
-        string absPath;
-        if ( ResourceIO::readTextResource( relativePath, text, &absPath ) == false )
-            return false;
-        if ( pOutAbsPath != nullptr )
-            *pOutAbsPath = std::move( absPath );
-        return parse( text, outMap, opt );
-    }
-
-    bool KeyValueFile::loadPath( string_view path, KeyValueMap& outMap, KeyValueParseOptions opt, string* pOutAbsPath )
-    {
-        if ( path.empty() )
-            return false;
-        if ( FileUtil::exists( path ) )
-        {
-            if ( pOutAbsPath != nullptr )
-                *pOutAbsPath = string{ path };
-            return loadFile( path, outMap, opt );
-        }
-        return loadResource( path, outMap, opt, pOutAbsPath );
     }
 
     const utf8* KeyValueFile::get( const KeyValueMap& mapData, string_view key, const utf8* pFallback )

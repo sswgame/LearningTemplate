@@ -164,7 +164,7 @@
 | `RenderResourceXml` | `Serialization/Format/ReflectedXMLFile` |
 | `CameraBlendCurve` · `CameraBlendKey` · `CameraBlendSpec`(GameFramework/Base/Actor/Camera) | `BlendCurve` · `BlendCurveKey` · `BlendCurveDef`(`Engine/Animation/BlendCurve.h`) |
 | `Engine/Character/<평면 60 개>` | `Character/{Fit,Socket,Hit,Pose,AnimationNotify}/`, 워핑 둘은 `Object/Animation/`(2026-10-05) |
-| `Utility/Debug/*` · `Utility/Format/KeyValueFile` | `Utility/Profiling/*`(`DebugOverlayState` · `KeyValueFile` 은 `Utility/`) |
+| `Utility/Debug/*` · `Utility/Format/KeyValueFile` | `Utility/Profiling/*`(`DebugOverlayState` 는 `Utility/`, `KeyValueFile` 은 `Core/File/`) |
 | `Graphics/Renderer/Debug/` | `Graphics/Debug/` |
 | 엔진 루트 `LocalizationTools` · `EngineDevCommands.cpp` | `DevTools/` |
 | `Engine/DevTools/`(`LocalizationTools` · `DevConsoleController` · `EngineDevCommands.cpp`) | `Editor/Common/Localization/` · `Engine/Input/` · 명령마다 소유 코드 옆(`GameTimeScale.cpp` · `GameAutoplay.cpp` · `DebugDrawQueue.cpp` · `Scene/SceneDevCommands.cpp`)(2026-10-10) |

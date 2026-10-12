@@ -355,6 +355,9 @@ Debug 기동은 CRT 누수 보고도 stderr로 냅니다(`MemoryTagTest.Diagnost
 **X-macro 목록 `.xxx` 의 원본은 `Predefined/` 입니다.** 사본이 남으면 `CheckDataFileReferences.py` 가 막습니다.
 `PredefinedNameType.xxx` 의 줄 순서가 곧 intern 인덱스라 중간에 끼워 넣지 않고, 대소문자만 다른 이름도 넣지 않습니다. 게이트의 제외 폴더는 게이트마다 따로 두지 않고 `kNotOurDirNames` 를 씁니다.
 
+**`key=value` 텍스트 표(세이브 슬롯, 에디터 ini, 에셋 .meta)는 `File/KeyValueFile.h` 하나가 읽고 씁니다.** 뒤에 적힌 같은 키가 이깁니다.
+Core 는 리소스 경로를 모르므로 리소스 상대 경로는 엔진이 `ResourceIO::readTextResource` 로 읽어 `KeyValueFile::parse` 에 넘깁니다.
+
 **4글자 표식은 `FourCcUtil::make( "...." )` 하나로 만듭니다.** 파일 바이트 순서 그대로입니다. 16진수로 손으로 적으면 바이트 순서가 갈립니다.
 형식을 바꾸면 커밋된 데이터(`Test/AppTest/Golden/*.ppm.z` 압축 스트림 등)의 앞 네 바이트도 함께 고칩니다.
 
