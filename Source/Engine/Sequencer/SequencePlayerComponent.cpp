@@ -21,6 +21,7 @@ namespace sw
         , _reserved{ 0 }
         , _player{}
         , _sequenceEventMulticast{}
+        , _cameraSignalMulticast{}
     {
         setCanEverTick( true );
     }
@@ -89,11 +90,24 @@ namespace sw
 
     void SequencePlayerComponent::stop()
     {
+        // 컷이 덮던 중에 멈추면 시네마틱 끝을 알린다 — 듣는 쪽이 게임 카메라로 섞어 나온다. 멈추기 전의 프레임으로 본다.
+        const bool                   bWasPlaying  = _player.isPlaying();
+        const SequenceTrackItem*     pCoveringCut = bWasPlaying ? _player.getAsset().findCameraCut( _player.getCurrentFrame() ) : nullptr;
+        vector<SequenceCameraSignal> listSignal;
+        if ( pCoveringCut != nullptr && _cameraSignalMulticast.isBound() )
+        {
+            SequenceCameraSignal signal;
+            signal._item         = *pCoveringCut;
+            signal._blendSeconds = _player.getAsset()._cameraBlendOutSeconds;
+            signal._kind         = SequenceCameraSignalKind::CinematicEnd;
+            listSignal.push_back( signal );
+        }
         _player.stop();
         // 카메라 컷은 컷 구간이 끝나야 해제되므로, 구간 안에서 멈추면 여기서 해제한다(게임 카메라가 원래 규칙으로 돌아간다).
         GameObject* pOwner = getOwner();
         if ( pOwner != nullptr )
             SequenceTimelineUtil::releaseCameraCut( pOwner->getManager(), _player.getAsset() );
+        broadcastCameraSignals( listSignal );
     }
 
     void SequencePlayerComponent::pause()
@@ -121,6 +135,32 @@ namespace sw
         _sequenceEventMulticast.remove( handle );
     }
 
+    DelegateHandle SequencePlayerComponent::registerCameraSignal( const OnSequenceCameraSignalDelegate& delegate )
+    {
+        return _cameraSignalMulticast.add( delegate );
+    }
+
+    void SequencePlayerComponent::unregisterCameraSignal( DelegateHandle handle )
+    {
+        _cameraSignalMulticast.remove( handle );
+    }
+
+    void SequencePlayerComponent::broadcastCameraSignals( vector<SequenceCameraSignal>& inoutListSignal )
+    {
+        if ( inoutListSignal.empty() )
+            return;
+        const float32 secondsPerFrame = _framesPerSecond > 0.0f ? 1.0f / _framesPerSecond : 0.0f;
+        for ( SequenceCameraSignal& signal : inoutListSignal )
+        {
+            signal._secondsUntil    = static_cast<float32>( signal._framesUntil ) * secondsPerFrame;
+            signal._durationSeconds = static_cast<float32>( signal._item._end - signal._item._start ) * secondsPerFrame;
+        }
+        for ( const SequenceCameraSignal& signal : inoutListSignal )
+        {
+            _cameraSignalMulticast.broadcast( signal );
+        }
+    }
+
     void SequencePlayerComponent::applyTimeline()
     {
         GameObject* pOwner = getOwner();
@@ -133,6 +173,14 @@ namespace sw
         // 루프를 되감은 갱신이면 끝 구간 이벤트까지 본다(`applyPlayback`).
         vector<const SequenceTrackItem*> listCrossed;
         SequenceTimelineUtil::applyPlayback( pManager, _player, &listCrossed );
+
+        // 카메라 신호는 듣는 쪽이 있을 때만 모은다(신호도 사본이라 핸들러가 시퀀스를 바꿔도 안전하다).
+        if ( _cameraSignalMulticast.isBound() )
+        {
+            vector<SequenceCameraSignal> listSignal;
+            SequenceTimelineUtil::collectPlaybackCameraSignals( _player, listSignal );
+            broadcastCameraSignals( listSignal );
+        }
         if ( listCrossed.empty() )
             return;
 

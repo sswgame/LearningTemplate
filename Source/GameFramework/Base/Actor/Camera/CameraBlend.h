@@ -41,6 +41,11 @@ namespace sw
          * @return 나가는 쪽을 살려 두어야 하면(블렌드가 없던 때 시작한 블렌드) true — 부르는 쪽이 다음 `step` 부터 나가는 포즈를 줍니다.
          */
         bool start( const BlendCurveDef& blend );
+        /**
+         * @brief 화면이 지금 @p from 이라고 보고 새 전환을 시작합니다. 나가는 쪽은 고정입니다. 다른 카메라가 그리던 화면(시네마틱의 마지막 컷)에서 넘어올 때 씁니다.
+         * @details 컷 블렌드면 다음 `step` 이 들어오는 포즈를 그대로 낸다. 컷 신호는 내지 않는다 — 이 카메라는 그동안 화면에 없었다.
+         */
+        void startFromPose( const CameraPose& from, const BlendCurveDef& blend );
         /** @brief 시간을 흘려 이번 포즈를 냅니다. @p pLiveFrom 은 살아 있는 나가는 쪽의 이번 포즈입니다(없으면 고정한 출발점을 씁니다). */
         const CameraPose& step( float32 deltaTime, const CameraPose& incoming, const CameraPose* pLiveFrom );
 

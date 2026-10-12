@@ -7,15 +7,46 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Sequencer/SequenceAsset.h"
+
 namespace sw
 {
     struct SequenceKeyTrack;
-    struct SequenceTrackItem;
 
     class GameObjectManager;
     class SequenceAsset;
     class SequencePlayer;
 
+    /** @brief 시퀀스가 카메라 쪽에 내는 신호의 종류입니다. 듣는 쪽(게임 프레임워크의 카메라)이 블렌드 · 흔들림 · 대기 뷰로 바꿉니다. */
+    enum class SequenceCameraSignalKind : uint8
+    {
+        CutBegin = 0,   ///< 덮는 카메라 컷이 바뀌었다 — 대상 카메라의 디렉터가 `_preset` 을 켠다
+        CinematicBegin, ///< 컷이 없던 때 첫 컷이 시작했다 — 게임 카메라 화면에서 `_blendSeconds` 동안 섞어 들어간다
+        CinematicEnd,   ///< 덮던 컷이 모두 끝났다(재생을 멈춘 때 포함) — 마지막 컷 화면에서 게임 카메라로 `_blendSeconds` 동안 섞어 나온다
+        CutPrewarm,     ///< 컷이 `_framesUntil` 프레임 뒤에 시작한다 — 그 카메라를 "곧 볼 시점(대기 뷰)" 으로 등록할 때(언리얼 preroll)
+        Shake,          ///< 카메라 흔들림 항목이 시작했다 — 대상 카메라를 구간 길이만큼 흔든다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 시퀀스 카메라 신호 하나입니다. 항목은 신호를 낸 순간의 사본이라 에셋이 바뀌어도 유효합니다.
+     * @details 프레임 단위 값만 타임라인이 채우고, 초 단위 값(`_secondsUntil`, `_durationSeconds`)은 재생 빠르기를 아는 `SequencePlayerComponent` 가 채운다.
+     */
+    struct SequenceCameraSignal
+    {
+        SequenceTrackItem        _item{};                  ///< 그 컷 · 흔들림 항목(끝 신호는 덮던 마지막 컷)
+        int32                    _framesUntil{ 0 };        ///< 대기 뷰: 컷 시작까지 남은 프레임
+        float32                  _secondsUntil{ 0.0f };    ///< 대기 뷰: 컷 시작까지 남은 시간(초)
+        float32                  _durationSeconds{ 0.0f }; ///< 흔들림: 구간 길이(초)
+        float32                  _blendSeconds{ 0.0f };    ///< 시네마틱 시작 · 끝: 섞는 시간(초). 0 이면 끊어 바꾼다
+        SequenceCameraSignalKind _kind{ SequenceCameraSignalKind::CutBegin };
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @brief 시퀀서 타임라인을 GameObject 에 반영하는 공용 도우미입니다.
      */
@@ -53,10 +84,21 @@ namespace sw
         [[nodiscard]] static bool readTrackValues( GameObjectManager* pManager, const SequenceKeyTrack& track, float32* pOutArrValue, uint32 valueCapacity );
         /** @brief 시퀀스에 카메라 컷이 있으면 컷을 풉니다(게임 카메라가 원래 규칙으로 돌아간다). 재생을 멈출 때 부릅니다. */
         static void releaseCameraCut( GameObjectManager* pManager, const SequenceAsset& asset );
+        /**
+         * @brief (@p previousFrame, @p frame] 동안의 카메라 신호를 @p outListSignal 에 **덧붙입니다**.
+         * @details 순서는 컷 바뀜, 시네마틱 시작 · 끝, 대기 뷰, 흔들림이다. 듣는 쪽은 컷의 프리셋을 먼저 켜고 그 위에 게임 화면에서 섞는다.
+         *          @p previousFrame 이 `kNoPreviousFrame` 이면 이전에 덮던 컷이 없다고 보고, 흔들림은 @p frame 에서 시작하는 것만 낸다.
+         */
+        static void collectCameraSignals( const SequenceAsset& asset, int32 previousFrame, int32 frame, vector<SequenceCameraSignal>& outListSignal );
+        /** @brief 플레이어의 이번 갱신 동안의 카메라 신호입니다. 루프를 되감았으면 되감기 전 끝 구간을 먼저 보고, 끝과 처음을 덮는 컷은 이어진 것으로 봅니다. */
+        static void collectPlaybackCameraSignals( const SequencePlayer& player, vector<SequenceCameraSignal>& outListSignal );
 
     private:
         /** @brief (@p previousFrame, @p frame] 에서 시작하는 이벤트를 @p pOutListCrossedEvent 에 **덧붙입니다**(비우지 않는다). */
         static void appendCrossedEvents( const SequenceAsset& asset, int32 previousFrame, int32 frame,
                                          vector<const SequenceTrackItem*>* pOutListCrossedEvent );
+        /** @brief 이전에 덮던 컷(@p pPreviousCut)을 알고 (@p previousFrame, @p frame] 의 카메라 신호를 덧붙입니다. */
+        static void appendCameraSignals( const SequenceAsset& asset, int32 previousFrame, int32 frame, const SequenceTrackItem* pPreviousCut,
+                                         vector<SequenceCameraSignal>& outListSignal );
     };
 } // namespace sw

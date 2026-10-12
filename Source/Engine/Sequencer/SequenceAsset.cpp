@@ -153,6 +153,9 @@ namespace sw
         _note     = root.get( "note" ).asString();
         if ( _frameMax <= _frameMin )
             _frameMax = _frameMin + 1;
+        _cameraBlendInSeconds  = MathUtil::max( 0.0f, static_cast<float32>( root.get( "cameraBlendIn" ).asFloat( 0.0 ) ) );
+        _cameraBlendOutSeconds = MathUtil::max( 0.0f, static_cast<float32>( root.get( "cameraBlendOut" ).asFloat( 0.0 ) ) );
+        _cameraPrerollFrames   = MathUtil::max( 0, SequenceAssetInternal::clampFrame( root.get( "cameraPreroll" ).asInt( 0 ) ) );
 
         forEachObjectInArray( root, "items", [this]( const JSONValue& itemJSON, size_t /*itemIndex*/ )
         {
@@ -166,7 +169,12 @@ namespace sw
             item._kind          = static_cast<SequenceItemKind>( SequenceAssetInternal::clampKindValue( rawKind ) );
             if ( findItemKindInfo( item._kind ) == nullptr )
                 SW_LOG_WARNING( "Sequence item '%#' has unknown type %# - it is kept but not applied", item._name, rawKind );
-            item._color = static_cast<uint32>( itemJSON.get( "color" ).asUint( 0xFFAA8080u ) );
+            item._color         = static_cast<uint32>( itemJSON.get( "color" ).asUint( 0xFFAA8080u ) );
+            item._preset        = itemJSON.get( "preset" ).asString();
+            item._amplitude     = static_cast<float32>( itemJSON.get( "amplitude" ).asFloat( 1.0 ) );
+            item._prerollFrames = SequenceAssetInternal::clampFrame( itemJSON.get( "preroll" ).asInt( SequenceTrackItem::kUseSequencePreroll ) );
+            if ( item._prerollFrames < 0 )
+                item._prerollFrames = SequenceTrackItem::kUseSequencePreroll;
             _listItem.push_back( std::move( item ) );
         } );
 
@@ -199,6 +207,13 @@ namespace sw
         root.set( "frameMin" ).setInt( _frameMin );
         root.set( "frameMax" ).setInt( _frameMax );
         root.set( "note" ).setString( _note );
+        // 카메라 블렌드 · 프리롤은 기본값이 아닐 때만 쓴다 — 카메라를 쓰지 않는 시퀀스 파일은 바이트가 그대로다.
+        if ( _cameraBlendInSeconds > 0.0f )
+            root.set( "cameraBlendIn" ).setFloat( static_cast<float64>( _cameraBlendInSeconds ) );
+        if ( _cameraBlendOutSeconds > 0.0f )
+            root.set( "cameraBlendOut" ).setFloat( static_cast<float64>( _cameraBlendOutSeconds ) );
+        if ( _cameraPrerollFrames > 0 )
+            root.set( "cameraPreroll" ).setInt( _cameraPrerollFrames );
 
         const JSONValue itemsVal = root.set( "items" );
         itemsVal.setArray();
@@ -212,6 +227,12 @@ namespace sw
             itemJSON.set( "end" ).setInt( item._end );
             itemJSON.set( "type" ).setInt( static_cast<int32>( item._kind ) );
             itemJSON.set( "color" ).setUint( item._color );
+            if ( item._preset.empty() == false )
+                itemJSON.set( "preset" ).setString( item._preset );
+            if ( item._amplitude != 1.0f )
+                itemJSON.set( "amplitude" ).setFloat( static_cast<float64>( item._amplitude ) );
+            if ( item._prerollFrames != SequenceTrackItem::kUseSequencePreroll )
+                itemJSON.set( "preroll" ).setInt( item._prerollFrames );
         }
 
         const JSONValue tracksVal = root.set( "tracks" );
@@ -252,6 +273,25 @@ namespace sw
                 return true;
         }
         return false;
+    }
+
+    const SequenceTrackItem* SequenceAsset::findCameraCut( int32 frame ) const
+    {
+        const SequenceTrackItem* pCut = nullptr;
+        for ( const SequenceTrackItem& item : _listItem )
+        {
+            const SequenceItemKindInfo* pInfo = findItemKindInfo( item._kind );
+            if ( pInfo == nullptr || pInfo->_bCutsCamera == false || frame < item._start || item._end < frame )
+                continue;
+            if ( pCut == nullptr || item._start >= pCut->_start )
+                pCut = &item;
+        }
+        return pCut;
+    }
+
+    int32 SequenceAsset::getPrerollFrames( const SequenceTrackItem& item ) const
+    {
+        return item._prerollFrames >= 0 ? item._prerollFrames : _cameraPrerollFrames;
     }
 
     void SequenceAsset::collectActiveItems( int32 frame, vector<const SequenceTrackItem*>& outListItem ) const

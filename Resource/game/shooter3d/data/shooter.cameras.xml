@@ -38,6 +38,21 @@
 		         damping="0.5" />
 		<Noise position="0 0 0" rotation="0.15 0.25 0" frequency="0.4" seed="3" />
 	</Preset>
+	<!--
+		돌리 — 아레나 북쪽 레일 위에서 플레이어에 가장 가까운 점에 서서 본다(Cinemachine Spline Dolly). 35 mm 렌즈에 8° 더치, 2.39 레터박스.
+		초점 · 조리개 · 후처리 값은 포즈에 실리지만 렌더러가 아직 카메라별로 읽지 않는다 — 스크린샷에는 자리 · 시야각 · 기울기만 보인다.
+	-->
+	<Preset id="dolly">
+		<View mode="Dolly" />
+		<Lens focalLength="35" sensor="36 24" focusDistance="8" aperture="2.8" dutch="8" near="0.1" far="200" />
+		<Damping position="0.4" orientation="0.15" />
+		<Dolly type="CatmullRom" closed="false" pathOffset="0">
+			<Point position="-15 5 -15" />
+			<Point position="0 6 -17" />
+			<Point position="15 5 -15" />
+		</Dolly>
+		<PostProcess letterbox="2.39" vignette="0.25" />
+	</Preset>
 	<!-- CCTV 로 들어가고 나올 때는 끊어 바꾼다 — 감시 화면은 이어지지 않는다(렌더러가 TAA 기록을 버린다). -->
 	<Blend from="*" to="cctv" curve="Cut" />
 	<Blend from="cctv" to="*" curve="Cut" />

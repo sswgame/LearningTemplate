@@ -28,6 +28,8 @@ namespace sw
         , _cycleAction{}
         , _cycleRole{ CameraRole::Custom }
         , _previousTarget{}
+        , _pendingView{}
+        , _pendingViewMulticast{}
         , _blender{}
         , _impulseListener{}
         , _shakeSubscription{}
@@ -79,6 +81,36 @@ namespace sw
         // 블렌드가 없던 때 바꾸면 나가는 타깃 카메라를 블렌드 동안 계속 읽는다(움직이는 카메라에서 출발).
         _previousTarget = _blender.start( blend ) ? _viewTarget : GameObjectHandle{};
         _viewTarget     = target;
+    }
+
+    void CameraManagerComponent::blendFromPose( const CameraPose& from, const BlendCurveDef& blend )
+    {
+        _previousTarget = GameObjectHandle{};
+        _blender.startFromPose( from, blend );
+    }
+
+    void CameraManagerComponent::setPendingView( const CameraPendingView& view )
+    {
+        _pendingView = view;
+        _pendingViewMulticast.broadcast( _pendingView );
+    }
+
+    void CameraManagerComponent::clearPendingView()
+    {
+        if ( hasPendingView() == false )
+            return;
+        _pendingView = CameraPendingView{};
+        _pendingViewMulticast.broadcast( _pendingView );
+    }
+
+    DelegateHandle CameraManagerComponent::registerPendingViewListener( const OnCameraPendingViewDelegate& delegate )
+    {
+        return _pendingViewMulticast.add( delegate );
+    }
+
+    void CameraManagerComponent::unregisterPendingViewListener( DelegateHandle handle )
+    {
+        _pendingViewMulticast.remove( handle );
     }
 
     GameObjectHandle CameraManagerComponent::cycleViewTarget( CameraRole role )

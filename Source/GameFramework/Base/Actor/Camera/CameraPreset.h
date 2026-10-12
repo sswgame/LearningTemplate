@@ -3,7 +3,7 @@
  * @brief 데이터로 적는 카메라 프리셋과 그 프리셋을 읽는 `CameraPresetCatalog` 를 정의합니다.
  * @details 프리셋은 XML 자식 원소 하나가 섹션 하나이다.
  *          섹션은 시점(`<View>`), 렌즈(`<Lens>`), 감쇠(`<Damping>`), 들어오기 블렌드(`<BlendIn>`), 입력(`<Input>`), 제약(`<Confiner>`),
- *          프레이밍(`<Framing>`), 충돌(`<Collision>`), 손떨림(`<Noise>`), 훑기(`<Sweep>`)가 있다.
+ *          프레이밍(`<Framing>`), 충돌(`<Collision>`), 손떨림(`<Noise>`), 훑기(`<Sweep>`), 돌리 레일(`<Dolly>`), 카메라별 후처리(`<PostProcess>`)가 있다.
  *          섹션을 더하려면 구조체 하나와 원소 하나를 더하면 된다.
  *          프리셋 사이의 블렌드 표도 여기서 읽는다. 프리셋을 포즈로 푸는 계산은 `CameraMode.h` 에 있다.
  *          Cinemachine 의 가상 카메라(Body, Aim, Lens, Noise, Confiner, Deoccluder, Composer)와 Custom Blends, 언리얼의 카메라 모드와 SpringArm 을 참고했다.
@@ -23,6 +23,7 @@
 #include "GameFramework/Base/Actor/Camera/CameraPose.h"
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
+#include "GameFramework/Base/World/Spline/SplinePath.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -39,6 +40,8 @@ namespace sw
         Follow,       ///< 대상의 요에 더한 요로 대상 뒤에서 초점을 본다
         FirstPerson,  ///< 눈 = 대상 + 대상 요로 돌린 오프셋, 회전 = 대상 요 · 피치 + 프리셋 요 · 피치
         ThirdPerson,  ///< 어깨 너머 — 대상의 시점(요 · 피치)을 따라 어깨 피벗(대상 요로 돌린 오프셋)에서 거리만큼 물러난다. 스프링 암(`<Collision>`)이 벽 앞으로 당긴다
+        FollowXY,     ///< 2D(XY 평면, +Y 가 위) — 초점의 X · Y 에 오프셋 X · Y 를 더한 자리, Z 는 오프셋 Z(카메라 평면) 그대로. 회전은 요 · 피치(0 이면 +Z 를 본다). 따라가는 빠르기는 `<Damping>`
+        Dolly,        ///< 돌리 레일 — 카메라가 `<Dolly>` 곡선 위에서 대상에 가장 가까운 점에 서서 대상을 본다(Cinemachine Spline Dolly, 언리얼 Rig Rail)
     };
 } // namespace sw
 
@@ -81,7 +84,12 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 렌즈 섹션(`<Lens>`)입니다. */
+    /**
+     * @brief 렌즈 섹션(`<Lens>`)입니다.
+     * @details 물리 렌즈 값은 언리얼 CineCameraComponent 의 Filmback · Lens Settings · Focus Settings 에 해당한다.
+     *          초점 길이(`_focalLength`)를 적으면 시야각은 센서 높이에서 구하고(`computeFieldOfViewY`), 적지 않으면(0) `_fieldOfViewY` 를 그대로 쓴다.
+     *          더치(`_dutch`)는 화면을 기울이는 롤이다. 초점 거리, 조리개, 렌즈 시프트는 포즈에 실려 피사계 심도와 비대칭 투영이 읽는다(렌더러에 아직 없다).
+     */
     REFLECT()
     struct SW_GF_API CameraLensDef
     {
@@ -97,6 +105,21 @@ namespace sw
         float32 _farPlane{ 100.0f };
         PROPERTY()
         bool _bOrthographic{ false };
+        PROPERTY( Min = 0.0, Tooltip = "Focal length; 0 uses the field of view instead", Units = mm )
+        float32 _focalLength{ 0.0f };
+        PROPERTY( Tooltip = "Sensor (filmback) width and height; 36 x 24 is full frame", Units = mm )
+        float2 _sensorSize{ 36.0f, 24.0f };
+        PROPERTY( Min = 0.0, Tooltip = "Distance the lens focuses at (depth of field)", Units = m )
+        float32 _focusDistance{ 10.0f };
+        PROPERTY( Min = 0.5, Tooltip = "Aperture f-number; smaller is a shallower depth of field" )
+        float32 _aperture{ 2.8f };
+        PROPERTY( Tooltip = "Projection centre shift as a fraction of the screen (shift lens)" )
+        float2 _lensShift{};
+        PROPERTY( Tooltip = "Roll of the view (Dutch angle)", Units = rad )
+        float32 _dutch{ 0.0f };
+
+        /** @brief 초점 길이가 있으면 센서 높이로 구한 수직 시야각, 없으면 `_fieldOfViewY` 입니다. */
+        float32 computeFieldOfViewY() const;
     };
 } // namespace sw
 
@@ -273,6 +296,36 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief 돌리 레일 섹션(`<Dolly>`)입니다. `Dolly` 모드의 카메라가 서는 곡선입니다(Cinemachine Spline Dolly, 언리얼 Rig Rail).
+     * @details 조절점은 월드 자리이다. 카메라는 곡선 위에서 대상 초점에 가장 가까운 점에 서고, `_pathOffset` 만큼 곡선을 따라 앞뒤로 옮긴다.
+     *          곡선은 모드 상태가 처음 풀 때 한 번 만들어 둔다(`CameraModeState`). 레일을 따라 미끄러지는 빠르기는 `<Damping>` 이 정한다.
+     * @code
+     *     <Dolly type="CatmullRom" closed="false" pathOffset="-2">
+     *         <Point position="0 2 -10"/>
+     *         <Point position="10 3 -5"/>
+     *         <Point position="20 2 -10"/>
+     *     </Dolly>
+     * @endcode
+     */
+    REFLECT()
+    struct SW_GF_API CameraDollyDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Rail control points (world)", Units = m )
+        vector<float3> _listPoint{};
+        PROPERTY( Tooltip = "Distance along the rail added to the point nearest the target", Units = m )
+        float32 _pathOffset{ 0.0f };
+        PROPERTY( Tooltip = "How the control points are joined" )
+        SplineType _type{ SplineType::CatmullRom };
+        PROPERTY( Tooltip = "The rail loops back to its first point" )
+        bool _bClosed{ false };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @brief 프리셋 하나입니다.
      * @code
      *     <Preset id="topdown">
@@ -313,6 +366,10 @@ namespace sw
         CameraNoiseDef _noise{};
         PROPERTY()
         CameraSweepDef _sweep{};
+        PROPERTY()
+        CameraDollyDef _dolly{};
+        PROPERTY()
+        CameraPostProcessValues _postProcess{};
     };
 } // namespace sw
 
@@ -330,16 +387,21 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 카메라가 따라가는 대상입니다.
+     * @brief 카메라가 따라가는 대상과 그 카메라가 그리는 화면의 비율입니다.
      * @details 월드 초점, 대상이 보는 요와 피치(라디안, 피치는 +가 아래), 대상 묶음의 반지름을 담는다.
      *          여러 대상을 담을 때는 `makeGroupCameraTarget` 이 초점을 묶음의 가운데로, 반지름을 묶음을 감싸는 구의 반지름으로 채운다.
+     *          화면 비율은 프레이밍의 가로 위치와 존을 각으로 바꿀 때 쓴다. 디렉터가 카메라의 출력(렌더 텍스처, 창, 화면 사각형)에서 채운다.
      */
     struct CameraTarget
     {
+        /** @brief 화면 비율을 모를 때(창이 없는 테스트, 서버) 쓰는 가로/세로 값입니다. */
+        static constexpr float32 kDefaultAspectRatio = 16.0f / 9.0f;
+
         float3  _focus{};
         float32 _yaw{ 0.0f };
         float32 _pitch{ 0.0f };
-        float32 _groupRadius{ 0.0f }; ///< 0 이면 대상 하나
+        float32 _groupRadius{ 0.0f };                ///< 0 이면 대상 하나
+        float32 _aspectRatio{ kDefaultAspectRatio }; ///< 카메라 화면의 가로/세로
     };
 
     /**

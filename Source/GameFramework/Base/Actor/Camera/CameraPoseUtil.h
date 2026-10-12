@@ -33,5 +33,11 @@ namespace sw
         static void applyLensToCamera( CameraComponent& camera, const CameraPose& pose );
         /** @brief 카메라의 지금 월드 자리 · 회전과 렌즈를 포즈로 읽습니다(뷰 타깃 블렌드의 입력). */
         static CameraPose makePoseFromCamera( const CameraComponent& camera );
+        /**
+         * @brief 카메라가 그리는 화면의 가로/세로 비율입니다.
+         * @details 렌더 텍스처 출력이면 그 텍스처 크기, 화면 출력이면 활성 창 크기에 화면 사각형을 곱한 크기로 센다.
+         *          창이 없으면(테스트, 서버) `CameraTarget::kDefaultAspectRatio` 이다.
+         */
+        static float32 computeAspectRatio( const CameraComponent& camera );
     };
 } // namespace sw

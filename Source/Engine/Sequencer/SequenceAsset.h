@@ -35,10 +35,11 @@ namespace sw
     ENUM()
     enum class SequenceItemKind : int32
     {
-        Clip      = 0, /**< 구간 동안 대상을 켭니다(유니티 Timeline 의 Activation 트랙). 움직임은 키 트랙(`SequenceKeyTrack`)이 정합니다. */
-        Event     = 1, /**< 시작 프레임을 지날 때 한 번 알립니다(`SequencePlayerComponent::registerSequenceEvent`). */
-        CameraCut = 2, /**< 구간 동안 대상의 카메라가 게임 카메라입니다(언리얼 Camera Cut 트랙, `CameraRegistry::setCutCamera`). */
-        Count          /**< 표식입니다. 종류가 아닙니다. */
+        Clip        = 0, /**< 구간 동안 대상을 켭니다(유니티 Timeline 의 Activation 트랙). 움직임은 키 트랙(`SequenceKeyTrack`)이 정합니다. */
+        Event       = 1, /**< 시작 프레임을 지날 때 한 번 알립니다(`SequencePlayerComponent::registerSequenceEvent`). */
+        CameraCut   = 2, /**< 구간 동안 대상의 카메라가 게임 카메라입니다(언리얼 Camera Cut 트랙, `CameraRegistry::setCutCamera`). `_preset` 이 있으면 대상의 카메라 디렉터가 그 프리셋을 켭니다. */
+        CameraShake = 3, /**< 구간 동안 대상 카메라를 흔듭니다(언리얼 Camera Shake 트랙). 세기는 `_amplitude`, 길이는 구간입니다. */
+        Count            /**< 표식입니다. 종류가 아닙니다. */
     };
 
     /** @brief 항목 종류 하나가 타임라인에 무엇을 하는지입니다. */
@@ -49,6 +50,7 @@ namespace sw
         bool             _bDrivesTarget; /**< 구간 동안 대상 오브젝트의 활성 상태와 트랜스폼을 정하는지 나타냅니다. */
         bool             _bFiresOnCross; /**< 시작 프레임을 지날 때 이벤트로 알리는지입니다. */
         bool             _bCutsCamera;   /**< 구간 동안 대상의 카메라를 게임 카메라로 고르는지입니다. */
+        bool             _bShakesCamera; /**< 시작 프레임을 지날 때 대상 카메라에 흔들림 신호를 내는지입니다. */
     };
 
     /**
@@ -73,9 +75,10 @@ namespace sw
 {
     /** @brief 항목 종류 표입니다. **종류마다 한 줄이고 순서는 `SequenceItemKind` 값 순서입니다.** */
     inline constexpr SequenceItemKindInfo kArrSequenceItemKindInfo[] = {
-        {     SequenceItemKind::Clip, 0xFF80AA80u,  true, false, false},
-        {    SequenceItemKind::Event, 0xFF8080AAu, false,  true, false},
-        {SequenceItemKind::CameraCut, 0xFFAA80AAu, false, false,  true},
+        {       SequenceItemKind::Clip, 0xFF80AA80u,  true, false, false, false},
+        {      SequenceItemKind::Event, 0xFF8080AAu, false,  true, false, false},
+        {  SequenceItemKind::CameraCut, 0xFFAA80AAu, false, false,  true, false},
+        {SequenceItemKind::CameraShake, 0xFF80A0C0u, false, false, false,  true},
     };
 
     /** @brief 트랜스폼 트랙 채널의 이름입니다(에디터 표시). 순서는 채널 순서입니다. */
@@ -96,13 +99,19 @@ namespace sw
     static_assert( SW_COUNT_OF( kArrSequenceItemKindInfo ) == static_cast<size_t>( SequenceItemKind::Count ),
                    "SequenceItemKind 를 늘렸으면 kArrSequenceItemKindInfo 에도 줄을 더할 것" );
 
-    /** @brief 시퀀서 트랙 항목입니다(클립, 이벤트, 카메라 컷). 구간 하나를 나타냅니다. */
+    /** @brief 시퀀서 트랙 항목입니다(클립, 이벤트, 카메라 컷, 카메라 흔들림). 구간 하나를 나타냅니다. */
     struct SequenceTrackItem
     {
+        /** @brief `_prerollFrames` 가 이 값이면 시퀀스의 프리롤(`SequenceAsset::_cameraPrerollFrames`)을 씁니다. */
+        static constexpr int32 kUseSequencePreroll = -1;
+
         string           _name;
         string           _targetObject;
+        string           _preset; /**< 카메라 컷: 대상의 카메라 디렉터가 켤 프리셋 id 입니다. 비우면 카메라를 그대로 씁니다. */
         int32            _start{ 0 };
         int32            _end{ 10 };
+        int32            _prerollFrames{ kUseSequencePreroll }; /**< 카메라 컷: 시작 몇 프레임 전에 대기 뷰 신호를 낼지입니다. */
+        float32          _amplitude{ 1.0f };                    /**< 카메라 흔들림: 최대 흔들림(m) 입니다. */
         uint32           _color{ 0xFFAA8080 };
         SequenceItemKind _kind{ SequenceItemKind::Clip }; /**< 테이블에 없는 값(새 버전 파일)은 읽고 다시 쓰지만 적용하지 않습니다. */
     };
@@ -186,11 +195,21 @@ namespace sw
     public:
         /** @brief 카메라 컷 항목이 하나라도 있으면 true 를 반환합니다. 없으면 시퀀스가 게임 카메라를 건드리지 않습니다. */
         bool hasCameraCut() const;
+        /** @brief @p frame 을 덮는 카메라 컷 가운데 가장 늦게 시작한 것입니다(같으면 뒤에 적힌 것). 없으면 nullptr 입니다. */
+        const SequenceTrackItem* findCameraCut( int32 frame ) const;
+        /** @brief 카메라 컷 항목의 프리롤 프레임입니다. 항목이 정하지 않았으면 시퀀스의 값입니다. */
+        int32 getPrerollFrames( const SequenceTrackItem& item ) const;
 
         int32                     _frameMin{ 0 };
         int32                     _frameMax{ 100 };
         string                    _note;
         vector<SequenceTrackItem> _listItem;
         vector<SequenceKeyTrack>  _listTrack; /**< 키 트랙(트랜스폼, 프로퍼티)입니다. 클립이나 이벤트와 달리 구간이 아니라 키로 값을 몹니다. */
+        /** @brief 게임 카메라에서 첫 카메라 컷으로 섞어 들어가는 시간(초)입니다. 0 이면 끊어 바꿉니다(언리얼 시퀀스의 Blend In). */
+        float32 _cameraBlendInSeconds{ 0.0f };
+        /** @brief 마지막 카메라 컷에서 게임 카메라로 섞어 나오는 시간(초)입니다. 0 이면 끊어 바꿉니다(언리얼 시퀀스의 Blend Out). */
+        float32 _cameraBlendOutSeconds{ 0.0f };
+        /** @brief 카메라 컷 시작 몇 프레임 전에 대기 뷰 신호를 낼지의 기본값입니다(언리얼 Sequencer 의 preroll frames). 0 이면 내지 않습니다. */
+        int32 _cameraPrerollFrames{ 0 };
     };
 } // namespace sw

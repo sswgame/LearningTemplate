@@ -5,9 +5,30 @@
 #include "Core/Math/MatrixMath.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Window/IWindow.h"
+
+#include "GameFramework/Base/Actor/Camera/CameraPreset.h"
 
 namespace sw
 {
+    float32 CameraPoseUtil::computeAspectRatio( const CameraComponent& camera )
+    {
+        const CameraRenderOutput& output = camera.getRenderOutput();
+        if ( output._target == CameraOutputTarget::RenderTexture )
+        {
+            if ( output._renderTextureHeight == 0 )
+                return CameraTarget::kDefaultAspectRatio;
+            return static_cast<float32>( output._renderTextureWidth ) / static_cast<float32>( output._renderTextureHeight );
+        }
+        const IWindow* pWindow = IWindow::getActiveWindow();
+        if ( pWindow == nullptr || pWindow->getHeight() == 0 )
+            return CameraTarget::kDefaultAspectRatio;
+        // 화면 사각형(분할 화면, PiP)은 창의 일부다 — 가로 비율과 세로 비율을 곱해 센다.
+        const float32 width  = static_cast<float32>( pWindow->getWidth() ) * output._screenRect._z;
+        const float32 height = static_cast<float32>( pWindow->getHeight() ) * output._screenRect._w;
+        return height > 0.0f ? width / height : CameraTarget::kDefaultAspectRatio;
+    }
+
     void CameraPoseUtil::applyLensToCamera( CameraComponent& camera, const CameraPose& pose )
     {
         camera.setOrthographic( pose._bOrthographic == SW_TRUE );

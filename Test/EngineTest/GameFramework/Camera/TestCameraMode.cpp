@@ -9,6 +9,7 @@
 #include "GameFramework/Base/Actor/Camera/CameraBlend.h"
 #include "GameFramework/Base/Actor/Camera/CameraCollisionProbe.h"
 #include "GameFramework/Base/Actor/Camera/CameraDirector.h"
+#include "GameFramework/Base/Actor/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Base/Actor/Camera/CameraManagerComponent.h"
 #include "GameFramework/Base/Actor/Camera/CameraMode.h"
 #include "GameFramework/Base/Actor/Camera/CameraPreset.h"
@@ -235,6 +236,34 @@ SW_TEST_CASE( CameraModeTest, FramingDeadZoneHoldsAndSoftZoneLimits )
 }
 
 /**
+ * @brief [CameraModeTest] 프레이밍의 가로 존은 대상이 실어 온 화면 비율로 센다 — 정사각형 화면은 16:9 보다 가로 소프트존이 좁다
+ * @details 비율을 16:9 로 고정하면 세로로 긴 화면(휴대폰 세로, 렌더 텍스처)에서 대상이 화면 밖으로 나가도 카메라가 돌지 않는다.
+ */
+SW_TEST_CASE( CameraModeTest, FramingHorizontalZonesFollowTheAspectRatio )
+{
+    CameraPresetDef def;
+    def._view._mode         = CameraPresetMode::Fixed;
+    def._view._aim          = CameraAimMode::Target;
+    def._lens._fieldOfViewY = 60.0f * MathUtil::kDegreeToRadian;
+    def._framing._bCompose  = true;
+    def._framing._deadZone  = float2{ 0.0f, 0.0f };
+    def._framing._softZone  = float2{ 0.5f, 0.5f };
+    def._framing._damping   = 10.0f;
+    for ( const float32 aspect : { 1.0f, 2.0f } )
+    {
+        CameraTarget target;
+        target._aspectRatio = aspect;
+        target._focus       = float3{ 0.0f, 0.0f, 10.0f };
+        CameraModeState state;
+        (void)evaluateCameraMode( def, target, 0.0f, state, nullptr );
+        target._focus = float3{ 10.0f, 0.0f, 10.0f }; // 45°
+        (void)evaluateCameraMode( def, target, 0.1f, state, nullptr );
+        const float32 softHalf = MathUtil::atan2( 0.5f * MathUtil::tan( 30.0f * MathUtil::kDegreeToRadian ) * aspect, 1.0f );
+        SW_EXPECT_NEAR_EQUAL( MathUtil::kPi * 0.25f - softHalf, state._aimYaw, 1.0e-4f );
+    }
+}
+
+/**
  * @brief [CameraModeTest] look-ahead 는 대상이 가는 쪽으로 조준을 미리 옮기고, 그룹 맞추기는 묶음이 화면에 들어올 만큼 물러난다
  */
 SW_TEST_CASE( CameraModeTest, LookAheadLeadsAndGroupFramingBacksOff )
@@ -442,6 +471,267 @@ SW_TEST_CASE( CameraModeTest, DirectorReportsCutsOnce )
     (void)director.step( 0.016f, CameraTarget{} );
     SW_EXPECT_TRUE( director.consumeCut() );
     SW_EXPECT_FALSE( director.consumeCut() );
+}
+
+/**
+ * @brief [CameraModeTest] XY 평면 따라가기(2D)는 초점의 X · Y 를 따르고 Z 는 카메라 평면에 두며, 이동 키는 화면 위(+Y) · 오른쪽(+X)으로 민다
+ * @details 땅(XZ) 기준 모드로 2D 씬을 풀면 카메라가 초점 위(+Y)로 올라가 평면을 옆에서 본다.
+ */
+SW_TEST_CASE( CameraModeTest, FollowXYTracksThePlaneAndKeepsTheCameraPlane )
+{
+    CameraPresetDef def;
+    def._view._mode          = CameraPresetMode::FollowXY;
+    def._view._offset        = float3{ 0.0f, 1.0f, -10.0f };
+    def._input._panSpeed     = 2.0f;
+    def._confiner._bBounds   = true;
+    def._confiner._boundsMin = float3{ -100.0f, -100.0f, -100.0f };
+    def._confiner._boundsMax = float3{ 8.0f, 100.0f, 100.0f };
+    CameraTarget target;
+    target._focus = float3{ 5.0f, 3.0f, 0.0f };
+
+    CameraModeState  state;
+    const CameraPose pose = evaluateCameraMode( def, target, 0.0f, state, nullptr );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, pose._position._x, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 4.0f, pose._position._y, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( -10.0f, pose._position._z, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, CameraModeTestInternal::computeForward( pose._rotation )._z, 1.0e-5f ); // 평면을 본다
+
+    CameraModeInput input;
+    input._pan = float2{ 1.0f, 0.0f }; // 앞(화면 위) 1 초
+    applyCameraInput( def, input, 1.0f, state );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, state._panOffset._y, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, state._panOffset._z, 1.0e-5f );
+
+    target._focus            = float3{ 20.0f, 3.0f, 0.0f }; // 상자 밖 — X 만 묶인다
+    const CameraPose bounded = evaluateCameraMode( def, target, 0.0f, state, nullptr );
+    SW_EXPECT_NEAR_EQUAL( 8.0f, bounded._position._x, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 6.0f, bounded._position._y, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( -10.0f, bounded._position._z, 1.0e-5f );
+}
+
+/**
+ * @brief [CameraModeTest] 2D 디렉터 — 감쇠로 대상을 따라가고, 충격은 실제로 떨리다가(부호가 바뀐다) 끝나면 따라가던 자리로 정확히 돌아온다
+ * @details 흔들림은 포즈 위에 마지막으로 더하는 오프셋이라 다음 프레임 포즈에 남지 않는다. 트랜스폼에 흔들림을 더해 두고 다음 틱에 다시 빼는 방식은
+ *          상태를 다시 읽으면(핫 리로드) 그 오프셋이 영영 남는다.
+ */
+SW_TEST_CASE( CameraModeTest, FollowXYDirectorDampsAndShakesBackToItsPlace )
+{
+    CameraPresetDef def;
+    def._id                    = hashed_string( "side" );
+    def._view._mode            = CameraPresetMode::FollowXY;
+    def._view._offset          = float3{ 0.0f, 0.0f, -10.0f };
+    def._lens._bOrthographic   = true;
+    def._damping._positionTime = 0.1f;
+    BlendCurveDef cut;
+    cut._curve = BlendCurve::Cut;
+
+    CameraDirector director;
+    director.activatePreset( def, cut );
+    CameraTarget target;
+    target._focus          = float3{ 5.0f, 3.0f, 0.0f };
+    const CameraPose start = director.step( 1.0f / 60.0f, target );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, start._position._x, 1.0e-5f ); // 새로 켠 프리셋은 그 자리에서 시작한다
+    SW_EXPECT_TRUE( start._bOrthographic == SW_TRUE );
+
+    target._focus            = float3{ 20.0f, 3.0f, 0.0f };
+    const CameraPose lagging = director.step( 1.0f / 60.0f, target );
+    SW_EXPECT_TRUE( lagging._position._x > 5.0f && lagging._position._x < 20.0f ); // 감쇠 — 한 프레임에 붙지 않는다
+    for ( int32 frameIndex = 0; frameIndex < 120; ++frameIndex )
+    {
+        (void)director.step( 1.0f / 60.0f, target );
+    }
+    SW_EXPECT_NEAR_EQUAL( 20.0f, director.getPose()._position._x, 1.0e-3f );
+
+    CameraImpulseDef impulse;
+    impulse._amplitude = 2.0f;
+    impulse._duration  = 0.5f;
+    impulse._frequency = 40.0f;
+    director.addImpulse( impulse, target._focus );
+    bool bSawPositive = false;
+    bool bSawNegative = false;
+    for ( int32 frameIndex = 0; frameIndex < 20; ++frameIndex )
+    {
+        const float32 offsetX = director.step( 1.0f / 60.0f, target )._position._x - 20.0f;
+        bSawPositive          = bSawPositive || offsetX > 0.05f;
+        bSawNegative          = bSawNegative || offsetX < -0.05f;
+    }
+    SW_EXPECT_TRUE_MSG( bSawPositive && bSawNegative, "흔들리지 않고 한쪽으로 밀려 있기만 합니다" );
+    for ( int32 frameIndex = 0; frameIndex < 30; ++frameIndex )
+    {
+        (void)director.step( 1.0f / 60.0f, target );
+    }
+    SW_EXPECT_NEAR_EQUAL( 20.0f, director.getPose()._position._x, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, director.getPose()._position._y, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( -10.0f, director.getPose()._position._z, 1.0e-4f );
+}
+
+/**
+ * @brief [CameraModeTest] 렌즈 물리값 — 초점 길이가 시야각을 정하고, 더치는 화면을 기울이며, 초점 · 조리개 · 시프트 · 후처리는 포즈에 실려 섞인다
+ */
+SW_TEST_CASE( CameraModeTest, LensPhysicalValuesReachThePose )
+{
+    CameraPresetDef def;
+    def._view._mode                        = CameraPresetMode::Fixed;
+    def._lens._focalLength                 = 50.0f;
+    def._lens._sensorSize                  = float2{ 36.0f, 24.0f };
+    def._lens._dutch                       = 20.0f * MathUtil::kDegreeToRadian;
+    def._lens._focusDistance               = 3.5f;
+    def._lens._aperture                    = 1.4f;
+    def._lens._lensShift                   = float2{ 0.0f, 0.1f };
+    def._postProcess._exposureCompensation = 1.0f;
+    def._postProcess._letterboxAspectRatio = 2.39f;
+    const CameraPose pose                  = evaluatePreset( def, CameraTarget{} );
+    SW_EXPECT_NEAR_EQUAL( 2.0f * MathUtil::atan2( 12.0f, 50.0f ), pose._fieldOfViewY, 1.0e-5f ); // 50 mm 풀 프레임 ≈ 27°
+    SW_EXPECT_NEAR_EQUAL( 3.5f, pose._focusDistance, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 1.4f, pose._aperture, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.1f, pose._lensShift._y, 1.0e-6f );
+    const float3 up = float3::transform( float3{ 0.0f, 1.0f, 0.0f }, pose._rotation );
+    SW_EXPECT_NEAR_EQUAL( MathUtil::cos( 20.0f * MathUtil::kDegreeToRadian ), up._y, 1.0e-4f ); // 앞축으로 기울었다
+    SW_EXPECT_NEAR_EQUAL( 1.0f, CameraModeTestInternal::computeForward( pose._rotation )._z, 1.0e-4f );
+
+    CameraPose       plain;
+    const CameraPose half = blendPoses( plain, pose, 0.5f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, half._postProcess._exposureCompensation, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 2.39f, half._postProcess._letterboxAspectRatio, 1.0e-6f ); // 한쪽에만 있으면 절반에서 바꾼다
+    SW_EXPECT_NEAR_EQUAL( 0.0f, blendPoses( plain, pose, 0.4f )._postProcess._letterboxAspectRatio, 1.0e-6f );
+}
+
+/**
+ * @brief [CameraModeTest] 시야각 킥은 오르고 버틴 뒤 0 으로 내려가며(끝에서 정확히 1 배), 줌 펀치는 좁힌다
+ */
+SW_TEST_CASE( CameraModeTest, FieldOfViewKickRisesHoldsAndReleases )
+{
+    CameraFieldOfViewKickDef kick;
+    kick._amount      = 0.2f;
+    kick._attackTime  = 0.1f;
+    kick._holdTime    = 0.1f;
+    kick._releaseTime = 0.2f;
+    CameraFieldOfViewKickListener listener;
+    listener.addKick( kick );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, listener.computeScale(), 1.0e-6f );
+    listener.step( 0.05f );
+    SW_EXPECT_NEAR_EQUAL( 1.1f, listener.computeScale(), 1.0e-4f ); // 오르기 절반 — SmoothStep 은 0.5
+    listener.step( 0.1f );
+    SW_EXPECT_NEAR_EQUAL( 1.2f, listener.computeScale(), 1.0e-5f ); // 버티기
+    CameraPose pose;
+    pose._fieldOfViewY = 1.0f;
+    SW_EXPECT_NEAR_EQUAL( 1.2f, listener.applyToPose( pose )._fieldOfViewY, 1.0e-5f );
+    listener.step( 0.3f );
+    SW_EXPECT_FALSE( listener.isActive() );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, listener.computeScale(), 1.0e-6f );
+
+    kick._amount = -0.5f; // 줌 펀치
+    listener.addKick( kick );
+    listener.step( 0.15f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, listener.computeScale(), 1.0e-5f );
+}
+
+/**
+ * @brief [CameraModeTest] 돌리 레일 — 카메라는 레일 위에서 대상에 가장 가까운 점에 서서 대상을 보고, 경로 오프셋만큼 레일을 따라 옮긴다
+ */
+SW_TEST_CASE( CameraModeTest, DollyRailFollowsTheNearestPoint )
+{
+    CameraPresetDef def;
+    def._view._mode       = CameraPresetMode::Dolly;
+    def._dolly._type      = SplineType::Linear;
+    def._dolly._listPoint = {
+        float3{-10.0f, 2.0f, -5.0f},
+        float3{ 10.0f, 2.0f, -5.0f}
+    };
+    CameraTarget target;
+    target._focus = float3{ 3.0f, 0.0f, 0.0f };
+    CameraModeState  state;
+    const CameraPose pose = evaluateCameraMode( def, target, 0.0f, state, nullptr );
+    SW_EXPECT_TRUE( state._bDollyPathBuilt == SW_TRUE );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, pose._position._x, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, pose._position._y, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( -5.0f, pose._position._z, 1.0e-3f );
+    const float3 forward = CameraModeTestInternal::computeForward( pose._rotation );
+    float3       toFocus = target._focus - pose._position;
+    toFocus.normalize();
+    SW_EXPECT_NEAR_EQUAL( toFocus._z, forward._z, 1.0e-3f ); // 대상을 본다
+
+    def._dolly._pathOffset = -2.0f;
+    state.reset();
+    target._focus = float3{ 50.0f, 0.0f, 0.0f }; // 레일 끝 너머 — 끝에서 오프셋만큼 뒤
+    SW_EXPECT_NEAR_EQUAL( 8.0f, evaluateCameraMode( def, target, 0.0f, state, nullptr )._position._x, 1.0e-3f );
+}
+
+/**
+ * @brief [CameraModeTest] 포즈의 화면 광선은 직교 리그의 광선과 같고, 원근 포즈는 화면 가운데가 앞 방향이다
+ */
+SW_TEST_CASE( CameraModeTest, ScreenRayFromAPoseMatchesTheOrthoRig )
+{
+    const float32   yaw   = 30.0f * MathUtil::kDegreeToRadian;
+    const float32   pitch = 40.0f * MathUtil::kDegreeToRadian;
+    CameraPresetDef def;
+    def._view._mode        = CameraPresetMode::OrthoTopDown;
+    def._view._yaw         = yaw;
+    def._view._pitch       = pitch;
+    def._view._distance    = 100.0f;
+    def._lens._orthoHeight = 40.0f;
+    CameraTarget target;
+    target._focus          = float3{ 3.0f, 0.0f, -2.0f };
+    const CameraPose ortho = evaluatePreset( def, target );
+    const float2     mouse{ 0.8f, 0.3f };
+    const GameRay    fromPose = computeCameraScreenRay( ortho, 1.5f, mouse );
+    const GameRay    fromRig  = OrthoCameraRigMath::computeScreenRay( target._focus, yaw, pitch, 100.0f, 40.0f, 1.5f, mouse );
+    SW_EXPECT_NEAR_EQUAL( fromRig._origin._x, fromPose._origin._x, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( fromRig._origin._y, fromPose._origin._y, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( fromRig._origin._z, fromPose._origin._z, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( fromRig._direction._x, fromPose._direction._x, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( fromRig._direction._y, fromPose._direction._y, 1.0e-4f );
+
+    CameraPose perspective;
+    perspective._rotation     = quaternion::makeFromYawPitchRoll( 0.0f, 0.0f, 0.0f );
+    perspective._fieldOfViewY = MathUtil::kHalfPi;
+    const GameRay center      = computeCameraScreenRay( perspective, 1.0f, float2{ 0.5f, 0.5f } );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, center._direction._z, 1.0e-5f );
+    const GameRay rightEdge = computeCameraScreenRay( perspective, 1.0f, float2{ 1.0f, 0.5f } );
+    SW_EXPECT_NEAR_EQUAL( rightEdge._direction._x, rightEdge._direction._z, 1.0e-5f ); // 시야각 90° 의 가장자리는 45°
+}
+
+/**
+ * @brief [CameraModeTest] 디렉터 컴포넌트의 땅 고르기와 시점 덮어쓰기 — 직교 리그를 쓰는 네 게임이 디렉터로 옮길 때 쓰는 함수
+ * @details 위에서 내려다보는 직교 프리셋에서 화면 가운데는 초점 아래 땅이고, 덮어쓴 원근 시점은 그 시점으로 고르며, 덮어쓰기를 풀면 원래 프리셋으로 돌아간다.
+ */
+SW_TEST_CASE( CameraModeTest, DirectorComponentPicksTheGroundAndHonoursTheOverride )
+{
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "DirectedRig" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    SW_ASSERT_NOT_NULL( pObject->addComponent<CameraComponent>() );
+    CameraDirectorComponent* pDirector = pObject->addComponent<CameraDirectorComponent>();
+    SW_ASSERT_NOT_NULL( pDirector );
+    SW_ASSERT_TRUE( pDirector->getCatalog().loadFromXMLText( R"(<CameraPresets>
+        <Preset id="topdown"><View mode="OrthoTopDown" pitch="90" yaw="0" distance="50"/><Lens orthographic="true" orthoHeight="20" far="200"/></Preset>
+    </CameraPresets>)",
+                                                             "ground-pick-test" ) );
+    pDirector->setInputEnabled( false );
+    BlendCurveDef cut;
+    cut._curve = BlendCurve::Cut;
+    pDirector->setOverrideBlend( cut );
+    manager.beginPlay();
+
+    float3 point{};
+    SW_ASSERT_TRUE( pDirector->findGroundPoint( float2{ 0.5f, 0.5f }, 0.0f, point ) );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, point._x, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, point._z, 1.0e-3f );
+    SW_ASSERT_TRUE( pDirector->findGroundPoint( float2{ 0.5f, 0.0f }, 0.0f, point ) ); // 화면 위 가장자리 — 요 0 이면 +Z 쪽 반 높이
+    SW_EXPECT_NEAR_EQUAL( 10.0f, point._z, 1.0e-2f );
+
+    pDirector->setViewOverride( float3{ 0.0f, 10.0f, -10.0f }, float3{ 45.0f * MathUtil::kDegreeToRadian, 0.0f, 0.0f }, 1.0f, 300.0f );
+    SW_EXPECT_TRUE( pDirector->isViewOverridden() );
+    pDirector->updateCamera( 0.016f );
+    SW_ASSERT_TRUE( pDirector->findGroundPoint( float2{ 0.5f, 0.5f }, 0.0f, point ) );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, point._z, 1.0e-2f ); // (0, 10, −10) 에서 45° 아래 → 원점
+    pDirector->setViewOverride( float3{ 0.0f, 10.0f, -20.0f }, float3{ 45.0f * MathUtil::kDegreeToRadian, 0.0f, 0.0f }, 1.0f, 300.0f );
+    SW_EXPECT_FALSE( pDirector->isBlending() ); // 덮어쓰는 동안은 값만 바꾼다(블렌드를 새로 시작하지 않는다)
+
+    pDirector->clearViewOverride();
+    SW_EXPECT_FALSE( pDirector->isViewOverridden() );
+    SW_EXPECT_TRUE( pDirector->getActivePresetID() == hashed_string( "topdown" ) );
+    manager.endPlay();
 }
 
 /**

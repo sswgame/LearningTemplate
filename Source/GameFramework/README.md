@@ -200,7 +200,17 @@ PROPERTY 는 리플렉션이 저장하지만, 디렉터가 가진 키트 객체�
 예시는 `Resource/engine/cameras/default.cameras.xml` 과 `Resource/game/shooter3d/data/shooter.cameras.xml` 입니다.
 
 프리셋 하나는 모드와 렌즈, 감쇠, 스프링 암, 흔들림 같은 섹션 원소로 이루어집니다. 모드 계산(`CameraMode.h`)은 컴포넌트를 모르는 순수 함수라서 씬 없이 테스트합니다.
-`CameraDirectorComponent` 는 카메라 오브젝트에 붙어 프리셋을 고르고 블렌드합니다. 블렌드는 언제나 지금 화면에서 출발하고, 블렌드 도중에 다시 바꾸면 그 순간의 섞인 포즈가 출발점이 됩니다.
+`CameraDirectorComponent` 는 카메라 오브젝트에 붙어 프리셋을 고르고 블렌드합니다. 블렌드는 언제나 지금 화면에서 출발합니다.
+블렌드 도중에 다시 바꾸면 나가던 블렌드가 멈추지 않고 블렌드 스택(최대 네 층)에서 계속 섞입니다. Cinemachine 의 중첩 블렌드와 같습니다.
+켠 프리셋과 블렌드 진행은 `writeState` / `restoreState` 로 저장하므로, 게임 인스턴스가 `registerStatefulComponent<CameraDirectorComponent>()` 로 올리면 핫 리로드와 세이브를 넘깁니다.
+렌즈는 시야각 대신 초점 길이와 센서(`<Lens focalLength="35" sensor="36 24">`)로도 적고, 더치 · 초점 거리 · 조리개 · 렌즈 시프트와 카메라별 후처리(`<PostProcess>`)는 포즈에 실려 섞입니다.
+렌더러가 아직 카메라별로 읽지 않아 화면에는 자리 · 시야각 · 더치만 보입니다(피사계 심도 패스와 후처리 덮어쓰기는 렌더러의 남은 일).
+돌리 레일은 `Dolly` 모드와 `<Dolly>` 곡선이고, 시야각 킥과 줌 펀치는 `addFieldOfViewKick` 입니다. 둘 다 Shooter3D 의 `dolly` 프리셋(`-gv_cameraPreset=dolly`)으로 스크린샷을 찍어 확인합니다.
+시퀀서는 카메라를 모르고 신호(`SequenceCameraSignal` — 컷 바뀜, 시네마틱 시작 · 끝, 대기 뷰, 흔들림)만 냅니다. 시퀀스 플레이어 옆의 `CinematicCameraComponent` 가 그 신호로
+컷 카메라 디렉터의 프리셋을 켜고, 시퀀스의 Blend In / Out 시간으로 게임 카메라와 섞고, 플레이어 카메라 매니저에 대기 뷰(`setPendingView`)를 등록합니다.
+시야각 · 초점 · 노출 값 트랙은 디렉터의 `_fieldOfViewOverride` · `_focusDistanceOverride` · `_exposureOffset` 를 프로퍼티 트랙으로 키합니다.
+게임 디렉터가 임시 시점(탑승 카메라)을 넣을 때는 `setViewOverride` / `clearViewOverride`, 마우스 아래 땅을 고를 때는 `findGroundPoint` 를 씁니다.
+직교 리그(`OrthoCameraRigComponent`)의 같은 이름 함수와 뜻이 같으므로, 리그를 쓰는 게임은 리그 값을 `OrthoTopDown` 프리셋 XML 로 옮기고 이 둘로 바꿉니다.
 `CameraManagerComponent` 는 플레이어마다 하나이고, 다른 오브젝트의 카메라를 뷰 타깃으로 따라갑니다. 언리얼의 `SetViewTargetWithBlend` 에 해당합니다.
 
 디렉터는 PostPhysics 그룹에서 입력만 읽고, 포즈는 틱 뒤에 씁니다. 틱 중의 트랜스폼 쓰기는 틱이 끝나야 적용되므로, 틱 안에서 대상을 읽으면 한 프레임 늦기 때문입니다.
@@ -266,7 +276,8 @@ GameFramework 최상위에는 `Base/`, `Kits/` 와 루트 파일만 둡니다. �
 - **시퀀서의 `SequenceItemKind` 값은 JSON 에 정수로 저장되므로 번호를 바꾸지 않습니다.** 시퀀서 이벤트는 `SequencePlayerComponent::registerSequenceEvent` 로 받습니다.
 - **카메라 포즈는 어느 공간의 값인지 보고 씁니다.** 월드 값이면 `CameraPoseUtil::applyToCamera`, 카메라 주인의 로컬 값(1인칭 눈 위치)이면 `applyToCameraLocal` 입니다.
   로컬 값을 월드로 쓰면 부모가 움직여도 카메라가 원점 근처에 남습니다. 루트 카메라에서는 둘이 같아서 드러나지 않습니다.
-- **2D(XY 평면) 씬의 따라가기 카메라는 `Follow2DCameraComponent` 입니다.** 데이터 카메라의 모드는 Y 가 위인 땅(XZ)을 기준으로 해서 2D 씬을 맡지 못합니다. 흔들림 식은 `CameraImpulse` 하나를 같이 씁니다.
+- **2D(XY 평면) 씬의 카메라는 디렉터의 `FollowXY` 모드입니다.** 다른 모드는 Y 가 위인 땅(XZ)을 기준으로 해서, 2D 씬에 쓰면 카메라가 평면을 옆에서 봅니다.
+  따라가는 빠르기는 `<Damping>`, 흔들림은 디렉터의 충격(`addImpulse`)입니다. 흔들림을 트랜스폼에 더해 두고 다음 틱에 다시 빼지 않습니다. 그렇게 하면 상태를 다시 읽을 때 오프셋이 남습니다.
 - **체력을 가진 컴포넌트는 `HealthSourceComponent` 를 상속합니다.** 읽기(`getHealthReading`)는 하나만 두고, 알림은 `notifyHealthChanged` 한 곳에서 보냅니다.
   RTTI 가 없어서 인터페이스가 아니라 리플렉션 베이스(`getComponent<HealthSourceComponent>()`)로 찾습니다.
   키트의 시뮬레이션 체력(`Vitality`, 정수 HP 배열)은 상속하지 않습니다. 그 유닛에 HP 바를 띄우려면 뷰 컴포넌트가 상속해 스냅샷을 읽습니다.

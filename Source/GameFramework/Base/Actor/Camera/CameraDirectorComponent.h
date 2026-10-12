@@ -22,6 +22,7 @@
 
 namespace sw
 {
+    class Archive;
     class ICameraCollisionProbe;
 
     /**
@@ -38,7 +39,8 @@ namespace sw
      *          암 충돌(`<Collision>`)은 따로 준 질의(`setCollisionProbe`)가 없으면 매니저의 `PhysicsOverlapWorld` 바디에 쓸어 본다. 대상 자신은 뺀다.
      *          입력 맵 액션 `_cycleAction` 이 발동하면 카탈로그 순서로 다음 프리셋을 켠다.
      *          블렌드 없는 전환(컷)은 카메라에 컷 표시를 넣어서 렌더러가 TAA 기록을 버리게 한다.
-     *          켠 프리셋과 블렌드 진행은 저장하지 않는다.
+     *          켠 프리셋과 블렌드 스택(진행, 입력이 돌린 각과 줌)은 `ComponentStateStore` 계약(`writeState` / `restoreState`)으로 저장한다.
+     *          게임 인스턴스가 `registerStatefulComponent<CameraDirectorComponent>()` 로 올리면 핫 리로드와 세이브를 넘긴다.
      */
     REFLECT( Category = "Camera", DisplayName = "Camera Director", Tooltip = "Drives the camera on this object from data presets with blends, damping, framing and shake" )
     class SW_GF_API CameraDirectorComponent : public Component
@@ -61,6 +63,30 @@ namespace sw
         [[nodiscard]] bool activatePreset( const hashed_string& id, const BlendCurveDef& blend );
         /** @brief 카탈로그 순서로 다음 프리셋을 켭니다. 마지막 다음은 처음이며, 켠 id 를 반환합니다. 프리셋이 없으면 빈 id 입니다. */
         hashed_string activateNextPreset();
+        /** @brief 화면이 지금 @p from 이라고 보고 켠 프리셋으로 @p blend 를 따라 섞습니다(`CameraDirector::blendFromPose`). 시네마틱에서 게임 카메라로 돌아올 때 씁니다. */
+        void blendFromPose( const CameraPose& from, const BlendCurveDef& blend ) { _director.blendFromPose( from, blend ); }
+
+        /**
+         * @brief 다음 갱신부터 이 원근 시점(`Fixed`)을 씁니다. @p euler 는 피치, 요, 롤(라디안)이며 롤은 쓰지 않습니다.
+         * @details 처음 덮어쓸 때 `_overrideBlend` 로 섞어 들어가고, 덮어쓰는 동안 다시 부르면 값만 바꾼다(탑승 시점은 매 프레임 움직인다).
+         *          게임 디렉터가 코스터 탑승이나 짧은 컷에 쓴다. 언리얼의 `SetViewTargetWithBlend` 로 임시 시점을 넣는 것과 같다.
+         */
+        void setViewOverride( const float3& position, const float3& euler, float32 fieldOfViewY, float32 farPlane );
+        /** @brief 덮어쓴 시점을 풀고, 덮어쓰기 전에 켜 있던 프리셋으로 `_overrideBlend` 를 따라 돌아갑니다. */
+        void clearViewOverride();
+        bool isViewOverridden() const { return _bViewOverride; }
+        /** @brief 덮어쓰기에 들어가고 나오는 블렌드입니다. */
+        void setOverrideBlend( const BlendCurveDef& blend ) { _overrideBlend = blend; }
+        /**
+         * @brief 화면 점 아래의 땅(y 가 @p groundHeight) 점을 구합니다. 지금 낸 포즈(블렌드 중이면 섞인 포즈)와 카메라 화면 비율로 광선을 쏩니다.
+         * @details 디렉터는 PostPhysics 틱 뒤에 포즈를 쓰므로, 앞 그룹(PrePhysics)에서 부르면 지난 프레임의 시점이다. 땅과 만나지 않으면 false 입니다.
+         */
+        [[nodiscard]] bool findGroundPoint( const float2& mouseNormalized, float32 groundHeight, float3& outPoint ) const;
+
+        /** @brief `ComponentStateStore` 계약 — 켠 프리셋과 블렌드 스택을 씁니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `ComponentStateStore` 계약 — 시작 전이면 보관했다가 카탈로그를 읽은 뒤 적용하고, 시작 뒤면 바로 적용합니다. 읽지 못하면 알리고 지금 상태를 둡니다. */
+        void restoreState( vector<uint8>&& bytes );
 
         /** @brief 카메라가 따라갈 오브젝트입니다. 비우면 초점은 원점이고 요와 피치는 0 입니다. */
         void                    setTarget( const GameObjectHandle& target ) { _target = target; }
@@ -75,6 +101,8 @@ namespace sw
         void setInputEnabled( bool bEnabled ) { _bReadInput = bEnabled; }
         /** @brief 충격을 더합니다. 원점과 모양을 받으며, 폭발이나 착지에 씁니다. */
         void addImpulse( const CameraImpulseDef& def, const float3& origin ) { _director.addImpulse( def, origin ); }
+        /** @brief 시야각 킥(+, 달리기 · 부스트) · 줌 펀치(−, 사격 · 착탄)를 더합니다. */
+        void addFieldOfViewKick( const CameraFieldOfViewKickDef& def ) { _director.addFieldOfViewKick( def ); }
 
         const hashed_string& getActivePresetID() const { return _director.getActivePresetID(); }
         bool                 isBlending() const { return _director.isBlending(); }
@@ -96,6 +124,8 @@ namespace sw
         void resolveCamera();
         /** @brief 시작 프리셋을 고릅니다. `-gv_cameraPreset` 이 카탈로그에 있으면(게임 시점 카메라만) 그것을 쓰고, 아니면 `_initialPreset`, 그것도 아니면 첫 프리셋을 씁니다. */
         hashed_string resolveStartPreset() const;
+        /** @brief 보관해 둔 상태 바이트를 디렉터에 적용합니다. 적용했으면 true 입니다. */
+        [[nodiscard]] bool applyPendingState();
 
     private:
         PROPERTY( Category = "Camera", DisplayName = "Presets", AssetPath, Tooltip = "Camera preset XML (<CameraPresets>)" )
@@ -120,9 +150,24 @@ namespace sw
         hashed_string _zoomAction;
         PROPERTY( Category = "Camera", DisplayName = "Read Input", Tooltip = "Feed the look, zoom, pan and rotate actions to presets with an <Input> section" )
         bool _bReadInput;
+        PROPERTY( Category = "Camera", DisplayName = "Override Blend", Tooltip = "Blend into and out of a view override (ride camera)" )
+        BlendCurveDef _overrideBlend;
+        PROPERTY( Category = "Sequencer", DisplayName = "Field Of View Override", Min = 0.0, Max = 3.14,
+                  Tooltip = "Vertical field of view a sequencer value track keys on top of the preset; 0 keeps the preset's", Units = rad )
+        float32 _fieldOfViewOverride;
+        PROPERTY( Category = "Sequencer", DisplayName = "Focus Distance Override", Min = 0.0,
+                  Tooltip = "Focus distance a sequencer value track keys on top of the preset; 0 keeps the preset's", Units = m )
+        float32 _focusDistanceOverride;
+        PROPERTY( Category = "Sequencer", DisplayName = "Exposure Offset", Tooltip = "Exposure compensation a sequencer value track adds to the preset's", Meta = "Units=EV" )
+        float32 _exposureOffset;
+
+        CameraPresetDef _overrideDef;          ///< 덮어쓴 시점의 고정 프리셋
+        hashed_string   _presetBeforeOverride; ///< 덮어쓰기를 풀 때 돌아갈 프리셋
+        bool            _bViewOverride;
 
         CameraPresetCatalog          _catalog;
         CameraDirector               _director;
+        vector<uint8>                _pendingStateBytes; ///< 시작 전에 받은 상태(`restoreState`) — 카탈로그를 읽은 뒤 적용한다
         const ICameraCollisionProbe* _pExternalProbe;
         float32                      _pendingDeltaTime; ///< 틱이 모은 시간 — 미룬 계산이 쓴다
     };

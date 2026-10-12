@@ -69,6 +69,52 @@ namespace sw
 
             return asset;
         }
+
+        /** @brief 컷 둘(10~20 은 프리셋 "wide", 21~30), 흔들림 하나(15~18), 프리롤 3 프레임, 블렌드 인 · 아웃이 있는 시퀀스. */
+        SequenceAsset makeCameraSequence()
+        {
+            SequenceAsset asset;
+            asset._frameMin              = 0;
+            asset._frameMax              = 40;
+            asset._cameraBlendInSeconds  = 0.5f;
+            asset._cameraBlendOutSeconds = 0.75f;
+            asset._cameraPrerollFrames   = 3;
+            SequenceTrackItem first{};
+            first._name         = "Wide";
+            first._targetObject = "ShotA";
+            first._preset       = "wide";
+            first._kind         = SequenceItemKind::CameraCut;
+            first._start        = 10;
+            first._end          = 20;
+            asset._listItem.push_back( first );
+            SequenceTrackItem second{};
+            second._name          = "Close";
+            second._targetObject  = "ShotB";
+            second._kind          = SequenceItemKind::CameraCut;
+            second._start         = 21;
+            second._end           = 30;
+            second._prerollFrames = 0; // 이 컷은 프리롤을 끈다
+            asset._listItem.push_back( second );
+            SequenceTrackItem shake{};
+            shake._name         = "Hit";
+            shake._targetObject = "ShotA";
+            shake._kind         = SequenceItemKind::CameraShake;
+            shake._start        = 15;
+            shake._end          = 18;
+            shake._amplitude    = 0.4f;
+            asset._listItem.push_back( shake );
+            return asset;
+        }
+
+        uint32 countSignal( const vector<SequenceCameraSignal>& listSignal, SequenceCameraSignalKind kind )
+        {
+            uint32 count = 0;
+            for ( const SequenceCameraSignal& signal : listSignal )
+            {
+                count += signal._kind == kind ? 1u : 0u;
+            }
+            return count;
+        }
     } // namespace
 } // namespace sw
 
@@ -784,4 +830,123 @@ SW_TEST_CASE( SequencerTest, CameraCutSelectsTargetCameraOnlyInsideItsSpan )
     sw::SequenceTimelineUtil::applyFrame( &manager, sw::makeSequenceWithFirstFrameEvent(), 5 );
     SW_EXPECT_TRUE( manager.getCameraRegistry().getCutCamera() == pCamera );
     manager.getCameraRegistry().setCutCamera( nullptr );
+}
+
+/**
+ * @brief [SequencerTest] 카메라 신호 — 프리롤 전에 대기 뷰, 첫 컷에 컷 바뀜과 시네마틱 시작(블렌드 인), 컷 사이에 컷 바뀜만, 흔들림은 시작에, 마지막 컷이 끝나면 시네마틱 끝(블렌드 아웃)
+ */
+SW_TEST_CASE( SequencerTest, CameraSignalsFollowTheCutTrack )
+{
+    const sw::SequenceAsset              asset = sw::makeCameraSequence();
+    sw::vector<sw::SequenceCameraSignal> listSignal;
+
+    sw::SequenceTimelineUtil::collectCameraSignals( asset, 5, 7, listSignal ); // 10 − 3 = 7 을 지났다
+    SW_ASSERT_EQUAL( size_t{ 1 }, listSignal.size() );
+    SW_EXPECT_TRUE( listSignal[0]._kind == sw::SequenceCameraSignalKind::CutPrewarm );
+    SW_EXPECT_EQUAL( 3, listSignal[0]._framesUntil );
+    SW_EXPECT_TRUE( listSignal[0]._item._targetObject == "ShotA" );
+
+    listSignal.clear();
+    sw::SequenceTimelineUtil::collectCameraSignals( asset, 9, 10, listSignal );
+    SW_ASSERT_EQUAL( size_t{ 2 }, listSignal.size() );
+    SW_EXPECT_TRUE( listSignal[0]._kind == sw::SequenceCameraSignalKind::CutBegin ); // 프리셋을 먼저 켜고
+    SW_EXPECT_TRUE( listSignal[0]._item._preset == "wide" );
+    SW_EXPECT_TRUE( listSignal[1]._kind == sw::SequenceCameraSignalKind::CinematicBegin ); // 그 위에 게임 화면에서 섞는다
+    SW_EXPECT_NEAR_EQUAL( 0.5f, listSignal[1]._blendSeconds, 1.0e-6f );
+
+    listSignal.clear();
+    sw::SequenceTimelineUtil::collectCameraSignals( asset, 14, 16, listSignal );
+    SW_ASSERT_EQUAL( size_t{ 1 }, listSignal.size() );
+    SW_EXPECT_TRUE( listSignal[0]._kind == sw::SequenceCameraSignalKind::Shake );
+    SW_EXPECT_NEAR_EQUAL( 0.4f, listSignal[0]._item._amplitude, 1.0e-6f );
+
+    listSignal.clear();
+    sw::SequenceTimelineUtil::collectCameraSignals( asset, 20, 21, listSignal ); // 컷 사이 — 프리롤 0 이라 대기 뷰가 없다
+    SW_ASSERT_EQUAL( size_t{ 1 }, listSignal.size() );
+    SW_EXPECT_TRUE( listSignal[0]._kind == sw::SequenceCameraSignalKind::CutBegin );
+    SW_EXPECT_TRUE( listSignal[0]._item._targetObject == "ShotB" );
+
+    listSignal.clear();
+    sw::SequenceTimelineUtil::collectCameraSignals( asset, 30, 31, listSignal );
+    SW_ASSERT_EQUAL( size_t{ 1 }, listSignal.size() );
+    SW_EXPECT_TRUE( listSignal[0]._kind == sw::SequenceCameraSignalKind::CinematicEnd );
+    SW_EXPECT_NEAR_EQUAL( 0.75f, listSignal[0]._blendSeconds, 1.0e-6f );
+    SW_EXPECT_TRUE( listSignal[0]._item._targetObject == "ShotB" );
+
+    // 한 갱신에 모두 지나도 순서대로 다 낸다.
+    listSignal.clear();
+    sw::SequenceTimelineUtil::collectCameraSignals( asset, 0, 35, listSignal );
+    SW_EXPECT_EQUAL( 1u, sw::countSignal( listSignal, sw::SequenceCameraSignalKind::Shake ) );
+    SW_EXPECT_EQUAL( 0u, sw::countSignal( listSignal, sw::SequenceCameraSignalKind::CutPrewarm ) );     // 이미 지난 컷은 미리 준비하지 않는다
+    SW_EXPECT_EQUAL( 0u, sw::countSignal( listSignal, sw::SequenceCameraSignalKind::CinematicBegin ) ); // 0 과 35 는 둘 다 컷 밖이다
+}
+
+/**
+ * @brief [SequencerTest] 플레이어 컴포넌트는 카메라 신호에 초 단위 값을 채워 알리고, 컷 안에서 멈추면 시네마틱 끝을 낸다
+ */
+SW_TEST_CASE( SequencerTest, PlayerComponentBroadcastsCameraSignals )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pSequenceObject = manager.createGameObject( sw::hashed_string{ "Sequence" } );
+    SW_ASSERT_NOT_NULL( pSequenceObject );
+    sw::SequencePlayerComponent* pPlayer = pSequenceObject->addComponent<sw::SequencePlayerComponent>();
+    SW_ASSERT_NOT_NULL( pPlayer );
+    manager.mergePendingAdds();
+    pPlayer->setSequence( sw::makeCameraSequence() );
+
+    struct Recorder
+    {
+        sw::vector<sw::SequenceCameraSignal> _listSignal;
+        void                                 record( const sw::SequenceCameraSignal& signal ) { _listSignal.push_back( signal ); }
+    };
+    Recorder                 recorder;
+    const sw::DelegateHandle handle =
+        pPlayer->registerCameraSignal( SW_DELEGATE_METHOD( sw::OnSequenceCameraSignalDelegate, &Recorder::record, &recorder ) );
+
+    pPlayer->play();
+    const float32 secondsPerFrame = 1.0f / pPlayer->getFramesPerSecond();
+    for ( int32 frameIndex = 0; frameIndex < 16; ++frameIndex )
+    {
+        pPlayer->onTick( secondsPerFrame );
+    }
+    SW_EXPECT_EQUAL( 1u, sw::countSignal( recorder._listSignal, sw::SequenceCameraSignalKind::CutPrewarm ) );
+    SW_EXPECT_EQUAL( 1u, sw::countSignal( recorder._listSignal, sw::SequenceCameraSignalKind::CinematicBegin ) );
+    for ( const sw::SequenceCameraSignal& signal : recorder._listSignal )
+    {
+        if ( signal._kind == sw::SequenceCameraSignalKind::CutPrewarm )
+            SW_EXPECT_NEAR_EQUAL( static_cast<float32>( signal._framesUntil ) * secondsPerFrame, signal._secondsUntil, 1.0e-5f );
+        if ( signal._kind == sw::SequenceCameraSignalKind::Shake )
+            SW_EXPECT_NEAR_EQUAL( 3.0f * secondsPerFrame, signal._durationSeconds, 1.0e-5f );
+    }
+
+    recorder._listSignal.clear();
+    pPlayer->stop(); // 컷 안에서 멈춘다
+    SW_ASSERT_EQUAL( size_t{ 1 }, recorder._listSignal.size() );
+    SW_EXPECT_TRUE( recorder._listSignal[0]._kind == sw::SequenceCameraSignalKind::CinematicEnd );
+    pPlayer->unregisterCameraSignal( handle );
+}
+
+/**
+ * @brief [SequencerTest] 카메라 필드(프리셋 · 세기 · 프리롤 · 블렌드 인/아웃)는 JSON 으로 왕복하고, 기본값이면 쓰지 않는다
+ */
+SW_TEST_CASE( SequencerTest, CameraFieldsRoundTripThroughJSON )
+{
+    const sw::SequenceAsset source = sw::makeCameraSequence();
+    sw::SequenceAsset       restored;
+    SW_ASSERT_TRUE( restored.parseJSON( source.toJSON() ) );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, restored._cameraBlendInSeconds, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.75f, restored._cameraBlendOutSeconds, 1.0e-6f );
+    SW_EXPECT_EQUAL( 3, restored._cameraPrerollFrames );
+    SW_ASSERT_EQUAL( size_t{ 3 }, restored._listItem.size() );
+    SW_EXPECT_TRUE( restored._listItem[0]._preset == "wide" );
+    SW_EXPECT_EQUAL( sw::SequenceTrackItem::kUseSequencePreroll, restored._listItem[0]._prerollFrames );
+    SW_EXPECT_EQUAL( 0, restored._listItem[1]._prerollFrames );
+    SW_EXPECT_TRUE( restored._listItem[2]._kind == sw::SequenceItemKind::CameraShake );
+    SW_EXPECT_NEAR_EQUAL( 0.4f, restored._listItem[2]._amplitude, 1.0e-6f );
+    SW_EXPECT_TRUE( restored.toJSON() == source.toJSON() );
+
+    // 카메라를 쓰지 않는 시퀀스는 새 키를 쓰지 않는다(기존 파일 바이트가 그대로다).
+    const sw::string plain = sw::makeSequenceWithFirstFrameEvent().toJSON();
+    SW_EXPECT_TRUE( plain.find( "camera" ) == sw::string::npos );
+    SW_EXPECT_TRUE( plain.find( "preset" ) == sw::string::npos );
 }

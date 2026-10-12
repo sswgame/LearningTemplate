@@ -18,6 +18,8 @@
 
 namespace sw
 {
+    struct GameRay;
+
     class ICameraCollisionProbe;
 
     /** @brief 이번 프레임의 카메라 입력입니다. `InputManager` 를 보는 컴포넌트가 채우고, 모드는 프리셋의 `<Input>` 이 받는 것만 씁니다. */
@@ -39,21 +41,23 @@ namespace sw
      */
     struct CameraModeState
     {
-        float3  _panOffset{};            ///< 이동 키가 옮긴 초점(월드)
-        float3  _previousFocus{};        ///< 지난 프레임의 대상 초점 — look-ahead 의 속도
-        float3  _lookAhead{};            ///< 부드럽게 따라가는 look-ahead 오프셋(월드)
-        float32 _yawOffset{ 0.0f };      ///< 마우스가 돌린 요(rad)
-        float32 _pitchOffset{ 0.0f };    ///< 마우스가 돌린 피치(rad)
-        float32 _rotateYaw{ 0.0f };      ///< 회전 키가 정한 요(rad)
-        float32 _rotateYawShown{ 0.0f }; ///< 화면에 보이는 회전 요 — `_rotateYaw` 를 `rotateTime` 으로 따라간다
-        float32 _zoom{ 0.0f };           ///< 거리(원근) · 직교 높이. 0 이면 프리셋 값
-        float32 _time{ 0.0f };           ///< 이 모드로 흐른 시간(훑기 · 잡음)
-        float32 _armLength{ -1.0f };     ///< 스프링 암의 지금 길이. 음수면 아직 없음
-        float32 _aimYaw{ 0.0f };         ///< 프레이밍이 정한 조준 요
-        float32 _aimPitch{ 0.0f };       ///< 프레이밍이 정한 조준 피치
-        uint8   _bAimValid{ SW_FALSE };
-        uint8   _bHasPreviousFocus{ SW_FALSE };
-        uint8   _bArmBlocked{ SW_FALSE }; ///< 지난 평가에서 암이 막혀 당겨졌다(진단 · 테스트)
+        SplinePath _dollyPath{};            ///< 돌리 레일 곡선 — 처음 풀 때 `<Dolly>` 의 점으로 한 번 만든다
+        float3     _panOffset{};            ///< 이동 키가 옮긴 초점(월드)
+        float3     _previousFocus{};        ///< 지난 프레임의 대상 초점 — look-ahead 의 속도
+        float3     _lookAhead{};            ///< 부드럽게 따라가는 look-ahead 오프셋(월드)
+        float32    _yawOffset{ 0.0f };      ///< 마우스가 돌린 요(rad)
+        float32    _pitchOffset{ 0.0f };    ///< 마우스가 돌린 피치(rad)
+        float32    _rotateYaw{ 0.0f };      ///< 회전 키가 정한 요(rad)
+        float32    _rotateYawShown{ 0.0f }; ///< 화면에 보이는 회전 요 — `_rotateYaw` 를 `rotateTime` 으로 따라간다
+        float32    _zoom{ 0.0f };           ///< 거리(원근) · 직교 높이. 0 이면 프리셋 값
+        float32    _time{ 0.0f };           ///< 이 모드로 흐른 시간(훑기 · 잡음)
+        float32    _armLength{ -1.0f };     ///< 스프링 암의 지금 길이. 음수면 아직 없음
+        float32    _aimYaw{ 0.0f };         ///< 프레이밍이 정한 조준 요
+        float32    _aimPitch{ 0.0f };       ///< 프레이밍이 정한 조준 피치
+        uint8      _bAimValid{ SW_FALSE };
+        uint8      _bHasPreviousFocus{ SW_FALSE };
+        uint8      _bArmBlocked{ SW_FALSE }; ///< 지난 평가에서 암이 막혀 당겨졌다(진단 · 테스트)
+        uint8      _bDollyPathBuilt{ SW_FALSE };
 
         /** @brief 새로 시작합니다. 프리셋을 켤 때 부릅니다. */
         void reset() { *this = CameraModeState{}; }
@@ -86,4 +90,12 @@ namespace sw
 
     /** @brief @p from 에서 @p to 를 보는 요와 피치(rad, 피치는 +가 아래)입니다. 같은 점이면 0 입니다. */
     SW_GF_API float2 computeLookAngles( const float3& from, const float3& to );
+
+    /**
+     * @brief 포즈의 화면 점을 지나는 광선입니다. 화면 점 @p mouseNormalized 는 왼쪽 위가 (0, 0), 오른쪽 아래가 (1, 1) 입니다.
+     * @details 직교 포즈는 광선이 모두 카메라 앞 방향과 나란하고 시작점이 화면 평면 위에서 옮겨진다. 원근 포즈는 카메라 자리에서 시야각만큼 벌어진다.
+     *          마우스 고르기(땅 점 찾기)에 쓴다. 디렉터가 지금 낸 포즈를 넘기면 블렌드 중에도 화면에 보이는 그대로 고른다.
+     * @param aspectRatio 화면의 가로/세로이다(`CameraPoseUtil::computeAspectRatio`).
+     */
+    SW_GF_API GameRay computeCameraScreenRay( const CameraPose& pose, float32 aspectRatio, const float2& mouseNormalized );
 } // namespace sw
