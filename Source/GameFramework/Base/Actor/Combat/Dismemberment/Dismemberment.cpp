@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Character/Hit/Dismemberment.h"
+#include "GameFramework/Base/Actor/Combat/Dismemberment/Dismemberment.h"
 
 #include "Engine/Character/Fit/GeometryCut.h"
 

@@ -9,7 +9,7 @@
 
 이 폴더의 기능은 두 가지로 나뉩니다.
 
-- **캐릭터 런타임.** 매 프레임 캐릭터 오브젝트 위에서 도는 컴포넌트입니다. 소켓, 소켓 부착, 후처리 리그, 애니메이션 알림, 래그돌, 절단, 맞힘 판정이 있습니다.
+- **캐릭터 런타임.** 매 프레임 캐릭터 오브젝트 위에서 도는 컴포넌트입니다. 소켓, 소켓 부착, 후처리 리그, 애니메이션 알림, 래그돌, 맞힘 판정이 있습니다. 절단(장르 규칙)은 GameFramework `Base/Actor/Combat/Dismemberment` 에 있습니다.
 - **외형 형상 계산.** 장비가 바뀔 때 한 번 하는 계산입니다. 체형, 장비 피팅, 메시 병합, 자르기, 표면 상태가 있습니다.
 
 다른 모듈과의 경계는 다음과 같습니다. 스켈레톤, 클립, 포즈, 스키닝은 [Animation](../Animation/README.md)이 맡고, 강체는 [Physics](../Physics/README.md)가 맡습니다.
@@ -227,7 +227,9 @@ KayKit 스켈레톤 리그(본 41개)의 물리 에셋은 `Resource/game/shooter
 쏘는 오브젝트의 바디는 모두 건너뜁니다(`PhysicsQueryFilter::_ignoreUserData`). 자기 래그돌 본이나 들고 있는 무기에 맞지 않게 하기 위해서입니다. 무기 한 발은 `traceWeaponHit` 으로 판정합니다.
 엔진은 체력을 모릅니다. 피해에 배율을 곱한 값을 어떻게 쓸지는 받는 컴포넌트가 정합니다.
 
-### 절단 — `DismembermentComponent`
+### 절단 — `DismembermentComponent`(GameFramework)
+
+절단은 장르 규칙이라 GameFramework `Base/Actor/Combat/Dismemberment` 에 있습니다. 엔진은 아래 동작이 쓰는 형상 도구(`GeometryCutUtil`, 영역 테이블, 래그돌)만 줍니다.
 
 치명적 맞음(`HitInfo::_bFatal`)이 잘라 낼 수 있는 영역(`_listSeverableRegion`)의 본에 맞으면 `severRegion` 을 실행합니다. 코드에서 바로 불러도 됩니다.
 맞은 본은 래그돌 바디, 물리 에셋의 본, 몸 영역 테이블(`*.fit.xml` 의 `<Region bones=…>`) 순서로 찾습니다.
