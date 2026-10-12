@@ -14,6 +14,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/IEditorPanelHost.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
+#include "Editor/Viewport/EditorColliderHandleTool.h"
 #include "Editor/Viewport/EditorViewportAssetDrop.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
@@ -208,6 +209,8 @@ namespace sw::editor
             visualizerArgs._pListCamera     = ( pSnapshotManager != nullptr ) ? &pSnapshotManager->getCameraRegistry().getAll() : nullptr;
             visualizerArgs._pListCollider   = ( pSnapshotManager != nullptr ) ? &pSnapshotManager->getOverlapWorld2D().getColliders() : nullptr;
             visualizerArgs._pDebugDrawQueue = getService<DebugDrawQueue>();
+            visualizerArgs._pObjectManager  = pSnapshotManager;
+            visualizerArgs._bGizmoDragging  = _gizmo.isDragging();
             visualizerArgs._bFlat2D         = EditorVisualizerGeometryUtil::isFlat2DView( pCamera->isOrthographic(), pCamera->getViewMatrix() );
             EditorViewportVisualizer::drawAll( visualizerArgs, _toolbarSettings._visualizerToggles );
 
@@ -215,7 +218,7 @@ namespace sw::editor
             pCanvasDrawList->PopClipRect();
 
             // 피킹과 호버는 기즈모보다 먼저 본다. ImGuizmo::IsOver · IsUsing 은 지난 프레임에 그린 기즈모의 상태다.
-            _picker.processClick( canvasPos, canvasSize, pCamera, bCanvasClicked, _toolbarSettings );
+            _picker.processClick( canvasPos, canvasSize, pCamera, bCanvasClicked && EditorColliderHandleTool::isCapturingMouse() == false, _toolbarSettings );
             _picker.processHover( canvasPos, canvasSize, pCamera, bCanvasHovered, _gizmo.isDragging(), _toolbarSettings );
             EditorSelectionBounds::setHoveredObjectID( _picker.getHoveredObjectID() );
 
@@ -223,7 +226,9 @@ namespace sw::editor
                 GameObjectManager* pObjectManager = editor::getActiveObjectManager();
                 if ( pObjectManager != nullptr )
                     pObjectManager->flushSceneTransforms();
-                _gizmo.draw( arrView, arrProj, canvasPos, canvasSize, _toolbarSettings );
+                // 콜라이더 손잡이 위에서는 기즈모가 마우스를 양보한다 — 손잡이는 기즈모 축 위에 놓인다.
+                if ( EditorColliderHandleTool::isCapturingMouse() == false )
+                    _gizmo.draw( arrView, arrProj, canvasPos, canvasSize, _toolbarSettings );
             }
 
             pCanvasDrawList->PushClipRect( imagePos, canvasMax, true );

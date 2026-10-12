@@ -54,6 +54,8 @@
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
 | `gv_editorProbeAsset` | `string` | — | 시험 | 탐침 Editor.ReferenceCount 가 볼 에셋의 리소스 id (시나리오용) | [ContentBrowserPanel.cpp](../../Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp) |
+| `gv_editorProbeBus` | `string` | `master` | 시험 | 탐침 Editor.AudioMixerBusVolume 이 볼 믹서 버스 이름 (시나리오용) | [AudioMixerPanel.cpp](../../Source/Editor/Panels/AudioMixer/AudioMixerPanel.cpp) |
+| `gv_editorProbeHierarchyObject` | `string` | — | 시험 | 탐침 Editor.HierarchyRowIndex 가 볼 오브젝트 이름 (시나리오용) | [HierarchyPanel.cpp](../../Source/Editor/Panels/Scene/HierarchyPanel.cpp) |
 
 ## `Source/Editor/SelfTest`
 

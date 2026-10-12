@@ -46,9 +46,9 @@ namespace sw::editor
          */
         static uint32 destroyObjects( GameObjectManager* pManager, const vector<GameObject*>& listObject );
         /**
-         * @brief 계층 창이 그릴 루트 오브젝트를 정해진 순서(오브젝트 id 오름차순)로 모읍니다. 먼저 출력 목록을 비우며, 지우는 중인 오브젝트는 뺍니다.
-         * @details 스토어의 순서는 삭제에 따라 바뀌므로(swap-remove) 쓰지 않는다. 씬은 파일 순서로 id 를 매기므로 처음 연 순서와 같고, 되돌린
-         *          오브젝트는 원래 id 로 돌아와 제 위치에 선다. 형제 순서를 저장하게 되면 그 순서로 바꾼다.
+         * @brief 계층 창이 그릴 루트 오브젝트를 표시 순서(형제 번호, 같으면 오브젝트 id 오름차순)로 모읍니다. 먼저 출력 목록을 비우며, 지우는 중인 오브젝트는 뺍니다.
+         * @details 스토어의 순서는 삭제에 따라 바뀌므로(swap-remove) 쓰지 않는다. 씬은 파일 순서로 id 를 매기므로 번호가 모두 0 인 씬은 처음 연 순서와 같고,
+         *          되돌린 오브젝트는 원래 id 와 번호로 돌아와 제 위치에 선다. 번호를 고치는 동작은 `EditorSiblingOrder` 에 있다.
          */
         static void collectRootsInOrder( GameObjectManager& manager, vector<GameObject*>& outListRoot );
         /** @brief 선택한 오브젝트들을 되돌리기 한 단계로 복제하고 새 오브젝트를 @p outListCreated 에 담습니다. 먼저 출력 목록을 비웁니다. */

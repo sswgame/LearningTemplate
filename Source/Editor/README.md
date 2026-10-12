@@ -196,6 +196,28 @@ Play 는 활성 씬을 스냅샷으로 찍고 월드를 시작합니다. Stop �
 상단 재생 툴바(`EditorPlayToolbar`)는 어느 뷰를 열어 두든 같은 자리에 있습니다. Play, Simulate, Pause, Step, Step N, Stop, 카메라 위치에서 시작(Cam), 시간 배율, 자동 플레이(Auto), RenderDoc 단추가 있습니다.
 메뉴 Play 에는 Eject(F8), Keep Simulation Changes, Play in New Window 가 있습니다. Play in New Window 는 저장된 활성 씬을 `-gv_firstScene` 으로 엔진을 따로 띄웁니다(언리얼 Standalone).
 
+### 프로젝트 설정, 오디오 믹서, 물리 · 내비 보기, 형제 순서
+
+- **프로젝트 설정**(Edit > Project Settings, `Panels/ProjectSettings/`)은 `Config/` 와 팩의 설정 JSON 을 프로퍼티 그리드로 고칩니다(언리얼 · 유니티 Project Settings).
+  파일 목록은 생성 문서 `docs/Config/ConfigReference.json` 에서 읽으므로 설정을 더해도 창을 고치지 않습니다(`ProjectSettingsCatalog`). 파일마다 `ProjectSettingsDocument` 가 타입의 기본 생성자(`$ctor`)로
+  현재값과 기본값 인스턴스를 만들고 `ConfigManager::readConfigJSON` 으로 엄격하게 읽습니다. 저장은 기본값과 같은 키를 뺀 글만 쓰고(`ConfigManager::collectEqualKeys`),
+  Save 가 `ConfigHotReload::reloadChangedFile`(곧 `ConfigManager::reloadConfigFile`)로 실행 중인 호스트에 알립니다. 창 시작 값(창 크기 · 백엔드)은 다음 실행부터 반영됩니다.
+  XML 설정(물리 · 내비메시 표)은 손으로 쓴 주석이 있어 다시 쓰면 잃으므로 이 창이 다루지 않습니다.
+- **오디오 믹서**(Window > Audio Mixer, `Panels/AudioMixer/`)는 버스마다 세로 띠 하나입니다. 피크 미터는 dB 로 보이고 천천히 내려가며, 볼륨은 옵션 메뉴와 같은 사용자 볼륨(`IAudioService::setBusVolume`),
+  M · S 는 `AudioEngine::setBusMuted` · `setBusSolo` 입니다. 값은 오디오 스레드가 블록마다 게시한 사본(`AudioEngine::getBusStatuses`)에서 읽고, 고치는 명령은 다음 블록(약 5 ms)에 적용됩니다.
+  위쪽 Post Event 는 로드된 이벤트 라이브러리의 이름 목록(`collectEventNames`)에서 골라 내고, Play Clip 은 클립 경로를 `sfx` 버스로 냅니다. `AudioDataHotReload` 가 `*.audiomixer.xml`(`loadMixer`)과
+  게임이 이미 로드한 `*.audioevents.xml`(같은 이름으로 `loadEventLibrary`)이 디스크에서 바뀌면 다시 읽습니다 — 게임이 로드하지 않은 라이브러리는 다른 이름으로 올리면 이벤트 이름이 겹치므로 건드리지 않습니다.
+- **물리 셰이프 · 내비메시 보기**는 씬 뷰 툴바의 Phys · Nav 토글입니다(기본 꺼짐, `Viewport/Visualizers/`). Phys 는 플레이 전에는 물리 씬에 바디가 없으므로 `RigidBody` · `RigidBody2D` 의 셰이프 목록을
+  월드 배율(`PhysicsComponentUtil::makeScaledShape`)을 먹여 그립니다. Nav 는 `SceneNavigation::drawDebug( kMesh )` 로 이미 베이크한 메시만 그리며 베이크를 일으키지 않습니다.
+  베이크는 Build > Bake Navigation(`navigation.bake`, `EditorNavigationCommands::bakeAll`)이고 편집 중에만 켜집니다 — 설정을 다시 걸어(`SceneNavigation::setSettings`) 에이전트 종류마다 `ensureNavMesh` 합니다.
+  선은 `EditorProjectedLineRenderer` 가 `IPhysicsDebugRenderer` 로 받아 근평면에서 잘라 `ImDrawList` 에 긋습니다.
+- **콜라이더 크기 손잡이**(`EditorColliderHandleTool`)는 Phys 가 켜져 있고 강체 하나를 골랐을 때 상자 · 구 · 캡슐의 면마다 사각 손잡이를 그립니다. 끌면 레이와 손잡이 축이 가장 가까운 점이 새 가장자리가 되고
+  (`EditorColliderHandleMath`, 배율은 `makeScaledShape` 에 단위 셰이프를 먹여 되돌립니다), 놓으면 `Resize Collider` 한 단계가 남습니다. 손잡이 위에서는 클릭 선택과 변환 기즈모가 마우스를 양보합니다.
+  2D 강체는 모양만 보이고 손잡이가 없습니다.
+- **형제 순서와 폴더**(`EditorSiblingOrder`)는 `GameObject::getSiblingIndex`(uint16, 씬 파일에 저장)를 고칩니다. 표시 순서는 (번호, 오브젝트 id) 이고 번호가 모두 0 인 옛 씬은 id 순 그대로입니다.
+  계층 창에서 행의 위 · 아래 가장자리에 끌어 놓으면 그 오브젝트 앞 · 뒤의 형제로(부모가 다르면 재부모), 가운데는 자식으로 넣습니다. 형제 전체를 0 부터 다시 매기고 바뀐 것마다 기록해 되돌리기 한 단계입니다.
+  커맨드 `scene.moveSiblingUp` · `scene.moveSiblingDown` 이 한 칸씩 옮기고, `scene.createFolder` 가 `Editor.Folder` 태그가 붙은 빈 오브젝트를 만듭니다. 형제 순서는 표시 순서일 뿐 틱 · 렌더 순서와 무관합니다.
+
 ### 임포트
 
 런타임은 엔진 형식만 읽습니다. 원본은 `textures_raw/`, `models_raw/`, `heightfields_raw/` 에 두고, 같은 상대 경로의 `textures/*.dds`, `models/*.mesh`, `heightfields/*.heightfield` 로 임포트합니다.
@@ -276,6 +298,11 @@ humanoid 본 표, 표정, 스프링 본, 1인칭은 옆 폴더의 `<이름>.avat
 | `Editor.PanelCount` | 패널 매니저가 가진 패널 수(등록 줄 + 직접 넣은 패널) |
 | `Editor.SelectedProperty` | 주 선택 오브젝트의 `gv_editorProbeProperty`(`<컴포넌트 타입>.<프로퍼티>`) 숫자 값 |
 | `Editor.PreferencesVisibleSections`, `Editor.PreferencesSavedKeyCount` | 환경설정 창이 보인 섹션 수(검색 뒤), `EditorPreferences.json` 에 저장된 키 수 |
+| `Editor.ProjectSettingsPageCount`, `Editor.ProjectSettingsKeyCount`, `Editor.ProjectSettingsDirtyPageCount` | 프로젝트 설정 창의 파일 수, 고른 파일의 기본값과 다른 키 수(메모리), 저장하지 않은 파일 수 |
+| `Editor.AudioMixerBusCount`, `Editor.AudioMixerMutedCount`, `Editor.AudioMixerSoloCount`, `Editor.AudioMixerBusVolume`, `Editor.AudioDataReloadCount` | 믹서 창의 버스 수, 음소거 · 솔로 버스 수, `gv_editorProbeBus` 버스의 사용자 볼륨(없으면 -1), 오디오 데이터 핫 리로드로 다시 읽은 파일 수 |
+| `Editor.PhysicsShapeSegments`, `Editor.NavMeshSegments`, `Editor.NavigationBakeCount`, `Editor.NavMeshCount` | Phys · Nav 시각화가 지난 프레임에 그린 선분 수, `navigation.bake` 가 돈 횟수, 활성 씬에서 내비메시가 선 에이전트 종류 수 |
+| `Editor.ColliderHandleCount`, `Editor.ColliderHandleCommitCount`, `Editor.ColliderHalfExtentX` | 콜라이더 손잡이 수, 끌기를 마치고 되돌리기를 남긴 횟수, 고른 강체 첫 셰이프의 반 크기 X |
+| `Editor.HierarchyRowIndex` | `gv_editorProbeHierarchyObject` 오브젝트가 계층 창 마지막 프레임의 몇 번째 행인지(0 부터, 없으면 -1) |
 | `Editor.ShortcutConflictCount`, `Editor.ShortcutOverrideCount` | 단축키 편집기가 묻는 충돌 수, 사용자 단축키 덮어쓰기 수 |
 | `Editor.ModulePreviewNewlyInactive` | 모듈 창이 묻는 미리보기에서 새로 꺼지는 모듈 수(묻지 않으면 0) |
 | `Editor.NetPlayProcessCount`, `Editor.NetPlayConnectedClients` | 멀티 프로세스 재생의 프로세스 수(멈추면 0), 서버에 붙었다고 로그에 남긴 클라이언트 수 |
@@ -521,6 +548,11 @@ Tile Map Tool 은 도구 단추 `tileMap.tool.brush` · `tileMap.tool.rect` · `
 
 ### 설정, 상태, 서비스
 
+- **프로젝트 설정은 XML 설정을 열지 않습니다.** 손으로 쓴 주석(`physicssettings.xml`)을 다시 쓰면 잃습니다. 저장소 파일을 쓰는 시나리오는 두지 않았습니다 — 저장과 호스트 다시 읽기는
+  `ProjectSettingsDocumentTest` 가 임시 폴더에서 봅니다.
+- **시나리오 파일 이름에 `settings` 를 넣지 마세요.** `Resource/*settings*.xml` 패턴이 설정 파일로 읽어 설정 카탈로그 검사(`CheckConfigReference`)가 걸립니다.
+- **콜라이더 손잡이는 기즈모 축 위에 놓입니다.** 손잡이 위에 마우스가 있는 프레임에는 기즈모를 그리지 않습니다(`EditorColliderHandleTool::isCapturingMouse`). 손잡이 끌기가 새 입력 경로를 더하면 같은 양보를 붙입니다.
+- **믹서 값은 한 블록 늦습니다.** 창이 읽는 사본은 오디오 스레드가 블록 끝에 게시한 것이라, 누른 직후 프레임에는 이전 값이 보입니다. 시나리오는 눌러 놓고 몇 프레임 뒤에 확인합니다.
 - **앱이 다시 쓰는 상태는 `Saved/Editor/`, 사람이 쓰는 설정은 `Config/Editor/` 입니다.** 에디터 자기 파일과 폴더 이름은 코드 상수(`EditorUtil::k…FileName`)이고 설정 파일이 제 위치를 정하지 않습니다.
 - **에디터 환경설정은 섹션 하나가 리플렉션 구조체 하나입니다.** 저장은 기본과 다른 값만 하고, 창에서 바꾼 0.5 초 뒤에 합니다. `-gv_editorUiScale` 과 `-gv_editorStartupScene` 은 주어지면 환경설정을 이깁니다.
 - **섹션의 바뀐 뒤 동작은 ImGui 컨텍스트보다 먼저 불릴 수 있습니다.** 기동 때 파일을 읽기 때문입니다. 상태를 소유자에게 옮길 때는 그 소유자가 언제 서는지부터 봅니다. 테마가 `EditorContext::initialize()` 전에 읽혀 조용히 버려진 적이 있습니다.

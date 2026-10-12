@@ -2890,6 +2890,22 @@
    "source": "Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp"
   },
   {
+   "name": "gv_editorProbeBus",
+   "type": "string",
+   "default": "master",
+   "kind": "시험",
+   "description": "탐침 Editor.AudioMixerBusVolume 이 볼 믹서 버스 이름 (시나리오용)",
+   "source": "Source/Editor/Panels/AudioMixer/AudioMixerPanel.cpp"
+  },
+  {
+   "name": "gv_editorProbeHierarchyObject",
+   "type": "string",
+   "default": "",
+   "kind": "시험",
+   "description": "탐침 Editor.HierarchyRowIndex 가 볼 오브젝트 이름 (시나리오용)",
+   "source": "Source/Editor/Panels/Scene/HierarchyPanel.cpp"
+  },
+  {
    "name": "gv_editorProbeObject",
    "type": "string",
    "default": "",

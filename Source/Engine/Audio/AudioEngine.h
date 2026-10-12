@@ -92,6 +92,8 @@ namespace sw
         void unloadEventLibrary( const hashed_string& libraryName );
         /** @brief 로드한 라이브러리에 그 이벤트가 있는지 반환합니다. */
         bool hasEvent( const hashed_string& eventName ) const;
+        /** @brief 그 이름(`loadEventLibrary` 에 준 이름)으로 로드한 라이브러리가 있는지 반환합니다. 에디터의 데이터 핫 리로드가 게임이 로드한 라이브러리만 다시 읽으려고 묻습니다. */
+        bool hasEventLibrary( const hashed_string& libraryName ) const;
         /** @brief 클립 캐시입니다. */
         AudioClipCache& getClipStore() { return _clipStore; }
         /** @brief 컨테이너와 범위가 쓰는 난수의 시드를 정합니다. 테스트에서 결정성을 얻으려고 씁니다. 다음 블록부터 적용됩니다. */
@@ -171,6 +173,10 @@ namespace sw
         bool isPlaying( AudioPlayingID playingID ) const;
         /** @brief 마지막 블록의 상태입니다. */
         AudioEngineStats getStats() const;
+        /** @brief 믹서 버스마다 마지막 블록의 상태(사용자 볼륨 · 음소거 · 솔로 · 피크)를 @p outListStatus 에 담습니다(비우고 채웁니다). 오디오 스레드가 블록마다 게시한 사본입니다. */
+        void getBusStatuses( vector<AudioBusStatus>& outListStatus ) const;
+        /** @brief 로드한 라이브러리의 이벤트 이름을 @p outListName 에 담습니다(비우고 채웁니다). 라이브러리 로드 순서는 정해져 있지 않습니다. */
+        void collectEventNames( vector<hashed_string>& outListName ) const;
 
         // --- 오디오 스레드 --------------------------------------------------------------------------------------------------
 

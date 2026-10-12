@@ -1,0 +1,40 @@
+#include "pch.h"
+
+#include "Editor/Common/Commands/EditorNavigationCommands.h"
+
+#include "Engine/Navigation/NavMeshSettings.h"
+#include "Engine/Object/Component/Navigation/SceneNavigation.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+
+namespace sw::editor
+{
+    SW_LOG_CALLER( "EditorNavigationCommands" );
+
+    uint32 EditorNavigationCommands::bakeAll( GameObjectManager& manager )
+    {
+        SceneNavigation&      navigation = manager.getSceneService<SceneNavigation>();
+        const NavMeshSettings settings   = navigation.getSettings();
+        navigation.setSettings( settings ); // 같은 표를 다시 걸어 마련해 둔 내비메시를 버린다
+        uint32 bakedCount{ 0 };
+        for ( const NavAgentTypeDef& agentType : settings._listAgentType )
+        {
+            if ( navigation.ensureNavMesh( agentType._name ) != nullptr )
+                ++bakedCount;
+        }
+        navigation.flushTileBakes();
+        SW_LOG_INFO( "Navigation baked: %# of %# agent type(s) have a navmesh", bakedCount, static_cast<uint32>( settings._listAgentType.size() ) );
+        return bakedCount;
+    }
+
+    uint32 EditorNavigationCommands::countBakedMeshes( GameObjectManager& manager )
+    {
+        SceneNavigation& navigation = manager.getSceneService<SceneNavigation>();
+        uint32           count{ 0 };
+        for ( const NavAgentTypeDef& agentType : navigation.getSettings()._listAgentType )
+        {
+            if ( navigation.findNavMesh( agentType._name ) != nullptr )
+                ++count;
+        }
+        return count;
+    }
+} // namespace sw::editor

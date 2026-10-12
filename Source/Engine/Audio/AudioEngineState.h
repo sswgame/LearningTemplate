@@ -33,6 +33,22 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 믹서 버스 하나의 마지막 블록 상태입니다. 에디터의 오디오 믹서 창이 읽습니다. */
+    struct AudioBusStatus
+    {
+        hashed_string _name{};
+        int32         _parentIndex{ -1 };  ///< 부모 버스의 번호(`AudioEngine::getBusStatuses` 목록 안). master 는 -1
+        float32       _volumeDb{ 0.0f };   ///< 데이터 볼륨(dB)
+        float32       _userVolume{ 1.0f }; ///< 사용자 볼륨(선형, [0, 1])
+        float32       _gain{ 0.0f };       ///< 페이더 게인(선형) — 데이터 × 사용자 × 스냅샷 × 음소거 · 솔로
+        float32       _peak{ 0.0f };       ///< 마지막 블록 출력 피크(절댓값 최대)
+        bool          _bMuted{ false };
+        bool          _bSolo{ false };
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 적응형 음악의 현재 위치입니다. 마지막 블록에서 게시한 값입니다. */
     struct AudioMusicStatus
     {
@@ -84,15 +100,26 @@ namespace sw
             _music = music;
             _appliedPlayingID.store( appliedPlayingID, std::memory_order_release );
         }
+        /** @brief 믹서 버스의 상태를 게시합니다. @p fillBus 가 잠금 안에서 목록(비어 있는 재사용 버퍼)을 채웁니다. */
+        template <typename FillFunc>
+        void publishBuses( FillFunc&& fillBus )
+        {
+            std::scoped_lock<mutex> lock{ _mutex };
+            _listBusStatus.clear();
+            fillBus( _listBusStatus );
+        }
         /** @brief 재생이 살아 있는지 반환합니다. 아직 적용하지 않은 id 면 @p nextPlayingID 보다 작을 때(발급한 id 일 때) true 입니다. */
         bool isPlaying( AudioPlayingID playingID, uint64 nextPlayingID ) const;
         /** @brief 마지막 블록의 상태입니다. */
         AudioEngineStats getStats() const;
         /** @brief 마지막 블록의 음악 위치입니다. */
         AudioMusicStatus getMusicStatus() const;
+        /** @brief 마지막 블록의 버스 상태를 @p outListStatus 에 복사합니다(비우고 채웁니다). 아직 게시한 것이 없으면 비어 있습니다. */
+        void getBusStatuses( vector<AudioBusStatus>& outListStatus ) const;
 
     private:
         vector<AudioPlayingID> _listPlaying{};         /**< 살아 있는 재생 id 입니다. 정렬되어 있습니다. */
+        vector<AudioBusStatus> _listBusStatus{};       /**< 버스 상태입니다(믹서 그래프 순서). */
         AudioEngineStats       _stats{};               /**< 마지막 블록의 상태입니다. */
         AudioMusicStatus       _music{};               /**< 마지막 블록의 음악 위치입니다. */
         atomic<uint64>         _appliedPlayingID{ 0 }; /**< 게시 시점에 적용된 재생 id 입니다. */
