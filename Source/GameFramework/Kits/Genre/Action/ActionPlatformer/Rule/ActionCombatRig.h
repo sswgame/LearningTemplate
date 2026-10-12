@@ -24,7 +24,6 @@ namespace sw
 
     class ActionPlatformerCatalog;
     class Archive;
-    class MoveCatalog;
     class PlatformTileMap;
 
     /** @brief 진영(편)입니다. */

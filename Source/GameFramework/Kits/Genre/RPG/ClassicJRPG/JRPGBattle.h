@@ -15,11 +15,11 @@
 #include "GameFramework/Base/Actor/Combat/TurnOrder.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGCatalog.h"
 
 namespace sw
 {
     class Archive;
+    class JRPGCatalog;
     class JRPGParty;
     class TimingJudge;
 

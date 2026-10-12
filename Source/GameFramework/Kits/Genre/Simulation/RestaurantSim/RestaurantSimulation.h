@@ -16,10 +16,8 @@
 #include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 #include "GameFramework/Base/Foundation/Utility/Time/FixedStepTimer.h"
 #include "GameFramework/Base/Gameplay/Inventory/Crafting.h"
-#include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Base/Gameplay/Progression/LevelProgress.h"
-#include "GameFramework/Base/Gameplay/Progression/Reputation.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/IngredientStock.h"
 
@@ -29,7 +27,9 @@ namespace sw
     struct SessionStateRefs;
 
     class Archive;
+    class Inventory;
     class ItemCatalog;
+    class ReputationState;
     class RestaurantCatalog;
     class WorldClock;
 
