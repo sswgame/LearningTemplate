@@ -34,20 +34,49 @@ namespace sw
             };
 
             SW_GAMESERVICE_API void* getRawService( sw::internal::ModuleServiceID id );
-            SW_GAMESERVICE_API void  bindRawLocalService( uint64 typeHash, void* pService );
+            /**
+             * @brief 로컬 서비스 칸을 걸거나(@p pService) 풉니다(nullptr).
+             * @details 소유 이미지(언로드 훑기가 이 칸을 회수할 이미지)는 @p pOwnerAddress 를 품은 이미지다. nullptr 이면 이 함수의 반환 주소를 쓴다.
+             *          반환 주소가 맞는 것은 부른 곳이 헤더의 인라인 템플릿(`bindLocalService`)이라 **서비스를 든 모듈에서 인스턴스화될 때뿐**이다.
+             *          GameFramework.dll 의 비템플릿 코드(예: `GameInstanceBase`)가 게임 객체의 칸을 대신 걸면 반환 주소는 GameFramework.dll 이라
+             *          게임 이미지 언로드 때 회수되지 않는다 — 그런 곳은 소유자 주소를 명시한다(`getPolymorphicOwnerAddress`).
+             */
+            SW_GAMESERVICE_API void  bindRawLocalService( uint64 typeHash, void* pService, const void* pOwnerAddress = nullptr );
             SW_GAMESERVICE_API void* getRawLocalService( uint64 typeHash );
         } // namespace internal
+
+        /**
+         * @brief 다형 객체 @p object 의 vtable 주소를 돌려줍니다. 가장 파생된 클래스의 vtable 이라 그 클래스를 정의한 이미지 안에 있다.
+         * @details 프레임워크 기반 클래스가 파생(게임 모듈) 객체가 든 서비스를 걸 때 소유자 주소로 넘긴다. 생성자 · 소멸자 안에서는 기반 vtable 이라 쓰지 않는다.
+         */
+        template <typename T>
+        const void* getPolymorphicOwnerAddress( const T& object )
+        {
+            static_assert( std::is_polymorphic_v<T>, "getPolymorphicOwnerAddress requires a polymorphic type" );
+            return *reinterpret_cast<const void* const*>( &object );
+        }
 
         // bindGameService · unbindGameService 는 RuntimeAPI/Service/GameServiceBinding.h 가 선언한다(진입점 매크로가 RuntimeAPI 안에서 부른다).
         /**
          * @brief 게임 로컬 서비스(게임 인스턴스가 든 카탈로그 등)를 겁니다.
          * @details 같은 타입이 이미 다른 인스턴스에 걸려 있으면 알리고 걸지 않는다. 먼저 `unbindLocalService` 로 풀어야 한다.
          *          핫 리로드에서는 옛 인스턴스가 `onShutdown` 에서 푼다.
+         *          소유 이미지는 이 템플릿을 인스턴스화한 모듈(부른 모듈)이다. 서비스를 든 모듈과 부른 모듈이 다르면 아래 오버로드로 소유자를 명시한다.
          */
         template <typename T>
         void bindLocalService( T* pService )
         {
             internal::bindRawLocalService( internal::getServiceTypeHash<T>(), static_cast<void*>( pService ) );
+        }
+
+        /**
+         * @brief 소유 이미지를 @p pOwnerAddress 를 품은 이미지로 명시해 겁니다. 그 이미지가 내려갈 때 이 칸이 회수된다.
+         * @details 프레임워크 코드가 게임 객체의 서비스를 대신 거는 곳에서 쓴다(예: `getPolymorphicOwnerAddress( *this )`).
+         */
+        template <typename T>
+        void bindLocalService( T* pService, const void* pOwnerAddress )
+        {
+            internal::bindRawLocalService( internal::getServiceTypeHash<T>(), static_cast<void*>( pService ), pOwnerAddress );
         }
 
         template <typename T>

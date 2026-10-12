@@ -91,7 +91,9 @@ namespace sw
             _bootstrap._packRoot = gameCfg._packRoot;
         if ( _bootstrap.load( path::kGameSettingsFile ) == false )
             SW_LOG_TRACE( "No custom bootstrap in pack '%#' — using defaults.", _bootstrap._packRoot );
-        game::bindLocalService<GameSettings>( &_bootstrap._data );
+        // 이 코드는 GameFramework.dll 이라 반환 주소로 소유자를 정하면 GameFramework.dll 이 된다. 칸은 게임 인스턴스(파생 · 게임 모듈)가 들므로
+        // 그 vtable 의 이미지를 소유자로 넘겨, 파생이 unbind 를 빠뜨려도 게임 모듈 언로드 때 회수되게 한다.
+        game::bindLocalService<GameSettings>( &_bootstrap._data, game::getPolymorphicOwnerAddress( *this ) );
         applyBootstrap();
         // 로딩 화면은 첫 씬 요청(onInitialize 안)이 띄울 수 있게 그 앞에 묶는다. UI 시스템이 없으면(전용 서버) 띄우지 않는다.
         LoadingScreenSettings loadingSettings = _pLoadingScreen->getSettings();

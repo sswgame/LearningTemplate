@@ -99,7 +99,7 @@ namespace sw
 
         namespace internal
         {
-            SW_GAMESERVICE_API void bindRawLocalService( uint64 typeHash, void* pService )
+            SW_GAMESERVICE_API void bindRawLocalService( uint64 typeHash, void* pService, const void* pOwnerAddress )
             {
                 map<uint64, LocalServiceEntry>& mapEntry = s_localServiceTable._mapEntry;
                 if ( pService == nullptr )
@@ -115,8 +115,11 @@ namespace sw
                     SW_LOG_ERROR( "Game local service %# is already bound to another instance - unbind it first (two kits share one service type)", typeHash );
                     return;
                 }
-                // 호출자는 헤더의 인라인 템플릿(`bindLocalService`)이라 반환 주소가 건 모듈의 이미지 안에 있다 — 그 이미지가 소유자다.
-                mapEntry[typeHash] = LocalServiceEntry{ pService, findOwnerImage( SW_GAMESERVICE_CALLER_ADDRESS() ) };
+                // 소유자를 명시하지 않았으면 반환 주소를 쓴다. 호출자가 헤더의 인라인 템플릿(`bindLocalService`)이라 반환 주소는 그 템플릿을
+                // 인스턴스화한 모듈 안이다 — 서비스를 든 모듈이 직접 걸 때만 맞다. GameFramework.dll 의 비템플릿 코드가 게임 객체를 대신 걸면
+                // 반환 주소는 GameFramework.dll 이라 틀리므로, 그런 곳은 pOwnerAddress 를 넘긴다(GameInstanceBase::initialize).
+                const void* pOwner = pOwnerAddress != nullptr ? pOwnerAddress : SW_GAMESERVICE_CALLER_ADDRESS();
+                mapEntry[typeHash] = LocalServiceEntry{ pService, findOwnerImage( pOwner ) };
             }
 
             SW_GAMESERVICE_API void* getRawLocalService( uint64 typeHash )
