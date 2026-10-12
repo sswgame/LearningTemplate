@@ -7,7 +7,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Process/Process.h"
 
-#include "Engine/Animation/Graph/AnimGraphAsset.h"
+#include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
 #include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Character/Fit/BodyShape.h"
@@ -186,9 +186,9 @@ namespace test
                 SpriteClipAsset asset;
                 (void)asset.parseJSON( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
-            static void runAnimGraph( const uint8* pData, size_t size )
+            static void runAnimationGraph( const uint8* pData, size_t size )
             {
-                AnimGraphAsset asset;
+                AnimationGraphAsset asset;
                 (void)asset.parseJSON( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runDialogue( const uint8* pData, size_t size )
@@ -330,7 +330,7 @@ namespace test
             static void seedSurfaceChannels( vector<vector<uint8>>& outListSeed ) { appendResourceSeeds( ".surfacechannels.xml", 2, outListSeed ); }
             static void seedUserSettings( vector<vector<uint8>>& outListSeed ) { appendResourceSeeds( ".settings.xml", 2, outListSeed ); }
             static void seedSpriteClip( vector<vector<uint8>>& outListSeed ) { appendResourceSeeds( ".sprite.json", 2, outListSeed ); }
-            static void seedAnimGraph( vector<vector<uint8>>& outListSeed )
+            static void seedAnimationGraph( vector<vector<uint8>>& outListSeed )
             {
                 appendResourceSeeds( ".animgraph.json", 2, outListSeed );
                 appendTextSeed( R"({"nodes":[{"id":1,"type":"Clip","name":"Idle","x":0,"y":0}],"links":[{"from":1,"to":2}]})", outListSeed );
@@ -392,7 +392,7 @@ namespace test
             {   "SurfaceChannels",    &LoaderFuzzTargetsInternal::runSurfaceChannels, &LoaderFuzzTargetsInternal::seedSurfaceChannels,  true},
             {"UserSettingsSchema", &LoaderFuzzTargetsInternal::runUserSettingsSchema,    &LoaderFuzzTargetsInternal::seedUserSettings,  true},
             {        "SpriteClip",         &LoaderFuzzTargetsInternal::runSpriteClip,      &LoaderFuzzTargetsInternal::seedSpriteClip,  true},
-            {         "AnimGraph",          &LoaderFuzzTargetsInternal::runAnimGraph,       &LoaderFuzzTargetsInternal::seedAnimGraph,  true},
+            {    "AnimationGraph",     &LoaderFuzzTargetsInternal::runAnimationGraph,  &LoaderFuzzTargetsInternal::seedAnimationGraph,  true},
             {          "Dialogue",           &LoaderFuzzTargetsInternal::runDialogue,        &LoaderFuzzTargetsInternal::seedDialogue,  true},
             {          "Sequence",           &LoaderFuzzTargetsInternal::runSequence,        &LoaderFuzzTargetsInternal::seedSequence,  true},
             {       "StringTable",        &LoaderFuzzTargetsInternal::runStringTable,     &LoaderFuzzTargetsInternal::seedStringTable,  true},

@@ -19,7 +19,7 @@ SW_TEST_CASE( EditorAssetTypeTest, MatchesKnownSuffixes )
 {
     SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Scene, "maps/town.scene.xml" ) );
     SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Prefab, "prefabs/hero.prefab.xml" ) );
-    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::AnimGraph, "anim/idle.anim.json" ) );
+    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::AnimationGraph, "anim/idle.anim.json" ) );
     SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::TileMap, "maps/overworld.tilemap.xml" ) );
     SW_EXPECT_FALSE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::TileMap, "maps/town.scene.xml" ) );
     // 죽은 확장자는 **음성으로** 못 박는다. 되살아나면 여기서 걸린다.
@@ -107,7 +107,7 @@ SW_TEST_CASE( EditorAssetTypeTest, PanelTitlesAndToolKinds )
 {
     SW_EXPECT_STREQ( "Prefab Editor", sw::editor::EditorAssetTypeRegistry::getPanelTitle( sw::editor::EditorAssetType::Prefab ) );
     SW_EXPECT_STREQ( "Animation Graph",
-                     sw::editor::EditorAssetTypeRegistry::getPanelTitle( sw::editor::EditorAssetType::AnimGraph ) );
+                     sw::editor::EditorAssetTypeRegistry::getPanelTitle( sw::editor::EditorAssetType::AnimationGraph ) );
 
     SW_EXPECT_STREQ( "Sequencer", sw::editor::EditorAssetTypeRegistry::getPanelTitle( sw::editor::EditorAssetType::Sequence ) );
     SW_EXPECT_STREQ( "Material", sw::editor::EditorAssetTypeRegistry::getPanelTitle( sw::editor::EditorAssetType::Material ) );
@@ -117,23 +117,23 @@ SW_TEST_CASE( EditorAssetTypeTest, PanelTitlesAndToolKinds )
     SW_ASSERT_NOT_NULL( pKind );
     SW_EXPECT_TRUE( kindCount >= 7 );
 
-    bool bHasAnim{ false };
+    bool bHasAnimation{ false };
     bool bHasMaterial{ false };
     for ( uint32 index = 0; index < kindCount; ++index )
     {
-        if ( pKind[index] == sw::editor::EditorAssetType::AnimGraph )
-            bHasAnim = true;
+        if ( pKind[index] == sw::editor::EditorAssetType::AnimationGraph )
+            bHasAnimation = true;
         if ( pKind[index] == sw::editor::EditorAssetType::Material )
             bHasMaterial = true;
     }
-    SW_EXPECT_TRUE( bHasAnim );
+    SW_EXPECT_TRUE( bHasAnimation );
     SW_EXPECT_TRUE( bHasMaterial );
 }
 
 SW_TEST_CASE( EditorAssetTypeTest, FindPanelTitleLongestSuffix )
 {
-    const auto animTitle = sw::editor::EditorAssetTypeRegistry::findPanelTitleForPath( "content/hero.anim.json" );
-    SW_EXPECT_STREQ( "Animation Graph", sw::string{ animTitle }.c_str() );
+    const auto animationTitle = sw::editor::EditorAssetTypeRegistry::findPanelTitleForPath( "content/hero.anim.json" );
+    SW_EXPECT_STREQ( "Animation Graph", sw::string{ animationTitle }.c_str() );
 
     const auto matTitle = sw::editor::EditorAssetTypeRegistry::findPanelTitleForPath( "content/hero.material" );
     SW_EXPECT_STREQ( "Material", sw::string{ matTitle }.c_str() );
@@ -142,9 +142,9 @@ SW_TEST_CASE( EditorAssetTypeTest, FindPanelTitleLongestSuffix )
     SW_EXPECT_TRUE( unknownTitle.empty() );
 }
 
-SW_TEST_CASE( EditorAssetTypeTest, DataDoesNotStealAnimJSON )
+SW_TEST_CASE( EditorAssetTypeTest, DataDoesNotStealAnimationJSON )
 {
-    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::AnimGraph, "a.anim.json" ) );
+    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::AnimationGraph, "a.anim.json" ) );
     SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Data, "a.anim.json" ) );
 }
 
@@ -373,7 +373,7 @@ SW_TEST_CASE( EditorAssetTypeTest, FindKindTakesTheFirstMatchingRow )
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "maps/town.scene.xml" ) == EditorAssetType::Scene );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "prefabs/hero.prefab.json" ) == EditorAssetType::Prefab );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "sprites/hero.png" ) == EditorAssetType::Texture );
-    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "anim/idle.anim.json" ) == EditorAssetType::AnimGraph );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "anim/idle.anim.json" ) == EditorAssetType::AnimationGraph );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "cut/intro.seq.json" ) == EditorAssetType::Sequence );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "maps/overworld.tilemap.xml" ) == EditorAssetType::TileMap );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "config/input.ini" ) == EditorAssetType::Data );

@@ -5,8 +5,8 @@
 
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
 #include "Engine/Animation/Sprite/SpriteClipPlayable.h"
-#include "Engine/Character/AnimNotify/AnimNotifyComponent.h"
-#include "Engine/Character/AnimNotify/AnimNotifyTable.h"
+#include "Engine/Character/AnimationNotify/AnimationNotifyComponent.h"
+#include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
 #include "Engine/Character/Socket/SocketSetComponent.h"
 #include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
@@ -22,7 +22,7 @@
 
 using namespace sw;
 
-// AnimNotify2DTest — 2D 도 같은 알림 디스패치: 스프라이트 클립 구간의 알림(구간 알림 포함), 스프라이트 애니메이터 → 받는 쪽(틱 뒤 게임 스레드),
+// AnimationNotify2DTest — 2D 도 같은 알림 디스패치: 스프라이트 클립 구간의 알림(구간 알림 포함), 스프라이트 애니메이터 → 받는 쪽(틱 뒤 게임 스레드),
 // Box2D 바닥 재질의 발소리, 칼날 궤적이 Box2D 바디의 히트 존을 맞힌다(자기 바디는 건너뜀).
 
 namespace sw
@@ -48,7 +48,7 @@ namespace sw
 
 namespace
 {
-    struct TestAnimNotify2DInternal
+    struct TestAnimationNotify2DInternal
     {
         static constexpr float32 kFrame = 1.0f / 60.0f;
 
@@ -71,9 +71,9 @@ namespace
 } // namespace
 
 /**
- * @brief [AnimNotify2DTest] 스프라이트 클립의 구간이 알림(시각 · 길이)을 들고 파일을 왕복하며, 재생할 것(구간)이 그 알림 트랙을 낸다
+ * @brief [AnimationNotify2DTest] 스프라이트 클립의 구간이 알림(시각 · 길이)을 들고 파일을 왕복하며, 재생할 것(구간)이 그 알림 트랙을 낸다
  */
-SW_TEST_CASE( AnimNotify2DTest, SpriteClipRangeCarriesNotifies )
+SW_TEST_CASE( AnimationNotify2DTest, SpriteClipRangeCarriesNotifies )
 {
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     SpriteClipAsset clip;
@@ -82,7 +82,7 @@ SW_TEST_CASE( AnimNotify2DTest, SpriteClipRangeCarriesNotifies )
     attack._name       = "Attack";
     attack._firstFrame = 2;
     attack._frameCount = 4;
-    attack._listNotify.push_back( AnimNotifyEvent{ hashed_string( "Swing" ), 0.1f, 0.2f } );
+    attack._listNotify.push_back( AnimationNotifyEvent{ hashed_string( "Swing" ), 0.1f, 0.2f } );
     clip._listAnimation.push_back( attack );
     const string path = test::makeTempPath( "attack.sprite.json" );
     SW_ASSERT_TRUE( clip.saveToFile( path ) );
@@ -101,11 +101,11 @@ SW_TEST_CASE( AnimNotify2DTest, SpriteClipRangeCarriesNotifies )
 }
 
 /**
- * @brief [AnimNotify2DTest] 2D 오브젝트(스프라이트 애니메이터 + Box2D 바디)의 알림 — 발소리는 Box2D 바닥 재질, 칼날 구간은 지나간 Box2D 표적을 히트 존과 함께 한 번 맞히고 자기 바디는 건너뛴다
+ * @brief [AnimationNotify2DTest] 2D 오브젝트(스프라이트 애니메이터 + Box2D 바디)의 알림 — 발소리는 Box2D 바닥 재질, 칼날 구간은 지나간 Box2D 표적을 히트 존과 함께 한 번 맞히고 자기 바디는 건너뛴다
  * @details 스프라이트 클립 `Attack`(100 ms 프레임 넷, 반복): Step 0.05 초, Swing 0.1 ~ 0.3 초. 칼날 소켓은 루트 기준 (0.5, 0) ~ (1.5, 0). 공격자를 프레임마다 +X 로 옮겨
  *          칼날이 x = 3 의 표적을 지나게 한다.
  */
-SW_TEST_CASE( AnimNotify2DTest, SpriteNotifiesDriveFootstepAndHitWindowIn2D )
+SW_TEST_CASE( AnimationNotify2DTest, SpriteNotifiesDriveFootstepAndHitWindowIn2D )
 {
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     SpriteClipAsset clip;
@@ -118,8 +118,8 @@ SW_TEST_CASE( AnimNotify2DTest, SpriteNotifiesDriveFootstepAndHitWindowIn2D )
     attack._name       = "Attack";
     attack._firstFrame = 0;
     attack._frameCount = 4;
-    attack._listNotify.push_back( AnimNotifyEvent{ hashed_string( "Step" ), 0.05f, 0.0f } );
-    attack._listNotify.push_back( AnimNotifyEvent{ hashed_string( "Swing" ), 0.1f, 0.2f } );
+    attack._listNotify.push_back( AnimationNotifyEvent{ hashed_string( "Step" ), 0.05f, 0.0f } );
+    attack._listNotify.push_back( AnimationNotifyEvent{ hashed_string( "Swing" ), 0.1f, 0.2f } );
     clip._listAnimation.push_back( attack );
     const string clipPath = test::makeTempPath( "fighter.sprite.json" );
     SW_ASSERT_TRUE( clip.saveToFile( clipPath ) );
@@ -127,9 +127,9 @@ SW_TEST_CASE( AnimNotify2DTest, SpriteNotifiesDriveFootstepAndHitWindowIn2D )
     SW_ASSERT_TRUE( FileUtil::writeTextFile( socketPath, R"(<SocketSet><Socket name="BladeA" translation="0.5 0 0"/><Socket name="BladeB" translation="1.5 0 0"/></SocketSet>)" ) );
 
     GameObjectManager     manager;
-    RigidBody2DComponent* pFloor  = TestAnimNotify2DInternal::spawnBox( manager, "Floor", float2{ 0.0f, -0.5f }, float2{ 20.0f, 0.5f }, PhysicsBodyType::Static, "Stone" );
-    RigidBody2DComponent* pTarget = TestAnimNotify2DInternal::spawnBox( manager, "Target", float2{ 3.0f, 0.0f }, float2{ 0.3f, 0.3f }, PhysicsBodyType::Static, "Flesh" );
-    RigidBody2DComponent* pSelf   = TestAnimNotify2DInternal::spawnBox( manager, "Fighter", float2{ 0.0f, 0.0f }, float2{ 1.6f, 0.4f }, PhysicsBodyType::Kinematic, "Flesh" );
+    RigidBody2DComponent* pFloor  = TestAnimationNotify2DInternal::spawnBox( manager, "Floor", float2{ 0.0f, -0.5f }, float2{ 20.0f, 0.5f }, PhysicsBodyType::Static, "Stone" );
+    RigidBody2DComponent* pTarget = TestAnimationNotify2DInternal::spawnBox( manager, "Target", float2{ 3.0f, 0.0f }, float2{ 0.3f, 0.3f }, PhysicsBodyType::Static, "Flesh" );
+    RigidBody2DComponent* pSelf   = TestAnimationNotify2DInternal::spawnBox( manager, "Fighter", float2{ 0.0f, 0.0f }, float2{ 1.6f, 0.4f }, PhysicsBodyType::Kinematic, "Flesh" );
     SW_ASSERT_TRUE( pFloor != nullptr && pTarget != nullptr && pSelf != nullptr );
     PhysicsHitZoneDef head;
     head._name             = hashed_string( "Head" );
@@ -141,16 +141,16 @@ SW_TEST_CASE( AnimNotify2DTest, SpriteNotifiesDriveFootstepAndHitWindowIn2D )
     SpriteComponent*            pSprite     = pFighter->addComponent<SpriteComponent>();
     SpriteAnimatorComponent*    pAnimator   = pFighter->addComponent<SpriteAnimatorComponent>();
     SocketSetComponent*         pSockets    = pFighter->addComponent<SocketSetComponent>();
-    AnimNotifyComponent*        pNotify     = pFighter->addComponent<AnimNotifyComponent>();
+    AnimationNotifyComponent*   pNotify     = pFighter->addComponent<AnimationNotifyComponent>();
     SW_ASSERT_TRUE( pTargetHits != nullptr && pSelfHits != nullptr && pSprite != nullptr && pAnimator != nullptr && pSockets != nullptr && pNotify != nullptr );
     pSprite->setClipPath( clipPath );
     pSockets->setSocketSetPath( socketPath );
-    shared_ptr<AnimNotifyTable> table = make_shared<AnimNotifyTable>();
-    SW_ASSERT_TRUE( table->loadFromXMLText( R"(<AnimNotifies>
+    shared_ptr<AnimationNotifyTable> table = make_shared<AnimationNotifyTable>();
+    SW_ASSERT_TRUE( table->loadFromXMLText( R"(<AnimationNotifies>
             <Notify name="Step" handler="Footstep" socket="Root" distance="0.6"/>
             <Notify name="Swing" handler="HitWindow" socketA="BladeA" socketB="BladeB" damage="5"/>
-        </AnimNotifies>)",
-                                            "fighter", AnimNotifyHandlerRegistry::getDefault() ) );
+        </AnimationNotifies>)",
+                                            "fighter", AnimationNotifyHandlerRegistry::getDefault() ) );
     pNotify->setNotifyTable( table );
 
     manager.beginPlay();
@@ -161,8 +161,8 @@ SW_TEST_CASE( AnimNotify2DTest, SpriteNotifiesDriveFootstepAndHitWindowIn2D )
         // 칼날 구간(0.1 ~ 0.3 초) 동안 +X 로 움직인다 — 프레임마다 0.25 m.
         if ( frameIndex >= 7 && frameIndex <= 16 )
             pSelf->setWorldPosition( pSelf->getWorldPosition() + float3{ 0.25f, 0.0f, 0.0f } );
-        manager.tick( TestAnimNotify2DInternal::kFrame );
-        for ( const AnimNotifyAction& action : pNotify->getActions() )
+        manager.tick( TestAnimationNotify2DInternal::kFrame );
+        for ( const AnimationNotifyAction& action : pNotify->getActions() )
         {
             if ( action._notify == hashed_string( "Step" ) )
             {
@@ -182,35 +182,35 @@ SW_TEST_CASE( AnimNotify2DTest, SpriteNotifiesDriveFootstepAndHitWindowIn2D )
 }
 
 /**
- * @brief [AnimNotify2DTest] 재생할 것이 바뀌었다는 표시(스프라이트가 같은 재생할 것을 다른 구간으로 다시 씀)가 오면 열린 구간을 닫는다
+ * @brief [AnimationNotify2DTest] 재생할 것이 바뀌었다는 표시(스프라이트가 같은 재생할 것을 다른 구간으로 다시 씀)가 오면 열린 구간을 닫는다
  */
-SW_TEST_CASE( AnimNotify2DTest, RestartedFrameClosesOpenStates )
+SW_TEST_CASE( AnimationNotify2DTest, RestartedFrameClosesOpenStates )
 {
     GameObjectManager manager;
     GameObject*       pObject = manager.createGameObject( hashed_string( "Sprite" ) );
     pObject->addComponent<SceneComponent>();
-    AnimNotifyComponent* pNotify = pObject->addComponent<AnimNotifyComponent>();
+    AnimationNotifyComponent* pNotify = pObject->addComponent<AnimationNotifyComponent>();
     SW_ASSERT_NOT_NULL( pNotify );
-    shared_ptr<AnimNotifyTable> table = make_shared<AnimNotifyTable>();
-    SW_ASSERT_TRUE( table->loadFromXMLText( R"(<AnimNotifies><Notify name="Taunt" handler="GameplayEvent" event="Taunted"/></AnimNotifies>)", "restart",
-                                            AnimNotifyHandlerRegistry::getDefault() ) );
+    shared_ptr<AnimationNotifyTable> table = make_shared<AnimationNotifyTable>();
+    SW_ASSERT_TRUE( table->loadFromXMLText( R"(<AnimationNotifies><Notify name="Taunt" handler="GameplayEvent" event="Taunted"/></AnimationNotifies>)", "restart",
+                                            AnimationNotifyHandlerRegistry::getDefault() ) );
     pNotify->setNotifyTable( table );
 
-    SpriteClipPlayable                 playable;
-    const vector<const IAnimPlayable*> listActive{ &playable };
-    AnimFiredNotify                    fired;
+    SpriteClipPlayable                      playable;
+    const vector<const IAnimationPlayable*> listActive{ &playable };
+    AnimationFiredNotify                    fired;
     fired._name     = hashed_string( "Taunt" );
     fired._pSource  = &playable;
     fired._duration = 0.5f;
-    fired._phase    = AnimNotifyPhase::Begin;
-    vector<AnimFiredNotify> listFired{ fired };
-    AnimNotifyFrame         frame;
-    frame._listFired          = vector_reference<const AnimFiredNotify>{ listFired.data(), listFired.size() };
-    frame._listActivePlayable = vector_reference<const IAnimPlayable* const>{ listActive.data(), listActive.size() };
+    fired._phase    = AnimationNotifyPhase::Begin;
+    vector<AnimationFiredNotify> listFired{ fired };
+    AnimationNotifyFrame         frame;
+    frame._listFired          = vector_reference<const AnimationFiredNotify>{ listFired.data(), listFired.size() };
+    frame._listActivePlayable = vector_reference<const IAnimationPlayable* const>{ listActive.data(), listActive.size() };
     pNotify->processFrame( frame );
     SW_EXPECT_EQUAL( 1u, pNotify->getActiveStateCount() );
 
-    AnimNotifyFrame restarted;
+    AnimationNotifyFrame restarted;
     restarted._listActivePlayable = frame._listActivePlayable; // 같은 객체가 아직 재생 중 — 표시가 없으면 끊긴 줄 모른다
     restarted._bRestarted         = SW_TRUE;
     pNotify->processFrame( restarted );

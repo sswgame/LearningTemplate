@@ -4,11 +4,11 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/AnimClip.h"
-#include "Engine/Animation/AnimPlayer.h"
-#include "Engine/Animation/Codec/ACL/ACLAnimCodec.h"
-#include "Engine/Animation/Codec/AnimCodec.h"
-#include "Engine/Animation/Codec/Raw/RawAnimCodec.h"
+#include "Engine/Animation/AnimationClip.h"
+#include "Engine/Animation/AnimationPlayer.h"
+#include "Engine/Animation/Codec/ACL/ACLAnimationCodec.h"
+#include "Engine/Animation/Codec/AnimationCodec.h"
+#include "Engine/Animation/Codec/Raw/RawAnimationCodec.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Object/Animation/AnimationSystem.h"
@@ -98,7 +98,7 @@ namespace
  */
 SW_TEST_CASE( SkeletalAnimationTest, ClipSamplingMatchesHandComputedValues )
 {
-    AnimRawClip raw;
+    AnimationRawClip raw;
     raw._sampleRate           = 2.0f;
     raw._sampleCount          = 3;
     raw._listTrackName        = { hashed_string( "root" ), hashed_string( "child" ) };
@@ -112,9 +112,9 @@ SW_TEST_CASE( SkeletalAnimationTest, ClipSamplingMatchesHandComputedValues )
             test::makeBoneTransform( float3{ 0.0f, 1.0f, 0.0f }, quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, arrAngle[sampleIndex] ) ) );
     }
 
-    AnimClip clip;
+    AnimationClip clip;
     clip.setName( hashed_string( "Hand" ) );
-    SW_ASSERT_TRUE( clip.compressFrom( raw, RawAnimCodec::getInstance(), AnimCodecSettings{}, nullptr ) );
+    SW_ASSERT_TRUE( clip.compressFrom( raw, RawAnimationCodec::getInstance(), AnimationCodecSettings{}, nullptr ) );
     SW_EXPECT_NEAR_EQUAL( 1.0f, clip.getDuration(), 1e-6f );
 
     Pose pose;
@@ -143,36 +143,36 @@ SW_TEST_CASE( SkeletalAnimationTest, ClipSamplingMatchesHandComputedValues )
 
 /**
  * @brief [SkeletalAnimationTest] 코덱 — Raw 는 오차 0, ACL 은 정밀도 기준(0.1 mm) 근처에서 1 mm 아래이고 Raw 보다 작다
- * @details 같은 잣대(`AnimCodecRegistry::measureMaxError` — 모델 공간 가상 정점)로 두 코덱을 측정한다. 이름으로 찾는 레지스트리도 본다.
+ * @details 같은 잣대(`AnimationCodecRegistry::measureMaxError` — 모델 공간 가상 정점)로 두 코덱을 측정한다. 이름으로 찾는 레지스트리도 본다.
  */
 SW_TEST_CASE( SkeletalAnimationTest, CodecRawVsACLMaxErrorUnderThreshold )
 {
-    const Skeleton    skeleton = test::makeChainSkeleton( 5 );
-    const AnimRawClip raw      = test::makeChainRawClip( skeleton, 61, 30.0f, 0.8f );
+    const Skeleton         skeleton = test::makeChainSkeleton( 5 );
+    const AnimationRawClip raw      = test::makeChainRawClip( skeleton, 61, 30.0f, 0.8f );
 
-    SW_EXPECT_TRUE( AnimCodecRegistry::findCodecByName( "ACL" ) == &ACLAnimCodec::getInstance() );
-    SW_EXPECT_TRUE( AnimCodecRegistry::findCodecByName( "raw" ) == &RawAnimCodec::getInstance() );
-    SW_EXPECT_NULL( AnimCodecRegistry::findCodecByName( "zip" ) );
+    SW_EXPECT_TRUE( AnimationCodecRegistry::findCodecByName( "ACL" ) == &ACLAnimationCodec::getInstance() );
+    SW_EXPECT_TRUE( AnimationCodecRegistry::findCodecByName( "raw" ) == &RawAnimationCodec::getInstance() );
+    SW_EXPECT_NULL( AnimationCodecRegistry::findCodecByName( "zip" ) );
 
-    AnimCodecSettings settings{};
+    AnimationCodecSettings settings{};
     settings._precision     = 0.0001f;
     settings._shellDistance = 0.1f;
-    vector<uint8>  rawBytes;
-    AnimCodecStats rawStats{};
-    SW_ASSERT_TRUE( AnimCodecRegistry::compressAndMeasure( RawAnimCodec::getInstance(), raw, settings, rawBytes, rawStats ) );
+    vector<uint8>       rawBytes;
+    AnimationCodecStats rawStats{};
+    SW_ASSERT_TRUE( AnimationCodecRegistry::compressAndMeasure( RawAnimationCodec::getInstance(), raw, settings, rawBytes, rawStats ) );
     SW_EXPECT_TRUE( rawStats._maxError < 1e-5f );
 
-    vector<uint8>  aclBytes;
-    AnimCodecStats aclStats{};
-    SW_ASSERT_TRUE( AnimCodecRegistry::compressAndMeasure( ACLAnimCodec::getInstance(), raw, settings, aclBytes, aclStats ) );
+    vector<uint8>       aclBytes;
+    AnimationCodecStats aclStats{};
+    SW_ASSERT_TRUE( AnimationCodecRegistry::compressAndMeasure( ACLAnimationCodec::getInstance(), raw, settings, aclBytes, aclStats ) );
     SW_EXPECT_TRUE_MSG( aclStats._maxError < 0.001f, ( string( "ACL max error " ) + to_string( aclStats._maxError ) ).c_str() );
     SW_EXPECT_TRUE( aclStats._compressedByteCount < rawStats._compressedByteCount );
     SW_EXPECT_TRUE( aclStats.computeRatio() > 2.0f );
 
     // ACL 블롭을 클립으로 실어도 같은 값이 나온다(정렬된 보관 · 코덱 번호).
-    AnimClip clip;
-    SW_ASSERT_TRUE( clip.compressFrom( raw, ACLAnimCodec::getInstance(), settings, nullptr ) );
-    SW_EXPECT_TRUE( clip.getCodecID() == AnimCodecID::ACL );
+    AnimationClip clip;
+    SW_ASSERT_TRUE( clip.compressFrom( raw, ACLAnimationCodec::getInstance(), settings, nullptr ) );
+    SW_EXPECT_TRUE( clip.getCodecID() == AnimationCodecID::ACL );
     Pose rawPose;
     Pose aclPose;
     raw.sample( 1.0f, rawPose );
@@ -186,25 +186,25 @@ SW_TEST_CASE( SkeletalAnimationTest, CodecRawVsACLMaxErrorUnderThreshold )
  */
 SW_TEST_CASE( SkeletalAnimationTest, ClipFileRoundTripsAndRejectsMalformedBytes )
 {
-    const Skeleton    skeleton = test::makeChainSkeleton( 3 );
-    const AnimRawClip raw      = test::makeChainRawClip( skeleton, 31, 30.0f, 0.5f );
-    AnimClip          clip;
+    const Skeleton         skeleton = test::makeChainSkeleton( 3 );
+    const AnimationRawClip raw      = test::makeChainRawClip( skeleton, 31, 30.0f, 0.5f );
+    AnimationClip          clip;
     clip.setName( hashed_string( "Walk" ) );
     clip.setLooping( false );
     clip.setRootMotionTrack( 0 );
-    clip.addNotify( AnimNotifyEvent{ hashed_string( "FootL" ), 0.25f, 0.0f } );
-    AnimCurve curve{};
+    clip.addNotify( AnimationNotifyEvent{ hashed_string( "FootL" ), 0.25f, 0.0f } );
+    AnimationClipCurve curve{};
     curve._name    = hashed_string( "Speed" );
     curve._listKey = {
-        AnimCurveKey{0.0f, 0.0f},
-        AnimCurveKey{1.0f, 2.0f}
+        AnimationClipCurveKey{0.0f, 0.0f},
+        AnimationClipCurveKey{1.0f, 2.0f}
     };
     clip.addCurve( curve );
-    SW_ASSERT_TRUE( clip.compressFrom( raw, ACLAnimCodec::getInstance(), AnimCodecSettings{}, nullptr ) );
+    SW_ASSERT_TRUE( clip.compressFrom( raw, ACLAnimationCodec::getInstance(), AnimationCodecSettings{}, nullptr ) );
 
     vector<uint8> bytes;
     clip.makeBytes( bytes );
-    AnimClip loaded;
+    AnimationClip loaded;
     SW_ASSERT_TRUE( loaded.readFromBytes( bytes.data(), bytes.size(), "round trip" ) );
     SW_EXPECT_EQUAL( string( "Walk" ), string( loaded.getName().c_str() ) );
     SW_EXPECT_FALSE( loaded.isLoopingByDefault() );
@@ -212,7 +212,7 @@ SW_TEST_CASE( SkeletalAnimationTest, ClipFileRoundTripsAndRejectsMalformedBytes 
     SW_EXPECT_EQUAL( 0, loaded.getRootMotionTrack() );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( loaded.getNotifyTrack().getEvents().size() ) );
     SW_EXPECT_NEAR_EQUAL( 0.25f, loaded.getNotifyTrack().getEvents()[0]._time, 1e-6f );
-    const AnimCurve* pCurve = loaded.findCurve( hashed_string( "Speed" ) );
+    const AnimationClipCurve* pCurve = loaded.findCurve( hashed_string( "Speed" ) );
     SW_ASSERT_NOT_NULL( pCurve );
     SW_EXPECT_NEAR_EQUAL( 1.0f, pCurve->evaluate( 0.5f ), 1e-5f );
     Pose original;
@@ -222,10 +222,10 @@ SW_TEST_CASE( SkeletalAnimationTest, ClipFileRoundTripsAndRejectsMalformedBytes 
     SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isNear( original.getBoneTransform( 0 )._translation, reloaded.getBoneTransform( 0 )._translation, 1e-6f ) );
 
     test::ScopedDefensiveTestLog expected( "malformed clip bytes are rejected" );
-    AnimClip                     broken;
+    AnimationClip                broken;
     SW_EXPECT_FALSE( broken.readFromBytes( bytes.data(), bytes.size() - 3, "truncated" ) );
     vector<uint8> wrongVersion = bytes;
-    wrongVersion[4]            = static_cast<uint8>( AnimClip::kVersion + 1 );
+    wrongVersion[4]            = static_cast<uint8>( AnimationClip::kVersion + 1 );
     SW_EXPECT_FALSE( broken.readFromBytes( wrongVersion.data(), wrongVersion.size(), "version" ) );
     vector<uint8> noMagic = bytes;
     noMagic[0]            = 'X';
@@ -310,22 +310,22 @@ SW_TEST_CASE( SkeletalAnimationTest, BlendWeightsMaskAndAdditive )
  */
 SW_TEST_CASE( SkeletalAnimationTest, RootMotionAcrossLoopBoundary )
 {
-    const Skeleton    skeleton = test::makeChainSkeleton( 2 );
-    const AnimRawClip raw      = test::makeChainRawClip( skeleton, 31, 30.0f, 0.0f );
-    AnimClip          clip;
+    const Skeleton         skeleton = test::makeChainSkeleton( 2 );
+    const AnimationRawClip raw      = test::makeChainRawClip( skeleton, 31, 30.0f, 0.0f );
+    AnimationClip          clip;
     clip.setRootMotionTrack( 0 );
-    SW_ASSERT_TRUE( clip.compressFrom( raw, RawAnimCodec::getInstance(), AnimCodecSettings{}, nullptr ) );
+    SW_ASSERT_TRUE( clip.compressFrom( raw, RawAnimationCodec::getInstance(), AnimationCodecSettings{}, nullptr ) );
 
-    AnimClipCursor cursor;
+    AnimationClipCursor cursor;
     (void)cursor.advance( 0.75f, clip.getPlayLength(), true );
-    const AnimTimeStep step = cursor.advance( 0.5f, clip.getPlayLength(), true );
+    const AnimationTimeStep step = cursor.advance( 0.5f, clip.getPlayLength(), true );
     SW_EXPECT_EQUAL( 1u, step._wrapCount );
     const BoneTransform delta = clip.computeRootMotionDelta( step );
     SW_EXPECT_NEAR_EQUAL( 0.5f, delta._translation._z, 1e-4f );
 
     // 한 걸음에 두 바퀴 반: 2.5 m.
-    AnimClipCursor     fast;
-    const AnimTimeStep longStep = fast.advance( 2.5f, clip.getPlayLength(), true );
+    AnimationClipCursor     fast;
+    const AnimationTimeStep longStep = fast.advance( 2.5f, clip.getPlayLength(), true );
     SW_EXPECT_NEAR_EQUAL( 2.5f, clip.computeRootMotionDelta( longStep )._translation._z, 1e-4f );
 }
 
@@ -339,9 +339,9 @@ SW_TEST_CASE( SkeletalAnimationTest, NotifyFiresExactlyOnceAcrossLoopBoundary )
     clip.addNotify( "Start", 0.0f );
     clip.addNotify( "Late", 0.95f );
 
-    AnimPlayer player;
+    AnimationPlayer player;
     player.play( &clip, true );
-    vector<AnimFiredNotify> listFired;
+    vector<AnimationFiredNotify> listFired;
     player.update( 0.9f, &listFired );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( listFired.size() ) );
     SW_EXPECT_TRUE( listFired[0]._name == hashed_string( "Start" ) );
@@ -360,7 +360,7 @@ SW_TEST_CASE( SkeletalAnimationTest, NotifyFiresExactlyOnceAcrossLoopBoundary )
     }
     uint32 lateCount  = 0;
     uint32 startCount = 0;
-    for ( const AnimFiredNotify& fired : listFired )
+    for ( const AnimationFiredNotify& fired : listFired )
     {
         lateCount += fired._name == hashed_string( "Late" ) ? 1u : 0u;
         startCount += fired._name == hashed_string( "Start" ) ? 1u : 0u;
@@ -376,16 +376,16 @@ SW_TEST_CASE( SkeletalAnimationTest, SyncGroupFollowsLeaderPhase )
 {
     test::TestPlayable walk( 1.0f, true );
     test::TestPlayable run( 0.5f, true );
-    AnimPlayer         walkPlayer;
-    AnimPlayer         runPlayer;
+    AnimationPlayer    walkPlayer;
+    AnimationPlayer    runPlayer;
     walkPlayer.play( &walk, true );
     runPlayer.play( &run, true );
     walkPlayer.update( 0.3f, nullptr );
     runPlayer.update( 0.05f, nullptr );
 
-    AnimPlayer* const arrPlayer[2] = { &runPlayer, &walkPlayer };
-    const float32     arrWeight[2] = { 0.25f, 0.75f };
-    SW_EXPECT_EQUAL( 1, AnimSyncGroup::synchronize( arrPlayer, arrWeight, 2 ) );
+    AnimationPlayer* const arrPlayer[2] = { &runPlayer, &walkPlayer };
+    const float32          arrWeight[2] = { 0.25f, 0.75f };
+    SW_EXPECT_EQUAL( 1, AnimationSyncGroup::synchronize( arrPlayer, arrWeight, 2 ) );
     SW_EXPECT_NEAR_EQUAL( 0.3f, runPlayer.getCurrentNormalizedTime(), 1e-5f );
     SW_EXPECT_NEAR_EQUAL( 0.15f, runPlayer.getCurrentTime(), 1e-5f );
     SW_EXPECT_NEAR_EQUAL( 0.3f, walkPlayer.getCurrentTime(), 1e-5f ); // 리더는 그대로
@@ -515,20 +515,20 @@ SW_TEST_CASE( SkeletalAnimationTest, FollowerReadsLeaderPose )
 SW_TEST_CASE( SkeletalAnimationTest, AnimatorPlaysClipFromFolder )
 {
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
-    const Skeleton    skeleton = test::makeChainSkeleton( 3 );
-    const AnimRawClip raw      = test::makeChainRawClip( skeleton, 31, 30.0f, 0.4f );
-    AnimClip          clip;
+    const Skeleton         skeleton = test::makeChainSkeleton( 3 );
+    const AnimationRawClip raw      = test::makeChainRawClip( skeleton, 31, 30.0f, 0.4f );
+    AnimationClip          clip;
     clip.setName( hashed_string( "Walk" ) );
     clip.setRootMotionTrack( 0 );
-    clip.addNotify( AnimNotifyEvent{ hashed_string( "Step" ), 0.1f, 0.0f } );
-    AnimCurve curve{};
+    clip.addNotify( AnimationNotifyEvent{ hashed_string( "Step" ), 0.1f, 0.0f } );
+    AnimationClipCurve curve{};
     curve._name    = hashed_string( "Speed" );
     curve._listKey = {
-        AnimCurveKey{0.0f, 0.0f},
-        AnimCurveKey{1.0f, 2.0f}
+        AnimationClipCurveKey{0.0f, 0.0f},
+        AnimationClipCurveKey{1.0f, 2.0f}
     };
     clip.addCurve( curve );
-    SW_ASSERT_TRUE( clip.compressFrom( raw, ACLAnimCodec::getInstance(), AnimCodecSettings{}, nullptr ) );
+    SW_ASSERT_TRUE( clip.compressFrom( raw, ACLAnimationCodec::getInstance(), AnimationCodecSettings{}, nullptr ) );
     const string folder = test::makeTempPath( "animclips" );
     SW_ASSERT_TRUE( clip.saveToFile( FileUtil::joinPath( folder, "walk.animclip" ) ) );
 
@@ -587,7 +587,7 @@ SW_TEST_CASE( SkeletalAnimationTest, InterruptedCrossfadeContinuesFromThePreviou
     const utf8*    arrName[3]{ "A", "B", "C" };
     for ( uint32 clipIndex = 0; clipIndex < 3; ++clipIndex )
     {
-        AnimRawClip raw;
+        AnimationRawClip raw;
         raw._sampleRate  = 30.0f;
         raw._sampleCount = 31;
         for ( uint32 boneIndex = 0; boneIndex < skeleton.getBoneCount(); ++boneIndex )
@@ -605,9 +605,9 @@ SW_TEST_CASE( SkeletalAnimationTest, InterruptedCrossfadeContinuesFromThePreviou
                 raw._listSample.push_back( transform );
             }
         }
-        AnimClip clip;
+        AnimationClip clip;
         clip.setName( hashed_string( arrName[clipIndex] ) );
-        SW_ASSERT_TRUE( clip.compressFrom( raw, RawAnimCodec::getInstance(), AnimCodecSettings{}, nullptr ) );
+        SW_ASSERT_TRUE( clip.compressFrom( raw, RawAnimationCodec::getInstance(), AnimationCodecSettings{}, nullptr ) );
         SW_ASSERT_TRUE( clip.saveToFile( FileUtil::joinPath( folder, StringUtil::toLower( arrName[clipIndex] ) + ".animclip" ) ) );
     }
 

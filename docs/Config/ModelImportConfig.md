@@ -42,9 +42,9 @@ JSON 키는 아래 테이블의 키 그대로입니다. 모르는 키는 로드 
 | `recenter` | `string` | `none` |  |  | none · xz(경계 상자 XZ 중심을 원점) · bottom-center(XZ 중심 + 가장 낮은 Y 를 0) |
 | `animations` | `bool` | `true` |  |  | 애니메이션을 가져온다 |
 | `clips` | `string[]` | — |  |  | 가져올 클립 이름(비면 모두 — 원본에 없는 이름은 임포트 오류) |
-| `animation_codec` | `string` | `acl` |  |  | 애니메이션 코덱 이름(`AnimCodecRegistry` 에 없으면 설정 오류) |
+| `animation_codec` | `string` | `acl` |  |  | 애니메이션 코덱 이름(`AnimationCodecRegistry` 에 없으면 설정 오류) |
 | `animation_sample_rate` | `number` | `30` |  |  | 초당 표본 수 |
-| `animation_precision` | `number` | `0.0001` |  |  | 코덱 정밀도(`AnimCodecSettings`) |
+| `animation_precision` | `number` | `0.0001` |  |  | 코덱 정밀도(`AnimationCodecSettings`) |
 | `animation_shell_distance` | `number` | `0.1` |  |  | 코덱 껍질 거리(미터) |
 | `root_motion_bone` | `string` | — |  |  | 루트 모션 트랙이 될 본(비면 없음) |
 | `attachments` | `bool` | `true` |  |  | 본 아래 스킨 없는 메시를 따로 임포트한다 |

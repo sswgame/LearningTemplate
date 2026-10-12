@@ -3,10 +3,10 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Animation/AnimJSONUtil.h"
+#include "Engine/Animation/AnimationJSONUtil.h"
 #include "Engine/Animation/Facial/FacialRig.h"
 #include "Engine/Animation/Facial/LipSync.h"
-#include "Engine/Animation/Graph/AnimGraphAsset.h"
+#include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Animation/Retarget/RetargetProfile.h"
 #include "Engine/Animation/Rig/RigAsset.h"
@@ -17,7 +17,7 @@
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Audio/AudioMusic.h"
 #include "Engine/Automation/AutomationScenario.h"
-#include "Engine/Character/AnimNotify/AnimNotifyTable.h"
+#include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
 #include "Engine/Character/Fit/BodyShape.h"
 #include "Engine/Character/Fit/FitPartData.h"
 #include "Engine/Character/Fit/FitSolver.h"
@@ -127,11 +127,11 @@ namespace
         static bool isNavMeshSettings( sw::string_view resourceID ) { return endsWith( resourceID, "navmeshsettings.xml" ); }
         static bool isPhysicsAsset( sw::string_view resourceID ) { return endsWith( resourceID, ".physics.xml" ); }
         static bool isSkeleton( sw::string_view resourceID ) { return endsWith( resourceID, sw::Skeleton::kExtension ); }
-        static bool isAnimGraph( sw::string_view resourceID ) { return endsWith( resourceID, ".animgraph.json" ); }
+        static bool isAnimationGraph( sw::string_view resourceID ) { return endsWith( resourceID, ".animgraph.json" ); }
         /** @brief 애니메이션 그래프(상태 기계) — 모르는 조건 표기는 로드 오류, 노드가 하나도 없으면 빈 그래프다. */
-        [[nodiscard]] static bool loadAnimGraph( const sw::string& resourceID )
+        [[nodiscard]] static bool loadAnimationGraph( const sw::string& resourceID )
         {
-            sw::AnimGraphAsset graph;
+            sw::AnimationGraphAsset graph;
             return graph.loadFromFile( resourceID ) && graph._listNode.empty() == false;
         }
         static bool isElementRules( sw::string_view resourceID ) { return endsWith( resourceID, ".elements.xml" ); }
@@ -351,19 +351,19 @@ namespace
             if ( document.loadFile( sw::FileUtil::joinPath( sw::ResourcePaths::getRootFolderPath(), resourceID ) ) == false )
                 return false;
             const sw::JSONValue root = document.getRoot();
-            if ( sw::AnimJSONUtil::hasOnlyKnownKeys( root, { "clips" }, resourceID ) == false || root.get( "clips" ).isObject() == false )
+            if ( sw::AnimationJSONUtil::hasOnlyKnownKeys( root, { "clips" }, resourceID ) == false || root.get( "clips" ).isObject() == false )
                 return false;
             const sw::JSONValue clips = root.get( "clips" );
             for ( const sw::string& clipName : clips.getMemberNames() )
             {
                 const sw::JSONValue clip = clips.get( clipName, false );
-                if ( sw::AnimJSONUtil::hasOnlyKnownKeys( clip, { "loop", "notifies", "curves" }, resourceID ) == false )
+                if ( sw::AnimationJSONUtil::hasOnlyKnownKeys( clip, { "loop", "notifies", "curves" }, resourceID ) == false )
                     return false;
                 const sw::JSONValue notifies = clip.get( "notifies" );
                 for ( size_t notifyIndex = 0; notifies.isArray() && notifyIndex < notifies.size(); ++notifyIndex )
                 {
                     const sw::JSONValue notify = notifies.at( notifyIndex );
-                    if ( sw::AnimJSONUtil::hasOnlyKnownKeys( notify, { "name", "time", "duration" }, resourceID ) == false || notify.get( "name" ).isString() == false ||
+                    if ( sw::AnimationJSONUtil::hasOnlyKnownKeys( notify, { "name", "time", "duration" }, resourceID ) == false || notify.get( "name" ).isString() == false ||
                          notify.get( "time" ).isNumber() == false )
                         return false;
                 }
@@ -373,8 +373,8 @@ namespace
         /** @brief 알림 표 — 처리기 이름 · 인자를 엔진 기본 처리기 레지스트리에 대조한다. */
         [[nodiscard]] static bool loadNotifyTable( const sw::string& resourceID )
         {
-            sw::AnimNotifyTable table;
-            return table.loadFromResource( resourceID, sw::AnimNotifyHandlerRegistry::getDefault() );
+            sw::AnimationNotifyTable table;
+            return table.loadFromResource( resourceID, sw::AnimationNotifyHandlerRegistry::getDefault() );
         }
         [[nodiscard]] static bool loadSockets( const sw::string& resourceID )
         {
@@ -552,7 +552,7 @@ namespace
             {              "items",               &isItems,                      &loadCatalog<sw::ItemCatalog>},
             {         "appearance",      &isAppearanceData,                                &loadAppearanceData},
             {           "skeleton",            &isSkeleton,                                      &loadSkeleton},
-            {          "animgraph",           &isAnimGraph,                                     &loadAnimGraph},
+            {          "animgraph",      &isAnimationGraph,                                &loadAnimationGraph},
             {         "audiomixer",          &isAudioMixer,                   &loadCatalog<sw::AudioMixerDesc>},
             {        "audioevents",         &isAudioEvents,                &loadCatalog<sw::AudioEventLibrary>},
             {         "audiomusic",          &isAudioMusic,                   &loadCatalog<sw::AudioMusicDesc>},

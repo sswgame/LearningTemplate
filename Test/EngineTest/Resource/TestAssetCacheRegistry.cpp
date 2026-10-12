@@ -68,11 +68,11 @@ SW_TEST_CASE( AssetCacheRegistryTest, BuiltInCachesAreReachableThroughTheRegistr
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "SpriteClip" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Mesh" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Skeleton" ) );
-    SW_EXPECT_NOT_NULL( resources.findAssetCache( "AnimClip" ) );
+    SW_EXPECT_NOT_NULL( resources.findAssetCache( "AnimationClip" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "StringTable" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Rig" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "SocketSet" ) );
-    SW_EXPECT_NOT_NULL( resources.findAssetCache( "AnimNotifyTable" ) );
+    SW_EXPECT_NOT_NULL( resources.findAssetCache( "AnimationNotifyTable" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "PhysicsAsset" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "SkeletonBoneLOD" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Fracture" ) );

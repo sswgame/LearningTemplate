@@ -2,8 +2,8 @@
 
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Animation/Graph/AnimGraphAsset.h"
-#include "Engine/Animation/Graph/AnimGraphPlayer.h"
+#include "Engine/Animation/Graph/AnimationGraphAsset.h"
+#include "Engine/Animation/Graph/AnimationGraphPlayer.h"
 
 #include "EngineTest/AnimationTestUtil.h"
 
@@ -12,28 +12,28 @@
 using namespace sw;
 
 // ------------------------------------------------------------------------------
-// 1) AnimGraphTest — 그래프 애셋의 JSON 왕복과 그래프 플레이어의 노드 이동
+// 1) AnimationGraphTest — 그래프 애셋의 JSON 왕복과 그래프 플레이어의 노드 이동
 // ------------------------------------------------------------------------------
 
 namespace
 {
     /** @brief Idle -> Attack 링크 하나를 가진 두 노드짜리 그래프를 만듭니다. */
-    AnimGraphAsset makeTwoNodeGraph()
+    AnimationGraphAsset makeTwoNodeGraph()
     {
-        AnimGraphAsset asset;
+        AnimationGraphAsset asset;
 
-        AnimGraphNode idleNode{};
+        AnimationGraphNode idleNode{};
         idleNode._id       = 1;
         idleNode._name     = "Idle";
         idleNode._position = float2{ 10.0f, 20.0f };
-        AnimGraphNode attackNode{};
+        AnimationGraphNode attackNode{};
         attackNode._id       = 2;
         attackNode._name     = "Attack";
         attackNode._position = float2{ 210.0f, 20.0f };
         asset._listNode.push_back( idleNode );
         asset._listNode.push_back( attackNode );
 
-        AnimGraphLink link{};
+        AnimationGraphLink link{};
         link._id       = 1;
         link._fromNode = 1;
         link._toNode   = 2;
@@ -44,13 +44,13 @@ namespace
 } // namespace
 
 /**
- * @brief [AnimGraphTest] toJSON / parseJSON 왕복이 노드·링크·좌표를 모두 보존하는지 검증
+ * @brief [AnimationGraphTest] toJSON / parseJSON 왕복이 노드·링크·좌표를 모두 보존하는지 검증
  */
-SW_TEST_CASE( AnimGraphTest, JSONRoundTripKeepsNodesAndLinks )
+SW_TEST_CASE( AnimationGraphTest, JSONRoundTripKeepsNodesAndLinks )
 {
-    const AnimGraphAsset source = makeTwoNodeGraph();
+    const AnimationGraphAsset source = makeTwoNodeGraph();
 
-    AnimGraphAsset parsed;
+    AnimationGraphAsset parsed;
     SW_EXPECT_TRUE( parsed.parseJSON( source.toJSON() ) );
 
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( parsed._listNode.size() ) );
@@ -63,20 +63,20 @@ SW_TEST_CASE( AnimGraphTest, JSONRoundTripKeepsNodesAndLinks )
 }
 
 /**
- * @brief [AnimGraphTest] loadFromFile 이 parseJSON 과 같은 결과를 내는지 검증
+ * @brief [AnimationGraphTest] loadFromFile 이 parseJSON 과 같은 결과를 내는지 검증
  * @details loadFromFile 은 읽어 둔 문서를 다시 문자열로 덤프하지 않고 한 번만 파싱한다. 두 경로의 결과가 같음을 못박아 둔다.
  */
-SW_TEST_CASE( AnimGraphTest, LoadFromFileMatchesParseJSON )
+SW_TEST_CASE( AnimationGraphTest, LoadFromFileMatchesParseJSON )
 {
-    const AnimGraphAsset source   = makeTwoNodeGraph();
-    const string         filePath = test::makeTempPath( "test_anim_graph.json" );
+    const AnimationGraphAsset source   = makeTwoNodeGraph();
+    const string              filePath = test::makeTempPath( "test_animation_graph.json" );
 
     SW_EXPECT_TRUE( source.saveToFile( filePath ) );
 
-    AnimGraphAsset loaded;
+    AnimationGraphAsset loaded;
     SW_EXPECT_TRUE( loaded.loadFromFile( filePath ) );
 
-    AnimGraphAsset parsed;
+    AnimationGraphAsset parsed;
     SW_EXPECT_TRUE( parsed.parseJSON( source.toJSON() ) );
 
     SW_EXPECT_EQUAL( static_cast<uint32>( parsed._listNode.size() ), static_cast<uint32>( loaded._listNode.size() ) );
@@ -86,15 +86,15 @@ SW_TEST_CASE( AnimGraphTest, LoadFromFileMatchesParseJSON )
 }
 
 /**
- * @brief [AnimGraphTest] 빈 이름으로 play 하면 들어오는 링크가 없는 노드에서 시작하는지 검증
+ * @brief [AnimationGraphTest] 빈 이름으로 play 하면 들어오는 링크가 없는 노드에서 시작하는지 검증
  */
-SW_TEST_CASE( AnimGraphTest, PlayStartsAtEntryNode )
+SW_TEST_CASE( AnimationGraphTest, PlayStartsAtEntryNode )
 {
-    const AnimGraphAsset     graph = makeTwoNodeGraph();
-    test::TestPlayable       idle( 1.0f, true );
-    test::TestPlayableSource source;
+    const AnimationGraphAsset graph = makeTwoNodeGraph();
+    test::TestPlayable        idle( 1.0f, true );
+    test::TestPlayableSource  source;
     source.add( "Idle", &idle );
-    AnimGraphPlayer player;
+    AnimationGraphPlayer player;
     player.setGraph( &graph );
     player.setPlayableSource( &source );
 
@@ -105,16 +105,16 @@ SW_TEST_CASE( AnimGraphTest, PlayStartsAtEntryNode )
 }
 
 /**
- * @brief [AnimGraphTest] 재생할 것이 없는 노드로 넘어가면 재생도 같이 비는지 검증
+ * @brief [AnimationGraphTest] 재생할 것이 없는 노드로 넘어가면 재생도 같이 비는지 검증
  * @details 플레이어를 그대로 두면 상태 이름은 새 노드를 말하는데 포즈는 이전 노드의 것이 남는다 — 둘이 다른 말을 한다.
  */
-SW_TEST_CASE( AnimGraphTest, AdvanceToCliplessNodeClearsPlayback )
+SW_TEST_CASE( AnimationGraphTest, AdvanceToCliplessNodeClearsPlayback )
 {
-    const AnimGraphAsset     graph = makeTwoNodeGraph();
-    test::TestPlayable       idle( 1.0f, false );
-    test::TestPlayableSource source;
+    const AnimationGraphAsset graph = makeTwoNodeGraph();
+    test::TestPlayable        idle( 1.0f, false );
+    test::TestPlayableSource  source;
     source.add( "Idle", &idle );
-    AnimGraphPlayer player;
+    AnimationGraphPlayer player;
     player.setGraph( &graph );
     player.setPlayableSource( &source );
 
@@ -132,15 +132,15 @@ SW_TEST_CASE( AnimGraphTest, AdvanceToCliplessNodeClearsPlayback )
 }
 
 /**
- * @brief [AnimGraphTest] stop 이 노드와 재생 상태를 함께 비우는지 검증
+ * @brief [AnimationGraphTest] stop 이 노드와 재생 상태를 함께 비우는지 검증
  */
-SW_TEST_CASE( AnimGraphTest, StopClearsNodeAndPlayback )
+SW_TEST_CASE( AnimationGraphTest, StopClearsNodeAndPlayback )
 {
-    const AnimGraphAsset     graph = makeTwoNodeGraph();
-    test::TestPlayable       idle( 1.0f, true );
-    test::TestPlayableSource source;
+    const AnimationGraphAsset graph = makeTwoNodeGraph();
+    test::TestPlayable        idle( 1.0f, true );
+    test::TestPlayableSource  source;
     source.add( "Idle", &idle );
-    AnimGraphPlayer player;
+    AnimationGraphPlayer player;
     player.setGraph( &graph );
     player.setPlayableSource( &source );
     SW_EXPECT_TRUE( player.play( hashed_string( "Idle" ), true, 0.0f ) );
@@ -152,49 +152,49 @@ SW_TEST_CASE( AnimGraphTest, StopClearsNodeAndPlayback )
 }
 
 /**
- * @brief [AnimGraphTest] 상태 기계 — 조건 링크는 파라미터가 참이 되는 갱신에 넘어가고, 트리거는 쓰이면 꺼지고, 조건 없는 링크는 반복 없이 끝날 때 넘어간다
+ * @brief [AnimationGraphTest] 상태 기계 — 조건 링크는 파라미터가 참이 되는 갱신에 넘어가고, 트리거는 쓰이면 꺼지고, 조건 없는 링크는 반복 없이 끝날 때 넘어간다
  * @details Idle →(Speed > 0.5) Walk →(트리거 Jump) Jump →(끝나면) Land. 조건은 JSON 으로 왕복한다(모르는 비교 표기는 로드 오류).
  */
-SW_TEST_CASE( AnimGraphTest, StateMachineFollowsConditionsTriggersAndFinish )
+SW_TEST_CASE( AnimationGraphTest, StateMachineFollowsConditionsTriggersAndFinish )
 {
-    AnimGraphAsset graph;
-    const utf8*    arrName[4] = { "Idle", "Walk", "Jump", "Land" };
+    AnimationGraphAsset graph;
+    const utf8*         arrName[4] = { "Idle", "Walk", "Jump", "Land" };
     for ( int32 nodeIndex = 0; nodeIndex < 4; ++nodeIndex )
     {
-        AnimGraphNode node{};
+        AnimationGraphNode node{};
         node._id   = nodeIndex + 1;
         node._name = arrName[nodeIndex];
         graph._listNode.push_back( node );
     }
     graph._listNode[1]._loopOverride = 1;
-    AnimGraphLink toWalk{};
+    AnimationGraphLink toWalk{};
     toWalk._id        = 1;
     toWalk._fromNode  = 1;
     toWalk._toNode    = 2;
-    toWalk._op        = AnimConditionOp::Greater;
+    toWalk._op        = AnimationConditionOp::Greater;
     toWalk._parameter = hashed_string( "Speed" );
     toWalk._threshold = 0.5f;
-    AnimGraphLink toJump{};
+    AnimationGraphLink toJump{};
     toJump._id        = 2;
     toJump._fromNode  = 2;
     toJump._toNode    = 3;
-    toJump._op        = AnimConditionOp::Trigger;
+    toJump._op        = AnimationConditionOp::Trigger;
     toJump._parameter = hashed_string( "Jump" );
-    AnimGraphLink toLand{};
+    AnimationGraphLink toLand{};
     toLand._id       = 3;
     toLand._fromNode = 3;
     toLand._toNode   = 4;
     graph._listLink  = { toWalk, toJump, toLand };
 
     // JSON 왕복 — 조건 · 반복이 남는다.
-    AnimGraphAsset parsed;
+    AnimationGraphAsset parsed;
     SW_ASSERT_TRUE( parsed.parseJSON( graph.toJSON() ) );
     SW_ASSERT_EQUAL( 3u, static_cast<uint32>( parsed._listLink.size() ) );
-    SW_EXPECT_TRUE( parsed._listLink[1]._op == AnimConditionOp::Trigger );
+    SW_EXPECT_TRUE( parsed._listLink[1]._op == AnimationConditionOp::Trigger );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( parsed._listNode[1]._loopOverride ) );
     {
         test::ScopedDefensiveTestLog expected( "unknown condition op is a load error" );
-        AnimGraphAsset               broken;
+        AnimationGraphAsset          broken;
         SW_EXPECT_FALSE( broken.parseJSON( R"({ "nodes": [ { "id": 1, "name": "A" } ], "links": [ { "id": 1, "from": 1, "to": 1, "condition": { "param": "x", "op": "~" } } ] })" ) );
     }
 
@@ -207,11 +207,11 @@ SW_TEST_CASE( AnimGraphTest, StateMachineFollowsConditionsTriggersAndFinish )
     source.add( "Walk", &walk );
     source.add( "Jump", &jump );
     source.add( "Land", &land );
-    AnimGraphPlayer player;
+    AnimationGraphPlayer player;
     player.setGraph( &parsed );
     player.setPlayableSource( &source );
     player.setDefaultBlendSeconds( 0.0f );
-    AnimParameterSet parameter;
+    AnimationParameterSet parameter;
     SW_ASSERT_TRUE( player.play( hashed_string{}, true, 0.0f ) );
 
     player.update( 0.1f, &parameter, nullptr );

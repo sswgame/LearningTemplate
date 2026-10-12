@@ -3,11 +3,11 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/AnimClip.h"
-#include "Engine/Animation/Codec/Raw/RawAnimCodec.h"
+#include "Engine/Animation/AnimationClip.h"
+#include "Engine/Animation/Codec/Raw/RawAnimationCodec.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/Character/AnimNotify/AnimNotifyComponent.h"
-#include "Engine/Character/AnimNotify/AnimNotifyTable.h"
+#include "Engine/Character/AnimationNotify/AnimationNotifyComponent.h"
+#include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
 #include "Engine/Character/Socket/SocketSetComponent.h"
 #include "Engine/Object/Animation/LocomotionWarpingComponent.h"
 #include "Engine/Object/Animation/MotionWarpingComponent.h"
@@ -38,26 +38,26 @@ namespace
         /** @brief 루트가 +Z 로 1 m/s 인 1 초 클립(사슬 3 뼈)을 폴더에 쓰고 그 폴더를 돌려줍니다. @p warpWindowSeconds 가 0 보다 크면 0 초부터 그 길이의 `Warp` 구간 알림을 답니다. */
         static string writeWalkClip( const utf8* pFolderName, float32 warpWindowSeconds, float32 authoredSpeed )
         {
-            const Skeleton    skeleton = test::makeChainSkeleton( 3 );
-            const AnimRawClip raw      = test::makeChainRawClip( skeleton, 31, 30.0f, 0.0f );
-            AnimClip          clip;
+            const Skeleton         skeleton = test::makeChainSkeleton( 3 );
+            const AnimationRawClip raw      = test::makeChainRawClip( skeleton, 31, 30.0f, 0.0f );
+            AnimationClip          clip;
             clip.setName( hashed_string( "Walk" ) );
             clip.setLooping( true );
             clip.setRootMotionTrack( 0 );
             if ( warpWindowSeconds > 0.0f )
-                clip.addNotify( AnimNotifyEvent{ hashed_string( "Warp" ), 0.0f, warpWindowSeconds } );
+                clip.addNotify( AnimationNotifyEvent{ hashed_string( "Warp" ), 0.0f, warpWindowSeconds } );
             if ( authoredSpeed > 0.0f )
             {
-                AnimCurve curve{};
+                AnimationClipCurve curve{};
                 curve._name    = hashed_string( "Speed" );
                 curve._listKey = {
-                    AnimCurveKey{0.0f, authoredSpeed},
-                    AnimCurveKey{1.0f, authoredSpeed}
+                    AnimationClipCurveKey{0.0f, authoredSpeed},
+                    AnimationClipCurveKey{1.0f, authoredSpeed}
                 };
                 clip.addCurve( curve );
             }
             string folder;
-            if ( clip.compressFrom( raw, RawAnimCodec::getInstance(), AnimCodecSettings{}, nullptr ) == false )
+            if ( clip.compressFrom( raw, RawAnimationCodec::getInstance(), AnimationCodecSettings{}, nullptr ) == false )
                 return folder;
             folder = test::makeTempPath( pFolderName );
             if ( clip.saveToFile( FileUtil::joinPath( folder, "walk.animclip" ) ) == false )
@@ -118,11 +118,11 @@ SW_TEST_CASE( MotionWarpingTest, WarpWindowReachesTargetAtWindowEnd )
     SW_ASSERT_NOT_NULL( pObject );
     SkeletalAnimatorComponent* pAnimator = TestMotionWarpingInternal::addAnimator( *pObject, folder );
     MotionWarpingComponent*    pWarping  = pObject->addComponent<MotionWarpingComponent>();
-    AnimNotifyComponent*       pNotify   = pObject->addComponent<AnimNotifyComponent>();
+    AnimationNotifyComponent*  pNotify   = pObject->addComponent<AnimationNotifyComponent>();
     SW_ASSERT_TRUE( pAnimator != nullptr && pWarping != nullptr && pNotify != nullptr );
-    shared_ptr<AnimNotifyTable> table = make_shared<AnimNotifyTable>();
-    SW_ASSERT_TRUE( table->loadFromXMLText( R"(<AnimNotifies><Notify name="Warp" handler="MotionWarp" target="Seat"/></AnimNotifies>)", "warp",
-                                            AnimNotifyHandlerRegistry::getDefault() ) );
+    shared_ptr<AnimationNotifyTable> table = make_shared<AnimationNotifyTable>();
+    SW_ASSERT_TRUE( table->loadFromXMLText( R"(<AnimationNotifies><Notify name="Warp" handler="MotionWarp" target="Seat"/></AnimationNotifies>)", "warp",
+                                            AnimationNotifyHandlerRegistry::getDefault() ) );
     pNotify->setNotifyTable( table );
     pAnimator->dispatchBeginPlay();
     pWarping->dispatchBeginPlay();

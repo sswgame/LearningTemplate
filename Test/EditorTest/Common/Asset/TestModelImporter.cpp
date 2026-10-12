@@ -512,7 +512,7 @@ SW_TEST_CASE( ModelImporterTest, SkinnedModelImportsSkeletonClipsAndAttachments 
     walkRule._listClipName = { "Walking_A" };
     SW_ASSERT_TRUE( sw::editor::ModelImporter::readModelAsset( copiedPath, walkRule, result ) );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( result._listClip.size() ) );
-    const sw::AnimClip& walk = result._listClip[0]._clip;
+    const sw::AnimationClip& walk = result._listClip[0]._clip;
     SW_EXPECT_FALSE( walk.isLoopingByDefault() );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( walk.getNotifyTrack().getEvents().size() ) );
     SW_EXPECT_TRUE( walk.getNotifyTrack().getEvents()[0]._name == sw::hashed_string( "FootL" ) );

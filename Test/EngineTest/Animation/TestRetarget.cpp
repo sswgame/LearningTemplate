@@ -3,9 +3,9 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/AnimClip.h"
-#include "Engine/Animation/Codec/AnimCodec.h"
-#include "Engine/Animation/Codec/Raw/RawAnimCodec.h"
+#include "Engine/Animation/AnimationClip.h"
+#include "Engine/Animation/Codec/AnimationCodec.h"
+#include "Engine/Animation/Codec/Raw/RawAnimationCodec.h"
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Animation/Retarget/RetargetProfile.h"
 #include "Engine/Animation/Skeletal/Pose.h"
@@ -244,21 +244,21 @@ SW_TEST_CASE( RetargetTest, LongerLegsKeepFeetOnScaledStride )
  */
 SW_TEST_CASE( RetargetTest, BakedClipMatchesRuntimeRetarget )
 {
-    const Skeleton    source = test::makeChainSkeleton( 3 );
-    const AnimRawClip raw    = test::makeChainRawClip( source, 31, 30.0f, 0.4f );
-    AnimClip          clip;
+    const Skeleton         source = test::makeChainSkeleton( 3 );
+    const AnimationRawClip raw    = test::makeChainRawClip( source, 31, 30.0f, 0.4f );
+    AnimationClip          clip;
     clip.setName( "Wave" );
     clip.setLooping( true );
     clip.setRootMotionTrack( 0 );
-    clip.addNotify( AnimNotifyEvent{ hashed_string( "Step" ), 0.5f, 0.0f } );
-    AnimCurve curve{};
+    clip.addNotify( AnimationNotifyEvent{ hashed_string( "Step" ), 0.5f, 0.0f } );
+    AnimationClipCurve curve{};
     curve._name    = hashed_string( "IK" );
     curve._listKey = {
-        AnimCurveKey{0.0f, 0.0f},
-        AnimCurveKey{1.0f, 1.0f}
+        AnimationClipCurveKey{0.0f, 0.0f},
+        AnimationClipCurveKey{1.0f, 1.0f}
     };
     clip.addCurve( curve );
-    SW_ASSERT_TRUE( clip.compressFrom( raw, RawAnimCodec::getInstance(), AnimCodecSettings{}, nullptr ) );
+    SW_ASSERT_TRUE( clip.compressFrom( raw, RawAnimationCodec::getInstance(), AnimationCodecSettings{}, nullptr ) );
 
     // 대상: 같은 이름, 본 1 이 두 배 긴 레퍼런스(본 비율 덮어쓰기).
     Pose reference;
@@ -276,8 +276,8 @@ SW_TEST_CASE( RetargetTest, BakedClipMatchesRuntimeRetarget )
     PoseRetargeter retargeter;
     SW_ASSERT_TRUE( retargeter.initialize( profile, source, source, &reference ) );
 
-    AnimClip baked;
-    SW_ASSERT_TRUE( RetargetBakeUtil::bakeClip( retargeter, clip, source, source, 30.0f, RawAnimCodec::getInstance(), AnimCodecSettings{}, baked ) );
+    AnimationClip baked;
+    SW_ASSERT_TRUE( RetargetBakeUtil::bakeClip( retargeter, clip, source, source, 30.0f, RawAnimationCodec::getInstance(), AnimationCodecSettings{}, baked ) );
     SW_EXPECT_NEAR_EQUAL( clip.getDuration(), baked.getDuration(), 1e-4f );
     SW_EXPECT_TRUE( baked.isLoopingByDefault() );
     SW_EXPECT_EQUAL( 0, baked.getRootMotionTrack() );
@@ -292,7 +292,7 @@ SW_TEST_CASE( RetargetTest, BakedClipMatchesRuntimeRetarget )
         Pose sourcePose;
         sourcePose.setToReference( source );
         SW_ASSERT_TRUE( clip.sampleTracks( time, trackPose ) );
-        AnimClip::copyTracksToPose( trackPose, listTrackToBone, sourcePose );
+        AnimationClip::copyTracksToPose( trackPose, listTrackToBone, sourcePose );
         Pose runtime;
         retargeter.retarget( sourcePose, runtime );
         Pose bakedPose;
@@ -317,7 +317,7 @@ SW_TEST_CASE( RetargetTest, KnightWalkOnProportionedMinion )
     SW_ASSERT_TRUE( minion.loadFromResource( TestRetargetInternal::kMinionSkeleton ) );
     RetargetProfile profile;
     SW_ASSERT_TRUE( profile.loadFromResource( TestRetargetInternal::kProfile ) );
-    AnimClip walk;
+    AnimationClip walk;
     SW_ASSERT_TRUE( walk.loadFromResource( TestRetargetInternal::kKnightWalk ) );
 
     // 하수인의 다리를 1.25 배 — 허벅지 스케일, 골반은 다리 길이의 0.25 만큼 올린다(발이 바닥에 남게).
@@ -354,7 +354,7 @@ SW_TEST_CASE( RetargetTest, KnightWalkOnProportionedMinion )
         Pose          trackPose;
         Pose          knightPose = knightReference;
         SW_ASSERT_TRUE( walk.sampleTracks( time, trackPose ) );
-        AnimClip::copyTracksToPose( trackPose, listTrackToBone, knightPose );
+        AnimationClip::copyTracksToPose( trackPose, listTrackToBone, knightPose );
         Pose minionPose;
         retargeter.retarget( knightPose, minionPose );
         vector<float4x4> listKnight;
@@ -425,9 +425,9 @@ SW_TEST_CASE( RetargetTest, BakeClipFileWritesTargetClip )
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
     const string outPath = FileUtil::joinPath( test::makeTempPath( "retargetbake" ), "walking_a_minion.animclip" );
     SW_ASSERT_TRUE( RetargetBakeUtil::bakeClipFile( TestRetargetInternal::kProfile, TestRetargetInternal::kKnightWalk, outPath ) );
-    AnimClip baked;
-    AnimClip source;
-    Skeleton minion;
+    AnimationClip baked;
+    AnimationClip source;
+    Skeleton      minion;
     SW_ASSERT_TRUE( baked.loadFromResource( outPath ) );
     SW_ASSERT_TRUE( source.loadFromResource( TestRetargetInternal::kKnightWalk ) );
     SW_ASSERT_TRUE( minion.loadFromResource( TestRetargetInternal::kMinionSkeleton ) );

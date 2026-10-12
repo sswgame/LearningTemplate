@@ -6,7 +6,7 @@ R1(엔진 루프에서 자동화 빼기), R2(에디터 그리기 인계 상태 �
 ## 단위
 
 ### R4. 자체 포맷 로더를 리플렉션으로 (파일마다 한 단위)
-- **남은 후보**: `SpriteClipAsset` · `SequenceAsset` · `Skeleton` · `AnimGraphAsset` · `DialogueGraphAsset` · `LocalizationDocuments` · `CultureInfo`.
+- **남은 후보**: `SpriteClipAsset` · `SequenceAsset` · `Skeleton` · `AnimationGraphAsset` · `DialogueGraphAsset` · `LocalizationDocuments` · `CultureInfo`.
 - **판정을 먼저 한다**: 적지 않은 값의 의미가 필요한가(부모 상속, "없음" 과 "0" 구분)? 그렇다면 옮기지 않는다. 옮기지 않기로 한 것과 그 이유는 [결정 기록](../09_Decisions.md) 5-4.
 - **방법**: 구조체에 `REFLECT` · `PROPERTY`, `ConfigManager::readConfigJSON` 으로 읽기(모르는 키 · 읽지 못한 값 · 범위는 거기서 오류), 의미 검사만 직접. 데이터 파일은 키를 `_이름` 규약으로 다시 쓰고(옛 이름 별칭 없음, 결정 기록 5-4) 설정 카탈로그를 `typeName` 방식으로 바꿔 문서를 생성한다.
 - **검증**: 그 로더의 기존 테스트, `ResourceDataSchemaTest`, 설정 · 리소스 스키마 게이트. 파일 하나가 한 단위라 서로 충돌하지 않는다.

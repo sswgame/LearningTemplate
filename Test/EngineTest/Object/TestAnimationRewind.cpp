@@ -3,8 +3,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/AnimClip.h"
-#include "Engine/Animation/Codec/Raw/RawAnimCodec.h"
+#include "Engine/Animation/AnimationClip.h"
+#include "Engine/Animation/Codec/Raw/RawAnimationCodec.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Object/Animation/AnimationRewind.h"
@@ -54,21 +54,21 @@ namespace
         /** @brief 반복 클립 `Wave`(알림 `Step` 0.5 초 · 커브 `Speed` 0 → 1)를 임시 폴더에 쓰고 폴더를 돌려줍니다. */
         static string writeWaveClip( const Skeleton& skeleton )
         {
-            string            folder = test::makeTempPath( "rewindclips" );
-            const AnimRawClip raw    = test::makeChainRawClip( skeleton, 31, 30.0f, 0.8f );
-            AnimClip          clip;
+            string                 folder = test::makeTempPath( "rewindclips" );
+            const AnimationRawClip raw    = test::makeChainRawClip( skeleton, 31, 30.0f, 0.8f );
+            AnimationClip          clip;
             clip.setName( hashed_string( "Wave" ) );
             clip.setLooping( true );
-            if ( clip.compressFrom( raw, RawAnimCodec::getInstance(), AnimCodecSettings{}, nullptr ) == false )
+            if ( clip.compressFrom( raw, RawAnimationCodec::getInstance(), AnimationCodecSettings{}, nullptr ) == false )
             {
                 folder.clear();
                 return folder;
             }
-            clip.addNotify( AnimNotifyEvent{ hashed_string( "Step" ), 0.5f, 0.0f } );
-            AnimCurve speed{};
+            clip.addNotify( AnimationNotifyEvent{ hashed_string( "Step" ), 0.5f, 0.0f } );
+            AnimationClipCurve speed{};
             speed._name = hashed_string( "Speed" );
-            speed._listKey.push_back( AnimCurveKey{ 0.0f, 0.0f } );
-            speed._listKey.push_back( AnimCurveKey{ clip.getDuration(), 1.0f } );
+            speed._listKey.push_back( AnimationClipCurveKey{ 0.0f, 0.0f } );
+            speed._listKey.push_back( AnimationClipCurveKey{ clip.getDuration(), 1.0f } );
             clip.addCurve( speed );
             if ( clip.saveToFile( FileUtil::joinPath( folder, "wave.animclip" ) ) == false )
                 folder.clear();

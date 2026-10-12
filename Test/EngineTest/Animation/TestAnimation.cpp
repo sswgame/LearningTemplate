@@ -3,8 +3,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/AnimPlayer.h"
-#include "Engine/Animation/Graph/AnimGraphAsset.h"
+#include "Engine/Animation/AnimationPlayer.h"
+#include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Animation/Graph/BlendSpace.h"
 #include "Engine/Animation/Skeletal/DualQuaternion.h"
 #include "Engine/Animation/Skeletal/Pose.h"
@@ -28,11 +28,11 @@ namespace
     /** @brief 이름 붙은 노드만 가진 그래프를 @p path 에 씁니다(링크 없음). */
     [[nodiscard]] bool writeNamedGraph( const string& path, std::initializer_list<const utf8*> listName )
     {
-        AnimGraphAsset graph;
-        int32          nodeID = 1;
+        AnimationGraphAsset graph;
+        int32               nodeID = 1;
         for ( const utf8* pName : listName )
         {
-            AnimGraphNode node{};
+            AnimationGraphNode node{};
             node._id   = nodeID++;
             node._name = pName;
             graph._listNode.push_back( node );
@@ -43,11 +43,11 @@ namespace
     /** @brief 애니메이터의 그래프 경로 PROPERTY 를 쓰고, 인스펙터 · 에셋 핫 리로드처럼 바뀐 칸을 알립니다. */
     [[nodiscard]] bool writeGraphPath( SpriteAnimatorComponent* pAnimator, const string& path )
     {
-        const PropertyInfo* pProperty = pAnimator->getTypeInfo()->findPropertyInHierarchy( hashed_string( "_animGraphPath" ) );
+        const PropertyInfo* pProperty = pAnimator->getTypeInfo()->findPropertyInHierarchy( hashed_string( "_animationGraphPath" ) );
         if ( pProperty == nullptr )
             return false;
         pProperty->setValue<string>( pAnimator, path );
-        pAnimator->onPropertyChanged( hashed_string( "_animGraphPath" ) );
+        pAnimator->onPropertyChanged( hashed_string( "_animationGraphPath" ) );
         return true;
     }
 } // namespace
@@ -59,10 +59,10 @@ namespace
 /**
  * @brief [AnimationTest] 재생 커서가 반복이면 한 바퀴 안으로 감고, 아니면 끝에서 멈추며 끝에 닿았다고 알린다
  */
-SW_TEST_CASE( AnimationTest, AnimClipCursorLoopsAndClamps )
+SW_TEST_CASE( AnimationTest, AnimationClipCursorLoopsAndClamps )
 {
-    AnimClipCursor cursor;
-    AnimTimeStep   step = cursor.advance( 2.0f, 4.0f, true );
+    AnimationClipCursor cursor;
+    AnimationTimeStep   step = cursor.advance( 2.0f, 4.0f, true );
     SW_EXPECT_NEAR_EQUAL( 2.0f, cursor.getTime(), 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 0.5f, cursor.computeNormalizedTime( 4.0f ), 1e-4f );
     SW_EXPECT_TRUE( step._bIncludesStart == SW_TRUE ); // 첫 걸음은 시작 시각을 포함한다
@@ -74,7 +74,7 @@ SW_TEST_CASE( AnimationTest, AnimClipCursorLoopsAndClamps )
     SW_EXPECT_TRUE( step._bIncludesStart == SW_FALSE );
 
     // 반복하지 않으면 끝에서 멈추고 끝에 닿았다고 알린다.
-    AnimClipCursor once;
+    AnimationClipCursor once;
     step = once.advance( 5.0f, 4.0f, false );
     SW_EXPECT_NEAR_EQUAL( 4.0f, once.getTime(), 1e-4f );
     SW_EXPECT_TRUE( step._bReachedEnd == SW_TRUE );
@@ -85,12 +85,12 @@ SW_TEST_CASE( AnimationTest, AnimClipCursorLoopsAndClamps )
 }
 
 /**
- * @brief [AnimationTest] AnimPlayer 단일 재생 및 시간 갱신 검증
+ * @brief [AnimationTest] AnimationPlayer 단일 재생 및 시간 갱신 검증
  */
-SW_TEST_CASE( AnimationTest, AnimPlayerPlayAndUpdate )
+SW_TEST_CASE( AnimationTest, AnimationPlayerPlayAndUpdate )
 {
     test::TestPlayable idle( 1.0f, true );
-    AnimPlayer         player;
+    AnimationPlayer    player;
 
     SW_EXPECT_NULL( player.getCurrentPlayable() );
     SW_EXPECT_NULL( player.getNextPlayable() );
@@ -110,12 +110,12 @@ SW_TEST_CASE( AnimationTest, AnimPlayerPlayAndUpdate )
 }
 
 /**
- * @brief [AnimationTest] AnimPlayer 재생 속도(Playback Speed) 스케일링 검증
+ * @brief [AnimationTest] AnimationPlayer 재생 속도(Playback Speed) 스케일링 검증
  */
-SW_TEST_CASE( AnimationTest, AnimPlayerPlaybackSpeed )
+SW_TEST_CASE( AnimationTest, AnimationPlayerPlaybackSpeed )
 {
     test::TestPlayable walk( 2.0f, true );
-    AnimPlayer         player;
+    AnimationPlayer    player;
     player.play( &walk, true );
     SW_EXPECT_NEAR_EQUAL( 1.0f, player.getSpeed(), 1e-4f );
 
@@ -136,14 +136,14 @@ SW_TEST_CASE( AnimationTest, AnimPlayerPlaybackSpeed )
 }
 
 /**
- * @brief [AnimationTest] AnimPlayer 크로스페이드 — 두 칸이 함께 흐르고, 가중치가 시간에 비례하며, 끝나면 다음 칸이 지금 칸이 된다
+ * @brief [AnimationTest] AnimationPlayer 크로스페이드 — 두 칸이 함께 흐르고, 가중치가 시간에 비례하며, 끝나면 다음 칸이 지금 칸이 된다
  */
-SW_TEST_CASE( AnimationTest, AnimPlayerCrossfade )
+SW_TEST_CASE( AnimationTest, AnimationPlayerCrossfade )
 {
     test::TestPlayable walk( 2.0f, true );
     test::TestPlayable run( 1.0f, true );
 
-    AnimPlayer player;
+    AnimationPlayer player;
     player.play( &walk, true );
     player.update( 0.5f, nullptr );
 
@@ -345,12 +345,12 @@ SW_TEST_CASE( AnimationTest, SkeletonRejectsParentThatDoesNotExistYet )
  * @brief [AnimationTest] 음수 재생 속도가 크로스페이드를 영원히 멈추지 않는지 검증
  * @details 음수를 그대로 흘리면 페이드 경과가 뒤로 흘러 페이드가 끝나지 않는다. 속도 0 은 일시정지다.
  */
-SW_TEST_CASE( AnimationTest, AnimPlayerClampsNegativeSpeed )
+SW_TEST_CASE( AnimationTest, AnimationPlayerClampsNegativeSpeed )
 {
     test::TestPlayable walk( 2.0f, true );
     test::TestPlayable run( 2.0f, true );
 
-    AnimPlayer player;
+    AnimationPlayer player;
     player.play( &walk, true );
     player.crossfade( &run, 1.0f, true );
 
@@ -627,10 +627,10 @@ SW_TEST_CASE( AnimationTest, BlendSpace2DClampsFarParametersToTheSampleRange )
  * @brief [AnimationTest] 오래 돈 반복 재생도 시간이 한 바퀴 안에 있어 프레임마다 앞으로 간다
  * @details 시간이 끝없이 커지면 10^6 초 근처에서는 0.01 초를 더해도 float32 값이 움직이지 않는다(애니메이션이 멈춘다).
  */
-SW_TEST_CASE( AnimationTest, AnimPlayerLongLoopKeepsAdvancing )
+SW_TEST_CASE( AnimationTest, AnimationPlayerLongLoopKeepsAdvancing )
 {
     test::TestPlayable idle( 1.0f, true );
-    AnimPlayer         player;
+    AnimationPlayer    player;
     player.play( &idle, true );
 
     player.update( 1000000.25f, nullptr ); // 열하루 남짓 켜 둔 셈
