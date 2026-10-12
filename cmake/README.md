@@ -50,7 +50,7 @@ cmake/
     ├── ThirdPartyLibs.cmake      — 서드파티를 어떻게 붙이나: SYSTEM include, vcpkg CONFIG 패키지(못 찾으면 구성 실패), 헤더 전용 포트, Engine 압축 코덱
     ├── AssetAndToolTargets.cmake— 에셋 쿠킹, Doxygen 문서, 린트 타겟 및 CTest 등록 헬퍼
     ├── ReflectionCodeGen.cmake  — ReflectionParser 코드 생성 파이프라인 (sw_addReflectionStep)
-    ├── CheckReflectionCandidates.cmake — 구성 뒤 반사 매크로가 생긴 헤더를 빌드 때 잡아 다시 구성하라고 세운다(sw_addReflectionStep 이 부른다)
+    ├── CheckReflectionCandidates.cmake — 구성 뒤 반사 매크로가 생긴 헤더를 빌드 때 잡아 다시 구성하라고 세운다(sw_addReflectionStep 이 컴파일을 막지 않는 `<타깃>_ReflectionCandidateCheck` ALL 타깃으로 건다 — all 빌드에서만 돈다)
     ├── RuntimeDependencies.cmake— vcpkg 경로 조회, Vulkan 레이어·mimalloc 런타임 DLL 복사
     │                               (DXC 복사는 `ThirdParty/dxc/CMakeLists.txt` 의 `sw_copyDxcDlls` —
     │                                DXC 탐색 로직이 거기 있어 같이 둔다)
