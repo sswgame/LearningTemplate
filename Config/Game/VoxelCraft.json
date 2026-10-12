@@ -1,5 +1,6 @@
 {
     "_packRoot": "game/voxelcraft",
+    "_userSettingsSchema": "data/voxel.settings.xml",
     "_windowTitle": "Voxel Craft",
     "_bUIPauseMenu": true
 }

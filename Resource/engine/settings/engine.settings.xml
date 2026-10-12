@@ -14,7 +14,7 @@
     enabledWhen   다른 설정 조건 `id=value` · `id!=value`, 여럿은 `;`
     platforms     windows · linux (없으면 전부)
     confirmSeconds  바꾼 뒤 이 시간 안에 확인하지 않으면 되돌린다(화면 방식)
-    optionsFrom   런타임 선택지 공급자(localization.languages)
+    optionsFrom   런타임 선택지 공급자(localization.languages · display.resolutions). <Option> 을 함께 적으면 공급자가 비었을 때의 대체 목록이다
     text · description  메뉴 글의 로컬라이제이션 키
 -->
 <UserSettingsSchema version="1">
@@ -33,7 +33,7 @@
 		<Option value="borderless" text="settings.display.windowMode.borderless"/>
 	</Setting>
 	<Setting id="display.resolution" category="display" type="enum" default="1280x720" confirmSeconds="15" target="applier:display.resolution"
-	         enabledWhen="display.windowMode=windowed" text="settings.display.resolution">
+	         enabledWhen="display.windowMode=windowed" optionsFrom="display.resolutions" text="settings.display.resolution">
 		<Option value="1280x720"/>
 		<Option value="1600x900"/>
 		<Option value="1920x1080"/>
@@ -121,10 +121,11 @@
 			<Value setting="graphics.textureQuality" value="ultra"/>
 			<Value setting="graphics.effectsQuality" value="ultra"/>
 		</Preset>
-		<!-- 첫 실행 자동 선택 — 위에서부터 조건을 모두 넘는 첫 줄. GPU 를 묻는 창구가 아직 없어 CPU 논리 코어 · 시스템 메모리만 본다. -->
-		<AutoDetect preset="ultra" minCores="16" minMemoryMb="30000"/>
-		<AutoDetect preset="high" minCores="8" minMemoryMb="15000"/>
-		<AutoDetect preset="medium" minCores="4" minMemoryMb="7500"/>
+		<!-- 첫 실행 자동 선택 — 위에서부터 조건을 모두 넘는 첫 줄. CPU 논리 코어 · 시스템 메모리 · 기본 어댑터의 전용 비디오 메모리를 본다
+		     (HardwareProbe — 전용 메모리를 못 읽은 기계는 minGPUMemoryMb 가 있는 줄에 맞지 않는다). -->
+		<AutoDetect preset="ultra" minCores="16" minMemoryMb="30000" minGPUMemoryMb="10000"/>
+		<AutoDetect preset="high" minCores="8" minMemoryMb="15000" minGPUMemoryMb="6000"/>
+		<AutoDetect preset="medium" minCores="4" minMemoryMb="7500" minGPUMemoryMb="3000"/>
 		<AutoDetect preset="low"/>
 	</Scalability>
 

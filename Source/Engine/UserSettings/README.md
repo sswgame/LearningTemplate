@@ -97,9 +97,10 @@ const string_view difficulty = pSettings->getValue( "gameplay.difficulty" ); // 
 | `target` | `gv:<전역 변수>`, `applier:<이름>`, 없음 |
 | `enabledWhen` | `a=b;c!=d` 처럼 다른 설정 값에 따라 회색 처리 |
 | `platforms` | `windows linux` 처럼 보일 플랫폼 |
-| `optionsFrom` | 선택지를 코드에서 받습니다(`localization.languages` 등) |
+| `optionsFrom` | 선택지를 코드에서 받습니다(`localization.languages`, `display.resolutions`). `<Option>` 을 함께 적으면 공급자가 비었을 때의 대체 목록입니다 |
 
 키 바인딩 설정은 대상을 적지 않습니다. 언제나 `input.keyBinding` 적용기로 입력 맵에 들어갑니다.
+게임은 자기 스키마(`data/<게임>.settings.xml`)에 입력 맵 액션마다 `type="keyBinding" action="…" bindIndex="0"` 줄을 더합니다. 테스트 게임 일곱이 그렇게 하고, `ShippedGameKeyBindingsNameRealInputMapActions` 테스트가 액션 이름과 바인딩 번호가 실제 입력 맵에 있는지 봅니다.
 
 **품질 그룹.** `<Scalability>` 는 언리얼의 Scalability Group처럼 설정 하나(`graphics.quality`)로 여러 설정을 한 번에 바꿉니다. 묶인 설정을 따로 바꾸면 품질 값이 `custom` 이 됩니다.
 기본 프리셋의 값이 묶인 설정의 기본값입니다. 두 곳에 따로 적은 기본값이 어긋나 첫 화면부터 `custom` 으로 보이는 일을 막기 위해서입니다.
@@ -118,7 +119,8 @@ const string_view difficulty = pSettings->getValue( "gameplay.difficulty" ); // 
 
 - **기본값과 다른 값만 씁니다.** 다음 버전에서 기본값이 바뀌면, 그 설정을 바꾸지 않은 플레이어는 새 기본값을 따라갑니다.
 - 읽을 때 모르는 키는 경고하고 버리고, 범위 밖 값은 범위 안으로 맞추고(경고), 형식이 틀린 값은 기본값으로 둡니다.
-- 파일이 없으면 첫 실행으로 봅니다. `HardwareProbe` 가 CPU 논리 코어 수와 시스템 메모리를 읽고, 스키마의 `<AutoDetect>` 조건으로 품질 프리셋을 고릅니다. 파일은 플레이어가 적용할 때 저장합니다.
+- 파일이 없으면 첫 실행으로 봅니다. `HardwareProbe` 가 CPU 논리 코어 수, 시스템 메모리, 기본 어댑터(RHI 가 쓰는 0 번)의 전용 비디오 메모리를 읽고, 스키마의 `<AutoDetect>` 조건(`minCores` · `minMemoryMb` · `minGPUMemoryMb`)으로 품질 프리셋을 고릅니다.
+  전용 메모리를 못 읽은 기계(Linux 의 amdgpu 가 아닌 드라이버 등)는 `minGPUMemoryMb` 가 있는 줄에 맞지 않아 더 낮은 줄로 내려갑니다. 파일은 플레이어가 적용할 때 저장합니다.
 - 확인 대기 중에는 파일에 이전 값을 씁니다. 확인 전에 게임이 꺼지면 다음 실행은 확인된 화면 설정으로 뜹니다.
 
 ### 시작과 적용 순서
@@ -176,7 +178,8 @@ const string_view difficulty = pSettings->getValue( "gameplay.difficulty" ); // 
 - **값만 있고 아직 읽는 곳이 없는 대상이 있습니다.** `gv_renderScale` 을 읽는 업스케일 패스가 없고, 시야 거리, 후처리, 텍스처와 이펙트 품질, 모션 블러, 카메라 시야각과 흔들림도 아직 읽는 곳이 없습니다.
   `gv_colorVisionMode` 는 UI 캔버스만 읽고 톤맵은 아직 읽지 않습니다. 남은 일은 [백로그](../../../docs/06_Backlog.md)에 있습니다.
 - **오디오 버스 `voice`, `ambient`, `ui` 는 값만 저장됩니다.** `IAudioService::setBusVolume` 에 값이 들어가지만, 재생 API가 아직 버스를 받지 않습니다.
-- **해상도 선택지는 데이터의 고정 목록입니다.** 모니터 모드를 열거하지 않습니다. 전용 전체 화면도 없고, `borderless`(모니터를 덮는 창)를 씁니다.
+- **해상도 선택지는 기본 모니터가 내는 모드입니다**(`display.resolutions` 공급자, Windows). 처음 한 번 읽어 두고, 스키마의 고정 목록은 모드를 못 읽는 플랫폼(Linux)의 대체입니다.
+  기본값과 지금 값이 모니터 모드에 없어도 목록 끝에 붙어 선택이 사라지지 않습니다. 전용 전체 화면은 없고, `borderless`(모니터를 덮는 창)를 씁니다.
 - **키 바인딩의 빈 값은 "입력 맵의 기본 바인딩"입니다.** 그래서 카테고리를 기본값으로 되돌리면 이전 리바인딩이 남지 않습니다.
 - **Dev 구성은 디버그 HUD 스키마(`engine/settings/debughud.settings.xml`, 카테고리 `debug`)를 엔진 · 게임 스키마 뒤에 덧붙입니다.** 그래서 Dev 옵션 메뉴에는 `debug` 탭이 있고 Shipping 에는 없습니다.
   사용자 파일보다 먼저 읽어야 저장된 HUD 값이 "모르는 키" 로 버려지지 않습니다([UI README](../UI/README.md#디버그-hud)).

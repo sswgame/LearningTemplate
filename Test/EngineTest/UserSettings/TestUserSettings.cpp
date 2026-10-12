@@ -27,6 +27,27 @@ namespace
 {
     struct UserSettingsTestInternal
     {
+        /** @brief 선택지 공급자 테스트의 "모니터 모드를 읽을 수 있는가" 스위치입니다. 꺼 두면 모드를 못 읽는 플랫폼입니다. */
+        static bool& getModesAvailableFlag()
+        {
+            static bool bAvailable = true;
+            return bAvailable;
+        }
+
+        /** @brief 선택지 공급자 테스트의 공급자입니다. */
+        static void collectTestModes( sw::vector<sw::UserSettingOption>& outListOption )
+        {
+            outListOption.clear();
+            if ( getModesAvailableFlag() == false )
+                return;
+            for ( const utf8* pValue : { "1920x1080", "2560x1440" } )
+            {
+                sw::UserSettingOption option;
+                option._value = pValue;
+                outListOption.push_back( option );
+            }
+        }
+
         /** @brief 테스트 스키마 — 카테고리 둘, 전역 변수 대상 셋, 적용기 대상 하나, 품질 묶음 하나, 확인 카운트다운 하나. */
         static constexpr const utf8* kSchemaXML = R"(
 <UserSettingsSchema version="1">
@@ -55,7 +76,7 @@ namespace
             <Value setting="video.scale" value="1"/>
             <Value setting="video.shadows" value="true"/>
         </Preset>
-        <AutoDetect preset="high" minCores="8" minMemoryMb="8000"/>
+        <AutoDetect preset="high" minCores="8" minMemoryMb="8000" minGPUMemoryMb="6000"/>
     </Scalability>
 </UserSettingsSchema>)";
 
@@ -323,11 +344,19 @@ SW_TEST_CASE( UserSettingsTest, ScalabilityPresetAndCustomDetection )
     sw::HardwareProbeResult strong;
     strong._logicalCoreCount = 16;
     strong._systemMemoryMb   = 32000;
+    strong._gpuMemoryMb      = 8000;
     sw::HardwareProbeResult weak;
     weak._logicalCoreCount = 2;
     weak._systemMemoryMb   = 4000;
     SW_EXPECT_STREQ( "high", settings.detectScalabilityPreset( strong ).c_str() );
     SW_EXPECT_STREQ( "low", settings.detectScalabilityPreset( weak ).c_str() );
+    // 전용 메모리를 못 읽은 기계(0)나 모자란 GPU 는 CPU · 메모리가 넉넉해도 GPU 하한이 있는 줄에 맞지 않는다.
+    sw::HardwareProbeResult unknownGPU = strong;
+    unknownGPU._gpuMemoryMb            = 0;
+    sw::HardwareProbeResult smallGPU   = strong;
+    smallGPU._gpuMemoryMb              = 2000;
+    SW_EXPECT_STREQ( "low", settings.detectScalabilityPreset( unknownGPU ).c_str() );
+    SW_EXPECT_STREQ( "low", settings.detectScalabilityPreset( smallGPU ).c_str() );
     SW_EXPECT_TRUE( settings.applyAutoDetectedPreset( strong ) );
     SW_EXPECT_STREQ( "high", settings.getAppliedValue( "video.quality" ) );
     SW_EXPECT_STREQ( "1", settings.getAppliedValue( "video.scale" ) );
@@ -616,6 +645,88 @@ SW_TEST_CASE( UserSettingsTest, LanguageSwitchChangesLocalizedString )
     SW_EXPECT_TRUE( settings.setPendingValue( "language.text", "fr_fr" ) == sw::UserSettingSetResult::Rejected );
     (void)settings.applyPending(); // 적용 결과는 아래 단언이 대상 값으로 확인한다
     SW_EXPECT_STREQ( "ko_kr", settings.getAppliedValue( "language.text" ) );
+}
+
+/**
+ * @brief [UserSettingsTest] 공급자와 고정 선택지를 함께 적은 설정 — 공급자 값이 이기고, 기본값은 늘 목록에 있고, 공급자가 비면 고정 선택지가 대체한다
+ * @details 해상도 설정이 이 모양이다: 모니터 모드를 열거할 수 있으면 그것이, 못 읽는 플랫폼은 스키마의 고정 목록이 선택지다.
+ */
+SW_TEST_CASE( UserSettingsTest, OptionProviderOverridesFixedOptionsAndFallsBack )
+{
+    sw::UserSettingsManager settings;
+    sw::UserSettingsTargets targets;
+    settings.initialize( targets );
+    settings.getRegistry().registerOptionProvider( "test.modes", SW_DELEGATE_FUNCTION( sw::UserSettingOptionProviderDelegate, &UserSettingsTestInternal::collectTestModes ) );
+    SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="video"/>
+        <Setting id="video.resolution" category="video" type="enum" default="1280x720" optionsFrom="test.modes">
+            <Option value="1280x720"/>
+            <Option value="1600x900"/>
+        </Setting></UserSettingsSchema>)",
+                                                    "provider.settings.xml" ) );
+    settings.reapplyAll();
+
+    sw::vector<sw::UserSettingOption> listOption;
+    UserSettingsTestInternal::getModesAvailableFlag() = true;
+    settings.collectOptions( "video.resolution", listOption );
+    SW_ASSERT_EQUAL( 3u, static_cast<uint32>( listOption.size() ) ); // 공급자 둘 + 목록에 없는 기본값
+    SW_EXPECT_STREQ( "1920x1080", listOption[0]._value.c_str() );
+    SW_EXPECT_STREQ( "1280x720", listOption[2]._value.c_str() );
+    SW_EXPECT_TRUE( settings.setPendingValue( "video.resolution", "2560x1440" ) == sw::UserSettingSetResult::Accepted );
+    SW_EXPECT_TRUE( settings.setPendingValue( "video.resolution", "1600x900" ) == sw::UserSettingSetResult::Rejected ); // 고정 목록에만 있는 값은 모니터가 못 낸다
+    settings.revertPending();
+
+    // 모드를 못 읽으면 고정 선택지가 대체한다.
+    UserSettingsTestInternal::getModesAvailableFlag() = false;
+    settings.collectOptions( "video.resolution", listOption );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listOption.size() ) );
+    SW_EXPECT_TRUE( settings.setPendingValue( "video.resolution", "1600x900" ) == sw::UserSettingSetResult::Accepted );
+    UserSettingsTestInternal::getModesAvailableFlag() = true;
+}
+
+/**
+ * @brief [UserSettingsTest] 게임 스키마의 키 바인딩 설정은 그 게임 입력 맵에 있는 액션의 다시 잡을 수 있는 바인딩을 가리킨다
+ * @details 액션 이름을 틀리거나 입력 맵에서 액션을 지우면 설정은 적용기에서 조용히 건너뛰어져 메뉴의 줄이 아무 일도 하지 않는다. 여기서 드러낸다.
+ */
+SW_TEST_CASE( UserSettingsTest, ShippedGameKeyBindingsNameRealInputMapActions )
+{
+    struct GameFiles
+    {
+        const utf8* _pSchema;
+        const utf8* _pInputMap;
+    };
+    const GameFiles arrGame[] = {
+        {  "game/shooter3d/data/shooter3d.settings.xml",     "game/shooter3d/data/shooter.input.xml"},
+        {   "game/abilityarena/data/arena.settings.xml",    "game/abilityarena/data/arena.input.xml"},
+        {   "game/harvestvalley/data/farm.settings.xml",    "game/harvestvalley/data/farm.input.xml"},
+        { "game/meadowvillage/data/meadow.settings.xml",  "game/meadowvillage/data/meadow.input.xml"},
+        {        "game/nilecity/data/nile.settings.xml",         "game/nilecity/data/nile.input.xml"},
+        {"game/starskirmish/data/skirmish.settings.xml", "game/starskirmish/data/skirmish.input.xml"},
+        {       "game/themepark/data/park.settings.xml",        "game/themepark/data/park.input.xml"},
+        {     "game/voxelcraft/data/voxel.settings.xml",      "game/voxelcraft/data/voxel.input.xml"},
+    };
+    for ( const GameFiles& game : arrGame )
+    {
+        sw::UserSettingsManager settings;
+        sw::UserSettingsTargets targets;
+        settings.initialize( targets );
+        SW_ASSERT_TRUE_MSG( settings.loadSchema( "engine/settings/engine.settings.xml" ), game._pSchema );
+        SW_ASSERT_TRUE_MSG( settings.loadSchema( game._pSchema ), game._pSchema );
+        sw::InputMap inputMap;
+        SW_ASSERT_TRUE_MSG( inputMap.loadFromResource( game._pInputMap ), game._pInputMap );
+
+        sw::vector<const sw::UserSettingDef*> listSetting;
+        settings.collectSettings( "controls", listSetting );
+        uint32 keyBindingCount{ 0 };
+        for ( const sw::UserSettingDef* pDef : listSetting )
+        {
+            if ( pDef->_type != sw::UserSettingType::KeyBinding )
+                continue;
+            ++keyBindingCount;
+            sw::InputSlot slot{};
+            SW_EXPECT_TRUE_MSG( inputMap.findRebindSlot( pDef->_action, pDef->_bindIndex, slot ), pDef->_id.c_str() );
+        }
+        SW_EXPECT_TRUE_MSG( keyBindingCount > 0, game._pSchema );
+    }
 }
 
 /**

@@ -256,7 +256,12 @@ namespace sw
             bool   _bRollback{ false };
         };
 
-        bool                 appendSchema( bool bLoaded );
+        bool appendSchema( bool bLoaded );
+        /**
+         * @brief 설정의 지금 선택지를 모읍니다. 공급자가 있으면 공급자 것, 비었으면 고정 `<Option>` 이 대체합니다.
+         * @details 공급자와 고정 선택지를 함께 적은 설정(해상도)은 기본값과 지금 값이 목록에 없으면 뒤에 붙인다. 모니터를 바꿔도 현재 선택이 목록에서 사라지지 않게 하기 위해서다.
+         */
+        void                 collectOptionsOf( const UserSettingDef& def, vector<UserSettingOption>& outListOption ) const;
         uint32               findIndex( const hashed_string& settingID ) const;
         const string&        getEffectiveValue( uint32 settingIndex ) const;
         bool                 isEnabledAt( uint32 settingIndex ) const;

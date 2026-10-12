@@ -157,6 +157,7 @@ namespace sw
         hashed_string _preset{};
         uint32        _minLogicalCoreCount{ 0 };
         uint32        _minSystemMemoryMb{ 0 };
+        uint32        _minGPUMemoryMb{ 0 }; ///< 기본 어댑터의 전용 비디오 메모리 하한. 0 이면 보지 않는다. 메모리를 못 읽은 기계(0)는 하한이 있는 규칙에 맞지 않는다.
     };
 } // namespace sw
 
