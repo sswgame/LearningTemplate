@@ -59,6 +59,7 @@ namespace
         sw::unique_ptr<sw::ConfigManager> _configManager{};
         sw::unique_ptr<sw::IAudioSystem>  _audioSystem{};
         sw::unique_ptr<sw::CommandStack>  _commandStack{};
+        sw::DelegateHandle                _sceneObjectsInvalidatedHandle{}; ///< 씬 매니저에 단 기록 비우기 구독(씬 단계 해제가 뗀다)
         const sw::EngineConfig*           _pEngineConfig{ nullptr };
 
         using Defaults = sw::EngineInitStepDefaults<TestHost>;
@@ -231,11 +232,19 @@ namespace
                 if ( host._pOwned->_pSceneManager->initialize( services ) == false )
                     return sw::EngineInitResult::Failed;
                 // 앱과 같다 — 씬이 바뀌면 되돌리기 기록을 소유자가 비운다(씬 매니저보다 기록이 늦게 해제된다).
-                host._pOwned->_pSceneManager->onSceneObjectsInvalidated().add(
-                    SW_DELEGATE_METHOD( sw::Delegate<void()>, &sw::CommandStack::clear, host._commandStack.get() ) );
+                sw::SceneObjectsInvalidatedDelegate& onInvalidated = host._pOwned->_pSceneManager->onSceneObjectsInvalidated();
+                if ( host._sceneObjectsInvalidatedHandle.isValid() )
+                    onInvalidated.remove( host._sceneObjectsInvalidatedHandle );
+                host._sceneObjectsInvalidatedHandle = onInvalidated.add( SW_DELEGATE_METHOD( sw::Delegate<void()>, &sw::CommandStack::clear, host._commandStack.get() ) );
                 return sw::EngineInitResult::Succeeded;
             }
-            static void shutdown( TestHost& host ) { host._pOwned->_pSceneManager->shutdown(); }
+            static void shutdown( TestHost& host )
+            {
+                host._pOwned->_pSceneManager->shutdown();
+                if ( host._sceneObjectsInvalidatedHandle.isValid() )
+                    host._pOwned->_pSceneManager->onSceneObjectsInvalidated().remove( host._sceneObjectsInvalidatedHandle );
+                host._sceneObjectsInvalidatedHandle = sw::DelegateHandle{};
+            }
             static void destroy( TestHost& host )
             {
                 host._pOwned->_pSceneManager.reset();

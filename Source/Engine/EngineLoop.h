@@ -250,6 +250,8 @@ namespace sw
 #endif
         /** @brief 에디터 Undo/Redo 전용이라 배포본에는 만들지 않습니다(목록의 HostCreated). */
         unique_ptr<CommandStack> _commandStack;
+        /** @brief 씬 매니저의 `onSceneObjectsInvalidated` 에 단 기록 비우기 구독입니다. 씬 단계 해제가 떼어 낸다. */
+        DelegateHandle _sceneObjectsInvalidatedHandle;
         /**
          * @brief 프레임 관찰자 목록입니다(소유하지 않는다). 프레임 앞(입력 전) · 씬 틱 뒤(UI 앞) · 패킷 채우기 · 프레임 뒤(렌더 제출 뒤) · 창 닫힘에서 붙인 순서대로 부르고,
          *        종료 코드를 내면 `requestQuit` 입니다. 텔레메트리(기동 단계 `Telemetry` 가 붙인다)와 App 의 진단 · 자동화도 여기로 붙습니다.

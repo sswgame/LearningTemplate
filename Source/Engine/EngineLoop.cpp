@@ -357,12 +357,23 @@ namespace sw
             if ( loop._owned._pSceneManager->initialize( services ) == false )
                 return EngineInitResult::Failed;
             // 되돌리기 기록은 나간 씬의 오브젝트를 가리킨다 — 씬이 바뀌면 소유자(여기)가 비운다. 씬 매니저는 기록을 모른다.
-            // 해제 단계가 씬 매니저를 기록보다 먼저 지우므로 구독은 따로 해제하지 않는다. 구독 대상은 Engine 코드라 핫 리로드와 무관하다.
+            // 구독은 핸들로 들고 해제 단계가 뗀다(다시 초기화해도 겹치지 않는다). 구독 대상은 Engine 코드라 핫 리로드와 무관하다.
+            SceneObjectsInvalidatedDelegate& onInvalidated = loop._owned._pSceneManager->onSceneObjectsInvalidated();
+            if ( loop._sceneObjectsInvalidatedHandle.isValid() )
+                onInvalidated.remove( loop._sceneObjectsInvalidatedHandle );
+            loop._sceneObjectsInvalidatedHandle = DelegateHandle{};
             if ( loop._commandStack != nullptr )
-                loop._owned._pSceneManager->onSceneObjectsInvalidated().add( SW_DELEGATE_METHOD( Delegate<void()>, &CommandStack::clear, loop._commandStack.get() ) );
+                loop._sceneObjectsInvalidatedHandle = onInvalidated.add( SW_DELEGATE_METHOD( Delegate<void()>, &CommandStack::clear, loop._commandStack.get() ) );
             return EngineInitResult::Succeeded;
         }
-        static void shutdown( EngineLoop& loop ) { loop._owned._pSceneManager->shutdown(); }
+        static void shutdown( EngineLoop& loop )
+        {
+            // 종료도 알린다(기록을 비운다) — 그 뒤에 구독을 뗀다.
+            loop._owned._pSceneManager->shutdown();
+            if ( loop._sceneObjectsInvalidatedHandle.isValid() )
+                loop._owned._pSceneManager->onSceneObjectsInvalidated().remove( loop._sceneObjectsInvalidatedHandle );
+            loop._sceneObjectsInvalidatedHandle = DelegateHandle{};
+        }
         static void destroy( EngineLoop& loop )
         {
             loop._owned._pSceneManager.reset();
@@ -873,6 +884,7 @@ namespace sw
         , _renderThread{ nullptr }
         , _packetBuilder{}
         , _commandStack{ nullptr }
+        , _sceneObjectsInvalidatedHandle{}
         , _listFrameObserver{}
         , _hostRole{ EngineHostRole::Client }
         , _bHeadless{ false }
