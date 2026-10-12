@@ -61,3 +61,37 @@ SW_TEST_CASE( EditorPreferencesStoreTest, RoundTripThroughTheFile )
     EditorPreferencesStore::resetSection( registrar.getRegistration() );
     SW_EXPECT_NEAR_EQUAL( 5.0f, probe._speed, 1e-6f );
 }
+
+/**
+ * @brief [EditorPreferencesStoreTest] 다시 올라온 모듈의 섹션은 파일 값을 다시 읽고, 그 뒤의 saveAll 이 파일 값을 지우지 않는다
+ * @details 핫 리로드를 흉내 낸다: 언로드 훅이 인스턴스 범위를 잊게 하고, 새 이미지의 인스턴스는 기본값으로 돌린다. 한 번 읽은 섹션은 다시 읽어 사용자 값을 덮지 않는다.
+ */
+SW_TEST_CASE( EditorPreferencesStoreTest, ReloadedSectionReadsTheFileOnce )
+{
+    const EditorRegistrar<EditorSettingsRegistration> registrar{
+        EditorSettingsRegistration{ { "probe", 0 }, "Test/Probe", &EditorPreferencesProbe::StaticType, &EditorSettingsInstance<EditorPreferencesProbe>::getInstance, &EditorSettingsInstance<EditorPreferencesProbe>::getDefault, nullptr, nullptr }
+    };
+    EditorPreferencesProbe& probe    = *static_cast<EditorPreferencesProbe*>( EditorSettingsInstance<EditorPreferencesProbe>::getInstance() );
+    const string            filePath = FileUtil::joinPath( test::makeTempDirectory( "editor_preferences_reload" ), EditorPreferencesStore::kFileName );
+    (void)EditorPreferencesStore::loadAll( filePath ); // 파일이 아직 없다 — 섹션을 '입힘' 으로 적어 둔다
+    probe._speed = 7.0f;
+    SW_ASSERT_TRUE( EditorPreferencesStore::saveAll( filePath ) );
+
+    // 모듈 리로드: 언로드 훅이 잊고, 새 이미지의 인스턴스는 기본값이다.
+    const utf8* pInstanceBytes = static_cast<const utf8*>( static_cast<const void*>( &probe ) );
+    EditorPreferencesStore::forgetSectionsWithin( pInstanceBytes, pInstanceBytes + sizeof( probe ) );
+    probe = EditorPreferencesProbe{};
+    SW_EXPECT_TRUE( EditorPreferencesStore::hasNewSections() );
+
+    // 다른 패널의 저장이 먼저 와도 파일 값을 지우지 않는다.
+    SW_ASSERT_TRUE( EditorPreferencesStore::saveAll( filePath ) );
+    SW_EXPECT_NEAR_EQUAL( 7.0f, probe._speed, 1e-6f );
+    SW_EXPECT_EQUAL( 1u, EditorPreferencesStore::countSavedKeys( filePath ) );
+    SW_EXPECT_FALSE( EditorPreferencesStore::hasNewSections() );
+
+    // 이미 읽은 섹션은 다시 읽지 않는다.
+    probe._speed = 3.0f;
+    SW_EXPECT_EQUAL( 0u, EditorPreferencesStore::loadNewSections( filePath ) );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, probe._speed, 1e-6f );
+    EditorPreferencesStore::resetSection( registrar.getRegistration() );
+}

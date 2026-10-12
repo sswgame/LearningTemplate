@@ -26,6 +26,8 @@ namespace sw::editor
         // 그 이미지가 섹션을 가지면 내리기 전에 저장한다(등록 줄은 이미지의 정적 소멸 때 빠지므로 지금은 아직 목록에 있다).
         if ( EditorPreferencesStore::hasSectionWithin( pBegin, pEnd ) )
             (void)EditorPreferencesStore::saveAll( EditorPreferencesStore::getDefaultFilePath() ); // 실패는 saveAll 이 경고로 알린다
+        // 다시 올라오면 새 이미지의 섹션은 기본값이다. 기록에서 빼 두어야 다음 프레임(또는 다음 saveAll)에 파일에서 다시 읽는다.
+        EditorPreferencesStore::forgetSectionsWithin( pBegin, pEnd );
         uint32 releasedCount = _context.getPanelManager().releasePanelsWithin( pBegin, pEnd, _context.getRHIDevice() );
         releasedCount += _context.getPopupManager().releasePopupsWithin( pBegin, pEnd );
         releasedCount += _context.getInspectorComponentManager().releaseInspectorsWithin( pBegin, pEnd );

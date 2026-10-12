@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Module/ModuleUnloadListener.h"
 
@@ -51,6 +52,45 @@ namespace sw::editor
                         SW_LOG_WARNING( "Editor preference %#.%# = '%#' could not be applied - kept the current value", type._name.c_str(), key.c_str(), text.c_str() );
                 }
             }
+
+            /**
+             * @brief 파일 값을 이미 입힌 섹션의 인스턴스 주소입니다. 메인 스레드만 씁니다.
+             * @details 확장 모듈이 다시 올라오면 그 섹션 인스턴스는 기본값이다. 여기 없는 섹션만 `loadNewSections` 가 읽어, 사용자가 바꾼 값을 두 번 덮지 않는다.
+             */
+            static vector<const void*>& getLoadedInstances()
+            {
+                static vector<const void*> s_listLoadedInstance;
+                return s_listLoadedInstance;
+            }
+
+            static bool isLoaded( const void* pInstance )
+            {
+                for ( const void* pLoaded : getLoadedInstances() )
+                {
+                    if ( pLoaded == pInstance )
+                        return true;
+                }
+                return false;
+            }
+
+            static void markLoaded( const void* pInstance )
+            {
+                if ( isLoaded( pInstance ) == false )
+                    getLoadedInstances().push_back( pInstance );
+            }
+
+            /** @brief 섹션 하나에 파일 루트의 값을 입히고 `_pfnOnChanged` 를 부릅니다. */
+            static void applySection( const JSONValue& root, const string& sectionID, const EditorSettingsRegistration& registration )
+            {
+                vector<string> listUnknownKey;
+                applyObject( root.get( sectionID ), *registration._pfnGetType(), registration._pfnGetInstance(), listUnknownKey );
+                for ( const string& key : listUnknownKey )
+                {
+                    SW_LOG_WARNING( "Editor preferences: unknown key '%#.%#' skipped", sectionID.c_str(), key.c_str() );
+                }
+                if ( registration._pfnOnChanged != nullptr )
+                    registration._pfnOnChanged();
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -59,6 +99,13 @@ namespace sw::editor
 {
     bool EditorPreferencesStore::loadAll( string_view filePath )
     {
+        using SettingsRegistry = EditorSettingsRegistryInternal::SettingsRegistry;
+        for ( uint32 index = 0; index < SettingsRegistry::getCount(); ++index )
+        {
+            const EditorSettingsRegistration& registration = SettingsRegistry::getAt( index );
+            if ( registration._pfnGetType() != nullptr )
+                EditorSettingsRegistryInternal::markLoaded( registration._pfnGetInstance() );
+        }
         if ( FileUtil::isRegularFile( filePath ) == false )
             return false;
         JSONDocument document;
@@ -76,20 +123,70 @@ namespace sw::editor
                 SW_LOG_WARNING( "Editor preferences: unknown section '%#' skipped (its module may be off)", sectionID.c_str() );
                 continue;
             }
-            vector<string> listUnknownKey;
-            EditorSettingsRegistryInternal::applyObject( root.get( sectionID ), *pRegistration->_pfnGetType(), pRegistration->_pfnGetInstance(), listUnknownKey );
-            for ( const string& key : listUnknownKey )
-            {
-                SW_LOG_WARNING( "Editor preferences: unknown key '%#.%#' skipped", sectionID.c_str(), key.c_str() );
-            }
-            if ( pRegistration->_pfnOnChanged != nullptr )
-                pRegistration->_pfnOnChanged();
+            EditorSettingsRegistryInternal::applySection( root, sectionID, *pRegistration );
         }
         return true;
     }
 
+    uint32 EditorPreferencesStore::loadNewSections( string_view filePath )
+    {
+        using SettingsRegistry = EditorSettingsRegistryInternal::SettingsRegistry;
+        vector<const EditorSettingsRegistration*> listPending;
+        for ( uint32 index = 0; index < SettingsRegistry::getCount(); ++index )
+        {
+            const EditorSettingsRegistration& registration = SettingsRegistry::getAt( index );
+            if ( registration._pfnGetType() == nullptr || EditorSettingsRegistryInternal::isLoaded( registration._pfnGetInstance() ) )
+                continue;
+            EditorSettingsRegistryInternal::markLoaded( registration._pfnGetInstance() );
+            listPending.push_back( &registration );
+        }
+        if ( listPending.empty() || FileUtil::isRegularFile( filePath ) == false )
+            return 0;
+        JSONDocument document;
+        if ( document.loadFile( filePath ) == false || document.getRoot().isObject() == false )
+        {
+            SW_LOG_WARNING( "Editor preferences %# could not be read - new sections keep defaults", string( filePath ).c_str() );
+            return 0;
+        }
+        const JSONValue root = document.getRoot();
+        uint32          appliedCount{ 0 };
+        for ( const EditorSettingsRegistration* pRegistration : listPending )
+        {
+            const string sectionID{ pRegistration->_pID };
+            if ( root.has( sectionID, false ) == false )
+                continue;
+            EditorSettingsRegistryInternal::applySection( root, sectionID, *pRegistration );
+            ++appliedCount;
+        }
+        return appliedCount;
+    }
+
+    bool EditorPreferencesStore::hasNewSections()
+    {
+        using SettingsRegistry = EditorSettingsRegistryInternal::SettingsRegistry;
+        for ( uint32 index = 0; index < SettingsRegistry::getCount(); ++index )
+        {
+            const EditorSettingsRegistration& registration = SettingsRegistry::getAt( index );
+            if ( registration._pfnGetType() != nullptr && EditorSettingsRegistryInternal::isLoaded( registration._pfnGetInstance() ) == false )
+                return true;
+        }
+        return false;
+    }
+
+    void EditorPreferencesStore::forgetSectionsWithin( const void* pBegin, const void* pEnd )
+    {
+        vector<const void*>& listLoaded = EditorSettingsRegistryInternal::getLoadedInstances();
+        for ( size_t index = listLoaded.size(); index > 0; --index )
+        {
+            if ( IModuleUnloadListener::isAddressWithin( listLoaded[index - 1], pBegin, pEnd ) )
+                VectorUtil::removeAtSwap( listLoaded, index - 1 ); // 순서는 뜻이 없다
+        }
+    }
+
     bool EditorPreferencesStore::saveAll( string_view filePath )
     {
+        // 다시 올라온 확장 모듈의 섹션은 아직 기본값이다. 그대로 쓰면 파일에 있던 그 섹션 값이 지워지므로 먼저 읽어 입힌다.
+        (void)EditorPreferencesStore::loadNewSections( filePath ); // 입힌 수는 쓰지 않는다
         JSONDocument            document;
         const JSONValue         root = document.makeObject();
         [[maybe_unused]] uint32 keyCount{ 0 }; // Shipping 은 SW_LOG_INFO 가 빠져 쓰는 곳이 없다

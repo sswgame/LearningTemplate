@@ -456,6 +456,11 @@ namespace sw::editor
             // 프레임 앞의 상태 정리는 단계로 옮기지 않는다. 메뉴 · 패널이 이번 프레임에 읽을 값이라 프레임을 열기 전이어야 한다.
             // 확장 모듈은 에디터가 뜬 뒤에도 로드되고 언로드된다. 등록 세대가 바뀌었으면 인스턴스를 맞추고, 같으면 비교 한 번으로 끝난다.
             _editorContext->syncExtensionRegistrations();
+#if !defined( SW_SHIPPING )
+            // 기동 뒤에 올라온 확장 모듈의 환경설정 섹션은 기본값이다. 새 섹션이 없으면 목록을 한 번 훑고 끝난다.
+            if ( EditorPreferencesStore::hasNewSections() )
+                (void)EditorPreferencesStore::loadNewSections( EditorPreferencesStore::getDefaultFilePath() ); // 입힌 수는 쓰지 않는다
+#endif
             _editorContext->setGameViewFocused( false );
             _editorContext->setGameViewHovered( false );
             _editorContext->clearViewDrawnMarks();
