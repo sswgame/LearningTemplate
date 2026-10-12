@@ -1,0 +1,28 @@
+<!--
+	AbilityArena 사운드 이벤트(AudioEventLibrary). 3D 아레나지만 소리는 모두 2D(공간화 없음)다 — 웨이브 알림, 쓰러짐, 피격.
+	피격은 투사체가 한꺼번에 닿을 수 있어 쿨다운과 동시 재생 상한으로 겹치는 소리를 줄이고, 볼륨과 피치를 조금씩 흔든다.
+-->
+<AudioEventLibrary>
+	<_listEvent>
+		<AudioEventDesc _name="WaveStart" _bus="sfx" _priority="70" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="game/abilityarena/sounds/maximize_001.ogg" />
+			</_listClip>
+		</AudioEventDesc>
+		<AudioEventDesc _name="PlayerFell" _bus="sfx" _priority="80" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="game/abilityarena/sounds/error_004.ogg" />
+			</_listClip>
+		</AudioEventDesc>
+		<AudioEventDesc _name="EnemyFell" _bus="sfx" _priority="50" _cooldownSeconds="0.05" _maxInstances="3" _steal="Quietest" _volumeDbMin="-3" _volumeDbMax="0" _pitchMin="-1.5" _pitchMax="1">
+			<_listClip>
+				<AudioClipEntry _path="game/abilityarena/sounds/impact_punch_heavy_000.ogg" />
+			</_listClip>
+		</AudioEventDesc>
+		<AudioEventDesc _name="ProjectileHit" _bus="sfx" _priority="40" _cooldownSeconds="0.04" _maxInstances="4" _steal="Oldest" _volumeDbMin="-4" _volumeDbMax="0" _pitchMin="-1.5" _pitchMax="1.5">
+			<_listClip>
+				<AudioClipEntry _path="game/abilityarena/sounds/impact_punch_medium_000.ogg" />
+			</_listClip>
+		</AudioEventDesc>
+	</_listEvent>
+</AudioEventLibrary>

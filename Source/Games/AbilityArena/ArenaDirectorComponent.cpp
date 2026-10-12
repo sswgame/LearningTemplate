@@ -38,9 +38,10 @@ namespace sw
             static constexpr uint32 kStateVersion   = 1;
             static constexpr int32  kProjectileTint = 3; ///< `applyTint` 의 투사체 번호(앞의 셋은 `ArenaUnitKind` 순서다).
 
-            static constexpr const utf8* kSoundWave       = "game/abilityarena/sounds/maximize_001.ogg";
-            static constexpr const utf8* kSoundPlayerFell = "game/abilityarena/sounds/error_004.ogg";
-            static constexpr const utf8* kSoundEnemyFell  = "game/abilityarena/sounds/impact_punch_heavy_000.ogg";
+            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 abilityarena.audioevents.xml 이 정한다.
+            static constexpr const utf8* kEventWave       = "WaveStart";
+            static constexpr const utf8* kEventPlayerFell = "PlayerFell";
+            static constexpr const utf8* kEventEnemyFell  = "EnemyFell";
 
             /** @brief 종류별 어빌리티 세트 ID 입니다. */
             static hashed_string findAbilitySetID( ArenaUnitKind kind )
@@ -398,7 +399,7 @@ namespace sw
     {
         if ( bAdvance || _wave == 0 )
             ++_wave;
-        getSoundQueue().queueClip( ArenaDirectorComponentInternal::kSoundWave );
+        getSoundQueue().queueEvent( ArenaDirectorComponentInternal::kEventWave );
         const uint32 gruntCount  = 2u + _wave;
         const uint32 casterCount = _wave / 2u;
         const uint32 totalCount  = gruntCount + casterCount;
@@ -598,12 +599,12 @@ namespace sw
                 if ( unit._kind == ArenaUnitKind::Player )
                 {
                     SW_LOG_INFO( "[Arena] the player fell on wave %# after %# kills", _wave, _killCount );
-                    getSoundQueue().queueClip( ArenaDirectorComponentInternal::kSoundPlayerFell );
+                    getSoundQueue().queueEvent( ArenaDirectorComponentInternal::kEventPlayerFell );
                 }
                 else
                 {
                     ++_killCount;
-                    getSoundQueue().queueClip( ArenaDirectorComponentInternal::kSoundEnemyFell );
+                    getSoundQueue().queueEvent( ArenaDirectorComponentInternal::kEventEnemyFell );
                 }
             }
             if ( unit._deathTimer >= 0.0f )

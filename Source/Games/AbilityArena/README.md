@@ -77,6 +77,8 @@ HP 바는 어빌리티 시스템의 체력 알림을 받는 `HealthBarComponent`
 유닛은 같은 오브젝트의 어빌리티 시스템과 같은 워커에서 돌기 때문에, 버튼이 발동하면 어빌리티가 그 자리에서 발동합니다. 다른 유닛에 거는 이펙트는 어빌리티 시스템이 틱 뒤로 미룹니다.
 카메라는 `PostUpdate` 라 물리 뒤의 플레이어 메시 위치를 직접 읽습니다. 스폰 요청과 효과음과 투사체 발사는 모두 틱 뒤에 처리합니다.
 
+**소리.** `AbilityArenaGame` 이 사운드 이벤트(`audio/abilityarena.audioevents.xml`)를 로드합니다. 웨이브 시작(`WaveStart`), 쓰러짐(`PlayerFell`, `EnemyFell`), 투사체 피격(`ProjectileHit`)은 모두 2D 이벤트이고, 겹치는 피격음은 쿨다운과 동시 재생 상한으로 줄입니다.
+
 **어빌리티가 디렉터를 찾는 방법.** 어빌리티는 게임 서비스를 쓰지 않고 `ArenaDirectorComponent::findForUnit` 으로 디렉터를 찾습니다.
 같은 오브젝트의 `ArenaUnitComponent` 가 가진 디렉터 핸들(PROPERTY)로 씬에서 찾으므로, 핫 리로드가 디렉터를 다시 만들어도(같은 id) 이어집니다.
 게임 서비스는 어빌리티 카탈로그 하나뿐이고, 게임 인스턴스가 시작할 때마다 다시 등록합니다.
