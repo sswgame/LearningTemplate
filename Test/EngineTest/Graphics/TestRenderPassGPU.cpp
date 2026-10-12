@@ -11,8 +11,8 @@
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Animation/AnimClip.h"
-#include "Engine/Animation/Codec/Raw/RawAnimCodec.h"
+#include "Engine/Animation/AnimationClip.h"
+#include "Engine/Animation/Codec/Raw/RawAnimationCodec.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -1965,13 +1965,13 @@ SW_TEST_CASE( RenderPassGPUTest, InstanceAnimationKeepsInstancesReadable )
         sw::FrameRenderer renderer;
         bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
 
-        sw::Scene scene( "InstanceAnimScene" );
+        sw::Scene scene( "InstanceAnimationScene" );
         if ( bOk )
             bOk = scene.ensureDefaultCameras();
 
-        constexpr uint32         kAnimMeshCount = 3;
-        sw::shared_ptr<sw::Mesh> arrMesh[kAnimMeshCount];
-        for ( uint32 meshIndex = 0; meshIndex < kAnimMeshCount && bOk; ++meshIndex )
+        constexpr uint32         kAnimationMeshCount = 3;
+        sw::shared_ptr<sw::Mesh> arrMesh[kAnimationMeshCount];
+        for ( uint32 meshIndex = 0; meshIndex < kAnimationMeshCount && bOk; ++meshIndex )
         {
             arrMesh[meshIndex] = sw::MeshUtil::createUnitCube();
             bOk                = arrMesh[meshIndex] != nullptr;
@@ -6562,10 +6562,10 @@ SW_TEST_CASE( RenderPassGPUTest, CrowdSharingAndVertexAnimationMatchPerUnitSkinn
     // 클립 — 반복, 길이 1 초, bone1 이 Z 축으로 크게 돈다.
     const sw::string folder = test::makeTempPath( "crowdgpuclips" );
     {
-        sw::AnimClip clip;
+        sw::AnimationClip clip;
         clip.setName( sw::hashed_string( "Wave" ) );
         clip.setLooping( true );
-        SW_ASSERT_TRUE( clip.compressFrom( test::makeChainRawClip( *skeleton, 31, 30.0f, 0.9f ), sw::RawAnimCodec::getInstance(), sw::AnimCodecSettings{}, nullptr ) );
+        SW_ASSERT_TRUE( clip.compressFrom( test::makeChainRawClip( *skeleton, 31, 30.0f, 0.9f ), sw::RawAnimationCodec::getInstance(), sw::AnimationCodecSettings{}, nullptr ) );
         SW_ASSERT_TRUE( clip.saveToFile( sw::FileUtil::joinPath( folder, "wave.animclip" ) ) );
     }
     sw::shared_ptr<sw::Mesh> bindCube = sw::MeshUtil::createUnitCube();

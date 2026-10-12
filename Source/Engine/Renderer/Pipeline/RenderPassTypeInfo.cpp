@@ -175,10 +175,10 @@ namespace sw
                         info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling;
                         break;
                     }
-                    case RenderPassType::InstanceAnim:
+                    case RenderPassType::InstanceAnimation:
                     {
                         // 인스턴스 버퍼 UAV 하나만 쓰므로 컬링 능력(간접 인자 제약)과 무관하다.
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderInstanceAnim;
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderInstanceAnimation;
                         info._flags          = Flag::kCompute;
                         break;
                     }

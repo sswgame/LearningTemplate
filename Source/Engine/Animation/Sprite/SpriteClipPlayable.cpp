@@ -36,7 +36,7 @@ namespace sw
             const SpriteClipAnimation& animation = _pClip->_listAnimation[animationIndex];
             if ( animation._firstFrame != _firstFrame || animation._frameCount != _frameCount )
                 continue;
-            for ( const AnimNotifyEvent& event : animation._listNotify )
+            for ( const AnimationNotifyEvent& event : animation._listNotify )
             {
                 _notifyTrack.addEvent( event );
             }

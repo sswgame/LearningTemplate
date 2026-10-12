@@ -68,13 +68,13 @@ namespace sw::editor::editoricon
     inline constexpr const utf8* kShader           = "\xee\x80\xb7"; ///< U+E037
     inline constexpr const utf8* kMaterial         = "\xee\x80\xb8"; ///< U+E038
     inline constexpr const utf8* kAudio            = "\xee\x80\xb9"; ///< U+E039
-    inline constexpr const utf8* kAnimGraph        = "\xee\x80\xba"; ///< U+E03A
+    inline constexpr const utf8* kAnimationGraph   = "\xee\x80\xba"; ///< U+E03A
     inline constexpr const utf8* kDialogue         = "\xee\x80\xbb"; ///< U+E03B
     inline constexpr const utf8* kSprite           = "\xee\x80\xbc"; ///< U+E03C
     inline constexpr const utf8* kTileMap          = "\xee\x80\xbd"; ///< U+E03D
     inline constexpr const utf8* kSequence         = "\xee\x80\xbe"; ///< U+E03E
     inline constexpr const utf8* kSkeleton         = "\xee\x80\xbf"; ///< U+E03F
-    inline constexpr const utf8* kAnimClip         = "\xee\x81\x80"; ///< U+E040
+    inline constexpr const utf8* kAnimationClip    = "\xee\x81\x80"; ///< U+E040
     inline constexpr const utf8* kRig              = "\xee\x81\x81"; ///< U+E041
     inline constexpr const utf8* kHeightfield      = "\xee\x81\x82"; ///< U+E042
     inline constexpr const utf8* kFracture         = "\xee\x81\x83"; ///< U+E043

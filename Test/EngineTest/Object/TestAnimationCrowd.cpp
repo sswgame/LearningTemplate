@@ -4,8 +4,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/AnimClip.h"
-#include "Engine/Animation/Codec/Raw/RawAnimCodec.h"
+#include "Engine/Animation/AnimationClip.h"
+#include "Engine/Animation/Codec/Raw/RawAnimationCodec.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -58,17 +58,17 @@ namespace
         /** @brief 반복 클립 둘(`wave` · `sway`)을 임시 폴더에 쓰고 그 폴더를 돌려줍니다. */
         static string writeClips( const Skeleton& skeleton )
         {
-            string             folder     = test::makeTempPath( "crowdclips" );
-            const AnimRawClip  wave       = test::makeChainRawClip( skeleton, 31, 30.0f, 0.6f );
-            const AnimRawClip  sway       = test::makeChainRawClip( skeleton, 31, 30.0f, 1.2f );
-            const AnimRawClip* arrRaw[2]  = { &wave, &sway };
-            const utf8*        arrName[2] = { "Wave", "Sway" };
+            string                  folder     = test::makeTempPath( "crowdclips" );
+            const AnimationRawClip  wave       = test::makeChainRawClip( skeleton, 31, 30.0f, 0.6f );
+            const AnimationRawClip  sway       = test::makeChainRawClip( skeleton, 31, 30.0f, 1.2f );
+            const AnimationRawClip* arrRaw[2]  = { &wave, &sway };
+            const utf8*             arrName[2] = { "Wave", "Sway" };
             for ( uint32 clipIndex = 0; clipIndex < 2; ++clipIndex )
             {
-                AnimClip clip;
+                AnimationClip clip;
                 clip.setName( hashed_string( arrName[clipIndex] ) );
                 clip.setLooping( true );
-                if ( clip.compressFrom( *arrRaw[clipIndex], RawAnimCodec::getInstance(), AnimCodecSettings{}, nullptr ) == false )
+                if ( clip.compressFrom( *arrRaw[clipIndex], RawAnimationCodec::getInstance(), AnimationCodecSettings{}, nullptr ) == false )
                 {
                     folder.clear();
                     return folder;
@@ -163,7 +163,7 @@ SW_TEST_CASE( AnimationCrowdTest, SameStateUnitsShareOneBucket )
     SW_EXPECT_EQUAL( mesh->getSkinDataID(), arrUnit[0]->getMesh()->getSkinDataID() ); // 사본은 원본의 스킨 데이터를 나눈다
 
     // 묶음의 포즈 = 묶음 시각의 클립 값, 유닛 시각과는 반 칸(0.125 초) 안.
-    const AnimRawClip raw = test::makeChainRawClip( *skeleton, 31, 30.0f, 0.6f );
+    const AnimationRawClip raw = test::makeChainRawClip( *skeleton, 31, 30.0f, 0.6f );
     for ( uint32 index = 0; index < 5; ++index )
     {
         const AnimationCrowdBucket* pBucket    = arrUnit[index]->findCrowdBucket();
@@ -297,10 +297,10 @@ SW_TEST_CASE( AnimationCrowdTest, VertexAnimationBakeMatchesSkinning )
 {
     const shared_ptr<Skeleton> skeleton = TestAnimationCrowdInternal::makeSkeleton();
     const shared_ptr<Mesh>     mesh     = TestAnimationCrowdInternal::makeSkinnedCube();
-    const AnimRawClip          raw      = test::makeChainRawClip( *skeleton, 31, 30.0f, 0.6f );
-    AnimClip                   clip;
+    const AnimationRawClip     raw      = test::makeChainRawClip( *skeleton, 31, 30.0f, 0.6f );
+    AnimationClip              clip;
     clip.setLooping( true );
-    SW_ASSERT_TRUE( clip.compressFrom( raw, RawAnimCodec::getInstance(), AnimCodecSettings{}, nullptr ) );
+    SW_ASSERT_TRUE( clip.compressFrom( raw, RawAnimationCodec::getInstance(), AnimationCodecSettings{}, nullptr ) );
 
     MeshVertexAnimation animation;
     SW_ASSERT_TRUE( MeshVertexAnimationBaker::bake( *mesh, *skeleton, clip, 10.0f, false, animation ) );
@@ -421,7 +421,7 @@ SW_TEST_CASE( AnimationCrowdTest, CookedVertexAnimationMatchesRuntimeBake )
     SW_EXPECT_TRUE( StringUtil::endsWith( cookedPath, "cube.wave.vat" ) );
     vector<uint8> cookedBytes;
     SW_ASSERT_TRUE( ResourceIO::readBinaryResource( cookedPath, cookedBytes ) );
-    AnimClip clip;
+    AnimationClip clip;
     SW_ASSERT_TRUE( clip.loadFromResource( FileUtil::joinPath( folder, "wave.animclip" ) ) );
     MeshVertexAnimation runtime;
     SW_ASSERT_TRUE( MeshVertexAnimationBaker::bake( *mesh, *skeleton, clip, 15.0f, false, runtime ) );

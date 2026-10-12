@@ -472,7 +472,7 @@ namespace sw
         { return weight != 0.0f; } );
     }
 
-    bool SkeletalMeshComponent::describeSharedPose( AnimSharedPoseRequest& outRequest ) const
+    bool SkeletalMeshComponent::describeSharedPose( AnimationSharedPoseRequest& outRequest ) const
     {
         // 리더를 따르거나 후처리 일이 있으면 유닛마다 포즈가 다르다 — 나눌 수 없다. 모프 가중치(얼굴 · 커브)도 묶음이 나누지 않는다.
         if ( _listTask.size() != 1 || _leader.isValid() || hasActiveMorphWeights() )
@@ -505,9 +505,9 @@ namespace sw
                 setShareCrowdPose( false );
             return;
         }
-        const bool                 bVisible = _bVisibleHint == SW_TRUE || _bAnimateWhenOffscreen == SW_TRUE;
-        AnimSharedPoseRequest      request{};
-        shared_ptr<const AnimClip> clip;
+        const bool                      bVisible = _bVisibleHint == SW_TRUE || _bAnimateWhenOffscreen == SW_TRUE;
+        AnimationSharedPoseRequest      request{};
+        shared_ptr<const AnimationClip> clip;
         if ( describeSharedPose( request ) )
             clip = _listTask[0]->findSharedPoseClip( request._pClip );
 
@@ -767,13 +767,13 @@ namespace sw
         }
     }
 
-    void SkeletalMeshComponent::collectSyncPlayers( vector<AnimPlayer*>& inoutListPlayer, vector<float32>& inoutListWeight, vector<hashed_string>& inoutListGroup )
+    void SkeletalMeshComponent::collectSyncPlayers( vector<AnimationPlayer*>& inoutListPlayer, vector<float32>& inoutListWeight, vector<hashed_string>& inoutListGroup )
     {
         for ( IAnimationPhaseTask* pTask : _listTask )
         {
-            hashed_string groupName{};
-            float32       weight  = 0.0f;
-            AnimPlayer*   pPlayer = pTask->findSyncPlayer( groupName, weight );
+            hashed_string    groupName{};
+            float32          weight  = 0.0f;
+            AnimationPlayer* pPlayer = pTask->findSyncPlayer( groupName, weight );
             if ( pPlayer == nullptr || groupName.empty() )
                 continue;
             inoutListPlayer.push_back( pPlayer );

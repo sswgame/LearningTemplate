@@ -1,0 +1,26 @@
+/**
+ * @file RawAnimationCodec.h
+ * @brief 압축하지 않는 기준 코덱입니다. 균일 샘플을 float 그대로 저장하고 두 샘플 사이를 보간합니다.
+ */
+#pragma once
+#include "Engine/Animation/Codec/AnimationCodec.h"
+
+namespace sw
+{
+    /**
+     * @class RawAnimationCodec
+     * @brief 블롭은 헤더(샘플 수, 샘플율, 트랙 수)와, 샘플마다 트랙마다 이동 3, 회전 4, 스케일 3 의 float32(리틀 엔디언)로 이루어집니다.
+     * @details 오차가 0 인 기준이라 다른 코덱의 오차를 측정할 때와 디버그에 씁니다. 샘플링은 `AnimationRawClip::sample` 과 같은 식입니다.
+     */
+    class SW_API RawAnimationCodec final : public IAnimationCodec
+    {
+    public:
+        /** @brief 프로세스에 하나인 인스턴스입니다(상태가 없습니다). */
+        static const RawAnimationCodec& getInstance();
+
+        AnimationCodecID   getID() const override { return AnimationCodecID::Raw; }
+        const utf8*        getName() const override { return "raw"; }
+        [[nodiscard]] bool compress( const AnimationRawClip& rawClip, const AnimationCodecSettings& settings, vector<uint8>& outBytes ) const override;
+        [[nodiscard]] bool sample( const uint8* pBytes, size_t byteCount, float32 time, Pose& outPose, const uint8* pTrackMask = nullptr ) const override;
+    };
+} // namespace sw

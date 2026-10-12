@@ -25,8 +25,8 @@
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Animation/AnimJSONUtil.h"
-#include "Engine/Animation/Codec/AnimCodec.h"
+#include "Engine/Animation/AnimationJSONUtil.h"
+#include "Engine/Animation/Codec/AnimationCodec.h"
 #include "Engine/Destruction/FractureAsset.h"
 #include "Engine/Destruction/MeshFracture.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
@@ -257,7 +257,7 @@ namespace sw::editor
             {
                 if ( rule._bImportAnimations == SW_FALSE )
                     return true;
-                const IAnimCodec* pCodec = AnimCodecRegistry::findCodecByName( rule._animationCodec );
+                const IAnimationCodec* pCodec = AnimationCodecRegistry::findCodecByName( rule._animationCodec );
                 if ( pCodec == nullptr )
                 {
                     SW_LOG_ERROR( "glTF '%#': unknown animation codec '%#'", sourcePath, rule._animationCodec.c_str() );
@@ -287,7 +287,7 @@ namespace sw::editor
 
                 vector<uint8>                 listRequestedFound( rule._listClipName.size(), SW_FALSE );
                 unordered_map<string, uint32> mapStemUse;
-                AnimCodecSettings             settings{};
+                AnimationCodecSettings        settings{};
                 settings._precision     = rule._animationPrecision;
                 settings._shellDistance = rule._animationShellDistance;
                 for ( cgltf_size animationIndex = 0; animationIndex < data.animations_count; ++animationIndex )
@@ -303,14 +303,14 @@ namespace sw::editor
                     }
 
                     // 모프 가중치 채널은 타깃 이름의 커브가 된다. 가중치만 움직이는 클립(말하기)도 그 길이를 가진다.
-                    vector<AnimCurve> listMorphCurve;
-                    const float32     morphDuration = readMorphWeightCurves( animation, rule._animationSampleRate, listMorphCurve );
-                    AnimRawClip       rawClip;
+                    vector<AnimationClipCurve> listMorphCurve;
+                    const float32              morphDuration = readMorphWeightCurves( animation, rule._animationSampleRate, listMorphCurve );
+                    AnimationRawClip           rawClip;
                     resampleAnimation( animation, skeleton, mapJointBone, listRest, listRootParent, rule._animationSampleRate, morphDuration, rawClip );
                     ModelImportClip imported{};
                     imported._clip.setName( hashed_string( clipName ) );
                     imported._clip.setRootMotionTrack( rootMotionBone );
-                    for ( const AnimCurve& curve : listMorphCurve )
+                    for ( const AnimationClipCurve& curve : listMorphCurve )
                     {
                         imported._clip.addCurve( curve );
                     }
@@ -319,11 +319,11 @@ namespace sw::editor
                     {
                         if ( itExtra->second._loopOverride >= 0 )
                             imported._clip.setLooping( itExtra->second._loopOverride != 0 );
-                        for ( const AnimNotifyEvent& event : itExtra->second._listNotify )
+                        for ( const AnimationNotifyEvent& event : itExtra->second._listNotify )
                         {
                             imported._clip.addNotify( event );
                         }
-                        for ( const AnimCurve& curve : itExtra->second._listCurve )
+                        for ( const AnimationClipCurve& curve : itExtra->second._listCurve )
                         {
                             imported._clip.addCurve( curve );
                         }
@@ -570,7 +570,7 @@ namespace sw::editor
         [[maybe_unused]] uint64 compressedByteTotal = 0;
         for ( const ModelImportClip& imported : result._listClip )
         {
-            const string clipPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImporterInternal::kClipFolder ), imported._fileStem + string( AnimClip::kExtension ) );
+            const string clipPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImporterInternal::kClipFolder ), imported._fileStem + string( AnimationClip::kExtension ) );
             if ( imported._clip.saveToFile( clipPath ) == false )
             {
                 SW_LOG_ERROR( "Failed to write animation clip %#", clipPath.c_str() );
@@ -644,7 +644,7 @@ namespace sw::editor
 
         StringBuilder<constant::kMaxBuffer64> versionText;
         versionText.appendFormat( "importer=%#;format=%#;recenter=%#;clip=%#", ModelImporterInternal::kImporterVersion, MeshAssetFormat::kVersion,
-                                  static_cast<uint32>( rule._recenter ), AnimClip::kVersion );
+                                  static_cast<uint32>( rule._recenter ), AnimationClip::kVersion );
         uint64 hash = StringUtil::computeHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
         hash        = StringUtil::computeHash64( versionText.c_str(), versionText.size(), false, hash );
         // 이동은 비트 그대로 섞는다. 문자열로 반올림하면 작은 변경이 같은 해시가 된다.

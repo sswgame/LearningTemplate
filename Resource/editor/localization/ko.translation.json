@@ -561,67 +561,67 @@
             "text": "카메라가 어느 쪽을 보는지 나타내는 방향 큐브를 보이거나 숨깁니다.",
             "sourceHash": "c994648fc818bbf2"
         },
-        "EditorAnimGraph.AddAttackTip": {
+        "EditorAnimationGraph.AddAttackTip": {
             "text": "Attack 상태 노드를 추가합니다. 노드 이름이 재생할 클립이며, 인스펙터에서 바꿀 수 있습니다.",
             "sourceHash": "d05267712c1567b5"
         },
-        "EditorAnimGraph.AddIdleTip": {
+        "EditorAnimationGraph.AddIdleTip": {
             "text": "Idle 상태 노드를 추가합니다. 노드 이름이 재생할 클립이며, 인스펙터에서 바꿀 수 있습니다.",
             "sourceHash": "bf07673925002c53"
         },
-        "EditorAnimGraph.AddWalkTip": {
+        "EditorAnimationGraph.AddWalkTip": {
             "text": "Walk 상태 노드를 추가합니다. 노드 이름이 재생할 클립이며, 인스펙터에서 바꿀 수 있습니다.",
             "sourceHash": "e42311713185f6be"
         },
-        "EditorAnimGraph.AdvanceTip": {
+        "EditorAnimationGraph.AdvanceTip": {
             "text": "미리보기를 전이 하나만큼 다음 상태로 넘깁니다.",
             "sourceHash": "ffd20f9a74aa99d0"
         },
-        "EditorAnimGraph.ConditionOpTip": {
+        "EditorAnimationGraph.ConditionOpTip": {
             "text": "파라미터를 Value 와 비교하는 방식입니다. (on finish) 는 클립이 끝나면 넘어가고, Trigger 는 파라미터가 설정될 때 한 번 발동합니다.",
             "sourceHash": "c2bca1c300b070b5"
         },
-        "EditorAnimGraph.ConditionParamTip": {
+        "EditorAnimationGraph.ConditionParamTip": {
             "text": "조건이 읽는 그래프 파라미터입니다(게임 코드가 플레이어를 통해 설정합니다).",
             "sourceHash": "4c4c4a08b247229f"
         },
-        "EditorAnimGraph.ConditionValueTip": {
+        "EditorAnimationGraph.ConditionValueTip": {
             "text": "파라미터와 비교할 임곗값입니다.",
             "sourceHash": "88407cb0f4b1c485"
         },
-        "EditorAnimGraph.ContextCreateFailed": {
+        "EditorAnimationGraph.ContextCreateFailed": {
             "text": "애니메이션 그래프 편집기 컨텍스트를 만들지 못했습니다.",
             "sourceHash": "48f777eddfeeab1d"
         },
-        "EditorAnimGraph.LinkSelectedTip": {
+        "EditorAnimationGraph.LinkSelectedTip": {
             "text": "선택한 두 노드 사이에 첫 번째에서 두 번째로 가는 전이를 추가합니다. 노드 하나를 클릭한 뒤 다른 노드를 Ctrl+클릭합니다.",
             "sourceHash": "95e5f721b9415489"
         },
-        "EditorAnimGraph.LoadTip": {
+        "EditorAnimationGraph.LoadTip": {
             "text": "저장하지 않은 편집을 버리고 디스크에서 그래프를 다시 읽습니다.",
             "sourceHash": "5358af2088461a47"
         },
-        "EditorAnimGraph.PlayTip": {
+        "EditorAnimationGraph.PlayTip": {
             "text": "진입 상태부터 0.75초마다 다음 상태로 넘어가며 그래프를 미리 봅니다. 전이 순서를 확인할 때 씁니다.",
             "sourceHash": "38f8576556cd8583"
         },
-        "EditorAnimGraph.SaveTip": {
+        "EditorAnimationGraph.SaveTip": {
             "text": "그래프와 노드 배치를 애셋 파일에 씁니다.",
             "sourceHash": "a992bf7ef254f73c"
         },
-        "EditorAnimGraph.StateClipTip": {
+        "EditorAnimationGraph.StateClipTip": {
             "text": "상태의 클립 이름입니다. 플레이어는 이 이름의 클립을 재생합니다.",
             "sourceHash": "c2f80044b84fab3a"
         },
-        "EditorAnimGraph.StateLoopTip": {
+        "EditorAnimationGraph.StateLoopTip": {
             "text": "이 상태의 클립을 반복할지 정합니다. Default 는 클립 자체의 루프 설정을 따릅니다.",
             "sourceHash": "ab5b86f7fb02c91b"
         },
-        "EditorAnimGraph.StopTip": {
+        "EditorAnimationGraph.StopTip": {
             "text": "미리보기를 멈춥니다.",
             "sourceHash": "801130dfee959864"
         },
-        "EditorAnimGraph.TransitionBlendTip": {
+        "EditorAnimationGraph.TransitionBlendTip": {
             "text": "크로스페이드 시간(초)입니다. 0보다 작으면 플레이어 기본값을 씁니다.",
             "sourceHash": "7ff3919e533f53ff"
         },

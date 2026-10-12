@@ -20,9 +20,9 @@ namespace sw
     /** @brief 한 프레임의 정점 변형 컴퓨트가 쓰는 상태입니다. 렌더 스레드만 만집니다. */
     struct FrameMeshDeformState
     {
-        RHIConstantBufferSlot _instanceAnimCb{}; ///< 인스턴스 애니메이션(instanceanim.hlsl) 상수 버퍼다.
-        RHIConstantBufferSlot _meshMorphCb{};    ///< 모프 디스패치 상수 버퍼다.
-        RHIConstantBufferSlot _meshSkinCb{};     ///< 스킨 디스패치 상수 버퍼다.
+        RHIConstantBufferSlot _instanceAnimationCb{}; ///< 인스턴스 애니메이션(instanceanimation.hlsl) 상수 버퍼다.
+        RHIConstantBufferSlot _meshMorphCb{};         ///< 모프 디스패치 상수 버퍼다.
+        RHIConstantBufferSlot _meshSkinCb{};          ///< 스킨 디스패치 상수 버퍼다.
         /// @brief GPU 가 변형한 정점 풀입니다. RT 가 소유합니다(GPUMeshMorphPool 참고).
         GPUMeshMorphPool _meshMorphPool{};
         /// @brief 정점 애니메이션(VAT) 테이블 풀입니다. RT 가 소유합니다(GPUVertexAnimationPool 참고).
@@ -42,11 +42,11 @@ namespace sw
          *          렌더러가 자기 시계를 가지므로 델타를 여기까지 실어 나르지 않아도 되고, 렌더 스레드에서
          *          게임 시간을 건드리지 않는다.
          */
-        GameTimer _animTimer{};
+        GameTimer _animationTimer{};
         /// @brief `setMeshMorphDiag` 로 받은 값입니다. 음수면 전역 변수 `gv_morphDiag` 를 따릅니다.
         int32 _meshMorphDiagOverride{ -1 };
 #if !defined( SW_SHIPPING )
-        /// @brief `setAnimationTimeOverride` 로 받은 시각(초)입니다. 음수면 `_animTimer` 를 따릅니다.
+        /// @brief `setAnimationTimeOverride` 로 받은 시각(초)입니다. 음수면 `_animationTimer` 를 따릅니다.
         float32 _animationTimeOverride{ -1.0f };
 #endif
         /// @brief 진단(`-gv_morphDiag=2|3`)에서 정점 셰이더에 결과 대신 **레스트** 버퍼를 바인딩했는지 여부입니다.

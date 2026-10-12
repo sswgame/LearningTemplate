@@ -205,7 +205,7 @@ namespace sw
 
         if ( bCPUDirty )
         {
-            // UnorderedAccess 를 함께 요구한다. instanceanim 컴퓨트가 월드 행렬을 고쳐 쓴다. 못 만드는
+            // UnorderedAccess 를 함께 요구한다. instanceanimation 컴퓨트가 월드 행렬을 고쳐 쓴다. 못 만드는
             // 백엔드 · 드라이버면 슬롯이 SRV 전용으로 한 번 더 시도해 그리기는 그대로 살린다.
             constexpr RHIBufferUsage kInstanceUsage =
                 RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;

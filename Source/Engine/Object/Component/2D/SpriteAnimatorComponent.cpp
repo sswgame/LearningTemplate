@@ -5,7 +5,7 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/Notify/AnimNotifyListener.h"
+#include "Engine/Animation/Notify/AnimationNotifyListener.h"
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -16,9 +16,9 @@ namespace sw
 
     // 컴포넌트는 오브젝트마다 만들어진다. 필드 크기 합(베이스 + 필드 + 비트필드 한 바이트)을 정렬로 올린 값을 넘으면 필드 사이에 구멍이 생긴 것이다.
     static_assert( sizeof( SpriteAnimatorComponent ) <=
-                       ( sizeof( SceneComponent ) + sizeof( string ) * 2 + sizeof( AnimGraphAsset ) + sizeof( vector<string> ) + sizeof( float32 ) +
-                         sizeof( SpriteAnimatorClipSource ) + sizeof( SpriteClipPlayable ) + sizeof( AnimGraphPlayer ) + sizeof( vector<AnimFiredNotify> ) +
-                         sizeof( IAnimNotifyListener* ) + sizeof( SpriteAnimatorLODClient ) + sizeof( int32 ) * 3 + sizeof( uint32 ) + sizeof( AnimationLODState ) +
+                       ( sizeof( SceneComponent ) + sizeof( string ) * 2 + sizeof( AnimationGraphAsset ) + sizeof( vector<string> ) + sizeof( float32 ) +
+                         sizeof( SpriteAnimatorClipSource ) + sizeof( SpriteClipPlayable ) + sizeof( AnimationGraphPlayer ) + sizeof( vector<AnimationFiredNotify> ) +
+                         sizeof( IAnimationNotifyListener* ) + sizeof( SpriteAnimatorLODClient ) + sizeof( int32 ) * 3 + sizeof( uint32 ) + sizeof( AnimationLODState ) +
                          sizeof( const SpriteClipAsset* ) + sizeof( AnimationSystem* ) + sizeof( uint8 ) + alignof( SpriteAnimatorComponent ) - 1 ) /
                            alignof( SpriteAnimatorComponent ) * alignof( SpriteAnimatorComponent ),
                    "SpriteAnimatorComponent has padding between fields (or a field was added without adding its size here)" );
@@ -28,7 +28,7 @@ namespace sw
     {
     }
 
-    const IAnimPlayable* SpriteAnimatorClipSource::findPlayable( const hashed_string& name ) const
+    const IAnimationPlayable* SpriteAnimatorClipSource::findPlayable( const hashed_string& name ) const
     {
         // 상태 기계가 넘어간 상태의 구간으로 하나뿐인 재생할 것을 맞춘다 — 스프라이트는 두 구간을 섞지 않는다(크로스페이드 0).
         (void)_owner.configurePlayable( string( name.c_str() ) );
@@ -73,7 +73,7 @@ namespace sw
     }
 
     SpriteAnimatorComponent::SpriteAnimatorComponent()
-        : _animGraphPath{}
+        : _animationGraphPath{}
         , _graph{}
         , _currentAnimation{}
         , _listAnimation{}
@@ -110,7 +110,7 @@ namespace sw
         SceneComponent::onBeginPlay();
         setTickGroup( TickGroup::PostPhysics );
 
-        tryLoadAnimGraph();
+        tryLoadAnimationGraph();
 
         // 그래프가 없으면 클립의 이름 붙은 구간이 애니메이션 목록이다. 구간 이름이 없는 클립은 프레임 전체가 애니메이션 하나다.
         const SpriteClipAsset* pClip = findClip();
@@ -164,27 +164,27 @@ namespace sw
         if ( findClip() != _pRangeClip )
             (void)configurePlayable( _currentAnimation );
 
-        // 시간 · 반복 · 끝 · "끝나면 다음" 은 상태 기계가 한다(스켈레탈 애니메이터와 같은 `AnimGraphPlayer`).
+        // 시간 · 반복 · 끝 · "끝나면 다음" 은 상태 기계가 한다(스켈레탈 애니메이터와 같은 `AnimationGraphPlayer`).
         _listFiredNotify.clear();
         _graphPlayer.update( deltaTime, nullptr, _pNotifyListener != nullptr ? &_listFiredNotify : nullptr );
         syncStateFromPlayer();
         if ( _pNotifyListener != nullptr )
         {
             // 워커다 — 받는 쪽(알림 디스패치)이 베껴 두고 틱 뒤 게임 스레드에서 처리한다.
-            const IAnimPlayable* const arrActive[1] = { &_playable };
-            AnimNotifyFrame            frame{};
-            frame._listFired          = vector_reference<const AnimFiredNotify>{ _listFiredNotify.data(), _listFiredNotify.size() };
-            frame._listActivePlayable = vector_reference<const IAnimPlayable* const>{ arrActive, 1 };
+            const IAnimationPlayable* const arrActive[1] = { &_playable };
+            AnimationNotifyFrame            frame{};
+            frame._listFired          = vector_reference<const AnimationFiredNotify>{ _listFiredNotify.data(), _listFiredNotify.size() };
+            frame._listActivePlayable = vector_reference<const IAnimationPlayable* const>{ arrActive, 1 };
             frame._deltaSeconds       = deltaTime;
             frame._bFromTick          = SW_TRUE;
             frame._bRestarted         = _bRangeChanged;
             _bRangeChanged            = SW_FALSE;
-            _pNotifyListener->onAnimNotifiesFired( frame );
+            _pNotifyListener->onAnimationNotifiesFired( frame );
         }
 
-        const AnimPlayer& player    = _graphPlayer.getPlayer();
-        const int32       prevFrame = _currentFrame;
-        _currentFrame               = _playable.findFrameAtTime( player.getCurrentTime() );
+        const AnimationPlayer& player    = _graphPlayer.getPlayer();
+        const int32            prevFrame = _currentFrame;
+        _currentFrame                    = _playable.findFrameAtTime( player.getCurrentTime() );
         if ( player.hasFinished() )
         {
             // 반복하지 않는 구간이 끝났고 그래프에 다음이 없다 — 마지막 프레임에서 멈춘다.
@@ -211,13 +211,13 @@ namespace sw
     void SpriteAnimatorComponent::onPropertyChanged( hashed_string propertyName )
     {
         SceneComponent::onPropertyChanged( propertyName );
-        static const hashed_string s_graphPathName( "_animGraphPath" );
+        static const hashed_string s_graphPathName( "_animationGraphPath" );
         if ( propertyName != s_graphPathName )
             return;
 
         const float32 resumeTime  = _graphPlayer.getPlayer().getCurrentTime();
         const int32   resumeFrame = _currentFrame;
-        tryLoadAnimGraph();
+        tryLoadAnimationGraph();
         if ( _bPlaying == SW_FALSE || _bGraphLoaded == SW_FALSE )
             return;
         // 지금 애니메이션이 새 그래프에도 있으면 그대로 잇는다. 없으면 그 이름은 이제 "끝나면 다음" 을 찾지 못한다 — 새 목록의 처음으로.
@@ -233,25 +233,25 @@ namespace sw
         updateSpriteFrame();
     }
 
-    void SpriteAnimatorComponent::play( const string& animName )
+    void SpriteAnimatorComponent::play( const string& animationName )
     {
         if ( _frameRate <= 0.0f )
             _frameRate = 12.0f;
-        _currentAnimation = animName;
+        _currentAnimation = animationName;
         _bPlaying         = SW_TRUE;
         _bPaused          = SW_FALSE;
         _currentFrame     = 0;
         _bRootWarned      = SW_FALSE;
-        _bRepeat          = configurePlayable( animName ) ? SW_TRUE : SW_FALSE;
+        _bRepeat          = configurePlayable( animationName ) ? SW_TRUE : SW_FALSE;
         // 구간은 방금 맞췄다 — 상태 기계에는 그 재생할 것을 바로 준다(이름이 그래프 노드면 그 노드의 "끝나면 다음" 을 따른다).
-        _graphPlayer.playPlayable( hashed_string( animName ), &_playable, _bRepeat == SW_TRUE );
+        _graphPlayer.playPlayable( hashed_string( animationName ), &_playable, _bRepeat == SW_TRUE );
         updateSpriteFrame();
         applyTransformKeys();
     }
 
-    void SpriteAnimatorComponent::play( const string& animName, bool loop )
+    void SpriteAnimatorComponent::play( const string& animationName, bool loop )
     {
-        play( animName );
+        play( animationName );
         setRepeat( loop );
     }
 
@@ -286,9 +286,9 @@ namespace sw
         return _currentAnimation;
     }
 
-    void SpriteAnimatorComponent::setCurrentAnimation( const string& anim )
+    void SpriteAnimatorComponent::setCurrentAnimation( const string& animation )
     {
-        _currentAnimation = anim;
+        _currentAnimation = animation;
     }
 
     bool SpriteAnimatorComponent::isRepeating() const
@@ -334,14 +334,14 @@ namespace sw
         return _bPaused == SW_TRUE;
     }
 
-    void SpriteAnimatorComponent::tryLoadAnimGraph()
+    void SpriteAnimatorComponent::tryLoadAnimationGraph()
     {
         _bGraphLoaded = SW_FALSE;
         _graphPlayer.setGraph( nullptr );
-        _graph = AnimGraphAsset{};
-        if ( _animGraphPath.empty() )
+        _graph = AnimationGraphAsset{};
+        if ( _animationGraphPath.empty() )
             return;
-        if ( _graph.loadFromFile( _animGraphPath ) == false )
+        if ( _graph.loadFromFile( _animationGraphPath ) == false )
             return;
         _bGraphLoaded = SW_TRUE;
         _graphPlayer.setGraph( &_graph );
@@ -377,7 +377,7 @@ namespace sw
         return 1.0f / MathUtil::max( _frameRate, 1.0f );
     }
 
-    bool SpriteAnimatorComponent::configurePlayable( const string& animName )
+    bool SpriteAnimatorComponent::configurePlayable( const string& animationName )
     {
         const SpriteClipAsset* pClip = findClip();
         _pRangeClip                  = pClip;
@@ -387,7 +387,7 @@ namespace sw
         SpriteClipAnimation range{};
         if ( pClip != nullptr )
         {
-            if ( pClip->findFrameRange( animName, range ) )
+            if ( pClip->findFrameRange( animationName, range ) )
             {
                 _firstClipFrame = range._firstFrame;
                 _totalFrames    = MathUtil::max( range._frameCount, 1 );
@@ -395,7 +395,7 @@ namespace sw
             }
             else
             {
-                SW_LOG_WARNING( "Sprite clip has no animation '%#' - showing frame 0", animName );
+                SW_LOG_WARNING( "Sprite clip has no animation '%#' - showing frame 0", animationName );
             }
         }
         _playable.configure( pClip, _firstClipFrame, _totalFrames, bLoop, getFallbackFrameSeconds() );

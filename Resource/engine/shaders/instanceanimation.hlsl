@@ -1,0 +1,92 @@
+#include "common.hlsli"
+
+/**
+ * instanceanimation.hlsl — GPUScene 인스턴스 애니메이션 (컴퓨트).
+ *
+ * CPU 가 매 프레임 오브젝트마다 회전을 계산해 트랜스폼을 다시 쓰던 것을 GPU 로 옮긴다. 인스턴스마다
+ * **각속도가 다르다** — 시드를 해시해 속도를 뽑으므로 전부 같은 속도로 도는 일이 없다.
+ *
+ * 각도는 누적하지 않고 **절대 시간에서 매번 다시 만든다**. 누적하면 프레임 시간 흔들림이 그대로 쌓여
+ * 백엔드마다 다른 각도가 나오고, 정지·재개가 불가능해진다.
+ *
+ * 바인딩 계약(bindingslots.hlsli): 컴퓨트 CB 는 b0, 인스턴스 읽기·쓰기 버퍼는 u0(RW).
+ * C++: bindComputeConstantBuffer( cb, 0 ) / bindComputeUav( instanceUav, 0 ).
+ */
+
+// 인스턴스 원소(SwInstanceData)는 그래픽스와 같은 정의 하나를 쓴다 — 고쳐 쓴 원소가 그대로 다시 그려지므로 128 바이트를 통째로 옮긴다.
+// spinSeed 가 0 인 인스턴스는 건드리지 않는다.
+#include "instancedata.hlsli"
+
+SW_DECLARE_CBUFFER( AnimationParams, SW_SLOT_COMPUTE_CB )
+{
+	float g_Time;          // 씬 시작부터의 절대 시간 (초)
+	float g_SpinBaseSpeed; // 기준 각속도 (라디안/초)
+	float g_SpinSpeedRange;// 시드가 만드는 속도 편차의 폭 (라디안/초)
+	uint  g_AnimationInstanceCount;
+};
+
+SW_DECLARE_RW_STRUCTURED_BUFFER( SwInstanceData, g_InstancesRW, 0 );
+
+/**
+ * @brief 시드를 32비트 정수 해시로 섞는다 (Wang hash).
+ * @details 시드가 1,2,3... 처럼 이어진 값이어도 결과가 골고루 흩어져야 한다. 곱셈만 쓰면 이웃한 시드가
+ *          이웃한 속도를 받아 "줄줄이 같은 속도"가 되는데, 그게 정확히 피하려는 그림이다.
+ */
+uint hashSeed(uint seed)
+{
+	seed = (seed ^ 61u) ^ (seed >> 16);
+	seed *= 9u;
+	seed = seed ^ (seed >> 4);
+	seed *= 0x27d4eb2du;
+	seed = seed ^ (seed >> 15);
+	return seed;
+}
+
+/** @brief 해시를 [0,1) 실수로. 상위 24비트만 쓴다 (하위 비트는 해시 품질이 낮다). */
+float hashToUnit(uint hash)
+{
+	return float(hash >> 8) * (1.0f / 16777216.0f);
+}
+
+[numthreads(64, 1, 1)]
+void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
+{
+	const uint instanceIndex = dispatchThreadId.x;
+	if (instanceIndex >= g_AnimationInstanceCount)
+		return;
+
+	SwInstanceData instance = g_InstancesRW[instanceIndex];
+	if (instance.spinSeed == 0)
+		return; // GPU 회전을 요청하지 않은 인스턴스는 CPU 가 올린 트랜스폼 그대로 둔다
+
+	const uint  hash = hashSeed(instance.spinSeed);
+	const float unit = hashToUnit(hash);
+
+	// 속도는 기준 ± 폭. 시드의 최하위 비트로 **방향**도 가른다 — 속도만 다르면 전부 같은 쪽으로 돌아
+	// 멀리서 보면 여전히 한 덩어리로 보인다.
+	const float speed     = g_SpinBaseSpeed + unit * g_SpinSpeedRange;
+	const float direction = (hash & 1u) != 0u ? -1.0f : 1.0f;
+
+	// 위상도 시드마다 어긋나게 — 속도가 달라도 t=0 에서 전부 같은 각도로 출발하면 처음 몇 초가 어색하다.
+	const float phase = hashToUnit(hashSeed(hash)) * kTwoPi;
+	const float angle = direction * speed * g_Time + phase;
+
+	// CPU 가 올린 월드는 스케일 x 이동으로 본다(회전은 GPU 몫). 행벡터 규약(mul(v, M))이라 0~2행이
+	// 축이고 3행이 이동이다. 축의 길이가 곧 스케일이므로 길이를 뽑아 회전을 새로 조립한다.
+	const float3 scale       = float3(length(instance.world[0].xyz), length(instance.world[1].xyz), length(instance.world[2].xyz));
+	const float3 translation = instance.world[3].xyz;
+
+	float sine, cosine;
+	sincos(angle, sine, cosine);
+
+	// world = Scale * RotY * Translate (행벡터 규약이라 왼쪽부터 적용된다).
+	instance.world[0] = float4(scale.x * cosine, 0.0f, scale.x * -sine, 0.0f);
+	instance.world[1] = float4(0.0f, scale.y, 0.0f, 0.0f);
+	instance.world[2] = float4(scale.z * sine, 0.0f, scale.z * cosine, 0.0f);
+	instance.world[3] = float4(translation, 1.0f);
+
+	// 바운드 중심은 이동 성분이다 — 회전만 바꿨으므로 그대로지만, 컬링이 읽는 값이라 맞춰 둔다.
+	instance.boundsCenter = translation;
+
+	g_InstancesRW[instanceIndex] = instance;
+}

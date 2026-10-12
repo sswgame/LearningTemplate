@@ -15,7 +15,7 @@
 #include "Editor/Common/Asset/ModelImporter.h"
 #include "Editor/Common/Asset/VrmMaterialImporter.h"
 
-#include "Engine/Animation/AnimClip.h"
+#include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -118,9 +118,9 @@ namespace sw::editor
         /** @brief 부가 데이터(`<y>.clips.json`)에 적힌 클립 하나의 설정입니다. */
         struct ClipExtra
         {
-            vector<AnimNotifyEvent> _listNotify;
-            vector<AnimCurve>       _listCurve;
-            int8                    _loopOverride{ -1 };
+            vector<AnimationNotifyEvent> _listNotify;
+            vector<AnimationClipCurve>   _listCurve;
+            int8                         _loopOverride{ -1 };
         };
 
         // ModelImportGeometry.cpp: glTF 읽기, 좌표계 변환, 프리미티브 합치기, 스킨, 모프, 삼각형 펼치기
@@ -271,14 +271,14 @@ namespace sw::editor
          */
         static void resampleAnimation( const cgltf_animation& animation, const Skeleton& skeleton, const unordered_map<const cgltf_node*, int32>& mapJointBone,
                                        const vector<BoneTransform>& listRest, const vector<float4x4>& listRootParent, float32 sampleRate, float32 minimumDuration,
-                                       AnimRawClip& outRawClip );
+                                       AnimationRawClip& outRawClip );
 
         /**
          * @brief 애니메이션의 모프 가중치 채널(`weights`)을 타깃 이름의 커브로 읽습니다. 커브 이름은 모프 타깃 이름이며, 런타임이 이름으로 유닛의 모프 가중치에 연결합니다.
          * @details 출력은 키마다 타깃 수만큼의 스칼라이다(CUBICSPLINE 은 접선, 값, 접선 셋). 선형과 계단은 키 시각 그대로 읽고, 큐빅은 샘플 레이트로 다시 샘플링한다.
          * @return 가중치 채널의 마지막 키 시각입니다. 클립 길이의 하한이 됩니다.
          */
-        static float32 readMorphWeightCurves( const cgltf_animation& animation, float32 sampleRate, vector<AnimCurve>& outListCurve );
+        static float32 readMorphWeightCurves( const cgltf_animation& animation, float32 sampleRate, vector<AnimationClipCurve>& outListCurve );
 
         /** @brief 부가 데이터(`<y>.clips.json`)를 읽습니다. 파일이 없으면 빈 맵으로 true 를 반환하고, 모르는 키나 잘못된 값이 있으면 false 를 반환합니다. */
         [[nodiscard]] static bool readClipData( string_view sourcePath, unordered_map<string, ClipExtra>& outMapExtra );

@@ -11,7 +11,7 @@
 
 #include "Editor/Common/Asset/VrmMaterialImporter.h"
 
-#include "Engine/Animation/AnimClip.h"
+#include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 
@@ -54,9 +54,9 @@ namespace sw::editor
      */
     struct ModelImportClip
     {
-        AnimClip       _clip;
-        string         _fileStem; ///< 출력 파일 이름(소문자)
-        AnimCodecStats _stats;
+        AnimationClip       _clip;
+        string              _fileStem; ///< 출력 파일 이름(소문자)
+        AnimationCodecStats _stats;
     };
 } // namespace sw::editor
 

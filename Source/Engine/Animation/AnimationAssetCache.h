@@ -14,7 +14,7 @@
 
 namespace sw
 {
-    class AnimClip;
+    class AnimationClip;
     class RigAsset;
     class Skeleton;
     class SkeletonBoneLOD;
@@ -42,18 +42,18 @@ namespace sw
 namespace sw
 {
     /**
-     * @class AnimClipCache
+     * @class AnimationClipCache
      * @brief 애니메이션 클립을 경로로 나눠 줍니다. 같은 클립을 쓰는 캐릭터 백 명이 파일을 백 번 읽지 않습니다.
      */
-    class SW_API AnimClipCache final : public IAssetCache
+    class SW_API AnimationClipCache final : public IAssetCache
     {
     public:
         /** @brief 경로의 클립을 나눠 받습니다. 처음이면 읽고, 읽을 수 없으면 nullptr 입니다. 워커에서 불러도 됩니다(잠급니다). */
-        static shared_ptr<const AnimClip> acquire( string_view path );
+        static shared_ptr<const AnimationClip> acquire( string_view path );
         /** @brief 사용 중이면 제자리에서 다시 읽습니다(틱 밖, 게임 스레드). 읽지 못하면 이전 내용 그대로 두고 false 를 반환합니다. */
         [[nodiscard]] static bool reloadShared( string_view path );
 
-        const utf8* getAssetKindName() const override { return "AnimClip"; }
+        const utf8* getAssetKindName() const override { return "AnimationClip"; }
         bool        isCached( string_view relativePath ) const override;
         void        reload( string_view relativePath, IRHIDevice* pDevice ) override;
         size_t      getCachedCount() const override;

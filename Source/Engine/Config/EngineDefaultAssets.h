@@ -77,7 +77,7 @@ namespace sw
         PROPERTY()
         string _shaderGPUCull{ "engine/shaders/gpucull.hlsl" }; ///< GPU 컬링 · 드로우 커맨드 생성(컴퓨트)
         PROPERTY()
-        string _shaderInstanceAnim{ "engine/shaders/instanceanim.hlsl" }; ///< 인스턴스 애니메이션(컴퓨트)
+        string _shaderInstanceAnimation{ "engine/shaders/instanceanimation.hlsl" }; ///< 인스턴스 애니메이션(컴퓨트)
         PROPERTY()
         string _shaderMeshMorph{ "engine/shaders/meshmorph.hlsl" }; ///< 모프 타깃(컴퓨트)
         PROPERTY()

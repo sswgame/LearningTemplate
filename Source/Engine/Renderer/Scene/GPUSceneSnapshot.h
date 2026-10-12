@@ -42,7 +42,7 @@ namespace sw
         uint32   _blendMode{ 0 }; ///< RHIBlendMode
         /**
          * @brief GPU 인스턴스 애니메이션 시드입니다. 0 이면 애니메이션이 없습니다.
-         * @details instanceanim.hlsl 이 이 값을 해시해 **인스턴스마다 다른 각속도**를 만든다. 회전은 CPU 가 매 프레임
+         * @details instanceanimation.hlsl 이 이 값을 해시해 **인스턴스마다 다른 각속도**를 만든다. 회전은 CPU 가 매 프레임
          *          계산해 올리지 않고 GPU 가 계산한다.
          */
         uint32 _spinSeed{ 0 };

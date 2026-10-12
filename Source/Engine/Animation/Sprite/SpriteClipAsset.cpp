@@ -118,8 +118,8 @@ namespace sw
             const JSONValue notifies = animationJSON.get( "notifies" );
             for ( size_t notifyIndex = 0; notifies.isArray() && notifyIndex < notifies.size(); ++notifyIndex )
             {
-                const JSONValue notify = notifies.at( notifyIndex );
-                AnimNotifyEvent event{};
+                const JSONValue      notify = notifies.at( notifyIndex );
+                AnimationNotifyEvent event{};
                 event._name     = hashed_string( notify.get( "name" ).asString() );
                 event._time     = static_cast<float32>( notify.get( "time" ).asFloat( 0.0 ) );
                 event._duration = static_cast<float32>( notify.get( "duration" ).asFloat( 0.0 ) );
@@ -199,7 +199,7 @@ namespace sw
                     continue;
                 const JSONValue notifiesVal = animationJSON.set( "notifies" );
                 notifiesVal.setArray();
-                for ( const AnimNotifyEvent& event : animation._listNotify )
+                for ( const AnimationNotifyEvent& event : animation._listNotify )
                 {
                     const JSONValue notifyJSON = notifiesVal.pushBack();
                     notifyJSON.setObject();

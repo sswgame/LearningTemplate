@@ -163,7 +163,7 @@
 | `-gv_editorOpenAllPanels=1` | `-gv_editorOpenPanel=all` |
 | `RenderResourceXml` | `Serialization/Format/ReflectedXMLFile` |
 | `CameraBlendCurve` · `CameraBlendKey` · `CameraBlendSpec`(GameFramework/Base/Actor/Camera) | `BlendCurve` · `BlendCurveKey` · `BlendCurveDef`(`Engine/Animation/BlendCurve.h`) |
-| `Engine/Character/<평면 60 개>` | `Character/{Fit,Socket,Hit,Pose,AnimNotify}/`, 워핑 둘은 `Object/Animation/`(2026-10-05) |
+| `Engine/Character/<평면 60 개>` | `Character/{Fit,Socket,Hit,Pose,AnimationNotify}/`, 워핑 둘은 `Object/Animation/`(2026-10-05) |
 | `Utility/Debug/*` · `Utility/Format/KeyValueFile` | `Utility/Profiling/*`(`DebugOverlayState` · `KeyValueFile` 은 `Utility/`) |
 | `Graphics/Renderer/Debug/` | `Graphics/Debug/` |
 | 엔진 루트 `LocalizationTools` · `EngineDevCommands.cpp` | `DevTools/` |
@@ -178,7 +178,7 @@
 | `Base/Camera/FirstPersonCameraComponent` | `Base/Control/FirstPersonCameraComponent`(시점 = 폰의 조종 회전) |
 | `Engine/Renderer/` | `Engine/Renderer/`(2026-10-10, 티어 표의 하위 폴더 예외도 삭제) |
 | `Resource/{AnimationAssetCache,SpriteClipCache,LocalizationReloadCache}` | `Animation/` · `Animation/Sprite/` · `Localization/` |
-| `Character/Pose/` · `Animation/AnimNotifyPhase` · `Object/Animation/AnimNotifyListener` | `Character/PoseModifier/` · `Animation/Notify/` |
+| `Character/Pose/` · `Animation/AnimationNotifyPhase` · `Object/Animation/AnimationNotifyListener` | `Character/PoseModifier/` · `Animation/Notify/` |
 | `IRenderSurface`(Common 루트) · `ServerConfig` · `ServerSecret`(Config 루트) | `Graphics/RHI/IRenderSurface` · `Config/Server/` |
 | `Utility/{XML,JSON,TileMap,Console,Profiling}` | `Serialization/{XML,JSON}` · `TileMap/` · `Console/` · `Profiling/` |
 | `Telemetry/HTTPClient` · `UI/Screens/` · `Serialization/Core/` · `UI/Core/` | `Observability/HTTPClient` · `UI/Screen/` · `Serialization/Base/` · `UI/Base/` |
@@ -572,7 +572,7 @@
     게임 뷰 패널을 떼어 띄우는 것(ImGui 멀티 뷰포트)으로 이미 되므로 따로 두지 않았다. 플레이 중 인스펙터 편집은 허용하고 Stop 이 되돌린다(유니티),
     남기기는 고른 오브젝트 단위의 Keep Simulation Changes(언리얼)다 — 프로퍼티 단위 남기기는 스냅샷 비교가 필요해 미뤘다.
   - **애니메이션 그래프 전이 편집은 오른쪽 인스펙터**(N8, 2026-10-11): 유니티 Animator 의 전이 인스펙터처럼 상태(이름 = 클립 · 반복)와 전이(조건 하나 · 블렌드)를
-    캔버스 옆 칸에서 고친다. 언리얼의 전이 규칙 그래프는 데이터(`AnimGraphLink`)가 비교 하나라 두지 않았다 — 조건이 여럿이 되면 그때 목록으로 늘린다.
+    캔버스 옆 칸에서 고친다. 언리얼의 전이 규칙 그래프는 데이터(`AnimationGraphLink`)가 비교 하나라 두지 않았다 — 조건이 여럿이 되면 그때 목록으로 늘린다.
   - **노드 그래프 틀 공개**(T3, 2026-10-10): `EditorNodeGraph` 를 내보내고 찾아 넣기 · 핀 타입 거절 · 문제 노드 표시를 틀에 둡니다(언리얼 `SGraphEditor`, 유니티 GraphView).
     확장 모듈은 imgui-node-editor 를 자기 사본으로 링크하고, 템플릿이 그 사본에도 지금 편집기를 겁니다 — ImGui 컨텍스트 결속기와 같은 까닭(vcpkg 정적 라이브러리).
     노드 그래프 라이브러리를 DLL 로 다시 짓는 길은 vcpkg 포트를 바꿔야 해 버렸습니다.

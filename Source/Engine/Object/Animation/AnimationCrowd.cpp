@@ -6,8 +6,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/AnimClip.h"
-#include "Engine/Animation/AnimJSONUtil.h"
+#include "Engine/Animation/AnimationClip.h"
+#include "Engine/Animation/AnimationJSONUtil.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Common/EngineParallel.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -80,7 +80,7 @@ namespace sw
 
     bool AnimationCrowdSettings::parseRoot( const JSONValue& root, string_view sourceLabel )
     {
-        if ( AnimJSONUtil::hasOnlyKnownKeys( root, { "variations_per_clip", "bucket_keep_seconds", "vertex_animation_frames_per_second" }, sourceLabel ) == false )
+        if ( AnimationJSONUtil::hasOnlyKnownKeys( root, { "variations_per_clip", "bucket_keep_seconds", "vertex_animation_frames_per_second" }, sourceLabel ) == false )
             return false;
         const JSONValue variations = root.get( "variations_per_clip" );
         const JSONValue keep       = root.get( "bucket_keep_seconds" );
@@ -97,7 +97,7 @@ namespace sw
         return true;
     }
 
-    AnimationCrowdBucket::AnimationCrowdBucket( const AnimationCrowdBucketKey& key, shared_ptr<const Skeleton> skeleton, shared_ptr<const AnimClip> clip,
+    AnimationCrowdBucket::AnimationCrowdBucket( const AnimationCrowdBucketKey& key, shared_ptr<const Skeleton> skeleton, shared_ptr<const AnimationClip> clip,
                                                 shared_ptr<Mesh> mesh )
         : _key{ key }
         , _skeleton{ std::move( skeleton ) }
@@ -164,7 +164,7 @@ namespace sw
         }
     }
 
-    uint32 AnimationCrowd::selectVariation( const AnimSharedPoseRequest& request, float32 duration ) const
+    uint32 AnimationCrowd::selectVariation( const AnimationSharedPoseRequest& request, float32 duration ) const
     {
         // 묶음 v 의 시각 = 시계 × 속도 + v × (길이 / 칸 수). 유닛 시각과의 차이를 칸 폭으로 나눠 반올림하면 가장 가까운 칸이다.
         const uint32  variationCount = MathUtil::max( _settings._variationsPerClip, 1u );
@@ -174,8 +174,8 @@ namespace sw
         return static_cast<uint32>( MathUtil::round( offset / span ) ) % variationCount;
     }
 
-    AnimationCrowdBucket* AnimationCrowd::joinBucket( AnimationCrowdBucket* pCurrent, const AnimSharedPoseRequest& request, const shared_ptr<const Skeleton>& skeleton,
-                                                      const shared_ptr<Mesh>& sourceMesh, const shared_ptr<const AnimClip>& clip )
+    AnimationCrowdBucket* AnimationCrowd::joinBucket( AnimationCrowdBucket* pCurrent, const AnimationSharedPoseRequest& request, const shared_ptr<const Skeleton>& skeleton,
+                                                      const shared_ptr<Mesh>& sourceMesh, const shared_ptr<const AnimationClip>& clip )
     {
         if ( request._pClip == nullptr || skeleton == nullptr || sourceMesh == nullptr || clip == nullptr || clip.get() != request._pClip ||
              clip->getDuration() <= 0.0f )
@@ -286,7 +286,7 @@ namespace sw
         _mapFreeSoloMesh[mesh->getSkinDataID()].push_back( std::move( mesh ) );
     }
 
-    shared_ptr<Mesh> AnimationCrowd::findVertexAnimationMesh( const shared_ptr<Mesh>& sourceMesh, const Skeleton& skeleton, const AnimClip& clip, bool bAnchorRootMotion,
+    shared_ptr<Mesh> AnimationCrowd::findVertexAnimationMesh( const shared_ptr<Mesh>& sourceMesh, const Skeleton& skeleton, const AnimationClip& clip, bool bAnchorRootMotion,
                                                               string_view meshPath )
     {
         if ( sourceMesh == nullptr )

@@ -3,9 +3,9 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/AnimClip.h"
-#include "Engine/Animation/Codec/ACL/ACLAnimCodec.h"
-#include "Engine/Animation/Codec/Raw/RawAnimCodec.h"
+#include "Engine/Animation/AnimationClip.h"
+#include "Engine/Animation/Codec/ACL/ACLAnimationCodec.h"
+#include "Engine/Animation/Codec/Raw/RawAnimationCodec.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
@@ -248,14 +248,14 @@ SW_TEST_CASE( AnimationLODTest, AnimatorSkipsRemovedBoneTracks )
                                 float4x4::Identity );
     }
     skeleton.computeInverseBindFromReference();
-    const AnimRawClip raw = test::makeChainRawClip( skeleton, 31, 30.0f, 0.6f );
+    const AnimationRawClip raw = test::makeChainRawClip( skeleton, 31, 30.0f, 0.6f );
 
     // 코덱 단독 — 마스크 0 인 트랙은 풀지 않는다(단위 변환).
-    const IAnimCodec* arrCodec[2] = { &RawAnimCodec::getInstance(), &ACLAnimCodec::getInstance() };
-    for ( const IAnimCodec* pCodec : arrCodec )
+    const IAnimationCodec* arrCodec[2] = { &RawAnimationCodec::getInstance(), &ACLAnimationCodec::getInstance() };
+    for ( const IAnimationCodec* pCodec : arrCodec )
     {
-        AnimClip codecClip;
-        SW_ASSERT_TRUE( codecClip.compressFrom( raw, *pCodec, AnimCodecSettings{}, nullptr ) );
+        AnimationClip codecClip;
+        SW_ASSERT_TRUE( codecClip.compressFrom( raw, *pCodec, AnimationCodecSettings{}, nullptr ) );
         const uint8 arrTrackMask[4] = { 1, 1, 1, 0 };
         Pose        pose;
         SW_ASSERT_TRUE( codecClip.sampleTracks( 0.3f, pose, arrTrackMask ) );
@@ -263,9 +263,9 @@ SW_TEST_CASE( AnimationLODTest, AnimatorSkipsRemovedBoneTracks )
         SW_EXPECT_TRUE( MathUtil::abs( pose.getBoneTransform( 2 )._rotation._w ) < 0.9999f );
     }
 
-    AnimClip clip;
+    AnimationClip clip;
     clip.setName( hashed_string( "Wave" ) );
-    SW_ASSERT_TRUE( clip.compressFrom( raw, ACLAnimCodec::getInstance(), AnimCodecSettings{}, nullptr ) );
+    SW_ASSERT_TRUE( clip.compressFrom( raw, ACLAnimationCodec::getInstance(), AnimationCodecSettings{}, nullptr ) );
     const string folder = test::makeTempPath( "lodclips" );
     SW_ASSERT_TRUE( clip.saveToFile( FileUtil::joinPath( folder, "wave.animclip" ) ) );
 

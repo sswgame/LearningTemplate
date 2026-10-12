@@ -405,9 +405,9 @@
        "description": "GPU 컬링 · 드로우 커맨드 생성(컴퓨트)"
       },
       {
-       "name": "_shaderInstanceAnim",
+       "name": "_shaderInstanceAnimation",
        "type": "string",
-       "default": "engine/shaders/instanceanim.hlsl",
+       "default": "engine/shaders/instanceanimation.hlsl",
        "min": "",
        "max": "",
        "units": "",
@@ -1728,7 +1728,7 @@
        "min": "",
        "max": "",
        "units": "",
-       "description": "애니메이션 코덱 이름(`AnimCodecRegistry` 에 없으면 설정 오류)"
+       "description": "애니메이션 코덱 이름(`AnimationCodecRegistry` 에 없으면 설정 오류)"
       },
       {
        "name": "animation_sample_rate",
@@ -1746,7 +1746,7 @@
        "min": "",
        "max": "",
        "units": "",
-       "description": "코덱 정밀도(`AnimCodecSettings`)"
+       "description": "코덱 정밀도(`AnimationCodecSettings`)"
       },
       {
        "name": "animation_shell_distance",

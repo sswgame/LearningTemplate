@@ -1,12 +1,12 @@
 /**
  * @file SpriteClipPlayable.h
- * @brief 스프라이트 클립의 이름 붙은 프레임 구간 하나를 재생할 것(`IAnimPlayable`)으로 노출합니다. 2D 와 3D 가 같은 재생기와 상태 기계를 쓰게 하는 다리입니다.
+ * @brief 스프라이트 클립의 이름 붙은 프레임 구간 하나를 재생할 것(`IAnimationPlayable`)으로 노출합니다. 2D 와 3D 가 같은 재생기와 상태 기계를 쓰게 하는 다리입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
-#include "Engine/Animation/AnimPlayback.h"
+#include "Engine/Animation/AnimationPlayback.h"
 
 namespace sw
 {
@@ -16,9 +16,9 @@ namespace sw
      * @class SpriteClipPlayable
      * @brief 구간(시작 프레임, 프레임 수, 반복)의 길이는 프레임 시간의 합이고, 재생 시각은 구간 안의 프레임과 클립 타임라인 시각으로 변환됩니다.
      * @details 스켈레탈 클립과 다른 것은 "샘플이 무엇을 내는가"뿐이다(프레임 번호와 트랜스폼 키 시각, 본 포즈). 시간 흐름, 반복, 끝, 다음 상태는
-     *          `AnimPlayer` 와 `AnimGraphPlayer` 가 두 쪽에 똑같이 처리한다. 클립이 없으면 길이가 대체 시간인 프레임 하나가 된다.
+     *          `AnimationPlayer` 와 `AnimationGraphPlayer` 가 두 쪽에 똑같이 처리한다. 클립이 없으면 길이가 대체 시간인 프레임 하나가 된다.
      */
-    class SW_API SpriteClipPlayable final : public IAnimPlayable
+    class SW_API SpriteClipPlayable final : public IAnimationPlayable
     {
     public:
         SpriteClipPlayable();
@@ -31,8 +31,8 @@ namespace sw
 
         float32 getPlayLength() const override { return _playLength; }
         bool    isLoopingByDefault() const override { return _bLoop == SW_TRUE; }
-        /** @brief (IAnimPlayable) 지금 구간의 알림 트랙입니다(클립의 구간 `notifies`). 없으면 nullptr 입니다. */
-        const AnimNotifyTrack* findNotifyTrack() const override { return _notifyTrack.isEmpty() ? nullptr : &_notifyTrack; }
+        /** @brief (IAnimationPlayable) 지금 구간의 알림 트랙입니다(클립의 구간 `notifies`). 없으면 nullptr 입니다. */
+        const AnimationNotifyTrack* findNotifyTrack() const override { return _notifyTrack.isEmpty() ? nullptr : &_notifyTrack; }
 
         const SpriteClipAsset* getClip() const { return _pClip; }
         int32                  getFirstFrame() const { return _firstFrame; }
@@ -47,7 +47,7 @@ namespace sw
         float32 computeClipTime( float32 time ) const;
 
     private:
-        AnimNotifyTrack        _notifyTrack; ///< 지금 구간의 알림(구간을 정할 때 클립에서 베낀다)
+        AnimationNotifyTrack   _notifyTrack; ///< 지금 구간의 알림(구간을 정할 때 클립에서 베낀다)
         const SpriteClipAsset* _pClip;
         float32                _fallbackSeconds;
         float32                _playLength;

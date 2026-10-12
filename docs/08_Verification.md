@@ -188,11 +188,11 @@ cd build/Ninja-Debug/Bin
   워크트리 콜드가 풀 빌드보다 느린 것은 PCH 를 켠 Windows 빌드가 sccache 에 거의 맞지 않기 때문이다(`/Yu` 캐시 불가, `Scripts/setup/README.md`). Release 는 측정하지 않았다(풀 1 회 192.3 s 만 있다).
 
 - **OS 헤더를 PCH 에서 뺀 효과**(2026-10-11, PC `SW`, Debug, `EngineMinimal.h` 가 `Windows.h` 묶음을 더는 넣지 않음): PCH 없이 `-fsyntax-only` 한 번역 단위의 중앙값(5 회)이 `GameObjectManager.cpp` 2.63 → 2.18 s ·
-  `Scene.cpp` 2.74 → 2.24 s · `AudioClip.cpp` 2.56 → 2.11 s · `AnimClip.cpp` 2.66 → 2.06 s(약 −19 %, TU 하나에 −0.5 s). PCH 를 켠 개발 풀 빌드는 131.5 → 127 s(−3 %)로 작다 — 이득은 PCH 를 끄는 구성(Windows CI)에서 크다.
+  `Scene.cpp` 2.74 → 2.24 s · `AudioClip.cpp` 2.56 → 2.11 s · `AnimationClip.cpp` 2.66 → 2.06 s(약 −19 %, TU 하나에 −0.5 s). PCH 를 켠 개발 풀 빌드는 131.5 → 127 s(−3 %)로 작다 — 이득은 PCH 를 끄는 구성(Windows CI)에서 크다.
   `Scripts` 없이 측정하는 법: `compile_commands.json` 의 명령에서 `/Yu` · `/Fp` · PCH 강제 포함 · `/Fo` 를 빼고 `-fsyntax-only -include Source/Engine/pch.h` 를 붙여 5 회 돌린다.
 - **`StdHeaders.h` 다이어트 효과**(2026-10-11, PC `SW`, Debug, 세 슬롯을 잡고 다른 빌드 없음): 스트림 · `<random>` · `<regex>` · `<future>` · `<variant>` · `<condition_variable>` · `<csignal>` ·
   `<queue>` · `<stack>` · `<bitset>` 을 빼고 쓰는 파일이 직접 include(`MathUtil::getRandom` 의 엔진은 `MathUtil.cpp` 로). PCH 없이 `-fsyntax-only` 5 회 중앙값: `GameObjectManager.cpp` 1.36 → 1.03 s ·
-  `Scene.cpp` 1.34 → 1.19 s · `AudioClip.cpp` 1.17 → 0.94 s · `AnimClip.cpp` 1.13 → 0.92 s(합 5.02 → 4.08 s, −19 %). 실제 컴파일(`-ftime-trace`, 1 회) 합 8.39 → 7.57 s, 헤더 파싱 비율 53 → 51 %.
+  `Scene.cpp` 1.34 → 1.19 s · `AudioClip.cpp` 1.17 → 0.94 s · `AnimationClip.cpp` 1.13 → 0.92 s(합 5.02 → 4.08 s, −19 %). 실제 컴파일(`-ftime-trace`, 1 회) 합 8.39 → 7.57 s, 헤더 파싱 비율 53 → 51 %.
   (위 OS 헤더 항목의 2.18 s 와 이 표의 1.36 s 차이는 그때 다른 빌드가 겹친 탓이다 — 같은 세션의 전후만 견준다.)
   남은 헤더 시간의 바닥: UCRT `wchar.h` → clang `intrin.h` → `immintrin.h`(AVX-512 하위 헤더 전부)가 TU 하나에 약 0.25 s 다(`__SCE__` 가 아니면 늘 전부 읽는다 — 엔진이 피할 수 없다).
   명령 다루는 법: 정규식으로 토큰만 지운다(문자열을 다시 쪼개면 `-DSW_LOG_TAG=\"…\"` 의 따옴표가 깨진다). `-ftime-trace` 는 구문 검사만으로는 파일을 쓰지 않으므로 `/Fo<임시>.obj` 로 실제 컴파일한다.

@@ -21,7 +21,7 @@
 			                       _bAnimateWhenOffscreen="false" />
 			<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
-			                           _animGraphPath="game/shooter3d/data/anim/skeleton.animgraph.json"
+			                           _animationGraphPath="game/shooter3d/data/anim/skeleton.animgraph.json"
 			                           _clipFolder="game/shooter3d/models/kaykit/skeleton_minion/clips"
 			                           _initialState="Spawn_Ground_Skeletons"
 			                           _currentState=""

@@ -557,7 +557,7 @@ def drawAudio(g: Glyph) -> None:
     g.poly([(8.5, 4.5), (20.7, 2.2), (20.7, 5.4), (8.5, 7.7)])
 
 
-def drawAnimGraph(g: Glyph) -> None:
+def drawAnimationGraph(g: Glyph) -> None:
     g.rect(2, 3, 7, 6, 1)
     g.rect(15, 9, 7, 6, 1)
     g.rect(2, 15, 7, 6, 1)
@@ -876,8 +876,8 @@ kListIcon: list[tuple[str, Callable[[Glyph], None]]] = [
     ("magnet", drawMagnet), ("grid", drawGrid), ("bookmark", drawBookmark), ("align", drawAlign), ("chart", drawChart), ("camera", drawCamera),
     # 에셋 종류
     ("cube", drawCube), ("scene", drawScene), ("prefab", drawPrefab), ("texture", drawTexture), ("shader", drawShader),
-    ("material", drawMaterial), ("audio", drawAudio), ("animGraph", drawAnimGraph), ("dialogue", drawDialogue), ("sprite", drawSprite),
-    ("tileMap", drawTileMap), ("sequence", drawSequence), ("skeleton", drawSkeleton), ("animClip", lambda g: drawPerson(g, "walk")),
+    ("material", drawMaterial), ("audio", drawAudio), ("animationGraph", drawAnimationGraph), ("dialogue", drawDialogue), ("sprite", drawSprite),
+    ("tileMap", drawTileMap), ("sequence", drawSequence), ("skeleton", drawSkeleton), ("animationClip", lambda g: drawPerson(g, "walk")),
     ("rig", drawRig), ("heightfield", drawHeightfield), ("fracture", drawFracture), ("widget", drawWidget), ("font", drawFont),
     # 오브젝트 · 컴포넌트 종류(Hierarchy · 인스펙터 · 뷰포트 빌보드)
     ("gameObject", drawGameObject), ("component", drawComponent), ("lightPoint", drawLightPoint), ("lightDirectional", drawLightDirectional),

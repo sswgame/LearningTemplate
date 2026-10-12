@@ -17,7 +17,7 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
-#include "Engine/Animation/Graph/AnimGraphAsset.h"
+#include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Object/Component/Component.h"
@@ -52,7 +52,7 @@ namespace sw::editor
             const utf8* _pDefaultFileName; ///< 경로가 비었을 때 여는 기본 파일(`Saved/Editor` 아래 이름). nullptr 이면 기본 문서가 없다
         };
 
-        constexpr ToolDocumentDesc kAnimGraphDocument{ "animation graph", EditorPaths::kAnimGraphDocumentFileName };
+        constexpr ToolDocumentDesc kAnimationGraphDocument{ "animation graph", EditorPaths::kAnimationGraphDocumentFileName };
         constexpr ToolDocumentDesc kDialogueGraphDocument{ "dialogue graph", EditorPaths::kDialogueGraphDocumentFileName };
         constexpr ToolDocumentDesc kSpriteClipDocument{ "sprite clip", EditorPaths::kSpriteClipDocumentFileName };
         constexpr ToolDocumentDesc kTileMapDocument{ "tile map", nullptr };
@@ -163,14 +163,14 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "EditorToolAssetCommands" );
 
-    ToolAssetLoadResult EditorToolAssetCommands::loadAnimGraph( AnimGraphAsset& outData, string_view path )
+    ToolAssetLoadResult EditorToolAssetCommands::loadAnimationGraph( AnimationGraphAsset& outData, string_view path )
     {
-        return EditorToolAssetInternal::loadToolDocument( kAnimGraphDocument, outData, path, nullptr );
+        return EditorToolAssetInternal::loadToolDocument( kAnimationGraphDocument, outData, path, nullptr );
     }
 
-    bool EditorToolAssetCommands::saveAnimGraph( const AnimGraphAsset& data, string_view path )
+    bool EditorToolAssetCommands::saveAnimationGraph( const AnimationGraphAsset& data, string_view path )
     {
-        return EditorToolAssetInternal::saveToolDocument( kAnimGraphDocument, data, path );
+        return EditorToolAssetInternal::saveToolDocument( kAnimationGraphDocument, data, path );
     }
 
     ToolAssetLoadResult EditorToolAssetCommands::loadDialogueGraph( DialogueGraphAsset& outData, string_view path )

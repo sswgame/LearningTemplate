@@ -12,5 +12,5 @@ a16db7b2113a3424 engine:colorvision.hlsli
 a1b2d3984b3b43a6 engine:bindingslots.hlsli
 a45b568224600ad1 engine:binding.hlsli
 b0b646918a263241 engine:lighting.hlsli
-c597f42214903f5e engine:instancedata.hlsli
+b565a5e10f5ab708 engine:instancedata.hlsli
 f653f249d0845efc engine:lighting2d.hlsli

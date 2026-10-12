@@ -199,7 +199,7 @@ namespace sw
     /**
      * @brief `-gv_benchAnimate=0`: 벤치의 **모든** 시간 구동 변화를 멈춥니다(기본값 1 은 움직입니다).
      * @details **기하가 있는 씬을 픽셀로 비교하려면 이 스위치가 필요하다.** 벤치는 두 가지를 시간으로
-     *          움직인다. 컴퓨트(instanceanim)가 만드는 회전과, `update()` 의 사인파가 만드는 상하
+     *          움직인다. 컴퓨트(instanceanimation)가 만드는 회전과, `update()` 의 사인파가 만드는 상하
      *          이동과 스케일이다. 둘 다 실제 시계의 델타에서 나오므로 같은 `-gv_screenshotFrame` 으로 두 번
      *          찍어도 이미지가 다르다(같은 설정으로 두 번 실행하면 **1.5%** 어긋나며, 셰이더 변경의 0.5% 차이를 가린다).
      *          손대지 않은 대조군이 움직이면 하니스를 먼저 의심할 것. 회전만 멈추면 부족하다(사인파가 남아
@@ -1153,7 +1153,7 @@ namespace sw
                                            wave * 0.75f,
                                            origin + static_cast<float32>( index / side ) * kBenchSpacing };
             write._bSetPosition        = SW_TRUE;
-            // 회전은 **컴퓨트가 만든다**(instanceanim.hlsl) — 시드 해시가 인스턴스마다 속도와 방향을 갈라 준다
+            // 회전은 **컴퓨트가 만든다**(instanceanimation.hlsl) — 시드 해시가 인스턴스마다 속도와 방향을 갈라 준다
             // (속도가 하나면 큐브가 몇 천 개여도 한 덩어리처럼 보인다). CPU 가 여기서 회전을 다시 쓰면 GPU 가 쓴 값을
             // 다음 업로드가 덮어써 도로 균일해진다 — 그래서 회전은 CPU 가 손대지 않는다.
 

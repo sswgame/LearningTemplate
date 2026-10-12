@@ -14,7 +14,7 @@
 namespace sw::editor
 {
     /**
-     * @brief 프레임 목록 · 이름 붙은 애니메이션 구간 · 선택적 TransformAnimation 키를 편집합니다 (AnimGraph과 별개)
+     * @brief 프레임 목록 · 이름 붙은 애니메이션 구간 · 선택적 TransformAnimation 키를 편집합니다 (AnimationGraph과 별개)
      * @details 문서는 런타임 타입 `SpriteClipAsset` 하나입니다 — 게임이 읽는 것과 같은 파서 · 같은 구조체를 편집합니다.
      */
     class SpriteClipPanel : public EditorDocumentPanel

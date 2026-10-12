@@ -3,7 +3,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/AnimClip.h"
+#include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Facial/FacialRig.h"
 #include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
@@ -184,9 +184,9 @@ SW_TEST_CASE( FacialAnimationTest, ImportedTestHeadCarriesMorphTargetsAndWeightC
     SW_EXPECT_TRUE( skeleton.findBoneIndex( hashed_string( "eye.l" ) ) >= 0 );
     SW_EXPECT_TRUE( skeleton.findBoneIndex( hashed_string( "eye.r" ) ) >= 0 );
 
-    AnimClip talk;
+    AnimationClip talk;
     SW_ASSERT_TRUE( talk.loadFromResource( string( TestFacialAnimationInternal::kClipFolder ) + "/talk.animclip" ) );
-    const AnimCurve* pJaw = talk.findCurve( hashed_string( "jawOpen" ) );
+    const AnimationClipCurve* pJaw = talk.findCurve( hashed_string( "jawOpen" ) );
     SW_ASSERT_NOT_NULL( pJaw );
     float32 maxJaw = 0.0f;
     for ( float32 time = 0.0f; time <= talk.getPlayLength(); time += 0.05f )
@@ -450,13 +450,13 @@ SW_TEST_CASE( FacialAnimationTest, GazeTurnsEyesTowardTheTargetWithinTheLimit )
 SW_TEST_CASE( FacialAnimationTest, AnimatorExpressionCurvesDriveExpressions )
 {
     SW_ASSERT_TRUE( ResourcePaths::initialize() );
-    AnimClip grin;
+    AnimationClip grin;
     SW_ASSERT_TRUE( grin.loadFromResource( string( TestFacialAnimationInternal::kClipFolder ) + "/talk.animclip" ) );
     grin.setName( hashed_string( "Grin" ) );
-    AnimCurve happy{};
+    AnimationClipCurve happy{};
     happy._name = hashed_string( "Happy" );
-    happy._listKey.push_back( AnimCurveKey{ 0.0f, 0.5f } );
-    happy._listKey.push_back( AnimCurveKey{ grin.getPlayLength(), 0.5f } );
+    happy._listKey.push_back( AnimationClipCurveKey{ 0.0f, 0.5f } );
+    happy._listKey.push_back( AnimationClipCurveKey{ grin.getPlayLength(), 0.5f } );
     grin.addCurve( happy );
     const string folder = test::makeTempPath( "grinclips" );
     SW_ASSERT_TRUE( grin.saveToFile( FileUtil::joinPath( folder, "grin.animclip" ) ) );

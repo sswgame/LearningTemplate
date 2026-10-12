@@ -10,7 +10,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Animation/AnimPlayback.h"
+#include "Engine/Animation/AnimationPlayback.h"
 
 namespace sw
 {
@@ -63,11 +63,11 @@ namespace sw
      */
     struct SpriteClipAnimation
     {
-        string                  _name;
-        vector<AnimNotifyEvent> _listNotify; ///< 구간 시작 기준 시각(초)의 알림이다. 스켈레탈 클립의 알림과 같은 의미이며, 길이가 0 보다 크면 구간 알림이다.
-        int32                   _firstFrame{ 0 };
-        int32                   _frameCount{ 0 };
-        uint8                   _bLoop{ SW_TRUE };
+        string                       _name;
+        vector<AnimationNotifyEvent> _listNotify; ///< 구간 시작 기준 시각(초)의 알림이다. 스켈레탈 클립의 알림과 같은 의미이며, 길이가 0 보다 크면 구간 알림이다.
+        int32                        _firstFrame{ 0 };
+        int32                        _frameCount{ 0 };
+        uint8                        _bLoop{ SW_TRUE };
     };
 } // namespace sw
 

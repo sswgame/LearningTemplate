@@ -15,7 +15,7 @@ namespace sw
 {
     struct PhysicsAsset;
 
-    class AnimNotifyTable;
+    class AnimationNotifyTable;
     class SocketKindTable;
     class SocketSet;
 
@@ -40,16 +40,16 @@ namespace sw
 
 namespace sw
 {
-    /** @class AnimNotifyTableCache @brief 알림 테이블을 기본 처리기 레지스트리로 읽어 나눠 줍니다. */
-    class SW_API AnimNotifyTableCache final : public IAssetCache
+    /** @class AnimationNotifyTableCache @brief 알림 테이블을 기본 처리기 레지스트리로 읽어 나눠 줍니다. */
+    class SW_API AnimationNotifyTableCache final : public IAssetCache
     {
     public:
         /** @brief 경로의 알림 테이블을 반환합니다. 읽을 수 없으면(모르는 처리기나 인자) 오류를 남기고 nullptr 를 반환합니다. */
-        static shared_ptr<const AnimNotifyTable> acquire( string_view path );
+        static shared_ptr<const AnimationNotifyTable> acquire( string_view path );
         /** @brief 이 테이블에서 다시 읽은 횟수를 반환합니다. */
         static uint32 getReloadCount();
 
-        const utf8* getAssetKindName() const override { return "AnimNotifyTable"; }
+        const utf8* getAssetKindName() const override { return "AnimationNotifyTable"; }
         bool        isCached( string_view relativePath ) const override;
         void        reload( string_view relativePath, IRHIDevice* pDevice ) override;
         size_t      getCachedCount() const override;

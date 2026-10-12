@@ -1,7 +1,7 @@
 /**
  * instancedata.hlsli — GPUScene 인스턴스 원소 하나(SwInstanceData). C++ `GPUInstance`(GPUSceneSnapshot.h)와 바이트까지 같다(128 바이트).
  *
- * 그래픽스(binding.hlsli 가 g_SwInstances 로 건다)와 컴퓨트 셋(gpucull · instancesort 는 읽고, instanceanim 은 고쳐 쓴다)이
+ * 그래픽스(binding.hlsli 가 g_SwInstances 로 건다)와 컴퓨트 셋(gpucull · instancesort 는 읽고, instanceanimation 은 고쳐 쓴다)이
  * **이 파일 하나**를 include 한다. 구조체를 셰이더마다 베끼면 한쪽만 고쳤을 때 원소가 아무 말 없이 어긋난다.
  * ShaderBindingValidatorTest.InstanceElementLayoutMatchesCPUStruct 가 세 이름을 모두 쿠킹된 바이너리로 대조한다.
  *
@@ -22,7 +22,7 @@ struct SwInstanceData
 	uint     meshBatchIndex;
 	uint     materialIndex;
 	uint     blendMode;
-	uint     spinSeed;  // GPU 회전 시드 — 0 이면 instanceanim.hlsl 이 건드리지 않는다
+	uint     spinSeed;  // GPU 회전 시드 — 0 이면 instanceanimation.hlsl 이 건드리지 않는다
 	uint     uvStart;   // 사각형의 왼쪽 위 꼭짓점이 읽는 UV (u, v) — unorm16 둘(u 가 하위 16비트)
 	uint     uvEnd;     // 오른쪽 아래 꼭짓점이 읽는 UV — unorm16 둘. uvEnd.u < uvStart.u 면 좌우가 뒤집힌다
 	uint     tint;      // 인스턴스 색 RGBA8 unorm(r 이 하위 바이트). 머티리얼 색 · 텍스처에 곱한다

@@ -8,7 +8,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Animation/AnimPlayer.h"
+#include "Engine/Animation/AnimationPlayer.h"
 #include "Engine/Common/EngineParallel.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -501,9 +501,9 @@ namespace sw
 
     void AnimationSystem::synchronizeGroups()
     {
-        vector<AnimPlayer*>   listPlayer;
-        vector<float32>       listWeight;
-        vector<hashed_string> listGroup;
+        vector<AnimationPlayer*> listPlayer;
+        vector<float32>          listWeight;
+        vector<hashed_string>    listGroup;
         for ( SkeletalMeshComponent* pUnit : _listActive )
         {
             pUnit->collectSyncPlayers( listPlayer, listWeight, listGroup );
@@ -511,9 +511,9 @@ namespace sw
         if ( listPlayer.size() < 2 )
             return;
 
-        vector<AnimPlayer*> listMemberPlayer;
-        vector<float32>     listMemberWeight;
-        vector<uint8>       listDone( listPlayer.size(), SW_FALSE );
+        vector<AnimationPlayer*> listMemberPlayer;
+        vector<float32>          listMemberWeight;
+        vector<uint8>            listDone( listPlayer.size(), SW_FALSE );
         for ( size_t first = 0; first < listPlayer.size(); ++first )
         {
             if ( listDone[first] == SW_TRUE )
@@ -529,7 +529,7 @@ namespace sw
                 listMemberWeight.push_back( listWeight[other] );
             }
             if ( listMemberPlayer.size() > 1 )
-                (void)AnimSyncGroup::synchronize( listMemberPlayer.data(), listMemberWeight.data(), static_cast<uint32>( listMemberPlayer.size() ) );
+                (void)AnimationSyncGroup::synchronize( listMemberPlayer.data(), listMemberWeight.data(), static_cast<uint32>( listMemberPlayer.size() ) );
         }
     }
 } // namespace sw
