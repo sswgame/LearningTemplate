@@ -58,7 +58,7 @@ namespace
         /** @brief 반복 클립 둘(`wave` · `sway`)을 임시 폴더에 쓰고 그 폴더를 돌려줍니다. */
         static string writeClips( const Skeleton& skeleton )
         {
-            const string       folder     = test::makeTempPath( "crowdclips" );
+            string             folder     = test::makeTempPath( "crowdclips" );
             const AnimRawClip  wave       = test::makeChainRawClip( skeleton, 31, 30.0f, 0.6f );
             const AnimRawClip  sway       = test::makeChainRawClip( skeleton, 31, 30.0f, 1.2f );
             const AnimRawClip* arrRaw[2]  = { &wave, &sway };
@@ -69,10 +69,16 @@ namespace
                 clip.setName( hashed_string( arrName[clipIndex] ) );
                 clip.setLooping( true );
                 if ( clip.compressFrom( *arrRaw[clipIndex], RawAnimCodec::getInstance(), AnimCodecSettings{}, nullptr ) == false )
-                    return string{};
+                {
+                    folder.clear();
+                    return folder;
+                }
                 const string fileName = clipIndex == 0 ? "wave.animclip" : "sway.animclip";
                 if ( clip.saveToFile( FileUtil::joinPath( folder, fileName ) ) == false )
-                    return string{};
+                {
+                    folder.clear();
+                    return folder;
+                }
             }
             return folder;
         }

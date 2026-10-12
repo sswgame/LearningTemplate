@@ -27,8 +27,7 @@ namespace test
             , _connection{}
             , _admin{}
         {
-            static uint32                                 s_sequence = 0;
-            const uint64                                  seed       = static_cast<uint64>( sw::MonotonicClock::nowNanoseconds() ) ^ ( static_cast<uint64>( ++s_sequence ) << 40 );
+            const uint64                                  seed = static_cast<uint64>( sw::MonotonicClock::nowNanoseconds() ) ^ ( static_cast<uint64>( reinterpret_cast<uintptr_t>( this ) ) << 20 );
             sw::StringBuilder<sw::constant::kMaxBuffer64> name;
             name.appendFormat( "sw_test_%#", static_cast<uint32>( seed ^ ( seed >> 32 ) ) );
             _schemaName = sw::string( name.view() );

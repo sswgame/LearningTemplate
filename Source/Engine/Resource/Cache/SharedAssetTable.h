@@ -40,17 +40,18 @@ namespace sw
         /** @brief 경로의 에셋을 나눠 받습니다. 처음이면 @p load 로 읽고, 읽을 수 없으면 nullptr 입니다. 워커에서 불러도 됩니다(잠급니다). */
         shared_ptr<const AssetType> acquire( string_view path, LoadFunction load )
         {
+            shared_ptr<const AssetType> live;
             if ( path.empty() || load == nullptr )
-                return nullptr;
-            const string                key  = makeKey( path );
-            shared_ptr<const AssetType> live = _table.findLive( key );
+                return live;
+            const string key = makeKey( path );
+            live             = _table.findLive( key );
             if ( live != nullptr )
                 return live;
 
             shared_ptr<AssetType> loaded = make_shared<AssetType>();
-            if ( load( path, *loaded ) == false )
-                return nullptr;
-            return _table.insertOrGetLive( key, std::move( loaded ) );
+            if ( load( path, *loaded ) )
+                live = _table.insertOrGetLive( key, std::move( loaded ) );
+            return live;
         }
 
         /** @brief 그 경로를 지금 쥔 에셋입니다. 없으면 nullptr 입니다. */

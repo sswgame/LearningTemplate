@@ -519,11 +519,12 @@ namespace sw
     hashed_string findWireTypeName( uint32 wireTypeHash )
     {
         const TypeRegistry& registry = engine::getTypeRegistry();
-        const hashed_string typeName = registry.canonicalTypeNameByHash( wireTypeHash );
+        hashed_string       typeName = registry.canonicalTypeNameByHash( wireTypeHash );
         if ( typeName.empty() == false )
             return typeName;
         const EnumInfo* pEnumInfo = registry.findEnumByNameHash( wireTypeHash );
-        return ( pEnumInfo != nullptr ) ? pEnumInfo->_fullyQualifiedName : hashed_string{};
+        typeName                  = ( pEnumInfo != nullptr ) ? pEnumInfo->_fullyQualifiedName : hashed_string{};
+        return typeName;
     }
 
     bool tryCoerceBinaryPayload( void* pPropPtr, hashed_string targetTypeName, const uint8* pPayload, size_t payloadSize,

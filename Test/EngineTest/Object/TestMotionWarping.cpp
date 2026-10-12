@@ -56,11 +56,12 @@ namespace
                 };
                 clip.addCurve( curve );
             }
+            string folder;
             if ( clip.compressFrom( raw, RawAnimCodec::getInstance(), AnimCodecSettings{}, nullptr ) == false )
-                return string{};
-            const string folder = test::makeTempPath( pFolderName );
+                return folder;
+            folder = test::makeTempPath( pFolderName );
             if ( clip.saveToFile( FileUtil::joinPath( folder, "walk.animclip" ) ) == false )
-                return string{};
+                folder.clear();
             return folder;
         }
 

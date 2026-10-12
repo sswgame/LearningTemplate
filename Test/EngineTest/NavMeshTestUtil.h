@@ -63,10 +63,9 @@ namespace navtest
                                               const sw::vector<sw::NavConvexVolume>* pExtraVolume = nullptr, sw::NavMeshBakeStats* pOutStats = nullptr )
     {
         sw::unique_ptr<sw::INavMesh> pNavMesh = sw::NavMeshBackend::createNavMesh();
-        if ( pNavMesh->initialize( settings._listAgentType.front(), settings, sw::NavMeshBakeUtil::computeBakeBounds( geometry ) ) == false )
-            return nullptr;
-        if ( sw::NavMeshBakeUtil::bakeAllTiles( *pNavMesh, geometry, pExtraVolume, pOutStats ) == false )
-            return nullptr;
+        if ( pNavMesh->initialize( settings._listAgentType.front(), settings, sw::NavMeshBakeUtil::computeBakeBounds( geometry ) ) == false ||
+             sw::NavMeshBakeUtil::bakeAllTiles( *pNavMesh, geometry, pExtraVolume, pOutStats ) == false )
+            pNavMesh.reset();
         return pNavMesh;
     }
 

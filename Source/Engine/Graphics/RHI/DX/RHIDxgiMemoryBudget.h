@@ -20,12 +20,12 @@ namespace sw
      */
     inline Microsoft::WRL::ComPtr<IDXGIAdapter3> findDxgiAdapterByLuid( const LUID& luid )
     {
+        Microsoft::WRL::ComPtr<IDXGIAdapter3> adapter;
         Microsoft::WRL::ComPtr<IDXGIFactory4> factory;
         if ( FAILED( CreateDXGIFactory1( IID_PPV_ARGS( factory.GetAddressOf() ) ) ) || factory == nullptr )
-            return nullptr;
-        Microsoft::WRL::ComPtr<IDXGIAdapter3> adapter;
+            return adapter;
         if ( FAILED( factory->EnumAdapterByLuid( luid, IID_PPV_ARGS( adapter.GetAddressOf() ) ) ) )
-            return nullptr;
+            adapter.Reset();
         return adapter;
     }
 

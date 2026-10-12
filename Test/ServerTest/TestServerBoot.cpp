@@ -42,11 +42,13 @@ namespace
     /** @brief Server 실행 파일의 절대 경로 — 작업 폴더(Bin), 없으면 산출물 폴더(TestBin 옆의 Bin). 없으면 빈 글. */
     string findServerPath()
     {
-        const string inBin = FileUtil::joinPath( FileUtil::getCurrentPath(), kServerExecutableName );
-        if ( FileUtil::exists( inBin ) )
-            return inBin;
-        const string besideTest = FileUtil::joinPath( FileUtil::getBinaryDirectory(), kServerExecutableName );
-        return FileUtil::exists( besideTest ) ? besideTest : string{};
+        string serverPath = FileUtil::joinPath( FileUtil::getCurrentPath(), kServerExecutableName );
+        if ( FileUtil::exists( serverPath ) == false )
+        {
+            const string besideTest = FileUtil::joinPath( FileUtil::getBinaryDirectory(), kServerExecutableName );
+            serverPath              = FileUtil::exists( besideTest ) ? besideTest : string{};
+        }
+        return serverPath;
     }
 
     /**

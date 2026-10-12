@@ -57,10 +57,12 @@ namespace sw
             }
             weak_ptr<ValueType>&  slot   = _mapValue[key];
             shared_ptr<ValueType> winner = slot.lock();
-            if ( winner != nullptr )
-                return winner;
-            slot = value;
-            return value;
+            if ( winner == nullptr )
+            {
+                slot   = value;
+                winner = std::move( value );
+            }
+            return winner;
         }
 
         /**
@@ -74,9 +76,9 @@ namespace sw
             if ( live != nullptr )
                 return live;
             shared_ptr<ValueType> created = create( key );
-            if ( created == nullptr )
-                return nullptr;
-            return insertOrGetLive( key, std::move( created ) );
+            if ( created != nullptr )
+                live = insertOrGetLive( key, std::move( created ) );
+            return live;
         }
 
         /** @brief 그 키의 칸을 뗍니다. 쥔 쪽의 값은 그대로 살고, 다음 요청은 새로 짓습니다. */

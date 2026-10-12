@@ -225,17 +225,24 @@ namespace sw
 
     string LiveOpsService::resolveValue( const string& value ) const
     {
+        string text;
         if ( value.empty() || value.front() != '@' || _dependencies._pRemoteConfig == nullptr )
-            return value;
+        {
+            text = value;
+            return text;
+        }
         const string_view key( value.data() + 1, value.size() - 1 );
-        string            text;
         if ( _dependencies._pRemoteConfig->findText( key, text ) )
             return text;
         int64 integer = 0;
         if ( _dependencies._pRemoteConfig->findInteger( key, integer ) )
-            return string( std::to_string( integer ).c_str() );
+        {
+            text = string( std::to_string( integer ).c_str() );
+            return text;
+        }
         SW_LOG_WARNING( "LiveOps: remote config key '%#' not found — parameter left as is", value.c_str() );
-        return value;
+        text = value;
+        return text;
     }
 
     const LiveEventDefinition* LiveOpsService::findEvent( string_view eventID ) const

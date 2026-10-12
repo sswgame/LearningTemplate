@@ -600,7 +600,7 @@ namespace sw
         TextFormatterWalker walker( pattern, TextWalkMode::Rebuild );
         walker.bindMap( pfnMap );
         if ( walker.walk( rebuilt ) == false )
-            return string( pattern );
+            rebuilt = string( pattern );
         return rebuilt;
     }
 } // namespace sw

@@ -203,16 +203,19 @@ namespace sw
 
     hashed_string Equipment::findSlotFor( const hashed_string& itemID ) const
     {
+        hashed_string  firstMatch{};
         const ItemDef* pDef = _pCatalog != nullptr ? _pCatalog->findItem( itemID ) : nullptr;
         if ( pDef == nullptr || pDef->isEquipment() == false )
-            return hashed_string{};
-        hashed_string firstMatch{};
+            return firstMatch;
         for ( const EquipSlot& equipSlot : _listSlot )
         {
             if ( equipSlot._accept != pDef->_equipSlot )
                 continue;
             if ( equipSlot._item.isEmpty() )
-                return equipSlot._name;
+            {
+                firstMatch = equipSlot._name;
+                return firstMatch;
+            }
             if ( firstMatch.empty() )
                 firstMatch = equipSlot._name;
         }

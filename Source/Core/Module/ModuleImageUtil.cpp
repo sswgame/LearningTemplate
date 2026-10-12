@@ -136,10 +136,10 @@ namespace sw
         const string besideLibrary = getDebugSymbolPath( libraryPath );
         string_view  fileName;
         FileUtil::getFileNamePart( besideLibrary, fileName );
-        const string inSymbolFolder = FileUtil::joinPath( FileUtil::joinPath( FileUtil::getBinaryDirectory(), kSymbolFolder ), fileName );
-        if ( FileUtil::exists( inSymbolFolder ) )
-            return inSymbolFolder;
-        return FileUtil::exists( besideLibrary ) ? besideLibrary : string{};
+        string found = FileUtil::joinPath( FileUtil::joinPath( FileUtil::getBinaryDirectory(), kSymbolFolder ), fileName );
+        if ( FileUtil::exists( found ) == false )
+            found = FileUtil::exists( besideLibrary ) ? besideLibrary : string{};
+        return found;
     }
 
     string ModuleImageUtil::getModuleDirectory()
@@ -150,11 +150,14 @@ namespace sw
     string ModuleImageUtil::findModuleLibraryPath( string_view baseName )
     {
         const string fileName   = formatSharedLibraryName( baseName );
-        const string modulePath = FileUtil::joinPath( getModuleDirectory(), fileName );
-        if ( FileUtil::exists( modulePath ) )
-            return modulePath;
-        const string binaryPath = FileUtil::joinPath( FileUtil::getBinaryDirectory(), fileName );
-        return FileUtil::exists( binaryPath ) ? binaryPath : modulePath;
+        string       modulePath = FileUtil::joinPath( getModuleDirectory(), fileName );
+        if ( FileUtil::exists( modulePath ) == false )
+        {
+            const string binaryPath = FileUtil::joinPath( FileUtil::getBinaryDirectory(), fileName );
+            if ( FileUtil::exists( binaryPath ) )
+                modulePath = binaryPath;
+        }
+        return modulePath;
     }
 
     void* ModuleImageUtil::loadDynamicLibrary( string_view libraryName )

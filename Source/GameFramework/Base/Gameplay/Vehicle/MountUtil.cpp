@@ -83,8 +83,9 @@ namespace sw
             {
                 const float4x4 vehicleWorld = vehicleRoot.getWorldMatrix();
                 const float3   preferred    = float3::transform( seat.getExitOffset(), vehicleWorld );
+                float3         result       = preferred;
                 if ( isSpotFree( manager, rider, preferred ) )
-                    return preferred;
+                    return result;
                 const float3  offset   = seat.getExitOffset();
                 const float32 distance = MathUtil::sqrt( offset._x * offset._x + offset._z * offset._z );
                 const float32 baseYaw  = MathUtil::atan2( offset._x, offset._z );
@@ -94,9 +95,12 @@ namespace sw
                     const float3  probe{ MathUtil::sin( yaw ) * distance, offset._y, MathUtil::cos( yaw ) * distance };
                     const float3  spot = float3::transform( probe, vehicleWorld );
                     if ( isSpotFree( manager, rider, spot ) )
-                        return spot;
+                    {
+                        result = spot;
+                        return result;
+                    }
                 }
-                return preferred;
+                return result;
             }
         };
     } // namespace

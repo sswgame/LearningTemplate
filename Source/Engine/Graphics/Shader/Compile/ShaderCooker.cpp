@@ -146,15 +146,18 @@ namespace sw
 
     string_view ShaderCooker::getSubfolderForFormat( ShaderTargetFormat format )
     {
-        string_view defaultFolder;
+        string_view folder;
         for ( const ShaderCookerInternal::BackendFolder& row : ShaderCookerInternal::kArrBackendFolder )
         {
             if ( row._format == format )
-                return row._folder;
+            {
+                folder = row._folder;
+                return folder;
+            }
             if ( row._bDefault )
-                defaultFolder = row._folder;
+                folder = row._folder;
         }
-        return defaultFolder;
+        return folder;
     }
 
     string_view ShaderCooker::getExtensionForFormat( ShaderTargetFormat format )

@@ -509,8 +509,9 @@ namespace
                               material->setParameter( nullptr, sw::hashed_string( "outlineWidthMode" ), "1.0" ) &&
                               material->setParameter( nullptr, sw::hashed_string( "outlineLightingMix" ), "0.0" );
             if ( bSet == false )
-                return nullptr;
-            material->setStaticSwitch( sw::hashed_string( "Outline" ), bOutline );
+                material.reset();
+            else
+                material->setStaticSwitch( sw::hashed_string( "Outline" ), bOutline );
             return material;
         }
 

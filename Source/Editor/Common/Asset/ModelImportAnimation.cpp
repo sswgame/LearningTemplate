@@ -57,7 +57,8 @@ namespace sw::editor
         {
             float32 arrMatrix[16]{};
             Memory::copy( arrMatrix, node.matrix, sizeof( arrMatrix ) );
-            return BoneTransform::makeFromMatrix( float4x4{ arrMatrix } );
+            transform = BoneTransform::makeFromMatrix( float4x4{ arrMatrix } );
+            return transform;
         }
         if ( node.has_translation != 0 )
             transform._translation = float3{ node.translation[0], node.translation[1], node.translation[2] };

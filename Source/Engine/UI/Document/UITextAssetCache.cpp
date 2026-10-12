@@ -27,22 +27,25 @@ namespace sw
 
     shared_ptr<const void> UITextAssetCache::findOrLoadAsset( string_view path, string& outError )
     {
-        const string key  = FileUtil::normalizePath( path );
-        const auto   iter = _mapPathToAsset.find( key );
+        shared_ptr<const void> asset;
+        const string           key  = FileUtil::normalizePath( path );
+        const auto             iter = _mapPathToAsset.find( key );
         if ( iter != _mapPathToAsset.end() )
-            return iter->second;
+        {
+            asset = iter->second;
+            return asset;
+        }
 
         string text;
         if ( readText( key, path, text ) == false )
         {
             outError = string( path ) + ": " + _pAssetLabel + " not found";
-            return {};
+            return asset;
         }
         ++_parseCount;
-        shared_ptr<const void> asset = _pParse( text, path, outError );
-        if ( asset == nullptr )
-            return {};
-        _mapPathToAsset[key] = asset;
+        asset = _pParse( text, path, outError );
+        if ( asset != nullptr )
+            _mapPathToAsset[key] = asset;
         return asset;
     }
 

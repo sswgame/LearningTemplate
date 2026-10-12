@@ -153,7 +153,10 @@ namespace sw
         const uint64               chainKey      = FontSystemInternal::hashName( culture, FontSystemInternal::hashFamilyFace( family, spec._weight, spec._slant ) );
         const auto                 iter          = _mapChain.find( chainKey );
         if ( iter != _mapChain.end() )
-            return iter->second;
+        {
+            chain = iter->second;
+            return chain;
+        }
 
         // 1) 고른 패밀리: 가짜 굵게와 기울임은 이 면에서 정한다.
         uint8            bFauxBold   = SW_FALSE;

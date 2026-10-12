@@ -123,10 +123,10 @@ namespace sw
 
     AABB NavGeometryCollector::computeBakeBounds( const NavMeshSurfaceComponent* pSurface, const NavMeshGeometry& geometry )
     {
-        const AABB bounds = NavMeshBakeUtil::computeBakeBounds( geometry );
-        AABB       surfaceBox{};
+        AABB bounds = NavMeshBakeUtil::computeBakeBounds( geometry );
+        AABB surfaceBox{};
         if ( NavGeometryCollectorInternal::findSurfaceBox( pSurface, surfaceBox ) )
-            return clipToSurfaceBox( bounds, surfaceBox );
+            bounds = clipToSurfaceBox( bounds, surfaceBox );
         return bounds;
     }
 

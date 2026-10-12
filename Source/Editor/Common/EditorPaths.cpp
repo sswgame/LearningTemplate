@@ -41,7 +41,7 @@ namespace sw::editor
         {
             const string projectRoot = getProjectRootPath();
             if ( projectRoot.empty() )
-                return {};
+                return stateDir;
             stateDir = FileUtil::joinPath( projectRoot, config::kDirSavedEditor );
         }
         FileUtil::ensureDirectoryExists( stateDir );

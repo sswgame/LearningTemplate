@@ -24,16 +24,16 @@ namespace sw
     struct FixedStringWarningGuard
     {
         FixedStringWarningGuard()
-            : _bEntered{ _s_bWarning == false }
+            : _bEntered{ getWarningFlag() == false }
         {
             if ( _bEntered )
-                _s_bWarning = true;
+                getWarningFlag() = true;
         }
 
         ~FixedStringWarningGuard()
         {
             if ( _bEntered )
-                _s_bWarning = false;
+                getWarningFlag() = false;
         }
 
         FixedStringWarningGuard( const FixedStringWarningGuard& )            = delete;
@@ -44,8 +44,8 @@ namespace sw
         bool _bEntered;
 
     private:
-        /** @brief 이 스레드가 지금 잘림 경고 안인지입니다. */
-        static inline thread_local bool _s_bWarning{ false };
+        /** @brief 이 스레드가 지금 잘림 경고 안인지입니다(스레드마다 하나, 정의는 fixed_string.cpp 한 곳). */
+        static bool& getWarningFlag();
     };
 } // namespace sw
 

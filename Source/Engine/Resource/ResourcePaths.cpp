@@ -318,15 +318,16 @@ namespace sw
 
     string ResourcePaths::toResourceID( string_view path )
     {
+        string id;
         if ( path.empty() )
-            return {};
+            return id;
         string relative = FileUtil::normalizeSeparators( path );
         if ( FileUtil::isAbsolutePath( relative ) )
         {
             const string root = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( getRootFolderPath() ) );
             string       underRoot;
             if ( root.empty() || FileUtil::makeRelativePath( root, relative, underRoot ) == false )
-                return {};
+                return id;
             relative = std::move( underRoot );
         }
         else if ( FileUtil::startsWithPathComponent( FileUtil::normalizePath( relative ), FileUtil::normalizePath( path::kResourceFolder ) ) )
@@ -334,14 +335,14 @@ namespace sw
             relative = FileUtil::suffixAfterPathComponent( FileUtil::normalizePath( relative ), FileUtil::normalizePath( path::kResourceFolder ) );
         }
 
-        string id = FileUtil::normalizePath( relative );
+        id = FileUtil::normalizePath( relative );
         while ( StringUtil::startsWith( id, "./" ) )
         {
             id.erase( 0, 2 );
         }
         if ( id.empty() || id == "." || id == ".." || StringUtil::startsWith( id, "../" ) || id.find( "/../" ) != string::npos ||
              StringUtil::endsWith( id, "/.." ) )
-            return {};
+            id.clear();
         return id;
     }
 

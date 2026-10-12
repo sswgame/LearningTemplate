@@ -171,22 +171,22 @@ namespace sw
 
     JSONValue RigJSONReader::readArray( string_view key, bool bRequired )
     {
-        const JSONValue value = readMember( key, bRequired );
+        JSONValue value = readMember( key, bRequired );
         if ( value.isValid() && value.isArray() == false )
         {
             fail( RigNodeInternal::makeKeyMessage( key, "must be an array" ) );
-            return JSONValue{};
+            value = JSONValue{};
         }
         return value;
     }
 
     JSONValue RigJSONReader::readObject( string_view key, bool bRequired )
     {
-        const JSONValue value = readMember( key, bRequired );
+        JSONValue value = readMember( key, bRequired );
         if ( value.isValid() && value.isObject() == false )
         {
             fail( RigNodeInternal::makeKeyMessage( key, "must be an object" ) );
-            return JSONValue{};
+            value = JSONValue{};
         }
         return value;
     }

@@ -28,11 +28,13 @@ namespace
 #else
         constexpr const utf8* kServerExecutableName = "Server";
 #endif
-        const string inBin = FileUtil::joinPath( FileUtil::getCurrentPath(), kServerExecutableName );
-        if ( FileUtil::exists( inBin ) )
-            return inBin;
-        const string besideTest = FileUtil::joinPath( FileUtil::getBinaryDirectory(), kServerExecutableName );
-        return FileUtil::exists( besideTest ) ? besideTest : string{};
+        string serverPath = FileUtil::joinPath( FileUtil::getCurrentPath(), kServerExecutableName );
+        if ( FileUtil::exists( serverPath ) == false )
+        {
+            const string besideTest = FileUtil::joinPath( FileUtil::getBinaryDirectory(), kServerExecutableName );
+            serverPath              = FileUtil::exists( besideTest ) ? besideTest : string{};
+        }
+        return serverPath;
     }
 
     /** @brief 모은 줄 가운데 @p processIndex 의 것에 @p pText 가 든 줄 수입니다. */

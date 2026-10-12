@@ -576,6 +576,7 @@ namespace sw
         using Internal             = ShooterPlayerComponentInternal;
         const float3      fallback = getEyePosition() + float3{ 0.0f, -0.15f, 0.0f };
         const GameObject* pOwner   = getOwner();
+        float3            result   = fallback;
         float4x4          muzzle;
         if ( _bFirstPerson == SW_FALSE )
         {
@@ -583,8 +584,11 @@ namespace sw
             const GameObject*                   pBody       = findBodyObject();
             const CharacterAppearanceComponent* pAppearance = pBody != nullptr ? pBody->getComponent<CharacterAppearanceComponent>() : nullptr;
             if ( pAppearance != nullptr && pAppearance->findSocketWorldTransform( hashed_string( Internal::kBodyMuzzleSocket ), muzzle ) )
-                return muzzle.getTranslation();
-            return fallback;
+            {
+                result = muzzle.getTranslation();
+                return result;
+            }
+            return result;
         }
         // 1인칭에서는 손에 든 총(카메라 자식)과 그 무기의 총구 소켓을 쓴다.
         const MeshComponent*      pViewWeapon = pOwner != nullptr ? Internal::findNamed<MeshComponent>( *pOwner, Internal::kViewWeaponName ) : nullptr;
@@ -592,9 +596,9 @@ namespace sw
         const hashed_string       socketPath  = pDatabase != nullptr ? Internal::findItemSocketSet( *pDatabase, getWeaponItem( _weaponIndex ) ) : hashed_string{};
         const SocketSet*          pSockets    = socketPath.empty() ? nullptr : _weaponSockets.findSocketSet( socketPath );
         const SocketDef*          pMuzzle     = pSockets != nullptr ? pSockets->findSocket( hashed_string( Internal::kMuzzleSocket ) ) : nullptr;
-        if ( pViewWeapon == nullptr || pMuzzle == nullptr )
-            return fallback;
-        return ( pMuzzle->makeLocalTransform() * pViewWeapon->getWorldMatrix() ).getTranslation();
+        if ( pViewWeapon != nullptr && pMuzzle != nullptr )
+            result = ( pMuzzle->makeLocalTransform() * pViewWeapon->getWorldMatrix() ).getTranslation();
+        return result;
     }
 
     void ShooterPlayerComponent::switchWeapon( int32 weaponIndex )

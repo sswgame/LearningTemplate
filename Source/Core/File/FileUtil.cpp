@@ -547,13 +547,16 @@ namespace sw
     {
         static constexpr string_view kTestBinaryFolder = "TestBin";
         static constexpr string_view kBinaryFolder     = "Bin";
-        const string                 executableDir     = getDirectoryPart( getExecutablePath() );
+        string                       binaryDir         = getDirectoryPart( getExecutablePath() );
         string_view                  folderName;
-        getFileNamePart( executableDir, folderName );
-        if ( folderName != kTestBinaryFolder )
-            return executableDir;
-        const string siblingBinary = joinPath( getDirectoryPart( executableDir ), kBinaryFolder );
-        return isDirectory( siblingBinary ) ? siblingBinary : executableDir;
+        getFileNamePart( binaryDir, folderName );
+        if ( folderName == kTestBinaryFolder )
+        {
+            const string siblingBinary = joinPath( getDirectoryPart( binaryDir ), kBinaryFolder );
+            if ( isDirectory( siblingBinary ) )
+                binaryDir = siblingBinary;
+        }
+        return binaryDir;
     }
 
     string FileUtil::getExecutablePath()

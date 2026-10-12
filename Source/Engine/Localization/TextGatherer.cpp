@@ -403,11 +403,14 @@ namespace sw
 
             static string_view readPropertyValue( const XMLNode& node, const PropertyInfo& property )
             {
-                const string_view attribute = node.getAttributeText( property._name.c_str(), false );
-                if ( attribute.empty() == false )
-                    return attribute;
-                const utf8* pChildText = node.findChildText( property._name.c_str(), false );
-                return pChildText != nullptr ? string_view( pChildText ) : string_view{};
+                string_view value = node.getAttributeText( property._name.c_str(), false );
+                if ( value.empty() )
+                {
+                    const utf8* pChildText = node.findChildText( property._name.c_str(), false );
+                    if ( pChildText != nullptr )
+                        value = string_view( pChildText );
+                }
+                return value;
             }
 
             static void gatherNode( const XMLNode& node, string_view originName, TextGatherer& gatherer, uint32 depth )

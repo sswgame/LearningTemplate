@@ -39,9 +39,9 @@ namespace
         {
             bytes[offset] = expectedByteAt( offset );
         }
-        const sw::string path = sw::FileUtil::joinPath( test::makeTempDirectory( "asyncfileio" ), pName );
+        sw::string path = sw::FileUtil::joinPath( test::makeTempDirectory( "asyncfileio" ), pName );
         if ( sw::FileUtil::writeFile( path, bytes.data(), bytes.size() ) == false )
-            return {};
+            path.clear();
         return path;
     }
 

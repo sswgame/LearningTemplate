@@ -54,13 +54,16 @@ namespace
         /** @brief 반복 클립 `Wave`(알림 `Step` 0.5 초 · 커브 `Speed` 0 → 1)를 임시 폴더에 쓰고 폴더를 돌려줍니다. */
         static string writeWaveClip( const Skeleton& skeleton )
         {
-            const string      folder = test::makeTempPath( "rewindclips" );
+            string            folder = test::makeTempPath( "rewindclips" );
             const AnimRawClip raw    = test::makeChainRawClip( skeleton, 31, 30.0f, 0.8f );
             AnimClip          clip;
             clip.setName( hashed_string( "Wave" ) );
             clip.setLooping( true );
             if ( clip.compressFrom( raw, RawAnimCodec::getInstance(), AnimCodecSettings{}, nullptr ) == false )
-                return string{};
+            {
+                folder.clear();
+                return folder;
+            }
             clip.addNotify( AnimNotifyEvent{ hashed_string( "Step" ), 0.5f, 0.0f } );
             AnimCurve speed{};
             speed._name = hashed_string( "Speed" );
@@ -68,7 +71,7 @@ namespace
             speed._listKey.push_back( AnimCurveKey{ clip.getDuration(), 1.0f } );
             clip.addCurve( speed );
             if ( clip.saveToFile( FileUtil::joinPath( folder, "wave.animclip" ) ) == false )
-                return string{};
+                folder.clear();
             return folder;
         }
 

@@ -355,9 +355,10 @@ namespace sw::editor
 
     string EditorNetPlaySession::mergeTraces()
     {
+        string mergedPath;
 #if SW_PROFILER_TRACE_ENABLED
         if ( _traceDirectory.empty() )
-            return {};
+            return mergedPath;
         vector<ProfilerTraceMergeInput> listInput;
         for ( const unique_ptr<ChildProcess>& pChild : _listProcess )
         {
@@ -369,24 +370,25 @@ namespace sw::editor
                 SW_LOG_WARNING( "No trace from %# (%#)", pChild->_label, pChild->_tracePath );
         }
         if ( listInput.size() < 2 )
-            return {};
+            return mergedPath;
         string json;
         string report;
         if ( ProfilerTraceExport::mergeTraceJSON( listInput, json, report ) == false )
         {
             SW_LOG_WARNING( "Traces could not be merged: %#", report );
-            return {};
+            return mergedPath;
         }
-        const string mergedPath = _traceDirectory + "/" + kMergedTraceFileName;
+        mergedPath = _traceDirectory + "/" + kMergedTraceFileName;
         if ( FileUtil::writeTextFile( mergedPath, json ) == false )
         {
             SW_LOG_WARNING( "Merged trace could not be written to %#", mergedPath );
-            return {};
+            mergedPath.clear();
+            return mergedPath;
         }
         SW_LOG_INFO( "Traces merged: %# -> %#", report, mergedPath );
         return mergedPath;
 #else
-        return {};
+        return mergedPath;
 #endif
     }
 } // namespace sw::editor

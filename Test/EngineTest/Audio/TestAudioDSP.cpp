@@ -22,12 +22,15 @@ namespace
         {
             sw::unique_ptr<sw::IAudioEffect> pEffect = sw::AudioEffectRegistry::createEffect( sw::hashed_string( pType ) );
             if ( pEffect == nullptr )
-                return nullptr;
+                return pEffect;
             for ( const std::pair<const utf8*, float32>& parameter : listParameter )
             {
                 const int32 parameterIndex = pEffect->findParameterIndex( sw::hashed_string( parameter.first ) );
                 if ( parameterIndex < 0 )
-                    return nullptr;
+                {
+                    pEffect.reset();
+                    return pEffect;
+                }
                 pEffect->setParameter( static_cast<uint32>( parameterIndex ), parameter.second );
             }
             return pEffect;

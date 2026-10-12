@@ -156,9 +156,9 @@ namespace
                     ++count;
                 }
             }
-            if ( count == 0 )
-                return sum;
-            return AppUITestColor{ sum._r / static_cast<float32>( count ), sum._g / static_cast<float32>( count ), sum._b / static_cast<float32>( count ) };
+            if ( count != 0 )
+                sum = AppUITestColor{ sum._r / static_cast<float32>( count ), sum._g / static_cast<float32>( count ), sum._b / static_cast<float32>( count ) };
+            return sum;
         }
 
         static float32 computeLuma( const AppUITestColor& color ) { return 0.2126f * color._r + 0.7152f * color._g + 0.0722f * color._b; }

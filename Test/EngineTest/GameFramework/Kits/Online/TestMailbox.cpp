@@ -41,10 +41,9 @@ namespace
             ServiceTransaction transaction;
             string             mailKey;
             bool               bReplayed = false;
-            if ( ServiceMail::stageSend( _database, message, transaction, mailKey, bReplayed ) != LedgerResult::Ok )
-                return string();
-            if ( bReplayed == false && _database.commit( transaction ) != ServiceStoreResult::Ok )
-                return string();
+            if ( ServiceMail::stageSend( _database, message, transaction, mailKey, bReplayed ) != LedgerResult::Ok ||
+                 ( bReplayed == false && _database.commit( transaction ) != ServiceStoreResult::Ok ) )
+                mailKey.clear();
             return mailKey;
         }
 

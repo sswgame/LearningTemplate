@@ -118,8 +118,9 @@ namespace sw
     {
         float3 forward = float3::transformVector( float3( 0.0f, 0.0f, 1.0f ), getWorldMatrix() );
         if ( forward.getLengthSquared() <= MathUtil::kEpsilon )
-            return float3( 0.0f, 0.0f, 1.0f );
-        forward.normalize();
+            forward = float3( 0.0f, 0.0f, 1.0f );
+        else
+            forward.normalize();
         return forward;
     }
 

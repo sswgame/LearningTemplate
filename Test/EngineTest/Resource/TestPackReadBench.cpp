@@ -120,9 +120,9 @@ namespace
             listFile.emplace_back( makeEntryKey( index ), makeEntryContent( index ) );
         }
 
-        const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packreadbench" ), pName );
+        sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packreadbench" ), pName );
         if ( sw::test::ResourcePackTestUtil::createPackFile( packPath, 0, compression, listFile ) == false )
-            return {};
+            packPath.clear();
         return packPath;
     }
 

@@ -171,11 +171,13 @@ namespace sw
                         continue;
                     log += readText( path );
                 }
-                if ( log.size() <= maxBytes )
-                    return log;
-                StringBuilder<constant::kMaxBuffer128> header;
-                header.appendFormat( "[... %# earlier bytes dropped ...]\n", static_cast<uint64>( log.size() - maxBytes ) );
-                return string( header.c_str() ) + log.substr( log.size() - static_cast<size_t>( maxBytes ) );
+                if ( log.size() > maxBytes )
+                {
+                    StringBuilder<constant::kMaxBuffer128> header;
+                    header.appendFormat( "[... %# earlier bytes dropped ...]\n", static_cast<uint64>( log.size() - maxBytes ) );
+                    log = string( header.c_str() ) + log.substr( log.size() - static_cast<size_t>( maxBytes ) );
+                }
+                return log;
             }
         };
     } // namespace

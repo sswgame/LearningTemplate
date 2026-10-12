@@ -129,13 +129,13 @@ namespace sw
 
     float3 CharacterDataReader::readFloat3( const XMLNode& node, const utf8* pName, const float3& fallback )
     {
+        float3      value = fallback;
         const utf8* pText = node.findAttribute( pName );
         if ( pText == nullptr )
-            return fallback;
+            return value;
         vector<string_view> listToken;
         splitTokens( string_view( pText ), listToken );
-        float3 value = fallback;
-        bool   bOk   = listToken.size() == 3;
+        bool bOk = listToken.size() == 3;
         for ( size_t axis = 0; bOk && axis < 3; ++axis )
         {
             bOk = StringUtil::parseFloat( listToken[axis], value.data()[axis] );
@@ -143,7 +143,7 @@ namespace sw
         if ( bOk == false )
         {
             addError( node, string( "attribute '" ) + pName + "' is not three numbers: '" + pText + "'" );
-            return fallback;
+            value = fallback;
         }
         return value;
     }

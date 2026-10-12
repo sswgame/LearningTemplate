@@ -360,6 +360,7 @@ namespace sw
 
     PhysicsBodyHandle Box2DPhysicsScene::createBody( const PhysicsBodyDesc2D& desc )
     {
+        PhysicsBodyHandle               handle{};
         shared_ptr<const ShapeDescList> pListShape;
         hashed_string                   defaultMaterial = desc._material;
         if ( desc._sharedShape.isValid() )
@@ -368,7 +369,7 @@ namespace sw
             if ( pShapeRecord == nullptr )
             {
                 SW_LOG_ERROR( "createBody: the shared shape handle is stale" );
-                return PhysicsBodyHandle{};
+                return handle;
             }
             pListShape = pShapeRecord->_pListShape;
             if ( defaultMaterial.empty() )
@@ -381,7 +382,7 @@ namespace sw
         if ( pListShape->empty() )
         {
             SW_LOG_ERROR( "A physics body needs at least one shape" );
-            return PhysicsBodyHandle{};
+            return handle;
         }
 
         b2BodyDef bodyDef       = b2DefaultBodyDef();
@@ -398,23 +399,24 @@ namespace sw
         bodyDef.fixedRotation   = desc._bLockRotation;
 
         BodyRecord record;
-        record._pListShape             = pListShape;
-        record._bodyID                 = b2CreateBody( _worldID, &bodyDef );
-        record._userData               = desc._userData;
-        record._type                   = desc._type;
-        record._layer                  = desc._layer;
-        record._bTrigger               = desc._bTrigger;
-        record._bEnabled               = true;
-        const b2BodyId          bodyID = record._bodyID;
-        const PhysicsBodyHandle handle = PhysicsBodyHandle::fromSlot( _bodies.insert( std::move( record ) ) );
-        BodyRecord&             stored = *findBody( handle );
+        record._pListShape    = pListShape;
+        record._bodyID        = b2CreateBody( _worldID, &bodyDef );
+        record._userData      = desc._userData;
+        record._type          = desc._type;
+        record._layer         = desc._layer;
+        record._bTrigger      = desc._bTrigger;
+        record._bEnabled      = true;
+        const b2BodyId bodyID = record._bodyID;
+        handle                = PhysicsBodyHandle::fromSlot( _bodies.insert( std::move( record ) ) );
+        BodyRecord& stored    = *findBody( handle );
         b2Body_SetUserData( bodyID, Box2DUtil::toUserData( handle ) );
         for ( const PhysicsShapeDesc2D& shape : *pListShape )
         {
             if ( attachShape( stored, shape, defaultMaterial, handle ) == false )
             {
                 destroyBody( handle );
-                return PhysicsBodyHandle{};
+                handle = PhysicsBodyHandle{};
+                return handle;
             }
         }
         if ( desc._mass > 0.0f && desc._type == PhysicsBodyType::Dynamic )

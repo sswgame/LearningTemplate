@@ -67,9 +67,9 @@ namespace sw
                     {0.35f, 0.85f,  1.0f, 1.0f},
                     { 0.3f,  0.8f,  0.4f, 1.0f},
                 };
-                const float4 color = kArrCategoryColor[MathUtil::clamp( category, 0, kUnitLookCategory - 1 )];
+                float4 color = kArrCategoryColor[MathUtil::clamp( category, 0, kUnitLookCategory - 1 )];
                 if ( bSelected )
-                    return float4{ 0.5f + color._x * 0.5f, 0.5f + color._y * 0.5f, 0.5f + color._z * 0.5f, 1.0f };
+                    color = float4{ 0.5f + color._x * 0.5f, 0.5f + color._y * 0.5f, 0.5f + color._z * 0.5f, 1.0f };
                 return color;
             }
         };

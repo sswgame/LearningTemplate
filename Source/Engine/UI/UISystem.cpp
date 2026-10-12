@@ -303,17 +303,18 @@ namespace sw
                                                       vector<string>& outListStyleSheet )
     {
         string                                  error;
+        unique_ptr<Widget>                      root;
         const shared_ptr<const UIDocumentAsset> document = _documentCache.findOrLoad( documentPath, error );
         if ( document == nullptr )
         {
             SW_LOG_ERROR( "[UI] Screen document is not loaded: %#", error.c_str() );
-            return {};
+            return root;
         }
-        unique_ptr<Widget> root = UIDocumentLoader::instantiate( *document, _documentCache, outListBinding, error );
+        root = UIDocumentLoader::instantiate( *document, _documentCache, outListBinding, error );
         if ( root == nullptr )
         {
             SW_LOG_ERROR( "[UI] Screen document cannot be built: %#", error.c_str() );
-            return {};
+            return root;
         }
         outDesc = document->_screenDesc;
         // 스타일 시트: 문서의 것 다음에 조각의 것(너비 우선, 이미 본 문서와 시트는 건너뛴다). 조각은 생성 단계에서 이미 캐시에 올라가 있다.

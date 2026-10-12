@@ -54,7 +54,7 @@ namespace sw
                 UIPropertyPath path{};
                 string         ignored;
                 if ( UIBindingValueUtil::resolvePath( type, pName, path, ignored ) == false )
-                    return UIPropertyPath{};
+                    path = UIPropertyPath{};
                 return path;
             }
 

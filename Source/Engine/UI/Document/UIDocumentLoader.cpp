@@ -267,24 +267,40 @@ namespace sw
             /** @brief 노드 @p nodeIndex 와 그 아래를 만듭니다. @p namePrefix 가 있으면(조각 안) 이름을 `접두.이름` 으로 감쌉니다. */
             static unique_ptr<Widget> instantiateNode( InstantiateContext& context, const UIDocumentAsset& document, uint32 nodeIndex, const string& namePrefix )
             {
+                unique_ptr<Widget>    widget;
                 const UIDocumentNode& node  = document._listNode[nodeIndex];
                 const TypeInfo*       pType = engine::getTypeRegistry().findType( node._typeName );
                 if ( pType == nullptr || pType->isAlive() == false || pType->isDerivedFrom( Widget::StaticType() ) == false )
-                    return failInstantiate( context, document, node, string( "'" ) + node._typeName.c_str() + "' is not a widget type" );
+                {
+                    widget = failInstantiate( context, document, node, string( "'" ) + node._typeName.c_str() + "' is not a widget type" );
+                    return widget;
+                }
 
-                unique_ptr<Widget> widget = UIDocumentLoader::createWidget( *pType );
+                widget = UIDocumentLoader::createWidget( *pType );
                 if ( widget == nullptr )
-                    return failInstantiate( context, document, node, string( "'" ) + node._typeName.c_str() + "' cannot be created (abstract or no default constructor)" );
+                {
+                    widget = failInstantiate( context, document, node, string( "'" ) + node._typeName.c_str() + "' cannot be created (abstract or no default constructor)" );
+                    return widget;
+                }
                 const TypeInfo* pDynamicType = widget->getTypeInfo();
                 if ( pDynamicType == nullptr || pDynamicType->_name != pType->_name )
-                    return failInstantiate( context, document, node, string( "'" ) + node._typeName.c_str() + "' does not override getTypeInfo()" );
+                {
+                    widget = failInstantiate( context, document, node, string( "'" ) + node._typeName.c_str() + "' does not override getTypeInfo()" );
+                    return widget;
+                }
 
                 vector<SchemaOrphanValue> listOrphan;
                 if ( XMLSerializer::deserializeSoft( widget.get(), *pType, node._propertyXML, &listOrphan ) == false )
-                    return failInstantiate( context, document, node, string( "'" ) + node._typeName.c_str() + "' cannot be read" );
+                {
+                    widget = failInstantiate( context, document, node, string( "'" ) + node._typeName.c_str() + "' cannot be read" );
+                    return widget;
+                }
                 if ( listOrphan.empty() == false )
-                    return failInstantiate( context, document, node,
-                                            string( "'" ) + node._typeName.c_str() + "' has unknown or unreadable '" + describeOrphan( listOrphan.front() ) + "'" );
+                {
+                    widget = failInstantiate( context, document, node,
+                                              string( "'" ) + node._typeName.c_str() + "' has unknown or unreadable '" + describeOrphan( listOrphan.front() ) + "'" );
+                    return widget;
+                }
 
                 if ( namePrefix.empty() == false && widget->getName().empty() == false )
                     widget->setName( hashed_string( namePrefix + "." + widget->getName().c_str() ) );
@@ -299,7 +315,10 @@ namespace sw
                 if ( node._fragment.empty() == false )
                 {
                     if ( pPanel == nullptr )
-                        return failInstantiate( context, document, node, "a fragment needs a panel to hold it" );
+                    {
+                        widget = failInstantiate( context, document, node, "a fragment needs a panel to hold it" );
+                        return widget;
+                    }
                     vector<string>& listStack  = context._listFragmentStack;
                     const bool      bRecursive = std::find( listStack.begin(), listStack.end(), node._fragment ) != listStack.end();
                     const bool      bTooDeep   = listStack.size() >= kMaxFragmentDepth;
@@ -311,12 +330,16 @@ namespace sw
                             chain += path + " -> ";
                         }
                         chain += node._fragment;
-                        return failInstantiate( context, document, node, ( bRecursive ? "fragment includes itself: " : "fragments nest too deep: " ) + chain );
+                        widget = failInstantiate( context, document, node, ( bRecursive ? "fragment includes itself: " : "fragments nest too deep: " ) + chain );
+                        return widget;
                     }
                     string                                  fragmentError;
                     const shared_ptr<const UIDocumentAsset> fragment = context._pCache->findOrLoad( node._fragment, fragmentError );
                     if ( fragment == nullptr )
-                        return failInstantiate( context, document, node, "fragment '" + node._fragment + "' is not loaded: " + fragmentError );
+                    {
+                        widget = failInstantiate( context, document, node, "fragment '" + node._fragment + "' is not loaded: " + fragmentError );
+                        return widget;
+                    }
                     // 조각 안의 이름은 이 위젯의 (감싼) 이름으로 감싼다. 이름 없는 조각은 바깥 접두를 그대로 넘긴다.
                     string childPrefix = namePrefix;
                     if ( widget->getName().empty() == false )
@@ -325,7 +348,10 @@ namespace sw
                     unique_ptr<Widget> child = instantiateNode( context, *fragment, 0, childPrefix );
                     listStack.pop_back();
                     if ( child == nullptr )
-                        return {};
+                    {
+                        widget.reset();
+                        return widget;
+                    }
                     pPanel->addChild( std::move( child ) );
                     return widget;
                 }
@@ -334,7 +360,10 @@ namespace sw
                 {
                     unique_ptr<Widget> child = instantiateNode( context, document, childIndex, namePrefix );
                     if ( child == nullptr )
-                        return {};
+                    {
+                        widget.reset();
+                        return widget;
+                    }
                     pPanel->addChild( std::move( child ) );
                 }
                 return widget;

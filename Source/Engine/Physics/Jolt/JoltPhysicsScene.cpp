@@ -313,40 +313,43 @@ namespace sw
 
     JPH::RefConst<JPH::Shape> JoltPhysicsScene::createJoltShape( span<const PhysicsShapeDesc3D> listShape, const hashed_string& defaultMaterial, bool bAllowMesh ) const
     {
+        JPH::RefConst<JPH::Shape> pResult;
         if ( listShape.empty() )
         {
             SW_LOG_ERROR( "A physics body needs at least one shape" );
-            return nullptr;
+            return pResult;
         }
         JPH::StaticCompoundShapeSettings compound;
         compound.SetEmbedded();
-        JPH::RefConst<JPH::Shape> pSingle;
         for ( const PhysicsShapeDesc3D& shape : listShape )
         {
             if ( shape._type == PhysicsShapeType3D::TriangleMesh && bAllowMesh == false )
             {
                 SW_LOG_ERROR( "Triangle mesh shapes need a Static or Kinematic body (a moving mesh has no volume)" );
-                return nullptr;
+                return pResult;
             }
             const PhysicsMaterialDef& material = resolveMaterial( shape._material, defaultMaterial );
             JPH::RefConst<JPH::Shape> pShape   = createSingleJoltShape( shape, material, findJoltMaterial( material._name ) );
             if ( pShape == nullptr )
-                return nullptr;
+                return pResult;
             if ( listShape.size() == 1 )
             {
-                pSingle = pShape;
                 if ( JoltPhysicsSceneInternal::isIdentityLocal( shape ) )
-                    return pSingle;
+                {
+                    pResult = pShape;
+                    return pResult;
+                }
                 JPH::RotatedTranslatedShapeSettings offset{ JoltUtil::toJolt( shape._localPosition ),
-                                                            JoltUtil::toJolt( quaternion::makeFromYawPitchRoll( shape._localRotation ) ), pSingle.GetPtr() };
+                                                            JoltUtil::toJolt( quaternion::makeFromYawPitchRoll( shape._localRotation ) ), pShape.GetPtr() };
                 offset.SetEmbedded();
                 JPH::Shape::ShapeResult result = offset.Create();
                 if ( result.HasError() )
                 {
                     SW_LOG_ERROR( "Jolt rejected a shape offset: %#", result.GetError().c_str() );
-                    return nullptr;
+                    return pResult;
                 }
-                return result.Get();
+                pResult = result.Get();
+                return pResult;
             }
             compound.AddShape( JoltUtil::toJolt( shape._localPosition ), JoltUtil::toJolt( quaternion::makeFromYawPitchRoll( shape._localRotation ) ), pShape.GetPtr() );
         }
@@ -354,9 +357,10 @@ namespace sw
         if ( result.HasError() )
         {
             SW_LOG_ERROR( "Jolt rejected a compound shape: %#", result.GetError().c_str() );
-            return nullptr;
+            return pResult;
         }
-        return result.Get();
+        pResult = result.Get();
+        return pResult;
     }
 
     PhysicsShapeHandle JoltPhysicsScene::createShape( span<const PhysicsShapeDesc3D> listShape, const hashed_string& material )
@@ -439,6 +443,7 @@ namespace sw
 
     PhysicsBodyHandle JoltPhysicsScene::createBodyUnadded( const PhysicsBodyDesc3D& desc )
     {
+        PhysicsBodyHandle         handle{};
         BodyRecord                record;
         JPH::RefConst<JPH::Shape> pShape;
         if ( desc._sharedShape.isValid() )
@@ -447,7 +452,7 @@ namespace sw
             if ( pShapeRecord == nullptr )
             {
                 SW_LOG_ERROR( "createBody: the shared shape handle is stale" );
-                return PhysicsBodyHandle{};
+                return handle;
             }
             pShape             = pShapeRecord->_pShape;
             record._pListShape = pShapeRecord->_pListShape;
@@ -456,13 +461,13 @@ namespace sw
         {
             pShape = createJoltShape( span<const PhysicsShapeDesc3D>{ desc._listShape.data(), desc._listShape.size() }, desc._material, desc._type != PhysicsBodyType::Dynamic );
             if ( pShape == nullptr )
-                return PhysicsBodyHandle{};
+                return handle;
             record._pListShape = make_shared<const ShapeDescList>( desc._listShape );
         }
         if ( desc._type == PhysicsBodyType::Dynamic && pShape->MustBeStatic() )
         {
             SW_LOG_ERROR( "createBody: a Dynamic body cannot use a triangle mesh shape" );
-            return PhysicsBodyHandle{};
+            return handle;
         }
 
         const PhysicsMaterialDef& material = resolveMaterial( desc._material, hashed_string{} );
@@ -492,15 +497,15 @@ namespace sw
         if ( pBody == nullptr )
         {
             SW_LOG_ERROR( "createBody: Jolt is out of bodies (limit %#)", JoltPhysicsSceneInternal::kMaxBodyCount );
-            return PhysicsBodyHandle{};
+            return handle;
         }
-        record._bodyID                 = pBody->GetID();
-        record._userData               = desc._userData;
-        record._type                   = desc._type;
-        record._layer                  = desc._layer;
-        record._bTrigger               = desc._bTrigger;
-        record._bEnabled               = true;
-        const PhysicsBodyHandle handle = PhysicsBodyHandle::fromSlot( _bodies.insert( std::move( record ) ) );
+        record._bodyID   = pBody->GetID();
+        record._userData = desc._userData;
+        record._type     = desc._type;
+        record._layer    = desc._layer;
+        record._bTrigger = desc._bTrigger;
+        record._bEnabled = true;
+        handle           = PhysicsBodyHandle::fromSlot( _bodies.insert( std::move( record ) ) );
         pBody->SetUserData( handle.packed() );
         setHandle( pBody->GetID(), handle );
         ++_bodyCount;
@@ -509,10 +514,13 @@ namespace sw
 
     PhysicsBodyHandle JoltPhysicsScene::createBody( const PhysicsBodyDesc3D& desc )
     {
-        const PhysicsBodyHandle handle  = createBodyUnadded( desc );
-        const BodyRecord*       pRecord = findBody( handle );
+        PhysicsBodyHandle handle  = createBodyUnadded( desc );
+        const BodyRecord* pRecord = findBody( handle );
         if ( pRecord == nullptr )
-            return PhysicsBodyHandle{};
+        {
+            handle = PhysicsBodyHandle{};
+            return handle;
+        }
         const bool bActivate = desc._type != PhysicsBodyType::Static;
         _system.GetBodyInterface().AddBody( pRecord->_bodyID, bActivate ? JPH::EActivation::Activate : JPH::EActivation::DontActivate );
         return handle;

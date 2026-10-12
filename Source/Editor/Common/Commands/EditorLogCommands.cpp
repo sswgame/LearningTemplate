@@ -51,7 +51,8 @@ namespace sw::editor
              */
             static string_view readPathBefore( string_view text, size_t separator )
             {
-                size_t begin = separator;
+                string_view result{};
+                size_t      begin = separator;
                 while ( begin > 0 && isPathBoundary( text[begin - 1] ) == false )
                 {
                     --begin;
@@ -59,20 +60,21 @@ namespace sw::editor
                 const string_view path = text.substr( begin, separator - begin );
                 const size_t      dot  = path.rfind( '.' );
                 if ( dot == string_view::npos || dot == 0 )
-                    return {};
+                    return result;
                 const size_t extensionLength = path.size() - dot - 1;
                 if ( extensionLength == 0 || extensionLength > 8 )
-                    return {};
+                    return result;
                 for ( size_t index = dot + 1; index < path.size(); ++index )
                 {
                     if ( isAlphaNumeric( path[index] ) == false )
-                        return {};
+                        return result;
                 }
                 // 확장자 앞에 이름이 있어야 한다(`.cpp` 하나만으로는 경로가 아니다).
                 const utf8 beforeDot = path[dot - 1];
                 if ( beforeDot == '/' || beforeDot == '\\' )
-                    return {};
-                return path;
+                    return result;
+                result = path;
+                return result;
             }
         };
     } // namespace
