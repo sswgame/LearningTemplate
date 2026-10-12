@@ -316,6 +316,9 @@ GameFramework의 데이터 테이블 캐시(`GameDataCache`)는 게임 서비스
 
 **컴포넌트가 머티리얼과 메시를 보관합니다.** Object가 Graphics의 아래 티어를 보는 방향이고, 언리얼의 `UStaticMeshComponent` 와 같습니다.
 Godot처럼 "노드는 RID만 안다"로 바꾸면 모든 컴포넌트에 해석 테이블이 생기고, `shared_ptr` 로 풀어 둔 렌더 패킷 수명 문제가 다시 생깁니다.
+다만 그 의존은 기능 컴포넌트(`Object/Component/{2D,3D,Audio,Navigation,Physics}`, `Object/SceneAnimation`)의 몫입니다. 컴포넌트 모델 코어(`Object/GameObject`, `Object/Prefab`,
+`Object/Component` 바로 아래)는 Graphics, Physics, Navigation, Audio, Animation, TileMap 을 include 하지 않고, 씬마다 하나인 기능은 씬 서비스(`ISceneService`)로 붙습니다.
+언리얼의 `UWorldSubsystem` 과 같은 방향이고, `CheckEngineLayers` 가 지킵니다(규칙과 예외 표는 `Scripts/lint/rules/CheckEngineLayers.toml` 의 `coreFolder` · `core:`).
 
 **렌더러가 컴포넌트를 읽습니다.** `GPUSceneBuilder` 가 `PrimitiveRegistry` 와 `ComponentRegistry` 를 훑는 것은 언리얼 `FScene` 이 프리미티브 프록시를 훑는 것과 같은 방향입니다.
 영속 렌더 씬(`FScene` 모델)은 두지 않습니다. 빌더가 내용이 같으면 빌드를 건너뛰고, 움직임만 있으면 제자리에서 갱신하고, 바뀐 구간만 업로드하기 때문입니다.

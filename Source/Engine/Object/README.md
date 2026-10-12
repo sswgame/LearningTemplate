@@ -331,9 +331,17 @@ addSubTickPrerequisite( kRideSubTick, pVehicleComponent->getTickHandle() );
 씬의 위치 갱신(`SceneTransformHierarchy`)이 이 구조의 첫 예입니다.
 엔진 바깥의 모듈이 단계를 더하려면 `ISceneFrameSystem` 을 구현해 `addFrameSystem` 으로 붙입니다. 이 경우 실행 위치는 "프레임 시스템" 단계로 정해져 있습니다.
 
-엔진의 기능 폴더가 씬마다 하나씩 두는 서비스(내비게이션)는 씬 서비스(`ISceneService`)로 등록합니다. 서비스 .cpp 에 `SW_SCENE_SERVICE( 타입, 단계 )` 한 줄을 두면
-매니저가 만들 때 함께 만들어지고, 그 단계에서 `update`, `clear` 에서 `shutdown` 이 불립니다. 부르는 쪽은 `manager.getSceneService<SceneNavigation>()` 로 얻습니다.
-코어(`GameObject/`)는 서비스 타입을 모르므로 기능 폴더를 include 하지 않습니다. 레지스트리는 Engine 이미지 안에서만 채웁니다(핫 리로드 모듈은 프레임 시스템을 씁니다).
+엔진의 기능 폴더가 씬마다 하나씩 두는 서비스(물리 `ScenePhysics`, 오디오 `SceneAudio`, 내비게이션 `SceneNavigation`)는 씬 서비스(`ISceneService`)로 등록합니다.
+서비스 .cpp 에 `SW_SCENE_SERVICE( 타입, 단계 )` 한 줄을 두면 매니저가 만들 때 함께 만들어지고, 그 단계에서 `update`, `clear` 에서 `shutdown` 이 불립니다.
+부르는 쪽은 `manager.getSceneService<ScenePhysics>()` 처럼 얻고, 그 서비스의 헤더를 직접 include 합니다. 서비스는 만들어질 때 `manager.getSceneEngineServices()` 에서 자기 엔진 서비스(물리, 오디오)를 읽습니다.
+레지스트리는 Engine 이미지 안에서만 채웁니다(핫 리로드 모듈은 프레임 시스템을 씁니다).
+
+### 코어와 기능 컴포넌트
+
+`GameObject/` · `Prefab/` · `Component/` 바로 아래 파일이 컴포넌트 모델의 **코어**입니다. 코어는 기능 폴더(Graphics, Physics, Navigation, Audio, Animation, TileMap)를 include 하지 않습니다.
+기능에 닿는 코드는 `Component/{2D,3D,Audio,Navigation,Physics}` 와 `SceneAnimation/`(씬 위에서 도는 애니메이션 시스템, 군중, LOD, 되감기, 워핑) 에 두고, 코어에 등록하는 방향으로 붙습니다.
+코어가 값으로 들어야 하는 작은 타입(물리 바디 핸들, 애니메이션 알림 종류)은 `Engine/Common` 의 계약 헤더(`PhysicsHandle.h`, `AnimationNotifyPhase.h`)에 둡니다.
+`CheckEngineLayers` 가 이 규칙을 지키고, 예외 표(`Scripts/lint/rules/CheckEngineLayers.toml` 의 `core:` 키)는 비어 있습니다.
 
 ## 함정과 주의
 
@@ -547,3 +555,7 @@ GameObject* pBullet = game::getService<AssetManager>()->getAssetCache<PrefabCach
 | `GameObject/ComponentRegistry.h` | 타입별 컴포넌트 레지스트리 |
 | `Prefab/PrefabAsset.h` | 프리팹 저장과 스폰, 중첩 프리팹 노드 |
 | `Prefab/PrefabInstanceRegistry.h` | 중첩 프리팹으로 스폰한 부품의 기록(씬 서비스) |
+| `GameObject/ISceneService.h` | 기능 폴더가 씬마다 두는 서비스의 계약과 레지스트리 |
+| `Component/Physics/ScenePhysics.h` | 씬의 강체 물리와 겹침 월드(씬 서비스) |
+| `Component/Audio/SceneAudio.h` | 씬의 오디오 묶기(씬 서비스) |
+| `SceneAnimation/AnimationSystem.h` | 씬의 애니메이션 평가, 군중, LOD |
