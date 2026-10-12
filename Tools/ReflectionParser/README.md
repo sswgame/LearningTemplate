@@ -65,7 +65,9 @@ REFLECT sw::CameraComponent : sw::SceneComponent  [component factory]
   FUNCTION $ctor() -> void  [constructor]
 ENUM sw::CameraRole : unsigned char
   Game = 0
-  Editor = 1
+  Viewport = 1
+  Custom = 2
+  Capture = 3
 ```
 
 - `[component factory]` 가 붙으면 생성 코드가 `TypeInfo::_addComponent` 를 채웁니다. 이 표시가 없으면 이름으로 그 컴포넌트를 만들 수 없습니다.
