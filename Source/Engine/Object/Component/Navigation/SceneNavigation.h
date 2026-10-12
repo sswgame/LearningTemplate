@@ -24,6 +24,7 @@
 #include "Core/Math/AABB.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/RegistrationList.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Navigation/NavMeshAsset.h"
@@ -188,7 +189,7 @@ namespace sw
         /** @brief 매니저에 놓인 표면 중 @p agentType 을 맡는 첫 표면입니다. */
         const NavMeshSurfaceComponent* findSurface( const hashed_string& agentType );
         /** @brief 등록된 기하 소스입니다(쿠킹). */
-        const vector<INavGeometrySource*>& getGeometrySources() const { return _listGeometrySource; }
+        const vector<INavGeometrySource*>& getGeometrySources() const { return _listGeometrySource.getItems(); }
         /** @brief 베이크 경계 — 표면의 상자(있으면)와 기하 경계의 겹침입니다. */
         static AABB computeBakeBounds( const NavMeshSurfaceComponent* pSurface, const NavMeshGeometry& geometry );
 
@@ -208,22 +209,22 @@ namespace sw
         void writeAgentResult( NavMeshAgentComponent& agent, NavMeshRuntime& runtime, float32 deltaTime );
         void waitForAllBakes();
 
-        NavMeshSettings                    _settings;
-        string                             _sourcePath;
-        shared_ptr<const NavMeshAsset>     _pCookedAsset;
-        vector<unique_ptr<NavMeshRuntime>> _listRuntime;
-        vector<NavMeshAgentComponent*>     _listAgent;
-        vector<NavMeshSurfaceComponent*>   _listSurface;
-        vector<NavMeshObstacleComponent*>  _listObstacle;
-        vector<INavGeometrySource*>        _listGeometrySource;
-        vector<AABB>                       _listDirtyArea;       ///< `_dirtyLock` 아래
-        vector<hashed_string>              _listFailedAgentType; ///< 모르는 종류 — 오류를 한 번만
-        GameObjectManager*                 _pManager;
-        GameObjectHandle                   _debugView; ///< `updateDebugView` 가 세운 오브젝트
-        uint32                             _rebakedTileCount;
-        mutable SpinLock                   _dirtyLock; ///< `invalidateArea` 가 아무 스레드에서 온다
-        bool                               _bSettingsLoaded;
-        bool                               _bGeometryDirty; ///< `_dirtyLock` 아래
-        bool                               _bObstacleVolumeDirty;
+        NavMeshSettings                      _settings;
+        string                               _sourcePath;
+        shared_ptr<const NavMeshAsset>       _pCookedAsset;
+        vector<unique_ptr<NavMeshRuntime>>   _listRuntime;
+        vector<NavMeshAgentComponent*>       _listAgent;
+        vector<NavMeshSurfaceComponent*>     _listSurface;
+        vector<NavMeshObstacleComponent*>    _listObstacle;
+        RegistrationList<INavGeometrySource> _listGeometrySource;  ///< 등록 순서(빼도 순서 유지) — 한 주인을 여러 소스가 맡으면 먼저 등록한 것이 이긴다
+        vector<AABB>                         _listDirtyArea;       ///< `_dirtyLock` 아래
+        vector<hashed_string>                _listFailedAgentType; ///< 모르는 종류 — 오류를 한 번만
+        GameObjectManager*                   _pManager;
+        GameObjectHandle                     _debugView; ///< `updateDebugView` 가 세운 오브젝트
+        uint32                               _rebakedTileCount;
+        mutable SpinLock                     _dirtyLock; ///< `invalidateArea` 가 아무 스레드에서 온다
+        bool                                 _bSettingsLoaded;
+        bool                                 _bGeometryDirty; ///< `_dirtyLock` 아래
+        bool                                 _bObstacleVolumeDirty;
     };
 } // namespace sw

@@ -139,6 +139,8 @@ SW_TEST_CASE( NavMeshDynamicTest, GeometrySourceChangeRebakesThatArea )
     sw::MockPillarGeometrySource source;
     source._pOwner = pPillar;
     navigation.registerGeometrySource( &source );
+    navigation.registerGeometrySource( &source ); // 같은 소스를 두 번 올려도 하나만 든다
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), navigation.getGeometrySources().size() );
     SW_ASSERT_NOT_NULL( navigation.ensureNavMesh( sw::hashed_string( "TestHumanoid" ) ) );
     SW_EXPECT_TRUE( Internal::findPathLength( navigation ) > 18.0f );
 
@@ -152,6 +154,7 @@ SW_TEST_CASE( NavMeshDynamicTest, GeometrySourceChangeRebakesThatArea )
     SW_EXPECT_TRUE( navigation.getRebakedTileCount() > 0 );
     SW_EXPECT_NEAR_EQUAL( 16.0f, Internal::findPathLength( navigation ), 0.1f );
     navigation.unregisterGeometrySource( &source );
+    SW_EXPECT_TRUE( navigation.getGeometrySources().empty() );
 }
 
 /**
