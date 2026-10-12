@@ -9,6 +9,7 @@
 #include "Engine/Serialization/Base/SerializeContext.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/UI/Animation/UIAnimatedProperty.h"
+#include "Engine/UI/Base/PanelWidget.h"
 #include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Style/UIStylePass.h"
@@ -233,7 +234,8 @@ namespace sw
             /** @brief 채널의 지금 값입니다. */
             static void evaluateChannel( const UIStyleTransitionState::Channel& channel, float32 ( &outArr )[4] )
             {
-                const float32 weight = channel._duration > 0.0f ? evaluateUICurve( channel._curve, channel._elapsed / channel._duration ) : 1.0f;
+                const float32 progress = channel._duration > 0.0f ? MathUtil::clamp( ( channel._elapsed - channel._delay ) / channel._duration, 0.0f, 1.0f ) : 1.0f;
+                const float32 weight   = evaluateUICurve( channel._curve, progress );
                 for ( uint32 index = 0; index < 4; ++index )
                 {
                     outArr[index] = MathUtil::lerp( channel._arrFrom[index], channel._arrTo[index], weight );
@@ -262,14 +264,14 @@ namespace sw
                         break;
                     if ( tokenCount == 4 )
                     {
-                        outError = "transition item '" + string( item ) + "' has more than three words";
+                        outError = "transition item '" + string( item ) + "' has more than four words";
                         return false;
                     }
                     arrToken[tokenCount++] = item.substr( begin, position - begin );
                 }
-                if ( tokenCount < 2 || tokenCount > 3 )
+                if ( tokenCount < 2 )
                 {
-                    outError = "transition item '" + string( item ) + "' must be 'field seconds [curve]'";
+                    outError = "transition item '" + string( item ) + "' must be 'field seconds [curve] [delay]'";
                     return false;
                 }
                 UIStyleTransitionSpec::Entry entry{};
@@ -278,16 +280,40 @@ namespace sw
                     outError = "transition item '" + string( item ) + "' has an unreadable duration";
                     return false;
                 }
-                if ( tokenCount == 3 )
+                // 길이 다음 단어: 숫자면 지연(곡선 없음), 아니면 곡선이다. 곡선 다음 숫자는 지연이다.
+                uint32  nextToken = 2;
+                float32 delay     = 0.0f;
+                if ( nextToken < tokenCount && StringUtil::parseFloat( arrToken[nextToken], delay ) )
+                {
+                    entry._delay = delay;
+                    ++nextToken;
+                }
+                else if ( nextToken < tokenCount )
                 {
                     BlendCurveDef       scratch{};
                     const PropertyInfo* pCurve = BlendCurveDef::StaticType()->findProperty( hashed_string( "_curve" ) );
-                    if ( pCurve == nullptr || SerializerUtil::applyPropertyText( *pCurve, &scratch, arrToken[2], SerializeContext::getDefault() ) == false )
+                    if ( pCurve == nullptr || SerializerUtil::applyPropertyText( *pCurve, &scratch, arrToken[nextToken], SerializeContext::getDefault() ) == false )
                     {
-                        outError = "transition item '" + string( item ) + "' has an unknown curve '" + string( arrToken[2] ) + "'";
+                        outError = "transition item '" + string( item ) + "' has an unknown curve '" + string( arrToken[nextToken] ) + "'";
                         return false;
                     }
                     entry._curve = scratch._curve;
+                    ++nextToken;
+                    if ( nextToken < tokenCount )
+                    {
+                        if ( StringUtil::parseFloat( arrToken[nextToken], delay ) == false )
+                        {
+                            outError = "transition item '" + string( item ) + "' has an unreadable delay '" + string( arrToken[nextToken] ) + "'";
+                            return false;
+                        }
+                        entry._delay = delay;
+                        ++nextToken;
+                    }
+                }
+                if ( nextToken < tokenCount || entry._delay < 0.0f )
+                {
+                    outError = "transition item '" + string( item ) + "' must be 'field seconds [curve] [delay]' with a delay of zero or more";
+                    return false;
                 }
                 const bool bAll = StringUtil::equals( arrToken[0], string_view( kAllName ), true );
                 if ( bAll == false )
@@ -374,6 +400,27 @@ namespace sw
         return UIStyleTransitionInternal::findComponentCount( field ) > 0;
     }
 
+    bool UIStyleTransition::findParentChannel( const Widget& widget, UIStyleField field, const float32 ( &newArr )[4], UIStyleTransitionState::Channel& outChannel )
+    {
+        const PanelWidget* pParent = widget.getParent();
+        if ( pParent == nullptr || pParent->_styleTransition == nullptr )
+            return false;
+        for ( const UIStyleTransitionState::Channel& channel : pParent->_styleTransition->_listChannel )
+        {
+            if ( channel._field != field )
+                continue;
+            const uint32 componentCount = UIStyleTransitionInternal::findComponentCount( field );
+            for ( uint32 component = 0; component < componentCount; ++component )
+            {
+                if ( channel._arrTo[component] != newArr[component] )
+                    return false;
+            }
+            outChannel = channel;
+            return true;
+        }
+        return false;
+    }
+
     void UIStyleTransition::onStyleChanged( Widget& widget, const UIComputedStyle* pOld, const UIComputedStyle* pNew, uint32 changedFields )
     {
         using Internal = UIStyleTransitionInternal;
@@ -413,13 +460,39 @@ namespace sw
                     break;
                 }
             }
-            const UIStyleTransitionSpec::Entry* pEntry = spec.findEntry( field );
-            if ( pEntry == nullptr || pEntry->_duration <= 0.0f || pOld->has( field ) == false || pNew->has( field ) == false )
-                continue; // 적지 않은 필드나 한쪽만 정한 필드는 바로 바꾼다
-            if ( bHaveFrom == false )
-                Internal::readField( pOld->_value, field, arrFrom );
+            const UIStyleTransitionSpec::Entry* pEntry   = spec.findEntry( field );
+            const bool                          bOwnSpec = pEntry != nullptr && pEntry->_duration > 0.0f;
+            // 새 값: 시트가 정했으면 그 값, 아니면 위젯이 자기 필드로 그리는 값이다(읽지 못하는 위젯은 바로 바뀐다).
             UIStyleTransitionState::Channel channel{};
-            Internal::readField( pNew->_value, field, channel._arrTo );
+            if ( pNew->has( field ) )
+                Internal::readField( pNew->_value, field, channel._arrTo );
+            else if ( widget.tryGetOwnStyleField( field, channel._arrTo ) == false )
+                continue;
+            UIStyleTransitionState::Channel mirrored{};
+            const bool                      bMirror = bOwnSpec == false && pNew->has( field ) && ( UIStyleFieldTable::getEntry( field )._flags & UIStyleFieldTable::kInherited ) != 0 &&
+                                 findParentChannel( widget, field, channel._arrTo, mirrored );
+            if ( bOwnSpec == false && bMirror == false )
+                continue; // 적지 않은 필드는 바로 바꾼다
+            if ( bMirror )
+            {
+                channel = mirrored;
+                for ( uint32 component = 0; component < 4; ++component )
+                {
+                    arrFrom[component] = channel._arrFrom[component];
+                }
+            }
+            else
+            {
+                // 옛 값: 옛 스타일이 정했으면 그 값, 아니면 위젯이 자기 필드로 그리던 값이다. 진행 중이던 채널의 지금 값이 있으면 그것이 우선이다.
+                if ( bHaveFrom == false && pOld->has( field ) )
+                    Internal::readField( pOld->_value, field, arrFrom );
+                else if ( bHaveFrom == false && widget.tryGetOwnStyleField( field, arrFrom ) == false )
+                    continue;
+                channel._field    = field;
+                channel._duration = pEntry->_duration;
+                channel._curve    = pEntry->_curve;
+                channel._delay    = pEntry->_delay;
+            }
             bool bSame = true;
             for ( uint32 component = 0; component < 4; ++component )
             {
@@ -428,9 +501,6 @@ namespace sw
             }
             if ( bSame )
                 continue;
-            channel._field    = field;
-            channel._duration = pEntry->_duration;
-            channel._curve    = pEntry->_curve;
             if ( state == nullptr )
                 state = make_unique<UIStyleTransitionState>();
             state->_listChannel.push_back( channel );
@@ -450,6 +520,7 @@ namespace sw
             float32 arrValue[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
             Internal::evaluateChannel( channel, arrValue );
             Internal::writeField( state->_shown._value, channel._field, arrValue );
+            state->_shown._setMask |= UIStyleFieldTable::makeBit( channel._field ); // 새 스타일이 정하지 않은 필드도 옮기는 동안은 정한 것으로 보인다
         }
         WidgetTree* pTree = widget.getTree();
         if ( pTree != nullptr && std::find( pTree->_listStyleTransition.begin(), pTree->_listStyleTransition.end(), widget.getID() ) == pTree->_listStyleTransition.end() )
@@ -477,8 +548,8 @@ namespace sw
             for ( size_t channelIndex = 0; channelIndex < state._listChannel.size(); )
             {
                 UIStyleTransitionState::Channel& channel = state._listChannel[channelIndex];
-                channel._elapsed                         = bReduceMotion ? channel._duration : channel._elapsed + step;
-                const bool bFinished                     = channel._elapsed >= channel._duration;
+                channel._elapsed                         = bReduceMotion ? channel._delay + channel._duration : channel._elapsed + step;
+                const bool bFinished                     = channel._elapsed >= channel._delay + channel._duration;
                 float32    arrValue[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
                 if ( bFinished )
                     std::copy( std::begin( channel._arrTo ), std::end( channel._arrTo ), std::begin( arrValue ) );

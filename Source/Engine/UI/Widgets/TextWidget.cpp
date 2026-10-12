@@ -103,6 +103,43 @@ namespace sw
         invalidateText();
     }
 
+    bool TextWidget::tryGetOwnStyleField( UIStyleField field, float32 ( &outArr )[4] ) const
+    {
+        const auto readFloat4 = [&outArr]( const float4& value )
+        {
+            outArr[0] = value._x;
+            outArr[1] = value._y;
+            outArr[2] = value._z;
+            outArr[3] = value._w;
+            return true;
+        };
+        switch ( field )
+        {
+            case UIStyleField::TextColor:
+            {
+                return readFloat4( _color );
+            }
+            case UIStyleField::TextOutlineColor:
+            {
+                return readFloat4( _outlineColor );
+            }
+            case UIStyleField::TextOutlineWidth:
+            {
+                outArr[0] = _outlineWidth;
+                return true;
+            }
+            case UIStyleField::FontSize:
+            {
+                outArr[0] = _style._fontSize;
+                return true;
+            }
+            default:
+            {
+                return Widget::tryGetOwnStyleField( field, outArr );
+            }
+        }
+    }
+
     void TextWidget::onBoundPropertyChanged( const PropertyInfo& property )
     {
         const hashed_string& name = property._name;

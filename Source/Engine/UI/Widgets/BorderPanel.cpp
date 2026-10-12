@@ -49,6 +49,61 @@ namespace sw
         invalidate( WidgetDirty::kPaint );
     }
 
+    bool BorderPanel::tryGetOwnStyleField( UIStyleField field, float32 ( &outArr )[4] ) const
+    {
+        const auto readFloat4 = [&outArr]( const float4& value )
+        {
+            outArr[0] = value._x;
+            outArr[1] = value._y;
+            outArr[2] = value._z;
+            outArr[3] = value._w;
+            return true;
+        };
+        switch ( field )
+        {
+            case UIStyleField::BackgroundColor:
+            {
+                return readFloat4( _background._color );
+            }
+            case UIStyleField::CornerRadius:
+            {
+                return readFloat4( _background._cornerRadius );
+            }
+            case UIStyleField::BorderColor:
+            {
+                return readFloat4( _background._borderColor );
+            }
+            case UIStyleField::BorderWidth:
+            {
+                outArr[0] = _background._borderWidth;
+                return true;
+            }
+            case UIStyleField::Padding:
+            {
+                return readFloat4( _contentPadding );
+            }
+            case UIStyleField::ShadowColor:
+            {
+                return readFloat4( _shadowColor );
+            }
+            case UIStyleField::ShadowOffset:
+            {
+                outArr[0] = _shadowOffset._x;
+                outArr[1] = _shadowOffset._y;
+                return true;
+            }
+            case UIStyleField::ShadowBlur:
+            {
+                outArr[0] = _shadowBlur;
+                return true;
+            }
+            default:
+            {
+                return Widget::tryGetOwnStyleField( field, outArr );
+            }
+        }
+    }
+
     float4 BorderPanel::computeEffectivePadding() const
     {
         const UIComputedStyle* pStyle = getComputedStyle();

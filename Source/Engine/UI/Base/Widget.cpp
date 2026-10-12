@@ -187,6 +187,14 @@ namespace sw
         return _computedStyle.get();
     }
 
+    bool Widget::tryGetOwnStyleField( UIStyleField field, float32 ( &outArr )[4] ) const
+    {
+        if ( field != UIStyleField::Opacity )
+            return false;
+        outArr[0] = 1.0f; // 스타일 불투명도는 위젯 불투명도에 곱해지는 값이라 정하지 않은 것은 1 이다
+        return true;
+    }
+
     float32 Widget::computeEffectiveOpacity() const
     {
         const UIComputedStyle* pStyle = getComputedStyle();

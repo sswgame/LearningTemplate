@@ -18,6 +18,8 @@
 
 namespace sw
 {
+    enum class UIStyleField : uint8;
+
     struct PropertyInfo;
     struct TypeInfo;
     struct UIComputedStyle;
@@ -168,6 +170,12 @@ namespace sw
          * @details 스타일 전환(`_transition`) 중이면 보간 중인 값이다(위젯이 가진 복사본). 전환이 끝나면 다시 공유하는 계산된 스타일을 가리킨다.
          */
         const UIComputedStyle* getComputedStyle() const;
+        /**
+         * @brief 계산된 스타일이 필드 @p field 를 정하지 않았을 때 이 위젯이 자기 필드로 그리는 값을 @p outArr 에 읽습니다(성분 수는 필드가 정합니다). 그런 값이 없으면 false 입니다.
+         * @details 스타일 전환이 "한쪽만 정한 필드"(위젯 자기 겉모습 ↔ 시트 값)를 옮기려고 묻습니다. 기본은 불투명도(스타일 값이 곱해지는 값이라 1)만 답합니다.
+         *          위젯 타입마다 자기가 그리는 필드(`BorderPanel` 의 배경 브러시, `TextWidget` 의 색 등)를 재정의합니다. 상태별로 달라지는 값은 기본 상태(상태 브러시가 아닌 것)를 답합니다.
+         */
+        [[nodiscard]] virtual bool tryGetOwnStyleField( UIStyleField field, float32 ( &outArr )[4] ) const;
         /** @brief 불투명도에 계산된 스타일의 `_opacity` 를 곱한 값입니다(그리기 순회가 씁니다). */
         float32 computeEffectiveOpacity() const;
 
