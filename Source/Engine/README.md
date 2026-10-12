@@ -21,16 +21,18 @@
 | 0 | `Common`, `Compression`, `Observability` |
 | 1 | `Reflection`, `Console` |
 | 2 | `Utility`, `Serialization` |
-| 3 | `Profiling`, `TileMap`, `Config`, `Physics` |
-| 4 | `Resource`, `Navigation` |
-| 5 | `Animation`, `Localization` |
-| 6 | `Audio`, `Dialogue`, `Text` |
-| 7 | `Graphics` |
-| 8 | `Window`, `Object` |
-| 9 | `Input`, `Scene`, `Sequencer`, `Character`, `Environment` |
-| 10 | `UserSettings`, `Module`, `Destruction`, `Automation` |
-| 11 | `Telemetry`, `Renderer`, `UI` |
-| 12 | `EngineLoop` 등 루트 파일 |
+| 3 | `TileMap`, `Config`, `Physics` |
+| 4 | `Profiling`, `Navigation` |
+| 5 | `Resource` |
+| 6 | `Animation`, `Localization` |
+| 7 | `Audio`, `Dialogue`, `Text` |
+| 8 | `Graphics` |
+| 9 | `Window`, `Object` |
+| 10 | `Input`, `Scene`, `Sequencer`, `Character`, `Environment` |
+| 11 | `UserSettings`, `Module`, `Destruction`, `Automation` |
+| 12 | `Telemetry`, `UI` |
+| 13 | `Renderer` |
+| 14 | `EngineLoop` 등 루트 파일 |
 
 표의 숫자는 include 그래프에서 계산한 값입니다(`py -3 Scripts/lint/report/RunEngineLayerGraph.py --apply` 가 게이트 표와 이 표를 함께 고칩니다). 폴더마다의 뜻은 아래 목록에 있습니다.
 
