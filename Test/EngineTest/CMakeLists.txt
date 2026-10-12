@@ -24,8 +24,21 @@ else()
 	sw_excludeUnbuiltSources(swEngineTestSource "/TestOnlineLoadBot\\.cpp$")
 endif()
 
+# 에디터 확장(GF_Editor_Admin)의 화면 없는 부분(제공자 · 세션)은 ImGui 를 몰라 EngineTest 가 직접 컴파일한다 — 확장 DLL 은 링크하지 않는다.
+# 키트가 꺼지면 그 키트의 테스트 파일이 빠지므로(`sw_excludeSourcesOfInactiveKits`) 이 소스도 같이 뺀다.
+set(swEngineTestExtensionSource "")
+if(TARGET GF_Admin)
+	set(swAdminEditorDirectory "${CMAKE_SOURCE_DIR}/Source/GameFramework/Kits/Feature/Online/Admin/Shared/Editor")
+	list(APPEND swEngineTestExtensionSource "${swAdminEditorDirectory}/AdminCommandProvider.cpp" "${swAdminEditorDirectory}/AdminToolSession.cpp")
+endif()
+# 기믹 회로 그래프 편집 모델(GF_Editor_Base)도 같다 - 화면 없는 모델과 컴포넌트 다리만 직접 컴파일한다.
+set(swGimmickGraphDirectory "${CMAKE_SOURCE_DIR}/Source/GameFramework/Base/Editor/Gimmick")
+list(APPEND swEngineTestExtensionSource "${swGimmickGraphDirectory}/GimmickGraphModel.cpp" "${swGimmickGraphDirectory}/GimmickGraphBridge.cpp")
+
 sw_addTestExecutable(EngineTest
 	HOST_SPLIT
+	EXTRA_SOURCES
+		${swEngineTestExtensionSource}
 	SOURCES
 		${swEngineTestSource}
 	LIBS

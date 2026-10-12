@@ -246,6 +246,7 @@ HP 바(`HealthBarComponent`)와 데미지 숫자(`DamageNumberComponent`)는 같
 2. `Scripts/lint/rules/CheckGameFrameworkLayers.toml` 의 `[base_folder_order]` 에 `<층>/<폴더>` 와 층 안 순서를 넣습니다. 표에 없는 폴더는 게이트가 실패시킵니다.
 3. 헤더에 처음 `REFLECT` 를 넣었으면 다시 configure 합니다. 리플렉션 대상 헤더는 `Base/` 전체를 재귀로 모으므로 새 폴더도 자동으로 들어가지만, 목록은 configure 때 만듭니다.
 
+기반의 에디터 확장은 `Base/Editor/` 에 둡니다(모듈 `GF_Editor_Base`, Dev 전용 — 층 표 밖의 별도 모듈이라 기반 어느 층이든 보지만 키트는 보지 않고, 아무도 이 폴더를 보지 않습니다).
 GameFramework 최상위에는 `Base/`, `Kits/` 와 루트 파일만 둡니다. 다른 폴더가 생기면 같은 게이트가 실패합니다.
 
 ### 새 키트를 만들 때
@@ -284,6 +285,9 @@ GameFramework 최상위에는 `Base/`, `Kits/` 와 루트 파일만 둡니다. �
 - **화면 마커 안의 위젯은 이름이 아니라 자식 순서와 타입으로 찾습니다.** 마커는 한 트리에 모이므로 이름이 겹칩니다. 위젯 값은 틱 뒤 큐에서 넣습니다. 병렬 틱에서 위젯을 고치면 안 됩니다.
 - **수명이 다하면 지우는 컴포넌트(페이드, 데미지 숫자, 투사체)는 `LifeSpanUtil` 로 셉니다.** 흐른 시간은 저장되는 PROPERTY 이고 `onBeginPlay` 에서 0 으로 돌리지 않습니다.
   돌리면 되돌리기나 핫 리로드 때마다 수명이 처음부터 다시 시작합니다.
+- **카탈로그의 데이터 파일 종류는 영역 폴더의 `*DataKind.cpp` 한 줄로 올립니다**(`SW_RESOURCE_DATA_KIND`, `Engine/Resource/ResourceDataKind.h`). 경로 규칙은 접두 · 포함 · 접미 선언이고 로더는 `ResourceDataKindUtil::loadCatalog<T>`
+  입니다. 스키마 테스트(`ResourceDataSchemaTest`)와 에디터의 카탈로그 편집기가 같은 레지스트리를 읽습니다. 한 파일은 정확히 한 종류에 맞아야 하고, 기반 폴더끼리 서로 include 하지 못하므로 등록 줄을 한 파일에 모으지 않습니다.
+- **XML 이 열거자를 이름으로 적을 때는 `Data/EnumNameTable.h` 를 씁니다.** 이름 배열에서 개수를 읽고(`for ( index < 6 )` 같은 리터럴을 두지 않는다) 대소문자를 무시해 찾으며, 호출한 쪽이 마지막 열거자로 `static_assert` 를 겁니다.
 - **`Data/GameDataXML.h` 와 `XMLCatalog.h` 는 XML 구현 헤더를 끌어오지 않습니다.** `XMLDocument` · `XMLNode` 는 전방 선언만 하고,
   `loadFile` · `loadText` 템플릿은 스택의 호출 정보와 함수 포인터를 `loadFileWith` · `loadTextWith`(.cpp 에서 문서를 연다)에 넘깁니다. 할당이 늘지 않습니다.
   노드를 직접 읽는 .cpp(루트 읽기, `findRequiredID`, `readName`)는 `Engine/Serialization/XML/XMLDocument.h` 를 스스로 include 합니다.

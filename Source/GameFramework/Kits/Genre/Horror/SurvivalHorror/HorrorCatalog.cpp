@@ -7,6 +7,7 @@
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
+#include "GameFramework/Base/Foundation/Data/EnumNameTable.h"
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
@@ -17,7 +18,9 @@ namespace sw
     {
         struct HorrorCatalogInternal
         {
-            static constexpr const utf8* kArrItemKindName[] = { "None", "Weapon", "Ammo", "Heal", "Key", "SaveItem", "Battery", "Document" };
+            static constexpr const utf8*                   kArrItemKindName[] = { "None", "Weapon", "Ammo", "Heal", "Key", "SaveItem", "Battery", "Document" };
+            static constexpr EnumNameTable<HorrorItemKind> kItemKindTable{ kArrItemKindName };
+            static_assert( kItemKindTable.getCount() == static_cast<size_t>( HorrorItemKind::Document ) + 1, "item kind names must cover every HorrorItemKind" );
 
             static void parseDigits( string_view text, vector<int32>& outListDigit, string_view sourceName, const utf8* pID )
             {
@@ -87,21 +90,12 @@ namespace sw
 {
     bool parseHorrorItemKind( string_view text, HorrorItemKind& outKind )
     {
-        for ( uint32 kindIndex = 0; kindIndex < 8; ++kindIndex )
-        {
-            if ( StringUtil::equals( text, string_view( HorrorCatalogInternal::kArrItemKindName[kindIndex] ), true ) )
-            {
-                outKind = static_cast<HorrorItemKind>( kindIndex );
-                return true;
-            }
-        }
-        return false;
+        return HorrorCatalogInternal::kItemKindTable.parse( text, outKind );
     }
 
     const utf8* toString( HorrorItemKind kind )
     {
-        const uint32 kindIndex = static_cast<uint32>( kind );
-        return kindIndex < 8 ? HorrorCatalogInternal::kArrItemKindName[kindIndex] : "?";
+        return HorrorCatalogInternal::kItemKindTable.toString( kind );
     }
 
     HorrorCatalog::HorrorCatalog()

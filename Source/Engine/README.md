@@ -182,6 +182,8 @@ py -3 Scripts/lint/gate/CheckEngineLayers.py
 기능 에셋 캐시는 자기 기능 폴더에 있고 `Resource` 의 `IAssetCache` 를 구현합니다. 스켈레톤 · 클립 · 리그는 `Animation/AnimationAssetCache`, 스프라이트 클립은 `Animation/Sprite/SpriteClipCache` 입니다.
 `Localization/LocalizationReloadCache` 는 로컬라이제이션 파일의 핫 리로드 진입점입니다. 글 자체는 `LocalizationManager` 가 가지고, 이 캐시의 `clear()` 는 아무것도 지우지 않습니다.
 기능 캐시는 자기 .cpp 에서 `SW_BUILT_IN_ASSET_CACHE( 타입 )` 한 줄로 등록합니다(`Resource/Cache/BuiltInAssetCache.h`). `AssetManager` 는 생성자에서 그 표를 훑어 매니저마다 소유 캐시를 만들고 종류 이름 순으로 올립니다 — `Resource` 는 기능 캐시 타입을 모르고, 타입으로 찾을 때는 부르는 쪽이 `getAssetCache<MaterialCache>()` 로 고릅니다.
+`Resource/ResourceDataKind.h` 의 데이터 파일 종류 레지스트리(`SW_RESOURCE_DATA_KIND`)는 카탈로그 한 종류의 경로 규칙(접두 · 포함 · 접미)과 실제 로더를 코드 옆 한 줄로 적습니다. 기반 · 키트 모듈이 올리고 모듈을 내리면 빠지며(`SW_DEV_COMMAND` 와 같은 모양),
+스키마 테스트와 에디터의 카탈로그 편집기가 읽습니다. 엔진 데이터(장면 · 머티리얼 · 파이프라인 …)는 `Resource` 가 티어 5 라 이 층에서 그 타입들을 include 할 수 없어 아직 테스트의 표에 남아 있습니다.
 등록표는 Engine 이미지 안에서만 채웁니다. 모듈의 캐시는 `registerAssetCache` · `unregisterAssetCache` 로 올리고 내립니다(표 항목은 내리지 않으므로 모듈이 쓰면 언로드 뒤 죽은 함수를 가리킵니다). `ResourcePakCompressionUtil` 은 팩 타입(`ResourcePakTypes.h`)을 쓰므로 Compression(티어 0)이 아니라 여기 있습니다.
 
 ### 개발 콘솔과 개발 명령
