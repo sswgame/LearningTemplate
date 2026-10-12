@@ -65,6 +65,106 @@ namespace sw::editor
                 return pLeft->_name < pRight->_name;
             }
 
+            static bool drawBooleanWidget( GlobalVariableInfo& info )
+            {
+                bool bVal = info.getValueAsBool();
+                if ( ImGui::Checkbox( "##val", &bVal ) == false )
+                    return false;
+                info.setValueAsBool( bVal );
+                return true;
+            }
+
+            static bool drawInt32Widget( GlobalVariableInfo& info )
+            {
+                int32 iVal = info.getValueAsInt();
+                if ( ImGui::DragInt( "##val", &iVal ) == false )
+                    return false;
+                info.setValueAsInt( iVal );
+                return true;
+            }
+
+            static bool drawFloatWidget( GlobalVariableInfo& info )
+            {
+                float32 fVal = info.getValueAsFloat();
+                if ( ImGui::DragFloat( "##val", &fVal, 0.1f ) == false )
+                    return false;
+                info.setValueAsFloat( fVal );
+                return true;
+            }
+
+            static bool drawStringWidget( GlobalVariableInfo& info )
+            {
+                string strVal = info.getValueAsString();
+                if ( EditorWidgets::drawTextField( "##val", strVal ) == false )
+                    return false;
+                info.setValueAsString( strVal.c_str() );
+                return true;
+            }
+
+            /** @brief 리플렉션 enum 테이블이 있으면 열거자 콤보, 없으면 정수 드래그입니다. */
+            static bool drawEnumWidget( GlobalVariableInfo& info )
+            {
+                const int32     currentVal = info.getValueAsInt();
+                TypeRegistry*   pRegistry  = editor::getService<TypeRegistry>();
+                const EnumInfo* pEnumInfo =
+                    ( pRegistry != nullptr && info._enumType.empty() == false )
+                        ? pRegistry->findEnum( hashed_string( info._enumType.c_str() ) )
+                        : nullptr;
+                if ( pEnumInfo == nullptr || pEnumInfo->_mapValueToName.empty() )
+                    return drawInt32Widget( info );
+
+                bool        bChanged{ false };
+                const utf8* pName    = pRegistry->enumToString( hashed_string( info._enumType.c_str() ), currentVal );
+                const utf8* pPreview = ( pName != nullptr ) ? pName : "<Unknown>";
+                if ( ImGui::BeginCombo( "##val", pPreview ) )
+                {
+                    for ( const auto& [val, nameHashed] : pEnumInfo->_mapValueToName )
+                    {
+                        const int32 val32     = static_cast<int32>( val );
+                        const utf8* name      = nameHashed.c_str();
+                        const bool  bSelected = ( val32 == currentVal );
+                        if ( ImGui::Selectable( name, bSelected ) )
+                        {
+                            info.setValueAsInt( val32 );
+                            bChanged = true;
+                        }
+                        if ( bSelected )
+                            ImGui::SetItemDefaultFocus();
+                    }
+                    ImGui::EndCombo();
+                }
+                return bChanged;
+            }
+
+            /** @brief 값 위젯 테이블의 행입니다. 값을 바꿨으면 true 를 반환합니다. */
+            struct WidgetRow
+            {
+                GlobalVariableType _type;
+                bool ( *_draw )( GlobalVariableInfo& info );
+            };
+
+            /**
+             * @brief 타입별 값 위젯 테이블입니다. 행 순서는 `GlobalVariableType` 열거자 순서이며, 새 타입은 여기 행 하나를 더합니다.
+             * @details Core 는 에디터를 모르므로 위젯은 에디터가 자기 테이블로 가집니다(Core 의 처리 테이블과 같은 열거자로 고른다).
+             */
+            static constexpr WidgetRow kArrWidgetRow[] = {
+                {GlobalVariableType::Boolean, &drawBooleanWidget},
+                {  GlobalVariableType::Int32,   &drawInt32Widget},
+                {  GlobalVariableType::Float,   &drawFloatWidget},
+                { GlobalVariableType::String,  &drawStringWidget},
+                {   GlobalVariableType::Enum,    &drawEnumWidget},
+            };
+
+            static constexpr bool isWidgetTableInTypeOrder()
+            {
+                for ( uint32 rowIndex = 0; rowIndex < static_cast<uint32>( GlobalVariableType::Count ); ++rowIndex )
+                {
+                    if ( kArrWidgetRow[rowIndex]._type != static_cast<GlobalVariableType>( rowIndex ) )
+                        return false;
+                }
+                return true;
+            }
+
             static bool drawVariableWidget( GlobalVariableInfo& info )
             {
                 ImGui::SetNextItemWidth( -1.0f );
@@ -73,96 +173,13 @@ namespace sw::editor
                     ImGui::TextDisabled( "(null data)" );
                     return false;
                 }
-
-                bool bChanged{ false };
-                switch ( info._type )
-                {
-                    case GlobalVariableType::Boolean:
-                    {
-                        bool bVal = info.getValueAsBool();
-                        if ( ImGui::Checkbox( "##val", &bVal ) )
-                        {
-                            info.setValueAsBool( bVal );
-                            bChanged = true;
-                        }
-                        break;
-                    }
-                    case GlobalVariableType::Float:
-                    {
-                        float32 fVal = info.getValueAsFloat();
-                        if ( ImGui::DragFloat( "##val", &fVal, 0.1f ) )
-                        {
-                            info.setValueAsFloat( fVal );
-                            bChanged = true;
-                        }
-                        break;
-                    }
-                    case GlobalVariableType::Int32:
-                    {
-                        int32 iVal = info.getValueAsInt();
-                        if ( ImGui::DragInt( "##val", &iVal ) )
-                        {
-                            info.setValueAsInt( iVal );
-                            bChanged = true;
-                        }
-                        break;
-                    }
-                    case GlobalVariableType::Enum:
-                    {
-                        const int32     currentVal = info.getValueAsInt();
-                        TypeRegistry*   pRegistry  = editor::getService<TypeRegistry>();
-                        const EnumInfo* pEnumInfo =
-                            ( pRegistry != nullptr && info._enumType.empty() == false )
-                                ? pRegistry->findEnum( hashed_string( info._enumType.c_str() ) )
-                                : nullptr;
-                        if ( pEnumInfo != nullptr && pEnumInfo->_mapValueToName.empty() == false )
-                        {
-                            const utf8* pName =
-                                pRegistry->enumToString( hashed_string( info._enumType.c_str() ), currentVal );
-                            const utf8* pPreview = ( pName != nullptr ) ? pName : "<Unknown>";
-                            if ( ImGui::BeginCombo( "##val", pPreview ) )
-                            {
-                                for ( const auto& [val, nameHashed] : pEnumInfo->_mapValueToName )
-                                {
-                                    const int32 val32     = static_cast<int32>( val );
-                                    const utf8* name      = nameHashed.c_str();
-                                    const bool  bSelected = ( val32 == currentVal );
-                                    if ( ImGui::Selectable( name, bSelected ) )
-                                    {
-                                        info.setValueAsInt( val32 );
-                                        bChanged = true;
-                                    }
-                                    if ( bSelected )
-                                        ImGui::SetItemDefaultFocus();
-                                }
-                                ImGui::EndCombo();
-                            }
-                        }
-                        else
-                        {
-                            int32 iVal = currentVal;
-                            if ( ImGui::DragInt( "##val", &iVal ) )
-                            {
-                                info.setValueAsInt( iVal );
-                                bChanged = true;
-                            }
-                        }
-                        break;
-                    }
-                    case GlobalVariableType::String:
-                    {
-                        string strVal = info.getValueAsString();
-                        if ( EditorWidgets::drawTextField( "##val", strVal ) )
-                        {
-                            info.setValueAsString( strVal.c_str() );
-                            bChanged = true;
-                        }
-                        break;
-                    }
-                }
-                return bChanged;
+                // 등록이 범위 밖 타입을 거절하므로 인덱스는 늘 행 안이다.
+                return kArrWidgetRow[static_cast<uint32>( info._type )]._draw( info );
             }
         };
+        static_assert( std::size( GlobalVariablesPanelInternal::kArrWidgetRow ) == static_cast<size_t>( GlobalVariableType::Count ),
+                       "GlobalVariablesPanel needs one value widget per GlobalVariableType" );
+        static_assert( GlobalVariablesPanelInternal::isWidgetTableInTypeOrder(), "GlobalVariablesPanel widget rows must follow GlobalVariableType order" );
     } // namespace
 
     /** @brief 변수 목록 테이블의 공통 플래그입니다. */
@@ -498,7 +515,7 @@ namespace sw::editor
 
         // Type 컬럼
         ImGui::TableNextColumn();
-        ImGui::TextDisabled( "%s", EditorGlobalVariableCommands::getTypeString( info ).c_str() );
+        ImGui::TextDisabled( "%s", info.getTypeName().c_str() );
 
         // Value / Widget 컬럼
         ImGui::TableNextColumn();
