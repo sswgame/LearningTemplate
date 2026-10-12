@@ -185,6 +185,7 @@ namespace sw
             uint64                 _requestID{ 0 };
             int64                  _deadlineMs{ 0 };
             uint16                 _method{ 0 };
+            uint8                  _bCancelled{ SW_FALSE }; ///< 꺼내 돌던 중 `cancelRequestsOf` 가 가렸다 — 부르지도 보내지도 않는다
         };
 
         struct PendingCall
@@ -204,11 +205,13 @@ namespace sw
         void        onNetResponse( const NetResponse& response );
         static void deliver( const OnlineResponseDelegate& onResponse, uint64 requestID, const NetResponse& response );
         void        dispatchPush( const uint8* pBody, int32 bodySize );
+        void        notifyServices( void ( IOnlineClientService::*pNotify )( OnlineServiceClient& ) );
 
         OnlineServiceClientSettings        _settings;
         vector<IOnlineClientService*>      _listService;
         vector<QueuedCall>                 _listQueuedCall;
-        unordered_map<uint64, PendingCall> _mapPendingCall; ///< 요청 클라이언트의 id → 부른 쪽
+        vector<vector<QueuedCall>*>        _listDrainingCall; ///< `flushQueuedCalls` · `failQueuedCalls` 가 꺼내 도는 지역 목록(겹쳐 불리면 여럿)
+        unordered_map<uint64, PendingCall> _mapPendingCall;   ///< 요청 클라이언트의 id → 부른 쪽
         unique_ptr<StreamMessageEndpoint>  _ownedEndpoint;
         unique_ptr<NetRequestClient>       _ownedRequestClient;
         StreamMessageEndpoint*             _pEndpoint;
