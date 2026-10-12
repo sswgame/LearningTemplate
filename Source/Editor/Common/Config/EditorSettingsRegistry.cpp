@@ -3,6 +3,7 @@
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Module/ModuleUnloadListener.h"
 
 #include "Editor/Common/EditorPaths.h"
 
@@ -115,6 +116,18 @@ namespace sw::editor
         }
         SW_LOG_INFO( "Editor preferences saved: %# key(s) -> %#", keyCount, string( filePath ).c_str() );
         return true;
+    }
+
+    bool EditorPreferencesStore::hasSectionWithin( const void* pBegin, const void* pEnd )
+    {
+        using SettingsRegistry = EditorSettingsRegistryInternal::SettingsRegistry;
+        for ( uint32 index = 0; index < SettingsRegistry::getCount(); ++index )
+        {
+            const EditorSettingsRegistration& registration = SettingsRegistry::getAt( index );
+            if ( registration._pfnGetType() != nullptr && IModuleUnloadListener::isAddressWithin( reinterpret_cast<const void*>( registration._pfnGetInstance ), pBegin, pEnd ) )
+                return true;
+        }
+        return false;
     }
 
     string EditorPreferencesStore::makeDifferenceJSON( const TypeInfo& type, const void* pCurrent, const void* pDefault )

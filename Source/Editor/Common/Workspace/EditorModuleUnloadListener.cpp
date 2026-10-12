@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Workspace/EditorModuleUnloadListener.h"
 
+#include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/GUI/EditorCommandGUI.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorPopupManager.h"
@@ -21,6 +22,10 @@ namespace sw::editor
 
     uint32 EditorModuleUnloadListener::onModuleUnloading( const void* pBegin, const void* pEnd, bool& /*outKeepImageMapped*/ )
     {
+        // 확장 모듈의 환경설정 섹션 값은 그 이미지의 함수 정적이다. 환경설정 창은 고친 뒤 잠시 기다렸다 저장하므로, 그 사이에 내려가면 고친 값이 사라진다.
+        // 그 이미지가 섹션을 가지면 내리기 전에 저장한다(등록 줄은 이미지의 정적 소멸 때 빠지므로 지금은 아직 목록에 있다).
+        if ( EditorPreferencesStore::hasSectionWithin( pBegin, pEnd ) )
+            (void)EditorPreferencesStore::saveAll( EditorPreferencesStore::getDefaultFilePath() ); // 실패는 saveAll 이 경고로 알린다
         uint32 releasedCount = _context.getPanelManager().releasePanelsWithin( pBegin, pEnd, _context.getRHIDevice() );
         releasedCount += _context.getPopupManager().releasePopupsWithin( pBegin, pEnd );
         releasedCount += _context.getInspectorComponentManager().releaseInspectorsWithin( pBegin, pEnd );

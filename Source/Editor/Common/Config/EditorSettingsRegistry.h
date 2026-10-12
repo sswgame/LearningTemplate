@@ -85,6 +85,11 @@ namespace sw::editor
         [[nodiscard]] static bool loadAll( string_view filePath );
         /** @brief 등록된 섹션을 모두 기본과의 차이만으로 씁니다. 차이가 없는 섹션은 빼고, 모두 없으면 빈 오브젝트를 씁니다. */
         [[nodiscard]] static bool saveAll( string_view filePath );
+        /**
+         * @brief 인스턴스 함수가 [@p pBegin, @p pEnd) 안에 있는 섹션이 있으면 true 입니다(확장 모듈 이미지가 가진 섹션).
+         * @details 그 섹션의 값은 그 이미지의 함수 정적이라 이미지를 내리면 사라진다. 언로드 훅이 이것으로 묻고 내리기 전에 `saveAll` 한다.
+         */
+        [[nodiscard]] static bool hasSectionWithin( const void* pBegin, const void* pEnd );
         /** @brief @p pCurrent 가 @p pDefault 와 다른 프로퍼티만 담은 JSON 오브젝트 문자열을 만듭니다. */
         static string makeDifferenceJSON( const TypeInfo& type, const void* pCurrent, const void* pDefault );
         /** @brief JSON 오브젝트 문자열을 인스턴스에 적용합니다. 없는 키는 그대로 둡니다. 모르는 키는 @p outListUnknownKey 에 담습니다. 형식이 틀리면 false 입니다. */
