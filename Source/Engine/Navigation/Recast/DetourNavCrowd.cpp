@@ -340,8 +340,11 @@ namespace sw
                 float32    remaining  = MathUtil::kMaxFloat;
                 if ( bLastIsEnd )
                     remaining = dtVdist2D( pAgent->npos, &pAgent->cornerVerts[( pAgent->ncorners - 1 ) * 3] );
-                const bool bArrived = pAgent->ncorners == 0 || ( bLastIsEnd && pAgent->ncorners == 1 && remaining <= pAgent->params.radius * 0.25f + 0.01f );
-                outState._moveState = bArrived ? NavCrowdMoveState::Arrived : NavCrowdMoveState::Moving;
+                // 모퉁이가 하나도 없는 프레임은 경로를 다시 찾기 전(링크 착지 직후 등)일 수 있다 — 목표가 몸 반지름 안일 때만 도착이다.
+                const float32 targetDistance = dtVdist2D( pAgent->npos, pAgent->targetPos );
+                const bool    bNoCorner      = pAgent->ncorners == 0 && targetDistance <= pAgent->params.radius + 0.01f;
+                const bool    bArrived       = bNoCorner || ( bLastIsEnd && pAgent->ncorners == 1 && remaining <= pAgent->params.radius * 0.25f + 0.01f );
+                outState._moveState          = bArrived ? NavCrowdMoveState::Arrived : NavCrowdMoveState::Moving;
                 break;
             }
             default:

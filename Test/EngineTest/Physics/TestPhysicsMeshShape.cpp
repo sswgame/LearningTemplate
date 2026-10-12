@@ -164,7 +164,7 @@ SW_TEST_CASE( PhysicsMeshShapeTest, MeshPathFillsTriangleMeshAndConvexHull )
     SW_EXPECT_NEAR_EQUAL( 9.5f, hit._distance, 1e-3f ); // 메시 윗면(y = 0.5)
     SW_EXPECT_TRUE( hit._body == meshBody );
 
-    // 같은 메시의 볼록 껍질은 움직일 수 있다 — 메시 정육면체 위에 떨어져 그 위(y = 1.5)에서 멈춘다.
+    // 같은 메시의 볼록 껍질은 움직일 수 있다 — 메시 정육면체 위(윗면 y = 0.5)에 떨어져 껍질 중심이 윗면 + 반 변(0.5) = 1.0 에서 멈춘다.
     const sw::PhysicsBodyHandle hullBody =
         addBody( *pScene, makeMeshShape( sw::PhysicsShapeType3D::ConvexHull, meshPath ), sw::float3{ 0.0f, 3.0f, 0.0f }, sw::PhysicsBodyType::Dynamic );
     SW_ASSERT_TRUE( hullBody.isValid() );
@@ -176,7 +176,7 @@ SW_TEST_CASE( PhysicsMeshShapeTest, MeshPathFillsTriangleMeshAndConvexHull )
     sw::float3     position{};
     sw::quaternion rotation{};
     SW_ASSERT_TRUE( pScene->getBodyTransform( hullBody, position, rotation ) );
-    SW_EXPECT_NEAR_EQUAL( 1.5f, position._y, 0.05f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, position._y, 0.05f );
     SW_EXPECT_NEAR_EQUAL( 1000.0f, pScene->getBodyMass( hullBody ), 30.0f ); // 1 m^3 × 밀도 1000(껍질의 볼록 반지름만큼 어긋난다)
 
     // 디버그 그리기와 시각화가 쓰는 창도 같은 기하를 본다.

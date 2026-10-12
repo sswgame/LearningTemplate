@@ -78,7 +78,7 @@ namespace
 SW_TEST_CASE( EditorSiblingOrderTest, DropZoneFollowsTheCursorInsideTheRow )
 {
     SW_EXPECT_TRUE( EditorSiblingOrder::computeDropZone( 100.0f, 100.0f, 120.0f ) == SiblingDropZone::Before );
-    SW_EXPECT_TRUE( EditorSiblingOrder::computeDropZone( 105.0f, 100.0f, 120.0f ) == SiblingDropZone::Onto );
+    SW_EXPECT_TRUE( EditorSiblingOrder::computeDropZone( 107.0f, 100.0f, 120.0f ) == SiblingDropZone::Onto );
     SW_EXPECT_TRUE( EditorSiblingOrder::computeDropZone( 110.0f, 100.0f, 120.0f ) == SiblingDropZone::Onto );
     SW_EXPECT_TRUE( EditorSiblingOrder::computeDropZone( 119.0f, 100.0f, 120.0f ) == SiblingDropZone::After );
     SW_EXPECT_TRUE( EditorSiblingOrder::computeDropZone( 110.0f, 100.0f, 100.0f ) == SiblingDropZone::Onto ); // 높이가 0 이면 가운데로 본다

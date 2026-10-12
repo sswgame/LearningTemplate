@@ -343,9 +343,18 @@ SW_TEST_CASE( ShooterTest, InputMapBindsEveryGameplayAction )
     {
         SW_EXPECT_TRUE_MSG( inputMap.hasAction( hashed_string( pAction ) ), pAction );
     }
-    const ActionBinding* pLook = inputMap.getBinding( "Look", 0 );
-    SW_ASSERT_NOT_NULL( pLook );
-    SW_EXPECT_TRUE( pLook->_kind == BindingKind::MouseDelta2D );
+    // Look 에는 마우스 이동과 오른쪽 스틱이 모두 묶인다 — 저장 형식이 종류별로 묶으므로 번호가 아니라 종류로 찾는다.
+    bool bHasMouseDelta = false;
+    bool bHasRightStick = false;
+    for ( uint32 bindIndex = 0; bindIndex < inputMap.getBindingCount( "Look" ); ++bindIndex )
+    {
+        const ActionBinding* pLook = inputMap.getBinding( "Look", bindIndex );
+        SW_ASSERT_NOT_NULL( pLook );
+        bHasMouseDelta = bHasMouseDelta || pLook->_kind == BindingKind::MouseDelta2D;
+        bHasRightStick = bHasRightStick || ( pLook->_kind == BindingKind::GamepadStick2D && pLook->_stick == GamepadStick::Right );
+    }
+    SW_EXPECT_TRUE( bHasMouseDelta );
+    SW_EXPECT_TRUE( bHasRightStick );
 
     // 마우스를 움직인 프레임에 Look 이 그 이동량(배율 1)을 낸다.
     input.postRawEvent( RawInputEvent::makeMouseRawDelta( 12.0f, -4.0f ) );

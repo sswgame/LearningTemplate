@@ -424,6 +424,17 @@ namespace
         static bool isLipSync( sw::string_view resourceID ) { return resourceID == sw::LipSyncSettings::kResourcePath; }
         static bool isVisemeTrack( sw::string_view resourceID ) { return endsWith( resourceID, sw::VisemeTrack::kExtension ); }
         static bool isFacialRig( sw::string_view resourceID ) { return endsWith( resourceID, sw::FacialRig::kExtension ); }
+        static bool isVrmAvatar( sw::string_view resourceID ) { return endsWith( resourceID, ".avatar.json" ); }
+
+        /** @brief VRM 아바타 임포트 산출물(`<모델>.avatar.json`) — 런타임 로더는 아직 없다(표정 · 스프링 본 · 1인칭 숨김은 후속). JSON 객체이고 `_version` · `_mapHumanBone` 이 있는지만 본다. */
+        [[nodiscard]] static bool loadVrmAvatar( const sw::string& resourceID )
+        {
+            sw::JSONDocument document;
+            if ( document.loadFile( sw::FileUtil::joinPath( sw::ResourcePaths::getRootFolderPath(), resourceID ) ) == false )
+                return false;
+            const sw::JSONValue root = document.getRoot();
+            return root.isObject() && root.get( "_version" ).isNumber() && root.get( "_mapHumanBone" ).isObject();
+        }
 
         // 엔진 카탈로그(`XMLCatalog`) 로더입니다. 게임 데이터(키트 · 기반 카탈로그)는 각자의 `*DataKind.cpp` 가 `SW_RESOURCE_DATA_KIND` 로 올린 종류를 `ResourceDataKindRegistry` 에서 찾습니다.
         template <typename TCatalog>
@@ -486,6 +497,7 @@ namespace
             {            "lipsync",             &isLipSync,                  &loadCatalog<sw::LipSyncSettings>},
             {            "visemes",         &isVisemeTrack,                      &loadCatalog<sw::VisemeTrack>},
             {             "facial",           &isFacialRig,                        &loadCatalog<sw::FacialRig>},
+            {          "vrmavatar",           &isVrmAvatar,                                     &loadVrmAvatar},
         };
 
         /**

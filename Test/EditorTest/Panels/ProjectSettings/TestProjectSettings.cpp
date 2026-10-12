@@ -39,6 +39,7 @@ SW_TEST_CASE( ProjectSettingsCatalogTest, PicksOnlyEditableJSONFiles )
 SW_TEST_CASE( ProjectSettingsCatalogTest, ExpandsWildcardsToFiles )
 {
     const sw::string root = test::makeTempDirectory( "project_settings_wildcard" );
+    SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( sw::FileUtil::joinPath( root, "Config/Game" ) ) );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( root, "Config/Game/Beta.json" ), "{}" ) );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( root, "Config/Game/Alpha.json" ), "{}" ) );
 
@@ -60,6 +61,7 @@ SW_TEST_CASE( ProjectSettingsCatalogTest, ExpandsWildcardsToFiles )
 SW_TEST_CASE( ProjectSettingsDocumentTest, SavesOnlyValuesThatDifferFromTheDefaults )
 {
     const sw::string path = sw::FileUtil::joinPath( test::makeTempDirectory( "project_settings_document" ), "EngineConfig.json" );
+    (void)sw::FileUtil::removeFile( path ); // 임시 폴더는 실행마다 비워지지 않는다 — 이전 실행이 남긴 파일이 없는 것이 이 테스트의 출발점이다(없어도 괜찮다)
 
     sw::editor::ProjectSettingsDocument document;
     SW_ASSERT_TRUE( document.open( *sw::EngineConfig::StaticType(), path ) == sw::ConfigReadResult::Missing );

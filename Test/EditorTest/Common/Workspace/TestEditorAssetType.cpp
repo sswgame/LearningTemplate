@@ -449,7 +449,8 @@ SW_TEST_CASE( EditorAssetTypeTest, UIDocumentOpensTheUIPreviewPanel )
 
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "engine/ui/pause.ui.xml" ) == EditorAssetType::UIDocument );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::matches( EditorAssetType::UIDocument, "game/shooter3d/ui/hud.ui.xml" ) );
-    SW_EXPECT_FALSE( EditorAssetTypeRegistry::matches( EditorAssetType::Data, "engine/ui/pause.ui.xml" ) );
+    // `matches` 는 종류마다 따로 판정하므로 일반 데이터(.xml)도 UI 문서에 맞는다 — 어느 종류로 보이는지는 첫 일치인 `findKind` 가 정한다.
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "engine/ui/pause.ui.xml" ) != EditorAssetType::Data );
     SW_EXPECT_STREQ( "UI Preview", sw::string{ EditorAssetTypeRegistry::findPanelTitleForPath( "engine/ui/pause.ui.xml" ) }.c_str() );
     SW_EXPECT_STREQ( "UI Preview", EditorAssetTypeRegistry::getPanelTitle( EditorAssetType::UIDocument ) );
 
