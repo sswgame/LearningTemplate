@@ -31,6 +31,9 @@ if(TARGET GF_Admin)
 	set(swAdminEditorDirectory "${CMAKE_SOURCE_DIR}/Source/GameFramework/Kits/Feature/Online/Admin/Shared/Editor")
 	list(APPEND swEngineTestExtensionSource "${swAdminEditorDirectory}/AdminCommandProvider.cpp" "${swAdminEditorDirectory}/AdminToolSession.cpp")
 endif()
+# 기믹 회로 그래프 편집 모델(GF_Editor_Base)도 같다 - 화면 없는 모델과 컴포넌트 다리만 직접 컴파일한다.
+set(swGimmickGraphDirectory "${CMAKE_SOURCE_DIR}/Source/GameFramework/Base/Editor/Gimmick")
+list(APPEND swEngineTestExtensionSource "${swGimmickGraphDirectory}/GimmickGraphModel.cpp" "${swGimmickGraphDirectory}/GimmickGraphBridge.cpp")
 
 sw_addTestExecutable(EngineTest
 	HOST_SPLIT
