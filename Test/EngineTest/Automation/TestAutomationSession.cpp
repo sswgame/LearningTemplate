@@ -6,11 +6,12 @@
 #include "Engine/Automation/AutomationSession.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Utility/EngineFrameObserver.h"
 
 #include "TestFramework/TestFramework.h"
 
 // 시나리오 구동기 — 파일 둘 이상을 한 프로세스에서 차례로 돌리고(통과해야 다음), 첫 실패에서 멈추거나(`keepGoing` 이면 이어 돌고) 종료 코드를 낸다.
-// EngineLoop 가 프레임 앞 · 뒤에서 부르는 자리를 테스트가 대신 부른다.
+// 세션은 프레임 관찰자(`IEngineFrameObserver`)다 — 엔진 루프가 프레임 앞 · 뒤에서 부르는 자리를 테스트가 대신 부른다.
 
 namespace
 {
@@ -38,12 +39,16 @@ namespace
         /** @brief 세션을 끝날 때까지(최대 @p maxFrames) 돌려 종료 코드를 돌려줍니다. */
         static int32 run( sw::AutomationSession& session, sw::InputManager& input, uint32 maxFrames = 200 )
         {
-            int32 exitCode = sw::AutomationSession::kRunning;
-            for ( uint32 frame = 0; frame < maxFrames && exitCode == sw::AutomationSession::kRunning; ++frame )
+            sw::IEngineFrameObserver& observer = session; // 엔진 루프처럼 인터페이스로만 부른다
+            sw::EngineFrameContext    context;
+            context._pInput                   = &input;
+            context._completedScreenshotCount = 0u;
+            int32 exitCode                    = sw::IEngineFrameObserver::kRunning;
+            for ( uint32 frame = 0; frame < maxFrames && exitCode == sw::IEngineFrameObserver::kRunning; ++frame )
             {
-                session.onFrameBegin( input );
+                observer.onFrameBegin( context );
                 input.beginFrame( 1.0f / 60.0f );
-                exitCode = session.onFrameEnd( input, 0u );
+                exitCode = observer.onFrameEnd( context );
                 input.endFrame();
             }
             return exitCode;
@@ -119,4 +124,23 @@ SW_TEST_CASE( AutomationSessionTest, MissingScenarioIsALoadErrorAndAnEmptyListDo
     sw::AutomationSession empty;
     SW_EXPECT_FALSE( empty.begin( " , ", {}, false, 0u ) );
     input.shutdown();
+}
+
+/**
+ * @brief [AutomationSessionTest] 시작하지 않은 세션은 관찰자로서 아무것도 정하지 않는다 — 창 닫힘 · 프레임 끝이 `kRunning` 이고 패킷의 스크린샷 경로를 건드리지 않는다
+ */
+SW_TEST_CASE( AutomationSessionTest, IdleSessionIsANeutralFrameObserver )
+{
+    sw::AutomationSession        session;
+    sw::IEngineFrameObserver&    observer = session;
+    const sw::EngineFrameContext context; // 입력 없음
+    observer.onFrameBegin( context );
+    SW_EXPECT_EQUAL( sw::IEngineFrameObserver::kRunning, observer.onFrameEnd( context ) );
+    SW_EXPECT_EQUAL( sw::IEngineFrameObserver::kRunning, observer.onWindowClosed( context ) );
+
+    sw::string                    screenshotPath = "earlier.ppm";
+    sw::EngineRenderPacketContext packetContext;
+    packetContext._pScreenshotPath = &screenshotPath;
+    observer.onBuildRenderPacket( packetContext );
+    SW_EXPECT_TRUE( screenshotPath == "earlier.ppm" ); // 앞 관찰자가 채운 경로는 그대로 둔다
 }

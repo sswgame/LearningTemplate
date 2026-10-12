@@ -25,11 +25,11 @@ namespace sw
     struct DebugOverlayState;
     struct EngineConfig;
     struct EngineDefaultAssets;
+    struct EngineFrameContext;
     struct RenderFramePacket;
 
     class AssetManager;
     class AssetStreamingQueue;
-    class AutomationSession;
     class CameraComponent;
     class CommandLineManager;
     class CommandStack;
@@ -44,6 +44,7 @@ namespace sw
     class GPUSceneBuilder;
     class GPUUploadQueue;
     class IAudioSystem;
+    class IEngineFrameObserver;
     class InputManager;
     class InputMap;
     class IRHIDevice;
@@ -137,6 +138,13 @@ namespace sw
          *          모든 타입이 등록된 것으로 적고, 씬을 읽는 일(헤드리스 쿠킹 · 게임 · 에디터의 씬 로드)은 그 뒤에만 됩니다.
          */
         void setModuleTypeLoader( ModuleTypeLoaderDelegate moduleTypeLoader );
+        /**
+         * @brief 프레임 관찰자(`IEngineFrameObserver`)를 붙입니다. 붙인 순서대로 부르고, 같은 관찰자를 두 번 붙이지 않습니다.
+         * @details 루프는 관찰자가 무엇인지 모릅니다(자동화 시나리오 · 시퀀서 · AI 구동기). 수명은 붙인 쪽이 쥐고, 없애기 전에 `removeFrameObserver` 로 뗍니다.
+         */
+        void addFrameObserver( IEngineFrameObserver* pObserver );
+        /** @brief 붙인 프레임 관찰자를 뗍니다. 붙어 있지 않으면 아무것도 하지 않습니다. */
+        void removeFrameObserver( IEngineFrameObserver* pObserver );
 
         void setPresentHook( sw::PresentHookDelegate presentHook );
         void setPostPresentHook( sw::PresentHookDelegate postPresentHook );
@@ -153,13 +161,13 @@ namespace sw
          * @details 창 수명은 App 이 쥐고 있으므로 여기서는 의사만 알립니다.
          */
         bool isQuitRequested() const { return _bQuitRequested || _profileSession.isQuitRequested(); }
-        /** @brief 이번 프레임이 끝나면 루프를 끝내라고 요청합니다(자동화 시나리오 · 도구). 여럿이면 처음 것의 코드를 씁니다. */
+        /** @brief 이번 프레임이 끝나면 루프를 끝내라고 요청합니다(프레임 관찰자 · 도구). 여럿이면 처음 것의 코드를 씁니다. */
         void requestQuit( int32 exitCode );
         /** @brief App 이 돌려줄 종료 코드입니다(요청이 없었으면 0). */
         int32 getExitCode() const { return _exitCode; }
         /**
-         * @brief 창이 닫혀 루프가 끝났다고 알립니다(App 이 루프 뒤에 부른다). 자동화 시나리오가 돌던 중이면 그 결과로 종료 코드를 정합니다
-         *        (`ExpectExitWithin` 시한 안이면 통과, 아니면 실패 — 시나리오 결과가 프로파일 세션의 종료보다 이긴다).
+         * @brief 창이 닫혀 루프가 끝났다고 알립니다(App 이 루프 뒤에 부른다). 프레임 관찰자가 종료 코드를 내면 그 코드로 정합니다
+         *        (관찰자의 결과가 프로파일 세션의 종료보다 이긴다).
          */
         void onWindowClosed();
 
@@ -206,6 +214,8 @@ namespace sw
         void pollShaderReloadHotkey();
         /** @brief 설정 파일을 다시 읽었습니다(`ConfigManager::onConfigReloaded`). 게임 설정 활성본 · 선호 수직 동기화를 다시 맞춥니다. */
         void onConfigReloaded( const hashed_string& configTypeName );
+        /** @brief 프레임 관찰자에게 넘길 이번 프레임의 문맥(입력 · 렌더 스레드가 쓴 스크린샷 수)을 만듭니다. */
+        EngineFrameContext makeFrameContext() const;
 
         // 기동 단계의 본문이다(`EngineLoop.cpp`). 표(`EngineInitStepList.xxx`)의 줄마다 `<단계>StartupStep` 하나이고, 빠지면 컴파일 오류다.
         // 중첩 타입이라 이 클래스의 private 을 그대로 쓰고, 바깥에서는 본문 표(`EngineInitStepTable`)만 이름을 본다.
@@ -258,8 +268,8 @@ namespace sw
         /** @brief 에디터 Undo/Redo 전용이라 배포본에는 만들지 않습니다(목록의 HostCreated). */
         unique_ptr<CommandStack>   _commandStack;
         unique_ptr<GPUUploadQueue> _gpuUploadQueue;
-        /** @brief `-scenario=<파일>[,<파일>…]` 의 자동화 구동기입니다. 프레임 앞(입력 전) · 뒤(씬 틱 뒤)에서 부르고, 끝나면 `requestQuit( 종료 코드 )` 입니다. */
-        unique_ptr<AutomationSession> _pAutomationSession;
+        /** @brief 프레임 관찰자 목록입니다(소유하지 않는다). 프레임 앞(입력 전) · 뒤(씬 틱 뒤) · 패킷 채우기 · 창 닫힘에서 붙인 순서대로 부르고, 종료 코드를 내면 `requestQuit` 입니다. */
+        vector<IEngineFrameObserver*> _listFrameObserver;
         /** @brief 추가 뷰(CCTV · 백미러 · PiP) 중 이번 프레임에 그릴 것을 고르는 스케줄러(갱신 주기 · 예산)입니다. FrameRenderer 단계가 만들고 해제합니다. */
         unique_ptr<RenderViewScheduler> _renderViewScheduler;
         /** @brief 스케줄러의 시각(초) — 프레임 델타의 누적입니다. */

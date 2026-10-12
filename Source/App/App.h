@@ -25,6 +25,7 @@ namespace sw
     struct EngineConfig;
     struct NativeWindowEvent;
 
+    class AutomationSession;
     class CommandLineManager;
     class DevConsoleController;
     class EditorModuleHost;
@@ -72,6 +73,12 @@ namespace sw
          *          바로 드러나지 않으므로 여기서 대신 알린다.
          */
         void warnUnknownGlobalOverrides() const;
+        /**
+         * @brief `-scenario` 가 있으면 자동화 세션을 만들어 엔진 루프에 프레임 관찰자로 붙이고 렌더 스레드의 시나리오 캡처를 켭니다.
+         * @details 시나리오는 늘 고정 프레임 시간이다(세션이 단계마다 `gv_fixedFrameDelta` 를 그 시나리오 값으로 맞춘다). 여럿이면 한 프로세스에서 차례로 돈다.
+         *          돌릴 시나리오가 없으면(목록이 빔) 세션을 남기지 않습니다.
+         */
+        void startAutomationSession( const CommandLineManager& commandLineManager );
 
         /** @brief 창 콜백 · 전역 변수 훅 · Present 훅을 연결합니다. */
         void bindHostCallbacks();
@@ -130,6 +137,11 @@ namespace sw
         ModuleCatalog       _moduleCatalog;
         ModuleResolution    _moduleResolution;
         unique_ptr<IWindow> _window;
+        /**
+         * @brief `-scenario=<파일>[,<파일>…]` 의 자동화 구동기입니다(`startAutomationSession`). 엔진 루프에 프레임 관찰자로 붙고, 끝나면 루프가 그 종료 코드로 끝납니다.
+         * @details 엔진 루프는 이것을 모릅니다. 엔진 종료 전에 떼고 없앱니다(실행기가 로그 리스너 · 입력을 빌려 쓴다).
+         */
+        unique_ptr<AutomationSession> _automationSession;
 
         FixedTimestep      _fixedTimestep;
         RHIBackendSwitcher _backendSwap;

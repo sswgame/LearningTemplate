@@ -25,7 +25,6 @@
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Audio/IAudioSystem.h"
 #include "Engine/Audio/LipSyncImport.h"
-#include "Engine/Automation/AutomationSession.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Compression/EngineCompressionCodecUtil.h"
 #include "Engine/Config/ConfigManager.h"
@@ -99,6 +98,7 @@
 #include "Engine/UserSettings/UserSettingsVariables.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/DebugOverlayState.h"
+#include "Engine/Utility/EngineFrameObserver.h"
 #include "Engine/Utility/GameTimeScale.h"
 #include "Engine/Window/IWindow.h"
 
@@ -928,7 +928,7 @@ namespace sw
         , _packetScratch{ nullptr }
         , _commandStack{ nullptr }
         , _gpuUploadQueue{ nullptr }
-        , _pAutomationSession{ nullptr }
+        , _listFrameObserver{}
         , _renderViewScheduler{ nullptr }
         , _renderViewClock{ 0.0 }
         , _listAnimationLODView{}
@@ -1043,20 +1043,6 @@ namespace sw
         if ( _bHeadless )
             return true;
 
-        // 자동화 시나리오(`-scenario=<파일>[,<파일>…]`) — 시나리오는 늘 고정 프레임 시간이다(App 의 `gv_fixedFrameDelta` 를 시나리오 값으로).
-        // 여럿이면 한 프로세스에서 차례로 돈다(앞 단계가 통과해야 다음으로 가며, 앞 단계의 씬 · 모듈 상태를 이어받는다).
-        string scenarioPath;
-        if ( _owned._pCommandLineManager->getArgument( CommandLineArgument::SCENARIO, scenarioPath ) && scenarioPath.empty() == false )
-        {
-            string reportPath;
-            (void)_owned._pCommandLineManager->getArgument( CommandLineArgument::SCENARIO_REPORT, reportPath );
-            _pAutomationSession = make_unique<AutomationSession>();
-            if ( _pAutomationSession->begin( scenarioPath, reportPath, _owned._pCommandLineManager->isArgumentProvided( CommandLineArgument::SCENARIO_KEEP_GOING ),
-                                             _renderThread != nullptr ? _renderThread->getCompletedScenarioScreenshotCount() : 0u ) &&
-                 _renderThread != nullptr )
-                _renderThread->setScenarioCaptureEnabled( true );
-        }
-
         _profileSession.begin();
 #if SW_PROFILER_TRACE_ENABLED
         ProfilerTraceExport::startExitCapture( engine::getFrameProfiler() ); // `-gv_traceSaveOnExit` — 없으면 아무것도 하지 않는다
@@ -1074,8 +1060,9 @@ namespace sw
         if ( engine::areEngineServicesBound() && _bHeadless == false )
             ProfilerTraceExport::finishExitCapture( engine::getFrameProfiler(), _hostRole == EngineHostRole::DedicatedServer ? "Server" : "App" );
 #endif
-        // 시나리오 실행기는 로그 리스너 · 입력을 빌려 쓴다 — 서비스보다 먼저 내린다.
-        _pAutomationSession.reset();
+        // 프레임 관찰자는 붙인 쪽이 서비스보다 먼저 내린다(로그 리스너 · 입력을 빌려 쓴다). 남은 것은 더 부르지 않는다.
+        // 목록의 용량은 기동 뒤에 잡았으므로 누수 보고 전에 해제한다.
+        vector<IEngineFrameObserver*>{}.swap( _listFrameObserver );
         AssetLoadProfiler::get().reportIfRequested( "session" );
         // 단계 본문을 초기화한 것만 역순으로 내린다: 씬의 디바이스 → 렌더 스레드 → 렌더러 → RHI → 씬 → 입력 · 오디오 → 모듈 이미지 → 태스크 → 셰이더 캐시.
         _startup.shutdownAll();
@@ -1166,19 +1153,65 @@ namespace sw
         SW_LOG_INFO( "Quit requested (exit code %#)", exitCode );
     }
 
+    void EngineLoop::addFrameObserver( IEngineFrameObserver* pObserver )
+    {
+        if ( pObserver == nullptr )
+            return;
+        for ( const IEngineFrameObserver* pExisting : _listFrameObserver )
+        {
+            if ( pExisting == pObserver )
+                return;
+        }
+        _listFrameObserver.push_back( pObserver );
+    }
+
+    void EngineLoop::removeFrameObserver( IEngineFrameObserver* pObserver )
+    {
+        for ( size_t index = 0; index < _listFrameObserver.size(); ++index )
+        {
+            if ( _listFrameObserver[index] != pObserver )
+                continue;
+            _listFrameObserver.erase( _listFrameObserver.begin() + static_cast<ptrdiff_t>( index ) );
+            return;
+        }
+    }
+
+    EngineFrameContext EngineLoop::makeFrameContext() const
+    {
+        EngineFrameContext context;
+        context._pInput                   = _owned._pInputManager.get();
+        context._completedScreenshotCount = _renderThread != nullptr ? _renderThread->getCompletedScenarioScreenshotCount() : 0u;
+        return context;
+    }
+
     void EngineLoop::onWindowClosed()
     {
-        if ( _pAutomationSession == nullptr )
+        if ( _listFrameObserver.empty() )
             return;
-        _exitCode       = _pAutomationSession->onWindowClosed( _owned._pInputManager.get() );
-        _bQuitRequested = true;
+        const EngineFrameContext context = makeFrameContext();
+        for ( IEngineFrameObserver* pObserver : _listFrameObserver )
+        {
+            const int32 observerExitCode = pObserver->onWindowClosed( context );
+            if ( observerExitCode == IEngineFrameObserver::kRunning )
+                continue;
+            // 관찰자의 결과가 앞선 종료 요청(프로파일 세션)의 코드보다 이긴다.
+            _exitCode       = observerExitCode;
+            _bQuitRequested = true;
+            return;
+        }
     }
 
     void EngineLoop::beginFrame( float32 deltaSeconds )
     {
-        // 시나리오의 시작 조건 · 가상 입력 붙이기 · 행동 층 단계는 이 프레임의 입력 재생 전이다.
-        if ( _pAutomationSession != nullptr && _owned._pInputManager != nullptr )
-            _pAutomationSession->onFrameBegin( *_owned._pInputManager );
+        // 관찰자의 프레임 앞 단계(시나리오의 시작 조건 · 가상 입력 붙이기 · 행동 층 단계)는 이 프레임의 입력 재생 전이다.
+        if ( _listFrameObserver.empty() == false )
+        {
+            const EngineFrameContext context = makeFrameContext();
+            for ( IEngineFrameObserver* pObserver : _listFrameObserver )
+            {
+                pObserver->onFrameBegin( context );
+            }
+        }
         if ( _owned._pInputManager != nullptr )
             _owned._pInputManager->beginFrame( deltaSeconds );
         // UI 는 게임 틱보다 먼저 입력을 받는다 — UI 가 먹은 행동 · 마우스 버튼은 이번 프레임 폰의 의도에 들지 않는다(플레이어 조종자가 본다).
@@ -1355,9 +1388,16 @@ namespace sw
             RenderFramePacket& packet = *_packetScratch;
             packet.resetForFrame();
             packet._bValid = 1;
-            // 시나리오 `<Screenshot>` 은 다음에 그리는 이 패킷에 싣는다.
-            if ( _pAutomationSession != nullptr )
-                (void)_pAutomationSession->takePendingScreenshotPath( packet._screenshotPath ); // 없으면 빈 채로 둔다
+            // 관찰자가 실을 것(시나리오 `<Screenshot>` 의 경로)은 다음에 그리는 이 패킷에 싣는다.
+            if ( _listFrameObserver.empty() == false )
+            {
+                EngineRenderPacketContext packetContext;
+                packetContext._pScreenshotPath = &packet._screenshotPath;
+                for ( IEngineFrameObserver* pObserver : _listFrameObserver )
+                {
+                    pObserver->onBuildRenderPacket( packetContext );
+                }
+            }
 
             packet._outputRenderTarget = mainOutput._renderTarget;
             packet._viewportWidth      = vpWidth;
@@ -1515,12 +1555,16 @@ namespace sw
 
         _memoryBudgetMonitor.onFrameEnd();
 
-        // 시나리오의 단언 · 환경 단계는 씬 틱 · 렌더 제출 뒤, 입력 프레임을 닫기 전이다(그 프레임의 눌림 엣지가 아직 보인다).
-        if ( _pAutomationSession != nullptr && _owned._pInputManager != nullptr )
+        // 관찰자의 프레임 뒤 단계(시나리오의 단언 · 환경 단계)는 씬 틱 · 렌더 제출 뒤, 입력 프레임을 닫기 전이다(그 프레임의 눌림 엣지가 아직 보인다).
+        if ( _listFrameObserver.empty() == false )
         {
-            const int32 sessionExitCode = _pAutomationSession->onFrameEnd( *_owned._pInputManager, _renderThread != nullptr ? _renderThread->getCompletedScenarioScreenshotCount() : 0u );
-            if ( sessionExitCode != AutomationSession::kRunning )
-                requestQuit( sessionExitCode );
+            const EngineFrameContext context = makeFrameContext();
+            for ( IEngineFrameObserver* pObserver : _listFrameObserver )
+            {
+                const int32 observerExitCode = pObserver->onFrameEnd( context );
+                if ( observerExitCode != IEngineFrameObserver::kRunning )
+                    requestQuit( observerExitCode ); // 여럿이면 처음 것의 코드다
+            }
         }
         if ( _owned._pInputManager != nullptr )
             _owned._pInputManager->endFrame();

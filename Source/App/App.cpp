@@ -18,6 +18,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Automation/AutomationProbe.h"
+#include "Engine/Automation/AutomationSession.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
@@ -267,6 +268,7 @@ namespace sw
         : _engineLoop{}
         , _moduleHost{ nullptr }
         , _window{ nullptr }
+        , _automationSession{ nullptr }
         , _fixedTimestep{}
         , _backendSwap{}
         , _userSettingsHost{}
@@ -326,6 +328,9 @@ namespace sw
             splash.dismiss();
             return false;
         }
+
+        // 자동화 시나리오는 엔진 기동이 끝난 지금, 모듈을 올리기 전에 시작한다(첫 단계의 시작 조건이 모듈 · 씬이 설 때까지 기다린다).
+        startAutomationSession( *pCommandLineManager );
 
         _fixedTimestep.configure( pEngineConfig->_maxFrameDeltaTime,
                                   pEngineConfig->_fixedDeltaTime,
@@ -478,6 +483,26 @@ namespace sw
         }
     }
 
+    void App::startAutomationSession( const CommandLineManager& commandLineManager )
+    {
+        string scenarioPath;
+        if ( commandLineManager.getArgument( CommandLineArgument::SCENARIO, scenarioPath ) == false || scenarioPath.empty() )
+            return;
+        string reportPath;
+        (void)commandLineManager.getArgument( CommandLineArgument::SCENARIO_REPORT, reportPath ); // 없으면 보고 파일을 쓰지 않는다
+        RenderThread* pRenderThread = _engineLoop.getRenderThread();
+        _automationSession          = make_unique<AutomationSession>();
+        const bool bKeepGoing       = commandLineManager.isArgumentProvided( CommandLineArgument::SCENARIO_KEEP_GOING );
+        if ( _automationSession->begin( scenarioPath, reportPath, bKeepGoing, pRenderThread != nullptr ? pRenderThread->getCompletedScenarioScreenshotCount() : 0u ) == false )
+        {
+            _automationSession.reset();
+            return;
+        }
+        if ( pRenderThread != nullptr )
+            pRenderThread->setScenarioCaptureEnabled( true );
+        _engineLoop.addFrameObserver( _automationSession.get() );
+    }
+
     void App::bindHostCallbacks()
     {
         _window->setResizeCallback( SW_DELEGATE_METHOD( WindowResizeDelegate, &App::onResize, this ) );
@@ -535,6 +560,12 @@ namespace sw
         // 창은 엔진(RHI) 뒤에 파괴한다. 기동 뒤에 바꾼 제목(에디터)의 사본은 엔진 종료의 누수 보고 전에 해제한다.
         if ( _window != nullptr )
             _window->releaseTitleStorage();
+        // 시나리오 실행기는 로그 리스너 · 입력을 빌려 쓴다 — 엔진 서비스보다 먼저 떼고 내린다.
+        if ( _automationSession != nullptr )
+        {
+            _engineLoop.removeFrameObserver( _automationSession.get() );
+            _automationSession.reset();
+        }
         _engineLoop.shutdown();
 
         if ( _window != nullptr )
