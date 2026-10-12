@@ -237,7 +237,7 @@ VRM 은 같은 길로 임포트하고, MToon 머티리얼이 있으면 머티리
 
 | 단계 | 속성 | 등록하는 곳 | 하는 일 |
 |---|---|---|---|
-| `EditorDrag` | `mark`, `dx`, `dy`(픽셀), `button`, `mods` | 에디터 `EditorScenarioSteps` | `mark` 위젯 가운데를 누르고 (dx, dy) 만큼 끌어 놓습니다(누름 · 절반 · 끝 · 뗌을 네 프레임에 — 프레임마다 커서를 다시 넣는다). 커브 키 · 손잡이 끌기 |
+| `EditorDrag` | `mark`, `dx`, `dy`(픽셀) 또는 `toMark`, `button`, `mods` | 에디터 `EditorScenarioSteps` | `mark` 위젯 가운데를 누르고 (dx, dy) 만큼 — 또는 `toMark` 위젯 가운데까지 — 끌어 놓습니다(누름 · 절반 · 끝 · 뗌을 네 프레임에 — 프레임마다 커서를 다시 넣는다). 커브 키 · 손잡이 끌기, 끌어 놓기(Hierarchy 줄을 다른 줄에: `hierarchydrag`) |
 | `EditorHover` | `mark`, `anchor` 또는 `release="true"` | 에디터 `EditorScenarioSteps` | 단추를 누르지 않고 커서를 레이블 자리에 붙잡아 둡니다(호버). `release` 까지 프레임마다 그 자리를 넣는다 |
 | `EditorClick` | `mark`, `button`(0..4), `mods`, `state`(`down`, `up`), `anchor`(`x,y` 0..1) | 에디터 `EditorScenarioSteps` | `mark` 이름이 붙은 위젯 가운데(`anchor` 를 주면 그 안의 자리 — 캔버스 빈 곳)를 클릭합니다. `state="down"` 은 누른 채 두고 `up` 까지 커서를 그 자리에 붙잡습니다(뷰포트 비행 · 끌기) |
 | `EditorText` | `value` | 에디터 `EditorScenarioSteps` | ImGui에 글자를 입력합니다 |
@@ -306,6 +306,8 @@ VRM 은 같은 길로 임포트하고, MToon 머티리얼이 있으면 머티리
 | `Editor.ReferenceIndexReady`, `Editor.ReferenceResultCount` | 참조 역색인이 다 만들어졌으면 1, 마지막 Find References 나 Show Dependencies 의 결과 줄 수 |
 | `Editor.OutputLogVisibleRows` | Output Log 가 지난 그리기에 보인 줄 수(거르기 · Collapse 뒤) |
 | `Editor.MaterialPreviewRedMinusBlue` | Material 패널의 구 미리보기 평균 (R - B)(0..255, 빨간 머티리얼이 크다). 패널이 닫혔거나 문서가 없으면 값이 없다 |
+| `Editor.SelectedEnumValue`, `Editor.ObjectDepth`, `Editor.DirtyDocumentCount` | 주 선택의 `gv_editorProbeProperty` 열거형 값(열거자의 수), `gv_editorProbeObject` 오브젝트가 부모 몇 겹 아래인지(루트 0 — 끌어 놓기 확인), 저장하지 않은 문서 패널 수 |
+| `Editor.MaterialDocumentIsProbeAsset`, `Editor.MaterialSwitchPending` | Material 패널이 연 문서가 `gv_editorProbeAsset` 이면 1(문서 교체와 미리보기 계산을 나눠 본다), 미저장 확인 때문에 새 문서를 못 열고 기다리는 중이면 1 |
 | `Editor.UIPreviewWidgetCount`, `Editor.UIPreviewFirstTextBytes`, `Editor.UIPreviewRightToLeft` | UI Preview 트리의 위젯 수, 문서 순서로 첫 글 위젯이 화면에 보이는 글의 UTF-8 바이트 수(의사 문화권이면 늘어난다), 루트가 오른쪽에서 왼쪽으로 배치됐으면 1(`qps-plocm`). 패널이 닫혔거나 문서가 없으면 값이 없다 |
 | `Editor.UIPreviewHoveredOrdinal`, `Editor.UIPreviewHoveredFocusable`, `Editor.UIPreviewFocusedOrdinal` | 입력 흉내가 호버한 위젯의 문서 순서 번호(없으면 -1)와 그 위젯이 포커스를 받는지, 탐색 방향 단추가 옮긴 포커스 위젯의 번호(없으면 -1) |
 | `Editor.UIPreviewSelectedOpacity`, `Editor.UIPreviewDirty`, `Editor.UIPreviewReloadedAfterSave` | 고른 위젯의 불투명도(고른 것이 없으면 값이 없다), 저장하지 않은 편집이 있으면 1, 저장한 뒤 핫 리로드가 문서를 다시 읽어 트리를 새로 지었으면 1 |
@@ -314,6 +316,9 @@ VRM 은 같은 길로 임포트하고, MToon 머티리얼이 있으면 머티리
 | `Editor.SceneViewMode`, `Editor.GameViewMode` | 씬 뷰 툴바의 보기 모드, 주 출력(게임 뷰)의 보기 모드(0 Lit · 1 Unlit · 2 Wireframe · 3 Normals · 4 Depth · 5 Overdraw) |
 | `Editor.ObjectPositionX`, `Editor.SequencerKeyFrameCount` | `gv_editorProbeObject` 오브젝트의 로컬 위치 X, Sequencer 패널이 고른 키 트랙의 키 프레임 수(패널이 닫혔거나 고른 트랙이 없으면 값이 없다) |
 
+UI Preview 창의 레이블은 `uipreview.language`(콤보) · `uipreview.language.<코드|game>`, `uipreview.widget.<이름>` · `uipreview.row.<번호>`, `uipreview.interact`, `uipreview.nav.<up|down|left|right|accept>`,
+`uipreview.animation` · `uipreview.animation.<이름|play|pause|stop>` · `uipreview.animationtime`, `uipreview.save` · `uipreview.reload` · `uipreview.image` · `uipreview.inspector.search` 입니다.
+인스펙터 열거형 콤보의 항목은 `inspector.enum.<프로퍼티>.<열거자>` 입니다(콤보를 연 프레임에만 있다 — `inspectorcombo`).
 `EditorClick` 이 누르는 위젯 레이블에는 `hierarchy.create`, `hierarchy.filter`, `hierarchy.selectedRow`, `hierarchy.activeToggle`, `hierarchy.addComponent`,
 `hierarchy.addComponent.search`, `hierarchy.addComponent.<타입>`, 눈 `hierarchy.toggle.<이름>` · 자물쇠 `hierarchy.lock.<이름>`, `inspector.name`, 씬 뷰 오버레이 손잡이 `overlay.grip.<바 id>` · 접기 `overlay.collapse.<바 id>` · 메뉴 `sceneView.overlays`, 인스펙터 Add Component 단추 `inspector.addComponent`(검색 칸 `inspector.addComponent.search`) · 자물쇠 `inspector.lock` · 에셋 고르기 `inspector.assetPicker.<프로퍼티>`, 기즈모 단추 `gizmo.translate` · `gizmo.rotate` · `gizmo.scale` · `gizmo.space`, 2D/3D 토글 `viewport.dimension`, 뷰포트 빌보드 `viewport.billboard.<오브젝트 이름>` · 시각화 체크박스 `viewport.visualizer.<id>`, 노드 그래프 캔버스 `graph.canvas`(빈 곳은 `anchor` 로) · 찾아 넣기 검색 칸 `graph.addNode.search`, 커브 미리보기 `inspector.curve.<프로퍼티>` · 편집기 캔버스 `curve.canvas` · 키 `curve.key.<n>` · 메뉴 `curve.menu.addKey`, `theme.swatch.violet`, 씬 뷰 캔버스 `sceneView.canvas` · 스크린샷 `sceneView.screenshot` · 보기 모드 콤보 `viewport.viewMode` · 그 항목 `viewport.viewMode.<모드>`(소문자), 프로파일러 Timeline 탭 `profiler.timeline.tab` · 녹화 단추 `profiler.timeline.record`, Test Runner 검색 칸 `testRunner.filter` · 자체 테스트 체크 `testRunner.select.<id>` · `testRunner.runSelected`(탭은 `state="down"` · `up` 을 다른 프레임에 나눠 눌러야 골라진다), 게임 뷰 `gameView.canvas` · `gameView.aspect` · 스크린샷 `gameView.screenshot`, 콘텐츠 브라우저 All packs `contentBrowser.allPacks` · 검색 칸 `contentBrowser.search` · 타일과 줄 `contentBrowser.asset.<파일 이름>` · 폴더 트리 `contentBrowser.folder.<리소스 id>` · 오른쪽 클릭 메뉴 `contentBrowser.menu.findReferences` · `contentBrowser.menu.showDependencies` · `contentBrowser.menu.rename` · `contentBrowser.menu.duplicate`, 상태줄 맵 검사 수 `statusBar.mapCheck`, Packaging 창 `packaging.skipBuild` · `packaging.skipCook` · `packaging.package`, Map Check 창의 줄 `mapCheck.row.<n>`(오류가 먼저) · `mapCheck.checkMap`, Add 단추 `contentBrowser.add` · 그 항목 `contentBrowser.add.folder` · `contentBrowser.add.material` · `contentBrowser.add.scene` · `contentBrowser.add.prefab`, 이름 입력 칸 `contentBrowser.rename`, 삭제 확인 `contentBrowser.delete.confirm`,
 상단 툴바 `toolbar.play` · `toolbar.simulate` · `toolbar.pause` · `toolbar.stop` · `toolbar.playAnyway`(미저장 확인 모달) · `toolbar.renderDoc` 이 있습니다. 씬 뷰와 게임 뷰는 같은 영역의 탭이라

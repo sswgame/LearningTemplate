@@ -471,6 +471,13 @@ namespace sw::editor
                 const bool bSelected = ( val == currentValue );
                 if ( ImGui::Selectable( nameHashed.c_str(), bSelected ) )
                     editedValue = val;
+                if ( EditorSelfTestMarks::isEnabled() )
+                {
+                    // 시나리오가 콤보 항목을 누를 수 있게 한다(`inspector.enum.<프로퍼티>.<열거자>`) — 콤보를 연 프레임에만 그려진다.
+                    fixed_string<constant::kMaxBuffer128> itemMark;
+                    formatstring( itemMark.data(), itemMark.capacity(), "inspector.enum.%#.%#", prop._name.c_str(), nameHashed.c_str() );
+                    EditorSelfTestMarks::note( itemMark.c_str() );
+                }
                 if ( bSelected )
                     ImGui::SetItemDefaultFocus();
             }
