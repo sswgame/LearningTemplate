@@ -101,6 +101,16 @@ namespace sw
         const float3& getNextCorner() const { return _nextCorner; }
         /** @brief 군중에 들어가 내비메시 위에 있으면 true 입니다. */
         bool isOnNavMesh() const { return _bOnNavMesh == SW_TRUE; }
+        /**
+         * @brief 오프 메시 링크(`NavMeshLinkComponent`)를 건너는 중이면 true 입니다(마지막 내비게이션 갱신). 애니메이션이 사다리 · 점프 동작으로 바꾸는 신호입니다.
+         * @details 건너는 동안 군중이 자리를 링크를 따라 옮긴다. `Transform` 은 오브젝트를, `CharacterController` 는 컨트롤러를 그 자리로 옮기고(물리 이동 대신),
+         *          `SteerOnly` 는 링크를 따라가는 속도를 낸다. 언리얼 `UNavLinkCustomComponent` 의 도착 알림 · 유니티 `NavMeshAgent.isOnOffMeshLink` 에 해당합니다.
+         */
+        bool isOnOffMeshLink() const { return _bOnOffMeshLink == SW_TRUE; }
+        /** @brief 건너는 링크의 두 끝 · 진행률(0..1) · 번호입니다. `isOnOffMeshLink` 일 때만 뜻이 있습니다. */
+        const NavLinkTraversal& getOffMeshLinkTraversal() const { return _linkTraversal; }
+        /** @brief 건너는 링크의 종류 이름(`NavMeshLinkComponent::getLinkType`, 예: `Ladder`)입니다. 링크 컴포넌트를 찾지 못했으면 빈 이름입니다. */
+        const hashed_string& getOffMeshLinkType() const { return _linkType; }
         /** @brief 공통 이동 창구입니다. */
         INavMover& getMover() { return _mover; }
 
@@ -152,6 +162,8 @@ namespace sw
         float3            _agentPosition;
         float3            _nextCorner;
         float3            _writtenPosition; ///< 마지막으로 오브젝트에 쓴 자리(바깥의 순간이동 판정)
+        NavLinkTraversal  _linkTraversal;   ///< 건너는 오프 메시 링크(`_bOnOffMeshLink`)
+        hashed_string     _linkType;        ///< 건너는 링크의 종류 이름
         NavCrowdAgentID   _crowdAgentID;
         uint32            _navIndex;   ///< `SceneNavigation` 의 목록 자리
         uint32            _crowdIndex; ///< 든 군중(에이전트 종류) 자리
@@ -162,6 +174,7 @@ namespace sw
         uint8             _bOnNavMesh        : 1;
         uint8             _bHasWritten       : 1;
         uint8             _bParamsDirty      : 1;
-        uint8             _reserved          : 2;
+        uint8             _bOnOffMeshLink    : 1;
+        uint8             _reserved          : 1;
     };
 } // namespace sw

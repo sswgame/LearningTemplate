@@ -7,7 +7,9 @@
 #include "Engine/Navigation/INavMesh.h"
 #include "Engine/Navigation/NavMeshSettings.h"
 #include "Engine/Object/Component/Navigation/NavMeshAgentComponent.h"
+#include "Engine/Object/Component/Navigation/NavMeshLinkComponent.h"
 #include "Engine/Object/Component/Navigation/NavMeshRuntime.h"
+#include "Engine/Object/Component/Navigation/SceneNavigation.h"
 #include "Engine/Object/Component/Physics/CharacterControllerComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -128,6 +130,15 @@ namespace sw
         agent._desiredVelocity = state._desiredVelocity;
         agent._nextCorner      = state._nextCorner;
         agent._bOnNavMesh      = state._bOnNavMesh ? SW_TRUE : SW_FALSE;
+        // 링크에 오른 첫 갱신에만 종류 이름을 찾는다(링크 컴포넌트 수만큼 훑는다).
+        const bool bEnteredLink = state._bOnOffMeshLink && ( agent._bOnOffMeshLink == SW_FALSE || agent._linkTraversal._linkID != state._link._linkID );
+        if ( bEnteredLink )
+        {
+            const NavMeshLinkComponent* pLink = agent._pSceneNavigation != nullptr ? agent._pSceneNavigation->findLink( state._link._linkID ) : nullptr;
+            agent._linkType                   = pLink != nullptr ? pLink->getLinkType() : hashed_string{};
+        }
+        agent._bOnOffMeshLink = state._bOnOffMeshLink ? SW_TRUE : SW_FALSE;
+        agent._linkTraversal  = state._link;
         if ( agent._bHasDestination == SW_TRUE && agent._moveStatus != NavMoveStatus::Arrived )
         {
             const bool bWithinStop = float3::getHorizontalDistance( state._position, agent._destination ) <= agent._stoppingDistance;
@@ -158,7 +169,13 @@ namespace sw
         GameObject*                   pOwner      = agent.getOwner();
         CharacterControllerComponent* pController = Internal::findDrivenController( agent );
         SceneComponent*               pScene      = pOwner->getPrimarySceneComponent();
-        if ( pController != nullptr )
+        if ( pController != nullptr && state._bOnOffMeshLink )
+        {
+            // 링크(사다리 · 틈)는 물리로 걸을 수 없다 — 건너는 동안은 군중이 정한 자리로 컨트롤러를 옮긴다.
+            pController->setMoveVelocity( float3{} );
+            pController->setWorldPosition( state._position );
+        }
+        else if ( pController != nullptr )
         {
             pController->setMoveVelocity( float3{ state._velocity._x, 0.0f, state._velocity._z } );
         }

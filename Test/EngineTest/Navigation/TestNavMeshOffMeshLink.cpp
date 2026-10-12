@@ -6,10 +6,17 @@
 #include "Engine/Navigation/INavMesh.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Navigation/NavMeshSettings.h"
+#include "Engine/Object/Component/Navigation/NavMeshAgentComponent.h"
+#include "Engine/Object/Component/Navigation/NavMeshLinkComponent.h"
+#include "Engine/Object/Component/Navigation/SceneNavigation.h"
+#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "EngineTest/NavMeshTestUtil.h"
 
 #include "TestFramework/TestFramework.h"
+#include "TestFramework/TestTick.h"
 
 namespace
 {
@@ -139,4 +146,63 @@ SW_TEST_CASE( NavMeshLinkTest, CrowdAgentTraversesTheLinkAndReportsIt )
     SW_EXPECT_FALSE( bArrivedOnLink );
     SW_EXPECT_FALSE( state._bOnOffMeshLink );
     SW_EXPECT_TRUE_MSG( sw::float3::getHorizontalDistance( state._position, goal ) < 0.5f, ( "ended at x " + std::to_string( state._position._x ) ).c_str() );
+}
+
+/**
+ * @brief [NavMeshLinkTest] 씬의 링크 컴포넌트가 베이크에 들고, 에이전트가 건너는 동안 링크 종류 이름(애니메이션 신호)을 알리며, 링크를 막으면 다시 베이크해도 막혀 있다
+ */
+SW_TEST_CASE( NavMeshLinkTest, LinkComponentBakesSignalsAndBlocks )
+{
+    sw::GameObjectManager manager;
+    sw::SceneNavigation&  navigation = manager.getSceneService<sw::SceneNavigation>();
+    navigation.setSettings( navtest::makeSettings() );
+    navtest::spawnStaticBody( manager, "FloorWest", sw::float3{ 3.0f, -0.5f, 2.0f }, sw::float3{ 3.0f, 0.5f, 2.0f } );
+    navtest::spawnStaticBody( manager, "FloorEast", sw::float3{ 12.0f, -0.5f, 2.0f }, sw::float3{ 3.0f, 0.5f, 2.0f } );
+    navtest::spawnSurface( manager, sw::NavGeometrySource::PhysicsColliders );
+
+    sw::GameObject*     pLinkObject = manager.createGameObject( sw::hashed_string( "GapJump" ) );
+    sw::SceneComponent* pLinkRoot   = pLinkObject->addComponent<sw::SceneComponent>();
+    pLinkRoot->setLocalPosition( sw::float3{ 5.3f, 0.0f, 2.0f } );
+    sw::NavMeshLinkComponent* pLink = pLinkObject->addComponent<sw::NavMeshLinkComponent>();
+    pLink->setEndOffset( sw::float3{ 4.4f, 0.0f, 0.0f } );
+    pLink->setLinkType( sw::hashed_string( "Jump" ) );
+
+    sw::GameObject*     pWalker = manager.createGameObject( sw::hashed_string( "Walker" ) );
+    sw::SceneComponent* pRoot   = pWalker->addComponent<sw::SceneComponent>();
+    pRoot->setLocalPosition( sw::float3{ 1.0f, 0.0f, 2.0f } );
+    sw::NavMeshAgentComponent* pAgent = pWalker->addComponent<sw::NavMeshAgentComponent>();
+    pAgent->setMaxSpeed( 3.0f );
+
+    manager.beginPlay();
+    test::tickFrames( manager, 2 );
+    const sw::hashed_string agentType( "TestHumanoid" );
+    SW_ASSERT_NOT_NULL( navigation.findNavMesh( agentType ) );
+    const sw::float3 goal{ 14.0f, 0.0f, 2.0f };
+    pAgent->setDestination( goal );
+    bool bSawJump = false;
+    for ( uint32 frame = 0; frame < 900 && pAgent->getMoveStatus() != sw::NavMoveStatus::Arrived; ++frame )
+    {
+        manager.tick( 1.0f / 60.0f );
+        bSawJump = bSawJump || ( pAgent->isOnOffMeshLink() && pAgent->getOffMeshLinkType() == sw::hashed_string( "Jump" ) );
+    }
+    SW_EXPECT_TRUE( bSawJump );
+    SW_EXPECT_TRUE( pAgent->getMoveStatus() == sw::NavMoveStatus::Arrived );
+    SW_EXPECT_TRUE( sw::float3::getHorizontalDistance( pRoot->getWorldPosition(), goal ) < 0.6f );
+    SW_EXPECT_FALSE( pAgent->isOnOffMeshLink() );
+
+    // 막으면(닫힌 문) 다음 갱신부터 경로가 건너지 않고, 편집기 베이크 버튼 창구로 다시 베이크해도 막혀 있다.
+    const sw::float3 west{ 1.0f, 0.0f, 2.0f };
+    sw::NavPath      path;
+    SW_EXPECT_TRUE( navigation.findPath( agentType, west, goal, path ) == sw::NavPathStatus::Complete );
+    pLink->setLinkEnabled( false );
+    manager.tick( 1.0f / 60.0f );
+    SW_EXPECT_TRUE( navigation.findPath( agentType, west, goal, path ) == sw::NavPathStatus::Partial );
+    SW_EXPECT_EQUAL( 1u, navigation.rebakeAllNavMeshes() );
+    SW_EXPECT_FALSE( navigation.isLoadedFromCooked( agentType ) );
+    SW_EXPECT_TRUE( navigation.findPath( agentType, west, goal, path ) == sw::NavPathStatus::Partial );
+    pLink->setLinkEnabled( true );
+    manager.tick( 1.0f / 60.0f );
+    SW_EXPECT_TRUE( navigation.findPath( agentType, west, goal, path ) == sw::NavPathStatus::Complete );
+    SW_EXPECT_EQUAL( pLink->computeCurrentLinkID(), path._listLinkCrossing.empty() ? 0u : path._listLinkCrossing.front()._linkID );
+    manager.endPlay();
 }
