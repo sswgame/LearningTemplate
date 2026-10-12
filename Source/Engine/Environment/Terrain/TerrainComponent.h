@@ -96,8 +96,10 @@ namespace sw
         bool isHoleAt( float32 worldX, float32 worldZ ) const { return _heightfield.isHoleAt( worldX, worldZ ); }
         /** @brief 월드 (x, z) 의 레이어 가중치(합 1)를 반환합니다. */
         float4 computeLayerWeightsAt( float32 worldX, float32 worldZ ) const { return _heightfield.computeLayerWeightsAt( worldX, worldZ ); }
-        /** @brief CPU 높이장을 반환합니다(물리 높이장과 배치 표면이 읽습니다). */
+        /** @brief CPU 높이장을 반환합니다(물리 충돌 `TerrainColliderComponent` 와 배치 표면이 읽습니다). */
         const TerrainHeightfield& getHeightfield() const { return _heightfield; }
+        /** @brief 높이장을 다시 읽을 때마다(`reloadTerrain`) 오르는 세대입니다. 높이장에서 만든 것(물리 바디)이 낡았는지 견줍니다. */
+        uint32 getHeightfieldGeneration() const { return _heightfieldGeneration; }
         /** @brief 청크 배치입니다. */
         const TerrainChunkLayout& getChunkLayout() const { return _layout; }
         /** @brief 청크 (x, z) 의 지금 LOD 입니다. 범위 밖이면 0 입니다. */
@@ -179,7 +181,8 @@ namespace sw
         vector<Chunk>       _listChunk;
         vector<uint32>      _listWantedLOD; ///< updateLODs 의 스크래치(청크마다 고른 LOD)
         EnvironmentMaterial _material;
-        PrimitiveRegistry*  _pPrimitiveRegistry; ///< 등록된 매니저의 레지스트리(구조 링크라 생포인터)
-        atomic<bool>        _bOriginDirty;       ///< 오너가 움직여 지형 원점이 낡았다
+        PrimitiveRegistry*  _pPrimitiveRegistry;    ///< 등록된 매니저의 레지스트리(구조 링크라 생포인터)
+        uint32              _heightfieldGeneration; ///< `reloadTerrain` 마다 오른다(`getHeightfieldGeneration`)
+        atomic<bool>        _bOriginDirty;          ///< 오너가 움직여 지형 원점이 낡았다
     };
 } // namespace sw

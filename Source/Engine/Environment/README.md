@@ -8,6 +8,7 @@
 - `TerrainComponent` 는 높이맵 에셋으로 지형을 그리고, 높이와 노멀을 물어볼 수 있게 합니다.
 - `FoliageComponent` 는 배치 규칙에 따라 풀과 나무를 지형 위에 흩뿌리고 GPU 인스턴싱으로 그립니다. `WindComponent` 가 바람을, `FoliageInfluencerComponent` 가 풀을 눕히는 구를 정합니다.
 - `WaterBodyComponent` 는 호수와 강의 수면을 그리고, 수면 높이와 물속 여부를 물어볼 수 있게 합니다.
+- `TerrainColliderComponent` 는 지형을 정적 물리 바디로 만들고, `BuoyancyComponent` 는 강체를 물 위에 띄웁니다. 유니티의 TerrainCollider, 언리얼 Water 플러그인의 BuoyancyComponent 에 해당합니다.
 
 세 기능 모두 렌더러를 고치지 않고 만들었습니다. 그려지는 것은 전부 메시 컴포넌트와 같은 `MeshInstanceBatch` 로 등록되므로, GPU 씬 빌드와 GPU 컬링, 멀티 드로우를 메시와 같은 경로로 지납니다.
 새로 생긴 것은 머티리얼 셰이더(`foliage.hlsl`, `gerstner.hlsli` 등)뿐입니다. 그래서 렌더러는 이 폴더를 모르고, 이 폴더는 씬(`Scene`) 대신 게임 오브젝트 매니저(`GameObjectManager`)만 봅니다.
@@ -128,15 +129,26 @@ LOD나 이웃 LOD가 바뀐 청크만 메시를 다시 만들어 `MeshInstanceBa
 DX12 프레임은 p50 2.6 ms, p99 3.4~8.4 ms이고 Vulkan은 p50 3.7 ms입니다. GPU가 병목이며, 가장 큰 패스는 그림자 패스(p50 1.4 ms)입니다.
 그림자를 끈 풀도 정점 셰이더는 실행되기 때문입니다. 측정 방법은 [Profiling/README.md](../Profiling/README.md)에 있습니다.
 
-## 확장하는 법 — 물리 엔진에 연결하기
+### 물리 — 지형 충돌과 부력
 
-지형 충돌과 부력은 아직 물리 엔진에 연결되어 있지 않습니다. 연결할 때 쓸 API는 다음과 같습니다.
+**지형 충돌.** `TerrainColliderComponent` 를 지형과 같은 오브젝트에 붙이면, 플레이를 시작한 뒤 첫 물리 프레임에 정적 바디 하나가 생깁니다.
+셰이프는 `TerrainCollisionUtil::makeCollisionMesh` 가 높이장에서 만든 삼각형 메시입니다. 대각선과 점 순서가 렌더 메시(LOD 0), 높이 질의와 같아서 물리가 보는 땅과 그려진 땅이 같습니다.
+구멍 셀은 삼각형을 내지 않습니다. 지형을 다시 읽으면(`reloadTerrain`) 높이장 세대(`getHeightfieldGeneration`)가 올라가고, 다음 물리 프레임에 바디를 다시 만듭니다.
 
-1. **지형을 Jolt `HeightFieldShape` 로 넘깁니다.** `TerrainHeightfield::getHeightSamples()` 는 N² 개의 월드 높이를 행 우선(z가 바깥, x가 안쪽)으로 줍니다.
-   `getResolution()`, `getCellSize()`, `getOrigin()` 으로 크기와 위치를 얻습니다. 원점은 샘플 (0, 0)의 위치입니다.
-2. **구멍을 옮깁니다.** `getHoleCells()` 는 (N−1)² 개의 셀 단위 구멍입니다. Jolt는 샘플 단위로 `cNoCollisionValue` 를 받으므로, 구멍 셀의 네 샘플 중 하나를 그 값으로 바꿉니다.
-3. **부력을 계산합니다.** `WaterBodyComponent::findWaterAt( manager, x, z )` 로 그 위치의 물을 찾고, `computeSurfaceHeight`, `computeSurfaceNormal`, `isUnderwater` 를 부릅니다.
-   파도 시간은 물 컴포넌트의 `getWaveTime()` 이 기준입니다. 고정 스텝 물리도 같은 시간을 넘겨야 화면의 파도와 부력이 맞습니다.
+Jolt 의 `HeightFieldShape` 대신 메시를 쓰는 이유는 구멍입니다. `HeightFieldShape` 는 구멍을 샘플 단위(`cNoCollisionValue`)로만 받아서, 셀 하나를 뚫으려면 이웃 셀까지 뚫립니다.
+메모리와 질의 속도는 `HeightFieldShape` 가 낫습니다. 물리 셰이프 종류에 높이장이 생기면 구멍이 없는 지형부터 그쪽으로 바꿉니다.
+
+**부력.** `BuoyancyComponent` 를 강체(`RigidBodyComponent`)와 같은 오브젝트에 붙이고 폰툰(구)을 적습니다.
+물리 고정 스텝마다 폰툰 자리를 바디의 지금 자세로 옮기고, 그 (x, z) 를 덮는 물(`WaterBodyComponent::findWaterAt`)의 수면 높이(`computeSurfaceHeight`)를 읽습니다.
+잠긴 비율은 구 캡 부피(`BuoyancyUtil::computeSubmergedFraction`)이고, 부력은 물 밀도 × 중력 × 잠긴 부피입니다. 부력과 물 저항은 폰툰 자리에 충격량으로 들어가므로, 기운 배는 스스로 바로 섭니다.
+파도 시간은 물 컴포넌트의 `getWaveTime()` 이라 화면의 파도와 부력이 같은 수면을 봅니다. 중력은 그 씬의 물리 설정 표(`PhysicsSettings::_gravity`)에서 옵니다.
+
+## 확장하는 법 — 배를 띄우기
+
+1. 배 오브젝트에 `RigidBodyComponent`(Dynamic, 질량)와 `BuoyancyComponent` 를 붙입니다.
+2. 폰툰을 배 바닥 네 귀퉁이에 둡니다. 폰툰이 하나면 기울어도 바로 서지 않습니다.
+3. 무게와 부력이 맞는지 봅니다. 평형에서 잠긴 비율은 질량 ÷ (밀도 × 폰툰 부피 합)입니다. 1 을 넘으면 가라앉습니다.
+4. 흔들림이 오래 가면 `_linearDrag` 를 올립니다. 폰툰 하나가 다 잠겼을 때 속도 1 m/s 당 받는 저항(N)입니다.
 
 ## 함정과 주의
 
@@ -157,6 +169,8 @@ DX12 프레임은 p50 2.6 ms, p99 3.4~8.4 ms이고 Vulkan은 p50 3.7 ms입니다
 | `Terrain/TerrainComponent.h` | 지형 속성과 질의 |
 | `Foliage/FoliageComponent.h` | 식생 레이어와 셀 배치 |
 | `Water/WaterBodyComponent.h` | 수면 모양과 질의 |
+| `Terrain/TerrainColliderComponent.h` | 지형 충돌 메시와 정적 바디 |
+| `Water/BuoyancyComponent.h` | 폰툰 부력과 물 저항 |
 | `EnvironmentUtil.h` | 카메라 위치 찾기, 애니메이션 스위치, 머티리얼 인스턴스 도우미 |
 
 - 테스트: `Test/EngineTest/Environment/`

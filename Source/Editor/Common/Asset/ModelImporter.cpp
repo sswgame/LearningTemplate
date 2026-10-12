@@ -439,7 +439,8 @@ namespace sw::editor
         vector<const cgltf_node*> listRoot;
         ModelImporterInternal::collectSceneRoots( *pData, listRoot );
         vector<ToonMaterialDesc> listToon;
-        if ( ModelImporterInternal::readToonMaterials( *pData, sourcePath, listToon, outResult._listIgnoredMaterialKey ) == false )
+        if ( ModelImporterInternal::readToonMaterials( *pData, sourcePath, listToon, outResult._listIgnoredMaterialKey ) == false ||
+             ModelImporterInternal::readVrmAvatar( *pData, sourcePath, outResult ) == false )
         {
             cgltf_free( pData );
             return false;
@@ -458,6 +459,8 @@ namespace sw::editor
                 bRead = ModelImporterInternal::readSkinnedModel( *pData, listRoot, rule, sourcePath, listToon, outResult );
             }
             cgltf_free( pData );
+            if ( bRead )
+                ModelImporterInternal::warnMissingAvatarBones( outResult, sourcePath );
             return bRead;
         }
 
@@ -560,12 +563,15 @@ namespace sw::editor
             entry._localTransform = attachment._localTransform;
             result._skeleton.addAttachment( entry );
         }
-        const string skeletonPath = FileUtil::joinPath( sideFolder, FileUtil::removeExtension( FileUtil::getFileNamePart( outputPath ) ) + string( Skeleton::kExtension ) );
+        const string stem         = FileUtil::removeExtension( FileUtil::getFileNamePart( outputPath ) );
+        const string skeletonPath = FileUtil::joinPath( sideFolder, stem + string( Skeleton::kExtension ) );
         if ( result._skeleton.saveToFile( skeletonPath ) == false )
         {
             SW_LOG_ERROR( "Failed to write skeleton %#", skeletonPath.c_str() );
             return false;
         }
+        if ( ModelImporterInternal::writeVrmAvatar( result, sourcePath, sideFolder, stem ) == false )
+            return false;
         [[maybe_unused]] uint64 rawByteTotal        = 0;
         [[maybe_unused]] uint64 compressedByteTotal = 0;
         for ( const ModelImportClip& imported : result._listClip )
@@ -651,7 +657,13 @@ namespace sw::editor
         hash                       = StringUtil::computeHash64( reinterpret_cast<const utf8*>( rule._arrTranslation ), sizeof( rule._arrTranslation ), false, hash );
         const string animationText = rule.makeAnimationHashText();
         hash                       = StringUtil::computeHash64( animationText.c_str(), animationText.size(), false, hash );
-        const string fractureText  = rule.makeFractureHashText();
+        // VRM 이면 아바타 파일 형식 버전도 섞는다. 그 형식만 바뀌었을 때 VRM 원본만 다시 임포트하게 한다(임포터 버전을 올리면 모든 모델이 어긋난다).
+        if ( ModelImporterInternal::containsVrmExtension( bytes ) )
+        {
+            const string avatarText = "avatar=" + to_string( VrmAvatarImporter::kVersion );
+            hash                    = StringUtil::computeHash64( avatarText.c_str(), avatarText.size(), false, hash );
+        }
+        const string fractureText = rule.makeFractureHashText();
         if ( fractureText.empty() == false )
         {
             const string fractureVersion = fractureText + ";format=" + to_string( FractureAsset::kVersion ) + ";algorithm=" + to_string( MeshFractureUtil::kAlgorithmVersion );

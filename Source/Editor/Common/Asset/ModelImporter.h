@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Editor/Common/Asset/VrmAvatarImporter.h"
 #include "Editor/Common/Asset/VrmMaterialImporter.h"
 
 #include "Engine/Animation/AnimationClip.h"
@@ -106,6 +107,10 @@ namespace sw::editor
         vector<ModelImportTexture> _listTexture;
         /** @brief 머티리얼이 지원하지 않는 VRM 키의 이름입니다. 값이 효과 없는 기본값이면 빠집니다. 임포트가 경고로 알립니다. */
         vector<string> _listIgnoredMaterialKey;
+        /** @brief VRM 이면 humanoid 본 표 · 표정 · 스프링 본 · 1인칭 정보입니다(`VrmAvatarImporter`). VRM 이 아니면 비어 있습니다. */
+        VrmAvatarDef _avatar;
+        /** @brief 아바타 정보에서 모르는 키와 옮기지 않는 값의 경로입니다. 임포트가 경고로 알립니다. */
+        vector<string> _listIgnoredAvatarKey;
         uint8          _bSkinned{ SW_FALSE };
     };
 } // namespace sw::editor
@@ -130,6 +135,7 @@ namespace sw::editor
      *
      *          VRM 은 머티리얼에 MToon 값이 있다(0.x 는 `extensions.VRM`, 1.0 은 `VRMC_materials_mtoon`). 머티리얼마다 `sections/<머티리얼>.mesh` 와 툰 머티리얼
      *          `materials/<머티리얼>.material` 을 옆 폴더에 더 쓰고, 그 머티리얼이 쓰는 내장 이미지를 `<x>/textures_raw/<y>/` 로 꺼낸다(`VrmMaterialImporter`).
+     *          humanoid 본 표 · 표정 · 스프링 본 · 1인칭은 본과 모프 타깃 이름으로 풀어 옆 폴더의 `<y>.avatar.json` 에 쓴다(`VrmAvatarImporter`).
      */
     struct ModelImporter
     {
