@@ -1,20 +1,18 @@
 #include "pch.h"
 
-#include "Editor/Panels/MultiplayerPanel.h"
+#include "Editor/Panels/Multiplayer/MultiplayerPanel.h"
 
+#include "Core/Common/Defines.h"
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
-#include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorNetModeCombo.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNetPlaySession.h"
-#include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Localization/LocText.h"
@@ -31,8 +29,6 @@ namespace sw::editor
     {
         struct MultiplayerPanelInternal
         {
-            /** @brief "Step" 이 한 번에 돌릴 수 있는 서버 틱 상한입니다. */
-            static constexpr int32 kMaxStepTickCount = 600;
             /** @brief `netplay.wait` 의 기본 시한(초)입니다. */
             static constexpr int32 kDefaultWaitSeconds = 60;
             /** @brief `netplay.wait` 가 세션을 다시 보는 간격입니다. */
@@ -165,11 +161,55 @@ namespace sw::editor
 {
     MultiplayerPanel::MultiplayerPanel()
         : IEditorPanel( false )
-        , _clientArguments{}
-        , _stepTickCount{ 1 }
-        , _logSource{ -1 }
-        , _bFollowLog{ true }
+        , _listTab{}
+        , _tabGeneration{ invalid_index::kUint32 }
+        , _targetProcessIndex{ EditorNetPlaySession::kServerProcessIndex }
     {
+    }
+
+    void MultiplayerPanel::syncTabs()
+    {
+        using Registry                              = EditorExtensionRegistry<EditorMultiplayerTabRegistration>;
+        const EditorExtensionRegistrationList& list = Registry::getList();
+        if ( list.getGeneration() == _tabGeneration )
+            return;
+        _tabGeneration = list.getGeneration();
+        _listTab.clear();
+        _listTab.reserve( Registry::getCount() );
+        for ( uint32 index = 0; index < Registry::getCount(); ++index )
+        {
+            const EditorMultiplayerTabRegistration& registration = Registry::getAt( index );
+            TabEntry&                               entry        = _listTab.emplace_back();
+            entry._pRegistration                                 = &registration;
+            entry._pTab                                          = registration._pCreate();
+        }
+    }
+
+    int32 MultiplayerPanel::drawTargetPicker( EditorNetPlaySession& session )
+    {
+        const int32 processCount = session.getProcessCount();
+        if ( processCount == 0 )
+        {
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorMultiplayer", "NoTarget" ) );
+            return -1;
+        }
+        _targetProcessIndex = MathUtil::clamp( _targetProcessIndex, 0, processCount - 1 );
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted( "Target" );
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * 10.0f );
+        const EditorNetPlayProcessStatus target = session.getProcessStatus( _targetProcessIndex );
+        if ( ImGui::BeginCombo( "##MultiplayerTarget", target._label.c_str() ) )
+        {
+            for ( int32 processIndex = 0; processIndex < processCount; ++processIndex )
+            {
+                if ( ImGui::Selectable( session.getProcessStatus( processIndex )._label.c_str(), processIndex == _targetProcessIndex ) )
+                    _targetProcessIndex = processIndex;
+            }
+            ImGui::EndCombo();
+        }
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "Target" ) );
+        return _targetProcessIndex;
     }
 
     void MultiplayerPanel::drawContent()
@@ -177,156 +217,22 @@ namespace sw::editor
         EditorNetPlaySession* pSession = MultiplayerPanelInternal::findSession();
         if ( pSession == nullptr )
             return;
+        syncTabs();
+        MultiplayerTabContext context;
+        context._pSession           = pSession;
+        context._targetProcessIndex = drawTargetPicker( *pSession );
         if ( ImGui::BeginTabBar( "##MultiplayerTabs" ) )
         {
-            if ( ImGui::BeginTabItem( "Session" ) )
+            for ( TabEntry& entry : _listTab )
             {
-                drawSessionTab( *pSession );
-                ImGui::EndTabItem();
+                if ( ImGui::BeginTabItem( entry._pRegistration->_pLabel ) )
+                {
+                    entry._pTab->drawTab( context );
+                    ImGui::EndTabItem();
+                }
             }
             ImGui::EndTabBar();
         }
-    }
-
-    void MultiplayerPanel::drawSessionTab( EditorNetPlaySession& session )
-    {
-        EditorNetPlaySettings& settings = session.getSettings();
-        (void)EditorNetModeCombo::draw( session ); // 바뀐 구성은 다음 Play 에 쓰인다
-        ImGui::SameLine();
-        ImGui::BeginDisabled( session.isRunning() );
-        ImGui::Checkbox( "Record traces", &settings._bRecordTraces );
-        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "RecordTraces" ) );
-        ImGui::SetNextItemWidth( -1.0f );
-        if ( ImGui::InputTextWithHint( "##ClientArguments", SW_LOCKEY( "EditorMultiplayer", "ClientArgumentsHint" ), _clientArguments.data(), _clientArguments.capacity() ) )
-            settings._clientArguments = _clientArguments.c_str();
-        ImGui::EndDisabled();
-
-        if ( session.isRunning() == false )
-        {
-            ImGui::BeginDisabled( settings._mode == EditorNetMode::Standalone );
-            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlay, "Play" ) ) )
-                (void)session.start( session.getSettings() ); // 실패 이유는 세션이 로그에 남긴다
-            EditorSelfTestMarks::note( "multiplayer.play" );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "Play" ) );
-            ImGui::EndDisabled();
-        }
-        else
-        {
-            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kStop, "Stop" ) ) )
-                (void)session.stop(); // 합친 경로는 로그와 아래 줄에 남는다
-            EditorSelfTestMarks::note( "multiplayer.stop" );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "Stop" ) );
-            ImGui::SameLine();
-            ImGui::TextDisabled( "UDP %u", static_cast<uint32>( session.getPort() ) );
-            ImGui::SameLine();
-            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPause, "Pause server" ) ) )
-                (void)session.sendServerCommand( "pause" ); // 답은 서버 로그 줄로 온다
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "PauseServer" ) );
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth( ImGui::GetFontSize() * 3.0f );
-            ImGui::InputInt( "##StepTicks", &_stepTickCount, 0, 0 );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "StepTickCount" ) );
-            _stepTickCount = MathUtil::clamp( _stepTickCount, 1, MultiplayerPanelInternal::kMaxStepTickCount );
-            ImGui::SameLine();
-            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kStepForward, "Step" ) ) )
-                (void)session.sendServerCommand( "step " + to_string( _stepTickCount ) ); // 답은 서버 로그 줄로 온다
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "StepServer" ) );
-            ImGui::SameLine();
-            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlay, "Resume server" ) ) )
-                (void)session.sendServerCommand( "resume" ); // 답은 서버 로그 줄로 온다
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ResumeServer" ) );
-        }
-        if ( session.getMergedTracePath().empty() == false )
-        {
-            ImGui::TextDisabled( "Last merged trace:" );
-            ImGui::SameLine();
-            ImGui::TextUnformatted( session.getMergedTracePath().c_str() );
-        }
-        ImGui::Separator();
-        drawProcessTable( session );
-        ImGui::Separator();
-        drawLog( session );
-    }
-
-    void MultiplayerPanel::drawProcessTable( EditorNetPlaySession& session )
-    {
-        const int32 processCount = session.getProcessCount();
-        if ( processCount == 0 )
-        {
-            ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorMultiplayer", "NoProcesses" ) );
-            return;
-        }
-        if ( ImGui::BeginTable( "##NetPlayProcesses", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_SizingStretchProp ) == false )
-            return;
-        ImGui::TableSetupColumn( "Process", ImGuiTableColumnFlags_WidthFixed );
-        ImGui::TableSetupColumn( "PID", ImGuiTableColumnFlags_WidthFixed );
-        ImGui::TableSetupColumn( "State", ImGuiTableColumnFlags_WidthFixed );
-        ImGui::TableSetupColumn( "Net", ImGuiTableColumnFlags_WidthFixed );
-        ImGui::TableSetupColumn( "Last line" );
-        ImGui::TableHeadersRow();
-        for ( int32 processIndex = 0; processIndex < processCount; ++processIndex )
-        {
-            const EditorNetPlayProcessStatus status = session.getProcessStatus( processIndex );
-            ImGui::TableNextRow();
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted( status._label.c_str() );
-            ImGui::TableNextColumn();
-            ImGui::Text( "%d", status._processID );
-            ImGui::TableNextColumn();
-            if ( status._bRunning )
-                EditorWidgets::drawChip( "running", editor::style::kOk );
-            else
-                EditorWidgets::drawChip( ( "exited " + to_string( status._exitCode ) ).c_str(), editor::style::kWarn );
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted( processIndex == 0 ? "server" : ( status._bConnected ? "connected" : "-" ) );
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted( status._lastLine.c_str() );
-        }
-        ImGui::EndTable();
-    }
-
-    void MultiplayerPanel::drawLog( EditorNetPlaySession& session )
-    {
-        // 이름은 한 번만 — 줄마다 상태 사본을 만들지 않는다.
-        const int32    processCount = session.getProcessCount();
-        vector<string> listLabel;
-        listLabel.reserve( static_cast<size_t>( processCount ) );
-        for ( int32 processIndex = 0; processIndex < processCount; ++processIndex )
-        {
-            listLabel.push_back( session.getProcessStatus( processIndex )._label );
-        }
-        if ( _logSource >= processCount )
-            _logSource = -1;
-        ImGui::SetNextItemWidth( ImGui::GetFontSize() * 10.0f );
-        if ( ImGui::BeginCombo( "##LogSource", _logSource < 0 ? "All processes" : listLabel[static_cast<size_t>( _logSource )].c_str() ) )
-        {
-            if ( ImGui::Selectable( "All processes", _logSource < 0 ) )
-                _logSource = -1;
-            for ( int32 processIndex = 0; processIndex < processCount; ++processIndex )
-            {
-                if ( ImGui::Selectable( listLabel[static_cast<size_t>( processIndex )].c_str(), _logSource == processIndex ) )
-                    _logSource = processIndex;
-            }
-            ImGui::EndCombo();
-        }
-        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "LogSource" ) );
-        ImGui::SameLine();
-        ImGui::Checkbox( "Follow", &_bFollowLog );
-        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "FollowLog" ) );
-        if ( ImGui::BeginChild( "##NetPlayLog", ImVec2( 0.0f, 0.0f ), ImGuiChildFlags_Borders ) )
-        {
-            for ( const EditorNetPlayLogLine& line : session.getLogLines() )
-            {
-                if ( _logSource >= 0 && line._processIndex != _logSource )
-                    continue;
-                ImGui::TextDisabled( "[%s]", line._processIndex < processCount ? listLabel[static_cast<size_t>( line._processIndex )].c_str() : "?" );
-                ImGui::SameLine();
-                ImGui::TextUnformatted( line._text.c_str() );
-            }
-            if ( _bFollowLog && ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - ImGui::GetTextLineHeight() )
-                ImGui::SetScrollHereY( 1.0f );
-        }
-        ImGui::EndChild();
     }
 
     SW_EDITOR_PANEL( MultiplayerPanel, "multiplayer", EditorPanelCategory::Tool, 2035 );

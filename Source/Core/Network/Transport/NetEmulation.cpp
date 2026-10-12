@@ -46,6 +46,21 @@ namespace sw
 
             /** @brief 0 이상 숫자를 읽습니다. */
             [[nodiscard]] static bool parseNonNegative( string_view text, float32& outValue ) { return StringUtil::parseFloat( text, outValue ) && outValue >= 0.0f; }
+
+            /** @brief 덮어쓰기 글 · 보고 줄의 실수 반올림 단위(0.01)의 역수입니다. */
+            static constexpr float64 kHundredths = 100.0;
+
+            /** @brief ` key=value` 를 덧붙입니다. 실수는 0.01 단위로 반올림해 가장 짧게 쓴다(초 → ms 처럼 단위를 바꾼 값의 끝자리 오차를 지운다). */
+            static void appendValue( string& inoutText, const utf8* pKey, float64 value )
+            {
+                utf8 arrBuffer[constant::kMaxBuffer32];
+                (void)StringUtil::formatNumber( arrBuffer, constant::kMaxBuffer32, static_cast<float32>( MathUtil::round( value * kHundredths ) / kHundredths ) );
+                if ( inoutText.empty() == false )
+                    inoutText += ' ';
+                inoutText += pKey;
+                inoutText += '=';
+                inoutText += arrBuffer;
+            }
         };
     } // namespace
 
@@ -143,6 +158,64 @@ namespace sw
         return bOk;
     }
 
+    string NetEmulationConditions::makeOverrideText() const
+    {
+        using Internal = NetEmulationInternal;
+        string text;
+        Internal::appendValue( text, "latencyMs", _latency / Internal::kMillisecond );
+        Internal::appendValue( text, "jitterMs", _jitter / Internal::kMillisecond );
+        Internal::appendValue( text, "lossPercent", static_cast<float64>( _lossRate / Internal::kPercent ) );
+        Internal::appendValue( text, "duplicatePercent", static_cast<float64>( _duplicateRate / Internal::kPercent ) );
+        Internal::appendValue( text, "reorderPercent", static_cast<float64>( _reorderRate / Internal::kPercent ) );
+        Internal::appendValue( text, "bandwidthKBps", static_cast<float64>( _bandwidthBytesPerSecond ) / static_cast<float64>( Internal::kKilobyte ) );
+        return text;
+    }
+
+    string NetEmulationReport::makeLine() const
+    {
+        string text{ kLinePrefix };
+        text += " connections=" + to_string( _connectionCount );
+        text += " sent=" + to_string( _sentPacketCount );
+        text += " dropped=" + to_string( _droppedPacketCount );
+        text += " resent=" + to_string( _resentMessageCount );
+        NetEmulationInternal::appendValue( text, "lossPercent", static_cast<float64>( _measuredLossPercent ) );
+        NetEmulationInternal::appendValue( text, "rttMs", static_cast<float64>( _rttMilliseconds ) );
+        return text;
+    }
+
+    bool NetEmulationReport::tryParseLine( string_view line, NetEmulationReport& outReport )
+    {
+        const size_t prefixAt = line.find( kLinePrefix );
+        if ( prefixAt == string_view::npos )
+            return false;
+        NetEmulationReport parsed;
+        bool               bOk = true;
+        StringUtil::forEachToken( line.substr( prefixAt + string_view( kLinePrefix ).size() ), " \t", [&parsed, &bOk]( string_view token ) -> bool
+        {
+            const size_t equals = token.find( '=' );
+            if ( equals == string_view::npos )
+                return true; // 머리 뒤의 다른 글(로그 꼬리)은 건너뛴다
+            const string_view key   = token.substr( 0, equals );
+            const string_view value = token.substr( equals + 1 );
+            if ( key == "connections" )
+                bOk = StringUtil::parseInt( value, parsed._connectionCount );
+            else if ( key == "sent" )
+                bOk = StringUtil::parseUint64( value, parsed._sentPacketCount );
+            else if ( key == "dropped" )
+                bOk = StringUtil::parseUint64( value, parsed._droppedPacketCount );
+            else if ( key == "resent" )
+                bOk = StringUtil::parseUint64( value, parsed._resentMessageCount );
+            else if ( key == "lossPercent" )
+                bOk = StringUtil::parseFloat( value, parsed._measuredLossPercent );
+            else if ( key == "rttMs" )
+                bOk = StringUtil::parseFloat( value, parsed._rttMilliseconds );
+            return bOk;
+        } );
+        if ( bOk )
+            outReport = parsed;
+        return bOk;
+    }
+
     NetEmulationTransport::NetEmulationTransport( INetTransport* pInner, uint32 seed )
         : _mutex{}
         , _pInner{ pInner }
@@ -193,6 +266,12 @@ namespace sw
             if ( link._bOverride == SW_FALSE )
                 link._conditions = conditions;
         }
+    }
+
+    NetEmulationConditions NetEmulationTransport::getDefaultConditions() const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        return _defaultConditions;
     }
 
     void NetEmulationTransport::setConditions( const NetAddress& to, const NetEmulationConditions& conditions )

@@ -793,6 +793,9 @@ namespace sw
                 viewport._width  = static_cast<float32>( tile._cell._size );
                 viewport._height = static_cast<float32>( tile._cell._size );
                 context._pCmd->setViewport( viewport );
+                // 타일마다 새 상수 슬롯을 잡는다. 슬롯은 패스당 하나라서 같은 슬롯에 행렬만 다시 올리면, GPU 가 나중에 읽는 DX12 · Vulkan 에서는
+                // 모든 타일이 마지막에 쓴 행렬을 본다(DX11 · GL 은 업데이트가 명령 순서대로 들어가 가려진다).
+                acquirePassCb( context );
                 context._passValues.setMatrix( names._lightViewProj, tile._viewProj );
                 drawSceneMeshes( context, pso, passCb, bTransparentBatch );
             }

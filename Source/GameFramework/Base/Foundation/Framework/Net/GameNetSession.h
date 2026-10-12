@@ -17,6 +17,10 @@
  *          게임 스레드는 프레임마다 `update` 로 연결 이벤트와 받은 메시지를 처리기에 나눠 준다.
  *          연결과 끊김은 로그를 한 줄씩 남기며(`Net session client N connected`, `Net session connected to …`),
  *          멀티 프로세스 재생과 테스트가 이 줄로 접속을 확인한다.
+ *
+ *          Dev 구성에서는 UDP 전송을 회선 흉내(`NetEmulationTransport`)로 감싼다. 시작 값은 `-gv_netEmu*` 이고, 실행 중에는 개발 명령
+ *          `net.emulation` · `net.disconnect` · `net.reconnect` · `net.traffic` 이 바꾼다(에디터 Multiplayer 창 Conditions 탭이 표준 입력으로 보낸다).
+ *          조건이 꺼져 있으면 흉내는 패킷을 그대로 넘긴다. Shipping 에는 흉내가 없다.
  * @warning 게임 모듈 핫 리로드는 게임 인스턴스를 새로 만든다. 세션도 닫고 다시 열므로 클라이언트는 끊겼다가(시간 초과) 다시 붙어야 한다.
  */
 #pragma once
@@ -27,6 +31,7 @@
 #include "Core/Network/Connection/NetHostThread.h"
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/NetTypes.h"
+#include "Core/Network/Transport/NetEmulation.h"
 #include "Core/Task/TaskFuture.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -108,6 +113,15 @@ namespace sw
         NetHost& getHost() { return _host; }
         /** @brief 키트와 게임이 메시지 처리기를 다는 라우터입니다. `update` 가 pump 합니다. */
         NetMessageRouter& getRouter() { return _router; }
+        /** @brief 세션 전송을 감싼 회선 흉내입니다. 세션을 열지 않았거나 Shipping 이면 nullptr 입니다. 스레드 안전합니다(네트워크 스레드가 같이 쓴다). */
+        NetEmulationTransport* findEmulation() { return _emulation.get(); }
+
+        /** @brief 이쪽에서 모든 연결을 끊습니다(회선 조절의 "끊기"). 클라이언트는 저절로 다시 붙지 않습니다 — `reconnect` 를 부릅니다. */
+        void disconnectPeers();
+        /** @brief 끊긴 클라이언트가 서버에 다시 붙기 시작합니다. 서버이거나 이미 붙어 있거나 붙는 중이면 false 입니다. */
+        [[nodiscard]] bool reconnect();
+        /** @brief 회선 흉내와 연결들의 수치를 한 보고로 모읍니다(`net.emulation stats` 의 답). 흉내가 없으면 흉내 칸은 0 입니다. */
+        NetEmulationReport makeEmulationReport() const;
 
     private:
         /** @brief 클라이언트 연결이 끝났으면 로그에 남깁니다. 시간 초과면 다시 시도하는데, 같이 띄운 서버가 아직 기동 중일 수 있기 때문입니다. */
@@ -116,15 +130,16 @@ namespace sw
         void logEvents() const;
 
     private:
-        NetHost                      _host;
-        NetHostThread                _thread;
-        NetMessageRouter             _router;
-        unique_ptr<UDPNetTransport>  _transport;
-        TaskFuture<NetConnectResult> _connectFuture;    ///< 클라이언트 — 기다리는 연결(결과를 알리면 비운다)
-        vector<NetHostEvent>         _listEventScratch; ///< `update` 가 다시 쓴다
-        NetAddress                   _serverAddress;
-        uint16                       _listenPort;
-        GameNetRole                  _role;
-        uint8                        _bConnectFailureReported; ///< 클라이언트 — 연결 실패를 한 번 알렸다(다시 시도하는 시간 초과는 처음만 알린다)
+        NetHost                           _host;
+        NetHostThread                     _thread;
+        NetMessageRouter                  _router;
+        unique_ptr<UDPNetTransport>       _transport;
+        unique_ptr<NetEmulationTransport> _emulation;        ///< `_transport` 를 감싼 회선 흉내(Dev). 호스트는 이것을 전송으로 쓴다
+        TaskFuture<NetConnectResult>      _connectFuture;    ///< 클라이언트 — 기다리는 연결(결과를 알리면 비운다)
+        vector<NetHostEvent>              _listEventScratch; ///< `update` 가 다시 쓴다
+        NetAddress                        _serverAddress;
+        uint16                            _listenPort;
+        GameNetRole                       _role;
+        uint8                             _bConnectFailureReported; ///< 클라이언트 — 연결 실패를 한 번 알렸다(다시 시도하는 시간 초과는 처음만 알린다)
     };
 } // namespace sw

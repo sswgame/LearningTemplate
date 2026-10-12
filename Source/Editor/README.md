@@ -177,11 +177,27 @@ Play 는 활성 씬을 스냅샷으로 찍고 월드를 시작합니다. Stop �
 (언리얼 PIE 의 Net Mode + "Run Under One Process" 끔). 서버는 `Server`(전용) 또는 첫 `App`(리슨 호스트)이고 `-gv_netListenPort`, 클라이언트는 `App` 이고 `-gv_netConnectAddress` 를 받습니다 — 포트는 비어 있는 것을 고릅니다.
 
 - 로그: 프로세스마다 읽기 스레드가 줄을 모으고 툴바가 프레임마다 `[Server]` · `[Client1]` 꼬리표를 붙여 Output Log 에 다시 씁니다(자식의 오류 줄은 경고로). 전용 서버의 줄에는 서버가 붙인 `[tick=N]` 이 그대로 있어 클라이언트 줄과 틱으로 맞춰 봅니다. 하나가 먼저 끝나면 종료 코드 · 마지막 줄과 함께 경고합니다.
-- Window > Multiplayer 의 Session 탭: 구성(트레이스 기록 · 클라이언트 인자), 프로세스 목록(pid · 상태 · 접속 · 마지막 줄), 서버 Pause · Step N · Resume(서버 표준 입력의 Dev 명령), 출처별 로그 거르기.
+- Window > Multiplayer 창은 위쪽의 대상 고르기(Server · Client N)와 탭 막대입니다. 탭은 모두 고른 대상을 받습니다.
+- Session 탭: 구성(트레이스 기록 · 클라이언트 인자), 프로세스 목록(pid · 상태 · 접속 · 마지막 줄), 서버 Pause · Step N · Resume(서버 표준 입력의 Dev 명령), 출처별 로그 거르기.
+- Conditions 탭(회선 조절, 언리얼 Net Emulation · 유니티 Network Simulator 의 자리): 프리셋(Off · LAN · Wi-Fi · LTE · Bad Wi-Fi · Disconnected), 올림(Up) · 내림(Down) 슬라이더(지연 · 흔들림 · 손실 · 대역폭),
+  Disconnect · Reconnect · Spike(몇 초 동안 모두 버리기), 마지막 보고(보낸 · 버린 패킷, 재전송, 잰 손실, RTT). 모두 대상 프로세스의 표준 입력에 게임 세션의 개발 명령
+  (`net.emulation <up|down|both> [<프리셋>] [key=value …]` · `net.emulation spike <초>` · `net.emulation stats` · `net.disconnect` · `net.reconnect`)을 보냅니다. All processes 를 켜면 모든 프로세스에 보냅니다.
+  흉내는 Dev 구성의 `GameNetSession` 이 UDP 전송을 `NetEmulationTransport` 로 감싸 두는 것이고(시작 값은 `-gv_netEmu*`), 값은 Core `NetEmulationConditions` 표가 정본입니다.
 - Stop: 모든 자식의 표준 입력에 `quit` 를 보내 정상 종료시키고(15 초를 넘으면 강제 종료), Record traces 가 켜져 있으면 프로세스마다 `-gv_traceSaveOnExit` 로 쓴 파일을
   이름을 달아 `Saved/Traces/netplay_<시각>/merged.trace.json` 으로 합칩니다 — Profiler 창 Load Trace · Perfetto 로 엽니다. 같은 PC 라 단조 시계로 정확히 맞습니다.
 - 개발 명령 `netplay.start [dedicated|listen] [<플레이어 수>]` · `netplay.stop` · `netplay.wait <클라이언트 수> [<초>]` · `netplay.server <명령>`, 탐침 `Editor.NetPlayProcessCount` · `Editor.NetPlayConnectedClients` —
   에디터 시나리오 `engine/automation/editor/netplay.scenario.xml` 이 이것으로 확인합니다. 세션 본체(`Common/Workspace/EditorNetPlaySession`)는 ImGui 가 없어 `EditorTest` 가 `Server` 를 헤드리스 클라이언트로 띄워 테스트합니다.
+- 회선 조절의 개발 명령 `netplay.command <server|client<N>|clients|all> <명령>`(그 프로세스들의 표준 입력에 한 줄) · `netplay.stats [<초>]`(모두에게 `net.emulation stats` 를 묻고 답을 기다림),
+  탐침 `Editor.NetPlayResentMessages` · `Editor.NetPlayEmulationDroppedPackets` · `Editor.NetPlayMeasuredLossPercent` — 시나리오 `netconditions.scenario.xml` 이 손실 30 % 와 `net.traffic` 부하로 확인합니다.
+  보고 줄 형식은 Core `NetEmulationReport` 하나를 쓰는 쪽(게임 세션)과 읽는 쪽(세션 · 탐침)이 나눠 씁니다.
+
+탭을 더하는 법(서버 디버깅의 다음 단위 · 확장 모듈):
+
+1. `Panels/Multiplayer/Multiplayer<이름>Tab.cpp` 에 `IMultiplayerTab` 을 상속한 클래스를 두고 `drawTab( const MultiplayerTabContext& )` 을 구현합니다. 문맥은 세션(`_pSession`)과 고른 대상(`_targetProcessIndex`, 세션이 없으면 -1)입니다.
+2. 같은 파일에 `SW_EDITOR_MULTIPLAYER_TAB( MyTab, "my_tab", 300, "My Tab" );` 한 줄을 둡니다. 순서 키가 탭 막대 순서입니다(Session 100 · Conditions 200).
+3. 창(`MultiplayerPanel`)은 고치지 않습니다. 등록 세대가 바뀌면 탭 인스턴스를 다시 만드므로 확장 모듈의 탭도 핫 리로드를 따라갑니다(탭 상태는 그때 사라집니다).
+4. 자식 프로세스에 무언가 시킬 때는 `EditorNetPlaySession::sendProcessCommand( 번호, 줄 )` 로 개발 명령을 보내고, 답은 로그 줄로 옵니다. 서버 코드는 에디터를 모릅니다.
+5. 확인은 `-gv_editorRegistryDump=1` 의 `EditorExtensionRegistry|multiplayerTab|<id>` 줄과 `AppSmokeTest.EditorRegistriesKeepTheirOrder` 입니다.
 
 ### 씬 뷰와 게임 뷰
 
@@ -375,6 +391,7 @@ Tile Map Tool 은 도구 단추 `tileMap.tool.brush` · `tileMap.tool.rect` · `
 | 뷰포트 시각화 | `SW_EDITOR_VISUALIZER( Name, "id", 300, editoricon::kBug, "Lbl", "툴팁", true, &draw );` | 툴바 토글 순서 |
 | 프로퍼티 타입 그리기 | `SW_EDITOR_PROPERTY_DRAWER( Name, "TypeName", Drawer );` | 타입 이름이 정함 |
 | 상태 막대 항목 | `SW_EDITOR_STATUS_BAR_ITEM( Name, "id", 100, &draw );` (`Common/GUI/EditorStatusBar.h`) | 메뉴 막대 오른쪽 상태 영역의 순서 |
+| Multiplayer 창 탭 | `SW_EDITOR_MULTIPLAYER_TAB( MyTab, "my_tab", 300, "My Tab" );` (`Panels/Multiplayer/MultiplayerTab.h`) | 탭 막대 순서 |
 
 1. 순서 키는 지금 100 간격입니다. 사이에 끼우려면 그 사이 값을 씁니다.
 2. 패널 id 는 `windows.ini` 의 가시성 키이고 `-gv_editorOpenPanel` 의 값입니다. 바꾸면 저장된 배치가 그 창을 잊습니다.

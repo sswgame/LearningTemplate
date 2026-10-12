@@ -2082,67 +2082,145 @@
         "EditorMultiplayer.ClientArgumentsHint": {
             "source": "client arguments (e.g. -vulkan -width=960 -height=540)",
             "origins": [
-                "Source/Editor/Panels/MultiplayerPanel.cpp"
+                "Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.ConditionsApplyToAll": {
+            "source": "Send each change to every process of the session instead of the selected one",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.ConditionsBandwidth": {
+            "source": "Line speed in KB/s (0 = unlimited)",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.ConditionsDisconnect": {
+            "source": "Drop every connection of the selected process (a client stays disconnected until Reconnect)",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.ConditionsDown": {
+            "source": "Packets this process receives",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.ConditionsNoSession": {
+            "source": "Start a multiplayer session (Session tab) to change its line conditions.",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.ConditionsNoStats": {
+            "source": "No stats yet - press Refresh stats",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.ConditionsPreset": {
+            "source": "Set both directions of the selected process to a line preset",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.ConditionsReconnect": {
+            "source": "Connect a disconnected client to the server again",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.ConditionsRefreshStats": {
+            "source": "Ask the selected process for its line and connection numbers",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.ConditionsSpike": {
+            "source": "Drop everything the selected process sends and receives for this many seconds",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.ConditionsUp": {
+            "source": "Packets this process sends (client to server for a client)",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerConditionsTab.cpp"
             ]
         },
         "EditorMultiplayer.FollowLog": {
             "source": "Keep scrolling to the newest log line",
             "origins": [
-                "Source/Editor/Panels/MultiplayerPanel.cpp"
+                "Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp"
             ]
         },
         "EditorMultiplayer.LogSource": {
             "source": "Show the log of one process or of every process",
             "origins": [
-                "Source/Editor/Panels/MultiplayerPanel.cpp"
+                "Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp"
             ]
         },
         "EditorMultiplayer.NoProcesses": {
             "source": "No processes - pick a Net Mode and press Play (toolbar or here).",
             "origins": [
-                "Source/Editor/Panels/MultiplayerPanel.cpp"
+                "Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.NoTarget": {
+            "source": "No multiplayer session is running. Start one in the Session tab.",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerPanel.cpp"
             ]
         },
         "EditorMultiplayer.PauseServer": {
             "source": "Pause the dedicated server's game tick",
             "origins": [
-                "Source/Editor/Panels/MultiplayerPanel.cpp"
+                "Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp"
             ]
         },
         "EditorMultiplayer.Play": {
             "source": "Start the server and clients for the selected Net Mode",
             "origins": [
-                "Source/Editor/Panels/MultiplayerPanel.cpp"
+                "Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp"
             ]
         },
         "EditorMultiplayer.RecordTraces": {
             "source": "Record a timeline per process and merge them into one file (merged.trace.json) on Stop - open it with Load Trace in the Profiler window or with Perfetto",
             "origins": [
-                "Source/Editor/Panels/MultiplayerPanel.cpp"
+                "Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp"
             ]
         },
         "EditorMultiplayer.ResumeServer": {
             "source": "Resume the paused server's game tick",
             "origins": [
-                "Source/Editor/Panels/MultiplayerPanel.cpp"
+                "Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp"
             ]
         },
         "EditorMultiplayer.StepServer": {
             "source": "Run the server game tick as many times as the field on the left says, then pause again (dedicated server Dev command step N)",
             "origins": [
-                "Source/Editor/Panels/MultiplayerPanel.cpp"
+                "Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp"
             ]
         },
         "EditorMultiplayer.StepTickCount": {
             "source": "Number of server ticks that Step runs (1 or more)",
             "origins": [
-                "Source/Editor/Panels/MultiplayerPanel.cpp"
+                "Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp"
             ]
         },
         "EditorMultiplayer.Stop": {
             "source": "Stop every process and merge the recorded traces",
             "origins": [
-                "Source/Editor/Panels/MultiplayerPanel.cpp"
+                "Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp"
+            ]
+        },
+        "EditorMultiplayer.Target": {
+            "source": "Process the tabs act on: the server or one client",
+            "origins": [
+                "Source/Editor/Panels/Multiplayer/MultiplayerPanel.cpp"
             ]
         },
         "EditorPackaging.Game": {

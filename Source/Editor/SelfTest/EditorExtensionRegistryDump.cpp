@@ -12,6 +12,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"
 #include "Editor/Panels/Inspector/InspectorComponentManager.h"
+#include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
 namespace sw::editor
@@ -74,6 +75,7 @@ namespace sw::editor
         EditorExtensionRegistryDumpInternal::dumpIDs<EditorInspectorRegistration>();
         EditorExtensionRegistryDumpInternal::dumpIDs<EditorVisualizerRegistration>();
         EditorExtensionRegistryDumpInternal::dumpIDs<EditorStatusBarItemRegistration>();
+        EditorExtensionRegistryDumpInternal::dumpIDs<EditorMultiplayerTabRegistration>();
         EditorExtensionRegistryDumpInternal::dumpIDs<EditorFrameStepRegistration>();
 
         const EditorCommandRegistry& registry = pContext->getCommandRegistry();

@@ -16,12 +16,16 @@
  *            같은 PC 이므로 단조 시계를 그대로 맞출 수 있어 정확하다.
  *          - 하나가 먼저 죽으면 `update` 가 종료 코드와 마지막 줄을 함께 경고한다.
  *          - 서버 일시정지와 한 틱 진행은 서버 표준 입력에 `pause`, `step N`, `resume` 을 보내서 처리한다(전용 서버의 Dev 명령).
+ *          - 회선 조절은 그 프로세스의 표준 입력에 `net.emulation …` 을 보낸다(`sendProcessCommand`). 답 줄 가운데 `NetEmulationReport` 줄은 프로세스마다 마지막 것을 보관한다.
  */
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Network/Transport/NetEmulation.h"
+
+#include "Editor/Common/EditorExports.h"
 
 namespace sw::editor
 {
@@ -68,13 +72,15 @@ namespace sw::editor
     /** @brief 패널이 그리는 프로세스 하나의 상태 복사본입니다. */
     struct EditorNetPlayProcessStatus
     {
-        string _label;
-        string _lastLine;
-        string _tracePath;
-        int32  _processID{ 0 };
-        int32  _exitCode{ 0 };
-        bool   _bRunning{ false };
-        bool   _bConnected{ false }; ///< 클라이언트가 서버에 연결되었다는 줄(`Net session connected to`)을 남겼다
+        string             _label;
+        string             _lastLine;
+        string             _tracePath;
+        NetEmulationReport _emulationReport{};         ///< 마지막으로 받은 `net.emulation stats` 의 답
+        uint32             _emulationReportCount{ 0 }; ///< 받은 보고 수 — 새 보고가 왔는지 이 값으로 본다
+        int32              _processID{ 0 };
+        int32              _exitCode{ 0 };
+        bool               _bRunning{ false };
+        bool               _bConnected{ false }; ///< 클라이언트가 서버에 연결되었다는 줄(`Net session connected to`)을 남겼다
     };
 } // namespace sw::editor
 
@@ -83,12 +89,15 @@ namespace sw::editor
     /**
      * @class EditorNetPlaySession
      * @brief 서버와 클라이언트 프로세스를 묶은 세션 하나입니다. `start`, 프레임마다 `update`, `stop` 순서로 씁니다. 게임(UI) 스레드에서만 호출합니다.
+     * @details 확장 모듈의 Multiplayer 창 탭(`SW_EDITOR_MULTIPLAYER_TAB`)도 이 세션을 받으므로 EditorModule 밖으로 내보낸다.
      */
-    class EditorNetPlaySession
+    class SW_EDITOR_API EditorNetPlaySession
     {
     public:
         /** @brief 패널 필터용으로 보관하는 최근 줄 수입니다. 넘으면 오래된 줄부터 버리며, 에디터 로그에는 모두 남습니다. */
         static constexpr size_t kMaxLogLine = 4000;
+        /** @brief 서버(전용 서버 · 리슨 호스트)의 프로세스 번호입니다. 클라이언트는 1 부터입니다. */
+        static constexpr int32 kServerProcessIndex = 0;
         /** @brief 합친 트레이스의 파일 이름입니다. */
         static constexpr const utf8* kMergedTraceFileName = "merged.trace.json";
 
@@ -110,6 +119,11 @@ namespace sw::editor
 
         /** @brief 서버(전용 서버 또는 리슨 호스트)의 표준 입력에 한 줄을 보냅니다. `pause`, `step 3`, `resume`, 개발 명령을 보낼 수 있습니다. 보냈으면 true 입니다. */
         [[nodiscard]] bool sendServerCommand( string_view command );
+        /**
+         * @brief 프로세스 하나(`getProcessStatus` 의 번호)의 표준 입력에 한 줄을 보냅니다. 끝났거나 번호가 없으면 false 입니다.
+         * @details 클라이언트 · 리슨 호스트(`App -gv_standardInputCommands=1`)와 전용 서버(Dev)는 그 줄을 개발 명령으로 돌리고 답을 로그 줄로 남긴다.
+         */
+        [[nodiscard]] bool sendProcessCommand( int32 processIndex, string_view command );
 
         bool isRunning() const { return _listProcess.empty() == false; }
         /** @brief 서버에 연결되었다고 로그에 남긴 클라이언트 수입니다. `Net session connected to` 줄을 센 값이며, 프로브와 테스트가 접속 여부를 이 값으로 확인합니다. */
