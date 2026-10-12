@@ -7,6 +7,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Process/ThreadCrashStack.h"
 
+#include <cstdio>
+
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Common/PlatformOsHeaders.h"
 
@@ -303,6 +305,51 @@ namespace sw
             }
         }
 
+        /**
+         * @brief 접근 위반이면 이유 글에 **무엇을 어떻게 접근하려 했는지**(읽기 · 쓰기 · 실행과 대상 주소)와 폴트가 난 코드가 든 모듈(이름 + 오프셋)을 덧붙입니다.
+         * @details 보고의 "at address" 는 폴트가 난 **명령어**의 주소라서, 그 명령어가 건드리려던 데이터 주소와 모듈 없이는 "어느 포인터가 죽었나" · "해제된 이미지의 코드인가" 를
+         *          알 수 없다. 크래시 순간이라 힙을 쓰지 않고 정적 버퍼에 쓴다.
+         */
+        const utf8* describeAccessViolationInternal( const EXCEPTION_RECORD& record, const utf8* pBaseReason )
+        {
+            static utf8 s_arrReason[512];
+            const utf8* pAccess  = "access";
+            uint64      dataAddr = 0;
+            if ( record.NumberParameters >= 2 )
+            {
+                pAccess  = record.ExceptionInformation[0] == 0 ? "read" : ( record.ExceptionInformation[0] == 1 ? "write" : "execute" );
+                dataAddr = static_cast<uint64>( record.ExceptionInformation[1] );
+            }
+            utf8        arrModule[260]{};
+            HMODULE     hModule = nullptr;
+            uint64      offset  = 0;
+            const utf8* pName   = "?";
+            utf16       arrWideModule[260]{};
+            if ( GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, static_cast<LPCWSTR>( record.ExceptionAddress ), &hModule ) &&
+                 GetModuleFileNameW( hModule, arrWideModule, static_cast<DWORD>( sizeof( arrWideModule ) / sizeof( arrWideModule[0] ) ) ) > 0 &&
+                 WideCharToMultiByte( CP_UTF8, 0, arrWideModule, -1, arrModule, static_cast<int32>( sizeof( arrModule ) - 1 ), nullptr, nullptr ) > 0 )
+            {
+                offset = reinterpret_cast<uint64>( record.ExceptionAddress ) - reinterpret_cast<uint64>( hModule );
+                pName  = arrModule;
+                for ( const utf8* pChar = arrModule; *pChar != '\0'; ++pChar )
+                {
+                    if ( *pChar == '\\' || *pChar == '/' )
+                        pName = pChar + 1;
+                }
+            }
+            // 폴트가 난 스레드의 이름(`SetThreadDescription` 으로 붙인 것 — 렌더 스레드 · 워커 · 게임 스레드를 가른다). 없으면 번호만 적는다.
+            utf8  arrThreadName[96]{};
+            PWSTR pWideName = nullptr;
+            if ( SUCCEEDED( GetThreadDescription( GetCurrentThread(), &pWideName ) ) && pWideName != nullptr )
+            {
+                (void)WideCharToMultiByte( CP_UTF8, 0, pWideName, -1, arrThreadName, static_cast<int32>( sizeof( arrThreadName ) - 1 ), nullptr, nullptr );
+                LocalFree( pWideName );
+            }
+            std::snprintf( s_arrReason, sizeof( s_arrReason ), "%s - %s of 0x%llx, in %s+0x%llx, thread %llu '%s'", pBaseReason, pAccess, static_cast<uint64>( dataAddr ), pName,
+                           static_cast<uint64>( offset ), static_cast<uint64>( GetCurrentThreadId() ), arrThreadName );
+            return s_arrReason;
+        }
+
         LONG WINAPI onUnhandledException( EXCEPTION_POINTERS* pInfo )
         {
             const void* pFaultAddress = nullptr;
@@ -311,6 +358,8 @@ namespace sw
             {
                 pReason       = exceptionCodeName( pInfo->ExceptionRecord->ExceptionCode );
                 pFaultAddress = pInfo->ExceptionRecord->ExceptionAddress;
+                if ( pInfo->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION || pInfo->ExceptionRecord->ExceptionCode == EXCEPTION_IN_PAGE_ERROR )
+                    pReason = describeAccessViolationInternal( *pInfo->ExceptionRecord, pReason );
             }
             reportCrash( pReason, pFaultAddress, ( pInfo != nullptr ) ? pInfo->ContextRecord : nullptr, pInfo );
 

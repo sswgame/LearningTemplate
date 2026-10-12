@@ -35,6 +35,8 @@
 
 ## 다음 세션이 할 일 (순서대로)
 
+0. **구조 리팩토링 — 계획 [StructureRefactor](StructureRefactor.md).** R1(엔진 루프에서 자동화 빼기) → 병렬로 R2(에디터 그리기 인계) · R3(레지스트리 통일) · R4(리플렉션 전환) · R7(체인 후속) → R5 · R6. 단위마다 파일 소유자가 하나다.
+
 작업 방식은 [작업 흐름](../11_Workflow.md). 도우미 여럿은 워크트리(`py -3 -m Scripts worktree-make <이름>`)에서만 일하고 push 하지 않으며, 적용 담당 하나가 `git merge --ff-only wt/<이름>` 으로 `main` 에 넣고 push 한다.
 도우미가 동시에 빌드할 때는 `D:\Projects\Personal\LT-wt\BUILD-LOCK-README.txt` 의 슬롯 잠금을 쓴다. 검증은 큰 묶음 끝에 한 번, 사이에는 Debug 풀 컴파일 + 린트 게이트만. WSL(리눅스)은 CI 로 본다.
 

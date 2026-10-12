@@ -217,11 +217,6 @@ namespace
                     listChained.push_back( scenarioPath );
             }
 
-            // OpenGL 에디터는 체인 안의 모듈 리로드에서 ImGui 렌더가 죽는다(백로그 1-5). 그 백엔드는 체인에서 리로드를 빼고, 리로드 시나리오는 프로세스를 따로 띄워 본다(단독으로는 통과한다).
-            const bool                   bReloadsInSeparateProcesses = sw::string( pSwitch ) == "-gl";
-            const sw::vector<sw::string> listReload                  = { "engine/automation/editor/chain/reloadgame.scenario.xml", "engine/automation/editor/chain/reloadkit.scenario.xml",
-                                                                         "engine/automation/editor/chain/reloadkitext.scenario.xml", "engine/automation/editor/chain/reloadeditor.scenario.xml" };
-
             uint32 ranCount = 0;
             if ( listChained.empty() == false )
             {
@@ -231,7 +226,7 @@ namespace
                 SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( stateFolder ) );
                 const sw::string arguments = "-EnableEditor -scenario-keep-going -gv_editorStateDir=" + stateFolder;
                 sw::string       scenarioLines;
-                const int32      exitCode = test::AppTestUtil::runScenarioChain( makeChain( listChained, bReloadsInSeparateProcesses ? 0u : kReloadEvery ), "editor", pSwitch, scenarioLines, arguments );
+                const int32      exitCode = test::AppTestUtil::runScenarioChain( makeChain( listChained, kReloadEvery ), "editor", pSwitch, scenarioLines, arguments );
                 const sw::string label    = sw::string( "editor chain " ) + pSwitch + " -> exit " + sw::to_string( exitCode ) + " (log: Saved/Automation/chain_editor_" + backend + ".log)\n" + scenarioLines;
                 SW_EXPECT_TRUE_MSG( exitCode != test::AppTestUtil::kNotLaunchedExitCode, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)에 App 이 있습니까?" );
                 if ( test::AppTestUtil::isSkippedExitCode( exitCode ) )
@@ -243,8 +238,6 @@ namespace
                 }
             }
             ranCount += runEditorGroups( listSeparate, pSwitch );
-            if ( bReloadsInSeparateProcesses )
-                ranCount += runEditorGroups( listReload, pSwitch );
             if ( ranCount == 0 )
                 SW_TEST_SKIP( "no editor scenario could run on this machine" );
         }

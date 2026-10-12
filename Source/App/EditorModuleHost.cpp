@@ -360,8 +360,9 @@ namespace sw
 
     void EditorModuleHost::onRenderWorkersDrained()
     {
-        if ( _editor != nullptr && _editorAPI.abandonPendingDraw != nullptr )
-            _editorAPI.abandonPendingDraw( _editor );
+        // 렌더 워커를 비웠다고 해서 에디터가 낸 프레임의 in-flight 표시를 풀면 안 된다. 게임 모듈만 리로드할 때 그 표시는 **아직 렌더 스레드에 제출되기 전인** 프레임의 것이다
+        // (게임 스레드가 리로드하느라 제출하지 못했다). 풀어 버리면 UI 스레드가 풀려 다음 `updateUI` 에서 보조 뷰포트를 그리는 동안 렌더 스레드가 그 프레임의 메인 스냅샷을 그려
+        // 같은 ImGui 백엔드(Vulkan 의 `RenderState` · 커맨드 풀)를 두 스레드가 함께 쓴다. 표시는 에디터 인스턴스를 없앨 때만 푼다(`destroyEditorInstance`).
     }
 
     // ======================================================================
@@ -430,6 +431,9 @@ namespace sw
 
     void EditorModuleHost::destroyEditorInstance( bool bReleaseAPITable )
     {
+        // 인스턴스가 사라지면 그 프레임을 렌더할 쪽도 없다(렌더 워커는 이미 비웠다). 남은 in-flight 표시를 풀지 않으면 종료 단계의 `waitForDrawSnapshotIdle` 이 영원히 반환하지 않는다.
+        if ( _editor != nullptr && _editorAPI.abandonPendingDraw != nullptr )
+            _editorAPI.abandonPendingDraw( _editor );
         ModuleInstanceUtil::destroyInstance( _editorAPI, _editor, bReleaseAPITable, sw::config::kTargetEditorModule );
     }
 
