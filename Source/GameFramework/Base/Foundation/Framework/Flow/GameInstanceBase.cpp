@@ -69,9 +69,9 @@ namespace sw
 
     GameObjectManager* GameInstanceBase::findActiveObjectManager()
     {
-        // `areGameServicesBound()` 가 바로 이 서비스(SceneManager 슬롯)를 보므로 아래 널 검사에는 사실상 닿지 않는다.
+        // `isSceneManagerServiceBound()` 가 바로 이 서비스(SceneManager 슬롯)를 보므로 아래 널 검사에는 사실상 닿지 않는다.
         // 그래도 `game::getService<T>()` 는 nullptr 을 반환할 수 있어서 `CheckNullableServiceUse` 린트가 요구하는 모양을 지킨다.
-        if ( game::areGameServicesBound() == false )
+        if ( game::isSceneManagerServiceBound() == false )
             return nullptr;
         SceneManager* pSceneManager = game::getService<SceneManager>();
         if ( pSceneManager == nullptr )

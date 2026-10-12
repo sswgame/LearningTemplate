@@ -40,14 +40,11 @@ namespace sw
 
         // bindGameService · unbindGameService 는 RuntimeAPI/Service/GameServiceBinding.h 가 선언한다(진입점 매크로가 RuntimeAPI 안에서 부른다).
         /**
-         * @brief 게임 서비스를 쓸 수 있는 상태인지 묻습니다. **SceneManager 슬롯 하나를 봅니다.**
-         * @details 이름은 "서비스들이 붙었는가"로 읽히지만, 실제로 검사하는 것은
-         *          `ModuleServiceID::SceneManager` **하나**뿐이다. 그래서 이 함수가 true 면
-         *          `getService<SceneManager>()` 는 널일 수 없고, 다른 서비스에 대해서는
-         *          **아무것도 보장하지 않는다.** 이 함수를 "필수 서비스 전체를 본다"로 읽고 가드를 넣으면
-         *          그 가드는 도달할 수 없다. 이름만 보고 판단하면 안 된다.
+         * @brief 게임 서비스 테이블의 SceneManager 칸이 묶였는지 묻습니다(`bindGameService` 뒤 · `unbindGameService` 전).
+         * @details 검사하는 것은 `ModuleServiceID::SceneManager` 하나다. true 면 `getService<SceneManager>()` 는 널이 아니고,
+         *          다른 서비스에 대해서는 아무것도 보장하지 않는다.
          */
-        SW_GAMESERVICE_API bool areGameServicesBound();
+        SW_GAMESERVICE_API bool isSceneManagerServiceBound();
 
         /**
          * @brief 게임 로컬 서비스(게임 인스턴스가 든 카탈로그 등)를 겁니다.
@@ -75,7 +72,7 @@ namespace sw
          *
          *          짝인 `editor::getService<T>()` 도 처음부터 조용히 nullptr 을 반환한다. 같은 함수가 두 벌 있는데 한쪽만 죽으면 안 되므로 이쪽을 맞춘다.
          *
-         *          "붙였어야 하는데 안 붙었다"를 묻고 싶으면 `areGameServicesBound()` 가 답한다.
+         *          "붙였어야 하는데 안 붙었다"를 묻고 싶으면 `isSceneManagerServiceBound()` 가 답한다.
          *          다만 그 함수는 `SceneManager` 슬롯 하나만 본다.
          * @return 찾은 서비스이다. 로컬에도 호스트에도 없으면 nullptr 이다.
          */

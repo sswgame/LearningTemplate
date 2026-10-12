@@ -35,7 +35,7 @@ namespace sw
             s_mapLocalService.clear();
         }
 
-        SW_GAMESERVICE_API bool areGameServicesBound()
+        SW_GAMESERVICE_API bool isSceneManagerServiceBound()
         {
             return s_gameService.arrServices[sw::internal::toRawServiceID( sw::internal::ModuleServiceID::SceneManager )] != nullptr;
         }
