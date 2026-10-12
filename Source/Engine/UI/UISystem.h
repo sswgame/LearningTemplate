@@ -31,7 +31,7 @@
 
 namespace sw
 {
-    class FontSystem;
+    class FontService;
     class InputManager;
     class InputMap;
     class LocalizationManager;
@@ -78,11 +78,11 @@ namespace sw
         /**
          * @brief 입력을 연결하고 시작합니다.
          * @param inputManager 액션과 포인터를 읽는 입력입니다(테스트는 자기 것을 넘깁니다).
-         * @param pFontSystem 텍스트 측정과 그리기가 쓰는 글꼴입니다(레이아웃부터 사용). 없으면 텍스트 위젯의 크기가 0 입니다.
+         * @param pFontService 텍스트 측정과 그리기가 쓰는 글꼴입니다(레이아웃부터 사용). 없으면 텍스트 위젯의 크기가 0 입니다.
          * @param uiInputMapPath UI 액션 맵 리소스(`engine/input/ui.input.xml`)입니다. 비우면 UI 액션이 없습니다(포인터만 동작).
          * @return 액션 맵을 지정했는데 읽지 못하면 false 입니다.
          */
-        [[nodiscard]] bool initialize( InputManager& inputManager, FontSystem* pFontSystem, string_view uiInputMapPath = {} );
+        [[nodiscard]] bool initialize( InputManager& inputManager, FontService* pFontService, string_view uiInputMapPath = {} );
         /** @brief 화면을 모두 즉시 닫고 입력을 놓습니다. 걸어 둔 게임 정지 요청도 해제합니다. */
         void shutdown();
         bool isInitialized() const { return _input.getInputManager() != nullptr; }
@@ -259,7 +259,7 @@ namespace sw
         void setInputMode( UIInputMode mode );
 
         InputManager*     getInputManager() const { return _input.getInputManager(); }
-        FontSystem*       getFontSystem() const { return _pFontSystem; }
+        FontService*      getFontService() const { return _pFontService; }
         const UIViewport& getViewport() const { return _viewport; }
         /** @brief 텍스트 측정 엔진입니다(글꼴이 없으면 nullptr). 레이아웃 컨텍스트가 넘깁니다. */
         TextLayoutEngine* getTextLayout() const { return _textLayout.get(); }
@@ -357,7 +357,7 @@ namespace sw
         UINotificationService        _notifications;
         UIActionGlyphSource          _actionGlyphs; ///< 입력 관리자와 UI 맵에서 가져오는 글리프 출처입니다(초기화 때 채웁니다).
         UIInputRouter                _input;        ///< 포커스, 포인터, 소비된 입력, UI 액션 맵, 입력 방식입니다.
-        FontSystem*                  _pFontSystem;
+        FontService*                 _pFontService;
         const LocalizationManager*   _pLocalization; ///< 문화권 출처입니다(nullptr 이면 엔진 서비스).
         UserSettingsManager*         _pUserSettings; ///< 설정 바인딩 출처입니다(nullptr 이면 엔진 서비스).
         unique_ptr<TextLayoutEngine> _textLayout;

@@ -4,7 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Text/FontSystem.h"
+#include "Engine/Text/FontService.h"
 
 namespace sw
 {
@@ -43,12 +43,12 @@ namespace sw
         return bFormatControl || bSeparatorEmbed || bVariationSelector || bCombiningMark || codepoint == 0xFEFFu;
     }
 
-    void TextItemizer::itemize( FontSystem& fontSystem, const FontFaceChain& chain, string_view text, vector<ShapingRun>& outListRun )
+    void TextItemizer::itemize( FontService& fontService, const FontFaceChain& chain, string_view text, vector<ShapingRun>& outListRun )
     {
         outListRun.clear();
         if ( chain._faceCount == 0 )
             return;
-        IFontRasterizer& rasterizer = fontSystem.getRasterizer();
+        IFontRasterizer& rasterizer = fontService.getRasterizer();
         bool             bHasRun    = false;
         ShapingRun       current{};
         size_t           offset = 0;
@@ -69,7 +69,7 @@ namespace sw
             if ( face == kInvalidFontFaceID )
             {
                 uint32 glyphIndex = 0;
-                face              = fontSystem.findFaceForCodepoint( chain, codepoint, glyphIndex );
+                face              = fontService.findFaceForCodepoint( chain, codepoint, glyphIndex );
             }
             if ( bNeutral == false )
                 direction = isStrongRightToLeft( codepoint ) ? TextDirection::RightToLeft : TextDirection::LeftToRight;

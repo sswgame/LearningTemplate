@@ -9,7 +9,7 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
-#include "Engine/Text/FontSystem.h"
+#include "Engine/Text/FontService.h"
 #include "Engine/Text/GlyphCache.h"
 #include "Engine/Text/TextLayout.h"
 #include "Engine/UI/Base/PanelWidget.h"
@@ -136,7 +136,7 @@ namespace
     /** @brief 가짜 글꼴 + 글 배치기입니다(기본 가족 Latin — 글자 0.5 em). */
     struct UIPaintFontFixture
     {
-        sw::test::FakeFontSystemFixture      _fonts;
+        sw::test::FakeFontServiceFixture     _fonts;
         sw::unique_ptr<sw::TextLayoutEngine> _layout;
         bool                                 _bInitialized;
 
@@ -147,16 +147,16 @@ namespace
         {
             sw::FontCatalogDesc catalog{};
             catalog._defaultFamily = "Latin";
-            sw::test::FakeFontSystemFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
+            sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
             _bInitialized = _fonts.initialize( catalog );
-            _layout       = sw::make_unique<sw::TextLayoutEngine>( *_fonts._fontSystem );
+            _layout       = sw::make_unique<sw::TextLayoutEngine>( *_fonts._fontService );
         }
 
         void bind( UIPaintFixture& fixture )
         {
             fixture._layoutContext._pTextLayout = _layout.get();
             fixture._paintContext._pTextLayout  = _layout.get();
-            fixture._paintContext._pGlyphCache  = &_fonts._fontSystem->getGlyphCache();
+            fixture._paintContext._pGlyphCache  = &_fonts._fontService->getGlyphCache();
         }
     };
     struct UIWidgetTestUtil

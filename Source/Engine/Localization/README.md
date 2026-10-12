@@ -153,7 +153,7 @@ CI 는 App 을 띄우지 않습니다. 같은 확인을 `EditorTest` 의 `Locali
 에디터 핫 리로드는 `.strings.json`, `.translation.json`, `.locproject.json` 변경을 에셋 캐시 "StringTable"(`LocalizationReloadCache`)로 보내 이 함수를 부릅니다.
 에디터 Data Table 패널의 Localization 탭은 원문과 문화권 번역을 한 테이블로 고치고, 저장하면 같은 경로로 다시 읽습니다.
 
-**글꼴.** `getFontFallback( culture )` 는 문화권(없으면 부모와 폴백)의 글꼴 패밀리 목록을 돌려줍니다. 이 목록으로 글꼴 대체 순서를 만드는 것은 `Engine/Text/FontSystem` 입니다.
+**글꼴.** `getFontFallback( culture )` 는 문화권(없으면 부모와 폴백)의 글꼴 패밀리 목록을 돌려줍니다. 이 목록으로 글꼴 대체 순서를 만드는 것은 `Engine/Text/FontService` 입니다.
 패밀리 이름은 `engine/fonts/fontcatalog.xml` 에 있어야 쓰입니다.
 
 **리치 텍스트.** `[b]` 나 `[color=…]` 같은 태그(`Core/String/MarkupTagScanner`)는 번역 검사가 원문과 번역의 태그 순서를 비교하고, 다르면 보고합니다. 의사 로컬라이저는 태그를 바꾸지 않습니다.

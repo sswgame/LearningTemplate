@@ -257,7 +257,7 @@ namespace
         // 하네스가 세우지 않는 단계다(모듈 이미지 · 헤드리스 작업 · 창 · RHI · 렌더러).
         using ModuleImagesStartupStep  = Defaults;
         using HeadlessStartupStep      = Defaults;
-        using FontsStartupStep         = Defaults; // 글꼴 테스트는 자기 FontSystem 을 만든다(가짜 래스터라이저 · 테스트 카탈로그)
+        using FontsStartupStep         = Defaults; // 글꼴 테스트는 자기 FontService 을 만든다(가짜 래스터라이저 · 테스트 카탈로그)
         using UserSettingsStartupStep  = Defaults;
         using RHIStartupStep           = Defaults;
         using FrameRendererStartupStep = Defaults;

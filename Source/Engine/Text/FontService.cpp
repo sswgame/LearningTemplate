@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Text/FontSystem.h"
+#include "Engine/Text/FontService.h"
 
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/StringUtil.h"
@@ -13,11 +13,11 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "FontSystem" );
+    SW_LOG_CALLER( "FontService" );
 
     namespace
     {
-        struct FontSystemInternal
+        struct FontServiceInternal
         {
             /** @brief 경고 키를 나누는 시드입니다. 패밀리 경고와 코드 포인트 경고가 같은 수로 겹치지 않게 합니다. */
             static constexpr uint64 kFamilyWarningSeed    = 1;
@@ -66,12 +66,12 @@ namespace sw
 
 namespace sw
 {
-    FontSystem::FontSystem()
-        : FontSystem( nullptr, nullptr )
+    FontService::FontService()
+        : FontService( nullptr, nullptr )
     {
     }
 
-    FontSystem::FontSystem( unique_ptr<IFontRasterizer> rasterizer, const LocalizationManager* pLocalization )
+    FontService::FontService( unique_ptr<IFontRasterizer> rasterizer, const LocalizationManager* pLocalization )
         : _rasterizer{ std::move( rasterizer ) }
         , _glyphCache{}
         , _catalog{}
@@ -85,9 +85,9 @@ namespace sw
     {
     }
 
-    FontSystem::~FontSystem() { shutdown(); }
+    FontService::~FontService() { shutdown(); }
 
-    bool FontSystem::initialize( string_view catalogPath )
+    bool FontService::initialize( string_view catalogPath )
     {
         FontCatalogDesc catalog;
         if ( catalog.loadFromResource( catalogPath ) == false )
@@ -95,7 +95,7 @@ namespace sw
         return initializeFromCatalog( std::move( catalog ) );
     }
 
-    bool FontSystem::initializeFromCatalog( FontCatalogDesc catalog )
+    bool FontService::initializeFromCatalog( FontCatalogDesc catalog )
     {
         shutdown();
         if ( catalog.validate() == false )
@@ -118,7 +118,7 @@ namespace sw
         return true;
     }
 
-    void FontSystem::shutdown()
+    void FontService::shutdown()
     {
         _glyphCache.reset();
         if ( _rasterizer != nullptr )
@@ -137,12 +137,12 @@ namespace sw
         _bInitialized = false;
     }
 
-    void FontSystem::registerMemoryFontFile( string_view path, vector<uint8> bytes )
+    void FontService::registerMemoryFontFile( string_view path, vector<uint8> bytes )
     {
         _mapMemoryFile[StringUtil::toLower( string( path ).c_str() )] = std::move( bytes );
     }
 
-    FontFaceChain FontSystem::getFaceChain( const FontSpec& spec )
+    FontFaceChain FontService::getFaceChain( const FontSpec& spec )
     {
         FontFaceChain chain{};
         if ( _bInitialized == false )
@@ -150,7 +150,7 @@ namespace sw
         const LocalizationManager* pLocalization = findLocalization();
         const string               culture       = pLocalization != nullptr ? pLocalization->getCurrentLanguage() : string{};
         const string_view          family        = spec._family.empty() ? string_view{ _catalog._defaultFamily } : string_view{ spec._family };
-        const uint64               chainKey      = FontSystemInternal::hashName( culture, FontSystemInternal::hashFamilyFace( family, spec._weight, spec._slant ) );
+        const uint64               chainKey      = FontServiceInternal::hashName( culture, FontServiceInternal::hashFamilyFace( family, spec._weight, spec._slant ) );
         const auto                 iter          = _mapChain.find( chainKey );
         if ( iter != _mapChain.end() )
         {
@@ -162,7 +162,7 @@ namespace sw
         uint8            bFauxBold   = SW_FALSE;
         uint8            bFauxItalic = SW_FALSE;
         const FontFaceID primaryFace = openFamilyFace( family, spec._weight, spec._slant, bFauxBold, bFauxItalic );
-        FontSystemInternal::appendFace( chain, primaryFace );
+        FontServiceInternal::appendFace( chain, primaryFace );
         if ( primaryFace != kInvalidFontFaceID )
         {
             chain._bFauxBold   = bFauxBold;
@@ -175,14 +175,14 @@ namespace sw
             {
                 uint8 bUnusedBold   = SW_FALSE;
                 uint8 bUnusedItalic = SW_FALSE;
-                FontSystemInternal::appendFace( chain, openFamilyFace( fallbackFamily, spec._weight, spec._slant, bUnusedBold, bUnusedItalic ) );
+                FontServiceInternal::appendFace( chain, openFamilyFace( fallbackFamily, spec._weight, spec._slant, bUnusedBold, bUnusedItalic ) );
             }
         }
         // 3) 카탈로그 기본 패밀리: 항상 열린다(initialize 가 확인했다).
         uint8            bDefaultBold   = SW_FALSE;
         uint8            bDefaultItalic = SW_FALSE;
         const FontFaceID defaultFace    = openFamilyFace( _catalog._defaultFamily, spec._weight, spec._slant, bDefaultBold, bDefaultItalic );
-        FontSystemInternal::appendFace( chain, defaultFace );
+        FontServiceInternal::appendFace( chain, defaultFace );
         if ( primaryFace == kInvalidFontFaceID )
         {
             chain._bFauxBold   = bDefaultBold;
@@ -192,7 +192,7 @@ namespace sw
         return chain;
     }
 
-    FontFaceID FontSystem::findFaceForCodepoint( const FontFaceChain& chain, uint32 codepoint, uint32& outGlyphIndex )
+    FontFaceID FontService::findFaceForCodepoint( const FontFaceChain& chain, uint32 codepoint, uint32& outGlyphIndex )
     {
         outGlyphIndex = 0;
         if ( chain._faceCount == 0 || _rasterizer == nullptr )
@@ -206,18 +206,18 @@ namespace sw
                 return chain._arrFace[index];
             }
         }
-        if ( markWarnedOnce( HashUtil::combine( FontSystemInternal::kCodepointWarningSeed, codepoint ) ) )
+        if ( markWarnedOnce( HashUtil::combine( FontServiceInternal::kCodepointWarningSeed, codepoint ) ) )
             SW_LOG_WARNING( "[Text] No font in the fallback chain has a glyph for codepoint %# - it draws as a box (install a system font that covers it)", codepoint );
         return chain._arrFace[0];
     }
 
-    void FontSystem::invalidateFaceChains() { _mapChain.clear(); }
+    void FontService::invalidateFaceChains() { _mapChain.clear(); }
 
-    FontFaceID FontSystem::openFamilyFace( string_view family, FontWeight weight, FontSlant slant, uint8& outFauxBold, uint8& outFauxItalic )
+    FontFaceID FontService::openFamilyFace( string_view family, FontWeight weight, FontSlant slant, uint8& outFauxBold, uint8& outFauxItalic )
     {
         outFauxBold                = SW_FALSE;
         outFauxItalic              = SW_FALSE;
-        const uint64 familyFaceKey = FontSystemInternal::hashFamilyFace( family, weight, slant );
+        const uint64 familyFaceKey = FontServiceInternal::hashFamilyFace( family, weight, slant );
         const auto   iter          = _mapOpenedFamilyFace.find( familyFaceKey );
         if ( iter != _mapOpenedFamilyFace.end() )
         {
@@ -238,7 +238,7 @@ namespace sw
             for ( const FontFaceDesc& face : pFamily->_listFace )
             {
                 const bool   bSlantMatch = face._slant == slant;
-                const uint32 distance    = FontSystemInternal::computeWeightDistance( weight, face._weight );
+                const uint32 distance    = FontServiceInternal::computeWeightDistance( weight, face._weight );
                 const bool   bHeavierTie = pBest != nullptr && distance == bestDistance && static_cast<uint16>( face._weight ) > static_cast<uint16>( pBest->_weight );
                 const bool   bBetter     = pBest == nullptr || ( bSlantMatch && bBestSlantMatch == false ) ||
                                      ( bSlantMatch == bBestSlantMatch && ( distance < bestDistance || bHeavierTie ) );
@@ -252,7 +252,7 @@ namespace sw
             if ( pBest != nullptr )
             {
                 opened._face        = openFontFile( pBest->_path, pBest->_faceIndex, true );
-                opened._bFauxBold   = FontSystemInternal::needsFauxBold( weight, pBest->_weight ) ? SW_TRUE : SW_FALSE;
+                opened._bFauxBold   = FontServiceInternal::needsFauxBold( weight, pBest->_weight ) ? SW_TRUE : SW_FALSE;
                 opened._bFauxItalic = slant == FontSlant::Italic && pBest->_slant != FontSlant::Italic ? SW_TRUE : SW_FALSE;
             }
         }
@@ -284,7 +284,7 @@ namespace sw
             opened = OpenedFamilyFace{};
             // 카탈로그의 시스템 패밀리는 설치가 기계마다 다르다. 없으면 대체 연쇄의 다음 패밀리를 쓰는 것이 정상이라 Info 로 남긴다.
             // 카탈로그에 없거나 저장소 폰트를 열지 못한 것은 데이터 잘못이라 Warning 으로 남긴다.
-            if ( markWarnedOnce( FontSystemInternal::hashName( family, FontSystemInternal::kFamilyWarningSeed ) ) )
+            if ( markWarnedOnce( FontServiceInternal::hashName( family, FontServiceInternal::kFamilyWarningSeed ) ) )
             {
                 if ( pSystemFamily != nullptr )
                     SW_LOG_INFO( "[Text] System font family '%#' is not installed on this machine - the next family in the fallback chain is used", string( family ).c_str() );
@@ -299,10 +299,10 @@ namespace sw
         return opened._face;
     }
 
-    FontFaceID FontSystem::openFontFile( const string& path, uint32 faceIndex, bool bResourcePath )
+    FontFaceID FontService::openFontFile( const string& path, uint32 faceIndex, bool bResourcePath )
     {
         const string lowerPath = StringUtil::toLower( path.c_str() );
-        const uint64 fileKey   = HashUtil::combine( FontSystemInternal::hashName( lowerPath ), faceIndex );
+        const uint64 fileKey   = HashUtil::combine( FontServiceInternal::hashName( lowerPath ), faceIndex );
         const auto   iter      = _mapOpenedFile.find( fileKey );
         if ( iter != _mapOpenedFile.end() )
             return iter->second;
@@ -332,7 +332,7 @@ namespace sw
         return face;
     }
 
-    bool FontSystem::markWarnedOnce( uint64 key )
+    bool FontService::markWarnedOnce( uint64 key )
     {
         if ( _uniqueWarned.find( key ) != _uniqueWarned.end() )
             return false;
@@ -340,7 +340,7 @@ namespace sw
         return true;
     }
 
-    const LocalizationManager* FontSystem::findLocalization() const
+    const LocalizationManager* FontService::findLocalization() const
     {
         if ( _pLocalization != nullptr )
             return _pLocalization;

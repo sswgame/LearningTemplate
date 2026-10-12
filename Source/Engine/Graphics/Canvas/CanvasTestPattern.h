@@ -11,7 +11,7 @@ namespace sw
 {
     struct CanvasDrawList;
 
-    class FontSystem;
+    class FontService;
 
     /**
      * @struct CanvasTestPattern
@@ -23,6 +23,6 @@ namespace sw
          * @brief 그리기 목록에 테스트 그림을 칠합니다(물리 픽셀 = UI 단위). 글꼴 시스템이 있으면 기본 가족 · 문화권 대체 사슬로 글을 쓴다(한글은 시스템 글꼴).
          * @param targetSize 대상 픽셀 크기(가위를 그 안으로 자른다)
          */
-        static void paint( CanvasDrawList& outCanvas, const float2& targetSize, FontSystem* pFontSystem, uint64 frameIndex );
+        static void paint( CanvasDrawList& outCanvas, const float2& targetSize, FontService* pFontService, uint64 frameIndex );
     };
 } // namespace sw

@@ -12,7 +12,7 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Text/FontSystem.h"
+#include "Engine/Text/FontService.h"
 #include "Engine/Text/GlyphAtlas.h"
 #include "Engine/Text/GlyphCache.h"
 #include "Engine/Text/TextLayout.h"
@@ -83,7 +83,7 @@ namespace sw
         , _notifications{ *this }
         , _actionGlyphs{}
         , _input{}
-        , _pFontSystem{ nullptr }
+        , _pFontService{ nullptr }
         , _pLocalization{ nullptr }
         , _pUserSettings{ nullptr }
         , _textLayout{}
@@ -117,15 +117,15 @@ namespace sw
         shutdown();
     }
 
-    bool UISystem::initialize( InputManager& inputManager, FontSystem* pFontSystem, string_view uiInputMapPath )
+    bool UISystem::initialize( InputManager& inputManager, FontService* pFontService, string_view uiInputMapPath )
     {
         UIAutomationSteps::ensureLinked();
-        _pFontSystem               = pFontSystem;
+        _pFontService              = pFontService;
         _actionGlyphs._pInput      = &inputManager;
         _actionGlyphs._pUIInputMap = nullptr;
         _documentCache.setReloadedHandler( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UISystem::onDocumentReloaded, this ) );
         _styleSheetCache.setReloadedHandler( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UISystem::onStyleSheetReloaded, this ) );
-        _textLayout = pFontSystem != nullptr ? make_unique<TextLayoutEngine>( *pFontSystem ) : nullptr;
+        _textLayout = pFontService != nullptr ? make_unique<TextLayoutEngine>( *pFontService ) : nullptr;
         if ( _input.initialize( inputManager, uiInputMapPath ) == false )
             return false; // 오류는 UIInputRouter::initialize 가 남겼다
         _actionGlyphs._pUIInputMap = _input.getUIInputMap();
@@ -158,7 +158,7 @@ namespace sw
         refreshActiveScreen();
         _input.shutdown();
         _textLayout.reset();
-        _pFontSystem = nullptr;
+        _pFontService = nullptr;
     }
 
     void UISystem::processInput( float32 deltaSeconds )
@@ -690,8 +690,8 @@ namespace sw
         const uint32 textRevision = context._pLocalization != nullptr ? context._pLocalization->getTextRevision() : 0;
         if ( _bTextRevisionKnown == SW_TRUE && textRevision != _textRevision )
         {
-            if ( _pFontSystem != nullptr && _pFontSystem->isInitialized() )
-                _pFontSystem->invalidateFaceChains(); // 문화권의 대체 폰트 패밀리가 바뀐다
+            if ( _pFontService != nullptr && _pFontService->isInitialized() )
+                _pFontService->invalidateFaceChains(); // 문화권의 대체 폰트 패밀리가 바뀐다
             vector<Widget*> listWidget;
             for ( const unique_ptr<UIScreen>& screen : _listScreen )
             {
@@ -862,9 +862,9 @@ namespace sw
         context._pLocalization = findLocalization();
         context._textRevision  = context._pLocalization != nullptr ? context._pLocalization->getTextRevision() : 0;
         context._pActionGlyphs = &_actionGlyphs;
-        if ( _pFontSystem != nullptr && _pFontSystem->isInitialized() )
+        if ( _pFontService != nullptr && _pFontService->isInitialized() )
         {
-            context._pGlyphCache     = &_pFontSystem->getGlyphCache();
+            context._pGlyphCache     = &_pFontService->getGlyphCache();
             context._atlasGeneration = context._pGlyphCache->getAtlas().getGeneration();
         }
         return context;

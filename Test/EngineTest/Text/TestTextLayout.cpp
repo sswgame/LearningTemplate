@@ -17,13 +17,13 @@ namespace
         static constexpr const utf8* kLatinPath = "test/fonts/latin.ttf";
         static constexpr const utf8* kTallPath  = "test/fonts/tall.ttf";
 
-        sw::test::FakeFontSystemFixture _fonts;
-        sw::TextLayoutEngine            _layout;
-        bool                            _bInitialized;
+        sw::test::FakeFontServiceFixture _fonts;
+        sw::TextLayoutEngine             _layout;
+        bool                             _bInitialized;
 
         TextLayoutTestFixture()
             : _fonts{}
-            , _layout{ *_fonts._fontSystem }
+            , _layout{ *_fonts._fontService }
             , _bInitialized{ false }
         {
             sw::test::FakeFontFaceConfig tall{};
@@ -32,8 +32,8 @@ namespace
             _fonts._pRasterizer->setFaceConfig( kTallPath, tall );
             sw::FontCatalogDesc catalog{};
             catalog._defaultFamily = "Latin";
-            sw::test::FakeFontSystemFixture::addFamily( catalog, "Latin", kLatinPath );
-            sw::test::FakeFontSystemFixture::addFamily( catalog, "Tall", kTallPath );
+            sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", kLatinPath );
+            sw::test::FakeFontServiceFixture::addFamily( catalog, "Tall", kTallPath );
             _bInitialized = _fonts.initialize( catalog );
         }
 

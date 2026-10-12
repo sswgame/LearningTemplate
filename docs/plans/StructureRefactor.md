@@ -73,7 +73,7 @@ S1(UI 화면 스위치 등록) · S2(자동화 엔진 단계 등록) · S4(`RHIB
 ### 묶음 2 — 끝남 (2026-10-12)
 S10(`SceneEngineServices` 주입) · S11(`BugItInputs` 주입, `makeInputs` / `capture`) · S12(에디터 프레임 단계 등록부 `EditorFrameStep` + 호출처 없던 `IEditor` 가상 둘 삭제)를 옮겼다. 검증: Debug 경고 0, 린트 63/63, `-L nogpu` 49/49, `-L hostgpu` 7/7.
 **옮기지 않은 것**:
-- **S10 의 인자 없는 생성자**(`Scene( name )` · `GameObjectManager()` · `SceneManager()`): 호출처가 테스트 · 쿠커 · 프리팹 원형 등 약 90 곳과 500 곳이다. 이 생성자들은 만들 때 `makeFromBoundEngine()` 으로 묶음을 한 번 읽고 클래스 안 접근은 모두 묶음을 거치므로 반쪽 이전이 아니다(`_pEngineOverride` 와 같은 "주입, 없으면 기본"). 범위 밖에 같은 패턴이 남았다: `FacialAnimationComponent` · `WidgetComponent` · `UISystem` · `FontSystem` 의 `getBoundEngineServices()`, `SceneCooker` · `SceneNavigationCooker` · `PortraitRenderer` 의 인자 없는 `Scene` 생성.
+- **S10 의 인자 없는 생성자**(`Scene( name )` · `GameObjectManager()` · `SceneManager()`): 호출처가 테스트 · 쿠커 · 프리팹 원형 등 약 90 곳과 500 곳이다. 이 생성자들은 만들 때 `makeFromBoundEngine()` 으로 묶음을 한 번 읽고 클래스 안 접근은 모두 묶음을 거치므로 반쪽 이전이 아니다(`_pEngineOverride` 와 같은 "주입, 없으면 기본"). 범위 밖에 같은 패턴이 남았다: `FacialAnimationComponent` · `WidgetComponent` · `UISystem` · `FontService` 의 `getBoundEngineServices()`, `SceneCooker` · `SceneNavigationCooker` · `PortraitRenderer` 의 인자 없는 `Scene` 생성.
 - **S12 의 프레임 앞 정리 · 프레임 열기 · 프레임 닫기**: ImGui 순서와 렌더 스레드 인계(`DrawSnapshotHandoff`)가 위치를 정하는 셸의 프레임 계약이라 `updateUI` 에 두고 이유를 주석으로 적었다.
 **측정할 것**: S12 의 `GT.Editor.updateUI` p50/p99 전후(Release · `-EnableEditor -dx12 -gv_profileFrames=600` · 3 회, 전의 `commandsAndWatchers + panels` 대 후의 `frameSteps`, VSync 에 붙지 않았는지 먼저).
 

@@ -9,7 +9,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Text/FontSystem.h"
+#include "Engine/Text/FontService.h"
 
 namespace sw
 {

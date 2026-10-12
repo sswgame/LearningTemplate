@@ -10,7 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Text/FontSystem.h"
+#include "Engine/Text/FontService.h"
 #include "Engine/Text/IFontRasterizer.h"
 
 namespace sw::test
@@ -166,21 +166,21 @@ namespace sw::test
 namespace sw::test
 {
     /**
-     * @brief 가짜 래스터라이저를 든 FontSystem 을 세우는 도우미입니다. 카탈로그 면 경로마다 메모리 글꼴 한 바이트를 등록해 "파일" 이 읽히게 합니다.
-     * @details 래스터라이저는 FontSystem 이 소유하므로, 설정을 고칠 포인터(`_pRasterizer`)를 따로 듭니다.
+     * @brief 가짜 래스터라이저를 든 FontService 을 세우는 도우미입니다. 카탈로그 면 경로마다 메모리 글꼴 한 바이트를 등록해 "파일" 이 읽히게 합니다.
+     * @details 래스터라이저는 FontService 이 소유하므로, 설정을 고칠 포인터(`_pRasterizer`)를 따로 듭니다.
      */
-    struct FakeFontSystemFixture
+    struct FakeFontServiceFixture
     {
-        FakeFontRasterizer*    _pRasterizer; ///< FontSystem 이 소유한 가짜(설정을 고칠 때)
-        unique_ptr<FontSystem> _fontSystem;  ///< 테스트 대상
+        FakeFontRasterizer*     _pRasterizer; ///< FontService 이 소유한 가짜(설정을 고칠 때)
+        unique_ptr<FontService> _fontService; ///< 테스트 대상
 
-        explicit FakeFontSystemFixture( const LocalizationManager* pLocalization = nullptr )
+        explicit FakeFontServiceFixture( const LocalizationManager* pLocalization = nullptr )
             : _pRasterizer{ nullptr }
-            , _fontSystem{}
+            , _fontService{}
         {
             unique_ptr<FakeFontRasterizer> rasterizer = sw::make_unique<FakeFontRasterizer>();
             _pRasterizer                              = rasterizer.get();
-            _fontSystem                               = sw::make_unique<FontSystem>( std::move( rasterizer ), pLocalization );
+            _fontService                              = sw::make_unique<FontService>( std::move( rasterizer ), pLocalization );
         }
 
         /** @brief 카탈로그의 모든 저장소 면 경로를 메모리 글꼴로 등록하고 시작합니다. */
@@ -190,10 +190,10 @@ namespace sw::test
             {
                 for ( const FontFaceDesc& face : family._listFace )
                 {
-                    _fontSystem->registerMemoryFontFile( face._path, vector<uint8>( 1, static_cast<uint8>( 1 ) ) );
+                    _fontService->registerMemoryFontFile( face._path, vector<uint8>( 1, static_cast<uint8>( 1 ) ) );
                 }
             }
-            return _fontSystem->initializeFromCatalog( catalog );
+            return _fontService->initializeFromCatalog( catalog );
         }
 
         /** @brief 저장소 가족 하나(면 하나)를 카탈로그에 더합니다. */

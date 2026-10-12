@@ -2,7 +2,7 @@
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/Localization/LocalizationManager.h"
-#include "Engine/Text/FontSystem.h"
+#include "Engine/Text/FontService.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/TextWidget.h"
@@ -40,10 +40,10 @@ namespace
      */
     struct UILocalizationFixture
     {
-        sw::LocalizationManager         _localization;
-        sw::test::FakeFontSystemFixture _fonts;
-        sw::InputManager                _input;
-        sw::UISystem                    _ui;
+        sw::LocalizationManager          _localization;
+        sw::test::FakeFontServiceFixture _fonts;
+        sw::InputManager                 _input;
+        sw::UISystem                     _ui;
 
         UILocalizationFixture()
             : _localization{}
@@ -62,8 +62,8 @@ namespace
 
             sw::FontCatalogDesc catalog{};
             catalog._defaultFamily = "Latin";
-            sw::test::FakeFontSystemFixture::addFamily( catalog, "Latin", UILocalizationTestUtil::kLatinPath );
-            sw::test::FakeFontSystemFixture::addFamily( catalog, "Noto Sans KR", UILocalizationTestUtil::kHangulPath );
+            sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", UILocalizationTestUtil::kLatinPath );
+            sw::test::FakeFontServiceFixture::addFamily( catalog, "Noto Sans KR", UILocalizationTestUtil::kHangulPath );
             sw::test::FakeFontFaceConfig latin{};
             latin.addRange( 0x20u, 0x24Fu ); // 라틴 확장까지 — 의사 문화권의 악센트 글자도 라틴 면이 그린다
             _fonts._pRasterizer->setFaceConfig( UILocalizationTestUtil::kLatinPath, latin );
@@ -76,7 +76,7 @@ namespace
             }
 
             SW_EXPECT_TRUE( _input.initialize() );
-            SW_EXPECT_TRUE( _ui.initialize( _input, _fonts._fontSystem.get() ) );
+            SW_EXPECT_TRUE( _ui.initialize( _input, _fonts._fontService.get() ) );
             _ui.setLocalization( &_localization );
         }
 

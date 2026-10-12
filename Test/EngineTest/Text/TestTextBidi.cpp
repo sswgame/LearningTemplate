@@ -44,11 +44,11 @@ namespace
         }
 
         /** @brief 모든 코드 포인트를 가진 가족 하나의 글꼴 시스템을 시작합니다. */
-        static bool initializeAllCoverage( sw::test::FakeFontSystemFixture& fixture )
+        static bool initializeAllCoverage( sw::test::FakeFontServiceFixture& fixture )
         {
             sw::FontCatalogDesc catalog{};
             catalog._defaultFamily = "All";
-            sw::test::FakeFontSystemFixture::addFamily( catalog, "All", kAllPath );
+            sw::test::FakeFontServiceFixture::addFamily( catalog, "All", kAllPath );
             return fixture.initialize( catalog );
         }
 
@@ -111,9 +111,9 @@ SW_TEST_CASE( UIBidiTest, MirroredBracketsInRtl )
     SW_EXPECT_EQUAL( 0x00BBu, sw::TextBidi::getMirroredCodepoint( 0x00ABu ) );
     SW_EXPECT_EQUAL( static_cast<uint32>( 'a' ), sw::TextBidi::getMirroredCodepoint( 'a' ) );
 
-    sw::test::FakeFontSystemFixture fixture;
+    sw::test::FakeFontServiceFixture fixture;
     SW_ASSERT_TRUE( UIBidiTestUtil::initializeAllCoverage( fixture ) );
-    sw::TextLayoutEngine layout{ *fixture._fontSystem };
+    sw::TextLayoutEngine layout{ *fixture._fontService };
     sw::TextLayoutResult result{};
     layout.layout( "(\xD7\xA9\xD7\x9C\xD7\x95\xD7\x9D)", UIBidiTestUtil::makeRightToLeftStyle(), 0.0f, result );
     SW_ASSERT_EQUAL( 6u, static_cast<uint32>( result._listGlyph.size() ) );
@@ -131,9 +131,9 @@ SW_TEST_CASE( UIBidiTest, MirroredBracketsInRtl )
  */
 SW_TEST_CASE( UIBidiTest, LineBreakThenReorder )
 {
-    sw::test::FakeFontSystemFixture fixture;
+    sw::test::FakeFontServiceFixture fixture;
     SW_ASSERT_TRUE( UIBidiTestUtil::initializeAllCoverage( fixture ) );
-    sw::TextLayoutEngine layout{ *fixture._fontSystem };
+    sw::TextLayoutEngine layout{ *fixture._fontService };
     sw::TextLayoutResult result{};
     layout.layout( "\xD7\x90\xD7\x91 \xD7\x92\xD7\x93", UIBidiTestUtil::makeRightToLeftStyle(), 12.0f, result ); // אב גד
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( result._listLine.size() ) );
@@ -172,9 +172,9 @@ SW_TEST_CASE( UIBidiTest, RightToLeftOverrideReversesPseudoText )
     SW_EXPECT_STREQ( "cbA x", UIBidiTestUtil::makeVisualText( overridden, sw::TextDirection::LeftToRight ).c_str() );
 
     // 배치도 같은 순서로 놓는다 — 셰이퍼가 버린 방향 제어도 수준을 바꾼다.
-    sw::test::FakeFontSystemFixture fixture;
+    sw::test::FakeFontServiceFixture fixture;
     SW_ASSERT_TRUE( UIBidiTestUtil::initializeAllCoverage( fixture ) );
-    sw::TextLayoutEngine layout{ *fixture._fontSystem };
+    sw::TextLayoutEngine layout{ *fixture._fontService };
     sw::TextLayoutResult result{};
     sw::TextLayoutStyle  style{};
     style._fontSize = 10.0f;

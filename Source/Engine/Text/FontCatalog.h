@@ -2,7 +2,7 @@
  * @file FontCatalog.h
  * @brief 폰트 카탈로그를 정의합니다. 패밀리 이름에서 저장소 폰트 면 파일을 찾고, 시스템 패밀리 이름에서 플랫폼별 파일 이름(OS 폰트 폴더)을 찾습니다.
  * @details 기본 테이블은 `engine/fonts/fontcatalog.xml`(`EngineDefaultAssets::_fontCatalog`)이다. 문화권 테이블(`engine.cultures.json`)의 `fonts` 패밀리 이름은
- *          이 테이블의 패밀리나 시스템 패밀리에 있어야 쓰인다(없으면 `FontSystem` 이 처음 한 번 경고하고 건너뛴다).
+ *          이 테이블의 패밀리나 시스템 패밀리에 있어야 쓰인다(없으면 `FontService` 이 처음 한 번 경고하고 건너뛴다).
  *          저장소에는 CC0 라틴 폰트만 둔다. 한글, CJK, 아랍 문자는 시스템 패밀리가 맡는다(런타임 UI 결정 R1).
  */
 #pragma once

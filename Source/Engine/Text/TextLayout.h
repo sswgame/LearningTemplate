@@ -13,7 +13,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Text/FontSystem.h"
+#include "Engine/Text/FontService.h"
 #include "Engine/Text/ITextShaper.h"
 #include "Engine/Text/RichTextParser.h"
 #include "Engine/Text/SimpleTextShaper.h"
@@ -139,7 +139,7 @@ namespace sw
     class SW_API TextLayoutEngine
     {
     public:
-        explicit TextLayoutEngine( FontSystem& fontSystem );
+        explicit TextLayoutEngine( FontService& fontService );
 
         TextLayoutEngine( const TextLayoutEngine& )            = delete;
         TextLayoutEngine& operator=( const TextLayoutEngine& ) = delete;
@@ -166,7 +166,7 @@ namespace sw
         /** @brief 텍스트의 양방향 수준을 정해 글리프마다 옮깁니다(`TextBidi`). 모든 수준이 0 이면 false 이며, 줄 안 재배열을 건너뜁니다. */
         bool resolveGlyphLevels( string_view text, TextDirection paragraphDirection );
 
-        FontSystem&                   _fontSystem;
+        FontService&                  _fontService;
         SimpleTextShaper              _shaper;
         vector<ShapingRun>            _listRunScratch;        ///< 런 나누기 결과입니다.
         vector<ShapedGlyph>           _listShapedScratch;     ///< 셰이핑 결과(논리 순서)

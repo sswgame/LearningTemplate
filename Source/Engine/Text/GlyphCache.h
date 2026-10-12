@@ -31,7 +31,7 @@ namespace sw
 {
     /**
      * @class GlyphCache
-     * @brief 글리프 캐시입니다. `FontSystem` 이 하나 듭니다(`getGlyphCache()`).
+     * @brief 글리프 캐시입니다. `FontService` 이 하나 듭니다(`getGlyphCache()`).
      */
     class SW_API GlyphCache
     {

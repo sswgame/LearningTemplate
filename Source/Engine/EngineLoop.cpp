@@ -80,7 +80,7 @@
 #include "Engine/Scene/SceneNavigationCooker.h"
 #include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/TelemetryService.h"
-#include "Engine/Text/FontSystem.h"
+#include "Engine/Text/FontService.h"
 #include "Engine/UI/Debug/DebugHUD.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UserSettings/HardwareProbe.h"
@@ -245,10 +245,10 @@ namespace sw
         {
             // 기본 가족(저장소 글꼴)을 못 열면 글자를 그릴 수 없다 — 기동 오류다. 시스템 대체 가족은 없어도 경고만 한다.
             const EngineDefaultAssets& defaultAssets = *loop._owned._pEngineDefaultAssets;
-            return loop._owned._pFontSystem->initialize( defaultAssets._fontCatalog ) ? EngineInitResult::Succeeded : EngineInitResult::Failed;
+            return loop._owned._pFontService->initialize( defaultAssets._fontCatalog ) ? EngineInitResult::Succeeded : EngineInitResult::Failed;
         }
-        static void shutdown( EngineLoop& loop ) { loop._owned._pFontSystem->shutdown(); }
-        static void destroy( EngineLoop& loop ) { loop._owned._pFontSystem.reset(); }
+        static void shutdown( EngineLoop& loop ) { loop._owned._pFontService->shutdown(); }
+        static void destroy( EngineLoop& loop ) { loop._owned._pFontService.reset(); }
     };
 
     struct EngineLoop::ShaderCacheStartupStep : EngineInitStepDefaults<EngineLoop>
@@ -834,7 +834,7 @@ namespace sw
             UISystem& ui = *loop._owned._pUISystem;
             ui.setScaleSettings( scaleSettings );
             // UI 행동 맵(탐색 · 확인 · 뒤로)을 못 읽으면 메뉴를 패드로 다룰 수 없다 — 데이터 오류라 기동 실패다.
-            if ( ui.initialize( *loop._owned._pInputManager, loop._owned._pFontSystem.get(), defaultAssets._uiInputMap ) == false )
+            if ( ui.initialize( *loop._owned._pInputManager, loop._owned._pFontService.get(), defaultAssets._uiInputMap ) == false )
                 return EngineInitResult::Failed;
             // UI 문서 · 스타일 시트 캐시를 에셋 캐시 레지스트리에 올린다 — 핫 리로드 · 종료 · 진단이 다른 에셋과 같은 길로 간다.
             loop._owned._pAssetManager->registerAssetCache( &ui.getDocumentCache() );
@@ -1281,7 +1281,7 @@ namespace sw
             }
 
             _packetBuilder.populateScene( packet, views, sceneViewCameraProvider, pActiveScene, deltaTime, *_rhi, _frameRenderer.get() );
-            RenderPacketBuilder::populateCanvas( packet, bSceneMain, _owned._pUISystem.get(), _owned._pFontSystem.get(), _rhi.get() );
+            RenderPacketBuilder::populateCanvas( packet, bSceneMain, _owned._pUISystem.get(), _owned._pFontService.get(), _rhi.get() );
 
             if ( _renderThread != nullptr )
             {

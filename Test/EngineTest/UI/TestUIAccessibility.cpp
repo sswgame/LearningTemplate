@@ -7,7 +7,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Text/FontSystem.h"
+#include "Engine/Text/FontService.h"
 #include "Engine/Text/TextLayout.h"
 #include "Engine/UI/Layout/ScrollPanel.h"
 #include "Engine/UI/Layout/UILayoutPass.h"
@@ -68,10 +68,10 @@ namespace
     {
         static constexpr float32 kFrameSeconds = 1.0f / 60.0f;
 
-        sw::InputManager                _input;
-        sw::test::FakeFontSystemFixture _fonts;
-        sw::UISystem                    _ui;
-        bool                            _bReady;
+        sw::InputManager                 _input;
+        sw::test::FakeFontServiceFixture _fonts;
+        sw::UISystem                     _ui;
+        bool                             _bReady;
 
         UIAccessibilityFixture()
             : _input{}
@@ -81,8 +81,8 @@ namespace
         {
             sw::FontCatalogDesc catalog{};
             catalog._defaultFamily = "Latin";
-            sw::test::FakeFontSystemFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
-            _bReady = _input.initialize() && _fonts.initialize( catalog ) && _ui.initialize( _input, _fonts._fontSystem.get() );
+            sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
+            _bReady = _input.initialize() && _fonts.initialize( catalog ) && _ui.initialize( _input, _fonts._fontService.get() );
         }
 
         ~UIAccessibilityFixture()
@@ -178,12 +178,12 @@ SW_TEST_CASE( UIAccessibilityTest, TextScaleHasMinimumSize )
     SW_EXPECT_NEAR_EQUAL( 36.0f, sw::UIScaleUtil::computeScaledFontSize( 18.0f, 2.0f ), 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 18.0f, sw::UIScaleUtil::computeScaledFontSize( 18.0f, 0.0f ), 1e-4f ); // 0 이하 배율은 1
 
-    sw::test::FakeFontSystemFixture fonts;
-    sw::FontCatalogDesc             catalog{};
+    sw::test::FakeFontServiceFixture fonts;
+    sw::FontCatalogDesc              catalog{};
     catalog._defaultFamily = "Latin";
-    sw::test::FakeFontSystemFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
+    sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
     SW_ASSERT_TRUE( fonts.initialize( catalog ) );
-    sw::TextLayoutEngine layout( *fonts._fontSystem );
+    sw::TextLayoutEngine layout( *fonts._fontService );
 
     auto measure = [&]( float32 fontSize, float32 textScale )
     {

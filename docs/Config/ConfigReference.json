@@ -267,7 +267,7 @@
        "min": "",
        "max": "",
        "units": "",
-       "description": "글꼴 카탈로그 — 저장소 글꼴 가족 · 시스템 글꼴 가족(`FontSystem`)"
+       "description": "글꼴 카탈로그 — 저장소 글꼴 가족 · 시스템 글꼴 가족(`FontService`)"
       },
       {
        "name": "_uiScaleSettings",

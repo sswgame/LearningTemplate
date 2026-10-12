@@ -7,7 +7,7 @@
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Text/FontSystem.h"
+#include "Engine/Text/FontService.h"
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Layout/UILayoutDump.h"
@@ -178,12 +178,12 @@ namespace
     /** @brief 입력 · 가짜 글꼴 · 설정 · UI 시스템 — 조건 하나의 뷰포트로 프레임을 돌립니다. 조건마다 새로 짓는다(앞 조건이 남긴 상태가 새지 않게). */
     struct UIDeterminismFixture
     {
-        sw::UserSettingsManager         _settings;
-        sw::InputManager                _input;
-        sw::test::FakeFontSystemFixture _fonts;
-        sw::UISystem                    _ui;
-        sw::UIViewport                  _viewport;
-        bool                            _bReady;
+        sw::UserSettingsManager          _settings;
+        sw::InputManager                 _input;
+        sw::test::FakeFontServiceFixture _fonts;
+        sw::UISystem                     _ui;
+        sw::UIViewport                   _viewport;
+        bool                             _bReady;
 
         explicit UIDeterminismFixture( const UIDeterminismTestUtil::Condition& condition )
             : _settings{}
@@ -195,10 +195,10 @@ namespace
         {
             sw::FontCatalogDesc catalog{};
             catalog._defaultFamily = "Latin";
-            sw::test::FakeFontSystemFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
+            sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
             _settings.initialize( sw::UserSettingsTargets{} );
             _bReady = _settings.loadSchemaFromXMLText( UIDeterminismTestUtil::kSchemaXML, "test.settings.xml" ) && _input.initialize() &&
-                      _fonts.initialize( catalog ) && _ui.initialize( _input, _fonts._fontSystem.get() );
+                      _fonts.initialize( catalog ) && _ui.initialize( _input, _fonts._fontService.get() );
             _settings.reapplyAll();
             _ui.setUserSettings( &_settings );
             _viewport._physicalSize = sw::float2{ condition._width, condition._height };

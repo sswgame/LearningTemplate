@@ -12,7 +12,7 @@
 | 이 엔진 | 언리얼 | 유니티 | Godot |
 |---|---|---|---|
 | `IFontRasterizer`(FreeType) | `FFreeTypeFace` | TextCore `FontEngine` | `FontFile` |
-| `FontSystem` 대체 사슬 | `FCompositeFont` | Font Asset 폴백 목록 | `Font.fallbacks` |
+| `FontService` 대체 사슬 | `FCompositeFont` | Font Asset 폴백 목록 | `Font.fallbacks` |
 | `ITextShaper` | `FShapedGlyphSequence`(HarfBuzz) | TextCore | `TextServer`(HarfBuzz) |
 | `TextLayoutEngine` | `FTextLayout`, `FSlateFontMeasure` | TextCore 생성기 | `TextParagraph` |
 | `TextBidi` | `TextBiDi`(ICU) | TextCore 일부 | `TextServer`(ICU) |
@@ -25,7 +25,7 @@
 ```mermaid
 flowchart LR
   Text["글 'HP 체력'"] --> Itemize["런 나누기<br/>TextItemizer"]
-  Chain["글꼴 대체 사슬<br/>FontSystem"] --> Itemize
+  Chain["글꼴 대체 사슬<br/>FontService"] --> Itemize
   Itemize --> Shape["셰이핑<br/>ITextShaper"]
   Shape --> Layout["줄 바꿈과 배치<br/>TextLayoutEngine + TextBidi"]
   Layout --> Glyphs["배치된 글리프 목록<br/>TextLayoutResult"]
@@ -58,14 +58,14 @@ UI 위젯을 거치지 않고 글자 계층만 써서 문장 하나를 정해진
 
 ### 1단계 — 글꼴 서비스와 배치기
 
-엔진이 켜지면 기동 단계 `Fonts` 가 글꼴 서비스를 엽니다. 서비스는 `engine::getFontSystem()` 으로 얻고, 배치기 `TextLayoutEngine` 은 그 서비스를 받아 만듭니다.
+엔진이 켜지면 기동 단계 `Fonts` 가 글꼴 서비스를 엽니다. 서비스는 `engine::getFontService()` 으로 얻고, 배치기 `TextLayoutEngine` 은 그 서비스를 받아 만듭니다.
 UI는 이미 배치기를 하나 가지고 있으므로(`UISystem::getTextLayout`), UI 코드 안에서는 그것을 씁니다.
 
 ### 2단계 — 스타일을 정하고 배치하기
 
 <!-- snippet: 글꼴 서비스 + TextLayoutEngine 으로 문장 하나를 너비 300 에 배치 — 5b U7 에서 문서 예시 테스트로 대조 -->
 ```cpp
-FontSystem*      pFonts = engine::getFontSystem();
+FontService*      pFonts = engine::getFontService();
 TextLayoutEngine layout{ *pFonts };
 
 TextLayoutStyle style{};
@@ -112,7 +112,7 @@ cd build/Ninja-Debug/Bin
 
 ### 글꼴 카탈로그와 대체 사슬
 
-글꼴 서비스 `FontSystem` 이 카탈로그를 읽고 사슬을 만듭니다. 카탈로그 경로는 `EngineDefaultAssets::_fontCatalog` 이고, 엔진 기본값은 `engine/fonts/fontcatalog.xml` 입니다.
+글꼴 서비스 `FontService` 이 카탈로그를 읽고 사슬을 만듭니다. 카탈로그 경로는 `EngineDefaultAssets::_fontCatalog` 이고, 엔진 기본값은 `engine/fonts/fontcatalog.xml` 입니다.
 
 카탈로그(`FontCatalogDesc`)에는 두 종류의 가족이 있습니다. 저장소 가족에는 이름, 면 파일, 굵기, 기울기를 적습니다.
 시스템 가족에는 이름과 Windows 파일 이름, 리눅스 파일 이름을 적고, 실행할 때 OS 글꼴 폴더에서 찾습니다.
@@ -136,12 +136,12 @@ CSS 글꼴 매칭 규칙을 단순하게 줄인 것입니다. SemiBold 이상을
 찾지 못한 시스템 가족은 처음 한 번 경고한 뒤 사슬에서 빠집니다. 기본 가족을 열지 못하면 기동이 실패합니다.
 
 기동 단계 `Fonts` 는 Client 대상에서만 실행합니다. 전용 서버와 쿠킹(Headless) 실행은 글꼴을 열지 않습니다.
-테스트 하네스도 이 단계를 실행하지 않으므로, 글꼴 테스트는 가짜 래스터라이저로 자기 `FontSystem` 을 만듭니다.
+테스트 하네스도 이 단계를 실행하지 않으므로, 글꼴 테스트는 가짜 래스터라이저로 자기 `FontService` 을 만듭니다.
 게임이나 테스트는 파일 대신 메모리에 있는 글꼴 바이트를 `registerMemoryFontFile` 로 같은 경로에 등록할 수 있습니다.
 
 ### 글리프 캐시와 아틀라스
 
-`GlyphCache` 는 `FontSystem` 이 시작할 때 만들고, `getGlyphCache()` 로 얻습니다. (면, 글리프 번호)로 글리프를 찾고, 없으면 래스터화해 아틀라스에 넣습니다.
+`GlyphCache` 는 `FontService` 이 시작할 때 만들고, `getGlyphCache()` 로 얻습니다. (면, 글리프 번호)로 글리프를 찾고, 없으면 래스터화해 아틀라스에 넣습니다.
 래스터 크기는 `SdfRasterParams` 하나로 모든 글자가 같습니다. 화면에서 크게 그리는 것은 SDF가 맡습니다.
 돌려준 `CachedGlyph*` 는 다음 `findOrAddGlyph` 호출 전까지만 유효합니다. 내부가 밀집 해시 테이블이라 원소가 옮겨질 수 있기 때문입니다.
 래스터화한 글리프 수는 프로파일 카운터 `Text.GlyphsRasterized` 에 보입니다.
@@ -272,7 +272,7 @@ LTR 문단에 RTL 문자와 RLO가 없으면 재배열을 통째로 건너뜁니
 `CheckThirdPartyIsolation.py` 가 이 경계를 검사합니다. imgui[freetype]과 같은 포트이고 임포트 타깃 이름이 `freetype` 그대로이므로, 래퍼 INTERFACE 타깃을 만들지 않고 전역 타깃으로 둡니다.
 
 **저장소에 한글이나 CJK 글꼴을 넣지 않습니다.** 저장소에는 CC0 라틴 글꼴만 두고, 나머지 문자는 OS 시스템 글꼴로 대체합니다([결정 기록 5-7](../../../docs/09_Decisions.md#5-7-런타임-ui-와-글자)).
-그래서 시스템 글꼴을 쓰는 테스트는 글리프가 있는지와 사슬 순서만 확인하고, 그 글꼴이 없는 기계에서는 건너뜁니다(`FontSystemTest.SystemFallbackCoversHangulWhenInstalled`).
+그래서 시스템 글꼴을 쓰는 테스트는 글리프가 있는지와 사슬 순서만 확인하고, 그 글꼴이 없는 기계에서는 건너뜁니다(`FontServiceTest.SystemFallbackCoversHangulWhenInstalled`).
 
 **`CachedGlyph*` 를 다음 조회 뒤까지 보관하지 않습니다.** 글리프 캐시는 밀집 해시 테이블이라 새 글리프를 넣으면 원소가 옮겨집니다.
 
@@ -290,7 +290,7 @@ LTR 문단에 RTL 문자와 RLO가 없으면 재배열을 통째로 건너뜁니
 
 | 파일 | 여는 때 |
 |---|---|
-| `FontSystem.h` | 사슬 만들기, 메모리 글꼴 등록 |
+| `FontService.h` | 사슬 만들기, 메모리 글꼴 등록 |
 | `TextLayout.h` | 배치 스타일과 결과 구조 |
 | `GlyphAtlas.h` | 페이지 크기, 업로드 형식 |
 | `Resource/engine/fonts/fontcatalog.xml` | 글꼴 가족 목록 |

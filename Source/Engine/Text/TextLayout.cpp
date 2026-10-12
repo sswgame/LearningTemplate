@@ -196,8 +196,8 @@ namespace sw
 
 namespace sw
 {
-    TextLayoutEngine::TextLayoutEngine( FontSystem& fontSystem )
-        : _fontSystem{ fontSystem }
+    TextLayoutEngine::TextLayoutEngine( FontService& fontService )
+        : _fontService{ fontService }
         , _shaper{}
         , _listRunScratch{}
         , _listShapedScratch{}
@@ -220,13 +220,13 @@ namespace sw
                                          const RichTextSpan* pSpan )
     {
         using Internal                   = TextLayoutInternal;
-        const FontFaceChain segmentChain = pSpan != nullptr ? _fontSystem.getFaceChain( Internal::makeSpanFont( style._font, *pSpan ) ) : chain;
+        const FontFaceChain segmentChain = pSpan != nullptr ? _fontService.getFaceChain( Internal::makeSpanFont( style._font, *pSpan ) ) : chain;
         const float32       fontSize     = pSpan != nullptr ? style._fontSize * pSpan->_sizeScale : style._fontSize;
         const uint32        colorRgba    = pSpan != nullptr ? pSpan->_colorRgba : 0xFFFFFFFFu;
         const uint8         fauxBits     = Internal::makeFauxBits( segmentChain );
         const size_t        firstGlyph   = _listShapedScratch.size();
-        TextItemizer::itemize( _fontSystem, segmentChain, text.substr( segmentStart, segmentEnd - segmentStart ), _listRunScratch );
-        const IFontRasterizer& rasterizer = _fontSystem.getRasterizer();
+        TextItemizer::itemize( _fontService, segmentChain, text.substr( segmentStart, segmentEnd - segmentStart ), _listRunScratch );
+        const IFontRasterizer& rasterizer = _fontService.getRasterizer();
         for ( ShapingRun& run : _listRunScratch )
         {
             run._byteOffset += static_cast<uint32>( segmentStart ); // 클러스터를 전체 텍스트 기준으로 맞춘다
@@ -328,10 +328,10 @@ namespace sw
         outResult._listLine.clear();
         outResult._size       = float2{};
         outResult._bTruncated = SW_FALSE;
-        if ( text.empty() || _fontSystem.isInitialized() == false )
+        if ( text.empty() || _fontService.isInitialized() == false )
             return;
 
-        const FontFaceChain chain = _fontSystem.getFaceChain( style._font );
+        const FontFaceChain chain = _fontService.getFaceChain( style._font );
         if ( chain._faceCount == 0 )
             return;
         shapeText( text, style, chain, pListSpan );
@@ -428,16 +428,16 @@ namespace sw
             }
         }
 
-        IFontRasterizer&        rasterizer = _fontSystem.getRasterizer();
+        IFontRasterizer&        rasterizer = _fontService.getRasterizer();
         Internal::EllipsisGlyph ellipsis{};
         const bool              bAnyEllipsis = outResult._bTruncated == SW_TRUE && bEllipsis;
         if ( bAnyEllipsis )
         {
-            ellipsis._face  = _fontSystem.findFaceForCodepoint( chain, Internal::kEllipsisCodepoint, ellipsis._glyphIndex );
+            ellipsis._face  = _fontService.findFaceForCodepoint( chain, Internal::kEllipsisCodepoint, ellipsis._glyphIndex );
             ellipsis._count = 1;
             if ( ellipsis._glyphIndex == 0 )
             {
-                ellipsis._face  = _fontSystem.findFaceForCodepoint( chain, '.', ellipsis._glyphIndex );
+                ellipsis._face  = _fontService.findFaceForCodepoint( chain, '.', ellipsis._glyphIndex );
                 ellipsis._count = Internal::kEllipsisFallbackCount;
             }
             GlyphMetrics metrics{};
@@ -610,9 +610,9 @@ namespace sw
     float2 TextLayoutEngine::measure( string_view text, const TextLayoutStyle& style, float32 maxWidth, const vector<RichTextSpan>* pListSpan )
     {
         using Internal = TextLayoutInternal;
-        if ( text.empty() || _fontSystem.isInitialized() == false )
+        if ( text.empty() || _fontService.isInitialized() == false )
             return float2{};
-        const FontFaceChain chain = _fontSystem.getFaceChain( style._font );
+        const FontFaceChain chain = _fontService.getFaceChain( style._font );
         uint64              key   = StringUtil::computeHash64( text.data(), text.size(), false, Internal::hashStyle( style ) );
         key                       = Internal::hashFloat( key, maxWidth );
         for ( uint32 index = 0; index < chain._faceCount; ++index )

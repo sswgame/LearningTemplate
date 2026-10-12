@@ -82,12 +82,12 @@ SW_TEST_CASE( RichTextTest, NamedColorSizeAndItalic )
 /** @brief [RichTextTest] 배치는 구간 경계에서 런을 끊는다 — 굵게는 굵은 면이 없는 가족이라 가짜 굵게, 색 · 크기는 그 글리프에만 */
 SW_TEST_CASE( RichTextTest, LayoutSplitsRunsAtSpanBoundaries )
 {
-    sw::test::FakeFontSystemFixture fixture;
-    sw::FontCatalogDesc             catalog{};
+    sw::test::FakeFontServiceFixture fixture;
+    sw::FontCatalogDesc              catalog{};
     catalog._defaultFamily = "Latin";
-    sw::test::FakeFontSystemFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
+    sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
     SW_ASSERT_TRUE( fixture.initialize( catalog ) );
-    sw::TextLayoutEngine layout( *fixture._fontSystem );
+    sw::TextLayoutEngine layout( *fixture._fontService );
 
     sw::RichTextParseResult parsed{};
     sw::RichTextParser::parse( "a[b]b[/b][color=#00ff00]c[/color][size=2]d[/size]", parsed );

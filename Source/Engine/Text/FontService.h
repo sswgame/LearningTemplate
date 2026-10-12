@@ -1,5 +1,5 @@
 /**
- * @file FontSystem.h
+ * @file FontService.h
  * @brief 폰트 서비스를 정의합니다. 이 계층은 카탈로그, 면 열기, 문화권 대체 연쇄를 담당하고, 아틀라스, 셰이핑, 배치는 이후 계층이 추가합니다.
  * @details 언리얼 `FCompositeFont`(서체 + 문자 범위별 대체)와 유니티 TextCore 폴백 목록에 해당한다. 게임 스레드에서만 부른다.
  *          기동 단계 `Fonts`(Client 대상이며, 전용 서버는 글자를 그리지 않아 열지 않는다)가 `initialize` 한다.
@@ -60,24 +60,24 @@ namespace sw
 namespace sw
 {
     /**
-     * @class FontSystem
-     * @brief 엔진 폰트 서비스입니다(`engine::getFontSystem()`).
+     * @class FontService
+     * @brief 엔진 폰트 서비스입니다(`engine::getFontService()`).
      * @details 폰트가 하나도 없는 기계(시스템 폰트가 없는 리눅스 CI, 서버)에서도 저장소 폰트(기본 패밀리)는 항상 열린다. 연쇄의 끝이 기본 패밀리이고,
      *          시스템 패밀리를 찾지 못하면 처음 한 번 경고하고 건너뛴다. 그 문자는 두부(글리프 0)로 그려진다.
      */
-    class SW_API FontSystem
+    class SW_API FontService
     {
     public:
-        FontSystem();
+        FontService();
         /**
          * @brief 래스터라이저(테스트는 결정적인 가짜)와 문화권 출처를 주입합니다.
          * @param pLocalization 대체 목록을 묻는 곳. nullptr 이면 엔진 서비스(`engine::getLocalizationManager()`)를 씁니다.
          */
-        explicit FontSystem( unique_ptr<IFontRasterizer> rasterizer, const LocalizationManager* pLocalization = nullptr );
-        ~FontSystem();
+        explicit FontService( unique_ptr<IFontRasterizer> rasterizer, const LocalizationManager* pLocalization = nullptr );
+        ~FontService();
 
-        FontSystem( const FontSystem& )            = delete;
-        FontSystem& operator=( const FontSystem& ) = delete;
+        FontService( const FontService& )            = delete;
+        FontService& operator=( const FontService& ) = delete;
 
         /** @brief 카탈로그 파일을 읽고 기본 패밀리를 엽니다. 기본 패밀리를 열지 못하면 false 입니다(글자를 그릴 수 없으므로 기동 오류입니다). */
         [[nodiscard]] bool initialize( string_view catalogPath );

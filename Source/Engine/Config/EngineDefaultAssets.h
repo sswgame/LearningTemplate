@@ -43,7 +43,7 @@ namespace sw
         PROPERTY()
         string _localizationProject{ "engine/localization/engine.locproject.json" }; ///< 엔진 문자열(설정 메뉴 등)의 로컬라이제이션 프로젝트
         PROPERTY()
-        string _fontCatalog{ "engine/fonts/fontcatalog.xml" }; ///< 글꼴 카탈로그 — 저장소 글꼴 가족 · 시스템 글꼴 가족(`FontSystem`)
+        string _fontCatalog{ "engine/fonts/fontcatalog.xml" }; ///< 글꼴 카탈로그 — 저장소 글꼴 가족 · 시스템 글꼴 가족(`FontService`)
         PROPERTY()
         string _uiScaleSettings{ "engine/ui/uiscale.xml" }; ///< 런타임 UI 배율 규칙 — 해상도 → 배율(`UIScaleSettings`, 게임 프리셋이 덮어쓴다)
         PROPERTY()

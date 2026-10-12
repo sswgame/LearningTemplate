@@ -50,7 +50,7 @@
 5. **서버 디버깅** — [ServerDebug](ServerDebug.md), 다음은 S4(회선 조절).
 6. **6 차 주석 작업의 남은 구역** — 백로그 1-9.
 7. **SOLID 후속 메모**(각 항목은 StructureRefactor 에 근거가 있다): `UIAutomationSteps::ensureLinked` 호출(`UISystem::initialize`)은 Engine 통째 링크라 불필요해 보인다, `Joint2DComponent` 는 Cone 을 고르면 `createJoint` 를 프레임마다 다시 시도해 오류 로그를 반복한다,
-   S10 범위 밖의 `getBoundEngineServices()` 직접 호출(`FacialAnimationComponent` · `WidgetComponent` · `UISystem` · `FontSystem`, `SceneCooker` · `SceneNavigationCooker` · `PortraitRenderer` 의 인자 없는 `Scene` 생성).
+   S10 범위 밖의 `getBoundEngineServices()` 직접 호출(`FacialAnimationComponent` · `WidgetComponent` · `UISystem` · `FontService`, `SceneCooker` · `SceneNavigationCooker` · `PortraitRenderer` 의 인자 없는 `Scene` 생성).
 
 ## 검증할 것
 

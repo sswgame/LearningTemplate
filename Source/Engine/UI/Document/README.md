@@ -130,7 +130,7 @@
 
 - 글 위젯의 `_text`(`Meta = "Localizable"`)는 **현지화 키 또는 글 그대로**입니다. 보이는 글은 측정하고 그릴 때 문맥의 문화권으로 `getStringByText( 키, 키 )` 를 불러 얻습니다.
   테이블에 없으면 글 그대로이므로, 문서에 영어 원문 `"Paused"` 를 적어도 그대로 보입니다. 해석한 글은 텍스트 리비전(`getTextRevision`)과 함께 위젯이 캐시합니다(`getDisplayText`).
-- 바인딩 단계가 프레임마다 텍스트 리비전 정수 하나를 비교합니다. 바뀌면 글꼴 대체 사슬을 비우고(`FontSystem::invalidateFaceChains`) 모든 위젯에 `onTextRevisionChanged` 를 부릅니다.
+- 바인딩 단계가 프레임마다 텍스트 리비전 정수 하나를 비교합니다. 바뀌면 글꼴 대체 사슬을 비우고(`FontService::invalidateFaceChains`) 모든 위젯에 `onTextRevisionChanged` 를 부릅니다.
   글 위젯은 글을 다시 해석하고 `kLayout` 이 됩니다. 언어가 바뀌면 글 길이가 바뀌기 때문입니다. 형식 바인딩(`format=`)도 같은 프레임에 다시 포맷합니다.
 - 코드는 **키를 넣습니다**(`setText( "Menu.Start" )`). `SW_LOCTEXT` 로 미리 해석한 글을 넣으면 언어를 바꿔도 그대로입니다.
   플레이어가 입력한 글처럼 해석하면 안 되는 글은 `setLocalized( false )` 로 둡니다. 글 입력 위젯은 입력한 글은 해석하지 않고 힌트만 해석합니다.
