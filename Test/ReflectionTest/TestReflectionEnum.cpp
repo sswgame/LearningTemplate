@@ -280,9 +280,9 @@ SW_TEST_CASE( ReflectionEnumInfoTest, TextParseRejectsUnknownNamesInsteadOfZero 
     SW_ASSERT_NOT_NULL( pFlag );
 
     int64 value = -1;
-    SW_EXPECT_TRUE( pRole->tryParseText( "Editor", value ) && value == 1 );
-    SW_EXPECT_TRUE( pRole->tryParseText( "editor", value ) && value == 1 ); // 대소문자 무시
-    SW_EXPECT_TRUE( pRole->tryParseText( " 2 ", value ) && value == 2 );    // 알려진 값의 숫자
+    SW_EXPECT_TRUE( pRole->tryParseText( "Viewport", value ) && value == 1 );
+    SW_EXPECT_TRUE( pRole->tryParseText( "viewport", value ) && value == 1 ); // 대소문자 무시
+    SW_EXPECT_TRUE( pRole->tryParseText( " 2 ", value ) && value == 2 );      // 알려진 값의 숫자
     SW_EXPECT_FALSE( pRole->tryParseText( "Bogus", value ) );
     SW_EXPECT_FALSE( pRole->tryParseText( "99", value ) );
     SW_EXPECT_FALSE( pRole->tryParseText( "", value ) );
