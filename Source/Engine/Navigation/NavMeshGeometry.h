@@ -81,6 +81,12 @@ namespace sw
          * @details 셰이프의 로컬 자세(`_localPosition`, `_localRotation`)를 @p bodyWorld 앞에 곱한다.
          */
         void addPhysicsShape( const PhysicsShapeDesc3D& shape, const float4x4& bodyWorld, uint8 area );
+        /**
+         * @brief 높이장(지형)을 삼각형으로 더합니다. 샘플은 @p resolution × @p resolution(행 우선, 행이 z)이고 값은 월드 높이입니다.
+         * @details 샘플 (x, z) 는 XZ ( @p origin.x + x × @p cellSize.x, @p origin.z + z × @p cellSize.y ) 다. 셀 하나는 대각선 (x, z)-(x+1, z+1) 로 나눈
+         *          삼각형 둘이다(지형 렌더 메시와 같은 나눔). @p pHoleCell(없어도 된다)은 (N-1)² 셀 마스크이고 0 이 아닌 셀은 넣지 않는다(구멍).
+         */
+        void addHeightfield( const float32* pHeight, uint32 resolution, const float3& origin, const float2& cellSize, const uint8* pHoleCell, uint8 area );
         /** @brief 볼록 부피를 더합니다. */
         void addConvexVolume( const NavConvexVolume& volume );
         /** @brief 오프 메시 링크를 더합니다. */

@@ -15,6 +15,7 @@
 #include "Engine/Navigation/NavMeshSettings.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
+#include "Engine/Object/Component/Navigation/NavGeometryContributor.h"
 #include "Engine/Object/Component/Navigation/NavMeshAgentComponent.h"
 #include "Engine/Object/Component/Navigation/NavMeshLinkComponent.h"
 #include "Engine/Object/Component/Navigation/NavMeshModifierComponent.h"
@@ -105,6 +106,33 @@ namespace sw
                 } );
             }
 
+            /** @brief 오브젝트에 기하를 내는 등록 종류(`NavGeometryContributorRegistry`)의 켜진 컴포넌트가 있으면 true 입니다. */
+            static bool hasContribution( const GameObject& object )
+            {
+                bool bFound = false;
+                for ( const NavGeometryContribution* pContribution : NavGeometryContributorRegistry::getAll() )
+                {
+                    object.forEachComponentOfType<Component>( pContribution->_pGetType(), [&]( Component* pComponent )
+                    {
+                        bFound = bFound || pComponent->isActive();
+                    } );
+                }
+                return bFound;
+            }
+
+            /** @brief 등록 종류의 켜진 컴포넌트마다 기하를 더합니다. */
+            static void collectContributions( const GameObject& object, uint8 area, NavMeshGeometry& outGeometry )
+            {
+                for ( const NavGeometryContribution* pContribution : NavGeometryContributorRegistry::getAll() )
+                {
+                    object.forEachComponentOfType<Component>( pContribution->_pGetType(), [&]( Component* pComponent )
+                    {
+                        if ( pComponent->isActive() )
+                            pContribution->_pContribute( *pComponent, area, outGeometry );
+                    } );
+                }
+            }
+
             /** @brief 표면의 경계 상자입니다. 정하지 않았으면 false 입니다. */
             static bool findSurfaceBox( const NavMeshSurfaceComponent* pSurface, AABB& outBox )
             {
@@ -168,14 +196,18 @@ namespace sw
             // 링크만 든 오브젝트는 그릴 상자가 없다 — 표면 상자 판정은 링크 자리로 따로 한다.
             AABB       objectBox{};
             const bool bOutsideSurface = bSurfaceBox && ( pObject->getWorldBox( objectBox ) == false || objectBox.intersects( surfaceBox ) == false );
-            const bool bHasLink        = pObject->getComponent<NavMeshLinkComponent>() != nullptr;
-            if ( bOutsideSurface && bHasLink == false )
+            // 등록된 종류(지형)도 그릴 상자가 없을 수 있다 — 베이크 경계가 표면 상자로 자르므로 상자 밖이어도 넣는다.
+            const bool bHasLink         = pObject->getComponent<NavMeshLinkComponent>() != nullptr;
+            const bool bHasContribution = Internal::hasContribution( *pObject );
+            if ( bOutsideSurface && bHasLink == false && bHasContribution == false )
                 return;
             const Internal::ObjectVerdict verdict = Internal::evaluateObject( *pObject, pSurface, settings );
             if ( verdict._bIncluded == false )
                 return;
             if ( bHasLink )
                 Internal::collectLinks( *pObject, pLinkType, settings, verdict._area, bSurfaceBox ? &surfaceBox : nullptr, outGeometry );
+            if ( bHasContribution )
+                Internal::collectContributions( *pObject, verdict._area, outGeometry );
             if ( bOutsideSurface )
                 return;
             for ( const INavGeometrySource* pSource : listSource )
