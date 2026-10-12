@@ -97,6 +97,12 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         shipping="엔진 팩에 실림", bCommitted=True,
         typeName="NavMeshSettings", header="Source/Engine/Navigation/NavMeshSettings.h", keyStyle=kKeyStyleXmlMember),
     ConfigFileEntry(
+        page="LipSyncSettings", pathPattern="Resource/engine/animation/lipsync.json", layer=kLayerEngineDefault, fileFormat="json",
+        reader="`LipSyncSettings::loadFromResource` (`FacialAnimationComponent::speak` · `App --import-lipsync`)", readWhen="처음 말할 때 · 립싱크 임포트",
+        shipping="엔진 팩에 실림", bCommitted=True,
+        typeName="LipSyncSettings", header="Source/Engine/Animation/Facial/LipSync.h", keyStyle=kKeyStyleJsonMember,
+        note="비즘 이름은 얼굴 리그(`*.facial.json`)의 `_listViseme` 와 맞춘다"),
+    ConfigFileEntry(
         page="", pathPattern="Resource/engine/data/render2d.xml", layer=kLayerEngineDefault, fileFormat="xml",
         reader="`Render2DSettings::getActive` (손으로 읽음 — 모르는 요소 · 속성은 오류)", readWhen="처음 쓸 때 · `reloadActive`",
         shipping="엔진 팩에 실림", bCommitted=True, ownerDoc="Source/Engine/Graphics/2D/Render2DSettings.h",
@@ -147,6 +153,12 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         page="", pathPattern="Resource/game/*/data/*.input.xml", layer=kLayerPackData, fileFormat="xml",
         reader="`InputMap::loadFromResource` (`GameSettings::_inputMap`)", readWhen="게임 인스턴스 초기화",
         shipping="게임 팩에 실림", bCommitted=True, ownerDoc="Source/Engine/Input/README.md", bOptional=True),
+    ConfigFileEntry(
+        page="FacialRig", pathPattern="Resource/game/*/models/*.facial.json", layer=kLayerPackData, fileFormat="json",
+        reader="`FacialRig::loadFromResource` (`FacialAnimationComponent::_facialRigPath`)", readWhen="컴포넌트 시작 · 경로를 바꿀 때",
+        shipping="게임 팩에 실림", bCommitted=True,
+        typeName="FacialRig", header="Source/Engine/Animation/Facial/FacialRig.h", keyStyle=kKeyStyleJsonMember,
+        note="메시에 없는 모프 타깃 · 스켈레톤에 없는 눈 본은 바인딩할 때 오류(`FacialRig::validate`)"),
     # --- 사용자 설정 --------------------------------------------------------------------------------------------------------
     ConfigFileEntry(
         page="UserSettings", pathPattern="%LOCALAPPDATA%/SWEngine/<팩>/usersettings.json", layer=kLayerUser, fileFormat="json",
@@ -246,4 +258,5 @@ kSetConfigFolderNonConfig = frozenset({"Config/README.md"})
 
 #: `Resource/` 아래에서 "설정 파일" 로 보는 이름 패턴 — 이 패턴에 맞는데 표의 어느 줄에도 맞지 않으면 게이트가 진다.
 kListResourceSettingPattern = ("Resource/*settings*.xml", "Resource/*.settings.xml", "Resource/*.input.xml",
-                               "Resource/*/data/render2d.xml", "Resource/engine/data/enginedefaultassets.xml")
+                               "Resource/*/data/render2d.xml", "Resource/engine/data/enginedefaultassets.xml",
+                               "Resource/engine/animation/lipsync.json", "Resource/*.facial.json")

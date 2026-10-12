@@ -12,25 +12,36 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
-    class JSONValue;
     class Skeleton;
 
     /** @brief 모프 타깃 하나의 가중치입니다. */
-    struct FacialTargetWeight
+    REFLECT()
+    struct SW_API FacialTargetWeight
     {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Morph target name of the mesh" )
         hashed_string _target;
-        float32       _weight{ 0.0f };
+        PROPERTY( Tooltip = "Target weight at pose weight 1" )
+        float32 _weight{ 0.0f };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 이름 붙은 얼굴 포즈(표정, 비즘)입니다. 타깃 가중치 묶음이며, 포즈 가중치를 곱해 더합니다. */
-    struct FacialPose
+    REFLECT()
+    struct SW_API FacialPose
     {
-        hashed_string              _name;
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Pose name (expression curve name, or a viseme name of the lip sync table); unique in its list" )
+        hashed_string _name;
+        PROPERTY( Tooltip = "Morph target weights of this pose (empty: the pose moves nothing)" )
         vector<FacialTargetWeight> _listTarget;
     };
 } // namespace sw
@@ -38,26 +49,42 @@ namespace sw
 namespace sw
 {
     /** @brief 눈 깜빡임입니다. 타깃(눈꺼풀)과 간격, 길이(초)를 담습니다. 타깃이 없으면 깜빡이지 않습니다. */
-    struct FacialBlinkSettings
+    REFLECT()
+    struct SW_API FacialBlinkSettings
     {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Eyelid morph targets (empty: no blinking)" )
         vector<hashed_string> _listTarget;
-        float32               _minInterval{ 2.0f };
-        float32               _maxInterval{ 5.0f };
-        float32               _duration{ 0.15f };
+        PROPERTY( Min = 0.0, Units = s, Tooltip = "Shortest time between blinks (greater than 0)" )
+        float32 _minInterval{ 2.0f };
+        PROPERTY( Min = 0.0, Units = s, Tooltip = "Longest time between blinks (not below the shortest)" )
+        float32 _maxInterval{ 5.0f };
+        PROPERTY( Min = 0.0, Units = s, Tooltip = "Length of one blink (greater than 0)" )
+        float32 _duration{ 0.15f };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 시선입니다. 눈 본들이 목표를 봅니다(앞 축과 최대 각). 사카드(작은 튐)는 간격과 크기로 정합니다. 눈 본이 없으면 보지 않습니다. */
-    struct FacialGazeSettings
+    REFLECT()
+    struct SW_API FacialGazeSettings
     {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Eye bones of the skeleton (empty: no gaze)" )
         vector<hashed_string> _listEyeBone;
-        float3                _forwardAxis{ 0.0f, 0.0f, 1.0f };
-        float32               _maxAngleDegrees{ 30.0f };
-        float32               _saccadeMinInterval{ 0.4f };
-        float32               _saccadeMaxInterval{ 1.6f };
-        float32               _saccadeAmplitudeDegrees{ 3.0f };
+        PROPERTY( Tooltip = "Eye forward axis in bone space (normalized on load, must not be zero)" )
+        float3 _forwardAxis{ 0.0f, 0.0f, 1.0f };
+        PROPERTY( Min = 0.0, Units = deg, Tooltip = "Largest angle the eyes turn from the forward axis" )
+        float32 _maxAngleDegrees{ 30.0f };
+        PROPERTY( Min = 0.0, Units = s, Tooltip = "Shortest time between saccades (greater than 0)" )
+        float32 _saccadeMinInterval{ 0.4f };
+        PROPERTY( Min = 0.0, Units = s, Tooltip = "Longest time between saccades (not below the shortest)" )
+        float32 _saccadeMaxInterval{ 1.6f };
+        PROPERTY( Min = 0.0, Units = deg, Tooltip = "Size of one saccade" )
+        float32 _saccadeAmplitudeDegrees{ 3.0f };
     };
 } // namespace sw
 
@@ -65,13 +92,16 @@ namespace sw
 {
     /**
      * @class FacialRig
-     * @brief 형식: `{ "expressions": { 이름: { 타깃: 가중치 } }, "visemes": { 이름: { 타깃: 가중치 } }, "blink": { "targets", "min_interval",
-     *        "max_interval", "duration" }, "gaze": { "eye_bones", "forward_axis", "max_angle_degrees", "saccade_min_interval", "saccade_max_interval",
-     *        "saccade_amplitude_degrees" } }`. 비즘 이름은 립싱크 표(`engine/animation/lipsync.json`)의 것과 맞춥니다.
+     * @brief 얼굴 리그 파일(`<얼굴>.facial.json`) 하나입니다. 비즘 이름은 립싱크 표(`engine/animation/lipsync.json`)의 것과 맞춥니다.
+     * @details 파일은 리플렉션 구조체로 읽는다(`ConfigManager::readConfigJSON` — 모르는 키 · 읽지 못한 값 · 범위 밖 숫자는 오류). 칸 표는 PROPERTY 가 정본이다.
+     *          `_blink` · `_gaze` 를 적지 않으면 기본값이고, 타깃 · 눈 본이 비면 그 기능을 쓰지 않는다. 읽은 뒤 `validateFile` 이 이름 중복 · 간격 순서를 본다.
      */
+    REFLECT()
     class SW_API FacialRig
     {
     public:
+        REFLECT_BODY();
+
         /** @brief 얼굴 리그 확장자입니다. */
         static constexpr string_view kExtension = ".facial.json";
 
@@ -90,12 +120,16 @@ namespace sw
         int32 findVisemeIndex( const hashed_string& name ) const;
 
     private:
-        [[nodiscard]] bool        parseRoot( const JSONValue& root, string_view sourceLabel );
-        [[nodiscard]] static bool parsePoses( const JSONValue& value, vector<FacialPose>& outListPose, string_view sourceLabel );
+        /** @brief 파일만으로 알 수 있는 의미를 봅니다(포즈 이름 · 깜빡임과 사카드 간격 · 앞 축). 어긋나면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool validateFile( string_view sourceLabel ) const;
 
-        vector<FacialPose>  _listExpression;
-        vector<FacialPose>  _listViseme;
+        PROPERTY( Tooltip = "Expressions: named morph target weight sets, driven by the curve of the same name" )
+        vector<FacialPose> _listExpression;
+        PROPERTY( Tooltip = "Visemes: morph target weight sets the lip sync drives by viseme name" )
+        vector<FacialPose> _listViseme;
+        PROPERTY( Tooltip = "Eye blink" )
         FacialBlinkSettings _blink;
-        FacialGazeSettings  _gaze;
+        PROPERTY( Tooltip = "Eye gaze and saccades" )
+        FacialGazeSettings _gaze;
     };
 } // namespace sw

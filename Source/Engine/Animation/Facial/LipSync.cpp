@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/AnimJSONUtil.h"
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -65,13 +66,9 @@ namespace sw
     bool LipSyncSettings::parseJSON( string_view json, string_view sourceLabel )
     {
         *this = LipSyncSettings{};
-        JSONDocument document;
-        if ( document.parse( json, sourceLabel ) == false )
-        {
-            SW_LOG_ERROR( "Lip sync settings '%#': malformed JSON", sourceLabel );
-            return false;
-        }
-        if ( parseRoot( document.getRoot(), sourceLabel ) )
+        const string label{ sourceLabel };
+        // 키는 대소문자까지 맞아야 하고, 모르는 키 · 읽지 못한 값 · 범위 밖 숫자는 오류다(`readConfigJSON` 이 로그로 알린다).
+        if ( ConfigManager::readConfigJSON( *this, json, label.c_str() ) && validate( sourceLabel ) )
             return true;
         *this = LipSyncSettings{};
         return false;
@@ -89,55 +86,41 @@ namespace sw
         return parseJSON( text, path );
     }
 
-    bool LipSyncSettings::parseRoot( const JSONValue& root, string_view sourceLabel )
+    bool LipSyncSettings::validate( string_view sourceLabel ) const
     {
-        if ( AnimJSONUtil::hasOnlyKnownKeys( root, { "frame_rate", "silence_rms", "full_rms", "sharpness", "fallback_viseme", "bands", "visemes" }, sourceLabel ) == false )
-            return false;
-        const JSONValue bands    = root.get( "bands" );
-        const JSONValue visemes  = root.get( "visemes" );
-        const bool      bScalars = root.get( "frame_rate" ).isNumber() && root.get( "silence_rms" ).isNumber() && root.get( "full_rms" ).isNumber() &&
-                              root.get( "sharpness" ).isNumber() && root.get( "fallback_viseme" ).isString();
-        if ( bScalars == false || bands.isArray() == false || bands.size() != 3 || visemes.isArray() == false || visemes.size() < 2 )
-        {
-            SW_LOG_ERROR( "Lip sync settings '%#' needs frame_rate, silence_rms, full_rms, sharpness, fallback_viseme, three bands and at least two visemes",
-                          sourceLabel );
-            return false;
-        }
-        _frameRate  = static_cast<float32>( root.get( "frame_rate" ).asFloat() );
-        _silenceRms = static_cast<float32>( root.get( "silence_rms" ).asFloat() );
-        _fullRms    = static_cast<float32>( root.get( "full_rms" ).asFloat() );
-        _sharpness  = static_cast<float32>( root.get( "sharpness" ).asFloat() );
         if ( _frameRate <= 0.0f || _fullRms <= _silenceRms )
         {
-            SW_LOG_ERROR( "Lip sync settings '%#': frame_rate must be positive and full_rms above silence_rms", sourceLabel );
+            SW_LOG_ERROR( "Lip sync settings '%#': _frameRate must be positive and _fullRms above _silenceRms", sourceLabel );
             return false;
         }
+        const float2      arrBandHz[3]{ _lowBandHz, _midBandHz, _highBandHz };
+        const utf8* const arrBandName[3]{ "_lowBandHz", "_midBandHz", "_highBandHz" };
         for ( uint32 bandIndex = 0; bandIndex < 3; ++bandIndex )
         {
-            if ( AnimJSONUtil::readFloats( bands.at( bandIndex ), _arrBandRange[bandIndex], 2 ) == false || _arrBandRange[bandIndex][1] <= _arrBandRange[bandIndex][0] )
+            const float2& band = arrBandHz[bandIndex];
+            if ( band._x <= 0.0f || band._y <= band._x )
             {
-                SW_LOG_ERROR( "Lip sync settings '%#': band %# must be [low Hz, high Hz]", sourceLabel, bandIndex );
+                SW_LOG_ERROR( "Lip sync settings '%#': %# must be \"low,high\" Hz with 0 < low < high", sourceLabel, arrBandName[bandIndex] );
                 return false;
             }
         }
-        for ( size_t visemeIndex = 0; visemeIndex < visemes.size(); ++visemeIndex )
+        if ( _listViseme.size() < 2 )
         {
-            const JSONValue viseme = visemes.at( visemeIndex );
-            if ( AnimJSONUtil::hasOnlyKnownKeys( viseme, { "name", "bands" }, sourceLabel ) == false )
-                return false;
-            LipSyncViseme entry{};
-            if ( viseme.get( "name" ).isString() == false || AnimJSONUtil::readFloats( viseme.get( "bands" ), entry._arrBand, 3 ) == false )
+            SW_LOG_ERROR( "Lip sync settings '%#': _listViseme needs at least two visemes (the first one is silence)", sourceLabel );
+            return false;
+        }
+        for ( size_t visemeIndex = 0; visemeIndex < _listViseme.size(); ++visemeIndex )
+        {
+            const LipSyncViseme& viseme = _listViseme[visemeIndex];
+            if ( viseme._name.empty() || findVisemeIndex( viseme._name ) != static_cast<int32>( visemeIndex ) )
             {
-                SW_LOG_ERROR( "Lip sync settings '%#': viseme %# needs a name and three band weights", sourceLabel, visemeIndex );
+                SW_LOG_ERROR( "Lip sync settings '%#': viseme %# needs a unique, non-empty _name", sourceLabel, visemeIndex );
                 return false;
             }
-            entry._name = hashed_string( viseme.get( "name" ).asString() );
-            _listViseme.push_back( entry );
         }
-        _fallbackViseme = hashed_string( root.get( "fallback_viseme" ).asString() );
         if ( findVisemeIndex( _fallbackViseme ) < 0 )
         {
-            SW_LOG_ERROR( "Lip sync settings '%#': fallback_viseme '%#' is not a viseme", sourceLabel, _fallbackViseme.c_str() );
+            SW_LOG_ERROR( "Lip sync settings '%#': _fallbackViseme '%#' is not a viseme", sourceLabel, _fallbackViseme.c_str() );
             return false;
         }
         return true;
@@ -302,10 +285,11 @@ namespace sw
         if ( sampleRate == 0 || visemeCount < 2 || listSample.empty() )
             return;
 
+        const float2              arrBandHz[3]{ settings._lowBandHz, settings._midBandHz, settings._highBandHz };
         LipSyncInternal::BandPass arrFilter[3];
         for ( uint32 bandIndex = 0; bandIndex < 3; ++bandIndex )
         {
-            arrFilter[bandIndex].configure( settings._arrBandRange[bandIndex][0], settings._arrBandRange[bandIndex][1], static_cast<float32>( sampleRate ) );
+            arrFilter[bandIndex].configure( arrBandHz[bandIndex]._x, arrBandHz[bandIndex]._y, static_cast<float32>( sampleRate ) );
         }
         const size_t    frameSamples = MathUtil::max<size_t>( static_cast<size_t>( static_cast<float32>( sampleRate ) / settings._frameRate ), 1u );
         const size_t    frameCount   = ( listSample.size() + frameSamples - 1 ) / frameSamples;
@@ -345,13 +329,13 @@ namespace sw
             float32       maxScore    = -MathUtil::kMaxFloat;
             for ( uint32 visemeIndex = 1; visemeIndex < visemeCount; ++visemeIndex )
             {
-                const float32* pBand         = settings._listViseme[visemeIndex]._arrBand;
-                const float32  profileLength = MathUtil::sqrt( pBand[0] * pBand[0] + pBand[1] * pBand[1] + pBand[2] * pBand[2] );
-                const float32  cosine        = ( shapeLength > 0.0f && profileLength > 0.0f )
-                                                 ? ( arrShape[0] * pBand[0] + arrShape[1] * pBand[1] + arrShape[2] * pBand[2] ) / ( shapeLength * profileLength )
-                                                 : 0.0f;
-                listScore[visemeIndex]       = cosine * settings._sharpness;
-                maxScore                     = MathUtil::max( maxScore, listScore[visemeIndex] );
+                const float3& band          = settings._listViseme[visemeIndex]._bandShape;
+                const float32 profileLength = MathUtil::sqrt( band._x * band._x + band._y * band._y + band._z * band._z );
+                const float32 cosine        = ( shapeLength > 0.0f && profileLength > 0.0f )
+                                                ? ( arrShape[0] * band._x + arrShape[1] * band._y + arrShape[2] * band._z ) / ( shapeLength * profileLength )
+                                                : 0.0f;
+                listScore[visemeIndex]      = cosine * settings._sharpness;
+                maxScore                    = MathUtil::max( maxScore, listScore[visemeIndex] );
             }
             float32 sum = 0.0f;
             for ( uint32 visemeIndex = 1; visemeIndex < visemeCount; ++visemeIndex )
