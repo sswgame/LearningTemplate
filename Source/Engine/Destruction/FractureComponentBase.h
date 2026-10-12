@@ -187,6 +187,8 @@ namespace sw
         /** @brief 지난 물리 프레임의 처리 시간(마이크로초)입니다. 사건 적용, 바디 생성, 자세 읽기, 렌더링 갱신으로 나뉩니다. */
         float32 getLastApplyMicroseconds() const { return _lastApplyMicroseconds; }
         float32 getLastPoseMicroseconds() const { return _lastPoseMicroseconds; }
+        /** @brief 아직 짓지 않은 잎 충돌 셰이프 수입니다. 온전한 동안 프레임마다 예산만큼 줄고, 깨지면 남은 것을 그 자리에서 짓습니다. 상태를 시작하기 전이면 0 입니다. */
+        uint32 getPendingLeafShapeCount() const;
 
         /** @brief 충돌이 사건을 만들지 정하는 권한입니다. 받는 쪽(클라이언트)은 끄고 받은 사건만 적용합니다. */
         void setAuthority( bool bAuthority ) { _bAuthority = bAuthority; }
@@ -252,11 +254,12 @@ namespace sw
         /** @brief 오브젝트의 지금 자세(월드)를 읽습니다. */
         void readObjectPose( float3& outPosition, quaternion& outRotation, float32& outScale ) const;
         /**
-         * @brief 잎마다 충돌 셰이프(볼록 껍질)를 @p scale 로 모두 만듭니다. 같은 배율로 이미 만들었으면 아무것도 하지 않습니다.
-         * @details 껍질 생성이 깨지는 프레임 비용의 대부분을 차지하므로(200 조각 벽 약 8 ms) 상태를 시작할 때 미리 만든다.
-         *          깨질 때는 정적 바디와 떨어진 덩어리(`createCompoundShape`)가 만들어 둔 잎 셰이프를 나눠 쓴다.
+         * @brief 잎마다 충돌 셰이프(볼록 껍질)의 점을 @p scale 로 만들고 셰이프는 비웁니다. 같은 배율로 이미 만들었으면 아무것도 하지 않습니다.
+         * @details 껍질 셰이프 생성이 깨지는 프레임 비용의 대부분이고(200 조각 벽 약 11 ms) 상태를 시작할 때 모두 지으면 플레이 첫 프레임이
+         *          파괴물 수에 비례해 길어진다. 그래서 온전한 프레임마다 예산(`gv_fractureShapeWarmMicroseconds`)만큼 나눠 짓고, 그 전에 깨지면 남은 잎을
+         *          바디를 만들며 짓는다. 깨질 때는 정적 바디와 떨어진 덩어리(`createCompoundShape`)가 만들어 둔 잎 셰이프를 나눠 쓴다.
          */
-        void prepareLeafShapes( float32 scale );
+        void prepareLeafPoints( float32 scale );
         /** @brief 처음 떨어진 조각이 생겼을 때 호출합니다. 오브젝트의 메시와 강체를 넘겨받고 조각 렌더링과 바디를 만듭니다. */
         void activate( ScenePhysics& physics );
         /** @brief 사건 하나의 결과로 그룹 바디를 고칩니다. */
@@ -340,7 +343,7 @@ namespace sw
         float3                          _intactLinearVelocity;
         float3                          _intactAngularVelocity;
         float32                         _objectScale;    ///< 고른 배율(축 배율의 평균)
-        float32                         _leafShapeScale; ///< 잎 셰이프를 만든 배율이다(0 = 아직 만들지 않았다).
+        float32                         _leafShapeScale; ///< 잎 껍질 점을 만든 배율이다(0 = 아직 만들지 않았다).
         float32                         _lastApplyMicroseconds;
         float32                         _lastPoseMicroseconds;
         float32                         _frameSimulatedTime; ///< 이번 물리 프레임에 진행한 고정 스텝 시간이다(수명과 페이드에 쓰며 결정적이다).

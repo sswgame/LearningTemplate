@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Destruction/DestructionRandom.h"
 #include "Engine/Destruction/FractureAnchor.h"
 #include "Engine/Destruction/FractureAsset.h"
@@ -18,11 +19,14 @@
 #include "Engine/Object/GameObject/ScenePhysics.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionCast.h"
 
 namespace sw
 {
     SW_GLOBAL_VARIABLE( int32, gv_destructionMaxDebrisBodies, 512, "한 씬(월드)의 모든 파괴 오브젝트가 함께 드는 떨어진 덩어리 바디의 상한(넘으면 오래된 작은 것부터 사라진다)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_fractureShapeWarmMicroseconds, 500,
+                             "파괴 잎 셰이프를 온전한 동안 미리 짓는 시간(us, 스레드마다 4 ms 창마다). 0=처음 깨질 때 모두, 음수=상태를 시작할 때 모두(전/후 비교용)" );
 } // namespace sw
 
 namespace sw
@@ -39,21 +43,45 @@ namespace sw
         IFracturePhysics( const IFracturePhysics& )            = delete;
         IFracturePhysics& operator=( const IFracturePhysics& ) = delete;
 
-        /** @brief 잎마다 껍질 셰이프를 지금 모두 만듭니다(오브젝트 원점 기준, 배율과 축소를 적용한 점). 이전에 만든 것은 해제합니다. */
-        virtual void               prepareLeafShapes( const FractureAsset& asset, float32 scale, float32 shrink, const hashed_string& material ) = 0;
-        virtual void               releaseLeafShapes()                                                                                           = 0;
+        /**
+         * @brief 잎마다 껍질 점을 만들고(오브젝트 원점 기준, 배율과 축소를 적용한 점) 이전에 만든 셰이프를 해제합니다.
+         *        셰이프는 `warmLeafShapes` 나 처음 쓰는 자리(바디 생성)에서 만듭니다.
+         */
+        virtual void prepareLeafPoints( const FractureAsset& asset, float32 scale, float32 shrink, const hashed_string& material ) = 0;
+        virtual void releaseLeafShapes()                                                                                           = 0;
+
+        /**
+         * @brief 아직 없는 잎 셰이프를 잎 순서대로 만들고, 남은 수를 반환합니다. 이미 있는 잎(먼저 깨져 만든 것)은 건너뜁니다.
+         * @param deadlineNanoseconds 하나를 만든 뒤 이 시각(`MonotonicClock::nowNanoseconds`)이 지났으면 멈춥니다. 0 이면 끝까지 만듭니다.
+         */
+        uint32 warmLeafShapes( int64 deadlineNanoseconds )
+        {
+            while ( _pendingLeafShapeCount > 0 && _nextWarmLeaf < _leafShapeCount )
+            {
+                const uint32 pendingBefore = _pendingLeafShapeCount;
+                ensureLeafShape( _nextWarmLeaf++ );
+                const bool bCreated = pendingBefore != _pendingLeafShapeCount;
+                if ( bCreated && deadlineNanoseconds != 0 && MonotonicClock::nowNanoseconds() >= deadlineNanoseconds )
+                    break;
+            }
+            return _pendingLeafShapeCount;
+        }
+
+        /** @brief 아직 만들지 않은 잎 셰이프 수입니다. */
+        uint32 getPendingLeafShapeCount() const { return _pendingLeafShapeCount; }
+
         virtual void               createStaticLeafBodies( vector_reference<const uint32> listLeaf, const float3& position, const quaternion& rotation, uint8 layer,
-                                                           uint64 userData, vector<PhysicsBodyHandle>& outListBody )                             = 0;
+                                                           uint64 userData, vector<PhysicsBodyHandle>& outListBody )       = 0;
         virtual PhysicsBodyHandle  createGroupBody( vector_reference<const uint32> listLeaf, const float3& position, const quaternion& rotation, float32 mass,
                                                     const float3& linearVelocity, const float3& angularVelocity, uint8 layer, uint64 userData,
-                                                    PhysicsShapeHandle& outShape )                                                               = 0;
-        virtual void               destroyBodies( vector_reference<const PhysicsBodyHandle> listBody )                                           = 0;
-        virtual void               destroyShape( PhysicsShapeHandle shape )                                                                      = 0;
-        [[nodiscard]] virtual bool readPose( PhysicsBodyHandle body, float3& outPosition, quaternion& outRotation ) const                        = 0;
-        virtual void               readVelocity( PhysicsBodyHandle body, float3& outLinear, float3& outAngular ) const                           = 0;
-        virtual bool               isSleeping( PhysicsBodyHandle body ) const                                                                    = 0;
-        virtual void               addImpulseAtPoint( PhysicsBodyHandle body, const float3& impulse, const float3& point )                       = 0;
-        virtual void               setBodyEnabled( PhysicsBodyHandle body, bool bEnabled )                                                       = 0;
+                                                    PhysicsShapeHandle& outShape )                                         = 0;
+        virtual void               destroyBodies( vector_reference<const PhysicsBodyHandle> listBody )                     = 0;
+        virtual void               destroyShape( PhysicsShapeHandle shape )                                                = 0;
+        [[nodiscard]] virtual bool readPose( PhysicsBodyHandle body, float3& outPosition, quaternion& outRotation ) const  = 0;
+        virtual void               readVelocity( PhysicsBodyHandle body, float3& outLinear, float3& outAngular ) const     = 0;
+        virtual bool               isSleeping( PhysicsBodyHandle body ) const                                              = 0;
+        virtual void               addImpulseAtPoint( PhysicsBodyHandle body, const float3& impulse, const float3& point ) = 0;
+        virtual void               setBodyEnabled( PhysicsBodyHandle body, bool bEnabled )                                 = 0;
         /** @brief 바디를 키네마틱으로 바꿉니다. 네트워크가 자세를 정하는 덩어리에 씁니다. */
         virtual void setBodyKinematic( PhysicsBodyHandle body ) = 0;
         /** @brief 키네마틱 바디를 한 스텝 동안 목표 자세로 옮깁니다. 닿는 것은 밀립니다. */
@@ -61,6 +89,26 @@ namespace sw
         /** @brief 잎 껍질을 그 자세에 놓았을 때 다른 오브젝트(@p ignoreUserData 가 아닌)의 정적 바디에 닿는지 반환합니다(앵커 World). */
         virtual bool overlapsStaticWorld( const FractureAsset& asset, uint32 leaf, float32 scale, const float3& position, const quaternion& rotation,
                                           uint64 ignoreUserData ) const = 0;
+
+    protected:
+        /** @brief 잎 @p leafCount 개가 모두 셰이프 없이 시작합니다(`prepareLeafPoints` · `releaseLeafShapes` 가 부른다). */
+        void resetLeafShapeWarm( uint32 leafCount )
+        {
+            _leafShapeCount        = leafCount;
+            _pendingLeafShapeCount = leafCount;
+            _nextWarmLeaf          = 0;
+        }
+
+        /** @brief 어댑터가 잎 셰이프 하나를 새로 만들 때마다 부릅니다. */
+        void noteLeafShapeCreated() { --_pendingLeafShapeCount; }
+
+        /** @brief 잎 셰이프가 없으면 만듭니다. */
+        virtual void ensureLeafShape( uint32 leaf ) = 0;
+
+    private:
+        uint32 _leafShapeCount{ 0 };
+        uint32 _pendingLeafShapeCount{ 0 };
+        uint32 _nextWarmLeaf{ 0 }; ///< 다음에 미리 만들 잎이다. 앞쪽 잎은 이미 있거나 만들었다.
     };
 } // namespace sw
 
@@ -70,12 +118,49 @@ namespace sw
 
     namespace
     {
+        /** @brief 잎 셰이프 미리 짓기가 이 스레드에서 쓴 시간이다. 창마다 다시 채워, 파괴물이 많아도 한 프레임에 예산만큼만 쓴다. */
+        struct FractureLeafWarmBudget
+        {
+            int64 _windowStartNanoseconds{ 0 };
+            int64 _spentNanoseconds{ 0 };
+        };
+
+        thread_local FractureLeafWarmBudget s_leafWarmBudget;
+
         struct FractureComponentBaseInternal
         {
-            static constexpr uint32  kBakeAfterStillFrames = 30;
-            static constexpr float32 kMoveEpsilon          = 1.0e-4f;
-            static constexpr uint32  kMaxPolygonPoint2D    = 8;
-            static constexpr float32 kSpawnGraceTime       = 0.3f; ///< 갓 생성된 조각끼리의 충돌을 피해로 보지 않는 시간(초)이다.
+            static constexpr uint32  kBakeAfterStillFrames      = 30;
+            static constexpr float32 kMoveEpsilon               = 1.0e-4f;
+            static constexpr uint32  kMaxPolygonPoint2D         = 8;
+            static constexpr float32 kSpawnGraceTime            = 0.3f; ///< 갓 생성된 조각끼리의 충돌을 피해로 보지 않는 시간(초)이다.
+            static constexpr int64   kNanosecondsPerMicrosecond = constant::kNanosecondsPerSecond / 1'000'000;
+            /// 미리 짓기 예산을 다시 채우는 창이다. 한 프레임(60 Hz 16.7 ms · 240 Hz 4.2 ms)보다 짧아 보통 프레임마다 채워지고, 아주 빠른 프레임에서는 몇 프레임에 한 번이 된다.
+            static constexpr int64 kLeafWarmWindowNanoseconds = constant::kNanosecondsPerSecond / 250;
+
+            /**
+             * @brief 온전한 동안 잎 셰이프를 예산 안에서 미리 짓습니다. 다 짓지 못한 잎은 처음 깨질 때 바디를 만들며 짓습니다.
+             * @details 상태를 시작할 때 한꺼번에 지으면 첫 프레임이 파괴물 수에 비례해 길어지고(쇼케이스 잎 312 개 ~20 ms),
+             *          깨질 때까지 미루기만 하면 그 비용이 깨지는 프레임으로 옮겨 간다. 그 사이의 온전한 프레임에 나눠 짓는다.
+             */
+            static void warmLeafShapes( IFracturePhysics& physics )
+            {
+                if ( gv_fractureShapeWarmMicroseconds <= 0 || physics.getPendingLeafShapeCount() == 0 )
+                    return;
+                const int64 now = MonotonicClock::nowNanoseconds();
+                if ( now - s_leafWarmBudget._windowStartNanoseconds >= kLeafWarmWindowNanoseconds )
+                {
+                    s_leafWarmBudget._windowStartNanoseconds = now;
+                    s_leafWarmBudget._spentNanoseconds       = 0;
+                }
+                const int64 remaining = static_cast<int64>( gv_fractureShapeWarmMicroseconds ) * kNanosecondsPerMicrosecond - s_leafWarmBudget._spentNanoseconds;
+                if ( remaining <= 0 )
+                    return;
+                SW_PROFILE_SCOPE( "GT.Scene.tick.physics.fractureWarm" );
+                const uint32 pendingBefore = physics.getPendingLeafShapeCount();
+                const uint32 pendingAfter  = physics.warmLeafShapes( now + remaining );
+                SW_PROFILE_COUNT( "GT.Scene.tick.physics.fractureWarmShapes", pendingBefore - pendingAfter );
+                s_leafWarmBudget._spentNanoseconds += MonotonicClock::nowNanoseconds() - now;
+            }
 
             /** @brief 잎 껍질 점을 오브젝트 원점 기준으로 만듭니다. (무게 중심 + 축소한 껍질) × 배율입니다. */
             static void makeLeafHull( const FractureAsset& asset, uint32 leaf, float32 scale, float32 shrink, vector<float3>& outListPoint )
@@ -167,7 +252,7 @@ namespace sw
 
             ~FracturePhysics3D() override { releaseLeafShapes(); }
 
-            void prepareLeafShapes( const FractureAsset& asset, float32 scale, float32 shrink, const hashed_string& material ) override
+            void prepareLeafPoints( const FractureAsset& asset, float32 scale, float32 shrink, const hashed_string& material ) override
             {
                 releaseLeafShapes();
                 _material = material;
@@ -176,8 +261,8 @@ namespace sw
                 for ( uint32 leaf = 0; leaf < asset.getPieceCount(); ++leaf )
                 {
                     FractureComponentBaseInternal::makeLeafHull( asset, leaf, scale, shrink, _listLeafPoint[leaf] );
-                    (void)findLeafShape( leaf );
                 }
+                resetLeafShapeWarm( asset.getPieceCount() );
             }
 
             void releaseLeafShapes() override
@@ -188,6 +273,7 @@ namespace sw
                         _scene.destroyShape( shape );
                 }
                 _listLeafShape.clear();
+                resetLeafShapeWarm( 0 );
             }
 
             void createStaticLeafBodies( vector_reference<const uint32> listLeaf, const float3& position, const quaternion& rotation, uint8 layer, uint64 userData,
@@ -283,6 +369,9 @@ namespace sw
                 return false;
             }
 
+        protected:
+            void ensureLeafShape( uint32 leaf ) override { (void)findLeafShape( leaf ); }
+
         private:
             PhysicsShapeHandle findLeafShape( uint32 leaf )
             {
@@ -292,6 +381,7 @@ namespace sw
                     shape._type          = PhysicsShapeType3D::ConvexHull;
                     shape._listPoint     = _listLeafPoint[leaf];
                     _listLeafShape[leaf] = _scene.createShape( vector_reference<const PhysicsShapeDesc3D>{ &shape, 1 }, _material );
+                    noteLeafShapeCreated();
                 }
                 return _listLeafShape[leaf];
             }
@@ -317,7 +407,7 @@ namespace sw
 
             ~FracturePhysics2D() override { releaseLeafShapes(); }
 
-            void prepareLeafShapes( const FractureAsset& asset, float32 scale, float32 shrink, const hashed_string& material ) override
+            void prepareLeafPoints( const FractureAsset& asset, float32 scale, float32 shrink, const hashed_string& material ) override
             {
                 releaseLeafShapes();
                 _material = material;
@@ -328,8 +418,8 @@ namespace sw
                 {
                     FractureComponentBaseInternal::makeLeafHull( asset, leaf, scale, shrink, listPoint );
                     FractureComponentBaseInternal::makeConvexPolygon( listPoint, FractureComponentBaseInternal::kMaxPolygonPoint2D, _listLeafPolygon[leaf] );
-                    (void)findLeafShape( leaf );
                 }
+                resetLeafShapeWarm( asset.getPieceCount() );
             }
 
             void releaseLeafShapes() override
@@ -340,6 +430,7 @@ namespace sw
                         _scene.destroyShape( shape );
                 }
                 _listLeafShape.clear();
+                resetLeafShapeWarm( 0 );
             }
 
             void createStaticLeafBodies( vector_reference<const uint32> listLeaf, const float3& position, const quaternion& rotation, uint8 layer, uint64 userData,
@@ -450,6 +541,9 @@ namespace sw
                 return false;
             }
 
+        protected:
+            void ensureLeafShape( uint32 leaf ) override { (void)findLeafShape( leaf ); }
+
         private:
             PhysicsShapeHandle findLeafShape( uint32 leaf )
             {
@@ -459,6 +553,7 @@ namespace sw
                     shape._type          = PhysicsShapeType2D::Polygon;
                     shape._listPoint     = _listLeafPolygon[leaf];
                     _listLeafShape[leaf] = _scene.createShape( vector_reference<const PhysicsShapeDesc2D>{ &shape, 1 }, _material );
+                    noteLeafShapeCreated();
                 }
                 return _listLeafShape[leaf];
             }
@@ -675,6 +770,8 @@ namespace sw
             return;
         processPendingEvents( physics );
         applyDriveTargets();
+        if ( _bFractured == SW_FALSE )
+            FractureComponentBaseInternal::warmLeafShapes( *_physics );
     }
 
     void FractureComponentBase::prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount )
@@ -766,6 +863,7 @@ namespace sw
 
     bool FractureComponentBase::initializeState( ScenePhysics& physics )
     {
+        SW_PROFILE_SCOPE( "GT.Scene.tick.physics.fractureState" );
         _asset            = acquireFracture();
         _bFractureMissing = _asset == nullptr ? SW_TRUE : SW_FALSE;
         if ( _asset == nullptr )
@@ -790,7 +888,9 @@ namespace sw
         float32    scale = 1.0f;
         readObjectPose( position, rotation, scale );
         _leafShapeScale = 0.0f;
-        prepareLeafShapes( scale );
+        prepareLeafPoints( scale );
+        if ( gv_fractureShapeWarmMicroseconds < 0 && _physics != nullptr )
+            (void)_physics->warmLeafShapes( 0 ); // 전/후 비교용: 예전처럼 지금 모두 짓는다
         return true;
     }
 
@@ -970,12 +1070,17 @@ namespace sw
 
     // --- 쪼갠 상태 -----------------------------------------------------------------------------------------------------------------
 
-    void FractureComponentBase::prepareLeafShapes( float32 scale )
+    void FractureComponentBase::prepareLeafPoints( float32 scale )
     {
         if ( _physics == nullptr || _asset == nullptr || scale == _leafShapeScale )
             return;
-        _physics->prepareLeafShapes( *_asset, scale, _profile._hullShrink, _profile._physicsMaterial );
+        _physics->prepareLeafPoints( *_asset, scale, _profile._hullShrink, _profile._physicsMaterial );
         _leafShapeScale = scale;
+    }
+
+    uint32 FractureComponentBase::getPendingLeafShapeCount() const
+    {
+        return _physics != nullptr ? _physics->getPendingLeafShapeCount() : 0;
     }
 
     void FractureComponentBase::activate( ScenePhysics& physics )
@@ -1024,7 +1129,8 @@ namespace sw
             }
         }
 
-        prepareLeafShapes( _objectScale );
+        // 배율이 상태를 시작할 때와 같으면 미리 지은 잎 셰이프를 그대로 쓴다. 남은 잎은 바디를 만들며 짓는다.
+        prepareLeafPoints( _objectScale );
         _renderUnits.create( *pOwner, *_asset, static_cast<const MeshComponent*>( resolveOwnedComponent( _intactMesh ) ), _interiorMaterialPath );
         _bFractured = SW_TRUE;
         _bPoseDirty = SW_TRUE;

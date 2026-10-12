@@ -18,6 +18,7 @@
 namespace sw
 {
     class CameraComponent;
+    class GameObject;
     class GameObjectManager;
     class Material;
     class MaterialInstance;
@@ -111,6 +112,14 @@ namespace sw
         /** @brief `-gv_benchSpawnChurn=N`: 프레임마다 큐브 N 개를 지우고 같은 위치에 새로 만듭니다. */
         void updateSpawnChurn( GameObjectManager* pObjects, Scene* pScene );
         /**
+         * @brief `-gv_benchUiNameplates=K`: 큐브 @p index 가 앞쪽 K 개 안이면 RTS 이름표(이름 글 + HP 막대)를 붙이고 true 를 반환합니다(BenchSceneProbes.cpp).
+         */
+        [[nodiscard]] static bool attachNameplate( GameObject& object, uint32 index );
+        /**
+         * @brief 벤치 프레임을 세고, `-gv_benchProbeFrame` 프레임에 한 번 일어나는 탐침(`-gv_benchUiHangulGlyphs` 새 한글 글리프, `-gv_benchSceneLoadPath` 비동기 씬 로드)을 겁니다.
+         */
+        void updateProbes( GameObjectManager* pObjects );
+        /**
          * @brief `-gv_benchLights=N` 개의 점광과 스포트라이트를 격자 위에 흩뿌립니다.
          * @details 위치는 **결정적 해시**로 정한다. 실행마다 같은 이미지가 나와야 스크린샷을 비교할 수 있다.
          *          홀수 번째는 스포트라이트다(점광만 두면 원뿔 감쇠 경로가 한 번도 실행되지 않는다).
@@ -189,6 +198,8 @@ namespace sw
         float32 _benchElapsed;
         /** @brief 격자 한 변의 큐브 수. 카메라를 다시 맞출 때 씁니다. */
         uint32 _benchGridSide;
+        /** @brief `updateProbes` 가 센 벤치 프레임 수입니다(탐침을 거는 프레임을 고릅니다). */
+        uint32 _probeFrame;
         /** @brief 늦게 생기는 에디터 카메라까지 한 번 더 맞췄으면 1. */
         uint8 _bRefreshedCameras : 1;
         /** @brief 리그 데모의 기사 몸 유닛 핸들입니다(몸 돌리기와 걷기). */

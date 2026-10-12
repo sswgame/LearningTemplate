@@ -2577,6 +2577,14 @@
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
   {
+   "name": "gv_benchProbeFrame",
+   "type": "int32",
+   "default": "180",
+   "kind": "시험 · 배포본에도",
+   "description": "한 번 일어나는 벤치 탐침(한글 글 · 씬 로드)을 거는 프레임(측정 창 워밍업 60 뒤)",
+   "source": "Source/Games/Empty/BenchSceneProbes.cpp"
+  },
+  {
    "name": "gv_benchRig",
    "type": "int32",
    "default": "0",
@@ -2599,6 +2607,14 @@
    "kind": "시험 · 배포본에도",
    "description": "리그 데모 카메라 (0 왼쪽 앞 · 1 정면 · 2 오른쪽 옆 · 3 오른쪽 뒤)",
    "source": "Source/Games/Empty/BenchSceneRig.cpp"
+  },
+  {
+   "name": "gv_benchSceneLoadPath",
+   "type": "string",
+   "default": "",
+   "kind": "시험 · 배포본에도",
+   "description": "탐침 프레임에 이 씬을 비동기로 연다(로드 중 최악 프레임 측정, 비우면 사용 안 함)",
+   "source": "Source/Games/Empty/BenchSceneProbes.cpp"
   },
   {
    "name": "gv_benchSpawnChurn",
@@ -2633,12 +2649,28 @@
    "source": "Source/Engine/UI/Debug/UIBenchScreen.cpp"
   },
   {
+   "name": "gv_benchUiHangulGlyphs",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험 · 배포본에도",
+   "description": "탐침 프레임에 서로 다른 한글 음절 N 개의 긴 글을 띄운다(새 글리프 첫 프레임 측정, 0=사용 안 함)",
+   "source": "Source/Games/Empty/BenchSceneProbes.cpp"
+  },
+  {
    "name": "gv_benchUiMarkers",
    "type": "int32",
    "default": "0",
    "kind": "시험 · 배포본에도",
    "description": "앞쪽 벤치 큐브 K 개에 화면 마커(숫자 글)를 붙인다 (0=사용 안 함)",
    "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_benchUiNameplates",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험 · 배포본에도",
+   "description": "앞쪽 벤치 큐브 K 개에 RTS 이름표(이름 글 + HP 막대)를 붙인다 (0=사용 안 함)",
+   "source": "Source/Games/Empty/BenchSceneProbes.cpp"
   },
   {
    "name": "gv_benchUiWidgets",
@@ -2983,6 +3015,14 @@
    "kind": "일반",
    "description": "식생 밀도 배율 (사용자 설정 graphics.foliageDensity)",
    "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
+   "name": "gv_fractureShapeWarmMicroseconds",
+   "type": "int32",
+   "default": "500",
+   "kind": "시험",
+   "description": "파괴 잎 셰이프를 온전한 동안 미리 짓는 시간(us, 스레드마다 4 ms 창마다). 0=처음 깨질 때 모두, 음수=상태를 시작할 때 모두(전/후 비교용)",
+   "source": "Source/Engine/Destruction/FractureComponentBase.cpp"
   },
   {
    "name": "gv_gpuCulling",

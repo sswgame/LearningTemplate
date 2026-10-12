@@ -1,0 +1,158 @@
+/**
+ * @file BenchSceneProbes.cpp
+ * @brief 벤치 탐침입니다. 측정 창 안의 정해진 프레임에 한 번 일어나는 일(새 한글 글리프 수백 개, 비동기 씬 로드)과
+ *        월드 공간 UI 대량(RTS 이름표 · HP 막대)을 걸어, 그 비용을 프로파일 표(`GT.Frame` max · p99, `GT.UI.*`, `RT.Canvas.*`)로 읽게 합니다.
+ */
+#include "pch.h"
+
+#include "Core/Container/StringUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Math/MathUtil.h"
+
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
+#include "Engine/UI/Layout/BoxPanel.h"
+#include "Engine/UI/Layout/WidgetLayoutSlot.h"
+#include "Engine/UI/Widgets/SliderWidget.h"
+#include "Engine/UI/Widgets/TextWidget.h"
+#include "Engine/UI/World/WidgetComponent.h"
+
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
+
+#include "Games/Empty/BenchScene.h"
+
+namespace sw
+{
+    /**
+     * @brief `-gv_benchUiNameplates=K`: 앞쪽 벤치 큐브 K 개에 RTS 이름표(이름 글 한 줄 + HP 막대)를 붙입니다.
+     * @details 월드 공간 UI 를 대량으로 그리는 비용(마커 투영 · 그리기 목록은 게임 스레드, 캔버스 업로드 · 그리기는 렌더 스레드)을 잰다.
+     *          기준은 RTS 유닛 2,000 개이고, 게임 스레드 `GT.UI.*` 합이 0.5 ms 를 넘으면 투영 · 컬링 · 간접 드로우를 컴퓨트로 옮길지 정한다.
+     *          HP 는 큐브마다 다른 고정값이다(바뀌지 않는 트리 출력 재사용이 어디까지 덮는지 같이 본다). `-gv_benchUiMarkers` 와 함께 주면 이름표가 이긴다.
+     */
+    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchUiNameplates, 0, "앞쪽 벤치 큐브 K 개에 RTS 이름표(이름 글 + HP 막대)를 붙인다 (0=사용 안 함)" );
+
+    /**
+     * @brief `-gv_benchUiHangulGlyphs=N`: `gv_benchProbeFrame` 프레임에 서로 다른 한글 음절 N 개로 된 긴 글을 화면에 띄웁니다.
+     * @details 새 글리프 수백 개를 처음 그리는 프레임(래스터화 · SDF · 아틀라스 업로드)의 최악 시간을 잰다. 표의 `GT.Frame` max 와 `RT.Canvas.Upload` max 를 본다.
+     *          히치가 4 ms 를 넘으면 SDF 를 컴퓨트(점프 플러딩)로 만들지 정한다. 시스템 한글 글꼴(맑은 고딕 · Noto Sans KR)이 없으면 두부만 그려져 측정이 아니다.
+     */
+    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchUiHangulGlyphs, 0, "탐침 프레임에 서로 다른 한글 음절 N 개의 긴 글을 띄운다(새 글리프 첫 프레임 측정, 0=사용 안 함)" );
+
+    /**
+     * @brief `-gv_benchSceneLoadPath=<리소스 경로>`: `gv_benchProbeFrame` 프레임에 이 씬을 비동기로 엽니다.
+     * @details 워커가 파싱 · 생성하는 동안과 활성 씬을 바꾸는 프레임의 최악 시간을 잰다(`GT.Frame` p99 · max). 로드 자체 시간은 로그
+     *          `'Scene.load.parse'` · `'Scene.load.instantiate'` 이다. 쿠킹본을 재려면 `--cooked-dir` 로 쿠킹한 폴더를 마운트한다(`Scripts/qa/SceneLoadBench.py`).
+     */
+    SW_TEST_GLOBAL_VARIABLE_SHIPPED( sw::string, gv_benchSceneLoadPath, "", "탐침 프레임에 이 씬을 비동기로 연다(로드 중 최악 프레임 측정, 비우면 사용 안 함)" );
+
+    /**
+     * @brief `-gv_benchProbeFrame=F`: 한 번 일어나는 탐침(한글 글, 씬 로드)을 거는 벤치 프레임입니다.
+     * @details 프로파일 측정 창은 워밍업(60 프레임) 뒤에 시작하므로 그보다 뒤여야 표에 잡힌다.
+     */
+    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchProbeFrame, 180, "한 번 일어나는 벤치 탐침(한글 글 · 씬 로드)을 거는 프레임(측정 창 워밍업 60 뒤)" );
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        struct BenchSceneProbesInternal
+        {
+            static constexpr float32 kNameplateWidth      = 72.0f;
+            static constexpr float32 kNameplateBarHeight  = 6.0f;
+            static constexpr float32 kNameplateTextHeight = 16.0f;
+            static constexpr float32 kHangulTextWidth     = 900.0f;
+            static constexpr uint32  kHangulFirst         = 0xAC00u; ///< '가'
+            static constexpr uint32  kHangulCount         = 11172u;  ///< 현대 한글 음절 수(U+AC00..U+D7A3)
+            /// 음절을 고르는 보폭이다. 음절 수와 서로소라 N 개가 모두 다르고, 받침 · 모음이 고루 섞인다.
+            static constexpr uint32 kHangulStride = 37u;
+            /// 몇 음절마다 띄어 쓸지다. 줄 바꿈이 단어 경계에서 일어나게 한다.
+            static constexpr uint32 kHangulWordLength = 6u;
+
+            static void setFixedSize( Widget& widget, float32 width, float32 height )
+            {
+                WidgetLayoutSlot slot = widget.getLayoutSlot();
+                slot._widthOverride   = width;
+                slot._heightOverride  = height;
+                widget.setLayoutSlot( slot );
+            }
+
+            /** @brief 서로 다른 한글 음절 @p count 개로 된 글입니다(같은 실행이면 늘 같은 글). */
+            static string makeHangulText( uint32 count )
+            {
+                string text;
+                text.reserve( static_cast<size_t>( count ) * 4u );
+                for ( uint32 index = 0; index < count; ++index )
+                {
+                    if ( index > 0 && ( index % kHangulWordLength ) == 0 )
+                        text.push_back( ' ' );
+                    StringUtil::appendUtf8( text, kHangulFirst + ( index * kHangulStride ) % kHangulCount );
+                }
+                return text;
+            }
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    bool BenchScene::attachNameplate( GameObject& object, uint32 index )
+    {
+        if ( gv_benchUiNameplates <= 0 || index >= static_cast<uint32>( gv_benchUiNameplates ) )
+            return false;
+        WidgetComponent* pPlate = object.addComponent<WidgetComponent>();
+        if ( pPlate == nullptr )
+            return false;
+        unique_ptr<BoxPanel> column = make_unique<BoxPanel>();
+        column->setOrientation( UIOrientation::Vertical );
+        column->setSpacing( 2.0f );
+        unique_ptr<TextWidget> name = make_unique<TextWidget>();
+        name->setLocalized( false );
+        name->setText( "Unit " + to_string( index ) );
+        BenchSceneProbesInternal::setFixedSize( *name, BenchSceneProbesInternal::kNameplateWidth, BenchSceneProbesInternal::kNameplateTextHeight );
+        (void)column->addChild( std::move( name ) );
+        unique_ptr<ProgressBarWidget> health = make_unique<ProgressBarWidget>();
+        health->setPercent( 0.2f + 0.8f * static_cast<float32>( ( index * 7u ) % 10u ) / 10.0f );
+        health->setFillColor( float4{ 0.2f, 0.85f, 0.3f, 1.0f } );
+        health->setBackgroundColor( float4{ 0.1f, 0.1f, 0.1f, 0.8f } );
+        BenchSceneProbesInternal::setFixedSize( *health, BenchSceneProbesInternal::kNameplateWidth, BenchSceneProbesInternal::kNameplateBarHeight );
+        (void)column->addChild( std::move( health ) );
+        pPlate->setSpace( WidgetSpace::Screen );
+        pPlate->setWorldOffset( float3{ 0.0f, 1.2f, 0.0f } );
+        pPlate->setContent( std::move( column ) );
+        return true;
+    }
+
+    void BenchScene::updateProbes( GameObjectManager* pObjects )
+    {
+        ++_probeFrame;
+        if ( _probeFrame != static_cast<uint32>( MathUtil::max( gv_benchProbeFrame, 1 ) ) )
+            return;
+
+        if ( gv_benchUiHangulGlyphs > 0 && pObjects != nullptr )
+        {
+            GameObject*      pObject = pObjects->createGameObject( hashed_string( "BenchHangulText" ) );
+            WidgetComponent* pText   = ( pObject != nullptr ) ? pObject->addComponent<WidgetComponent>() : nullptr;
+            if ( pText != nullptr )
+            {
+                unique_ptr<TextWidget> text = make_unique<TextWidget>();
+                text->setLocalized( false );
+                text->setText( BenchSceneProbesInternal::makeHangulText( static_cast<uint32>( gv_benchUiHangulGlyphs ) ) );
+                BenchSceneProbesInternal::setFixedSize( *text, BenchSceneProbesInternal::kHangulTextWidth, 0.0f ); // 높이는 줄 바꿈한 글이 정한다
+                pText->setSpace( WidgetSpace::Screen );
+                pText->setContent( std::move( text ) );
+                _listBenchExtra.push_back( pText->getHandle() );
+                SW_LOG_INFO( "[Bench] probe frame %#: %# Hangul syllables on screen", _probeFrame, gv_benchUiHangulGlyphs );
+            }
+        }
+
+        if ( gv_benchSceneLoadPath.empty() == false )
+        {
+            SceneManager* pSceneManager = game::getService<SceneManager>();
+            const bool    bRequested    = pSceneManager != nullptr && pSceneManager->requestLoadAsync( gv_benchSceneLoadPath );
+            SW_LOG_INFO( "[Bench] probe frame %#: async scene load '%#' %#", _probeFrame, gv_benchSceneLoadPath.c_str(), bRequested ? "requested" : "failed" );
+        }
+    }
+} // namespace sw
