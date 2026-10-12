@@ -3,7 +3,7 @@
 #include "EngineTest/RHITestDevice.h"
 
 #include "Engine/Graphics/RHI/RHI.h"
-#include "Engine/Graphics/RHI/RHICapabilities.h"
+#include "Engine/Graphics/RHI/RHIBackendInfo.h"
 
 namespace test
 {

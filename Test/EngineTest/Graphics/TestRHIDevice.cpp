@@ -6,7 +6,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHI.h"
-#include "Engine/Graphics/RHI/RHICapabilities.h"
+#include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -242,6 +242,17 @@ SW_TEST_CASE( RHIDeviceTest, BackendTypeNameQuery )
     const utf8* glName = sw::RHI::getBackendTypeName( sw::RHIBackend::OpenGL );
     SW_EXPECT_TRUE( glName != nullptr );
     SW_EXPECT_EQUAL( sw::string( "OpenGL" ), sw::string( glName ) );
+
+    // 이름 · 셰이더 타깃 · 능력 조회는 모두 기술자 표 한 줄을 읽는다. 표에 없는 값은 이름 "Unknown" 이고 만들 수 없다.
+    for ( const sw::RHIBackendInfo& info : sw::RHIBackendInfoTable::kArrInfo )
+    {
+        SW_EXPECT_EQUAL( sw::string( info._pName ), sw::string( sw::RHI::getBackendTypeName( info._backend ) ) );
+        SW_EXPECT_TRUE( sw::RHI::getShaderTargetFormat( info._backend ) == info._shaderTarget );
+        SW_EXPECT_TRUE( sw::RHIAvailability::query( info._backend )._bGPUCulling == info._capabilities._bGPUCulling );
+    }
+    const sw::RHIBackend outOfRange = static_cast<sw::RHIBackend>( std::size( sw::RHIBackendInfoTable::kArrInfo ) );
+    SW_EXPECT_EQUAL( sw::string( "Unknown" ), sw::string( sw::RHI::getBackendTypeName( outOfRange ) ) );
+    SW_EXPECT_FALSE( sw::RHIAvailability::isAvailable( outOfRange ) );
 }
 
 /**

@@ -234,6 +234,7 @@ Vulkan은 Present 호출에 동기화 인자가 없고, 스왑체인의 present 
 5. `RHIDeviceTest` 에 `RHIBackendSweep` 으로 네 백엔드를 도는 테스트를 더합니다. 결과는 픽셀이나 리드백 값으로 확인합니다.
 
 새 백엔드 소스 파일은 `Graphics/RHI/<백엔드 폴더>/` 에 두면 됩니다. 모듈 타깃과 Shipping 빌드가 폴더 단위로 소스를 가져갑니다.
+엔진 쪽은 `RHIBackendInfo.h` 의 기술자 표에 줄 하나를 더하면 이름 · 셰이더 타깃 · 모듈 로드 · 능력 · 프로파일러 API 가 모두 따라옵니다. 이름과 셰이더 타깃은 쿠킹 표(`Config/Engine/CookContract.json`)와 같아야 하고, 다르면 `RHI.cpp` 의 `static_assert` 가 빌드를 멈춥니다. 에디터의 ImGui 렌더러(`IImGuiRendererBackend::createRendererBackend`)는 따로 더합니다.
 
 ### 바꾼 뒤 확인하는 법
 
@@ -397,6 +398,7 @@ DirectX 11은 뷰포트를 바인딩하는 세 곳이 가위도 함께 바인딩
 | `IRHIDevice.h` | 디바이스 인터페이스와 종료 순서 |
 | `IRHICommandList.h` | 기록할 수 있는 명령 |
 | `RHITypes.h` | 포맷, PSO 설명, 백엔드 공통 상수 |
-| `RHICapabilities.h` | 백엔드가 할 수 있는 일 |
+| `RHICapabilities.h` | 백엔드가 할 수 있는 일(플래그) |
+| `RHIBackendInfo.h` | 백엔드마다 한 줄인 기술자 표(이름 · 셰이더 타깃 · 모듈 · 플랫폼 · 프로파일러 API · 능력)와 가용성 조회 |
 | `Modules/RHIModuleAbi.h` | 엔진과 백엔드 DLL의 계약 버전 |
 | `RHIRenderResource.h` | 디바이스 수명 이벤트 레지스트리 |

@@ -1,6 +1,6 @@
 /**
  * @file RHICapabilities.h
- * @brief RHI 백엔드 능력과 OS · 빌드 가용성 조회입니다.
+ * @brief RHI 백엔드 능력 플래그입니다. 백엔드마다의 값과 가용성 조회는 `RHIBackendInfo.h` 의 기술자 표에 있습니다.
  */
 #pragma once
 #include "Engine/Config/RHIBackendType.h"
@@ -8,9 +8,6 @@
 
 namespace sw
 {
-    // ------------------------------------------------------------------------------
-    // 1) RHICapabilities — bindless / 컴퓨트 / 인디렉트
-    // ------------------------------------------------------------------------------
     /**
      * @note 비트필드 대신 uint8 입니다. DLL · 컴파일러 간 패킹 · true 대입 문제를 피합니다. 0/1 만 씁니다.
      * @note **여기에 에디터 능력을 넣지 말 것.** "이 백엔드로 에디터가 도는가" 는
@@ -44,118 +41,5 @@ namespace sw
 
         /** @brief 기본값(컴퓨트만 켠 보수적 기본)으로 만듭니다. */
         RHICapabilities() noexcept = default;
-    };
-} // namespace sw
-
-namespace sw
-{
-    // ------------------------------------------------------------------------------
-    // 2) RHIAvailability — OS/빌드에서 생성 가능 여부 + 백엔드별 능력표
-    // ------------------------------------------------------------------------------
-    struct RHIAvailability
-    {
-        /** @brief 이 OS/빌드에서 해당 백엔드를 만들 수 있으면 true. */
-        static bool isAvailable( RHIBackend backend ) noexcept
-        {
-            // DX11 · DX12 가 같은 답을 내는 것은 의도다. 둘 다 Windows 전용이다.
-            switch ( backend )
-            {
-                // NOLINTNEXTLINE(bugprone-branch-clone) — DX11 · DX12 가 같은 답인 것은 의도다(둘 다 Windows 전용)
-                case RHIBackend::DirectX11:
-                case RHIBackend::DirectX12:
-#if defined( SW_PLATFORM_WINDOWS )
-                    return true;
-#else
-                    return false;
-#endif
-                case RHIBackend::Vulkan:
-                case RHIBackend::OpenGL:
-                    return true;
-            }
-            return false;
-        }
-
-        /** @brief 백엔드의 정적 capability 표를 반환합니다. */
-        static RHICapabilities query( RHIBackend backend ) noexcept
-        {
-            RHICapabilities caps{};
-            switch ( backend )
-            {
-                case RHIBackend::DirectX12:
-                {
-                    caps._bBindless                   = SW_TRUE;
-                    caps._bNativeBindless             = SW_TRUE; // 후보. 런타임은 Device::getCapabilities()
-                    caps._bCompute                    = SW_TRUE;
-                    caps._bOffscreenRT                = SW_TRUE;
-                    caps._bIndirectDraw               = SW_TRUE;
-                    caps._bGPUCulling                 = SW_TRUE;
-                    caps._bGPUMeshMorph               = SW_TRUE;
-                    caps._bMultiDrawIndirect          = SW_TRUE;
-                    caps._bParallelCommandRecording   = SW_TRUE;
-                    caps._bThreadSafeResourceCreation = SW_TRUE;
-                    break;
-                }
-                case RHIBackend::DirectX11:
-                {
-                    caps._bBindless       = SW_TRUE;
-                    caps._bNativeBindless = SW_FALSE;
-                    caps._bCompute        = SW_TRUE;
-                    caps._bOffscreenRT    = SW_TRUE;
-                    caps._bIndirectDraw   = SW_TRUE;
-                    // D3D11 은 한 버퍼에 `BUFFER_STRUCTURED` 와 `DRAWINDIRECT_ARGS` 를 같이 걸 수 없다.
-                    // gpucull.hlsl 이 간접 인자를 RWStructuredBuffer 로 쓰므로 그 버퍼를 인다이렉트 인자로도
-                    // 쓰려면 둘 중 하나를 포기해야 한다. 인다이렉트 드로우를 살리고 컬링을 끈다
-                    // (간접 인자는 GPUScene 이 CPU 에서 이미 채운다).
-                    caps._bGPUCulling        = SW_FALSE;
-                    caps._bGPUMeshMorph      = SW_TRUE; // 구조버퍼 SRV/UAV 만 쓴다. 간접 인자 제약과 무관하다
-                    caps._bMultiDrawIndirect = SW_TRUE;
-                    // **디바이스가 있으면 이 값을 믿지 말 것.** `D3D11RHIDevice::getCapabilities` 가
-                    // `D3D11_FEATURE_THREADING` 조회 결과로 이 항목을 덮어 **참이 될 수 있다**. 여기 FALSE 는
-                    // "드라이버를 모를 때의 보수적 기본값" 이지 "DX11 은 병렬로 기록하지 않는다" 가 아니다.
-                    // 둘을 혼동하면 병렬 테스트가 DX11 병렬 경로를 건너뛴다.
-                    caps._bParallelCommandRecording   = SW_FALSE;
-                    caps._bThreadSafeResourceCreation = SW_TRUE;
-                    break;
-                }
-                case RHIBackend::OpenGL:
-                    caps._bBindless       = SW_TRUE;
-                    caps._bNativeBindless = SW_FALSE;
-                    caps._bCompute        = SW_TRUE;
-                    caps._bOffscreenRT    = SW_TRUE;
-                    caps._bIndirectDraw   = SW_TRUE;
-                    caps._bGPUCulling     = SW_TRUE;
-                    // 주의: GL 드라이버는 early-return 모양의 `swComputeMorphElement`(DXC 가 OpSwitch(0) 구조로 내는 코드)를
-                    // 잘못 컴파일해 풀에서 **한 칸 앞 원소**를 읽는다. 셰이더 쪽은 분기 없는 한 식이어야 한다(binding.hlsli 주석).
-                    // 회귀는 RenderPassGPUTest.MorphPoolIdentityMatchesRest 가 잡는다.
-                    caps._bGPUMeshMorph             = SW_TRUE;
-                    caps._bMultiDrawIndirect        = SW_TRUE;
-                    caps._bParallelCommandRecording = SW_FALSE;
-#if defined( SW_PLATFORM_WINDOWS )
-                    caps._bRequiresWindowRecreate = SW_TRUE;
-#endif
-                    caps._bThreadSafeResourceCreation = SW_FALSE;
-                    break;
-                case RHIBackend::Vulkan:
-                {
-                    caps._bBindless       = SW_TRUE;
-                    caps._bNativeBindless = SW_TRUE; // 후보. 런타임은 supportsNativeBindlessSampling()
-                    caps._bCompute        = SW_TRUE;
-                    caps._bOffscreenRT    = SW_TRUE;
-                    caps._bIndirectDraw   = SW_TRUE;
-                    caps._bGPUCulling     = SW_TRUE;
-                    // 주의: 백엔드 하나가 다른 그림을 내면 **쿠킹된 셰이더 산출물이 낡았는지부터 의심할 것**
-                    // (`App.exe --cook-shaders` 로 다시 쿠킹하고 견준다). Vulkan 의 모프는 DX12 · DX11 과 픽셀 수가 같다.
-                    caps._bGPUMeshMorph      = SW_TRUE;
-                    caps._bMultiDrawIndirect = SW_TRUE;
-                    // 리스트가 자기 VkCommandPool + VkCommandBuffer + 기록 상태를 소유한다.
-                    // 풀이 리스트마다 따로여야 하는 이유는 VkCommandPool 이 외부 동기화 대상이기
-                    // 때문이다. DX12 의 커맨드 얼로케이터와 같은 제약이다.
-                    caps._bParallelCommandRecording   = SW_TRUE;
-                    caps._bThreadSafeResourceCreation = SW_TRUE;
-                    break;
-                }
-            }
-            return caps;
-        }
     };
 } // namespace sw

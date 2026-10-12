@@ -8,6 +8,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/RHIBackendType.h"
+#include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 
