@@ -289,6 +289,7 @@ namespace sw
         , _churnFrame{ 0 }
         , _benchElapsed{ 0.0f }
         , _benchGridSide{ 0 }
+        , _probeFrame{ 0 }
         , _bRefreshedCameras{ SW_FALSE }
         , _listRigBody{}
         , _rigLookTarget{}
@@ -789,7 +790,8 @@ namespace sw
             pMesh->setGPUSpinSeed( index + 1u );
         pMesh->setVisible( true );
 
-        if ( gv_benchUiMarkers > 0 && index < static_cast<uint32>( gv_benchUiMarkers ) )
+        const bool bNameplate = attachNameplate( *pObject, index );
+        if ( bNameplate == false && gv_benchUiMarkers > 0 && index < static_cast<uint32>( gv_benchUiMarkers ) )
         {
             WidgetComponent* pMarker = pObject->addComponent<WidgetComponent>();
             if ( pMarker != nullptr )
@@ -1094,6 +1096,7 @@ namespace sw
         if ( pObjects == nullptr )
             return;
 
+        updateProbes( pObjects );
         updateMaterialChurn( pObjects );
         updateSpawnChurn( pObjects, pScene );
         updateRigCharacters( deltaTime );
