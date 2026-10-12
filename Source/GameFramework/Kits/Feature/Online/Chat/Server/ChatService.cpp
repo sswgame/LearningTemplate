@@ -6,6 +6,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBus.h"
+#include "GameFramework/Base/Online/Identity/AccountPresence.h"
 #include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"

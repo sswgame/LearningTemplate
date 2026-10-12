@@ -73,7 +73,7 @@
 ## 4. 정적으로 확인할 것 (실행 없이)
 
 - `dumpbin /exports` 로 `GameFramework.dll` 이 `SW_GF_API` 심볼과 `bindGameService` · `unbindGameService`(C 링크) 를 내보내는지, `SWGame.dll` 이 그것을 가져오는지. 이 PC 에서는 `readobj` 로 한 번 봤다.
-- **알려진 문제**: 키트 DLL 이 Base 클래스의 암시적 멤버를 내보낸다(백로그 1-6). 이번 병합 전부터 있었다.
+- **알려진 문제**: 키트 DLL 이 Base 클래스의 암시적 멤버를 내보낸다(백로그 `C-3`). 이번 병합 전부터 있었다.
 - 리플렉션 생성 검사: (a) 같은 이름의 반사 헤더를 둘 만들면 구성이 `FATAL` 로 멈추는지 (b) 구성 뒤 기존 헤더에 반사 매크로를 넣으면 그 헤더가 바뀔 때 빌드가 서는지(`cmake/Engine/CheckReflectionCandidates.cmake`).
 
 ## 5. CI
