@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 카탈로그 편집기(Panels/Catalog): 데이터 파일 종류 레지스트리에 올라온 카탈로그 파일이 목록에 서고, 첫 파일을 열면 원소별 표로 보이며,
+  셀 편집 · 되돌리기 · 행 더하기 · 되돌리기 단추가 돌고, 그 종류의 실제 로더로 검증이 통과한다. 파일은 저장하지 않는다(저장소의 데이터를 건드리지 않는다).
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/catalogeditor.scenario.xml -dx12
+-->
+<Scenario name="editor.catalogeditor" isolated="true" fixedDelta="0.0166667" timeoutFrames="1400" startAfter="Immediately" input="exclusive">
+	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
+	<At frame="25"><DevCommand line="layout.reset"/></At>
+	<At frame="40"><DevCommand line="panel.focus catalog_editor"/></At>
+	<At frame="60"><WaitUntil probe="Editor.CatalogFileCount" atLeast="1" timeoutFrames="800"/></At>
+	<At frame="90"><EditorClick mark="catalog.file.first"/></At>
+	<At frame="110">
+		<ExpectLog contains="Catalog opened " count="1"/>
+		<Expect probe="Editor.CatalogRowCount" atLeast="1"/>
+	</At>
+	<!-- 첫 셀을 고치면 입력 칸을 떠날 때(Enter) 문서에 반영된다 -->
+	<At frame="115"><EditorClick mark="catalog.cell.first"/></At>
+	<At frame="125"><EditorKey key="Ctrl+A"/></At>
+	<At frame="130"><EditorText value="zz_edit"/></At>
+	<At frame="140"><EditorKey key="Enter"/></At>
+	<At frame="160"><ExpectLog contains="Catalog Edited " count="1"/></At>
+	<At frame="165"><EditorClick mark="catalog.undo"/></At>
+	<At frame="185"><ExpectLog contains="Catalog undo" count="1"/></At>
+	<!-- 행을 더하면 행 수가 늘고, 되돌리기(Revert)가 저장된 글로 돌린다 -->
+	<At frame="190"><EditorClick mark="catalog.addrow.first"/></At>
+	<At frame="210"><ExpectLog contains="Catalog Added row to " count="1"/></At>
+	<At frame="215"><EditorClick mark="catalog.revert"/></At>
+	<At frame="235"><ExpectLog contains="Catalog reverted " count="1"/></At>
+	<!-- 저장된 파일을 그 종류의 로더로 읽어 경고가 없으면 통과다 -->
+	<At frame="240"><EditorClick mark="catalog.validate"/></At>
+	<At frame="260">
+		<ExpectLog contains="Catalog validation passed" count="1"/>
+		<Expect probe="Editor.CatalogValidation" equals="1"/>
+	</At>
+	<At frame="265"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
+</Scenario>

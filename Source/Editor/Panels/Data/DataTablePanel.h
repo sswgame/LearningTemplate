@@ -11,12 +11,14 @@
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/Commands/EditorDataTableCommands.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
+#include "Editor/Panels/Catalog/CatalogDocument.h"
+#include "Editor/Panels/Catalog/CatalogTableEditor.h"
 
 namespace sw::editor
 {
     /**
      * @class DataTablePanel
-     * @brief 로컬라이제이션 프로젝트(엔진 · 게임)의 원문 표와 문화권 번역을 한 표로 편집하고, 데이터 XML 파일을 살펴보고 편집 · 저장하는 에디터 창입니다.
+     * @brief 로컬라이제이션 프로젝트(엔진 · 게임)의 원문 표와 문화권 번역을 한 표로 편집하고, 데이터 XML 파일을 원소별 표(또는 XML 원문)로 편집 · 저장하는 에디터 창입니다.
      * @details 번역 칸의 색이 상태입니다 — 주황은 원문이 바뀐 뒤의 번역(낡음), 노랑은 검토 표시, 빨강 테두리 글은 최대 길이를 넘은 번역입니다.
      *          저장하면 실행 중인 게임이 그 프로젝트를 다시 읽습니다.
      */
@@ -72,6 +74,8 @@ namespace sw::editor
         vector<GameDataFileEntry> _listGameDataFile;
         string                    _selectedGameDataRawText;
         string                    _savedGameDataRawText;
+        CatalogDocument           _gameDataDocument;
+        CatalogTableEditor        _gameDataTable;
         EditorLocalizationLoadJob _localizationJob;
         EditorGameDataScanJob     _gameDataJob;
         int32                     _selectedGameDataIndex;
@@ -80,6 +84,7 @@ namespace sw::editor
         uint8                     _bGameDataLoaded     : 1;
         uint8                     _bLocalizationDirty  : 1;
         uint8                     _bGameDataDirty      : 1;
-        [[maybe_unused]] uint8    _reserved            : 4;
+        uint8                     _bGameDataRaw        : 1;
+        [[maybe_unused]] uint8    _reserved            : 3;
     };
 } // namespace sw::editor

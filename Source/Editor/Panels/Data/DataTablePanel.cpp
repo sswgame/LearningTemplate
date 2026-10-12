@@ -47,6 +47,8 @@ namespace sw::editor
         , _listGameDataFile{}
         , _selectedGameDataRawText{}
         , _savedGameDataRawText{}
+        , _gameDataDocument{}
+        , _gameDataTable{}
         , _localizationJob{}
         , _gameDataJob{}
         , _selectedGameDataIndex{ -1 }
@@ -55,6 +57,7 @@ namespace sw::editor
         , _bGameDataLoaded{ SW_FALSE }
         , _bLocalizationDirty{ SW_FALSE }
         , _bGameDataDirty{ SW_FALSE }
+        , _bGameDataRaw{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -86,7 +89,9 @@ namespace sw::editor
         if ( _bGameDataDirty == SW_TRUE )
         {
             _selectedGameDataRawText = _savedGameDataRawText;
-            _bGameDataDirty          = SW_FALSE;
+            (void)_gameDataDocument.load( _selectedGameDataRawText ); // 깨진 원문도 글 상자로 고치게 열린다
+            _gameDataTable.reset();
+            _bGameDataDirty = SW_FALSE;
             syncDocumentDirty();
         }
     }
@@ -459,19 +464,33 @@ namespace sw::editor
                 loadSelectedGameDataFile();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "RevertTip" ) );
 
+            ImGui::SameLine();
+            bool bRaw = _bGameDataRaw == SW_TRUE;
+            if ( ImGui::Checkbox( "Raw XML", &bRaw ) )
+                _bGameDataRaw = bRaw ? SW_TRUE : SW_FALSE;
+            EditorWidgets::drawTooltip( "Table edits keep comments and indentation. Nested elements are edited in the raw text view." );
+
             ImGui::Separator();
 
-            // 편집기 / XML 원문 텍스트 상자
-            vector<utf8> arrEditBuffer;
-            arrEditBuffer.resize( _selectedGameDataRawText.size() + 4096, 0 );
-            if ( _selectedGameDataRawText.empty() == false )
-                Memory::copy( arrEditBuffer.data(), _selectedGameDataRawText.c_str(), _selectedGameDataRawText.size() );
-
-            constexpr ImGuiInputTextFlags editFlags = ImGuiInputTextFlags_AllowTabInput;
-            if ( ImGui::InputTextMultiline( "##rawXmlEdit", arrEditBuffer.data(), arrEditBuffer.size(),
-                                            ImGui::GetContentRegionAvail(), editFlags ) )
+            if ( _bGameDataRaw == SW_TRUE || _gameDataDocument.isParsed() == false )
             {
-                _selectedGameDataRawText = arrEditBuffer.data();
+                // XML 원문 텍스트 상자 - 표로 못 읽는 문서도 여기서 고친다
+                vector<utf8> arrEditBuffer;
+                arrEditBuffer.resize( _selectedGameDataRawText.size() + 4096, 0 );
+                if ( _selectedGameDataRawText.empty() == false )
+                    Memory::copy( arrEditBuffer.data(), _selectedGameDataRawText.c_str(), _selectedGameDataRawText.size() );
+
+                constexpr ImGuiInputTextFlags editFlags = ImGuiInputTextFlags_AllowTabInput;
+                if ( ImGui::InputTextMultiline( "##rawXmlEdit", arrEditBuffer.data(), arrEditBuffer.size(), ImGui::GetContentRegionAvail(), editFlags ) )
+                {
+                    _selectedGameDataRawText = arrEditBuffer.data();
+                    _gameDataDocument.replaceText( _selectedGameDataRawText, false );
+                    markGameDataDirty();
+                }
+            }
+            else if ( _gameDataTable.draw( _gameDataDocument ) )
+            {
+                _selectedGameDataRawText = _gameDataDocument.getText();
                 markGameDataDirty();
             }
         }
@@ -518,13 +537,17 @@ namespace sw::editor
             _selectedGameDataIndex = -1;
             _selectedGameDataRawText.clear();
             _savedGameDataRawText.clear();
+            (void)_gameDataDocument.load( string_view() ); // 읽은 것이 없다 - 표를 비운다
+            _gameDataTable.reset();
             _bGameDataDirty = SW_FALSE;
             syncDocumentDirty();
             return;
         }
         _selectedGameDataRawText = std::move( text );
         _savedGameDataRawText    = _selectedGameDataRawText;
-        _bGameDataDirty          = SW_FALSE;
+        (void)_gameDataDocument.load( _selectedGameDataRawText ); // 깨진 원문도 글 상자로 고치게 열린다
+        _gameDataTable.reset();
+        _bGameDataDirty = SW_FALSE;
         syncDocumentDirty();
     }
 
@@ -540,7 +563,8 @@ namespace sw::editor
             return;
         }
         _savedGameDataRawText = _selectedGameDataRawText;
-        _bGameDataDirty       = SW_FALSE;
+        _gameDataDocument.markSaved();
+        _bGameDataDirty = SW_FALSE;
         syncDocumentDirty();
         SW_LOG_INFO( "Saved game data table %#", entry._fileName.c_str() );
     }
