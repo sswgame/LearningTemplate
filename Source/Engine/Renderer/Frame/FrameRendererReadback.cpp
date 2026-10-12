@@ -42,6 +42,9 @@ namespace sw
             SW_LOG_ERROR( "readbackTransient: readbackTexture2D 실패 ('%#').", string( attachmentName ).c_str() );
             return false;
         }
+        // 깊이 첨부는 네 백엔드 모두 텍셀마다 0..1 float32 하나로 읽힌다(스텐실 없음). 선언 포맷(D24S8)을 그대로 넘기면 바이트를 색으로 잘못 푼다.
+        if ( FrameRendererUtil::isDepthFormat( outFormat ) )
+            outFormat = kRHIDepthReadbackFormat;
         return outLayout._width != 0 && outLayout._height != 0;
     }
 

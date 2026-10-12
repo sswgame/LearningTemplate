@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Memory/Memory.h"
+
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -128,6 +130,34 @@ SW_TEST_CASE( RenderTargetImageFileTest, UnpacksBgraAndHalfToRgba8 )
     SW_ASSERT_TRUE( sw::RenderTargetImageFile::unpackRgba8( halfBytes, halfLayout, sw::RHIFormat::R16G16B16A16_FLOAT, rgbaBytes ) );
     const sw::vector<uint8> expectedHalf{ 255, 0, 255, 255 };
     SW_EXPECT_TRUE( rgbaBytes == expectedHalf );
+}
+
+/**
+ * @brief [RenderTargetImageFileTest] 깊이 읽기 배치(R32_FLOAT 0..1)와 R8 은 회색으로 풀린다 — `-gv_screenshotAttachment=ShadowMap` 의 길
+ * @details 깊이 첨부를 선언 포맷(D24S8)으로 풀면 float 바이트가 색이 된다. 읽기는 `kRHIDepthReadbackFormat` 배치로 오고 [0,1] 밖은 자른다.
+ */
+SW_TEST_CASE( RenderTargetImageFileTest, UnpacksDepthAndSingleChannelAsGray )
+{
+    sw::RHITextureMipSpan layout{};
+    layout._width                 = 3;
+    layout._height                = 1;
+    layout._rowBytes              = 12;
+    const float32     arrDepth[3] = { 0.0f, 0.5f, 2.0f };
+    sw::vector<uint8> depthBytes( sizeof( arrDepth ) );
+    sw::Memory::copy( depthBytes.data(), arrDepth, sizeof( arrDepth ) );
+    sw::vector<uint8> rgbaBytes;
+    SW_ASSERT_TRUE( sw::RenderTargetImageFile::unpackRgba8( depthBytes, layout, sw::kRHIDepthReadbackFormat, rgbaBytes ) );
+    const sw::vector<uint8> expectedDepth{ 0, 0, 0, 255, 128, 128, 128, 255, 255, 255, 255, 255 };
+    SW_EXPECT_TRUE( rgbaBytes == expectedDepth );
+
+    sw::RHITextureMipSpan byteLayout{};
+    byteLayout._width    = 2;
+    byteLayout._height   = 1;
+    byteLayout._rowBytes = 4;
+    const sw::vector<uint8> maskBytes{ 7, 200, 0xEE, 0xEE };
+    SW_ASSERT_TRUE( sw::RenderTargetImageFile::unpackRgba8( maskBytes, byteLayout, sw::RHIFormat::R8_UNORM, rgbaBytes ) );
+    const sw::vector<uint8> expectedMask{ 7, 7, 7, 255, 200, 200, 200, 255 };
+    SW_EXPECT_TRUE( rgbaBytes == expectedMask );
 }
 
 /**

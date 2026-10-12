@@ -55,6 +55,7 @@
 #include "Engine/Renderer/Capture/PortraitRenderer.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/RenderFramePacket.h"
+#include "Engine/Renderer/Frame/RenderTargetImageFile.h"
 #include "Engine/Renderer/Frame/TransientAttachmentPool.h"
 #include "Engine/Renderer/Graph/RenderGraph.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
@@ -4655,6 +4656,60 @@ SW_TEST_CASE( RenderPassGPUTest, ShadowPassCastsOnEveryBackend )
 SW_TEST_CASE( RenderPassGPUTest, ShadowSurvivesLargeShadowVolume )
 {
     expectShadowCastsOnEveryBackend( "ShadowSurvivesLargeShadowVolume", 180.0f );
+}
+
+/**
+ * @brief [RenderPassGPUTest] 그림자 맵(깊이 첨부)을 CPU 로 읽으면 0..1 깊이 float32 배치이고, 큐브가 쓴 깊이가 클리어 값(1)보다 작다 — 네 백엔드 모두
+ * @details `-gv_screenshotAttachment=ShadowMap` 의 길이다. 읽기가 선언 포맷(D24S8)을 그대로 넘기면 이미지 변환이 float 바이트를 색으로 푼다.
+ *          크기는 화면이 아니라 그림자 품질(`FrameRenderer::getShadowMapResolution`)이다.
+ */
+SW_TEST_CASE( RenderPassGPUTest, ShadowMapAttachmentReadsBackAsDepth )
+{
+    uint32                checkedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const utf8*  pName = device->getBackendName();
+        LitCubeScene cube;
+        if ( cube.populate() == false )
+            continue;
+        sw::FrameRenderer renderer;
+        if ( renderer.initialize( device.get(), "engine/pipeline/forwardpipeline.xml" ) == false )
+            continue;
+        bool bRendered = true;
+        for ( uint32 frameIndex = 0; frameIndex < 3 && bRendered; ++frameIndex )
+        {
+            bRendered = renderSceneFrame( renderer, device.get(), cube._scene, sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+        }
+        sw::vector<uint8>     bytes;
+        sw::RHITextureMipSpan layout{};
+        sw::RHIFormat         format = sw::RHIFormat::Unknown;
+        const bool            bRead  = bRendered && renderer.readbackTransient( "ShadowMap", bytes, layout, format );
+        if ( bRead )
+        {
+            ++checkedCount;
+            SW_EXPECT_TRUE_MSG( format == sw::kRHIDepthReadbackFormat, ( sw::string( pName ) + ": 깊이 첨부가 깊이 읽기 배치로 보고되지 않았다" ).c_str() );
+            SW_EXPECT_EQUAL( layout._width, sw::FrameRenderer::getShadowMapResolution() );
+            float32 minDepth = 1.0f;
+            for ( uint32 row = 0; row < layout._height; ++row )
+            {
+                for ( uint32 column = 0; column < layout._width; ++column )
+                {
+                    float32 depth = 1.0f;
+                    sw::Memory::copy( &depth, bytes.data() + static_cast<size_t>( row ) * layout._rowBytes + static_cast<size_t>( column ) * 4u, sizeof( depth ) );
+                    minDepth = sw::MathUtil::min( minDepth, depth );
+                }
+            }
+            SW_EXPECT_TRUE_MSG( minDepth < 0.99f, ( sw::string( pName ) + ": 그림자 맵에 쓴 깊이가 없다 (최소 " + sw::to_string( minDepth ) + ")" ).c_str() );
+            sw::vector<uint8> rgbaBytes;
+            SW_EXPECT_TRUE( sw::RenderTargetImageFile::unpackRgba8( bytes, layout, format, rgbaBytes ) );
+        }
+        else
+            SW_LOG_WARNING( "ShadowMapAttachmentReadsBackAsDepth: %# 에서 그림자 맵을 읽지 못했습니다.", pName );
+        renderer.shutdown();
+    }
+    if ( checkedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could read the shadow map" );
 }
 
 /**
