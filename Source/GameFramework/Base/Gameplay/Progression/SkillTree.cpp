@@ -81,17 +81,13 @@ namespace sw
                 skill._requiredLevel = node.getAttributeInt( "level", skill._requiredLevel );
                 skill._requiredSpent = MathUtil::max( 0, node.getAttributeInt( "spent", skill._requiredSpent ) );
                 // "basic:2,stance" 형식이며, 이름:랭크로 적고 랭크를 생략하면 1 이다.
-                GameDataXML::forEachToken( node.getAttributeText( "requires" ), ", ", [&]( string_view token )
+                // 읽히지 않는 랭크는 경고 없이 기본값이다.
+                GameDataXML::forEachNamedNumber( node.getAttributeText( "requires" ), ", ", SkillRequirement{}._rank, GameDataXML::MissingValue::UseDefault,
+                                                 [&]( string_view, string_view skillName, int32 rank, bool )
                 {
                     SkillRequirement requirement;
-                    const size_t     colon = token.find( ':' );
-                    requirement._skillID   = hashed_string( colon == string_view::npos ? token : token.substr( 0, colon ) );
-                    if ( colon != string_view::npos )
-                    {
-                        int32 rank = 1;
-                        if ( StringUtil::parseInt( token.substr( colon + 1 ), rank ) )
-                            requirement._rank = MathUtil::max( 1, rank );
-                    }
+                    requirement._skillID = hashed_string( skillName );
+                    requirement._rank    = MathUtil::max( 1, rank );
                     skill._listRequirement.push_back( requirement );
                 } );
                 const XMLNode statNode = node.findChild( "Stats" );

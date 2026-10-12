@@ -9,6 +9,7 @@
 
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
+#include "GameFramework/Base/Online/Store/ServiceStoreUtil.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyStoreLogic.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Shared/Catalog/CurrencyCatalog.h"
@@ -41,11 +42,10 @@ namespace sw
                                                               "unavailable" };
             static_assert( SW_COUNT_OF( kArrMethodName ) == static_cast<size_t>( EconomyMethod::kCount ), "method names must match EconomyMethod" );
             static_assert( SW_COUNT_OF( kArrResultName ) == static_cast<size_t>( EconomyResult::Count ), "result names must match EconomyResult" );
-            static constexpr int64 kShutdownWaitMs = 5000;
-            static constexpr int32 kWalletIndex    = EconomyMethod::toIndex( EconomyMethod::kGetWallet );
-            static constexpr int32 kHistoryIndex   = EconomyMethod::toIndex( EconomyMethod::kGetHistory );
-            static constexpr int32 kPurchaseIndex  = EconomyMethod::toIndex( EconomyMethod::kPurchase );
-            static constexpr int32 kRedeemIndex    = EconomyMethod::toIndex( EconomyMethod::kRedeemReceipt );
+            static constexpr int32 kWalletIndex   = EconomyMethod::toIndex( EconomyMethod::kGetWallet );
+            static constexpr int32 kHistoryIndex  = EconomyMethod::toIndex( EconomyMethod::kGetHistory );
+            static constexpr int32 kPurchaseIndex = EconomyMethod::toIndex( EconomyMethod::kPurchase );
+            static constexpr int32 kRedeemIndex   = EconomyMethod::toIndex( EconomyMethod::kRedeemReceipt );
         };
 
         /** @brief 경제 요청 하나의 저장소 왕복입니다. 입력은 공개 필드에 값으로 채워 맡기고, 결과는 `complete` 에서 서비스에 넘깁니다. */
@@ -153,13 +153,10 @@ namespace sw
 
     void EconomyService::shutdown()
     {
-        const Deadline deadline = Deadline::afterMilliseconds( EconomyServiceInternal::kShutdownWaitMs );
-        while ( _pStore != nullptr && _listPendingCall.empty() == false && deadline.isExpired() == false )
-        {
-            pollReceipts();
-            if ( _pStore->pollCompletions() == 0 )
-                MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + 1000000 );
-        }
+        // 영수증 검증 완료도 호출을 끝내므로 걸음마다 같이 거둔다.
+        ServiceStoreUtil::drainUntilIdle( _pStore, [this]()
+        { return _listPendingCall.empty(); }, [this]()
+        { pollReceipts(); } );
         if ( _listPendingCall.empty() == false )
         {
             SW_LOG_ERROR( "EconomyService shut down with %# calls still pending", _listPendingCall.size() );

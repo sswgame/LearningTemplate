@@ -99,4 +99,8 @@ namespace sw
         (void)parseFloats( text, arrValue, 3 ); // 못 읽은 칸은 대체값이 남는다
         return float3{ arrValue[0], arrValue[1], arrValue[2] };
     }
+
+    bool GameDataXML::parseNumber( string_view token, int32& outValue ) { return StringUtil::parseInt( token, outValue ); }
+
+    bool GameDataXML::parseNumber( string_view token, float32& outValue ) { return StringUtil::parseFloat( token, outValue ); }
 } // namespace sw

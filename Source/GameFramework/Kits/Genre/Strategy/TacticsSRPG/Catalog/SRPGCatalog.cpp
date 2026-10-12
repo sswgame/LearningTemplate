@@ -244,14 +244,14 @@ namespace sw
         SRPGCatalogInternal::parseFourInts( node.getAttributeText( "aptitude" ), 0, def._arrAptitude, true );
         GameDataXML::forEachToken( node.getAttributeText( "weapons" ), ",; \t", [&]( string_view token )
         { def._listWeaponID.push_back( hashed_string( token ) ); } );
-        GameDataXML::forEachToken( node.getAttributeText( "developsTo" ), ",; \t", [&]( string_view token )
+        GameDataXML::forEachNamedNumber( node.getAttributeText( "developsTo" ), ",; \t", SRPGDevelopTarget{}._requiredLevel, GameDataXML::MissingValue::UseDefault,
+                                         [&]( string_view token, string_view unitName, int32 requiredLevel, bool bValid )
         {
             SRPGDevelopTarget target;
-            const size_t      colon = token.find( ':' );
-            target._unitID          = hashed_string( token.substr( 0, colon ) );
-            if ( colon != string_view::npos && StringUtil::parseInt( token.substr( colon + 1 ), target._requiredLevel ) == false )
+            target._unitID = hashed_string( unitName );
+            if ( bValid == false )
                 SW_LOG_WARNING( "%#: unit '%#' has a bad develop level in '%#'", sourceName, pID, token );
-            target._requiredLevel = MathUtil::max( 1, target._requiredLevel );
+            target._requiredLevel = MathUtil::max( 1, requiredLevel );
             def._listDevelop.push_back( target );
         } );
         (void)_unitCatalog.add( def );

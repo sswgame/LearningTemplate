@@ -114,5 +114,45 @@ namespace sw
                 tokenStart = tokenEnd + 1;
             }
         }
+
+        /** @brief `forEachNamedNumber` 에서 토큰에 콜론(`:값`)이 없을 때의 처리입니다. */
+        enum class MissingValue : uint8
+        {
+            UseDefault, //!< 기본값으로 읽고 유효로 친다("stance" = "stance:1").
+            Reject,     //!< 값이 꼭 있어야 한다. 유효하지 않은 토큰으로 넘긴다.
+        };
+
+        /**
+         * @brief "이름:숫자" 토큰 목록("spearman:3,archer:2")을 읽어 토큰마다 @p callback( token, name, value, bValid ) 을 부릅니다. 할당하지 않습니다.
+         * @details @p TValue 는 `int32` 또는 `float32` 이다. 숫자가 읽히지 않거나 @p missing 이 `Reject` 인데 콜론이 없으면
+         *          @p value 는 @p defaultValue, @p bValid 는 false 다. 경고와 범위 제한은 호출부가 한다(경고에 카탈로그 문맥이 들어가야 한다).
+         * @code
+         *     GameDataXML::forEachNamedNumber( text, ",; ", 1, GameDataXML::MissingValue::UseDefault,
+         *                                      [&]( string_view token, string_view name, int32 count, bool bValid ) { ... } );
+         * @endcode
+         */
+        template <typename TValue, typename TCallback>
+        static void forEachNamedNumber( string_view text, string_view separators, TValue defaultValue, MissingValue missing, TCallback&& callback )
+        {
+            forEachToken( text, separators, [&]( string_view token )
+            {
+                const size_t      colon = token.find( ':' );
+                const string_view name  = colon == string_view::npos ? token : token.substr( 0, colon );
+                TValue            value = defaultValue;
+                bool              bValid{ missing == MissingValue::UseDefault };
+                if ( colon != string_view::npos )
+                {
+                    bValid = parseNumber( token.substr( colon + 1 ), value );
+                    if ( bValid == false )
+                        value = defaultValue;
+                }
+                callback( token, name, value, bValid );
+            } );
+        }
+
+        /** @brief `forEachNamedNumber` 의 값 읽기입니다. 실패하면 false 입니다. */
+        [[nodiscard]] static bool parseNumber( string_view token, int32& outValue );
+        /** @brief `forEachNamedNumber` 의 실수 값 읽기입니다. 실패하면 false 입니다. */
+        [[nodiscard]] static bool parseNumber( string_view token, float32& outValue );
     };
 } // namespace sw

@@ -12,6 +12,7 @@
 #include "GameFramework/Base/Online/Identity/AccountSessionControl.h"
 #include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
+#include "GameFramework/Base/Online/Store/ServiceStoreUtil.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminStoreLogic.h"
 
 namespace sw
@@ -28,7 +29,6 @@ namespace sw
                                                               "insufficient_funds", "cap_exceeded", "busy", "unavailable" };
             static_assert( SW_COUNT_OF( kArrMethodName ) == static_cast<size_t>( AdminMethod::kCount ), "method names must match AdminMethod" );
             static_assert( SW_COUNT_OF( kArrResultName ) == static_cast<size_t>( AdminResult::Count ), "result names must match AdminResult" );
-            static constexpr int64 kShutdownWaitMs = 5000;
         };
 
         /** @brief GM 명령 하나의 저장소 왕복입니다. */
@@ -110,12 +110,8 @@ namespace sw
 
     void AdminService::shutdown()
     {
-        const Deadline deadline = Deadline::afterMilliseconds( AdminServiceInternal::kShutdownWaitMs );
-        while ( _pStore != nullptr && ( _listPendingCall.empty() == false || _pendingSeedCount > 0 ) && deadline.isExpired() == false )
-        {
-            if ( _pStore->pollCompletions() == 0 )
-                MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + 1000000 );
-        }
+        ServiceStoreUtil::drainUntilIdle( _pStore, [this]()
+        { return _listPendingCall.empty() && _pendingSeedCount <= 0; } );
         if ( _listPendingCall.empty() == false )
         {
             SW_LOG_ERROR( "AdminService shut down with %# calls still pending", _listPendingCall.size() );
