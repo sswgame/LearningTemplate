@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLNameCheck.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
 {
@@ -22,34 +23,34 @@ namespace sw
 
     bool CharacterDataReader::parseRoot( XMLDocument& outDocument, string_view xmlText, const utf8* pRootName, XMLNode& outRoot )
     {
-        if ( outDocument.parse( xmlText, _sourceName ) == false )
-        {
-            addError( outDocument.getLastError() );
-            return false;
-        }
-        outRoot = outDocument.getRoot( pRootName );
-        if ( outRoot.isValid() == false )
-        {
-            addError( string( "root element <" ) + pRootName + "> is missing" );
-            return false;
-        }
-        return true;
+        return reportRootStatus( outDocument, XMLReadUtil::parseRoot( outDocument, xmlText, _sourceName, pRootName, outRoot ), pRootName );
     }
 
     bool CharacterDataReader::loadRoot( XMLDocument& outDocument, string_view path, const utf8* pRootName, XMLNode& outRoot )
     {
-        if ( outDocument.loadPath( path ) == false )
+        return reportRootStatus( outDocument, XMLReadUtil::loadRoot( outDocument, path, pRootName, outRoot ), pRootName );
+    }
+
+    bool CharacterDataReader::reportRootStatus( const XMLDocument& document, XMLRootStatus status, const utf8* pRootName )
+    {
+        switch ( status )
         {
-            addError( outDocument.getLastError().empty() ? string( "cannot read" ) : outDocument.getLastError() );
-            return false;
+            case XMLRootStatus::Found:
+            {
+                return true;
+            }
+            case XMLRootStatus::NotLoaded:
+            {
+                addError( document.getLastError().empty() ? string( "cannot read" ) : document.getLastError() );
+                return false;
+            }
+            case XMLRootStatus::RootMissing:
+            {
+                addError( string( "root element <" ) + pRootName + "> is missing" );
+                return false;
+            }
         }
-        outRoot = outDocument.getRoot( pRootName );
-        if ( outRoot.isValid() == false )
-        {
-            addError( string( "root element <" ) + pRootName + "> is missing" );
-            return false;
-        }
-        return true;
+        return false;
     }
 
     void CharacterDataReader::addError( const XMLNode& node, string_view message )
@@ -158,14 +159,10 @@ namespace sw
 
     hashed_string CharacterDataReader::readName( const XMLNode& node, const utf8* pName, bool bRequired )
     {
-        const string_view text = StringUtil::trim( node.getAttributeText( pName ) );
-        if ( text.empty() )
-        {
-            if ( bRequired )
-                addError( node, string( "needs attribute '" ) + pName + "'" );
-            return hashed_string{};
-        }
-        return hashed_string( text );
+        const hashed_string name = XMLReadUtil::readName( node, pName );
+        if ( name.empty() && bRequired )
+            addError( node, string( "needs attribute '" ) + pName + "'" );
+        return name;
     }
 
     void CharacterDataReader::readNameList( const XMLNode& node, const utf8* pName, vector<hashed_string>& outListName )

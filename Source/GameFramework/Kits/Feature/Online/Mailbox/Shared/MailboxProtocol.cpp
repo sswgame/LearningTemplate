@@ -4,6 +4,7 @@
 
 #include "Core/Network/BitStream.h"
 
+#include "GameFramework/Base/Online/Service/OnlineReplyUtil.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -122,10 +123,8 @@ namespace sw
 
     bool MailboxProtocol::readReply( BitReader& reader, MailboxReply& outReply )
     {
-        const uint64 result = reader.readVarUint();
-        if ( result >= static_cast<uint64>( MailboxResult::Count ) )
+        if ( OnlineReplyUtil::readEnum( reader, MailboxResult::Count, outReply._result ) == false )
             return false;
-        outReply._result       = static_cast<MailboxResult>( result );
         outReply._claimedCount = static_cast<int32>( reader.readVarInt() );
         if ( ServiceKeyUtil::readString( reader, kMaxKeySize, outReply._nextCursor ) == false )
             return false;
@@ -153,18 +152,12 @@ namespace sw
 
     MailboxResult MailboxProtocol::fromErrorCode( uint16 errorCode )
     {
-        switch ( errorCode )
-        {
-            case OnlineError::kOk:
-                return MailboxResult::Ok;
-            case OnlineError::kUnauthenticated:
-                return MailboxResult::NotSignedIn;
-            case OnlineError::kInvalidRequest:
-                return MailboxResult::InvalidRequest;
-            case OnlineError::kConflict:
-                return MailboxResult::Busy;
-            default:
-                return MailboxResult::Unavailable;
-        }
+        static constexpr OnlineErrorResult<MailboxResult> kArrErrorResult[] = {
+            {             OnlineError::kOk,             MailboxResult::Ok},
+            {OnlineError::kUnauthenticated,    MailboxResult::NotSignedIn},
+            { OnlineError::kInvalidRequest, MailboxResult::InvalidRequest},
+            {       OnlineError::kConflict,           MailboxResult::Busy},
+        };
+        return OnlineError::toResult( errorCode, kArrErrorResult, MailboxResult::Unavailable );
     }
 } // namespace sw

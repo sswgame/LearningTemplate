@@ -335,16 +335,11 @@ namespace sw
 
     MatchmakingResult MatchmakingProtocol::fromErrorCode( uint16 errorCode )
     {
-        switch ( errorCode )
-        {
-            case OnlineError::kOk:
-                return MatchmakingResult::Ok;
-            case OnlineError::kInvalidRequest:
-                return MatchmakingResult::Invalid;
-            case OnlineError::kConflict:
-                return MatchmakingResult::Conflict;
-            default:
-                return MatchmakingResult::Unavailable;
-        }
+        static constexpr OnlineErrorResult<MatchmakingResult> kArrErrorResult[] = {
+            {            OnlineError::kOk,       MatchmakingResult::Ok},
+            {OnlineError::kInvalidRequest,  MatchmakingResult::Invalid},
+            {      OnlineError::kConflict, MatchmakingResult::Conflict},
+        };
+        return OnlineError::toResult( errorCode, kArrErrorResult, MatchmakingResult::Unavailable );
     }
 } // namespace sw

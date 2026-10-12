@@ -212,7 +212,7 @@ Shipping 실행 파일에 레지스트리가 없는지는 `DevCommandShippingTes
 ### Utility, Console, Profiling, TileMap, Module
 
 `Utility/` 에는 진짜 최하위 헬퍼만 둡니다. 키-값 파일, `CommandStack`, 게임이 쓰고 에디터 HUD가 읽는 디버그 값(`DebugOverlayState`), 커브 값 타입(`FloatCurve`)이 여기 있습니다.
-XML · JSON 문서(`XMLDocument`, `JSONDocument`, `ConfigKeyDoc`)는 `Serialization/XML` · `Serialization/JSON` 에 있습니다. 데이터 XML의 "모르는 이름" 검사는 `XMLNameCheck` 하나가 합니다. 문구는 `<원소> has unknown attribute 'x'` 로 같고, 데이터 오류면 Error, 읽기를 계속하는 로더면 Warning을 고릅니다.
+XML · JSON 문서(`XMLDocument`, `JSONDocument`, `ConfigKeyDoc`)는 `Serialization/XML` · `Serialization/JSON` 에 있습니다. 데이터 XML의 "모르는 이름" 검사는 `XMLNameCheck` 하나가 합니다. 문구는 `<원소> has unknown attribute 'x'` 로 같고, 데이터 오류면 Error, 읽기를 계속하는 로더면 Warning을 고릅니다. 문서를 읽고 루트 원소를 찾는 것과 이름 속성 읽기(앞뒤 공백 제거)는 XMLReadUtil 이 합니다. 결과(XMLRootStatus)만 돌려주고, 오류 모음이나 경고는 부르는 쪽(CharacterDataReader · GameDataXML)이 남깁니다.
 게임 시간 배율(`GameTimeScale`, `gv_timeScale`)은 호스트가 프레임 시간에 곱합니다. 게임의 자동 플레이 스위치 계약(`GameAutoplay`, `SW_GAME_AUTOPLAY`)도 여기 있습니다.
 `Profiling/` 은 엔진 프로파일러입니다. `SW_PROFILE_SCOPE` 한 줄이 `FrameProfiler` 표와 Tracy 구간에 함께 남습니다([Profiling](Profiling/README.md)).
 `Console/` 은 콘솔 해석기(`DevConsole`, 레지스트리는 `Core/Console`), `TileMap/` 은 2D 타일맵 데이터(타일셋 에셋, 맵 XML, 격자 도우미)입니다. 셋 다 쓰는 곳이 여러 티어에 걸쳐 바닥 가까이 둡니다.

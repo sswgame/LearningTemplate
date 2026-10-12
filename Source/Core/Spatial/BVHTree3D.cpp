@@ -3,6 +3,7 @@
 #include "Core/Spatial/BVHTree3D.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/IndexFreeList.h"
 #include "Core/Math/Frustum.h"
 #include "Core/Math/Math.h"
 
@@ -97,17 +98,8 @@ namespace sw
 
     int32 BVHTree3D::allocateNode()
     {
-        if ( _listFreeNode.empty() == false )
-        {
-            const int32 nodeIndex = _listFreeNode.back();
-            _listFreeNode.pop_back();
-            _listNode[static_cast<size_t>( nodeIndex )] = BVHNode3D{};
-            return nodeIndex;
-        }
-
-        const int32 nodeIndex = static_cast<int32>( _listNode.size() );
-        _listNode.emplace_back();
-        return nodeIndex;
+        // 재사용 칸도 새 칸도 기본 노드로 채운다.
+        return static_cast<int32>( allocateFreeListIndex( _listNode, _listFreeNode, BVHNode3D{} ) );
     }
 
     void BVHTree3D::freeNode( int32 nodeIndex )
@@ -118,7 +110,7 @@ namespace sw
             _listNode[static_cast<size_t>( nodeIndex )]._leftChild  = invalid_index::kInt32;
             _listNode[static_cast<size_t>( nodeIndex )]._rightChild = invalid_index::kInt32;
             _listNode[static_cast<size_t>( nodeIndex )]._handle     = SlotHandle{};
-            _listFreeNode.push_back( nodeIndex );
+            _listFreeNode.push_back( static_cast<uint32>( nodeIndex ) );
         }
     }
 

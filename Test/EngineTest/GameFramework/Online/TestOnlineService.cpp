@@ -1,8 +1,10 @@
 #include "pch.h"
 
+#include "Core/Network/BitStream.h"
 #include "Core/Network/Message/NetRequest.h"
 
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
+#include "GameFramework/Base/Online/Service/OnlineReplyUtil.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 
 #include "TestFramework/TestFramework.h"
@@ -13,6 +15,14 @@ using namespace sw;
 
 namespace
 {
+    enum class SampleOnlineResult : uint8
+    {
+        Ok,
+        NotSignedIn,
+        Unavailable,
+        Count
+    };
+
     class NullRequestHandler final : public INetRequestHandler
     {
     public:
@@ -91,4 +101,41 @@ SW_TEST_CASE( OnlineServiceTest, MethodRangeTableIsDisjoint )
             SW_EXPECT_FALSE( OnlineMethodRange::isInRange( arrRange[other], arrRange[index] ) );
         }
     }
+}
+
+/**
+ * @brief [OnlineProtocolTest] 오류 코드는 키트 표에서 결과로 바뀌고, 표에 없는 코드는 키트가 준 기본값이다
+ * @details 키트마다 받는 코드가 달라 표와 기본값(대개 Unavailable)은 키트가 가진다. 키트마다 적던 switch 를 대신한다.
+ */
+SW_TEST_CASE( OnlineProtocolTest, ErrorCodeMapsThroughKitTable )
+{
+    static constexpr OnlineErrorResult<SampleOnlineResult> kArrErrorResult[] = {
+        {             OnlineError::kOk,          SampleOnlineResult::Ok},
+        {OnlineError::kUnauthenticated, SampleOnlineResult::NotSignedIn},
+    };
+    SW_EXPECT_TRUE( OnlineError::toResult( OnlineError::kOk, kArrErrorResult, SampleOnlineResult::Unavailable ) == SampleOnlineResult::Ok );
+    SW_EXPECT_TRUE( OnlineError::toResult( OnlineError::kUnauthenticated, kArrErrorResult, SampleOnlineResult::Unavailable ) ==
+                    SampleOnlineResult::NotSignedIn );
+    SW_EXPECT_TRUE( OnlineError::toResult( OnlineError::kInternal, kArrErrorResult, SampleOnlineResult::Unavailable ) ==
+                    SampleOnlineResult::Unavailable );
+}
+
+/**
+ * @brief [OnlineProtocolTest] 응답 첫 칸의 결과(varuint)는 Count 미만만 읽고, 넘거나 몸이 모자라면 거절한다
+ */
+SW_TEST_CASE( OnlineProtocolTest, ReadEnumRejectsOutOfRangeAndShortBody )
+{
+    BitWriter writer;
+    writer.writeVarUint( static_cast<uint64>( SampleOnlineResult::NotSignedIn ) );
+    writer.writeVarUint( static_cast<uint64>( SampleOnlineResult::Count ) );
+
+    BitReader          reader( writer.getBytes().data(), writer.getByteCount() );
+    SampleOnlineResult result = SampleOnlineResult::Ok;
+    SW_EXPECT_TRUE( OnlineReplyUtil::readEnum( reader, SampleOnlineResult::Count, result ) );
+    SW_EXPECT_TRUE( result == SampleOnlineResult::NotSignedIn );
+    SW_EXPECT_FALSE( OnlineReplyUtil::readEnum( reader, SampleOnlineResult::Count, result ) );
+    SW_EXPECT_TRUE( result == SampleOnlineResult::NotSignedIn );
+
+    BitReader empty( nullptr, 0 );
+    SW_EXPECT_FALSE( OnlineReplyUtil::readEnum( empty, SampleOnlineResult::Count, result ) );
 }

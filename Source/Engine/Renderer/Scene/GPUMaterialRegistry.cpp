@@ -3,6 +3,7 @@
 #include "Engine/Renderer/Scene/GPUMaterialRegistry.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/IndexFreeList.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/Material/Material.h"
@@ -103,19 +104,12 @@ namespace sw
         {
             elementIndex = it->second;
         }
-        else if ( state._listFreeEntry.empty() == false )
-        {
-            // 회수된 슬롯을 재사용한다. 새 슬롯을 늘리면 버퍼가 단조 증가한다.
-            elementIndex = state._listFreeEntry.back();
-            state._listFreeEntry.pop_back();
-            group._listEntry[elementIndex] = GPUMaterialElement{ material, instance };
-            state._mapEntryToIndex.emplace( key, elementIndex );
-        }
         else
         {
-            group._listEntry.push_back( GPUMaterialElement{ material, instance } );
-            state._listEntryLastUsedBuild.push_back( 0 );
-            elementIndex = static_cast<uint32>( group._listEntry.size() - 1 );
+            // 회수된 슬롯을 먼저 재사용한다. 새 슬롯만 늘리면 버퍼가 단조 증가한다.
+            elementIndex = allocateFreeListIndex( group._listEntry, state._listFreeEntry, GPUMaterialElement{ material, instance } );
+            if ( elementIndex >= state._listEntryLastUsedBuild.size() )
+                state._listEntryLastUsedBuild.resize( elementIndex + 1 );
             state._mapEntryToIndex.emplace( key, elementIndex );
         }
         state._listEntryLastUsedBuild[elementIndex] = _buildCounter;

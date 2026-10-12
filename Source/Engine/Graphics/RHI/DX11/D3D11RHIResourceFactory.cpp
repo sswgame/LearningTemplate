@@ -2,13 +2,13 @@
 
 #include "Engine/Graphics/RHI/DX11/D3D11RHIResourceFactory.h"
 
+#include "Core/Container/IndexFreeList.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
 #include "Engine/Graphics/RHI/Support/RHIBufferSize.h"
-#include "Engine/Graphics/RHI/Support/RHIIndexFreeList.h"
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 

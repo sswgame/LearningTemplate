@@ -3,12 +3,12 @@
 #include "Engine/Graphics/RHI/GL/OpenGLRHIResourceFactory.h"
 
 #include "Core/Common/EnumUtil.h"
+#include "Core/Container/IndexFreeList.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 #include "Engine/Graphics/RHI/Support/RHIBufferSize.h"
-#include "Engine/Graphics/RHI/Support/RHIIndexFreeList.h"
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 

@@ -4,6 +4,7 @@
 
 #include "Core/Network/BitStream.h"
 
+#include "GameFramework/Base/Online/Service/OnlineReplyUtil.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -104,23 +105,11 @@ namespace sw
                                      ServiceKeyUtil::readString( reader, LedgerConstant::kMaxMemoSize, outLine._memo );
                 if ( bTextOk == false )
                     return false;
-                outLine._timeMs        = reader.readVarInt();
-                outLine._actorID       = reader.readVarUint();
-                const uint64 actorKind = reader.readVarUint();
-                if ( actorKind >= static_cast<uint64>( LedgerActorKind::Count ) )
+                outLine._timeMs  = reader.readVarInt();
+                outLine._actorID = reader.readVarUint();
+                if ( OnlineReplyUtil::readEnum( reader, LedgerActorKind::Count, outLine._actorKind ) == false )
                     return false;
-                outLine._actorKind = static_cast<LedgerActorKind>( actorKind );
                 return readBalances( reader, outLine._listChange );
-            }
-
-            template <typename T>
-            [[nodiscard]] static bool readEnum( BitReader& reader, T countValue, T& outValue )
-            {
-                const uint64 value = reader.readVarUint();
-                if ( value >= static_cast<uint64>( countValue ) )
-                    return false;
-                outValue = static_cast<T>( value );
-                return true;
             }
         };
     } // namespace
@@ -201,8 +190,8 @@ namespace sw
         outRequest._endMs     = reader.readVarInt();
         const int64 maxCount  = reader.readVarInt();
         outRequest._maxCount  = static_cast<int32>( maxCount );
-        const bool bEnumOk    = AdminProtocolInternal::readEnum( reader, ServiceSanctionKind::Count, outRequest._sanctionKind ) &&
-                             AdminProtocolInternal::readEnum( reader, AdminRole::Count, outRequest._role );
+        const bool bEnumOk    = OnlineReplyUtil::readEnum( reader, ServiceSanctionKind::Count, outRequest._sanctionKind ) &&
+                             OnlineReplyUtil::readEnum( reader, AdminRole::Count, outRequest._role );
         outRequest._bRefund    = reader.readBool() ? SW_TRUE : SW_FALSE;
         const bool bMaxCountOk = 1 <= maxCount && maxCount <= kMaxListCount;
         return bEnumOk && bMaxCountOk && reader.hasOverflowed() == false;
@@ -239,11 +228,11 @@ namespace sw
 
     bool AdminProtocol::readReply( BitReader& reader, AdminReply& outReply )
     {
-        if ( AdminProtocolInternal::readEnum( reader, AdminResult::Count, outReply._result ) == false )
+        if ( OnlineReplyUtil::readEnum( reader, AdminResult::Count, outReply._result ) == false )
             return false;
         outReply._bReplayed = reader.readBool() ? SW_TRUE : SW_FALSE;
         outReply._bOnline   = reader.readBool() ? SW_TRUE : SW_FALSE;
-        if ( AdminProtocolInternal::readEnum( reader, AdminRole::Count, outReply._targetRole ) == false )
+        if ( OnlineReplyUtil::readEnum( reader, AdminRole::Count, outReply._targetRole ) == false )
             return false;
         outReply._processedCount = static_cast<int32>( reader.readVarInt() );
         if ( ServiceKeyUtil::readString( reader, kMaxTextSize, outReply._nextCursor ) == false )
@@ -283,21 +272,14 @@ namespace sw
 
     AdminResult AdminProtocol::fromErrorCode( uint16 errorCode )
     {
-        switch ( errorCode )
-        {
-            case OnlineError::kOk:
-                return AdminResult::Ok;
-            case OnlineError::kUnauthenticated:
-                return AdminResult::NotSignedIn;
-            case OnlineError::kForbidden:
-                return AdminResult::Forbidden;
-            case OnlineError::kInvalidRequest:
-                return AdminResult::InvalidRequest;
-            case OnlineError::kConflict:
-                return AdminResult::Busy;
-            default:
-                return AdminResult::Unavailable;
-        }
+        static constexpr OnlineErrorResult<AdminResult> kArrErrorResult[] = {
+            {             OnlineError::kOk,             AdminResult::Ok},
+            {OnlineError::kUnauthenticated,    AdminResult::NotSignedIn},
+            {      OnlineError::kForbidden,      AdminResult::Forbidden},
+            { OnlineError::kInvalidRequest, AdminResult::InvalidRequest},
+            {       OnlineError::kConflict,           AdminResult::Busy},
+        };
+        return OnlineError::toResult( errorCode, kArrErrorResult, AdminResult::Unavailable );
     }
 
     AdminRole AdminProtocol::getRequiredRole( uint16 method, ServiceSanctionKind sanctionKind )
