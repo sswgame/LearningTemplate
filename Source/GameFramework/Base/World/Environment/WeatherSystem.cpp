@@ -40,15 +40,13 @@ namespace sw
             weather._minDuration = MathUtil::max( 1.0f, node.getAttributeFloat( "minDuration", weather._minDuration ) );
             weather._maxDuration = MathUtil::max( weather._minDuration, node.getAttributeFloat( "maxDuration", weather._maxDuration ) );
             // "Spring:3,Summer:1" — 계절:가중치(가중치를 빼면 `weight`).
-            GameDataXML::forEachToken( node.getAttributeText( "seasons" ), ", ", [&]( string_view token )
+            // 읽히지 않는 가중치도 경고 없이 `weight` 다.
+            GameDataXML::forEachNamedNumber( node.getAttributeText( "seasons" ), ", ", weather._weight, GameDataXML::MissingValue::UseDefault,
+                                             [&]( string_view, string_view seasonName, float32 weight, bool )
             {
                 WeatherSeasonWeight seasonWeight;
-                const size_t        colon = token.find( ':' );
-                seasonWeight._season      = hashed_string( colon == string_view::npos ? token : token.substr( 0, colon ) );
-                seasonWeight._weight      = weather._weight;
-                float32 value             = 0.0f;
-                if ( colon != string_view::npos && StringUtil::parseFloat( token.substr( colon + 1 ), value ) )
-                    seasonWeight._weight = MathUtil::max( 0.0f, value );
+                seasonWeight._season = hashed_string( seasonName );
+                seasonWeight._weight = MathUtil::max( 0.0f, weight );
                 weather._listSeasonWeight.push_back( seasonWeight );
             } );
             const XMLNode valueNode = node.findChild( "Values" );

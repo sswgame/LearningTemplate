@@ -9,6 +9,7 @@
 #include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
+#include "GameFramework/Base/Online/Store/ServiceStoreUtil.h"
 
 #include <algorithm>
 
@@ -18,7 +19,6 @@ namespace sw
     {
         struct ChatServiceInternal
         {
-            static constexpr int64       kShutdownWaitMs = 5000;
             static constexpr int32       kTrimBatchCount = 64; ///< 정리 한 번에 지우는 지난 기록 수이다
             static constexpr const utf8* kWhisperPrefix  = "whisper.";
 
@@ -229,13 +229,8 @@ namespace sw
 
     void ChatService::shutdown()
     {
-        IServiceStore* pStore   = _dependencies._pStore;
-        const Deadline deadline = Deadline::afterMilliseconds( ChatServiceInternal::kShutdownWaitMs );
-        while ( pStore != nullptr && _pendingStoreCount > 0 && deadline.isExpired() == false )
-        {
-            if ( pStore->pollCompletions() == 0 )
-                MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + 1000000 );
-        }
+        ServiceStoreUtil::drainUntilIdle( _dependencies._pStore, [this]()
+        { return _pendingStoreCount <= 0; } );
         if ( _pendingStoreCount > 0 )
             SW_LOG_ERROR( "ChatService shut down with %# store works still pending", _pendingStoreCount );
         if ( _dependencies._pPresence != nullptr ) // 맡긴 찾기를 회수한다. 접속 상태 관리자가 이 객체보다 오래 살아도 이 객체를 부르지 않게 하려는 것이다. 저장 작업을 회수한 뒤에 한다. 그 완료가 찾기를 낼 수 있기 때문이다

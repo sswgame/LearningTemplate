@@ -56,14 +56,14 @@ namespace sw
             static void parseGarrison( string_view text, vector<ConquestGarrisonDef>& outListGarrison, string_view sourceName, const utf8* pID )
             {
                 outListGarrison.clear();
-                GameDataXML::forEachToken( text, ",; ", [&]( string_view token )
+                GameDataXML::forEachNamedNumber( text, ",; ", ConquestGarrisonDef{}._count, GameDataXML::MissingValue::UseDefault,
+                                                 [&]( string_view token, string_view unitName, int32 count, bool bValid )
                 {
                     ConquestGarrisonDef garrison;
-                    const size_t        colon = token.find( ':' );
-                    garrison._unitID          = hashed_string( token.substr( 0, colon ) );
-                    if ( colon != string_view::npos && StringUtil::parseInt( token.substr( colon + 1 ), garrison._count ) == false )
+                    garrison._unitID = hashed_string( unitName );
+                    if ( bValid == false )
                         SW_LOG_WARNING( "%#: site '%#' has a bad garrison count '%#'", sourceName, pID, token );
-                    garrison._count = MathUtil::max( 0, garrison._count );
+                    garrison._count = MathUtil::max( 0, count );
                     outListGarrison.push_back( garrison );
                 } );
             }

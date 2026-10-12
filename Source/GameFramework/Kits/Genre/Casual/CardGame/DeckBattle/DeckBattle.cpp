@@ -69,12 +69,12 @@ namespace sw
             def._name         = pName != nullptr ? pName : pID;
             def._cost         = MathUtil::max( 0, node.getAttributeInt( "cost", 1 ) );
             def._bExhaust     = node.getAttributeBool( "exhaust", false ) ? SW_TRUE : SW_FALSE;
-            GameDataXML::forEachToken( node.getAttributeText( "effects" ), ",; ", [&]( string_view token )
+            GameDataXML::forEachNamedNumber( node.getAttributeText( "effects" ), ",; ", 0, GameDataXML::MissingValue::Reject,
+                                             [&]( string_view token, string_view kindName, int32 amount, bool bAmount )
             {
-                const size_t     colon = token.find( ':' );
                 DeckBattleEffect effect;
-                const bool       bKind   = DeckBattleInternal::parseEffectKind( token.substr( 0, colon ), effect._kind );
-                const bool       bAmount = colon != string_view::npos && StringUtil::parseInt( token.substr( colon + 1 ), effect._amount );
+                const bool       bKind = DeckBattleInternal::parseEffectKind( kindName, effect._kind );
+                effect._amount         = amount;
                 if ( bKind && bAmount )
                     def._listEffect.push_back( effect );
                 else

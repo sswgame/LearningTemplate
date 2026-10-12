@@ -8,6 +8,7 @@
 #include "Engine/Observability/MetricRegistry.h"
 
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
+#include "GameFramework/Base/Online/Store/ServiceStoreUtil.h"
 
 namespace sw
 {
@@ -23,7 +24,6 @@ namespace sw
             static constexpr const utf8* kArrExpiryAction[] = { "discarded", "returned", "removed" };
             static_assert( SW_COUNT_OF( kArrMethodName ) == static_cast<size_t>( MailboxMethod::kCount ), "method names must match MailboxMethod" );
             static_assert( SW_COUNT_OF( kArrResultName ) == static_cast<size_t>( MailboxResult::Count ), "result names must match MailboxResult" );
-            static constexpr int64 kShutdownWaitMs = 5000;
         };
 
         /** @brief 우편함 요청 하나의 저장소 왕복입니다. */
@@ -185,12 +185,8 @@ namespace sw
 
     void MailboxService::shutdown()
     {
-        const Deadline deadline = Deadline::afterMilliseconds( MailboxServiceInternal::kShutdownWaitMs );
-        while ( _pStore != nullptr && isIdle() == false && deadline.isExpired() == false )
-        {
-            if ( _pStore->pollCompletions() == 0 )
-                MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + 1000000 );
-        }
+        ServiceStoreUtil::drainUntilIdle( _pStore, [this]()
+        { return isIdle(); } );
         if ( isIdle() == false )
         {
             SW_LOG_ERROR( "MailboxService shut down with %# calls still pending", _listPendingCall.size() );
