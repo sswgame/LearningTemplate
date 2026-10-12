@@ -13,9 +13,9 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/TagID.h"
 
 #include "Engine/Object/Component/Component.h"
-#include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/TickRegistry.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -30,6 +30,8 @@ namespace sw
     class ObjectStateSerializer;
     class PoolAllocator;
     class SceneComponent;
+    class TagContainer;
+    class TagQuery;
 
     /**
      * @brief 오브젝트의 컴포넌트 목록입니다(인라인 슬롯 4개). 보통의 오브젝트(씬 컴포넌트, 메시, 로직 한두 개)는 힙을 쓰지 않습니다.
