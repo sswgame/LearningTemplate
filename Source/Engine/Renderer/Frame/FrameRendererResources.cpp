@@ -168,7 +168,9 @@ namespace sw
     void FrameRenderer::ensurePassCbCapacityForFrame()
     {
         const uint32 batchCount = static_cast<uint32>( _gpuScene.getOpaqueBatches().size() + _gpuScene.getTransparentBatches().size() );
-        const uint32 estimate   = batchCount * _s_kDrawCbPassEstimate + PassConstantRing::kInitialSlotCount;
+        // 그림자 패스는 타일(캐스케이드 · 점광 · 스폿 면)마다 씬을 한 번씩 그린다 — 어림값의 그림자 한 번을 타일 수로 바꾼다.
+        const uint32 shadowTileCount = MathUtil::max( computeShadowTileCountPerView(), 1u );
+        const uint32 estimate        = batchCount * ( _s_kDrawCbPassEstimate - 1u + shadowTileCount ) + PassConstantRing::kInitialSlotCount;
         _passCbRing.ensureCapacity( _pDevice, MathUtil::max( estimate, _passCbRing.getHighWater() + PassConstantRing::kInitialSlotCount ) );
     }
 

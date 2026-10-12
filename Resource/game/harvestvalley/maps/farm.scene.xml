@@ -52,6 +52,9 @@
 					                           _ambient="0.28"
 					                           _shadowExtent="20"
 					                           _shadowDistance="40"
+					                           _shadowViewDistance="1000"
+					                           _shadowReceiverMinHeight="-1"
+					                           _shadowReceiverMaxHeight="8"
 					                           _bCastShadow="true" />
 					<FarmSunComponent _componentName="FarmSunComponent"
 					                  _bActive="true"

@@ -3,6 +3,8 @@
 #include "Engine/Renderer/Frame/RenderTargetImageFile.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Resource/Image/ImageFileWriter.h"
@@ -43,6 +45,34 @@ namespace sw
     bool RenderTargetImageFile::unpackRgba8( const vector<uint8>& bytes, const RHITextureMipSpan& layout, RHIFormat format, vector<uint8>& outRgbaBytes )
     {
         const uint32 bytesPerPixel = getRHIFormatBytesPerPixel( format );
+        // 단일 채널(깊이 읽기 배치 R32_FLOAT, 마스크 R8)은 회색으로 푼다 — 세 채널에 같은 값이다.
+        const bool bGrayFloat = ( format == RHIFormat::R32_FLOAT );
+        const bool bGrayByte  = ( format == RHIFormat::R8_UNORM );
+        if ( bGrayFloat || bGrayByte )
+        {
+            outRgbaBytes.clear();
+            outRgbaBytes.reserve( static_cast<size_t>( layout._width ) * layout._height * 4 );
+            for ( uint32 row = 0; row < layout._height; ++row )
+            {
+                const uint8* pRow = bytes.data() + static_cast<size_t>( row ) * layout._rowBytes;
+                for ( uint32 column = 0; column < layout._width; ++column )
+                {
+                    const uint8* pPixel = pRow + static_cast<size_t>( column ) * bytesPerPixel;
+                    uint8        gray   = pPixel[0];
+                    if ( bGrayFloat )
+                    {
+                        float32 value = 0.0f;
+                        Memory::copy( &value, pPixel, sizeof( value ) );
+                        gray = static_cast<uint8>( MathUtil::clamp( value, 0.0f, 1.0f ) * 255.0f + 0.5f );
+                    }
+                    outRgbaBytes.push_back( gray );
+                    outRgbaBytes.push_back( gray );
+                    outRgbaBytes.push_back( gray );
+                    outRgbaBytes.push_back( 255 );
+                }
+            }
+            return true;
+        }
         if ( bytesPerPixel < 3 )
             return false;
         const bool bHalf = ( format == RHIFormat::R16G16B16A16_FLOAT );

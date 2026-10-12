@@ -44,8 +44,10 @@
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/3D/PointLightComponent.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
+#include "Engine/Object/Component/3D/SpotLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/CameraRegistry.h"
@@ -55,6 +57,7 @@
 #include "Engine/Renderer/Capture/PortraitRenderer.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/RenderFramePacket.h"
+#include "Engine/Renderer/Frame/RenderTargetImageFile.h"
 #include "Engine/Renderer/Frame/TransientAttachmentPool.h"
 #include "Engine/Renderer/Graph/RenderGraph.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
@@ -692,9 +695,10 @@ namespace
 
     /**
      * @brief 그림자 패스가 바닥에 그림자를 드리우는지 — 그림자 맵을 비운 판(그림자 패스 깊이 쓰기를 끈 판)과 그림이 **달라야** 한다.
-     * @param shadowExtent 0 이면 주광의 기본 볼륨, 아니면 그 반경(m)의 볼륨(빛 거리는 그 두 배)
+     * @param shadowExtent       0 이면 주광의 기본 볼륨, 아니면 그 반경(m)의 볼륨(빛 거리는 그 두 배)
+     * @param shadowViewDistance 0 보다 크면 볼륨을 기본 카메라(원근)에 맞추고 그 깊이까지 @p cascadeCount 개로 나눈다(CSM)
      */
-    void expectShadowCastsOnEveryBackend( const utf8* pTestName, float32 shadowExtent )
+    void expectShadowCastsOnEveryBackend( const utf8* pTestName, float32 shadowExtent, float32 shadowViewDistance = 0.0f, uint32 cascadeCount = 1 )
     {
         sw::string pipelineText;
         SW_ASSERT_TRUE( sw::ResourceIO::readTextResource( "engine/pipeline/forwardpipeline.xml", pipelineText ) );
@@ -719,14 +723,19 @@ namespace
             sw::RHITextureMipSpan layoutEmptyShadow{};
             const utf8*           pName = device->getBackendName();
             bool                  bOk   = cube.populate();
-            if ( bOk && shadowExtent > 0.0f )
+            if ( bOk && ( shadowExtent > 0.0f || shadowViewDistance > 0.0f ) )
             {
                 sw::DirectionalLightComponent* pLight = cube._scene.findActiveDirectionalLight();
                 bOk                                   = pLight != nullptr;
-                if ( bOk )
+                if ( bOk && shadowExtent > 0.0f )
                 {
                     pLight->setShadowExtent( shadowExtent );
                     pLight->setShadowDistance( shadowExtent * 2.0f );
+                }
+                if ( bOk && shadowViewDistance > 0.0f )
+                {
+                    pLight->setShadowViewDistance( shadowViewDistance );
+                    pLight->setShadowCascadeCount( cascadeCount );
                 }
             }
             if ( bOk )
@@ -748,6 +757,135 @@ namespace
 
         if ( comparedCount == 0 )
             SW_TEST_SKIP( "No RHI backend could run the shadow pipelines" );
+    }
+
+    /**
+     * @brief 큐브 위에 점광(또는 아래를 비추는 스폿)을 두고 Present 캡처를 읽습니다. 주광은 그림자를 끈다 — 그림에 진 그림자는 그 빛의 것뿐이다.
+     * @param bSpot       true 면 스폿, false 면 점광
+     * @param bCastShadow 그 빛의 그림자를 켤지
+     */
+    bool renderLocalLightCapture( sw::IRHIDevice* pDevice, bool bSpot, bool bCastShadow, sw::vector<uint8>& outByte, sw::RHITextureMipSpan& outLayout )
+    {
+        LitCubeScene cube;
+        if ( cube.populate() == false )
+            return false;
+        sw::DirectionalLightComponent* pKeyLight = cube._scene.findActiveDirectionalLight();
+        sw::GameObject*                pObject   = cube._scene.getObjectManager()->createGameObject( sw::hashed_string( bSpot ? "SpotLight" : "PointLight" ) );
+        if ( pKeyLight == nullptr || pObject == nullptr )
+            return false;
+        pKeyLight->setCastShadow( false );
+        pKeyLight->setIntensity( 0.2f );
+        if ( bSpot )
+        {
+            sw::SpotLightComponent* pSpot = pObject->addComponent<sw::SpotLightComponent>();
+            if ( pSpot == nullptr )
+                return false;
+            pSpot->setLocalPosition( sw::float3{ 0.4f, 4.0f, 0.3f } );
+            pSpot->setRadius( 10.0f );
+            pSpot->setOuterConeAngle( 0.9f );
+            pSpot->setInnerConeAngle( 0.6f );
+            pSpot->setIntensity( 8.0f );
+            pSpot->setCastShadow( bCastShadow );
+        }
+        else
+        {
+            sw::PointLightComponent* pPoint = pObject->addComponent<sw::PointLightComponent>();
+            if ( pPoint == nullptr )
+                return false;
+            pPoint->setLocalPosition( sw::float3{ 0.4f, 3.2f, 0.3f } );
+            pPoint->setRadius( 9.0f );
+            pPoint->setIntensity( 6.0f );
+            pPoint->setCastShadow( bCastShadow );
+        }
+        cube._scene.getObjectManager()->flushSceneTransforms();
+        return renderPresentCaptureOf( pDevice, cube._scene, "engine/pipeline/forwardpipeline.xml", outByte, outLayout );
+    }
+
+    /**
+     * @brief 점광 · 스폿의 그림자가 그림을 바꾸는지 — 그 빛의 그림자를 켠 판과 끈 판이 **달라야** 한다(네 백엔드 모두).
+     * @details 아틀라스 칸에 그리는 그림자 패스(면 여섯 · 칸 하나)와 셰이더의 `swSampleLocalShadow` 가 함께 맞아야 다르다. 칸 위치가 어긋나면 그림자가 엉뚱한 데 지거나
+     *          옆 칸을 읽어 그림이 같거나 얼룩진다 — 그 판정은 ShadowSetupTest 가 행렬로 한다.
+     */
+    void expectLocalShadowOnEveryBackend( const utf8* pTestName, bool bSpot )
+    {
+        uint32                comparedCount{ 0 };
+        test::RHIBackendSweep sweep;
+        for ( test::RHITestDevice& device : sweep )
+        {
+            const utf8*           pName = device->getBackendName();
+            sw::vector<uint8>     listShadow;
+            sw::vector<uint8>     listNoShadow;
+            sw::RHITextureMipSpan layoutShadow{};
+            sw::RHITextureMipSpan layoutNoShadow{};
+            const bool            bOk = renderLocalLightCapture( device.get(), bSpot, true, listShadow, layoutShadow ) &&
+                             renderLocalLightCapture( device.get(), bSpot, false, listNoShadow, layoutNoShadow );
+            if ( bOk && layoutShadow._width == layoutNoShadow._width )
+            {
+                ++comparedCount;
+                const CaptureDifference difference = compareCaptures( listNoShadow, listShadow );
+                SW_EXPECT_TRUE_MSG( difference._notBackgroundCount > 0, ( sw::string( pName ) + ": 기준 그림이 배경뿐입니다" ).c_str() );
+                SW_EXPECT_FALSE_MSG( difference.isSameImage(),
+                                     ( sw::string( pName ) + ": " + ( bSpot ? "스폿" : "점광" ) + " 그림자를 켜도 그림이 같다 (" + difference.describe() + ")" ).c_str() );
+            }
+            else if ( bOk == false )
+                SW_LOG_WARNING( "%#: %# 에서 그리지 못했습니다.", pTestName, pName );
+        }
+        if ( comparedCount == 0 )
+            SW_TEST_SKIP( "No RHI backend could run the local shadow test" );
+    }
+
+    /**
+     * @brief 다중 뷰 무대의 붉은 큐브(주 카메라 화면 밖) 아래에 바닥을 깔고, 그 큐브만 보는 캡처 뷰를 그려 뷰 텍스처의 평균 밝기를 냅니다.
+     * @details 주광의 볼륨은 카메라에 맞춘다(`_shadowViewDistance`) — 주 시점 볼륨은 원점 둘레라 붉은 큐브를 덮지 않는다. 캡처 뷰가 자기 볼륨을 쓰면 바닥에
+     *          그림자가 지고, 주 시점 볼륨을 쓰면 지지 않는다.
+     */
+    bool renderCaptureViewMeanLuma( sw::IRHIDevice* pDevice, bool bCastShadow, float64& outMeanLuma )
+    {
+        outMeanLuma = 0.0;
+        sw::FrameRenderer        renderer;
+        MultiViewScene           stage;
+        sw::shared_ptr<sw::Mesh> floor = sw::MeshUtil::createPlane();
+        bool                     bOk   = renderer.initialize( pDevice ) && renderer.isReady() && stage.populate() && floor != nullptr;
+        sw::MeshComponent*       pFloor =
+            bOk ? stage.addCube( "Floor", floor, stage._materialBlue.get(), sw::float3{ -MultiViewScene::kCubeDistance, -1.0f, 0.0f } ) : nullptr;
+        sw::DirectionalLightComponent* pLight = stage._scene.findActiveDirectionalLight();
+        bOk                                   = bOk && pFloor != nullptr && pLight != nullptr;
+        if ( bOk )
+        {
+            pFloor->setLocalScale( sw::float3{ 12.0f, 1.0f, 12.0f } );
+            pLight->setCastShadow( bCastShadow );
+            pLight->setShadowViewDistance( 12.0f );
+            pLight->setShadowDistance( 20.0f );
+            pLight->setShadowReceiverHeightRange( -3.0f, 4.0f );
+        }
+        bOk = bOk && stage.addViewCamera( "CameraShadow", sw::float3{ -MultiViewScene::kCubeDistance, 0.0f, 0.0f },
+                                          MultiViewScene::makeTextureOutput( "rendertarget/test_shadow_view", 0.0f ), sw::CameraRole::Capture ) != nullptr;
+        for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
+        {
+            bOk = renderSceneFrame( renderer, pDevice, stage._scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+        }
+        const sw::Texture2D*  pTexture = bOk ? sw::engine::getAssetManager().getAssetCache<sw::TextureCache>().find( "rendertarget/test_shadow_view" ) : nullptr;
+        sw::vector<uint8>     bytes;
+        sw::RHITextureMipSpan layout{};
+        bOk = bOk && pTexture != nullptr && pTexture->isRHIValid() && pDevice->getResourceFactory()->readbackTexture2D( pTexture->getHandle(), 0, 0, bytes, layout );
+        if ( bOk )
+        {
+            test::RHITestImage image;
+            image.assign( std::move( bytes ), layout, pTexture->getFormat() );
+            uint64 sum = 0;
+            for ( uint32 y = 0; y < image.getHeight(); ++y )
+            {
+                for ( uint32 x = 0; x < image.getWidth(); ++x )
+                {
+                    const test::Rgba8 pixel = image.getPixel( x, y );
+                    sum += static_cast<uint64>( pixel._r ) + pixel._g + pixel._b;
+                }
+            }
+            const float64 channelCount = static_cast<float64>( image.getPixelCount() ) * 3.0;
+            outMeanLuma                = channelCount > 0.0 ? static_cast<float64>( sum ) / channelCount : 0.0;
+        }
+        renderer.shutdown();
+        return bOk;
     }
 
     /** @brief 위를 보는 면의 노멀 색(0.5 + 0.5 · +Y = 초록이 가장 밝다)인 픽셀 수입니다. RGBA8 · BGRA8 모두 G 는 둘째 칸입니다. */
@@ -4655,6 +4793,114 @@ SW_TEST_CASE( RenderPassGPUTest, ShadowPassCastsOnEveryBackend )
 SW_TEST_CASE( RenderPassGPUTest, ShadowSurvivesLargeShadowVolume )
 {
     expectShadowCastsOnEveryBackend( "ShadowSurvivesLargeShadowVolume", 180.0f );
+}
+
+/**
+ * @brief [RenderPassGPUTest] 그림자 맵(깊이 첨부)을 CPU 로 읽으면 0..1 깊이 float32 배치이고, 큐브가 쓴 깊이가 클리어 값(1)보다 작다 — 네 백엔드 모두
+ * @details `-gv_screenshotAttachment=ShadowMap` 의 길이다. 읽기가 선언 포맷(D24S8)을 그대로 넘기면 이미지 변환이 float 바이트를 색으로 푼다.
+ *          크기는 화면이 아니라 그림자 품질(`FrameRenderer::getShadowMapResolution`)이다.
+ */
+SW_TEST_CASE( RenderPassGPUTest, ShadowMapAttachmentReadsBackAsDepth )
+{
+    uint32                checkedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const utf8*  pName = device->getBackendName();
+        LitCubeScene cube;
+        if ( cube.populate() == false )
+            continue;
+        sw::FrameRenderer renderer;
+        if ( renderer.initialize( device.get(), "engine/pipeline/forwardpipeline.xml" ) == false )
+            continue;
+        bool bRendered = true;
+        for ( uint32 frameIndex = 0; frameIndex < 3 && bRendered; ++frameIndex )
+        {
+            bRendered = renderSceneFrame( renderer, device.get(), cube._scene, sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+        }
+        sw::vector<uint8>     bytes;
+        sw::RHITextureMipSpan layout{};
+        sw::RHIFormat         format = sw::RHIFormat::Unknown;
+        const bool            bRead  = bRendered && renderer.readbackTransient( "ShadowMap", bytes, layout, format );
+        if ( bRead )
+        {
+            ++checkedCount;
+            SW_EXPECT_TRUE_MSG( format == sw::kRHIDepthReadbackFormat, ( sw::string( pName ) + ": 깊이 첨부가 깊이 읽기 배치로 보고되지 않았다" ).c_str() );
+            SW_EXPECT_EQUAL( layout._width, sw::FrameRenderer::getShadowMapResolution() );
+            float32 minDepth = 1.0f;
+            for ( uint32 row = 0; row < layout._height; ++row )
+            {
+                for ( uint32 column = 0; column < layout._width; ++column )
+                {
+                    float32 depth = 1.0f;
+                    sw::Memory::copy( &depth, bytes.data() + static_cast<size_t>( row ) * layout._rowBytes + static_cast<size_t>( column ) * 4u, sizeof( depth ) );
+                    minDepth = sw::MathUtil::min( minDepth, depth );
+                }
+            }
+            SW_EXPECT_TRUE_MSG( minDepth < 0.99f, ( sw::string( pName ) + ": 그림자 맵에 쓴 깊이가 없다 (최소 " + sw::to_string( minDepth ) + ")" ).c_str() );
+            sw::vector<uint8> rgbaBytes;
+            SW_EXPECT_TRUE( sw::RenderTargetImageFile::unpackRgba8( bytes, layout, format, rgbaBytes ) );
+        }
+        else
+            SW_LOG_WARNING( "ShadowMapAttachmentReadsBackAsDepth: %# 에서 그림자 맵을 읽지 못했습니다.", pName );
+        renderer.shutdown();
+    }
+    if ( checkedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could read the shadow map" );
+}
+
+/**
+ * @brief [RenderPassGPUTest] 원근 카메라의 캐스케이드 그림자(넷)가 바닥에 그림자를 드리운다 — 네 백엔드 모두
+ * @details 캐스케이드는 아틀라스의 사분면에 하나씩 그리고(뷰포트), 셰이더가 카메라 깊이로 고른다. 칸 원점 · 배율 · 뷰포트 규약이 백엔드마다 어긋나면
+ *          그림자가 사라지거나 옆 사분면을 읽는다. 그림자 패스 깊이 쓰기를 끈 판과 **달라야** 한다.
+ */
+SW_TEST_CASE( RenderPassGPUTest, CascadedShadowCastsOnEveryBackend )
+{
+    expectShadowCastsOnEveryBackend( "CascadedShadowCastsOnEveryBackend", 0.0f, 20.0f, 4 );
+}
+
+/**
+ * @brief [RenderPassGPUTest] 점광 그림자가 그림을 바꾼다 — 아틀라스 칸 여섯(면마다 90° 원근), 네 백엔드 모두
+ */
+SW_TEST_CASE( RenderPassGPUTest, PointLightShadowCastsOnEveryBackend )
+{
+    expectLocalShadowOnEveryBackend( "PointLightShadowCastsOnEveryBackend", false );
+}
+
+/**
+ * @brief [RenderPassGPUTest] 스폿 그림자가 그림을 바꾼다 — 아틀라스 칸 하나, 네 백엔드 모두
+ */
+SW_TEST_CASE( RenderPassGPUTest, SpotLightShadowCastsOnEveryBackend )
+{
+    expectLocalShadowOnEveryBackend( "SpotLightShadowCastsOnEveryBackend", true );
+}
+
+/**
+ * @brief [RenderPassGPUTest] 추가 뷰(캡처 카메라)는 자기 카메라에 맞춘 그림자 볼륨을 쓴다 — 주 시점 볼륨 밖의 큐브도 그 뷰에서 그림자를 드리운다(네 백엔드)
+ * @details 주 카메라는 원점을, 캡처 카메라는 30 m 떨어진 붉은 큐브를 본다. 볼륨을 카메라에 맞추는 빛(`_shadowViewDistance` 12 m)이면 주 시점 볼륨은 큐브를
+ *          덮지 않는다. 캡처 뷰가 주 시점 볼륨을 쓰면 그림자를 켜도 끈 판과 같은 밝기다.
+ */
+SW_TEST_CASE( RenderPassGPUTest, ExtraViewCastsShadowsOutsideTheMainVolume )
+{
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string label = sw::string( device->getBackendName() ) + ": ";
+        float64          shadowLuma{ 0.0 };
+        float64          litLuma{ 0.0 };
+        const bool       bOk = renderCaptureViewMeanLuma( device.get(), true, shadowLuma ) && renderCaptureViewMeanLuma( device.get(), false, litLuma );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "캡처 뷰를 그리거나 읽지 못했다" ).c_str() );
+        if ( bOk == false )
+            continue;
+        ++comparedCount;
+        SW_LOG_INFO( "%#capture view mean luma: shadow %# · no shadow %#", label, shadowLuma, litLuma );
+        SW_EXPECT_TRUE_MSG( litLuma > 1.0, ( label + "캡처 뷰가 비어 있다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( shadowLuma + 0.5 < litLuma,
+                            ( label + "그림자를 켜도 캡처 뷰가 어두워지지 않는다 — 주 시점 볼륨을 쓰고 있다 (" + sw::to_string( shadowLuma ) + " vs " + sw::to_string( litLuma ) + ")" ).c_str() );
+    }
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend for the extra-view shadow test" );
 }
 
 /**

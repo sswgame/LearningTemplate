@@ -16,40 +16,44 @@ namespace sw
     {
         constexpr float4 kDefaultBloomParams{ 0.55f, 0.65f, 0.25f, 0.0f };
         constexpr float4 kDefaultOutlineColor{ 0.08f, 0.05f, 0.12f, 0.85f };
-
-        /// @brief 그림자용 라이트 카메라를 원점에서 얼마나 떨어뜨릴지입니다. 직교 깊이 범위도 이 값을 씁니다.
-        constexpr float32 kLightDistance = 2.0f;
-        /// @brief 라이트 직교 투영이 담는 가로 · 세로 범위입니다(약 2.222).
-        constexpr float32 kLightOrthoExtent = 2.0f / 0.9f;
-
     } // namespace
+
+    void FrameRenderer::applyFrameShadow()
+    {
+        // 게임 스레드가 배치를 만들지 않은 프레임(씬 없음)이거나 그림자 품질이 그 사이 바뀌었으면 아틀라스 배치를 지금 크기로 다시 세운다.
+        const uint32 atlasResolution = getShadowMapResolution();
+        if ( _frameShadow._layout.getAtlasResolution() != atlasResolution )
+            _frameShadow._layout = ShadowAtlasLayout::make( atlasResolution, _frameShadow._layout.getCascadeCount(), static_cast<uint32>( _frameShadow._listLocalTile.size() ) );
+        // 주광이 없으면 프레임 키 라이트(기본 방향)의 작은 고정 볼륨으로 폴백한다 — 라이트 컴포넌트가 없는 씬도 그림자가 진다.
+        if ( _frameShadow._mainView._bValid == SW_FALSE )
+        {
+            const float4& dirIntensity = _frameLight._dirIntensity;
+            _frameShadow._mainView     = ShadowSetupUtil::makeFallbackShadow( float3{ dirIntensity._x, dirIntensity._y, dirIntensity._z }, _frameShadow );
+        }
+        _mainView._shadow = _frameShadow._mainView;
+    }
+
+    void FrameRenderer::applyViewShadowConstants( FramePassContext& context, const ViewShadowData& shadow )
+    {
+        const PassConstantNames& names = passConstantNames();
+        context._passValues.setMatrix( names._lightViewProj, shadow._lightViewProj );
+        context._passValues.setFloat4( names._shadowParams, shadow._shadowParams );
+        context._passValues.setFloat4( names._shadowCascadeLayout, shadow._cascadeLayout );
+        for ( uint32 cascadeIndex = 0; cascadeIndex < shaderslot::kShadowCascadeMax; ++cascadeIndex )
+        {
+            context._passValues.setFloat4( names._arrShadowCascade[cascadeIndex], shadow._arrCascade[cascadeIndex] );
+        }
+    }
 
     void FrameRenderer::updatePassConstants( FramePassContext& context )
     {
         // **프레임당 한 번** 프레임 시드(_frameContext)에만 채운다. 패스 컨텍스트는 이 시드를 복사해
         // 가므로(onGraphPassExecute) 패스마다 다시 계산할 필요가 없고, 드로우마다는 더더욱 없다.
         //
-        // 뷰 · 라이트 행렬은 씬이 없으면(렌더 스레드 패킷 경로) 폴백으로 세운다. 패킷이 자기
-        // 뷰 행렬을 갖고 있으면 executePacket 이 그 위에 덮어쓴다.
-        float4x4 lightViewProj{};
-        float4   shadowParams{};
-        if ( _frameLight._bHasShadowViewProj != SW_FALSE )
-        {
-            lightViewProj = _frameLight._shadowViewProj;
-            shadowParams  = _frameLight._shadowParams;
-        }
-        else
-        {
-            computeLightViewProj( context, lightViewProj );
-            // 폴백 볼륨(한 변 kLightOrthoExtent · 깊이 같은 길이)의 크기로 바이어스를 환산한다 — 빛이 있는 경로와 같은 식이다.
-            DirectionalShadowProjection fallback{};
-            fallback._resolution     = getShadowMapResolution();
-            fallback._texelWorldSize = kLightOrthoExtent / static_cast<float32>( fallback._resolution );
-            fallback._depthRange     = kLightOrthoExtent;
-            shadowParams             = fallback.computeShaderParams();
-        }
-        context._passValues.setMatrix( passConstantNames()._lightViewProj, lightViewProj );
-        view( RenderViewType::Shadow ).setViewProjection( lightViewProj );
+        // 뷰 행렬은 씬이 없으면(렌더 스레드 패킷 경로) 폴백으로 세운다. 패킷이 자기 뷰 행렬을 갖고 있으면 executePacket 이
+        // 그 위에 덮어쓴다. 그림자는 `applyFrameShadow` 가 마련한 주 시점의 것이다(주광이 없으면 키 라이트 폴백).
+        applyViewShadowConstants( context, _mainView._shadow );
+        view( RenderViewType::Shadow ).setViewProjection( _mainView._shadow._cullViewProj );
 
         CameraComponent* pCam = ( _pScene != nullptr ) ? _pScene->getActiveGameCamera() : nullptr;
         if ( pCam != nullptr )
@@ -66,7 +70,6 @@ namespace sw
 
         context._passValues.setFloat4( passConstantNames()._keyLightDirIntensity, _frameLight._dirIntensity );
         context._passValues.setFloat4( passConstantNames()._keyLightColor, _frameLight._colorAmbient );
-        context._passValues.setFloat4( passConstantNames()._shadowParams, shadowParams );
         context._passValues.setFloat4( passConstantNames()._bloomParams, kDefaultBloomParams );
         context._passValues.setFloat4( passConstantNames()._outlineColor, kDefaultOutlineColor );
         applyViewPassConstants( context );
@@ -110,31 +113,6 @@ namespace sw
         context._passValues.setMatrix( passConstantNames()._invViewProj, viewProj.invert() );
         // 컬링은 기록 시작 전에 도는데 그때는 상수버퍼에서 도로 꺼낼 수 없다. 지금 그리는 뷰에 같은 값을 남긴다.
         activeCullInput().setViewProjection( viewProj );
-    }
-
-    void FrameRenderer::computeLightViewProj( const FramePassContext& context, float4x4& outMat ) const
-    {
-        (void)context;
-        // **이번 프레임의 라이트**를 쓴다. 주의: 여기서 따로 둔 상수를 보면 패킷이 다른 방향을
-        // 실어 줄 때 셰이딩(_frameLight 를 쓴다)과 그림자 행렬이 서로 다른 빛을 보게 된다. 기본값은
-        // FrameLightState 의 멤버 초기값 하나뿐이다(값을 두 군데 두면 언젠가 갈라진다).
-        const float4& dirIntensity = _frameLight._dirIntensity;
-        float3        lightDir     = float3{ dirIntensity._x, dirIntensity._y, dirIntensity._z }.normalize();
-        if ( lightDir.getLengthSquared() < MathUtil::kEpsilon )
-            lightDir = float3{ 0.57735f, -0.57735f, 0.57735f };
-
-        // 라이트를 원점 위(빛이 오는 쪽)에 두고 빛 방향을 따라 원점을 내려다본다. up 이 라이트와
-        // 거의 나란하면 side 축이 사라지므로 다른 축으로 갈아탄다.
-        const float3 up  = MathUtil::abs( lightDir._y ) > 0.99f ? float3::Forward : float3::Up;
-        const float3 eye = lightDir * -kLightDistance;
-
-        // 행렬은 makeLookAt · makeOrthographic 으로 만든다. view · ortho 성분을 손으로 쓰면 어떤 규약(좌수,
-        // 행벡터)인지 읽어서 알아내야 하고, CameraComponent 가 쓰는 규약과 어긋나도 드러나지 않는다.
-        // 깊이 범위는 **눈을 기준으로** 잡는다(DirectionalLightComponent::computeShadowViewProj 와 같은 규칙).
-        constexpr float32 kLightOrthoHalf = kLightOrthoExtent * 0.5f;
-        outMat                            = float4x4::makeLookAt( eye, float3::Zero, up ) *
-                 float4x4::makeOrthographic( kLightOrthoExtent, kLightOrthoExtent,
-                                             kLightDistance - kLightOrthoHalf, kLightDistance + kLightOrthoHalf );
     }
 
     void FrameRenderer::computeViewProj( float4x4& outMat ) const

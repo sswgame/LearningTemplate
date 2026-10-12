@@ -37,7 +37,15 @@ namespace sw
         , _radius{ SpotLightComponentInternal::kDefaultRadius }
         , _innerConeAngle{ SpotLightComponentInternal::kDefaultInnerCone }
         , _outerConeAngle{ SpotLightComponentInternal::kDefaultOuterCone }
+        , _bCastShadow{ SW_FALSE }
+        , _reservedSpotLight{ 0 }
     {
+    }
+
+    void SpotLightComponent::setCastShadow( bool bCastShadow )
+    {
+        _bCastShadow = bCastShadow ? SW_TRUE : SW_FALSE;
+        onPropertyChanged( hashed_string( "_bCastShadow" ) );
     }
 
     void SpotLightComponent::setRadius( float32 radius )

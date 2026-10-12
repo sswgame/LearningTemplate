@@ -376,13 +376,7 @@ namespace sw
                     beginDepthOnlyPass( context, passDepth.view(), clearVal._x, colorLoadFor( passDepth, false ) );
                     // 그림자를 끈 뷰는 지우기만 한다. 깊이 1(가장 멀다)이면 모두 빛을 받는다.
                     if ( _pActiveView->_settings._bShadows == SW_TRUE )
-                    {
-                        // 그림자는 라이트 절두체로 거른 목록을 쓴다(언리얼의 뷰별 인스턴스 컬링에 해당한다). 끝나면 지금 뷰의 슬롯으로 돌아간다.
-                        const uint32 viewCull  = context._cullViewIndex;
-                        context._cullViewIndex = static_cast<uint32>( RenderViewType::Shadow );
-                        drawSceneMeshes( context, getEnginePSO( RenderPassType::Shadow ), passCb, bTransparentBatch );
-                        context._cullViewIndex = viewCull;
-                    }
+                        drawShadowTiles( context, passCb, bTransparentBatch );
                     context._pCmd->endRenderPass();
                     break;
                 }
@@ -745,6 +739,49 @@ namespace sw
         beginInfo._width                                = depth._texture != 0 ? depth._width : activePool().getWidth();
         beginInfo._height                               = depth._texture != 0 ? depth._height : activePool().getHeight();
         context._pCmd->beginRenderPass( beginInfo );
+    }
+
+    uint32 FrameRenderer::computeShadowTileCountPerView() const
+    {
+        return _frameShadow._layout.getCascadeCount() + static_cast<uint32>( _frameShadow._listLocalTile.size() );
+    }
+
+    void FrameRenderer::drawShadowTiles( FramePassContext& context, RHIDescriptorIndex passCb, bool bTransparentBatch )
+    {
+        // 그림자는 모든 타일을 덮는 상자로 거른 목록을 쓴다(언리얼의 뷰별 인스턴스 컬링에 해당한다). 끝나면 지금 뷰의 슬롯으로 돌아간다.
+        const ViewShadowData&        shadow   = _pActiveView->_shadow;
+        const RHIPipelineStateHandle pso      = getEnginePSO( RenderPassType::Shadow );
+        const uint32                 viewCull = context._cullViewIndex;
+        context._cullViewIndex                = _pActiveView->_shadowCullSlot;
+
+        // 캐스케이드 하나가 아틀라스 전체이고 점광 · 스폿 타일이 없으면 아틀라스가 생기기 전과 같다 — 뷰포트도 행렬도 바꾸지 않는다.
+        const bool bWholeAtlas = shadow._cascadeCount <= 1 && _frameShadow._listLocalTile.empty() &&
+                                 shadow._arrCascadeTile[0]._cell._size == _frameShadow._layout.getAtlasResolution();
+        if ( bWholeAtlas )
+        {
+            drawSceneMeshes( context, pso, passCb, bTransparentBatch );
+        }
+        else
+        {
+            // 타일마다 그 칸을 뷰포트로 잡고(가위도 같이 잡힌다) 그 타일의 행렬로 씬을 그린다. 상수가 바뀌므로 드로우는 새 상수 버퍼 슬롯을 받는다.
+            const PassConstantNames& names     = passConstantNames();
+            const uint32             tileCount = shadow._cascadeCount + static_cast<uint32>( _frameShadow._listLocalTile.size() );
+            for ( uint32 tileIndex = 0; tileIndex < tileCount; ++tileIndex )
+            {
+                const ShadowTileDraw& tile = tileIndex < shadow._cascadeCount ? shadow._arrCascadeTile[tileIndex] : _frameShadow._listLocalTile[tileIndex - shadow._cascadeCount];
+                RHIViewport           viewport{};
+                viewport._x      = static_cast<float32>( tile._cell._x );
+                viewport._y      = static_cast<float32>( tile._cell._y );
+                viewport._width  = static_cast<float32>( tile._cell._size );
+                viewport._height = static_cast<float32>( tile._cell._size );
+                context._pCmd->setViewport( viewport );
+                context._passValues.setMatrix( names._lightViewProj, tile._viewProj );
+                drawSceneMeshes( context, pso, passCb, bTransparentBatch );
+            }
+            // 이 패스 컨텍스트는 패스마다 시드의 사본이지만, 기준 행렬로 되돌려 두면 뒤에 무엇이 붙어도 셰이딩과 같은 행렬을 본다.
+            context._passValues.setMatrix( names._lightViewProj, shadow._lightViewProj );
+        }
+        context._cullViewIndex = viewCull;
     }
 
     void FrameRenderer::registerPassTexture( FramePassContext& context, const hashed_string& canonicalName, string_view attachmentName )

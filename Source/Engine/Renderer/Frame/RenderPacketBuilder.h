@@ -101,5 +101,7 @@ namespace sw
         float64 _renderViewClock;
         /** @brief 애니메이션 LOD 에 넘기는 이번 프레임의 뷰(주 시점 + 그리는 추가 뷰)입니다. 프레임마다 재사용합니다. */
         vector<AnimationLODView> _listAnimationLODView;
+        /** @brief 그림자를 켠 점광 · 스폿의 라이트 원소 번호입니다(`collectSceneLights` → `ShadowSetupUtil::populateFrame`). 프레임마다 재사용합니다. */
+        vector<uint32> _listShadowLightIndex;
     };
 } // namespace sw

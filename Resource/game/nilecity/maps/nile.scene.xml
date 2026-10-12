@@ -55,6 +55,9 @@
 					                           _ambient="0.28"
 					                           _shadowExtent="60"
 					                           _shadowDistance="120"
+					                           _shadowViewDistance="1000"
+					                           _shadowReceiverMinHeight="-2"
+					                           _shadowReceiverMaxHeight="20"
 					                           _bCastShadow="true" />
 				</_listComponent>
 			</GameObject>

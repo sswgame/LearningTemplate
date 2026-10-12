@@ -21,6 +21,7 @@
 #include "Engine/Renderer/Frame/RenderViewCollector.h"
 #include "Engine/Renderer/Frame/RenderViewScheduler.h"
 #include "Engine/Renderer/Light/GPULightBuffer.h"
+#include "Engine/Renderer/Light/ShadowSetup.h"
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Text/FontService.h"
@@ -46,6 +47,7 @@ namespace sw
         , _renderViewScheduler{ nullptr }
         , _renderViewClock{ 0.0 }
         , _listAnimationLODView{}
+        , _listShadowLightIndex{}
     {
     }
 
@@ -120,8 +122,8 @@ namespace sw
         }
 
         // 씬의 **모든** 라이트다. 방향광 · 점광 · 스폿이 한 목록으로 간다. 위의 키라이트는 그림자
-        // 행렬과 앰비언트의 출처이자, 라이트 목록이 비었을 때의 폴백이다.
-        collectSceneLights( pActiveScene, packet._listLight );
+        // 행렬과 앰비언트의 출처이자, 라이트 목록이 비었을 때의 폴백이다. 그림자를 켠 점광 · 스폿은 번호를 따로 받아 아래에서 아틀라스 칸을 준다.
+        collectSceneLights( pActiveScene, packet._listLight, &_listShadowLightIndex );
 
         pActiveScene->ensureDefaultCameras();
         // 핫 리로드 · 씬 전환 · 씬 틱이 GameObject 를 파괴했을 수 있으므로 여기서 조회한다. 씬 뷰 카메라는 씬 뷰가 있을 때만 묻는다.
@@ -147,16 +149,10 @@ namespace sw
         // 보기 모드는 뷰마다다 — 씬 뷰(호스트 타깃 뷰든 주 출력이든)는 씬 뷰 툴바의 모드, 게임 화면은 주 출력 모드(-gv_viewMode, 기본 Lit).
         const RenderViewMode sceneViewMode = pFrameRenderer != nullptr ? pFrameRenderer->getSceneViewMode() : RenderViewMode::Lit;
         packet._mainView._viewMode         = bSceneMain ? sceneViewMode : ( pFrameRenderer != nullptr ? pFrameRenderer->getViewMode() : RenderViewMode::Lit );
-        // 그림자 행렬과 그 바이어스는 한 볼륨에서 같이, 카메라가 정해진 **뒤에** 만든다 — `_shadowViewDistance` 를 준 빛은 볼륨을
-        // 카메라가 보는 곳에 맞춘다. 텍셀 스냅 · 바이어스는 렌더 스레드가 만들 그림자 맵과 같은 해상도로 측정한다.
-        if ( pLight != nullptr && pShadowLight != nullptr )
-        {
-            const uint32                      shadowResolution = FrameRenderer::getShadowMapResolution();
-            const DirectionalShadowProjection shadow           = packet._bHasViewProj == SW_TRUE ? pShadowLight->computeShadowProjectionForView( packet._viewProj, shadowResolution )
-                                                                                                 : pShadowLight->computeShadowProjection( shadowResolution );
-            packet._lightViewProj                              = shadow._viewProj;
-            packet._shadowParams                               = shadow.computeShaderParams();
-        }
+        // 그림자 배치(아틀라스 칸 · 캐스케이드 · 점광 · 스폿 타일)는 카메라가 정해진 **뒤에** 만든다 — `_shadowViewDistance` 를 준 빛은 볼륨을
+        // 카메라가 보는 곳에 맞춘다. 텍셀 스냅 · 바이어스는 렌더 스레드가 그릴 캐스케이드 칸과 같은 해상도로 잰다.
+        ShadowSetupUtil::populateFrame( pLight != nullptr ? pShadowLight : nullptr, packet._bHasViewProj == SW_TRUE ? &packet._viewProj : nullptr, pLight != nullptr,
+                                        FrameRenderer::getShadowMapResolution(), _listShadowLightIndex, packet._listLight, packet._shadow );
         // 추가 뷰(캡처 카메라 · 화면 사각형) — 갱신 주기 · 보이는가 · 예산으로 이번 프레임에 그릴 것을 고른다. 쉬는 뷰도 실린다.
         _renderViewClock += static_cast<float64>( MathUtil::max( 0.0f, deltaTime ) );
         if ( _renderViewScheduler != nullptr && pActiveScene->getObjectManager() != nullptr )
@@ -169,6 +165,12 @@ namespace sw
             RenderViewCollector::removeScreenRectViews( packet._listView );
         else if ( pSceneViewCamera != nullptr && pSceneViewCamera != pCam )
             RenderViewCollector::appendHostView( *pSceneViewCamera, views._scene, sceneViewMode, packet._listView );
+        // 추가 뷰마다 자기 카메라에 맞춘 방향광 그림자 — 주 시점 볼륨을 쓰면 다른 곳을 보는 CCTV · 분할 화면은 그림자가 빠진다.
+        for ( RenderViewRequest& view : packet._listView )
+        {
+            if ( view._bRender == SW_TRUE )
+                view._shadow = ShadowSetupUtil::makeViewShadowFor( pLight != nullptr ? pShadowLight : nullptr, view._viewProj, packet._shadow );
+        }
         // 애니메이션 LOD 의 뷰 — 주 시점과 이번 프레임에 그리는 추가 뷰(CCTV · 분할 화면). 다음 프레임 평가가 이것으로 가시성 · 화면 크기를 본다.
         // 갱신 주기로 쉬는 추가 뷰는 넣지 않는다 — 그 뷰에만 보이는 캐릭터는 그 뷰가 그리는 프레임에만 포즈를 만든다.
         if ( pActiveScene->getObjectManager() != nullptr )

@@ -9,6 +9,7 @@
 #include "Engine/Renderer/Frame/PresentHookDelegate.h"
 #include "Engine/Renderer/Frame/RenderView.h"
 #include "Engine/Renderer/Light/GPULightBuffer.h"
+#include "Engine/Renderer/Light/ShadowSetup.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 
 namespace sw
@@ -20,9 +21,11 @@ namespace sw
         float4           _clearColor;
         float3           _cameraPos;
         float4x4         _viewProj;
-        float4x4         _lightViewProj;
-        /** @brief 그림자 셰이더 값(`g_ShadowParams`)입니다 — 그림자 행렬과 같은 볼륨에서 나온다(`DirectionalShadowProjection::computeShaderParams`). */
-        float4 _shadowParams;
+        /**
+         * @brief 이 프레임의 그림자 배치입니다 — 아틀라스 칸, 주 시점의 방향광 캐스케이드(`_mainView`), 점광 · 스폿 타일과 그 라이트 버퍼 원소.
+         * @details 주 시점 그림자가 비어 있으면(주광이 없다) 렌더러가 프레임 키 라이트로 폴백한다. 렌더러가 맞바꾸기로 받는다(저장소가 돈다).
+         */
+        FrameShadowData _shadow;
         /** @brief xyz = 빛이 나아가는 방향, w = 세기입니다. */
         float4 _lightDirIntensity;
         /** @brief rgb = 빛 색, a = 환경광입니다. */
@@ -60,8 +63,7 @@ namespace sw
             , _clearColor{ 0.12f, 0.15f, 0.18f, 1.0f }
             , _cameraPos{ FrameRendererUtil::kDefaultCameraPos[0], FrameRendererUtil::kDefaultCameraPos[1], FrameRendererUtil::kDefaultCameraPos[2] }
             , _viewProj{}
-            , _lightViewProj{}
-            , _shadowParams{}
+            , _shadow{}
             , _lightDirIntensity{}
             , _lightColorAmbient{}
             , _listView{}
@@ -87,11 +89,10 @@ namespace sw
          */
         void resetForFrame()
         {
-            _clearColor        = float4{ 0.12f, 0.15f, 0.18f, 1.0f };
-            _cameraPos         = float3{ FrameRendererUtil::kDefaultCameraPos[0], FrameRendererUtil::kDefaultCameraPos[1], FrameRendererUtil::kDefaultCameraPos[2] };
-            _viewProj          = float4x4{};
-            _lightViewProj     = float4x4{};
-            _shadowParams      = float4{};
+            _clearColor = float4{ 0.12f, 0.15f, 0.18f, 1.0f };
+            _cameraPos  = float3{ FrameRendererUtil::kDefaultCameraPos[0], FrameRendererUtil::kDefaultCameraPos[1], FrameRendererUtil::kDefaultCameraPos[2] };
+            _viewProj   = float4x4{};
+            _shadow.clear();
             _lightDirIntensity = float4{};
             _lightColorAmbient = float4{};
             _listLight.clear();

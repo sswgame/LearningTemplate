@@ -289,7 +289,12 @@ namespace sw
         for ( unique_ptr<ViewTarget>& pView : _listExtraView )
         {
             // 컬링하지 못한 추가 뷰는 그리지 않는다. 가시 목록을 바인딩하는 프레임에 갱신되지 않은 목록을 읽게 된다.
-            if ( pView->_bRenderThisFrame == SW_TRUE && dispatchCullView( pView->_cullSlot, pView->_cullInput, instanceCount, pView.get() ) == false )
+            // 그림자 패스도 이 뷰의 그림자 볼륨으로 따로 거른다 — 주 시점의 그림자 슬롯을 쓰면 이 뷰만 보는 곳의 가리는 물체가 빠진다.
+            if ( pView->_bRenderThisFrame == SW_FALSE )
+                continue;
+            const bool bViewCulled   = dispatchCullView( pView->_cullSlot, pView->_cullInput, instanceCount, pView.get() );
+            const bool bShadowCulled = bViewCulled && dispatchCullView( pView->_shadowCullSlot, pView->_shadowCullInput, instanceCount, nullptr );
+            if ( bShadowCulled == false )
                 pView->_bRenderThisFrame = SW_FALSE;
         }
         _bGPUCullingActive = bAllViewsCulled ? 1u : 0u;
