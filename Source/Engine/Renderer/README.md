@@ -230,6 +230,10 @@ UI와 화면 글자는 파이프라인의 마지막 `Canvas` 패스가 그립니
 - **배치마다 한 번 그립니다.** 사각형은 구조체 버퍼(t15)에 올리고, 배치마다 가위, 루트 상수(시작 위치, 텍스처 네 개, 대상 크기, 색각 보정), `drawInstanced( 6, n )` 을 기록합니다. 셰이더는 `canvas.hlsl` 입니다.
 - **톤 매핑 뒤에 그립니다.** 주 출력(백버퍼, 게임 뷰 렌더 타깃, 스크린샷 캡처)은 `resolvePresentTarget` 하나가 고르고 Present와 Canvas가 같이 씁니다.
   Canvas는 Present 뒤에 같은 출력에 Load로 그립니다. UI는 톤 매핑을 거치지 않으므로 색각 보정(`gv_colorVisionMode`)을 캔버스 셰이더가 직접 적용합니다(`g_SwCanvasColorVision`, 함수는 `colorvision.hlsli`).
+- **주 출력에 마지막으로 그리는 뷰가 UI 를 그립니다.** 화면 사각형 뷰(PiP, 분할 화면)는 주 시점 뒤에 같은 출력에 겹치므로, 화면 사각형 뷰가 있으면 그 마지막 뷰의 Canvas 패스가,
+  없으면 주 시점의 Canvas 패스가 UI 를 그립니다(`_pMainOutputCanvasView`). 언리얼이 모든 장면 뷰 뒤에 Slate 를 한 번 그리는 것과 같은 순서입니다(`RenderPassGPUTest.CanvasDrawsOverScreenRectView`).
+- **렌더 텍스처 대상은 위젯 크기를 따라갑니다.** 월드 공간 위젯이 그리기 크기를 바꾸면 `TextureCache::resizeRenderTarget` 이 같은 텍스처 객체에 새 크기의 GPU 자원을 만들고
+  리로드 세대를 올려 머티리얼이 새 인덱스를 받게 합니다(언리얼 `UTextureRenderTarget2D::ResizeTarget`). 옛 자원을 읽는 프레임을 기다리므로 크기가 바뀔 때만 일어납니다.
 
 ### 다중 뷰 — 카메라마다 출력 하나
 

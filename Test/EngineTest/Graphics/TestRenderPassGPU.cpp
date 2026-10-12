@@ -5823,6 +5823,73 @@ SW_TEST_CASE( RenderPassGPUTest, ScreenRectViewDrawsOnlyInsideItsRectangle )
 }
 
 /**
+ * @brief [RenderPassGPUTest] 주 출력의 캔버스(UI)는 화면 사각형 뷰(PiP) 위에 그려진다(4 백엔드, Present 캡처)
+ * @details 캔버스는 주 출력에 마지막으로 그리는 뷰가 그린다(언리얼은 모든 장면 뷰 뒤 Slate). 주 시점의 Canvas 패스가 그리면 뒤에 겹치는 PiP 가
+ *          UI 를 덮는다 — PiP 사각형 한가운데의 초록 사각형이 PiP 의 붉은 큐브에 가려지면 순서가 틀린 것이다.
+ */
+SW_TEST_CASE( RenderPassGPUTest, CanvasDrawsOverScreenRectView )
+{
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string       label = sw::string( device->getBackendName() ) + ": ";
+        sw::FrameRenderer      renderer;
+        MultiViewScene         stage;
+        bool                   bOk = renderer.initialize( device.get() ) && renderer.isReady() && stage.populate();
+        sw::CameraRenderOutput output;
+        output._target     = sw::CameraOutputTarget::ScreenRect;
+        output._screenRect = sw::float4{ 0.55f, 0.55f, 0.4f, 0.4f };
+        bOk                = bOk && stage.addViewCamera( "PictureInPicture", sw::float3{ -MultiViewScene::kCubeDistance, 0.0f, 0.0f }, output, sw::CameraRole::Game ) != nullptr;
+        renderer.setPresentCaptureEnabled( true );
+        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+        sw::vector<uint8>     bytes;
+        sw::RHITextureMipSpan layout{};
+        bOk = bOk && renderer.readbackPresentCapture( bytes, layout );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "첫 프레임 · 캡처" ).c_str() );
+        if ( bOk == false )
+        {
+            renderer.shutdown();
+            continue;
+        }
+        test::RHITestImage first;
+        first.assign( std::move( bytes ), layout, sw::constant::kBackBufferFormat );
+        const float32 width  = static_cast<float32>( first.getWidth() );
+        const float32 height = static_cast<float32>( first.getHeight() );
+
+        // PiP 사각형(0.55..0.95)의 가운데에 초록 사각형을 둔다.
+        sw::CanvasFrameData canvas{};
+        canvas._mainOutput._targetSize = sw::float2{ width, height };
+        {
+            sw::CanvasPainter painter( canvas._mainOutput, 1.0f );
+            sw::CanvasBrush   green{};
+            green._color = sw::float4{ 0.0f, 1.0f, 0.0f, 1.0f };
+            painter.fillRect( sw::float2{ width * 0.7f, height * 0.7f }, sw::float2{ width * 0.1f, height * 0.1f }, green );
+        }
+        renderer.setCanvasFrame( canvas );
+        for ( uint32 frameIndex = 0; frameIndex < 2 && bOk; ++frameIndex )
+        {
+            bOk = renderSceneFrame( renderer, device.get(), stage._scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+        }
+        bOk = bOk && renderer.readbackPresentCapture( bytes, layout );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "캔버스 프레임 · 캡처" ).c_str() );
+        if ( bOk )
+        {
+            test::RHITestImage image;
+            image.assign( std::move( bytes ), layout, sw::constant::kBackBufferFormat );
+            const test::Rgba8 center = image.getPixel( static_cast<uint32>( width * 0.75f ), static_cast<uint32>( height * 0.75f ) );
+            SW_LOG_INFO( "%#canvas over PiP center %#,%#,%#", label, center._r, center._g, center._b );
+            SW_EXPECT_TRUE_MSG( center._g > 200 && center._r < 60 && center._b < 60,
+                                ( label + "PiP 가 캔버스를 덮었다 — " + sw::to_string( center._r ) + "," + sw::to_string( center._g ) + "," +
+                                  sw::to_string( center._b ) )
+                                    .c_str() );
+        }
+        renderer.shutdown();
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the canvas-over-screen-rect test" );
+}
+
+/**
  * @brief [RenderPassGPUTest] 창으로 나간 그림(백버퍼)이 Present 캡처와 같다 — 4 백엔드
  * @details 스크린샷(`-gv_screenshot`)은 오프스크린 캡처를 읽으므로 캡처 → 창 블릿의 반전 · 잘림은 거기서 보이지 않는다(GL 창은 0 행이 아래).
  *          캡처를 켜고 그린 프레임의 백버퍼를 읽어 캡처와 픽셀로 견준다 — 위아래가 뒤집히면 큐브 · 바닥 자리가 갈린다.
@@ -7669,6 +7736,58 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasTargetDrawsIntoRenderTexture )
     }
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the canvas target test" );
+}
+
+/**
+ * @brief [RenderPassGPUTest] 위젯이 그리기 크기를 바꾸면 캔버스 대상 텍스처를 그 크기로 다시 만든다(`TextureCache::resizeRenderTarget`). 4 백엔드
+ * @details 64 → 128 로 키운 프레임 뒤 텍스처 폭이 128 이고, 그 안에 새 크기 기준의 빨간 사각형(64 × 64)이 있어야 한다. 변이: 다시 만들지 않으면 폭이 64 로 남는다
+ *          (언리얼 `UTextureRenderTarget2D::ResizeTarget` 과 같은 동작).
+ */
+SW_TEST_CASE( RenderPassGPUTest, CanvasTargetRecreatesTextureWhenWidgetResizes )
+{
+    constexpr const utf8* kTargetPath = "rendertarget/test_canvas_target_resize";
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string  label = sw::string( device->getBackendName() ) + ": ";
+        sw::FrameRenderer renderer;
+        LitCubeScene      stage;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady() && stage.populate();
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "무대 준비" ).c_str() );
+        const auto makeFrame = []( float32 size, uint64 revision )
+        {
+            sw::CanvasFrameData       frame{};
+            sw::CanvasTargetDrawList& target = frame._listTarget.emplace_back();
+            target._targetPath               = sw::hashed_string( kTargetPath );
+            target._list._targetSize         = sw::float2{ size, size };
+            target._contentRevision          = revision;
+            sw::CanvasPainter painter( target._list, 1.0f );
+            sw::CanvasBrush   brush{};
+            brush._color = sw::float4{ 1.0f, 0.0f, 0.0f, 1.0f };
+            painter.fillRect( sw::float2{ size * 0.25f, size * 0.25f }, sw::float2{ size * 0.5f, size * 0.5f }, brush );
+            return frame;
+        };
+        const sw::float4    clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+        sw::CanvasFrameData smallFrame = makeFrame( 64.0f, 1 );
+        renderer.setCanvasFrame( smallFrame );
+        bOk          = bOk && renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        int64  diff  = 0;
+        uint32 drawn = 0;
+        uint32 width = 0;
+        SW_EXPECT_TRUE_MSG( bOk && MultiViewScene::readTextureRedMinusBlue( device.get(), kTargetPath, diff, drawn, width ), ( label + "첫 읽기" ).c_str() );
+        SW_EXPECT_EQUAL( 64u, width );
+
+        sw::CanvasFrameData largeFrame = makeFrame( 128.0f, 2 );
+        renderer.setCanvasFrame( largeFrame );
+        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        SW_EXPECT_EQUAL( 1u, renderer.getLastDrawnCanvasTargetCount() );
+        SW_EXPECT_TRUE_MSG( bOk && MultiViewScene::readTextureRedMinusBlue( device.get(), kTargetPath, diff, drawn, width ), ( label + "두 번째 읽기" ).c_str() );
+        SW_EXPECT_EQUAL( 128u, width );
+        SW_EXPECT_TRUE_MSG( drawn >= 64u * 64u - 128u && drawn <= 64u * 64u + 128u, ( label + "새 크기의 빨간 사각형 넓이가 아니다 (" + sw::to_string( drawn ) + ")" ).c_str() );
+        renderer.shutdown();
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the canvas target resize test" );
 }
 
 /**

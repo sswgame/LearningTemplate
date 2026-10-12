@@ -632,10 +632,11 @@ namespace sw
                 }
                 case RenderPassType::Canvas:
                 {
-                    // 화면 2D 를 주 시점 출력(Present 가 그린 것)에 기존 내용을 유지한 채(Load) 그린다. 추가 뷰(렌더 텍스처, 화면 사각형)에는 그리지 않는다.
-                    // UI 는 주 시점에만 있다. 그릴 것이 없으면 렌더 패스를 열지 않는다. 대상 전체가 뷰포트다(화면 사각형 설정과 무관).
+                    // 화면 2D 를 주 출력(Present 가 그린 것)에 기존 내용을 유지한 채(Load) 그린다. 주 출력에 **마지막으로 그리는 뷰**만 그린다
+                    // (`_pMainOutputCanvasView` — 화면 사각형 뷰가 있으면 그 마지막 것, 없으면 주 시점). 그래야 PiP · 분할 화면이 UI 를 덮지 않는다.
+                    // 렌더 텍스처 · 호스트 타깃 뷰에는 그리지 않는다. 그릴 것이 없으면 렌더 패스를 열지 않는다. 대상 전체가 뷰포트다(화면 사각형 설정과 무관).
                     const PresentTarget target = resolvePresentTarget();
-                    const bool          bDraw  = isRenderingExtraView() == false && _canvasFrame._mainOutput.isEmpty() == false && target._width > 0 &&
+                    const bool          bDraw  = _pActiveView == _pMainOutputCanvasView && _canvasFrame._mainOutput.isEmpty() == false && target._width > 0 &&
                                        target._height > 0;
                     const RHIPipelineStateHandle psoCanvas = bDraw ? findOutputPSO( RenderPassType::Canvas, target._format ) : RHIPipelineStateHandle{ 0 };
                     if ( psoCanvas != 0 )

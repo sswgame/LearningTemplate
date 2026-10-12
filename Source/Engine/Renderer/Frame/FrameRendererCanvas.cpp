@@ -36,12 +36,21 @@ namespace sw
                 pState->_path = target._targetPath;
             }
             pState->_bSeen = SW_TRUE;
-            if ( pState->_pTexture != nullptr || bServices == false || _pDevice == nullptr )
+            if ( bServices == false || _pDevice == nullptr )
                 continue;
-            // 머티리얼과 같은 경로로 캐시에서 빌린다 — 크기는 처음 만들 때 정해진다(위젯의 그리기 크기).
+            const uint32  width    = static_cast<uint32>( target._list._targetSize._x );
+            const uint32  height   = static_cast<uint32>( target._list._targetSize._y );
             TextureCache& textures = engine::getAssetManager().getAssetCache<TextureCache>();
-            textures.declareRenderTarget( target._targetPath.view(), static_cast<uint32>( target._list._targetSize._x ),
-                                          static_cast<uint32>( target._list._targetSize._y ) );
+            if ( pState->_pTexture != nullptr )
+            {
+                // 위젯이 그리기 크기를 바꿨으면 텍스처를 그 크기로 다시 만든다(같은 객체, 새 GPU 자원). 다시 만든 텍스처는 비어 있으므로 다시 그린다.
+                const bool bResized = width > 0 && height > 0 && ( pState->_pTexture->getWidth() != width || pState->_pTexture->getHeight() != height );
+                if ( bResized && textures.resizeRenderTarget( target._targetPath.view(), width, height, _pDevice ) )
+                    pState->_drawnRevision = 0;
+                continue;
+            }
+            // 머티리얼과 같은 경로로 캐시에서 빌린다 — 처음 만드는 크기는 위젯의 그리기 크기다.
+            textures.declareRenderTarget( target._targetPath.view(), width, height );
             pState->_pTexture      = textures.acquire( target._targetPath.view(), _pDevice );
             pState->_drawnRevision = 0;
         }

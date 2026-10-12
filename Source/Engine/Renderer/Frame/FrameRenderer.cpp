@@ -96,6 +96,7 @@ namespace sw
         , _listCanvasTarget{}
         , _lastDrawnCanvasTargetCount{ 0 }
         , _pLastSwapchainWriter{ nullptr }
+        , _pMainOutputCanvasView{ nullptr }
         , _statusMessage{}
         , _graphContext{}
         , _frameLight{}
@@ -412,6 +413,14 @@ namespace sw
         // 주 시점의 시드와 클리어 기록으로 돌아온다(추가 뷰가 자기 값을 덮어썼다).
         _frameContext = _mainSeedScratch;
         _bHasExecutedDepthPrepass.store( 0 );
+
+        // 주 출력의 캔버스는 주 출력에 마지막으로 그리는 뷰가 그린다. 화면 사각형 뷰는 주 시점 뒤에 겹치므로, 주 시점이 그리면 그 뷰가 UI 를 덮는다.
+        _pMainOutputCanvasView = &_mainView;
+        for ( const unique_ptr<ViewTarget>& pView : _listExtraView )
+        {
+            if ( pView->_bRenderThisFrame == SW_TRUE && pView->_outputKind == RenderViewOutputKind::ScreenRect )
+                _pMainOutputCanvasView = pView.get();
+        }
 
         // 병렬 기록이 가능하면(백엔드 capability, TaskManager, 레벨이 나올 만큼 컴파일된 그래프) 레벨마다 여러 리스트로 기록한다.
         // 첫 프레임처럼 그래프가 아직 컴파일되지 않았으면(getExecutionOrder() 가 비어 있으면) 직렬 경로로 간다.

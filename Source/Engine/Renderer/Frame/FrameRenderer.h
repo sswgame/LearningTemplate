@@ -852,7 +852,13 @@ namespace sw
         vector<CanvasTargetState> _listCanvasTarget;
         uint32                    _lastDrawnCanvasTargetCount;
         /// @brief Swapchain 을 쓰는 마지막 패스입니다. 선언 순서 기준이며, 그래프가 같은 출력에 대한 쓰기를 선언 순서로 연결합니다. 콜백을 바인딩할 때 정합니다.
-        const RenderGraphPassDesc*  _pLastSwapchainWriter;
+        const RenderGraphPassDesc* _pLastSwapchainWriter;
+        /**
+         * @brief 이번 프레임에 주 출력의 캔버스(화면 2D)를 그리는 뷰입니다. 주 출력에 마지막으로 그리는 뷰(마지막 화면 사각형 뷰, 없으면 주 시점)입니다.
+         * @details 화면 사각형 뷰(PiP · 분할 화면)는 주 시점 뒤에 같은 출력에 겹쳐 그리므로, 주 시점의 Canvas 패스가 UI 를 그리면 그 뷰가 UI 를 덮는다.
+         *          언리얼이 모든 장면 뷰 뒤에 Slate 를 한 번 그리는 것과 같은 순서로, 마지막 뷰의 Canvas 패스만 UI 를 그린다. `submitGraph` 가 기록 전에 정한다.
+         */
+        const ViewTarget*           _pMainOutputCanvasView;
         string                      _statusMessage;
         RenderGraphExecutionContext _graphContext;
 
