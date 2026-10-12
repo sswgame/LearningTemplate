@@ -11,12 +11,13 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Serialization/XML/XMLDocument.h"
-
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
+    // XML 구현 헤더를 끌어오지 않는다. 노드를 직접 읽는 .cpp 가 Engine/Serialization/XML/XMLDocument.h 를 스스로 include 한다.
+    class XMLDocument;
+    class XMLNode;
 
     /**
      * @struct GameDataXML
@@ -42,19 +43,16 @@ namespace sw
         template <typename TLoader, typename TResult>
         [[nodiscard]] static bool loadFile( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XMLNode&, string_view ), string_view path, const utf8* pRootName )
         {
-            XMLDocument doc;
-            XMLNode     root;
-            string      sourceName;
-            return loadRoot( doc, path, pRootName, root, sourceName ) && isLoaded( ( loader.*pLoadRoot )( root, sourceName ) );
+            RootCall<TLoader, TResult> call{ loader, pLoadRoot };
+            return loadFileWith( &call, &RootCall<TLoader, TResult>::invoke, path, pRootName );
         }
         /** @brief `loadFile` 의 XML 문자열 버전입니다. 테스트와 에디터 미리보기(`loadFromXMLText`)가 씁니다. */
         template <typename TLoader, typename TResult>
         [[nodiscard]] static bool loadText( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XMLNode&, string_view ), string_view xmlText, string_view sourceName,
                                             const utf8* pRootName )
         {
-            XMLDocument doc;
-            XMLNode     root;
-            return parseRoot( doc, xmlText, sourceName, pRootName, root ) && isLoaded( ( loader.*pLoadRoot )( root, sourceName ) );
+            RootCall<TLoader, TResult> call{ loader, pLoadRoot };
+            return loadTextWith( &call, &RootCall<TLoader, TResult>::invoke, xmlText, sourceName, pRootName );
         }
 
         /** @brief `loadFile` 에 다른 카탈로그(기술, 코스터 설계)를 함께 넘기는 버전입니다. 루트 읽기가 `( root, context, sourceName )` 를 받습니다. */
@@ -62,20 +60,24 @@ namespace sw
         [[nodiscard]] static bool loadFile( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XMLNode&, const TContext&, string_view ), const TContext& context,
                                             string_view path, const utf8* pRootName )
         {
-            XMLDocument doc;
-            XMLNode     root;
-            string      sourceName;
-            return loadRoot( doc, path, pRootName, root, sourceName ) && isLoaded( ( loader.*pLoadRoot )( root, context, sourceName ) );
+            RootCallWithContext<TLoader, TResult, TContext> call{ loader, pLoadRoot, context };
+            return loadFileWith( &call, &RootCallWithContext<TLoader, TResult, TContext>::invoke, path, pRootName );
         }
         /** @brief `loadText` 에 다른 카탈로그를 함께 넘기는 버전입니다. */
         template <typename TLoader, typename TResult, typename TContext>
         [[nodiscard]] static bool loadText( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XMLNode&, const TContext&, string_view ), const TContext& context,
                                             string_view xmlText, string_view sourceName, const utf8* pRootName )
         {
-            XMLDocument doc;
-            XMLNode     root;
-            return parseRoot( doc, xmlText, sourceName, pRootName, root ) && isLoaded( ( loader.*pLoadRoot )( root, context, sourceName ) );
+            RootCallWithContext<TLoader, TResult, TContext> call{ loader, pLoadRoot, context };
+            return loadTextWith( &call, &RootCallWithContext<TLoader, TResult, TContext>::invoke, xmlText, sourceName, pRootName );
         }
+
+        /** @brief 루트 읽기를 부르는 함수 포인터입니다. @p pCall 은 호출부 스택의 호출 정보이고, 할당하지 않습니다. */
+        using ReadRootFunction = bool ( * )( void* pCall, const XMLNode& root, string_view sourceName );
+        /** @brief 문서를 .cpp 안에서 열고 루트를 @p pReadRoot 에 넘깁니다. `loadFile` 템플릿의 몸통이라 헤더가 XML 구현 타입을 몰라도 된다. */
+        [[nodiscard]] static bool loadFileWith( void* pCall, ReadRootFunction pReadRoot, string_view path, const utf8* pRootName );
+        /** @brief `loadFileWith` 의 XML 문자열 버전입니다. */
+        [[nodiscard]] static bool loadTextWith( void* pCall, ReadRootFunction pReadRoot, string_view xmlText, string_view sourceName, const utf8* pRootName );
 
         /** @brief `id` 속성을 반환합니다. 없거나 비면 "<원소> without an id - skipped" 를 경고하고 nullptr 를 반환합니다. */
         static const utf8* findRequiredID( const XMLNode& node, string_view sourceName );
@@ -166,5 +168,32 @@ namespace sw
         [[nodiscard]] static bool parseNumber( string_view token, int32& outValue );
         /** @brief `forEachNamedNumber` 의 실수 값 읽기입니다. 실패하면 false 입니다. */
         [[nodiscard]] static bool parseNumber( string_view token, float32& outValue );
+
+    private:
+        template <typename TLoader, typename TResult>
+        struct RootCall
+        {
+            TLoader& loader;
+            TResult ( TLoader::*pLoadRoot )( const XMLNode&, string_view );
+
+            static bool invoke( void* pCall, const XMLNode& root, string_view sourceName )
+            {
+                RootCall& call = *static_cast<RootCall*>( pCall );
+                return isLoaded( ( call.loader.*call.pLoadRoot )( root, sourceName ) );
+            }
+        };
+        template <typename TLoader, typename TResult, typename TContext>
+        struct RootCallWithContext
+        {
+            TLoader& loader;
+            TResult ( TLoader::*pLoadRoot )( const XMLNode&, const TContext&, string_view );
+            const TContext& context;
+
+            static bool invoke( void* pCall, const XMLNode& root, string_view sourceName )
+            {
+                RootCallWithContext& call = *static_cast<RootCallWithContext*>( pCall );
+                return isLoaded( ( call.loader.*call.pLoadRoot )( root, call.context, sourceName ) );
+            }
+        };
     };
 } // namespace sw
