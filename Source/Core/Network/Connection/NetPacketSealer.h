@@ -47,7 +47,7 @@ namespace sw
      * @class NetPacketSealer
      * @brief 암호화 방식의 패킷 본문을 봉인하고 엽니다. 연 평문은 다음 `open` 까지 `getOpened` 에 남습니다.
      */
-    class NetPacketSealer
+    class SW_API NetPacketSealer
     {
     public:
         static constexpr int32 kSecureHeadSize    = 1 + 4 + 8;                                                                     ///< 종류 1바이트, 연결 값 4바이트, 패킷 번호 8바이트.

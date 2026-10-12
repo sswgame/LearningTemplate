@@ -8,6 +8,7 @@
  *          **스레드**: 잠금이 없다. `NetHost` 의 값 멤버로 그 잠금 안에서만 쓴다.
  */
 #pragma once
+#include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
 namespace sw
@@ -18,7 +19,7 @@ namespace sw
      * @class NetChallenge
      * @brief 챌린지 값의 비밀 키와 솔트 수열을 쥡니다. 서버는 챌린지 값을, 클라이언트는 자기 솔트를 여기서 받습니다.
      */
-    class NetChallenge
+    class SW_API NetChallenge
     {
     public:
         static constexpr float64 kWindowSeconds = 5.0; ///< 챌린지 값의 시간 윈도우. 값을 만든 윈도우와 그다음 윈도우 동안 유효하다.

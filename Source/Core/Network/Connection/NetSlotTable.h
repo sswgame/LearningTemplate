@@ -45,7 +45,7 @@ namespace sw
      * @class NetSlotTable
      * @brief 연결 슬롯과 주소 맵을 함께 쥡니다. 슬롯을 비우거나 다시 채우는 일은 맵과 짝을 맞춰 여기서만 합니다.
      */
-    class NetSlotTable
+    class SW_API NetSlotTable
     {
     public:
         NetSlotTable();
