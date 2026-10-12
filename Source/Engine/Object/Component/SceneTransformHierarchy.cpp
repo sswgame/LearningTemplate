@@ -14,6 +14,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
+#include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw
 {
@@ -395,6 +396,8 @@ namespace sw
         }
         if ( totalCount == 0 )
             return 0;
+        // 자기 오브젝트에 쓴 틱 쓰기(대기 칸) 수다. 아래 `queuedWrites` 와 합하면 틱 중 세터가 남긴 일의 전부다.
+        SW_PROFILE_COUNT( "GT.Scene.tick.pendingSlots", totalCount );
 
         // 스레드 슬롯 하나가 잡 하나다. 칸 하나는 처음 대기에 든 스레드의 목록에만 있으므로 워커끼리 같은 칸을 만지지 않는다.
         struct PendingSlotJob
@@ -465,6 +468,7 @@ namespace sw
         const uint32 totalCount = static_cast<uint32>( _listOrderedWrite.size() );
         if ( totalCount == 0 )
             return 0;
+        SW_PROFILE_COUNT( "GT.Scene.tick.queuedWrites", totalCount );
 
         // **대상 단위로 정렬한다.** 같은 대상의 건이 연속하고, 그 안은 (쓴 오브젝트, 순번) 순이다 — 이기는 값이 스레드 배정과 무관하다.
         // 다른 오브젝트에 쓰는 건만 여기 오므로(자기 오브젝트는 대기 칸) 수가 작다.
@@ -514,7 +518,13 @@ namespace sw
     {
         // 워커가 올리는 더티 루트(계층이 있는 칸)는 슬롯별 스크래치로 간다. 앞에서 슬롯 수만큼 잡아 두고, 끝나면 본 목록으로 합친다.
         mergeQueuedDirtyRoots();
-        const uint32 changedCount = applyPendingSlots( registry ) + applyQueuedWriteSlots( manager );
+        uint32 changedCount = 0;
+        {
+            // 대기 칸 적용만 따로 잰다 — 나머지(`queuedTransforms` − 이것)가 다른 오브젝트에 쓴 건의 정렬 · 적용이다.
+            SW_PROFILE_SCOPE( "GT.Scene.tick.pendingSlotApply" );
+            changedCount += applyPendingSlots( registry );
+        }
+        changedCount += applyQueuedWriteSlots( manager );
         mergeQueuedDirtyRoots();
         clearQueuedWrites();
         if ( changedCount > 0 )

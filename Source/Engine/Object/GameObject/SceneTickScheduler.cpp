@@ -75,6 +75,8 @@ namespace sw
 
                 void tickRange( uint32 start, uint32 end )
                 {
+                    // 청크 하나의 CPU 시간이다. 모든 스레드의 합이라 `GT.Scene.tick.components`(벽시계)와 견주면 병렬 효율이 보인다.
+                    SW_PROFILE_SCOPE( "GT.Scene.tick.objectRange" );
                     TickThreadState& threadState = StructuralChangeBuffer::getThreadState();
                     for ( uint32 index = start; index < end; ++index )
                     {
@@ -173,6 +175,7 @@ namespace sw
             const vector<TickObjectEntry>& listEntry = _tickRegistry.getEntries( group );
             if ( listEntry.empty() == false )
             {
+                SW_PROFILE_COUNT( "GT.Scene.tick.objectEntries", listEntry.size() );
                 SceneTickSchedulerInternal::ObjectGroupTick job{};
                 job._pEntry    = listEntry.data();
                 job._deltaTime = deltaTime;
