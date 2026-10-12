@@ -27,6 +27,7 @@
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
+#include "Engine/Graphics/RHI/IRHIContextThreadBinding.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHI.h"
@@ -6264,18 +6265,19 @@ SW_TEST_CASE( RenderPassGPUTest, GlContextBindWaitsForAShortHolder )
     test::RHITestDevice device( sw::RHIBackend::OpenGL );
     if ( device.isReady() == false )
         SW_TEST_SKIP( "OpenGL is not available" );
-    sw::IRHIDevice* pDevice = device.get();
-    pDevice->unbindGraphicsContext(); // 테스트 스레드가 쥐고 있던 것을 놓는다
+    sw::IRHIContextThreadBinding* pBinding = device->findContextThreadBinding();
+    SW_ASSERT_NOT_NULL( pBinding );
+    pBinding->unbindGraphicsContext(); // 테스트 스레드가 쥐고 있던 것을 놓는다
 
     std::atomic<bool>  bHeld{ false };
     std::atomic<bool>  bHolderDone{ false };
-    std::thread        holder( [pDevice, &bHeld, &bHolderDone]()
+    std::thread        holder( [pBinding, &bHeld, &bHolderDone]()
     {
-        if ( pDevice->bindGraphicsContext() )
+        if ( pBinding->bindGraphicsContext() )
         {
             bHeld.store( true );
             std::this_thread::sleep_for( std::chrono::milliseconds( 30 ) );
-            pDevice->unbindGraphicsContext();
+            pBinding->unbindGraphicsContext();
         }
         bHolderDone.store( true );
     } );
@@ -6285,12 +6287,12 @@ SW_TEST_CASE( RenderPassGPUTest, GlContextBindWaitsForAShortHolder )
         std::this_thread::yield();
     }
     const bool bHolderTookIt = bHeld.load();
-    const bool bBound        = pDevice->bindGraphicsContext(); // 30 ms 안에 놓이므로 기다리면 된다
+    const bool bBound        = pBinding->bindGraphicsContext(); // 30 ms 안에 놓이므로 기다리면 된다
     holder.join();
     SW_EXPECT_TRUE_MSG( bHolderTookIt, "the holder thread could not take the GL context" );
     SW_EXPECT_TRUE_MSG( bBound, "bindGraphicsContext gave up while another thread held the context for 30 ms" );
     if ( bBound == false )
-        (void)pDevice->bindGraphicsContext(); // 디바이스를 내리는 쪽(이 스레드)이 컨텍스트를 쥐어야 한다
+        (void)pBinding->bindGraphicsContext(); // 디바이스를 내리는 쪽(이 스레드)이 컨텍스트를 쥐어야 한다
 }
 
 /**

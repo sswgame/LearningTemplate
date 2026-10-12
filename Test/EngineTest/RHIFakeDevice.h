@@ -84,19 +84,24 @@ namespace test
     class FakeRHIDevice final : public sw::IRHIDevice
     {
     public:
-        bool                    initializeInternal( const sw::RHISwapChainDesc& ) override { return true; }
-        void                    shutdownInternal() override { _listShutdownStep.push_back( "shutdownInternal" ); }
-        void                    waitIdleInternal() override { _listShutdownStep.push_back( "waitIdleInternal" ); }
-        void                    detachCommandRecordingInternal() override { _listShutdownStep.push_back( "detachCommandRecordingInternal" ); }
-        void                    resizeInternal( uint32, uint32 ) override {}
-        void                    beginFrame( const sw::float4& ) override {}
-        void                    endFrame( bool, bool ) override {}
-        sw::IRHICommandContext* getFrameStreamContext() override { return nullptr; }
-        sw::RHIBackend          getBackendType() const override { return sw::RHIBackend::DirectX12; }
-        const utf8*             getBackendName() const override { return "Fake"; }
-        void*                   getNativeDevice() const override { return _pNativeDevice; }
-        void*                   getNativeContext() const override { return nullptr; }
-        void*                   getNativeCommandQueue() const override { return nullptr; }
+        bool                     initializeInternal( const sw::RHISwapChainDesc& ) override { return true; }
+        void                     shutdownInternal() override { _listShutdownStep.push_back( "shutdownInternal" ); }
+        void                     waitIdleInternal() override { _listShutdownStep.push_back( "waitIdleInternal" ); }
+        void                     detachCommandRecordingInternal() override { _listShutdownStep.push_back( "detachCommandRecordingInternal" ); }
+        void                     resizeInternal( uint32, uint32 ) override {}
+        void                     beginFrame( const sw::float4& ) override {}
+        void                     endFrame( bool, bool ) override {}
+        sw::IRHICommandContext*  getFrameStreamContext() override { return nullptr; }
+        sw::RHIBackend           getBackendType() const override { return sw::RHIBackend::DirectX12; }
+        const utf8*              getBackendName() const override { return "Fake"; }
+        void*                    getNativeDevice() const override { return _pNativeDevice; }
+        void*                    getNativeContext() const override { return nullptr; }
+        void*                    getNativeCommandQueue() const override { return nullptr; }
+        void*                    getNativeTexturePointer( sw::RHITextureHandle ) const override { return nullptr; }
+        sw::IRHIResourceFactory* getResourceFactory() override { return nullptr; }
+        bool                     supportsInstancedSceneDraw() const override { return false; }
+        /** @brief 드라이버가 없으니 모든 항목이 "모름" 입니다. */
+        [[nodiscard]] bool queryGPUMemoryBudgetInternal( sw::RHIMemoryBudget& ) override { return false; }
 
         sw::RHICapabilities getCapabilities() const override
         {

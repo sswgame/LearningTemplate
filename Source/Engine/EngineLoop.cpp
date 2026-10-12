@@ -37,6 +37,7 @@
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
+#include "Engine/Graphics/RHI/IRHIContextThreadBinding.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
@@ -1100,9 +1101,9 @@ namespace sw
         // 렌더 스레드가 받은 일을 모두 끝내게 하고, 컨텍스트가 스레드에 묶이는 백엔드(GL · DX11)는 이 스레드가 잡는다.
         if ( _renderThread != nullptr )
             _renderThread->waitIdle();
-        IRHIDevice& device     = _rhi->getDevice();
-        const bool  bExclusive = device.requiresExclusiveContextThread();
-        if ( bExclusive && device.bindGraphicsContext() == false )
+        IRHIDevice&               device          = _rhi->getDevice();
+        IRHIContextThreadBinding* pContextBinding = device.findContextThreadBinding();
+        if ( pContextBinding != nullptr && pContextBinding->bindGraphicsContext() == false )
         {
             SW_LOG_ERROR( "Portrait: could not bind the graphics context" );
             return false;
@@ -1138,8 +1139,8 @@ namespace sw
             SW_LOG_INFO( "Portrait '%#' -> %#.dds / .png (%#x%#)", string( path ).c_str(), base.c_str(), request._width, request._height );
         }
         portrait.shutdown();
-        if ( bExclusive )
-            device.unbindGraphicsContext();
+        if ( pContextBinding != nullptr )
+            pContextBinding->unbindGraphicsContext();
         return bAllSucceeded;
     }
 

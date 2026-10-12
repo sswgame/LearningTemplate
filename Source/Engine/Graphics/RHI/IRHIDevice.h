@@ -17,12 +17,13 @@ namespace sw
 
     struct RHIDeferredHandleQueue;
     struct RHIMemoryBudget;
-    struct RHITimestampFrame;
 
     class IRenderSurface;
     class IRHICommandContext;
     class IRHICommandList;
+    class IRHIContextThreadBinding;
     class IRHIResourceFactory;
+    class IRHITimestampProvider;
     class RHIMemoryLedger;
 
     /** @brief `IRHIDevice::releaseHandle` 이 해제하는 핸들의 종류입니다. 종류마다 해제에 쓰는 팩터리 함수가 다릅니다. */
@@ -201,49 +202,11 @@ namespace sw
         virtual void endFrame( bool vsync = true, bool bPresent = true ) = 0;
 
         /**
-         * @brief 타임스탬프 계측을 켜고 끕니다. **끄면 백엔드는 아무 자원도 만들지 않고 아무것도 읽지 않습니다.**
-         * @details 계측에는 비용이 든다. 쿼리 힙과 풀이 필요하고, 프레임마다 리셋, resolve, 읽기가 따라붙는다.
-         *          그래서 "측정할 사람이 있을 때만" 켠다. **정책은 엔진이 정하고 여기서는 메커니즘만 제공한다.**
-         *          백엔드는 별도 모듈이라 엔진 전역(프로파일러)을 볼 수 없다.
-         *          켠 다음 프레임부터 슬롯이 열린다(자원은 그때 만든다).
+         * @brief GPU 타임스탬프 계측 능력입니다. 이 능력이 없는 디바이스(테스트 목)는 nullptr 입니다.
+         * @details 선택 능력이라 `IRHIDevice` 에 빈 기본 구현으로 두지 않고 따로 뽑았다(`IRHITimestampProvider`). 가상 호출이 아니라 멤버 하나를
+         *          읽으므로 패스마다 물어도 된다. 백엔드를 바꾸면 디바이스가 바뀌므로 포인터를 디바이스 밖에 오래 들고 있지 않는다.
          */
-        virtual void setTimestampEnabled( bool bEnabled ) { (void)bEnabled; }
-
-        /**
-         * @brief 이번 프레임에 쓸 수 있는 타임스탬프 슬롯 수입니다. 0 이면 이 백엔드나 드라이버가 지원하지 않습니다.
-         * @details 슬롯은 프레임마다 0 부터 다시 쓴다. 기록은 `IRHICommandList::writeTimestamp` 가 한다.
-         */
-        virtual uint32 getTimestampSlotCount() const { return 0; }
-
-        /**
-         * @brief **이미 끝난 프레임**의 타임스탬프를 읽습니다. 슬롯마다 기준점 이후의 마이크로초와 기준점의 GPU 시계(나노초)가 들어 있습니다.
-         * @return 읽을 값이 있으면 true 입니다. GPU 가 아직 끝내지 않았으면 false 이며, 다음 프레임에 다시 물으면 됩니다.
-         * @details 결과는 몇 프레임 늦는다. **기다리지 않는다.** 기다리면 측정하려던 그 파이프라인을
-         *          멈춰 세워 측정값이 거짓이 된다.
-         *          이번 프레임에 기록하지 않은 슬롯은 **음수**로 돌아온다. 백엔드마다 기록하지 않은 슬롯에 남는
-         *          값이 다르기 때문이다(DX12 와 DX11 은 지난 사이클 값, Vulkan 과 GL 은 미가용).
-         *          호출하는 쪽은 음수가 하나라도 섞인 구간을 통째로 버려야 한다.
-         *          같은 값이 엔진 테이블(`GPU.<패스>`)과 외부 프로파일러(Tracy GPU 타임라인)로 간다. 쿼리는 한 벌이다.
-         */
-        [[nodiscard]] virtual bool readTimestamps( RHITimestampFrame& outFrame );
-
-        /**
-         * @brief GPU 시계의 **현재** 값을 타임스탬프와 같은 영역의 나노초로 읽습니다. 외부 프로파일러가 GPU 시각을 CPU 시계에 맞출 때 씁니다.
-         * @return 읽지 못하면 false 입니다(타임스탬프를 지원하지 않는 디바이스).
-         * @details 값은 이 함수가 돌아오는 순간의 GPU 시계다. 백엔드마다 비용이 다르다(`isGPUClockReadCheap` 참고).
-         *          렌더 스레드(GL 은 컨텍스트를 가진 스레드)에서 부른다.
-         */
-        [[nodiscard]] virtual bool readGPUClockNanos( int64& outGPUNanos )
-        {
-            outGPUNanos = 0;
-            return false;
-        }
-        /**
-         * @brief `readGPUClockNanos` 가 기다리지 않으면 true 입니다(DX12 `GetClockCalibration`, GL `GL_TIMESTAMP`).
-         * @details false 인 백엔드(DX11, Vulkan)는 타임스탬프를 하나 내고 GPU 가 그것을 지날 때까지 기다린다. 그래서 컨텍스트를 열 때 한 번만 부르고
-         *          주기적으로 다시 맞추지 않는다.
-         */
-        virtual bool isGPUClockReadCheap() const { return false; }
+        IRHITimestampProvider* findTimestampProvider() const { return _pTimestampProvider; }
         /**
          * @brief 백버퍼 크기를 바꿉니다. 채택된 크기는 `getBackBufferWidth/Height` 가 알려 줍니다.
          * @details 크기를 여기에 기록하는 이유는 렌더러가 첨부 크기를 정할 때 **창이 아니라 디바이스에 묻게**
@@ -254,8 +217,9 @@ namespace sw
         /** @brief 백버퍼 너비입니다. initialize 때는 표면 크기이고, 그 뒤에는 마지막 `resize` 값입니다. */
         uint32 getBackBufferWidth() const { return _backBufferWidth; }
         /** @brief 백버퍼 높이입니다. initialize 때는 표면 크기이고, 그 뒤에는 마지막 `resize` 값입니다. */
-        uint32                       getBackBufferHeight() const { return _backBufferHeight; }
-        virtual IRHIResourceFactory* getResourceFactory() { return nullptr; }
+        uint32 getBackBufferHeight() const { return _backBufferHeight; }
+        /** @brief 리소스를 만들고 파괴하는 팩터리입니다. 팩터리가 없는 디바이스(테스트 목)는 nullptr 를 돌려줍니다. */
+        virtual IRHIResourceFactory* getResourceFactory() = 0;
 
         /**
          * @brief 디바이스가 소유한 **프레임 스트림**에 기록하는 컨텍스트입니다.
@@ -279,24 +243,20 @@ namespace sw
          * @details true 면 FrameRenderer 가 인스턴스 버퍼를 바인딩하고 배치를 drawIndirect(멀티 드로우)로 그리며, 인스턴스마다의
          *          월드 행렬과 materialIndex 는 구조 버퍼에서 읽는다. false 면 씬 메시를 그릴 수 없다. 드로우마다 g_World 를 쓰는 폴백 경로는 없다.
          */
-        virtual bool supportsInstancedSceneDraw() const { return false; }
+        virtual bool supportsInstancedSceneDraw() const = 0;
+
+        /**
+         * @brief 컨텍스트 스레드 바인딩 능력입니다. 컨텍스트가 스레드에 묶이지 않는 디바이스(DX12, Vulkan, 테스트 목)는 nullptr 입니다.
+         * @details 선택 능력이라 따로 뽑았다(`IRHIContextThreadBinding`). 가상 호출이 아니라 멤버 하나를 읽는다.
+         */
+        IRHIContextThreadBinding* findContextThreadBinding() const { return _pContextThreadBinding; }
 
         /**
          * @brief 드로우와 Present 컨텍스트를 소유 스레드 하나에서만 써야 하면 true 를 반환합니다.
          * @details DX11 즉시 컨텍스트와 OpenGL(wgl/egl MakeCurrent)이 그렇습니다. DX12 와 Vulkan 은 false 입니다.
+         *          컨텍스트 스레드 바인딩 능력(`findContextThreadBinding`)이 있는지와 같은 질문입니다.
          */
-        virtual bool requiresExclusiveContextThread() const { return false; }
-
-        /**
-         * @brief 호출한 스레드에 그래픽스 컨텍스트를 붙입니다(RenderThread 진입 시).
-         * @details OpenGL 은 wglMakeCurrent, glXMakeCurrent 를 부른다. DX11 은 붙일 것이 없다. 컨텍스트에
-         *          MakeCurrent 가 없어서, 다른 스레드에서 부르지 않는 것이 곧 배타성이다.
-         *          DX12 와 Vulkan 은 할 일이 없다.
-         */
-        virtual bool bindGraphicsContext() { return true; }
-
-        /** @brief 스레드 바인딩을 해제합니다(OpenGL 은 MakeCurrent(null)). */
-        virtual void unbindGraphicsContext() {}
+        bool requiresExclusiveContextThread() const { return _pContextThreadBinding != nullptr; }
 
         /** @brief 백엔드 이름 문자열을 반환합니다. */
         virtual const utf8* getBackendName() const = 0;
@@ -322,24 +282,11 @@ namespace sw
         [[nodiscard]] bool queryNativeHandles( RHINativeHandles& inoutHandles ) const;
 
         /**
-         * @brief RHI 텍스처의 백엔드 네이티브 텍스처 이름(OpenGL GLuint 등)을 반환합니다. 지원하지 않으면 0 입니다.
+         * @brief 네이티브 텍스처를 포인터 형태로 반환합니다. 없는 핸들이면 nullptr 입니다.
+         * @details D3D12 는 `ID3D12Resource*`, D3D11 은 `ID3D11Texture2D*`, Vulkan 은 이미지 뷰, OpenGL 은 텍스처 이름(GLuint)을 포인터 폭으로 넓힌 값이다.
          * @note 에디터 MODULE 이 RHI_* 디바이스 MODULE 의 구체 타입에 링크하지 않도록 가상 함수로 둡니다.
          */
-        virtual uint32 getNativeTextureName( RHITextureHandle texture ) const
-        {
-            (void)texture;
-            return 0;
-        }
-
-        /**
-         * @brief 네이티브 텍스처 리소스 포인터(D3D12 ID3D12Resource*, D3D11 ID3D11Texture2D* 등)를 반환합니다. 지원하지 않으면 nullptr 입니다.
-         * @note 에디터 MODULE 이 RHI_* 디바이스 MODULE 의 구체 타입에 링크하지 않도록 가상 함수로 둡니다.
-         */
-        virtual void* getNativeTexturePointer( RHITextureHandle texture ) const
-        {
-            (void)texture;
-            return nullptr;
-        }
+        virtual void* getNativeTexturePointer( RHITextureHandle texture ) const = 0;
 
         /** @brief 스왑체인을 만들 표면을 저장합니다. `initialize` 가 핸들과 크기를 여기서 읽습니다. */
         void setRenderSurface( IRenderSurface* pSurface ) { _pSurface = pSurface; }
@@ -455,12 +402,12 @@ namespace sw
 
     protected:
         /** @brief 백엔드의 실제 GPU 대기와 해제 큐 비우기입니다. `waitIdle` 이 렌더 스레드를 먼저 비운 뒤, `shutdown` 이 2단계로 부릅니다. */
-        virtual void waitIdleInternal() {}
+        virtual void waitIdleInternal() = 0;
         /**
          * @brief 종료 3단계입니다. 프레임 스트림 컨텍스트를 해제하고 살아 있는 커맨드 리스트를 디바이스에서 분리합니다.
          * @details 리스트는 디바이스보다 오래 살 수 있다(렌더 그래프가 프레임을 넘겨 보관한다). 분리하지 않으면 그쪽 소멸자가 이미 종료된 디바이스에 자원을 반납하려 한다.
          */
-        virtual void detachCommandRecordingInternal() {}
+        virtual void detachCommandRecordingInternal() = 0;
         /**
          * @brief 백엔드가 자기 네이티브 핸들을 채웁니다. 버전 대조는 이미 끝났고 `outHandles` 는 기본값(`_backend` 만 채운 상태)입니다.
          * @details 기본 구현은 `getNativeDevice`, `getNativeContext`, `getNativeCommandQueue` 세 항목을 채우고, 디바이스가 없으면 false 를 반환한다.
@@ -469,15 +416,15 @@ namespace sw
         [[nodiscard]] virtual bool queryNativeHandlesInternal( RHINativeHandles& outHandles ) const;
         /**
          * @brief 백엔드가 드라이버의 GPU 메모리 사용량과 예산을 채웁니다. `outBudget` 은 모든 항목이 "모름" 인 기본값으로 전달됩니다.
-         * @details 물을 수 없으면(API 나 확장이 없음) false 를 반환한다(기본 구현). 아는 항목만 플래그를 켜고, 모르는 항목은 임의로 채우지 않는다.
+         * @details 물을 수 없으면(API 나 확장이 없음) false 를 반환한다. 아는 항목만 플래그를 켜고, 모르는 항목은 임의로 채우지 않는다.
          */
-        [[nodiscard]] virtual bool queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget )
-        {
-            (void)outBudget;
-            return false;
-        }
+        [[nodiscard]] virtual bool queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget ) = 0;
 
-        IRenderSurface*           _pSurface;
+        IRenderSurface* _pSurface;
+        /// @brief 타임스탬프 계측 능력입니다(findTimestampProvider 참고). 능력을 가진 백엔드가 생성자에서 자기를 적습니다.
+        IRHITimestampProvider* _pTimestampProvider;
+        /// @brief 컨텍스트 스레드 바인딩 능력입니다(findContextThreadBinding 참고). 능력을 가진 백엔드가 생성자에서 자기를 적습니다.
+        IRHIContextThreadBinding* _pContextThreadBinding;
         RenderThreadDrainFunction _pfnRenderThreadDrain;
         void*                     _pRenderThreadDrainContext;
         std::thread::id           _renderThreadID;

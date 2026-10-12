@@ -6,6 +6,7 @@
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/Support/RHIConstantBufferMirror.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
@@ -151,7 +152,7 @@ namespace sw
      * @class VulkanRHIDevice
      * @brief Vulkan 1.3 그래픽스와 컴퓨트 디바이스 구현입니다(Descriptor Indexing, bindless).
      */
-    class VulkanRHIDevice : public IRHIDevice
+    class VulkanRHIDevice : public IRHIDevice, public IRHITimestampProvider
     {
         friend class VulkanRHICommandContext;
         friend class VulkanRHICommandList;

@@ -13,7 +13,9 @@
 #include "Engine/Common/EnginePlatformHeaders.h"
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHISwapChain.h"
+#include "Engine/Graphics/RHI/IRHIContextThreadBinding.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
@@ -82,7 +84,7 @@ namespace sw
      * @class D3D11RHIDevice
      * @brief Direct3D 11 그래픽스 디바이스 구현입니다.
      */
-    class D3D11RHIDevice : public IRHIDevice
+    class D3D11RHIDevice : public IRHIDevice, public IRHITimestampProvider, public IRHIContextThreadBinding
     {
         friend class D3D11RHICommandContext;
         friend class D3D11RHICommandList;
@@ -179,10 +181,10 @@ namespace sw
         /** @brief 즉시 컨텍스트(ID3D11DeviceContext) 포인터를 반환합니다. */
         void* getNativeContext() const override { return _deviceContext.Get(); }
 
-        /** @brief 즉시 컨텍스트는 소유 스레드에서만 쓰므로 true 입니다. */
-        bool requiresExclusiveContextThread() const override { return true; }
-        /** @brief 즉시 컨텍스트가 있는지 답합니다. MakeCurrent 가 없어 바인딩할 것은 없습니다. */
+        /** @brief 즉시 컨텍스트가 있는지 답합니다. MakeCurrent 가 없어 바인딩할 것은 없습니다. 즉시 컨텍스트는 소유 스레드에서만 씁니다. */
         bool bindGraphicsContext() override;
+        /** @brief MakeCurrent 가 없어 놓을 것이 없습니다. 소유 스레드를 바꾸는 것은 부르는 쪽(RenderThread)의 순서가 정합니다. */
+        void unbindGraphicsContext() override {}
 
         /** @brief D3D11 은 커맨드 큐 객체가 없어 nullptr 을 반환합니다. */
         void* getNativeCommandQueue() const override { return nullptr; }

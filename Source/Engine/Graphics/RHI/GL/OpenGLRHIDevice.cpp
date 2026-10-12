@@ -59,7 +59,9 @@ namespace sw
         , _bAtiMemInfo{ SW_FALSE }
         , _reservedFlags{ 0 }
     {
-        _resourceImpl = sw::make_unique<OpenGLRHIResourceFactory>( this );
+        _resourceImpl          = sw::make_unique<OpenGLRHIResourceFactory>( this );
+        _pTimestampProvider    = this;
+        _pContextThreadBinding = this;
     }
 
     OpenGLRHIDevice::~OpenGLRHIDevice()

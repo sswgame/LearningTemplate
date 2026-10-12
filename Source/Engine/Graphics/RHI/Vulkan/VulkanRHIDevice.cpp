@@ -117,7 +117,8 @@ namespace sw
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
     {
-        _resourceImpl = sw::make_unique<VulkanRHIResourceFactory>( this );
+        _resourceImpl       = sw::make_unique<VulkanRHIResourceFactory>( this );
+        _pTimestampProvider = this;
     }
 
     VulkanRHIDevice::~VulkanRHIDevice()
