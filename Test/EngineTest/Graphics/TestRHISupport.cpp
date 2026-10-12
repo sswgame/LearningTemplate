@@ -144,6 +144,43 @@ SW_TEST_CASE( RHIReleaseQueueTest, GPUFenceRelease )
 }
 
 /**
+ * @brief [RHIReleaseQueueTest] 두 스레드가 tickFrame · tickCompleted 를 동시에 불러도 콜백이 한 번씩만 돈다
+ * @details DX12 는 렌더 스레드의 endFrame 과 리소스를 만드는 스레드의 업로드 펜스 대기가 둘 다 tickCompleted 를 부른다.
+ *          스크래치 목록을 잠금 없이 바꾸던 때는 두 tick 이 같은 벡터를 동시에 만졌다.
+ */
+SW_TEST_CASE( RHIReleaseQueueTest, ConcurrentTicksRunEachCallbackOnce )
+{
+    constexpr uint32    kCount = 2000;
+    sw::RHIReleaseQueue queue( 1 );
+    std::atomic<uint32> calledCount{ 0 };
+    for ( uint32 index = 0; index < kCount; ++index )
+    {
+        sw::RHIResourceReleaseDelegate releaseDel = SW_DELEGATE_LAMBDA( sw::RHIResourceReleaseDelegate, [&calledCount]()
+        {
+            calledCount.fetch_add( 1u, std::memory_order_relaxed );
+        } );
+        if ( ( index & 1u ) == 0 )
+            queue.enqueueRelease( releaseDel );
+        else
+            queue.enqueueGPURelease( releaseDel, index );
+    }
+    std::thread frameThread( [&queue]()
+    {
+        for ( uint32 index = 0; index < kCount; ++index )
+        {
+            queue.tickFrame();
+        }
+    } );
+    for ( uint32 index = 0; index < kCount; ++index )
+    {
+        queue.tickCompleted( index );
+    }
+    frameThread.join();
+    SW_EXPECT_EQUAL( kCount, calledCount.load() );
+    SW_EXPECT_EQUAL( 0u, queue.getPendingReleaseCount() );
+}
+
+/**
  * @brief [RHIShaderRequestTest] 파이프라인 서술체를 컴파일 요청으로 해석하는 규칙 — 네 백엔드가 같이 쓴다.
  * @details 진입점 기본값, define 은 두 스테이지에, RT 0 개 + 뎁스 테스트면 픽셀 스테이지 없음(경로가 있어도),
  *          RT 수는 뎁스 전용 0 / 그 밖 1 이상. 백엔드마다 규칙을 복사하면 어느 하나가 define 이나 뎁스 전용 판정을

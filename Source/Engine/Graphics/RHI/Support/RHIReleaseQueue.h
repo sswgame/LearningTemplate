@@ -69,6 +69,7 @@ namespace sw
         vector<FrameDeferredEntry> _listFrameEntry;
         vector<GPUDeferredEntry>   _listGPUEntry;
         /// @brief tick 이 완료된 콜백을 옮겨 담는 자리입니다. 잠금 밖에서 부르려고 옮깁니다. 프레임마다 다시 채워 용량이 남습니다.
+        ///        `_spinLock` 안에서만 꺼내고 돌려놓습니다 — tick 은 여러 스레드에서 올 수 있습니다(DX12 업로드 펜스 대기).
         vector<RHIResourceReleaseDelegate> _listReadyScratch;
         mutable SpinLock                   _spinLock;
         uint64                             _currentFrame;
