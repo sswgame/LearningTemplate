@@ -213,7 +213,14 @@ function(sw_addReflectionStep TARGET_NAME)
 		)
 	endif()
 
-	add_custom_target(${TARGET_NAME}_ReflectionGen DEPENDS ${generatedFiles} ${swReflectScanStamp})
+	# 후보 검사는 타깃 컴파일을 막지 않는 별도 ALL 타깃이다. 예전에는 _ReflectionGen 에 묶여 평범한 헤더 하나만 고쳐도
+	# 수천 개 후보를 다시 훑는 동안 컴파일이 기다렸다. 계약: ALL 에 들어 있으므로 기본 빌드(all)에서 검사가 FATAL_ERROR 로
+	# 실패하면 빌드 전체가 실패한다(컴파일과 병렬로 돌 뿐 결과는 같다). `--target <타깃>` 만 지으면 검사는 돌지 않는다 —
+	# 그때 새 매크로 헤더는 링크의 미해결 기호로 드러난다. 같은 이름 반사 헤더 FATAL 은 구성 때 판정이라 영향이 없다.
+	if(swReflectScanStamp)
+		add_custom_target(${TARGET_NAME}_ReflectionCandidateCheck ALL DEPENDS "${swReflectScanStamp}")
+	endif()
+	add_custom_target(${TARGET_NAME}_ReflectionGen DEPENDS ${generatedFiles})
 	add_dependencies(${TARGET_NAME} ReflectionParser ${TARGET_NAME}_ReflectionGen)
 
 	# 타깃마다 두 줄씩 configure 출력을 메우지 않는다 — `cmake --log-level=VERBOSE` 로 다시 본다.
