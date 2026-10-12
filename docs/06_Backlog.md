@@ -133,6 +133,9 @@
 
 ### 1-6. 게임프레임워크 · 킷 · 게임
 
+- **키트 DLL 이 Base 클래스의 암시적 멤버를 내보낸다**(2026-10-12 통합 3 에서 확인, `llvm-readobj --coff-exports GF_WitcherRPG.dll` 에 `Inventory` · `Crafter` · `StatBlock` 의 생성자 · 소멸자).
+  키트 TU 는 강제 포함 헤더로 `SW_GF_EXPORTS` 를 정의하고(`cmake/Engine/ModuleTargets.cmake` 의 `GF_EXPORTS`), Base 헤더와 키트 헤더가 같은 `SW_GF_API` 를 써서 Base 선언도 dllexport 로 풀린다.
+  고치려면 키트 자기 헤더용 매크로를 따로 두고(언리얼의 모듈마다 `<MODULE>_API`) 키트 헤더를 기계적으로 바꾼다. `GameServiceBinding.h` 의 `SW_GAMESERVICE_API` 도 같은 규칙을 따른다.
 - **GameCurve(키트 꺾은선)는 FloatCurve 로 옮기지 않았다** — 데이터(`<Curve time scale>`)를 다시 써야 한다. 쓰는 곳(SpawnTable · AIDirectorProfile)을 고칠 때 같이.
   엔진의 커브 값 타입은 `Engine/Utility/FloatCurve`(키 · Constant · Linear · Cubic · 접선, 에디터 그리기 확장 있음)다.
 - **사용자 설정(옵션 메뉴 백엔드)의 남은 것** — 백엔드 · 바인딩 API 는 `Source/Engine/UserSettings/README.md`, 메뉴는 `Engine/UI/Screen/OptionsMenuScreen`.
