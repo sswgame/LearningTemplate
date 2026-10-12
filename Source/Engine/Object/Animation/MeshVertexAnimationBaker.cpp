@@ -5,7 +5,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/AnimClip.h"
+#include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -51,7 +51,7 @@ namespace sw
         }
     }
 
-    bool MeshVertexAnimationBaker::bake( const Mesh& skinMesh, const Skeleton& skeleton, const AnimClip& clip, float32 framesPerSecond, bool bAnchorRootMotion,
+    bool MeshVertexAnimationBaker::bake( const Mesh& skinMesh, const Skeleton& skeleton, const AnimationClip& clip, float32 framesPerSecond, bool bAnchorRootMotion,
                                          MeshVertexAnimation& outAnimation )
     {
         outAnimation = MeshVertexAnimation{};

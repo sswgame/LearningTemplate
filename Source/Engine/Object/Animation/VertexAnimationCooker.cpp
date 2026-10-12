@@ -6,8 +6,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Animation/AnimClip.h"
-#include "Engine/Animation/AnimJSONUtil.h"
+#include "Engine/Animation/AnimationClip.h"
+#include "Engine/Animation/AnimationJSONUtil.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -68,7 +68,7 @@ namespace sw
 
     bool VertexAnimationCookList::parseRoot( const JSONValue& root, string_view sourceLabel )
     {
-        if ( AnimJSONUtil::hasOnlyKnownKeys( root, { "mesh", "skeleton", "clip_folder", "clips" }, sourceLabel ) == false )
+        if ( AnimationJSONUtil::hasOnlyKnownKeys( root, { "mesh", "skeleton", "clip_folder", "clips" }, sourceLabel ) == false )
             return false;
         const JSONValue clips = root.get( "clips" );
         if ( root.get( "mesh" ).isString() == false || root.get( "skeleton" ).isString() == false || root.get( "clip_folder" ).isString() == false ||
@@ -108,7 +108,7 @@ namespace sw
 
     string VertexAnimationCookList::makeClipPath( const hashed_string& clipName ) const
     {
-        const string fileName = StringUtil::toLower( clipName.c_str() ) + string( AnimClip::kExtension );
+        const string fileName = StringUtil::toLower( clipName.c_str() ) + string( AnimationClip::kExtension );
         return _clipFolder.empty() ? fileName : FileUtil::joinPath( _clipFolder, fileName );
     }
 
@@ -129,7 +129,7 @@ namespace sw
         uint32 writtenCount = 0;
         for ( const hashed_string& clipName : list._listClip )
         {
-            AnimClip            clip;
+            AnimationClip       clip;
             MeshVertexAnimation animation;
             const string        cookedPath = MeshVertexAnimation::makeCookedPath( list._meshPath, clipName );
             const string        outputPath = cookedDir.empty() ? cookedPath : FileUtil::joinPath( cookedDir, cookedPath );
