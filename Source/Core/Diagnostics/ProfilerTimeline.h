@@ -96,9 +96,9 @@ namespace sw
          * @details 기록이 꺼져 있으면 켭니다(끝날 때 원래대로). 예산을 넘은 스레드는 더 담지 않고 잘림 표지만 남깁니다. 프레임 경계도 같은 수까지 담습니다.
          *          켜 두는 동안 사건마다 벡터 덧붙이기 한 번이 더 듭니다(링 기록과 같은 자리에서). 이미 진행 중이면 처음부터 다시 시작합니다.
          */
-        void startLongCapture( uint32 maxEventsPerThread );
+        void beginLongCapture( uint32 maxEventsPerThread );
         /** @brief 긴 캡처를 멈춥니다. 모은 사건은 `collectLongCapture` 로 읽습니다. 기록 상태는 시작 전으로 되돌립니다. */
-        void stopLongCapture();
+        void endLongCapture();
         /** @brief 긴 캡처 중이면 true 입니다. */
         bool isLongCaptureActive() const { return _longLimit.load( std::memory_order_relaxed ) != 0; }
         /**

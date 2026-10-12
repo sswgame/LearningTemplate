@@ -139,7 +139,7 @@ SW_TEST_CASE( ProfilerTimelineTest, LongCaptureKeepsEverythingFromTheStartUntilT
     sw::ProfilerTimeline timeline;
     SW_EXPECT_FALSE( timeline.isRecording() );
     constexpr uint32 kBudget = sw::ProfilerTimeline::kEventCapacity + 100; // 링 크기보다 큰 예산
-    timeline.startLongCapture( kBudget );
+    timeline.beginLongCapture( kBudget );
     SW_EXPECT_TRUE( timeline.isLongCaptureActive() );
     SW_EXPECT_TRUE( timeline.isRecording() ); // 꺼져 있어도 캡처가 켠다
     timeline.recordFrameBegin( 1 );
@@ -147,7 +147,7 @@ SW_TEST_CASE( ProfilerTimelineTest, LongCaptureKeepsEverythingFromTheStartUntilT
     {
         timeline.recordEvent( 3, 10 + index * 2, 11 + index * 2, 0 );
     }
-    timeline.stopLongCapture();
+    timeline.endLongCapture();
     SW_EXPECT_FALSE( timeline.isLongCaptureActive() );
     SW_EXPECT_FALSE( timeline.isRecording() ); // 시작 전 상태로
 
@@ -173,12 +173,12 @@ SW_TEST_CASE( ProfilerTimelineTest, LongCaptureKeepsEverythingFromTheStartUntilT
 SW_TEST_CASE( ProfilerTimelineTest, RestartedLongCaptureDropsThePreviousCapture )
 {
     sw::ProfilerTimeline timeline;
-    timeline.startLongCapture( 100 );
+    timeline.beginLongCapture( 100 );
     timeline.recordEvent( 1, 10, 20, 0 );
-    timeline.stopLongCapture();
-    timeline.startLongCapture( 100 );
+    timeline.endLongCapture();
+    timeline.beginLongCapture( 100 );
     timeline.recordEvent( 2, 30, 40, 0 );
-    timeline.stopLongCapture();
+    timeline.endLongCapture();
 
     sw::vector<sw::ProfilerTimelineThread> listThread;
     sw::vector<uint64>                     listFrameBegin;

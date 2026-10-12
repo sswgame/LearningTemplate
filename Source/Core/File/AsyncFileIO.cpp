@@ -411,7 +411,7 @@ namespace sw
         _cv.notify_all();
     }
 
-    void AsyncFileIOQueue::beginStop()
+    void AsyncFileIOQueue::requestStop()
     {
         vector<shared_ptr<AsyncReadRequest>> listCanceled;
         {
@@ -627,7 +627,7 @@ namespace sw
         if ( _backend == nullptr )
             return;
         // 순서: 새 요청을 막고 큐를 비운다 → OS 에 걸린 것이 끝나면 IO 스레드가 내려간다 → 태스크로 실은 완료 콜백까지 기다린다.
-        _queue->beginStop();
+        _queue->requestStop();
         _backend->stop();
         _queue->waitIdle();
         _backend.reset();

@@ -196,9 +196,9 @@ namespace sw
     }
 
 #if SW_PROFILER_TRACE_ENABLED
-    void ProfilerTimeline::startLongCapture( uint32 maxEventsPerThread )
+    void ProfilerTimeline::beginLongCapture( uint32 maxEventsPerThread )
     {
-        stopLongCapture(); // 진행 중이던 것을 먼저 닫아 쓰는 쪽이 모두 멈춘 뒤에 비운다
+        endLongCapture(); // 진행 중이던 것을 먼저 닫아 쓰는 쪽이 모두 멈춘 뒤에 비운다
         _listLongFrameBegin.clear();
         _bLongTruncated.store( false, std::memory_order_relaxed );
         _bLongPrevRecording.store( isRecording(), std::memory_order_relaxed );
@@ -207,7 +207,7 @@ namespace sw
         _longLimit.store( maxEventsPerThread == 0 ? 1 : maxEventsPerThread, std::memory_order_seq_cst );
     }
 
-    void ProfilerTimeline::stopLongCapture()
+    void ProfilerTimeline::endLongCapture()
     {
         if ( _longLimit.exchange( 0, std::memory_order_seq_cst ) == 0 )
             return;

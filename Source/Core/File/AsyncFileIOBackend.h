@@ -94,7 +94,7 @@ namespace sw
 
         /** @brief IO 스레드를 띄웁니다. 이 플랫폼 · 커널에서 쓸 수 없으면 false 입니다(그때 매니저가 스레드 풀로 내려간다). */
         [[nodiscard]] virtual bool start() = 0;
-        /** @brief 큐가 멈춘 뒤(`beginStop`) 불립니다. OS 에 걸린 요청이 모두 끝나면 스레드를 내립니다. */
+        /** @brief 큐가 멈춘 뒤(`requestStop`) 불립니다. OS 에 걸린 요청이 모두 끝나면 스레드를 내립니다. */
         virtual void stop() = 0;
         /** @brief 큐에 새 요청이 들어왔거나 멈추라는 신호입니다. 아무 스레드에서나 불립니다. */
         virtual void wake() = 0;
@@ -142,7 +142,7 @@ namespace sw
         void finish( const shared_ptr<AsyncReadRequest>& pRequest, AsyncIOStatus status );
 
         /** @brief 멈춥니다 — 새 요청을 받지 않고 큐에 남은 것을 `Canceled` 로 끝낸 뒤 백엔드를 깨웁니다. */
-        void beginStop();
+        void requestStop();
         /** @brief 멈추는 중이면 true 입니다. */
         bool isStopping() const;
         /** @brief 백엔드가 꺼내 아직 `finish` 하지 않은 요청 수입니다. */

@@ -426,7 +426,7 @@ namespace sw
             return false;
         }
         profiler.setEnabled( true ); // 스코프가 시계를 읽어야 사건이 쌓인다
-        profiler.getTimeline().startLongCapture( budget == 0 ? kDefaultEventBudgetPerThread : budget );
+        profiler.getTimeline().beginLongCapture( budget == 0 ? kDefaultEventBudgetPerThread : budget );
         g_longRecording._endNanos    = seconds > 0.0 ? MonotonicClock::nowNanoseconds() + static_cast<int64>( seconds * 1.0e9 ) : 0;
         g_longRecording._path        = string( path );
         g_longRecording._processName = string( processName );
@@ -455,7 +455,7 @@ namespace sw
         if ( g_longRecording._bActive.load( std::memory_order_acquire ) == false )
             return false;
         ProfilerTimeline& timeline = profiler.getTimeline();
-        timeline.stopLongCapture();
+        timeline.endLongCapture();
         g_longRecording._bActive.store( false, std::memory_order_release );
 
         vector<ProfilerTimelineThread> listThread;
