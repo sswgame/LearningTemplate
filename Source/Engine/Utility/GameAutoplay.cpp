@@ -5,21 +5,28 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/Logger.h"
+#include "Core/String/RegistrationList.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Console/DevCommandRegistry.h"
 
 namespace sw
 {
+    SW_LOG_CALLER( "GameAutoplay" );
+
     namespace
     {
         struct GameAutoplayInternal
         {
-            /** @brief 등록된 자동 플레이(등록 순서). Engine 이미지의 함수 정적이라 게임 모듈이 바뀌어도 남는다. */
-            static vector<const GameAutoplayRegistration*>& getRegistrations()
+            /**
+             * @brief 등록된 자동 플레이(등록 순서 · 이름은 전역 변수 이름). Engine 이미지의 함수 정적이라 게임 모듈이 바뀌어도 남는다.
+             *        핫 리로드가 올리는 교체 이미지의 같은 이름은 대체한다(`RegistrationReloadScope`).
+             */
+            static RegistrationList<const GameAutoplayRegistration>& getRegistrations()
             {
-                static vector<const GameAutoplayRegistration*> s_listRegistration;
-                return s_listRegistration;
+                static RegistrationList<const GameAutoplayRegistration> s_registration{ RegistrationOrder::Insertion, true };
+                return s_registration;
             }
         };
     } // namespace
@@ -29,26 +36,28 @@ namespace sw
 {
     void GameAutoplay::registerAutoplay( const GameAutoplayRegistration* pRegistration )
     {
-        if ( pRegistration != nullptr && pRegistration->_pValue != nullptr )
-            GameAutoplayInternal::getRegistrations().push_back( pRegistration );
+        if ( pRegistration == nullptr || pRegistration->_pValue == nullptr || pRegistration->_pVariableName == nullptr )
+            return;
+        const RegistrationResult result = GameAutoplayInternal::getRegistrations().add( pRegistration, pRegistration->_pVariableName );
+        if ( result == RegistrationResult::DuplicateName )
+            SW_LOG_ERROR( "Game autoplay '%#' is registered twice - the second one is ignored", pRegistration->_pVariableName );
     }
 
     void GameAutoplay::unregisterAutoplay( const GameAutoplayRegistration* pRegistration )
     {
-        vector<const GameAutoplayRegistration*>& listRegistration = GameAutoplayInternal::getRegistrations();
-        for ( size_t index = 0; index < listRegistration.size(); ++index )
-        {
-            if ( listRegistration[index] != pRegistration )
-                continue;
-            listRegistration.erase( listRegistration.begin() + static_cast<ptrdiff_t>( index ) );
+        RegistrationList<const GameAutoplayRegistration>& registration = GameAutoplayInternal::getRegistrations();
+        if ( registration.remove( pRegistration ) == false )
             return;
-        }
+        // 게임 모듈이 내려가 비었으면 저장소를 놓는다 — 게임이 키운 용량이 EngineMisc 태그에 남지 않게.
+        if ( registration.getCount() == 0 )
+            registration.shrinkToFit();
     }
 
     const GameAutoplayRegistration* GameAutoplay::findActive()
     {
-        const vector<const GameAutoplayRegistration*>& listRegistration = GameAutoplayInternal::getRegistrations();
-        return listRegistration.empty() ? nullptr : listRegistration.back();
+        const RegistrationList<const GameAutoplayRegistration>& registration = GameAutoplayInternal::getRegistrations();
+        const uint32                                            count        = registration.getCount();
+        return count == 0 ? nullptr : registration.getAt( count - 1 );
     }
 
     bool GameAutoplay::isOn()
