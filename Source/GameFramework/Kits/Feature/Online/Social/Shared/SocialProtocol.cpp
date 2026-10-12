@@ -4,6 +4,7 @@
 
 #include "Core/Network/BitStream.h"
 
+#include "GameFramework/Base/Online/Service/OnlineReplyUtil.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -55,10 +56,8 @@ namespace sw
 
     bool SocialProtocol::readReply( BitReader& reader, SocialReply& outReply )
     {
-        const uint64 result = reader.readVarUint();
-        if ( result >= static_cast<uint64>( SocialResult::Count ) )
+        if ( OnlineReplyUtil::readEnum( reader, SocialResult::Count, outReply._result ) == false )
             return false;
-        outReply._result       = static_cast<SocialResult>( result );
         outReply._otherID      = reader.readVarUint();
         const uint64 linkCount = reader.readVarUint();
         if ( linkCount > static_cast<uint64>( SocialLimit::kMaxLinkPage ) )
@@ -170,18 +169,12 @@ namespace sw
 
     SocialResult SocialProtocol::fromErrorCode( uint16 errorCode )
     {
-        switch ( errorCode )
-        {
-            case OnlineError::kOk:
-                return SocialResult::Ok;
-            case OnlineError::kUnauthenticated:
-                return SocialResult::NotSignedIn;
-            case OnlineError::kInvalidRequest:
-                return SocialResult::Invalid;
-            case OnlineError::kConflict:
-                return SocialResult::Conflict;
-            default:
-                return SocialResult::Unavailable;
-        }
+        static constexpr OnlineErrorResult<SocialResult> kArrErrorResult[] = {
+            {             OnlineError::kOk,          SocialResult::Ok},
+            {OnlineError::kUnauthenticated, SocialResult::NotSignedIn},
+            { OnlineError::kInvalidRequest,     SocialResult::Invalid},
+            {       OnlineError::kConflict,    SocialResult::Conflict},
+        };
+        return OnlineError::toResult( errorCode, kArrErrorResult, SocialResult::Unavailable );
     }
 } // namespace sw

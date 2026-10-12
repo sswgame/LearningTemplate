@@ -38,6 +38,7 @@ flowchart BT
 메시지는 채널로 보냅니다. 신뢰 순서, 신뢰 순서 없음, 순서만(메시지 종류마다 가장 새 것 하나), 비신뢰 네 가지입니다.
 
 **호스트.** `NetHost` 는 서버나 클라이언트의 엔드포인트입니다. 연결 핸드셰이크와 연결 목록, 대역폭 상한, 암호화를 맡고, 공개 함수는 잠금 하나로 보호되어 아무 스레드에서나 부를 수 있습니다.
+호스트 안의 챌린지 값(`NetChallenge`), 슬롯 표(`NetSlotTable`), 봉인(`NetPacketSealer`)은 가상 함수 없는 값 멤버이고 호스트의 잠금 안에서만 씁니다.
 `NetHostThread` 는 호스트를 전용 스레드에서 돌려, 게임 프레임이 멈춰도 확인과 재전송이 계속되게 합니다.
 
 **메시지 라우터.** `NetMessageRouter` 는 메시지의 첫 바이트(종류)로 처리기를 찾아 넘깁니다. 키트는 `INetMessageHandler` 를 구현해 자기 종류만 읽습니다.
@@ -229,6 +230,9 @@ I/O 스레드를 끝낼 때 완료 포트의 멈춤 표시는 깨우기용으로
 |---|---|
 | `Connection/NetConnection.h` | 채널, 조각, 재전송, 확인 요청 비트 |
 | `Connection/NetHost.h` | 핸드셰이크, 와이어 버전, 대역폭, 암호화 |
+| `Connection/NetChallenge.h` | 상태 없는 챌린지 값과 솔트 |
+| `Connection/NetSlotTable.h` | 연결 슬롯과 주소 맵 |
+| `Connection/NetPacketSealer.h` | AEAD 봉인과 열기, 키 유도, 증명과 키 확인 태그 |
 | `Message/NetMessage.h` | 메시지 처리기와 라우터 |
 | `Transport/NetEmulation.h` | 회선 흉내 조건 |
 | `Replication/` | 우선도, 틱 고리, 입력 창, 시계, 보간 |

@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/vector.h"
+#include "Core/Container/KeyedPendingList.h"
 #include "Core/Delegate/Delegate.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -72,14 +72,8 @@ namespace sw::editor
         uint32 getPendingCount() const;
 
     private:
-        struct Entry
-        {
-            RHIResourceReleaseDelegate _releaseDelegate;
-            uint64                     _firstSafeSequence{ 0 }; ///< 이 번호 이상의 스냅샷은 해제된 리소스를 그리지 않는다
-        };
-
-        vector<Entry> _listEntry;
-        mutable mutex _mutex;
-        uint64        _lastPublishedSequence;
+        KeyedPendingList<RHIResourceReleaseDelegate> _listEntry; ///< 키 = 이 번호 이상의 스냅샷은 해제된 리소스를 그리지 않는다
+        mutable mutex                                _mutex;
+        uint64                                       _lastPublishedSequence;
     };
 } // namespace sw::editor

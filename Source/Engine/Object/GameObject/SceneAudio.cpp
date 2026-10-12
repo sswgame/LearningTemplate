@@ -120,7 +120,7 @@ namespace sw
         (void)_zone.remove( pZone ); // 등록돼 있지 않았으면 할 일이 없다
     }
 
-    void SceneAudio::update( float32 deltaSeconds, const CameraComponent* pCamera, const IPhysicsScene3D* pScene3D )
+    void SceneAudio::update( float32 deltaSeconds, const CameraComponent* pCamera, const IPhysicsQueryScene3D* pScene3D )
     {
         AudioEngine* pEngine = findAudioEngine();
         if ( pEngine == nullptr )

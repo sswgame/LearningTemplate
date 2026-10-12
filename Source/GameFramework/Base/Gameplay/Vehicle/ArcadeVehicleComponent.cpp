@@ -39,12 +39,12 @@ namespace sw
 
     float32 ArcadeVehicleComponent::PhysicsGround::sampleHeight( float32 x, float32 z ) const
     {
-        using Internal                = ArcadeVehicleComponentInternal;
-        const IPhysicsScene3D* pScene = _pManager != nullptr ? _pManager->getScenePhysics().findScene3D() : nullptr;
+        using Internal                     = ArcadeVehicleComponentInternal;
+        const IPhysicsQueryScene3D* pScene = _pManager != nullptr ? _pManager->getScenePhysics().findScene3D() : nullptr;
         if ( pScene == nullptr )
             return _fallbackHeight;
-        IPhysicsScene3D::CastHit hit;
-        const float3             origin{ x, _probeTop, z };
+        IPhysicsQueryScene3D::CastHit hit;
+        const float3                  origin{ x, _probeTop, z };
         if ( pScene->raycast( origin, float3{ 0.0f, -1.0f, 0.0f }, Internal::kProbeLength, PhysicsQueryFilter{}, hit ) == false )
             return _fallbackHeight;
         return _probeTop - hit._distance;

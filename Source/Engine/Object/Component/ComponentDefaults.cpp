@@ -208,7 +208,7 @@ namespace sw
     const ComponentDefaults::ResolvedDefaults& ComponentDefaults::resolveFor( const TypeInfo& typeInfo )
     {
         // 세대가 같은 동안만 쓴다. 재등록이 프로퍼티 목록을 갈면 패치의 `_pProperty` 가 옛 목록을 가리킨다.
-        const uint32 generation = gv_typeTableGeneration.load( std::memory_order_acquire );
+        const uint32 generation = TypeRegistry::getGeneration();
         {
             std::shared_lock<std::shared_mutex> readLock{ _resolvedMutex };
             const auto                          it = _mapResolved.find( &typeInfo );

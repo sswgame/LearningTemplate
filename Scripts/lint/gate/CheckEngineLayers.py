@@ -8,6 +8,7 @@ Engine 레이어 금지 include 검사.
   2) Source/Games/**, Source/GameFramework/** 에서 Engine/Common/EngineServices.h 금지
      (게임 쪽은 GameFramework/Base/Foundation/Framework/GameService.h 의 game:: 만 사용).
   3) Engine 내부 티어: 아래 티어가 위 티어를 include 하지 못한다(`Scripts/lint/rules/CheckEngineLayers.toml` 의 `[tier]`). 레이어는 Engine 최상위 폴더 하나다.
+     하위 티어(`[subtier]`)가 있는 최상위 폴더는 그 안의 `<폴더>/<하위 폴더>` 사이도 같은 규칙으로 본다(지금은 Graphics — RHI ↔ Shader 같은 고리).
   4) Source/RuntimeAPI/** 에서 Engine / App / ModuleHost / Games 경로 include 금지 — 호스트 ↔ 모듈 계약이 구현을 알면 안 된다.
      (Export/ 의 모듈 매크로가 Editor · GameFramework 로케이터를 끌어오는 것은 계약이라 막지 않는다.)
   5) 최상위 소스 폴더 사이의 방향(include 경로의 **앞부분**으로 본다): Core 는 아무것도 모르고, App 은 Engine · RuntimeAPI · ModuleHost 만(게임 · 에디터는
@@ -115,13 +116,19 @@ _kForbiddenPrefixRules: tuple[tuple[str, tuple[str, ...]], ...] = (
 _kRootLayerName = "<root>"
 
 # Engine 내부 티어 — 숫자가 큰 쪽이 위다(`rules/CheckEngineLayers.toml` 의 `[tier]`, 계산 · 고쳐 쓰기는 RunEngineLayerGraph --apply).
-_kRuleSchema = {"tier": kKindInteger}
-_kEngineTier: dict[str, int] = LintGate.readRules("CheckEngineLayers", _kRuleSchema, requiredKeys=("tier",))["tier"]
+_kRuleSchema = {"tier": kKindInteger, "subtier": kKindInteger}
+_kRuleData = LintGate.readRules("CheckEngineLayers", _kRuleSchema, requiredKeys=("tier",))
+_kEngineTier: dict[str, int] = _kRuleData["tier"]
+#: 하위 티어 — `<최상위 폴더>/<하위 폴더>` → 숫자(`[subtier]`). 키가 있는 최상위 폴더만 하위 폴더 사이를 본다.
+_kEngineSubTier: dict[str, int] = _kRuleData["subtier"]
+_kSubTieredLayer: frozenset[str] = frozenset(key.split("/")[0] for key in _kEngineSubTier)
 
 #: 티어 예외 — `prelude:<include 경로>` 는 어느 티어에서 include 해도 되는 헤더, `wiring:<파일>` 은 모든 서브시스템을 알아야 해
 #: 위 티어를 include 해도 되는 배선 파일이다(`rules/CheckEngineLayers.toml` 의 `[exemption]`).
 _kPreludePrefix = "prelude:"
 _kWiringPrefix = "wiring:"
+#: `subprelude:<include 경로>` 는 같은 최상위 폴더 안의 어느 하위 티어에서 include 해도 되는 헤더다(최상위 티어 검사에는 쓰이지 않는다).
+_kSubPreludePrefix = "subprelude:"
 
 
 def engineTierOfInternal(folderName: str) -> int | None:
@@ -135,6 +142,51 @@ def engineLayerOfInternal(engineRelativePath: str) -> str:
     if len(parts) == 1:
         return _kRootLayerName
     return parts[0]
+
+
+def engineSubLayerOfInternal(engineRelativePath: str) -> str:
+    """Engine/ 아래 상대 경로 → `<최상위 폴더>/<하위 폴더>`(최상위 폴더 바로 아래 파일은 `<최상위 폴더>/<root>`)."""
+    parts = engineRelativePath.split("/")
+    if len(parts) <= 2:
+        return f"{parts[0]}/{_kRootLayerName}"
+    return f"{parts[0]}/{parts[1]}"
+
+
+def findSubTierViolationsInternal(relativeFilePath: str, engineRelativePath: str, sourceLayer: str, listRawInclude: list[str]) -> list[str]:
+    """하위 티어가 있는 최상위 폴더 안에서 아래 하위 폴더가 위 하위 폴더를 include 하는 줄."""
+    if sourceLayer not in _kSubTieredLayer:
+        return []
+    gate = CheckEngineLayersGate
+    sourceSubLayer = engineSubLayerOfInternal(engineRelativePath)
+    sourceSubTier = _kEngineSubTier.get(sourceSubLayer)
+    if sourceSubTier is None:
+        return [f"{relativeFilePath}: 하위 폴더 '{sourceSubLayer}' 가 하위 티어 표(rules/CheckEngineLayers.toml 의 [subtier])에 없습니다."]
+    listViolation: list[str] = []
+    for includePath in listRawInclude:
+        normalizedInclude = normalizePath(includePath)
+        if normalizedInclude.startswith("Engine/") is False:
+            continue
+        destRelative = normalizedInclude[len("Engine/") :]
+        if engineLayerOfInternal(destRelative) != sourceLayer:
+            continue
+        subPreludeKey = _kSubPreludePrefix + normalizedInclude
+        if subPreludeKey in gate.mapExemption:
+            gate.seeExemption(subPreludeKey)
+        destSubLayer = engineSubLayerOfInternal(destRelative)
+        if destSubLayer == sourceSubLayer:
+            continue
+        destSubTier = _kEngineSubTier.get(destSubLayer)
+        if destSubTier is None:
+            listViolation.append(f'{relativeFilePath}: #include "{includePath}"  (하위 티어 표에 없는 폴더 \'{destSubLayer}\')')
+            continue
+        if destSubTier > sourceSubTier:
+            if subPreludeKey in gate.mapExemption:
+                gate.useExemption(subPreludeKey)
+                continue
+            listViolation.append(
+                f'{relativeFilePath}: #include "{includePath}"  (하위 티어 {sourceSubLayer}(T{sourceSubTier}) -> {destSubLayer}(T{destSubTier}))'
+            )
+    return listViolation
 
 
 def processFile(filePath: Path, repositoryRoot: Path) -> list[str]:
@@ -215,6 +267,8 @@ def processFile(filePath: Path, repositoryRoot: Path) -> list[str]:
                 f'{relativeFilePath}: #include "{includePath}"  (티어 {sourceLayer}(T{sourceTier}) -> {destLayer}(T{destTier}))'
             )
 
+    tierViolations += findSubTierViolationsInternal(relativeFilePath, engineRelativePath, sourceLayer, listRawInclude)
+
     if bWiring and tierViolations:
         gate.useExemption(wiringKey)
         return fileViolations
@@ -250,6 +304,20 @@ class CheckEngineLayersGate(LintGate):
             "name": "Graphics(RHI)가 Renderer 를 include",
             "files": {
                 "Source/Engine/Graphics/RHI/Probe.cpp": '#include "pch.h"\n\n#include "Engine/Renderer/Frame/FrameRenderer.h"\n',
+            },
+        },
+        {
+            # 같은 Graphics 안의 고리 — RHI 백엔드가 셰이더 캐시를 쓰므로 셰이더가 RHI 를 알면 순환이다(최상위 티어로는 안 보인다).
+            "name": "Graphics/Shader 가 Graphics/RHI 를 include (하위 티어)",
+            "files": {
+                "Source/Engine/Graphics/Shader/Compile/Probe.cpp": '#include "pch.h"\n\n#include "Engine/Graphics/RHI/RHI.h"\n',
+            },
+        },
+        {
+            # 하위 폴더를 새로 만들면 표에 자리를 정해야 한다.
+            "name": "하위 티어 표에 없는 Graphics 하위 폴더",
+            "files": {
+                "Source/Engine/Graphics/ProbeFolder/Probe.cpp": '#include "pch.h"\n',
             },
         },
         {

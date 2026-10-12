@@ -7,12 +7,12 @@
 #include "pch.h"
 
 #include "Core/Common/EnumUtil.h"
+#include "Core/Container/IndexFreeList.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIResourceFactory.h"
-#include "Engine/Graphics/RHI/Support/RHIIndexFreeList.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 #include <glad/glad.h>
@@ -57,15 +57,15 @@ namespace sw
 
     void OpenGLRHIResourceFactory::unregisterBindlessResource( RHIDescriptorIndex index )
     {
-        // 이중 해제 가드는 `releaseFreeListIndex` 안에 있다. 종류 이름만 넘겨 로그를 맞춘다.
+        // 이중 해제 가드는 `releaseFreeListIndex` 안에 있다.
         releaseFreeListIndex( _pDevice->_listRegisteredBindless, _pDevice->_listBindlessFree, index,
-                              OpenGLRHIDevice::BindlessResourceRecord{}, "buffer" );
+                              OpenGLRHIDevice::BindlessResourceRecord{} );
     }
 
     void OpenGLRHIResourceFactory::unregisterBindlessTexture( RHIDescriptorIndex index )
     {
         releaseFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree, index,
-                              OpenGLRHIDevice::BindlessTextureRecord{}, "texture" );
+                              OpenGLRHIDevice::BindlessTextureRecord{} );
     }
 
     RHIDescriptorIndex OpenGLRHIResourceFactory::registerBindlessBufferUav( RHIBufferHandle buffer )
@@ -93,6 +93,6 @@ namespace sw
     {
         // 이중 해제는 도우미가 막는다. 막지 않으면 같은 인덱스가 프리리스트에 두 번 들어간다.
         releaseFreeListIndex( _pDevice->_listRegisteredUAV, _pDevice->_listUavFree, index,
-                              OpenGLRHIDevice::BindlessResourceRecord{}, "uav" );
+                              OpenGLRHIDevice::BindlessResourceRecord{} );
     }
 } // namespace sw

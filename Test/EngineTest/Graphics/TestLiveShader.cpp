@@ -12,6 +12,7 @@
     #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
+    #include "Engine/Resource/ResourcePaths.h"
 
     #include "TestFramework/TestFramework.h"
 

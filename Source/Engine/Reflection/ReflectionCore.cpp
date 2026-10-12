@@ -18,6 +18,9 @@ namespace sw
 {
     namespace
     {
+        /** @brief 타입 테이블의 세대입니다(`TypeRegistry::getGeneration`). 등록, 별칭, 모듈 해제가 일어날 때마다 오릅니다. */
+        atomic<uint32> s_typeTableGeneration{ 0 };
+
         struct ReflectionCoreInternal
         {
             /** @brief `describeType` 의 인자 목록입니다. `타입 이름 = 기본값` 형태입니다. */
@@ -623,17 +626,15 @@ namespace sw
         void forceLinkBuiltinTypes();
     } // namespace generated
 
-    atomic<uint32> gv_typeTableGeneration{ 0 };
-
     TypeRegistry::TypeRegistry()
         : _bAllModuleTypesRegistered{ false }
     {
         generated::forceLinkBuiltinTypes();
     }
 
-    uint32 TypeRegistry::getGeneration() const
+    uint32 TypeRegistry::getGeneration()
     {
-        return gv_typeTableGeneration.load( std::memory_order_acquire );
+        return s_typeTableGeneration.load( std::memory_order_acquire );
     }
 
     void TypeRegistry::markAllModuleTypesRegistered()
@@ -711,7 +712,7 @@ namespace sw
             _mapHashToCanonicalName.insert_or_assign( shortName.getHash(), canonicalName );
         }
         // 테이블이 바뀌었으니 세대를 올린다. 기록해 둔 빈 결과(`TypeLookupCache` 의 미등록, 찾지 못한 부모)를 다음 조회가 다시 찾는다.
-        gv_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
+        s_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
 
         // 로그는 잠금 밖에서 남긴다. 리스너가 레지스트리를 다시 물어도 멈추지 않게 하려는 것이다.
         lock.unlock();
@@ -1020,7 +1021,7 @@ namespace sw
             pInfo->clearAncestorDisplay();
             pInfo->clearInheritedProperties();
         }
-        gv_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
+        s_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
     }
 #endif
 
@@ -1056,7 +1057,7 @@ namespace sw
         _mapAliasToFqn.insert_or_assign( aliasHash, canonicalKey );
         _mapHashToCanonicalName.insert_or_assign( aliasHash.getHash(), canonicalName );
         // 별칭이 생기면 같은 이름의 답이 nullptr 에서 타입으로 바뀔 수 있다.
-        gv_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
+        s_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
 
         const string qualified = ReflectionCoreInternal::qualifyAliasWithNamespace( pAliasName, pCanonicalName );
         if ( qualified.empty() == false )
@@ -1109,11 +1110,14 @@ namespace sw
 
     const TypeInfo* TypeLookupCache::findSlow( const hashed_string& fqn ) const
     {
+        // 빈 결과를 기록한 세대가 그대로면 다시 찾지 않는다.
+        if ( _generation.load( std::memory_order_acquire ) == s_typeTableGeneration.load( std::memory_order_acquire ) )
+            return nullptr;
         // 레지스트리가 아직 없으면 캐시를 건드리지 않고 nullptr 를 반환한다(다음 호출이 다시 본다).
         if ( engine::areEngineServicesBound() == false )
             return nullptr;
         // 세대는 찾기 **전에** 읽는다. 찾는 사이 등록이 끼면 옛 세대가 남아 다음 호출이 다시 찾는다(그 반대는 없다).
-        const uint32    generation = gv_typeTableGeneration.load( std::memory_order_acquire );
+        const uint32    generation = s_typeTableGeneration.load( std::memory_order_acquire );
         const TypeInfo* pType      = engine::getTypeRegistry().findType( fqn );
         _pType.store( pType, std::memory_order_release );
         _generation.store( generation, std::memory_order_release );
@@ -1236,7 +1240,7 @@ namespace sw
 
         // 찾지 못한 이름은 세대가 같은 동안 다시 찾지 않는다. 등록되지 않는 기반(`Component`)을 부모로 둔 타입은 모두
         // 여기로 오므로 그때마다 레지스트리를 잠그고 찾지 않는다. 등록이나 해제가 세대를 올리면 한 번 더 찾는다.
-        const uint32 generation = gv_typeTableGeneration.load( std::memory_order_acquire );
+        const uint32 generation = s_typeTableGeneration.load( std::memory_order_acquire );
         if ( _parentMissGeneration.load( std::memory_order_acquire ) == generation )
             return nullptr;
 

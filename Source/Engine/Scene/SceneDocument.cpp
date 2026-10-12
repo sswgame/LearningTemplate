@@ -13,6 +13,8 @@
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Resource/ResourceIO.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 

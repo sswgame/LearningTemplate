@@ -17,6 +17,8 @@
 
 namespace sw
 {
+    enum class XMLRootStatus : uint8;
+
     /**
      * @brief 파일 하나를 읽는 동안의 오류 모음과 필드 읽기 도우미입니다.
      * @details 숫자와 벡터 필드는 비어 있으면 @p fallback 을 쓰고, 문자열이 숫자가 아니면 오류를 남기고 @p fallback 을 쓴다. 벡터는 공백이나 쉼표로 나눈 세 수이고,
@@ -89,6 +91,8 @@ namespace sw
 
     private:
         void reportUnknownAttributes( const XMLNode& node, const utf8* const* ppKnown, size_t knownCount );
+        /** @brief 루트 찾기 결과가 실패면 이유를 오류로 남깁니다. 찾았으면 true 입니다. */
+        bool reportRootStatus( const XMLDocument& document, XMLRootStatus status, const utf8* pRootName );
 
     private:
         string         _sourceName;

@@ -51,6 +51,17 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 공통 오류 코드 하나를 키트 결과 하나로 바꾸는 표의 한 줄입니다(`OnlineError::toResult`). */
+    template <typename TResult>
+    struct OnlineErrorResult
+    {
+        uint16  _errorCode;
+        TResult _result;
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 응답 오류 코드 — `NetRequestStatus::ApplicationError` 몸의 첫 2 바이트(리틀 엔디언), 뒤는 자세한 몸입니다. */
     struct OnlineError
     {
@@ -66,6 +77,21 @@ namespace sw
         static constexpr uint16 kConflict        = 9;
         static constexpr uint16 kFeatureDisabled = 10; ///< 원격 기능 플래그가 껐다
         static constexpr uint16 kInternal        = 255;
+
+        /**
+         * @brief @p errorCode 를 키트 표 @p arrRow 에서 찾아 키트 결과로 바꿉니다. 표에 없으면 @p fallback 입니다.
+         * @details 결과 열거형과 표, 기본값(대개 `Unavailable`)은 키트가 가진다 — 키트마다 받는 코드가 다르다.
+         */
+        template <typename TResult, size_t Count>
+        static constexpr TResult toResult( uint16 errorCode, const OnlineErrorResult<TResult> ( &arrRow )[Count], TResult fallback )
+        {
+            for ( const OnlineErrorResult<TResult>& row : arrRow )
+            {
+                if ( row._errorCode == errorCode )
+                    return row._result;
+            }
+            return fallback;
+        }
     };
 } // namespace sw
 

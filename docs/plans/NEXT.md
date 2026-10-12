@@ -26,7 +26,7 @@
   - DX11 · GL 의 bindless 인덱스 즉시 재사용 — 다른 해제 경로에도 지연 해제가 필요한지 아직 보지 않았다.
   - umod 의 리눅스 `__builtin_return_address` 분기는 이 PC 에서 짓지 못했다(CI).
 - **옮기지 않기로 한 것(C 묶음 판정)**: 장비 피팅 규칙 · Gimmick/Genre · CommandStack · Observability · Dialogue/Sequencer/Localization/GameAutoplay · 리플렉션 에디터 메타 이름 — 언리얼 · 유니티도 이것들을 엔진 쪽(또는 에디터 공용)에 두고 게임 프레임워크로 내리지 않는다(Sequencer · Localization · Dialogue 는 엔진 모듈, 되돌리기는 에디터 트랜잭션, 메타 이름은 UPROPERTY 메타처럼 리플렉션 소유).
-  **이득이 작아 보류**: CharacterHit 피해 배율 · HitWindow damage · Ballistics 키트 공유 · FixedTimestep · KeyValueFile 의 Core 이동.
+  **보류를 풀어 처리했다(2026-10-13, rfP10)**: 맞음 · 히트 존 배율은 `CharacterHitUtil::makeHitInfo` 하나, `FixedTimestep` → `Core/Time`, `KeyValueFile` → `Core/File`, 지연 해제 큐의 키 기준 골격은 `Core/Container/KeyedPendingList`. Ballistics 는 이미 `GameFramework/Base` 한 벌이고 키트의 투사체(2D 직선 · 결정적 걸음)는 다른 계산이라 그대로다.
 - **사용자가 할 검증**: Debug `-L lint` · `-L nogpu` · `-L hostgpu`, Shipping `-L nogpu`. 새 · 바뀐 테스트 — `ReflectionEnumInfoTest`, `GameObjectManagerTest.PostTickOnComponentSkipsPendingDestroy`, `GameObjectManagerPoolTest.ModuleUnloadDrainsDeferredPostTickWork`,
   `ServiceClientCallTableTest.ForeignResponseDuringSendDoesNotTakeTheSendingDelegate`, 옮긴 `TestDismemberment` · `TestWitcherRPG` · `TestTacticsSRPG` · `TestProgression` · `TestSpatial` · `TestProfilerTimeline`, 온라인 키트 테스트, umod 의 `TestGameService` 회수 · `ModuleHostTest.SharedModuleCannotBeRegisteredForReload`,
   utex 의 새 GPU 테스트(작업 스레드 안 `SW_TEST_DEFENSIVE_SCOPE` 가 스레드별로 동작하는지). 게임 프리셋 넷을 2 차 병합 뒤 다시 짓기.

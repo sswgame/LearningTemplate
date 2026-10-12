@@ -440,29 +440,6 @@ namespace sw
             pRecord->_state._position = position;
     }
 
-    PhysicsVehicleHandle Box2DPhysicsScene::createWheeledVehicle( PhysicsBodyHandle chassis, const PhysicsWheeledVehicleDesc& desc )
-    {
-        (void)chassis;
-        (void)desc;
-        return PhysicsVehicleHandle{};
-    }
-
-    void Box2DPhysicsScene::setVehicleInput( PhysicsVehicleHandle vehicle, float32 forward, float32 right, float32 brake, float32 handBrake )
-    {
-        (void)vehicle;
-        (void)forward;
-        (void)right;
-        (void)brake;
-        (void)handBrake;
-    }
-
-    bool Box2DPhysicsScene::getVehicleState( PhysicsVehicleHandle vehicle, PhysicsVehicleState& outState ) const
-    {
-        (void)vehicle;
-        outState = PhysicsVehicleState{};
-        return false;
-    }
-
     bool Box2DPhysicsScene::getCharacterState( PhysicsCharacterHandle character, PhysicsCharacterState2D& outState ) const
     {
         const CharacterRecord* pRecord = _characters.get( character.getSlot() );
@@ -532,12 +509,13 @@ namespace sw
         b2QueryFilter queryFilter = b2DefaultQueryFilter();
         queryFilter.categoryBits  = ~static_cast<uint64_t>( 0 );
         queryFilter.maskBits      = static_cast<uint64_t>( filter._layerMask );
-        vector<PhysicsBodyHandle>                      listFound;
-        Box2DPhysicsSceneQueryInternal::OverlapContext context{ this, &filter, &listFound };
+        // 찾은 바디를 출력 끝에 바로 붙이고 그 구간만 정렬해 중복을 지운다(호출마다 임시 버퍼를 할당하지 않는다).
+        const size_t                                   firstIndex = outListBody.size();
+        Box2DPhysicsSceneQueryInternal::OverlapContext context{ this, &filter, &outListBody };
         b2World_OverlapShape( _worldID, &proxy, queryFilter, &Box2DPhysicsSceneQueryInternal::overlapResult, &context );
-        std::sort( listFound.begin(), listFound.end() );
-        listFound.erase( std::unique( listFound.begin(), listFound.end() ), listFound.end() );
-        outListBody.insert( outListBody.end(), listFound.begin(), listFound.end() );
-        return static_cast<uint32>( listFound.size() );
+        const vector<PhysicsBodyHandle>::iterator first = outListBody.begin() + static_cast<ptrdiff_t>( firstIndex );
+        std::sort( first, outListBody.end() );
+        outListBody.erase( std::unique( first, outListBody.end() ), outListBody.end() );
+        return static_cast<uint32>( outListBody.size() - firstIndex );
     }
 } // namespace sw

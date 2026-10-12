@@ -185,6 +185,41 @@ SW_TEST_CASE( PhysicsScene3DTest, RaycastReportsHitDistance )
     SW_EXPECT_EQUAL( 0u, pScene->overlapShape( makeBox( sw::float3{ 1.0f, 1.0f, 1.0f } ), sw::float3{ -5.0f, 0.0f, 0.0f }, sw::quaternion{}, filter, listFound ) );
 }
 
+// 바퀴 차는 차원 트레이트가 정한다 — 2D 씬은 차 인터페이스를 상속하지 않아 2D 에 차를 부르면 컴파일 오류다.
+static_assert( std::is_base_of_v<sw::IPhysicsVehicleScene, sw::IPhysicsScene3D>, "3D scene implements wheeled vehicles" );
+static_assert( std::is_base_of_v<sw::IPhysicsVehicleScene, sw::IPhysicsScene2D> == false, "2D scene has no wheeled vehicles" );
+
+/**
+ * @brief [PhysicsScene3DTest] 역할 인터페이스(바디 · 질의 · 월드)는 같은 씬 하나에 닿는다
+ */
+SW_TEST_CASE( PhysicsScene3DTest, RoleInterfacesReachTheSameScene )
+{
+    // 바디 역할로 만든 바디를 질의 역할이 찾고, 월드 역할의 스텝이 같은 바디를 움직인다(역할마다 다른 바탕 클래스지만 씬은 하나).
+    sw::unique_ptr<sw::IPhysicsScene3D> pScene = makeScene();
+    SW_ASSERT_NOT_NULL( pScene.get() );
+    sw::IPhysicsBodyScene3D&        bodies  = *pScene;
+    const sw::IPhysicsQueryScene3D& queries = *pScene;
+
+    sw::PhysicsBodyDesc3D desc;
+    desc._listShape.push_back( makeBox( sw::float3{ 0.5f, 0.5f, 0.5f } ) );
+    desc._position                     = sw::float3{ 5.0f, 0.0f, 0.0f };
+    desc._type                         = sw::PhysicsBodyType::Dynamic;
+    desc._userData                     = 91;
+    const sw::PhysicsBodyHandle target = bodies.createBody( desc );
+    SW_ASSERT_TRUE( bodies.isBodyValid( target ) );
+
+    sw::IPhysicsQueryScene3D::CastHit hit;
+    SW_ASSERT_TRUE( queries.raycast( sw::float3{}, sw::float3{ 1.0f, 0.0f, 0.0f }, 100.0f, sw::PhysicsQueryFilter{}, hit ) );
+    SW_EXPECT_TRUE( hit._body == target );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 91 ), hit._userData );
+
+    pScene->step( kStep3D );
+    sw::float3     position{};
+    sw::quaternion rotation{};
+    SW_ASSERT_TRUE( bodies.getBodyTransform( target, position, rotation ) );
+    SW_EXPECT_TRUE( position._y < 0.0f ); // 중력으로 떨어졌다
+}
+
 /**
  * @brief [PhysicsScene3DTest] 레이어 표가 막은 쌍은 지나치고, 허락한 쌍은 막는다(같은 바닥 · 같은 상자, 레이어만 다르다)
  */

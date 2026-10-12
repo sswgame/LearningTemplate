@@ -60,6 +60,13 @@ namespace sw
                 outDirection = planar * ( 1.0f / length );
                 return true;
             }
+
+            /** @brief 히트 존 정의(이름, 피해 배율)를 맞음에 옮깁니다. */
+            static void applyHitZone( const PhysicsHitZoneDef& zone, HitInfo& inoutHit )
+            {
+                inoutHit._zone             = zone._name;
+                inoutHit._damageMultiplier = zone._damageMultiplier;
+            }
         };
     } // namespace
 } // namespace sw
@@ -69,7 +76,7 @@ namespace sw
     bool CharacterHitUtil::raycast3D( const GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, uint32 layerMask,
                                       uint64 ignoreObjectID, CharacterRayHit& outHit )
     {
-        const IPhysicsScene3D* pScene = manager.getScenePhysics().findScene3D();
+        const IPhysicsQueryScene3D* pScene = manager.getScenePhysics().findScene3D();
         if ( pScene == nullptr || maxDistance <= 0.0f || direction.getLengthSquared() <= 1.0e-12f )
             return false;
         PhysicsCastHit3D hit;
@@ -82,8 +89,8 @@ namespace sw
     bool CharacterHitUtil::raycast2D( const GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, uint32 layerMask,
                                       uint64 ignoreObjectID, CharacterRayHit& outHit )
     {
-        const IPhysicsScene2D* pScene = manager.getScenePhysics().findScene2D();
-        float2                 planar{};
+        const IPhysicsQueryScene2D* pScene = manager.getScenePhysics().findScene2D();
+        float2                      planar{};
         if ( pScene == nullptr || maxDistance <= 0.0f || CharacterHitInternal::makePlanarDirection( direction, planar ) == false )
             return false;
         PhysicsCastHit2D hit;
@@ -98,7 +105,7 @@ namespace sw
     {
         if ( radius <= 0.0f )
             return raycast3D( manager, origin, direction, maxDistance, layerMask, ignoreObjectID, outHit );
-        const IPhysicsScene3D* pScene = manager.getScenePhysics().findScene3D();
+        const IPhysicsQueryScene3D* pScene = manager.getScenePhysics().findScene3D();
         if ( pScene == nullptr || maxDistance <= 0.0f || direction.getLengthSquared() <= 1.0e-12f )
             return false;
         PhysicsShapeDesc3D sphere;
@@ -117,8 +124,8 @@ namespace sw
     {
         if ( radius <= 0.0f )
             return raycast2D( manager, origin, direction, maxDistance, layerMask, ignoreObjectID, outHit );
-        const IPhysicsScene2D* pScene = manager.getScenePhysics().findScene2D();
-        float2                 planar{};
+        const IPhysicsQueryScene2D* pScene = manager.getScenePhysics().findScene2D();
+        float2                      planar{};
         if ( pScene == nullptr || maxDistance <= 0.0f || CharacterHitInternal::makePlanarDirection( direction, planar ) == false )
             return false;
         PhysicsShapeDesc2D circle;
@@ -134,9 +141,8 @@ namespace sw
 
     void CharacterHitUtil::resolveHitZone( const GameObject& target, PhysicsBodyHandle body, HitInfo& inoutHit )
     {
-        inoutHit._zone             = hashed_string{};
-        inoutHit._damageMultiplier = 1.0f;
-        inoutHit._bodyIndex        = -1;
+        CharacterHitInternal::applyHitZone( PhysicsHitZoneDef{}, inoutHit );
+        inoutHit._bodyIndex = -1;
         if ( body.isValid() == false )
             return;
         // 래그돌과 히트박스에서는 물리 에셋 바디의 히트 존을 먼저 본다.
@@ -149,10 +155,7 @@ namespace sw
             {
                 inoutHit._bodyIndex = bodyIndex;
                 if ( pZone != nullptr )
-                {
-                    inoutHit._zone             = pZone->_name;
-                    inoutHit._damageMultiplier = pZone->_damageMultiplier;
-                }
+                    CharacterHitInternal::applyHitZone( *pZone, inoutHit );
                 return;
             }
         }
@@ -161,18 +164,32 @@ namespace sw
             const RigidBodyComponent* pBody3D = castTo<RigidBodyComponent>( pComponent );
             if ( pBody3D != nullptr && pBody3D->getBodyHandle() == body )
             {
-                inoutHit._zone             = pBody3D->getHitZone()._name;
-                inoutHit._damageMultiplier = pBody3D->getHitZone()._damageMultiplier;
+                CharacterHitInternal::applyHitZone( pBody3D->getHitZone(), inoutHit );
                 return;
             }
             const RigidBody2DComponent* pBody2D = castTo<RigidBody2DComponent>( pComponent );
             if ( pBody2D != nullptr && pBody2D->getBodyHandle() == body )
             {
-                inoutHit._zone             = pBody2D->getHitZone()._name;
-                inoutHit._damageMultiplier = pBody2D->getHitZone()._damageMultiplier;
+                CharacterHitInternal::applyHitZone( pBody2D->getHitZone(), inoutHit );
                 return;
             }
         }
+    }
+
+    HitInfo CharacterHitUtil::makeHitInfo( const CharacterRayHit& rayHit, GameObject* pInstigator, const float3& direction, float32 damage, float32 impulse )
+    {
+        HitInfo hit;
+        hit._pInstigator = pInstigator;
+        hit._body        = rayHit._body;
+        hit._point       = rayHit._point;
+        hit._normal      = rayHit._normal;
+        hit._direction   = direction.getLengthSquared() > 1.0e-12f ? direction.normalize() : float3{};
+        hit._damage      = damage;
+        hit._impulse     = impulse;
+        hit._bIs2D       = rayHit._bIs2D;
+        if ( rayHit._pObject != nullptr )
+            resolveHitZone( *rayHit._pObject, rayHit._body, hit );
+        return hit;
     }
 
     void CharacterHitUtil::deliverHit( GameObject& target, const HitInfo& hit )
@@ -197,17 +214,8 @@ namespace sw
                                      : raycast3D( manager, origin, direction, maxDistance, layerMask, ignoreID, rayHit );
         if ( bHit == false || rayHit._pObject == nullptr )
             return false;
-        HitInfo hit;
-        hit._pInstigator = pInstigator;
-        hit._body        = rayHit._body;
-        hit._point       = rayHit._point;
-        hit._normal      = rayHit._normal;
-        hit._direction   = direction.getLengthSquared() > 0.0f ? direction.normalize() : float3{};
-        hit._damage      = damage;
-        hit._impulse     = impulse;
-        hit._bIs2D       = bIs2D;
-        resolveHitZone( *rayHit._pObject, rayHit._body, hit );
-        outHit = hit;
+        const HitInfo hit = makeHitInfo( rayHit, pInstigator, direction, damage, impulse );
+        outHit            = hit;
         deliverHit( *rayHit._pObject, hit );
         return true;
     }

@@ -7,8 +7,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Base/ContainerVisitor.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
@@ -317,7 +317,7 @@ namespace sw
 
                 // 찾기만 한다. 파일의 이름을 intern 하면 전역 테이블이 파일 크기만큼 늘어난다(`hashed_string::findInterned`).
                 const hashed_string typeName = hashed_string::findInterned( typeNameText );
-                const TypeInfo*     pType    = typeName.empty() ? nullptr : engine::getTypeRegistry().findType( typeName );
+                const TypeInfo*     pType    = typeName.empty() ? nullptr : context.getTypeRegistry().findType( typeName );
                 void*               pObj     = ( pType != nullptr ) ? context.createOwnedPointer( typeName ) : nullptr;
                 if ( pObj == nullptr )
                 {
@@ -474,7 +474,7 @@ namespace sw
                     if ( SerializerUtil::deserializeValueBinary( pValue, typeName, _pData, _dataSize, *_pInOutOffset, _context, _wireVersion ) )
                         return ContainerReadResult::Read;
                     const bool bAdvanced  = valueStart < *_pInOutOffset && *_pInOutOffset <= _dataSize;
-                    const bool bSkippable = bAdvanced && engine::getTypeRegistry().findEnum( typeName ) != nullptr;
+                    const bool bSkippable = bAdvanced && _context.getTypeRegistry().findEnum( typeName ) != nullptr;
                     return bSkippable ? ContainerReadResult::FieldFailed : ContainerReadResult::StreamBroken;
                 }
 
@@ -495,9 +495,9 @@ namespace sw
     {
         if ( context.findTextWriter( typeName ) != nullptr )
             return nullptr;
-        if ( engine::getTypeRegistry().findEnum( typeName ) != nullptr )
+        if ( context.getTypeRegistry().findEnum( typeName ) != nullptr )
             return nullptr;
-        const TypeInfo* pTypeInfo = engine::getTypeRegistry().findType( typeName );
+        const TypeInfo* pTypeInfo = context.getTypeRegistry().findType( typeName );
         if ( pTypeInfo == nullptr || pTypeInfo->isPrimitive() )
             return nullptr;
         return pTypeInfo;
@@ -510,8 +510,8 @@ namespace sw
             return typeName;
 
         // 없으면 리플렉션이 아는 원본 이름(`_name`)으로 한 번 더 물어본다. Alias 나 옛 이름으로 들어온 경우다.
-        TypeRegistry&   registry  = engine::getTypeRegistry();
-        const TypeInfo* pTypeInfo = registry.findType( typeName );
+        const TypeRegistry& registry  = context.getTypeRegistry();
+        const TypeInfo*     pTypeInfo = registry.findType( typeName );
         if ( pTypeInfo != nullptr && pTypeInfo->_name.empty() == false &&
              ( context.findBinaryWriter( pTypeInfo->_name ) != nullptr || context.findTextWriter( pTypeInfo->_name ) != nullptr ) )
             return pTypeInfo->_name;
@@ -545,7 +545,7 @@ namespace sw
             return;
         }
 
-        const EnumInfo* pEnumInfo = engine::getTypeRegistry().findEnum( typeName );
+        const EnumInfo* pEnumInfo = context.getTypeRegistry().findEnum( typeName );
         if ( pEnumInfo != nullptr )
         {
             // 값이 아니라 열거자 정체성(이름 해시)으로 싣는다. 값으로 실으면 열거자 순서가 바뀔 때 세이브와 스냅샷의 뜻이 바뀐다.
@@ -553,7 +553,7 @@ namespace sw
             return;
         }
 
-        const TypeInfo* pStructInfo = engine::getTypeRegistry().findType( typeName );
+        const TypeInfo* pStructInfo = context.getTypeRegistry().findType( typeName );
         if ( pStructInfo != nullptr )
         {
             if ( pStructInfo->isPrimitive() == false )
@@ -596,11 +596,11 @@ namespace sw
         if ( pReader != nullptr )
             return ( *pReader )( pValuePtr, pData, dataSize, offset );
 
-        const EnumInfo* pEnumInfo = engine::getTypeRegistry().findEnum( typeName );
+        const EnumInfo* pEnumInfo = context.getTypeRegistry().findEnum( typeName );
         if ( pEnumInfo != nullptr )
             return SerializerUtilInternal::readEnumBinary( *pEnumInfo, pValuePtr, pData, dataSize, offset, wireVersion );
 
-        const TypeInfo* pStructInfo = engine::getTypeRegistry().findType( typeName );
+        const TypeInfo* pStructInfo = context.getTypeRegistry().findType( typeName );
         if ( pStructInfo != nullptr )
         {
             if ( pStructInfo->isPrimitive() == false )
@@ -658,7 +658,7 @@ namespace sw
             return;
         }
 
-        const EnumInfo* pEnumInfo = engine::getTypeRegistry().findEnum( typeName );
+        const EnumInfo* pEnumInfo = context.getTypeRegistry().findEnum( typeName );
         if ( pEnumInfo != nullptr )
         {
             const int64 val = pEnumInfo->readValueFromMemory( pValPtr );
@@ -669,7 +669,7 @@ namespace sw
             return;
         }
 
-        const TypeInfo* pStructInfo = engine::getTypeRegistry().findType( typeName );
+        const TypeInfo* pStructInfo = context.getTypeRegistry().findType( typeName );
         if ( pStructInfo != nullptr )
         {
             if ( pStructInfo->isPrimitive() == false )
@@ -690,7 +690,7 @@ namespace sw
         if ( pTextReader != nullptr )
             return ( *pTextReader )( pValPtr, valStr );
 
-        const EnumInfo* pEnumInfo = engine::getTypeRegistry().findEnum( typeName );
+        const EnumInfo* pEnumInfo = context.getTypeRegistry().findEnum( typeName );
         if ( pEnumInfo != nullptr )
         {
             string_view flagsText = valStr;
@@ -707,7 +707,7 @@ namespace sw
             return true;
         }
 
-        const TypeInfo* pStructInfo = engine::getTypeRegistry().findType( typeName );
+        const TypeInfo* pStructInfo = context.getTypeRegistry().findType( typeName );
         if ( pStructInfo != nullptr )
         {
             if ( pStructInfo->isPrimitive() == false )
@@ -819,9 +819,9 @@ namespace sw
         const hashed_string resolved = resolveHandlerTypeName( typeName, context );
         if ( context.findTextWriter( resolved ) != nullptr && context.findTextReader( resolved ) != nullptr )
             return true;
-        if ( engine::getTypeRegistry().findEnum( typeName ) != nullptr )
+        if ( context.getTypeRegistry().findEnum( typeName ) != nullptr )
             return true;
-        const TypeInfo* pStructInfo = engine::getTypeRegistry().findType( typeName );
+        const TypeInfo* pStructInfo = context.getTypeRegistry().findType( typeName );
         return pStructInfo != nullptr && pStructInfo->isPrimitive() == false;
     }
 

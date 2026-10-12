@@ -58,6 +58,12 @@ namespace sw
          * @details 래그돌과 히트박스(`RagdollComponent`, 물리 에셋 바디의 `_hitZone`)가 먼저이고, 다음은 그 바디를 가진 강체 컴포넌트의 `_hitZone` 이다.
          */
         static void resolveHitZone( const GameObject& target, PhysicsBodyHandle body, HitInfo& inoutHit );
+        /**
+         * @brief 광선이 맞은 것(@p rayHit)과 때린 쪽 값으로 맞음을 만들고 히트 존까지 채웁니다. `_pObject` 가 없으면 히트 존은 비어 있습니다.
+         * @details 무기 레이캐스트(`traceWeaponHit`)와 근접 판정(`HitWindow`)이 같은 맞음을 이 한 곳에서 만든다. 피해 배율은 히트 존이 정한다.
+         * @param direction 때린 방향입니다(길이는 상관없고, 거의 0 이면 방향 없음).
+         */
+        static HitInfo makeHitInfo( const CharacterRayHit& rayHit, GameObject* pInstigator, const float3& direction, float32 damage, float32 impulse );
         /** @brief 맞은 오브젝트의 켜진 컴포넌트마다 `onHitReceived` 를 호출합니다(목록을 복사해서 돌므로 처리 중에 컴포넌트를 붙이고 떼도 됩니다). */
         static void deliverHit( GameObject& target, const HitInfo& hit );
         /**

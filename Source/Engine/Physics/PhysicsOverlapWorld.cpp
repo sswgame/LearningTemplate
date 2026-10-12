@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Common/EngineParallel.h"
 #include "Engine/Physics/Collision/ContinuousCollision.h"
 
 namespace sw
@@ -43,6 +44,24 @@ namespace sw
 
 namespace sw
 {
+    PhysicsOverlapWorld::PhysicsOverlapWorld()
+    {
+        _listQueryScratch.resize( engine::getParallelScratchSlotCount() );
+    }
+
+    vector<PhysicsOverlapWorld::BodyHandle>& PhysicsOverlapWorld::getQueryScratch( vector<BodyHandle>& listFallback ) const
+    {
+        // 서비스가 없으면 모든 스레드가 슬롯 0 을 받으므로 나눠 쓸 수 없다. 테스트와 도구만 이 경로로 온다.
+        if ( engine::areEngineServicesBound() == false )
+            return listFallback;
+        const uint32 slot = engine::getParallelScratchSlot();
+        if ( slot >= _listQueryScratch.size() )
+            return listFallback;
+        vector<BodyHandle>& scratch = _listQueryScratch[slot];
+        scratch.clear();
+        return scratch;
+    }
+
     PhysicsOverlapWorld::CellRange PhysicsOverlapWorld::CellRange::fromAABB( const AABB& aabb, float32 cellSize )
     {
         // 뒤집힌 AABB(min > max)도 받는다. 부르는 쪽마다 정규화를 적으면 그중 하나가 빠진다.
@@ -298,22 +317,20 @@ namespace sw
         (void)deltaTime; // 적분하지 않는다. 강체가 없으므로 겹침만 다시 측정한다.
         std::unique_lock<std::shared_mutex> lock{ _mutex };
 
-        // 바디를 먼저 복사한다. 테이블을 도는 동안(테이블의 잠금 안) 다른 바디를 꺼내면 같은 잠금을 다시 잡게 된다.
-        struct BodyEntry
-        {
-            BodyHandle  _handle{};
-            PhysicsBody _body{};
-        };
-        vector<BodyEntry> listBody;
+        // 바디를 먼저 복사한다. 테이블을 도는 동안(테이블의 잠금 안) 다른 바디를 꺼내면 같은 잠금을 다시 잡게 된다. 참조로 돌면 교착한다.
+        // 사본은 멤버 버퍼에 담는다(비우고 용량은 남긴다). step 은 배타 잠금 안이라 다른 스레드가 버퍼를 같이 쓰지 않는다.
+        vector<StepBodyEntry>& listBody = _listScratchStepBody;
+        listBody.clear();
         listBody.reserve( _bodies.size() );
         _bodies.forEachHandle( [&listBody]( SlotHandle handle, const PhysicsBody& body )
-        { listBody.push_back( BodyEntry{ handle, body } ); } );
+        { listBody.push_back( StepBodyEntry{ handle, body } ); } );
 
         // 이번 step 에 셀 하나 이내로 움직인 바디들의 축별 가장 큰 거리다. 연속 바디의 후보를 모으는 범위를 이만큼 넓힌다(`addSweptPairs`).
         // 셀 하나보다 멀리 간 바디는 넓히는 데 넣지 않고 따로 모아, 연속 바디마다 하나씩 측정한다.
-        float3             maxDisplacement{ 0.0f, 0.0f, 0.0f };
-        vector<BodyHandle> listFarMover;
-        for ( const BodyEntry& entry : listBody )
+        float3              maxDisplacement{ 0.0f, 0.0f, 0.0f };
+        vector<BodyHandle>& listFarMover = _listScratchFarMover;
+        listFarMover.clear();
+        for ( const StepBodyEntry& entry : listBody )
         {
             if ( entry._body._aabb.isValid() == false || entry._body._stepAABB.isValid() == false )
                 continue;
@@ -328,8 +345,8 @@ namespace sw
         }
 
         _listScratchPair.clear();
-        vector<BodyHandle> listCandidate;
-        for ( const BodyEntry& entry : listBody )
+        vector<BodyHandle>& listCandidate = _listScratchCandidate;
+        for ( const StepBodyEntry& entry : listBody )
         {
             if ( entry._body._aabb.isValid() == false )
                 continue;
@@ -487,7 +504,8 @@ namespace sw
             return;
         }
 
-        vector<BodyHandle> listCandidateHandle;
+        vector<BodyHandle>  listFallback;
+        vector<BodyHandle>& listCandidateHandle = getQueryScratch( listFallback );
         gatherCandidateHandles( range, listCandidateHandle );
 
         for ( BodyHandle handle : listCandidateHandle )
@@ -548,7 +566,8 @@ namespace sw
             return false;
         }
 
-        vector<BodyHandle> listCandidateHandle;
+        vector<BodyHandle>  listFallback;
+        vector<BodyHandle>& listCandidateHandle = getQueryScratch( listFallback );
         gatherCandidateHandles( range, listCandidateHandle );
 
         for ( BodyHandle handle : listCandidateHandle )

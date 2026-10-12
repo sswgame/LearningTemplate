@@ -148,6 +148,8 @@ CRT 검사는 힙 합계만 비교하므로 서비스가 종료되어 합계가 
 엔진 코드와 테스트 코드는 `std::chrono::steady_clock::now()` 를 직접 읽지 않습니다. 프로파일러, 로그, 기한이 같은 시각을 봐야 하기 때문이고, `CheckClockReads.py` 게이트가 막습니다.
 기다리는 루프는 횟수가 아니라 시간(`Deadline`)으로 끊습니다. 횟수 상한은 느린 머신에서 정상적인 대기를 실패로 만듭니다.
 프레임 델타와 일시정지가 필요하면 `GameTimer` 를 씁니다.
+프레임 시간을 가변 델타와 고정 스텝 수로 나누는 정책은 `Time/FixedTimestep.h` 입니다(최대 델타 · 고정 스텝 길이 · 프레임당 스텝 상한, 넘친 잔액은 버린다).
+기본값은 Core 가 정하지 않고 값을 가진 쪽이 만들 때 넘깁니다 — App 은 `EngineConfig` 의 초기값을 넘깁니다.
 
 UTC 시각(서버의 만료, 기록 시각, 기간)은 `Time/WallClock.h` 하나가 다룹니다. `system_clock` 을 읽는 유일한 파일입니다.
 NTP 보정으로 거꾸로 갈 수 있으므로 경과 시간에는 쓰지 않습니다. 서비스는 현재 시각을 `nowMs` 매개변수로 받고, 테스트는 가짜 시각을 넣습니다.
@@ -269,6 +271,9 @@ Win32 문자열 변환은 `utf8ToUtf16` 을 씁니다. `ImmGetCompositionStringW
 `vector.h` 템플릿 본문이 `char` → `unsigned char` 로 인스턴스화되어 `-Wsign-conversion` 경고가 납니다. 정수 인자를 부호 없는 매개변수로 넘기는 `emplace_back` · `make_unique` · `try_emplace` 도
 `size_t{ n }` · `5u` 처럼 맞는 타입으로 적습니다. 경고 위치는 `Core` 헤더지만 고칠 곳은 부르는 쪽입니다. PCH 를 켜면 이 경고가 보이지 않으니 `-DSW_ENABLE_PCH=OFF` 빌드에서 확인합니다.
 
+**"키(프레임 번호 · 펜스 값 · 스냅샷 번호)가 닿을 때까지 들고 있다가 해제" 하는 큐의 목록은 `KeyedPendingList` 를 씁니다.** 잠금은 쓰는 쪽이 갖고, 꺼낸 항목은 잠금 밖에서 실행합니다.
+`RHIReleaseQueue`(프레임 · 펜스)와 에디터의 `EditorDrawReleaseQueue`(스냅샷 번호)가 씁니다. 키 없이 모두 비우는 `DeferredDelegateQueue`, 배치 수로 내리는 `DeferredImageUnloadQueue` 는 조건이 달라 따로 둡니다.
+
 **완료를 모으는 줄에 고정 용량 큐(`ConcurrentQueue`)를 쓰지 마세요.** 가득 차면 `enqueue` 가 false를 돌려주고 그 완료는 조용히 사라집니다.
 에셋 스트리밍 큐가 그렇게 한 경로의 콜백 중 1024개를 넘는 것을 잃었습니다(`AssetStreamingTest.ManyCallbacksOnOnePathAreAllDelivered`). 상한 없는 잠금과 deque로 둡니다.
 
@@ -352,6 +357,9 @@ Debug 기동은 CRT 누수 보고도 stderr로 냅니다(`MemoryTagTest.Diagnost
 
 **X-macro 목록 `.xxx` 의 원본은 `Predefined/` 입니다.** 사본이 남으면 `CheckDataFileReferences.py` 가 막습니다.
 `PredefinedNameType.xxx` 의 줄 순서가 곧 intern 인덱스라 중간에 끼워 넣지 않고, 대소문자만 다른 이름도 넣지 않습니다. 게이트의 제외 폴더는 게이트마다 따로 두지 않고 `kNotOurDirNames` 를 씁니다.
+
+**`key=value` 텍스트 표(세이브 슬롯, 에디터 ini, 에셋 .meta)는 `File/KeyValueFile.h` 하나가 읽고 씁니다.** 뒤에 적힌 같은 키가 이깁니다.
+Core 는 리소스 경로를 모르므로 리소스 상대 경로는 엔진이 `ResourceIO::readTextResource` 로 읽어 `KeyValueFile::parse` 에 넘깁니다.
 
 **4글자 표식은 `FourCcUtil::make( "...." )` 하나로 만듭니다.** 파일 바이트 순서 그대로입니다. 16진수로 손으로 적으면 바이트 순서가 갈립니다.
 형식을 바꾸면 커밋된 데이터(`Test/AppTest/Golden/*.ppm.z` 압축 스트림 등)의 앞 네 바이트도 함께 고칩니다.

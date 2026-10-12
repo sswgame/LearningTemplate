@@ -11,7 +11,9 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/TagID.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectAny.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Base/BinaryStream.h"
 #include "Engine/Serialization/Base/SerializeReflectAny.h"
 
@@ -222,6 +224,11 @@ namespace sw
         if ( it != _mapTextReader.end() )
             return &it->second;
         return ( _pHandlerFallback != nullptr ) ? _pHandlerFallback->findTextReader( typeName ) : nullptr;
+    }
+
+    const TypeRegistry& SerializeContext::getTypeRegistry() const
+    {
+        return ( _pTypeRegistry != nullptr ) ? *_pTypeRegistry : engine::getTypeRegistry();
     }
 
     SerializeContext SerializeContext::deriveFromDefault()

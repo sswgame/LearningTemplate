@@ -26,6 +26,9 @@ namespace sw
         using Angular   = float3;     ///< 각속도와 토크다(축 × 크기).
         using ShapeDesc = PhysicsShapeDesc3D;
 
+        /** @brief 씬이 바퀴 차(`IPhysicsVehicleScene`)를 구현하는지입니다. */
+        static constexpr bool kSupportsVehicle = true;
+
         /** @brief 이 차원이 만들 수 있는 관절 종류인지 봅니다. 3D 는 모든 종류를 만듭니다. */
         static constexpr bool supportsJoint( PhysicsJointType ) { return true; }
     };
@@ -40,6 +43,9 @@ namespace sw
         using Rotation  = float32;
         using Angular   = float32;
         using ShapeDesc = PhysicsShapeDesc2D;
+
+        /** @brief 평면 물리에는 바퀴 차가 없습니다. 씬은 `IPhysicsVehicleScene` 을 상속하지 않습니다. */
+        static constexpr bool kSupportsVehicle = false;
 
         /** @brief 이 차원이 만들 수 있는 관절 종류인지 봅니다. 평면에는 스윙이 없어 Cone 을 만들지 않습니다. */
         static constexpr bool supportsJoint( PhysicsJointType type ) { return type != PhysicsJointType::Cone; }

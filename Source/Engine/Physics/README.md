@@ -105,7 +105,17 @@ pBoxBody->addImpulse( float3{ 0.0f, 5.0f, 0.0f } );
 | `PhysicsDesc.h` | 바디, 관절, 캐릭터 서술자 |
 | `Collision/PhysicsQuery.h` | 질의 필터, 레이 캐스트와 셰이프 캐스트 결과 |
 | `Collision/PhysicsContact.h` | 접촉과 트리거 이벤트 |
-| `IPhysicsScene.h` | 씬 인터페이스 |
+| `IPhysicsScene.h` | 씬 인터페이스(월드: 스텝, 중력, 레이어, 접촉 이벤트). 아래 역할 인터페이스를 모두 상속합니다 |
+| `IPhysicsBodyScene.h` | 셰이프와 바디 |
+| `IPhysicsJointScene.h` | 관절 |
+| `IPhysicsCharacterScene.h` | 캐릭터 무버 |
+| `IPhysicsQueryScene.h` | 레이 캐스트, 셰이프 캐스트, 겹침 |
+| `IPhysicsVehicleScene.h` | 바퀴 차(3D 만) |
+
+씬 하나가 역할을 모두 구현하지만, 한 역할만 쓰는 코드는 그 역할의 인터페이스만 받습니다. 맞힘 판정과 소리 가림은 `IPhysicsQueryScene3D`, 강체 컴포넌트는 `IPhysicsBodyScene3D` 를 받습니다.
+언리얼 Chaos 가 월드, 바디, 구속, 캐릭터 이동을 나누고, 유니티가 `Physics` 질의와 `Rigidbody`, `Joint`, `CharacterController` 를 나누는 것과 같습니다.
+바퀴 차는 차원 트레이트의 `kSupportsVehicle` 이 참인 3D 씬만 상속하므로, 2D 씬에 차를 부르면 컴파일 오류입니다.
+역할 인터페이스의 함수 호출은 바탕 클래스 하나를 거치는 가상 호출이라, 더 드는 비용은 `this` 포인터 보정 한 번뿐입니다.
 
 3D 셰이프는 상자, 구, 캡슐, 볼록 껍질, 삼각 메시이고 2D 셰이프는 상자, 원, 캡슐, 다각형, 사슬입니다.
 바디와 관절 서술자는 차원 하나(`PhysicsDimension3D`, `PhysicsDimension2D`)로 갈리는 템플릿이라 3D 와 2D 가 같은 코드를 씁니다.
@@ -164,7 +174,7 @@ Jolt 의 `VehicleConstraint` 와 `WheeledVehicleController` 를 스텝 리스너
 
 - 굴림 방식은 `WheelDrive`(앞, 뒤, 네 바퀴)로 고릅니다. 앞바퀴만 조향하고 핸드브레이크는 뒷바퀴에 겁니다.
 - `setDriverInput( 앞, 오른쪽, 브레이크, 핸드브레이크 )` 는 어느 틱에서든 부를 수 있고, 상태(`getVehicleState`)는 물리 프레임이 끝날 때 갱신됩니다.
-- 씬 인터페이스는 `IPhysicsScene3D::createWheeledVehicle`, `setVehicleInput`, `getVehicleState` 입니다. 2D 에는 없습니다.
+- 씬 인터페이스는 `IPhysicsVehicleScene::createWheeledVehicle`, `setVehicleInput`, `getVehicleState` 입니다. 2D 씬은 이 인터페이스를 상속하지 않습니다.
 - 엔진과 Jolt 는 좌표계의 손(왼손, 오른손)이 달라서 오른쪽(+X)의 뜻이 다르므로, 백엔드가 조향 부호를 바꿉니다.
 - 같은 실행에서 같은 입력이면 같은 궤적이 나옵니다. 기계가 다르면 보장하지 않습니다.
 - 바퀴 메시를 바퀴 자세로 옮기는 기능은 아직 없습니다.
@@ -266,6 +276,10 @@ Jolt 의 `VehicleConstraint` 와 `WheeledVehicleController` 를 스텝 리스너
 
 **연속 바디의 후보 범위를 먼 이동 바디로 넓히지 마세요.** 후보 범위는 셀 하나 이내로 움직인 바디만으로 넓히고, 멀리 움직인 바디(`isFarMover`)는 하나씩 따로 계산합니다.
 하나가 멀리 끌려가면 모든 연속 바디가 월드 전체를 훑게 되기 때문입니다.
+
+**겹침 월드의 버퍼를 지역 변수로 되돌리지 마세요.** `step` 은 바디 사본, 먼 이동 바디, 후보를 멤버 버퍼에 담아 프레임마다 할당하지 않습니다(배타 잠금 안이라 하나면 됩니다).
+`queryAABB` 와 `sweepTest` 는 여러 스레드가 함께 부르므로 후보 버퍼를 스레드 슬롯마다 둡니다(`engine::getParallelScratchSlot`). 엔진 서비스가 없으면 모든 스레드가 슬롯 0 을 받으므로 지역 버퍼로 돌아갑니다.
+바디 사본은 없애면 안 됩니다. 테이블을 도는 동안 다른 바디를 꺼내면 같은 잠금을 다시 잡아 교착합니다. step 시간은 `GT.Scene.tick.physics.overlapStep` 구간과 `PhysicsBenchTest` 로 잽니다.
 
 **셀 순회 변수는 `int64` 로 두세요.** 셀 범위는 `CellRange` 하나로 계산합니다. `int32` 순회 변수가 `MathUtil::kMaxInt32` 에서 넘치면 루프가 끝나지 않습니다.
 `toCellCoord` 는 `float64` 로 나눈 뒤 정수로 바꿉니다. 공간 색인 규약은 [Spatial](../../Core/Spatial/README.md)에 있습니다.

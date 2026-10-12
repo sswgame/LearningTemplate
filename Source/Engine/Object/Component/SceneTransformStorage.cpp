@@ -6,6 +6,7 @@
 
 #include "Engine/Object/Component/SceneTransformStorage.h"
 
+#include "Core/Container/IndexFreeList.h"
 #include "Core/Memory/Memory.h"
 
 #include <cstdlib>
@@ -44,12 +45,7 @@ namespace sw
         SceneTransformPage* pPage = nullptr;
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            if ( _listFreeSlot.empty() == false )
-            {
-                slot = _listFreeSlot.back();
-                _listFreeSlot.pop_back();
-            }
-            else
+            if ( tryPopFreeListIndex( _listFreeSlot, slot ) == false )
             {
                 // 닿지 않는 한계다(`kMaxPageCount` 설명). 닿았다면 칸 없이 컴포넌트를 만들 방법이 없다 — 알리고 멈춘다.
                 if ( _nextSlot >= kMaxPageCount * SceneTransformPage::kSlotCount )

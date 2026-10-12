@@ -6,6 +6,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
