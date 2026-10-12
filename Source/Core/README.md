@@ -28,7 +28,7 @@ Engine은 같은 OBJECT를 링크해 Dev 구성에서 `Engine.dll` 로 Core의 �
 | `Task/` | 워커 풀과 태스크 그래프([Task](Task/README.md)) |
 | `Concurrency/` | 원시 동기화(`atomic` · `mutex` · `SpinLock` · `Futex`)와 경합 검출 훅 |
 | `Spatial/` | 공간 인덱스(`SpatialHashGrid2D` · `SpatialQuadTree` · `SpatialOctree` · `BVHTree3D`, [Spatial](Spatial/README.md)) |
-| `Diagnostics/` | 호출 스택, 크래시 보고, `MemoryProfiler`, 교착 검출기, 경합 보고기 |
+| `Diagnostics/` | 호출 스택, 크래시 보고, `MemoryProfiler`, 교착 검출기, 경합 보고기, 프로파일러 타임라인 링(`ProfilerTimeline`) |
 | `File/` | 파일 유틸, 비동기 파일 IO, 파일 감시 |
 | `Time/` | 단조 시계와 벽시계 |
 | `Compression/` | 압축 스트림과 코덱 레지스트리 |

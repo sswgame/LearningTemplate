@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Profiling/ProfilerTimeline.h"
+#include "Core/Diagnostics/ProfilerTimeline.h"
 
 #include "TestFramework/TestFramework.h"
 

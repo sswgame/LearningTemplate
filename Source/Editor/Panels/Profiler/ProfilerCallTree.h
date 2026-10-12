@@ -5,8 +5,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
-
-#include "Engine/Profiling/ProfilerTimeline.h"
+#include "Core/Diagnostics/ProfilerTimeline.h"
 
 namespace sw::editor
 {
