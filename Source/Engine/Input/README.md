@@ -142,6 +142,28 @@ py -3 -m Scripts test VirtualInputTest.*
 액션의 `trigger` 는 `<bind>`, `<chord>`, `<axis1d>` 에 적용됩니다. `<axis1d>` 는 적지 않으면 `Down` 이고, `getAxis1D` 는 트리거와 관계없이 누르는 동안 값을 돌려줍니다.
 연속 값을 내는 `vector2d`, `stick`, `mouseDelta` 는 `Down` 으로 고정이라 다른 트리거를 적으면 로드할 때 경고합니다.
 
+### 스틱으로 시점 돌리기 — 배율과 프레임 시간 곱
+
+마우스 이동은 프레임당 픽셀이라 스틱을 그대로 묶으면 프레임률을 따르는 느린 값이 됩니다. `<stick>` 에 언리얼 Enhanced Input 의 Scale · Scale By Delta Time 에 해당하는 모디파이어를 적습니다.
+
+```xml
+<action name="Look">
+    <mouseDelta scale="1"/>
+    <stick stick="Right" deadzone="0.15" scaleX="700" scaleY="-700" scaleByDelta="true"/>
+</action>
+```
+
+값은 `스틱 × 축 배율 × 프레임 시간(초)` 입니다. 배율을 초당 픽셀로 적으면 프레임률과 무관하게 같은 속도입니다.
+`scaleY` 가 음수인 까닭은 마우스 이동의 Y 가 아래쪽이 +, 스틱의 Y 는 위쪽이 + 이기 때문입니다.
+배율이 1이 아니거나 `scaleByDelta` 를 켠 스틱은 마우스 이동처럼 이동량으로 쓰여 `[-1, 1]` 로 자르지 않고, 반전(`setInvertX`, `setInvertY`)은 바인딩 평가에서 한 번 적용합니다(`BindingKinds::isRelative( binding )`).
+두 속성을 적지 않은 스틱은 예전과 같습니다.
+
+### 패드로 커서 움직이기 — 가상 커서
+
+명령형 게임(RTS · 도시 건설)은 마우스 위치를 읽습니다. `InputManager::getVirtualCursor().setEnabled( true )` 를 켜면 `beginFrame` 이 패드 스틱을 마우스 이동으로, 패드 A · B 를 마우스 왼쪽 · 오른쪽 버튼으로 바꿔 OS 사건 뒤에 적용합니다(언리얼 CommonUI 의 아날로그 커서와 같은 쓰임).
+UI 호버와 월드 피킹은 마우스 위치만 읽으므로 따로 고칠 곳이 없습니다. 실제 마우스가 움직이면 그 위치에서 이어 움직이고, 패드가 낸 마우스 사건은 글리프를 키보드 · 마우스로 돌리지 않습니다.
+속도 · 데드존 · 응답 지수 · 버튼은 `VirtualCursorSettings` 입니다. 가상 입력(시나리오 · 리플레이)이 붙어 있는 동안은 쉽니다 — 리플레이는 낸 마우스 사건을 그대로 녹화하므로 커서를 켜지 않아도 같은 화면이 재현됩니다.
+
 ### 레이어
 
 액션은 레이어에 속합니다. 메뉴가 열리면 메뉴 레이어를 올려 아래 레이어의 입력을 막을 수 있습니다.
@@ -284,7 +306,7 @@ Win32는 BMP 밖의 글자(이모지, 확장 한자)를 서로게이트 `WM_CHAR
 
 **`GamepadDevice::_triggerDeadzone` 은 디지털 눌림 판정과 다릅니다.** 트리거의 아날로그 잡음만 걸러 내고, 버튼처럼 눌렸는지는 0.5 고정 임계값으로 판정합니다.
 
-**`ActionBinding::_scale` 의 뜻은 바인딩 종류마다 다릅니다.** `MouseDelta2D` 에서는 감도 배율이고, `VirtualJoystick2D` 에서는 드래그 반경(픽셀)입니다.
+**`ActionBinding::_scale` 의 뜻은 바인딩 종류마다 다릅니다.** `MouseDelta2D` 에서는 감도 배율이고, `VirtualJoystick2D` 에서는 드래그 반경(픽셀)입니다. 스틱의 배율은 `_scale` 이 아니라 축마다 `_axisScale` 입니다.
 
 **리눅스의 `/dev/input/jsN` 이 모두 게임패드는 아닙니다.** joydev 는 절대 좌표 마우스와 태블릿에도 노드를 만듭니다. 가상 머신(CI 러너)의 Hyper-V 마우스를 패드로 열면 왼쪽 스틱이 늘 (-0.707, 0.707) 로 기울어 UI 포커스가 저절로 움직입니다.
 `LinuxGamepadDevice` 는 버튼 맵에 조이스틱 · 게임패드 버튼이 있는 노드만 엽니다(`isGamepadButtonMap`). 슬롯 번호는 여전히 `jsN` 의 N 이라, 그런 노드가 앞 번호를 차지하면 실제 패드가 1번 슬롯으로 밀립니다.
@@ -305,5 +327,6 @@ Win32는 BMP 밖의 글자(이모지, 확장 한자)를 서로게이트 `WM_CHAR
 | `RawInputEvent.h` | 원시 사건과 `make*()` 팩토리 함수 |
 | `Virtual/VirtualInputScript.h` | 프레임 번호에 적은 가상 사건 |
 | `Virtual/InputReplay.h` | 입력 층 녹화와 재생 |
+| `Virtual/VirtualCursor.h` | 패드 스틱 · 버튼을 마우스 이동 · 버튼으로 바꾸는 가상 커서 |
 | `Test/EngineTest/Input/` | 기능별 사용 예(테스트) |
 | `Source/Editor/Panels/InputMap/InputMapPanel.cpp` | 액션 바인딩을 편집하고 테스트하는 에디터 패널 |

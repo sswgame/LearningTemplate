@@ -553,6 +553,9 @@ namespace
                 SW_EXPECT_NEAR_EQUAL( pExpected->_outerDeadzone, pActual->_outerDeadzone, 1.0e-5f );
                 SW_EXPECT_NEAR_EQUAL( pExpected->_responseExponent, pActual->_responseExponent, 1.0e-5f );
                 SW_EXPECT_NEAR_EQUAL( pExpected->_scale, pActual->_scale, 1.0e-5f );
+                SW_EXPECT_NEAR_EQUAL( pExpected->_axisScale._x, pActual->_axisScale._x, 1.0e-5f );
+                SW_EXPECT_NEAR_EQUAL( pExpected->_axisScale._y, pActual->_axisScale._y, 1.0e-5f );
+                SW_EXPECT_TRUE_MSG( pExpected->_bScaleByDelta == pActual->_bScaleByDelta, action.c_str() );
                 for ( uint32 slotIndex = 0; slotIndex < 4; ++slotIndex )
                 {
                     SW_EXPECT_TRUE_MSG( pExpected->_arrSlot[slotIndex]._deviceKind == pActual->_arrSlot[slotIndex]._deviceKind, action.c_str() );
@@ -607,7 +610,8 @@ SW_TEST_CASE( InputMapTest, EditorSavedDefinitionReloadsWithTheSameBindings )
     edited.bindGamepadStick2D( "Look", sw::GamepadStick::Right, 0.2f, "Gameplay", 1, 0.9f, 1.5f );
     edited.bindChord( "QuickSave", sw::Key::LeftControl, sw::Key::S, sw::ActionTrigger::Released, "Debug" );
     edited.bindMouseDelta( "Look", 2.5f, "Gameplay" );
-    edited.createAction( "Steer", sw::InputActionValueType::Axis1D ); // 바인딩 없이 이름만 만든 액션(패널의 "Add Action")
+    edited.bindGamepadStick2D( "Look", sw::GamepadStick::Right, 0.15f, "Gameplay", 0, 1.0f, 1.0f, sw::float2{ 600.0f, -600.0f }, true ); // 시점 스틱: 배율 · 프레임 시간 곱
+    edited.createAction( "Steer", sw::InputActionValueType::Axis1D );                                                                    // 바인딩 없이 이름만 만든 액션(패널의 "Add Action")
 
     const sw::string savedPath = test::makeTempPath( "edited.input.xml" );
     SW_ASSERT_TRUE( edited.saveToResource( savedPath ) );
@@ -633,6 +637,50 @@ SW_TEST_CASE( InputMapTest, EditorSavedDefinitionReloadsWithTheSameBindings )
     SW_ASSERT_TRUE( sw::FileUtil::readTextFile( savedPath, savedText ) );
     SW_ASSERT_TRUE( sw::FileUtil::readTextFile( resavedPath, resavedText ) );
     SW_EXPECT_TRUE( savedText == resavedText );
+}
+
+/**
+ * @brief [InputMapTest] 스틱 바인딩의 배율 · 프레임 시간 곱 — 값은 스틱 × 축 배율 × 프레임 시간이고, [-1, 1] 에 묶이지 않는다
+ * @details 마우스 이동(픽셀/프레임)과 같은 `Look` 액션에 오른쪽 스틱을 묶을 수 있게 하는 모디파이어다(언리얼 Enhanced Input 의 Scale · Scale By Delta Time).
+ *          배율이 1 이고 프레임 시간 곱이 없는 스틱은 예전처럼 [-1, 1] 에 묶인다.
+ */
+SW_TEST_CASE( InputMapTest, GamepadStickScalesByAxisAndFrameTime )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::GamepadDevice* pPad = input.getGamepad( 0 );
+    if ( pPad == nullptr )
+    {
+        input.shutdown();
+        return; // 이 플랫폼에는 게임패드 장치가 없다
+    }
+    pPad->setVirtualSession( true );
+    pPad->setVirtualConnected( true );
+    pPad->setAxis( 2, 1.0f );  // RX
+    pPad->setAxis( 3, -1.0f ); // RY (아래)
+
+    sw::InputMap inputMap;
+    inputMap.setInputManager( &input );
+    // 안쪽 데드존 0 · 바깥 1: 스틱 (1, 0) 은 그대로 1 이다.
+    inputMap.bindGamepadStick2D( "Look", sw::GamepadStick::Right, 0.0f, {}, 0, 1.0f, 1.0f, sw::float2{ 600.0f, -600.0f }, true );
+    inputMap.bindGamepadStick2D( "Aim", sw::GamepadStick::Right, 0.0f, {}, 0, 1.0f, 1.0f );
+    pPad->setAxis( 3, 0.0f );
+    inputMap.update( 0.01f );
+    const sw::float2 look = inputMap.getVector2D( "Look" );
+    SW_EXPECT_NEAR_EQUAL( 6.0f, look._x, 1.0e-4f ); // 1 × 600 × 0.01
+    SW_EXPECT_NEAR_EQUAL( 0.0f, look._y, 1.0e-4f );
+    inputMap.update( 0.02f );
+    SW_EXPECT_NEAR_EQUAL( 12.0f, inputMap.getVector2D( "Look" )._x, 1.0e-4f ); // 프레임 시간을 따른다
+
+    pPad->setAxis( 3, 1.0f ); // 위
+    const sw::float2 up = inputMap.getVector2D( "Look" );
+    SW_EXPECT_TRUE( up._y < 0.0f ); // 축 배율의 음수 Y: 스틱 위가 화면 위(마우스 이동의 -y)다
+
+    // 배율이 없는 스틱은 종전처럼 묶인다.
+    pPad->setAxis( 2, 5.0f );
+    SW_EXPECT_TRUE( inputMap.getVector2D( "Aim" ).getLength() <= 1.0001f );
+    pPad->setVirtualSession( false );
+    input.shutdown();
 }
 
 /**

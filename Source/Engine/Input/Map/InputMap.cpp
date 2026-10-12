@@ -129,6 +129,13 @@ namespace sw
         return pInfo != nullptr && pInfo->_bRelative;
     }
 
+    bool BindingKinds::isRelative( const ActionBinding& binding )
+    {
+        if ( isRelative( binding._kind ) )
+            return true;
+        return binding._kind == BindingKind::GamepadStick2D && ( binding._bScaleByDelta || binding._axisScale._x != 1.0f || binding._axisScale._y != 1.0f );
+    }
+
     InputMap::InputMap()
         : _pInput{ nullptr }
         , _mapAction{}
@@ -155,6 +162,7 @@ namespace sw
         , _navRepeatDelay{ 0.4f }
         , _navRepeatRate{ 0.08f }
         , _totalElapsedTime{ 0.0f }
+        , _lastDeltaSeconds{ 0.0f }
         , _stickDeadzoneOverride{ -1.0f }
         , _deadzoneShape{ DeadzoneShape::Radial }
         , _digitalNormalization{ DigitalNormalization::Circular }
@@ -184,6 +192,7 @@ namespace sw
         _doubleClickMaxDistance = InputMapDefaults::kDoubleClickMaxDistance;
         _holdThreshold          = InputMapDefaults::kHoldThreshold;
         _totalElapsedTime       = 0.0f;
+        _lastDeltaSeconds       = 0.0f;
     }
 
     void InputMap::createAction( const hashed_string& action, InputActionValueType valueType )
@@ -274,7 +283,7 @@ namespace sw
             float2 bVal{ 0.0f, 0.0f };
             if ( isBindingLayerActive( binding ) == false || evaluateBindingDown( binding, bVal ) == false )
                 continue;
-            float32& accumulator = BindingKinds::isRelative( binding._kind ) ? relative : bounded;
+            float32& accumulator = BindingKinds::isRelative( binding ) ? relative : bounded;
             accumulator += bVal._x;
         }
         if ( _bInvertX == SW_TRUE )
@@ -296,7 +305,8 @@ namespace sw
         commitBinding( action, InputActionValueType::Axis2D, binding );
     }
 
-    void InputMap::bindGamepadStick2D( const hashed_string& action, GamepadStick stick, float32 deadzone, const hashed_string& layer, uint8 padIndex, float32 outerDeadzone, float32 responseExponent )
+    void InputMap::bindGamepadStick2D( const hashed_string& action, GamepadStick stick, float32 deadzone, const hashed_string& layer, uint8 padIndex, float32 outerDeadzone, float32 responseExponent,
+                                       float2 axisScale, bool bScaleByDelta )
     {
         if ( action.empty() )
             return;
@@ -307,6 +317,8 @@ namespace sw
         binding._deadzone         = deadzone;
         binding._outerDeadzone    = outerDeadzone;
         binding._responseExponent = responseExponent;
+        binding._axisScale        = axisScale;
+        binding._bScaleByDelta    = bScaleByDelta;
         commitBinding( action, InputActionValueType::Axis2D, binding );
     }
 
@@ -323,7 +335,7 @@ namespace sw
             float2 bindingValue{ 0.0f, 0.0f };
             if ( isBindingLayerActive( binding ) && evaluateBindingDown( binding, bindingValue ) )
             {
-                float2& accumulator = BindingKinds::isRelative( binding._kind ) ? relative : bounded;
+                float2& accumulator = BindingKinds::isRelative( binding ) ? relative : bounded;
                 accumulator._x += bindingValue._x;
                 accumulator._y += bindingValue._y;
             }

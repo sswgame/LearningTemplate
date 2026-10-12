@@ -232,6 +232,7 @@ namespace sw
                         stickNode.appendAttribute( InputMapXML::kAttrDeadzone, binding._deadzone );
                         stickNode.appendAttribute( "outerDeadzone", binding._outerDeadzone );
                         stickNode.appendAttribute( "responseExponent", binding._responseExponent );
+                        InputMapSerializationInternal::writeStickModifier( stickNode, binding );
                         stickNode.appendAttribute( InputMapXML::kAttrLayer, binding._layer.c_str() );
                         return true;
                     }
@@ -275,6 +276,24 @@ namespace sw
                     return false;
                 outPadIndex = static_cast<uint8>( padIndex );
                 return true;
+            }
+
+            /** @brief 스틱 배율 · 프레임 시간 곱(`scaleX` · `scaleY` · `scaleByDelta`)을 적습니다. 기본값(1, 1, false)이면 적지 않아 기존 파일이 그대로 나온다. */
+            static void writeStickModifier( XMLNode node, const ActionBinding& binding )
+            {
+                if ( binding._axisScale._x != 1.0f )
+                    node.appendAttribute( "scaleX", binding._axisScale._x );
+                if ( binding._axisScale._y != 1.0f )
+                    node.appendAttribute( "scaleY", binding._axisScale._y );
+                if ( binding._bScaleByDelta )
+                    node.appendAttribute( "scaleByDelta", true );
+            }
+
+            /** @brief 스틱 배율 · 프레임 시간 곱을 읽습니다. 없는 속성은 기본값(1, 1, false)입니다. */
+            static void readStickModifier( XMLNode node, float2& outAxisScale, bool& outScaleByDelta )
+            {
+                outAxisScale    = float2{ node.getAttributeFloat( "scaleX", 1.0f ), node.getAttributeFloat( "scaleY", 1.0f ) };
+                outScaleByDelta = node.getAttributeBool( "scaleByDelta", false );
             }
 
             /**
@@ -574,7 +593,10 @@ namespace sw
                 }
                 const float32 outerDeadzone    = stickNode.getAttributeFloat( "outerDeadzone", 1.0f );
                 const float32 responseExponent = stickNode.getAttributeFloat( "responseExponent", 1.0f );
-                bindGamepadStick2D( hashed_string( pActionName ), stick, deadzone, hashed_string( stickLayer.view() ), padIndex, outerDeadzone, responseExponent );
+                float2        axisScale{ 1.0f, 1.0f };
+                bool          bScaleByDelta{ false };
+                InputMapSerializationInternal::readStickModifier( stickNode, axisScale, bScaleByDelta );
+                bindGamepadStick2D( hashed_string( pActionName ), stick, deadzone, hashed_string( stickLayer.view() ), padIndex, outerDeadzone, responseExponent, axisScale, bScaleByDelta );
             }
 
             // 5) <chord> 태그 파싱
@@ -793,6 +815,7 @@ namespace sw
                         bindNode.appendAttribute( "deadzone", b._deadzone );
                         bindNode.appendAttribute( "outerDeadzone", b._outerDeadzone );
                         bindNode.appendAttribute( "exponent", b._responseExponent );
+                        InputMapSerializationInternal::writeStickModifier( bindNode, b );
                         break;
                     }
                     case BindingKind::MouseDelta2D:
@@ -907,7 +930,10 @@ namespace sw
                     const float32      deadzone      = bindNode.getAttributeFloat( "deadzone", 0.15f );
                     const float32      outerDeadzone = bindNode.getAttributeFloat( "outerDeadzone", 1.0f );
                     const float32      exp           = bindNode.getAttributeFloat( "exponent", 1.0f );
-                    bindGamepadStick2D( hashed_string( pAction ), stick, deadzone, hashed_string( layer ), pad, outerDeadzone, exp );
+                    float2             axisScale{ 1.0f, 1.0f };
+                    bool               bScaleByDelta{ false };
+                    InputMapSerializationInternal::readStickModifier( bindNode, axisScale, bScaleByDelta );
+                    bindGamepadStick2D( hashed_string( pAction ), stick, deadzone, hashed_string( layer ), pad, outerDeadzone, exp, axisScale, bScaleByDelta );
                     break;
                 }
                 case BindingKind::MouseDelta2D:

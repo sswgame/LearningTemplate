@@ -15,6 +15,7 @@
 	<!-- 시점 — 폰의 _lookAction(플레이어 조종자가 조종 회전에 더한다). 잠금 토글은 플레이어 조종자의 _mouseLockAction. -->
 	<action name="Voxel.Look" layer="Gameplay">
 		<mouseDelta scale="1"/>
+		<stick stick="Right" deadzone="0.15" scaleX="700" scaleY="-700" scaleByDelta="true"/>
 	</action>
 
 	<action name="ToggleMouseLock" layer="Gameplay" trigger="Pressed">
