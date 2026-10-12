@@ -201,6 +201,6 @@ Dev 와 Shipping · Server 는 다른 갈래를 탄다 — 고친 갈래의 프�
   단계가 복사한다. 깨끗한 폴더의 첫 빌드에는 `sqlite3` · `libpq` · `libssl` · `libcrypto` 가 없고 다시 지으면 생긴다(테스트는 작업 폴더 `Bin` 에서 찾아 어느 쪽이든 돈다).
   산출물 목록을 견줄 때는 같은 단계(둘 다 다시 빌드)끼리 견준다.
 - **`NOMINMAX` · `WIN32_LEAN_AND_MEAN` 은 `Platform/Windows.cmake` 의 컴파일 정의다** — 헤더 정의(`PlatformOsHeaders.h`)는 그보다 먼저 `windows.h` 를 읽은 TU 에 닿지 않는다.
-  그 헤더에서 OS 헤더를 빼는 일(백로그 1-9)은 이 정의에 기댄다. `sw_global_options` 를 링크하지 않는 타깃은 이 정의도 없다.
+  그 헤더에서 OS 헤더를 빼는 일(백로그 `C-13`)은 이 정의에 기댄다. `sw_global_options` 를 링크하지 않는 타깃은 이 정의도 없다.
 - **`cmake -P` 스크립트는 `cmake_minimum_required` 를 먼저 둔다** — 없으면 정책이 OLD 라 CMake 3.x(CI 러너)에서 `IN_LIST` 가 "Unknown arguments" 다.
   CMake 4.x(이 PC)는 3.5 이전 정책의 OLD 를 지워 늘 통과하므로 로컬에서는 안 보인다. `-P` 로 include 되는 모듈(`ModuleManifest` · `RhiBackends`)은 그것이 없으면 구성을 세운다.
