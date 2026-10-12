@@ -211,7 +211,8 @@ SW_TEST_CASE( UINotificationTest, ReduceMotionSkipsFades )
     SW_EXPECT_NEAR_EQUAL( 1.0f, pEntry->getOpacity(), 1e-4f );
     fixture.runFrame( 0.6f );
     SW_EXPECT_EQUAL( 0u, fixture.notes().getFadingCount() );
-    SW_EXPECT_TRUE( pScreen->getTree().findWidgetByName( "0" ) == nullptr );
+    // 항목이 모두 사라지면 서비스가 화면을 닫는다 — `pScreen` 은 이미 없으므로 읽지 않고 화면이 닫혔는지 본다.
+    SW_EXPECT_TRUE( fixture._ui.findScreen( fixture.notes().getScreen() ) == nullptr );
 }
 
 /**

@@ -480,6 +480,9 @@ namespace sw
 
             const string lookupName = ( method._bConstructor != SW_FALSE ) ? CodeGeneratorInternal::makeCtorLookupName( method, _session ) : method._name;
 
+            // 파서가 더한 기본 생성자는 그 타입이 기본 생성 가능할 때만 등록한다(참조 멤버 · 기본 생성자 없는 베이스는 가린다).
+            if ( method._bSynthesized != SW_FALSE )
+                emit.linef( "if constexpr ( ::std::is_default_constructible_v<%#> )", typeInfo._fullyQualifiedName );
             emit.line( "{" );
             emit.push();
             emit.line( "::sw::FunctionInfo funcInfo;" );

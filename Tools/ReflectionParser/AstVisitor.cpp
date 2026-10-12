@@ -1106,6 +1106,30 @@ namespace sw
                 collector._pType->_listMethod.push_back( std::move( method ) );
             }
 
+            /**
+             * @brief 생성자를 하나도 선언하지 않은 타입(집합체 등)에 `$ctor()` 를 더합니다.
+             * @details libclang 은 암시 생성자를 자식 커서로 내지 않아 `collectConstructor` 가 이 타입들을 놓친다. 그러면 `$ctor` 로 만들어 쓰는 곳(설정 창, 스키마 이행)이
+             *          이 타입만 못 만든다. 기본 생성이 불가능한 타입(참조 멤버 · 기본 생성자 없는 베이스)인지는 파서가 알 수 없어, 생성 코드가 `if constexpr` 로 가린다.
+             */
+            static void synthesizeDefaultConstructor( MemberCollector& collector )
+            {
+                if ( collector._bSkipConstructors == SW_TRUE )
+                    return;
+                for ( const ParsedFunctionInfo& method : collector._pType->_listMethod )
+                {
+                    if ( method._bConstructor == SW_TRUE )
+                        return;
+                }
+
+                ParsedFunctionInfo method;
+                method._name           = annotation::kCtorLookupName;
+                method._returnTypeName = annotation::kVoidTypeName;
+                method._bConstructor   = SW_TRUE;
+                method._bSynthesized   = SW_TRUE;
+                method._category       = annotation::kConstructorCategory;
+                collector._pType->_listMethod.push_back( std::move( method ) );
+            }
+
             /** @brief FUNCTION 이 붙은 메서드를 수집합니다. */
             static void collectMethod( const CXCursor cursor, const string& functionSpelling, MemberCollector& collector )
             {
@@ -1662,6 +1686,7 @@ namespace sw
                 markHeaderError( outHeader );
                 return;
             }
+            AstVisitorInternal::synthesizeDefaultConstructor( collector );
             // 추상 타입(REFLECT(Abstract) · C++ 추상)은 팩토리를 내지 않는다 — 팩토리는 `addComponent<T>()` 로 T 를 만든다. 공통 기반
             // 컴포넌트(`LightComponent`)가 그 예다.
             const bool bRequiresFactory = AstVisitorInternal::isDerivedFromComponent( cursor, _pSession->_config );

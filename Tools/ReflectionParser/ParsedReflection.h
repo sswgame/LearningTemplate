@@ -201,7 +201,8 @@ namespace sw
         uint8                        _bStatic       : 1;
         uint8                        _bConst        : 1;
         uint8                        _bCallInEditor : 1;
-        [[maybe_unused]] uint8       _reserved      : 2;
+        uint8                        _bSynthesized  : 1; ///< 소스에 선언이 없어 파서가 더한 기본 생성자(집합체 · 암시 생성자 타입)
+        [[maybe_unused]] uint8       _reserved      : 1;
         [[maybe_unused]] uint16      _padding;
 
         ParsedFunctionInfo() noexcept
@@ -220,6 +221,7 @@ namespace sw
             , _bStatic{ SW_FALSE }
             , _bConst{ SW_FALSE }
             , _bCallInEditor{ SW_FALSE }
+            , _bSynthesized{ SW_FALSE }
             , _reserved{ 0 }
             , _padding{ 0 }
         {
