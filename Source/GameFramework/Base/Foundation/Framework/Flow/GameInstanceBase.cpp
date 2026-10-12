@@ -176,15 +176,15 @@ namespace sw
             SW_LOG_INFO( "The game instance was recreated over a live scene - keeping it instead of loading the first scene" );
             return false;
         }
-        return requestSceneLoad( getFirstScene(), "first" );
+        return requestLoadScene( getFirstScene(), "first" );
     }
 
     bool GameInstanceBase::requestEntranceScene()
     {
-        return requestSceneLoad( getEntranceScene(), "entrance" );
+        return requestLoadScene( getEntranceScene(), "entrance" );
     }
 
-    bool GameInstanceBase::requestSceneLoad( const string& scenePath, const utf8* pWhich )
+    bool GameInstanceBase::requestLoadScene( const string& scenePath, const utf8* pWhich )
     {
         if ( scenePath.empty() )
             return false;

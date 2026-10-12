@@ -242,7 +242,7 @@ namespace sw
          * @brief @p scenePath 의 로드를 `SceneManager` 에 맡기고 `SceneLoadRequestedEvent` 를 냅니다.
          * @return 경로가 비었으면 조용히 false, 맡기지 못했으면 알리고 false 입니다(그때는 이벤트도 없습니다).
          */
-        [[nodiscard]] bool requestSceneLoad( const string& scenePath, const utf8* pWhich );
+        [[nodiscard]] bool requestLoadScene( const string& scenePath, const utf8* pWhich );
         /** @brief 끝난 씬 로드마다 `SceneLoadCompletedEvent` 를 냅니다(요청 순서). */
         void publishFinishedSceneLoads();
         /** @brief 올린 타입의 상태를 모두 싣고, 그다음 세운 것을 모두 걷습니다(`onBeforeStateSerialize` 앞). */
