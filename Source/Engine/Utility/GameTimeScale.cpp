@@ -3,11 +3,10 @@
 #include "Engine/Utility/GameTimeScale.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
-
-#include "Engine/Console/DevCommandRegistry.h"
 
 namespace sw
 {

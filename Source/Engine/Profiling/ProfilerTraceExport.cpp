@@ -12,7 +12,7 @@
     #include "Core/Time/WallClock.h"
 
     #include "Engine/Common/EngineServices.h"
-    #include "Engine/Console/DevCommandRegistry.h"
+    #include "Core/Console/DevCommandRegistry.h"
     #include "Engine/Profiling/FrameProfiler.h"
     #include "Engine/Resource/ResourcePaths.h"
     #include "Engine/Serialization/JSON/JSONDocument.h"

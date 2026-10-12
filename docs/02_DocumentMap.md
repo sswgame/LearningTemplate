@@ -71,7 +71,7 @@
   - [UI 문서와 데이터 바인딩](../Source/Engine/UI/Document/README.md), [엔진 기본 화면과 접근성](../Source/Engine/UI/Screen/README.md)
 - [Animation](../Source/Engine/Animation/README.md), [Audio](../Source/Engine/Audio/README.md), [Input](../Source/Engine/Input/README.md), [Localization](../Source/Engine/Localization/README.md)
 - [Physics](../Source/Engine/Physics/README.md) — [Jolt](../Source/Engine/Physics/Jolt/README.md)와 [Box2D](../Source/Engine/Physics/Box2D/README.md) 백엔드
-- [Spatial](../Source/Engine/Spatial/README.md), [Navigation](../Source/Engine/Navigation/README.md), [Environment](../Source/Engine/Environment/README.md)
+- [Spatial](../Source/Core/Spatial/README.md), [Navigation](../Source/Engine/Navigation/README.md), [Environment](../Source/Engine/Environment/README.md)
 - [Character](../Source/Engine/Character/README.md), [Destruction](../Source/Engine/Destruction/README.md)
 - [UserSettings](../Source/Engine/UserSettings/README.md), [Telemetry](../Source/Engine/Telemetry/README.md), [Automation](../Source/Engine/Automation/README.md), [Profiling](../Source/Engine/Profiling/README.md)
 

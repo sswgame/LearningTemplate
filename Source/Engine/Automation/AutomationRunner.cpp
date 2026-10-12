@@ -2,6 +2,7 @@
 
 #include "Engine/Automation/AutomationRunner.h"
 
+#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -15,7 +16,6 @@
 #include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Automation/AutomationWindowSteps.h"
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

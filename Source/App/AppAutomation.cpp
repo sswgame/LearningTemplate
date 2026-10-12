@@ -8,7 +8,7 @@
     #include "Core/Container/vector.h"
 
     #include "Engine/Automation/AutomationProbe.h"
-    #include "Engine/Console/DevCommandRegistry.h"
+    #include "Core/Console/DevCommandRegistry.h"
 
     #include "ModuleHost/LiveReloadManager.h"
 

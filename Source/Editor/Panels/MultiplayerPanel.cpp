@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/MultiplayerPanel.h"
 
+#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"
@@ -16,7 +17,6 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/AutomationProbe.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Localization/LocText.h"
 
 #include <imgui.h>

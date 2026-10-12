@@ -2,10 +2,9 @@
 
 #include "GameFramework/Base/Foundation/Framework/Net/GameNetSession.h"
 
+#include "Core/Console/DevCommandRegistry.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
-
-#include "Engine/Console/DevCommandRegistry.h"
 
 namespace sw
 {

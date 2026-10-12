@@ -13,8 +13,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-
-#include "Engine/Profiling/ProfilerTimeline.h"
+#include "Core/Diagnostics/ProfilerTimeline.h"
 
 #if SW_PROFILER_TRACE_ENABLED
 

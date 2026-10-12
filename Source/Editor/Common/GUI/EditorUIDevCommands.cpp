@@ -5,14 +5,14 @@
  */
 #include "pch.h"
 
+#include "Core/Console/DevCommandRegistry.h"
+
 #include "Editor/Common/GUI/EditorDockLayout.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-
-#include "Engine/Console/DevCommandRegistry.h"
 
 namespace sw::editor
 {

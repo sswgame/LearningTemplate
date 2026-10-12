@@ -268,7 +268,7 @@ Jolt 의 `VehicleConstraint` 와 `WheeledVehicleController` 를 스텝 리스너
 하나가 멀리 끌려가면 모든 연속 바디가 월드 전체를 훑게 되기 때문입니다.
 
 **셀 순회 변수는 `int64` 로 두세요.** 셀 범위는 `CellRange` 하나로 계산합니다. `int32` 순회 변수가 `MathUtil::kMaxInt32` 에서 넘치면 루프가 끝나지 않습니다.
-`toCellCoord` 는 `float64` 로 나눈 뒤 정수로 바꿉니다. 공간 색인 규약은 [Spatial](../Spatial/README.md)에 있습니다.
+`toCellCoord` 는 `float64` 로 나눈 뒤 정수로 바꿉니다. 공간 색인 규약은 [Spatial](../../Core/Spatial/README.md)에 있습니다.
 
 **`onOverlapBegin` 안에서는 스폰과 파괴를 해도 됩니다.** 겹침 이벤트는 틱이 끝난 뒤 게임 스레드에서 실행되기 때문입니다.
 
@@ -277,7 +277,7 @@ Jolt 의 `VehicleConstraint` 와 `WheeledVehicleController` 를 스텝 리스너
 - [Jolt 백엔드](Jolt/README.md), [Box2D 백엔드](Box2D/README.md) — 백엔드별 사정
 - [물리 컴포넌트](../Object/Component/Physics/README.md) — 컴포넌트의 물리 프레임 단계
 - [Character](../Character/README.md) — 래그돌, 맞힘 판정, 소켓 부착의 물리
-- [Spatial](../Spatial/README.md) — 겹침 월드가 쓰는 공간 그리드
+- [Spatial](../../Core/Spatial/README.md) — 겹침 월드가 쓰는 공간 그리드
 
 자주 여는 파일은 다음과 같습니다.
 

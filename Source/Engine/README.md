@@ -19,7 +19,7 @@
 | 티어 | 폴더 |
 |---|---|
 | 0 | `Common`, `Compression`, `Observability` |
-| 1 | `Reflection`, `Console`, `Spatial` |
+| 1 | `Reflection`, `Console` |
 | 2 | `Utility`, `Serialization` |
 | 3 | `Profiling`, `TileMap`, `Config`, `Physics` |
 | 4 | `Resource`, `Navigation` |
@@ -45,7 +45,7 @@
   네트워크 보안(OpenSSL)은 온라인을 쓰는 게임만 필요하므로 Engine 이 아니라 `GameFramework/Base/Online/Security` 에 있습니다 — Engine.dll 은 libssl · libcrypto 를 모릅니다.
   `Observability` 는 Core만 보는 서버 운영 관측입니다. 엔진의 HTTP(운영 엔드포인트 `OpsHTTPEndpoint`, 텔레메트리 · 크래시 보고가 쓰는 `IHTTPClient`)도 여기 한 곳에 있습니다.
 - **설정과 물리.** 물리의 설정 테이블, 물리 에셋, 셰이프 서술자가 리플렉션 데이터라서 물리가 설정과 같은 자리에 있습니다.
-- **공간.** 공간 분할(`Spatial`)은 Core 수학의 `AABB`(`Core/Math/AABB.h`)만 쓰므로 토대 바로 위에 있습니다. 물리 · 렌더 · 내비가 그 위에서 같은 트리를 씁니다.
+- **공간.** 공간 분할은 Core 수학의 `AABB` 만 쓰므로 Core 에 있습니다([Core/Spatial](../Core/Spatial/README.md)). 물리 · 렌더 · 내비가 같은 트리를 씁니다.
 - **에셋과 내비.** `Resource` 는 에셋 데이터베이스, 팩, 캐시 레지스트리(`IAssetCache`)입니다.
   내비메시(`Navigation`)는 물리의 셰이프 서술자를 읽어 베이크하고, 씬 쪽 내비게이션 컴포넌트가 그것을 씁니다.
 - **기능 데이터.** `Animation` 과 `Localization` 은 자기 에셋 캐시(`AnimationAssetCache`, `SpriteClipCache`, `LocalizationReloadCache`)가 `IAssetCache` 를 구현하므로 `Resource` 위에 있습니다.
@@ -81,7 +81,7 @@ py -3 Scripts/lint/report/RunEngineLayerGraph.py
 
 ```text
    5  Animation            -> Common, Reflection, Resource, Serialization
-   9  Character            -> Animation, Audio, Common, Graphics, Object, Physics, Reflection, Resource, Serialization, Spatial
+   9  Character            -> Animation, Audio, Common, Graphics, Object, Physics, Reflection, Resource, Serialization
 ```
 
 계산한 티어가 게이트의 테이블과 다르면 그 줄 끝에 `<- 게이트 표는 N` 이 붙습니다. 같은 티어끼리의 include는 허용되므로 계산 값이 테이블보다 높게 나올 수 있습니다.
@@ -184,7 +184,7 @@ py -3 Scripts/lint/gate/CheckEngineLayers.py
 
 ### 개발 콘솔과 개발 명령
 
-개발 콘솔과 개발 명령은 Shipping에 없습니다(`SW_DEV_COMMANDS_ENABLED`). 명령 레지스트리는 `Console/DevCommandRegistry` 하나이고, 모듈을 언로드하면 그 모듈의 명령이 빠집니다.
+개발 콘솔과 개발 명령은 Shipping에 없습니다(`SW_DEV_COMMANDS_ENABLED`). 명령 레지스트리는 `Core/Console/DevCommandRegistry` 하나이고, 모듈을 언로드하면 그 모듈의 명령이 빠집니다.
 명령은 자기 `.cpp` 에 `SW_DEV_COMMAND( 변수, "이름", "사용법", "설명", &본문 )` 한 줄로 등록하고, 본문은 `#if SW_DEV_COMMANDS_ENABLED` 안에 둡니다.
 게임과 키트의 치트(무적, 아이템 주기)도 같은 방식으로 그 게임과 키트에 둡니다. 엔진 명령도 소유 코드 옆에 있습니다 — `timescale` 은 `Utility/GameTimeScale.cpp`, `autoplay` 는 `Utility/GameAutoplay.cpp`, `debugdraw.category` 는 `Graphics/Debug/DebugDrawQueue.cpp`, `screenshot [file]`(다음 프레임을 PNG 로 — `RenderThread::requestScreenshot`)은 `Renderer/Capture/ScreenshotPathUtil.cpp`, `renderdoc.capture` · `renderdoc.ui`(RenderDoc 이 붙었을 때 — `-renderdoc`)는 `Renderer/Capture/RenderDocCapture.cpp`,
 버그 리포트 `bugit [메모]` · `bugitgo [폴더]`(언리얼 BugIt · BugItGo — `Saved/BugIt/<시각>/` 에 info · 스크린샷 · 로그 사본 · 씬 사본 · 재현 명령, 카메라는 에디터 카메라가 있으면 그것)는 `Renderer/Capture/BugItReport.cpp`, 활성 씬을 찾는 `teleport` · `tag.add` · `anim.rewind*` 는 `Scene/SceneDevCommands.cpp`(컴포넌트 모델은 씬을 모른다).
@@ -198,7 +198,7 @@ Shipping 실행 파일에 레지스트리가 없는지는 `DevCommandShippingTes
 글자는 액션이 아니라 글자 입력(`InputManager::setTextInputCallback( …, InputKeyboardFocus::DevConsole )`)으로 받고, 콘솔을 여닫은 프레임의 글자는 버립니다.
 열려 있는 동안 콘솔이 키보드 포커스를 가지므로 게임의 키보드 입력은 "안 눌림"이 됩니다. 패드는 포커스와 관계가 없어 게임이 계속 받습니다.
 
-런타임 디버그 HUD(FPS · 스레드 시간 · 드로우 · 메모리 · 오브젝트 · 물리 · 오디오 · 입력 · 카메라 · 게임 디버그 값)도 같은 Dev 전용 도구입니다. 섹션 레지스트리는 `Console/DebugHUDRegistry` 이고,
+런타임 디버그 HUD(FPS · 스레드 시간 · 드로우 · 메모리 · 오브젝트 · 물리 · 오디오 · 입력 · 카메라 · 게임 디버그 값)도 같은 Dev 전용 도구입니다. 섹션 레지스트리는 `Core/Console/DebugHUDRegistry` 이고,
 섹션은 소유 코드의 `.cpp` 에 `SW_DEBUG_HUD_SECTION` 한 줄로 답니다. 단축키(Ctrl+F3), 명령 `hud`, 설정 창, 꺼진 상태의 비용은 [UI README](UI/README.md#디버그-hud)에 있습니다.
 
 ### 서버 운영 관측
@@ -213,7 +213,7 @@ Shipping 실행 파일에 레지스트리가 없는지는 `DevCommandShippingTes
 XML · JSON 문서(`XMLDocument`, `JSONDocument`, `ConfigKeyDoc`)는 `Serialization/XML` · `Serialization/JSON` 에 있습니다. 데이터 XML의 "모르는 이름" 검사는 `XMLNameCheck` 하나가 합니다. 문구는 `<원소> has unknown attribute 'x'` 로 같고, 데이터 오류면 Error, 읽기를 계속하는 로더면 Warning을 고릅니다.
 게임 시간 배율(`GameTimeScale`, `gv_timeScale`)은 호스트가 프레임 시간에 곱합니다. 게임의 자동 플레이 스위치 계약(`GameAutoplay`, `SW_GAME_AUTOPLAY`)도 여기 있습니다.
 `Profiling/` 은 엔진 프로파일러입니다. `SW_PROFILE_SCOPE` 한 줄이 `FrameProfiler` 표와 Tracy 구간에 함께 남습니다([Profiling](Profiling/README.md)).
-`Console/` 은 개발 명령 레지스트리와 콘솔 해석기, 디버그 HUD 섹션 레지스트리, `TileMap/` 은 2D 타일맵 데이터(타일셋 에셋, 맵 XML, 격자 도우미)입니다. 셋 다 쓰는 곳이 여러 티어에 걸쳐 바닥 가까이 둡니다.
+`Console/` 은 콘솔 해석기(`DevConsole`, 레지스트리는 `Core/Console`), `TileMap/` 은 2D 타일맵 데이터(타일셋 에셋, 맵 XML, 격자 도우미)입니다. 셋 다 쓰는 곳이 여러 티어에 걸쳐 바닥 가까이 둡니다.
 배치 규칙의 타일 표면(`Environment/Placement/PlacementTileSurface`)은 타일 값을 받아 쓰는 어댑터라 `TileMap` 과 겹치지 않습니다.
 
 `Module/` 에는 모듈 DLL 쪽 계약만 둡니다.
@@ -384,7 +384,6 @@ Debug STL 은 문자열 객체마다 16 B 컨테이너 프록시를 잡습니다
 | [Character](Character/README.md) | 캐릭터 형상, 소켓, 피격 |
 | [Physics](Physics/README.md) | 물리 |
 | [Navigation](Navigation/README.md) | 내비메시와 군중 |
-| [Spatial](Spatial/README.md) | 공간 분할 |
 | [Environment](Environment/README.md) | 지형, 식생, 물 |
 | [Destruction](Destruction/README.md) | 파괴 가능 메시 |
 | [Audio](Audio/README.md) | 오디오 |

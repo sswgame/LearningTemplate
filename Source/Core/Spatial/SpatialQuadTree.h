@@ -1,5 +1,5 @@
 #pragma once
-#include "Engine/Spatial/SpatialTree.h"
+#include "Core/Spatial/SpatialTree.h"
 
 namespace sw
 {

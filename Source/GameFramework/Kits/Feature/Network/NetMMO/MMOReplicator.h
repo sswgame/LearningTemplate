@@ -29,8 +29,7 @@
 #include "Core/Network/Replication/NetParallel.h"
 #include "Core/Network/Replication/NetPrioritizer.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
-
-#include "Engine/Spatial/SpatialHashGrid2D.h"
+#include "Core/Spatial/SpatialHashGrid2D.h"
 
 #include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
 #include "GameFramework/GameFrameworkExports.h"

@@ -70,6 +70,6 @@ grid.queryCircle( center._x, center._z, 30.0f, listNear ); // listNear 는 먼�
 
 ## 더 볼 곳
 
-- 테스트: `Test/EngineTest/Spatial/TestSpatial.cpp`
+- 테스트: `Test/CoreTest/Spatial/TestSpatial.cpp`
 - 쓰는 곳: `GameFramework/Kits/Feature/Network/NetMMO/MMOReplicator`(해시 그리드), `Engine/Character/Fit/SurfaceBvh`(BVH)
-- 상위 문서: [Engine/README.md](../README.md)
+- 상위 문서: [Core/README.md](../README.md) — Core 의 `Common` · `Container` · `Math`(`AABB` · `Frustum`)만 쓰므로 Core 에 있습니다.

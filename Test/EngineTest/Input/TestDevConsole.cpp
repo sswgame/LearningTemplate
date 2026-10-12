@@ -1,10 +1,10 @@
 #include "pch.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Console/DevCommandRegistry.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Console/DevConsole.h"
 #include "Engine/EngineLoop.h"
 #include "Engine/Input/DevConsoleController.h"

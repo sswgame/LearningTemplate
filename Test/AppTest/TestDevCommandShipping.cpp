@@ -1,9 +1,8 @@
 #include "pch.h"
 
+#include "Core/Console/DevCommandRegistry.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Module/ModuleBuildID.h"
-
-#include "Engine/Console/DevCommandRegistry.h"
 
 #include "TestFramework/TestFramework.h"
 

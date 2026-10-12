@@ -6,13 +6,12 @@
 #include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/formatString.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/String/fixed_string.h"
-
-#include "Engine/Console/DevCommandRegistry.h"
 
 #if SW_DEV_COMMANDS_ENABLED
 

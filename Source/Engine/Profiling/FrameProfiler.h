@@ -23,10 +23,10 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Diagnostics/ProfilerTimeline.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Profiling/ProfilerBackend.h"
-#include "Engine/Profiling/ProfilerTimeline.h"
 
 namespace sw
 {
