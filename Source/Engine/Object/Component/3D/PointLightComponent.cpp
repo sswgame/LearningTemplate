@@ -29,6 +29,8 @@ namespace sw
     PointLightComponent::PointLightComponent()
         : LightComponent( shaderslot::kLightTypePoint, PointLightComponentInternal::kDefaultColor, PointLightComponentInternal::kDefaultIntensity )
         , _radius{ PointLightComponentInternal::kDefaultRadius }
+        , _bCastShadow{ SW_FALSE }
+        , _reservedPointLight{ 0 }
     {
     }
 
@@ -37,6 +39,12 @@ namespace sw
         // 반경 0 은 셰이더에서 0 으로 나누는 자리다. 아주 작은 값으로 막는다.
         _radius = MathUtil::max( radius, 0.01f );
         onPropertyChanged( hashed_string( "_radius" ) );
+    }
+
+    void PointLightComponent::setCastShadow( bool bCastShadow )
+    {
+        _bCastShadow = bCastShadow ? SW_TRUE : SW_FALSE;
+        onPropertyChanged( hashed_string( "_bCastShadow" ) );
     }
 
     void PointLightComponent::validateRadius( ValidationContext& context ) const

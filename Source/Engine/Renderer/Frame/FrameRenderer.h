@@ -27,6 +27,7 @@
 #include "Engine/Renderer/Frame/TransientAttachmentPool.h"
 #include "Engine/Renderer/Graph/RenderGraph.h"
 #include "Engine/Renderer/Light/GPULightBuffer.h"
+#include "Engine/Renderer/Light/ShadowSetup.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Renderer/Scene/GPUMeshMorphPool.h"
@@ -357,15 +358,23 @@ namespace sw
             vector<uint32>              _listInstanceSlot;          ///< 지금 `_instanceSlotStream` 에 들어 있는 내용(같으면 다시 만들지 않는다)
             RHIBufferHandle             _instanceSlotStream{ 0 };   ///< 이 뷰의 인스턴스 슬롯 스트림(꼬리만 뷰 순서). 컬링이 없는 백엔드(DX11)에서 쓴다.
             uint32                      _transparentTailBase{ 0 };  ///< 순번 테이블 0번의 인스턴스 번호
-            uint32                      _cullSlot{ 0 };
-            uint32                      _outputWidth{ 0 }; ///< 출력 크기(렌더 텍스처, 화면 사각형)
-            uint32                      _outputHeight{ 0 };
-            uint32                      _shadowMapResolution{ 0 }; ///< 풀이 가진 그림자 맵 한 변(0이면 아직 없음). 품질이 바뀌면 풀을 다시 만든다.
-            RenderViewOutputKind        _outputKind{ RenderViewOutputKind::ScreenRect };
-            uint8                       _bRenderThisFrame{ SW_FALSE };
-            uint8                       _bSeenThisFrame{ SW_FALSE };
-            uint8                       _bHasTransparentRank{ SW_FALSE }; ///< 이번 프레임에 `_transparentRank` 로 정렬한다.
-            uint8                       _bUsesViewSlotStream{ SW_FALSE }; ///< 이번 프레임에 `_instanceSlotStream` 으로 그린다.
+            /**
+             * @brief 이 뷰의 방향광 그림자(셰이더 상수 · 캐스케이드 타일 · 컬링 절두체)입니다. 주 시점은 프레임의 것, 추가 뷰는 자기 카메라에 맞춘 것이다.
+             * @details 추가 뷰가 주 시점 볼륨을 쓰면 다른 곳을 보는 CCTV · 분할 화면은 그림자가 빠진다(언리얼의 뷰별 그림자 뷰).
+             */
+            ViewShadowData _shadow;
+            /// @brief 추가 뷰의 그림자 패스 컬링 입력(행렬 · 절두체 · 자기 컬링 상수 버퍼)입니다. 주 시점은 `_arrView[Shadow]` 를 씁니다.
+            RenderView           _shadowCullInput;
+            uint32               _cullSlot{ 0 };
+            uint32               _shadowCullSlot{ static_cast<uint32>( RenderViewType::Shadow ) }; ///< 그림자 패스가 쓰는 컬링 슬롯(주 시점은 1, 추가 뷰는 자기 슬롯)
+            uint32               _outputWidth{ 0 };                                                ///< 출력 크기(렌더 텍스처, 화면 사각형)
+            uint32               _outputHeight{ 0 };
+            uint32               _shadowMapResolution{ 0 }; ///< 풀이 가진 그림자 맵 한 변(0이면 아직 없음). 품질이 바뀌면 풀을 다시 만든다.
+            RenderViewOutputKind _outputKind{ RenderViewOutputKind::ScreenRect };
+            uint8                _bRenderThisFrame{ SW_FALSE };
+            uint8                _bSeenThisFrame{ SW_FALSE };
+            uint8                _bHasTransparentRank{ SW_FALSE }; ///< 이번 프레임에 `_transparentRank` 로 정렬한다.
+            uint8                _bUsesViewSlotStream{ SW_FALSE }; ///< 이번 프레임에 `_instanceSlotStream` 으로 그린다.
         };
 
         /** @brief 주 출력에 그리는 패스(Present, Canvas)의 대상입니다. 지금 뷰가 정하며 `resolvePresentTarget` 이 구합니다. */
@@ -512,12 +521,23 @@ namespace sw
          */
         struct FrameLightState
         {
-            float4   _dirIntensity{ -0.35f, -0.85f, -0.25f, 1.35f };
-            float4   _colorAmbient{ 1.0f, 0.82f, 0.62f, 0.28f };
-            float4x4 _shadowViewProj{};
-            float4   _shadowParams{}; ///< g_ShadowParams. 그림자 행렬과 한 쌍으로 쓴다.
-            uint8    _bHasShadowViewProj{ SW_FALSE };
+            float4 _dirIntensity{ -0.35f, -0.85f, -0.25f, 1.35f };
+            float4 _colorAmbient{ 1.0f, 0.82f, 0.62f, 0.28f };
         };
+        /**
+         * @brief 이번 프레임의 그림자 배치(`_frameShadow`)를 마무리합니다. 주 시점 그림자가 비어 있으면(주광이 없다) 프레임 키 라이트로 폴백하고, 주 시점 뷰에 옮깁니다.
+         * @details 라이트 버퍼 업로드보다 먼저 부른다 — 점광 · 스폿 타일 원소가 라이트 버퍼 꼬리에 붙는다.
+         */
+        void applyFrameShadow();
+        /** @brief 뷰 하나의 방향광 그림자 상수(`g_LightViewProj` · `g_ShadowParams` · `g_ShadowCascadeLayout` · `g_ShadowCascade0..3`)를 패스 상수에 씁니다. */
+        void applyViewShadowConstants( FramePassContext& context, const ViewShadowData& shadow );
+        /**
+         * @brief 그림자 패스 하나를 그립니다 — 지금 뷰의 캐스케이드 타일과 프레임의 점광 · 스폿 타일을 아틀라스의 자기 칸(뷰포트)에 그립니다.
+         * @details 타일마다 `g_LightViewProj` 를 그 타일의 행렬로 바꿔 씬을 한 번씩 그린다. 컬링은 모든 타일을 덮는 상자(`ViewShadowData::_cullViewProj`) 하나다.
+         */
+        void drawShadowTiles( FramePassContext& context, RHIDescriptorIndex passCb, bool bTransparentBatch );
+        /** @brief 이번 프레임 한 뷰의 그림자 패스가 그리는 타일 수입니다(상수 버퍼 링 용량 산정). */
+        uint32 computeShadowTileCountPerView() const;
         /** @brief 카메라의 뷰와 투영 행렬을 적용합니다. */
         void applyViewFromCamera( FramePassContext& context, CameraComponent* pCamera );
         /**
@@ -526,8 +546,6 @@ namespace sw
          *          지난 프레임의 카메라를 가리키고, 증상은 "빛이 한 프레임 늦게 따라온다" 로 나타난다.
          */
         void applyViewProjection( FramePassContext& context, const float4x4& viewProj );
-        /** @brief 주 광원의 뷰-투영 행렬을 만듭니다. */
-        void computeLightViewProj( const FramePassContext& context, float4x4& outMat ) const;
         /** @brief 카메라의 뷰-투영 행렬을 만듭니다. */
         void computeViewProj( float4x4& outMat ) const;
         /** @brief 월드 행렬을 단위 행렬로 설정합니다. */
@@ -769,6 +787,13 @@ namespace sw
         GPULightBuffer _lightBuffer;
         /// @brief 씬 직접 경로에서 라이트를 모으는 버퍼입니다. 프레임마다 할당하지 않으려고 보관합니다.
         vector<GPULight> _listScratchLight;
+        /// @brief 씬 직접 경로에서 그림자를 켠 점광 · 스폿의 라이트 원소 번호입니다. 프레임마다 재사용합니다.
+        vector<uint32> _listScratchShadowLightIndex;
+        /**
+         * @brief 이번 프레임의 그림자 배치(아틀라스 칸 · 주 시점 캐스케이드 · 점광 · 스폿 타일)입니다.
+         * @details 패킷 경로는 패킷과 맞바꾸기로 받고, 씬 직접 경로는 여기에 바로 채운다. 기록 중에는 읽기만 한다.
+         */
+        FrameShadowData _frameShadow;
 
         /** @brief 뷰 하나를 얻습니다. 그 뷰의 행렬, 절두체, 상수 버퍼가 함께 옵니다. */
         RenderView&       view( RenderViewType type ) { return _arrView[static_cast<uint32>( type )]; }
@@ -857,7 +882,7 @@ namespace sw
         RenderGraphExecutionContext _graphContext;
 
         // 아래는 8바이트보다 작은 필드다. 사이에 끼면 패딩이 생기므로 큰 것부터 두고 작은 것을 끝에 모은다.
-        FrameLightState _frameLight; ///< 크기가 8의 배수가 아니라(116) 4바이트 필드와 짝을 지어 배치한다.
+        FrameLightState _frameLight; ///< float4 둘(32바이트)이다.
         /// @brief 주 출력(백버퍼, 게임 뷰 RT)의 크기입니다. 주 시점의 풀은 이 크기 × 사각형 × 해상도 배율이고, 화면 사각형 뷰와 Present 캡처는 이 크기를 씁니다.
         uint32 _outputWidth;
         uint32 _outputHeight;

@@ -123,8 +123,8 @@ float3 shadeToonLights( float3 litColor, float3 shadeColor, float3 worldPosition
 			continue;
 		bAnyLight3d = true;
 
-		// 그림자 맵은 그것을 받는 빛(params.x) 하나의 것이다. 계단을 지난 뒤에 곱한다(MToon 1.0) — 그림자 경계도 그림자색으로 떨어진다.
-		const float shadowTerm = ( light.params.x > 0.5f ) ? lerp( 1.0f, shadow, shadowReceive ) : 1.0f;
+		// 그림자는 그것을 받는 빛(params.x)마다다 — 방향광은 캐스케이드, 점광 · 스폿은 자기 타일(swComputeLightShadow). 계단을 지난 뒤에 곱한다(MToon 1.0) — 그림자 경계도 그림자색으로 떨어진다.
+		const float shadowTerm = lerp( 1.0f, swComputeLightShadow( light, worldPosition, normal, shadow ), shadowReceive );
 		const float shading    = linearStep( lower, upper, dot( normal, toLight ) + shadingShift ) * shadowTerm;
 		const float3 radiance  = light.colorIntensity.rgb * light.colorIntensity.a * attenuation;
 		color += lerp( shadeColor, litColor, shading ) * radiance;

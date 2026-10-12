@@ -82,10 +82,12 @@ namespace sw
                 view._outputHeight = view._pOutputTexture->getHeight();
             }
 
-            // 컬링 · 정렬 상수버퍼는 뷰마다 자기 것이다(나눠 쓰면 뒤 업로드가 앞 디스패치를 덮어쓴다).
-            const bool bCullCb = view._cullInput._cullCb.isValid() || view._cullInput._cullCb.create( _pDevice, sizeof( FrameRendererUtil::GPUCullParams ) );
-            const bool bSortCb = view._cullInput._sortCb.isValid() || view._cullInput._sortCb.create( _pDevice, sizeof( FrameRendererUtil::GPUSortParams ) );
-            if ( bCullCb == false || bSortCb == false )
+            // 컬링 · 정렬 상수버퍼는 뷰마다 자기 것이다(나눠 쓰면 뒤 업로드가 앞 디스패치를 덮어쓴다). 그림자 패스의 컬링도 뷰마다 자기 슬롯 · 상수버퍼다
+            // (정렬은 그림자에 필요 없다 — 깊이만 쓴다).
+            const bool bCullCb       = view._cullInput._cullCb.isValid() || view._cullInput._cullCb.create( _pDevice, sizeof( FrameRendererUtil::GPUCullParams ) );
+            const bool bSortCb       = view._cullInput._sortCb.isValid() || view._cullInput._sortCb.create( _pDevice, sizeof( FrameRendererUtil::GPUSortParams ) );
+            const bool bShadowCullCb = view._shadowCullInput._cullCb.isValid() || view._shadowCullInput._cullCb.create( _pDevice, sizeof( FrameRendererUtil::GPUCullParams ) );
+            if ( bCullCb == false || bSortCb == false || bShadowCullCb == false )
             {
                 SW_LOG_ERROR( "Failed to create the cull / sort constant buffers of extra view %# - it is not drawn", view._viewID );
                 view._bRenderThisFrame = SW_FALSE;
@@ -93,6 +95,10 @@ namespace sw
             }
             view._cullInput.setViewProjection( request._viewProj );
             view._cullInput._position = request._position;
+            // 방향광 그림자는 이 뷰의 카메라에 맞춘 것이다. 게임 스레드가 채우지 않았으면(쉬는 뷰 · 그림자 빛 없음) 주 시점의 것을 쓴다.
+            view._shadow = request._shadow._bValid == SW_TRUE ? request._shadow : _mainView._shadow;
+            view._shadowCullInput.setViewProjection( view._shadow._cullViewProj );
+            view._shadowCullInput._position = request._position;
 
             if ( view._bRenderThisFrame == SW_TRUE )
             {
@@ -103,7 +109,7 @@ namespace sw
             }
         }
 
-        // 이번 요청에 없는 뷰(카메라가 사라졌다)는 놓는다. 남은 뷰의 컬링 칸은 목록 순서로 고정 칸 뒤에 붙는다.
+        // 이번 요청에 없는 뷰(카메라가 사라졌다)는 놓는다. 남은 뷰의 컬링 칸은 목록 순서로 고정 칸 뒤에 붙는다 — 뷰마다 둘(시점, 그림자).
         for ( unique_ptr<ViewTarget>& pView : _listExtraView )
         {
             if ( pView->_bSeenThisFrame == SW_FALSE )
@@ -115,9 +121,10 @@ namespace sw
                               _listExtraView.end() );
         for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( _listExtraView.size() ); ++viewIndex )
         {
-            _listExtraView[viewIndex]->_cullSlot = kFirstExtraCullView + viewIndex;
+            _listExtraView[viewIndex]->_cullSlot       = kFirstExtraCullView + viewIndex * kCullSlotsPerExtraView;
+            _listExtraView[viewIndex]->_shadowCullSlot = kFirstExtraCullView + viewIndex * kCullSlotsPerExtraView + 1u;
         }
-        _gpuScene.setCullViewCount( _pDevice, kFirstExtraCullView + static_cast<uint32>( _listExtraView.size() ) );
+        _gpuScene.setCullViewCount( _pDevice, kFirstExtraCullView + static_cast<uint32>( _listExtraView.size() ) * kCullSlotsPerExtraView );
     }
 
     void FrameRenderer::releaseExtraView( ViewTarget& view )
@@ -125,6 +132,7 @@ namespace sw
         releaseViewTransients( view );
         view._cullInput._cullCb.release( _pDevice );
         view._cullInput._sortCb.release( _pDevice );
+        view._shadowCullInput._cullCb.release( _pDevice );
         releaseViewTransparentOrder( view );
         view._commandList.reset();
         if ( view._pOutputTexture != nullptr && engine::areEngineServicesBound() )
@@ -202,11 +210,12 @@ namespace sw
         if ( pCmd == nullptr )
             return;
 
-        // 주 시점의 시드에서 출발해 이 뷰의 것(뷰-투영 · 풀 크기 · 플래그 · 컬링 칸)만 덮어쓴다. 라이트 · 그림자 행렬은 프레임 공통이다.
+        // 주 시점의 시드에서 출발해 이 뷰의 것(뷰-투영 · 풀 크기 · 플래그 · 컬링 칸 · 방향광 그림자)만 덮어쓴다. 라이트 목록과 점광 · 스폿 그림자는 프레임 공통이다.
         _pActiveView  = &view;
         _frameContext = _mainSeedScratch;
         applyViewProjection( _frameContext, view._cullInput._viewProj );
         applyViewPassConstants( _frameContext );
+        applyViewShadowConstants( _frameContext, view._shadow );
         _frameContext._cullViewIndex = view._cullSlot;
         _frameContext._pCmd          = pCmd; // 직렬 경로의 패스는 시드의 리스트에 기록한다
         resetClearedAttachments();

@@ -246,5 +246,11 @@
 #define SW_VERTEX_ANIMATION_NORMAL_STEPS 4096u
 // 거스트너 파도 칸 수. 부력 · 수면 질의(WaterWaveMath)가 CPU 에서 같은 식을 다시 계산한다(RenderPassGPUTest.WaterWaveShaderMatchesCPU).
 #define SW_GERSTNER_WAVE_COUNT         4
+// 방향광 캐스케이드 상한 — PassCB 의 g_ShadowCascade0..3 넷이다. 그림자 아틀라스의 네 사분면에 하나씩 든다(DirectionalShadowProjection).
+#define SW_SHADOW_CASCADE_MAX          4u
+// 점광 · 스폿 그림자 타일 하나가 라이트 버퍼에서 차지하는 원소 수 — [0] 아틀라스 자리를 접은 뷰-투영(행 넷), [1] 칸 사각형 · 바이어스.
+// 타일 원소는 g_SwLights 의 빛 뒤(g_SwLightCount 부터)에 붙고, 빛 원소의 `params.w` 가 첫 타일의 상대 번호다. 점광은 면 여섯(+X −X +Y −Y +Z −Z 순)이다.
+#define SW_SHADOW_TILE_ELEMENT_COUNT   2u
+#define SW_POINT_SHADOW_FACE_COUNT     6u
 
 #endif // SW_ENGINE_BINDINGSLOTS_HLSLI

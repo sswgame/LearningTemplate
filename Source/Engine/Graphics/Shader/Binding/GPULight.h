@@ -24,7 +24,7 @@ namespace sw
         float4 _positionRadius{}; ///< xyz 월드 위치, w 반경 (점광 · 스폿광. 방향광은 0)
         float4 _colorIntensity{}; ///< rgb 빛 색, a 세기
         float4 _directionType{};  ///< xyz 빛이 나아가는 방향(방향광 · 스폿광), w 타입 (shaderslot::kLightType*)
-        float4 _params{};         ///< x 그림자 플래그(그림자 맵의 빛이면 1), y 스폿 바깥 원뿔 cos, z 스폿 안쪽 원뿔 cos, w 예약
+        float4 _params{};         ///< x 그림자 플래그(그림자 아틀라스 칸을 받은 빛이면 1), y 스폿 바깥 원뿔 cos, z 스폿 안쪽 원뿔 cos, w 점광 · 스폿의 첫 그림자 타일 원소(빛 수 기준 상대 번호)
     };
 
     static_assert( sizeof( GPULight ) == 64, "GPULight 는 float4 넷(64바이트)이어야 한다 — 셰이더 SwLightData 와 같은 크기" );

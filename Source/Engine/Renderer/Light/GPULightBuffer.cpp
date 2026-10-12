@@ -7,6 +7,8 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Object/Component/2D/ShadowCaster2DComponent.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
+#include "Engine/Object/Component/3D/PointLightComponent.h"
+#include "Engine/Object/Component/3D/SpotLightComponent.h"
 #include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
@@ -15,9 +17,27 @@ namespace sw
 {
     SW_LOG_CALLER( "GPULightBuffer" );
 
-    void collectSceneLights( const Scene* pScene, vector<GPULight>& outList )
+    namespace
+    {
+        struct GPULightBufferInternal
+        {
+            /** @brief 그림자를 켠 점광 · 스폿이면 true 입니다(방향광은 씬이 하나 고른다). */
+            static bool castsLocalShadow( const LightComponent& light )
+            {
+                if ( light.getLightType() == shaderslot::kLightTypePoint )
+                    return static_cast<const PointLightComponent&>( light ).castsShadow();
+                if ( light.getLightType() == shaderslot::kLightTypeSpot )
+                    return static_cast<const SpotLightComponent&>( light ).castsShadow();
+                return false;
+            }
+        };
+    } // namespace
+
+    void collectSceneLights( const Scene* pScene, vector<GPULight>& outList, vector<uint32>* pOutListShadowLightIndex )
     {
         outList.clear();
+        if ( pOutListShadowLightIndex != nullptr )
+            pOutListShadowLightIndex->clear();
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
             return;
 
@@ -38,6 +58,9 @@ namespace sw
                 pLight->writeGPULight( light );
                 if ( pLight == pShadowLight )
                     light._params._x = 1.0f;
+                // 그림자를 드리우는 점광 · 스폿은 번호만 적는다 — 아틀라스 칸(`_params.x` · `_params.w`)은 칸 수를 아는 쪽이 나눠 준다(ShadowSetupUtil).
+                if ( pOutListShadowLightIndex != nullptr && GPULightBufferInternal::castsLocalShadow( *pLight ) )
+                    pOutListShadowLightIndex->push_back( static_cast<uint32>( outList.size() ) );
                 outList.push_back( light );
             }
         }
@@ -50,7 +73,7 @@ namespace sw
         }
     }
 
-    void GPULightBuffer::update( IRHIDevice* pDevice, const vector<GPULight>& listLight )
+    void GPULightBuffer::update( IRHIDevice* pDevice, const vector<GPULight>& listLight, const vector<GPULight>& listShadowTileElement )
     {
         if ( pDevice == nullptr )
             return;
@@ -74,14 +97,25 @@ namespace sw
             return;
         }
 
+        // 점광 · 스폿 그림자 타일 원소는 (잘린) 빛 뒤에 붙는다 — 셰이더는 g_SwLightCount + 빛의 params.w 로 찾는다.
+        const GPULight* pUpload    = listLight.data();
+        uint32          totalCount = count;
+        if ( listShadowTileElement.empty() == false )
+        {
+            _listUploadScratch.assign( listLight.begin(), listLight.begin() + count );
+            _listUploadScratch.insert( _listUploadScratch.end(), listShadowTileElement.begin(), listShadowTileElement.end() );
+            pUpload    = _listUploadScratch.data();
+            totalCount = static_cast<uint32>( _listUploadScratch.size() );
+        }
+
         constexpr RHIBufferUsage kUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
         const uint32             stride = static_cast<uint32>( sizeof( GPULight ) );
-        if ( _buffer.ensureCapacity( pDevice, stride, count, kUsage, true, false, listLight.data() ) == false )
+        if ( _buffer.ensureCapacity( pDevice, stride, totalCount, kUsage, true, false, pUpload ) == false )
         {
             _count = 0;
             return;
         }
-        _buffer.upload( pDevice, listLight.data(), count * stride );
+        _buffer.upload( pDevice, pUpload, totalCount * stride );
     }
 
     void GPULightBuffer::release( IRHIDevice* pDevice )

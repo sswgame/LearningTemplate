@@ -11,6 +11,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Renderer/Frame/RenderView.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
@@ -409,6 +410,11 @@ namespace sw
         hashed_string _keyLightDirIntensity{ "g_KeyLightDirIntensity" };
         hashed_string _keyLightColor{ "g_KeyLightColor" };
         hashed_string _shadowParams{ "g_ShadowParams" };
+        /// @brief 방향광 캐스케이드 배치입니다 — x 수, y 칸 배율, z 경계 섞기 폭. `ViewShadowData::_cascadeLayout`.
+        hashed_string _shadowCascadeLayout{ "g_ShadowCascadeLayout" };
+        /// @brief 캐스케이드마다 (배율, 이동 x, 이동 y, 깊이 끝)입니다. 이름이 넷인 까닭: 배열 멤버의 리플렉션 이름이 백엔드마다 다르다(GL 은 `[0]` 이 붙는다).
+        hashed_string _arrShadowCascade[shaderslot::kShadowCascadeMax]{ hashed_string{ "g_ShadowCascade0" }, hashed_string{ "g_ShadowCascade1" },
+                                                                        hashed_string{ "g_ShadowCascade2" }, hashed_string{ "g_ShadowCascade3" } };
         hashed_string _bloomParams{ "g_BloomParams" };
         hashed_string _outlineColor{ "g_OutlineColor" };
         hashed_string _outlineParams{ "g_OutlineParams" };

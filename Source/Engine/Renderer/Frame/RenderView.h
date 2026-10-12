@@ -11,6 +11,7 @@
 
 #include "Engine/Graphics/RHI/RHIConstantBufferSlot.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Renderer/Light/ShadowSetup.h"
 
 namespace sw
 {
@@ -26,8 +27,10 @@ namespace sw
         Count  = 2  ///< 고정 뷰의 수. 추가 뷰(CCTV, PiP)의 컬링 슬롯은 이 뒤에 붙는다(`kFirstExtraCullView`).
     };
 
-    /// @brief 추가 뷰의 첫 컬링 슬롯입니다. 슬롯 0은 주 시점이고 1은 그림자 라이트입니다.
+    /// @brief 추가 뷰의 첫 컬링 슬롯입니다. 슬롯 0은 주 시점이고 1은 주 시점의 그림자입니다.
     inline constexpr uint32 kFirstExtraCullView = static_cast<uint32>( RenderViewType::Count );
+    /// @brief 추가 뷰 하나가 쓰는 컬링 슬롯 수입니다 — 자기 시점 하나, 자기 그림자 패스 하나(뷰마다 그림자 볼륨이 다르다).
+    inline constexpr uint32 kCullSlotsPerExtraView = 2;
     /// @brief 한 프레임에 가질 수 있는 추가 뷰의 최대 수입니다(컬링 슬롯, 상수 버퍼, 트랜지언트 풀이 뷰마다 하나씩 있습니다).
     inline constexpr uint32 kMaxExtraRenderView = 8;
 
@@ -133,6 +136,8 @@ namespace sw
         uint32               _outputHeight{ 0 };
         RenderViewOutputKind _outputKind{ RenderViewOutputKind::RenderTexture };
         uint8                _bRender{ SW_TRUE }; ///< 이번 프레임에 그린다(갱신 주기, 가시 여부, 예산이 정한다).
+        /// @brief 이 뷰의 카메라에 맞춘 방향광 그림자입니다(그리는 뷰만 채운다). 비어 있으면 주 시점의 것을 쓴다.
+        ViewShadowData _shadow{};
     };
 } // namespace sw
 

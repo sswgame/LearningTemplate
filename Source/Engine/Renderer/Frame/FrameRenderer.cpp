@@ -482,9 +482,8 @@ namespace sw
         _mainView._settings._viewMode = getViewMode(); // 직접 경로(테스트)는 주 출력 모드를 쓴다. 패킷 경로는 EngineLoop 가 싣는다.
         // 씬 직접 경로(에디터, 테스트)도 패킷 경로와 **같은 라이트 버퍼**를 쓴다. 경로마다 조명이
         // 다르면 에디터에서 본 이미지와 게임 화면이 달라진다.
-        collectSceneLights( pScene, _listScratchLight );
-        _lightBuffer.update( pDevice, _listScratchLight );
-        // 주 광원(그림자 행렬, 앰비언트, 목록이 비었을 때의 폴백)도 패킷 경로(EngineLoop)와 **같은 규칙**으로
+        collectSceneLights( pScene, _listScratchLight, &_listScratchShadowLightIndex );
+        // 주 광원(그림자 배치, 앰비언트, 목록이 비었을 때의 폴백)도 패킷 경로(EngineLoop)와 **같은 규칙**으로
         // 씬에서 읽는다. 주의: 이 경로가 주 광원을 채우지 않으면 테스트가 씬에 둔 방향광이 이미지에 반영되지 않아,
         // 조명이 필요한 픽셀 검증(블룸이 1을 넘는 위치)이 불가능해진다.
         DirectionalLightComponent* pKeyLight    = ( pScene != nullptr ) ? pScene->findActiveDirectionalLight() : nullptr;
@@ -495,30 +494,19 @@ namespace sw
             const float3 lightColor   = pKeyLight->getColor();
             _frameLight._dirIntensity = float4{ lightDir._x, lightDir._y, lightDir._z, pKeyLight->getIntensity() };
             _frameLight._colorAmbient = float4{ lightColor._x, lightColor._y, lightColor._z, pKeyLight->getAmbient() };
-            if ( pShadowLight != nullptr )
-            {
-                // 볼륨 맞춤은 패킷 경로(EngineLoop)와 같은 규칙으로 주 시점 카메라의 뷰-투영을 쓴다.
-                const uint32                      shadowResolution = getShadowMapResolution();
-                const DirectionalShadowProjection shadow =
-                    pMainCamera != nullptr
-                        ? pShadowLight->computeShadowProjectionForView(
-                              pMainCamera->getViewProjectionMatrix( RenderViewCollector::computeAspect( _mainView._settings, _directOutputWidth, _directOutputHeight ) ),
-                              shadowResolution )
-                        : pShadowLight->computeShadowProjection( shadowResolution );
-                _frameLight._shadowViewProj = shadow._viewProj;
-                _frameLight._shadowParams   = shadow.computeShaderParams();
-            }
-            else
-            {
-                _frameLight._shadowViewProj = float4x4{};
-                _frameLight._shadowParams   = float4{};
-            }
-            _frameLight._bHasShadowViewProj = SW_TRUE;
         }
         else
         {
             _frameLight = FrameLightState{};
         }
+        // 그림자 배치(볼륨 맞춤 · 아틀라스 칸 · 점광 · 스폿 타일)는 패킷 경로(EngineLoop)와 같은 함수로 주 시점 카메라의 뷰-투영에 맞춘다.
+        const float4x4 mainCameraViewProj =
+            pMainCamera != nullptr ? pMainCamera->getViewProjectionMatrix( RenderViewCollector::computeAspect( _mainView._settings, _directOutputWidth, _directOutputHeight ) )
+                                   : float4x4{};
+        ShadowSetupUtil::populateFrame( pKeyLight != nullptr ? pShadowLight : nullptr, pMainCamera != nullptr ? &mainCameraViewProj : nullptr, pKeyLight != nullptr,
+                                        getShadowMapResolution(), _listScratchShadowLightIndex, _listScratchLight, _frameShadow );
+        applyFrameShadow();
+        _lightBuffer.update( pDevice, _listScratchLight, _frameShadow._listTileElement );
         ensurePassResources();
         ensureTransientResources( _directOutputWidth, _directOutputHeight );
         resetPassCbRing();
@@ -539,6 +527,12 @@ namespace sw
             RenderViewCollector::collectExtraViews( *pScene->getObjectManager(), pMainCamera, view( RenderViewType::Main )._viewProj, _outputWidth, _outputHeight,
                                                     static_cast<float64>( getAnimationTime() ), RenderViewCollector::getDefaultBudget(), _directViewScheduler,
                                                     _listDirectViewScratch );
+        }
+        // 추가 뷰마다 자기 카메라에 맞춘 방향광 그림자 — 패킷 경로(RenderPacketBuilder)와 같은 함수다.
+        for ( RenderViewRequest& request : _listDirectViewScratch )
+        {
+            if ( request._bRender == SW_TRUE )
+                request._shadow = ShadowSetupUtil::makeViewShadowFor( pKeyLight != nullptr ? pShadowLight : nullptr, request._viewProj, _frameShadow );
         }
         // 패킷 경로와 **같은 경로**다. 빌더가 스냅샷을 만들고 RT 쪽이 받는다. 렌더 스레드 쪽 GPUScene 에는 씬을 읽는 메서드가 없다.
         // 주 카메라의 정렬 축도 패킷 경로(EngineLoop)처럼 설정한다. 직교 카메라는 시선 축을, 원근 카메라는 거리를 쓴다.
@@ -576,19 +570,19 @@ namespace sw
         // 주 광원은 씬이 아니라 패킷으로 온다. 렌더 스레드는 씬을 볼 수 없다(_pScene = nullptr).
         if ( packet._bHasLight != SW_FALSE )
         {
-            _frameLight._dirIntensity       = packet._lightDirIntensity;
-            _frameLight._colorAmbient       = packet._lightColorAmbient;
-            _frameLight._shadowViewProj     = packet._lightViewProj;
-            _frameLight._shadowParams       = packet._shadowParams;
-            _frameLight._bHasShadowViewProj = SW_TRUE;
+            _frameLight._dirIntensity = packet._lightDirIntensity;
+            _frameLight._colorAmbient = packet._lightColorAmbient;
         }
         else
         {
             _frameLight = FrameLightState{};
         }
-        // 씬의 모든 라이트다. 방향광과 점광이 한 버퍼에 섞여 올라가고 포워드와 디퍼드가 같이 읽는다.
+        // 그림자 배치도 패킷으로만 온다. 맞바꾸기라 지난 프레임의 저장소가 패킷으로 돌아간다.
+        std::swap( _frameShadow, packet._shadow );
+        applyFrameShadow();
+        // 씬의 모든 라이트다. 방향광과 점광이 한 버퍼에 섞여 올라가고 포워드와 디퍼드가 같이 읽는다. 점광 · 스폿 그림자 타일은 그 뒤에 붙는다.
         // 비어 있으면 셰이더가 위의 키 라이트로 폴백하므로 라이트 컴포넌트가 없는 씬도 그대로 그려진다.
-        _lightBuffer.update( pDevice, packet._listLight );
+        _lightBuffer.update( pDevice, packet._listLight, _frameShadow._listTileElement );
 
         ensurePassResources();
         ensureTransientResources( packet._viewportWidth, packet._viewportHeight );

@@ -238,14 +238,15 @@ UI와 화면 글자는 파이프라인의 마지막 `Canvas` 패스가 그립니
 카메라가 등록될 때 크기를 알리면(`declareRenderTarget`) 캐시가 렌더 타깃 텍스처로 만듭니다.
 
 - 뷰 하나(`FrameRenderer::ViewTarget`)는 자기 트랜지언트 풀, 컬링 입력, TAA 기록, 커맨드 리스트, 출력 텍스처를 가집니다. 트랜지언트 풀의 크기에는 해상도 배율이 곱해집니다.
-- `GPUScene` 의 컬링 슬롯은 0이 주 뷰, 1이 그림자, 2부터가 추가 뷰입니다(`kFirstExtraCullView`, 최대 `kMaxExtraRenderView`).
+- `GPUScene` 의 컬링 슬롯은 0이 주 뷰, 1이 주 뷰의 그림자, 2부터가 추가 뷰입니다. 추가 뷰는 하나에 둘(자기 시점, 자기 그림자 패스)을 씁니다(`kFirstExtraCullView`, `kCullSlotsPerExtraView`, 최대 `kMaxExtraRenderView`).
 - **호스트 타깃 뷰**(`RenderViewOutputKind::HostTarget`)는 호스트가 만든 RT 핸들에 그리는 추가 뷰입니다 — 에디터 씬 뷰가 이것입니다. 호스트가 `HostViewTargets`(게임 뷰 · 씬 뷰)를
   `EngineLoop::tick` 에 넘기면 게임 뷰가 주 출력(게임 카메라 · 화면 UI · 화면 사각형 뷰 · 스크린샷 캡처)이고 씬 뷰는 호스트 카메라의 호스트 타깃 뷰입니다.
   게임 뷰가 없고 씬 뷰만 있으면 씬 뷰가 주 출력이 되고 화면 UI · 화면 사각형 뷰를 싣지 않습니다(`RenderViewCollector::removeScreenRectViews`). 호스트 뷰는 예산 · 갱신 주기와 무관하게 매 프레임 그리고,
   추가 뷰가 가득하면 마지막 자리를 씁니다(`appendHostView`).
 - 프레임 순서는 프리패스, 렌더 텍스처 뷰, 주 뷰, 화면 사각형 뷰, 호스트 타깃 뷰입니다. 프리패스에서 이번에 그릴 모든 뷰의 컬링을 한 번에 합니다. 화면 사각형 뷰는 주 화면 위에 덮어 그립니다.
-- 패스 상수는 주 뷰의 값에서 출발해 뷰-투영 행렬, 풀 크기, 플래그, 컬링 슬롯만 덮어씁니다. 라이트와 그림자 행렬은 프레임 공통입니다.
-- 그림자 볼륨은 주 카메라에 맞춥니다(`DirectionalLightComponent::computeShadowProjectionForView`). 추가 뷰가 다른 곳을 보면 주 볼륨 밖의 그림자는 그 뷰에서 빠집니다.
+- 패스 상수는 주 뷰의 값에서 출발해 뷰-투영 행렬, 풀 크기, 플래그, 컬링 슬롯, 방향광 그림자 상수만 덮어씁니다. 라이트 목록과 점광 · 스폿 그림자 타일은 프레임 공통입니다.
+- 방향광 그림자 볼륨은 **뷰마다** 그 뷰의 카메라에 맞춥니다(`ShadowSetupUtil::makeViewShadowFor` → `RenderViewRequest::_shadow`). 게임 스레드가 패킷을 만들 때 계산하고,
+  추가 뷰는 자기 그림자 컬링 슬롯으로 가리는 물체를 거릅니다. 언리얼이 뷰마다 그림자 뷰를 두는 것과 같습니다(`RenderPassGPUTest.ExtraViewCastsShadowsOutsideTheMainVolume`).
 - 그림자를 끈 뷰는 그림자 맵을 지우기만 하고, 후처리를 끈 뷰는 `SW_PASS_FLAG_SKIP_POST` 로 후처리 사슬이 원본을 고릅니다. 어떤 패스가 효과라서 건너뛰는지는 패스 타입 표의 `kSkipsWithoutPostProcess` 가 정합니다(새 효과 패스는 그 비트를 켜면 됩니다).
 - **보기 모드는 뷰마다입니다**(`RenderViewSettings::_viewMode`). 게임 스레드가 패킷을 만들 때 싣습니다 — 씬 뷰(호스트 타깃 뷰든 주 출력이든)는 `FrameRenderer::getSceneViewMode`, 게임 화면은 `getViewMode`(`-gv_viewMode`, 기본 Lit).
   드로우는 그리는 뷰의 모드로 PSO 를 고르고, `ensureMaterialPSOs` 는 이번 프레임 뷰들의 모드를 모두 준비합니다. 표면 값 모드(Normals · Depth · Overdraw)는 후처리 · 톤맵을 건너뜁니다(`usesPostProcess` · `usesTonemap`).
@@ -466,7 +467,8 @@ OpenGL 기본 프레임버퍼는 원점이 아래라 `setViewport` 가 y를 뒤�
 
 **추가 뷰의 메모리는 "뷰 픽셀 × 첨부 바이트"입니다.** 포워드는 픽셀당 12바이트(512² 뷰에 3MB), 디퍼드는 TAA 기록을 포함해 64바이트(512² 뷰에 17MB, 1080p 주 뷰에 133MB)입니다.
 뷰 한도 8개를 모두 512² 디퍼드로 써도 주 뷰 하나 수준이라 풀을 공유하지 않았습니다. 4인 분할 화면도 합이 주 화면과 같습니다.
-추가 뷰는 그림자 패스를 포함한 그래프 전체를 자기 풀로 돌리므로 그림자 맵도 뷰마다 하나입니다. 크기는 뷰와 무관한 그림자 품질로 정해지고, 2048² D24S8이면 뷰마다 16MB입니다.
+추가 뷰는 그림자 패스를 포함한 그래프 전체를 자기 풀로 돌리므로 그림자 아틀라스도 뷰마다 하나입니다. 크기는 뷰와 무관한 그림자 품질로 정해지고, 2048² D24S8이면 뷰마다 16MB입니다.
+점광 · 스폿 타일은 모든 뷰의 아틀라스에 같은 칸으로 다시 그립니다(라이트 버퍼의 타일 원소가 프레임 공통이라 칸이 같아야 한다).
 공유는 비용으로는 이득이 작았습니다([결정 기록](../../../docs/09_Decisions.md) 3절). 화질이 문제가 되면 주 뷰 그림자를 먼저 그려 나눠 읽게 합니다.
 
 **초상화 베이크(`PortraitRenderer`)는 동기입니다.** 부르는 곳이 `App --render-portraits` 하나뿐이라 렌더 스레드를 멈추는 편이 맞습니다. 런타임이나 에디터 썸네일이 쓰게 되면 그때 큐로 바꿉니다.
@@ -488,14 +490,31 @@ OpenGL 기본 프레임버퍼는 원점이 아래라 `setViewport` 가 y를 뒤�
 
 ### 그림자와 측정
 
-**그림자 직교 투영의 깊이 범위는 눈 기준 `[거리-반경, 거리+반경]` 입니다.** 아니면 그림자 항이 늘 1이 됩니다. 셰이더의 샘플 함수는 `swSampleShadowAtWorld` 입니다.
+**그림자 맵은 아틀라스 하나입니다**(`Light/ShadowSetup.h`). 첨부 `ShadowMap` 하나를 칸으로 나눠 쓰고, 칸 나누기(`ShadowAtlasLayout`)는 프레임마다 게임 스레드가 정합니다.
+방향광 캐스케이드가 하나이고 점광 · 스폿 그림자가 없으면 아틀라스 전체가 그 캐스케이드입니다(아틀라스 전과 같은 그림). 그 밖에는 캐스케이드가 사분면을 하나씩 쓰고,
+남은 사분면을 2x2 로 나눠 점광(칸 여섯, 면마다 90° 원근 — +X −X +Y −Y +Z −Z)과 스폿(칸 하나)이 앞에서부터 받습니다. 점광 · 스폿 그림자가 있으면 캐스케이드는 둘까지이고,
+칸이 모자란 빛은 그림자 없이 비춥니다. 큐브 · 배열 텍스처가 아닌 2D 칸이라 RHI 와 DirectX 11 · OpenGL 의 엔진 텍스처 슬롯(넷)이 그대로입니다(유니티 URP · Godot 과 같은 방식).
+그림자 패스는 칸마다 뷰포트를 잡고 `g_LightViewProj` 를 그 칸의 행렬로 바꿔 씬을 한 번씩 그립니다(`FrameRenderer::drawShadowTiles`). 컬링은 모든 칸을 덮는 상자 하나입니다.
+- 방향광은 PassCB(`g_ShadowCascadeLayout` · `g_ShadowCascade0..3`)를 읽습니다. 캐스케이드는 빛 회전과 깊이 구간이 같아 기준 행렬 하나에 (배율, 이동)만 다르고, 셰이더는 카메라 뷰 깊이(클립 w)로 고르며 끝의 10 % 를 다음 캐스케이드와 섞습니다.
+- 점광 · 스폿은 라이트 버퍼의 빛 뒤(`g_SwLightCount` 부터)에 붙은 타일 원소를 읽습니다. 타일마다 원소 둘 — 아틀라스 자리를 접은 뷰-투영, 칸 사각형 · 바이어스 — 이고 빛 원소의 `params.w` 가 첫 타일입니다.
+- 행렬 · 칸 판정은 `ShadowSetupTest`(GPU 없음), 픽셀은 `RenderPassGPUTest` 의 `CascadedShadowCastsOnEveryBackend` · `PointLightShadowCastsOnEveryBackend` · `SpotLightShadowCastsOnEveryBackend` 가 봅니다.
+- 깊이 첨부를 눈으로 보려면 `-gv_screenshotAttachment=ShadowMap` 입니다. 깊이 읽기는 네 백엔드 모두 0..1 float32(`kRHIDepthReadbackFormat`)이고 회색 PPM 으로 씁니다.
+
+**볼륨을 카메라에 맞출 때는 경계 구로 맞춥니다**(`computeShadowProjectionForView`, 언리얼 CSM · 유니티 Stable Fit). 절두체 조각 ∩ 받는 높이 띠의 꼭짓점 평균을 중심으로 한 구라
+카메라가 돌아도 크기가 그대로이고, 원점은 텍셀 격자에 스냅합니다. 상자로 맞추면 회전마다 빛 공간 폭이 달라 2 m 양자 경계에서 가장자리가 튑니다(`ShadowSetupTest.FittedVolumeSizeIgnoresCameraRotation`).
+대신 볼륨이 상자보다 조금 큽니다(ThemePark 줌 25 에서 140 m, 텍셀 6.8 cm).
+
+**그림자 직교 투영의 깊이 범위는 눈 기준 `[거리-반경, 거리+반경]` 입니다.** 아니면 그림자 항이 늘 1이 됩니다. 셰이더의 샘플 함수는 `swSampleShadowAtWorld`(방향광)와 `swSampleLocalShadow`(점광 · 스폿)이고, 빛마다의 항은 `swComputeLightShadow` 한 벌입니다.
 회귀는 행렬로 확인하고(`ShadowMatrixDepthRangeContainsScene`), 픽셀로 보려면 바닥을 깝니다(`-gv_benchGround=1`). 그림자 테스트는 그림자 깊이 쓰기를 끈 결과와 **달라야** 합니다.
 렌더 결과가 같은 프로세스 안에서는 같고 프로세스마다 다르면 배치 순서를 의심합니다.
 
 **그림자 바이어스는 텍셀 단위로 환산합니다**(`DirectionalShadowProjection::computeShaderParams`, 깊이 1텍셀, 노멀 오프셋 2텍셀). NDC 상수로 두면 볼륨에 비례해 커집니다.
-360m 볼륨에서 0.02는 7.2m라, 작은 물체의 그림자가 사라지고 발밑에서 그림자가 떨어집니다.
-그림자 맵 크기는 화면과 무관하게 `gv_shadowQuality` 로 1024에서 4096 사이입니다. 볼륨은 절두체와 그림자를 받는 높이 띠의 교집합에 텍셀 스냅을 더한 것입니다.
-필터는 3x3 PCF이고, 에뮬레이션 백엔드(DirectX 11, OpenGL)는 GatherRed 쌍선형 비교라 네 백엔드의 이미지가 같습니다.
+360m 볼륨에서 0.02는 7.2m라, 작은 물체의 그림자가 사라지고 발밑에서 그림자가 떨어집니다. 캐스케이드는 텍셀이 배율만큼 작으므로 셰이더가 두 값을 배율로 나눕니다.
+원근 칸(점광 · 스폿)은 텍셀이 거리에 비례하므로 거리를 곱하고, 깊이 바이어스는 NDC 가 아니라 빛 쪽으로 옮긴 월드 점으로 줍니다(원근 깊이는 비선형이다).
+그림자 맵 크기는 화면과 무관하게 `gv_shadowQuality` 로 1024에서 4096 사이입니다. 볼륨은 절두체와 그림자를 받는 높이 띠의 교집합을 감싸는 구에 텍셀 스냅을 더한 것입니다.
+필터는 3x3 PCF이고, 칸이 아틀라스 전체가 아니면 탭을 칸 안으로 자릅니다. 에뮬레이션 백엔드(DirectX 11, OpenGL)는 GatherRed 쌍선형 비교라 네 백엔드의 이미지가 같습니다.
+
+**PassCB 는 상수 버퍼 슬롯(`PassConstantRing::kSlotBytes`, 768 바이트) 안에 들어야 합니다.** 캐스케이드 상수 다섯을 더하며 512 를 넘겼습니다. 넘으면 OpenGL 만 업로드를 거절합니다.
 
 **GPU 타임스탬프 슬롯은 패스 인덱스로 고정합니다.** 흐르는 카운터를 쓰면 병렬 기록에서 경쟁합니다. 기다리지 않고, 링 슬롯이 펜스를 지난 뒤에만 읽고, 기록하지 않은 슬롯은 음수입니다.
 계측은 `SW_PROFILE_COMPILED` 로 감싸며 Shipping에서는 통째로 빠집니다. 로그에만 쓰는 값은 `[[maybe_unused]]` 로 둡니다.

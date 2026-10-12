@@ -19,7 +19,7 @@ namespace sw
      *          언리얼 `USpotLightComponent` 의 `InnerConeAngle` / `OuterConeAngle` 과 같은 규약입니다.
      * @note 방향은 기본 방향(**아래**)을 이 컴포넌트의 월드 회전으로 돌린 것입니다(`LightComponent` 의 방향 규약). 기본이 아래인
      *       까닭: 전방 +Z 를 쓰면 카메라 쪽으로 쏴 화면이 통째로 하얘져 "스폿인지" 를 알 수 없습니다.
-     * @note 점광과 같은 이유로 **그림자를 드리우지 않습니다.** 그림자 맵이 방향광 하나에 묶여 있습니다.
+     * @note 그림자는 켤 때만 드리웁니다(`_bCastShadow`, 기본 끔). 그림자 아틀라스의 칸 하나에 바깥 원뿔을 덮는 원근으로 그립니다(`ShadowSetupUtil`).
      */
     REFLECT( Category = "Rendering 3D", DisplayName = "Spot Light", Tooltip = "Cone-shaped light with inner/outer falloff" )
     class SW_API SpotLightComponent : public LightComponent
@@ -50,6 +50,11 @@ namespace sw
         /** @brief 빛이 나아가는 방향(정규화)입니다. 기본 방향(아래)을 월드 회전으로 돌린 것입니다. */
         float3 getLightDirection() const;
 
+        /** @brief 그림자를 드리우면 true 입니다. */
+        bool castsShadow() const { return _bCastShadow == SW_TRUE; }
+        /** @brief 그림자 사용 여부를 설정합니다. */
+        void setCastShadow( bool bCastShadow );
+
     protected:
         /** @brief 위치 · 반경 · 방향과 원뿔의 코사인(`_params.yz`)을 씁니다. */
         void writeGPULightKindFields( GPULight& outLight ) const override;
@@ -61,5 +66,8 @@ namespace sw
         float32 _innerConeAngle;
         PROPERTY( Category = "Cone", DisplayName = "Outer Cone Angle", Min = 0.0, Tooltip = "Half angle where the light reaches zero", Units = rad )
         float32 _outerConeAngle;
+        PROPERTY( Category = "Shadow", DisplayName = "Cast Shadow", Tooltip = "Render this light into one cell of the shadow atlas" )
+        uint8                  _bCastShadow       : 1;
+        [[maybe_unused]] uint8 _reservedSpotLight : 7;
     };
 } // namespace sw

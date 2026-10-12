@@ -7,9 +7,9 @@
  * 라이트는 상수버퍼가 아니라 **구조버퍼**(t12, `SW_SLOT_LIGHT_SRV`)다 — 개수가 씬마다 다르고,
  * 패스당 한 번 걸면 드로우 사이에 바인딩이 바뀌지 않는다(이 엔진의 규약).
  *
- * 그림자는 **방향광 하나**뿐이다. 그림자 맵이 하나이기 때문이고, 어느 빛이 그걸 받는지는
- * 원소의 `params.x` 가 말한다. 점광 그림자는 큐브맵이 필요한데 이 엔진에는 큐브맵 자원이 없다 —
- * 없는 것을 있는 척하지 않는다.
+ * 그림자 맵은 **아틀라스 하나**다(C++ `ShadowSetup.h`). 방향광은 캐스케이드마다 사분면 하나(하나뿐이면 아틀라스 전체)를,
+ * 점광은 칸 여섯(면마다 90° 원근), 스폿은 칸 하나를 쓴다. 어느 빛이 그림자를 받는지는 원소의 `params.x` 가 말하고,
+ * 점광 · 스폿은 `params.w` 가 라이트 버퍼 꼬리(g_SwLightCount 부터)의 첫 타일 원소를 가리킨다.
  */
 
 #ifndef SW_ENGINE_LIGHTING_HLSLI
@@ -27,49 +27,161 @@ struct SwLightData
 	float4 positionRadius; // xyz 월드 위치(점광·스폿), w 반경 — 방향광은 0
 	float4 colorIntensity; // rgb 빛 색, a 세기
 	float4 directionType;  // xyz 빛이 나아가는 방향(방향광·스폿), w 타입 (SW_LIGHT_TYPE_*)
-	float4 params;         // x 그림자를 받는가(0/1), y cos(바깥 원뿔각), z cos(안쪽 원뿔각), w 예약
+	float4 params;         // x 그림자를 받는가(0/1), y cos(바깥 원뿔각), z cos(안쪽 원뿔각), w 점광 · 스폿 그림자의 첫 타일 원소(g_SwLightCount 기준 상대 번호)
 };
 
 SW_DECLARE_STRUCTURED_BUFFER( SwLightData, g_SwLights, SW_SLOT_LIGHT_SRV );
 
 /**
- * @brief 이 픽셀이 그림자 맵에서 얼마나 가려졌는지 — 1 이면 빛을 다 받고, 0 에 가까울수록 그늘이다.
+ * @brief 아틀라스의 한 점 둘레를 3x3 PCF 로 비교합니다 — 탭 하나가 2x2 쌍선형 비교라 가장자리의 텍셀 계단이 보이지 않는다(가장자리가 텍셀 세 개 폭으로 번진다).
+ * @param texelUv  탭 간격(아틀라스 텍셀 하나의 UV 폭)
+ * @param clampMin 탭을 이 사각형 안으로 자른다(칸 경계 — 옆 칸을 읽지 않게). 아틀라스 전체면 자르지 않아도 된다(bClamp = false).
+ */
+float swFilterShadowAtlas( float2 uv, float depth, float texelUv, bool bClamp, float2 clampMin, float2 clampMax )
+{
+	float lit = 0.0f;
+	[unroll] for ( int offsetY = -1; offsetY <= 1; ++offsetY )
+	{
+		[unroll] for ( int offsetX = -1; offsetX <= 1; ++offsetX )
+		{
+			const float2 tapUv = uv + float2( offsetX, offsetY ) * texelUv;
+			lit += swSampleShadowComparison( g_ShadowMapIndex, bClamp ? clamp( tapUv, clampMin, clampMax ) : tapUv, depth );
+		}
+	}
+	return lit * ( 1.0f / 9.0f );
+}
+
+/** @brief 캐스케이드 c 의 상수(배율, 이동 x, 이동 y, 깊이 끝)입니다. */
+float4 swLoadShadowCascade( uint cascadeIndex )
+{
+	return ( cascadeIndex == 0u ) ? g_ShadowCascade0 : ( cascadeIndex == 1u ) ? g_ShadowCascade1 : ( cascadeIndex == 2u ) ? g_ShadowCascade2 : g_ShadowCascade3;
+}
+
+/**
+ * @brief 방향광 캐스케이드 하나에서 가림을 잽니다(1 = 빛). 그 캐스케이드 볼륨 밖이면 @p outInside 가 false 이고 값은 1 이다.
+ * @details 캐스케이드는 기준 볼륨(g_LightViewProj)과 빛 회전 · 깊이 구간이 같아 xy 만 배율 · 이동으로 옮긴다. 텍셀이 배율만큼 작으므로
+ *          노멀 오프셋 · 깊이 바이어스(g_ShadowParams.z · x 는 기준 볼륨의 값)도 배율로 나눈다. 칸 원점은 사분면 c 다(칸 배율 0.5 일 때).
+ */
+float swSampleShadowCascade( uint cascadeIndex, float3 worldPosition, float3 worldNormal, out bool outInside )
+{
+	const float4 cascade        = swLoadShadowCascade( cascadeIndex );
+	const float  scale          = cascade.x;
+	const float3 samplePosition = worldPosition + worldNormal * ( g_ShadowParams.z / scale );
+	const float4 lightClip      = mul( float4( samplePosition, 1.0f ), g_LightViewProj );
+	const float3 ndc            = lightClip.xyz / lightClip.w;
+	const float2 tileUv         = ( ndc.xy * scale + cascade.yz ) * float2( 0.5f, -0.5f ) + 0.5f;
+	const float  tileScale      = g_ShadowCascadeLayout.y;
+	const float2 tileOrigin     = float2( cascadeIndex & 1u, cascadeIndex >> 1u ) * tileScale;
+	const float2 uv             = tileOrigin + tileUv * tileScale;
+	outInside = lightClip.w > 0.0f && tileUv.x >= 0.0f && tileUv.x <= 1.0f && tileUv.y >= 0.0f && tileUv.y <= 1.0f && ndc.z >= 0.0f && ndc.z <= 1.0f;
+
+	// 바이어스(g_ShadowParams.x · z)가 없으면 자기 자신에 그림자가 져 표면이 줄무늬가 된다(shadow acne). 간격은 아틀라스 텍셀 하나의 UV 폭이다.
+	// 칸이 아틀라스 전체가 아니면 탭을 칸 안(반 텍셀 안쪽)으로 자른다 — 옆 사분면은 다른 캐스케이드 · 점광의 깊이다.
+	const float  texelUv   = g_ShadowParams.w * tileScale;
+	const bool   bClamp    = tileScale < 1.0f;
+	const float2 clampMin  = tileOrigin + 0.5f * texelUv;
+	const float2 clampMax  = tileOrigin + tileScale - 0.5f * texelUv;
+	const float  lit       = outInside ? swFilterShadowAtlas( uv, ndc.z - g_ShadowParams.x / scale, texelUv, bClamp, clampMin, clampMax ) : 1.0f;
+	// 세기는 g_ShadowParams.y — 완전한 검정이 아니라 "얼마나 어두워지는가" 다.
+	return lerp( 1.0f - g_ShadowParams.y, 1.0f, saturate( lit ) );
+}
+
+/**
+ * @brief 이 픽셀이 방향광 그림자 맵에서 얼마나 가려졌는지 — 1 이면 빛을 다 받고, 0 에 가까울수록 그늘이다.
  * @param worldNormal 받는 면의 월드 노멀(정규화) — 노멀 오프셋에 쓴다
  * @details 월드 위치를 **라이트 클립 공간으로 투영해** 샘플한다. 그림자 맵을 화면 UV 로 읽으면 그림자가 아니라
  *          "깊이 텍스처를 화면에 붙인 무늬" 라, 카메라가 움직이면 그늘이 물체를 따라오지 않고 화면에 붙는다.
  *          바이어스는 둘이다 — 노멀 쪽으로 `g_ShadowParams.z`(m) 띄운 점을 읽고(노멀 오프셋), 깊이에서 `g_ShadowParams.x`(NDC)를 뺀다.
  *          둘 다 CPU 가 텍셀 크기로 정한다(`DirectionalShadowProjection::computeShaderParams`). 깊이 바이어스만 키우면 그림자가 물체 발치에서 떨어진다.
- *          필터는 3x3 PCF 다 — 탭 하나가 2x2 쌍선형 비교라 가장자리가 텍셀 세 개 폭으로 번진다.
- * @note 맵 밖은 1(가려지지 않음)이다. 0 으로 두면 그림자 볼륨 밖이 통째로 검게 죽는다.
+ *
+ *          캐스케이드는 카메라 뷰 깊이(`g_ViewProj` 의 클립 w — 원근에서 뷰 z, 직교에서 1)로 고른다. 끝에서 `g_ShadowCascadeLayout.z` 만큼은
+ *          다음 캐스케이드와 섞어 경계가 줄로 보이지 않게 한다(유니티 URP Cascade Blend). 고른 캐스케이드 볼륨 밖이면 다음 캐스케이드를 읽는다.
+ * @note 맵 밖은 1(가려지지 않음)이다. 0 으로 두면 그림자 볼륨 밖이 통째로 검게 죽는다. early-return 이 없다(GL 드라이버 함정, binding.hlsli swComputeMorphElement).
  */
 float swSampleShadowAtWorld( float3 worldPosition, float3 worldNormal )
 {
-	if ( g_ShadowMapIndex == kInvalidIndex )
-		return 1.0f;
-
-	const float3 samplePosition = worldPosition + worldNormal * g_ShadowParams.z;
-	const float4 lightClip      = mul( float4( samplePosition, 1.0f ), g_LightViewProj );
-	if ( lightClip.w <= 0.0f )
-		return 1.0f;
-
-	const float3 ndc = lightClip.xyz / lightClip.w;
-	const float2 uv  = ndc.xy * float2( 0.5f, -0.5f ) + 0.5f;
-	if ( uv.x < 0.0f || uv.x > 1.0f || uv.y < 0.0f || uv.y > 1.0f || ndc.z < 0.0f || ndc.z > 1.0f )
-		return 1.0f;
-
-	// 바이어스(g_ShadowParams.x · z)가 없으면 자기 자신에 그림자가 져 표면이 줄무늬가 된다(shadow acne).
-	// 3x3 PCF — 탭 하나가 2x2 쌍선형 비교라 가장자리의 텍셀 계단이 보이지 않는다. 간격 g_ShadowParams.w = 텍셀 하나의 UV 폭.
-	const float depth = ndc.z - g_ShadowParams.x;
-	float       lit   = 0.0f;
-	[unroll] for ( int offsetY = -1; offsetY <= 1; ++offsetY )
+	float result = 1.0f;
+	if ( g_ShadowMapIndex != kInvalidIndex )
 	{
-		[unroll] for ( int offsetX = -1; offsetX <= 1; ++offsetX )
-			lit += swSampleShadowComparison( g_ShadowMapIndex, uv + float2( offsetX, offsetY ) * g_ShadowParams.w, depth );
+		const uint  cascadeCount = (uint)( g_ShadowCascadeLayout.x + 0.5f );
+		const float viewDepth    = mul( float4( worldPosition, 1.0f ), g_ViewProj ).w;
+		uint        cascadeIndex = cascadeCount;
+		[unroll] for ( uint index = 0u; index < SW_SHADOW_CASCADE_MAX; ++index )
+		{
+			if ( cascadeIndex == cascadeCount && index < cascadeCount && viewDepth <= swLoadShadowCascade( index ).w )
+				cascadeIndex = index;
+		}
+		if ( cascadeIndex < cascadeCount )
+		{
+			bool        bInside = false;
+			const float first   = swSampleShadowCascade( cascadeIndex, worldPosition, worldNormal, bInside );
+			result              = first;
+			const uint  nextIndex  = cascadeIndex + 1u;
+			const float splitEnd   = swLoadShadowCascade( cascadeIndex ).w;
+			const float splitStart = ( cascadeIndex == 0u ) ? 0.0f : swLoadShadowCascade( cascadeIndex - 1u ).w;
+			const float blendWidth = max( ( splitEnd - splitStart ) * g_ShadowCascadeLayout.z, 1e-4f );
+			const float blend      = saturate( ( viewDepth - ( splitEnd - blendWidth ) ) / blendWidth );
+			const bool  bUseNext   = nextIndex < cascadeCount && ( bInside == false || blend > 0.0f );
+			if ( bUseNext )
+			{
+				bool        bNextInside = false;
+				const float second      = swSampleShadowCascade( nextIndex, worldPosition, worldNormal, bNextInside );
+				result                  = ( bInside == false ) ? second : lerp( first, second, bNextInside ? blend : 0.0f );
+			}
+		}
 	}
-	lit *= 1.0f / 9.0f;
+	return result;
+}
 
-	// 세기는 g_ShadowParams.y — 완전한 검정이 아니라 "얼마나 어두워지는가" 다.
-	return lerp( 1.0f - g_ShadowParams.y, 1.0f, saturate( lit ) );
+/**
+ * @brief 점광 · 스폿 하나의 그림자 — 1 이면 그 빛을 다 받는다. 그림자 칸이 없는 빛(`params.x` 가 0)이면 1 이다.
+ * @details 타일 원소 둘을 읽는다 — [0] 아틀라스 자리를 접은 뷰-투영(행 넷), [1] 칸 uv 사각형(xy 최소, zw 최대) · (노멀 오프셋 / m, 깊이 바이어스 / m, 텍셀 UV 폭, 세기).
+ *          원근 칸은 텍셀 크기가 거리에 비례하므로 바이어스에 빛까지의 거리를 곱한다. 깊이 바이어스는 NDC 가 아니라 **빛 쪽으로 옮긴 월드 점**으로 준다
+ *          (원근 깊이는 비선형이라 NDC 상수가 거리마다 다른 월드 길이가 된다). 점광은 빛에서 본 방향의 가장 큰 축으로 면을 고른다(+X −X +Y −Y +Z −Z).
+ */
+float swSampleLocalShadow( SwLightData light, float3 worldPosition, float3 worldNormal )
+{
+	const uint   lightType = (uint)( light.directionType.w + 0.5f );
+	const float3 fromLight = worldPosition - light.positionRadius.xyz;
+	const float3 axis      = abs( fromLight );
+	uint         faceIndex = 0u;
+	if ( lightType == SW_LIGHT_TYPE_POINT )
+	{
+		if ( axis.x >= axis.y && axis.x >= axis.z )
+			faceIndex = ( fromLight.x >= 0.0f ) ? 0u : 1u;
+		else if ( axis.y >= axis.z )
+			faceIndex = ( fromLight.y >= 0.0f ) ? 2u : 3u;
+		else
+			faceIndex = ( fromLight.z >= 0.0f ) ? 4u : 5u;
+	}
+	const uint        element    = g_SwLightCount + (uint)( light.params.w + 0.5f ) + faceIndex * SW_SHADOW_TILE_ELEMENT_COUNT;
+	const SwLightData matrixRows = g_SwLights[element];
+	const SwLightData info       = g_SwLights[element + 1u];
+	const float4x4    viewProj   = float4x4( matrixRows.positionRadius, matrixRows.colorIntensity, matrixRows.directionType, matrixRows.params );
+
+	const float  distance       = length( fromLight );
+	const float3 toLight        = -fromLight / max( distance, 1e-4f );
+	const float3 samplePosition = worldPosition + worldNormal * ( info.colorIntensity.x * distance ) + toLight * ( info.colorIntensity.y * distance );
+	const float4 lightClip      = mul( float4( samplePosition, 1.0f ), viewProj );
+	const float3 ndc            = lightClip.xyz / lightClip.w;
+	const float2 uv             = ndc.xy * float2( 0.5f, -0.5f ) + 0.5f;
+	const bool   bInside        = lightClip.w > 0.0f && ndc.z >= 0.0f && ndc.z <= 1.0f && uv.x >= info.positionRadius.x && uv.x <= info.positionRadius.z &&
+	                     uv.y >= info.positionRadius.y && uv.y <= info.positionRadius.w;
+	const float lit = bInside ? swFilterShadowAtlas( uv, ndc.z, info.colorIntensity.z, true, info.positionRadius.xy, info.positionRadius.zw ) : 1.0f;
+	return lerp( 1.0f - info.colorIntensity.w, 1.0f, saturate( lit ) );
+}
+
+/**
+ * @brief 빛 하나가 이 점에 드리우는 그림자 항입니다(1 = 그림자 없음). 방향광은 미리 잰 @p directionalShadow 를, 점광 · 스폿은 자기 타일을 읽는다.
+ * @details 조명 식이 둘(`swShadeLights` · 셀 셰이딩 `toon.hlsl`)이어도 그림자 항은 이 한 벌이다.
+ */
+float swComputeLightShadow( SwLightData light, float3 worldPosition, float3 worldNormal, float directionalShadow )
+{
+	const uint lightType = (uint)( light.directionType.w + 0.5f );
+	float      shadow    = 1.0f;
+	if ( light.params.x > 0.5f )
+		shadow = ( lightType == SW_LIGHT_TYPE_DIRECTIONAL ) ? directionalShadow : swSampleLocalShadow( light, worldPosition, worldNormal );
+	return shadow;
 }
 
 /**
@@ -140,7 +252,7 @@ uint swComputeLightCount()
  * @param albedo   표면 색 (앰비언트에도 곱해진다)
  * @param worldPosition 월드 위치 — 점광의 거리 감쇠에 쓴다
  * @param normal   월드 노멀 (정규화되어 있어야 한다)
- * @param shadow   `swSampleShadowAtWorld` 가 준 값 — `params.x` 가 켜진 빛에만 곱한다
+ * @param shadow   `swSampleShadowAtWorld` 가 준 방향광 값 — `params.x` 가 켜진 방향광에만 곱한다(점광 · 스폿은 `swComputeLightShadow` 가 자기 타일을 읽는다)
  * @details 라이트 버퍼가 안 걸렸으면(`kInvalidIndex`) PassCB 의 키라이트 하나로 폴백한다 —
  *          라이트 컴포넌트가 없는 씬도 키라이트 하나로 그려진다.
  */
@@ -167,7 +279,7 @@ float3 swShadeLights( float3 albedo, float3 worldPosition, float3 normal, float 
 		if ( normalDotLight * attenuation <= 0.0f )
 			continue;
 
-		const float shadowTerm = ( light.params.x > 0.5f ) ? shadow : 1.0f;
+		const float shadowTerm = swComputeLightShadow( light, worldPosition, normal, shadow );
 		lit += albedo * normalDotLight * attenuation * light.colorIntensity.a * light.colorIntensity.rgb * shadowTerm;
 	}
 

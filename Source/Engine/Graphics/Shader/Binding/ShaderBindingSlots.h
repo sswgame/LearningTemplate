@@ -128,6 +128,12 @@ namespace sw
         inline constexpr uint32 kVertexAnimationNormalSteps = SW_VERTEX_ANIMATION_NORMAL_STEPS;
         /// @brief 거스트너 파도의 항 수입니다(진폭이 0인 항은 비어 있는 항입니다).
         inline constexpr uint32 kGerstnerWaveCount = SW_GERSTNER_WAVE_COUNT;
+        /// @brief 방향광 캐스케이드의 상한입니다(PassCB `g_ShadowCascade0..3`). 그림자 아틀라스의 네 사분면에 하나씩 듭니다.
+        inline constexpr uint32 kShadowCascadeMax = SW_SHADOW_CASCADE_MAX;
+        /// @brief 점광 · 스폿 그림자 타일 하나의 라이트 버퍼 원소 수입니다([0] 뷰-투영 행 넷, [1] 칸 사각형 · 바이어스).
+        inline constexpr uint32 kShadowTileElementCount = SW_SHADOW_TILE_ELEMENT_COUNT;
+        /// @brief 점광 그림자의 면 수입니다(+X −X +Y −Y +Z −Z 순 — 셰이더의 면 고르기와 같은 순서).
+        inline constexpr uint32 kPointShadowFaceCount = SW_POINT_SHADOW_FACE_COUNT;
 
         // ------------------------------------------------------------------------------
         // 3) 컴퓨트와 샘플러

@@ -704,7 +704,8 @@ SW_TEST_CASE( SceneTest, ShadowBiasStaysInWorldUnits )
  * @brief [SceneTest] 그림자 볼륨이 직교 카메라가 보는 바닥을 덮고, 줌에 따라 텍셀이 작아진다
  * @details 볼륨을 원점에 고정하면 공원 안쪽(초점 60,0,230)은 볼륨 밖이라 그림자가 하나도 없고, 확대해도 텍셀이 그대로다(ThemePark).
  *          보이는 바닥 점이 모두 볼륨 안이어야 하고, 그 점에서 빛 쪽으로 30 m 높이까지 올라간 가리는 점도 깊이 구간 안이어야 한다(가까운 면에 잘리면
- *          레일 · 나무 그림자가 빠진다). 텍셀은 줌 25 에서 6 cm, 줌 110 에서 20 cm 아래 — 고정 볼륨 360 m 는 17.6 cm 다.
+ *          레일 · 나무 그림자가 빠진다). 텍셀은 줌 25 에서 7 cm, 줌 110 에서 20 cm 아래 — 고정 볼륨 360 m 는 17.6 cm 다.
+ *          볼륨은 경계 구로 맞춰(카메라를 돌려도 크기가 그대로) 상자로 맞출 때보다 조금 크다(줌 25 에서 140 m · 6.8 cm).
  */
 SW_TEST_CASE( SceneTest, ShadowVolumeFollowsOrthoCamera )
 {
@@ -725,7 +726,7 @@ SW_TEST_CASE( SceneTest, ShadowVolumeFollowsOrthoCamera )
     const ViewCase kArrCase[] = {
         { sw::float3{ 20.0f, 0.0f, 20.0f }, 110.0f,  0.2f},
         {sw::float3{ 60.0f, 0.0f, 230.0f }, 110.0f,  0.2f},
-        {sw::float3{ 20.0f, 0.0f, -35.0f },  25.0f, 0.06f},
+        {sw::float3{ 20.0f, 0.0f, -35.0f },  25.0f, 0.07f},
     };
     for ( const ViewCase& viewCase : kArrCase )
     {
