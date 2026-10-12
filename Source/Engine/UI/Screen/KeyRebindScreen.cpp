@@ -21,6 +21,7 @@ namespace sw
         , _pSettings{ nullptr }
         , _openFrame{ 0 }
         , _escapeHeldSeconds{ 0.0f }
+        , _listenSeconds{ 0.0f }
         , _bListening{ true }
         , _bEscapeHeld{ false }
     {
@@ -88,7 +89,12 @@ namespace sw
         }
         InputSlot slot{};
         if ( pInput->findFirstPressedSlot( slot ) == false )
+        {
+            _listenSeconds += deltaSeconds;
+            if ( _listenSeconds >= kListenTimeoutSeconds )
+                close(); // 받은 것이 없으니 보류 값은 그대로다
             return;
+        }
         if ( slot == InputSlot::fromKey( Key::Escape ) )
         {
             _bEscapeHeld       = true;

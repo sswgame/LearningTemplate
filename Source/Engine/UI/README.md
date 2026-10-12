@@ -270,12 +270,15 @@ UI는 키와 버튼을 직접 보지 않고 **행동(action)**을 받습니다. 
 5. 닫기 요청을 적용하고, 글 입력 포커스를 갱신합니다.
 
 **먹은 입력.** UI가 쓴 행동의 물리 입력은 **뗄 때까지** 먹은 입력이 됩니다. 키, 패드 버튼, 조합 키의 트리거 키, 기운 스틱이 모두 해당하고, 위젯이 처리한 마우스 버튼도 그렇습니다.
-게임 쪽에서 이것을 확인하는 곳은 플레이어 조종자(`PlayerControllerComponent`) 하나입니다. 먹은 행동은 의도에 넣지 않고, 모달이나 로딩 화면이 있으면 의도를 0으로 둡니다.
+게임 쪽에서 이것을 확인하는 곳은 플레이어 조종자(`PlayerControllerComponent`)와, 입력 맵을 직접 읽는 명령 조종자(NileCity · StarSkirmish · ThemeParkTycoon · MeadowVillage의 디렉터)와 카메라(`CameraDirectorComponent` · `OrthoCameraRigComponent` · `CameraManagerComponent`)입니다.
+플레이어 조종자는 먹은 행동을 의도에 넣지 않고, 모달이나 로딩 화면이 있으면 의도를 0으로 둡니다. 입력 맵을 직접 읽는 쪽은 `const InputMap& inputMap = input.getInputMap();` 를
+`const UIInputMapView inputMap( input.getInputMap(), game::getService<UISystem>() );` 로 바꾸면 됩니다(`wasActionTriggered` · `wasActionPressed` · `isActionDown` · `getAxis1D` · `getVector2D` 가 같은 이름이고,
+먹은 행동이거나 게임 입력이 막혀 있으면 "누르지 않음"을 돌려줍니다. UI 시스템이 없으면 입력 맵 그대로입니다).
 활성 화면이 커서를 원하면(`wantsCursor`) 마우스 잠금도 쉽니다. 입력 맵이 UI 맵과 게임 맵 둘이어도 물리 슬롯으로 비교하므로, 메뉴에서 누른 패드 A가 점프가 되지 않습니다.
 
 **글 입력.** 글 입력 위젯(`supportsTextInput`)이 포커스를 가지면 키보드 포커스 `UI` 를 잡습니다. 그동안 게임은 키를 보지 못합니다.
 입력 위젯에 있는 동안 누른 키는 뗄 때까지 게임에 가지 않고, 글자와 IME 조합은 그 위젯의 `onTextEvent` 로 갑니다.
-이때 UI 행동은 `UI.Back`, `UI.FocusNext`, `UI.FocusPrevious` 만 받습니다. 스페이스가 확인 버튼으로 동작하지 않게 하기 위해서입니다. 개발 콘솔이 열려 있으면 UI는 행동을 받지 않습니다.
+이때 UI 행동은 `UI.Back`, `UI.FocusNext`, `UI.FocusPrevious` 와 글 편집 행동(`UI.Text*`)만 받습니다. 스페이스가 확인 버튼으로 동작하지 않게 하기 위해서입니다. 개발 콘솔이 열려 있으면 UI는 행동을 받지 않습니다.
 
 ### 화면 스택
 
@@ -363,7 +366,9 @@ arrange가 결과 방향을 위젯에 기록하고(`isRightToLeft`), 글 위젯�
 - `PanelWidget::arrangeChild` 가 RTL 패널이면 자식 사각형을 패널 너비 기준으로 뒤집습니다(x → 너비 − x − 폭). 상자의 가로 순서, 캔버스의 앵커와 오프셋, 격자 열, 흐름 줄이 한 번에 뒤집힙니다.
 - `UILayoutPass::arrange` 가 자기 슬롯을 **부모의** 방향으로 읽어, RTL이면 여백의 왼쪽과 오른쪽, 가로 정렬의 Start와 End를 바꿉니다.
 
-스크롤 패널은 내용 위치를 뒤집지 않습니다(`mirrorsChildrenInRightToLeft` 가 false). 내용 안의 패널이 자기 방향으로 뒤집습니다.
+스크롤 패널은 내용 위치를 일반 거울 배치로 뒤집지 않습니다(`mirrorsChildrenInRightToLeft` 가 false). 내용 안의 패널이 자기 방향으로 뒤집습니다.
+가로 스크롤은 `arrangeChildren` 이 직접 시작점을 오른쪽으로 둡니다. 오프셋은 **시작 쪽에서 잰 거리**라서 오른쪽에서 왼쪽이면 오프셋 0 이 내용의 오른쪽 끝이고(`x = 보이는 너비 − 내용 너비 + 오프셋`), 늘수록 내용이 오른쪽으로 밀려 왼쪽 끝이 드러납니다.
+화면 좌표로 들어오는 입력(스틱, 막대 끌기, 트랙 누름, `scrollIntoView` 의 사각형)만 `getHorizontalScrollSign` 으로 부호를 뒤집고, 휠은 "끝 쪽으로"라서 그대로입니다. 막대 엄지도 오른쪽 끝에서 시작합니다. 세로 막대는 방향과 상관없이 오른쪽에 둡니다.
 방향을 바꾸면 크기는 그대로이므로 `kArrange` 만 됩니다. 문화권이 바뀌어 루트 방향이 달라지면 다음 순회가 트리 전체를 다시 배치합니다.
 포커스 탐색의 Left와 Right는 화면 기준 그대로입니다. 결과 사각형으로 후보를 고르므로 거울 배치에 저절로 맞고, 히트 테스트도 기하를 보므로 따로 할 일이 없습니다.
 
@@ -376,6 +381,7 @@ arrange가 결과 방향을 위젯에 기록하고(`isRightToLeft`), 글 위젯�
 | `ButtonWidget`, `CheckBoxWidget` | Button, CheckBox | Button, Toggle | Button, CheckBox |
 | `SliderWidget`, `ProgressBarWidget` | Slider, ProgressBar | Slider, ProgressBar | HSlider, ProgressBar |
 | `ComboBoxWidget`, `TextInputWidget` | ComboBox, EditableTextBox | DropdownField, TextField | OptionButton, LineEdit |
+| `RotatorWidget` | CommonUI `UCommonRotator` | (슬라이더로 만든 단계 선택) | (좌우 화살표 `OptionButton`) |
 | `ListViewWidget` | ListView | ListView | ItemList |
 | `UIPaintPass` 와 위젯별 그리기 캐시 | Slate 요소 캐시 | 더러운 요소 다시 그리기 | CanvasItem 명령 캐시 |
 
@@ -408,8 +414,18 @@ arrange가 결과 방향을 위젯에 기록하고(`isRightToLeft`), 글 위젯�
 - **슬라이더**는 포커스 상태에서 `UI.NavigateLeft` 와 `UI.NavigateRight` 를 처리해 값을 한 단계 옮깁니다. 그래서 포커스는 위아래로만 떠납니다. RTL이면 최솟값이 오른쪽입니다.
 - **콤보 상자**는 자기가 든 화면의 `UISystem` 에 팝업 화면을 엽니다. 팝업은 Modal 층이지만 막지 않고, 항목 버튼이 상자 아래에 놓입니다. 밖을 클릭하거나 `UI.Back` 이면 닫힙니다.
   팝업은 상자를 (화면 핸들, 위젯 번호)로 다시 찾습니다(`WidgetTree::getScreen`).
-- **글 입력 위젯**은 글자 사건을 끝에 붙입니다. IME 조합 중인 글은 확정 전까지 따로 보이고, Enter는 확정 알림입니다. 커서는 글 끝에 있습니다.
-  `UI.TextBackspace` 는 입력 위젯이 키보드를 가진 동안에만 `UISystem` 이 보내고, 끝 코드 포인트 하나를 지웁니다.
+- **로테이터**(`RotatorWidget`)는 콤보 상자 대신 쓰는 패드 중심의 "좌우로 고르기"입니다. 고른 항목의 글을 가운데에 보이고 양옆에 화살표를 그립니다.
+  포커스를 가진 채 `UI.NavigateLeft` · `UI.NavigateRight` 가 항목을 하나씩 넘기고(끝에서 반대쪽 끝으로 돕니다) `UI.Accept` 는 다음 항목이며,
+  항목이 둘보다 적으면 좌우를 처리하지 않아 포커스가 옆으로 떠납니다. 포인터는 왼쪽 화살표 쪽이 이전, 그 밖은 다음이고, 오른쪽에서 왼쪽 위젯에서는 키와 화살표가 모두 뒤집힙니다.
+  필드 규약(`_listOption` · `_selectedIndex`)이 콤보 상자와 같아서 설정 바인딩이 그대로 붙습니다.
+- **글 입력 위젯**은 글자 사건을 커서 자리에 넣고(선택이 있으면 선택을 대신합니다), Enter는 확정 알림입니다. 커서와 선택 기준점은 원문의 UTF-8 바이트 위치이고 항상 코드 포인트 경계입니다.
+  IME 조합 중인 글은 확정 전까지 커서 자리에 밑줄로 끼워 보입니다. 편집 행동은 입력 위젯이 키보드를 가진 동안에만 `UISystem` 이 보냅니다.
+  `UI.TextBackspace` · `UI.TextDelete`(Delete), `UI.TextCaretLeft/Right`(좌우 화살표), `UI.TextHome/End`, Shift 를 더한 `UI.TextSelectLeft/Right/Home/End`, `UI.TextSelectAll`(Ctrl+A), `UI.TextCopy/Cut/Paste`(Ctrl+C/X/V)입니다.
+  Shift 조합은 조합 키 없는 바인딩도 함께 발화하므로 라우터가 Shift 쪽이 발화한 프레임에는 일반 이동을 보내지 않습니다(`UIInputRouterInternal::kArrTextAction`).
+  좌우는 화면 기준이라 오른쪽에서 왼쪽 위젯에서는 논리 순서가 뒤집히고, Home 과 End 는 논리 순서입니다. 포인터를 누르면 가장 가까운 글자 사이로 커서가 가고 두 번 누르면 전체를 선택합니다.
+  복사 · 붙여넣기는 `UISystem::getClipboard()`(`UIClipboardService`)를 거칩니다. 붙이는 글의 줄 바꿈과 제어 문자는 뺍니다(HTML 입력 칸과 같습니다).
+  운영체제 클립보드는 창 계층이 `UIClipboardAPI` 를 끼워야 이어지고, 끼우기 전에는 엔진 안에서만 오가는 글 한 칸입니다. 글자 단위는 코드 포인트라서 결합 문자 묶음은 낱낱으로 움직입니다.
+  필드보다 긴 글을 커서 쪽으로 스크롤하는 것과 끌어서 선택하기는 없습니다.
 - **가상 목록**(`ListViewWidget`)은 보이는 줄 수 + 1개만 줄 위젯을 만듭니다(`setRowFactory`). 항목 k는 언제나 줄 k % 줄 수에 연결합니다(`setRowBinder`).
   그래서 한 줄 스크롤하면 위젯 하나만 다시 연결되고, 보이는 동안 항목과 위젯의 짝이 바뀌지 않아 포커스가 항목을 따라갑니다. 줄 위젯은 레이아웃 도중에 만들어지고 바로 배치됩니다.
 
@@ -538,6 +554,25 @@ Empty 게임의 `-gv_benchUiMarkers=K` 는 벤치 큐브에 화면 마커를 붙
   위젯 캐시를 차례로 붙인 결과와 미리 합친 하위 목록을 붙인 결과는 텍스처 번호 · 일괄 경계가 다를 수 있습니다(`UIDeterminismTest` 골든이 바뀐다).
 - 구간은 `GT.UI.Animate`, `GT.UI.Bind`, `GT.UI.Style`, `GT.UI.Layout`, `GT.UI.Paint` 이고, 카운터는 `UI.StyleWidgets`, `UI.LayoutWidgets`, `UI.PaintWidgets`, `UI.CanvasQuads` 입니다.
 
+#### 측정 시나리오 — 아직 하지 않은 최적화를 하기 전에
+
+두 가지 구조 변경(패널 하위 출력 캐시, 변환을 그림 캐시 밖에서 곱하기)은 **재서 이길 때만** 합니다. 같은 바이너리로 세 모양을 잽니다(Release, VSync 끔, `-gv_profileFrames=600`, 값은 `FrameProfiler` 표의 `per_frame`/`p50`/`p99` 열).
+
+| 모양 | 명령 | 보는 것 |
+|---|---|---|
+| A. 멈춘 화면 | `App -gv_benchUiWidgets=10000 -gv_benchUiChurn=0` | `GT.UI.Paint` 가 0 에 가까운지(바뀌지 않은 트리는 순회하지 않는다) |
+| B. 일부만 바뀜 | `App -gv_benchUiWidgets=10000 -gv_benchUiChurn=10` | `GT.UI` 합 p50(목표 0.3 ms)과 `UI.PaintWidgets` — 보이는 위젯을 걷는 비용이다 |
+| C. 조상 변환이 매 프레임 | `App -gv_benchUiWidgets=10000 -gv_benchUiOpacityPulse=1` | 조상 `kTransform` 으로 보이는 자손 전체를 다시 칠하는 비용(`UI.PaintWidgets` 가 보이는 위젯 수와 같아야 한다) |
+
+- **패널 하위 출력 캐시(Slate 의 Invalidation Panel)**는 B 의 `GT.UI` p50 이 목표를 넘고 보이는 위젯 수가 늘수록 선형으로 늘 때만 합니다. 이득은 걷는 비용(`UI.PaintWidgets` 만큼의 방문)을 패널 하나의 이어 붙이기 한 번으로 바꾸는 것이고,
+  손해는 패널 안 위젯 하나가 바뀌면 그 패널의 캐시를 통째로 다시 만드는 것입니다.
+- **설계 메모.** (1) 하위 목록을 **합치지 않은 일괄 그대로** 들어야 합니다 — `CanvasDrawList::appendDrawList` 가 가위 · 텍스처 넷이 같은 일괄을 합치는 순서에 결과가 달려 있어, 미리 합친 하위 목록을 붙이면 일괄 경계가 달라져
+  골든(`UIDeterminismTest`)이 바뀝니다. 원본 일괄을 이어 붙이는 길(`appendRawBatches` 같은 것)을 먼저 두고, 같은 바이트인지 골든으로 확인한 뒤에 캐시를 얹습니다.
+  (2) 무효화는 자손에서 위로 올라가야 하므로 `Widget::invalidate` 가 부모 쪽에 "자손이 더럽다" 비트(`kChildPaint`)를 올려 캐시 패널에서 멈추게 합니다(`kChildLayout` 과 같은 방식).
+  (3) 캐시 경계는 자동이 아니라 선택입니다(패널의 `_bCachePaintOutput`) — 레이아웃 경계와 같은 이유로, 크기가 고정이고 자주 바뀌지 않는 큰 목록 패널에만 켭니다. (4) 스크롤 패널은 자르기 영역이 움직이므로 첫 대상에서 뺍니다.
+- **변환을 캐시 밖에서 곱하기**는 C 에서 `GT.UI.Paint` p50 이 A 의 수십 배이고 실제 화면이 조상 불투명도 · 변환을 오래 움직일 때만 합니다(메뉴 페이드는 0.2 초라 해당 없다). 설계는 위젯 캐시에 "조상 변환을 곱하기 전" 사각형을 두고
+  그리기 패스가 목록에 이어 붙일 때 조상 변환을 곱하는 것이며, 그러면 가위 사각형과 둥근 자르기(`_clipRect`)도 같이 변환해야 해서 일괄 합치기 규칙이 흔들립니다 — 위 (1) 과 같은 골든 확인이 먼저입니다.
+
 ## 확장하는 법
 
 ### 새 위젯 타입 만들기
@@ -603,6 +638,8 @@ HUD 상태를 바꾸는 시나리오는 사용자 파일에 남으므로 끝에�
 |---|---|
 | `UISystem.h` | 서비스 API, 화면 열기와 닫기, 프레임 순서 |
 | `Input/UIInputRouter.h` | 포인터 · 액션 · 글자 입력을 화면으로 보내는 규칙, 포커스 복원, 입력 방식 |
+| `Input/UIInputMapView.h` | 게임 입력 맵을 읽되 UI 가 먹은 입력을 거르는 창구(명령 조종자 · 카메라) |
+| `Input/UIClipboardService.h` | 글 입력 칸의 복사 · 붙여넣기 클립보드와 운영체제 연결 표(`UIClipboardAPI`) |
 | `Style/UIThemeController.h` | 테마 고르기(설정 `gv_uiTheme` 따라가기), 테마 시트 + 문서 시트로 스타일 세트 짓기 |
 | `Screen/UIOffscreenScreens.h` | 화면 스택 밖 미리보기(에디터)의 프레임 처리와 렌더 텍스처 목록 |
 | `Base/Widget.h` | 위젯 가상 함수와 무효화 |

@@ -18,10 +18,12 @@
 #include "Engine/UI/Document/UIBindingDesc.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Input/UIActionGlyphSource.h"
+#include "Engine/UI/Input/UIClipboardService.h"
 #include "Engine/UI/Input/UIInputRouter.h"
 #include "Engine/UI/Layout/UILayoutPass.h"
 #include "Engine/UI/Layout/UIScale.h"
 #include "Engine/UI/Render/UIPaintPass.h"
+#include "Engine/UI/Screen/UIGlobalCommandRegistry.h"
 #include "Engine/UI/Screen/UINotificationService.h"
 #include "Engine/UI/Screen/UIOffscreenScreens.h"
 #include "Engine/UI/Screen/UIScreen.h"
@@ -147,6 +149,15 @@ namespace sw
         const string& getPauseMenuDocument() const { return _pauseMenuDocument; }
         /** @brief 설정 출처입니다. `setUserSettings` 로 받은 것이고, 없으면 엔진 서비스이며, 그것도 없으면 nullptr 입니다. 옵션 메뉴와 설정 바인딩이 씁니다. */
         UserSettingsManager* findUserSettings() const;
+        /**
+         * @brief 화면이 처리하지 않은 UI 명령의 전역 표입니다. 게임 흐름이 `ReturnToTitle` · 호스트가 `QuitGame` 같은 명령을 등록하면 일시정지 메뉴가 그 버튼을 보입니다.
+         * @details 함수가 모듈 이미지 안에 있으면 그 모듈이 언로드될 때 제거됩니다. 등록한 쪽은 끝날 때 `unregisterCommand` 로 거둡니다.
+         */
+        UIGlobalCommandRegistry&       getGlobalCommands() { return _globalCommands; }
+        const UIGlobalCommandRegistry& getGlobalCommands() const { return _globalCommands; }
+        /** @brief 글 클립보드입니다. 글 입력 위젯의 복사 · 잘라내기 · 붙여넣기가 쓰며, 창 계층이 운영체제 연결(`UIClipboardAPI`)을 끼웁니다. */
+        UIClipboardService&       getClipboard() { return _clipboard; }
+        const UIClipboardService& getClipboard() const { return _clipboard; }
         /** @brief 알림과 토스트입니다. 오버레이 레이어에서 세 개까지 쌓고, 대기열을 두며, 같은 글은 합칩니다. 게임과 키트가 `post` 합니다. */
         UINotificationService&       getNotifications() { return _notifications; }
         const UINotificationService& getNotifications() const { return _notifications; }
@@ -365,6 +376,8 @@ namespace sw
         UIThemeController            _theme;
         vector<string>               _listReopenDocument; ///< 모듈 다시 로드로 닫은 문서 화면입니다(다음 update 가 다시 엽니다).
         UIBindingConverterRegistry   _bindingConverters;
+        UIClipboardService           _clipboard;      ///< 글 입력 위젯의 복사 · 붙여넣기 창구입니다.
+        UIGlobalCommandRegistry      _globalCommands; ///< 화면이 처리하지 않은 명령을 받는 전역 표입니다.
         UINotificationService        _notifications;
         UIActionGlyphSource          _actionGlyphs; ///< 입력 관리자와 UI 맵에서 가져오는 글리프 출처입니다(초기화 때 채웁니다).
         UIInputRouter                _input;        ///< 포커스, 포인터, 소비된 입력, UI 액션 맵, 입력 방식입니다.

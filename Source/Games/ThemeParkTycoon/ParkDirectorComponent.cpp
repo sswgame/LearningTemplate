@@ -15,6 +15,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/UI/Input/UIInputMapView.h"
+#include "Engine/UI/UISystem.h"
 #include "Engine/Utility/GameAutoplay.h"
 
 #include "GameFramework/Base/Actor/Camera/OrthoCameraRigComponent.h"
@@ -590,8 +592,8 @@ namespace sw
     // ------------------------------------------------------------------------------
     void ParkDirectorComponent::updateInput( const InputManager& input )
     {
-        // 키는 입력 맵(`data/park.input.xml`)이 정한다.
-        const InputMap& inputMap = input.getInputMap();
+        // 키는 입력 맵(`data/park.input.xml`)이 정한다. 일시정지 메뉴 같은 UI 가 먹은 입력은 보이지 않는다.
+        const UIInputMapView inputMap( input.getInputMap(), game::getService<UISystem>() );
         if ( inputMap.wasActionTriggered( hashed_string( "Park.NextRide" ) ) && _listPlacement.empty() == false )
         {
             _selectedPlacement = ( _selectedPlacement + 1 ) % static_cast<int32>( _listPlacement.size() );

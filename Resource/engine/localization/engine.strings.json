@@ -110,8 +110,22 @@
                 "engine/ui/key_rebind.ui.xml"
             ]
         },
+        "Quit Game": {
+            "source": "Quit Game",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/pause.ui.xml"
+            ]
+        },
         "Resume": {
             "source": "Resume",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/pause.ui.xml"
+            ]
+        },
+        "Return to Title": {
+            "source": "Return to Title",
             "context": "TextWidget._text",
             "origins": [
                 "engine/ui/pause.ui.xml"

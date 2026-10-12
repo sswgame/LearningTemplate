@@ -8,6 +8,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/UI/Input/UIInputMapView.h"
+#include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
@@ -140,7 +142,7 @@ namespace sw
 
         // 키는 입력 맵(`data/meadow.input.xml`)이 정한다. 대화는 하루 한 번(키트가 막는다).
         const InputManager* pInput = game::getService<InputManager>();
-        if ( pInput != nullptr && pInput->getInputMap().wasActionTriggered( hashed_string( MeadowVillageData::kTalkAction ) ) )
+        if ( pInput != nullptr && UIInputMapView( pInput->getInputMap(), game::getService<UISystem>() ).wasActionTriggered( hashed_string( MeadowVillageData::kTalkAction ) ) )
         {
             const CreatureInteractResult result = _town.talkTo( sprout );
             SW_LOG_INFO( "[Meadow] talk to sprout: %# (friendship %#)", toString( result ), _town.getFriendship( sprout ) );

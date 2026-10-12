@@ -13,6 +13,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/UI/Input/UIInputMapView.h"
+#include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Base/Actor/Camera/CameraCollisionProbe.h"
 #include "GameFramework/Base/Actor/Camera/CameraPoseUtil.h"
@@ -269,7 +271,7 @@ namespace sw
         const InputManager* pInput = _bReadInput ? game::getService<InputManager>() : nullptr;
         if ( pInput == nullptr )
             return;
-        const InputMap& inputMap = pInput->getInputMap();
+        const UIInputMapView inputMap( pInput->getInputMap(), game::getService<UISystem>() ); // 메뉴가 먹은 입력과 모달 아래의 입력은 카메라가 보지 않는다
         if ( _cycleAction.empty() == false && inputMap.wasActionTriggered( _cycleAction ) )
         {
             [[maybe_unused]] const hashed_string nextID = activateNextPreset(); // 로그는 Shipping 에서 빠진다

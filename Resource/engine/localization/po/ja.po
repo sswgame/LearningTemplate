@@ -104,8 +104,20 @@ msgstr ""
 
 #. Context: TextWidget._text
 #: engine/ui/pause.ui.xml
+msgctxt "Quit Game"
+msgid "Quit Game"
+msgstr ""
+
+#. Context: TextWidget._text
+#: engine/ui/pause.ui.xml
 msgctxt "Resume"
 msgid "Resume"
+msgstr ""
+
+#. Context: TextWidget._text
+#: engine/ui/pause.ui.xml
+msgctxt "Return to Title"
+msgid "Return to Title"
 msgstr ""
 
 #. Context: TextWidget._text

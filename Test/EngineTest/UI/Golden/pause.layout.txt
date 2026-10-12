@@ -8,6 +8,8 @@ SafeZonePanel 0.00 0.00 1280.00 720.00
           TextWidget 609.00 328.00 63.00 18.00
         Options 593.00 366.00 95.00 34.00
           TextWidget 609.00 374.00 63.00 18.00
+        ReturnToTitle collapsed
+        QuitGame collapsed
         Hint 593.00 412.00 95.00 18.00
           BoxPanel 593.00 412.00 95.00 18.00
             Hint.Label 593.00 412.00 95.00 18.00
@@ -21,6 +23,8 @@ SafeZonePanel 0.00 0.00 1280.00 720.00
           TextWidget 593.00 312.00 94.00 27.00
         Options 569.00 369.00 142.00 51.00
           TextWidget 593.00 381.00 94.00 27.00
+        ReturnToTitle collapsed
+        QuitGame collapsed
         Hint 569.00 438.00 142.00 27.00
           BoxPanel 569.00 438.00 142.00 27.00
             Hint.Label 569.00 438.00 142.00 27.00
@@ -34,6 +38,8 @@ SafeZonePanel 0.00 0.00 1920.00 1080.00
           TextWidget 929.00 508.00 63.00 18.00
         Options 913.00 546.00 95.00 34.00
           TextWidget 929.00 554.00 63.00 18.00
+        ReturnToTitle collapsed
+        QuitGame collapsed
         Hint 913.00 592.00 95.00 18.00
           BoxPanel 913.00 592.00 95.00 18.00
             Hint.Label 913.00 592.00 95.00 18.00
@@ -47,6 +53,8 @@ SafeZonePanel 0.00 0.00 1920.00 1080.00
           TextWidget 913.00 492.00 94.00 27.00
         Options 889.00 549.00 142.00 51.00
           TextWidget 913.00 561.00 94.00 27.00
+        ReturnToTitle collapsed
+        QuitGame collapsed
         Hint 889.00 618.00 142.00 27.00
           BoxPanel 889.00 618.00 142.00 27.00
             Hint.Label 889.00 618.00 142.00 27.00
@@ -60,6 +68,8 @@ SafeZonePanel 0.00 0.00 3840.00 2160.00
           TextWidget 1889.00 1048.00 63.00 18.00
         Options 1873.00 1086.00 95.00 34.00
           TextWidget 1889.00 1094.00 63.00 18.00
+        ReturnToTitle collapsed
+        QuitGame collapsed
         Hint 1873.00 1132.00 95.00 18.00
           BoxPanel 1873.00 1132.00 95.00 18.00
             Hint.Label 1873.00 1132.00 95.00 18.00
@@ -73,6 +83,8 @@ SafeZonePanel 0.00 0.00 3840.00 2160.00
           TextWidget 1873.00 1032.00 94.00 27.00
         Options 1849.00 1089.00 142.00 51.00
           TextWidget 1873.00 1101.00 94.00 27.00
+        ReturnToTitle collapsed
+        QuitGame collapsed
         Hint 1849.00 1158.00 142.00 27.00
           BoxPanel 1849.00 1158.00 142.00 27.00
             Hint.Label 1849.00 1158.00 142.00 27.00

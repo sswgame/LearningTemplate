@@ -6,6 +6,7 @@
 #include "Engine/Input/Virtual/VirtualInputScript.h"
 #include "Engine/UI/Base/PanelWidget.h"
 #include "Engine/UI/Base/UIFocusManager.h"
+#include "Engine/UI/Input/UIInputMapView.h"
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/ScrollPanel.h"
 #include "Engine/UI/Screen/UIScreen.h"
@@ -372,4 +373,68 @@ SW_TEST_CASE( UIInputTest, RightStickScrollsFocusedList )
         fixture.runFrame();
     }
     SW_EXPECT_NEAR_EQUAL( 100.0f, pScroll->getScrollOffset()._y, 0.01f );
+}
+
+/**
+ * @brief [UIInputTest] 명령 조종자가 읽는 창구(`UIInputMapView`): 메뉴가 먹은 패드 A 는 게임 액션으로 새지 않고, 화면을 닫고 다시 누르면 보인다. UI 시스템이 없으면 입력 맵 그대로다
+ * @details 변이: `UIInputMapView::isActionBlocked` 가 `isActionConsumed` 를 부르지 않으면 메뉴를 누른 프레임에 Jump 가 보여 진다.
+ */
+SW_TEST_CASE( UIInputTest, InputMapViewHidesConsumedInputFromCommandControllers )
+{
+    UIInputFixture fixture;
+    fixture.openMenu( 2 );
+    SW_ASSERT_TRUE( fixture.focus( 0 ) );
+    SW_ASSERT_TRUE( fixture._script.addSlot( 1, sw::InputSlot::fromGamepadButton( sw::GamepadButton::A ), true ) );
+    SW_ASSERT_TRUE( fixture._script.addSlot( 3, sw::InputSlot::fromGamepadButton( sw::GamepadButton::A ), false ) );
+    SW_ASSERT_TRUE( fixture._script.addSlot( 6, sw::InputSlot::fromGamepadButton( sw::GamepadButton::A ), true ) );
+    fixture.attachScript();
+
+    const sw::InputMap&      gameMap = fixture._input.getInputMap();
+    const sw::UIInputMapView view( gameMap, &fixture._ui );
+    const sw::UIInputMapView rawView( gameMap, nullptr );
+    fixture.runFrame();   // 0 — 패드 연결
+    fixture.beginFrame(); // 1 — A 누름: 메뉴 버튼이 클릭된다
+    SW_EXPECT_TRUE( gameMap.wasActionTriggered( "Jump" ) );
+    SW_EXPECT_FALSE( view.wasActionTriggered( "Jump" ) );
+    SW_EXPECT_FALSE( view.wasActionPressed( "Jump" ) );
+    SW_EXPECT_TRUE( view.isActionBlocked( "Jump" ) );
+    SW_EXPECT_TRUE( rawView.wasActionTriggered( "Jump" ) ); // UI 시스템이 없으면 거르지 않는다
+    fixture.endFrame();
+    fixture.beginFrame(); // 2 — 누른 채
+    SW_EXPECT_FALSE( view.isActionDown( "Jump" ) );
+    SW_EXPECT_TRUE( rawView.isActionDown( "Jump" ) );
+    fixture.endFrame();
+    fixture.runFrame(); // 3 — 뗌
+    fixture._ui.closeScreen( fixture._menu );
+    fixture.runFrame();   // 4
+    fixture.runFrame();   // 5
+    fixture.beginFrame(); // 6 — 화면이 없으니 게임의 것
+    SW_EXPECT_TRUE( view.wasActionTriggered( "Jump" ) );
+    fixture.endFrame();
+}
+
+/**
+ * @brief [UIInputTest] 모달 화면이 떠 있으면 UI 가 먹지 않은 입력도 `UIInputMapView` 가 막는다 — 축과 방향 값은 0 이다
+ * @details 변이: `isActionBlocked` 가 `isGameInputBlocked` 를 빼면 모달 아래에서 W 가 게임에 보여 진다.
+ */
+SW_TEST_CASE( UIInputTest, InputMapViewBlocksEverythingUnderModal )
+{
+    UIInputFixture   fixture;
+    sw::UIScreenDesc modalDesc{};
+    modalDesc._bModal = true;
+    auto modalRoot    = sw::make_unique<sw::uitest::TestPanelWidget>( "modal" );
+    (void)modalRoot->addChild( sw::make_unique<sw::uitest::TestBoxWidget>( "ok", true ) );
+    (void)fixture._ui.pushScreen( sw::make_unique<sw::UIScreen>( modalDesc, std::move( modalRoot ) ) );
+    fixture.runFrame();
+    SW_EXPECT_TRUE( fixture._input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::W ) ) );
+
+    const sw::InputMap&      gameMap = fixture._input.getInputMap();
+    const sw::UIInputMapView view( gameMap, &fixture._ui );
+    fixture.beginFrame(); // W 누름: UI 행동이 아니라 먹히지 않았다
+    SW_EXPECT_TRUE( fixture._ui.isGameInputBlocked() );
+    SW_EXPECT_TRUE( gameMap.isActionDown( "MoveForward" ) );
+    SW_EXPECT_FALSE( view.isActionDown( "MoveForward" ) );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, view.getAxis1D( "MoveForward" ), 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, view.getVector2D( "Move" )._x, 1e-6f );
+    fixture.endFrame();
 }

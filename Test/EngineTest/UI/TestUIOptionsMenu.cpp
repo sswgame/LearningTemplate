@@ -11,10 +11,12 @@
 #include "Engine/UI/Screen/OptionsMenuScreen.h"
 #include "Engine/UI/Screen/PauseMenuScreen.h"
 #include "Engine/UI/Screen/SettingsConfirmScreen.h"
+#include "Engine/UI/Screen/UIGlobalCommandRegistry.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/ButtonWidget.h"
 #include "Engine/UI/Widgets/CheckBoxWidget.h"
 #include "Engine/UI/Widgets/ComboBoxWidget.h"
+#include "Engine/UI/Widgets/RotatorWidget.h"
 #include "Engine/UI/Widgets/SliderWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
@@ -258,6 +260,31 @@ SW_TEST_CASE( UIOptionsMenuTest, RebindCapturesNextKeyAndSwapsOnConflict )
 }
 
 /**
+ * @brief [UIOptionsMenuTest] 키를 기다리다 아무것도 받지 못한 채 시간(10 초)이 지나면 취소하고 닫는다 — 패드 사용자도 빠져나올 수 있다. 보류 값은 그대로다
+ * @details 변이: `onTick` 의 `_listenSeconds` 누적을 빼면 창이 남아 진다.
+ */
+SW_TEST_CASE( UIOptionsMenuTest, RebindTimesOutWithoutInput )
+{
+    UIOptionsMenuFixture fixture;
+    fixture.selectTab( 2 );
+    sw::OptionsMenuScreen* pMenu = fixture.getMenu();
+    pMenu->dispatchCommand( "Rebind", *pMenu->findRowValueWidget( "controls.jump" ) );
+    SW_ASSERT_NOT_NULL( fixture.getPrompt<sw::KeyRebindScreen>() );
+    constexpr uint32 kFramesPerSecond = 60;
+    for ( uint32 frame = 0; frame < 9 * kFramesPerSecond; ++frame )
+    {
+        fixture.runFrame();
+    }
+    SW_EXPECT_NOT_NULL( fixture.getPrompt<sw::KeyRebindScreen>() ); // 9 초 — 아직 기다린다
+    for ( uint32 frame = 0; frame < 2 * kFramesPerSecond; ++frame )
+    {
+        fixture.runFrame();
+    }
+    SW_EXPECT_TRUE( fixture.getPrompt<sw::KeyRebindScreen>() == nullptr ); // 11 초 — 취소했다
+    SW_EXPECT_FALSE( fixture._settings.isPending( "controls.jump" ) );
+}
+
+/**
  * @brief [UIOptionsMenuTest] 키를 받는 동안 UI 행동은 꺼진다 — Esc 를 누른 프레임에 창이 닫히지 않고(UI.Back 이 아니다) 뗄 때 취소된다.
  *        아래 화살표는 탐색이 아니라 바인딩이 되고, 창이 닫히면 포커스는 그 행 단추로 돌아온다
  * @details 변이: `UIInputRouter::processActions` 의 `wantsUIActions` 검사를 빼면 Esc 를 누른 프레임에 UI.Back 이 창을 닫는다.
@@ -371,4 +398,74 @@ SW_TEST_CASE( UIOptionsMenuTest, PauseActionOpensPauseMenu )
         fixture.runFrame();
     }
     SW_EXPECT_EQUAL( 0u, fixture._ui.getScreenCount() );
+}
+
+/**
+ * @brief [UIOptionsMenuTest] 일시정지 메뉴의 "타이틀로" · "끝내기" 단추 — 전역 명령 표에 같은 이름이 등록돼 있는 동안만 보이고, 누르면 등록한 함수가 불리며, 거두면 다시 접힌다
+ * @details 변이: `PauseMenuScreen::onTick` 이 표를 보지 않고 늘 보이면 처음 접힘 단언이 진다. `UIScreen::dispatchCommand` 가 전역 표로 넘기지 않으면 호출 수가 0 이다.
+ */
+SW_TEST_CASE( UIOptionsMenuTest, PauseMenuSessionButtonsFollowGlobalCommands )
+{
+    UIOptionsMenuFixture fixture;
+    fixture.getMenu()->close();
+    fixture.runFrame();
+    fixture._ui.setPauseMenuDocument( "engine/ui/pause.ui.xml" );
+    fixture.tapKey( sw::Key::Escape );
+    sw::UIScreen* pPause = fixture._ui.getActiveScreen();
+    SW_ASSERT_NOT_NULL( pPause );
+    sw::Widget* pTitle = pPause->getTree().findWidgetByName( sw::UIGlobalCommandRegistry::kReturnToTitle );
+    sw::Widget* pQuit  = pPause->getTree().findWidgetByName( sw::UIGlobalCommandRegistry::kQuitGame );
+    SW_ASSERT_NOT_NULL( pTitle );
+    SW_ASSERT_NOT_NULL( pQuit );
+    SW_EXPECT_TRUE( pTitle->getVisibility() == sw::WidgetVisibility::Collapsed ); // 등록한 쪽이 없으면 접혀 있다
+    SW_EXPECT_TRUE( pQuit->getVisibility() == sw::WidgetVisibility::Collapsed );
+
+    uint32 quitCount = 0;
+    fixture._ui.getGlobalCommands().registerCommand(
+        sw::UIGlobalCommandRegistry::kQuitGame, SW_DELEGATE_LAMBDA( sw::UICommandDelegate, [&quitCount]( const sw::hashed_string&, sw::Widget& )
+    { ++quitCount; } ) );
+    fixture.runFrame();
+    SW_EXPECT_TRUE( pQuit->getVisibility() == sw::WidgetVisibility::Visible );
+    SW_EXPECT_TRUE( pTitle->getVisibility() == sw::WidgetVisibility::Collapsed ); // 다른 명령은 그대로
+
+    pPause->dispatchCommand( sw::UIGlobalCommandRegistry::kQuitGame, *pQuit );
+    SW_EXPECT_EQUAL( 1u, quitCount );
+
+    fixture._ui.getGlobalCommands().unregisterCommand( sw::UIGlobalCommandRegistry::kQuitGame );
+    fixture.runFrame();
+    SW_EXPECT_TRUE( pQuit->getVisibility() == sw::WidgetVisibility::Collapsed );
+    SW_EXPECT_FALSE( fixture._ui.getGlobalCommands().hasCommand( sw::UIGlobalCommandRegistry::kQuitGame ) );
+}
+
+/**
+ * @brief [UIOptionsMenuTest] 열거형 행: 포인터 방식이면 펼치는 콤보 상자, 탐색(패드 · 키보드) 방식이면 좌우로 고르는 로테이터이고, 로테이터의 오른쪽 키가 설정 값을 다음 항목으로 쓴다
+ * @details 행은 탭을 고를 때 짓는다. 변이: `findRowDocument` 가 입력 방식을 보지 않으면 탐색 방식에서도 콤보 상자가 나와 진다.
+ */
+SW_TEST_CASE( UIOptionsMenuTest, EnumRowUsesRotatorInNavigationMode )
+{
+    UIOptionsMenuFixture   fixture;
+    sw::OptionsMenuScreen* pMenu = fixture.getMenu();
+    fixture.selectTab( 1 );
+    SW_EXPECT_NOT_NULL( sw::castTo<sw::ComboBoxWidget>( pMenu->findRowValueWidget( "video.mode" ) ) ); // 포인터 방식(기본)
+
+    fixture._ui.setInputMode( sw::UIInputMode::Navigation );
+    fixture.selectTab( 0 );
+    fixture.selectTab( 1 );
+    sw::RotatorWidget* pRotator = sw::castTo<sw::RotatorWidget>( pMenu->findRowValueWidget( "video.mode" ) );
+    SW_ASSERT_NOT_NULL( pRotator );
+    SW_EXPECT_EQUAL( 0u, pRotator->getSelectedIndex() ); // windowed
+    SW_EXPECT_EQUAL( size_t{ 2 }, pRotator->getOptions().size() );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( pMenu->getBindingSet().getErrors().size() ) );
+
+    sw::UIActionEvent right{};
+    right._action = sw::hashed_string( sw::UIActionName::kNavigateRight );
+    SW_EXPECT_TRUE( pRotator->onActionEvent( right, sw::UIRoutePhase::Bubble ).isHandled() );
+    SW_EXPECT_STREQ( "fullscreen", sw::string( fixture._settings.getValue( "video.mode" ) ).c_str() ); // 보류 값으로 쓰였다
+    fixture.runFrame();
+    SW_EXPECT_EQUAL( 1u, pRotator->getSelectedIndex() );
+
+    fixture._ui.setInputMode( sw::UIInputMode::Pointer );
+    fixture.selectTab( 0 );
+    fixture.selectTab( 1 );
+    SW_EXPECT_NOT_NULL( sw::castTo<sw::ComboBoxWidget>( pMenu->findRowValueWidget( "video.mode" ) ) );
 }

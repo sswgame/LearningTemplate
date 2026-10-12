@@ -7,6 +7,8 @@
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
+#include "EngineTest/UI/UIScopedVariable.h"
+
 #include "TestFramework/TestFramework.h"
 
 // UINotificationTest — 알림 · 토스트(8-3): 셋까지 쌓고 대기열(우선순위), 같은 글 합치기("x2"), 시간이 다 되면 내리고 다음을 올림, 입력 · 포커스를 받지 않음.
@@ -91,7 +93,11 @@ SW_TEST_CASE( UINotificationTest, QueuesBeyondThree )
     SW_ASSERT_NOT_NULL( pScreen );
     const sw::PanelWidget* pStack = pScreen->getTree().findWidget<sw::PanelWidget>( "Stack" );
     SW_ASSERT_NOT_NULL( pStack );
-    SW_EXPECT_EQUAL( 3u, pStack->getChildCount() ); // 내린 항목의 위젯은 지웠다
+    SW_EXPECT_EQUAL( 4u, pStack->getChildCount() ); // 내린 항목의 위젯은 페이드가 끝날 때까지 남는다
+    SW_EXPECT_EQUAL( 1u, fixture.notes().getFadingCount() );
+    fixture.runFrame( 0.25f );
+    SW_EXPECT_EQUAL( 3u, pStack->getChildCount() ); // 페이드가 끝나 지웠다
+    SW_EXPECT_EQUAL( 0u, fixture.notes().getFadingCount() );
 }
 
 /** @brief [UINotificationTest] 같은 글을 다시 올리면 새로 쌓지 않고 센다("x2") · 시간을 다시 측정한다 */
@@ -107,7 +113,7 @@ SW_TEST_CASE( UINotificationTest, SameTextMergesWithCount )
     SW_EXPECT_EQUAL( 2u, fixture.notes().getVisibleCountOf( 0 ) );
     const sw::UIScreen* pScreen = fixture._ui.findScreen( fixture.notes().getScreen() );
     SW_ASSERT_NOT_NULL( pScreen );
-    const sw::TextWidget* pCount = pScreen->getTree().findWidget<sw::TextWidget>( "Count" );
+    const sw::TextWidget* pCount = pScreen->getTree().findWidget<sw::TextWidget>( "0.Count" ); // 항목마다 이름이 다르다(번호.Count)
     SW_ASSERT_NOT_NULL( pCount );
     SW_EXPECT_STREQ( "x2", pCount->getText().c_str() );
     SW_EXPECT_TRUE( pCount->isVisible() );
@@ -125,6 +131,10 @@ SW_TEST_CASE( UINotificationTest, ExpiresAfterDuration )
     SW_EXPECT_EQUAL( 1u, fixture.notes().getVisibleCount() );
     fixture.runFrame( 0.3f );
     SW_EXPECT_EQUAL( 0u, fixture.notes().getVisibleCount() );
+    SW_EXPECT_EQUAL( 1u, fixture.notes().getFadingCount() );
+    SW_EXPECT_EQUAL( 1u, fixture._ui.getScreenCount() ); // 사라지는 항목이 있는 동안은 화면을 닫지 않는다
+    fixture.runFrame( 0.25f );
+    SW_EXPECT_EQUAL( 0u, fixture.notes().getFadingCount() );
     fixture.runFrame();
     SW_EXPECT_EQUAL( 0u, fixture._ui.getScreenCount() );
     SW_EXPECT_TRUE( fixture.notes().getScreen() == sw::kInvalidUIScreenHandle );
@@ -148,4 +158,82 @@ SW_TEST_CASE( UINotificationTest, NeverTakesFocusOrInput )
     SW_EXPECT_FALSE( fixture._ui.isGameInputBlocked() );
     SW_EXPECT_FALSE( fixture._ui.wantsCursor() );
     SW_EXPECT_FALSE( fixture._ui.getUIInputMap()->isLayerEnabled( "UI" ) ); // UI 행동을 켜지 않는다
+}
+
+/**
+ * @brief [UINotificationTest] 항목은 불투명도 0 에서 1 로 들어오고(페이드 인), 시간이 다 되면 자리는 바로 비고 위젯은 1 에서 0 으로 사라진 뒤 지워진다
+ * @details 변이: `showEntry` 의 시작 불투명도 0 을 빼면 첫 프레임에 이미 1 이라 진다. `startFadeOut` 이 바로 지우면 페이드 도중 위젯이 없어 진다.
+ */
+SW_TEST_CASE( UINotificationTest, EntryFadesInAndOut )
+{
+    using Util = UINotificationTestUtil;
+    UINotificationFixture fixture;
+    fixture.notes().post( Util::make( "fade", 1.0f ) );
+    fixture.runFrame( 0.0f );
+    const sw::UIScreen* pScreen = fixture._ui.findScreen( fixture.notes().getScreen() );
+    SW_ASSERT_NOT_NULL( pScreen );
+    const sw::Widget* pEntry = pScreen->getTree().findWidgetByName( "0" );
+    SW_ASSERT_NOT_NULL( pEntry );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pEntry->getOpacity(), 1e-4f ); // 막 붙었다
+    fixture.runFrame( sw::UINotificationService::kFadeSeconds * 0.5f );
+    SW_EXPECT_TRUE( pEntry->getOpacity() > 0.0f && pEntry->getOpacity() < 1.0f );
+    fixture.runFrame( sw::UINotificationService::kFadeSeconds );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pEntry->getOpacity(), 1e-4f );
+
+    fixture.runFrame( 1.0f ); // 시간이 다 됐다
+    SW_EXPECT_EQUAL( 0u, fixture.notes().getVisibleCount() );
+    const sw::Widget* pFading = pScreen->getTree().findWidgetByName( "0" );
+    SW_ASSERT_NOT_NULL( pFading ); // 위젯은 페이드 동안 남는다
+    fixture.runFrame( sw::UINotificationService::kFadeSeconds * 0.5f );
+    SW_EXPECT_TRUE( pFading->getOpacity() < 1.0f );
+    fixture.runFrame( sw::UINotificationService::kFadeSeconds );
+    SW_EXPECT_TRUE( pScreen->getTree().findWidgetByName( "0" ) == nullptr );
+}
+
+/**
+ * @brief [UINotificationTest] 움직임 줄이기이면 페이드 없이 바로 보이고 바로 지워진다
+ * @details 변이: `startFadeOut` 이 `gv_uiReduceMotion` 을 보지 않으면 사라지는 목록에 한 항목이 남아 진다.
+ */
+SW_TEST_CASE( UINotificationTest, ReduceMotionSkipsFades )
+{
+    using Util = UINotificationTestUtil;
+    const ScopedBoolVariable reduceMotion( "gv_uiReduceMotion", true );
+    UINotificationFixture    fixture;
+    fixture.notes().post( Util::make( "instant", 0.5f ) );
+    fixture.runFrame( 0.0f );
+    const sw::UIScreen* pScreen = fixture._ui.findScreen( fixture.notes().getScreen() );
+    SW_ASSERT_NOT_NULL( pScreen );
+    const sw::Widget* pEntry = pScreen->getTree().findWidgetByName( "0" );
+    SW_ASSERT_NOT_NULL( pEntry );
+    fixture.runFrame( 0.0f ); // 트윈 단계가 끝 값을 쓴다
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pEntry->getOpacity(), 1e-4f );
+    fixture.runFrame( 0.6f );
+    SW_EXPECT_EQUAL( 0u, fixture.notes().getFadingCount() );
+    SW_EXPECT_TRUE( pScreen->getTree().findWidgetByName( "0" ) == nullptr );
+}
+
+/**
+ * @brief [UINotificationTest] 항목마다 위젯 이름이 겹치지 않는다 — `<번호>` · `<번호>.Message` · `<번호>.Count` 가 한 트리에 한 번씩이다
+ * @details 변이: `showEntry` 의 `setName` 을 빼면 둘째 항목부터 이름이 겹쳐 "1.Message" 를 찾지 못한다.
+ */
+SW_TEST_CASE( UINotificationTest, EntryWidgetNamesAreUnique )
+{
+    using Util = UINotificationTestUtil;
+    UINotificationFixture fixture;
+    fixture.notes().post( Util::make( "first" ) );
+    fixture.notes().post( Util::make( "second" ) );
+    fixture.notes().post( Util::make( "third" ) );
+    fixture.runFrame();
+    const sw::UIScreen* pScreen = fixture._ui.findScreen( fixture.notes().getScreen() );
+    SW_ASSERT_NOT_NULL( pScreen );
+    const utf8* arrExpected[] = { "first", "second", "third" };
+    for ( uint32 index = 0; index < 3; ++index )
+    {
+        const sw::string      messageName = sw::to_string( index ) + ".Message";
+        const sw::TextWidget* pMessage    = pScreen->getTree().findWidget<sw::TextWidget>( sw::hashed_string( messageName ) );
+        SW_ASSERT_NOT_NULL( pMessage );
+        SW_EXPECT_STREQ( arrExpected[index], pMessage->getText().c_str() );
+        SW_EXPECT_NOT_NULL( pScreen->getTree().findWidget<sw::TextWidget>( sw::hashed_string( sw::to_string( index ) + ".Count" ) ) );
+    }
+    SW_EXPECT_TRUE( pScreen->getTree().findWidgetByName( "Message" ) == nullptr ); // 조각의 옛 이름은 남지 않는다
 }

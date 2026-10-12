@@ -48,6 +48,8 @@ namespace sw
         void   paint( CanvasPainter& painter, const UIPaintContext& context ) const override;
         /** @brief 지금 칠할 배경입니다. 기본은 `_background` 이며, 버튼은 상태(호버, 누름, 꺼짐)별 브러시를 반환합니다. */
         virtual const UIBrush& getBackgroundBrush() const { return _background; }
+        /** @brief 배경 브러시(기본 상태)의 색 · 모서리 · 테두리, 여백, 그림자를 자기 값으로 답합니다(스타일 전환의 "한쪽만 정한 필드"). */
+        [[nodiscard]] bool tryGetOwnStyleField( UIStyleField field, float32 ( &outArr )[4] ) const override;
 
     private:
         PROPERTY( DisplayName = "Background" )

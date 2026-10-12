@@ -7,6 +7,7 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/UI/Animation/UIStyleTransition.h"
 #include "Engine/UI/Base/UIFocusManager.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/Style/UIStylePass.h"
@@ -18,6 +19,8 @@
 #include "Engine/UI/Widgets/BorderPanel.h"
 #include "Engine/UI/Widgets/ButtonWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
+
+#include "EngineTest/UI/UIScopedVariable.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -75,33 +78,6 @@ namespace
     const sw::float4 UIStyleTestUtil::kBlue{ 0.0f, 0.0f, 1.0f, 1.0f };
     const sw::float4 UIStyleTestUtil::kYellow{ 1.0f, 1.0f, 0.0f, 1.0f };
 
-    /** @brief 전역 bool 변수 하나를 이름으로 바꾸고 스코프 끝에 되돌립니다(테스트 DLL 은 Engine 의 gv_* 를 extern 으로 못 읽는다). */
-    class ScopedBoolVariable
-    {
-    public:
-        ScopedBoolVariable( const utf8* pName, bool bValue )
-            : _pInfo{ sw::engine::getGlobalVariableManager().findVariable( pName ) }
-            , _bPrevious{ false }
-        {
-            SW_EXPECT_TRUE( _pInfo != nullptr );
-            if ( _pInfo == nullptr )
-                return;
-            _bPrevious = _pInfo->getValueAsBool();
-            (void)_pInfo->setValueAsBool( bValue );
-        }
-        ~ScopedBoolVariable()
-        {
-            if ( _pInfo != nullptr )
-                (void)_pInfo->setValueAsBool( _bPrevious );
-        }
-        ScopedBoolVariable( const ScopedBoolVariable& )            = delete;
-        ScopedBoolVariable& operator=( const ScopedBoolVariable& ) = delete;
-
-    private:
-        sw::GlobalVariableInfo* _pInfo;
-        bool                    _bPrevious;
-    };
-
     /** @brief 전환 테스트의 시트 — 배경색만 1 초 Linear 로 옮기고, 글 색은 적지 않아 바로 바뀐다. */
     constexpr utf8 kTransitionSheet[] = "<UIStyleSheet _schemaVersion=\"1\">\n"
                                         "\t<Rule _selector=\"BorderPanel\" _transition=\"_backgroundColor 1 Linear\" />\n"
@@ -111,6 +87,34 @@ namespace
     constexpr utf8 kTransitionBody[]  = "\t<CanvasPanel>\n"
                                         "\t\t<BorderPanel _name=\"Box\" _styleClass=\"a\" />\n"
                                         "\t</CanvasPanel>\n";
+
+    /** @brief 위젯 자기 겉모습 ↔ 시트 값 전환의 시트 — 클래스 b 만 배경색을 정한다(클래스 없는 상태는 위젯이 자기 브러시로 그린다). */
+    constexpr utf8 kOwnValueSheet[] = "<UIStyleSheet _schemaVersion=\"1\">\n"
+                                      "\t<Rule _selector=\"BorderPanel\" _transition=\"_backgroundColor 1 Linear\" />\n"
+                                      "\t<Rule _selector=\".b\" _backgroundColor=\"0,0,1,1\" />\n"
+                                      "</UIStyleSheet>\n";
+    constexpr utf8 kOwnValueBody[]  = "\t<CanvasPanel>\n"
+                                      "\t\t<BorderPanel _name=\"Box\" />\n"
+                                      "\t</CanvasPanel>\n";
+
+    /** @brief 물려받는 글 색 전환의 시트 — 부모(BorderPanel)만 글 색 전환을 적고, 자식 글은 적지 않는다. */
+    constexpr utf8 kInheritSheet[] = "<UIStyleSheet _schemaVersion=\"1\">\n"
+                                     "\t<Rule _selector=\"BorderPanel\" _transition=\"_textColor 1 Linear\" />\n"
+                                     "\t<Rule _selector=\".a\" _textColor=\"0,1,0,1\" />\n"
+                                     "\t<Rule _selector=\".b\" _textColor=\"1,1,0,1\" />\n"
+                                     "</UIStyleSheet>\n";
+    constexpr utf8 kInheritBody[]  = "\t<CanvasPanel>\n"
+                                     "\t\t<BorderPanel _name=\"Box\" _styleClass=\"a\">\n"
+                                     "\t\t\t<TextWidget _name=\"Label\" _text=\"x\" _bLocalized=\"false\" />\n"
+                                     "\t\t</BorderPanel>\n"
+                                     "\t</CanvasPanel>\n";
+
+    /** @brief 전환 지연의 시트 — 배경색을 1 초 Linear 로 옮기되 0.5 초 늦게 시작한다. */
+    constexpr utf8 kDelaySheet[] = "<UIStyleSheet _schemaVersion=\"1\">\n"
+                                   "\t<Rule _selector=\"BorderPanel\" _transition=\"_backgroundColor 1 Linear 0.5\" />\n"
+                                   "\t<Rule _selector=\".a\" _backgroundColor=\"1,0,0,1\" />\n"
+                                   "\t<Rule _selector=\".b\" _backgroundColor=\"0,0,1,1\" />\n"
+                                   "</UIStyleSheet>\n";
 
     /** @brief 입력 관리자와 UI 시스템 — 시트 하나를 건 문서를 연다. */
     struct UIStyleFixture
@@ -638,4 +642,100 @@ SW_TEST_CASE( UIStyleTest, ThemeFollowsUserSetting )
         SW_EXPECT_STREQ( "shooter", fixture._ui.getThemeName().c_str() );
     }
     SW_EXPECT_TRUE( pSetting->setValueAsString( previous ) );
+}
+
+/**
+ * @brief [UIStyleTest] 한쪽만 정한 칸: 위젯이 자기 브러시로 그리던 색 ↔ 시트가 정한 색으로 옮겨 가고(들어갈 때도 나올 때도), 끝나면 다시 시트가 정하지 않은 상태로 돌아간다
+ * @details 변이: `BorderPanel::tryGetOwnStyleField` 를 지우면 클래스 b 를 붙이는 프레임에 바로 파랑이 되어 진다(전환 없음).
+ */
+SW_TEST_CASE( UIStyleTest, OwnValueTransitionsToAndFromSheetValue )
+{
+    using Util = UIStyleTestUtil;
+    UIStyleFixture fixture;
+    sw::UIScreen*  pScreen = fixture.open( kOwnValueSheet, kOwnValueBody );
+    SW_ASSERT_NOT_NULL( pScreen );
+    sw::BorderPanel* pBox = static_cast<sw::BorderPanel*>( pScreen->getTree().findWidgetByName( "Box" ) );
+    SW_ASSERT_NOT_NULL( pBox );
+    pBox->setBackground( sw::UIBrush::makeSolid( Util::kRed, 0.0f ) );
+    Util::runFrame( fixture._input, fixture._ui, 0.0f );
+    SW_EXPECT_TRUE( Util::findBackground( pBox ) == sw::float4( -1.0f, -1.0f, -1.0f, -1.0f ) ); // 시트가 정하지 않았다 — 위젯 자기 브러시
+
+    pBox->setStyleClass( "b" );
+    Util::runFrame( fixture._input, fixture._ui, 0.0f );
+    SW_EXPECT_TRUE( Util::isNear( Util::kRed, Util::findBackground( pBox ) ) ); // 자기 색에서 출발
+    Util::runFrame( fixture._input, fixture._ui, 0.5f );
+    SW_EXPECT_TRUE( Util::isNear( sw::float4{ 0.5f, 0.0f, 0.5f, 1.0f }, Util::findBackground( pBox ) ) );
+    Util::runFrame( fixture._input, fixture._ui, 0.6f );
+    SW_EXPECT_TRUE( Util::findBackground( pBox ) == Util::kBlue );
+
+    pBox->setStyleClass( "" );
+    Util::runFrame( fixture._input, fixture._ui, 0.0f );
+    SW_EXPECT_TRUE( Util::isNear( Util::kBlue, Util::findBackground( pBox ) ) ); // 시트가 정하지 않은 쪽으로도 옮겨 간다 — 지금은 아직 파랑
+    Util::runFrame( fixture._input, fixture._ui, 0.5f );
+    SW_EXPECT_TRUE( Util::isNear( sw::float4{ 0.5f, 0.0f, 0.5f, 1.0f }, Util::findBackground( pBox ) ) );
+    Util::runFrame( fixture._input, fixture._ui, 0.6f );
+    SW_EXPECT_TRUE( Util::findBackground( pBox ) == sw::float4( -1.0f, -1.0f, -1.0f, -1.0f ) ); // 끝나면 다시 위젯 자기 브러시
+}
+
+/**
+ * @brief [UIStyleTest] 물려받는 글 색은 부모의 전환 시간표를 따른다 — 자식이 자기 전환을 적지 않아도 부모와 같은 값으로 옮겨 간다
+ * @details 변이: `findParentChannel` 을 지우면 자식 글이 클래스를 바꾼 프레임에 바로 노랑이 되어 진다.
+ */
+SW_TEST_CASE( UIStyleTest, InheritedTextColorFollowsParentTransition )
+{
+    using Util = UIStyleTestUtil;
+    UIStyleFixture fixture;
+    sw::UIScreen*  pScreen = fixture.open( kInheritSheet, kInheritBody );
+    SW_ASSERT_NOT_NULL( pScreen );
+    sw::Widget* pBox   = pScreen->getTree().findWidgetByName( "Box" );
+    sw::Widget* pLabel = pScreen->getTree().findWidgetByName( "Label" );
+    SW_ASSERT_NOT_NULL( pBox );
+    SW_ASSERT_NOT_NULL( pLabel );
+    SW_EXPECT_TRUE( Util::findTextColor( pLabel ) == Util::kGreen );
+
+    pBox->setStyleClass( "b" );
+    Util::runFrame( fixture._input, fixture._ui, 0.0f );
+    SW_EXPECT_TRUE( Util::findTextColor( pLabel ) == Util::kGreen ); // 부모와 함께 아직 출발값
+    Util::runFrame( fixture._input, fixture._ui, 0.5f );
+    SW_EXPECT_TRUE( Util::isNear( sw::float4{ 0.5f, 1.0f, 0.0f, 1.0f }, Util::findTextColor( pBox ) ) );
+    SW_EXPECT_TRUE( Util::isNear( sw::float4{ 0.5f, 1.0f, 0.0f, 1.0f }, Util::findTextColor( pLabel ) ) ); // 자식 글도 같은 값
+    Util::runFrame( fixture._input, fixture._ui, 0.6f );
+    SW_EXPECT_TRUE( Util::findTextColor( pLabel ) == Util::kYellow );
+}
+
+/**
+ * @brief [UIStyleTest] 전환 지연: 지연 동안은 옛 값에 머물고, 지연이 지난 뒤부터 길이만큼 옮겨 간다. 항목 읽기는 "길이 [곡선] [지연]"이고 음수 지연은 오류다
+ * @details 변이: `evaluateChannel` 이 지연을 빼지 않으면 0.25 초에 이미 0.25 만큼 옮겨 가 있어 진다.
+ */
+SW_TEST_CASE( UIStyleTest, TransitionDelayHoldsOldValue )
+{
+    using Util = UIStyleTestUtil;
+    UIStyleFixture fixture;
+    sw::UIScreen*  pScreen = fixture.open( kDelaySheet, kTransitionBody );
+    SW_ASSERT_NOT_NULL( pScreen );
+    sw::Widget* pBox = pScreen->getTree().findWidgetByName( "Box" );
+    SW_ASSERT_NOT_NULL( pBox );
+    pBox->setStyleClass( "a" );
+    Util::runFrame( fixture._input, fixture._ui, 0.0f );
+    pBox->setStyleClass( "b" );
+    Util::runFrame( fixture._input, fixture._ui, 0.0f );
+    Util::runFrame( fixture._input, fixture._ui, 0.25f );
+    SW_EXPECT_TRUE( Util::isNear( Util::kRed, Util::findBackground( pBox ) ) ); // 지연 중
+    Util::runFrame( fixture._input, fixture._ui, 0.75f );                       // 1.0 초: 지연 0.5 + 진행 0.5
+    SW_EXPECT_TRUE( Util::isNear( sw::float4{ 0.5f, 0.0f, 0.5f, 1.0f }, Util::findBackground( pBox ) ) );
+    Util::runFrame( fixture._input, fixture._ui, 1.0f );
+    SW_EXPECT_TRUE( Util::findBackground( pBox ) == Util::kBlue );
+
+    sw::UIStyleTransitionSpec spec{};
+    sw::string                error;
+    SW_ASSERT_TRUE( sw::UIStyleTransitionSpec::parse( "_backgroundColor 0.2 0.1", spec, error ) );
+    SW_ASSERT_NOT_NULL( spec.findEntry( sw::UIStyleField::BackgroundColor ) );
+    SW_EXPECT_NEAR_EQUAL( 0.1f, spec.findEntry( sw::UIStyleField::BackgroundColor )->_delay, 1e-6f );
+    SW_EXPECT_TRUE( spec.findEntry( sw::UIStyleField::BackgroundColor )->_curve == sw::BlendCurve::EaseOut ); // 곡선을 적지 않아도 지연을 적을 수 있다
+    SW_ASSERT_TRUE( sw::UIStyleTransitionSpec::parse( "_opacity 0.3 Linear 0.2", spec, error ) );
+    SW_EXPECT_NEAR_EQUAL( 0.2f, spec.findEntry( sw::UIStyleField::Opacity )->_delay, 1e-6f );
+    SW_EXPECT_TRUE( spec.findEntry( sw::UIStyleField::Opacity )->_curve == sw::BlendCurve::Linear );
+    SW_EXPECT_FALSE( sw::UIStyleTransitionSpec::parse( "_opacity 0.3 Linear -0.2", spec, error ) );
+    SW_EXPECT_FALSE( sw::UIStyleTransitionSpec::parse( "_opacity 0.3 Linear 0.2 extra", spec, error ) );
+    SW_EXPECT_FALSE( sw::UIStyleTransitionSpec::parse( "_opacity 0.3 Linear nonsense", spec, error ) );
 }

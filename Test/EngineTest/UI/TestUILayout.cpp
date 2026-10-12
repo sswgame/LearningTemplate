@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Engine/UI/Base/UIEvents.h"
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Layout/GridPanel.h"
@@ -412,6 +413,70 @@ SW_TEST_CASE( UILayoutTest, ScrollOffsetChangeIsArrangeOnly )
     SW_EXPECT_EQUAL( 0u, fixture.update() );
     SW_EXPECT_EQUAL( 1u, listItem[0]->getMeasureCount() );
     SW_EXPECT_NEAR_EQUAL( -30.0f, listItem[0]->getGeometry()._position._y, 0.001f );
+}
+
+/**
+ * @brief [UILayoutTest] 오른쪽에서 왼쪽 문화권의 가로 스크롤 패널은 내용 오른쪽 끝에서 시작한다 — 오프셋 0 이 오른쪽 끝이고, 보이게 하기 · 스틱 · 막대 엄지가 그 방향을 따른다
+ * @details 변이: `ScrollPanel::arrangeChildren` 이 RTL 을 보지 않으면 내용이 왼쪽 끝(x = 0)에서 시작해 item0 이 0 에 놓여 진다.
+ *          `getHorizontalScrollSign` 을 빼면 스틱 오른쪽이 오프셋을 늘려 진다.
+ */
+SW_TEST_CASE( UILayoutTest, RtlHorizontalScrollStartsAtRight )
+{
+    const auto buildAndRun = []( bool bRightToLeft, sw::test::UILayoutFixture& fixture, sw::vector<sw::test::TestFixedWidget*>& outListItem ) -> sw::ScrollPanel*
+    {
+        fixture.getContext()._bRightToLeft = bRightToLeft;
+        sw::CanvasPanel*     pCanvas       = fixture.setRoot<sw::CanvasPanel>( "canvas" );
+        sw::ScrollPanel*     pScroll       = fixture.addPanel<sw::ScrollPanel>( pCanvas, "scroll" );
+        sw::WidgetLayoutSlot slot          = pScroll->getLayoutSlot();
+        slot._anchorMax                    = sw::float2{ 1.0f, 1.0f };
+        slot._offsetMax                    = sw::float2{};
+        pScroll->setLayoutSlot( slot );
+        pScroll->setScrollAxes( true, false );
+        pScroll->setNavigationMargin( 0.0f );
+        sw::BoxPanel* pContent = fixture.addPanel<sw::BoxPanel>( pScroll, "content" );
+        pContent->setOrientation( sw::UIOrientation::Horizontal );
+        const utf8* const arrName[] = { "item0", "item1", "item2", "item3", "item4" };
+        for ( uint32 index = 0; index < 5; ++index )
+        {
+            outListItem.push_back( fixture.addFixed( pContent, sw::hashed_string( arrName[index] ), 50.0f, 40.0f ) );
+        }
+        fixture.update();
+        return pScroll;
+    };
+
+    sw::test::UILayoutFixture              fixture( 200.0f, 100.0f );
+    sw::vector<sw::test::TestFixedWidget*> listItem;
+    sw::ScrollPanel*                       pScroll = buildAndRun( true, fixture, listItem );
+    SW_ASSERT_TRUE( pScroll->isRightToLeft() );
+    SW_EXPECT_NEAR_EQUAL( 250.0f, pScroll->getContentSize()._x, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( -50.0f, fixture.getTree().findWidgetByName( "content" )->getGeometry()._position._x, 0.001f ); // 내용 오른쪽 끝이 패널 오른쪽 끝에 붙는다
+    SW_EXPECT_NEAR_EQUAL( 150.0f, listItem[0]->getGeometry()._position._x, 0.001f );                                     // 내용 안 상자가 거울로 놓여 첫 칸이 오른쪽 끝
+    SW_EXPECT_NEAR_EQUAL( -50.0f, listItem[4]->getGeometry()._position._x, 0.001f );                                     // 끝 칸은 왼쪽 밖
+    sw::ScrollPanel::ScrollBarLayout bar{};
+    SW_ASSERT_TRUE( pScroll->computeScrollBar( sw::UIOrientation::Horizontal, bar ) );
+    SW_EXPECT_NEAR_EQUAL( 200.0f, bar._thumbPosition._x + bar._thumbSize._x, 0.001f ); // 엄지도 오른쪽 끝에서 시작한다
+
+    SW_EXPECT_TRUE( pScroll->scrollIntoView( *listItem[4] ) ); // 왼쪽 밖 → 내용을 오른쪽으로 밀어 드러낸다(오프셋이 는다)
+    SW_EXPECT_NEAR_EQUAL( 50.0f, pScroll->getScrollOffset()._x, 0.001f );
+    fixture.update();
+    SW_EXPECT_NEAR_EQUAL( 0.0f, listItem[4]->getGeometry()._position._x, 0.001f );
+    SW_ASSERT_TRUE( pScroll->computeScrollBar( sw::UIOrientation::Horizontal, bar ) );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, bar._thumbPosition._x, 0.001f ); // 끝까지 갔으니 엄지는 왼쪽 끝
+
+    sw::UIActionEvent stick{};
+    stick._action       = sw::hashed_string( sw::UIActionName::kScroll );
+    stick._value        = sw::float2{ 1.0f, 0.0f }; // 스틱 오른쪽 = 화면에서 오른쪽 내용이 드러난다
+    stick._deltaSeconds = 0.01f;
+    SW_EXPECT_TRUE( pScroll->onActionEvent( stick, sw::UIRoutePhase::Bubble ).isHandled() );
+    SW_EXPECT_NEAR_EQUAL( 38.0f, pScroll->getScrollOffset()._x, 0.001f ); // 오른쪽 방향이라 오프셋이 12 줄었다
+
+    // 대조: 왼쪽에서 오른쪽 문화권은 같은 스틱이 오프셋을 늘린다.
+    sw::test::UILayoutFixture              ltrFixture( 200.0f, 100.0f );
+    sw::vector<sw::test::TestFixedWidget*> ltrItem;
+    sw::ScrollPanel*                       pLtrScroll = buildAndRun( false, ltrFixture, ltrItem );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, ltrItem[0]->getGeometry()._position._x, 0.001f );
+    SW_EXPECT_TRUE( pLtrScroll->onActionEvent( stick, sw::UIRoutePhase::Bubble ).isHandled() );
+    SW_EXPECT_NEAR_EQUAL( 12.0f, pLtrScroll->getScrollOffset()._x, 0.001f );
 }
 
 /**

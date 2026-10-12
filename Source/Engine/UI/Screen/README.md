@@ -33,11 +33,15 @@
   행마다 견본을 만들어 안쪽 이름을 `<설정 id>.<이름>` 으로 바꾸고, 값 위젯 `Value` 에 `{setting:id}` 바인딩을 코드로 연결합니다.
   형식별로 연결하는 필드는 Bool이 `_bChecked`, Int와 Float가 `_value`, Enum이 `_selectedIndex`, String이 `_text` 이고, 값 글 `ValueText` 는 단방향입니다.
   키 바인딩 행은 버튼(`Rebind`)과 글리프 `Glyph`(`getBindingGlyph`)이고, 입력 방식이 바뀌면 글리프를 다시 씁니다. 탭을 바꾸면 행과 바인딩을 다시 만듭니다.
+- **열거형 행은 입력 방식을 따릅니다.** 포인터 방식이면 펼치는 콤보 상자 견본(`setting_enum.ui.xml`), 탐색(패드 · 키보드) 방식이면 좌우로 하나씩 넘기는 로테이터 견본(`setting_enum_pad.ui.xml`, `RotatorWidget`)을 씁니다.
+  행은 탭을 고를 때 지으므로 입력 방식이 바뀐 뒤 다음 탭 전환에서 바뀌고, 지은 행은 어느 방식으로도 쓸 수 있습니다(콤보는 `UI.Accept` 로 펼치고, 로테이터는 클릭으로 넘깁니다).
+  두 견본의 위젯 이름(`Label`, `Value`)은 같아서 게임 문서가 덮어써도 이름만 지키면 됩니다.
 - **적용.** `applyPending` 으로 확인 대기가 시작되면 `SettingsConfirmScreen` 모달이 열립니다. 남은 초는 뷰모델 바인딩 `{bind:_secondsLeft, converter=Seconds}` 로 보입니다.
   시간은 설정 매니저가 세고, 시간이 다 되면 매니저가 스스로 되돌립니다. 창은 확인 대기가 끝난 것을 보고 닫힙니다. [되돌리기]와 뒤로 가기는 남은 시간을 다 쓴 것으로 보고 지금 되돌립니다.
 - **닫기.** 닫기나 뒤로 가기에서 보류 값이 있으면 `engine/ui/confirm_unsaved.ui.xml`("적용, 버리기, 취소")을 엽니다. 이 창의 버튼은 메뉴를 번호로 찾으므로, 메뉴가 먼저 사라져도 매달린 포인터가 없습니다.
 - **키 바인딩 창**은 연 다음 프레임부터 `InputManager::findFirstPressedSlot` 의 첫 슬롯(키보드, 마우스, 패드 순)을 받습니다.
   받는 동안 `wantsUIActions` 가 false라서 누른 키가 메뉴를 움직이지 않습니다. Esc는 떼면 취소이고, 1초 누르면 Esc 자체를 바인딩합니다.
+  패드 B 도 바인딩할 수 있어야 해서 패드 단추에는 취소가 없습니다. 대신 아무것도 받지 못한 채 10초(`KeyRebindScreen::kListenTimeoutSeconds`)가 지나면 취소하고 닫으므로 패드만 쥔 사용자도 빠져나옵니다.
   받은 슬롯은 UI가 먹습니다(`UISystem::consumeSlot`). 뗄 때까지 게임이 보지 못합니다.
   다른 행동과 겹치면(`findBindingConflict`) "이미 쓰입니다" 창이 바꾸기와 취소를 묻고, 바꾸기는 `setPendingBinding( Swap )` 입니다. 스키마 밖 행동과 겹치면 취소만 할 수 있습니다.
 - 개발 스위치 `-gv_uiOptionsMenu=1` 은 옵션 메뉴를 바로 띄웁니다. 스크린샷과 네 백엔드 확인에 씁니다.
@@ -49,6 +53,10 @@
 게임 프리셋 `_bUIPauseMenu` 를 켜면, 열린 화면이 없을 때 UI 맵의 `UIGlobal` 레이어 행동 `UI.Pause`(Esc, 패드 Start)가 `PauseMenuScreen` 을 엽니다.
 문서는 프리셋 `_uiPauseMenu` 이고 기본은 `engine/ui/pause.ui.xml` 입니다. 그 입력은 UI가 먹으므로, 같은 키를 쓰는 게임 행동(Shooter3D의 마우스 잠금 토글)은 보지 못합니다.
 메뉴가 커서를 원하므로 그동안 마우스 잠금이 쉬고, 닫으면 돌아옵니다. `OpenOptions` 명령은 옵션 메뉴를 위에 엽니다.
+`ReturnToTitle`(타이틀로) · `QuitGame`(끝내기) 버튼은 게임 흐름의 일이라 화면이 처리하지 않고 전역 명령 표(`UISystem::getGlobalCommands`, `UIGlobalCommandRegistry`)로 넘깁니다.
+두 버튼은 문서에서 접혀 있고, 표에 같은 이름의 명령이 등록돼 있는 동안만 `PauseMenuScreen::onTick` 이 보입니다. 게임 흐름(`GameInstanceBase`)이나 호스트(`EngineLoop`)가 처리 함수를 등록하고 끝날 때 거둡니다.
+함수가 모듈 이미지 안에 있으면 모듈이 내려갈 때 표에서 빠집니다. 화면이 처리하지 않은 모든 `_command` 가 같은 길로 가므로 HUD 단추도 쓸 수 있습니다.
+명령 조종자 게임(NileCity · StarSkirmish · ThemeParkTycoon · MeadowVillage)도 `_bUIPauseMenu` 를 켭니다 — 이 게임들의 입력 맵은 Esc 를 쓰지 않고, 디렉터와 카메라는 `UIInputMapView` 로 입력을 읽어 메뉴가 먹은 입력이 게임으로 새지 않습니다(시나리오 `game/nilecity/automation/pause.scenario.xml`).
 
 #### 알림과 행동 글리프
 
@@ -56,6 +64,9 @@
   대기열은 우선순위가 큰 것, 같으면 먼저 온 것부터 꺼냅니다. 같은 글이 보이거나 기다리는 중이면 새로 쌓지 않고 개수("x2")를 세며 시간을 다시 측정합니다. 시간은 보이기 시작한 뒤부터 측정합니다.
   화면은 오버레이 층이라 입력과 포커스를 받지 않고, 게임과 메뉴를 막지 않습니다. 보일 것이 없으면 화면을 닫습니다.
   항목은 조각 `engine/ui/parts/notification.ui.xml`(`Message`, `Count`)이고, 루트 클래스 `notification <info|achievement|warning|hint>` 를 `styles/notifications.uistyle.xml` 이 꾸밉니다.
+  같은 조각이 항목마다 한 트리에 붙으므로 붙이기 전에 이름을 `<올린 차례>`(루트) · `<올린 차례>.Message` · `<올린 차례>.Count` 로 바꿉니다(`UINotificationService::getEntryWidgetName`). 조각의 옛 이름은 남지 않습니다.
+  항목은 불투명도 0 에서 0.2 초 동안 1 로 들어오고, 시간이 다 되면 보이는 목록에서는 바로 빠져 자리를 내주며 위젯은 0.2 초 동안 사라진 뒤 지워집니다(`UISystem::tween`).
+  사라지는 항목이 있는 동안은 화면을 닫지 않고, 움직임 줄이기(`gv_uiReduceMotion`)이면 페이드 없이 바로 붙고 바로 지웁니다.
   사용처는 옵션 메뉴의 "다시 시작하면 적용", 자동 저장 완료, GameFramework의 튜토리얼 힌트입니다.
 - **행동 글리프.** 글 위젯의 글에 `[action=이름]` 이 있으면, 번역을 해석한 뒤 측정과 그리기 문맥의 `UIActionGlyphSource` 가 지금 장치의 글리프로 바꿉니다.
   게임 입력 맵을 먼저 보고 UI 맵을 보며, 장치 종류는 `InputManager::getActiveGlyphStyle` 입니다. 번역가가 태그 위치를 옮길 수 있습니다.
@@ -94,7 +105,7 @@ HUD와 로딩 화면은 GameFramework에 있습니다. 엔진 UI의 문서와 �
 | 자막 | `gv_subtitles` 등 | `UISubtitleService` |
 
 - **최소 글자 크기.** 배율이 줄여도 글은 12 UI 단위 밑으로 내려가지 않습니다. 그보다 작게 적은 글은 적은 크기가 하한입니다.
-  글자 배율 2에서 넘치지 않게 하는 것은 문서가 할 일입니다. 긴 이름은 줄 바꿈 없이 `_overflow="Ellipsis"` 로, 늘어난 줄은 `ScrollPanel` 로 처리합니다(`UIAccessibilityTest.OptionsMenuFitsAtDoubleTextScale`).
+  글자 배율 2에서 넘치지 않게 하는 것은 문서가 할 일입니다. 긴 이름은 줄 바꿈 없이 `_overflow="Ellipsis"` 로, 늘어난 줄은 `ScrollPanel` 로 처리합니다(`UIAccessibilityTest.OptionsMenuFitsAtDoubleTextScale` — 엔진 옵션 메뉴 문서를 테스트 스키마로 열어 글자 배율 {1, 2} × UI 배율 {1, 1.5}에서 창 · 스크롤 · 단추 줄 · 행이 넘치지 않는지 탭마다 봅니다).
 - **고대비 테마.** 사용자 설정 `accessibility.uiTheme`(`gv_uiTheme`)의 값은 `default` 와 `highcontrast` 입니다. 테마 목록을 적용할 때 그 이름이 목록에 있으면 그 테마, 없으면 목록의 기본 테마를 씁니다.
   실행 중에 바뀌면 다음 `update` 가 따라갑니다. 게임 테마 목록이 이 설정을 받으려면 같은 이름의 테마를 둡니다.
   `highcontrast` 는 기본 시트 위에 `engine/ui/styles/highcontrast.uistyle.xml` 을 더한 것입니다. 기본 시트와 같은 선택자로 색과 테두리만 덮으므로, 특정도가 같고 뒤 시트가 이깁니다.

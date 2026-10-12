@@ -12,11 +12,13 @@
 #include "Engine/UI/Layout/ScrollPanel.h"
 #include "Engine/UI/Layout/UILayoutPass.h"
 #include "Engine/UI/Layout/UIScale.h"
+#include "Engine/UI/Screen/OptionsMenuScreen.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/Screen/UISubtitleService.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/BorderPanel.h"
 #include "Engine/UI/Widgets/TextWidget.h"
+#include "Engine/UserSettings/UserSettingsManager.h"
 
 #include "EngineTest/Text/FakeFontRasterizer.h"
 
@@ -24,7 +26,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// UIAccessibilityTest — 글자 크기 하한(gv_uiTextScale) · 글자 배율 2 에서 메뉴가 넘치지 않음(견본 문서) · 자막(UISubtitleService: 설정 · 읽기 시간 · 둘까지 쌓기 · 대화 러너).
+// UIAccessibilityTest — 글자 크기 하한(gv_uiTextScale) · 글자 배율 2 · 배율 1.5 에서 엔진 옵션 메뉴가 넘치지 않음 · 자막(UISubtitleService: 설정 · 읽기 시간 · 둘까지 쌓기 · 대화 러너).
 // 가짜 래스터라이저(글자 0.5 em) · 디바이스 없음(nogpu). 자막 화면은 저장소 문서 engine/ui/subtitles.ui.xml 을 읽는다.
 
 namespace
@@ -109,58 +111,86 @@ namespace
         sw::UIScreen* findSubtitleScreen() const { return _ui.findScreen( _ui.getSubtitles().getScreen() ); }
     };
 
-    struct UIAccessibilityTestUtil
-    {
-        /** @brief 견본 옵션 메뉴 — 640×400 창 안 세로 스크롤에 "이름 · 슬라이더" 줄 여덟. 이름은 줄 바꿈 없이 줄임표로 자른다. */
-        static constexpr utf8   kOptionsDocument[] = "<UIDocument _schemaVersion=\"1\">\n"
-                                                     "\t<UIScreenDesc _bPausesGame=\"false\" />\n"
-                                                     "\t<CanvasPanel>\n"
-                                                     "\t\t<BorderPanel _name=\"Window\" _contentPadding=\"24,24,24,24\">\n"
-                                                     "\t\t\t<_slot _anchorMin=\"0.5,0.5\" _anchorMax=\"0.5,0.5\" _offsetMin=\"-320,-200\" _offsetMax=\"320,200\" />\n"
-                                                     "\t\t\t<ScrollPanel _name=\"Scroll\">\n"
-                                                     "\t\t\t\t<BoxPanel _name=\"Rows\" _orientation=\"Vertical\" _spacing=\"8\">\n"
-                                                     "%ROWS%"
-                                                     "\t\t\t\t</BoxPanel>\n"
-                                                     "\t\t\t</ScrollPanel>\n"
-                                                     "\t\t</BorderPanel>\n"
-                                                     "\t</CanvasPanel>\n"
-                                                     "</UIDocument>\n";
-        static constexpr uint32 kOptionRowCount    = 8;
+    /** @brief 옵션 메뉴의 테스트 스키마 — 긴 이름 한 줄(글자 배율 2 에서 줄이 늘어난다)과 형식마다 한 줄, 탭 둘. */
+    constexpr const utf8* kOptionsSchemaXML = R"(
+<UserSettingsSchema version="1">
+    <Category id="audio" text="Audio"/>
+    <Category id="video" text="Video"/>
+    <Setting id="audio.master" category="audio" type="float" default="0.5" min="0" max="1" step="0.25" text="Master Volume"/>
+    <Setting id="audio.voices" category="audio" type="int" default="8" min="1" max="16" step="1" text="Subtitle background opacity and other long names"/>
+    <Setting id="audio.mute" category="audio" type="bool" default="false" text="Mute"/>
+    <Setting id="video.mode" category="video" type="enum" default="windowed" text="Window Mode">
+        <Option value="windowed"/>
+        <Option value="fullscreen"/>
+    </Setting>
+</UserSettingsSchema>)";
 
-        static sw::string makeOptionsDocument()
+    /** @brief 엔진 옵션 메뉴(`engine/ui/options.ui.xml`)를 테스트 스키마로 연 UI 시스템입니다. 뷰포트는 물리 크기 ÷ UI 배율의 UI 단위입니다. */
+    struct UIAccessibilityOptionsFixture
+    {
+        sw::UserSettingsManager          _settings;
+        sw::InputManager                 _input;
+        sw::test::FakeFontServiceFixture _fonts;
+        sw::UISystem                     _ui;
+        sw::UIViewport                   _viewport;
+        sw::UIScreenHandle               _menu;
+        bool                             _bReady;
+
+        UIAccessibilityOptionsFixture( float32 physicalWidth, float32 physicalHeight, float32 uiScale )
+            : _settings{}
+            , _input{}
+            , _fonts{}
+            , _ui{}
+            , _viewport{}
+            , _menu{ sw::kInvalidUIScreenHandle }
+            , _bReady{ false }
         {
-            sw::string rows;
-            for ( uint32 index = 0; index < kOptionRowCount; ++index )
-            {
-                const sw::string number = sw::to_string( index );
-                rows += "\t\t\t\t\t<BoxPanel _name=\"Row" + number + "\" _orientation=\"Horizontal\" _spacing=\"12\">\n";
-                rows += "\t\t\t\t\t\t<TextWidget _name=\"Label" + number + "\" _text=\"Subtitle background opacity\">\n";
-                rows += "\t\t\t\t\t\t\t<_slot _sizeRule=\"Fill\" _verticalAlignment=\"Center\" />\n";
-                rows += "\t\t\t\t\t\t\t<_style _fontSize=\"20\" _bWrap=\"false\" _overflow=\"Ellipsis\" _maxLines=\"1\" />\n";
-                rows += "\t\t\t\t\t\t</TextWidget>\n";
-                rows += "\t\t\t\t\t\t<SliderWidget _name=\"Slider" + number + "\">\n";
-                rows += "\t\t\t\t\t\t\t<_slot _widthOverride=\"200\" _heightOverride=\"24\" _verticalAlignment=\"Center\" />\n";
-                rows += "\t\t\t\t\t\t</SliderWidget>\n";
-                rows += "\t\t\t\t\t</BoxPanel>\n";
-            }
-            sw::string       document = kOptionsDocument;
-            const size_t     at       = document.find( "%ROWS%" );
-            constexpr size_t kTagSize = 6;
-            document.replace( at, kTagSize, rows );
-            return document;
+            sw::FontCatalogDesc catalog{};
+            catalog._defaultFamily = "Latin";
+            sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
+            _settings.initialize( sw::UserSettingsTargets{} );
+            _bReady = _settings.loadSchemaFromXMLText( kOptionsSchemaXML, "test.settings.xml" ) && _input.initialize() && _fonts.initialize( catalog ) &&
+                      _ui.initialize( _input, _fonts._fontService.get(), "engine/input/ui.input.xml" );
+            _settings.reapplyAll();
+            _ui.setUserSettings( &_settings );
+            _viewport._physicalSize = sw::float2{ physicalWidth, physicalHeight };
+            _viewport._uiScale      = uiScale;
+            _viewport._size         = sw::float2{ physicalWidth / uiScale, physicalHeight / uiScale };
+            if ( _bReady )
+                _menu = sw::OptionsMenuScreen::open( _ui );
+            runFrames( 2 );
         }
 
+        ~UIAccessibilityOptionsFixture()
+        {
+            _ui.shutdown();
+            _input.shutdown();
+            _settings.shutdown();
+        }
+
+        UIAccessibilityOptionsFixture( const UIAccessibilityOptionsFixture& )            = delete;
+        UIAccessibilityOptionsFixture& operator=( const UIAccessibilityOptionsFixture& ) = delete;
+
+        void runFrames( uint32 count )
+        {
+            for ( uint32 frame = 0; frame < count; ++frame )
+            {
+                _input.beginFrame( UIAccessibilityFixture::kFrameSeconds );
+                _ui.processInput( UIAccessibilityFixture::kFrameSeconds );
+                _ui.update( UIAccessibilityFixture::kFrameSeconds, _viewport );
+                _input.endFrame();
+            }
+        }
+    };
+
+    struct UIAccessibilityTestUtil
+    {
         /** @brief @p inner 가 @p outer 안에 드는지(오차 0.5 UI 단위) 봅니다. */
         static bool isInside( const sw::UIRect& inner, const sw::UIRect& outer )
         {
             constexpr float32 kEpsilon = 0.5f;
             return inner.getLeft() >= outer.getLeft() - kEpsilon && inner.getTop() >= outer.getTop() - kEpsilon && inner.getRight() <= outer.getRight() + kEpsilon &&
                    inner.getBottom() <= outer.getBottom() + kEpsilon;
-        }
-
-        static const sw::TextWidget* findText( const sw::UIScreen& screen, const sw::string& name )
-        {
-            return screen.getTree().findWidget<sw::TextWidget>( sw::hashed_string( name ) );
         }
     };
 } // namespace
@@ -211,53 +241,79 @@ SW_TEST_CASE( UIAccessibilityTest, TextScaleHasMinimumSize )
 }
 
 /**
- * @brief [UIAccessibilityTest] 글자 배율 2 에서 메뉴가 화면 · 창을 넘지 않는다 — 긴 이름은 줄임표로 잘리고 늘어난 줄은 스크롤로 간다
- * @details 옵션 메뉴(8-2)가 아직 없어 견본 문서(창 640×400 · 줄 여덟 "이름 · 슬라이더")와 엔진 견본 pause.ui.xml 로 본다. 배율 1 에서는 자르지도 스크롤하지도 않는다(대조).
- *          배율 2: 모든 이름의 사각형이 그 줄 안 · 슬라이더 왼쪽이고 잘렸다(줄임표), 스크롤 최대값 > 0, 창은 뷰포트 안. pause.ui.xml 의 창도 뷰포트 안.
+ * @brief [UIAccessibilityTest] 글자 배율 2 에서도 엔진 옵션 메뉴가 화면 · 창을 넘지 않는다 — 창은 뷰포트 안, 스크롤 · 단추 줄은 창 안, 행은 스크롤 너비 안, 단추는 단추 줄 안
+ * @details 엔진 옵션 메뉴 문서(`engine/ui/options.ui.xml`)를 테스트 스키마로 열어 탭마다 본다. 조건: 글자 배율 {1, 2} × (1280×720 배율 1, 배율 1.5 — 853×480 UI 단위).
+ *          자동 크기 창(`_minSize`=`_maxSize`=960×640)은 캔버스 패널이 패널 안으로 줄여 밀어 넣으므로 작은 뷰포트에서도 창이 화면 안에 든다(`UI` README "함정과 주의").
+ *          넘치는 줄은 `Scroll` 이 맡는다(내용이 보이는 높이보다 크면 스크롤 최댓값이 양수). pause.ui.xml 의 창도 같은 뷰포트 안.
+ *          변이: 옵션 문서 `Window` 슬롯의 `_maxSize` 를 빼고 크기를 고정하면 853×480 에서 창이 뷰포트 밖으로 나가 진다.
  */
 SW_TEST_CASE( UIAccessibilityTest, OptionsMenuFitsAtDoubleTextScale )
 {
-    using Util                    = UIAccessibilityTestUtil;
-    const sw::UIRect viewportRect = sw::UIRect::makeFromPositionSize( 0.0f, 0.0f, 1280.0f, 720.0f );
-    for ( const float32 textScale : { 1.0f, 2.0f } )
+    using Util = UIAccessibilityTestUtil;
+    struct Condition
     {
-        const ScopedVariable   scale( "gv_uiTextScale", sw::to_string( textScale ) );
-        UIAccessibilityFixture fixture;
+        float32 _textScale;
+        float32 _uiScale;
+    };
+    constexpr Condition arrCondition[] = {
+        {1.0f, 1.0f},
+        {2.0f, 1.0f},
+        {1.0f, 1.5f},
+        {2.0f, 1.5f}
+    };
+    for ( const Condition& condition : arrCondition )
+    {
+        const ScopedVariable          scale( "gv_uiTextScale", sw::to_string( condition._textScale ) );
+        UIAccessibilityOptionsFixture fixture( 1280.0f, 720.0f, condition._uiScale );
         SW_ASSERT_TRUE( fixture._bReady );
-        fixture._ui.getDocumentCache().registerMemoryDocument( "test/options.ui.xml", Util::makeOptionsDocument() );
-        sw::UIScreen* pScreen = fixture._ui.findScreen( fixture._ui.openScreen( "test/options.ui.xml" ) );
-        SW_ASSERT_NOT_NULL( pScreen );
-        fixture.runFrame();
-        fixture.runFrame();
-
-        const bool             bDouble = textScale > 1.5f;
-        const sw::WidgetTree&  tree    = pScreen->getTree();
-        const sw::Widget*      pWindow = tree.findWidgetByName( "Window" );
-        const sw::ScrollPanel* pScroll = tree.findWidget<sw::ScrollPanel>( "Scroll" );
-        SW_ASSERT_NOT_NULL( pWindow );
-        SW_ASSERT_NOT_NULL( pScroll );
-        SW_EXPECT_TRUE( Util::isInside( pWindow->getGeometry().computeScreenBounds(), viewportRect ) );
-        SW_EXPECT_TRUE( Util::isInside( pScroll->getGeometry().computeScreenBounds(), pWindow->getGeometry().computeScreenBounds() ) );
-        SW_EXPECT_EQUAL( bDouble, pScroll->getMaxScrollOffset()._y > 0.0f );
-        for ( uint32 index = 0; index < Util::kOptionRowCount; ++index )
+        sw::OptionsMenuScreen* pMenu = static_cast<sw::OptionsMenuScreen*>( fixture._ui.findScreen( fixture._menu ) );
+        SW_ASSERT_NOT_NULL( pMenu );
+        const sw::UIRect viewportRect = sw::UIRect::makeFromPositionSize( 0.0f, 0.0f, fixture._viewport._size._x, fixture._viewport._size._y );
+        SW_ASSERT_EQUAL( 2u, pMenu->getTabCount() );
+        for ( uint32 tab = 0; tab < pMenu->getTabCount(); ++tab )
         {
-            const sw::string      number  = sw::to_string( index );
-            const sw::TextWidget* pLabel  = Util::findText( *pScreen, "Label" + number );
-            const sw::Widget*     pRow    = tree.findWidgetByName( sw::hashed_string( "Row" + number ) );
-            const sw::Widget*     pSlider = tree.findWidgetByName( sw::hashed_string( "Slider" + number ) );
-            SW_ASSERT_NOT_NULL( pLabel );
-            SW_ASSERT_NOT_NULL( pRow );
-            SW_ASSERT_NOT_NULL( pSlider );
-            const sw::UIRect label = pLabel->getGeometry().computeScreenBounds();
-            SW_EXPECT_TRUE( Util::isInside( label, pRow->getGeometry().computeScreenBounds() ) );
-            SW_EXPECT_TRUE( label.getRight() <= pSlider->getGeometry().computeScreenBounds().getLeft() + 0.5f );
-            SW_EXPECT_EQUAL( bDouble, pLabel->getLastLayout()._bTruncated == SW_TRUE );
-            SW_EXPECT_TRUE( pLabel->getLastLayout()._size._x <= label.getRight() - label.getLeft() + 0.5f );
+            pMenu->selectTab( tab );
+            fixture.runFrames( 2 );
+            const sw::string       where    = "tab " + sw::to_string( tab ) + " textScale " + sw::to_string( condition._textScale ) + " uiScale " + sw::to_string( condition._uiScale );
+            const sw::WidgetTree&  tree     = pMenu->getTree();
+            const sw::Widget*      pWindow  = tree.findWidgetByName( "Window" );
+            const sw::ScrollPanel* pScroll  = tree.findWidget<sw::ScrollPanel>( "Scroll" );
+            const sw::Widget*      pButtons = tree.findWidgetByName( "Buttons" );
+            SW_ASSERT_NOT_NULL( pWindow );
+            SW_ASSERT_NOT_NULL( pScroll );
+            SW_ASSERT_NOT_NULL( pButtons );
+            const sw::UIRect windowRect = pWindow->getGeometry().computeScreenBounds();
+            const sw::UIRect scrollRect = pScroll->getGeometry().computeScreenBounds();
+            SW_EXPECT_TRUE_MSG( Util::isInside( windowRect, viewportRect ), where.c_str() );
+            SW_EXPECT_TRUE_MSG( Util::isInside( scrollRect, windowRect ), where.c_str() );
+            SW_EXPECT_TRUE_MSG( Util::isInside( pButtons->getGeometry().computeScreenBounds(), windowRect ), where.c_str() );
+            SW_EXPECT_TRUE_MSG( scrollRect.getBottom() - scrollRect.getTop() > 0.0f, where.c_str() ); // Fill 칸이 0 으로 눌리지 않았다
+            for ( const utf8* pButtonName : { "Apply", "Revert", "Defaults", "Close" } )
+            {
+                const sw::Widget* pButton = tree.findWidgetByName( sw::hashed_string( pButtonName ) );
+                SW_ASSERT_NOT_NULL( pButton );
+                const sw::UIRect buttonRect = pButton->getGeometry().computeScreenBounds();
+                SW_EXPECT_TRUE_MSG( buttonRect.getRight() > buttonRect.getLeft(), where.c_str() );
+                SW_EXPECT_TRUE_MSG( Util::isInside( buttonRect, pButtons->getGeometry().computeScreenBounds() ), where.c_str() );
+            }
+            for ( uint32 row = 0; row < pMenu->getRowCount(); ++row )
+            {
+                const sw::string  settingID = pMenu->getRowSetting( row ).c_str();
+                const sw::Widget* pLabel    = tree.findWidgetByName( sw::hashed_string( settingID + ".Label" ) );
+                const sw::Widget* pValue    = pMenu->findRowValueWidget( pMenu->getRowSetting( row ) );
+                SW_ASSERT_NOT_NULL( pLabel );
+                SW_ASSERT_NOT_NULL( pValue );
+                // 가로로는 스크롤하지 않으므로 행의 칸은 모두 스크롤 너비 안이어야 한다(세로는 스크롤이 맡는다).
+                SW_EXPECT_TRUE_MSG( pLabel->getGeometry().computeScreenBounds().getRight() <= scrollRect.getRight() + 0.5f, ( where + " label of " + settingID ).c_str() );
+                SW_EXPECT_TRUE_MSG( pValue->getGeometry().computeScreenBounds().getRight() <= scrollRect.getRight() + 0.5f, ( where + " value of " + settingID ).c_str() );
+                SW_EXPECT_TRUE_MSG( pLabel->getGeometry().computeScreenBounds().getRight() <= pValue->getGeometry().computeScreenBounds().getLeft() + 0.5f,
+                                    ( where + " label overlaps value of " + settingID ).c_str() );
+            }
         }
 
         sw::UIScreen* pPause = fixture._ui.findScreen( fixture._ui.openScreen( "engine/ui/pause.ui.xml" ) );
         SW_ASSERT_NOT_NULL( pPause );
-        fixture.runFrame();
+        fixture.runFrames( 1 );
         const sw::Widget* pPauseWindow = pPause->getTree().findWidgetByName( "Window" );
         SW_ASSERT_NOT_NULL( pPauseWindow );
         SW_EXPECT_TRUE( Util::isInside( pPauseWindow->getGeometry().computeScreenBounds(), viewportRect ) );

@@ -201,7 +201,7 @@
 **스타일 전환**(`Animation/UIStyleTransition`)은 USS와 CSS의 `transition` 에 해당합니다. 시트 규칙의 `_transition` 필드에 적습니다.
 
 ```xml
-<Rule _selector="ButtonWidget" _transition="_backgroundColor 0.12 EaseOut, _opacity 0.2 Linear" />   <!-- 필드 길이(초) 곡선(없으면 EaseOut) -->
+<Rule _selector="ButtonWidget" _transition="_backgroundColor 0.12 EaseOut, _opacity 0.2 Linear 0.05" />   <!-- 필드 길이(초) 곡선(없으면 EaseOut) 지연(초, 없으면 0) -->
 <Rule _selector="ButtonWidget:hover" _backgroundColor="$accentHover" />
 ```
 
@@ -210,10 +210,17 @@
   `all` 은 보간되는 모든 필드이고, 뒤 항목이 앞 항목을 덮습니다.
 - 보간되는 필드는 실수 필드입니다. 색, 모서리, 두께, 그림자, 여백, 글자 크기, 외곽선, 불투명도가 해당합니다.
   글꼴, `_transition` 자신, 모르는 필드, 읽지 못한 길이, 모르는 곡선은 시트 로드 오류입니다.
-- 바로 바뀌는 경우도 있습니다. `_transition` 에 적지 않은 필드, 처음 스타일을 맞추는 위젯, 이전과 새 스타일 중 한쪽만 정한 필드, `gv_uiReduceMotion` 이 켜진 경우입니다.
+- **지연**(`transition-delay`)은 길이 뒤에 적습니다(곡선을 건너뛰고 `"_opacity 0.2 0.1"` 로도 적을 수 있습니다 — CSS 가 시간 둘을 길이, 지연 순으로 읽는 것과 같습니다). 지연 동안은 옛 값에 머물고, 그 뒤부터 길이만큼 옮겨 갑니다.
+  움직임 줄이기가 켜지면 지연도 없이 끝 값입니다. 음수 지연은 시트 로드 오류입니다.
+- **한쪽만 정한 필드.** 이전과 새 스타일 중 한쪽만 그 필드를 정했으면, 정하지 않은 쪽 값은 위젯이 자기 필드로 그리던 값입니다(`Widget::tryGetOwnStyleField`). 그래서 `:hover` 규칙이 `_backgroundColor` 를 처음 정하는 단추도
+  기본 겉모습 브러시에서 호버 색으로 옮겨 가고, 호버가 풀리면 다시 기본 브러시 쪽으로 돌아옵니다. 읽을 수 있는 위젯은 `BorderPanel`(배경 브러시의 색 · 모서리 · 테두리, 여백, 그림자)과 `TextWidget`(글 색, 외곽선, 글자 크기)이고,
+  불투명도는 모든 위젯이 1 로 답합니다. 상태마다 다른 브러시(단추의 호버, 누름, 꺼짐)는 읽지 않고 기본 상태 브러시를 씁니다. 읽지 못하는 위젯과 필드는 바로 바뀝니다.
+- 바로 바뀌는 경우도 있습니다. `_transition` 에 적지 않은 필드, 처음 스타일을 맞추는 위젯, `gv_uiReduceMotion` 이 켜진 경우입니다.
 - 보이는 값은 위젯이 보관하는 복사본(`UIStyleTransitionState`)이고, `Widget::getComputedStyle` 이 그것을 돌려줍니다. 공유하는 계산된 스타일은 바꾸지 않고, 전환이 끝나면 복사본을 지웁니다.
-- 상속되는 글 필드는 부모의 **목표** 값을 물려받습니다. 보간 중인 값을 자손에 내리면 공유 키가 프레임마다 바뀌기 때문입니다.
-  자식 글도 함께 움직이게 하려면 자식 규칙에도 `_transition` 을 적습니다(예: `ButtonWidget TextWidget`). 자식 입장에서는 물려받은 값이 바뀐 것도 바뀐 필드입니다.
+- 상속되는 글 필드는 공유하는 계산된 스타일에서는 부모의 **목표** 값을 물려받습니다. 보간 중인 값을 자손에 내리면 공유 키가 프레임마다 바뀌기 때문입니다.
+  그 대신 부모가 그 필드를 옮기는 중이고 자식의 새 값이 부모의 목표와 같으며 자식이 그 필드에 자기 `_transition` 을 적지 않았으면, 자식도 **부모의 채널을 그대로 복사**합니다
+  (같은 출발값 · 길이 · 곡선 · 지연 · 진행이라 같은 값을 보입니다). CSS 에서 물려받은 값이 부모의 보간을 따라가는 것과 같아서, 단추 안의 글이 단추와 함께 움직이게 하려고
+  자식 규칙에 `_transition` 을 따로 적을 필요가 없습니다(`UIStyleTest.InheritedTextColorFollowsParentTransition`). 자식이 자기 전환을 적었으면 그것을 씁니다.
 
 ### 오프스크린 화면
 

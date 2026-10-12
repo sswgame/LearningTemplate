@@ -111,7 +111,7 @@ namespace sw
         const float32         top    = target._position._y - view._position._y;
         float2                delta{};
         if ( _bScrollHorizontal )
-            delta._x = ScrollPanelInternal::computeRevealDelta( left, left + target._size._x, view._size._x, _navigationMargin );
+            delta._x = getHorizontalScrollSign() * ScrollPanelInternal::computeRevealDelta( left, left + target._size._x, view._size._x, _navigationMargin );
         if ( _bScrollVertical )
             delta._y = ScrollPanelInternal::computeRevealDelta( top, top + target._size._y, view._size._y, _navigationMargin );
         const float2 before = _scrollOffset;
@@ -132,7 +132,9 @@ namespace sw
         const float32 trackLength = viewLength;
         const float32 thumbLength = MathUtil::min( trackLength, MathUtil::max( _minThumbLength, trackLength * viewLength / content ) );
         const float32 offset      = bVertical ? _scrollOffset._y : _scrollOffset._x;
-        const float32 thumbStart  = ( trackLength - thumbLength ) * ( offset / axisMax );
+        // 오른쪽에서 왼쪽의 가로 스크롤은 오프셋 0 이 오른쪽 끝이라 엄지도 오른쪽 끝에서 시작한다.
+        const float32 progress   = offset / axisMax;
+        const float32 thumbStart = ( trackLength - thumbLength ) * ( bVertical || isRightToLeft() == false ? progress : 1.0f - progress );
         if ( bVertical )
         {
             outLayout._trackPosition = float2{ _viewportSize._x - _scrollBarThickness, 0.0f };
@@ -163,7 +165,7 @@ namespace sw
                 if ( phase != UIRoutePhase::Bubble )
                     return UIReply::makeUnhandled();
                 const float32 distance = -event._wheel * _wheelStep;
-                const float2  delta    = _bScrollVertical ? float2{ 0.0f, distance } : float2{ distance, 0.0f };
+                const float2  delta    = _bScrollVertical ? float2{ 0.0f, distance } : float2{ distance, 0.0f }; // 휠 아래는 끝 쪽이라 방향과 상관없이 오프셋이 늘어난다
                 return applyScrollDelta( delta ) ? UIReply::makeHandled() : UIReply::makeUnhandled();
             }
             case UIPointerEventKind::Down:
@@ -181,7 +183,7 @@ namespace sw
                 if ( computeScrollBar( _dragAxis, bar ) == false )
                     return UIReply::makeHandled();
                 const bool    bVertical = _dragAxis == UIOrientation::Vertical;
-                const float32 moved     = bVertical ? local._y - _dragStartLocal._y : local._x - _dragStartLocal._x;
+                const float32 moved     = bVertical ? local._y - _dragStartLocal._y : getHorizontalScrollSign() * ( local._x - _dragStartLocal._x );
                 const float32 freeTrack = bVertical ? bar._trackSize._y - bar._thumbSize._y : bar._trackSize._x - bar._thumbSize._x;
                 const float2  maxOffset = getMaxScrollOffset();
                 const float32 axisMax   = bVertical ? maxOffset._y : maxOffset._x;
@@ -207,7 +209,7 @@ namespace sw
         if ( phase != UIRoutePhase::Bubble || event._action != hashed_string( UIActionName::kScroll ) )
             return UIReply::makeUnhandled();
         const float32 distance = _stickSpeed * event._deltaSeconds;
-        const float2  delta{ event._value._x * distance, -event._value._y * distance };
+        const float2  delta{ getHorizontalScrollSign() * event._value._x * distance, -event._value._y * distance };
         return applyScrollDelta( delta ) ? UIReply::makeHandled() : UIReply::makeUnhandled();
     }
 
@@ -249,7 +251,8 @@ namespace sw
                 // 트랙: 누른 쪽으로 한 화면만큼 옮긴다(Godot 와 브라우저가 같다).
                 const float32 thumbStart = bVertical ? bar._thumbPosition._y : bar._thumbPosition._x;
                 const float32 point      = bVertical ? local._y : local._x;
-                const float32 page       = ( bVertical ? _viewportSize._y : _viewportSize._x ) * ( point < thumbStart ? -1.0f : 1.0f );
+                const float32 direction  = ( point < thumbStart ? -1.0f : 1.0f ) * ( bVertical ? 1.0f : getHorizontalScrollSign() );
+                const float32 page       = ( bVertical ? _viewportSize._y : _viewportSize._x ) * direction;
                 (void)applyScrollDelta( bVertical ? float2{ 0.0f, page } : float2{ page, 0.0f } ); // 끝에 닿아 못 옮겨도 트랙 누름은 받은 것이다
                 return UIReply::makeHandled();
             }
@@ -261,6 +264,11 @@ namespace sw
             return UIReply::makeHandled().capturePointer();
         }
         return UIReply::makeUnhandled();
+    }
+
+    float32 ScrollPanel::getHorizontalScrollSign() const
+    {
+        return isRightToLeft() ? -1.0f : 1.0f;
     }
 
     float2 ScrollPanel::clampOffset( const float2& scrollOffset ) const
@@ -308,7 +316,9 @@ namespace sw
         _contentSize          = float2{ _bScrollHorizontal ? MathUtil::max( desired._x + padding._x + padding._z, size._x ) : size._x,
                                _bScrollVertical ? MathUtil::max( desired._y + padding._y + padding._w, size._y ) : size._y };
         _scrollOffset = clampOffset( _scrollOffset ); // 내용이 줄었으면 끝에 붙인다(지금 배치하는 중이라 무효화는 하지 않는다)
-        arrangeChild( context, content, float2{ -_scrollOffset._x, -_scrollOffset._y }, _contentSize );
+        // 오른쪽에서 왼쪽이면 내용이 오른쪽 끝에 붙어 시작하고(오프셋 0), 오프셋이 늘수록 내용이 오른쪽으로 밀려 왼쪽 끝이 드러난다.
+        const float32 contentX = isRightToLeft() ? size._x - _contentSize._x + _scrollOffset._x : -_scrollOffset._x;
+        arrangeChild( context, content, float2{ contentX, -_scrollOffset._y }, _contentSize );
         // 막대 엄지의 길이와 위치는 내용 크기, 보이는 크기, 오프셋에서 나온다. 그리기만 다시 하며 레이아웃 비트는 건드리지 않는다.
         if ( previousContent != _contentSize || previousViewport != _viewportSize || previousOffset != _scrollOffset )
             invalidate( WidgetDirty::kPaint );

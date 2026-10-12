@@ -15,6 +15,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/UI/Input/UIInputMapView.h"
+#include "Engine/UI/UISystem.h"
 #include "Engine/Utility/GameAutoplay.h"
 #include "Engine/Window/IWindow.h"
 
@@ -624,12 +626,12 @@ namespace sw
     {
         // 카메라 이동과 확대는 리그(PostUpdate)가 읽는다. 여기서는 도구, 속도, 건설을 처리한다.
         (void)deltaTime;
-        // 키는 입력 맵(`data/nile.input.xml`)이 정한다.
-        const InputMap& inputMap  = input.getInputMap();
-        const int32     toolCount = static_cast<int32>( _listTool.size() );
-        const bool      bNextTool = inputMap.wasActionTriggered( hashed_string( "Nile.NextTool" ) );
-        const bool      bPrevTool = inputMap.wasActionTriggered( hashed_string( "Nile.PrevTool" ) );
-        const bool      bRoadTool = inputMap.wasActionTriggered( hashed_string( "Nile.RoadTool" ) );
+        // 키는 입력 맵(`data/nile.input.xml`)이 정한다. 일시정지 메뉴 같은 UI 가 먹은 입력은 보이지 않는다.
+        const UIInputMapView inputMap( input.getInputMap(), game::getService<UISystem>() );
+        const int32          toolCount = static_cast<int32>( _listTool.size() );
+        const bool           bNextTool = inputMap.wasActionTriggered( hashed_string( "Nile.NextTool" ) );
+        const bool           bPrevTool = inputMap.wasActionTriggered( hashed_string( "Nile.PrevTool" ) );
+        const bool           bRoadTool = inputMap.wasActionTriggered( hashed_string( "Nile.RoadTool" ) );
         if ( bNextTool )
             _selectedTool = ( _selectedTool + 1 ) % toolCount;
         if ( bPrevTool )

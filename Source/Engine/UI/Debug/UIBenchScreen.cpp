@@ -17,6 +17,7 @@
 
 SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchUiWidgets, 0, "UI 벤치 — 격자 셀 수(셀마다 테두리 · 아이콘 · 글, 대부분 스크롤 밖) (0=사용 안 함)" );
 SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchUiChurn, 0, "UI 벤치 — 프레임마다 글을 바꾸는 셀 수(앞쪽 보이는 셀 안에서 돈다)" );
+SW_TEST_GLOBAL_VARIABLE_SHIPPED( bool, gv_benchUiOpacityPulse, false, "UI 벤치 — 프레임마다 화면 루트 불투명도를 바꿔 보이는 자손 전체를 다시 칠하게 한다 (조상 kTransform 비용 측정)" );
 
 namespace sw
 {
@@ -118,6 +119,12 @@ namespace sw
     {
         (void)deltaSeconds;
         ++_frameIndex;
+        if ( gv_benchUiOpacityPulse )
+        {
+            Widget* pRoot = getTree().getRoot();
+            if ( pRoot != nullptr )
+                pRoot->setOpacity( ( _frameIndex & 1u ) == 0 ? 1.0f : kPulseOpacity );
+        }
         const uint32 window = _listCellText.size() < kChurnWindow ? static_cast<uint32>( _listCellText.size() ) : kChurnWindow;
         const uint32 churn  = gv_benchUiChurn > 0 ? static_cast<uint32>( gv_benchUiChurn ) : 0u;
         if ( window == 0 || churn == 0 )
