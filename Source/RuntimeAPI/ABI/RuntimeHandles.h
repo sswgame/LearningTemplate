@@ -20,6 +20,4 @@ namespace sw
     using EditorHandle = void*;
     /** @brief 게임 인스턴스를 가리키는 불투명(opaque) 핸들입니다. SWGame 이 소유합니다. */
     using GameHandle = void*;
-    /** @brief RHI 텍스처를 가리키는 핸들입니다. 값 자체가 식별자이므로 포인터가 아닙니다. */
-    using TextureHandle = uint64;
 } // namespace sw

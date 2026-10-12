@@ -20,7 +20,7 @@ graph LR
 **API 테이블.** 모듈은 `exportGameAPI` 나 `exportEditorAPI` 를 내보내고, App은 이 함수를 불러 함수 포인터 테이블(`GameAPI`, `EditorAPI`)을 받습니다.
 App은 그 뒤로 모듈 객체를 이 테이블로만 부릅니다. 만들기, 초기화, 업데이트, 상태 직렬화가 모두 이 테이블의 항목입니다.
 
-**불투명 핸들.** 경계를 넘는 객체는 `ABI/RuntimeHandles.h` 의 핸들입니다. `WindowHandle`, `RHIDeviceHandle`, `EditorHandle`, `GameHandle`, `TextureHandle` 이 있습니다.
+**불투명 핸들.** 경계를 넘는 객체는 `ABI/RuntimeHandles.h` 의 핸들입니다. `WindowHandle`, `RHIDeviceHandle`, `EditorHandle`, `GameHandle` 이 있습니다.
 받는 쪽은 핸들 안의 타입을 모르고, 만든 쪽에 되돌려 줄 때만 씁니다.
 
 **서비스 테이블.** 모듈이 엔진 기능(씬 매니저, 리소스 등)을 쓰려면 App이 넘겨주는 `ModuleService` 를 거칩니다. 서비스 ID 순서로 놓인 포인터 배열 하나입니다.
