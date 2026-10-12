@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/KeyValueFile.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 
@@ -14,8 +15,6 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorLayoutStore.h"
 #include "Editor/Common/Workspace/EditorService.h"
-
-#include "Engine/Utility/KeyValueFile.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -277,7 +276,7 @@ namespace sw::editor
             return;
 
         KeyValueMap visibilityKv;
-        if ( KeyValueFile::loadPath( _windowsIniPath, visibilityKv ) == false )
+        if ( KeyValueFile::loadFile( _windowsIniPath, visibilityKv ) == false )
         {
             SW_LOG_WARNING( "Failed to open windows.ini: %#", _windowsIniPath.c_str() );
             return;

@@ -5,8 +5,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
-
-#include "Engine/Utility/KeyValueFile.h"
+#include "Core/File/KeyValueFile.h"
 
 namespace sw::editor
 {

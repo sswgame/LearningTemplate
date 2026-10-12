@@ -40,7 +40,8 @@ namespace sw
 {
     /**
      * @class KeyValueFile
-     * @brief `key=value` 줄을 파싱하고 절대/리소스 상대 경로에서 로드합니다
+     * @brief `key=value` 줄을 파싱하고 경로에서 로드합니다
+     * @details 리소스 상대 경로는 Core 가 모른다. 엔진은 `ResourceIO::readTextResource` 로 글을 읽어 `parse` 에 넘긴다.
      */
     class SW_API KeyValueFile
     {
@@ -53,16 +54,6 @@ namespace sw
 
         /** @brief 절대 경로를 읽고 파싱합니다. */
         [[nodiscard]] static bool loadFile( string_view absPath, KeyValueMap& outMap, KeyValueParseOptions opt = {} );
-
-        /** @brief ResourcePaths로 해석한 뒤 loadFile합니다. */
-        [[nodiscard]] static bool loadResource( string_view relativePath, KeyValueMap& outMap, KeyValueParseOptions opt = {},
-                                                string* pOutAbsPath = nullptr );
-
-        /**
-         * @brief 절대 경로 · 작업 경로에 파일이 있으면 loadFile, 없으면 loadResource 로 읽습니다.
-         */
-        [[nodiscard]] static bool loadPath( string_view path, KeyValueMap& outMap, KeyValueParseOptions opt = {},
-                                            string* pOutAbsPath = nullptr );
 
         // ------------------------------------------------------------------------------
         // 3) 조회
