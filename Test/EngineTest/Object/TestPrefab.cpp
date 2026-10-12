@@ -542,6 +542,58 @@ SW_TEST_CASE( PrefabTest, EngineCooksXMLAndJSONPrefabs )
 }
 
 /**
+ * @brief [PrefabTest] 쿠커가 만든 쿠킹본으로 읽은 프리팹은 그 소스(XML · JSON)로 읽은 프리팹과 같다
+ * @details 개발 구성은 소스만, 배포 구성은 쿠킹본만 읽는다(`PrefabCache::loadPrefab`). 둘이 갈라지면 Shipping 에서만 다른 프리팹이 스폰되고
+ *          개발 빌드의 테스트는 그것을 보지 못한다. 이름 · 위치 몇 개가 아니라, 둘을 같은 형식(JSON)으로 다시 써서 글 전체를 견준다.
+ */
+SW_TEST_CASE( PrefabTest, CookedPrefabMatchesItsSource )
+{
+    const sw::string sourceRoot = test::makeTempDirectory( "prefab_equiv_src" );
+    const sw::string cookedRoot = test::makeTempDirectory( "prefab_equiv_cooked" );
+    SW_ASSERT_FALSE( sourceRoot.empty() );
+    SW_ASSERT_FALSE( cookedRoot.empty() );
+
+    const sw::PrefabAsset crate = sw::makeCratePrefab();
+    SW_ASSERT_TRUE( crate.saveToXMLFile( sourceRoot + "/crate.prefab.xml" ) );
+    SW_ASSERT_TRUE( crate.saveToJSONFile( sourceRoot + "/barrel.prefab.json" ) );
+
+    uint32       failedCount  = 0;
+    const uint32 writtenCount = sw::PrefabCache::cookAllPrefabs( sourceRoot, cookedRoot, failedCount );
+    SW_EXPECT_EQUAL( 2u, writtenCount );
+    SW_EXPECT_EQUAL( 0u, failedCount );
+
+    struct SourceAndCooked
+    {
+        const utf8* _pSource;
+        const utf8* _pCooked;
+        bool        _bJSON;
+    };
+    for ( const SourceAndCooked& pair : {
+              SourceAndCooked{  "/crate.prefab.xml",  "/crate.prefab.bin", false},
+              SourceAndCooked{"/barrel.prefab.json", "/barrel.prefab.bin",  true}
+    } )
+    {
+        sw::PrefabAsset  fromSource;
+        sw::PrefabAsset  fromCooked;
+        const sw::string sourcePath = sourceRoot + pair._pSource;
+        SW_ASSERT_TRUE_MSG( pair._bJSON ? fromSource.loadFromJSONFile( sourcePath ) : fromSource.loadFromXMLFile( sourcePath ), pair._pSource );
+        SW_ASSERT_TRUE_MSG( fromCooked.loadFromBinaryFile( cookedRoot + pair._pCooked ), pair._pCooked );
+        SW_EXPECT_EQUAL( fromSource.getName(), fromCooked.getName() );
+
+        // 같은 형식으로 다시 써서 글 전체를 견준다. 형식마다 다른 읽은 상태의 표현은 여기서 지워진다.
+        const sw::string sourceJSONPath = test::makeTempPath( "equiv_from_source.prefab.json" );
+        const sw::string cookedJSONPath = test::makeTempPath( "equiv_from_cooked.prefab.json" );
+        SW_ASSERT_TRUE( fromSource.saveToJSONFile( sourceJSONPath ) );
+        SW_ASSERT_TRUE( fromCooked.saveToJSONFile( cookedJSONPath ) );
+        sw::string sourceJSON;
+        sw::string cookedJSON;
+        SW_ASSERT_TRUE( sw::FileUtil::readTextFile( sourceJSONPath, sourceJSON ) );
+        SW_ASSERT_TRUE( sw::FileUtil::readTextFile( cookedJSONPath, cookedJSON ) );
+        SW_EXPECT_TRUE_MSG( sourceJSON == cookedJSON, pair._pSource );
+    }
+}
+
+/**
  * @brief [PrefabTest] 컴포넌트 이름은 프리팹의 세 형식(XML · JSON · 쿠킹한 PFB2)을 건너 남는다
  * @details 이름은 오브젝트 안에서 컴포넌트를 가리키는 키다(부착 대상 · 프리팹 오버라이드). 프리팹이 이름을 잃으면 스폰한 인스턴스가 기본값(타입 이름)을
  *          달고 나와, 그 이름으로 적힌 오버라이드 · 부착이 가리킬 곳을 잃는다.

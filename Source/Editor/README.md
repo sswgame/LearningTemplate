@@ -508,6 +508,7 @@ Tile Map Tool 은 도구 단추 `tileMap.tool.brush` · `tileMap.tool.rect` · `
 ### 임포트
 
 - **임포트 동작을 바꾸면 임포터 버전을 올립니다**(`TextureImporterInternal::kImporterVersion`, `ModelImportUtil::kImporterVersion`, `HeightfieldImporterInternal::kImporterVersion`). 올려야 모든 스탬프가 어긋남이 되어 다시 임포트됩니다.
+- **인코더 라이브러리(텍스처는 DirectXTex, vcpkg 판)를 올려도 임포터 버전을 올립니다.** 텍스처 인코더는 파이썬이 아니라 C++ `TextureImporter` 이고, 스탬프는 원본 · 규칙 · 임포터 버전만 보므로 라이브러리 판이 바뀐 것은 스스로 알지 못합니다. 결과 해시는 "결과를 손댔다" 로만 잡혀 원인이 흐려집니다.
 - **모델 임포트의 옆 폴더(`models/<모델>/`)는 임포트마다 통째로 지워집니다.** 손으로 쓴 캐릭터 데이터는 `game/<게임>/characters/<캐릭터>/` 처럼 임포트 산출물 밖에 둡니다. 클립 알림은 원본 옆 `<모델>.clips.json` 에 적습니다.
 - **임포터는 결과 옆 폴더의 머티리얼에 경로에서 정해지는 GUID 의 `.meta` 를 미리 씁니다**(`ModelImportUtil::makeImportedGuid`). 머티리얼 캐시가 첫 실행에 실행마다 다른 GUID 를 지으면 스탬프가 "손으로 바꿨다" 가 됩니다.
 - **원본 glb 는 내려받은 그대로 둡니다.** 비표준 씬 뿌리는 임포터가 받고, 배치 오프셋은 `ModelImportConfig.json` 규칙의 `translation` 으로 지웁니다. 스킨드 모델에 `translation` 과 `recenter` 는 오류입니다. 바인드 행렬이 어긋나기 때문입니다.

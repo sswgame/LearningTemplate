@@ -314,7 +314,7 @@ namespace sw::editor
             static constexpr string_view kImportedTextureFolder = "textures";
             /** @brief 스탬프의 헤더 줄입니다. 형식이나 판정이 바뀌면 올립니다. 이전 스탬프는 모두 어긋남이 되어 한 번 다시 임포트합니다. */
             static constexpr string_view kImportStampHeader = "SWTEXIMPORT 1";
-            /** @brief 임포터 버전입니다. 같은 원본과 규칙에서 다른 바이트가 나오게 바꿨다면 올립니다. 원본 해시에 섞입니다. */
+            /** @brief 임포터(인코더) 버전입니다. 같은 원본과 규칙에서 다른 바이트가 나오게 바꿨다면 올립니다. DirectXTex 판을 올린 것도 그렇습니다. 원본 해시에 섞입니다. */
             static constexpr uint32 kImporterVersion = 1;
 
             /** @brief 임포트하는 원본 이미지 확장자인지 확인합니다. `.dds`, `import.stamp`, `.meta` 같은 파일은 원본이 아닙니다. */

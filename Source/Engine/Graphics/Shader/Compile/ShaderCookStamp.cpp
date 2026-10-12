@@ -10,8 +10,10 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Module/ModuleImageUtil.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIRequiredVersion.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Resource/ResourcePaths.h"
 
@@ -32,8 +34,12 @@ namespace sw
              * @brief 쿠킹 스탬프 헤더입니다. **버전을 올리면 스탬프가 모두 불일치가 되어 한 번 전부 다시 쿠킹합니다.**
              * @details 2에서 3으로의 변경은 포맷이 아니라 **판정 기준**이 바뀐 것이다(파일 시간에서 내용 해시로).
              *          3 이전 스탬프는 "쿠킹된 것이 소스와 같다" 는 보장을 하지 못하므로 믿지 않는다.
+             *          4 는 도구 지문 줄(`<hex> @toolchain`, `ShaderCooker::getToolchainFingerprint`)을 더했다. 3 스탬프는 컴파일러와 옵션을 모르므로 믿지 않는다.
              */
-            static constexpr string_view kCookStampHeader{ "SWCOOK 3" };
+            static constexpr string_view kCookStampHeader{ "SWCOOK 4" };
+
+            /** @brief 스탬프에서 도구 지문 줄의 키입니다. 소스 키는 '@' 로 시작하지 않습니다(`CookAssets.py` 는 이 줄을 건너뜁니다). */
+            static constexpr string_view kToolchainKey{ "@toolchain" };
 
             /** @brief 스탬프의 16자리 hex 를 uint64 로 바꿉니다. 형식이 맞지 않으면 0이며 불일치로 처리합니다. */
             static uint64 parseHex64( string_view hex )
@@ -219,6 +225,11 @@ namespace sw
                     }
                 }
 
+                // 도구 지문이 다르면(컴파일러 · 옵션이 바뀌었으면) 소스가 같아도 모두 낡았다. 빈 테이블과 같게 다룬다.
+                const auto toolchainIter = info._mapHash.find( string( kToolchainKey ) );
+                if ( toolchainIter == info._mapHash.end() || toolchainIter->second != computeToolchainFingerprint() )
+                    info._mapHash.clear();
+
                 // 헤더는 어느 셰이더가 무엇을 include 하는지 파싱하지 않고 include 루트의 것을 **모두** 본다. 넉넉하게 쿠킹하는 쪽이 안전하다.
                 info._bHeadersCurrent = info._mapHash.empty() == false;
                 vector<StampedSource> listHeader;
@@ -234,6 +245,38 @@ namespace sw
                 }
 
                 return _s_mapStamp.emplace( binDirectory, std::move( info ) ).first->second;
+            }
+
+            /**
+             * @brief 도구 지문을 구합니다(`ShaderCooker::getToolchainFingerprint` 의 본체). 프로세스에서 한 번만 계산합니다.
+             * @details 컴파일러 라이브러리는 `ShaderCompiler.cpp` 가 찾는 순서(실행 파일 옆 → Bin)로 찾는다. 이름만으로 로드하는 마지막
+             *          후보는 경로를 모르므로 보지 않는다. D3DCompiler(DX11)는 OS 구성 요소라 넣지 않는다.
+             */
+            static uint64 computeToolchainFingerprint()
+            {
+                static const uint64 s_fingerprint = []()
+                {
+                    uint64 hash = StringUtil::computeHash64( to_string( ShaderCooker::kCompileOptionsRevision ), false );
+                    hash        = StringUtil::computeHash64( to_string( VulkanRHIRequiredVersion::kRequiredAPIVersion ), false, hash );
+
+                    const string   libName = ModuleImageUtil::formatSharedLibraryName( "dxcompiler" );
+                    const string   execDir = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
+                    vector<string> listCandidate;
+                    if ( execDir.empty() == false )
+                        listCandidate.push_back( FileUtil::joinPath( execDir, libName ) );
+                    listCandidate.push_back( FileUtil::joinPath( FileUtil::getBinaryDirectory(), libName ) );
+                    uint64 libraryHash = 0;
+                    for ( const string& candidatePath : listCandidate )
+                    {
+                        if ( FileUtil::isRegularFile( candidatePath ) )
+                        {
+                            libraryHash = readContentHash( candidatePath );
+                            break;
+                        }
+                    }
+                    return StringUtil::computeHash64( to_string( libraryHash ), false, hash );
+                }();
+                return s_fingerprint;
             }
 
             /** @brief 소스 절대 경로를 스탬프 키(shaders/ 기준 소문자 상대 경로)로 바꿉니다. */
@@ -281,6 +324,13 @@ namespace sw
                     StringBuilder<constant::kMaxBuffer256> sb;
                     sb.appendFormat( "%#", Fmt( hash, Format( 16, Format::Padding::Zero ).hex() ) );
                     sb.append( ' ' ).append( source._key );
+                    listLine.push_back( string( sb.c_str(), sb.size() ) );
+                }
+
+                {
+                    StringBuilder<constant::kMaxBuffer256> sb;
+                    sb.appendFormat( "%#", Fmt( computeToolchainFingerprint(), Format( 16, Format::Padding::Zero ).hex() ) );
+                    sb.append( ' ' ).append( string( kToolchainKey ) );
                     listLine.push_back( string( sb.c_str(), sb.size() ) );
                 }
 
@@ -352,7 +402,14 @@ namespace sw
         const uint64 sourceHash = ShaderCookStampInternal::computeContentHash( absShaderPath );
         if ( sourceHash == 0 )
             return 0;
-        return StringUtil::computeHash64( to_string( getSharedHeaderContentHash() ), false, sourceHash );
+        // 도구 지문도 섞는다. 디스크 캐시 키가 이 값을 쓰므로, 빠지면 DXC 를 바꿔도 옛 바이트를 돌려준다.
+        const uint64 headerHash = StringUtil::computeHash64( to_string( getSharedHeaderContentHash() ), false, sourceHash );
+        return StringUtil::computeHash64( to_string( getToolchainFingerprint() ), false, headerHash );
+    }
+
+    uint64 ShaderCooker::getToolchainFingerprint()
+    {
+        return ShaderCookStampInternal::computeToolchainFingerprint();
     }
 
     bool ShaderCooker::isCookedOutputCurrent( string_view binDirectory, string_view absShaderPath )
