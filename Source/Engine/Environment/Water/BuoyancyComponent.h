@@ -78,9 +78,9 @@ namespace sw
     private:
         PROPERTY( Category = "Buoyancy", DisplayName = "Pontoons", Tooltip = "Spheres that sample the water surface (body local)" )
         vector<BuoyancyPontoon> _listPontoon;
-        PROPERTY( Category = "Buoyancy", DisplayName = "Water Density", Min = 0.0, Tooltip = "Fresh water is 1000", Units = "kg/m3" )
+        PROPERTY( Category = "Buoyancy", DisplayName = "Water Density", Min = 0.0, Tooltip = "Fresh water is 1000", Meta = "Units=kg/m3" )
         float32 _waterDensity;
-        PROPERTY( Category = "Buoyancy", DisplayName = "Linear Drag", Min = 0.0, Tooltip = "Drag force per m/s of a fully submerged pontoon", Units = "N*s/m" )
+        PROPERTY( Category = "Buoyancy", DisplayName = "Linear Drag", Min = 0.0, Tooltip = "Drag force per m/s of a fully submerged pontoon", Meta = "Units=N*s/m" )
         float32 _linearDrag;
 
         uint32 _submergedPontoonCount;
