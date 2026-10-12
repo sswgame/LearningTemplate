@@ -24,7 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common import getProjectRoot  # noqa: E402
 
 # `Config/Editor/` 에서 옮기는 이름 — 앱이 쓰던 상태만(사람이 고치는 `Config/Editor/*.json` 도구 값 · 임포트 규칙은 그 자리에 남는다).
-_kListEditorStateName = ("imgui.ini", "windows.ini", "AnimGraph.json", "DialogueGraphEditor.json", "AnimGraphData.json",
+_kListEditorStateName = ("imgui.ini", "windows.ini", "AnimationGraph.json", "DialogueGraphEditor.json", "AnimationGraphData.json",
                          "DialogueGraphData.json", "SpriteClip.json", "EditorConfig.json", "Layouts")
 
 

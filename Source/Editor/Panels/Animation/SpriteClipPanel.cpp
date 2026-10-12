@@ -72,7 +72,7 @@ namespace sw::editor
             _status                = SW_LOCKEYFORMAT( "EditorSpriteClip", "SavedStatus", TextArgumentList().addText( "path", savedPath ) );
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "SaveTip" ) );
-        ImGui::TextDisabled( "%s/%s (separate from AnimGraph)", config::kDirSavedEditor, EditorPaths::kSpriteClipDocumentFileName );
+        ImGui::TextDisabled( "%s/%s (separate from AnimationGraph)", config::kDirSavedEditor, EditorPaths::kSpriteClipDocumentFileName );
 
         ImGui::Separator();
         ImGui::TextUnformatted( "Frames (u,v,w,h,durationMs)" );

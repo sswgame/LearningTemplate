@@ -667,7 +667,7 @@ namespace sw
                 case RenderPassType::Tonemap:
                 case RenderPassType::ForwardOpaqueNoDepthWrite:
                 case RenderPassType::GPUCull:
-                case RenderPassType::InstanceAnim:
+                case RenderPassType::InstanceAnimation:
                 case RenderPassType::InstanceSort:
                 case RenderPassType::MeshMorph:
                 case RenderPassType::MeshSkin:

@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Character/AnimNotify/AnimNotifyComponent.h"
+#include "Engine/Character/AnimationNotify/AnimationNotifyComponent.h"
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Character/Socket/SocketBindingComponent.h"
@@ -86,7 +86,7 @@ namespace sw
         GameObject*                pEnemy    = pObjects->createGameObject( hashed_string( "CombatEnemy" ) );
         SkeletalMeshComponent*     pUnit     = pEnemy->addComponent<SkeletalMeshComponent>();
         SkeletalAnimatorComponent* pAnimator = pEnemy->addComponent<SkeletalAnimatorComponent>();
-        AnimNotifyComponent*       pNotify   = pEnemy->addComponent<AnimNotifyComponent>();
+        AnimationNotifyComponent*  pNotify   = pEnemy->addComponent<AnimationNotifyComponent>();
         SocketSetComponent*        pSockets  = pEnemy->addComponent<SocketSetComponent>();
         RagdollComponent*          pRagdoll  = pEnemy->addComponent<RagdollComponent>();
         pUnit->setMeshID( Internal::kEnemyMesh );
@@ -185,11 +185,11 @@ namespace sw
         _elapsed += deltaTime;
         ++_frame;
 
-        const AnimNotifyComponent* pNotify = pEnemy->getComponent<AnimNotifyComponent>();
-        static const hashed_string s_footstep( "Footstep" );
+        const AnimationNotifyComponent* pNotify = pEnemy->getComponent<AnimationNotifyComponent>();
+        static const hashed_string      s_footstep( "Footstep" );
         for ( size_t actionIndex = 0; pNotify != nullptr && actionIndex < pNotify->getActions().size(); ++actionIndex )
         {
-            const AnimNotifyAction& action = pNotify->getActions()[actionIndex];
+            const AnimationNotifyAction& action = pNotify->getActions()[actionIndex];
             if ( action._handler == s_footstep )
             {
                 ++_footstepCount;

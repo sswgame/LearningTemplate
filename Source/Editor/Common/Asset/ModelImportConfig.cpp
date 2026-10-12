@@ -8,8 +8,8 @@
 
 #include "Editor/Common/EditorPaths.h"
 
-#include "Engine/Animation/AnimJSONUtil.h"
-#include "Engine/Animation/Codec/AnimCodec.h"
+#include "Engine/Animation/AnimationJSONUtil.h"
+#include "Engine/Animation/Codec/AnimationCodec.h"
 #include "Engine/Destruction/MeshFracture.h"
 #include "Engine/Serialization/JSON/ConfigKeyDoc.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -37,9 +37,9 @@ namespace sw::editor
             {                "recenter",    "string",    "none", "none · xz(경계 상자 XZ 중심을 원점) · bottom-center(XZ 중심 + 가장 낮은 Y 를 0)"},
             {              "animations",      "bool",    "true",                                                           "애니메이션을 가져온다"},
             {                   "clips",  "string[]",        "",                    "가져올 클립 이름(비면 모두 — 원본에 없는 이름은 임포트 오류)"},
-            {         "animation_codec",    "string",     "acl",                   "애니메이션 코덱 이름(`AnimCodecRegistry` 에 없으면 설정 오류)"},
+            {         "animation_codec",    "string",     "acl",              "애니메이션 코덱 이름(`AnimationCodecRegistry` 에 없으면 설정 오류)"},
             {   "animation_sample_rate",    "number",      "30",                                                                    "초당 표본 수"},
-            {     "animation_precision",    "number",  "0.0001",                                                "코덱 정밀도(`AnimCodecSettings`)"},
+            {     "animation_precision",    "number",  "0.0001",                                           "코덱 정밀도(`AnimationCodecSettings`)"},
             {"animation_shell_distance",    "number",     "0.1",                                                            "코덱 껍질 거리(미터)"},
             {        "root_motion_bone",    "string",        "",                                               "루트 모션 트랙이 될 본(비면 없음)"},
             {             "attachments",      "bool",    "true",                                        "본 아래 스킨 없는 메시를 따로 임포트한다"},
@@ -230,7 +230,7 @@ namespace sw::editor
         if ( ruleValue.has( "animation_codec" ) )
         {
             inoutRule._animationCodec = ruleValue.get( "animation_codec" ).asString();
-            if ( AnimCodecRegistry::findCodecByName( inoutRule._animationCodec ) == nullptr )
+            if ( AnimationCodecRegistry::findCodecByName( inoutRule._animationCodec ) == nullptr )
             {
                 SW_LOG_ERROR( "ModelImportConfig rule '%#': unknown animation_codec '%#' (raw | acl).", inoutRule._name.c_str(), inoutRule._animationCodec.c_str() );
                 return false;
@@ -314,12 +314,12 @@ namespace sw::editor
             }
             *arrNumberValue[keyIndex] = static_cast<float32>( value.asFloat() );
         }
-        if ( fractureValue.has( "impact_point" ) && AnimJSONUtil::readFloats( fractureValue.get( "impact_point" ), &settings._impactPoint._x, 3 ) == false )
+        if ( fractureValue.has( "impact_point" ) && AnimationJSONUtil::readFloats( fractureValue.get( "impact_point" ), &settings._impactPoint._x, 3 ) == false )
         {
             SW_LOG_ERROR( "%#: impact_point must be an array of three numbers.", context.c_str() );
             return false;
         }
-        if ( fractureValue.has( "interior_color" ) && AnimJSONUtil::readFloats( fractureValue.get( "interior_color" ), &settings._interiorColor._x, 4 ) == false )
+        if ( fractureValue.has( "interior_color" ) && AnimationJSONUtil::readFloats( fractureValue.get( "interior_color" ), &settings._interiorColor._x, 4 ) == false )
         {
             SW_LOG_ERROR( "%#: interior_color must be an array of four numbers.", context.c_str() );
             return false;
@@ -327,7 +327,7 @@ namespace sw::editor
         if ( fractureValue.has( "slices" ) )
         {
             float32    arrSlice[3] = { 0.0f, 0.0f, 0.0f };
-            const bool bRead       = AnimJSONUtil::readFloats( fractureValue.get( "slices" ), arrSlice, 3 );
+            const bool bRead       = AnimationJSONUtil::readFloats( fractureValue.get( "slices" ), arrSlice, 3 );
             if ( bRead == false || arrSlice[0] < 1.0f || arrSlice[1] < 1.0f || arrSlice[2] < 1.0f )
             {
                 SW_LOG_ERROR( "%#: slices must be three positive integers.", context.c_str() );

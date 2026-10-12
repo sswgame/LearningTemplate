@@ -12,7 +12,7 @@
 
 #include "Editor/Common/Asset/ModelImportUtil.h"
 
-#include "Engine/Animation/AnimJSONUtil.h"
+#include "Engine/Animation/AnimationJSONUtil.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw::editor
@@ -189,7 +189,7 @@ namespace sw::editor
 
     void ModelImportUtil::resampleAnimation( const cgltf_animation& animation, const Skeleton& skeleton, const unordered_map<const cgltf_node*, int32>& mapJointBone,
                                              const vector<BoneTransform>& listRest, const vector<float4x4>& listRootParent, float32 sampleRate, float32 minimumDuration,
-                                             AnimRawClip& outRawClip )
+                                             AnimationRawClip& outRawClip )
     {
         const uint32          boneCount = skeleton.getBoneCount();
         vector<JointChannels> listChannel( boneCount );
@@ -214,7 +214,7 @@ namespace sw::editor
         }
 
         const uint32 intervalCount = duration > 0.0f ? MathUtil::max( 1u, static_cast<uint32>( MathUtil::ceil( duration * sampleRate - 1e-3f ) ) ) : 0u;
-        outRawClip                 = AnimRawClip{};
+        outRawClip                 = AnimationRawClip{};
         outRawClip._sampleCount    = intervalCount + 1;
         outRawClip._sampleRate     = intervalCount > 0 ? static_cast<float32>( intervalCount ) / duration : sampleRate;
         for ( uint32 boneIndex = 0; boneIndex < boneCount; ++boneIndex )
@@ -236,7 +236,7 @@ namespace sw::editor
         }
     }
 
-    float32 ModelImportUtil::readMorphWeightCurves( const cgltf_animation& animation, float32 sampleRate, vector<AnimCurve>& outListCurve )
+    float32 ModelImportUtil::readMorphWeightCurves( const cgltf_animation& animation, float32 sampleRate, vector<AnimationClipCurve>& outListCurve )
     {
         outListCurve.clear();
         float32 duration = 0.0f;
@@ -280,16 +280,16 @@ namespace sw::editor
             for ( cgltf_size targetIndex = 0; targetIndex < targetCount; ++targetIndex )
             {
                 const hashed_string name       = makeMorphTargetName( &mesh, targetIndex );
-                const bool          bDuplicate = std::any_of( outListCurve.begin(), outListCurve.end(), [&name]( const AnimCurve& curve )
+                const bool          bDuplicate = std::any_of( outListCurve.begin(), outListCurve.end(), [&name]( const AnimationClipCurve& curve )
                          { return curve._name == name; } );
                 if ( bDuplicate )
                     continue;
-                AnimCurve curve{};
+                AnimationClipCurve curve{};
                 curve._name = name;
                 for ( const float32 time : listTime )
                 {
                     if ( evaluateChannel( data, time, false, listValue.data() ) )
-                        curve._listKey.push_back( AnimCurveKey{ time, listValue[targetIndex] } );
+                        curve._listKey.push_back( AnimationClipCurveKey{ time, listValue[targetIndex] } );
                 }
                 outListCurve.push_back( std::move( curve ) );
             }
@@ -310,13 +310,13 @@ namespace sw::editor
             return false;
         }
         const JSONValue root = document.getRoot();
-        if ( AnimJSONUtil::hasOnlyKnownKeys( root, { "clips" }, clipDataPath ) == false || root.get( "clips" ).isObject() == false )
+        if ( AnimationJSONUtil::hasOnlyKnownKeys( root, { "clips" }, clipDataPath ) == false || root.get( "clips" ).isObject() == false )
             return false;
         const JSONValue clips = root.get( "clips" );
         for ( const string& clipName : clips.getMemberNames() )
         {
             const JSONValue clipValue = clips.get( clipName, false );
-            if ( AnimJSONUtil::hasOnlyKnownKeys( clipValue, { "loop", "notifies", "curves" }, clipDataPath ) == false )
+            if ( AnimationJSONUtil::hasOnlyKnownKeys( clipValue, { "loop", "notifies", "curves" }, clipDataPath ) == false )
                 return false;
             ClipExtra extra{};
             if ( clipValue.has( "loop" ) )
@@ -325,13 +325,13 @@ namespace sw::editor
             for ( size_t notifyIndex = 0; notifies.isArray() && notifyIndex < notifies.size(); ++notifyIndex )
             {
                 const JSONValue notify = notifies.at( notifyIndex );
-                if ( AnimJSONUtil::hasOnlyKnownKeys( notify, { "name", "time", "duration" }, clipDataPath ) == false || notify.get( "name" ).isString() == false ||
+                if ( AnimationJSONUtil::hasOnlyKnownKeys( notify, { "name", "time", "duration" }, clipDataPath ) == false || notify.get( "name" ).isString() == false ||
                      notify.get( "time" ).isNumber() == false )
                 {
                     SW_LOG_ERROR( "Clip data '%#': notify %# of '%#' needs a name and a time", clipDataPath.c_str(), notifyIndex, clipName.c_str() );
                     return false;
                 }
-                AnimNotifyEvent event{};
+                AnimationNotifyEvent event{};
                 event._name     = hashed_string( notify.get( "name" ).asString() );
                 event._time     = static_cast<float32>( notify.get( "time" ).asFloat() );
                 event._duration = static_cast<float32>( notify.get( "duration" ).asFloat( 0.0 ) );
@@ -340,18 +340,18 @@ namespace sw::editor
             const JSONValue curves = clipValue.get( "curves" );
             for ( const string& curveName : curves.isObject() ? curves.getMemberNames() : vector<string>{} )
             {
-                const JSONValue keys = curves.get( curveName, false );
-                AnimCurve       curve{};
+                const JSONValue    keys = curves.get( curveName, false );
+                AnimationClipCurve curve{};
                 curve._name = hashed_string( curveName );
                 for ( size_t keyIndex = 0; keys.isArray() && keyIndex < keys.size(); ++keyIndex )
                 {
                     float32 arrKey[2]{};
-                    if ( AnimJSONUtil::readFloats( keys.at( keyIndex ), arrKey, 2 ) == false )
+                    if ( AnimationJSONUtil::readFloats( keys.at( keyIndex ), arrKey, 2 ) == false )
                     {
                         SW_LOG_ERROR( "Clip data '%#': curve '%#' keys must be [time, value] pairs", clipDataPath.c_str(), curveName.c_str() );
                         return false;
                     }
-                    curve._listKey.push_back( AnimCurveKey{ arrKey[0], arrKey[1] } );
+                    curve._listKey.push_back( AnimationClipCurveKey{ arrKey[0], arrKey[1] } );
                 }
                 extra._listCurve.push_back( std::move( curve ) );
             }

@@ -35,18 +35,18 @@ namespace sw::editor
         Shader,
         Audio,
         Data,
-        AnimGraph,
+        AnimationGraph,
         DialogueGraph,
         SpriteClip,
         TileMap,
         Sequence,
         Mesh,
-        Skeleton,    ///< 임포트가 만든 스켈레톤(`.skeleton.json`). 스켈레톤 캐시가 핫 리로드한다
-        AnimClip,    ///< 임포트가 만든 애니메이션 클립(`.animclip`). 클립 캐시가 핫 리로드한다
-        Heightfield, ///< 높이장. 원본(`heightfields_raw/` 의 `.png`, `.r16`)이 바뀌면 임포트하고, 결과는 `.heightfield` 이다
-        Rig,         ///< 후처리 리그(`.rig.json`). 리그 캐시가 핫 리로드하고 PoseModifierComponent 가 다시 바인딩한다
-        Fracture,    ///< 임포트가 만든 파쇄 에셋(`.fracture`). 파쇄 캐시가 핫 리로드한다
-        Count        ///< 종류의 개수이며 종류가 아니다. 종류 테이블(EditorAssetType.cpp)이 모든 종류를 한 번씩 담는지 컴파일 타임에 검사한다
+        Skeleton,      ///< 임포트가 만든 스켈레톤(`.skeleton.json`). 스켈레톤 캐시가 핫 리로드한다
+        AnimationClip, ///< 임포트가 만든 애니메이션 클립(`.animclip`). 클립 캐시가 핫 리로드한다
+        Heightfield,   ///< 높이장. 원본(`heightfields_raw/` 의 `.png`, `.r16`)이 바뀌면 임포트하고, 결과는 `.heightfield` 이다
+        Rig,           ///< 후처리 리그(`.rig.json`). 리그 캐시가 핫 리로드하고 PoseModifierComponent 가 다시 바인딩한다
+        Fracture,      ///< 임포트가 만든 파쇄 에셋(`.fracture`). 파쇄 캐시가 핫 리로드한다
+        Count          ///< 종류의 개수이며 종류가 아니다. 종류 테이블(EditorAssetType.cpp)이 모든 종류를 한 번씩 담는지 컴파일 타임에 검사한다
     };
 
     /** @brief 소스 파일을 임포트하는 임포터입니다. 처리했으면 true 를 반환하며, 임포트했거나 임포트하지 않는다고 알린 경우가 모두 해당합니다. 이때는 그 파일의 캐시 리로드를 하지 않습니다. */
@@ -137,7 +137,7 @@ namespace sw::editor
 
         /**
          * @brief 경로가 속한 종류 하나를 반환합니다. 해당하는 종류가 없으면 `Unknown` 입니다.
-         * @details 판정 테이블의 순서대로 처음 맞는 항목이 이긴다. `.anim.json` 은 Data 보다 앞선 AnimGraph 로, 이미지는 SpriteClip 보다 앞선 Texture 로 판정한다.
+         * @details 판정 테이블의 순서대로 처음 맞는 항목이 이긴다. `.anim.json` 은 Data 보다 앞선 AnimationGraph 로, 이미지는 SpriteClip 보다 앞선 Texture 로 판정한다.
          *          아이콘, 색, 퀵 런처 분류, 카탈로그, 썸네일, 열기, 드롭이 모두 이 함수 하나로 종류를 정한다.
          */
         static EditorAssetType findKind( string_view path );

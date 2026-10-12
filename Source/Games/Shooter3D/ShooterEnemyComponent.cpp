@@ -13,7 +13,7 @@
 #include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Base/Foundation/Utility/Math/OrientationUtil.h"
 
-#include "Games/Shooter3D/ShooterAnimParameter.h"
+#include "Games/Shooter3D/ShooterAnimationParameter.h"
 #include "Games/Shooter3D/ShooterBodyMovementComponent.h"
 #include "Games/Shooter3D/ShooterDirectorComponent.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"
@@ -216,7 +216,7 @@ namespace sw
         }
 
         // 쫓는 동안만 걷는다(일어남 · 휘두름 · 움찔 · 쓰러짐은 제자리) — 플레이어와 같은 몸 이동.
-        float32                       moveCode  = ShooterAnimParameter::kMoveIdle;
+        float32                       moveCode  = ShooterAnimationParameter::kMoveIdle;
         ShooterBodyMovementComponent* pMovement = pOwner->getComponent<ShooterBodyMovementComponent>();
         if ( pMovement != nullptr )
         {
@@ -226,7 +226,7 @@ namespace sw
             const float3& velocity = pMovement->getMoveVelocity();
             const float32 speed    = MathUtil::sqrt( velocity._x * velocity._x + velocity._z * velocity._z );
             if ( speed > _walkClipSpeed )
-                moveCode = speed >= _runSpeed ? ShooterAnimParameter::kMoveRun : ShooterAnimParameter::kMoveWalk;
+                moveCode = speed >= _runSpeed ? ShooterAnimationParameter::kMoveRun : ShooterAnimationParameter::kMoveWalk;
         }
         // 몸을 조종 요 쪽으로 돌린다(일어나는 중 · 움찔 · 쓰러지는 중은 그대로).
         const bool bTurning = _phase == ShooterEnemyPhase::Chasing || _phase == ShooterEnemyPhase::Attacking;
@@ -247,13 +247,13 @@ namespace sw
         SkeletalAnimatorComponent* pAnimator = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
         if ( pAnimator == nullptr )
             return;
-        AnimParameterSet& parameters = pAnimator->getParameters();
-        parameters.setFloat( hashed_string( ShooterAnimParameter::kMove ), moveCode );
-        parameters.setBool( hashed_string( ShooterAnimParameter::kDead ), isDead() );
+        AnimationParameterSet& parameters = pAnimator->getParameters();
+        parameters.setFloat( hashed_string( ShooterAnimationParameter::kMove ), moveCode );
+        parameters.setBool( hashed_string( ShooterAnimationParameter::kDead ), isDead() );
         if ( _bAttackStarting == SW_TRUE )
             parameters.setTrigger( hashed_string( "Attack" ) );
         if ( _bHitPending == SW_TRUE )
-            parameters.setTrigger( hashed_string( ShooterAnimParameter::kHit ) );
+            parameters.setTrigger( hashed_string( ShooterAnimationParameter::kHit ) );
         _bAttackStarting = SW_FALSE;
         _bHitPending     = SW_FALSE;
     }

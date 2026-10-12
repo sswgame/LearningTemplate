@@ -205,11 +205,11 @@ namespace sw
         /// @brief 엔진 예약 CB 이름입니다(리플렉션 매칭 키).
         namespace cbname
         {
-            inline constexpr const utf8* kPass     = "PassCB";
-            inline constexpr const utf8* kMaterial = "MaterialCB";
-            inline constexpr const utf8* kCull     = "CullParams";
-            inline constexpr const utf8* kAnim     = "AnimParams"; ///< instanceanim.hlsl 의 컴퓨트 CB(b0)
-            inline constexpr const utf8* kSort     = "SortParams"; ///< instancesort.hlsl 의 컴퓨트 CB(b0)
+            inline constexpr const utf8* kPass      = "PassCB";
+            inline constexpr const utf8* kMaterial  = "MaterialCB";
+            inline constexpr const utf8* kCull      = "CullParams";
+            inline constexpr const utf8* kAnimation = "AnimParams"; ///< instanceanim.hlsl 의 컴퓨트 CB(b0)
+            inline constexpr const utf8* kSort      = "SortParams"; ///< instancesort.hlsl 의 컴퓨트 CB(b0)
             /// @brief SW_ROOT_CONSTANTS_BEGIN/END 가 선언하는 루트/푸시 상수 블록입니다(DX12 b0 space2, Vulkan 푸시 상수, DX11 과 GL 의 b2).
             inline constexpr const utf8* kRootConstants = "SwRootConstants";
         } // namespace cbname
@@ -217,32 +217,32 @@ namespace sw
         /// @brief 엔진 예약 리소스 이름입니다. binding.hlsli 와 gpucull.hlsl 의 선언과 같아야 합니다(계약 검증 키).
         namespace resname
         {
-            inline constexpr const utf8* kInstances          = "g_SwInstances";
-            inline constexpr const utf8* kMaterials          = "g_SwMaterials";
-            inline constexpr const utf8* kEngineTexture      = "g_SwSlot";        ///< 뒤에 0..3 이 붙는다.
-            inline constexpr const utf8* kMaterialTexture    = "g_SwMaterialTex"; ///< 뒤에 0..3 이 붙는다.
-            inline constexpr const utf8* kBindlessTextures   = "g_SwBindlessTex2D";
-            inline constexpr const utf8* kBindlessRwTextures = "g_SwBindlessRWTex2D";
-            inline constexpr const utf8* kSamplers           = "g_SwSamplers";           ///< Vulkan: set 1 binding 1 immutable sampler 배열(s0..s6)
-            inline constexpr const utf8* kSamplerSlot        = "g_SwSampler";            ///< 뒤에 0..6 이 붙는다. DX12 정적 샘플러 s#(배열은 정적 샘플러로 채울 수 없다).
-            inline constexpr const utf8* kShadowSampler      = "g_SwSamplerShadowCmp";   ///< s7 비교 샘플러
-            inline constexpr const utf8* kRwTextureSlot      = "g_SwRWSlot";             ///< 뒤에 0..3 이 붙는다(DX11/GL 컴퓨트 RW 텍스처 슬롯).
-            inline constexpr const utf8* kVisibleInstances   = "g_SwVisibleInstanceIDs"; ///< t10(그래픽스). 컬링이 만든 가시 목록
-            inline constexpr const utf8* kMorphVertices      = "g_SwMorphVertices";      ///< t11(그래픽스). GPU 가 변형한 정점 풀
-            inline constexpr const utf8* kLights             = "g_SwLights";             ///< t12(그래픽스). 씬 라이트 목록
-            inline constexpr const utf8* kBatches            = "g_SwBatches";            ///< t13(그래픽스). 씬 배치 테이블
-            inline constexpr const utf8* kVertexAnimation    = "g_SwVertexAnimation";    ///< t14(그래픽스). 정점 애니메이션(VAT) 테이블
-            inline constexpr const utf8* kCanvasQuads        = "g_SwCanvasQuads";        ///< t15(캔버스 패스). 화면 2D 사각형
-            inline constexpr const utf8* kMorphRestVertices  = "g_RestVertices";         ///< meshmorph t0. 레스트 포즈
-            inline constexpr const utf8* kMorphVerticesRw    = "g_MorphVerticesRW";      ///< meshmorph 와 meshskin 의 u0. 변형 결과
-            inline constexpr const utf8* kSkinWeights        = "g_SkinWeights";          ///< meshskin t1. 스킨 정점의 가중치와 팔레트 행 번호
-            inline constexpr const utf8* kSkinPalette        = "g_SkinPalette";          ///< meshskin t2. 본 팔레트(본 하나가 float4 세 개)
-            inline constexpr const utf8* kSkinInstances      = "g_SkinInstances";        ///< meshskin t3. 스킨 인스턴스 테이블(인스턴스 하나가 uint4 두 개)
-            inline constexpr const utf8* kCullInstances      = "g_Instances";
-            inline constexpr const utf8* kCullBatchInfo      = "g_BatchInfo"; ///< 컬링 t1. 배치의 인스턴스 구간
-            inline constexpr const utf8* kCullIndirectArgs   = "g_IndirectArgs";
-            inline constexpr const utf8* kCullVisibleIDs     = "g_VisibleInstanceIDs"; ///< 컬링 u1. 압축해서 쓰는 쪽
-            inline constexpr const utf8* kAnimInstancesRw    = "g_InstancesRW";        ///< instanceanim u0. 월드 행렬을 고쳐 쓴다.
+            inline constexpr const utf8* kInstances            = "g_SwInstances";
+            inline constexpr const utf8* kMaterials            = "g_SwMaterials";
+            inline constexpr const utf8* kEngineTexture        = "g_SwSlot";        ///< 뒤에 0..3 이 붙는다.
+            inline constexpr const utf8* kMaterialTexture      = "g_SwMaterialTex"; ///< 뒤에 0..3 이 붙는다.
+            inline constexpr const utf8* kBindlessTextures     = "g_SwBindlessTex2D";
+            inline constexpr const utf8* kBindlessRwTextures   = "g_SwBindlessRWTex2D";
+            inline constexpr const utf8* kSamplers             = "g_SwSamplers";           ///< Vulkan: set 1 binding 1 immutable sampler 배열(s0..s6)
+            inline constexpr const utf8* kSamplerSlot          = "g_SwSampler";            ///< 뒤에 0..6 이 붙는다. DX12 정적 샘플러 s#(배열은 정적 샘플러로 채울 수 없다).
+            inline constexpr const utf8* kShadowSampler        = "g_SwSamplerShadowCmp";   ///< s7 비교 샘플러
+            inline constexpr const utf8* kRwTextureSlot        = "g_SwRWSlot";             ///< 뒤에 0..3 이 붙는다(DX11/GL 컴퓨트 RW 텍스처 슬롯).
+            inline constexpr const utf8* kVisibleInstances     = "g_SwVisibleInstanceIDs"; ///< t10(그래픽스). 컬링이 만든 가시 목록
+            inline constexpr const utf8* kMorphVertices        = "g_SwMorphVertices";      ///< t11(그래픽스). GPU 가 변형한 정점 풀
+            inline constexpr const utf8* kLights               = "g_SwLights";             ///< t12(그래픽스). 씬 라이트 목록
+            inline constexpr const utf8* kBatches              = "g_SwBatches";            ///< t13(그래픽스). 씬 배치 테이블
+            inline constexpr const utf8* kVertexAnimation      = "g_SwVertexAnimation";    ///< t14(그래픽스). 정점 애니메이션(VAT) 테이블
+            inline constexpr const utf8* kCanvasQuads          = "g_SwCanvasQuads";        ///< t15(캔버스 패스). 화면 2D 사각형
+            inline constexpr const utf8* kMorphRestVertices    = "g_RestVertices";         ///< meshmorph t0. 레스트 포즈
+            inline constexpr const utf8* kMorphVerticesRw      = "g_MorphVerticesRW";      ///< meshmorph 와 meshskin 의 u0. 변형 결과
+            inline constexpr const utf8* kSkinWeights          = "g_SkinWeights";          ///< meshskin t1. 스킨 정점의 가중치와 팔레트 행 번호
+            inline constexpr const utf8* kSkinPalette          = "g_SkinPalette";          ///< meshskin t2. 본 팔레트(본 하나가 float4 세 개)
+            inline constexpr const utf8* kSkinInstances        = "g_SkinInstances";        ///< meshskin t3. 스킨 인스턴스 테이블(인스턴스 하나가 uint4 두 개)
+            inline constexpr const utf8* kCullInstances        = "g_Instances";
+            inline constexpr const utf8* kCullBatchInfo        = "g_BatchInfo"; ///< 컬링 t1. 배치의 인스턴스 구간
+            inline constexpr const utf8* kCullIndirectArgs     = "g_IndirectArgs";
+            inline constexpr const utf8* kCullVisibleIDs       = "g_VisibleInstanceIDs"; ///< 컬링 u1. 압축해서 쓰는 쪽
+            inline constexpr const utf8* kAnimationInstancesRw = "g_InstancesRW";        ///< instanceanim u0. 월드 행렬을 고쳐 쓴다.
         } // namespace resname
 
         // 계약의 내부 일관성을 검사한다. 값을 바꾸면 여기서 먼저 걸린다.

@@ -18,7 +18,7 @@ namespace sw::editor
 {
     /**
      * @class EditorViewportPreview
-     * @brief Anim / Dialogue / Sequencer / Material 미리보기를 씬 뷰에 반영합니다.
+     * @brief Animation / Dialogue / Sequencer / Material 미리보기를 씬 뷰에 반영합니다.
      */
     class EditorViewportPreview
     {

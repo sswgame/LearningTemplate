@@ -11,7 +11,7 @@
 
 #include "GameFramework/Base/Foundation/Utility/Math/OrientationUtil.h"
 
-#include "Games/Shooter3D/ShooterAnimParameter.h"
+#include "Games/Shooter3D/ShooterAnimationParameter.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"
 
 namespace sw
@@ -27,19 +27,19 @@ namespace sw
                 switch ( direction )
                 {
                     case LocomotionDirection::Idle:
-                        return ShooterAnimParameter::kMoveIdle;
+                        return ShooterAnimationParameter::kMoveIdle;
                     case LocomotionDirection::Forward:
-                        return forwardSpeed >= runThreshold ? ShooterAnimParameter::kMoveRun : ShooterAnimParameter::kMoveWalk;
+                        return forwardSpeed >= runThreshold ? ShooterAnimationParameter::kMoveRun : ShooterAnimationParameter::kMoveWalk;
                     case LocomotionDirection::Backward:
-                        return ShooterAnimParameter::kMoveBackward;
+                        return ShooterAnimationParameter::kMoveBackward;
                     case LocomotionDirection::Left:
-                        return ShooterAnimParameter::kMoveLeft;
+                        return ShooterAnimationParameter::kMoveLeft;
                     case LocomotionDirection::Right:
-                        return ShooterAnimParameter::kMoveRight;
+                        return ShooterAnimationParameter::kMoveRight;
                     case LocomotionDirection::Airborne:
-                        return ShooterAnimParameter::kMoveAir;
+                        return ShooterAnimationParameter::kMoveAir;
                 }
-                return ShooterAnimParameter::kMoveIdle;
+                return ShooterAnimationParameter::kMoveIdle;
             }
         };
     } // namespace
@@ -86,13 +86,13 @@ namespace sw
         if ( pAnimator == nullptr || _bLayersReady == SW_TRUE )
             return;
         _bLayersReady = SW_TRUE;
-        AnimLayerDesc aim;
+        AnimationLayerDesc aim;
         aim._clipName     = hashed_string( _aimLayerClip );
         aim._maskRootBone = hashed_string( _upperBodyBone );
         aim._weight       = 0.0f;
         aim._bLoop        = SW_FALSE; // 겨누기 클립은 총을 올려 겨눈 자세로 끝난다 — 돌리면 끝 → 처음에서 팔이 튄다. 끝 자세를 쥔다
         _aimLayer         = _aimLayerClip.empty() ? -1 : pAnimator->addLayer( aim );
-        AnimLayerDesc shoot;
+        AnimationLayerDesc shoot;
         shoot._clipName     = hashed_string( _shootLayerClip );
         shoot._maskRootBone = hashed_string( _upperBodyBone );
         shoot._weight       = 0.0f;
@@ -130,18 +130,18 @@ namespace sw
             if ( bAlive )
             {
                 _hitTimer = _hitPause;
-                pAnimator->getParameters().setTrigger( hashed_string( ShooterAnimParameter::kHit ) );
+                pAnimator->getParameters().setTrigger( hashed_string( ShooterAnimationParameter::kHit ) );
             }
         }
         _hitTimer -= step;
-        AnimParameterSet& parameters = pAnimator->getParameters();
+        AnimationParameterSet& parameters = pAnimator->getParameters();
         // 대각선 · 임계값 근처에서 상태가 오가면 클립이 매번 처음부터 다시 돈다 — 히스테리시스로 고르고 바뀐 것은 잠깐 이어져야 받아들인다.
         const LocomotionDirection candidate = LocomotionMath::classifyFrom( _locomotion.getDirection(), pPlayer->getMoveVelocity(), _bodyYaw,
                                                                             pPlayer->isOnGround(), _walkThreshold );
         const LocomotionDirection direction = _locomotion.update( candidate, step );
         const float32             forward   = LocomotionMath::computeLocalVelocity( pPlayer->getMoveVelocity(), _bodyYaw )._x;
-        parameters.setFloat( hashed_string( ShooterAnimParameter::kMove ), Internal::computeMoveCode( direction, forward, _runThreshold ) );
-        parameters.setBool( hashed_string( ShooterAnimParameter::kDead ), bAlive == false );
+        parameters.setFloat( hashed_string( ShooterAnimationParameter::kMove ), Internal::computeMoveCode( direction, forward, _runThreshold ) );
+        parameters.setBool( hashed_string( ShooterAnimationParameter::kDead ), bAlive == false );
 
         // 상체 — 겨눈 자세는 늘, 쏘는 동작은 막 쏜 동안. 맞음 · 쓰러짐 동안은 비켜선다.
         const bool    bUpperBodyFree = bAlive && _hitTimer <= 0.0f;

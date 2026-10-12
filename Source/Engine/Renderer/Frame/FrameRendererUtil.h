@@ -94,7 +94,7 @@ namespace sw
             uint32  _arrPad[2]{};
         };
         /** @brief 인스턴스 애니메이션 디스패치 상수(instanceanim.hlsl `AnimParams`, b0)입니다. */
-        struct GPUAnimParams
+        struct GPUAnimationParams
         {
             float32 _time{ 0.0f };
             float32 _baseSpeed{ 0.0f };

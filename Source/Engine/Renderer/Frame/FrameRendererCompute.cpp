@@ -59,29 +59,29 @@ namespace sw
         // 매 프레임 인스턴스당 96바이트를 읽고 아무 일도 하지 않는다. 컬링 능력과는 무관하다(DX11 도 돈다).
         if ( _gpuScene.isUploaded() && instanceCount > 0 && _gpuScene.getSpinInstanceCount() > 0 )
         {
-            const RHIPipelineStateHandle animPSO = getEnginePSO( RenderPassType::InstanceAnim );
-            if ( animPSO != 0 && _deform._instanceAnimCb.isValid() &&
+            const RHIPipelineStateHandle animationPSO = getEnginePSO( RenderPassType::InstanceAnimation );
+            if ( animationPSO != 0 && _deform._instanceAnimationCb.isValid() &&
                  _gpuScene.getInstanceUav() != kInvalidDescriptorIndex )
             {
-                FrameRendererUtil::GPUAnimParams animParams{};
-                animParams._time = getAnimationTime();
+                FrameRendererUtil::GPUAnimationParams animationParams{};
+                animationParams._time = getAnimationTime();
                 // 기준 각속도와 편차 폭(라디안/초). 편차가 기준보다 커야 "다 같은 속도" 로 보이지 않는다.
-                animParams._baseSpeed     = FrameRendererUtil::kGPUSpinBaseSpeed;
-                animParams._speedRange    = FrameRendererUtil::kGPUSpinSpeedRange;
-                animParams._instanceCount = instanceCount;
-                _deform._instanceAnimCb.update( *_pCmd, &animParams, sizeof( animParams ) );
+                animationParams._baseSpeed     = FrameRendererUtil::kGPUSpinBaseSpeed;
+                animationParams._speedRange    = FrameRendererUtil::kGPUSpinSpeedRange;
+                animationParams._instanceCount = instanceCount;
+                _deform._instanceAnimationCb.update( *_pCmd, &animationParams, sizeof( animationParams ) );
 
                 // **쓰기 전에** UAV 상태로 옮긴다. 인스턴스 버퍼는 직전 프레임에 정점 셰이더가 읽던
                 // (그리고 방금 CPU 업로드가 쓴) 상태라, 이 전이 없이 UAV 로 쓰면 DX12 와 Vulkan 에서 쓰기가
                 // 유효하지 않다. 화면은 조용히 예전 값 그대로다.
                 _pCmd->transitionBuffer( _gpuScene.getInstanceBuffer(), RHIBufferState::UnorderedAccess );
-                _pCmd->setComputePipelineState( animPSO );
+                _pCmd->setComputePipelineState( animationPSO );
                 // AnimParams(b0) / g_InstancesRW(u0). instanceanim.hlsl 레지스터와 1:1 로 대응한다.
-                _pCmd->bindComputeConstantBuffer( _deform._instanceAnimCb._index, 0 );
+                _pCmd->bindComputeConstantBuffer( _deform._instanceAnimationCb._index, 0 );
                 _pCmd->bindComputeUav( _gpuScene.getInstanceUav(), 0 );
-                const uint32 animGroups = ( instanceCount + 63u ) / 64u;
-                if ( animGroups > 0 )
-                    _pCmd->dispatchCompute( animGroups, 1, 1 );
+                const uint32 animationGroups = ( instanceCount + 63u ) / 64u;
+                if ( animationGroups > 0 )
+                    _pCmd->dispatchCompute( animationGroups, 1, 1 );
                 // 다음 디스패치(컬링)와 정점 셰이더가 이 결과를 읽는다. 쓰기가 끝났음을 알린다.
                 _pCmd->transitionBuffer( _gpuScene.getInstanceBuffer(), RHIBufferState::ShaderResource );
             }
@@ -99,7 +99,7 @@ namespace sw
         if ( _deform._animationTimeOverride >= 0.0f )
             return _deform._animationTimeOverride;
 #endif
-        return _deform._animTimer.getTotalTime();
+        return _deform._animationTimer.getTotalTime();
     }
 
     void FrameRenderer::prepareMeshMorphPool()

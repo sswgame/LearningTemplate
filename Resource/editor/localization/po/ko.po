@@ -709,83 +709,83 @@ msgctxt "EdCommon.ViewportOrientationCube"
 msgid "Show or hide the orientation cube that shows which way the camera faces."
 msgstr "카메라가 어느 쪽을 보는지 나타내는 방향 큐브를 보이거나 숨깁니다."
 
-#: Source/Editor/Panels/Animation/AnimGraphPanel.cpp
-msgctxt "EditorAnimGraph.AddAttackTip"
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EditorAnimationGraph.AddAttackTip"
 msgid "Add an Attack state node. Its name is the clip it plays; rename it in the inspector."
 msgstr "Attack 상태 노드를 추가합니다. 노드 이름이 재생할 클립이며, 인스펙터에서 바꿀 수 있습니다."
 
-#: Source/Editor/Panels/Animation/AnimGraphPanel.cpp
-msgctxt "EditorAnimGraph.AddIdleTip"
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EditorAnimationGraph.AddIdleTip"
 msgid "Add an Idle state node. Its name is the clip it plays; rename it in the inspector."
 msgstr "Idle 상태 노드를 추가합니다. 노드 이름이 재생할 클립이며, 인스펙터에서 바꿀 수 있습니다."
 
-#: Source/Editor/Panels/Animation/AnimGraphPanel.cpp
-msgctxt "EditorAnimGraph.AddWalkTip"
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EditorAnimationGraph.AddWalkTip"
 msgid "Add a Walk state node. Its name is the clip it plays; rename it in the inspector."
 msgstr "Walk 상태 노드를 추가합니다. 노드 이름이 재생할 클립이며, 인스펙터에서 바꿀 수 있습니다."
 
-#: Source/Editor/Panels/Animation/AnimGraphPanel.cpp
-msgctxt "EditorAnimGraph.AdvanceTip"
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EditorAnimationGraph.AdvanceTip"
 msgid "Step the preview to the next state by one transition."
 msgstr "미리보기를 전이 하나만큼 다음 상태로 넘깁니다."
 
-#: Source/Editor/Panels/Animation/AnimGraphPanel.cpp
-msgctxt "EditorAnimGraph.ConditionOpTip"
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EditorAnimationGraph.ConditionOpTip"
 msgid "How the parameter is compared with Value. (on finish) moves on when the clip ends; Trigger fires once when the parameter is set."
 msgstr "파라미터를 Value 와 비교하는 방식입니다. (on finish) 는 클립이 끝나면 넘어가고, Trigger 는 파라미터가 설정될 때 한 번 발동합니다."
 
-#: Source/Editor/Panels/Animation/AnimGraphPanel.cpp
-msgctxt "EditorAnimGraph.ConditionParamTip"
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EditorAnimationGraph.ConditionParamTip"
 msgid "Graph parameter the condition reads (set by game code through the player)"
 msgstr "조건이 읽는 그래프 파라미터입니다(게임 코드가 플레이어를 통해 설정합니다)."
 
-#: Source/Editor/Panels/Animation/AnimGraphPanel.cpp
-msgctxt "EditorAnimGraph.ConditionValueTip"
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EditorAnimationGraph.ConditionValueTip"
 msgid "The threshold the parameter is compared against."
 msgstr "파라미터와 비교할 임곗값입니다."
 
-#: Source/Editor/Panels/Animation/AnimGraphPanel.cpp
-msgctxt "EditorAnimGraph.ContextCreateFailed"
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EditorAnimationGraph.ContextCreateFailed"
 msgid "Failed to create Animation Graph editor context."
 msgstr "애니메이션 그래프 편집기 컨텍스트를 만들지 못했습니다."
 
-#: Source/Editor/Panels/Animation/AnimGraphPanel.cpp
-msgctxt "EditorAnimGraph.LinkSelectedTip"
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EditorAnimationGraph.LinkSelectedTip"
 msgid "Add a transition between the two selected nodes, from the first selected to the second. Click one node, then Ctrl+click the other."
 msgstr "선택한 두 노드 사이에 첫 번째에서 두 번째로 가는 전이를 추가합니다. 노드 하나를 클릭한 뒤 다른 노드를 Ctrl+클릭합니다."
 
-#: Source/Editor/Panels/Animation/AnimGraphPanel.cpp
-msgctxt "EditorAnimGraph.LoadTip"
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EditorAnimationGraph.LoadTip"
 msgid "Reload the graph from disk, discarding unsaved edits."
 msgstr "저장하지 않은 편집을 버리고 디스크에서 그래프를 다시 읽습니다."
 
-#: Source/Editor/Panels/Animation/AnimGraphPanel.cpp
-msgctxt "EditorAnimGraph.PlayTip"
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EditorAnimationGraph.PlayTip"
 msgid "Preview the graph from the entry state, stepping to the next state every 0.75 seconds. Use it to check the transition order."
 msgstr "진입 상태부터 0.75초마다 다음 상태로 넘어가며 그래프를 미리 봅니다. 전이 순서를 확인할 때 씁니다."
 
-#: Source/Editor/Panels/Animation/AnimGraphPanel.cpp
-msgctxt "EditorAnimGraph.SaveTip"
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EditorAnimationGraph.SaveTip"
 msgid "Write the graph and its node layout to the asset file."
 msgstr "그래프와 노드 배치를 애셋 파일에 씁니다."
 
-#: Source/Editor/Panels/Animation/AnimGraphPanel.cpp
-msgctxt "EditorAnimGraph.StateClipTip"
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EditorAnimationGraph.StateClipTip"
 msgid "The state's clip name - the player plays the clip with this name"
 msgstr "상태의 클립 이름입니다. 플레이어는 이 이름의 클립을 재생합니다."
 
-#: Source/Editor/Panels/Animation/AnimGraphPanel.cpp
-msgctxt "EditorAnimGraph.StateLoopTip"
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EditorAnimationGraph.StateLoopTip"
 msgid "Whether this state's clip repeats. Default keeps the clip's own loop setting."
 msgstr "이 상태의 클립을 반복할지 정합니다. Default 는 클립 자체의 루프 설정을 따릅니다."
 
-#: Source/Editor/Panels/Animation/AnimGraphPanel.cpp
-msgctxt "EditorAnimGraph.StopTip"
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EditorAnimationGraph.StopTip"
 msgid "Stop the preview."
 msgstr "미리보기를 멈춥니다."
 
-#: Source/Editor/Panels/Animation/AnimGraphPanel.cpp
-msgctxt "EditorAnimGraph.TransitionBlendTip"
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EditorAnimationGraph.TransitionBlendTip"
 msgid "Crossfade seconds; below zero uses the player default"
 msgstr "크로스페이드 시간(초)입니다. 0보다 작으면 플레이어 기본값을 씁니다."
 

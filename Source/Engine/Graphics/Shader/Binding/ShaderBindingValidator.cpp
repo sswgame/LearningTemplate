@@ -314,7 +314,7 @@ namespace sw
                      slotB( shaderslot::kComputeConstantBuffer ), slotB( shaderslot::kComputeConstantBuffer ), vkB( shaderslot::kComputeConstantBuffer ), slotB( shaderslot::kComputeConstantBuffer ) );
                 add( shaderslot::cbname::kSort, ShaderBindingKind::ConstantBuffer,
                      slotB( shaderslot::kComputeConstantBuffer ), slotB( shaderslot::kComputeConstantBuffer ), vkB( shaderslot::kComputeConstantBuffer ), slotB( shaderslot::kComputeConstantBuffer ) );
-                add( shaderslot::cbname::kAnim, ShaderBindingKind::ConstantBuffer,
+                add( shaderslot::cbname::kAnimation, ShaderBindingKind::ConstantBuffer,
                      slotB( shaderslot::kComputeConstantBuffer ), slotB( shaderslot::kComputeConstantBuffer ), vkB( shaderslot::kComputeConstantBuffer ), slotB( shaderslot::kComputeConstantBuffer ) );
                 // 루트/푸시 상수 블록: DX12 b0 space2, DX11 · GL b2 에뮬. Vulkan 은 푸시 상수라 바인딩 자리가 없다(리플렉션에 안 나온다).
                 add( shaderslot::cbname::kRootConstants, ShaderBindingKind::ConstantBuffer,
@@ -348,7 +348,7 @@ namespace sw
                 add( shaderslot::resname::kCullIndirectArgs, ShaderBindingKind::RwStructuredBuffer, slotB( 0 ), slotB( 0 ), vkU( 0 ), slotB( shaderslot::gl::kUavBinding0 ) );
                 add( shaderslot::resname::kCullVisibleIDs, ShaderBindingKind::RwStructuredBuffer, slotB( 1 ), slotB( 1 ), vkU( 1 ), slotB( shaderslot::gl::kUavBinding0 + 1 ) );
                 // instanceanim 컴퓨트: 인스턴스 버퍼를 u0 으로 고쳐 쓴다.
-                add( shaderslot::resname::kAnimInstancesRw, ShaderBindingKind::RwStructuredBuffer, slotB( 0 ), slotB( 0 ), vkU( 0 ), slotB( shaderslot::gl::kUavBinding0 ) );
+                add( shaderslot::resname::kAnimationInstancesRw, ShaderBindingKind::RwStructuredBuffer, slotB( 0 ), slotB( 0 ), vkU( 0 ), slotB( shaderslot::gl::kUavBinding0 ) );
                 // 엔진 텍스처 슬롯 t0..t3 / 머티리얼 텍스처 t5..t8: 에뮬 백엔드(DX11 · GL)만. Vulkan · DX12 는 선언 자체가 없어야 한다.
                 static string s_arrEngineName[shaderslot::kEngineTextureCount];
                 static string s_arrEngineSamplerName[shaderslot::kEngineTextureCount];

@@ -127,7 +127,7 @@ namespace sw
         void setVertexPoolEnabled( bool bEnabled ) { _vertexPoolOverride = bEnabled ? 1 : 0; }
 #if !defined( SW_SHIPPING )
         /**
-         * @brief 시간으로 구동하는 컴퓨트(인스턴스 애니메이션, 메시 모프)가 읽는 절대 시간(초)을 고정합니다. 음수면 렌더러 시계(`_animTimer`)를 따르며 기본값입니다.
+         * @brief 시간으로 구동하는 컴퓨트(인스턴스 애니메이션, 메시 모프)가 읽는 절대 시간(초)을 고정합니다. 음수면 렌더러 시계(`_animationTimer`)를 따르며 기본값입니다.
          * @details 테스트가 쓴다. 모프 변위는 sin(시간)이라 벽시계로 캡처하면 시각에 따라 이미지가 달라지고, 부하가 걸린 실행에서 픽셀 단언이 흔들린다.
          *          테스트 전용이므로 배포본에서는 바꿀 수 없게 뺀다.
          */
@@ -801,7 +801,7 @@ namespace sw
         void prepareMeshMorphPool();
         /** @brief 지금 적용되는 모프 진단 모드입니다. 오버라이드가 있으면 그 값을, 없으면 `gv_morphDiag` 를 씁니다. */
         int32 getEffectiveMeshMorphDiag() const;
-        /** @brief 시간으로 구동하는 컴퓨트가 읽을 절대 시간(초)입니다. `setAnimationTimeOverride` 로 받은 값(0 이상, 배포본에는 없음)을 쓰고, 없으면 `_animTimer` 의 누적 시간을 씁니다. */
+        /** @brief 시간으로 구동하는 컴퓨트가 읽을 절대 시간(초)입니다. `setAnimationTimeOverride` 로 받은 값(0 이상, 배포본에는 없음)을 쓰고, 없으면 `_animationTimer` 의 누적 시간을 씁니다. */
         float32 getAnimationTime() const;
         /** @brief 씬 배치를 멀티 드로우로 묶을지 반환합니다. `setDrawMergeEnabled` 로 받은 값을 쓰고, 없으면 전역 `gv_drawMerge` 를 씁니다. */
         bool isDrawMergeEnabled() const;

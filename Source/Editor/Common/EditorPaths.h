@@ -19,15 +19,15 @@ namespace sw::editor
          * @brief 에디터가 쓰는 파일 이름입니다. 이름은 코드가 정하고 설정 파일이 바꾸지 않는다. 설정 파일이 자기 위치와
          *        이웃 파일 이름을 정하면 그 설정 파일을 찾는 경로가 순환한다. 임포트 설정 둘만 `Config/Editor`(사람이 쓴다)에 있고, 나머지는 `Saved/Editor`(앱이 쓴다)에 있다.
          */
-        static constexpr const utf8* kImguiIniFileName              = "imgui.ini";
-        static constexpr const utf8* kWindowsIniFileName            = "windows.ini";
-        static constexpr const utf8* kAnimGraphCanvasFileName       = "AnimGraph.json";           ///< 노드 에디터 캔버스 상태
-        static constexpr const utf8* kDialogueGraphCanvasFileName   = "DialogueGraphEditor.json"; ///< 노드 에디터 캔버스 상태
-        static constexpr const utf8* kAnimGraphDocumentFileName     = "AnimGraphData.json";       ///< 경로가 없는 애니메이션 그래프 문서
-        static constexpr const utf8* kDialogueGraphDocumentFileName = "DialogueGraphData.json";   ///< 경로가 없는 대화 그래프 문서
-        static constexpr const utf8* kSpriteClipDocumentFileName    = "SpriteClip.json";          ///< 경로가 없는 스프라이트 클립 문서
-        static constexpr const utf8* kTextureImportConfigFileName   = "TextureImportConfig.json";
-        static constexpr const utf8* kModelImportConfigFileName     = "ModelImportConfig.json";
+        static constexpr const utf8* kImguiIniFileName               = "imgui.ini";
+        static constexpr const utf8* kWindowsIniFileName             = "windows.ini";
+        static constexpr const utf8* kAnimationGraphCanvasFileName   = "AnimationGraph.json";      ///< 노드 에디터 캔버스 상태
+        static constexpr const utf8* kDialogueGraphCanvasFileName    = "DialogueGraphEditor.json"; ///< 노드 에디터 캔버스 상태
+        static constexpr const utf8* kAnimationGraphDocumentFileName = "AnimationGraphData.json";  ///< 경로가 없는 애니메이션 그래프 문서
+        static constexpr const utf8* kDialogueGraphDocumentFileName  = "DialogueGraphData.json";   ///< 경로가 없는 대화 그래프 문서
+        static constexpr const utf8* kSpriteClipDocumentFileName     = "SpriteClip.json";          ///< 경로가 없는 스프라이트 클립 문서
+        static constexpr const utf8* kTextureImportConfigFileName    = "TextureImportConfig.json";
+        static constexpr const utf8* kModelImportConfigFileName      = "ModelImportConfig.json";
         /** @brief 에디터 UI 문구의 로컬라이제이션 프로젝트(리소스 경로)입니다. 에디터가 시작할 때 로드하고 끝날 때 언로드합니다. 엔진 테이블과 따로 있으므로 배포본에 실리지 않습니다. */
         static constexpr const utf8* kLocalizationProject = "editor/localization/editor.locproject.json";
 

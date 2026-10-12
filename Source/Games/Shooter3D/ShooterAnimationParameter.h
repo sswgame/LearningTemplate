@@ -1,5 +1,5 @@
 /**
- * @file ShooterAnimParameter.h
+ * @file ShooterAnimationParameter.h
  * @brief Shooter3D 애니 그래프(knight · skeleton animgraph)의 매개변수 이름과 이동 코드입니다. 플레이어 몸과 적이 같은 그래프 계약을 씁니다.
  */
 #pragma once
@@ -8,10 +8,10 @@
 namespace sw
 {
     /**
-     * @struct ShooterAnimParameter
+     * @struct ShooterAnimationParameter
      * @brief 애니 그래프 데이터의 매개변수 · `Move` 값입니다. 그래프 XML 의 전이 조건과 같은 값이어야 한다(데이터 계약).
      */
-    struct ShooterAnimParameter
+    struct ShooterAnimationParameter
     {
         static constexpr string_view kMove = "Move"; ///< 이동 코드(float) — 아래 kMove* 값
         static constexpr string_view kHit  = "Hit";  ///< 맞음(트리거)

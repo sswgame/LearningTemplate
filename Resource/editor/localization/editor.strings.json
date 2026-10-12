@@ -842,100 +842,100 @@
                 "Source/Editor/Viewport/EditorViewportToolbar.cpp"
             ]
         },
-        "EditorAnimGraph.AddAttackTip": {
+        "EditorAnimationGraph.AddAttackTip": {
             "source": "Add an Attack state node. Its name is the clip it plays; rename it in the inspector.",
             "origins": [
-                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+                "Source/Editor/Panels/Animation/AnimationGraphPanel.cpp"
             ]
         },
-        "EditorAnimGraph.AddIdleTip": {
+        "EditorAnimationGraph.AddIdleTip": {
             "source": "Add an Idle state node. Its name is the clip it plays; rename it in the inspector.",
             "origins": [
-                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+                "Source/Editor/Panels/Animation/AnimationGraphPanel.cpp"
             ]
         },
-        "EditorAnimGraph.AddWalkTip": {
+        "EditorAnimationGraph.AddWalkTip": {
             "source": "Add a Walk state node. Its name is the clip it plays; rename it in the inspector.",
             "origins": [
-                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+                "Source/Editor/Panels/Animation/AnimationGraphPanel.cpp"
             ]
         },
-        "EditorAnimGraph.AdvanceTip": {
+        "EditorAnimationGraph.AdvanceTip": {
             "source": "Step the preview to the next state by one transition.",
             "origins": [
-                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+                "Source/Editor/Panels/Animation/AnimationGraphPanel.cpp"
             ]
         },
-        "EditorAnimGraph.ConditionOpTip": {
+        "EditorAnimationGraph.ConditionOpTip": {
             "source": "How the parameter is compared with Value. (on finish) moves on when the clip ends; Trigger fires once when the parameter is set.",
             "origins": [
-                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+                "Source/Editor/Panels/Animation/AnimationGraphPanel.cpp"
             ]
         },
-        "EditorAnimGraph.ConditionParamTip": {
+        "EditorAnimationGraph.ConditionParamTip": {
             "source": "Graph parameter the condition reads (set by game code through the player)",
             "origins": [
-                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+                "Source/Editor/Panels/Animation/AnimationGraphPanel.cpp"
             ]
         },
-        "EditorAnimGraph.ConditionValueTip": {
+        "EditorAnimationGraph.ConditionValueTip": {
             "source": "The threshold the parameter is compared against.",
             "origins": [
-                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+                "Source/Editor/Panels/Animation/AnimationGraphPanel.cpp"
             ]
         },
-        "EditorAnimGraph.ContextCreateFailed": {
+        "EditorAnimationGraph.ContextCreateFailed": {
             "source": "Failed to create Animation Graph editor context.",
             "origins": [
-                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+                "Source/Editor/Panels/Animation/AnimationGraphPanel.cpp"
             ]
         },
-        "EditorAnimGraph.LinkSelectedTip": {
+        "EditorAnimationGraph.LinkSelectedTip": {
             "source": "Add a transition between the two selected nodes, from the first selected to the second. Click one node, then Ctrl+click the other.",
             "origins": [
-                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+                "Source/Editor/Panels/Animation/AnimationGraphPanel.cpp"
             ]
         },
-        "EditorAnimGraph.LoadTip": {
+        "EditorAnimationGraph.LoadTip": {
             "source": "Reload the graph from disk, discarding unsaved edits.",
             "origins": [
-                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+                "Source/Editor/Panels/Animation/AnimationGraphPanel.cpp"
             ]
         },
-        "EditorAnimGraph.PlayTip": {
+        "EditorAnimationGraph.PlayTip": {
             "source": "Preview the graph from the entry state, stepping to the next state every 0.75 seconds. Use it to check the transition order.",
             "origins": [
-                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+                "Source/Editor/Panels/Animation/AnimationGraphPanel.cpp"
             ]
         },
-        "EditorAnimGraph.SaveTip": {
+        "EditorAnimationGraph.SaveTip": {
             "source": "Write the graph and its node layout to the asset file.",
             "origins": [
-                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+                "Source/Editor/Panels/Animation/AnimationGraphPanel.cpp"
             ]
         },
-        "EditorAnimGraph.StateClipTip": {
+        "EditorAnimationGraph.StateClipTip": {
             "source": "The state's clip name - the player plays the clip with this name",
             "origins": [
-                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+                "Source/Editor/Panels/Animation/AnimationGraphPanel.cpp"
             ]
         },
-        "EditorAnimGraph.StateLoopTip": {
+        "EditorAnimationGraph.StateLoopTip": {
             "source": "Whether this state's clip repeats. Default keeps the clip's own loop setting.",
             "origins": [
-                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+                "Source/Editor/Panels/Animation/AnimationGraphPanel.cpp"
             ]
         },
-        "EditorAnimGraph.StopTip": {
+        "EditorAnimationGraph.StopTip": {
             "source": "Stop the preview.",
             "origins": [
-                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+                "Source/Editor/Panels/Animation/AnimationGraphPanel.cpp"
             ]
         },
-        "EditorAnimGraph.TransitionBlendTip": {
+        "EditorAnimationGraph.TransitionBlendTip": {
             "source": "Crossfade seconds; below zero uses the player default",
             "origins": [
-                "Source/Editor/Panels/Animation/AnimGraphPanel.cpp"
+                "Source/Editor/Panels/Animation/AnimationGraphPanel.cpp"
             ]
         },
         "EditorAnimationRewind.AllTracksTip": {

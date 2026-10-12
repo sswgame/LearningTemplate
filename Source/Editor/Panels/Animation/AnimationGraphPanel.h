@@ -5,19 +5,19 @@
 
 #include "Editor/Common/GUI/EditorGraphDocumentPanel.h"
 
-#include "Engine/Animation/Graph/AnimGraphAsset.h"
-#include "Engine/Animation/Graph/AnimGraphPlayer.h"
+#include "Engine/Animation/Graph/AnimationGraphAsset.h"
+#include "Engine/Animation/Graph/AnimationGraphPlayer.h"
 
 namespace sw::editor
 {
     /** @brief imgui-node-editor 로 만든 애니메이션 그래프 편집 패널입니다. */
-    class AnimGraphPanel : public EditorGraphDocumentPanel<AnimGraphAsset>
+    class AnimationGraphPanel : public EditorGraphDocumentPanel<AnimationGraphAsset>
     {
     public:
         /** @brief 애니메이션 그래프 도구를 생성합니다. */
-        AnimGraphPanel();
+        AnimationGraphPanel();
         /** @brief 노드 에디터 컨텍스트를 해제합니다. */
-        virtual ~AnimGraphPanel() override = default;
+        virtual ~AnimationGraphPanel() override = default;
 
         // ------------------------------------------------------------------------------
         // 1) IEditorPanel: 제목과 그리기
@@ -30,9 +30,9 @@ namespace sw::editor
         /** @brief 노드 그래프 캔버스를 그립니다. */
         void               drawAnimationCanvas();
         [[nodiscard]] bool saveDocument() override;
-        /** @brief 조건이 있는 전이 수를 반환합니다. 프로브 `Editor.AnimGraphConditionCount` 가 읽습니다. */
+        /** @brief 조건이 있는 전이 수를 반환합니다. 프로브 `Editor.AnimationGraphConditionCount` 가 읽습니다. */
         uint32 countConditionLinks() const;
-        /** @brief 전이 수를 반환합니다. 프로브 `Editor.AnimGraphLinkCount` 가 읽습니다. */
+        /** @brief 전이 수를 반환합니다. 프로브 `Editor.AnimationGraphLinkCount` 가 읽습니다. */
         uint32 getLinkCount() const { return static_cast<uint32>( _listLink.size() ); }
 
     private:
@@ -68,15 +68,15 @@ namespace sw::editor
         void duplicateNode( int32 nodeID );
 
     private:
-        AnimGraphAsset  _previewGraph;        ///< 미리보기 플레이어가 빌려 쓰는 그래프 복사본이다
-        AnimGraphPlayer _previewPlayer;       ///< 노드 이름만 넘긴다. 클립 없이 "끝나면 다음" 을 직접 진행한다
-        string          _previewStateName;    ///< 지난번 미리보기 상태다. 전이 흐름을 표시하는 데 쓴다
-        string          _nameEditBuffer;      ///< 상태 이름 입력란의 텍스트
-        string          _parameterEditBuffer; ///< 조건 파라미터 입력란의 텍스트
-        vector<int32>   _listSelectionOrder;  ///< 캔버스에서 선택한 노드를 선택한 순서대로 담는다
-        int32           _selectedNodeID;
-        int32           _selectedLinkID;
-        int32           _canvasLinkID; ///< 지난 프레임에 캔버스에서 선택한 링크다. 바뀐 때만 따라간다
-        int32           _flowLinkID;   ///< 다음 캔버스에서 흐름을 보여 줄 전이다. 0 이면 없다
+        AnimationGraphAsset  _previewGraph;        ///< 미리보기 플레이어가 빌려 쓰는 그래프 복사본이다
+        AnimationGraphPlayer _previewPlayer;       ///< 노드 이름만 넘긴다. 클립 없이 "끝나면 다음" 을 직접 진행한다
+        string               _previewStateName;    ///< 지난번 미리보기 상태다. 전이 흐름을 표시하는 데 쓴다
+        string               _nameEditBuffer;      ///< 상태 이름 입력란의 텍스트
+        string               _parameterEditBuffer; ///< 조건 파라미터 입력란의 텍스트
+        vector<int32>        _listSelectionOrder;  ///< 캔버스에서 선택한 노드를 선택한 순서대로 담는다
+        int32                _selectedNodeID;
+        int32                _selectedLinkID;
+        int32                _canvasLinkID; ///< 지난 프레임에 캔버스에서 선택한 링크다. 바뀐 때만 따라간다
+        int32                _flowLinkID;   ///< 다음 캔버스에서 흐름을 보여 줄 전이다. 0 이면 없다
     };
 } // namespace sw::editor
