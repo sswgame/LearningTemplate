@@ -471,6 +471,10 @@
   GameFramework 는 Base 의 짧은 헤더 약 230 개와 .cpp · .inl, Kits/Feature 의 옛 어휘(꼬리표, 그새, 거두다, 짓다)가 남은 약 35 개(Network · Online · Voxel 등), Kits/Feature/Online 의 Account 밖 폴더다.
   Core 는 Math, File, Process, Delegate, Memory, Diagnostics, CommandLine, Container, Task, Network 나머지, LogSink, String 이다. RuntimeAPI 는 손대지 않았다. Games 는 Empty 벤치 씬 일부와 VoxelCraft 전체다.
   '시험' → '테스트' 는 `Scripts/**` · `Test/**` · `docs/Config/**` 278 곳과 셰이더 주석 2 곳(`waterwaveprobe.hlsl` · `lighting2d.hlsli` — 바꾸면 `App --cook-shaders` 로 다시 쿠킹)이 남았다.
+- **다음 이름 점검**(2026-10-13 이름 점검에서 남긴 것). 기준은 [AGENTS.md](../AGENTS.md) "Class suffixes" 절과 [결정 기록](09_Decisions.md) 5-1 이다. 아직 보지 않은 것:
+  ① `Context` 접미어 타입이 무엇을 담는지, ② `*Util` 정적 클래스 중 한 타입의 메서드가 된 것이 나은 것,
+  ③ `Unit` 계열(812 회), ④ 남은 지역 · 멤버 변수 단독 `value` 약 50 곳,
+  ⑤ `Settings` · `Config` 접미어(`NetHostSettings` 등)를 고르는 기준.
 
 ### 1-10. 관찰 중 — 다시 보이면 원인을 판다
 
