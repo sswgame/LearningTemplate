@@ -83,14 +83,14 @@ namespace sw
                 return true;
             }
 
-            /** @brief 보이는 시점의 카메라입니다 — 에디터 카메라가 있으면 그것, 없으면 활성 게임 카메라. */
+            /** @brief 보이는 시점의 카메라입니다 — 뷰포트 카메라(`CameraRole::Viewport`)가 있으면 그것, 없으면 활성 게임 카메라. */
             static CameraComponent* findViewCamera( Scene& scene )
             {
                 if ( scene.getObjectManager() != nullptr )
                 {
                     for ( CameraComponent* pCamera : scene.getObjectManager()->getCameraRegistry().getAll() )
                     {
-                        if ( pCamera != nullptr && pCamera->getRole() == CameraRole::Editor && CameraRegistry::isUsableCamera( pCamera ) )
+                        if ( pCamera != nullptr && pCamera->getRole() == CameraRole::Viewport && CameraRegistry::isUsableCamera( pCamera ) )
                             return pCamera;
                     }
                 }

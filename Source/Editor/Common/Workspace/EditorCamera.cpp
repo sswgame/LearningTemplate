@@ -20,7 +20,7 @@ namespace sw::editor
 
             static CameraComponent* createEditorCamera( GameObjectManager* pObjectManager )
             {
-                return CameraComponent::findOrCreateNamed( pObjectManager, hashed_string{ kEditorCameraObjectName }, CameraRole::Editor,
+                return CameraComponent::findOrCreateNamed( pObjectManager, hashed_string{ kEditorCameraObjectName }, CameraRole::Viewport,
                                                            float3( 2.15f, 1.55f, 2.65f ), float3( 0.0f, 0.0f, 0.0f ) );
             }
         };
@@ -39,7 +39,7 @@ namespace sw::editor
 
         // 레지스트리의 규칙(역할 · 우선순위) 하나로 고른다. 프레임마다 세 번(뷰포트 update · draw, 게임 스레드의 뷰 카메라) 불리는 자리라
         // 씬 전체를 돌며 오브젝트마다 `getComponent<CameraComponent>()` 를 묻지 않는다.
-        CameraComponent* pBest = pObjectManager->getCameraRegistry().selectCamera( CameraRole::Editor );
+        CameraComponent* pBest = pObjectManager->getCameraRegistry().selectCamera( CameraRole::Viewport );
         if ( pBest != nullptr )
             return pBest;
 
@@ -47,7 +47,7 @@ namespace sw::editor
         if ( pNamed == nullptr )
             return nullptr;
         CameraComponent* pNamedCam = pNamed->getComponent<CameraComponent>();
-        if ( pNamedCam == nullptr || pNamedCam->getRole() != CameraRole::Editor )
+        if ( pNamedCam == nullptr || pNamedCam->getRole() != CameraRole::Viewport )
             return nullptr;
         return pNamedCam;
     }

@@ -3,8 +3,8 @@
  * @brief 카메라 컴포넌트의 레지스트리입니다. 역할 · 우선순위로 카메라를 고르는 규칙도 여기 하나입니다.
  *
  * [왜 필요한가]
- * `ComponentRegistry` 와 같은 이유입니다. **찾지 말고 등록받습니다.** 게임 카메라(`Scene`)와 에디터 카메라(`EditorCamera`)가 같은
- * 규칙 하나(`selectCamera`)로 고릅니다. 모든 GameObject 를 돌며 `getComponent<CameraComponent>()` 를 물으면 에디터 카메라
+ * `ComponentRegistry` 와 같은 이유입니다. **찾지 말고 등록받습니다.** 게임 카메라(`Scene`)와 뷰포트 카메라(`CameraRole::Viewport`)가 같은
+ * 규칙 하나(`selectCamera`)로 고릅니다. 모든 GameObject 를 돌며 `getComponent<CameraComponent>()` 를 물으면 뷰포트 카메라
  * 조회만으로 프레임마다 세 번(뷰포트 update · draw, 게임 스레드의 뷰 카메라) 씬 전체를 훑고, 한 번 골라 캐시하면 나중에 생긴
  * 더 높은 우선순위의 카메라나 꺼진 카메라를 따라가지 못합니다.
  */
@@ -49,7 +49,7 @@ namespace sw
         /**
          * @brief 역할 @p role 의 켜진 카메라 중 우선순위가 가장 높은 것입니다. 같으면 컴포넌트 id 가 큰(나중에 만든) 것이 이깁니다 — 되돌리기 ·
          *        플레이 종료 복원이 id 를 복원하므로 편집 이력과 무관합니다. 없으면 nullptr 입니다.
-         * @details 게임 카메라(`Scene::ensureDefaultCameras`)와 에디터 카메라(`EditorCamera::find`)가 함께 쓰는 **하나의** 규칙입니다.
+         * @details 게임 카메라(`Scene::ensureDefaultCameras`)와 도구의 뷰포트 카메라(`CameraRole::Viewport`)가 함께 쓰는 **하나의** 규칙입니다.
          *          켜짐은 `isUsableCamera` 입니다. 출력이 주 시점이 아닌 카메라(화면 사각형 · 렌더 텍스처)는 고르지 않습니다 — 그것들은 자기 출력의 추가 뷰다.
          */
         CameraComponent* selectCamera( CameraRole role ) const;
