@@ -106,9 +106,20 @@ namespace sw
                     }
                     case RenderPassType::Bloom:
                     {
+                        // BloomBright(반해상도 밝은 부분)를 선언하면 그것을 업샘플해 더하고, 없으면 원본에서 밝은 부분을 직접 구한다.
                         info._pDefaultShader = &EngineDefaultAssets::_shaderPostBloom;
-                        info._inputContract  = makeContract( { Role::SourceColor }, { Role::AmbientOcclusion } );
+                        info._inputContract  = makeContract( { Role::SourceColor }, { Role::AmbientOcclusion, Role::BloomBright } );
                         info._flags          = Flag::kGenericFullscreen | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess;
+                        break;
+                    }
+                    case RenderPassType::BloomDownsample:
+                    {
+                        // 출력은 반해상도 첨부다(파이프라인이 `_resolutionDivisor` 로 정한다). 후처리를 끈 뷰에서는 셰이더가 0 을 낸다 —
+                        // 원본을 복사하는 kSkipsWithoutPostProcess 는 크기가 다른 출력에 맞지 않는다.
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderPostBloom;
+                        info._pPassDefine    = kPassBloomDownsampleDefine;
+                        info._inputContract  = makeContract( { Role::SourceColor }, {} );
+                        info._flags          = Flag::kGenericFullscreen | Flag::kHasInputContract;
                         break;
                     }
                     case RenderPassType::Outline:

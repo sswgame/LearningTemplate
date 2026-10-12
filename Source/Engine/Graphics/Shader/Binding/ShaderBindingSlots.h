@@ -108,6 +108,7 @@ namespace sw
         inline constexpr uint32 kPassFlagNativeBindless = SW_PASS_FLAG_NATIVE_BINDLESS;
         inline constexpr uint32 kPassFlagSkipPost       = SW_PASS_FLAG_SKIP_POST;
         inline constexpr uint32 kPassFlagSkipTonemap    = SW_PASS_FLAG_SKIP_TONEMAP;
+        inline constexpr uint32 kPassFlagPointUpscale   = SW_PASS_FLAG_POINT_UPSCALE;
         /// @brief 2D 그림자 가림막 토막 원소의 종류입니다. 빛 종류가 아니라서(레지스트리 슬롯이 없다) `kLightTypeCount` 밖에 있습니다.
         inline constexpr uint32 kLightTypeShadow2D = SW_LIGHT_TYPE_SHADOW2D;
         /// @brief 한 프레임에 GPU 로 보내는 라이트 수의 상한입니다. 넘으면 엔진이 잘라서 보내고 경고합니다.

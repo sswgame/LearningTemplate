@@ -138,3 +138,47 @@ SW_TEST_CASE( TileGridUtilTest, NavCostsDriveTheGridPathfinder )
     SW_EXPECT_FALSE( bCrossesWall );
     SW_EXPECT_TRUE( bUsesBottomRow );
 }
+
+/**
+ * @brief [TileGridUtilTest] 청크 배치는 맵을 한 변 N 칸 청크로 행 우선 나누고, 끝 청크는 남은 칸만큼 작으며, 칸의 청크 안 번호는 그 청크의 실제 폭으로 센다
+ * @details 70 x 40 맵 · 청크 32 — 청크 3 x 2. 오른쪽 끝 청크는 폭 6, 아래 끝은 높이 8 이다. 칸 (69, 39) 는 마지막 청크(5)의 (5, 7) 이라 청크 안 번호 7 x 6 + 5 = 47.
+ */
+SW_TEST_CASE( TileGridUtilTest, ChunkGridSplitsTheMapRowMajorWithShorterEdgeChunks )
+{
+    const sw::TileChunkGrid grid = sw::TileChunkGrid::make( 70, 40, 32 );
+    SW_EXPECT_EQUAL( 3, grid._countX );
+    SW_EXPECT_EQUAL( 2, grid._countY );
+    SW_EXPECT_EQUAL( 6, grid.getChunkCount() );
+    SW_EXPECT_EQUAL( 0, grid.computeChunkIndex( 0, 0 ) );
+    SW_EXPECT_EQUAL( 2, grid.computeChunkIndex( 64, 0 ) );
+    SW_EXPECT_EQUAL( 5, grid.computeChunkIndex( 69, 39 ) );
+    const sw::TileRect edge = grid.computeChunkRect( 5 );
+    SW_EXPECT_EQUAL( 64, edge._x );
+    SW_EXPECT_EQUAL( 32, edge._y );
+    SW_EXPECT_EQUAL( 6, edge._width );
+    SW_EXPECT_EQUAL( 8, edge._height );
+    SW_EXPECT_EQUAL( 47u, grid.computeEntryIndex( 69, 39 ) );
+    SW_EXPECT_EQUAL( 33u, grid.computeEntryIndex( 33, 1 ) ); // 청크 1 의 (1, 1) — 폭 32
+    // 모든 칸이 꼭 한 청크의 한 번호에 들어간다(청크 안 번호는 그 청크의 칸 수보다 작고, 겹치지 않는다).
+    constexpr uint32  kEntryStride = 32u * 32u;
+    sw::vector<uint8> listSeen( static_cast<size_t>( grid.getChunkCount() ) * kEntryStride, 0 );
+    uint32            duplicateCount{ 0 };
+    uint32            outsideCount{ 0 };
+    for ( int32 y = 0; y < 40; ++y )
+    {
+        for ( int32 x = 0; x < 70; ++x )
+        {
+            const int32        chunkIndex = grid.computeChunkIndex( x, y );
+            const sw::TileRect rect       = grid.computeChunkRect( chunkIndex );
+            const uint32       entry      = grid.computeEntryIndex( x, y );
+            if ( entry >= static_cast<uint32>( rect._width * rect._height ) )
+                ++outsideCount;
+            const size_t slot = static_cast<size_t>( chunkIndex ) * kEntryStride + entry;
+            if ( listSeen[slot] != 0 )
+                ++duplicateCount;
+            listSeen[slot] = 1;
+        }
+    }
+    SW_EXPECT_EQUAL( 0u, outsideCount );
+    SW_EXPECT_EQUAL( 0u, duplicateCount );
+}

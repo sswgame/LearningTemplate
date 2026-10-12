@@ -843,17 +843,26 @@ namespace sw
          */
         bool dispatchCullView( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount, const ViewTarget* pExtraView );
         /**
-         * @brief 머티리얼이 없는 배치에 바인딩하는, 0 으로 채운 원소 하나짜리 구조 버퍼입니다. **stride 마다 하나**씩 있습니다.
+         * @brief 머티리얼이 없는 배치에 바인딩하는 원소 하나짜리 구조 버퍼입니다. **내용이 다른 원소마다 하나**씩 있습니다.
          * @details DX12 에서 아무것도 바인딩하지 않은 t9 를 읽으면 GPU 폴트(디바이스 제거)가 난다. 어떤 드로우도 빈 슬롯으로
          *          나가지 않도록 항상 유효한 버퍼를 바인딩한다. 언리얼의 기본 머티리얼에 해당한다.
          *
          *          언리얼이 RDG 더미 버퍼를 `CreateStructuredDesc( sizeof( FElement ), 1 )` 로 만드는 것과 같은 방식이다.
          *          주의: 고정 크기 원소 하나를 모든 셰이더에 공용으로 바인딩하면 셰이더의 `SwMaterialData` stride 와 어긋나
          *          DX11 디버그 레이어가 드로우마다 "structure stride 256 vs 24" 같은 경고를 낸다.
+         *          원소는 0 이지만 텍스처 인덱스 필드만 `kInvalidDescriptorIndex` 다(`MaterialUtil::makeFallbackElement`). 0 은 Vulkan 의 첫 실제
+         *          텍스처 · DX11 · GL 의 머티리얼 텍스처 서수 0 이라, 0 으로 두면 백엔드마다 다른 텍스처를 읽는다.
          *
-         *          키는 stride 다. 셋업(ensureMaterialFallbackBuffers)에서만 만들고 기록 중에는 조회만 한다.
+         *          셋업(ensureMaterialFallbackBuffers)에서만 만들고 기록 중에는 조회만 한다.
          */
-        unordered_map<uint32, RHIStructuredBufferSlot> _mapMaterialFallback;
+        struct MaterialFallback
+        {
+            vector<uint8>           _bytes;
+            RHIStructuredBufferSlot _buffer;
+        };
+        vector<MaterialFallback> _listMaterialFallback;
+        /// @brief 바인딩 레이아웃 → `_listMaterialFallback` 순번입니다. 레이아웃은 `_psoCache` 가 소유하며 PSO 마다 하나입니다.
+        unordered_map<const ShaderBindingLayout*, uint32> _mapLayoutMaterialFallback;
         /// @brief 순번 테이블이 없는 뷰(주 시점, 그림자)의 정렬 디스패치가 t2 에 바인딩하는 원소 하나짜리 자리 표시 버퍼입니다. 셰이더는 플래그(`g_UseViewRank`)가 0 이면 읽지 않습니다.
         RHIStructuredBufferSlot _transparentRankPlaceholder;
         /// @brief 엔진 패스 PSO, Present PSO, 머티리얼 변형과 그 바인딩 레이아웃입니다. 소유와 해제 순서는 캐시가 관리합니다.
@@ -879,7 +888,13 @@ namespace sw
         vector<CanvasTargetState> _listCanvasTarget;
         uint32                    _lastDrawnCanvasTargetCount;
         /// @brief Swapchain 을 쓰는 마지막 패스입니다. 선언 순서 기준이며, 그래프가 같은 출력에 대한 쓰기를 선언 순서로 연결합니다. 콜백을 바인딩할 때 정합니다.
-        const RenderGraphPassDesc*  _pLastSwapchainWriter;
+        const RenderGraphPassDesc* _pLastSwapchainWriter;
+        /**
+         * @brief 이번 프레임에 주 출력의 캔버스(화면 2D)를 그리는 뷰입니다. 주 출력에 마지막으로 그리는 뷰(마지막 화면 사각형 뷰, 없으면 주 시점)입니다.
+         * @details 화면 사각형 뷰(PiP · 분할 화면)는 주 시점 뒤에 같은 출력에 겹쳐 그리므로, 주 시점의 Canvas 패스가 UI 를 그리면 그 뷰가 UI 를 덮는다.
+         *          언리얼이 모든 장면 뷰 뒤에 Slate 를 한 번 그리는 것과 같은 순서로, 마지막 뷰의 Canvas 패스만 UI 를 그린다. `submitGraph` 가 기록 전에 정한다.
+         */
+        const ViewTarget*           _pMainOutputCanvasView;
         string                      _statusMessage;
         RenderGraphExecutionContext _graphContext;
 

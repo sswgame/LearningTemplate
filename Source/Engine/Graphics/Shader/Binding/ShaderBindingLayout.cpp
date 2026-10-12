@@ -141,7 +141,10 @@ namespace sw
                 {
                     const bool bStructured = ( slot._kind == ShaderBindingKind::StructuredBuffer || slot._kind == ShaderBindingKind::RwStructuredBuffer );
                     if ( bStructured && slot._name == name && slot._elementStride == 0 )
-                        slot._elementStride = element._totalSize;
+                    {
+                        slot._elementStride     = element._totalSize;
+                        slot._listElementMember = element._listVariable;
+                    }
                 }
             }
         }

@@ -47,6 +47,8 @@ namespace sw
          *          레이아웃은 여전히 디바이스 백엔드로 빌드한 것을 씁니다.
          */
         uint32 _elementStride{ 0 };
+        /// @brief StructuredBuffer<T> 원소의 멤버(이름 · 타입 · 오프셋)입니다. `_elementStride` 와 같이 채웁니다. 머티리얼 폴백 원소가 텍스처 인덱스 필드를 찾는 데 씁니다.
+        vector<ShaderVariableInfo> _listElementMember;
     };
 } // namespace sw
 

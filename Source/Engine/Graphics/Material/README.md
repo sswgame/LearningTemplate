@@ -58,6 +58,8 @@ MeshComponent  ──▶  GPUSceneBuilder 가 머티리얼 원소로 모아 셰�
 
 `.material` 파일의 루트는 `MaterialDesc` 이고, `shaderPath`, `blendMode`, `_properties`, `_permutations` 를 가집니다. 읽고 쓰는 코드는 `MaterialXML.cpp` 에 있습니다.
 블렌드 모드는 `Opaque` 와 `Transparent` 두 가지입니다. 반투명 머티리얼은 `blendMode="Transparent"` 와 함께 `_alwaysDefines` 에 `MATERIAL_BLEND_TRANSLUCENT` 를 넣습니다.
+`forwardlit.hlsl` 머티리얼은 `_alwaysDefines` 에 `MATERIAL_WORLD_UV` 를 넣으면 메시 UV 대신 월드 위치로 알베도를 읽습니다(트라이플래너, 텍스처 한 장이 1 m).
+블록아웃용 `prototypegrid_*.material` 이 이것을 써서 메시 크기와 상관없이 한 칸이 1 m 입니다(언리얼 `WorldGridMaterial`).
 
 에셋 형식이 바뀌었는지는 `AssetFormatRegistry::upgradeXMLWithActiveRegistry` 가 판단합니다. 씬, 프리팹과 같은 경로이고 `AssetManager` 없이 돕니다.
 다만 본문의 enum 글을 해석하려면 `TypeRegistry` 가 필요합니다.

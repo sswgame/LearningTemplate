@@ -44,9 +44,12 @@ namespace sw
         _outputHeight = height;
 
         // 주 시점의 풀은 출력 × 사각형 × 해상도 배율이다(분할 화면의 한 칸 · 낮춘 해상도). 비율을 지키려고 둘 다 같은 배율로 줄인다.
+        // 정수 업스케일이면 사각형 픽셀 / 배율(내림)이다 — Present 가 그 배로 키운다.
         const RenderViewSettings& settings   = _mainView._settings;
-        const uint32              poolWidth  = MathUtil::max( 1u, static_cast<uint32>( static_cast<float32>( width ) * settings._screenRect._z * settings._resolutionScale + 0.5f ) );
-        const uint32              poolHeight = MathUtil::max( 1u, static_cast<uint32>( static_cast<float32>( height ) * settings._screenRect._w * settings._resolutionScale + 0.5f ) );
+        const uint32              poolWidth  = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( width ) * settings._screenRect._z,
+                                                                                         settings._resolutionScale, settings._upscaleZoom );
+        const uint32              poolHeight = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( height ) * settings._screenRect._w,
+                                                                                         settings._resolutionScale, settings._upscaleZoom );
         if ( ensureViewTransients( _mainView, poolWidth, poolHeight ) )
             publishRenderTargets();
         _presentCapture.ensure( _pDevice, _outputWidth, _outputHeight );

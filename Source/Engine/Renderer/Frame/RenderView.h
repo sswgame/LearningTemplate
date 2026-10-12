@@ -106,6 +106,12 @@ namespace sw
         uint8          _bPostProcess{ SW_TRUE };              ///< 후처리(블룸, 외곽선, 톤맵, TAA)를 적용한다.
         uint8          _bCut{ SW_FALSE };                     ///< 이번 프레임에 화면이 끊겼다(언리얼 `bCameraCut`). TAA 히스토리를 버린다.
         RenderViewMode _viewMode{ RenderViewMode::Lit };      ///< 이 뷰의 보기 모드(에디터 씬 뷰만 바꾸고, 게임 뷰는 Lit 이다).
+        /**
+         * @brief 정수 업스케일 배율입니다(0 = 끔). N 이면 내부 해상도가 사각형 픽셀 / N(내림)이고 Present 가 점 샘플로 N 배 키워 사각형 가운데에 놓는다.
+         * @details 픽셀 아트의 Upscale Render Texture(유니티 Pixel Perfect Camera) — 낮은 해상도에서 그려 자산 픽셀이 화면 픽셀 N × N 으로 고르게 커진다.
+         *          해상도 배율(`_resolutionScale`)은 보지 않는다. 주 시점은 남는 띠를 검게 지우고, 화면 사각형 뷰는 아래 그림을 남긴다.
+         */
+        uint8 _upscaleZoom{ 0 };
 
         /** @brief 사각형이 출력 전체인지 나타냅니다. */
         bool isFullRect() const { return _screenRect._x <= 0.0f && _screenRect._y <= 0.0f && _screenRect._z >= 1.0f && _screenRect._w >= 1.0f; }

@@ -101,3 +101,79 @@ SW_TEST_CASE( TileMapRendererTest, TilesDrawRepaintAndBuildColliders )
     pTiles->onEndPlay();
     SW_EXPECT_EQUAL( 0u, pTiles->getPhysicsBodyCount() );
 }
+
+/**
+ * @brief [TileMapRendererTest] 큰 레이어(300 × 300 — 65536 칸을 넘는다)는 청크로 나뉘고 칠한 칸이 있는 청크만 배치를 만들며, 빈 청크에 칠하면 그 청크가 생긴다
+ * @details 청크 한 변 32 칸이라 10 × 10 청크다. 맞은편 모서리 두 칸만 칠하면 배치 둘 · 인스턴스 둘이다(칸마다 항목을 들면 9 만 항목). 가운데에 칠하면 배치 셋 ·
+ *          인스턴스 셋이다(틱 밖이라 바로 만든다). 유니티 Tilemap 의 Chunk 모드와 같다.
+ */
+SW_TEST_CASE( TileMapRendererTest, LargeLayerBuildsOnlyPaintedChunks )
+{
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    sw::Scene scene( "TileMapChunkScene" );
+    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    sw::GameObjectManager* pManager = scene.getObjectManager();
+    sw::GameObject*        pObject  = pManager->createGameObject( sw::hashed_string( "BigLevel" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    SW_ASSERT_NOT_NULL( pObject->addComponent<sw::SceneComponent>() );
+    sw::TileMapRendererComponent* pTiles = pObject->addComponent<sw::TileMapRendererComponent>();
+    SW_ASSERT_NOT_NULL( pTiles );
+
+    sw::TileSetAsset tileSet;
+    SW_ASSERT_TRUE( tileSet.loadFromXMLText( kRendererTileSetXML, "<test>" ) );
+    sw::TileMapXMLData map;
+    SW_ASSERT_TRUE( map.resetTiles( 300, 300 ) );
+    map._tileSetPath = "engine/tilesets/test.tileset.xml";
+    SW_ASSERT_TRUE( map.setTileBrush( 0, 0, "ground" ) );
+    SW_ASSERT_TRUE( map.setTileBrush( 299, 299, "ground" ) );
+    pTiles->setTileMapData( map, tileSet );
+    SW_ASSERT_TRUE( pTiles->rebuild() );
+    SW_EXPECT_EQUAL( 100u, pTiles->getChunkCount() );
+    SW_EXPECT_EQUAL( 2u, pTiles->getBuiltChunkCount() );
+
+    sw::GPUSceneBuilder builder;
+    builder.populateFromScene( &scene, sw::float3{ 0.0f, 0.0f, -10.0f } );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( builder.getInstances().size() ) );
+
+    SW_ASSERT_TRUE( pTiles->setTileBrush( 150, 150, "ground" ) );
+    SW_EXPECT_EQUAL( 3u, pTiles->getBuiltChunkCount() );
+    builder.populateFromScene( &scene, sw::float3{ 0.0f, 0.0f, -10.0f } );
+    SW_EXPECT_EQUAL( 3u, static_cast<uint32>( builder.getInstances().size() ) );
+    // 마지막 청크의 칸도 제자리에 놓인다(끝 청크는 폭 12 — 청크 안 번호가 그 폭으로 세어진다).
+    const sw::float3 corner = pTiles->computeCellCenter( 299, 299 );
+    bool             bCornerFound{ false };
+    for ( const sw::GPUInstance& instance : builder.getInstances() )
+    {
+        if ( sw::MathUtil::abs( instance._boundsCenter._x - corner._x ) < 1e-3f && sw::MathUtil::abs( instance._boundsCenter._y - corner._y ) < 1e-3f )
+            bCornerFound = true;
+    }
+    SW_EXPECT_TRUE( bCornerFound );
+    pTiles->onEndPlay();
+}
+
+/**
+ * @brief [TileMapRendererTest] 편집 중 미리보기 — 맵 경로를 바꾸면(에디터 속성 창과 같은 길) 플레이 없이 그리기 배치가 생기고 물리 바디는 만들지 않는다
+ * @details 언리얼 · 유니티의 타일맵처럼 편집 중에도 보여야 칠하고 배치할 수 있다. 바디는 플레이 시작(`onBeginPlay` → `rebuild`)만 만든다.
+ */
+SW_TEST_CASE( TileMapRendererTest, EditorPreviewDrawsWithoutPlay )
+{
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    sw::Scene scene( "TileMapPreviewScene" );
+    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    sw::GameObjectManager* pManager = scene.getObjectManager();
+    sw::GameObject*        pObject  = pManager->createGameObject( sw::hashed_string( "PreviewLevel" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    SW_ASSERT_NOT_NULL( pObject->addComponent<sw::SceneComponent>() );
+    sw::TileMapRendererComponent* pTiles = pObject->addComponent<sw::TileMapRendererComponent>();
+    SW_ASSERT_NOT_NULL( pTiles );
+
+    pTiles->setTileMapPath( "game/empty/maps/twod.tilemap.xml" );
+    pTiles->onPropertyChanged( sw::hashed_string( "_tileMapPath" ) );
+    if ( pTiles->getTileMap()._width == 0 )
+        SW_TEST_SKIP( "game/empty/maps/twod.tilemap.xml is not available in this resource layout" );
+    SW_EXPECT_TRUE( pTiles->getBuiltChunkCount() > 0 );
+    SW_EXPECT_EQUAL( 0u, pTiles->getPhysicsBodyCount() );
+    sw::GPUSceneBuilder builder;
+    builder.populateFromScene( &scene, sw::float3{ 0.0f, 0.0f, -10.0f } );
+    SW_EXPECT_TRUE( builder.getInstances().empty() == false );
+}

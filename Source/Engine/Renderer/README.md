@@ -73,6 +73,10 @@ flowchart TB
 - `RenderPassTypeInfo.cpp` 는 패스 종류마다의 사실을 열거값 하나에 한 줄로 모은 테이블입니다. 기본 셰이더, PSO 기본 상태, 패스 define, 컬러 출력 수, 그리는 대상, 입력 계약이 들어 있습니다.
   엔진 PSO 등록(`ensurePassResources`), 셰이더 쿠킹 요청, `executePass` 의 분기, 파이프라인 검증이 모두 이 테이블을 읽습니다.
 - 첨부마다 해상도 나눗수(`RenderPassAttachment::_resolutionDivisor`, 1, 2, 4)가 있고, 패스는 출력 첨부의 크기로 렌더 패스를 엽니다.
+- 디퍼드 블룸은 밝은 부분을 반해상도로 구합니다. `BloomDownsample` 패스(블룸 셰이더의 `SW_PASS_BLOOM_DOWNSAMPLE`)가 `BloomBright`(나눗수 2)에 원본 4x4 텍셀 평균의
+  밝은 부분을 쓰고, `Bloom` 패스가 그것을 `BloomBright` 역할로 읽어 원래 해상도에서 업샘플해 더합니다(언리얼 블룸 셋업 · 다운샘플 → 합성). `BloomBright` 를 선언하지 않은
+  파이프라인의 Bloom 패스는 원본에서 직접 구합니다. 에뮬 백엔드(DX11 · GL)는 이 역할을 노멀과 같은 슬롯 2 에 겁니다(한 패스에 둘이 같이 오지 않습니다).
+  GPU 비용은 `GPU.BloomDownsample` · `GPU.PostBloom` 타임스탬프로 봅니다.
 
 XML이 선언한 포맷과 코드가 만드는 것이 어긋나면 조용히 잘못 그리거나 GPU가 멈춥니다. 그래서 로드할 때 `validate()` 가 다음을 검사합니다.
 
@@ -230,6 +234,10 @@ UI와 화면 글자는 파이프라인의 마지막 `Canvas` 패스가 그립니
 - **배치마다 한 번 그립니다.** 사각형은 구조체 버퍼(t15)에 올리고, 배치마다 가위, 루트 상수(시작 위치, 텍스처 네 개, 대상 크기, 색각 보정), `drawInstanced( 6, n )` 을 기록합니다. 셰이더는 `canvas.hlsl` 입니다.
 - **톤 매핑 뒤에 그립니다.** 주 출력(백버퍼, 게임 뷰 렌더 타깃, 스크린샷 캡처)은 `resolvePresentTarget` 하나가 고르고 Present와 Canvas가 같이 씁니다.
   Canvas는 Present 뒤에 같은 출력에 Load로 그립니다. UI는 톤 매핑을 거치지 않으므로 색각 보정(`gv_colorVisionMode`)을 캔버스 셰이더가 직접 적용합니다(`g_SwCanvasColorVision`, 함수는 `colorvision.hlsli`).
+- **주 출력에 마지막으로 그리는 뷰가 UI 를 그립니다.** 화면 사각형 뷰(PiP, 분할 화면)는 주 시점 뒤에 같은 출력에 겹치므로, 화면 사각형 뷰가 있으면 그 마지막 뷰의 Canvas 패스가,
+  없으면 주 시점의 Canvas 패스가 UI 를 그립니다(`_pMainOutputCanvasView`). 언리얼이 모든 장면 뷰 뒤에 Slate 를 한 번 그리는 것과 같은 순서입니다(`RenderPassGPUTest.CanvasDrawsOverScreenRectView`).
+- **렌더 텍스처 대상은 위젯 크기를 따라갑니다.** 월드 공간 위젯이 그리기 크기를 바꾸면 `TextureCache::resizeRenderTarget` 이 같은 텍스처 객체에 새 크기의 GPU 자원을 만들고
+  리로드 세대를 올려 머티리얼이 새 인덱스를 받게 합니다(언리얼 `UTextureRenderTarget2D::ResizeTarget`). 옛 자원을 읽는 프레임을 기다리므로 크기가 바뀔 때만 일어납니다.
 
 ### 다중 뷰 — 카메라마다 출력 하나
 
@@ -238,6 +246,8 @@ UI와 화면 글자는 파이프라인의 마지막 `Canvas` 패스가 그립니
 카메라가 등록될 때 크기를 알리면(`declareRenderTarget`) 캐시가 렌더 타깃 텍스처로 만듭니다.
 
 - 뷰 하나(`FrameRenderer::ViewTarget`)는 자기 트랜지언트 풀, 컬링 입력, TAA 기록, 커맨드 리스트, 출력 텍스처를 가집니다. 트랜지언트 풀의 크기에는 해상도 배율이 곱해집니다.
+  정수 업스케일(`RenderViewSettings::_upscaleZoom`, 픽셀 퍼펙트의 Upscale Render Texture)이면 풀은 사각형 픽셀 / 배율(내림)이고, Present 가 점 샘플(`SW_PASS_FLAG_POINT_UPSCALE`)로
+  그 배만큼 키워 사각형 가운데에 놓습니다(`FrameRendererUtil::computeViewPoolExtent` · `computeUpscaleOffset`). 주 시점은 남는 띠를 검게 지웁니다.
 - `GPUScene` 의 컬링 슬롯은 0이 주 뷰, 1이 주 뷰의 그림자, 2부터가 추가 뷰입니다. 추가 뷰는 하나에 둘(자기 시점, 자기 그림자 패스)을 씁니다(`kFirstExtraCullView`, `kCullSlotsPerExtraView`, 최대 `kMaxExtraRenderView`).
 - **호스트 타깃 뷰**(`RenderViewOutputKind::HostTarget`)는 호스트가 만든 RT 핸들에 그리는 추가 뷰입니다 — 에디터 씬 뷰가 이것입니다. 호스트가 `HostViewTargets`(게임 뷰 · 씬 뷰)를
   `EngineLoop::tick` 에 넘기면 게임 뷰가 주 출력(게임 카메라 · 화면 UI · 화면 사각형 뷰 · 스크린샷 캡처)이고 씬 뷰는 호스트 카메라의 호스트 타깃 뷰입니다.
@@ -330,7 +340,9 @@ C++가 막지 못하는 것은 옮겨지는 구조체에 원시 포인터 필드
   버퍼 하나를 드로우들이 나눠 쓰면 GPU는 제출 뒤에 읽으므로 모두 마지막 값을 봅니다. `RenderPassGPUTest.MultiBatchPassKeepsPerBatchConstants` 가 메시 두 개로 이것을 확인합니다.
 - **머티리얼 원소는 영속 ID를 가집니다.** 처음 본 조합에만 슬롯을 주고, 쓰이지 않으면 나중에 회수하지만 슬롯을 옮기지 않습니다.
   옮기면 인스턴스에 적힌 `materialIndex` 가 엉뚱한 원소를 가리킵니다(`GPUSceneTest.MaterialElementIDsPersistAcrossBuildsAndAreFreed`).
-- **머티리얼 폴백 버퍼는 stride마다 하나입니다**(`ensureMaterialFallbackBuffers`, stride는 `ShaderBindingSlot::_elementStride`). SRV의 구조체 stride는 셰이더 선언과 같아야 하기 때문입니다. 언리얼 RDG의 더미 버퍼와 같은 규칙입니다.
+- **머티리얼 폴백 버퍼는 셰이더의 원소 레이아웃을 따릅니다**(`ensureMaterialFallbackBuffers`, stride는 `ShaderBindingSlot::_elementStride`). SRV의 구조체 stride는 셰이더 선언과 같아야 하기 때문입니다. 언리얼 RDG의 더미 버퍼와 같은 규칙입니다.
+  원소는 0 이지만 텍스처 인덱스 필드(이름이 `Map` 으로 끝나는 uint, `MaterialUtil::isTextureIndexMember`)는 `kInvalidDescriptorIndex` 입니다. 0 은 Vulkan bindless 의 첫 실제 텍스처이고
+  DX11 · GL 에서는 머티리얼 텍스처 서수 0 이라, 0 으로 두면 백엔드마다 다른 텍스처를 읽습니다. 내용이 같은 원소는 버퍼 하나를 나눠 씁니다.
 - **스프라이트의 프레임과 색은 인스턴스 필드입니다**(`GPUInstance::_sprite`, 16바이트 `GPUSpriteInstanceData`). 언리얼의 Custom Primitive Data에 해당합니다.
   배치 키를 건드리지 않으므로 같은 텍스처의 스프라이트는 한 번에 그려집니다(`RenderPassGPUTest.SpriteFramesAndTintsArePerInstance`). 스프라이트 메시는 양면 사각형(`MeshUtil::createSpriteQuad`)입니다.
 - **값이 실제로 바뀔 때만 일합니다.** 상수 버퍼와 바인딩 상태는 내용이 달라질 때만 버전을 올리고 다시 만듭니다. 같은 값을 다시 넣는 호출이 흔하기 때문입니다.

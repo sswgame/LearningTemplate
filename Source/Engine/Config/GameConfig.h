@@ -23,6 +23,14 @@ namespace sw
         PROPERTY()
         string _windowTitle{ "SWEngine" }; ///< 주 창 제목 — 게임마다 다르다(언리얼 ProjectName 자리). 창은 팩을 마운트하기 전에 생긴다
 
+        /**
+         * @brief 이 게임이 그리는 렌더 파이프라인 XML 의 리소스 경로(예: `engine/pipeline/forward2dpipeline.xml`)입니다. 비면 엔진 기본(포워드)입니다.
+         * @details 유니티 Graphics 설정의 Render Pipeline Asset · Godot 의 렌더링 방식 프로젝트 설정에 해당합니다. 명령줄(`-gv_renderPipeline` ·
+         *          `-gv_deferred`)이 이보다 우선합니다. 2D 게임은 톤 매핑이 없는 `forward2dpipeline.xml` 을 고릅니다.
+         */
+        PROPERTY()
+        string _renderPipeline{};
+
         /** @brief 엔진 스키마에 덧붙이는 게임의 사용자 설정 스키마(팩 상대 경로, 예: `data/usersettings.settings.xml`)입니다. 비면 없습니다. */
         PROPERTY()
         string _userSettingsSchema{};

@@ -5874,6 +5874,60 @@ SW_TEST_CASE( RenderPassGPUTest, HalfResolutionBloomBlursByTheSourceTexel )
 }
 
 /**
+ * @brief [RenderPassGPUTest] 디퍼드 블룸의 밝은 부분(BloomBright)은 반 크기이고 밝은 큐브 자리에 값이 있으며, 합성(BloomColor)은 원래 크기다 — 4 백엔드
+ * @details `deferredpipeline.xml` 은 BloomDownsample 이 반해상도에 밝은 부분을 구하고 PostBloom 이 업샘플해 더한다. 변이: Bloom 패스가 BloomBright 를
+ *          읽지 않거나(g_BloomBrightIndex 무효) 다운샘플이 0 을 내면 BloomBright 가 비고, 합성 크기가 반으로 줄면 화면 해상도가 떨어진다.
+ */
+SW_TEST_CASE( RenderPassGPUTest, DeferredBloomBrightIsHalfResolution )
+{
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string   label = sw::string( device->getBackendName() ) + ": ";
+        LitCubeScene       stage;
+        bool               bOk = stage.populate();
+        test::RHITestImage litColor;
+        test::RHITestImage bloomBright;
+        test::RHITestImage bloomColor;
+        if ( bOk )
+        {
+            sw::FrameRenderer renderer;
+            bOk = renderer.initialize( device.get(), "engine/pipeline/deferredpipeline.xml" ) && renderer.isReady();
+            for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
+            {
+                bOk = renderSceneFrame( renderer, device.get(), stage._scene, sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+            }
+            bOk = bOk && litColor.readTransient( renderer, "LitColor" ) && bloomBright.readTransient( renderer, "BloomBright" ) &&
+                  bloomColor.readTransient( renderer, "BloomColor" );
+            renderer.shutdown();
+        }
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "디퍼드를 그리거나 되읽지 못했다" ).c_str() );
+        if ( bOk == false )
+            continue;
+        ++comparedCount;
+        SW_EXPECT_EQUAL( sw::TransientAttachmentPool::computeScaledExtent( litColor.getWidth(), 2 ), bloomBright.getWidth() );
+        SW_EXPECT_EQUAL( sw::TransientAttachmentPool::computeScaledExtent( litColor.getHeight(), 2 ), bloomBright.getHeight() );
+        SW_EXPECT_EQUAL( litColor.getWidth(), bloomColor.getWidth() );
+        SW_EXPECT_EQUAL( litColor.getHeight(), bloomColor.getHeight() );
+        uint32 brightCount{ 0 };
+        for ( uint32 y = 0; y < bloomBright.getHeight(); ++y )
+        {
+            for ( uint32 x = 0; x < bloomBright.getWidth(); ++x )
+            {
+                const test::Rgba8 pixel = bloomBright.getPixel( x, y );
+                if ( pixel._r > 8 || pixel._g > 8 || pixel._b > 8 )
+                    ++brightCount;
+            }
+        }
+        SW_LOG_INFO( "%#BloomBright %#x%# bright pixels %#", label, bloomBright.getWidth(), bloomBright.getHeight(), brightCount );
+        SW_EXPECT_TRUE_MSG( brightCount > 0, ( label + "반해상도 BloomBright 가 비었다 — 다운샘플 패스가 밝은 부분을 내지 않는다" ).c_str() );
+    }
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could run the deferred bloom pipeline" );
+}
+
+/**
  * @brief [RenderPassGPUTest] 캡처 카메라 둘이 각자의 렌더 텍스처에 각자 본 것을 그린다(4 백엔드)
  * @details 붉은 큐브만 보는 카메라 → `rendertarget/test_red`, 푸른 큐브만 보는 카메라 → `rendertarget/test_blue`. 두 텍스처를 되읽어 한쪽은 붉고
  *          한쪽은 푸른지 본다. 뷰가 컬링 칸 · 상수버퍼 · 풀을 나눠 쓰면 둘이 같은 그림이 되거나(뒤 뷰의 절두체로 거른다) 비어 있다.
@@ -6066,6 +6120,230 @@ SW_TEST_CASE( RenderPassGPUTest, ScreenRectViewDrawsOnlyInsideItsRectangle )
     }
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the screen-rect view test" );
+}
+
+/**
+ * @brief [RenderPassGPUTest] 주 출력의 캔버스(UI)는 화면 사각형 뷰(PiP) 위에 그려진다(4 백엔드, Present 캡처)
+ * @details 캔버스는 주 출력에 마지막으로 그리는 뷰가 그린다(언리얼은 모든 장면 뷰 뒤 Slate). 주 시점의 Canvas 패스가 그리면 뒤에 겹치는 PiP 가
+ *          UI 를 덮는다 — PiP 사각형 한가운데의 초록 사각형이 PiP 의 붉은 큐브에 가려지면 순서가 틀린 것이다.
+ */
+SW_TEST_CASE( RenderPassGPUTest, CanvasDrawsOverScreenRectView )
+{
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string       label = sw::string( device->getBackendName() ) + ": ";
+        sw::FrameRenderer      renderer;
+        MultiViewScene         stage;
+        bool                   bOk = renderer.initialize( device.get() ) && renderer.isReady() && stage.populate();
+        sw::CameraRenderOutput output;
+        output._target     = sw::CameraOutputTarget::ScreenRect;
+        output._screenRect = sw::float4{ 0.55f, 0.55f, 0.4f, 0.4f };
+        bOk                = bOk && stage.addViewCamera( "PictureInPicture", sw::float3{ -MultiViewScene::kCubeDistance, 0.0f, 0.0f }, output, sw::CameraRole::Game ) != nullptr;
+        renderer.setPresentCaptureEnabled( true );
+        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+        sw::vector<uint8>     bytes;
+        sw::RHITextureMipSpan layout{};
+        bOk = bOk && renderer.readbackPresentCapture( bytes, layout );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "첫 프레임 · 캡처" ).c_str() );
+        if ( bOk == false )
+        {
+            renderer.shutdown();
+            continue;
+        }
+        test::RHITestImage first;
+        first.assign( std::move( bytes ), layout, sw::constant::kBackBufferFormat );
+        const float32 width  = static_cast<float32>( first.getWidth() );
+        const float32 height = static_cast<float32>( first.getHeight() );
+
+        // PiP 사각형(0.55..0.95)의 가운데에 초록 사각형을 둔다.
+        sw::CanvasFrameData canvas{};
+        canvas._mainOutput._targetSize = sw::float2{ width, height };
+        {
+            sw::CanvasPainter painter( canvas._mainOutput, 1.0f );
+            sw::CanvasBrush   green{};
+            green._color = sw::float4{ 0.0f, 1.0f, 0.0f, 1.0f };
+            painter.fillRect( sw::float2{ width * 0.7f, height * 0.7f }, sw::float2{ width * 0.1f, height * 0.1f }, green );
+        }
+        renderer.setCanvasFrame( canvas );
+        for ( uint32 frameIndex = 0; frameIndex < 2 && bOk; ++frameIndex )
+        {
+            bOk = renderSceneFrame( renderer, device.get(), stage._scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+        }
+        bOk = bOk && renderer.readbackPresentCapture( bytes, layout );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "캔버스 프레임 · 캡처" ).c_str() );
+        if ( bOk )
+        {
+            test::RHITestImage image;
+            image.assign( std::move( bytes ), layout, sw::constant::kBackBufferFormat );
+            const test::Rgba8 center = image.getPixel( static_cast<uint32>( width * 0.75f ), static_cast<uint32>( height * 0.75f ) );
+            SW_LOG_INFO( "%#canvas over PiP center %#,%#,%#", label, center._r, center._g, center._b );
+            SW_EXPECT_TRUE_MSG( center._g > 200 && center._r < 60 && center._b < 60,
+                                ( label + "PiP 가 캔버스를 덮었다 — " + sw::to_string( center._r ) + "," + sw::to_string( center._g ) + "," +
+                                  sw::to_string( center._b ) )
+                                    .c_str() );
+        }
+        renderer.shutdown();
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the canvas-over-screen-rect test" );
+}
+
+/**
+ * @brief [RenderPassGPUTest] 프로토타입 격자 머티리얼은 월드에 붙어 있다 — 바닥을 정확히 1 m 옮겨도 화면의 격자가 그대로다(4 백엔드, Unlit 캡처)
+ * @details `MATERIAL_WORLD_UV`(forwardlit.hlsl 트라이플래너)는 월드 위치로 텍스처를 읽고 한 장이 1 m 다. 그래서 12 m 바닥을 1 m 옮기면 화면 가운데
+ *          아래(바닥이 덮는 곳)의 픽셀이 같다. 변이: 메시 UV 로 읽으면 바닥과 함께 격자가 1/12 장 움직여 그 창의 픽셀이 바뀐다. 언리얼 WorldGridMaterial 과 같은 동작이다.
+ */
+SW_TEST_CASE( RenderPassGPUTest, PrototypeGridMaterialIsAnchoredToTheWorld )
+{
+    test::RHIBackendSweep sweep;
+    uint32                comparedCount{ 0 };
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string             label = sw::string( device->getBackendName() ) + ": ";
+        sw::shared_ptr<sw::Material> grid  = sw::Material::create();
+        sw::shared_ptr<sw::Mesh>     plane = sw::MeshUtil::createPlane();
+        bool                         bOk   = grid->loadFromFile( "engine/materials/prototypegrid_light.material" ) && plane != nullptr;
+        sw::vector<uint8>            arrBytes[2];
+        sw::RHITextureMipSpan        arrLayout[2]{};
+        for ( uint32 shiftIndex = 0; shiftIndex < 2 && bOk; ++shiftIndex )
+        {
+            sw::Scene scene{ "PrototypeGridScene" };
+            bOk                       = scene.ensureDefaultCameras();
+            sw::GameObject*    pFloor = bOk ? scene.getObjectManager()->createGameObject( sw::hashed_string( "Floor" ) ) : nullptr;
+            sw::MeshComponent* pMesh  = pFloor != nullptr ? pFloor->addComponent<sw::MeshComponent>() : nullptr;
+            bOk                       = pMesh != nullptr;
+            if ( bOk )
+            {
+                pMesh->setMesh( plane );
+                pMesh->setMaterial( grid.get() );
+                pMesh->setLocalScale( sw::float3{ 12.0f, 1.0f, 12.0f } );
+                pMesh->setLocalPosition( sw::float3{ static_cast<float32>( shiftIndex ), 0.0f, 0.0f } ); // 0 m · 1 m
+                scene.getObjectManager()->flushSceneTransforms();
+            }
+            bOk = bOk && renderPresentCaptureOf( device.get(), scene, "engine/pipeline/forwardpipeline.xml", arrBytes[shiftIndex], arrLayout[shiftIndex],
+                                                 sw::RenderViewMode::Unlit );
+        }
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "격자 바닥 그리기 · 캡처" ).c_str() );
+        if ( bOk == false )
+            continue;
+        test::RHITestImage before;
+        test::RHITestImage after;
+        before.assign( std::move( arrBytes[0] ), arrLayout[0], sw::constant::kBackBufferFormat );
+        after.assign( std::move( arrBytes[1] ), arrLayout[1], sw::constant::kBackBufferFormat );
+        // 화면 가운데 아래(가로 30..70 %, 세로 70..90 %) — 바닥이 덮는 곳이다.
+        const uint32 left   = before.getWidth() * 3 / 10;
+        const uint32 right  = before.getWidth() * 7 / 10;
+        const uint32 top    = before.getHeight() * 7 / 10;
+        const uint32 bottom = before.getHeight() * 9 / 10;
+        uint64       differenceSum{ 0 };
+        uint32       darkest{ 255 };
+        uint32       brightest{ 0 };
+        uint32       sampleCount{ 0 };
+        for ( uint32 y = top; y < bottom; ++y )
+        {
+            for ( uint32 x = left; x < right; ++x )
+            {
+                const test::Rgba8 pixelBefore = before.getPixel( x, y );
+                const test::Rgba8 pixelAfter  = after.getPixel( x, y );
+                differenceSum += static_cast<uint64>( test::RHITestImage::getColorDistance( pixelBefore, pixelAfter ) );
+                darkest   = sw::MathUtil::min( darkest, static_cast<uint32>( pixelBefore._g ) );
+                brightest = sw::MathUtil::max( brightest, static_cast<uint32>( pixelBefore._g ) );
+                ++sampleCount;
+            }
+        }
+        const float64 meanDifference = sampleCount > 0 ? static_cast<float64>( differenceSum ) / static_cast<float64>( sampleCount ) : 0.0;
+        SW_LOG_INFO( "%#prototype grid: mean difference after a 1 m shift %#, window green %#..%#", label, meanDifference, darkest, brightest );
+        SW_EXPECT_TRUE_MSG( brightest >= darkest + 16u, ( label + "창 안에 격자 무늬가 없다 — 비교가 뜻이 없다 (" + sw::to_string( darkest ) + ".." + sw::to_string( brightest ) + ")" ).c_str() );
+        SW_EXPECT_TRUE_MSG( meanDifference < 2.0, ( label + "바닥을 1 m 옮기자 격자가 따라 움직였다(월드 좌표가 아니다) — 평균 차이 " + sw::to_string( meanDifference ) ).c_str() );
+        ++comparedCount;
+    }
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could render the prototype grid test" );
+}
+
+/**
+ * @brief [RenderPassGPUTest] 정수 업스케일(픽셀 퍼펙트 Upscale Render Texture)은 화면 / 4 로 그려 점 샘플로 4 배 키운다 — 캡처가 4 × 4 칸마다 한 색이다(4 백엔드)
+ * @details 카메라 출력의 `_upscaleZoom` = 4. 2D 파이프라인(forward2dpipeline.xml)의 Present 는 원본을 그대로 옮기므로 칸 안의 16 픽셀이 같아야 한다.
+ *          변이: Present 가 선형으로 읽거나 뷰포트를 배율 크기로 맞추지 않으면 큐브 가장자리의 칸이 섞인다. 남는 띠는 가운데 정렬로 양쪽에 반씩이다.
+ */
+SW_TEST_CASE( RenderPassGPUTest, UpscaledViewDrawsUniformZoomBlocks )
+{
+    constexpr uint32      kZoom = 4;
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string     label = sw::string( device->getBackendName() ) + ": ";
+        LitCubeScene         stage;
+        bool                 bOk     = stage.populate();
+        sw::CameraComponent* pCamera = bOk ? stage._scene.getActiveGameCamera() : nullptr;
+        bOk                          = pCamera != nullptr;
+        if ( bOk )
+        {
+            sw::CameraRenderOutput output = pCamera->getRenderOutput();
+            output._upscaleZoom           = kZoom;
+            pCamera->setRenderOutput( output );
+        }
+        sw::vector<uint8>     bytes;
+        sw::RHITextureMipSpan layout{};
+        bOk = bOk && renderPresentCaptureOf( device.get(), stage._scene, "engine/pipeline/forward2dpipeline.xml", bytes, layout );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "업스케일 그리기 · 캡처" ).c_str() );
+        if ( bOk == false )
+            continue;
+        test::RHITestImage image;
+        image.assign( std::move( bytes ), layout, sw::constant::kBackBufferFormat );
+        const uint32 poolWidth  = image.getWidth() / kZoom;
+        const uint32 poolHeight = image.getHeight() / kZoom;
+        const uint32 restX      = image.getWidth() - poolWidth * kZoom;
+        const uint32 restY      = image.getHeight() - poolHeight * kZoom;
+        // 띠는 왼쪽 · 위가 내림이다. 되읽은 행 순서가 백엔드마다 위아래가 다를 수 있어(GL 원점) 두 정렬 중 맞는 쪽을 본다.
+        auto countMixedBlocks = [&]( uint32 offsetX, uint32 offsetY, uint32& outBlockCount, bool& outVaried ) -> uint32
+        {
+            uint32            mixedCount{ 0 };
+            const test::Rgba8 firstColor = image.getPixel( offsetX, offsetY );
+            outBlockCount                = 0;
+            outVaried                    = false;
+            for ( uint32 blockY = 0; blockY < poolHeight; ++blockY )
+            {
+                for ( uint32 blockX = 0; blockX < poolWidth; ++blockX )
+                {
+                    const uint32      originX = offsetX + blockX * kZoom;
+                    const uint32      originY = offsetY + blockY * kZoom;
+                    const test::Rgba8 corner  = image.getPixel( originX, originY );
+                    outVaried                 = outVaried || test::RHITestImage::getColorDistance( corner, firstColor ) > 16;
+                    bool bUniform{ true };
+                    for ( uint32 y = 0; y < kZoom && bUniform; ++y )
+                    {
+                        for ( uint32 x = 0; x < kZoom; ++x )
+                        {
+                            if ( test::RHITestImage::getColorDistance( image.getPixel( originX + x, originY + y ), corner ) > 1 )
+                            {
+                                bUniform = false;
+                                break;
+                            }
+                        }
+                    }
+                    ++outBlockCount;
+                    if ( bUniform == false )
+                        ++mixedCount;
+                }
+            }
+            return mixedCount;
+        };
+        uint32 blockCount{ 0 };
+        bool   bVaried{ false };
+        uint32 mixedBlockCount = countMixedBlocks( restX / 2u, restY / 2u, blockCount, bVaried );
+        if ( mixedBlockCount > 0 && ( restX % 2u != 0 || restY % 2u != 0 ) )
+            mixedBlockCount = sw::MathUtil::min( mixedBlockCount, countMixedBlocks( restX - restX / 2u, restY - restY / 2u, blockCount, bVaried ) );
+        SW_LOG_INFO( "%#upscale x%#: %# of %# blocks mixed (%#x%#)", label, kZoom, mixedBlockCount, blockCount, image.getWidth(), image.getHeight() );
+        SW_EXPECT_TRUE_MSG( bVaried, ( label + "그림이 한 색이다 — 큐브가 없어 비교가 뜻이 없다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( mixedBlockCount == 0,
+                            ( label + "4 x 4 칸 안의 픽셀이 다르다(점 샘플 · 배율 뷰포트가 아니다) — " + sw::to_string( mixedBlockCount ) ).c_str() );
+        ++comparedCount;
+    }
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could render the upscale test" );
 }
 
 /**
@@ -7915,6 +8193,58 @@ SW_TEST_CASE( RenderPassGPUTest, CanvasTargetDrawsIntoRenderTexture )
     }
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the canvas target test" );
+}
+
+/**
+ * @brief [RenderPassGPUTest] 위젯이 그리기 크기를 바꾸면 캔버스 대상 텍스처를 그 크기로 다시 만든다(`TextureCache::resizeRenderTarget`). 4 백엔드
+ * @details 64 → 128 로 키운 프레임 뒤 텍스처 폭이 128 이고, 그 안에 새 크기 기준의 빨간 사각형(64 × 64)이 있어야 한다. 변이: 다시 만들지 않으면 폭이 64 로 남는다
+ *          (언리얼 `UTextureRenderTarget2D::ResizeTarget` 과 같은 동작).
+ */
+SW_TEST_CASE( RenderPassGPUTest, CanvasTargetRecreatesTextureWhenWidgetResizes )
+{
+    constexpr const utf8* kTargetPath = "rendertarget/test_canvas_target_resize";
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string  label = sw::string( device->getBackendName() ) + ": ";
+        sw::FrameRenderer renderer;
+        LitCubeScene      stage;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady() && stage.populate();
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "무대 준비" ).c_str() );
+        const auto makeFrame = []( float32 size, uint64 revision )
+        {
+            sw::CanvasFrameData       frame{};
+            sw::CanvasTargetDrawList& target = frame._listTarget.emplace_back();
+            target._targetPath               = sw::hashed_string( kTargetPath );
+            target._list._targetSize         = sw::float2{ size, size };
+            target._contentRevision          = revision;
+            sw::CanvasPainter painter( target._list, 1.0f );
+            sw::CanvasBrush   brush{};
+            brush._color = sw::float4{ 1.0f, 0.0f, 0.0f, 1.0f };
+            painter.fillRect( sw::float2{ size * 0.25f, size * 0.25f }, sw::float2{ size * 0.5f, size * 0.5f }, brush );
+            return frame;
+        };
+        const sw::float4    clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+        sw::CanvasFrameData smallFrame = makeFrame( 64.0f, 1 );
+        renderer.setCanvasFrame( smallFrame );
+        bOk          = bOk && renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        int64  diff  = 0;
+        uint32 drawn = 0;
+        uint32 width = 0;
+        SW_EXPECT_TRUE_MSG( bOk && MultiViewScene::readTextureRedMinusBlue( device.get(), kTargetPath, diff, drawn, width ), ( label + "첫 읽기" ).c_str() );
+        SW_EXPECT_EQUAL( 64u, width );
+
+        sw::CanvasFrameData largeFrame = makeFrame( 128.0f, 2 );
+        renderer.setCanvasFrame( largeFrame );
+        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        SW_EXPECT_EQUAL( 1u, renderer.getLastDrawnCanvasTargetCount() );
+        SW_EXPECT_TRUE_MSG( bOk && MultiViewScene::readTextureRedMinusBlue( device.get(), kTargetPath, diff, drawn, width ), ( label + "두 번째 읽기" ).c_str() );
+        SW_EXPECT_EQUAL( 128u, width );
+        SW_EXPECT_TRUE_MSG( drawn >= 64u * 64u - 128u && drawn <= 64u * 64u + 128u, ( label + "새 크기의 빨간 사각형 넓이가 아니다 (" + sw::to_string( drawn ) + ")" ).c_str() );
+        renderer.shutdown();
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the canvas target resize test" );
 }
 
 /**

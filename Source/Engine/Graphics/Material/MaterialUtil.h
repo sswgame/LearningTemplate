@@ -11,6 +11,8 @@
 
 namespace sw
 {
+    struct ShaderVariableInfo;
+
     /** @brief 머티리얼 패킹 · XML · 퍼뮤테이션 define 공유 도우미입니다. */
     struct MaterialUtil
     {
@@ -35,6 +37,21 @@ namespace sw
         static MaterialPropertyType defaultShaderTypeFor( MaterialPropertyType cpuType );
         static MaterialPropertyType shaderTypeFromReflectionName( string_view typeName, uint32 byteSize );
         static uint32               alignOffset( uint32 offset, uint32 typeSize );
+
+        /// @brief 셰이더 머티리얼 원소(`SW_MATERIAL_BEGIN`)에서 텍스처 인덱스 필드의 이름 꼬리입니다(`albedoMap`, `normalMap`).
+        static constexpr const utf8* kTextureIndexMemberSuffix = "Map";
+        /**
+         * @brief 셰이더 머티리얼 원소의 멤버가 텍스처 인덱스 필드인지입니다. `uint` 이고 이름이 `kTextureIndexMemberSuffix` 로 끝나면 그렇습니다.
+         * @details 리플렉션은 텍스처 인덱스도 그냥 `uint` 로 알려 주므로(`pointFilter` 같은 플래그와 같다) 셰이더 쪽 이름 규칙이 표식입니다.
+         *          유니티 셰이더의 `_MainTex` · `_BumpMap` 처럼 이름이 텍스처 슬롯을 말합니다. 규칙은 `binding.hlsli` 의 `SW_MATERIAL_BEGIN` 옆에 적혀 있습니다.
+         */
+        static bool isTextureIndexMember( string_view memberName, string_view reflectedType, uint32 byteSize );
+        /**
+         * @brief 머티리얼 없는 배치에 거는 폴백 원소 하나의 바이트를 만듭니다. 텍스처 인덱스 필드는 `kInvalidDescriptorIndex`, 나머지는 0 입니다.
+         * @details 0 은 Vulkan bindless 의 첫 실제 텍스처이고 DX11 · GL 에서는 머티리얼 텍스처 서수 0 이라 **유효한** 인덱스입니다.
+         *          `kInvalidDescriptorIndex` 는 셰이더의 `swSampleMaterialTexture` 가 "텍스처 없음"(흰색)으로 읽습니다 — 네 백엔드가 같은 값을 냅니다.
+         */
+        static vector<uint8> makeFallbackElement( const vector<ShaderVariableInfo>& listMember, uint32 stride );
 
         /**
          * @brief 머티리얼의 불리언 글(`true` · `false` · `1` · `0` · `yes` · `no` · `on` · `off`)을 읽습니다. 머티리얼의 불리언 글은 모두 여기를 지납니다.

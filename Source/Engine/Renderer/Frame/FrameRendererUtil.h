@@ -69,6 +69,53 @@ namespace sw
         static constexpr float32 kDefaultCameraPos[3] = { 0.0f, 1.2f, 3.2f };
 
         /**
+         * @brief 뷰의 내부 해상도 한 축(픽셀)을 냅니다. 정수 업스케일(`RenderViewSettings::_upscaleZoom`)이면 출력 사각형 픽셀 / 배율의 내림이고, 아니면
+         *        출력 사각형 픽셀 × 해상도 배율의 반올림입니다. 1 보다 작아지지 않습니다.
+         * @details 내림이어야 배율을 곱한 크기가 사각형 안에 들어가 Present 가 정수 배로 키울 수 있다(유니티 Pixel Perfect Camera 의 Upscale Render Texture).
+         */
+        static uint32 computeViewPoolExtent( float32 rectPixels, float32 resolutionScale, uint32 upscaleZoom )
+        {
+            if ( upscaleZoom > 0 )
+                return MathUtil::max( 1u, static_cast<uint32>( rectPixels ) / upscaleZoom );
+            return MathUtil::max( 1u, static_cast<uint32>( rectPixels * resolutionScale + 0.5f ) );
+        }
+        /**
+         * @brief 정수 업스케일 뷰를 출력 사각형 가운데에 놓는 한 축의 시작 픽셀입니다. 남는 픽셀은 양쪽에 반씩(왼쪽 · 위가 내림) 띠로 남습니다.
+         */
+        static uint32 computeUpscaleOffset( uint32 rectStartPixels, uint32 rectPixels, uint32 poolPixels, uint32 upscaleZoom )
+        {
+            const uint32 scaledPixels = poolPixels * upscaleZoom;
+            return rectStartPixels + ( scaledPixels < rectPixels ? ( rectPixels - scaledPixels ) / 2u : 0u );
+        }
+
+        /** @brief 렌더 파이프라인을 고르는 데 쓰는 후보들입니다. 빈 경로는 "정하지 않음" 입니다. */
+        struct PipelineChoice
+        {
+            string_view _argumentPath;    ///< `initialize` 인자(테스트 · 도구)
+            string_view _commandLinePath; ///< `-gv_renderPipeline`
+            string_view _deferredPath;    ///< 엔진 기본 디퍼드(`-gv_deferred` 일 때만)
+            string_view _gamePath;        ///< 게임 프리셋(`GameConfig::_renderPipeline`)
+            string_view _forwardPath;     ///< 엔진 기본 포워드
+            bool        _bDeferred{ false };
+        };
+        /**
+         * @brief 그릴 파이프라인을 고릅니다. 인자 → `-gv_renderPipeline` → `-gv_deferred` → 게임 프리셋 → 엔진 기본 포워드 순서입니다.
+         * @details 명령줄은 측정 · 검증 스위치라 게임 데이터보다 앞선다(유니티 Graphics 설정의 Render Pipeline Asset 을 실행 인자가 덮는 것과 같다).
+         */
+        static string_view computePipelinePath( const PipelineChoice& choice )
+        {
+            if ( choice._argumentPath.empty() == false )
+                return choice._argumentPath;
+            if ( choice._commandLinePath.empty() == false )
+                return choice._commandLinePath;
+            if ( choice._bDeferred && choice._deferredPath.empty() == false )
+                return choice._deferredPath;
+            if ( choice._gamePath.empty() == false )
+                return choice._gamePath;
+            return choice._forwardPath;
+        }
+
+        /**
          * @brief GPU 인스턴스 회전의 기준 각속도와 편차 폭(라디안/초)입니다.
          * @details 편차가 기준보다 **커야** 인스턴스마다 속도가 확연히 갈린다. 폭이 기준보다 작으면
          *          속도 차이가 눈에 띄지 않아 결국 "다 같은 속도" 로 보인다. 그것이 이 패스를 만든 이유다.
@@ -380,6 +427,7 @@ namespace sw
         /// 값은 RenderPassInputRole 의 이름과 같습니다. 역할로 바인딩하고 셰이더가 `g_<Role>Index` 로 읽습니다.
         hashed_string _sourceColor{ "SourceColor" };
         hashed_string _ambientOcclusion{ "AmbientOcclusion" };
+        hashed_string _bloomBright{ "BloomBright" };
     };
 } // namespace sw
 

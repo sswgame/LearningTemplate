@@ -58,6 +58,14 @@ namespace sw
          */
         void declareRenderTarget( string_view relativePath, uint32 width, uint32 height );
         /**
+         * @brief 이미 만든 렌더 텍스처를 새 크기로 다시 만듭니다(렌더 스레드 — 기록 전에). 크기가 같거나 아직 없으면 크기만 알리고 false 입니다.
+         * @details 언리얼 `UTextureRenderTarget2D::ResizeTarget` 에 해당합니다. 위젯이 그리기 크기를 바꾼 캔버스 대상처럼, 먼저 만든 크기가 낡은 경우에 씁니다.
+         *          `Texture2D` 객체는 **그대로 두고** GPU 자원만 바꿉니다(빌린 포인터가 그대로 유효합니다). 새 SRV 인덱스를 받으므로 `reload` 처럼 세대를 올려
+         *          머티리얼이 인덱스를 다시 받게 합니다. 옛 자원을 읽는 프레임이 끝나도록 디바이스를 기다리므로 크기가 바뀔 때만 부릅니다.
+         * @return 다시 만들었으면 true 입니다. 실패는 로그를 남깁니다.
+         */
+        bool resizeRenderTarget( string_view relativePath, uint32 width, uint32 height, IRHIDevice* pDevice );
+        /**
          * @brief 경로의 텍스처를 디스크에서 다시 읽어 GPU 에 올립니다(에디터 핫 리로드).
          * @details 캐시에 없으면 아무 일도 하지 않습니다. 아무도 안 쓰는 것을 올릴 이유가 없습니다.
          *          `Texture2D` 객체는 **그대로 두고** 내용만 갈아 끼웁니다. 머티리얼이 포인터를

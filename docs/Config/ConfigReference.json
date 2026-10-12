@@ -1017,6 +1017,15 @@
        "description": "주 창 제목 — 게임마다 다르다(언리얼 ProjectName 자리). 창은 팩을 마운트하기 전에 생긴다"
       },
       {
+       "name": "_renderPipeline",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "이 게임이 그리는 렌더 파이프라인 XML 의 리소스 경로(예: `engine/pipeline/forward2dpipeline.xml`)입니다. 비면 엔진 기본(포워드)입니다. 유니티 Graphics 설정의 Render Pipeline Asset · Godot 의 렌더링 방식 프로젝트 설정에 해당합니다. 명령줄(`-gv_renderPipeline` · `-gv_deferred`)이 이보다 우선합니다. 2D 게임은 톤 매핑이 없는 `forward2dpipeline.xml` 을 고릅니다."
+      },
+      {
        "name": "_userSettingsSchema",
        "type": "string",
        "default": "",
@@ -3245,7 +3254,7 @@
    "type": "string",
    "default": "",
    "kind": "일반",
-   "description": "이 파이프라인 XML 로 그린다 (비우면 기본 포워드 · gv_deferred)",
+   "description": "이 파이프라인 XML 로 그린다 (비우면 gv_deferred · 게임 프리셋 · 기본 포워드)",
    "source": "Source/Engine/Renderer/Frame/FrameRenderer.cpp"
   },
   {

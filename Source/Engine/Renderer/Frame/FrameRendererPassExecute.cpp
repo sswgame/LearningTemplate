@@ -212,6 +212,8 @@ namespace sw
                 return names._shadowMap;
             case RenderPassInputRole::AmbientOcclusion:
                 return names._ambientOcclusion;
+            case RenderPassInputRole::BloomBright:
+                return names._bloomBright;
             case RenderPassInputRole::Invalid:
             case RenderPassInputRole::Count:
                 return names._sourceColor;
@@ -309,7 +311,7 @@ namespace sw
         const bool                bTransparentBatch = info.hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
         if ( info.hasFlag( RenderPassTraitFlag::kGenericFullscreen ) && pPassDesc != nullptr )
         {
-            // 일반 풀스크린 패스(테이블의 kGenericFullscreen: Lighting, SSAO, Bloom, Outline, Tonemap)다. **선언이 곧 바인딩**이다.
+            // 일반 풀스크린 패스(테이블의 kGenericFullscreen: Lighting, SSAO, Bloom, BloomDownsample, Outline, Tonemap)다. **선언이 곧 바인딩**이다.
             // 입력은 역할 이름으로 모두 바인딩하고, 타깃은 선언한 출력 중 첫 번째로 있는 것이다. 계약(RenderPassInputSignature)이
             // 로드 시점에 같은 목록을 검사했다. 새 포스트 패스는 테이블의 한 줄로 여기를 탄다.
             registerDeclaredInputs( context, *pPassDesc );
@@ -566,11 +568,14 @@ namespace sw
                     const RHITextureHandle dstTarget      = target._texture;
                     const uint32           outputWidth    = target._width;
                     const uint32           outputHeight   = target._height;
-                    const bool             bFullRect      = bOwnOutput || activeView._settings.isFullRect();
-                    // 주 시점이 사각형 하나만 쓰면 바깥은 지운다. 화면 사각형 뷰는 주 시점 위에 겹치므로 남긴다.
-                    const RHIRenderPassLoadOp outputLoad = ( isRenderingExtraView() && bOwnOutput == false ) ? RHIRenderPassLoadOp::Load
-                                                         : bFullRect                                         ? RHIRenderPassLoadOp::DontCare
-                                                                                                             : RHIRenderPassLoadOp::Clear;
+                    // 정수 업스케일(픽셀 퍼펙트)은 주 출력에만 있다 — 원본(사각형 픽셀 / 배율)을 배율만큼 키워 사각형 가운데에 놓으므로 사각형 전체가 아니다.
+                    const uint32 upscaleZoom = bOwnOutput ? 0u : static_cast<uint32>( activeView._settings._upscaleZoom );
+                    const bool   bFullRect   = ( bOwnOutput || activeView._settings.isFullRect() ) && upscaleZoom == 0;
+                    // 주 시점이 사각형 하나만 쓰면 바깥은 지운다(업스케일의 남는 띠는 검게). 화면 사각형 뷰는 주 시점 위에 겹치므로 남긴다.
+                    const RHIRenderPassLoadOp outputLoad  = ( isRenderingExtraView() && bOwnOutput == false ) ? RHIRenderPassLoadOp::Load
+                                                          : bFullRect                                         ? RHIRenderPassLoadOp::DontCare
+                                                                                                              : RHIRenderPassLoadOp::Clear;
+                    const float4&             outputClear = upscaleZoom > 0 ? FrameRendererUtil::kBlackClear : _clearColor;
                     // PSO 는 대상의 실제 포맷으로 고른다. 렌더 타깃 포맷은 PSO 의 일부라 대상마다 PSO 가 다르다.
                     const RHIPipelineStateHandle psoBlit = findOutputPSO( RenderPassType::Present, target._format );
                     if ( src != 0 && psoBlit != 0 )
@@ -585,11 +590,12 @@ namespace sw
                         beginInfo._arrColorTarget[0] = dstTarget;
                         beginInfo._colorTargetCount  = 1;
                         beginInfo._arrLoadOp[0]      = outputLoad;
-                        beginInfo._arrClearColor[0]  = _clearColor;
+                        beginInfo._arrClearColor[0]  = outputClear;
                         beginInfo._width             = outputWidth;
                         beginInfo._height            = outputHeight;
                         context._pCmd->beginRenderPass( beginInfo );
                         // 사각형이면 뷰포트로 그 안에만 그린다. 전체 화면 삼각형이 사각형을 채우고 원본 전체를 그 안에 늘인다.
+                        // 정수 업스케일이면 원본 크기 × 배율을 사각형 가운데에 놓는다 — 셰이더가 점 샘플(SW_PASS_FLAG_POINT_UPSCALE)이라 원본 픽셀이 배율 × 배율 칸이다.
                         if ( bFullRect == false )
                         {
                             const float4& rect = activeView._settings._screenRect;
@@ -598,6 +604,16 @@ namespace sw
                             viewport._y      = rect._y * static_cast<float32>( outputHeight );
                             viewport._width  = rect._z * static_cast<float32>( outputWidth );
                             viewport._height = rect._w * static_cast<float32>( outputHeight );
+                            if ( upscaleZoom > 0 )
+                            {
+                                const TransientAttachmentPool& pool = activePool();
+                                viewport._x                         = static_cast<float32>( FrameRendererUtil::computeUpscaleOffset(
+                                    static_cast<uint32>( viewport._x ), static_cast<uint32>( viewport._width ), pool.getWidth(), upscaleZoom ) );
+                                viewport._y                         = static_cast<float32>( FrameRendererUtil::computeUpscaleOffset(
+                                    static_cast<uint32>( viewport._y ), static_cast<uint32>( viewport._height ), pool.getHeight(), upscaleZoom ) );
+                                viewport._width                     = static_cast<float32>( pool.getWidth() * upscaleZoom );
+                                viewport._height                    = static_cast<float32>( pool.getHeight() * upscaleZoom );
+                            }
                             context._pCmd->setViewport( viewport );
                         }
                         drawFullscreen( context, psoBlit, passCb );
@@ -626,10 +642,11 @@ namespace sw
                 }
                 case RenderPassType::Canvas:
                 {
-                    // 화면 2D 를 주 시점 출력(Present 가 그린 것)에 기존 내용을 유지한 채(Load) 그린다. 추가 뷰(렌더 텍스처, 화면 사각형)에는 그리지 않는다.
-                    // UI 는 주 시점에만 있다. 그릴 것이 없으면 렌더 패스를 열지 않는다. 대상 전체가 뷰포트다(화면 사각형 설정과 무관).
+                    // 화면 2D 를 주 출력(Present 가 그린 것)에 기존 내용을 유지한 채(Load) 그린다. 주 출력에 **마지막으로 그리는 뷰**만 그린다
+                    // (`_pMainOutputCanvasView` — 화면 사각형 뷰가 있으면 그 마지막 것, 없으면 주 시점). 그래야 PiP · 분할 화면이 UI 를 덮지 않는다.
+                    // 렌더 텍스처 · 호스트 타깃 뷰에는 그리지 않는다. 그릴 것이 없으면 렌더 패스를 열지 않는다. 대상 전체가 뷰포트다(화면 사각형 설정과 무관).
                     const PresentTarget target = resolvePresentTarget();
-                    const bool          bDraw  = isRenderingExtraView() == false && _canvasFrame._mainOutput.isEmpty() == false && target._width > 0 &&
+                    const bool          bDraw  = _pActiveView == _pMainOutputCanvasView && _canvasFrame._mainOutput.isEmpty() == false && target._width > 0 &&
                                        target._height > 0;
                     const RHIPipelineStateHandle psoCanvas = bDraw ? findOutputPSO( RenderPassType::Canvas, target._format ) : RHIPipelineStateHandle{ 0 };
                     if ( psoCanvas != 0 )
@@ -657,6 +674,7 @@ namespace sw
                 case RenderPassType::Lighting:
                 case RenderPassType::SSAO:
                 case RenderPassType::Bloom:
+                case RenderPassType::BloomDownsample:
                 case RenderPassType::Outline:
                 case RenderPassType::Tonemap:
                 case RenderPassType::ForwardOpaqueNoDepthWrite:
@@ -830,19 +848,20 @@ namespace sw
         const RHIDescriptorIndex depth  = srvOf( names._sceneDepth );
         const RHIDescriptorIndex source = srvOf( names._sourceColor );
         const RHIDescriptorIndex ao     = srvOf( names._ambientOcclusion );
+        const RHIDescriptorIndex bloom  = srvOf( names._bloomBright );
 
-        // 슬롯 테이블은 binding.hlsli 의 swSampleIndex 와 같아야 한다: [shadow|source, albedo|ao, normal, depth|shadow].
-        // 한 슬롯을 나눠 쓰는 둘은 같은 패스에 함께 바인딩되지 않는다(알베도는 Lighting, AO 는 Bloom).
+        // 슬롯 테이블은 binding.hlsli 의 swSampleIndex 와 같아야 한다: [shadow|source, albedo|ao, normal|bloom, depth|shadow].
+        // 한 슬롯을 나눠 쓰는 둘은 같은 패스에 함께 바인딩되지 않는다(알베도 · 노멀은 Lighting · SSAO, AO · 반해상도 블룸은 Bloom).
         const RHIDescriptorIndex slot0 = ( shadow != kInvalidDescriptorIndex ) ? shadow : source;
         const RHIDescriptorIndex slot1 = ( albedo != kInvalidDescriptorIndex ) ? albedo : ao;
-        const RHIDescriptorIndex slot2 = normal;
+        const RHIDescriptorIndex slot2 = ( normal != kInvalidDescriptorIndex ) ? normal : bloom;
         const RHIDescriptorIndex slot3 = ( depth != kInvalidDescriptorIndex ) ? depth : shadow;
 
         if ( shadow != kInvalidDescriptorIndex || source != kInvalidDescriptorIndex )
             context._pCmd->bindShaderResource( slot0, 0 );
         if ( albedo != kInvalidDescriptorIndex || ao != kInvalidDescriptorIndex )
             context._pCmd->bindShaderResource( slot1, 1 );
-        if ( normal != kInvalidDescriptorIndex )
+        if ( normal != kInvalidDescriptorIndex || bloom != kInvalidDescriptorIndex )
             context._pCmd->bindShaderResource( slot2, 2 );
         if ( depth != kInvalidDescriptorIndex || shadow != kInvalidDescriptorIndex )
             context._pCmd->bindShaderResource( slot3, 3 );

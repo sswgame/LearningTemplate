@@ -12,6 +12,7 @@
 #include "Engine/Object/GameObject/CameraRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/RenderViewScheduler.h"
 
 namespace sw
@@ -26,11 +27,15 @@ namespace sw
     {
         struct RenderViewCollectorInternal
         {
+            /// 정수 업스케일 배율의 상한입니다(`CameraRenderOutput::_upscaleZoom` 의 Max 와 같다 — 넘는 값은 데이터 오류라 자른다).
+            static constexpr uint32 kMaxUpscaleZoom = 16;
+
             static RenderViewSettings makeSettings( const CameraRenderOutput& output )
             {
                 RenderViewSettings settings;
                 settings._screenRect      = output._screenRect;
                 settings._resolutionScale = MathUtil::clamp( output._resolutionScale, 0.1f, 2.0f );
+                settings._upscaleZoom     = static_cast<uint8>( MathUtil::min( output._upscaleZoom, kMaxUpscaleZoom ) );
                 settings._bShadows        = output._bShadows ? SW_TRUE : SW_FALSE;
                 settings._bPostProcess    = output._bPostProcess ? SW_TRUE : SW_FALSE;
                 return settings;
@@ -70,8 +75,14 @@ namespace sw
 
     float32 RenderViewCollector::computeAspect( const RenderViewSettings& settings, uint32 outputWidth, uint32 outputHeight )
     {
-        const float32 width  = static_cast<float32>( outputWidth ) * settings._screenRect._z;
-        const float32 height = static_cast<float32>( outputHeight ) * settings._screenRect._w;
+        float32 width  = static_cast<float32>( outputWidth ) * settings._screenRect._z;
+        float32 height = static_cast<float32>( outputHeight ) * settings._screenRect._w;
+        // 정수 업스케일이면 실제로 그리는 크기(사각형 / 배율의 내림)의 비율이다 — 키운 뒤에도 픽셀이 정사각이다.
+        if ( settings._upscaleZoom > 0 && width > 0.0f && height > 0.0f )
+        {
+            width  = static_cast<float32>( FrameRendererUtil::computeViewPoolExtent( width, 1.0f, settings._upscaleZoom ) );
+            height = static_cast<float32>( FrameRendererUtil::computeViewPoolExtent( height, 1.0f, settings._upscaleZoom ) );
+        }
         return ( width > 0.0f && height > 0.0f ) ? width / height : ( 16.0f / 9.0f );
     }
 
@@ -105,11 +116,12 @@ namespace sw
             {
                 if ( output._renderTexture.empty() )
                     continue;
-                request._outputKind           = RenderViewOutputKind::RenderTexture;
-                request._renderTexture        = hashed_string( string_view{ output._renderTexture } );
-                request._outputWidth          = MathUtil::max( 1u, output._renderTextureWidth );
-                request._outputHeight         = MathUtil::max( 1u, output._renderTextureHeight );
-                request._settings._screenRect = float4{ 0.0f, 0.0f, 1.0f, 1.0f };
+                request._outputKind            = RenderViewOutputKind::RenderTexture;
+                request._renderTexture         = hashed_string( string_view{ output._renderTexture } );
+                request._outputWidth           = MathUtil::max( 1u, output._renderTextureWidth );
+                request._outputHeight          = MathUtil::max( 1u, output._renderTextureHeight );
+                request._settings._screenRect  = float4{ 0.0f, 0.0f, 1.0f, 1.0f };
+                request._settings._upscaleZoom = 0; // 렌더 텍스처는 자기 크기에 그린다
             }
             else
             {
@@ -119,7 +131,11 @@ namespace sw
                 request._outputWidth  = MathUtil::max( 1u, static_cast<uint32>( static_cast<float32>( outputWidth ) * output._screenRect._z + 0.5f ) );
                 request._outputHeight = MathUtil::max( 1u, static_cast<uint32>( static_cast<float32>( outputHeight ) * output._screenRect._w + 0.5f ) );
             }
-            const float32 aspect         = static_cast<float32>( request._outputWidth ) / static_cast<float32>( request._outputHeight );
+            // 정수 업스케일이면 실제로 그리는 크기(사각형 / 배율의 내림)의 비율이다(주 시점의 computeAspect 와 같은 규칙).
+            const uint32  zoom           = request._settings._upscaleZoom;
+            const float32 drawnWidth     = static_cast<float32>( FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( request._outputWidth ), 1.0f, zoom ) );
+            const float32 drawnHeight    = static_cast<float32>( FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( request._outputHeight ), 1.0f, zoom ) );
+            const float32 aspect         = drawnWidth / drawnHeight;
             request._viewProj            = pCamera->getViewProjectionMatrix( aspect );
             request._position            = pCamera->getCameraPosition();
             request._transparentSortAxis = Render2DSettings::getActive().computeTransparentSortAxis( pCamera->isOrthographic(), pCamera->getCameraForward() );

@@ -18,6 +18,16 @@ PSInput VSMain(SwVertexInput input, uint vertexId : SV_VertexID)
 	return output;
 }
 
+#if defined( SW_PASS_BLOOM_DOWNSAMPLE )
+float4 PSMain(PSInput input) : SV_TARGET
+{
+	// BloomDownsample 패스 — 반해상도 출력에 밝은 부분만 낸다(합성은 Bloom 패스가 한다). 원본은 원래 해상도라 g_SourceTexel 이 원본 텍셀이다.
+	// 후처리를 끈 뷰에서는 더할 것이 없다(0). 크기가 다른 출력이라 원본을 복사할 수 없다.
+	const bool bSkipPost = (g_Flags & SW_PASS_FLAG_SKIP_POST) != 0u;
+	const float3 bright = bSkipPost ? float3(0.0f, 0.0f, 0.0f) : swComputeBloomBrightDownsampled(input.uv, g_SourceTexel.xy);
+	return float4(bright, 1.0f);
+}
+#else
 float4 PSMain(PSInput input) : SV_TARGET
 {
 	// 본문은 postbloom.hlsli 하나다 — 합친 체인(postchain.hlsl)과 **같은 코드**를 쓴다.
@@ -26,5 +36,9 @@ float4 PSMain(PSInput input) : SV_TARGET
 	float3 color = swSampleSourcePoint(input.uv).rgb;
 	// 후처리를 끈 뷰(CCTV · 표면 값 보기 모드)는 원본을 낸다 — 포맷이 달라 복사할 수 없을 때 렌더러가 이 셰이더로 원본을 옮긴다. 값 선택이다(postchain 과 같은 이유).
 	const bool bSkipPost = (g_Flags & SW_PASS_FLAG_SKIP_POST) != 0u;
-	return float4(bSkipPost ? color : swApplyBloom(input.uv, texel, color), 1.0f);
+	// 파이프라인이 반해상도 밝은 부분(BloomBright)을 입력으로 선언했으면 그것을 업샘플해 더하고, 아니면 여기서 구한다. 인덱스는 패스 상수라 분기가 고르다.
+	const bool bHasDownsampledBright = g_BloomBrightIndex != kInvalidIndex;
+	const float3 bloomed = bHasDownsampledBright ? swApplyBloomBright(input.uv, color) : swApplyBloom(input.uv, texel, color);
+	return float4(bSkipPost ? color : bloomed, 1.0f);
 }
+#endif

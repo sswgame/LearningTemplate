@@ -137,6 +137,61 @@ namespace sw
         size._height                             = height;
     }
 
+    bool TextureCache::resizeRenderTarget( string_view relativePath, uint32 width, uint32 height, IRHIDevice* pDevice )
+    {
+        SW_MEMORY_SCOPE( Texture );
+        if ( _impl == nullptr || pDevice == nullptr || isRenderTargetPath( relativePath ) == false || width == 0 || height == 0 )
+            return false;
+        const string key = FileUtil::normalizePath( relativePath );
+
+        // 크기를 먼저 알린다 — 아직 만들지 않았으면 다음 acquire 가 이 크기로 만든다. 다시 만드는 일은 reload 와 같이 잠금 밖에서 한다.
+        std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
+        Impl::RenderTargetSize&             size = _impl->_mapRenderTargetSize[key];
+        size._width                              = width;
+        size._height                             = height;
+        Texture2D* pTexture                      = nullptr;
+        for ( ;; )
+        {
+            const auto it = _impl->_mapEntry.find( key );
+            if ( it == _impl->_mapEntry.end() || it->second._texture == nullptr )
+                return false;
+            if ( it->second._bLoading )
+            {
+                _impl->_cvLoaded.wait( lock );
+                continue;
+            }
+            const Texture2D& existing = *it->second._texture;
+            if ( existing.isRHIValid() && existing.getWidth() == width && existing.getHeight() == height )
+                return false;
+            it->second._bLoading = true;
+            pTexture             = it->second._texture.get();
+            break;
+        }
+        lock.unlock();
+
+        // 이전 프레임이 옛 텍스처와 그 bindless 인덱스를 읽고 있을 수 있다(DX11 · GL 은 인덱스를 곧바로 돌려준다) — reload 와 같은 이유로 기다린다.
+        pDevice->waitIdle();
+        pTexture->releaseRHI( pDevice );
+        const bool bReady = pTexture->createRenderTarget( pDevice, key, width, height, constant::kOffscreenColorFormat );
+        if ( bReady == false )
+            SW_LOG_ERROR( "Failed to resize render texture %# to %#x%#", key.c_str(), width, height );
+
+        lock.lock();
+        const auto it = _impl->_mapEntry.find( key );
+        SW_ASSERT( it != _impl->_mapEntry.end() && it->second._bLoading );
+        it->second._bLoading = false;
+        if ( it->second._refCount == 0 )
+        {
+            pTexture->releaseRHI( pDevice );
+            _impl->_mapEntry.erase( it );
+        }
+        lock.unlock();
+        // 새 SRV 인덱스를 받았다 — 빌려 간 머티리얼이 다시 받게 한다(reload 와 같은 순서: 진행 중 표시를 내린 뒤에 올린다).
+        _impl->_reloadGeneration.fetch_add( 1u, std::memory_order_acq_rel );
+        _impl->_cvLoaded.notify_all();
+        return bReady;
+    }
+
     void TextureCache::reload( string_view relativePath, IRHIDevice* pDevice )
     {
         SW_MEMORY_SCOPE( Texture );

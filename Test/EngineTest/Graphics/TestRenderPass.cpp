@@ -411,6 +411,92 @@ SW_TEST_CASE( RenderPassTest, ShippedPipelinesValidateClean )
 }
 
 /**
+ * @brief [RenderPassTest] 파이프라인은 인자 → -gv_renderPipeline → -gv_deferred → 게임 프리셋(GameConfig::_renderPipeline) → 엔진 기본 포워드 순서로 고른다
+ * @details 게임은 데이터(프리셋)로 고르고, 명령줄은 측정 · 검증용으로 그것을 덮는다. 게임 프리셋이 디퍼드 스위치보다 앞서면 `-gv_deferred=1` 측정이
+ *          2D 게임에서 조용히 무시된다.
+ */
+SW_TEST_CASE( RenderPassTest, PipelineChoiceFollowsArgumentCommandLineGameThenDefault )
+{
+    sw::FrameRendererUtil::PipelineChoice choice{};
+    choice._forwardPath  = "engine/pipeline/forwardpipeline.xml";
+    choice._deferredPath = "engine/pipeline/deferredpipeline.xml";
+    SW_EXPECT_TRUE( sw::FrameRendererUtil::computePipelinePath( choice ) == "engine/pipeline/forwardpipeline.xml" );
+    choice._gamePath = "engine/pipeline/forward2dpipeline.xml";
+    SW_EXPECT_TRUE( sw::FrameRendererUtil::computePipelinePath( choice ) == "engine/pipeline/forward2dpipeline.xml" );
+    choice._bDeferred = true;
+    SW_EXPECT_TRUE( sw::FrameRendererUtil::computePipelinePath( choice ) == "engine/pipeline/deferredpipeline.xml" );
+    choice._commandLinePath = "engine/pipeline/forwardtoonpipeline.xml";
+    SW_EXPECT_TRUE( sw::FrameRendererUtil::computePipelinePath( choice ) == "engine/pipeline/forwardtoonpipeline.xml" );
+    choice._argumentPath = "engine/pipeline/forwardpipelinestaged.xml";
+    SW_EXPECT_TRUE( sw::FrameRendererUtil::computePipelinePath( choice ) == "engine/pipeline/forwardpipelinestaged.xml" );
+}
+
+/**
+ * @brief [RenderPassTest] 정수 업스케일 뷰의 내부 해상도는 사각형 픽셀 / 배율의 내림이고(해상도 배율은 보지 않는다), 키운 그림은 사각형 가운데에 놓인다
+ * @details 내림이어야 배율을 곱한 크기가 사각형 안에 들어간다. 1281 / 4 = 320 → 1280 이 1281 안에, 남는 1 픽셀은 왼쪽 0 · 오른쪽 1 이다.
+ */
+SW_TEST_CASE( RenderPassTest, UpscaleViewExtentFloorsAndCentersTheEnlargedImage )
+{
+    SW_EXPECT_EQUAL( 320u, sw::FrameRendererUtil::computeViewPoolExtent( 1280.0f, 0.5f, 4 ) );
+    SW_EXPECT_EQUAL( 320u, sw::FrameRendererUtil::computeViewPoolExtent( 1283.0f, 1.0f, 4 ) );
+    SW_EXPECT_EQUAL( 1u, sw::FrameRendererUtil::computeViewPoolExtent( 3.0f, 1.0f, 4 ) );
+    SW_EXPECT_EQUAL( 640u, sw::FrameRendererUtil::computeViewPoolExtent( 1280.0f, 0.5f, 0 ) ); // 업스케일이 아니면 해상도 배율의 반올림
+    SW_EXPECT_EQUAL( 0u, sw::FrameRendererUtil::computeUpscaleOffset( 0, 1281, 320, 4 ) );
+    SW_EXPECT_EQUAL( 5u, sw::FrameRendererUtil::computeUpscaleOffset( 0, 1290, 320, 4 ) );
+    SW_EXPECT_EQUAL( 105u, sw::FrameRendererUtil::computeUpscaleOffset( 100, 1290, 320, 4 ) );
+    SW_EXPECT_EQUAL( 0u, sw::FrameRendererUtil::computeUpscaleOffset( 0, 100, 30, 4 ) ); // 키운 그림이 더 크면 가운데로 옮기지 않는다
+}
+
+/**
+ * @brief [RenderPassTest] 디퍼드 블룸은 밝은 부분을 반해상도로 구하고(BloomDownsample → BloomBright, 나눗수 2) Bloom 패스가 그것을 BloomBright 역할로 읽는다
+ * @details 다운샘플 패스는 블룸 셰이더의 `SW_PASS_BLOOM_DOWNSAMPLE` 퍼뮤테이션이다. Bloom 패스가 BloomBright 를 읽지 않으면 셰이더가 원본에서 다시 구해
+ *          반해상도 패스가 헛일이 된다(언리얼 블룸 셋업 · 다운샘플 → 합성).
+ */
+SW_TEST_CASE( RenderPassTest, DeferredBloomBrightIsComputedAtHalfResolution )
+{
+    sw::RenderPipelineAsset res;
+    SW_ASSERT_TRUE( res.loadFromXMLFile( "engine/pipeline/deferredpipeline.xml" ) );
+    SW_EXPECT_EQUAL( 0u, res.validate( "engine/pipeline/deferredpipeline.xml" ) );
+
+    const sw::RenderPassAttachment* pBright = nullptr;
+    for ( const sw::RenderPassAttachment& attachment : res.getDesc()._listAttachment )
+    {
+        if ( attachment._name == "BloomBright" )
+            pBright = &attachment;
+    }
+    SW_ASSERT_NOT_NULL( pBright );
+    SW_EXPECT_EQUAL( 2u, pBright->_resolutionDivisor );
+
+    int32 downsampleIndex{ -1 };
+    int32 bloomIndex{ -1 };
+    for ( uint32 passIndex = 0; passIndex < static_cast<uint32>( res.getGraphPass().size() ); ++passIndex )
+    {
+        const sw::RenderGraphPassDesc& pass = res.getGraphPass()[passIndex];
+        if ( pass._resolvedType == sw::RenderPassType::BloomDownsample )
+        {
+            downsampleIndex = static_cast<int32>( passIndex );
+            SW_ASSERT_TRUE( pass._listResolvedOutput.size() == 1 );
+            SW_EXPECT_TRUE( pass._listResolvedOutput[0].view() == "BloomBright" );
+            const sw::RenderPassShaderSelection shader = sw::selectRenderPassShader( pass._resolvedType, &pass, sw::EngineDefaultAssets{} );
+            SW_EXPECT_TRUE( std::find( shader._listDefine.begin(), shader._listDefine.end(), sw::string( sw::kPassBloomDownsampleDefine ) ) != shader._listDefine.end() );
+        }
+        if ( pass._resolvedType == sw::RenderPassType::Bloom )
+        {
+            bloomIndex = static_cast<int32>( passIndex );
+            bool bReadsBright{ false };
+            for ( const sw::RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
+            {
+                if ( static_cast<sw::RenderPassInputRole>( input._role ) == sw::RenderPassInputRole::BloomBright )
+                    bReadsBright = true;
+            }
+            SW_EXPECT_TRUE_MSG( bReadsBright, "Bloom 패스가 BloomBright 를 읽지 않는다" );
+        }
+    }
+    SW_EXPECT_TRUE( 0 <= downsampleIndex );
+    SW_EXPECT_TRUE_MSG( downsampleIndex < bloomIndex, "BloomDownsample 이 Bloom 보다 먼저 선언돼야 한다" );
+}
+
+/**
  * @brief [RenderPassTest] GPU 타임스탬프가 측정하는 패스 수와 칸 배치가 맞다 — 넘는 패스 수를 세는 함수가 로드 경고의 근거다
  * @details 패스는 인덱스 x 2 쌍을 쓰고 뒤쪽 칸은 프레임 · 컴퓨트 예약이다. 실행 · 보고 · 로드 경고가 모두 `kGPUTimedPassCapacity` 하나로 자른다.
  */

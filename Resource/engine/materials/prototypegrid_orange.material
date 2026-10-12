@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 블록아웃용 격자 머티리얼(언리얼 WorldGridMaterial 에 해당). 격자는 메시 UV 를 따른다 — 월드 좌표 판은 백로그 1-3. -->
+<!-- 블록아웃용 격자 머티리얼(언리얼 WorldGridMaterial 에 해당). MATERIAL_WORLD_UV 로 월드 좌표에서 읽어 메시 크기와 상관없이 한 칸이 1 m 다(forwardlit.hlsl 트라이플래너). -->
 <MaterialDesc formatVersion="0" name="PrototypeGridOrange" shaderPath="engine/shaders/forwardlit.hlsl" blendMode="Opaque">
 	<_properties>
 		<item name="color" type="Color" shaderType="Float4" defaultValue="1.0 1.0 1.0 1.0" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
@@ -9,6 +9,7 @@
 	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
 		<_alwaysDefines>
 			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_WORLD_UV</item>
 		</_alwaysDefines>
 		<_multiCompiles>
 			<item name="FogMode" selected="FOG_OFF">

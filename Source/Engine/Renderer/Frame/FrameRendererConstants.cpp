@@ -91,6 +91,8 @@ namespace sw
             flags |= shaderslot::kPassFlagSkipPost;
         if ( _pActiveView->_settings.usesTonemap() == false )
             flags |= shaderslot::kPassFlagSkipTonemap;
+        if ( _pActiveView->_settings._upscaleZoom > 0 )
+            flags |= shaderslot::kPassFlagPointUpscale;
         context._passValues.setUint( passConstantNames()._flags, flags );
     }
 

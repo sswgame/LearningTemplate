@@ -102,9 +102,11 @@ namespace sw
 
             if ( view._bRenderThisFrame == SW_TRUE )
             {
+                // 정수 업스케일(화면 사각형 뷰)이면 사각형 픽셀 / 배율(내림)이다. 렌더 텍스처 · 호스트 타깃은 자기 크기에 그대로 그린다.
                 const float32 scale  = MathUtil::clamp( view._settings._resolutionScale, 0.1f, 2.0f );
-                const uint32  width  = MathUtil::max( 1u, static_cast<uint32>( static_cast<float32>( view._outputWidth ) * scale + 0.5f ) );
-                const uint32  height = MathUtil::max( 1u, static_cast<uint32>( static_cast<float32>( view._outputHeight ) * scale + 0.5f ) );
+                const uint32  zoom   = view._outputKind == RenderViewOutputKind::ScreenRect ? view._settings._upscaleZoom : 0u;
+                const uint32  width  = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( view._outputWidth ), scale, zoom );
+                const uint32  height = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( view._outputHeight ), scale, zoom );
                 (void)ensureViewTransients( view, width, height );
             }
         }

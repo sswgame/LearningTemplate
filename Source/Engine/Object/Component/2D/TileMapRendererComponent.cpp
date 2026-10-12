@@ -10,20 +10,12 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/SpriteInstanceBatch.h"
 #include "Engine/Physics/PhysicsOverlapWorld.h"
 
 namespace sw
 {
     SW_LOG_CALLER( "TileMapRenderer" );
-
-    namespace
-    {
-        struct TileMapRendererComponentInternal
-        {
-            /** @brief 한 레이어가 칸마다 항목을 드는 상한입니다(청크로 나누지 않으므로 큰 맵은 여러 레이어 · 오브젝트로 나눕니다). */
-            static constexpr size_t kMaxCellCount = 65536;
-        };
-    } // namespace
 
     TileMapRendererComponent::TileMapRendererComponent()
         : _tileMapPath{}
@@ -34,16 +26,39 @@ namespace sw
         , _bGenerateColliders{ true }
         , _map{}
         , _tileSet{}
+        , _chunkGrid{}
         , _listBrushIndex{}
+        , _listAnimatedFlag{}
         , _listAnimatedCell{}
         , _listSolidRect{}
         , _listOutlineEdge{}
         , _listBody{}
-        , _batch{}
+        , _listChunkBatch{}
         , _lastOwnerWorld{ float4x4::Identity }
         , _elapsedSeconds{ 0.0f }
         , _bLoaded{ SW_FALSE }
+        , _bChunkBuildQueued{ SW_FALSE }
     {
+    }
+
+    TileMapRendererComponent::~TileMapRendererComponent()
+    {
+        releaseChunks();
+    }
+
+    void TileMapRendererComponent::onUnregister( GameObjectManager& manager )
+    {
+        removePhysicsBodies();
+        releaseChunks();
+        Component::onUnregister( manager );
+    }
+
+    void TileMapRendererComponent::onPostLoad()
+    {
+        Component::onPostLoad();
+        // 편집 중 미리보기 — 플레이 전에도 보이게 그리기 배치만 만든다(바디는 플레이 시작의 rebuild 가 만든다).
+        if ( _tileMapPath.empty() == false && loadTileMap() )
+            (void)rebuildChunks(); // 관리자가 없으면(소유자 없음) 그릴 곳이 없다 — 알릴 것도 없다
     }
 
     void TileMapRendererComponent::onBeginPlay()
@@ -59,13 +74,12 @@ namespace sw
     void TileMapRendererComponent::onEndPlay()
     {
         removePhysicsBodies();
-        _batch.shutdown();
         Component::onEndPlay();
     }
 
     void TileMapRendererComponent::onTick( float32 deltaTime )
     {
-        if ( _batch.isInitialized() == false )
+        if ( _listChunkBatch.empty() )
             return;
         _elapsedSeconds += deltaTime;
         // 오브젝트가 움직였으면 모든 칸을 다시 놓는다(타일맵은 대개 서 있다 — 행렬 비교 한 번).
@@ -73,12 +87,9 @@ namespace sw
         if ( Memory::compare( &ownerWorld, &_lastOwnerWorld, sizeof( ownerWorld ) ) != 0 )
         {
             _lastOwnerWorld = ownerWorld;
-            for ( int32 y = 0; y < _map._height; ++y )
+            for ( int32 chunkIndex = 0; chunkIndex < _chunkGrid.getChunkCount(); ++chunkIndex )
             {
-                for ( int32 x = 0; x < _map._width; ++x )
-                {
-                    refreshCellEntry( x, y );
-                }
+                refreshChunkCells( chunkIndex );
             }
             return;
         }
@@ -111,55 +122,153 @@ namespace sw
         _tileSet           = tileSet;
         _bLoaded           = SW_FALSE;
         const size_t count = static_cast<size_t>( _map._width ) * static_cast<size_t>( _map._height );
-        if ( count == 0 || count > TileMapRendererComponentInternal::kMaxCellCount )
+        if ( count == 0 || count > kMaxCellCount )
         {
-            SW_LOG_ERROR( "Tile map '%#' has %# cells - a tile layer holds 1..%#", _map._name, static_cast<uint32>( count ),
-                          static_cast<uint32>( TileMapRendererComponentInternal::kMaxCellCount ) );
+            SW_LOG_ERROR( "Tile map '%#' has %# cells - a tile layer holds 1..%#", _map._name, static_cast<uint32>( count ), static_cast<uint32>( kMaxCellCount ) );
             return;
         }
         // 팔레트의 이름은 타일셋에 있어야 한다 — 모르는 이름은 데이터 오류다(그 칸은 비운다).
         if ( _map.mapTileCells( _tileSet, _listBrushIndex ) == false )
             SW_LOG_ERROR( "Tile map '%#' paints a brush that tile set '%#' does not have - those cells are empty", _map._name, _map._tileSetPath );
+        _chunkGrid = TileChunkGrid::make( _map._width, _map._height, kChunkSize );
+        _listAnimatedFlag.assign( count, 0 );
+        _listAnimatedCell.clear();
         _bLoaded = SW_TRUE;
     }
 
     void TileMapRendererComponent::onPropertyChanged( hashed_string propertyName )
     {
         Component::onPropertyChanged( propertyName );
-        // 켜고 끄기를 빌더가 다시 보게 — 다른 칸은 다음 rebuild 가 맞춘다.
         static const hashed_string s_activeName( "_bActive" );
+        static const hashed_string s_tileMapName( "_tileMapPath" );
+        static const hashed_string s_materialName( "_materialPath" );
+        static const hashed_string s_sortingLayerName( "_sortingLayer" );
+        static const hashed_string s_orderName( "_orderInLayer" );
+        // 켜고 끄기를 빌더가 다시 보게 — 다른 칸은 다음 rebuild 가 맞춘다.
         if ( propertyName == s_activeName )
-            _batch.markAllEntriesDirty();
+        {
+            for ( unique_ptr<SpriteInstanceBatch>& pBatch : _listChunkBatch )
+            {
+                if ( pBatch != nullptr )
+                    pBatch->markAllEntriesDirty();
+            }
+            return;
+        }
+        // 편집 중 미리보기 — 맵이 바뀌면 다시 읽고, 머티리얼 · 정렬이 바뀌면 배치를 다시 만든다.
+        if ( propertyName == s_tileMapName )
+        {
+            _bLoaded = SW_FALSE;
+            if ( _tileMapPath.empty() == false && loadTileMap() )
+                (void)rebuildChunks(); // 관리자가 없으면 그릴 곳이 없다
+            else
+                releaseChunks();
+            return;
+        }
+        const bool bLooksChanged = propertyName == s_materialName || propertyName == s_sortingLayerName || propertyName == s_orderName;
+        if ( bLooksChanged && _bLoaded == SW_TRUE )
+            (void)rebuildChunks(); // 관리자가 없으면 그릴 곳이 없다
     }
 
     void TileMapRendererComponent::onOwnerActiveInHierarchyChanged()
     {
         Component::onOwnerActiveInHierarchyChanged();
-        _batch.markAllEntriesDirty();
+        for ( unique_ptr<SpriteInstanceBatch>& pBatch : _listChunkBatch )
+        {
+            if ( pBatch != nullptr )
+                pBatch->markAllEntriesDirty();
+        }
     }
 
     bool TileMapRendererComponent::rebuild()
+    {
+        if ( rebuildChunks() == false )
+            return false;
+        refreshCollision();
+        return true;
+    }
+
+    bool TileMapRendererComponent::rebuildChunks()
     {
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr || _bLoaded == SW_FALSE )
             return false;
-        const uint32 count = static_cast<uint32>( _listBrushIndex.size() );
-        _batch.setSorting( _sortingLayer, _orderInLayer );
-        _batch.setOwnerComponent( this );
-        if ( _batch.initialize( *pManager, _tileSet.getAtlasPath(), count, _materialPath, _tileSet.getNormalAtlasPath() ) == false )
-            return false;
+        releaseChunks();
+        _listChunkBatch.resize( static_cast<size_t>( _chunkGrid.getChunkCount() ) );
         _lastOwnerWorld = getOwnerWorld();
         _listAnimatedCell.clear();
+        _listAnimatedFlag.assign( _listBrushIndex.size(), 0 );
+        // 칠한 칸이 있는 청크만 배치를 만든다(빈 청크는 항목을 들지 않는다).
         for ( int32 y = 0; y < _map._height; ++y )
         {
             for ( int32 x = 0; x < _map._width; ++x )
             {
+                if ( _listBrushIndex[indexOf( x, y )] != 0 && ensureChunkBatch( _chunkGrid.computeChunkIndex( x, y ) ) == false )
+                    return false;
+            }
+        }
+        for ( int32 chunkIndex = 0; chunkIndex < _chunkGrid.getChunkCount(); ++chunkIndex )
+        {
+            refreshChunkCells( chunkIndex );
+        }
+        return true;
+    }
+
+    bool TileMapRendererComponent::ensureChunkBatch( int32 chunkIndex )
+    {
+        if ( chunkIndex < 0 || static_cast<size_t>( chunkIndex ) >= _listChunkBatch.size() )
+            return false;
+        unique_ptr<SpriteInstanceBatch>& pBatch = _listChunkBatch[static_cast<size_t>( chunkIndex )];
+        if ( pBatch != nullptr )
+            return true;
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
+        if ( pManager == nullptr )
+            return false;
+        const TileRect                  rect  = _chunkGrid.computeChunkRect( chunkIndex );
+        const uint32                    count = static_cast<uint32>( rect._width * rect._height );
+        unique_ptr<SpriteInstanceBatch> batch = make_unique<SpriteInstanceBatch>();
+        batch->setSorting( _sortingLayer, _orderInLayer );
+        batch->setOwnerComponent( this );
+        if ( batch->initialize( *pManager, _tileSet.getAtlasPath(), count, _materialPath, _tileSet.getNormalAtlasPath() ) == false )
+            return false;
+        pBatch = std::move( batch );
+        return true;
+    }
+
+    void TileMapRendererComponent::releaseChunks()
+    {
+        for ( unique_ptr<SpriteInstanceBatch>& pBatch : _listChunkBatch )
+        {
+            if ( pBatch != nullptr )
+                pBatch->shutdown();
+        }
+        _listChunkBatch.clear();
+    }
+
+    uint32 TileMapRendererComponent::getBuiltChunkCount() const
+    {
+        uint32 builtCount{ 0 };
+        for ( const unique_ptr<SpriteInstanceBatch>& pBatch : _listChunkBatch )
+        {
+            if ( pBatch != nullptr )
+                ++builtCount;
+        }
+        return builtCount;
+    }
+
+    void TileMapRendererComponent::refreshChunkCells( int32 chunkIndex )
+    {
+        if ( _listChunkBatch[static_cast<size_t>( chunkIndex )] == nullptr )
+            return; // 빈 청크 — 놓을 칸이 없다
+        const TileRect rect = _chunkGrid.computeChunkRect( chunkIndex );
+        for ( int32 y = rect._y; y < rect._y + rect._height; ++y )
+        {
+            for ( int32 x = rect._x; x < rect._x + rect._width; ++x )
+            {
                 refreshCellEntry( x, y );
             }
         }
-        refreshCollision();
-        return true;
     }
 
     bool TileMapRendererComponent::setTileBrush( int32 x, int32 y, string_view brushName )
@@ -179,7 +288,7 @@ namespace sw
         }
         (void)_map.setTileBrush( x, y, brushName ); // 칸 범위는 위에서 봤다
         _listBrushIndex[indexOf( x, y )] = value;
-        if ( _batch.isInitialized() )
+        if ( _listChunkBatch.empty() == false )
         {
             // 규칙 타일은 이웃을 보므로 칠한 칸과 이웃 여덟 칸을 다시 고른다.
             for ( int32 offsetY = -1; offsetY <= 1; ++offsetY )
@@ -236,25 +345,74 @@ namespace sw
     {
         _sortingLayer = layerName;
         _orderInLayer = orderInLayer;
-        _batch.setSorting( _sortingLayer, _orderInLayer );
+        for ( unique_ptr<SpriteInstanceBatch>& pBatch : _listChunkBatch )
+        {
+            if ( pBatch != nullptr )
+                pBatch->setSorting( _sortingLayer, _orderInLayer );
+        }
     }
 
     void TileMapRendererComponent::refreshCellEntry( int32 x, int32 y )
     {
-        const uint32      entry   = static_cast<uint32>( indexOf( x, y ) );
-        const TileVisual* pVisual = _tileSet.resolveVisual( _listBrushIndex, _map._width, _map._height, x, y );
-        if ( pVisual == nullptr || pVisual->_listFrameCell.empty() )
+        const int32                      chunkIndex = _chunkGrid.computeChunkIndex( x, y );
+        unique_ptr<SpriteInstanceBatch>& pBatch     = _listChunkBatch[static_cast<size_t>( chunkIndex )];
+        const uint32                     entry      = _chunkGrid.computeEntryIndex( x, y );
+        const TileVisual*                pVisual    = _tileSet.resolveVisual( _listBrushIndex, _map._width, _map._height, x, y );
+        const bool                       bVisible   = pVisual != nullptr && pVisual->_listFrameCell.empty() == false;
+        if ( bVisible == false )
         {
-            _batch.setEntryVisible( entry, false );
+            if ( pBatch != nullptr )
+                pBatch->setEntryVisible( entry, false );
             return;
         }
-        if ( pVisual->isAnimated() && std::find( _listAnimatedCell.begin(), _listAnimatedCell.end(), entry ) == _listAnimatedCell.end() )
-            _listAnimatedCell.push_back( entry );
+        if ( pBatch == nullptr )
+        {
+            // 빈 청크에 칠했다. 배치를 만드는 것은 구조 변경이라 틱 중에는 틱 뒤로 미룬다(그 청크를 통째로 다시 놓는다).
+            if ( _bChunkBuildQueued == SW_TRUE )
+                return;
+            GameObject*        pOwner   = getOwner();
+            GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
+            if ( pManager == nullptr )
+                return;
+            _bChunkBuildQueued = SW_TRUE;
+            pManager->executeOrDeferPostTickOnComponent<TileMapRendererComponent>( getHandle(), []( TileMapRendererComponent& tiles )
+            {
+                tiles._bChunkBuildQueued = SW_FALSE;
+                for ( int32 index = 0; index < tiles._chunkGrid.getChunkCount(); ++index )
+                {
+                    const bool bMissing = tiles._listChunkBatch[static_cast<size_t>( index )] == nullptr;
+                    if ( bMissing == false )
+                        continue;
+                    const TileRect rect = tiles._chunkGrid.computeChunkRect( index );
+                    bool           bPainted{ false };
+                    for ( int32 cellY = rect._y; cellY < rect._y + rect._height && bPainted == false; ++cellY )
+                    {
+                        for ( int32 cellX = rect._x; cellX < rect._x + rect._width; ++cellX )
+                        {
+                            if ( tiles._listBrushIndex[tiles.indexOf( cellX, cellY )] != 0 )
+                            {
+                                bPainted = true;
+                                break;
+                            }
+                        }
+                    }
+                    if ( bPainted && tiles.ensureChunkBatch( index ) )
+                        tiles.refreshChunkCells( index );
+                }
+            } );
+            return;
+        }
+        const size_t cellIndex = indexOf( x, y );
+        if ( pVisual->isAnimated() && _listAnimatedFlag[cellIndex] == 0 )
+        {
+            _listAnimatedFlag[cellIndex] = 1;
+            _listAnimatedCell.push_back( static_cast<uint32>( cellIndex ) );
+        }
         const float32  size = _tileSet.getTileSize();
         const float3   local{ ( static_cast<float32>( x ) + 0.5f ) * size, -( static_cast<float32>( y ) + 0.5f ) * size, 0.0f };
         const float4x4 world = SpriteInstanceBatch::makeQuadWorld( local, size, size ) * _lastOwnerWorld;
         const float4   uv    = _tileSet.computeCellUvRect( pVisual->computeCellAt( _elapsedSeconds ) );
-        _batch.setEntry( entry, world, uv, float4{ 1.0f, 1.0f, 1.0f, 1.0f } );
+        pBatch->setEntry( entry, world, uv, float4{ 1.0f, 1.0f, 1.0f, 1.0f } );
     }
 
     void TileMapRendererComponent::refreshCollision()
