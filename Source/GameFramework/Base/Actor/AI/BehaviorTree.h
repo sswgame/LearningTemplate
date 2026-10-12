@@ -2,7 +2,7 @@
  * @file BehaviorTree.h
  * @brief 행동 트리를 정의합니다.
  * @details 정의(여러 행위자가 공유)와 실행기(행위자마다)를 나눈 언리얼식 트리이다.
- *          노드는 셀렉터, 시퀀스, 데코레이터, 작업, 조건, 대기가 있다.
+ *          노드는 셀렉터, 시퀀스, 데코레이터, 작업, 조건, 대기, 이동(`INavMover` — 격자 · 내비메시 공통)이 있다.
  *          데코레이터는 반전, 성공 강제, 반복, 쿨다운, 시간 제한, 블랙보드 조건(관찰 중단 포함)을 지원한다.
  */
 #pragma once
@@ -10,6 +10,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -39,7 +40,8 @@ namespace sw
         BlackboardCondition, ///< 블랙보드 값이 조건에 맞을 때만 자식을 돌린다
         Action,              ///< 작업 함수
         Condition,           ///< 조건 함수(성공 · 실패)
-        Wait                 ///< `_seconds` 기다린다
+        Wait,                ///< `_seconds` 기다린다
+        MoveTo               ///< 블랙보드 벡터 `_key` 로 간다 — 러너의 `INavMover`(격자 · 내비메시 공통). 닿으면 성공, 길이 없으면 실패
     };
 
     /** @brief 블랙보드 조건의 비교 방식입니다. */
@@ -71,6 +73,8 @@ namespace sw
 
     struct BehaviorContext;
 
+    class INavMover;
+
     /** @brief 작업과 조건 함수입니다. 작업은 끝날 때까지 `Running` 을 반환하고, 중단되면 `_bAborted` 로 한 번 더 불려 뒷정리합니다. */
     using BehaviorTaskFunction = BehaviorStatus ( * )( BehaviorContext& context );
 
@@ -79,6 +83,7 @@ namespace sw
     {
         Blackboard* _pBlackboard{ nullptr };
         void*       _pOwner{ nullptr }; ///< 행위자(게임이 넘긴 것)
+        INavMover*  _pMover{ nullptr }; ///< 행위자의 이동 창구(`BehaviorTreeRunner::setMover`). 없으면 이동 노드가 실패한다
         float32     _deltaTime{ 0.0f };
         int32       _nodeIndex{ -1 };
         uint8       _bJustStarted{ SW_FALSE }; ///< 이 작업이 이번 틱에 시작했다(목적지 정하기 등 처음 한 번)
@@ -140,6 +145,13 @@ namespace sw
         int32 addAction( int32 parent, const utf8* pName, BehaviorTaskFunction function );
         int32 addCondition( int32 parent, const utf8* pName, BehaviorTaskFunction function );
         int32 addWait( int32 parent, float32 seconds );
+        /**
+         * @brief 블랙보드 벡터 @p destinationKey 로 가는 이동 노드를 더합니다. 언리얼 `BTTask_MoveTo`(블랙보드 키 + 관찰)에 해당합니다.
+         * @details 러너의 `INavMover`(내비메시 에이전트든 격자 행위자든)에 목적지를 걸고, 닿으면 성공 · 길이 없거나 멈춰지면 실패 · 가는 동안 Running 이다.
+         *          도는 동안 블랙보드 값이 @p repathDistance 미터보다 멀리 바뀌면 새 목적지로 다시 건다(쫓기). 중단되면 이동을 멈춘다.
+         *          키가 비었거나 러너에 이동 창구가 없으면 실패한다.
+         */
+        int32 addMoveTo( int32 parent, const hashed_string& destinationKey, float32 repathDistance = 0.5f );
 
         /** @brief 트리가 올바르면 true 입니다. 뿌리가 있고, 데코레이터는 자식이 꼭 하나, 컴포짓은 하나 이상, 작업과 조건은 함수가 있어야 합니다. */
         bool                isValid() const;
@@ -170,6 +182,8 @@ namespace sw
         BehaviorTreeRunner();
 
         void initialize( const BehaviorTree* pTree );
+        /** @brief 이동 노드(`addMoveTo`)가 쓸 행위자의 이동 창구입니다. 행위자보다 먼저 사라지면 nullptr 로 바꿉니다. */
+        void setMover( INavMover* pMover ) { _context._pMover = pMover; }
         /** @brief 한 틱 돌리고 뿌리의 상태를 반환합니다. */
         BehaviorStatus tick( Blackboard& blackboard, void* pOwner, float32 deltaTime );
         /** @brief 도는 작업을 모두 중단하고 처음 상태로 돌립니다. */
@@ -182,6 +196,8 @@ namespace sw
 
     private:
         BehaviorStatus tickNode( int32 index );
+        /** @brief 이동 노드 한 틱입니다(목적지를 걸거나 다시 걸고, 이동 창구의 상태를 노드 상태로 옮긴다). */
+        BehaviorStatus tickMoveTo( int32 index, bool bFirst );
         /** @brief 노드를 끝난 상태로 돌립니다. 커서, 타이머, 횟수를 비우되 쿨다운은 남깁니다. */
         void finishNode( int32 index );
         /** @brief 도는 노드와 그 아래를 중단합니다. 작업은 `_bAborted` 로 한 번 불립니다. */
@@ -197,6 +213,7 @@ namespace sw
         vector<int32>       _listCounter;
         vector<uint8>       _listActive;
         vector<uint8>       _listLastCondition; ///< 관찰 중단 조건의 지난 틱 결과
+        vector<float3>      _listMoveTarget;    ///< 이동 노드가 마지막으로 건 목적지
         float32             _elapsedTime;
         int32               _activeLeaf;
     };

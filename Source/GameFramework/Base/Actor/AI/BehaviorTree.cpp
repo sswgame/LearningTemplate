@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Navigation/INavMover.h"
+
 #include "GameFramework/Base/Actor/AI/Blackboard.h"
 
 namespace sw
@@ -143,6 +145,17 @@ namespace sw
         return index;
     }
 
+    int32 BehaviorTree::addMoveTo( int32 parent, const hashed_string& destinationKey, float32 repathDistance )
+    {
+        const int32 index = addNode( parent, BehaviorNodeType::MoveTo, destinationKey.c_str() );
+        if ( index < 0 )
+            return index;
+        BehaviorNode& node = _listNode[static_cast<size_t>( index )];
+        node._key          = destinationKey;
+        node._compareValue = MathUtil::max( 0.0f, repathDistance );
+        return index;
+    }
+
     bool BehaviorTree::isDecorator( int32 index ) const
     {
         switch ( getNode( index )._type )
@@ -159,6 +172,7 @@ namespace sw
             case BehaviorNodeType::Action:
             case BehaviorNodeType::Condition:
             case BehaviorNodeType::Wait:
+            case BehaviorNodeType::MoveTo:
                 return false;
         }
         return false;
@@ -177,12 +191,16 @@ namespace sw
                 ++childCount;
             }
             const bool bComposite = node._type == BehaviorNodeType::Selector || node._type == BehaviorNodeType::Sequence;
-            const bool bLeaf      = node._type == BehaviorNodeType::Action || node._type == BehaviorNodeType::Condition || node._type == BehaviorNodeType::Wait;
+            const bool bLeaf      = node._type == BehaviorNodeType::Action || node._type == BehaviorNodeType::Condition || node._type == BehaviorNodeType::Wait ||
+                               node._type == BehaviorNodeType::MoveTo;
+            const bool bNeedsFunction = node._type == BehaviorNodeType::Action || node._type == BehaviorNodeType::Condition;
             if ( bComposite && childCount == 0 )
                 return false;
             if ( isDecorator( index ) && childCount != 1 )
                 return false;
-            if ( bLeaf && ( childCount != 0 || ( node._type != BehaviorNodeType::Wait && node._function == nullptr ) ) )
+            if ( bLeaf && ( childCount != 0 || ( bNeedsFunction && node._function == nullptr ) ) )
+                return false;
+            if ( node._type == BehaviorNodeType::MoveTo && node._key.empty() )
                 return false;
         }
         return true;
@@ -225,6 +243,7 @@ namespace sw
         , _listCounter{}
         , _listActive{}
         , _listLastCondition{}
+        , _listMoveTarget{}
         , _elapsedTime{ 0.0f }
         , _activeLeaf{ -1 }
     {
@@ -240,6 +259,7 @@ namespace sw
         _listCounter.assign( nodeCount, 0 );
         _listActive.assign( nodeCount, SW_FALSE );
         _listLastCondition.assign( nodeCount, SW_FALSE );
+        _listMoveTarget.assign( nodeCount, float3{} );
         _elapsedTime = 0.0f;
         _activeLeaf  = -1;
     }
@@ -313,6 +333,8 @@ namespace sw
             (void)node._function( _context ); // 뒷정리만 — 결과는 쓰지 않는다
             _context._bAborted = SW_FALSE;
         }
+        if ( node._type == BehaviorNodeType::MoveTo && _context._pMover != nullptr )
+            _context._pMover->stopMoving();
         finishNode( index );
     }
 
@@ -467,10 +489,47 @@ namespace sw
                     _activeLeaf = index;
                 break;
             }
+            case BehaviorNodeType::MoveTo:
+            {
+                status = tickMoveTo( index, bFirst );
+                if ( status == BehaviorStatus::Running )
+                    _activeLeaf = index;
+                break;
+            }
         }
 
         if ( status != BehaviorStatus::Running )
             finishNode( index );
         return status;
+    }
+
+    BehaviorStatus BehaviorTreeRunner::tickMoveTo( int32 index, bool bFirst )
+    {
+        const BehaviorNode& node   = _pTree->getNode( index );
+        INavMover*          pMover = _context._pMover;
+        if ( pMover == nullptr || _context._pBlackboard->isSet( node._key ) == false )
+            return BehaviorStatus::Failure;
+        const float3 destination = _context._pBlackboard->getVector( node._key );
+        float3&      issued      = _listMoveTarget[static_cast<size_t>( index )];
+        const bool   bRepath     = bFirst || ( destination - issued ).getLength() > node._compareValue;
+        if ( bRepath )
+        {
+            issued = destination;
+            if ( pMover->moveTo( destination ) == false )
+                return BehaviorStatus::Failure;
+            // 요청이 다음 갱신에 풀리는 구현(내비메시 에이전트)이 있다 — 이번 틱의 상태는 옛 요청의 것이라 읽지 않는다.
+            return BehaviorStatus::Running;
+        }
+        switch ( pMover->getMoveStatus() )
+        {
+            case NavMoveStatus::Moving:
+                return BehaviorStatus::Running;
+            case NavMoveStatus::Arrived:
+                return BehaviorStatus::Success;
+            case NavMoveStatus::Idle:   // 다른 것이 멈췄다
+            case NavMoveStatus::Failed: // 길이 없다
+                return BehaviorStatus::Failure;
+        }
+        return BehaviorStatus::Failure;
     }
 } // namespace sw
