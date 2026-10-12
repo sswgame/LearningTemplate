@@ -410,7 +410,7 @@ namespace sw::editor
         ImGui::PopStyleColor( 3 );
     }
 
-    void EditorWidgets::drawPropertyRowBegin( const utf8* pLabel, float32 labelWidth )
+    void EditorWidgets::drawPropertyRowLabel( const utf8* pLabel, float32 labelWidth )
     {
         ImGui::AlignTextToFramePadding();
         ImGui::TextDisabled( "%s", pLabel );
@@ -443,7 +443,7 @@ namespace sw::editor
         bool bChanged{ false };
 
         if ( StringUtil::isNullOrEmpty( pLabel ) == false )
-            drawPropertyRowBegin( pLabel, labelWidth );
+            drawPropertyRowLabel( pLabel, labelWidth );
 
         const float32 availWidth    = ImGui::GetContentRegionAvail().x;
         const float32 clearBtnWidth = 24.0f;
@@ -486,7 +486,7 @@ namespace sw::editor
     {
         ImGui::PushID( pLabel );
         if ( StringUtil::isNullOrEmpty( pLabel ) == false )
-            drawPropertyRowBegin( pLabel, labelWidth );
+            drawPropertyRowLabel( pLabel, labelWidth );
         else
             ImGui::SetNextItemWidth( -1.0f );
         float32 arrColor[4]{ color._r, color._g, color._b, color._a };
