@@ -4,6 +4,7 @@
 #include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionRPC.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
 #include "Engine/Serialization/Base/Serializer.h"
@@ -327,6 +328,24 @@ SW_TEST_CASE( ReflectionSerializationTest, ObjectDiffSerializationDelta )
         sw::Memory::copy( unknownDiff.data() + sizeof( uint32 ), &zeroPayload, sizeof( uint32 ) );
         SW_EXPECT_FALSE( sw::ObjectDiffSerializer::deserializeDiff( &viaAlias, aliasInfo, unknownDiff.data(), unknownDiff.size() ) );
     }
+}
+
+/**
+ * @brief [ReflectionSerializationTest] 컨텍스트에 넣은 레지스트리로만 타입을 찾는다(기본은 엔진 전역)
+ */
+SW_TEST_CASE( ReflectionSerializationTest, ContextTypeRegistryIsolatesLookup )
+{
+    const sw::hashed_string typeName( "sw::ComplexData" );
+
+    const sw::SerializeContext globalContext = sw::SerializeContext::deriveFromDefault();
+    SW_EXPECT_TRUE( &globalContext.getTypeRegistry() == &sw::engine::getTypeRegistry() );
+    SW_EXPECT_TRUE( sw::SerializerUtil::findNestedObjectType( typeName, globalContext ) != nullptr );
+
+    const sw::TypeRegistry emptyRegistry;
+    sw::SerializeContext   isolatedContext = sw::SerializeContext::deriveFromDefault();
+    isolatedContext.setTypeRegistry( &emptyRegistry );
+    SW_EXPECT_TRUE( &isolatedContext.getTypeRegistry() == &emptyRegistry );
+    SW_EXPECT_TRUE( sw::SerializerUtil::findNestedObjectType( typeName, isolatedContext ) == nullptr );
 }
 
 /**
