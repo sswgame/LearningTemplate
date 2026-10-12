@@ -437,13 +437,13 @@ namespace sw
 
     void SceneNavigation::registerGeometrySource( INavGeometrySource* pSource )
     {
-        if ( pSource != nullptr )
-            _listGeometrySource.push_back( pSource );
+        // nullptr · 이미 등록한 소스는 목록이 거절한다(같은 소스가 두 번 들면 빼기가 하나만 지워 죽은 포인터가 남는다).
+        (void)_listGeometrySource.add( pSource );
     }
 
     void SceneNavigation::unregisterGeometrySource( INavGeometrySource* pSource )
     {
-        SceneNavigationInternal::removeFromList( _listGeometrySource, pSource );
+        (void)_listGeometrySource.remove( pSource ); // 등록하지 않은 소스를 빼는 것은 할 일이 없다
     }
 
     void SceneNavigation::invalidateArea( const AABB& bounds, bool bGeometryChanged )
@@ -571,7 +571,7 @@ namespace sw
         pRuntime->_searchExtent             = float3{ reach, MathUtil::max( 1.0f, pType->_height ), reach };
 
         shared_ptr<NavMeshGeometry> pGeometry = make_shared<NavMeshGeometry>();
-        collectGeometry( *_pManager, pRuntime->_pSurface, _settings, _listGeometrySource, *pGeometry );
+        collectGeometry( *_pManager, pRuntime->_pSurface, _settings, _listGeometrySource.getItems(), *pGeometry );
         shared_ptr<vector<NavConvexVolume>> pVolume = make_shared<vector<NavConvexVolume>>();
         collectObstacleVolumes( *pVolume );
         pRuntime->_pNavMesh = NavMeshBackend::createNavMesh();
@@ -822,7 +822,7 @@ namespace sw
             for ( const unique_ptr<NavMeshRuntime>& pRuntime : _listRuntime )
             {
                 shared_ptr<NavMeshGeometry> pGeometry = make_shared<NavMeshGeometry>();
-                collectGeometry( *_pManager, pRuntime->_pSurface, _settings, _listGeometrySource, *pGeometry );
+                collectGeometry( *_pManager, pRuntime->_pSurface, _settings, _listGeometrySource.getItems(), *pGeometry );
                 pGeometry->rebuildSpatialIndex( MathUtil::max( 1.0f, pRuntime->_pNavMesh->getTileGrid()._tileWorldSize * 0.25f ) );
                 pRuntime->_pGeometry = std::move( pGeometry );
             }
@@ -1234,7 +1234,7 @@ namespace sw
             const Internal::ObjectVerdict verdict = Internal::evaluateObject( *pObject, pSurface, settings );
             if ( verdict._bIncluded == false )
                 return;
-            // 기하를 대신 내는 소스(파괴 오브젝트)가 이 오브젝트를 맡으면 그것만 쓴다.
+            // 기하를 대신 내는 소스(파괴 오브젝트)가 이 오브젝트를 맡으면 그것만 쓴다. 여럿이 맡으면 @p listSource 의 첫 소스다(등록 순서).
             for ( const INavGeometrySource* pSource : listSource )
             {
                 if ( pSource->getNavGeometryOwner() == pObject && pSource->overridesOwnerGeometry() )
