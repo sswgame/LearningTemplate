@@ -167,8 +167,8 @@ namespace sw
             --_cooldownSteps;
 
         // 대상 고르기: 태그를 가진 것들을 후보로 삼고, 상호작용과 같은 방식(거리, 시야각, 시야)으로 고른다.
-        const float3      origin = pScene->getWorldPosition();
-        InteractionViewer viewer;
+        const float3    origin = pScene->getWorldPosition();
+        InteractionView viewer;
         viewer._position = origin;
         viewer._forward  = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, pScene->getWorldMatrix() );
         viewer._objectID = pOwner->getObjectID();

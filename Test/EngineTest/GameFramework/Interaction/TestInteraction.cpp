@@ -136,7 +136,7 @@ namespace
  */
 SW_TEST_CASE( InteractionTest, SelectionPicksNearestInViewWithLineOfSight )
 {
-    InteractionViewer viewer;
+    InteractionView viewer;
     viewer._position                           = float3{ 0.0f, 0.0f, 0.0f };
     viewer._forward                            = float3{ 0.0f, 0.0f, 1.0f };
     viewer._objectID                           = 99;
@@ -157,7 +157,7 @@ SW_TEST_CASE( InteractionTest, SelectionPicksNearestInViewWithLineOfSight )
     SW_EXPECT_EQUAL( 0, InteractionSelector::selectBest( viewer, listCandidate, nullptr ) ); // 우선도가 거리를 이긴다
 
     // 2D — Z(그리기 순서)가 멀어도 XY 거리로 본다. 시선은 +X.
-    InteractionViewer side;
+    InteractionView side;
     side._space                           = InteractionSpace::Space2D;
     side._forward                         = float3{ 1.0f, 0.0f, 0.0f };
     vector<InteractionCandidate> listFlat = {
@@ -577,7 +577,7 @@ SW_TEST_CASE( InteractionTest, RegistryCandidatesMatchFullSceneScan )
     /** @brief 전수 훑기로 고른 대상(없으면 무효 핸들)입니다 — 레지스트리 이전의 고르기 그대로. */
     const auto selectByScan = [&manager, pPlayer]()
     {
-        InteractionViewer viewer;
+        InteractionView viewer;
         viewer._space    = InteractionSpace::Space3D;
         viewer._objectID = pPlayer->getObjectID();
         viewer._position = pPlayer->getPrimarySceneComponent()->getWorldPosition();
