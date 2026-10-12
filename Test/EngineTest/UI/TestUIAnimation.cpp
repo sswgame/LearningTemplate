@@ -13,6 +13,7 @@
 #include "Engine/UI/UISystem.h"
 
 #include "EngineTest/UI/UILayoutTestUtil.h"
+#include "EngineTest/UI/UIScopedVariable.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -21,33 +22,6 @@
 
 namespace
 {
-    /** @brief 전역 bool 변수 하나를 이름으로 바꾸고 스코프 끝에 되돌립니다(테스트 DLL 은 Engine 의 gv_* 를 extern 으로 못 읽는다). */
-    class ScopedBoolVariable
-    {
-    public:
-        ScopedBoolVariable( const utf8* pName, bool bValue )
-            : _pInfo{ sw::engine::getGlobalVariableManager().findVariable( pName ) }
-            , _bPrevious{ false }
-        {
-            SW_EXPECT_TRUE( _pInfo != nullptr );
-            if ( _pInfo == nullptr )
-                return;
-            _bPrevious = _pInfo->getValueAsBool();
-            (void)_pInfo->setValueAsBool( bValue );
-        }
-        ~ScopedBoolVariable()
-        {
-            if ( _pInfo != nullptr )
-                (void)_pInfo->setValueAsBool( _bPrevious );
-        }
-        ScopedBoolVariable( const ScopedBoolVariable& )            = delete;
-        ScopedBoolVariable& operator=( const ScopedBoolVariable& ) = delete;
-
-    private:
-        sw::GlobalVariableInfo* _pInfo;
-        bool                    _bPrevious;
-    };
-
     struct UIAnimationTestUtil
     {
         static constexpr float32 kTolerance = 0.001f;

@@ -9,6 +9,7 @@
 #include "Engine/UI/Document/UIDocumentLoader.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/TextWidget.h"
+#include "Engine/UserSettings/UserSettingsVariables.h"
 
 namespace sw
 {
@@ -59,6 +60,7 @@ namespace sw
     UINotificationService::UINotificationService( UISystem& ui )
         : _listVisible{}
         , _listQueued{}
+        , _listFading{}
         , _ui{ ui }
         , _nextOrder{ 0 }
         , _screen{ kInvalidUIScreenHandle }
@@ -86,20 +88,37 @@ namespace sw
         _listQueued.push_back( entry );
     }
 
+    hashed_string UINotificationService::getEntryWidgetName( uint64 order, string_view part )
+    {
+        string name = to_string( order );
+        if ( part.empty() == false )
+        {
+            name += ".";
+            name.append( part.data(), part.size() );
+        }
+        return hashed_string( name );
+    }
+
     void UINotificationService::update( float32 deltaSeconds )
     {
-        // 1) 보이는 알림의 시간: 끝난 것을 내린다.
-        UIScreen* pScreen = _ui.findScreen( _screen );
+        // 0) 사라지는 중인 항목: 페이드가 끝나면 위젯을 지운다.
+        for ( size_t index = _listFading.size(); index > 0; --index )
+        {
+            FadingEntry& fading = _listFading[index - 1];
+            fading._remainingSeconds -= deltaSeconds;
+            if ( fading._remainingSeconds > 0.0f )
+                continue;
+            removeEntryWidget( fading._widget );
+            _listFading.erase( _listFading.begin() + static_cast<ptrdiff_t>( index - 1 ) );
+        }
+        // 1) 보이는 알림의 시간: 끝난 것을 내린다(자리는 바로 비고, 위젯은 페이드 뒤에 지운다).
         for ( size_t index = _listVisible.size(); index > 0; --index )
         {
             Entry& entry = _listVisible[index - 1];
             entry._ageSeconds += deltaSeconds;
             if ( entry._ageSeconds < entry._desc._durationSeconds )
                 continue;
-            Widget*      pWidget = pScreen != nullptr ? pScreen->getTree().findWidgetByID( entry._widget ) : nullptr;
-            PanelWidget* pParent = pWidget != nullptr ? pWidget->getParent() : nullptr;
-            if ( pParent != nullptr )
-                (void)pParent->removeChild( pWidget ); // 부모에서 찾은 위젯이라 항상 제거된다
+            startFadeOut( entry );
             _listVisible.erase( _listVisible.begin() + static_cast<ptrdiff_t>( index - 1 ) );
         }
         // 2) 자리가 나면 기다리는 알림을 올린다. 우선순위가 큰 것이 먼저이고, 같으면 먼저 온 것이 먼저다.
@@ -121,7 +140,7 @@ namespace sw
             showEntry( _listVisible.back() );
         }
         // 3) 보일 것이 없으면 화면을 닫는다(오버레이라 입력과 무관하며, 열고 닫는 비용은 알림 단위로 든다).
-        if ( _listVisible.empty() && _screen != kInvalidUIScreenHandle )
+        if ( _listVisible.empty() && _listFading.empty() && _screen != kInvalidUIScreenHandle )
         {
             _ui.closeScreen( _screen );
             _screen = kInvalidUIScreenHandle;
@@ -132,6 +151,7 @@ namespace sw
     {
         _listVisible.clear();
         _listQueued.clear();
+        _listFading.clear();
         if ( _screen != kInvalidUIScreenHandle && _ui.findScreen( _screen ) != nullptr )
             _ui.closeScreen( _screen );
         _screen = kInvalidUIScreenHandle;
@@ -183,8 +203,20 @@ namespace sw
             return;
         }
         widget->setStyleClass( Internal::getKindClass( entry._desc._kind ) );
+        // 같은 조각을 항목마다 붙이므로 붙이기 전에 이름을 항목 번호로 가른다(붙은 뒤에는 "name is used twice" 경고가 난다).
+        widget->setName( getEntryWidgetName( entry._order ) );
+        if ( Widget* pMessage = Internal::findDescendant( *widget, Internal::kMessageName ); pMessage != nullptr )
+            pMessage->setName( getEntryWidgetName( entry._order, Internal::kMessageName ) );
+        if ( Widget* pCount = Internal::findDescendant( *widget, Internal::kCountName ); pCount != nullptr )
+            pCount->setName( getEntryWidgetName( entry._order, Internal::kCountName ) );
         entry._widget = widget->getID();
+        widget->setOpacity( 0.0f ); // 페이드로 들어온다(움직임 줄이기이면 아래 트윈이 바로 1 을 쓴다)
         (void)pStack->addChild( std::move( widget ) );
+        if ( _ui.tween( entry._widget, "_opacity", "1", kFadeSeconds, BlendCurve::EaseOut ) == false )
+        {
+            if ( Widget* pAdded = pScreen->getTree().findWidgetByID( entry._widget ); pAdded != nullptr )
+                pAdded->setOpacity( 1.0f ); // 트윈을 걸지 못하면 보이지 않는 채로 남지 않게 한다
+        }
         refreshEntry( entry );
     }
 
@@ -195,12 +227,38 @@ namespace sw
         Widget*   pEntry  = pScreen != nullptr ? pScreen->getTree().findWidgetByID( entry._widget ) : nullptr;
         if ( pEntry == nullptr )
             return; // 아직 기다리는 중이다
-        if ( TextWidget* pMessage = castTo<TextWidget>( Internal::findDescendant( *pEntry, Internal::kMessageName ) ); pMessage != nullptr )
+        if ( TextWidget* pMessage = castTo<TextWidget>( Internal::findDescendant( *pEntry, getEntryWidgetName( entry._order, Internal::kMessageName ) ) ); pMessage != nullptr )
             pMessage->setText( entry._desc._text );
-        if ( TextWidget* pCount = castTo<TextWidget>( Internal::findDescendant( *pEntry, Internal::kCountName ) ); pCount != nullptr )
+        if ( TextWidget* pCount = castTo<TextWidget>( Internal::findDescendant( *pEntry, getEntryWidgetName( entry._order, Internal::kCountName ) ) ); pCount != nullptr )
         {
             pCount->setText( "x" + to_string( entry._count ) );
             pCount->setVisibility( entry._count > 1 ? WidgetVisibility::Visible : WidgetVisibility::Collapsed );
         }
+    }
+
+    void UINotificationService::startFadeOut( const Entry& entry )
+    {
+        UIScreen* pScreen = _ui.findScreen( _screen );
+        Widget*   pWidget = pScreen != nullptr ? pScreen->getTree().findWidgetByID( entry._widget ) : nullptr;
+        if ( pWidget == nullptr )
+            return; // 위젯을 만들지 못했던 항목이다
+        if ( gv_uiReduceMotion || _ui.tween( entry._widget, "_opacity", "0", kFadeSeconds, BlendCurve::EaseIn ) == false )
+        {
+            removeEntryWidget( entry._widget );
+            return;
+        }
+        FadingEntry fading{};
+        fading._widget           = entry._widget;
+        fading._remainingSeconds = kFadeSeconds;
+        _listFading.push_back( fading );
+    }
+
+    void UINotificationService::removeEntryWidget( WidgetID widget )
+    {
+        UIScreen*    pScreen = _ui.findScreen( _screen );
+        Widget*      pWidget = pScreen != nullptr ? pScreen->getTree().findWidgetByID( widget ) : nullptr;
+        PanelWidget* pParent = pWidget != nullptr ? pWidget->getParent() : nullptr;
+        if ( pParent != nullptr )
+            (void)pParent->removeChild( pWidget ); // 부모에서 찾은 위젯이라 항상 제거된다
     }
 } // namespace sw

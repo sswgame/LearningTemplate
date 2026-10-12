@@ -19,6 +19,8 @@
 #include "Engine/UI/Widgets/ButtonWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
+#include "EngineTest/UI/UIScopedVariable.h"
+
 #include "TestFramework/TestFramework.h"
 
 // UIStyleTest — 스타일 시트(*.uistyle.xml): 선택자 · 특정도 · 상태 · 자손 결합자 · 상속 · 변수 · 무효화 종류 · 나눠 쓰기 · 테마(고대비 · 사용자 설정).
@@ -74,33 +76,6 @@ namespace
     const sw::float4 UIStyleTestUtil::kGreen{ 0.0f, 1.0f, 0.0f, 1.0f };
     const sw::float4 UIStyleTestUtil::kBlue{ 0.0f, 0.0f, 1.0f, 1.0f };
     const sw::float4 UIStyleTestUtil::kYellow{ 1.0f, 1.0f, 0.0f, 1.0f };
-
-    /** @brief 전역 bool 변수 하나를 이름으로 바꾸고 스코프 끝에 되돌립니다(테스트 DLL 은 Engine 의 gv_* 를 extern 으로 못 읽는다). */
-    class ScopedBoolVariable
-    {
-    public:
-        ScopedBoolVariable( const utf8* pName, bool bValue )
-            : _pInfo{ sw::engine::getGlobalVariableManager().findVariable( pName ) }
-            , _bPrevious{ false }
-        {
-            SW_EXPECT_TRUE( _pInfo != nullptr );
-            if ( _pInfo == nullptr )
-                return;
-            _bPrevious = _pInfo->getValueAsBool();
-            (void)_pInfo->setValueAsBool( bValue );
-        }
-        ~ScopedBoolVariable()
-        {
-            if ( _pInfo != nullptr )
-                (void)_pInfo->setValueAsBool( _bPrevious );
-        }
-        ScopedBoolVariable( const ScopedBoolVariable& )            = delete;
-        ScopedBoolVariable& operator=( const ScopedBoolVariable& ) = delete;
-
-    private:
-        sw::GlobalVariableInfo* _pInfo;
-        bool                    _bPrevious;
-    };
 
     /** @brief 전환 테스트의 시트 — 배경색만 1 초 Linear 로 옮기고, 글 색은 적지 않아 바로 바뀐다. */
     constexpr utf8 kTransitionSheet[] = "<UIStyleSheet _schemaVersion=\"1\">\n"

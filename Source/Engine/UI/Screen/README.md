@@ -56,6 +56,9 @@
   대기열은 우선순위가 큰 것, 같으면 먼저 온 것부터 꺼냅니다. 같은 글이 보이거나 기다리는 중이면 새로 쌓지 않고 개수("x2")를 세며 시간을 다시 측정합니다. 시간은 보이기 시작한 뒤부터 측정합니다.
   화면은 오버레이 층이라 입력과 포커스를 받지 않고, 게임과 메뉴를 막지 않습니다. 보일 것이 없으면 화면을 닫습니다.
   항목은 조각 `engine/ui/parts/notification.ui.xml`(`Message`, `Count`)이고, 루트 클래스 `notification <info|achievement|warning|hint>` 를 `styles/notifications.uistyle.xml` 이 꾸밉니다.
+  같은 조각이 항목마다 한 트리에 붙으므로 붙이기 전에 이름을 `<올린 차례>`(루트) · `<올린 차례>.Message` · `<올린 차례>.Count` 로 바꿉니다(`UINotificationService::getEntryWidgetName`). 조각의 옛 이름은 남지 않습니다.
+  항목은 불투명도 0 에서 0.2 초 동안 1 로 들어오고, 시간이 다 되면 보이는 목록에서는 바로 빠져 자리를 내주며 위젯은 0.2 초 동안 사라진 뒤 지워집니다(`UISystem::tween`).
+  사라지는 항목이 있는 동안은 화면을 닫지 않고, 움직임 줄이기(`gv_uiReduceMotion`)이면 페이드 없이 바로 붙고 바로 지웁니다.
   사용처는 옵션 메뉴의 "다시 시작하면 적용", 자동 저장 완료, GameFramework의 튜토리얼 힌트입니다.
 - **행동 글리프.** 글 위젯의 글에 `[action=이름]` 이 있으면, 번역을 해석한 뒤 측정과 그리기 문맥의 `UIActionGlyphSource` 가 지금 장치의 글리프로 바꿉니다.
   게임 입력 맵을 먼저 보고 UI 맵을 보며, 장치 종류는 `InputManager::getActiveGlyphStyle` 입니다. 번역가가 태그 위치를 옮길 수 있습니다.

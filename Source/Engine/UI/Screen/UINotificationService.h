@@ -1,12 +1,13 @@
 /**
  * @file UINotificationService.h
- * @brief 알림과 토스트입니다. "저장했습니다", "다시 시작하면 적용됩니다", 퀘스트 갱신, 튜토리얼 힌트를 오버레이 레이어에 최대 셋까지 쌓아 보여 줍니다.
+ * @brief 알림과 토스트입니다. "저장했습니다", "다시 시작하면 적용됩니다", 퀘스트 갱신, 튜토리얼 힌트를 오버레이 레이어에 최대 셋까지 쌓아 보여 줍니다(들어올 때와 나갈 때 페이드).
  */
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/Base/WidgetTypes.h"
@@ -43,13 +44,19 @@ namespace sw
      * @details 보이는 알림은 `kMaxVisible` 개까지이고(오래된 것이 위), 나머지는 대기열(우선순위, 온 순서)에 둔다. 화면은 오버레이 레이어 문서 `engine/ui/notifications.ui.xml` 이며,
      *          입력과 포커스를 받지 않으므로 게임과 메뉴를 막지 않는다. 보일 것이 없으면 화면을 닫는다. 항목은 조각 `engine/ui/parts/notification.ui.xml`
      *          (`Message`, `Count`, 루트의 스타일 클래스 `notification <종류>`)로 만든다. 게임 스레드에서만 쓴다.
+     *
+     *          **이름.** 항목 조각의 위젯은 한 트리에 여럿 들어가므로 붙이기 전에 이름을 `<번호>`(루트), `<번호>.Message`, `<번호>.Count` 로 바꾼다. 번호는 올린 차례(`Entry::_order`)이고,
+     *          그래서 "name is used twice" 경고가 나지 않는다(`getEntryWidgetName`).
+     *          **들어오기 · 나가기.** 항목 위젯은 불투명도 0 으로 붙고 `kFadeSeconds` 동안 1 로 올라온다. 시간이 다 되면 보이는 목록(자리 계산, `getVisibleCount`)에서는 바로 빠지고
+     *          위젯은 같은 시간 동안 0 으로 사라진 뒤 지운다(화면은 사라지는 항목까지 없어져야 닫는다). 움직임 줄이기(`gv_uiReduceMotion`)이면 페이드 없이 바로 붙고 바로 지운다.
      */
     class SW_API UINotificationService
     {
     public:
-        static constexpr uint32 kMaxVisible       = 3;
-        static constexpr utf8   kScreenDocument[] = "engine/ui/notifications.ui.xml";
-        static constexpr utf8   kEntryDocument[]  = "engine/ui/parts/notification.ui.xml";
+        static constexpr uint32  kMaxVisible       = 3;
+        static constexpr utf8    kScreenDocument[] = "engine/ui/notifications.ui.xml";
+        static constexpr utf8    kEntryDocument[]  = "engine/ui/parts/notification.ui.xml";
+        static constexpr float32 kFadeSeconds      = 0.2f; ///< 들어올 때와 나갈 때 불투명도가 변하는 시간입니다.
 
         explicit UINotificationService( UISystem& ui );
         UINotificationService( const UINotificationService& )            = delete;
@@ -69,6 +76,10 @@ namespace sw
         uint32        getVisibleCountOf( uint32 index ) const { return _listVisible[index]._count; }
         /** @brief 알림 화면입니다(보일 것이 없으면 무효). */
         UIScreenHandle getScreen() const { return _screen; }
+        /** @brief 사라지는 중이라 위젯만 남은 항목 수입니다. */
+        uint32 getFadingCount() const { return static_cast<uint32>( _listFading.size() ); }
+        /** @brief 올린 차례가 @p order 인 항목의 위젯 이름입니다. @p part 가 비면 항목 루트(`<번호>`), 아니면 `<번호>.<part>`(`Message`, `Count`)입니다. */
+        static hashed_string getEntryWidgetName( uint64 order, string_view part = string_view{} );
 
     private:
         /** @struct Entry @brief 알림 하나의 상태입니다. 서술, 센 횟수, 보인 시간, 위젯을 가집니다. */
@@ -81,6 +92,13 @@ namespace sw
             WidgetID           _widget{ kInvalidWidgetID };
         };
 
+        /** @struct FadingEntry @brief 시간이 다 돼 사라지는 중인 항목의 위젯입니다. */
+        struct FadingEntry
+        {
+            WidgetID _widget{ kInvalidWidgetID };
+            float32  _remainingSeconds{ 0.0f };
+        };
+
         /** @brief 같은 글의 알림을 찾습니다(없으면 nullptr). */
         Entry* findSameText( const string& text );
         /** @brief 알림 화면을 엽니다(이미 열렸으면 그것). 열지 못하면 nullptr 입니다. */
@@ -89,12 +107,17 @@ namespace sw
         void showEntry( Entry& entry );
         /** @brief 항목 위젯의 텍스트와 센 횟수를 씁니다. */
         void refreshEntry( const Entry& entry );
+        /** @brief 항목 위젯을 사라지게 합니다(페이드를 걸어 `_listFading` 으로 옮기고, 움직임 줄이기이면 바로 지웁니다). */
+        void startFadeOut( const Entry& entry );
+        /** @brief 항목 위젯을 트리에서 떼어 지웁니다. */
+        void removeEntryWidget( WidgetID widget );
 
     private:
-        vector<Entry>  _listVisible; ///< 보이는 알림입니다(위부터).
-        vector<Entry>  _listQueued;  ///< 기다리는 알림입니다.
-        UISystem&      _ui;
-        uint64         _nextOrder;
-        UIScreenHandle _screen;
+        vector<Entry>       _listVisible; ///< 보이는 알림입니다(위부터).
+        vector<Entry>       _listQueued;  ///< 기다리는 알림입니다.
+        vector<FadingEntry> _listFading;  ///< 사라지는 중인 항목의 위젯입니다.
+        UISystem&           _ui;
+        uint64              _nextOrder;
+        UIScreenHandle      _screen;
     };
 } // namespace sw
