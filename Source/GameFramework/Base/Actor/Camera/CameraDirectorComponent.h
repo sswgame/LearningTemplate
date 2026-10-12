@@ -85,7 +85,7 @@ namespace sw
 
         /** @brief `ComponentStateStore` 계약 — 켠 프리셋과 블렌드 스택을 씁니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `ComponentStateStore` 계약 — 시작 전이면 들고 있다가 카탈로그를 읽은 뒤 적용하고, 시작 뒤면 바로 적용합니다. 읽지 못하면 알리고 지금 상태를 둡니다. */
+        /** @brief `ComponentStateStore` 계약 — 시작 전이면 보관했다가 카탈로그를 읽은 뒤 적용하고, 시작 뒤면 바로 적용합니다. 읽지 못하면 알리고 지금 상태를 둡니다. */
         void restoreState( vector<uint8>&& bytes );
 
         /** @brief 카메라가 따라갈 오브젝트입니다. 비우면 초점은 원점이고 요와 피치는 0 입니다. */
@@ -124,7 +124,7 @@ namespace sw
         void resolveCamera();
         /** @brief 시작 프리셋을 고릅니다. `-gv_cameraPreset` 이 카탈로그에 있으면(게임 시점 카메라만) 그것을 쓰고, 아니면 `_initialPreset`, 그것도 아니면 첫 프리셋을 씁니다. */
         hashed_string resolveStartPreset() const;
-        /** @brief 들고 있던 상태 바이트를 디렉터에 적용합니다. 적용했으면 true 입니다. */
+        /** @brief 보관해 둔 상태 바이트를 디렉터에 적용합니다. 적용했으면 true 입니다. */
         [[nodiscard]] bool applyPendingState();
 
     private:

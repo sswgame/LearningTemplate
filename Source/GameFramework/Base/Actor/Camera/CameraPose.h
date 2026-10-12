@@ -15,7 +15,7 @@ namespace sw
 {
     /**
      * @struct CameraPostProcessValues
-     * @brief 카메라 하나가 화면 후처리에 얹는 값입니다. 프리셋의 `<PostProcess>` 섹션이고 포즈가 섞어 나릅니다. 모든 값의 기본은 "바꾸지 않음"(중립)입니다.
+     * @brief 카메라 하나가 화면 후처리에 적용하는 값입니다. 프리셋의 `<PostProcess>` 섹션이고 포즈가 섞어 나릅니다. 모든 값의 기본은 "바꾸지 않음"(중립)입니다.
      * @details 언리얼 CineCameraComponent 의 PostProcessSettings 덮어쓰기와 Cinemachine Volume Settings 에 해당한다.
      *          값이 중립과 같으면 덮어쓰지 않는 것이라 따로 켜고 끄는 표시를 두지 않는다. 그래서 두 카메라 사이를 그냥 직선으로 섞을 수 있다.
      *          렌더러는 아직 카메라별로 읽지 않는다(톤맵 · 블룸 · 비네트 상수가 전역이다). 읽는 쪽이 생기면 렌더 뷰가 이 값을 싣는다.

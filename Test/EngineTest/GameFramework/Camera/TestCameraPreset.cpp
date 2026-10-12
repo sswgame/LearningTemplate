@@ -430,8 +430,8 @@ SW_TEST_CASE( CameraPresetTest, DirectorCollapsesTheBlendStackWithoutAJump )
 }
 
 /**
- * @brief [CameraPresetTest] 블렌드 스택(프리셋, 진행, 입력이 돌린 상태)은 저장했다 되살리면 같은 포즈를 이어 낸다
- * @details 카탈로그 밖의 프리셋(코드로 만든 것)은 다시 풀 수 없으므로 마지막 포즈로 고정해 되살린다.
+ * @brief [CameraPresetTest] 블렌드 스택(프리셋, 진행, 입력이 돌린 상태)은 저장했다 복원하면 같은 포즈를 이어 낸다
+ * @details 카탈로그 밖의 프리셋(코드로 만든 것)은 다시 풀 수 없으므로 마지막 포즈로 고정해 복원한다.
  */
 SW_TEST_CASE( CameraPresetTest, DirectorStateRoundTripsTheBlendStack )
 {

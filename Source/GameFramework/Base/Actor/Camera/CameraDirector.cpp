@@ -178,7 +178,7 @@ namespace sw
             _listLayer.push_back( layer );
             return;
         }
-        // 스택이 비었는데 화면은 있다(되살리기 실패 뒤) — 지금 화면을 고정 층으로 깔고 거기서 섞는다.
+        // 스택이 비었는데 화면은 있다(복원 실패 뒤) — 지금 화면을 고정 층으로 깔고 거기서 섞는다.
         if ( _listLayer.empty() )
             _listLayer.push_back( makeFrozenLayer( _outputPose ) );
         layer._weight = 0.0f;

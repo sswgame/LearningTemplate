@@ -75,7 +75,7 @@ namespace sw
         /** @brief 화면이 지금 @p from 이라고 보고 뷰 타깃으로 @p blend 를 따라 섞습니다. 시네마틱 컷에서 게임 카메라로 돌아올 때 씁니다(언리얼 시퀀스 Blend Out). */
         void blendFromPose( const CameraPose& from, const BlendCurveDef& blend );
 
-        /** @brief 곧 볼 시점을 등록합니다. 앞의 대기 뷰를 바꾸고 듣는 쪽에 알립니다. 시퀀서 컷 트랙의 프리롤과 게임의 뷰 타깃 전환이 같은 창구를 씁니다. */
+        /** @brief 곧 볼 시점을 등록합니다. 앞의 대기 뷰를 바꾸고 듣는 쪽에 알립니다. 시퀀서 컷 트랙의 프리롤과 게임의 뷰 타깃 전환이 같은 함수를 씁니다. */
         void setPendingView( const CameraPendingView& view );
         /** @brief 대기 뷰를 풉니다(그 시점으로 바뀌었거나 취소했다). 등록된 것이 없으면 아무것도 하지 않습니다. */
         void                     clearPendingView();

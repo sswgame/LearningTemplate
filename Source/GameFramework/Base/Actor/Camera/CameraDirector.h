@@ -76,7 +76,7 @@ namespace sw
          * @details 프리셋 본문은 쓰지 않는다. 읽을 때 카탈로그에서 다시 찾고, 카탈로그에 없는 층(코드로 만든 프리셋)은 마지막 포즈로 고정해 둔다.
          */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 스택을 되살립니다. 형식이 맞지 않거나 잘렸으면 false 이고 지금 상태는 그대로입니다. */
+        /** @brief `writeState` 의 바이트로 스택을 복원합니다. 형식이 맞지 않거나 잘렸으면 false 이고 지금 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive, const CameraPresetCatalog& catalog );
 
         const hashed_string&   getActivePresetID() const { return getActivePreset()._id; }

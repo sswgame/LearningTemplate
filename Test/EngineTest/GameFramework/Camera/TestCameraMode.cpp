@@ -511,7 +511,7 @@ SW_TEST_CASE( CameraModeTest, FollowXYTracksThePlaneAndKeepsTheCameraPlane )
 
 /**
  * @brief [CameraModeTest] 2D 디렉터 — 감쇠로 대상을 따라가고, 충격은 실제로 떨리다가(부호가 바뀐다) 끝나면 따라가던 자리로 정확히 돌아온다
- * @details 흔들림은 포즈 위에 마지막으로 얹는 오프셋이라 다음 프레임 포즈에 남지 않는다. 트랜스폼에 흔들림을 더해 두고 다음 틱에 걷어 내는 방식은
+ * @details 흔들림은 포즈 위에 마지막으로 더하는 오프셋이라 다음 프레임 포즈에 남지 않는다. 트랜스폼에 흔들림을 더해 두고 다음 틱에 다시 빼는 방식은
  *          상태를 다시 읽으면(핫 리로드) 그 오프셋이 영영 남는다.
  */
 SW_TEST_CASE( CameraModeTest, FollowXYDirectorDampsAndShakesBackToItsPlace )
@@ -692,7 +692,7 @@ SW_TEST_CASE( CameraModeTest, ScreenRayFromAPoseMatchesTheOrthoRig )
 }
 
 /**
- * @brief [CameraModeTest] 디렉터 컴포넌트의 땅 고르기와 시점 덮어쓰기 — 직교 리그 네 게임이 디렉터로 옮길 때 쓰는 창구
+ * @brief [CameraModeTest] 디렉터 컴포넌트의 땅 고르기와 시점 덮어쓰기 — 직교 리그를 쓰는 네 게임이 디렉터로 옮길 때 쓰는 함수
  * @details 위에서 내려다보는 직교 프리셋에서 화면 가운데는 초점 아래 땅이고, 덮어쓴 원근 시점은 그 시점으로 고르며, 덮어쓰기를 풀면 원래 프리셋으로 돌아간다.
  */
 SW_TEST_CASE( CameraModeTest, DirectorComponentPicksTheGroundAndHonoursTheOverride )
