@@ -14,7 +14,7 @@
 
 namespace
 {
-    constexpr float32 kStep3D = 1.0f / 60.0f;
+    constexpr float32 kMeshShapeStep = 1.0f / 60.0f;
 
     /** @brief 반 크기 0.5 인 정육면체의 삼각형 목록(36 위치, 모서리 8 개를 삼각형마다 복사 — 임포터가 쓰는 모양)입니다. */
     sw::vector<sw::float3> makeCubeTriangleList()
@@ -171,7 +171,7 @@ SW_TEST_CASE( PhysicsMeshShapeTest, MeshPathFillsTriangleMeshAndConvexHull )
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), sw::PhysicsMeshShapeCache::getCachedCount() ); // 같은 경로는 다시 읽지 않는다
     for ( uint32 stepIndex = 0; stepIndex < 240; ++stepIndex )
     {
-        pScene->step( kStep3D );
+        pScene->step( kMeshShapeStep );
     }
     sw::float3     position{};
     sw::quaternion rotation{};
