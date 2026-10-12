@@ -580,6 +580,10 @@ Empty 게임의 `-gv_benchUiMarkers=K` 는 벤치 큐브에 화면 마커를 붙
 HUD 화면도 등록 포인터를 프레임을 넘겨 들지 않고 섹션 이름만 둡니다 — 모듈이 내려간 뒤 사라진 본문을 부르지 않게 하기 위해서입니다(`DebugHUDTest.UnloadedSectionLeavesTheScreen`).
 HUD 상태를 바꾸는 시나리오는 사용자 파일에 남으므로 끝에서 기본값으로 되돌립니다(`AppScenarioTest` 는 `-gv_userSettingsFile` 을 주지 않는다).
 
+**바인딩 값 종류(`UIBindingValueKind`)는 맨 끝에 더하고 `kUIBindingValueKindCount` 를 맞춥니다.** 종류별 이름 · 경로 읽기 · 쓰기는 `UIBindingValue.cpp` 의 종류 표 한 줄이고,
+표 크기는 static_assert 로 개수와 맞춥니다. 숫자 필드 읽기 · 쓰기도 내장 타입 순서(`kint8` .. `kfloat64`)의 표 한 줄입니다.
+값 변환(`toBool` · `toNumber` · `toText`)은 프레임마다 부르는 짧은 분기라 switch 로 두고, 새 종류가 빠지면 `-Werror=switch` 가 알립니다.
+
 **게임 스레드에서 텍스처를 빌리지 않습니다.** 위젯은 디바이스가 없어 `TextureCache::acquire` 를 부를 수 없습니다.
 경로 이미지는 그리기 목록에 경로(`CanvasTextureRef::_texturePath`)로 넣고, 렌더 스레드의 `CanvasRenderer::prepareFrame` 이 기록 전에 빌립니다.
 머티리얼 텍스처와 같은 캐시라서 백엔드 교체도 같은 경로를 탑니다.

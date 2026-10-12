@@ -30,6 +30,13 @@ namespace sw
         Text,   ///< string 과 hashed_string 입니다.
         Other   ///< 그 밖의 리플렉션 타입입니다(같은 타입끼리, 또는 텍스트로만 연결).
     };
+
+    /**
+     * @brief `UIBindingValueKind` 의 개수입니다. 종류는 맨 끝에 더하고 여기의 마지막 종류를 바꾼다.
+     * @details 종류별 이름 · 경로 읽기 · 쓰기는 UIBindingValue.cpp 의 종류 표 한 줄이고, 표 크기를 이 값과 static_assert 로 맞춘다.
+     *          값 변환(`toBool` · `toNumber` · `toText`)은 switch 로 두어 새 종류가 빠지면 -Werror=switch 가 알린다.
+     */
+    inline constexpr uint32 kUIBindingValueKindCount = static_cast<uint32>( UIBindingValueKind::Other ) + 1;
 } // namespace sw
 
 namespace sw

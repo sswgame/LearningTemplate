@@ -18,160 +18,170 @@ namespace sw
     {
         struct UIBindingValueInternal
         {
-            /** @brief 내장 숫자 타입 필드를 실수로 읽습니다. 숫자 타입이 아니면 false 입니다. */
-            [[nodiscard]] static bool tryReadNumber( int32 builtinIndex, const void* pValue, float64& outNumber )
+            /** @brief 숫자 내장 타입 한 줄의 읽기 · 쓰기입니다. */
+            struct NumberOps
             {
-                switch ( builtinIndex )
-                {
-                    case ReflectBuiltinIndex::kint8:
-                    {
-                        outNumber = *static_cast<const int8*>( pValue );
-                        return true;
-                    }
-                    case ReflectBuiltinIndex::kint16:
-                    {
-                        outNumber = *static_cast<const int16*>( pValue );
-                        return true;
-                    }
-                    case ReflectBuiltinIndex::kint32:
-                    {
-                        outNumber = *static_cast<const int32*>( pValue );
-                        return true;
-                    }
-                    case ReflectBuiltinIndex::kint64:
-                    {
-                        outNumber = static_cast<float64>( *static_cast<const int64*>( pValue ) );
-                        return true;
-                    }
-                    case ReflectBuiltinIndex::kuint8:
-                    {
-                        outNumber = *static_cast<const uint8*>( pValue );
-                        return true;
-                    }
-                    case ReflectBuiltinIndex::kuint16:
-                    {
-                        outNumber = *static_cast<const uint16*>( pValue );
-                        return true;
-                    }
-                    case ReflectBuiltinIndex::kuint32:
-                    {
-                        outNumber = *static_cast<const uint32*>( pValue );
-                        return true;
-                    }
-                    case ReflectBuiltinIndex::kuint64:
-                    {
-                        outNumber = static_cast<float64>( *static_cast<const uint64*>( pValue ) );
-                        return true;
-                    }
-                    case ReflectBuiltinIndex::kfloat32:
-                    {
-                        outNumber = static_cast<float64>( *static_cast<const float32*>( pValue ) );
-                        return true;
-                    }
-                    case ReflectBuiltinIndex::kfloat64:
-                    {
-                        outNumber = *static_cast<const float64*>( pValue );
-                        return true;
-                    }
-                    default:
-                    {
-                        return false;
-                    }
-                }
+                float64 ( *pRead )( const void* pValue );
+                bool ( *pWrite )( void* pValue, float64 number ); ///< 바뀌었으면 true 입니다.
+                bool bInteger;
+            };
+
+            template <typename NumberType>
+            static float64 readNumber( const void* pValue )
+            {
+                return static_cast<float64>( *static_cast<const NumberType*>( pValue ) );
             }
 
-            /** @brief 정수 필드에 반올림해 씁니다. 바뀌었으면 true 입니다. */
-            template <typename IntegerType>
-            [[nodiscard]] static bool writeInteger( void* pValue, float64 number )
+            /** @brief 정수는 반올림해 쓰고 실수는 그대로 씁니다. 바뀌었으면 true 입니다. */
+            template <typename NumberType>
+            [[nodiscard]] static bool writeNumber( void* pValue, float64 number )
             {
-                const IntegerType rounded = static_cast<IntegerType>( MathUtil::round( number ) );
-                IntegerType&      field   = *static_cast<IntegerType*>( pValue );
-                if ( field == rounded )
-                    return false;
-                field = rounded;
-                return true;
-            }
-
-            /** @brief 실수 필드에 씁니다. 바뀌었으면 true 입니다. */
-            template <typename FloatType>
-            [[nodiscard]] static bool writeFloat( void* pValue, float64 number )
-            {
-                const FloatType value = static_cast<FloatType>( number );
-                FloatType&      field = *static_cast<FloatType*>( pValue );
+                NumberType value{};
+                if constexpr ( std::is_integral_v<NumberType> )
+                    value = static_cast<NumberType>( MathUtil::round( number ) );
+                else
+                    value = static_cast<NumberType>( number );
+                NumberType& field = *static_cast<NumberType*>( pValue );
                 if ( field == value )
                     return false;
                 field = value;
                 return true;
             }
 
-            /** @brief 내장 숫자 타입 필드에 씁니다. 숫자 타입이 아니면 false(쓰지 않음)이고 @p outbChanged 는 그대로입니다. */
-            [[nodiscard]] static bool tryWriteNumber( int32 builtinIndex, void* pValue, float64 number, bool& outbChanged )
+            template <typename NumberType>
+            static constexpr NumberOps makeNumberOps()
             {
-                switch ( builtinIndex )
-                {
-                    case ReflectBuiltinIndex::kint8:
-                    {
-                        outbChanged = writeInteger<int8>( pValue, number );
-                        return true;
-                    }
-                    case ReflectBuiltinIndex::kint16:
-                    {
-                        outbChanged = writeInteger<int16>( pValue, number );
-                        return true;
-                    }
-                    case ReflectBuiltinIndex::kint32:
-                    {
-                        outbChanged = writeInteger<int32>( pValue, number );
-                        return true;
-                    }
-                    case ReflectBuiltinIndex::kint64:
-                    {
-                        outbChanged = writeInteger<int64>( pValue, number );
-                        return true;
-                    }
-                    case ReflectBuiltinIndex::kuint8:
-                    {
-                        outbChanged = writeInteger<uint8>( pValue, number );
-                        return true;
-                    }
-                    case ReflectBuiltinIndex::kuint16:
-                    {
-                        outbChanged = writeInteger<uint16>( pValue, number );
-                        return true;
-                    }
-                    case ReflectBuiltinIndex::kuint32:
-                    {
-                        outbChanged = writeInteger<uint32>( pValue, number );
-                        return true;
-                    }
-                    case ReflectBuiltinIndex::kuint64:
-                    {
-                        outbChanged = writeInteger<uint64>( pValue, number );
-                        return true;
-                    }
-                    case ReflectBuiltinIndex::kfloat32:
-                    {
-                        outbChanged = writeFloat<float32>( pValue, number );
-                        return true;
-                    }
-                    case ReflectBuiltinIndex::kfloat64:
-                    {
-                        outbChanged = writeFloat<float64>( pValue, number );
-                        return true;
-                    }
-                    default:
-                    {
-                        return false;
-                    }
-                }
+                return NumberOps{ &readNumber<NumberType>, &writeNumber<NumberType>, std::is_integral_v<NumberType> };
             }
 
-            /** @brief 정수 타입 필드이면 true 입니다. */
-            static bool isIntegerBuiltin( int32 builtinIndex )
+            /** @brief 숫자 내장 타입 표입니다. 줄 순서는 내장 타입 표의 kint8 .. kfloat64 순서와 같다(아래 static_assert 가 확인한다). */
+            static const NumberOps kArrNumberOps[];
+
+            /** @brief 내장 숫자 타입의 표 줄입니다. 숫자 타입이 아니면 nullptr 입니다. */
+            [[nodiscard]] static const NumberOps* findNumberOps( int32 builtinIndex )
             {
-                return builtinIndex != ReflectBuiltinIndex::kfloat32 && builtinIndex != ReflectBuiltinIndex::kfloat64;
+                if ( builtinIndex < ReflectBuiltinIndex::kint8 || builtinIndex > ReflectBuiltinIndex::kfloat64 )
+                    return nullptr;
+                return &kArrNumberOps[builtinIndex - ReflectBuiltinIndex::kint8];
             }
+
+            /** @brief 종류 하나의 이름과 경로 필드 읽기 · 쓰기입니다. @p pValue 는 잎 필드 주소, @p builtinIndex 는 잎의 내장 타입 자리입니다. */
+            struct KindOps
+            {
+                const utf8* pName;
+                UIBindingValue ( *pRead )( const PropertyInfo& leaf, const void* pOwner, const void* pValue, int32 builtinIndex );
+                bool ( *pWrite )( const PropertyInfo& leaf, void* pOwner, void* pValue, int32 builtinIndex, const UIBindingValue& value ); ///< 바뀌었으면 true 입니다.
+            };
+
+            static UIBindingValue     readNone( const PropertyInfo&, const void*, const void*, int32 ) { return {}; }
+            [[nodiscard]] static bool writeNone( const PropertyInfo&, void*, void*, int32, const UIBindingValue& ) { return false; }
+
+            static UIBindingValue readBool( const PropertyInfo&, const void*, const void* pValue, int32 )
+            {
+                return UIBindingValue::makeBool( *static_cast<const bool*>( pValue ) );
+            }
+            [[nodiscard]] static bool writeBool( const PropertyInfo&, void*, void* pValue, int32, const UIBindingValue& value )
+            {
+                if ( value._kind != UIBindingValueKind::Bool && value._kind != UIBindingValueKind::Number )
+                    return false;
+                bool&      field  = *static_cast<bool*>( pValue );
+                const bool bValue = value.toBool();
+                if ( field == bValue )
+                    return false;
+                field = bValue;
+                return true;
+            }
+
+            static UIBindingValue readNumberKind( const PropertyInfo&, const void*, const void* pValue, int32 builtinIndex )
+            {
+                // Number 로 분류한 필드라 표 줄이 있다(없으면 0)
+                const NumberOps* pOps = findNumberOps( builtinIndex );
+                if ( pOps == nullptr )
+                    return UIBindingValue::makeNumber( 0.0, false );
+                return UIBindingValue::makeNumber( pOps->pRead( pValue ), pOps->bInteger );
+            }
+            [[nodiscard]] static bool writeNumberKind( const PropertyInfo&, void*, void* pValue, int32 builtinIndex, const UIBindingValue& value )
+            {
+                if ( value._kind != UIBindingValueKind::Bool && value._kind != UIBindingValueKind::Number )
+                    return false;
+                const NumberOps* pOps = findNumberOps( builtinIndex );
+                return pOps != nullptr && pOps->pWrite( pValue, value.toNumber() );
+            }
+
+            static UIBindingValue readText( const PropertyInfo&, const void*, const void* pValue, int32 builtinIndex )
+            {
+                if ( builtinIndex == ReflectBuiltinIndex::khashed_string )
+                    return UIBindingValue::makeText( static_cast<const hashed_string*>( pValue )->c_str() );
+                return UIBindingValue::makeText( *static_cast<const string*>( pValue ) );
+            }
+            [[nodiscard]] static bool writeText( const PropertyInfo&, void*, void* pValue, int32 builtinIndex, const UIBindingValue& value )
+            {
+                const string text = value.toText();
+                if ( builtinIndex == ReflectBuiltinIndex::khashed_string )
+                {
+                    hashed_string& field = *static_cast<hashed_string*>( pValue );
+                    if ( field.isEqual( hashed_string( text ), NameCase::CaseSensitive ) )
+                        return false;
+                    field = hashed_string( text );
+                    return true;
+                }
+                string& field = *static_cast<string*>( pValue );
+                if ( field == text )
+                    return false;
+                field = text;
+                return true;
+            }
+
+            static UIBindingValue readOther( const PropertyInfo& leaf, const void* pOwner, const void*, int32 )
+            {
+                UIBindingValue value = UIBindingValue::makeText( SerializerUtil::formatPropertyText( leaf, pOwner, SerializeContext::getDefault() ) );
+                value._kind          = UIBindingValueKind::Other;
+                return value;
+            }
+            [[nodiscard]] static bool writeOther( const PropertyInfo& leaf, void* pOwner, void*, int32, const UIBindingValue& value )
+            {
+                if ( value._kind != UIBindingValueKind::Other && value._kind != UIBindingValueKind::Text )
+                    return false;
+                const SerializeContext& context = SerializeContext::getDefault();
+                if ( SerializerUtil::formatPropertyText( leaf, pOwner, context ) == value._text )
+                    return false;
+                return SerializerUtil::applyPropertyText( leaf, pOwner, value._text, context );
+            }
+
+            /** @brief 종류 표입니다. 줄 순서는 `UIBindingValueKind` 의 값 순서와 같다. 종류를 더하면 여기에 한 줄을 더한다. */
+            static const KindOps kArrKindOps[];
+
+            [[nodiscard]] static const KindOps& getKindOps( UIBindingValueKind kind ) { return kArrKindOps[static_cast<uint32>( kind )]; }
         };
+
+        constexpr UIBindingValueInternal::NumberOps UIBindingValueInternal::kArrNumberOps[] = {
+            UIBindingValueInternal::makeNumberOps<int8>(),
+            UIBindingValueInternal::makeNumberOps<int16>(),
+            UIBindingValueInternal::makeNumberOps<int32>(),
+            UIBindingValueInternal::makeNumberOps<int64>(),
+            UIBindingValueInternal::makeNumberOps<uint8>(),
+            UIBindingValueInternal::makeNumberOps<uint16>(),
+            UIBindingValueInternal::makeNumberOps<uint32>(),
+            UIBindingValueInternal::makeNumberOps<uint64>(),
+            UIBindingValueInternal::makeNumberOps<float32>(),
+            UIBindingValueInternal::makeNumberOps<float64>(),
+        };
+        static_assert( std::size( UIBindingValueInternal::kArrNumberOps ) == ReflectBuiltinIndex::kfloat64 - ReflectBuiltinIndex::kint8 + 1, "number table must cover kint8 .. kfloat64" );
+        static_assert( ReflectBuiltinOf<int8>::kIndex == ReflectBuiltinIndex::kint8 && ReflectBuiltinOf<int16>::kIndex == ReflectBuiltinIndex::kint8 + 1 &&
+                           ReflectBuiltinOf<int32>::kIndex == ReflectBuiltinIndex::kint8 + 2 && ReflectBuiltinOf<int64>::kIndex == ReflectBuiltinIndex::kint8 + 3 &&
+                           ReflectBuiltinOf<uint8>::kIndex == ReflectBuiltinIndex::kint8 + 4 && ReflectBuiltinOf<uint16>::kIndex == ReflectBuiltinIndex::kint8 + 5 &&
+                           ReflectBuiltinOf<uint32>::kIndex == ReflectBuiltinIndex::kint8 + 6 && ReflectBuiltinOf<uint64>::kIndex == ReflectBuiltinIndex::kint8 + 7 &&
+                           ReflectBuiltinOf<float32>::kIndex == ReflectBuiltinIndex::kint8 + 8 && ReflectBuiltinOf<float64>::kIndex == ReflectBuiltinIndex::kint8 + 9,
+                       "number table rows must follow the builtin table order" );
+
+        constexpr UIBindingValueInternal::KindOps UIBindingValueInternal::kArrKindOps[] = {
+            {  "none",       &UIBindingValueInternal::readNone,       &UIBindingValueInternal::writeNone}, // None
+            {  "bool",       &UIBindingValueInternal::readBool,       &UIBindingValueInternal::writeBool}, // Bool
+            {"number", &UIBindingValueInternal::readNumberKind, &UIBindingValueInternal::writeNumberKind}, // Number
+            {  "text",       &UIBindingValueInternal::readText,       &UIBindingValueInternal::writeText}, // Text
+            {"struct",      &UIBindingValueInternal::readOther,      &UIBindingValueInternal::writeOther}, // Other
+        };
+        static_assert( std::size( UIBindingValueInternal::kArrKindOps ) == kUIBindingValueKindCount, "kind table must have one row per UIBindingValueKind" );
     } // namespace
 } // namespace sw
 
@@ -316,20 +326,7 @@ namespace sw
 
     const utf8* UIBindingValueUtil::getKindName( UIBindingValueKind kind )
     {
-        switch ( kind )
-        {
-            case UIBindingValueKind::None:
-                return "none";
-            case UIBindingValueKind::Bool:
-                return "bool";
-            case UIBindingValueKind::Number:
-                return "number";
-            case UIBindingValueKind::Text:
-                return "text";
-            case UIBindingValueKind::Other:
-                return "struct";
-        }
-        return "none";
+        return UIBindingValueInternal::getKindOps( kind ).pName;
     }
 
     bool UIBindingValueUtil::resolvePath( const TypeInfo& type, string_view path, UIPropertyPath& outPath, string& outError )
@@ -383,36 +380,7 @@ namespace sw
             return UIBindingValue::makeBool( leaf.getValue<bool>( pOwner ) );
         const void* pValue       = leaf.getRawPtr( pOwner );
         const int32 builtinIndex = ReflectValueUtil::findBuiltinIndex( leaf._typeName );
-        switch ( path._kind )
-        {
-            case UIBindingValueKind::Bool:
-            {
-                return UIBindingValue::makeBool( *static_cast<const bool*>( pValue ) );
-            }
-            case UIBindingValueKind::Number:
-            {
-                float64 number = 0.0;
-                (void)UIBindingValueInternal::tryReadNumber( builtinIndex, pValue, number ); // Number 로 분류한 필드라 실패하지 않는다(실패하면 0)
-                return UIBindingValue::makeNumber( number, UIBindingValueInternal::isIntegerBuiltin( builtinIndex ) );
-            }
-            case UIBindingValueKind::Text:
-            {
-                if ( builtinIndex == ReflectBuiltinIndex::khashed_string )
-                    return UIBindingValue::makeText( static_cast<const hashed_string*>( pValue )->c_str() );
-                return UIBindingValue::makeText( *static_cast<const string*>( pValue ) );
-            }
-            case UIBindingValueKind::Other:
-            {
-                UIBindingValue value = UIBindingValue::makeText( SerializerUtil::formatPropertyText( leaf, pOwner, SerializeContext::getDefault() ) );
-                value._kind          = UIBindingValueKind::Other;
-                return value;
-            }
-            case UIBindingValueKind::None:
-            {
-                return {};
-            }
-        }
-        return {};
+        return UIBindingValueInternal::getKindOps( path._kind ).pRead( leaf, pOwner, pValue, builtinIndex );
     }
 
     bool UIBindingValueUtil::writeValue( const UIPropertyPath& path, void* pRoot, const UIBindingValue& value )
@@ -433,60 +401,7 @@ namespace sw
         }
         void*       pValue       = leaf.getRawPtr( pOwner );
         const int32 builtinIndex = ReflectValueUtil::findBuiltinIndex( leaf._typeName );
-        switch ( path._kind )
-        {
-            case UIBindingValueKind::Bool:
-            {
-                if ( value._kind != UIBindingValueKind::Bool && value._kind != UIBindingValueKind::Number )
-                    return false;
-                bool&      field  = *static_cast<bool*>( pValue );
-                const bool bValue = value.toBool();
-                if ( field == bValue )
-                    return false;
-                field = bValue;
-                return true;
-            }
-            case UIBindingValueKind::Number:
-            {
-                if ( value._kind != UIBindingValueKind::Bool && value._kind != UIBindingValueKind::Number )
-                    return false;
-                bool bChanged = false;
-                // 숫자 필드가 아니면 쓰지 않고 bChanged 는 false 로 남는다
-                (void)UIBindingValueInternal::tryWriteNumber( builtinIndex, pValue, value.toNumber(), bChanged );
-                return bChanged;
-            }
-            case UIBindingValueKind::Text:
-            {
-                const string text = value.toText();
-                if ( builtinIndex == ReflectBuiltinIndex::khashed_string )
-                {
-                    hashed_string& field = *static_cast<hashed_string*>( pValue );
-                    if ( field.isEqual( hashed_string( text ), NameCase::CaseSensitive ) )
-                        return false;
-                    field = hashed_string( text );
-                    return true;
-                }
-                string& field = *static_cast<string*>( pValue );
-                if ( field == text )
-                    return false;
-                field = text;
-                return true;
-            }
-            case UIBindingValueKind::Other:
-            {
-                if ( value._kind != UIBindingValueKind::Other && value._kind != UIBindingValueKind::Text )
-                    return false;
-                const SerializeContext& context = SerializeContext::getDefault();
-                if ( SerializerUtil::formatPropertyText( leaf, pOwner, context ) == value._text )
-                    return false;
-                return SerializerUtil::applyPropertyText( leaf, pOwner, value._text, context );
-            }
-            case UIBindingValueKind::None:
-            {
-                return false;
-            }
-        }
-        return false;
+        return UIBindingValueInternal::getKindOps( path._kind ).pWrite( leaf, pOwner, pValue, builtinIndex, value );
     }
 
     bool UIBindingValueUtil::copyValue( const UIPropertyPath& sourcePath, const void* pSourceRoot, const UIPropertyPath& targetPath, void* pTargetRoot )
