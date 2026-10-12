@@ -30,6 +30,13 @@ namespace
         ScopedProbeServiceUnbind( const ScopedProbeServiceUnbind& )            = delete;
         ScopedProbeServiceUnbind& operator=( const ScopedProbeServiceUnbind& ) = delete;
     };
+
+    /** @brief 프레임워크 기반 클래스가 대신 거는 게임 인스턴스를 흉내 냅니다. vtable 이 이 테스트 이미지에 있다. */
+    struct GameServiceProbeInstance
+    {
+        virtual ~GameServiceProbeInstance() = default;
+        GameServiceProbeCatalog _catalog{ 1 };
+    };
 } // namespace
 
 /**
@@ -68,7 +75,7 @@ SW_TEST_CASE( GameServiceTest, UnloadSweepReleasesLocalServicesOfTheImage )
 
     const void* pTestImageBegin = nullptr;
     const void* pTestImageEnd   = nullptr;
-    if ( ModuleImageUtil::findLoadedImageRange( reinterpret_cast<const void*>( &game::bindLocalService<GameServiceProbeCatalog> ), pTestImageBegin, pTestImageEnd ) == false )
+    if ( ModuleImageUtil::findLoadedImageRange( reinterpret_cast<const void*>( static_cast<void ( * )( GameServiceProbeCatalog* )>( &game::bindLocalService<GameServiceProbeCatalog> ) ), pTestImageBegin, pTestImageEnd ) == false )
         return; // 이미지 범위를 읽을 수 없는 플랫폼
 
     // 옛 인스턴스가 풀지 않은 채 언로드 차례가 온다.
@@ -79,4 +86,35 @@ SW_TEST_CASE( GameServiceTest, UnloadSweepReleasesLocalServicesOfTheImage )
 
     game::bindLocalService<GameServiceProbeCatalog>( &newInstance ); // 새 인스턴스는 거절되지 않는다
     SW_EXPECT_TRUE( game::getService<GameServiceProbeCatalog>() == &newInstance );
+}
+
+/**
+ * @brief [GameServiceTest] 소유자를 명시해 건 칸은 반환 주소가 아니라 그 소유자 이미지를 따른다 — 프레임워크 코드가 건 게임 객체의 서비스도 게임 이미지 언로드 때 회수된다
+ * @details 앞 절반은 소유자를 다른 이미지(GameFramework 의 함수 주소)로 명시해, 부른 곳(테스트 이미지)의 훑기가 회수하지 않음을 본다.
+ *          뒤 절반은 `GameInstanceBase::initialize` 처럼 인스턴스 vtable 을 소유자로 넘겨, 그 이미지의 훑기가 회수함을 본다.
+ */
+SW_TEST_CASE( GameServiceTest, ExplicitOwnerDecidesWhichImageReleasesTheService )
+{
+    ScopedProbeServiceUnbind unbind;
+    GameServiceProbeInstance instance;
+
+    const void* pTestImageBegin = nullptr;
+    const void* pTestImageEnd   = nullptr;
+    if ( ModuleImageUtil::findLoadedImageRange( game::getPolymorphicOwnerAddress( instance ), pTestImageBegin, pTestImageEnd ) == false )
+        return; // 이미지 범위를 읽을 수 없는 플랫폼
+    vector<IModuleUnloadListener::ReleaseResult> listResult;
+
+    const void* pFrameworkAddress = reinterpret_cast<const void*>( &game::internal::getRawLocalService );
+    if ( pFrameworkAddress < pTestImageBegin || pFrameworkAddress >= pTestImageEnd ) // GameFramework 를 정적으로 묶은 빌드는 건너뛴다
+    {
+        game::bindLocalService<GameServiceProbeCatalog>( &instance._catalog, pFrameworkAddress );
+        IModuleUnloadListener::releaseAllWithin( pTestImageBegin, static_cast<const uint8*>( pTestImageBegin ) + 1, listResult );
+        SW_EXPECT_TRUE( game::getService<GameServiceProbeCatalog>() == &instance._catalog ); // 부른 이미지가 아니라 소유자 이미지를 따른다
+        game::unbindLocalService<GameServiceProbeCatalog>();
+    }
+
+    game::bindLocalService<GameServiceProbeCatalog>( &instance._catalog, game::getPolymorphicOwnerAddress( instance ) );
+    IModuleUnloadListener::releaseAllWithin( pTestImageBegin, static_cast<const uint8*>( pTestImageBegin ) + 1, listResult );
+    SW_EXPECT_TRUE( game::getService<GameServiceProbeCatalog>() == nullptr );
+    SW_EXPECT_TRUE( game::isServiceBound<GameServiceProbeCatalog>() == false );
 }
