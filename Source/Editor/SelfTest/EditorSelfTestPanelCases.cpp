@@ -556,7 +556,7 @@ namespace sw::editor
                     // 처음 열림은 레지스트리가 만드는 새 인스턴스로 판단한다. 실행 중인 패널은 앞 테스트나 사용자가 열었을 수 있다.
                     for ( const utf8* pPanelID : kArrFloatingToolPanelID )
                     {
-                        const EditorPanelRegistration* pRegistration = EditorRegistry<EditorPanelRegistration>::find( pPanelID );
+                        const EditorPanelRegistration* pRegistration = EditorExtensionRegistry<EditorPanelRegistration>::find( pPanelID );
                         if ( context.expect( pRegistration != nullptr, "a floating tool panel is not registered" ) == false )
                             continue;
                         const unique_ptr<IEditorPanel> pFresh = pRegistration->_pCreate();

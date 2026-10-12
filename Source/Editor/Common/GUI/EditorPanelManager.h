@@ -10,7 +10,7 @@
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
-#include "Editor/Common/Workspace/EditorRegistry.h"
+#include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 
 namespace sw
 {
@@ -51,7 +51,7 @@ namespace sw::editor
      * @details `_pID` 는 `windows.ini` 의 가시성 키이자 `-gv_editorOpenPanel` 의 값이다. `_order` 는 Panel 메뉴와 그리기 순서이고,
      *          카테고리는 Panel 메뉴의 Panels 와 Tools 그룹을 정한다.
      */
-    struct EditorPanelRegistration : EditorRegistration
+    struct EditorPanelRegistration : EditorExtensionRegistration
     {
         static constexpr const utf8* kKindName = "panel";
 
@@ -94,7 +94,7 @@ namespace sw::editor
         void registerDefaultPanels();
         /**
          * @brief 등록 목록과 맞춥니다. 새 항목은 인스턴스를 만들고(지난번에 열려 있던 id 이면 열린 채로), 사라진 항목의 인스턴스는 종료합니다.
-         * @details 세대(`EditorRegistrationList::getGeneration`)가 같으면 바로 반환한다. 에디터 프레임 앞에서 호출한다(`EditorContext::syncExtensionRegistrations`).
+         * @details 세대(`EditorExtensionRegistrationList::getGeneration`)가 같으면 바로 반환한다. 에디터 프레임 앞에서 호출한다(`EditorContext::syncExtensionRegistrations`).
          */
         void syncWithRegistry( IRHIDevice* pRHIDevice );
         /**

@@ -10,12 +10,12 @@ namespace sw::editor
 {
     uint32 EditorViewportVisualizer::getCount()
     {
-        return EditorRegistry<EditorVisualizerRegistration>::getCount();
+        return EditorExtensionRegistry<EditorVisualizerRegistration>::getCount();
     }
 
     const EditorVisualizerRegistration& EditorViewportVisualizer::getAt( uint32 index )
     {
-        return EditorRegistry<EditorVisualizerRegistration>::getAt( index );
+        return EditorExtensionRegistry<EditorVisualizerRegistration>::getAt( index );
     }
 
     void EditorViewportVisualizer::drawAll( const EditorViewportVisualizerArgs& args, const EditorVisualizerToggles& toggles )

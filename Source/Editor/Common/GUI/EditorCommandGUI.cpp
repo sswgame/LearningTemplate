@@ -615,7 +615,7 @@ namespace sw::editor
 
     void EditorCommandGUI::syncWithRegistry()
     {
-        if ( EditorRegistry<EditorCommandRegistration>::getList().getGeneration() == EditorCommandGUIInternal::getSyncedGeneration() )
+        if ( EditorExtensionRegistry<EditorCommandRegistration>::getList().getGeneration() == EditorCommandGUIInternal::getSyncedGeneration() )
             return;
         registerDefaults();
     }
@@ -668,7 +668,7 @@ namespace sw::editor
 
         EditorCommandRegistry& registry = pContext->getCommandRegistry();
         registry.clear();
-        getSyncedGeneration() = EditorRegistry<EditorCommandRegistration>::getList().getGeneration();
+        getSyncedGeneration() = EditorExtensionRegistry<EditorCommandRegistration>::getList().getGeneration();
 
         for ( const EditorCommandGUIInternal::CommandRow& row : EditorCommandGUIInternal::_s_arrCommandRow )
         {

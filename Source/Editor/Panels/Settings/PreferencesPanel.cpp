@@ -73,7 +73,7 @@ namespace sw::editor
 
     void PreferencesPanel::drawContent()
     {
-        using SettingsRegistry = EditorRegistry<EditorSettingsRegistration>;
+        using SettingsRegistry = EditorExtensionRegistry<EditorSettingsRegistration>;
         // 체크를 먼저 둔다 — 검색 칸이 남은 폭을 다 쓰므로 뒤에 두면 창 밖으로 밀린다.
         ImGui::Checkbox( "Modified only", &_bModifiedOnly );
         EditorSelfTestMarks::note( "preferences.modifiedOnly" );

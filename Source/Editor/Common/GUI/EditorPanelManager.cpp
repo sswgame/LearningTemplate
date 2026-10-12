@@ -111,8 +111,8 @@ namespace sw::editor
 
     void EditorPanelManager::syncWithRegistry( IRHIDevice* pRHIDevice )
     {
-        using PanelRegistry                = EditorRegistry<EditorPanelRegistration>;
-        const EditorRegistrationList& list = PanelRegistry::getList();
+        using PanelRegistry                         = EditorExtensionRegistry<EditorPanelRegistration>;
+        const EditorExtensionRegistrationList& list = PanelRegistry::getList();
         if ( list.getGeneration() == _syncedGeneration )
             return;
         _syncedGeneration = list.getGeneration();

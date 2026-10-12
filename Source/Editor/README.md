@@ -150,7 +150,7 @@ UI 를 만지는 명령의 등록 줄을 그 UI 의 .cpp 에 둡니다(레이아
 
 ### 레지스트리
 
-`Common/Workspace/EditorRegistry.h` 의 `EditorRegistry<T>` 와 `EditorRegistrar<T>` 가 등록 줄을 모읍니다. 등록 줄은 정적 객체라 DLL 이 올라올 때 목록에 오릅니다.
+`Common/Workspace/EditorExtensionRegistry.h` 의 `EditorExtensionRegistry<T>` 와 `EditorExtensionRegistrar<T>` 가 등록 줄을 모읍니다. 등록 줄은 정적 객체라 DLL 이 올라올 때 목록에 오릅니다.
 목록은 순서 키, 같으면 id 사전순으로 정렬됩니다. 번역 단위 사이의 정적 초기화 순서는 정해지지 않으므로 등록 순서에 기대지 않습니다.
 같은 종류의 같은 id 는 둘째 등록이 오류와 함께 거절됩니다. 매니저(패널, 팝업, 인스펙터)는 등록 세대가 바뀌면 다시 맞춥니다.
 
@@ -337,7 +337,7 @@ Tile Map Tool 은 도구 단추 `tileMap.tool.brush` · `tileMap.tool.rect` · `
 
 1. 순서 키는 지금 100 간격입니다. 사이에 끼우려면 그 사이 값을 씁니다.
 2. 패널 id 는 `windows.ini` 의 가시성 키이고 `-gv_editorOpenPanel` 의 값입니다. 바꾸면 저장된 배치가 그 창을 잊습니다.
-3. 확인은 `App.exe -EnableEditor -gv_editorRegistryDump=1 -gv_profileFrames=30` 입니다. 레지스트리를 `EditorRegistry|<종류>|<id>|…` 한 줄씩 남기고, `AppSmokeTest.EditorRegistriesKeepTheirOrder` 가 기대 목록과 대조합니다.
+3. 확인은 `App.exe -EnableEditor -gv_editorRegistryDump=1 -gv_profileFrames=30` 입니다. 레지스트리를 `EditorExtensionRegistry|<종류>|<id>|…` 한 줄씩 남기고, `AppSmokeTest.EditorRegistriesKeepTheirOrder` 가 기대 목록과 대조합니다.
 4. 프로퍼티 타입 그리기는 `draw( 인스턴스, 프로퍼티, 그리드 )` 를 받습니다. 팝업 편집기처럼 여러 프레임에 걸친 편집은 작업 사본을 고치고 마칠 때 `grid.applyPropertyTextAsEdit` 로 한 번 입힙니다. 본보기는 `FloatCurve` 의 커브 편집기입니다.
 
 ### 커맨드
@@ -398,7 +398,7 @@ Tile Map Tool 은 도구 단추 `tileMap.tool.brush` · `tileMap.tool.rect` · `
 - **확장 모듈이 내려가면 그 이미지의 등록 줄로 만든 인스턴스가 먼저 지워집니다**(`EditorModuleUnloadListener`). 열려 있던 패널은 id 로 기억해 다시 올라오면 엽니다.
 - **노드 그래프 캔버스는 `beginGraphCanvas` 로 엽니다.** 확장 모듈은 imgui-node-editor 를 자기 사본으로 링크하므로, 템플릿이 그 사본에도 지금 편집기를 겁니다. `_nodeGraph.beginCanvas` 를 바로 부르면 확장의 `ax::NodeEditor` 호출이 편집기 없음으로 멈춥니다.
 - **시각화의 켬과 끔은 id 로 보관합니다**(`EditorVisualizerToggles`). 등록 순서의 비트 위치로 보관하면 줄이 끼어들 때 다른 시각화가 켜집니다.
-- **메뉴와 매니저에 손 목록을 다시 만들지 않습니다.** 등록 목록은 EditorModule 에 하나(`getEditorRegistrationList`)이고 확장 모듈의 등록도 같은 목록에 오릅니다.
+- **메뉴와 매니저에 손 목록을 다시 만들지 않습니다.** 등록 목록은 EditorModule 에 하나(`getEditorExtensionRegistrationList`)이고 확장 모듈의 등록도 같은 목록에 오릅니다.
 
 ### 커맨드와 입력
 

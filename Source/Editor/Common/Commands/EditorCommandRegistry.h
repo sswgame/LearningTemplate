@@ -12,7 +12,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/EditorExports.h"
-#include "Editor/Common/Workspace/EditorRegistry.h"
+#include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 
 namespace sw::editor
 {
@@ -281,7 +281,7 @@ namespace sw::editor
      *          id 는 테이블의 id 와도 겹치면 안 된다(`validate`). 문자열은 리터럴이어야 한다. 메뉴 경로는 이미 있는 메뉴(`"MainMenu/File"` 등)이거나
      *          새 한 단계 메뉴(`"MainMenu/ThemePark"`)이다. 메뉴끼리는 가장 작은 순서값으로 정렬되므로 확장은 9000번대를 쓴다.
      */
-    struct EditorCommandRegistration : EditorRegistration
+    struct EditorCommandRegistration : EditorExtensionRegistration
     {
         static constexpr const utf8* kKindName = "command";
 

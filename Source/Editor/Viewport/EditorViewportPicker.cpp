@@ -124,7 +124,7 @@ namespace sw::editor
 
         // 빌보드(라이트, 카메라, 오디오 아이콘)를 레이 피킹보다 먼저 검사한다. 메시가 없어 레이로는 집히지 않기 때문이다(언리얼 빌보드, 유니티 Gizmo 아이콘 클릭).
         // 잠근 오브젝트의 빌보드가 맞으면 그 위치는 "빈 곳" 으로 처리한다. 뒤의 레이 피킹으로 넘기지 않는다.
-        const EditorVisualizerRegistration* pBillboard = EditorRegistry<EditorVisualizerRegistration>::find( EditorViewportBillboard::kVisualizerID );
+        const EditorVisualizerRegistration* pBillboard = EditorExtensionRegistry<EditorVisualizerRegistration>::find( EditorViewportBillboard::kVisualizerID );
         if ( pBillboard != nullptr && settings._visualizerToggles.isOn( *pBillboard ) )
         {
             vector<EditorViewportBillboardItem> listItem;

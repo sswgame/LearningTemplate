@@ -3,7 +3,7 @@
  * @brief 에디터 UI 프레임 안에서 순서대로 도는 단계(`SW_EDITOR_FRAME_STEP`)의 등록 줄입니다.
  */
 #pragma once
-#include "Editor/Common/Workspace/EditorRegistry.h"
+#include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 
 namespace sw::editor
 {
@@ -43,7 +43,7 @@ namespace sw::editor
      * @details 단계는 ImGui 프레임 안(NewFrame 과 Render 사이)에서 UI 스레드가 부른다. 그래서 ImGui 를 그려도 된다. 순서는 `_order` 가 정하고,
      *          셸이 아는 단계의 값은 `EditorFrameStepOrder` 에 있다. 같은 id 의 둘째 등록은 거절되고, 핫 리로드 중에는 새 이미지의 등록이 옛 것을 대체한다.
      */
-    struct EditorFrameStepRegistration : EditorRegistration
+    struct EditorFrameStepRegistration : EditorExtensionRegistration
     {
         static constexpr const utf8* kKindName = "frameStep";
 
@@ -65,7 +65,7 @@ namespace sw::editor
          */
         static void runAll( EditorContext& context )
         {
-            using Registry = EditorRegistry<EditorFrameStepRegistration>;
+            using Registry = EditorExtensionRegistry<EditorFrameStepRegistration>;
             for ( uint32 index = 0; index < Registry::getCount(); ++index )
             {
                 const EditorFrameStepRegistration& registration = Registry::getAt( index );

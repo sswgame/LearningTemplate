@@ -20,7 +20,7 @@ namespace sw::editor
     {
         struct EditorSettingsRegistryInternal
         {
-            using SettingsRegistry = EditorRegistry<EditorSettingsRegistration>;
+            using SettingsRegistry = EditorExtensionRegistry<EditorSettingsRegistration>;
 
             /** @brief @p pCurrent 가 기본과 다른 프로퍼티를 @p object 에 담습니다. 담은 수입니다. */
             static uint32 writeDifference( const JSONValue& object, const TypeInfo& type, const void* pCurrent, const void* pDefault )

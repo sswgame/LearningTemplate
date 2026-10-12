@@ -7,7 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Editor/Common/Workspace/EditorRegistry.h"
+#include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 #include "Editor/Viewport/EditorVisualizerToggles.h"
 
 struct ImDrawList;
@@ -57,7 +57,7 @@ namespace sw::editor
      * @details 항목 하나가 라벨, 툴팁, 기본값, 그리기 함수를 모두 가지며, 툴바 체크박스는 이 항목들에서 만들어진다. `_order` 가 툴바
      *          체크박스의 순서다. 켬과 끔은 id 로 보관한다(`EditorVisualizerToggles`).
      */
-    struct EditorVisualizerRegistration : EditorRegistration
+    struct EditorVisualizerRegistration : EditorExtensionRegistration
     {
         /** @brief 시각화 하나를 그립니다. */
         using DrawFunc = void ( * )( const EditorViewportVisualizerArgs& args );

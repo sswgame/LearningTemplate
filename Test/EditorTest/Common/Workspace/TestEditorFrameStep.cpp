@@ -13,8 +13,8 @@ using namespace sw::editor;
 
 namespace
 {
-    using FrameStepRegistry  = EditorRegistry<EditorFrameStepRegistration>;
-    using FrameStepRegistrar = EditorRegistrar<EditorFrameStepRegistration>;
+    using FrameStepRegistry  = EditorExtensionRegistry<EditorFrameStepRegistration>;
+    using FrameStepRegistrar = EditorExtensionRegistrar<EditorFrameStepRegistration>;
 
     // 테스트 단계는 부르지 않는다(EditorTest 는 EditorContext 를 만들 수 없다). 단계가 무엇인지는 함수 주소로 가린다.
     void runFirstStep( EditorContext& /*context*/ ) {}

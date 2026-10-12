@@ -22,7 +22,7 @@ namespace sw::editor
     void EditorUIContext::publish( const EditorUIContextState& state )
     {
         EditorUIContextInternal::getState() = state;
-        using BinderRegistry                = EditorRegistry<EditorUIBinderRegistration>;
+        using BinderRegistry                = EditorExtensionRegistry<EditorUIBinderRegistration>;
         for ( uint32 index = 0; index < BinderRegistry::getCount(); ++index )
         {
             const EditorUIBinderRegistration& registration = BinderRegistry::getAt( index );

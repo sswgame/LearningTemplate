@@ -381,7 +381,7 @@ namespace sw::editor
 {
     uint32 EditorCommandTableUtil::appendRegistrations( EditorCommandRegistry& registry, const void* pExcludeBegin, const void* pExcludeEnd )
     {
-        using CommandRegistry = EditorRegistry<EditorCommandRegistration>;
+        using CommandRegistry = EditorExtensionRegistry<EditorCommandRegistration>;
         uint32 excludedCount{ 0 };
         for ( uint32 index = 0; index < CommandRegistry::getCount(); ++index )
         {

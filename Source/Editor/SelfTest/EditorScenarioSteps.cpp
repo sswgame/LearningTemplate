@@ -890,7 +890,7 @@ namespace sw::editor
                 if ( pContext == nullptr )
                     return false;
                 const SceneViewPanel*               pPanel        = static_cast<const SceneViewPanel*>( pContext->getPanelManager().findPanel( "scene_view" ) );
-                const EditorVisualizerRegistration* pRegistration = EditorRegistry<EditorVisualizerRegistration>::find( gv_editorProbeVisualizer );
+                const EditorVisualizerRegistration* pRegistration = EditorExtensionRegistry<EditorVisualizerRegistration>::find( gv_editorProbeVisualizer );
                 if ( pPanel == nullptr || pRegistration == nullptr )
                     return false;
                 outValue = pPanel->getViewportClient().getToolbarSettings()._visualizerToggles.isOn( *pRegistration ) ? 1.0 : 0.0;

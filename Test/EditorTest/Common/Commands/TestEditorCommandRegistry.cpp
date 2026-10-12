@@ -340,7 +340,7 @@ SW_TEST_CASE( EditorCommandRegistryTest, ValidateCatchesMenuPathsNothingDraws )
 SW_TEST_CASE( EditorCommandRegistryTest, RegistrationLinesAreAppendedAndExcludedByImageRange )
 {
     s_invokeCount = 0;
-    const EditorRegistrar<EditorCommandRegistration> registrar{
+    const EditorExtensionRegistrar<EditorCommandRegistration> registrar{
         EditorCommandRegistration{ { "test.registeredCommand", 9100 }, "Registered", "", "Test", "툴팁", "detail", { EditorCommandKey::F7, commandmodifier::kCtrl }, &bumpInvokeCount, nullptr, "MainMenu/TestExtension" }
     };
     const EditorCommandRegistration* pRow = &registrar.getRegistration();

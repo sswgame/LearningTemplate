@@ -268,10 +268,10 @@ namespace sw::editor
         EditorContext* pContext = EditorContext::get();
 
         // 패널 · 확장이 더한 상태 항목(맵 검사 수 …) — 메뉴 막대는 무엇인지 모르고 순서대로 그린다.
-        const uint32 statusItemCount = EditorRegistry<EditorStatusBarItemRegistration>::getCount();
+        const uint32 statusItemCount = EditorExtensionRegistry<EditorStatusBarItemRegistration>::getCount();
         for ( uint32 itemIndex = 0; itemIndex < statusItemCount; ++itemIndex )
         {
-            EditorRegistry<EditorStatusBarItemRegistration>::getAt( itemIndex )._pfnDraw();
+            EditorExtensionRegistry<EditorStatusBarItemRegistration>::getAt( itemIndex )._pfnDraw();
             ImGui::SameLine();
         }
 

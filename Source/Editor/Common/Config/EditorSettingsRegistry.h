@@ -8,7 +8,7 @@
 #include "Core/Container/vector.h"
 
 #include "Editor/Common/EditorExports.h"
-#include "Editor/Common/Workspace/EditorRegistry.h"
+#include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 
 namespace sw
 {
@@ -24,7 +24,7 @@ namespace sw::editor
      * @details id 는 저장 파일의 키(`"viewport"`)이고, 라벨은 창 왼쪽 목록에 보이는 이름(`"Editor/Viewport"`)이다. '/' 앞이 그룹이다.
      *          인스턴스와 기본값 인스턴스는 그 섹션 파일의 함수 정적 변수다. 확장 모듈도 섹션을 등록할 수 있다.
      */
-    struct EditorSettingsRegistration : EditorRegistration
+    struct EditorSettingsRegistration : EditorExtensionRegistration
     {
         static constexpr const utf8* kKindName = "settings";
 

@@ -2,7 +2,7 @@
 
 #include "Core/Container/string.h"
 
-#include "Editor/Common/Workspace/EditorRegistry.h"
+#include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -12,15 +12,15 @@ using namespace sw::editor;
 namespace
 {
     /** @brief 테스트 전용 등록 줄. EditorTest 에는 실제 패널 · 시각화(ImGui 를 그린다)가 링크되지 않는다. */
-    struct FakeRegistration : EditorRegistration
+    struct FakeRegistration : EditorExtensionRegistration
     {
         static constexpr const utf8* kKindName = "fake";
 
         int32 _payload;
     };
 
-    using FakeRegistry  = EditorRegistry<FakeRegistration>;
-    using FakeRegistrar = EditorRegistrar<FakeRegistration>;
+    using FakeRegistry  = EditorExtensionRegistry<FakeRegistration>;
+    using FakeRegistrar = EditorExtensionRegistrar<FakeRegistration>;
 
     /** @brief 레지스트리의 id 를 순서대로 쉼표로 이은 글입니다. */
     string joinRegisteredIDs()
@@ -37,11 +37,11 @@ namespace
 } // namespace
 
 /**
- * @brief [EditorRegistryTest] 보이는 순서는 등록 순서가 아니라 순서 키 — 같으면 id 사전순 — 가 정한다
+ * @brief [EditorExtensionRegistryTest] 보이는 순서는 등록 순서가 아니라 순서 키 — 같으면 id 사전순 — 가 정한다
  * @details 패널 · 팝업 · 시각화는 각자 자기 .cpp 의 정적 등록자로 등록되고, 번역 단위 사이의 정적 초기화 순서는 정해지지 않는다.
  *          그래서 Panel 메뉴 · 툴바 체크박스 순서가 링크 순서에 따라 바뀌지 않으려면 레지스트리가 순서 키로 줄을 세워야 한다.
  */
-SW_TEST_CASE( EditorRegistryTest, OrderKeyDecidesOrderNotRegistrationOrder )
+SW_TEST_CASE( EditorExtensionRegistryTest, OrderKeyDecidesOrderNotRegistrationOrder )
 {
     SW_ASSERT_EQUAL( 0u, FakeRegistry::getCount() );
     {
@@ -80,10 +80,10 @@ SW_TEST_CASE( EditorRegistryTest, OrderKeyDecidesOrderNotRegistrationOrder )
 }
 
 /**
- * @brief [EditorRegistryTest] 같은 id 의 둘째 등록은 거절되고, 그것이 내려가도 첫째는 남는다
+ * @brief [EditorExtensionRegistryTest] 같은 id 의 둘째 등록은 거절되고, 그것이 내려가도 첫째는 남는다
  * @details 두 파일이 같은 패널 id 를 쓰면 `windows.ini` 가시성 키와 `-gv_editorOpenPanel` 이 둘 중 아무것에나 걸린다. 첫째만 받아 오류로 알린다.
  */
-SW_TEST_CASE( EditorRegistryTest, SecondRegistrationOfAnIDIsRejected )
+SW_TEST_CASE( EditorExtensionRegistryTest, SecondRegistrationOfAnIDIsRejected )
 {
     const FakeRegistrar first{
         FakeRegistration{ { "panel_id", 100 }, 1 }
@@ -109,28 +109,28 @@ SW_TEST_CASE( EditorRegistryTest, SecondRegistrationOfAnIDIsRejected )
 }
 
 /**
- * @brief [EditorRegistryTest] 종류 이름이 같으면 어느 템플릿 인스턴스에서 찾든 같은 목록이다
+ * @brief [EditorExtensionRegistryTest] 종류 이름이 같으면 어느 템플릿 인스턴스에서 찾든 같은 목록이다
  * @details 확장 모듈(DLL)의 등록이 EditorModule 의 목록에 올라야 에디터에 보인다. 목록을 템플릿 함수 정적으로 두면 DLL 마다 사본이 생긴다.
  */
-SW_TEST_CASE( EditorRegistryTest, KindNameResolvesToOneList )
+SW_TEST_CASE( EditorExtensionRegistryTest, KindNameResolvesToOneList )
 {
-    EditorRegistrationList& first  = getEditorRegistrationList( "test.kind" );
-    EditorRegistrationList& second = getEditorRegistrationList( "test.kind" );
+    EditorExtensionRegistrationList& first  = getEditorExtensionRegistrationList( "test.kind" );
+    EditorExtensionRegistrationList& second = getEditorExtensionRegistrationList( "test.kind" );
     SW_EXPECT_TRUE( &first == &second );
-    SW_EXPECT_TRUE( &first != &getEditorRegistrationList( "test.other" ) );
-    SW_EXPECT_TRUE( &FakeRegistry::getList() == &getEditorRegistrationList( FakeRegistration::kKindName ) );
+    SW_EXPECT_TRUE( &first != &getEditorExtensionRegistrationList( "test.other" ) );
+    SW_EXPECT_TRUE( &FakeRegistry::getList() == &getEditorExtensionRegistrationList( FakeRegistration::kKindName ) );
 }
 
 /**
- * @brief [EditorRegistryTest] 넣고 빼면 세대가 오르고, 거절된 등록은 세대를 올리지 않는다
+ * @brief [EditorExtensionRegistryTest] 넣고 빼면 세대가 오르고, 거절된 등록은 세대를 올리지 않는다
  * @details 매니저(패널 · 인스펙터 · 팝업 · 커맨드)는 세대가 바뀌었을 때만 인스턴스를 다시 맞춘다.
  */
-SW_TEST_CASE( EditorRegistryTest, GenerationCountsChanges )
+SW_TEST_CASE( EditorExtensionRegistryTest, GenerationCountsChanges )
 {
-    EditorRegistrationList&         list   = getEditorRegistrationList( "test.generation" );
-    const uint32                    before = list.getGeneration();
-    static const EditorRegistration kFirst{ "a", 1 };
-    static const EditorRegistration kDuplicate{ "a", 2 };
+    EditorExtensionRegistrationList&         list   = getEditorExtensionRegistrationList( "test.generation" );
+    const uint32                             before = list.getGeneration();
+    static const EditorExtensionRegistration kFirst{ "a", 1 };
+    static const EditorExtensionRegistration kDuplicate{ "a", 2 };
     SW_EXPECT_TRUE( list.addRegistration( kFirst ) );
     SW_EXPECT_EQUAL( before + 1, list.getGeneration() );
     {

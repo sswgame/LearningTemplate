@@ -39,7 +39,7 @@ SelfTest = 7
 # 키는 셋이다: prelude:<include 경로> · wiring:<파일> · violation:<파일> -> <include 경로>(줄일 대상).
 [exemption]
 "prelude:Editor/Common/Workspace/EditorService.h" = "호스트(엔진) 서비스 창구와 활성 씬 바로가기 — Core · RuntimeAPI 만 include 하는 잎 헤더라 어느 층에서나 쓴다"
-"prelude:Editor/Common/Workspace/EditorRegistry.h" = "등록 줄(SW_EDITOR_*)의 공통 기반(등록 세대 · 모듈 범위) — Core 만 include 하는 잎 헤더"
+"prelude:Editor/Common/Workspace/EditorExtensionRegistry.h" = "등록 줄(SW_EDITOR_*)의 공통 기반(등록 세대 · 모듈 범위) — Core 만 include 하는 잎 헤더"
 "prelude:Editor/Common/GUI/EditorIconGlyphs.h" = "아이콘 글리프 코드포인트 상수만 — 커맨드 등록 줄이 아이콘을 적는다"
 "prelude:Editor/SelfTest/EditorSelfTestInput.h" = "입력 흉내 표식(EditorSelfTestMarks::note) — 위젯이 그린 자리를 남기는 잎 헤더(Core 만 include)"
 "wiring:Source/Editor/Common/Workspace/EditorContextLifecycle.cpp" = "EditorContext 의 생성 · 종료 — 패널 · 팝업 · 인스펙터 매니저를 소유하는 조립점(언리얼 UnrealEdEngine 초기화 자리)"

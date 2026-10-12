@@ -36,7 +36,7 @@
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
-#include "Editor/SelfTest/EditorRegistryDump.h"
+#include "Editor/SelfTest/EditorExtensionRegistryDump.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -322,7 +322,7 @@ namespace sw::editor
             CommandStack* pCommandStack = editor::getService<CommandStack>();
             if ( pCommandStack != nullptr )
                 EditorTransaction::bindObjectEditListener( *pCommandStack );
-            EditorRegistryDump::dumpIfRequested();
+            EditorExtensionRegistryDump::dumpIfRequested();
             _dockLayout.loadPanelVisibility();
 
             // 모니터 DPI 에 맞춰 스타일과 글자를 키운다. 테마를 읽은 뒤에 해야 한다. 테마가 96 DPI 기준 크기를 기록하기 때문이다.

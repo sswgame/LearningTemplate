@@ -10,7 +10,7 @@
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorRegistry.h"
+#include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -131,7 +131,7 @@ namespace sw::editor
 
     void TestRunnerPanel::drawSelfTestTab()
     {
-        using Registry = EditorRegistry<EditorSelfTestRegistration>;
+        using Registry = EditorExtensionRegistry<EditorSelfTestRegistration>;
         ImGui::SetNextItemWidth( 220.0f * EditorThemeUtil::getDpiScale() );
         ImGui::InputTextWithHint( "##SelfTestFilter", "Filter tests...", _arrFilter, sizeof( _arrFilter ) );
         EditorSelfTestMarks::note( "testRunner.filter" );

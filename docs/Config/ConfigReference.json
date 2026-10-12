@@ -2885,7 +2885,7 @@
    "default": "false",
    "kind": "시험",
    "description": "시작할 때 에디터 레지스트리(패널 · 팝업 · 인스펙터 · 시각화 · 메뉴)를 로그로 덤프",
-   "source": "Source/Editor/SelfTest/EditorRegistryDump.cpp"
+   "source": "Source/Editor/SelfTest/EditorExtensionRegistryDump.cpp"
   },
   {
    "name": "gv_editorSelfTest",

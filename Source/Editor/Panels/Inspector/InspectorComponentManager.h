@@ -9,7 +9,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/RegistrationList.h"
 
-#include "Editor/Common/Workspace/EditorRegistry.h"
+#include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 
 namespace sw
 {
@@ -26,7 +26,7 @@ namespace sw::editor
      * @details id 는 컴포넌트 클래스 이름이다. 컴포넌트 하나에 확장은 하나이고, 두 번째 등록은 거절된다. 그리는 순서는 등록 순서가
      *          아니라 타입 계층(기반에서 파생 순서)이 정하므로 `_order` 는 쓰지 않는다.
      */
-    struct EditorInspectorRegistration : EditorRegistration
+    struct EditorInspectorRegistration : EditorExtensionRegistration
     {
         static constexpr const utf8* kKindName = "inspector";
 

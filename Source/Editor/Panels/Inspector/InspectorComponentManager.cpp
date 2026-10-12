@@ -69,8 +69,8 @@ namespace sw::editor
 
     void InspectorComponentManager::syncWithRegistry()
     {
-        using InspectorRegistry            = EditorRegistry<EditorInspectorRegistration>;
-        const EditorRegistrationList& list = InspectorRegistry::getList();
+        using InspectorRegistry                     = EditorExtensionRegistry<EditorInspectorRegistration>;
+        const EditorExtensionRegistrationList& list = InspectorRegistry::getList();
         if ( list.getGeneration() == _syncedGeneration )
             return;
         _syncedGeneration = list.getGeneration();

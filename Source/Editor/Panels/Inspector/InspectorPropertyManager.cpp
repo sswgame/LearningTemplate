@@ -712,8 +712,8 @@ namespace sw::editor
 
     void InspectorPropertyManager::syncWithRegistry()
     {
-        using DrawerRegistry               = EditorRegistry<EditorPropertyDrawerRegistration>;
-        const EditorRegistrationList& list = DrawerRegistry::getList();
+        using DrawerRegistry                        = EditorExtensionRegistry<EditorPropertyDrawerRegistration>;
+        const EditorExtensionRegistrationList& list = DrawerRegistry::getList();
         if ( list.getGeneration() == _syncedGeneration )
             return;
         _syncedGeneration = list.getGeneration();

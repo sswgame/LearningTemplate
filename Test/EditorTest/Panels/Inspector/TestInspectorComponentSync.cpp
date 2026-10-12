@@ -38,7 +38,7 @@ SW_TEST_CASE( InspectorComponentSyncTest, FollowsRegistrationsAndReleasesByImage
     manager.registerDefaults();
     SW_EXPECT_TRUE( manager.find( "CameraComponent" ) == nullptr );
     {
-        const EditorRegistrar<EditorInspectorRegistration> registrar{
+        const EditorExtensionRegistrar<EditorInspectorRegistration> registrar{
             EditorInspectorRegistration{ { "CameraComponent", 0 }, &getCameraType, &createFakeInspector }
         };
         manager.syncWithRegistry();

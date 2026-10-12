@@ -14,7 +14,7 @@
 #include "Core/Container/vector.h"
 
 #include "Editor/Common/EditorExports.h"
-#include "Editor/Common/Workspace/EditorRegistry.h"
+#include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 
 namespace sw::editor
 {
@@ -62,7 +62,7 @@ namespace sw::editor
      * @struct EditorSelfTestRegistration
      * @brief 에디터 자체 테스트 하나의 등록 항목입니다. `_pID` 는 `-gv_editorSelfTest` 패턴이 매칭하는 이름(`영역.무엇`)이고, `_order` 가 실행 순서입니다.
      */
-    struct EditorSelfTestRegistration : EditorRegistration
+    struct EditorSelfTestRegistration : EditorExtensionRegistration
     {
         static constexpr const utf8* kKindName = "selftest";
 

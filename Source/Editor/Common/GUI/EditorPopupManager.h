@@ -9,7 +9,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/GUI/IEditorPopup.h"
-#include "Editor/Common/Workspace/EditorRegistry.h"
+#include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 
 namespace sw::editor
 {
@@ -31,7 +31,7 @@ namespace sw::editor
      * @struct EditorPopupRegistration
      * @brief 팝업 한 종류의 등록 줄입니다. 팝업의 .cpp 가 `SW_EDITOR_POPUP` 으로 둡니다. id 는 팝업의 `kPopupID` 입니다.
      */
-    struct EditorPopupRegistration : EditorRegistration
+    struct EditorPopupRegistration : EditorExtensionRegistration
     {
         static constexpr const utf8* kKindName = "popup";
 

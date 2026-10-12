@@ -7,7 +7,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/EditorExports.h"
-#include "Editor/Common/Workspace/EditorRegistry.h"
+#include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 
 namespace sw
 {
@@ -50,7 +50,7 @@ namespace sw::editor
      * @brief 프로퍼티 타입 하나의 그리기 확장 등록 줄입니다(유니티 PropertyDrawer 에 해당). id 는 리플렉션 `_typeName` 과 같은 타입 이름입니다.
      * @details 확장 모듈과 게임이 자기 값 타입에 위젯을 다는 길입니다. 내장 타입(`ReflectBuiltins.xxx`)과 이름이 같으면 등록 줄이 이깁니다.
      */
-    struct EditorPropertyDrawerRegistration : EditorRegistration
+    struct EditorPropertyDrawerRegistration : EditorExtensionRegistration
     {
         static constexpr const utf8* kKindName = "propertydrawer";
 

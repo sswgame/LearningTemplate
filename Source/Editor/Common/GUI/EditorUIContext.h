@@ -6,7 +6,7 @@
 #include "Core/Common/Types.h"
 
 #include "Editor/Common/EditorExports.h"
-#include "Editor/Common/Workspace/EditorRegistry.h"
+#include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 
 namespace sw::editor
 {
@@ -26,7 +26,7 @@ namespace sw::editor
      * @details vcpkg imgui 는 정적 라이브러리라 DLL 마다 `GImGui` · 할당자 사본이 생깁니다. 결속 함수는 **그 DLL 의** ImGui 사본에
      *          `SetAllocatorFunctions` · `SetCurrentContext` 를 겁니다(Dear ImGui FAQ "DLL 경계"). 할당자는 엔진 Memory 라 어느 DLL 이 잡고 풀어도 같습니다.
      */
-    struct EditorUIBinderRegistration : EditorRegistration
+    struct EditorUIBinderRegistration : EditorExtensionRegistration
     {
         static constexpr const utf8* kKindName = "uibinder";
 
@@ -55,11 +55,11 @@ namespace sw::editor
      * @class EditorUIBinderRegistrar
      * @brief 결속 함수를 등록하고, 이미 컨텍스트가 있으면 **바로** 겁니다(에디터가 뜬 뒤 로드된 확장 모듈 — 핫 리로드).
      */
-    class EditorUIBinderRegistrar : public EditorRegistrar<EditorUIBinderRegistration>
+    class EditorUIBinderRegistrar : public EditorExtensionRegistrar<EditorUIBinderRegistration>
     {
     public:
         explicit EditorUIBinderRegistrar( const EditorUIBinderRegistration& registration )
-            : EditorRegistrar<EditorUIBinderRegistration>{ registration }
+            : EditorExtensionRegistrar<EditorUIBinderRegistration>{ registration }
         {
             if ( EditorUIContext::getCurrent()._pImGuiContext != nullptr && registration._pfnBind != nullptr )
                 registration._pfnBind( EditorUIContext::getCurrent() );

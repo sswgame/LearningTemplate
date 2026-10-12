@@ -92,8 +92,8 @@ namespace sw::editor
 
     void EditorPopupManager::syncWithRegistry()
     {
-        using PopupRegistry                = EditorRegistry<EditorPopupRegistration>;
-        const EditorRegistrationList& list = PopupRegistry::getList();
+        using PopupRegistry                         = EditorExtensionRegistry<EditorPopupRegistration>;
+        const EditorExtensionRegistrationList& list = PopupRegistry::getList();
         if ( list.getGeneration() == _syncedGeneration )
             return;
         _syncedGeneration = list.getGeneration();

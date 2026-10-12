@@ -1,22 +1,22 @@
 #include "pch.h"
 
-#include "Editor/Common/Workspace/EditorRegistry.h"
+#include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "EditorRegistry" );
+    SW_LOG_CALLER( "EditorExtensionRegistry" );
 
     namespace
     {
-        struct EditorRegistryInternal
+        struct EditorExtensionRegistryInternal
         {
             /** @brief 종류 이름 → 목록입니다. 종류는 열 개 안팎이라 줄 찾기로 충분하다. 함수 정적이라 다른 TU 의 정적 등록자보다 늦게 만들어질 걱정이 없다. */
-            static vector<unique_ptr<EditorRegistrationList>>& getLists()
+            static vector<unique_ptr<EditorExtensionRegistrationList>>& getLists()
             {
-                static vector<unique_ptr<EditorRegistrationList>> s_listList;
+                static vector<unique_ptr<EditorExtensionRegistrationList>> s_listList;
                 return s_listList;
             }
         };
@@ -25,14 +25,14 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    EditorRegistrationList::EditorRegistrationList( const utf8* pKindName )
+    EditorExtensionRegistrationList::EditorExtensionRegistrationList( const utf8* pKindName )
         : _pKindName{ pKindName }
         , _registered{ RegistrationOrder::ByOrderThenName, true }
         , _generation{ 0 }
     {
     }
 
-    bool EditorRegistrationList::addRegistration( const EditorRegistration& registration )
+    bool EditorExtensionRegistrationList::addRegistration( const EditorExtensionRegistration& registration )
     {
         const string_view        id     = ( registration._pID != nullptr ) ? string_view{ registration._pID } : string_view{};
         const RegistrationResult result = _registered.add( &registration, id, registration._order );
@@ -64,22 +64,22 @@ namespace sw::editor
         }
     }
 
-    void EditorRegistrationList::removeRegistration( const EditorRegistration& registration )
+    void EditorExtensionRegistrationList::removeRegistration( const EditorExtensionRegistration& registration )
     {
         // 거절된 등록자의 소멸도 여기로 온다 — 올라 있지 않으면 할 일이 없다
         if ( _registered.remove( &registration ) )
             ++_generation;
     }
 
-    EditorRegistrationList& getEditorRegistrationList( const utf8* pKindName )
+    EditorExtensionRegistrationList& getEditorExtensionRegistrationList( const utf8* pKindName )
     {
-        vector<unique_ptr<EditorRegistrationList>>& listList = EditorRegistryInternal::getLists();
-        for ( const unique_ptr<EditorRegistrationList>& pList : listList )
+        vector<unique_ptr<EditorExtensionRegistrationList>>& listList = EditorExtensionRegistryInternal::getLists();
+        for ( const unique_ptr<EditorExtensionRegistrationList>& pList : listList )
         {
             if ( StringUtil::equals( pList->getKindName(), pKindName, false ) )
                 return *pList;
         }
-        listList.push_back( make_unique<EditorRegistrationList>( pKindName ) );
+        listList.push_back( make_unique<EditorExtensionRegistrationList>( pKindName ) );
         return *listList.back();
     }
 } // namespace sw::editor

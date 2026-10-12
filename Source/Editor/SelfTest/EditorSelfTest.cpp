@@ -196,7 +196,7 @@ namespace sw::editor
             return;
         }
 
-        using Registry = EditorRegistry<EditorSelfTestRegistration>;
+        using Registry = EditorExtensionRegistry<EditorSelfTestRegistration>;
         if ( state._bStarted == false )
         {
             state._bStarted = true;
