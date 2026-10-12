@@ -12,7 +12,7 @@ namespace sw
 {
     // 핸들은 ABI/RuntimeHandles.h 가 모아 들고 있다. GameHandle 포함.
 
-    struct ModuleService;
+    struct ModuleServiceTable;
 
     // ------------------------------------------------------------------------------
     // 1) GameAPI — C ABI 함수 테이블
@@ -27,7 +27,7 @@ namespace sw
         void ( *shutdown )( GameHandle game ){ nullptr };                                                   /**< @brief 게임을 종료합니다. */
         void ( *update )( GameHandle game, float32 deltaTime ){ nullptr };                                  /**< @brief 프레임 업데이트를 수행합니다. */
         void ( *fixedUpdate )( GameHandle game, float32 fixedDeltaTime ){ nullptr };                        /**< @brief 고정 프레임 업데이트를 수행합니다. */
-        void ( *bindService )( const ModuleService* pService ){ nullptr };                                  /**< @brief ModuleService 를 게임 모듈에 주입하거나 nullptr 로 해제합니다. */
+        void ( *bindService )( const ModuleServiceTable* pService ){ nullptr };                             /**< @brief ModuleServiceTable 를 게임 모듈에 주입하거나 nullptr 로 해제합니다. */
         bool ( *serializeState )( GameHandle game, void* pOutBuffer, uint32* pInOutSize ){ nullptr };       /**< @brief 게임 상태를 버퍼에 직렬화하거나 크기를 반환합니다. 구현이 지원하는 범위만 복원됩니다. */
         bool ( *deserializeState )( GameHandle game, const void* pInBuffer, uint32 size ){ nullptr };       /**< @brief 버퍼에서 게임 상태를 복원합니다. */
     };

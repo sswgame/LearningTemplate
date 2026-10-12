@@ -4,7 +4,7 @@
 
 #include "Core/Concurrency/atomic.h"
 
-#include "RuntimeAPI/Service/ModuleService.h"
+#include "RuntimeAPI/Service/ModuleServiceTable.h"
 #include "RuntimeAPI/Service/ServiceListColumns.h"
 
 // 서비스 **타입의 정의는 하나도 필요 없다.** 이 파일이 하는 일은 포인터를 담아 두고 참조로
@@ -85,7 +85,7 @@ namespace sw
             return s_bServicesBound.load( std::memory_order_acquire );
         }
 
-        void fillModuleServices( ModuleService& outService, bool bGameModuleOnly )
+        void fillModuleServices( ModuleServiceTable& outService, bool bGameModuleOnly )
         {
             using namespace sw::internal;
             outService = {};

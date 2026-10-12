@@ -42,7 +42,7 @@ namespace sw::editor
     } // namespace
 } // namespace sw::editor
 
-extern "C" SW_MODULE_API int32 runEditorLocalizationTask( uint32 task, const utf8* pPoPath, const utf8* pProjectArgument, const sw::ModuleService* pService )
+extern "C" SW_MODULE_API int32 runEditorLocalizationTask( uint32 task, const utf8* pPoPath, const utf8* pProjectArgument, const sw::ModuleServiceTable* pService )
 {
     // 인스턴스가 없는 헤드리스 호출이라 서비스 표를 이 호출 동안만 묶는다(`importEditorAssets` 와 같은 길).
     if ( pService != nullptr )

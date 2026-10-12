@@ -15,12 +15,12 @@ namespace sw::editor
 {
     namespace
     {
-        ModuleService       s_editorService{};
+        ModuleServiceTable  s_editorService{};
         map<uint64, void*>  s_mapLocalService{};
         EditorToolDefaults* s_pEditorToolDefaults{ nullptr };
     } // namespace
 
-    void bindEditorService( const ModuleService& service )
+    void bindEditorService( const ModuleServiceTable& service )
     {
         s_editorService = service;
     }

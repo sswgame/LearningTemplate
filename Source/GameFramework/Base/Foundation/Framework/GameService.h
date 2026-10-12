@@ -6,7 +6,7 @@
 #include "Core/Container/StringUtil.h"
 
 #include "RuntimeAPI/Service/GameServiceBinding.h"
-#include "RuntimeAPI/Service/ModuleService.h"
+#include "RuntimeAPI/Service/ModuleServiceTable.h"
 
 #include <type_traits>
 

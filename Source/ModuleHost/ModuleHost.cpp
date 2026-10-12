@@ -18,7 +18,7 @@
 #include "ModuleHost/ModuleCompiler.h"
 #include "ModuleHost/ModuleInstanceUtil.h"
 
-#include "RuntimeAPI/Service/ModuleService.h"
+#include "RuntimeAPI/Service/ModuleServiceTable.h"
 #include "RuntimeAPI/Service/ServiceListColumns.h"
 
 #include "sw/config/ConfigConstants.h"
@@ -511,7 +511,7 @@ namespace sw
     // 인스턴스 생성과 파괴. 리로드 경로와 RHI 핫스왑 경로가 같은 코드를 쓴다.
     // ======================================================================
 
-    void ModuleHost::fillModuleService( ModuleService& outService, bool bGameModule ) const
+    void ModuleHost::fillModuleService( ModuleServiceTable& outService, bool bGameModule ) const
     {
         engine::fillModuleServices( outService, bGameModule );
 
@@ -530,7 +530,7 @@ namespace sw
         if ( _gameAPI.bindService == nullptr )
             return;
 
-        ModuleService gameService{};
+        ModuleServiceTable gameService{};
         fillModuleService( gameService, true );
         _gameAPI.bindService( &gameService );
     }

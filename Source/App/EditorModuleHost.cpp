@@ -11,7 +11,7 @@
 #include "ModuleHost/LiveReloadManager.h"
 #include "ModuleHost/ModuleInstanceUtil.h"
 
-#include "RuntimeAPI/Service/ModuleService.h"
+#include "RuntimeAPI/Service/ModuleServiceTable.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -368,7 +368,7 @@ namespace sw
         if ( _editorAPI.bindService == nullptr )
             return;
 
-        ModuleService editorService{};
+        ModuleServiceTable editorService{};
         fillModuleService( editorService, false );
         _editorAPI.bindService( &editorService );
     }

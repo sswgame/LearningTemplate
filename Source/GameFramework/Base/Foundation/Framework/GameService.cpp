@@ -67,8 +67,8 @@ namespace sw
             }
         };
 
-        ModuleService     s_gameService{};
-        LocalServiceTable s_localServiceTable{};
+        ModuleServiceTable s_gameService{};
+        LocalServiceTable  s_localServiceTable{};
 
         /** @brief 호출 지점 @p pCallerAddress 를 품은 이미지의 시작 주소를 돌려줍니다. 찾지 못하면 그 주소 자체입니다(범위 비교는 그대로 맞다). */
         const void* findOwnerImage( const void* pCallerAddress )
@@ -83,7 +83,7 @@ namespace sw
 
     namespace game
     {
-        SW_GAMESERVICE_API void bindGameService( const ModuleService& service )
+        SW_GAMESERVICE_API void bindGameService( const ModuleServiceTable& service )
         {
             s_gameService = service;
             // 데이터 표 캐시(상호작용 · 원소 규칙)를 호스트의 에셋 캐시 레지스트리에 올린다 — 핫 리로드 · 비우기 · 진단이 그 레지스트리를 훑는다.

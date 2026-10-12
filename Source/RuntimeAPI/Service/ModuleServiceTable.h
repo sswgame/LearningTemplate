@@ -1,5 +1,5 @@
 /**
- * @file ModuleService.h
+ * @file ModuleServiceTable.h
  * @brief App ↔ 모듈 공통 서비스 로케이터입니다. 엔진 · 호스트 서비스 id 를 모두 두고, 게임 모듈에는 GameVisible 인 칸만 채워 넘깁니다.
  */
 #pragma once
@@ -73,7 +73,7 @@ namespace sw
 #undef SW_HOST_SERVICE
     } // namespace internal
 
-    struct ModuleService
+    struct ModuleServiceTable
     {
         const void* arrServices[internal::kModuleServiceCount]{ nullptr };
     };

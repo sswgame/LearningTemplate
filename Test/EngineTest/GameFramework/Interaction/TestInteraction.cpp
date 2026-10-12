@@ -66,7 +66,7 @@ namespace
             : _resources{ resources }
             , _bBound{ true }
         {
-            ModuleService service{};
+            ModuleServiceTable service{};
             service.arrServices[internal::toRawServiceID( internal::ModuleServiceID::AssetManager )] = &_resources;
             game::bindGameService( service );
         }

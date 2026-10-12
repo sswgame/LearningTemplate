@@ -119,7 +119,7 @@ namespace
     {
         explicit ScopedSceneGameService( SceneManager& manager )
         {
-            ModuleService service{};
+            ModuleServiceTable service{};
             service.arrServices[internal::toRawServiceID( internal::ModuleServiceID::SceneManager )] = &manager;
             game::bindGameService( service );
         }
@@ -2877,7 +2877,7 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
         ScopedRunState()
         {
             (void)_input.initialize(); // 장치 등록뿐이다 — 아래 단언이 통합 맵을 본다
-            ModuleService service{};
+            ModuleServiceTable service{};
             service.arrServices[internal::toRawServiceID( internal::ModuleServiceID::InputManager )]        = &_input;
             service.arrServices[internal::toRawServiceID( internal::ModuleServiceID::LocalizationManager )] = &engine::getLocalizationManager();
             game::bindGameService( service );

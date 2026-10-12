@@ -44,7 +44,7 @@ namespace sw
         pOutAPI->shutdown    = []( sw::GameHandle gameHandle ) { sw::ModuleForwardUtil::callVoid<GameClass>( gameHandle, &GameClass::shutdown ); };                                                          \
         pOutAPI->update      = []( sw::GameHandle gameHandle, float32 deltaTime ) { sw::ModuleForwardUtil::callVoid<GameClass>( gameHandle, &GameClass::update, deltaTime ); };                              \
         pOutAPI->fixedUpdate = []( sw::GameHandle gameHandle, float32 fixedDeltaTime ) { sw::ModuleForwardUtil::callVoid<GameClass>( gameHandle, &GameClass::fixedUpdate, fixedDeltaTime ); };               \
-        pOutAPI->bindService = []( const sw::ModuleService* pService )                                                                                                                                       \
+        pOutAPI->bindService = []( const sw::ModuleServiceTable* pService )                                                                                                                                  \
         {                                                                                                                                                                                                    \
             if ( pService != nullptr )                                                                                                                                                                       \
                 sw::game::bindGameService( *pService );                                                                                                                                                      \

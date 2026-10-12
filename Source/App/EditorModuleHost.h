@@ -144,7 +144,7 @@ namespace sw
         /** @brief 이번 프레임의 게임 뷰와 씬 뷰 RT 핸들과 크기를 에디터에서 조회해 프레임 상태에 담습니다(보이지 않는 패널의 뷰는 비어 있습니다). */
         void sampleViewTargets();
 
-        /** @brief ModuleService 를 다시 만들어 에디터 모듈에 넘깁니다. */
+        /** @brief ModuleServiceTable 를 다시 만들어 에디터 모듈에 넘깁니다. */
         void rebindEditorService();
         /**
          * @brief 에디터 인스턴스를 shutdown, destroy 하고 핸들을 비웁니다.

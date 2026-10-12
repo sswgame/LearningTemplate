@@ -5,7 +5,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/EngineServiceCollection.h"
 
-#include "RuntimeAPI/Service/ModuleService.h"
+#include "RuntimeAPI/Service/ModuleServiceTable.h"
 #include "RuntimeAPI/Service/ServiceListColumns.h"
 
 #include "TestFramework/TestFramework.h"
@@ -25,8 +25,8 @@ using namespace sw;
  */
 SW_TEST_CASE( EngineServiceTest, GameModuleTableHidesHostOnlyServices )
 {
-    ModuleService editorTable{};
-    ModuleService gameTable{};
+    ModuleServiceTable editorTable{};
+    ModuleServiceTable gameTable{};
     engine::fillModuleServices( editorTable, false );
     engine::fillModuleServices( gameTable, true );
 
@@ -57,7 +57,7 @@ SW_TEST_CASE( EngineServiceTest, GameModuleTableHidesHostOnlyServices )
  */
 SW_TEST_CASE( EngineServiceTest, FillClearsTheWholeTableFirst )
 {
-    ModuleService table{};
+    ModuleServiceTable table{};
     // 호스트 서비스 자리에 미리 값을 넣어 둔다 — Engine 이 채우는 자리가 아니다.
     const uint32 hostRawID       = internal::toRawServiceID( internal::ModuleServiceID::IModuleCompiler );
     table.arrServices[hostRawID] = &table;

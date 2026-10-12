@@ -17,7 +17,7 @@
 namespace sw
 {
     struct ModuleResolution;
-    struct ModuleService;
+    struct ModuleServiceTable;
 
     class IWindow;
     class LiveReloadManager;
@@ -203,7 +203,7 @@ namespace sw
         /** @brief RHI 교체 뒤 게임을 다시 만듭니다. 테이블이 비었으면 모듈에서 다시 바인딩합니다. */
         [[nodiscard]] bool recreateGameInstance( void* pGameModule );
         /** @brief 호스트가 모듈에 넘기는 서비스 테이블을 채웁니다. @p bGameModule 이면 게임에 허용된 것(GameVisible)만 채웁니다. */
-        void fillModuleService( ModuleService& outService, bool bGameModule ) const;
+        void fillModuleService( ModuleServiceTable& outService, bool bGameModule ) const;
 
         /** @brief 이번 프레임 상태를 호스트 모듈이 채웁니다(뷰 RT, 씬 틱 여부). */
         ModuleFrameState&  getMutableFrameState() { return _frameState; }
@@ -224,7 +224,7 @@ namespace sw
         virtual void onRenderWorkersDrained() {}
 
     private:
-        /** @brief ModuleService 를 다시 만들어 게임 모듈에 넘깁니다(게임에 허용된 것만 채웁니다). */
+        /** @brief ModuleServiceTable 를 다시 만들어 게임 모듈에 넘깁니다(게임에 허용된 것만 채웁니다). */
         void rebindGameService();
         /** @brief 게임 인스턴스를 shutdown, destroy 하고 핸들을 비웁니다. @p bReleaseAPITable 은 `suspendModules` 와 같습니다. */
         void destroyGameInstance( bool bReleaseAPITable );

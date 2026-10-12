@@ -158,7 +158,7 @@ namespace sw
             if ( pfnExport( &api ) == false || api.create == nullptr || api.destroy == nullptr )
                 return false;
 
-            sw::ModuleService gameService{};
+            sw::ModuleServiceTable gameService{};
             if ( api.bindService != nullptr )
             {
                 sw::engine::fillModuleServices( gameService, true );
@@ -1689,7 +1689,7 @@ SW_TEST_CASE( ModuleAPITest, FullGameSceneAndComponentLifecycle )
 
     if ( api.bindService )
     {
-        sw::ModuleService gameService{};
+        sw::ModuleServiceTable gameService{};
         sw::engine::fillModuleServices( gameService, true );
         api.bindService( &gameService );
     }
@@ -1808,7 +1808,7 @@ SW_TEST_CASE( ModuleAPITest, SharedModuleChildKeepsItsRegistrations )
     SW_ASSERT_NOT_NULL( pfnExport );
     sw::GameAPI api{};
     SW_ASSERT_TRUE( pfnExport( &api ) );
-    sw::ModuleService gameService{};
+    sw::ModuleServiceTable gameService{};
     if ( api.bindService != nullptr )
     {
         sw::engine::fillModuleServices( gameService, true );
@@ -1933,7 +1933,7 @@ SW_TEST_CASE( ModuleAPITest, GameModuleRepeatedReloadCycle )
 
         if ( api.bindService )
         {
-            sw::ModuleService gameService{};
+            sw::ModuleServiceTable gameService{};
             sw::engine::fillModuleServices( gameService, true );
             api.bindService( &gameService );
         }
@@ -1998,7 +1998,7 @@ SW_TEST_CASE( ModuleAPITest, UnloadChildReleasesTheChannelsItsImageCreated )
     SW_ASSERT_NOT_NULL( pfnExport );
     sw::GameAPI api{};
     SW_ASSERT_TRUE( pfnExport( &api ) );
-    sw::ModuleService gameService{};
+    sw::ModuleServiceTable gameService{};
     if ( api.bindService != nullptr )
     {
         sw::engine::fillModuleServices( gameService, true );

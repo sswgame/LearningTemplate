@@ -6,7 +6,7 @@
  */
 #pragma once
 #include "RuntimeAPI/Export/GameFrameworkAPI.h"
-#include "RuntimeAPI/Service/ModuleService.h"
+#include "RuntimeAPI/Service/ModuleServiceTable.h"
 
 /** @brief 게임 서비스 함수의 내보내기 매크로입니다. GameFramework 와 같은 규칙이라 `SW_GF_API` 를 그대로 쓴다. */
 #define SW_GAMESERVICE_API SW_GF_API
@@ -19,7 +19,7 @@ namespace sw
         extern "C"
         {
             /** @brief App 이 넘긴 서비스 테이블을 이 모듈의 게임 서비스 로케이터에 연결합니다. */
-            SW_GAMESERVICE_API void bindGameService( const ModuleService& service );
+            SW_GAMESERVICE_API void bindGameService( const ModuleServiceTable& service );
             /** @brief 게임 서비스 로케이터의 연결을 끊습니다. 모듈을 언로드하기 전에 부릅니다. */
             SW_GAMESERVICE_API void unbindGameService();
         }

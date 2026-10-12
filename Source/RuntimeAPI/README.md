@@ -13,7 +13,7 @@ RuntimeAPI는 실행 파일 `App` 과, 실행 중에 로드하는 게임 모듈�
 ```mermaid
 graph LR
     App -->|GameAPI, EditorAPI 테이블로 호출| Module["게임 모듈, 에디터 모듈"]
-    App -->|ModuleService 테이블을 넘김| Module
+    App -->|ModuleServiceTable 테이블을 넘김| Module
     Module -->|서비스 테이블로 엔진 서비스 사용| Engine
 ```
 
@@ -23,7 +23,7 @@ App은 그 뒤로 모듈 객체를 이 테이블로만 부릅니다. 만들기, 
 **불투명 핸들.** 경계를 넘는 객체는 `ABI/RuntimeHandles.h` 의 핸들입니다. `WindowHandle`, `RHIDeviceHandle`, `EditorHandle`, `GameHandle` 이 있습니다.
 받는 쪽은 핸들 안의 타입을 모르고, 만든 쪽에 되돌려 줄 때만 씁니다.
 
-**서비스 테이블.** 모듈이 엔진 기능(씬 매니저, 리소스 등)을 쓰려면 App이 넘겨주는 `ModuleService` 를 거칩니다. 서비스 ID 순서로 놓인 포인터 배열 하나입니다.
+**서비스 테이블.** 모듈이 엔진 기능(씬 매니저, 리소스 등)을 쓰려면 App이 넘겨주는 `ModuleServiceTable` 를 거칩니다. 서비스 ID 순서로 놓인 포인터 배열 하나입니다.
 
 **ABI 버전과 스탬프.** App과 모듈이 같은 헤더로 빌드됐는지 로드할 때 확인하는 값입니다(`ABI/ModuleAbi.h` 의 `kModuleAbiVersion`, `kModuleAbiStamp`).
 

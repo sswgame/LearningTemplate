@@ -11,7 +11,7 @@ namespace sw::test
     class ScopedGameServiceBinding
     {
     public:
-        explicit ScopedGameServiceBinding( const ModuleService& service )
+        explicit ScopedGameServiceBinding( const ModuleServiceTable& service )
         {
             game::bindGameService( service );
         }

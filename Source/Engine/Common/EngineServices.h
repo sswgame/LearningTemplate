@@ -44,7 +44,7 @@ namespace sw
 #undef SW_ENGINE_SERVICE_OPT
     };
 
-    struct ModuleService;
+    struct ModuleServiceTable;
 
     namespace engine
     {
@@ -80,11 +80,11 @@ namespace sw
          */
         SW_API const EngineServices& getBoundEngineServices();
         /**
-         * @brief ModuleService 테이블에 현재 바인딩된 Engine 서비스를 채웁니다.
+         * @brief ModuleServiceTable 테이블에 현재 바인딩된 Engine 서비스를 채웁니다.
          * @param bGameModuleOnly true 면 `GameVisible` 인 것만 채웁니다. 나머지 자리는 nullptr 입니다.
          * @note 표를 먼저 통째로 비우므로, 호스트 전용 서비스는 **이 호출 뒤에** 채워야 합니다.
          */
-        SW_API void fillModuleServices( ModuleService& outService, bool bGameModuleOnly = false );
+        SW_API void fillModuleServices( ModuleServiceTable& outService, bool bGameModuleOnly = false );
 
         // ------------------------------------------------------------------------------
         // 3) 코어 매니저 조회 — bind 이후에만 호출 (EngineServiceList.xxx 에서 생성)

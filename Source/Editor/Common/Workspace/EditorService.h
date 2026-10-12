@@ -9,7 +9,7 @@
 
 #include "Editor/Common/EditorExports.h"
 
-#include "RuntimeAPI/Service/ModuleService.h"
+#include "RuntimeAPI/Service/ModuleServiceTable.h"
 
 #include <type_traits>
 
@@ -51,7 +51,7 @@ namespace sw::editor
         SW_EDITOR_API void* getRawLocalService( uint64 typeHash );
     } // namespace internal
 
-    void bindEditorService( const ModuleService& service );
+    void bindEditorService( const ModuleServiceTable& service );
     void unbindEditorService();
 
     template <typename T>
