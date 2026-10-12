@@ -102,6 +102,34 @@ namespace
         }
     };
 
+    /** @brief Ready 알림에서 다른 키트(@p _pVictim)를 파괴하는 키트입니다. */
+    class DestroyOtherOnReadyClientService final : public IOnlineClientService
+    {
+    public:
+        explicit DestroyOtherOnReadyClientService( uint16 methodRange )
+            : _methodRange{ methodRange } {}
+
+        unique_ptr<DestroyOtherOnReadyClientService>* _pVictim{ nullptr };
+        int32*                                        _pReadyCount{ nullptr };
+
+        uint16 getMethodRange() const override { return _methodRange; }
+        uint32 getProtocolVersion() const override { return 1; }
+        void   onServicePush( uint16 kind, BitReader& body ) override
+        {
+            (void)kind;
+            (void)body;
+        }
+        void onClientReady( OnlineServiceClient& client ) override
+        {
+            (void)client;
+            ++*_pReadyCount;
+            if ( _pVictim != nullptr )
+                _pVictim->reset();
+        }
+
+    private:
+        uint16 _methodRange;
+    };
 } // namespace
 
 /**
@@ -128,6 +156,35 @@ SW_TEST_CASE( ServiceClientCallTableTest, KitDestroyedWhileFailingQueuedCallsGet
 
     SW_EXPECT_EQUAL( responseCount, 1 );
     SW_EXPECT_TRUE( kit == nullptr );
+}
+
+/**
+ * @brief [ServiceClientCallTableTest] Ready 알림 중 한 키트가 다른 키트를 파괴해도 순회가 깨지지 않고 파괴된 키트는 알림을 받지 않는다.
+ * @details 키트 소멸자가 서비스 목록에서 자기를 지우므로, 목록을 그대로 돌면 반복자가 무효가 된다.
+ */
+SW_TEST_CASE( ServiceClientCallTableTest, KitDestroyedDuringReadyNotificationIsSkipped )
+{
+    LoopbackStreamNetwork   network( 5u );
+    MemoryServiceDatabase   database;
+    MemoryEphemeralDatabase cacheDatabase;
+    LocalServerBusHub       hub;
+    test::OnlineTestServer  server( network, &database, &cacheDatabase, &hub, 1 );
+    server.start();
+    test::OnlineTestClients clients( network );
+
+    int32                                        readyCount = 0;
+    unique_ptr<DestroyOtherOnReadyClientService> killer     = sw::make_unique<DestroyOtherOnReadyClientService>( OnlineMethodRange::kGame + OnlineMethodRange::kSize );
+    unique_ptr<DestroyOtherOnReadyClientService> victim =
+        sw::make_unique<DestroyOtherOnReadyClientService>( OnlineMethodRange::kGame + 2 * OnlineMethodRange::kSize );
+    killer->_pVictim        = &victim;
+    killer->_pReadyCount    = &readyCount;
+    victim->_pReadyCount    = &readyCount;
+    const int32 clientIndex = clients.connect( server._port, { killer.get(), victim.get() } );
+    test::tickAll( { &server }, clients, 0 );
+
+    SW_EXPECT_TRUE( clients.getClient( clientIndex ).isReady() );
+    SW_EXPECT_EQUAL( readyCount, 1 ); // 파괴한 쪽만 — 파괴된 키트는 부르지 않는다
+    SW_EXPECT_TRUE( victim == nullptr );
 }
 
 SW_TEST_CASE( ServiceClientCallTableTest, ImmediateFailureInsideSendStillReachesTheDelegate )

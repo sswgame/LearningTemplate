@@ -205,6 +205,7 @@ namespace sw
         void        onNetResponse( const NetResponse& response );
         static void deliver( const OnlineResponseDelegate& onResponse, uint64 requestID, const NetResponse& response );
         void        dispatchPush( const uint8* pBody, int32 bodySize );
+        void        notifyServices( void ( IOnlineClientService::*pNotify )( OnlineServiceClient& ) );
 
         OnlineServiceClientSettings        _settings;
         vector<IOnlineClientService*>      _listService;

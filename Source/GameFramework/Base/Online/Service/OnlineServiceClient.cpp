@@ -285,10 +285,7 @@ namespace sw
         _connection = StreamConnectionHandle{};
         if ( _state == OnlineClientState::VersionMismatch )
             return;
-        for ( IOnlineClientService* pService : _listService )
-        {
-            pService->onClientDisconnected( *this );
-        }
+        notifyServices( &IOnlineClientService::onClientDisconnected );
         _state         = OnlineClientState::Disconnected;
         _nextConnectMs = _nowMs + _backoffMs;
         _backoffMs     = _backoffMs <= 0 ? OnlineServiceClientInternal::kFirstBackoffMs : std::min( _backoffMs * 2, _settings._maxBackoffMs );
@@ -394,10 +391,7 @@ namespace sw
             }
             _state     = OnlineClientState::Ready;
             _backoffMs = 0;
-            for ( IOnlineClientService* pService : _listService ) // 재접속 요청이 모은 요청보다 먼저 나간다
-            {
-                pService->onClientReady( *this );
-            }
+            notifyServices( &IOnlineClientService::onClientReady ); // 재접속 요청이 모은 요청보다 먼저 나간다
             flushQueuedCalls();
             return;
         }
@@ -458,8 +452,21 @@ namespace sw
             if ( pService->getMethodRange() != range )
                 continue;
             BitReader reader( pBody + 2, bodySize - 2 );
-            pService->onServicePush( kind, reader );
+            pService->onServicePush( kind, reader ); // 하나만 부르고 곧 나간다 — 콜백이 목록을 바꿔도 순회를 잇지 않는다
             return;
+        }
+    }
+
+    void OnlineServiceClient::notifyServices( void ( IOnlineClientService::*pNotify )( OnlineServiceClient& ) )
+    {
+        // 콜백이 키트를 파괴하면 소멸자가 _listService 에서 지우므로 사본을 돈다(키트 수는 몇 개뿐).
+        // 부르기 직전에 아직 등록돼 있는지 본다. 순회 중 새로 등록되는 키트는 없다 — registerClientService 는 초기화 전에만 된다.
+        const vector<IOnlineClientService*> listService = _listService;
+        for ( IOnlineClientService* pService : listService )
+        {
+            if ( std::find( _listService.begin(), _listService.end(), pService ) == _listService.end() )
+                continue;
+            ( pService->*pNotify )( *this );
         }
     }
 } // namespace sw
