@@ -201,7 +201,7 @@ def cookShadersInternal(projectRoot: Path, appExePath: Path | None = None) -> bo
 
 
 _kCookStampFileName = "cook.stamp"
-_kCookStampHeader = "SWCOOK 4"
+_kCookStampHeader = "SWCOOK 3"
 _kFnv1a64Offset = 14695981039346656037
 _kFnv1a64Prime = 1099511628211
 
@@ -307,8 +307,6 @@ def verifyShaderCookInternal(projectRoot: Path, targetRhi: str) -> list[str]:
             parts = line.split(" ", 1)
             if len(parts) != 2:
                 continue
-            if parts[1].strip().startswith("@"):
-                continue  # 도구 지문(@toolchain)은 컴파일러를 아는 C++ 쿠커만 판정한다(ShaderCookStamp.cpp).
             stamped[parts[1].strip()] = parts[0].strip()
 
         for rel, digest in sorted(expected.items()):

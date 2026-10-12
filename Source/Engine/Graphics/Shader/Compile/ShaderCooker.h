@@ -124,20 +124,6 @@ namespace sw
         static uint64 getSharedHeaderContentHash();
 
         /**
-         * @brief 컴파일 옵션의 판입니다. **`ShaderCompiler.cpp` 가 컴파일러에 넘기는 인자(플래그 · 백엔드 define)를 바꾸면 올리세요.**
-         * @details 이 값은 `getToolchainFingerprint` 에 들어가 쿠킹 스탬프와 디스크 캐시 키를 바꾼다. 올리지 않으면 소스가 그대로라
-         *          옛 옵션으로 만든 바이너리가 "최신" 으로 남는다.
-         */
-        inline static constexpr uint32 kCompileOptionsRevision = 1;
-
-        /**
-         * @brief 컴파일러 도구의 지문입니다. 컴파일 옵션 판, Vulkan 타깃 판, 컴파일러 라이브러리(dxcompiler) 내용 해시를 합칩니다(값을 캐시합니다).
-         * @details 소스 내용 해시만 보면 DXC 를 바꾸거나 옵션을 고쳐도 아무것도 다시 쿠킹하지 않는다. 슬롯 계약 숫자(시프트 포함)는
-         *          `bindingslots.hlsli` 에 있고 그 파일은 include 루트 헤더라 이미 스탬프에 들어간다. 라이브러리를 찾지 못하면 그 몫은 0 이다.
-         */
-        static uint64 getToolchainFingerprint();
-
-        /**
          * @brief 셰이더 `#include` 가 자기 폴더 다음으로 찾는 도메인입니다(`<도메인>/shaders`). 컴파일러의 검색 경로와 쿠킹 스탬프가 같은 테이블을 씁니다.
          * @details 스탬프는 자기 도메인의 소스에 더해 이 도메인들의 `.hlsli` 를 `<도메인>:<상대 경로>` 키로 기록한다. common 셰이더가 include 하는
          *          engine 헤더를 고치면 common 산출물도 낡은 것이 되어야 한다.

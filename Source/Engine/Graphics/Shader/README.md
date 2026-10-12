@@ -207,10 +207,10 @@ SPIR-V는 `-fvk-use-dx-layout` 으로 DirectX와 같은 패킹을 씁니다. 인
 **셰이더를 고쳤는데 화면이 그대로면 실제로 로드된 바이트부터 확인하세요.** 거의 항상 위 세 가지 중 하나가 예전 것입니다.
 
 **낡았는지는 내용 해시 하나로 판단합니다**(`ShaderCooker::computeEffectiveSourceHash`). 파일 시간으로 판단하지 마세요. 쿠킹된 바이너리를 커밋하는 저장소라 `git pull` 이 mtime을 임의 순서로 덮어씁니다.
-스탬프 헤더는 `SWCOOK 4` 이고, `cook.stamp` 는 CR을 뗀 바이트로 계산합니다. `<hex> @toolchain` 줄은 도구 지문(`ShaderCooker::getToolchainFingerprint`: 컴파일 옵션 판 · Vulkan 타깃 판 · dxcompiler 내용 해시)이고, 다르면 스탬프 전체가 낡은 것입니다.
+스탬프 헤더는 `SWCOOK 3` 이고, `cook.stamp` 는 CR을 뗀 바이트로 계산합니다.
 매니페스트가 바이너리보다 낡으면 바인더가 빈 레이아웃으로 그려 DirectX 12가 DEVICE_HUNG에 빠집니다. 배포 패킹은 `Scripts/generate/CookAssets.py --verify-shaders` 로 이것을 막습니다.
 
-**`ShaderCompiler.cpp` 의 컴파일러 인자를 바꾸면 `ShaderCooker::kCompileOptionsRevision` 을 올리세요.** DXC 라이브러리 교체는 내용 해시로 스스로 잡히지만, 옵션은 코드라 판을 올려야 스탬프와 디스크 캐시가 낡음을 압니다. D3DCompiler(DX11)는 OS 구성 요소라 지문에 없습니다.
+**컴파일러 동작(옵션, DXC 버전)을 바꿔 실험할 때는 `ShaderCompiler` 디스크 캐시와 `cook.stamp` 를 지웁니다.** 소스가 그대로면 내용 해시도 그대로라 아무것도 다시 쿠킹하지 않습니다.
 
 **쿠킹된 파일 이름은 `ShaderCooker::computeBinaryFileName` 하나가 정합니다.** 이름에는 퍼뮤테이션 해시가 들어갑니다. 해시가 빠지면 define이 GPU에 전달되지 않는데도 리플렉션은 맞아 보입니다.
 
