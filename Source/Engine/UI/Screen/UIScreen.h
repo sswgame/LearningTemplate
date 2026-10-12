@@ -146,7 +146,7 @@ namespace sw
          * @details 기본 구현은 `registerCommand` 로 등록한 함수를 부른다. 아무도 처리하지 않으면 경고를 한 줄 남겨, 문서의 명령 이름 오타가 조용히 묻히지 않게 한다.
          */
         virtual bool onCommand( const hashed_string& command, Widget& source );
-        /** @brief 트리의 위젯 @p source 가 명령(버튼 클릭)을 냅니다. `onCommand` 로 보내고, 아무도 처리하지 않으면 경고합니다. 빈 명령은 무시합니다. */
+        /** @brief 트리의 위젯 @p source 가 명령(버튼 클릭)을 냅니다. `onCommand` 로 보내고, 처리하지 않으면 UI 시스템의 전역 명령 표(`UISystem::getGlobalCommands`)로 보내며, 거기서도 없으면 경고합니다. 빈 명령은 무시합니다. */
         void dispatchCommand( const hashed_string& command, Widget& source );
 
         /**

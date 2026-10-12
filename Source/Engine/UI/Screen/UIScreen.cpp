@@ -125,7 +125,7 @@ namespace sw
     {
         if ( command.empty() )
             return;
-        if ( onCommand( command, source ) == false )
+        if ( onCommand( command, source ) == false && ( _pUISystem == nullptr || _pUISystem->getGlobalCommands().tryExecute( command, source ) == false ) )
             SW_LOG_WARNING( "[UI] Command '%#' from widget '%#' is not handled by screen %# (%#)", command.c_str(), source.getName().c_str(), _handle,
                             _documentPath.empty() ? "built in code" : _documentPath.c_str() );
     }

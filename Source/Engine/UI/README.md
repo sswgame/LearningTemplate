@@ -270,7 +270,10 @@ UI는 키와 버튼을 직접 보지 않고 **행동(action)**을 받습니다. 
 5. 닫기 요청을 적용하고, 글 입력 포커스를 갱신합니다.
 
 **먹은 입력.** UI가 쓴 행동의 물리 입력은 **뗄 때까지** 먹은 입력이 됩니다. 키, 패드 버튼, 조합 키의 트리거 키, 기운 스틱이 모두 해당하고, 위젯이 처리한 마우스 버튼도 그렇습니다.
-게임 쪽에서 이것을 확인하는 곳은 플레이어 조종자(`PlayerControllerComponent`) 하나입니다. 먹은 행동은 의도에 넣지 않고, 모달이나 로딩 화면이 있으면 의도를 0으로 둡니다.
+게임 쪽에서 이것을 확인하는 곳은 플레이어 조종자(`PlayerControllerComponent`)와, 입력 맵을 직접 읽는 명령 조종자(NileCity · StarSkirmish · ThemeParkTycoon · MeadowVillage의 디렉터)와 카메라(`CameraDirectorComponent` · `OrthoCameraRigComponent` · `CameraManagerComponent`)입니다.
+플레이어 조종자는 먹은 행동을 의도에 넣지 않고, 모달이나 로딩 화면이 있으면 의도를 0으로 둡니다. 입력 맵을 직접 읽는 쪽은 `const InputMap& inputMap = input.getInputMap();` 를
+`const UIInputMapView inputMap( input.getInputMap(), game::getService<UISystem>() );` 로 바꾸면 됩니다(`wasActionTriggered` · `wasActionPressed` · `isActionDown` · `getAxis1D` · `getVector2D` 가 같은 이름이고,
+먹은 행동이거나 게임 입력이 막혀 있으면 "누르지 않음"을 돌려줍니다. UI 시스템이 없으면 입력 맵 그대로입니다).
 활성 화면이 커서를 원하면(`wantsCursor`) 마우스 잠금도 쉽니다. 입력 맵이 UI 맵과 게임 맵 둘이어도 물리 슬롯으로 비교하므로, 메뉴에서 누른 패드 A가 점프가 되지 않습니다.
 
 **글 입력.** 글 입력 위젯(`supportsTextInput`)이 포커스를 가지면 키보드 포커스 `UI` 를 잡습니다. 그동안 게임은 키를 보지 못합니다.
@@ -611,6 +614,8 @@ HUD 상태를 바꾸는 시나리오는 사용자 파일에 남으므로 끝에�
 |---|---|
 | `UISystem.h` | 서비스 API, 화면 열기와 닫기, 프레임 순서 |
 | `Input/UIInputRouter.h` | 포인터 · 액션 · 글자 입력을 화면으로 보내는 규칙, 포커스 복원, 입력 방식 |
+| `Input/UIInputMapView.h` | 게임 입력 맵을 읽되 UI 가 먹은 입력을 거르는 창구(명령 조종자 · 카메라) |
+| `Input/UIClipboardService.h` | 글 입력 칸의 복사 · 붙여넣기 클립보드와 운영체제 연결 표(`UIClipboardAPI`) |
 | `Style/UIThemeController.h` | 테마 고르기(설정 `gv_uiTheme` 따라가기), 테마 시트 + 문서 시트로 스타일 세트 짓기 |
 | `Screen/UIOffscreenScreens.h` | 화면 스택 밖 미리보기(에디터)의 프레임 처리와 렌더 텍스처 목록 |
 | `Base/Widget.h` | 위젯 가상 함수와 무효화 |

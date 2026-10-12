@@ -81,6 +81,7 @@ namespace sw
         , _listReopenDocument{}
         , _bindingConverters{}
         , _clipboard{}
+        , _globalCommands{}
         , _notifications{ *this }
         , _actionGlyphs{}
         , _input{}
@@ -651,6 +652,7 @@ namespace sw
         uint32 closedCount = 0;
         // 언로드되는 모듈의 변환기 함수와 뷰모델은 바인딩이 해제한다(화면은 남으며, 다음 바인딩 단계가 다시 연결한다).
         const bool bConverterRemoved = _bindingConverters.removeCodeWithin( pBegin, pEnd ) > 0;
+        (void)_globalCommands.removeCodeWithin( pBegin, pEnd ); // 제거한 수는 쓰지 않는다. 화면이 따로 다시 연결할 것이 없다
         for ( const unique_ptr<UIScreen>& screen : _listScreen )
         {
             const UIViewModel* pViewModel = screen->getViewModel();

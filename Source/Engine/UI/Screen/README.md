@@ -49,6 +49,10 @@
 게임 프리셋 `_bUIPauseMenu` 를 켜면, 열린 화면이 없을 때 UI 맵의 `UIGlobal` 레이어 행동 `UI.Pause`(Esc, 패드 Start)가 `PauseMenuScreen` 을 엽니다.
 문서는 프리셋 `_uiPauseMenu` 이고 기본은 `engine/ui/pause.ui.xml` 입니다. 그 입력은 UI가 먹으므로, 같은 키를 쓰는 게임 행동(Shooter3D의 마우스 잠금 토글)은 보지 못합니다.
 메뉴가 커서를 원하므로 그동안 마우스 잠금이 쉬고, 닫으면 돌아옵니다. `OpenOptions` 명령은 옵션 메뉴를 위에 엽니다.
+`ReturnToTitle`(타이틀로) · `QuitGame`(끝내기) 버튼은 게임 흐름의 일이라 화면이 처리하지 않고 전역 명령 표(`UISystem::getGlobalCommands`, `UIGlobalCommandRegistry`)로 넘깁니다.
+두 버튼은 문서에서 접혀 있고, 표에 같은 이름의 명령이 등록돼 있는 동안만 `PauseMenuScreen::onTick` 이 보입니다. 게임 흐름(`GameInstanceBase`)이나 호스트(`EngineLoop`)가 처리 함수를 등록하고 끝날 때 거둡니다.
+함수가 모듈 이미지 안에 있으면 모듈이 내려갈 때 표에서 빠집니다. 화면이 처리하지 않은 모든 `_command` 가 같은 길로 가므로 HUD 단추도 쓸 수 있습니다.
+명령 조종자 게임(NileCity · StarSkirmish · ThemeParkTycoon · MeadowVillage)도 `_bUIPauseMenu` 를 켭니다 — 이 게임들의 입력 맵은 Esc 를 쓰지 않고, 디렉터와 카메라는 `UIInputMapView` 로 입력을 읽어 메뉴가 먹은 입력이 게임으로 새지 않습니다(시나리오 `game/nilecity/automation/pause.scenario.xml`).
 
 #### 알림과 행동 글리프
 
@@ -97,7 +101,7 @@ HUD와 로딩 화면은 GameFramework에 있습니다. 엔진 UI의 문서와 �
 | 자막 | `gv_subtitles` 등 | `UISubtitleService` |
 
 - **최소 글자 크기.** 배율이 줄여도 글은 12 UI 단위 밑으로 내려가지 않습니다. 그보다 작게 적은 글은 적은 크기가 하한입니다.
-  글자 배율 2에서 넘치지 않게 하는 것은 문서가 할 일입니다. 긴 이름은 줄 바꿈 없이 `_overflow="Ellipsis"` 로, 늘어난 줄은 `ScrollPanel` 로 처리합니다(`UIAccessibilityTest.OptionsMenuFitsAtDoubleTextScale`).
+  글자 배율 2에서 넘치지 않게 하는 것은 문서가 할 일입니다. 긴 이름은 줄 바꿈 없이 `_overflow="Ellipsis"` 로, 늘어난 줄은 `ScrollPanel` 로 처리합니다(`UIAccessibilityTest.OptionsMenuFitsAtDoubleTextScale` — 엔진 옵션 메뉴 문서를 테스트 스키마로 열어 글자 배율 {1, 2} × UI 배율 {1, 1.5}에서 창 · 스크롤 · 단추 줄 · 행이 넘치지 않는지 탭마다 봅니다).
 - **고대비 테마.** 사용자 설정 `accessibility.uiTheme`(`gv_uiTheme`)의 값은 `default` 와 `highcontrast` 입니다. 테마 목록을 적용할 때 그 이름이 목록에 있으면 그 테마, 없으면 목록의 기본 테마를 씁니다.
   실행 중에 바뀌면 다음 `update` 가 따라갑니다. 게임 테마 목록이 이 설정을 받으려면 같은 이름의 테마를 둡니다.
   `highcontrast` 는 기본 시트 위에 `engine/ui/styles/highcontrast.uistyle.xml` 을 더한 것입니다. 기본 시트와 같은 선택자로 색과 테두리만 덮으므로, 특정도가 같고 뒤 시트가 이깁니다.

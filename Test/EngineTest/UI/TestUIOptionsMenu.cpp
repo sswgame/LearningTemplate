@@ -11,6 +11,7 @@
 #include "Engine/UI/Screen/OptionsMenuScreen.h"
 #include "Engine/UI/Screen/PauseMenuScreen.h"
 #include "Engine/UI/Screen/SettingsConfirmScreen.h"
+#include "Engine/UI/Screen/UIGlobalCommandRegistry.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/ButtonWidget.h"
 #include "Engine/UI/Widgets/CheckBoxWidget.h"
@@ -371,4 +372,41 @@ SW_TEST_CASE( UIOptionsMenuTest, PauseActionOpensPauseMenu )
         fixture.runFrame();
     }
     SW_EXPECT_EQUAL( 0u, fixture._ui.getScreenCount() );
+}
+
+/**
+ * @brief [UIOptionsMenuTest] 일시정지 메뉴의 "타이틀로" · "끝내기" 단추 — 전역 명령 표에 같은 이름이 등록돼 있는 동안만 보이고, 누르면 등록한 함수가 불리며, 거두면 다시 접힌다
+ * @details 변이: `PauseMenuScreen::onTick` 이 표를 보지 않고 늘 보이면 처음 접힘 단언이 진다. `UIScreen::dispatchCommand` 가 전역 표로 넘기지 않으면 호출 수가 0 이다.
+ */
+SW_TEST_CASE( UIOptionsMenuTest, PauseMenuSessionButtonsFollowGlobalCommands )
+{
+    UIOptionsMenuFixture fixture;
+    fixture.getMenu()->close();
+    fixture.runFrame();
+    fixture._ui.setPauseMenuDocument( "engine/ui/pause.ui.xml" );
+    fixture.tapKey( sw::Key::Escape );
+    sw::UIScreen* pPause = fixture._ui.getActiveScreen();
+    SW_ASSERT_NOT_NULL( pPause );
+    sw::Widget* pTitle = pPause->getTree().findWidgetByName( sw::UIGlobalCommandRegistry::kReturnToTitle );
+    sw::Widget* pQuit  = pPause->getTree().findWidgetByName( sw::UIGlobalCommandRegistry::kQuitGame );
+    SW_ASSERT_NOT_NULL( pTitle );
+    SW_ASSERT_NOT_NULL( pQuit );
+    SW_EXPECT_TRUE( pTitle->getVisibility() == sw::WidgetVisibility::Collapsed ); // 등록한 쪽이 없으면 접혀 있다
+    SW_EXPECT_TRUE( pQuit->getVisibility() == sw::WidgetVisibility::Collapsed );
+
+    uint32 quitCount = 0;
+    fixture._ui.getGlobalCommands().registerCommand(
+        sw::UIGlobalCommandRegistry::kQuitGame, SW_DELEGATE_LAMBDA( sw::UICommandDelegate, [&quitCount]( const sw::hashed_string&, sw::Widget& )
+    { ++quitCount; } ) );
+    fixture.runFrame();
+    SW_EXPECT_TRUE( pQuit->getVisibility() == sw::WidgetVisibility::Visible );
+    SW_EXPECT_TRUE( pTitle->getVisibility() == sw::WidgetVisibility::Collapsed ); // 다른 명령은 그대로
+
+    pPause->dispatchCommand( sw::UIGlobalCommandRegistry::kQuitGame, *pQuit );
+    SW_EXPECT_EQUAL( 1u, quitCount );
+
+    fixture._ui.getGlobalCommands().unregisterCommand( sw::UIGlobalCommandRegistry::kQuitGame );
+    fixture.runFrame();
+    SW_EXPECT_TRUE( pQuit->getVisibility() == sw::WidgetVisibility::Collapsed );
+    SW_EXPECT_FALSE( fixture._ui.getGlobalCommands().hasCommand( sw::UIGlobalCommandRegistry::kQuitGame ) );
 }
