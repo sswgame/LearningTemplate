@@ -33,6 +33,10 @@ namespace sw::editor
     public:
         /** @brief 지난 그리기의 미리보기 평균 (R - B)(0..255)입니다. 그리지 않았으면 false 입니다(탐침 `Editor.MaterialPreviewRedMinusBlue`). */
         bool findPreviewRedMinusBlue( float32& outValue ) const;
+        /** @brief 지금 연 문서가 @p assetPath(리소스 id)이면 true 입니다(탐침 `Editor.MaterialDocumentIsProbeAsset`). */
+        bool hasDocument( string_view assetPath ) const { return getLoadedAssetPath() == assetPath; }
+        /** @brief 미저장 편집 때문에 "그래도 바꿀까요?" 대답을 기다리는 중이면 true 입니다(탐침 `Editor.MaterialSwitchPending`). */
+        bool isWaitingForSwitchAnswer() const { return isSwitchConfirmPending(); }
 
     private:
         shared_ptr<Material>                  _material; ///< 편집 사본. Material 은 create() 로만 만들 수 있습니다

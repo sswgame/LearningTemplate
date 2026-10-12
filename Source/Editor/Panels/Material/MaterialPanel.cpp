@@ -5,6 +5,7 @@
 #include "Core/Common/Defines.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
@@ -195,6 +196,38 @@ namespace sw::editor
                 outValue = static_cast<float64>( value );
                 return true;
             }
+
+            /** @brief 열린 Material 패널입니다. 닫혔으면 nullptr 입니다. */
+            [[nodiscard]] static const MaterialPanel* findOpenPanel()
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return nullptr;
+                const MaterialPanel* pPanel = static_cast<const MaterialPanel*>( pContext->getPanelManager().findPanel( "material" ) );
+                return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
+            }
+
+            /** @brief 패널이 지금 연 문서가 `gv_editorProbeAsset`(리소스 id)이면 1 입니다 — 문서 교체와 미리보기 계산을 나눠 보는 길입니다. */
+            [[nodiscard]] static bool readDocumentIsProbeAsset( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const MaterialPanel*      pPanel = findOpenPanel();
+                GlobalVariableManager*    pGvm   = editor::getService<GlobalVariableManager>();
+                const GlobalVariableInfo* pInfo  = pGvm != nullptr ? pGvm->findVariable( "gv_editorProbeAsset" ) : nullptr;
+                if ( pPanel == nullptr || pInfo == nullptr )
+                    return false;
+                const string wanted = pInfo->getValueAsString();
+                outValue            = wanted.empty() == false && pPanel->hasDocument( wanted ) ? 1.0 : 0.0;
+                return true;
+            }
+
+            [[nodiscard]] static bool readSwitchPending( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const MaterialPanel* pPanel = findOpenPanel();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = pPanel->isWaitingForSwitchAnswer() ? 1.0 : 0.0;
+                return true;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -206,6 +239,12 @@ namespace sw::editor
     SW_AUTOMATION_PROBE( editorMaterialPreviewRedMinusBlue, "Editor.MaterialPreviewRedMinusBlue",
                          "Mean (R - B) of the Material panel's sphere preview in the last frame (0..255; red materials are high)",
                          &MaterialPanelInternal::readPreviewRedMinusBlue );
+    SW_AUTOMATION_PROBE( editorMaterialDocumentIsProbeAsset, "Editor.MaterialDocumentIsProbeAsset",
+                         "1 when the document open in the Material panel is gv_editorProbeAsset (tells a document switch that did not happen from a preview that did not follow)",
+                         &MaterialPanelInternal::readDocumentIsProbeAsset );
+    SW_AUTOMATION_PROBE( editorMaterialSwitchPending, "Editor.MaterialSwitchPending",
+                         "1 while the Material panel waits for the 'unsaved changes, switch anyway?' answer - the new document is not opened until then",
+                         &MaterialPanelInternal::readSwitchPending );
 
     MaterialPanel::MaterialPanel()
         : EditorDocumentPanel{ EditorAssetType::Material, false }

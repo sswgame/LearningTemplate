@@ -52,7 +52,9 @@ namespace sw::editor
         const string& getLoadedAssetPath() const { return _loadedAssetPath; }
         bool          isDocumentLoaded() const;
         bool          isDocumentLoadFailed() const { return _bLoadFailed == SW_TRUE; }
-        bool          canSaveDocument() const override { return _bLoadFailed == SW_FALSE; }
+        /** @brief 다른 문서로 바꾸려는데 미저장 편집이 있어 "그래도 바꿀까요?" 확인을 기다리는 중이면 true 입니다. 이 동안 새 문서는 열리지 않습니다(자동화 탐침이 읽는다). */
+        bool isSwitchConfirmPending() const { return _bConfirmSwitch == SW_TRUE; }
+        bool canSaveDocument() const override { return _bLoadFailed == SW_FALSE; }
 
         /**
          * @brief 이 패널의 문서를 (다시) 읽어 내용을 채웁니다. 읽음 또는 못 읽음 표시는 기반 클래스가 결과를 보고 하며(`reloadDocument`), 패널은 표시하지 않습니다.
