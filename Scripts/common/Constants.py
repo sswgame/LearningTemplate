@@ -179,6 +179,7 @@ kNotOurDirNames: frozenset[str] = frozenset({
     "Ninja",
     "_cache",
     "_deps",
+    "worktrees",  # 에이전트 격리 워크트리(`.claude/worktrees/<이름>/`) — 저장소 전체의 사본이라 훑으면 같은 파일이 여러 번 잡힌다
 })
 
 #: 저장소에 있지만 우리 코드가 아닌 것까지 뺀 이름 — 내려받은 도구 · 빌드(`kNotOurDirNames`) + 저장소 안 서드파티.
