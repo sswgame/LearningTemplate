@@ -9,6 +9,7 @@
 #include "Engine/Animation/Codec/ACL/ACLAnimationCodec.h"
 #include "Engine/Animation/Codec/AnimationCodec.h"
 #include "Engine/Animation/Codec/Raw/RawAnimationCodec.h"
+#include "Engine/Animation/Skeletal/LocomotionSpeedUtil.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Object/Animation/AnimationSystem.h"
@@ -642,4 +643,46 @@ SW_TEST_CASE( SkeletalAnimationTest, InterruptedCrossfadeContinuesFromThePreviou
         manager.getAnimationSystem().evaluate( 0.05f );
     }
     SW_EXPECT_NEAR_EQUAL( 2.0f, pUnit->getLocalPose().getBoneTransform( 0 )._translation._x, 1e-3f );
+}
+
+/**
+ * @brief [SkeletalAnimationTest] 제자리 걷기 클립의 발 속도 — 디딘 발(더 낮은 발)이 뒤로 1 m/s 로 미끄러지는 합성 클립에서 1 m/s 를 잰다
+ * @details 앞 반 초는 왼발, 뒤 반 초는 오른발이 땅(y 0)에 있고 z 를 0.25 에서 -0.25 로 옮긴다. 들린 발(y 0.1)은 앞으로 간다.
+ *          재생 속도는 이동 속도 / 발 속도를 범위로 자르고, 발 속도가 0 이면 1 이다.
+ */
+SW_TEST_CASE( SkeletalAnimationTest, LocomotionFootSpeedMatchesPlantedFoot )
+{
+    Skeleton skeleton;
+    (void)skeleton.addBone( "root", -1, test::makeBoneTransform( float3{} ), float4x4::Identity );
+    (void)skeleton.addBone( "foot.l", 0, test::makeBoneTransform( float3{ -0.1f, 0.0f, 0.0f } ), float4x4::Identity );
+    (void)skeleton.addBone( "foot.r", 0, test::makeBoneTransform( float3{ 0.1f, 0.0f, 0.0f } ), float4x4::Identity );
+    skeleton.computeInverseBindFromReference();
+
+    AnimationRawClip raw;
+    raw._sampleRate      = 30.0f;
+    raw._sampleCount     = 31;
+    raw._listTrackName   = { hashed_string( "root" ), hashed_string( "foot.l" ), hashed_string( "foot.r" ) };
+    raw._listTrackParent = { -1, 0, 0 };
+    for ( uint32 sampleIndex = 0; sampleIndex < raw._sampleCount; ++sampleIndex )
+    {
+        const float32 time        = static_cast<float32>( sampleIndex ) / raw._sampleRate;
+        const bool    bLeftDown   = time < 0.5f;
+        const float32 halfElapsed = bLeftDown ? time : time - 0.5f;
+        const float32 plantedZ    = 0.25f - halfElapsed;
+        const float32 swingZ      = -0.25f + halfElapsed;
+        raw._listSample.push_back( test::makeBoneTransform( float3{} ) );
+        raw._listSample.push_back( test::makeBoneTransform( float3{ -0.1f, bLeftDown ? 0.0f : 0.1f, bLeftDown ? plantedZ : swingZ } ) );
+        raw._listSample.push_back( test::makeBoneTransform( float3{ 0.1f, bLeftDown ? 0.1f : 0.0f, bLeftDown ? swingZ : plantedZ } ) );
+    }
+    AnimationClip clip;
+    clip.setName( hashed_string( "Walk" ) );
+    SW_ASSERT_TRUE( clip.compressFrom( raw, RawAnimationCodec::getInstance(), AnimationCodecSettings{}, nullptr ) );
+
+    const float32 footSpeed = LocomotionSpeedUtil::computeFootSpeed( clip, skeleton, "foot.l", "foot.r", LocomotionSpeedUtil::kDefaultSampleCount );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, footSpeed, 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, LocomotionSpeedUtil::computeFootSpeed( clip, skeleton, "foot.l", "toe.r", LocomotionSpeedUtil::kDefaultSampleCount ), 1e-6f );
+
+    SW_EXPECT_NEAR_EQUAL( 1.5f, LocomotionSpeedUtil::computePlayRate( 1.5f, footSpeed, 0.5f, 2.0f ), 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, LocomotionSpeedUtil::computePlayRate( 5.0f, footSpeed, 0.5f, 2.0f ), 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, LocomotionSpeedUtil::computePlayRate( 5.0f, 0.0f, 0.5f, 2.0f ), 1e-6f );
 }

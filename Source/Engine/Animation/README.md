@@ -123,6 +123,9 @@ glTF 의 열 우선 행렬 배열을 행 우선으로 읽으면 그대로 이 �
 
 **동기 그룹**(`AnimationSyncGroup`)은 같은 그룹의 클립들이 리더의 위상(재생 비율)을 따라가게 합니다. 걷기와 뛰기를 섞을 때 발이 엇갈리지 않게 하는 데 씁니다.
 
+**재생 속도 매칭.** 제자리 이동 클립의 발 속도는 `Skeletal/LocomotionSpeedUtil::computeFootSpeed` 로 측정합니다. 더 낮은 발을 디딘 발로 보고, 그 발이 모델 공간에서 뒤로 미끄러지는 속도를 잽니다.
+게임은 실제 이동 속도를 이 값으로 나눈 재생 속도(`computePlayRate`, 범위로 자름)를 써서 발 미끄러짐을 줄입니다. 언리얼의 Play Rate Matching 에 해당하고, 범위를 넘는 몫은 보폭 워핑이 맡을 일입니다.
+
 **레이어와 가산 포즈.** 레이어는 본 하나와 그 자손에 다른 클립을 덮어쓰거나(`Override`) 더합니다(`Additive`). 가산 포즈는 `Pose::makeAdditive` 로 만들고 `applyAdditive` 로 얹습니다.
 
 ### 알림
