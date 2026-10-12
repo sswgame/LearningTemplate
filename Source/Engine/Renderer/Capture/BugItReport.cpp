@@ -97,16 +97,17 @@ namespace sw
                 return scene.getActiveGameCamera();
             }
 
-            /** @brief 로거를 비운 뒤 지금 로그 파일(로그 폴더에서 가장 최근에 쓴 .txt)을 @p destination 에 복사합니다. */
-            [[nodiscard]] static bool copyCurrentLog( string_view destination )
+            /** @brief BugIt 폴더들의 기본 루트(`Saved/BugIt`)입니다. */
+            static string makeDefaultRoot()
             {
-                // 로거는 비동기다 — 비우지 않으면 bugit 직전 줄이 사본에 없다.
-                Logger::flushGlobalForCrash();
-                ILogSink* pSink = Logger::getGlobalSink();
-                if ( pSink == nullptr )
-                    return false;
+                return FileUtil::joinPath( path::kSavedFolder, BugItReport::kFolderName );
+            }
+
+            /** @brief @p logFolderPath 에서 가장 최근에 쓴 .txt 를 @p destination 에 복사합니다. */
+            [[nodiscard]] static bool copyLatestLog( string_view logFolderPath, string_view destination )
+            {
                 vector<string> listFilePath;
-                if ( FileUtil::collectFiles( pSink->getLogFolderPath(), ".txt", listFilePath, false ) == false || listFilePath.empty() )
+                if ( FileUtil::collectFiles( logFolderPath, ".txt", listFilePath, false ) == false || listFilePath.empty() )
                     return false;
                 const string* pLatest = nullptr;
                 int64         latestTicks{ 0 };
@@ -137,7 +138,7 @@ namespace sw
                     note += word;
                 }
                 string directory;
-                if ( BugItReport::capture( note, directory ) == false )
+                if ( BugItReport::capture( BugItReport::makeInputs( note ), directory ) == false )
                 {
                     outReply = "bugit failed (see the log)";
                     return false;
@@ -151,7 +152,12 @@ namespace sw
             {
                 if ( listArgument.size() > 1 )
                     return false;
-                return BugItReport::goTo( listArgument.empty() ? string_view{} : string_view( listArgument[0] ), outReply );
+                if ( engine::areEngineServicesBound() == false )
+                {
+                    outReply = "bugitgo: engine services are not bound";
+                    return false;
+                }
+                return BugItReport::goTo( engine::getSceneManager(), listArgument.empty() ? string_view{} : string_view( listArgument[0] ), outReply );
             }
         };
 #endif
@@ -275,66 +281,84 @@ namespace sw
         return "";
     }
 
-    bool BugItReport::capture( string_view note, string& outDirectory )
+    BugItInputs BugItReport::makeInputs( string_view note )
     {
-        outDirectory.clear();
-        const string root      = FileUtil::joinPath( path::kSavedFolder, kFolderName );
-        const string directory = makeUniqueDirectory( root, ScreenshotPathUtil::getLocalTimeNow() );
-        if ( directory.empty() )
-        {
-            SW_LOG_WARNING( "bugit: could not create a folder under '%#'", root );
-            return false;
-        }
+        BugItInputs inputs;
+        inputs._report._note               = string( note );
+        inputs._report._buildConfiguration = build::kConfigName;
+        inputs._report._game               = GameConfig::getActive()._windowTitle;
+        inputs._root                       = BugItReportInternal::makeDefaultRoot();
+        inputs._localTime                  = ScreenshotPathUtil::getLocalTimeNow();
+        inputs._bRequestScreenshot         = true;
 
-        BugItReport report;
-        report._note                   = string( note );
-        report._buildConfiguration     = build::kConfigName;
-        report._game                   = GameConfig::getActive()._windowTitle;
-        const FrameRenderer* pRenderer = engine::areEngineServicesBound() ? engine::getFrameRenderer() : nullptr;
+        // 로거는 비동기다 — 비우지 않으면 bugit 직전 줄이 사본에 없다.
+        Logger::flushGlobalForCrash();
+        if ( ILogSink* pSink = Logger::getGlobalSink(); pSink != nullptr )
+            inputs._logFolderPath = string( pSink->getLogFolderPath() );
+
+        if ( engine::areEngineServicesBound() == false )
+            return inputs;
+        const FrameRenderer* pRenderer = engine::getFrameRenderer();
         if ( pRenderer != nullptr && pRenderer->getDevice() != nullptr )
-            report._rhiBackend = pRenderer->getDevice()->getBackendName();
-        Scene* pScene = engine::areEngineServicesBound() ? engine::getSceneManager().getActiveScene() : nullptr;
-        if ( pScene != nullptr )
+            inputs._report._rhiBackend = pRenderer->getDevice()->getBackendName();
+        SceneManager& sceneManager = engine::getSceneManager();
+        if ( Scene* pScene = sceneManager.getActiveScene(); pScene != nullptr )
         {
-            report._scenePath              = pScene->getSourcePath();
+            inputs._pSceneManager          = &sceneManager;
+            inputs._report._scenePath      = pScene->getSourcePath();
             const CameraComponent* pCamera = BugItReportInternal::findViewCamera( *pScene );
             if ( pCamera != nullptr )
             {
-                report._cameraPosition        = pCamera->getCameraPosition();
-                report._cameraRotationDegrees = computeRotationDegrees( pCamera->getCameraForward() );
+                inputs._report._cameraPosition        = pCamera->getCameraPosition();
+                inputs._report._cameraRotationDegrees = computeRotationDegrees( pCamera->getCameraForward() );
             }
         }
+        inputs._pFrameProfiler = &engine::getFrameProfiler();
+        (void)engine::getCommandLineManager().getArgument( CommandLineArgument::ENABLE_EDITOR, inputs._bEditor ); // 없으면 false 그대로
+        return inputs;
+    }
+
+    bool BugItReport::capture( const BugItInputs& inputs, string& outDirectory )
+    {
+        outDirectory.clear();
+        const string directory = makeUniqueDirectory( inputs._root, inputs._localTime );
+        if ( directory.empty() )
+        {
+            SW_LOG_WARNING( "bugit: could not create a folder under '%#'", inputs._root );
+            return false;
+        }
+
+        const BugItReport& report = inputs._report;
         if ( report.writeInfo( directory ) == false )
         {
             SW_LOG_WARNING( "bugit: could not write '%#'", FileUtil::joinPath( directory, kInfoFileName ) );
             return false;
         }
 
-        RenderThread::requestScreenshot( FileUtil::joinPath( directory, kScreenshotFileName ) );
-        if ( BugItReportInternal::copyCurrentLog( FileUtil::joinPath( directory, kLogFileName ) ) == false )
+        if ( inputs._bRequestScreenshot )
+            RenderThread::requestScreenshot( FileUtil::joinPath( directory, kScreenshotFileName ) );
+        if ( inputs._logFolderPath.empty() == false &&
+             BugItReportInternal::copyLatestLog( inputs._logFolderPath, FileUtil::joinPath( directory, kLogFileName ) ) == false )
             SW_LOG_WARNING( "bugit: the log file could not be copied" );
 #if SW_PROFILER_TRACE_ENABLED
-        if ( engine::areEngineServicesBound() )
+        if ( inputs._pFrameProfiler != nullptr )
         {
             // 타임라인 기록이 켜져 있었으면 최근 프레임의 시간축을 같이 담는다(꺼져 있으면 조용히 건너뛴다).
             string tracePath;
             string traceReply;
-            if ( ProfilerTraceExport::saveRecentFrames( engine::getFrameProfiler(), ProfilerTimeline::kFrameCapacity - 1,
+            if ( ProfilerTraceExport::saveRecentFrames( *inputs._pFrameProfiler, ProfilerTimeline::kFrameCapacity - 1,
                                                         FileUtil::joinPath( directory, kTraceFileName ), "Game", tracePath, traceReply ) )
                 SW_LOG_INFO( "bugit: timeline trace saved (%#)", traceReply );
         }
 #endif
-        if ( pScene != nullptr && engine::getSceneManager().saveActiveSceneCopy( FileUtil::joinPath( directory, kSceneFileName ) ) == false )
+        if ( inputs._pSceneManager != nullptr && inputs._pSceneManager->saveActiveSceneCopy( FileUtil::joinPath( directory, kSceneFileName ) ) == false )
             SW_LOG_WARNING( "bugit: the scene copy could not be saved" );
 
-        bool bEditor{ false };
-        if ( engine::areEngineServicesBound() )
-            (void)engine::getCommandLineManager().getArgument( CommandLineArgument::ENABLE_EDITOR, bEditor ); // 없으면 false 그대로
         const utf8* pBackendFlag = findBackendFlag( report._rhiBackend );
         string      repro        = "App.exe";
         if ( pBackendFlag[0] != '\0' )
             repro += string( " -" ) + pBackendFlag;
-        if ( bEditor )
+        if ( inputs._bEditor )
             repro += " -EnableEditor";
         repro += " -gv_devConsoleExec=\"bugitgo " + directory + "\"\n";
         if ( FileUtil::writeTextFile( FileUtil::joinPath( directory, kReproFileName ), repro ) == false )
@@ -345,20 +369,17 @@ namespace sw
         return true;
     }
 
-    bool BugItReport::goTo( string_view directory, string& outReply )
+    bool BugItReport::goTo( SceneManager& sceneManager, string_view directory, string& outReply )
     {
-        const string folder = directory.empty() ? findLatestDirectory( FileUtil::joinPath( path::kSavedFolder, kFolderName ) ) : string( directory );
+        const string folder = directory.empty() ? findLatestDirectory( BugItReportInternal::makeDefaultRoot() ) : string( directory );
         BugItReport  report;
         if ( folder.empty() || readInfo( folder, report ) == false )
         {
             outReply = "bugitgo: no BugIt folder at '" + folder + "'";
             return false;
         }
-        if ( engine::areEngineServicesBound() == false )
-            return false;
-        SceneManager& sceneManager = engine::getSceneManager();
-        Scene*        pScene       = sceneManager.getActiveScene();
-        const bool    bOtherScene  = report._scenePath.empty() == false && ( pScene == nullptr || pScene->getSourcePath() != report._scenePath );
+        Scene*     pScene      = sceneManager.getActiveScene();
+        const bool bOtherScene = report._scenePath.empty() == false && ( pScene == nullptr || pScene->getSourcePath() != report._scenePath );
         if ( bOtherScene )
         {
             // 다른 씬이면 원래 씬을 연다(사본은 그 순간의 기록일 뿐 — 열어서 저장하면 BugIt 폴더에 쓰게 된다). 로드는 워커가 하고 교체는 이 스레드가 한다.

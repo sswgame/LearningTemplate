@@ -7,7 +7,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// BugItReport — bugit 의 info.txt 읽고 쓰기 · 폴더 이름 · 시선 각도(렌더러 · 씬 없이).
+// BugItReport — bugit 의 info.txt 읽고 쓰기 · 폴더 이름 · 주입한 입력으로 폴더 모으기 · 시선 각도(렌더러 · 씬 없이).
 
 /**
  * @brief [BugItReportTest] info.txt 를 쓰고 읽으면 같은 값이다(한글 메모 · 공백 · 소수 카메라 값)
@@ -67,6 +67,47 @@ SW_TEST_CASE( BugItReportTest, SameSecondGetsSuffixAndLatestIsFound )
     SW_EXPECT_TRUE( sw::FileUtil::getFileNamePart( first ) == "20261006-101530" );
     SW_EXPECT_TRUE( sw::FileUtil::getFileNamePart( second ) == "20261006-101530-2" );
     SW_EXPECT_TRUE( sw::FileUtil::getFileNamePart( sw::BugItReport::findLatestDirectory( root ) ) == "20261006-101530-2" );
+}
+
+/**
+ * @brief [BugItReportTest] 가짜 입력을 넣으면 엔진 없이 보고서 폴더가 만들어진다(info · 로그 사본 · 재현 명령, 씬 관리자가 없으면 씬 사본은 건너뛴다)
+ */
+SW_TEST_CASE( BugItReportTest, CaptureWritesFolderFromInjectedInputs )
+{
+    const sw::string logFolder = test::makeTempDirectory( "bugit_capture_log" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( logFolder, "run.txt" ), "line before bugit\n" ) );
+
+    sw::BugItInputs inputs;
+    inputs._root                          = test::makeTempDirectory( "bugit_capture_root" );
+    inputs._localTime                     = sw::ScreenshotLocalTime{ 2026, 10, 12, 9, 5, 7 };
+    inputs._logFolderPath                 = logFolder;
+    inputs._bEditor                       = true;
+    inputs._report._note                  = "fake inputs";
+    inputs._report._scenePath             = "game/empty/maps/editortest.scene.xml";
+    inputs._report._rhiBackend            = "Vulkan 1.3";
+    inputs._report._cameraPosition        = sw::float3{ 4.0f, 5.0f, 6.0f };
+    inputs._report._cameraRotationDegrees = sw::float3{ 10.0f, 20.0f, 0.0f };
+
+    sw::string directory;
+    SW_ASSERT_TRUE( sw::BugItReport::capture( inputs, directory ) );
+    SW_EXPECT_TRUE( sw::FileUtil::getFileNamePart( directory ) == "20261012-090507" );
+
+    sw::BugItReport read;
+    SW_ASSERT_TRUE( sw::BugItReport::readInfo( directory, read ) );
+    SW_EXPECT_TRUE( read._note == "fake inputs" );
+    SW_EXPECT_TRUE( read._scenePath == inputs._report._scenePath );
+    SW_EXPECT_TRUE( read._rhiBackend == "Vulkan 1.3" );
+    SW_EXPECT_NEAR_EQUAL( 6.0f, read._cameraPosition._z, 0.0001f );
+
+    sw::string logCopy;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( directory, sw::BugItReport::kLogFileName ), logCopy ) );
+    SW_EXPECT_TRUE( logCopy.find( "line before bugit" ) != sw::string::npos );
+
+    sw::string repro;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( directory, sw::BugItReport::kReproFileName ), repro ) );
+    SW_EXPECT_TRUE( repro.find( "App.exe -vk -EnableEditor" ) != sw::string::npos );
+    SW_EXPECT_TRUE( repro.find( "bugitgo " + directory ) != sw::string::npos );
+    SW_EXPECT_TRUE( sw::FileUtil::exists( sw::FileUtil::joinPath( directory, sw::BugItReport::kSceneFileName ) ) == false );
 }
 
 /**
