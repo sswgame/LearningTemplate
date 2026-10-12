@@ -339,6 +339,43 @@ SW_TEST_CASE( GameObjectManagerTest, PostTickWorkRunsOnAnEmptyScene )
 }
 
 /**
+ * @brief [GameObjectManagerTest] 컴포넌트 틱 뒤 실행은 살아 있는 컴포넌트만 부르고, 삭제 대기 컴포넌트는 건너뛴다.
+ * @details 핸들로 다시 찾을 때 삭제 대기 컴포넌트도 찾힌다. 그 컴포넌트에 일을 시키면 지워질 객체의 상태를 다시 세운다.
+ */
+SW_TEST_CASE( GameObjectManagerTest, PostTickOnComponentSkipsPendingDestroy )
+{
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents();
+
+    GameObject* pLive  = manager.createGameObject( hashed_string( "PostTickLive" ) );
+    GameObject* pDying = manager.createGameObject( hashed_string( "PostTickDying" ) );
+    SW_ASSERT_NOT_NULL( pLive );
+    SW_ASSERT_NOT_NULL( pDying );
+    pLive->addComponent<MockMeshComponent>();
+    pDying->addComponent<MockMeshComponent>();
+    manager.tick( 0.0f );
+    MockMeshComponent* pLiveMesh  = pLive->getComponent<MockMeshComponent>();
+    MockMeshComponent* pDyingMesh = pDying->getComponent<MockMeshComponent>();
+    SW_ASSERT_NOT_NULL( pLiveMesh );
+    SW_ASSERT_NOT_NULL( pDyingMesh );
+    const ComponentHandle liveHandle  = pLiveMesh->getHandle();
+    const ComponentHandle dyingHandle = pDyingMesh->getHandle();
+
+    static int32 s_callCount = 0;
+    s_callCount              = 0;
+    // 틱 밖이므로 바로 돈다.
+    manager.executeOrDeferPostTickOnComponent<MockMeshComponent>( liveHandle, []( MockMeshComponent& )
+    { ++s_callCount; } );
+    SW_EXPECT_EQUAL( 1, s_callCount );
+
+    manager.destroyObject( pDying );
+    manager.executeOrDeferPostTickOnComponent<MockMeshComponent>( dyingHandle, []( MockMeshComponent& )
+    { ++s_callCount; } );
+    SW_EXPECT_EQUAL( 1, s_callCount );
+    manager.tick( 0.0f );
+}
+
+/**
  * @brief [GameObjectManagerTest] 한 프레임 안에 만들고 지운 오브젝트는 병합되지 않고 사라진다 — 이름 · id 로도 찾을 수 없다.
  * @details 병합 전 파괴는 대기 목록을 훑어 빼는 길이다(본 목록에 없다). 병합과 파괴가 잠금을 한 번씩만 잡게 바꾼 뒤에도 그 길이 산다.
  */
