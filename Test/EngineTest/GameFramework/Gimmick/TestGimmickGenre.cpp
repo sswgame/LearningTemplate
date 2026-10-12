@@ -7,6 +7,7 @@
 
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/3D/PointLightComponent.h"
+#include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -386,4 +387,53 @@ SW_TEST_CASE( GimmickGenreTest, EveryGimmickPrefabSpawnsWithValidWiring )
     }
     SW_EXPECT_TRUE( prefabCount >= 25 );
     SW_EXPECT_TRUE( circuitCount >= 6 );
+}
+
+/**
+ * @brief [GimmickGenreTest] 3D 변형 프리팹(`*3d.prefab.xml`)은 2D 짝과 같은 크기 · 트리거 설정의 3D 강체 박스를 들고 2D 콜라이더는 없으며, 나머지 컴포넌트 수가 같다
+ * @details 2D 콜라이더의 폭 · 높이가 3D 박스의 x · y 전체 길이이고, 깊이(z)는 메시의 z 배율을 따른다. 움직이는 장치(발판 · 문 · 엘리베이터 · 미는 블록)는 키네마틱, 나머지는 정적이다.
+ */
+SW_TEST_CASE( GimmickGenreTest, Gimmick3DVariantsMirrorTheir2DPrefabs )
+{
+    SW_ASSERT_TRUE( ResourcePaths::initialize() );
+    const string   folder = FileUtil::joinPath( ResourcePaths::getRootFolderPath(), "common/prefabs/gimmicks" );
+    vector<string> listFile;
+    SW_ASSERT_TRUE( FileUtil::collectFiles( folder, ".xml", listFile, true ) );
+    GameObjectManager manager;
+    int32             variantCount = 0;
+    for ( const string& filePath : listFile )
+    {
+        constexpr string_view kVariantSuffix = "3d.prefab.xml";
+        if ( filePath.size() <= kVariantSuffix.size() || string_view( filePath ).substr( filePath.size() - kVariantSuffix.size() ) != kVariantSuffix )
+            continue;
+        const string twoDimensionalPath = filePath.substr( 0, filePath.size() - kVariantSuffix.size() ) + ".prefab.xml";
+        const string variantID          = ResourcePaths::toResourceID( filePath );
+        const string baseID             = ResourcePaths::toResourceID( twoDimensionalPath );
+
+        PrefabAsset variant;
+        PrefabAsset base;
+        SW_ASSERT_TRUE_MSG( variant.loadFromXMLFile( variantID ), variantID.c_str() );
+        SW_ASSERT_TRUE_MSG( base.loadFromXMLFile( baseID ), baseID.c_str() );
+        GameObject* pVariant = manager.createGameObject( hashed_string( "Variant" ) );
+        GameObject* pBase    = manager.createGameObject( hashed_string( "Base" ) );
+        SW_ASSERT_TRUE_MSG( variant.applyStateTo( pVariant ), variantID.c_str() );
+        SW_ASSERT_TRUE_MSG( base.applyStateTo( pBase ), baseID.c_str() );
+        ++variantCount;
+
+        const RigidBodyComponent*     pBody = pVariant->getComponent<RigidBodyComponent>();
+        const BoxCollider2DComponent* pBox  = pBase->getComponent<BoxCollider2DComponent>();
+        SW_ASSERT_NOT_NULL( pBody );
+        SW_ASSERT_NOT_NULL( pBox );
+        SW_EXPECT_TRUE_MSG( pVariant->getComponent<BoxCollider2DComponent>() == nullptr, variantID.c_str() );
+        SW_EXPECT_EQUAL( pBox->isTrigger(), pBody->isTrigger() );
+        SW_ASSERT_EQUAL( size_t( 1 ), pBody->getShapes().size() );
+        const PhysicsShapeDesc3D& shape = pBody->getShapes()[0];
+        SW_EXPECT_TRUE_MSG( shape._type == PhysicsShapeType3D::Box, variantID.c_str() );
+        SW_EXPECT_NEAR_EQUAL( pBox->getOffsetScale()._x, shape._halfExtents._x * 2.0f, 1.0e-3f );
+        SW_EXPECT_NEAR_EQUAL( pBox->getOffsetScale()._y, shape._halfExtents._y * 2.0f, 1.0e-3f );
+        SW_EXPECT_TRUE_MSG( shape._halfExtents._z > 0.0f, variantID.c_str() );
+        SW_EXPECT_EQUAL( pBase->getComponentCount(), pVariant->getComponentCount() );
+        SW_EXPECT_TRUE_MSG( pBody->getBodyType() == PhysicsBodyType::Static || pBody->getBodyType() == PhysicsBodyType::Kinematic, variantID.c_str() );
+    }
+    SW_EXPECT_EQUAL( 21, variantCount ); // 2D 콜라이더를 든 기믹 프리팹마다 하나
 }

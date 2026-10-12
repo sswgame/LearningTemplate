@@ -1,0 +1,52 @@
+<Prefab formatVersion="0" name="Rope3D">
+	<GameObject _schemaVersion="0" _name="Rope3D" _bActive="true">
+		<_listComponent>
+			<RigidBodyComponent _componentName="RigidBodyComponent"
+			                    _bActive="true"
+			                    _localPosition="0,0,0"
+			                    _localRotation="0,0,0"
+			                    _localScale="1,1,1"
+			                    _attachOwner="None"
+			                    _attachOwnerID="0"
+			                    _attachComponent="None"
+			                    _bodyType="Static"
+			                    _layer="Default"
+			                    _material="None"
+			                    _mass="0"
+			                    _linearDamping="0.05"
+			                    _angularDamping="0.05"
+			                    _gravityFactor="1"
+			                    _bTrigger="true"
+			                    _bContinuous="false"
+			                    _bLockRotation="false"
+			                    _bInterpolate="true">
+				<_listShape>
+					<PhysicsShapeDesc3D _type="Box"
+					                    _halfExtents="0.25,3,0.25"
+					                    _radius="0.5"
+					                    _halfHeight="0.5"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _material="None">
+						<_listPoint />
+						<_listIndex />
+					</PhysicsShapeDesc3D>
+				</_listShape>
+			</RigidBodyComponent>
+			<GimmickSensorComponent _componentName="GimmickSensorComponent"
+			                        _bActive="true"
+			                        _defaultWeight="1"
+			                        _bCountTriggers="false">
+				<_requiredTags>
+					<_listTag />
+				</_requiredTags>
+				<_listOccupant />
+			</GimmickSensorComponent>
+			<ClimbZoneComponent _componentName="ClimbZoneComponent"
+			                    _bActive="true"
+			                    _axis="0,1,0"
+			                    _climbSpeed="3"
+			                    _bSwing="true" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

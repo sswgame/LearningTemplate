@@ -1,0 +1,58 @@
+<Prefab formatVersion="0" name="HazardZone3D">
+	<GameObject _schemaVersion="0" _name="HazardZone3D" _bActive="true">
+		<_listComponent>
+			<RigidBodyComponent _componentName="RigidBodyComponent"
+			                    _bActive="true"
+			                    _localPosition="0,0,0"
+			                    _localRotation="0,0,0"
+			                    _localScale="1,1,1"
+			                    _attachOwner="None"
+			                    _attachOwnerID="0"
+			                    _attachComponent="None"
+			                    _bodyType="Static"
+			                    _layer="Default"
+			                    _material="None"
+			                    _mass="0"
+			                    _linearDamping="0.05"
+			                    _angularDamping="0.05"
+			                    _gravityFactor="1"
+			                    _bTrigger="true"
+			                    _bContinuous="false"
+			                    _bLockRotation="false"
+			                    _bInterpolate="true">
+				<_listShape>
+					<PhysicsShapeDesc3D _type="Box"
+					                    _halfExtents="1.5,0.5,1.5"
+					                    _radius="0.5"
+					                    _halfHeight="0.5"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _material="None">
+						<_listPoint />
+						<_listIndex />
+					</PhysicsShapeDesc3D>
+				</_listShape>
+			</RigidBodyComponent>
+			<GimmickSensorComponent _componentName="GimmickSensorComponent"
+			                        _bActive="true"
+			                        _defaultWeight="1"
+			                        _bCountTriggers="false">
+				<_requiredTags>
+					<_listTag />
+				</_requiredTags>
+				<_listOccupant />
+			</GimmickSensorComponent>
+			<GimmickCircuitComponent _componentName="GimmickCircuitComponent" _bActive="true" _stepTime="0.016666668">
+				<_listNode>
+					<GimmickNodeDesc _id="hazard" _kind="Hazard" _params="onTime=2; offTime=2; damage=10; damageInterval=0.5" />
+				</_listNode>
+				<_listNodeTarget>
+					<item>0</item>
+				</_listNodeTarget>
+				<_listWire />
+				<_listRestPose />
+				<_stateBytes />
+			</GimmickCircuitComponent>
+		</_listComponent>
+	</GameObject>
+</Prefab>

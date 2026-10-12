@@ -1,0 +1,61 @@
+<Prefab formatVersion="0" name="FloorSwitch3D">
+	<GameObject _schemaVersion="0" _name="FloorSwitch3D" _bActive="true">
+		<_listComponent>
+			<RigidBodyComponent _componentName="RigidBodyComponent"
+			                    _bActive="true"
+			                    _localPosition="0,0,0"
+			                    _localRotation="0,0,0"
+			                    _localScale="1,1,1"
+			                    _attachOwner="None"
+			                    _attachOwnerID="0"
+			                    _attachComponent="None"
+			                    _bodyType="Static"
+			                    _layer="Default"
+			                    _material="None"
+			                    _mass="0"
+			                    _linearDamping="0.05"
+			                    _angularDamping="0.05"
+			                    _gravityFactor="1"
+			                    _bTrigger="true"
+			                    _bContinuous="false"
+			                    _bLockRotation="false"
+			                    _bInterpolate="true">
+				<_listShape>
+					<PhysicsShapeDesc3D _type="Box"
+					                    _halfExtents="0.5,0.2,0.5"
+					                    _radius="0.5"
+					                    _halfHeight="0.5"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _material="None">
+						<_listPoint />
+						<_listIndex />
+					</PhysicsShapeDesc3D>
+				</_listShape>
+			</RigidBodyComponent>
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="1,0.1,1"
+			               _attachOwner="None"
+			               _attachOwnerID="0"
+			               _attachComponent="RigidBodyComponent#0"
+			               _meshID="Cube"
+			               _materialPath="engine/materials/defaultmaterial.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<GimmickSensorComponent _componentName="GimmickSensorComponent"
+			                        _bActive="true"
+			                        _defaultWeight="1"
+			                        _bCountTriggers="false">
+				<_requiredTags>
+					<_listTag />
+				</_requiredTags>
+				<_listOccupant />
+			</GimmickSensorComponent>
+		</_listComponent>
+	</GameObject>
+</Prefab>

@@ -130,7 +130,7 @@ cd build/Ninja-Debug/Bin
 ### 장르 기믹 세트
 
 `Genre/` 에는 회로와 센서를 다시 쓰는 작은 컴포넌트가 있고, `Resource/common/prefabs/gimmicks/<장르>/` 에 그것을 조립한 프리팹이 있습니다.
-프리팹은 엔진 직렬화기로 쓴 것이라 손으로 고치지 않습니다.
+프리팹은 엔진 직렬화기로 쓴 것이라 손으로 고치지 않습니다(3D 변형은 2D 프리팹을 변환해 쓴 같은 모양의 파일입니다).
 
 | 장르 | 프리팹 | 핵심 컴포넌트 |
 |------|--------|---------------|
@@ -182,7 +182,10 @@ cd build/Ninja-Debug/Bin
 - **원소 테이블에서 이름은 테이블 안에 선언한 것만 씁니다.** 모르는 이름, 규칙, 모양, 원소는 읽기 오류입니다(`ResourceDataSchemaTest` 가 `.elements.xml` 을 읽습니다).
 - **액션 어드벤처 키트의 `AdventureElementGrid` 는 이 격자 위에 키트의 재질과 설정을 더한 것입니다.** 설정 값으로 기본 테이블과 같은 모양의 테이블을 코드로 만들고,
   `ElementRuleTest.AdventureGridMatchesDefaultTable` 이 걸음마다 결과가 같은지 봅니다.
-- **프리팹의 콜라이더는 지금 `BoxCollider2DComponent` 입니다**(트리거 겹침 폴백). 3D 트리거와 강체 콜라이더로 바꾸는 일은 남아 있습니다.
+- **프리팹의 기본 콜라이더는 `BoxCollider2DComponent` 입니다**(2D 겹침). 3D 게임은 같은 폴더의 `<이름>3d.prefab.xml` 변형을 씁니다 — 2D 콜라이더 대신 `RigidBodyComponent` 박스를 든 프리팹입니다.
+  폭 · 높이는 2D 콜라이더의 `_offsetScale` 과 같고 깊이는 메시의 z 배율(메시가 없으면 장치별 값)이며, 트리거 설정은 그대로입니다. 움직이는 장치(움직이는 발판, 엘리베이터, 문, 미는 블록)는 `Kinematic`
+  (트랜스폼이 원본이라 `Mover` 와 `Door` 가 옮기고 밀린 동적 바디가 속도를 받음), 나머지는 `Static` 입니다. 나머지 컴포넌트와 회로는 2D 짝과 같고(`GimmickGenreTest.Gimmick3DVariantsMirrorTheir2DPrefabs`),
+  3D 에서 겹침이 `onOverlapBegin` 으로 오는지는 장치마다 3D 씬에서 확인해야 합니다.
 - **Windows 헤더는 `near` 와 `far` 를 빈 매크로로 정의합니다.** 지역 변수 이름으로 쓰면 컴파일이 이상하게 깨집니다.
 
 ## 더 볼 곳

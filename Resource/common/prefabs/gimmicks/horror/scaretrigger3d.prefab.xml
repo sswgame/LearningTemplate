@@ -1,0 +1,52 @@
+<Prefab formatVersion="0" name="ScareTrigger3D">
+	<GameObject _schemaVersion="0" _name="ScareTrigger3D" _bActive="true">
+		<_listComponent>
+			<RigidBodyComponent _componentName="RigidBodyComponent"
+			                    _bActive="true"
+			                    _localPosition="0,0,0"
+			                    _localRotation="0,0,0"
+			                    _localScale="1,1,1"
+			                    _attachOwner="None"
+			                    _attachOwnerID="0"
+			                    _attachComponent="None"
+			                    _bodyType="Static"
+			                    _layer="Default"
+			                    _material="None"
+			                    _mass="0"
+			                    _linearDamping="0.05"
+			                    _angularDamping="0.05"
+			                    _gravityFactor="1"
+			                    _bTrigger="true"
+			                    _bContinuous="false"
+			                    _bLockRotation="false"
+			                    _bInterpolate="true">
+				<_listShape>
+					<PhysicsShapeDesc3D _type="Box"
+					                    _halfExtents="1.5,1.5,1.5"
+					                    _radius="0.5"
+					                    _halfHeight="0.5"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _material="None">
+						<_listPoint />
+						<_listIndex />
+					</PhysicsShapeDesc3D>
+				</_listShape>
+			</RigidBodyComponent>
+			<ScareTriggerComponent _componentName="ScareTriggerComponent"
+			                       _bActive="true"
+			                       _cue="Scare"
+			                       _sound=""
+			                       _bOnce="true"
+			                       _cooldown="10"
+			                       _cooldownLeft="0"
+			                       _fireCount="0">
+				<_requiredTags>
+					<_listTag>
+						<item>Player</item>
+					</_listTag>
+				</_requiredTags>
+			</ScareTriggerComponent>
+		</_listComponent>
+	</GameObject>
+</Prefab>
