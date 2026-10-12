@@ -155,6 +155,21 @@ UDP 패킷 압축은 측정 결과(`NetCompressionBenchTest`) 이득이 없어 �
 3. 메시지 크기 상한은 메시지 구조체에 상수 하나로 두고, 보내는 쪽과 받는 쪽이 같이 씁니다.
 4. 형식을 바꿨다면 그 계층의 와이어 버전(Core면 `NetWireVersion::kCore`, 키트면 `NetKitWireVersion`)을 올립니다.
 
+### 설계 메모 — UDP 일괄 받기 · 보내기 계약(아직 넣지 않음)
+
+MMO 규모 서버에서 패킷마다의 `recvfrom` · `sendto` 시스템 호출이 지배적이라고 측정되면(`NetUDPBenchTest`, Windows 는 패킷당 약 6.5 us — [검증과 측정](../../../docs/08_Verification.md) 2절)
+`INetTransport` 에 일괄 계약 하나를 더합니다. 리눅스 수치(WSL Release)가 나란히 놓인 뒤 정합니다. 지금 정해 둔 모양은 다음과 같습니다.
+
+- **계약.** `int32 receiveBatch( NetDatagramBatch& outBatch, int32 maxCount )` 와 `int32 sendBatch( const NetDatagramBatch& batch )` 를 가상 함수로 더하고, 기본 구현은
+  지금의 `receive` · `send` 를 돌립니다(루프백 · 흉내 전송은 그대로). 묶음은 바이트 아레나 하나 + `{ 위치, 길이, 주소 }` 목록입니다. `NetHost` 가 이미 같은 모양
+  (`OutgoingBatch`)으로 보내고, 받기는 지금 데이터그램마다 버퍼를 따로 두는(`_listReceived`) 것을 아레나 하나로 바꿉니다.
+- **Windows.** RIO(Registered I/O — `RIOReceiveEx` · `RIOSendEx`, 버퍼를 한 번 등록해 호출마다의 잠금 · 복사를 없앤다)를 먼저 씁니다. 없으면 `WSARecvMsg` 로 같은 계약을 채웁니다.
+  Windows 11 · Server 2022 의 USO(`UDP_SEND_MSG_SIZE`) · URO(`UDP_RECV_MAX_COALESCED_SIZE`)가 있으면 같은 주소로 가는 패킷을 한 번에 넘깁니다.
+- **리눅스.** `recvmmsg` · `sendmmsg` 를 쓰고, GSO(`UDP_SEGMENT`) · GRO(`UDP_GRO`)를 켤 수 있으면 같은 주소 패킷을 한 덩어리로 넘깁니다.
+- **고르는 기준.** 같은 바이너리에서 일괄 크기만 바꿔 `NetUDPBenchTest` 의 패킷당 시간과 서버 틱 p99 를 잽니다. 시스템 호출 몫이 절반을 넘을 때만 넣습니다(측정 없는 최적화는
+  하지 않는다). 스레드 하나가 차면 그다음은 포트 샤딩(`ServerConfig::_gamePortShardCount`, 샤드마다 `NetHost`)이며, 두 플랫폼이 같은 계약을 씁니다.
+- **지키는 것.** 일괄 받기도 `NetHost::kMaxDatagramPerUpdate` 상한을 지키고, 받기 · 보내기를 잠금 밖에서 하는 지금의 규칙(`update` 스레드 전용 버퍼)을 그대로 둡니다.
+
 ## 함정과 주의
 
 **상한은 보내는 쪽에서도 확인하세요.** 받는 쪽만 상한을 보면, 넘는 메시지가 보낸 쪽에서는 "보냈다", 받는 쪽에서는 깨짐으로 조용히 사라집니다.
