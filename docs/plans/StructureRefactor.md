@@ -87,11 +87,12 @@ S10(`SceneEngineServices` 주입) · S11(`BugItInputs` 주입, `makeInputs` / `c
 | S15 | `FractureComponentBase.cpp` 1811 | 네트워크 동기 · 앵커 풀이 · 렌더 유닛 멤버 객체 | 프레임당, 객체 분리만 |
 | S16 | `FrameRenderer.h` 985 · 멤버 127 | GPU 타임라인 · 리드백 · 트랜지언트를 값 멤버 클래스로, 프로파일러는 초기화 때 주입 | 비핫, 이동 뒤 측정 |
 | S17 | `GPUSceneBuilder.cpp` 1644 | 투명 정렬 · 머티리얼 레지스트리 · 스킨 팔레트를 비가상 클래스로 | **핫** — 클래스 이동만, 내부 루프 그대로, 측정 필수 |
-| S18 | `EditorViewportClient.cpp` 1179 | 카메라 · 피킹 · 기즈모 · 오버레이 · 드롭 | 비핫 |
-| S19 | `ContentBrowserPanel.cpp` 1530 | 파일 작업 · 참조 결과 · 임포트 대기열 · 탐색 이력 | 비핫 |
-| S20 | `LiveReloadManager.cpp` 1317 | 그래프 계산 · 섀도 복사 · 지연 언로드 큐 | 비핫 |
 | S21 | `EditorAssetCommands.cpp` 817 · `UserSettingsManager.cpp` 1061 · `SceneNavigation.cpp` 1285 · `App.cpp` 866 · `EditorModuleHost.cpp` 445 | 각 파일의 감사 표 방향 | 비핫 |
 | S22 | `IRHIDevice.h` 가상 37 중 14 가 빈 기본 | 선택 능력 인터페이스(`IRHITimestampProvider` 등)로 — **`IRHICommandList` 는 건드리지 않는다** | 비핫 |
+
+**끝남 (2026-10-12)**: S18(`EditorViewportClient` 1179 → 243 줄: 카메라 · 피킹 · 기즈모 · 캔버스 오버레이 · 에셋 드롭 값 멤버), S19(`ContentBrowserPanel` 멤버 39 → 29: 파일 작업 · 참조 검색 · 임포트 대기열 · 탐색 이력, 이력 · 이름 바꾸기 · 임포트 대기열 테스트), S20(`LiveReloadManager` 1317 → 965 줄: `ModuleDependencyGraph` · `ModuleShadowCopy` · `DeferredImageUnloadQueue`, DLL 없는 테스트).
+**옮기지 않은 것**: S19 의 모달 · 결과 창 플래그와 이름 입력 버퍼(ImGui 팝업 시점이라 작업 클래스가 ImGui 순서를 알게 된다), S20 의 `verifyModuleBindings` · `isBoundTo`(모든 컨텍스트 핸들을 함께 보는 검사라 떼면 반쪽 이전), `ModuleShadowCopy` 를 인스턴스로 만들기(번호가 프로세스 전역이어야 섀도 폴더 이름이 겹치지 않는다).
+S18 의 새 클래스는 ImGui 에 의존해 단위 테스트가 없다 — 에디터 자체 테스트 · `AppScenarioTest` 에디터 케이스가 본다.
 
 ### 핫 경로라 유지하는 것
 핫 경로라 제안하지 않는 것과 의도된 예외는 [결정 기록](../09_Decisions.md) 2절에 있습니다.
