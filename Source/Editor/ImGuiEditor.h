@@ -3,8 +3,7 @@
  * @brief ImGui 에디터 호스트입니다. OS 와 GPU 백엔드, 프레임 루프를 담당합니다.
  */
 #pragma once
-#include "Core/Concurrency/atomic.h"
-
+#include "Editor/Common/Backend/DrawSnapshotHandoff.h"
 #include "Editor/Common/Backend/EditorDrawDataSnapshot.h"
 #include "Editor/Common/GUI/EditorDockLayout.h"
 #include "Editor/IEditor.h"
@@ -46,6 +45,7 @@ namespace sw::editor
         void render( IRHIDevice* pRHIDevice ) override;
         /** @brief 메인 스왑체인 Present 뒤에 멀티 뷰포트를 그립니다. */
         void postPresent( IRHIDevice* pRHIDevice ) override;
+        /** @brief 렌더 대기 중인 draw 스냅샷 표시를 버립니다. 에디터 인스턴스를 없앨 때만 부릅니다(`DrawSnapshotHandoff::abandon`). */
         void abandonPendingDraw() override;
         /** @brief 네이티브 이벤트를 ImGui 플랫폼 레이어에 전달합니다. */
         bool processEvent( const NativeWindowEvent& event ) override;
@@ -90,20 +90,14 @@ namespace sw::editor
         void waitForDrawSnapshotIdle();
 
     private:
-        /** @brief 렌더 중인 슬롯이 없음을 뜻하는 센티널 값입니다. */
-        static constexpr uint32 _s_kInvalidDrawSlot = invalid_index::kUint32;
-        // draw 스냅샷 슬롯 수는 인플라이트 프레임 수와 같은 개념이므로 constant::kMaxFrameCountInFlight 를 직접 쓴다. 별칭을
-        // 두면 같은 개념에 이름이 둘이 되고, 한쪽만 바뀌어도 컴파일은 통과한다.
-        static_assert( constant::kMaxFrameCountInFlight >= 2, "draw 스냅샷은 최소 2개(더블 버퍼) 이상이어야 합니다." );
-
         unique_ptr<IImGuiPlatformBackend> _platformBackend;
         unique_ptr<IImGuiRendererBackend> _rendererBackend;
         unique_ptr<EditorToolDefaults>    _editorToolDefaults;
         unique_ptr<EditorContext>         _editorContext;
         EditorDockLayout                  _dockLayout;
         EditorDrawDataSnapshot            _arrDrawSnapshot[constant::kMaxFrameCountInFlight];
-        atomic<uint32>                    _publishedDrawSlot;
-        atomic<uint32>                    _inFlightDrawSlot;
+        /// @brief `_arrDrawSnapshot` 슬롯을 UI 스레드와 렌더 스레드가 주고받는 약속입니다. 불변식은 `DrawSnapshotHandoff` 에 있습니다.
+        DrawSnapshotHandoff _drawSnapshotHandoff;
         /// @brief 마지막으로 낸 draw 스냅샷 번호입니다. UI 스레드 전용이며 1 부터 시작합니다. 해제한 리소스의 해제 순서를 이 번호로 정합니다(`EditorDrawReleaseQueue`).
         uint64 _lastDrawSnapshotSequence;
 
