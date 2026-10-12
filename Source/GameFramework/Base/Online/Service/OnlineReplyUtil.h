@@ -57,6 +57,21 @@ namespace sw
             return false;
         }
 
+        /**
+         * @brief varuint 로 실린 열거형(응답 첫 칸의 결과 등)을 읽습니다. @p countValue 이상이거나 몸이 모자라면 false 이고 @p outValue 는 그대로입니다.
+         * @details 쓰는 쪽은 `writeVarUint( static_cast<uint64>( value ) )` 한 줄이다. 결과를 8 비트(`writeBits`)로 싣는 키트(채팅 · 라이브옵스 · 매치메이킹)는
+         *          와이어가 달라 쓰지 않는다.
+         */
+        template <typename TEnum>
+        [[nodiscard]] static bool readEnum( BitReader& reader, TEnum countValue, TEnum& outValue )
+        {
+            const uint64 value = reader.readVarUint();
+            if ( reader.hasOverflowed() || value >= static_cast<uint64>( countValue ) )
+                return false;
+            outValue = static_cast<TEnum>( value );
+            return true;
+        }
+
     private:
         template <typename TReply>
         static void markUnavailable( TReply& outReply )

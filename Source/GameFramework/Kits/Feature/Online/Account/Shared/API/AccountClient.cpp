@@ -16,19 +16,13 @@ namespace sw
             /** @brief 공통 오류 코드를 의미가 가까운 업무 결과로 바꿉니다. */
             static LoginResult toResult( uint16 errorCode )
             {
-                switch ( errorCode )
-                {
-                    case OnlineError::kRateLimited:
-                        return LoginResult::RateLimited;
-                    case OnlineError::kUpdateRequired:
-                        return LoginResult::UpdateRequired;
-                    case OnlineError::kUnauthenticated:
-                        return LoginResult::InvalidToken;
-                    case OnlineError::kInvalidRequest:
-                        return LoginResult::InvalidRequest;
-                    default:
-                        return LoginResult::StoreUnavailable;
-                }
+                static constexpr OnlineErrorResult<LoginResult> kArrErrorResult[] = {
+                    {    OnlineError::kRateLimited,    LoginResult::RateLimited},
+                    { OnlineError::kUpdateRequired, LoginResult::UpdateRequired},
+                    {OnlineError::kUnauthenticated,   LoginResult::InvalidToken},
+                    { OnlineError::kInvalidRequest, LoginResult::InvalidRequest},
+                };
+                return OnlineError::toResult( errorCode, kArrErrorResult, LoginResult::StoreUnavailable );
             }
 
             static bool isGrantOperation( AccountClientOperation operation )

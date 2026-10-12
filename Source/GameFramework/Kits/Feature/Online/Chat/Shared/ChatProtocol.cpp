@@ -123,19 +123,13 @@ namespace sw
 
     ChatResult ChatProtocol::fromErrorCode( uint16 errorCode )
     {
-        switch ( errorCode )
-        {
-            case OnlineError::kOk:
-                return ChatResult::Ok;
-            case OnlineError::kUnauthenticated:
-                return ChatResult::NotSignedIn;
-            case OnlineError::kInvalidRequest:
-                return ChatResult::Invalid;
-            case OnlineError::kRateLimited:
-                return ChatResult::RateLimited;
-            default:
-                return ChatResult::Unavailable;
-        }
+        static constexpr OnlineErrorResult<ChatResult> kArrErrorResult[] = {
+            {             OnlineError::kOk,          ChatResult::Ok},
+            {OnlineError::kUnauthenticated, ChatResult::NotSignedIn},
+            { OnlineError::kInvalidRequest,     ChatResult::Invalid},
+            {    OnlineError::kRateLimited, ChatResult::RateLimited},
+        };
+        return OnlineError::toResult( errorCode, kArrErrorResult, ChatResult::Unavailable );
     }
 
     string ChatProtocol::makeChannelTopic( string_view channelID )
