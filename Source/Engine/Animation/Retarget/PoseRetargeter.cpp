@@ -130,6 +130,30 @@ namespace sw
             }
         }
 
+        // 본 이름 테이블과 같은 이름 짝은 사슬 뒤에 넣는다. 아래 중복 검사가 먼저 정한 짝을 남긴다.
+        for ( const RetargetBonePair& namePair : profile.getBonePairs() )
+        {
+            uint32 sourceBone = 0;
+            uint32 targetBone = 0;
+            bOk               = PoseRetargeterInternal::findBone( sourceSkeleton, namePair._source, "source", sourceBone ) &&
+                  PoseRetargeterInternal::findBone( targetSkeleton, namePair._target, "target", targetBone );
+            if ( bOk == false )
+                return false;
+            listSourceBone.push_back( sourceBone );
+            listTargetBone.push_back( targetBone );
+        }
+        if ( profile.isMappingSameNames() )
+        {
+            for ( uint32 targetBone = 0; targetBone < targetSkeleton.getBoneCount(); ++targetBone )
+            {
+                const int32 sourceBone = sourceSkeleton.findBoneIndex( targetSkeleton.getBone( targetBone )._name );
+                if ( sourceBone < 0 )
+                    continue;
+                listSourceBone.push_back( static_cast<uint32>( sourceBone ) );
+                listTargetBone.push_back( targetBone );
+            }
+        }
+
         for ( size_t index = 0; index < listTargetBone.size(); ++index )
         {
             bool bDuplicate = false;
@@ -156,7 +180,9 @@ namespace sw
         const float32 sourceHeight = _sourcePelvisReference._y - _sourceRootReference._y;
         const float32 targetHeight = _targetPelvisReference._y - _targetRootReference._y;
         _heightRatio               = ( MathUtil::abs( sourceHeight ) > MathUtil::kEpsilon ) ? targetHeight / sourceHeight : 1.0f;
-        _bInitialized              = SW_TRUE;
+        if ( profile.getHeightRatioOverride() > 0.0f )
+            _heightRatio = profile.getHeightRatioOverride();
+        _bInitialized = SW_TRUE;
         return true;
     }
 

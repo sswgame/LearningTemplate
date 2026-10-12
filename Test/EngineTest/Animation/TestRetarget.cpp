@@ -192,6 +192,53 @@ SW_TEST_CASE( RetargetTest, RotationTransfersAcrossLocalAxisConventions )
 }
 
 /**
+ * @brief [RetargetTest] 본 이름 테이블(`bone_map`)과 같은 이름 짝(`map_same_names`)이 사슬 없이 회전을 옮기고, `height_ratio` 가 골반 높이 비를 덮어쓴다
+ */
+SW_TEST_CASE( RetargetTest, BoneMapAndSameNamesTransferWithoutChains )
+{
+    const Skeleton source = test::makeChainSkeleton( 3 );
+    Skeleton       renamed;
+    (void)renamed.addBone( "bone0", -1, test::makeBoneTransform( float3{} ), float4x4::Identity );
+    (void)renamed.addBone( "Elbow", 0, test::makeBoneTransform( float3{ 0.0f, 1.0f, 0.0f } ), float4x4::Identity );
+    (void)renamed.addBone( "bone2", 1, test::makeBoneTransform( float3{ 0.0f, 1.0f, 0.0f } ), float4x4::Identity );
+    renamed.computeInverseBindFromReference();
+
+    RetargetProfile profile;
+    SW_ASSERT_TRUE( profile.parseJSON( R"({ "root": { "source": "bone0", "target": "bone0" }, "pelvis": { "source": "bone0", "target": "bone0" },
+        "translation": "Copy", "chains": [], "bone_map": [ { "source": "bone1", "target": "Elbow" } ], "map_same_names": true, "height_ratio": 1.25 })",
+                                       "names.retarget.json" ) );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( profile.getBonePairs().size() ) );
+    SW_EXPECT_TRUE( profile.isMappingSameNames() );
+    PoseRetargeter retargeter;
+    SW_ASSERT_TRUE( retargeter.initialize( profile, source, renamed, nullptr ) );
+    SW_EXPECT_NEAR_EQUAL( 1.25f, retargeter.getHeightRatio(), 1e-6f );
+
+    Pose sourcePose;
+    sourcePose.setToReference( source );
+    TestRetargetInternal::rotateLocal( sourcePose, 1, float3::UnitZ, 0.7f );
+    TestRetargetInternal::rotateLocal( sourcePose, 2, float3::UnitZ, 0.4f );
+    Pose targetPose;
+    retargeter.retarget( sourcePose, targetPose );
+    vector<float4x4> listSource;
+    vector<float4x4> listTarget;
+    TestRetargetInternal::computeModel( source, sourcePose, listSource );
+    TestRetargetInternal::computeModel( renamed, targetPose, listTarget );
+    SW_EXPECT_TRUE( TestRetargetInternal::isNear( listSource[2].getTranslation(), listTarget[2].getTranslation(), 1e-4f ) ); // 테이블(Elbow)
+    const float3 sourceTip = float3::transform( float3::UnitY, listSource[2] );
+    const float3 targetTip = float3::transform( float3::UnitY, listTarget[2] );
+    SW_EXPECT_TRUE( TestRetargetInternal::isNear( sourceTip, targetTip, 1e-4f ) ); // 같은 이름(bone2)
+
+    test::ScopedDefensiveTestLog expected( "bad bone table rows are rejected" );
+    RetargetProfile              negative;
+    SW_EXPECT_FALSE( negative.parseJSON( R"({ "root": { "source": "r", "target": "r" }, "pelvis": { "source": "h", "target": "h" }, "chains": [], "height_ratio": 0 })",
+                                         "bad.retarget.json" ) );
+    RetargetProfile unknownTarget;
+    unknownTarget.setRootAndPelvis( "bone0", "bone0", "bone0", "bone0", RetargetTranslationMode::Copy );
+    unknownTarget.addBonePair( RetargetBonePair{ hashed_string( "bone1" ), hashed_string( "Wrist" ) } );
+    SW_EXPECT_FALSE( retargeter.initialize( unknownTarget, source, renamed, nullptr ) );
+}
+
+/**
  * @brief [RetargetTest] 다리가 1.5 배 긴 스켈레톤(본 비율) — 골반 · 발 움직임이 골반 높이 비만큼 커지고 IK 목표가 발을 그 자리에 정확히 둔다. IK 를 끄면 어긋난다
  */
 SW_TEST_CASE( RetargetTest, LongerLegsKeepFeetOnScaledStride )

@@ -26,26 +26,32 @@ namespace sw
 {
     RetargetProfile::RetargetProfile()
         : _listChain{}
+        , _listBonePair{}
         , _sourceSkeletonPath{}
         , _targetSkeletonPath{}
         , _sourceRoot{}
         , _targetRoot{}
         , _sourcePelvis{}
         , _targetPelvis{}
+        , _heightRatioOverride{ 0.0f }
         , _translationMode{ RetargetTranslationMode::ScaleByPelvisHeight }
+        , _bMapSameNames{ SW_FALSE }
     {
     }
 
     void RetargetProfile::clear()
     {
         _listChain.clear();
+        _listBonePair.clear();
         _sourceSkeletonPath.clear();
         _targetSkeletonPath.clear();
-        _sourceRoot      = hashed_string{};
-        _targetRoot      = hashed_string{};
-        _sourcePelvis    = hashed_string{};
-        _targetPelvis    = hashed_string{};
-        _translationMode = RetargetTranslationMode::ScaleByPelvisHeight;
+        _sourceRoot          = hashed_string{};
+        _targetRoot          = hashed_string{};
+        _sourcePelvis        = hashed_string{};
+        _targetPelvis        = hashed_string{};
+        _heightRatioOverride = 0.0f;
+        _translationMode     = RetargetTranslationMode::ScaleByPelvisHeight;
+        _bMapSameNames       = SW_FALSE;
     }
 
     void RetargetProfile::setRootAndPelvis( const hashed_string& sourceRoot, const hashed_string& targetRoot, const hashed_string& sourcePelvis,
@@ -98,11 +104,32 @@ namespace sw
         _targetSkeletonPath = targetSkeleton.empty() ? string{} : string{ targetSkeleton.c_str() };
         _translationMode    = static_cast<RetargetTranslationMode>( modeIndex );
 
-        const JSONValue arrPair[2] = { reader.readObject( "root", true ), reader.readObject( "pelvis", true ) };
-        const JSONValue chains     = reader.readArray( "chains", true );
-        bOk                        = reader.finish() && bOk;
+        const JSONValue arrPair[2]  = { reader.readObject( "root", true ), reader.readObject( "pelvis", true ) };
+        const JSONValue chains      = reader.readArray( "chains", true );
+        const JSONValue boneMap     = reader.readArray( "bone_map", false );
+        bool            bMapSame    = false;
+        float32         heightRatio = 0.0f;
+        bOk                         = reader.readBool( "map_same_names", bMapSame, false ) && reader.readFloat( "height_ratio", heightRatio, false ) && bOk;
+        bOk                         = reader.finish() && bOk;
         if ( bOk == false )
             return false;
+        if ( root.has( "height_ratio" ) && heightRatio <= 0.0f )
+        {
+            SW_LOG_ERROR( "Retarget profile '%#': 'height_ratio' must be positive", sourceLabel );
+            return false;
+        }
+        _bMapSameNames       = bMapSame ? SW_TRUE : SW_FALSE;
+        _heightRatioOverride = heightRatio;
+
+        for ( size_t index = 0; index < boneMap.size(); ++index )
+        {
+            RigJSONReader    entryReader( boneMap.at( index ), sourceLabel );
+            RetargetBonePair pair{};
+            bOk = entryReader.readName( "source", pair._source, true ) && entryReader.readName( "target", pair._target, true );
+            if ( ( entryReader.finish() && bOk ) == false )
+                return false;
+            _listBonePair.push_back( pair );
+        }
 
         hashed_string* arrSource[2] = { &_sourceRoot, &_sourcePelvis };
         hashed_string* arrTarget[2] = { &_targetRoot, &_targetPelvis };
