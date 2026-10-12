@@ -180,6 +180,36 @@ namespace sw
         /** @brief wstring_view 의 앞뒤 공백을 뗀 뷰를 반환합니다(할당 없음). */
         static wstring_view trim( wstring_view input );
 
+        /**
+         * @brief @p text 를 줄마다 나눠 @p callback( string_view line ) 을 부릅니다. 할당하지 않습니다.
+         * @details 줄 끝의 `\r` 하나를 떼므로 CRLF 글도 같은 줄을 냅니다. 빈 줄도 넘기지만, 글이 `\n` 으로 끝나면 그 뒤에 빈 줄을
+         *          하나 더 만들지 않습니다(빈 글은 줄이 없습니다). 콜백이 `bool` 을 돌려주면 false 에서 멈춥니다.
+         */
+        template <typename TCallback>
+        static void forEachLine( string_view text, TCallback&& callback )
+        {
+            size_t lineStart = 0;
+            while ( lineStart < text.size() )
+            {
+                size_t lineEnd = text.find( '\n', lineStart );
+                if ( lineEnd == string_view::npos )
+                    lineEnd = text.size();
+                string_view line = text.substr( lineStart, lineEnd - lineStart );
+                if ( line.empty() == false && line.back() == '\r' )
+                    line.remove_suffix( 1 );
+                lineStart = lineEnd + 1;
+                if constexpr ( std::is_same_v<std::invoke_result_t<TCallback&, string_view>, bool> )
+                {
+                    if ( callback( line ) == false )
+                        return;
+                }
+                else
+                {
+                    callback( line );
+                }
+            }
+        }
+
         /** @brief 문자열 길이(문자 수)를 반환합니다. */
         static uint32 strlen( const utf8* pStr );
         /** @brief 문자열 길이(문자 수)를 반환합니다. */

@@ -53,18 +53,15 @@ namespace sw
 
             static string findHeaderField( string_view header, string_view fieldName )
             {
-                size_t lineStart = 0;
-                while ( lineStart < header.size() )
+                string value;
+                StringUtil::forEachLine( header, [&]( string_view line )
                 {
-                    size_t lineEnd = header.find( '\n', lineStart );
-                    if ( lineEnd == string_view::npos )
-                        lineEnd = header.size();
-                    const string_view line = header.substr( lineStart, lineEnd - lineStart );
-                    if ( StringUtil::startsWith( line, fieldName, true ) && line.size() > fieldName.size() && line[fieldName.size()] == ':' )
-                        return string( StringUtil::trim( line.substr( fieldName.size() + 1 ) ) );
-                    lineStart = lineEnd + 1;
-                }
-                return {};
+                    if ( StringUtil::startsWith( line, fieldName, true ) == false || line.size() <= fieldName.size() || line[fieldName.size()] != ':' )
+                        return true;
+                    value = string( StringUtil::trim( line.substr( fieldName.size() + 1 ) ) );
+                    return false;
+                } );
+                return value;
             }
 
             static void appendQuotedLine( string& outText, string_view keyword, string_view value )

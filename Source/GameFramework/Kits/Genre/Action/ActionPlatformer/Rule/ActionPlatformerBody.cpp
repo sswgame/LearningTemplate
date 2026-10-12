@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionPlatformerBody.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -48,19 +49,11 @@ namespace sw
             static void splitLines( string_view text, vector<string_view>& outListLine )
             {
                 outListLine.clear();
-                size_t start = 0;
-                while ( start <= text.size() )
+                StringUtil::forEachLine( text, [&]( string_view line )
                 {
-                    const size_t end  = text.find( '\n', start );
-                    string_view  line = text.substr( start, end == string_view::npos ? string_view::npos : end - start );
-                    if ( line.empty() == false && line.back() == '\r' )
-                        line.remove_suffix( 1 );
                     if ( line.empty() == false )
                         outListLine.push_back( line );
-                    if ( end == string_view::npos )
-                        break;
-                    start = end + 1;
-                }
+                } );
             }
         };
     } // namespace

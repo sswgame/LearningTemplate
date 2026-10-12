@@ -186,17 +186,11 @@ namespace sw
             return false;
         outReport              = BugItReport{};
         const string_view body = FileUtil::skipUtf8Bom( text );
-        size_t            lineBegin{ 0 };
-        while ( lineBegin < body.size() )
+        StringUtil::forEachLine( body, [&]( string_view line )
         {
-            size_t lineEnd = body.find( '\n', lineBegin );
-            if ( lineEnd == string_view::npos )
-                lineEnd = body.size();
-            const string_view line = StringUtil::trim( body.substr( lineBegin, lineEnd - lineBegin ) );
-            lineBegin              = lineEnd + 1;
             const size_t separator = line.find( '=' );
             if ( separator == string_view::npos )
-                continue;
+                return;
             const string_view key   = StringUtil::trim( line.substr( 0, separator ) );
             const string_view value = StringUtil::trim( line.substr( separator + 1 ) );
             if ( key == BugItReportInternal::kKeyNote )
@@ -213,7 +207,7 @@ namespace sw
                 (void)BugItReportInternal::parseFloat3( value, outReport._cameraPosition ); // 틀린 값이면 0 자리 — 폴더의 나머지는 그래도 읽는다
             else if ( key == BugItReportInternal::kKeyRotation )
                 (void)BugItReportInternal::parseFloat3( value, outReport._cameraRotationDegrees ); // 위와 같다
-        }
+        } );
         return true;
     }
 

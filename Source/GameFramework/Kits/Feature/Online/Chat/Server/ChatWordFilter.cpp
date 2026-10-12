@@ -152,18 +152,12 @@ namespace sw
             return false;
         }
         vector<string> listWord;
-        size_t         lineStart = 0;
-        while ( lineStart < content.size() )
+        StringUtil::forEachLine( content, [&]( string_view line )
         {
-            size_t lineEnd = content.find( '\n', lineStart );
-            if ( lineEnd == string::npos )
-                lineEnd = content.size();
-            string_view line( content.data() + lineStart, lineEnd - lineStart );
             line = StringUtil::trimEnd( line );
             if ( line.empty() == false && line.front() != '#' )
                 listWord.emplace_back( line );
-            lineStart = lineEnd + 1;
-        }
+        } );
         initialize( listWord, mode );
         return true;
     }
