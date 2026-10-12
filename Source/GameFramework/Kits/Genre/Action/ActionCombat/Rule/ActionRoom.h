@@ -16,7 +16,6 @@
 #include "GameFramework/Base/Foundation/Utility/Grid/FacingDir.h"
 #include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/GameFrameworkMinimal.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Catalog/MonsterCatalog.h"
 
 namespace sw
