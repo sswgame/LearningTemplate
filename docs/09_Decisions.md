@@ -183,6 +183,12 @@
 | `Utility/{XML,JSON,TileMap,Console,Profiling}` | `Serialization/{XML,JSON}` · `TileMap/` · `Console/` · `Profiling/` |
 | `Telemetry/HTTPClient` · `UI/Screens/` · `Serialization/Core/` · `UI/Core/` | `Observability/HTTPClient` · `UI/Screen/` · `Serialization/Base/` · `UI/Base/` |
 | `Physics` · `Resource` · `Animation` · `Input` 루트 파일 | `Physics/{Collision,Asset}` · `Resource/{Pack,Image,Cache}` · `Animation/{Sprite,Graph,Skeletal}` · `Input/{Map,Virtual}`(이동 표는 그 이동 커밋들의 기록) |
+| `IOnlineService` · `OnlineServiceHost::registerService` | `IOnlineHostService` · `registerHostService` |
+| `GameStateComponent` · `GameStateRefs` · `GameStateSettings` · `GameStateInitResult` · `Base/Gameplay/GameState` | `SessionStateComponent` · `SessionStateRefs` · `SessionStateSettings` · `SessionStateInitResult` · `Base/Gameplay/SessionState` |
+| `InteractionViewer` · `InteractorComponent::makeViewer` | `InteractionView` · `makeView` |
+| `EditorViewportPick`(Common/Commands) | `EditorViewportRayPick` |
+| `GameInstanceBase::requestSceneLoad` · `EditorWidgets::drawPropertyRowBegin` · `IEditorPanel::getOpenPtr` | `requestLoadScene` · `drawPropertyRowLabel` · `getOpenFlagAddress` |
+| `TurnOrder::Actor`(private) | `TurnOrder::Combatant` |
 
 일부러 둔 용어: stamp · kit · cook · orphan · chord · pin.
 
@@ -194,6 +200,14 @@
 ### 5-1. 문서와 저장소
 
 - **약어는 대문자로 쓴다**(사용자 결정 2026-10-10 — 이미 대문자인 `AABB` · `RHI` · `TagID` 와 철자가 하나가 되고, 함수 이름에서도 약어가 보인다). 목록은 `Scripts/lint/rules/AcronymRegistry.toml` 한 자리(읽기 · 철자 판정은 `Scripts/lint/AcronymRegistry.py`), 대문자 약어가 이어 붙으면 낱말을 사이에 두거나 뜻이 같은 쪽을 뺀다(`RTSCommanderAI` · `HTTPAddress` · `kRTSCatalogXML` · `RHITimestamp` · `OpenSSLContext`). `SSL` 은 제품 이름표(`OpenSSL`)로 둔다 — 약어로 올리면 `_pSsl` 같은 OpenSSL 핸들 이름까지 바뀌고 이어 붙음은 이름 하나뿐이었다. 파이썬 · CMake 식별자는 대상이 아니다.
+- **클래스 접미어는 하는 일로 고릅니다**(사용자 결정 2026-10-13 — 상용 엔진이 같은 접미어를 같은 뜻으로 쓴다). `…Manager` 는 런타임 오브젝트 집합의 수명과 생성 · 파괴 · 로드 정책을 소유하고(유니티 SceneManager, 언리얼 AssetManager),
+  `…Registry` 는 등록으로 채우는 이름 · ID 조회 테이블이며 수명 정책이 없습니다(언리얼 AssetRegistry). `…System` 은 매 프레임 많은 오브젝트 · 컴포넌트에 같은 로직을 돌리고(유니티 DOTS System),
+  `…Service` 는 서비스 바인딩이나 원격 엔드포인트로 닿는 교체 가능한 기능 창구(PlayFab · EOS · Nakama 서비스), `…Backend` 는 인터페이스의 플랫폼 · 라이브러리 구현(`JoltPhysicsBackend`, `XAudio2AudioBackend`)입니다.
+  C 함수 테이블은 `…API`(`GameAPI` · `EditorAPI` · `ModuleAPI`)입니다. 함께 정한 규칙 셋: `Anim` 은 `Animation` 으로 풀어 씁니다(Anim 접두 식별자는 개명 중이며 새로 만들지 않고, 언리얼 `AnimInstance` 같은 외부 용어를 가리킬 때만 예외).
+  불린 변수 · 멤버의 `b` 접두(`bVisible`)는 언리얼 관습으로 허용하고 불린을 돌려주는 함수만 is · has · can · should 규칙을 따릅니다.
+  `Scene` 은 씬 하나의 데이터를 소유하고(언리얼 Level/World · 유니티 Scene), `GameObjectManager` 는 그 씬 오브젝트의 수명을, `GameObjectStore` 는 저장소를 맡습니다. 규칙 원문은 [AGENTS.md](../AGENTS.md) "Class suffixes" 절입니다.
+- **같은 기준으로 바꾼 이름**(2026-10-13): 온라인 호스트 쪽 인터페이스는 클라이언트 쪽 `IOnlineClientService` · `registerClientService` 와 짝을 맞춰 `IOnlineHostService` · `registerHostService` 로 했습니다.
+  키트가 나눠 쓰는 공유 상태는 언리얼 GameState(월드 단위 복제 상태)와 뜻이 달라 `SessionStateComponent` · `SessionStateRefs` 로 했습니다.
 - **저장소에 LICENSE 파일을 두지 않습니다**(2026-10-06). 라이선스를 정하는 것은 사용자의 일이라, README 의 MIT 배지와 develop 배지도 뺐습니다.
 - **코딩 규칙의 원본은 `AGENTS.md` 하나입니다**(2026-10-06). [04 코딩 규칙 예시](04_CodingGuidelines.md)는 규칙을 다시 적지 않는 한국어 예시 모음입니다.
   언리얼도 Coding Standard 한 문서에 규칙을 두고 예시는 따로 둡니다. `CLAUDE.md` 는 에이전트가 매번 읽는 한국어 요약이고, 원본이 따로 있는 규칙(에이전트 표, 편집 함정, 작업 방식)은 한 줄과 링크로만 가리킵니다.

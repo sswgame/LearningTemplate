@@ -20,7 +20,7 @@ namespace sw
 
     /**
      * @class Scene
-     * @brief 게임 월드의 기본 단위입니다(Level/World). 자기 GameObjectManager 를 소유합니다.
+     * @brief 씬 하나의 데이터(이름 · 원본 경로 · 프리팹 출처 · 저장 ID 테이블 · 카메라 선택 · 오브젝트 매니저)를 소유합니다. 언리얼 Level/World · 유니티 Scene 에 해당하고, 오브젝트 수명은 자기 `GameObjectManager` 가 관리합니다.
      */
     class SW_API Scene
     {

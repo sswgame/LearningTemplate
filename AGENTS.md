@@ -92,6 +92,29 @@ cmake --build --preset Ninja-Debug
   new resource class is covered the moment it derives. Per-frame buffer managers that are not assets
   (`GPUScene`) keep their own vocabulary — they are not registry members.
 
+### Class suffixes — Manager · Registry · System · Service · Backend
+
+A class suffix says what the class does with the objects it names. Pick the one that matches, the way the commercial engines use it:
+
+| Suffix | Meaning | Commercial counterpart |
+| --- | --- | --- |
+| `…Manager` | Owns the lifetime of a set of runtime objects and decides the create / destroy / load policy. | Unity `SceneManager`, Unreal `UAssetManager` |
+| `…Registry` | Lookup table filled by registration, keyed by name or ID. No lifetime policy. | Unreal `AssetRegistry` |
+| `…System` | Runs every frame over many objects / components with the same logic. | Unity DOTS `System` |
+| `…Service` | Replaceable function window reached through service binding or a remote endpoint. | PlayFab · EOS · Nakama services |
+| `…Backend` | Platform or library implementation of an interface. | `JoltPhysicsBackend`, `XAudio2AudioBackend` |
+
+A C function table is `…API` (`GameAPI`, `EditorAPI`, `ModuleAPI`).
+
+Fixed naming rules that go with the table:
+
+- **`Anim` is spelled out as `Animation`.** Identifiers with an `Anim` prefix are being renamed and no new one is added. The only
+  exception is a name that refers to an outside term, such as Unreal's `AnimInstance` or `AnimMontage`.
+- **A boolean variable or member keeps the `b` prefix** (`bVisible`, `_bOpen`), as in Unreal. Only a function that returns a
+  boolean follows the `is` / `has` / `can` / `should` rule.
+- **`Scene` owns the data of one scene** (Unreal Level / World, Unity Scene). `GameObjectManager` manages the lifetime of that
+  scene's objects, and `GameObjectStore` is the storage it uses. Their header descriptions say each role, not "one scene" for all three.
+
 ### Function names
 
 A reader who knows one of these names must be able to guess the rest; that is the whole point.

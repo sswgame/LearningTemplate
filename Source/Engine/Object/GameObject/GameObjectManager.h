@@ -1,6 +1,6 @@
 /**
  * @file GameObjectManager.h
- * @brief 씬 하나 — 오브젝트 저장소 · 틱 디스패치 · 틱 중 규칙 · 레지스트리 · 물리를 소유하고, 게임이 부르는 API 를 전달합니다.
+ * @brief 씬 하나의 오브젝트 수명(생성 · 파괴 · 플레이 시작)을 관리합니다. 오브젝트 저장소 · 틱 디스패치 · 틱 중 규칙 · 레지스트리 · 물리를 소유하고, 게임이 부르는 API 를 전달합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
