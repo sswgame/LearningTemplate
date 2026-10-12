@@ -368,12 +368,8 @@ namespace sw
         void paintScreens();
         /** @brief 사용자 설정 `gv_uiTheme`(accessibility.uiTheme)이 바뀌었으면 그 테마로 바꿉니다(빈 값이거나 테마 목록이 없으면 그대로 둡니다). */
         void syncThemeSetting();
-        /** @brief `gv_uiDemo` 를 따라 개발용 테스트 화면을 열고 닫습니다(열면 입력 방식을 탐색으로 바꿔 첫 버튼에 포커스 테두리를 보입니다). */
-        void syncDemoScreen();
-        /** @brief `gv_benchUiWidgets` 를 보고 벤치 화면(`UIBenchScreen`)을 열고 닫습니다(개수가 바뀌면 다시 만듭니다). */
-        void syncBenchScreen();
-        /** @brief `gv_uiOptionsMenu` 를 따라 옵션 메뉴를 열고 닫습니다(개발용 스위치이며, 스크린샷과 네 백엔드 확인에 씁니다). */
-        void syncOptionsMenuSwitch();
+        /** @brief 등록된 화면 스위치(`UIScreenSwitches`, 견본 · 벤치 · 옵션 메뉴 등)를 순서대로 돌려 개발 스위치에 맞게 화면을 열고 닫습니다. */
+        void syncScreenSwitches();
         /** @brief 화면이 없을 때 `UI.Pause` 가 오면 일시정지 메뉴를 엽니다. */
         void processPauseAction();
         /** @brief UI 맵 레이어를 맞춥니다. `UI` 는 활성 화면이 있을 때 켜고, `UIGlobal`(일시정지)은 활성 화면이 없고 일시정지 메뉴가 있을 때 켭니다. */
@@ -401,6 +397,13 @@ namespace sw
             CanvasDrawList       _scratch{};
             uint64               _revision{ 0 };
             float32              _textScale{ 1.0f };
+        };
+
+        /** @struct SwitchScreen @brief 화면 스위치 하나가 연 화면입니다. 스위치 이름(등록할 때의 이름 사본)으로 찾아, 모듈이 다시 올라와도 같은 화면을 이어 갑니다. */
+        struct SwitchScreen
+        {
+            string         _name{};
+            UIScreenHandle _screen{ kInvalidUIScreenHandle };
         };
 
         vector<unique_ptr<UIScreen>> _listScreen;    ///< 그리기 순서(레이어, 쌓인 순서)로 정렬한 목록입니다. 입력은 역순으로 처리합니다.
@@ -435,14 +438,12 @@ namespace sw
         float32                      _inputDeltaSeconds;  ///< 이번 `processInput` 의 프레임 시간입니다(액션 이벤트에 싣습니다).
         UINavigationDirection        _stickDirection;     ///< 스틱이 지금 가리키는 탐색 방향입니다(기울이지 않았으면 Next 이며 쓰지 않는 값입니다).
         UIScreenHandle               _activeScreen;
-        UIScreenHandle               _demoScreen;          ///< `-gv_uiDemo` 가 연 테스트 화면입니다(없으면 무효).
-        UIScreenHandle               _benchScreen;         ///< `-gv_benchUiWidgets` 가 연 벤치 화면입니다(없으면 무효).
         UIScreenHandle               _markerScreen;        ///< 화면 마커를 담는 HUD 화면입니다(없으면 무효).
         vector<WidgetComponent*>     _listWidgetComponent; ///< 등록된 위젯 컴포넌트입니다(소유하지 않으며, 끝날 때 스스로 뺍니다).
         vector<UIScreenHandle>       _listTickScratch;     ///< `tickScreens` 가 도는 번호입니다(프레임마다 다시 씁니다).
+        vector<SwitchScreen>         _listSwitchScreen;    ///< 화면 스위치(`UIScreenSwitches`)마다 연 화면입니다(이름으로 찾습니다).
         string                       _optionsMenuDocument; ///< 옵션 메뉴 문서입니다.
         string                       _pauseMenuDocument;   ///< 일시정지 메뉴 문서입니다(비면 일시정지 메뉴가 없습니다).
-        UIScreenHandle               _optionsSwitchScreen; ///< `-gv_uiOptionsMenu` 가 연 옵션 메뉴입니다(없으면 무효).
         UIScreenHandle               _nextScreenHandle;
         uint32                       _nextPushOrder;
         uint32                       _textRevision; ///< 마지막 바인딩 단계가 본 텍스트 버전입니다.

@@ -13,6 +13,7 @@
 #include "Engine/UI/Screen/KeyRebindScreen.h"
 #include "Engine/UI/Screen/SettingsConfirmScreen.h"
 #include "Engine/UI/Screen/UINotificationService.h"
+#include "Engine/UI/Screen/UIScreenSwitch.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/ButtonWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
@@ -71,8 +72,31 @@ namespace sw
                 }
                 return nullptr;
             }
+
+            /** @brief 화면 스위치: `gv_uiOptionsMenu` 를 따라 옵션 메뉴를 열고 닫습니다(개발용 스위치이며, 스크린샷과 네 백엔드 확인에 씁니다). */
+            static UIScreenHandle syncSwitch( UISystem& uiSystem, UIScreenHandle current )
+            {
+                const bool bOpen = current != kInvalidUIScreenHandle && uiSystem.findScreen( current ) != nullptr;
+                if ( gv_uiOptionsMenu == bOpen )
+                    return current;
+                if ( bOpen )
+                {
+                    uiSystem.closeScreen( current );
+                    return kInvalidUIScreenHandle;
+                }
+                const UIScreenHandle screen = OptionsMenuScreen::open( uiSystem );
+                if ( screen == kInvalidUIScreenHandle )
+                {
+                    gv_uiOptionsMenu = false; // 열 수 없다(설정 서비스 없음). 프레임마다 다시 시도하지 않는다
+                    return kInvalidUIScreenHandle;
+                }
+                uiSystem.setInputMode( UIInputMode::Navigation );
+                return screen;
+            }
         };
     } // namespace
+
+    SW_UI_SCREEN_SWITCH( OptionsMenu, "OptionsMenu", 2, &OptionsMenuScreenInternal::syncSwitch );
 
     OptionsMenuScreen::OptionsMenuScreen( const UIScreenDesc& desc, unique_ptr<Widget> root )
         : UIScreen{ desc, std::move( root ) }

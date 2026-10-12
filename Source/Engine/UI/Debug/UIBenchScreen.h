@@ -22,7 +22,7 @@ namespace sw
      * @brief 스크롤 패널 안에 줄 바꿈 격자를 두는 벤치 화면입니다. 칸마다 테두리(바탕), 아이콘 상자, 텍스트를 놓고 크기를 고정합니다(칸이 레이아웃 경계). 대부분은 스크롤 밖이라 잘립니다.
      * @details `onTick` 이 프레임마다 앞쪽(보이는) 칸 `gv_benchUiChurn` 개의 텍스트를 바꾼다. 무효화와 그리기 캐시가 비용을 그 칸으로 가두는지 측정한다.
      *          측정할 구간은 `GT.UI.*`, `RT.Canvas.*` 이고, 카운터는 `UI.LayoutWidgets`, `UI.PaintWidgets`, `Text.GlyphsRasterized` 다(값은 per_frame 열에 있다).
-     *          `UISystem::update` 가 `gv_benchUiWidgets` 를 보고 열고 닫는다(HUD 레이어이며 포커스와 입력을 받지 않는다).
+     *          .cpp 의 화면 스위치(`SW_UI_SCREEN_SWITCH`)가 `gv_benchUiWidgets` 를 보고 열고 닫는다(HUD 레이어이며 포커스와 입력을 받지 않는다).
      */
     class SW_API UIBenchScreen final : public UIScreen
     {

@@ -41,6 +41,8 @@
   받은 슬롯은 UI가 먹습니다(`UISystem::consumeSlot`). 뗄 때까지 게임이 보지 못합니다.
   다른 행동과 겹치면(`findBindingConflict`) "이미 쓰입니다" 창이 바꾸기와 취소를 묻고, 바꾸기는 `setPendingBinding( Swap )` 입니다. 스키마 밖 행동과 겹치면 취소만 할 수 있습니다.
 - 개발 스위치 `-gv_uiOptionsMenu=1` 은 옵션 메뉴를 바로 띄웁니다. 스크린샷과 네 백엔드 확인에 씁니다.
+  이런 스위치는 화면 .cpp 가 `SW_UI_SCREEN_SWITCH`(`UIScreenSwitch.h`) 한 줄로 스스로 등록하고, `UISystem::update` 는 등록을 (순서, 이름) 순으로 돌기만 합니다.
+  새 개발 화면을 더할 때 `UISystem` 은 고치지 않습니다. 견본(`UIDemo`) · 벤치(`UIBench`) · 옵션 메뉴(`OptionsMenu`)가 이 모양입니다.
 
 #### 일시정지 메뉴
 

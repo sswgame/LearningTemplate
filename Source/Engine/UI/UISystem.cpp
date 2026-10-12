@@ -26,15 +26,13 @@
 #include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Binding/UIBindingSet.h"
 #include "Engine/UI/Binding/UIViewModel.h"
-#include "Engine/UI/Debug/UIBenchScreen.h"
-#include "Engine/UI/Debug/UIDemoScreen.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Document/UIDocumentLoader.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Layout/ScrollPanel.h"
 #include "Engine/UI/Layout/UILayoutDump.h"
-#include "Engine/UI/Screen/OptionsMenuScreen.h"
 #include "Engine/UI/Screen/PauseMenuScreen.h"
+#include "Engine/UI/Screen/UIScreenSwitch.h"
 #include "Engine/UI/Style/UIStylePass.h"
 #include "Engine/UI/Style/UIStyleSet.h"
 #include "Engine/UI/Style/UIStyleSheet.h"
@@ -169,14 +167,12 @@ namespace sw
         , _inputDeltaSeconds{ 0.0f }
         , _stickDirection{ UINavigationDirection::Next }
         , _activeScreen{ kInvalidUIScreenHandle }
-        , _demoScreen{ kInvalidUIScreenHandle }
-        , _benchScreen{ kInvalidUIScreenHandle }
         , _markerScreen{ kInvalidUIScreenHandle }
         , _listWidgetComponent{}
         , _listTickScratch{}
+        , _listSwitchScreen{}
         , _optionsMenuDocument{ "engine/ui/options.ui.xml" }
         , _pauseMenuDocument{}
-        , _optionsSwitchScreen{ kInvalidUIScreenHandle }
         , _nextScreenHandle{ 1 }
         , _nextPushOrder{ 0 }
         , _textRevision{ 0 }
@@ -241,8 +237,7 @@ namespace sw
         }
         _listWidgetComponent.clear();
         _markerScreen = kInvalidUIScreenHandle;
-        _demoScreen   = kInvalidUIScreenHandle;
-        _benchScreen  = kInvalidUIScreenHandle;
+        _listSwitchScreen.clear();
         _focus.clearFocus();
         while ( _listScreen.empty() == false )
         {
@@ -290,9 +285,7 @@ namespace sw
         const ScopedMemoryTag uiMemoryTag{ MemoryTag::UI }; // 그리기 캐시, 그리기 목록, 텍스트 배치, 글리프 아틀라스가 프레임 안에서 커진다
         _viewport = viewport;
         syncThemeSetting();
-        syncDemoScreen();
-        syncBenchScreen();
-        syncOptionsMenuSwitch();
+        syncScreenSwitches();
         reopenClosedScreens();
         _subtitles.update( deltaSeconds );
         tickScreens( deltaSeconds );
@@ -1484,57 +1477,24 @@ namespace sw
         (void)setTheme( hashed_string( setting ) );
     }
 
-    void UISystem::syncBenchScreen()
+    void UISystem::syncScreenSwitches()
     {
-        const uint32         wanted  = gv_benchUiWidgets > 0 ? static_cast<uint32>( gv_benchUiWidgets ) : 0u;
-        const UIBenchScreen* pBench  = static_cast<const UIBenchScreen*>( findScreen( _benchScreen ) );
-        const uint32         current = pBench != nullptr ? pBench->getCellCount() : 0u;
-        if ( wanted == current )
-            return;
-        if ( pBench != nullptr )
-            closeScreen( _benchScreen );
-        _benchScreen = wanted > 0 ? pushScreen( UIBenchScreen::create( wanted ) ) : kInvalidUIScreenHandle;
-    }
-
-    void UISystem::syncDemoScreen()
-    {
-        const bool bOpen = _demoScreen != kInvalidUIScreenHandle && findScreen( _demoScreen ) != nullptr;
-        if ( gv_uiDemo == bOpen )
-            return;
-        if ( bOpen )
+        const uint32 switchCount = UIScreenSwitches::getCount();
+        for ( uint32 index = 0; index < switchCount; ++index )
         {
-            closeScreen( _demoScreen );
-            _demoScreen = kInvalidUIScreenHandle;
-            return;
+            const UIScreenSwitchRegistration* pRegistration = UIScreenSwitches::getAt( index );
+            const string_view                 name{ pRegistration->_pName };
+            size_t                            stateIndex = 0;
+            while ( stateIndex < _listSwitchScreen.size() && string_view{ _listSwitchScreen[stateIndex]._name } != name )
+            {
+                ++stateIndex;
+            }
+            if ( stateIndex == _listSwitchScreen.size() )
+                _listSwitchScreen.push_back( SwitchScreen{ string( name ), kInvalidUIScreenHandle } );
+            // 스위치 함수가 화면을 올리고 닫아도 이 목록은 건드리지 않지만, 번호로 다시 집어 쓴다(참조를 함수 호출 너머로 들지 않는다).
+            const UIScreenHandle screen           = pRegistration->_pFunction( *this, _listSwitchScreen[stateIndex]._screen );
+            _listSwitchScreen[stateIndex]._screen = screen;
         }
-        _demoScreen = pushScreen( UIDemoScreen::create() );
-        setInputMode( UIInputMode::Navigation );
-        // 알림과 액션 글리프도 함께 보인다(오버레이 레이어, 스크린샷 확인용).
-        UINotificationDesc hint{};
-        hint._text            = "[action=UI.Accept] Select";
-        hint._durationSeconds = 600.0f;
-        hint._kind            = UINotificationKind::Hint;
-        _notifications.post( hint );
-    }
-
-    void UISystem::syncOptionsMenuSwitch()
-    {
-        const bool bOpen = _optionsSwitchScreen != kInvalidUIScreenHandle && findScreen( _optionsSwitchScreen ) != nullptr;
-        if ( gv_uiOptionsMenu == bOpen )
-            return;
-        if ( bOpen )
-        {
-            closeScreen( _optionsSwitchScreen );
-            _optionsSwitchScreen = kInvalidUIScreenHandle;
-            return;
-        }
-        _optionsSwitchScreen = OptionsMenuScreen::open( *this );
-        if ( _optionsSwitchScreen == kInvalidUIScreenHandle )
-        {
-            gv_uiOptionsMenu = false; // 열 수 없다(설정 서비스 없음). 프레임마다 다시 시도하지 않는다
-            return;
-        }
-        setInputMode( UIInputMode::Navigation );
     }
 
     void UISystem::setPauseMenuDocument( string_view documentPath )

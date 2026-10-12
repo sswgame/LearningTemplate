@@ -9,6 +9,8 @@
 #include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Layout/ScrollPanel.h"
 #include "Engine/UI/Layout/WrapPanel.h"
+#include "Engine/UI/Screen/UIScreenSwitch.h"
+#include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/BorderPanel.h"
 #include "Engine/UI/Widgets/ImageWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
@@ -51,12 +53,27 @@ namespace sw
                 (void)cell->addChild( std::move( row ) );
                 return cell;
             }
+
+            /** @brief 화면 스위치: `gv_benchUiWidgets` 를 보고 벤치 화면을 열고 닫습니다(개수가 바뀌면 다시 만듭니다). */
+            static UIScreenHandle syncSwitch( UISystem& uiSystem, UIScreenHandle current )
+            {
+                const uint32         wanted    = gv_benchUiWidgets > 0 ? static_cast<uint32>( gv_benchUiWidgets ) : 0u;
+                const UIBenchScreen* pBench    = static_cast<const UIBenchScreen*>( uiSystem.findScreen( current ) );
+                const uint32         cellCount = pBench != nullptr ? pBench->getCellCount() : 0u;
+                if ( wanted == cellCount )
+                    return current;
+                if ( pBench != nullptr )
+                    uiSystem.closeScreen( current );
+                return wanted > 0 ? uiSystem.pushScreen( UIBenchScreen::create( wanted ) ) : kInvalidUIScreenHandle;
+            }
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
+    SW_UI_SCREEN_SWITCH( UIBench, "UIBench", 1, &UIBenchScreenInternal::syncSwitch );
+
     unique_ptr<UIBenchScreen> UIBenchScreen::create( uint32 cellCount )
     {
         using Internal                 = UIBenchScreenInternal;

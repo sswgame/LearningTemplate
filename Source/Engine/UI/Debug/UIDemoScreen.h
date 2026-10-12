@@ -17,7 +17,7 @@ namespace sw
     /**
      * @struct UIDemoScreen
      * @brief 코드로 만든 위젯 트리가 게임 창에 보이는지(네 백엔드 스크린샷)와 패드로 포커스가 옮겨지는지 확인하는 화면입니다. 에셋 없이 동작합니다(이미지 없음).
-     * @details `UISystem::update` 가 `gv_uiDemo` 를 보고 열고 닫는다. 열 때 입력 방식을 탐색으로 두어 첫 버튼에 포커스 테두리가 보인다.
+     * @details .cpp 의 화면 스위치(`SW_UI_SCREEN_SWITCH`)가 `gv_uiDemo` 를 보고 열고 닫는다(`UISystem::update` 가 돌린다). 열 때 입력 방식을 탐색으로 두어 첫 버튼에 포커스 테두리가 보인다.
      */
     struct SW_API UIDemoScreen
     {

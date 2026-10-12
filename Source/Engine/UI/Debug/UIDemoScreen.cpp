@@ -8,6 +8,8 @@
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/Screen/UIScreenSwitch.h"
+#include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/BorderPanel.h"
 #include "Engine/UI/Widgets/ButtonWidget.h"
 #include "Engine/UI/Widgets/CheckBoxWidget.h"
@@ -125,12 +127,36 @@ namespace sw
                 (void)row->addChild( std::move( control ) );
                 (void)column.addChild( std::move( row ) );
             }
+
+            /** @brief 화면 스위치: `gv_uiDemo` 를 따라 견본 화면을 열고 닫습니다(열면 입력 방식을 탐색으로 바꿔 첫 버튼에 포커스 테두리를 보입니다). */
+            static UIScreenHandle syncSwitch( UISystem& uiSystem, UIScreenHandle current )
+            {
+                const bool bOpen = current != kInvalidUIScreenHandle && uiSystem.findScreen( current ) != nullptr;
+                if ( gv_uiDemo == bOpen )
+                    return current;
+                if ( bOpen )
+                {
+                    uiSystem.closeScreen( current );
+                    return kInvalidUIScreenHandle;
+                }
+                const UIScreenHandle screen = uiSystem.pushScreen( UIDemoScreen::create() );
+                uiSystem.setInputMode( UIInputMode::Navigation );
+                // 알림과 액션 글리프도 함께 보인다(오버레이 레이어, 스크린샷 확인용).
+                UINotificationDesc hint{};
+                hint._text            = "[action=UI.Accept] Select";
+                hint._durationSeconds = 600.0f;
+                hint._kind            = UINotificationKind::Hint;
+                uiSystem.getNotifications().post( hint );
+                return screen;
+            }
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
+    SW_UI_SCREEN_SWITCH( UIDemo, "UIDemo", 0, &UIDemoScreenInternal::syncSwitch );
+
     unique_ptr<UIScreen> UIDemoScreen::create()
     {
         using Internal                = UIDemoScreenInternal;
