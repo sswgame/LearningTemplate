@@ -8,8 +8,13 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
-#include "Engine/Physics/PhysicsDesc.h"
 #include "Engine/Physics/PhysicsTypes.h"
+
+namespace sw
+{
+    struct PhysicsVehicleState;
+    struct PhysicsWheeledVehicleDesc;
+} // namespace sw
 
 namespace sw
 {

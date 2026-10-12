@@ -9,6 +9,7 @@
 #include "GameFramework/Base/Online/Cache/EphemeralStore.h"
 #include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/PartyLobbyService.h"
 
 #include <algorithm>
 

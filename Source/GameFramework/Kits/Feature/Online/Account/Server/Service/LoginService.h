@@ -34,7 +34,6 @@ namespace sw
 {
     struct LoginStoreOutcome;
 
-    class IPlatformLoginProvider;
     class IServiceStore;
     class RemoteConfig;
 
