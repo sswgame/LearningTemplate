@@ -14,6 +14,8 @@ GameFramework 층 검사 — 기반의 층 · 폴더 순서(DAG)와 키트의 �
      `GF_<기능>`) · `Server/`(`GF_Server_<기능>`) · `Client/`(`GF_Client_<기능>`)로 짝을 두고, 셋이 각각 키트 하나다. 예외는 하나 — 서버 · 클라이언트
      키트는 같은 기능의 `Shared/` 를 include 해도 된다(서버 → 공유 ← 클라이언트). 서버 키트끼리 · 다른 기능의 키트는 여전히 안 된다.
      옛 꼴 `Kits/<성격>/<묶음>/Server/<키트>/` 는 실패다.
+  3-1) 루트 파일(`GameFramework/x.h` 등)과 묶음 공용 헤더(`Kits/<성격>/<묶음>/x.h`)는 Core · Engine · 같은 폴더만 include 한다 —
+     기반이나 키트를 끌어오면 그 헤더를 쓰는 쪽이 층 검사 없이 의존을 얻는다(우산 헤더 금지).
   4) GameFramework 의 어느 파일도 `Games/` · `Editor/` 를 include 하지 않는다. 키트의 에디터 확장 폴더(`<키트>/Editor/`)만 `Editor/` 를 include 한다.
 
 키트 → 기반은 어느 층이든 된다(키트는 기반 위의 층이다). 기반을 DLL 여럿으로 나누지는 않는다 — 층은 폴더로만 지킨다
@@ -169,6 +171,14 @@ def checkFileInternal(relativeFilePath: str, text: str) -> list[str]:
             if reason != "":
                 listViolation.append(f'{relativeFilePath}: #include "{includePath}"  ({reason})')
             continue
+        # 루트 파일(`GameFramework/x.h` · `Base/x.h` · `Kits/<성격>/x.h`)과 묶음 공용 헤더(`Kits/<성격>/<묶음>/x.h`)는 Core · Engine 과
+        # 같은 폴더만 본다. 여기서 기반이나 키트를 끌어오면 그 헤더를 include 하는 쪽이 층 검사를 거치지 않고 의존을 얻는다.
+        if sourceKind == "root" and destKind in ("base", "kit", "kitGroup"):
+            listViolation.append(f'{relativeFilePath}: #include "{includePath}"  (루트 파일 -> {destKind} {destName}, Core · Engine · 같은 폴더만 된다)')
+            continue
+        if sourceKind == "kitGroup" and (destKind in ("base", "kit") or (destKind == "kitGroup" and destName != sourceName)):
+            listViolation.append(f'{relativeFilePath}: #include "{includePath}"  (묶음 {sourceName} 공용 헤더 -> {destKind} {destName}, Core · Engine · 같은 폴더만 된다)')
+            continue
         if sourceKind == "kit" and destKind == "kit" and destName != sourceName and isSameFeatureSharedKitInternal(sourceName, destName) is False:
             listViolation.append(f'{relativeFilePath}: #include "{includePath}"  (키트 {sourceName} -> 다른 키트 {destName})')
             continue
@@ -283,6 +293,37 @@ class CheckGameFrameworkLayersGate(LintGate):
             "name": "공유 키트가 같은 기능의 서버 키트를 include",
             "files": {
                 "Source/GameFramework/Kits/Feature/Online/Trade/Shared/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Feature/Online/Trade/Server/TradeService.h"\n',
+            },
+        },
+        {
+            # 우산 헤더처럼 루트 파일이 기반을 끌어오면 그 헤더를 쓰는 키트 · 기반이 층 검사 없이 의존을 얻는다.
+            "name": "루트 파일이 기반을 include",
+            "files": {
+                "Source/GameFramework/Probe.h": '#pragma once\n\n#include "GameFramework/Base/Foundation/Framework/GameService.h"\n',
+            },
+        },
+        {
+            "name": "루트 파일이 키트를 include",
+            "files": {
+                "Source/GameFramework/Probe.h": '#pragma once\n\n#include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterBattle.h"\n',
+            },
+        },
+        {
+            "name": "묶음 공용 헤더가 기반을 include",
+            "files": {
+                "Source/GameFramework/Kits/Feature/Network/Probe.h": '#pragma once\n\n#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"\n',
+            },
+        },
+        {
+            "name": "묶음 공용 헤더가 같은 묶음의 키트를 include",
+            "files": {
+                "Source/GameFramework/Kits/Genre/RPG/Probe.h": '#pragma once\n\n#include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterBattle.h"\n',
+            },
+        },
+        {
+            "name": "묶음 공용 헤더가 다른 묶음의 공용 헤더를 include",
+            "files": {
+                "Source/GameFramework/Kits/Genre/RPG/Probe.h": '#pragma once\n\n#include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"\n',
             },
         },
         {

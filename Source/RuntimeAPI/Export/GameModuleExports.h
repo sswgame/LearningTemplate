@@ -2,17 +2,16 @@
  * @file GameModuleExports.h
  * @brief 게임 모듈의 진입점(C-ABI) 구현을 위한 매크로 모음입니다.
  *
- * @note 이 헤더는 **경계 계약이 아니라 모듈 쪽 접착제**입니다. 그래서 `ABI/` 와 달리 모듈 자신의
- *       서비스 로케이터(`GameFramework/`)를 끌어옵니다. 모듈 구현 `.cpp` 만 include 합니다.
+ * @note 이 헤더는 **경계 계약이 아니라 모듈 쪽 접착제**입니다. 모듈의 서비스 로케이터는 선언(`Service/GameServiceBinding.h`)만 보고,
+ *       정의는 GameFramework 가 가집니다. 모듈 구현 `.cpp` 만 include 합니다.
  */
 #pragma once
 #include "Core/Memory/Memory.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameService.h"
-
 #include "RuntimeAPI/ABI/GameAPI.h"
 #include "RuntimeAPI/ABI/ModuleAbi.h"
 #include "RuntimeAPI/Export/ModuleForwardUtil.h"
+#include "RuntimeAPI/Service/GameServiceBinding.h"
 
 namespace sw
 {

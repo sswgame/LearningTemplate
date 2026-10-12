@@ -53,10 +53,10 @@ Kits/<성격>/<그룹>/<기능>/Client/     →  모듈 GF_Client_<기능>   (�
 | `Genre/RPG` | `ClassicJRPG` | 클래식 JRPG | |
 | | `MonsterCollector` | 포켓몬 류 몬스터 수집 | |
 | | `OpenWorldWestern` | 오픈월드 서부극 | |
-| | `WitcherRPG` | 위쳐 류 RPG | |
+| | `WitcherRPG` | 위쳐 류 RPG, 스킬 트리(`SkillTree`) | |
 | `Genre/Strategy` | `RealTimeStrategy` | 스타크래프트 류 실시간 전략 | StarSkirmish |
 | | `CityBuilder` | 파라오 류 도시 건설 | NileCity |
-| | `TacticsSRPG` | 택틱스 SRPG | |
+| | `TacticsSRPG` | 택틱스 SRPG, 로그라이트 런 지도(`RunMap`) | |
 | | `SideScrollConquest` | 횡스크롤 정복 | |
 | `Genre/Simulation` | `Farming` | 농장 생활 | HarvestValley, MeadowVillage |
 | | `CreatureLife` | 생물 생활과 마을 | MeadowVillage |
@@ -220,7 +220,7 @@ DB 와 캐시 드라이버, 그리고 그 서드파티 라이브러리는 `["Ser
 | 1인칭 카메라와 마우스 잠금 | `FirstPersonCameraComponent`, `PawnComponent::_bLockMouse` |
 | 무기, 피해 공식, 탄도 | `Base/Actor/Combat/` |
 | 인벤토리, 장비, 전리품, 제작 | `Base/Gameplay/Inventory/` |
-| 레벨, 스킬 트리, 평판 | `Base/Gameplay/Progression/` |
+| 레벨, 평판 | `Base/Gameplay/Progression/` |
 | 퀘스트, 시계, 날씨, 지역 그래프 | `Base/Gameplay/Quest/`, `Base/World/` |
 | 팀, 점수, 부활, 라운드 | `Base/Gameplay/Match/` |
 | 길찾기, 흐름장, 이동 범위 | `Base/Actor/Navigation/` |

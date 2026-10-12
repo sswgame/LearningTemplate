@@ -11,8 +11,8 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Gameplay/Progression/LevelProgress.h"
-#include "GameFramework/Base/Gameplay/Progression/RunMap.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/RunMap.h"
 
 namespace sw
 {

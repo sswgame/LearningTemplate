@@ -5,6 +5,7 @@
 #include "GameFramework/Base/Actor/Navigation/GridReachability.h"
 #include "GameFramework/Base/World/Land/LandRegistry.h"
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Catalog/SRPGCatalog.h"
+#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/RunMap.h"
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGBattlefield.h"
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGCombat.h"
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGCommanderAI.h"
@@ -94,6 +95,33 @@ namespace
         settings._bSupportAttack  = SW_FALSE;
         settings._bSupportDefense = SW_FALSE;
         return settings;
+    }
+
+    /** @brief 런 지도의 상태 바이트입니다. */
+    vector<uint8> captureRunMapBytes( const RunMap& map )
+    {
+        Archive archive;
+        map.writeState( archive );
+        vector<uint8> bytes;
+        archive.writeData( bytes );
+        return bytes;
+    }
+
+    /**
+     * @brief @p original 의 바이트를 @p inoutRestored 에 읽고(끝까지 다 읽어야 한다), 둘을 @p step 으로 같은 만큼 더 돌린 뒤 바이트가 같으면 true 입니다.
+     */
+    template <typename TStep>
+    bool runMapReplaysAfterRestore( RunMap& original, RunMap& inoutRestored, TStep step )
+    {
+        const vector<uint8> bytes = captureRunMapBytes( original );
+        Archive             archive( bytes.data(), bytes.size() );
+        if ( inoutRestored.readState( archive ) == false || archive.getRemainingBytes() != 0 )
+            return false;
+        if ( captureRunMapBytes( inoutRestored ) != bytes )
+            return false;
+        step( original );
+        step( inoutRestored );
+        return captureRunMapBytes( original ) == captureRunMapBytes( inoutRestored );
     }
 } // namespace
 
@@ -807,4 +835,112 @@ SW_TEST_CASE( TacticsSRPGTest, BattlefieldBorrowsItsLandForTheBattleOnly )
     scene._field.releaseLand();
     SW_EXPECT_EQUAL( LandRegistry::kNoOwner, land.getOwner( 13, 11 ) );
     SW_EXPECT_TRUE( land.claimRect( other, 13, 11, 13, 11, false ) );
+}
+
+SW_TEST_CASE( TacticsSRPGTest, RunMapsConnectFloorsWithoutCrossingAndEndAtTheBoss )
+{
+    RunMapSettings settings;
+    SW_ASSERT_TRUE( RunMap::loadSettings( R"(<RunMap floors="12" columns="7" paths="6">
+        <Node kind="Battle" weight="5"/><Node kind="Elite" weight="1" minFloor="4"/><Node kind="Rest" weight="1" minFloor="3" noRepeat="true"/>
+        <Node kind="Shop" weight="1" noRepeat="true"/><Floor index="0" kind="Battle"/><Floor index="6" kind="Treasure"/><Floor index="-1" kind="Boss"/>
+      </RunMap>)",
+                                          "TacticsSRPGTest", settings ) );
+    RunMap mapA;
+    RunMap mapB;
+    mapA.generate( settings, 42u );
+    mapB.generate( settings, 42u );
+    SW_ASSERT_TRUE( mapA.getNodes().size() == mapB.getNodes().size() ); // 씨앗이 같으면 같은 지도
+    int32 bossCount = 0;
+    for ( size_t index = 0; index < mapA.getNodes().size(); ++index )
+    {
+        const RunNode& node = mapA.getNodes()[index];
+        SW_EXPECT_TRUE( node._kind == mapB.getNodes()[index]._kind );
+        if ( node._floor == 0 )
+            SW_EXPECT_TRUE( node._kind == hashed_string( "Battle" ) );
+        if ( node._floor == 6 )
+            SW_EXPECT_TRUE( node._kind == hashed_string( "Treasure" ) );
+        if ( node._floor < 4 )
+            SW_EXPECT_TRUE( node._kind != hashed_string( "Elite" ) );
+        bossCount += node._kind == hashed_string( "Boss" ) ? 1 : 0;
+        // 위층의 같은 · 옆 열로만, 끝 층 아니면 막다른 칸이 없다.
+        if ( node._floor < 11 )
+            SW_EXPECT_FALSE( node._listNext.empty() );
+        for ( const int32 nextIndex : node._listNext )
+        {
+            const RunNode& next = mapA.getNodes()[static_cast<size_t>( nextIndex )];
+            SW_EXPECT_EQUAL( node._floor + 1, next._floor );
+            if ( next._floor < 11 )
+                SW_EXPECT_TRUE( next._column >= node._column - 1 && next._column <= node._column + 1 );
+            // 휴식 · 상점은 연달아 나오지 않는다.
+            if ( node._kind == hashed_string( "Rest" ) || node._kind == hashed_string( "Shop" ) )
+                SW_EXPECT_TRUE( next._kind != node._kind );
+        }
+    }
+    SW_EXPECT_EQUAL( 1, bossCount );
+    // 엇갈리는 선이 없다 — (f, c) → (f+1, c+1) 과 (f, c+1) → (f+1, c) 가 함께 있지 않다.
+    for ( const RunNode& node : mapA.getNodes() )
+    {
+        for ( const int32 nextIndex : node._listNext )
+        {
+            const RunNode& next = mapA.getNodes()[static_cast<size_t>( nextIndex )];
+            if ( next._column != node._column + 1 || next._floor == 11 )
+                continue;
+            for ( const RunNode& other : mapA.getNodes() )
+            {
+                if ( other._floor != node._floor || other._column != node._column + 1 )
+                    continue;
+                for ( const int32 otherNext : other._listNext )
+                {
+                    SW_EXPECT_FALSE( mapA.getNodes()[static_cast<size_t>( otherNext )]._column == node._column &&
+                                     mapA.getNodes()[static_cast<size_t>( otherNext )]._floor == node._floor + 1 );
+                }
+            }
+        }
+    }
+
+    // 걷기 — 갈 수 있는 칸만, 끝까지.
+    vector<int32> listChoice;
+    mapA.collectChoices( listChoice );
+    SW_ASSERT_TRUE( listChoice.empty() == false );
+    SW_EXPECT_FALSE( mapA.moveTo( static_cast<int32>( mapA.getNodes().size() ) + 5 ) );
+    while ( mapA.isFinished() == false )
+    {
+        mapA.collectChoices( listChoice );
+        SW_ASSERT_TRUE( listChoice.empty() == false );
+        SW_ASSERT_TRUE( mapA.moveTo( listChoice.back() ) );
+    }
+    SW_EXPECT_TRUE( mapA.findNode( mapA.getCurrent() )->_kind == hashed_string( "Boss" ) );
+}
+
+/**
+ * @brief [TacticsSRPGTest] 런 지도 — 만든 지도 · 지금 자리가 와서 같은 갈림길을 낸다
+ */
+SW_TEST_CASE( TacticsSRPGTest, RunMapReplaysAfterRestore )
+{
+    RunMapSettings settings;
+    RunNodeRule    fight;
+    fight._kind = "Fight";
+    RunNodeRule rest;
+    rest._kind            = "Rest";
+    rest._weight          = 0.3f;
+    settings._listRule    = { fight, rest };
+    settings._floorCount  = 6;
+    settings._columnCount = 4;
+    settings._pathCount   = 3;
+    RunMap map;
+    map.generate( settings, 17 );
+    vector<int32> listChoice;
+    map.collectChoices( listChoice );
+    SW_ASSERT_FALSE( listChoice.empty() );
+    SW_ASSERT_TRUE( map.moveTo( listChoice[0] ) );
+
+    RunMap restored;
+    SW_EXPECT_TRUE( runMapReplaysAfterRestore( map, restored, []( RunMap& state )
+    {
+        vector<int32> listStepChoice;
+        state.collectChoices( listStepChoice );
+        if ( listStepChoice.empty() == false )
+            (void)state.moveTo( listStepChoice.back() ); // 갈 수 있는 칸만 고른다 — 결과는 아래 두 상태 비교가 본다
+    } ) );
+    SW_EXPECT_EQUAL( map.getCurrent(), restored.getCurrent() );
 }

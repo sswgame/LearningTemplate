@@ -112,7 +112,7 @@ void FarmerBodyComponent::onTick( float32 deltaTime )
 
 | 층 | 폴더(층 안 순서) | 무엇 |
 |----|------------------|------|
-| 0 `Online` | `Online`(한 폴더로 본다) | 온라인 기반 계약. Core 만 봅니다 |
+| 0 `Online` | `Online`(한 폴더로 본다) | 온라인 기반 계약. 다른 기반을 보지 않습니다 |
 | 1 `Foundation` | `Utility`(0) · `Data`(1) · `Framework`(2) | 계산 도구, 데이터 틀, 게임 모듈의 수명 · 서비스 창구 · 저장 |
 | 2 `World` | `Environment` · `Query` · `Lifetime` · `Spline`(0), `Land`(1) | 월드 상태(시계 · 날씨 · 중력 · 땅 · 플래그 · 질의)와 곡선 |
 | 3 `Actor` | `Input` · `Movement` · `Navigation` · `Combat` · `Camera`(0), `AI` · `Control`(1) | 액터 하나: 입력, 조종, 이동, 길 찾기, AI, 카메라, 전투 수치 |

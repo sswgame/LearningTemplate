@@ -7,10 +7,10 @@
 #include "GameFramework/Base/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
-#include "GameFramework/Base/Gameplay/Progression/SkillTree.h"
 #include "GameFramework/Base/Gameplay/Quest/QuestCatalog.h"
 #include "GameFramework/Base/Gameplay/Quest/QuestLog.h"
 #include "GameFramework/Kits/Genre/RPG/WitcherRPG/Catalog/WitcherCatalog.h"
+#include "GameFramework/Kits/Genre/RPG/WitcherRPG/Rule/SkillTree.h"
 #include "GameFramework/Kits/Genre/RPG/WitcherRPG/Rule/WitcherAlchemy.h"
 #include "GameFramework/Kits/Genre/RPG/WitcherRPG/Rule/WitcherBestiary.h"
 #include "GameFramework/Kits/Genre/RPG/WitcherRPG/Rule/WitcherCombat.h"
@@ -125,6 +125,17 @@ namespace
         archive.writeData( bytes );
         return bytes;
     }
+
+    constexpr const utf8* kSkillTestXML = R"(
+<SkillTreeCatalog>
+  <Tree id="combat">
+    <Skill id="basic" maxRank="2" cost="1"><Stats attack="2"/></Skill>
+    <Skill id="power" maxRank="3" cost="1" level="3" requires="basic:2" ability="PowerStrike"><Stats attack="5"/></Skill>
+    <Skill id="berserk" cost="2" spent="4" group="stance" ability="Berserk"/>
+    <Skill id="guard" cost="1" group="stance"><Stats armor="4"/></Skill>
+  </Tree>
+</SkillTreeCatalog>
+)";
 } // namespace
 
 SW_TEST_CASE( WitcherRPGTest, CatalogReadsMonstersAlchemySignsMutagensAndContracts )
@@ -680,4 +691,46 @@ SW_TEST_CASE( WitcherRPGTest, StateRoundTripContinuesTheSameHunt )
     Archive mutagenCut( mutagenBytes.data(), mutagenBytes.size() - 1 );
     SW_EXPECT_FALSE( truncatedMutagens.readState( mutagenCut ) );
     SW_EXPECT_TRUE( truncatedMutagens.getSkill( 0, 0 ).empty() );
+}
+
+SW_TEST_CASE( WitcherRPGTest, SkillTreesCheckRequirementsTiersGroupsAndRefunds )
+{
+    SkillTreeCatalog catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kSkillTestXML, "WitcherRPGTest" ) );
+    SkillTreeState state;
+    state.initialize( catalog.findTree( hashed_string( "combat" ) ) );
+    state.addPoints( 5 );
+    const hashed_string basic( "basic" );
+    const hashed_string power( "power" );
+
+    SW_EXPECT_TRUE( state.rankUp( power, 5 ) == SkillResult::RequirementMissing );
+    SW_EXPECT_TRUE( state.rankUp( basic, 1 ) == SkillResult::Ok );
+    SW_EXPECT_TRUE( state.rankUp( basic, 1 ) == SkillResult::Ok );
+    SW_EXPECT_TRUE( state.rankUp( basic, 1 ) == SkillResult::MaxRank );
+    SW_EXPECT_TRUE( state.rankUp( power, 2 ) == SkillResult::LevelTooLow );
+    SW_EXPECT_TRUE( state.rankUp( power, 3 ) == SkillResult::Ok );
+    SW_EXPECT_TRUE( state.rankUp( hashed_string( "berserk" ), 9 ) == SkillResult::TierLocked ); // 3 점만 썼다
+    SW_EXPECT_TRUE( state.rankUp( hashed_string( "guard" ), 9 ) == SkillResult::Ok );
+    SW_EXPECT_TRUE( state.rankUp( power, 3 ) == SkillResult::Ok );
+    SW_EXPECT_TRUE( state.rankUp( power, 3 ) == SkillResult::NotEnoughPoints );
+    state.addPoints( 2 );
+    SW_EXPECT_TRUE( state.rankUp( hashed_string( "berserk" ), 9 ) == SkillResult::GroupTaken ); // 층은 열렸지만 같은 그룹의 guard 를 배웠다
+    SW_EXPECT_EQUAL( 5, state.getSpentPoints() );
+
+    StatBlock stats;
+    state.computeStats( stats );
+    SW_EXPECT_NEAR_EQUAL( 14.0f, stats.getValue( hashed_string( "attack" ) ), 1.0e-4f ); // 2 × 2 + 5 × 2
+    SW_EXPECT_NEAR_EQUAL( 4.0f, stats.getValue( hashed_string( "armor" ) ), 1.0e-4f );
+    vector<hashed_string> listAbility;
+    state.collectAbilities( listAbility );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( listAbility.size() ) );
+
+    SW_EXPECT_TRUE( state.rankDown( basic ) == SkillResult::RequiredByOther ); // power 가 basic 2 를 요구한다
+    SW_EXPECT_TRUE( state.rankDown( power ) == SkillResult::Ok );
+    SW_EXPECT_TRUE( state.rankDown( basic ) == SkillResult::RequiredByOther ); // 랭크 1 도 basic 2 를 요구한다
+    SW_EXPECT_TRUE( state.rankDown( power ) == SkillResult::Ok );
+    SW_EXPECT_TRUE( state.rankDown( basic ) == SkillResult::Ok );
+    SW_EXPECT_EQUAL( 2, state.refundAll() );
+    SW_EXPECT_EQUAL( 7, state.getPoints() );
+    SW_EXPECT_EQUAL( 0, state.getRank( hashed_string( "guard" ) ) );
 }

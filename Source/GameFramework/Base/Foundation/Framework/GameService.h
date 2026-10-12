@@ -5,21 +5,10 @@
 #pragma once
 #include "Core/Container/StringUtil.h"
 
+#include "RuntimeAPI/Service/GameServiceBinding.h"
 #include "RuntimeAPI/Service/ModuleService.h"
 
 #include <type_traits>
-
-#if defined( SW_PLATFORM_WINDOWS )
-    #if defined( SW_GF_EXPORTS )
-        #define SW_GAMESERVICE_API __declspec( dllexport )
-    #elif defined( SW_GF_IMPORTS )
-        #define SW_GAMESERVICE_API __declspec( dllimport )
-    #else
-        #define SW_GAMESERVICE_API
-    #endif
-#else
-    #define SW_GAMESERVICE_API __attribute__( ( visibility( "default" ) ) )
-#endif
 
 namespace sw
 {
@@ -49,8 +38,7 @@ namespace sw
             SW_GAMESERVICE_API void* getRawLocalService( uint64 typeHash );
         } // namespace internal
 
-        SW_GAMESERVICE_API void bindGameService( const ModuleService& service );
-        SW_GAMESERVICE_API void unbindGameService();
+        // bindGameService · unbindGameService 는 RuntimeAPI/Service/GameServiceBinding.h 가 선언한다(진입점 매크로가 RuntimeAPI 안에서 부른다).
         /**
          * @brief 게임 서비스를 쓸 수 있는 상태인지 묻습니다. **SceneManager 슬롯 하나를 봅니다.**
          * @details 이름은 "서비스들이 붙었는가"로 읽히지만, 실제로 검사하는 것은

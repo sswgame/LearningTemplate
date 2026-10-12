@@ -9,8 +9,8 @@
 #include "GameFramework/Base/Actor/Combat/Damage/ElementChart.h"
 #include "GameFramework/Base/Foundation/Data/StatBlock.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
-#include "GameFramework/Base/Gameplay/Progression/SkillTree.h"
 #include "GameFramework/Kits/Genre/RPG/WitcherRPG/Catalog/WitcherCatalog.h"
+#include "GameFramework/Kits/Genre/RPG/WitcherRPG/Rule/SkillTree.h"
 
 namespace sw
 {
