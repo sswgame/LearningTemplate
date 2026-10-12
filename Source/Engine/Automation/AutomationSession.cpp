@@ -62,19 +62,20 @@ namespace sw
         }
     }
 
-    void AutomationSession::onFrameBegin( InputManager& input )
+    void AutomationSession::onFrameBegin( const EngineFrameContext& context )
     {
-        if ( _pRunner != nullptr )
-            _pRunner->onFrameBegin( input );
+        if ( _pRunner != nullptr && context._pInput != nullptr )
+            _pRunner->onFrameBegin( *context._pInput );
     }
 
-    int32 AutomationSession::onFrameEnd( InputManager& input, uint32 completedScreenshotCount )
+    int32 AutomationSession::onFrameEnd( const EngineFrameContext& context )
     {
         // `isActive` 가 아니라 `hasEnded` — 시작 프레임에서 진 시나리오(읽기 오류 · 시작 시한)도 여기서 끝맺고 그 코드로 끝난다.
-        if ( _pRunner == nullptr || _pRunner->hasEnded() )
+        if ( _pRunner == nullptr || _pRunner->hasEnded() || context._pInput == nullptr )
             return kRunning;
+        const uint32 completedScreenshotCount = context._completedScreenshotCount;
         _pRunner->setCompletedScreenshotCount( completedScreenshotCount >= _screenshotBaseline ? completedScreenshotCount - _screenshotBaseline : 0u );
-        const AutomationResult result = _pRunner->onFrameEnd( input );
+        const AutomationResult result = _pRunner->onFrameEnd( *context._pInput );
         if ( result == AutomationResult::Running )
             return kRunning;
         return onStageEnded( static_cast<int32>( result ), completedScreenshotCount );
@@ -106,11 +107,11 @@ namespace sw
         return static_cast<int32>( _pChain->getFinalResult() );
     }
 
-    int32 AutomationSession::onWindowClosed( InputManager* pInput )
+    int32 AutomationSession::onWindowClosed( const EngineFrameContext& context )
     {
         if ( _pRunner == nullptr )
             return kRunning;
-        AutomationResult result = _pRunner->onWindowClosed( pInput );
+        AutomationResult result = _pRunner->onWindowClosed( context._pInput );
         // 창이 닫히면 루프가 끝난다 — 돌릴 단계가 남아 있으면 체인은 끝까지 가지 못했다(`CloseWindow` 는 마지막 단계에만 둔다).
         if ( _pChain != nullptr && _pChain->onStageEnded( result ) )
         {
@@ -121,8 +122,11 @@ namespace sw
         return static_cast<int32>( result );
     }
 
-    bool AutomationSession::takePendingScreenshotPath( string& outPath )
+    void AutomationSession::onBuildRenderPacket( EngineRenderPacketContext& inoutContext )
     {
-        return _pRunner != nullptr && _pRunner->takePendingScreenshotPath( outPath );
+        // 패킷 하나에는 스크린샷이 하나다 — 이미 찼으면 꺼내지 않고 다음 패킷에 싣는다.
+        if ( _pRunner == nullptr || inoutContext._pScreenshotPath == nullptr || inoutContext._pScreenshotPath->empty() == false )
+            return;
+        (void)_pRunner->takePendingScreenshotPath( *inoutContext._pScreenshotPath ); // 요청이 없으면 빈 채로 둔다
     }
 } // namespace sw

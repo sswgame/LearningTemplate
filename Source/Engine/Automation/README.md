@@ -168,9 +168,12 @@ echo $LASTEXITCODE
 - 단계 종류와 프로브 이름은 시작 조건이 참이 되는 프레임에 검사합니다. 게임과 에디터 모듈이 등록하는 이름이 그때 모두 채워져 있기 때문입니다.
 - 입력 단계는 시작할 때 가상 입력 소스로 옮겨지고, 각 프레임의 `InputManager::beginFrame` 에서 OS 사건과 같은 위치로 들어갑니다([Input README](../Input/README.md)).
 - 확인 단계와 환경 단계는 그 프레임의 씬 틱 뒤, `EngineLoop::endFrame` 이 입력 프레임을 닫기 전에 돕니다.
-- `EngineLoop` 는 `AutomationSession` 하나를 들고 프레임 앞(`onFrameBegin`) · 뒤(`onFrameEnd`)에서 부릅니다. 세션이 시나리오 순서(`AutomationScenarioChain`)와 지금 단계의 실행기를 들고, 단계가 시작할 때마다
-  App의 `gv_fixedFrameDelta` 를 그 시나리오의 `fixedDelta` 로 바꾸고 작업 폴더 · 스크린샷 기준선을 맞춥니다. 루프는 실행기 · 체인 · 단계 전환을 모릅니다.
-- 체인이 끝나면 세션이 종료 코드를 돌려주고 `EngineLoop::requestQuit( 종료 코드 )` 를 부르며, App은 그 코드로 종료합니다.
+- `AutomationSession` 은 프레임 관찰자(`IEngineFrameObserver`, `Engine/Utility/EngineFrameObserver.h`)입니다. App 이 `-scenario` 를 읽어 세션을 만들고 렌더 스레드의 시나리오 캡처를 켠 뒤
+  `EngineLoop::addFrameObserver` 로 붙입니다. 루프는 관찰자 목록만 알고 프레임 앞(`onFrameBegin`) · 뒤(`onFrameEnd`) · 렌더 패킷 채우기(`onBuildRenderPacket`) · 창 닫힘(`onWindowClosed`)에서 부릅니다.
+  전용 서버는 시나리오를 쓰지 않습니다.
+- 세션이 시나리오 순서(`AutomationScenarioChain`)와 지금 단계의 실행기를 들고, 단계가 시작할 때마다 App의 `gv_fixedFrameDelta` 를 그 시나리오의 `fixedDelta` 로 바꾸고
+  작업 폴더 · 스크린샷 기준선을 맞춥니다. 루프는 세션 · 실행기 · 체인 · 단계 전환을 모릅니다.
+- 체인이 끝나면 `onFrameEnd` 가 종료 코드를 돌려주고 루프가 `requestQuit( 종료 코드 )` 를 부르며, App은 그 코드로 종료합니다. App 은 엔진을 내리기 전에 세션을 떼고(`removeFrameObserver`) 없앱니다.
 
 ### 스크린샷과 이미지 지표
 
