@@ -2,7 +2,6 @@
 
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"
 
-#include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
 
@@ -16,7 +15,6 @@
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Graphics/Upload/GPUUploadQueue.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
-#include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneTransformStorage.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -120,9 +118,9 @@ namespace sw
         _snapshot._listTransparentBatch.clear();
         _snapshot._listAllBatch.clear();
         // 머티리얼 레지스트리는 "그룹 목록(스냅샷)" 과 "셰이더 경로에서 인덱스를 찾는 맵" 이 한 몸이다. 목록만 지우면 맵이 옛 인덱스를
-        // 반환하고 materialGroupFor 가 범위 밖이라 조용히 건너뛴다. 그러면 배치에 머티리얼 버퍼가 실리지 않아 폴백(0)으로
+        // 반환하고 GPUMaterialRegistry::materialGroupFor 가 범위 밖이라 조용히 건너뛴다. 그러면 배치에 머티리얼 버퍼가 실리지 않아 폴백(0)으로
         // 그려지고, 투명 머티리얼은 알파 0이라 화면에서 사라진다(백엔드 교체 뒤 유리 큐브가 없어지던 원인이다).
-        resetMaterialRegistry();
+        _materialRegistry.reset( _snapshot );
         _listScratchCandidate.clear();
         _listScratchRaw.clear();
         _listScratchOpaqueEntry.clear();
@@ -138,45 +136,8 @@ namespace sw
             return;
         _bMergeAcrossMaterials = value;
         // 합치기 여부가 배치 키를 바꾼다. 곧 원소 구성이 달라진다. 영속 인덱스를 그대로 두면 바꾸기 전 기준의 슬롯이 남는다.
-        resetMaterialRegistry();
+        _materialRegistry.reset( _snapshot );
         invalidateBuildCache();
-    }
-
-    uint64 GPUSceneBuilder::permutationHashFor( const Material* pMaterial, const MaterialInstance* pInstance )
-    {
-        if ( pMaterial == nullptr )
-            return 0;
-        // 인스턴스가 있으면 그 해시를 쓴다. 키워드 오버라이드가 퍼뮤테이션을 바꾸고, 그 해시는 부모의 것을 이미 포함한다.
-        const uint64 defineHash = ( pInstance != nullptr ) ? pInstance->getPermutationHash() : pMaterial->getPermutationHash();
-        uint64       hash       = pMaterial->getShaderPathHash();
-        hash                    = HashUtil::combine( hash, defineHash );
-        return hash;
-    }
-
-    uint32 GPUSceneBuilder::shaderPermutationFor( const Material* pMaterial, const MaterialInstance* pInstance )
-    {
-        if ( pMaterial == nullptr )
-            return kInvalidShaderPermutation;
-        const uint64 hash = permutationHashFor( pMaterial, pInstance );
-        const auto   it   = _mapPermutationToIndex.find( hash );
-        if ( it != _mapPermutationToIndex.end() )
-            return it->second;
-
-        GPUShaderPermutation permutation{};
-        permutation._shaderPath = pMaterial->getShaderPath();
-        permutation._listDefine = ( pInstance != nullptr ) ? pInstance->getCachedShaderDefines() : pMaterial->getCachedShaderDefines();
-        permutation._hash       = hash;
-
-        // copy-on-write: 목록은 RT 와 공유하므로 제자리에 추가하지 않는다. 새 퍼뮤테이션은 드물어(머티리얼 종류만큼) 복사가 싸다.
-        shared_ptr<vector<GPUShaderPermutation>> pList = ( _snapshot._pListShaderPermutation != nullptr )
-                                                           ? make_shared<vector<GPUShaderPermutation>>( *_snapshot._pListShaderPermutation )
-                                                           : make_shared<vector<GPUShaderPermutation>>();
-        pList->push_back( std::move( permutation ) );
-        _snapshot._pListShaderPermutation = pList;
-
-        const uint32 index = static_cast<uint32>( pList->size() - 1 );
-        _mapPermutationToIndex.emplace( hash, index );
-        return index;
     }
 
     Material* GPUSceneBuilder::batchKeyMaterial( Material* pMaterial, uint64 permutationHash )
@@ -338,7 +299,7 @@ namespace sw
     {
         // 어느 PSO 로 그릴지를 정하는 값이다. 배치 키의 일부이고, 여기서 한 번 구해 두면
         // 나누기와 정렬이 다시 구하지 않는다(투명은 원소마다 물었다).
-        candidate._permutationHash = permutationHashFor( candidate._material.get(), candidate._instance.get() );
+        candidate._permutationHash = GPUMaterialRegistry::permutationHashFor( candidate._material.get(), candidate._instance.get() );
     }
 
     void GPUSceneBuilder::fillPayload( const DrawCandidate& candidate, GPUInstance& outInstance )
@@ -440,7 +401,7 @@ namespace sw
 
         // 아래 건너뛰기 판단(퍼뮤테이션 세대) 전에 처리한다. 바뀐 머티리얼이 있으면 그 세대가 오른다.
         refreshReloadedTextures();
-        collectSkinPalettes( *pObjects );
+        _skinPaletteCollector.collect( pObjects->getAnimationSystem(), _snapshot );
 
         const PrimitiveRegistry& primitives    = pObjects->getPrimitiveRegistry();
         const uint64             setGeneration = primitives.getSetGeneration();
@@ -448,7 +409,7 @@ namespace sw
         const bool               bSetSame      = bHasCache && ( setGeneration == _lastPrimitiveSetGeneration );
         // 정렬 축이 바뀌어도(직교와 원근 카메라 전환) 투명 순서가 바뀐다. 카메라가 그대로인 것으로 보지 않는다.
         const bool bCamSame = bHasCache && ( float3::getDistanceSquared( cameraPos, _lastCameraPos ) <= MathUtil::kEpsilon ) &&
-                              ( float3::getDistanceSquared( _transparentSortAxis, _lastTransparentSortAxis ) <= MathUtil::kEpsilon );
+                              ( float3::getDistanceSquared( _transparentSorter.getAxis(), _lastTransparentSortAxis ) <= MathUtil::kEpsilon );
         // 퍼뮤테이션은 프리미티브를 더럽히지 않는다. 머티리얼이나 인스턴스의 정적 스위치, 키워드, 멀티컴파일을
         // 바꾸면 그릴 셰이더가 달라지는데 씬에서는 아무 일도 일어나지 않은 것처럼 보인다. 세대로 가른다.
         const uint64 permutationGeneration = MaterialUtil::getPermutationGeneration();
@@ -783,7 +744,7 @@ namespace sw
             }
             {
                 SW_PROFILE_SCOPE( "GT.GPUScene.build.free" );
-                freeUnusedMaterialElements();
+                _materialRegistry.freeUnusedMaterialElements( _snapshot );
             }
         }
 
@@ -791,7 +752,7 @@ namespace sw
         // 번갈아 쓰므로 프레임당 힙 할당이 생기지 않는다.
         _listBuiltCandidate.swap( _listScratchCandidate );
         _lastCameraPos              = cameraPos;
-        _lastTransparentSortAxis    = _transparentSortAxis;
+        _lastTransparentSortAxis    = _transparentSorter.getAxis();
         _lastPrimitiveSetGeneration = setGeneration;
         _lastPermutationGeneration  = permutationGeneration;
         _snapshot._bCPUDirty        = SW_TRUE;
@@ -837,67 +798,6 @@ namespace sw
         }
     }
 
-    void GPUSceneBuilder::collectSkinPalettes( GameObjectManager& objects )
-    {
-        const AnimationSystem& animation = objects.getAnimationSystem();
-        if ( animation.getUnitCount() == 0 && _snapshot._listSkinPalette.empty() )
-            return;
-        SW_PROFILE_SCOPE( "GT.GPUScene.build.skinPalettes" );
-
-        _snapshot._listSkinPalette.clear();
-        shared_ptr<vector<float4>>  listRow    = make_shared<vector<float4>>();
-        shared_ptr<vector<float32>> listWeight = make_shared<vector<float32>>();
-        // 행벡터 4x4 의 0, 1, 2번 열이다. 셰이더는 dot( float4( p, 1 ), 열 ) 로 옮긴다(meshskin.hlsl). 모프 가중치는 [0, 1] 로 제한해 싣는다.
-        auto appendPalette = [this, &listRow, &listWeight]( const Mesh* pMesh, const vector<float4x4>& listPalette, const vector<float32>* pListMorphWeight )
-        {
-            GPUSkinPalette entry{};
-            entry._pMesh     = pMesh;
-            entry._firstRow  = static_cast<uint32>( listRow->size() );
-            entry._boneCount = static_cast<uint32>( listPalette.size() );
-            if ( pListMorphWeight != nullptr && pListMorphWeight->empty() == false )
-            {
-                entry._firstMorphWeight = static_cast<uint32>( listWeight->size() );
-                entry._morphWeightCount = static_cast<uint32>( pListMorphWeight->size() );
-                for ( const float32 weight : *pListMorphWeight )
-                {
-                    listWeight->push_back( MathUtil::clamp( weight, 0.0f, 1.0f ) );
-                }
-            }
-            for ( const float4x4& matrix : listPalette )
-            {
-                listRow->push_back( float4{ matrix._11, matrix._21, matrix._31, matrix._41 } );
-                listRow->push_back( float4{ matrix._12, matrix._22, matrix._32, matrix._42 } );
-                listRow->push_back( float4{ matrix._13, matrix._23, matrix._33, matrix._43 } );
-            }
-            _snapshot._listSkinPalette.push_back( entry );
-        };
-        listRow->reserve( _paletteRowCountHint );
-        // 레벨(평가 순서)이 아니라 등록된 유닛 전부를 본다. 유닛 하나가 빠지면(시체를 정리함) 레벨은 다음 평가까지 비어 있어, 레벨로 모으면
-        // 그 프레임의 모든 스킨드 메시가 팔레트 없이(단위 행렬이며 바인드 포즈) 한 번 그려진다.
-        for ( const SkeletalMeshComponent* pUnit : animation.getUnits() )
-        {
-            // 군중 묶음과 공유하는 유닛과 VAT 유닛은 자기 팔레트가 없다. 묶음이 아래에서 한 번 싣는다.
-            const AnimationCrowdMode mode = pUnit->getCrowdMode();
-            if ( mode == AnimationCrowdMode::Shared || mode == AnimationCrowdMode::VertexAnimation )
-                continue;
-            const Mesh* pMesh = pUnit->getRawMesh();
-            if ( pMesh == nullptr || pMesh->hasSkin() == false )
-                continue;
-            appendPalette( pMesh, pUnit->getSkinPalette(), &pUnit->getMorphWeights() );
-        }
-        // 군중 묶음은 묶음 하나가 메시 하나, 결과 구간 하나, 팔레트 하나다(멤버가 몇이든). 가리키는 유닛이 있는 묶음만 그려진다.
-        for ( const unique_ptr<AnimationCrowdBucket>& bucket : animation.getCrowd().getBuckets() )
-        {
-            if ( bucket->getReferenceCount() > 0 && bucket->getMesh() != nullptr )
-                appendPalette( bucket->getMesh().get(), bucket->getSkinPalette(), nullptr );
-        }
-        _paletteRowCountHint           = listRow->size();
-        _snapshot._pListSkinPaletteRow = std::move( listRow );
-        _snapshot._pListMorphWeight    = std::move( listWeight );
-        // VAT 시계는 군중 시계 그대로다(인스턴스 시간 오프셋이 이 시계 기준이다).
-        _snapshot._vertexAnimationTime = static_cast<float32>( animation.getCrowd().getClock() );
-    }
-
     void GPUSceneBuilder::exportCPUSnapshot( GPUSceneSnapshot& outSnapshot )
     {
         // 옮겨지는 것은 GPUSceneSnapshot 이 가진 것 **모두이고 그것뿐**이다. 복사다. 퍼뮤테이션 테이블은 GT 가
@@ -912,72 +812,27 @@ namespace sw
             return;
         SW_PROFILE_SCOPE( "GT.GPUScene.build.sortTransparent" );
 
-        // 키를 한 번만 구한다. 비교 함수 안에서 거리를 다시 구하면 원소마다 raw 를 무작위로 다시 읽는다(헤더 주석).
+        // 키를 한 번만 구한다. 비교 함수 안에서 거리를 다시 구하면 원소마다 raw 를 무작위로 다시 읽는다(GPUTransparentSorter.h).
         // 정렬 레이어 키 0은 "기본" 표시다. 테이블의 기본 키로 바꿔야 Default 레이어의 스프라이트와 3D 투명 물체가 한 줄에 선다.
-        const uint32 defaultSortKey   = Render2DSettings::getActive().getDefaultSortKey();
-        const size_t transparentCount = _listScratchTransparentIdx.size();
-        _listTransparentSortKey.resize( transparentCount );
+        // 키는 `_listScratchTransparentIdx` 의 지금 순서(나누기를 다시 하지 않은 프레임이면 지난 정렬 결과)로 채운다. 정렬이 그 순서에서 출발한다.
+        const uint32                   defaultSortKey   = Render2DSettings::getActive().getDefaultSortKey();
+        const size_t                   transparentCount = _listScratchTransparentIdx.size();
+        const float3&                  sortAxis         = _transparentSorter.getAxis();
+        vector<GPUTransparentSortKey>& listSortKey      = _transparentSorter.resizeKeys( transparentCount );
         for ( size_t sortIndex = 0; sortIndex < transparentCount; ++sortIndex )
         {
-            const uint32 candidateIndex        = _listScratchTransparentIdx[sortIndex];
-            const uint32 sortKey               = _listScratchCandidate[candidateIndex]._sortKey;
-            const uint32 sortLayer             = ( sortKey == Render2DSettings::kDefaultSortKeyPlaceholder ) ? defaultSortKey : sortKey;
-            _listTransparentSortKey[sortIndex] = makeTransparentSortKey( sortLayer, _listScratchRaw[candidateIndex]._boundsCenter, cameraPos, _transparentSortAxis, candidateIndex );
+            const uint32 candidateIndex = _listScratchTransparentIdx[sortIndex];
+            const uint32 sortKey        = _listScratchCandidate[candidateIndex]._sortKey;
+            const uint32 sortLayer      = ( sortKey == Render2DSettings::kDefaultSortKeyPlaceholder ) ? defaultSortKey : sortKey;
+            listSortKey[sortIndex] =
+                GPUTransparentSorter::makeTransparentSortKey( sortLayer, _listScratchRaw[candidateIndex]._boundsCenter, cameraPos, sortAxis, candidateIndex );
         }
-        // 레이어 키, 먼 것, 후보 인덱스 순서다. 정렬이 결정적이어야 "순서가 그대로" 판정이 흔들리지 않는다.
-        const auto isFartherFirst = &GPUSceneBuilder::isDrawnBefore;
-
-        // **지난 프레임 순서에서 출발한다.** 나누기를 다시 하지 않은 프레임이면 `_listScratchTransparentIdx` 가 지난 정렬 결과
-        // 그대로라, 한 프레임에 조금씩 움직인 물체들은 거의 정렬되어 있다. 삽입 정렬은 (원소 수 + 뒤집힌 쌍 수)에 비례한다.
-        // std::sort 는 입력이 거의 정렬되어 있어도 N log N 을 다 치른다. 이동 횟수가 예산을 넘으면(카메라가 크게 돌았거나
-        // 나누기를 다시 해 후보 순서로 돌아갔을 때) std::sort 로 넘긴다. 순서는 전순서(거리, 후보 인덱스)라 **어느 쪽으로
-        // 정렬해도 결과가 같다**. 반쯤 삽입 정렬된 배열을 넘겨받아도 std::sort 의 결과는 그대로다.
-        const size_t moveBudget = transparentCount * kTransparentInsertionMovesPerElement;
-        size_t       moveCount  = 0;
-        for ( size_t sortIndex = 1; sortIndex < transparentCount && moveCount <= moveBudget; ++sortIndex )
-        {
-            if ( isFartherFirst( _listTransparentSortKey[sortIndex], _listTransparentSortKey[sortIndex - 1] ) == false )
-                continue;
-            const TransparentSortKey key         = _listTransparentSortKey[sortIndex];
-            size_t                   insertIndex = sortIndex;
-            do
-            {
-                _listTransparentSortKey[insertIndex] = _listTransparentSortKey[insertIndex - 1];
-                --insertIndex;
-            } while ( insertIndex > 0 && isFartherFirst( key, _listTransparentSortKey[insertIndex - 1] ) );
-            _listTransparentSortKey[insertIndex] = key;
-            moveCount += sortIndex - insertIndex;
-        }
-        if ( moveCount > moveBudget )
-            std::sort( _listTransparentSortKey.begin(), _listTransparentSortKey.end(), isFartherFirst );
-        for ( size_t sortIndex = 0; sortIndex < transparentCount; ++sortIndex )
-        {
-            _listScratchTransparentIdx[sortIndex] = _listTransparentSortKey[sortIndex]._candidateIndex;
-        }
-    }
-
-    bool GPUSceneBuilder::isDrawnBefore( const TransparentSortKey& keyA, const TransparentSortKey& keyB )
-    {
-        if ( keyA._sortKey != keyB._sortKey )
-            return keyA._sortKey < keyB._sortKey;
-        if ( keyA._depth != keyB._depth )
-            return keyA._depth > keyB._depth;
-        return keyA._candidateIndex < keyB._candidateIndex;
-    }
-
-    GPUSceneBuilder::TransparentSortKey GPUSceneBuilder::makeTransparentSortKey( uint32 sortLayer, const float3& center, const float3& eye, const float3& axis,
-                                                                                 uint32 orderIndex )
-    {
-        TransparentSortKey key;
-        key._sortKey        = sortLayer;
-        key._depth          = axis.getLengthSquared() > MathUtil::kEpsilon ? ( center - eye ).dot( axis ) : float3::getDistanceSquared( center, eye );
-        key._candidateIndex = orderIndex;
-        return key;
+        _transparentSorter.sortKeys( _listScratchTransparentIdx );
     }
 
     void GPUSceneBuilder::setTransparentSortAxis( const float3& axis )
     {
-        _transparentSortAxis = axis;
+        _transparentSorter.setAxis( axis );
     }
 
     void GPUSceneBuilder::computeViewTransparentOrders( const vector<RenderViewRequest>& listView )
@@ -1000,61 +855,18 @@ namespace sw
         {
             if ( view._bRender == SW_FALSE )
                 continue;
-            // 1) 이 뷰의 시점으로 꼬리 전체를 정렬한다. 같은 깊이는 주 순서(꼬리 번호)로 가른다. 전순서라 결정적이다.
-            _listViewSortKey.resize( tailCount );
+            // 이 뷰의 시점으로 꼬리 키를 채운다. 후보 인덱스 칸에는 꼬리 번호를 넣는다(같은 깊이는 주 순서로 가른다).
+            // 정렬과 순번 테이블은 `GPUTransparentSorter::computeViewOrder` 가 만든다.
+            vector<GPUTransparentSortKey>& listViewSortKey = _transparentSorter.resizeViewKeys( tailCount );
             for ( uint32 tailIndex = 0; tailIndex < tailCount; ++tailIndex )
             {
                 const uint32 candidateIndex = _listBuiltTransparentIdx[tailIndex];
                 const uint32 sortKey        = candidateIndex < _listBuiltCandidate.size() ? _listBuiltCandidate[candidateIndex]._sortKey : 0u;
                 const uint32 sortLayer      = ( sortKey == Render2DSettings::kDefaultSortKeyPlaceholder ) ? defaultSortKey : sortKey;
-                _listViewSortKey[tailIndex] =
-                    makeTransparentSortKey( sortLayer, ( *pInstance )[tailBase + tailIndex]._boundsCenter, view._position, view._transparentSortAxis, tailIndex );
+                listViewSortKey[tailIndex]  = GPUTransparentSorter::makeTransparentSortKey( sortLayer, ( *pInstance )[tailBase + tailIndex]._boundsCenter,
+                                                                                            view._position, view._transparentSortAxis, tailIndex );
             }
-            std::sort( _listViewSortKey.begin(), _listViewSortKey.end(), &GPUSceneBuilder::isDrawnBefore );
-
-            GPUViewTransparentOrder order;
-            order._viewID                       = view._viewID;
-            order._tailBase                     = tailBase;
-            shared_ptr<vector<uint32>> listRank = make_shared<vector<uint32>>( tailCount );
-            for ( uint32 rank = 0; rank < tailCount; ++rank )
-            {
-                ( *listRank )[_listViewSortKey[rank]._candidateIndex] = rank;
-            }
-
-            // 2) 배치 안을 rank 순으로 다시 배치한 꼬리 슬롯(컬링 없는 백엔드의 인스턴스 슬롯 스트림)과, 배치마다 가장 먼저 그릴 인스턴스의 rank.
-            shared_ptr<vector<uint32>> listTailSlot = make_shared<vector<uint32>>( tailCount );
-            for ( uint32 tailIndex = 0; tailIndex < tailCount; ++tailIndex )
-            {
-                ( *listTailSlot )[tailIndex] = tailBase + tailIndex;
-            }
-            vector<uint32> listBatchFirstRank( listBatch.size(), MathUtil::kMaxUInt32 );
-            for ( uint32 batchIndex = 0; batchIndex < static_cast<uint32>( listBatch.size() ); ++batchIndex )
-            {
-                const GPUMeshBatch& batch          = listBatch[batchIndex];
-                const bool          bInsideTheTail = tailBase <= batch._instanceBase && batch._instanceBase + batch._instanceCount <= tailBase + tailCount;
-                if ( bInsideTheTail == false )
-                    continue;
-                const uint32 begin = batch._instanceBase - tailBase;
-                const uint32 end   = begin + batch._instanceCount;
-                for ( uint32 tailIndex = begin; tailIndex < end; ++tailIndex )
-                {
-                    listBatchFirstRank[batchIndex] = MathUtil::min( listBatchFirstRank[batchIndex], ( *listRank )[tailIndex] );
-                }
-                std::sort( listTailSlot->begin() + begin, listTailSlot->begin() + end,
-                           [&listRank, tailBase]( uint32 slotA, uint32 slotB )
-                { return ( *listRank )[slotA - tailBase] < ( *listRank )[slotB - tailBase]; } );
-            }
-            order._listBatchOrder.resize( listBatch.size() );
-            for ( uint32 batchIndex = 0; batchIndex < static_cast<uint32>( listBatch.size() ); ++batchIndex )
-            {
-                order._listBatchOrder[batchIndex] = batchIndex;
-            }
-            std::stable_sort( order._listBatchOrder.begin(), order._listBatchOrder.end(),
-                              [&listBatchFirstRank]( uint32 batchA, uint32 batchB )
-            { return listBatchFirstRank[batchA] < listBatchFirstRank[batchB]; } );
-            order._pListRank     = std::move( listRank );
-            order._pListTailSlot = std::move( listTailSlot );
-            _snapshot._listViewTransparentOrder.push_back( std::move( order ) );
+            _snapshot._listViewTransparentOrder.push_back( _transparentSorter.computeViewOrder( view._viewID, tailBase, listBatch ) );
         }
     }
 
@@ -1306,24 +1118,9 @@ namespace sw
         // 배치 구성이 그대로인 프레임이라(투명 꼬리도 다시 만들지 않는다) 그 목록이 지금 그리는 원소 그대로다. 주의: 부분 갱신
         // 프레임에 시계를 멈추면, 트랜스폼만 바뀐 프리미티브는 부분 수집으로 가므로(모두 움직이는 씬도 그렇다) 숨기거나 뺀 메시의
         // 원소를 다음 구조 변경까지 붙든다.
-        ++_buildCounter;
-        SW_PROFILE_SCOPE( "GT.GPUScene.build.refresh.stamp" );
         // 스탬프는 원소에 찍는다. 인스턴스 8000개를 돌 필요 없이 배치가 기록해 둔 (배치, 원소) 쌍만 돈다.
-        const size_t batchCount = MathUtil::min( _snapshot._listAllBatch.size(), _listBatchElementRange.size() );
-        for ( size_t batchIndex = 0; batchIndex < batchCount; ++batchIndex )
-        {
-            const uint32 groupIndex = _snapshot._listAllBatch[batchIndex]._materialGroup;
-            if ( groupIndex >= _listMaterialGroupState.size() )
-                continue;
-            MaterialGroupState&   state = _listMaterialGroupState[groupIndex];
-            const GPUInstanceRun& range = _listBatchElementRange[batchIndex];
-            for ( uint32 entry = range._start; entry < range._start + range._count && entry < _listBatchElementIndex.size(); ++entry )
-            {
-                const uint32 elementIndex = _listBatchElementIndex[entry];
-                if ( elementIndex < state._listEntryLastUsedBuild.size() )
-                    state._listEntryLastUsedBuild[elementIndex] = _buildCounter;
-            }
-        }
+        SW_PROFILE_SCOPE( "GT.GPUScene.build.refresh.stamp" );
+        _materialRegistry.stampBatchElements( _snapshot._listAllBatch, _listBatchElementRange, _listBatchElementIndex );
         return true;
     }
 
@@ -1382,13 +1179,9 @@ namespace sw
 
         // **머티리얼 원소 인덱스는 프레임을 넘어 유지된다**(언리얼 GPUScene 의 영속 PrimitiveID 에 해당한다).
         // 그룹을 통째로 지우고 인스턴스마다 다시 부여하면 O(N·M) 이고, 같은 머티리얼의 인덱스가 프레임마다 달라져
-        // "바뀐 것만 올린다" 를 할 수 없다. 그래서 처음 본 (머티리얼, 인스턴스) 쌍에만 슬롯을 주고, 쓰이지 않으면 아래 freeUnusedMaterialElements 가
-        // 지연 회수한다. 슬롯을 옮기지 않으므로 인덱스는 안정적이다.
-        ++_buildCounter;
-        for ( MaterialGroupState& state : _listMaterialGroupState )
-        {
-            state._bHasLast = SW_FALSE;
-        }
+        // "바뀐 것만 올린다" 를 할 수 없다. 그래서 처음 본 (머티리얼, 인스턴스) 쌍에만 슬롯을 주고, 쓰이지 않으면
+        // `GPUMaterialRegistry::freeUnusedMaterialElements` 가 지연 회수한다. 슬롯을 옮기지 않으므로 인덱스는 안정적이다.
+        _materialRegistry.beginBuild();
 
         if ( _listScratchOpaqueEntry.empty() == false )
         {
@@ -1497,11 +1290,11 @@ namespace sw
             batch._materialCb = ( material != nullptr ) ? material->getDescriptorIndex() : kInvalidDescriptorIndex;
         // 텍스처 슬롯은 인스턴스가 아니라 부모 머티리얼이 소유한다(인스턴스는 CB 값만 덮어쓴다).
         GPUSceneBuilderInternal::fillMaterialTextureSrvs( batch, material.get() );
-        batch._materialGroup = materialGroupFor( material.get() );
+        batch._materialGroup = _materialRegistry.materialGroupFor( material.get(), _snapshot );
         // 퍼뮤테이션은 **배치에 실제로 들어 있는 후보**에서 뽑는다. 합치기가 켜지면 키의 인스턴스는 nullptr 이라,
         // 키로 물으면 대표 머티리얼의 define 만 나오고 인스턴스가 켠 키워드가 통째로 빠진다. 그 배치는
         // 잘못된 셰이더로 그려진다. 한 배치의 구성원은 모두 같은 퍼뮤테이션 해시를 가지므로 아무 구성원이나 맞다.
-        batch._shaderPermutation = shaderPermutationFor( headCandidate._material.get(), headCandidate._instance.get() );
+        batch._shaderPermutation = _materialRegistry.shaderPermutationFor( headCandidate._material.get(), headCandidate._instance.get(), _snapshot );
         batch._materialIndex     = 0;
 
         // 인스턴스마다 자기 (머티리얼, 인스턴스) 원소를 받는다. 합치기가 켜져 있으면 한 배치에 여러 머티리얼이 들어간다.
@@ -1518,7 +1311,7 @@ namespace sw
             if ( _bReuseMaterialElement != SW_FALSE && srcIdx < _listCandidateMaterialElement.size() )
                 gpuInstance._materialIndex = _listCandidateMaterialElement[srcIdx];
             else
-                gpuInstance._materialIndex = assignMaterialElement( candidate._material, candidate._instance, batch._materialGroup );
+                gpuInstance._materialIndex = _materialRegistry.assignMaterialElement( candidate._material, candidate._instance, batch._materialGroup, _snapshot );
             if ( srcIdx < _listCandidateMaterialElement.size() )
                 _listCandidateMaterialElement[srcIdx] = gpuInstance._materialIndex;
             GPUInstanceRun& elementRange = _listBatchElementRange.back();
@@ -1542,103 +1335,5 @@ namespace sw
         vector<GPUMeshBatch>& listByBlend = ( blendMode == RHIBlendMode::Transparent ) ? _snapshot._listTransparentBatch : _snapshot._listOpaqueBatch;
         listByBlend.push_back( batch );
         _snapshot._listAllBatch.push_back( std::move( batch ) );
-    }
-
-    void GPUSceneBuilder::freeUnusedMaterialElements()
-    {
-        // 이번 빌드에서 쓰이지 않은 원소는 바로 지우지 않는다. 아직 GPU 가 읽는 중인 프레임이 있을 수 있다.
-        // 패킷 링 깊이(constant::kRenderFrameQueueDepth)와 같은 지연 기준을 쓴다. 큐에 있는 패킷이 아직 원소를 읽을 수 있다.
-        if ( _buildCounter <= constant::kRenderFrameQueueDepth )
-            return;
-        const uint64 staleBefore = _buildCounter - constant::kRenderFrameQueueDepth;
-
-        const size_t groupCount = MathUtil::min( _snapshot._listMaterialGroup.size(), _listMaterialGroupState.size() );
-        for ( size_t groupIndex = 0; groupIndex < groupCount; ++groupIndex )
-        {
-            GPUMaterialGroup&   group = _snapshot._listMaterialGroup[groupIndex];
-            MaterialGroupState& state = _listMaterialGroupState[groupIndex];
-            for ( uint32 index = 0; index < group._listEntry.size(); ++index )
-            {
-                if ( group._listEntry[index]._material == nullptr )
-                    continue;
-                if ( index < state._listEntryLastUsedBuild.size() && state._listEntryLastUsedBuild[index] >= staleBefore )
-                    continue;
-
-                const GPUMaterialElementKey key{ group._listEntry[index]._material.get(), group._listEntry[index]._instance.get() };
-                state._mapEntryToIndex.erase( key );
-                // 슬롯은 비워 두고 프리리스트로 돌린다. 뒤 원소를 당겨오면 그들의 인덱스가 바뀌어
-                // 이미 인스턴스에 기록된 materialIndex 가 엉뚱한 머티리얼을 가리킨다.
-                group._listEntry[index] = GPUMaterialElement{};
-                state._listFreeEntry.push_back( index );
-                state._bHasLast = SW_FALSE;
-            }
-        }
-    }
-
-    void GPUSceneBuilder::resetMaterialRegistry()
-    {
-        _snapshot._listMaterialGroup.clear();
-        _listMaterialGroupState.clear();
-        _mapShaderPathToGroup.clear();
-        _snapshot._pListShaderPermutation.reset();
-        _mapPermutationToIndex.clear();
-    }
-
-    uint32 GPUSceneBuilder::materialGroupFor( const Material* pMaterial )
-    {
-        if ( pMaterial == nullptr )
-            return kInvalidMaterialGroup;
-        const string& shaderPath = pMaterial->getShaderPath();
-        const auto    it         = _mapShaderPathToGroup.find( shaderPath );
-        if ( it != _mapShaderPathToGroup.end() )
-            return it->second;
-
-        GPUMaterialGroup group{};
-        group._shaderPath = shaderPath;
-        _snapshot._listMaterialGroup.push_back( std::move( group ) );
-        _listMaterialGroupState.emplace_back();
-        const uint32 groupIndex = static_cast<uint32>( _snapshot._listMaterialGroup.size() - 1 );
-        _mapShaderPathToGroup.emplace( shaderPath, groupIndex );
-        return groupIndex;
-    }
-
-    uint32 GPUSceneBuilder::assignMaterialElement( const shared_ptr<Material>& material, const shared_ptr<MaterialInstance>& instance, uint32 groupIndex )
-    {
-        Material* const         pMaterial = material.get();
-        MaterialInstance* const pInstance = instance.get();
-        if ( pMaterial == nullptr || groupIndex >= _snapshot._listMaterialGroup.size() || groupIndex >= _listMaterialGroupState.size() )
-            return 0;
-        GPUMaterialGroup&           group = _snapshot._listMaterialGroup[groupIndex];
-        MaterialGroupState&         state = _listMaterialGroupState[groupIndex];
-        const GPUMaterialElementKey key{ pMaterial, pInstance };
-        // 배치 안의 인스턴스는 같은 원소를 연속으로 조회한다. 포인터 비교 한 번으로 끝낸다.
-        if ( state._bHasLast != SW_FALSE && state._lastKey == key )
-            return state._lastIndex;
-        const auto it = state._mapEntryToIndex.find( key );
-        uint32     elementIndex{ 0 };
-        if ( it != state._mapEntryToIndex.end() )
-        {
-            elementIndex = it->second;
-        }
-        else if ( state._listFreeEntry.empty() == false )
-        {
-            // 회수된 슬롯을 재사용한다. 새 슬롯을 늘리면 버퍼가 단조 증가한다.
-            elementIndex = state._listFreeEntry.back();
-            state._listFreeEntry.pop_back();
-            group._listEntry[elementIndex] = GPUMaterialElement{ material, instance };
-            state._mapEntryToIndex.emplace( key, elementIndex );
-        }
-        else
-        {
-            group._listEntry.push_back( GPUMaterialElement{ material, instance } );
-            state._listEntryLastUsedBuild.push_back( 0 );
-            elementIndex = static_cast<uint32>( group._listEntry.size() - 1 );
-            state._mapEntryToIndex.emplace( key, elementIndex );
-        }
-        state._listEntryLastUsedBuild[elementIndex] = _buildCounter;
-        state._lastKey                              = key;
-        state._lastIndex                            = elementIndex;
-        state._bHasLast                             = SW_TRUE;
-        return elementIndex;
     }
 } // namespace sw

@@ -21,7 +21,7 @@
 
 ### 정렬 키와 그리는 순서
 
-투명 큐는 **정렬 키, 깊이, 후보 번호** 순서로 완전히 정렬해 그립니다(`GPUSceneBuilder::isDrawnBefore`).
+투명 큐는 **정렬 키, 깊이, 후보 번호** 순서로 완전히 정렬해 그립니다(`GPUTransparentSorter::isDrawnBefore`).
 
 - 키는 `(레이어 순번 << 16) | (레이어 안 순서 + 0x8000)` 입니다. 그래서 레이어가 순서보다 우선합니다. 유니티에서 Sorting Layer가 Order in Layer보다 우선하는 것과 같습니다.
 - 키 0은 "Default 레이어, 순서 0"을 뜻하는 예약값입니다. `MeshComponent` 는 정렬 테이블을 읽지 않고 0을 가지며, 빌더가 테이블의 기본 키로 바꿉니다.

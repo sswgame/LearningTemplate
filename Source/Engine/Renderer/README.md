@@ -116,6 +116,8 @@ GPU 타임스탬프 슬롯(`FrameRendererUtil::kGPUTimedPassCapacity`)보다 패
 세 타입이 한 줄로 이어지고, 두 스레드는 가운데 타입으로만 만납니다.
 
 - `GPUSceneBuilder`(게임 스레드)는 `MeshComponent` 를 훑어 인스턴스 배열, 배치, 머티리얼 원소 테이블을 만듭니다. 다시 모을지 판단하는 캐시와 머티리얼 원소의 영속 ID가 여기 있습니다. GPU 핸들은 하나도 없습니다.
+  일의 일부는 값 멤버 클래스가 맡고 빌더가 직접 부릅니다(가상 호출 없음). `GPUMaterialRegistry` 는 머티리얼 그룹, 원소의 영속 인덱스, 퍼뮤테이션 표와 회수 시계를,
+  `GPUTransparentSorter` 는 투명 순서 규칙, 정렬, 추가 뷰 순번 테이블을, `GPUSkinPaletteCollector` 는 스킨 팔레트 옮기기를 맡습니다. 후보(`DrawCandidate`)를 읽는 일은 빌더에 남습니다.
 - `GPUSceneSnapshot` 은 게임 스레드에서 렌더 스레드로 옮겨지는 값의 전부입니다. 여기 없는 값은 옮겨질 수 없습니다.
 - `GPUScene`(렌더 스레드)은 스냅샷을 받아 인스턴스 구조체 버퍼, 배치 테이블, 간접 인자, 머티리얼 버퍼로 올립니다. 씬을 볼 수 없습니다.
 
@@ -129,7 +131,7 @@ GPU 풀은 렌더 스레드가 소유합니다.
   컴퓨트 셰이더(`meshskin.hlsl`)는 디스패치 하나로 모든 정점을 처리하고, 정점마다 이분 탐색으로 자기 인스턴스를 찾습니다.
 - `GPUVertexAnimationPool` 은 정점 애니메이션 텍스처(VAT)가 있는 메시(`Mesh::setVertexAnimation`)의 테이블을 버퍼 하나에 이어 붙입니다. 테이블은 베이크한 뒤 변하지 않으므로 집합이 바뀔 때만 올립니다.
 
-스킨 팔레트는 본마다 행렬 하나이고, 게임 스레드의 `AnimationSystem` 이 만듭니다. `GPUSceneBuilder::collectSkinPalettes` 가 매 프레임 스냅샷으로 옮기고,
+스킨 팔레트는 본마다 행렬 하나이고, 게임 스레드의 `AnimationSystem` 이 만듭니다. `GPUSkinPaletteCollector::collect` 가 매 프레임 스냅샷으로 옮기고,
 렌더 스레드의 `GPUMeshMorphPool::uploadSkinPalettes` 가 올립니다. 군중 배치와 팔레트를 나눠 쓰는 유닛은 건너뛰고 배치가 한 번 싣습니다.
 스킨드 메시의 모프 타깃은 레스트 버퍼 뒤에 원본마다 한 번 두고, 컴퓨트가 스키닝 **앞에** 더합니다. 스킨이 없는 메시의 모프는 이 경로를 타지 않습니다.
 
@@ -432,7 +434,7 @@ Vulkan PSO는 셰이더가 읽는 정점 속성만 바인딩합니다.
 
 ### 투명 순서
 
-**투명 순서의 기준은 CPU의 `GPUSceneBuilder::sortTransparent` 하나입니다**(정렬 레이어 키, 깊이, 후보 번호 순). GPU의 `instancesort.hlsl` 은 압축된 목록을 인스턴스 번호 오름차순으로 되돌릴 뿐입니다.
+**투명 순서의 기준은 CPU의 `GPUSceneBuilder::sortTransparent` 하나입니다**(정렬 레이어 키, 깊이, 후보 번호 순, 비교 규칙은 `GPUTransparentSorter::isDrawnBefore`). GPU의 `instancesort.hlsl` 은 압축된 목록을 인스턴스 번호 오름차순으로 되돌릴 뿐입니다.
 배치 안의 인스턴스가 CPU 순서로 놓이기 때문입니다. GPU에서 깊이를 다시 측정하면 정렬 레이어와 직교 카메라의 시선 축을 모르므로, 같은 깊이를 불안정하게 나눠 CPU와 다른 순서가 나옵니다.
 깊이는 직교 카메라에서 시선 축 위의 위치, 원근 카메라에서 거리입니다(`Render2DSettings::computeTransparentSortAxis`, [2D 문서](../Graphics/2D/README.md)).
 
