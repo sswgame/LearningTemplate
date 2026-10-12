@@ -69,7 +69,7 @@ echo $LASTEXITCODE
 - 셰이더 쿠킹은 `ShaderCookDriver::cookAllShaders` 가 합니다.
 - 씬 쿠킹은 씬과 프리팹 외에 GUID 레지스트리, VAT, 내비 표면이 있는 씬의 `.navmesh` 도 씁니다. 입력은 팩을 마운트하지 않은 소스 트리(`ContentSource::SourceTree`)입니다.
   모든 타입이 등록된 `ModuleTypes` 단계 뒤에만 쿠킹하고, 모르는 타입의 컴포넌트(`MissingComponent`)가 있는 씬은 실패로 셉니다.
-- 임포트는 App이 `EditorModuleHost::importAssetsWithEditorModule` 로 에디터 모듈을 인스턴스 없이 로드해서 부릅니다. 에디터가 없는 Shipping 빌드에서는 실패합니다.
+- 임포트는 App이 `EditorModuleHost::importAssetsWithEditorModule` 로 에디터 모듈을 인스턴스 없이 로드해서 부릅니다(구현은 `EditorModuleHostHeadless.cpp`). 에디터가 없는 Shipping 빌드에서는 실패합니다.
 - 로컬라이제이션 도구(`--gather-text` · `--check-text` · `--import-po` · `--export-po`)도 같은 길입니다(`EditorModuleHost::runLocalizationWithEditorModule`, 진입점 `runEditorLocalizationTask`).
 
 ## 작동 원리
@@ -95,10 +95,10 @@ echo $LASTEXITCODE
 | `FixedTimestep::advance` | 이번 프레임의 델타와 고정 스텝 수를 먼저 확정합니다 |
 | `UserSettingsHost::tick` | 화면 설정 변경은 OS 리사이즈처럼 프레임 시작 전에 합니다 |
 | `EngineLoop::beginFrame`, `ModuleHost::beginFrame` | 에디터의 Play 상태를 한 번 읽어 고정합니다 |
-| `pollReloadHotkeys`, `updateDevConsole` | 개발 빌드의 단축키와 개발 콘솔을 처리합니다 |
+| `updateShellActions`, `ModuleReloadDriver::pollReloadTriggers`, `DevConsoleHost::update` | 개발 빌드의 셸 액션을 갱신한 뒤 리로드 단축키와 개발 콘솔이 읽습니다 |
 | `fixedUpdateGame` × N, `updateGame` | 고정된 Play 상태를 읽으므로 모든 스텝이 같은 답을 봅니다 |
 | `ModuleHost::updateEditorUI` | 에디터가 입력을 처리한 뒤에 게임 뷰 · 씬 뷰 RT(보이는 패널만)와 틱 여부를 정합니다 |
-| `LiveReloadManager::update` | 모듈 교체는 틱 직전에 합니다 |
+| `ModuleReloadDriver::update` | 모듈 교체(`LiveReloadManager::update`)는 틱 직전에 합니다 |
 | `EngineLoop::tick`, `ModuleHost::endEditorFrame` | 고정한 프레임 상태(`ModuleFrameState`)를 그대로 넘깁니다 |
 | `RHIBackendSwitcher::applyIfPending`, `EngineLoop::endFrame` | 그래픽 API 교체는 프레임 경계에서만 합니다 |
 
@@ -121,10 +121,10 @@ echo $LASTEXITCODE
 ### 리로드 단축키와 개발 콘솔
 
 리로드 단축키는 `EngineLoop` 가 가진 셸 전용 입력 맵의 `Debug` 레이어(`Resource/engine/input/default.input.xml`)로 받습니다.
-Ctrl+F8은 셰이더 리로드이고 엔진이 처리합니다. Ctrl+F6은 에디터, Ctrl+F7은 게임 모듈 리로드이고 `App::pollReloadHotkeys` 가 `EngineLoop::wasDebugActionTriggered` 로 확인합니다.
-이 단축키는 개발 빌드 전용입니다. Shipping에는 리로드할 모듈이 없어서 `App::pollReloadHotkeys` 가 비어 있습니다.
+Ctrl+F8은 셰이더 리로드이고 엔진이 처리합니다. Ctrl+F6은 에디터, Ctrl+F7은 게임 모듈 리로드이고 `ModuleReloadDriver::pollReloadTriggers` 가 `EngineLoop::wasDebugActionTriggered` 로 확인합니다.
+이 단축키는 개발 빌드 전용입니다. Shipping에는 리로드할 모듈이 없어서 `ModuleReloadDriver` 의 함수가 모두 비어 있습니다.
 
-에디터 없이 실행하면 `~` 키로 게임 창 위에 개발 콘솔(`Source/Engine/Input/DevConsoleController.h`)을 엽니다.
+에디터 없이 실행하면 `~` 키로 게임 창 위에 개발 콘솔(`Source/Engine/Input/DevConsoleController.h`)을 엽니다. App 쪽 수명과 표준 입력 채널은 `DevConsoleHost` 가 맡습니다.
 명령이나 `gv_이름 [값]` 을 입력하고 Enter를 누릅니다. Tab은 자동 완성, ↑와 ↓는 입력 기록, Esc나 `~` 는 닫기입니다.
 콘솔이 열려 있는 동안은 콘솔이 `InputManager` 의 키보드 포커스를 가져가므로 게임은 키 입력을 받지 않습니다. 창 메시지를 가로채지는 않으므로 입력 재생과 테스트의 입력 주입도 콘솔에 도달합니다.
 에디터가 있으면 Output Log 창의 입력 줄이 같은 콘솔입니다.
@@ -165,7 +165,7 @@ Ctrl+F8은 셰이더 리로드이고 엔진이 처리합니다. Ctrl+F6은 에�
 **헤드리스 작업을 하나 더할 때**
 
 1. 인자를 `Source/Core/Predefined/ArgumentList.xxx` 에 한 줄 추가합니다.
-2. 엔진이 할 수 있는 작업이면 엔진의 `Headless` 단계에서 처리합니다. 에디터 코드가 필요하거나 엔진 서비스 없이 도는 작업이면 `App.cpp` 의 헤드리스 작업 표(`kArrHeadlessTask`)에 한 줄 더합니다.
+2. 엔진이 할 수 있는 작업이면 엔진의 `Headless` 단계에서 처리합니다. 에디터 코드가 필요하거나 엔진 서비스 없이 도는 작업이면 `AppHeadlessTasks.cpp` 의 헤드리스 작업 표(`kArrHeadlessTask`)에 한 줄 더합니다.
    에디터 임포트는 `EditorImportKind` 에 종류를 더하고 `runEditorImport<종류, 임포트 인자, 대조 인자>` 줄을 씁니다.
 3. 작업이 `Failed` 를 돌려주면 `App::initialize` 가 false를 반환해 종료 코드로 알립니다. `Finished` 는 그 작업만 하고 성공으로 끝냅니다(크래시 보고).
 4. `py -3 Scripts/generate/GenerateConfigReference.py` 로 인자 문서를 다시 생성합니다.
@@ -190,6 +190,13 @@ Ctrl+F8은 셰이더 리로드이고 엔진이 처리합니다. Ctrl+F6은 에�
 
 | 파일 | 내용 |
 |---|---|
-| `App.cpp` | 앱 수명, 프레임 순서, 헤드리스 작업 표 |
+| `App.cpp` | 앱 수명, 창, 프레임 순서, 콜백 연결 |
+| `AppHeadlessTasks.cpp` | App 이 맡는 헤드리스 작업 표(크래시 보고, 로컬라이제이션, 원본 임포트)와 종료 코드 규칙 |
+| `AppAssertDialog.cpp` | 대화형 에디터 실행의 단언 대화상자(Windows Debug)와 탐침 `App.AssertDialogInstalled` |
+| `AppAutomation.cpp` | 자동화 · 개발 명령에 내주는 리로드 매니저 창구 |
+| `ModuleReloadDriver.cpp` | 핫 리로드 매니저 수명, 리로드 단축키 · `-gv_reloadGameAtFrame`, 틱 직전 교체 |
+| `DevConsoleHost.cpp` | 게임 창 개발 콘솔과 표준 입력 명령 채널(`-gv_devConsoleExec` · `-gv_standardInputCommands`) |
+| `EditorModuleHost.cpp` | 에디터 인스턴스 · 리로드 콜백 · UI · Present 훅 · RHI 교체 뒤 재초기화 |
+| `EditorModuleHostHeadless.cpp` | 인스턴스 없이 에디터 모듈을 올려 부르는 임포트 · 로컬라이제이션 |
 | `RHIBackendSwitcher.cpp` | 프레임 경계의 그래픽 API 교체 |
 | `UserSettingsHost.cpp` | 사용자 설정의 화면 요청 적용 |

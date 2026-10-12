@@ -2,52 +2,35 @@
 
 #include "App/App.h"
 
-#include "App/AppAutomation.h"
+#include "App/AppAssertDialog.h"
+#include "App/AppHeadlessTasks.h"
 #include "App/EditorModuleHost.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
-#include "Core/Common/PlatformOsHeaders.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
-#include "Core/LogSink/ConsoleLogOutput.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Process/StandardInputReader.h"
-#include "Core/String/StringBuilder.h"
-#include "Core/String/string_splitter.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Automation/AutomationSession.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
-#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
-#include "Engine/Input/DevConsoleController.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/RenderFramePacket.h"
 #include "Engine/Renderer/RenderThread.h"
-#include "Engine/Scene/SceneManager.h"
-#include "Engine/Telemetry/CrashReportService.h"
-#include "Engine/Telemetry/CrashReportUploader.h"
 #include "Engine/Utility/GameTimeScale.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
 #include "Engine/Window/SplashWindow.h"
 
-#include "ModuleHost/LiveReloadManager.h"
 #include "ModuleHost/ModuleCatalogLoader.h"
-
-#include "RuntimeAPI/ABI/EditorAPI.h"
-
-#include "sw/config/ConfigConstants.h"
 
 namespace sw
 {
@@ -60,212 +43,24 @@ namespace sw
             static constexpr uint32 kEditorMinClientWidth  = 960;
             static constexpr uint32 kEditorMinClientHeight = 540;
         };
-
-        /** @brief 대화형 에디터 실행의 단언 대화상자입니다(Windows Debug). 언리얼의 ensure 대화상자에 해당합니다. */
-        struct AppAssertDialogInternal
-        {
-#if defined( SW_DEBUG ) && defined( SW_PLATFORM_WINDOWS )
-            /** @brief 이 전역 변수가 0 이 아니거나 비어 있지 않으면 자동 실행입니다(프로파일, 에디터 자체 테스트). 이름으로 읽으며, App 은 모듈을 모릅니다. */
-            static constexpr const utf8* kArrAutomationVariable[] = { "gv_profileFrames", "gv_profileSeconds", "gv_editorSelfTest" };
-
-            /** @brief 사람이 지켜보지 않는 실행이면 true 를 반환합니다(-unattended, 시나리오, 프로파일, 자체 테스트). */
-            static bool isAutomatedRun( const CommandLineManager& commandLine )
-            {
-                if ( commandLine.isArgumentProvided( CommandLineArgument::UNATTENDED ) || commandLine.isArgumentProvided( CommandLineArgument::SCENARIO ) )
-                    return true;
-                for ( const utf8* pName : kArrAutomationVariable )
-                {
-                    const GlobalVariableInfo* pVariable = engine::getGlobalVariableManager().findVariable( pName );
-                    if ( pVariable == nullptr )
-                        continue;
-                    const bool bSet = pVariable->_type == GlobalVariableType::String ? pVariable->getValueAsString().empty() == false
-                                                                                     : pVariable->getValueAsFloat() != 0.0f;
-                    if ( bSet )
-                        return true;
-                }
-                return false;
-            }
-
-            /** @brief 단언을 사용자에게 묻습니다. 디버거가 붙어 있으면 묻지 않고 멈춥니다. 개발자가 그 위치를 직접 보려는 것이기 때문입니다. */
-            static internal::AssertAction showAssertDialog( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line )
-            {
-                if ( IsDebuggerPresent() != FALSE )
-                    return internal::AssertAction::Break;
-                StringBuilder<constant::kMaxBuffer8192> text;
-                text.appendFormat( "Assertion failed: %s\n%s\n\n%s(%d)\n\n"
-                                   "Continue  - ignore this time\nTry Again - break into the debugger (or write a crash report)\nCancel    - ignore this assert for the rest of the run",
-                                   pExpression, pMessage != nullptr ? pMessage : "", pFile, line );
-                const wstring wideText = StringUtil::utf8ToUtf16( text.c_str() );
-                const int32   result   = MessageBoxW( nullptr, wideText.c_str(), L"SW Engine - Assertion", MB_CANCELTRYCONTINUE | MB_ICONERROR | MB_TOPMOST | MB_SETFOREGROUND );
-                switch ( result )
-                {
-                    case IDCONTINUE:
-                        return internal::AssertAction::IgnoreOnce;
-                    case IDCANCEL:
-                        return internal::AssertAction::IgnoreAlways;
-                    default:
-                        return internal::AssertAction::Break;
-                }
-            }
-#endif
-
-            /** @brief 프로브 `App.AssertDialogInstalled` 입니다. 대화상자가 설치돼 있으면 1 입니다. */
-            [[nodiscard]] static bool readAssertDialogInstalled( const GameObjectManager* /*pManager*/, float64& outValue )
-            {
-#if defined( SW_DEBUG )
-                outValue = internal::hasAssertDialog() ? 1.0 : 0.0;
-#else
-                outValue = 0.0;
-#endif
-                return true;
-            }
-        };
-
-        /**
-         * @brief App 이 맡는 헤드리스 작업 테이블입니다. 엔진의 `Headless` 단계가 하지 못하는 일(에디터 모듈 작업, 크래시 보고)만 여기에 둡니다.
-         * @note 에디터 모듈 작업(로컬라이제이션, 임포트)의 인자는 엔진의 `Headless` 단계도 알아야 합니다. 창과 RHI 없이 시작한 뒤 여기로 넘깁니다.
-         * @details 작업 하나가 `kArrHeadlessTask` 의 항목 하나입니다. 위에서부터 차례로 실행하며, 인자가 없는 작업은 건너뜁니다.
-         *          종료 코드 규칙은 다음과 같습니다. 실패한 작업이 하나라도 있으면 `App::initialize` 가 false 를 반환하고(종료 코드가 0 이 아님),
-         *          `Finished` 를 반환한 작업은 뒤의 항목을 보지 않고 성공으로 끝냅니다.
-         */
-        struct AppHeadlessInternal
-        {
-            /** @brief 작업 하나의 결과입니다. */
-            enum class TaskResult : uint8
-            {
-                NotRequested, ///< 인자가 없어 실행하지 않았다.
-                Succeeded,    ///< 실행했고 성공했다. 다음 항목으로 넘어간다.
-                Failed,       ///< 실행했고 실패했다. 다음 항목도 실행하고, 마지막에 실패로 반환한다.
-                Finished,     ///< 이 작업만 하고 끝낸다(성공). 뒤의 항목은 보지 않는다.
-            };
-            using TaskFunction = TaskResult ( * )( const CommandLineManager& commandLine );
-
-            /**
-             * @brief 크래시 보고 프로세스(`-crash-reporter=<폴더>`)입니다. 엔진은 명령줄 처리까지만 시작한 상태이며(서비스와 게임 모듈이 없습니다) 번들만 보내고 끝냅니다.
-             * @note 이 저장소는 네트워크 API 를 포함하지 않습니다. 게임이 IHTTPClient 를 구현하면 여기서 HTTPCrashReportUploader 를 씁니다.
-             */
-            static TaskResult runCrashReporter( const CommandLineManager& commandLine )
-            {
-                string reporterFolder;
-                if ( commandLine.getArgument( CommandLineArgument::CRASH_REPORTER, reporterFolder ) == false || reporterFolder.empty() )
-                    return TaskResult::NotRequested;
-                [[maybe_unused]] const uint32 sentCount = CrashReportService::runReporter( reporterFolder, NullCrashReportUploader::get() );
-                SW_LOG_INFO( "[CrashReporter] %# report(s) sent from '%#'", sentCount, reporterFolder.c_str() );
-                return TaskResult::Finished;
-            }
-
-            /**
-             * @brief 원본 임포트(`--import-<종류>`) 또는 대조만 하는 실행(`--check-<종류>`)입니다. 에디터 모듈의 일이라 App 이 모듈을 로드해 부릅니다.
-             * @tparam kKind 임포트 종류. @tparam kImportArgument 임포트 인자. @tparam kCheckArgument 대조만 하는 인자.
-             */
-            template <EditorImportKind kKind, CommandLineArgument kImportArgument, CommandLineArgument kCheckArgument>
-            static TaskResult runEditorImport( const CommandLineManager& commandLine )
-            {
-                bool bImport = false;
-                bool bCheck  = false;
-                commandLine.getArgument( kImportArgument, bImport );
-                commandLine.getArgument( kCheckArgument, bCheck );
-                if ( bImport == false && bCheck == false )
-                    return TaskResult::NotRequested;
-                return EditorModuleHost::importAssetsWithEditorModule( kKind, bCheck ) ? TaskResult::Succeeded : TaskResult::Failed;
-            }
-
-            /**
-             * @brief 로컬라이제이션 도구(`--gather-text`, `--check-text`, `--import-po=<파일>`, `--export-po`, 프로젝트는 `-loc-project`)입니다.
-             * @details 에디터 모듈의 일이라 임포트와 같은 경로로 부릅니다. 번역을 수집한 직후 교환할 수 있도록, 한 번의 실행에서 수집, 가져오기, 내보내기 순서로 처리합니다.
-             */
-            static TaskResult runLocalizationTools( const CommandLineManager& commandLine )
-            {
-                bool   bGatherText = false;
-                bool   bCheckText  = false;
-                bool   bExportPo   = false;
-                string importPoPath;
-                string projectPath;
-                commandLine.getArgument( CommandLineArgument::GATHER_TEXT, bGatherText );
-                commandLine.getArgument( CommandLineArgument::CHECK_TEXT, bCheckText );
-                commandLine.getArgument( CommandLineArgument::EXPORT_PO, bExportPo );
-                commandLine.getArgument( CommandLineArgument::IMPORT_PO, importPoPath );
-                commandLine.getArgument( CommandLineArgument::LOC_PROJECT, projectPath );
-                if ( bGatherText == false && bCheckText == false && bExportPo == false && importPoPath.empty() )
-                    return TaskResult::NotRequested;
-
-                bool bSucceeded = true;
-                if ( bGatherText || bCheckText )
-                {
-                    const EditorLocalizationTask gatherTask = bCheckText ? EditorLocalizationTask::CheckText : EditorLocalizationTask::GatherText;
-                    bSucceeded                              = EditorModuleHost::runLocalizationWithEditorModule( gatherTask, {}, projectPath ) && bSucceeded;
-                }
-                if ( importPoPath.empty() == false )
-                    bSucceeded = EditorModuleHost::runLocalizationWithEditorModule( EditorLocalizationTask::ImportPo, importPoPath, projectPath ) && bSucceeded;
-                if ( bExportPo )
-                    bSucceeded = EditorModuleHost::runLocalizationWithEditorModule( EditorLocalizationTask::ExportPo, {}, projectPath ) && bSucceeded;
-                return bSucceeded ? TaskResult::Succeeded : TaskResult::Failed;
-            }
-
-            /** @brief 헤드리스 작업 테이블입니다. 새 작업은 인자를 `ArgumentList.xxx` 에 추가하고 여기에 항목 하나를 더합니다. */
-            static constexpr TaskFunction kArrHeadlessTask[] = {
-                &runCrashReporter,
-                &runLocalizationTools,
-                &runEditorImport<EditorImportKind::Texture, CommandLineArgument::IMPORT_TEXTURES, CommandLineArgument::CHECK_TEXTURES>,
-                &runEditorImport<EditorImportKind::Model, CommandLineArgument::IMPORT_MODELS, CommandLineArgument::CHECK_MODELS>,
-                &runEditorImport<EditorImportKind::Heightfield, CommandLineArgument::IMPORT_HEIGHTFIELDS, CommandLineArgument::CHECK_HEIGHTFIELDS>,
-            };
-
-            /** @brief 테이블을 차례로 실행합니다. 실패한 작업이 하나라도 있으면 false 를 반환합니다(명령줄이 없으면 아무것도 실행하지 않고 true). */
-            static bool runHeadlessTasks( const CommandLineManager* pCommandLine )
-            {
-                if ( pCommandLine == nullptr )
-                    return true;
-                bool bSucceeded = true;
-                for ( const TaskFunction pfnTask : kArrHeadlessTask )
-                {
-                    const TaskResult result = pfnTask( *pCommandLine );
-                    if ( result == TaskResult::Finished )
-                        break;
-                    if ( result == TaskResult::Failed )
-                        bSucceeded = false;
-                }
-                return bSucceeded;
-            }
-        };
     } // namespace
 
-#if !defined( SW_SHIPPING )
-    /**
-     * @brief `-gv_reloadGameAtFrame=N`: N 번째 프레임에 게임 모듈(SWGame)의 핫 리로드를 한 번 요청합니다(리로드 단축키와 같은 경로).
-     * @details 디렉터의 시뮬레이션이 리로드 뒤에도 이어지는지 손대지 않고 확인하는 스위치입니다. 로그의 `[ReloadProbe]` 앞뒤 상태 줄을 비교합니다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_reloadGameAtFrame, 0, "이 프레임에 게임 모듈 핫 리로드를 요청한다 (0=사용 안 함)" );
-#endif
     /**
      * @brief `-gv_fixedFrameDelta=<초>`: 0 보다 크면 프레임마다 실제 시계 대신 그 시간을 흘립니다(자동화 시나리오, 픽셀 비교, 재현). 0 이면 실시간입니다.
      * @details 고정 스텝(물리, fixedUpdate)도 이 시간으로 나뉩니다. 1/60 이면 프레임마다 정확히 한 스텝입니다. 시나리오(`-scenario`)는 이 값을
      *          시나리오의 `fixedDelta` 로 설정합니다.
      */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( float32, gv_fixedFrameDelta, 0.0f, "프레임마다 흘릴 고정 시간(초, 0=실시간) — 결정적 실행" );
-
-    SW_AUTOMATION_PROBE( appAssertDialogInstalled, "App.AssertDialogInstalled", "1 when App installed the interactive assert dialog (never in automated runs)",
-                         &AppAssertDialogInternal::readAssertDialogInstalled );
 } // namespace sw
 
 namespace sw
 {
     SW_LOG_CALLER( "App" );
 
-#if !defined( SW_SHIPPING )
-    /** @brief `-gv_devConsoleExec="timescale 0.5;gv_viewMode 2"`: 시작 씬이 열린 뒤 개발 콘솔에서 실행할 명령입니다(`;` 로 구분). 자동화와 재현에 씁니다. */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_devConsoleExec, "", "시작 씬이 열린 뒤 개발 콘솔로 돌릴 명령 (; 로 나눔)" );
-    /** @brief `-gv_devConsoleOpen=1`: 에디터 없이 실행할 때 게임 창의 개발 콘솔을 연 채로 시작합니다(화면 확인용). */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_devConsoleOpen, 0, "게임 창 개발 콘솔을 연 채로 시작 (1=열기)" );
-    /**
-     * @brief `-gv_standardInputCommands=1`: 표준 입력의 각 줄을 명령으로 받습니다. `quit` 과 `stop` 은 정상 종료이고, 나머지는 개발 콘솔 명령입니다.
-     * @details 부모 프로세스(에디터의 멀티 프로세스 재생)가 클라이언트를 띄울 때 켠다. 켜면 로그를 줄마다 내보내므로 부모가 줄 단위로 바로 모을 수 있다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_standardInputCommands, 0, "표준 입력의 줄을 명령으로 받는다 (quit=종료, 1=켜기)" );
-#endif
-
     App::App()
         : _engineLoop{}
+        , _moduleReload{}
+        , _devConsole{}
         , _moduleHost{ nullptr }
         , _window{ nullptr }
         , _automationSession{ nullptr }
@@ -275,7 +70,6 @@ namespace sw
         , _sceneViewCameraProvider{}
         , _initializeStartMicro{ 0 }
         , _bEnableEditor{ SW_FALSE }
-        , _bDevConsoleExecPending{ SW_FALSE }
         , _bQuitAfterInitialize{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -304,8 +98,8 @@ namespace sw
         {
             if ( _engineLoop.didHeadlessTaskFail() )
                 return false;
-            // App 이 맡는 헤드리스 작업(크래시 보고, 로컬라이제이션 도구, 원본 임포트)은 `AppHeadlessInternal::kArrHeadlessTask` 테이블이 정한다.
-            return AppHeadlessInternal::runHeadlessTasks( _engineLoop.getCommandLineManager() );
+            // App 이 맡는 헤드리스 작업(크래시 보고, 로컬라이제이션 도구, 원본 임포트)은 `AppHeadlessTasks` 의 표가 정한다.
+            return AppHeadlessTasks::runAll( _engineLoop.getCommandLineManager() );
         }
 
         SplashWindow splash;
@@ -414,15 +208,6 @@ namespace sw
         return true;
     }
 
-    LiveReloadManager* App::getLiveReloadManager() const
-    {
-#if defined( SW_SHIPPING )
-        return nullptr;
-#else
-        return _liveReloadManager.get();
-#endif
-    }
-
     bool App::loadModuleImages()
     {
         // 모듈 호스트, 감시자, 앱 설정은 엔진 기반의 일이다. 모듈 본체의 로드는 ModuleHost 가 에디터와 게임 태그를 걸어 처리한다.
@@ -434,26 +219,18 @@ namespace sw
             return false;
 
         // 모듈 감시자는 모듈을 로드하는 ModuleHost 보다 먼저 있어야 한다. ModuleHost 가 이 포인터로 모듈을 로드하고 리로드 콜백을 등록한다.
-        _liveReloadManager = make_unique<LiveReloadManager>();
-        AppAutomation::bindLiveReloadManager( _liveReloadManager.get() ); // 개발 명령 `module.reload` · 탐침 `Module.*` 가 읽는다
-        // 모듈 DLL 을 언로드할 수 있는 곳은 "씬은 사라졌고 서비스는 아직 있는" 좁은 구간뿐이다. 엔진이 제공하는 훅에 등록한다.
-        _engineLoop.setOnScenesReleased( SW_DELEGATE_LAMBDA( Delegate<void()>, [this]()
-        {
-            AppAutomation::bindLiveReloadManager( nullptr );
-            if ( _liveReloadManager != nullptr )
-                _liveReloadManager->shutdown();
-        } ) );
+        _moduleReload.initialize( _engineLoop );
 #endif
 
         _moduleHost = make_unique<EditorModuleHost>();
-        return _moduleHost->loadModuleImages( getLiveReloadManager(), _moduleCatalog, _moduleResolution );
+        return _moduleHost->loadModuleImages( _moduleReload.getLiveReloadManager(), _moduleCatalog, _moduleResolution );
     }
 
     bool App::startModules()
     {
         if ( _moduleHost == nullptr )
             _moduleHost = make_unique<EditorModuleHost>();
-        if ( _moduleHost->initialize( getLiveReloadManager(),
+        if ( _moduleHost->initialize( _moduleReload.getLiveReloadManager(),
                                       _engineLoop.getRHI(),
                                       _window.get(),
                                       _engineLoop.getRenderThread(),
@@ -516,12 +293,10 @@ namespace sw
             _sceneViewCameraProvider = SW_DELEGATE_METHOD( ViewCameraProviderDelegate, &App::getSceneViewCamera, this );
             // 에디터 창은 패널 배치가 겹치는 크기 아래로 줄이지 않는다(언리얼 메인 프레임과 유니티 에디터 창도 최소 크기를 둔다).
             _window->setMinimumClientSize( AppWindowInternal::kEditorMinClientWidth, AppWindowInternal::kEditorMinClientHeight );
-#if defined( SW_DEBUG ) && defined( SW_PLATFORM_WINDOWS )
-            // 대화형 에디터 실행에서만 단언을 묻는다. 단언 한 번에 저장하지 않은 편집을 잃지 않게 하기 위해서다. 자동 실행과 테스트는 기존처럼 멈춘다.
+            // 대화형 에디터 실행에서만 단언을 묻는다(Windows Debug). 자동 실행과 테스트는 기존처럼 멈춘다.
             const CommandLineManager* pCommandLine = _engineLoop.getCommandLineManager();
-            if ( pCommandLine != nullptr && AppAssertDialogInternal::isAutomatedRun( *pCommandLine ) == false )
-                internal::setAssertDialog( &AppAssertDialogInternal::showAssertDialog );
-#endif
+            if ( pCommandLine != nullptr )
+                AppAssertDialog::installForInteractiveRun( *pCommandLine );
         }
 
         _backendSwap.initialize( &_engineLoop, _moduleHost.get(), _bEnableEditor == SW_TRUE );
@@ -550,13 +325,8 @@ namespace sw
             }
         }
 
-#if !defined( SW_SHIPPING )
-        // 콘솔은 입력 관리자에 글자 콜백을 등록하고 키보드 포커스를 잡는다. 따라서 엔진(입력 관리자)보다 먼저 종료한다. 콘솔 창은 게임 창이 소유한 팝업이라
-        // 게임 창보다도 먼저 종료한다.
-        _devConsoleController.reset();
-        _standardInput.reset();                             // 읽기 스레드를 멈추고 기다린다.
-        vector<string>{}.swap( _listStandardInputCommand ); // 엔진 종료의 누수 보고 전에 해제한다(기동 뒤에 잡은 용량).
-#endif
+        // 콘솔은 엔진(입력 관리자)과 게임 창보다 먼저 내린다(`DevConsoleHost::shutdown`).
+        _devConsole.shutdown();
         // 창은 엔진(RHI) 뒤에 파괴한다. 기동 뒤에 바꾼 제목(에디터)의 사본은 엔진 종료의 누수 보고 전에 해제한다.
         if ( _window != nullptr )
             _window->releaseTitleStorage();
@@ -591,15 +361,13 @@ namespace sw
         SW_LOG_INFO( "Entering App Main Loop (Thin Launcher)... startup %# ms", startupMicro / 1000 );
 
         _fixedTimestep.start();
-        startDevConsole();
+        _devConsole.initialize( _window.get(), _bEnableEditor == SW_TRUE );
 
         while ( _window->processMessages() )
         {
-#if !defined( SW_SHIPPING )
-            runPendingDevConsoleExec();
-#endif
+            _devConsole.runPendingExec();
             // 프로파일 실행(-gv_profileFrames=N)과 자동화 시나리오(-scenario)는 스스로 끝난다(종료 코드는 `getExitCode`). 부모 프로세스는 표준 입력의 quit 으로 끝낸다.
-            if ( _engineLoop.isQuitRequested() || pollStandardInputCommands() )
+            if ( _engineLoop.isQuitRequested() || _devConsole.pollStandardInputCommands() )
             {
                 _window->requestClose();
                 break;
@@ -616,8 +384,12 @@ namespace sw
             // 모든 단계가 같은 답을 본다.
             _moduleHost->beginFrame();
 
-            pollReloadHotkeys( frameTime._deltaTime );
-            updateDevConsole();
+            // 셸 액션(리로드 단축키 · 개발 콘솔 키)을 이번 프레임 것으로 갱신한 뒤 둘이 읽는다. Shipping 에는 둘 다 없어 셸 InputMap 도 로드하지 않는다.
+#if !defined( SW_SHIPPING )
+            _engineLoop.updateShellActions( frameTime._deltaTime );
+#endif
+            _moduleReload.pollReloadTriggers( _engineLoop, _bEnableEditor == SW_TRUE );
+            _devConsole.update( _engineLoop.getShellInputMap() );
 
             // **게임 모듈의 시간도 테이블에 올린다.** 이 셋이 계측 밖이면 "frame breakdown" 테이블에 게임 코드가 쓰는 시간이 한 줄도 없어
             // `GT.Frame` 만 보고 "프레임의 전부"라고 읽게 된다.
@@ -644,10 +416,7 @@ namespace sw
             // 조회 자체를 tick 안으로 넘긴다.
             //
             // 모듈 교체는 **틱 직전**(게임 업데이트 뒤, 씬 틱 앞)에 한다. 여기서 DLL 이 바뀌고 인스턴스가 새로 만들어지기 때문이다.
-#if !defined( SW_SHIPPING )
-            if ( _liveReloadManager != nullptr )
-                _liveReloadManager->update();
-#endif
+            _moduleReload.update();
 
             const ModuleFrameState& frameState = _moduleHost->getFrameState();
             _engineLoop.tick( frameTime._deltaTime, frameState._views, _sceneViewCameraProvider, frameState._bTickScene == SW_TRUE );
@@ -670,32 +439,6 @@ namespace sw
     int32 App::getExitCode() const
     {
         return _engineLoop.getExitCode();
-    }
-
-    void App::pollReloadHotkeys( [[maybe_unused]] float32 deltaTime )
-    {
-#if !defined( SW_SHIPPING )
-        _engineLoop.updateShellActions( deltaTime );
-
-        // 모듈을 다시 로드하는 장치는 여기(App)에 있다. Engine 에는 "이 액션이 눌렸나"만 묻는다.
-        if ( _engineLoop.wasDebugActionTriggered( InputMapDefaults::kReloadGameAction ) )
-        {
-            onForceReload( config::kTargetGameModule );
-            SW_LOG_INFO( "%#: force SWGame reload", InputMapDefaults::kReloadGameAction );
-        }
-        if ( gv_reloadGameAtFrame > 0 && engine::getFrameProfiler().getFrameCount() == static_cast<uint64>( gv_reloadGameAtFrame ) )
-        {
-            SW_LOG_INFO( "[ReloadProbe] frame %# - forcing SWGame reload", gv_reloadGameAtFrame );
-            gv_reloadGameAtFrame = 0; // 한 번만 실행한다. 프로파일러가 프레임 수를 되돌리면(워밍업 뒤) 같은 번호가 다시 온다.
-            onForceReload( config::kTargetGameModule );
-        }
-        if ( _bEnableEditor == SW_TRUE && _engineLoop.wasDebugActionTriggered( InputMapDefaults::kReloadEditorAction ) )
-        {
-            onForceReload( config::kTargetEditorModule );
-            SW_LOG_INFO( "%#: force EditorModule reload", InputMapDefaults::kReloadEditorAction );
-        }
-#endif
-        // Shipping 에는 리로드할 모듈이 없다. 그 입력 상태를 묻는 코드가 없으므로 셸 InputMap 도 로드하지 않는다.
     }
 
     void App::onResize( const uint32 width, const uint32 height )
@@ -724,78 +467,6 @@ namespace sw
             _fixedTimestep.configure( pEngineConfig->_maxFrameDeltaTime, pEngineConfig->_fixedDeltaTime, pEngineConfig->_maxFixedStepPerFrame );
     }
 
-    void App::startDevConsole()
-    {
-#if !defined( SW_SHIPPING )
-        _devConsoleController = make_unique<DevConsoleController>();
-        // 에디터가 있으면 입력을 받지 않는다(Output Log 입력 줄이 같은 콘솔이다). 시작 명령만 실행한다.
-        if ( _bEnableEditor == SW_FALSE && engine::areEngineServicesBound() )
-            (void)_devConsoleController->initialize( &engine::getInputManager(), _window.get() ); // 창을 만들지 못해도 입력과 시작 명령은 돈다(경고는 그쪽이 남긴다).
-        _bDevConsoleExecPending = gv_devConsoleExec.empty() ? SW_FALSE : SW_TRUE;
-        if ( gv_devConsoleOpen != 0 && _bEnableEditor == SW_FALSE )
-            _devConsoleController->setOpen( true );
-        if ( gv_standardInputCommands != 0 )
-        {
-            ConsoleLogOutput::setFlushEveryLine( true ); // 부모가 줄 단위로 바로 모은다(접속과 종료 줄을 기다리는 쪽).
-            _standardInput = make_unique<StandardInputReader>();
-            _standardInput->start();
-        }
-#endif
-    }
-
-    bool App::pollStandardInputCommands()
-    {
-#if !defined( SW_SHIPPING )
-        if ( _standardInput == nullptr )
-            return false;
-        _standardInput->drainLines( _listStandardInputCommand );
-        bool bQuitRequested = false;
-        for ( const string& line : _listStandardInputCommand )
-        {
-            const string_view command = StringUtil::trim( line );
-            if ( command == "quit" || command == "stop" )
-            {
-                SW_LOG_INFO( "App quit requested on standard input" );
-                bQuitRequested = true;
-                break;
-            }
-            if ( command.empty() == false && _devConsoleController != nullptr )
-                (void)_devConsoleController->getConsole().submit( command ); // 응답과 실패는 로그에 남는다.
-        }
-        _listStandardInputCommand.clear();
-        return bQuitRequested;
-#else
-        return false;
-#endif
-    }
-
-    void App::runPendingDevConsoleExec()
-    {
-#if !defined( SW_SHIPPING )
-        // 시작 씬이 다 열린 뒤에 실행한다. 씬을 보는 명령(teleport, select, debugdraw.demo)이 빈 씬에 닿지 않게 하기 위해서다.
-        if ( _bDevConsoleExecPending == SW_FALSE || _devConsoleController == nullptr || engine::areEngineServicesBound() == false )
-            return;
-        const SceneManager& sceneManager = engine::getSceneManager();
-        if ( sceneManager.isTransitioning() || sceneManager.getActiveScene() == nullptr )
-            return;
-        _bDevConsoleExecPending = SW_FALSE;
-        const string_splitter commands( string_view{ gv_devConsoleExec.c_str(), gv_devConsoleExec.size() }, { ";" } );
-        for ( const string_view command : commands.getSplitList() )
-        {
-            (void)_devConsoleController->getConsole().submit( command ); // 응답과 실패는 로그에 남는다.
-        }
-#endif
-    }
-
-    void App::updateDevConsole()
-    {
-#if !defined( SW_SHIPPING )
-        InputMap* pShellMap = _engineLoop.getShellInputMap();
-        if ( _bEnableEditor == SW_FALSE && _devConsoleController != nullptr && pShellMap != nullptr )
-            _devConsoleController->update( *pShellMap );
-#endif
-    }
-
     bool App::onWindowMessage( const NativeWindowEvent& event )
     {
         // 무인 자동화는 사람의 마우스와 키보드 입력을 여기서 버린다. 에디터(ImGui)와 게임 입력 둘 다에 닿지 않는다. 창 이벤트는 그대로 지나간다.
@@ -818,49 +489,21 @@ namespace sw
         return _moduleHost != nullptr ? _moduleHost->getSceneViewCamera() : nullptr;
     }
 
-    void App::onForceReload( const utf8* pModuleName )
-    {
-        LiveReloadManager* const pLiveReloadManager = getLiveReloadManager();
-        if ( pLiveReloadManager == nullptr )
-            return;
-
-        pLiveReloadManager->triggerReload( pModuleName );
-    }
-
     void App::onEditorRender( IRHIDevice& renderDevice, const RenderFramePacket& /*framePacket*/ )
     {
-        SW_MEMORY_SCOPE( Editor );
         // 이 훅은 렌더 스레드가 부른다. ModuleHost 가 사라진 뒤에는 불리지 않는다. shutdown 이 ModuleHost 를 지우기 전에
         // drainRenderWorkers 로 큐를 비우고, 그 시점에는 메인 루프가 이미 끝나 새 프레임이 들어오지 않는다. 훅 델리게이트 자체를
         // 여기서 끊는 것은 오히려 위험하다. RenderThread::setPresentHook 은 잠금 없는 대입이라, 렌더 스레드가 도는 중에 바꾸면
         // 레이스가 된다(실제로 종료할 때 크래시가 났다). 아래 검사는 그 불변 조건이 깨졌을 때 죽는 대신 조용히 넘어가기 위한 것이다.
         if ( _moduleHost == nullptr )
             return;
-
-        const EditorHandle pEditor = _moduleHost->getEditor();
-        if ( pEditor == nullptr )
-            return;
-
-        const EditorAPI& editorAPI = _moduleHost->getEditorAPI();
-        if ( editorAPI.preRender != nullptr )
-            editorAPI.preRender( pEditor, &renderDevice );
-
-        if ( editorAPI.render != nullptr )
-            editorAPI.render( pEditor, &renderDevice );
+        _moduleHost->renderEditor( renderDevice );
     }
 
     void App::onEditorPostPresent( IRHIDevice& renderDevice, const RenderFramePacket& /*framePacket*/ )
     {
-        SW_MEMORY_SCOPE( Editor );
         if ( _moduleHost == nullptr )
             return;
-
-        const EditorHandle pEditor = _moduleHost->getEditor();
-        if ( pEditor == nullptr )
-            return;
-
-        const EditorAPI& editorAPI = _moduleHost->getEditorAPI();
-        if ( editorAPI.postPresent != nullptr )
-            editorAPI.postPresent( pEditor, &renderDevice );
+        _moduleHost->postPresentEditor( renderDevice );
     }
 } // namespace sw

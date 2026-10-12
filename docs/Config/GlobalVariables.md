@@ -10,13 +10,13 @@
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
-| `gv_devConsoleExec` | `string` | — | 시험 | 시작 씬이 열린 뒤 개발 콘솔로 돌릴 명령 (; 로 나눔) | [App.cpp](../../Source/App/App.cpp) |
-| `gv_devConsoleOpen` | `int32` | `0` | 시험 | 게임 창 개발 콘솔을 연 채로 시작 (1=열기) | [App.cpp](../../Source/App/App.cpp) |
+| `gv_devConsoleExec` | `string` | — | 시험 | 시작 씬이 열린 뒤 개발 콘솔로 돌릴 명령 (; 로 나눔) | [DevConsoleHost.cpp](../../Source/App/DevConsoleHost.cpp) |
+| `gv_devConsoleOpen` | `int32` | `0` | 시험 | 게임 창 개발 콘솔을 연 채로 시작 (1=열기) | [DevConsoleHost.cpp](../../Source/App/DevConsoleHost.cpp) |
 | `gv_fixedFrameDelta` | `float32` | `0.0` | 시험 · 배포본에도 | 프레임마다 흘릴 고정 시간(초, 0=실시간) — 결정적 실행 | [App.cpp](../../Source/App/App.cpp) |
-| `gv_reloadGameAtFrame` | `int32` | `0` | 시험 | 이 프레임에 게임 모듈 핫 리로드를 요청한다 (0=사용 안 함) | [App.cpp](../../Source/App/App.cpp) |
+| `gv_reloadGameAtFrame` | `int32` | `0` | 시험 | 이 프레임에 게임 모듈 핫 리로드를 요청한다 (0=사용 안 함) | [ModuleReloadDriver.cpp](../../Source/App/ModuleReloadDriver.cpp) |
 | `gv_rhiSwapAtFrame` | `int32` | `0` | 시험 | 이 프레임에 백엔드 교체를 요청한다 (0=사용 안 함) | [RHIBackendSwitcher.cpp](../../Source/App/RHIBackendSwitcher.cpp) |
 | `gv_rhiSwapTo` | `RHIBackend` | `DirectX12` | 시험 | gv_rhiSwapAtFrame 에 바꿀 백엔드 | [RHIBackendSwitcher.cpp](../../Source/App/RHIBackendSwitcher.cpp) |
-| `gv_standardInputCommands` | `int32` | `0` | 시험 | 표준 입력의 줄을 명령으로 받는다 (quit=종료, 1=켜기) | [App.cpp](../../Source/App/App.cpp) |
+| `gv_standardInputCommands` | `int32` | `0` | 시험 | 표준 입력의 줄을 명령으로 받는다 (quit=종료, 1=켜기) | [DevConsoleHost.cpp](../../Source/App/DevConsoleHost.cpp) |
 | `gv_userSettingsApply` | `string` | — | 시험 · 배포본에도 | 사용자 설정을 메뉴와 같은 길로 바꾼다: "id=value;id=value" (자동화) | [UserSettingsHost.cpp](../../Source/App/UserSettingsHost.cpp) |
 | `gv_userSettingsApplyFrame` | `int32` | `30` | 시험 · 배포본에도 | gv_userSettingsApply 를 적용할 프레임 | [UserSettingsHost.cpp](../../Source/App/UserSettingsHost.cpp) |
 | `gv_userSettingsAutoConfirm` | `bool` | `true` | 시험 · 배포본에도 | gv_userSettingsApply 의 화면 변경을 바로 확인한다 (false 면 카운트다운이 되돌린다) | [UserSettingsHost.cpp](../../Source/App/UserSettingsHost.cpp) |
