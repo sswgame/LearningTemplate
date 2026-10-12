@@ -23,7 +23,6 @@
 #include "GameFramework/Base/Online/Directory/ServerRegistryReader.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Rule/MatchMaker.h"
-#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/PartyLobbyService.h"
 
 namespace sw
 {
@@ -31,6 +30,7 @@ namespace sw
 
     class EphemeralStoreRouter;
     class IServerBus;
+    class PartyLobbyService;
 
     /**
      * @class IMatchRatingSource
