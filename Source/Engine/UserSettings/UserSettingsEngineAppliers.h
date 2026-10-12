@@ -8,7 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/UserSettings/UserSettingsRegistry.h"
+#include "Engine/UserSettings/UserSettingApplierRegistry.h"
 #include "Engine/Window/IWindow.h"
 
 namespace sw
@@ -84,19 +84,19 @@ namespace sw
         [[nodiscard]] static bool tryParseWindowMode( string_view text, WindowDisplayMode& outMode );
 
     private:
-        [[nodiscard]] bool applyBusVolume( const UserSettingApplyContext& context );
-        [[nodiscard]] bool applyMute( const UserSettingApplyContext& context );
-        [[nodiscard]] bool applyMouseSensitivity( const UserSettingApplyContext& context );
-        [[nodiscard]] bool applyGamepadSensitivity( const UserSettingApplyContext& context );
-        [[nodiscard]] bool applyInvertX( const UserSettingApplyContext& context );
-        [[nodiscard]] bool applyInvertY( const UserSettingApplyContext& context );
-        [[nodiscard]] bool applyStickDeadzone( const UserSettingApplyContext& context );
-        [[nodiscard]] bool applyToggleMode( const UserSettingApplyContext& context );
-        [[nodiscard]] bool applyKeyBinding( const UserSettingApplyContext& context );
-        [[nodiscard]] bool applyLanguage( const UserSettingApplyContext& context );
-        [[nodiscard]] bool applyWindowMode( const UserSettingApplyContext& context );
-        [[nodiscard]] bool applyResolution( const UserSettingApplyContext& context );
-        [[nodiscard]] bool applyVSync( const UserSettingApplyContext& context );
+        [[nodiscard]] bool applyBusVolume( const UserSettingApplyParams& context );
+        [[nodiscard]] bool applyMute( const UserSettingApplyParams& context );
+        [[nodiscard]] bool applyMouseSensitivity( const UserSettingApplyParams& context );
+        [[nodiscard]] bool applyGamepadSensitivity( const UserSettingApplyParams& context );
+        [[nodiscard]] bool applyInvertX( const UserSettingApplyParams& context );
+        [[nodiscard]] bool applyInvertY( const UserSettingApplyParams& context );
+        [[nodiscard]] bool applyStickDeadzone( const UserSettingApplyParams& context );
+        [[nodiscard]] bool applyToggleMode( const UserSettingApplyParams& context );
+        [[nodiscard]] bool applyKeyBinding( const UserSettingApplyParams& context );
+        [[nodiscard]] bool applyLanguage( const UserSettingApplyParams& context );
+        [[nodiscard]] bool applyWindowMode( const UserSettingApplyParams& context );
+        [[nodiscard]] bool applyResolution( const UserSettingApplyParams& context );
+        [[nodiscard]] bool applyVSync( const UserSettingApplyParams& context );
         void               collectLanguages( vector<UserSettingOption>& outListOption );
 
         static bool isToggleModeName( string_view value );

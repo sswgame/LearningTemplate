@@ -1,5 +1,5 @@
 /**
- * @file UserSettingsRegistry.h
+ * @file UserSettingApplierRegistry.h
  * @brief 사용자 설정이 값을 넘기는 이름 붙은 적용기와, 런타임 선택지 공급자의 레지스트리를 정의합니다.
  * @details 스키마(데이터)는 `target="applier:<name>"` 과 `optionsFrom="<name>"` 으로 여기의 이름을 고른다. 코드는 이름과 동작만 가진다.
  */
@@ -17,7 +17,7 @@ namespace sw
     struct UserSettingOption;
 
     /** @brief 적용기 한 번 부름의 인자입니다. */
-    struct UserSettingApplyContext
+    struct UserSettingApplyParams
     {
         const UserSettingDef* _pDef{ nullptr };   ///< 적용하는 설정입니다.
         string_view           _value{};           ///< 정규화한 값
@@ -27,7 +27,7 @@ namespace sw
     };
 
     /** @brief 값을 대상에 넣습니다. 넣지 못하면 false 입니다(경고는 적용기가 남깁니다). */
-    SW_DECLARE_DELEGATE( bool, UserSettingApplierDelegate, const UserSettingApplyContext& );
+    SW_DECLARE_DELEGATE( bool, UserSettingApplierDelegate, const UserSettingApplyParams& );
     /** @brief 적용기가 받는 값인지 확인합니다(스키마 검사가 기본값과 선택지를 대조합니다). */
     SW_DECLARE_DELEGATE( bool, UserSettingValueFilterDelegate, string_view );
     /** @brief 지금 고를 수 있는 선택지를 채웁니다(언어 목록 등). */
@@ -54,7 +54,7 @@ namespace sw
         /** @brief 이름의 적용기가 있는지 봅니다. */
         bool hasApplier( const hashed_string& name ) const;
         /** @brief 적용기를 부릅니다. 없으면 false 입니다. */
-        bool invokeApplier( const hashed_string& name, const UserSettingApplyContext& context ) const;
+        bool invokeApplier( const hashed_string& name, const UserSettingApplyParams& context ) const;
         /** @brief 적용기가 @p value 를 받는지 확인합니다. 필터가 없는 적용기나 없는 적용기는 true 입니다. */
         bool acceptsValue( const hashed_string& name, string_view value ) const;
 

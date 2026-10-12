@@ -161,7 +161,7 @@ const string_view difficulty = pSettings->getValue( "gameplay.difficulty" ); // 
 
 **새 적용기를 만들려면**
 
-1. 값을 받아 반영하는 함수를 만들고 `UserSettingsRegistry::registerApplier` 로 이름을 붙여 등록합니다. 엔진 적용기는 `UserSettingsEngineAppliers.cpp` 에 있습니다.
+1. 값을 받아 반영하는 함수를 만들고 `UserSettingApplierRegistry::registerApplier` 로 이름을 붙여 등록합니다. 엔진 적용기는 `UserSettingsEngineAppliers.cpp` 에 있습니다.
 2. 받는 값의 형식을 안다면 같은 호출에 값 필터(`UserSettingValueFilterDelegate`)도 넘깁니다. 그러면 스키마 로드 때 선택지를 검사합니다.
 3. 스키마에서 `target="applier:<이름>"` 으로 고릅니다. `param` 속성으로 같은 적용기에 다른 인자를 넘길 수 있습니다(`audio.busVolume` 의 `voice` 처럼).
 
@@ -189,7 +189,7 @@ const string_view difficulty = pSettings->getValue( "gameplay.difficulty" ); // 
 | `UserSettingsSchema.h` | 스키마 형식, 검사, 값 정규화 |
 | `UserSettingsManager.h` | 엔진 서비스와 메뉴 API |
 | `UserSettingsFile.h` | 사용자 파일 형식(JSON 읽기 · 쓰기, 버전 올리기 단계) |
-| `UserSettingsRegistry.h` | 적용기와 선택지 공급자 레지스트리 |
+| `UserSettingApplierRegistry.h` | 적용기와 선택지 공급자 레지스트리 |
 | `UserSettingsEngineAppliers.h` | 엔진 적용기와 화면 요청(`DisplaySettingsRequest`) |
 | `UserSettingsVariables.h` | 설정이 값을 넣는 전역 변수 |
 | `Source/App/UserSettingsHost.h` | 카운트다운 진행과 화면 변경 적용 |

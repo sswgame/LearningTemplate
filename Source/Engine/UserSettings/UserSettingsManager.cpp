@@ -784,7 +784,7 @@ namespace sw
             }
             case UserSettingTargetKind::Applier:
             {
-                UserSettingApplyContext context;
+                UserSettingApplyParams context;
                 context._pDef     = &def;
                 context._value    = value;
                 context._param    = def._targetParam;

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/UserSettings/UserSettingsRegistry.h"
+#include "Engine/UserSettings/UserSettingApplierRegistry.h"
 
 #include "Engine/UserSettings/UserSettingsSchema.h"
 
@@ -43,7 +43,7 @@ namespace sw
         return findApplierEntry( name ) != nullptr;
     }
 
-    bool UserSettingApplierRegistry::invokeApplier( const hashed_string& name, const UserSettingApplyContext& context ) const
+    bool UserSettingApplierRegistry::invokeApplier( const hashed_string& name, const UserSettingApplyParams& context ) const
     {
         const ApplierEntry* pEntry = findApplierEntry( name );
         if ( pEntry == nullptr || pEntry->_applier.isBound() == false )

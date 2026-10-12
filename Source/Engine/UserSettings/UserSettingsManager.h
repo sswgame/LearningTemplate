@@ -15,8 +15,8 @@
 #include "Core/Module/ModuleUnloadListener.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/UserSettings/UserSettingApplierRegistry.h"
 #include "Engine/UserSettings/UserSettingsEngineAppliers.h"
-#include "Engine/UserSettings/UserSettingsRegistry.h"
 #include "Engine/UserSettings/UserSettingsSchema.h"
 
 namespace sw

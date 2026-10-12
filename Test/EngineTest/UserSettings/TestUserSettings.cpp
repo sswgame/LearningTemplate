@@ -195,7 +195,7 @@ SW_TEST_CASE( UserSettingsTest, ApplierRegistryDispatchesByName )
         sw::string _value;
         sw::string _param;
         uint32     _callCount{ 0 };
-        bool       record( const sw::UserSettingApplyContext& context )
+        bool       record( const sw::UserSettingApplyParams& context )
         {
             _value = sw::string( context._value );
             _param = sw::string( context._param );
@@ -240,7 +240,7 @@ SW_TEST_CASE( UserSettingsTest, RejectedApplyIsCountedAndReported )
 {
     struct Refuser
     {
-        bool refuse( const sw::UserSettingApplyContext& /*context*/ ) { return false; }
+        bool refuse( const sw::UserSettingApplyParams& /*context*/ ) { return false; }
     };
     Refuser refuser;
 

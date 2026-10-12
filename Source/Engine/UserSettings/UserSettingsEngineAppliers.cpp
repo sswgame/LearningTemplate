@@ -118,7 +118,7 @@ namespace sw
         return false;
     }
 
-    bool UserSettingsEngineAppliers::applyBusVolume( const UserSettingApplyContext& context )
+    bool UserSettingsEngineAppliers::applyBusVolume( const UserSettingApplyParams& context )
     {
         if ( _targets._pAudioSystem == nullptr )
             return true;
@@ -126,14 +126,14 @@ namespace sw
         return true;
     }
 
-    bool UserSettingsEngineAppliers::applyMute( const UserSettingApplyContext& context )
+    bool UserSettingsEngineAppliers::applyMute( const UserSettingApplyParams& context )
     {
         if ( _targets._pAudioSystem != nullptr )
             _targets._pAudioSystem->setMute( UserSettingsEngineAppliersInternal::toBool( context._value ) );
         return true;
     }
 
-    bool UserSettingsEngineAppliers::applyMouseSensitivity( const UserSettingApplyContext& context )
+    bool UserSettingsEngineAppliers::applyMouseSensitivity( const UserSettingApplyParams& context )
     {
         const float32 sensitivity = UserSettingsEngineAppliersInternal::toFloat( context._value, 1.0f );
         if ( _targets._pInputMap != nullptr )
@@ -141,7 +141,7 @@ namespace sw
         return true;
     }
 
-    bool UserSettingsEngineAppliers::applyGamepadSensitivity( const UserSettingApplyContext& context )
+    bool UserSettingsEngineAppliers::applyGamepadSensitivity( const UserSettingApplyParams& context )
     {
         const float32 sensitivity = UserSettingsEngineAppliersInternal::toFloat( context._value, 1.0f );
         if ( _targets._pInputMap != nullptr )
@@ -149,28 +149,28 @@ namespace sw
         return true;
     }
 
-    bool UserSettingsEngineAppliers::applyInvertX( const UserSettingApplyContext& context )
+    bool UserSettingsEngineAppliers::applyInvertX( const UserSettingApplyParams& context )
     {
         if ( _targets._pInputMap != nullptr )
             _targets._pInputMap->setInvertX( UserSettingsEngineAppliersInternal::toBool( context._value ) );
         return true;
     }
 
-    bool UserSettingsEngineAppliers::applyInvertY( const UserSettingApplyContext& context )
+    bool UserSettingsEngineAppliers::applyInvertY( const UserSettingApplyParams& context )
     {
         if ( _targets._pInputMap != nullptr )
             _targets._pInputMap->setInvertY( UserSettingsEngineAppliersInternal::toBool( context._value ) );
         return true;
     }
 
-    bool UserSettingsEngineAppliers::applyStickDeadzone( const UserSettingApplyContext& context )
+    bool UserSettingsEngineAppliers::applyStickDeadzone( const UserSettingApplyParams& context )
     {
         if ( _targets._pInputMap != nullptr )
             _targets._pInputMap->setStickDeadzoneOverride( UserSettingsEngineAppliersInternal::toFloat( context._value, -1.0f ) );
         return true;
     }
 
-    bool UserSettingsEngineAppliers::applyToggleMode( const UserSettingApplyContext& context )
+    bool UserSettingsEngineAppliers::applyToggleMode( const UserSettingApplyParams& context )
     {
         const hashed_string action( context._param );
         // 액션은 게임이 입력 맵을 만든 뒤에야 있다. 없으면 건너뛰고, 게임이 맵을 만든 뒤의 다시 적용(`reapplyAll`)에서 적용된다.
@@ -180,7 +180,7 @@ namespace sw
         return true;
     }
 
-    bool UserSettingsEngineAppliers::applyKeyBinding( const UserSettingApplyContext& context )
+    bool UserSettingsEngineAppliers::applyKeyBinding( const UserSettingApplyParams& context )
     {
         if ( _targets._pInputMap == nullptr || context._pDef == nullptr )
             return true;
@@ -200,7 +200,7 @@ namespace sw
         return _targets._pInputMap->rebindSlot( def._action, slot, def._bindIndex );
     }
 
-    bool UserSettingsEngineAppliers::applyLanguage( const UserSettingApplyContext& context )
+    bool UserSettingsEngineAppliers::applyLanguage( const UserSettingApplyParams& context )
     {
         if ( _targets._pLocalizationManager == nullptr || context._value.empty() )
             return true;
@@ -215,7 +215,7 @@ namespace sw
         return localization.setCurrentLanguage( context._value );
     }
 
-    bool UserSettingsEngineAppliers::applyWindowMode( const UserSettingApplyContext& context )
+    bool UserSettingsEngineAppliers::applyWindowMode( const UserSettingApplyParams& context )
     {
         WindowDisplayMode mode{ WindowDisplayMode::Windowed };
         if ( tryParseWindowMode( context._value, mode ) == false )
@@ -226,7 +226,7 @@ namespace sw
         return true;
     }
 
-    bool UserSettingsEngineAppliers::applyResolution( const UserSettingApplyContext& context )
+    bool UserSettingsEngineAppliers::applyResolution( const UserSettingApplyParams& context )
     {
         uint32 width{ 0 };
         uint32 height{ 0 };
@@ -239,7 +239,7 @@ namespace sw
         return true;
     }
 
-    bool UserSettingsEngineAppliers::applyVSync( const UserSettingApplyContext& context )
+    bool UserSettingsEngineAppliers::applyVSync( const UserSettingApplyParams& context )
     {
         _displayRequest._bVSync    = UserSettingsEngineAppliersInternal::toBool( context._value );
         _displayRequest._bHasVSync = _displayRequest._bHasVSync || context._bDefault == false;

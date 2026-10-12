@@ -9,7 +9,7 @@
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
-#include "Engine/UserSettings/UserSettingsRegistry.h"
+#include "Engine/UserSettings/UserSettingApplierRegistry.h"
 
 namespace sw
 {
