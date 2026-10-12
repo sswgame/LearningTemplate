@@ -84,6 +84,21 @@ namespace sw
         static constexpr utf8 kScroll[]        = "UI.Scroll";        ///< 패드 오른쪽 스틱이며 값을 가집니다.
         static constexpr utf8 kTextBackspace[] = "UI.TextBackspace"; ///< 텍스트 입력 위젯이 키보드 포커스를 가진 동안만 쓰며, 커서 앞 글자 하나를 지웁니다.
         static constexpr utf8 kPause[]         = "UI.Pause";         ///< 화면이 없을 때만 쓰며(레이어 `UIGlobal`) 일시정지 메뉴를 엽니다.
+
+        // 글 편집 액션입니다. 모두 글 입력 위젯이 키보드 포커스를 가진 동안만 쓰고, 그 밖의 키 입력은 UI 의 것이 아닙니다.
+        static constexpr utf8 kTextDelete[]      = "UI.TextDelete";      ///< 커서 뒤 글자 하나(선택이 있으면 선택)를 지웁니다.
+        static constexpr utf8 kTextCaretLeft[]   = "UI.TextCaretLeft";   ///< 커서를 화면 기준 왼쪽 글자로 옮기고 선택을 풉니다.
+        static constexpr utf8 kTextCaretRight[]  = "UI.TextCaretRight";  ///< 커서를 화면 기준 오른쪽 글자로 옮기고 선택을 풉니다.
+        static constexpr utf8 kTextHome[]        = "UI.TextHome";        ///< 커서를 글 처음으로 옮깁니다.
+        static constexpr utf8 kTextEnd[]         = "UI.TextEnd";         ///< 커서를 글 끝으로 옮깁니다.
+        static constexpr utf8 kTextSelectLeft[]  = "UI.TextSelectLeft";  ///< 선택을 화면 기준 왼쪽 글자까지 넓힙니다.
+        static constexpr utf8 kTextSelectRight[] = "UI.TextSelectRight"; ///< 선택을 화면 기준 오른쪽 글자까지 넓힙니다.
+        static constexpr utf8 kTextSelectHome[]  = "UI.TextSelectHome";  ///< 선택을 글 처음까지 넓힙니다.
+        static constexpr utf8 kTextSelectEnd[]   = "UI.TextSelectEnd";   ///< 선택을 글 끝까지 넓힙니다.
+        static constexpr utf8 kTextSelectAll[]   = "UI.TextSelectAll";   ///< 글 전체를 선택합니다.
+        static constexpr utf8 kTextCopy[]        = "UI.TextCopy";        ///< 선택을 클립보드로 복사합니다.
+        static constexpr utf8 kTextCut[]         = "UI.TextCut";         ///< 선택을 클립보드로 옮기고 지웁니다.
+        static constexpr utf8 kTextPaste[]       = "UI.TextPaste";       ///< 클립보드 글(한 줄)을 선택 자리에 넣습니다.
     };
 } // namespace sw
 

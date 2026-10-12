@@ -18,6 +18,7 @@
 #include "Engine/UI/Document/UIBindingDesc.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Input/UIActionGlyphSource.h"
+#include "Engine/UI/Input/UIClipboardService.h"
 #include "Engine/UI/Input/UIInputRouter.h"
 #include "Engine/UI/Layout/UILayoutPass.h"
 #include "Engine/UI/Layout/UIScale.h"
@@ -147,6 +148,9 @@ namespace sw
         const string& getPauseMenuDocument() const { return _pauseMenuDocument; }
         /** @brief 설정 출처입니다. `setUserSettings` 로 받은 것이고, 없으면 엔진 서비스이며, 그것도 없으면 nullptr 입니다. 옵션 메뉴와 설정 바인딩이 씁니다. */
         UserSettingsManager* findUserSettings() const;
+        /** @brief 글 클립보드입니다. 글 입력 위젯의 복사 · 잘라내기 · 붙여넣기가 쓰며, 창 계층이 운영체제 연결(`UIClipboardAPI`)을 끼웁니다. */
+        UIClipboardService&       getClipboard() { return _clipboard; }
+        const UIClipboardService& getClipboard() const { return _clipboard; }
         /** @brief 알림과 토스트입니다. 오버레이 레이어에서 세 개까지 쌓고, 대기열을 두며, 같은 글은 합칩니다. 게임과 키트가 `post` 합니다. */
         UINotificationService&       getNotifications() { return _notifications; }
         const UINotificationService& getNotifications() const { return _notifications; }
@@ -354,6 +358,7 @@ namespace sw
         UIThemeController            _theme;
         vector<string>               _listReopenDocument; ///< 모듈 다시 로드로 닫은 문서 화면입니다(다음 update 가 다시 엽니다).
         UIBindingConverterRegistry   _bindingConverters;
+        UIClipboardService           _clipboard; ///< 글 입력 위젯의 복사 · 붙여넣기 창구입니다.
         UINotificationService        _notifications;
         UIActionGlyphSource          _actionGlyphs; ///< 입력 관리자와 UI 맵에서 가져오는 글리프 출처입니다(초기화 때 채웁니다).
         UIInputRouter                _input;        ///< 포커스, 포인터, 소비된 입력, UI 액션 맵, 입력 방식입니다.

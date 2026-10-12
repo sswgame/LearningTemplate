@@ -4,7 +4,8 @@
   UISystem owns this map and enables the UI layer only while a focus-taking screen is active. An input the UI uses for an action
   is consumed until released: the player controller does not turn it into the pawn's intent (gamepad A = accept, not jump).
   Navigation uses trigger="Repeat" (fires on press, then repeats after navRepeatDelay at navRepeatRate) like a held D-pad.
-  UI.TextBackspace is routed only while a text field holds keyboard focus (with Back and the focus Tab actions).
+  UI.TextBackspace and the other UI.Text* edit actions are routed only while a text field holds keyboard focus (with Back and the focus Tab actions).
+  A Shift binding fires the plain binding too (Shift+Left also fires Left); the router skips the plain edit action when its Shift twin fired.
   UI.Scroll (right stick) goes to the focused widget's path, or the hovered path without focus; a scroll panel moves at its stick speed.
   The UIGlobal layer is on only while no screen is active and the game preset enables the pause menu: UI.Pause opens it (and is consumed).
 -->
@@ -44,6 +45,45 @@
 		</action>
 		<action name="UI.TextBackspace" trigger="Repeat">
 			<bind source="key" code="Backspace"/>
+		</action>
+		<action name="UI.TextDelete" trigger="Repeat">
+			<bind source="key" code="Delete"/>
+		</action>
+		<action name="UI.TextCaretLeft" trigger="Repeat">
+			<bind source="key" code="Left"/>
+		</action>
+		<action name="UI.TextCaretRight" trigger="Repeat">
+			<bind source="key" code="Right"/>
+		</action>
+		<action name="UI.TextHome" trigger="Pressed">
+			<bind source="key" code="Home"/>
+		</action>
+		<action name="UI.TextEnd" trigger="Pressed">
+			<bind source="key" code="End"/>
+		</action>
+		<action name="UI.TextSelectLeft" trigger="Repeat">
+			<bind source="key" modifier="Shift" code="Left"/>
+		</action>
+		<action name="UI.TextSelectRight" trigger="Repeat">
+			<bind source="key" modifier="Shift" code="Right"/>
+		</action>
+		<action name="UI.TextSelectHome" trigger="Pressed">
+			<bind source="key" modifier="Shift" code="Home"/>
+		</action>
+		<action name="UI.TextSelectEnd" trigger="Pressed">
+			<bind source="key" modifier="Shift" code="End"/>
+		</action>
+		<action name="UI.TextSelectAll" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="A"/>
+		</action>
+		<action name="UI.TextCopy" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="C"/>
+		</action>
+		<action name="UI.TextCut" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="X"/>
+		</action>
+		<action name="UI.TextPaste" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="V"/>
 		</action>
 		<action name="UI.Accept" trigger="Pressed">
 			<bind source="key" code="Enter"/>

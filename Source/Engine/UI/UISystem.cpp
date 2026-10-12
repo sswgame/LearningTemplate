@@ -80,6 +80,7 @@ namespace sw
         , _theme{}
         , _listReopenDocument{}
         , _bindingConverters{}
+        , _clipboard{}
         , _notifications{ *this }
         , _actionGlyphs{}
         , _input{}

@@ -48,6 +48,33 @@ namespace sw
                 {    UIActionName::kFocusNext,     UINavigationDirection::Next},
                 {UIActionName::kFocusPrevious, UINavigationDirection::Previous},
             };
+
+            /**
+             * @struct TextAction
+             * @brief 글 입력 위젯이 키보드 포커스를 가진 동안만 보내는 편집 액션과, 그 액션을 가리는 액션입니다.
+             * @details Shift 조합은 조합 키 없는 바인딩도 함께 발화하므로(Shift+Left 는 Left 도 누른 것), 가리는 액션이 발화한 프레임에는 이 액션을 보내지 않습니다.
+             */
+            struct TextAction
+            {
+                const utf8* _pAction;
+                const utf8* _pShadowedBy; ///< 이 액션이 발화한 프레임에 이 액션을 건너뛰게 하는 액션입니다(없으면 nullptr).
+            };
+            static constexpr TextAction kArrTextAction[] = {
+                {  UIActionName::kTextBackspace,                        nullptr},
+                {     UIActionName::kTextDelete,                        nullptr},
+                {  UIActionName::kTextCaretLeft,  UIActionName::kTextSelectLeft},
+                { UIActionName::kTextCaretRight, UIActionName::kTextSelectRight},
+                {       UIActionName::kTextHome,  UIActionName::kTextSelectHome},
+                {        UIActionName::kTextEnd,   UIActionName::kTextSelectEnd},
+                { UIActionName::kTextSelectLeft,                        nullptr},
+                {UIActionName::kTextSelectRight,                        nullptr},
+                { UIActionName::kTextSelectHome,                        nullptr},
+                {  UIActionName::kTextSelectEnd,                        nullptr},
+                {  UIActionName::kTextSelectAll,                        nullptr},
+                {       UIActionName::kTextCopy,                        nullptr},
+                {        UIActionName::kTextCut,                        nullptr},
+                {      UIActionName::kTextPaste,                        nullptr},
+            };
         };
     } // namespace
 } // namespace sw
@@ -338,10 +365,20 @@ namespace sw
                 consumeAction( uiMap, action );
         }
 
-        // 텍스트 입력 위젯: 지우기는 위젯이 키보드 포커스를 가진 동안만 처리한다(그 밖에서 Backspace 는 UI 의 것이 아니다).
-        const hashed_string backspaceAction( UIActionName::kTextBackspace );
-        if ( bTextFocus && uiMap.wasActionTriggered( backspaceAction ) && routeAction( *pActive, backspaceAction, float2{} ) )
-            consumeAction( uiMap, backspaceAction );
+        // 텍스트 입력 위젯: 지우기와 커서 이동 · 선택 · 복사 붙여넣기는 위젯이 키보드 포커스를 가진 동안만 처리한다(그 밖에서 이 키들은 UI 의 것이 아니다).
+        if ( bTextFocus )
+        {
+            for ( const UIInputRouterInternal::TextAction& entry : UIInputRouterInternal::kArrTextAction )
+            {
+                const hashed_string action( entry._pAction );
+                if ( uiMap.wasActionTriggered( action ) == false )
+                    continue;
+                if ( entry._pShadowedBy != nullptr && uiMap.wasActionTriggered( hashed_string( entry._pShadowedBy ) ) )
+                    continue;
+                if ( routeAction( *pActive, action, float2{} ) )
+                    consumeAction( uiMap, action );
+            }
+        }
 
         const hashed_string backAction( UIActionName::kBack );
         if ( uiMap.wasActionTriggered( backAction ) )

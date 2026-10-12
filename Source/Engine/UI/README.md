@@ -275,7 +275,7 @@ UI는 키와 버튼을 직접 보지 않고 **행동(action)**을 받습니다. 
 
 **글 입력.** 글 입력 위젯(`supportsTextInput`)이 포커스를 가지면 키보드 포커스 `UI` 를 잡습니다. 그동안 게임은 키를 보지 못합니다.
 입력 위젯에 있는 동안 누른 키는 뗄 때까지 게임에 가지 않고, 글자와 IME 조합은 그 위젯의 `onTextEvent` 로 갑니다.
-이때 UI 행동은 `UI.Back`, `UI.FocusNext`, `UI.FocusPrevious` 만 받습니다. 스페이스가 확인 버튼으로 동작하지 않게 하기 위해서입니다. 개발 콘솔이 열려 있으면 UI는 행동을 받지 않습니다.
+이때 UI 행동은 `UI.Back`, `UI.FocusNext`, `UI.FocusPrevious` 와 글 편집 행동(`UI.Text*`)만 받습니다. 스페이스가 확인 버튼으로 동작하지 않게 하기 위해서입니다. 개발 콘솔이 열려 있으면 UI는 행동을 받지 않습니다.
 
 ### 화면 스택
 
@@ -408,8 +408,14 @@ arrange가 결과 방향을 위젯에 기록하고(`isRightToLeft`), 글 위젯�
 - **슬라이더**는 포커스 상태에서 `UI.NavigateLeft` 와 `UI.NavigateRight` 를 처리해 값을 한 단계 옮깁니다. 그래서 포커스는 위아래로만 떠납니다. RTL이면 최솟값이 오른쪽입니다.
 - **콤보 상자**는 자기가 든 화면의 `UISystem` 에 팝업 화면을 엽니다. 팝업은 Modal 층이지만 막지 않고, 항목 버튼이 상자 아래에 놓입니다. 밖을 클릭하거나 `UI.Back` 이면 닫힙니다.
   팝업은 상자를 (화면 핸들, 위젯 번호)로 다시 찾습니다(`WidgetTree::getScreen`).
-- **글 입력 위젯**은 글자 사건을 끝에 붙입니다. IME 조합 중인 글은 확정 전까지 따로 보이고, Enter는 확정 알림입니다. 커서는 글 끝에 있습니다.
-  `UI.TextBackspace` 는 입력 위젯이 키보드를 가진 동안에만 `UISystem` 이 보내고, 끝 코드 포인트 하나를 지웁니다.
+- **글 입력 위젯**은 글자 사건을 커서 자리에 넣고(선택이 있으면 선택을 대신합니다), Enter는 확정 알림입니다. 커서와 선택 기준점은 원문의 UTF-8 바이트 위치이고 항상 코드 포인트 경계입니다.
+  IME 조합 중인 글은 확정 전까지 커서 자리에 밑줄로 끼워 보입니다. 편집 행동은 입력 위젯이 키보드를 가진 동안에만 `UISystem` 이 보냅니다.
+  `UI.TextBackspace` · `UI.TextDelete`(Delete), `UI.TextCaretLeft/Right`(좌우 화살표), `UI.TextHome/End`, Shift 를 더한 `UI.TextSelectLeft/Right/Home/End`, `UI.TextSelectAll`(Ctrl+A), `UI.TextCopy/Cut/Paste`(Ctrl+C/X/V)입니다.
+  Shift 조합은 조합 키 없는 바인딩도 함께 발화하므로 라우터가 Shift 쪽이 발화한 프레임에는 일반 이동을 보내지 않습니다(`UIInputRouterInternal::kArrTextAction`).
+  좌우는 화면 기준이라 오른쪽에서 왼쪽 위젯에서는 논리 순서가 뒤집히고, Home 과 End 는 논리 순서입니다. 포인터를 누르면 가장 가까운 글자 사이로 커서가 가고 두 번 누르면 전체를 선택합니다.
+  복사 · 붙여넣기는 `UISystem::getClipboard()`(`UIClipboardService`)를 거칩니다. 붙이는 글의 줄 바꿈과 제어 문자는 뺍니다(HTML 입력 칸과 같습니다).
+  운영체제 클립보드는 창 계층이 `UIClipboardAPI` 를 끼워야 이어지고, 끼우기 전에는 엔진 안에서만 오가는 글 한 칸입니다. 글자 단위는 코드 포인트라서 결합 문자 묶음은 낱낱으로 움직입니다.
+  필드보다 긴 글을 커서 쪽으로 스크롤하는 것과 끌어서 선택하기는 없습니다.
 - **가상 목록**(`ListViewWidget`)은 보이는 줄 수 + 1개만 줄 위젯을 만듭니다(`setRowFactory`). 항목 k는 언제나 줄 k % 줄 수에 연결합니다(`setRowBinder`).
   그래서 한 줄 스크롤하면 위젯 하나만 다시 연결되고, 보이는 동안 항목과 위젯의 짝이 바뀌지 않아 포커스가 항목을 따라갑니다. 줄 위젯은 레이아웃 도중에 만들어지고 바로 배치됩니다.
 
