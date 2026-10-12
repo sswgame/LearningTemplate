@@ -171,11 +171,13 @@ namespace sw
             class ContainerReader final : public IContainerReader
             {
             public:
-                ContainerReader( const JSONValue& root, const SerializeContext& context, vector<SchemaOrphanValue>* pOutListOrphan )
+                ContainerReader( const JSONValue& root, const SerializeContext& context, vector<SchemaOrphanValue>* pOutListOrphan,
+                                 const PropertyInfo& propForOrphan )
                     : _listCursor{}
                     , _pCurrentKey{ nullptr }
                     , _context{ context }
                     , _pOutListOrphan{ pOutListOrphan }
+                    , _propForOrphan{ propForOrphan }
                 {
                     _listCursor.push_back( root );
                 }
@@ -230,13 +232,13 @@ namespace sw
 
                 ContainerReadResult readOwnedPointer() override
                 {
-                    // 타입 이름 키 하나짜리 오브젝트가 아니면 원소로 보지 않고 건너뛴다.
+                    // `{ "타입이름": {...} }` 꼴이 아니면 원소로 읽을 수 없다 - 그 원소만 orphan 으로 남긴다(XML 의 못 읽은 원소와 같다).
                     const JSONValue& element = _listCursor.back();
                     if ( element.isObject() == false )
-                        return ContainerReadResult::Read;
+                        return rejectElement( element );
                     const vector<string> listKey = element.getMemberNames();
                     if ( listKey.size() != 1 )
-                        return ContainerReadResult::Read;
+                        return rejectElement( element );
                     const hashed_string typeName = hashed_string::findInterned( listKey[0] );
                     const TypeInfo*     pType    = typeName.empty() ? nullptr : engine::getTypeRegistry().findType( typeName );
                     void*               pObject  = ( pType != nullptr ) ? _context.createOwnedPointer( typeName ) : nullptr;
@@ -272,10 +274,30 @@ namespace sw
                 ContainerReadResult skipElement( size_t ) override { return ContainerReadResult::FieldFailed; }
 
             private:
+                /**
+                 * @brief 모양이 틀린 소유 포인터 원소를 알리고 orphan 으로 남깁니다.
+                 * @details orphan 목록이 있으면 원소 하나만 거기 남고 Read 다 - 돌려주는 실패가 `_listComponent` 칸 전체를 orphan 으로 만들지 않게 한다.
+                 *          엄격 읽기(목록 없음)면 FieldFailed 다.
+                 */
+                ContainerReadResult rejectElement( const JSONValue& element ) const
+                {
+                    SW_LOG_WARNING( "'%#' has an owned-pointer element that is not a single-key type object - element dropped", _propForOrphan._name.c_str() );
+                    if ( _pOutListOrphan == nullptr )
+                        return ContainerReadResult::FieldFailed;
+                    SchemaOrphanValue orphan;
+                    orphan._name         = _propForOrphan._name;
+                    orphan._nameHash     = _propForOrphan.getNameHash();
+                    orphan._wireTypeHash = 0;
+                    orphan._text         = element.dump();
+                    _pOutListOrphan->push_back( std::move( orphan ) );
+                    return ContainerReadResult::Read;
+                }
+
                 vector<JSONValue, InlineAllocator<JSONValue, 4>> _listCursor;
                 const string*                                    _pCurrentKey;
                 const SerializeContext&                          _context;
                 vector<SchemaOrphanValue>*                       _pOutListOrphan;
+                const PropertyInfo&                              _propForOrphan;
             };
 
             [[nodiscard]] static bool readJSONValue( void* pValPtr, const hashed_string& typeName, const JSONValue& src, const SerializeContext& context )
@@ -360,7 +382,7 @@ namespace sw
                 void* pPropPtr = prop.getRawPtr( pInstance );
                 if ( prop._bIsContainer && prop.hasContainerWrapper() )
                 {
-                    ContainerReader reader( field, context, pOutListOrphan );
+                    ContainerReader reader( field, context, pOutListOrphan, prop );
                     return ContainerVisitor::read( pPropPtr, prop.getContainerShape(), reader, context ) == ContainerReadResult::Read;
                 }
                 return readJSONValue( pPropPtr, prop._typeName, field, context );
