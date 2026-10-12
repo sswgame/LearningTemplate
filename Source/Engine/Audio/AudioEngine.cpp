@@ -2,6 +2,8 @@
 
 #include "Engine/Audio/AudioEngine.h"
 
+#include "Core/Container/StringUtil.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Audio/AudioMixer.h"
@@ -213,6 +215,21 @@ namespace sw
         {
             if ( entry.second->findEvent( eventName ) != nullptr )
                 return true;
+        }
+        return false;
+    }
+
+    bool AudioEngine::findEventLibraryName( string_view libraryName, hashed_string& outLibraryName ) const
+    {
+        const string            wanted = FileUtil::normalizeSeparators( libraryName );
+        std::scoped_lock<mutex> lock{ _libraryMutex };
+        for ( const auto& entry : _mapGameLibrary )
+        {
+            if ( StringUtil::equals( FileUtil::normalizeSeparators( entry.first.view() ), wanted, true ) )
+            {
+                outLibraryName = entry.first;
+                return true;
+            }
         }
         return false;
     }

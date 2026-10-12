@@ -203,6 +203,10 @@ Wwise 의 Event, Random/Sequence/Blend 컨테이너, Playback Limit, RTPC 에 �
 파일 안의 규칙(이름, 클립, 범위, 곡선 순서, 모르는 파라미터), 그래프와의 대조(버스, 감쇠 프리셋), 다른 라이브러리와의 이벤트와 파라미터 이름 충돌입니다. 하나라도 어긋나면 오류이고 로드하지 않습니다.
 같은 이름으로 다시 로드하면 교체합니다(핫 리로드). 쿨다운과 순서 커서는 이름으로 이어집니다. 로드할 때 클립 디코드도 시작합니다(뱅크 로드). 재생 중인 인스턴스는 자기 라이브러리를 끝까지 씁니다.
 
+**핫 리로드.** 파일이 바뀌면 `IAudioService::reloadDataFile( 경로 )` 가 믹서 그래프(`loadMixer` 로 읽은 경로)나 이벤트 라이브러리(`loadEventLibrary` 이름이 그 경로)를 다시 읽어 바꿉니다.
+읽기나 검사에 실패하면 지금 것을 그대로 쓰고 오류만 남깁니다. 에셋 캐시 레지스트리에는 `AudioReloadCache`("AudioData")가 올라 있어, 에디터의 핫 리로드 경로 표가 `.audiomixer.xml` ·
+`.audioevents.xml` 접미사를 "경로를 든 캐시가 읽는다" 경로(`AssetReloadRoute::kAnyCacheHoldingPath`)로 돌리면 이 캐시가 받습니다. 음악 파일(`*.music.xml`)은 재생 중인 곡을 다시 시작하게 되므로 다시 읽지 않습니다.
+
 ### 스냅샷
 
 스냅샷은 버스 페이더 오프셋(dB), 센드 레벨, 이펙트 파라미터를 묶은 것이고, 그래프 데이터의 `_listSnapshot` 에 있습니다. Wwise 의 State, FMOD 의 Snapshot, 언리얼의 Sound Mix 에 해당합니다.

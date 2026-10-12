@@ -57,6 +57,7 @@ namespace sw
         , _listBusVolume{}
         , _listOfflineBlock{}
         , _musicPath{}
+        , _mixerPath{}
         , _musicPlayingID{ 0 }
         , _offlineFrameDebt{ 0.0 }
         , _masterVolume{ 1.0f }
@@ -76,7 +77,9 @@ namespace sw
             return true;
 
         AudioMixerDesc mixerDesc;
-        if ( ResourceIO::hasResource( kDefaultMixerPath ) == false || mixerDesc.loadFromResource( kDefaultMixerPath ) == false )
+        if ( ResourceIO::hasResource( kDefaultMixerPath ) && mixerDesc.loadFromResource( kDefaultMixerPath ) )
+            _mixerPath = kDefaultMixerPath;
+        else
             mixerDesc = AudioMixerDesc::makeDefault();
         if ( _pEngine->initialize( mixerDesc ) == false && _pEngine->initialize( AudioMixerDesc::makeDefault() ) == false )
             return false;
@@ -221,7 +224,44 @@ namespace sw
         AudioMixerDesc mixerDesc;
         if ( mixerDesc.loadFromResource( resourcePath ) == false )
             return false;
-        return _pEngine->loadMixer( mixerDesc );
+        if ( _pEngine->loadMixer( mixerDesc ) == false )
+            return false;
+        _mixerPath = string( resourcePath );
+        return true;
+    }
+
+    bool IAudioService::isDataFile( string_view resourcePath ) const
+    {
+        if ( _bInitialized == false || resourcePath.empty() )
+            return false;
+        const bool    bMixer = _mixerPath.empty() == false && StringUtil::equals( FileUtil::normalizeSeparators( _mixerPath ), FileUtil::normalizeSeparators( resourcePath ), true );
+        hashed_string libraryName;
+        return bMixer || _pEngine->findEventLibraryName( resourcePath, libraryName );
+    }
+
+    bool IAudioService::reloadDataFile( string_view resourcePath )
+    {
+        if ( _bInitialized == false || resourcePath.empty() )
+            return false;
+        const bool    bMixer = _mixerPath.empty() == false && StringUtil::equals( FileUtil::normalizeSeparators( _mixerPath ), FileUtil::normalizeSeparators( resourcePath ), true );
+        hashed_string libraryName;
+        if ( bMixer == false && _pEngine->findEventLibraryName( resourcePath, libraryName ) == false )
+            return false;
+        if ( bMixer )
+        {
+            const bool bReloaded = loadMixer( _mixerPath );
+            if ( bReloaded )
+                SW_LOG_INFO( "Mixer graph reloaded: %#", resourcePath );
+            return bReloaded;
+        }
+        AudioEventLibrary library;
+        if ( library.loadFromResource( resourcePath ) == false )
+            return false;
+        // 이름은 라이브러리를 처음 올린 이름 그대로여야 같은 라이브러리를 바꾼다.
+        if ( _pEngine->loadEventLibrary( libraryName, library ) == false )
+            return false;
+        SW_LOG_INFO( "Event library reloaded: %#", resourcePath );
+        return true;
     }
 
     void IAudioService::setMasterVolume( float32 volume )
