@@ -165,6 +165,9 @@ pMesh->setMaterialInstance( std::move( tint ) );
   생성자가 `create()` 만 만들 수 있는 키를 요구하므로, 다른 방법으로 만들면 컴파일 오류가 납니다.
 - GPU 리소스를 보관하는 클래스는 `RHIRenderResource` 를 상속합니다. 그래픽 API를 실행 중에 바꾸면 엔진이 이 클래스들에게 옛 디바이스의 리소스를 해제하고 새 디바이스에서 다시 만들라고 알립니다.
 - GPU 버퍼 해제는 GPU가 그 버퍼를 다 쓸 때까지 미룹니다.
+- `TextureCache` 는 `Texture2D` 를 `unique_ptr` 로 들고 참조 수로 수명을 정합니다. 맵이 원소를 옮겨도 텍스처 주소는 그대로입니다.
+  `acquire` 가 준 포인터는 짝이 되는 `release` 까지 살아 있습니다. `find` 는 참조를 세지 않으므로, 누군가 `acquire` 로 붙들고 있는 동안만 쓰고 저장하지 않습니다.
+  디스크 읽기 · GPU 생성 · 리로드의 `waitIdle` 은 잠금 밖에서 하고, 같은 경로를 동시에 원한 스레드는 먼저 시작한 쪽의 결과를 기다려 받습니다.
 
 이 규칙의 전체와 이유는 [Renderer 문서](../Renderer/README.md)의 "소유와 수명"에 있습니다.
 
