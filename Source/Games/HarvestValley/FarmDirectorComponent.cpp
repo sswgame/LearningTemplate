@@ -53,10 +53,11 @@ namespace sw
             static constexpr float3 kDefaultShippingBinPosition{ 13.4f, 0.0f, 1.0f };
             static constexpr float3 kDefaultShopPosition{ -1.6f, 0.0f, 5.0f };
 
-            static constexpr const utf8* kSoundSelect  = "game/harvestvalley/sounds/select_002.ogg";
-            static constexpr const utf8* kSoundPlant   = "game/harvestvalley/sounds/drop_002.ogg";
-            static constexpr const utf8* kSoundHarvest = "game/harvestvalley/sounds/pluck_001.ogg";
-            static constexpr const utf8* kSoundShip    = "game/harvestvalley/sounds/confirmation_001.ogg";
+            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 harvestvalley.audioevents.xml 이 정한다.
+            static constexpr const utf8* kEventSelect  = "ToolSelect";
+            static constexpr const utf8* kEventPlant   = "Plant";
+            static constexpr const utf8* kEventHarvest = "Harvest";
+            static constexpr const utf8* kEventShip    = "Ship";
 
             /** @brief 공유 시계의 계절 이름입니다(시계 설정과 작물 카탈로그가 함께 씁니다). */
             static vector<hashed_string> makeSeasons() { return { hashed_string( "Spring" ), hashed_string( "Summer" ), hashed_string( "Fall" ), hashed_string( "Winter" ) }; }
@@ -638,7 +639,7 @@ namespace sw
                 if ( isAutoPlayOn() == false )
                 {
                     SW_LOG_INFO( "[Farm] tool: %#", Internal::toToolName( _tool ) );
-                    getSoundQueue().queueClip( Internal::kSoundSelect );
+                    getSoundQueue().queueEvent( Internal::kEventSelect );
                 }
             }
         }
@@ -717,7 +718,7 @@ namespace sw
                 if ( result == FarmActionResult::Done && pState->getInventory().removeItem( seed, 1 ) == false )
                     SW_LOG_WARNING( "[Farm] planted without a seed in the bag" );
                 if ( result == FarmActionResult::Done )
-                    getSoundQueue().queueClip( Internal::kSoundPlant );
+                    getSoundQueue().queueEvent( Internal::kEventPlant );
                 break;
             }
             case FarmTool::Hand:
@@ -730,7 +731,7 @@ namespace sw
                     // 가방이 차면 덜 들어간다(남은 것은 밭에서 사라진다). 실제로 넣은 수를 적는다.
                     const int32 added = pState != nullptr ? pState->getInventory().addItem( produce, count ) : 0;
                     SW_LOG_INFO( "[Farm] harvested %# x%# (%# into the bag)", produce.c_str(), count, added );
-                    getSoundQueue().queueClip( Internal::kSoundHarvest );
+                    getSoundQueue().queueEvent( Internal::kEventHarvest );
                 }
                 break;
             }
@@ -762,7 +763,7 @@ namespace sw
         if ( shipped > 0 )
         {
             SW_LOG_INFO( "[Farm] shipped %# items - paid tonight", shipped );
-            getSoundQueue().queueClip( FarmDirectorComponentInternal::kSoundShip );
+            getSoundQueue().queueEvent( FarmDirectorComponentInternal::kEventShip );
         }
         return shipped;
     }
