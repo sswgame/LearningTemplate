@@ -97,11 +97,6 @@ namespace sw
             s_localServiceTable._mapEntry.clear();
         }
 
-        SW_GAMESERVICE_API bool isSceneManagerServiceBound()
-        {
-            return s_gameService.arrServices[sw::internal::toRawServiceID( sw::internal::ModuleServiceID::SceneManager )] != nullptr;
-        }
-
         namespace internal
         {
             SW_GAMESERVICE_API void bindRawLocalService( uint64 typeHash, void* pService )

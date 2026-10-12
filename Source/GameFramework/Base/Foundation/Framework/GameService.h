@@ -40,13 +40,6 @@ namespace sw
 
         // bindGameService · unbindGameService 는 RuntimeAPI/Service/GameServiceBinding.h 가 선언한다(진입점 매크로가 RuntimeAPI 안에서 부른다).
         /**
-         * @brief 게임 서비스 테이블의 SceneManager 칸이 묶였는지 묻습니다(`bindGameService` 뒤 · `unbindGameService` 전).
-         * @details 검사하는 것은 `ModuleServiceID::SceneManager` 하나다. true 면 `getService<SceneManager>()` 는 널이 아니고,
-         *          다른 서비스에 대해서는 아무것도 보장하지 않는다.
-         */
-        SW_GAMESERVICE_API bool isSceneManagerServiceBound();
-
-        /**
          * @brief 게임 로컬 서비스(게임 인스턴스가 든 카탈로그 등)를 겁니다.
          * @details 같은 타입이 이미 다른 인스턴스에 걸려 있으면 알리고 걸지 않는다. 먼저 `unbindLocalService` 로 풀어야 한다.
          *          핫 리로드에서는 옛 인스턴스가 `onShutdown` 에서 푼다.
@@ -72,8 +65,7 @@ namespace sw
          *
          *          짝인 `editor::getService<T>()` 도 처음부터 조용히 nullptr 을 반환한다. 같은 함수가 두 벌 있는데 한쪽만 죽으면 안 되므로 이쪽을 맞춘다.
          *
-         *          "붙였어야 하는데 안 붙었다"를 묻고 싶으면 `isSceneManagerServiceBound()` 가 답한다.
-         *          다만 그 함수는 `SceneManager` 슬롯 하나만 본다.
+         *          "붙였어야 하는데 안 붙었다"를 묻고 싶으면 `isServiceBound<T>()` 가 답한다.
          * @return 찾은 서비스이다. 로컬에도 호스트에도 없으면 nullptr 이다.
          */
         template <typename T>
@@ -92,6 +84,21 @@ namespace sw
                     return pHost;
             }
             return nullptr;
+        }
+
+        /**
+         * @brief 서비스 @p T 가 지금 묶여 있는지 묻습니다. `getService<T>()` 와 같은 순서(게임 로컬 → 호스트) · 같은 trait 로 본다.
+         * @details 호스트 서비스는 `ModuleServiceTraits<T>` 가 있는 타입만 본다(서비스 표의 그 칸). 로컬 서비스는 `bindLocalService<T>` 로 건 것이다.
+         */
+        template <typename T>
+        bool isServiceBound()
+        {
+            if ( internal::getRawLocalService( internal::getServiceTypeHash<T>() ) != nullptr )
+                return true;
+            if constexpr ( internal::HasModuleServiceTraits<T>::value )
+                return internal::getRawService( sw::internal::ModuleServiceTraits<T>::id ) != nullptr;
+            else
+                return false;
         }
     } // namespace game
 } // namespace sw
