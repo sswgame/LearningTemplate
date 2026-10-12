@@ -59,7 +59,7 @@
 		<entity id="3" name="VillageState">
 			<GameObject _schemaVersion="0" _name="VillageState" _bActive="true">
 				<_listComponent>
-					<GameStateComponent _componentName="GameStateComponent" _bActive="true" />
+					<SessionStateComponent _componentName="SessionStateComponent" _bActive="true" />
 					<MeadowFarmDirectorComponent _componentName="MeadowFarmDirectorComponent"
 					                             _bActive="true"
 					                             _bAutoPlay="false"

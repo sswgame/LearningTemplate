@@ -55,7 +55,7 @@ namespace sw
         return WorldQuery::hasLineOfSight( _manager, from, to, viewerObjectID, targetObjectID );
     }
 
-    bool InteractionSelector::isInReach( const InteractionViewer& viewer, const InteractionCandidate& candidate, float32& outDistance )
+    bool InteractionSelector::isInReach( const InteractionView& viewer, const InteractionCandidate& candidate, float32& outDistance )
     {
         using Internal      = InteractionSelectorInternal;
         const float3 offset = Internal::flatten( candidate._position - viewer._position, viewer._space );
@@ -71,7 +71,7 @@ namespace sw
         return cosine >= MathUtil::cos( candidate._maxAngle );
     }
 
-    int32 InteractionSelector::selectBest( const InteractionViewer& viewer, const vector<InteractionCandidate>& listCandidate, const ILineOfSightQuery* pLineOfSight )
+    int32 InteractionSelector::selectBest( const InteractionView& viewer, const vector<InteractionCandidate>& listCandidate, const ILineOfSightQuery* pLineOfSight )
     {
         using Internal = InteractionSelectorInternal;
         vector<Internal::ReachableCandidate> listReachable;

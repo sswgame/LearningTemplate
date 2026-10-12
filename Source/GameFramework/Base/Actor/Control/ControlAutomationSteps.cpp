@@ -90,10 +90,10 @@ namespace sw
                 const string* pValue = step.findAttribute( "frames" );
                 if ( pValue == nullptr )
                     return true;
-                int32 value = 0;
-                if ( StringUtil::parseInt( StringUtil::trim( string_view{ *pValue } ), value ) && value >= 1 )
+                int32 parsedFrameCount = 0;
+                if ( StringUtil::parseInt( StringUtil::trim( string_view{ *pValue } ), parsedFrameCount ) && parsedFrameCount >= 1 )
                 {
-                    outFrameCount = static_cast<uint32>( value );
+                    outFrameCount = static_cast<uint32>( parsedFrameCount );
                     return true;
                 }
                 outError = step.describe() + ": frames must be a positive integer, got '" + *pValue + "'";

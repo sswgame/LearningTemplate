@@ -34,7 +34,7 @@
 namespace test
 {
     /** @brief 테스트 로그인 — 몸 `varuint 계정 id` 로 이 연결을 그 계정에 묶습니다. 이미 다른 연결에 붙은 계정이면 kConflict. */
-    class TestLoginService final : public sw::IOnlineService
+    class TestLoginService final : public sw::IOnlineHostService
     {
     public:
         static constexpr uint16 kLoginMethod = sw::OnlineMethodRange::kGame + 0x01;
@@ -206,7 +206,7 @@ namespace test
 
 namespace test
 {
-    /** @brief 서버 프로세스 하나입니다. 키트 서비스는 테스트가 `_host.registerService` 로 올린 뒤 `start` 하고, 키트 묶음은 `addKit` 으로 맡긴다. */
+    /** @brief 서버 프로세스 하나입니다. 키트 서비스는 테스트가 `_host.registerHostService` 로 올린 뒤 `start` 하고, 키트 묶음은 `addKit` 으로 맡긴다. */
     class OnlineTestServer final
     {
     public:
@@ -234,7 +234,7 @@ namespace test
             , _host{}
             , _port{ static_cast<uint16>( kFirstPort + serverID ) }
         {
-            SW_EXPECT_TRUE( _host.registerService( &_loginService ) );
+            SW_EXPECT_TRUE( _host.registerHostService( &_loginService ) );
         }
 
         ~OnlineTestServer()

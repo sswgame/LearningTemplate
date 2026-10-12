@@ -20,7 +20,7 @@
 ```mermaid
 flowchart LR
   Client["OnlineServiceClient<br/>+ 키트 클라이언트(ChatClient …)"] -- "스트림(요청 · 응답 · 알림)" --> Host["OnlineServiceHost<br/>인증 · 제한 · 라우팅"]
-  Host --> Binding["키트 바인딩(ChatServer …)<br/>IOnlineService"]
+  Host --> Binding["키트 바인딩(ChatServer …)<br/>IOnlineHostService"]
   Binding --> Logic["키트 로직(ChatService …)"]
   Logic -- "저장소 작업" --> Store["IServiceStore<br/>영속 · 원본"]
   Logic --> Cache["IEphemeralStore<br/>캐시 · 잃어도 되는 것"]
@@ -28,7 +28,7 @@ flowchart LR
 ```
 
 **서비스 호스트.** `OnlineServiceHost` 가 스트림 엔드포인트를 열고 요청을 받습니다. 연결의 첫 요청(Hello)에서 기반과 키트의 버전을 협상하고,
-인증과 요청 제한(주소와 계정마다의 토큰 버킷, 본문 크기 상한)을 먼저 본 뒤 메서드 범위를 맡은 서비스(`IOnlineService`)에 넘깁니다.
+인증과 요청 제한(주소와 계정마다의 토큰 버킷, 본문 크기 상한)을 먼저 본 뒤 메서드 범위를 맡은 서비스(`IOnlineHostService`)에 넘깁니다.
 키트마다 메서드 범위 256개를 가집니다(`OnlineProtocol.h`). 앞쪽 128개는 메서드이고 뒤쪽 128개는 서버가 보내는 알림입니다.
 
 **저장소 작업.** 영속 저장소 계약은 `IServiceStore` 입니다. (테이블, 키)마다 바이트와 버전을 가지고, 조건부 쓰기를 묶은 트랜잭션과 키 범위 읽기를 지원합니다.
@@ -141,7 +141,7 @@ GM 도구 키트는 운영 도구와 에디터만 의존하고, 플레이어용 
 ### 새 서비스 키트를 만들 때
 
 1. 공유 키트 `Kits/Feature/Online/<기능>/Shared/` 에 와이어 형식(`<기능>Protocol.h`)과 클라이언트를 둡니다. 메서드 범위는 다른 키트와 겹치지 않게 정합니다.
-2. 서버 키트 `Kits/Feature/Online/<기능>/Server/` 에 로직과 바인딩을 둡니다. 로직은 전송을 모르는 클래스로 두고, 바인딩이 `IOnlineService` 로 호스트에 등록합니다.
+2. 서버 키트 `Kits/Feature/Online/<기능>/Server/` 에 로직과 바인딩을 둡니다. 로직은 전송을 모르는 클래스로 두고, 바인딩이 `IOnlineHostService` 로 호스트에 등록합니다.
 3. 여러 키트가 한 트랜잭션에 넣어야 하는 쓰기(원장 이동, 우편 넣기, 제재)는 이 폴더에 둡니다. 키트 안에 두면 다른 키트가 같은 트랜잭션을 만들 수 없습니다.
 4. 저장소 작업마다 계약 테스트를 메모리 저장소로 돌리고, 끝단 테스트(`<기능>StreamTest`)를 하니스로 둡니다.
 5. 지표가 필요하면 `ServiceMetrics` 로 표준 지표(`service_requests_total` 등)를 셉니다. 레지스트리는 전용 서버 실행 파일이 하나 가지고 넘깁니다.
@@ -152,7 +152,7 @@ GM 도구 키트는 운영 도구와 에디터만 의존하고, 플레이어용 
 
 - **캐시 응답과 서버 버스 메시지를 꺼내는 것은 호스트 하나입니다**(`getEphemeralRouter`, `subscribeServerBus`). `IEphemeralStore::pollReplies` 와 `IServerBus::pollMessages` 는 전체 것을 꺼냅니다.
   서비스 둘이 직접 부르면 서로의 응답을 가져가고, 가져간 쪽은 버리고 맡긴 쪽은 영원히 기다립니다.
-- **메서드 범위가 겹치는 서비스는 `registerService` 가, 같은 메서드 번호는 `NetRequestServer::registerMethod` 가 거절합니다.** 덮어쓰면 한 키트의 요청이 다른 키트로 갑니다.
+- **메서드 범위가 겹치는 서비스는 `registerHostService` 가, 같은 메서드 번호는 `NetRequestServer::registerMethod` 가 거절합니다.** 덮어쓰면 한 키트의 요청이 다른 키트로 갑니다.
 - **종료 순서는 키트(로직과 바인딩), 호스트, 저장소와 캐시 순입니다.** 실제 서버도 테스트 하니스(`OnlineTestServer::addKit`)도 같습니다.
   키트의 `shutdown` 은 빌려 준 것을 모두 회수합니다. 저장 작업, 라우터의 `cancel`, 접속 상태의 `IAccountPresence::cancel`, 버스 구독이 그것입니다.
   늦게 내려가는 서비스는 호스트 `shutdown` 이 `onHostShutdown` 으로 떼어 두므로, 사라진 호스트를 부르지 않습니다.

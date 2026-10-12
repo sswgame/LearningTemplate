@@ -133,20 +133,20 @@ namespace sw
 
     void GameInstanceBase::applyBootstrap()
     {
-        const GameSettings& data = _bootstrap._data;
+        const GameSettings& settings = _bootstrap._data;
 
         // 게임의 로컬라이제이션 프로젝트를 올린다. 엔진 프로젝트는 엔진이 기동 때 올렸다.
-        if ( data._localizationProject.empty() == false && GameStrings::initialize( data._localizationProject, data._defaultLanguage, data._fallbackLanguage ) == false )
-            SW_LOG_WARNING( "GameSettings localization project '%#' could not be loaded - strings show their keys", data._localizationProject.c_str() );
+        if ( settings._localizationProject.empty() == false && GameStrings::initialize( settings._localizationProject, settings._defaultLanguage, settings._fallbackLanguage ) == false )
+            SW_LOG_WARNING( "GameSettings localization project '%#' could not be loaded - strings show their keys", settings._localizationProject.c_str() );
 
         // 게임플레이 입력 맵은 `InputManager::beginFrame` 이 프레임마다 갱신하는 통합 맵이며, `PlayerController` 가 읽는다.
-        if ( data._inputMap.empty() == false )
+        if ( settings._inputMap.empty() == false )
         {
             InputManager* pInput = game::getService<InputManager>();
             if ( pInput == nullptr )
-                SW_LOG_WARNING( "GameSettings input map '%#' is not loaded - no InputManager service", data._inputMap.c_str() );
-            else if ( pInput->getInputMap().loadFromResource( data._inputMap ) == false )
-                SW_LOG_WARNING( "GameSettings input map '%#' could not be loaded - gameplay actions keep their current bindings", data._inputMap.c_str() );
+                SW_LOG_WARNING( "GameSettings input map '%#' is not loaded - no InputManager service", settings._inputMap.c_str() );
+            else if ( pInput->getInputMap().loadFromResource( settings._inputMap ) == false )
+                SW_LOG_WARNING( "GameSettings input map '%#' could not be loaded - gameplay actions keep their current bindings", settings._inputMap.c_str() );
         }
     }
 
@@ -176,15 +176,15 @@ namespace sw
             SW_LOG_INFO( "The game instance was recreated over a live scene - keeping it instead of loading the first scene" );
             return false;
         }
-        return requestSceneLoad( getFirstScene(), "first" );
+        return requestLoadScene( getFirstScene(), "first" );
     }
 
     bool GameInstanceBase::requestEntranceScene()
     {
-        return requestSceneLoad( getEntranceScene(), "entrance" );
+        return requestLoadScene( getEntranceScene(), "entrance" );
     }
 
-    bool GameInstanceBase::requestSceneLoad( const string& scenePath, const utf8* pWhich )
+    bool GameInstanceBase::requestLoadScene( const string& scenePath, const utf8* pWhich )
     {
         if ( scenePath.empty() )
             return false;

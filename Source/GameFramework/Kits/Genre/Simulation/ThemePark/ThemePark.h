@@ -24,7 +24,7 @@
 namespace sw
 {
     struct CoasterRideStats;
-    struct GameStateRefs;
+    struct SessionStateRefs;
 
     class Archive;
     class Wallet;
@@ -171,7 +171,7 @@ namespace sw
          * @brief 설정으로 빈 공원을 엽니다. 공원 돈은 빌린 지갑(@p refs 의 지갑이며 통화는 `ThemeParkSettings::_currency`)이고, 시작 자금은 게임이 넣습니다.
          * @details 건설은 `trySpend`, 입장료와 탈것 요금은 `add`, 운영비는 `charge`(빚이 될 수 있다)로 처리한다. 지갑이 없으면 건설은 모두 거절하고 수입은 버린다.
          */
-        void initialize( const ThemeParkSettings& settings, const GameStateRefs& refs );
+        void initialize( const ThemeParkSettings& settings, const SessionStateRefs& refs );
         /** @brief 시간을 진행합니다. 큰 시간은 0.25초씩 나눠 처리합니다. */
         void update( float32 deltaTime );
 

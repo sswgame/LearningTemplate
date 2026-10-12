@@ -71,8 +71,8 @@ namespace sw
         const InteractionSession& getSession() const { return _session; }
 
     private:
-        void makeViewer( InteractionViewer& outViewer ) const;
-        void gatherCandidates( GameObjectManager& manager, const GameObject& owner, const InteractionViewer& viewer );
+        void makeView( InteractionView& outViewer ) const;
+        void gatherCandidates( GameObjectManager& manager, const GameObject& owner, const InteractionView& viewer );
         void setFocus( GameObjectManager& manager, GameObjectHandle focus, ComponentHandle focusComponent );
         void finishSession( GameObjectManager& manager, const GameObject& owner );
 

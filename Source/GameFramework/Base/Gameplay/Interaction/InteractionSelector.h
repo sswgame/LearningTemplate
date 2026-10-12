@@ -28,7 +28,7 @@ namespace sw
 namespace sw
 {
     /** @brief 고르는 쪽(눈)입니다. */
-    struct InteractionViewer
+    struct InteractionView
     {
         float3           _position{};
         float3           _forward{ 0.0f, 0.0f, 1.0f }; ///< 시선. 정규화하지 않아도 된다
@@ -88,11 +88,11 @@ namespace sw
     struct SW_GF_API InteractionSelector
     {
         /** @brief 거리와 각만 보고 후보가 닿는지 판정합니다. 시야는 보지 않습니다. @p outDistance 는 공간에 맞춘 거리입니다. */
-        static bool isInReach( const InteractionViewer& viewer, const InteractionCandidate& candidate, float32& outDistance );
+        static bool isInReach( const InteractionView& viewer, const InteractionCandidate& candidate, float32& outDistance );
         /**
          * @brief 닿고(`isInReach`) 보이는 후보 중 우선도가 가장 높고, 같으면 가장 가까운 것의 번호입니다. 보이는지는 @p pLineOfSight 가 있고 후보가 시야를 요구할 때만 검사합니다.
          * @details 시야 질의는 거리와 각을 통과한 후보에만 가까운 순으로 한다. 광선 검사가 비싸기 때문이다. 고를 후보가 없으면 −1 이다.
          */
-        static int32 selectBest( const InteractionViewer& viewer, const vector<InteractionCandidate>& listCandidate, const ILineOfSightQuery* pLineOfSight );
+        static int32 selectBest( const InteractionView& viewer, const vector<InteractionCandidate>& listCandidate, const ILineOfSightQuery* pLineOfSight );
     };
 } // namespace sw

@@ -45,7 +45,7 @@ namespace sw::editor
         /**
          * @brief 마우스 아래의 월드 레이를 만듭니다. 캔버스 밖이거나 퇴화했으면 false 입니다.
          * @details 피킹, 자, 애셋 드롭이 같은 레이를 쓴다. ImGui 에 의존하는 부분은 마우스 위치뿐이고, 나머지는
-         *          `EditorViewportPick::makeRay` 이므로 테스트가 있다.
+         *          `EditorViewportRayPick::makeRay` 이므로 테스트가 있다.
          */
         static bool makeMouseRay( const float4x4& invViewProj, const float2& canvasPos, const float2& canvasSize, EditorPickRay& outRay );
 

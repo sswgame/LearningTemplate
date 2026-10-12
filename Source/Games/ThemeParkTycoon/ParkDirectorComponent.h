@@ -19,8 +19,8 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
-#include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Foundation/Framework/Presentation/MaterialTintCache.h"
+#include "GameFramework/Base/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrain.h"
@@ -102,11 +102,11 @@ namespace sw
         /** @brief 아직 건설하지 않은 것 중 가장 싼 것을 건설합니다. */
         bool buildCheapestRemaining();
         /** @brief 공원이 빌려 쓸 공유 상태(디렉터가 보관하는 금고)를 반환합니다. */
-        GameStateRefs makeRefs();
-        void          spawnGuestPool( GameObjectManager& manager );
-        void          spawnRideView( GameObjectManager& manager, int32 placementIndex );
-        void          spawnCoasterView( GameObjectManager& manager, int32 coasterIndex );
-        void          spawnPath( GameObjectManager& manager, const float3& from, const float3& to );
+        SessionStateRefs makeRefs();
+        void             spawnGuestPool( GameObjectManager& manager );
+        void             spawnRideView( GameObjectManager& manager, int32 placementIndex );
+        void             spawnCoasterView( GameObjectManager& manager, int32 coasterIndex );
+        void             spawnPath( GameObjectManager& manager, const float3& from, const float3& to );
 
         void  updateInput( const InputManager& input );
         void  updateRides( float32 deltaTime );

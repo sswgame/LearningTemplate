@@ -3,7 +3,7 @@
  * @brief 장르 키트 둘을 한 씬 · 한 공유 상태에 섞는 조립 테스트입니다 — Farming + CreatureLife(틱 순서 · 키트 사이 흐름), RTS + CityBuilder(한 땅 · 한 지갑 · 한 시계),
  *        둘 다 다른 실행의 세이브 · 핫 리로드 왕복.
  * @details 밭이 순무를 키워 팔면 번 돈이 공유 지갑에 들고, 마을이 같은 틱에 그 돈으로 과수원을 심어 생물의 부탁(공유 일지)이 끝난다.
- *          공유 상태(`GameStateComponent`)와 두 디렉터가 한 오브젝트에 그 순서로 붙어 시계 → 밭 → 마을 순서로 매 틱 돈다.
+ *          공유 상태(`SessionStateComponent`)와 두 디렉터가 한 오브젝트에 그 순서로 붙어 시계 → 밭 → 마을 순서로 매 틱 돈다.
  */
 #include "pch.h"
 
@@ -21,9 +21,9 @@
 #include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
-#include "GameFramework/Base/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Base/Gameplay/Progression/Reputation.h"
 #include "GameFramework/Base/Gameplay/Quest/QuestCatalog.h"
+#include "GameFramework/Base/Gameplay/SessionState/SessionStateComponent.h"
 #include "GameFramework/Base/World/Land/LandRegistry.h"
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureLifeCatalog.h"
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureTown.h"
@@ -90,9 +90,9 @@ namespace sw
         }
 
         /** @brief 공유 상태 설정 — 하루는 실제 24 초(1 초 = 게임 1 시간), 계절 넷 × 28 일. */
-        GameStateSettings makeStateSettings() const
+        SessionStateSettings makeStateSettings() const
         {
-            GameStateSettings settings;
+            SessionStateSettings settings;
             settings._clock._listSeason    = { "Spring", "Summer", "Fall", "Winter" };
             settings._clock._secondsPerDay = 24.0f;
             settings._clock._daysPerSeason = 28;
@@ -129,7 +129,7 @@ namespace sw
     protected:
         bool startGame() override
         {
-            GameStateComponent*           pState   = GameStateComponent::findOnOwner( *this );
+            SessionStateComponent*        pState   = SessionStateComponent::findOnOwner( *this );
             const KitCompositionCatalogs& catalogs = KitCompositionCatalogs::get();
             if ( pState == nullptr || catalogs._bLoaded == SW_FALSE )
                 return false;
@@ -162,7 +162,7 @@ namespace sw
         void tickGame( float32 deltaTime ) override
         {
             (void)deltaTime;
-            GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
+            SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
             if ( pState == nullptr )
                 return;
             for ( const WorldClockEvent& clockEvent : pState->getClockEvents() )
@@ -180,7 +180,7 @@ namespace sw
 
     private:
         /** @brief 하루 넘김 — 밭이 자라고, 다 자란 칸을 거둬 팔고 다시 심고, 나머지는 물 준다. */
-        void startNextDay( GameStateComponent& state )
+        void startNextDay( SessionStateComponent& state )
         {
             const hashed_string season = state.getClock().getSeasonName(); // 계절은 공유 시계의 데이터(U12 — FarmSeason 없음)
             _field.advanceDay( season, false );
@@ -254,7 +254,7 @@ namespace sw
     protected:
         bool startGame() override
         {
-            GameStateComponent*           pState   = GameStateComponent::findOnOwner( *this );
+            SessionStateComponent*        pState   = SessionStateComponent::findOnOwner( *this );
             const KitCompositionCatalogs& catalogs = KitCompositionCatalogs::get();
             if ( pState == nullptr || catalogs._bLoaded == SW_FALSE )
                 return false;
@@ -270,11 +270,11 @@ namespace sw
 
         bool readState( Archive& archive ) override
         {
-            GameStateComponent* pState  = GameStateComponent::findOnOwner( *this );
-            uint32              tag     = 0;
-            uint32              version = 0;
-            Archive             body;
-            const bool          bFrameRead = pState != nullptr && StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) &&
+            SessionStateComponent* pState  = SessionStateComponent::findOnOwner( *this );
+            uint32                 tag     = 0;
+            uint32                 version = 0;
+            Archive                body;
+            const bool             bFrameRead = pState != nullptr && StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) &&
                                     StateArchiveUtil::readSection( archive, tag, version, body );
             if ( bFrameRead == false || tag != CreatureTown::kStateTag || version != CreatureTown::kStateVersion )
                 return false;
@@ -290,7 +290,7 @@ namespace sw
         void tickGame( float32 deltaTime ) override
         {
             (void)deltaTime;
-            GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
+            SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
             if ( pState == nullptr )
                 return;
             const WorldClock& clock = pState->getClock();
@@ -321,7 +321,7 @@ namespace sw
         }
 
     private:
-        static void initializeTown( CreatureTown& outTown, GameStateComponent& state )
+        static void initializeTown( CreatureTown& outTown, SessionStateComponent& state )
         {
             const KitCompositionCatalogs& catalogs = KitCompositionCatalogs::get();
             outTown.initialize( &catalogs._creatures, state.makeRefs(), kTownSize, kTownSize, CreatureTownSettings{} ); // U14 뒤 모양 — 평판 카탈로그는 공유 상태가
@@ -346,7 +346,7 @@ namespace sw
     public:
         KitCompositionGameInstance()
         {
-            registerStatefulComponent<GameStateComponent>();
+            registerStatefulComponent<SessionStateComponent>();
             registerDirector<KitCompositionFarmDirector>();
             registerDirector<KitCompositionTownDirector>();
         }
@@ -395,9 +395,9 @@ namespace sw
         }
 
         /** @brief 공유 상태 설정 — 땅 32 × 32(칸 1 m), 하루(= 도시의 한 달)는 실제 24 초. */
-        static GameStateSettings makeStateSettings()
+        static SessionStateSettings makeStateSettings()
         {
-            GameStateSettings settings;
+            SessionStateSettings settings;
             settings._clock._secondsPerDay = 24.0f;
             settings._landWidth            = kLandSize;
             settings._landHeight           = kLandSize;
@@ -435,10 +435,10 @@ namespace sw
     protected:
         bool startGame() override
         {
-            GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
+            SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
             if ( pState == nullptr || LandCompositionCatalogs::get()._bLoaded == SW_FALSE )
                 return false;
-            if ( pState->initialize( LandCompositionCatalogs::makeStateSettings() ) == GameStateInitResult::Fresh )
+            if ( pState->initialize( LandCompositionCatalogs::makeStateSettings() ) == SessionStateInitResult::Fresh )
             {
                 pState->getWallet().add( "Deben", LandCompositionCatalogs::kStartingDeben );
                 pState->getWallet().add( "Minerals", LandCompositionCatalogs::kStartingMinerals );
@@ -449,12 +449,12 @@ namespace sw
 
         bool readState( Archive& archive ) override
         {
-            GameStateComponent* pState   = GameStateComponent::findOnOwner( *this );
-            uint32              tag      = 0;
-            uint32              version  = 0;
-            uint8               bLaidOut = SW_FALSE;
-            Archive             body;
-            const bool          bHeadRead = pState != nullptr && StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion );
+            SessionStateComponent* pState   = SessionStateComponent::findOnOwner( *this );
+            uint32                 tag      = 0;
+            uint32                 version  = 0;
+            uint8                  bLaidOut = SW_FALSE;
+            Archive                body;
+            const bool             bHeadRead = pState != nullptr && StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion );
             if ( bHeadRead == false )
                 return false;
             archive >> bLaidOut;
@@ -471,7 +471,7 @@ namespace sw
 
         void tickGame( float32 deltaTime ) override
         {
-            GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
+            SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
             if ( pState == nullptr )
                 return;
             if ( _bLaidOut == SW_FALSE )
@@ -496,7 +496,7 @@ namespace sw
         }
 
     private:
-        static void initializeCity( CitySimulation& outCity, GameStateComponent& state )
+        static void initializeCity( CitySimulation& outCity, SessionStateComponent& state )
         {
             outCity.initialize( &LandCompositionCatalogs::get()._city, LandCompositionCatalogs::kLandSize, LandCompositionCatalogs::kLandSize, CitySettings{}, state.makeRefs() );
             outCity.bindLand( &state.getLand(), int2{ 0, 0 } );
@@ -547,7 +547,7 @@ namespace sw
     protected:
         bool startGame() override
         {
-            GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
+            SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
             if ( pState == nullptr || LandCompositionCatalogs::get()._bLoaded == SW_FALSE )
                 return false;
             (void)pState->initialize( LandCompositionCatalogs::makeStateSettings() ); // 이미 열렸으면 아무것도 하지 않는다
@@ -562,7 +562,7 @@ namespace sw
 
         bool readState( Archive& archive ) override
         {
-            GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
+            SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
             if ( pState == nullptr || StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) == false )
                 return false;
             int32  tickCount   = 0;
@@ -605,7 +605,7 @@ namespace sw
         }
 
     private:
-        static void initializeWorld( RTSWorld& outWorld, GameStateComponent& state )
+        static void initializeWorld( RTSWorld& outWorld, SessionStateComponent& state )
         {
             outWorld.initialize( &LandCompositionCatalogs::get()._rts, LandCompositionCatalogs::kLandSize, LandCompositionCatalogs::kLandSize, RTSSettings{} );
             outWorld.bindLand( &state.getLand(), int2{ 0, 0 } );
@@ -638,7 +638,7 @@ namespace sw
     public:
         LandCompositionGameInstance()
         {
-            registerStatefulComponent<GameStateComponent>();
+            registerStatefulComponent<SessionStateComponent>();
             registerDirector<KitCompositionCityDirector>();
             registerDirector<KitCompositionSkirmishDirector>();
         }
@@ -686,7 +686,7 @@ namespace
             _pScene                  = _sceneManager.createEmptyActiveScene( "KitComposition" );
             _pBinding                = make_unique<ScopedCompositionSceneService>( _sceneManager );
             GameObject* pStateObject = getManager()->createGameObject( hashed_string( "VillageState" ) );
-            (void)pStateObject->addComponent<GameStateComponent>();
+            (void)pStateObject->addComponent<SessionStateComponent>();
             (void)pStateObject->addComponent<KitCompositionFarmDirector>();
             (void)pStateObject->addComponent<KitCompositionTownDirector>();
         }
@@ -728,9 +728,9 @@ namespace
     /** @brief 씬의 판을 숫자로 읽습니다. 공유 상태 · 두 디렉터를 못 찾으면 false 입니다. */
     bool makeCompositionDigest( GameObjectManager& manager, KitCompositionDigest& outDigest )
     {
-        GameStateComponent* pState     = nullptr;
-        int32               stateCount = 0;
-        manager.forEachComponentOfType<GameStateComponent>( [&pState, &stateCount]( GameStateComponent* pComponent )
+        SessionStateComponent* pState     = nullptr;
+        int32                  stateCount = 0;
+        manager.forEachComponentOfType<SessionStateComponent>( [&pState, &stateCount]( SessionStateComponent* pComponent )
         {
             pState = pState == nullptr ? pComponent : pState;
             ++stateCount;
@@ -775,7 +775,7 @@ namespace
             _pScene                  = _sceneManager.createEmptyActiveScene( "LandComposition" );
             _pBinding                = make_unique<ScopedCompositionSceneService>( _sceneManager );
             GameObject* pStateObject = getManager()->createGameObject( hashed_string( "LandState" ) );
-            (void)pStateObject->addComponent<GameStateComponent>();
+            (void)pStateObject->addComponent<SessionStateComponent>();
             (void)pStateObject->addComponent<KitCompositionCityDirector>();
             (void)pStateObject->addComponent<KitCompositionSkirmishDirector>();
         }
@@ -804,11 +804,11 @@ namespace
         (void)KitCompositionSkirmishDirector::StaticType();
     }
 
-    GameStateComponent* findLandState( GameObjectManager& manager, int32& outStateCount )
+    SessionStateComponent* findLandState( GameObjectManager& manager, int32& outStateCount )
     {
-        GameStateComponent* pState = nullptr;
-        outStateCount              = 0;
-        manager.forEachComponentOfType<GameStateComponent>( [&pState, &outStateCount]( GameStateComponent* pComponent )
+        SessionStateComponent* pState = nullptr;
+        outStateCount                 = 0;
+        manager.forEachComponentOfType<SessionStateComponent>( [&pState, &outStateCount]( SessionStateComponent* pComponent )
         {
             pState = pState == nullptr ? pComponent : pState;
             ++outStateCount;
@@ -818,7 +818,7 @@ namespace
 
     bool makeLandCompositionDigest( GameObjectManager& manager, LandCompositionDigest& outDigest )
     {
-        GameStateComponent* pState = findLandState( manager, outDigest._stateCount );
+        SessionStateComponent* pState = findLandState( manager, outDigest._stateCount );
         if ( pState == nullptr || pState->getOwner() == nullptr )
             return false;
         const KitCompositionSkirmishDirector* pSkirmish = pState->getOwner()->getComponent<KitCompositionSkirmishDirector>();
@@ -883,8 +883,8 @@ SW_TEST_CASE( KitCompositionTest, FarmIncomeBuysTheTownOrchardInTheSameTick )
     SW_EXPECT_EQUAL( 1, lastDigest._orchardCount );
 
     // 부탁이 끝난 알림은 공유 일지에 남아 게임 화면이 받는다(마을이 꺼내 먹지 않았다)
-    GameStateComponent* pState = nullptr;
-    pManager->forEachComponentOfType<GameStateComponent>( [&pState]( GameStateComponent* pComponent )
+    SessionStateComponent* pState = nullptr;
+    pManager->forEachComponentOfType<SessionStateComponent>( [&pState]( SessionStateComponent* pComponent )
     { pState = pComponent; } );
     SW_ASSERT_NOT_NULL( pState );
     vector<QuestEvent> listEvent;
@@ -1016,8 +1016,8 @@ SW_TEST_CASE( KitCompositionTest, CityAndSkirmishShareTheLandAndRouteAroundBuild
     pManager->beginPlay();
     runCompositionTicks( *pManager, 2 * LandCompositionTestInternal::kHalfRunTicks );
 
-    int32               stateCount = 0;
-    GameStateComponent* pState     = findLandState( *pManager, stateCount );
+    int32                  stateCount = 0;
+    SessionStateComponent* pState     = findLandState( *pManager, stateCount );
     SW_ASSERT_NOT_NULL( pState );
     KitCompositionCityDirector*           pCity     = pState->getOwner()->getComponent<KitCompositionCityDirector>();
     const KitCompositionSkirmishDirector* pSkirmish = pState->getOwner()->getComponent<KitCompositionSkirmishDirector>();

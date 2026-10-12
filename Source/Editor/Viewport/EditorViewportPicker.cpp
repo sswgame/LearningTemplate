@@ -6,7 +6,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Editor/Common/Commands/EditorViewportPick.h"
+#include "Editor/Common/Commands/EditorViewportRayPick.h"
 #include "Editor/Common/EditorProfile.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -141,9 +141,9 @@ namespace sw::editor
             }
         }
 
-        // 어떤 컴포넌트 종류를 집을 수 있는지는 EditorViewportPick 의 테이블이 정한다. ImGui 없이 테스트한다.
+        // 어떤 컴포넌트 종류를 집을 수 있는지는 EditorViewportRayPick 의 테이블이 정한다. ImGui 없이 테스트한다.
         EditorPickResult pickResult{};
-        if ( EditorViewportPick::pick( pManager, pickRay, settings._bIs2DMode, pickResult ) == false || pickResult._pObject == nullptr ||
+        if ( EditorViewportRayPick::pick( pManager, pickRay, settings._bIs2DMode, pickResult ) == false || pickResult._pObject == nullptr ||
              pContext->getWorkspace().isObjectLocked( pickResult._pObject->getObjectID() ) || pickResult._pObject->isHiddenInEditor() )
             return false;
         pOutObject    = pickResult._pObject;

@@ -18,7 +18,7 @@
 
 namespace sw
 {
-    struct GameStateRefs;
+    struct SessionStateRefs;
 
     class Archive;
     class GameFlags;
@@ -92,7 +92,7 @@ namespace sw
          * @brief 카탈로그 규칙으로 처음 상태(물약 가득, 처치 없음)를 설정합니다. 통화는 빌려 온 지갑(@p refs 의 지갑)에 있는 카탈로그 통화(`MetroRules::_currency`)입니다.
          * @details 죽으면 그 통화의 잔액을 시체로 옮기고(지갑은 0이 된다), 되찾으면 지갑으로 돌려준다. 지갑이 없으면 처치 보상과 시체도 없다.
          */
-        void initialize( const MetroidvaniaCatalog* pCatalog, const GameStateRefs& refs );
+        void initialize( const MetroidvaniaCatalog* pCatalog, const SessionStateRefs& refs );
 
         /**
          * @brief 쉬는 지점에서 쉽니다. 체력을 가득 채우고(`Vitality::respawn`), 물약을 충전하고, 보스가 아닌 적을 부활시키고, 되살아날 위치를 갱신합니다.

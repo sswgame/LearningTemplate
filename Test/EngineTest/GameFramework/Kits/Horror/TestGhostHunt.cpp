@@ -3,7 +3,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Base/Gameplay/Inventory/LootTable.h"
@@ -112,7 +112,7 @@ namespace
                  _areaGraph.loadFromXMLText( kGhostAreaXML, "GhostHuntTest" ) == false )
                 return false;
             _bag.initialize( nullptr, 8 );
-            GameStateRefs refs;
+            SessionStateRefs refs;
             refs._pFlags     = &_flags;
             refs._pInventory = &_bag;
             refs._pWallet    = &_wallet;
@@ -444,7 +444,7 @@ SW_TEST_CASE( GhostHuntTest, KeysLiveInThePlayerBag )
     // 가방을 빌려 주지 않은 저택 — 열쇠가 드는 문은 열리지 않는다
     GhostMansionScene bagless;
     SW_ASSERT_TRUE( bagless.initialize( 11 ) );
-    GameStateRefs refs;
+    SessionStateRefs refs;
     refs._pFlags = &bagless._flags;
     bagless._mansion.initialize( &bagless._catalog, &bagless._loot, &bagless._areaGraph, refs, 11 );
     SW_EXPECT_TRUE( bagless._mansion.unlockDoor( "parlorDoor" ) == GhostDoorResult::NeedKey );
@@ -513,7 +513,7 @@ SW_TEST_CASE( GhostHuntTest, StateRoundTripContinuesTheSameMansion )
     SW_EXPECT_TRUE( mansion.searchFurniture( "curtain", GhostSearchMode::Vacuum, loot ) == GhostSearchResult::Found ); // 부를 찾은 가구는 뒤진 것으로 치지 않는다
     scene.run( 1.0f );
 
-    GameStateRefs refs;
+    SessionStateRefs refs;
     refs._pFlags     = &scene._flags;
     refs._pInventory = &scene._bag;
     refs._pWallet    = &scene._wallet;

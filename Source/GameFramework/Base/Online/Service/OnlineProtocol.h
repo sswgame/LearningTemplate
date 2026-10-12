@@ -3,7 +3,7 @@
  * @brief 온라인 서비스의 와이어 표 — 키트마다의 메서드 영역 · 호스트 메서드 · 공통 오류 코드 · 기반 프로토콜 판입니다.
  * @details - 메서드(uint16) = 영역 + 0x00..0x7F, 알림 종류(Message 프레임 `[종류 u16][몸]`) = 영역 + 0x80..0xFF. 키트 오류 = 영역 + n(공통 0..255 는 `OnlineError`).
  *          - 값은 와이어 형식이다 — 바꾸면 `OnlineProtocolConstant::kBaseVersion` 을 올린다. 키트의 메서드 상수는 `static_assert( OnlineMethodRange::isInRange( … ) )`.
- *          - 영역이 겹치는 키트 둘을 한 호스트에 올리면 `OnlineServiceHost::registerService` 가 거절한다(조립 실수를 기동에서 잡는다).
+ *          - 영역이 겹치는 키트 둘을 한 호스트에 올리면 `OnlineServiceHost::registerHostService` 가 거절한다(조립 실수를 기동에서 잡는다).
  */
 #pragma once
 #include "Core/Common/Types.h"

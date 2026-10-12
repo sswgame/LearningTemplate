@@ -11,7 +11,7 @@
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
-#include "GameFramework/Base/Gameplay/GameState/GameStateComponent.h"
+#include "GameFramework/Base/Gameplay/SessionState/SessionStateComponent.h"
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureLifeCatalog.h"
 
 #include "Games/MeadowVillage/MeadowVillageData.h"
@@ -59,10 +59,10 @@ namespace sw
 
     bool MeadowTownDirectorComponent::startGame()
     {
-        GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
+        SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
         {
-            SW_LOG_WARNING( "[Meadow] the town cannot start - no GameStateComponent in front of it on this object" );
+            SW_LOG_WARNING( "[Meadow] the town cannot start - no SessionStateComponent in front of it on this object" );
             return false;
         }
         (void)pState->initialize( MeadowVillageData::makeStateSettings() ); // 밭 디렉터가 이미 열었으면 아무것도 하지 않는다
@@ -79,11 +79,11 @@ namespace sw
 
     bool MeadowTownDirectorComponent::readState( Archive& archive )
     {
-        GameStateComponent* pState  = GameStateComponent::findOnOwner( *this );
-        uint32              tag     = 0;
-        uint32              version = 0;
-        Archive             body;
-        const bool          bFrameRead = pState != nullptr && StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) &&
+        SessionStateComponent* pState  = SessionStateComponent::findOnOwner( *this );
+        uint32                 tag     = 0;
+        uint32                 version = 0;
+        Archive                body;
+        const bool             bFrameRead = pState != nullptr && StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) &&
                                 StateArchiveUtil::readSection( archive, tag, version, body );
         if ( bFrameRead == false || tag != CreatureTown::kStateTag || version != CreatureTown::kStateVersion )
             return false;
@@ -101,7 +101,7 @@ namespace sw
     void MeadowTownDirectorComponent::tickGame( float32 deltaTime )
     {
         (void)deltaTime;
-        GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
+        SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
             return;
         const WorldClock&   clock = pState->getClock();
@@ -165,7 +165,7 @@ namespace sw
         _listView.clear();
     }
 
-    bool MeadowTownDirectorComponent::initializeTown( CreatureTown& outTown, GameStateComponent& state )
+    bool MeadowTownDirectorComponent::initializeTown( CreatureTown& outTown, SessionStateComponent& state )
     {
         const CreatureLifeCatalog* pCatalog = game::getService<CreatureLifeCatalog>();
         if ( pCatalog == nullptr )

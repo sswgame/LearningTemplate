@@ -24,7 +24,7 @@
 
 namespace sw
 {
-    struct GameStateRefs;
+    struct SessionStateRefs;
 
     class Archive;
     class ItemCatalog;
@@ -138,7 +138,7 @@ namespace sw
          *        (공유 상태의 주인이 흘립니다). 내리면 그 위성의 날씨로 바꾸고, 떠나면 시계를 다음 날 도착 시각으로 넘깁니다.
          *        터미널에서 산 물건은 빌린 우주선 창고(@p shipStorage)에 들어가며, 창고는 원정보다 오래 살아야 합니다.
          */
-        void initialize( const ScavengerExpeditionData& data, const GameStateRefs& refs, Inventory& shipStorage, uint32 seed, int32 crewCount );
+        void initialize( const ScavengerExpeditionData& data, const SessionStateRefs& refs, Inventory& shipStorage, uint32 seed, int32 crewCount );
 
         /** @brief 궤도에서 위성으로 이동합니다(비용을 냅니다). 이미 그 위성이면 공짜입니다. */
         ScavengerActionResult routeTo( const hashed_string& moonID );

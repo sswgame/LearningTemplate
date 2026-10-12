@@ -2,7 +2,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Base/Gameplay/Progression/Reputation.h"
@@ -94,9 +94,9 @@ namespace
             return bLoaded;
         }
 
-        GameStateRefs makeRefs()
+        SessionStateRefs makeRefs()
         {
-            GameStateRefs refs;
+            SessionStateRefs refs;
             refs._pQuestLog   = &_questLog;
             refs._pReputation = &_friendship;
             refs._pClock      = &_clock;
@@ -227,7 +227,7 @@ SW_TEST_CASE( CreatureLifeTest, HabitatsMatchRotatedPatternsAndLargestWins )
     CreatureLifeTestWorld world;
     SW_ASSERT_TRUE( world.load() );
     CreatureTown town;
-    town.initialize( &world._catalog, GameStateRefs{}, 8, 8, CreatureTownSettings{} );
+    town.initialize( &world._catalog, SessionStateRefs{}, 8, 8, CreatureTownSettings{} );
 
     // 돌린 풀숲: 2×2 풀 + 그 위 줄 오른쪽에 나무(돌리지 않은 패턴은 나무가 풀 줄의 오른쪽 끝에 있어야 한다).
     (void)town.setObject( 2, 2, "grass" );
@@ -299,7 +299,7 @@ SW_TEST_CASE( CreatureLifeTest, VisitorsFollowPhaseWeatherAndAreDeterministic )
 
     // 연못(자리 2): 밤 · 비의 frog 는 늘, newt 는 35 % — 같은 씨앗이면 두 마을이 같은 시각에 받는다.
     CreatureTown townB;
-    townB.initialize( &world._catalog, GameStateRefs{}, 10, 10, CreatureTownSettings{} );
+    townB.initialize( &world._catalog, SessionStateRefs{}, 10, 10, CreatureTownSettings{} );
     (void)town.setObject( 0, 5, "water" );
     (void)town.setObject( 1, 5, "water" );
     (void)townB.setObject( 0, 5, "water" );
@@ -555,11 +555,11 @@ SW_TEST_CASE( CreatureLifeTest, TownStateRoundTripContinuesTheSameTown )
     SW_EXPECT_EQUAL( friendshipBefore + 50, restored.getFriendship( "sprout" ) );
 
     CreatureTown smaller;
-    smaller.initialize( &world._catalog, GameStateRefs{}, 8, 8, CreatureTownSettings{} );
+    smaller.initialize( &world._catalog, SessionStateRefs{}, 8, 8, CreatureTownSettings{} );
     Archive smallerReader( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( smaller.readState( smallerReader ) );
     CreatureTown truncated;
-    truncated.initialize( &world._catalog, GameStateRefs{}, 10, 10, CreatureTownSettings{} );
+    truncated.initialize( &world._catalog, SessionStateRefs{}, 10, 10, CreatureTownSettings{} );
     Archive cut( written.getData(), written.getSize() - 2 );
     SW_EXPECT_FALSE( truncated.readState( cut ) );
     SW_EXPECT_TRUE( truncated.getCreatures().empty() );
@@ -598,7 +598,7 @@ SW_TEST_CASE( CreatureLifeTest, TownPlacesOnlyOnUsableLandAndBlocksForTreesAndHo
     SW_ASSERT_TRUE( land.claimRect( other, 2, 2, 2, 2, false ) );
 
     CreatureTown town;
-    town.initialize( nullptr, GameStateRefs{}, 6, 6, CreatureTownSettings{} );
+    town.initialize( nullptr, SessionStateRefs{}, 6, 6, CreatureTownSettings{} );
     SW_ASSERT_TRUE( town.setObject( 1, 1, "grass" ) ); // 묶기 전에 놓은 것은 묶을 때 얻는다
     SW_ASSERT_TRUE( town.bindLand( &land, int2{ 0, 0 } ) );
     SW_EXPECT_TRUE( land.getOwnerName( 1, 1 ) == hashed_string( "CreatureLife" ) );
@@ -617,7 +617,7 @@ SW_TEST_CASE( CreatureLifeTest, TownPlacesOnlyOnUsableLandAndBlocksForTreesAndHo
 
     // 남의 땅 위에 이미 놓인 오브젝트가 있으면 묶지 않는다
     CreatureTown second;
-    second.initialize( nullptr, GameStateRefs{}, 6, 6, CreatureTownSettings{} );
+    second.initialize( nullptr, SessionStateRefs{}, 6, 6, CreatureTownSettings{} );
     SW_ASSERT_TRUE( second.setObject( 2, 2, "grass" ) );
     SW_EXPECT_FALSE( second.bindLand( &land, int2{ 0, 0 } ) );
 }

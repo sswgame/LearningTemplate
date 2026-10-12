@@ -1,6 +1,6 @@
 /**
- * @file GameStateComponent.h
- * @brief 키트 디렉터 여럿이 함께 쓰는 판 상태를 보관하는 컴포넌트입니다. 지갑, 플래그, 시계, 퀘스트 일지, 평판, 가방, 날씨, 땅이 들어 있습니다. 언리얼 Lyra 의 GameState 액터와 GameState 컴포넌트에 해당합니다.
+ * @file SessionStateComponent.h
+ * @brief 키트 디렉터 여럿이 함께 쓰는 판 상태를 보관하는 컴포넌트입니다. 지갑, 플래그, 시계, 퀘스트 일지, 평판, 가방, 날씨, 땅이 들어 있습니다. 세이브 슬롯 하나(한 세션)의 상태이며, 월드 단위 복제 상태인 언리얼 GameState 와는 다릅니다.
  */
 #pragma once
 #include "Core/Common/FourCcUtil.h"
@@ -10,7 +10,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Base/Gameplay/Progression/Reputation.h"
@@ -30,7 +30,7 @@ namespace sw
     class WeatherCatalog;
 
     /** @brief 판 상태를 여는 데 필요한 설정입니다. 카탈로그는 소유하지 않고 참조만 하므로 컴포넌트보다 오래 살아 있어야 합니다. 보통 게임 인스턴스가 카탈로그를 보관합니다. */
-    struct GameStateSettings
+    struct SessionStateSettings
     {
         WorldClockSettings       _clock{};
         const QuestCatalog*      _pQuestCatalog{ nullptr };
@@ -48,8 +48,8 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `GameStateComponent::initialize` 의 결과입니다. */
-    enum class GameStateInitResult : uint8
+    /** @brief `SessionStateComponent::initialize` 의 결과입니다. */
+    enum class SessionStateInitResult : uint8
     {
         Fresh = 0,         ///< 새 판이다. 여는 디렉터가 시작값(시작 돈, 첫 플래그)을 넣는다
         Restored,          ///< 보관하고 있던 세이브나 핫 리로드 바이트로 복원했다. 시작값은 넣지 않는다
@@ -60,7 +60,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @class GameStateComponent
+     * @class SessionStateComponent
      * @brief 키트 디렉터 여럿이 함께 쓰는 판 상태 하나입니다. 같은 오브젝트에 디렉터들과 함께 두고 **맨 앞**에 붙입니다.
      * @details - **순서**: 한 오브젝트의 틱은 한 워커가 붙은 순서대로 처리한다(`TickRegistry`). 이 컴포넌트(시계를 진행), 첫 디렉터, 둘째 디렉터 순서가
      *            매 틱 같고, 디렉터는 앞 디렉터가 이번 틱에 쓴 지갑과 플래그를 잠금 없이 읽는다. 주의할 점이 있다. 공유 상태를 쓰는 디렉터를 **다른 오브젝트**에 두면
@@ -70,10 +70,10 @@ namespace sw
      *          - **여는 쪽**: 같은 오브젝트의 첫 디렉터가 `startGame` 에서 `initialize` 를 부른다. 시작값(공유 상태를 건드리는 시작 배치 포함)은
      *            `isFreshGame()` 일 때만 넣는다. 복원한 판 위에 시작값이 중복으로 쌓이지 않게 하기 위해서다.
      *          - **세이브**: `writeState` 는 상태마다 구간 하나(`StateArchiveUtil::writeSection`)를 쓴다. 알 수 없는 구간은 건너뛰고, 빠진 구간은 새 판으로 둔다.
-     *            게임 인스턴스가 생성자에서 `registerStatefulComponent<GameStateComponent>()` 로 스냅샷에 등록한다.
+     *            게임 인스턴스가 생성자에서 `registerStatefulComponent<SessionStateComponent>()` 로 스냅샷에 등록한다.
      */
     REFLECT( Category = "Framework", DisplayName = "Game State", Tooltip = "Shared state (wallet, flags, clock, quests, reputation) used by the kit directors on the same object" )
-    class SW_GF_API GameStateComponent : public Component
+    class SW_GF_API SessionStateComponent : public Component
     {
     public:
         REFLECT_BODY();
@@ -81,14 +81,14 @@ namespace sw
         static constexpr uint32 kStateTag     = FourCcUtil::make( "GTST" );
         static constexpr uint32 kStateVersion = 1;
 
-        GameStateComponent();
-        virtual ~GameStateComponent() override;
+        SessionStateComponent();
+        virtual ~SessionStateComponent() override;
 
         /**
          * @brief 판 상태를 엽니다. 첫 호출만 설정을 쓰고, 보관하고 있던 복원 바이트가 있으면 그것으로 복원합니다.
          * @return 새 판, 복원, 이미 열림 중 하나입니다. 복원하려던 바이트를 읽지 못했으면 경고를 남기고 새 판(`Fresh`)으로 엽니다.
          */
-        GameStateInitResult initialize( const GameStateSettings& settings );
+        SessionStateInitResult initialize( const SessionStateSettings& settings );
 
         /** @brief 틱 그룹을 디렉터와 같은 `PrePhysics` 로 정합니다. */
         void onBeginPlay() override;
@@ -123,10 +123,10 @@ namespace sw
         const vector<WorldClockEvent>& getClockEvents() const { return _listClockEvent; }
 
         /** @brief 이 판 상태를 참조로 넘겨 줄 포인터 모음입니다. 설정에서 열지 않은 것(가방 슬롯 0, 날씨 카탈로그 없음, 땅 크기 0)은 nullptr 입니다. */
-        GameStateRefs makeRefs();
+        SessionStateRefs makeRefs();
 
         /** @brief @p component 와 같은 오브젝트에 있는 판 상태입니다. 없으면 nullptr 입니다. */
-        static GameStateComponent* findOnOwner( const Component& component );
+        static SessionStateComponent* findOnOwner( const Component& component );
 
     private:
         /** @brief 보관하고 있던 복원 바이트를 적용합니다. 구조가 깨졌으면 경고를 남기고 false 를 반환합니다. */

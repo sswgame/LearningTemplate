@@ -96,7 +96,7 @@ namespace
             _loginService.initialize( &_store, &_crypto, settings, arrMasterKey );
             _loginService.setRemoteConfig( pRemoteConfig );
             _accountServer.initialize( &_loginService, AccountServerSettings{} );
-            SW_EXPECT_TRUE( _host.registerService( &_accountServer ) );
+            SW_EXPECT_TRUE( _host.registerHostService( &_accountServer ) );
             OnlineServiceHostSettings hostSettings;
             hostSettings._transportSettings._ioThreadCount        = 0;
             hostSettings._endpointSettings._security._pTLSContext = pTLSContext;

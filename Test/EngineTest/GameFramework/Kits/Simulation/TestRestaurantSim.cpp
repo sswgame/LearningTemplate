@@ -2,7 +2,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
@@ -63,9 +63,9 @@ namespace
         WorldClock      _clock;      ///< 날(시세 굴림의 씨앗)
         ReputationState _reputation; ///< 손님 평판(세력 restaurant.guests)
 
-        GameStateRefs makeRefs()
+        SessionStateRefs makeRefs()
         {
-            GameStateRefs refs;
+            SessionStateRefs refs;
             refs._pWallet     = &_wallet;
             refs._pClock      = &_clock;
             refs._pReputation = &_reputation;

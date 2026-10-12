@@ -130,9 +130,9 @@ namespace sw::editor
 
         /**
          * @brief 프로퍼티 행의 라벨을 왼쪽에 그리고, 다음 항목이 @p labelWidth 부터 남은 폭을 모두 쓰게 합니다.
-         * @details 라벨이 붙는 위젯(`drawAssetSlot`, `drawColorEdit`)이 이 함수로 라벨 열을 맞춘다. 행을 닫는 함수는 없다. 다음 항목이 행의 끝이다.
+         * @details 라벨이 붙는 위젯(`drawAssetSlot`, `drawColorEdit`)이 이 함수로 라벨 열을 맞춘다. 행을 열고 닫는 상태가 없어 짝 함수(end)를 두지 않는다. 다음 항목이 행의 끝이다.
          */
-        static void drawPropertyRowBegin( const utf8* pLabel, float32 labelWidth = 120.0f );
+        static void drawPropertyRowLabel( const utf8* pLabel, float32 labelWidth = 120.0f );
 
         /**
          * @brief `string` 을 직접 편집하는 한 줄 텍스트 입력을 그립니다. 값이 바뀌면 true 입니다.

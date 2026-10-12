@@ -420,9 +420,9 @@ namespace sw
             SW_LOG_WARNING( "[Park] the saved park state does not match this build - opening a new park" );
     }
 
-    GameStateRefs ParkDirectorComponent::makeRefs()
+    SessionStateRefs ParkDirectorComponent::makeRefs()
     {
-        GameStateRefs refs;
+        SessionStateRefs refs;
         refs._pWallet = &_wallet;
         return refs;
     }

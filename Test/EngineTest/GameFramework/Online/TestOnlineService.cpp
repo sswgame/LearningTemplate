@@ -23,7 +23,7 @@ namespace
         }
     };
 
-    class RangeService final : public IOnlineService
+    class RangeService final : public IOnlineHostService
     {
     public:
         explicit RangeService( uint16 range )
@@ -68,12 +68,12 @@ SW_TEST_CASE( OnlineServiceTest, RegisterMethodRefusesADuplicate )
     RangeService      sameRange( OnlineMethodRange::kAccount );
     RangeService      notABase( 0x0910 );
     RangeService      hostRange( OnlineMethodRange::kHost );
-    SW_EXPECT_TRUE( host.registerService( &account ) );
+    SW_EXPECT_TRUE( host.registerHostService( &account ) );
     {
         SW_TEST_DEFENSIVE_SCOPE( "overlapping or misaligned method ranges are refused" );
-        SW_EXPECT_FALSE( host.registerService( &sameRange ) );
-        SW_EXPECT_FALSE( host.registerService( &notABase ) );
-        SW_EXPECT_FALSE( host.registerService( &hostRange ) );
+        SW_EXPECT_FALSE( host.registerHostService( &sameRange ) );
+        SW_EXPECT_FALSE( host.registerHostService( &notABase ) );
+        SW_EXPECT_FALSE( host.registerHostService( &hostRange ) );
     }
 }
 

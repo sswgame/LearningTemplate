@@ -47,7 +47,7 @@ namespace
 
         void start( test::OnlineTestServer& server )
         {
-            SW_EXPECT_TRUE( server._host.registerService( &_binding ) );
+            SW_EXPECT_TRUE( server._host.registerHostService( &_binding ) );
             server.start();
             server.addKit( this );
             LiveOpsDependencies dependencies;
@@ -130,7 +130,7 @@ SW_TEST_CASE( LiveOpsStreamTest, DeviceRegistrationOverTheWireReachesTheDispatch
     LiveOpsService             service;
     LiveOpsServer              binding;
     test::OnlineTestServer     server( network, &database, &cacheDatabase, &hub, 1 );
-    SW_EXPECT_TRUE( server._host.registerService( &binding ) );
+    SW_EXPECT_TRUE( server._host.registerHostService( &binding ) );
     server.start();
     LiveOpsDependencies dependencies;
     dependencies._pStore = &server._store;

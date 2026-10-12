@@ -5,7 +5,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Actor/Input/TimingJudge.h"
-#include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
@@ -108,11 +108,11 @@ namespace
         }
 
         /** @brief 파티가 빌릴 공유 상태 — 부를 때마다 가방 · 지갑을 새로 엽니다. */
-        GameStateRefs makeRefs()
+        SessionStateRefs makeRefs()
         {
             _inventory.initialize( &_itemCatalog, 20 );
             _wallet.clear();
-            GameStateRefs refs;
+            SessionStateRefs refs;
             refs._pInventory = &_inventory;
             refs._pWallet    = &_wallet;
             return refs;
@@ -676,7 +676,7 @@ SW_TEST_CASE( ClassicJRPGTest, StateRoundTripContinuesTheSameBattle )
     }
 
     // 복원한 쪽은 같은 가방 · 지갑을 빌린다(가방을 다시 열지 않는다).
-    GameStateRefs refs;
+    SessionStateRefs refs;
     refs._pInventory = &world._inventory;
     refs._pWallet    = &world._wallet;
 

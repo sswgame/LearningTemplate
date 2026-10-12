@@ -84,7 +84,7 @@ namespace sw
 
     void InteractorComponent::cancelInteraction() { _session.cancel(); }
 
-    void InteractorComponent::makeViewer( InteractionViewer& outViewer ) const
+    void InteractorComponent::makeView( InteractionView& outViewer ) const
     {
         const GameObject*     pOwner = getOwner();
         const SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
@@ -96,7 +96,7 @@ namespace sw
         outViewer._forward  = _space == InteractionSpace::Space2D ? _facing2D : float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, pScene->getWorldMatrix() );
     }
 
-    void InteractorComponent::gatherCandidates( GameObjectManager& manager, const GameObject& owner, const InteractionViewer& viewer )
+    void InteractorComponent::gatherCandidates( GameObjectManager& manager, const GameObject& owner, const InteractionView& viewer )
     {
         _listCandidate.clear();
         _listCandidateComponent.clear();
@@ -164,8 +164,8 @@ namespace sw
         const bool bHeld    = _bHeld == SW_TRUE;
         _bPressed           = SW_FALSE;
 
-        InteractionViewer viewer;
-        makeViewer( viewer );
+        InteractionView viewer;
+        makeView( viewer );
         gatherCandidates( *pManager, *pOwner, viewer );
 
         if ( _session.isActive() )

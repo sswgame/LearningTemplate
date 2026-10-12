@@ -50,10 +50,10 @@ namespace sw
         {
             if ( slot.compare( 0, groupPrefix.size(), groupPrefix ) != 0 )
                 continue;
-            LocalSlotInfo& info = outListSlotInfo.emplace_back();
-            info._slot          = slot;
-            info._byteCount     = static_cast<int64>( entry._envelope.size() );
-            info._writtenAtMs   = entry._writtenAtMs;
+            LocalSlotInfo& slotInfo = outListSlotInfo.emplace_back();
+            slotInfo._slot          = slot;
+            slotInfo._byteCount     = static_cast<int64>( entry._envelope.size() );
+            slotInfo._writtenAtMs   = entry._writtenAtMs;
         }
         return LocalStoreResult::Ok;
     }

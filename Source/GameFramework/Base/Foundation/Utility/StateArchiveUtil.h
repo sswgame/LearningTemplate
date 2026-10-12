@@ -32,7 +32,7 @@ namespace sw
         [[nodiscard]] static bool readHeader( Archive& archive, uint32 tag, uint32 version );
         /**
          * @brief 구간 하나를 씁니다. 표, 버전, 본문 길이(uint32), 본문 순입니다. 읽는 쪽은 모르는 표를 길이로 건너뜁니다.
-         * @details 상태 하나에 키트와 기반 상태 여럿을 실을 때 쓴다(`GameStateComponent`, 키트 여럿을 든 디렉터).
+         * @details 상태 하나에 키트와 기반 상태 여럿을 실을 때 쓴다(`SessionStateComponent`, 키트 여럿을 든 디렉터).
          *          한 구간의 형식이 바뀌어도 다른 구간은 그대로 읽히고, 빠진 구간은 읽는 쪽이 새 판으로 둔다.
          *          @p body 는 쓰기 모드로 다 쓴 아카이브이다.
          */

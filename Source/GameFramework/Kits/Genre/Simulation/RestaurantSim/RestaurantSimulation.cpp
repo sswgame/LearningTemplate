@@ -7,7 +7,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Base/World/Environment/WorldClock.h"
@@ -95,7 +95,7 @@ namespace sw
 
     void RestaurantSimulation::initialize( const RestaurantCatalog* pCatalog, const RecipeCatalog* pRecipeCatalog, const ItemCatalog* pItemCatalog,
                                            const ShopCatalog* pShopCatalog, const ExperienceCurve* pStaffCurve,
-                                           const GameStateRefs& refs, Inventory& pantry, const RestaurantSettings& settings )
+                                           const SessionStateRefs& refs, Inventory& pantry, const RestaurantSettings& settings )
     {
         _pCatalog       = pCatalog;
         _pRecipeCatalog = pRecipeCatalog;

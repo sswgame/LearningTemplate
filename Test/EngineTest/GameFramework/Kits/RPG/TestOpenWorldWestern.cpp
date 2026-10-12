@@ -9,7 +9,7 @@
 
 #include "GameFramework/Base/Actor/Control/Controller/AIControllerComponent.h"
 #include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Base/Gameplay/Inventory/LootTable.h"
@@ -267,7 +267,7 @@ SW_TEST_CASE( OpenWorldWesternTest, HonorTiersGiveDiscountsAndDialogueFlags )
     SW_ASSERT_TRUE( catalog.loadFromXMLText( kWesternTestXML, "OpenWorldWesternTest" ) );
     ReputationState reputation; // 공유 평판 — 그 카탈로그에 명예 세력이 있어야 단계가 선다
     reputation.initialize( &catalog.getHonorReputation() );
-    GameStateRefs refs;
+    SessionStateRefs refs;
     refs._pReputation = &reputation;
     WesternHonor honor;
     honor.initialize( &catalog, refs );

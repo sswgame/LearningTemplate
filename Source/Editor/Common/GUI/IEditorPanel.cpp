@@ -17,7 +17,7 @@ namespace sw::editor
         if ( _bDocumentDirty )
             panelFlags |= EditorPanelFlags::UnsavedDocument;
 
-        if ( EditorChrome::beginPanel( getPanelTitle(), getOpenPtr(), panelFlags ) == false )
+        if ( EditorChrome::beginPanel( getPanelTitle(), getOpenFlagAddress(), panelFlags ) == false )
         {
             _bWindowFocused = false;
             onPanelCollapsed();

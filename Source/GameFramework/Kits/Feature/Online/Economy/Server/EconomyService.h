@@ -60,7 +60,7 @@ namespace sw
 namespace sw
 {
     /** @class EconomyService @brief 경제 요청 처리기입니다. */
-    class SW_GF_API EconomyService final : public IOnlineService
+    class SW_GF_API EconomyService final : public IOnlineHostService
     {
     public:
         using ReplyDelegate = Delegate<void( const EconomyReply& )>;
@@ -73,7 +73,7 @@ namespace sw
         EconomyService( const EconomyService& )            = delete;
         EconomyService& operator=( const EconomyService& ) = delete;
 
-        /** @brief 카탈로그나 저장소가 없거나 Shipping 에 개발 전용 영수증 제공자가 있으면 false 를 반환합니다. 호스트에 등록하는 일은 호출하는 쪽이 합니다(`host.registerService( &service )`). */
+        /** @brief 카탈로그나 저장소가 없거나 Shipping 에 개발 전용 영수증 제공자가 있으면 false 를 반환합니다. 호스트에 등록하는 일은 호출하는 쪽이 합니다(`host.registerHostService( &service )`). */
         [[nodiscard]] bool initialize( IServiceStore* pStore, const EconomyServiceSettings& settings );
         void               shutdown();
 
@@ -82,7 +82,7 @@ namespace sw
         /** @brief 영수증 결과를 회수해 지급 작업을 맡기고 지표를 갱신합니다. 호스트가 있으면 `onServiceTick` 이 부릅니다. */
         void tick( int64 nowMs );
 
-        // IOnlineService
+        // IOnlineHostService
         uint16 getMethodRange() const override { return OnlineMethodRange::kEconomy; }
         uint32 getProtocolVersion() const override { return EconomyProtocol::kVersion; }
         void   onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;

@@ -6,7 +6,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Common/Commands/EditorViewportPick.h"
+#include "Editor/Common/Commands/EditorViewportRayPick.h"
 
 #include <imgui.h>
 
@@ -63,7 +63,7 @@ namespace sw::editor
         const float32 v     = ( mouse.y - canvasPos._y ) / canvasSize._y;
         if ( u < 0.0f || 1.0f < u || v < 0.0f || 1.0f < v )
             return false;
-        return EditorViewportPick::makeRay( invViewProj, u, v, outRay );
+        return EditorViewportRayPick::makeRay( invViewProj, u, v, outRay );
     }
 
     bool EditorViewportProjectionUtil::projectPoint( const float4x4& viewProj, const float3& worldPt,

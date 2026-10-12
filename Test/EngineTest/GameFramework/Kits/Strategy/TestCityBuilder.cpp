@@ -5,7 +5,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Base/World/Land/LandRegistry.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
@@ -54,7 +54,7 @@ namespace
             settings._wagePerWorkerPerMonth = wagePerWorkerPerMonth;
             _wallet.clear();
             _wallet.add( settings._currency, money );
-            GameStateRefs refs;
+            SessionStateRefs refs;
             refs._pWallet = &_wallet;
             _city.initialize( &_catalog, 32, 24, settings, refs );
             return true;
@@ -412,7 +412,7 @@ SW_TEST_CASE( CityBuilderTest, StateRoundTripContinuesTheSameCity )
         CityCatalog    catalog;
         CitySimulation smallCity;
         SW_ASSERT_TRUE( catalog.loadFromXMLText( kCityTestXML, "CityBuilderTest" ) );
-        smallCity.initialize( &catalog, 8, 8, CitySettings{}, GameStateRefs{} );
+        smallCity.initialize( &catalog, 8, 8, CitySettings{}, SessionStateRefs{} );
         Archive smallReader( written.getData(), written.getSize() );
         SW_EXPECT_FALSE( smallCity.readState( smallReader ) );
         SW_EXPECT_TRUE( smallCity.getBuildings().empty() );

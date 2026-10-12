@@ -1,6 +1,6 @@
 /**
  * @file GameObjectStore.h
- * @brief 씬 하나의 오브젝트 저장소입니다. 오브젝트 생성, 이름 부여(번호 재사용), id 테이블, 조회, 순회, 지연 파괴, 컴포넌트 풀, 플레이 수명(beginPlay 대기열)을 맡습니다.
+ * @brief `GameObjectManager` 가 쓰는 오브젝트 저장소입니다. 오브젝트 생성, 이름 부여(번호 재사용), id 테이블, 조회, 순회, 지연 파괴, 컴포넌트 풀, 플레이 수명(beginPlay 대기열)을 맡습니다.
  * @details 언리얼의 `ULevel::Actors` 와 `FUObjectArray`, 유니티 DOTS 의 `EntityManager` 에 해당한다. `GameObjectManager` 가 소유하고, 게임이 부르는
  *          API(`createGameObject`, `resolveComponent`, `destroyObject` 등)는 매니저가 같은 이름으로 전달한다. 프레임 순서와 틱 중 규칙은 모르고,
  *          틱 중인지는 `StructuralChangeBuffer::isFrozen` 으로만 읽는다.

@@ -78,12 +78,12 @@ namespace sw
             const string_view slot = entry._path.substr( rootSize, entry._path.size() - rootSize - extension.size() );
             if ( slot.substr( 0, groupPrefix.size() ) != groupPrefix || ILocalStore::isValidSlotName( slot ) == false )
                 return true;
-            LocalSlotInfo& info = listSlotInfo.emplace_back();
-            info._slot          = string( slot );
-            info._byteCount     = static_cast<int64>( FileUtil::getFileSize( entry._path ) );
-            int64 ticks         = 0;
+            LocalSlotInfo& slotInfo = listSlotInfo.emplace_back();
+            slotInfo._slot          = string( slot );
+            slotInfo._byteCount     = static_cast<int64>( FileUtil::getFileSize( entry._path ) );
+            int64 ticks             = 0;
             if ( FileUtil::getFileWriteTime( entry._path, ticks ) )
-                info._writtenAtMs = ticks / ( FileUtil::kFileTimeTicksPerSecond / 1000 );
+                slotInfo._writtenAtMs = ticks / ( FileUtil::kFileTimeTicksPerSecond / 1000 );
             return true;
         } );
         if ( bListed == false )

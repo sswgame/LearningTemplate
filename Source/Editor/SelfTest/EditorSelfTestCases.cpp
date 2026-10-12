@@ -195,7 +195,7 @@ namespace sw::editor
             {
                 constexpr float32 kLabelWidth = 150.0f;
                 beginProbeWindow();
-                EditorWidgets::drawPropertyRowBegin( "Label", kLabelWidth );
+                EditorWidgets::drawPropertyRowLabel( "Label", kLabelWidth );
                 (void)context.expect( isNear( ImGui::GetCursorPosX(), kLabelWidth, 0.5f ), "the value column does not start at the label width" );
                 const float32 expectedWidth = ImGui::GetContentRegionAvail().x - 1.0f;
                 (void)context.expect( isNear( ImGui::CalcItemWidth(), expectedWidth, 1.0f ), "the value does not fill the rest of the row" );

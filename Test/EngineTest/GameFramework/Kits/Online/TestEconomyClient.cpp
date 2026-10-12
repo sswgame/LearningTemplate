@@ -67,8 +67,8 @@ namespace
             economySettings._pCurrencyCatalog = &_currencies;
             economySettings._pOfferCatalog    = &_offers;
             SW_EXPECT_TRUE( _economy.initialize( &_store, economySettings ) );
-            SW_EXPECT_TRUE( _host.registerService( &_accountServer ) );
-            SW_EXPECT_TRUE( _host.registerService( &_economy ) );
+            SW_EXPECT_TRUE( _host.registerHostService( &_accountServer ) );
+            SW_EXPECT_TRUE( _host.registerHostService( &_economy ) );
             OnlineServiceHostSettings hostSettings;
             hostSettings._transportSettings._ioThreadCount = 0;
             hostSettings._listenAddress                    = NetAddress::makeLoopback( kPort );

@@ -13,7 +13,7 @@
 
 namespace sw
 {
-    struct GameStateRefs;
+    struct SessionStateRefs;
     struct WesternHonorTierDef;
 
     class GameFlags;
@@ -22,7 +22,7 @@ namespace sw
 
     /**
      * @class WesternHonor
-     * @brief 플레이어 한 명의 명예입니다. 평판은 빌려 씁니다(`GameStateRefs::_pReputation`). 그 평판의 카탈로그에 `WesternCatalog::getHonorReputation()` 의 세력이 있어야 단계가 정해집니다.
+     * @brief 플레이어 한 명의 명예입니다. 평판은 빌려 씁니다(`SessionStateRefs::_pReputation`). 그 평판의 카탈로그에 `WesternCatalog::getHonorReputation()` 의 세력이 있어야 단계가 정해집니다.
      *        단계가 바뀌면 빌려 온 평판에 `ReputationEvent` 가 쌓입니다. 이벤트를 꺼내는 것은 게임 화면이며, 키트는 꺼내지 않습니다.
      */
     class SW_GF_API WesternHonor
@@ -30,7 +30,7 @@ namespace sw
     public:
         WesternHonor();
 
-        void initialize( const WesternCatalog* pCatalog, const GameStateRefs& refs );
+        void initialize( const WesternCatalog* pCatalog, const SessionStateRefs& refs );
         /** @brief 이름이 붙은 행동(낯선 이 돕기, 낙인, 강도)을 반영하고, 실제로 바뀐 값을 반환합니다. 모르는 행동이면 0 을 반환합니다. */
         int32 applyAction( const hashed_string& actionID );
         /** @brief 범죄의 명예 변화를 반영합니다(목격 여부와 상관없이 적용합니다. 양심의 문제이기 때문입니다). */

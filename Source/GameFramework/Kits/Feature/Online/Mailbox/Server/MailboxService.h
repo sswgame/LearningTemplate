@@ -54,7 +54,7 @@ namespace sw
 namespace sw
 {
     /** @class MailboxService @brief 우편함 요청 처리기입니다. 서비스 스레드에서 씁니다. */
-    class SW_GF_API MailboxService final : public IOnlineService
+    class SW_GF_API MailboxService final : public IOnlineHostService
     {
     public:
         using ReplyDelegate = Delegate<void( const MailboxReply& )>;
@@ -76,7 +76,7 @@ namespace sw
         /** @brief 예약 작업이 부르는 만료 정리 한 번입니다. 주기와 별개이며 다음 `tick` 에 맡기고, 이미 돌고 있으면 무시합니다. */
         void requestSweep();
 
-        // IOnlineService
+        // IOnlineHostService
         uint16 getMethodRange() const override { return OnlineMethodRange::kMailbox; }
         uint32 getProtocolVersion() const override { return MailboxProtocol::kVersion; }
         void   onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;

@@ -63,8 +63,8 @@ namespace
             _accountServer.initialize( &_loginService, AccountServerSettings{} );
             _tradeService.initialize( &_store, &_tradePolicy, nullptr, 77, TradeSettings{} );
             _tradeServer.initialize( &_tradeService, &_loginService, nullptr );
-            SW_EXPECT_TRUE( _host.registerService( &_accountServer ) );
-            SW_EXPECT_TRUE( _host.registerService( &_tradeServer ) );
+            SW_EXPECT_TRUE( _host.registerHostService( &_accountServer ) );
+            SW_EXPECT_TRUE( _host.registerHostService( &_tradeServer ) );
             OnlineServiceHostSettings hostSettings;
             hostSettings._transportSettings._ioThreadCount = 0;
             hostSettings._listenAddress                    = NetAddress::makeLoopback( kTradePort );
