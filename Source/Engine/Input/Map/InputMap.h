@@ -453,6 +453,7 @@ namespace sw
         /**
          * @brief true 면 이 맵은 키보드 포커스(`InputManager::setKeyboardFocus`)와 상관없이 키를 읽습니다. 기본은 false 이며 게임 쪽 맵이 이 값을 씁니다.
          * @details 셸 맵(개발 콘솔, 리로드 단축키)만 켠다. 콘솔이 키보드를 가진 동안에도 닫는 키와 편집 키를 받아야 하기 때문이다.
+         *          패드도 같다 — 콘솔이 열린 동안 게임 맵은 패드 바인딩을 "안 눌림" 으로 보고(`InputManager::isGamepadControlVisibleToGame`), 이 맵은 장치 상태를 그대로 읽는다.
          */
         void setKeyboardFocusIgnored( bool bIgnored ) { _bKeyboardFocusIgnored = bIgnored ? SW_TRUE : SW_FALSE; }
         bool isKeyboardFocusIgnored() const { return _bKeyboardFocusIgnored == SW_TRUE; }
@@ -626,6 +627,8 @@ namespace sw
         /** @brief 슬롯 하나의 눌림입니다. 키보드 슬롯은 `isKeyboardKeyDown` 과 같은 규칙을 따릅니다. */
         bool isSlotDown( const InputSlot& slot ) const;
         bool wasSlotPressed( const InputSlot& slot ) const;
+        /** @brief 개발 콘솔이 입력을 쥐어 이 맵이 슬롯을 "안 눌림" 으로 봐야 하면 true 입니다(키보드와 패드 슬롯). 키보드 포커스를 무시하는 맵(셸 맵, UI 맵)은 늘 false 입니다. */
+        bool isSlotHiddenByConsole( const InputSlot& slot ) const;
         /**
          * @brief 바인딩 값을 합쳐 액션 값을 계산합니다.
          * @details 축, 버튼, 스틱 몫(@p bounded)은 축 반전을 적용한 뒤 [-1, 1](또는 원)에 묶는다.

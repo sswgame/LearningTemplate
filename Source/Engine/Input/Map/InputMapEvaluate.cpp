@@ -286,8 +286,7 @@ namespace sw
         const IInputDevice* pDevice = _pInput != nullptr ? _pInput->getDevice( slot._deviceKind, slot._deviceIndex ) : nullptr;
         if ( pDevice == nullptr )
             return false;
-        // 키보드는 포커스를 따른다. 개발 콘솔이 키보드를 가진 동안 게임 맵의 키 바인딩은 "안 눌림" 으로 본다.
-        if ( slot._deviceKind == InputDeviceKind::Keyboard && _bKeyboardFocusIgnored == SW_FALSE && _pInput->isKeyVisibleToGame( static_cast<Key>( slot._controlIndex ) ) == false )
+        if ( isSlotHiddenByConsole( slot ) )
             return false;
         return pDevice->isControlDown( slot._controlIndex );
     }
@@ -297,9 +296,21 @@ namespace sw
         const IInputDevice* pDevice = _pInput != nullptr ? _pInput->getDevice( slot._deviceKind, slot._deviceIndex ) : nullptr;
         if ( pDevice == nullptr )
             return false;
-        if ( slot._deviceKind == InputDeviceKind::Keyboard && _bKeyboardFocusIgnored == SW_FALSE && _pInput->isKeyVisibleToGame( static_cast<Key>( slot._controlIndex ) ) == false )
+        if ( isSlotHiddenByConsole( slot ) )
             return false;
         return pDevice->wasControlPressed( slot._controlIndex );
+    }
+
+    bool InputMap::isSlotHiddenByConsole( const InputSlot& slot ) const
+    {
+        if ( _bKeyboardFocusIgnored == SW_TRUE )
+            return false;
+        // 개발 콘솔이 입력을 쥔 동안 게임 맵은 키보드 바인딩과 패드 바인딩을 모두 "안 눌림" 으로 본다(패드는 셸 맵이 콘솔 조작에 쓴다).
+        if ( slot._deviceKind == InputDeviceKind::Keyboard )
+            return _pInput->isKeyVisibleToGame( static_cast<Key>( slot._controlIndex ) ) == false;
+        if ( slot._deviceKind == InputDeviceKind::Gamepad )
+            return _pInput->isGamepadControlVisibleToGame( slot._deviceIndex, slot._controlIndex ) == false;
+        return false;
     }
 
     bool InputMap::evaluateBindingDown( const ActionBinding& binding, float2& outValue ) const

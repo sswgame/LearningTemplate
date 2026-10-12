@@ -579,6 +579,8 @@ namespace sw
             // 사용자 폴더의 파일이다(세이브 게임과 별개). 자동화는 `-gv_userSettingsFile` 로 사용자 폴더를 건드리지 않는다.
             const string gameName = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( gameConfig._packRoot ) );
             settings.setUserFilePath( gv_userSettingsFile.empty() ? UserSettingsManager::makeDefaultUserFilePath( gameName ) : gv_userSettingsFile );
+            // 셸 키(콘솔 여는 키 …)를 플레이어가 바꾼 것도 같은 사용자 폴더에 둔다. 셸 맵은 처음 돌 때 만들므로 그 전에 경로를 알려 준다.
+            loop._shellActions.setUserBindingsPath( ShellInputActions::makeUserBindingsPath( settings.getUserFilePath() ) );
             if ( settings.loadUserFile( settings.getUserFilePath() ) == false )
                 (void)settings.applyAutoDetectedPreset( HardwareProbe::probe() ); // 맞는 프리셋이 없으면 기본값 그대로다
             settings.reapplyAll();

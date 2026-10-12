@@ -24,7 +24,7 @@ namespace sw
      * @class DevConsoleController
      * @brief 에디터 없이 띄운 게임 창의 개발 콘솔입니다.
      * @details 여는 키와 편집 키는 셸 InputMap(`default.input.xml`)의 액션이고, 글자는 `InputManager` 의 글자 입력(포커스 `DevConsole`)으로 받는다.
-     *          열려 있는 동안 `InputManager` 키보드 포커스를 가진다. 그동안 게임 쪽 키 조회와 통합 InputMap 의 키보드 바인딩은 "안 눌림" 으로 보인다.
+     *          열려 있는 동안 `InputManager` 키보드 포커스를 가진다. 그동안 게임 쪽 키 조회와 통합 InputMap 의 키보드 · 패드 바인딩은 "안 눌림" 으로 보인다(패드는 `InputManager::isGamepadControlVisibleToGame`).
      *          명령, `gv_`, 자동완성, 기록의 해석은 `DevConsole` 이 하고, 그리기는 `IDevConsoleWindow` 가 한다.
      *          테스트는 플랫폼 창 없이 `RawInputEvent` 를 넣어 돌린다.
      */

@@ -2,6 +2,7 @@
 
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Console/DevCommandRegistry.h"
+#include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -11,6 +12,7 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
+#include "Engine/Input/ShellInputActions.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Window/NativeWindowEvent.h"
 
@@ -492,3 +494,90 @@ SW_TEST_CASE( DevCommandRegistryTest, IsCompiledOutOfShipping )
 }
 
 #endif
+
+/**
+ * @brief [DevConsoleControllerTest] 콘솔이 열린 동안 게임 맵은 패드 바인딩을 "안 눌림" 으로 보고(셸 맵은 그대로 읽는다), 닫는 B 는 뗄 때까지 게임에 보이지 않는다
+ * @details 패드로 콘솔을 조작(Back 열기 · A 실행 · B 닫기)하는 동안 같은 입력이 게임에도 가면 shooter3d 의 Back(카메라 전환) 같은 게임 액션이 같이 발화한다.
+ *          콘솔을 닫을 때 쥔 채인 B 가 닫은 뒤 게임의 B 로 새지도 않는다. 변이: `InputMap::isSlotHiddenByConsole` 이 패드를 보지 않으면 첫 단언이 진다.
+ */
+SW_TEST_CASE( DevConsoleControllerTest, GamepadIsHiddenFromTheGameWhileTheConsoleIsOpen )
+{
+    test::ScopedLogSuppressor suppressor;
+    DevConsoleRig             rig;
+    SW_ASSERT_TRUE( rig.initialize() );
+    InputMap& gameMap = rig._input.getInputMap();
+    gameMap.bind( "PadJump", GamepadButton::A, ActionTrigger::Down );
+    gameMap.bind( "PadBack", GamepadButton::B, ActionTrigger::Down );
+
+    rig.runFrame( { RawInputEvent::makeGamepadButtonDown( GamepadButton::A ) } );
+    SW_EXPECT_TRUE( gameMap.isActionDown( "PadJump" ) ); // 닫혀 있으면 게임이 받는다
+    rig.runFrame( { RawInputEvent::makeGamepadButtonUp( GamepadButton::A ) } );
+
+    rig.tapButton( GamepadButton::Back );
+    SW_ASSERT_TRUE( rig._controller.isOpen() );
+    rig.runFrame( { RawInputEvent::makeGamepadButtonDown( GamepadButton::A ) } );
+    SW_EXPECT_FALSE( gameMap.isActionDown( "PadJump" ) );
+    SW_EXPECT_TRUE( rig._pShellMap->wasActionTriggered( hashed_string( InputMapDefaults::kDevConsoleSubmitAction ) ) ); // 셸 맵은 장치 상태 그대로 읽는다
+    SW_ASSERT_NOT_NULL( rig._input.getGamepad() );
+    SW_EXPECT_TRUE( rig._input.getGamepad()->isButtonDown( GamepadButton::A ) ); // 장치 상태는 계속 갱신된다
+    rig.runFrame( { RawInputEvent::makeGamepadButtonUp( GamepadButton::A ) } );
+
+    // B 를 쥔 채로 콘솔을 닫는다 — 닫은 뒤에도 뗄 때까지 게임의 B 로 보이지 않는다.
+    rig.runFrame( { RawInputEvent::makeGamepadButtonDown( GamepadButton::B ) } );
+    SW_ASSERT_FALSE( rig._controller.isOpen() );
+    rig.runFrame( {} );
+    SW_EXPECT_FALSE( gameMap.isActionDown( "PadBack" ) );
+    rig.runFrame( { RawInputEvent::makeGamepadButtonUp( GamepadButton::B ) } );
+    rig.runFrame( {} );
+    rig.runFrame( { RawInputEvent::makeGamepadButtonDown( GamepadButton::B ) } ); // 닫힌 뒤 새로 누른 B 는 게임 것이다
+    SW_EXPECT_TRUE( gameMap.isActionDown( "PadBack" ) );
+}
+
+/**
+ * @brief [DevConsoleControllerTest] 플레이어가 바꾼 셸 키는 사용자 파일에 기본값과 다른 것만 남고, 새 맵에 읽으면 같은 키가 되며, 기본으로 되돌리면 파일이 사라진다
+ * @details 셸 맵(콘솔 여는 키 …)은 리소스에서 읽는 기본 키 위에 사용자 파일의 재배치를 입힌다. 전체 스냅샷을 쓰면 기본 키가 바뀐 뒤에도 옛 키를 붙든다.
+ *          낡은 파일(없는 액션, 읽지 못하는 슬롯)은 기동을 막지 않고 건너뛴다.
+ */
+SW_TEST_CASE( DevConsoleControllerTest, ShellRebindingsPersistPerPlayer )
+{
+    test::ScopedLogSuppressor suppressor;
+    DevConsoleRig             rig;
+    SW_ASSERT_TRUE( rig.initialize() );
+    InputMap&           shell  = *rig._pShellMap;
+    const hashed_string toggle = hashed_string( InputMapDefaults::kDevConsoleToggleAction );
+    InputSlot           defaultSlot{};
+    SW_ASSERT_TRUE( shell.findRebindSlot( toggle, 0, defaultSlot ) );
+    SW_ASSERT_TRUE( shell.rebindKey( toggle, Key::F2, 0 ) );
+
+    const string path = test::makeTempPath( "shell_user_bindings.xml" );
+    SW_ASSERT_TRUE( ShellInputActions::saveUserBindings( shell, path ) );
+    SW_EXPECT_TRUE( FileUtil::exists( path ) );
+
+    // 새 맵은 기본 키로 시작하고, 파일을 읽으면 그 플레이어의 키가 된다.
+    unique_ptr<InputMap> fresh = EngineLoop::createShellInputMap( EngineDefaultAssets{}._shellInputMap );
+    InputSlot            slot{};
+    SW_ASSERT_TRUE( fresh->findRebindSlot( toggle, 0, slot ) );
+    SW_EXPECT_TRUE( slot == defaultSlot );
+    SW_ASSERT_TRUE( ShellInputActions::loadUserBindings( *fresh, path ) );
+    SW_ASSERT_TRUE( fresh->findRebindSlot( toggle, 0, slot ) );
+    SW_EXPECT_TRUE( slot == InputSlot::fromKey( Key::F2 ) );
+
+    // 기본으로 되돌린 플레이어에게는 파일이 남지 않는다. 파일이 없으면 읽기는 아무것도 하지 않고 성공이다.
+    shell.resetAllBindingsToDefault();
+    SW_ASSERT_TRUE( ShellInputActions::saveUserBindings( shell, path ) );
+    SW_EXPECT_FALSE( FileUtil::exists( path ) );
+    SW_EXPECT_TRUE( ShellInputActions::loadUserBindings( *fresh, path ) );
+
+    // 낡은 파일: 없는 액션과 읽지 못하는 슬롯은 건너뛰고, 읽을 수 있는 줄은 적용한다.
+    const string stalePath = test::makeTempPath( "shell_user_bindings_stale.xml" );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( stalePath, "<ShellBindings><bind action=\"NoSuchShellAction\" index=\"0\" slot=\"Key.F3\"/>"
+                                                        "<bind action=\"DevConsoleToggle\" index=\"0\" slot=\"Key.NoSuchKey\"/>"
+                                                        "<bind action=\"DevConsoleToggle\" index=\"0\" slot=\"Key.F4\"/></ShellBindings>" ) );
+    SW_ASSERT_TRUE( ShellInputActions::loadUserBindings( shell, stalePath ) );
+    SW_ASSERT_TRUE( shell.findRebindSlot( toggle, 0, slot ) );
+    SW_EXPECT_TRUE( slot == InputSlot::fromKey( Key::F4 ) );
+
+    // 사용자 바인딩 파일은 사용자 설정 파일 옆이다.
+    SW_EXPECT_STREQ( "", ShellInputActions::makeUserBindingsPath( "" ).c_str() );
+    SW_EXPECT_STREQ( "C:/Users/p/swengine/shooter3d/shellbindings.xml", ShellInputActions::makeUserBindingsPath( "C:/Users/p/swengine/shooter3d/usersettings.json" ).c_str() );
+}
