@@ -31,6 +31,12 @@
 - `PrefabTest.CookedPrefabMatchesItsSource` — 소스로 읽은 프리팹과 쿠킹본으로 읽은 프리팹을 JSON 으로 다시 써서 글 전체를 견준다. 틀리면 쿠킹본이 소스와 어긋난 것인지 테스트 쓰기가 불안정한 것인지부터 가른다.
 - `TestRHISupport` 의 두 스레드 `tickCompleted` 테스트.
 - `TestRenderPassGPU` 의 동시 `acquire` 테스트(DX12 · DX11 만. GL 은 다른 스레드에서 못 만든다). **작업 스레드 안의 `SW_TEST_DEFENSIVE_SCOPE` 가 스레드마다 따로 동작하는지** 먼저 본다.
+- 잠재 결함 점검 뒤 수정(tfx1~6)에서 더한 것:
+  - `GameObjectManagerPoolTest.ModuleUnloadDrainsRequeuedPostTickWork` — 비우는 중에 다시 미룬 일도 언로드 전에 빈다(반복 상한 64).
+  - `ModuleHostTest.SharedModuleCannotBeRegisteredForReload` 의 Windows 대소문자 케이스(`gameframework` 도 거절).
+  - `TestGameService.ExplicitOwnerDecidesWhichImageReleasesTheService`.
+  - 온라인 `KitDestroyedWhileFailingQueuedCallsGetsNoMoreCalls` · `KitDestroyedDuringReadyNotificationIsSkipped`. **후자는 테스트 서버의 Hello 가 게임 영역 키트 `kGame+0x100` · `kGame+0x200` 을 받아 주는지에 달려 있다** — 판 불일치로 Ready 에 못 가면 실패할 수 있으니 테스트 결함인지부터 가른다.
+  - `EditorPreferencesStoreTest.ReloadedSectionReadsTheFileOnce`.
 
 **옮긴 테스트**(경로가 바뀌었다): `TestDismemberment`(GameFramework Combat), `TestWitcherRPG` · `TestTacticsSRPG`(`SkillTree` · `RunMap` 케이스), `TestProgression`, `TestSpatial`(CoreTest), `ProfilerTimeline` 테스트(CoreTest).
 테스트 목록에서 사라지거나 두 번 잡히지 않았는지 `ctest -N` 개수를 병합 전과 견준다.
@@ -53,6 +59,14 @@
 | 로그 범주 이름 | `AbilitySystemComponent*` · `ScheduleSystem*` 로그 태그가 파일 이름으로 바뀌었다. 로그를 걸러 보는 도구가 있으면 맞춘다 | 로그 필터가 안 맞음 |
 | 개발 명령 · HUD 레지스트리 | 에디터 HUD 섹션 · 개발 콘솔 명령이 평소처럼 나온다(락을 추가함) | 모듈 로드 때 교착 |
 | `isServiceBound<T>()` | 게임 인스턴스 시작 · `DontDestroyOnLoad` 가 평소처럼 동작 | 서비스가 묶였는데 안 묶였다고 나옴 |
+| `TextureCache::find` 로드/리로드 중 `nullptr` (tfx3) | 텍스처 리로드 직후 한 프레임 안에 머티리얼 SRV 가 새 것으로 바뀐다. 세대는 진행 중 표시를 내린 뒤 올린다 | 리로드 뒤 머티리얼이 검게 · 옛 텍스처로 남음 |
+| 에디터 환경설정 새 섹션 읽기 (tfx2) | 프레임마다 `hasNewSections` 로 묻고 새 섹션만 읽는다. 확장 모듈 리로드 뒤에도 그 섹션 값이 남는다 | 리로드 뒤 기본값 · 사용자가 바꾼 값을 파일 값이 덮음 |
+| `DebugHUD` 섹션 복사 (tfx2) | 레지스트리 판 번호나 `gv_debugHUDSections` 가 바뀔 때만 다시 센다. 섹션 켜고 끄기에 프로파일러가 따라 켜지고 꺼진다 | 프로파일러가 안 켜지거나 안 꺼짐 |
+| 틱 뒤 큐 비우기 상한 64 (tfx1) | 모듈 언로드 때 오류 로그 `Deferred work kept re-queueing` 가 정상 경로에서 안 나온다 | 언로드 뒤 없는 코드 호출 |
+| 공용 모듈 이름 대소문자 (tfx1) | Windows 에서 철자만 바꾼 이름도 공용 모듈 거절 | 공용 모듈 리로드가 통과 |
+| 로컬 서비스 소유 이미지 (tfx5) | `GameInstanceBase` 가 vtable 주소로 `GameSettings` 소유자를 게임 모듈로 건다. 게임 모듈 리로드 뒤 회수 · 다시 걸기 | bind 거절 로그 · 옛 포인터 |
+| 온라인 취소 표시 · 서비스 알림 사본 순회 (tfx4) | 실패 콜백 · Ready 알림 중 키트가 파괴돼도 크래시 없이 남은 호출이 그 키트로 안 간다 | 파괴된 키트 호출 |
+| 리플렉션 후보 검사 별도 타깃 (tfx6) | 평범한 헤더만 바꿔 빌드할 때 컴파일이 검사를 기다리지 않는다. 구성 뒤 헤더에 `REFLECT(` 를 넣고 `all` 을 지으면 빌드가 선다(통합 4 에서 빌드로 확인). **`--target <타깃>` 만 지으면 검사가 안 돈다**(링크 오류로 드러난다) | 새 매크로 헤더가 조용히 링크에서 깨짐 |
 
 실기동 순서는 [인계 문서](NEXT.md)의 "검증할 것"(에디터 `-EnableEditor` · 게임 프리셋 · 네 백엔드 · 모듈 리로드)을 따른다. **`-gv_profileFrames=60` 을 붙여 스스로 끝나게 한다.**
 

@@ -15,7 +15,9 @@
 - **이번 세션에 고친 결함 · 구조**(커밋마다 문제점/해결방안/결과): `CameraRole` 옛 이름을 기대한 테스트, 틱 뒤 실행 도우미가 삭제 대기 컴포넌트를 부르던 것 + Debug 타입 단언, `this` 를 묶은 틱 뒤 실행 여섯 곳, 모듈 언로드 전 틱 뒤 큐 비우기,
   호출 표의 id 대조 없는 '보내는 중' 응답 · 버리는 `clear`, `OnlineReplyUtil` · `ServiceClientCallTable` 의 `OnlineServiceClient.h` include, 씬 무효화 구독 해제, 개발 명령 · HUD 레지스트리 잠금과 include 정리(`DevCommandsEnabled.h` · `DebugHUDSectionFormat.h`),
   `SW_GF_API` 한 곳 + 게임 서비스 연결 함수 C 링크(`RuntimeAPI/Export/GameFrameworkAPI.h`), `isServiceBound<T>()` 일반화, 리플렉션 생성 이름 충돌 검사 · 구성 뒤 매크로가 생긴 헤더 검사(`cmake/Engine/CheckReflectionCandidates.cmake`), 엔진 층 티어 표.
+- **통합 4(로컬, push 안 함)**: 잠재 결함 점검 뒤 수정 여섯 브랜치(tfx1~6)를 `wt/integ3` 에 병합했다(충돌 없음). 재구성 뒤 Debug · Shipping `all AllTests` 경고 0 · 오류 0 · 링크 0, lint-suite · 바뀐 헤더 7 개 자립 · `CheckSourceGlob` · clang-format 20.1.8 통과. 테스트 · 실행은 안 했다.
 - **남은 위험**:
+  - `MaterialInstance` 는 리로드 세대가 바뀌면 쥔 포인터의 `getSrv()` 로 다시 패킹한다. 다른 텍스처가 아직 리로드 중이면 그 SRV 를 한 프레임 읽을 수 있다(다음 세대에 다시 패킹돼 회복). `Material::refreshTextureBindings` 는 `find` 를 써서 해당 없다.
   - `SW_DELEGATE_METHOD(this)` 를 다른 지연 경로(틱 뒤 실행 밖)에 넘기는 곳은 여전히 핸들을 거치지 않는다. 게이트는 `deferPostTick` · `executeOrDeferPostTick` 만 본다.
   - Shooter 적 체력이 `Vitality` 로 바뀌어 최대 체력 1 하한 · 음수 피해 0 처리가 생겼다(데이터에서 체력 0 을 주면 예전에는 바로 죽고 지금은 1 로 산다).
   - 키트 DLL 이 Base 클래스의 암시적 멤버를 내보낸다(백로그 1-6).
