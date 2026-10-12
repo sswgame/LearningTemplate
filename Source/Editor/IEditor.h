@@ -51,14 +51,10 @@ namespace sw
         virtual void abandonPendingDraw() = 0;
 
         // ------------------------------------------------------------------------------
-        // 3) 입력과 ImGui 텍스처
+        // 3) 입력, 뷰, 플레이 상태
         // ------------------------------------------------------------------------------
         /** @brief 네이티브 이벤트를 ImGui 플랫폼 레이어에 전달합니다. */
         virtual bool processEvent( const NativeWindowEvent& event ) = 0;
-        /** @brief RHI 텍스처를 ImGui 텍스처 ID 로 등록합니다. */
-        virtual void* registerTexture( uint64 texture ) = 0;
-        /** @brief 등록된 ImGui 텍스처 ID 를 해제합니다. */
-        virtual void unregisterTexture( void* pTextureID ) = 0;
         /** @brief 이번 프레임 게임 뷰의 렌더 타깃 핸들과 크기를 조회합니다. 게임 뷰 패널이 보이지 않으면 0 입니다. */
         virtual void getGameViewport( uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) const = 0;
         /** @brief 이번 프레임 씬 뷰의 렌더 타깃 핸들과 크기를 조회합니다. 씬 뷰가 보이지 않으면 0 입니다. 두 뷰가 모두 보이지 않으면 씬 뷰 렌더 타깃을 반환합니다. */
