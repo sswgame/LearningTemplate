@@ -132,7 +132,7 @@
 | `gv_dumpRenderGraph` | `bool` | `false` | 시험 | 렌더 그래프를 컴파일할 때마다 레벨 · 패스 · 읽고 쓰는 자원을 로그로 남긴다 | [FrameRendererPassExecute.cpp](../../Source/Engine/Renderer/Frame/FrameRendererPassExecute.cpp) |
 | `gv_gpuCulling` | `int32` | `1` | 일반 | GPU 컬링 컴퓨트 디스패치 (0=건너뜀, 진단용) | [FrameRendererCompute.cpp](../../Source/Engine/Renderer/Frame/FrameRendererCompute.cpp) |
 | `gv_morphDiag` | `int32` | `0` | 일반 | 메시 모프 진단 (0 평소 / 1 강제 켬 / 2 디스패치 생략 / 3 번호표) | [FrameRendererCompute.cpp](../../Source/Engine/Renderer/Frame/FrameRendererCompute.cpp) |
-| `gv_renderPipeline` | `string` | — | 일반 | 이 파이프라인 XML 로 그린다 (비우면 기본 포워드 · gv_deferred) | [FrameRenderer.cpp](../../Source/Engine/Renderer/Frame/FrameRenderer.cpp) |
+| `gv_renderPipeline` | `string` | — | 일반 | 이 파이프라인 XML 로 그린다 (비우면 gv_deferred · 게임 프리셋 · 기본 포워드) | [FrameRenderer.cpp](../../Source/Engine/Renderer/Frame/FrameRenderer.cpp) |
 | `gv_renderViewBudget` | `int32` | `4` | 일반 | 한 프레임에 그리는 추가 뷰(CCTV · 백미러 · PiP)의 최대 수 (0 = 제한 없음) | [RenderViewCollector.cpp](../../Source/Engine/Renderer/Frame/RenderViewCollector.cpp) |
 | `gv_rhiImmediateSubmit` | `bool` | `false` | 일반 | RHI 커맨드 리스트를 프레임 끝에 모아 제출하지 않고 즉시 제출 (디버깅용, 오버헤드 큼) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
 | `gv_screenshot` | `string` | — | 시험 · 배포본에도 | 화면에 나간 그림(Present 결과)을 PPM 으로 덤프할 경로 (비면 사용 안 함) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |

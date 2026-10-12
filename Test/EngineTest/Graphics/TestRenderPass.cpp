@@ -411,6 +411,27 @@ SW_TEST_CASE( RenderPassTest, ShippedPipelinesValidateClean )
 }
 
 /**
+ * @brief [RenderPassTest] 파이프라인은 인자 → -gv_renderPipeline → -gv_deferred → 게임 프리셋(GameConfig::_renderPipeline) → 엔진 기본 포워드 순서로 고른다
+ * @details 게임은 데이터(프리셋)로 고르고, 명령줄은 측정 · 검증용으로 그것을 덮는다. 게임 프리셋이 디퍼드 스위치보다 앞서면 `-gv_deferred=1` 측정이
+ *          2D 게임에서 조용히 무시된다.
+ */
+SW_TEST_CASE( RenderPassTest, PipelineChoiceFollowsArgumentCommandLineGameThenDefault )
+{
+    sw::FrameRendererUtil::PipelineChoice choice{};
+    choice._forwardPath  = "engine/pipeline/forwardpipeline.xml";
+    choice._deferredPath = "engine/pipeline/deferredpipeline.xml";
+    SW_EXPECT_TRUE( sw::FrameRendererUtil::computePipelinePath( choice ) == "engine/pipeline/forwardpipeline.xml" );
+    choice._gamePath = "engine/pipeline/forward2dpipeline.xml";
+    SW_EXPECT_TRUE( sw::FrameRendererUtil::computePipelinePath( choice ) == "engine/pipeline/forward2dpipeline.xml" );
+    choice._bDeferred = true;
+    SW_EXPECT_TRUE( sw::FrameRendererUtil::computePipelinePath( choice ) == "engine/pipeline/deferredpipeline.xml" );
+    choice._commandLinePath = "engine/pipeline/forwardtoonpipeline.xml";
+    SW_EXPECT_TRUE( sw::FrameRendererUtil::computePipelinePath( choice ) == "engine/pipeline/forwardtoonpipeline.xml" );
+    choice._argumentPath = "engine/pipeline/forwardpipelinestaged.xml";
+    SW_EXPECT_TRUE( sw::FrameRendererUtil::computePipelinePath( choice ) == "engine/pipeline/forwardpipelinestaged.xml" );
+}
+
+/**
  * @brief [RenderPassTest] 디퍼드 블룸은 밝은 부분을 반해상도로 구하고(BloomDownsample → BloomBright, 나눗수 2) Bloom 패스가 그것을 BloomBright 역할로 읽는다
  * @details 다운샘플 패스는 블룸 셰이더의 `SW_PASS_BLOOM_DOWNSAMPLE` 퍼뮤테이션이다. Bloom 패스가 BloomBright 를 읽지 않으면 셰이더가 원본에서 다시 구해
  *          반해상도 패스가 헛일이 된다(언리얼 블룸 셋업 · 다운샘플 → 합성).

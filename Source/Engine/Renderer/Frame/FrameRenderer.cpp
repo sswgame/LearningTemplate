@@ -6,6 +6,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -32,10 +33,11 @@ namespace sw
      */
     SW_GLOBAL_VARIABLE( bool, gv_deferred, false, "기본 파이프라인을 디퍼드로 (기본 포워드)" );
     /**
-     * @brief `-gv_renderPipeline=<파이프라인 XML>` 이면 그 파이프라인으로 그립니다(기본과 디퍼드 선택보다 우선합니다).
-     * @details 2D 게임은 `engine/pipeline/forward2dpipeline.xml`(그림자 맵과 톤맵 없음)을 고른다. 톤맵은 흰색을 0.5 로 누르기 때문이다.
+     * @brief `-gv_renderPipeline=<파이프라인 XML>` 이면 그 파이프라인으로 그립니다(디퍼드 선택 · 게임 프리셋 · 기본보다 우선합니다).
+     * @details 게임은 데이터로 고른다 — 게임 프리셋의 `GameConfig::_renderPipeline`(2D 게임은 그림자 맵과 톤맵이 없는
+     *          `engine/pipeline/forward2dpipeline.xml`. 톤맵은 흰색을 0.5 로 누르기 때문이다). 이 스위치는 측정 · 검증용으로 그것을 덮는다.
      */
-    SW_GLOBAL_VARIABLE( sw::string, gv_renderPipeline, "", "이 파이프라인 XML 로 그린다 (비우면 기본 포워드 · gv_deferred)" );
+    SW_GLOBAL_VARIABLE( sw::string, gv_renderPipeline, "", "이 파이프라인 XML 로 그린다 (비우면 gv_deferred · 게임 프리셋 · 기본 포워드)" );
 
     /**
      * @brief `-gv_drawMerge=0` 이면 같은 PSO 와 머티리얼의 연속 배치를 멀티 드로우 하나로 묶지 않고 배치마다 한 번씩 부릅니다.
@@ -174,15 +176,16 @@ namespace sw
         if ( rpm.findRenderPass( hashed_string( FrameRendererUtil::kDefaultMainPassName ) ) == nullptr )
             rpm.loadRenderPass( engineDefaultAssets._defaultRenderPass );
 
-        // 인자, `-gv_renderPipeline`, `-gv_deferred`, EngineDefaultAssets 의 포워드 순서로 고른다. 디퍼드 경로(와 그 위의 조명)를
-        // 측정하거나 검증하려면 `-gv_deferred=1` 을 준다.
-        string_view resolvedPipeline = pipelineXMLPath;
-        if ( resolvedPipeline.empty() && gv_renderPipeline.empty() == false )
-            resolvedPipeline = gv_renderPipeline;
-        if ( resolvedPipeline.empty() && gv_deferred )
-            resolvedPipeline = engineDefaultAssets._defaultDeferredPipeline;
-        if ( resolvedPipeline.empty() )
-            resolvedPipeline = engineDefaultAssets._defaultForwardPipeline;
+        // 인자, `-gv_renderPipeline`, `-gv_deferred`, 게임 프리셋(GameConfig::_renderPipeline), EngineDefaultAssets 의 포워드 순서로 고른다.
+        // 디퍼드 경로(와 그 위의 조명)를 측정하거나 검증하려면 `-gv_deferred=1` 을 준다.
+        FrameRendererUtil::PipelineChoice choice{};
+        choice._argumentPath               = pipelineXMLPath;
+        choice._commandLinePath            = gv_renderPipeline;
+        choice._deferredPath               = engineDefaultAssets._defaultDeferredPipeline;
+        choice._gamePath                   = GameConfig::getActive()._renderPipeline;
+        choice._forwardPath                = engineDefaultAssets._defaultForwardPipeline;
+        choice._bDeferred                  = gv_deferred;
+        const string_view resolvedPipeline = FrameRendererUtil::computePipelinePath( choice );
 
         if ( loadPipeline( resolvedPipeline ) == false )
         {
