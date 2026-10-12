@@ -5,7 +5,7 @@
 #include "Core/Time/MonotonicClock.h"
 #include "Core/Time/WallClock.h"
 
-#include "Editor/Common/Commands/EditorNetPlaySession.h"
+#include "Editor/Common/Workspace/EditorNetPlaySession.h"
 
 #include "TestFramework/TestFramework.h"
 

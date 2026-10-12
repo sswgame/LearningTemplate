@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Commands/EditorNetPlaySession.h"
+#include "Editor/Common/Workspace/EditorNetPlaySession.h"
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"

@@ -181,7 +181,7 @@ Play 는 활성 씬을 스냅샷으로 찍고 월드를 시작합니다. Stop �
 - Stop: 모든 자식의 표준 입력에 `quit` 를 보내 정상 종료시키고(15 초를 넘으면 강제 종료), Record traces 가 켜져 있으면 프로세스마다 `-gv_traceSaveOnExit` 로 쓴 파일을
   이름을 달아 `Saved/Traces/netplay_<시각>/merged.trace.json` 으로 합칩니다 — Profiler 창 Load Trace · Perfetto 로 엽니다. 같은 PC 라 단조 시계로 정확히 맞습니다.
 - 개발 명령 `netplay.start [dedicated|listen] [<플레이어 수>]` · `netplay.stop` · `netplay.wait <클라이언트 수> [<초>]` · `netplay.server <명령>`, 탐침 `Editor.NetPlayProcessCount` · `Editor.NetPlayConnectedClients` —
-  에디터 시나리오 `engine/automation/editor/netplay.scenario.xml` 이 이것으로 확인합니다. 세션 본체(`Common/Commands/EditorNetPlaySession`)는 ImGui 가 없어 `EditorTest` 가 `Server` 를 헤드리스 클라이언트로 띄워 테스트합니다.
+  에디터 시나리오 `engine/automation/editor/netplay.scenario.xml` 이 이것으로 확인합니다. 세션 본체(`Common/Workspace/EditorNetPlaySession`)는 ImGui 가 없어 `EditorTest` 가 `Server` 를 헤드리스 클라이언트로 띄워 테스트합니다.
 
 ### 씬 뷰와 게임 뷰
 
