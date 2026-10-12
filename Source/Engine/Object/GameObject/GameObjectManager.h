@@ -16,7 +16,6 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/CameraRegistry.h"
 #include "Engine/Object/GameObject/ComponentRegistry.h"
@@ -29,6 +28,7 @@
 #include "Engine/Object/GameObject/SceneFrameStep.h"
 #include "Engine/Object/GameObject/SceneTickScheduler.h"
 #include "Engine/Object/GameObject/StructuralChangeBuffer.h"
+#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 
 namespace sw
 {

@@ -14,7 +14,7 @@
 
 다른 모듈과의 경계는 다음과 같습니다. 스켈레톤, 클립, 포즈, 스키닝은 [Animation](../Animation/README.md)이 맡고, 강체는 [Physics](../Physics/README.md)가 맡습니다.
 장비 슬롯, 아이템 외형, 외형 규칙, 프리셋을 해석하는 일은 GameFramework 의 `Base/Appearance` 가 맡습니다.
-모션 워핑처럼 캐릭터 형상과 소켓을 모르는 애니메이션 기능은 `Object/Animation/` 에 있습니다.
+모션 워핑처럼 캐릭터 형상과 소켓을 모르는 애니메이션 기능은 `Object/SceneAnimation/` 에 있습니다.
 
 이 폴더는 엔진 계층 7 에 있습니다(Scene, Sequencer 와 같은 층). 컴포넌트(Object, 계층 6), 공간 질의, 블렌드 곡선, XML 읽기 위에 있고, 씬과 렌더러는 모릅니다.
 알림, 후처리 리그, 레퍼런스 포즈가 `Animation`(계층 2)이 아니라 여기 있는 것도 그 때문입니다. 이 기능들은 소켓과 맞힘 판정을 읽어야 합니다.
@@ -341,7 +341,7 @@ KayKit 리그의 영역 테이블은 `skeleton_warrior.fit.xml`(Head, Arm_L, Arm
 - [Object](../Object/README.md) — 컴포넌트 수명
 - `Source/GameFramework/Base/Gameplay/Appearance/` — 외형 슬롯, 프리셋, `CharacterAppearanceComponent`
 
-모션 워핑(`MotionWarpingComponent`)과 이동 보정(`LocomotionWarpingComponent`)은 `Object/Animation/` 에 있고, 규칙은 각 헤더의 주석에 있습니다.
+모션 워핑(`MotionWarpingComponent`)과 이동 보정(`LocomotionWarpingComponent`)은 `Object/SceneAnimation/` 에 있고, 규칙은 각 헤더의 주석에 있습니다.
 
 자주 여는 파일은 다음과 같습니다.
 

@@ -2375,7 +2375,7 @@
    "default": "0",
    "kind": "시험",
    "description": "Draw every crowd-shared unit with vertex animation regardless of distance (verification)",
-   "source": "Source/Engine/Object/Animation/AnimationSystem.cpp"
+   "source": "Source/Engine/Object/SceneAnimation/AnimationSystem.cpp"
   },
   {
    "name": "gv_animationLod",
@@ -2383,7 +2383,7 @@
    "default": "1",
    "kind": "일반",
    "description": "Animation LOD: frustum visibility, update rate, bone LOD and budget (0 = every unit every frame)",
-   "source": "Source/Engine/Object/Animation/AnimationSystem.cpp"
+   "source": "Source/Engine/Object/SceneAnimation/AnimationSystem.cpp"
   },
   {
    "name": "gv_animationRewind",
@@ -2391,7 +2391,7 @@
    "default": "0",
    "kind": "시험",
    "description": "Record animation rewind history (poses, graph state, notifies, curves, root motion)",
-   "source": "Source/Engine/Object/Animation/AnimationRewind.cpp"
+   "source": "Source/Engine/Object/SceneAnimation/AnimationRewind.cpp"
   },
   {
    "name": "gv_animationRewindSeconds",
@@ -2399,7 +2399,7 @@
    "default": "10.0",
    "kind": "시험",
    "description": "Seconds of animation rewind history kept per unit",
-   "source": "Source/Engine/Object/Animation/AnimationRewind.cpp"
+   "source": "Source/Engine/Object/SceneAnimation/AnimationRewind.cpp"
   },
   {
    "name": "gv_arenaAutoPlay",

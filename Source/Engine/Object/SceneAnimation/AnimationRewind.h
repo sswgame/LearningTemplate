@@ -24,7 +24,7 @@
     #include "Core/Math/MatrixMath.h"
     #include "Core/String/hashed_string.h"
 
-    #include "Engine/Object/Animation/AnimationDebugState.h"
+    #include "Engine/Object/SceneAnimation/AnimationDebugState.h"
 
 namespace sw
 {

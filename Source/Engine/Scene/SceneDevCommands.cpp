@@ -2,7 +2,7 @@
  * @file SceneDevCommands.cpp
  * @brief 활성 씬을 다루는 개발 명령(순간이동 · 태그 · 애니메이션 되감기)입니다. Shipping 에는 없습니다.
  * @details 명령은 소유 코드 옆에 `SW_DEV_COMMAND` 로 둡니다(언리얼 `FAutoConsoleCommand`). 활성 씬을 찾는 명령은 씬(티어 7)이 아니면 둘 곳이 없어
- *          애니메이션 되감기(`Object/Animation/AnimationRewind`)도 여기 둡니다 — 컴포넌트 모델(6)은 씬을 모릅니다.
+ *          애니메이션 되감기(`Object/SceneAnimation/AnimationRewind`)도 여기 둡니다 — 컴포넌트 모델(6)은 씬을 모릅니다.
  */
 #include "pch.h"
 
@@ -14,7 +14,7 @@
     #include "Core/String/TagID.h"
 
     #include "Engine/Common/EngineServices.h"
-    #include "Engine/Object/Animation/AnimationSystem.h"
+    #include "Engine/Object/SceneAnimation/AnimationSystem.h"
     #include "Engine/Object/Component/SceneComponent.h"
     #include "Engine/Object/GameObject/GameObject.h"
     #include "Engine/Object/GameObject/GameObjectManager.h"

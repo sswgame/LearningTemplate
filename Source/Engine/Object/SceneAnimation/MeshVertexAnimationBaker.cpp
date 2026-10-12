@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Object/Animation/MeshVertexAnimationBaker.h"
+#include "Engine/Object/SceneAnimation/MeshVertexAnimationBaker.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"

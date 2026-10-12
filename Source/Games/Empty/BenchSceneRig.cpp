@@ -10,7 +10,6 @@
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
-#include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
@@ -18,6 +17,7 @@
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 

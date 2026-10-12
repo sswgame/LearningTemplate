@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Object/Animation/LocomotionWarpingComponent.h"
+#include "Engine/Object/SceneAnimation/LocomotionWarpingComponent.h"
 
 #include "Core/Math/MathUtil.h"
 

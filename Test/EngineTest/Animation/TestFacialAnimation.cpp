@@ -11,12 +11,12 @@
 #include "Engine/Audio/LipSyncImport.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
-#include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/3D/FacialAnimationComponent.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestFramework.h"

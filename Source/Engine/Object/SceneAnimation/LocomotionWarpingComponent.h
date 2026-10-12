@@ -15,8 +15,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

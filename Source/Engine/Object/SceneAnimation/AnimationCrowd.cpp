@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Object/Animation/AnimationCrowd.h"
+#include "Engine/Object/SceneAnimation/AnimationCrowd.h"
 
 #include "Core/Delegate/Delegate.h"
 #include "Core/Log/Logger.h"
@@ -12,7 +12,7 @@
 #include "Engine/Common/EngineParallel.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshVertexAnimation.h"
-#include "Engine/Object/Animation/MeshVertexAnimationBaker.h"
+#include "Engine/Object/SceneAnimation/MeshVertexAnimationBaker.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"

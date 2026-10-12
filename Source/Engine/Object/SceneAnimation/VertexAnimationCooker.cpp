@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Object/Animation/VertexAnimationCooker.h"
+#include "Engine/Object/SceneAnimation/VertexAnimationCooker.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
@@ -13,7 +13,7 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshVertexAnimation.h"
-#include "Engine/Object/Animation/MeshVertexAnimationBaker.h"
+#include "Engine/Object/SceneAnimation/MeshVertexAnimationBaker.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 

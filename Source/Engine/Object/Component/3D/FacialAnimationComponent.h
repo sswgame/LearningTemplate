@@ -12,8 +12,8 @@
 
 #include "Engine/Animation/Facial/FacialRig.h"
 #include "Engine/Animation/Facial/LipSync.h"
-#include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

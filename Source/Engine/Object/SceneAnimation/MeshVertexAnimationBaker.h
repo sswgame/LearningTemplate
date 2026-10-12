@@ -1,7 +1,7 @@
 /**
  * @file MeshVertexAnimationBaker.h
  * @brief 정점 애니메이션 표(`MeshVertexAnimation`) 굽기 — 스킨드 메시 + 스켈레톤 + 클립을 프레임 × 정점 표로 미리 스키닝합니다.
- * @details 표 형식은 Graphics(`MeshVertexAnimation`)가, 포즈 샘플은 Animation 이 맡습니다. 둘을 다 아는 컴포넌트 층(Object/Animation)에 둡니다 —
+ * @details 표 형식은 Graphics(`MeshVertexAnimation`)가, 포즈 샘플은 Animation 이 맡습니다. 둘을 다 아는 컴포넌트 층(Object/SceneAnimation)에 둡니다 —
  *          언리얼 AnimToTexture 가 애니메이션과 렌더 모듈을 함께 드는 플러그인인 것과 같은 자리입니다.
  */
 #pragma once

@@ -11,11 +11,11 @@
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Character/Fit/BodyShape.h"
-#include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/3D/PoseRetargetComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/AnimationTestUtil.h"

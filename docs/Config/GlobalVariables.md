@@ -104,10 +104,10 @@
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
-| `gv_animationForceVertexAnimation` | `int32` | `0` | 시험 | Draw every crowd-shared unit with vertex animation regardless of distance (verification) | [AnimationSystem.cpp](../../Source/Engine/Object/Animation/AnimationSystem.cpp) |
-| `gv_animationLod` | `int32` | `1` | 일반 | Animation LOD: frustum visibility, update rate, bone LOD and budget (0 = every unit every frame) | [AnimationSystem.cpp](../../Source/Engine/Object/Animation/AnimationSystem.cpp) |
-| `gv_animationRewind` | `int32` | `0` | 시험 | Record animation rewind history (poses, graph state, notifies, curves, root motion) | [AnimationRewind.cpp](../../Source/Engine/Object/Animation/AnimationRewind.cpp) |
-| `gv_animationRewindSeconds` | `float32` | `10.0` | 시험 | Seconds of animation rewind history kept per unit | [AnimationRewind.cpp](../../Source/Engine/Object/Animation/AnimationRewind.cpp) |
+| `gv_animationForceVertexAnimation` | `int32` | `0` | 시험 | Draw every crowd-shared unit with vertex animation regardless of distance (verification) | [AnimationSystem.cpp](../../Source/Engine/Object/SceneAnimation/AnimationSystem.cpp) |
+| `gv_animationLod` | `int32` | `1` | 일반 | Animation LOD: frustum visibility, update rate, bone LOD and budget (0 = every unit every frame) | [AnimationSystem.cpp](../../Source/Engine/Object/SceneAnimation/AnimationSystem.cpp) |
+| `gv_animationRewind` | `int32` | `0` | 시험 | Record animation rewind history (poses, graph state, notifies, curves, root motion) | [AnimationRewind.cpp](../../Source/Engine/Object/SceneAnimation/AnimationRewind.cpp) |
+| `gv_animationRewindSeconds` | `float32` | `10.0` | 시험 | Seconds of animation rewind history kept per unit | [AnimationRewind.cpp](../../Source/Engine/Object/SceneAnimation/AnimationRewind.cpp) |
 | `gv_tickBatch` | `bool` | `true` | 시험 | 타입별 일괄 틱 경로를 쓴다(0 이면 모든 오브젝트를 칸 목록으로 — 전/후 비교용) | [TickRegistry.cpp](../../Source/Engine/Object/GameObject/TickRegistry.cpp) |
 
 ## `Source/Engine/Profiling`

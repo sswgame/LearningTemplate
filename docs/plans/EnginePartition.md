@@ -16,12 +16,12 @@
 
 - `Utility` 루트 파일(`CommandStack` · `DebugOverlayState` · `GameAutoplay` · `GameTimeScale`)은 이름만 보고 두었습니다. 후보는 `CommandStack` → `Scene`(에디터 실행 취소),
   `GameTimeScale` · `GameAutoplay` → `Config`, `DebugOverlayState` → `Profiling` 입니다.
-- `Character/AnimationNotify`(처리기, 테이블, 컴포넌트)는 `CharacterHit` · `SocketSetComponent` 를 써서 `Object/Animation` 으로 내릴 수 없습니다. 알림 계약만 `Animation/Notify` 로 모았습니다.
+- `Character/AnimationNotify`(처리기, 테이블, 컴포넌트)는 `CharacterHit` · `SocketSetComponent` 를 써서 `Object/SceneAnimation` 으로 내릴 수 없습니다. 알림 계약만 `Animation/Notify` 로 모았습니다.
 - `Test/EngineTest/Graphics` 의 렌더러 테스트(`TestGpuScene` · `TestRenderGraph` 등)는 아직 `Graphics` 폴더에 있습니다(`Test/EngineTest/Renderer` 로 옮길 후보).
 
 ## 2. 컴포넌트 모델을 코어와 기능으로 가르기 (중간 위험, 가장 큰 효과)
 
-- `Object` 를 둘로 나눕니다. **코어**는 `GameObject` · `Prefab` · `Component` 기반 클래스 · 리플렉션 훅이고, **기능 컴포넌트**는 `Component/{2D,3D,Audio,Navigation,Physics}` · `Object/Animation` 입니다.
+- `Object` 를 둘로 나눕니다. **코어**는 `GameObject` · `Prefab` · `Component` 기반 클래스 · 리플렉션 훅이고, **기능 컴포넌트**는 `Component/{2D,3D,Audio,Navigation,Physics}` · `Object/SceneAnimation` 입니다.
 - 씬마다 하나인 기능 서비스는 씬 서비스 레지스트리(`ISceneService` · `SW_SCENE_SERVICE`)로 만듭니다. `SceneNavigation` 이 첫 예이고 `GameObject/` 는 그 타입을 모릅니다.
   다음은 `ScenePhysics` · `SceneAudio` 입니다. `SceneAudio::update` 는 카메라가 필요해 프레임 단계 목록 밖에 있으므로 단계 하나를 더하거나 `Scene::tick` 쪽 진입점이 필요합니다.
 - 코어는 `Graphics` · `Physics` · `Navigation` · `Audio` 를 include 하지 않습니다. `GameObject` 의 기능 의존은 기능 컴포넌트가 코어에 등록하는 방향으로 뒤집습니다.

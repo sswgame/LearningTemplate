@@ -13,8 +13,8 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Character/Fit/CharacterGeometry.h"
-#include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"
