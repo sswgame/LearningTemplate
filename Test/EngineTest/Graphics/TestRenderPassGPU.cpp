@@ -4523,6 +4523,63 @@ SW_TEST_CASE( RenderPassGPUTest, MissingTextureSamplesTheChecker )
 }
 
 /**
+ * @brief [RenderPassGPUTest] 여러 스레드가 같은 텍스처를 동시에 빌려도 한 번만 만들어지고 모두 같은 객체를 받는다
+ * @details `TextureCache::acquire` 는 디스크 읽기와 GPU 생성을 잠금 밖에서 한다. 같은 키를 동시에 원한 스레드는 진행 중 표시를 보고
+ *          기다렸다가 결과를 받아야 한다 — 따로 만들면 하나가 버려지거나 참조 수가 어긋난다. 실패한 키는 표에 남지 않는다.
+ *          GL 은 컨텍스트가 한 스레드라 다른 스레드에서 만들 수 없으므로 DX12 · DX11 로만 본다.
+ */
+SW_TEST_CASE( RenderPassGPUTest, ConcurrentTextureAcquireCreatesOnce )
+{
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    test::RHITestDevice device( { sw::RHIBackend::DirectX12, sw::RHIBackend::DirectX11 } );
+    if ( device.isReady() == false )
+        SW_TEST_SKIP( "No thread-safe RHI backend for the concurrent texture acquire test" );
+
+    constexpr const utf8* kTexture     = "engine/textures/test/checker.dds";
+    constexpr const utf8* kAbsent      = "engine/textures/test/doesnotexist.dds";
+    constexpr uint32      kThreadCount = 8;
+    sw::TextureCache&     textures     = sw::engine::getAssetManager().getAssetCache<sw::TextureCache>();
+    const bool            bHeldBefore  = textures.find( kTexture ) != nullptr;
+
+    sw::vector<sw::Texture2D*> listResult( kThreadCount, nullptr );
+    sw::vector<std::thread>    listThread;
+    std::atomic<bool>          bGo{ false };
+    for ( uint32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
+    {
+        listThread.emplace_back( [&, threadIndex]()
+        {
+            while ( bGo.load( std::memory_order_acquire ) == false )
+            {
+                std::this_thread::yield();
+            }
+            listResult[threadIndex] = textures.acquire( kTexture, device.get() );
+            SW_TEST_DEFENSIVE_SCOPE( "the texture does not exist" );
+            SW_EXPECT_TRUE( textures.acquire( kAbsent, device.get() ) == nullptr );
+        } );
+    }
+    bGo.store( true, std::memory_order_release );
+    for ( std::thread& thread : listThread )
+    {
+        thread.join();
+    }
+
+    SW_ASSERT_TRUE( listResult[0] != nullptr );
+    for ( sw::Texture2D* pResult : listResult )
+    {
+        SW_EXPECT_TRUE_MSG( pResult == listResult[0], "두 스레드가 같은 텍스처를 따로 만들었습니다" );
+    }
+    SW_EXPECT_TRUE( textures.find( kTexture ) == listResult[0] );
+    SW_EXPECT_FALSE_MSG( textures.isCached( kAbsent ), "실패한 텍스처가 표에 남았습니다" );
+
+    // 빌린 만큼 놓으면 표에서 빠진다(이미 누가 들고 있었으면 남는다).
+    for ( uint32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
+    {
+        textures.release( kTexture, device.get() );
+    }
+    SW_EXPECT_EQUAL( bHeldBefore, textures.find( kTexture ) != nullptr );
+}
+
+/**
  * @brief [RenderPassGPUTest] 깊이 프리패스를 넣어도 같은 그림이 나온다 — 깊이 첨부 이름을 바꿔도
  * @details 깊이 프리패스가 깨지는 방식: (1) 프리패스가 그림자와 같은 셰이더 변형으로 그리면 장면 깊이에 **광원 공간**의 깊이를 쓰고,
  *          (2) 깊이 비교가 Less 면 프리패스 뒤 같은 깊이를 다시 그리는 기본 패스가 모두 탈락한다(LessEqual 이어야 한다). 언리얼 EarlyZ · 유니티
