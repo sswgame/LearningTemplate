@@ -4,6 +4,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Physics/PhysicsDebugDraw.h"
 #include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Physics/PhysicsSystem.h"
 
@@ -160,6 +161,64 @@ SW_TEST_CASE( PhysicsScene2DTest, RaycastReportsHitDistance )
     sw::vector<sw::PhysicsBodyHandle> listFound;
     SW_EXPECT_EQUAL( 1u, pScene->overlapShape( makeBox( sw::float2{ 1.0f, 1.0f } ), sw::float2{ 5.5f, 0.0f }, 0.0f, filter, listFound ) );
     SW_EXPECT_EQUAL( 0u, pScene->overlapShape( makeBox( sw::float2{ 1.0f, 1.0f } ), sw::float2{ -5.0f, 0.0f }, 0.0f, filter, listFound ) );
+}
+
+/**
+ * @brief [PhysicsScene2DTest] 모든 닿음 질의는 바디마다 가장 가까운 닿음 하나를 가까운 순서로 출력 끝에 붙인다(3D 와 같은 모양)
+ */
+SW_TEST_CASE( PhysicsScene2DTest, RaycastAllAndShapeCastAllReportEveryBodyNearestFirst )
+{
+    sw::unique_ptr<sw::IPhysicsScene2D> pScene = makeScene();
+    SW_ASSERT_NOT_NULL( pScene.get() );
+    const sw::PhysicsBodyHandle farBody  = addBody( *pScene, makeBox( sw::float2{ 0.5f, 0.5f } ), sw::float2{ 12.0f, 0.0f }, sw::PhysicsBodyType::Static, 0, "Bouncy", 3 );
+    const sw::PhysicsBodyHandle nearBody = addBody( *pScene, makeBox( sw::float2{ 0.5f, 0.5f } ), sw::float2{ 4.0f, 0.0f }, sw::PhysicsBodyType::Static, 0, "", 1 );
+    addBody( *pScene, makeBox( sw::float2{ 0.5f, 0.5f } ), sw::float2{ 4.0f, 5.0f }, sw::PhysicsBodyType::Static ); // 광선 밖
+
+    sw::PhysicsQueryFilter           filter;
+    sw::vector<sw::PhysicsCastHit2D> listHit;
+    SW_ASSERT_EQUAL( 2u, pScene->raycastAll( sw::float2{}, sw::float2{ 1.0f, 0.0f }, 100.0f, filter, listHit ) );
+    SW_EXPECT_TRUE( listHit[0]._body == nearBody );
+    SW_EXPECT_TRUE( listHit[1]._body == farBody );
+    SW_EXPECT_NEAR_EQUAL( 3.5f, listHit[0]._distance, 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( 11.5f, listHit[1]._distance, 1e-3f );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 1 ), listHit[0]._userData );
+    SW_EXPECT_TRUE( listHit[1]._material == sw::hashed_string( "Bouncy" ) );
+
+    listHit.clear();
+    SW_EXPECT_EQUAL( 1u, pScene->raycastAll( sw::float2{}, sw::float2{ 1.0f, 0.0f }, 5.0f, filter, listHit ) );
+    filter._layerMask = 1u << 1;
+    SW_EXPECT_EQUAL( 0u, pScene->raycastAll( sw::float2{}, sw::float2{ 1.0f, 0.0f }, 100.0f, filter, listHit ) );
+
+    filter._layerMask  = sw::MathUtil::kMaxUInt32;
+    filter._ignoreBody = nearBody;
+    listHit.clear();
+    SW_ASSERT_EQUAL( 1u, pScene->shapeCastAll( makeCircle( 0.5f ), sw::float2{}, 0.0f, sw::float2{ 1.0f, 0.0f }, 100.0f, filter, listHit ) );
+    SW_EXPECT_TRUE( listHit[0]._body == farBody );
+    SW_EXPECT_NEAR_EQUAL( 11.0f, listHit[0]._distance, 2e-2f );
+}
+
+/**
+ * @brief [PhysicsScene2DTest] 바디 하나의 선은 같은 서술자와 자세를 셰이프 도우미에 넘긴 선과 같고, 무효 핸들은 아무것도 내지 않는다
+ */
+SW_TEST_CASE( PhysicsScene2DTest, DrawBodyDebugMatchesShapeLinesFromDesc )
+{
+    sw::unique_ptr<sw::IPhysicsScene2D> pScene = makeScene();
+    SW_ASSERT_NOT_NULL( pScene.get() );
+    const sw::PhysicsShapeDesc2D circle = makeCircle( 0.75f );
+    const sw::PhysicsBodyHandle  body   = addBody( *pScene, circle, sw::float2{ 2.0f, 1.0f }, sw::PhysicsBodyType::Static );
+    SW_ASSERT_TRUE( body.isValid() );
+
+    sw::PhysicsDebugLineCollector fromBody;
+    SW_ASSERT_TRUE( pScene->drawBodyDebug( body, fromBody ) );
+    sw::PhysicsDebugLineCollector fromDesc;
+    sw::PhysicsDebugDrawUtil::drawShape2D( fromDesc, circle, sw::float2{ 2.0f, 1.0f }, 0.0f, sw::PhysicsDebugDrawUtil::getBodyColor( 0, false, false ) );
+    SW_ASSERT_TRUE( fromBody.getLines().empty() == false );
+    SW_ASSERT_EQUAL( fromDesc.getLines().size(), fromBody.getLines().size() );
+    for ( size_t lineIndex = 0; lineIndex < fromBody.getLines().size(); ++lineIndex )
+    {
+        SW_EXPECT_NEAR_EQUAL( 0.0f, ( fromBody.getLines()[lineIndex]._from - fromDesc.getLines()[lineIndex]._from ).getLength(), 1e-4f );
+    }
+    SW_EXPECT_FALSE( pScene->drawBodyDebug( sw::PhysicsBodyHandle{}, fromBody ) );
 }
 
 /**
@@ -350,6 +409,50 @@ SW_TEST_CASE( PhysicsScene2DTest, StepIsDeterministic )
     {
         SW_EXPECT_TRUE( arrListPosition[0][bodyIndex]._x == arrListPosition[1][bodyIndex]._x );
         SW_EXPECT_TRUE( arrListPosition[0][bodyIndex]._y == arrListPosition[1][bodyIndex]._y );
+    }
+}
+
+/**
+ * @brief [PhysicsScene2DTest] 전용 워커를 붙여도 결과는 한 스레드와 비트까지 같다(Box2D 는 고정 블록으로 나눈다) — 워커 수 1 · 2 · 4
+ */
+SW_TEST_CASE( PhysicsScene2DTest, StepIsDeterministicAcrossWorkerCounts )
+{
+    // 바디가 솔버 블록을 여럿 만들 만큼 많아야 일을 실제로 나눈다(쌓인 더미 — 접촉 그래프 색칠과 섬 나누기가 모두 돈다).
+    constexpr uint32       kBodyCount       = 400;
+    const uint32           arrWorkerCount[] = { 1, 2, 4 };
+    sw::vector<sw::float2> arrListPosition[3];
+    for ( uint32 runIndex = 0; runIndex < 3; ++runIndex )
+    {
+        sw::PhysicsSettings settings               = makeSettings();
+        settings._workerCount2D                    = arrWorkerCount[runIndex];
+        sw::unique_ptr<sw::IPhysicsScene2D> pScene = sw::engine::getPhysicsSystem().createScene2D( settings );
+        SW_ASSERT_NOT_NULL( pScene.get() );
+        addFloor( *pScene );
+        sw::vector<sw::PhysicsBodyHandle> listBody;
+        for ( uint32 bodyIndex = 0; bodyIndex < kBodyCount; ++bodyIndex )
+        {
+            const float32 x = static_cast<float32>( bodyIndex % 20 ) * 0.9f - 9.0f;
+            const float32 y = 1.0f + static_cast<float32>( bodyIndex / 20 ) * 0.9f;
+            listBody.push_back(
+                addBody( *pScene, ( bodyIndex % 2 ) == 0 ? makeBox( sw::float2{ 0.4f, 0.4f } ) : makeCircle( 0.4f ), sw::float2{ x, y }, sw::PhysicsBodyType::Dynamic ) );
+        }
+        stepFor( *pScene, 120 );
+        for ( const sw::PhysicsBodyHandle& body : listBody )
+        {
+            arrListPosition[runIndex].push_back( getPosition( *pScene, body ) );
+        }
+    }
+    for ( uint32 runIndex = 1; runIndex < 3; ++runIndex )
+    {
+        uint32 mismatchCount = 0;
+        for ( size_t bodyIndex = 0; bodyIndex < arrListPosition[0].size(); ++bodyIndex )
+        {
+            const bool bSame = arrListPosition[0][bodyIndex]._x == arrListPosition[runIndex][bodyIndex]._x &&
+                               arrListPosition[0][bodyIndex]._y == arrListPosition[runIndex][bodyIndex]._y;
+            if ( bSame == false )
+                ++mismatchCount;
+        }
+        SW_EXPECT_EQUAL( 0u, mismatchCount ); // 워커 수가 다르면 바디가 달리 움직였다
     }
 }
 

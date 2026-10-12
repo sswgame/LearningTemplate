@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
@@ -22,8 +23,8 @@ namespace sw
         Box = 0,
         Sphere,
         Capsule,      ///< 로컬 Y 축으로 선 캡슐이다. 원기둥 반 높이(`_halfHeight`)와 반지름으로 정한다.
-        ConvexHull,   ///< `_listPoint` 를 감싸는 볼록 껍질이다.
-        TriangleMesh, ///< `_listPoint` 와 `_listIndex` 의 삼각형이다. Static 과 Kinematic 바디만 쓸 수 있다(움직이는 메시 충돌은 백엔드가 막는다).
+        ConvexHull,   ///< `_listPoint`(비었으면 `_meshPath` 메시의 정점)를 감싸는 볼록 껍질이다.
+        TriangleMesh, ///< `_listPoint` 와 `_listIndex`(비었으면 `_meshPath` 메시)의 삼각형이다. Static 과 Kinematic 바디만 쓸 수 있다(움직이는 메시 충돌은 백엔드가 막는다).
     };
 
     /** @brief 2D 셰이프 종류입니다(Box2D 의 polygon, circle, capsule, chain). */
@@ -67,6 +68,9 @@ namespace sw
         vector<float3> _listPoint;
         PROPERTY( Tooltip = "Triangle mesh: three vertex indices per triangle" )
         vector<uint32> _listIndex;
+        /** @brief 볼록 껍질 · 삼각 메시를 채울 메시 에셋입니다. 점을 직접 적지 않았을 때만 쓴다(`PhysicsMeshShapeCache`). 메시 로컬 좌표가 셰이프 로컬이다. */
+        PROPERTY( AssetPath, AssetType = "Mesh", Tooltip = "Convex hull / triangle mesh: .mesh asset to fill the points from when _listPoint is empty" )
+        string _meshPath;
         PROPERTY( Tooltip = "Physics material name (empty: the body's material)" )
         hashed_string _material{};
     };

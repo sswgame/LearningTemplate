@@ -109,7 +109,7 @@ pBoxBody->addImpulse( float3{ 0.0f, 5.0f, 0.0f } );
 | `IPhysicsBodyScene.h` | 셰이프와 바디 |
 | `IPhysicsJointScene.h` | 관절 |
 | `IPhysicsCharacterScene.h` | 캐릭터 무버 |
-| `IPhysicsQueryScene.h` | 레이 캐스트, 셰이프 캐스트, 겹침 |
+| `IPhysicsQueryScene.h` | 레이 캐스트, 셰이프 캐스트(가장 가까운 것 하나, 모두), 겹침 |
 | `IPhysicsVehicleScene.h` | 바퀴 차(3D 만) |
 
 씬 하나가 역할을 모두 구현하지만, 한 역할만 쓰는 코드는 그 역할의 인터페이스만 받습니다. 맞힘 판정과 소리 가림은 `IPhysicsQueryScene3D`, 강체 컴포넌트는 `IPhysicsBodyScene3D` 를 받습니다.
@@ -118,6 +118,10 @@ pBoxBody->addImpulse( float3{ 0.0f, 5.0f, 0.0f } );
 역할 인터페이스의 함수 호출은 바탕 클래스 하나를 거치는 가상 호출이라, 더 드는 비용은 `this` 포인터 보정 한 번뿐입니다.
 
 3D 셰이프는 상자, 구, 캡슐, 볼록 껍질, 삼각 메시이고 2D 셰이프는 상자, 원, 캡슐, 다각형, 사슬입니다.
+볼록 껍질과 삼각 메시는 점을 직접 적거나 `_meshPath` 에 메시 에셋(`.mesh`)을 적습니다. 메시를 적으면 `PhysicsMeshShapeCache` 가 경로마다 한 번 읽어
+같은 위치의 정점을 합치고(weld) 퇴화 삼각형을 뺀 뒤 바디 생성과 디버그 그리기에 나눠 줍니다. 언리얼이 스태틱 메시의 정점에서 충돌을 만드는 것과 같은 자리입니다.
+물리는 그래픽스보다 아래 티어라 `.mesh` 를 직접 읽지 못하므로, 엔진 조립 지점이 읽기 함수 하나를 `setLoadFunction` 으로 넣습니다. 넣지 않았거나 파일을 읽지 못하면
+경로마다 오류 한 번을 남기고 그 셰이프의 바디는 만들지 않습니다. `.mesh` 의 감기(엔진 앞면)는 Jolt 의 앞면과 같아 뒤집지 않습니다.
 바디와 관절 서술자는 차원 하나(`PhysicsDimension3D`, `PhysicsDimension2D`)로 갈리는 템플릿이라 3D 와 2D 가 같은 코드를 씁니다.
 
 라이브러리 헤더(`<Jolt/...>`, `<box2d/...>`)는 그 백엔드 폴더에서만 include 하고, 라이브러리는 `Source/Engine/CMakeLists.txt` 에서만 링크합니다. `CheckThirdPartyIsolation.py` 가 이 규칙을 지킵니다.
@@ -125,7 +129,8 @@ pBoxBody->addImpulse( float3{ 0.0f, 5.0f, 0.0f } );
 
 **잡 시스템.** Jolt 는 스텝을 의존 관계가 있는 잡으로 나눕니다. 기다리는 스레드가 장벽에서 남은 잡을 직접 실행하므로 잡끼리 바쁘게 기다리지 않습니다.
 그래서 엔진 태스크(`TaskManager` 의 High 레인)로 실행해도 안전합니다(`JoltJobSystem`).
-Box2D 는 한 스레드로 돕니다. Box2D 의 솔버 워커들은 서로를 바쁘게 기다리는 구조라, 공유 작업 풀에 넘기면 교착 상태가 될 수 있기 때문입니다.
+Box2D 는 기본으로 한 스레드로 돕니다. Box2D 의 솔버 워커들은 서로를 바쁘게 기다리는 구조라, 공유 작업 풀에 넘기면 교착 상태가 될 수 있기 때문입니다.
+바디가 수천이면 설정의 `_workerCount2D` 로 씬마다 전용 워커를 붙입니다. 소유 규칙, 잠금 순서, 결정성은 [Box2D 백엔드](Box2D/README.md)에 있습니다.
 
 ### 규칙
 
@@ -139,6 +144,8 @@ Box2D 는 한 스레드로 돕니다. Box2D 의 솔버 워커들은 서로를 �
 
 - 쏘는 오브젝트의 바디를 모두 빼려면 `PhysicsQueryFilter::_ignoreUserData` 에 그 오브젝트 id 를 넣습니다. 자기 래그돌 본이나 들고 있는 무기를 맞히지 않게 할 때 씁니다.
 - 레이 캐스트 결과의 `_material` 은 맞은 셰이프의 재질 이름입니다. 발소리나 탄흔 종류를 고를 때 씁니다.
+- 닿는 것을 모두 찾으려면 `raycastAll` 과 `shapeCastAll` 을 씁니다. 바디마다 가장 가까운 닿음 하나를 가까운 순서로 출력 끝에 붙입니다(관통 사격, 시야를 가린 것 모두).
+  컴파운드 바디는 서브 셰이프가 여럿 닿아도 한 번이고, 거리가 같으면 바디 핸들 순서입니다. 언리얼의 `LineTraceMulti`, 유니티의 `RaycastAll` 에 해당합니다.
 - 두 바디만 예외로 충돌을 끄려면 `setPairCollision` 을 씁니다. 관절로 이은 두 바디는 관절의 `_bCollideConnectedBodies`(기본 거짓)로 정합니다.
 
 **접촉 이벤트.** 바디 쌍마다 시작, 유지, 끝이 한 번씩 납니다. 셰이프가 여러 개여도 바디 쌍당 한 번입니다.
@@ -180,6 +187,8 @@ Jolt 의 `VehicleConstraint` 와 `WheeledVehicleController` 를 스텝 리스너
 - 바퀴 메시를 바퀴 자세로 옮기는 기능은 아직 없습니다.
 
 `-gv_physicsDebugDraw=1` 이면 활성 씬의 바디와 캐릭터를 디버그 선으로 그립니다.
+셰이프 선을 목록으로 받으려면 `PhysicsDebugLineCollector` 를 출구로 넘깁니다. 살아 있는 바디 하나는 `IPhysicsBodyScene::drawBodyDebug`, 시뮬레이션 전(에디터 편집 중)의
+컴포넌트는 셰이프 서술자와 트랜스폼을 `PhysicsDebugDrawUtil::drawShape3D`, `drawShape2D` 에 넘깁니다. 둘은 같은 선을 냅니다.
 
 ### 물리 에셋과 래그돌
 

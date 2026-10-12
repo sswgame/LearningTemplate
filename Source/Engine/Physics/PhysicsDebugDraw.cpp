@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Physics/Collision/PhysicsMeshShapeCache.h"
 #include "Engine/Physics/PhysicsTypes.h"
 
 namespace sw
@@ -124,14 +125,15 @@ namespace sw
             case PhysicsShapeType3D::ConvexHull:
             {
                 // 껍질의 면은 백엔드가 만든다. 점 사이의 별 모양(중심에서 각 점)으로 부피만 보이게 한다.
-                float3 center{};
-                for ( const float3& point : shape._listPoint )
+                const PhysicsShapeGeometry geometry = PhysicsMeshShapeCache::acquireGeometry( shape );
+                float3                     center{};
+                for ( const float3& point : geometry._listPoint )
                 {
                     center += point;
                 }
-                if ( shape._listPoint.empty() == false )
-                    center = center * ( 1.0f / static_cast<float32>( shape._listPoint.size() ) );
-                for ( const float3& point : shape._listPoint )
+                if ( geometry._listPoint.empty() == false )
+                    center = center * ( 1.0f / static_cast<float32>( geometry._listPoint.size() ) );
+                for ( const float3& point : geometry._listPoint )
                 {
                     renderer.drawLine( frame.apply( center ), frame.apply( point ), color );
                 }
@@ -139,17 +141,18 @@ namespace sw
             }
             case PhysicsShapeType3D::TriangleMesh:
             {
-                const size_t pointCount = shape._listPoint.size();
-                for ( size_t index = 0; index + 2 < shape._listIndex.size(); index += 3 )
+                const PhysicsShapeGeometry geometry   = PhysicsMeshShapeCache::acquireGeometry( shape );
+                const size_t               pointCount = geometry._listPoint.size();
+                for ( size_t index = 0; index + 2 < geometry._listIndex.size(); index += 3 )
                 {
-                    const uint32 indexA = shape._listIndex[index];
-                    const uint32 indexB = shape._listIndex[index + 1];
-                    const uint32 indexC = shape._listIndex[index + 2];
+                    const uint32 indexA = geometry._listIndex[index];
+                    const uint32 indexB = geometry._listIndex[index + 1];
+                    const uint32 indexC = geometry._listIndex[index + 2];
                     if ( indexA >= pointCount || indexB >= pointCount || indexC >= pointCount )
                         continue;
-                    const float3 pointA = frame.apply( shape._listPoint[indexA] );
-                    const float3 pointB = frame.apply( shape._listPoint[indexB] );
-                    const float3 pointC = frame.apply( shape._listPoint[indexC] );
+                    const float3 pointA = frame.apply( geometry._listPoint[indexA] );
+                    const float3 pointB = frame.apply( geometry._listPoint[indexB] );
+                    const float3 pointC = frame.apply( geometry._listPoint[indexC] );
                     renderer.drawLine( pointA, pointB, color );
                     renderer.drawLine( pointB, pointC, color );
                     renderer.drawLine( pointC, pointA, color );

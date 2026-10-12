@@ -39,6 +39,16 @@ namespace sw
                 bool                      _bHit{ false };
             };
 
+            /** @brief 닿는 것을 모두 모으는 질의의 콜백 컨텍스트입니다. 결과를 출력 끝에 바로 붙입니다. */
+            struct CastAllContext
+            {
+                const Box2DPhysicsScene*          _pScene{ nullptr };
+                const PhysicsQueryFilter*         _pFilter{ nullptr };
+                const vector<PhysicsMaterialDef>* _pListMaterial{ nullptr }; ///< 레이 캐스트만 준다(재질 이름을 채운다)
+                vector<PhysicsCastHit2D>*         _pListHit{ nullptr };
+                float32                           _maxDistance{ 0.0f };
+            };
+
             struct OverlapContext
             {
                 const Box2DPhysicsScene*   _pScene{ nullptr };
@@ -73,6 +83,28 @@ namespace sw
                 context._fraction = fraction;
                 context._bHit     = true;
                 return fraction; // 더 가까운 것만 찾는다
+            }
+
+            static float32 castAllResult( b2ShapeId shapeID, b2Vec2 point, b2Vec2 normal, float32 fraction, void* pContext )
+            {
+                CastAllContext& context = *static_cast<CastAllContext*>( pContext );
+                if ( acceptsShape( *context._pScene, shapeID, *context._pFilter ) == false )
+                    return -1.0f; // 이 셰이프는 없는 것으로 친다
+                PhysicsCastHit2D hit;
+                hit._body     = Box2DUtil::fromUserData( b2Body_GetUserData( b2Shape_GetBody( shapeID ) ) );
+                hit._userData = context._pScene->getBodyUserData( hit._body );
+                hit._point    = Box2DUtil::toEngine( point );
+                hit._normal   = Box2DUtil::toEngine( normal );
+                hit._fraction = fraction;
+                hit._distance = fraction * context._maxDistance;
+                if ( context._pListMaterial != nullptr )
+                {
+                    const int32 materialIndex = b2Shape_GetMaterial( shapeID );
+                    if ( 0 <= materialIndex && static_cast<size_t>( materialIndex ) < context._pListMaterial->size() )
+                        hit._material = ( *context._pListMaterial )[static_cast<size_t>( materialIndex )]._name;
+                }
+                context._pListHit->push_back( hit );
+                return 1.0f; // 광선을 줄이지 않고 계속 찾는다
             }
 
             static bool overlapResult( b2ShapeId shapeID, void* pContext )
@@ -498,6 +530,37 @@ namespace sw
         outHit._fraction = context._fraction;
         outHit._distance = context._fraction * maxDistance;
         return true;
+    }
+
+    uint32 Box2DPhysicsScene::raycastAll( const float2& origin, const float2& direction, float32 maxDistance, const PhysicsQueryFilter& filter,
+                                          vector<PhysicsCastHit2D>& outListHit ) const
+    {
+        b2QueryFilter queryFilter                                 = b2DefaultQueryFilter();
+        queryFilter.categoryBits                                  = ~static_cast<uint64_t>( 0 );
+        queryFilter.maskBits                                      = static_cast<uint64_t>( filter._layerMask );
+        const size_t                                   firstIndex = outListHit.size();
+        Box2DPhysicsSceneQueryInternal::CastAllContext context{ this, &filter, &_settings._listMaterial, &outListHit, maxDistance };
+        b2World_CastRay( _worldID, Box2DUtil::toBox2D( origin ), Box2DUtil::toBox2D( direction * maxDistance ), queryFilter,
+                         &Box2DPhysicsSceneQueryInternal::castAllResult, &context );
+        return PhysicsQueryUtil::keepNearestHitPerBody( outListHit, firstIndex );
+    }
+
+    uint32 Box2DPhysicsScene::shapeCastAll( const PhysicsShapeDesc2D& shape, const float2& position, const float32& rotation, const float2& direction,
+                                            float32 maxDistance, const PhysicsQueryFilter& filter, vector<PhysicsCastHit2D>& outListHit ) const
+    {
+        b2ShapeProxy proxy{};
+        if ( Box2DPhysicsSceneQueryInternal::makeProxy( shape, position, rotation, proxy ) == false )
+        {
+            SW_LOG_ERROR( "shapeCastAll: a chain cannot be cast" );
+            return 0;
+        }
+        b2QueryFilter queryFilter                                 = b2DefaultQueryFilter();
+        queryFilter.categoryBits                                  = ~static_cast<uint64_t>( 0 );
+        queryFilter.maskBits                                      = static_cast<uint64_t>( filter._layerMask );
+        const size_t                                   firstIndex = outListHit.size();
+        Box2DPhysicsSceneQueryInternal::CastAllContext context{ this, &filter, nullptr, &outListHit, maxDistance };
+        b2World_CastShape( _worldID, &proxy, Box2DUtil::toBox2D( direction * maxDistance ), queryFilter, &Box2DPhysicsSceneQueryInternal::castAllResult, &context );
+        return PhysicsQueryUtil::keepNearestHitPerBody( outListHit, firstIndex );
     }
 
     uint32 Box2DPhysicsScene::overlapShape( const PhysicsShapeDesc2D& shape, const float2& position, const float32& rotation, const PhysicsQueryFilter& filter,

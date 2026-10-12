@@ -420,6 +420,61 @@ namespace sw
         JPH::RayCastResult                                   hit;
         if ( _system.GetNarrowPhaseQuery().CastRay( ray, hit, JPH::BroadPhaseLayerFilter{}, layerFilter, bodyFilter ) == false )
             return false;
+        makeRayHit( ray, hit, maxDistance, outHit );
+        return true;
+    }
+
+    uint32 JoltPhysicsScene::raycastAll( const float3& origin, const float3& direction, float32 maxDistance, const PhysicsQueryFilter& filter,
+                                         vector<PhysicsCastHit3D>& outListHit ) const
+    {
+        const BodyRecord*                                    pIgnore = findBody( filter._ignoreBody );
+        const JoltPhysicsSceneQueryInternal::LayerMaskFilter layerFilter{ filter._layerMask };
+        const JoltPhysicsSceneQueryInternal::QueryBodyFilter bodyFilter{ *this, pIgnore != nullptr ? pIgnore->_bodyID : JPH::BodyID{}, filter };
+        const JPH::RRayCast                                  ray{ JoltUtil::toJolt( origin ), JoltUtil::toJolt( direction ) * maxDistance };
+        // `raycast`(CastRay 의 가장 가까운 닿음)와 같은 판정이 되도록 볼록 셰이프를 속이 찬 것으로 보고, 메시는 뒷면을 버린다(Jolt 기본값).
+        JPH::RayCastSettings                                 settings;
+        JPH::AllHitCollisionCollector<JPH::CastRayCollector> collector;
+        _system.GetNarrowPhaseQuery().CastRay( ray, settings, collector, JPH::BroadPhaseLayerFilter{}, layerFilter, bodyFilter );
+        const size_t firstIndex = outListHit.size();
+        outListHit.reserve( firstIndex + collector.mHits.size() );
+        for ( const JPH::RayCastResult& hit : collector.mHits )
+        {
+            PhysicsCastHit3D result;
+            makeRayHit( ray, hit, maxDistance, result );
+            if ( result._body.isValid() )
+                outListHit.push_back( result );
+        }
+        return PhysicsQueryUtil::keepNearestHitPerBody( outListHit, firstIndex );
+    }
+
+    uint32 JoltPhysicsScene::shapeCastAll( const PhysicsShapeDesc3D& shape, const float3& position, const quaternion& rotation, const float3& direction,
+                                           float32 maxDistance, const PhysicsQueryFilter& filter, vector<PhysicsCastHit3D>& outListHit ) const
+    {
+        const JPH::RefConst<JPH::Shape> pShape = createJoltShape( span<const PhysicsShapeDesc3D>{ &shape, 1 }, hashed_string{}, false );
+        if ( pShape == nullptr )
+            return 0;
+        const BodyRecord*                                      pIgnore = findBody( filter._ignoreBody );
+        const JoltPhysicsSceneQueryInternal::LayerMaskFilter   layerFilter{ filter._layerMask };
+        const JoltPhysicsSceneQueryInternal::QueryBodyFilter   bodyFilter{ *this, pIgnore != nullptr ? pIgnore->_bodyID : JPH::BodyID{}, filter };
+        const JPH::RMat44                                      start = JPH::RMat44::sRotationTranslation( JoltUtil::toJolt( rotation ), JoltUtil::toJolt( position ) );
+        const JPH::RShapeCast                                  cast  = JPH::RShapeCast::sFromWorldTransform( pShape.GetPtr(), JPH::Vec3::sReplicate( 1.0f ), start, JoltUtil::toJolt( direction ) * maxDistance );
+        JPH::ShapeCastSettings                                 settings;
+        JPH::AllHitCollisionCollector<JPH::CastShapeCollector> collector;
+        _system.GetNarrowPhaseQuery().CastShape( cast, settings, JPH::RVec3::sZero(), collector, JPH::BroadPhaseLayerFilter{}, layerFilter, bodyFilter );
+        const size_t firstIndex = outListHit.size();
+        outListHit.reserve( firstIndex + collector.mHits.size() );
+        for ( const JPH::ShapeCastResult& hit : collector.mHits )
+        {
+            PhysicsCastHit3D result;
+            makeShapeCastHit( hit, maxDistance, result );
+            if ( result._body.isValid() )
+                outListHit.push_back( result );
+        }
+        return PhysicsQueryUtil::keepNearestHitPerBody( outListHit, firstIndex );
+    }
+
+    void JoltPhysicsScene::makeRayHit( const JPH::RRayCast& ray, const JPH::RayCastResult& hit, float32 maxDistance, PhysicsCastHit3D& outHit ) const
+    {
         const JPH::RVec3 point = ray.GetPointOnRay( hit.mFraction );
         outHit._body           = findHandle( hit.mBodyID );
         outHit._userData       = getBodyUserData( outHit._body );
@@ -435,7 +490,16 @@ namespace sw
             if ( pMaterial != nullptr && pMaterial != JPH::PhysicsMaterial::sDefault.GetPtr() )
                 outHit._material = static_cast<const JoltPhysicsMaterial*>( pMaterial )->getName();
         }
-        return true;
+    }
+
+    void JoltPhysicsScene::makeShapeCastHit( const JPH::ShapeCastResult& hit, float32 maxDistance, PhysicsCastHit3D& outHit ) const
+    {
+        outHit._body     = findHandle( hit.mBodyID2 );
+        outHit._userData = getBodyUserData( outHit._body );
+        outHit._point    = JoltUtil::toEngine( hit.mContactPointOn2 );
+        outHit._normal   = JoltUtil::toEngine( -hit.mPenetrationAxis.NormalizedOr( JPH::Vec3::sZero() ) );
+        outHit._fraction = hit.mFraction;
+        outHit._distance = hit.mFraction * maxDistance;
     }
 
     bool JoltPhysicsScene::shapeCast( const PhysicsShapeDesc3D& shape, const float3& position, const quaternion& rotation, const float3& direction, float32 maxDistance,
@@ -454,13 +518,7 @@ namespace sw
         _system.GetNarrowPhaseQuery().CastShape( cast, settings, JPH::RVec3::sZero(), collector, JPH::BroadPhaseLayerFilter{}, layerFilter, bodyFilter );
         if ( collector.HadHit() == false )
             return false;
-        const JPH::ShapeCastResult& hit = collector.mHit;
-        outHit._body                    = findHandle( hit.mBodyID2 );
-        outHit._userData                = getBodyUserData( outHit._body );
-        outHit._point                   = JoltUtil::toEngine( hit.mContactPointOn2 );
-        outHit._normal                  = JoltUtil::toEngine( -hit.mPenetrationAxis.NormalizedOr( JPH::Vec3::sZero() ) );
-        outHit._fraction                = hit.mFraction;
-        outHit._distance                = hit.mFraction * maxDistance;
+        makeShapeCastHit( collector.mHit, maxDistance, outHit );
         return true;
     }
 

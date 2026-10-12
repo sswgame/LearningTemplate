@@ -60,6 +60,11 @@ namespace sw
             SW_LOG_ERROR( "Physics settings need a positive fixed step, at least one step per frame and one 2D sub-step" );
             bValid = false;
         }
+        if ( _workerCount2D == 0 || _workerCount2D > kMaxWorkerCount2D )
+        {
+            SW_LOG_ERROR( "Physics settings ask for %# 2D workers - use 1 to %#", _workerCount2D, kMaxWorkerCount2D );
+            bValid = false;
+        }
         for ( size_t layerIndex = 0; layerIndex < _listLayer.size(); ++layerIndex )
         {
             const PhysicsLayerDef& layer = _listLayer[layerIndex];

@@ -6,6 +6,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Physics/Box2D/Box2DUtil.h"
+#include "Engine/Physics/Box2D/Box2DWorkerPool.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
 
 #include <box2d/box2d.h>
@@ -45,6 +46,7 @@ namespace sw
     Box2DPhysicsScene::Box2DPhysicsScene( const PhysicsSettings& settings )
         : _settings{ settings }
         , _layers{}
+        , _pWorkerPool{}
         , _worldID{}
         , _groundBodyID{}
         , _bodies{}
@@ -63,7 +65,15 @@ namespace sw
 
         b2WorldDef worldDef = b2DefaultWorldDef();
         worldDef.gravity    = Box2DUtil::toBox2D( _settings._gravity2D );
-        _worldID            = b2CreateWorld( &worldDef );
+        if ( _settings._workerCount2D > 1 )
+        {
+            _pWorkerPool             = make_unique<Box2DWorkerPool>( _settings._workerCount2D );
+            worldDef.workerCount     = static_cast<int32>( _pWorkerPool->getWorkerCount() );
+            worldDef.enqueueTask     = &Box2DWorkerPool::enqueueTask;
+            worldDef.finishTask      = &Box2DWorkerPool::finishTask;
+            worldDef.userTaskContext = _pWorkerPool.get();
+        }
+        _worldID = b2CreateWorld( &worldDef );
 
         b2BodyDef groundDef = b2DefaultBodyDef();
         groundDef.type      = b2_staticBody;
@@ -111,17 +121,7 @@ namespace sw
     void Box2DPhysicsScene::drawDebug( IPhysicsDebugRenderer& renderer ) const
     {
         _bodies.forEachHandle( [&]( SlotHandle, const BodyRecord& record )
-        {
-            if ( record._bEnabled == false || record._pListShape == nullptr )
-                return;
-            const b2Transform transform = b2Body_GetTransform( record._bodyID );
-            const bool        bSleeping = record._type != PhysicsBodyType::Static && b2Body_IsAwake( record._bodyID ) == false;
-            const float4      color     = PhysicsDebugDrawUtil::getBodyColor( static_cast<uint8>( record._type ), bSleeping, record._bTrigger );
-            for ( const PhysicsShapeDesc2D& shape : *record._pListShape )
-            {
-                PhysicsDebugDrawUtil::drawShape2D( renderer, shape, Box2DUtil::toEngine( transform.p ), b2Rot_GetAngle( transform.q ), color );
-            }
-        } );
+        { drawBodyRecord( record, renderer ); } );
         _characters.forEachHandle( [&]( SlotHandle, const CharacterRecord& record )
         {
             PhysicsShapeDesc2D capsule;
@@ -131,6 +131,28 @@ namespace sw
             const float2 center = record._state._position + float2{ 0.0f, record._desc._halfHeight + record._desc._radius };
             PhysicsDebugDrawUtil::drawShape2D( renderer, capsule, center, 0.0f, float4{ 0.9f, 0.4f, 1.0f, 1.0f } );
         } );
+    }
+
+    bool Box2DPhysicsScene::drawBodyDebug( PhysicsBodyHandle body, IPhysicsDebugRenderer& renderer ) const
+    {
+        const BodyRecord* pRecord = findBody( body );
+        if ( pRecord == nullptr )
+            return false;
+        drawBodyRecord( *pRecord, renderer );
+        return true;
+    }
+
+    void Box2DPhysicsScene::drawBodyRecord( const BodyRecord& record, IPhysicsDebugRenderer& renderer ) const
+    {
+        if ( record._bEnabled == false || record._pListShape == nullptr )
+            return;
+        const b2Transform transform = b2Body_GetTransform( record._bodyID );
+        const bool        bSleeping = record._type != PhysicsBodyType::Static && b2Body_IsAwake( record._bodyID ) == false;
+        const float4      color     = PhysicsDebugDrawUtil::getBodyColor( static_cast<uint8>( record._type ), bSleeping, record._bTrigger );
+        for ( const PhysicsShapeDesc2D& shape : *record._pListShape )
+        {
+            PhysicsDebugDrawUtil::drawShape2D( renderer, shape, Box2DUtil::toEngine( transform.p ), b2Rot_GetAngle( transform.q ), color );
+        }
     }
 
     // --- 셰이프와 필터 ----------------------------------------------------------------------------------------------------

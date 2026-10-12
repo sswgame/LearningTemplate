@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Physics/Collision/PhysicsMeshShapeCache.h"
 #include "Engine/Physics/Jolt/JoltJobSystem.h"
 #include "Engine/Physics/Jolt/JoltUtil.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
@@ -186,21 +187,8 @@ namespace sw
 
     void JoltPhysicsScene::drawDebug( IPhysicsDebugRenderer& renderer ) const
     {
-        const JPH::BodyInterface& bodyInterface = _system.GetBodyInterface();
         _bodies.forEachHandle( [&]( SlotHandle, const BodyRecord& record )
-        {
-            if ( record._bEnabled == false || record._pListShape == nullptr )
-                return;
-            JPH::RVec3 position;
-            JPH::Quat  rotation;
-            bodyInterface.GetPositionAndRotation( record._bodyID, position, rotation );
-            const bool   bSleeping = record._type != PhysicsBodyType::Static && bodyInterface.IsActive( record._bodyID ) == false;
-            const float4 color     = PhysicsDebugDrawUtil::getBodyColor( static_cast<uint8>( record._type ), bSleeping, record._bTrigger );
-            for ( const PhysicsShapeDesc3D& shape : *record._pListShape )
-            {
-                PhysicsDebugDrawUtil::drawShape3D( renderer, shape, JoltUtil::toEngine( position ), JoltUtil::toEngine( rotation ), color );
-            }
-        } );
+        { drawBodyRecord( record, renderer ); } );
         _characters.forEachHandle( [&]( SlotHandle, const CharacterRecord& record )
         {
             PhysicsShapeDesc3D capsule;
@@ -210,6 +198,31 @@ namespace sw
             const float3 center = record._state._position + float3{ 0.0f, record._desc._halfHeight + record._desc._radius, 0.0f };
             PhysicsDebugDrawUtil::drawShape3D( renderer, capsule, center, quaternion{}, float4{ 0.9f, 0.4f, 1.0f, 1.0f } );
         } );
+    }
+
+    bool JoltPhysicsScene::drawBodyDebug( PhysicsBodyHandle body, IPhysicsDebugRenderer& renderer ) const
+    {
+        const BodyRecord* pRecord = findBody( body );
+        if ( pRecord == nullptr )
+            return false;
+        drawBodyRecord( *pRecord, renderer );
+        return true;
+    }
+
+    void JoltPhysicsScene::drawBodyRecord( const BodyRecord& record, IPhysicsDebugRenderer& renderer ) const
+    {
+        if ( record._bEnabled == false || record._pListShape == nullptr )
+            return;
+        const JPH::BodyInterface& bodyInterface = _system.GetBodyInterface();
+        JPH::RVec3                position;
+        JPH::Quat                 rotation;
+        bodyInterface.GetPositionAndRotation( record._bodyID, position, rotation );
+        const bool   bSleeping = record._type != PhysicsBodyType::Static && bodyInterface.IsActive( record._bodyID ) == false;
+        const float4 color     = PhysicsDebugDrawUtil::getBodyColor( static_cast<uint8>( record._type ), bSleeping, record._bTrigger );
+        for ( const PhysicsShapeDesc3D& shape : *record._pListShape )
+        {
+            PhysicsDebugDrawUtil::drawShape3D( renderer, shape, JoltUtil::toEngine( position ), JoltUtil::toEngine( rotation ), color );
+        }
     }
 
     // --- 셰이프 -----------------------------------------------------------------------------------------------------------
@@ -269,9 +282,10 @@ namespace sw
             }
             case PhysicsShapeType3D::ConvexHull:
             {
-                JPH::Array<JPH::Vec3> listPoint;
-                listPoint.reserve( shape._listPoint.size() );
-                for ( const float3& point : shape._listPoint )
+                const PhysicsShapeGeometry geometry = PhysicsMeshShapeCache::acquireGeometry( shape );
+                JPH::Array<JPH::Vec3>      listPoint;
+                listPoint.reserve( geometry._listPoint.size() );
+                for ( const float3& point : geometry._listPoint )
                 {
                     listPoint.push_back( JoltUtil::toJolt( point ) );
                 }
@@ -283,17 +297,18 @@ namespace sw
             }
             case PhysicsShapeType3D::TriangleMesh:
             {
-                JPH::VertexList listVertex;
-                listVertex.reserve( shape._listPoint.size() );
-                for ( const float3& point : shape._listPoint )
+                const PhysicsShapeGeometry geometry = PhysicsMeshShapeCache::acquireGeometry( shape );
+                JPH::VertexList            listVertex;
+                listVertex.reserve( geometry._listPoint.size() );
+                for ( const float3& point : geometry._listPoint )
                 {
                     listVertex.push_back( JPH::Float3{ point._x, point._y, point._z } );
                 }
                 JPH::IndexedTriangleList listTriangle;
-                listTriangle.reserve( shape._listIndex.size() / 3 );
-                for ( size_t index = 0; index + 2 < shape._listIndex.size(); index += 3 )
+                listTriangle.reserve( geometry._listIndex.size() / 3 );
+                for ( size_t index = 0; index + 2 < geometry._listIndex.size(); index += 3 )
                 {
-                    listTriangle.push_back( JPH::IndexedTriangle{ shape._listIndex[index], shape._listIndex[index + 1], shape._listIndex[index + 2], 0 } );
+                    listTriangle.push_back( JPH::IndexedTriangle{ geometry._listIndex[index], geometry._listIndex[index + 1], geometry._listIndex[index + 2], 0 } );
                 }
                 JPH::PhysicsMaterialList listMaterial;
                 listMaterial.push_back( pMaterial );

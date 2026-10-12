@@ -28,9 +28,12 @@
 #include <Jolt/Physics/Body/BodyFilter.h>
 #include <Jolt/Physics/Character/CharacterVirtual.h>
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseLayer.h>
+#include <Jolt/Physics/Collision/CastResult.h>
 #include <Jolt/Physics/Collision/ContactListener.h>
 #include <Jolt/Physics/Collision/ObjectLayer.h>
 #include <Jolt/Physics/Collision/PhysicsMaterial.h>
+#include <Jolt/Physics/Collision/RayCast.h>
+#include <Jolt/Physics/Collision/ShapeCast.h>
 #include <Jolt/Physics/Constraints/TwoBodyConstraint.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/Physics/Vehicle/VehicleCollisionTester.h>
@@ -184,6 +187,7 @@ namespace sw
         void            wakeBody( PhysicsBodyHandle body ) override;
         uint64          getBodyUserData( PhysicsBodyHandle body ) const override;
         void            setPairCollision( PhysicsBodyHandle bodyA, PhysicsBodyHandle bodyB, bool bCollide ) override;
+        bool            drawBodyDebug( PhysicsBodyHandle body, IPhysicsDebugRenderer& renderer ) const override;
 
         PhysicsJointHandle createJoint( const PhysicsJointDesc3D& desc ) override;
         void               destroyJoint( PhysicsJointHandle joint ) override;
@@ -206,6 +210,10 @@ namespace sw
         bool   raycast( const float3& origin, const float3& direction, float32 maxDistance, const PhysicsQueryFilter& filter, PhysicsCastHit3D& outHit ) const override;
         bool   shapeCast( const PhysicsShapeDesc3D& shape, const float3& position, const quaternion& rotation, const float3& direction, float32 maxDistance,
                           const PhysicsQueryFilter& filter, PhysicsCastHit3D& outHit ) const override;
+        uint32 raycastAll( const float3& origin, const float3& direction, float32 maxDistance, const PhysicsQueryFilter& filter,
+                           vector<PhysicsCastHit3D>& outListHit ) const override;
+        uint32 shapeCastAll( const PhysicsShapeDesc3D& shape, const float3& position, const quaternion& rotation, const float3& direction, float32 maxDistance,
+                             const PhysicsQueryFilter& filter, vector<PhysicsCastHit3D>& outListHit ) const override;
         uint32 overlapShape( const PhysicsShapeDesc3D& shape, const float3& position, const quaternion& rotation, const PhysicsQueryFilter& filter,
                              vector<PhysicsBodyHandle>& outListBody ) const override;
 
@@ -293,6 +301,12 @@ namespace sw
         PhysicsBodyHandle createBodyUnadded( const PhysicsBodyDesc3D& desc );
         const BodyRecord* findBody( PhysicsBodyHandle body ) const;
         BodyRecord*       findBody( PhysicsBodyHandle body );
+        /** @brief 켜진 바디 하나의 셰이프를 지금 자세로 선으로 냅니다(`drawDebug` 와 `drawBodyDebug` 가 나눠 쓴다). */
+        void drawBodyRecord( const BodyRecord& record, IPhysicsDebugRenderer& renderer ) const;
+        /** @brief 광선 닿음 하나를 엔진 결과로 옮깁니다(법선과 재질 이름은 바디를 잠그고 읽는다). */
+        void makeRayHit( const JPH::RRayCast& ray, const JPH::RayCastResult& hit, float32 maxDistance, PhysicsCastHit3D& outHit ) const;
+        /** @brief 셰이프 캐스트 닿음 하나를 엔진 결과로 옮깁니다. */
+        void              makeShapeCastHit( const JPH::ShapeCastResult& hit, float32 maxDistance, PhysicsCastHit3D& outHit ) const;
         PhysicsBodyHandle findHandle( const JPH::BodyID& bodyID ) const;
         void              setHandle( const JPH::BodyID& bodyID, PhysicsBodyHandle body );
         /** @brief 바디들에 붙은 관절과 바퀴 차를 지웁니다(바디를 지우기 전에 호출합니다). */

@@ -4,6 +4,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Physics/PhysicsDebugDraw.h"
 #include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Physics/PhysicsSystem.h"
 
@@ -183,6 +184,93 @@ SW_TEST_CASE( PhysicsScene3DTest, RaycastReportsHitDistance )
     sw::vector<sw::PhysicsBodyHandle> listFound;
     SW_EXPECT_EQUAL( 1u, pScene->overlapShape( makeBox( sw::float3{ 1.0f, 1.0f, 1.0f } ), sw::float3{ 5.5f, 0.0f, 0.0f }, sw::quaternion{}, filter, listFound ) );
     SW_EXPECT_EQUAL( 0u, pScene->overlapShape( makeBox( sw::float3{ 1.0f, 1.0f, 1.0f } ), sw::float3{ -5.0f, 0.0f, 0.0f }, sw::quaternion{}, filter, listFound ) );
+}
+
+/**
+ * @brief [PhysicsScene3DTest] 모든 닿음 질의는 바디마다 가장 가까운 닿음 하나를 가까운 순서로 붙이고, 컴파운드 바디도 한 번만 낸다
+ */
+SW_TEST_CASE( PhysicsScene3DTest, RaycastAllAndShapeCastAllReportEveryBodyNearestFirst )
+{
+    sw::unique_ptr<sw::IPhysicsScene3D> pScene = makeScene();
+    SW_ASSERT_NOT_NULL( pScene.get() );
+    // 먼 것부터 만들어 핸들 순서와 거리 순서를 엇갈리게 한다. 가운데 것은 서브 셰이프 둘(x 로 나란한 상자 둘)의 컴파운드다.
+    const sw::PhysicsBodyHandle farBody =
+        addBody( *pScene, makeBox( sw::float3{ 0.5f, 0.5f, 0.5f } ), sw::float3{ 12.0f, 0.0f, 0.0f }, sw::PhysicsBodyType::Static, 0, "Bouncy", 3 );
+    sw::PhysicsBodyDesc3D  compound;
+    sw::PhysicsShapeDesc3D front           = makeBox( sw::float3{ 0.5f, 0.5f, 0.5f } );
+    front._localPosition                   = sw::float3{ -1.0f, 0.0f, 0.0f };
+    sw::PhysicsShapeDesc3D back            = makeBox( sw::float3{ 0.5f, 0.5f, 0.5f } );
+    back._localPosition                    = sw::float3{ 1.0f, 0.0f, 0.0f };
+    compound._listShape                    = { front, back };
+    compound._position                     = sw::float3{ 8.0f, 0.0f, 0.0f };
+    compound._type                         = sw::PhysicsBodyType::Static;
+    compound._userData                     = 2;
+    const sw::PhysicsBodyHandle middleBody = pScene->createBody( compound );
+    const sw::PhysicsBodyHandle nearBody =
+        addBody( *pScene, makeBox( sw::float3{ 0.5f, 0.5f, 0.5f } ), sw::float3{ 4.0f, 0.0f, 0.0f }, sw::PhysicsBodyType::Static, 0, "", 1 );
+    addBody( *pScene, makeBox( sw::float3{ 0.5f, 0.5f, 0.5f } ), sw::float3{ 4.0f, 5.0f, 0.0f }, sw::PhysicsBodyType::Static ); // 광선 밖
+
+    sw::PhysicsQueryFilter           filter;
+    sw::vector<sw::PhysicsCastHit3D> listHit;
+    listHit.push_back( sw::PhysicsCastHit3D{} ); // 출력 끝에 붙인다 — 앞의 것은 그대로다
+    SW_ASSERT_EQUAL( 3u, pScene->raycastAll( sw::float3{}, sw::float3{ 1.0f, 0.0f, 0.0f }, 100.0f, filter, listHit ) );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 4 ), listHit.size() );
+    SW_EXPECT_FALSE( listHit[0]._body.isValid() );
+    SW_EXPECT_TRUE( listHit[1]._body == nearBody );
+    SW_EXPECT_TRUE( listHit[2]._body == middleBody );
+    SW_EXPECT_TRUE( listHit[3]._body == farBody );
+    SW_EXPECT_NEAR_EQUAL( 3.5f, listHit[1]._distance, 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( 6.5f, listHit[2]._distance, 1e-3f ); // 컴파운드의 앞 상자
+    SW_EXPECT_NEAR_EQUAL( 11.5f, listHit[3]._distance, 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( -1.0f, listHit[2]._normal._x, 1e-3f );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 2 ), listHit[2]._userData );
+    SW_EXPECT_TRUE( listHit[3]._material == sw::hashed_string( "Bouncy" ) );
+
+    // 마스크와 길이는 `raycast` 와 같이 거른다.
+    listHit.clear();
+    SW_EXPECT_EQUAL( 1u, pScene->raycastAll( sw::float3{}, sw::float3{ 1.0f, 0.0f, 0.0f }, 5.0f, filter, listHit ) );
+    filter._layerMask = 1u << 2;
+    SW_EXPECT_EQUAL( 0u, pScene->raycastAll( sw::float3{}, sw::float3{ 1.0f, 0.0f, 0.0f }, 100.0f, filter, listHit ) );
+
+    // 셰이프 캐스트: 반지름 0.5 구는 표면 0.5 m 앞에서 닿는다. 쏘는 쪽 바디는 뺀다.
+    filter._layerMask  = sw::MathUtil::kMaxUInt32;
+    filter._ignoreBody = middleBody;
+    listHit.clear();
+    SW_ASSERT_EQUAL( 2u, pScene->shapeCastAll( makeSphere( 0.5f ), sw::float3{}, sw::quaternion{}, sw::float3{ 1.0f, 0.0f, 0.0f }, 100.0f, filter, listHit ) );
+    SW_EXPECT_TRUE( listHit[0]._body == nearBody );
+    SW_EXPECT_TRUE( listHit[1]._body == farBody );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, listHit[0]._distance, 1e-2f );
+    SW_EXPECT_NEAR_EQUAL( 11.0f, listHit[1]._distance, 1e-2f );
+}
+
+/**
+ * @brief [PhysicsScene3DTest] 바디 하나의 선(살아 있는 바디)은 같은 서술자와 자세를 셰이프 도우미에 넘긴 선(편집 중 시각화)과 같다
+ */
+SW_TEST_CASE( PhysicsScene3DTest, DrawBodyDebugMatchesShapeLinesFromDesc )
+{
+    sw::unique_ptr<sw::IPhysicsScene3D> pScene = makeScene();
+    SW_ASSERT_NOT_NULL( pScene.get() );
+    const sw::PhysicsShapeDesc3D box  = makeBox( sw::float3{ 0.5f, 1.0f, 1.5f } );
+    const sw::float3             at   = sw::float3{ 1.0f, 2.0f, 3.0f };
+    const sw::PhysicsBodyHandle  body = addBody( *pScene, box, at, sw::PhysicsBodyType::Static );
+    SW_ASSERT_TRUE( body.isValid() );
+
+    sw::PhysicsDebugLineCollector fromBody;
+    SW_ASSERT_TRUE( pScene->drawBodyDebug( body, fromBody ) );
+    sw::PhysicsDebugLineCollector fromDesc;
+    sw::PhysicsDebugDrawUtil::drawShape3D( fromDesc, box, at, sw::quaternion{}, sw::PhysicsDebugDrawUtil::getBodyColor( 0, false, false ) );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 12 ), fromBody.getLines().size() ); // 상자 모서리 12 개
+    SW_ASSERT_EQUAL( fromDesc.getLines().size(), fromBody.getLines().size() );
+    for ( size_t lineIndex = 0; lineIndex < fromBody.getLines().size(); ++lineIndex )
+    {
+        SW_EXPECT_NEAR_EQUAL( 0.0f, ( fromBody.getLines()[lineIndex]._from - fromDesc.getLines()[lineIndex]._from ).getLength(), 1e-4f );
+        SW_EXPECT_NEAR_EQUAL( 0.0f, ( fromBody.getLines()[lineIndex]._to - fromDesc.getLines()[lineIndex]._to ).getLength(), 1e-4f );
+    }
+
+    fromBody.clear();
+    pScene->destroyBody( body );
+    SW_EXPECT_FALSE( pScene->drawBodyDebug( body, fromBody ) );
+    SW_EXPECT_TRUE( fromBody.getLines().empty() );
 }
 
 // 바퀴 차는 차원 트레이트가 정한다 — 2D 씬은 차 인터페이스를 상속하지 않아 2D 에 차를 부르면 컴파일 오류다.

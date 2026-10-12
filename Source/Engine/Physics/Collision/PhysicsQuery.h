@@ -4,7 +4,9 @@
  */
 #pragma once
 #include "Core/Common/Macros.h"
+#include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/hashed_string.h"
 
@@ -48,4 +50,31 @@ namespace sw
 
     using PhysicsCastHit3D = PhysicsCastHit<PhysicsDimension3D>;
     using PhysicsCastHit2D = PhysicsCastHit<PhysicsDimension2D>;
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 여러 닿음을 모으는 질의(`raycastAll`, `shapeCastAll`)가 두 백엔드에서 같은 모양의 결과를 내게 하는 도우미입니다. */
+    struct PhysicsQueryUtil
+    {
+        /**
+         * @brief @p inoutListHit 의 @p firstIndex 부터 끝까지를 바디마다 가장 가까운 닿음 하나만 남기고 가까운 순서로 정렬합니다. 남은 수를 돌려줍니다.
+         * @details 컴파운드 바디는 서브 셰이프마다 따로 잡히므로 바디 하나가 여러 번 나온다. 거리가 같으면 바디 핸들 순서로 정해 결과가 결정적이다.
+         *          출력 끝에서 제자리로 처리하므로 임시 버퍼를 할당하지 않는다.
+         */
+        template <typename TDimension>
+        static uint32 keepNearestHitPerBody( vector<PhysicsCastHit<TDimension>>& inoutListHit, size_t firstIndex )
+        {
+            using Hit                                  = PhysicsCastHit<TDimension>;
+            const typename vector<Hit>::iterator first = inoutListHit.begin() + static_cast<ptrdiff_t>( firstIndex );
+            std::sort( first, inoutListHit.end(), []( const Hit& lhs, const Hit& rhs )
+            { return lhs._body == rhs._body ? lhs._fraction < rhs._fraction : lhs._body < rhs._body; } );
+            inoutListHit.erase( std::unique( first, inoutListHit.end(), []( const Hit& lhs, const Hit& rhs )
+            { return lhs._body == rhs._body; } ),
+                                inoutListHit.end() );
+            std::sort( first, inoutListHit.end(), []( const Hit& lhs, const Hit& rhs )
+            { return lhs._fraction == rhs._fraction ? lhs._body < rhs._body : lhs._fraction < rhs._fraction; } );
+            return static_cast<uint32>( inoutListHit.size() - firstIndex );
+        }
+    };
 } // namespace sw

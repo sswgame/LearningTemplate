@@ -10,6 +10,7 @@
  *    (마지막 서브 스텝의 `normalImpulse` × 서브 스텝 수)이다. `totalNormalImpulse` 는 이완 반복까지 더해서 약 두 배가 된다.
  *  - **월드에 붙는 관절.** 바디 B 가 없으면 씬이 가진 정적 바디(원점) 하나에 붙인다.
  *  - **위치 모터.** Box2D 의 관절 스프링(목표 각, 거리)으로 구현한다. 속도 모터는 Box2D 모터를 그대로 쓴다.
+ *  - **스레드.** `PhysicsSettings::_workerCount2D` 가 2 이상이면 씬마다 전용 워커(`Box2DWorkerPool`)를 붙인다. 소유 규칙 · 잠금 순서 · 결정성은 그 헤더에 있다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -30,6 +31,8 @@
 
 namespace sw
 {
+    class Box2DWorkerPool;
+
     /** @class Box2DPhysicsScene @brief Box2D 로 도는 2D 물리 씬입니다. 파일 머리말 참고. */
     class Box2DPhysicsScene final : public IPhysicsScene2D
     {
@@ -83,6 +86,7 @@ namespace sw
         void            wakeBody( PhysicsBodyHandle body ) override;
         uint64          getBodyUserData( PhysicsBodyHandle body ) const override;
         void            setPairCollision( PhysicsBodyHandle bodyA, PhysicsBodyHandle bodyB, bool bCollide ) override;
+        bool            drawBodyDebug( PhysicsBodyHandle body, IPhysicsDebugRenderer& renderer ) const override;
 
         PhysicsJointHandle createJoint( const PhysicsJointDesc2D& desc ) override;
         void               destroyJoint( PhysicsJointHandle joint ) override;
@@ -99,6 +103,10 @@ namespace sw
         bool   raycast( const float2& origin, const float2& direction, float32 maxDistance, const PhysicsQueryFilter& filter, PhysicsCastHit2D& outHit ) const override;
         bool   shapeCast( const PhysicsShapeDesc2D& shape, const float2& position, const float32& rotation, const float2& direction, float32 maxDistance,
                           const PhysicsQueryFilter& filter, PhysicsCastHit2D& outHit ) const override;
+        uint32 raycastAll( const float2& origin, const float2& direction, float32 maxDistance, const PhysicsQueryFilter& filter,
+                           vector<PhysicsCastHit2D>& outListHit ) const override;
+        uint32 shapeCastAll( const PhysicsShapeDesc2D& shape, const float2& position, const float32& rotation, const float2& direction, float32 maxDistance,
+                             const PhysicsQueryFilter& filter, vector<PhysicsCastHit2D>& outListHit ) const override;
         uint32 overlapShape( const PhysicsShapeDesc2D& shape, const float2& position, const float32& rotation, const PhysicsQueryFilter& filter,
                              vector<PhysicsBodyHandle>& outListBody ) const override;
 
@@ -149,6 +157,8 @@ namespace sw
         void              applyFilter( const BodyRecord& record );
         const BodyRecord* findBody( PhysicsBodyHandle body ) const;
         BodyRecord*       findBody( PhysicsBodyHandle body );
+        /** @brief 켜진 바디 하나의 셰이프를 지금 자세로 선으로 냅니다(`drawDebug` 와 `drawBodyDebug` 가 나눠 쓴다). */
+        void              drawBodyRecord( const BodyRecord& record, IPhysicsDebugRenderer& renderer ) const;
         PhysicsBodyHandle findHandleOfShape( b2ShapeId shapeID ) const;
         /** @brief 쌍 예외 필터 관절 테이블에서 @p body 가 포함된 것을 지웁니다(바디를 지우면 Box2D 가 관절도 지웁니다). */
         void forgetPairJointsOf( PhysicsBodyHandle body );
@@ -161,6 +171,7 @@ namespace sw
 
         PhysicsSettings                           _settings;
         CollisionLayers                           _layers;
+        unique_ptr<Box2DWorkerPool>               _pWorkerPool; ///< `_workerCount2D` 가 2 이상일 때만 있다. 월드보다 늦게 사라진다(소멸자가 월드를 먼저 지운다).
         b2WorldId                                 _worldID;
         b2BodyId                                  _groundBodyID; ///< 월드에 붙는 관절의 상대(정적, 원점)
         SlotHandleTable<BodyRecord>               _bodies;
