@@ -232,31 +232,38 @@ SW_TEST_CASE( AnimationTest, Skeleton_BoneHierarchyAndSkinningMatrices )
 }
 
 /**
- * @brief [AnimationTest] BlendSpace1D 및 2D 파라메트릭 모션 블렌딩 검증
+ * @brief [AnimationTest] 블렌드 스페이스 가중치 — 1D 는 이웃 두 표본을 선형으로, 2D 는 표본 위에서 그 표본 하나를 낸다
  */
 SW_TEST_CASE( AnimationTest, BlendSpace_ParametricMotionInterpolation )
 {
-    BlendSpace1D bs1D;
-    bs1D.addSample( 0.0f, "Idle", float4x4::makeTranslation( float3{ 0.0f, 0.0f, 0.0f } ) );
-    bs1D.addSample( 5.0f, "Walk", float4x4::makeTranslation( float3{ 0.0f, 0.0f, 5.0f } ) );
-    bs1D.addSample( 10.0f, "Run", float4x4::makeTranslation( float3{ 0.0f, 0.0f, 15.0f } ) );
+    BlendSpace speed;
+    speed.addSample( float2{ 10.0f, 0.0f }, "Run" );
+    speed.addSample( float2{ 0.0f, 0.0f }, "Idle" );
+    speed.addSample( float2{ 5.0f, 0.0f }, "Walk" );
+    SW_ASSERT_TRUE( speed.getSamples()[0]._clipName == hashed_string( "Idle" ) ); // x 순으로 정렬된다
 
-    // 1) Idle 경계
-    float4x4 pose0 = bs1D.evaluate( 0.0f );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, pose0._43, 1e-3f );
+    vector<float32> listWeight;
+    speed.computeSampleWeights( float2{ 7.5f, 0.0f }, listWeight );
+    SW_ASSERT_EQUAL( 3u, static_cast<uint32>( listWeight.size() ) );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, listWeight[0], 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, listWeight[1], 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, listWeight[2], 1e-6f );
+    speed.computeSampleWeights( float2{ -3.0f, 0.0f }, listWeight );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, listWeight[0], 1e-6f ); // 범위 밖은 끝 표본
 
-    // 2) Walk-Run 중간 (speed = 7.5 -> t = 0.5 between 5 and 15 -> 10.0f)
-    float4x4 poseMid = bs1D.evaluate( 7.5f );
-    SW_EXPECT_NEAR_EQUAL( 10.0f, poseMid._43, 1e-2f );
+    BlendSpace direction;
+    direction.setAxisCount( 2 );
+    direction.addSample( float2{ 0.0f, 0.0f }, "Idle" );
+    direction.addSample( float2{ 1.0f, 0.0f }, "Right" );
+    direction.addSample( float2{ -1.0f, 0.0f }, "Left" );
+    direction.computeSampleWeights( float2{ 1.0f, 0.0f }, listWeight );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, listWeight[1], 1e-6f );
+    direction.computeSampleWeights( float2{ 0.5f, 0.0f }, listWeight );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, listWeight[0] + listWeight[1] + listWeight[2], 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( listWeight[0], listWeight[1], 1e-5f ); // 두 표본에서 같은 거리
 
-    // 3) 2D Blend Space (IDW)
-    BlendSpace2D bs2D;
-    bs2D.addSample( 0.0f, 0.0f, "Idle", float4x4::makeTranslation( float3{ 0.0f, 0.0f, 0.0f } ) );
-    bs2D.addSample( 1.0f, 0.0f, "Right", float4x4::makeTranslation( float3{ 10.0f, 0.0f, 0.0f } ) );
-    bs2D.addSample( -1.0f, 0.0f, "Left", float4x4::makeTranslation( float3{ -10.0f, 0.0f, 0.0f } ) );
-
-    float4x4 pose2D = bs2D.evaluate( 1.0f, 0.0f );
-    SW_EXPECT_NEAR_EQUAL( 10.0f, pose2D._41, 1e-2f );
+    // 한 바퀴 길이는 가중 평균이다(걷기 1 초, 달리기 0.6 초를 반씩 → 0.8 초).
+    SW_EXPECT_NEAR_EQUAL( 0.8f, BlendSpace::computeBlendedLength( vector<float32>{ 1.0f, 0.6f }, vector<float32>{ 0.5f, 0.5f } ), 1e-6f );
 }
 
 /**
@@ -279,27 +286,40 @@ SW_TEST_CASE( AnimationTest, DualQuaternionKeepsRotationOfScaledMatrix )
 }
 
 /**
- * @brief [AnimationTest] BlendSpace1D 가 표본 사이에서도 스케일을 유지하는지 검증
- * @details 표본 사이의 블렌드가 스케일을 섞지 않으면 그 사이에서 스케일이 1 로 주저앉아,
- *          파라미터를 조금 옮기는 것만으로 포즈가 튄다.
+ * @brief [AnimationTest] 포즈 가중 섞기가 표본 사이에서도 스케일을 유지하고, 같은 회전의 반대 부호(q, -q)를 상쇄하지 않는지 검증
+ * @details 스케일을 섞지 않으면 그 사이에서 스케일이 1 로 주저앉아 파라미터를 조금 옮기는 것만으로 포즈가 튄다.
+ *          q 와 -q 를 그대로 더하면 0 이 되어 정규화가 깨진다.
  */
-SW_TEST_CASE( AnimationTest, BlendSpace1DKeepsScaleBetweenSamples )
+SW_TEST_CASE( AnimationTest, PoseBlendWeightedKeepsScaleAndRotationSign )
 {
-    const float4x4 poseA = float4x4::makeScale( 2.0f ) * float4x4::makeTranslation( float3{ 0.0f, 0.0f, 0.0f } );
-    const float4x4 poseB = float4x4::makeScale( 2.0f ) * float4x4::makeTranslation( float3{ 0.0f, 0.0f, 10.0f } );
+    Pose poseA;
+    Pose poseB;
+    poseA.resize( 1 );
+    poseB.resize( 1 );
+    const quaternion turn = quaternion::makeFromAxisAngle( float3::UnitY, 0.5f );
+    poseA.setBoneTransform( 0, BoneTransform{
+                                   float3{0.0f, 0.0f, 0.0f},
+                                   turn, float3{2.0f, 2.0f, 2.0f}
+    } );
+    poseB.setBoneTransform( 0, BoneTransform{
+                                   float3{0.0f, 0.0f, 10.0f},
+                                   turn * -1.0f, float3{2.0f, 2.0f,  2.0f}
+    } );
 
-    BlendSpace1D blendSpace;
-    blendSpace.addSample( 0.0f, "A", poseA );
-    blendSpace.addSample( 1.0f, "B", poseB );
+    const Pose*   arrPose[2]   = { &poseA, &poseB };
+    const float32 arrWeight[2] = { 0.5f, 0.5f };
+    Pose          blended;
+    Pose::blendWeighted( arrPose, arrWeight, 2, blended );
+    SW_ASSERT_EQUAL( 1u, blended.getBoneCount() );
+    const BoneTransform result = blended.getBoneTransform( 0 );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, result._scale._x, 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, result._translation._z, 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, MathUtil::abs( result._rotation.dot( turn ) ), 1e-5f );
 
-    const float4x4 midPose = blendSpace.evaluate( 0.5f );
-    SW_EXPECT_NEAR_EQUAL( 2.0f, midPose.getScale()._x, 1e-3f );
-    SW_EXPECT_NEAR_EQUAL( 2.0f, midPose.getScale()._z, 1e-3f );
-    SW_EXPECT_NEAR_EQUAL( 5.0f, midPose._43, 1e-2f );
-
-    // 표본 바로 옆이 표본과 이어져야 한다.
-    const float4x4 nearStartPose = blendSpace.evaluate( 0.001f );
-    SW_EXPECT_NEAR_EQUAL( 2.0f, nearStartPose.getScale()._x, 1e-3f );
+    // 가중치가 0 인 포즈는 건너뛰고, 합이 1 이 아니어도 나눠 쓴다.
+    const float32 arrOnlyB[2] = { 0.0f, 3.0f };
+    Pose::blendWeighted( arrPose, arrOnlyB, 2, blended );
+    SW_EXPECT_NEAR_EQUAL( 10.0f, blended.getBoneTransform( 0 )._translation._z, 1e-5f );
 }
 
 /**
@@ -309,18 +329,21 @@ SW_TEST_CASE( AnimationTest, BlendSpace1DKeepsScaleBetweenSamples )
  */
 SW_TEST_CASE( AnimationTest, BlendSpace2DUsesSamplesBeyondThirtyTwo )
 {
-    BlendSpace2D blendSpace;
+    BlendSpace blendSpace;
+    blendSpace.setAxisCount( 2 );
     for ( int32 index = 0; index < 32; ++index )
     {
-        blendSpace.addSample( 100.0f + static_cast<float32>( index ), 100.0f, "Far", float4x4::makeTranslation( float3{ 0.0f, 0.0f, 0.0f } ) );
+        blendSpace.addSample( float2{ 100.0f + static_cast<float32>( index ), 100.0f }, "Far" );
     }
 
-    blendSpace.addSample( 0.1f, 0.0f, "Near", float4x4::makeTranslation( float3{ 0.0f, 0.0f, 100.0f } ) );
-    SW_EXPECT_EQUAL( 33u, static_cast<uint32>( blendSpace.getSampleCount() ) );
+    blendSpace.addSample( float2{ 0.1f, 0.0f }, "Near" );
+    SW_EXPECT_EQUAL( 33u, blendSpace.getSampleCount() );
 
     // 목표(0,0)에서 가장 가까운 표본이 결과를 지배해야 한다.
-    const float4x4 pose = blendSpace.evaluate( 0.0f, 0.0f );
-    SW_EXPECT_TRUE( pose._43 > 90.0f );
+    vector<float32> listWeight;
+    blendSpace.computeSampleWeights( float2{ 0.0f, 0.0f }, listWeight );
+    SW_ASSERT_EQUAL( 33u, static_cast<uint32>( listWeight.size() ) );
+    SW_EXPECT_TRUE( listWeight[32] > 0.9f );
 }
 
 /**
@@ -612,15 +635,17 @@ SW_TEST_CASE( AnimationTest, SpriteAnimatorAppliesClipTransformKeys )
  */
 SW_TEST_CASE( AnimationTest, BlendSpace2DClampsFarParametersToTheSampleRange )
 {
-    BlendSpace2D blendSpace;
-    blendSpace.addSample( 0.0f, 0.0f, "Idle", float4x4::makeTranslation( float3{ 0.0f, 0.0f, 0.0f } ) );
-    blendSpace.addSample( 600.0f, 0.0f, "Run", float4x4::makeTranslation( float3{ 600.0f, 0.0f, 0.0f } ) );
-    blendSpace.addSample( 0.0f, 600.0f, "Strafe", float4x4::makeTranslation( float3{ 0.0f, 600.0f, 0.0f } ) );
-    blendSpace.addSample( 600.0f, 600.0f, "RunStrafe", float4x4::makeTranslation( float3{ 600.0f, 600.0f, 0.0f } ) );
+    BlendSpace blendSpace;
+    blendSpace.setAxisCount( 2 );
+    blendSpace.addSample( float2{ 0.0f, 0.0f }, "Idle" );
+    blendSpace.addSample( float2{ 600.0f, 0.0f }, "Run" );
+    blendSpace.addSample( float2{ 0.0f, 600.0f }, "Strafe" );
+    blendSpace.addSample( float2{ 600.0f, 600.0f }, "RunStrafe" );
 
-    const float4x4 dashPose = blendSpace.evaluate( 2500.0f, 0.0f );
-    SW_EXPECT_NEAR_EQUAL( 600.0f, dashPose._41, 1e-2f );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, dashPose._42, 1e-2f );
+    vector<float32> listWeight;
+    blendSpace.computeSampleWeights( float2{ 2500.0f, 0.0f }, listWeight );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, listWeight[1], 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, listWeight[0], 1e-6f );
 }
 
 /**

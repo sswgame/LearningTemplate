@@ -229,11 +229,14 @@ namespace sw
         AnimationRewindRecorder&       getRewind() { return _rewind; }
         const AnimationRewindRecorder& getRewind() const { return _rewind; }
 #endif
-        /** @brief 거리 LOD 의 기준점(보통 카메라 월드 위치)을 정합니다. 카메라나 뷰를 가진 쪽이 프레임마다 넣습니다. */
+        /**
+         * @brief 주 시점 위치(보통 카메라 월드 위치)를 정합니다. `setLODViews` 가 첫 뷰로 채우고, 뷰를 넣지 않는 벤치는 직접 넣습니다.
+         * @details 리그 노드의 LOD 는 이 위치가 아니라 유닛의 화면 크기(`AnimationLODState::_screenSize`)로 판정한다(노드 키 `min_screen_size`).
+         */
         void setLODViewPosition( const float3& position );
-        /** @brief 거리 LOD 기준점을 지웁니다(거리 LOD 가 꺼집니다). */
+        /** @brief 주 시점 위치를 지웁니다. */
         void clearLODViewPosition() { _bHasLODViewPosition = SW_FALSE; }
-        /** @brief 거리 LOD 기준점을 찾습니다. 정하지 않았으면 false 입니다. */
+        /** @brief 주 시점 위치를 찾습니다. 정하지 않았으면 false 입니다. */
         bool findLODViewPosition( float3& outPosition ) const;
 
     private:

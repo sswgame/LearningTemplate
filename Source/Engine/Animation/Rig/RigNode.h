@@ -114,11 +114,14 @@ namespace sw
     struct RigPrepareContext
     {
         float4x4               _worldFromModel{};
-        float3                 _viewPosition{};
         const IRigGroundQuery* _pGroundQuery{ nullptr };
         float3                 _worldGravity{ 0.0f, -constant::kDefaultGravity, 0.0f }; ///< 월드 중력이다. 호스트가 설정된 물리 중력을 넣는다(애니메이션 계층은 물리를 모른다).
         float32                _deltaSeconds{ 0.0f };
-        uint8                  _bHasViewPosition{ SW_FALSE };
+        /**
+         * @brief 유닛의 화면 크기(`AnimationLODState::_screenSize`, 경계 구 지름 / 화면 높이)입니다. 노드의 `min_screen_size` 와 비교합니다.
+         * @details LOD 판정을 하지 않는 호스트(테스트, 서버)는 기본값 1 을 두어 모든 노드를 켭니다.
+         */
+        float32 _screenSize{ 1.0f };
     };
 } // namespace sw
 
@@ -207,6 +210,8 @@ namespace sw
      * @brief 노드 하나입니다. 데이터(파라미터)와 실행 상태(스프링 입자, 부모 바꾸기 오프셋 등)를 함께 보관합니다. 에셋이 원형을 가지고 인스턴스가 복제합니다.
      * @details 가중치 = `_weight` × (커브가 있으면 그 값) × (시퀀서 슬롯이 있으면 그 값, 정하지 않았으면 1)이다. 가중치가 1 보다 작으면 노드가 쓴
      *          본(`collectWrittenBones`)의 로컬을 노드 앞의 값과 섞는다. 가중치가 0 이면 노드를 실행하지 않는다(상태도 멈춘다).
+     *          화면 크기가 `_minScreenSize` 보다 작으면 노드를 끄고, 꺼지는 순간 `reset` 한다(다시 켜지면 애니메이션 포즈에서 시작한다).
+     *          언리얼 애니메이션 노드의 LOD Threshold 에 해당하며, 거리 대신 화면 크기를 써서 시야각과 해상도가 달라도 같은 기준이 된다.
      */
     class SW_API RigNode
     {
@@ -244,7 +249,9 @@ namespace sw
         float32              getWeight() const { return _weight; }
         const hashed_string& getWeightCurve() const { return _weightCurve; }
         const hashed_string& getWeightSlot() const { return _weightSlot; }
-        /** @brief 공통 키(name, weight, weight_curve, weight_slot)를 읽습니다(에셋이 호출합니다). */
+        /** @brief 노드를 켜 두는 가장 작은 화면 크기입니다. 0 이면 항상 켭니다. */
+        float32 getMinScreenSize() const { return _minScreenSize; }
+        /** @brief 공통 키(name, weight, weight_curve, weight_slot, min_screen_size)를 읽습니다(에셋이 호출합니다). */
         [[nodiscard]] bool parseCommon( RigJSONReader& reader );
 
     protected:
@@ -252,5 +259,6 @@ namespace sw
         hashed_string _weightCurve;
         hashed_string _weightSlot;
         float32       _weight;
+        float32       _minScreenSize;
     };
 } // namespace sw

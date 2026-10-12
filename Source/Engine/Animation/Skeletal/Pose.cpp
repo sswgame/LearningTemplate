@@ -116,6 +116,52 @@ namespace sw
         }
     }
 
+    void Pose::blendWeighted( const Pose* const* ppPose, const float32* pWeight, uint32 poseCount, Pose& outPose )
+    {
+        uint32  boneCount   = MathUtil::kMaxUInt32;
+        float32 totalWeight = 0.0f;
+        int32   firstPose   = -1;
+        for ( uint32 poseIndex = 0; poseIndex < poseCount; ++poseIndex )
+        {
+            if ( pWeight[poseIndex] <= 0.0f )
+                continue;
+            boneCount = MathUtil::min( boneCount, ppPose[poseIndex]->getBoneCount() );
+            totalWeight += pWeight[poseIndex];
+            if ( firstPose < 0 )
+                firstPose = static_cast<int32>( poseIndex );
+        }
+        if ( firstPose < 0 || totalWeight <= 0.0f )
+        {
+            outPose.resize( 0 );
+            return;
+        }
+        outPose.resize( boneCount );
+        const float32 inverseTotal = 1.0f / totalWeight;
+        const Pose&   reference    = *ppPose[firstPose];
+        for ( uint32 boneIndex = 0; boneIndex < boneCount; ++boneIndex )
+        {
+            float3           translation{};
+            float3           scale{};
+            quaternion       rotation{ 0.0f, 0.0f, 0.0f, 0.0f };
+            const quaternion hemisphere = reference._listRotation[boneIndex];
+            for ( uint32 poseIndex = static_cast<uint32>( firstPose ); poseIndex < poseCount; ++poseIndex )
+            {
+                const float32 weight = pWeight[poseIndex] * inverseTotal;
+                if ( weight <= 0.0f )
+                    continue;
+                const Pose& pose = *ppPose[poseIndex];
+                translation += pose._listTranslation[boneIndex] * weight;
+                scale += pose._listScale[boneIndex] * weight;
+                // 같은 회전의 두 부호(q 와 -q)가 섞여 상쇄되지 않게 첫 포즈 쪽 반구로 맞춘다.
+                const quaternion& sampleRotation = pose._listRotation[boneIndex];
+                rotation += ( hemisphere.dot( sampleRotation ) < 0.0f ) ? sampleRotation * -weight : sampleRotation * weight;
+            }
+            outPose._listTranslation[boneIndex] = translation;
+            outPose._listRotation[boneIndex]    = rotation.normalize();
+            outPose._listScale[boneIndex]       = scale;
+        }
+    }
+
     void Pose::makeAdditive( const Pose& pose, const Pose& referencePose, Pose& outAdditive )
     {
         const uint32 boneCount = MathUtil::min( pose.getBoneCount(), referencePose.getBoneCount() );

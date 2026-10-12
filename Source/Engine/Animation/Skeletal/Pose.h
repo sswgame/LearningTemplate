@@ -73,6 +73,12 @@ namespace sw
          * @param pBoneWeight 본 수만큼의 마스크(0..1)입니다. nullptr 이면 모든 본이 1 입니다.
          */
         static void blendMasked( const Pose& base, const Pose& layer, float32 weight, const float32* pBoneWeight, Pose& outPose );
+        /**
+         * @brief 포즈 여럿을 가중치로 섞습니다(블렌드 스페이스). 이동과 스케일은 가중 평균, 회전은 첫 포즈 쪽 반구로 맞춘 가중 합을 정규화합니다.
+         * @details 가중치는 합으로 나눠 쓰므로 합이 1 이 아니어도 된다. 가중치가 0 인 포즈는 건너뛴다. 본 수는 가장 적은 포즈에 맞춘다.
+         *          두 포즈일 때는 `blend` 와 같은 결과다(회전 nlerp).
+         */
+        static void blendWeighted( const Pose* const* ppPose, const float32* pWeight, uint32 poseCount, Pose& outPose );
         /** @brief @p pose 를 @p referencePose 기준의 가산 포즈로 바꿔 @p outAdditive 에 씁니다(클래스 설명의 규약). */
         static void makeAdditive( const Pose& pose, const Pose& referencePose, Pose& outAdditive );
         /** @brief 가산 포즈를 @p weight(본마다 @p pBoneWeight 를 곱함)만큼 적용합니다. */

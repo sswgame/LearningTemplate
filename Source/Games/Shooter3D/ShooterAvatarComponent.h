@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -15,6 +16,9 @@
 
 namespace sw
 {
+    class AnimationClip;
+    class SkeletalAnimatorComponent;
+
     /**
      * @class ShooterAvatarComponent
      * @brief 몸 프리팹(`prefabs/player_body.prefab.xml` — 스킨드 메시 · 애니메이터 · 외형과 같은 오브젝트)의 컴포넌트입니다. 플레이어가 세우고 `setPlayer` 로 잇습니다.
@@ -23,6 +27,8 @@ namespace sw
      *          5 오른쪽 옆걸음 · 6 공중) · `Hit`(트리거) · `Dead` 이고, 상체(`_upperBodyBone` 아래)는 레이어 둘 — 총을 겨눈 자세(`_aimLayerClip`)와 쏘는
      *          동작(`_shootLayerClip`, 막 쏜 동안)이 덮습니다. 맞음 · 쓰러짐 동안은 레이어를 내려 온몸 클립이 보이게 합니다. 이동 방향은 히스테리시스 +
      *          최소 유지 시간(`LocomotionDirectionFilter`)으로 골라 대각선에서 상태가 오가지 않습니다.
+     *          발 미끄러짐은 재생 속도 매칭으로 줄입니다. 지금 이동 클립의 발 속도(`LocomotionSpeedUtil::computeFootSpeed`, 클립마다 한 번 측정)로 실제 수평 속도를 나눠
+     *          [`_minPlayRate`, `_maxPlayRate`] 로 자른 값을 애니메이터 재생 속도로 씁니다. 범위를 넘는 몫(빠른 뒷걸음)은 보폭 워핑이 없어 남습니다.
      *          왼손을 총에 붙이는 손 IK · 맞은 부위 · 래그돌은 PoseModifier · 물리 쪽이 들어오면 그 자리(무기 소켓 `MainHand.SupportHand`)를 씁니다.
      */
     REFLECT( Category = "Shooter3D", DisplayName = "Shooter Avatar", Tooltip = "Visible player body: follows the player and drives the animator from its movement and firing" )
@@ -43,6 +49,8 @@ namespace sw
     private:
         /** @brief 레이어 둘을 겁니다(클립 폴더가 정해진 뒤 한 번). */
         void ensureLayers();
+        /** @brief 지금 상태 클립의 발 속도에 수평 이동 속도를 맞춘 재생 속도입니다. 서 있거나 공중이거나 이동 클립이 아니면 1 입니다. */
+        float32 computeLocomotionPlayRate( const SkeletalAnimatorComponent& animator, LocomotionDirection direction, float32 moveSpeed );
 
     private:
         PROPERTY( Category = "Avatar", DisplayName = "Player", Tooltip = "Object with the ShooterPlayerComponent this body follows" )
@@ -63,8 +71,17 @@ namespace sw
         float32 _turnRate;
         PROPERTY( Category = "Avatar", DisplayName = "Layer Blend Rate", Tooltip = "How fast the aim and shoot layer weights follow their target", Min = 0.0 )
         float32 _layerBlendRate;
+        PROPERTY( Category = "Avatar", DisplayName = "Left Foot Bone", Tooltip = "Bone used to measure the foot speed of locomotion clips" )
+        string _leftFootBone;
+        PROPERTY( Category = "Avatar", DisplayName = "Right Foot Bone", Tooltip = "Bone used to measure the foot speed of locomotion clips" )
+        string _rightFootBone;
+        PROPERTY( Category = "Avatar", DisplayName = "Min Play Rate", Tooltip = "Slowest play rate speed matching may choose", Min = 0.0 )
+        float32 _minPlayRate;
+        PROPERTY( Category = "Avatar", DisplayName = "Max Play Rate", Tooltip = "Fastest play rate speed matching may choose", Min = 0.0 )
+        float32 _maxPlayRate;
 
-        LocomotionDirectionFilter _locomotion;
+        LocomotionDirectionFilter                    _locomotion;
+        unordered_map<const AnimationClip*, float32> _mapClipFootSpeed; ///< 클립마다 한 번 측정한 발 속도(m/s)
 
         float32 _aimWeight;
         float32 _shootWeight;

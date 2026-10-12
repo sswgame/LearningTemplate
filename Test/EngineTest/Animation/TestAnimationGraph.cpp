@@ -233,3 +233,59 @@ SW_TEST_CASE( AnimationGraphTest, StateMachineFollowsConditionsTriggersAndFinish
     SW_EXPECT_EQUAL( 4, player.getCurrentNodeID() );
     SW_EXPECT_TRUE( player.getPlayer().getCurrentPlayable() == &land );
 }
+
+/**
+ * @brief [AnimationGraphTest] 블렌드 스페이스 상태와 동기 그룹이 JSON 왕복에서 남는다(1D 는 x 순으로 정렬, 2D 는 y 까지)
+ */
+SW_TEST_CASE( AnimationGraphTest, BlendSpaceNodeAndSyncGroupRoundTrip )
+{
+    const string_view   json = R"({ "nodes": [
+        { "id": 1, "name": "Locomotion", "sync_group": "Feet",
+          "blend_space": { "x": "Speed", "samples": [ { "clip": "Running_A", "x": 6 }, { "clip": "Idle", "x": 0 }, { "clip": "Walking_A", "x": 2 } ] } },
+        { "id": 2, "name": "Strafe",
+          "blend_space": { "x": "Right", "y": "Forward", "samples": [ { "clip": "Walking_Left", "x": -1, "y": 0 }, { "clip": "Walking_A", "x": 0, "y": 1 } ] } },
+        { "id": 3, "name": "Jump" } ], "links": [] })";
+    AnimationGraphAsset graph;
+    SW_ASSERT_TRUE( graph.parseJSON( json ) );
+
+    AnimationGraphAsset parsed;
+    SW_ASSERT_TRUE( parsed.parseJSON( graph.toJSON() ) );
+    SW_ASSERT_EQUAL( 3u, static_cast<uint32>( parsed._listNode.size() ) );
+
+    const AnimationGraphNode& locomotion = parsed._listNode[0];
+    SW_EXPECT_TRUE( locomotion.hasBlendSpace() );
+    SW_EXPECT_TRUE( locomotion._syncGroup == hashed_string( "Feet" ) );
+    SW_EXPECT_TRUE( locomotion._blendSpace._parameterX == hashed_string( "Speed" ) );
+    SW_EXPECT_TRUE( locomotion._blendSpace._parameterY.empty() );
+    SW_EXPECT_EQUAL( 1u, locomotion._blendSpace._space.getAxisCount() );
+    SW_ASSERT_EQUAL( 3u, locomotion._blendSpace._space.getSampleCount() );
+    SW_EXPECT_TRUE( locomotion._blendSpace._space.getSamples()[0]._clipName == hashed_string( "Idle" ) );
+    SW_EXPECT_TRUE( locomotion._blendSpace._space.getSamples()[2]._clipName == hashed_string( "Running_A" ) );
+
+    const AnimationGraphNode& strafe = parsed._listNode[1];
+    SW_EXPECT_EQUAL( 2u, strafe._blendSpace._space.getAxisCount() );
+    SW_EXPECT_TRUE( strafe._blendSpace._parameterY == hashed_string( "Forward" ) );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, strafe._blendSpace._space.getSamples()[1]._position._y, 1e-6f );
+    SW_EXPECT_TRUE( strafe._syncGroup.empty() );
+
+    SW_EXPECT_FALSE( parsed._listNode[2].hasBlendSpace() );
+}
+
+/**
+ * @brief [AnimationGraphTest] 표본이 없거나 클립 · x 파라미터가 빈 블렌드 스페이스는 로드 오류다(조용히 보통 상태가 되지 않는다)
+ */
+SW_TEST_CASE( AnimationGraphTest, InvalidBlendSpaceIsLoadError )
+{
+    const string_view arrBad[] = {
+        R"({ "nodes": [ { "id": 1, "name": "A", "blend_space": { "x": "Speed", "samples": [] } } ] })",
+        R"({ "nodes": [ { "id": 1, "name": "A", "blend_space": { "x": "Speed", "samples": [ { "x": 1 } ] } } ] })",
+        R"({ "nodes": [ { "id": 1, "name": "A", "blend_space": { "samples": [ { "clip": "Idle", "x": 1 } ] } } ] })",
+    };
+    test::ScopedDefensiveTestLog expected( "invalid blend space nodes are rejected" );
+    for ( const string_view bad : arrBad )
+    {
+        AnimationGraphAsset graph;
+        SW_EXPECT_FALSE( graph.parseJSON( bad ) );
+        SW_EXPECT_TRUE( graph._listNode.empty() );
+    }
+}

@@ -10,10 +10,28 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Animation/Graph/BlendSpace.h"
+
 namespace sw
 {
     class JSONValue;
 
+    /**
+     * @struct AnimationGraphBlendSpaceDef
+     * @brief 블렌드 스페이스 상태의 데이터입니다(JSON 노드의 "blend_space"). 축 파라미터 이름과 표본(클립 이름, 위치)을 가집니다.
+     * @details JSON 형식은 `{ "x": "Speed", "y": "Direction", "samples": [ { "clip": "Idle", "x": 0, "y": 0 }, … ] }` 이다. "y" 를 적지 않으면 1D 다.
+     *          표본이 없거나, 클립 이름이나 "x" 파라미터가 비면 로드 오류다.
+     */
+    struct AnimationGraphBlendSpaceDef
+    {
+        BlendSpace    _space;      /**< 표본과 축 수입니다. 표본이 없으면 블렌드 스페이스 상태가 아닙니다. */
+        hashed_string _parameterX; /**< x 축 파라미터 이름(`AnimationParameterSet`)입니다. */
+        hashed_string _parameterY; /**< y 축 파라미터 이름입니다. 1D 면 비어 있습니다. */
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 애니메이션 그래프 노드입니다. */
     struct AnimationGraphNode
     {
@@ -22,9 +40,19 @@ namespace sw
         /** @brief 그래프 에디터에서의 노드 위치입니다. JSON 키는 "x", "y" 그대로라 파일 형식은 바뀌지 않습니다. */
         float2 _position{ 40.0f, 40.0f };
         /**
+         * @brief 이 상태에 있는 동안 들어갈 동기 그룹 이름입니다(JSON "sync_group", 선택). 같은 그룹의 재생은 가장 무거운 쪽의 위상을 따릅니다.
+         * @details 언리얼 애님 그래프의 Sync Group, 유니티 블렌드 트리의 동기화에 해당한다. 비어 있으면 컴포넌트가 정한 그룹을 그대로 쓴다.
+         */
+        hashed_string _syncGroup{};
+        /** @brief 블렌드 스페이스 상태의 데이터입니다(JSON "blend_space", 선택). 표본이 없으면 이름이 곧 클립인 보통 상태입니다. */
+        AnimationGraphBlendSpaceDef _blendSpace{};
+        /**
          * @brief 이 상태의 반복 여부입니다(JSON "loop", 선택). -1 은 적지 않았다는 뜻입니다. 직접 재생은 호출한 쪽이 정하고, "끝나면 다음"으로 들어오면 반복하지 않습니다.
          */
         int8 _loopOverride{ -1 };
+
+        /** @brief 블렌드 스페이스 상태인지 반환합니다. */
+        bool hasBlendSpace() const { return _blendSpace._space.getSampleCount() > 0; }
     };
 } // namespace sw
 
@@ -106,7 +134,9 @@ namespace sw
         vector<AnimationGraphLink> _listLink; /**< 링크 목록입니다. */
 
     private:
-        /** @brief 이미 파싱된 JSON 루트에서 노드와 링크를 읽습니다. 모르는 조건 표기면 false 를 반환합니다. */
+        /** @brief 이미 파싱된 JSON 루트에서 노드와 링크를 읽습니다. 모르는 조건 표기나 잘못된 블렌드 스페이스면 false 를 반환합니다. */
         [[nodiscard]] bool parseRoot( const JSONValue& root );
+        /** @brief 노드의 "blend_space" 객체를 읽습니다. 잘못되었으면 오류를 남기고 false 입니다. */
+        [[nodiscard]] static bool parseBlendSpace( const JSONValue& blendSpaceJSON, AnimationGraphNode& inoutNode );
     };
 } // namespace sw

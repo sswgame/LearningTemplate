@@ -125,8 +125,11 @@ namespace sw
                                       _owner._listTableUnit[unitIndex] == _owner._pUnit->getHandle();
                 if ( bOwnUnit == false )
                     return RigSocketLookup::OtherUnit;
+                // 표면 기준 소켓은 체형 보정을 더한 로컬이다(테이블이 계산해 둔다).
+                float4x4 local = pDef->makeLocalTransform();
+                (void)pTable->computeLocalTransform( socketID, local ); // 켜진 소켓이라 실패하지 않는다. 실패해도 보정 없는 로컬이 남는다
                 outParentBone = pDef->_parent;
-                outLocal      = BoneTransform::makeFromMatrix( pDef->makeLocalTransform() );
+                outLocal      = BoneTransform::makeFromMatrix( local );
                 return RigSocketLookup::OwnUnit;
             }
         }
@@ -499,8 +502,10 @@ namespace sw
                     pTargetUnit = castTo<SkeletalMeshComponent>( getOwner()->getManager()->resolveComponent( _listTableUnit[unitIndex] ) );
                 if ( pDef != nullptr )
                 {
+                    float4x4 local = pDef->makeLocalTransform();
+                    (void)_pSocketTable->computeLocalTransform( socketID, local ); // 체형 보정을 더한다. 켜진 소켓이라 실패하지 않는다
                     boneName    = pDef->_parent;
-                    socketLocal = BoneTransform::makeFromMatrix( pDef->makeLocalTransform() );
+                    socketLocal = BoneTransform::makeFromMatrix( local );
                     bSocketRoot = boneName.empty();
                 }
             }
@@ -648,8 +653,8 @@ namespace sw
         prepare._deltaSeconds   = context._deltaSeconds;
         prepare._worldGravity   = PhysicsSystem::getConfiguredGravity();
         prepare._pGroundQuery   = ( _pGroundQueryOverride != nullptr ) ? _pGroundQueryOverride : _groundQuery.get();
-        if ( pManager != nullptr && pManager->getAnimationSystem().findLODViewPosition( prepare._viewPosition ) )
-            prepare._bHasViewPosition = SW_TRUE;
+        // 화면 크기는 지난 LOD 판정의 결과다. 뷰를 받지 않은 시스템(테스트, 서버)에서는 기본값 1 이라 모든 노드가 켜진다.
+        prepare._screenSize = unit.getAnimationLODState()._screenSize;
         _instance.prepare( prepare );
     }
 

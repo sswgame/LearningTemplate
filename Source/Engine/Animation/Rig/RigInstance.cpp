@@ -45,6 +45,7 @@ namespace sw
         , _listTargetOffset{}
         , _listNode{}
         , _listNodeWrittenBone{}
+        , _listNodeLODOff{}
         , _listSlotWeight{}
         , _listMorphWeight{}
         , _listSharedCollider{}
@@ -135,6 +136,7 @@ namespace sw
             vector<uint32> listWritten;
             node->collectWrittenBones( listWritten );
             _listNodeWrittenBone.push_back( std::move( listWritten ) );
+            _listNodeLODOff.push_back( SW_FALSE );
             _listNode.push_back( std::move( node ) );
         }
         if ( bOk == false )
@@ -154,6 +156,7 @@ namespace sw
         _listTargetOffset.clear();
         _listNode.clear();
         _listNodeWrittenBone.clear();
+        _listNodeLODOff.clear();
         _listMorphWeight.clear();
         _pendingDeltaSeconds = 0.0f;
     }
@@ -279,9 +282,15 @@ namespace sw
     {
         _pendingDeltaSeconds += MathUtil::max( context._deltaSeconds, 0.0f );
         _worldGravity = context._worldGravity;
-        for ( const unique_ptr<RigNode>& node : _listNode )
+        for ( uint32 nodeIndex = 0; nodeIndex < static_cast<uint32>( _listNode.size() ); ++nodeIndex )
         {
-            node->prepare( context );
+            RigNode&   node = *_listNode[nodeIndex];
+            const bool bOff = context._screenSize < node.getMinScreenSize();
+            if ( bOff && _listNodeLODOff[nodeIndex] == SW_FALSE )
+                node.reset(); // 다시 켤 때 애니메이션 포즈에서 시작한다
+            _listNodeLODOff[nodeIndex] = bOff ? SW_TRUE : SW_FALSE;
+            if ( bOff == false )
+                node.prepare( context );
         }
     }
 
@@ -305,6 +314,8 @@ namespace sw
         context._worldGravity   = _worldGravity;
         for ( uint32 nodeIndex = 0; nodeIndex < static_cast<uint32>( _listNode.size() ); ++nodeIndex )
         {
+            if ( _listNodeLODOff[nodeIndex] == SW_TRUE )
+                continue;
             const float32 weight = computeNodeWeight( nodeIndex );
             if ( weight <= 0.0f )
                 continue;

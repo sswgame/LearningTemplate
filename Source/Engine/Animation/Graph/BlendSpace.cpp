@@ -3,39 +3,80 @@
 #include "Engine/Animation/Graph/BlendSpace.h"
 
 #include "Core/Common/StdHeaders.h"
-#include "Core/Math/Math.h"
-
-#include "Engine/Animation/Skeletal/DualQuaternion.h"
-#include "Engine/Animation/Skeletal/Pose.h"
+#include "Core/Math/MathUtil.h"
 
 namespace sw
 {
     namespace
     {
-        /**
-         * @brief 포즈 행렬과 (스케일 + 강체 변환) 사이를 오갑니다.
-         * @details `DualQuaternion` 은 스케일을 담지 못한다. 그래서 포즈를 섞을 때는 스케일을
-         *          따로 떼어 선형 보간하고, 나머지 회전과 이동만 DLB 로 섞은 뒤 다시 곱한다.
-         *          떼지 않고 섞으면 샘플 지점에서는 원본 포즈가 그대로 나오는데 그 사이에서만
-         *          스케일이 1 로 주저앉아, 파라미터를 조금 옮기는 것만으로 포즈가 튄다.
-         */
         struct BlendSpaceInternal
         {
-            /** @brief 포즈에서 스케일을 떼어 @p outScale 에 담고, 남은 강체 변환을 반환합니다. */
-            static DualQuaternion splitPose( const float4x4& pose, float3& outScale )
+            /** @brief 1D 가중치입니다. 표본은 x 오름차순입니다. */
+            static void computeLinearWeights( const vector<BlendSpaceSample>& listSample, float32 parameter, vector<float32>& outListWeight )
             {
-                quaternion rotation{};
-                float3     translation{};
-                // 축 하나가 0 이면 회전을 뽑을 수 없어 decompose 가 Identity 를 준다. 그래도
-                // 스케일 0 은 그대로 살려 둔다. 눌린 포즈를 1 로 복원하면 그것대로 틀린 결과다.
-                pose.decompose( outScale, rotation, translation );
-                return DualQuaternion( rotation, translation );
+                const size_t count = listSample.size();
+                if ( parameter <= listSample.front()._position._x )
+                {
+                    outListWeight.front() = 1.0f;
+                    return;
+                }
+                if ( parameter >= listSample.back()._position._x )
+                {
+                    outListWeight.back() = 1.0f;
+                    return;
+                }
+                for ( size_t index = 0; index + 1 < count; ++index )
+                {
+                    const float32 lower = listSample[index]._position._x;
+                    const float32 upper = listSample[index + 1]._position._x;
+                    if ( lower <= parameter && parameter <= upper )
+                    {
+                        const float32 span       = upper - lower;
+                        const float32 alpha      = ( span > MathUtil::kEpsilon ) ? ( parameter - lower ) / span : 0.0f;
+                        outListWeight[index]     = 1.0f - alpha;
+                        outListWeight[index + 1] = alpha;
+                        return;
+                    }
+                }
+                outListWeight.back() = 1.0f;
             }
 
-            /** @brief 강체 변환과 스케일을 포즈 행렬로 되돌립니다. */
-            static float4x4 makePose( const DualQuaternion& rigid, const float3& scale )
+            /** @brief 2D 역거리 가중치입니다. 파라미터는 표본 범위로 먼저 가둡니다. */
+            static void computeInverseDistanceWeights( const vector<BlendSpaceSample>& listSample, const float2& parameter, vector<float32>& outListWeight )
             {
-                return float4x4::makeScale( scale ) * rigid.toMatrix4x4();
+                float2 minParameter = listSample.front()._position;
+                float2 maxParameter = listSample.front()._position;
+                for ( const BlendSpaceSample& sample : listSample )
+                {
+                    minParameter = float2{ MathUtil::min( minParameter._x, sample._position._x ), MathUtil::min( minParameter._y, sample._position._y ) };
+                    maxParameter = float2{ MathUtil::max( maxParameter._x, sample._position._x ), MathUtil::max( maxParameter._y, sample._position._y ) };
+                }
+                const float2 target{ MathUtil::clamp( parameter._x, minParameter._x, maxParameter._x ), MathUtil::clamp( parameter._y, minParameter._y, maxParameter._y ) };
+
+                // 1/d² 를 그대로 더해 절대 임계값과 비교하면 단위가 큰 공간(cm/s, 표본 0~600)에서 합이 작아 엉뚱한 표본으로 튄다.
+                // 가장 가까운 표본의 거리로 나눠 그 표본의 상대 가중치를 1 로 둔다.
+                float32 nearestDistanceSquared = MathUtil::kMaxFloat;
+                for ( size_t index = 0; index < listSample.size(); ++index )
+                {
+                    const float32 distanceSquared = float2::getDistanceSquared( target, listSample[index]._position );
+                    if ( distanceSquared < MathUtil::kEpsilon )
+                    {
+                        outListWeight[index] = 1.0f;
+                        return;
+                    }
+                    nearestDistanceSquared = MathUtil::min( nearestDistanceSquared, distanceSquared );
+                }
+                float32 totalWeight = 0.0f;
+                for ( size_t index = 0; index < listSample.size(); ++index )
+                {
+                    outListWeight[index] = nearestDistanceSquared / float2::getDistanceSquared( target, listSample[index]._position );
+                    totalWeight += outListWeight[index];
+                }
+                const float32 inverseTotal = 1.0f / totalWeight; // 가장 가까운 표본이 1 이라 합은 1 이상이다
+                for ( float32& weight : outListWeight )
+                {
+                    weight *= inverseTotal;
+                }
             }
         };
     } // namespace
@@ -43,127 +84,52 @@ namespace sw
 
 namespace sw
 {
-    void BlendSpace1D::addSample( float32 parameter, string_view clipName, const float4x4& pose )
+    BlendSpace::BlendSpace()
+        : _listSample{}
+        , _axisCount{ 1 }
     {
-        BlendSample1D sample{};
-        sample._parameter = parameter;
-        sample._clipName  = string{ clipName };
-        sample._pose      = pose;
-
-        _listSample.push_back( std::move( sample ) );
-
-        std::sort( _listSample.begin(), _listSample.end(), []( const BlendSample1D& a, const BlendSample1D& b )
-        {
-            return a._parameter < b._parameter;
-        } );
     }
 
-    float4x4 BlendSpace1D::evaluate( float32 parameter ) const
+    void BlendSpace::addSample( const float2& position, const hashed_string& clipName )
     {
-        if ( _listSample.empty() )
-            return float4x4::Identity;
-
-        if ( _listSample.size() == 1 || parameter <= _listSample.front()._parameter )
-            return _listSample.front()._pose;
-
-        if ( parameter >= _listSample.back()._parameter )
-            return _listSample.back()._pose;
-
-        for ( size_t index = 0; index + 1 < _listSample.size(); ++index )
+        _listSample.push_back( BlendSpaceSample{ position, clipName } );
+        if ( _axisCount == 1 )
         {
-            const BlendSample1D& s0 = _listSample[index];
-            const BlendSample1D& s1 = _listSample[index + 1];
-
-            if ( s0._parameter <= parameter && parameter <= s1._parameter )
+            std::stable_sort( _listSample.begin(), _listSample.end(), []( const BlendSpaceSample& lhs, const BlendSpaceSample& rhs )
             {
-                const float32 span = s1._parameter - s0._parameter;
-                const float32 t    = span > MathUtil::kEpsilon ? ( ( parameter - s0._parameter ) / span ) : 0.0f;
-
-                float3               scale0{};
-                float3               scale1{};
-                const DualQuaternion dq0 = BlendSpaceInternal::splitPose( s0._pose, scale0 );
-                const DualQuaternion dq1 = BlendSpaceInternal::splitPose( s1._pose, scale1 );
-                return BlendSpaceInternal::makePose( DualQuaternion::dlb( dq0, dq1, t ), float3::lerp( scale0, scale1, t ) );
-            }
+                return lhs._position._x < rhs._position._x;
+            } );
         }
-
-        return _listSample.back()._pose;
     }
 
-    void BlendSpace1D::evaluateRootPose( float32 parameter, Pose& inoutPose ) const
+    void BlendSpace::computeSampleWeights( const float2& parameter, vector<float32>& outListWeight ) const
     {
-        if ( inoutPose.getBoneCount() > 0 )
-            inoutPose.setBoneTransform( 0, BoneTransform::makeFromMatrix( evaluate( parameter ) ) );
-    }
-
-    void BlendSpace2D::addSample( float32 paramX, float32 paramY, string_view clipName, const float4x4& pose )
-    {
-        BlendSample2D sample{};
-        sample._parameter = float2{ paramX, paramY };
-        sample._clipName  = string{ clipName };
-        sample._pose      = pose;
-
-        _listSample.push_back( std::move( sample ) );
-    }
-
-    float4x4 BlendSpace2D::evaluate( float32 paramX, float32 paramY ) const
-    {
+        outListWeight.assign( _listSample.size(), 0.0f );
         if ( _listSample.empty() )
-            return float4x4::Identity;
-
+            return;
         if ( _listSample.size() == 1 )
-            return _listSample.front()._pose;
-
-        // 역거리 가중치(IDW)다. 샘플 수에 상한이 없다(고정 길이 버퍼를 두지 않는다. 두면 넘는 샘플을 아무 말 없이 버리게 된다).
-        //
-        // 파라미터는 **샘플 범위로 먼저 제한한다**(언리얼 블렌드 스페이스와 같다). 가중치는 가장 가까운 샘플의 거리로 나눠 1 이 되게 한다.
-        // 주의: 1/d² 를 그대로 더해 절대값 임계값과 비교하면, cm/s 단위(샘플 0~600)에서 대시 2500 일 때 샘플마다 가중치가 2e-7 쯤이라
-        // "합이 너무 작다"에 걸려, 가장 가까운 샘플이 아니라 **처음 넣은 샘플**(보통 Idle)로 튄다.
-        float2 minParam = _listSample.front()._parameter;
-        float2 maxParam = _listSample.front()._parameter;
-        for ( const BlendSample2D& sample : _listSample )
         {
-            minParam = float2{ MathUtil::min( minParam._x, sample._parameter._x ), MathUtil::min( minParam._y, sample._parameter._y ) };
-            maxParam = float2{ MathUtil::max( maxParam._x, sample._parameter._x ), MathUtil::max( maxParam._y, sample._parameter._y ) };
+            outListWeight.front() = 1.0f;
+            return;
         }
-        const float2 targetParam{ MathUtil::clamp( paramX, minParam._x, maxParam._x ), MathUtil::clamp( paramY, minParam._y, maxParam._y ) };
-
-        float32 nearestDistSq = MathUtil::kMaxFloat;
-        for ( const BlendSample2D& sample : _listSample )
+        if ( _axisCount == 1 )
         {
-            const float32 distSq = float2::getDistanceSquared( targetParam, sample._parameter );
-            if ( distSq < MathUtil::kEpsilon )
-                return sample._pose;
-            nearestDistSq = MathUtil::min( nearestDistSq, distSq );
+            BlendSpaceInternal::computeLinearWeights( _listSample, parameter._x, outListWeight );
+            return;
         }
+        BlendSpaceInternal::computeInverseDistanceWeights( _listSample, parameter, outListWeight );
+    }
 
-        // 가장 가까운 샘플의 상대 가중치가 1 이므로 합은 1 이상이다. 작아서 버리는 일이 없다.
-        float32 totalWeight = 0.0f;
-        for ( const BlendSample2D& sample : _listSample )
+    float32 BlendSpace::computeBlendedLength( const vector<float32>& listSampleLength, const vector<float32>& listWeight )
+    {
+        const size_t count       = MathUtil::min( listSampleLength.size(), listWeight.size() );
+        float32      length      = 0.0f;
+        float32      totalWeight = 0.0f;
+        for ( size_t index = 0; index < count; ++index )
         {
-            totalWeight += nearestDistSq / float2::getDistanceSquared( targetParam, sample._parameter );
+            length += listSampleLength[index] * listWeight[index];
+            totalWeight += listWeight[index];
         }
-        const float32 invTotalWeight = nearestDistSq / totalWeight;
-
-        float3         sampleScale{};
-        DualQuaternion accumDq     = BlendSpaceInternal::splitPose( _listSample.front()._pose, sampleScale );
-        float32        accumWeight = invTotalWeight / float2::getDistanceSquared( targetParam, _listSample.front()._parameter );
-        float3         accumScale  = sampleScale * accumWeight;
-
-        for ( size_t index = 1; index < _listSample.size(); ++index )
-        {
-            const BlendSample2D& sample           = _listSample[index];
-            const float32        normalizedWeight = invTotalWeight / float2::getDistanceSquared( targetParam, sample._parameter );
-            const float32        weightSum        = accumWeight + normalizedWeight;
-            if ( weightSum < MathUtil::kEpsilon )
-                continue;
-
-            const DualQuaternion sampleDq = BlendSpaceInternal::splitPose( sample._pose, sampleScale );
-            accumDq                       = DualQuaternion::dlb( accumDq, sampleDq, normalizedWeight / weightSum );
-            accumScale += sampleScale * normalizedWeight;
-            accumWeight = weightSum;
-        }
-
-        return BlendSpaceInternal::makePose( accumDq, accumScale );
+        return ( totalWeight > MathUtil::kEpsilon ) ? length / totalWeight : 0.0f;
     }
 } // namespace sw

@@ -83,9 +83,45 @@ namespace sw
         return parseRoot( doc.getRoot() );
     }
 
+    bool AnimationGraphAsset::parseBlendSpace( const JSONValue& blendSpaceJSON, AnimationGraphNode& inoutNode )
+    {
+        AnimationGraphBlendSpaceDef& def = inoutNode._blendSpace;
+        def._parameterX                  = hashed_string( blendSpaceJSON.get( "x" ).asString() );
+        if ( blendSpaceJSON.has( "y" ) )
+            def._parameterY = hashed_string( blendSpaceJSON.get( "y" ).asString() );
+        def._space.clear();
+        def._space.setAxisCount( def._parameterY.empty() ? 1u : 2u );
+        if ( def._parameterX.empty() )
+        {
+            SW_LOG_ERROR( "Animation graph node '%#' has a blend space without an 'x' parameter", inoutNode._name.c_str() );
+            return false;
+        }
+
+        bool bValid = true;
+        forEachObjectInArray( blendSpaceJSON, "samples", [&def, &bValid, &inoutNode]( const JSONValue& sampleJSON, size_t sampleIndex )
+        {
+            const string clipName = sampleJSON.get( "clip" ).asString();
+            if ( clipName.empty() )
+            {
+                SW_LOG_ERROR( "Animation graph node '%#' blend space sample %# has no 'clip'", inoutNode._name.c_str(), sampleIndex );
+                bValid = false;
+                return;
+            }
+            const float2 position{ static_cast<float32>( sampleJSON.get( "x" ).asFloat( 0.0 ) ), static_cast<float32>( sampleJSON.get( "y" ).asFloat( 0.0 ) ) };
+            def._space.addSample( position, hashed_string( clipName ) );
+        } );
+        if ( bValid && def._space.getSampleCount() == 0 )
+        {
+            SW_LOG_ERROR( "Animation graph node '%#' has a blend space without samples", inoutNode._name.c_str() );
+            bValid = false;
+        }
+        return bValid;
+    }
+
     bool AnimationGraphAsset::parseRoot( const JSONValue& root )
     {
-        forEachObjectInArray( root, "nodes", [this]( const JSONValue& nodeJSON, size_t /*nodeIndex*/ )
+        bool bValid = true;
+        forEachObjectInArray( root, "nodes", [this, &bValid]( const JSONValue& nodeJSON, size_t /*nodeIndex*/ )
         {
             AnimationGraphNode node{};
             node._id          = static_cast<int32>( nodeJSON.get( "id" ).asInt( 0 ) );
@@ -94,11 +130,15 @@ namespace sw
             node._position._y = static_cast<float32>( nodeJSON.get( "y" ).asFloat( 40.0 ) );
             if ( nodeJSON.has( "loop" ) )
                 node._loopOverride = nodeJSON.get( "loop" ).asBool() ? 1 : 0;
+            if ( nodeJSON.has( "sync_group" ) )
+                node._syncGroup = hashed_string( nodeJSON.get( "sync_group" ).asString() );
+            const JSONValue blendSpaceJSON = nodeJSON.get( "blend_space" );
+            if ( blendSpaceJSON.isObject() && parseBlendSpace( blendSpaceJSON, node ) == false )
+                bValid = false;
             if ( node._id > 0 )
                 _listNode.push_back( std::move( node ) );
         } );
 
-        bool bValid = true;
         forEachObjectInArray( root, "links", [this, &bValid]( const JSONValue& linkJSON, size_t /*linkIndex*/ )
         {
             AnimationGraphLink link{};
@@ -147,6 +187,28 @@ namespace sw
             nodeJSON.set( "y" ).setFloat( static_cast<float64>( node._position._y ) );
             if ( node._loopOverride >= 0 )
                 nodeJSON.set( "loop" ).setBool( node._loopOverride != 0 );
+            if ( node._syncGroup.empty() == false )
+                nodeJSON.set( "sync_group" ).setString( node._syncGroup.c_str() );
+            if ( node.hasBlendSpace() )
+            {
+                const AnimationGraphBlendSpaceDef& def            = node._blendSpace;
+                const JSONValue                    blendSpaceJSON = nodeJSON.set( "blend_space" );
+                blendSpaceJSON.setObject();
+                blendSpaceJSON.set( "x" ).setString( def._parameterX.c_str() );
+                if ( def._parameterY.empty() == false )
+                    blendSpaceJSON.set( "y" ).setString( def._parameterY.c_str() );
+                const JSONValue samplesJSON = blendSpaceJSON.set( "samples" );
+                samplesJSON.setArray();
+                for ( const BlendSpaceSample& sample : def._space.getSamples() )
+                {
+                    const JSONValue sampleJSON = samplesJSON.pushBack();
+                    sampleJSON.setObject();
+                    sampleJSON.set( "clip" ).setString( sample._clipName.c_str() );
+                    sampleJSON.set( "x" ).setFloat( static_cast<float64>( sample._position._x ) );
+                    if ( def._space.getAxisCount() == 2 )
+                        sampleJSON.set( "y" ).setFloat( static_cast<float64>( sample._position._y ) );
+                }
+            }
         }
 
         const JSONValue linksVal = root.set( "links" );

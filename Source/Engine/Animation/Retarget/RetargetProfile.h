@@ -36,6 +36,16 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 본 이름 테이블의 한 줄입니다. 원본 본 하나의 모델 공간 회전 차이를 대상 본 하나로 옮깁니다(사슬이 아닌 머리, 손가락, 장식 본). */
+    struct RetargetBonePair
+    {
+        hashed_string _source{};
+        hashed_string _target{};
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class RetargetProfile
      * @brief 프로필 하나입니다. 형식은 JSON 이며, 모르는 키나 겹친 사슬 이름은 오류입니다.
@@ -43,9 +53,14 @@ namespace sw
      * { "source_skeleton": "game/.../knight.skeleton.json", "target_skeleton": "game/.../skeleton_minion.skeleton.json",
      *   "root": { "source": "root", "target": "root" }, "pelvis": { "source": "hips", "target": "hips" },
      *   "translation": "ScaleByPelvisHeight",
-     *   "chains": [ { "name": "LeftLeg", "source": ["upperleg.l", "lowerleg.l", "foot.l"], "target": ["upperleg.l", "lowerleg.l", "foot.l"], "ik_goal": true } ] }
+     *   "chains": [ { "name": "LeftLeg", "source": ["upperleg.l", "lowerleg.l", "foot.l"], "target": ["upperleg.l", "lowerleg.l", "foot.l"], "ik_goal": true } ],
+     *   "bone_map": [ { "source": "head", "target": "Head" } ], "map_same_names": true, "height_ratio": 1.25 }
      * @endcode
-     *          사슬, 골반, 뿌리에 속하지 않은 대상 본은 대상 레퍼런스 포즈 그대로입니다(IK 보조 본, 손가락).
+     *          - `bone_map`(선택): 본 이름 테이블이다. 사슬로 묶지 않은 본을 한 줄에 하나씩 짝짓는다.
+     *          - `map_same_names`(선택): 사슬, 테이블 어디에도 없는 대상 본 중 원본에 같은 이름이 있으면 짝짓는다(언리얼 IK Retargeter 의 이름 자동 매핑).
+     *          - `height_ratio`(선택, 0 보다 큼): 뿌리와 골반 이동, IK 목표 사슬의 끝 위치에 곱하는 비율이다. 적지 않으면 골반 높이 비(대상 / 원본)를 쓴다.
+     *            골반 높이가 체형을 대표하지 못하는 스켈레톤(네 발, 웅크린 레퍼런스)에 쓴다.
+     *          짝이 없는 대상 본은 대상 레퍼런스 포즈 그대로입니다(IK 보조 본, 손가락). 짝은 사슬, 테이블, 같은 이름 순으로 먼저 정한 것이 이깁니다.
      */
     class SW_API RetargetProfile
     {
@@ -69,8 +84,20 @@ namespace sw
         const hashed_string&         getTargetPelvis() const { return _targetPelvis; }
         RetargetTranslationMode      getTranslationMode() const { return _translationMode; }
         const vector<RetargetChain>& getChains() const { return _listChain; }
+        /** @brief 본 이름 테이블입니다. */
+        const vector<RetargetBonePair>& getBonePairs() const { return _listBonePair; }
+        /** @brief 같은 이름의 본을 자동으로 짝지을지입니다. */
+        bool isMappingSameNames() const { return _bMapSameNames == SW_TRUE; }
+        /** @brief 뿌리와 골반 이동 비율의 덮어쓰기입니다. 0 이면 골반 높이 비를 계산합니다. */
+        float32 getHeightRatioOverride() const { return _heightRatioOverride; }
         /** @brief 사슬을 추가합니다(코드로 만드는 프로필과 테스트용). */
         void addChain( const RetargetChain& chain ) { _listChain.push_back( chain ); }
+        /** @brief 본 이름 테이블에 한 줄을 추가합니다(코드로 만드는 프로필과 테스트용). */
+        void addBonePair( const RetargetBonePair& pair ) { _listBonePair.push_back( pair ); }
+        /** @brief 같은 이름 자동 짝짓기를 정합니다(코드로 만드는 프로필과 테스트용). */
+        void setMapSameNames( bool bMap ) { _bMapSameNames = bMap ? SW_TRUE : SW_FALSE; }
+        /** @brief 이동 비율 덮어쓰기를 정합니다. 0 이하이면 계산한 골반 높이 비를 씁니다. */
+        void setHeightRatioOverride( float32 ratio ) { _heightRatioOverride = ratio > 0.0f ? ratio : 0.0f; }
         /** @brief 뿌리와 골반 쌍, 이동 방법을 정합니다(코드로 만드는 프로필과 테스트용). */
         void setRootAndPelvis( const hashed_string& sourceRoot, const hashed_string& targetRoot, const hashed_string& sourcePelvis, const hashed_string& targetPelvis,
                                RetargetTranslationMode mode );
@@ -78,13 +105,16 @@ namespace sw
     private:
         [[nodiscard]] bool parseRoot( const JSONValue& root, string_view sourceLabel );
 
-        vector<RetargetChain>   _listChain;
-        string                  _sourceSkeletonPath;
-        string                  _targetSkeletonPath;
-        hashed_string           _sourceRoot;
-        hashed_string           _targetRoot;
-        hashed_string           _sourcePelvis;
-        hashed_string           _targetPelvis;
-        RetargetTranslationMode _translationMode;
+        vector<RetargetChain>    _listChain;
+        vector<RetargetBonePair> _listBonePair;
+        string                   _sourceSkeletonPath;
+        string                   _targetSkeletonPath;
+        hashed_string            _sourceRoot;
+        hashed_string            _targetRoot;
+        hashed_string            _sourcePelvis;
+        hashed_string            _targetPelvis;
+        float32                  _heightRatioOverride;
+        RetargetTranslationMode  _translationMode;
+        uint8                    _bMapSameNames;
     };
 } // namespace sw
