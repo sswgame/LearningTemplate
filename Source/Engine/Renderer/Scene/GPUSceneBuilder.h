@@ -3,7 +3,8 @@
  * @brief 게임 스레드가 씬의 프리미티브(MeshComponent, 인스턴스 배치 항목)를 모아 `GPUSceneSnapshot` 을 만듭니다.
  * @details 렌더 스레드 쪽(`GPUScene`)과는 스냅샷 타입으로만 만난다. 여기에는 GPU 핸들이 하나도 없고, 저쪽에는 씬이 없다.
  *          프레임 간에 유지되는 것은 재구축 여부를 판단하는 캐시(후보 집합, 카메라, 세대)와 **머티리얼 원소 레지스트리**
- *          (언리얼 GPUScene 의 영속 ID 에 해당)다. 스냅샷은 매 프레임 복사해 내보내고, 기준 데이터는 여기에 남는다.
+ *          (언리얼 GPUScene 의 영속 ID 에 해당, `GPUMaterialRegistry`)다. 스냅샷은 매 프레임 복사해 내보내고, 기준 데이터는 여기에 남는다.
+ *          투명 정렬 규칙(`GPUTransparentSorter`), 머티리얼 레지스트리, 스킨 팔레트 옮기기(`GPUSkinPaletteCollector`)는 값 멤버 클래스로 두고 직접 부른다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -13,14 +14,16 @@
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Renderer/Scene/GPUInstanceRing.h"
+#include "Engine/Renderer/Scene/GPUMaterialRegistry.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
+#include "Engine/Renderer/Scene/GPUSkinPaletteCollector.h"
+#include "Engine/Renderer/Scene/GPUTransparentSorter.h"
 
 namespace sw
 {
     struct PrimitiveInstanceEntry;
     struct RenderViewRequest;
 
-    class GameObjectManager;
     class GPUUploadQueue;
     class Material;
     class MaterialInstance;
@@ -80,11 +83,11 @@ namespace sw
         /**
          * @brief 추가 뷰마다 투명 꼬리를 그 뷰의 시점으로 다시 정렬해 스냅샷에 싣습니다. `populateFromScene` **뒤**, 내보내기 전에 부릅니다.
          * @details 씬이 그대로인 프레임에도 부른다. 뷰 카메라만 움직여도 순서가 바뀌기 때문이다. 그리지 않는 뷰(`_bRender` 0)는 건너뛴다.
-         *          정렬 키는 주 뷰와 같은 규칙(`makeTransparentSortKey`, `isDrawnBefore`)을 쓴다.
+         *          정렬 키는 주 뷰와 같은 규칙(`GPUTransparentSorter::makeTransparentSortKey`, `isDrawnBefore`)을 쓴다.
          */
         void computeViewTransparentOrders( const vector<RenderViewRequest>& listView );
         /** @brief 투명 정렬의 깊이 축입니다. 영벡터면 거리를 씁니다. */
-        const float3& getTransparentSortAxis() const { return _transparentSortAxis; }
+        const float3& getTransparentSortAxis() const { return _transparentSorter.getAxis(); }
         /**
          * @brief 스냅샷(GT 에서 RT 로 넘어가는 모든 데이터)을 outSnapshot 으로 복사합니다. GPU 쪽 데이터는 타입상 담을 수 없습니다.
          * @details GT 가 프레임마다 RenderFramePacket 에 담을 때 쓴다. 부른 뒤 dirty 플래그는 소비된 것으로 보고
@@ -145,24 +148,6 @@ namespace sw
          *       쓰지 않는다. 여기에 접두부를 건드리는 코드를 추가하면 레이스가 생긴다.
          */
         void rebuildTransparentTail();
-        /** @brief 오래 쓰이지 않은 머티리얼 원소를 회수해 프리리스트로 돌립니다. 인덱스는 옮기지 않습니다. */
-        void freeUnusedMaterialElements();
-        /** @brief 머티리얼 원소 레지스트리를 통째로 비웁니다. 그룹 기준이 바뀌었을 때 부릅니다. */
-        void resetMaterialRegistry();
-        /** @brief 머티리얼의 셰이더 타입 그룹 인덱스를 찾거나 만듭니다(populateBatches 안에서 부릅니다). 머티리얼이 없으면 kInvalidMaterialGroup 입니다. */
-        uint32 materialGroupFor( const Material* pMaterial );
-        /**
-         * @brief (머티리얼, 인스턴스)의 퍼뮤테이션 해시를 반환합니다. 셰이더 경로와 정적 define 을 함께 봅니다.
-         * @details 인스턴스는 키워드를 덮어쓸 수 있으므로 인스턴스가 있으면 그 해시를 쓴다(부모의 해시를 이미 포함한다).
-         */
-        static uint64 permutationHashFor( const Material* pMaterial, const MaterialInstance* pInstance );
-        /** @brief 퍼뮤테이션 인덱스를 찾거나 만듭니다(populateBatches 안에서 부릅니다). 머티리얼이 없으면 kInvalidShaderPermutation 입니다. */
-        uint32 shaderPermutationFor( const Material* pMaterial, const MaterialInstance* pInstance );
-        /**
-         * @brief (머티리얼, 인스턴스) 쌍을 그룹에 넣고 원소 인덱스(materialIndex)를 반환합니다(populateBatches 안에서 부릅니다).
-         * @details 같은 쌍은 같은 원소를 공유한다. 인스턴스마다 부른다. 배치를 합치면 한 배치 안에 원소가 여러 개 들어간다.
-         */
-        uint32 assignMaterialElement( const shared_ptr<Material>& material, const shared_ptr<MaterialInstance>& instance, uint32 groupIndex );
         /**
          * @brief 배치 키에 쓸 머티리얼입니다. 합치기가 켜져 있으면 같은 퍼뮤테이션의 대표 머티리얼을, 아니면 그 머티리얼 자신을 반환합니다.
          * @details 대표는 재구축할 때마다 처음 만난 머티리얼이다(_mapShaderRepresentative). 재구축 여부는 후보 자체를 비교해 판단하므로 대표가 바뀌어도 상관없다.
@@ -172,16 +157,11 @@ namespace sw
         Material* batchKeyMaterial( Material* pMaterial, uint64 permutationHash );
         /**
          * @brief 투명 인덱스를 카메라 거리순(먼 것에서 가까운 것 순서)으로 정렬합니다.
-         * @details 지난 프레임의 순서에서 삽입 정렬로 시작하고, 이동 횟수가 원소당 `kTransparentInsertionMovesPerElement` 를 넘으면
+         * @details 후보에서 키를 채우는 것만 여기서 하고, 정렬은 `GPUTransparentSorter::sortKeys` 가 한다. 지난 프레임의 순서에서
+         *          삽입 정렬로 시작하고, 이동 횟수가 원소당 `GPUTransparentSorter::kTransparentInsertionMovesPerElement` 를 넘으면
          *          std::sort 로 넘어간다. 순서는 전순서이므로 어느 쪽이든 결과가 같다.
          */
         void sortTransparent( const float3& cameraPos );
-        /**
-         * @brief 투명 정렬이 삽입 정렬로 버틸 수 있는 이동 예산입니다(원소당 이동 횟수).
-         * @details 한 프레임에 조금씩 움직이는 씬은 뒤집힌 쌍이 원소 수보다 훨씬 적다. 이 예산을 넘는 프레임(카메라가 크게
-         *          돌았거나 나누기를 다시 했을 때)은 삽입 정렬을 멈추고 std::sort 가 마저 한다. 최악의 경우 N log N 에 예산만큼 더한 값이다.
-         */
-        static constexpr size_t kTransparentInsertionMovesPerElement = 8;
         /** @brief 불투명 인덱스 테이블과 투명 인덱스 테이블을 후보에서 다시 만듭니다. */
         void rebuildPartitionTables();
         /**
@@ -200,37 +180,15 @@ namespace sw
          *          퍼뮤테이션 세대를 올려 배치를 다시 만들게 한다. 네이티브 bindless 는 머티리얼 바이트가 바뀌어 매 프레임 업로드가 처리한다.
          */
         void refreshReloadedTextures();
-        /**
-         * @brief 애니메이션 유닛의 스킨 팔레트를 스냅샷으로 옮깁니다. 프리미티브 더티와 무관하게 매 프레임 실행합니다.
-         * @details 팔레트는 포즈가 바뀔 때마다 바뀌므로 수집 건너뛰기(아무것도 바뀌지 않음) 판단보다 앞에서 따로 돈다. 배열은 프레임마다 새로 만들어
-         *          공유한다. RT 가 지난 프레임 배열을 읽는 동안 덮어쓰지 않기 위해서다.
-         */
-        void collectSkinPalettes( GameObjectManager& objects );
 
         /** @brief 기준 스냅샷입니다. 매 프레임 `exportCPUSnapshot` 이 복사해 내보냅니다. 퍼뮤테이션 테이블과 머티리얼 그룹은 여기서 계속 자랍니다. */
         GPUSceneSnapshot _snapshot;
-        /// @brief 셰이더 경로에서 `_snapshot._listMaterialGroup` 인덱스를 찾는 맵입니다. 배치마다 그룹 목록을 string 비교로 훑지 않기 위한 것입니다.
-        unordered_map<string, uint32> _mapShaderPathToGroup;
-
-        /**
-         * @brief 머티리얼 그룹의 원소 인덱스 테이블입니다. `_snapshot._listMaterialGroup` 과 같은 인덱스로 나란히 둡니다.
-         * @details 스냅샷의 그룹에는 RT 가 읽는 것(경로, 원소)만 남기고 테이블은 여기 둔다. 프레임마다 패킷으로 복사되지 않는다.
-         */
-        struct MaterialGroupState
-        {
-            unordered_map<GPUMaterialElementKey, uint32, GPUMaterialElementKeyHash> _mapEntryToIndex;
-            /// @brief 원소별로 마지막으로 쓰인 빌드 번호입니다. 오래 쓰이지 않은 원소를 회수하는 기준입니다.
-            vector<uint64> _listEntryLastUsedBuild;
-            /// @brief 회수된 원소 슬롯입니다. **인덱스를 옮기지 않고** 재사용합니다. 옮기면 영속 ID 가 아니게 됩니다.
-            vector<uint32> _listFreeEntry;
-            /// @brief 직전 조회 결과입니다. 배치 안의 인스턴스는 정렬되어 있어 대부분 같은 원소를 연속으로 조회합니다.
-            GPUMaterialElementKey _lastKey{};
-            uint32                _lastIndex{ 0 };
-            uint8                 _bHasLast{ SW_FALSE };
-        };
-        vector<MaterialGroupState> _listMaterialGroupState;
-        /// @brief 빌드 번호입니다. 원소가 마지막으로 쓰인 시점을 재는 데만 씁니다(회수 판정).
-        uint64 _buildCounter{ 0 };
+        /** @brief 머티리얼 그룹, 원소의 영속 인덱스, 퍼뮤테이션 표입니다. RT 가 읽는 부분은 `_snapshot` 에 쓰고 찾는 맵과 회수 시계는 자기가 가집니다. */
+        GPUMaterialRegistry _materialRegistry;
+        /** @brief 투명 정렬 규칙, 정렬 축, 정렬 작업 배열입니다. */
+        GPUTransparentSorter _transparentSorter;
+        /** @brief 스킨 팔레트를 `_snapshot` 으로 옮깁니다(`populateFromScene` 이 매 프레임 부릅니다). */
+        GPUSkinPaletteCollector _skinPaletteCollector;
         /**
          * @brief 마지막 수집 때 본 퍼뮤테이션 세대입니다(`MaterialUtil::getPermutationGeneration`).
          * @details 정지한 씬에서 머티리얼의 정적 스위치나 키워드를 바꾸면 프리미티브는 하나도 더러워지지
@@ -243,8 +201,6 @@ namespace sw
          *          같은 배치가 된다. 배치는 PSO 하나로 그리므로 한쪽 퍼뮤테이션이 통째로 사라진다.
          */
         unordered_map<uint64, Material*> _mapShaderRepresentative;
-        /// @brief 퍼뮤테이션 해시에서 `_snapshot._pListShaderPermutation` 의 인덱스를 찾는 맵입니다.
-        unordered_map<uint64, uint32> _mapPermutationToIndex;
 
         /// 그릴 후보 하나(트랜스폼, 바운드, 메시, 머티리얼, 인스턴스, 블렌드)입니다. populateFromScene 이 배열을 재사용해 프레임당 힙 할당을 줄입니다.
         struct DrawCandidate
@@ -504,8 +460,6 @@ namespace sw
          *          `publishInstances()`(스냅샷에 포인터 넘기기)다. 이전 값은 `getPublished()` 로 읽는다. 규칙과 이유는 그 타입의 주석에 있다.
          */
         GPUInstanceRing _instanceRing;
-        /** @brief 지난 프레임 팔레트 행 수입니다. 이번 프레임 배열을 그만큼 미리 확보합니다(캐릭터 천 명이면 행이 십만 개이므로, 자라면서 옮겨지지 않게 합니다). */
-        size_t _paletteRowCountHint{ 0 };
 
         /** @brief 이번 프레임의 쓰기 슬롯을 반환합니다(`GPUInstanceRing::acquireWrite`). */
         vector<GPUInstance>& instanceWork() { return _instanceRing.acquireWrite(); }
@@ -531,32 +485,6 @@ namespace sw
         uint32 _lastTextureReloadGeneration{ 0 };
 
         /**
-         * @brief 투명 정렬 키(정렬 레이어 키, 깊이, 후보 인덱스)입니다. 정렬 전에 한 번 계산해 둡니다.
-         * @details 깊이는 정렬 축이 영벡터면 카메라까지의 거리², 아니면 그 축 위의 깊이(카메라 기준)다. 둘 다 클수록 먼저 그린다.
-         */
-        struct TransparentSortKey
-        {
-            uint32  _sortKey{ 0 };
-            float32 _depth{ 0.0f };
-            uint32  _candidateIndex{ 0 };
-        };
-        /**
-         * @brief 투명 정렬 순서입니다. 정렬 레이어 키가 작은 것, 깊이가 큰 것(먼 것), 후보 인덱스가 작은 것 순입니다. 전순서입니다.
-         * @details 깊이가 같으면 후보 인덱스(등록 순서)로 가르므로 같은 Z 의 스프라이트가 카메라를 따라 앞뒤가 뒤집히지 않는다.
-         */
-        static bool isDrawnBefore( const TransparentSortKey& keyA, const TransparentSortKey& keyB );
-        /** @brief 투명 인스턴스 하나의 정렬 키를 채웁니다. 주 뷰(`sortTransparent`)와 추가 뷰(`computeViewTransparentOrders`)가 같은 규칙을 씁니다. */
-        static TransparentSortKey makeTransparentSortKey( uint32 sortLayer, const float3& center, const float3& eye, const float3& axis, uint32 orderIndex );
-        /**
-         * @brief 투명 정렬의 작업 배열입니다.
-         * @details 비교 함수가 원소마다 raw 에서 바운드를 읽어 거리를 **다시** 구하면 투명 2000개에 비교 22000번,
-         *          무작위 읽기 44000번이 든다. 그 raw 는 다른 코어가 방금 쓴 것이라 원격 캐시에서 가져온다. 키를 한 번 계산해 두면 읽기는 2000번이고, 정렬은 12바이트 연속 배열 위에서 돈다.
-         */
-        vector<TransparentSortKey> _listTransparentSortKey;
-        /// @brief 추가 뷰 정렬의 스크래치입니다. 뷰마다 다시 씁니다.
-        vector<TransparentSortKey> _listViewSortKey;
-
-        /**
          * @brief 배치마다 그 배치의 인스턴스가 쓰는 머티리얼 원소 인덱스(중복 없음)입니다. `_listBatchElementRange` 로 자릅니다.
          * @details 회수 시계 스탬프는 **원소**에 찍는 것이라 인스턴스 8000개가 아니라 (배치, 원소) 쌍만 돌면 된다.
          *          합치기가 꺼져 있으면 배치당 원소 하나이고, 켜져 있어도 배치당 머티리얼 종류 수만큼이다.
@@ -567,9 +495,7 @@ namespace sw
         /** @brief 마지막으로 반영한 프리미티브 집합 세대입니다. 달라졌으면 레지스트리가 바뀐 것입니다. */
         uint64 _lastPrimitiveSetGeneration{ 0 };
         float3 _lastCameraPos{};
-        /** @brief 투명 정렬의 깊이 축입니다. 영벡터면 카메라까지의 거리를 씁니다(`setTransparentSortAxis`). */
-        float3 _transparentSortAxis{};
-        /** @brief 마지막 빌드가 쓴 깊이 축입니다. 다르면 정렬을 다시 합니다. */
+        /** @brief 마지막 빌드가 쓴 깊이 축입니다(`GPUTransparentSorter::getAxis`). 다르면 정렬을 다시 합니다. */
         float3 _lastTransparentSortAxis{};
         uint8  _bMergeAcrossMaterials{ SW_FALSE };
         /// @brief 꼬리를 재방출하는 중이면 true 입니다. `emitBatch` 가 원소를 테이블에서 다시 조회하지 않고 `_listCandidateMaterialElement` 를 읽습니다.

@@ -6459,7 +6459,7 @@ SW_TEST_CASE( RenderPassGPUTest, PortraitRendererDrawsAPrefabInIsolation )
  * @details 스킨드 큐브(위쪽 정점 = bone1) 셋이 반복 클립(bone1 사인 회전)을 0 · 0.25 · 0.5 초부터 재생한다. 변형 칸 넷(폭 0.25 초)의 가운데라
  *          (A) 캐릭터마다 사본 · 포즈 · 팔레트(공유 끔)와 (B) 묶음 공유(묶음 셋, 결과 구간 셋)가 같은 그림이어야 하고, (C) 모두 VAT(15 fps 표의
  *          정확한 프레임 시각)로 그려도 같아야 한다. (D) 클립 없는 바인드 포즈와는 달라야 한다 — 같으면 팔레트 · 표가 GPU 에 닿지 않는다.
- *          (B) 가 지면 묶음 팔레트를 싣는 쪽(`GPUSceneBuilder::collectSkinPalettes`) · 인스턴스 표(meshskin.hlsl), (C) 가 지면 VAT 정점 셰이더 경로다.
+ *          (B) 가 지면 묶음 팔레트를 싣는 쪽(`GPUSkinPaletteCollector::collect`) · 인스턴스 표(meshskin.hlsl), (C) 가 지면 VAT 정점 셰이더 경로다.
  */
 SW_TEST_CASE( RenderPassGPUTest, CrowdSharingAndVertexAnimationMatchPerUnitSkinning )
 {
