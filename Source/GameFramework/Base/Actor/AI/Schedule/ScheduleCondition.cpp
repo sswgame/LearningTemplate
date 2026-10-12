@@ -41,7 +41,7 @@ namespace sw
             static void parseTagList( string_view text, vector<TagID>& outListTag )
             {
                 outListTag.clear();
-                GameDataXML::forEachToken( text, kNameSeparators, [&]( string_view token )
+                StringUtil::forEachToken( text, kNameSeparators, [&]( string_view token )
                 { outListTag.push_back( TagID::request( token ) ); } );
             }
 
@@ -109,7 +109,7 @@ namespace sw
     uint8 ScheduleCondition::parsePhaseMask( string_view text, string_view sourceName, string_view ownerName )
     {
         uint8 mask = 0;
-        GameDataXML::forEachToken( text, ScheduleConditionInternal::kNameSeparators, [&]( string_view token )
+        StringUtil::forEachToken( text, ScheduleConditionInternal::kNameSeparators, [&]( string_view token )
         {
             const hashed_string name( token );
             bool                bFound = false;
@@ -139,7 +139,7 @@ namespace sw
         Internal::warnUnknownNames( _listWeather, vocabulary._listWeather, "weather", sourceName, ownerName );
 
         _listDayOfSeason.clear();
-        GameDataXML::forEachToken( node.getAttributeText( "daysOfSeason" ), Internal::kNameSeparators, [&]( string_view token )
+        StringUtil::forEachToken( node.getAttributeText( "daysOfSeason" ), Internal::kNameSeparators, [&]( string_view token )
         {
             int32 dayOfSeason = 0;
             if ( StringUtil::parseInt( token, dayOfSeason ) && dayOfSeason >= 1 )

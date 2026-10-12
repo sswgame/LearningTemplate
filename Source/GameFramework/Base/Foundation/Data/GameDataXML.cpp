@@ -96,7 +96,7 @@ namespace sw
 
     void GameDataXML::appendNameList( string_view text, string_view separators, vector<hashed_string>& outListName )
     {
-        forEachToken( text, separators, [&]( string_view token )
+        StringUtil::forEachToken( text, separators, [&]( string_view token )
         { outListName.push_back( hashed_string( token ) ); } );
     }
 
@@ -106,7 +106,7 @@ namespace sw
             return 0;
         uint32 tokenIndex = 0;
         uint32 readCount  = 0;
-        forEachToken( text, GameDataXMLInternal::kNumberSeparators, [&]( string_view token )
+        StringUtil::forEachToken( text, GameDataXMLInternal::kNumberSeparators, [&]( string_view token )
         {
             if ( tokenIndex >= maxCount )
                 return;

@@ -54,7 +54,7 @@ namespace sw
             entry._weight  = MathUtil::max( 0.0f, node.getAttributeFloat( "weight", entry._weight ) );
             entry._minTime = MathUtil::max( 0.0f, node.getAttributeFloat( "minTime", entry._minTime ) );
             entry._max     = node.getAttributeInt( "max", entry._max );
-            GameDataXML::forEachToken( node.getAttributeText( "tags" ), ",; ", [&]( string_view token )
+            StringUtil::forEachToken( node.getAttributeText( "tags" ), ",; ", [&]( string_view token )
             { entry._listTag.push_back( hashed_string( token ) ); } );
             (void)_catalog.add( entry );
         }

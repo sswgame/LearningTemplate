@@ -21,7 +21,7 @@ namespace sw
             static uint8 parsePostureMask( string_view text, uint8 fallback, string_view sourceName, const utf8* pMoveID )
             {
                 uint8 mask = 0;
-                GameDataXML::forEachToken( text, ",; \t", [&]( string_view token )
+                StringUtil::forEachToken( text, ",; \t", [&]( string_view token )
                 {
                     if ( StringUtil::equals( token, "Standing", true ) )
                         mask = static_cast<uint8>( mask | ( 1u << static_cast<uint32>( FighterPosture::Standing ) ) );

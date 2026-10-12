@@ -56,7 +56,7 @@ namespace sw
                     return outCondition._tag.isValid();
                 }
                 outCondition._kind = EquipConditionKind::BodyShape;
-                GameDataXML::forEachToken( string_view( pBodyShape ), ",; ", [&]( string_view token )
+                StringUtil::forEachToken( string_view( pBodyShape ), ",; ", [&]( string_view token )
                 {
                     outCondition._listBodyShape.push_back( hashed_string( token ) );
                 } );
@@ -119,7 +119,7 @@ namespace sw
             def._maxStack      = MathUtil::max( 1, node.getAttributeInt( "maxStack", def._maxStack ) );
             def._value         = MathUtil::max( 0, node.getAttributeInt( "value", def._value ) );
             def._rarity        = node.getAttributeInt( "rarity", def._rarity );
-            GameDataXML::forEachToken( node.getAttributeText( "tags" ), ",; ", [&]( string_view token )
+            StringUtil::forEachToken( node.getAttributeText( "tags" ), ",; ", [&]( string_view token )
             {
                 def._listTag.push_back( hashed_string( token ) );
             } );

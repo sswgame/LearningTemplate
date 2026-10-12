@@ -34,7 +34,7 @@ namespace sw
 
             static void readColors( string_view text, vector<float4>& outListColor )
             {
-                GameDataXML::forEachToken( text, ";", [&]( string_view token )
+                StringUtil::forEachToken( text, ";", [&]( string_view token )
                 {
                     outListColor.push_back( GameDataXML::parseFloat4( token, float4( 1.0f, 1.0f, 1.0f, 1.0f ) ) );
                 } );

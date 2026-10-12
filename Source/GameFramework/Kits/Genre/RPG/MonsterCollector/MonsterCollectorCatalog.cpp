@@ -22,7 +22,7 @@ namespace sw
             static void parseSixInts( string_view text, int32 ( &inoutArrValue )[kMonsterStatCount], int32 minValue )
             {
                 int32 slot = 0;
-                GameDataXML::forEachToken( text, ",; \t", [&]( string_view token )
+                StringUtil::forEachToken( text, ",; \t", [&]( string_view token )
                 {
                     if ( slot >= kMonsterStatCount )
                         return;

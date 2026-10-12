@@ -1,4 +1,4 @@
-// StringUtil 의 나누기 도우미 — forEachLine 이 CRLF · 빈 줄 · 끝 줄바꿈을 어떻게 다루는지, false 에서 멈추는지.
+// StringUtil 의 나누기 도우미 — forEachLine 의 CRLF · 빈 줄 · 끝 줄바꿈, forEachToken 의 빈 토큰, 둘 다 false 에서 멈추는지.
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
@@ -31,6 +31,25 @@ SW_TEST_CASE( StringUtilSplitTest, ForEachLineStopsWhenCallbackReturnsFalse )
     {
         ++count;
         return line != "y";
+    } );
+    SW_EXPECT_EQUAL( 2u, count );
+}
+
+SW_TEST_CASE( StringUtilSplitTest, ForEachTokenSkipsEmptyTokensAndStops )
+{
+    vector<string> listToken;
+    StringUtil::forEachToken( ",,Spring, Fall;;Winter ", ",; ", [&]( string_view token )
+    { listToken.push_back( string( token ) ); } );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 3 ), listToken.size() );
+    SW_EXPECT_TRUE( listToken[0] == "Spring" );
+    SW_EXPECT_TRUE( listToken[1] == "Fall" );
+    SW_EXPECT_TRUE( listToken[2] == "Winter" );
+
+    uint32 count = 0;
+    StringUtil::forEachToken( "a b c", " ", [&]( string_view token )
+    {
+        ++count;
+        return token != "b";
     } );
     SW_EXPECT_EQUAL( 2u, count );
 }

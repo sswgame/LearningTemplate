@@ -169,27 +169,19 @@ namespace sw
                     outMask = UserSettingsPlatform::kAll;
                     return true;
                 }
-                outMask      = 0;
-                bool   bOk   = true;
-                size_t start = 0;
-                while ( start < text.size() )
+                outMask  = 0;
+                bool bOk = true;
+                StringUtil::forEachToken( text, " ,", [&]( string_view name )
                 {
-                    size_t end = text.find_first_of( " ,", start );
-                    if ( end == string_view::npos )
-                        end = text.size();
-                    const string_view name = text.substr( start, end - start );
-                    start                  = end + 1;
-                    if ( name.empty() )
-                        continue;
                     uint8 bit = 0;
                     if ( findNamedValue( kArrPlatformName, name, bit ) == false )
                     {
                         SW_LOG_ERROR( "%#: setting '%#' names an unknown platform '%#'", sourceName, settingID.c_str(), name );
                         bOk = false;
-                        continue;
+                        return;
                     }
                     outMask = static_cast<uint8>( outMask | bit );
-                }
+                } );
                 return bOk;
             }
 

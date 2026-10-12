@@ -51,7 +51,7 @@ namespace sw
 
             static void readTags( string_view text, TagContainer& outTags )
             {
-                GameDataXML::forEachToken( text, ", ;", [&outTags]( string_view token )
+                StringUtil::forEachToken( text, ", ;", [&outTags]( string_view token )
                 { outTags.addTag( TagID::request( token ) ); } );
             }
 

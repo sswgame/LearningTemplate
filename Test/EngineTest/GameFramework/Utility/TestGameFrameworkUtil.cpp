@@ -454,7 +454,7 @@ SW_TEST_CASE( GameFrameworkUtilTest, DataXMLReadsRootsIDsNumbersAndTokens )
     SW_EXPECT_NEAR_EQUAL( 3.0f, arrValue[1], 1.0e-6f );
 
     int32 tokenCount = 0;
-    GameDataXML::forEachToken( ",Spring,, Fall ;", ",; ", [&]( string_view token )
+    StringUtil::forEachToken( ",Spring,, Fall ;", ",; ", [&]( string_view token )
     {
         ++tokenCount;
         SW_EXPECT_FALSE( token.empty() );

@@ -95,7 +95,7 @@ namespace sw
             bool              bSkip = false;
             if ( pSkipName != nullptr )
             {
-                GameDataXML::forEachToken( string_view( pSkipName ), ",", [&]( string_view token )
+                StringUtil::forEachToken( string_view( pSkipName ), ",", [&]( string_view token )
                 {
                     bSkip = bSkip || StringUtil::equals( token, name, true );
                 } );

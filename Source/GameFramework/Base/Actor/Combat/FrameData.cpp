@@ -117,7 +117,7 @@ namespace sw
                 window._fromFrame  = child.getAttributeInt( "from", move.getLastActiveFrame() + 1 );
                 window._toFrame    = child.getAttributeInt( "to", lastFrame );
                 window._bOnHitOnly = child.getAttributeBool( "onHit", false ) ? SW_TRUE : SW_FALSE;
-                GameDataXML::forEachToken( child.getAttributeText( "moves" ), ",; \t", [&]( string_view token )
+                StringUtil::forEachToken( child.getAttributeText( "moves" ), ",; \t", [&]( string_view token )
                 { window._listMoveID.push_back( hashed_string( token ) ); } );
                 if ( window._listMoveID.empty() || window._toFrame < window._fromFrame )
                 {

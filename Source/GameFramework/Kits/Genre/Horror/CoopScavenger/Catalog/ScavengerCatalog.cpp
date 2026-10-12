@@ -150,7 +150,7 @@ namespace sw
             def._minValueScale = MathUtil::max( 0.0f, node.getAttributeFloat( "valueMin", def._minValueScale ) );
             def._maxValueScale = MathUtil::max( def._minValueScale, node.getAttributeFloat( "valueMax", def._minValueScale ) );
             def._bCompany      = node.getAttributeBool( "company", false ) ? SW_TRUE : SW_FALSE;
-            GameDataXML::forEachToken( node.getAttributeText( "scraps" ), ",; ", [&]( string_view token )
+            StringUtil::forEachToken( node.getAttributeText( "scraps" ), ",; ", [&]( string_view token )
             {
                 const hashed_string scrapID( token );
                 if ( _scrapCatalog.find( scrapID ) == nullptr )

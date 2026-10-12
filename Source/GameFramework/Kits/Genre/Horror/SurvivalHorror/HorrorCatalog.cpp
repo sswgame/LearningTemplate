@@ -22,7 +22,7 @@ namespace sw
             static void parseDigits( string_view text, vector<int32>& outListDigit, string_view sourceName, const utf8* pID )
             {
                 outListDigit.clear();
-                GameDataXML::forEachToken( text, ",; ", [&]( string_view token )
+                StringUtil::forEachToken( text, ",; ", [&]( string_view token )
                 {
                     int32 digit = 0;
                     if ( StringUtil::parseInt( token, digit ) )
@@ -36,7 +36,7 @@ namespace sw
             static void parseLinks( string_view text, vector<HorrorClueLink>& outListLink, string_view sourceName, const utf8* pID )
             {
                 outListLink.clear();
-                GameDataXML::forEachToken( text, ",; ", [&]( string_view token )
+                StringUtil::forEachToken( text, ",; ", [&]( string_view token )
                 {
                     const size_t dash = token.find( '-' );
                     if ( dash == string_view::npos || dash == 0 || dash + 1 >= token.size() )

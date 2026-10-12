@@ -92,7 +92,7 @@ namespace sw
 
     void AppearanceXMLUtil::readTags( const XMLNode& node, const utf8* pAttribute, TagContainer& outTags )
     {
-        GameDataXML::forEachToken( node.getAttributeText( pAttribute ), ",; ", [&]( string_view token )
+        StringUtil::forEachToken( node.getAttributeText( pAttribute ), ",; ", [&]( string_view token )
         {
             outTags.addTag( TagID::request( token ) );
         } );

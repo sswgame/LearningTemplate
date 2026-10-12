@@ -79,7 +79,7 @@ namespace sw
                 SW_LOG_WARNING( "%#: dish '%#' has no positive price - skipped", sourceName, pID );
                 continue;
             }
-            GameDataXML::forEachToken( node.getAttributeText( "quality" ), ",;| ", [&]( string_view token )
+            StringUtil::forEachToken( node.getAttributeText( "quality" ), ",;| ", [&]( string_view token )
             {
                 float32 level = 0.0f;
                 if ( GameDataXML::parseFloats( token, &level, 1 ) == 1 )

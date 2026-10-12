@@ -83,7 +83,7 @@ namespace sw
             static void parseTagList( string_view text, vector<TagID>& outListTag )
             {
                 outListTag.clear();
-                GameDataXML::forEachToken( text, ",;| ", [&]( string_view token )
+                StringUtil::forEachToken( text, ",;| ", [&]( string_view token )
                 { outListTag.push_back( TagID::request( token ) ); } );
             }
 

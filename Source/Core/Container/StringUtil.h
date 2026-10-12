@@ -210,6 +210,39 @@ namespace sw
             }
         }
 
+        /**
+         * @brief @p separators 의 아무 글자로 나뉜 비지 않은 토큰마다 @p callback( string_view token ) 을 부릅니다. 할당하지 않습니다.
+         * @details 구분자가 이어지면 빈 토큰은 건너뜁니다. 콜백이 `bool` 을 돌려주면 false 에서 멈춥니다.
+         * @code
+         *     StringUtil::forEachToken( "Spring, Fall", ",; ", [&]( string_view token ) { ... } );
+         * @endcode
+         */
+        template <typename TCallback>
+        static void forEachToken( string_view text, string_view separators, TCallback&& callback )
+        {
+            size_t tokenStart = 0;
+            while ( tokenStart < text.size() )
+            {
+                size_t tokenEnd = text.find_first_of( separators, tokenStart );
+                if ( tokenEnd == string_view::npos )
+                    tokenEnd = text.size();
+                if ( tokenEnd > tokenStart )
+                {
+                    const string_view token = text.substr( tokenStart, tokenEnd - tokenStart );
+                    if constexpr ( std::is_same_v<std::invoke_result_t<TCallback&, string_view>, bool> )
+                    {
+                        if ( callback( token ) == false )
+                            return;
+                    }
+                    else
+                    {
+                        callback( token );
+                    }
+                }
+                tokenStart = tokenEnd + 1;
+            }
+        }
+
         /** @brief 문자열 길이(문자 수)를 반환합니다. */
         static uint32 strlen( const utf8* pStr );
         /** @brief 문자열 길이(문자 수)를 반환합니다. */

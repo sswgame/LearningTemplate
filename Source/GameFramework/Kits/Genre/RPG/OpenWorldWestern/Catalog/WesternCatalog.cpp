@@ -25,7 +25,7 @@ namespace sw
             static uint8 parseSizeMask( string_view text )
             {
                 uint8 mask = 0;
-                GameDataXML::forEachToken( text, ",; ", [&]( string_view token )
+                StringUtil::forEachToken( text, ",; ", [&]( string_view token )
                 {
                     if ( StringUtil::equals( token, string_view( "Small" ), true ) )
                         mask |= 1u << static_cast<uint32>( WesternAnimalSize::Small );
@@ -154,7 +154,7 @@ namespace sw
                 bond._staminaBonus = node.getAttributeFloat( "stamina", 0.0f );
                 bond._healthBonus  = node.getAttributeFloat( "health", 0.0f );
                 bond._fearResist   = node.getAttributeFloat( "fearResist", 0.0f );
-                GameDataXML::forEachToken( node.getAttributeText( "unlocks" ), ",; ", [&]( string_view token )
+                StringUtil::forEachToken( node.getAttributeText( "unlocks" ), ",; ", [&]( string_view token )
                 { bond._listUnlock.push_back( hashed_string( token ) ); } );
                 _listBondLevel.push_back( bond );
                 ++loadedCount;
