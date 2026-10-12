@@ -2848,6 +2848,14 @@
    "source": "Source/Editor/Panels/AudioMixer/AudioMixerPanel.cpp"
   },
   {
+   "name": "gv_editorProbeHierarchyObject",
+   "type": "string",
+   "default": "",
+   "kind": "시험",
+   "description": "탐침 Editor.HierarchyRowIndex 가 볼 오브젝트 이름 (시나리오용)",
+   "source": "Source/Editor/Panels/Scene/HierarchyPanel.cpp"
+  },
+  {
    "name": "gv_editorProbeObject",
    "type": "string",
    "default": "",

@@ -154,6 +154,13 @@ namespace sw
         /** @brief 부모 GameObject 입니다. primary SceneComponent 의 부모를 소유한 오브젝트를 반환합니다. */
         GameObject* getParent() const;
         /**
+         * @brief 같은 부모 아래(부모가 없으면 씬의 루트들 사이) 형제 중 표시 순서입니다. 작을수록 앞이고 같으면 오브젝트 id 순입니다(유니티 sibling index).
+         * @details 씬 파일에 저장되고 에디터의 계층 창이 그 순서로 그립니다. 틱 · 렌더 순서에는 쓰지 않는다. 값은 형제 수 안에서 0 부터 센 자리이고 65535 로 막힌다.
+         */
+        uint16 getSiblingIndex() const { return _siblingIndex; }
+        /** @brief 형제 사이의 표시 순서를 정합니다. 되돌리기 기록은 부르는 쪽(`EditorSiblingOrder`)이 합니다. */
+        void setSiblingIndex( uint16 siblingIndex ) { _siblingIndex = siblingIndex; }
+        /**
          * @brief 이 오브젝트(자식 오브젝트는 제외)의 켜진 씬 컴포넌트들이 그리거나 부딪히는 것을 덮는 **월드** 상자입니다. 크기가 있는 것이 없으면 false 를 반환합니다.
          * @details 에디터의 바닥과 표면 붙이기, 프레이밍이 크기를 이 함수 하나로 측정한다(`SceneComponent::getWorldBox`).
          */
@@ -413,6 +420,11 @@ namespace sw
         uint32 _tickPrerequisiteCount;
         /** @brief 틱 멤버십이 바뀌어 레지스트리의 더티 목록에 올라 있는지 나타냅니다. 워커에서 표시하므로 원자값입니다. */
         atomic<uint8> _bTickDirty;
+        /**
+         * @brief 형제 사이의 표시 순서입니다(`getSiblingIndex`). 클래스 끝의 꼬리 패딩에 들어가 오브젝트 크기를 늘리지 않으므로, 앞쪽으로 옮기지 않는다.
+         */
+        PROPERTY( HideInInspector )
+        uint16 _siblingIndex;
     };
 
     template <typename T, typename... Args>

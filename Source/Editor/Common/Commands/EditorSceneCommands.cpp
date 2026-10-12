@@ -8,6 +8,7 @@
 #include "Core/String/TagID.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/Commands/EditorSiblingOrder.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -245,9 +246,7 @@ namespace sw::editor
             if ( pObj != nullptr && pObj->getParent() == nullptr && pObj->isPendingDestroy() == false )
                 outListRoot.push_back( pObj );
         } );
-        std::sort( outListRoot.begin(), outListRoot.end(),
-                   []( const GameObject* pLeft, const GameObject* pRight )
-        { return pLeft->getObjectID() < pRight->getObjectID(); } );
+        EditorSiblingOrder::sortSiblings( outListRoot );
     }
 
     void EditorSceneCommands::duplicateObjects( GameObjectManager* pManager, const vector<GameObject*>& listObject, vector<GameObject*>& outListCreated )

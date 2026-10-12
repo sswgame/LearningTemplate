@@ -3,11 +3,14 @@
 #include "Editor/Panels/Scene/HierarchyPanel.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/TagID.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
+#include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
+#include "Editor/Common/Commands/EditorSiblingOrder.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
@@ -26,6 +29,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -39,6 +43,9 @@
 
 namespace sw::editor
 {
+    /** @brief 프로브 `Editor.HierarchyRowIndex` 가 볼 오브젝트 이름입니다. 시나리오가 `<Variable>` 로 정합니다. */
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbeHierarchyObject, "", "탐침 Editor.HierarchyRowIndex 가 볼 오브젝트 이름 (시나리오용)" );
+
     namespace
     {
         struct HierarchyPanelInternal
@@ -110,6 +117,58 @@ namespace sw::editor
                 return s_state;
             }
 
+            /** @brief `gv_editorProbeHierarchyObject` 오브젝트가 마지막 프레임에 그린 행에서 몇 번째인지입니다(0 부터). 그리지 않았거나 없으면 -1 입니다. */
+            [[nodiscard]] static bool readProbedRowIndex( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue                    = -1.0;
+                GameObjectManager* pManager = editor::getActiveObjectManager();
+                const GameObject*  pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( gv_editorProbeHierarchyObject.c_str() ) ) : nullptr;
+                if ( pObject == nullptr )
+                    return true;
+                const vector<uint64>& listRow = getRowState()._listDrawnRow;
+                for ( size_t rowIndex = 0; rowIndex < listRow.size(); ++rowIndex )
+                {
+                    if ( listRow[rowIndex] == pObject->getObjectID() )
+                    {
+                        outValue = static_cast<float64>( rowIndex );
+                        break;
+                    }
+                }
+                return true;
+            }
+
+            /** @brief 단일 선택(주 선택)된 오브젝트를 형제 사이에서 한 칸 옮깁니다. 커맨드(`scene.moveSiblingUp` · `Down`)가 씁니다. */
+            static void moveSelectionStep( bool bDown )
+            {
+                EditorContext*     pContext = EditorContext::get();
+                GameObjectManager* pManager = editor::getActiveObjectManager();
+                GameObject*        pObject  = pContext != nullptr ? pContext->getEditorSelection().getPrimaryObject() : nullptr;
+                if ( pManager != nullptr && pObject != nullptr )
+                    (void)EditorSiblingOrder::moveStep( *pManager, pObject, bDown, findEditorCameraObject() ); // 끝이면 아무것도 하지 않는다
+            }
+
+            static void runMoveUp()
+            {
+                moveSelectionStep( false );
+            }
+
+            static void runMoveDown()
+            {
+                moveSelectionStep( true );
+            }
+
+            /** @brief 주 선택이 폴더면 그 안에, 아니면 루트에 정리용 폴더를 만듭니다(언리얼 아웃라이너의 새 폴더). */
+            static void runCreateFolder()
+            {
+                EditorContext*     pContext = EditorContext::get();
+                GameObjectManager* pManager = editor::getActiveObjectManager();
+                if ( pManager == nullptr )
+                    return;
+                GameObject* pSelected = pContext != nullptr ? pContext->getEditorSelection().getPrimaryObject() : nullptr;
+                GameObject* pParent   = pSelected != nullptr && EditorSiblingOrder::isFolder( *pSelected ) ? pSelected : nullptr;
+                (void)EditorSiblingOrder::createFolder( *pManager, pParent ); // 편집이 막혔으면 nullptr 이고 아무것도 바뀌지 않는다
+            }
+
             /** @brief @p pObj 가 @p pTarget 의 조상이면 true 입니다. */
             static bool isAncestorOf( const GameObject* pObj, const GameObject* pTarget )
             {
@@ -157,17 +216,51 @@ namespace sw::editor
                 return false;
             }
 
-            static void handleHierarchyReparentDrop( GameObject* pTargetParent, const ImGuiPayload* pPayload,
-                                                     GameObjectManager* pManager )
+            /** @brief 계층 창이 보이지 않는 에디터 카메라 오브젝트입니다. 형제 번호를 다시 매길 때 빼야 한다. 없으면 nullptr 입니다. */
+            static const GameObject* findEditorCameraObject()
             {
-                if ( pPayload == nullptr || pManager == nullptr || pTargetParent == nullptr )
+                const CameraComponent* pEditorCamera = EditorCamera::find( editor::getActiveScene() );
+                return pEditorCamera != nullptr ? pEditorCamera->getOwner() : nullptr;
+            }
+
+            /** @brief 끌어 놓을 자리를 행 위에 그립니다 — 앞 · 뒤는 선, 자식으로 넣기는 행 테두리입니다. */
+            static void drawDropIndicator( SiblingDropZone zone, const ImVec2& rowMin, const ImVec2& rowMax )
+            {
+                ImDrawList*   pDrawList = ImGui::GetWindowDrawList();
+                const ImU32   color     = EditorColorUtil::toImU32( style::kAccent );
+                const float32 thickness = 2.0f;
+                if ( zone == SiblingDropZone::Before )
+                    pDrawList->AddLine( ImVec2{ rowMin.x, rowMin.y }, ImVec2{ rowMax.x, rowMin.y }, color, thickness );
+                else if ( zone == SiblingDropZone::After )
+                    pDrawList->AddLine( ImVec2{ rowMin.x, rowMax.y }, ImVec2{ rowMax.x, rowMax.y }, color, thickness );
+                else
+                    pDrawList->AddRect( rowMin, rowMax, color, 0.0f, 0, thickness );
+            }
+
+            /**
+             * @brief 오브젝트 행에 끌어 놓은 오브젝트를 처리합니다. 행의 위 · 아래 가장자리는 그 오브젝트 앞 · 뒤의 형제로(형제 순서를 저장한다),
+             *        가운데는 자식으로 넣습니다(유니티 하이어라키의 끌기와 같다). 놓기 전에는 자리 표시만 그립니다.
+             */
+            static void handleHierarchyDrop( GameObject* pTarget, const ImGuiPayload* pPayload, GameObjectManager* pManager )
+            {
+                if ( pPayload == nullptr || pManager == nullptr || pTarget == nullptr )
                     return;
                 if ( pPayload->DataSize != static_cast<int32>( sizeof( uint64 ) ) )
                     return;
 
+                const ImVec2          rowMin = ImGui::GetItemRectMin();
+                const ImVec2          rowMax = ImGui::GetItemRectMax();
+                const SiblingDropZone zone   = EditorSiblingOrder::computeDropZone( ImGui::GetMousePos().y, rowMin.y, rowMax.y );
+                drawDropIndicator( zone, rowMin, rowMax );
+                if ( pPayload->IsDelivery() == false )
+                    return;
+
                 const uint64      draggedID = *static_cast<const uint64*>( pPayload->Data );
                 GameObject* const pDragged  = pManager->findGameObjectByID( draggedID );
-                EditorSceneCommands::reparent( pDragged, pTargetParent );
+                if ( zone == SiblingDropZone::Onto )
+                    EditorSceneCommands::reparent( pDragged, pTarget );
+                else
+                    (void)EditorSiblingOrder::moveBeside( *pManager, pDragged, pTarget, zone == SiblingDropZone::After, findEditorCameraObject() ); // 실패는 아무것도 바꾸지 않는다
             }
 
             static void drawGameObjectDragDrop( GameObject* pObj, GameObjectManager* pManager )
@@ -185,9 +278,9 @@ namespace sw::editor
 
                 if ( ImGui::BeginDragDropTarget() )
                 {
-                    const ImGuiPayload* pPayload = ImGui::AcceptDragDropPayload( kHierarchyGoPayload );
+                    const ImGuiPayload* pPayload = ImGui::AcceptDragDropPayload( kHierarchyGoPayload, ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect );
                     if ( pPayload != nullptr )
-                        handleHierarchyReparentDrop( pObj, pPayload, pManager );
+                        handleHierarchyDrop( pObj, pPayload, pManager );
 
                     string droppedAssetPath;
                     if ( EditorWidgets::tryAcceptAssetPayload( droppedAssetPath ) )
@@ -279,6 +372,19 @@ namespace sw::editor
 
                 if ( ImGui::MenuItem( "Create Child GameObject" ) )
                     EditorSceneCommands::create( pManager, pObj );
+
+                if ( ImGui::MenuItem( "Create Folder" ) )
+                    (void)EditorSiblingOrder::createFolder( *pManager, nullptr ); // 편집이 막혔으면 nullptr 이고 아무것도 바뀌지 않는다
+                EditorSelfTestMarks::note( "hierarchy.menu.createFolder" );
+                if ( ImGui::MenuItem( "Create Folder Inside" ) )
+                    (void)EditorSiblingOrder::createFolder( *pManager, pObj ); // 편집이 막혔으면 nullptr 이고 아무것도 바뀌지 않는다
+
+                if ( ImGui::MenuItem( "Move Up" ) )
+                    (void)EditorSiblingOrder::moveStep( *pManager, pObj, false, findEditorCameraObject() ); // 맨 위면 아무것도 하지 않는다
+                EditorSelfTestMarks::note( "hierarchy.menu.moveUp" );
+                if ( ImGui::MenuItem( "Move Down" ) )
+                    (void)EditorSiblingOrder::moveStep( *pManager, pObj, true, findEditorCameraObject() ); // 맨 아래면 아무것도 하지 않는다
+                EditorSelfTestMarks::note( "hierarchy.menu.moveDown" );
 
                 if ( ImGui::MenuItem( "Duplicate GameObject", "Ctrl+D" ) )
                     EditorSceneCommands::duplicate( pManager, pObj );
@@ -435,7 +541,7 @@ namespace sw::editor
                 }
 
                 // 오브젝트 아이콘은 빌보드 종류 컴포넌트(라이트, 카메라, 오디오)가 있으면 그 아이콘이고, 없으면 기본 오브젝트 아이콘이다.
-                const utf8*                           pIcon = EditorComponentIcon::findObjectRow( *pObj )._pGlyph;
+                const utf8*                           pIcon = EditorSiblingOrder::isFolder( *pObj ) ? editoricon::kFolder : EditorComponentIcon::findObjectRow( *pObj )._pGlyph;
                 fixed_string<constant::kMaxBuffer256> arrLabel;
                 if ( badgeStr.empty() == false )
                     formatstring( arrLabel.data(), arrLabel.capacity(), "%# %# %###go%#", pIcon, pObj->getName().c_str(), badgeStr.c_str(), objectID );
@@ -547,7 +653,7 @@ namespace sw::editor
                 if ( bOpen )
                 {
                     vector<GameObject*> listChild;
-                    pObj->getChildren( listChild );
+                    EditorSiblingOrder::collectChildrenInOrder( *pObj, listChild );
                     for ( GameObject* pChild : listChild )
                     {
                         drawGameObjectNode( pChild, pManager, pFilter, renamingObjectID, renameBuffer,
@@ -602,6 +708,16 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_EDITOR_PANEL( HierarchyPanel, "hierarchy", EditorPanelCategory::Core, 100 );
+    SW_EDITOR_COMMAND( SceneMoveSiblingUp, "scene.moveSiblingUp", 2420, "Move Up in Hierarchy", editoricon::kGameObject, "Scene", "고른 오브젝트를 형제 사이에서 한 칸 위로 옮깁니다",
+                       "Move the selected object up among its siblings", {}, &HierarchyPanelInternal::runMoveUp, nullptr, "MainMenu/Edit" );
+    SW_EDITOR_COMMAND( SceneMoveSiblingDown, "scene.moveSiblingDown", 2421, "Move Down in Hierarchy", editoricon::kGameObject, "Scene",
+                       "고른 오브젝트를 형제 사이에서 한 칸 아래로 옮깁니다", "Move the selected object down among its siblings", {}, &HierarchyPanelInternal::runMoveDown, nullptr,
+                       "MainMenu/Edit" );
+    SW_EDITOR_COMMAND( SceneCreateFolder, "scene.createFolder", 2422, "Create Folder", editoricon::kFolder, "Scene",
+                       "고른 오브젝트 아래(없으면 루트)에 정리용 폴더를 만듭니다", "Create an organizing folder under the selection", {}, &HierarchyPanelInternal::runCreateFolder, nullptr,
+                       "MainMenu/Edit" );
+    SW_AUTOMATION_PROBE( editorHierarchyRowIndex, "Editor.HierarchyRowIndex", "Row index (from 0) of the object named by gv_editorProbeHierarchyObject in the last Hierarchy frame (-1 when not drawn)",
+                         &HierarchyPanelInternal::readProbedRowIndex );
 
     HierarchyPanel::HierarchyPanel()
         : _renamingObjectID{ 0 }
@@ -754,6 +870,8 @@ namespace sw::editor
             {
                 if ( ImGui::MenuItem( "Create Empty GameObject" ) )
                     EditorSceneCommands::create( pManager, nullptr );
+                if ( ImGui::MenuItem( "Create Folder" ) )
+                    (void)EditorSiblingOrder::createFolder( *pManager, nullptr ); // 편집이 막혔으면 nullptr 이고 아무것도 바뀌지 않는다
                 ImGui::EndPopup();
             }
         }
