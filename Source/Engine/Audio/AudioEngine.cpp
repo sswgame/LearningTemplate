@@ -29,12 +29,7 @@ namespace sw
         , _listVoiceScratch{}
         , _listAttenuation{}
         , _listSnapshot{}
-        , _pMusic{ nullptr }
-        , _musicPlayingID{ 0 }
-        , _musicSegmentStart{ 0 }
-        , _musicPendingFrame{ 0 }
-        , _musicSegment{ -1 }
-        , _musicPendingSegment{ -1 }
+        , _music{}
         , _mapLibrary{}
         , _mapEventState{}
         , _mapParameter{}
@@ -47,11 +42,7 @@ namespace sw
         , _droppedEventCount{ 0 }
         , _peakRealVoiceCount{ 0 }
         , _blockCursor{ audio::kBlockFrameCount }
-        , _listPublishedPlaying{}
-        , _publishedStats{}
-        , _publishedMusic{}
-        , _publishedAppliedID{ 0 }
-        , _publishMutex{}
+        , _published{}
         , _bInitialized{ false }
     {
     }
@@ -101,15 +92,11 @@ namespace sw
             _mapGameLibrary.clear();
         }
         _mapEmitter.clear();
-        _pMusic.reset();
-        _musicSegment        = -1;
-        _musicPendingSegment = -1;
+        _music._pDesc.reset();
+        _music._segment        = -1;
+        _music._pendingSegment = -1;
         _pMixer.reset();
-        {
-            std::scoped_lock<mutex> lock{ _publishMutex };
-            _listPublishedPlaying.clear();
-            _publishedStats = AudioEngineStats{};
-        }
+        _published.clear();
     }
 
     bool AudioEngine::loadMixer( const AudioMixerDesc& mixerDesc )
@@ -365,8 +352,7 @@ namespace sw
 
     AudioMusicStatus AudioEngine::getMusicStatus() const
     {
-        std::scoped_lock<mutex> lock{ _publishMutex };
-        return _publishedMusic;
+        return _published.getMusicStatus();
     }
 
     void AudioEngine::setBusUserVolume( const hashed_string& bus, float32 volume )
@@ -488,17 +474,12 @@ namespace sw
     {
         if ( playingID == 0 )
             return false;
-        // 아직 오디오 스레드가 보지 못한 재생은 살아 있는 것으로 친다.
-        if ( playingID > _publishedAppliedID.load( std::memory_order_acquire ) )
-            return playingID < _nextPlayingID.load( std::memory_order_acquire );
-        std::scoped_lock<mutex> lock{ _publishMutex };
-        return std::binary_search( _listPublishedPlaying.begin(), _listPublishedPlaying.end(), playingID );
+        return _published.isPlaying( playingID, _nextPlayingID.load( std::memory_order_acquire ) );
     }
 
     AudioEngineStats AudioEngine::getStats() const
     {
-        std::scoped_lock<mutex> lock{ _publishMutex };
-        return _publishedStats;
+        return _published.getStats();
     }
 
     float32 AudioEngine::getBusPeak( const hashed_string& bus ) const
@@ -1068,29 +1049,17 @@ namespace sw
             stats._instanceCount += instance._bInUse ? 1u : 0u;
         }
 
-        std::scoped_lock<mutex> lock{ _publishMutex };
-        _listPublishedPlaying.clear();
-        for ( const VoiceSlot& slot : _listVoice )
+        _published.publish( stats, _music.makeStatus( _renderedFrameCount ), _appliedPlayingID, [this]( vector<AudioPlayingID>& listPlaying ) -> uint32
         {
-            if ( slot._bInUse == false )
-                continue;
-            ++stats._voiceCount;
-            _listPublishedPlaying.push_back( slot._playingID );
-        }
-        std::sort( _listPublishedPlaying.begin(), _listPublishedPlaying.end() );
-        _publishedStats = stats;
-        _publishedMusic = AudioMusicStatus{};
-        if ( _pMusic != nullptr && _musicSegment >= 0 )
-        {
-            const uint32  segmentIndex  = static_cast<uint32>( _musicSegment );
-            const float64 framesPerBeat = _pMusic->computeFramesPerBeat( segmentIndex );
-            const float64 elapsed       = static_cast<float64>( _renderedFrameCount ) - static_cast<float64>( _musicSegmentStart );
-            _publishedMusic._segment    = _pMusic->_listSegment[segmentIndex]._name;
-            _publishedMusic._beat       = elapsed / framesPerBeat;
-            _publishedMusic._bar        = elapsed <= 0.0 ? 0u : static_cast<uint64>( _publishedMusic._beat ) / _pMusic->getBeatsPerBar( segmentIndex );
-            _publishedMusic._tempo      = static_cast<float32>( 60.0 * static_cast<float64>( audio::kSampleRate ) / framesPerBeat );
-            _publishedMusic._bPlaying   = true;
-        }
-        _publishedAppliedID.store( _appliedPlayingID, std::memory_order_release );
+            uint32 voiceCount = 0;
+            for ( const VoiceSlot& slot : _listVoice )
+            {
+                if ( slot._bInUse == false )
+                    continue;
+                ++voiceCount;
+                listPlaying.push_back( slot._playingID );
+            }
+            return voiceCount;
+        } );
     }
 } // namespace sw

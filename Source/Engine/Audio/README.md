@@ -294,6 +294,7 @@ AudioEngine& engine = pAudio->getEngine();                         // 이벤트,
 |---|---|
 | `IAudioSystem.h` | 오디오 서비스, 볼륨, 음악 |
 | `AudioEngine.h` | 명령, 이벤트, 파라미터, 스냅샷 |
+| `AudioEngineState.h` | 엔진의 값 부품: `AudioMusicPlayback` 는 음악의 재생 위치와 전환 예약을, `AudioPublishedState` 는 게임 스레드가 읽는 게시 사본(재생 목록, 상태, 음악 위치)을 맡습니다 |
 | `AudioMixerDesc.h` | 버스 그래프 데이터 |
 | `AudioEvent.h` | 이벤트 라이브러리 데이터 |
 | `AudioMusic.h` | 적응형 음악 데이터 |

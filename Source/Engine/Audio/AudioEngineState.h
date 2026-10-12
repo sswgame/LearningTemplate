@@ -1,0 +1,101 @@
+/**
+ * @file AudioEngineState.h
+ * @brief `AudioEngine` 이 값 멤버로 가지는 부품입니다. 적응형 음악의 재생 위치와, 오디오 스레드가 게임 스레드에 게시하는 사본을 따로 둡니다.
+ * @details 둘 다 비가상이고 할당을 늘리지 않습니다. 오디오 상태를 바꾸는 순서는 `AudioEngine` 이 정합니다.
+ */
+#pragma once
+#include "Core/Common/Macros.h"
+#include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/mutex.h"
+#include "Core/Container/vector.h"
+#include "Core/Memory/Memory.h"
+#include "Core/String/hashed_string.h"
+
+#include "Engine/Audio/AudioMusic.h"
+#include "Engine/Audio/AudioTypes.h"
+
+namespace sw
+{
+    /** @brief 마지막 블록에서 게시한 엔진 상태입니다. */
+    struct AudioEngineStats
+    {
+        uint64 _renderedFrameCount{ 0 }; ///< 지금까지 렌더한 프레임 수다.
+        uint32 _voiceCount{ 0 };         ///< 살아 있는 보이스 수다. 실제, 가상, 클립 대기 보이스를 모두 센다.
+        uint32 _realVoiceCount{ 0 };     ///< 섞은 보이스 수다.
+        uint32 _virtualVoiceCount{ 0 };  ///< 위치만 진행한 보이스 수다.
+        uint32 _instanceCount{ 0 };      ///< 살아 있는 이벤트 인스턴스 수다.
+        uint32 _peakRealVoiceCount{ 0 }; ///< 지금까지 한 블록에 섞은 보이스 수의 최댓값이다.
+        uint64 _playedEventCount{ 0 };   ///< 지금까지 낸 이벤트 수다. 인스턴스를 만든 이벤트만 센다.
+        uint64 _droppedEventCount{ 0 };  ///< 쿨다운, 상한(Reject), 슬롯 부족으로 버린 이벤트 수다.
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 적응형 음악의 현재 위치입니다. 마지막 블록에서 게시한 값입니다. */
+    struct AudioMusicStatus
+    {
+        hashed_string _segment{};     ///< 현재 구간이다. 전환을 기다리는 동안은 이전 구간이다.
+        float64       _beat{ 0.0 };   ///< 구간 시작에서 센 박(소수)
+        uint64        _bar{ 0 };      ///< 구간 시작에서 센 마디 수다.
+        float32       _tempo{ 0.0f }; ///< 현재 템포(BPM)다.
+        bool          _bPlaying{ false };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 오디오 스레드가 가진 적응형 음악의 재생 위치입니다. 구간 전환 예약을 함께 담습니다. */
+    struct AudioMusicPlayback
+    {
+        shared_ptr<const AudioMusicDesc> _pDesc{};              ///< 지금 음악이다.
+        AudioPlayingID                   _playingID{ 0 };       ///< 음악의 재생 id 다.
+        uint64                           _segmentStart{ 0 };    ///< 현재 구간의 0 박이 있는 렌더 프레임이다.
+        uint64                           _pendingFrame{ 0 };    ///< 예약된 전환의 렌더 프레임이다.
+        int32                            _segment{ -1 };        ///< 지금 구간이다(-1 = 없음).
+        int32                            _pendingSegment{ -1 }; ///< 예약된 다음 구간이다(-1 = 없음).
+
+        /** @brief @p renderedFrameCount 시각의 음악 위치를 만듭니다. 음악이 없으면 재생하지 않는 상태입니다. */
+        AudioMusicStatus makeStatus( uint64 renderedFrameCount ) const;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 오디오 스레드가 블록마다 게시하고 게임 스레드가 읽는 사본입니다. 자기 잠금으로 지킵니다. */
+    class AudioPublishedState
+    {
+    public:
+        /** @brief 게시한 재생 목록과 상태를 비웁니다. */
+        void clear();
+        /**
+         * @brief 새 사본을 게시합니다. @p fillPlaying 이 잠금 안에서 재생 id 를 채우고 보이스 수를 반환합니다.
+         * @details 목록은 채운 뒤 정렬하고, 적용한 재생 id 는 맨 끝에 release 로 씁니다.
+         */
+        template <typename FillFunc>
+        void publish( AudioEngineStats stats, const AudioMusicStatus& music, uint64 appliedPlayingID, FillFunc&& fillPlaying )
+        {
+            std::scoped_lock<mutex> lock{ _mutex };
+            _listPlaying.clear();
+            stats._voiceCount = fillPlaying( _listPlaying );
+            std::sort( _listPlaying.begin(), _listPlaying.end() );
+            _stats = stats;
+            _music = music;
+            _appliedPlayingID.store( appliedPlayingID, std::memory_order_release );
+        }
+        /** @brief 재생이 살아 있는지 반환합니다. 아직 적용하지 않은 id 면 @p nextPlayingID 보다 작을 때(발급한 id 일 때) true 입니다. */
+        bool isPlaying( AudioPlayingID playingID, uint64 nextPlayingID ) const;
+        /** @brief 마지막 블록의 상태입니다. */
+        AudioEngineStats getStats() const;
+        /** @brief 마지막 블록의 음악 위치입니다. */
+        AudioMusicStatus getMusicStatus() const;
+
+    private:
+        vector<AudioPlayingID> _listPlaying{};         /**< 살아 있는 재생 id 입니다. 정렬되어 있습니다. */
+        AudioEngineStats       _stats{};               /**< 마지막 블록의 상태입니다. */
+        AudioMusicStatus       _music{};               /**< 마지막 블록의 음악 위치입니다. */
+        atomic<uint64>         _appliedPlayingID{ 0 }; /**< 게시 시점에 적용된 재생 id 입니다. */
+        mutable mutex          _mutex{};               /**< 위 사본을 지킵니다. */
+    };
+} // namespace sw
