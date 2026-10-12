@@ -196,6 +196,17 @@ HP 바(`HealthBarComponent`)가 그 리스너를 상속하므로, 어빌리티 �
 
 세트의 어트리뷰트 값은 세트를 컴포넌트에 붙이기 전에 정합니다. 그래서 "체력은 최대 체력 이하" 같은 훅이 적은 순서에 따라 값을 자르지 않습니다.
 
+### 소스 파일 나눔
+
+`AbilitySystemComponent` 는 클래스 하나이고, 구현만 책임별로 네 `.cpp` 에 나눕니다. 헤더와 공개 API, 틱 경로(`onTick` → `advanceTime` 의 비가상 직접 호출)는 그대로입니다.
+
+| 파일 | 책임 |
+|---|---|
+| `AbilitySystemComponent.cpp` | 수명 · 틱 · 목록 잠금과 지연 제거 · 카탈로그와 세트 부여 · 태그 · 스레드 확인 · 모듈 언로드 정리 |
+| `AbilitySystemComponentAttribute.cpp` | 어트리뷰트 세트 등록 · 값 조회와 base 쓰기 · 지속 이펙트 집계로 현재값 다시 계산 · 변경 알림 |
+| `AbilitySystemComponentEffect.cpp` | 이펙트 스펙 만들기 · 적용(즉시 · 지속 · 스택) · 제거 · 주기 실행 · 남은 시간(쿨다운) 조회 · 큐 발송 |
+| `AbilitySystemComponentAbility.cpp` | 어빌리티 부여 · 발동 · 취소 · 입력 · 활성 어빌리티 틱, 게임플레이 이벤트와 큐 구독, 체력 읽기 |
+
 ## 확장하는 법
 
 ### 새 어빌리티 클래스
