@@ -7,6 +7,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/NetTransport.h"
@@ -47,6 +48,19 @@ namespace sw
          *        `-gv_netEmuReorderPercent`, `-gv_netEmuBandwidthKilobytesPerSecond` 가 해당하며, 언리얼의 `PktLag`, `PktLagVariance`, `PktLoss`, `PktDup`, `PktOrder` 에 대응합니다.
          */
         static NetEmulationConditions makeFromGlobalVariables();
+        /**
+         * @brief 이름으로 회선 프리셋을 고릅니다(`off`, `lan`, `wifi`, `lte`, `badwifi`, `disconnected`). 모르는 이름이면 false 입니다.
+         * @details 값은 한 방향입니다. 언리얼 Net Emulation 프로필(Average · Bad), 유니티 Network Simulator 프리셋(Broadband · 4G · 3G)과 같은 자리이고,
+         *          에디터 회선 조절과 개발 명령이 같은 표를 씁니다(서버 디버깅 S4).
+         */
+        [[nodiscard]] static bool tryGetPreset( string_view presetName, NetEmulationConditions& outConditions );
+        /** @brief 프리셋 이름을 쉼표로 이은 글입니다(도움말 · 오류 문구). */
+        static const utf8* getPresetNames();
+        /**
+         * @brief `latencyMs=80 jitterMs=20 lossPercent=5 duplicatePercent=1 reorderPercent=2 bandwidthKBps=256` 같은 덮어쓰기를 @p inoutConditions 에 적용합니다.
+         * @details 키는 전역 변수(`gv_netEmu*`)와 같은 단위입니다. 빈칸으로 나누며, 모르는 키나 음수 · 숫자가 아닌 값이면 false 와 @p outError 이고 아무것도 바꾸지 않습니다.
+         */
+        [[nodiscard]] static bool parseOverrides( string_view text, NetEmulationConditions& inoutConditions, string& outError );
     };
 } // namespace sw
 
@@ -58,10 +72,13 @@ namespace sw
         uint64 _sentCount{ 0 };    ///< 안쪽 전송에 넘긴 패킷(중복 포함).
         uint64 _droppedCount{ 0 }; ///< 손실이나 큐 넘침으로 버린 패킷.
         uint64 _duplicatedCount{ 0 };
-        uint64 _reorderedCount{ 0 }; ///< 일부러 늦춘 패킷.
-        uint64 _queueDropCount{ 0 }; ///< 버린 패킷 중 대역폭 큐 넘침으로 버린 것.
-        uint64 _filteredCount{ 0 };  ///< 버린 패킷 중 필터가 버린 것.
-        uint64 _corruptedCount{ 0 }; ///< 한 바이트를 뒤집어 넘긴 패킷(버리지 않는다).
+        uint64 _reorderedCount{ 0 };       ///< 일부러 늦춘 패킷.
+        uint64 _queueDropCount{ 0 };       ///< 버린 패킷 중 대역폭 큐 넘침으로 버린 것.
+        uint64 _filteredCount{ 0 };        ///< 버린 패킷 중 필터가 버린 것.
+        uint64 _corruptedCount{ 0 };       ///< 한 바이트를 뒤집어 넘긴 패킷(버리지 않는다).
+        uint64 _outageDroppedCount{ 0 };   ///< 끊김(`startOutage`) 동안 버린 패킷(보내기와 받기).
+        uint64 _incomingDroppedCount{ 0 }; ///< 받는 쪽 조건의 손실로 버린 패킷.
+        uint64 _incomingDelayedCount{ 0 }; ///< 받는 쪽 조건으로 늦춰 넘긴 패킷.
     };
 } // namespace sw
 
@@ -93,6 +110,15 @@ namespace sw
         void clearConditions( const NetAddress& to );
         /** @brief 목적지에 적용하는 조건을 반환합니다. */
         NetEmulationConditions findConditions( const NetAddress& to ) const;
+        /**
+         * @brief 받는 쪽(내려받기) 조건을 둡니다. 지연 · 흔들림 · 손실 · 순서 바꿈만 씁니다(대역폭 · 중복 · 깨짐은 보내는 쪽 조건의 몫).
+         * @details 한 프로세스가 올림과 내림을 따로 나쁘게 하는 길입니다(언리얼 `PktIncomingLagMin` · `PktIncomingLoss`). 받은 패킷을 큐에 두고 때가 되면 `receive` 가 넘깁니다.
+         */
+        void                   setIncomingConditions( const NetEmulationConditions& conditions );
+        NetEmulationConditions getIncomingConditions() const;
+        /** @brief 지금(마지막 `update` 시각)부터 @p durationSeconds 동안 보내고 받는 것을 모두 버립니다. 회선 조절의 "스파이크"(터널 · 엘리베이터)입니다. 0 이하면 끝냅니다. */
+        void startOutage( float64 durationSeconds );
+        bool isInOutage() const;
 
         [[nodiscard]] bool send( const NetAddress& to, const uint8* pData, int32 size ) override;
         [[nodiscard]] bool receive( NetAddress& outFrom, vector<uint8>& outBuffer ) override;
@@ -123,16 +149,31 @@ namespace sw
             uint8                  _bOverride{ SW_FALSE };
         };
 
+        /** @brief 받는 쪽 조건으로 늦춘 패킷 하나입니다. */
+        struct Incoming
+        {
+            vector<uint8> _buffer{};
+            NetAddress    _from{};
+            float64       _deliverTime{ 0.0 };
+            uint64        _order{ 0 };
+        };
+
         LinkState& findOrAddLink( const NetAddress& to );
         float32    nextRandom();
+        /** @brief 잠금 안에서 부릅니다. 안쪽 전송에서 받은 것을 받는 쪽 조건으로 큐에 넣습니다. */
+        void pullIncomingLocked();
 
         mutable mutex          _mutex;
         INetTransport*         _pInner;
         vector<Pending>        _listPending;
+        vector<Incoming>       _listIncoming; ///< 받는 쪽 조건으로 늦춘 패킷(도착 순서)
+        vector<uint8>          _receivedBytes;
         vector<LinkState>      _listLink;
         NetEmulationConditions _defaultConditions;
+        NetEmulationConditions _incomingConditions;
         NetEmulationStats      _stats;
         float64                _time;
+        float64                _outageUntil; ///< 이 시각 전까지 보내고 받는 것을 모두 버린다
         uint64                 _order;
         uint32                 _randomState;
     };

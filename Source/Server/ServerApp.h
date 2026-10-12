@@ -11,6 +11,9 @@
  *
  *          운영 관측을 위해 지표 레지스트리(`server_tick_seconds`, `server_dropped_ticks_total`)와 상태 확인(틱마다 박동하고, 종료 요청이 오면 비우는 중으로 바꾼다)을 항상 가진다.
  *          설정의 `_opsPort` 가 0 이 아니면 운영 HTTP 엔드포인트(`/metrics`, `/healthz`, `/readyz`, 기본 바인드는 `127.0.0.1`)를 연다.
+ *          프로세스 지표(`process_resident_memory_bytes`, `server_service_connections`)는 초에 한 번 갱신한다.
+ *          게임 인스턴스를 만든 뒤 모듈이 올린 서버 서비스(`ServerServiceRegistry`, 예: 온라인 서비스 호스트)를 시작하고 서버 루프마다 돌린다. 서비스는 지표와 상태
+ *          레지스트리를 `ServerServiceContext` 로 받는다. 서비스 코드는 모듈에 있으므로 모듈을 언로드하기 전(리로드, 종료)에 멈춘다.
  *          Dev 빌드에서는 콘솔 명령 `pause`, `resume`, `step [N]` 으로 게임 틱을 멈추고 한 틱씩 돌릴 수 있다. 디버거 없이 중단점처럼 쓰는 기능이며, 네트워크 스레드는 계속 돌아 연결이 유지된다.
  */
 #pragma once
@@ -22,6 +25,7 @@
 
 #include "Engine/EngineLoop.h"
 #include "Engine/Module/ModuleCatalog.h"
+#include "Engine/Observability/ServerServiceRegistry.h"
 
 namespace sw
 {
@@ -31,10 +35,13 @@ namespace sw
     class IStreamTransport;
     class LiveReloadManager;
     class MetricCounter;
+    class MetricGauge;
     class MetricHistogram;
     class MetricRegistry;
     class ModuleHost;
     class OpsHTTPEndpoint;
+    class ProcessMetrics;
+    class ServerServiceManager;
     class ServiceHealthRegistry;
 
     /**
@@ -67,6 +74,20 @@ namespace sw
         /** @brief 지표와 상태 레지스트리를 만들고, 설정이 켜면 운영 HTTP 엔드포인트를 엽니다. 켰는데 열지 못하면 false 를 반환합니다(기동 실패). */
         [[nodiscard]] bool initializeObservability();
         void               shutdownObservability();
+        /** @brief 레지스트리에 올라온 서버 서비스(온라인 서비스 호스트 등)를 시작합니다. 하나라도 실패하면 false 입니다(기동 실패). */
+        [[nodiscard]] bool startServerServices();
+        /** @brief 프로세스 지표(메모리, 서비스 연결 수)를 초에 한 번 갱신합니다. */
+        void updateProcessMetrics( int64 monotonicMs );
+        /**
+         * @brief 지난 실행이 남긴 크래시 파일을 묶음 폴더(`Saved/CrashReports`)로 묶고 지표 `server_crash_reports` 에 남은 묶음 수를 적습니다.
+         * @details 클라이언트의 `Telemetry` 기동 단계(동의는 플레이어 설정)를 서버는 돌지 않으므로 여기서 묶습니다. 동의는 `Local`(기계 안에만)입니다.
+         *          보내기(보고 프로세스)는 운영 설정의 동의와 서버용 보고 경로가 생기면 더합니다.
+         */
+        void collectPreviousCrashes();
+#if !defined( SW_SHIPPING )
+        /** @brief 모듈 리로드 직전입니다. 서버 서비스의 코드는 그 모듈에 있으므로 먼저 멈추고, 게임 쪽 처리는 모듈 호스트에 넘깁니다. 다음 틱에 다시 시작합니다. */
+        bool onBeforeModuleReload( const vector<string>& listModuleName );
+#endif
         LiveReloadManager* getLiveReloadManager() const;
         void               tickOnce( float32 deltaSeconds );
         /** @brief 콘솔 명령 한 줄을 이 스레드(게임 스레드)에서 처리합니다. */
@@ -89,22 +110,30 @@ namespace sw
         unique_ptr<ServiceHealthRegistry> _healthRegistry;
         unique_ptr<IStreamTransport>      _opsTransport; ///< 운영 HTTP 의 스트림 전송(엔드포인트가 빌려 쓰므로 엔드포인트를 종료한 뒤 지운다).
         unique_ptr<OpsHTTPEndpoint>       _opsEndpoint;
-        vector<string>                    _listPendingCommand;  ///< 콘솔에서 꺼낸 줄(틱마다 재사용)
-        const ServerConfig*               _pServerConfig;       // ConfigManager 가 소유한다
-        MetricHistogram*                  _pTickHistogram;      ///< server_tick_seconds. 틱 본문 시간.
-        MetricCounter*                    _pDroppedTickCounter; ///< server_dropped_ticks_total
+        unique_ptr<ProcessMetrics>        _processMetrics;
+        unique_ptr<ServerServiceManager>  _serverServices;          ///< 모듈이 올린 서버 서비스(온라인 서비스 호스트 등)
+        string                            _serverConfigPath;        ///< 읽은 서버 설정 파일 경로(서비스가 옆 파일을 찾는다)
+        ServerServiceContext              _serverServiceContext;    ///< 서버 서비스와 게임 · 키트 모듈(`ServerServiceRegistry::findHostContext`)이 받는 서버 문맥
+        vector<string>                    _listPendingCommand;      ///< 콘솔에서 꺼낸 줄(틱마다 재사용)
+        const ServerConfig*               _pServerConfig;           // ConfigManager 가 소유한다
+        MetricHistogram*                  _pTickHistogram;          ///< server_tick_seconds. 틱 본문 시간.
+        MetricCounter*                    _pDroppedTickCounter;     ///< server_dropped_ticks_total
+        MetricGauge*                      _pServiceConnectionGauge; ///< server_service_connections. 서버 서비스가 받고 있는 연결 수
         uint64                            _tickCount;
         int64                             _startNanoseconds;
         int64                             _tickNanoseconds;          ///< 한 틱 주기
         int64                             _statusTickSumNanoseconds; ///< 틱 본문 시간 합
         int64                             _statusTickMaxNanoseconds; ///< 틱 본문 시간 최대
         uint32                            _statusTickSampleCount;
-        uint32                            _droppedTickCount; ///< 밀려 버린 틱 수(누적)
-        uint32                            _pendingStepCount; ///< 일시정지 중 더 돌 틱 수(`step N`)
+        uint32                            _droppedTickCount;    ///< 밀려 버린 틱 수(누적)
+        uint32                            _pendingStepCount;    ///< 일시정지 중 더 돌 틱 수(`step N`)
+        int64                             _nextProcessSampleMs; ///< 프로세스 지표를 다시 읽을 단조 밀리초
 
         uint8                  _bReady                  : 1;
         uint8                  _bSignalHandlerInstalled : 1;
         uint8                  _bPaused                 : 1; ///< Dev `pause`. 게임 틱을 멈춘다(콘솔, 종료 신호, 네트워크 스레드는 돈다).
-        [[maybe_unused]] uint8 _reserved                : 5;
+        uint8                  _bRestartServerServices  : 1; ///< 모듈 리로드로 서버 서비스를 멈췄다. 다음 틱에 다시 시작한다
+        uint8                  _bCrashReportsStarted    : 1; ///< 크래시 보고 서비스를 이 서버가 초기화했다(종료 때 내린다)
+        [[maybe_unused]] uint8 _reserved                : 3;
     };
 } // namespace sw

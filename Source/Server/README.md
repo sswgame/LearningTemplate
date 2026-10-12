@@ -68,7 +68,12 @@ Dev 빌드는 게임 틱을 멈추는 명령도 받습니다. `pause` 는 틱을
 클라이언트는 `App.exe "-gv_netConnectAddress=127.0.0.1:7777"` 이고, 로그에 `Net session client 0 connected from …` 가 남습니다. Dev 서버의 `net.status` 가 역할 · 연결 수를 답합니다.
 에디터는 툴바의 Net Mode(전용 서버 + 클라이언트 N)로 이 둘을 자식 프로세스로 띄우고 로그 · 트레이스를 모읍니다([Editor README](../Editor/README.md) "멀티 프로세스 재생").
 
-**5단계 — 배포 서버를 빌드합니다.** `Ninja-Shipping-Server` 프리셋은 서버만 빌드하고, 쿠킹도 서버 패키지 규칙으로 합니다.
+**5단계 — 온라인 서비스를 띄웁니다.** 서버 설정 옆에 `<이름>.online.json` 을 두면(예: `ops.json` 이면 `ops.online.json`) 서버가 로그인, 채팅, 디렉터리, 매칭 같은
+온라인 서비스를 서비스 포트(`_servicePort`, TCP · TLS 1.3)에서 받습니다. 파일이 없으면 띄우지 않습니다. 파일 형식과 키트 옵션은 [Online README](../GameFramework/Base/Online/README.md) "서버 조립" 에 있습니다.
+로그에 `Online services listening on port 7780 (server 1, kits: account, …)` 가 남고, 상태 검사 `online_services` 가 `/readyz` 에 들어갑니다.
+Dev 에서 TLS 인증서와 키 경로를 비우면 `Saved/Certificates/` 의 개발용 인증서를 씁니다. Shipping 은 두 경로가 필수입니다.
+
+**6단계 — 배포 서버를 빌드합니다.** `Ninja-Shipping-Server` 프리셋은 서버만 빌드하고, 쿠킹도 서버 패키지 규칙으로 합니다.
 
 ```powershell
 build/Ninja-Shipping-Server/Bin/Server.exe -server-config=Config/Server/Empty.json
@@ -112,6 +117,21 @@ Dev의 Server는 팩이 아니라 낱개 파일을 읽지만, 같은 규칙으�
 
 서버는 지표 레지스트리(`Engine/Observability/MetricRegistry`)와 상태 확인 레지스트리(`ServiceHealthRegistry`)를 항상 갖고 있습니다.
 지표에는 `server_tick_seconds` 히스토그램과 `server_dropped_ticks_total` 이 있고, 상태 확인은 틱마다 신호를 받으며 종료 요청을 받으면 드레인(draining) 상태가 됩니다.
+프로세스 지표 `process_resident_memory_bytes`, `process_resident_memory_max_bytes`, `process_start_time_seconds`(Prometheus 클라이언트 라이브러리의 표준 이름)와
+서버 서비스가 받고 있는 연결 수 `server_service_connections` 는 초에 한 번 갱신합니다. 콘솔 `status` 줄에도 서비스 수, 연결 수, 상주 메모리가 나옵니다.
+
+### 서버 서비스 — 모듈이 서버에 붙이는 일
+
+게임 틱과 따로 서버 프로세스와 함께 사는 일(온라인 서비스 호스트, 서버 등록)은 **서버 서비스**(`IServerService`)입니다.
+모듈(GameFramework, 키트, 게임)이 `.cpp` 에 `SW_REGISTER_SERVER_SERVICE( 타입, "이름", 시작 순서 )` 한 줄을 두면, 서버가 게임 인스턴스를 만든 뒤 시작 순서대로 만들어 시작하고
+서버 루프마다 `tick` 을 부르고, 종료할 때 반대 순서로 멈춥니다. 언리얼의 `UEngineSubsystem`(모듈이 로드되면 엔진이 만든다)에 해당합니다.
+
+- 서비스는 `ServerServiceContext` 로 서버 설정, 설정 테이블, 지표 레지스트리, 상태 레지스트리를 받습니다. 서버 서비스가 아닌 게임 인스턴스와 키트 코드는
+  같은 문맥을 `ServerServiceRegistry::findHostContext()` 로 받습니다(전용 서버가 게임 인스턴스를 만들기 전에 묶고 종료 때 풉니다. App 과 테스트에서는 null).
+  게임과 키트가 서버 지표와 상태를 받는 길은 이 문맥 하나입니다.
+- 하나라도 시작에 실패하면 서버는 기동하지 않습니다. 설정상 할 일이 없는 서비스는 아무것도 하지 않고 성공으로 끝냅니다.
+- 서비스 코드는 모듈 안에 있으므로, Dev 서버는 모듈 리로드 직전에 서비스를 멈추고 리로드 뒤 다시 시작합니다.
+- 서비스는 게임 틱이 멈춘 동안(`pause`)에도 돕니다.
 설정의 `_opsPort` 가 0이 아니면 운영 HTTP 엔드포인트(`OpsHTTPEndpoint`)를 엽니다. GET 하나에 답하고 연결을 닫으며, 평문이고 인증이 없습니다.
 
 | 경로 | 응답 |
@@ -188,7 +208,9 @@ WantedBy=multi-user.target
   준비, 상태, 종료 줄과 콘솔 명령의 답이 Info라서, 빼면 서버가 아무 말도 하지 않습니다. 이 차이는 `ServerBootTest` 가 Shipping-Server 빌드에서 확인합니다.
 - **서버 패키지에 없는 에셋을 가리키는 테스트는 서버 전용 빌드에서 건너뛰세요.** `Test/EngineTest/HostTargetTestUtil.h` 를 씁니다.
   그런 에셋을 찾는 엔진 코드(`DDSLoader`, 지형 스플랫 맵)는 `isExcludedForHost` 로 오류 없이 넘어가야 합니다.
-- 서버의 크래시 보고와 텔레메트리는 아직 없습니다. `Telemetry` 단계가 `Client` 대상이기 때문입니다. 남은 일은 [백로그](../../docs/06_Backlog.md)에 있습니다.
+- **서버는 지난 크래시를 기동 때 묶기만 합니다.** `Telemetry` 단계가 `Client` 대상(동의가 플레이어 설정)이라 서버는 따로 묶습니다(`Saved/CrashReports/crash_<세션>`).
+  동의는 `local`(기계 안에만)이고, 남은 묶음 수가 지표 `server_crash_reports` 와 경고 줄로 나옵니다. 보내기는 운영 설정의 동의와 서버용 보고 경로가 생기면 더합니다.
+  서버의 텔레메트리는 없습니다. 남은 일은 [백로그](../../docs/06_Backlog.md)에 있습니다.
 
 ## 더 볼 곳
 
@@ -199,7 +221,7 @@ WantedBy=multi-user.target
 | `Windows/WindowsServiceHost.h` | Windows 서비스 |
 | `Engine/Config/Server/ServerConfig.h` | 서버 설정 |
 | `Core/Process/ShutdownSignal.h` | 종료 신호 처리 |
-| `Engine/Observability/` | 지표, 상태 확인, 운영 HTTP |
+| `Engine/Observability/` | 지표, 상태 확인, 운영 HTTP, 프로세스 지표, 서버 서비스 레지스트리 |
 
 - 엔진 초기화 목록: `Source/Engine/EngineInitStepList.xxx`
 - 쿠킹 규칙: `Config/Engine/CookContract.json`

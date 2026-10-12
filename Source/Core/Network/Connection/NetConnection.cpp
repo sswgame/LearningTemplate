@@ -157,7 +157,8 @@ namespace sw
             }
             case NetChannelType::Unreliable:
             {
-                _listOutgoingUnreliable.emplace_back( pData, pData + size );
+                QueuedUnreliable& queued = _listOutgoingUnreliable.emplace_back();
+                queued._buffer.assign( pData, pData + size );
                 return true;
             }
             case NetChannelType::Count:
@@ -247,8 +248,18 @@ namespace sw
         return ackBits;
     }
 
-    void NetConnection::writePacket( float64 time, BitWriter& writer, int32 maxBytes, float64 ackRequestInterval )
+    void NetConnection::writePacket( float64 time, BitWriter& writer, int32 maxBytes, float64 ackRequestInterval, float64 maxUnreliableAgeSeconds )
     {
+        // 비신뢰 줄의 나이를 센다. 처음 만난 메시지는 지금으로 적고, 상한을 넘게 기다린 것은 싣지 않고 버린다 — 포화가 풀릴 때 옛 비신뢰가 몰려 나가지 않게.
+        for ( auto queuedIt = _listOutgoingUnreliable.rbegin(); queuedIt != _listOutgoingUnreliable.rend() && queuedIt->_queuedTime < 0.0; ++queuedIt )
+        {
+            queuedIt->_queuedTime = time; // 새 메시지는 뒤에 붙으므로 뒤에서부터 아직 적지 않은 것만 본다
+        }
+        while ( maxUnreliableAgeSeconds > 0.0 && _listOutgoingUnreliable.empty() == false && time - _listOutgoingUnreliable.front()._queuedTime > maxUnreliableAgeSeconds )
+        {
+            _listOutgoingUnreliable.pop_front();
+            ++_stats._expiredUnreliableCount;
+        }
         const uint16 sequence = _nextPacketSequence++;
         const uint16 ack      = _receivedPackets.hasNewest() ? _receivedPackets.getNewest() : static_cast<uint16>( 0xFFFF );
         writer.writeBits( sequence, 16 );
@@ -320,7 +331,7 @@ namespace sw
         {
             while ( _listOutgoingUnreliable.empty() == false )
             {
-                if ( writeMessage( NetChannelType::Unreliable, 0, _listOutgoingUnreliable.front(), false ) == false )
+                if ( writeMessage( NetChannelType::Unreliable, 0, _listOutgoingUnreliable.front()._buffer, false ) == false )
                     break;
                 _listOutgoingUnreliable.pop_front();
             }

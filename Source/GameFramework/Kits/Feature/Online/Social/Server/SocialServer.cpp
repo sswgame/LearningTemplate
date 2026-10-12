@@ -6,6 +6,7 @@
 
 #include "GameFramework/Base/Online/Bus/ServerBus.h"
 #include "GameFramework/Base/Online/Identity/AccountPresence.h"
+#include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Kits/Feature/Online/Social/Shared/SocialProtocol.h"
 
 namespace sw
@@ -49,6 +50,12 @@ namespace sw
                         return GuildOperation::SetRole;
                     case SocialMethod::kGuildSetNotice:
                         return GuildOperation::SetNotice;
+                    case SocialMethod::kGuildDeposit:
+                        return GuildOperation::Deposit;
+                    case SocialMethod::kGuildWithdraw:
+                        return GuildOperation::Withdraw;
+                    case SocialMethod::kGuildStorage:
+                        return GuildOperation::ListStorage;
                     default:
                         return GuildOperation::Get;
                 }
@@ -145,6 +152,11 @@ namespace sw
             guildRequest._nowMs     = nowMs;
             guildRequest._role      = request._role;
             guildRequest._operation = Internal::toGuildOperation( context._method );
+            guildRequest._assetID   = std::move( request._assetID );
+            guildRequest._amount    = request._amount;
+            if ( context._idempotencyKey.isValid() ) // 창고 이동의 분개 키이다. 없으면 길드 로직이 Invalid 로 끝낸다
+                guildRequest._journalKey = LedgerJournalKey::makeFromIdempotency( LedgerJournalKey::makeAccountScope( selfID ), context._idempotencyKey._high,
+                                                                                  context._idempotencyKey._low );
             _pGuildService->submit( guildRequest, requestTag );
             return;
         }
@@ -193,8 +205,9 @@ namespace sw
         for ( GuildCompletion& completion : _listGuildScratch )
         {
             SocialReply reply;
-            reply._result = completion._result;
-            reply._guild  = std::move( completion._info );
+            reply._result      = completion._result;
+            reply._guild       = std::move( completion._info );
+            reply._listStorage = std::move( completion._listStorage );
             respond( host, completion._requestTag, reply );
         }
         sendNotifications( host );

@@ -1812,3 +1812,79 @@ SW_TEST_CASE( NetworkTest, ReliableUnorderedSkipsTheHeadOfLineButStaysReliable )
     const vector<uint8> tooLarge( static_cast<size_t>( NetConnection::kMaxSingleMessageSize + 1 ), 0 );
     SW_EXPECT_FALSE( sender.sendMessage( NetChannelType::ReliableUnordered, tooLarge.data(), static_cast<int32>( tooLarge.size() ) ) );
 }
+
+/**
+ * @brief [NetworkTest] 비신뢰 메시지는 보낼 줄에서 나이 상한(기본 0.25 초)을 넘게 기다리면 싣지 않고 버린다 — 포화가 풀릴 때 옛 비신뢰가 몰려 나가지 않는다. 상한 0 이면 버리지 않는다
+ */
+SW_TEST_CASE( NetworkTest, UnreliableMessagesExpireAfterWaitingTooLong )
+{
+    NetConnection sender;
+    NetConnection receiver;
+    for ( int32 index = 0; index < 3; ++index )
+    {
+        const vector<uint8> buffer = makeMessage( index );
+        SW_ASSERT_TRUE( sender.sendMessage( NetChannelType::Unreliable, buffer.data(), 4 ) );
+    }
+    BitWriter starved;
+    sender.writePacket( 0.0, starved, 0 ); // 대역폭 토큰을 다 쓴 전송 — 헤더만 나가고 메시지는 기다린다
+    SW_EXPECT_EQUAL( 3, sender.getQueuedUnreliableCount() );
+
+    BitWriter late;
+    sender.writePacket( 0.5, late, 1200 ); // 0.5 초를 기다렸다 — 상한을 넘었다
+    SW_EXPECT_EQUAL( 0, sender.getQueuedUnreliableCount() );
+    SW_EXPECT_EQUAL( uint64( 3 ), sender.getStats()._expiredUnreliableCount );
+    BitReader lateReader( late.getBytes().data(), late.getByteCount() );
+    SW_EXPECT_TRUE( receiver.readPacket( 0.5, lateReader ) );
+    vector<uint8> buffer;
+    SW_EXPECT_FALSE( receiver.receiveMessage( NetChannelType::Unreliable, buffer ) );
+
+    // 상한 안이면 그대로 간다.
+    const vector<uint8> fresh = makeMessage( 7 );
+    SW_ASSERT_TRUE( sender.sendMessage( NetChannelType::Unreliable, fresh.data(), 4 ) );
+    BitWriter onTime;
+    sender.writePacket( 0.6, onTime, 1200 );
+    BitReader onTimeReader( onTime.getBytes().data(), onTime.getByteCount() );
+    SW_EXPECT_TRUE( receiver.readPacket( 0.6, onTimeReader ) );
+    SW_ASSERT_TRUE( receiver.receiveMessage( NetChannelType::Unreliable, buffer ) );
+    SW_EXPECT_EQUAL( 7, readMessageValue( buffer ) );
+
+    // 상한 0 — 오래 기다려도 버리지 않는다.
+    SW_ASSERT_TRUE( sender.sendMessage( NetChannelType::Unreliable, fresh.data(), 4 ) );
+    BitWriter noRoom;
+    sender.writePacket( 1.0, noRoom, 0, NetConnection::kDefaultAckRequestInterval, 0.0 );
+    BitWriter muchLater;
+    sender.writePacket( 5.0, muchLater, 1200, NetConnection::kDefaultAckRequestInterval, 0.0 );
+    SW_EXPECT_EQUAL( 0, sender.getQueuedUnreliableCount() );
+    SW_EXPECT_EQUAL( uint64( 3 ), sender.getStats()._expiredUnreliableCount );
+}
+
+/**
+ * @brief [NetworkTest] 대역폭을 넘게 비신뢰를 쌓으면 그 연결이 포화로 보이고, 줄이 나이 상한으로 비고 토큰이 차면 다시 포화가 아니다(언리얼 IsNetReady)
+ */
+SW_TEST_CASE( NetworkTest, SaturatedConnectionIsReportedUntilTheQueueDrains )
+{
+    NetHostSettings settings;
+    settings._maxBytesPerSecond = 2400; // 패킷 두 개쯤 — 초당
+    test::LoopbackCluster cluster( 61u );
+    addServerAndClient( cluster, settings );
+    SW_ASSERT_TRUE( cluster.connectClients( 30 ) );
+    NetHost& client = cluster.getClient( 0 );
+    SW_EXPECT_FALSE( client.isConnectionSaturated( 0 ) );
+    SW_EXPECT_FALSE( client.isConnectionSaturated( 5 ) ); // 없는 연결
+    const vector<uint8> payload = makePatternMessage( 9u, 1000 );
+    for ( int32 index = 0; index < 20; ++index )
+    {
+        SW_ASSERT_TRUE( client.sendMessage( 0, NetChannelType::Unreliable, payload ) );
+    }
+    cluster.step( 1.0 / 60.0 );
+    SW_EXPECT_TRUE( client.isConnectionSaturated( 0 ) );
+    for ( int32 frame = 0; frame < 120; ++frame )
+    {
+        cluster.step( 1.0 / 60.0 );
+    }
+    SW_EXPECT_FALSE( client.isConnectionSaturated( 0 ) );
+    NetConnectionStats stats;
+    SW_ASSERT_TRUE( client.getConnectionStats( 0, stats ) );
+    SW_EXPECT_TRUE( stats._expiredUnreliableCount > 0 ); // 다 싣지 못한 것은 기다리다 버렸다
+    SW_EXPECT_TRUE( cluster.areClientsConnected() );
+}

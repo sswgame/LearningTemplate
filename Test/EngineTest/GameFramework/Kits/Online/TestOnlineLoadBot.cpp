@@ -68,6 +68,7 @@ namespace
             LoadBotLocalServer           server;
             LoadBotLocalServerSettings   serverSettings;
             serverSettings._port               = kServerPort;
+            serverSettings._startMs            = kServerStartMs; // 첫 tick 과 같은 서비스 시각 — 실행마다 같은 표가 나와야 한다
             serverSettings._bLightPasswordHash = SW_TRUE;
             SW_EXPECT_TRUE_MSG( server.initialize( serverTransport.get(), serverSettings, error ), error.c_str() );
 

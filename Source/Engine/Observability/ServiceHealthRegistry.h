@@ -34,7 +34,7 @@ namespace sw
     public:
         ServiceHealthRegistry();
 
-        /** @brief 검사를 등록하고 번호를 돌려줍니다. 처음 상태는 Failing(아직 확인하지 않음)입니다. */
+        /** @brief 검사를 등록하고 번호를 돌려줍니다. 처음 상태는 Failing(아직 확인하지 않음)입니다. 같은 이름이 있으면 그 검사를 Failing 으로 되돌리고 같은 번호를 돌려줍니다. */
         int32 registerCheck( string_view name, bool bRequiredForReady );
         /** @brief 범위 밖 번호는 무시합니다. */
         void setCheck( int32 checkIndex, HealthState state, string_view detail );

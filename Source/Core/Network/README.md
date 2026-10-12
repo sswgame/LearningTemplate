@@ -55,7 +55,9 @@ py -3 -m Scripts test NetworkThreadTest.*
 1. 루프백 망(`LoopbackNetwork`)을 하나 만들고, 서버와 클라이언트가 각자 그 망의 전송을 씁니다. 루프백은 보낸 순서대로 다음 `update` 에 배달만 하므로 결과가 결정적입니다.
 2. 서버 `NetHost` 가 듣고, 클라이언트 `NetHost` 가 연결합니다. 비동기로 연결하려면 `connectAsync` 가 돌려주는 `TaskFuture<NetConnectResult>` 를 씁니다.
 3. 매 프레임 두 호스트의 `update` 를 부르면 핸드셰이크가 진행되고, 연결되면 `sendMessage` 로 보낸 메시지를 반대쪽이 꺼냅니다.
-4. 회선을 나쁘게 만들려면 전송을 `NetEmulationTransport` 로 감싸고 지연, 손실, 순서 뒤바뀜을 겁니다.
+4. 회선을 나쁘게 만들려면 전송을 `NetEmulationTransport` 로 감싸고 지연, 손실, 순서 뒤바뀜을 겁니다. 보내는 쪽 조건(`setDefaultConditions`)과 받는 쪽 조건(`setIncomingConditions`)을
+   따로 걸어 올림과 내림을 다르게 하고, `startOutage( 초 )` 로 그동안 모든 패킷을 버립니다(스파이크). 이름 있는 프리셋(`tryGetPreset` — off · lan · wifi · lte · badwifi · disconnected)과
+   키-값 덮어쓰기(`parseOverrides` — `latencyMs=80 lossPercent=5`)는 회선 조절 창과 개발 명령이 같이 씁니다.
 
 스트림(TCP) 쪽은 `test::StreamEndpointPair`(`Test/TestFramework/TestStreamEndpointPair.h`)가 루프백 위의 엔드포인트 한 쌍을 한 스레드로 돌립니다.
 
@@ -92,6 +94,8 @@ py -3 -m Scripts test NetworkThreadTest.*
 
 **대역폭.** 연결마다 대역폭 상한(`_maxBytesPerSecond`, 기본 100,000B/s)이 있습니다. 언리얼의 `NetSpeed` 에 해당합니다.
 보낼 것이 없으면 `_keepAliveInterval`(0.25초)마다만 보냅니다. 호스트는 주소에서 연결을 해시로 찾으므로 연결 수와 관계없이 패킷 하나를 O(1)로 처리합니다.
+상한을 다 써서 기다리는 비신뢰 메시지는 `_maxUnreliableAgeSeconds`(0.25초)를 넘게 기다리면 싣지 않고 버립니다(`_expiredUnreliableCount`). 포화가 풀릴 때 옛 위치가 몰려 나가지 않게 하기 위해서입니다.
+키트는 `isConnectionSaturated( 연결 )` 로 포화를 묻고 그 틱의 비신뢰 복제를 건너뜁니다. 언리얼 `IsNetReady` 가 거짓일 때 액터 복제를 건너뛰는 것과 같습니다.
 
 **스레드.** `update` 는 소켓 받기와 보내기를 잠금 밖에서 한 번에 최대 512개씩 처리하고, 잠금 안에서는 패킷 처리만 합니다.
 `NetHostThread` 는 소켓을 기다렸다가(`poll`, `WSAPoll`, 최대 2ms) `update` 를 부릅니다. 기다리는 일이라 TaskManager 워커가 아니라 전용 스레드를 씁니다.
@@ -150,6 +154,21 @@ UDP 패킷 압축은 측정 결과(`NetCompressionBenchTest`) 이득이 없어 �
 2. 처리기(`INetMessageHandler`)의 종류 마스크에 그 값을 더하고, 본문을 `BitReader` 로 읽습니다. 형식이 틀리면 `Malformed` 를 돌려줍니다.
 3. 메시지 크기 상한은 메시지 구조체에 상수 하나로 두고, 보내는 쪽과 받는 쪽이 같이 씁니다.
 4. 형식을 바꿨다면 그 계층의 와이어 버전(Core면 `NetWireVersion::kCore`, 키트면 `NetKitWireVersion`)을 올립니다.
+
+### 설계 메모 — UDP 일괄 받기 · 보내기 계약(아직 넣지 않음)
+
+MMO 규모 서버에서 패킷마다의 `recvfrom` · `sendto` 시스템 호출이 지배적이라고 측정되면(`NetUDPBenchTest`, Windows 는 패킷당 약 6.5 us — [검증과 측정](../../../docs/08_Verification.md) 2절)
+`INetTransport` 에 일괄 계약 하나를 더합니다. 리눅스 수치(WSL Release)가 나란히 놓인 뒤 정합니다. 지금 정해 둔 모양은 다음과 같습니다.
+
+- **계약.** `int32 receiveBatch( NetDatagramBatch& outBatch, int32 maxCount )` 와 `int32 sendBatch( const NetDatagramBatch& batch )` 를 가상 함수로 더하고, 기본 구현은
+  지금의 `receive` · `send` 를 돌립니다(루프백 · 흉내 전송은 그대로). 묶음은 바이트 아레나 하나 + `{ 위치, 길이, 주소 }` 목록입니다. `NetHost` 가 이미 같은 모양
+  (`OutgoingBatch`)으로 보내고, 받기는 지금 데이터그램마다 버퍼를 따로 두는(`_listReceived`) 것을 아레나 하나로 바꿉니다.
+- **Windows.** RIO(Registered I/O — `RIOReceiveEx` · `RIOSendEx`, 버퍼를 한 번 등록해 호출마다의 잠금 · 복사를 없앤다)를 먼저 씁니다. 없으면 `WSARecvMsg` 로 같은 계약을 채웁니다.
+  Windows 11 · Server 2022 의 USO(`UDP_SEND_MSG_SIZE`) · URO(`UDP_RECV_MAX_COALESCED_SIZE`)가 있으면 같은 주소로 가는 패킷을 한 번에 넘깁니다.
+- **리눅스.** `recvmmsg` · `sendmmsg` 를 쓰고, GSO(`UDP_SEGMENT`) · GRO(`UDP_GRO`)를 켤 수 있으면 같은 주소 패킷을 한 덩어리로 넘깁니다.
+- **고르는 기준.** 같은 바이너리에서 일괄 크기만 바꿔 `NetUDPBenchTest` 의 패킷당 시간과 서버 틱 p99 를 잽니다. 시스템 호출 몫이 절반을 넘을 때만 넣습니다(측정 없는 최적화는
+  하지 않는다). 스레드 하나가 차면 그다음은 포트 샤딩(`ServerConfig::_gamePortShardCount`, 샤드마다 `NetHost`)이며, 두 플랫폼이 같은 계약을 씁니다.
+- **지키는 것.** 일괄 받기도 `NetHost::kMaxDatagramPerUpdate` 상한을 지키고, 받기 · 보내기를 잠금 밖에서 하는 지금의 규칙(`update` 스레드 전용 버퍼)을 그대로 둡니다.
 
 ## 함정과 주의
 

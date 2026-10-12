@@ -22,13 +22,15 @@
 namespace sw
 {
     class IStreamTransport;
+    class ITLSContext;
     class LoadBot;
 
     /** @brief 실행기 설정입니다. */
     struct LoadBotRunnerSettings
     {
-        NetAddress _serverAddress{};
-        int32      _botCountOverride{ 0 }; ///< 0 = 시나리오 값
+        NetAddress   _serverAddress{};
+        ITLSContext* _pTLSContext{ nullptr }; ///< 있으면 모든 연결이 TLS 1.3(전용 서버의 서비스 포트). 빌려 쓰며 실행기보다 오래 산다
+        int32        _botCountOverride{ 0 };  ///< 0 = 시나리오 값
     };
 } // namespace sw
 

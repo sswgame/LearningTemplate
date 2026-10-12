@@ -117,6 +117,24 @@ namespace sw
 
     uint64 SocialClient::requestGuild( const SocialReplyDelegate& onReply ) { return send( SocialMethod::kGuildGet, SocialRequest{}, onReply ); }
 
+    uint64 SocialClient::depositToGuild( string_view assetID, int64 amount, const SocialReplyDelegate& onReply )
+    {
+        SocialRequest request;
+        request._assetID = string( assetID );
+        request._amount  = amount;
+        return send( SocialMethod::kGuildDeposit, request, onReply );
+    }
+
+    uint64 SocialClient::withdrawFromGuild( string_view assetID, int64 amount, const SocialReplyDelegate& onReply )
+    {
+        SocialRequest request;
+        request._assetID = string( assetID );
+        request._amount  = amount;
+        return send( SocialMethod::kGuildWithdraw, request, onReply );
+    }
+
+    uint64 SocialClient::requestGuildStorage( const SocialReplyDelegate& onReply ) { return send( SocialMethod::kGuildStorage, SocialRequest{}, onReply ); }
+
     void SocialClient::onServicePush( uint16 kind, BitReader& body )
     {
         if ( kind != SocialMethod::kPushNotification )
@@ -141,7 +159,7 @@ namespace sw
         BitWriter body;
         SocialProtocol::writeRequest( body, request );
         NetRequestOptions options;
-        const bool        bChange = SocialMethod::isLinkChange( method ) || ( SocialMethod::isGuild( method ) && method != SocialMethod::kGuildGet );
+        const bool        bChange = SocialMethod::isLinkChange( method ) || ( SocialMethod::isGuild( method ) && SocialMethod::isGuildRead( method ) == false );
         if ( bChange )
             options._idempotencyKey = NetIdempotencyKey::makeRandom();
         return _callTable.send( *_pClient, method, body, options, OnlineResponseDelegate::create<&SocialClient::onResponse>( this ), PendingCall{ onReply, method } );

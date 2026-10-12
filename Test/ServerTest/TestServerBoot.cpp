@@ -295,6 +295,50 @@ SW_TEST_CASE( ServerBootTest, NetListenPortAcceptsAClientFromAnotherProcess )
 }
 
 /**
+ * @brief [ServerBootTest] 서버 설정 옆 `<이름>.online.json` 이 있으면 서버 서비스가 온라인 서비스(계정 · 디렉터리 · 채팅)를 서비스 포트에서 띄우고, 종료 때 내린다
+ * @details 서버 설정과 온라인 설정을 임시 폴더에 쓰고 `-server-config` 로 준다. 서비스 포트는 TLS 1.3 이고 Dev 는 개발용 인증서를 쓴다(배포 서버는 인증서 경로가
+ *          필수라 건너뛴다). 연결 없이 기동 · 종료와 로그 줄, status 의 서비스 수를 본다 — 요청 흐름은 OnlineLoadBotTest 가 같은 조립으로 돈다.
+ */
+SW_TEST_CASE( ServerBootTest, OnlineServicesStartFromTheOnlineConfigBesideTheServerConfig )
+{
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "the shipping server needs real TLS certificate and key paths for the service port" );
+#else
+    if ( findServerPath().empty() )
+        SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
+    uint16 port = 0;
+    {
+        UDPNetTransport probe; // 비어 있을 법한 번호를 고른다(같은 번호의 TCP 포트를 쓴다)
+        SW_ASSERT_TRUE( probe.open( 0, true ) );
+        port = probe.getLocalAddress()._port;
+        probe.close();
+    }
+    const string folder = FileUtil::joinPath( FileUtil::getTempDirectory(), "sw_server_online_" + to_string( Process::getCurrentProcessID() ) );
+    SW_ASSERT_TRUE( FileUtil::ensureDirectoryExists( folder ) );
+    const string serverConfigPath = FileUtil::joinPath( folder, "online_test.json" );
+    const string onlineConfigPath = FileUtil::joinPath( folder, "online_test.online.json" );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( serverConfigPath, R"({ "_listenAddress": "127.0.0.1", "_servicePort": )" + to_string( port ) + " }" ) );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( onlineConfigPath, R"({
+        "_listKit": [
+            { "_name": "account", "_listOption": [ { "_key": "lightPasswordHash", "_value": "1" } ] },
+            { "_name": "directory" },
+            { "_name": "chat", "_listOption": [ { "_key": "bannedWords", "_value": "none" } ] }
+        ],
+        "_ioThreadCount": 1
+    })" ) );
+    ProcessOptions options;
+    options._bPipeStandardInput = true;
+    const ServerRun run         = runServer( "-server-config=\"" + serverConfigPath + "\" -gv_serverExitAfterTicks=60", options, []( Process& process )
+            { (void)process.writeInput( "status\n" ); } ); // 못 쓰면 상태 줄이 없어 아래 단언이 실패한다
+    (void)FileUtil::removeDirectory( folder );             // 임시 폴더 — 못 지워도 테스트 결과와 상관없다
+    expectCleanExit( run, "TickLimit" );
+    SW_EXPECT_TRUE_MSG( run._output.find( "Online services listening on port " + to_string( port ) ) != string::npos, "the online services did not start" );
+    SW_EXPECT_TRUE_MSG( run._output.find( "kits: account, directory, chat" ) != string::npos, "the kits were not attached in their start order" );
+    SW_EXPECT_TRUE_MSG( run._output.find( "services 1 (connections 0)" ) != string::npos, "status did not count the online services" );
+#endif
+}
+
+/**
  * @brief [ServerBootTest] 서버 설정 파일이 없으면 배포 서버는 서지 않는다(기본 포트로 조용히 뜬 서버는 틀린 DB 에 붙는다). Dev 는 기본값으로 선다.
  */
 SW_TEST_CASE( ServerBootTest, MissingServerConfigStopsOnlyTheShippingServer )

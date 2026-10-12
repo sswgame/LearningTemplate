@@ -1,0 +1,124 @@
+#include "pch.h"
+
+#include "GameFramework/Base/Online/Identity/AccountBlockList.h"
+#include "GameFramework/Base/Online/Server/OnlineServerConfig.h"
+#include "GameFramework/Base/Online/Server/OnlineServerKit.h"
+#include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
+#include "GameFramework/Kits/Feature/Online/Chat/Server/ChatServer.h"
+#include "GameFramework/Kits/Feature/Online/Chat/Server/ChatService.h"
+
+// 채팅 키트의 서버 조립 — 채팅 서비스와 바인딩을 올린다. 표시 이름과 접속 여부는 계정 키트(필수), 다른 서버 귓속말은 접속 상태, 차단은 친구 키트의 차단 목록을 받는다.
+// 옵션:
+//   bannedWords  금칙어 파일(프로젝트 루트 기준). 기본 `Config/Server/chat_banned_words.txt`. `none` 이면 거르지 않는다.
+
+namespace sw
+{
+    namespace
+    {
+        struct ChatOnlineServerKitInternal
+        {
+            static constexpr const utf8* kDefaultBannedWordsPath = "Config/Server/chat_banned_words.txt";
+            static constexpr const utf8* kNoBannedWords          = "none";
+        };
+
+        /** @brief 친구 키트의 차단 목록을 채팅 정책으로 씁니다. 받는 사람이 보낸 사람을 막았는가입니다. */
+        class ChatBlockPolicy final : public IChatPolicy
+        {
+        public:
+            explicit ChatBlockPolicy( const IAccountBlockList* pBlockList )
+                : _pBlockList{ pBlockList }
+            {
+            }
+
+            bool isBlocked( AccountID recipientID, AccountID senderID ) const override { return _pBlockList->isBlocked( recipientID, senderID ); }
+
+        private:
+            const IAccountBlockList* _pBlockList;
+        };
+
+        /**
+         * @class ChatOnlineServerKit
+         * @brief 채팅 키트의 서버 조립입니다.
+         */
+        class ChatOnlineServerKit final : public IOnlineServerKit
+        {
+        public:
+            ChatOnlineServerKit()
+                : _service{}
+                , _server{}
+                , _policy{}
+                , _settings{}
+                , _bStarted{ false }
+            {
+            }
+
+            bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
+            {
+                const string* pUnknown = entry.findUnknownOption( { "bannedWords" } );
+                if ( pUnknown != nullptr )
+                {
+                    outError = "unknown option '" + *pUnknown + "'";
+                    return false;
+                }
+                const string* pBannedWords = entry.findOption( "bannedWords" );
+                if ( pBannedWords == nullptr )
+                    _settings._bannedWordsPath = ChatOnlineServerKitInternal::kDefaultBannedWordsPath;
+                else if ( *pBannedWords != ChatOnlineServerKitInternal::kNoBannedWords )
+                    _settings._bannedWordsPath = *pBannedWords;
+                if ( context._pHost->registerHostService( &_server ) == false )
+                {
+                    outError = "the chat method range is already taken";
+                    return false;
+                }
+                return true;
+            }
+
+            bool start( OnlineServerKitContext& context, string& outError ) override
+            {
+                if ( context._pAccountDirectory == nullptr )
+                {
+                    outError = "chat needs the account kit (display names and who is online)";
+                    return false;
+                }
+                if ( context._pBlockList != nullptr )
+                    _policy = make_unique<ChatBlockPolicy>( context._pBlockList );
+                ChatServiceDependencies dependencies;
+                dependencies._pStore     = context._pStore;
+                dependencies._pBus       = context._pBus;
+                dependencies._pPresence  = context._pPresence;
+                dependencies._pDirectory = context._pAccountDirectory;
+                dependencies._pPolicy    = _policy.get();
+                dependencies._serverID   = context._serverID;
+                if ( _service.initialize( dependencies, _settings ) == false )
+                {
+                    outError = "the chat service refused its dependencies";
+                    return false;
+                }
+                _server.initialize( &_service );
+                _bStarted = true;
+                return true;
+            }
+
+            void stop() override
+            {
+                if ( _bStarted == false )
+                    return;
+                _server.shutdown();
+                _service.shutdown();
+                _bStarted = false;
+            }
+
+        private:
+            ChatService                 _service;
+            ChatServer                  _server;
+            unique_ptr<ChatBlockPolicy> _policy;
+            ChatSettings                _settings;
+            bool                        _bStarted;
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    SW_REGISTER_ONLINE_SERVER_KIT( ChatOnlineServerKit, "chat", OnlineServerKitOrder::kChat );
+} // namespace sw

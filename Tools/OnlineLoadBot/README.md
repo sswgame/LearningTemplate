@@ -20,7 +20,10 @@ Locust나 Gatling 같은 부하 테스트 도구와 같은 일을 하지만, HTT
 build/Ninja-Debug/Bin/OnlineLoadBot.exe --scenario=Tools/OnlineLoadBot/Scenarios/quick_check.json --local-server --light-hash
 ```
 
-- `--local-server` 는 같은 프로세스에 서버를 조립합니다(`LoadBotLocalServer`). 메모리 저장소, 캐시, 메시지 버스 위에 서버 키트 일곱을 올리고, 봇은 루프백 TCP로 붙습니다(기본 포트 7100).
+- `--local-server` 는 같은 프로세스에 서버를 조립합니다(`LoadBotLocalServer`). 전용 서버와 같은 조립(`OnlineServerRuntime`)으로 메모리 저장소, 캐시, 메시지 버스 위에
+  서버 키트 일곱을 올리고, 봇은 루프백 TCP(평문)로 붙습니다(기본 포트 7100).
+- 전용 서버에 붙으려면 `--server=127.0.0.1:7780 --tls` 를 씁니다. 서버의 온라인 서비스 포트는 TLS 1.3 이고, `--tls` 만 주면 Dev 개발용 인증서를 신뢰합니다
+  (`--tls=<신뢰 PEM>` 으로 바꾼다). 서버 쪽 설정은 [Server README](../../Source/Server/README.md) 5단계입니다.
 - `--light-hash` 는 가벼운 Argon2id 설정을 씁니다. 로그인 해시 비용 자체를 측정하려면 빼고 실행합니다.
 
 끝나면 동작별 지연 표가 로그에 나오고, 오류율이 상한 이하면 종료 코드 0입니다.
@@ -30,7 +33,7 @@ build/Ninja-Debug/Bin/OnlineLoadBot.exe --scenario=Tools/OnlineLoadBot/Scenarios
 ### 명령줄
 
 ```text
-OnlineLoadBot --scenario=<json> (--server=<ip:port> | --local-server[=<port>]) [--bots=N] [--report=<json>] [--max-error-percent=N] [--light-hash]
+OnlineLoadBot --scenario=<json> (--server=<ip:port> [--tls[=<PEM>]] | --local-server[=<port>]) [--bots=N] [--report=<json>] [--max-error-percent=N] [--light-hash]
 ```
 
 | 인자 | 뜻 |
@@ -41,6 +44,7 @@ OnlineLoadBot --scenario=<json> (--server=<ip:port> | --local-server[=<port>]) [
 | `--report` | 결과를 JSON으로도 씁니다 |
 | `--max-error-percent` | 오류율 상한(기본 1%) |
 | `--light-hash` | 가벼운 비밀번호 해시 |
+| `--tls` | `--server` 와 함께. TLS 1.3 으로 붙습니다. 값을 주면 그 PEM 을 신뢰하고, 비우면 Dev 개발용 인증서를 신뢰합니다 |
 
 종료 코드는 0(통과), 1(오류율이 상한을 넘음), 2(인자나 시나리오 오류)입니다.
 

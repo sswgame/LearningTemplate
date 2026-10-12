@@ -54,8 +54,9 @@ namespace sw
         StreamTransportSettings transportSettings;
         transportSettings._ioThreadCount  = 0;
         transportSettings._maxConnections = std::max( transportSettings._maxConnections, _scenario._botCount + LoadBotRunnerInternal::kSpareConnectionCount );
-        if ( pTransport == nullptr || _endpoint.initialize( pTransport, StreamEndpointSettings{} ) == false ||
-             pTransport->initialize( &_endpoint, transportSettings ) == false )
+        StreamEndpointSettings endpointSettings;
+        endpointSettings._security._pTLSContext = settings._pTLSContext;
+        if ( pTransport == nullptr || _endpoint.initialize( pTransport, endpointSettings ) == false || pTransport->initialize( &_endpoint, transportSettings ) == false )
         {
             outError = "load bot runner could not start its stream transport";
             return false;

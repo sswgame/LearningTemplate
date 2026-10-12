@@ -48,6 +48,7 @@ namespace sw
         uint64  _receivedPacketCount{ 0 };
         uint64  _ackedPacketCount{ 0 };
         uint64  _resentMessageCount{ 0 };
+        uint64  _expiredUnreliableCount{ 0 }; ///< 줄에서 나이 상한을 넘겨 버린 비신뢰 메시지(대역폭이 포화돼 오래 기다린 것).
     };
 } // namespace sw
 
@@ -70,6 +71,12 @@ namespace sw
         static constexpr int32   kPacketHeaderBits          = 16 + 16 + 32;
         static constexpr int32   kFastResendGap             = 3;    ///< 이만큼 뒤의 패킷이 확인됐는데 확인이 없으면 잃은 것으로 본다.
         static constexpr float64 kResendMargin              = 0.05; ///< 재전송 간격은 RTT에 이 여유를 더한 값이다(흔들림과 상대의 보내기 간격을 흡수한다).
+        /**
+         * @brief 비신뢰 메시지가 보낼 줄에서 기다릴 수 있는 시간(초)의 기본값입니다. 넘으면 싣지 않고 버립니다.
+         * @details 대역폭이 오래 포화되면 옛 비신뢰가 쌓였다가 몰려 나간다. 비신뢰는 늦으면 쓸모가 없으므로(위치 · 효과) 버리는 쪽이 맞다.
+         *          언리얼은 포화된 연결(`IsNetReady` 거짓)에 비신뢰 번치를 아예 싣지 않는다. 30 Hz 기준 8 틱쯤이다.
+         */
+        static constexpr float64 kDefaultMaxUnreliableAge = 0.25;
 
         static_assert( ( 1 << kMessageSizeBits ) > kMaxSingleMessageSize, "the length field must hold one whole fragment" );
         static_assert( kMaxReliableMessageSize % kMaxSingleMessageSize == 0 && kMaxReliableMessageSize / kMaxSingleMessageSize < kReliableWindow,
@@ -95,7 +102,8 @@ namespace sw
          * @param ackRequestInterval 확인만 담은 답이라도 마지막 확인 요청에서 이 간격이 지났으면 확인을 요청합니다.
          *                           양쪽의 연결 유지 시각이 맞물려 한쪽이 늘 답만 보내게 되어도 그쪽 RTT 를 측정하기 위해서입니다(`NetHostSettings::_keepAliveInterval`).
          */
-        void writePacket( float64 time, BitWriter& writer, int32 maxBytes, float64 ackRequestInterval = kDefaultAckRequestInterval );
+        void writePacket( float64 time, BitWriter& writer, int32 maxBytes, float64 ackRequestInterval = kDefaultAckRequestInterval,
+                          float64 maxUnreliableAgeSeconds = kDefaultMaxUnreliableAge );
         /** @brief 패킷 본문을 읽습니다. 깨졌거나 오래된 중복이면 false 를 반환합니다. */
         [[nodiscard]] bool readPacket( float64 time, BitReader& reader );
         /** @brief 보낼 것이 있는지 반환합니다. 새 메시지, 재전송 시각이 된 신뢰 메시지, 확인해 줄 패킷이 해당합니다. */
@@ -105,7 +113,9 @@ namespace sw
 
         const NetConnectionStats& getStats() const { return _stats; }
         int32                     getPendingReliableCount() const;
-        uint16                    getNextPacketSequence() const { return _nextPacketSequence; }
+        /** @brief 보낼 줄에서 기다리는 비신뢰 메시지 수입니다. 0 보다 크면 앞 패킷이 다 싣지 못했다(대역폭 포화). */
+        int32  getQueuedUnreliableCount() const { return static_cast<int32>( _listOutgoingUnreliable.size() ); }
+        uint16 getNextPacketSequence() const { return _nextPacketSequence; }
 
     private:
         struct SentPacket
@@ -158,6 +168,13 @@ namespace sw
             uint8          _bMore{ SW_FALSE }; ///< 신뢰 순서에서 다음 ID가 같은 메시지다.
         };
 
+        /** @brief 보낼 줄의 비신뢰 메시지 하나입니다. */
+        struct QueuedUnreliable
+        {
+            vector<uint8> _buffer{};
+            float64       _queuedTime{ -1.0 }; ///< 처음 `writePacket` 을 만난 시각. 음수면 아직 만나지 않았다(나이를 세지 않는다)
+        };
+
         void    processAcks( float64 time, uint16 ack, uint32 ackBits );
         void    detectLostPackets( uint16 ack );
         bool    isReliableDue( const OutgoingReliable& message, float64 time, float64 resendDelay ) const;
@@ -175,7 +192,7 @@ namespace sw
         SequenceBuffer<IncomingReliable> _incomingReliable;
         deque<vector<uint8>>             _arrIncoming[static_cast<int32>( NetChannelType::Count )];
         vector<vector<uint8>>            _listOutgoingSequenced; ///< 종류(첫 바이트)마다 가장 새 메시지 하나. 쌓인 순서대로 보관한다.
-        deque<vector<uint8>>             _listOutgoingUnreliable;
+        deque<QueuedUnreliable>          _listOutgoingUnreliable;
         vector<ParsedMessage>            _listParsedScratch;    ///< 받은 패킷을 먼저 다 읽어 두는 스크래치 버퍼(용량을 다시 쓴다).
         vector<SequencedStream>          _listSequencedReceive; ///< 순서만 채널에서 종류마다 마지막으로 넘긴 번호.
         vector<uint8>                    _listReliableAssembly; ///< 모으는 중인 신뢰 순서 메시지(앞 조각들). 마지막 조각이 오면 넘긴다.

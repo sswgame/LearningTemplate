@@ -42,9 +42,20 @@ namespace sw
     int32 ServiceHealthRegistry::registerCheck( string_view name, bool bRequiredForReady )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        Check&                  check = _listCheck.emplace_back();
-        check._name                   = string( name );
-        check._bRequiredForReady      = bRequiredForReady ? SW_TRUE : SW_FALSE;
+        // 같은 이름은 같은 검사다. 서비스를 멈췄다 다시 시작해도(모듈 리로드) 보고에 같은 줄이 둘 생기지 않는다.
+        for ( size_t checkIndex = 0; checkIndex < _listCheck.size(); ++checkIndex )
+        {
+            Check& existing = _listCheck[checkIndex];
+            if ( existing._name != name )
+                continue;
+            existing._state = HealthState::Failing;
+            existing._detail.clear();
+            existing._bRequiredForReady = bRequiredForReady ? SW_TRUE : SW_FALSE;
+            return static_cast<int32>( checkIndex );
+        }
+        Check& check             = _listCheck.emplace_back();
+        check._name              = string( name );
+        check._bRequiredForReady = bRequiredForReady ? SW_TRUE : SW_FALSE;
         return static_cast<int32>( _listCheck.size() ) - 1;
     }
 

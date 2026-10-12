@@ -41,7 +41,7 @@ namespace sw
 
     /**
      * @class IChatPolicy
-     * @brief 게임 조립 단계가 연결해 주는 정책입니다. 차단 테이블은 친구 키트(GF_Social)의 것입니다.
+     * @brief 서버 조립이 연결해 주는 정책입니다. 차단 테이블은 친구 키트(GF_Social)의 것이며, 채팅 키트 조립(`ChatOnlineServerKit`)이 기반의 `IAccountBlockList` 로 받습니다.
      */
     class SW_GF_API IChatPolicy
     {
