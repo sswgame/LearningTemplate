@@ -1177,7 +1177,7 @@ SW_TEST_CASE( ReflectionTypeInfoTest, DescribeTypeShowsTheRegisteredLayout )
     SW_EXPECT_TRUE_MSG( light.find( "(bit field)" ) != sw::string::npos, light.c_str() );
 
     const sw::string role = registry.describeEnum( sw::hashed_string( "CameraRole" ) );
-    SW_EXPECT_TRUE_MSG( role.find( "Editor = 1" ) != sw::string::npos && role.find( "unsigned" ) != sw::string::npos, role.c_str() );
+    SW_EXPECT_TRUE_MSG( role.find( "Viewport = 1" ) != sw::string::npos && role.find( "unsigned" ) != sw::string::npos, role.c_str() );
 
     SW_EXPECT_TRUE( registry.describeType( sw::hashed_string( "NoSuchTypeAnywhere" ) ).find( "is not registered" ) != sw::string::npos );
 }

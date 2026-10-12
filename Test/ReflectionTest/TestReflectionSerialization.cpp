@@ -2981,7 +2981,7 @@ SW_TEST_CASE( ReflectionSerializationTest, AssetTextDoesNotGrowTheNameTable )
 
     const uint32 countBefore = sw::hashed_string::getInternedCount();
     int64        value       = -1;
-    SW_EXPECT_TRUE( pRole->tryParse( "editor", value ) && value == 1 ); // 대소문자를 가리지 않는 답은 그대로
+    SW_EXPECT_TRUE( pRole->tryParse( "viewport", value ) && value == 1 ); // 대소문자를 가리지 않는 답은 그대로
     SW_EXPECT_TRUE( pFlag->tryParseText( "Read | write", value ) && value == 3 );
     SW_EXPECT_FALSE( pRole->tryParse( "R8NoSuchRole", value ) );
     SW_EXPECT_FALSE( pRole->tryParseText( "R8NoSuchRoleToo", value ) );

@@ -102,6 +102,25 @@ namespace
         }
     };
 
+    /** @brief Hello 의 영역 · 판 대조를 맞추려고 서버에 등록하는, 요청을 받지 않는 서비스입니다. */
+    class StubOnlineService final : public IOnlineService
+    {
+    public:
+        explicit StubOnlineService( uint16 methodRange )
+            : _methodRange{ methodRange } {}
+
+        uint16 getMethodRange() const override { return _methodRange; }
+        uint32 getProtocolVersion() const override { return 1; }
+        void   onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override
+        {
+            (void)body;
+            (void)host.respondError( context._token, OnlineError::kInvalidRequest );
+        }
+
+    private:
+        uint16 _methodRange;
+    };
+
     /** @brief Ready 알림에서 다른 키트(@p _pVictim)를 파괴하는 키트입니다. */
     class DestroyOtherOnReadyClientService final : public IOnlineClientService
     {
@@ -146,8 +165,10 @@ SW_TEST_CASE( ServiceClientCallTableTest, KitDestroyedWhileFailingQueuedCallsGet
     kit->_pOwner                                          = &kit;
     kit->_pResponseCount                                  = &responseCount;
     SW_ASSERT_TRUE( client.registerClientService( kit.get() ) );
-    string error;
-    SW_ASSERT_TRUE_MSG( client.initialize( transport.get(), OnlineServiceClientSettings{}, error ), error.c_str() ); // 서버가 없다 — 요청은 모인다
+    string                      error;
+    OnlineServiceClientSettings settings;
+    settings._transportSettings._ioThreadCount = 0;                                             // 루프백 전송은 IO 스레드를 두지 않는다
+    SW_ASSERT_TRUE_MSG( client.initialize( transport.get(), settings, error ), error.c_str() ); // 서버가 없다 — 요청은 모인다
 
     const OnlineResponseDelegate onResponse = OnlineResponseDelegate::create<&SelfDestroyingClientService::onResponse>( kit.get() );
     (void)client.sendRequest( OnlineMethodRange::kGame + 1, BitWriter{}, NetRequestOptions{}, onResponse );
@@ -169,6 +190,10 @@ SW_TEST_CASE( ServiceClientCallTableTest, KitDestroyedDuringReadyNotificationIsS
     MemoryEphemeralDatabase cacheDatabase;
     LocalServerBusHub       hub;
     test::OnlineTestServer  server( network, &database, &cacheDatabase, &hub, 1 );
+    StubOnlineService       killerService( OnlineMethodRange::kGame + OnlineMethodRange::kSize ); // 서버가 클라이언트 키트의 영역을 알아야 Hello 가 통과한다
+    StubOnlineService       victimService( OnlineMethodRange::kGame + 2 * OnlineMethodRange::kSize );
+    SW_ASSERT_TRUE( server._host.registerService( &killerService ) );
+    SW_ASSERT_TRUE( server._host.registerService( &victimService ) );
     server.start();
     test::OnlineTestClients clients( network );
 
