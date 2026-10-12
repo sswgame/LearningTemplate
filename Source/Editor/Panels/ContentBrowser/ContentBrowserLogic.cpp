@@ -86,3 +86,50 @@ namespace sw::editor
         return listChild;
     }
 } // namespace sw::editor
+
+namespace sw::editor
+{
+    ContentBrowserHistory::ContentBrowserHistory()
+        : _listEntry{}
+        , _currentIndex{ -1 }
+    {
+    }
+
+    void ContentBrowserHistory::record( string_view folderAbs, const vector<ContentBrowserCrumb>& listCrumb )
+    {
+        const bool bSameAsCurrent = 0 <= _currentIndex && _currentIndex < static_cast<int32>( _listEntry.size() ) &&
+                                    FileUtil::pathsEqualNormalized( _listEntry[static_cast<size_t>( _currentIndex )]._folderPathAbs, folderAbs );
+        if ( bSameAsCurrent )
+            return;
+
+        if ( canNavigateForward() )
+            _listEntry.erase( _listEntry.begin() + ( _currentIndex + 1 ), _listEntry.end() );
+        ContentBrowserHistoryEntry newEntry;
+        newEntry._folderPathAbs = string{ folderAbs };
+        newEntry._listCrumb     = listCrumb;
+        _listEntry.push_back( std::move( newEntry ) );
+
+        if ( _listEntry.size() > kMaxEntryCount )
+        {
+            const size_t dropCount = _listEntry.size() - kMaxEntryCount;
+            _listEntry.erase( _listEntry.begin(), _listEntry.begin() + static_cast<std::ptrdiff_t>( dropCount ) );
+        }
+        _currentIndex = static_cast<int32>( _listEntry.size() ) - 1;
+    }
+
+    const ContentBrowserHistoryEntry* ContentBrowserHistory::stepBack()
+    {
+        if ( canNavigateBack() == false )
+            return nullptr;
+        --_currentIndex;
+        return &_listEntry[static_cast<size_t>( _currentIndex )];
+    }
+
+    const ContentBrowserHistoryEntry* ContentBrowserHistory::stepForward()
+    {
+        if ( canNavigateForward() == false )
+            return nullptr;
+        ++_currentIndex;
+        return &_listEntry[static_cast<size_t>( _currentIndex )];
+    }
+} // namespace sw::editor

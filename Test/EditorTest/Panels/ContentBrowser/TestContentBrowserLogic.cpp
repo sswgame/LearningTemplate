@@ -5,7 +5,7 @@
 #include "TestFramework/TestFramework.h"
 
 // ContentBrowserLogicTest — 콘텐츠 브라우저의 판단: 경로 줄 조각이 저마다 절대 경로를 든다, 폴더 트리는 폴더마다 한 번만
-// 디스크를 읽는다. ImGui 없음.
+// 디스크를 읽는다, 탐색 이력은 웹 브라우저처럼 뒤로 · 앞으로 간다. ImGui 없음.
 
 namespace
 {
@@ -114,4 +114,85 @@ SW_TEST_CASE( ContentBrowserLogicTest, FolderCacheReadsEachFolderOnce )
     cache.clear();
     (void)cache.getOrScanChildFolders( "D:/Res/engine" );
     SW_EXPECT_EQUAL( 66u, TestContentBrowserLogicInternal::getScanCount() );
+}
+
+/**
+ * @brief [ContentBrowserLogicTest] 탐색 이력은 뒤로 · 앞으로 가며 그때의 브레드크럼을 되살리고, 같은 폴더는 다시 적지 않으며, 중간에서 새 폴더로 가면 앞쪽을 버린다
+ */
+SW_TEST_CASE( ContentBrowserLogicTest, HistoryStepsBackAndForwardLikeABrowser )
+{
+    using sw::editor::ContentBrowserCrumb;
+    using sw::editor::ContentBrowserHistory;
+    using sw::editor::ContentBrowserHistoryEntry;
+    ContentBrowserHistory history;
+    SW_EXPECT_FALSE( history.canNavigateBack() );
+    SW_EXPECT_FALSE( history.canNavigateForward() );
+    SW_EXPECT_NULL( history.stepBack() );
+    SW_EXPECT_EQUAL( -1, history.getCurrentIndex() );
+
+    sw::vector<ContentBrowserCrumb> listCrumb;
+    listCrumb.push_back( ContentBrowserCrumb{ "engine", "D:/Res/engine" } );
+    history.record( "D:/Res/engine", listCrumb );
+    history.record( "D:\\Res\\Engine", listCrumb ); // 대소문자 · 구분자만 다른 같은 폴더는 다시 적지 않는다
+    SW_EXPECT_EQUAL( 1u, history.getEntryCount() );
+    SW_EXPECT_FALSE( history.canNavigateBack() );
+
+    listCrumb.push_back( ContentBrowserCrumb{ "shaders", "D:/Res/engine/shaders" } );
+    history.record( "D:/Res/engine/shaders", listCrumb );
+    history.record( "D:/Res/engine/models", listCrumb );
+    SW_EXPECT_EQUAL( 3u, history.getEntryCount() );
+
+    const ContentBrowserHistoryEntry* pBack = history.stepBack();
+    SW_ASSERT_NOT_NULL( pBack );
+    SW_EXPECT_STREQ( "D:/Res/engine/shaders", pBack->_folderPathAbs.c_str() );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( pBack->_listCrumb.size() ) );
+    pBack = history.stepBack();
+    SW_ASSERT_NOT_NULL( pBack );
+    SW_EXPECT_STREQ( "D:/Res/engine", pBack->_folderPathAbs.c_str() );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( pBack->_listCrumb.size() ) ); // 그때의 브레드크럼
+    SW_EXPECT_NULL( history.stepBack() );
+    SW_EXPECT_EQUAL( 0, history.getCurrentIndex() ); // 돌아갈 곳이 없으면 위치는 그대로
+
+    const ContentBrowserHistoryEntry* pForward = history.stepForward();
+    SW_ASSERT_NOT_NULL( pForward );
+    SW_EXPECT_STREQ( "D:/Res/engine/shaders", pForward->_folderPathAbs.c_str() );
+    SW_EXPECT_TRUE( history.canNavigateForward() );
+
+    // 중간에서 새 폴더로 가면 앞으로 가기 이력(models)을 버린다.
+    history.record( "D:/Res/engine/data", listCrumb );
+    SW_EXPECT_EQUAL( 3u, history.getEntryCount() );
+    SW_EXPECT_FALSE( history.canNavigateForward() );
+    pBack = history.stepBack();
+    SW_ASSERT_NOT_NULL( pBack );
+    SW_EXPECT_STREQ( "D:/Res/engine/shaders", pBack->_folderPathAbs.c_str() );
+}
+
+/**
+ * @brief [ContentBrowserLogicTest] 탐색 이력은 상한을 넘으면 가장 오래된 폴더부터 버린다 — 에디터를 오래 켜 두어도 목록이 끝없이 늘지 않는다
+ */
+SW_TEST_CASE( ContentBrowserLogicTest, HistoryDropsTheOldestEntryOverTheLimit )
+{
+    using sw::editor::ContentBrowserCrumb;
+    using sw::editor::ContentBrowserHistory;
+    ContentBrowserHistory                 history;
+    const sw::vector<ContentBrowserCrumb> listCrumb;
+    const uint32                          recordCount = static_cast<uint32>( ContentBrowserHistory::kMaxEntryCount ) + 10;
+    for ( uint32 folderIndex = 0; folderIndex < recordCount; ++folderIndex )
+    {
+        sw::string folder{ "D:/Res/f" };
+        folder.push_back( static_cast<utf8>( 'a' + folderIndex / 26 ) );
+        folder.push_back( static_cast<utf8>( 'a' + folderIndex % 26 ) );
+        history.record( folder, listCrumb );
+    }
+    SW_EXPECT_EQUAL( static_cast<uint32>( ContentBrowserHistory::kMaxEntryCount ), history.getEntryCount() );
+    SW_EXPECT_EQUAL( static_cast<int32>( ContentBrowserHistory::kMaxEntryCount ) - 1, history.getCurrentIndex() );
+
+    // 가장 오래 남은 것은 처음 10 개를 버린 뒤의 폴더다("D:/Res/fak").
+    while ( history.canNavigateBack() )
+    {
+        (void)history.stepBack();
+    }
+    const sw::editor::ContentBrowserHistoryEntry* pForward = history.stepForward();
+    SW_ASSERT_NOT_NULL( pForward );
+    SW_EXPECT_STREQ( "D:/Res/fal", pForward->_folderPathAbs.c_str() );
 }
