@@ -16,6 +16,8 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/UI/Input/UIInputMapView.h"
+#include "Engine/UI/UISystem.h"
 #include "Engine/Utility/GameAutoplay.h"
 #include "Engine/Window/IWindow.h"
 
@@ -412,9 +414,9 @@ namespace sw
     void SkirmishDirectorComponent::updateInput( const InputManager& input )
     {
         // 카메라 이동과 확대는 리그(PostUpdate)가 읽는다. 여기서는 속도, 일시정지, 명령을 처리한다.
-        // 키는 입력 맵(`data/skirmish.input.xml`)이 정한다.
-        const InputMap& inputMap = input.getInputMap();
-        const bool      bFaster  = inputMap.wasActionTriggered( hashed_string( "Skirmish.Faster" ) );
+        // 키는 입력 맵(`data/skirmish.input.xml`)이 정한다. 일시정지 메뉴 같은 UI 가 먹은 입력은 보이지 않는다.
+        const UIInputMapView inputMap( input.getInputMap(), game::getService<UISystem>() );
+        const bool           bFaster = inputMap.wasActionTriggered( hashed_string( "Skirmish.Faster" ) );
         if ( bFaster || inputMap.wasActionTriggered( hashed_string( "Skirmish.Slower" ) ) )
         {
             _timeScale = MathUtil::clamp( _timeScale * ( bFaster ? 2.0f : 0.5f ), 0.25f, 8.0f );
@@ -433,12 +435,12 @@ namespace sw
 
     void SkirmishDirectorComponent::updateHumanCommands( const InputManager& input )
     {
-        RTSWorld&       world    = _match.getWorld();
-        const InputMap& inputMap = input.getInputMap();
-        float3          point{};
-        const bool      bPointValid = findGroundPoint( input, point );
-        const bool      bShift      = inputMap.isActionDown( hashed_string( "Skirmish.AddToSelection" ) );
-        const bool      bControl    = inputMap.isActionDown( hashed_string( "Skirmish.GroupModifier" ) );
+        RTSWorld&            world = _match.getWorld();
+        const UIInputMapView inputMap( input.getInputMap(), game::getService<UISystem>() );
+        float3               point{};
+        const bool           bPointValid = findGroundPoint( input, point );
+        const bool           bShift      = inputMap.isActionDown( hashed_string( "Skirmish.AddToSelection" ) );
+        const bool           bControl    = inputMap.isActionDown( hashed_string( "Skirmish.GroupModifier" ) );
         updateDrag( input, point, bPointValid );
 
         if ( bPointValid && inputMap.wasActionTriggered( hashed_string( "Skirmish.Order" ) ) )
@@ -517,10 +519,10 @@ namespace sw
 
     void SkirmishDirectorComponent::updateDrag( const InputManager& input, const float3& point, bool bPointValid )
     {
-        RTSWorld&           world    = _match.getWorld();
-        const InputMap&     inputMap = input.getInputMap();
-        const hashed_string selectAction( "Skirmish.Select" );
-        const bool          bShift = inputMap.isActionDown( hashed_string( "Skirmish.AddToSelection" ) );
+        RTSWorld&            world = _match.getWorld();
+        const UIInputMapView inputMap( input.getInputMap(), game::getService<UISystem>() );
+        const hashed_string  selectAction( "Skirmish.Select" );
+        const bool           bShift = inputMap.isActionDown( hashed_string( "Skirmish.AddToSelection" ) );
         if ( bPointValid && inputMap.wasActionPressed( selectAction ) )
         {
             if ( _bAttackMovePending == SW_TRUE )

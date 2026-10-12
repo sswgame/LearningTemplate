@@ -10,6 +10,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/UI/Input/UIInputMapView.h"
+#include "Engine/UI/UISystem.h"
 #include "Engine/Utility/GameAutoplay.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
@@ -122,9 +124,10 @@ namespace sw
         if ( pState == nullptr )
             return;
         // 키는 입력 맵(`data/meadow.input.xml`)이 정한다. 시계를 미는 것은 밭 디렉터 하나다(마을은 읽기만).
-        const InputManager* pInput       = game::getService<InputManager>();
-        const bool          bFastForward = isAutoPlayOn() ||
-                                  ( pInput != nullptr && pInput->getInputMap().isActionDown( hashed_string( MeadowVillageData::kFastForwardAction ) ) );
+        const InputManager* pInput = game::getService<InputManager>();
+        const bool          bFastForward =
+            isAutoPlayOn() ||
+            ( pInput != nullptr && UIInputMapView( pInput->getInputMap(), game::getService<UISystem>() ).isActionDown( hashed_string( MeadowVillageData::kFastForwardAction ) ) );
         pState->getClock().setTimeScale( bFastForward ? _fastTimeScale : 1.0f );
         for ( const WorldClockEvent& clockEvent : pState->getClockEvents() )
         {

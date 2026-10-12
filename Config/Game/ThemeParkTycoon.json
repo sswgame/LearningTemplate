@@ -1,4 +1,5 @@
 {
     "_packRoot": "game/themepark",
-    "_windowTitle": "Theme Park Tycoon"
+    "_windowTitle": "Theme Park Tycoon",
+    "_bUIPauseMenu": true
 }

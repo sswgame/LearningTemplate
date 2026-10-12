@@ -1,4 +1,5 @@
 {
     "_packRoot": "game/starskirmish",
-    "_windowTitle": "Star Skirmish"
+    "_windowTitle": "Star Skirmish",
+    "_bUIPauseMenu": true
 }

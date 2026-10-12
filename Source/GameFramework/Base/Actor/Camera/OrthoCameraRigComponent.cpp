@@ -8,6 +8,8 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/UI/Input/UIInputMapView.h"
+#include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Base/Actor/Camera/CameraMode.h"
 #include "GameFramework/Base/Actor/Camera/CameraPoseUtil.h"
@@ -145,10 +147,11 @@ namespace sw
         if ( pInput == nullptr )
             return;
         // 장치는 입력 맵이 정한다(게임의 `Camera.Pan` · `Camera.Rotate` · `Camera.Zoom` — 맵에 없으면 움직이지 않는다).
-        const InputMap& inputMap     = pInput->getInputMap();
-        const float2    panInput     = inputMap.getVector2D( _panAction );
-        const float32   forwardInput = panInput._y;
-        const float32   rightInput   = panInput._x;
+        // 메뉴가 먹은 입력(왼쪽 스틱으로 메뉴를 옮기는 동안)과 모달 아래의 입력은 리그가 보지 않는다.
+        const UIInputMapView inputMap( pInput->getInputMap(), game::getService<UISystem>() );
+        const float2         panInput     = inputMap.getVector2D( _panAction );
+        const float32        forwardInput = panInput._y;
+        const float32        rightInput   = panInput._x;
         // 확대할수록 느리게 — 화면에서 보이는 빠르기가 같다.
         const float32 panScale = _panReferenceHeight > 0.0f ? _orthoHeight / _panReferenceHeight : 1.0f;
         const float3  pan      = OrthoCameraRigMath::computePanDirection( _yaw, forwardInput, rightInput );

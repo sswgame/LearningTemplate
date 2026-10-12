@@ -1,4 +1,5 @@
 {
     "_packRoot": "game/meadowvillage",
-    "_windowTitle": "Meadow Village"
+    "_windowTitle": "Meadow Village",
+    "_bUIPauseMenu": true
 }

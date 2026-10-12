@@ -1,4 +1,5 @@
 {
     "_packRoot": "game/nilecity",
-    "_windowTitle": "Nile City"
+    "_windowTitle": "Nile City",
+    "_bUIPauseMenu": true
 }

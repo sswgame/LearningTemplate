@@ -10,6 +10,8 @@
 #include "Engine/Object/GameObject/CameraRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/UI/Input/UIInputMapView.h"
+#include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Base/Actor/Camera/CameraPoseUtil.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
@@ -67,7 +69,7 @@ namespace sw
     {
         Component::onTick( deltaTime );
         const InputManager* pInput = _cycleAction.empty() == false ? game::getService<InputManager>() : nullptr;
-        if ( pInput != nullptr && pInput->getInputMap().wasActionTriggered( _cycleAction ) )
+        if ( pInput != nullptr && UIInputMapView( pInput->getInputMap(), game::getService<UISystem>() ).wasActionTriggered( _cycleAction ) )
             (void)cycleViewTarget( _cycleRole );
         updateCamera( deltaTime );
     }
