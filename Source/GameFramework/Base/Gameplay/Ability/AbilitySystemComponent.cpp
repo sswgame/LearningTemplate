@@ -399,12 +399,12 @@ namespace sw
             return;
 
         // 위치는 지금 읽는다. 자기 오브젝트이므로 이 워커가 읽어도 된다. 숫자 생성은 틱 중이면 틱 직후에 한다(`DamageNumberComponent::spawnNumber`).
-        const SceneComponent* pRoot    = pOwner->getPrimarySceneComponent();
-        const float3          position = ( pRoot != nullptr ? pRoot->getWorldPosition() : float3{} ) + _damageNumberOffset;
-        const int32           value    = static_cast<int32>( MathUtil::round( amount ) );
-        if ( value <= 0 )
+        const SceneComponent* pRoot         = pOwner->getPrimarySceneComponent();
+        const float3          position      = ( pRoot != nullptr ? pRoot->getWorldPosition() : float3{} ) + _damageNumberOffset;
+        const int32           roundedDamage = static_cast<int32>( MathUtil::round( amount ) );
+        if ( roundedDamage <= 0 )
             return;
-        DamageNumberComponent::spawnNumber( *pManager, position, value );
+        DamageNumberComponent::spawnNumber( *pManager, position, roundedDamage );
     }
 
     uint32 AbilitySystemComponent::onModuleUnloading( const void* pBegin, const void* pEnd )

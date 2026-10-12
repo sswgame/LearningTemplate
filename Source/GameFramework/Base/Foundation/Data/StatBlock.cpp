@@ -100,10 +100,10 @@ namespace sw
                     bSkip = bSkip || StringUtil::equals( token, name, true );
                 } );
             }
-            float32 value = 0.0f;
-            if ( bSkip || StringUtil::parseFloat( string_view( attribute.getValue() ), value ) == false )
+            float32 statValue = 0.0f;
+            if ( bSkip || StringUtil::parseFloat( string_view( attribute.getValue() ), statValue ) == false )
                 continue; // 숫자가 아닌 속성(이름 · 태그)은 능력치가 아니다
-            addValue( hashed_string( attribute.getName() ), value );
+            addValue( hashed_string( attribute.getName() ), statValue );
             ++loadedCount;
         }
         return loadedCount;

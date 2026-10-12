@@ -99,10 +99,10 @@ namespace sw
             return LocalStoreResult::IOError;
         for ( const vector<SQLValue>& row : rowSet._listRow )
         {
-            LocalSlotInfo& info = outListSlotInfo.emplace_back();
-            info._slot          = string( row[0].getText() );
-            info._byteCount     = row[1]._integer;
-            info._writtenAtMs   = row[2]._integer;
+            LocalSlotInfo& slotInfo = outListSlotInfo.emplace_back();
+            slotInfo._slot          = string( row[0].getText() );
+            slotInfo._byteCount     = row[1]._integer;
+            slotInfo._writtenAtMs   = row[2]._integer;
         }
         return LocalStoreResult::Ok;
     }

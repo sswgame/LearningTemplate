@@ -23,9 +23,9 @@ namespace sw
         if ( mapIter == _mapAttribute.end() )
             _listAttributeName.push_back( name );
 
-        AttributeData& data = _mapAttribute[name];
-        data._baseValue     = baseValue;
-        data._currentValue  = baseValue;
+        AttributeData& attribute = _mapAttribute[name];
+        attribute._baseValue     = baseValue;
+        attribute._currentValue  = baseValue;
     }
 
     void AttributeSet::setAttributeRange( const hashed_string& name, float32 minValue, float32 maxValue )
