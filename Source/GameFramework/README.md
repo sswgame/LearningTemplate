@@ -273,6 +273,9 @@ GameFramework 최상위에는 `Base/`, `Kits/` 와 루트 파일만 둡니다. �
 - **화면 마커 안의 위젯은 이름이 아니라 자식 순서와 타입으로 찾습니다.** 마커는 한 트리에 모이므로 이름이 겹칩니다. 위젯 값은 틱 뒤 큐에서 넣습니다. 병렬 틱에서 위젯을 고치면 안 됩니다.
 - **수명이 다하면 지우는 컴포넌트(페이드, 데미지 숫자, 투사체)는 `LifeSpanUtil` 로 셉니다.** 흐른 시간은 저장되는 PROPERTY 이고 `onBeginPlay` 에서 0 으로 돌리지 않습니다.
   돌리면 되돌리기나 핫 리로드 때마다 수명이 처음부터 다시 시작합니다.
+- **`Data/GameDataXML.h` 와 `XMLCatalog.h` 는 XML 구현 헤더를 끌어오지 않습니다.** `XMLDocument` · `XMLNode` 는 전방 선언만 하고,
+  `loadFile` · `loadText` 템플릿은 스택의 호출 정보와 함수 포인터를 `loadFileWith` · `loadTextWith`(.cpp 에서 문서를 연다)에 넘깁니다. 할당이 늘지 않습니다.
+  노드를 직접 읽는 .cpp(루트 읽기, `findRequiredID`, `readName`)는 `Engine/Serialization/XML/XMLDocument.h` 를 스스로 include 합니다.
 - **월드 플래그는 `GameFlags` 하나입니다.** 대화 러너와 지역 잠금(`AreaGraph`), NPC 일정이 같은 저장소와 같은 조건식(`a && !b || count>=3`)을 씁니다. 0 을 넣으면 지워집니다.
 
 ## 더 볼 곳

@@ -54,6 +54,21 @@ namespace sw
         return true;
     }
 
+    bool GameDataXML::loadFileWith( void* pCall, ReadRootFunction pReadRoot, string_view path, const utf8* pRootName )
+    {
+        XMLDocument doc;
+        XMLNode     root;
+        string      sourceName;
+        return loadRoot( doc, path, pRootName, root, sourceName ) && pReadRoot( pCall, root, sourceName );
+    }
+
+    bool GameDataXML::loadTextWith( void* pCall, ReadRootFunction pReadRoot, string_view xmlText, string_view sourceName, const utf8* pRootName )
+    {
+        XMLDocument doc;
+        XMLNode     root;
+        return parseRoot( doc, xmlText, sourceName, pRootName, root ) && pReadRoot( pCall, root, sourceName );
+    }
+
     const utf8* GameDataXML::findRequiredID( const XMLNode& node, string_view sourceName )
     {
         const utf8* pID = node.findAttribute( "id" );
