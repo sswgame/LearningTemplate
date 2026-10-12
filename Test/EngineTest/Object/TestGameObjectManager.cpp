@@ -698,6 +698,21 @@ SW_TEST_CASE( GameObjectManagerPoolTest, ModuleComponentsPurgedBeforeUnload )
     // 3) 멱등이다 — 이미 걷힌 뒤 다시 불러도 0.
     SW_EXPECT_EQUAL( 0u, manager.destroyComponentsOfModule( moduleName.c_str() ) );
 }
+
+/**
+ * @brief [GameObjectManagerPoolTest] 모듈을 내리기 전에 틱 밖에서 미뤄 둔 틱 뒤 일을 먼저 돌린다.
+ * @details 미룬 람다는 모듈 코드일 수 있다. 모듈이 내려간 뒤 다음 틱에 돌면 없는 코드로 뛴다.
+ */
+SW_TEST_CASE( GameObjectManagerPoolTest, ModuleUnloadDrainsDeferredPostTickWork )
+{
+    sw::GameObjectManager manager;
+    bool                  bRan = false;
+    manager.deferPostTick( [&bRan]()
+    { bRan = true; } );
+    SW_EXPECT_FALSE( bRan );
+    (void)manager.destroyComponentsOfModule( "NotThisModule" ); // 지운 수는 이 테스트가 보지 않는다
+    SW_EXPECT_TRUE( bRan );
+}
 #endif
 
 /**
