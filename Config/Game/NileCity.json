@@ -1,4 +1,5 @@
 {
     "_packRoot": "game/nilecity",
+    "_userSettingsSchema": "data/nile.settings.xml",
     "_windowTitle": "Nile City"
 }

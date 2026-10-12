@@ -62,7 +62,7 @@ namespace sw
             static constexpr const utf8* kArrScalabilityAttribute[] = { "setting", "custom", "autoDetectFallback" };
             static constexpr const utf8* kArrPresetAttribute[]      = { "name" };
             static constexpr const utf8* kArrValueAttribute[]       = { "setting", "value" };
-            static constexpr const utf8* kArrAutoDetectAttribute[]  = { "preset", "minCores", "minMemoryMb" };
+            static constexpr const utf8* kArrAutoDetectAttribute[]  = { "preset", "minCores", "minMemoryMb", "minGPUMemoryMb" };
             static constexpr const utf8* kArrUpgradeAttribute[]     = { "version", "op", "key", "to", "valueFrom", "valueTo", "scale" };
             static constexpr const utf8* kArrRootAttribute[]        = { "version" };
 
@@ -438,10 +438,12 @@ namespace sw
                         bOk = XMLNameCheck::reportUnknownAttributes( groupChild, Internal::kArrAutoDetectAttribute, sourceName ) && bOk;
                         int32 minCores{ 0 };
                         int32 minMemoryMb{ 0 };
+                        int32 minGPUMemoryMb{ 0 };
                         bOk = groupChild.tryGetAttributeIntInRange( "minCores", 0, 0, 4096, minCores ) && bOk;
                         bOk = groupChild.tryGetAttributeIntInRange( "minMemoryMb", 0, 0, 1 << 30, minMemoryMb ) && bOk;
+                        bOk = groupChild.tryGetAttributeIntInRange( "minGPUMemoryMb", 0, 0, 1 << 30, minGPUMemoryMb ) && bOk;
                         group._listAutoDetectRule.push_back( ScalabilityAutoDetectRule{ hashed_string( groupChild.getAttributeText( "preset" ) ),
-                                                                                        static_cast<uint32>( minCores ), static_cast<uint32>( minMemoryMb ) } );
+                                                                                        static_cast<uint32>( minCores ), static_cast<uint32>( minMemoryMb ), static_cast<uint32>( minGPUMemoryMb ) } );
                     }
                     else
                     {
@@ -602,9 +604,10 @@ namespace sw
             }
             case UserSettingType::Enum:
             {
-                if ( def._listOption.empty() )
+                if ( def._listOption.empty() || def._optionProvider.empty() == false )
                 {
-                    // 선택지를 공급자에서 받는 열거형은 여기서 형식만 본다(빈 텍스트는 "자동").
+                    // 선택지를 공급자에서 받는 열거형은 여기서 형식만 본다(빈 텍스트는 "자동"). 공급자와 고정 선택지를 함께 적은 설정의 고정 선택지는
+                    // 공급자가 비었을 때의 대체 목록이라, 공급자가 주는 값(모니터 해상도)을 막지 않는다.
                     outValue = string( value );
                     return UserSettingValueResult::Accepted;
                 }

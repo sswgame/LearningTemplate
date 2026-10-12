@@ -3,11 +3,13 @@
 #include "Engine/UserSettings/UserSettingsEngineAppliers.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/formatString.h"
 
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
+#include "Engine/UserSettings/HardwareProbe.h"
 #include "Engine/UserSettings/UserSettingsSchema.h"
 
 namespace sw
@@ -65,6 +67,8 @@ namespace sw
         registry.registerApplier( "display.resolution", SW_DELEGATE_METHOD( UserSettingApplierDelegate, &UserSettingsEngineAppliers::applyResolution, this ),
                                   SW_DELEGATE_FUNCTION( UserSettingValueFilterDelegate, &UserSettingsEngineAppliers::isResolutionText ) );
         registry.registerApplier( "display.vsync", SW_DELEGATE_METHOD( UserSettingApplierDelegate, &UserSettingsEngineAppliers::applyVSync, this ) );
+        registry.registerOptionProvider( "display.resolutions",
+                                         SW_DELEGATE_METHOD( UserSettingOptionProviderDelegate, &UserSettingsEngineAppliers::collectResolutions, this ) );
         registry.registerOptionProvider( "localization.languages",
                                          SW_DELEGATE_METHOD( UserSettingOptionProviderDelegate, &UserSettingsEngineAppliers::collectLanguages, this ) );
     }
@@ -258,6 +262,30 @@ namespace sw
             option._value = language;
             outListOption.push_back( option );
         }
+    }
+
+    void UserSettingsEngineAppliers::collectResolutions( vector<UserSettingOption>& outListOption )
+    {
+        outListOption.clear();
+        // 모니터 모드 열거는 수백 줄을 훑는다 — 메뉴가 그릴 때마다 부르므로 처음 한 번만 읽는다.
+        if ( _bResolutionProbed == false )
+        {
+            HardwareProbe::probeDisplayResolutions( _listDisplayResolution );
+            _bResolutionProbed = true;
+        }
+        for ( const int2& resolution : _listDisplayResolution )
+        {
+            UserSettingOption option;
+            option._value = formatResolution( resolution._x, resolution._y );
+            outListOption.push_back( option );
+        }
+    }
+
+    string UserSettingsEngineAppliers::formatResolution( int32 width, int32 height )
+    {
+        utf8 arrText[constant::kMaxBuffer32]{};
+        formatstring( arrText, constant::kMaxBuffer32, "%#x%#", width, height );
+        return string( arrText );
     }
 
     bool UserSettingsEngineAppliers::isToggleModeName( string_view value )

@@ -7,4 +7,15 @@
 		<Option value="normal" text="settings.gameplay.difficulty.normal"/>
 		<Option value="hard" text="settings.gameplay.difficulty.hard"/>
 	</Setting>
+
+	<!-- 조작 — 입력 맵(data/shooter.input.xml)의 액션 중 첫 바인딩을 다시 잡을 수 있게 한다. text 가 없으면 메뉴는 id 를 보인다. -->
+	<Setting id="controls.fire" category="controls" type="keyBinding" action="Fire" bindIndex="0" default=""/>
+	<Setting id="controls.jump" category="controls" type="keyBinding" action="Jump" bindIndex="0" default=""/>
+	<Setting id="controls.sprint" category="controls" type="keyBinding" action="Sprint" bindIndex="0" default=""/>
+	<Setting id="controls.reload" category="controls" type="keyBinding" action="Reload" bindIndex="0" default=""/>
+	<Setting id="controls.cycleCamera" category="controls" type="keyBinding" action="CycleCamera" bindIndex="0" default=""/>
+	<Setting id="controls.weapon1" category="controls" type="keyBinding" action="Weapon1" bindIndex="0" default=""/>
+	<Setting id="controls.weapon2" category="controls" type="keyBinding" action="Weapon2" bindIndex="0" default=""/>
+	<Setting id="controls.weapon3" category="controls" type="keyBinding" action="Weapon3" bindIndex="0" default=""/>
+	<Setting id="controls.cameraLookHold" category="controls" type="keyBinding" action="Camera.LookHold" bindIndex="0" default=""/>
 </UserSettingsSchema>

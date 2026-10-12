@@ -19,6 +19,7 @@
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Input/Virtual/IVirtualInputSource.h"
+#include "Engine/Input/Virtual/VirtualCursor.h"
 
 namespace sw
 {
@@ -109,6 +110,12 @@ namespace sw
         KeyboardDevice* getKeyboard() const { return _pKeyboard; }
         MouseDevice*    getMouse() const { return _pMouse; }
         GamepadDevice*  getGamepad( uint32 deviceIndex = 0 ) const;
+        /**
+         * @brief 패드 스틱으로 마우스 커서를 움직이는 가상 커서입니다. 꺼진 채 시작하며, 패드로 커서를 쓰는 게임이 켭니다(`VirtualCursor::setEnabled`).
+         * @details 켜면 `beginFrame` 이 스틱 · 버튼을 마우스 이동 · 버튼 이벤트로 바꿔 OS 이벤트 뒤에 적용한다. 가상 입력(시나리오 · 리플레이)이 붙어 있으면 쉰다.
+         */
+        VirtualCursor&       getVirtualCursor() { return _virtualCursor; }
+        const VirtualCursor& getVirtualCursor() const { return _virtualCursor; }
 
         // ------------------------------------------------------------------------------
         // 4) InputMap · 장치 상태 조회
@@ -343,6 +350,7 @@ namespace sw
         unique_ptr<InputMap>                 _pInputMap;            /**< 이 InputManager 에 연결된 기본 InputMap 인스턴스입니다. */
         vector<RawInputEvent>                _listDrainedEvent;     /**< beginFrame() 에서 큐를 비워 담아 두는 임시 버퍼입니다(매 프레임 재사용). */
         IVirtualInputSource*                 _pVirtualInput;        /**< 붙인 가상 입력 원천입니다(빌림). nullptr 이면 OS 입력만 받습니다. */
+        VirtualCursor                        _virtualCursor;        /**< 패드 스틱으로 마우스 커서를 움직이는 가상 커서입니다. */
         uint32                               _virtualFrameIndex;    /**< 붙인 뒤 `beginFrame` 횟수이며, 원천에 넘기는 프레임 번호입니다. */
         uint32                               _beginFrameCount;      /**< `beginFrame` 을 부른 횟수입니다. */
         InputGlyphStyle                      _activeGlyphStyle;     /**< 마지막으로 조작이 감지된 장치 종류입니다(UI 글리프 자동 전환용). */

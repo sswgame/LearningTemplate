@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- StarSkirmish 의 사용자 설정 — 엔진 스키마(engine/settings/engine.settings.xml) 위에 덧붙는다(Config/Game/StarSkirmish.json 의 _userSettingsSchema).
+     조작 탭의 키 바인딩: 입력 맵(data/skirmish.input.xml)의 액션마다 첫 바인딩을 다시 잡을 수 있다. 빈 default 는 "입력 맵의 기본 바인딩"이다.
+     text 를 적지 않았으므로 메뉴는 설정 id 를 보인다(표시 이름은 로컬라이제이션 수집 뒤에 text 키로 더한다). -->
+<UserSettingsSchema version="1">
+	<Setting id="controls.skirmishSelect" category="controls" type="keyBinding" action="Skirmish.Select" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishOrder" category="controls" type="keyBinding" action="Skirmish.Order" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishSlower" category="controls" type="keyBinding" action="Skirmish.Slower" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishFaster" category="controls" type="keyBinding" action="Skirmish.Faster" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishPause" category="controls" type="keyBinding" action="Skirmish.Pause" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishStatus" category="controls" type="keyBinding" action="Skirmish.Status" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishAddToSelection" category="controls" type="keyBinding" action="Skirmish.AddToSelection" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishGroupModifier" category="controls" type="keyBinding" action="Skirmish.GroupModifier" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishAttackMove" category="controls" type="keyBinding" action="Skirmish.AttackMove" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishStop" category="controls" type="keyBinding" action="Skirmish.Stop" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishHold" category="controls" type="keyBinding" action="Skirmish.Hold" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishCommand1" category="controls" type="keyBinding" action="Skirmish.Command1" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishCommand2" category="controls" type="keyBinding" action="Skirmish.Command2" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishCommand3" category="controls" type="keyBinding" action="Skirmish.Command3" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishBuildSupplyDepot" category="controls" type="keyBinding" action="Skirmish.Build.SupplyDepot" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishBuildBarracks" category="controls" type="keyBinding" action="Skirmish.Build.Barracks" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishBuildRefinery" category="controls" type="keyBinding" action="Skirmish.Build.Refinery" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishBuildAcademy" category="controls" type="keyBinding" action="Skirmish.Build.Academy" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishBuildFactory" category="controls" type="keyBinding" action="Skirmish.Build.Factory" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishBuildStarport" category="controls" type="keyBinding" action="Skirmish.Build.Starport" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishBuildBunker" category="controls" type="keyBinding" action="Skirmish.Build.Bunker" bindIndex="0" default=""/>
+	<Setting id="controls.skirmishJumpToSelection" category="controls" type="keyBinding" action="Skirmish.JumpToSelection" bindIndex="0" default=""/>
+</UserSettingsSchema>

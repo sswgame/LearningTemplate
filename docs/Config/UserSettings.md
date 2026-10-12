@@ -63,8 +63,111 @@
 | `telemetry.enabled` | bool | `false` |  | confirm | `게임 코드` |
 | `telemetry.crashReports` | enum | `local` |  | confirm | `게임 코드` |
 
+## `Resource/game/abilityarena/data/arena.settings.xml`
+
+| id | 타입 | 기본값 | 범위 | 적용 | 대상 |
+|---|---|---|---|---|---|
+| `controls.arenaMelee` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.arenaFireball` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.arenaHeal` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.arenaDash` | keyBinding | `` |  | confirm | `input.keyBinding` |
+
+## `Resource/game/harvestvalley/data/farm.settings.xml`
+
+| id | 타입 | 기본값 | 범위 | 적용 | 대상 |
+|---|---|---|---|---|---|
+| `controls.farmSeedPrev` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.farmSeedNext` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.farmUse` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.farmShip` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.farmBuy` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.farmSleep` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.farmStatus` | keyBinding | `` |  | confirm | `input.keyBinding` |
+
+## `Resource/game/meadowvillage/data/meadow.settings.xml`
+
+| id | 타입 | 기본값 | 범위 | 적용 | 대상 |
+|---|---|---|---|---|---|
+| `controls.villageFastForward` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.townTalk` | keyBinding | `` |  | confirm | `input.keyBinding` |
+
+## `Resource/game/nilecity/data/nile.settings.xml`
+
+| id | 타입 | 기본값 | 범위 | 적용 | 대상 |
+|---|---|---|---|---|---|
+| `controls.nilePlace` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.nileDemolish` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.nileNextTool` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.nilePrevTool` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.nileRoadTool` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.nilePause` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.nileSlower` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.nileFaster` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.nileToggleAutoPlan` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.nileStatus` | keyBinding | `` |  | confirm | `input.keyBinding` |
+
 ## `Resource/game/shooter3d/data/shooter3d.settings.xml`
 
 | id | 타입 | 기본값 | 범위 | 적용 | 대상 |
 |---|---|---|---|---|---|
 | `gameplay.difficulty` | enum | `normal` |  | confirm | `게임 코드` |
+| `controls.fire` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.jump` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.sprint` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.reload` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.cycleCamera` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.weapon1` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.weapon2` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.weapon3` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.cameraLookHold` | keyBinding | `` |  | confirm | `input.keyBinding` |
+
+## `Resource/game/starskirmish/data/skirmish.settings.xml`
+
+| id | 타입 | 기본값 | 범위 | 적용 | 대상 |
+|---|---|---|---|---|---|
+| `controls.skirmishSelect` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.skirmishOrder` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.skirmishSlower` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.skirmishFaster` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.skirmishPause` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.skirmishStatus` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.skirmishAddToSelection` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.skirmishGroupModifier` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.skirmishAttackMove` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.skirmishStop` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.skirmishHold` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.skirmishCommand1` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.skirmishCommand2` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.skirmishCommand3` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.skirmishBuildSupplyDepot` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.skirmishBuildBarracks` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.skirmishBuildRefinery` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.skirmishBuildAcademy` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.skirmishBuildFactory` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.skirmishBuildStarport` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.skirmishBuildBunker` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.skirmishJumpToSelection` | keyBinding | `` |  | confirm | `input.keyBinding` |
+
+## `Resource/game/themepark/data/park.settings.xml`
+
+| id | 타입 | 기본값 | 범위 | 적용 | 대상 |
+|---|---|---|---|---|---|
+| `controls.parkNextRide` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.parkToggleOpen` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.parkPriceDown` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.parkPriceUp` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.parkFeeDown` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.parkFeeUp` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.parkBuild` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.parkRide` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.parkThoughts` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.parkStatus` | keyBinding | `` |  | confirm | `input.keyBinding` |
+
+## `Resource/game/voxelcraft/data/voxel.settings.xml`
+
+| id | 타입 | 기본값 | 범위 | 적용 | 대상 |
+|---|---|---|---|---|---|
+| `controls.voxelJump` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.voxelSprint` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.voxelBreak` | keyBinding | `` |  | confirm | `input.keyBinding` |
+| `controls.voxelPlace` | keyBinding | `` |  | confirm | `input.keyBinding` |

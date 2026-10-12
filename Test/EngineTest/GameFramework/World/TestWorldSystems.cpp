@@ -57,8 +57,7 @@ namespace
   <Entry id="a" cost="1" weight="3"/>
   <Entry id="b" cost="2" weight="2" max="3"/>
   <Entry id="c" cost="4" weight="1" max="1" minTime="20"/>
-  <Curve time="600" scale="2"/>
-  <Curve time="0" scale="0.5"/>
+  <Curve><Key time="600" value="2"/><Key time="0" value="0.5"/></Curve>
 </SpawnTable>
 )";
 

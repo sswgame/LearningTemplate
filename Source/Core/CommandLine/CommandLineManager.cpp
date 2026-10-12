@@ -197,6 +197,14 @@ namespace sw
         return true;
     }
 
+    bool CommandLineManager::isGlobalVariableProvided( string_view name ) const
+    {
+        // 등록된 변수(Engine 전역 변수 — registerToCommandLine 이 인자로 넣었다)는 표에서, 아직 없는 변수(모듈 것)는 보류표에서 찾는다.
+        if ( name.empty() )
+            return false;
+        return _mapPendingGlobal.find( name ) != _mapPendingGlobal.end() || isArgumentProvided( name );
+    }
+
     vector<string> CommandLineManager::collectPendingGlobalNames() const
     {
         vector<string> listName;

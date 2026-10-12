@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- NileCity 의 사용자 설정 — 엔진 스키마(engine/settings/engine.settings.xml) 위에 덧붙는다(Config/Game/NileCity.json 의 _userSettingsSchema).
+     조작 탭의 키 바인딩: 입력 맵(data/nile.input.xml)의 액션마다 첫 바인딩을 다시 잡을 수 있다. 빈 default 는 "입력 맵의 기본 바인딩"이다.
+     text 를 적지 않았으므로 메뉴는 설정 id 를 보인다(표시 이름은 로컬라이제이션 수집 뒤에 text 키로 더한다). -->
+<UserSettingsSchema version="1">
+	<Setting id="controls.nilePlace" category="controls" type="keyBinding" action="Nile.Place" bindIndex="0" default=""/>
+	<Setting id="controls.nileDemolish" category="controls" type="keyBinding" action="Nile.Demolish" bindIndex="0" default=""/>
+	<Setting id="controls.nileNextTool" category="controls" type="keyBinding" action="Nile.NextTool" bindIndex="0" default=""/>
+	<Setting id="controls.nilePrevTool" category="controls" type="keyBinding" action="Nile.PrevTool" bindIndex="0" default=""/>
+	<Setting id="controls.nileRoadTool" category="controls" type="keyBinding" action="Nile.RoadTool" bindIndex="0" default=""/>
+	<Setting id="controls.nilePause" category="controls" type="keyBinding" action="Nile.Pause" bindIndex="0" default=""/>
+	<Setting id="controls.nileSlower" category="controls" type="keyBinding" action="Nile.Slower" bindIndex="0" default=""/>
+	<Setting id="controls.nileFaster" category="controls" type="keyBinding" action="Nile.Faster" bindIndex="0" default=""/>
+	<Setting id="controls.nileToggleAutoPlan" category="controls" type="keyBinding" action="Nile.ToggleAutoPlan" bindIndex="0" default=""/>
+	<Setting id="controls.nileStatus" category="controls" type="keyBinding" action="Nile.Status" bindIndex="0" default=""/>
+</UserSettingsSchema>

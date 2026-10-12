@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- VoxelCraft 의 사용자 설정 — 엔진 스키마(engine/settings/engine.settings.xml) 위에 덧붙는다(Config/Game/VoxelCraft.json 의 _userSettingsSchema).
+     조작 탭의 키 바인딩: 입력 맵(data/voxel.input.xml)의 액션마다 첫 바인딩을 다시 잡을 수 있다. 빈 default 는 "입력 맵의 기본 바인딩"이다.
+     text 를 적지 않았으므로 메뉴는 설정 id 를 보인다(표시 이름은 로컬라이제이션 수집 뒤에 text 키로 더한다). -->
+<UserSettingsSchema version="1">
+	<Setting id="controls.voxelJump" category="controls" type="keyBinding" action="Voxel.Jump" bindIndex="0" default=""/>
+	<Setting id="controls.voxelSprint" category="controls" type="keyBinding" action="Voxel.Sprint" bindIndex="0" default=""/>
+	<Setting id="controls.voxelBreak" category="controls" type="keyBinding" action="Voxel.Break" bindIndex="0" default=""/>
+	<Setting id="controls.voxelPlace" category="controls" type="keyBinding" action="Voxel.Place" bindIndex="0" default=""/>
+</UserSettingsSchema>

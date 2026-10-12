@@ -11,8 +11,10 @@
     <Signal id="lowAmmo" kind="level" scale="0.25"/>
   </Intensity>
   <Phase id="BuildUp" spawnScale="1" spawnTags="Skeleton">
-    <Curve time="0" scale="0.6"/>
-    <Curve time="30" scale="1.5"/>
+    <Curve>
+      <Key time="0" value="0.6"/>
+      <Key time="30" value="1.5"/>
+    </Curve>
     <Exit to="Peak" intensityAbove="0.7" minTime="8"/>
     <Exit to="Peak" minTime="45"/>
   </Phase>

@@ -17,6 +17,7 @@
 	</action>
 	<action name="Look" layer="Gameplay">
 		<mouseDelta scale="1"/>
+		<stick stick="Right" deadzone="0.15" scaleX="700" scaleY="-700" scaleByDelta="true"/>
 	</action>
 	<action name="ToggleMouseLock" layer="Gameplay" trigger="Pressed">
 		<bind source="key" code="Escape"/>

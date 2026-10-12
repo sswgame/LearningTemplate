@@ -310,6 +310,17 @@ namespace sw
             ++_virtualFrameIndex;
         }
 
+        // 2-2) 가상 커서(패드 스틱 → 마우스 이동 · 버튼)의 이벤트를 붙인다. 가상 입력이 붙어 있으면 그쪽이 입력을 정하므로 쉰다.
+        if ( _virtualCursor.isEnabled() && _pVirtualInput == nullptr && _pMouse != nullptr )
+        {
+            const IWindow* pWindow = IWindow::getActiveWindow();
+            if ( pWindow != nullptr )
+            {
+                _virtualCursor.emitFrame( getGamepad( _virtualCursor.getSettings()._padIndex ), _pMouse->getPosition(),
+                                          int2{ static_cast<int32>( pWindow->getWidth() ), static_cast<int32>( pWindow->getHeight() ) }, deltaSeconds, _listDrainedEvent );
+            }
+        }
+
         // 3) 꺼낸 원시 이벤트를 들어온 순서대로 장치에 적용한다(새 프레임 엣지 플래그 설정). 포커스를 잃는 이벤트도 이 순서 안에서
         //    적용해야 그보다 먼저 들어온 키 누름이 리셋 뒤에 다시 적용되지 않는다(알트탭하면 캐릭터가 계속 달리는 문제가 생긴다).
         for ( const RawInputEvent& rawEvent : _listDrainedEvent )
@@ -347,6 +358,10 @@ namespace sw
             if ( _pMouse->wasAnyButtonPressed() || mouseDelta != int2{} || _pMouse->getMouseWheel() != 0.0f )
                 setActiveGlyphStyle( InputGlyphStyle::KeyboardMouse );
         }
+
+        // 패드가 낸 마우스 이벤트는 마우스를 만졌다는 뜻이 아니다 — 글리프는 패드로 남긴다.
+        if ( _virtualCursor.didEmitLastFrame() )
+            setActiveGlyphStyle( InputGlyphStyle::GamepadXbox );
 
         // 5) 통합 InputMap 을 이번 프레임 입력으로 갱신한다(게임플레이가 읽는 맵). 갱신은 맵의 주인이 한다.
         //    엔진 루프, 리플레이 재동기화, 테스트가 같은 경로를 탄다.

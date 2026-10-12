@@ -1,5 +1,6 @@
 {
     "_packRoot": "game/abilityarena",
+    "_userSettingsSchema": "data/arena.settings.xml",
     "_windowTitle": "Ability Arena",
     "_bUIPauseMenu": true
 }

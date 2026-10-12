@@ -23,6 +23,7 @@ namespace sw
     void InputMap::update( float32 deltaSeconds )
     {
         _totalElapsedTime += deltaSeconds;
+        _lastDeltaSeconds = deltaSeconds;
 
         // 1) 선입력 버퍼를 갱신한다(링 버퍼, O(1) 정리)
         for ( uint32 index = 0; index < _bufferedActionCount; ++index )
@@ -147,7 +148,7 @@ namespace sw
 
                 if ( bRawDown )
                 {
-                    float2& accumulator = BindingKinds::isRelative( binding._kind ) ? relativeValue : totalAccumValue;
+                    float2& accumulator = BindingKinds::isRelative( binding ) ? relativeValue : totalAccumValue;
                     accumulator._x += bindingValue._x;
                     accumulator._y += bindingValue._y;
                 }
@@ -417,6 +418,13 @@ namespace sw
 
                     stickX *= _gamepadSensitivity._x;
                     stickY *= _gamepadSensitivity._y;
+                    if ( BindingKinds::isRelative( binding ) )
+                    {
+                        // 이동량으로 쓰는 스틱: 배율과 프레임 시간을 곱하고, 반전은 마우스 이동처럼 여기서 한 번만 적용한다(액션 값 단계는 이동량을 반전하지 않는다).
+                        const float32 frameScale = binding._bScaleByDelta ? _lastDeltaSeconds : 1.0f;
+                        stickX *= binding._axisScale._x * frameScale * ( _bInvertX == SW_TRUE ? -1.0f : 1.0f );
+                        stickY *= binding._axisScale._y * frameScale * ( _bInvertY == SW_TRUE ? -1.0f : 1.0f );
+                    }
                     outValue = float2{ stickX, stickY };
                     return ( stickX != 0.0f || stickY != 0.0f );
                 }

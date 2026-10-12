@@ -62,7 +62,7 @@ director.notifyDespawned( spawnID );
     <Signal id="lowAmmo" kind="level" scale="0.25"/>                       <!-- 긴장도의 바닥 -->
   </Intensity>
   <Phase id="BuildUp" spawnScale="1" spawnTags="Drone">
-    <Curve time="0" scale="0.6"/><Curve time="30" scale="1.5"/>            <!-- 단계 안 시간 → 스폰 배율 -->
+    <Curve><Key time="0" value="0.6"/><Key time="30" value="1.5"/></Curve> <!-- 단계 안 시간 → 스폰 배율 -->
     <Exit to="Peak" intensityAbove="0.7" minTime="8"/>                     <!-- 적은 절이 모두 참이면 나간다 -->
     <Exit to="Peak" minTime="45"/>                                         <!-- 시간으로 나가는 길(언젠가는 절정) -->
   </Phase>
@@ -87,7 +87,7 @@ director.notifyDespawned( spawnID );
 `combat="true"` 신호가 들어오면 "싸움 뒤 지난 시간"이 0 이 되고, `decayDelay` 초가 지나야 `decayPerSecond` 로 식기 시작합니다.
 긴장도는 쌓인 스트레스와 바닥 합 중 큰 쪽이고, 상한은 `max` 입니다.
 
-**단계의 스폰 배율**은 `spawnScale` 에 `<Curve>`(단계 안 시간에 따른 배율)를 곱한 값입니다. 배율이 0 이면 예산을 쌓지도 쓰지도 않습니다.
+**단계의 스폰 배율**은 `spawnScale` 에 `<Curve>`(단계 안 시간에 따른 배율 — `FloatCurve` 의 `<Key time value interpolation>`, 기본은 선형)를 곱한 값입니다. 배율이 0 이면 예산을 쌓지도 쓰지도 않습니다.
 그래서 쉬는 동안 모아 둔 예산이 쉼이 끝나자마자 한꺼번에 나오지 않습니다. `spawnTags` 는 그 단계에서 낼 스폰 항목의 태그입니다.
 
 **나가는 길**(`<Exit>`)의 절은 `minTime`(단계에 머문 시간), `intensityAbove`, `intensityBelow`, `calmFor`(마지막 싸움 뒤 시간)입니다. 적은 순서대로 보고, 절이 모두 참인 첫 길로 나갑니다.

@@ -38,7 +38,7 @@ namespace sw
     uint32 SpawnTable::loadRoot( const XMLNode& root, string_view sourceName )
     {
         _catalog.clear();
-        _curve.clear();
+        _curve._listKey.clear();
         _budgetPerMinute  = MathUtil::max( 0.0f, root.getAttributeFloat( "budgetPerMinute", _budgetPerMinute ) );
         _maxBudget        = MathUtil::max( 0.0f, root.getAttributeFloat( "maxBudget", _maxBudget ) );
         _startBudget      = MathUtil::clamp( root.getAttributeFloat( "startBudget", _startBudget ), 0.0f, _maxBudget );
@@ -58,7 +58,7 @@ namespace sw
             { entry._listTag.push_back( hashed_string( token ) ); } );
             (void)_catalog.add( entry );
         }
-        (void)_curve.readPoints( root, "Curve", "scale", 0.0f ); // 점 수만 돌려준다 — 점이 없으면 곡선이 대체값을 쓴다
+        (void)GameDataXML::readFloatCurve( root, "Curve", 0.0f, _curve, sourceName ); // 모르는 이름은 읽기가 이미 경고했고, 키가 없으면 곡선이 대체값을 쓴다
         return static_cast<uint32>( _catalog.getCount() );
     }
 

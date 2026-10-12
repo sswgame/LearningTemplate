@@ -25,6 +25,8 @@ namespace sw
 {
     enum class InputGlyphStyle : uint8;
 
+    struct ActionBinding;
+
     class InputManager;
 
     // ------------------------------------------------------------------------------
@@ -97,6 +99,12 @@ namespace sw
          *          마우스 이동의 반전은 그 바인딩 평가에서 한 번만 적용한다.
          */
         static bool isRelative( BindingKind kind );
+        /**
+         * @brief 바인딩 하나가 이동량으로 쓰이는지 묻습니다. 종류가 이동량이거나, 스틱에 배율 · 프레임 시간 곱이 걸린 것입니다.
+         * @details 스틱 값에 배율(`_axisScale`)이나 프레임 시간 곱을 걸면 [-1, 1] 을 넘는 시점 속도(픽셀/프레임)가 되므로 묶지 않는다.
+         *          마우스 이동과 같은 쪽으로 합쳐져 한 `Look` 액션에 둘을 함께 묶을 수 있다.
+         */
+        static bool isRelative( const ActionBinding& binding );
     };
 } // namespace sw
 
@@ -240,6 +248,8 @@ namespace sw
         float32        _outerDeadzone{ 1.0f };
         float32        _responseExponent{ 1.0f };
         float32        _scale{ 1.0f };                          /**< MouseDelta2D · MouseWheel1D: 감도 배율. VirtualJoystick2D: 드래그 반경(px). */
+        float2         _axisScale{ 1.0f, 1.0f };                /**< GamepadStick2D: 축마다 배율(언리얼 Enhanced Input 의 Scale). 마우스 Y 는 아래가 +라 스틱을 Look 에 묶으려면 Y 를 음수로 둔다. */
+        bool           _bScaleByDelta{ false };                 /**< GamepadStick2D: 프레임 시간을 곱한다(Scale By Delta Time). 배율을 초당 값(픽셀/초)으로 적을 수 있다. */
         mutable uint32 _cachedLayerIndex{ kInvalidLayerIndex }; /**< `_listLayerEntry` 의 안정된 인덱스입니다. 포인터가 아니라 인덱스라서 재할당되어도 안전합니다. */
         mutable float2 _joystickAnchor{ 0.0f, 0.0f };           /**< VirtualJoystick2D 전용입니다. 드래그를 시작한 순간의 마우스 위치(플로팅 앵커)입니다. */
         mutable bool   _bJoystickAnchored{ false };             /**< VirtualJoystick2D 전용입니다. 드래그 중이라 앵커가 잡혀 있는지 나타냅니다. */
@@ -329,7 +339,12 @@ namespace sw
         /** @brief 2D 이동 축 바인딩을 등록합니다(키보드 4방향 합성). */
         void bindVector2D( const hashed_string& action, Key up, Key down, Key left, Key right, float32 deadzone = 0.0f, const hashed_string& layer = {} );
         /** @brief 게임패드 아날로그 스틱 2D 이동 축 바인딩을 등록합니다(데드존, 바깥 데드존, 응답 곡선 가속). */
-        void bindGamepadStick2D( const hashed_string& action, GamepadStick stick = GamepadStick::Left, float32 deadzone = 0.15f, const hashed_string& layer = {}, uint8 padIndex = 0, float32 outerDeadzone = 1.0f, float32 responseExponent = 1.0f );
+        /**
+         * @param axisScale 축마다 배율입니다. 1 이 아니거나 @p bScaleByDelta 면 값이 [-1, 1] 을 넘는 이동량이 되어 마우스 이동(`bindMouseDelta`)과 같은 액션에 합쳐집니다.
+         * @param bScaleByDelta 켜면 값에 프레임 시간(초)을 곱합니다. 오른쪽 스틱을 `Look` 에 묶을 때 @p axisScale 을 초당 픽셀로 적으면 프레임률과 무관한 속도가 됩니다.
+         */
+        void bindGamepadStick2D( const hashed_string& action, GamepadStick stick = GamepadStick::Left, float32 deadzone = 0.15f, const hashed_string& layer = {}, uint8 padIndex = 0, float32 outerDeadzone = 1.0f, float32 responseExponent = 1.0f,
+                                 float2 axisScale = float2{ 1.0f, 1.0f }, bool bScaleByDelta = false );
         void bindMouseDelta( const hashed_string& action, float32 sensitivity = 1.0f, const hashed_string& layer = {} );
         /** @brief 마우스 휠을 1D 축으로 등록합니다. 값은 이번 프레임 휠 이동량(한 칸 = 1, 위가 +)에 @p scale 을 곱한 값이며, 휠을 굴린 프레임에만 0 이 아닙니다. */
         void bindMouseWheel( const hashed_string& action, float32 scale = 1.0f, const hashed_string& layer = {} );
@@ -683,6 +698,7 @@ namespace sw
         float32                              _navRepeatDelay;
         float32                              _navRepeatRate;
         float32                              _totalElapsedTime;
+        float32                              _lastDeltaSeconds; ///< 가장 최근 `update` 의 프레임 시간. 프레임 시간 곱 바인딩이 쓴다.
         float32                              _stickDeadzoneOverride;
         DeadzoneShape                        _deadzoneShape;
         DigitalNormalization                 _digitalNormalization;

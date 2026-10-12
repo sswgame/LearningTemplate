@@ -1,4 +1,5 @@
 {
     "_packRoot": "game/themepark",
+    "_userSettingsSchema": "data/park.settings.xml",
     "_windowTitle": "Theme Park Tycoon"
 }

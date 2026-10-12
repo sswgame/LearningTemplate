@@ -10,8 +10,9 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Utility/FloatCurve.h"
+
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/GameCurve.h"
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -59,7 +60,7 @@ namespace sw
         const SpawnEntryDef*         findEntry( const hashed_string& id ) const { return _catalog.find( id ); }
         int32                        findEntryIndex( const hashed_string& id ) const { return _catalog.findIndex( id ); }
         const vector<SpawnEntryDef>& getEntries() const { return _catalog.getAll(); }
-        const GameCurve&             getCurve() const { return _curve; }
+        const FloatCurve&            getCurve() const { return _curve; }
         float32                      getBudgetPerMinute() const { return _budgetPerMinute; }
         float32                      getMaxBudget() const { return _maxBudget; }
         float32                      getStartBudget() const { return _startBudget; }
@@ -70,7 +71,7 @@ namespace sw
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
         GameCatalog<SpawnEntryDef> _catalog;
-        GameCurve                  _curve;
+        FloatCurve                 _curve;
         float32                    _budgetPerMinute;
         float32                    _maxBudget;
         float32                    _startBudget;

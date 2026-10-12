@@ -17,6 +17,8 @@
 namespace sw
 {
     // XML 구현 헤더를 끌어오지 않는다. 노드를 직접 읽는 .cpp 가 Engine/Serialization/XML/XMLDocument.h 를 스스로 include 한다.
+    struct FloatCurve;
+
     class XMLDocument;
     class XMLNode;
 
@@ -107,6 +109,16 @@ namespace sw
         static constexpr bool isLoaded( uint32 loadedCount ) { return loadedCount > 0; }
         /** @brief 루트 읽기의 성공 여부를 그대로 반환합니다. */
         static constexpr bool isLoaded( bool bLoaded ) { return bLoaded; }
+
+        /**
+         * @brief @p parent 의 첫 @p pElement 자식(`<Curve>`)이 든 `<Key time value interpolation/>` 를 읽어 @p outCurve 를 채웁니다. 먼저 키를 비웁니다.
+         * @details 값은 @p minValue 아래로 내려가지 않는다. `interpolation` 은 `linear`(기본) · `constant` · `cubic` 이고, 접선은 이웃 키로 센다.
+         *          원소가 없으면 키도 없다(커브가 대체값을 쓴다). 모르는 속성 · 원소나 모르는 보간 이름이 있으면 경고하고 false 를 반환한다(읽을 수 있는 키는 읽는다).
+         * @code
+         *     <Curve><Key time="0" value="0.5"/><Key time="600" value="2" interpolation="cubic"/></Curve>
+         * @endcode
+         */
+        [[nodiscard]] static bool readFloatCurve( const XMLNode& parent, const utf8* pElement, float32 minValue, FloatCurve& outCurve, string_view sourceName );
 
         /** @brief `forEachNamedNumber` 에서 토큰에 콜론(`:값`)이 없을 때의 처리입니다. */
         enum class MissingValue : uint8
