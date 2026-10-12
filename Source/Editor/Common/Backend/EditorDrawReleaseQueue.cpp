@@ -21,10 +21,7 @@ namespace sw::editor
             return;
 
         std::scoped_lock<mutex> lock{ _mutex };
-        Entry                   entry{};
-        entry._releaseDelegate   = releaseDelegate;
-        entry._firstSafeSequence = _lastPublishedSequence + 1;
-        _listEntry.push_back( entry );
+        _listEntry.push( releaseDelegate, _lastPublishedSequence + 1 );
     }
 
     void EditorDrawReleaseQueue::markSnapshotPublished( uint64 snapshotSequence )
@@ -42,13 +39,7 @@ namespace sw::editor
         vector<RHIResourceReleaseDelegate> listReady;
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            auto                    partitionIter = std::stable_partition( _listEntry.begin(), _listEntry.end(), [renderedSnapshotSequence]( const Entry& entry )
-                               { return entry._firstSafeSequence > renderedSnapshotSequence; } );
-            for ( auto iter = partitionIter; iter != _listEntry.end(); ++iter )
-            {
-                listReady.push_back( iter->_releaseDelegate );
-            }
-            _listEntry.erase( partitionIter, _listEntry.end() );
+            _listEntry.extractReady( renderedSnapshotSequence, listReady );
         }
 
         for ( const RHIResourceReleaseDelegate& releaseDelegate : listReady )
@@ -60,15 +51,17 @@ namespace sw::editor
 
     void EditorDrawReleaseQueue::flushAll()
     {
-        vector<Entry> listFlush;
+        KeyedPendingList<RHIResourceReleaseDelegate> listFlush;
         {
             std::scoped_lock<mutex> lock{ _mutex };
             listFlush.swap( _listEntry );
         }
 
-        for ( const Entry& entry : listFlush )
+        vector<RHIResourceReleaseDelegate> listReady;
+        listFlush.extractAll( listReady );
+        for ( const RHIResourceReleaseDelegate& releaseDelegate : listReady )
         {
-            entry._releaseDelegate();
+            releaseDelegate();
         }
     }
 

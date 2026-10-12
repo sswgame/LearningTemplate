@@ -271,6 +271,9 @@ Win32 문자열 변환은 `utf8ToUtf16` 을 씁니다. `ImmGetCompositionStringW
 `vector.h` 템플릿 본문이 `char` → `unsigned char` 로 인스턴스화되어 `-Wsign-conversion` 경고가 납니다. 정수 인자를 부호 없는 매개변수로 넘기는 `emplace_back` · `make_unique` · `try_emplace` 도
 `size_t{ n }` · `5u` 처럼 맞는 타입으로 적습니다. 경고 위치는 `Core` 헤더지만 고칠 곳은 부르는 쪽입니다. PCH 를 켜면 이 경고가 보이지 않으니 `-DSW_ENABLE_PCH=OFF` 빌드에서 확인합니다.
 
+**"키(프레임 번호 · 펜스 값 · 스냅샷 번호)가 닿을 때까지 들고 있다가 해제" 하는 큐의 목록은 `KeyedPendingList` 를 씁니다.** 잠금은 쓰는 쪽이 갖고, 꺼낸 항목은 잠금 밖에서 실행합니다.
+`RHIReleaseQueue`(프레임 · 펜스)와 에디터의 `EditorDrawReleaseQueue`(스냅샷 번호)가 씁니다. 키 없이 모두 비우는 `DeferredDelegateQueue`, 배치 수로 내리는 `DeferredImageUnloadQueue` 는 조건이 달라 따로 둡니다.
+
 **완료를 모으는 줄에 고정 용량 큐(`ConcurrentQueue`)를 쓰지 마세요.** 가득 차면 `enqueue` 가 false를 돌려주고 그 완료는 조용히 사라집니다.
 에셋 스트리밍 큐가 그렇게 한 경로의 콜백 중 1024개를 넘는 것을 잃었습니다(`AssetStreamingTest.ManyCallbacksOnOnePathAreAllDelivered`). 상한 없는 잠금과 deque로 둡니다.
 
