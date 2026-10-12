@@ -44,7 +44,11 @@ namespace sw
         /// @brief 크기를 알리지 않은 렌더 텍스처의 한 변(px)입니다.
         static constexpr uint32 kDefaultRenderTargetSize = 256;
 
-        /** @brief 경로의 텍스처를 확보하고 GPU 에 올립니다(렌더 텍스처 경로면 렌더 타깃을 만든다). 실패하면 nullptr 입니다. */
+        /**
+         * @brief 경로의 텍스처를 확보하고 GPU 에 올립니다(렌더 텍스처 경로면 렌더 타깃을 만든다). 실패하면 nullptr 입니다.
+         * @details **수명 계약**: 성공하면 참조를 하나 셉니다. 돌려준 포인터는 짝이 되는 `release` 까지 살아 있습니다(객체는 `unique_ptr` 이라
+         *          맵이 원소를 옮겨도 주소가 그대로입니다). 올리기는 잠금 밖에서 하고, 같은 경로를 동시에 원한 스레드는 그 결과를 기다려 받습니다.
+         */
         Texture2D* acquire( string_view relativePath, IRHIDevice* pDevice );
         /** @brief 렌더 텍스처 경로(`rendertarget/...`)인지입니다. */
         static bool isRenderTargetPath( string_view relativePath );
@@ -60,7 +64,11 @@ namespace sw
          *          빌려 가 있으므로 객체를 바꾸면 빌린 쪽이 해제된 것을 가리킵니다.
          */
         void reload( string_view relativePath, IRHIDevice* pDevice ) override;
-        /** @brief 이미 든 텍스처를 **참조 수를 바꾸지 않고** 찾습니다. 없으면 nullptr 입니다. */
+        /**
+         * @brief 이미 든 텍스처를 **참조 수를 바꾸지 않고** 찾습니다. 없거나 처음 올리는 중이면 nullptr 입니다.
+         * @warning 빌린 포인터입니다. 누군가 `acquire` 로 참조를 쥐고 있는 동안만 유효하고, 마지막 `release` 나 `clear` 뒤에는 해제된 객체입니다.
+         *          저장하지 말고 그 자리에서 쓰십시오. 오래 들고 있어야 하면 `acquire` · `release` 짝으로 빌립니다.
+         */
         const Texture2D* find( string_view relativePath ) const;
         /**
          * @brief `reload` 가 텍스처를 다시 올린 횟수입니다.
@@ -74,7 +82,7 @@ namespace sw
         bool isCached( string_view relativePath ) const override;
         /** @brief 지금 들고 있는 항목 수입니다. */
         size_t getCachedCount() const override;
-        /** @brief 캐시를 비웁니다(GPU 자원은 이미 내려가 있어야 합니다). */
+        /** @brief 캐시를 비웁니다(GPU 자원은 이미 내려가 있어야 합니다). 종료 때만 부르며, 그 뒤 `acquire` · `find` 로 받은 포인터는 모두 무효입니다. */
         void clear() override;
 
     private:
