@@ -31,7 +31,7 @@ namespace sw::editor
         virtual ~ImGuiEditor() override;
 
         // ------------------------------------------------------------------------------
-        // 2) IEditor: 초기화, 프레임, 이벤트, 텍스처
+        // 2) IEditor: 초기화, 프레임, 이벤트, 뷰, 플레이 상태
         // ------------------------------------------------------------------------------
         /** @brief 플랫폼 백엔드, 렌더러, 폰트를 초기화합니다. */
         bool initialize( IWindow* pWindow, IRHIDevice* pRHIDevice ) override;
@@ -49,10 +49,6 @@ namespace sw::editor
         void abandonPendingDraw() override;
         /** @brief 네이티브 이벤트를 ImGui 플랫폼 레이어에 전달합니다. */
         bool processEvent( const NativeWindowEvent& event ) override;
-        /** @brief RHI 텍스처를 ImGui 텍스처 ID 로 등록합니다. */
-        void* registerTexture( uint64 texture ) override;
-        /** @brief 등록된 ImGui 텍스처 ID 를 해제합니다. */
-        void unregisterTexture( void* pTextureID ) override;
         /** @brief 이번 프레임 게임 뷰의 렌더 타깃 핸들과 크기를 조회합니다. */
         void getGameViewport( uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) const override;
         /** @brief 이번 프레임 씬 뷰의 렌더 타깃 핸들과 크기를 조회합니다. */

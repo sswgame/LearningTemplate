@@ -668,19 +668,6 @@ namespace sw::editor
         return false;
     }
 
-    void* ImGuiEditor::registerTexture( uint64 texture )
-    {
-        if ( _rendererBackend != nullptr )
-            return _rendererBackend->registerTexture( texture );
-        return nullptr;
-    }
-
-    void ImGuiEditor::unregisterTexture( void* pTextureID )
-    {
-        if ( _rendererBackend != nullptr )
-            _rendererBackend->unregisterTexture( pTextureID );
-    }
-
     void ImGuiEditor::getGameViewport( uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) const
     {
         const bool bRequest = _editorContext != nullptr && EditorViewTargetUtil::shouldRequestGameView( _editorContext->wasViewDrawn( EditorViewKind::Game ) );
