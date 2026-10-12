@@ -7,19 +7,37 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/UI/Base/WidgetTypes.h"
 
 namespace sw
 {
     struct PropertyInfo;
+    struct TypeInfo;
     struct UIScaleSettings;
+    struct WidgetLayoutSlot;
 
+    class PanelWidget;
+    class TypeRegistry;
     class UIScreen;
     class UISystem;
     class Widget;
     class WidgetTree;
 } // namespace sw
+
+namespace sw::editor
+{
+    /** @brief 캔버스 자식의 슬롯 손잡이 하나입니다(디자이너). 가운데는 옮기기, 나머지는 그 변만 옮깁니다. */
+    enum class UIPreviewSlotHandle : uint8
+    {
+        Move = 0,
+        Left,
+        Top,
+        Right,
+        Bottom
+    };
+} // namespace sw::editor
 
 namespace sw::editor
 {
@@ -105,6 +123,32 @@ namespace sw::editor
          * @return 문서나 루트가 없으면 false 이고 @p outError 에 까닭을 적습니다.
          */
         [[nodiscard]] static bool makeDocumentText( UISystem& ui, const UIScreen& screen, string_view documentPath, string& outText, string& outError );
+        // --- 디자이너: 팔레트 · 끌어 놓기 · 슬롯 손잡이 ---------------------------------------------------------------
+        /** @brief 문서 순서 번호 @p ordinal 의 위젯이 패널이면 그 패널입니다. 패널이 아니거나 범위 밖이면 nullptr 입니다. */
+        static PanelWidget* findPanelByOrdinal( WidgetTree& tree, uint32 ordinal );
+        /**
+         * @brief 팔레트 목록입니다 — 만들 수 있는(추상이 아닌) 위젯 타입을 이름순으로 담습니다(`Widget` 의 모든 파생 타입, 게임 모듈의 위젯 포함).
+         * @details 위젯 타입이 늘면 목록도 는다. 타입 레지스트리가 아는 것이 곧 팔레트라 따로 표를 두지 않는다(유니티 UI Builder 의 Library, UMG 의 Palette 와 같다).
+         */
+        static void collectPaletteTypes( const TypeRegistry& registry, vector<const TypeInfo*>& outListType );
+        /**
+         * @brief 놓은 자리 @p pTarget 이 받을 패널을 고릅니다 — 패널이면 그 패널(자식 끝에), 아니면 그 위젯의 부모(그 위젯 바로 뒤에)입니다. 둘 다 없으면 루트가 패널일 때 루트입니다.
+         * @param outIndex 새 위젯이 들어갈 자식 번호입니다.
+         */
+        static PanelWidget* findDropContainer( WidgetTree& tree, Widget* pTarget, uint32& outIndex );
+        /** @brief @p type 의 위젯을 만들어 문서 순서 번호 @p parentOrdinal 인 패널의 @p index 번째에 끼웁니다. 못 끼우면 nullptr 입니다(패널이 아니거나 타입을 만들 수 없다). */
+        static Widget* insertWidget( WidgetTree& tree, const TypeInfo& type, uint32 parentOrdinal, uint32 index );
+        /** @brief 문서 순서 번호 @p parentOrdinal 인 패널의 @p index 번째 자식을 떼어 소유권을 돌려줍니다(지우거나 되돌릴 때 다시 끼운다). 없으면 빈 포인터입니다. */
+        static unique_ptr<Widget> detachWidget( WidgetTree& tree, uint32 parentOrdinal, uint32 index );
+        /** @brief 떼어 낸 위젯을 같은 자리에 다시 끼웁니다(지우기 되돌리기). 못 끼우면 nullptr 입니다. */
+        static Widget* attachWidget( WidgetTree& tree, unique_ptr<Widget> widget, uint32 parentOrdinal, uint32 index );
+        /** @brief 위젯의 슬롯을 손잡이로 고칠 수 있으면 true 입니다 — 부모가 캔버스 패널(앵커와 오프셋)일 때입니다. */
+        static bool canEditSlotByHandle( const Widget& widget );
+        /**
+         * @brief 손잡이 @p handle 을 UI 단위 @p deltaUI 만큼 끈 결과를 슬롯에 적용합니다. 가운데는 두 오프셋을 함께, 변은 그 변의 오프셋만 옮깁니다(자동 크기이면 오른쪽 · 아래 오프셋은 쓰이지 않아 옮기지 않는다).
+         * @return 슬롯이 바뀌었으면 true 입니다.
+         */
+        [[nodiscard]] static bool applySlotDrag( WidgetLayoutSlot& inoutSlot, UIPreviewSlotHandle handle, const float2& deltaUI );
         /** @brief 시간 막대 줄입니다 — "0.25 / 1.00 s". */
         static string makeTimeLabel( float32 time, float32 duration );
     };

@@ -10,7 +10,9 @@
 #include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Layout/BoxPanel.h"
+#include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Layout/UIScale.h"
+#include "Engine/UI/Layout/WidgetLayoutSlot.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/BorderPanel.h"
@@ -204,4 +206,87 @@ SW_TEST_CASE( UIPreviewLogicTest, EditedPropertyIsWrittenIntoTheDocumentText )
     ui.closeOffscreenScreen( handle );
     ui.shutdown();
     input.shutdown();
+}
+
+/**
+ * @brief [UIPreviewLogicTest] 디자이너: 위젯을 끼우고 떼고 다시 끼우면 트리가 그대로 돌아오고, 놓을 자리는 패널이면 그 안 · 아니면 그 위젯 뒤이며, 패널이 아닌 곳에는 끼우지 못한다
+ * @details 되돌리기 항목이 이 함수들로 구조를 되돌린다(추가 → 떼기, 지우기 → 같은 위젯 다시 끼우기). 문서 순서 번호로 부모를 가리키므로 앞 자식이 늘면 번호가 밀리지 않는지도 본다.
+ */
+SW_TEST_CASE( UIPreviewLogicTest, DesignerInsertDetachAndAttachRoundTrip )
+{
+    using sw::editor::UIPreviewLogic;
+    sw::WidgetTree               tree;
+    sw::unique_ptr<sw::BoxPanel> root  = sw::make_unique<sw::BoxPanel>();
+    sw::BoxPanel*                pRoot = root.get();
+    (void)pRoot->addChild( sw::make_unique<sw::TextWidget>() ); // 번호 1
+    tree.setRoot( std::move( root ) );
+    sw::vector<sw::editor::UIPreviewWidgetRow> listRow;
+    UIPreviewLogic::collectWidgetRows( tree, listRow );
+    SW_ASSERT_EQUAL( 2u, static_cast<uint32>( listRow.size() ) );
+
+    // 패널(루트)에 놓으면 자식 끝, 패널이 아닌 위젯(글)에 놓으면 그 바로 뒤이며 부모는 같다.
+    uint32 index{ 99 };
+    SW_EXPECT_TRUE( UIPreviewLogic::findDropContainer( tree, pRoot, index ) == pRoot );
+    SW_EXPECT_EQUAL( 1u, index );
+    sw::Widget* pText = tree.findWidgetByID( listRow[1]._widget );
+    SW_ASSERT_NOT_NULL( pText );
+    SW_EXPECT_TRUE( UIPreviewLogic::findDropContainer( tree, pText, index ) == pRoot );
+    SW_EXPECT_EQUAL( 1u, index );                                                         // 글은 0 번이라 바로 뒤가 1 번
+    SW_EXPECT_TRUE( UIPreviewLogic::findDropContainer( tree, nullptr, index ) == pRoot ); // 놓은 곳이 없으면 루트
+
+    // 끼운다 — 두 번째 자식으로.
+    sw::Widget* pAdded = UIPreviewLogic::insertWidget( tree, *sw::TextWidget::StaticType(), 0u, 1u );
+    SW_ASSERT_NOT_NULL( pAdded );
+    SW_EXPECT_EQUAL( 2u, pRoot->getChildCount() );
+    SW_EXPECT_EQUAL( 2u, UIPreviewLogic::findWidgetOrdinal( tree, pAdded->getID() ) );
+
+    // 떼면 그 위젯의 소유권이 나오고 트리는 처음과 같다. 같은 자리에 다시 끼우면 같은 위젯이다.
+    sw::unique_ptr<sw::Widget> detached = UIPreviewLogic::detachWidget( tree, 0u, 1u );
+    SW_ASSERT_NOT_NULL( detached.get() );
+    SW_EXPECT_EQUAL( 1u, pRoot->getChildCount() );
+    const sw::Widget* pSame = detached.get();
+    SW_EXPECT_TRUE( UIPreviewLogic::attachWidget( tree, std::move( detached ), 0u, 1u ) == pSame );
+    SW_EXPECT_EQUAL( 2u, pRoot->getChildCount() );
+
+    // 패널이 아닌 곳(글)에는 끼우지 못하고, 없는 자리는 떼지 못한다.
+    SW_EXPECT_TRUE( UIPreviewLogic::insertWidget( tree, *sw::TextWidget::StaticType(), 1u, 0u ) == nullptr );
+    SW_EXPECT_TRUE( UIPreviewLogic::detachWidget( tree, 0u, 9u ) == nullptr );
+    SW_EXPECT_TRUE( UIPreviewLogic::findPanelByOrdinal( tree, 1u ) == nullptr );
+    SW_EXPECT_TRUE( UIPreviewLogic::findPanelByOrdinal( tree, 0u ) == pRoot );
+}
+
+/**
+ * @brief [UIPreviewLogicTest] 슬롯 손잡이: 가운데는 두 오프셋을 함께, 변은 그 변만 옮기고, 자동 크기이면 오른쪽 · 아래는 옮기지 않으며, 캔버스 자식만 손잡이로 고친다
+ */
+SW_TEST_CASE( UIPreviewLogicTest, SlotHandlesMoveTheMatchingOffsets )
+{
+    using sw::editor::UIPreviewLogic;
+    using sw::editor::UIPreviewSlotHandle;
+    sw::WidgetLayoutSlot slot{};
+    slot._offsetMin = sw::float2{ 10.0f, 20.0f };
+    slot._offsetMax = sw::float2{ 110.0f, 70.0f };
+    SW_EXPECT_FALSE( UIPreviewLogic::applySlotDrag( slot, UIPreviewSlotHandle::Move, sw::float2{} ) ); // 안 움직였다
+    SW_EXPECT_TRUE( UIPreviewLogic::applySlotDrag( slot, UIPreviewSlotHandle::Move, sw::float2{ 5.0f, -5.0f } ) );
+    SW_EXPECT_NEAR_EQUAL( 15.0f, slot._offsetMin._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 15.0f, slot._offsetMin._y, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 115.0f, slot._offsetMax._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 65.0f, slot._offsetMax._y, 1e-4f );
+    SW_EXPECT_TRUE( UIPreviewLogic::applySlotDrag( slot, UIPreviewSlotHandle::Right, sw::float2{ 10.0f, 99.0f } ) ); // 오른쪽 변은 가로만 본다
+    SW_EXPECT_NEAR_EQUAL( 125.0f, slot._offsetMax._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 65.0f, slot._offsetMax._y, 1e-4f );
+    SW_EXPECT_TRUE( UIPreviewLogic::applySlotDrag( slot, UIPreviewSlotHandle::Top, sw::float2{ 99.0f, 4.0f } ) );
+    SW_EXPECT_NEAR_EQUAL( 19.0f, slot._offsetMin._y, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 15.0f, slot._offsetMin._x, 1e-4f );
+    slot._bAutoSize = true; // 크기가 내용에서 오므로 오른쪽 · 아래 오프셋은 쓰이지 않는다
+    SW_EXPECT_FALSE( UIPreviewLogic::applySlotDrag( slot, UIPreviewSlotHandle::Bottom, sw::float2{ 0.0f, 8.0f } ) );
+    SW_EXPECT_TRUE( UIPreviewLogic::applySlotDrag( slot, UIPreviewSlotHandle::Left, sw::float2{ -3.0f, 0.0f } ) );
+    SW_EXPECT_NEAR_EQUAL( 12.0f, slot._offsetMin._x, 1e-4f );
+
+    sw::WidgetTree                  tree;
+    sw::unique_ptr<sw::CanvasPanel> canvas  = sw::make_unique<sw::CanvasPanel>();
+    sw::CanvasPanel*                pCanvas = canvas.get();
+    sw::Widget*                     pChild  = pCanvas->addChild( sw::make_unique<sw::BorderPanel>() );
+    tree.setRoot( std::move( canvas ) );
+    SW_EXPECT_TRUE( UIPreviewLogic::canEditSlotByHandle( *pChild ) );
+    SW_EXPECT_FALSE( UIPreviewLogic::canEditSlotByHandle( *pCanvas ) ); // 루트는 부모가 없다
 }

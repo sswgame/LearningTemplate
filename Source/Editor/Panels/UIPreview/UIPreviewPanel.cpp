@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/UIPreview/UIPreviewPanel.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/FileUtil.h"
@@ -29,15 +30,18 @@
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/UI/Animation/UIAnimationPlayer.h"
+#include "Engine/UI/Base/PanelWidget.h"
 #include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Base/WidgetNavigation.h"
 #include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/Document/UIDocumentWriter.h"
+#include "Engine/UI/Layout/WidgetLayoutSlot.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
@@ -58,17 +62,45 @@ namespace sw::editor
             if ( _pPanel != nullptr )
                 _pPanel->applyEditedText( generation, ordinal, propertyName, text );
         }
+
+        void insert( uint32 generation, const hashed_string& typeName, uint32 parentOrdinal, uint32 index ) const
+        {
+            if ( _pPanel != nullptr )
+                _pPanel->applyInsert( generation, typeName, parentOrdinal, index );
+        }
+
+        void detach( uint32 generation, uint32 parentOrdinal, uint32 index, const shared_ptr<RemovedWidget>& pHolder ) const
+        {
+            if ( _pPanel != nullptr )
+                _pPanel->applyDetach( generation, parentOrdinal, index, pHolder );
+        }
+
+        void reattach( uint32 generation, uint32 parentOrdinal, uint32 index, const shared_ptr<RemovedWidget>& pHolder ) const
+        {
+            if ( _pPanel != nullptr )
+                _pPanel->applyReattach( generation, parentOrdinal, index, pHolder );
+        }
+    };
+
+    /** @brief 지운 위젯을 되돌리기 항목 둘(지우기를 되돌리기 · 다시 하기)이 나눠 들고 있는 상자입니다. */
+    struct UIPreviewPanel::RemovedWidget
+    {
+        unique_ptr<Widget> _pWidget{};
     };
 
     namespace
     {
         struct UIPreviewPanelInternal
         {
-            static constexpr float32 kLeftWidth      = 340.0f;
-            static constexpr float32 kIndentPerLevel = 12.0f;
-            static constexpr float32 kTreeRatio      = 0.38f; ///< 왼쪽 칸에서 위젯 트리가 차지하는 높이 비율(나머지는 인스펙터)
-            static constexpr Color   kLayoutColor{ Color::fromBytes( 90, 200, 255, 110 ) };
-            static constexpr Color   kSafeZoneColor{ Color::fromBytes( 255, 80, 80, 200 ) };
+            static constexpr float32     kLeftWidth            = 340.0f;
+            static constexpr float32     kIndentPerLevel       = 12.0f;
+            static constexpr float32     kTreeRatio            = 0.28f; ///< 왼쪽 칸에서 위젯 트리가 차지하는 높이 비율
+            static constexpr float32     kPaletteRatio         = 0.22f; ///< 팔레트가 차지하는 높이 비율(나머지는 인스펙터)
+            static constexpr float32     kHandleSize           = 9.0f;  ///< 슬롯 손잡이 한 변(96 DPI 픽셀)
+            static constexpr uint32      kPaletteRefreshFrames = 180;   ///< 팔레트를 다시 모으는 간격(게임 모듈이 위젯 타입을 더하거나 뺄 수 있다)
+            static constexpr const utf8* kPaletteDragPayload   = "SW_UIPREVIEW_WIDGET_TYPE";
+            static constexpr Color       kLayoutColor{ Color::fromBytes( 90, 200, 255, 110 ) };
+            static constexpr Color       kSafeZoneColor{ Color::fromBytes( 255, 80, 80, 200 ) };
 
             /** @brief 시나리오가 누를 이름표 `<접두어>.<접미어>` 를 남깁니다. 테스트를 켰을 때만 문자열을 만듭니다. */
             static void noteMark( const utf8* pPrefix, const utf8* pSuffix )
@@ -200,6 +232,33 @@ namespace sw::editor
                 return true;
             }
 
+            [[nodiscard]] static bool readSlotEditable( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const UIPreviewProbe* pProbe = findProbe();
+                if ( pProbe == nullptr || pProbe->_bSelectedValid == false )
+                    return false;
+                outValue = pProbe->_bSlotEditable ? 1.0 : 0.0;
+                return true;
+            }
+
+            [[nodiscard]] static bool readSelectedOffsetMinX( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const UIPreviewProbe* pProbe = findProbe();
+                if ( pProbe == nullptr || pProbe->_bSelectedValid == false )
+                    return false;
+                outValue = static_cast<float64>( pProbe->_selectedOffsetMinX );
+                return true;
+            }
+
+            [[nodiscard]] static bool readPaletteCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const UIPreviewProbe* pProbe = findProbe();
+                if ( pProbe == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pProbe->_paletteCount );
+                return true;
+            }
+
             [[nodiscard]] static bool readLanguageIndex( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const UIPreviewProbe* pProbe = findProbe();
@@ -237,6 +296,13 @@ namespace sw::editor
     SW_AUTOMATION_PROBE( editorUIPreviewReloadedAfterSave, "Editor.UIPreviewReloadedAfterSave",
                          "1 once the UI Preview rebuilt its tree from the file after the last Save (proves the write reached the document)",
                          &UIPreviewPanelInternal::readReloadedAfterSave );
+    SW_AUTOMATION_PROBE( editorUIPreviewSlotEditable, "Editor.UIPreviewSlotEditable",
+                         "1 when the selected widget's slot can be dragged by handles (its parent is a canvas panel); no value without a selection",
+                         &UIPreviewPanelInternal::readSlotEditable );
+    SW_AUTOMATION_PROBE( editorUIPreviewSelectedOffsetMinX, "Editor.UIPreviewSelectedOffsetMinX", "Slot _offsetMin._x of the selected widget (a handle drag changes it)",
+                         &UIPreviewPanelInternal::readSelectedOffsetMinX );
+    SW_AUTOMATION_PROBE( editorUIPreviewPaletteCount, "Editor.UIPreviewPaletteCount", "Widget types the UI Preview palette lists (every constructible Widget subclass)",
+                         &UIPreviewPanelInternal::readPaletteCount );
     SW_AUTOMATION_PROBE( editorUIPreviewLanguageIndex, "Editor.UIPreviewLanguageIndex", "Row of the UI Preview language combo (0 = the game language)",
                          &UIPreviewPanelInternal::readLanguageIndex );
 
@@ -245,6 +311,10 @@ namespace sw::editor
         , _listRow{}
         , _listLanguage{}
         , _listBaseline{}
+        , _listPaletteType{}
+        , _paletteFilter{}
+        , _slotDragBaseline{}
+        , _paletteType{}
         , _documentPath{ "engine/ui/pause.ui.xml" }
         , _openedDocument{}
         , _targetPath{}
@@ -270,6 +340,8 @@ namespace sw::editor
         , _generation{ 0 }
         , _gameTextRevision{ 0 }
         , _languageIndex{ 0 }
+        , _slotDragOrdinal{ UIPreviewLogic::kNoOrdinal }
+        , _paletteFrame{ 0 }
         , _resolutionIndex{ 1 }
         , _uiScale{ 1.0f }
         , _textScale{ 1.0f }
@@ -287,6 +359,7 @@ namespace sw::editor
         , _bApplyLocalization{ false }
         , _bAwaitReload{ false }
         , _bReloadedAfterSave{ false }
+        , _bSlotDragging{ false }
     {
         _pSession->_pPanel = this;
     }
@@ -559,24 +632,144 @@ namespace sw::editor
                 continue;
             if ( baseline._text == newText )
                 return;
-            const string oldText                     = baseline._text;
-            baseline._text                           = newText;
-            const uint32                  generation = _generation;
-            const uint32                  ordinal    = _selectedOrdinal;
-            const shared_ptr<EditSession> pSession   = _pSession;
+            const string oldText = baseline._text;
+            baseline._text       = newText;
             // 끌어 바꾸는 값은 프레임마다 알려 온다 — 같은 위젯 · 같은 프로퍼티의 연속 편집은 되돌리기 항목 하나로 합친다.
-            const string coalesceKey = "uipreview." + to_string( ordinal ) + "." + name;
-            EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, ordinal, name, oldText]()
-            {
-                pSession->apply( generation, ordinal, name, oldText );
-            } ),
-                                     SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, ordinal, name, newText]()
-            {
-                pSession->apply( generation, ordinal, name, newText );
-            } ),
-                                     "Edit UI Widget", coalesceKey );
+            pushPropertyEdit( _selectedOrdinal, name, oldText, newText, "uipreview." + to_string( _selectedOrdinal ) + "." + name );
             return;
         }
+    }
+
+    void UIPreviewPanel::pushPropertyEdit( uint32 ordinal, const string& propertyName, const string& oldText, const string& newText, const string& coalesceKey )
+    {
+        const uint32                  generation = _generation;
+        const shared_ptr<EditSession> pSession   = _pSession;
+        EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, ordinal, propertyName, oldText]()
+        {
+            pSession->apply( generation, ordinal, propertyName, oldText );
+        } ),
+                                 SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, ordinal, propertyName, newText]()
+        {
+            pSession->apply( generation, ordinal, propertyName, newText );
+        } ),
+                                 "Edit UI Widget", coalesceKey );
+    }
+
+    UIScreen* UIPreviewPanel::findPreviewScreen() const
+    {
+        UISystem* pUI = editor::getService<UISystem>();
+        return pUI != nullptr ? pUI->findOffscreenScreen( _screen ) : nullptr;
+    }
+
+    void UIPreviewPanel::afterStructureEdit( UIScreen& screen, uint32 selectedOrdinal )
+    {
+        // 위젯이 붙거나 떨어졌다 — 호버 경로가 옛 위젯 번호를 들고 있을 수 있어 비우고, 고름과 기준 값을 새 구조에 맞춘다.
+        WidgetTree& tree = screen.getTree();
+        _pointer.clearHover();
+        _bPointerInside  = false;
+        _baselineWidget  = kInvalidWidgetID;
+        _selectedOrdinal = selectedOrdinal;
+        _selected        = selectedOrdinal != UIPreviewLogic::kNoOrdinal ? UIPreviewLogic::findWidgetByOrdinal( tree, selectedOrdinal ) : kInvalidWidgetID;
+        markDocumentDirty();
+    }
+
+    bool UIPreviewPanel::addWidget( UIScreen& screen, const hashed_string& typeName, Widget* pTarget )
+    {
+        TypeRegistry*   pRegistry = editor::getService<TypeRegistry>();
+        const TypeInfo* pType     = pRegistry != nullptr ? pRegistry->findType( typeName ) : nullptr;
+        WidgetTree&     tree      = screen.getTree();
+        uint32          index{ 0 };
+        PanelWidget*    pParent = UIPreviewLogic::findDropContainer( tree, pTarget, index );
+        if ( pType == nullptr || pParent == nullptr )
+            return false;
+        const uint32 parentOrdinal = UIPreviewLogic::findWidgetOrdinal( tree, pParent->getID() );
+        Widget*      pAdded        = UIPreviewLogic::insertWidget( tree, *pType, parentOrdinal, index );
+        if ( pAdded == nullptr )
+        {
+            SW_LOG_WARNING( "UI Preview: a '%#' cannot be added to '%#' (the panel takes no more children or the type cannot be built)", typeName.c_str(),
+                            pParent->getName().c_str() );
+            return false;
+        }
+        afterStructureEdit( screen, UIPreviewLogic::findWidgetOrdinal( tree, pAdded->getID() ) );
+        const uint32                  generation = _generation;
+        const shared_ptr<EditSession> pSession   = _pSession;
+        EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, index]()
+        {
+            pSession->detach( generation, parentOrdinal, index, shared_ptr<RemovedWidget>{} );
+        } ),
+                                 SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, typeName, parentOrdinal, index]()
+        {
+            pSession->insert( generation, typeName, parentOrdinal, index );
+        } ),
+                                 "Add UI Widget" );
+        return true;
+    }
+
+    bool UIPreviewPanel::deleteSelected( UIScreen& screen )
+    {
+        WidgetTree& tree    = screen.getTree();
+        Widget*     pWidget = tree.findWidgetByID( _selected );
+        if ( pWidget == nullptr || pWidget->getParent() == nullptr )
+            return false; // 루트는 지우지 않는다(문서에는 루트가 있어야 한다)
+        PanelWidget* pParent = pWidget->getParent();
+        const uint32 index   = pParent->findChildIndex( pWidget );
+        if ( index == invalid_index::kUint32 )
+            return false;
+        const uint32 parentOrdinal = UIPreviewLogic::findWidgetOrdinal( tree, pParent->getID() );
+        _pointer.clearHover();
+        shared_ptr<RemovedWidget> pHolder = sw::make_shared<RemovedWidget>();
+        pHolder->_pWidget                 = UIPreviewLogic::detachWidget( tree, parentOrdinal, index );
+        if ( pHolder->_pWidget == nullptr )
+            return false;
+        afterStructureEdit( screen, parentOrdinal );
+        const uint32                  generation = _generation;
+        const shared_ptr<EditSession> pSession   = _pSession;
+        EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, index, pHolder]()
+        {
+            pSession->reattach( generation, parentOrdinal, index, pHolder );
+        } ),
+                                 SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, index, pHolder]()
+        {
+            pSession->detach( generation, parentOrdinal, index, pHolder );
+        } ),
+                                 "Delete UI Widget" );
+        return true;
+    }
+
+    void UIPreviewPanel::applyInsert( uint32 generation, const hashed_string& typeName, uint32 parentOrdinal, uint32 index )
+    {
+        UIScreen*       pScreen   = generation == _generation ? findPreviewScreen() : nullptr;
+        TypeRegistry*   pRegistry = editor::getService<TypeRegistry>();
+        const TypeInfo* pType     = pRegistry != nullptr ? pRegistry->findType( typeName ) : nullptr;
+        if ( pScreen == nullptr || pType == nullptr )
+            return;
+        Widget* pAdded = UIPreviewLogic::insertWidget( pScreen->getTree(), *pType, parentOrdinal, index );
+        if ( pAdded != nullptr )
+            afterStructureEdit( *pScreen, UIPreviewLogic::findWidgetOrdinal( pScreen->getTree(), pAdded->getID() ) );
+    }
+
+    void UIPreviewPanel::applyDetach( uint32 generation, uint32 parentOrdinal, uint32 index, const shared_ptr<RemovedWidget>& pHolder )
+    {
+        UIScreen* pScreen = generation == _generation ? findPreviewScreen() : nullptr;
+        if ( pScreen == nullptr )
+            return;
+        _pointer.clearHover();
+        unique_ptr<Widget> removed = UIPreviewLogic::detachWidget( pScreen->getTree(), parentOrdinal, index );
+        if ( removed == nullptr )
+            return;
+        if ( pHolder != nullptr )
+            pHolder->_pWidget = std::move( removed ); // 지우기를 다시 하면 되돌릴 때 끼울 위젯을 다시 맡는다
+        afterStructureEdit( *pScreen, parentOrdinal );
+    }
+
+    void UIPreviewPanel::applyReattach( uint32 generation, uint32 parentOrdinal, uint32 index, const shared_ptr<RemovedWidget>& pHolder )
+    {
+        UIScreen* pScreen = generation == _generation ? findPreviewScreen() : nullptr;
+        if ( pScreen == nullptr || pHolder == nullptr || pHolder->_pWidget == nullptr )
+            return;
+        Widget* pAttached = UIPreviewLogic::attachWidget( pScreen->getTree(), std::move( pHolder->_pWidget ), parentOrdinal, index );
+        if ( pAttached != nullptr )
+            afterStructureEdit( *pScreen, UIPreviewLogic::findWidgetOrdinal( pScreen->getTree(), pAttached->getID() ) );
     }
 
     void UIPreviewPanel::applyEditedText( uint32 generation, uint32 ordinal, const string& propertyName, const string& text )
@@ -875,7 +1068,137 @@ namespace sw::editor
         ImGui::TextDisabled( "%s", UIPreviewLogic::makeTimeLabel( bActive ? time : value, duration ).c_str() );
     }
 
-    void UIPreviewPanel::drawWidgetList( const UIScreen& screen )
+    void UIPreviewPanel::acceptPaletteDrop( UIScreen& screen, Widget* pTarget )
+    {
+        if ( ImGui::BeginDragDropTarget() == false )
+            return;
+        const ImGuiPayload* pPayload = ImGui::AcceptDragDropPayload( UIPreviewPanelInternal::kPaletteDragPayload );
+        if ( pPayload != nullptr && pPayload->Data != nullptr )
+            (void)addWidget( screen, hashed_string( static_cast<const utf8*>( pPayload->Data ) ), pTarget ); // 못 붙이면 addWidget 이 경고로 알린다
+        ImGui::EndDragDropTarget();
+    }
+
+    void UIPreviewPanel::drawPalette( UIScreen& screen )
+    {
+        using Internal          = UIPreviewPanelInternal;
+        TypeRegistry* pRegistry = editor::getService<TypeRegistry>();
+        const uint32  frame     = static_cast<uint32>( ImGui::GetFrameCount() );
+        if ( pRegistry != nullptr && ( _listPaletteType.empty() || frame - _paletteFrame > Internal::kPaletteRefreshFrames ) )
+        {
+            UIPreviewLogic::collectPaletteTypes( *pRegistry, _listPaletteType );
+            _paletteFrame = frame;
+        }
+
+        const bool bCanAdd = _paletteType.empty() == false;
+        ImGui::BeginDisabled( bCanAdd == false );
+        if ( ImGui::Button( "Add" ) )
+            (void)addWidget( screen, _paletteType, screen.getTree().findWidgetByID( _selected ) );
+        ImGui::EndDisabled();
+        Internal::noteMark( "uipreview.palette", "add" );
+        EditorWidgets::drawTooltip( "Add the chosen widget type into the selected panel (after the selected widget when it is not a panel). Drag an entry onto a tree row or the picture instead to choose the place." );
+        ImGui::SameLine();
+        const bool bCanDelete = screen.getTree().findWidgetByID( _selected ) != nullptr && screen.getTree().findWidgetByID( _selected )->getParent() != nullptr;
+        ImGui::BeginDisabled( bCanDelete == false );
+        if ( ImGui::Button( "Delete" ) )
+            (void)deleteSelected( screen ); // 루트나 없는 선택은 못 지우고, 그때는 단추가 꺼져 있다
+        ImGui::EndDisabled();
+        Internal::noteMark( "uipreview", "delete" );
+        EditorWidgets::drawTooltip( "Remove the selected widget and its children (Undo puts them back). The root cannot be removed." );
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth( -1.0f );
+        (void)EditorWidgets::drawTextField( "##uipreviewpalettefilter", _paletteFilter );
+        Internal::noteMark( "uipreview.palette", "filter" );
+
+        ImGui::BeginChild( "##uipreviewpalettelist", ImVec2{ 0.0f, 0.0f }, ImGuiChildFlags_None );
+        for ( const TypeInfo* pType : _listPaletteType )
+        {
+            const utf8* pName = pType->_name.c_str();
+            if ( _paletteFilter.empty() == false && StringUtil::stristr( pName, _paletteFilter.c_str() ) == nullptr )
+                continue;
+            const bool bChosen = _paletteType == pType->_name;
+            if ( ImGui::Selectable( pName, bChosen, ImGuiSelectableFlags_AllowDoubleClick ) )
+            {
+                _paletteType = pType->_name;
+                if ( ImGui::IsMouseDoubleClicked( 0 ) )
+                    (void)addWidget( screen, _paletteType, screen.getTree().findWidgetByID( _selected ) );
+            }
+            Internal::noteMark( "uipreview.palette", pName );
+            // 끌어서 트리 줄이나 그림에 놓는다 — 놓는 쪽이 받는 패널을 고른다(`UIPreviewLogic::findDropContainer`).
+            if ( ImGui::BeginDragDropSource( ImGuiDragDropFlags_None ) )
+            {
+                ImGui::SetDragDropPayload( Internal::kPaletteDragPayload, pName, StringUtil::strlen( pName ) + 1 );
+                ImGui::TextUnformatted( pName );
+                ImGui::EndDragDropSource();
+            }
+        }
+        ImGui::EndChild();
+    }
+
+    void UIPreviewPanel::drawSlotHandles( UIScreen& screen, const float2& drawSize, const float2& origin )
+    {
+        using Internal  = UIPreviewPanelInternal;
+        Widget* pWidget = screen.getTree().findWidgetByID( _selected );
+        if ( pWidget == nullptr || UIPreviewLogic::canEditSlotByHandle( *pWidget ) == false || drawSize._x <= 0.0f || drawSize._y <= 0.0f )
+            return;
+        const PropertyInfo* pSlotProp = UIPreviewLogic::findWidgetProperty( *pWidget, "_slot" );
+        if ( pSlotProp == nullptr )
+            return;
+        const UIRect  box  = UIPreviewLogic::mapUIToImage( pWidget->getGeometry().computeScreenBounds(), drawSize, _viewport );
+        const float32 half = Internal::kHandleSize * EditorThemeUtil::getDpiScale() * 0.5f;
+        const float2  center{ origin._x + ( box._left + box._right ) * 0.5f, origin._y + ( box._top + box._bottom ) * 0.5f };
+        struct HandleRow
+        {
+            UIPreviewSlotHandle _handle;
+            const utf8*         _pMark;
+            float2              _center;
+        };
+        const HandleRow arrHandle[] = {
+            {  UIPreviewSlotHandle::Move,   "move",                                       center},
+            {  UIPreviewSlotHandle::Left,   "left",   float2{ origin._x + box._left, center._y }},
+            {   UIPreviewSlotHandle::Top,    "top",    float2{ center._x, origin._y + box._top }},
+            { UIPreviewSlotHandle::Right,  "right",  float2{ origin._x + box._right, center._y }},
+            {UIPreviewSlotHandle::Bottom, "bottom", float2{ center._x, origin._y + box._bottom }},
+        };
+        // 마우스 이동량(화면 픽셀)을 UI 단위로 옮기는 배율 — 그림이 뷰포트보다 작게 그려진다.
+        const float32 toUIX = _viewport._size._x / drawSize._x;
+        const float32 toUIY = _viewport._size._y / drawSize._y;
+        for ( const HandleRow& row : arrHandle )
+        {
+            ImGui::SetCursorScreenPos( ImVec2{ row._center._x - half, row._center._y - half } );
+            ImGui::PushID( row._pMark );
+            ImGui::InvisibleButton( "##handle", ImVec2{ half * 2.0f, half * 2.0f } );
+            Internal::noteMark( "uipreview.handle", row._pMark );
+            ImGui::GetWindowDrawList()->AddRectFilled( ImVec2{ row._center._x - half, row._center._y - half }, ImVec2{ row._center._x + half, row._center._y + half },
+                                                       EditorColorUtil::toImU32( style::kHighlight ) );
+            if ( ImGui::IsItemActivated() )
+            {
+                _bSlotDragging    = true;
+                _slotDragOrdinal  = _selectedOrdinal;
+                _slotDragBaseline = UIPreviewLogic::formatWidgetProperty( *pWidget, *pSlotProp );
+            }
+            if ( ImGui::IsItemActive() && _bSlotDragging )
+            {
+                const ImVec2     mouseDelta = ImGui::GetIO().MouseDelta;
+                WidgetLayoutSlot slot       = pWidget->getLayoutSlot();
+                if ( UIPreviewLogic::applySlotDrag( slot, row._handle, float2{ mouseDelta.x * toUIX, mouseDelta.y * toUIY } ) )
+                    pWidget->setLayoutSlot( slot );
+            }
+            if ( ImGui::IsItemDeactivated() && _bSlotDragging )
+            {
+                _bSlotDragging       = false;
+                const string newText = UIPreviewLogic::formatWidgetProperty( *pWidget, *pSlotProp );
+                if ( newText != _slotDragBaseline )
+                {
+                    pushPropertyEdit( _slotDragOrdinal, "_slot", _slotDragBaseline, newText, string{} );
+                    markDocumentDirty();
+                    _baselineWidget = kInvalidWidgetID; // 인스펙터의 기준 값을 다시 잡는다
+                }
+            }
+            ImGui::PopID();
+        }
+    }
+
+    void UIPreviewPanel::drawWidgetList( UIScreen& screen )
     {
         using Internal = UIPreviewPanelInternal;
         UIPreviewLogic::collectWidgetRows( screen.getTree(), _listRow );
@@ -898,6 +1221,7 @@ namespace sw::editor
                 if ( pWidget != nullptr && pWidget->getName().empty() == false )
                     Internal::noteMark( "uipreview.widget", pWidget->getName().c_str() );
             }
+            acceptPaletteDrop( screen, screen.getTree().findWidgetByID( row._widget ) ); // 팔레트 항목을 이 줄에 놓는다
             ImGui::Unindent( Internal::kIndentPerLevel * static_cast<float32>( row._depth ) + 0.001f );
             ImGui::PopID();
         }
@@ -1029,6 +1353,19 @@ namespace sw::editor
         ImGui::Image( reinterpret_cast<ImTextureID>( _pTextureID ), ImVec2{ drawSize._x, drawSize._y } );
         const bool bImageHovered = ImGui::IsItemHovered();
         EditorSelfTestMarks::note( "uipreview.image" );
+        if ( _bInteract == false && ImGui::BeginDragDropTarget() )
+        {
+            // 팔레트 항목을 그림 위에 놓는다 — 놓은 점 아래 위젯이 받는 쪽을 정한다(패널이면 그 안, 아니면 그 뒤).
+            const ImGuiPayload* pPayload = ImGui::AcceptDragDropPayload( Internal::kPaletteDragPayload );
+            if ( pPayload != nullptr && pPayload->Data != nullptr )
+            {
+                const ImVec2   mouse  = ImGui::GetMousePos();
+                const float2   point  = UIPreviewLogic::mapImageToUI( float2{ mouse.x - origin._x, mouse.y - origin._y }, drawSize, _viewport );
+                const WidgetID target = UIPreviewLogic::findWidgetAt( screen.getTree(), point );
+                (void)addWidget( screen, hashed_string( static_cast<const utf8*>( pPayload->Data ) ), screen.getTree().findWidgetByID( target ) ); // 못 붙이면 addWidget 이 경고로 알린다
+            }
+            ImGui::EndDragDropTarget();
+        }
         if ( _bInteract )
         {
             feedPointer( screen, drawSize, origin, bImageHovered );
@@ -1065,6 +1402,9 @@ namespace sw::editor
             const UIRect safe{ insets._x, insets._y, _viewport._size._x - insets._z, _viewport._size._y - insets._w };
             drawBox( UIPreviewLogic::mapUIToImage( safe, drawSize, _viewport ), EditorColorUtil::toImU32( Internal::kSafeZoneColor ), 1.0f );
         }
+        // 캔버스 자식의 슬롯 손잡이(옮기기 · 네 변) — 끌면 슬롯의 오프셋이 바뀌고 놓으면 되돌리기 항목 하나가 쌓인다. 입력 흉내 중에는 숨긴다(포인터를 가로채지 않게).
+        if ( _bInteract == false )
+            drawSlotHandles( screen, drawSize, origin );
         ImGui::EndChild();
     }
 
@@ -1111,9 +1451,12 @@ namespace sw::editor
         const Widget* pSelected = tree.findWidgetByID( _selected );
         if ( pSelected != nullptr )
         {
-            _probe._bSelectedValid  = true;
-            _probe._selectedOpacity = pSelected->getOpacity();
+            _probe._bSelectedValid     = true;
+            _probe._selectedOpacity    = pSelected->getOpacity();
+            _probe._bSlotEditable      = UIPreviewLogic::canEditSlotByHandle( *pSelected );
+            _probe._selectedOffsetMinX = pSelected->getLayoutSlot()._offsetMin._x;
         }
+        _probe._paletteCount = static_cast<uint32>( _listPaletteType.size() );
         float32 time{ 0.0f };
         float32 duration{ 0.0f };
         if ( pScreen->getAnimationPlayer().getPlaybackTime( _animation, time, duration ) )
@@ -1153,12 +1496,16 @@ namespace sw::editor
             return;
         }
 
-        // 왼쪽 칸: 위젯 트리 위, 고른 위젯의 프로퍼티(인스펙터) 아래. 오른쪽: 미리보기 그림.
+        // 왼쪽 칸: 위젯 트리, 팔레트, 고른 위젯의 프로퍼티(인스펙터)를 위에서 아래로. 오른쪽: 미리보기 그림.
         const float32 dpi = EditorThemeUtil::getDpiScale();
         ImGui::BeginChild( "##uipreviewleft", ImVec2{ Internal::kLeftWidth * dpi, 0.0f }, ImGuiChildFlags_None );
-        const float32 treeHeight = ImGui::GetContentRegionAvail().y * Internal::kTreeRatio;
+        const float32 treeHeight    = ImGui::GetContentRegionAvail().y * Internal::kTreeRatio;
+        const float32 paletteHeight = ImGui::GetContentRegionAvail().y * Internal::kPaletteRatio;
         ImGui::BeginChild( "##uipreviewtree", ImVec2{ 0.0f, treeHeight }, ImGuiChildFlags_Borders );
         drawWidgetList( *pScreen );
+        ImGui::EndChild();
+        ImGui::BeginChild( "##uipreviewpalette", ImVec2{ 0.0f, paletteHeight }, ImGuiChildFlags_Borders );
+        drawPalette( *pScreen );
         ImGui::EndChild();
         ImGui::BeginChild( "##uipreviewinspector", ImVec2{ 0.0f, 0.0f }, ImGuiChildFlags_Borders );
         drawInspector( *pScreen );

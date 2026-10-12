@@ -8,7 +8,9 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/UI/Animation/UIAnimationPlayer.h"
@@ -17,8 +19,11 @@
 #include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
+#include "Engine/UI/Document/UIDocumentLoader.h"
 #include "Engine/UI/Document/UIDocumentWriter.h"
+#include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Layout/UIScale.h"
+#include "Engine/UI/Layout/WidgetLayoutSlot.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UISystem.h"
 
@@ -194,6 +199,119 @@ namespace sw::editor
             return false;
         widget.onBoundPropertyChanged( prop );
         return true;
+    }
+
+    PanelWidget* UIPreviewLogic::findPanelByOrdinal( WidgetTree& tree, uint32 ordinal )
+    {
+        Widget* pWidget = tree.findWidgetByID( findWidgetByOrdinal( tree, ordinal ) );
+        return pWidget != nullptr ? pWidget->asPanel() : nullptr;
+    }
+
+    void UIPreviewLogic::collectPaletteTypes( const TypeRegistry& registry, vector<const TypeInfo*>& outListType )
+    {
+        outListType.clear();
+        for ( const TypeInfo* pType : registry.getDerivedTypes<Widget>() )
+        {
+            if ( pType != nullptr && pType->canConstruct() )
+                outListType.push_back( pType );
+        }
+        std::sort( outListType.begin(), outListType.end(), []( const TypeInfo* pLeft, const TypeInfo* pRight )
+        { return string_view{ pLeft->_name.c_str() } < string_view{ pRight->_name.c_str() }; } );
+    }
+
+    PanelWidget* UIPreviewLogic::findDropContainer( WidgetTree& tree, Widget* pTarget, uint32& outIndex )
+    {
+        PanelWidget* pContainer = pTarget != nullptr ? pTarget->asPanel() : nullptr;
+        if ( pContainer != nullptr )
+        {
+            outIndex = pContainer->getChildCount(); // 패널에 놓으면 자식 끝에 붙인다
+            return pContainer;
+        }
+        pContainer = pTarget != nullptr ? pTarget->getParent() : nullptr;
+        if ( pContainer != nullptr )
+        {
+            const uint32 targetIndex = pContainer->findChildIndex( pTarget );
+            outIndex                 = targetIndex == invalid_index::kUint32 ? pContainer->getChildCount() : targetIndex + 1; // 패널이 아닌 위젯에 놓으면 그 바로 뒤에 끼운다
+            return pContainer;
+        }
+        Widget* pRoot = tree.getRoot();
+        pContainer    = pRoot != nullptr ? pRoot->asPanel() : nullptr;
+        outIndex      = pContainer != nullptr ? pContainer->getChildCount() : 0;
+        return pContainer;
+    }
+
+    Widget* UIPreviewLogic::insertWidget( WidgetTree& tree, const TypeInfo& type, uint32 parentOrdinal, uint32 index )
+    {
+        PanelWidget* pParent = findPanelByOrdinal( tree, parentOrdinal );
+        if ( pParent == nullptr )
+            return nullptr;
+        unique_ptr<Widget> widget = UIDocumentLoader::createWidget( type );
+        if ( widget == nullptr )
+            return nullptr;
+        return pParent->insertChild( index, std::move( widget ) );
+    }
+
+    unique_ptr<Widget> UIPreviewLogic::detachWidget( WidgetTree& tree, uint32 parentOrdinal, uint32 index )
+    {
+        PanelWidget* pParent = findPanelByOrdinal( tree, parentOrdinal );
+        if ( pParent == nullptr || index >= pParent->getChildCount() )
+            return {};
+        return pParent->removeChild( pParent->getChild( index ) );
+    }
+
+    Widget* UIPreviewLogic::attachWidget( WidgetTree& tree, unique_ptr<Widget> widget, uint32 parentOrdinal, uint32 index )
+    {
+        PanelWidget* pParent = findPanelByOrdinal( tree, parentOrdinal );
+        if ( pParent == nullptr || widget == nullptr )
+            return nullptr;
+        return pParent->insertChild( index, std::move( widget ) );
+    }
+
+    bool UIPreviewLogic::canEditSlotByHandle( const Widget& widget )
+    {
+        return castTo<const CanvasPanel>( widget.getParent() ) != nullptr;
+    }
+
+    bool UIPreviewLogic::applySlotDrag( WidgetLayoutSlot& inoutSlot, UIPreviewSlotHandle handle, const float2& deltaUI )
+    {
+        if ( deltaUI._x == 0.0f && deltaUI._y == 0.0f )
+            return false;
+        switch ( handle )
+        {
+            case UIPreviewSlotHandle::Move:
+            {
+                inoutSlot._offsetMin._x += deltaUI._x;
+                inoutSlot._offsetMin._y += deltaUI._y;
+                inoutSlot._offsetMax._x += deltaUI._x;
+                inoutSlot._offsetMax._y += deltaUI._y;
+                return true;
+            }
+            case UIPreviewSlotHandle::Left:
+            {
+                inoutSlot._offsetMin._x += deltaUI._x;
+                return deltaUI._x != 0.0f;
+            }
+            case UIPreviewSlotHandle::Top:
+            {
+                inoutSlot._offsetMin._y += deltaUI._y;
+                return deltaUI._y != 0.0f;
+            }
+            case UIPreviewSlotHandle::Right:
+            {
+                if ( inoutSlot._bAutoSize )
+                    return false;
+                inoutSlot._offsetMax._x += deltaUI._x;
+                return deltaUI._x != 0.0f;
+            }
+            case UIPreviewSlotHandle::Bottom:
+            {
+                if ( inoutSlot._bAutoSize )
+                    return false;
+                inoutSlot._offsetMax._y += deltaUI._y;
+                return deltaUI._y != 0.0f;
+            }
+        }
+        return false;
     }
 
     bool UIPreviewLogic::makeDocumentText( UISystem& ui, const UIScreen& screen, string_view documentPath, string& outText, string& outError )
