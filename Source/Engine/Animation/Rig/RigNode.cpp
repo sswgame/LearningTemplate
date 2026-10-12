@@ -5,7 +5,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/AnimJSONUtil.h"
+#include "Engine/Animation/AnimationJSONUtil.h"
 #include "Engine/Animation/Rig/RigIKSolver.h"
 #include "Engine/Animation/Rig/RigInstance.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
@@ -127,7 +127,7 @@ namespace sw
         if ( value.isValid() == false )
             return bRequired == false;
         float32 arrValue[3]{};
-        if ( AnimJSONUtil::readFloats( value, arrValue, 3 ) == false )
+        if ( AnimationJSONUtil::readFloats( value, arrValue, 3 ) == false )
         {
             fail( RigNodeInternal::makeKeyMessage( key, "must be an array of 3 numbers" ) );
             return false;

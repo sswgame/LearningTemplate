@@ -92,7 +92,7 @@ set_target_properties(Engine PROPERTIES FOLDER "Source/Engine")
 # 헤더는 각 백엔드 폴더에서만 include 한다(CheckThirdPartyIsolation.py) — 다른 코드와 다른 타깃은 엔진 인터페이스만 본다.
 # ThirdParty include/link 는 PRIVATE 로 둔다. Engine 밖으로 헤더가 노출되지 않게 해 C-ABI 격리를 유지한다.
 # ------------------------------------------------------------------------------
-# 애니메이션 압축(ACL · RTM, 헤더만). 헤더는 `Animation/Codec/ACL/` 에서만 include 한다 — 코덱 인터페이스(`AnimCodec.h`) 뒤에 감춘다.
+# 애니메이션 압축(ACL · RTM, 헤더만). 헤더는 `Animation/Codec/ACL/` 에서만 include 한다 — 코덱 인터페이스(`AnimationCodec.h`) 뒤에 감춘다.
 target_link_libraries(Engine PRIVATE acl)
 
 if(TARGET sw_third_party_includes)

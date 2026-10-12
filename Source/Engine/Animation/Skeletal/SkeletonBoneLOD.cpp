@@ -7,7 +7,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Animation/AnimJSONUtil.h"
+#include "Engine/Animation/AnimationJSONUtil.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -66,7 +66,7 @@ namespace sw
 
     bool SkeletonBoneLOD::parseRoot( const JSONValue& root, string_view sourceLabel )
     {
-        if ( AnimJSONUtil::hasOnlyKnownKeys( root, { "levels" }, sourceLabel ) == false )
+        if ( AnimationJSONUtil::hasOnlyKnownKeys( root, { "levels" }, sourceLabel ) == false )
             return false;
         const JSONValue levels = root.get( "levels" );
         if ( levels.isArray() == false )
@@ -77,7 +77,7 @@ namespace sw
         for ( size_t levelIndex = 0; levelIndex < levels.size(); ++levelIndex )
         {
             const JSONValue level = levels.at( levelIndex );
-            if ( AnimJSONUtil::hasOnlyKnownKeys( level, { "max_screen_size", "remove" }, sourceLabel ) == false )
+            if ( AnimationJSONUtil::hasOnlyKnownKeys( level, { "max_screen_size", "remove" }, sourceLabel ) == false )
                 return false;
             const JSONValue removed = level.get( "remove" );
             if ( level.get( "max_screen_size" ).isNumber() == false || removed.isArray() == false || removed.size() == 0 )

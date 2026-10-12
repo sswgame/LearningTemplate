@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Animation/Codec/Raw/RawAnimCodec.h"
+#include "Engine/Animation/Codec/Raw/RawAnimationCodec.h"
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -9,7 +9,7 @@ namespace sw
 {
     namespace
     {
-        struct RawAnimCodecInternal
+        struct RawAnimationCodecInternal
         {
             /** @brief 헤더 크기입니다(샘플 수, 샘플율, 트랙 수). */
             static constexpr size_t kHeaderSize = 12;
@@ -46,13 +46,13 @@ namespace sw
 
 namespace sw
 {
-    const RawAnimCodec& RawAnimCodec::getInstance()
+    const RawAnimationCodec& RawAnimationCodec::getInstance()
     {
-        static const RawAnimCodec s_codec;
+        static const RawAnimationCodec s_codec;
         return s_codec;
     }
 
-    bool RawAnimCodec::compress( const AnimRawClip& rawClip, const AnimCodecSettings& settings, vector<uint8>& outBytes ) const
+    bool RawAnimationCodec::compress( const AnimationRawClip& rawClip, const AnimationCodecSettings& settings, vector<uint8>& outBytes ) const
     {
         (void)settings;
         outBytes.clear();
@@ -60,27 +60,27 @@ namespace sw
         if ( rawClip._sampleCount == 0 || trackCount == 0 || rawClip._listSample.size() != static_cast<size_t>( rawClip._sampleCount ) * trackCount )
             return false;
 
-        outBytes.reserve( RawAnimCodecInternal::kHeaderSize + rawClip._listSample.size() * RawAnimCodecInternal::kFloatPerTransform * sizeof( float32 ) );
-        RawAnimCodecInternal::appendUint( outBytes, rawClip._sampleCount );
-        RawAnimCodecInternal::appendFloat( outBytes, rawClip._sampleRate );
-        RawAnimCodecInternal::appendUint( outBytes, trackCount );
+        outBytes.reserve( RawAnimationCodecInternal::kHeaderSize + rawClip._listSample.size() * RawAnimationCodecInternal::kFloatPerTransform * sizeof( float32 ) );
+        RawAnimationCodecInternal::appendUint( outBytes, rawClip._sampleCount );
+        RawAnimationCodecInternal::appendFloat( outBytes, rawClip._sampleRate );
+        RawAnimationCodecInternal::appendUint( outBytes, trackCount );
         for ( const BoneTransform& transform : rawClip._listSample )
         {
-            const float32 arrValue[RawAnimCodecInternal::kFloatPerTransform] = { transform._translation._x, transform._translation._y, transform._translation._z,
-                                                                                 transform._rotation._x, transform._rotation._y, transform._rotation._z,
-                                                                                 transform._rotation._w, transform._scale._x, transform._scale._y,
-                                                                                 transform._scale._z };
+            const float32 arrValue[RawAnimationCodecInternal::kFloatPerTransform] = { transform._translation._x, transform._translation._y, transform._translation._z,
+                                                                                      transform._rotation._x, transform._rotation._y, transform._rotation._z,
+                                                                                      transform._rotation._w, transform._scale._x, transform._scale._y,
+                                                                                      transform._scale._z };
             for ( const float32 value : arrValue )
             {
-                RawAnimCodecInternal::appendFloat( outBytes, value );
+                RawAnimationCodecInternal::appendFloat( outBytes, value );
             }
         }
         return true;
     }
 
-    bool RawAnimCodec::sample( const uint8* pBytes, size_t byteCount, float32 time, Pose& outPose, const uint8* pTrackMask ) const
+    bool RawAnimationCodec::sample( const uint8* pBytes, size_t byteCount, float32 time, Pose& outPose, const uint8* pTrackMask ) const
     {
-        if ( pBytes == nullptr || byteCount < RawAnimCodecInternal::kHeaderSize )
+        if ( pBytes == nullptr || byteCount < RawAnimationCodecInternal::kHeaderSize )
             return false;
         uint32  sampleCount = 0;
         float32 sampleRate  = 0.0f;
@@ -88,8 +88,8 @@ namespace sw
         Memory::copy( &sampleCount, pBytes, sizeof( sampleCount ) );
         Memory::copy( &sampleRate, pBytes + 4, sizeof( sampleRate ) );
         Memory::copy( &trackCount, pBytes + 8, sizeof( trackCount ) );
-        const size_t transformSize = RawAnimCodecInternal::kFloatPerTransform * sizeof( float32 );
-        const size_t expectedSize  = RawAnimCodecInternal::kHeaderSize + static_cast<size_t>( sampleCount ) * trackCount * transformSize;
+        const size_t transformSize = RawAnimationCodecInternal::kFloatPerTransform * sizeof( float32 );
+        const size_t expectedSize  = RawAnimationCodecInternal::kHeaderSize + static_cast<size_t>( sampleCount ) * trackCount * transformSize;
         if ( sampleCount == 0 || expectedSize != byteCount )
             return false;
 
@@ -100,14 +100,14 @@ namespace sw
         const uint32  firstSample  = static_cast<uint32>( frame );
         const uint32  secondSample = MathUtil::min( firstSample + 1, sampleCount - 1 );
         const float32 alpha        = frame - static_cast<float32>( firstSample );
-        const uint8*  pFirst       = pBytes + RawAnimCodecInternal::kHeaderSize + static_cast<size_t>( firstSample ) * trackCount * transformSize;
-        const uint8*  pSecond      = pBytes + RawAnimCodecInternal::kHeaderSize + static_cast<size_t>( secondSample ) * trackCount * transformSize;
+        const uint8*  pFirst       = pBytes + RawAnimationCodecInternal::kHeaderSize + static_cast<size_t>( firstSample ) * trackCount * transformSize;
+        const uint8*  pSecond      = pBytes + RawAnimationCodecInternal::kHeaderSize + static_cast<size_t>( secondSample ) * trackCount * transformSize;
         for ( uint32 trackIndex = 0; trackIndex < trackCount; ++trackIndex )
         {
             if ( pTrackMask != nullptr && pTrackMask[trackIndex] == 0 )
                 continue;
-            const BoneTransform first  = RawAnimCodecInternal::readTransform( pFirst + trackIndex * transformSize );
-            const BoneTransform second = RawAnimCodecInternal::readTransform( pSecond + trackIndex * transformSize );
+            const BoneTransform first  = RawAnimationCodecInternal::readTransform( pFirst + trackIndex * transformSize );
+            const BoneTransform second = RawAnimationCodecInternal::readTransform( pSecond + trackIndex * transformSize );
             outPose.setBoneTransform( trackIndex, BoneTransform::blend( first, second, alpha ) );
         }
         return true;

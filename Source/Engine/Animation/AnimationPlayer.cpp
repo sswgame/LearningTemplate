@@ -1,12 +1,12 @@
 #include "pch.h"
 
-#include "Engine/Animation/AnimPlayer.h"
+#include "Engine/Animation/AnimationPlayer.h"
 
 #include "Core/Math/MathUtil.h"
 
 namespace sw
 {
-    AnimPlayer::AnimPlayer()
+    AnimationPlayer::AnimationPlayer()
         : _arrSlot{}
         , _fadeDuration{ 0.0f }
         , _fadeElapsed{ 0.0f }
@@ -15,7 +15,7 @@ namespace sw
     {
     }
 
-    void AnimPlayer::play( const IAnimPlayable* pPlayable, bool bLoop )
+    void AnimationPlayer::play( const IAnimationPlayable* pPlayable, bool bLoop )
     {
         _arrSlot[0]            = Slot{};
         _arrSlot[0]._pPlayable = pPlayable;
@@ -25,7 +25,7 @@ namespace sw
         _fadeElapsed           = 0.0f;
     }
 
-    void AnimPlayer::crossfade( const IAnimPlayable* pPlayable, float32 fadeSeconds, bool bLoop )
+    void AnimationPlayer::crossfade( const IAnimationPlayable* pPlayable, float32 fadeSeconds, bool bLoop )
     {
         if ( pPlayable == nullptr || _arrSlot[0]._pPlayable == nullptr || fadeSeconds <= 0.0f )
         {
@@ -45,7 +45,7 @@ namespace sw
         _fadeElapsed           = 0.0f;
     }
 
-    void AnimPlayer::update( float32 deltaSeconds, vector<AnimFiredNotify>* pOutListFired )
+    void AnimationPlayer::update( float32 deltaSeconds, vector<AnimationFiredNotify>* pOutListFired )
     {
         const float32 delta = MathUtil::max( deltaSeconds, 0.0f ) * _speed;
         const float32 alpha = getBlendAlpha();
@@ -54,9 +54,9 @@ namespace sw
             Slot& slot = _arrSlot[slotIndex];
             if ( slot._pPlayable == nullptr )
                 continue;
-            const float32 playLength      = slot._pPlayable->getPlayLength();
-            slot._lastStep                = slot._cursor.advance( delta, playLength, slot._bLoop == SW_TRUE );
-            const AnimNotifyTrack* pTrack = slot._pPlayable->findNotifyTrack();
+            const float32 playLength           = slot._pPlayable->getPlayLength();
+            slot._lastStep                     = slot._cursor.advance( delta, playLength, slot._bLoop == SW_TRUE );
+            const AnimationNotifyTrack* pTrack = slot._pPlayable->findNotifyTrack();
             if ( pTrack != nullptr && pOutListFired != nullptr )
                 pTrack->collectFired( slot._lastStep, playLength, slotIndex == 0 ? 1.0f - alpha : alpha, slot._pPlayable, *pOutListFired );
         }
@@ -72,7 +72,7 @@ namespace sw
         _fadeElapsed  = 0.0f;
     }
 
-    bool AnimPlayer::hasFinished() const
+    bool AnimationPlayer::hasFinished() const
     {
         const Slot& current = _arrSlot[0];
         if ( current._pPlayable == nullptr )
@@ -82,26 +82,26 @@ namespace sw
         return current._cursor.getTime() >= current._pPlayable->getPlayLength();
     }
 
-    float32 AnimPlayer::getBlendAlpha() const
+    float32 AnimationPlayer::getBlendAlpha() const
     {
         if ( _arrSlot[1]._pPlayable == nullptr || _fadeDuration <= 0.0f )
             return 0.0f;
         return MathUtil::clamp( _fadeElapsed / _fadeDuration, 0.0f, 1.0f );
     }
 
-    void AnimPlayer::setCurrentTime( float32 time )
+    void AnimationPlayer::setCurrentTime( float32 time )
     {
         const float32 playLength = _arrSlot[0]._pPlayable != nullptr ? _arrSlot[0]._pPlayable->getPlayLength() : 0.0f;
         _arrSlot[0]._cursor.reset( MathUtil::clamp( time, 0.0f, MathUtil::max( playLength, 0.0f ) ) );
     }
 
-    float32 AnimPlayer::getCurrentNormalizedTime() const
+    float32 AnimationPlayer::getCurrentNormalizedTime() const
     {
         const Slot& current = _arrSlot[0];
         return current._pPlayable != nullptr ? current._cursor.computeNormalizedTime( current._pPlayable->getPlayLength() ) : 0.0f;
     }
 
-    void AnimPlayer::setNormalizedTime( float32 normalizedTime )
+    void AnimationPlayer::setNormalizedTime( float32 normalizedTime )
     {
         for ( Slot& slot : _arrSlot )
         {
@@ -110,7 +110,7 @@ namespace sw
         }
     }
 
-    int32 AnimSyncGroup::synchronize( AnimPlayer* const* ppPlayer, const float32* pWeight, uint32 count )
+    int32 AnimationSyncGroup::synchronize( AnimationPlayer* const* ppPlayer, const float32* pWeight, uint32 count )
     {
         int32   leaderIndex  = -1;
         float32 leaderWeight = -1.0f;
@@ -136,7 +136,7 @@ namespace sw
         return leaderIndex;
     }
 
-    void AnimParameterSet::setFloat( const hashed_string& name, float32 value )
+    void AnimationParameterSet::setFloat( const hashed_string& name, float32 value )
     {
         for ( Entry& entry : _listEntry )
         {
@@ -152,7 +152,7 @@ namespace sw
         _listEntry.push_back( entry );
     }
 
-    float32 AnimParameterSet::getFloat( const hashed_string& name ) const
+    float32 AnimationParameterSet::getFloat( const hashed_string& name ) const
     {
         for ( const Entry& entry : _listEntry )
         {

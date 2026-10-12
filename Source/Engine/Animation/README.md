@@ -15,7 +15,7 @@
 
 - 누가 언제 포즈를 만드는지(평가)는 `Object/Animation/AnimationSystem` 입니다.
 - 컴포넌트는 `Object/Component/3D/` 의 `SkeletalMeshComponent` 와 `SkeletalAnimatorComponent`, 그리고 `Object/Component/2D/SpriteAnimatorComponent` 입니다.
-- 경로로 스켈레톤과 클립을 나눠 주는 캐시(`SkeletonCache`, `AnimClipCache`)는 `AnimationAssetCache`, 스프라이트 클립 캐시는 `SpriteClipCache` 입니다. 둘 다 `Resource` 의 `IAssetCache` 를 구현하므로 이 폴더는 `Resource` 위 티어입니다.
+- 경로로 스켈레톤과 클립을 나눠 주는 캐시(`SkeletonCache`, `AnimationClipCache`)는 `AnimationAssetCache`, 스프라이트 클립 캐시는 `SpriteClipCache` 입니다. 둘 다 `Resource` 의 `IAssetCache` 를 구현하므로 이 폴더는 `Resource` 위 티어입니다.
 - 후처리 리그를 유닛에 붙이는 컴포넌트, 알림 처리기, 래그돌은 [Character](../Character/README.md)에 있습니다.
 
 ## 머릿속 그림
@@ -76,7 +76,7 @@ pAnimator->setInitialState( "Idle" );
 ```cpp
 pAnimator->getParameters().setFloat( hashed_string( "Speed" ), 3.0f );    // 상태 기계 파라미터
 pAnimator->play( hashed_string( "Walking_A" ), true, 0.2f );              // 직접 재생, 0.2초 크로스페이드
-pAnimator->addLayer( AnimLayerDesc{ hashed_string( "1H_Ranged_Aiming" ), hashed_string( "spine" ), 1.0f } );
+pAnimator->addLayer( AnimationLayerDesc{ hashed_string( "1H_Ranged_Aiming" ), hashed_string( "spine" ), 1.0f } );
 ```
 
 - 상태 기계 그래프가 있으면 파라미터만 쓰고 전이는 그래프에 맡깁니다.
@@ -86,7 +86,7 @@ pAnimator->addLayer( AnimLayerDesc{ hashed_string( "1H_Ranged_Aiming" ), hashed_
 ### 3단계 — 알림 받기
 
 ```cpp
-for ( const AnimFiredNotify& fired : pAnimator->getFiredNotifies() )
+for ( const AnimationFiredNotify& fired : pAnimator->getFiredNotifies() )
 {
     // 발소리, 이펙트
 }
@@ -113,42 +113,42 @@ glTF 의 열 우선 행렬 배열을 행 우선으로 읽으면 그대로 이 �
 
 ### 재생 — 커서, 플레이어, 상태 기계
 
-**커서**(`AnimClipCursor`)는 재생 시각, 반복 여부, 끝났는지를 관리합니다. 클립이든 스프라이트 구간이든 `IAnimPlayable` 이면 같은 커서로 재생합니다.
+**커서**(`AnimationClipCursor`)는 재생 시각, 반복 여부, 끝났는지를 관리합니다. 클립이든 스프라이트 구간이든 `IAnimationPlayable` 이면 같은 커서로 재생합니다.
 
-**플레이어**(`AnimPlayer`)는 슬롯 두 개로 크로스페이드합니다. 새 클립을 틀면 지금 클립에서 새 클립으로 정해진 시간 동안 가중치를 옮깁니다.
+**플레이어**(`AnimationPlayer`)는 슬롯 두 개로 크로스페이드합니다. 새 클립을 틀면 지금 클립에서 새 클립으로 정해진 시간 동안 가중치를 옮깁니다.
 전환 곡선은 `BlendCurve`(`BlendCurveDef`, `evaluateBlendWeight`)이고, 카메라 디렉터, 시퀀서, 소켓 부착의 되돌아가기도 같은 구현을 씁니다.
 
-**상태 기계**(`AnimGraphPlayer`)는 JSON 그래프(`AnimGraphAsset`)를 실행합니다. 노드가 상태이고 링크가 전이입니다.
-전이 조건은 파라미터(`AnimParameterSet`)와 비교 연산자(`>`, `<`, `>=`, `<=`, `==`, `!=`) 또는 `trigger` 로 적습니다. 전이마다 블렌드 시간이 있고, 노드마다 반복 여부가 있습니다.
+**상태 기계**(`AnimationGraphPlayer`)는 JSON 그래프(`AnimationGraphAsset`)를 실행합니다. 노드가 상태이고 링크가 전이입니다.
+전이 조건은 파라미터(`AnimationParameterSet`)와 비교 연산자(`>`, `<`, `>=`, `<=`, `==`, `!=`) 또는 `trigger` 로 적습니다. 전이마다 블렌드 시간이 있고, 노드마다 반복 여부가 있습니다.
 
-**동기 그룹**(`AnimSyncGroup`)은 같은 그룹의 클립들이 리더의 위상(재생 비율)을 따라가게 합니다. 걷기와 뛰기를 섞을 때 발이 엇갈리지 않게 하는 데 씁니다.
+**동기 그룹**(`AnimationSyncGroup`)은 같은 그룹의 클립들이 리더의 위상(재생 비율)을 따라가게 합니다. 걷기와 뛰기를 섞을 때 발이 엇갈리지 않게 하는 데 씁니다.
 
 **레이어와 가산 포즈.** 레이어는 본 하나와 그 자손에 다른 클립을 덮어쓰거나(`Override`) 더합니다(`Additive`). 가산 포즈는 `Pose::makeAdditive` 로 만들고 `applyAdditive` 로 얹습니다.
 
 ### 알림
 
-알림은 클립의 특정 시각(또는 구간)에 붙은 이름입니다. `AnimNotifyTrack` 이 지나간 알림을 정확히 한 번씩 알려 줍니다.
+알림은 클립의 특정 시각(또는 구간)에 붙은 이름입니다. `AnimationNotifyTrack` 이 지나간 알림을 정확히 한 번씩 알려 줍니다.
 
 - 판정 구간은 반 열린 구간 `(이전 시각, 지금 시각]` 입니다. 재생을 시작한 직후의 첫 걸음만 시작 시각을 포함합니다.
 - 반복 경계를 넘으면 `(이전, 끝]` 과 `[0, 지금]` 을 함께 봅니다. 그래서 한 시각의 알림은 한 바퀴에 한 번만 울립니다.
-- 길이가 있는 알림(구간 알림)은 시작에서 `Begin`, 끝에서 `End` 가 울립니다(`AnimNotifyPhase`). 끝은 한 바퀴의 끝을 넘지 않고, 같은 시각이면 `End` 가 먼저 울립니다.
-- `AnimFiredNotify::_pSource` 와 `_eventIndex` 로 같은 이름의 구간들을 서로 구별합니다.
+- 길이가 있는 알림(구간 알림)은 시작에서 `Begin`, 끝에서 `End` 가 울립니다(`AnimationNotifyPhase`). 끝은 한 바퀴의 끝을 넘지 않고, 같은 시각이면 `End` 가 먼저 울립니다.
+- `AnimationFiredNotify::_pSource` 와 `_eventIndex` 로 같은 이름의 구간들을 서로 구별합니다.
 
-애니메이터는 울린 알림을 프레임마다 한 번 받는 쪽(`IAnimNotifyListener`)에 넘깁니다. 이름을 처리기에 연결하는 쪽은 `Engine/Character/AnimNotify/AnimNotifyComponent` 입니다.
-알림 계약(`AnimNotifyPhase`, `IAnimNotifyListener`)은 이 폴더의 `Notify/` 에 있고, 처리기는 소켓과 피격을 쓰므로 `Character` 에 있습니다. 알림을 거두어 넘기는 시스템은 `Object/Animation/AnimationSystem` 입니다.
+애니메이터는 울린 알림을 프레임마다 한 번 받는 쪽(`IAnimationNotifyListener`)에 넘깁니다. 이름을 처리기에 연결하는 쪽은 `Engine/Character/AnimationNotify/AnimationNotifyComponent` 입니다.
+알림 계약(`AnimationNotifyPhase`, `IAnimationNotifyListener`)은 이 폴더의 `Notify/` 에 있고, 처리기는 소켓과 피격을 쓰므로 `Character` 에 있습니다. 알림을 거두어 넘기는 시스템은 `Object/Animation/AnimationSystem` 입니다.
 
 ### 2D 와 3D 가 함께 쓰는 것
 
 | 기능 | 2D(`SpriteAnimatorComponent`) | 3D(`SkeletalAnimatorComponent`) |
 |---|---|---|
-| 재생할 것 | `SpriteClipPlayable` | `AnimClip` |
-| 시간, 반복, 크로스페이드 | `AnimClipCursor`, `AnimPlayer` | 같음 |
-| 상태 기계 | `AnimGraphPlayer` | 같음 |
-| 알림, 동기 그룹 | `AnimNotifyTrack`, `AnimSyncGroup` | 같음 |
+| 재생할 것 | `SpriteClipPlayable` | `AnimationClip` |
+| 시간, 반복, 크로스페이드 | `AnimationClipCursor`, `AnimationPlayer` | 같음 |
+| 상태 기계 | `AnimationGraphPlayer` | 같음 |
+| 알림, 동기 그룹 | `AnimationNotifyTrack`, `AnimationSyncGroup` | 같음 |
 | 샘플 결과 | 구간 안의 프레임 | 코덱으로 푼 본 포즈 |
 | LOD | `SpriteAnimatorLODClient` | `SkeletalMeshLODClient` |
 
-`SpriteClipPlayable` 은 스프라이트 클립(`.sprite.json`)의 이름 붙은 구간 하나를 `IAnimPlayable` 로 보여 줍니다. 구간 길이는 프레임 시간의 합입니다.
+`SpriteClipPlayable` 은 스프라이트 클립(`.sprite.json`)의 이름 붙은 구간 하나를 `IAnimationPlayable` 로 보여 줍니다. 구간 길이는 프레임 시간의 합입니다.
 스프라이트 알림은 구간마다 `animations[].notifies` 에 구간 시작 기준 초로 적습니다.
 
 알림을 넘기는 스레드는 다릅니다. 3D 는 게임 스레드의 마무리 단계에서 넘깁니다.
@@ -242,12 +242,12 @@ Weight[i] = 1 / dist(p, p[i])^2,   NormalizedWeight[i] = Weight[i] / ΣWeight
 
 ### 클립 압축 — 코덱
 
-클립의 본 트랙은 코덱이 압축한 블롭으로 저장됩니다. 코드는 코덱을 이름으로만 고르고, 어느 코덱을 쓸지는 임포트 규칙(데이터)이 정합니다(`AnimCodecRegistry`).
+클립의 본 트랙은 코덱이 압축한 블롭으로 저장됩니다. 코드는 코덱을 이름으로만 고르고, 어느 코덱을 쓸지는 임포트 규칙(데이터)이 정합니다(`AnimationCodecRegistry`).
 
 - `Raw` 는 압축하지 않은 균일 샘플입니다. 비교 기준과 디버그용입니다.
 - `ACL` 은 Animation Compression Library 2.1 입니다. 가변 비트율, 상수 트랙 제거, 오차 기준 키 줄이기를 합니다.
 
-`AnimCodecRegistry::measureMaxError` 는 원본과 블롭을 같은 시각들에서 샘플해 모델 공간 가상 정점의 최대 거리를 측정합니다. 가상 정점은 본 원점에서 세 축 방향으로 shell 거리만큼 떨어진 점입니다.
+`AnimationCodecRegistry::measureMaxError` 는 원본과 블롭을 같은 시각들에서 샘플해 모델 공간 가상 정점의 최대 거리를 측정합니다. 가상 정점은 본 원점에서 세 축 방향으로 shell 거리만큼 떨어진 점입니다.
 코덱과 무관한 하나의 기준이라 Raw 와 ACL 을 같은 수치로 비교할 수 있습니다.
 
 ### 후처리 리그 — IK, 제약, 스프링 본
@@ -309,7 +309,7 @@ KayKit 기사가 비탈 위에서 발을 디디고, 움직이는 구를 바라�
 | 파일 | 형식이 적힌 곳 |
 |---|---|
 | `.skeleton.json` | `Skeletal/Skeleton.h` |
-| `.animclip` | `AnimClip.h` |
+| `.animclip` | `AnimationClip.h` |
 | `.bonelod.json` | `Skeletal/SkeletonBoneLOD.h` |
 | `.mesh` 의 스킨 스트림과 모프 블록 | `Graphics/Mesh/MeshAssetFormat.h` |
 | `.facial.json` | `Facial/FacialRig.h` |
@@ -344,15 +344,15 @@ glTF 모프 타깃은 `.mesh` 의 모프 블록으로, `weights` 채널은 타�
 
 ### 새 코덱
 
-1. `AnimCodecID` 에 값을 추가합니다. 이 값은 파일에 기록되므로 기존 값을 바꾸지 않습니다.
-2. `IAnimCodec` 을 구현하고 코덱 테이블(`AnimCodec.cpp`)에 넣습니다.
+1. `AnimationCodecID` 에 값을 추가합니다. 이 값은 파일에 기록되므로 기존 값을 바꾸지 않습니다.
+2. `IAnimationCodec` 을 구현하고 코덱 테이블(`AnimationCodec.cpp`)에 넣습니다.
 3. 서드파티 라이브러리를 쓴다면 그 헤더는 코덱 폴더의 `.cpp` 에서만 include 합니다(`CheckThirdPartyIsolation.py`).
 
 ## 함정과 주의
 
 **가산 포즈의 회전 순서를 바꾸지 마세요.** 가산 델타는 `inverse(ref) * pose`(로컬에서 먼저 적용)이고, 얹을 때는 `base * delta` 입니다. 순서를 바꾸면 부모 공간에서 회전해 팔이 엉뚱한 축으로 돕니다.
 
-**크로스페이드가 다른 크로스페이드로 끊기면 튑니다.** 플레이어는 섞이던 슬롯 하나를 버립니다(`AnimPlayer::getInterruptCount` 가 증가).
+**크로스페이드가 다른 크로스페이드로 끊기면 튑니다.** 플레이어는 섞이던 슬롯 하나를 버립니다(`AnimationPlayer::getInterruptCount` 가 증가).
 스켈레탈 애니메이터는 끊긴 순간의 포즈를 새 페이드 길이 동안 섞어 이어 붙입니다. 포즈를 직접 섞는 다른 코드도 같은 처리를 해야 튀지 않습니다.
 
 **끝 자세로 끝나는 클립을 반복 레이어로 돌리지 마세요.** 겨누기나 들어 올리기 클립을 반복하면 끝에서 처음으로 넘어갈 때 튑니다. 레이어의 `_bLoop` 를 끄면 끝 자세를 유지합니다.
@@ -362,14 +362,14 @@ Shooter3D 에서는 원인 셋이 겹쳐 있었습니다. 반복으로 돌린 �
 몸 전체가 튀면 Shooter3D 의 `-gv_shooterMotionTrace=<경로>` 로 프레임별 CSV 를 남겨 발 위치, 루트 본, 요 각속도, 카메라 이동을 나눠 봅니다.
 자동 조준이 표적을 바꿀 때 초당 20라디안으로 돌던 요 스냅이 원인인 경우도 있었습니다. 각속도 상한은 `OrientationUtil::turnTowardAngle` 로 제한합니다.
 
-**ACL 블롭은 16바이트 정렬이어야 합니다.** `AnimClip` 은 블롭을 `AnimCodecBlock` 배열로 보관합니다. 바이트 배열에서 오차를 측정하는 곳(`measureMaxError`)은 정렬된 사본을 만듭니다.
+**ACL 블롭은 16바이트 정렬이어야 합니다.** `AnimationClip` 은 블롭을 `AnimationCodecBlock` 배열로 보관합니다. 바이트 배열에서 오차를 측정하는 곳(`measureMaxError`)은 정렬된 사본을 만듭니다.
 
 **ACL 의 정밀도 기본값은 센티미터 기준입니다.** ACL 의 기본값은 정밀도 0.01, shell 거리 3.0 입니다. 엔진은 미터를 쓰므로 임포트 규칙의 기본값은 `animation_precision` 0.0001, `animation_shell_distance` 0.1 입니다.
 
 **ACL 과 RTM 헤더는 `Codec/ACL/` 의 `.cpp` 에서만 include 하세요.** 다른 곳에서 include 하면 `CheckThirdPartyIsolation.py` 가 막습니다.
 
-**`AnimPlayback.h` 를 `Component.h` 에서 include 하지 마세요.** `Component.h` 는 PCH 에 들어 있어서, 거기서 include 한 헤더를 고치면 PCH 가 다시 빌드됩니다.
-그래서 `Component.h` 는 알림 종류 하나만 담은 `AnimNotifyPhase.h` 만 include 합니다.
+**`AnimationPlayback.h` 를 `Component.h` 에서 include 하지 마세요.** `Component.h` 는 PCH 에 들어 있어서, 거기서 include 한 헤더를 고치면 PCH 가 다시 빌드됩니다.
+그래서 `Component.h` 는 알림 종류 하나만 담은 `AnimationNotifyPhase.h` 만 include 합니다.
 
 **되감는 동안 평가가 멈춘다는 것을 기억하세요.** 기록 요청은 프로세스 전역이고, 씬마다의 기록기가 평가 전에 그 요청을 따릅니다. 테스트에서 요청을 바꿨으면 되돌립니다(`ScopedRecording`).
 군중 그룹을 나눠 쓰는 유닛에는 기록된 포즈를 적용하지 않습니다. 포즈가 그룹의 것이기 때문입니다. 기록과 뼈대 그리기만 됩니다.
@@ -395,7 +395,7 @@ Shooter3D 에서는 원인 셋이 겹쳐 있었습니다. 반복으로 돌린 �
 | `Object/Component/3D/SkeletalAnimatorComponent.h` | 재생, 레이어, 파라미터, 알림 |
 | `Object/Component/3D/SkeletalMeshComponent.h` | 유닛, LOD 설정, 군중 공유 |
 | `Skeletal/Pose.h` | 포즈, 섞기, 모델 공간, 스킨 팔레트 |
-| `AnimPlayer.h`, `Graph/AnimGraphPlayer.h` | 크로스페이드, 상태 기계 |
-| `AnimPlayback.h` | 커서, 알림 트랙 |
+| `AnimationPlayer.h`, `Graph/AnimationGraphPlayer.h` | 크로스페이드, 상태 기계 |
+| `AnimationPlayback.h` | 커서, 알림 트랙 |
 | `Rig/RigAsset.h`, `Rig/RigInstance.h` | 리그 에셋과 실행 상태 |
 | `Object/Animation/AnimationLOD.h`, `AnimationCrowd.h` | LOD, 군중 공유 |

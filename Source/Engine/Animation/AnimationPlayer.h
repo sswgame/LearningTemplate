@@ -1,6 +1,6 @@
 /**
- * @file AnimPlayer.h
- * @brief 재생할 것(`IAnimPlayable`) 두 슬롯을 크로스페이드하는 플레이어, 동기 그룹, 상태 기계 파라미터입니다. 2D 와 3D 가 함께 씁니다.
+ * @file AnimationPlayer.h
+ * @brief 재생할 것(`IAnimationPlayable`) 두 슬롯을 크로스페이드하는 플레이어, 동기 그룹, 상태 기계 파라미터입니다. 2D 와 3D 가 함께 씁니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -8,32 +8,32 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Animation/AnimPlayback.h"
+#include "Engine/Animation/AnimationPlayback.h"
 
 namespace sw
 {
     /**
-     * @class AnimPlayer
+     * @class AnimationPlayer
      * @brief 현재 슬롯과 다음 슬롯(크로스페이드 대상)을 가집니다. 시간을 흘리고, 지나간 알림을 섞임 가중치와 함께 모읍니다.
      * @details 무엇을 샘플하는지(스프라이트 프레임, 본 포즈)는 모른다. 호출하는 쪽이 슬롯의 재생할 것, 시각, 가중치로 샘플한다.
      *          페이드가 끝나면 다음 슬롯이 현재 슬롯이 된다. 속도는 0 이상이다(역재생은 지원하지 않는다).
      */
-    class SW_API AnimPlayer
+    class SW_API AnimationPlayer
     {
     public:
-        AnimPlayer();
+        AnimationPlayer();
 
         /** @brief 즉시 재생합니다(페이드 없음). nullptr 이면 멈춥니다. */
-        void play( const IAnimPlayable* pPlayable, bool bLoop );
+        void play( const IAnimationPlayable* pPlayable, bool bLoop );
         /** @brief @p fadeSeconds 동안 섞으며 넘어갑니다. 현재 재생이 없거나 길이가 0 이면 즉시 재생합니다. */
-        void crossfade( const IAnimPlayable* pPlayable, float32 fadeSeconds, bool bLoop );
+        void crossfade( const IAnimationPlayable* pPlayable, float32 fadeSeconds, bool bLoop );
         /** @brief 멈추고 비웁니다. */
         void stop() { play( nullptr, false ); }
         /**
          * @brief 시간을 흘립니다(속도 배율 적용). 지나간 알림은 @p pOutListFired 에 덧붙입니다(선택).
          * @details 페이드 중이면 두 슬롯이 함께 흐르고, 각자 자기 가중치로 알림을 낸다.
          */
-        void update( float32 deltaSeconds, vector<AnimFiredNotify>* pOutListFired );
+        void update( float32 deltaSeconds, vector<AnimationFiredNotify>* pOutListFired );
 
         /** @brief 재생 속도 배율입니다(음수는 0 으로 막습니다). */
         void    setSpeed( float32 speed ) { _speed = speed > 0.0f ? speed : 0.0f; }
@@ -43,11 +43,11 @@ namespace sw
         /** @brief 현재(또는 마지막) 페이드 길이(초)입니다. */
         float32 getFadeDuration() const { return _fadeDuration; }
 
-        const IAnimPlayable* getCurrentPlayable() const { return _arrSlot[0]._pPlayable; }
-        const IAnimPlayable* getNextPlayable() const { return _arrSlot[1]._pPlayable; }
-        bool                 isCurrentLooping() const { return _arrSlot[0]._bLoop == SW_TRUE; }
-        bool                 isNextLooping() const { return _arrSlot[1]._bLoop == SW_TRUE; }
-        bool                 isCrossfading() const { return _arrSlot[1]._pPlayable != nullptr; }
+        const IAnimationPlayable* getCurrentPlayable() const { return _arrSlot[0]._pPlayable; }
+        const IAnimationPlayable* getNextPlayable() const { return _arrSlot[1]._pPlayable; }
+        bool                      isCurrentLooping() const { return _arrSlot[0]._bLoop == SW_TRUE; }
+        bool                      isNextLooping() const { return _arrSlot[1]._bLoop == SW_TRUE; }
+        bool                      isCrossfading() const { return _arrSlot[1]._pPlayable != nullptr; }
         /** @brief 현재 슬롯이 반복 없이 끝까지 갔으면 true 입니다(재생할 것이 없어도 true). */
         bool hasFinished() const;
         /** @brief 다음 슬롯의 섞임 가중치(0..1)입니다. 페이드 중이 아니면 0 입니다. */
@@ -64,18 +64,18 @@ namespace sw
         /** @brief 동기 그룹이 현재 슬롯(과 다음 슬롯)을 리더의 정규화 위치로 맞춥니다. */
         void setNormalizedTime( float32 normalizedTime );
         /** @brief 마지막 갱신에서 현재 슬롯이 지나간 구간을 반환합니다(루트 모션). */
-        const AnimTimeStep& getCurrentStep() const { return _arrSlot[0]._lastStep; }
+        const AnimationTimeStep& getCurrentStep() const { return _arrSlot[0]._lastStep; }
         /** @brief 마지막 갱신에서 다음 슬롯이 지나간 구간을 반환합니다. */
-        const AnimTimeStep& getNextStep() const { return _arrSlot[1]._lastStep; }
+        const AnimationTimeStep& getNextStep() const { return _arrSlot[1]._lastStep; }
 
     private:
         /** @brief 슬롯 하나입니다. 재생할 것, 위치, 반복, 마지막 이동 구간을 담습니다. */
         struct Slot
         {
-            const IAnimPlayable* _pPlayable{ nullptr };
-            AnimClipCursor       _cursor{};
-            AnimTimeStep         _lastStep{};
-            uint8                _bLoop{ SW_FALSE };
+            const IAnimationPlayable* _pPlayable{ nullptr };
+            AnimationClipCursor       _cursor{};
+            AnimationTimeStep         _lastStep{};
+            uint8                     _bLoop{ SW_FALSE };
         };
 
         Slot    _arrSlot[2];
@@ -89,27 +89,27 @@ namespace sw
 namespace sw
 {
     /**
-     * @struct AnimSyncGroup
+     * @struct AnimationSyncGroup
      * @brief 동기 그룹입니다. 가중치가 가장 큰 플레이어(리더)의 정규화 위치에 나머지(팔로워)를 맞춥니다(언리얼 Sync Group 의 마커 없는 위상 동기에 해당합니다).
      * @details 걷기 1.0 초와 달리기 0.7 초를 섞어도 발이 같은 위상을 딛는다. 리더의 가중치가 같으면 앞의 것이 리더다.
      */
-    struct SW_API AnimSyncGroup
+    struct SW_API AnimationSyncGroup
     {
         /** @return 리더의 인덱스입니다. 목록이 비었으면 -1 입니다. */
-        static int32 synchronize( AnimPlayer* const* ppPlayer, const float32* pWeight, uint32 count );
+        static int32 synchronize( AnimationPlayer* const* ppPlayer, const float32* pWeight, uint32 count );
     };
 } // namespace sw
 
 namespace sw
 {
     /**
-     * @class AnimParameterSet
+     * @class AnimationParameterSet
      * @brief 상태 기계 파라미터(이름 → 실수)입니다. 불은 0/1, 트리거는 한 번 쓰이면 0 으로 돌아가는 1 입니다.
      */
-    class SW_API AnimParameterSet
+    class SW_API AnimationParameterSet
     {
     public:
-        AnimParameterSet() = default;
+        AnimationParameterSet() = default;
 
         void    setFloat( const hashed_string& name, float32 value );
         float32 getFloat( const hashed_string& name ) const;

@@ -1,5 +1,5 @@
 /**
- * @file AnimClip.h
+ * @file AnimationClip.h
  * @brief 스켈레탈 애니메이션 클립 에셋(`.animclip`)입니다. 본 트랙(코덱 블롭), 실수 커브, 알림, 루트 모션 트랙을 담습니다.
  */
 #pragma once
@@ -9,8 +9,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Animation/AnimPlayback.h"
-#include "Engine/Animation/Codec/AnimCodec.h"
+#include "Engine/Animation/AnimationPlayback.h"
+#include "Engine/Animation/Codec/AnimationCodec.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 
 namespace sw
@@ -18,10 +18,10 @@ namespace sw
     class Skeleton;
 
     /**
-     * @struct AnimCurveKey
+     * @struct AnimationClipCurveKey
      * @brief 커브 키 하나(시각, 값)입니다.
      */
-    struct AnimCurveKey
+    struct AnimationClipCurveKey
     {
         float32 _time{ 0.0f };
         float32 _value{ 0.0f };
@@ -31,13 +31,13 @@ namespace sw
 namespace sw
 {
     /**
-     * @struct AnimCurve
+     * @struct AnimationClipCurve
      * @brief 이름 붙은 실수 커브입니다(머티리얼 값, 발 고정 가중치, 속도 같은 게임 값). 키 사이는 선형이고, 바깥은 끝 키의 값을 씁니다.
      */
-    struct SW_API AnimCurve
+    struct SW_API AnimationClipCurve
     {
-        hashed_string        _name;
-        vector<AnimCurveKey> _listKey; ///< 시각 오름차순입니다.
+        hashed_string                 _name;
+        vector<AnimationClipCurveKey> _listKey; ///< 시각 오름차순입니다.
 
         /** @brief @p time 의 값입니다. 키가 없으면 0 입니다. */
         float32 evaluate( float32 time ) const;
@@ -47,13 +47,13 @@ namespace sw
 namespace sw
 {
     /**
-     * @class AnimClip
+     * @class AnimationClip
      * @brief 클립 하나입니다. 트랙(본 이름 순서)은 코덱 블롭에 들어 있고, 샘플은 코덱이 트랙 순서의 포즈로 디코드합니다.
      * @details 파일 형식(리틀 엔디언)은 다음 순서다. 매직 `SWAC`, 버전, 플래그(비트 0 = 반복), 길이(초), 이름, 트랙 수와 트랙(본) 이름들,
      *          루트 모션 트랙(-1 = 없음), 코덱 번호, 블롭 크기와 블롭, 알림(이름, 시각, 구간), 커브(이름, 키)다. 문자열은 길이(uint32)와 바이트로 쓴다.
      *          읽기는 현재 형식만 받는다(버전이 다르면 원본에서 다시 임포트한다).
      */
-    class SW_API AnimClip final : public IAnimPlayable
+    class SW_API AnimationClip final : public IAnimationPlayable
     {
     public:
         /** @brief 클립 에셋 확장자입니다. */
@@ -61,28 +61,28 @@ namespace sw
         /** @brief 지금 파일 형식 버전입니다. */
         static constexpr uint32 kVersion = 1;
 
-        AnimClip();
+        AnimationClip();
 
-        /** @brief (IAnimPlayable) 길이(초)를 반환합니다. */
+        /** @brief (IAnimationPlayable) 길이(초)를 반환합니다. */
         float32 getPlayLength() const override { return _duration; }
-        /** @brief (IAnimPlayable) 데이터가 정한 반복 여부입니다. */
+        /** @brief (IAnimationPlayable) 데이터가 정한 반복 여부입니다. */
         bool isLoopingByDefault() const override { return _bLoop == SW_TRUE; }
-        /** @brief (IAnimPlayable) 알림 트랙입니다. */
-        const AnimNotifyTrack* findNotifyTrack() const override { return _notifyTrack.isEmpty() ? nullptr : &_notifyTrack; }
+        /** @brief (IAnimationPlayable) 알림 트랙입니다. */
+        const AnimationNotifyTrack* findNotifyTrack() const override { return _notifyTrack.isEmpty() ? nullptr : &_notifyTrack; }
 
         const hashed_string&         getName() const { return _name; }
         float32                      getDuration() const { return _duration; }
         uint32                       getTrackCount() const { return static_cast<uint32>( _listTrackName.size() ); }
         const vector<hashed_string>& getTrackNames() const { return _listTrackName; }
-        AnimCodecID                  getCodecID() const { return _codecID; }
+        AnimationCodecID             getCodecID() const { return _codecID; }
         /** @brief 블롭 크기(바이트)입니다. */
         size_t getCodecByteCount() const { return _codecByteCount; }
         /** @brief 16 바이트 정렬된 블롭 시작입니다. */
-        const uint8*             getCodecData() const { return reinterpret_cast<const uint8*>( _listCodecBlock.data() ); }
-        const AnimNotifyTrack&   getNotifyTrack() const { return _notifyTrack; }
-        const vector<AnimCurve>& getCurves() const { return _listCurve; }
+        const uint8*                      getCodecData() const { return reinterpret_cast<const uint8*>( _listCodecBlock.data() ); }
+        const AnimationNotifyTrack&       getNotifyTrack() const { return _notifyTrack; }
+        const vector<AnimationClipCurve>& getCurves() const { return _listCurve; }
         /** @brief 이름으로 커브를 찾습니다. 없으면 nullptr 입니다. */
-        const AnimCurve* findCurve( const hashed_string& name ) const;
+        const AnimationClipCurve* findCurve( const hashed_string& name ) const;
         /** @brief 루트 모션을 뽑을 트랙입니다. -1 이면 루트 모션이 없습니다. */
         int32 getRootMotionTrack() const { return _rootMotionTrack; }
 
@@ -90,15 +90,15 @@ namespace sw
         void setLooping( bool bLoop ) { _bLoop = bLoop ? SW_TRUE : SW_FALSE; }
         void setRootMotionTrack( int32 trackIndex ) { _rootMotionTrack = trackIndex; }
         /** @brief 알림을 하나 추가합니다(임포트와 테스트용). */
-        void addNotify( const AnimNotifyEvent& event ) { _notifyTrack.addEvent( event ); }
+        void addNotify( const AnimationNotifyEvent& event ) { _notifyTrack.addEvent( event ); }
         /** @brief 커브를 하나 추가합니다(임포트와 테스트용). */
-        void addCurve( const AnimCurve& curve ) { _listCurve.push_back( curve ); }
+        void addCurve( const AnimationClipCurve& curve ) { _listCurve.push_back( curve ); }
 
         /**
          * @brief 원본 샘플을 @p codec 으로 압축해 이 클립의 트랙, 길이, 블롭으로 삼습니다(임포트와 테스트용). 이름, 알림, 커브는 그대로 둡니다.
          * @param pOutStats 압축률과 최대 오차를 받습니다(선택).
          */
-        [[nodiscard]] bool compressFrom( const AnimRawClip& rawClip, const IAnimCodec& codec, const AnimCodecSettings& settings, AnimCodecStats* pOutStats );
+        [[nodiscard]] bool compressFrom( const AnimationRawClip& rawClip, const IAnimationCodec& codec, const AnimationCodecSettings& settings, AnimationCodecStats* pOutStats );
 
         /**
          * @brief @p time 초의 트랙 포즈(트랙 순서)를 @p outTrackPose 에 씁니다. 코덱이 없거나 블롭이 깨졌으면 false 입니다.
@@ -122,7 +122,7 @@ namespace sw
          * @brief 루트 모션 트랙이 @p step 동안 움직인 양을 반환합니다(부모 공간 이동 차이와 회전 차이 `inverse( 이전 ) * 현재`).
          * @details 반복을 넘으면 (끝 - 이전) + 온 바퀴 × (끝 - 시작) + (현재 - 시작)이다. 루트 모션 트랙이 없으면 단위 변환이다.
          */
-        BoneTransform computeRootMotionDelta( const AnimTimeStep& step ) const;
+        BoneTransform computeRootMotionDelta( const AnimationTimeStep& step ) const;
         /** @brief 루트 모션 트랙의 시각 0 변환을 반환합니다(추출한 뒤 루트를 이 위치에 고정합니다). */
         BoneTransform getRootMotionAnchor() const;
 
@@ -143,15 +143,15 @@ namespace sw
         /** @brief 내용을 비웁니다. */
         void clear();
 
-        hashed_string          _name;
-        vector<hashed_string>  _listTrackName;
-        vector<AnimCodecBlock> _listCodecBlock;
-        size_t                 _codecByteCount;
-        AnimNotifyTrack        _notifyTrack;
-        vector<AnimCurve>      _listCurve;
-        float32                _duration;
-        int32                  _rootMotionTrack;
-        AnimCodecID            _codecID;
-        uint8                  _bLoop;
+        hashed_string               _name;
+        vector<hashed_string>       _listTrackName;
+        vector<AnimationCodecBlock> _listCodecBlock;
+        size_t                      _codecByteCount;
+        AnimationNotifyTrack        _notifyTrack;
+        vector<AnimationClipCurve>  _listCurve;
+        float32                     _duration;
+        int32                       _rootMotionTrack;
+        AnimationCodecID            _codecID;
+        uint8                       _bLoop;
     };
 } // namespace sw

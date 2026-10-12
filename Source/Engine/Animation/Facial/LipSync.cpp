@@ -6,7 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/AnimJSONUtil.h"
+#include "Engine/Animation/AnimationJSONUtil.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -167,7 +167,7 @@ namespace sw
             return false;
         }
         const JSONValue root = document.getRoot();
-        if ( AnimJSONUtil::hasOnlyKnownKeys( root, { "frame_rate", "visemes", "frames" }, sourceLabel ) == false )
+        if ( AnimationJSONUtil::hasOnlyKnownKeys( root, { "frame_rate", "visemes", "frames" }, sourceLabel ) == false )
             return false;
         const JSONValue visemes = root.get( "visemes" );
         const JSONValue frames  = root.get( "frames" );
@@ -184,7 +184,7 @@ namespace sw
         vector<float32> listFrame( _listViseme.size() );
         for ( size_t frameIndex = 0; frameIndex < frames.size(); ++frameIndex )
         {
-            if ( AnimJSONUtil::readFloats( frames.at( frameIndex ), listFrame.data(), static_cast<uint32>( listFrame.size() ) ) == false )
+            if ( AnimationJSONUtil::readFloats( frames.at( frameIndex ), listFrame.data(), static_cast<uint32>( listFrame.size() ) ) == false )
             {
                 SW_LOG_ERROR( "Viseme track '%#': frame %# must hold one weight per viseme", sourceLabel, frameIndex );
                 *this = VisemeTrack{};

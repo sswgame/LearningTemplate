@@ -16,10 +16,10 @@
 
 namespace sw
 {
-    struct AnimCodecSettings;
+    struct AnimationCodecSettings;
 
-    class AnimClip;
-    class IAnimCodec;
+    class AnimationClip;
+    class IAnimationCodec;
     class Skeleton;
 } // namespace sw
 
@@ -108,10 +108,10 @@ namespace sw
     {
         /**
          * @brief 원본 클립을 @p sampleRate 로 샘플해 리타깃하고, 대상 스켈레톤 트랙(본 이름)의 클립으로 압축합니다. 알림, 커브, 반복, 루트 모션
-         *        트랙(이름으로 짝지음)을 옮깁니다. 파일로 쓰는 일은 호출하는 쪽이 합니다(`AnimClip::saveToFile`).
+         *        트랙(이름으로 짝지음)을 옮깁니다. 파일로 쓰는 일은 호출하는 쪽이 합니다(`AnimationClip::saveToFile`).
          */
-        [[nodiscard]] static bool bakeClip( PoseRetargeter& retargeter, const AnimClip& sourceClip, const Skeleton& sourceSkeleton, const Skeleton& targetSkeleton,
-                                            float32 sampleRate, const IAnimCodec& codec, const AnimCodecSettings& settings, AnimClip& outClip );
+        [[nodiscard]] static bool bakeClip( PoseRetargeter& retargeter, const AnimationClip& sourceClip, const Skeleton& sourceSkeleton, const Skeleton& targetSkeleton,
+                                            float32 sampleRate, const IAnimationCodec& codec, const AnimationCodecSettings& settings, AnimationClip& outClip );
         /**
          * @brief 파일에서 파일로 베이크합니다. 프로필(`*.retarget.json`)이 지정한 두 스켈레톤을 읽고, 원본 클립을 30 Hz 로 샘플해 원본과 같은 코덱으로
          *        압축한 뒤 @p outClipPath 에 씁니다. `App --bake-retarget=<프로필>,<원본 클립>,<출력 클립>` 이 호출합니다.

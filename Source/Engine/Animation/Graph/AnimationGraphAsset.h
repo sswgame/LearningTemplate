@@ -1,5 +1,5 @@
 /**
- * @file AnimGraphAsset.h
+ * @file AnimationGraphAsset.h
  * @brief 에디터와 런타임이 함께 쓰는 애니메이션 그래프 JSON 에셋입니다.
  */
 #pragma once
@@ -15,7 +15,7 @@ namespace sw
     class JSONValue;
 
     /** @brief 애니메이션 그래프 노드입니다. */
-    struct AnimGraphNode
+    struct AnimationGraphNode
     {
         string _name;    /**< 노드 이름. 클립을 묶는 열쇠입니다. */
         int32  _id{ 0 }; /**< 그래프 안에서 유일한 노드 id 입니다. 1 이상이어야 합니다. */
@@ -31,10 +31,10 @@ namespace sw
 namespace sw
 {
     /**
-     * @enum AnimConditionOp
+     * @enum AnimationConditionOp
      * @brief 전이 조건의 비교입니다(JSON "op": ">", "<", ">=", "<=", "==", "!=", "trigger"). 모르는 표기는 로드 오류입니다.
      */
-    enum class AnimConditionOp : uint8
+    enum class AnimationConditionOp : uint8
     {
         None = 0,     ///< 조건이 없습니다. 현재 상태가 반복 없이 끝나면 넘어갑니다("끝나면 다음").
         Greater,      ///< 파라미터가 값보다 크다.
@@ -50,15 +50,15 @@ namespace sw
 namespace sw
 {
     /** @brief 애니메이션 그래프 링크(상태 전이)입니다. */
-    struct SW_API AnimGraphLink
+    struct SW_API AnimationGraphLink
     {
-        int32           _id{ 0 };               /**< 그래프 안에서 유일한 링크 id 입니다. 1 이상이어야 합니다. */
-        int32           _fromNode{ 0 };         /**< 출발 노드 id 입니다. */
-        int32           _toNode{ 0 };           /**< 도착 노드 id 입니다. */
-        float32         _blendSeconds{ -1.0f }; /**< 크로스페이드 길이(JSON "blend", 선택). 음수면 플레이어 기본값입니다. */
-        hashed_string   _parameter;             /**< 조건 파라미터 이름(JSON "condition"."param")입니다. */
-        float32         _threshold{ 0.0f };     /**< 조건 비교값(JSON "condition"."value")입니다. */
-        AnimConditionOp _op{ AnimConditionOp::None };
+        int32                _id{ 0 };               /**< 그래프 안에서 유일한 링크 id 입니다. 1 이상이어야 합니다. */
+        int32                _fromNode{ 0 };         /**< 출발 노드 id 입니다. */
+        int32                _toNode{ 0 };           /**< 도착 노드 id 입니다. */
+        float32              _blendSeconds{ -1.0f }; /**< 크로스페이드 길이(JSON "blend", 선택). 음수면 플레이어 기본값입니다. */
+        hashed_string        _parameter;             /**< 조건 파라미터 이름(JSON "condition"."param")입니다. */
+        float32              _threshold{ 0.0f };     /**< 조건 비교값(JSON "condition"."value")입니다. */
+        AnimationConditionOp _op{ AnimationConditionOp::None };
 
         /** @brief 조건이 지금 파라미터 값으로 참인지 봅니다. 조건이 없으면 false 입니다(끝나면 다음은 따로 봅니다). */
         bool isConditionMet( float32 parameterValue ) const;
@@ -68,14 +68,14 @@ namespace sw
 namespace sw
 {
     /**
-     * @class AnimGraphAsset
+     * @class AnimationGraphAsset
      * @brief BlendSpace 와 SpriteAnimator 가 노드 이름을 함께 쓰는 JSON 그래프입니다.
      */
-    class SW_API AnimGraphAsset
+    class SW_API AnimationGraphAsset
     {
     public:
         /** @brief 빈 그래프를 만듭니다. */
-        AnimGraphAsset() = default;
+        AnimationGraphAsset() = default;
 
         /** @brief JSON 파일을 읽습니다. */
         [[nodiscard]] bool loadFromFile( string_view path );
@@ -88,22 +88,22 @@ namespace sw
         /** @brief 노드 이름 목록을 채웁니다. */
         void collectNodeNames( vector<string>& outListName ) const;
         /** @brief id 로 노드를 찾습니다. */
-        const AnimGraphNode* findNode( int32 nodeID ) const;
+        const AnimationGraphNode* findNode( int32 nodeID ) const;
         /** @brief 이름으로 노드를 찾습니다. */
-        const AnimGraphNode* findNodeByName( string_view name ) const;
+        const AnimationGraphNode* findNodeByName( string_view name ) const;
         /** @brief 진입 노드(들어오는 링크가 없는 첫 노드, 없으면 목록 앞)를 반환합니다. */
-        const AnimGraphNode* findEntryNode() const;
+        const AnimationGraphNode* findEntryNode() const;
         /** @brief 그 노드에서 나가는 첫 링크의 대상 id 입니다. 없으면 0 입니다. */
         int32 findFirstOutgoingNodeID( int32 fromNodeID ) const;
         /** @brief 조건 없는 첫 나가는 링크("끝나면 다음")입니다. 없으면 nullptr 입니다. */
-        const AnimGraphLink* findFinishLink( int32 fromNodeID ) const;
+        const AnimationGraphLink* findFinishLink( int32 fromNodeID ) const;
         /** @brief 조건 표기를 읽습니다. 모르는 표기면 false 입니다. */
-        [[nodiscard]] static bool parseConditionOp( string_view text, AnimConditionOp& outOp );
+        [[nodiscard]] static bool parseConditionOp( string_view text, AnimationConditionOp& outOp );
         /** @brief 조건 표기를 씁니다. */
-        static const utf8* getConditionOpText( AnimConditionOp op );
+        static const utf8* getConditionOpText( AnimationConditionOp op );
 
-        vector<AnimGraphNode> _listNode; /**< 노드 목록입니다. */
-        vector<AnimGraphLink> _listLink; /**< 링크 목록입니다. */
+        vector<AnimationGraphNode> _listNode; /**< 노드 목록입니다. */
+        vector<AnimationGraphLink> _listLink; /**< 링크 목록입니다. */
 
     private:
         /** @brief 이미 파싱된 JSON 루트에서 노드와 링크를 읽습니다. 모르는 조건 표기면 false 를 반환합니다. */

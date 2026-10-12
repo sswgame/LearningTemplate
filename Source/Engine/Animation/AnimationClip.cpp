@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Animation/AnimClip.h"
+#include "Engine/Animation/AnimationClip.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
@@ -12,11 +12,11 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AnimClip" );
+    SW_LOG_CALLER( "AnimationClip" );
 
     namespace
     {
-        struct AnimClipInternal
+        struct AnimationClipInternal
         {
             /** @brief 파일 머리의 매직(`SWAC`)입니다. */
             static constexpr uint8 kArrMagic[4] = { 'S', 'W', 'A', 'C' };
@@ -109,7 +109,7 @@ namespace sw
 
 namespace sw
 {
-    float32 AnimCurve::evaluate( float32 time ) const
+    float32 AnimationClipCurve::evaluate( float32 time ) const
     {
         if ( _listKey.empty() )
             return 0.0f;
@@ -117,18 +117,18 @@ namespace sw
             return _listKey.front()._value;
         for ( size_t keyIndex = 1; keyIndex < _listKey.size(); ++keyIndex )
         {
-            const AnimCurveKey& next = _listKey[keyIndex];
+            const AnimationClipCurveKey& next = _listKey[keyIndex];
             if ( time > next._time )
                 continue;
-            const AnimCurveKey& previous = _listKey[keyIndex - 1];
-            const float32       span     = next._time - previous._time;
-            const float32       alpha    = span > 0.0f ? ( time - previous._time ) / span : 1.0f;
+            const AnimationClipCurveKey& previous = _listKey[keyIndex - 1];
+            const float32                span     = next._time - previous._time;
+            const float32                alpha    = span > 0.0f ? ( time - previous._time ) / span : 1.0f;
             return MathUtil::lerp( previous._value, next._value, alpha );
         }
         return _listKey.back()._value;
     }
 
-    AnimClip::AnimClip()
+    AnimationClip::AnimationClip()
         : _name{}
         , _listTrackName{}
         , _listCodecBlock{}
@@ -137,14 +137,14 @@ namespace sw
         , _listCurve{}
         , _duration{ 0.0f }
         , _rootMotionTrack{ -1 }
-        , _codecID{ AnimCodecID::Raw }
+        , _codecID{ AnimationCodecID::Raw }
         , _bLoop{ SW_TRUE }
     {
     }
 
-    const AnimCurve* AnimClip::findCurve( const hashed_string& name ) const
+    const AnimationClipCurve* AnimationClip::findCurve( const hashed_string& name ) const
     {
-        for ( const AnimCurve& curve : _listCurve )
+        for ( const AnimationClipCurve& curve : _listCurve )
         {
             if ( curve._name == name )
                 return &curve;
@@ -152,11 +152,11 @@ namespace sw
         return nullptr;
     }
 
-    bool AnimClip::compressFrom( const AnimRawClip& rawClip, const IAnimCodec& codec, const AnimCodecSettings& settings, AnimCodecStats* pOutStats )
+    bool AnimationClip::compressFrom( const AnimationRawClip& rawClip, const IAnimationCodec& codec, const AnimationCodecSettings& settings, AnimationCodecStats* pOutStats )
     {
-        vector<uint8>  bytes;
-        AnimCodecStats stats{};
-        if ( AnimCodecRegistry::compressAndMeasure( codec, rawClip, settings, bytes, stats ) == false )
+        vector<uint8>       bytes;
+        AnimationCodecStats stats{};
+        if ( AnimationCodecRegistry::compressAndMeasure( codec, rawClip, settings, bytes, stats ) == false )
             return false;
         _listTrackName = rawClip._listTrackName;
         _duration      = rawClip.getDuration();
@@ -167,15 +167,15 @@ namespace sw
         return true;
     }
 
-    bool AnimClip::sampleTracks( float32 time, Pose& outTrackPose, const uint8* pTrackMask ) const
+    bool AnimationClip::sampleTracks( float32 time, Pose& outTrackPose, const uint8* pTrackMask ) const
     {
-        const IAnimCodec* pCodec = AnimCodecRegistry::findCodec( _codecID );
+        const IAnimationCodec* pCodec = AnimationCodecRegistry::findCodec( _codecID );
         if ( pCodec == nullptr || _codecByteCount == 0 )
             return false;
         return pCodec->sample( getCodecData(), _codecByteCount, MathUtil::clamp( time, 0.0f, _duration ), outTrackPose, pTrackMask );
     }
 
-    void AnimClip::makeTrackToBoneMap( const Skeleton& skeleton, vector<int32>& outListBone ) const
+    void AnimationClip::makeTrackToBoneMap( const Skeleton& skeleton, vector<int32>& outListBone ) const
     {
         outListBone.resize( _listTrackName.size() );
         for ( size_t trackIndex = 0; trackIndex < _listTrackName.size(); ++trackIndex )
@@ -184,8 +184,8 @@ namespace sw
         }
     }
 
-    bool AnimClip::samplePose( float32 time, const vector<int32>& listTrackToBone, Pose& inoutPose, Pose& scratchTrackPose, bool bAnchorRootMotion,
-                               const uint8* pTrackMask ) const
+    bool AnimationClip::samplePose( float32 time, const vector<int32>& listTrackToBone, Pose& inoutPose, Pose& scratchTrackPose, bool bAnchorRootMotion,
+                                    const uint8* pTrackMask ) const
     {
         if ( sampleTracks( time, scratchTrackPose, pTrackMask ) == false )
             return false;
@@ -205,7 +205,7 @@ namespace sw
         return true;
     }
 
-    void AnimClip::copyTracksToPose( const Pose& trackPose, const vector<int32>& listTrackToBone, Pose& inoutPose, const uint8* pTrackMask )
+    void AnimationClip::copyTracksToPose( const Pose& trackPose, const vector<int32>& listTrackToBone, Pose& inoutPose, const uint8* pTrackMask )
     {
         const uint32 trackCount = MathUtil::min( trackPose.getBoneCount(), static_cast<uint32>( listTrackToBone.size() ) );
         for ( uint32 trackIndex = 0; trackIndex < trackCount; ++trackIndex )
@@ -216,7 +216,7 @@ namespace sw
         }
     }
 
-    BoneTransform AnimClip::sampleRootMotionTrack( float32 time ) const
+    BoneTransform AnimationClip::sampleRootMotionTrack( float32 time ) const
     {
         Pose trackPose;
         if ( _rootMotionTrack < 0 || sampleTracks( time, trackPose ) == false )
@@ -224,12 +224,12 @@ namespace sw
         return trackPose.getBoneTransform( static_cast<uint32>( _rootMotionTrack ) );
     }
 
-    BoneTransform AnimClip::getRootMotionAnchor() const
+    BoneTransform AnimationClip::getRootMotionAnchor() const
     {
         return sampleRootMotionTrack( 0.0f );
     }
 
-    BoneTransform AnimClip::computeRootMotionDelta( const AnimTimeStep& step ) const
+    BoneTransform AnimationClip::computeRootMotionDelta( const AnimationTimeStep& step ) const
     {
         BoneTransform delta{};
         if ( _rootMotionTrack < 0 )
@@ -260,27 +260,27 @@ namespace sw
         return delta;
     }
 
-    void AnimClip::assignCodecBytes( const uint8* pData, size_t byteCount )
+    void AnimationClip::assignCodecBytes( const uint8* pData, size_t byteCount )
     {
         _listCodecBlock.clear();
-        _listCodecBlock.resize( ( byteCount + sizeof( AnimCodecBlock ) - 1 ) / sizeof( AnimCodecBlock ) );
+        _listCodecBlock.resize( ( byteCount + sizeof( AnimationCodecBlock ) - 1 ) / sizeof( AnimationCodecBlock ) );
         if ( byteCount > 0 )
             Memory::copy( _listCodecBlock.data(), pData, byteCount );
         _codecByteCount = byteCount;
     }
 
-    void AnimClip::clear()
+    void AnimationClip::clear()
     {
-        *this = AnimClip{};
+        *this = AnimationClip{};
     }
 
-    void AnimClip::makeBytes( vector<uint8>& outBytes ) const
+    void AnimationClip::makeBytes( vector<uint8>& outBytes ) const
     {
         outBytes.clear();
-        AnimClipInternal::Writer writer{ outBytes };
-        writer.writeRaw( AnimClipInternal::kArrMagic, sizeof( AnimClipInternal::kArrMagic ) );
+        AnimationClipInternal::Writer writer{ outBytes };
+        writer.writeRaw( AnimationClipInternal::kArrMagic, sizeof( AnimationClipInternal::kArrMagic ) );
         writer.writeUint( kVersion );
-        writer.writeUint( _bLoop == SW_TRUE ? AnimClipInternal::kFlagLoop : 0u );
+        writer.writeUint( _bLoop == SW_TRUE ? AnimationClipInternal::kFlagLoop : 0u );
         writer.writeFloat( _duration );
         writer.writeString( _name.c_str() );
         writer.writeUint( static_cast<uint32>( _listTrackName.size() ) );
@@ -293,18 +293,18 @@ namespace sw
         writer.writeUint( static_cast<uint32>( _codecByteCount ) );
         writer.writeRaw( getCodecData(), _codecByteCount );
         writer.writeUint( static_cast<uint32>( _notifyTrack.getEvents().size() ) );
-        for ( const AnimNotifyEvent& event : _notifyTrack.getEvents() )
+        for ( const AnimationNotifyEvent& event : _notifyTrack.getEvents() )
         {
             writer.writeString( event._name.c_str() );
             writer.writeFloat( event._time );
             writer.writeFloat( event._duration );
         }
         writer.writeUint( static_cast<uint32>( _listCurve.size() ) );
-        for ( const AnimCurve& curve : _listCurve )
+        for ( const AnimationClipCurve& curve : _listCurve )
         {
             writer.writeString( curve._name.c_str() );
             writer.writeUint( static_cast<uint32>( curve._listKey.size() ) );
-            for ( const AnimCurveKey& key : curve._listKey )
+            for ( const AnimationClipCurveKey& key : curve._listKey )
             {
                 writer.writeFloat( key._time );
                 writer.writeFloat( key._value );
@@ -312,25 +312,25 @@ namespace sw
         }
     }
 
-    bool AnimClip::readFromBytes( const uint8* pData, size_t byteCount, string_view sourceLabel )
+    bool AnimationClip::readFromBytes( const uint8* pData, size_t byteCount, string_view sourceLabel )
     {
         clear();
-        if ( pData == nullptr || byteCount < sizeof( AnimClipInternal::kArrMagic ) ||
-             Memory::compare( pData, AnimClipInternal::kArrMagic, sizeof( AnimClipInternal::kArrMagic ) ) != 0 )
+        if ( pData == nullptr || byteCount < sizeof( AnimationClipInternal::kArrMagic ) ||
+             Memory::compare( pData, AnimationClipInternal::kArrMagic, sizeof( AnimationClipInternal::kArrMagic ) ) != 0 )
         {
             SW_LOG_ERROR( "Animation clip '%#' has no SWAC magic", sourceLabel );
             return false;
         }
 
-        AnimClipInternal::Reader reader{ pData, byteCount, sizeof( AnimClipInternal::kArrMagic ), false };
-        const uint32             version = reader.readUint();
+        AnimationClipInternal::Reader reader{ pData, byteCount, sizeof( AnimationClipInternal::kArrMagic ), false };
+        const uint32                  version = reader.readUint();
         if ( version != kVersion )
         {
             SW_LOG_ERROR( "Animation clip '%#' is version %#, not the current %# - re-import the model", sourceLabel, version, kVersion );
             return false;
         }
         const uint32 flags      = reader.readUint();
-        _bLoop                  = ( flags & AnimClipInternal::kFlagLoop ) != 0 ? SW_TRUE : SW_FALSE;
+        _bLoop                  = ( flags & AnimationClipInternal::kFlagLoop ) != 0 ? SW_TRUE : SW_FALSE;
         _duration               = reader.readFloat();
         _name                   = hashed_string( reader.readString() );
         const uint32 trackCount = reader.readUint();
@@ -355,7 +355,7 @@ namespace sw
         {
             for ( uint32 notifyIndex = 0; notifyIndex < notifyCount; ++notifyIndex )
             {
-                AnimNotifyEvent event{};
+                AnimationNotifyEvent event{};
                 event._name     = hashed_string( reader.readString() );
                 event._time     = reader.readFloat();
                 event._duration = reader.readFloat();
@@ -367,13 +367,13 @@ namespace sw
         {
             for ( uint32 curveIndex = 0; curveIndex < curveCount; ++curveIndex )
             {
-                AnimCurve curve{};
+                AnimationClipCurve curve{};
                 curve._name           = hashed_string( reader.readString() );
                 const uint32 keyCount = reader.readUint();
                 if ( reader.canHold( keyCount, sizeof( float32 ) * 2 ) == false )
                     break;
                 curve._listKey.resize( keyCount );
-                for ( AnimCurveKey& key : curve._listKey )
+                for ( AnimationClipCurveKey& key : curve._listKey )
                 {
                     key._time  = reader.readFloat();
                     key._value = reader.readFloat();
@@ -382,7 +382,7 @@ namespace sw
             }
         }
 
-        const bool bCodecKnown  = codecValue < static_cast<uint32>( AnimCodecID::Count );
+        const bool bCodecKnown  = codecValue < static_cast<uint32>( AnimationCodecID::Count );
         const bool bRootInRange = _rootMotionTrack >= -1 && _rootMotionTrack < static_cast<int32>( _listTrackName.size() );
         const bool bValidHeader = MathUtil::isFinite( _duration ) && _duration >= 0.0f;
         if ( reader._bFailed || reader._offset != byteCount || bCodecKnown == false || bRootInRange == false || bValidHeader == false )
@@ -391,11 +391,11 @@ namespace sw
             clear();
             return false;
         }
-        _codecID = static_cast<AnimCodecID>( codecValue );
+        _codecID = static_cast<AnimationCodecID>( codecValue );
         return true;
     }
 
-    bool AnimClip::saveToFile( string_view path ) const
+    bool AnimationClip::saveToFile( string_view path ) const
     {
         vector<uint8> bytes;
         makeBytes( bytes );
@@ -404,7 +404,7 @@ namespace sw
         return FileUtil::writeFile( path, bytes.data(), bytes.size() );
     }
 
-    bool AnimClip::loadFromResource( string_view path )
+    bool AnimationClip::loadFromResource( string_view path )
     {
         SW_MEMORY_SCOPE( Animation );
         vector<uint8> bytes;

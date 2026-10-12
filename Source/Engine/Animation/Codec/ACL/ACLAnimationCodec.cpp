@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Animation/Codec/ACL/ACLAnimCodec.h"
+#include "Engine/Animation/Codec/ACL/ACLAnimationCodec.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
@@ -13,7 +13,7 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ACLAnimCodec" );
+    SW_LOG_CALLER( "ACLAnimationCodec" );
 
     namespace
     {
@@ -77,13 +77,13 @@ namespace sw
 
 namespace sw
 {
-    const ACLAnimCodec& ACLAnimCodec::getInstance()
+    const ACLAnimationCodec& ACLAnimationCodec::getInstance()
     {
-        static const ACLAnimCodec s_codec;
+        static const ACLAnimationCodec s_codec;
         return s_codec;
     }
 
-    bool ACLAnimCodec::compress( const AnimRawClip& rawClip, const AnimCodecSettings& settings, vector<uint8>& outBytes ) const
+    bool ACLAnimationCodec::compress( const AnimationRawClip& rawClip, const AnimationCodecSettings& settings, vector<uint8>& outBytes ) const
     {
         outBytes.clear();
         const uint32 trackCount = rawClip.getTrackCount();
@@ -133,7 +133,7 @@ namespace sw
         return true;
     }
 
-    bool ACLAnimCodec::sample( const uint8* pBytes, size_t byteCount, float32 time, Pose& outPose, const uint8* pTrackMask ) const
+    bool ACLAnimationCodec::sample( const uint8* pBytes, size_t byteCount, float32 time, Pose& outPose, const uint8* pTrackMask ) const
     {
         if ( pBytes == nullptr || byteCount == 0 || ( reinterpret_cast<uintptr_t>( pBytes ) & 15u ) != 0 )
             return false;

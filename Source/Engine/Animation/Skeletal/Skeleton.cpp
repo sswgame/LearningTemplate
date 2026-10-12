@@ -6,7 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Animation/AnimJSONUtil.h"
+#include "Engine/Animation/AnimationJSONUtil.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -93,7 +93,7 @@ namespace sw
 
     bool Skeleton::parseRoot( const JSONValue& root, string_view sourceLabel )
     {
-        if ( AnimJSONUtil::hasOnlyKnownKeys( root, { "bones", "attachments" }, sourceLabel ) == false )
+        if ( AnimationJSONUtil::hasOnlyKnownKeys( root, { "bones", "attachments" }, sourceLabel ) == false )
             return false;
         const JSONValue bones = root.get( "bones" );
         if ( bones.isArray() == false || bones.size() == 0 )
@@ -104,12 +104,12 @@ namespace sw
         for ( size_t boneIndex = 0; boneIndex < bones.size(); ++boneIndex )
         {
             const JSONValue bone = bones.at( boneIndex );
-            if ( AnimJSONUtil::hasOnlyKnownKeys( bone, { "name", "parent", "translation", "rotation", "scale", "inverse_bind" }, sourceLabel ) == false )
+            if ( AnimationJSONUtil::hasOnlyKnownKeys( bone, { "name", "parent", "translation", "rotation", "scale", "inverse_bind" }, sourceLabel ) == false )
                 return false;
             BoneTransform referencePose{};
             float32       arrInverseBind[16]{};
-            const bool    bComplete = bone.get( "name" ).isString() && bone.get( "parent" ).isNumber() && AnimJSONUtil::readBoneTransform( bone, referencePose ) &&
-                                   AnimJSONUtil::readFloats( bone.get( "inverse_bind" ), arrInverseBind, 16 );
+            const bool    bComplete = bone.get( "name" ).isString() && bone.get( "parent" ).isNumber() && AnimationJSONUtil::readBoneTransform( bone, referencePose ) &&
+                                   AnimationJSONUtil::readFloats( bone.get( "inverse_bind" ), arrInverseBind, 16 );
             if ( bComplete == false )
             {
                 SW_LOG_ERROR( "Skeleton '%#': bone %# is missing a field or has a malformed one", sourceLabel, boneIndex );
@@ -130,11 +130,11 @@ namespace sw
         for ( size_t attachmentIndex = 0; attachmentIndex < attachments.size(); ++attachmentIndex )
         {
             const JSONValue attachment = attachments.at( attachmentIndex );
-            if ( AnimJSONUtil::hasOnlyKnownKeys( attachment, { "name", "mesh", "bone", "translation", "rotation", "scale" }, sourceLabel ) == false )
+            if ( AnimationJSONUtil::hasOnlyKnownKeys( attachment, { "name", "mesh", "bone", "translation", "rotation", "scale" }, sourceLabel ) == false )
                 return false;
             SkeletonAttachment entry{};
             const bool         bComplete = attachment.get( "name" ).isString() && attachment.get( "mesh" ).isString() && attachment.get( "bone" ).isString() &&
-                                   AnimJSONUtil::readBoneTransform( attachment, entry._localTransform );
+                                   AnimationJSONUtil::readBoneTransform( attachment, entry._localTransform );
             if ( bComplete == false )
             {
                 SW_LOG_ERROR( "Skeleton '%#': attachment %# is missing a field or has a malformed one", sourceLabel, attachmentIndex );
@@ -166,8 +166,8 @@ namespace sw
                 entry.setObject();
                 entry.set( "name" ).setString( bone._name.c_str() );
                 entry.set( "parent" ).setInt( bone._parentIndex );
-                AnimJSONUtil::writeBoneTransform( entry, bone._referencePose );
-                AnimJSONUtil::writeFloats( entry.set( "inverse_bind" ), &bone._inverseBind._11, 16 );
+                AnimationJSONUtil::writeBoneTransform( entry, bone._referencePose );
+                AnimationJSONUtil::writeFloats( entry.set( "inverse_bind" ), &bone._inverseBind._11, 16 );
             }
         }
         {
@@ -180,7 +180,7 @@ namespace sw
                 entry.set( "name" ).setString( attachment._name );
                 entry.set( "mesh" ).setString( attachment._meshPath );
                 entry.set( "bone" ).setString( attachment._parentBone.c_str() );
-                AnimJSONUtil::writeBoneTransform( entry, attachment._localTransform );
+                AnimationJSONUtil::writeBoneTransform( entry, attachment._localTransform );
             }
         }
         return document.dump( 2 );

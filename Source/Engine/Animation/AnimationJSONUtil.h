@@ -1,5 +1,5 @@
 /**
- * @file AnimJSONUtil.h
+ * @file AnimationJSONUtil.h
  * @brief 애니메이션 데이터(스켈레톤, 클립 옆 데이터, 임포트 규칙)가 함께 쓰는 JSON 읽기와 쓰기 도우미입니다.
  */
 #pragma once
@@ -15,10 +15,10 @@ namespace sw
     class JSONValue;
 
     /**
-     * @struct AnimJSONUtil
+     * @struct AnimationJSONUtil
      * @brief 모르는 키를 오류로 보는 검사와, 고정 길이 숫자 배열과 본 변환의 읽기와 쓰기를 제공합니다.
      */
-    struct SW_API AnimJSONUtil
+    struct SW_API AnimationJSONUtil
     {
         /**
          * @brief 객체의 멤버가 모두 @p listKnownKey 안에 있는지 검사합니다. 모르는 키가 있으면 그 이름을 오류로 남기고 false 를 반환합니다.

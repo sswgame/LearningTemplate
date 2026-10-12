@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Animation/AnimPlayback.h"
+#include "Engine/Animation/AnimationPlayback.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -8,15 +8,15 @@ namespace sw
 {
     namespace
     {
-        struct AnimNotifyTrackInternal
+        struct AnimationNotifyTrackInternal
         {
             /** @brief 울린 알림의 순서입니다. 시각이 이르면 먼저이고, 시각이 같으면 끝이 먼저입니다. */
-            static bool isFiredBefore( const AnimFiredNotify& lhs, const AnimFiredNotify& rhs )
+            static bool isFiredBefore( const AnimationFiredNotify& lhs, const AnimationFiredNotify& rhs )
             {
                 if ( lhs._time != rhs._time )
                     return lhs._time < rhs._time;
-                const bool bLhsEnd = lhs._phase == AnimNotifyPhase::End;
-                const bool bRhsEnd = rhs._phase == AnimNotifyPhase::End;
+                const bool bLhsEnd = lhs._phase == AnimationNotifyPhase::End;
+                const bool bRhsEnd = rhs._phase == AnimationNotifyPhase::End;
                 return bLhsEnd && bRhsEnd == false;
             }
         };
@@ -25,15 +25,15 @@ namespace sw
 
 namespace sw
 {
-    void AnimClipCursor::reset( float32 time )
+    void AnimationClipCursor::reset( float32 time )
     {
         _time   = MathUtil::max( time, 0.0f );
         _bFresh = SW_TRUE;
     }
 
-    AnimTimeStep AnimClipCursor::advance( float32 deltaSeconds, float32 playLength, bool bLoop )
+    AnimationTimeStep AnimationClipCursor::advance( float32 deltaSeconds, float32 playLength, bool bLoop )
     {
-        AnimTimeStep step{};
+        AnimationTimeStep step{};
         step._previousTime   = _time;
         step._bIncludesStart = _bFresh;
         _bFresh              = SW_FALSE;
@@ -66,17 +66,17 @@ namespace sw
         return step;
     }
 
-    float32 AnimClipCursor::computeNormalizedTime( float32 playLength ) const
+    float32 AnimationClipCursor::computeNormalizedTime( float32 playLength ) const
     {
         return playLength > 0.0f ? MathUtil::clamp( _time / playLength, 0.0f, 1.0f ) : 0.0f;
     }
 
-    void AnimClipCursor::setNormalizedTime( float32 normalizedTime, float32 playLength )
+    void AnimationClipCursor::setNormalizedTime( float32 normalizedTime, float32 playLength )
     {
         _time = playLength > 0.0f ? MathUtil::clamp( normalizedTime, 0.0f, 1.0f ) * playLength : 0.0f;
     }
 
-    void AnimNotifyTrack::addEvent( const AnimNotifyEvent& event )
+    void AnimationNotifyTrack::addEvent( const AnimationNotifyEvent& event )
     {
         size_t insertIndex = _listEvent.size();
         while ( insertIndex > 0 && _listEvent[insertIndex - 1]._time > event._time )
@@ -86,8 +86,8 @@ namespace sw
         _listEvent.insert( _listEvent.begin() + static_cast<ptrdiff_t>( insertIndex ), event );
     }
 
-    void AnimNotifyTrack::collectFired( const AnimTimeStep& step, float32 playLength, float32 weight, const IAnimPlayable* pSource,
-                                        vector<AnimFiredNotify>& outListFired ) const
+    void AnimationNotifyTrack::collectFired( const AnimationTimeStep& step, float32 playLength, float32 weight, const IAnimationPlayable* pSource,
+                                             vector<AnimationFiredNotify>& outListFired ) const
     {
         if ( _listEvent.empty() )
             return;
@@ -105,51 +105,51 @@ namespace sw
         collectRange( 0.0f, step._currentTime, true, playLength, weight, pSource, outListFired );
     }
 
-    float32 AnimNotifyTrack::computeEndTime( const AnimNotifyEvent& event, float32 playLength )
+    float32 AnimationNotifyTrack::computeEndTime( const AnimationNotifyEvent& event, float32 playLength )
     {
         const float32 endTime = event._time + event._duration;
         return playLength > 0.0f ? MathUtil::min( endTime, playLength ) : endTime;
     }
 
-    void AnimNotifyTrack::collectRange( float32 fromTime, float32 toTime, bool bIncludeFrom, float32 playLength, float32 weight, const IAnimPlayable* pSource,
-                                        vector<AnimFiredNotify>& outListFired ) const
+    void AnimationNotifyTrack::collectRange( float32 fromTime, float32 toTime, bool bIncludeFrom, float32 playLength, float32 weight, const IAnimationPlayable* pSource,
+                                             vector<AnimationFiredNotify>& outListFired ) const
     {
         const size_t firstAdded = outListFired.size();
         for ( size_t eventIndex = 0; eventIndex < _listEvent.size(); ++eventIndex )
         {
-            const AnimNotifyEvent& event         = _listEvent[eventIndex];
-            const bool             bState        = event._duration > 0.0f;
-            const float32          endTime       = bState ? computeEndTime( event, playLength ) : 0.0f;
-            const bool             bStartCrossed = ( bIncludeFrom ? event._time >= fromTime : event._time > fromTime ) && event._time <= toTime;
+            const AnimationNotifyEvent& event         = _listEvent[eventIndex];
+            const bool                  bState        = event._duration > 0.0f;
+            const float32               endTime       = bState ? computeEndTime( event, playLength ) : 0.0f;
+            const bool                  bStartCrossed = ( bIncludeFrom ? event._time >= fromTime : event._time > fromTime ) && event._time <= toTime;
             // 끝은 시작과 같은 구간 규칙을 쓴다. 다만 시작 시각을 포함하는 첫 걸음에서도 끝 시각 자체가 from 이면 이미 닫힌 구간이라 뺀다.
             const bool bEndCrossed = bState && endTime > fromTime && endTime <= toTime;
             if ( bStartCrossed )
             {
-                AnimFiredNotify fired{};
+                AnimationFiredNotify fired{};
                 fired._name       = event._name;
                 fired._pSource    = pSource;
                 fired._time       = event._time;
                 fired._weight     = weight;
                 fired._duration   = event._duration;
                 fired._eventIndex = static_cast<uint32>( eventIndex );
-                fired._phase      = bState ? AnimNotifyPhase::Begin : AnimNotifyPhase::Instant;
+                fired._phase      = bState ? AnimationNotifyPhase::Begin : AnimationNotifyPhase::Instant;
                 outListFired.push_back( fired );
             }
             if ( bEndCrossed )
             {
-                AnimFiredNotify fired{};
+                AnimationFiredNotify fired{};
                 fired._name       = event._name;
                 fired._pSource    = pSource;
                 fired._time       = endTime;
                 fired._weight     = weight;
                 fired._duration   = event._duration;
                 fired._eventIndex = static_cast<uint32>( eventIndex );
-                fired._phase      = AnimNotifyPhase::End;
+                fired._phase      = AnimationNotifyPhase::End;
                 outListFired.push_back( fired );
             }
         }
         // 시각 순서로 정렬한다. 같은 시각이면 끝이 먼저다(앞 구간이 닫힌 뒤 다음 구간이 열린다).
         std::stable_sort( outListFired.begin() + static_cast<ptrdiff_t>( firstAdded ), outListFired.end(),
-                          AnimNotifyTrackInternal::isFiredBefore );
+                          AnimationNotifyTrackInternal::isFiredBefore );
     }
 } // namespace sw

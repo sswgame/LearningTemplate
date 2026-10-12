@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Animation/Graph/AnimGraphAsset.h"
+#include "Engine/Animation/Graph/AnimationGraphAsset.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
@@ -10,13 +10,13 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AnimGraphAsset" );
+    SW_LOG_CALLER( "AnimationGraphAsset" );
 
     namespace
     {
-        struct AnimGraphAssetInternal
+        struct AnimationGraphAssetInternal
         {
-            /** @brief 조건 표기 표입니다. 순서는 `AnimConditionOp` 와 같습니다(None 은 표기가 없습니다). */
+            /** @brief 조건 표기 표입니다. 순서는 `AnimationConditionOp` 와 같습니다(None 은 표기가 없습니다). */
             static constexpr const utf8* kArrOpText[] = { "", ">", "<", ">=", "<=", "==", "!=", "trigger" };
         };
     } // namespace
@@ -24,31 +24,31 @@ namespace sw
 
 namespace sw
 {
-    bool AnimGraphLink::isConditionMet( float32 parameterValue ) const
+    bool AnimationGraphLink::isConditionMet( float32 parameterValue ) const
     {
         switch ( _op )
         {
-            case AnimConditionOp::None:
+            case AnimationConditionOp::None:
                 return false;
-            case AnimConditionOp::Greater:
+            case AnimationConditionOp::Greater:
                 return parameterValue > _threshold;
-            case AnimConditionOp::Less:
+            case AnimationConditionOp::Less:
                 return parameterValue < _threshold;
-            case AnimConditionOp::GreaterEqual:
+            case AnimationConditionOp::GreaterEqual:
                 return parameterValue >= _threshold;
-            case AnimConditionOp::LessEqual:
+            case AnimationConditionOp::LessEqual:
                 return parameterValue <= _threshold;
-            case AnimConditionOp::Equal:
+            case AnimationConditionOp::Equal:
                 return parameterValue == _threshold;
-            case AnimConditionOp::NotEqual:
+            case AnimationConditionOp::NotEqual:
                 return parameterValue != _threshold;
-            case AnimConditionOp::Trigger:
+            case AnimationConditionOp::Trigger:
                 return parameterValue != 0.0f;
         }
         return false;
     }
 
-    bool AnimGraphAsset::loadFromFile( string_view path )
+    bool AnimationGraphAsset::loadFromFile( string_view path )
     {
         SW_MEMORY_SCOPE( Animation );
         _listNode.clear();
@@ -63,7 +63,7 @@ namespace sw
         return parseRoot( doc.getRoot() );
     }
 
-    bool AnimGraphAsset::saveToFile( string_view path ) const
+    bool AnimationGraphAsset::saveToFile( string_view path ) const
     {
         if ( path.empty() )
             return false;
@@ -71,7 +71,7 @@ namespace sw
         return FileUtil::writeTextFile( path, toJSON() );
     }
 
-    bool AnimGraphAsset::parseJSON( string_view jsonView )
+    bool AnimationGraphAsset::parseJSON( string_view jsonView )
     {
         _listNode.clear();
         _listLink.clear();
@@ -83,11 +83,11 @@ namespace sw
         return parseRoot( doc.getRoot() );
     }
 
-    bool AnimGraphAsset::parseRoot( const JSONValue& root )
+    bool AnimationGraphAsset::parseRoot( const JSONValue& root )
     {
         forEachObjectInArray( root, "nodes", [this]( const JSONValue& nodeJSON, size_t /*nodeIndex*/ )
         {
-            AnimGraphNode node{};
+            AnimationGraphNode node{};
             node._id          = static_cast<int32>( nodeJSON.get( "id" ).asInt( 0 ) );
             node._name        = nodeJSON.get( "name" ).asString();
             node._position._x = static_cast<float32>( nodeJSON.get( "x" ).asFloat( 40.0 ) );
@@ -101,7 +101,7 @@ namespace sw
         bool bValid = true;
         forEachObjectInArray( root, "links", [this, &bValid]( const JSONValue& linkJSON, size_t /*linkIndex*/ )
         {
-            AnimGraphLink link{};
+            AnimationGraphLink link{};
             link._id       = static_cast<int32>( linkJSON.get( "id" ).asInt( 0 ) );
             link._fromNode = static_cast<int32>( linkJSON.get( "from" ).asInt( 0 ) );
             link._toNode   = static_cast<int32>( linkJSON.get( "to" ).asInt( 0 ) );
@@ -111,7 +111,7 @@ namespace sw
             if ( condition.isObject() )
             {
                 const string opText = condition.get( "op" ).asString();
-                if ( parseConditionOp( opText, link._op ) == false || link._op == AnimConditionOp::None )
+                if ( parseConditionOp( opText, link._op ) == false || link._op == AnimationConditionOp::None )
                 {
                     SW_LOG_ERROR( "Animation graph link %# has unknown condition op '%#'", link._id, opText.c_str() );
                     bValid = false;
@@ -130,14 +130,14 @@ namespace sw
         return bValid;
     }
 
-    string AnimGraphAsset::toJSON() const
+    string AnimationGraphAsset::toJSON() const
     {
         JSONDocument    doc;
         const JSONValue root = doc.makeObject();
 
         const JSONValue nodesVal = root.set( "nodes" );
         nodesVal.setArray();
-        for ( const AnimGraphNode& node : _listNode )
+        for ( const AnimationGraphNode& node : _listNode )
         {
             const JSONValue nodeJSON = nodesVal.pushBack();
             nodeJSON.setObject();
@@ -151,7 +151,7 @@ namespace sw
 
         const JSONValue linksVal = root.set( "links" );
         linksVal.setArray();
-        for ( const AnimGraphLink& link : _listLink )
+        for ( const AnimationGraphLink& link : _listLink )
         {
             const JSONValue linkJSON = linksVal.pushBack();
             linkJSON.setObject();
@@ -160,7 +160,7 @@ namespace sw
             linkJSON.set( "to" ).setInt( link._toNode );
             if ( link._blendSeconds >= 0.0f )
                 linkJSON.set( "blend" ).setFloat( static_cast<float64>( link._blendSeconds ) );
-            if ( link._op != AnimConditionOp::None )
+            if ( link._op != AnimationConditionOp::None )
             {
                 const JSONValue condition = linkJSON.set( "condition" );
                 condition.setObject();
@@ -173,20 +173,20 @@ namespace sw
         return doc.dump( 2 );
     }
 
-    void AnimGraphAsset::collectNodeNames( vector<string>& outListName ) const
+    void AnimationGraphAsset::collectNodeNames( vector<string>& outListName ) const
     {
         outListName.clear();
         outListName.reserve( _listNode.size() );
-        for ( const AnimGraphNode& node : _listNode )
+        for ( const AnimationGraphNode& node : _listNode )
         {
             if ( node._name.empty() == false )
                 outListName.push_back( node._name );
         }
     }
 
-    const AnimGraphNode* AnimGraphAsset::findNode( int32 nodeID ) const
+    const AnimationGraphNode* AnimationGraphAsset::findNode( int32 nodeID ) const
     {
-        for ( const AnimGraphNode& node : _listNode )
+        for ( const AnimationGraphNode& node : _listNode )
         {
             if ( node._id == nodeID )
                 return &node;
@@ -194,11 +194,11 @@ namespace sw
         return nullptr;
     }
 
-    const AnimGraphNode* AnimGraphAsset::findNodeByName( string_view name ) const
+    const AnimationGraphNode* AnimationGraphAsset::findNodeByName( string_view name ) const
     {
         if ( name.empty() )
             return nullptr;
-        for ( const AnimGraphNode& node : _listNode )
+        for ( const AnimationGraphNode& node : _listNode )
         {
             if ( node._name == name )
                 return &node;
@@ -206,12 +206,12 @@ namespace sw
         return nullptr;
     }
 
-    const AnimGraphNode* AnimGraphAsset::findEntryNode() const
+    const AnimationGraphNode* AnimationGraphAsset::findEntryNode() const
     {
-        for ( const AnimGraphNode& node : _listNode )
+        for ( const AnimationGraphNode& node : _listNode )
         {
             bool bHasIncoming = false;
-            for ( const AnimGraphLink& link : _listLink )
+            for ( const AnimationGraphLink& link : _listLink )
             {
                 if ( link._toNode != node._id )
                     continue;
@@ -226,38 +226,38 @@ namespace sw
         return &_listNode.front();
     }
 
-    const AnimGraphLink* AnimGraphAsset::findFinishLink( int32 fromNodeID ) const
+    const AnimationGraphLink* AnimationGraphAsset::findFinishLink( int32 fromNodeID ) const
     {
-        for ( const AnimGraphLink& link : _listLink )
+        for ( const AnimationGraphLink& link : _listLink )
         {
-            if ( link._fromNode == fromNodeID && link._op == AnimConditionOp::None )
+            if ( link._fromNode == fromNodeID && link._op == AnimationConditionOp::None )
                 return &link;
         }
         return nullptr;
     }
 
-    bool AnimGraphAsset::parseConditionOp( string_view text, AnimConditionOp& outOp )
+    bool AnimationGraphAsset::parseConditionOp( string_view text, AnimationConditionOp& outOp )
     {
-        for ( uint32 index = 1; index < static_cast<uint32>( std::size( AnimGraphAssetInternal::kArrOpText ) ); ++index )
+        for ( uint32 index = 1; index < static_cast<uint32>( std::size( AnimationGraphAssetInternal::kArrOpText ) ); ++index )
         {
-            if ( text == AnimGraphAssetInternal::kArrOpText[index] )
+            if ( text == AnimationGraphAssetInternal::kArrOpText[index] )
             {
-                outOp = static_cast<AnimConditionOp>( index );
+                outOp = static_cast<AnimationConditionOp>( index );
                 return true;
             }
         }
         return false;
     }
 
-    const utf8* AnimGraphAsset::getConditionOpText( AnimConditionOp op )
+    const utf8* AnimationGraphAsset::getConditionOpText( AnimationConditionOp op )
     {
         const uint32 index = static_cast<uint32>( op );
-        return index < static_cast<uint32>( std::size( AnimGraphAssetInternal::kArrOpText ) ) ? AnimGraphAssetInternal::kArrOpText[index] : "";
+        return index < static_cast<uint32>( std::size( AnimationGraphAssetInternal::kArrOpText ) ) ? AnimationGraphAssetInternal::kArrOpText[index] : "";
     }
 
-    int32 AnimGraphAsset::findFirstOutgoingNodeID( int32 fromNodeID ) const
+    int32 AnimationGraphAsset::findFirstOutgoingNodeID( int32 fromNodeID ) const
     {
-        for ( const AnimGraphLink& link : _listLink )
+        for ( const AnimationGraphLink& link : _listLink )
         {
             if ( link._fromNode == fromNodeID )
                 return link._toNode;

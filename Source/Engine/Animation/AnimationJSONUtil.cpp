@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Animation/AnimJSONUtil.h"
+#include "Engine/Animation/AnimationJSONUtil.h"
 
 #include "Core/Log/Logger.h"
 
@@ -9,9 +9,9 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AnimJSONUtil" );
+    SW_LOG_CALLER( "AnimationJSONUtil" );
 
-    bool AnimJSONUtil::hasOnlyKnownKeys( const JSONValue& object, std::initializer_list<string_view> listKnownKey, string_view context )
+    bool AnimationJSONUtil::hasOnlyKnownKeys( const JSONValue& object, std::initializer_list<string_view> listKnownKey, string_view context )
     {
         if ( object.isObject() == false )
         {
@@ -30,7 +30,7 @@ namespace sw
         return bKnown;
     }
 
-    bool AnimJSONUtil::readFloats( const JSONValue& value, float32* pOutValue, uint32 count )
+    bool AnimationJSONUtil::readFloats( const JSONValue& value, float32* pOutValue, uint32 count )
     {
         if ( value.isArray() == false || value.size() != count )
             return false;
@@ -44,7 +44,7 @@ namespace sw
         return true;
     }
 
-    void AnimJSONUtil::writeFloats( const JSONValue& value, const float32* pValue, uint32 count )
+    void AnimationJSONUtil::writeFloats( const JSONValue& value, const float32* pValue, uint32 count )
     {
         value.setArray();
         for ( uint32 index = 0; index < count; ++index )
@@ -53,7 +53,7 @@ namespace sw
         }
     }
 
-    bool AnimJSONUtil::readBoneTransform( const JSONValue& object, BoneTransform& outTransform )
+    bool AnimationJSONUtil::readBoneTransform( const JSONValue& object, BoneTransform& outTransform )
     {
         float32    arrTranslation[3]{};
         float32    arrRotation[4]{};
@@ -68,7 +68,7 @@ namespace sw
         return true;
     }
 
-    void AnimJSONUtil::writeBoneTransform( const JSONValue& object, const BoneTransform& transform )
+    void AnimationJSONUtil::writeBoneTransform( const JSONValue& object, const BoneTransform& transform )
     {
         const float32 arrTranslation[3] = { transform._translation._x, transform._translation._y, transform._translation._z };
         const float32 arrRotation[4]    = { transform._rotation._x, transform._rotation._y, transform._rotation._z, transform._rotation._w };

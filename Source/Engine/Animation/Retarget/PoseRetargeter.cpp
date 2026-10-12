@@ -5,8 +5,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/AnimClip.h"
-#include "Engine/Animation/Codec/AnimCodec.h"
+#include "Engine/Animation/AnimationClip.h"
+#include "Engine/Animation/Codec/AnimationCodec.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 
 namespace sw
@@ -226,15 +226,15 @@ namespace sw
         _targetBuffer.writeTo( outTargetPose );
     }
 
-    bool RetargetBakeUtil::bakeClip( PoseRetargeter& retargeter, const AnimClip& sourceClip, const Skeleton& sourceSkeleton, const Skeleton& targetSkeleton,
-                                     float32 sampleRate, const IAnimCodec& codec, const AnimCodecSettings& settings, AnimClip& outClip )
+    bool RetargetBakeUtil::bakeClip( PoseRetargeter& retargeter, const AnimationClip& sourceClip, const Skeleton& sourceSkeleton, const Skeleton& targetSkeleton,
+                                     float32 sampleRate, const IAnimationCodec& codec, const AnimationCodecSettings& settings, AnimationClip& outClip )
     {
         if ( retargeter.isInitialized() == false || sampleRate <= 0.0f )
             return false;
         const float32 duration    = sourceClip.getDuration();
         const uint32  sampleCount = MathUtil::max( 2u, static_cast<uint32>( MathUtil::ceil( duration * sampleRate ) ) + 1u );
 
-        AnimRawClip raw;
+        AnimationRawClip raw;
         raw._sampleCount = sampleCount;
         raw._sampleRate  = ( duration > 0.0f ) ? static_cast<float32>( sampleCount - 1 ) / duration : sampleRate;
         for ( uint32 boneIndex = 0; boneIndex < targetSkeleton.getBoneCount(); ++boneIndex )
@@ -258,7 +258,7 @@ namespace sw
                 SW_LOG_ERROR( "Retarget bake: clip '%#' could not be sampled", sourceClip.getName().c_str() );
                 return false;
             }
-            AnimClip::copyTracksToPose( trackPose, listTrackToBone, sourcePose );
+            AnimationClip::copyTracksToPose( trackPose, listTrackToBone, sourcePose );
             retargeter.retarget( sourcePose, targetPose );
             for ( uint32 boneIndex = 0; boneIndex < targetPose.getBoneCount(); ++boneIndex )
             {
@@ -266,16 +266,16 @@ namespace sw
             }
         }
 
-        outClip = AnimClip{};
+        outClip = AnimationClip{};
         if ( outClip.compressFrom( raw, codec, settings, nullptr ) == false )
             return false;
         outClip.setName( sourceClip.getName() );
         outClip.setLooping( sourceClip.isLoopingByDefault() );
-        for ( const AnimNotifyEvent& event : sourceClip.getNotifyTrack().getEvents() )
+        for ( const AnimationNotifyEvent& event : sourceClip.getNotifyTrack().getEvents() )
         {
             outClip.addNotify( event );
         }
-        for ( const AnimCurve& curve : sourceClip.getCurves() )
+        for ( const AnimationClipCurve& curve : sourceClip.getCurves() )
         {
             outClip.addCurve( curve );
         }
@@ -292,7 +292,7 @@ namespace sw
         RetargetProfile profile;
         Skeleton        sourceSkeleton;
         Skeleton        targetSkeleton;
-        AnimClip        sourceClip;
+        AnimationClip   sourceClip;
         const bool      bLoaded = profile.loadFromResource( profilePath ) && sourceSkeleton.loadFromResource( profile.getSourceSkeletonPath() ) &&
                              targetSkeleton.loadFromResource( profile.getTargetSkeletonPath() ) && sourceClip.loadFromResource( sourceClipPath );
         if ( bLoaded == false )
@@ -300,11 +300,11 @@ namespace sw
             SW_LOG_ERROR( "Retarget bake: '%#' / '%#' could not be loaded", profilePath, sourceClipPath );
             return false;
         }
-        const IAnimCodec* pCodec = AnimCodecRegistry::findCodec( sourceClip.getCodecID() );
-        PoseRetargeter    retargeter;
-        AnimClip          baked;
-        const bool        bBaked = pCodec != nullptr && retargeter.initialize( profile, sourceSkeleton, targetSkeleton, nullptr ) &&
-                            bakeClip( retargeter, sourceClip, sourceSkeleton, targetSkeleton, PoseRetargeterInternal::kBakeSampleRate, *pCodec, AnimCodecSettings{},
+        const IAnimationCodec* pCodec = AnimationCodecRegistry::findCodec( sourceClip.getCodecID() );
+        PoseRetargeter         retargeter;
+        AnimationClip          baked;
+        const bool             bBaked = pCodec != nullptr && retargeter.initialize( profile, sourceSkeleton, targetSkeleton, nullptr ) &&
+                            bakeClip( retargeter, sourceClip, sourceSkeleton, targetSkeleton, PoseRetargeterInternal::kBakeSampleRate, *pCodec, AnimationCodecSettings{},
                                       baked );
         if ( bBaked == false || baked.saveToFile( outClipPath ) == false )
         {
