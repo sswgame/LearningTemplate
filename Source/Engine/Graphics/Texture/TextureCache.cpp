@@ -104,9 +104,10 @@ namespace sw
         if ( it == _impl->_mapEntry.end() || it->second._texture == nullptr )
             return;
 
-        // 이전 프레임이 아직 이 텍스처의 bindless SRV 인덱스를 읽고 있을 수 있다. releaseRHI() 는
-        // 인덱스를 곧바로 프리리스트로 돌려주므로, 기다리지 않고 다시 올리면 같은 인덱스를 받은
-        // 다른 텍스처를 읽는 조용한 오염이 된다(MaterialCache::reload 와 같은 이유).
+        // 이전 프레임이 아직 이 텍스처와 그 bindless SRV 인덱스를 읽고 있을 수 있다. 인덱스를 돌려주는 때는 백엔드마다 다르다:
+        // DX12 · Vulkan 은 해제 큐(enqueueGPURelease)를 거쳐 GPU 펜스가 지난 뒤에 프리리스트로 돌려주지만,
+        // DX11 · GL 은 unregisterBindlessTexture 에서 곧바로 돌려준다. 그 둘에서 기다리지 않고 다시 올리면 같은 인덱스를 받은
+        // 다른 텍스처를 읽는 조용한 오염이 된다(MaterialCache::reload 와 같은 이유). 텍스처 객체 해제도 같은 대기에 기댄다.
         pDevice->waitIdle();
         it->second._texture->releaseRHI( pDevice );
         if ( it->second._texture->loadFromResource( pDevice, key ) == false )
