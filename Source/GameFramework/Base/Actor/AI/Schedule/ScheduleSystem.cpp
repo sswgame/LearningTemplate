@@ -394,6 +394,19 @@ namespace sw
         _listNpc[static_cast<size_t>( npcIndex )]._bTagsDirty = SW_TRUE;
     }
 
+    void ScheduleSystem::setNpcAffinity( int32 npcIndex, int32 affinity )
+    {
+        if ( isValidNpc( npcIndex ) == false || _listNpc[static_cast<size_t>( npcIndex )]._affinity == affinity )
+            return;
+        _listNpc[static_cast<size_t>( npcIndex )]._affinity   = affinity;
+        _listNpc[static_cast<size_t>( npcIndex )]._bTagsDirty = SW_TRUE;
+    }
+
+    int32 ScheduleSystem::getNpcAffinity( int32 npcIndex ) const
+    {
+        return isValidNpc( npcIndex ) ? _listNpc[static_cast<size_t>( npcIndex )]._affinity : 0;
+    }
+
     bool ScheduleSystem::pushInterruption( int32 npcIndex, const hashed_string& interruptID )
     {
         if ( _pCatalog == nullptr || isValidNpc( npcIndex ) == false )

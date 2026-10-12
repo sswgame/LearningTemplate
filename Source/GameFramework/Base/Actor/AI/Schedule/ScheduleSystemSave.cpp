@@ -140,6 +140,7 @@ namespace sw
             npcState._originMinute   = npc._originMinute;
             npcState._heldArea       = npc._held._area;
             npcState._heldPosition   = npc._held._position;
+            npcState._affinity       = npc._affinity;
             for ( const Interruption& interruption : npc._listInterruption )
             {
                 ScheduleInterruptionSaveState interruptionState;
@@ -196,6 +197,7 @@ namespace sw
             if ( npcIndex < 0 )
                 continue;
             NpcRuntime& npc = _listNpc[static_cast<size_t>( npcIndex )];
+            npc._affinity   = npcState._affinity;
             npc._tags.clear();
             for ( const string& tagName : npcState._listTag )
             {
