@@ -125,8 +125,11 @@ namespace sw
                                       _owner._listTableUnit[unitIndex] == _owner._pUnit->getHandle();
                 if ( bOwnUnit == false )
                     return RigSocketLookup::OtherUnit;
+                // 표면 기준 소켓은 체형 보정을 더한 로컬이다(테이블이 계산해 둔다).
+                float4x4 local = pDef->makeLocalTransform();
+                (void)pTable->computeLocalTransform( socketID, local ); // 켜진 소켓이라 실패하지 않는다. 실패해도 보정 없는 로컬이 남는다
                 outParentBone = pDef->_parent;
-                outLocal      = BoneTransform::makeFromMatrix( pDef->makeLocalTransform() );
+                outLocal      = BoneTransform::makeFromMatrix( local );
                 return RigSocketLookup::OwnUnit;
             }
         }
@@ -499,8 +502,10 @@ namespace sw
                     pTargetUnit = castTo<SkeletalMeshComponent>( getOwner()->getManager()->resolveComponent( _listTableUnit[unitIndex] ) );
                 if ( pDef != nullptr )
                 {
+                    float4x4 local = pDef->makeLocalTransform();
+                    (void)_pSocketTable->computeLocalTransform( socketID, local ); // 체형 보정을 더한다. 켜진 소켓이라 실패하지 않는다
                     boneName    = pDef->_parent;
-                    socketLocal = BoneTransform::makeFromMatrix( pDef->makeLocalTransform() );
+                    socketLocal = BoneTransform::makeFromMatrix( local );
                     bSocketRoot = boneName.empty();
                 }
             }

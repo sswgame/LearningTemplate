@@ -184,7 +184,8 @@ pRagdoll->setPhysicsAssetPath( "game/shooter3d/characters/skeleton_warrior/skele
 땅 광선은 씬 물리(`IPhysicsScene3D`)로 쏘고, 평면 리그면 2D 물리로 쏩니다.
 
 - **대상 연결.** `bindUnit( 이름, 유닛, 소켓 에셋 )` 과 `bindObject( 이름, 오브젝트 )` 로 먼저 연결한 것을 쓰고, 없으면 같은 이름의 자식, 그다음 매니저 전체에서 찾습니다.
-  외형 조립 쪽은 `setSocketTable( 해석된 테이블, 유닛 목록 )` 으로 `MainHand.Grip` 같은 이름을 그 테이블에서 찾게 합니다. 이때 표면 기준 소켓의 체형 보정은 따르지 않습니다.
+  외형 조립 쪽은 `setSocketTable( 해석된 테이블, 유닛 목록 )` 으로 `MainHand.Grip` 같은 이름을 그 테이블에서 찾게 합니다.
+  표면 기준 소켓은 체형 보정을 더한 로컬(`ResolvedSocketTable::computeLocalTransform`)을 씁니다. 리그는 묶을 때 이 값을 읽으므로, 체형을 바꾸면(`applyShapedGeometry`) `setSocketTable` 을 다시 불러 리그를 다시 묶습니다.
 - **무기 손잡이.** 무기 유닛은 오른손 소켓에 붙어 몸을 따르고, 왼손 IK 는 무기의 `Grip` 소켓을 `"space": "handslot.r"` 대상으로 잡습니다. 몸, 무기, 몸으로 이어지는 순환 의존 없이 이번 프레임의 오른손을 따라갑니다.
 - **가중치.** `setSlotWeight( 슬롯, 값 )` 은 시퀀서 슬롯 값(샷 중간에 무기를 다른 손으로 옮겨 쥐기)을, 애니메이터의 `getCurveValue` 는 클립 커브를 노드 가중치로 넘깁니다. `setNodeControl( 노드, "parent", 번호 )` 는 부모 바꾸기 노드를 조절합니다.
 - **모프 출력.** 포즈 구동(RBF) 노드가 낸 보정 모프 가중치는 유닛의 같은 이름 모프 타깃에 더해집니다(`getMorphWeights`). 보정 본은 바로 포즈에 들어갑니다.

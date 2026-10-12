@@ -227,9 +227,24 @@ namespace sw
         const Unit* pUnit = findUnit( slot._unit );
         if ( pUnit == nullptr )
             return false;
+        return pUnit->_sockets.computeSocketTransform( makeCorrectedDef( slot ), unitBones, outUnitTransform );
+    }
+
+    bool ResolvedSocketTable::computeLocalTransform( SocketID socketID, float4x4& outLocalTransform ) const
+    {
+        const SocketID target = resolveTarget( socketID );
+        if ( target == kInvalidSocketID )
+            return false;
+        outLocalTransform = makeCorrectedDef( _listSlot[target] ).makeLocalTransform();
+        return true;
+    }
+
+    SocketDef ResolvedSocketTable::makeCorrectedDef( const Slot& slot )
+    {
+        // 보정은 부모 본 축의 이동이다(applyShapedGeometry 가 바인드 부모 축으로 옮겨 둔다).
         SocketDef corrected = slot._def;
         corrected._translation += slot._shapeOffsetLocal;
-        return pUnit->_sockets.computeSocketTransform( corrected, unitBones, outUnitTransform );
+        return corrected;
     }
 
     bool ResolvedSocketTable::getSocketTransform( const hashed_string& fullName, const SocketPoseView& pose, float4x4& outWorldTransform ) const

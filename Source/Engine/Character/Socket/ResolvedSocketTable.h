@@ -89,6 +89,12 @@ namespace sw
         uint32 getSocketCount() const { return static_cast<uint32>( _listSlot.size() ); }
 
         /**
+         * @brief 소켓(후보를 따라간 실제 소켓)의 **부모 본 기준** 로컬 변환입니다. 표면 기준 소켓은 체형 보정(`applyShapedGeometry`)을 더합니다.
+         * @details 후처리 리그처럼 부모 본과 로컬을 따로 받는 쪽이 쓴다. 체형을 바꾼 뒤에는 받는 쪽이 다시 읽어야 한다(`PoseModifierComponent::setSocketTable`).
+         * @return 꺼진 소켓이면 false 입니다.
+         */
+        bool computeLocalTransform( SocketID socketID, float4x4& outLocalTransform ) const;
+        /**
          * @brief 소켓(후보를 따라간 실제 소켓)의 **유닛 공간** 변환을 그 유닛의 본 배열로 계산합니다.
          * @param unitBones `getSocketUnit( resolveTarget( socketID ) )` 유닛의 지금 본 배열입니다.
          */
@@ -121,8 +127,10 @@ namespace sw
         };
 
         hashed_string makeFullName( const hashed_string& prefix, const hashed_string& name ) const;
-        SocketID      findOrAddSlot( const hashed_string& fullName );
-        const Unit*   findUnit( uint32 unitIndex ) const;
+        /** @brief 슬롯의 정의에 체형 보정을 더한 사본입니다. */
+        static SocketDef makeCorrectedDef( const Slot& slot );
+        SocketID         findOrAddSlot( const hashed_string& fullName );
+        const Unit*      findUnit( uint32 unitIndex ) const;
 
     private:
         vector<Slot>                           _listSlot;

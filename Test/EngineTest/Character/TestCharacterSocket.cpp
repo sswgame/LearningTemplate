@@ -277,6 +277,14 @@ SW_TEST_CASE( ResolvedSocketTableTest, SocketsFollowBodyShape )
     SW_EXPECT_NEAR_EQUAL( 0.06f, transform.getTranslation()._z, 1.0e-3f ); // 배가 나온 만큼 앞으로
     SW_ASSERT_TRUE( table.computeUnitTransform( table.findSocket( hashed_string( "Wrist" ) ), shapedBones, transform ) );
     SW_EXPECT_TRUE( Internal::isNear( float3( 0.0f, 1.15f, 0.0f ), transform.getTranslation(), 1.0e-5f ) ); // 본 비율을 따라
+
+    // 리그가 읽는 부모 본 기준 로컬도 같은 보정을 더한다(부모 축 = 바인드 모델 축이라 z 가 그대로 늘어난다).
+    float4x4 local;
+    SW_ASSERT_TRUE( table.computeLocalTransform( table.findSocket( hashed_string( "BellyFront" ) ), local ) );
+    SW_EXPECT_NEAR_EQUAL( 0.06f, local.getTranslation()._z, 1.0e-3f );
+    SW_ASSERT_TRUE( table.computeLocalTransform( table.findSocket( hashed_string( "Wrist" ) ), local ) );
+    SW_EXPECT_TRUE( Internal::isNear( float3( 0.0f, 0.05f, 0.0f ), local.getTranslation(), 1.0e-5f ) ); // 본 기준 소켓은 보정이 없다
+    SW_EXPECT_FALSE( table.computeLocalTransform( kInvalidSocketID, local ) );
 }
 
 /**
