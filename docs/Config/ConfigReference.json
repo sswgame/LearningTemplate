@@ -860,6 +860,126 @@
    "enums": []
   },
   {
+   "page": "LipSyncSettings",
+   "path": "Resource/engine/animation/lipsync.json",
+   "layer": "엔진 기본값",
+   "type": "LipSyncSettings",
+   "types": [
+    {
+     "name": "LipSyncSettings",
+     "source": "Source/Engine/Animation/Facial/LipSync.h",
+     "fields": [
+      {
+       "name": "_listViseme",
+       "type": "vector<LipSyncViseme>",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Visemes the analysis picks from (at least two; the first one is silence)"
+      },
+      {
+       "name": "_lowBandHz",
+       "type": "float2",
+       "default": "150.0, 600.0",
+       "min": "",
+       "max": "",
+       "units": "Hz",
+       "description": "Low band pass range (low, high)"
+      },
+      {
+       "name": "_midBandHz",
+       "type": "float2",
+       "default": "600.0, 1600.0",
+       "min": "",
+       "max": "",
+       "units": "Hz",
+       "description": "Mid band pass range (low, high)"
+      },
+      {
+       "name": "_highBandHz",
+       "type": "float2",
+       "default": "1600.0, 7000.0",
+       "min": "",
+       "max": "",
+       "units": "Hz",
+       "description": "High band pass range (low, high)"
+      },
+      {
+       "name": "_frameRate",
+       "type": "float32",
+       "default": "30.0",
+       "min": "0.0",
+       "max": "",
+       "units": "fps",
+       "description": "Viseme track frames per second (greater than 0)"
+      },
+      {
+       "name": "_silenceRms",
+       "type": "float32",
+       "default": "0.02",
+       "min": "0.0",
+       "max": "",
+       "units": "",
+       "description": "RMS below this is silence"
+      },
+      {
+       "name": "_fullRms",
+       "type": "float32",
+       "default": "0.25",
+       "min": "0.0",
+       "max": "",
+       "units": "",
+       "description": "RMS at which the mouth is fully open (above the silence RMS)"
+      },
+      {
+       "name": "_sharpness",
+       "type": "float32",
+       "default": "8.0",
+       "min": "0.0",
+       "max": "",
+       "units": "",
+       "description": "Sharpness of the band shape comparison (inverse softmax temperature)"
+      },
+      {
+       "name": "_fallbackViseme",
+       "type": "hashed_string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Viseme the amplitude drives when there is no track"
+      }
+     ]
+    },
+    {
+     "name": "LipSyncViseme",
+     "source": "Source/Engine/Animation/Facial/LipSync.h",
+     "fields": [
+      {
+       "name": "_name",
+       "type": "hashed_string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Viseme name - the facial rig maps it to morph targets"
+      },
+      {
+       "name": "_bandShape",
+       "type": "float3",
+       "default": "0.0, 0.0, 0.0",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Energy ratio of the low, mid and high band (x, y, z) this viseme looks like"
+      }
+     ]
+    }
+   ],
+   "enums": []
+  },
+  {
    "page": "GameConfig",
    "path": "Config/Game/*.json",
    "layer": "게임 프리셋",
@@ -1063,6 +1183,207 @@
        "max": "",
        "units": "",
        "description": "범용 커스텀 키-값 프로퍼티 저장소"
+      }
+     ]
+    }
+   ],
+   "enums": []
+  },
+  {
+   "page": "FacialRig",
+   "path": "Resource/game/*/models/*.facial.json",
+   "layer": "팩 데이터",
+   "type": "FacialRig",
+   "types": [
+    {
+     "name": "FacialRig",
+     "source": "Source/Engine/Animation/Facial/FacialRig.h",
+     "fields": [
+      {
+       "name": "_listExpression",
+       "type": "vector<FacialPose>",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Expressions: named morph target weight sets, driven by the curve of the same name"
+      },
+      {
+       "name": "_listViseme",
+       "type": "vector<FacialPose>",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Visemes: morph target weight sets the lip sync drives by viseme name"
+      },
+      {
+       "name": "_blink",
+       "type": "FacialBlinkSettings",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Eye blink"
+      },
+      {
+       "name": "_gaze",
+       "type": "FacialGazeSettings",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Eye gaze and saccades"
+      }
+     ]
+    },
+    {
+     "name": "FacialPose",
+     "source": "Source/Engine/Animation/Facial/FacialRig.h",
+     "fields": [
+      {
+       "name": "_name",
+       "type": "hashed_string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Pose name (expression curve name, or a viseme name of the lip sync table); unique in its list"
+      },
+      {
+       "name": "_listTarget",
+       "type": "vector<FacialTargetWeight>",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Morph target weights of this pose (empty: the pose moves nothing)"
+      }
+     ]
+    },
+    {
+     "name": "FacialBlinkSettings",
+     "source": "Source/Engine/Animation/Facial/FacialRig.h",
+     "fields": [
+      {
+       "name": "_listTarget",
+       "type": "vector<hashed_string>",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Eyelid morph targets (empty: no blinking)"
+      },
+      {
+       "name": "_minInterval",
+       "type": "float32",
+       "default": "2.0",
+       "min": "0.0",
+       "max": "",
+       "units": "s",
+       "description": "Shortest time between blinks (greater than 0)"
+      },
+      {
+       "name": "_maxInterval",
+       "type": "float32",
+       "default": "5.0",
+       "min": "0.0",
+       "max": "",
+       "units": "s",
+       "description": "Longest time between blinks (not below the shortest)"
+      },
+      {
+       "name": "_duration",
+       "type": "float32",
+       "default": "0.15",
+       "min": "0.0",
+       "max": "",
+       "units": "s",
+       "description": "Length of one blink (greater than 0)"
+      }
+     ]
+    },
+    {
+     "name": "FacialGazeSettings",
+     "source": "Source/Engine/Animation/Facial/FacialRig.h",
+     "fields": [
+      {
+       "name": "_listEyeBone",
+       "type": "vector<hashed_string>",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Eye bones of the skeleton (empty: no gaze)"
+      },
+      {
+       "name": "_forwardAxis",
+       "type": "float3",
+       "default": "0.0, 0.0, 1.0",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Eye forward axis in bone space (normalized on load, must not be zero)"
+      },
+      {
+       "name": "_maxAngleDegrees",
+       "type": "float32",
+       "default": "30.0",
+       "min": "0.0",
+       "max": "",
+       "units": "deg",
+       "description": "Largest angle the eyes turn from the forward axis"
+      },
+      {
+       "name": "_saccadeMinInterval",
+       "type": "float32",
+       "default": "0.4",
+       "min": "0.0",
+       "max": "",
+       "units": "s",
+       "description": "Shortest time between saccades (greater than 0)"
+      },
+      {
+       "name": "_saccadeMaxInterval",
+       "type": "float32",
+       "default": "1.6",
+       "min": "0.0",
+       "max": "",
+       "units": "s",
+       "description": "Longest time between saccades (not below the shortest)"
+      },
+      {
+       "name": "_saccadeAmplitudeDegrees",
+       "type": "float32",
+       "default": "3.0",
+       "min": "0.0",
+       "max": "",
+       "units": "deg",
+       "description": "Size of one saccade"
+      }
+     ]
+    },
+    {
+     "name": "FacialTargetWeight",
+     "source": "Source/Engine/Animation/Facial/FacialRig.h",
+     "fields": [
+      {
+       "name": "_target",
+       "type": "hashed_string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Morph target name of the mesh"
+      },
+      {
+       "name": "_weight",
+       "type": "float32",
+       "default": "0.0",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Target weight at pose weight 1"
       }
      ]
     }

@@ -9,20 +9,26 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
+
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
-    class JSONValue;
-
     /**
      * @struct LipSyncViseme
      * @brief 분석이 고르는 비즘 하나와 그 대역 형태(저, 중, 고 에너지 비율)입니다.
      */
-    struct LipSyncViseme
+    REFLECT()
+    struct SW_API LipSyncViseme
     {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Viseme name - the facial rig maps it to morph targets" )
         hashed_string _name;
-        float32       _arrBand[3]{ 0.0f, 0.0f, 0.0f };
+        PROPERTY( Tooltip = "Energy ratio of the low, mid and high band (x, y, z) this viseme looks like" )
+        float3 _bandShape{ 0.0f, 0.0f, 0.0f };
     };
 } // namespace sw
 
@@ -30,33 +36,44 @@ namespace sw
 {
     /**
      * @struct LipSyncSettings
-     * @brief 분석 표(데이터, `engine/animation/lipsync.json`): `{ "frame_rate", "silence_rms", "full_rms", "sharpness", "fallback_viseme",
-     *        "bands": [ [저 Hz, 고 Hz] x 3 ], "visemes": [ { "name", "bands": [저, 중, 고] } ] }`. 첫 비즘은 무음(sil)으로 씁니다.
+     * @brief 분석 표(데이터, `engine/animation/lipsync.json`)입니다. 첫 비즘은 무음(sil)으로 씁니다.
+     * @details 파일은 리플렉션 구조체로 읽는다(`ConfigManager::readConfigJSON` — 모르는 키 · 읽지 못한 값 · 범위 밖 숫자는 오류). 칸 표는 PROPERTY 가 정본이다.
+     *          대역은 (낮은 Hz, 높은 Hz) 쌍이고, 비즘은 둘 이상이며 `_fallbackViseme` 은 그 가운데 하나여야 한다(`validate`).
      */
+    REFLECT()
     struct SW_API LipSyncSettings
     {
+        REFLECT_BODY();
+
         /** @brief 테이블 파일의 리소스 경로입니다. */
         static constexpr string_view kResourcePath = "engine/animation/lipsync.json";
 
+        PROPERTY( Tooltip = "Visemes the analysis picks from (at least two; the first one is silence)" )
         vector<LipSyncViseme> _listViseme;
-        float32               _arrBandRange[3][2]{
-            { 150.0f,  600.0f},
-            { 600.0f, 1600.0f},
-            {1600.0f, 7000.0f}
-        };
-        float32       _frameRate{ 30.0f };
-        float32       _silenceRms{ 0.02f }; ///< 이보다 작으면 무음으로 본다.
-        float32       _fullRms{ 0.25f };    ///< 이 크기에서 입이 다 열린다
-        float32       _sharpness{ 8.0f };   ///< 대역 형태 비교의 날카로움이다(softmax 온도의 역수).
-        hashed_string _fallbackViseme;      ///< 트랙이 없을 때 진폭이 움직이는 비즘이다.
+        PROPERTY( Units = Hz, Tooltip = "Low band pass range (low, high)" )
+        float2 _lowBandHz{ 150.0f, 600.0f };
+        PROPERTY( Units = Hz, Tooltip = "Mid band pass range (low, high)" )
+        float2 _midBandHz{ 600.0f, 1600.0f };
+        PROPERTY( Units = Hz, Tooltip = "High band pass range (low, high)" )
+        float2 _highBandHz{ 1600.0f, 7000.0f };
+        PROPERTY( Min = 0.0, Units = fps, Tooltip = "Viseme track frames per second (greater than 0)" )
+        float32 _frameRate{ 30.0f };
+        PROPERTY( Min = 0.0, Tooltip = "RMS below this is silence" )
+        float32 _silenceRms{ 0.02f };
+        PROPERTY( Min = 0.0, Tooltip = "RMS at which the mouth is fully open (above the silence RMS)" )
+        float32 _fullRms{ 0.25f };
+        PROPERTY( Min = 0.0, Tooltip = "Sharpness of the band shape comparison (inverse softmax temperature)" )
+        float32 _sharpness{ 8.0f };
+        PROPERTY( Tooltip = "Viseme the amplitude drives when there is no track" )
+        hashed_string _fallbackViseme;
 
+        /** @brief JSON 을 읽고 검사합니다. 틀리면 오류를 남기고 false 이며, 내용은 기본값으로 돌아갑니다. */
         [[nodiscard]] bool parseJSON( string_view json, string_view sourceLabel );
         [[nodiscard]] bool loadFromResource( string_view path );
+        /** @brief 프레임 속도 · RMS 순서 · 대역 순서 · 비즘 수 · 대체 비즘을 봅니다. 어긋나면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool validate( string_view sourceLabel ) const;
         /** @brief 비즘 번호입니다. 없으면 -1 입니다. */
         int32 findVisemeIndex( const hashed_string& name ) const;
-
-    private:
-        [[nodiscard]] bool parseRoot( const JSONValue& root, string_view sourceLabel );
     };
 } // namespace sw
 

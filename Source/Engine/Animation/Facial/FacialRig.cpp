@@ -4,26 +4,54 @@
 
 #include "Core/Log/Logger.h"
 
-#include "Engine/Animation/AnimJSONUtil.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Resource/ResourceIO.h"
-#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
     SW_LOG_CALLER( "FacialRig" );
 
+    namespace
+    {
+        struct FacialRigInternal
+        {
+            /** @brief 포즈 이름이 모두 비지 않았고 겹치지 않는지 봅니다. 어긋난 줄마다 오류를 남깁니다. */
+            static bool hasUniquePoseNames( const vector<FacialPose>& listPose, const utf8* pListName, string_view sourceLabel )
+            {
+                bool bValid = true;
+                for ( size_t poseIndex = 0; poseIndex < listPose.size(); ++poseIndex )
+                {
+                    const FacialPose& pose       = listPose[poseIndex];
+                    bool              bDuplicate = false;
+                    for ( size_t previousIndex = 0; previousIndex < poseIndex; ++previousIndex )
+                    {
+                        if ( listPose[previousIndex]._name == pose._name )
+                            bDuplicate = true;
+                    }
+                    if ( pose._name.empty() == false && bDuplicate == false )
+                        continue;
+                    SW_LOG_ERROR( "Facial rig '%#': %# entry %# needs a unique, non-empty _name", sourceLabel, pListName, poseIndex );
+                    bValid = false;
+                }
+                return bValid;
+            }
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
     bool FacialRig::parseJSON( string_view json, string_view sourceLabel )
     {
         *this = FacialRig{};
-        JSONDocument document;
-        if ( document.parse( json, sourceLabel ) == false )
+        const string label{ sourceLabel };
+        // 키는 대소문자까지 맞아야 하고, 모르는 키 · 읽지 못한 값 · 범위 밖 숫자는 오류다(`readConfigJSON` 이 로그로 알린다).
+        if ( ConfigManager::readConfigJSON( *this, json, label.c_str() ) && validateFile( sourceLabel ) )
         {
-            SW_LOG_ERROR( "Facial rig '%#': malformed JSON", sourceLabel );
-            return false;
-        }
-        if ( parseRoot( document.getRoot(), sourceLabel ) )
+            _gaze._forwardAxis.normalize();
             return true;
+        }
         *this = FacialRig{};
         return false;
     }
@@ -40,105 +68,27 @@ namespace sw
         return parseJSON( text, path );
     }
 
-    bool FacialRig::parsePoses( const JSONValue& value, vector<FacialPose>& outListPose, string_view sourceLabel )
+    bool FacialRig::validateFile( string_view sourceLabel ) const
     {
-        if ( value.isValid() == false || value.isNull() )
-            return true;
-        if ( value.isObject() == false )
+        bool bValid = FacialRigInternal::hasUniquePoseNames( _listExpression, "_listExpression", sourceLabel );
+        if ( FacialRigInternal::hasUniquePoseNames( _listViseme, "_listViseme", sourceLabel ) == false )
+            bValid = false;
+        if ( _blink._minInterval <= 0.0f || _blink._maxInterval < _blink._minInterval || _blink._duration <= 0.0f )
         {
-            SW_LOG_ERROR( "Facial rig '%#': expressions and visemes must be objects of { target: weight }", sourceLabel );
-            return false;
+            SW_LOG_ERROR( "Facial rig '%#': _blink intervals must be positive and ordered, _duration positive", sourceLabel );
+            bValid = false;
         }
-        for ( const string& poseName : value.getMemberNames() )
+        if ( _gaze._saccadeMinInterval <= 0.0f || _gaze._saccadeMaxInterval < _gaze._saccadeMinInterval )
         {
-            const JSONValue targets = value.get( poseName, false );
-            if ( targets.isObject() == false )
-            {
-                SW_LOG_ERROR( "Facial rig '%#': pose '%#' must be an object of { target: weight }", sourceLabel, poseName.c_str() );
-                return false;
-            }
-            FacialPose pose{};
-            pose._name = hashed_string( poseName );
-            for ( const string& targetName : targets.getMemberNames() )
-            {
-                const JSONValue weight = targets.get( targetName, false );
-                if ( weight.isNumber() == false )
-                {
-                    SW_LOG_ERROR( "Facial rig '%#': pose '%#' target '%#' needs a numeric weight", sourceLabel, poseName.c_str(), targetName.c_str() );
-                    return false;
-                }
-                pose._listTarget.push_back( FacialTargetWeight{ hashed_string( targetName ), static_cast<float32>( weight.asFloat() ) } );
-            }
-            outListPose.push_back( std::move( pose ) );
+            SW_LOG_ERROR( "Facial rig '%#': _gaze saccade intervals must be positive and ordered", sourceLabel );
+            bValid = false;
         }
-        return true;
-    }
-
-    bool FacialRig::parseRoot( const JSONValue& root, string_view sourceLabel )
-    {
-        if ( AnimJSONUtil::hasOnlyKnownKeys( root, { "expressions", "visemes", "blink", "gaze" }, sourceLabel ) == false )
-            return false;
-        if ( parsePoses( root.get( "expressions" ), _listExpression, sourceLabel ) == false || parsePoses( root.get( "visemes" ), _listViseme, sourceLabel ) == false )
-            return false;
-
-        const JSONValue blink = root.get( "blink" );
-        if ( blink.isObject() )
+        if ( _gaze._forwardAxis.dot( _gaze._forwardAxis ) <= 0.0f )
         {
-            if ( AnimJSONUtil::hasOnlyKnownKeys( blink, { "targets", "min_interval", "max_interval", "duration" }, sourceLabel ) == false )
-                return false;
-            const JSONValue targets = blink.get( "targets" );
-            if ( targets.isArray() == false || blink.get( "min_interval" ).isNumber() == false || blink.get( "max_interval" ).isNumber() == false ||
-                 blink.get( "duration" ).isNumber() == false )
-            {
-                SW_LOG_ERROR( "Facial rig '%#': blink needs targets, min_interval, max_interval and duration", sourceLabel );
-                return false;
-            }
-            for ( size_t targetIndex = 0; targetIndex < targets.size(); ++targetIndex )
-            {
-                _blink._listTarget.push_back( hashed_string( targets.at( targetIndex ).asString() ) );
-            }
-            _blink._minInterval = static_cast<float32>( blink.get( "min_interval" ).asFloat() );
-            _blink._maxInterval = static_cast<float32>( blink.get( "max_interval" ).asFloat() );
-            _blink._duration    = static_cast<float32>( blink.get( "duration" ).asFloat() );
-            if ( _blink._minInterval <= 0.0f || _blink._maxInterval < _blink._minInterval || _blink._duration <= 0.0f )
-            {
-                SW_LOG_ERROR( "Facial rig '%#': blink intervals must be positive and ordered, duration positive", sourceLabel );
-                return false;
-            }
+            SW_LOG_ERROR( "Facial rig '%#': _gaze._forwardAxis must not be zero", sourceLabel );
+            bValid = false;
         }
-
-        const JSONValue gaze = root.get( "gaze" );
-        if ( gaze.isObject() )
-        {
-            if ( AnimJSONUtil::hasOnlyKnownKeys( gaze, { "eye_bones", "forward_axis", "max_angle_degrees", "saccade_min_interval", "saccade_max_interval", "saccade_amplitude_degrees" },
-                                                 sourceLabel ) == false )
-                return false;
-            const JSONValue bones = gaze.get( "eye_bones" );
-            float32         arrForward[3]{};
-            const bool      bComplete = bones.isArray() && AnimJSONUtil::readFloats( gaze.get( "forward_axis" ), arrForward, 3 ) &&
-                                   gaze.get( "max_angle_degrees" ).isNumber() && gaze.get( "saccade_min_interval" ).isNumber() &&
-                                   gaze.get( "saccade_max_interval" ).isNumber() && gaze.get( "saccade_amplitude_degrees" ).isNumber();
-            if ( bComplete == false )
-            {
-                SW_LOG_ERROR( "Facial rig '%#': gaze needs eye_bones, forward_axis, max_angle_degrees and the saccade numbers", sourceLabel );
-                return false;
-            }
-            for ( size_t boneIndex = 0; boneIndex < bones.size(); ++boneIndex )
-            {
-                _gaze._listEyeBone.push_back( hashed_string( bones.at( boneIndex ).asString() ) );
-            }
-            _gaze._forwardAxis             = float3{ arrForward }.normalize();
-            _gaze._maxAngleDegrees         = static_cast<float32>( gaze.get( "max_angle_degrees" ).asFloat() );
-            _gaze._saccadeMinInterval      = static_cast<float32>( gaze.get( "saccade_min_interval" ).asFloat() );
-            _gaze._saccadeMaxInterval      = static_cast<float32>( gaze.get( "saccade_max_interval" ).asFloat() );
-            _gaze._saccadeAmplitudeDegrees = static_cast<float32>( gaze.get( "saccade_amplitude_degrees" ).asFloat() );
-            if ( _gaze._saccadeMinInterval <= 0.0f || _gaze._saccadeMaxInterval < _gaze._saccadeMinInterval )
-            {
-                SW_LOG_ERROR( "Facial rig '%#': saccade intervals must be positive and ordered", sourceLabel );
-                return false;
-            }
-        }
-        return true;
+        return bValid;
     }
 
     bool FacialRig::validate( const vector<hashed_string>& listMorphTargetName, const Skeleton& skeleton, string_view sourceLabel ) const

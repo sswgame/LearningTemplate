@@ -201,11 +201,14 @@ SW_TEST_CASE( FacialAnimationTest, ImportedTestHeadCarriesMorphTargetsAndWeightC
 
     test::ScopedDefensiveTestLog expected( "a rig naming a missing morph target fails validation" );
     FacialRig                    broken;
-    SW_ASSERT_TRUE( broken.parseJSON( R"({ "expressions": { "Frown": { "browDown": 1.0 } } })", "broken" ) );
+    SW_ASSERT_TRUE( broken.parseJSON( R"({ "_listExpression": [ { "_name": "Frown", "_listTarget": [ { "_target": "browDown", "_weight": 1.0 } ] } ] })", "broken" ) );
     SW_EXPECT_FALSE( broken.validate( listTargetName, skeleton, "broken" ) );
-    SW_ASSERT_TRUE( broken.parseJSON( R"({ "expressions": { "Smile": { "smile": 1.0 } } })", "clash" ) );
+    SW_ASSERT_TRUE( broken.parseJSON( R"({ "_listExpression": [ { "_name": "Smile", "_listTarget": [ { "_target": "smile", "_weight": 1.0 } ] } ] })", "clash" ) );
     SW_EXPECT_FALSE( broken.validate( listTargetName, skeleton, "clash" ) );
-    SW_EXPECT_FALSE( broken.parseJSON( R"({ "expressions": {}, "eyebrows": {} })", "unknown key" ) );
+    SW_EXPECT_FALSE( broken.parseJSON( R"({ "_listExpression": [], "eyebrows": {} })", "unknown key" ) );
+    SW_EXPECT_FALSE( broken.parseJSON( R"({ "_listViseme": [ { "_name": "AA" }, { "_name": "AA" } ] })", "duplicate pose" ) );
+    SW_EXPECT_FALSE( broken.parseJSON( R"({ "_blink": { "_minInterval": 3.0, "_maxInterval": 1.0 } })", "unordered blink" ) );
+    SW_EXPECT_TRUE( broken.getExpressions().empty() );
 }
 
 /**
@@ -276,7 +279,11 @@ SW_TEST_CASE( FacialAnimationTest, LipSyncAnalyzerSeparatesSyntheticVowels )
 
     test::ScopedDefensiveTestLog expected( "unknown keys in lip sync data are rejected" );
     LipSyncSettings              broken;
-    SW_EXPECT_FALSE( broken.parseJSON( R"({ "frame_rate": 30, "pitch": 1 })", "broken" ) );
+    SW_EXPECT_FALSE( broken.parseJSON( R"({ "_frameRate": 30, "pitch": 1 })", "broken" ) );
+    SW_EXPECT_FALSE( broken.parseJSON( R"({ "_listViseme": [ { "_name": "sil" }, { "_name": "AA" } ], "_fallbackViseme": "OO" })", "unknown fallback" ) );
+    SW_EXPECT_FALSE( broken.parseJSON( R"({ "_listViseme": [ { "_name": "sil" }, { "_name": "AA" } ], "_fallbackViseme": "AA", "_lowBandHz": "600,150" })",
+                                       "reversed band" ) );
+    SW_EXPECT_TRUE( broken._listViseme.empty() );
     SW_EXPECT_FALSE( copy.parseJSON( R"({ "frame_rate": 30, "visemes": [ "sil" ], "frames": [ [ 0 ] ], "phonemes": [] })", "broken" ) );
 }
 
