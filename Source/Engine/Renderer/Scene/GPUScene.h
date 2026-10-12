@@ -181,7 +181,7 @@ namespace sw
         RHIDescriptorIndex getInstanceSrv() const { return _instances._srv; }
         /**
          * @brief 인스턴스 버퍼의 UAV 인덱스입니다. 컴퓨트가 월드 행렬을 **고쳐 쓰는** 경로입니다.
-         * @details instanceanim.hlsl 이 인스턴스마다 다른 각속도로 회전을 더한다. 백엔드가 구조 버퍼 UAV 를
+         * @details instanceanimation.hlsl 이 인스턴스마다 다른 각속도로 회전을 더한다. 백엔드가 구조 버퍼 UAV 를
          *          만들지 못하면 kInvalidDescriptorIndex 이고, 그러면 애니메이션 패스가 통째로 생략된다(그리기는 그대로).
          */
         RHIDescriptorIndex getInstanceUav() const { return _instances._uav; }

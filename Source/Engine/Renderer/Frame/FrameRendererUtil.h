@@ -71,7 +71,7 @@ namespace sw
          * @brief GPU 인스턴스 회전의 기준 각속도와 편차 폭(라디안/초)입니다.
          * @details 편차가 기준보다 **커야** 인스턴스마다 속도가 확연히 갈린다. 폭이 기준보다 작으면
          *          속도 차이가 눈에 띄지 않아 결국 "다 같은 속도" 로 보인다. 그것이 이 패스를 만든 이유다.
-         *          instanceanim.hlsl 이 시드 해시로 [기준, 기준+폭) 에서 속도를 고르고 방향도 정한다.
+         *          instanceanimation.hlsl 이 시드 해시로 [기준, 기준+폭) 에서 속도를 고르고 방향도 정한다.
          */
         static constexpr float32 kGPUSpinBaseSpeed  = 0.35f;
         static constexpr float32 kGPUSpinSpeedRange = 1.75f;
@@ -93,7 +93,7 @@ namespace sw
             uint32  _batchCount{ 0 };
             uint32  _arrPad[2]{};
         };
-        /** @brief 인스턴스 애니메이션 디스패치 상수(instanceanim.hlsl `AnimParams`, b0)입니다. */
+        /** @brief 인스턴스 애니메이션 디스패치 상수(instanceanimation.hlsl `AnimationParams`, b0)입니다. */
         struct GPUAnimationParams
         {
             float32 _time{ 0.0f };

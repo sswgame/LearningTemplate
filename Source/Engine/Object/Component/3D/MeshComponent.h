@@ -105,7 +105,7 @@ namespace sw
 
         /**
          * @brief GPU 회전 애니메이션 시드를 설정합니다(0 이면 애니메이션 없음).
-         * @details 0 이 아니면 GPUScene 인스턴스에 실려 `instanceanim.hlsl` 이 이 값을 해시해
+         * @details 0 이 아니면 GPUScene 인스턴스에 실려 `instanceanimation.hlsl` 이 이 값을 해시해
          *          **인스턴스마다 다른 각속도**로 회전을 적용한다. CPU 는 매 프레임 트랜스폼을 다시 쓰지 않아도
          *          되고, 회전은 전적으로 컴퓨트가 만든다. 시드가 다르면 속도도 다르므로 보통 인덱스 + 1 을 준다.
          */

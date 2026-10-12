@@ -208,8 +208,8 @@ namespace sw
             inline constexpr const utf8* kPass      = "PassCB";
             inline constexpr const utf8* kMaterial  = "MaterialCB";
             inline constexpr const utf8* kCull      = "CullParams";
-            inline constexpr const utf8* kAnimation = "AnimParams"; ///< instanceanim.hlsl 의 컴퓨트 CB(b0)
-            inline constexpr const utf8* kSort      = "SortParams"; ///< instancesort.hlsl 의 컴퓨트 CB(b0)
+            inline constexpr const utf8* kAnimation = "AnimationParams"; ///< instanceanimation.hlsl 의 컴퓨트 CB(b0)
+            inline constexpr const utf8* kSort      = "SortParams";      ///< instancesort.hlsl 의 컴퓨트 CB(b0)
             /// @brief SW_ROOT_CONSTANTS_BEGIN/END 가 선언하는 루트/푸시 상수 블록입니다(DX12 b0 space2, Vulkan 푸시 상수, DX11 과 GL 의 b2).
             inline constexpr const utf8* kRootConstants = "SwRootConstants";
         } // namespace cbname
@@ -242,7 +242,7 @@ namespace sw
             inline constexpr const utf8* kCullBatchInfo        = "g_BatchInfo"; ///< 컬링 t1. 배치의 인스턴스 구간
             inline constexpr const utf8* kCullIndirectArgs     = "g_IndirectArgs";
             inline constexpr const utf8* kCullVisibleIDs       = "g_VisibleInstanceIDs"; ///< 컬링 u1. 압축해서 쓰는 쪽
-            inline constexpr const utf8* kAnimationInstancesRw = "g_InstancesRW";        ///< instanceanim u0. 월드 행렬을 고쳐 쓴다.
+            inline constexpr const utf8* kAnimationInstancesRw = "g_InstancesRW";        ///< instanceanimation u0. 월드 행렬을 고쳐 쓴다.
         } // namespace resname
 
         // 계약의 내부 일관성을 검사한다. 값을 바꾸면 여기서 먼저 걸린다.

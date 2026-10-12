@@ -31,7 +31,7 @@ namespace sw
         {
             float4x4              _world{ float4x4::Identity };
             float32               _boundsRadius{ 0.866f }; ///< 단위 큐브의 반지름. MeshComponent 의 기본값과 같습니다
-            uint32                _spinSeed{ 0 };          ///< GPU 회전 시드(0 이면 없음). instanceanim.hlsl 이 해시합니다
+            uint32                _spinSeed{ 0 };          ///< GPU 회전 시드(0 이면 없음). instanceanimation.hlsl 이 해시합니다
             GPUSpriteInstanceData _sprite{};               ///< 스프라이트 프레임 · 색(sprite2d.hlsl 이 읽습니다). 기본은 텍스처 전체 · 흰색
             uint8                 _bVisible{ SW_TRUE };    ///< 이 항목만 숨깁니다. 숨긴 항목은 후보에서 빠집니다
         };

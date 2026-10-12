@@ -525,7 +525,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, Dx12RootSignatureFitsBudget )
  * @details `g_SwInstances`(t4)는 **C++ 이 쓰고 셰이더가 읽는** 유일한 구조체다 — 한쪽만 바뀌면 컴파일도 검증 레이어도
  *          아무 말을 하지 않고 월드 행렬·머티리얼 인덱스가 원소 1 부터 어긋난다(stride 가 어긋난 구조 버퍼와 같은 함정).
  *          그래서 stride 와 필드 오프셋을 쿠킹한 바이너리의 리플렉션에서 읽어 C++ 구조체와 대조한다. GPU 가 필요 없다.
- *          컴퓨트 셋(gpucull · instancesort 의 `g_Instances`, instanceanim 의 `g_InstancesRW`)도 같은 원소를 읽고 쓴다. 셋 다 `instancedata.hlsli`
+ *          컴퓨트 셋(gpucull · instancesort 의 `g_Instances`, instanceanimation 의 `g_InstancesRW`)도 같은 원소를 읽고 쓴다. 셋 다 `instancedata.hlsli`
  *          하나를 쓰고, 여기서 세 이름을 모두 대조한다 — 구조체를 각자 베끼면 칸을 더할 때 한 곳만 고쳐 컬링 · 정렬 · 회전이 원소 1 부터
  *          어긋난다. 이름마다 적어도 한
  *          바이너리가 있어야 한다(없으면 그 셰이더가 이름을 바꿨고 검사가 눈을 감은 것이다).

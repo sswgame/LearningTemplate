@@ -1,7 +1,7 @@
 #include "common.hlsli"
 
 /**
- * instanceanim.hlsl — GPUScene 인스턴스 애니메이션 (컴퓨트).
+ * instanceanimation.hlsl — GPUScene 인스턴스 애니메이션 (컴퓨트).
  *
  * CPU 가 매 프레임 오브젝트마다 회전을 계산해 트랜스폼을 다시 쓰던 것을 GPU 로 옮긴다. 인스턴스마다
  * **각속도가 다르다** — 시드를 해시해 속도를 뽑으므로 전부 같은 속도로 도는 일이 없다.
@@ -17,12 +17,12 @@
 // spinSeed 가 0 인 인스턴스는 건드리지 않는다.
 #include "instancedata.hlsli"
 
-SW_DECLARE_CBUFFER( AnimParams, SW_SLOT_COMPUTE_CB )
+SW_DECLARE_CBUFFER( AnimationParams, SW_SLOT_COMPUTE_CB )
 {
 	float g_Time;          // 씬 시작부터의 절대 시간 (초)
 	float g_SpinBaseSpeed; // 기준 각속도 (라디안/초)
 	float g_SpinSpeedRange;// 시드가 만드는 속도 편차의 폭 (라디안/초)
-	uint  g_AnimInstanceCount;
+	uint  g_AnimationInstanceCount;
 };
 
 SW_DECLARE_RW_STRUCTURED_BUFFER( SwInstanceData, g_InstancesRW, 0 );
@@ -52,7 +52,7 @@ float hashToUnit(uint hash)
 void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
 {
 	const uint instanceIndex = dispatchThreadId.x;
-	if (instanceIndex >= g_AnimInstanceCount)
+	if (instanceIndex >= g_AnimationInstanceCount)
 		return;
 
 	SwInstanceData instance = g_InstancesRW[instanceIndex];

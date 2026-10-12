@@ -86,7 +86,7 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
 	if (batchIndex >= g_BatchCount)
 		return;
 
-	// 바운드 중심은 이미 월드 공간이다 (GPUScene 이 월드 행렬의 이동 성분으로 채우고, instanceanim 도
+	// 바운드 중심은 이미 월드 공간이다 (GPUScene 이 월드 행렬의 이동 성분으로 채우고, instanceanimation 도
 	// 회전 뒤에 다시 맞춘다). 여기서 또 world 를 곱하면 이동이 두 번 들어간다.
 	if (isVisible(instance.boundsCenter, instance.boundsRadius) == false)
 		return;

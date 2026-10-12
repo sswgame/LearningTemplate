@@ -778,7 +778,7 @@ namespace sw
         bool usesGPUGeneratedCommands() const;
 
         /**
-         * @brief 인스턴스 애니메이션 컴퓨트를 기록합니다(instanceanim.hlsl).
+         * @brief 인스턴스 애니메이션 컴퓨트를 기록합니다(instanceanimation.hlsl).
          * @details **컬링보다 먼저** 돌아야 한다. 순서가 뒤집히면 컬링이 이번 프레임에 움직이기 전의
          *          바운드로 판정한다. 회전을 요청한 인스턴스가 없으면 통째로 건너뛴다.
          */

@@ -407,7 +407,7 @@
       {
        "name": "_shaderInstanceAnimation",
        "type": "string",
-       "default": "engine/shaders/instanceanim.hlsl",
+       "default": "engine/shaders/instanceanimation.hlsl",
        "min": "",
        "max": "",
        "units": "",

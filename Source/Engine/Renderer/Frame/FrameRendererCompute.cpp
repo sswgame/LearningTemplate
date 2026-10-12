@@ -76,7 +76,7 @@ namespace sw
                 // 유효하지 않다. 화면은 조용히 예전 값 그대로다.
                 _pCmd->transitionBuffer( _gpuScene.getInstanceBuffer(), RHIBufferState::UnorderedAccess );
                 _pCmd->setComputePipelineState( animationPSO );
-                // AnimParams(b0) / g_InstancesRW(u0). instanceanim.hlsl 레지스터와 1:1 로 대응한다.
+                // AnimationParams(b0) / g_InstancesRW(u0). instanceanimation.hlsl 레지스터와 1:1 로 대응한다.
                 _pCmd->bindComputeConstantBuffer( _deform._instanceAnimationCb._index, 0 );
                 _pCmd->bindComputeUav( _gpuScene.getInstanceUav(), 0 );
                 const uint32 animationGroups = ( instanceCount + 63u ) / 64u;

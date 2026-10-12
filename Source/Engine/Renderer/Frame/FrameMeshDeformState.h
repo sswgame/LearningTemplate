@@ -20,7 +20,7 @@ namespace sw
     /** @brief 한 프레임의 정점 변형 컴퓨트가 쓰는 상태입니다. 렌더 스레드만 만집니다. */
     struct FrameMeshDeformState
     {
-        RHIConstantBufferSlot _instanceAnimationCb{}; ///< 인스턴스 애니메이션(instanceanim.hlsl) 상수 버퍼다.
+        RHIConstantBufferSlot _instanceAnimationCb{}; ///< 인스턴스 애니메이션(instanceanimation.hlsl) 상수 버퍼다.
         RHIConstantBufferSlot _meshMorphCb{};         ///< 모프 디스패치 상수 버퍼다.
         RHIConstantBufferSlot _meshSkinCb{};          ///< 스킨 디스패치 상수 버퍼다.
         /// @brief GPU 가 변형한 정점 풀입니다. RT 가 소유합니다(GPUMeshMorphPool 참고).
