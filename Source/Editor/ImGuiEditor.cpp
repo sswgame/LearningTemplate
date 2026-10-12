@@ -196,8 +196,7 @@ namespace sw::editor
         , _editorContext{ nullptr }
         , _dockLayout{}
         , _arrDrawSnapshot{}
-        , _publishedDrawSlot{ 0 }
-        , _inFlightDrawSlot{ _s_kInvalidDrawSlot }
+        , _drawSnapshotHandoff{}
         , _lastDrawSnapshotSequence{ 0 }
         , _bInitialized{ SW_FALSE }
         , _reservedFlags{ 0 }
@@ -564,12 +563,7 @@ namespace sw::editor
                     ImGui::RenderPlatformWindowsDefault();
             }
 
-            const uint32 writeSlot =
-                ( _publishedDrawSlot.load( std::memory_order_acquire ) + 1u ) % constant::kMaxFrameCountInFlight;
-            while ( _inFlightDrawSlot.load( std::memory_order_acquire ) == writeSlot )
-            {
-                std::this_thread::yield();
-            }
+            const uint32 writeSlot = _drawSnapshotHandoff.waitForWriteSlot();
 
             // 스냅샷을 내기 전에 번호를 알린다. 이 뒤에 해제하는 자원은 이 스냅샷이 그릴 수 있으므로 다음 번호를 받아야 한다.
             ++_lastDrawSnapshotSequence;
@@ -579,13 +573,9 @@ namespace sw::editor
             }
             if ( _rendererBackend != nullptr )
                 _rendererBackend->getDrawReleaseQueue().markSnapshotPublished( _lastDrawSnapshotSequence );
-            _publishedDrawSlot.store( writeSlot, std::memory_order_release );
-
-            // 이 프레임을 "렌더 대기" 상태로 표시한다. 다음 updateUI 는 상단의 waitForDrawSnapshotIdle
-            // 에서 postPresent 까지 막힌다. 그래서 렌더 스레드가 present 훅에서 ImGui 공유 상태
-            // (텍스처 리스트, 뷰포트)를 건드리는 GL 경로에서도 UI 스레드와 겹치지 않는다.
-            // 렌더 스레드의 render() 도 같은 값을 다시 저장하지만 값이 같으므로 문제없다.
-            _inFlightDrawSlot.store( writeSlot, std::memory_order_release );
+            // 게시하면 이 프레임이 "렌더 대기" 가 된다. 다음 updateUI 는 상단의 waitForDrawSnapshotIdle 에서 postPresent 까지 막힌다.
+            // 그래서 렌더 스레드가 present 훅에서 ImGui 공유 상태(텍스처 리스트, 뷰포트)를 건드리는 GL 경로에서도 UI 스레드와 겹치지 않는다.
+            _drawSnapshotHandoff.publish( writeSlot );
         }
     }
 
@@ -603,8 +593,7 @@ namespace sw::editor
             _rendererBackend->processTextureUpdates();
         }
 
-        const uint32 slot = _publishedDrawSlot.load( std::memory_order_acquire );
-        _inFlightDrawSlot.store( slot, std::memory_order_release );
+        const uint32 slot = _drawSnapshotHandoff.beginRender();
         if ( slot < constant::kMaxFrameCountInFlight )
         {
             ImDrawData* pDrawData = _arrDrawSnapshot[slot].getMainDrawData();
@@ -631,15 +620,15 @@ namespace sw::editor
         std::ignore = pRHIDevice;
         // 메인 스냅샷 렌더가 끝났으므로 UI 스레드가 다음 슬롯을 쓸 수 있게 해제한다.
         // 보조 뷰포트는 updateUI 에서 UI 스레드가 이미 렌더하고 present 했다.
-        _inFlightDrawSlot.store( _s_kInvalidDrawSlot, std::memory_order_release );
+        _drawSnapshotHandoff.endRender();
     }
 
     void ImGuiEditor::abandonPendingDraw()
     {
-        // in-flight 표시는 "렌더 스레드가 이 슬롯을 읽고 postPresent 에서 해제한다" 는 약속이다. 렌더 워커를 비우면 그
-        // 약속을 지킬 쪽이 사라지므로, 워커를 비운 쪽이 여기로 알려 준다. 이 호출이 없으면 다음 waitForDrawSnapshotIdle 이 영원히 반환하지
-        // 않는다. 에디터 모듈을 핫 리로드할 때 destroyEditorInstance, shutdown 을 거쳐 무한 대기에 빠진다.
-        _inFlightDrawSlot.store( _s_kInvalidDrawSlot, std::memory_order_release );
+        // in-flight 표시는 "렌더 스레드가 이 슬롯을 읽고 postPresent 에서 해제한다" 는 약속이다. 에디터 인스턴스를 없애면(destroyEditorInstance)
+        // 그 약속을 지킬 쪽이 사라지므로 여기서 푼다. 풀지 않으면 shutdown 뒤의 waitForDrawSnapshotIdle 이 영원히 반환하지 않는다.
+        // 인스턴스가 살아 있는 동안(게임 모듈만 리로드할 때)에는 부르지 않는다. 그 표시는 아직 렌더 스레드에 제출되지 않은 프레임의 것이다.
+        _drawSnapshotHandoff.abandon();
     }
 
     bool ImGuiEditor::processEvent( const NativeWindowEvent& event )
@@ -811,10 +800,7 @@ namespace sw::editor
 
     void ImGuiEditor::waitForDrawSnapshotIdle()
     {
-        while ( _inFlightDrawSlot.load( std::memory_order_acquire ) != _s_kInvalidDrawSlot )
-        {
-            std::this_thread::yield();
-        }
+        _drawSnapshotHandoff.waitForIdle();
     }
 
     void ImGuiEditor::renderBackend( IRHIDevice* pRHIDevice, ImDrawData* pDrawData )

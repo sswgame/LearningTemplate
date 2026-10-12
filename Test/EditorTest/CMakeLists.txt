@@ -18,6 +18,7 @@ endif()
 # 파일이 섞여 들어오는 것(EditorTest 는 ImGui 를 링크하지 않으므로 그 순간 빌드가 깨진다).
 sw_addTestExecutable(EditorTest
 	EXTRA_SOURCES
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/DrawSnapshotHandoff.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/EditorDrawReleaseQueue.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorAssetFileCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorCommandRegistry.cpp"

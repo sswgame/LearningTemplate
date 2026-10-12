@@ -357,7 +357,8 @@ VRM 은 같은 길로 임포트하고, MToon 머티리얼이 있으면 머티리
 - **draw 스냅샷은 ImGui 내부에 기댑니다.** 그리기 목록은 풀로 두고 버퍼만 옮겨 담은 뒤 쓰기 커서를 "다 썼음" 으로 맞춥니다. `OwnerViewport` 는 원본 것을 두고 `Textures` 는 비웁니다. 매 프레임 `CloneOutput` 으로 새로 만들면 프레임당 약 260 KB 를 잡고 놓습니다(6 분에 20 GB). ImGui 버전을 올리면 이 셋을 먼저 다시 확인합니다.
 - **떠 있는 뷰포트는 UI 스레드가 그립니다.** GL 처럼 컨텍스트가 스레드에 묶인 백엔드는 `requiresRenderThreadContext()` 가 참이라 그 GPU 호출을 렌더 스레드의 present 훅에서 합니다.
 - **렌더 백엔드는 네이티브 객체를 `RHINativeHandles` 로만 받습니다.** `IRHIDevice` 가 버전 번호를 대조해 내줍니다. 백엔드 디바이스 클래스로 캐스팅하지 않습니다.
-- **draw 스냅샷은 획득한 뒤 present 하거나 포기(`abandonPendingDraw`)해서 끝냅니다.**
+- **draw 스냅샷은 획득한 뒤 present 하거나 포기(`abandonPendingDraw`)해서 끝냅니다.** 슬롯 인계는 `DrawSnapshotHandoff`(게시 · 렌더 시작 · 렌더 끝 · 포기) 하나가 맡고, 불변식은 그 헤더에 있습니다.
+  포기는 에디터 인스턴스를 없앨 때만 합니다. 게임 모듈만 리로드할 때 풀면 아직 제출되지 않은 프레임을 렌더 스레드가 UI 스레드와 동시에 그려, 같은 렌더 백엔드를 두 스레드가 함께 씁니다.
 
 ### ImGui 위젯
 
