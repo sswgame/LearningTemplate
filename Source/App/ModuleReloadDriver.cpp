@@ -22,6 +22,12 @@ namespace sw
     SW_LOG_CALLER( "App" );
 
 #if !defined( SW_SHIPPING )
+    namespace
+    {
+        /** @brief 에디터 모듈(EditorModule) 핫 리로드 단축키의 액션 이름(`default.input.xml` 의 Debug 레이어). 에디터를 아는 App 만 쓴다. */
+        inline constexpr utf8 kReloadEditorAction[] = "ReloadEditor";
+    } // namespace
+
     /**
      * @brief `-gv_reloadGameAtFrame=N`: N 번째 프레임에 게임 모듈(SWGame)의 핫 리로드를 한 번 요청합니다(리로드 단축키와 같은 경로).
      * @details 디렉터의 시뮬레이션이 리로드 뒤에도 이어지는지 손대지 않고 확인하는 스위치입니다. 로그의 `[ReloadProbe]` 앞뒤 상태 줄을 비교합니다.
@@ -68,10 +74,10 @@ namespace sw
             gv_reloadGameAtFrame = 0; // 한 번만 실행한다. 프로파일러가 프레임 수를 되돌리면(워밍업 뒤) 같은 번호가 다시 온다.
             requestReload( config::kTargetGameModule );
         }
-        if ( bEnableEditor && engineLoop.wasDebugActionTriggered( InputMapDefaults::kReloadEditorAction ) )
+        if ( bEnableEditor && engineLoop.wasDebugActionTriggered( kReloadEditorAction ) )
         {
             requestReload( config::kTargetEditorModule );
-            SW_LOG_INFO( "%#: force EditorModule reload", InputMapDefaults::kReloadEditorAction );
+            SW_LOG_INFO( "%#: force EditorModule reload", kReloadEditorAction );
         }
 #endif
         // Shipping 에는 리로드할 모듈이 없다. 그 입력 상태를 묻는 코드가 없으므로 셸 InputMap 도 로드하지 않는다.

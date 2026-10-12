@@ -151,7 +151,6 @@ namespace sw
         inline constexpr utf8 kDefaultLayerName[]    = "Gameplay";
         inline constexpr utf8 kTitleLayerName[]      = "Title";
         inline constexpr utf8 kReloadShadersAction[] = "ReloadShaders";
-        inline constexpr utf8 kReloadEditorAction[]  = "ReloadEditor";
         inline constexpr utf8 kReloadGameAction[]    = "ReloadGame";
         // 개발 콘솔 셸 맵(`default.input.xml`)의 기본값이다. 여는 키는 늘 켜진 Debug 레이어에 두고, 나머지 키는 콘솔이 열려 있는 동안만 켜지는 DevConsole 레이어에 둔다.
         inline constexpr utf8    kDevConsoleLayerName[]            = "DevConsole";
