@@ -190,12 +190,23 @@ namespace sw
             }
             if ( pPanel->hasCustomPaintOrder() )
             {
-                vector<uint32> listOrder;
-                pPanel->collectPaintOrder( listOrder );
-                for ( const uint32 index : listOrder )
+                // 순서 목록은 깊이마다 하나씩 재사용한다. 자식이 z 순서 패널이면 이 함수가 재귀하므로 목록 하나를 나눠 쓸 수 없다.
+                // 바깥 배열이 재귀 중에 커지면 안쪽 목록이 옮겨지므로 참조를 들고 있지 않고 매번 인덱스로 읽는다.
+                // 그리기는 게임 스레드에서만 돌지만 트리를 칠하는 스레드가 늘어도 깨지지 않도록 스레드마다 둔다.
+                thread_local vector<vector<uint32>> t_listPaintOrderByDepth;
+                thread_local uint32                 t_paintOrderDepth = 0;
+                const uint32                        depth             = t_paintOrderDepth;
+                if ( t_listPaintOrderByDepth.size() <= depth )
+                    t_listPaintOrderByDepth.resize( depth + 1 );
+                pPanel->collectPaintOrder( t_listPaintOrderByDepth[depth] );
+                const uint32 orderCount = static_cast<uint32>( t_listPaintOrderByDepth[depth].size() );
+                ++t_paintOrderDepth;
+                for ( uint32 order = 0; order < orderCount; ++order )
                 {
+                    const uint32 index = t_listPaintOrderByDepth[depth][order];
                     paintedCount += paintChild( *pPanel->getChild( index ), context, painter, outCanvas, bChildForce, bAtlasChanged );
                 }
+                --t_paintOrderDepth;
             }
             else
             {
