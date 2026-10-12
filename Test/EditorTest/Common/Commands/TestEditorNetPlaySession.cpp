@@ -117,6 +117,73 @@ SW_TEST_CASE( EditorNetPlaySessionTest, DedicatedServerAndTwoClientsConnectPause
 }
 
 /**
+ * @brief [EditorNetPlaySessionTest] 회선 조절이 표준 입력으로 클라이언트에 닿는다 — 손실 30 % 에서 신뢰 메시지가 다시 보내지고, 보고 줄이 세션에 모이고,
+ *        끊기 · 재접속이 그 프로세스의 연결을 끊었다 다시 붙인다(서버 디버깅 S4)
+ * @details 클라이언트는 `Server` 실행 파일(헤드리스)이다. 에디터 Conditions 탭과 `netplay.command` 가 보내는 것과 같은 개발 명령(`net.emulation` · `net.traffic` ·
+ *          `net.disconnect` · `net.reconnect`)을 보낸다. 에디터가 `App` 클라이언트로 같은 일을 하는 것은 에디터 시나리오 `netconditions` 가 본다.
+ */
+SW_TEST_CASE( EditorNetPlaySessionTest, LineConditionsReachAClientAndItsReportShowsResends )
+{
+    const string serverPath = findServerPath();
+    if ( serverPath.empty() )
+        SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );
+
+    EditorNetPlaySettings settings;
+    settings._mode                 = EditorNetMode::DedicatedServer;
+    settings._clientCount          = 1;
+    settings._serverExecutablePath = serverPath;
+    settings._clientExecutablePath = serverPath;
+    settings._bRecordTraces        = false;
+
+    EditorNetPlaySession session;
+    SW_ASSERT_TRUE( session.start( settings ) );
+    SW_ASSERT_TRUE_MSG( waitForLine( session, 1, "Net session connected to" ), "Client1 did not connect" );
+
+    // 두 방향 손실 30 % — 클라이언트가 보낸 것도, 받는 확인도 잃는다. 그 위에 신뢰 메시지를 흘려 재전송을 만든다.
+    SW_ASSERT_TRUE( session.sendProcessCommand( 1, "net.emulation both lossPercent=30" ) );
+    SW_EXPECT_TRUE_MSG( waitForLine( session, 1, "net emulation up [latencyMs=0 jitterMs=0 lossPercent=30" ), "net.emulation did not reach the client" );
+    SW_ASSERT_TRUE( session.sendProcessCommand( 1, "net.traffic 100 1000" ) ); // 메시지 하나가 패킷 하나 — 손실이 반드시 맞는다
+    SW_EXPECT_TRUE_MSG( waitForLine( session, 1, "net traffic queued 100 reliable message(s) to 1 connection(s)" ), "net.traffic did not reach the client" );
+
+    // 재전송은 RTT 뒤에 일어난다 — 보고를 다시 물으며 시한 안에 재전송 · 버림이 보일 때까지 기다린다.
+    const Deadline     deadline = Deadline::afterMilliseconds( kWaitTimeoutMilliseconds );
+    NetEmulationReport report;
+    while ( deadline.isExpired() == false )
+    {
+        const uint32 reportCount = session.getProcessStatus( 1 )._emulationReportCount;
+        SW_ASSERT_TRUE( session.sendProcessCommand( 1, "net.emulation stats" ) );
+        while ( session.getProcessStatus( 1 )._emulationReportCount == reportCount && deadline.isExpired() == false )
+        {
+            session.update();
+            std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
+        }
+        report = session.getProcessStatus( 1 )._emulationReport;
+        if ( report._resentMessageCount > 0 && report._droppedPacketCount > 0 )
+            break;
+        std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
+    }
+    SW_EXPECT_TRUE_MSG( session.getProcessStatus( 1 )._emulationReportCount > 0, "the client never answered net.emulation stats" );
+    SW_EXPECT_EQUAL( report._connectionCount, 1 );
+    SW_EXPECT_TRUE_MSG( report._droppedPacketCount > 0, "30% loss dropped no packet" );
+    SW_EXPECT_TRUE_MSG( report._resentMessageCount > 0, "30% loss resent no reliable message" );
+
+    // 끊기 · 재접속 — 조건을 끄고 나서(핸드셰이크를 잃지 않게) 끊고 다시 붙인다.
+    SW_ASSERT_TRUE( session.sendProcessCommand( 1, "net.emulation both off" ) );
+    SW_ASSERT_TRUE( session.sendProcessCommand( 1, "net.disconnect" ) );
+    SW_EXPECT_TRUE_MSG( waitForLine( session, 1, "Net session disconnected its peers on request" ), "net.disconnect did not reach the client" );
+    SW_EXPECT_TRUE_MSG( waitForLine( session, 0, "disconnected (" ), "the server did not see the client leave" );
+    SW_ASSERT_TRUE( session.sendProcessCommand( 1, "net.reconnect" ) );
+    const Deadline reconnectDeadline = Deadline::afterMilliseconds( kWaitTimeoutMilliseconds );
+    while ( countLines( session, 1, "Net session connected to" ) < 2 && reconnectDeadline.isExpired() == false )
+    {
+        session.update();
+        std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
+    }
+    SW_EXPECT_EQUAL( countLines( session, 1, "Net session connected to" ), 2 );
+    (void)session.stop(); // 트레이스를 끈 세션이라 합친 경로는 없다
+}
+
+/**
  * @brief [EditorNetPlaySessionTest] Standalone 은 프로세스를 띄우지 않는다(에디터 안 재생)
  */
 SW_TEST_CASE( EditorNetPlaySessionTest, StandaloneLaunchesNothing )

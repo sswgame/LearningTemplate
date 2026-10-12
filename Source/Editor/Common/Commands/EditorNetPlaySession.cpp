@@ -22,18 +22,20 @@ namespace sw::editor
     /** @brief 자식 프로세스 하나 — 읽기 스레드가 줄을 쌓고, 게임 스레드가 `update` 에서 꺼낸다. */
     struct EditorNetPlaySession::ChildProcess
     {
-        Process        _process{};
-        std::thread    _reader{};
-        mutex          _mutex{};
-        vector<string> _listPendingLine{}; ///< 읽기 스레드가 넣는다(_mutex)
-        string         _label{};
-        string         _lastLine{};
-        string         _tracePath{};
-        atomic<int32>  _exitCode{ 0 };
-        atomic<uint32> _exited{ 0 };    ///< 읽기 스레드가 파이프 끝을 보고 종료 코드를 거뒀다
-        int32          _processID{ 0 }; ///< 띄울 때의 pid(거둔 뒤에도 패널에 보인다)
-        bool           _bExitReported{ false };
-        bool           _bConnected{ false }; ///< 클라이언트 — 서버에 붙었다는 줄을 남겼다
+        Process            _process{};
+        std::thread        _reader{};
+        mutex              _mutex{};
+        vector<string>     _listPendingLine{}; ///< 읽기 스레드가 넣는다(_mutex)
+        string             _label{};
+        string             _lastLine{};
+        string             _tracePath{};
+        NetEmulationReport _emulationReport{};         ///< 마지막 `net.emulation stats` 답(게임 스레드)
+        uint32             _emulationReportCount{ 0 }; ///< 받은 보고 수(게임 스레드)
+        atomic<int32>      _exitCode{ 0 };
+        atomic<uint32>     _exited{ 0 };    ///< 읽기 스레드가 파이프 끝을 보고 종료 코드를 거뒀다
+        int32              _processID{ 0 }; ///< 띄울 때의 pid(거둔 뒤에도 패널에 보인다)
+        bool               _bExitReported{ false };
+        bool               _bConnected{ false }; ///< 클라이언트 — 서버에 붙었다는 줄을 남겼다
     };
 } // namespace sw::editor
 
@@ -259,6 +261,8 @@ namespace sw::editor
                     SW_LOG_INFO( "[%#] %#", child._label, line );
                 if ( processIndex > 0 && line.find( EditorNetPlaySessionInternal::kConnectedLine ) != string::npos )
                     child._bConnected = true; // 0 번은 서버(전용 서버 · 리슨 호스트)다
+                if ( NetEmulationReport::tryParseLine( line, child._emulationReport ) )
+                    ++child._emulationReportCount;
                 child._lastLine = line;
                 _listLogLine.push_back( EditorNetPlayLogLine{ std::move( line ), static_cast<int32>( processIndex ) } );
             }
@@ -274,9 +278,17 @@ namespace sw::editor
 
     bool EditorNetPlaySession::sendServerCommand( string_view command )
     {
-        if ( _listProcess.empty() || _listProcess[0]->_exited.load() != 0 )
+        return sendProcessCommand( kServerProcessIndex, command );
+    }
+
+    bool EditorNetPlaySession::sendProcessCommand( int32 processIndex, string_view command )
+    {
+        if ( processIndex < 0 || processIndex >= getProcessCount() )
             return false;
-        return _listProcess[0]->_process.writeInput( string( command ) + "\n" );
+        ChildProcess& child = *_listProcess[static_cast<size_t>( processIndex )];
+        if ( child._exited.load() != 0 )
+            return false;
+        return child._process.writeInput( string( command ) + "\n" );
     }
 
     int32 EditorNetPlaySession::getConnectedClientCount() const
@@ -294,14 +306,16 @@ namespace sw::editor
         EditorNetPlayProcessStatus status;
         if ( processIndex < 0 || processIndex >= getProcessCount() )
             return status;
-        const ChildProcess& child = *_listProcess[static_cast<size_t>( processIndex )];
-        status._label             = child._label;
-        status._lastLine          = child._lastLine;
-        status._tracePath         = child._tracePath;
-        status._processID         = child._processID;
-        status._bRunning          = child._exited.load() == 0;
-        status._bConnected        = child._bConnected;
-        status._exitCode          = status._bRunning ? 0 : child._exitCode.load();
+        const ChildProcess& child    = *_listProcess[static_cast<size_t>( processIndex )];
+        status._label                = child._label;
+        status._lastLine             = child._lastLine;
+        status._tracePath            = child._tracePath;
+        status._emulationReport      = child._emulationReport;
+        status._emulationReportCount = child._emulationReportCount;
+        status._processID            = child._processID;
+        status._bRunning             = child._exited.load() == 0;
+        status._bConnected           = child._bConnected;
+        status._exitCode             = status._bRunning ? 0 : child._exitCode.load();
         return status;
     }
 

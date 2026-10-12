@@ -61,6 +61,37 @@ namespace sw
          * @details 키는 전역 변수(`gv_netEmu*`)와 같은 단위입니다. 빈칸으로 나누며, 모르는 키나 음수 · 숫자가 아닌 값이면 false 와 @p outError 이고 아무것도 바꾸지 않습니다.
          */
         [[nodiscard]] static bool parseOverrides( string_view text, NetEmulationConditions& inoutConditions, string& outError );
+        /**
+         * @brief `parseOverrides` 가 읽는 글을 만듭니다(`latencyMs=35 jitterMs=15 lossPercent=1 duplicatePercent=0 reorderPercent=0.5 bandwidthKBps=1024`).
+         * @details 키 여섯을 모두 쓰므로 받는 쪽은 앞 상태와 상관없이 이 조건이 된다. 값은 0.01 단위로 반올림한다. 에디터 회선 조절이 자식 프로세스에 보내는 명령이 이 글이다.
+         */
+        string makeOverrideText() const;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct NetEmulationReport
+     * @brief 프로세스 하나의 회선 흉내 · 연결 수치를 한 줄로 주고받는 형식입니다(개발 명령 `net.emulation stats` 의 답).
+     * @details 쓰는 쪽(게임 세션)과 읽는 쪽(에디터 Multiplayer 창 · 탐침)이 이 정의 하나를 씁니다. 줄은 `kLinePrefix` 뒤에 `key=value` 를 빈칸으로 잇습니다.
+     */
+    struct SW_API NetEmulationReport
+    {
+        /** @brief 줄의 머리입니다. 로그 줄 안 어디에 있어도 찾습니다(앞에 로그 꼬리표 · 명령 메아리가 붙는다). */
+        static constexpr const utf8* kLinePrefix = "Net emulation stats";
+
+        uint64  _sentPacketCount{ 0 };        ///< 흉내가 안쪽 전송에 넘긴 패킷
+        uint64  _droppedPacketCount{ 0 };     ///< 흉내가 버린 패킷(보내는 쪽 손실 · 큐 넘침 · 끊김과 받는 쪽 손실)
+        uint64  _resentMessageCount{ 0 };     ///< 연결들이 다시 보낸 신뢰 메시지의 합(`NetConnectionStats::_resentMessageCount`)
+        float32 _measuredLossPercent{ 0.0f }; ///< 연결들이 잰 손실 중 가장 큰 값(%) — 확인이 안 온 패킷으로 추정한 값이다
+        float32 _rttMilliseconds{ 0.0f };     ///< 연결들의 평활 RTT 중 가장 큰 값(ms)
+        int32   _connectionCount{ 0 };        ///< 붙어 있는 연결 수
+
+        /** @brief `kLinePrefix connections=1 sent=… dropped=… resent=… lossPercent=… rttMs=…` 한 줄을 만듭니다. */
+        string makeLine() const;
+        /** @brief @p line 에서 `kLinePrefix` 를 찾아 뒤의 값을 읽습니다. 머리가 없거나 아는 키의 값이 숫자가 아니면 false 이고 @p outReport 를 바꾸지 않습니다. 모르는 키는 건너뜁니다. */
+        [[nodiscard]] static bool tryParseLine( string_view line, NetEmulationReport& outReport );
     };
 } // namespace sw
 
@@ -104,7 +135,8 @@ namespace sw
         NetEmulationTransport( const NetEmulationTransport& )            = delete;
         NetEmulationTransport& operator=( const NetEmulationTransport& ) = delete;
 
-        void setDefaultConditions( const NetEmulationConditions& conditions );
+        void                   setDefaultConditions( const NetEmulationConditions& conditions );
+        NetEmulationConditions getDefaultConditions() const;
         /** @brief 목적지 하나의 조건을 둡니다(기본값 대신). */
         void setConditions( const NetAddress& to, const NetEmulationConditions& conditions );
         void clearConditions( const NetAddress& to );

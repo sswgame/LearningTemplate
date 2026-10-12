@@ -65,7 +65,7 @@ Dev 빌드는 게임 틱을 멈추는 명령도 받습니다. `pause` 는 틱을
 디버거로 멈추면 네트워크 스레드도 서는데, 그때는 `NetHost` 의 디버거 대기가 연결을 지킵니다([Network README](../Core/Network/README.md) "디버거 대기").
 
 **4단계 — 네트워크 서버로 띄웁니다.** `-gv_netListenPort=7777` 을 주면 게임 인스턴스가 그 UDP 포트를 열고 클라이언트를 받습니다(`GameNetSession` — 키트가 없는 Empty 도).
-클라이언트는 `App.exe "-gv_netConnectAddress=127.0.0.1:7777"` 이고, 로그에 `Net session client 0 connected from …` 가 남습니다. Dev 서버의 `net.status` 가 역할 · 연결 수를 답합니다.
+클라이언트는 `App.exe "-gv_netConnectAddress=127.0.0.1:7777"` 이고, 로그에 `Net session client 0 connected from …` 가 남습니다. Dev 서버의 `net.status` 가 역할 · 연결 수를 답하고, `net.emulation` · `net.disconnect` · `net.reconnect` · `net.traffic` 이 실행 중에 회선 흉내를 바꿉니다(에디터 Multiplayer 창 Conditions 탭이 쓰는 명령).
 에디터는 툴바의 Net Mode(전용 서버 + 클라이언트 N)로 이 둘을 자식 프로세스로 띄우고 로그 · 트레이스를 모읍니다([Editor README](../Editor/README.md) "멀티 프로세스 재생").
 
 **5단계 — 온라인 서비스를 띄웁니다.** 서버 설정 옆에 `<이름>.online.json` 을 두면(예: `ops.json` 이면 `ops.online.json`) 서버가 로그인, 채팅, 디렉터리, 매칭 같은

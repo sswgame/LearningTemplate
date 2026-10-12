@@ -57,7 +57,8 @@ py -3 -m Scripts test NetworkThreadTest.*
 3. 매 프레임 두 호스트의 `update` 를 부르면 핸드셰이크가 진행되고, 연결되면 `sendMessage` 로 보낸 메시지를 반대쪽이 꺼냅니다.
 4. 회선을 나쁘게 만들려면 전송을 `NetEmulationTransport` 로 감싸고 지연, 손실, 순서 뒤바뀜을 겁니다. 보내는 쪽 조건(`setDefaultConditions`)과 받는 쪽 조건(`setIncomingConditions`)을
    따로 걸어 올림과 내림을 다르게 하고, `startOutage( 초 )` 로 그동안 모든 패킷을 버립니다(스파이크). 이름 있는 프리셋(`tryGetPreset` — off · lan · wifi · lte · badwifi · disconnected)과
-   키-값 덮어쓰기(`parseOverrides` — `latencyMs=80 lossPercent=5`)는 회선 조절 창과 개발 명령이 같이 씁니다.
+   키-값 덮어쓰기(`parseOverrides` — `latencyMs=80 lossPercent=5`, 거꾸로 만드는 것은 `makeOverrideText`)는 회선 조절 창과 개발 명령이 같이 씁니다.
+   흉내 · 연결 수치 한 줄(`NetEmulationReport` — 버린 패킷, 재전송, 잰 손실, RTT)도 쓰는 쪽(게임 세션의 `net.emulation stats`)과 읽는 쪽(에디터)이 이 정의 하나를 씁니다.
 
 스트림(TCP) 쪽은 `test::StreamEndpointPair`(`Test/TestFramework/TestStreamEndpointPair.h`)가 루프백 위의 엔드포인트 한 쌍을 한 스레드로 돌립니다.
 

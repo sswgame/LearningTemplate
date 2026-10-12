@@ -224,6 +224,62 @@ SW_TEST_CASE( NetEmulationTest, PresetsAndOverridesMakeConditions )
 }
 
 /**
+ * @brief [NetEmulationTest] 덮어쓰기 글을 만들어 다시 읽으면 같은 조건이다 — 에디터 회선 조절이 보내는 글과 개발 명령이 읽는 글이 한 정의를 쓴다
+ */
+SW_TEST_CASE( NetEmulationTest, OverrideTextRoundTripsEveryPreset )
+{
+    for ( const utf8* pPreset : { "off", "lan", "wifi", "lte", "badwifi", "disconnected" } )
+    {
+        NetEmulationConditions preset;
+        SW_ASSERT_TRUE( NetEmulationConditions::tryGetPreset( pPreset, preset ) );
+        const string           text = preset.makeOverrideText();
+        NetEmulationConditions parsed;
+        parsed._latency = 9.0; // 글이 모든 키를 써서 앞 상태를 덮는지 본다
+        string error;
+        SW_ASSERT_TRUE_MSG( NetEmulationConditions::parseOverrides( text, parsed, error ), error.c_str() );
+        SW_EXPECT_NEAR_EQUAL( parsed._latency, preset._latency, 1.0e-6 );
+        SW_EXPECT_NEAR_EQUAL( parsed._jitter, preset._jitter, 1.0e-6 );
+        SW_EXPECT_NEAR_EQUAL( parsed._lossRate, preset._lossRate, 1.0e-5f );
+        SW_EXPECT_NEAR_EQUAL( parsed._duplicateRate, preset._duplicateRate, 1.0e-5f );
+        SW_EXPECT_NEAR_EQUAL( parsed._reorderRate, preset._reorderRate, 1.0e-5f );
+        SW_EXPECT_EQUAL( parsed._bandwidthBytesPerSecond, preset._bandwidthBytesPerSecond );
+    }
+    NetEmulationConditions lte;
+    SW_ASSERT_TRUE( NetEmulationConditions::tryGetPreset( "lte", lte ) );
+    SW_EXPECT_EQUAL( lte.makeOverrideText(), string( "latencyMs=35 jitterMs=15 lossPercent=1 duplicatePercent=0 reorderPercent=0.5 bandwidthKBps=1024" ) );
+}
+
+/**
+ * @brief [NetEmulationTest] 보고 줄은 로그 꼬리표 · 명령 메아리 뒤에 있어도 읽히고, 머리가 없거나 값이 숫자가 아니면 읽지 않는다
+ */
+SW_TEST_CASE( NetEmulationTest, ReportLineRoundTripsThroughALogLine )
+{
+    NetEmulationReport report;
+    report._connectionCount     = 2;
+    report._sentPacketCount     = 1200;
+    report._droppedPacketCount  = 360;
+    report._resentMessageCount  = 41;
+    report._measuredLossPercent = 29.5f;
+    report._rttMilliseconds     = 12.25f;
+    const string line           = "[12:00:01.234] [Info] [DevConsole] > net.emulation stats : " + report.makeLine();
+
+    NetEmulationReport parsed;
+    SW_ASSERT_TRUE( NetEmulationReport::tryParseLine( line, parsed ) );
+    SW_EXPECT_EQUAL( parsed._connectionCount, 2 );
+    SW_EXPECT_EQUAL( parsed._sentPacketCount, uint64{ 1200 } );
+    SW_EXPECT_EQUAL( parsed._droppedPacketCount, uint64{ 360 } );
+    SW_EXPECT_EQUAL( parsed._resentMessageCount, uint64{ 41 } );
+    SW_EXPECT_NEAR_EQUAL( parsed._measuredLossPercent, 29.5f, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( parsed._rttMilliseconds, 12.25f, 1.0e-4f );
+
+    NetEmulationReport untouched;
+    untouched._resentMessageCount = 7;
+    SW_EXPECT_FALSE( NetEmulationReport::tryParseLine( "net session: Client, connected 1", untouched ) );
+    SW_EXPECT_FALSE( NetEmulationReport::tryParseLine( string( NetEmulationReport::kLinePrefix ) + " resent=many", untouched ) );
+    SW_EXPECT_EQUAL( untouched._resentMessageCount, uint64{ 7 } );
+}
+
+/**
  * @brief [NetEmulationTest] 끊김(스파이크)은 그 시간 동안 보내는 것을 모두 버리고, 끝나면 다시 그대로 보낸다
  */
 SW_TEST_CASE( NetEmulationTest, OutageDropsEverythingUntilItEnds )
