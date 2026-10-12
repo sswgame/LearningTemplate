@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Widgets/ViewportInputOverlay.h"
+#include "Editor/Viewport/ViewportInputOverlay.h"
 
 #include "Editor/Common/GUI/EditorColorUtil.h"
 

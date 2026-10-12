@@ -12,9 +12,9 @@
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Widgets/ViewportInputOverlay.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
+#include "Editor/Viewport/ViewportInputOverlay.h"
 
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Devices/KeyboardDevice.h"

@@ -14,10 +14,10 @@
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorDebugHUDControls.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Widgets/ViewportInputOverlay.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
+#include "Editor/Viewport/ViewportInputOverlay.h"
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"

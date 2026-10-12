@@ -6,7 +6,6 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Editor/Common/Commands/EditorViewportRayPick.h"
 #include "Editor/Common/EditorProfile.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -14,6 +13,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Viewport/EditorViewportBillboard.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
+#include "Editor/Viewport/EditorViewportRayPick.h"
 #include "Editor/Viewport/EditorViewportToolbar.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 

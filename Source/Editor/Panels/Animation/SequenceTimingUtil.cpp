@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Commands/SequenceTimingUtil.h"
+#include "Editor/Panels/Animation/SequenceTimingUtil.h"
 
 namespace sw::editor
 {

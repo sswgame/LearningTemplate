@@ -3,6 +3,15 @@
 새 세션은 이 문서를 먼저 읽습니다. 배치 경계마다 적용 담당이 고쳐 씁니다. 끝난 항목은 지웁니다(한 일은 `git log`, 교훈은 영역 README · 결정 기록 · 검증 문서에 있다).
 작업 방식은 [작업 방식](../11_Workflow.md), 남은 일 전체는 [백로그](../06_Backlog.md)(분류 A~H)입니다.
 
+
+**순서(사용자 결정 2026-10-13 — 폴리싱에 집중, 운영 · 배포는 보류 `H-3`)**:
+1. **그래픽스 회귀 확정**(아래 실패 목록의 첫 둘). 수정 전에 `-gv_gpuCulling=0` · `-gv_drawMerge=0` 으로 `CascadedShadowCastsOnEveryBackend`(DX12 + Vulkan 만 실패, DX11 · GL 통과) 와 `TransparentOrderMatchesAcrossBackends` A/B,
+   Vulkan `readbackTexture2D` 의 `VkResult` 로그(DEVICE_LOST 여부), 병합 전 `b4f2301e6` · `9224ca389`(그림자 아틀라스) 단독 비교. 분석(코드 읽기)의 가설: wvShadow 가 그림자 슬롯 컬링 절두체를 `_cullViewProj` 로 바꿨고 캐스케이드 경로에서 비는 것. RHI 파일은 이 구간에서 안 바뀌었다.
+   같은 로그의 별건: OpenGL `PrototypeGridMaterialIsAnchoredToTheWorld` 실패(바닥을 옮기자 격자가 따라 움직임 — `MATERIAL_WORLD_UV`).
+2. **성능 증거(반드시)**: Release 로 `B-1` · `B-2` · `B-13`(S12 ~ S17 이동 전후) 와 아래 "검증 명령"의 `PerfCompare.py` 케이스를 잰다. 나쁘면 해당 변경을 되돌리고 결정 기록 3절에 숫자와 함께 적는다.
+3. **검증 자동화**: `hostgpu` 를 병합 전에 돌리는 길(직렬 약 17 분), 에디터 종료 검증(`-EnableEditor` 종료 exit 0) 을 테스트에 넣는다. Shipping · 게임 프리셋 8 개 빌드 · 네 백엔드 스크린샷 비교.
+4. **다중 월드(`D3-7`)** — 프리팹 격리 · 에디터 서버+클라이언트 재생(`S8`) 의 선행 조건. 에디터 보강(`D3-1` 의 남은 것)도 같이 본다.
+5. 그 사이: 한 줄 함수 `InlineOnly` 서식, `Source` 폴더 소속 정리(감사 목록의 낮은 위험부터 — Editor 헤더 4 개는 옮겼고 남은 것은 `EditorNetPlaySession.h` → `Workspace/`, `EditorAssetFileCommands.cpp` 의 `<shellapi.h>` 도우미화, 평평한 폴더 `Editor/Common/Commands`(61) · `Engine/Object/GameObject`(45) · `Engine/Renderer/Frame`(43) 쪼개기).
 ## 최우선 (2026-10-13 기준) — 에디터 종료 교착은 풀렸다(함정 절 참고)
 
 **`hostgpu` 에서 확인한 실패**(교착 때문에 일부만 봤다 — 이제 전체를 다시 돌려 볼 수 있다):

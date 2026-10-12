@@ -4,9 +4,7 @@
 
 #include "Core/Container/GameObjectHandle.h"
 
-#include "Editor/Common/Commands/EditorColliderHandleMath.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
-#include "Editor/Common/Commands/EditorViewportRayPick.h"
 #include "Editor/Common/EditorColor.h"
 #include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -15,7 +13,9 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
+#include "Editor/Viewport/EditorColliderHandleMath.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
+#include "Editor/Viewport/EditorViewportRayPick.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
 #include "Engine/Automation/AutomationProbe.h"

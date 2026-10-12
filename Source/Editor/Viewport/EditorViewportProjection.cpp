@@ -6,7 +6,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Common/Commands/EditorViewportRayPick.h"
+#include "Editor/Viewport/EditorViewportRayPick.h"
 
 #include <imgui.h>
 

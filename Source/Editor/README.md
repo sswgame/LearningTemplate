@@ -436,7 +436,7 @@ GameFramework 와 키트의 에디터 확장은 `Source/GameFramework/PlugIn/Edi
 
 ### 뷰포트에서 집기와 그리기
 
-1. 피킹은 `Common/Commands/EditorViewportRayPick` 이 합니다. 고유한 경계가 있는 종류는 제공자 표에 한 줄을 넣습니다. 그렇지 않은 컴포넌트도 오브젝트의 `SceneComponent` 를 기본 반지름으로 훑으므로 집힙니다.
+1. 피킹은 `Viewport/EditorViewportRayPick` 이 합니다. 고유한 경계가 있는 종류는 제공자 표에 한 줄을 넣습니다. 그렇지 않은 컴포넌트도 오브젝트의 `SceneComponent` 를 기본 반지름으로 훑으므로 집힙니다.
 2. 디버그 시각화는 `Viewport/Visualizers/` 에 파일 하나와 `SW_EDITOR_VISUALIZER` 한 줄입니다. 툴바 토글도 그 레지스트리에서 만들어집니다.
 3. 월드에서 화면으로는 `Viewport/EditorViewportProjection` 을 씁니다. 선분은 `projectSegment` 로 투영합니다. 점마다 투영하면 카메라를 가로지르는 선이 통째로 사라집니다.
 4. 화면에서 월드로는 `EditorViewportRayPick::makeRay` 와 `rayHitsAxisPlane` 입니다. 뷰포트 도구를 더할 때 NDC 계산을 다시 쓰지 않습니다.

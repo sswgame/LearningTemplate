@@ -5,9 +5,9 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Commands/SequenceTimingUtil.h"
 #include "Editor/Common/GUI/EditorDocumentPanel.h"
 #include "Editor/Common/Widgets/EditorCurveEditor.h"
+#include "Editor/Panels/Animation/SequenceTimingUtil.h"
 
 #include "Engine/Sequencer/SequenceAsset.h"
 

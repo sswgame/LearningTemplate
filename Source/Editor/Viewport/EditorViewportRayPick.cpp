@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Editor/Common/Commands/EditorViewportRayPick.h"
+#include "Editor/Viewport/EditorViewportRayPick.h"
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
