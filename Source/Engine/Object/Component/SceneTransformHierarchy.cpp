@@ -102,6 +102,7 @@ namespace sw
         , _pPendingSlotScratch{ nullptr }
         , _writeScratchCount{ 0 }
         , _listActiveScratchSlot{}
+        , _listActiveScratchStart{}
         , _listOrderedWrite{}
         , _listWriteGroupStart{}
         , _listBatchBucket{}
@@ -228,13 +229,10 @@ namespace sw
         _writeScratchCount   = static_cast<uint32>( _listWriteScratch.size() );
     }
 
-    bool SceneTransformHierarchy::queuePendingSlot( uint32 transformSlot )
+    vector<uint32>* SceneTransformHierarchy::findPendingSlotList()
     {
         const uint32 slot = engine::getParallelScratchSlot();
-        if ( slot >= _writeScratchCount )
-            return false;
-        _pPendingSlotScratch[slot].push_back( transformSlot );
-        return true;
+        return ( slot < _writeScratchCount ) ? &_pPendingSlotScratch[slot] : nullptr;
     }
 
     bool SceneTransformHierarchy::queueWriteParallel( const SceneTransformWrite& write, uint64 writerID )
@@ -387,35 +385,47 @@ namespace sw
     {
         uint32 totalCount = 0;
         _listActiveScratchSlot.clear();
+        _listActiveScratchStart.clear();
         for ( uint32 slot = 0; slot < _writeScratchCount; ++slot )
         {
             if ( _pPendingSlotScratch[slot].empty() )
                 continue;
-            totalCount += static_cast<uint32>( _pPendingSlotScratch[slot].size() );
             _listActiveScratchSlot.push_back( slot );
+            _listActiveScratchStart.push_back( totalCount );
+            totalCount += static_cast<uint32>( _pPendingSlotScratch[slot].size() );
         }
         if ( totalCount == 0 )
             return 0;
+        _listActiveScratchStart.push_back( totalCount );
         // 자기 오브젝트에 쓴 틱 쓰기(대기 칸) 수다. 아래 `queuedWrites` 와 합하면 틱 중 세터가 남긴 일의 전부다.
         SW_PROFILE_COUNT( "GT.Scene.tick.pendingSlots", totalCount );
 
-        // 스레드 슬롯 하나가 잡 하나다. 칸 하나는 처음 대기에 든 스레드의 목록에만 있으므로 워커끼리 같은 칸을 만지지 않는다.
+        // 스레드 목록들을 이어 붙인 번호 공간 [0, totalCount) 를 고르게 자른다. 칸 하나는 처음 대기에 든 스레드의 목록에만 있으므로 워커끼리
+        // 같은 칸을 만지지 않는다. 목록 하나를 잡 하나로 주면 가장 많이 틱한 스레드(먼저 청크를 집는 게임 스레드)의 목록이 합류를 붙잡는다.
         struct PendingSlotJob
         {
             SceneTransformStorage* _pStorage{ nullptr };
             PrimitiveRegistry*     _pRegistry{ nullptr };
-            vector<uint32>*        _pSlotList{ nullptr };
+            const vector<uint32>*  _pSlotList{ nullptr };
             const uint32*          _pActiveSlot{ nullptr };
+            const uint32*          _pActiveStart{ nullptr }; ///< 목록마다 시작 번호, 끝에 전체 수(`activeCount + 1` 개)
+            uint32                 _activeCount{ 0 };
             atomic<uint32>         _changedCount{ 0 };
 
             void applyRange( uint32 start, uint32 end )
             {
+                // start 를 담은 목록: 시작 번호가 start 보다 큰 첫 목록의 바로 앞.
+                uint32 listIndex    = static_cast<uint32>( std::upper_bound( _pActiveStart, _pActiveStart + _activeCount, start ) - _pActiveStart ) - 1u;
                 uint32 changedCount = 0;
-                for ( uint32 index = start; index < end; ++index )
+                for ( uint32 cursor = start; cursor < end && listIndex < _activeCount; ++listIndex )
                 {
-                    for ( const uint32 transformSlot : std::as_const( _pSlotList[_pActiveSlot[index]] ) )
+                    const vector<uint32>& listSlot   = _pSlotList[_pActiveSlot[listIndex]];
+                    const uint32          listBegin  = _pActiveStart[listIndex];
+                    const uint32          rangeEnd   = MathUtil::min( end, _pActiveStart[listIndex + 1] );
+                    const uint32*         pSlotIndex = listSlot.data();
+                    for ( ; cursor < rangeEnd; ++cursor )
                     {
-                        if ( applyPendingSlot( *_pStorage, transformSlot, *_pRegistry ) )
+                        if ( applyPendingSlot( *_pStorage, pSlotIndex[cursor - listBegin], *_pRegistry ) )
                             ++changedCount;
                     }
                 }
@@ -424,15 +434,13 @@ namespace sw
             }
         };
         PendingSlotJob job{};
-        job._pStorage            = &SceneTransformStorage::get();
-        job._pRegistry           = &registry;
-        job._pSlotList           = _pPendingSlotScratch;
-        job._pActiveSlot         = _listActiveScratchSlot.data();
-        const uint32 activeCount = static_cast<uint32>( _listActiveScratchSlot.size() );
-        if ( totalCount < kParallelWriteCount )
-            job.applyRange( 0, activeCount );
-        else
-            engine::runParallel( activeCount, 1, SW_DELEGATE_METHOD( ParallelBlockDelegate, &PendingSlotJob::applyRange, &job ) );
+        job._pStorage     = &SceneTransformStorage::get();
+        job._pRegistry    = &registry;
+        job._pSlotList    = _pPendingSlotScratch;
+        job._pActiveSlot  = _listActiveScratchSlot.data();
+        job._pActiveStart = _listActiveScratchStart.data();
+        job._activeCount  = static_cast<uint32>( _listActiveScratchSlot.size() );
+        engine::runParallel( totalCount, kParallelWriteCount, SW_DELEGATE_METHOD( ParallelBlockDelegate, &PendingSlotJob::applyRange, &job ) );
         return job._changedCount.load( std::memory_order_relaxed );
     }
 

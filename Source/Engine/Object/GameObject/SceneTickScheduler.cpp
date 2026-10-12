@@ -67,23 +67,42 @@ namespace sw
                 }
             }
 
+            /**
+             * @brief 청크 하나를 시작합니다 — 이 스레드의 틱 상태에 대기 칸 목록을 한 번 넣어 둡니다(세터가 스레드 슬롯을 다시 묻지 않게).
+             * @details 청크 도중 이 스레드가 기다리며 다른 틱 청크를 돌면 그 청크의 끝이 상태를 비운다. 그 뒤의 세터는 쓰기 큐로 가므로 결과는 같다.
+             */
+            static TickThreadState& beginRange( SceneTransformHierarchy& hierarchy )
+            {
+                TickThreadState& threadState  = StructuralChangeBuffer::getThreadState();
+                threadState._pPendingSlotList = hierarchy.findPendingSlotList();
+                return threadState;
+            }
+
+            /** @brief 청크를 끝냅니다 — 틱 상태를 비웁니다(틱 밖의 세터가 대기 칸으로 가지 않게). */
+            static void endRange( TickThreadState& threadState )
+            {
+                threadState._pTickingObject   = nullptr;
+                threadState._pTickWriter      = nullptr;
+                threadState._pPendingSlotList = nullptr;
+            }
+
             /** @brief 한 그룹의 칸 목록을 [start, end) 로 나눠 도는 잡 본문입니다. 워커는 포인터만 받습니다. 한 칸은 한 오브젝트라 나눠지지 않습니다. */
             struct ObjectGroupTick
             {
-                const TickObjectEntry* _pEntry{ nullptr };
-                float32                _deltaTime{ 0.0f };
+                const TickObjectEntry*   _pEntry{ nullptr };
+                SceneTransformHierarchy* _pHierarchy{ nullptr };
+                float32                  _deltaTime{ 0.0f };
 
                 void tickRange( uint32 start, uint32 end )
                 {
                     // 청크 하나의 CPU 시간이다. 모든 스레드의 합이라 `GT.Scene.tick.components`(벽시계)와 견주면 병렬 효율이 보인다.
                     SW_PROFILE_SCOPE( "GT.Scene.tick.objectRange" );
-                    TickThreadState& threadState = StructuralChangeBuffer::getThreadState();
+                    TickThreadState& threadState = beginRange( *_pHierarchy );
                     for ( uint32 index = start; index < end; ++index )
                     {
                         tickEntry( threadState, _deltaTime, _pEntry[index] );
                     }
-                    threadState._pTickingObject = nullptr;
-                    threadState._pTickWriter    = nullptr;
+                    endRange( threadState );
                 }
             };
 
@@ -93,12 +112,13 @@ namespace sw
              */
             struct StageTick
             {
-                const TickItem* _pItem{ nullptr };
-                float32         _deltaTime{ 0.0f };
+                const TickItem*          _pItem{ nullptr };
+                SceneTransformHierarchy* _pHierarchy{ nullptr };
+                float32                  _deltaTime{ 0.0f };
 
                 void tickRange( uint32 start, uint32 end )
                 {
-                    TickThreadState& threadState = StructuralChangeBuffer::getThreadState();
+                    TickThreadState& threadState = beginRange( *_pHierarchy );
                     for ( uint32 index = start; index < end; ++index )
                     {
                         const TickItem& item  = _pItem[index];
@@ -112,8 +132,7 @@ namespace sw
                         threadState._pTickWriter    = pOwner;
                         runTickItem( _deltaTime, item );
                     }
-                    threadState._pTickingObject = nullptr;
-                    threadState._pTickWriter    = nullptr;
+                    endRange( threadState );
                 }
             };
         };
@@ -177,8 +196,9 @@ namespace sw
             {
                 SW_PROFILE_COUNT( "GT.Scene.tick.objectEntries", listEntry.size() );
                 SceneTickSchedulerInternal::ObjectGroupTick job{};
-                job._pEntry    = listEntry.data();
-                job._deltaTime = deltaTime;
+                job._pEntry     = listEntry.data();
+                job._pHierarchy = _pHierarchy;
+                job._deltaTime  = deltaTime;
                 engine::runParallel( static_cast<uint32>( listEntry.size() ), SceneTickSchedulerInternal::kParallelTickThreshold,
                                      SW_DELEGATE_METHOD( ParallelBlockDelegate, &SceneTickSchedulerInternal::ObjectGroupTick::tickRange, &job ) );
             }
@@ -195,8 +215,9 @@ namespace sw
                 if ( stage._bApplyBefore == SW_TRUE )
                     applyStageTransforms();
                 SceneTickSchedulerInternal::StageTick job{};
-                job._pItem     = stage._listItem.data();
-                job._deltaTime = deltaTime;
+                job._pItem      = stage._listItem.data();
+                job._pHierarchy = _pHierarchy;
+                job._deltaTime  = deltaTime;
                 engine::runParallel( static_cast<uint32>( stage._listItem.size() ), SceneTickSchedulerInternal::kParallelTickThreshold,
                                      SW_DELEGATE_METHOD( ParallelBlockDelegate, &SceneTickSchedulerInternal::StageTick::tickRange, &job ) );
             }

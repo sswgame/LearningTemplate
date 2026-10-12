@@ -16,7 +16,7 @@ namespace sw
     {
         /**
          * @brief 이 스레드의 틱 상태입니다(`StructuralChangeBuffer::getThreadState`). Engine 의 이 TU 하나에만 있습니다(파일 머리말).
-         * @details 포인터 둘이라 초기화가 상수이고, TLS 접근에 감싸는 함수가 붙지 않습니다.
+         * @details 포인터뿐이라 초기화가 상수이고, TLS 접근에 감싸는 함수가 붙지 않습니다.
          */
         thread_local TickThreadState t_tickThreadState{};
     } // namespace

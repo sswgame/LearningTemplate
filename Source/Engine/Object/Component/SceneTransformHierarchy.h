@@ -92,7 +92,7 @@ namespace sw
      *          하나, `engine::runParallel`, 매니저 tick 의 단계 한 줄"** 이 병렬 시스템 하나의 구조이고, 이 타입이 그 첫 예다.
      *
      *          **틱 중 쓰기는 두 경로가 있다.** 자기 오브젝트를 틱하는 스레드의 세터는 슬롯의 대기 위치에 바로 쓰고 슬롯 번호만 스레드 목록에
-     *          올린다(`queuePendingSlot`). 다른 오브젝트의 컴포넌트에 쓰는 것은 두 스레드가 한 슬롯에 쓸 수 있으므로 쓰기 큐로 보낸다
+     *          올린다(`findPendingSlotList`). 다른 오브젝트의 컴포넌트에 쓰는 것은 두 스레드가 한 슬롯에 쓸 수 있으므로 쓰기 큐로 보낸다
      *          (`queueWriteParallel`). 틱이 끝나면 `applyTickWrites` 가 대기 슬롯, 쓰기 큐 순으로 스레드 슬롯 단위로 나눠 적용한다. 틱 중에
      *          다른 오브젝트가 읽는 값은 여전히 틱 전 값이다. 유니티 DOTS 가 게임플레이 잡 뒤에 `TransformSystemGroup` 을 두는 것과 같은
      *          구조다.
@@ -178,15 +178,17 @@ namespace sw
          */
         bool queueWriteParallel( const SceneTransformWrite& write, uint64 writerID );
         /**
-         * @brief 틱 중에 슬롯에 바로 쓴 컴포넌트의 슬롯 번호를 **자기 스레드 슬롯**의 대기 목록에 올립니다. 워커에서 불립니다.
-         * @details 세터(`SceneComponent::writeTickTransform`)가 슬롯이 처음 대기에 들어갈 때 한 번 부른다. 대기 값 자체는 슬롯에 있고, 목록은
-         *          틱 뒤 적용이 어느 슬롯을 볼지만 안다(4 바이트). 쓰기 큐의 건(64 바이트, 앞 건과 합치는 비교 포함)을 대신한다.
-         * @return 올렸으면 true 입니다. 스레드가 스크래치 슬롯을 받지 못했으면 false 이고, 부르는 쪽이 쓰기 큐로 돌립니다.
+         * @brief **이 스레드 슬롯**의 대기 목록입니다. 틱 중에 슬롯에 바로 쓴 컴포넌트의 슬롯 번호가 여기에 오릅니다. 워커에서 불립니다.
+         * @details 틱 디스패치가 청크마다 한 번 받아 `TickThreadState::_pPendingSlotList` 에 둔다. 세터(`SceneComponent::writeTickTransform`)는
+         *          슬롯이 처음 대기에 들어갈 때 그 목록에 슬롯 번호만 올린다(4 바이트) — 세터마다 스레드 슬롯을 다시 묻지 않는다. 대기 값 자체는
+         *          슬롯에 있다. 목록은 `beginTickWrites` 뒤 틱이 끝날 때까지 옮겨지지 않는다.
+         * @return 스레드가 스크래치 슬롯을 받지 못했으면 nullptr 입니다. 그러면 세터는 쓰기 큐로 갑니다.
          */
-        bool queuePendingSlot( uint32 transformSlot );
+        vector<uint32>* findPendingSlotList();
         /**
          * @brief 틱 중에 쓴 트랜스폼을 적용하고 목록을 비웁니다(틱 뒤, 게임 스레드). 먼저 대기 슬롯, 다음에 쓰기 큐 순서입니다.
-         * @details 대기 슬롯은 스레드 슬롯 하나가 잡 하나다(슬롯 하나는 처음 대기에 들어간 스레드의 목록에만 있어 겹치지 않는다). 쓰기 큐는
+         * @details 대기 슬롯은 모든 스레드 목록을 이어 붙인 번호 공간을 고르게 잘라 잡에 준다(슬롯 하나는 처음 대기에 들어간 스레드의 목록에만 있어
+         *          겹치지 않는다 — 목록마다 잡 하나로 주면 가장 많이 틱한 스레드의 목록 하나가 합류를 붙잡는다). 쓰기 큐는
          *          **대상 단위로** 나눈다. 건을 (대상, 쓴 오브젝트, 순번)으로 정렬하고 대상 경계에서만 잘라 잡에 준다. 그러면 한 컴포넌트는 한
          *          워커만 쓰고(유니티 `TransformAccessArray` 가 트랜스폼 하나를 한 잡에만 주는 것과 같다), 이기는 값은 스레드 배정과 무관하게 정해진다.
          *          쓰기 큐를 스레드 슬롯 단위로 잡에 주면 두 오브젝트의 틱이 같은 컴포넌트를 쓸 때 두 워커가 그 슬롯을 동시에 쓰므로 안 된다.
@@ -277,7 +279,7 @@ namespace sw
          * @param bUseCachedTarget 건이 가진 `_pTarget` 을 믿고 핸들을 다시 찾지 않을지 나타냅니다. 같은 `tick()` 안에서 쌓이고 적용되는 틱 큐만 true 입니다.
          */
         static uint32 applyWriteRange( GameObjectManager& manager, const SceneTransformWrite* pWrite, uint32 start, uint32 end, bool bUseCachedTarget );
-        /** @brief 대기 슬롯 목록을 스레드 슬롯 단위로 나눠 적용합니다(`applyTickWrites` 의 앞 절반). 바뀐 슬롯 수를 반환합니다. */
+        /** @brief 대기 슬롯 목록을 이어 붙인 번호 공간을 고르게 나눠 적용합니다(`applyTickWrites` 의 앞 절반). 바뀐 슬롯 수를 반환합니다. */
         uint32 applyPendingSlots( PrimitiveRegistry& registry );
         /** @brief 쓰기 큐를 대상 단위로 정렬하고 분할해 적용합니다(`applyTickWrites` 의 뒤 절반). 바뀐 건수를 반환합니다. */
         uint32 applyQueuedWriteSlots( GameObjectManager& manager );
@@ -307,6 +309,8 @@ namespace sw
         uint32 _writeScratchCount;
         /** @brief 이번 적용에서 비어 있지 않은 스레드 슬롯입니다. 적용 잡의 입력이고, 할당을 재사용합니다. */
         vector<uint32> _listActiveScratchSlot;
+        /** @brief 위 슬롯 목록들을 이어 붙였을 때 각 목록의 시작 번호입니다(마지막 값은 전체 수). 할당을 재사용합니다. */
+        vector<uint32> _listActiveScratchStart;
         /** @brief 틱 큐의 건을 (대상, 쓴 오브젝트, 순번)으로 정렬한 것입니다. 할당을 재사용합니다. */
         vector<OrderedTickWrite> _listOrderedWrite;
         /** @brief 정렬한 틱 큐를 잡으로 나눈 경계입니다. 대상 경계에서만 자릅니다. 마지막 값은 전체 건수입니다. */

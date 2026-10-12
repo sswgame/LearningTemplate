@@ -19,6 +19,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/vector.h"
 
 #include "Engine/Object/GameObject/DeferredDelegateQueue.h"
 
@@ -29,12 +30,17 @@ namespace sw
 
     /**
      * @struct TickThreadState
-     * @brief 한 스레드가 지금 도는 틱의 상태입니다. 틱 디스패치가 항목을 도는 동안 채우고, 틱 밖에서는 둘 다 nullptr 입니다.
+     * @brief 한 스레드가 지금 도는 틱의 상태입니다. 틱 디스패치가 항목을 도는 동안 채우고, 틱 밖에서는 모두 nullptr 입니다.
      */
     struct TickThreadState
     {
         const GameObject* _pTickingObject{ nullptr }; ///< 이 스레드가 지금 틱하는 오브젝트 — 그 오브젝트의 대기 칸에 잠금 없이 쓴다
         const GameObject* _pTickWriter{ nullptr };    ///< 지금 도는 틱의 주인 오브젝트 — 다른 오브젝트에 쓴 건의 순서 키
+        /**
+         * @brief 이 스레드의 대기 칸 목록입니다(`SceneTransformHierarchy::findPendingSlotList`). 틱 디스패치가 청크마다 한 번 채운다.
+         * @details 세터가 칸 번호를 올릴 때마다 스레드 슬롯을 다시 묻지 않게 한다. nullptr 이면(슬롯을 못 받았거나 틱 청크 밖) 세터는 쓰기 큐로 간다.
+         */
+        vector<uint32>* _pPendingSlotList{ nullptr };
     };
 } // namespace sw
 

@@ -115,13 +115,21 @@ namespace sw
     {
         // **자기 오브젝트를 틱하는 스레드면 칸에 바로 쓴다.** 한 오브젝트의 항목은 한 워커가 돌므로 이 칸의 대기 자리를 쓰는 스레드는
         // 이 스레드 하나다. 틱 뒤 적용은 칸 번호 목록을 따라 배열만 읽는다.
-        const GameObject* pOwner = getOwner();
-        if ( pOwner != nullptr && GameObjectManager::getTickingObject() == pOwner )
+        const GameObject*      pOwner      = getOwner();
+        const TickThreadState& threadState = StructuralChangeBuffer::getThreadState();
+        if ( pOwner != nullptr && threadState._pTickingObject == pOwner )
         {
             const uint32 pageIndex   = getPageIndex();
             uint8&       pendingMask = _pTransformPage->_arrPendingMask[pageIndex];
-            // 칸이 처음 대기에 들 때만 번호를 올린다. 스레드가 대기 목록 칸을 못 받았으면(도우미 칸이 다 찬 드문 경우) 아래 큐로 간다.
-            if ( pendingMask != 0 || _pManager->getTransformHierarchy().queuePendingSlot( _transformSlot ) )
+            // 칸이 처음 대기에 들 때만 번호를 올린다. 목록은 틱 디스패치가 청크마다 스레드 상태에 넣어 둔 것이다(세터마다 스레드 슬롯을 묻지
+            // 않는다). 없으면(도우미 칸이 다 찬 드문 경우) 아래 큐로 간다.
+            bool bPending = pendingMask != 0;
+            if ( bPending == false && threadState._pPendingSlotList != nullptr )
+            {
+                threadState._pPendingSlotList->push_back( _transformSlot );
+                bPending = true;
+            }
+            if ( bPending )
             {
                 pendingMask |= bit;
                 _pTransformPage->getPendingValueRef( pageIndex, bit ) = value;
