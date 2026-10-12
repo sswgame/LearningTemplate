@@ -1,6 +1,7 @@
 /**
  * @file EditorModuleHost.h
- * @brief App 전용 모듈 호스트입니다. 공통 `ModuleHost`(게임 모듈) 위에 에디터 인스턴스, 에디터 리로드, 에디터 UI, RHI 교체 뒤 재초기화를 구현합니다.
+ * @brief App 전용 모듈 호스트입니다. 공통 `ModuleHost`(게임 모듈) 위에 에디터 인스턴스, 에디터 리로드, 에디터 UI · Present 훅, RHI 교체 뒤 재초기화를 구현합니다.
+ *        인스턴스 없이 에디터 모듈만 올려 부르는 헤드리스 작업은 `EditorModuleHostHeadless.cpp` 에 있습니다.
  * @note 의존은 이쪽에서 `ModuleHost` 로 한 방향입니다. 전용 서버(`Server`)는 이 클래스를 링크하지 않습니다.
  */
 #pragma once
@@ -13,9 +14,11 @@
 
 namespace sw
 {
+    struct ModuleAPISymbols;
     struct NativeWindowEvent;
 
     class CameraComponent;
+    class IRHIDevice;
 
     /**
      * @class EditorModuleHost
@@ -45,7 +48,8 @@ namespace sw
         /**
          * @brief 에디터 인스턴스 없이 에디터 모듈만 로드해 @p kind 원본을 임포트하거나 대조합니다(`App --import-textures`, `--import-models` 와 `--check-*`).
          * @details 헤드리스 부팅(창과 RHI 없음)에서 부릅니다. 모듈 ABI 를 대조하고, 모듈 타입을 등록했다가 해제한 뒤 모듈을 언로드합니다.
-         *          Shipping 에는 에디터 모듈이 없어 실패합니다.
+         *          Shipping 에는 에디터 모듈이 없어 실패합니다. 인스턴스 상태를 쓰지 않아 구현은 `EditorModuleHostHeadless.cpp` 에 따로 둡니다
+         *          (모듈 이미지를 직접 올리고 내리는 의존이 인스턴스 경로와 `SmokeTest` 에 섞이지 않게).
          * @return 원본과 임포트 결과가 맞으면(임포트는 모두 성공하면) true 를 반환합니다.
          */
         [[nodiscard]] static bool importAssetsWithEditorModule( EditorImportKind kind, bool bCheckOnly );
@@ -71,10 +75,10 @@ namespace sw
         /** @brief 이번 프레임에 씬 뷰를 그리는 에디터 카메라를 에디터에서 조회합니다. */
         CameraComponent* getSceneViewCamera() const;
 
-        /** @brief 에디터 인스턴스 핸들을 반환합니다. App 의 Present 훅이 씁니다. */
-        EditorHandle getEditor() const { return _editor; }
-        /** @brief EditorAPI 테이블을 반환합니다. App 의 Present 훅이 씁니다. */
-        const EditorAPI& getEditorAPI() const { return _editorAPI; }
+        /** @brief 렌더 스레드의 Present 훅에서 에디터 UI 를 그립니다(`preRender` 다음 `render`). 에디터가 없으면 아무것도 하지 않습니다. */
+        void renderEditor( IRHIDevice& renderDevice );
+        /** @brief Present 뒤에 에디터의 멀티 뷰포트 · 플랫폼 창을 처리합니다. 에디터가 없으면 아무것도 하지 않습니다. */
+        void postPresentEditor( IRHIDevice& renderDevice );
 
         // LiveReload 콜백. 에디터.
         /** @brief 에디터 모듈을 언로드하기 직전에 불립니다. 인스턴스와 API 테이블을 해제합니다. */
@@ -131,6 +135,8 @@ namespace sw
         void onRenderWorkersDrained() override;
 
     private:
+        /** @brief 에디터 모듈 이미지의 ABI · API 표 심볼 이름입니다. 인스턴스 경로와 헤드리스 경로(`EditorModuleHostHeadless.cpp`)가 같이 씁니다. */
+        static const ModuleAPISymbols& getModuleSymbols();
         /** @brief 에디터를 실제로 호출할 수 있는 상태인지 확인합니다(모드가 켜져 있고 인스턴스가 살아 있음). */
         bool hasEditor() const { return _bEnableEditor == SW_TRUE && _editor != nullptr; }
         /** @brief 에디터가 월드를 틱해야 하는지 묻습니다. Pause 이면서 Step 이 아니면 false 입니다. */

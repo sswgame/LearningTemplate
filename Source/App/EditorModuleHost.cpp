@@ -2,11 +2,8 @@
 
 #include "App/EditorModuleHost.h"
 
-#include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Module/ModuleImageUtil.h"
 
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Module/ModuleCatalog.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -26,47 +23,6 @@ namespace sw
         struct EditorModuleHostInternal
         {
             static constexpr ModuleAPISymbols kEditorSymbols{ "getEditorModuleAbiVersion", "getEditorModuleAbiStamp", "exportEditorAPI", "Editor" };
-
-#if !defined( SW_SHIPPING )
-            /**
-             * @brief 에디터 인스턴스 없이 에디터 모듈만 올려 진입점 @p pSymbol 하나를 부르고 내립니다(헤드리스 임포트 · 로컬라이제이션 공통).
-             * @details 모듈 ABI 를 대조하고, 모듈 타입을 등록했다가 걷습니다. @p call 은 `( TEntryFn, const ModuleService& ) -> bool` 이고 엔진 서비스 표를 받습니다.
-             * @param pPurpose 로그에 쓰는 작업 이름입니다(`"Asset importing"`).
-             */
-            template <typename TEntryFn, typename TCall>
-            [[nodiscard]] static bool callEditorModuleEntry( const utf8* pSymbol, const utf8* pPurpose, TCall&& call )
-            {
-                const string modulePath     = ModuleImageUtil::findModuleLibraryPath( sw::config::kTargetEditorModule );
-                void* const  pLibraryModule = FileUtil::exists( modulePath ) ? ModuleImageUtil::loadDynamicLibrary( modulePath ) : nullptr;
-                if ( pLibraryModule == nullptr )
-                {
-                    SW_LOG_ERROR( "%# needs the editor module in Bin/Modules: %#", pPurpose, modulePath.c_str() );
-                    return false;
-                }
-
-                // 로드하는 순간 모듈의 정적 등록기가 전역 헤드에 매달린다. 모듈 이름으로 등록해 두어야 언로드하기 전에 해제할 수 있다.
-                engine::registerModuleTypes( sw::config::kTargetEditorModule );
-
-                bool bSucceeded = false;
-                if ( ModuleInstanceUtil::matchesModuleAbi( pLibraryModule, kEditorSymbols ) )
-                {
-                    const TEntryFn pfnEntry = reinterpret_cast<TEntryFn>( ModuleImageUtil::getDynamicSymbol( pLibraryModule, pSymbol ) );
-                    if ( pfnEntry == nullptr )
-                        SW_LOG_ERROR( "The editor module does not export %#", pSymbol );
-                    else
-                    {
-                        ModuleService service{};
-                        engine::fillModuleServices( service );
-                        bSucceeded = call( pfnEntry, static_cast<const ModuleService&>( service ) );
-                    }
-                }
-
-                engine::unregisterModuleTypes( sw::config::kTargetEditorModule );
-                // 언로드하지 못하면(다른 코드가 아직 그 이미지의 이벤트 채널을 구독한다) 프로세스 끝까지 로드된 채로 남을 뿐이다. 이유는 경고로 남는다.
-                (void)ModuleImageUtil::unloadModuleImage( sw::config::kTargetEditorModule, pLibraryModule );
-                return bSucceeded;
-            }
-#endif
         };
     } // namespace
 } // namespace sw
@@ -183,42 +139,6 @@ namespace sw
 #endif
     }
 
-    bool EditorModuleHost::importAssetsWithEditorModule( EditorImportKind kind, bool bCheckOnly )
-    {
-#if defined( SW_SHIPPING )
-        (void)kind;
-        (void)bCheckOnly;
-        SW_LOG_ERROR( "Asset importing needs the editor module, which a Shipping build does not have - run it from a Dev build." );
-        return false;
-#else
-        // 인스턴스 없이 부르므로 엔진 서비스 테이블을 직접 넘긴다. 임포터가 작업 시스템으로 압축을 나눈다.
-        return EditorModuleHostInternal::callEditorModuleEntry<PFN_ImportEditorAssets>( kImportEditorAssetsSymbol, "Asset importing",
-                                                                                        [kind, bCheckOnly]( PFN_ImportEditorAssets pfnImport, const ModuleService& service )
-        {
-            return pfnImport( static_cast<uint32>( kind ), bCheckOnly ? 1u : 0u, &service ) == 0;
-        } );
-#endif
-    }
-
-    bool EditorModuleHost::runLocalizationWithEditorModule( EditorLocalizationTask task, string_view poPath, string_view projectArgument )
-    {
-#if defined( SW_SHIPPING )
-        (void)task;
-        (void)poPath;
-        (void)projectArgument;
-        SW_LOG_ERROR( "Localization tools need the editor module, which a Shipping build does not have - run them from a Dev build." );
-        return false;
-#else
-        const string poPathText( poPath );
-        const string projectText( projectArgument );
-        return EditorModuleHostInternal::callEditorModuleEntry<PFN_RunEditorLocalizationTask>(
-            kRunEditorLocalizationTaskSymbol, "Localization tools", [task, &poPathText, &projectText]( PFN_RunEditorLocalizationTask pfnRun, const ModuleService& service )
-        {
-            return pfnRun( static_cast<uint32>( task ), poPathText.c_str(), projectText.c_str(), &service ) == 0;
-        } );
-#endif
-    }
-
     // ======================================================================
     // 프레임 단위 처리
     // ======================================================================
@@ -296,6 +216,25 @@ namespace sw
         return static_cast<CameraComponent*>( _editorAPI.getSceneViewCamera( _editor ) );
     }
 
+    void EditorModuleHost::renderEditor( IRHIDevice& renderDevice )
+    {
+        SW_MEMORY_SCOPE( Editor );
+        if ( hasEditor() == false )
+            return;
+        if ( _editorAPI.preRender != nullptr )
+            _editorAPI.preRender( _editor, &renderDevice );
+        if ( _editorAPI.render != nullptr )
+            _editorAPI.render( _editor, &renderDevice );
+    }
+
+    void EditorModuleHost::postPresentEditor( IRHIDevice& renderDevice )
+    {
+        SW_MEMORY_SCOPE( Editor );
+        if ( hasEditor() == false || _editorAPI.postPresent == nullptr )
+            return;
+        _editorAPI.postPresent( _editor, &renderDevice );
+    }
+
     // ======================================================================
     // LiveReload 콜백. 에디터.
     // ======================================================================
@@ -325,7 +264,7 @@ namespace sw
     bool EditorModuleHost::isEditorImageUsable( void* pLibraryModule ) const
     {
         EditorAPI api{};
-        if ( ModuleInstanceUtil::exportAPIFromImage<EditorAPI, PFN_ExportEditorAPI>( pLibraryModule, EditorModuleHostInternal::kEditorSymbols, api ) == false )
+        if ( ModuleInstanceUtil::exportAPIFromImage<EditorAPI, PFN_ExportEditorAPI>( pLibraryModule, getModuleSymbols(), api ) == false )
             return false;
         return api.create != nullptr && api.destroy != nullptr;
     }
@@ -369,9 +308,14 @@ namespace sw
     // API 바인딩 · 인스턴스
     // ======================================================================
 
+    const ModuleAPISymbols& EditorModuleHost::getModuleSymbols()
+    {
+        return EditorModuleHostInternal::kEditorSymbols;
+    }
+
     bool EditorModuleHost::bindEditorAPI( void* pLibraryModule )
     {
-        if ( ModuleInstanceUtil::exportAPIFromImage<EditorAPI, PFN_ExportEditorAPI>( pLibraryModule, EditorModuleHostInternal::kEditorSymbols, _editorAPI ) == false )
+        if ( ModuleInstanceUtil::exportAPIFromImage<EditorAPI, PFN_ExportEditorAPI>( pLibraryModule, getModuleSymbols(), _editorAPI ) == false )
             return false;
 
         rebindEditorService();

@@ -44,6 +44,8 @@ sw_addTestExecutable(SmokeTest
 	SOURCES
 		TestSmoke.cpp
 		TestModuleHost.cpp
+		# App 헤드리스 작업 표의 규칙(`AppHeadlessTasks::runTable`, 헤더 안 구현)은 모듈 없이 본다.
+		TestAppHeadlessTasks.cpp
 		${CMAKE_SOURCE_DIR}/Source/ModuleHost/ModuleHost.cpp
 		# App 전용 층(에디터 인스턴스 · RHI 교체 뒤 재초기화)도 같은 테스트가 본다 — App 은 실행 파일이라 소스로 가져온다.
 		${CMAKE_SOURCE_DIR}/Source/App/EditorModuleHost.cpp

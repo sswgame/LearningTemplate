@@ -2773,7 +2773,7 @@
    "default": "",
    "kind": "시험",
    "description": "시작 씬이 열린 뒤 개발 콘솔로 돌릴 명령 (; 로 나눔)",
-   "source": "Source/App/App.cpp"
+   "source": "Source/App/DevConsoleHost.cpp"
   },
   {
    "name": "gv_devConsoleOpen",
@@ -2781,7 +2781,7 @@
    "default": "0",
    "kind": "시험",
    "description": "게임 창 개발 콘솔을 연 채로 시작 (1=열기)",
-   "source": "Source/App/App.cpp"
+   "source": "Source/App/DevConsoleHost.cpp"
   },
   {
    "name": "gv_drawMerge",
@@ -3189,7 +3189,7 @@
    "default": "0",
    "kind": "시험",
    "description": "이 프레임에 게임 모듈 핫 리로드를 요청한다 (0=사용 안 함)",
-   "source": "Source/App/App.cpp"
+   "source": "Source/App/ModuleReloadDriver.cpp"
   },
   {
    "name": "gv_renderPipeline",
@@ -3357,7 +3357,7 @@
    "default": "0",
    "kind": "시험",
    "description": "표준 입력의 줄을 명령으로 받는다 (quit=종료, 1=켜기)",
-   "source": "Source/App/App.cpp"
+   "source": "Source/App/DevConsoleHost.cpp"
   },
   {
    "name": "gv_subtitleBackgroundOpacity",
