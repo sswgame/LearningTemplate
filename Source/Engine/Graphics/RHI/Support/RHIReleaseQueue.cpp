@@ -45,15 +45,25 @@ namespace sw
         // 스크래치를 빌려 쓴다. 콜백이 다시 tick 을 부르는 드문 재진입에도 안전하도록 잠깐 꺼내 두고 끝나면 돌려놓는다.
         // 꺼내고 돌려놓는 것도 잠금 안에서 한다 — DX12 는 렌더 스레드의 endFrame 과 리소스를 만드는 스레드의
         // 업로드 펜스 대기(D3D12RHIResourceFactory)가 tickCompleted 를 동시에 부를 수 있다.
+        // 잠금 안에서는 할당하지 않는다: 꺼낼 개수를 먼저 세고, 그릇이 모자라면 잠금을 놓고 늘린 뒤 다시 센다.
         vector<RHIResourceReleaseDelegate> listReady;
         {
-            std::scoped_lock<SpinLock> lock{ _spinLock };
+            std::unique_lock<SpinLock> lock{ _spinLock };
             listReady.swap( _listReadyScratch );
-            _currentFrame++;
+            const uint64 currentFrame = ++_currentFrame;
+            for ( ;; )
+            {
+                const size_t readyCount = static_cast<size_t>( std::count_if( _listFrameEntry.begin(), _listFrameEntry.end(), [currentFrame]( const FrameDeferredEntry& entry )
+                { return entry._targetFrame <= currentFrame; } ) );
+                if ( readyCount <= listReady.capacity() )
+                    break;
+                lock.unlock();
+                listReady.reserve( readyCount );
+                lock.lock();
+            }
 
-            const uint64 currentFrame  = _currentFrame;
-            auto         partitionIter = std::stable_partition( _listFrameEntry.begin(), _listFrameEntry.end(), [currentFrame]( const FrameDeferredEntry& entry )
-                    {
+            auto partitionIter = std::stable_partition( _listFrameEntry.begin(), _listFrameEntry.end(), [currentFrame]( const FrameDeferredEntry& entry )
+            {
                 return entry._targetFrame > currentFrame;
             } );
 
@@ -78,11 +88,21 @@ namespace sw
 
     void RHIReleaseQueue::tickCompleted( uint64 completedFence )
     {
-        // 스크래치를 빌려 쓴다(tickFrame 과 같은 이유로 잠금 안에서 꺼내고 돌려놓는다).
+        // 스크래치를 빌려 쓴다(tickFrame 과 같은 이유로 잠금 안에서 꺼내고 돌려놓고, 같은 방식으로 잠금 안에서는 할당하지 않는다).
         vector<RHIResourceReleaseDelegate> listReady;
         {
-            std::scoped_lock<SpinLock> lock{ _spinLock };
+            std::unique_lock<SpinLock> lock{ _spinLock };
             listReady.swap( _listReadyScratch );
+            for ( ;; )
+            {
+                const size_t readyCount = static_cast<size_t>( std::count_if( _listGPUEntry.begin(), _listGPUEntry.end(), [completedFence]( const GPUDeferredEntry& entry )
+                { return entry._targetFence <= completedFence; } ) );
+                if ( readyCount <= listReady.capacity() )
+                    break;
+                lock.unlock();
+                listReady.reserve( readyCount );
+                lock.lock();
+            }
             auto partitionIter = std::stable_partition( _listGPUEntry.begin(), _listGPUEntry.end(), [completedFence]( const GPUDeferredEntry& entry )
             {
                 return entry._targetFence > completedFence;
