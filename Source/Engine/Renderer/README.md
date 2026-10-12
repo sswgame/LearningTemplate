@@ -176,7 +176,7 @@ DirectX 12 커맨드 시그니처로 루트 상수를 주입하고 Vulkan과 Ope
 | `FrameRenderer` | 수명, 파이프라인 로드, 프레임 진입 |
 | `FrameRendererResources` | 기록 전에 만들어야 하는 패스 리소스 |
 | `FrameRendererTransients` | 첨부(렌더 타깃)의 수명과 조회 |
-| `FrameRendererReadback` | 첨부를 CPU로 읽기(테스트, 스크린샷) |
+| `FrameRendererReadback` | 첨부를 CPU로 읽기(테스트, 스크린샷). 파일 쓰기는 `RenderTargetImageFile` |
 | `FrameRendererCompute` | 그리기 전에 도는 컴퓨트 프리패스 |
 | `FrameRendererConstants` | 프레임마다 한 번 채우는 상수 |
 | `FrameRendererPassExecute` | 패스 종류별 실행 분기 |
@@ -195,6 +195,15 @@ DirectX 12 커맨드 시그니처로 루트 상수를 주입하고 Vulkan과 Ope
 - `RenderPSOCache` 는 엔진 패스 PSO, 출력 패스(Present, Canvas)의 대상 포맷별 PSO, 머티리얼 퍼뮤테이션 변형과 바인딩 레이아웃을 소유합니다.
   만드는 일은 `FrameRendererPSO` 가 하고, 해제 순서(변형, 패스, 출력 포맷별)는 캐시가 압니다.
 - `TransientAttachmentPool` 은 이름으로 찾는 프레임 첨부 풀입니다. "이번 프레임에 이미 클리어했는가"도 여기서 기억합니다.
+
+프레임 끝이나 진단에서만 쓰는 상태 두 개도 값 멤버 클래스로 둡니다. 둘 다 가상 함수 없이 직접 부릅니다.
+
+- `GPUPassTimeline` 은 지난 프레임의 GPU 타임스탬프를 읽어 프로파일러의 `GPU.<패스>` · `GPU.Compute` · `GPU.Frame` 과 Tracy GPU 타임라인으로 냅니다.
+  프로파일러는 `initialize` 가 주입하고, 타임스탬프를 쓸지도 `isRecording` 에 묻습니다. 보고(`reportFrame`)는 GPU 없이 테스트합니다.
+- `PresentCaptureTarget` 은 스크린샷용 Present 캡처 텍스처의 수명, 출력 RT 복사, CPU 읽기를 맡습니다. 어디에 그릴지는 `resolvePresentTarget` 이 정합니다.
+- 읽어 온 바이트를 PNG 나 PPM 으로 쓰는 변환은 `RenderTargetImageFile` 입니다(GPU 없음).
+
+트랜지언트를 "무엇을 얼마나 만들지" 정하는 코드(`FrameRendererTransients`)는 렌더러에 남깁니다. 파이프라인 선언, 뷰의 TAA 기록, 그림자 품질을 함께 읽어서 떼면 그 셋을 모두 넘겨야 하고, 소유는 이미 `TransientAttachmentPool` 이 합니다.
 
 그 밖의 주요 타입은 다음과 같습니다. 각 타입의 자세한 설명은 헤더의 `@brief` 에 있습니다.
 
