@@ -13,13 +13,13 @@
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Renderer/Canvas/CanvasRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/FrameResourceRegistry.h"
-#include "Engine/Renderer/Frame/GPUTimelineExporter.h"
+#include "Engine/Renderer/Frame/GPUPassTimeline.h"
 #include "Engine/Renderer/Frame/PassConstantRing.h"
 #include "Engine/Renderer/Frame/PassConstantValues.h"
+#include "Engine/Renderer/Frame/PresentCaptureTarget.h"
 #include "Engine/Renderer/Frame/RenderPSOCache.h"
 #include "Engine/Renderer/Frame/RenderView.h"
 #include "Engine/Renderer/Frame/RenderViewScheduler.h"
@@ -169,7 +169,7 @@ namespace sw
          */
         void setPresentCaptureEnabled( bool bEnabled );
         /** @brief 이 렌더러가 Present 결과를 받아 두고 있으면 true 입니다. */
-        bool isPresentCaptureEnabled() const { return _bPresentCaptureEnabled != SW_FALSE && _presentCapture != 0; }
+        bool isPresentCaptureEnabled() const { return _presentCapture.isActive(); }
         /**
          * @brief 받아 둔 Present 결과, 즉 화면에 나간 이미지를 CPU 로 읽습니다.
          * @details 포맷은 항상 `constant::kBackBufferFormat` 이다. 테스트가 **최종 화면**을 픽셀로 비교하는 유일한 경로다.
@@ -187,11 +187,6 @@ namespace sw
         /** @brief 마지막 프레임에 다시 그린 캔버스 렌더 텍스처 대상 수입니다. 내용 번호가 같은 대상은 다시 그리지 않습니다(테스트와 진단용). */
         uint32 getLastDrawnCanvasTargetCount() const { return _lastDrawnCanvasTargetCount; }
 
-    private:
-        /** @brief 읽어 온 바이트를 파일로 씁니다. 확장자가 `.png` 면 PNG, 아니면 PPM(P6)입니다. 트랜지언트, 텍스처, Present 캡처 덤프가 함께 씁니다. */
-        [[nodiscard]] static bool writeImageFile( const vector<uint8>& byte, const RHITextureMipSpan& layout, RHIFormat format, string_view outFilePath );
-
-    public:
         /**
          * @brief 화면에 나간 첨부의 이름입니다. Present 패스가 입력으로 받는 첨부이며, 없으면 빈 문자열입니다.
          * @details 저장하려는 것은 항상 "지금 보이는 이미지" 이므로 파이프라인에 물어본다.
@@ -477,14 +472,6 @@ namespace sw
          *          선언했는지, 대상 첨부의 포맷이 무엇인지는 셋업 시점에 이미 알 수 있다.
          */
         void ensureTaaHistory( ViewTarget& view );
-        /** @brief Present 캡처 텍스처를 한 번만 만듭니다. 캡처가 켜져 있을 때만 만듭니다. */
-        void ensurePresentCapture();
-        /**
-         * @brief 출력 RT(에디터 게임 뷰)를 Present 캡처로 복사합니다. 크기나 포맷이 다르면 한 번 경고하고 건너뜁니다.
-         * @details 백버퍼 출력은 캡처에 그린 뒤 백버퍼로 복사한다(백버퍼는 읽을 핸들이 없다). RT 출력은 그 RT 가 곧 읽을 수 있는 텍스처라
-         *          그린 뒤에 복사한다. RT 에 그린 이미지가 에디터 게임 뷰에 그대로 나가야 하므로 대상을 캡처로 바꾸지 않는다.
-         */
-        void copyOutputToPresentCapture( const FramePassContext& context, const PresentTarget& target );
         /** @brief 트랜지언트 텍스처를 해제합니다. */
         void releaseTransientResources();
         /** @brief 그래프 패스 콜백을 한 번만 바인딩합니다. */
@@ -773,32 +760,13 @@ namespace sw
         int32 _vertexPoolOverride;
         /// @brief 이번 프레임의 씬 간접 드로우 호출 수입니다. 패스를 병렬로 기록하므로 atomic 으로 둡니다.
         atomic<uint32> _indirectDrawCallCount;
-        /** @brief 지난 프레임의 타임스탬프입니다. 단위는 마이크로초이며, 프레임 시작 기준 누적값에 기준점의 GPU 시계를 더한 값입니다. 엔진 테이블과 Tracy 가 같은 값을 씁니다. */
-        RHITimestampFrame _gpuTimestampFrame;
-        /** @brief 패스 하나의 GPU 스코프입니다. 그 슬롯을 만든 패스 이름, 프로파일러 슬롯, 외부 프로파일러 지점을 담습니다. */
-        struct GPUPassScope
-        {
-            string                 _passName;
-            const ProfileZoneSite* _pZoneSite{ nullptr }; ///< Tracy GPU 구간 이름(패스 이름, 프로세스 수명 동안 유지되는 사본)
-            uint32                 _profilerSlot{ 0xFFFFFFFFu };
-        };
         /**
-         * @brief 패스 번호에서 GPU 스코프 슬롯을 찾는 목록입니다. 패스 이름이 그대로면 매 프레임 슬롯만 꺼냅니다.
-         * @details `registerScope` 는 등록된 스코프 모두(약 80개)를 문자열 비교로 훑는다. 그래서 렌더 스레드가 매 프레임 부르지 않고,
-         *          슬롯의 패스 이름이 바뀔 때만 부른다. 프로파일러는 이름 **포인터**를 보관하므로 이름은 intern 아레나(프로세스가 끝날 때까지
-         *          제자리에 있다)에 둔다. 주의: 늘어나며 옮겨지는 저장소의 `string` 을 넘기면, 짧은 이름(`GPU.Shadow` 처럼 문자열 객체 안에
-         *          들어가는 것)의 포인터가 옮겨진 뒤의 빈 공간을 가리킨다.
+         * @brief 패스별 GPU 시간입니다. 지난 프레임의 타임스탬프를 읽어 프로파일러(`GPU.<패스>`)와 Tracy GPU 타임라인으로 냅니다.
+         * @details 프로파일러는 `initialize` 가 주입한다. 타임스탬프를 쓸지(`isRecording`)도 여기에 묻는다.
+         *          GPU 타임스탬프가 없으면 GPU 비용을 `RT.BeginFrame`(백프레셔) 같은 대리값으로 추측하거나 패스를 하나씩 지워 가며
+         *          차이로 구해야 한다. 그런 추측(클리어, 포맷 비용 등)은 쉽게 틀린다.
          */
-        vector<GPUPassScope> _listGPUPassScope;
-        /// @brief `GPU.Compute` 와 `GPU.Frame` 의 프로파일러 슬롯입니다. 처음 한 번만 등록하므로 프레임마다 선형 탐색을 하지 않습니다.
-        uint32 _gpuComputeScopeSlot;
-        uint32 _gpuFrameScopeSlot;
-        /// @brief 외부 프로파일러(Tracy)의 GPU 타임라인입니다. 엔진 테이블과 같은 타임스탬프를 쓰므로 쿼리는 한 벌만 있습니다.
-        GPUTimelineExporter _gpuTimeline;
-        /// @brief 패스 번호에서 Tracy 지점을 찾는 목록입니다. `_listGPUPassScope` 에서 프레임마다 채우며, 할당을 반복하지 않도록 보관합니다.
-        vector<const ProfileZoneSite*> _listGPUPassSite;
-        /// @brief GPU 시계를 읽지 못한 디바이스입니다. 블로킹 읽기(DX11, Vulkan)를 프레임마다 다시 하지 않기 위해 기억합니다.
-        const IRHIDevice* _pGPUTimelineFailedDevice;
+        GPUPassTimeline _gpuPassTimeline;
         /// @brief 마지막 프레임의 값입니다(getLastIndirectDrawCallCount).
         uint32 _lastIndirectDrawCallCount;
         /// @brief `setInputRoleEnabled( role, false )` 가 켠 비트입니다. 그 역할의 입력은 바인딩하지 않습니다.
@@ -823,22 +791,6 @@ namespace sw
         /** @brief 이번 프레임에 컴퓨트로 드로우 커맨드를 만들 예정인지 반환합니다. 업로드 전에 GPUScene 에 알리는 데 씁니다. */
         bool usesGPUGeneratedCommands() const;
 
-        /**
-         * @brief 지난 프레임의 패스별 GPU 시간을 프로파일러에 `GPU.<패스>` 로 넣습니다.
-         * @details GPU 타임스탬프가 없으면 GPU 비용을 `RT.BeginFrame`(백프레셔) 같은 대리값으로
-         *          추측하거나 패스를 하나씩 지워 가며 차이로 구해야 한다. 그런 추측(클리어, 포맷 비용 등)은 쉽게 틀린다.
-         */
-        void reportGPUPassTimes( IRHIDevice* pDevice );
-        /**
-         * @brief 방금 읽은 타임스탬프를 외부 프로파일러(Tracy)의 GPU 타임라인으로 내보냅니다. 출력이 꺼져 있으면 아무것도 하지 않습니다.
-         * @details 디바이스가 바뀌면 GPU 컨텍스트를 새로 열고(그때 GPU 시계를 한 번 읽는다), 읽기가 싼 시계(DX12, GL)는 몇 프레임마다 다시 맞춘다.
-         */
-        void exportGPUTimeline( IRHIDevice* pDevice );
-        /**
-         * @brief 패스 @p passIndex 의 `GPU.<패스>` 프로파일러 슬롯입니다. 그 슬롯의 패스 이름이 바뀌었을 때만 다시 등록합니다.
-         * @details 파이프라인을 다시 읽어 패스 구성이 바뀌어도 이름 비교로 알아챈다(슬롯마다 문자열 비교 한 번).
-         */
-        uint32 gpuScopeSlotFor( size_t passIndex, const string& passName );
         /**
          * @brief 인스턴스 애니메이션 컴퓨트를 기록합니다(instanceanim.hlsl).
          * @details **컬링보다 먼저** 돌아야 한다. 순서가 뒤집히면 컬링이 이번 프레임에 움직이기 전의
@@ -903,12 +855,8 @@ namespace sw
         RenderPSOCache                       _psoCache;
         unordered_map<hashed_string, uint32> _mapPassNameToIndex;
         RHITextureHandle                     _outputRenderTarget;
-        /**
-         * @brief Present 결과를 받아 두는 텍스처입니다. 0이면 받지 않습니다. 스크린샷이 **최종 화면**을 읽는 경로입니다.
-         * @details 스크린샷은 트랜지언트만 읽을 수 있고 백버퍼는 핸들이 없다. 주의: Present 가 **읽는** 첨부를
-         *          캡처하면 톤맵과 Present 에 합친 후처리가 스크린샷에서 빠진다. Present 결과를 받아 두면 둘 다 담긴다.
-         */
-        RHITextureHandle _presentCapture;
+        /// @brief Present 결과를 받아 두는 텍스처입니다(`-gv_screenshot`). 스크린샷이 **최종 화면**을 읽는 경로이며, 크기는 주 출력을 따릅니다.
+        PresentCaptureTarget _presentCapture;
         /// @brief 캔버스(화면 2D) 렌더러입니다. 아틀라스 사본, 사각형 버퍼, 일괄 드로우를 렌더 스레드에서 처리합니다.
         CanvasRenderer _canvasRenderer;
         /// @brief 그릴 캔버스입니다. 패킷과 `setCanvasFrame` 에서 맞바꾸기로 받으며, 기록 중에는 읽기만 합니다.
@@ -935,9 +883,6 @@ namespace sw
         /// @brief 주 출력(백버퍼, 게임 뷰 RT)의 크기입니다. 주 시점의 풀은 이 크기 × 사각형 × 해상도 배율이고, 화면 사각형 뷰와 Present 캡처는 이 크기를 씁니다.
         uint32 _outputWidth;
         uint32 _outputHeight;
-        /// @brief Present 캡처 텍스처의 크기입니다. 출력 크기가 바뀌면 다시 만듭니다.
-        uint32 _presentCaptureWidth;
-        uint32 _presentCaptureHeight;
         /// @brief 마지막 프레임에 그린 추가 뷰 수입니다.
         uint32 _lastRenderedExtraViewCount;
         /// @brief 씬 직접 경로의 출력 크기(`setOutputSizeOverride`)입니다. 0이면 백버퍼 크기를 씁니다.
@@ -955,7 +900,6 @@ namespace sw
          *          갱신되지 않은(또는 0 으로 찬) 목록을 읽어 모두 같은 인스턴스를 그린다.
          */
         uint8                  _bGPUCullingActive;
-        uint8                  _bPresentCaptureEnabled; ///< `-gv_screenshot` 실행에서만 켠다(전체 화면 복사가 한 번 더 들어간다).
         FrameRendererStatus    _status;
         uint8                  _bCallbacksBound     : 1;
         uint8                  _bPassResourcesReady : 1;
@@ -969,8 +913,6 @@ namespace sw
         atomic<uint8> _sceneViewMode;
         /// @brief 셋업에 없는 출력 대상 포맷(Present, Canvas)을 만났을 때 한 번만 알리기 위한 래치입니다.
         atomic<uint8> _bOutputPSOMissingLogged;
-        /// @brief 출력 RT 와 Present 캡처의 크기나 포맷이 달라 복사를 건너뛴다는 것을 한 번만 알리기 위한 래치입니다.
-        atomic<uint8> _bCaptureMismatchLogged;
         /// @brief 머티리얼 폴백 stride 가 없다는 것을 한 번만 알리기 위한 래치입니다. 드로우 경로이므로 프레임마다 로그를 찍으면 안 됩니다.
         atomic<uint8> _bMaterialFallbackMissingLogged;
         /// @brief 컬러 타깃이 없어 패스를 건너뛴다는 것을 한 번만 알리기 위한 래치입니다. 패스 경로이므로 프레임마다 로그를 찍으면 안 됩니다.

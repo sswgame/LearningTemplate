@@ -49,7 +49,7 @@ namespace sw
         const uint32              poolHeight = MathUtil::max( 1u, static_cast<uint32>( static_cast<float32>( height ) * settings._screenRect._w * settings._resolutionScale + 0.5f ) );
         if ( ensureViewTransients( _mainView, poolWidth, poolHeight ) )
             publishRenderTargets();
-        ensurePresentCapture();
+        _presentCapture.ensure( _pDevice, _outputWidth, _outputHeight );
     }
 
     bool FrameRenderer::ensureViewTransients( ViewTarget& view, uint32 width, uint32 height )
@@ -157,47 +157,12 @@ namespace sw
 
     void FrameRenderer::setPresentCaptureEnabled( bool bEnabled )
     {
-        _bPresentCaptureEnabled = bEnabled ? SW_TRUE : SW_FALSE;
+        _presentCapture.setEnabled( _pDevice, bEnabled );
         if ( bEnabled == false )
-        {
-            if ( _presentCapture != 0 && _pDevice != nullptr )
-            {
-                _pDevice->getResourceFactory()->destroyTexture( _presentCapture );
-                _presentCapture = 0;
-            }
             return;
-        }
         // **여기서 만들어야 한다.** 트랜지언트 할당은 크기가 그대로면 통째로 건너뛰므로, 켜는
         // 시점이 그 뒤면(커맨드라인은 프레임이 돌기 시작한 뒤에야 반영된다) 영영 안 만들어진다.
-        ensurePresentCapture();
-    }
-
-    void FrameRenderer::ensurePresentCapture()
-    {
-        if ( _pDevice == nullptr || _bPresentCaptureEnabled == SW_FALSE )
-            return;
-        // 캡처는 주 출력과 크기가 같아야 한다(주 시점 · 화면 사각형 뷰가 그 안에 그린다). 출력 크기가 바뀌었으면 다시 만든다.
-        const uint32 outputWidth  = _outputWidth != 0 ? _outputWidth : FrameRendererUtil::kDefaultTransientSize;
-        const uint32 outputHeight = _outputHeight != 0 ? _outputHeight : FrameRendererUtil::kDefaultTransientSize;
-        if ( _presentCapture != 0 )
-        {
-            if ( _presentCaptureWidth == outputWidth && _presentCaptureHeight == outputHeight )
-                return;
-            _pDevice->getResourceFactory()->destroyTexture( _presentCapture );
-            _presentCapture = 0;
-        }
-
-        // 포맷은 **계약값**이다. 백버퍼가 실제로 무엇을 채택했든(Vulkan 은 서피스 협상 결과) 캡처는
-        // 늘 같은 포맷이라 PPM 으로 푸는 쪽이 한 가지만 알면 된다. Present PSO 변종에도 이 포맷이 있다.
-        RHITextureDesc captureDesc{};
-        captureDesc._width             = outputWidth;
-        captureDesc._height            = outputHeight;
-        captureDesc._format            = constant::kBackBufferFormat;
-        captureDesc._bIsRenderTarget   = SW_TRUE;
-        captureDesc._bIsShaderResource = SW_TRUE;
-        _presentCapture                = _pDevice->getResourceFactory()->createTexture2D( captureDesc );
-        _presentCaptureWidth           = outputWidth;
-        _presentCaptureHeight          = outputHeight;
+        _presentCapture.ensure( _pDevice, _outputWidth, _outputHeight );
     }
 
     void FrameRenderer::releaseTransientResources()
@@ -211,10 +176,8 @@ namespace sw
         {
             releaseViewTransients( *pView );
         }
-        // 캡처도 트랜지언트와 크기가 같아야 한다. 같이 버리고 ensurePresentCapture 가 새 크기로 만든다.
-        if ( _presentCapture != 0 && _pDevice != nullptr )
-            _pDevice->getResourceFactory()->destroyTexture( _presentCapture );
-        _presentCapture = 0;
+        // 캡처도 트랜지언트와 크기가 같아야 한다. 같이 버리고 다음 ensureTransientResources 가 새 크기로 만든다.
+        _presentCapture.release( _pDevice );
     }
 
     void FrameRenderer::releaseViewTransients( ViewTarget& view )

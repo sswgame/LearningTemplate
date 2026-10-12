@@ -1,0 +1,154 @@
+#include "pch.h"
+
+#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RHI/Support/RHITimestamp.h"
+#include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Frame/GPUPassTimeline.h"
+#include "Engine/Renderer/Frame/PresentCaptureTarget.h"
+#include "Engine/Renderer/Frame/RenderTargetImageFile.h"
+#include "Engine/Renderer/Pipeline/RenderPassAsset.h"
+
+#include "TestFramework/TestFramework.h"
+
+// FrameRenderer 에서 뽑은 조각(GPU 패스 시간 보고 · 렌더 타깃 이미지 변환 · Present 캡처)을 GPU 없이 본다.
+
+namespace
+{
+    /** @brief 모든 칸이 "안 적힘" 인 타임스탬프 프레임입니다. */
+    sw::RHITimestampFrame makeEmptyTimestampFrameInternal()
+    {
+        sw::RHITimestampFrame frame;
+        frame._listMicro.assign( sw::constant::kMaxGPUTimestampSlot, -1.0f );
+        return frame;
+    }
+
+    /** @brief 이름만 채운 패스 서술 목록입니다. 보고는 패스 이름만 읽습니다. */
+    sw::vector<sw::RenderGraphPassDesc> makePassListInternal()
+    {
+        sw::vector<sw::RenderGraphPassDesc> listPass( 3 );
+        listPass[0]._name = "A";
+        listPass[1]._name = "B";
+        listPass[2]._name = "C";
+        return listPass;
+    }
+} // namespace
+
+/**
+ * @brief [GPUPassTimelineTest] 주입한 프로파일러에 패스마다 `GPU.<패스>` 를, 패스 밖으로 `GPU.Compute` · `GPU.Frame` 을 넣고 안 적힌 패스는 뺀다
+ * @details `GPU.Frame` 은 프레임 첫 칸부터 **가장 늦게 끝난** 패스까지다(패스 번호 순이 시간 순이 아니다).
+ */
+SW_TEST_CASE( GPUPassTimelineTest, ReportsPassComputeAndFrameSpansToInjectedProfiler )
+{
+    // 프로파일러는 구간 표가 커서(수백 KB) 힙에 둔다.
+    const sw::unique_ptr<sw::FrameProfiler> pProfiler = sw::make_unique<sw::FrameProfiler>();
+    pProfiler->setEnabled( true );
+
+    sw::GPUPassTimeline timeline;
+    SW_EXPECT_FALSE( timeline.isRecording() );
+    timeline.bindProfiler( pProfiler.get() );
+    SW_EXPECT_TRUE( timeline.isRecording() );
+
+    sw::RHITimestampFrame frame                                            = makeEmptyTimestampFrameInternal();
+    frame._listMicro[sw::FrameRendererUtil::kGPUTimestampSlotFrameBegin]   = 0.0f;
+    frame._listMicro[sw::FrameRendererUtil::kGPUTimestampSlotComputeBegin] = 1.0f;
+    frame._listMicro[sw::FrameRendererUtil::kGPUTimestampSlotComputeEnd]   = 5.0f;
+    frame._listMicro[0]                                                    = 10.0f; // 패스 A
+    frame._listMicro[1]                                                    = 20.0f;
+    frame._listMicro[2]                                                    = 6.0f; // 패스 B
+    frame._listMicro[3]                                                    = 9.0f;
+    frame._listMicro[4]                                                    = 30.0f; // 패스 C — 끝 칸이 안 적혔다
+
+    pProfiler->beginFrame();
+    timeline.reportFrame( frame, makePassListInternal() );
+    pProfiler->endFrame();
+
+    sw::FrameProfiler& profiler = *pProfiler;
+    SW_EXPECT_EQUAL( profiler.getLastFrameNanos( profiler.registerScope( "GPU.A" ) ), static_cast<uint64>( 10'000 ) );
+    SW_EXPECT_EQUAL( profiler.getLastFrameNanos( profiler.registerScope( "GPU.B" ) ), static_cast<uint64>( 3'000 ) );
+    SW_EXPECT_EQUAL( profiler.getLastFrameCount( profiler.registerScope( "GPU.C" ) ), static_cast<uint64>( 0 ) );
+    SW_EXPECT_EQUAL( profiler.getLastFrameNanos( profiler.registerScope( "GPU.Compute" ) ), static_cast<uint64>( 4'000 ) );
+    SW_EXPECT_EQUAL( profiler.getLastFrameNanos( profiler.registerScope( "GPU.Frame" ) ), static_cast<uint64>( 20'000 ) );
+}
+
+/**
+ * @brief [GPUPassTimelineTest] 프로파일러가 없으면 쓰지도 보고하지도 않는다
+ * @details 서비스 없이 렌더러만 쓰는 실행이 이 경로다. 프로파일러를 바꾸면 슬롯을 새 프로파일러에 다시 등록한다.
+ */
+SW_TEST_CASE( GPUPassTimelineTest, WithoutProfilerDoesNothingAndRebindRegistersAgain )
+{
+    sw::GPUPassTimeline   timeline;
+    sw::RHITimestampFrame frame = makeEmptyTimestampFrameInternal();
+    frame._listMicro[0]         = 1.0f;
+    frame._listMicro[1]         = 2.0f;
+    timeline.reportFrame( frame, makePassListInternal() ); // 프로파일러가 없어도 아무 일 없이 돌아온다.
+    SW_EXPECT_FALSE( timeline.isRecording() );
+
+    const sw::unique_ptr<sw::FrameProfiler> pFirst  = sw::make_unique<sw::FrameProfiler>();
+    const sw::unique_ptr<sw::FrameProfiler> pSecond = sw::make_unique<sw::FrameProfiler>();
+    pFirst->setEnabled( true );
+    pSecond->setEnabled( true );
+    // 두 번째 프로파일러에 다른 이름을 먼저 넣어 슬롯 번호가 첫 번째와 어긋나게 한다.
+    (void)pSecond->registerScope( "Other" );
+
+    timeline.bindProfiler( pFirst.get() );
+    timeline.reportFrame( frame, makePassListInternal() );
+    timeline.bindProfiler( pSecond.get() );
+    pSecond->beginFrame();
+    timeline.reportFrame( frame, makePassListInternal() );
+    pSecond->endFrame();
+
+    SW_EXPECT_EQUAL( pSecond->getLastFrameNanos( pSecond->registerScope( "GPU.A" ) ), static_cast<uint64>( 1'000 ) );
+    SW_EXPECT_EQUAL( pSecond->getLastFrameCount( pSecond->registerScope( "Other" ) ), static_cast<uint64>( 0 ) );
+}
+
+/**
+ * @brief [RenderTargetImageFileTest] BGRA 는 채널을 맞바꾸고, half 첨부는 바이트가 아니라 값으로 풀어 [0,1] 로 자른다
+ * @details half 를 바이트로 읽으면 가수 하위 바이트가 색이 된다. 행 간격은 `_rowBytes` 를 따른다.
+ */
+SW_TEST_CASE( RenderTargetImageFileTest, UnpacksBgraAndHalfToRgba8 )
+{
+    sw::RHITextureMipSpan layout{};
+    layout._width    = 1;
+    layout._height   = 2;
+    layout._rowBytes = 8; // 행 간격을 픽셀보다 넓게 둬 다음 행을 행 간격으로 찾는지 본다
+
+    const sw::vector<uint8> bgraBytes{ 10, 20, 30, 40, 0xEE, 0xEE, 0xEE, 0xEE, 50, 60, 70, 80, 0xEE, 0xEE, 0xEE, 0xEE };
+    sw::vector<uint8>       rgbaBytes;
+    SW_ASSERT_TRUE( sw::RenderTargetImageFile::unpackRgba8( bgraBytes, layout, sw::RHIFormat::B8G8R8A8_UNORM, rgbaBytes ) );
+    const sw::vector<uint8> expectedBgra{ 30, 20, 10, 255, 70, 60, 50, 255 };
+    SW_EXPECT_TRUE( rgbaBytes == expectedBgra );
+
+    // half 1.0 = 0x3C00, 0.0 = 0x0000, 2.0 = 0x4000(1 로 잘린다). 리틀 엔디언.
+    sw::RHITextureMipSpan halfLayout{};
+    halfLayout._width    = 1;
+    halfLayout._height   = 1;
+    halfLayout._rowBytes = 8;
+    const sw::vector<uint8> halfBytes{ 0x00, 0x3C, 0x00, 0x00, 0x00, 0x40, 0x00, 0x3C };
+    SW_ASSERT_TRUE( sw::RenderTargetImageFile::unpackRgba8( halfBytes, halfLayout, sw::RHIFormat::R16G16B16A16_FLOAT, rgbaBytes ) );
+    const sw::vector<uint8> expectedHalf{ 255, 0, 255, 255 };
+    SW_EXPECT_TRUE( rgbaBytes == expectedHalf );
+}
+
+/**
+ * @brief [PresentCaptureTargetTest] 디바이스가 없으면 텍스처를 만들지 않고, 크기나 포맷이 다른 출력은 복사 대상이 아니다
+ */
+SW_TEST_CASE( PresentCaptureTargetTest, StaysInactiveWithoutDeviceAndRejectsMismatchedOutput )
+{
+    sw::PresentCaptureTarget capture;
+    SW_EXPECT_FALSE( capture.isEnabled() );
+    capture.setEnabled( nullptr, true );
+    capture.ensure( nullptr, 64, 32 );
+    SW_EXPECT_TRUE( capture.isEnabled() );
+    SW_EXPECT_FALSE( capture.isActive() ); // 디바이스가 없어 텍스처가 없다.
+    SW_EXPECT_EQUAL( capture.getTexture(), static_cast<sw::RHITextureHandle>( 0 ) );
+
+    // 만든 적 없는 캡처의 크기는 0 이라 어떤 출력과도 맞지 않는다. 포맷이 계약값이 아니어도 맞지 않는다.
+    SW_EXPECT_FALSE( capture.matchesOutput( 64, 32, sw::constant::kBackBufferFormat ) );
+    SW_EXPECT_FALSE( capture.matchesOutput( 0, 0, sw::RHIFormat::R16G16B16A16_FLOAT ) );
+    SW_EXPECT_TRUE( capture.matchesOutput( 0, 0, sw::constant::kBackBufferFormat ) );
+
+    sw::vector<uint8>     bytes;
+    sw::RHITextureMipSpan layout{};
+    SW_EXPECT_FALSE( capture.readback( nullptr, bytes, layout ) );
+}

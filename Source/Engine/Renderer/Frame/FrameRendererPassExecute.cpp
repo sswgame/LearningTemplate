@@ -171,7 +171,7 @@ namespace sw
         // 패스 슬롯은 패스 번호로 고정이라 주 시점만 기록한다(추가 뷰가 같은 슬롯을 다시 쓰면 주 시점의 시간이 덮인다).
         const IRHITimestampProvider* pTimestamps   = _pDevice != nullptr ? _pDevice->findTimestampProvider() : nullptr;
         const bool                   bWriteGPUTime = pTimestamps != nullptr && passContext._pCmd != nullptr && isRenderingExtraView() == false &&
-                                   engine::getFrameProfiler().isEnabled() &&
+                                   _gpuPassTimeline.isRecording() &&
                                    static_cast<uint32>( passIndex ) < FrameRendererUtil::kGPUTimedPassCapacity &&
                                    ( timestampBegin + 1u ) < pTimestamps->getTimestampSlotCount();
         if ( bWriteGPUTime )
@@ -627,7 +627,7 @@ namespace sw
                         context._pCmd->endRenderPass();
                     }
                     if ( target._bCaptureFromOutput == SW_TRUE && isLastSwapchainWriter( pPassDesc ) )
-                        copyOutputToPresentCapture( context, target );
+                        _presentCapture.copyFromOutput( *context._pCmd, target._texture, target._width, target._height, target._format );
                     break;
                 }
                 case RenderPassType::Canvas:
@@ -655,7 +655,7 @@ namespace sw
                     if ( target._bCaptureToBack == SW_TRUE && isLastSwapchainWriter( pPassDesc ) )
                         context._pCmd->blitTexture( target._texture, 0 );
                     if ( target._bCaptureFromOutput == SW_TRUE && isLastSwapchainWriter( pPassDesc ) )
-                        copyOutputToPresentCapture( context, target );
+                        _presentCapture.copyFromOutput( *context._pCmd, target._texture, target._width, target._height, target._format );
                     break;
                 }
                 // 실행 코드가 없는 타입이다. 패스 서술이 없는 일반 풀스크린 패스이거나, PSO 슬롯만 있는 엔진 내부 타입이다.
@@ -830,7 +830,7 @@ namespace sw
         const bool bCaptureFromOutput = bOwnOutput == false && _outputRenderTarget != 0 && isPresentCaptureEnabled();
 
         PresentTarget target{};
-        target._texture = bOwnOutput ? ownOutput : bCapture ? _presentCapture
+        target._texture = bOwnOutput ? ownOutput : bCapture ? _presentCapture.getTexture()
                                                             : _outputRenderTarget;
         target._width   = bOwnOutput ? activeView._outputWidth : _outputWidth;
         target._height  = bOwnOutput ? activeView._outputHeight : _outputHeight;
@@ -841,22 +841,6 @@ namespace sw
         target._bCaptureToBack     = bCaptureToBack ? SW_TRUE : SW_FALSE;
         target._bCaptureFromOutput = bCaptureFromOutput ? SW_TRUE : SW_FALSE;
         return target;
-    }
-
-    void FrameRenderer::copyOutputToPresentCapture( const FramePassContext& context, const PresentTarget& target )
-    {
-        // 캡처는 계약 포맷(kBackBufferFormat)으로 출력 크기에 맞춰 만든다(ensurePresentCapture). 게임 뷰 RT 도 같은 포맷이라 그대로 복사된다.
-        const bool bSameSize   = _presentCaptureWidth == target._width && _presentCaptureHeight == target._height;
-        const bool bSameFormat = target._format == constant::kBackBufferFormat;
-        if ( bSameSize == false || bSameFormat == false )
-        {
-            if ( _bCaptureMismatchLogged.exchange( 1 ) == 0 )
-                SW_LOG_WARNING( "Present capture skipped - the output render target (%#x%#, format %#) does not match the capture (%#x%#, format %#)",
-                                target._width, target._height, static_cast<uint32>( target._format ), _presentCaptureWidth, _presentCaptureHeight,
-                                static_cast<uint32>( constant::kBackBufferFormat ) );
-            return;
-        }
-        context._pCmd->blitTexture( target._texture, _presentCapture );
     }
 
     bool FrameRenderer::isLastSwapchainWriter( const RenderGraphPassDesc* pPassDesc ) const
