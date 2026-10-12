@@ -84,6 +84,7 @@ namespace sw
         , _currentCulture{}
         , _listProject{}
         , _mapLooseTable{}
+        , _mapBinaryTable{}
         , _mapLanguageTable{}
         , _mapCultureStatistic{}
         , _listLookupCulture{}
@@ -103,6 +104,7 @@ namespace sw
             std::unique_lock<std::shared_mutex> lock( _mutex );
             _listProject.clear();
             _mapLooseTable.clear();
+            _mapBinaryTable.clear();
             _mapCallback.clear();
             _currentLanguage.clear();
             rebuildTablesLocked();
@@ -459,12 +461,91 @@ namespace sw
         string language;
         {
             std::unique_lock<std::shared_mutex> lock( _mutex );
-            if ( _mapLooseTable.erase( normalizeLanguageCode( languageCode ) ) == 0 )
+            const string                        code         = normalizeLanguageCode( languageCode );
+            const size_t                        erasedLoose  = _mapLooseTable.erase( code );
+            const size_t                        erasedBinary = _mapBinaryTable.erase( code );
+            if ( erasedLoose == 0 && erasedBinary == 0 )
                 return;
             rebuildTablesLocked();
             language = _currentLanguage;
         }
         notifyLanguageChanged( language, language );
+    }
+
+    bool LocalizationManager::loadBinaryTable( const uint8* pData, size_t size )
+    {
+        LocalizationBinaryTable table;
+        string                  error;
+        if ( table.parse( pData, size, &error ) == false )
+        {
+            SW_LOG_WARNING( "Binary localization table is not loaded: %#", error.c_str() );
+            return false;
+        }
+        string oldLanguage;
+        string newLanguage;
+        {
+            std::unique_lock<std::shared_mutex> lock( _mutex );
+            const string                        code = normalizeLanguageCode( table.getCulture() );
+            if ( code.empty() )
+            {
+                SW_LOG_WARNING( "Binary localization table has no culture" );
+                return false;
+            }
+            _mapBinaryTable[code] = std::move( table );
+            oldLanguage           = _currentLanguage;
+            if ( _currentLanguage.empty() )
+                _currentLanguage = code;
+            newLanguage = _currentLanguage;
+            rebuildTablesLocked();
+            rebuildLookupChainLocked();
+        }
+        notifyLanguageChanged( oldLanguage, newLanguage );
+        return true;
+    }
+
+    bool LocalizationManager::loadBinaryTableResource( string_view resourcePath )
+    {
+        vector<uint8> bytes;
+        if ( ResourceIO::readBinaryResource( resourcePath, bytes ) == false )
+        {
+            SW_LOG_WARNING( "Binary localization table '%#' cannot be read", resourcePath );
+            return false;
+        }
+        return loadBinaryTable( bytes.data(), bytes.size() );
+    }
+
+    bool LocalizationManager::cookBinaryTable( string_view languageCode, vector<uint8>& outBytes ) const
+    {
+        const string                        code = normalizeLanguageCode( languageCode );
+        LocalizationBinaryTable             table;
+        std::shared_lock<std::shared_mutex> lock( _mutex );
+        table.setCulture( code );
+        for ( const MountedProject& project : _listProject )
+        {
+            if ( project._project._sourceCulture == code )
+            {
+                for ( const auto& [key, entry] : project._mapSource )
+                {
+                    table.setText( key, entry._source );
+                }
+            }
+            for ( const TranslationTable& translation : project._listTranslation )
+            {
+                if ( translation.getCulture() != code )
+                    continue;
+                for ( const auto& [key, entry] : translation.getEntries() )
+                {
+                    const auto                   sourceIt = project._mapSource.find( key );
+                    const SourceTextEntry* const pSource  = sourceIt != project._mapSource.end() ? &sourceIt->second : nullptr;
+                    if ( translation.computeState( key, pSource ) == TranslationState::Current )
+                        table.setText( key, entry._text );
+                }
+            }
+        }
+        if ( table.getTexts().empty() )
+            return false;
+        table.toBytes( outBytes );
+        return true;
     }
 
     bool LocalizationManager::initialize( string_view projectPath, string_view defaultLanguage, string_view fallbackLanguage )
@@ -584,6 +665,16 @@ namespace sw
                 {
                     pseudoTable.setStringByHash( hashed_string::computeHash( key ), PseudoLocalizer::transform( entry._source, pCulture->_pseudoMode ) );
                 }
+            }
+        }
+
+        // 쿠킹된 이진 표는 프로젝트 위, 낱개 테이블 아래다.
+        for ( const auto& [code, binary] : _mapBinaryTable )
+        {
+            StringTable& table = getOrCreateTableLocked( code );
+            for ( const auto& [keyHash, text] : binary.getTexts() )
+            {
+                table.setStringByHash( keyHash, text );
             }
         }
 
@@ -840,7 +931,7 @@ namespace sw
         string language;
         {
             std::shared_lock<std::shared_mutex> lock( _mutex );
-            if ( _listProject.empty() && _mapLooseTable.empty() )
+            if ( _listProject.empty() && _mapLooseTable.empty() && _mapBinaryTable.empty() )
                 return; // 텍스트를 하나도 로드하지 않은 실행(로컬라이제이션 없는 게임, 테스트)은 모든 키가 빠지므로 알릴 필요가 없다
             language = _currentLanguage;
         }

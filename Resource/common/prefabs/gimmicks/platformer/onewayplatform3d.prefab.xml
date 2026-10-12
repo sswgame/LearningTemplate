@@ -1,0 +1,56 @@
+<Prefab formatVersion="0" name="OneWayPlatform3D">
+	<GameObject _schemaVersion="0" _name="OneWayPlatform3D" _bActive="true">
+		<_listComponent>
+			<RigidBodyComponent _componentName="RigidBodyComponent"
+			                    _bActive="true"
+			                    _localPosition="0,0,0"
+			                    _localRotation="0,0,0"
+			                    _localScale="1,1,1"
+			                    _attachOwner="None"
+			                    _attachOwnerID="0"
+			                    _attachComponent="None"
+			                    _bodyType="Static"
+			                    _layer="Default"
+			                    _material="None"
+			                    _mass="0"
+			                    _linearDamping="0.05"
+			                    _angularDamping="0.05"
+			                    _gravityFactor="1"
+			                    _bTrigger="false"
+			                    _bContinuous="false"
+			                    _bLockRotation="false"
+			                    _bInterpolate="true">
+				<_listShape>
+					<PhysicsShapeDesc3D _type="Box"
+					                    _halfExtents="1.5,0.1,1"
+					                    _radius="0.5"
+					                    _halfHeight="0.5"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _material="None">
+						<_listPoint />
+						<_listIndex />
+					</PhysicsShapeDesc3D>
+				</_listShape>
+			</RigidBodyComponent>
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="3,0.2,2"
+			               _attachOwner="None"
+			               _attachOwnerID="0"
+			               _attachComponent="RigidBodyComponent#0"
+			               _meshID="Cube"
+			               _materialPath="engine/materials/defaultmaterial.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<OneWayPlatformComponent _componentName="OneWayPlatformComponent"
+			                         _bActive="true"
+			                         _normal="0,1,0"
+			                         _bDropThrough="true" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

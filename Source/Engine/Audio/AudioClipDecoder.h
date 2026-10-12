@@ -8,6 +8,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Memory/Memory.h"
 
 namespace sw
 {
@@ -40,6 +41,10 @@ namespace sw
 
 namespace sw
 {
+    struct AudioStreamInfo;
+
+    class IAudioStreamDecoder;
+
     /**
      * @struct AudioClipDecoder
      * @brief 형식마다 하나씩 두고 확장자로 고르는 디코더입니다. 실패하면 false 를 반환하고 @p outPcm 은 건드리지 않습니다.
@@ -48,6 +53,16 @@ namespace sw
     {
         /** @brief RIFF WAV 의 PCM 과 IEEE float(확장형 포함)를 읽습니다. ADPCM 같은 압축 WAV 는 false 를 반환합니다. */
         [[nodiscard]] static bool decodeWav( const uint8* pBytes, size_t byteCount, AudioPcm& outPcm );
+        /**
+         * @brief WAV 의 형식과 `data` 청크 위치만 읽습니다(샘플을 복사하지 않습니다). @p outFormat 의 `_listData` 는 비어 있습니다.
+         * @details 스트리밍이 바이트 안의 샘플 자리를 바로 읽으려고 씁니다. `decodeWav` 가 같은 코드를 씁니다.
+         */
+        [[nodiscard]] static bool parseWavLayout( const uint8* pBytes, size_t byteCount, AudioPcm& outFormat, size_t& outDataOffset, uint32& outDataSize );
+        /**
+         * @brief OGG Vorbis 를 처음부터 순차로 읽는 디코더를 엽니다(스트리밍). 헤더가 틀렸거나 채널이 3 개 이상이면 nullptr 입니다.
+         * @details 디코더는 @p pBytes 를 복사하지 않고 읽으므로 호출한 쪽이 디코더보다 오래 바이트를 지켜야 합니다. 같은 헤더 검사(`decodeOgg`)를 거칩니다.
+         */
+        static unique_ptr<IAudioStreamDecoder> openOggStream( const uint8* pBytes, size_t byteCount, AudioStreamInfo& outInfo );
         /** @brief OGG Vorbis 를 16 비트 정수 PCM 으로 풉니다(stb_vorbis). */
         [[nodiscard]] static bool decodeOgg( const uint8* pBytes, size_t byteCount, AudioPcm& outPcm );
         /** @brief 이 디코더가 확장자로 다루는 형식(`.wav`, `.ogg`)인지 반환합니다. */

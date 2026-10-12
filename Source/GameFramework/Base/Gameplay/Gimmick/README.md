@@ -103,7 +103,9 @@ cd build/Ninja-Debug/Bin
 
 **상태는 바이트 하나입니다**(`saveState`). 걸음 번호, 누적 시간, 노드 출력, 지난 입력, 센서 값, 노드 상태가 들어갑니다. 머리에 회로 모양의 해시가 있어서 다른 회로의 바이트는 거절합니다.
 컴포넌트는 걸음을 낸 틱마다 PROPERTY `_stateBytes` 에 써 두므로 레벨 세이브와 핫 리로드, 플레이 복원이 이어집니다. 체크포인트는 `captureCheckpoint` 와 `restoreCheckpoint` 입니다.
-네트워크 스냅샷과 롤백도 같은 바이트를 씁니다. 무버의 경로 길이는 배치에서 다시 계산하므로 저장하지 않습니다.
+씬 전체의 회로 상태는 `GimmickStateBundle` 이 한 덩어리로 묶습니다(`collect` → `write` / `read` → `apply`). 키는 소유 오브젝트 **이름**의 해시라 오브젝트 id 가 다른 기계끼리도 맞고, 같은 씬이면 바이트가 같습니다.
+롤백은 게임의 `IRollbackGame::saveState` 에서 `collect` + `write` 한 바이트를 싣고 `loadState` 에서 `read` + `apply` 합니다. 네트워크는 `GimmickSnapshotUtil`(NetClientServer 키트)이 회로 상태를 255 바이트 엔티티 조각으로 나눠 `NetSnapshot` 에 싣고 받는 쪽이 `extractBundle` 로 모읍니다.
+구조가 다른 회로나 모르는 이름은 그 항목만 건너뛰고 셉니다(`GimmickStateTest`). 무버의 경로 길이는 배치에서 다시 계산하므로 저장하지 않습니다.
 
 **쉬는 자세는 처음 플레이할 때 한 번 잡아 저장합니다**(`_listRestPose`). 그래야 핫 리로드나 세이브 로드가 움직이던 문의 위치를 쉬는 자세로 착각하지 않습니다.
 
@@ -130,7 +132,7 @@ cd build/Ninja-Debug/Bin
 ### 장르 기믹 세트
 
 `Genre/` 에는 회로와 센서를 다시 쓰는 작은 컴포넌트가 있고, `Resource/common/prefabs/gimmicks/<장르>/` 에 그것을 조립한 프리팹이 있습니다.
-프리팹은 엔진 직렬화기로 쓴 것이라 손으로 고치지 않습니다.
+프리팹은 엔진 직렬화기로 쓴 것이라 손으로 고치지 않습니다(3D 변형은 2D 프리팹을 변환해 쓴 같은 모양의 파일입니다).
 
 | 장르 | 프리팹 | 핵심 컴포넌트 |
 |------|--------|---------------|
@@ -182,7 +184,10 @@ cd build/Ninja-Debug/Bin
 - **원소 테이블에서 이름은 테이블 안에 선언한 것만 씁니다.** 모르는 이름, 규칙, 모양, 원소는 읽기 오류입니다(`ResourceDataSchemaTest` 가 `.elements.xml` 을 읽습니다).
 - **액션 어드벤처 키트의 `AdventureElementGrid` 는 이 격자 위에 키트의 재질과 설정을 더한 것입니다.** 설정 값으로 기본 테이블과 같은 모양의 테이블을 코드로 만들고,
   `ElementRuleTest.AdventureGridMatchesDefaultTable` 이 걸음마다 결과가 같은지 봅니다.
-- **프리팹의 콜라이더는 지금 `BoxCollider2DComponent` 입니다**(트리거 겹침 폴백). 3D 트리거와 강체 콜라이더로 바꾸는 일은 남아 있습니다.
+- **프리팹의 기본 콜라이더는 `BoxCollider2DComponent` 입니다**(2D 겹침). 3D 게임은 같은 폴더의 `<이름>3d.prefab.xml` 변형을 씁니다 — 2D 콜라이더 대신 `RigidBodyComponent` 박스를 든 프리팹입니다.
+  폭 · 높이는 2D 콜라이더의 `_offsetScale` 과 같고 깊이는 메시의 z 배율(메시가 없으면 장치별 값)이며, 트리거 설정은 그대로입니다. 움직이는 장치(움직이는 발판, 엘리베이터, 문, 미는 블록)는 `Kinematic`
+  (트랜스폼이 원본이라 `Mover` 와 `Door` 가 옮기고 밀린 동적 바디가 속도를 받음), 나머지는 `Static` 입니다. 나머지 컴포넌트와 회로는 2D 짝과 같고(`GimmickGenreTest.Gimmick3DVariantsMirrorTheir2DPrefabs`),
+  3D 에서 겹침이 `onOverlapBegin` 으로 오는지는 장치마다 3D 씬에서 확인해야 합니다.
 - **Windows 헤더는 `near` 와 `far` 를 빈 매크로로 정의합니다.** 지역 변수 이름으로 쓰면 컴파일이 이상하게 깨집니다.
 
 ## 더 볼 곳

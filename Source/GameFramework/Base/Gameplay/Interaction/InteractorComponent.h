@@ -89,6 +89,8 @@ namespace sw
         float32 _keepDistanceScale;
 
         InteractionSession              _session;
+        hashed_string                   _resumeState; ///< 몽타주를 틀기 전 애니메이터 상태입니다. 취소하면 이 상태로 돌아갑니다(몽타주가 없었으면 비어 있다).
+        int32                           _montageStep; ///< 이번 상호작용에서 몽타주를 튼 단계 번호입니다(상호작용이 아니면 −1).
         InteractionPrompt               _prompt;
         vector<InteractionCandidate>    _listCandidate;
         vector<ComponentHandle>         _listCandidateComponent;

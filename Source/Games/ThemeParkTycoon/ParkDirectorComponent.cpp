@@ -50,9 +50,10 @@ namespace sw
             static constexpr float32 kRailTopDepth    = 0.7f;
             static constexpr float32 kRailBottomDepth = 1.0f;
 
-            static constexpr const utf8* kSoundError  = "game/themepark/sounds/error_001.ogg";
-            static constexpr const utf8* kSoundBuilt  = "game/themepark/sounds/confirmation_001.ogg";
-            static constexpr const utf8* kSoundSelect = "game/themepark/sounds/select_001.ogg";
+            // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 themepark.audioevents.xml 이 정한다.
+            static constexpr const utf8* kEventBlocked = "Blocked";
+            static constexpr const utf8* kEventBuilt   = "Built";
+            static constexpr const utf8* kEventSelect  = "Select";
 
             /** @brief 오브젝트의 메시를 위치, 회전, 크기로 둡니다. 메시가 없으면 nullptr 입니다. */
             static MeshComponent* placeMesh( GameObject* pObject, const float3& position, const float3& rotation )
@@ -260,7 +261,7 @@ namespace sw
         if ( _wallet.canAfford( _settings._currency, placement._buildCost ) == false )
         {
             SW_LOG_INFO( "[Park] not enough cash for %# ($%# needed, $%# in the bank)", placement._ride._name.c_str(), placement._buildCost, _wallet.getBalance( _settings._currency ) );
-            getSoundQueue().queueClip( ParkDirectorComponentInternal::kSoundError );
+            getSoundQueue().queueEvent( ParkDirectorComponentInternal::kEventBlocked );
             return false;
         }
 
@@ -298,7 +299,7 @@ namespace sw
         if ( pCoaster != nullptr )
             _listCoaster.push_back( std::move( pCoaster ) );
         SW_LOG_INFO( "[Park] built %# for $%# - ticket $%#, $%# left", ride._name.c_str(), placement._buildCost, ride._price, _wallet.getBalance( _settings._currency ) );
-        getSoundQueue().queueClip( ParkDirectorComponentInternal::kSoundBuilt );
+        getSoundQueue().queueEvent( ParkDirectorComponentInternal::kEventBuilt );
         _listPendingRideView.push_back( placementIndex );
         return true;
     }
@@ -597,7 +598,7 @@ namespace sw
         if ( inputMap.wasActionTriggered( hashed_string( "Park.NextRide" ) ) && _listPlacement.empty() == false )
         {
             _selectedPlacement = ( _selectedPlacement + 1 ) % static_cast<int32>( _listPlacement.size() );
-            getSoundQueue().queueClip( ParkDirectorComponentInternal::kSoundSelect );
+            getSoundQueue().queueEvent( ParkDirectorComponentInternal::kEventSelect );
             [[maybe_unused]] const RidePlacement& placement = _listPlacement[static_cast<size_t>( _selectedPlacement )];
             SW_LOG_INFO( "[Park] selected %# (%#)", placement._ride._name.c_str(), placement._rideIndex >= 0 ? "built" : "not built - B to build" );
         }

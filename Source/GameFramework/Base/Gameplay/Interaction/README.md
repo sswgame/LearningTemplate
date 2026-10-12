@@ -45,6 +45,10 @@
 없으면 오브젝트 원점과 앞을 씁니다. 상호작용을 시작하면 하는 쪽의 `MotionWarpingComponent` 에 그 위치와 요를 워프 목표로 넣습니다. 목표 이름은 마커 이름이고, 없으면 `Interaction` 입니다.
 그래서 상호작용 클립의 `MotionWarp` 구간이 손을 문고리에 맞춥니다.
 
+**몽타주.** 단계(`<Step>`)나 상호작용(`<Interaction>`, 단계의 기본값)에 `montage="CraftHammer"` 를 적으면, 그 단계가 시작될 때 하는 쪽의 `SkeletalAnimatorComponent` 가 그 이름의 상태나 클립을 한 번 재생합니다
+(시작은 첫 단계, 마지막이 아닌 단계를 끝내면 다음 단계). 애니메이터가 없거나 그래프에 없는 이름이면 재생하지 않고 상호작용은 그대로 갑니다. 취소하면 몽타주를 끊고 재생 전 상태로 돌아가며,
+끝까지 가면 그 상태가 그래프에서 끝나면 나가는 전환을 가져야 합니다 — 돌아가는 일은 애니메이터 그래프가 합니다.
+
 **시야**는 `WorldQuery` 로 묻습니다. 물리 서비스가 없으면 씬의 강체 물리(`ScenePhysicsWorldQuery`)와 `PhysicsOverlapWorld` AABB 중 가까운 것을 씁니다. 쏘는 쪽의 바디는 건너뛰고, 트리거는 막지 않습니다.
 틱 워커에서 묻지만, 물리 스텝은 틱 그룹 사이에 돌므로 질의와 겹치지 않습니다.
 
@@ -56,6 +60,8 @@
 ## 확장하는 법
 
 - **새 상호작용 종류**는 데이터에 정의를 더합니다. 코드가 필요한 결과는 `InteractionCompletedEvent` 를 받아 처리합니다.
+- **NPC 일정과 잇기.** `SmartObjectScheduleLocator` 는 일정의 `UseObject` 가 씬의 스마트 오브젝트 슬롯을 시간 창으로 예약하게 하는 제공자이고(`claimReserved` 로 블록이 시작될 때 점유),
+  `InteractionInterruptionSystem` 은 상호작용(말 걸기) 중인 대상 NPC 에 일정의 끼어들기(`Talk`)를 쌓고 끝나면 뺍니다. 둘 다 게임 스레드에서 부릅니다. 자세한 쓰임은 [AI/Schedule](../../Actor/AI/Schedule/README.md) 의 "확장하는 법"입니다.
 - **네트워크 게임**은 `IInteractionAuthority` 를 구현해 하는 쪽에 등록합니다. 권한이 `Server` 면 시작 전에 허락을 묻고, 완료를 알립니다.
 
 ## 함정과 주의

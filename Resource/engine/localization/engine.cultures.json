@@ -3,6 +3,8 @@
         "ar": {
             "nativeName": "العربية",
             "pluralRule": "arabic",
+            "currencyCode": "SAR",
+            "currencyPattern": "¤ #",
             "rightToLeft": true,
             "digits": "arab",
             "decimalSeparator": "٫",
@@ -58,6 +60,8 @@
         "de": {
             "nativeName": "Deutsch",
             "pluralRule": "english",
+            "currencyCode": "EUR",
+            "currencyPattern": "# ¤",
             "decimalSeparator": ",",
             "groupSeparator": ".",
             "percentPattern": "# %",
@@ -110,6 +114,9 @@
         "en": {
             "nativeName": "English",
             "pluralRule": "english",
+            "ordinalRule": "english",
+            "currencyCode": "USD",
+            "currencyPattern": "¤#",
             "rightToLeft": false,
             "digits": "latn",
             "decimalSeparator": ".",
@@ -164,6 +171,7 @@
         "en_gb": {
             "parent": "en",
             "nativeName": "English (UK)",
+            "currencyCode": "GBP",
             "datePatterns": {
                 "short": "dd/MM/y",
                 "medium": "d MMM y",
@@ -181,6 +189,8 @@
         "es": {
             "nativeName": "Español",
             "pluralRule": "english",
+            "currencyCode": "EUR",
+            "currencyPattern": "# ¤",
             "decimalSeparator": ",",
             "groupSeparator": ".",
             "percentPattern": "# %",
@@ -233,6 +243,9 @@
         "fr": {
             "nativeName": "Français",
             "pluralRule": "french",
+            "ordinalRule": "french",
+            "currencyCode": "EUR",
+            "currencyPattern": "# ¤",
             "decimalSeparator": ",",
             "groupSeparator": " ",
             "percentPattern": "# %",
@@ -285,6 +298,8 @@
         "ja": {
             "nativeName": "日本語",
             "pluralRule": "none",
+            "currencyCode": "JPY",
+            "currencyPattern": "¤#",
             "datePatterns": {
                 "short": "y/MM/dd",
                 "medium": "y/MM/dd",
@@ -336,6 +351,8 @@
         "ko": {
             "nativeName": "한국어",
             "pluralRule": "none",
+            "currencyCode": "KRW",
+            "currencyPattern": "¤#",
             "datePatterns": {
                 "short": "yy. M. d.",
                 "medium": "y. M. d.",
@@ -387,6 +404,8 @@
         "pl": {
             "nativeName": "Polski",
             "pluralRule": "polish",
+            "currencyCode": "PLN",
+            "currencyPattern": "# ¤",
             "decimalSeparator": ",",
             "groupSeparator": " ",
             "percentPattern": "#%",
@@ -450,6 +469,8 @@
         "ru": {
             "nativeName": "Русский",
             "pluralRule": "russian",
+            "currencyCode": "RUB",
+            "currencyPattern": "# ¤",
             "decimalSeparator": ",",
             "groupSeparator": " ",
             "percentPattern": "# %",
@@ -502,6 +523,8 @@
         "zh": {
             "nativeName": "简体中文",
             "pluralRule": "none",
+            "currencyCode": "CNY",
+            "currencyPattern": "¤#",
             "datePatterns": {
                 "short": "y/M/d",
                 "medium": "y年M月d日",
@@ -552,6 +575,7 @@
         "zh_tw": {
             "parent": "zh",
             "nativeName": "繁體中文",
+            "currencyCode": "TWD",
             "timePatterns": {
                 "short": "a h:mm",
                 "medium": "a h:mm:ss"

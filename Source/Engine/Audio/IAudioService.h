@@ -100,6 +100,19 @@ namespace sw
 
         /** @brief 믹서 그래프를 리소스에서 읽어 교체합니다(게임이 자기 그래프를 쓸 때). 읽기나 검사에 실패하면 false 를 반환하고 현재 그래프를 그대로 씁니다. */
         [[nodiscard]] bool loadMixer( string_view resourcePath );
+        /** @brief 마지막으로 읽은 믹서 그래프의 리소스 경로입니다. 코드의 기본 그래프를 쓰면 비어 있습니다. */
+        const string& getMixerPath() const { return _mixerPath; }
+
+        /**
+         * @brief 그 경로가 지금 쓰는 오디오 데이터(믹서 그래프 · 이벤트 라이브러리)의 파일인지 반환합니다. 모르는 경로로 이름을 intern 하지 않습니다.
+         * @details 핫 리로드가 바뀐 파일마다 묻는 길이다(`AudioReloadCache`).
+         */
+        bool isDataFile( string_view resourcePath ) const;
+        /**
+         * @brief 바뀐 오디오 데이터 파일을 다시 읽어 바꿉니다. 믹서 그래프면 `loadMixer`, 이벤트 라이브러리면 같은 이름으로 `loadEventLibrary`(쿨다운과 순서 커서는 이름으로 이어지고 재생 중인 인스턴스는 끝까지 옛 것을 씁니다).
+         * @return 읽기나 검사에 실패하면 false 이고 지금 것을 그대로 씁니다. 오디오 데이터 파일이 아니면 false 입니다.
+         */
+        [[nodiscard]] bool reloadDataFile( string_view resourcePath );
 
         /** @brief 엔진을 반환합니다. 이벤트, 파라미터, 스냅샷, 음악, 공간화는 여기서 씁니다. */
         AudioEngine& getEngine() { return *_pEngine; }
@@ -152,6 +165,7 @@ namespace sw
         vector<AudioBusVolume>  _listBusVolume;    /**< 세 기본 버스 밖의 버스 볼륨입니다. */
         vector<float32>         _listOfflineBlock; /**< 장치가 없을 때 렌더하는 버퍼입니다. */
         string                  _musicPath;        /**< 마지막으로 요청된 배경음악 경로입니다. */
+        string                  _mixerPath;        /**< 마지막으로 읽은 믹서 그래프 경로입니다. */
         AudioPlayingID          _musicPlayingID;   /**< 배경음악 재생 id 입니다. */
         float64                 _offlineFrameDebt; /**< 장치가 없을 때 아직 렌더하지 않은 프레임(소수)입니다. */
         float32                 _masterVolume;     /**< 마스터 볼륨 [0,1] 입니다. */

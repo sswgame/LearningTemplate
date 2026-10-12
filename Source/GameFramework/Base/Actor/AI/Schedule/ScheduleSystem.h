@@ -256,6 +256,12 @@ namespace sw
         ScheduleLOD getNpcLOD( int32 npcIndex ) const;
         void        addNpcTag( int32 npcIndex, const TagID& tag );
         void        removeNpcTag( int32 npcIndex, const TagID& tag );
+        /**
+         * @brief NPC 의 호감도(관계 단계 — 하트 수 같은 정수)를 정합니다. 조건의 `minAffinity` · `maxAffinity` 가 읽습니다. 값이 바뀌면 그 NPC 의 계획을 다시 세웁니다.
+         * @details 기본은 0 입니다. 저장 상태에 실립니다(`ScheduleNpcSaveState::_affinity`).
+         */
+        void  setNpcAffinity( int32 npcIndex, int32 affinity );
+        int32 getNpcAffinity( int32 npcIndex ) const;
 
         /** @brief 끼어들기(카탈로그 `<Interrupt>` id)를 쌓습니다. 모르는 id 면 경고하고 false, 이미 있으면 만료만 다시 셉니다. */
         bool pushInterruption( int32 npcIndex, const hashed_string& interruptID );
@@ -314,11 +320,12 @@ namespace sw
             int32                   _defIndex{ -1 };
             int32                   _originMinute{ 0 }; ///< 0 일 0:00 부터
             int32                   _planDay{ -1 };
+            int32                   _affinity{ 0 }; ///< 호감도(관계 단계). 바뀌면 `_bTagsDirty` 로 계획을 다시 세운다
             int32                   _wakeMinute{ 0 };
             ScheduleNpcPhase        _emittedPhase{ ScheduleNpcPhase::Performing };
             ScheduleLOD             _lod{ ScheduleLOD::Far };
-            uint8                   _bTagsDirty{ SW_FALSE };
-            uint8                   _bEmitted{ SW_FALSE }; ///< `_emittedSegment` 가 유효한가
+            uint8                   _bTagsDirty{ SW_FALSE }; ///< 태그나 호감도가 바뀌었다 — 다음 시간 흐름에서 계획을 다시 세운다
+            uint8                   _bEmitted{ SW_FALSE };   ///< `_emittedSegment` 가 유효한가
         };
 
         /** @brief 계획 칸 후보 하나(루틴 · 행사의 칸)입니다. */

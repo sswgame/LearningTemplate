@@ -78,6 +78,10 @@ namespace sw
         static void collectRuleNames( vector<string>& outListName );
         /** @brief 범주의 키워드(`one` …)입니다. */
         static const utf8* getCategoryName( PluralCategory category );
+        /** @brief 서수 규칙 이름의 함수입니다(`selectordinal` 이 씁니다). 모르는 이름이면 nullptr 입니다. `none`(other 하나), `english`(1st · 2nd · 3rd · 4th), `french`(1er · 2e) 가 있습니다. */
+        static PluralRuleFunc findOrdinalRule( string_view ruleName );
+        /** @brief 등록된 서수 규칙 이름을 모읍니다. */
+        static void collectOrdinalRuleNames( vector<string>& outListName );
         /** @brief 키워드를 범주로 읽습니다. 모르는 키워드면 false 입니다. */
         [[nodiscard]] static bool tryParseCategory( string_view keyword, PluralCategory& outCategory );
     };
@@ -85,15 +89,21 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 날짜와 시각 값입니다(달력은 그레고리력이고 시간대는 없으며, 받은 값을 그대로 씁니다). */
+    /**
+     * @brief 날짜와 시각 값입니다(달력은 그레고리력입니다).
+     * @details 값은 받은 그대로 쓰고 시간대 변환은 하지 않습니다. 시간대가 필요하면 `TimeZoneUtil::convertUnixMilliseconds` 가 UTC 시각을 그 시간대의 값으로 바꾸고
+     *          `_bZoned` 와 `_utcOffsetMinutes` 를 채웁니다(패턴의 `z` 가 그 오프셋을 씁니다).
+     */
     struct TextDateTime
     {
         int32 _year{ 1970 };
-        uint8 _month{ 1 }; ///< 1..12
-        uint8 _day{ 1 };   ///< 1..31
-        uint8 _hour{ 0 };  ///< 0..23
+        int16 _utcOffsetMinutes{ 0 }; ///< UTC 와의 차이이며 `_bZoned` 일 때만 뜻이 있습니다.
+        uint8 _month{ 1 };            ///< 1..12
+        uint8 _day{ 1 };              ///< 1..31
+        uint8 _hour{ 0 };             ///< 0..23
         uint8 _minute{ 0 };
         uint8 _second{ 0 };
+        bool  _bZoned{ false };
     };
 } // namespace sw
 
@@ -109,9 +119,12 @@ namespace sw
         string           _parentCode; ///< 물려받는 문화권(없으면 빈 값)
         string           _nativeName; ///< 자기 언어로 쓴 이름(언어 선택 메뉴)
         string           _pluralRuleName;
+        string           _ordinalRuleName;
         string           _decimalSeparator;
         string           _groupSeparator;
-        string           _percentPattern; ///< `#` 위치에 숫자가 들어갑니다(`#%`, `# %`).
+        string           _percentPattern;  ///< `#` 위치에 숫자가 들어갑니다(`#%`, `# %`).
+        string           _currencyCode;    ///< 이 문화권의 기본 통화(ISO 4217, `KRW`)입니다.
+        string           _currencyPattern; ///< `#` 위치에 숫자가, `¤` 위치에 통화 기호가 들어갑니다(`¤#`, `# ¤`).
         string           _dateShort;
         string           _dateMedium;
         string           _dateLong;
@@ -122,6 +135,7 @@ namespace sw
         vector<string>   _listDayPeriod;         ///< 2 개(오전, 오후)이며 `a` 에 씁니다.
         vector<string>   _listFont;              ///< 폰트 대체 목록입니다(패밀리 이름이며 앞이 우선). UI 폰트 렌더러가 읽습니다.
         PluralRuleFunc   _pPluralRule;
+        PluralRuleFunc   _pOrdinalRule;
         NumeralSystem    _numeralSystem;
         PseudoLocaleMode _pseudoMode;
         bool             _bRightToLeft;
@@ -130,6 +144,8 @@ namespace sw
 
         /** @brief 복수형 범주를 고릅니다. */
         PluralCategory selectPlural( const PluralOperands& operands ) const;
+        /** @brief 서수(1st · 2nd) 범주를 고릅니다. */
+        PluralCategory selectOrdinal( const PluralOperands& operands ) const;
         /** @brief 의사 로컬라이제이션 문화권인지입니다. */
         bool isPseudo() const { return _pseudoMode != PseudoLocaleMode::None; }
 
@@ -139,6 +155,11 @@ namespace sw
         string formatDecimal( float64 value, uint32 minFraction, uint32 maxFraction ) const;
         /** @brief 비율(0.5 → 50 %)을 이 문화권의 백분율 패턴으로 씁니다. */
         string formatPercent( float64 ratio ) const;
+        /**
+         * @brief 금액을 통화 패턴으로 씁니다. 소수 자리는 통화가 정합니다(KRW · JPY 0, USD · EUR 2).
+         * @param currencyCode ISO 4217 코드이며 비우면 이 문화권의 기본 통화입니다. 모르는 코드는 기호 자리에 코드를 쓰고 소수 2 자리입니다.
+         */
+        string formatCurrency( float64 amount, string_view currencyCode ) const;
         /** @brief 날짜와 시각을 CLDR 패턴(`y`, `M`, `d`, `H`, `h`, `m`, `s`, `a`, 작은따옴표 텍스트)으로 씁니다. */
         string formatDateTime( const TextDateTime& value, string_view pattern ) const;
         /** @brief `short`, `medium`, `long` 날짜 패턴입니다. 모르는 이름이면 빈 값입니다. */

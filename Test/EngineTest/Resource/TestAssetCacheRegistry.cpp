@@ -61,7 +61,7 @@ SW_TEST_CASE( AssetCacheRegistryTest, BuiltInCachesAreReachableThroughTheRegistr
 {
     sw::AssetManager resources;
 
-    SW_ASSERT_EQUAL( size_t( 17 ), resources.getAllAssetCache().size() );
+    SW_ASSERT_EQUAL( size_t( 18 ), resources.getAllAssetCache().size() );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Material" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Texture" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Prefab" ) );
@@ -70,6 +70,7 @@ SW_TEST_CASE( AssetCacheRegistryTest, BuiltInCachesAreReachableThroughTheRegistr
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Skeleton" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "AnimationClip" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "StringTable" ) );
+    SW_EXPECT_NOT_NULL( resources.findAssetCache( "AudioData" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Rig" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "SocketSet" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "AnimationNotifyTable" ) );

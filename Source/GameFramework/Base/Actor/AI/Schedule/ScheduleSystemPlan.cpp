@@ -490,14 +490,16 @@ namespace sw
         const ScheduleConditionVocabulary& vocabulary = _pCatalog->getVocabulary();
         const WorldClockSettings&          clock      = _settings._clock;
         ScheduleConditionContext           context;
-        context._pFlags      = _pFlags;
-        context._pNpcTags    = &_listNpc[static_cast<size_t>( npcIndex )]._tags;
-        context._pWorldTags  = _pWorldTags;
-        context._weather     = _weather;
-        context._day         = day;
-        context._dayOfSeason = day % clock._daysPerSeason + 1;
-        context._season      = clock._listSeason[static_cast<size_t>( ( day / clock._daysPerSeason ) % static_cast<int32>( clock._listSeason.size() ) )];
-        context._chanceKey   = ScheduleSystemPlanInternal::mixKey( chanceKey, _settings._seed );
+        context._pFlags       = _pFlags;
+        context._pNpcTags     = &_listNpc[static_cast<size_t>( npcIndex )]._tags;
+        context._pWorldTags   = _pWorldTags;
+        context._weather      = _weather;
+        context._day          = day;
+        context._dayOfSeason  = day % clock._daysPerSeason + 1;
+        context._affinity     = _listNpc[static_cast<size_t>( npcIndex )]._affinity;
+        context._pSeasonOrder = &clock._listSeason;
+        context._season       = clock._listSeason[static_cast<size_t>( ( day / clock._daysPerSeason ) % static_cast<int32>( clock._listSeason.size() ) )];
+        context._chanceKey    = ScheduleSystemPlanInternal::mixKey( chanceKey, _settings._seed );
         if ( vocabulary._listWeekday.empty() == false )
             context._weekday = vocabulary._listWeekday[static_cast<size_t>( day % static_cast<int32>( vocabulary._listWeekday.size() ) )];
         return context;

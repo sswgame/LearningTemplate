@@ -171,6 +171,46 @@ namespace sw
         return fadeDistance <= 0.0f ? 1.0f : MathUtil::saturate( depth / fadeDistance );
     }
 
+    AudioSpatialResult AudioSpatializer::combineListeners( const AudioSpatialResult* pResult, uint32 count, AudioListenerMixMode mode )
+    {
+        if ( pResult == nullptr || count == 0 )
+            return AudioSpatialResult{};
+        uint32 loudest = 0;
+        for ( uint32 index = 1; index < count; ++index )
+        {
+            if ( pResult[loudest]._gain < pResult[index]._gain )
+                loudest = index;
+        }
+        if ( mode == AudioListenerMixMode::Loudest || count == 1 )
+            return pResult[loudest];
+
+        float32 powerSum    = 0.0f;
+        float32 panPowerSum = 0.0f;
+        float32 openestHz   = 0.0f;
+        float32 nearest     = pResult[0]._distance;
+        bool    bAnyAudible = false;
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            const AudioSpatialResult& result = pResult[index];
+            const float32             power  = result._gain * result._gain;
+            powerSum += power;
+            panPowerSum += power * result._pan;
+            nearest = MathUtil::min( nearest, result._distance );
+            if ( 0.0f < result._gain )
+            {
+                openestHz   = bAnyAudible ? MathUtil::max( openestHz, result._lowPassHz ) : result._lowPassHz;
+                bAnyAudible = true;
+            }
+        }
+        AudioSpatialResult combined = pResult[loudest];
+        combined._gain              = MathUtil::min( MathUtil::sqrt( powerSum ), MathUtil::max( 1.0f, pResult[loudest]._gain ) );
+        combined._pan               = 0.0f < powerSum ? panPowerSum / powerSum : pResult[loudest]._pan;
+        combined._distance          = nearest;
+        if ( bAnyAudible )
+            combined._lowPassHz = openestHz;
+        return combined;
+    }
+
     AudioSpatialResult AudioSpatializer::compute( const AudioListenerState& listener, const AudioEmitterState& emitter, const AudioAttenuationDesc& attenuation,
                                                   const AudioOcclusionDesc& occlusion )
     {

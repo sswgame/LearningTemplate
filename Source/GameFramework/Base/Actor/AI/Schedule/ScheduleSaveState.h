@@ -57,6 +57,8 @@ namespace sw
         float3 _heldPosition{}; ///< 끼어든 동안 머문 자리(게임이 알린 자리)
         PROPERTY()
         int32 _originMinute{ 0 };
+        PROPERTY()
+        int32 _affinity{ 0 }; ///< 호감도(관계 단계). 필드가 없는 옛 저장은 0 이다(PROPERTY 기본값)
     };
 } // namespace sw
 

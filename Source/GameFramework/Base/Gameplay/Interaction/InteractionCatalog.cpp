@@ -22,8 +22,8 @@ namespace sw
         {
             static constexpr const utf8* kArrInteractionAttribute[] = { "id", "prompt", "mode", "duration", "presses", "decay",
                                                                         "maxParticipants", "maxDistance", "maxAngle", "lineOfSight", "cooldown", "requiredTags",
-                                                                        "forbiddenTags", "alignment", "highlight", "authority" };
-            static constexpr const utf8* kArrStepAttribute[]        = { "prompt", "mode", "duration", "presses", "decay", "maxParticipants" };
+                                                                        "forbiddenTags", "alignment", "highlight", "authority", "montage" };
+            static constexpr const utf8* kArrStepAttribute[]        = { "prompt", "mode", "duration", "presses", "decay", "maxParticipants", "montage" };
             static constexpr const utf8* kArrSmartObjectAttribute[] = { "id" };
             static constexpr const utf8* kArrSlotAttribute[]        = { "id", "offset", "yaw", "tags" };
 
@@ -55,13 +55,16 @@ namespace sw
                 { outTags.addTag( TagID::request( token ) ); } );
             }
 
-            /** @brief 단계 속성(mode, prompt, duration, presses, decay, maxParticipants)을 읽습니다. 빠진 속성은 @p inoutStep 의 값을 그대로 둡니다. */
+            /** @brief 단계 속성(mode, prompt, montage, duration, presses, decay, maxParticipants)을 읽습니다. 빠진 속성은 @p inoutStep 의 값을 그대로 둡니다. */
             [[nodiscard]] static bool readStep( const XMLNode& node, InteractionStepDef& inoutStep, string_view sourceName )
             {
                 const bool  bValid  = readEnum( node, "mode", inoutStep._mode, sourceName );
                 const utf8* pPrompt = node.findAttribute( "prompt" );
                 if ( pPrompt != nullptr )
                     inoutStep._prompt = hashed_string( pPrompt );
+                const utf8* pMontage = node.findAttribute( "montage" );
+                if ( pMontage != nullptr )
+                    inoutStep._montage = hashed_string( pMontage );
                 inoutStep._duration        = MathUtil::max( 0.0f, node.getAttributeFloat( "duration", inoutStep._duration ) );
                 inoutStep._presses         = MathUtil::max( 1, node.getAttributeInt( "presses", inoutStep._presses ) );
                 inoutStep._decay           = MathUtil::max( 0.0f, node.getAttributeFloat( "decay", inoutStep._decay ) );

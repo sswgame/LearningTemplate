@@ -62,6 +62,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Audio/AudioStream.h"
+
 namespace sw
 {
     namespace
@@ -144,31 +146,102 @@ namespace sw
                 return true;
             }
         };
+
+        /**
+         * @brief 디코더 메모리를 우리 버퍼 한 덩어리에서 나눠 주며 stb_vorbis 를 엽니다. 모자라면(VORBIS_outofmem) 두 배로 다시 열고, 상한을 넘으면 실패합니다.
+         * @details stb 는 깨진 헤더의 오류 경로에서 `setup_temp_malloc` 으로 잡은 임시 버퍼를 해제하지 않는데(변이한 Ogg 로 재현된다), 우리 버퍼 안이면 함께 버려진다.
+         *          조작한 헤더가 수백 MB 를 요구하는 경우도 여기서 막힌다. 열린 디코더는 @p inoutListArena 를 닫을 때까지 써서 호출한 쪽이 디코더와 같이 쥐어야 한다.
+         */
+        struct OggOpenUtil
+        {
+            static constexpr size_t kInitialArenaBytes = 256 * 1024;
+            static constexpr size_t kMaxArenaBytes     = 64 * 1024 * 1024;
+
+            static stb_vorbis* openWithArena( const uint8* pBytes, size_t byteCount, vector<uint8>& inoutListArena )
+            {
+                if ( pBytes == nullptr || byteCount < 4 || byteCount > static_cast<size_t>( INT32_MAX ) || Memory::compare( pBytes, "OggS", 4 ) != 0 )
+                    return nullptr;
+                if ( OggCommentHeaderGuard::isCommentHeaderSane( pBytes, byteCount ) == false )
+                    return nullptr;
+                stb_vorbis* pVorbis = nullptr;
+                for ( size_t arenaBytes = kInitialArenaBytes; arenaBytes <= kMaxArenaBytes; arenaBytes *= 2 )
+                {
+                    inoutListArena.resize( arenaBytes );
+                    stb_vorbis_alloc alloc{ reinterpret_cast<utf8*>( inoutListArena.data() ), static_cast<int32>( arenaBytes ) };
+                    int32            error = VORBIS__no_error;
+                    pVorbis                = stb_vorbis_open_memory( pBytes, static_cast<int32>( byteCount ), &error, &alloc );
+                    if ( pVorbis != nullptr || error != VORBIS_outofmem )
+                        break;
+                }
+                return pVorbis;
+            }
+        };
+
+        /** @brief stb_vorbis 로 OGG 를 앞으로 가며 float 로 푸는 스트리밍 디코더입니다. 채널은 파일 그대로(1 ~ 2)입니다. */
+        class OggStreamDecoder final : public IAudioStreamDecoder
+        {
+        public:
+            OggStreamDecoder( stb_vorbis* pVorbis, vector<uint8>&& listArena, int32 channelCount, uint32 frameCount )
+                : _listArena{ std::move( listArena ) }
+                , _pVorbis{ pVorbis }
+                , _frameCount{ frameCount }
+                , _channelCount{ channelCount }
+            {
+            }
+
+            ~OggStreamDecoder() override
+            {
+                if ( _pVorbis != nullptr )
+                    stb_vorbis_close( _pVorbis );
+            }
+
+            uint32 readFrames( float32* pOut, uint32 frameCount ) override
+            {
+                const int32 decoded = stb_vorbis_get_samples_float_interleaved( _pVorbis, _channelCount, pOut, static_cast<int32>( frameCount ) * _channelCount );
+                return decoded > 0 ? static_cast<uint32>( decoded ) : 0u;
+            }
+
+            bool seekToFrame( uint32 frame ) override
+            {
+                if ( _frameCount < frame )
+                    return false;
+                if ( frame == 0 )
+                    return stb_vorbis_seek_start( _pVorbis ) != 0; // 루프의 되감기는 처음으로 가는 것이 대부분이라 빠른 길을 쓴다
+                return stb_vorbis_seek( _pVorbis, frame ) != 0;
+            }
+
+        private:
+            vector<uint8> _listArena; ///< stb_vorbis 의 메모리입니다. 디코더가 닫힐 때까지 살아 있어야 한다.
+            stb_vorbis*   _pVorbis;
+            uint32        _frameCount;
+            int32         _channelCount;
+        };
     } // namespace
+
+    unique_ptr<IAudioStreamDecoder> AudioClipDecoder::openOggStream( const uint8* pBytes, size_t byteCount, AudioStreamInfo& outInfo )
+    {
+        vector<uint8> listArena;
+        stb_vorbis*   pVorbis = OggOpenUtil::openWithArena( pBytes, byteCount, listArena );
+        if ( pVorbis == nullptr )
+            return nullptr;
+        const stb_vorbis_info info       = stb_vorbis_get_info( pVorbis );
+        const uint32          frameCount = stb_vorbis_stream_length_in_samples( pVorbis );
+        if ( info.channels < 1 || 2 < info.channels || info.sample_rate == 0 || frameCount == 0 )
+        {
+            stb_vorbis_close( pVorbis );
+            return nullptr;
+        }
+        outInfo._sampleRate   = info.sample_rate;
+        outInfo._frameCount   = frameCount;
+        outInfo._channelCount = static_cast<uint16>( info.channels );
+        return make_unique<OggStreamDecoder>( pVorbis, std::move( listArena ), info.channels, frameCount );
+    }
 
     bool AudioClipDecoder::decodeOgg( const uint8* pBytes, size_t byteCount, AudioPcm& outPcm )
     {
-        if ( pBytes == nullptr || byteCount < 4 || byteCount > static_cast<size_t>( INT32_MAX ) || Memory::compare( pBytes, "OggS", 4 ) != 0 )
-            return false;
-        if ( OggCommentHeaderGuard::isCommentHeaderSane( pBytes, byteCount ) == false )
-            return false;
-
-        // 디코더 메모리를 우리 버퍼 한 덩어리에서 나눠 준다(`stb_vorbis_alloc`). stb 는 깨진 헤더의 오류 경로에서 `setup_temp_malloc` 으로 잡은
-        // 임시 버퍼를 해제하지 않는데(변이한 Ogg 로 재현된다), 우리 버퍼 안이면 함께 버려진다. 모자라면(VORBIS_outofmem) 두 배로 다시 열고, 상한을 넘으면
-        // 실패한다. 조작한 헤더가 수백 MB 를 요구하는 경우도 여기서 막힌다.
-        constexpr size_t kInitialArenaBytes = 256 * 1024;
-        constexpr size_t kMaxArenaBytes     = 64 * 1024 * 1024;
-        vector<uint8>    listArena;
-        stb_vorbis*      pVorbis = nullptr;
-        for ( size_t arenaBytes = kInitialArenaBytes; arenaBytes <= kMaxArenaBytes; arenaBytes *= 2 )
-        {
-            listArena.resize( arenaBytes );
-            stb_vorbis_alloc alloc{ reinterpret_cast<utf8*>( listArena.data() ), static_cast<int32>( arenaBytes ) };
-            int32            error = VORBIS__no_error;
-            pVorbis                = stb_vorbis_open_memory( pBytes, static_cast<int32>( byteCount ), &error, &alloc );
-            if ( pVorbis != nullptr || error != VORBIS_outofmem )
-                break;
-        }
+        // 디코더 메모리는 우리 버퍼 한 덩어리에서 나눠 준다(`OggOpenUtil::openWithArena`).
+        vector<uint8> listArena;
+        stb_vorbis*   pVorbis = OggOpenUtil::openWithArena( pBytes, byteCount, listArena );
         if ( pVorbis == nullptr )
             return false;
 

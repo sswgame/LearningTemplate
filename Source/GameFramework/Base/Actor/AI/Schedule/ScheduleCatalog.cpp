@@ -29,7 +29,7 @@ namespace sw
             static constexpr const utf8* kArrNpcAttribute[]         = { "id", "archetype", "home", "speed", "idle", "tags" };
             static constexpr const utf8* kArrRoutineAttribute[]     = { "id", "priority" };
             static constexpr const utf8* kArrEventAttribute[]       = { "id", "priority", "npcs", "archetypes" };
-            static constexpr const utf8* kArrBlockAttribute[]       = { "start", "end", "activity", "place", "objectKind", "appointment", "animation", "radius", "every" };
+            static constexpr const utf8* kArrBlockAttribute[]       = { "start", "end", "activity", "place", "objectKind", "appointment", "animation", "radius", "every", "overnight" };
             /** @brief 원소를 읽는 바퀴입니다 — 가리켜지는 것을 먼저 읽어 파일 안 순서와 상관없이 이름을 검사한다. */
             struct ElementPass
             {
@@ -340,9 +340,7 @@ namespace sw
                     SW_LOG_WARNING( "%#: event '%#' has unknown element <%#>", sourceName, pID, child.getName() );
                     continue;
                 }
-                ScheduleBlockDef block;
-                if ( readBlock( child, sourceName, pID, false, block ) )
-                    event._listBlock.push_back( block );
+                readBlock( child, sourceName, pID, false, event._listBlock );
             }
             warnOverlappingBlocks( event._listBlock, sourceName, pID );
             (void)_eventCatalog.add( event );
@@ -366,16 +364,33 @@ namespace sw
                 SW_LOG_WARNING( "%#: routine '%#' of '%#' has unknown element <%#>", sourceName, outRoutine._id.c_str(), ownerName, child.getName() );
                 continue;
             }
-            ScheduleBlockDef block;
-            if ( readBlock( child, sourceName, ownerName, true, block ) )
-                outRoutine._listBlock.push_back( block );
+            readBlock( child, sourceName, ownerName, true, outRoutine._listBlock );
         }
         warnOverlappingBlocks( outRoutine._listBlock, sourceName, ownerName );
     }
 
-    bool ScheduleCatalog::readBlock( const XMLNode& node, string_view sourceName, string_view ownerName, bool bInRoutine, ScheduleBlockDef& outBlock ) const
+    void ScheduleCatalog::readBlock( const XMLNode& node, string_view sourceName, string_view ownerName, bool bInRoutine, vector<ScheduleBlockDef>& inoutListBlock ) const
     {
-        using Internal = ScheduleCatalogInternal;
+        ScheduleBlockDef block;
+        int32            tailEndMinute{ -1 };
+        if ( readSingleBlock( node, sourceName, ownerName, bInRoutine, block, tailEndMinute ) == false )
+            return;
+        inoutListBlock.push_back( block );
+        if ( tailEndMinute > 0 )
+        {
+            // 자정을 넘는 칸의 다음 날 새벽 쪽이다 — 같은 활동 · 장소 · 조건이고 0:00 에서 시작한다.
+            ScheduleBlockDef tail = block;
+            tail._startMinute     = 0;
+            tail._endMinute       = tailEndMinute;
+            inoutListBlock.push_back( tail );
+        }
+    }
+
+    bool ScheduleCatalog::readSingleBlock( const XMLNode& node, string_view sourceName, string_view ownerName, bool bInRoutine, ScheduleBlockDef& outBlock,
+                                           int32& outTailEndMinute ) const
+    {
+        using Internal   = ScheduleCatalogInternal;
+        outTailEndMinute = -1;
         Internal::warnUnknownAttributes( node, Internal::kArrBlockAttribute, true, sourceName );
         outBlock._activity      = hashed_string( node.getAttributeText( "activity" ) );
         outBlock._place         = hashed_string( node.getAttributeText( "place" ) );
@@ -443,6 +458,17 @@ namespace sw
         }
         outBlock._startMinute = Internal::readClock( node, "start", -1, sourceName, ownerName, bValid );
         outBlock._endMinute   = Internal::readClock( node, "end", -1, sourceName, ownerName, bValid );
+        // `overnight="true"` 인 칸은 끝이 시작보다 이른 것이 정상이다(22:00–6:00, 자정을 넘는다). 끝이 0:00 이면 24:00 으로 읽는다.
+        // 표시가 없는 칸의 start ≥ end 는 실수라서 아래에서 경고하고 뺀다.
+        const bool bWrapsMidnight = bValid && node.getAttributeBool( "overnight", false ) && outBlock._startMinute > 0 && outBlock._endMinute >= 0 &&
+                                    outBlock._endMinute < outBlock._startMinute;
+        if ( bWrapsMidnight )
+        {
+            outTailEndMinute    = outBlock._endMinute;
+            outBlock._endMinute = kScheduleMinutesPerDay;
+            if ( outTailEndMinute == 0 )
+                outTailEndMinute = -1; // 24:00 에서 끝나는 칸일 뿐, 새벽 쪽은 없다
+        }
         if ( bValid && ( outBlock._startMinute < 0 || outBlock._endMinute <= outBlock._startMinute ) )
         {
             SW_LOG_WARNING( "%#: '%#' has a %# block that needs start < end - skipped", sourceName, ownerName, outBlock._activity.c_str() );

@@ -1,0 +1,87 @@
+<Prefab formatVersion="0" name="KeycardDoor3D">
+	<GameObject _schemaVersion="0" _name="KeycardDoor3D" _bActive="true">
+		<_listComponent>
+			<RigidBodyComponent _componentName="RigidBodyComponent"
+			                    _bActive="true"
+			                    _localPosition="0,0,0"
+			                    _localRotation="0,0,0"
+			                    _localScale="1,1,1"
+			                    _attachOwner="None"
+			                    _attachOwnerID="0"
+			                    _attachComponent="None"
+			                    _bodyType="Kinematic"
+			                    _layer="Default"
+			                    _material="None"
+			                    _mass="0"
+			                    _linearDamping="0.05"
+			                    _angularDamping="0.05"
+			                    _gravityFactor="1"
+			                    _bTrigger="false"
+			                    _bContinuous="false"
+			                    _bLockRotation="false"
+			                    _bInterpolate="true">
+				<_listShape>
+					<PhysicsShapeDesc3D _type="Box"
+					                    _halfExtents="1,1.5,0.15"
+					                    _radius="0.5"
+					                    _halfHeight="0.5"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _material="None">
+						<_listPoint />
+						<_listIndex />
+					</PhysicsShapeDesc3D>
+				</_listShape>
+			</RigidBodyComponent>
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="2,3,0.3"
+			               _attachOwner="None"
+			               _attachOwnerID="0"
+			               _attachComponent="RigidBodyComponent#0"
+			               _meshID="Cube"
+			               _materialPath="engine/materials/defaultmaterial.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<InteractableComponent _componentName="InteractableComponent"
+			                       _bActive="true"
+			                       _interactionID="SwipeKeycard"
+			                       _catalogPath=""
+			                       _lastInteractor="0"
+			                       _cooldownRemaining="0"
+			                       _priority="0"
+			                       _bEnabled="true" />
+			<GimmickSensorComponent _componentName="GimmickSensorComponent"
+			                        _bActive="true"
+			                        _defaultWeight="1"
+			                        _bCountTriggers="false">
+				<_requiredTags>
+					<_listTag />
+				</_requiredTags>
+				<_listOccupant />
+			</GimmickSensorComponent>
+			<GimmickCircuitComponent _componentName="GimmickCircuitComponent" _bActive="true" _stepTime="0.016666668">
+				<_listNode>
+					<GimmickNodeDesc _id="swipe" _kind="Interaction" _params="" />
+					<GimmickNodeDesc _id="hold" _kind="Pulse" _params="seconds=4" />
+					<GimmickNodeDesc _id="door" _kind="Door" _params="openTime=0.4; closeTime=0.8; openOffset=0 3 0" />
+				</_listNode>
+				<_listNodeTarget>
+					<item>0</item>
+					<item>0</item>
+					<item>0</item>
+				</_listNodeTarget>
+				<_listWire>
+					<GimmickWireDesc _from="swipe.OnUsed" _to="hold.In" _bInvert="false" />
+					<GimmickWireDesc _from="hold.Out" _to="door.Open" _bInvert="false" />
+				</_listWire>
+				<_listRestPose />
+				<_stateBytes />
+			</GimmickCircuitComponent>
+		</_listComponent>
+	</GameObject>
+</Prefab>

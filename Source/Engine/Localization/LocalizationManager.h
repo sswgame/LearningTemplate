@@ -15,6 +15,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Localization/CultureInfo.h"
+#include "Engine/Localization/LocalizationBinaryTable.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 
 namespace sw
@@ -107,8 +108,21 @@ namespace sw
         [[nodiscard]] bool loadLanguageJSON( string_view languageCode, string_view jsonText );
         /** @brief 낱개 테이블에 문자열 하나를 넣습니다. */
         void setString( string_view languageCode, const hashed_string& key, string_view value );
-        /** @brief 그 언어의 낱개 테이블을 언로드합니다(프로젝트의 텍스트는 남습니다). */
+        /** @brief 그 언어의 낱개 테이블과 이진 표를 언로드합니다(프로젝트의 텍스트는 남습니다). */
         void unloadLanguage( string_view languageCode );
+
+        /**
+         * @brief 쿠킹된 이진 번역 표(`LocalizationBinaryTable`, `.locres`)를 읽어 그 문화권의 글을 프로젝트 위에 덮습니다. 낱개 테이블(`loadLanguageJSON`)보다는 아래입니다.
+         * @details 저작 파일을 두지 않는 배포본이 쓴다. 같은 문화권의 표를 다시 로드하면 바꿉니다. 깨진 바이트는 거절하고 아무것도 바꾸지 않습니다.
+         */
+        [[nodiscard]] bool loadBinaryTable( const uint8* pData, size_t size );
+        /** @brief 리소스 경로(또는 절대 경로)의 이진 번역 표를 읽습니다. */
+        [[nodiscard]] bool loadBinaryTableResource( string_view resourcePath );
+        /**
+         * @brief 로드한 프로젝트에서 그 문화권의 화면에 나오는 글(낡은 번역 · 검토 번역 제외)을 이진 번역 표 바이트로 굽습니다(쿠킹 단계가 부른다).
+         * @return 그 문화권의 글이 하나도 없으면 false 입니다.
+         */
+        [[nodiscard]] bool cookBinaryTable( string_view languageCode, vector<uint8>& outBytes ) const;
 
         /**
          * @brief 게임 프로젝트를 로드하고(앞의 게임 프로젝트는 언로드합니다) 활성 언어와 폴백 언어를 정합니다. 순서는 명령줄 `-lang`, @p defaultLanguage, 폴백, 아무 언어입니다.
@@ -218,6 +232,7 @@ namespace sw
         CultureInfo                                    _currentCulture; ///< 지금 문화권의 형식 데이터(사슬을 다시 셀 때 함께)
         vector<MountedProject>                         _listProject;
         map<string, TranslationTable>                  _mapLooseTable;
+        map<string, LocalizationBinaryTable>           _mapBinaryTable; ///< 문화권 코드 → 쿠킹된 이진 표
         unordered_map<string, unique_ptr<StringTable>> _mapLanguageTable;
         map<string, LocalizationCultureStatistics>     _mapCultureStatistic;
         vector<string>                                 _listLookupCulture;

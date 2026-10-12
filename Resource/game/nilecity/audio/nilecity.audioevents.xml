@@ -1,0 +1,28 @@
+<!--
+	NileCity 사운드 이벤트(AudioEventLibrary). 위에서 내려다보는 도시 건설이라 소리는 모두 2D(공간화 없음)다.
+	선택 · 건설 · 막힘 · 진화는 짧은 알림이라 ui 버스로 보내고, 막힘은 연달아 눌러도 시끄럽지 않게 쿨다운을 둔다.
+-->
+<AudioEventLibrary>
+	<_listEvent>
+		<AudioEventDesc _name="Select" _bus="ui" _priority="70" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="game/nilecity/sounds/select_003.ogg" />
+			</_listClip>
+		</AudioEventDesc>
+		<AudioEventDesc _name="Built" _bus="ui" _priority="70" _maxInstances="2">
+			<_listClip>
+				<AudioClipEntry _path="game/nilecity/sounds/confirmation_002.ogg" />
+			</_listClip>
+		</AudioEventDesc>
+		<AudioEventDesc _name="Blocked" _bus="ui" _priority="70" _cooldownSeconds="0.5" _maxInstances="1" _steal="Reject">
+			<_listClip>
+				<AudioClipEntry _path="game/nilecity/sounds/error_002.ogg" />
+			</_listClip>
+		</AudioEventDesc>
+		<AudioEventDesc _name="Evolved" _bus="sfx" _priority="55" _cooldownSeconds="0.1" _maxInstances="3" _steal="Quietest" _volumeDbMin="-3" _volumeDbMax="0" _pitchMin="-1" _pitchMax="2">
+			<_listClip>
+				<AudioClipEntry _path="game/nilecity/sounds/drop_003.ogg" />
+			</_listClip>
+		</AudioEventDesc>
+	</_listEvent>
+</AudioEventLibrary>

@@ -6,6 +6,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Localization/CurrencyUtil.h"
+#include "Engine/Localization/TimeZoneUtil.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -90,11 +92,40 @@ namespace sw
                 return PluralCategory::Other;
             }
 
+            /** @brief 영어 서수입니다. one: 1 · 21 · 101 (11 제외), two: 2 · 22 (12 제외), few: 3 · 23 (13 제외). */
+            static PluralCategory selectOrdinalEnglish( const PluralOperands& operands )
+            {
+                const int64 mod10  = operands._integerDigits % 10;
+                const int64 mod100 = operands._integerDigits % 100;
+                if ( mod10 == 1 && mod100 != 11 )
+                    return PluralCategory::One;
+                if ( mod10 == 2 && mod100 != 12 )
+                    return PluralCategory::Two;
+                if ( mod10 == 3 && mod100 != 13 )
+                    return PluralCategory::Few;
+                return PluralCategory::Other;
+            }
+
+            /** @brief 프랑스어 서수입니다. one: 1 (1er), 나머지 other (2e …). */
+            static PluralCategory selectOrdinalFrench( const PluralOperands& operands )
+            {
+                return operands._integerDigits == 1 ? PluralCategory::One : PluralCategory::Other;
+            }
+
             struct RuleRow
             {
                 const utf8*    _pName;
                 PluralRuleFunc _pRule;
             };
+
+            static constexpr RuleRow kArrOrdinalRule[] = {
+                {   "none",           &selectNone},
+                {"english", &selectOrdinalEnglish},
+                { "french",  &selectOrdinalFrench},
+            };
+
+            /** @brief 통화 패턴에서 통화 기호 자리를 가리키는 `¤`(U+00A4) 의 UTF-8 입니다. */
+            static constexpr const utf8* kCurrencySign = "\xC2\xA4";
 
             static constexpr RuleRow kArrRule[] = {
                 {   "none",    &selectNone},
@@ -109,8 +140,9 @@ namespace sw
             static constexpr const utf8* kArrCategoryName[] = { "zero", "one", "two", "few", "many", "other" };
             static_assert( SW_COUNT_OF( kArrCategoryName ) == static_cast<size_t>( PluralCategory::Count ), "kArrCategoryName must name every PluralCategory" );
 
-            static constexpr const utf8* kArrCultureField[] = { "parent", "nativeName", "pluralRule", "rightToLeft", "digits", "decimalSeparator",
-                                                                "groupSeparator", "percentPattern", "datePatterns", "timePatterns", "monthNames", "monthAbbreviations",
+            static constexpr const utf8* kArrCultureField[] = { "parent", "nativeName", "pluralRule", "ordinalRule", "rightToLeft",
+                                                                "digits", "decimalSeparator", "groupSeparator", "percentPattern", "currencyCode",
+                                                                "currencyPattern", "datePatterns", "timePatterns", "monthNames", "monthAbbreviations",
                                                                 "dayPeriods", "fonts", "pseudo" };
 
             static bool isKnownField( string_view name )
@@ -208,6 +240,19 @@ namespace sw
                     inoutInfo._pluralRuleName = ruleName;
                     inoutInfo._pPluralRule    = pRule;
                 }
+                const JSONValue ordinalRule = entry.get( "ordinalRule", false );
+                if ( ordinalRule.isValid() )
+                {
+                    const string   ruleName = ordinalRule.asString();
+                    PluralRuleFunc pRule    = PluralRuleUtil::findOrdinalRule( ruleName );
+                    if ( pRule == nullptr )
+                    {
+                        outError = "unknown ordinalRule '" + ruleName + "'";
+                        return false;
+                    }
+                    inoutInfo._ordinalRuleName = ruleName;
+                    inoutInfo._pOrdinalRule    = pRule;
+                }
                 const JSONValue rightToLeft = entry.get( "rightToLeft", false );
                 if ( rightToLeft.isValid() )
                     inoutInfo._bRightToLeft = rightToLeft.asBool( false );
@@ -249,6 +294,12 @@ namespace sw
                 const JSONValue percentPattern = entry.get( "percentPattern", false );
                 if ( percentPattern.isValid() )
                     inoutInfo._percentPattern = percentPattern.asString();
+                const JSONValue currencyCode = entry.get( "currencyCode", false );
+                if ( currencyCode.isValid() )
+                    inoutInfo._currencyCode = currencyCode.asString();
+                const JSONValue currencyPattern = entry.get( "currencyPattern", false );
+                if ( currencyPattern.isValid() )
+                    inoutInfo._currencyPattern = currencyPattern.asString();
 
                 const JSONValue datePatterns = entry.get( "datePatterns", false );
                 if ( datePatterns.isValid() && readPatternGroup( datePatterns, &inoutInfo._dateShort, &inoutInfo._dateMedium, &inoutInfo._dateLong, outError ) == false )
@@ -336,6 +387,25 @@ namespace sw
         }
     }
 
+    PluralRuleFunc PluralRuleUtil::findOrdinalRule( string_view ruleName )
+    {
+        for ( const CultureInfoInternal::RuleRow& row : CultureInfoInternal::kArrOrdinalRule )
+        {
+            if ( ruleName == row._pName )
+                return row._pRule;
+        }
+        return nullptr;
+    }
+
+    void PluralRuleUtil::collectOrdinalRuleNames( vector<string>& outListName )
+    {
+        outListName.clear();
+        for ( const CultureInfoInternal::RuleRow& row : CultureInfoInternal::kArrOrdinalRule )
+        {
+            outListName.push_back( row._pName );
+        }
+    }
+
     const utf8* PluralRuleUtil::getCategoryName( PluralCategory category )
     {
         const size_t index = static_cast<size_t>( category );
@@ -360,9 +430,12 @@ namespace sw
         , _parentCode{}
         , _nativeName{}
         , _pluralRuleName{ "none" }
+        , _ordinalRuleName{ "none" }
         , _decimalSeparator{ "." }
         , _groupSeparator{ "," }
         , _percentPattern{ "#%" }
+        , _currencyCode{ "USD" }
+        , _currencyPattern{ "\xC2\xA4#" }
         , _dateShort{ "y-MM-dd" }
         , _dateMedium{ "y-MM-dd" }
         , _dateLong{ "y-MM-dd" }
@@ -373,6 +446,7 @@ namespace sw
         , _listDayPeriod{}
         , _listFont{}
         , _pPluralRule{ PluralRuleUtil::findRule( "none" ) }
+        , _pOrdinalRule{ PluralRuleUtil::findOrdinalRule( "none" ) }
         , _numeralSystem{ NumeralSystem::Latin }
         , _pseudoMode{ PseudoLocaleMode::None }
         , _bRightToLeft{ false }
@@ -382,6 +456,11 @@ namespace sw
     PluralCategory CultureInfo::selectPlural( const PluralOperands& operands ) const
     {
         return _pPluralRule != nullptr ? _pPluralRule( operands ) : PluralCategory::Other;
+    }
+
+    PluralCategory CultureInfo::selectOrdinal( const PluralOperands& operands ) const
+    {
+        return _pOrdinalRule != nullptr ? _pOrdinalRule( operands ) : PluralCategory::Other;
     }
 
     void CultureInfo::appendDigits( string& inoutText, string_view asciiDigits ) const
@@ -475,6 +554,38 @@ namespace sw
                 text.append( number );
             else
                 text.push_back( character );
+        }
+        return text;
+    }
+
+    string CultureInfo::formatCurrency( float64 amount, string_view currencyCode ) const
+    {
+        const string_view   code      = currencyCode.empty() ? string_view( _currencyCode ) : currencyCode;
+        const CurrencyInfo* pCurrency = CurrencyUtil::findCurrency( code );
+        const uint32        digits    = pCurrency != nullptr ? pCurrency->_minorDigitCount : 2u;
+        const string        symbol    = pCurrency != nullptr ? string( pCurrency->_pSymbol ) : string( code );
+        string              number    = formatDecimal( amount, digits, digits );
+        const bool          bNegative = number.empty() == false && number.front() == '-';
+        if ( bNegative )
+            number.erase( 0, 1 ); // 부호는 기호 앞이 아니라 맨 앞에 쓴다(-$3.00, -3,00 €)
+        const string_view sign = CultureInfoInternal::kCurrencySign;
+        string            text;
+        if ( bNegative )
+            text.push_back( '-' );
+        size_t position = 0;
+        while ( position < _currencyPattern.size() )
+        {
+            if ( string_view( _currencyPattern ).substr( position, sign.size() ) == sign )
+            {
+                text.append( symbol );
+                position += sign.size();
+                continue;
+            }
+            if ( _currencyPattern[position] == '#' )
+                text.append( number );
+            else
+                text.push_back( _currencyPattern[position] );
+            ++position;
         }
         return text;
     }
@@ -584,6 +695,13 @@ namespace sw
                 {
                     if ( _listDayPeriod.size() == 2 )
                         text.append( _listDayPeriod[value._hour < 12 ? 0 : 1] );
+                    break;
+                }
+                case 'z':
+                {
+                    // 시간대를 모르는 값(`_bZoned` 가 꺼진 값)에는 오프셋을 쓰지 않는다. 한 글자는 UTC+9, 넷은 UTC+09:00
+                    if ( value._bZoned )
+                        text.append( TimeZoneUtil::formatOffset( value._utcOffsetMinutes, runLength >= 4 ) );
                     break;
                 }
                 default:

@@ -83,6 +83,38 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief 사이드체인 덕킹 하나입니다. 다른 버스의 출력이 임계값을 넘으면 이 버스를 눌러 줍니다(대사가 나올 때 음악 낮추기).
+     *        Wwise 의 Auto-Ducking, 언리얼 서브믹스의 Ducking 에 해당합니다.
+     * @details 눌림은 **눌리는 버스**(이 버스)에 적고, 신호는 지난 블록의 소스 버스 피크(페이더 뒤)입니다. 한 블록(약 5 ms) 늦지만 처리 순서에 제약이 없습니다.
+     *          눌림 양은 임계값을 넘으면 `_depthDb`, 아니면 0 으로 정하고 `_attackSeconds` · `_releaseSeconds` 로 dB 축에서 따라갑니다.
+     *          덕이 여럿이면 가장 깊은 것을 씁니다(합치지 않음).
+     * @code
+     *     <AudioBusDesc _name="music" _parent="master">
+     *         <_listDuck><AudioDuckDesc _sourceBus="voice" _thresholdDb="-40" _depthDb="-9" /></_listDuck>
+     *     </AudioBusDesc>
+     * @endcode
+     */
+    REFLECT()
+    struct SW_API AudioDuckDesc
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Bus whose output level ducks this bus (dialogue ducks music)" )
+        hashed_string _sourceBus{};
+        PROPERTY( Tooltip = "Source level above which the duck engages", Meta = "Units=dB" )
+        float32 _thresholdDb{ -40.0f };
+        PROPERTY( Max = 0.0, Tooltip = "Fader offset of this bus at full duck", Meta = "Units=dB" )
+        float32 _depthDb{ -9.0f };
+        PROPERTY( Min = 0.0, Tooltip = "Time to reach the full duck", Units = s )
+        float32 _attackSeconds{ 0.05f };
+        PROPERTY( Min = 0.0, Tooltip = "Time to come back once the source falls quiet", Units = s )
+        float32 _releaseSeconds{ 0.5f };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @brief 버스(서브믹스) 하나입니다. 입력은 이 버스로 보낸 보이스, 자식 버스, 센드의 합이며, 이펙트 체인을 지나 페이더를 거친 뒤 부모로 갑니다.
      * @code
      *     <AudioBusDesc _name="sfx" _parent="master" _volumeDb="0">
@@ -103,6 +135,8 @@ namespace sw
         vector<AudioSendDesc> _listSend{};
         PROPERTY( Tooltip = "Insert effects, in order, before the sends and the fader" )
         vector<AudioEffectDesc> _listEffect{};
+        PROPERTY( Tooltip = "Sidechain ducks: other buses whose output presses this bus down" )
+        vector<AudioDuckDesc> _listDuck{};
         PROPERTY( Tooltip = "Bus fader", Meta = "Units=dB" )
         float32 _volumeDb{ 0.0f };
         PROPERTY( Tooltip = "Starts muted" )
@@ -213,6 +247,8 @@ namespace sw
         vector<AudioAttenuationDesc> _listAttenuation{};
         PROPERTY( Tooltip = "How occlusion (0..1) turns into volume and low-pass" )
         AudioOcclusionDesc _occlusion{};
+        PROPERTY( Tooltip = "Split screen: measure each sound from the loudest listener, or sum every listener by power" )
+        AudioListenerMixMode _listenerMix{ AudioListenerMixMode::Loudest };
         PROPERTY( Tooltip = "Mix snapshots (bus, send and effect parameter sets blended over time)" )
         vector<AudioSnapshotDesc> _listSnapshot{};
         PROPERTY( Min = 1, Tooltip = "Most voices alive at once (real and virtual)" )

@@ -175,7 +175,7 @@ namespace sw
      *       </Event>
      *     </Schedules>
      * @endcode
-     * @details 시각은 `H:MM`(0:00..24:00)으로 적는다.
+     * @details 시각은 `H:MM`(0:00..24:00)으로 적는다. 자정을 넘는 칸은 `overnight="true"` 를 적고(`22:00`–`6:00`) 두 칸으로 나눠 읽는다.
      *          모르는 이름(원소, 속성, 활동, 장소, 약속, 묶음, 요일, 계절, 날씨), 겹치는 칸, 시작 ≥ 끝, 묶음 순환은 경고하고 그 항목을 뺀다.
      *          `ResourceDataSchemaTest` 가 그 경고를 실패로 잡는다.
      */
@@ -217,8 +217,15 @@ namespace sw
         /** @brief 원소 하나를 읽습니다. 읽은 NPC 수(0 또는 1)를 반환합니다. */
         uint32 loadElement( const XMLNode& node, string_view sourceName );
         void   readRoutine( const XMLNode& node, string_view sourceName, string_view ownerName, ScheduleRoutineDef& outRoutine ) const;
-        /** @brief 칸을 읽습니다. 쓸 수 없는 칸이면 경고하고 false 를 반환합니다. @p bInRoutine 이면 `Meet` 를 받습니다. */
-        [[nodiscard]] bool readBlock( const XMLNode& node, string_view sourceName, string_view ownerName, bool bInRoutine, ScheduleBlockDef& outBlock ) const;
+        /**
+         * @brief 칸을 읽어 @p inoutListBlock 에 더합니다. 쓸 수 없는 칸이면 경고하고 더하지 않습니다. @p bInRoutine 이면 `Meet` 를 받습니다.
+         * @details 자정을 넘는 칸(`overnight="true" start="22:00" end="6:00"`)은 두 칸 `[22:00, 24:00)` 과 `[0:00, 6:00)` 으로 나눠 더합니다. 조건은 두 칸이 같고 각 칸이 그날에 대해 따로 판정합니다.
+         *          `overnight` 표시가 없는 start ≥ end 는 실수라서 경고하고 뺍니다.
+         */
+        void readBlock( const XMLNode& node, string_view sourceName, string_view ownerName, bool bInRoutine, vector<ScheduleBlockDef>& inoutListBlock ) const;
+        /** @brief 칸 하나를 읽습니다. 자정을 넘는 칸이면 @p outTailEndMinute 에 다음 날 새벽 칸의 끝(분)을 적고 `outBlock` 은 24:00 에서 끝납니다. 아니면 −1 입니다. */
+        [[nodiscard]] bool readSingleBlock( const XMLNode& node, string_view sourceName, string_view ownerName, bool bInRoutine, ScheduleBlockDef& outBlock,
+                                            int32& outTailEndMinute ) const;
         void               warnOverlappingBlocks( const vector<ScheduleBlockDef>& listBlock, string_view sourceName, string_view ownerName ) const;
         /** @brief NPC 마다 묶음 사슬의 루틴을 이어 붙이고 약속 참가자를 모읍니다. 순환이나 모르는 이름은 경고합니다. */
         void resolveReferences( string_view sourceName );

@@ -1,0 +1,73 @@
+<Prefab formatVersion="0" name="MovingPlatform3D">
+	<GameObject _schemaVersion="0" _name="MovingPlatform3D" _bActive="true">
+		<_listComponent>
+			<RigidBodyComponent _componentName="RigidBodyComponent"
+			                    _bActive="true"
+			                    _localPosition="0,0,0"
+			                    _localRotation="0,0,0"
+			                    _localScale="1,1,1"
+			                    _attachOwner="None"
+			                    _attachOwnerID="0"
+			                    _attachComponent="None"
+			                    _bodyType="Kinematic"
+			                    _layer="Default"
+			                    _material="None"
+			                    _mass="0"
+			                    _linearDamping="0.05"
+			                    _angularDamping="0.05"
+			                    _gravityFactor="1"
+			                    _bTrigger="false"
+			                    _bContinuous="false"
+			                    _bLockRotation="false"
+			                    _bInterpolate="true">
+				<_listShape>
+					<PhysicsShapeDesc3D _type="Box"
+					                    _halfExtents="1.5,0.25,1.5"
+					                    _radius="0.5"
+					                    _halfHeight="0.5"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _material="None">
+						<_listPoint />
+						<_listIndex />
+					</PhysicsShapeDesc3D>
+				</_listShape>
+			</RigidBodyComponent>
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="3,0.5,3"
+			               _attachOwner="None"
+			               _attachOwnerID="0"
+			               _attachComponent="RigidBodyComponent#0"
+			               _meshID="Cube"
+			               _materialPath="engine/materials/defaultmaterial.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<SplineComponent _componentName="SplineComponent"
+			                 _bActive="true"
+			                 _samplesPerSegment="16"
+			                 _type="Linear"
+			                 _bClosed="false">
+				<_listControlPoint>
+					<item>0,0,0</item>
+					<item>6,0,0</item>
+				</_listControlPoint>
+			</SplineComponent>
+			<GimmickCircuitComponent _componentName="GimmickCircuitComponent" _bActive="true" _stepTime="0.016666668">
+				<_listNode>
+					<GimmickNodeDesc _id="move" _kind="Mover" _params="speed=2; mode=PingPong; pause=0.5" />
+				</_listNode>
+				<_listNodeTarget>
+					<item>0</item>
+				</_listNodeTarget>
+				<_listWire />
+				<_listRestPose />
+				<_stateBytes />
+			</GimmickCircuitComponent>
+		</_listComponent>
+	</GameObject>
+</Prefab>

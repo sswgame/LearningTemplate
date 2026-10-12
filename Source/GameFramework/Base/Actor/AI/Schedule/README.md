@@ -76,12 +76,15 @@ const ScheduleNpcView view = schedules.getNpcView( npcIndex ); // 위치, 활동
 
 ### 데이터 규칙
 
-시각은 `H:MM`(0:00 부터 24:00)입니다. 하루를 넘는 블록은 없으므로, 밤잠은 22:00–24:00 과 0:00–7:00 두 블록으로 적습니다. 블록이 없는 시간은 NPC 의 `idle`(기본 `StayHome`)입니다.
+시각은 `H:MM`(0:00 부터 24:00)입니다. 자정을 넘는 블록은 `overnight="true"` 를 적어 `start="22:00" end="6:00"` 처럼 쓰면 읽을 때 22:00–24:00 과 0:00–6:00 두 블록으로 나뉩니다(조건은 같고 각 블록이 그날로 따로 판정합니다 —
+`days="Fri"` 이면 새벽 쪽은 금요일 새벽입니다). `overnight` 표시가 없는 start ≥ end 는 실수라서 경고하고 뺍니다. 블록이 없는 시간은 NPC 의 `idle`(기본 `StayHome`)입니다.
 
 **고르기.** 하루를 블록 경계로 자른 조각마다, 조건이 맞는 후보(루틴, 행사, 약속 블록) 중 우선순위가 가장 높은 것이 이깁니다. 같으면 먼저 적은 것입니다.
 축제는 우선순위가 높은 행사라서 그 시간만 덮습니다. 조건은 루틴에도 블록에도 적을 수 있고, `phases`(하루의 때)는 블록 시작 시각으로 판정합니다.
 
-**조건**(`ScheduleCondition`)은 요일, 계절의 날, 계절, 날씨, 하루의 때, `GameFlags` 식, 태그(관계, 퀘스트), 확률입니다. 판정할 때 절마다 결과를 남기므로 추적에서 볼 수 있습니다.
+**조건**(`ScheduleCondition`)은 요일, 계절의 날(`daysOfSeason="1,5-9"` 범위 가능), 주(`weeks="1,3"` — 계절의 1~7 일이 첫째 주), 날짜 범위(`from="Spring 20" to="Summer 5"` — 계절을 넘나들고,
+`from` 이 `to` 보다 늦으면 `Winter 20`~`Spring 5` 처럼 해를 넘으며, 한쪽만 적으면 열려 있음), 계절, 날씨, 하루의 때, `GameFlags` 식, 태그(관계, 퀘스트), 호감도 단계(`minAffinity` · `maxAffinity` — 하트 수 같은 정수, 게임이
+`setNpcAffinity` 로 넣고 바뀌면 그 NPC 의 계획을 다시 세우며 저장에 실림), 확률입니다. 판정할 때 절마다 결과를 남기므로 추적에서 볼 수 있습니다.
 페이싱 감독의 조우 조건도 같은 클래스를 씁니다.
 
 **약속.** `Meet` 블록이 같은 약속을 가리키는 NPC 들이 참가자입니다. 읽을 때 모으고, 둘 미만이면 경고합니다. 시간과 장소는 약속의 것이고, 우선순위는 루틴과 약속 중 높은 것입니다.
@@ -129,12 +132,14 @@ const ScheduleNpcView view = schedules.getNpcView( npcIndex ); // 위치, 활동
 
 ## 확장하는 법
 
-아직 연결하지 않은 곳이 셋 있습니다. 쓰는 게임이 생기면 이 순서로 붙입니다.
+연결은 인터페이스 셋이고, 앞의 둘은 구현이 들어 있습니다. 쓰는 게임이 생기면 붙입니다.
 
-1. **스마트 오브젝트.** 스마트 오브젝트 시스템이 `IScheduleActivityLocator` 를 구현해 `setActivityLocator` 로 끼웁니다. `reserve` 는 (NPC, 종류, 날, 시간 창)에 대해 멱등이어야 합니다.
-   지금 점유만 하는 시스템이면 어댑터가 시간 창 예약 테이블을 가지고, 블록이 시작될 때 실제로 점유합니다.
-2. **애니메이션.** `IScheduleActivityAnimator::onActivityStarted( cue )` 를 구현해, `_animation`(블록의 `animation`, 없으면 활동 종류의 기본)으로 애니메이터 상태나 클립을 고릅니다.
-   `Near` NPC 에게만 불리고, 화면 밖 NPC 는 사건(`drainEvents`)만 남습니다.
+1. **스마트 오브젝트.** `SmartObjectScheduleLocator`(`Gameplay/Interaction`)가 `IScheduleActivityLocator` 를 구현합니다. `setActivityLocator` 로 끼우면 `UseObject` 의 `objectKind`
+   (= 스마트 오브젝트 정의 id, `Bench`)에 맞는 씬의 슬롯을 시간 창으로 예약합니다. 예약만 하고 점유는 하지 않으므로, 블록이 시작될 때 게임이 사건의 예약 id 로 `claimReserved( 예약 id, NPC )` 를
+   부르고 끝나면 `releaseClaim` 을 부릅니다(플레이어가 먼저 앉았으면 점유가 실패하니 물러서는 활동을 고릅니다). 예약 저장은 `fillState` / `restoreState` 를 게임 세이브에 함께 싣습니다.
+   말 걸기는 `InteractionInterruptionSystem`(`Gameplay/Interaction`)이 상호작용 중인 대상 NPC 에 `pushInterruption( "Talk" )` 를 쌓고 끝나면 뺍니다.
+2. **애니메이션.** `ScheduleSkeletalAnimator` 가 `IScheduleActivityAnimator` 를 구현해, `_animation`(블록의 `animation`, 없으면 `setActivityState` 로 정한 활동 종류의 기본 상태)을
+   NPC 오브젝트(이름 = NPC id)의 `SkeletalAnimatorComponent::play` 로 재생하고, 활동이 끝나면 쉬는 상태(`Idle`)로 돌아갑니다. `Near` NPC 에게만 불리고, 화면 밖 NPC 는 사건(`drainEvents`)만 남습니다.
 3. **길찾기.** 내비메시가 생기면 `ISchedulePathing` 구현을 하나 더합니다.
 
 ## 함정과 주의

@@ -29,6 +29,8 @@ namespace sw
     public:
         /** @brief 정의의 슬롯 수만큼 비웁니다. */
         void initialize( const SmartObjectDef& def );
+        /** @brief 지금 정의의 id 입니다. */
+        const hashed_string& getDefinitionID() const { return _def._id; }
 
         /** @brief 비어 있으면 차지합니다. 이미 그 슬롯을 차지했으면 true 이고(멱등), 다른 쪽이 차지했으면 false 입니다. 한 쪽은 슬롯 하나만 차지할 수 있습니다. */
         [[nodiscard]] bool claim( int32 slot, uint64 claimantID );
@@ -67,6 +69,9 @@ namespace sw
         SmartObjectComponent();
         virtual ~SmartObjectComponent() override = default;
 
+        /** @brief 씬의 컴포넌트 레지스트리에 올라 "스마트 오브젝트를 모두" 를 씬을 훑지 않고 돌려줍니다(`SmartObjectScheduleLocator`). */
+        void onRegister( GameObjectManager& manager ) override;
+        void onUnregister( GameObjectManager& manager ) override;
         void onPostLoad() override;
         void onBeginPlay() override;
         /** @brief 상호작용 테이블을 다시 읽었으면(핫 리로드) 새 테이블에서 슬롯 정의를 다시 찾습니다. */
@@ -78,6 +83,8 @@ namespace sw
         void setDefinition( const SmartObjectDef& def );
         /** @brief 정의 id 를 바꾸고 다시 찾습니다. */
         void setSmartObjectID( const hashed_string& id );
+        /** @brief 지금 쓰는 정의의 id 입니다(테이블의 `<SmartObject id>` 이거나 `setDefinition` 으로 넣은 정의의 id). 정의가 없으면 비어 있습니다. */
+        hashed_string getDefinitionID() const;
         /** @brief 상호작용 테이블 경로를 바꾸고 다시 찾습니다. 비어 있으면 공용 기본 테이블을 씁니다. */
         void setCatalogPath( string_view path );
         /** @brief 슬롯을 차지합니다. */

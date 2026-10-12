@@ -6,9 +6,79 @@
 
 namespace sw
 {
+    namespace
+    {
+        /** @brief 메모리에 통째로 푼 클립에서 보간 샘플을 읽습니다. */
+        struct AudioVoiceMemorySampler
+        {
+            const float32* _pSample;
+            bool           _bStereo;
+
+            void sample( uint32 index, uint32 next, float32 fraction, float32& outLeft, float32& outRight ) const
+            {
+                if ( _bStereo )
+                {
+                    outLeft  = _pSample[index * 2] + ( _pSample[next * 2] - _pSample[index * 2] ) * fraction;
+                    outRight = _pSample[index * 2 + 1] + ( _pSample[next * 2 + 1] - _pSample[index * 2 + 1] ) * fraction;
+                }
+                else
+                {
+                    outLeft  = _pSample[index] + ( _pSample[next] - _pSample[index] ) * fraction;
+                    outRight = outLeft;
+                }
+            }
+        };
+
+        /**
+         * @brief 스트리밍 창에서 보간 샘플을 읽습니다.
+         * @details 루프 이음매(`index` 가 마지막 프레임이고 `next` 가 0)는 창을 처음으로 되감지 않고 처음 읽어 둔 첫 프레임으로 보간한다.
+         *          첫 프레임을 읽은 적이 없으면(중간에서 시작) 보간 없이 `index` 프레임을 쓴다.
+         */
+        struct AudioVoiceStreamSampler
+        {
+            AudioStreamWindow& _window;
+            float32&           _firstLeft;
+            float32&           _firstRight;
+            bool&              _bHaveFirst;
+
+            void sample( uint32 index, uint32 next, float32 fraction, float32& outLeft, float32& outRight ) const
+            {
+                float32 leftA{ 0.0f };
+                float32 rightA{ 0.0f };
+                (void)_window.readFrame( index, leftA, rightA ); // 끝을 넘으면 0 이다(무음)
+                if ( index == 0 && _bHaveFirst == false )
+                {
+                    _firstLeft  = leftA;
+                    _firstRight = rightA;
+                    _bHaveFirst = true;
+                }
+                float32 leftB{ leftA };
+                float32 rightB{ rightA };
+                if ( next == 0 && index != 0 )
+                {
+                    if ( _bHaveFirst )
+                    {
+                        leftB  = _firstLeft;
+                        rightB = _firstRight;
+                    }
+                }
+                else if ( next != index )
+                {
+                    (void)_window.readFrame( next, leftB, rightB ); // 끝을 넘으면 0 이라 무음이다(보간 상대가 없다)
+                }
+                outLeft  = leftA + ( leftB - leftA ) * fraction;
+                outRight = rightA + ( rightB - rightA ) * fraction;
+            }
+        };
+    } // namespace
+
     AudioVoice::AudioVoice()
         : _pClip{ nullptr }
         , _lowPass{}
+        , _stream{}
+        , _firstFrameLeft{ 0.0f }
+        , _firstFrameRight{ 0.0f }
+        , _bHaveFirstFrame{ false }
         , _position{ 0.0 }
         , _rate{ 1.0 }
         , _gainLeft{ 0.0f }
@@ -39,6 +109,9 @@ namespace sw
         _bLoop            = bLoop ? SW_TRUE : SW_FALSE;
         _startDelayFrames = startDelayFrames;
         _bFinished        = ( _pClip == nullptr || _pClip->_frameCount == 0 ) ? SW_TRUE : SW_FALSE;
+        // 스트리밍 클립은 보이스마다 디코더를 연다(압축 바이트는 클립이 한 벌만 든다). 열지 못하면 소리 없이 끝난다.
+        if ( _bFinished == SW_FALSE && _pClip->isStreamed() && _stream.open( *_pClip->_pStream ) == false )
+            _bFinished = SW_TRUE;
     }
 
     void AudioVoice::reset()
@@ -136,11 +209,21 @@ namespace sw
 
     void AudioVoice::mixInto( float32* pBusInput, uint32 frameCount )
     {
+        if ( _pClip->isStreamed() )
+        {
+            AudioVoiceStreamSampler sampler{ _stream, _firstFrameLeft, _firstFrameRight, _bHaveFirstFrame };
+            mixLoop( pBusInput, frameCount, sampler );
+            return;
+        }
+        AudioVoiceMemorySampler sampler{ _pClip->_listSample.data(), _pClip->_channelCount >= 2 };
+        mixLoop( pBusInput, frameCount, sampler );
+    }
 
+    template <typename TSampler>
+    void AudioVoice::mixLoop( float32* pBusInput, uint32 frameCount, TSampler& sampler )
+    {
         const AudioClipData& clip         = *_pClip;
-        const float32*       pSample      = clip._listSample.data();
         const uint32         clipFrames   = clip._frameCount;
-        const bool           bStereo      = clip._channelCount >= 2;
         const float32        invFrames    = 1.0f / static_cast<float32>( frameCount );
         const float32        stepLeft     = ( _targetGainLeft - _gainLeft ) * invFrames;
         const float32        stepRight    = ( _targetGainRight - _gainRight ) * invFrames;
@@ -172,19 +255,11 @@ namespace sw
                 next = _bLoop == SW_TRUE ? 0u : index;
 
             const float32 fade = _fadeGain;
-            if ( bStereo )
-            {
-                const float32 left  = pSample[index * 2] + ( pSample[next * 2] - pSample[index * 2] ) * fraction;
-                const float32 right = pSample[index * 2 + 1] + ( pSample[next * 2 + 1] - pSample[index * 2 + 1] ) * fraction;
-                pBusInput[frameIndex * 2] += left * gainLeft * fade;
-                pBusInput[frameIndex * 2 + 1] += right * gainRight * fade;
-            }
-            else
-            {
-                const float32 mono = pSample[index] + ( pSample[next] - pSample[index] ) * fraction;
-                pBusInput[frameIndex * 2] += mono * gainLeft * fade;
-                pBusInput[frameIndex * 2 + 1] += mono * gainRight * fade;
-            }
+            float32       left{ 0.0f };
+            float32       right{ 0.0f };
+            sampler.sample( index, next, fraction, left, right );
+            pBusInput[frameIndex * 2] += left * gainLeft * fade;
+            pBusInput[frameIndex * 2 + 1] += right * gainRight * fade;
 
             position += rate;
             if ( position >= clipFrames64 )

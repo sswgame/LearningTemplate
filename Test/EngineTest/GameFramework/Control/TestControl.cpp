@@ -34,6 +34,7 @@
 #include "GameFramework/Base/Actor/Camera/CameraManagerComponent.h"
 #include "GameFramework/Base/Actor/Control/ControlSystem.h"
 #include "GameFramework/Base/Actor/Control/Controller/AIControllerComponent.h"
+#include "GameFramework/Base/Actor/Control/Controller/IntentPlayback.h"
 #include "GameFramework/Base/Actor/Control/Controller/IntentTrackControllerComponent.h"
 #include "GameFramework/Base/Actor/Control/Controller/PlayerControllerComponent.h"
 #include "GameFramework/Base/Actor/Control/Controller/RemoteControllerComponent.h"
@@ -1022,4 +1023,62 @@ SW_TEST_CASE( ControlTest, UIConsumedInputDoesNotReachThePawn )
         ui.shutdown();
     }
     input.shutdown();
+}
+
+/**
+ * @brief [ControlTest] 재생 진입점 — 기록 파일을 `IntentPlayback::startFromFile` 로 열면 폰마다 기록 조종자가 서서 기록과 같은 궤적을 따라가고,
+ *        씬에 폰이 없는 트랙은 건너뛰며, 파일이 없으면 오류를 채우고 false 이다
+ */
+SW_TEST_CASE( ControlTest, PlaybackEntryReplaysAFileAndSkipsMissingPawns )
+{
+    using Internal = ControlRecordTestInternal;
+    vector<float3> listRecordedPosition;
+    const string   path = test::makeTempPath( "playback.swintent" );
+    {
+        GameObjectManager manager;
+        PawnComponent*    pPawn = Internal::spawnAnalogPawn( manager, "Runner" );
+        PawnComponent*    pGone = Internal::spawnAnalogPawn( manager, "Gone" );
+        ControlSystem::ensureFor( manager ).setRecording( true );
+        manager.beginPlay();
+        AIControllerComponent* pAI     = Internal::possessWithWanderingAI( manager, *pPawn );
+        AIControllerComponent* pAIGone = Internal::possessWithWanderingAI( manager, *pGone );
+        for ( uint32 tick = 0; tick < Internal::kTickCount; ++tick )
+        {
+            Internal::setThrottle( *pAI, tick );
+            Internal::setThrottle( *pAIGone, tick );
+            manager.tick( ControlTestInternal::kDeltaTime );
+            listRecordedPosition.push_back( ControlTestInternal::findPosition( *pPawn->getOwner() ) );
+        }
+        SW_ASSERT_TRUE( ControlSystem::find( manager )->getHistory().saveToFile( path ) );
+        manager.endPlay();
+    }
+
+    {
+        GameObjectManager manager; // "Gone" 폰이 없는 씬
+        PawnComponent*    pPawn = Internal::spawnAnalogPawn( manager, "Runner" );
+        manager.beginPlay();
+        string error;
+        uint32 started = 99;
+        SW_ASSERT_TRUE_MSG( IntentPlayback::startFromFile( manager, path, false, error, &started ), error.c_str() );
+        SW_EXPECT_EQUAL( 1u, started );
+        GameObject* pTrackObject = manager.findGameObjectByName( "IntentTrack.Runner" );
+        SW_ASSERT_NOT_NULL( pTrackObject );
+        SW_EXPECT_TRUE( pTrackObject->getComponent<IntentTrackControllerComponent>() != nullptr );
+        for ( uint32 tick = 0; tick < Internal::kTickCount; ++tick )
+        {
+            manager.tick( ControlTestInternal::kDeltaTime );
+            const float3 position = ControlTestInternal::findPosition( *pPawn->getOwner() );
+            const float3 recorded = listRecordedPosition[tick];
+            SW_EXPECT_TRUE( position._x == recorded._x && position._y == recorded._y && position._z == recorded._z );
+        }
+        manager.endPlay();
+    }
+    (void)FileUtil::tryRemoveFile( path ); // 임시 파일 정리 — 지우지 못해도 테스트 결과와 무관하다
+
+    GameObjectManager manager;
+    string            error;
+    uint32            started = 99;
+    SW_EXPECT_FALSE( IntentPlayback::startFromFile( manager, path, false, error, &started ) );
+    SW_EXPECT_FALSE( error.empty() );
+    SW_EXPECT_EQUAL( 0u, started );
 }

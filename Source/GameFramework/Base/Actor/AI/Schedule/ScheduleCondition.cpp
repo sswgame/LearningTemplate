@@ -23,7 +23,85 @@ namespace sw
         {
             static constexpr const utf8* kNameSeparators = ",;| ";
 
-            static constexpr const utf8* kArrConditionAttribute[] = { "days", "daysOfSeason", "seasons", "weathers", "phases", "flags", "tags", "notTags", "chance" };
+            static constexpr const utf8* kArrConditionAttribute[] = { "days", "daysOfSeason", "weeks", "from", "to", "seasons", "weathers",
+                                                                      "phases", "flags", "tags", "minAffinity", "maxAffinity", "notTags", "chance" };
+            /** @brief 날짜 범위 비교용 열쇠에서 계절 한 칸의 폭입니다(계절당 날 수는 이보다 작다). */
+            static constexpr int32 kSeasonKeyStride = 1000;
+            /** @brief 한 주의 날 수입니다. */
+            static constexpr int32 kDaysPerWeek = 7;
+
+            /** @brief 계절 순서에서 @p season 의 번호입니다. 모르면 −1 입니다. */
+            static int32 findSeasonIndex( const vector<hashed_string>* pListSeason, const hashed_string& season )
+            {
+                if ( pListSeason == nullptr )
+                    return -1;
+                for ( size_t index = 0; index < pListSeason->size(); ++index )
+                {
+                    if ( ( *pListSeason )[index] == season )
+                        return static_cast<int32>( index );
+                }
+                return -1;
+            }
+
+            /** @brief "5-9, 12" 를 계절의 날 목록으로 읽습니다. 범위(`a-b`)는 풀어 넣습니다. */
+            static void parseDayList( string_view text, vector<int32>& outListDay, int32 maxDay, string_view sourceName, string_view ownerName, const utf8* pWhat )
+            {
+                outListDay.clear();
+                StringUtil::forEachToken( text, kNameSeparators, [&]( string_view token )
+                {
+                    const size_t dashPos = token.find( '-' );
+                    int32        first{ 0 };
+                    int32        last{ 0 };
+                    bool         bValid{ false };
+                    if ( dashPos != string_view::npos )
+                    {
+                        bValid = StringUtil::parseInt( token.substr( 0, dashPos ), first ) && StringUtil::parseInt( token.substr( dashPos + 1 ), last );
+                    }
+                    else
+                    {
+                        bValid = StringUtil::parseInt( token, first );
+                        last   = first;
+                    }
+                    if ( bValid == false || first < 1 || last < first || maxDay < last )
+                    {
+                        SW_LOG_WARNING( "%#: '%#' has an invalid %# '%#'", sourceName, ownerName, pWhat, token );
+                        return;
+                    }
+                    for ( int32 day = first; day <= last; ++day )
+                    {
+                        outListDay.push_back( day );
+                    }
+                } );
+            }
+
+            /** @brief "Spring 20" 를 읽습니다. 비어 있으면 true 이고 날은 0 입니다(한계 없음). */
+            [[nodiscard]] static bool parseDate( string_view text, const vector<hashed_string>& listKnownSeason, hashed_string& outSeason, int32& outDay, string_view sourceName,
+                                                 string_view ownerName, const utf8* pWhat )
+            {
+                outSeason = hashed_string{};
+                outDay    = 0;
+                if ( StringUtil::trim( text ).empty() )
+                    return true;
+                string_view seasonName;
+                string_view dayText;
+                StringUtil::forEachToken( text, kNameSeparators, [&]( string_view token )
+                {
+                    if ( seasonName.empty() )
+                        seasonName = token;
+                    else if ( dayText.empty() )
+                        dayText = token;
+                } );
+                int32 day{ 0 };
+                if ( seasonName.empty() || StringUtil::parseInt( dayText, day ) == false || day < 1 )
+                {
+                    SW_LOG_WARNING( "%#: '%#' has an invalid %# date '%#' (expected \"Season day\")", sourceName, ownerName, pWhat, text );
+                    return false;
+                }
+                outSeason = hashed_string( seasonName );
+                outDay    = day;
+                warnUnknownNames( { outSeason }, listKnownSeason, "season", sourceName, ownerName );
+                return true;
+            }
 
             /** @brief 어휘가 있으면 목록의 이름이 어휘에 있는지 봅니다. */
             static void warnUnknownNames( const vector<hashed_string>& listName, const vector<hashed_string>& listKnown, const utf8* pKind, string_view sourceName,
@@ -85,6 +163,12 @@ namespace sw
                 return "tags";
             case ScheduleConditionClause::Chance:
                 return "chance";
+            case ScheduleConditionClause::Week:
+                return "weeks";
+            case ScheduleConditionClause::DateRange:
+                return "from/to";
+            case ScheduleConditionClause::Affinity:
+                return "minAffinity/maxAffinity";
             case ScheduleConditionClause::Count:
                 return "count";
         }
@@ -138,15 +222,21 @@ namespace sw
         Internal::warnUnknownNames( _listSeason, vocabulary._listSeason, "season", sourceName, ownerName );
         Internal::warnUnknownNames( _listWeather, vocabulary._listWeather, "weather", sourceName, ownerName );
 
-        _listDayOfSeason.clear();
-        StringUtil::forEachToken( node.getAttributeText( "daysOfSeason" ), Internal::kNameSeparators, [&]( string_view token )
-        {
-            int32 dayOfSeason = 0;
-            if ( StringUtil::parseInt( token, dayOfSeason ) && dayOfSeason >= 1 )
-                _listDayOfSeason.push_back( dayOfSeason );
-            else
-                SW_LOG_WARNING( "%#: '%#' has an invalid day of season '%#'", sourceName, ownerName, token );
-        } );
+        // 계절의 날은 1 부터 366 까지(`a-b` 범위 가능). 주는 1 부터 53 까지.
+        Internal::parseDayList( node.getAttributeText( "daysOfSeason" ), _listDayOfSeason, 366, sourceName, ownerName, "day of season" );
+        Internal::parseDayList( node.getAttributeText( "weeks" ), _listWeek, 53, sourceName, ownerName, "week" );
+
+        // 계절을 넘나드는 날짜 범위. 둘 다 적으면 `from` 이 `to` 보다 늦을 때 해를 넘는 범위다(Winter 20 ~ Spring 5).
+        if ( Internal::parseDate( node.getAttributeText( "from" ), vocabulary._listSeason, _fromSeason, _fromDay, sourceName, ownerName, "from" ) == false )
+            _fromDay = 0;
+        if ( Internal::parseDate( node.getAttributeText( "to" ), vocabulary._listSeason, _toSeason, _toDay, sourceName, ownerName, "to" ) == false )
+            _toDay = 0;
+
+        // 호감도(관계 단계) 범위 — 한쪽만 적어도 된다.
+        _minAffinity = node.getAttributeInt( "minAffinity", MathUtil::kMinInt32 );
+        _maxAffinity = node.getAttributeInt( "maxAffinity", MathUtil::kMaxInt32 );
+        if ( _minAffinity > _maxAffinity )
+            SW_LOG_WARNING( "%#: '%#' has minAffinity %# above maxAffinity %# - it can never match", sourceName, ownerName, _minAffinity, _maxAffinity );
 
         _phaseMask = parsePhaseMask( node.getAttributeText( "phases" ), sourceName, ownerName );
         Internal::parseTagList( node.getAttributeText( "tags" ), _listRequiredTag );
@@ -166,9 +256,11 @@ namespace sw
 
     bool ScheduleCondition::isEmpty() const
     {
-        const bool bNoNames = _listWeekday.empty() && _listSeason.empty() && _listWeather.empty() && _listDayOfSeason.empty();
-        const bool bNoTags  = _listRequiredTag.empty() && _listForbiddenTag.empty();
-        return bNoNames && bNoTags && _flags.empty() && _chance >= 1.0f && _phaseMask == 0;
+        const bool bNoNames    = _listWeekday.empty() && _listSeason.empty() && _listWeather.empty() && _listDayOfSeason.empty() && _listWeek.empty();
+        const bool bNoTags     = _listRequiredTag.empty() && _listForbiddenTag.empty();
+        const bool bNoDates    = _fromDay <= 0 && _toDay <= 0;
+        const bool bNoAffinity = _minAffinity == MathUtil::kMinInt32 && _maxAffinity == MathUtil::kMaxInt32;
+        return bNoNames && bNoTags && bNoDates && bNoAffinity && _flags.empty() && _chance >= 1.0f && _phaseMask == 0;
     }
 
     ScheduleConditionResult ScheduleCondition::evaluate( const ScheduleConditionContext& context ) const
@@ -186,6 +278,34 @@ namespace sw
             }
             Internal::mark( result, ScheduleConditionClause::DayOfSeason, bFound );
         }
+        if ( _listWeek.empty() == false )
+        {
+            const int32 week = ( context._dayOfSeason - 1 ) / Internal::kDaysPerWeek + 1;
+            Internal::mark( result, ScheduleConditionClause::Week, VectorUtil::contains( _listWeek, week ) );
+        }
+        if ( _fromDay > 0 || _toDay > 0 )
+        {
+            // 날짜를 (계절 번호, 날) 열쇠로 바꿔 비교한다. 계절 순서를 모르면(context 에 없으면) 거짓이다.
+            const int32 currentSeason = Internal::findSeasonIndex( context._pSeasonOrder, context._season );
+            const int32 fromSeason    = _fromDay > 0 ? Internal::findSeasonIndex( context._pSeasonOrder, _fromSeason ) : 0;
+            const int32 toSeason      = _toDay > 0 ? Internal::findSeasonIndex( context._pSeasonOrder, _toSeason ) : 0;
+            bool        bInRange      = false;
+            if ( currentSeason >= 0 && fromSeason >= 0 && toSeason >= 0 )
+            {
+                const int32 current = currentSeason * Internal::kSeasonKeyStride + context._dayOfSeason;
+                const int32 from    = fromSeason * Internal::kSeasonKeyStride + _fromDay;
+                const int32 to      = toSeason * Internal::kSeasonKeyStride + _toDay;
+                if ( _fromDay > 0 && _toDay > 0 )
+                    bInRange = from <= to ? ( from <= current && current <= to ) : ( from <= current || current <= to );
+                else if ( _fromDay > 0 )
+                    bInRange = from <= current;
+                else
+                    bInRange = current <= to;
+            }
+            Internal::mark( result, ScheduleConditionClause::DateRange, bInRange );
+        }
+        if ( _minAffinity != MathUtil::kMinInt32 || _maxAffinity != MathUtil::kMaxInt32 )
+            Internal::mark( result, ScheduleConditionClause::Affinity, _minAffinity <= context._affinity && context._affinity <= _maxAffinity );
         if ( _listSeason.empty() == false )
             Internal::mark( result, ScheduleConditionClause::Season, VectorUtil::contains( _listSeason, context._season ) );
         if ( _listWeather.empty() == false )

@@ -2,6 +2,7 @@
  * @file AudioVoice.h
  * @brief 클립 하나를 버스 입력에 섞는 보이스입니다. 재생 위치, 피치 리샘플, 게인 램프, 팬, 페이드, 루프, 가상 진행을 처리합니다.
  * @details 보이스는 오디오 스레드만 만진다. 블록마다 엔진이 목표(볼륨, 팬, 피치)를 정하면, 보이스는 블록 안에서 샘플마다 게인을 목표로 램프한다.
+ *          스트리밍 클립(`AudioClipData::_pStream`)은 시작할 때 보이스가 디코더를 열고(`AudioStreamWindow`), 믹스하면서 필요한 만큼만 앞으로 풀어 읽는다.
  *          **가상(virtual)** 보이스는 섞지 않고 재생 위치만 진행한다. 다시 들리게 되면 그 시각의 위치에서 이어서 재생한다(Wwise 의 "virtual voice").
  */
 #pragma once
@@ -10,6 +11,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Audio/AudioClip.h"
+#include "Engine/Audio/AudioStream.h"
 #include "Engine/Audio/DSP/AudioBiquad.h"
 
 namespace sw
@@ -71,6 +73,8 @@ namespace sw
         float64 getPosition() const { return _position; }
         /** @brief 페이드가 향하는 목표 게인입니다. 들림 판정에 쓰며, 페이드인 첫 블록도 들리는 것으로 봅니다. */
         float32 getFadeTarget() const { return _fadeTarget; }
+        /** @brief 스트리밍 창입니다(스트리밍 클립이 아니면 닫혀 있다). 진단 · 테스트가 되감은 횟수를 읽는다. */
+        const AudioStreamWindow& getStreamWindow() const { return _stream; }
         /** @brief 현재 적용 중인 페이드 게인입니다. */
         float32 getFadeGain() const { return _fadeGain; }
         /** @brief 클립입니다. */
@@ -81,12 +85,19 @@ namespace sw
         bool stepFade();
         /** @brief 거르지 않고 @p pTarget 에 더합니다. */
         void mixInto( float32* pTarget, uint32 frameCount );
+        /** @brief 게인 램프 · 페이드 · 위치 진행을 하며 @p sampler 가 주는 보간 샘플을 더합니다. 메모리 클립과 스트리밍 클립이 같은 본문을 쓴다. */
+        template <typename TSampler>
+        void mixLoop( float32* pTarget, uint32 frameCount, TSampler& sampler );
         /** @brief 위치를 @p frameCount 출력 프레임만큼 진행합니다(루프와 끝 처리). */
         void advancePosition( uint32 frameCount );
 
     private:
         shared_ptr<const AudioClipData> _pClip;             /**< 재생하는 클립입니다. */
         AudioBiquadStereo               _lowPass;           /**< 보이스 로우패스입니다. */
+        AudioStreamWindow               _stream;            /**< 스트리밍 클립의 디코더와 창입니다. */
+        float32                         _firstFrameLeft;    /**< 스트리밍 루프 이음매 보간에 쓰는 클립 첫 프레임(왼쪽)입니다. */
+        float32                         _firstFrameRight;   /**< 같은 첫 프레임의 오른쪽입니다. */
+        bool                            _bHaveFirstFrame;   /**< 첫 프레임을 읽어 두었는지입니다. */
         float64                         _position;          /**< 클립 안의 위치(프레임, 소수)입니다. */
         float64                         _rate;              /**< 출력 프레임당 진행하는 클립 프레임입니다. */
         float32                         _gainLeft;          /**< 지금 왼쪽 게인입니다(램프 중). */

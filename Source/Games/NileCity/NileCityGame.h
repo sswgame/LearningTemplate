@@ -21,5 +21,6 @@ namespace sw
 
     protected:
         bool onInitialize() override;
+        void onShutdown() override;
     };
 } // namespace sw

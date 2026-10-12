@@ -1,6 +1,6 @@
 /**
  * @file ScheduleCondition.h
- * @brief 일정 조건 — 요일 · 계절의 날 · 계절 · 날씨 · 하루의 때 · 게임 플래그 조건식 · 태그(관계 · 퀘스트) · 확률입니다.
+ * @brief 일정 조건 — 요일 · 계절의 날(범위 가능) · 주 · 날짜 범위 · 계절 · 날씨 · 하루의 때 · 게임 플래그 조건식 · 태그(관계 · 퀘스트) · 호감도 단계 · 확률입니다.
  * @details 루틴 · 일정 칸 · 축제 · 약속이 같은 조건을 씁니다(스타듀 밸리의 요일 · 비 · 하트 일정, 스카이림 Radiant AI 패키지 조건).
  *          조건은 절(clause)마다 따로 판정해 어느 절이 막았는지 남깁니다 — "왜 여기 있나" 추적이 그것을 보여 줍니다.
  */
@@ -9,6 +9,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/TagID.h"
 #include "Core/String/hashed_string.h"
 
@@ -32,6 +33,9 @@ namespace sw
         Flags,
         Tags,
         Chance,
+        Week,      ///< 계절의 몇째 주인지(`weeks`, 1 부터 — 1 ~ 7 일이 첫째 주)
+        DateRange, ///< 계절을 넘나드는 날짜 범위(`from` · `to`)
+        Affinity,  ///< NPC 의 호감도(관계 단계) 범위(`minAffinity` · `maxAffinity`)
         Count
     };
 
@@ -43,16 +47,18 @@ namespace sw
     /** @brief 조건을 판정할 때의 세계 상태입니다. 빈 칸(널 포인터 · 빈 이름)은 "모름" 이고, 그 절을 요구하는 조건은 거짓입니다. */
     struct ScheduleConditionContext
     {
-        const GameFlags*    _pFlags{ nullptr };
-        const TagContainer* _pNpcTags{ nullptr };   ///< NPC 자신의 태그(관계 · 퀘스트 진행)
-        const TagContainer* _pWorldTags{ nullptr }; ///< 세계 태그(축제 중 · 경보)
-        hashed_string       _weekday{};
-        hashed_string       _season{};
-        hashed_string       _weather{};
-        int32               _day{ 0 };         ///< 0 부터 센 전체 날 — 확률 굴림의 열쇠
-        int32               _dayOfSeason{ 0 }; ///< 1 부터
-        uint32              _chanceKey{ 0 };   ///< 확률 굴림의 열쇠(씨앗 · NPC · 루틴을 섞은 값)
-        DayPhase            _phase{ DayPhase::Day };
+        const GameFlags*             _pFlags{ nullptr };
+        const TagContainer*          _pNpcTags{ nullptr };   ///< NPC 자신의 태그(관계 · 퀘스트 진행)
+        const TagContainer*          _pWorldTags{ nullptr }; ///< 세계 태그(축제 중 · 경보)
+        hashed_string                _weekday{};
+        hashed_string                _season{};
+        hashed_string                _weather{};
+        int32                        _day{ 0 };                ///< 0 부터 센 전체 날 — 확률 굴림의 열쇠
+        const vector<hashed_string>* _pSeasonOrder{ nullptr }; ///< 한 해의 계절 순서(날짜 범위가 비교한다). 없으면 날짜 범위 절은 거짓이다.
+        int32                        _dayOfSeason{ 0 };        ///< 1 부터
+        int32                        _affinity{ 0 };           ///< NPC 의 호감도(관계 단계). 게임이 `ScheduleSystem::setNpcAffinity` 로 넣는다.
+        uint32                       _chanceKey{ 0 };          ///< 확률 굴림의 열쇠(씨앗 · NPC · 루틴을 섞은 값)
+        DayPhase                     _phase{ DayPhase::Day };
     };
 } // namespace sw
 
@@ -87,8 +93,9 @@ namespace sw
      * @struct ScheduleCondition
      * @brief 일정 조건 하나입니다. 모든 절이 참이어야 참이고, 적지 않은 절은 늘 참입니다.
      * @code
-     *     <Routine id="rainy" priority="10" weathers="rain,storm" days="Sat,Sun" seasons="Spring" daysOfSeason="1,2"
-     *              phases="Day" flags="bridgeFixed && !festival" tags="Relationship.Player.Friend" notTags="Quest.Missing" chance="0.5"/>
+     *     <Routine id="rainy" priority="10" weathers="rain,storm" days="Sat,Sun" seasons="Spring" daysOfSeason="1,2,5-9" weeks="1,3"
+     *              from="Spring 20" to="Summer 5" phases="Day" flags="bridgeFixed && !festival" tags="Relationship.Player.Friend" notTags="Quest.Missing"
+     *              minAffinity="4" maxAffinity="7" chance="0.5"/>
      * @endcode
      * @details 확률은 날 · 열쇠의 해시로 굴려 같은 씨앗이면 같은 날 같은 답입니다(저장 · 재생 · 화면 밖 시뮬레이션이 같은 길을 간다).
      */
@@ -98,9 +105,16 @@ namespace sw
         vector<hashed_string> _listSeason{};
         vector<hashed_string> _listWeather{};
         vector<int32>         _listDayOfSeason{};
+        vector<int32>         _listWeek{};
         vector<TagID>         _listRequiredTag{};
         vector<TagID>         _listForbiddenTag{};
         string                _flags{}; ///< `GameFlags` 조건식
+        hashed_string         _fromSeason{};
+        hashed_string         _toSeason{};
+        int32                 _fromDay{ 0 };                       ///< 0 이면 시작 한계가 없다
+        int32                 _toDay{ 0 };                         ///< 0 이면 끝 한계가 없다
+        int32                 _minAffinity{ MathUtil::kMinInt32 }; ///< 호감도 하한(없으면 `kMinInt32`)
+        int32                 _maxAffinity{ MathUtil::kMaxInt32 }; ///< 호감도 상한(없으면 `kMaxInt32`)
         float32               _chance{ 1.0f };
         uint8                 _phaseMask{ 0 }; ///< `makeDayPhaseBit` 의 합 — 0 이면 언제나
 

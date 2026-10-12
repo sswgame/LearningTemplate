@@ -7,6 +7,7 @@
 
 #include "Engine/Object/Component/3D/LightComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
@@ -557,5 +558,29 @@ namespace sw
     {
         _checkpointBytes.clear();
         restoreCheckpoint();
+    }
+
+    bool GimmickCircuitComponent::restoreStateBytes( const vector<uint8>& bytes )
+    {
+        if ( _circuit.isBuilt() == false || _circuit.loadState( bytes ) == false )
+            return false;
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        if ( pManager != nullptr )
+            applyActuators( *pManager );
+        storeState();
+        return true;
+    }
+
+    void GimmickCircuitComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        manager.getComponentRegistry().add<GimmickCircuitComponent>( this );
+    }
+
+    void GimmickCircuitComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<GimmickCircuitComponent>( this );
+        Component::onUnregister( manager );
     }
 } // namespace sw

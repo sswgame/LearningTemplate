@@ -94,6 +94,11 @@ namespace sw
         bool hasEvent( const hashed_string& eventName ) const;
         /** @brief 그 이름(`loadEventLibrary` 에 준 이름)으로 로드한 라이브러리가 있는지 반환합니다. 에디터의 데이터 핫 리로드가 게임이 로드한 라이브러리만 다시 읽으려고 묻습니다. */
         bool hasEventLibrary( const hashed_string& libraryName ) const;
+        /**
+         * @brief 그 이름(보통 리소스 경로)으로 로드한 라이브러리를 찾아 로드할 때의 이름을 @p outLibraryName 에 돌려줍니다. 구분자와 대소문자를 무시하고, 이름을 intern 하지 않습니다.
+         * @details 핫 리로드가 바뀐 파일마다 묻는 길이라 모르는 경로로 `hashed_string` 을 만들지 않는다. 돌려준 이름으로 다시 로드해야 같은 라이브러리를 바꾼다.
+         */
+        [[nodiscard]] bool findEventLibraryName( string_view libraryName, hashed_string& outLibraryName ) const;
         /** @brief 클립 캐시입니다. */
         AudioClipCache& getClipStore() { return _clipStore; }
         /** @brief 컨테이너와 범위가 쓰는 난수의 시드를 정합니다. 테스트에서 결정성을 얻으려고 씁니다. 다음 블록부터 적용됩니다. */

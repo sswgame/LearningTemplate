@@ -97,6 +97,13 @@ _soundQueue.playAll();                      // 틱 뒤 게임 스레드에서
 OGG 디코더(stb_vorbis)의 메모리는 엔진 아레나에서 받고, 256KB 에서 시작해 64MB 를 넘지 않습니다(`AudioVorbisDecode.cpp`). 깨진 파일이 과하게 할당하거나 누수를 내더라도 아레나 안에서 끝납니다.
 공통 디코더가 못 읽는 형식(MP3, ADPCM WAV)은 백엔드의 대체 디코더(`AudioClipCache::setFallbackDecoder`)가 풉니다. Windows 는 Media Foundation 을 씁니다.
 
+**긴 소리는 스트리밍합니다.** 3 분 스테레오 48 kHz 를 float 로 풀면 약 69 MB 인데 같은 곡의 OGG 는 3 ~ 4 MB 입니다. 클립 캐시는 길이가 `setStreamMinSeconds`(기본 20 초) 이상인 OGG(채널 1 ~ 2)와
+WAV(16 비트 · float32, 채널 1 ~ 2)를 풀지 않고 압축 바이트 한 벌(`AudioStreamSource`)만 든 클립으로 만듭니다(`AudioClipData::isStreamed()`, `_listSample` 은 비어 있음). 보이스가 시작할 때
+자기 디코더를 열고(`AudioStreamWindow`), 믹스하면서 필요한 만큼(2048 프레임 덩어리)만 앞으로 풀어 읽습니다. 같은 곡을 두 보이스가 재생해도 압축 바이트는 하나입니다.
+루프를 한 바퀴 돌 때와 위치를 옮길 때(가상 보이스가 다시 들릴 때)만 되감고, 루프 이음매 보간은 처음 읽어 둔 첫 프레임을 써서 되감기 없이 끝납니다.
+결과는 통째로 푼 소리와 샘플까지 같습니다(`TestAudioStream`). 한계: 디코드는 믹서 스레드에서 블록마다 하고(OGG 한 블록이 수 마이크로초), 보이스를 시작할 때 디코더를 여는 한 번이 가장 비쌉니다.
+팩에 부분 읽기 API 가 없어 파일 전체를 메모리에 읽습니다 — 디스크 스트리밍은 아닙니다. 3 채널 이상 OGG 와 8 · 24 비트 WAV, MP3 는 통째로 풉니다.
+
 ### 버스 그래프
 
 데이터는 `engine/audio/default.audiomixer.xml` 이고, 파일이 없으면 `AudioMixerDesc::makeDefault` 를 씁니다. 게임은 `IAudioService::loadMixer` 로 그래프를 바꿀 수 있고, 재생 중인 보이스는 같은 이름의 버스로 옮겨 갑니다.
@@ -117,6 +124,20 @@ OGG 디코더(stb_vorbis)의 메모리는 엔진 아레나에서 받고, 256KB �
 - **페이더 게인은 데이터 볼륨(dB), 사용자 볼륨, 스냅샷 오프셋(dB), 음소거와 솔로를 곱한 값입니다.**
   사용자 볼륨은 옵션 메뉴의 `audio.busVolume` 이 `IAudioService::setBusVolume` 으로 넣고, 그래프를 바꿔도 버스 이름으로 유지됩니다. 음소거(`setMute`)는 `master` 한 곳에만 겁니다.
 - 버스 하나라도 솔로면, 솔로 버스의 조상(신호가 지나는 경로)과 자손만 소리를 냅니다. DAW 와 Wwise 의 솔로와 같습니다.
+
+### 사이드체인 덕킹
+
+다른 버스가 시끄러우면 이 버스를 눌러 줍니다. 대사가 나올 때 음악 낮추기가 대표입니다(Wwise Auto-Ducking, 언리얼 서브믹스 Ducking). 눌리는 버스(음악)에 적습니다.
+
+```xml
+<AudioBusDesc _name="music" _parent="master">
+    <_listDuck><AudioDuckDesc _sourceBus="voice" _thresholdDb="-40" _depthDb="-9" _attackSeconds="0.05" _releaseSeconds="0.5" /></_listDuck>
+</AudioBusDesc>
+```
+
+소스 버스의 **지난 블록** 출력 피크(페이더 뒤)가 `_thresholdDb` 이상이면 목표가 `_depthDb`(0 이하), 아니면 0 입니다. 눌림은 dB 축에서 `_attackSeconds`(더 깊어질 때)와 `_releaseSeconds`(돌아올 때)로 따라가고,
+버스 페이더에 더해집니다(`AudioMixer::getBusDuckDb`). 지난 블록 값을 쓰므로 한 블록(약 5 ms) 늦지만 처리 순서에 제약이 없고 고리가 생겨도 재귀하지 않습니다. 덕이 여럿이면 가장 깊은 하나를 씁니다.
+모르는 소스, 자기 자신, 양수 깊이는 읽기 오류입니다. 기본 그래프에는 덕이 없습니다 — 게임이 믹서를 바꿀 때 넣습니다(`loadMixer`). 조건 없이 늘 낮추는 것은 스냅샷(`PauseMenu` 처럼 버스 오프셋)이 맞습니다.
 
 ### 이펙트
 
@@ -142,7 +163,9 @@ OGG 디코더(stb_vorbis)의 메모리는 엔진 아레나에서 받고, 256KB �
 보이스에 에미터(`_emitterID`)와 감쇠 프리셋(`_attenuation`)이 모두 있으면 블록마다 리스너 기준으로 공간화합니다. 하나라도 없으면 공간화하지 않는 2D 소리입니다(`AudioSpatial`).
 감쇠 프리셋은 믹서 데이터의 `_listAttenuation` 에 있습니다. Wwise 의 Attenuation ShareSet, 언리얼의 Sound Attenuation 에 해당합니다.
 
-**리스너.** `setListener( 번호, AudioListenerState )` 로 최대 4개(화면 분할)를 둡니다. 리스너가 여럿이면 보이스마다 가장 크게 들리는 리스너를 기준으로 계산합니다. 리스너를 섞는 다중 리스너 믹스는 없습니다.
+**리스너.** `setListener( 번호, AudioListenerState )` 로 최대 4개(화면 분할)를 둡니다. 리스너가 여럿이면 믹서 데이터의 `_listenerMix` 가 정합니다. `Loudest`(기본)는 보이스마다 가장 크게 들리는 리스너 하나를 기준으로 계산하고(언리얼 · Wwise 의 가장 가까운 리스너),
+`PowerSum` 은 리스너마다 계산해 합칩니다 — 게인은 √(Σ게인²)(1 을 넘지 않음), 팬은 전력 가중 평균, 컷오프는 들리는 리스너 중 가장 열린 것, 도플러는 가장 크게 들리는 리스너의 것입니다(`AudioSpatializer::combineListeners`).
+출력이 스테레오 하나이므로 리스너마다 따로 렌더해 더하는 것이 아니라 보이스 하나의 결과를 합치는 근사입니다.
 
 **팬.** 3D 모드(`World3D`)는 소리 방향의 리스너 오른쪽 성분으로 좌우를 정하고, 고도는 쓰지 않습니다. 리스너에 아주 가까운 소리는 가운데로 모읍니다.
 모노 소리는 등전력 팬(가운데 -3 dB)이고 스테레오 소리는 밸런스입니다. HRTF(바이노럴)와 서라운드 출력은 없고, 출력은 스테레오입니다.
@@ -186,6 +209,10 @@ Wwise 의 Event, Random/Sequence/Blend 컨테이너, Playback Limit, RTPC 에 �
 **로드 검사.** `AudioEngine::loadEventLibrary( 이름, 라이브러리 )` 는 세 가지를 확인합니다.
 파일 안의 규칙(이름, 클립, 범위, 곡선 순서, 모르는 파라미터), 그래프와의 대조(버스, 감쇠 프리셋), 다른 라이브러리와의 이벤트와 파라미터 이름 충돌입니다. 하나라도 어긋나면 오류이고 로드하지 않습니다.
 같은 이름으로 다시 로드하면 교체합니다(핫 리로드). 쿨다운과 순서 커서는 이름으로 이어집니다. 로드할 때 클립 디코드도 시작합니다(뱅크 로드). 재생 중인 인스턴스는 자기 라이브러리를 끝까지 씁니다.
+
+**핫 리로드.** 파일이 바뀌면 `IAudioService::reloadDataFile( 경로 )` 가 믹서 그래프(`loadMixer` 로 읽은 경로)나 이벤트 라이브러리(`loadEventLibrary` 이름이 그 경로)를 다시 읽어 바꿉니다.
+읽기나 검사에 실패하면 지금 것을 그대로 쓰고 오류만 남깁니다. 에셋 캐시 레지스트리에는 `AudioReloadCache`("AudioData")가 올라 있어, 에디터의 핫 리로드 경로 표가 `.audiomixer.xml` ·
+`.audioevents.xml` 접미사를 "경로를 든 캐시가 읽는다" 경로(`AssetReloadRoute::kAnyCacheHoldingPath`)로 돌리면 이 캐시가 받습니다. 음악 파일(`*.music.xml`)은 재생 중인 곡을 다시 시작하게 되므로 다시 읽지 않습니다.
 
 ### 스냅샷
 
@@ -231,7 +258,13 @@ Wwise 의 Event, Random/Sequence/Blend 컨테이너, Playback Limit, RTPC 에 �
 - 리버브 존은 경계에서 0, `_fadeDistance` 안쪽에서 1 인 세기로 스냅샷(`Cave`, `Hall`, `Underwater`)을 겁니다. 같은 스냅샷을 쓰는 존이 여럿이면 가장 큰 세기를 씁니다.
 
 **가림 질의.** 3D 물리 씬이 있으면 `PhysicsAudioOcclusionQuery` 가 `IPhysicsScene3D::raycast` 광선 세 개(가운데와 좌우)를 쏴 막힌 비율을 구합니다. 에미터 몇 개씩 프레임마다 돌아가며 계산하고, 오프셋 값은 헤더에 있습니다.
-물리 씬이 없거나 2D(Box2D) 씬이면 가림은 0 입니다. `setOcclusionQuery` 로 내비메시나 방 그래프 같은 다른 기하를 쓰는 질의로 바꿀 수 있습니다.
+3D 씬이 없고 2D(Box2D) 씬이 있으면 `Physics2DAudioOcclusionQuery` 가 같은 규칙의 레이 셋을 월드 XY 평면에서 쏩니다(Z 는 레이어라 무시). 물리 씬이 없으면 가림은 0 입니다.
+`setOcclusionQuery` 로 다른 기하를 쓰는 질의로 바꿀 수 있습니다.
+
+**방과 포털.** 레이캐스트 대신 `AudioRoomGraph`(Wwise Rooms & Portals)를 `setOcclusionQuery` 에 물리면 "소리가 문을 거쳐 오는가"로 가림을 정합니다.
+방은 축 정렬 상자(겹치면 부피가 작은 쪽이 그 점의 방)이고 포털은 두 방(또는 바깥 `kOutside`)을 잇는 열림 0..1 의 통로입니다. 같은 방이면 가림 0, 아니면 포털 사슬 가운데
+투과율(`열림 × (1 − 열린 포털 가림)` 의 곱)이 가장 큰 길로 `가림 = 1 − max(투과율, 벽 누설)` 입니다. 문 여닫기는 `setPortalOpenness` 만 부르면 엔진의 가림 추종이 부드럽게 바꿔 줍니다.
+회절(모서리를 돌아 들어오는 소리의 방향)은 하지 않습니다.
 
 사라진 에미터는 엔진에서 바로 지우지 않고, 그 위치의 한 번짜리 소리가 끝난 뒤 지웁니다. 위치를 잃은 소리가 2D 로 돌아가 크게 들리지 않게 하기 위해서입니다.
 엔진은 오디오 서비스(`engine::getAudioService`)의 것이고, 테스트는 `SceneAudio::setAudioEngine` 으로 장치 없는 엔진을 연결합니다.

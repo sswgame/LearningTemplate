@@ -98,6 +98,9 @@ namespace sw
         GimmickCircuitComponent();
         virtual ~GimmickCircuitComponent() override = default;
 
+        /** @brief 씬의 컴포넌트 레지스트리에 올라 "회로를 모두" 를 씬을 훑지 않고 돌려줍니다(`GimmickStateBundle`). */
+        void onRegister( GameObjectManager& manager ) override;
+        void onUnregister( GameObjectManager& manager ) override;
         void onPostLoad() override;
         void onBeginPlay() override;
         void onTick( float32 deltaTime ) override;
@@ -122,6 +125,11 @@ namespace sw
         void restoreCheckpoint();
         /** @brief 만든 직후 상태로 되돌립니다. */
         void resetCircuit();
+        /**
+         * @brief `getStateBytes` 가 준 바이트(다른 기계에서 온 네트워크 스냅샷, 롤백 저장)로 상태를 되돌리고 액추에이터 자세를 다시 적용합니다.
+         * @return 바이트가 이 회로 구조의 것이 아니면(해시 · 크기 불일치) 아무것도 바꾸지 않고 false 입니다.
+         */
+        [[nodiscard]] bool restoreStateBytes( const vector<uint8>& bytes );
 
         const GimmickCircuit& getCircuit() const { return _circuit; }
         GimmickCircuit&       getCircuit() { return _circuit; }

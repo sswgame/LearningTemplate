@@ -1,0 +1,28 @@
+<!--
+	HarvestValley 사운드 이벤트(AudioEventLibrary). 위에서 내려다보는 농장이라 소리는 모두 2D(공간화 없음)다.
+	선택 · 심기 · 수확 · 출하는 농부의 동작에 따라 연달아 나올 수 있어 쿨다운으로 겹침을 줄이고, 볼륨과 피치를 조금씩 흔든다.
+-->
+<AudioEventLibrary>
+	<_listEvent>
+		<AudioEventDesc _name="ToolSelect" _bus="ui" _priority="70" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="game/harvestvalley/sounds/select_002.ogg" />
+			</_listClip>
+		</AudioEventDesc>
+		<AudioEventDesc _name="Plant" _bus="sfx" _priority="50" _cooldownSeconds="0.08" _maxInstances="2" _steal="Oldest" _volumeDbMin="-3" _volumeDbMax="0" _pitchMin="-1.5" _pitchMax="1.5">
+			<_listClip>
+				<AudioClipEntry _path="game/harvestvalley/sounds/drop_002.ogg" />
+			</_listClip>
+		</AudioEventDesc>
+		<AudioEventDesc _name="Harvest" _bus="sfx" _priority="55" _cooldownSeconds="0.08" _maxInstances="3" _steal="Oldest" _volumeDbMin="-3" _volumeDbMax="0" _pitchMin="-1" _pitchMax="2">
+			<_listClip>
+				<AudioClipEntry _path="game/harvestvalley/sounds/pluck_001.ogg" />
+			</_listClip>
+		</AudioEventDesc>
+		<AudioEventDesc _name="Ship" _bus="ui" _priority="70" _maxInstances="2">
+			<_listClip>
+				<AudioClipEntry _path="game/harvestvalley/sounds/confirmation_001.ogg" />
+			</_listClip>
+		</AudioEventDesc>
+	</_listEvent>
+</AudioEventLibrary>

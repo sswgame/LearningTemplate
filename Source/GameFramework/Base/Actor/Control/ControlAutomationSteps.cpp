@@ -14,6 +14,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Base/Actor/Control/Controller/ControllerComponent.h"
+#include "GameFramework/Base/Actor/Control/Controller/IntentPlayback.h"
 #include "GameFramework/Base/Actor/Control/Controller/IntentTrackControllerComponent.h"
 #include "GameFramework/Base/Actor/Control/Intent/ControlIntent.h"
 #include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
@@ -24,9 +25,6 @@ namespace sw
     {
         struct ControlAutomationStepsInternal
         {
-            /** @brief `<Intent>` 이 폰마다 세우는 기록 조종자 오브젝트 이름의 앞머리입니다(뒤에 폰 이름). */
-            static constexpr string_view kTrackControllerPrefix = "IntentTrack.";
-
             static bool checkAttributeNames( const AutomationStep& step, std::initializer_list<string_view> listAllowed, string& outError )
             {
                 for ( const AutomationAttribute& attribute : step._listAttribute )
@@ -170,7 +168,7 @@ namespace sw
                 listIntent[0]._buttonTriggered = intent._buttonDown;
 
                 GameObjectManager& manager        = *pObject->getManager();
-                const string       controllerName = string( kTrackControllerPrefix ) + *pPawnName;
+                const string       controllerName = string( IntentPlayback::kControllerPrefix ) + *pPawnName;
                 GameObject*        pTrackObject   = manager.findGameObjectByName( hashed_string( controllerName ) );
                 if ( pTrackObject == nullptr )
                     pTrackObject = manager.createGameObject( hashed_string( controllerName ) );

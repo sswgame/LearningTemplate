@@ -6,6 +6,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Audio/AudioClipDecoder.h"
+#include "Engine/Audio/AudioStream.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Resource/ResourceIO.h"
 
@@ -102,7 +103,7 @@ namespace sw
     void AudioClipData::copyMonoSamples( vector<float32>& outListSample ) const
     {
         outListSample.assign( _frameCount, 0.0f );
-        if ( _channelCount == 0 )
+        if ( _channelCount == 0 || _listSample.empty() )
             return;
         const float32 scale = 1.0f / static_cast<float32>( _channelCount );
         for ( uint32 frameIndex = 0; frameIndex < _frameCount; ++frameIndex )
@@ -119,6 +120,7 @@ namespace sw
     AudioClipCache::AudioClipCache()
         : _mapPathToEntry{}
         , _pFallbackDecoder{ nullptr }
+        , _streamMinSeconds{ kDefaultStreamMinSeconds }
         , _mutex{}
     {
     }
@@ -199,7 +201,23 @@ namespace sw
             const bool    bRead = ResourceIO::readBinaryResource( pathView, bytes ) ||
                                ( FileUtil::exists( pathView ) && FileUtil::readFile( pathView, bytes ) );
             if ( bRead )
+            {
+                // 긴 소리는 풀지 않고 압축 바이트로 스트리밍한다(음수 기준이면 끈다). 짧거나 스트리밍할 수 없는 형식이면 바이트가 그대로 남아 아래에서 통째로 푼다.
+                if ( 0.0f <= _streamMinSeconds )
+                {
+                    shared_ptr<const AudioStreamSource> pStream = AudioStreamSource::tryCreate( pathView, bytes, _streamMinSeconds );
+                    if ( pStream != nullptr )
+                    {
+                        shared_ptr<AudioClipData> pClip = make_shared<AudioClipData>();
+                        pClip->_pStream                 = pStream;
+                        pClip->_frameCount              = pStream->getInfo()._frameCount;
+                        pClip->_sampleRate              = pStream->getInfo()._sampleRate;
+                        pClip->_channelCount            = pStream->getInfo()._channelCount;
+                        return pClip;
+                    }
+                }
                 bDecoded = AudioClipDecoder::decode( pathView, bytes.data(), bytes.size(), pcm );
+            }
         }
         // 공통 디코더가 못 읽는 WAV(ADPCM 등)와 다른 형식(MP3 등)은 백엔드의 대체 디코더에 넘긴다. OGG 는 넘기지 않는다(Media Foundation 은 Vorbis 를 모른다).
         if ( bDecoded == false && _pFallbackDecoder != nullptr && FileUtil::hasExtension( pathView, ".ogg" ) == false )

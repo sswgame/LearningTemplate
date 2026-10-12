@@ -24,7 +24,7 @@ namespace sw
 
 namespace sw
 {
-    bool AudioClipDecoder::decodeWav( const uint8* pBytes, size_t byteCount, AudioPcm& outPcm )
+    bool AudioClipDecoder::parseWavLayout( const uint8* pBytes, size_t byteCount, AudioPcm& outFormat, size_t& outDataOffset, uint32& outDataSize )
     {
         using Internal = AudioClipDecoderInternal;
         if ( pBytes == nullptr || byteCount < 44 )
@@ -82,8 +82,21 @@ namespace sw
              pcm._bitsPerSample == 0 || ( pcm._bitsPerSample % 8u ) != 0 )
             return false;
 
-        pcm._bFloat = baseFormatTag == Internal::kWaveFormatIeeeFloat ? SW_TRUE : SW_FALSE;
-        pcm._listData.assign( pData, pData + dataSize );
+        pcm._bFloat   = baseFormatTag == Internal::kWaveFormatIeeeFloat ? SW_TRUE : SW_FALSE;
+        outFormat     = std::move( pcm );
+        outDataOffset = static_cast<size_t>( pData - pBytes );
+        outDataSize   = dataSize;
+        return true;
+    }
+
+    bool AudioClipDecoder::decodeWav( const uint8* pBytes, size_t byteCount, AudioPcm& outPcm )
+    {
+        AudioPcm pcm;
+        size_t   dataOffset{ 0 };
+        uint32   dataSize{ 0 };
+        if ( parseWavLayout( pBytes, byteCount, pcm, dataOffset, dataSize ) == false )
+            return false;
+        pcm._listData.assign( pBytes + dataOffset, pBytes + dataOffset + dataSize );
         outPcm = std::move( pcm );
         return true;
     }

@@ -7,6 +7,7 @@
 #include "Engine/Object/Component/Audio/AudioEmitterComponent.h"
 #include "Engine/Object/Component/Audio/AudioListenerComponent.h"
 #include "Engine/Object/Component/Audio/AudioReverbZoneComponent.h"
+#include "Engine/Object/Component/Audio/Physics2DAudioOcclusionQuery.h"
 #include "Engine/Object/Component/Audio/PhysicsAudioOcclusionQuery.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -120,7 +121,7 @@ namespace sw
         (void)_zone.remove( pZone ); // 등록돼 있지 않았으면 할 일이 없다
     }
 
-    void SceneAudio::update( float32 deltaSeconds, const CameraComponent* pCamera, const IPhysicsQueryScene3D* pScene3D )
+    void SceneAudio::update( float32 deltaSeconds, const CameraComponent* pCamera, const IPhysicsQueryScene3D* pScene3D, const IPhysicsQueryScene2D* pScene2D )
     {
         AudioEngine* pEngine = findAudioEngine();
         if ( pEngine == nullptr )
@@ -189,12 +190,18 @@ namespace sw
         }
 
         // 가림 — 프레임마다 몇 개씩 돌아가며 측정한다(엔진이 부드럽게 따라간다).
-        PhysicsAudioOcclusionQuery  physicsQuery;
-        const IAudioOcclusionQuery* pQuery = _pOcclusionOverride;
+        PhysicsAudioOcclusionQuery   physicsQuery;
+        Physics2DAudioOcclusionQuery physics2DQuery;
+        const IAudioOcclusionQuery*  pQuery = _pOcclusionOverride;
         if ( pQuery == nullptr && pScene3D != nullptr )
         {
             physicsQuery.setScene( pScene3D, MathUtil::kMaxUInt32 );
             pQuery = &physicsQuery;
+        }
+        else if ( pQuery == nullptr && pScene2D != nullptr )
+        {
+            physics2DQuery.setScene( pScene2D, MathUtil::kMaxUInt32 );
+            pQuery = &physics2DQuery;
         }
         const uint32 emitterCount = static_cast<uint32>( _listEmitterSnapshot.size() );
         if ( pQuery != nullptr && emitterCount > 0 )
