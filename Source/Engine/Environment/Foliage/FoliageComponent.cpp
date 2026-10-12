@@ -106,13 +106,8 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr || _bBuiltOnTerrain == SW_TRUE )
             return;
-        const ComponentHandle self = getHandle();
-        pManager->executeOrDeferPostTick( [pManager, self]()
-        {
-            FoliageComponent* pFoliage = static_cast<FoliageComponent*>( pManager->resolveComponent( self ) );
-            if ( pFoliage != nullptr )
-                pFoliage->rebuildFoliage();
-        } );
+        pManager->executeOrDeferPostTickOnComponent<FoliageComponent>( getHandle(), []( FoliageComponent& foliage )
+        { foliage.rebuildFoliage(); } );
     }
 
     void FoliageComponent::onPropertyChanged( hashed_string propertyName )
