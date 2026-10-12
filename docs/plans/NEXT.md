@@ -23,6 +23,8 @@
 
 ## 검증할 것
 
+- **S18 ~ S22 는 빌드 · 테스트 없이 병합했다**(사용자가 검증을 따로 맡는다, 2026-10-12). 먼저 볼 곳은 [StructureRefactor](StructureRefactor.md) "S21 · S22 끝남" 의 마지막 줄. S18 ~ S20 은 Debug 빌드 · 린트 · `nogpu` · `hostgpu` 까지 통과했고 Shipping 은 안 돌렸다.
+
 - 6 차 병합 뒤 돌리지 않은 것: Shipping `-L hostgpu`, 게임 프리셋(`Ninja-Debug-<Game>`)과 네 백엔드 대표 실행(지연 로드 제거가 핫 리로드와 모듈 로드를 바꿨다),
   Debug `-L hostgpu` 의 통과 여부(실행은 했으나 결과를 읽지 못했다 — 다시 돌려 `tests passed` 를 본다).
 - 다른 PC 에서 vcpkg 포트 `tracy`(port-version 2)를 받으면 `cmake --preset` 이 Tracy 를 다시 빌드한다.

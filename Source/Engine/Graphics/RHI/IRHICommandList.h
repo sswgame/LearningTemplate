@@ -45,7 +45,7 @@ namespace sw
         virtual void setScissorRect( const RHIScissorRect& rect ) = 0;
         /**
          * @brief 이 지점의 GPU 시각을 슬롯에 기록합니다. 지원하지 않는 백엔드에서는 아무 일도 하지 않습니다.
-         * @param slotIndex `IRHIDevice::getTimestampSlotCount()` 미만이어야 합니다.
+         * @param slotIndex `IRHITimestampProvider::getTimestampSlotCount()` 미만이어야 합니다.
          */
         virtual void writeTimestamp( uint32 slotIndex ) { (void)slotIndex; }
 
