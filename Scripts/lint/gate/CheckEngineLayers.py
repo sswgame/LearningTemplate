@@ -15,6 +15,9 @@ Engine 레이어 금지 include 검사.
      C-ABI 로만), Server 는 Engine · RuntimeAPI · ModuleHost 만, ModuleHost 는 Engine · RuntimeAPI 만 알고, 에디터는 게임 · 키트 · 호스트를 모르며,
      Engine · GameFramework · 게임은 호스트(App · ModuleHost · Server)를 모른다.
   6) 게임은 다른 게임을 include 하지 않는다 — 나눠 쓸 것은 키트 · 기반으로 내린다.
+  7) 컴포넌트 모델 코어(`[coreFolder]` — Object/GameObject · Prefab · Component **바로 아래** 파일)는 기능 폴더(`[coreBannedLayer]` — Graphics ·
+     Physics · Navigation · Audio · Animation · TileMap)를 include 하지 않는다. 티어로는 Object 가 그 폴더들 위라 티어 검사가 못 잡는 방향이다.
+     기능 컴포넌트(Component/2D · 3D · Audio · Navigation · Physics)는 코어가 아니다. 예외 키는 `core:<파일>|<include 경로>` 다.
 
 티어는 **include 그래프에서 계산한 것**이다 — 손으로 고른 금지 쌍은 늘릴 기준이 없다. 전체 그래프를
 Tarjan SCC 로 줄이고 위상 순서를 티어로 쓰며, 위반은 경고가 아니라 실패다.
@@ -49,7 +52,7 @@ from common import (  # noqa: E402
     normalizePath,
     startsWithPathComponent,
 )
-from common.RuleData import kKindInteger  # noqa: E402
+from common.RuleData import kKindInteger, kKindTextList  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 
@@ -116,12 +119,18 @@ _kForbiddenPrefixRules: tuple[tuple[str, tuple[str, ...]], ...] = (
 _kRootLayerName = "<root>"
 
 # Engine 내부 티어 — 숫자가 큰 쪽이 위다(`rules/CheckEngineLayers.toml` 의 `[tier]`, 계산 · 고쳐 쓰기는 RunEngineLayerGraph --apply).
-_kRuleSchema = {"tier": kKindInteger, "subtier": kKindInteger}
+_kRuleSchema = {"tier": kKindInteger, "subtier": kKindInteger, "coreFolder": kKindTextList, "coreBannedLayer": kKindTextList}
 _kRuleData = LintGate.readRules("CheckEngineLayers", _kRuleSchema, requiredKeys=("tier",))
 _kEngineTier: dict[str, int] = _kRuleData["tier"]
 #: 하위 티어 — `<최상위 폴더>/<하위 폴더>` → 숫자(`[subtier]`). 키가 있는 최상위 폴더만 하위 폴더 사이를 본다.
 _kEngineSubTier: dict[str, int] = _kRuleData["subtier"]
 _kSubTieredLayer: frozenset[str] = frozenset(key.split("/")[0] for key in _kEngineSubTier)
+#: 컴포넌트 모델 코어 폴더(Engine/ 기준) — 그 **바로 아래** 파일만 코어다(하위 폴더는 기능 컴포넌트).
+_kCoreFolder: frozenset[str] = frozenset(_kRuleData["coreFolder"])
+#: 코어가 include 하지 않는 Engine 최상위 폴더.
+_kCoreBannedLayer: frozenset[str] = frozenset(_kRuleData["coreBannedLayer"])
+#: 코어 예외 키 접두 — `core:<저장소 기준 파일>|<include 경로>`.
+_kCorePrefix = "core:"
 
 #: 티어 예외 — `prelude:<include 경로>` 는 어느 티어에서 include 해도 되는 헤더, `wiring:<파일>` 은 모든 서브시스템을 알아야 해
 #: 위 티어를 include 해도 되는 배선 파일이다(`rules/CheckEngineLayers.toml` 의 `[exemption]`).
@@ -189,6 +198,28 @@ def findSubTierViolationsInternal(relativeFilePath: str, engineRelativePath: str
     return listViolation
 
 
+def findCoreViolationsInternal(relativeFilePath: str, engineRelativePath: str, listRawInclude: list[str]) -> list[str]:
+    """컴포넌트 모델 코어 파일이 기능 폴더를 include 하는 줄(예외 표에 든 줄은 넘긴다)."""
+    folderPath, _, _ = engineRelativePath.rpartition("/")
+    if folderPath not in _kCoreFolder:
+        return []
+    gate = CheckEngineLayersGate
+    listViolation: list[str] = []
+    for includePath in listRawInclude:
+        normalizedInclude = normalizePath(includePath)
+        if normalizedInclude.startswith("Engine/") is False:
+            continue
+        destLayer = engineLayerOfInternal(normalizedInclude[len("Engine/") :])
+        if destLayer not in _kCoreBannedLayer:
+            continue
+        coreKey = f"{_kCorePrefix}{relativeFilePath}|{normalizedInclude}"
+        if coreKey in gate.mapExemption:
+            gate.useExemption(coreKey)
+            continue
+        listViolation.append(f'{relativeFilePath}: #include "{includePath}"  (컴포넌트 모델 코어 {folderPath} -> 기능 폴더 {destLayer})')
+    return listViolation
+
+
 def processFile(filePath: Path, repositoryRoot: Path) -> list[str]:
     """파일 하나의 금지 include 와 티어 위반을 돌려줍니다. 읽지 못하면 `GateError` 입니다."""
     relativeFilePath = filePath.relative_to(repositoryRoot).as_posix()
@@ -238,6 +269,8 @@ def processFile(filePath: Path, repositoryRoot: Path) -> list[str]:
 
     enginePrefixLen = len(kDirSourceEngine) + 1
     engineRelativePath = relativeFilePath[enginePrefixLen:]
+    # 코어 규칙은 배선 예외로 넘기지 않는다 — 티어 위반과 따로 센다.
+    fileViolations += findCoreViolationsInternal(relativeFilePath, engineRelativePath, listRawInclude)
     sourceLayer = engineLayerOfInternal(engineRelativePath)
     sourceTier = engineTierOfInternal(sourceLayer)
     if sourceTier is None:
@@ -318,6 +351,19 @@ class CheckEngineLayersGate(LintGate):
             "name": "하위 티어 표에 없는 Graphics 하위 폴더",
             "files": {
                 "Source/Engine/Graphics/ProbeFolder/Probe.cpp": '#include "pch.h"\n',
+            },
+        },
+        {
+            # 컴포넌트 모델 코어가 기능을 아는 방향 — Object 는 Graphics 보다 티어가 위라 티어 검사로는 안 잡힌다.
+            "name": "Object/GameObject 가 Graphics 를 include (코어 -> 기능)",
+            "files": {
+                "Source/Engine/Object/GameObject/Probe.cpp": '#include "pch.h"\n\n#include "Engine/Graphics/Mesh/Mesh.h"\n',
+            },
+        },
+        {
+            "name": "Object/Component 바로 아래가 Physics 를 include (코어 -> 기능)",
+            "files": {
+                "Source/Engine/Object/Component/Probe.h": '#pragma once\n\n#include "Engine/Physics/PhysicsTypes.h"\n',
             },
         },
         {
