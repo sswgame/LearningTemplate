@@ -11,10 +11,8 @@ R1(엔진 루프에서 자동화 빼기), R2(에디터 그리기 인계 상태 �
 - **방법**: 구조체에 `REFLECT` · `PROPERTY`, `ConfigManager::readConfigJSON` 으로 읽기(모르는 키 · 읽지 못한 값 · 범위는 거기서 오류), 의미 검사만 직접. 데이터 파일은 키를 `_이름` 규약으로 다시 쓰고(옛 이름 별칭 없음, 결정 기록 5-4) 설정 카탈로그를 `typeName` 방식으로 바꿔 문서를 생성한다.
 - **검증**: 그 로더의 기존 테스트, `ResourceDataSchemaTest`, 설정 · 리소스 스키마 게이트. 파일 하나가 한 단위라 서로 충돌하지 않는다.
 
-### R5. `EngineLoop` 추가 분해 (= S13)
-- **왜**: 셸 입력 · 단축키 · 백엔드 교체 · 초상화 렌더 · 프로파일 세션이 한 클래스에 몰려 있다(`EngineLoop.cpp` 약 1,700 줄 · include 약 100 개).
-- **먼저 잰다**: `-ftime-trace` 로 `EngineLoop.cpp` 헤더 파싱 · 증분 시간([빌드 속도](BuildSpeed.md) 6 단계). 숫자가 분해를 정당화하지 않으면 하지 않는다.
-- **후보**: 셸 입력 · 단축키(`updateShellActions` · `createShellInputMap` · `pollShaderReloadHotkey` · `wasDebugActionTriggered`), 백엔드 교체(`applyPendingBackendChange` · `rebindSceneAfterDeviceRecreate`), 초상화 렌더.
+### R5. `EngineLoop` 추가 분해 (= S13) — 끝남
+- 2026-10-12 에 측정 없이 옮겼다(사용자 결정). 결과와 남은 측정은 아래 묶음 3 "S13 ~ S17".
 
 ### R6. 빌드 속도 5 · 6 단계
 - [빌드 속도](BuildSpeed.md) 5 단계(유니티 범위 확대)는 공유 설치가 조용할 때 교차 3 쌍 + 배치 4 · 8 · 16 을 잰다. **다른 빌드가 없을 때만** 한다(측정이 오염된다).
@@ -79,27 +77,30 @@ S10(`SceneEngineServices` 주입) · S11(`BugItInputs` 주입, `makeInputs` / `c
 - **S12 의 프레임 앞 정리 · 프레임 열기 · 프레임 닫기**: ImGui 순서와 렌더 스레드 인계(`DrawSnapshotHandoff`)가 위치를 정하는 셸의 프레임 계약이라 `updateUI` 에 두고 이유를 주석으로 적었다.
 **측정할 것**: S12 의 `GT.Editor.updateUI` p50/p99 전후(Release · `-EnableEditor -dx12 -gv_profileFrames=600` · 3 회, 전의 `commandsAndWatchers + panels` 대 후의 `frameSteps`, VSync 에 붙지 않았는지 먼저).
 
-### 묶음 3 — S(큰 클래스 나누기) — 하나씩, 핫 경로는 측정 후
-| 단위 | 대상(줄 수) | 방향 | 핫 경로 |
-|---|---|---|---|
-| S13 (= R5) | `EngineLoop.cpp` `tick` 285 줄 · include 102 | `RenderPacketBuilder` · `DebugOverlayDriver` 를 값 멤버로. 나머지는 관찰자 훅 | 프레임당 1 회 — 측정 |
-| S14 | `UISystem.cpp` 1620 | `UIInputRouter` · `UIThemeController` · `UIOffscreenScreens` | 프레임당 1 회 |
-| S15 | `FractureComponentBase.cpp` 1811 | 네트워크 동기 · 앵커 풀이 · 렌더 유닛 멤버 객체 | 프레임당, 객체 분리만 |
-| S16 | `FrameRenderer.h` 985 · 멤버 127 | GPU 타임라인 · 리드백 · 트랜지언트를 값 멤버 클래스로, 프로파일러는 초기화 때 주입 | 비핫, 이동 뒤 측정 |
-| S17 | `GPUSceneBuilder.cpp` 1644 | 투명 정렬 · 머티리얼 레지스트리 · 스킨 팔레트를 비가상 클래스로 | **핫** — 클래스 이동만, 내부 루프 그대로, 측정 필수 |
+### 묶음 3 — S(큰 클래스 나누기) — 끝남 (S13 ~ S22 전부, 2026-10-12)
+SOLID 계획 단위는 S1 ~ S22 가 모두 끝났다(옮기지 않은 것은 각 묶음의 판정). 남은 후보는 아래 "다음 후보" 한 줄뿐이다.
+
+**S13 ~ S17 끝남 (2026-10-12, 핫 경로를 측정 없이 옮김 — 사용자 결정, 측정은 사용자가 따로 한다)**: 모두 비가상 값 멤버 · 직접 호출, 루프 본문 · 호출 순서 그대로.
+- S13 `EngineLoop.cpp` 1722 → 1440 줄: `ShellInputActions`(셸 InputMap) · `RenderPacketBuilder`(패킷 상태 여섯) · `SceneDebugDraw`(물리 · 내비 디버그 선, 정적) · `PortraitBatchUtil`(초상화 일괄). 전역 변수 정의 셋이 쓰는 파일로 옮겨 설정 문서를 다시 생성했다. 백엔드 교체 · `pollShaderReloadHotkey` · `MaterialCache::initializePending` · 관찰자 루프는 수명 계약 · 순서가 뜻이라 `tick` 에 남겼다.
+- S14 `UISystem.cpp` 1580 → 1032 줄: `UIInputRouter` · `UIThemeController` · `UIOffscreenScreens`(오프스크린 레이아웃 · 그리기 컨텍스트를 화면마다가 아니라 프레임에 한 번 만든다, 값은 같다). 일시정지 메뉴 열기 · 탐색 방식 포커스 복원 · 모든 화면 스타일 재적용 루프는 화면 스택을 알아야 해 `UISystem` 에 남겼다.
+- S15 `FractureComponentBase.cpp` 1811 → 1660 줄: `FractureAnchorUtil`(앵커 판정) · `FractureNetworkSync`(상태 해시 · 자세 목표 대기열 · 스냅샷, 바이트 배치 유지) · `FractureRenderUnits`. 그룹 재구성 · 물리 어댑터(약 440 줄)는 반쪽 이전이라 남겼다. 자세 목표 대기열은 자기 잠금(`_driveMutex`)을 쓴다.
+- S16 `FrameRenderer.h` 985 → 927 줄: `GPUPassTimeline` · `PresentCaptureTarget` · `RenderTargetImageFile`. 트랜지언트 계획은 파이프라인 · TAA · 그림자 · 활성 뷰를 함께 읽어 남겼다. **동작 변화**: 엔진 서비스가 묶이지 않은 실행은 GPU 계측이 꺼진다(전에는 단언).
+- S17 `GPUSceneBuilder.cpp` 1644 → 1339 줄: `GPUTransparentSorter` · `GPUMaterialRegistry` · `GPUSkinPaletteCollector`. 배치 키 대표 맵 · 정렬 키를 채우는 루프 · `DrawCandidate` 를 읽는 것은 빌더에 남겼다.
+- **측정할 것(사용자)**: `GT.GPUScene.build`(S17), `GT.Editor.updateUI`(S12), 프레임당 `EngineLoop.tick` · `UISystem` · `FrameRenderer` 구간 전후. Release · `-gv_profileFrames` · 3 회, VSync 에 붙지 않았는지 먼저. `tick` 은 이제 `engine::getDebugDrawQueue()` 를 매 프레임 부른다(비가상 호출 셋 증가).
+- **다음 후보**: "`ProfilerPanel`(1243 줄)을 탭 상태 객체와 `ProfilerTabContext` 로 나누기"(S8 에서 넘어옴).
 
 **끝남 (2026-10-12)**: S18(`EditorViewportClient` 1179 → 243 줄: 카메라 · 피킹 · 기즈모 · 캔버스 오버레이 · 에셋 드롭 값 멤버), S19(`ContentBrowserPanel` 멤버 39 → 29: 파일 작업 · 참조 검색 · 임포트 대기열 · 탐색 이력, 이력 · 이름 바꾸기 · 임포트 대기열 테스트), S20(`LiveReloadManager` 1317 → 965 줄: `ModuleDependencyGraph` · `ModuleShadowCopy` · `DeferredImageUnloadQueue`, DLL 없는 테스트).
 **옮기지 않은 것**: S19 의 모달 · 결과 창 플래그와 이름 입력 버퍼(ImGui 팝업 시점이라 작업 클래스가 ImGui 순서를 알게 된다), S20 의 `verifyModuleBindings` · `isBoundTo`(모든 컨텍스트 핸들을 함께 보는 검사라 떼면 반쪽 이전), `ModuleShadowCopy` 를 인스턴스로 만들기(번호가 프로세스 전역이어야 섀도 폴더 이름이 겹치지 않는다).
 S18 의 새 클래스는 ImGui 에 의존해 단위 테스트가 없다 — 에디터 자체 테스트 · `AppScenarioTest` 에디터 케이스가 본다.
 
-**S21 · S22 끝남 (2026-10-12, 검증 전 병합 — 사용자가 검증을 따로 맡는다)**:
+**S21 · S22 끝남 (2026-10-12, Debug 빌드까지만 확인 — 테스트는 사용자가 따로 맡는다)**:
 - S21: `EditorAssetCommands` 817 → 157 줄(`EditorSceneFileCommands` · `EditorPrefabIsolationCommands` · `EditorFolderListing`, 호출처 클래스 이름 변경), `UserSettingsManager` 1061 → 922 줄(`UserSettingsFile`), `SceneNavigation` 1285 → 565 줄(`NavGeometryCollector` · `NavTileRebaker` · `NavAgentCrowdSync` · `NavDebugView` · `NavMeshRuntime.h`), `App.cpp` 866 → 509 줄(`AppHeadlessTasks` · `AppAssertDialog` · `DevConsoleHost` · `ModuleReloadDriver`), `EditorModuleHost` 445 → 389 줄(헤드리스 구현은 `EditorModuleHostHeadless.cpp`).
 - S22: `IRHIDevice` 의 선택 능력 둘을 `IRHITimestampProvider`(네 백엔드) · `IRHIContextThreadBinding`(DX11 · GL)로 뽑았다. 질의는 비가상 `findTimestampProvider()` 멤버 읽기라 핫 경로 비용이 없다. RHI 모듈 ABI 30 → 31.
 - **옮기지 않은 것**: `UserSettingsManager` 의 키 바인딩 겹침 · 품질 번들 맞추기(`setPendingAt` 상태 기계와 떨어지지 않아 반쪽 이전) · `applyToTarget` 의 전역 변수 쓰기(호출처 하나), `SceneNavigation` 의 에이전트 루프 · 런타임 찾기 · 설정 로드, `App` 의 `updateShellActions` · 모듈 카탈로그 해석 · 헤드리스 static 두 함수의 클래스 이전(`EditorModuleHost::…` 이름을 문서가 가리킨다), `IRHIDevice` 의 `supportsNativeBindlessSampling` · `applyVSyncInternal` · 비어 있지 않은 공용 기본 구현.
-- **검증 전이라 먼저 볼 곳**: Debug 전체 빌드와 링크(특히 SmokeTest 소스 목록에 `EditorModuleHostHeadless.cpp` 가 없는 점, 새 `SW_API` 클래스), `-L nogpu`(`NavMesh*` · `UserSettingsFileTest` · `AppHeadlessTasksTest` · `EditorFolderListing` 테스트), Shipping(단일 백엔드 정적 링크, `SW_PROFILE_COMPILED` 꺼짐), Linux(GLX 컨텍스트 · 다중 상속 경고), `OpenGLRHICommandList.cpp`(compile_commands 에 없어 문법 검사도 못 했다), 에디터 실기동(Present 훅), `assertdialog.scenario.xml`, `-gv_reloadGameAtFrame`, `-gv_standardInputCommands`.
+- **테스트 전이라 먼저 볼 곳**: (Debug 전체 빌드 · 링크는 통과) SmokeTest 소스 목록에 `EditorModuleHostHeadless.cpp` 가 없는 점, 새 `SW_API` 클래스), `-L nogpu`(`NavMesh*` · `UserSettingsFileTest` · `AppHeadlessTasksTest` · `EditorFolderListing` 테스트), Shipping(단일 백엔드 정적 링크, `SW_PROFILE_COMPILED` 꺼짐), Linux(GLX 컨텍스트 · 다중 상속 경고), `OpenGLRHICommandList.cpp`(compile_commands 에 없어 문법 검사도 못 했다), 에디터 실기동(Present 훅), `assertdialog.scenario.xml`, `-gv_reloadGameAtFrame`, `-gv_standardInputCommands`.
 
 ### 핫 경로라 유지하는 것
 핫 경로라 제안하지 않는 것과 의도된 예외는 [결정 기록](../09_Decisions.md) 2절에 있습니다.
 
 ### 순서 제안
-묶음 1 은 병렬로(파일이 서로 겹치지 않는다). 묶음 2 는 S10 → S11 → S12. 묶음 3 은 S13 을 먼저(측정 + `IEngineFrameObserver` 위에서), 큰 클래스 하나가 한 단위이고 단위마다 린트 + 해당 테스트 + 핫 경로면 측정으로 닫는다.
+끝났다. 처음 계획은 핫 경로(S13 · S14 · S17)를 측정으로 먼저 정당화하는 것이었으나 사용자 결정으로 이동만 먼저 하고 측정은 뒤로 미뤘다 — 측정이 나쁘게 나오면 그 단위를 되돌리거나 훅을 합친다.
