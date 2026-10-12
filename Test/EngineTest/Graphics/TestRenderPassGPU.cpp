@@ -4545,23 +4545,25 @@ SW_TEST_CASE( RenderPassGPUTest, ConcurrentTextureAcquireCreatesOnce )
     sw::vector<sw::Texture2D*> listResult( kThreadCount, nullptr );
     sw::vector<std::thread>    listThread;
     std::atomic<bool>          bGo{ false };
-    for ( uint32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
     {
-        listThread.emplace_back( [&, threadIndex]()
+        SW_TEST_DEFENSIVE_SCOPE( "the texture does not exist" ); // 로그 싱크는 프로세스 전체라 스레드마다 열면 서로 덮어쓴다 — 메인 스레드에서 한 번만 연다
+        for ( uint32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
         {
-            while ( bGo.load( std::memory_order_acquire ) == false )
+            listThread.emplace_back( [&, threadIndex]()
             {
-                std::this_thread::yield();
-            }
-            listResult[threadIndex] = textures.acquire( kTexture, device.get() );
-            SW_TEST_DEFENSIVE_SCOPE( "the texture does not exist" );
-            SW_EXPECT_TRUE( textures.acquire( kAbsent, device.get() ) == nullptr );
-        } );
-    }
-    bGo.store( true, std::memory_order_release );
-    for ( std::thread& thread : listThread )
-    {
-        thread.join();
+                while ( bGo.load( std::memory_order_acquire ) == false )
+                {
+                    std::this_thread::yield();
+                }
+                listResult[threadIndex] = textures.acquire( kTexture, device.get() );
+                SW_EXPECT_TRUE( textures.acquire( kAbsent, device.get() ) == nullptr );
+            } );
+        }
+        bGo.store( true, std::memory_order_release );
+        for ( std::thread& thread : listThread )
+        {
+            thread.join();
+        }
     }
 
     SW_ASSERT_TRUE( listResult[0] != nullptr );
