@@ -34,16 +34,25 @@ namespace sw
         return pCrime != nullptr ? changeValue( pCrime->_honor ) : 0;
     }
 
-    int32 WesternHonor::changeValue( int32 delta ) { return _pReputation != nullptr ? _pReputation->changeValue( hashed_string( WesternCatalog::kHonorFactionID ), delta ) : 0; }
+    int32 WesternHonor::changeValue( int32 delta )
+    {
+        return _pReputation != nullptr ? _pReputation->changeValue( hashed_string( WesternCatalog::kHonorFactionID ), delta ) : 0;
+    }
 
-    int32 WesternHonor::getValue() const { return _pReputation != nullptr ? _pReputation->getValue( hashed_string( WesternCatalog::kHonorFactionID ) ) : 0; }
+    int32 WesternHonor::getValue() const
+    {
+        return _pReputation != nullptr ? _pReputation->getValue( hashed_string( WesternCatalog::kHonorFactionID ) ) : 0;
+    }
 
     hashed_string WesternHonor::getTierName() const
     {
         return _pReputation != nullptr ? _pReputation->getTierName( hashed_string( WesternCatalog::kHonorFactionID ) ) : hashed_string{};
     }
 
-    const WesternHonorTierDef* WesternHonor::findTier() const { return _pCatalog != nullptr ? _pCatalog->findHonorTier( getTierName() ) : nullptr; }
+    const WesternHonorTierDef* WesternHonor::findTier() const
+    {
+        return _pCatalog != nullptr ? _pCatalog->findHonorTier( getTierName() ) : nullptr;
+    }
 
     float32 WesternHonor::computePriceScale() const
     {

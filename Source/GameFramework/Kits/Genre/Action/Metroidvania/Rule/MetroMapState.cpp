@@ -31,7 +31,10 @@ namespace sw
         _listPickup.clear();
     }
 
-    bool MetroMapState::enterArea( const hashed_string& areaID ) { return _pGraph != nullptr && _pGraph->enterArea( areaID ); }
+    bool MetroMapState::enterArea( const hashed_string& areaID )
+    {
+        return _pGraph != nullptr && _pGraph->enterArea( areaID );
+    }
 
     MetroMapPurchase MetroMapState::buyRegionMap( const hashed_string& region, Wallet& inoutWallet, const hashed_string& currency )
     {
@@ -49,7 +52,10 @@ namespace sw
         return MetroMapPurchase::Bought;
     }
 
-    bool MetroMapState::hasRegionMap( const hashed_string& region ) const { return VectorUtil::contains( _listRegionMap, region ); }
+    bool MetroMapState::hasRegionMap( const hashed_string& region ) const
+    {
+        return VectorUtil::contains( _listRegionMap, region );
+    }
 
     bool MetroMapState::isShownOnMap( const hashed_string& areaID ) const
     {
@@ -70,7 +76,10 @@ namespace sw
         return pPickup;
     }
 
-    bool MetroMapState::isCollected( const hashed_string& pickupID ) const { return VectorUtil::contains( _listPickup, pickupID ); }
+    bool MetroMapState::isCollected( const hashed_string& pickupID ) const
+    {
+        return VectorUtil::contains( _listPickup, pickupID );
+    }
 
     void MetroMapState::collectItemMarkers( vector<const MetroPickupDef*>& outListPickup ) const
     {
@@ -96,7 +105,10 @@ namespace sw
         return true;
     }
 
-    bool MetroMapState::isSiteActive( const hashed_string& siteID ) const { return VectorUtil::contains( _listSite, siteID ); }
+    bool MetroMapState::isSiteActive( const hashed_string& siteID ) const
+    {
+        return VectorUtil::contains( _listSite, siteID );
+    }
 
     bool MetroMapState::canFastTravel( const hashed_string& fromSiteID, const hashed_string& toSiteID ) const
     {
@@ -109,7 +121,10 @@ namespace sw
         return isSiteActive( fromSiteID ) && isSiteActive( toSiteID );
     }
 
-    float32 MetroMapState::computeExplorationRatio() const { return _pGraph != nullptr ? _pGraph->computeExplorationRatio() : 0.0f; }
+    float32 MetroMapState::computeExplorationRatio() const
+    {
+        return _pGraph != nullptr ? _pGraph->computeExplorationRatio() : 0.0f;
+    }
 
     float32 MetroMapState::computeCollectionRatio() const
     {

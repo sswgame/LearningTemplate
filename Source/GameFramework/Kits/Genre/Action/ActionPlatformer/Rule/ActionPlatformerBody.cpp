@@ -111,7 +111,10 @@ namespace sw
         return _listDirt[static_cast<size_t>( _topology.toIndex( x, y ) )] == SW_TRUE;
     }
 
-    bool ActionTerrainGrid::isDirtAt( const float2& worldPosition ) const { return isDirt( computeTileX( worldPosition._x ), computeTileY( worldPosition._y ) ); }
+    bool ActionTerrainGrid::isDirtAt( const float2& worldPosition ) const
+    {
+        return isDirt( computeTileX( worldPosition._x ), computeTileY( worldPosition._y ) );
+    }
 
     int32 ActionTerrainGrid::findGrapplePoint( const float2& position, float32 minDistance, float32 maxDistance ) const
     {
@@ -131,9 +134,15 @@ namespace sw
         return bestIndex;
     }
 
-    int32 ActionTerrainGrid::computeTileX( float32 worldX ) const { return static_cast<int32>( MathUtil::floor( ( worldX - _origin._x ) / _tileSize ) ); }
+    int32 ActionTerrainGrid::computeTileX( float32 worldX ) const
+    {
+        return static_cast<int32>( MathUtil::floor( ( worldX - _origin._x ) / _tileSize ) );
+    }
 
-    int32 ActionTerrainGrid::computeTileY( float32 worldY ) const { return static_cast<int32>( MathUtil::floor( ( worldY - _origin._y ) / _tileSize ) ); }
+    int32 ActionTerrainGrid::computeTileY( float32 worldY ) const
+    {
+        return static_cast<int32>( MathUtil::floor( ( worldY - _origin._y ) / _tileSize ) );
+    }
 
     // ------------------------------------------------------------------------------
     // ActionPlatformerBody

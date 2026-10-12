@@ -23,7 +23,10 @@ namespace sw
     {
     }
 
-    ZstdDictionaryCompressor::~ZstdDictionaryCompressor() { shutdown(); }
+    ZstdDictionaryCompressor::~ZstdDictionaryCompressor()
+    {
+        shutdown();
+    }
 
     bool ZstdDictionaryCompressor::trainDictionary( const vector<vector<uint8>>& listSample, int32 dictionaryByteCount, vector<uint8>& outDictionaryBytes )
     {

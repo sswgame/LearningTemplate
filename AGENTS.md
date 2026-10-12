@@ -447,6 +447,9 @@ namespace sw
 ## C++ style
 
 - Follow `.clang-format`.
+- A function body goes on its own lines. Only a function defined inside a class body may stay on one line
+  (`AllowShortFunctionsOnASingleLine: InlineOnly` — getters and trivial accessors). Free `inline` functions
+  (operators, math helpers) and out-of-class definitions are expanded: `{` on the next line, then the body.
 - When a constructor exists, initialize fields in the constructor (not in the
   header), in declaration order. Use brace initialization — except an iterator pair, which takes
   parentheses (`_listValue( list.begin(), list.end() )`): braces pick the `initializer_list` constructor and store

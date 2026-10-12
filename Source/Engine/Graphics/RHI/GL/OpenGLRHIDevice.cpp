@@ -69,8 +69,14 @@ namespace sw
         shutdown();
     }
 
-    IRHIResourceFactory* OpenGLRHIDevice::getResourceFactory() { return _resourceImpl.get(); }
-    IRHICommandContext*  OpenGLRHIDevice::getFrameStreamContext() { return _frameStreamContext.get(); }
+    IRHIResourceFactory* OpenGLRHIDevice::getResourceFactory()
+    {
+        return _resourceImpl.get();
+    }
+    IRHICommandContext* OpenGLRHIDevice::getFrameStreamContext()
+    {
+        return _frameStreamContext.get();
+    }
 
     bool OpenGLRHIDevice::queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget )
     {

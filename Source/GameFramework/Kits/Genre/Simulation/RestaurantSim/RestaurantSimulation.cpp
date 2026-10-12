@@ -1044,5 +1044,8 @@ namespace sw
         return MathUtil::max( RestaurantSimulationInternal::kMinDemand, 1.0f - _settings._priceElasticity * ( ratio - 1.0f ) );
     }
 
-    int32 RestaurantSimulation::getReputation() const { return _pReputation != nullptr ? _pReputation->getValue( _settings._reputationFaction ) : 0; }
+    int32 RestaurantSimulation::getReputation() const
+    {
+        return _pReputation != nullptr ? _pReputation->getValue( _settings._reputationFaction ) : 0;
+    }
 } // namespace sw

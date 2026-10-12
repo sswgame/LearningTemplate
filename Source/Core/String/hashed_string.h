@@ -284,11 +284,17 @@ namespace sw
 {
     /** @brief 같은 이름인지 비교합니다. 비교 인덱스를 정수로 비교하므로 대소문자를 무시합니다. 철자까지 비교하려면 `isEqual( other, NameCase::CaseSensitive )` 를 씁니다. */
     template <typename T>
-    bool operator==( const basic_hashed_string<T>& lhs, const basic_hashed_string<T>& rhs ) noexcept { return lhs.getIndex() == rhs.getIndex(); }
+    bool operator==( const basic_hashed_string<T>& lhs, const basic_hashed_string<T>& rhs ) noexcept
+    {
+        return lhs.getIndex() == rhs.getIndex();
+    }
 
     /** @brief 다른 이름인지 비교합니다. */
     template <typename T>
-    bool operator!=( const basic_hashed_string<T>& lhs, const basic_hashed_string<T>& rhs ) noexcept { return lhs.getIndex() != rhs.getIndex(); }
+    bool operator!=( const basic_hashed_string<T>& lhs, const basic_hashed_string<T>& rhs ) noexcept
+    {
+        return lhs.getIndex() != rhs.getIndex();
+    }
 
     // 순서 연산자(<, <=, >, >=)는 두지 않는다. FName 처럼 용도에 맞게 고른다. 사람이 보는 순서는 `HashedStringLexicalLess`, 찾기용은 `HashedStringFastLess` 를 쓴다.
 

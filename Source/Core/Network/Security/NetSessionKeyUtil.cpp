@@ -31,7 +31,10 @@ namespace sw
 
 namespace sw
 {
-    void NetSessionKeys::wipe() { NetSessionKeyUtilInternal::wipeBytes( this, sizeof( NetSessionKeys ) ); }
+    void NetSessionKeys::wipe()
+    {
+        NetSessionKeyUtilInternal::wipeBytes( this, sizeof( NetSessionKeys ) );
+    }
 
     bool NetSessionKeyUtil::computeSessionKeys( INetSecurityProvider& provider, const uint8* pSharedSecret, const NetSessionSecret* pSessionSecret, uint64 clientSalt,
                                                 uint64 serverSalt, uint32 protocolID, NetSessionKeys& outKeys )

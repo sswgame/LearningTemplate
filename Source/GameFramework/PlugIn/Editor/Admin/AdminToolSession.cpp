@@ -54,7 +54,10 @@ namespace sw::editor
         return s_session;
     }
 
-    void AdminToolSession::useFake() { _pActive = &_fake; }
+    void AdminToolSession::useFake()
+    {
+        _pActive = &_fake;
+    }
 
     void AdminToolSession::useLiveClient( AdminClient* pClient )
     {

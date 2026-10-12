@@ -62,4 +62,7 @@ namespace sw
  */
 #define SW_AUTOMATION_PROBE( id, pName, pTooltip, pFunction )                                             \
     static const ::sw::AutomationProbeRegistration sw_automationProbe_##id{ pName, pTooltip, pFunction }; \
-    static const ::sw::AutomationProbeRegistrar    sw_automationProbeRegistrar_##id { &sw_automationProbe_##id }
+    static const ::sw::AutomationProbeRegistrar    sw_automationProbeRegistrar_##id                       \
+    {                                                                                                     \
+        &sw_automationProbe_##id                                                                          \
+    }

@@ -16,7 +16,10 @@ namespace sw
     {
     }
 
-    void ChatClient::initialize( OnlineServiceClient* pClient ) { _pClient = pClient; }
+    void ChatClient::initialize( OnlineServiceClient* pClient )
+    {
+        _pClient = pClient;
+    }
 
     uint64 ChatClient::join( string_view channelID, const ReplyDelegate& onReply )
     {

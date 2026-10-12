@@ -62,7 +62,10 @@ namespace sw
         return reader.readBytes( arrWire, LoginConstant::kTokenWireSize ) && outToken.readBytes( arrWire, LoginConstant::kTokenWireSize );
     }
 
-    void AccountWire::writeText( BitWriter& outWriter, string_view text ) { outWriter.writeBlob( reinterpret_cast<const uint8*>( text.data() ), static_cast<int32>( text.size() ) ); }
+    void AccountWire::writeText( BitWriter& outWriter, string_view text )
+    {
+        outWriter.writeBlob( reinterpret_cast<const uint8*>( text.data() ), static_cast<int32>( text.size() ) );
+    }
 
     bool AccountWire::readText( BitReader& reader, int32 maxSize, string& outText )
     {
@@ -73,9 +76,15 @@ namespace sw
         return true;
     }
 
-    void AccountWire::writeBlob( BitWriter& outWriter, const vector<uint8>& bytes ) { outWriter.writeBlob( bytes.data(), static_cast<int32>( bytes.size() ) ); }
+    void AccountWire::writeBlob( BitWriter& outWriter, const vector<uint8>& bytes )
+    {
+        outWriter.writeBlob( bytes.data(), static_cast<int32>( bytes.size() ) );
+    }
 
-    bool AccountWire::readBlob( BitReader& reader, int32 maxSize, vector<uint8>& outBytes ) { return reader.readBlob( outBytes, maxSize ); }
+    bool AccountWire::readBlob( BitReader& reader, int32 maxSize, vector<uint8>& outBytes )
+    {
+        return reader.readBlob( outBytes, maxSize );
+    }
 
     void AccountWire::writeGrantReply( BitWriter& outWriter, LoginResult result, const LoginGrant& grant )
     {

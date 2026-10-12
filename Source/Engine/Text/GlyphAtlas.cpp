@@ -153,7 +153,10 @@ namespace sw
             page._listDirty.push_back( rect );
     }
 
-    void GlyphAtlas::markPageUsed( uint32 page, uint64 frameIndex ) { _listPage[page]._lastUsedFrame = frameIndex; }
+    void GlyphAtlas::markPageUsed( uint32 page, uint64 frameIndex )
+    {
+        _listPage[page]._lastUsedFrame = frameIndex;
+    }
 
     bool GlyphAtlas::evictLeastRecentlyUsedPage( uint64 currentFrame, uint32& outPage )
     {

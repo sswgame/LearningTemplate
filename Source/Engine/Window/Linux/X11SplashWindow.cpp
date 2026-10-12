@@ -240,10 +240,19 @@ namespace sw
 
 #else
 
-    bool X11SplashWindow::initialize( const utf8*, const utf8*, uint32, uint32 ) { return false; }
-    void X11SplashWindow::updateStatus( const utf8*, float32 ) {}
-    void X11SplashWindow::setProgress( float32 ) {}
-    void X11SplashWindow::dismiss() {}
+    bool X11SplashWindow::initialize( const utf8*, const utf8*, uint32, uint32 )
+    {
+        return false;
+    }
+    void X11SplashWindow::updateStatus( const utf8*, float32 )
+    {
+    }
+    void X11SplashWindow::setProgress( float32 )
+    {
+    }
+    void X11SplashWindow::dismiss()
+    {
+    }
 
 #endif
 } // namespace sw

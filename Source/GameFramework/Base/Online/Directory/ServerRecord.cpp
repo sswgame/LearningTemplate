@@ -22,9 +22,15 @@ namespace sw
         return key;
     }
 
-    string ServerRecord::makeMember( uint64 serverID ) { return ServiceKeyUtil::makeHex64( serverID ); }
+    string ServerRecord::makeMember( uint64 serverID )
+    {
+        return ServiceKeyUtil::makeHex64( serverID );
+    }
 
-    bool ServerRecord::parseMember( string_view member, uint64& outServerID ) { return ServiceKeyUtil::parseHex64( member, outServerID ); }
+    bool ServerRecord::parseMember( string_view member, uint64& outServerID )
+    {
+        return ServiceKeyUtil::parseHex64( member, outServerID );
+    }
 
     bool ServerRecord::isValidName( string_view name )
     {

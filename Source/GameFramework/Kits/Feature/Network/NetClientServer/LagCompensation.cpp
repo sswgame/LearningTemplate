@@ -12,7 +12,10 @@ namespace sw
         _listFrame.initialize( MathUtil::max( 2, capacity ) );
     }
 
-    void LagCompensationHistory::record( uint32 tick, const vector<LagRecord>& listRecord ) { _listFrame.acquire( tick ) = listRecord; }
+    void LagCompensationHistory::record( uint32 tick, const vector<LagRecord>& listRecord )
+    {
+        _listFrame.acquire( tick ) = listRecord;
+    }
 
     const LagRecord* LagCompensationHistory::findRecord( const vector<LagRecord>& listRecord, uint32 entityID )
     {

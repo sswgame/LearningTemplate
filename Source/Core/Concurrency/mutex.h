@@ -153,9 +153,15 @@ namespace sw
         }
     }
 #else
-    inline void mutex::notifyLockAttempt() {}
-    inline void mutex::notifyAcquired() {}
-    inline void mutex::notifyReleased() {}
+    inline void mutex::notifyLockAttempt()
+    {
+    }
+    inline void mutex::notifyAcquired()
+    {
+    }
+    inline void mutex::notifyReleased()
+    {
+    }
 #endif
 
     inline void mutex::lock()

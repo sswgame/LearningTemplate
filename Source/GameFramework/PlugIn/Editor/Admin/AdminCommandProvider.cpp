@@ -69,7 +69,10 @@ namespace sw::editor
     {
     }
 
-    void AdminClientProvider::bind( AdminClient* pClient ) { _pClient = pClient; }
+    void AdminClientProvider::bind( AdminClient* pClient )
+    {
+        _pClient = pClient;
+    }
 
     void AdminClientProvider::sendCommand( uint16 method, const AdminRequest& request, const NetIdempotencyKey& key, AdminClient::ReplyDelegate onReply )
     {
@@ -129,7 +132,10 @@ namespace sw::editor
         return nullptr;
     }
 
-    int64 FakeAdminProvider::getNowMs() const { return _nowMs != 0 ? _nowMs : WallClock::nowUnixMilliseconds(); }
+    int64 FakeAdminProvider::getNowMs() const
+    {
+        return _nowMs != 0 ? _nowMs : WallClock::nowUnixMilliseconds();
+    }
 
     void FakeAdminProvider::sendCommand( uint16 method, const AdminRequest& request, const NetIdempotencyKey& key, AdminClient::ReplyDelegate onReply )
     {

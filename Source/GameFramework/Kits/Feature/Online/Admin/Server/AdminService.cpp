@@ -92,7 +92,10 @@ namespace sw
     {
     }
 
-    AdminService::~AdminService() { SW_ASSERT( _listPendingCall.empty() ); }
+    AdminService::~AdminService()
+    {
+        SW_ASSERT( _listPendingCall.empty() );
+    }
 
     bool AdminService::initialize( IServiceStore* pStore, const AdminServiceSettings& settings )
     {

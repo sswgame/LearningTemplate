@@ -280,7 +280,10 @@ namespace sw
         }
     }
 
-    void StreamMessageEndpoint::onStreamWritable( StreamConnectionHandle handle ) { (void)handle; }
+    void StreamMessageEndpoint::onStreamWritable( StreamConnectionHandle handle )
+    {
+        (void)handle;
+    }
 
     void StreamMessageEndpoint::onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason )
     {
@@ -357,7 +360,10 @@ namespace sw
         return sendFrame( handle, StreamFrameKind::Message, pBody, bodySize );
     }
 
-    StreamConnectionHandle StreamMessageEndpoint::connect( const NetAddress& remote ) { return _pTransport != nullptr ? _pTransport->connect( remote ) : StreamConnectionHandle{}; }
+    StreamConnectionHandle StreamMessageEndpoint::connect( const NetAddress& remote )
+    {
+        return _pTransport != nullptr ? _pTransport->connect( remote ) : StreamConnectionHandle{};
+    }
 
     void StreamMessageEndpoint::close( StreamConnectionHandle handle, StreamCloseMode mode )
     {
@@ -377,7 +383,10 @@ namespace sw
         _pTransport->close( handle, mode );
     }
 
-    IStreamTransport* StreamMessageEndpoint::getTransport() const { return _pTransport; }
+    IStreamTransport* StreamMessageEndpoint::getTransport() const
+    {
+        return _pTransport;
+    }
 
     float64 StreamMessageEndpoint::getRoundTripSeconds( StreamConnectionHandle handle ) const
     {

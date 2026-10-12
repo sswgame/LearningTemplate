@@ -183,7 +183,10 @@ namespace sw
         return float3{ 0.0f, 0.0f, 1.0f };
     }
 
-    float32 SplinePath::wrapDistance( float32 distance ) const { return ArcLengthUtil::wrapDistance( distance, _length, _bClosed == SW_TRUE ); }
+    float32 SplinePath::wrapDistance( float32 distance ) const
+    {
+        return ArcLengthUtil::wrapDistance( distance, _length, _bClosed == SW_TRUE );
+    }
 
     float32 SplinePath::findParameterAtDistance( float32 wrappedDistance ) const
     {

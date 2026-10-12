@@ -97,9 +97,15 @@ namespace sw
         return "GET";
     }
 
-    const HTTPHeader* HTTPClientResponse::findHeader( string_view name ) const { return HTTPUtil::findHeader( _listHeader, name ); }
+    const HTTPHeader* HTTPClientResponse::findHeader( string_view name ) const
+    {
+        return HTTPUtil::findHeader( _listHeader, name );
+    }
 
-    const HTTPHeader* HTTPServerRequest::findHeader( string_view name ) const { return HTTPUtil::findHeader( _listHeader, name ); }
+    const HTTPHeader* HTTPServerRequest::findHeader( string_view name ) const
+    {
+        return HTTPUtil::findHeader( _listHeader, name );
+    }
 
     const HTTPHeader* HTTPServerRequest::findQuery( string_view name ) const
     {

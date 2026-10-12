@@ -42,7 +42,10 @@ namespace sw
     {
     }
 
-    LoadBotRunner::~LoadBotRunner() { shutdown(); }
+    LoadBotRunner::~LoadBotRunner()
+    {
+        shutdown();
+    }
 
     bool LoadBotRunner::initialize( IStreamTransport* pTransport, const LoadBotScenario& scenario, const LoadBotRunnerSettings& settings, string& outError )
     {
@@ -104,7 +107,10 @@ namespace sw
         return _startUs > 0 ? MonotonicClock::nowMicroseconds() - _startUs : 0;
     }
 
-    int64 LoadBotRunner::getNowMs() const { return getNowUs() / LoadBotRunnerInternal::kMicrosecondsPerMs; }
+    int64 LoadBotRunner::getNowMs() const
+    {
+        return getNowUs() / LoadBotRunnerInternal::kMicrosecondsPerMs;
+    }
 
     int64 LoadBotRunner::computeLaunchMs( int32 botIndex ) const
     {
@@ -167,7 +173,10 @@ namespace sw
         return handle;
     }
 
-    void LoadBotRunner::closeBot( StreamConnectionHandle handle ) { _endpoint.close( handle, StreamCloseMode::Graceful ); }
+    void LoadBotRunner::closeBot( StreamConnectionHandle handle )
+    {
+        _endpoint.close( handle, StreamCloseMode::Graceful );
+    }
 
     LoadBot* LoadBotRunner::findBotByConnection( StreamConnectionHandle handle ) const
     {

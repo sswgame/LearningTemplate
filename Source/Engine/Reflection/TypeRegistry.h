@@ -491,7 +491,10 @@ namespace sw
     }
 
     /** @brief C 문자열 canonical 이름으로 타입 일치 여부를 검사합니다. */
-    inline bool TypeRegistry::isType( const hashed_string& nameOrFqn, const utf8* pCanonicalName ) const { return pCanonicalName != nullptr && isType( nameOrFqn, hashed_string( pCanonicalName ) ); }
+    inline bool TypeRegistry::isType( const hashed_string& nameOrFqn, const utf8* pCanonicalName ) const
+    {
+        return pCanonicalName != nullptr && isType( nameOrFqn, hashed_string( pCanonicalName ) );
+    }
 } // namespace sw
 
 namespace sw::engine

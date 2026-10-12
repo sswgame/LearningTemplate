@@ -940,7 +940,10 @@ namespace sw
         return true;
     }
 
-    int32 CreatureTown::getDay() const { return _pClock != nullptr ? _pClock->getDay() : 0; }
+    int32 CreatureTown::getDay() const
+    {
+        return _pClock != nullptr ? _pClock->getDay() : 0;
+    }
 
     int32 CreatureTown::getFriendship( const hashed_string& speciesID ) const
     {

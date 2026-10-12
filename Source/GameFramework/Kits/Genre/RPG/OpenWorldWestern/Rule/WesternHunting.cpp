@@ -40,7 +40,10 @@ namespace sw
         return carcass;
     }
 
-    void WesternHunting::ageCarcass( WesternCarcass& inoutCarcass, float32 gameHours ) { inoutCarcass._ageHours += MathUtil::max( 0.0f, gameHours ); }
+    void WesternHunting::ageCarcass( WesternCarcass& inoutCarcass, float32 gameHours )
+    {
+        inoutCarcass._ageHours += MathUtil::max( 0.0f, gameHours );
+    }
 
     int32 WesternHunting::computeCarcassStars( const WesternCatalog& catalog, const WesternCarcass& carcass )
     {

@@ -197,7 +197,10 @@ namespace sw
         return toxicity;
     }
 
-    float32 WitcherAlchemy::getMaxToxicity() const { return _pCatalog != nullptr ? _pCatalog->getAlchemy()._maxToxicity : 100.0f; }
+    float32 WitcherAlchemy::getMaxToxicity() const
+    {
+        return _pCatalog != nullptr ? _pCatalog->getAlchemy()._maxToxicity : 100.0f;
+    }
 
     int32 WitcherAlchemy::getCharges( const hashed_string& itemID ) const
     {

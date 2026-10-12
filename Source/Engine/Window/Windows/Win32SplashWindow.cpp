@@ -323,11 +323,23 @@ namespace sw
 
     Win32SplashWindow::~Win32SplashWindow() = default;
 
-    bool             Win32SplashWindow::initialize( const utf8*, const utf8*, uint32, uint32 ) { return false; }
-    void             Win32SplashWindow::updateStatus( const utf8*, float32 ) {}
-    void             Win32SplashWindow::setProgress( float32 ) {}
-    void             Win32SplashWindow::dismiss() {}
-    LRESULT CALLBACK Win32SplashWindow::splashWndProc( HWND, UINT, WPARAM, LPARAM ) { return 0; }
+    bool Win32SplashWindow::initialize( const utf8*, const utf8*, uint32, uint32 )
+    {
+        return false;
+    }
+    void Win32SplashWindow::updateStatus( const utf8*, float32 )
+    {
+    }
+    void Win32SplashWindow::setProgress( float32 )
+    {
+    }
+    void Win32SplashWindow::dismiss()
+    {
+    }
+    LRESULT CALLBACK Win32SplashWindow::splashWndProc( HWND, UINT, WPARAM, LPARAM )
+    {
+        return 0;
+    }
 } // namespace sw
 
 #endif

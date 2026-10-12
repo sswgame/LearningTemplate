@@ -17,7 +17,10 @@ namespace sw
     {
     }
 
-    void MailboxClient::initialize( OnlineServiceClient* pClient ) { _pClient = pClient; }
+    void MailboxClient::initialize( OnlineServiceClient* pClient )
+    {
+        _pClient = pClient;
+    }
 
     uint64 MailboxClient::requestList( string_view cursor, int32 maxCount, ReplyDelegate onReply )
     {

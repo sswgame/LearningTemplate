@@ -240,12 +240,28 @@ namespace sw::editor
 #else
 namespace sw::editor
 {
-    bool  ImGuiDX12RendererBackend::initialize( class IRHIDevice* /*pRHIDevice*/ ) { return false; }
-    void  ImGuiDX12RendererBackend::shutdown() {}
-    void  ImGuiDX12RendererBackend::newFrame() {}
-    void  ImGuiDX12RendererBackend::processTextureUpdates() {}
-    void  ImGuiDX12RendererBackend::render( class IRHIDevice* /*pRHIDevice*/, ImDrawData* /*pDrawData*/ ) {}
-    void* ImGuiDX12RendererBackend::registerTexture( RHITextureHandle /*texture*/ ) { return nullptr; }
-    void  ImGuiDX12RendererBackend::unregisterTexture( void* /*pTextureID*/ ) {}
+    bool ImGuiDX12RendererBackend::initialize( class IRHIDevice* /*pRHIDevice*/ )
+    {
+        return false;
+    }
+    void ImGuiDX12RendererBackend::shutdown()
+    {
+    }
+    void ImGuiDX12RendererBackend::newFrame()
+    {
+    }
+    void ImGuiDX12RendererBackend::processTextureUpdates()
+    {
+    }
+    void ImGuiDX12RendererBackend::render( class IRHIDevice* /*pRHIDevice*/, ImDrawData* /*pDrawData*/ )
+    {
+    }
+    void* ImGuiDX12RendererBackend::registerTexture( RHITextureHandle /*texture*/ )
+    {
+        return nullptr;
+    }
+    void ImGuiDX12RendererBackend::unregisterTexture( void* /*pTextureID*/ )
+    {
+    }
 } // namespace sw::editor
 #endif

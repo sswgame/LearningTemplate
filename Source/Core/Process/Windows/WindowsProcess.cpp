@@ -312,7 +312,10 @@ namespace sw
         return StringUtil::utf16ToUtf8( arrBuffer );
     }
 
-    bool Process::isDebuggerPresent() { return IsDebuggerPresent() != FALSE; }
+    bool Process::isDebuggerPresent()
+    {
+        return IsDebuggerPresent() != FALSE;
+    }
 
     bool Process::isProcessAlive( int32 processID )
     {

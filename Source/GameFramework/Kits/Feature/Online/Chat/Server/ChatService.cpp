@@ -205,7 +205,10 @@ namespace sw
     {
     }
 
-    ChatService::~ChatService() { shutdown(); }
+    ChatService::~ChatService()
+    {
+        shutdown();
+    }
 
     bool ChatService::initialize( const ChatServiceDependencies& dependencies, const ChatSettings& settings )
     {

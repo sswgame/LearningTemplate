@@ -232,7 +232,10 @@ namespace sw
         }
     }
 
-    void TradeServer::onPresenceFound( const AccountPresenceResult& found ) { _listFound.push_back( found ); }
+    void TradeServer::onPresenceFound( const AccountPresenceResult& found )
+    {
+        _listFound.push_back( found );
+    }
 
     void TradeServer::respondImmediately( OnlineServiceHost& host, const NetRequestToken& token, TradeResult result )
     {

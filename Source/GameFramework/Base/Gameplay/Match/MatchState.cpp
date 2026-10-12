@@ -288,7 +288,10 @@ namespace sw
         pushEvent( MatchEvent::Kind::MatchEnded, -1, -1, _winningTeam, 0 );
     }
 
-    const MatchTeam* MatchState::findTeam( int32 team ) const { return isValidTeam( team ) ? &_listTeam[static_cast<size_t>( team )] : nullptr; }
+    const MatchTeam* MatchState::findTeam( int32 team ) const
+    {
+        return isValidTeam( team ) ? &_listTeam[static_cast<size_t>( team )] : nullptr;
+    }
 
     const MatchParticipant* MatchState::findParticipant( int32 participant ) const
     {

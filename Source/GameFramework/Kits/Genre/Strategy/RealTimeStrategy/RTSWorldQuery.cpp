@@ -36,7 +36,10 @@ namespace sw
         return count;
     }
 
-    bool RTSWorld::hasConstructed( int32 player, const hashed_string& defID ) const { return countUnits( player, defID, false ) > 0; }
+    bool RTSWorld::hasConstructed( int32 player, const hashed_string& defID ) const
+    {
+        return countUnits( player, defID, false ) > 0;
+    }
 
     int32 RTSWorld::countPlanned( int32 player, const hashed_string& defID ) const
     {

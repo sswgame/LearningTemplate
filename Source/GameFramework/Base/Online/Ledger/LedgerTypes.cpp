@@ -216,13 +216,25 @@ namespace sw
         return scope;
     }
 
-    bool LedgerUtil::isValidAssetID( string_view assetID ) { return LedgerTypesInternal::isTokenText( assetID, LedgerConstant::kMaxAssetIDSize, "_.-" ); }
+    bool LedgerUtil::isValidAssetID( string_view assetID )
+    {
+        return LedgerTypesInternal::isTokenText( assetID, LedgerConstant::kMaxAssetIDSize, "_.-" );
+    }
 
-    bool LedgerUtil::isValidReasonCode( string_view reason ) { return LedgerTypesInternal::isTokenText( reason, LedgerConstant::kMaxReasonSize, "_." ); }
+    bool LedgerUtil::isValidReasonCode( string_view reason )
+    {
+        return LedgerTypesInternal::isTokenText( reason, LedgerConstant::kMaxReasonSize, "_." );
+    }
 
-    bool LedgerUtil::isValidEscrowDomain( string_view domain ) { return LedgerTypesInternal::isTokenText( domain, LedgerTypesInternal::kMaxEscrowDomainSize, "_" ); }
+    bool LedgerUtil::isValidEscrowDomain( string_view domain )
+    {
+        return LedgerTypesInternal::isTokenText( domain, LedgerTypesInternal::kMaxEscrowDomainSize, "_" );
+    }
 
-    bool LedgerUtil::isValidEscrowToken( string_view token ) { return LedgerTypesInternal::isTokenText( token, LedgerTypesInternal::kMaxEscrowTokenSize, "_.-" ); }
+    bool LedgerUtil::isValidEscrowToken( string_view token )
+    {
+        return LedgerTypesInternal::isTokenText( token, LedgerTypesInternal::kMaxEscrowTokenSize, "_.-" );
+    }
 
     bool LedgerUtil::isValidJournalKey( string_view journalKey )
     {

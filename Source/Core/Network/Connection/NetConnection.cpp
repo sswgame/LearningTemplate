@@ -118,7 +118,10 @@ namespace sw
         _bUnreliableFirst        = SW_FALSE;
     }
 
-    int32 NetConnection::getPendingReliableCount() const { return NetSequence::computeDifference( _nextReliableSendID, _oldestUnackedReliableID ); }
+    int32 NetConnection::getPendingReliableCount() const
+    {
+        return NetSequence::computeDifference( _nextReliableSendID, _oldestUnackedReliableID );
+    }
 
     bool NetConnection::sendMessage( NetChannelType channel, const uint8* pData, int32 size )
     {
@@ -216,7 +219,10 @@ namespace sw
         return true;
     }
 
-    float64 NetConnection::computeResendDelay() const { return MathUtil::max( 0.1, static_cast<float64>( _stats._rtt ) + kResendMargin ); }
+    float64 NetConnection::computeResendDelay() const
+    {
+        return MathUtil::max( 0.1, static_cast<float64>( _stats._rtt ) + kResendMargin );
+    }
 
     bool NetConnection::isReliableDue( const OutgoingReliable& message, float64 time, float64 resendDelay ) const
     {

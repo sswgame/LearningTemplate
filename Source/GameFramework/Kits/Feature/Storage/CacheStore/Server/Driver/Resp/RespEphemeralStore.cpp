@@ -68,7 +68,10 @@ namespace sw
     {
     }
 
-    RespEphemeralStore::~RespEphemeralStore() { shutdown(); }
+    RespEphemeralStore::~RespEphemeralStore()
+    {
+        shutdown();
+    }
 
     bool RespEphemeralStore::initialize( unique_ptr<IStreamTransport> transport, const StreamTransportSettings& transportSettings, const RespStoreSettings& settings,
                                          unique_ptr<ITLSContext> tlsContext, string& outError )

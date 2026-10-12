@@ -61,11 +61,20 @@ namespace sw
         _stamina.update( deltaTime );
     }
 
-    bool MetroDuelist::tryAttack() { return _pCatalog != nullptr && _vitality.isAlive() && _stamina.trySpend( _pCatalog->getRules()._attackStaminaCost ); }
+    bool MetroDuelist::tryAttack()
+    {
+        return _pCatalog != nullptr && _vitality.isAlive() && _stamina.trySpend( _pCatalog->getRules()._attackStaminaCost );
+    }
 
-    bool MetroDuelist::tryDodge() { return _pCatalog != nullptr && _vitality.isAlive() && _stamina.trySpend( _pCatalog->getRules()._dodgeStaminaCost ); }
+    bool MetroDuelist::tryDodge()
+    {
+        return _pCatalog != nullptr && _vitality.isAlive() && _stamina.trySpend( _pCatalog->getRules()._dodgeStaminaCost );
+    }
 
-    void MetroDuelist::pressParry() { _parryPressTime = _time; }
+    void MetroDuelist::pressParry()
+    {
+        _parryPressTime = _time;
+    }
 
     MetroDefenseOutcome MetroDuelist::receiveAttack( float32 damage, float32 poiseDamage, int32 attackerID )
     {

@@ -75,7 +75,10 @@ namespace sw
         return multiplier;
     }
 
-    bool ElementChart::isImmune( const hashed_string& attack, const vector<hashed_string>& listDefend ) const { return computeMultiplier( attack, listDefend ) <= 0.0f; }
+    bool ElementChart::isImmune( const hashed_string& attack, const vector<hashed_string>& listDefend ) const
+    {
+        return computeMultiplier( attack, listDefend ) <= 0.0f;
+    }
 
     hashed_string ElementChart::rollStatus( const hashed_string& element, GameRandom& random ) const
     {

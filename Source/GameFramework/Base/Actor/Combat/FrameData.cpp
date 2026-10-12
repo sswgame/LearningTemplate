@@ -38,7 +38,10 @@ namespace sw
     // ------------------------------------------------------------------------------
     // MoveFrameData
     // ------------------------------------------------------------------------------
-    int32 MoveFrameData::computeFrameAdvantage( bool bOnBlock ) const { return FrameDataInternal::computeAdvantage( *this, _startup, bOnBlock ); }
+    int32 MoveFrameData::computeFrameAdvantage( bool bOnBlock ) const
+    {
+        return FrameDataInternal::computeAdvantage( *this, _startup, bOnBlock );
+    }
 
     // ------------------------------------------------------------------------------
     // MoveCatalog
@@ -210,7 +213,10 @@ namespace sw
         applyHitstop( _move._hitstop );
     }
 
-    void MoveTimeline::applyHitstop( int32 frames ) { _hitstopRemaining = MathUtil::max( _hitstopRemaining, frames ); }
+    void MoveTimeline::applyHitstop( int32 frames )
+    {
+        _hitstopRemaining = MathUtil::max( _hitstopRemaining, frames );
+    }
 
     MovePhase MoveTimeline::getPhase() const
     {
@@ -257,7 +263,10 @@ namespace sw
         return false;
     }
 
-    int32 MoveTimeline::computeFrameAdvantage( bool bOnBlock ) const { return FrameDataInternal::computeAdvantage( _move, _frame, bOnBlock ); }
+    int32 MoveTimeline::computeFrameAdvantage( bool bOnBlock ) const
+    {
+        return FrameDataInternal::computeAdvantage( _move, _frame, bOnBlock );
+    }
 
     GuardOutcome MoveTimeline::computeGuardOutcome( AttackHeight height, GuardStance stance, bool bUnblockable )
     {

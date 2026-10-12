@@ -271,7 +271,10 @@ namespace sw
             _reviveElapsed = 0.0f;
     }
 
-    void Vitality::setInvulnerable( float32 seconds ) { _invulnerable.extendTo( seconds ); }
+    void Vitality::setInvulnerable( float32 seconds )
+    {
+        _invulnerable.extendTo( seconds );
+    }
 
     void Vitality::kill( int32 instigatorID )
     {
@@ -285,7 +288,10 @@ namespace sw
         _eventBuffer.drainTo( outListEvent );
     }
 
-    float32 Vitality::getHealthRatio() const { return _health / _settings._maxHealth; }
+    float32 Vitality::getHealthRatio() const
+    {
+        return _health / _settings._maxHealth;
+    }
 
     float32 Vitality::getReviveProgress() const
     {

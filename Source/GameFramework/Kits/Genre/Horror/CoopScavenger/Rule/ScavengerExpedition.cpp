@@ -347,7 +347,10 @@ namespace sw
         _eventBuffer.drainTo( outListEvent );
     }
 
-    int64 ScavengerExpedition::getCredits() const { return _data._pCatalog != nullptr && _pWallet != nullptr ? _pWallet->getBalance( _data._pCatalog->getCurrency() ) : 0; }
+    int64 ScavengerExpedition::getCredits() const
+    {
+        return _data._pCatalog != nullptr && _pWallet != nullptr ? _pWallet->getBalance( _data._pCatalog->getCurrency() ) : 0;
+    }
 
     int32 ScavengerExpedition::computeShipValue() const
     {
@@ -573,7 +576,10 @@ namespace sw
         _eventBuffer.push( event );
     }
 
-    int32 ScavengerExpedition::getDayIndex() const { return _pClock != nullptr ? _pClock->getDay() : 0; }
+    int32 ScavengerExpedition::getDayIndex() const
+    {
+        return _pClock != nullptr ? _pClock->getDay() : 0;
+    }
 
     void ScavengerExpedition::writeState( Archive& outArchive ) const
     {

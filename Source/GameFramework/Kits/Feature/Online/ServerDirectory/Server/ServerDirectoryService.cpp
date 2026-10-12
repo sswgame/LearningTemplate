@@ -196,7 +196,10 @@ namespace sw
     {
     }
 
-    ServerDirectoryService::~ServerDirectoryService() { shutdown(); }
+    ServerDirectoryService::~ServerDirectoryService()
+    {
+        shutdown();
+    }
 
     void ServerDirectoryService::initialize( const ServerDirectoryDependencies& dependencies, const ServerDirectorySettings& settings )
     {
@@ -258,7 +261,10 @@ namespace sw
         markStatusIfChanged( nowMs );
     }
 
-    void ServerDirectoryService::notifyChanged() { _bReloadRequested = SW_TRUE; }
+    void ServerDirectoryService::notifyChanged()
+    {
+        _bReloadRequested = SW_TRUE;
+    }
 
     bool ServerDirectoryService::takeStatusChange()
     {

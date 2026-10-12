@@ -13,7 +13,10 @@ namespace sw
     {
     }
 
-    void SocialClient::initialize( OnlineServiceClient* pClient ) { _pClient = pClient; }
+    void SocialClient::initialize( OnlineServiceClient* pClient )
+    {
+        _pClient = pClient;
+    }
 
     uint64 SocialClient::requestFriend( AccountID otherID, const SocialReplyDelegate& onReply )
     {
@@ -58,7 +61,10 @@ namespace sw
         return send( SocialMethod::kUnblock, request, onReply );
     }
 
-    uint64 SocialClient::listLinks( const SocialReplyDelegate& onReply ) { return send( SocialMethod::kListLinks, SocialRequest{}, onReply ); }
+    uint64 SocialClient::listLinks( const SocialReplyDelegate& onReply )
+    {
+        return send( SocialMethod::kListLinks, SocialRequest{}, onReply );
+    }
 
     uint64 SocialClient::setPresence( SocialPresenceStatus status, string_view activity, const SocialReplyDelegate& onReply )
     {
@@ -68,7 +74,10 @@ namespace sw
         return send( SocialMethod::kSetPresence, request, onReply );
     }
 
-    uint64 SocialClient::queryFriendPresence( const SocialReplyDelegate& onReply ) { return send( SocialMethod::kFriendPresence, SocialRequest{}, onReply ); }
+    uint64 SocialClient::queryFriendPresence( const SocialReplyDelegate& onReply )
+    {
+        return send( SocialMethod::kFriendPresence, SocialRequest{}, onReply );
+    }
 
     uint64 SocialClient::createGuild( string_view name, const SocialReplyDelegate& onReply )
     {
@@ -91,7 +100,10 @@ namespace sw
         return send( SocialMethod::kGuildAccept, request, onReply );
     }
 
-    uint64 SocialClient::leaveGuild( const SocialReplyDelegate& onReply ) { return send( SocialMethod::kGuildLeave, SocialRequest{}, onReply ); }
+    uint64 SocialClient::leaveGuild( const SocialReplyDelegate& onReply )
+    {
+        return send( SocialMethod::kGuildLeave, SocialRequest{}, onReply );
+    }
 
     uint64 SocialClient::kickFromGuild( AccountID targetID, const SocialReplyDelegate& onReply )
     {
@@ -115,7 +127,10 @@ namespace sw
         return send( SocialMethod::kGuildSetNotice, request, onReply );
     }
 
-    uint64 SocialClient::requestGuild( const SocialReplyDelegate& onReply ) { return send( SocialMethod::kGuildGet, SocialRequest{}, onReply ); }
+    uint64 SocialClient::requestGuild( const SocialReplyDelegate& onReply )
+    {
+        return send( SocialMethod::kGuildGet, SocialRequest{}, onReply );
+    }
 
     uint64 SocialClient::depositToGuild( string_view assetID, int64 amount, const SocialReplyDelegate& onReply )
     {
@@ -133,7 +148,10 @@ namespace sw
         return send( SocialMethod::kGuildWithdraw, request, onReply );
     }
 
-    uint64 SocialClient::requestGuildStorage( const SocialReplyDelegate& onReply ) { return send( SocialMethod::kGuildStorage, SocialRequest{}, onReply ); }
+    uint64 SocialClient::requestGuildStorage( const SocialReplyDelegate& onReply )
+    {
+        return send( SocialMethod::kGuildStorage, SocialRequest{}, onReply );
+    }
 
     void SocialClient::onServicePush( uint16 kind, BitReader& body )
     {

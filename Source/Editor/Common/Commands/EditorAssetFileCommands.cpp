@@ -145,7 +145,10 @@ namespace sw::editor
         return false;
     }
 
-    span<const EditorNewAssetTemplate> EditorAssetFileCommands::getNewAssetTemplateList() { return EditorAssetFileCommandsInternal::kArrNewAssetTemplate; }
+    span<const EditorNewAssetTemplate> EditorAssetFileCommands::getNewAssetTemplateList()
+    {
+        return EditorAssetFileCommandsInternal::kArrNewAssetTemplate;
+    }
 
     bool EditorAssetFileCommands::createAsset( string_view folderAbs, const EditorNewAssetTemplate& assetTemplate, string& outAssetAbs )
     {
@@ -297,7 +300,10 @@ namespace sw::editor
 #endif
     }
 
-    bool EditorAssetFileCommands::deleteAsset( string_view absolutePath ) { return AssetDatabase::deleteAssetFile( absolutePath ); }
+    bool EditorAssetFileCommands::deleteAsset( string_view absolutePath )
+    {
+        return AssetDatabase::deleteAssetFile( absolutePath );
+    }
 
     uint32 EditorAssetFileCommands::importFiles( string_view destFolderAbs, const vector<string>& listSourcePath )
     {

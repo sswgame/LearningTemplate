@@ -243,6 +243,9 @@ Foo::Foo()
 }
 ```
 
+함수 본문은 줄을 나눠 씁니다. 클래스 본문 안에 정의한 짧은 함수(getter · 단순 접근자)만 한 줄이 허용됩니다(`AllowShortFunctionsOnASingleLine: InlineOnly`).
+클래스 밖의 `inline` 자유 함수(연산자 · 수학 도우미)와 클래스 밖 정의는 `{` 를 다음 줄에 두고 본문을 펼칩니다.
+
 ## 7. HLSL — [AGENTS.md › HLSL](../AGENTS.md#hlsl)
 
 | 쓰지 않는 것 | 쓰는 것 |

@@ -242,7 +242,10 @@ namespace sw
 #endif
     }
 
-    uint16 ProfilerBackend::getTracyPort() { return TracyProfilerBackend::getDataPort(); }
+    uint16 ProfilerBackend::getTracyPort()
+    {
+        return TracyProfilerBackend::getDataPort();
+    }
 
 #if SW_PROFILER_BACKEND_COMPILED
     const TaskProfileHook* ProfilerBackend::getTaskProfileHook()
@@ -251,7 +254,10 @@ namespace sw
     }
 #endif
 
-    IProfilerBackend* ProfilerBackend::getActiveBackend() { return ProfilerBackendInternal::s_pActive.load( std::memory_order_acquire ); }
+    IProfilerBackend* ProfilerBackend::getActiveBackend()
+    {
+        return ProfilerBackendInternal::s_pActive.load( std::memory_order_acquire );
+    }
 
     void ProfilerBackend::setActiveBackend( IProfilerBackend* pBackend )
     {

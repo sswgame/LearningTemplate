@@ -787,15 +787,42 @@ namespace
     // 아래 케이스가 명령마다 다는 함수들이다. 몸통을 서로 다르게 둔다 — 같으면 링커가 접어 스텁 주소가 겹칠 수 있다.
     int32 s_releaseProbeValue{ 0 };
 
-    void redoKeptFirst() { s_releaseProbeValue += 1; }
-    void undoKeptFirst() { s_releaseProbeValue -= 1; }
-    void redoPairInner() { s_releaseProbeValue += 10; }
-    void undoPairInner() { s_releaseProbeValue -= 10; }
-    void redoPairModule() { s_releaseProbeValue += 100; }
-    void undoPairModule() { s_releaseProbeValue -= 100; }
-    void redoKeptLast() { s_releaseProbeValue += 1000; }
-    void undoKeptLast() { s_releaseProbeValue -= 1000; }
-    void onReleaseProbeEdit( const sw::CommandStack::ObjectEditNotice& ) { s_releaseProbeValue += 10000; }
+    void redoKeptFirst()
+    {
+        s_releaseProbeValue += 1;
+    }
+    void undoKeptFirst()
+    {
+        s_releaseProbeValue -= 1;
+    }
+    void redoPairInner()
+    {
+        s_releaseProbeValue += 10;
+    }
+    void undoPairInner()
+    {
+        s_releaseProbeValue -= 10;
+    }
+    void redoPairModule()
+    {
+        s_releaseProbeValue += 100;
+    }
+    void undoPairModule()
+    {
+        s_releaseProbeValue -= 100;
+    }
+    void redoKeptLast()
+    {
+        s_releaseProbeValue += 1000;
+    }
+    void undoKeptLast()
+    {
+        s_releaseProbeValue -= 1000;
+    }
+    void onReleaseProbeEdit( const sw::CommandStack::ObjectEditNotice& )
+    {
+        s_releaseProbeValue += 10000;
+    }
 
     sw::CommandStack::Command makeFunctionCommand( const utf8* pLabel, void ( *pfnRedo )(), void ( *pfnUndo )() )
     {

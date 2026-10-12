@@ -1436,7 +1436,10 @@ namespace sw
         _shellActions.update( *_owned._pInputManager, deltaTime );
     }
 
-    unique_ptr<InputMap> EngineLoop::createShellInputMap( string_view inputMapPath ) { return ShellInputActions::createInputMap( inputMapPath ); }
+    unique_ptr<InputMap> EngineLoop::createShellInputMap( string_view inputMapPath )
+    {
+        return ShellInputActions::createInputMap( inputMapPath );
+    }
 
     void EngineLoop::pollShaderReloadHotkey()
     {
@@ -1456,5 +1459,8 @@ namespace sw
 #endif
     }
 
-    bool EngineLoop::wasDebugActionTriggered( string_view actionName ) const { return _shellActions.wasActionTriggered( hashed_string( actionName ) ); }
+    bool EngineLoop::wasDebugActionTriggered( string_view actionName ) const
+    {
+        return _shellActions.wasActionTriggered( hashed_string( actionName ) );
+    }
 } // namespace sw

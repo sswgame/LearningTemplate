@@ -136,9 +136,15 @@ namespace sw
             GimmickSensorComponentInternal::addAtomic( _pendingDamage, amount );
     }
 
-    void GimmickSensorComponent::notifyUsed() { GimmickSensorComponentInternal::addAtomic( _pendingUse, 1.0f ); }
+    void GimmickSensorComponent::notifyUsed()
+    {
+        GimmickSensorComponentInternal::addAtomic( _pendingUse, 1.0f );
+    }
 
-    float32 GimmickSensorComponent::consumeDamage() { return _pendingDamage.exchange( 0.0f ); }
+    float32 GimmickSensorComponent::consumeDamage()
+    {
+        return _pendingDamage.exchange( 0.0f );
+    }
 
     float32 GimmickSensorComponent::consumeUses()
     {

@@ -29,7 +29,9 @@ namespace sw
         SetThreadStackGuarantee( &guaranteeBytes );
     }
 
-    void ThreadCrashStack::releaseCurrentThread() {}
+    void ThreadCrashStack::releaseCurrentThread()
+    {
+    }
 } // namespace sw
 
 #endif

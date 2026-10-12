@@ -168,7 +168,10 @@ namespace sw
         return fundingHolder._kind == LedgerHolderKind::Account ? ServiceMailExpiryAction::ReturnToSender : ServiceMailExpiryAction::Discard;
     }
 
-    LedgerHolder ServiceMail::makeEscrowHolder( string_view mailKey ) { return LedgerHolder::makeEscrow( "mail", ServiceMailInternal::makeMailToken( mailKey ) ); }
+    LedgerHolder ServiceMail::makeEscrowHolder( string_view mailKey )
+    {
+        return LedgerHolder::makeEscrow( "mail", ServiceMailInternal::makeMailToken( mailKey ) );
+    }
 
     string ServiceMail::makeExpiryKey( int64 expiresMs, string_view mailKey )
     {

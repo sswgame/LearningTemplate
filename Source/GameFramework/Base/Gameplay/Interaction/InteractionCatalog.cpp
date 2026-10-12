@@ -84,7 +84,10 @@ namespace sw
 
 namespace sw
 {
-    bool InteractionDef::allowsInteractor( const TagContainer& interactorTags ) const { return interactorTags.matchesTags( _requiredTags, _forbiddenTags ); }
+    bool InteractionDef::allowsInteractor( const TagContainer& interactorTags ) const
+    {
+        return interactorTags.matchesTags( _requiredTags, _forbiddenTags );
+    }
 
     bool InteractionCatalog::readInteraction( const XMLNode& node, InteractionDef& outDef, string_view sourceName ) const
     {

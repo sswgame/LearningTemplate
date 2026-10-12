@@ -51,7 +51,10 @@ namespace sw
         resetHistory();
     }
 
-    const NetSnapshot* ReplicationClient::getLatest() const { return _listSnapshot.hasNewest() ? _listSnapshot.find( _listSnapshot.getNewestTick() ) : nullptr; }
+    const NetSnapshot* ReplicationClient::getLatest() const
+    {
+        return _listSnapshot.hasNewest() ? _listSnapshot.find( _listSnapshot.getNewestTick() ) : nullptr;
+    }
 
     NetHandleResult ReplicationClient::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {

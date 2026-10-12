@@ -280,7 +280,10 @@ namespace sw
         }
     }
 
-    bool RichTextParser::hasSameTags( string_view sourceMarkup, string_view translatedMarkup ) { return MarkupTagScanner::hasSameTags( sourceMarkup, translatedMarkup ); }
+    bool RichTextParser::hasSameTags( string_view sourceMarkup, string_view translatedMarkup )
+    {
+        return MarkupTagScanner::hasSameTags( sourceMarkup, translatedMarkup );
+    }
 
     uint32 RichTextParser::expandActionTags( string_view markup, const RichTextActionGlyphResolver& resolve, string& outText )
     {

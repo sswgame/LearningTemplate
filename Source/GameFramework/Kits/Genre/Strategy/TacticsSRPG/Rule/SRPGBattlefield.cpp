@@ -698,7 +698,10 @@ namespace sw
         return true;
     }
 
-    int32 SRPGBattlefield::computeDistance( const int2& lhs, const int2& rhs ) { return MathUtil::abs( lhs._x - rhs._x ) + MathUtil::abs( lhs._y - rhs._y ); }
+    int32 SRPGBattlefield::computeDistance( const int2& lhs, const int2& rhs )
+    {
+        return MathUtil::abs( lhs._x - rhs._x ) + MathUtil::abs( lhs._y - rhs._y );
+    }
 
     const SRPGTerrainDef* SRPGBattlefield::findTerrainAt( const int2& cell ) const
     {

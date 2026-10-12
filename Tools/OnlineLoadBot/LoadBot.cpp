@@ -128,7 +128,10 @@ namespace sw
         _listFrame.push_back( Frame{ &pRunner->getScenario()._listStep, 0, 1 } );
     }
 
-    LoadBot::~LoadBot() { shutdown(); }
+    LoadBot::~LoadBot()
+    {
+        shutdown();
+    }
 
     void LoadBot::start()
     {
@@ -161,7 +164,10 @@ namespace sw
             stop();
     }
 
-    void LoadBot::handleFrame( StreamFrameKind kind, const uint8* pBody, int32 bodySize ) { _client.handleFrame( kind, pBody, bodySize ); }
+    void LoadBot::handleFrame( StreamFrameKind kind, const uint8* pBody, int32 bodySize )
+    {
+        _client.handleFrame( kind, pBody, bodySize );
+    }
 
     void LoadBot::handleClosed( StreamCloseReason reason )
     {
@@ -551,5 +557,8 @@ namespace sw
         finishWithResult( errorCode, 0 );
     }
 
-    void LoadBot::onFriendAccepted( const SocialClientReply& reply ) { (void)reply; }
+    void LoadBot::onFriendAccepted( const SocialClientReply& reply )
+    {
+        (void)reply;
+    }
 } // namespace sw

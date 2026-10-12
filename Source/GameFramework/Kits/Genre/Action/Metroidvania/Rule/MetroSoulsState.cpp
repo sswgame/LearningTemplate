@@ -191,7 +191,10 @@ namespace sw
         _eventBuffer.push( event );
     }
 
-    hashed_string MetroSoulsState::getCurrencyName() const { return _pCatalog != nullptr ? _pCatalog->getRules()._currency : MetroRules{}._currency; }
+    hashed_string MetroSoulsState::getCurrencyName() const
+    {
+        return _pCatalog != nullptr ? _pCatalog->getRules()._currency : MetroRules{}._currency;
+    }
 
     void MetroSoulsState::writeState( Archive& outArchive ) const
     {

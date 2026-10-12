@@ -311,9 +311,15 @@ namespace sw
         return float4x4::makeFromQuaternion( *this );
     }
 
-    bool quaternion::operator==( const quaternion& other ) const noexcept { return MathUtil::nearEqual( _x, other._x ) && MathUtil::nearEqual( _y, other._y ) && MathUtil::nearEqual( _z, other._z ) && MathUtil::nearEqual( _w, other._w ); }
+    bool quaternion::operator==( const quaternion& other ) const noexcept
+    {
+        return MathUtil::nearEqual( _x, other._x ) && MathUtil::nearEqual( _y, other._y ) && MathUtil::nearEqual( _z, other._z ) && MathUtil::nearEqual( _w, other._w );
+    }
 
-    bool quaternion::operator!=( const quaternion& other ) const noexcept { return !( *this == other ); }
+    bool quaternion::operator!=( const quaternion& other ) const noexcept
+    {
+        return !( *this == other );
+    }
 
     quaternion& quaternion::operator+=( const quaternion& other ) noexcept
     {
@@ -749,9 +755,15 @@ namespace sw
         return result;
     }
 
-    bool float4x4::operator==( const float4x4& other ) const noexcept { return ( MathUtil::nearEqual( _11, other._11 ) && MathUtil::nearEqual( _12, other._12 ) && MathUtil::nearEqual( _13, other._13 ) && MathUtil::nearEqual( _14, other._14 ) ) && ( MathUtil::nearEqual( _21, other._21 ) && MathUtil::nearEqual( _22, other._22 ) && MathUtil::nearEqual( _23, other._23 ) && MathUtil::nearEqual( _24, other._24 ) ) && ( MathUtil::nearEqual( _31, other._31 ) && MathUtil::nearEqual( _32, other._32 ) && MathUtil::nearEqual( _33, other._33 ) && MathUtil::nearEqual( _34, other._34 ) ) && ( MathUtil::nearEqual( _41, other._41 ) && MathUtil::nearEqual( _42, other._42 ) && MathUtil::nearEqual( _43, other._43 ) && MathUtil::nearEqual( _44, other._44 ) ); }
+    bool float4x4::operator==( const float4x4& other ) const noexcept
+    {
+        return ( MathUtil::nearEqual( _11, other._11 ) && MathUtil::nearEqual( _12, other._12 ) && MathUtil::nearEqual( _13, other._13 ) && MathUtil::nearEqual( _14, other._14 ) ) && ( MathUtil::nearEqual( _21, other._21 ) && MathUtil::nearEqual( _22, other._22 ) && MathUtil::nearEqual( _23, other._23 ) && MathUtil::nearEqual( _24, other._24 ) ) && ( MathUtil::nearEqual( _31, other._31 ) && MathUtil::nearEqual( _32, other._32 ) && MathUtil::nearEqual( _33, other._33 ) && MathUtil::nearEqual( _34, other._34 ) ) && ( MathUtil::nearEqual( _41, other._41 ) && MathUtil::nearEqual( _42, other._42 ) && MathUtil::nearEqual( _43, other._43 ) && MathUtil::nearEqual( _44, other._44 ) );
+    }
 
-    bool float4x4::operator!=( const float4x4& other ) const noexcept { return !( *this == other ); }
+    bool float4x4::operator!=( const float4x4& other ) const noexcept
+    {
+        return !( *this == other );
+    }
 
     float4x4& float4x4::operator+=( const float4x4& other ) noexcept
     {

@@ -92,5 +92,8 @@ namespace sw::editor
         }
     }
 
-    uint64 EditorFolderListing::getChildFolderScanCount() { return EditorFolderListingInternal::getChildFolderScanCounter().load(); }
+    uint64 EditorFolderListing::getChildFolderScanCount()
+    {
+        return EditorFolderListingInternal::getChildFolderScanCounter().load();
+    }
 } // namespace sw::editor

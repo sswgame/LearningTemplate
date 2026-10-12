@@ -106,7 +106,10 @@ namespace sw
         return send( AccountClientOperation::Resume, AccountMethod::kResume, body, false );
     }
 
-    uint64 AccountClient::logout() { return send( AccountClientOperation::Logout, AccountMethod::kLogout, BitWriter{}, true ); }
+    uint64 AccountClient::logout()
+    {
+        return send( AccountClientOperation::Logout, AccountMethod::kLogout, BitWriter{}, true );
+    }
 
     uint64 AccountClient::linkCredential( string_view loginName, string_view password )
     {
@@ -137,11 +140,20 @@ namespace sw
         return send( AccountClientOperation::UnlinkPlatform, AccountMethod::kUnlinkPlatform, body, true );
     }
 
-    uint64 AccountClient::listLinks() { return send( AccountClientOperation::ListLinks, AccountMethod::kListLinks, BitWriter{}, true ); }
+    uint64 AccountClient::listLinks()
+    {
+        return send( AccountClientOperation::ListLinks, AccountMethod::kListLinks, BitWriter{}, true );
+    }
 
-    uint64 AccountClient::requestDeletion() { return send( AccountClientOperation::RequestDeletion, AccountMethod::kRequestDeletion, BitWriter{}, true ); }
+    uint64 AccountClient::requestDeletion()
+    {
+        return send( AccountClientOperation::RequestDeletion, AccountMethod::kRequestDeletion, BitWriter{}, true );
+    }
 
-    uint64 AccountClient::cancelDeletion() { return send( AccountClientOperation::CancelDeletion, AccountMethod::kCancelDeletion, BitWriter{}, true ); }
+    uint64 AccountClient::cancelDeletion()
+    {
+        return send( AccountClientOperation::CancelDeletion, AccountMethod::kCancelDeletion, BitWriter{}, true );
+    }
 
     int32 AccountClient::pollReplies( vector<AccountClientReply>& outListReply )
     {
@@ -174,9 +186,15 @@ namespace sw
         Memory::copy( outCredentials._secret._arrByte, ticket._arrSecret, NetGameTicket::kSecretSize );
     }
 
-    uint16 AccountClient::getMethodRange() const { return OnlineMethodRange::kAccount; }
+    uint16 AccountClient::getMethodRange() const
+    {
+        return OnlineMethodRange::kAccount;
+    }
 
-    uint32 AccountClient::getProtocolVersion() const { return AccountProtocol::kVersion; }
+    uint32 AccountClient::getProtocolVersion() const
+    {
+        return AccountProtocol::kVersion;
+    }
 
     void AccountClient::onServicePush( uint16 kind, BitReader& body )
     {

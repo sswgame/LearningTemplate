@@ -40,9 +40,15 @@ namespace sw
         _secret    = nextSalt();
     }
 
-    uint64 NetChallenge::nextSalt() { return HashUtil::splitMix64Next( _saltState ); }
+    uint64 NetChallenge::nextSalt()
+    {
+        return HashUtil::splitMix64Next( _saltState );
+    }
 
-    int64 NetChallenge::computeWindow( float64 nowSeconds ) { return static_cast<int64>( MathUtil::floor( nowSeconds / kWindowSeconds ) ); }
+    int64 NetChallenge::computeWindow( float64 nowSeconds )
+    {
+        return static_cast<int64>( MathUtil::floor( nowSeconds / kWindowSeconds ) );
+    }
 
     uint64 NetChallenge::makeTokenForWindow( const NetAddress& address, uint64 clientSalt, int64 window ) const
     {

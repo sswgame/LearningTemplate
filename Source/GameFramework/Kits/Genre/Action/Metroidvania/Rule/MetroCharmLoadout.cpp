@@ -110,9 +110,15 @@ namespace sw
         return _pCatalog->getRules()._overcharmDamageTakenScale;
     }
 
-    bool MetroCharmLoadout::isOwned( const hashed_string& charmID ) const { return VectorUtil::contains( _listOwned, charmID ); }
+    bool MetroCharmLoadout::isOwned( const hashed_string& charmID ) const
+    {
+        return VectorUtil::contains( _listOwned, charmID );
+    }
 
-    bool MetroCharmLoadout::isEquipped( const hashed_string& charmID ) const { return VectorUtil::contains( _listEquipped, charmID ); }
+    bool MetroCharmLoadout::isEquipped( const hashed_string& charmID ) const
+    {
+        return VectorUtil::contains( _listEquipped, charmID );
+    }
 
     void MetroCharmLoadout::writeState( Archive& outArchive ) const
     {

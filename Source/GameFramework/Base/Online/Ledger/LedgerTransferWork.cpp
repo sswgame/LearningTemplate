@@ -13,7 +13,10 @@ namespace sw
     {
     }
 
-    void LedgerTransferWork::run( IServiceStoreConnection& connection ) { (void)Ledger::executeTransfer( connection, _request, _outcome ); }
+    void LedgerTransferWork::run( IServiceStoreConnection& connection )
+    {
+        (void)Ledger::executeTransfer( connection, _request, _outcome );
+    }
 
     void LedgerTransferWork::complete()
     {

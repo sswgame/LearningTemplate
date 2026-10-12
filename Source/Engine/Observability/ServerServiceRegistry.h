@@ -138,5 +138,8 @@ namespace sw
  * @param Name 로그와 오류에 쓰는 이름(문자열 리터럴)
  * @param StartOrder 시작 순서(작은 것부터)
  */
-#define SW_REGISTER_SERVER_SERVICE( Type, Name, StartOrder ) \
-    const ::sw::ServerServiceRegistrar<Type> s_serverServiceRegistrar##Type { Name, StartOrder }
+#define SW_REGISTER_SERVER_SERVICE( Type, Name, StartOrder )                \
+    const ::sw::ServerServiceRegistrar<Type> s_serverServiceRegistrar##Type \
+    {                                                                       \
+        Name, StartOrder                                                    \
+    }

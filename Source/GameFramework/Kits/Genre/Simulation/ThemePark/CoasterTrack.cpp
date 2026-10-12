@@ -189,7 +189,10 @@ namespace sw
         }
     }
 
-    float32 CoasterTrack::wrapDistance( float32 distance ) const { return ArcLengthUtil::wrapDistance( distance, _length, _bClosed == SW_TRUE ); }
+    float32 CoasterTrack::wrapDistance( float32 distance ) const
+    {
+        return ArcLengthUtil::wrapDistance( distance, _length, _bClosed == SW_TRUE );
+    }
 
     CoasterTrackFrame CoasterTrack::sample( float32 distance ) const
     {

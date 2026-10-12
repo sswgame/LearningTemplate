@@ -295,7 +295,10 @@ namespace test
     {
     }
 
-    TestHostRuntime::~TestHostRuntime() { stop(); }
+    TestHostRuntime::~TestHostRuntime()
+    {
+        stop();
+    }
 
     bool TestHostRuntime::start( int32 argc, utf8* argv[] )
     {

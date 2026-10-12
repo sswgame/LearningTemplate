@@ -195,7 +195,10 @@ namespace sw
         return true;
     }
 
-    string PushNotificationDispatcher::makeAccountPrefix( AccountID accountID ) { return ServiceKeyUtil::makeHex64( accountID ) + "/"; }
+    string PushNotificationDispatcher::makeAccountPrefix( AccountID accountID )
+    {
+        return ServiceKeyUtil::makeHex64( accountID ) + "/";
+    }
 
     string PushNotificationDispatcher::makeDeviceKey( AccountID accountID, string_view providerID, string_view token )
     {

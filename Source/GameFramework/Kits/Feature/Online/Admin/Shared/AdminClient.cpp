@@ -15,7 +15,10 @@ namespace sw
     {
     }
 
-    void AdminClient::initialize( OnlineServiceClient* pClient ) { _pClient = pClient; }
+    void AdminClient::initialize( OnlineServiceClient* pClient )
+    {
+        _pClient = pClient;
+    }
 
     uint64 AdminClient::sendCommand( uint16 method, const AdminRequest& request, const NetIdempotencyKey& key, ReplyDelegate onReply )
     {

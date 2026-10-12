@@ -149,7 +149,10 @@ namespace sw
         return result;
     }
 
-    bool ActionStageRun::isSecretFound( const hashed_string& secretID ) const { return VectorUtil::contains( _listSecretCommitted, secretID ) || VectorUtil::contains( _listSecretPending, secretID ); }
+    bool ActionStageRun::isSecretFound( const hashed_string& secretID ) const
+    {
+        return VectorUtil::contains( _listSecretCommitted, secretID ) || VectorUtil::contains( _listSecretPending, secretID );
+    }
 
     void ActionStageRun::commitSecrets()
     {

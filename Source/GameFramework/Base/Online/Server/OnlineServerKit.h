@@ -176,5 +176,8 @@ namespace sw
  * @param Name 설정 파일(`_listKit[]._name`)과 로그에 쓰는 이름(문자열 리터럴)
  * @param Order 시작 순서(`OnlineServerKitOrder::k*`)
  */
-#define SW_REGISTER_ONLINE_SERVER_KIT( Type, Name, Order ) \
-    const ::sw::OnlineServerKitRegistrar<Type> s_onlineServerKitRegistrar##Type { Name, Order }
+#define SW_REGISTER_ONLINE_SERVER_KIT( Type, Name, Order )                      \
+    const ::sw::OnlineServerKitRegistrar<Type> s_onlineServerKitRegistrar##Type \
+    {                                                                           \
+        Name, Order                                                             \
+    }

@@ -494,7 +494,10 @@ namespace sw
 
 namespace sw
 {
-    bool OpenSSLNetSecurityProvider::fillRandomBytes( uint8* pOut, int32 size ) { return size <= 0 || RAND_bytes( pOut, size ) == 1; }
+    bool OpenSSLNetSecurityProvider::fillRandomBytes( uint8* pOut, int32 size )
+    {
+        return size <= 0 || RAND_bytes( pOut, size ) == 1;
+    }
 
     bool OpenSSLNetSecurityProvider::makeX25519KeyPair( NetX25519KeyPair& outKeyPair )
     {

@@ -83,7 +83,10 @@ namespace sw
         ++_mapErrorKeyToCount[string( errorKey )];
     }
 
-    void LoadBotMetrics::recordPush( uint16 pushKind ) { ++_mapPushKindToCount[pushKind]; }
+    void LoadBotMetrics::recordPush( uint16 pushKind )
+    {
+        ++_mapPushKindToCount[pushKind];
+    }
 
     void LoadBotMetrics::recordConnection( bool bOpened )
     {
@@ -93,9 +96,15 @@ namespace sw
             ++_failedCount;
     }
 
-    void LoadBotMetrics::recordDisconnect() { ++_disconnectCount; }
+    void LoadBotMetrics::recordDisconnect()
+    {
+        ++_disconnectCount;
+    }
 
-    void LoadBotMetrics::recordMatch( uint64 matchID ) { _listMatchID.push_back( matchID ); }
+    void LoadBotMetrics::recordMatch( uint64 matchID )
+    {
+        _listMatchID.push_back( matchID );
+    }
 
     int64 LoadBotMetrics::computePercentile( const vector<int64>& listSortedSample, int32 percentile )
     {
@@ -212,9 +221,15 @@ namespace sw
         return document.dump( LoadBotMetricsInternal::kJSONIndent );
     }
 
-    int64 LoadBotMetrics::getCompletedCount( LoadBotAction action ) const { return static_cast<int64>( _listSampleByAction[static_cast<size_t>( action )].size() ); }
+    int64 LoadBotMetrics::getCompletedCount( LoadBotAction action ) const
+    {
+        return static_cast<int64>( _listSampleByAction[static_cast<size_t>( action )].size() );
+    }
 
-    int64 LoadBotMetrics::getErrorCount( LoadBotAction action ) const { return _listErrorCountByAction[static_cast<size_t>( action )]; }
+    int64 LoadBotMetrics::getErrorCount( LoadBotAction action ) const
+    {
+        return _listErrorCountByAction[static_cast<size_t>( action )];
+    }
 
     int64 LoadBotMetrics::getTotalCompletedCount() const
     {

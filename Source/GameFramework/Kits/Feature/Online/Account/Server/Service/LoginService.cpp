@@ -638,7 +638,10 @@ namespace sw
             _completionBuffer.push( std::move( completion ) );
     }
 
-    bool LoginService::consumeAttempt( uint64 clientKey, int64 nowMs, int64& outRetryAfterMs ) { return _mapClientToAttemptBucket.tryConsume( clientKey, nowMs, outRetryAfterMs ); }
+    bool LoginService::consumeAttempt( uint64 clientKey, int64 nowMs, int64& outRetryAfterMs )
+    {
+        return _mapClientToAttemptBucket.tryConsume( clientKey, nowMs, outRetryAfterMs );
+    }
 
     void LoginService::pushImmediate( LoginOperation operation, uint64 requestTag, LoginResult result, const LoginGrant& grant )
     {

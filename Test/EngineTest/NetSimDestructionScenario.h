@@ -148,8 +148,14 @@ namespace test
 
 namespace test
 {
-    inline ShowcaseServerSession& getServerSession( NetSimHarness& harness ) { return *static_cast<ShowcaseServerSession*>( harness.getServer().getSession() ); }
-    inline ShowcaseClientSession& getClientSession( NetSimWorld& world ) { return *static_cast<ShowcaseClientSession*>( world.getSession() ); }
+    inline ShowcaseServerSession& getServerSession( NetSimHarness& harness )
+    {
+        return *static_cast<ShowcaseServerSession*>( harness.getServer().getSession() );
+    }
+    inline ShowcaseClientSession& getClientSession( NetSimWorld& world )
+    {
+        return *static_cast<ShowcaseClientSession*>( world.getSession() );
+    }
 
     /** @brief 클라이언트의 모든 파괴 오브젝트 해시가 서버와 같은지입니다. */
     inline bool matchesServer( NetSimHarness& harness, NetSimWorld& client )

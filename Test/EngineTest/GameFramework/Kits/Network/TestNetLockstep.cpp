@@ -390,7 +390,10 @@ namespace
         int32 _clientChecksumInterval;
     };
 
-    const LeaveLockstepSession& getLeaveLockstepSession( const NetSimWorld& world ) { return *static_cast<const LeaveLockstepSession*>( world.getSession() ); }
+    const LeaveLockstepSession& getLeaveLockstepSession( const NetSimWorld& world )
+    {
+        return *static_cast<const LeaveLockstepSession*>( world.getSession() );
+    }
 
     /** @brief 흉내 거르개 — 모두 버린다(회선이 끊긴 것처럼 — 양쪽이 연결 제한 시간으로 안다). */
     bool dropAllPackets( const NetAddress& to, const uint8* pData, int32 size, void* pContext )

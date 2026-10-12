@@ -19,9 +19,15 @@ namespace sw
     {
     }
 
-    void MatchmakingClient::initialize( OnlineServiceClient* pClient ) { _pClient = pClient; }
+    void MatchmakingClient::initialize( OnlineServiceClient* pClient )
+    {
+        _pClient = pClient;
+    }
 
-    uint64 MatchmakingClient::createParty( const ReplyDelegate& onReply ) { return send( MatchmakingMethod::kPartyCreate, BitWriter{}, onReply ); }
+    uint64 MatchmakingClient::createParty( const ReplyDelegate& onReply )
+    {
+        return send( MatchmakingMethod::kPartyCreate, BitWriter{}, onReply );
+    }
 
     uint64 MatchmakingClient::inviteToParty( AccountID targetID, const ReplyDelegate& onReply )
     {
@@ -37,7 +43,10 @@ namespace sw
         return send( MatchmakingMethod::kPartyAccept, body, onReply );
     }
 
-    uint64 MatchmakingClient::leaveParty( const ReplyDelegate& onReply ) { return send( MatchmakingMethod::kPartyLeave, BitWriter{}, onReply ); }
+    uint64 MatchmakingClient::leaveParty( const ReplyDelegate& onReply )
+    {
+        return send( MatchmakingMethod::kPartyLeave, BitWriter{}, onReply );
+    }
 
     uint64 MatchmakingClient::kickFromParty( AccountID targetID, const ReplyDelegate& onReply )
     {
@@ -97,7 +106,10 @@ namespace sw
         return send( MatchmakingMethod::kQueueJoin, body, onReply );
     }
 
-    uint64 MatchmakingClient::leaveQueue( const ReplyDelegate& onReply ) { return send( MatchmakingMethod::kQueueLeave, BitWriter{}, onReply ); }
+    uint64 MatchmakingClient::leaveQueue( const ReplyDelegate& onReply )
+    {
+        return send( MatchmakingMethod::kQueueLeave, BitWriter{}, onReply );
+    }
 
     void MatchmakingClient::onServicePush( uint16 kind, BitReader& body )
     {

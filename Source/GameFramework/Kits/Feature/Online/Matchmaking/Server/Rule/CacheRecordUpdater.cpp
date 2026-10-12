@@ -13,9 +13,15 @@ namespace sw
     {
     }
 
-    CacheRecordUpdater::~CacheRecordUpdater() { shutdown(); }
+    CacheRecordUpdater::~CacheRecordUpdater()
+    {
+        shutdown();
+    }
 
-    void CacheRecordUpdater::initialize( EphemeralStoreRouter* pRouter ) { _pRouter = pRouter; }
+    void CacheRecordUpdater::initialize( EphemeralStoreRouter* pRouter )
+    {
+        _pRouter = pRouter;
+    }
 
     void CacheRecordUpdater::shutdown()
     {

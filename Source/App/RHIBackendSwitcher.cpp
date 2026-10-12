@@ -169,7 +169,9 @@ namespace sw
         return kRunning;
     }
 
-    void RHIBackendSwitcher::onBuildRenderPacket( [[maybe_unused]] EngineRenderPacketContext& inoutContext ) {}
+    void RHIBackendSwitcher::onBuildRenderPacket( [[maybe_unused]] EngineRenderPacketContext& inoutContext )
+    {
+    }
 
     void RHIBackendSwitcher::onBackendVariableChanged( const GlobalVariableInfo* pInfo )
     {

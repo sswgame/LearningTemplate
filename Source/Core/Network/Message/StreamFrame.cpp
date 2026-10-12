@@ -48,7 +48,10 @@ namespace sw
         return StreamFrameDecodeResult::Frame;
     }
 
-    int32 StreamFrameDecoder::getBufferedBytes() const { return static_cast<int32>( _bytes.size() ) - _readOffset; }
+    int32 StreamFrameDecoder::getBufferedBytes() const
+    {
+        return static_cast<int32>( _bytes.size() ) - _readOffset;
+    }
 
     bool StreamFrameEncoder::appendFrame( vector<uint8>& outBytes, StreamFrameKind kind, uint8 flags, const uint8* pBody, int32 bodySize, int32 maxBodySize )
     {

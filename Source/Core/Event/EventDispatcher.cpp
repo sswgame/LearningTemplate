@@ -9,7 +9,9 @@
 namespace sw
 {
     IEvent::IEvent()
-        : _next{ nullptr } {}
+        : _next{ nullptr }
+    {
+    }
 
     IEvent::~IEvent()
     {

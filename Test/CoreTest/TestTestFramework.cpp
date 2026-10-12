@@ -54,7 +54,10 @@ namespace
     }
 
     /** @brief 지역 레지스트리의 케이스 본문 — 예상 밖 Error 를 하나 남깁니다. */
-    void logProbeError() { SW_LOG_ERROR( "Deliberate probe error (TestFrameworkTest.HostSuiteCaseFailsOnUnexpectedErrorLog)" ); }
+    void logProbeError()
+    {
+        SW_LOG_ERROR( "Deliberate probe error (TestFrameworkTest.HostSuiteCaseFailsOnUnexpectedErrorLog)" );
+    }
 
     /** @brief 지역 레지스트리의 케이스 본문 — 방어 테스트 구간 안에서 Error 를 남깁니다. */
     void logProbeErrorInDefensiveScope()

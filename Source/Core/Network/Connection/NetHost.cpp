@@ -184,9 +184,15 @@ namespace sw
         return true;
     }
 
-    bool NetHost::connect( const NetAddress& serverAddress ) { return connectLocked( serverAddress, nullptr ); }
+    bool NetHost::connect( const NetAddress& serverAddress )
+    {
+        return connectLocked( serverAddress, nullptr );
+    }
 
-    bool NetHost::connect( const NetAddress& serverAddress, const NetConnectCredentials& credentials ) { return connectLocked( serverAddress, &credentials ); }
+    bool NetHost::connect( const NetAddress& serverAddress, const NetConnectCredentials& credentials )
+    {
+        return connectLocked( serverAddress, &credentials );
+    }
 
     bool NetHost::connectLocked( const NetAddress& serverAddress, const NetConnectCredentials* pCredentials )
     {
@@ -204,7 +210,10 @@ namespace sw
         return bStarted;
     }
 
-    TaskFuture<NetConnectResult> NetHost::connectAsync( const NetAddress& serverAddress ) { return connectAsyncWith( serverAddress, nullptr ); }
+    TaskFuture<NetConnectResult> NetHost::connectAsync( const NetAddress& serverAddress )
+    {
+        return connectAsyncWith( serverAddress, nullptr );
+    }
 
     TaskFuture<NetConnectResult> NetHost::connectAsync( const NetAddress& serverAddress, const NetConnectCredentials& credentials )
     {

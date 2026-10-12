@@ -72,5 +72,8 @@ namespace sw
         return now - _offset - targetTime > _listWindow.back()._lateWidth * _scale;
     }
 
-    float32 TimingJudge::getEarliestWidth() const { return _listWindow.empty() ? 0.0f : _listWindow.back()._earlyWidth * _scale; }
+    float32 TimingJudge::getEarliestWidth() const
+    {
+        return _listWindow.empty() ? 0.0f : _listWindow.back()._earlyWidth * _scale;
+    }
 } // namespace sw

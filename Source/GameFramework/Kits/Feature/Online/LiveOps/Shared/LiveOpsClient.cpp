@@ -19,7 +19,10 @@ namespace sw
     {
     }
 
-    void LiveOpsClient::initialize( OnlineServiceClient* pClient ) { _pClient = pClient; }
+    void LiveOpsClient::initialize( OnlineServiceClient* pClient )
+    {
+        _pClient = pClient;
+    }
 
     uint64 LiveOpsClient::requestLiveState( string_view region, uint32 buildVersion, const ReplyDelegate& onReply )
     {

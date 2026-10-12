@@ -188,21 +188,51 @@ namespace sw
     };
 
     template <typename T, typename U>
-    bool operator==( const Allocator<T>&, const Allocator<U>& ) { return true; }
+    bool operator==( const Allocator<T>&, const Allocator<U>& )
+    {
+        return true;
+    }
 
     template <typename T, typename U>
-    bool operator!=( const Allocator<T>&, const Allocator<U>& ) { return false; }
+    bool operator!=( const Allocator<T>&, const Allocator<U>& )
+    {
+        return false;
+    }
 } // namespace sw
 
 // sw_new 용 전역 placement new/delete 오버로드. 정렬이 기본(16)보다 큰 타입은 컴파일러가 align_val_t 판을 고른다(kUsesAlignedAllocation).
-inline void* operator new( size_t size, sw::MemoryAllocTag ) { return sw::Memory::allocate( size ); }
-inline void* operator new[]( size_t size, sw::MemoryAllocTag ) { return sw::Memory::allocate( size ); }
-inline void  operator delete( void* pPtr, sw::MemoryAllocTag ) noexcept { sw::Memory::free( pPtr ); }
-inline void  operator delete[]( void* pPtr, sw::MemoryAllocTag ) noexcept { sw::Memory::free( pPtr ); }
-inline void* operator new( size_t size, std::align_val_t alignment, sw::MemoryAllocTag ) { return sw::Memory::allocateAligned( size, static_cast<size_t>( alignment ) ); }
-inline void* operator new[]( size_t size, std::align_val_t alignment, sw::MemoryAllocTag ) { return sw::Memory::allocateAligned( size, static_cast<size_t>( alignment ) ); }
-inline void  operator delete( void* pPtr, std::align_val_t, sw::MemoryAllocTag ) noexcept { sw::Memory::freeAligned( pPtr ); }
-inline void  operator delete[]( void* pPtr, std::align_val_t, sw::MemoryAllocTag ) noexcept { sw::Memory::freeAligned( pPtr ); }
+inline void* operator new( size_t size, sw::MemoryAllocTag )
+{
+    return sw::Memory::allocate( size );
+}
+inline void* operator new[]( size_t size, sw::MemoryAllocTag )
+{
+    return sw::Memory::allocate( size );
+}
+inline void operator delete( void* pPtr, sw::MemoryAllocTag ) noexcept
+{
+    sw::Memory::free( pPtr );
+}
+inline void operator delete[]( void* pPtr, sw::MemoryAllocTag ) noexcept
+{
+    sw::Memory::free( pPtr );
+}
+inline void* operator new( size_t size, std::align_val_t alignment, sw::MemoryAllocTag )
+{
+    return sw::Memory::allocateAligned( size, static_cast<size_t>( alignment ) );
+}
+inline void* operator new[]( size_t size, std::align_val_t alignment, sw::MemoryAllocTag )
+{
+    return sw::Memory::allocateAligned( size, static_cast<size_t>( alignment ) );
+}
+inline void operator delete( void* pPtr, std::align_val_t, sw::MemoryAllocTag ) noexcept
+{
+    sw::Memory::freeAligned( pPtr );
+}
+inline void operator delete[]( void* pPtr, std::align_val_t, sw::MemoryAllocTag ) noexcept
+{
+    sw::Memory::freeAligned( pPtr );
+}
 
 template <typename T>
 void sw_delete_func( T* pPtr )
@@ -361,7 +391,10 @@ namespace sw
     using std::make_shared;
 #else
     template <typename T, typename... Args>
-    shared_ptr<T> make_shared( Args&&... args ) { return std::allocate_shared<T>( sw::Allocator<T>{}, std::forward<Args>( args )... ); }
+    shared_ptr<T> make_shared( Args&&... args )
+    {
+        return std::allocate_shared<T>( sw::Allocator<T>{}, std::forward<Args>( args )... );
+    }
 #endif
 } // namespace sw
 

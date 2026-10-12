@@ -19,7 +19,10 @@ namespace sw
         _worker = std::thread( &ThreadedLocalStore::runWorker, this );
     }
 
-    ThreadedLocalStore::~ThreadedLocalStore() { shutdown(); }
+    ThreadedLocalStore::~ThreadedLocalStore()
+    {
+        shutdown();
+    }
 
     uint64 ThreadedLocalStore::submitRead( string_view slot )
     {

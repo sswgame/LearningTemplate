@@ -172,7 +172,10 @@ namespace sw
         return true;
     }
 
-    int32 AdventureVitals::computeHealthQuarters() const { return static_cast<int32>( _health.getHealth() + 0.5f ); }
+    int32 AdventureVitals::computeHealthQuarters() const
+    {
+        return static_cast<int32>( _health.getHealth() + 0.5f );
+    }
 
     void AdventureVitals::writeState( Archive& outArchive ) const
     {

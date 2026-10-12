@@ -52,17 +52,35 @@ namespace sw
     {
     }
 
-    MatchQueueService::~MatchQueueService() { shutdown(); }
+    MatchQueueService::~MatchQueueService()
+    {
+        shutdown();
+    }
 
-    string MatchQueueService::makeLeaseKey( string_view modeID ) { return "mm/lease/" + string( modeID ); }
+    string MatchQueueService::makeLeaseKey( string_view modeID )
+    {
+        return "mm/lease/" + string( modeID );
+    }
 
-    string MatchQueueService::makeQueueTopic( string_view modeID ) { return MatchQueueServiceInternal::kQueuePrefix + string( modeID ); }
+    string MatchQueueService::makeQueueTopic( string_view modeID )
+    {
+        return MatchQueueServiceInternal::kQueuePrefix + string( modeID );
+    }
 
-    string MatchQueueService::makeCancelTopic( string_view modeID ) { return MatchQueueServiceInternal::kCancelPrefix + string( modeID ); }
+    string MatchQueueService::makeCancelTopic( string_view modeID )
+    {
+        return MatchQueueServiceInternal::kCancelPrefix + string( modeID );
+    }
 
-    string MatchQueueService::makeResultTopic( uint64 serverID ) { return "mm.result." + ServiceKeyUtil::makeHex64( serverID ); }
+    string MatchQueueService::makeResultTopic( uint64 serverID )
+    {
+        return "mm.result." + ServiceKeyUtil::makeHex64( serverID );
+    }
 
-    string MatchQueueService::makeAssignTopic( uint64 serverID ) { return "mm.assign." + ServiceKeyUtil::makeHex64( serverID ); }
+    string MatchQueueService::makeAssignTopic( uint64 serverID )
+    {
+        return "mm.assign." + ServiceKeyUtil::makeHex64( serverID );
+    }
 
     void MatchQueueService::initialize( const MatchQueueDependencies& dependencies, const vector<MatchModeDefinition>& listMode )
     {
@@ -108,7 +126,10 @@ namespace sw
         _dependencies._pBus    = nullptr;
     }
 
-    bool MatchQueueService::hasMode( string_view modeID ) const { return _mapMode.find( string( modeID ) ) != _mapMode.end(); }
+    bool MatchQueueService::hasMode( string_view modeID ) const
+    {
+        return _mapMode.find( string( modeID ) ) != _mapMode.end();
+    }
 
     MatchQueueService::ModeState* MatchQueueService::findModeState( string_view modeID )
     {

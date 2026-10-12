@@ -248,7 +248,10 @@ namespace sw
     {
     }
 
-    SQLServiceStore::~SQLServiceStore() { _pool.shutdown(); }
+    SQLServiceStore::~SQLServiceStore()
+    {
+        _pool.shutdown();
+    }
 
     bool SQLServiceStore::initialize( string_view driverName, const SQLConnectionPoolSettings& settings, string_view migrationFolder, int64 nowMs, string& outError )
     {
@@ -268,5 +271,8 @@ namespace sw
         return _pool.initialize( pDriver, settings, outError );
     }
 
-    void SQLServiceStore::submit( unique_ptr<IServiceStoreWork> work ) { _pool.submit( sw::make_unique<SQLServiceStoreInternal::SQLServiceStoreJob>( std::move( work ) ) ); }
+    void SQLServiceStore::submit( unique_ptr<IServiceStoreWork> work )
+    {
+        _pool.submit( sw::make_unique<SQLServiceStoreInternal::SQLServiceStoreJob>( std::move( work ) ) );
+    }
 } // namespace sw

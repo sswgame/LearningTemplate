@@ -555,7 +555,9 @@ namespace sw
         _frames.add( deltaSeconds * 1000.0f );
     }
 
-    void TelemetryService::onFrameBegin( [[maybe_unused]] const EngineFrameContext& context ) {}
+    void TelemetryService::onFrameBegin( [[maybe_unused]] const EngineFrameContext& context )
+    {
+    }
 
     void TelemetryService::onAfterSceneTick( const EngineFrameContext& context )
     {
@@ -574,7 +576,9 @@ namespace sw
         return kRunning;
     }
 
-    void TelemetryService::onBuildRenderPacket( [[maybe_unused]] EngineRenderPacketContext& inoutContext ) {}
+    void TelemetryService::onBuildRenderPacket( [[maybe_unused]] EngineRenderPacketContext& inoutContext )
+    {
+    }
 
     void TelemetryService::emitSceneSummaryLocked()
     {

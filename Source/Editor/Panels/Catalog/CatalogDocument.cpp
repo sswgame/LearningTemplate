@@ -33,7 +33,10 @@ namespace sw::editor
         return _parsed.isParsed();
     }
 
-    void CatalogDocument::markSaved() { _savedText = _text; }
+    void CatalogDocument::markSaved()
+    {
+        _savedText = _text;
+    }
 
     void CatalogDocument::revert()
     {

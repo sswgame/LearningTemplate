@@ -58,9 +58,15 @@ namespace sw
         target._material = static_cast<uint8>( MathUtil::clamp( material, 0, ElementRuleTable::kMaxMaterialCount - 1 ) );
     }
 
-    int32 ElementGrid::getMaterial( const int2& cell ) const { return isInside( cell ) ? _listCell[static_cast<size_t>( toIndex( cell ) )]._material : 0; }
+    int32 ElementGrid::getMaterial( const int2& cell ) const
+    {
+        return isInside( cell ) ? _listCell[static_cast<size_t>( toIndex( cell ) )]._material : 0;
+    }
 
-    void ElementGrid::setWind( const int2& wind ) { _wind = int2{ MathUtil::clamp( wind._x, -1, 1 ), MathUtil::clamp( wind._y, -1, 1 ) }; }
+    void ElementGrid::setWind( const int2& wind )
+    {
+        _wind = int2{ MathUtil::clamp( wind._x, -1, 1 ), MathUtil::clamp( wind._y, -1, 1 ) };
+    }
 
     bool ElementGrid::hasStatus( const int2& cell, int32 status ) const
     {
@@ -74,7 +80,10 @@ namespace sw
         return hasStatus( cell, status ) ? _listCell[static_cast<size_t>( toIndex( cell ) )]._arrStatusValue[status] : 0;
     }
 
-    bool ElementGrid::hasFlag( const int2& cell, int32 flag ) const { return _pTable != nullptr && isInside( cell ) && _pTable->hasFlag( getMaterial( cell ), flag ); }
+    bool ElementGrid::hasFlag( const int2& cell, int32 flag ) const
+    {
+        return _pTable != nullptr && isInside( cell ) && _pTable->hasFlag( getMaterial( cell ), flag );
+    }
 
     int32 ElementGrid::countStatus( int32 status ) const
     {

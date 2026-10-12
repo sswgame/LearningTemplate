@@ -50,7 +50,10 @@ namespace sw
     {
     }
 
-    LoopbackPkceLoginClient::~LoopbackPkceLoginClient() { shutdown(); }
+    LoopbackPkceLoginClient::~LoopbackPkceLoginClient()
+    {
+        shutdown();
+    }
 
     bool LoopbackPkceLoginClient::initialize( unique_ptr<IStreamTransport> serverTransport, unique_ptr<IStreamTransport> clientTransport,
                                               const StreamTransportSettings& transportSettings, INetSecurityProvider* pProvider, IExternalBrowser* pBrowser,

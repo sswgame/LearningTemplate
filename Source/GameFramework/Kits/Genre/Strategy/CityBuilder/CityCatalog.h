@@ -60,7 +60,10 @@ namespace sw
     [[nodiscard]] SW_GF_API bool parseCityService( string_view text, CityService& outService );
     SW_GF_API const utf8*        toString( CityService service );
     SW_GF_API const utf8*        toString( CityBuildingKind kind );
-    constexpr uint8              makeCityServiceBit( CityService service ) { return static_cast<uint8>( 1u << static_cast<uint32>( service ) ); }
+    constexpr uint8              makeCityServiceBit( CityService service )
+    {
+        return static_cast<uint8>( 1u << static_cast<uint32>( service ) );
+    }
 
     /** @brief 물자 하나입니다. */
     struct CityGoodDef

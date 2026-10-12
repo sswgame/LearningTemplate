@@ -11,7 +11,10 @@ namespace sw
     {
     }
 
-    bool NetSecurityLoginCrypto::fillRandom( uint8* pOut, int32 size ) { return _pProvider != nullptr && _pProvider->fillRandomBytes( pOut, size ); }
+    bool NetSecurityLoginCrypto::fillRandom( uint8* pOut, int32 size )
+    {
+        return _pProvider != nullptr && _pProvider->fillRandomBytes( pOut, size );
+    }
 
     bool NetSecurityLoginCrypto::computePasswordHash( string_view password, const uint8* pSalt, int32 saltSize, const NetPasswordHashParams& params, uint8* pOut,
                                                       int32 outSize )

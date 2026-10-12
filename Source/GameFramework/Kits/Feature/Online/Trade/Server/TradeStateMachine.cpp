@@ -6,7 +6,10 @@
 
 namespace sw
 {
-    bool DefaultTradePolicy::isTradable( string_view assetID ) const { return assetID.substr( 0, 5 ) == "item." || assetID.substr( 0, 4 ) == "cur."; }
+    bool DefaultTradePolicy::isTradable( string_view assetID ) const
+    {
+        return assetID.substr( 0, 5 ) == "item." || assetID.substr( 0, 4 ) == "cur.";
+    }
 
     TradeResult TradeStateMachine::validateOffer( const vector<TradeLeg>& listLeg, const ITradePolicy& policy )
     {

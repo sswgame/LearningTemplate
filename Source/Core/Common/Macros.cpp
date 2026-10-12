@@ -56,11 +56,20 @@ namespace sw::internal
         return true;
     }
 
-    void beginAssertCapture() noexcept { s_assertCaptureDepth.fetch_add( 1, std::memory_order_acq_rel ); }
+    void beginAssertCapture() noexcept
+    {
+        s_assertCaptureDepth.fetch_add( 1, std::memory_order_acq_rel );
+    }
 
-    void endAssertCapture() noexcept { s_assertCaptureDepth.fetch_sub( 1, std::memory_order_acq_rel ); }
+    void endAssertCapture() noexcept
+    {
+        s_assertCaptureDepth.fetch_sub( 1, std::memory_order_acq_rel );
+    }
 
-    uint32 getCapturedAssertCount() noexcept { return s_capturedAssertCount.load( std::memory_order_acquire ); }
+    uint32 getCapturedAssertCount() noexcept
+    {
+        return s_capturedAssertCount.load( std::memory_order_acquire );
+    }
 
     void setAssertDialog( AssertDialogFunc pfnDialog ) noexcept
     {
@@ -70,7 +79,10 @@ namespace sw::internal
         state._ignoredSiteCount = 0;
     }
 
-    bool hasAssertDialog() noexcept { return getAssertDialogState()._pfnDialog.load( std::memory_order_acquire ) != nullptr; }
+    bool hasAssertDialog() noexcept
+    {
+        return getAssertDialogState()._pfnDialog.load( std::memory_order_acquire ) != nullptr;
+    }
 
     bool shouldBreakOnAssert( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line ) noexcept
     {

@@ -51,9 +51,15 @@ namespace sw
         return bRead;
     }
 
-    bool HTTPLink::flushHandshake( IStreamTransport& transport ) { return _tlsSession == nullptr || flushCiphertext( transport ); }
+    bool HTTPLink::flushHandshake( IStreamTransport& transport )
+    {
+        return _tlsSession == nullptr || flushCiphertext( transport );
+    }
 
-    const utf8* HTTPLink::getFailureText() const { return _tlsSession != nullptr ? _tlsSession->getFailureText() : "stream failure"; }
+    const utf8* HTTPLink::getFailureText() const
+    {
+        return _tlsSession != nullptr ? _tlsSession->getFailureText() : "stream failure";
+    }
 
     bool HTTPLink::flushCiphertext( IStreamTransport& transport )
     {

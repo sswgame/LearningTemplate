@@ -127,7 +127,10 @@ namespace sw
             _listStimulus[static_cast<size_t>( stimulus )]._listRule.push_back( rule );
     }
 
-    void ElementRuleTable::addStepRule( const ElementStepRule& rule ) { _listStepRule.push_back( rule ); }
+    void ElementRuleTable::addStepRule( const ElementStepRule& rule )
+    {
+        _listStepRule.push_back( rule );
+    }
 
     int32 ElementRuleTable::findFlag( const hashed_string& id ) const
     {

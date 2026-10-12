@@ -183,7 +183,10 @@ namespace sw
         _value = MathUtil::min( _value, getMax() );
     }
 
-    float32 ResourceGauge::getRatio() const { return MathUtil::saturate( _value / getMax() ); }
+    float32 ResourceGauge::getRatio() const
+    {
+        return MathUtil::saturate( _value / getMax() );
+    }
 
     bool ResourceGauge::canUse() const
     {
@@ -192,7 +195,10 @@ namespace sw
         return _settings._bOverheatMode == SW_TRUE ? _value < getMax() : _value > 0.0f;
     }
 
-    void ResourceGauge::markUsed() { _sinceUse = 0.0f; }
+    void ResourceGauge::markUsed()
+    {
+        _sinceUse = 0.0f;
+    }
 
     void ResourceGauge::releaseLockIfRecovered()
     {

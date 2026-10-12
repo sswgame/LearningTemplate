@@ -207,7 +207,10 @@ namespace sw
         return nodeIndex >= 0 && nodeIndex < static_cast<int32>( _listNode.size() ) ? &_listNode[static_cast<size_t>( nodeIndex )] : nullptr;
     }
 
-    bool RunMap::isFinished() const { return _current >= 0 && _listNode[static_cast<size_t>( _current )]._floor == _floorCount - 1; }
+    bool RunMap::isFinished() const
+    {
+        return _current >= 0 && _listNode[static_cast<size_t>( _current )]._floor == _floorCount - 1;
+    }
 
     void RunMap::writeState( Archive& outArchive ) const
     {

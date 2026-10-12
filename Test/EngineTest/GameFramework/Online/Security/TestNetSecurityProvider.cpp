@@ -17,7 +17,10 @@ using namespace sw;
 
 namespace
 {
-    uint8 toNibble( utf8 digit ) { return static_cast<uint8>( digit <= '9' ? digit - '0' : digit - 'a' + 10 ); }
+    uint8 toNibble( utf8 digit )
+    {
+        return static_cast<uint8>( digit <= '9' ? digit - '0' : digit - 'a' + 10 );
+    }
 
     vector<uint8> fromHex( const utf8* pHex )
     {

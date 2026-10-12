@@ -66,7 +66,10 @@ namespace sw
         return true;
     }
 
-    NetAddress NetSimTrafficCounter::getLocalAddress() const { return _pInner != nullptr ? _pInner->getLocalAddress() : NetAddress{}; }
+    NetAddress NetSimTrafficCounter::getLocalAddress() const
+    {
+        return _pInner != nullptr ? _pInner->getLocalAddress() : NetAddress{};
+    }
 
     void NetSimTrafficCounter::update( float64 time )
     {
@@ -102,11 +105,20 @@ namespace sw
         _host.initialize( &_counter, hostSettings );
     }
 
-    NetSimWorld::~NetSimWorld() { stop(); }
+    NetSimWorld::~NetSimWorld()
+    {
+        stop();
+    }
 
-    bool NetSimWorld::isConnected() const { return isServer() || _host.getConnectionState( 0 ) == NetConnectionState::Connected; }
+    bool NetSimWorld::isConnected() const
+    {
+        return isServer() || _host.getConnectionState( 0 ) == NetConnectionState::Connected;
+    }
 
-    GameObjectManager& NetSimWorld::getObjectManager() { return *_pScene->getObjectManager(); }
+    GameObjectManager& NetSimWorld::getObjectManager()
+    {
+        return *_pScene->getObjectManager();
+    }
 
     void NetSimWorld::start( INetSimGame* pGame )
     {
@@ -168,7 +180,10 @@ namespace sw
     {
     }
 
-    NetSimHarness::~NetSimHarness() { shutdown(); }
+    NetSimHarness::~NetSimHarness()
+    {
+        shutdown();
+    }
 
     bool NetSimHarness::initialize( const NetSimSettings& settings, INetSimGame* pGame )
     {
@@ -283,7 +298,10 @@ namespace sw
         }
     }
 
-    void NetSimHarness::setLinkConditions( int32 worldIndex, const NetSimLinkConditions& conditions ) { applyLinkConditions( worldIndex, conditions ); }
+    void NetSimHarness::setLinkConditions( int32 worldIndex, const NetSimLinkConditions& conditions )
+    {
+        applyLinkConditions( worldIndex, conditions );
+    }
 
     void NetSimHarness::applyLinkConditions( int32 worldIndex, const NetSimLinkConditions& conditions )
     {

@@ -10,7 +10,9 @@ namespace sw
         , _listReadyScratch{}
         , _spinLock{}
         , _currentFrame{ 0 }
-        , _frameLatency{ frameLatency } {}
+        , _frameLatency{ frameLatency }
+    {
+    }
 
     RHIReleaseQueue::~RHIReleaseQueue()
     {

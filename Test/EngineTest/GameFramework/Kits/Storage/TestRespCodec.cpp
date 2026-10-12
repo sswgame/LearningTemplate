@@ -13,9 +13,15 @@ using namespace sw;
 
 namespace
 {
-    vector<uint8> makeBytes( const utf8* pText, size_t size ) { return vector<uint8>( reinterpret_cast<const uint8*>( pText ), reinterpret_cast<const uint8*>( pText ) + size ); }
+    vector<uint8> makeBytes( const utf8* pText, size_t size )
+    {
+        return vector<uint8>( reinterpret_cast<const uint8*>( pText ), reinterpret_cast<const uint8*>( pText ) + size );
+    }
 
-    vector<uint8> makeBytes( const utf8* pText ) { return makeBytes( pText, std::strlen( pText ) ); }
+    vector<uint8> makeBytes( const utf8* pText )
+    {
+        return makeBytes( pText, std::strlen( pText ) );
+    }
 
     /** @brief @p bytes 를 @p chunkSize 조각으로 넣으며 값을 모두 꺼냅니다. 오류면 false. */
     [[nodiscard]] bool parseAll( const vector<uint8>& bytes, size_t chunkSize, vector<RespValue>& outListValue )

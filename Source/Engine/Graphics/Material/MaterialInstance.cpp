@@ -85,7 +85,9 @@ namespace sw
         , _parentPermutationHash{ 0 }
         , _bDefinesDirty{ SW_TRUE }
         , _bGPUDirty{ SW_TRUE }
-        , _instReserved{ 0 } {}
+        , _instReserved{ 0 }
+    {
+    }
 
     MaterialInstance::~MaterialInstance()
     {

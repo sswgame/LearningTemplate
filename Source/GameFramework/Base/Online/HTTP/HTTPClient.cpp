@@ -24,7 +24,10 @@ namespace sw
     {
     }
 
-    HTTPClient::~HTTPClient() { shutdown(); }
+    HTTPClient::~HTTPClient()
+    {
+        shutdown();
+    }
 
     bool HTTPClient::initialize( unique_ptr<IStreamTransport> transport, const StreamTransportSettings& transportSettings, const HTTPClientSettings& settings )
     {

@@ -102,7 +102,10 @@ namespace sw
         _pDef         = &_overrideDef;
     }
 
-    const InteractionDef* InteractableComponent::getDefinition() const { return _bHasOverride == SW_TRUE ? &_overrideDef : _pDef; }
+    const InteractionDef* InteractableComponent::getDefinition() const
+    {
+        return _bHasOverride == SW_TRUE ? &_overrideDef : _pDef;
+    }
 
     void InteractableComponent::setInteractionID( const hashed_string& id )
     {

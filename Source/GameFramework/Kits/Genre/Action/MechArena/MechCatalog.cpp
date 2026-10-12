@@ -84,7 +84,10 @@ namespace sw
         return offset;
     }
 
-    int32 MechDef::computeSlotCount() const { return computeSlotOffset( static_cast<int32>( _listMode.size() ) ); }
+    int32 MechDef::computeSlotCount() const
+    {
+        return computeSlotOffset( static_cast<int32>( _listMode.size() ) );
+    }
 
     MechCatalog::MechCatalog()
         : _catalogMech{}

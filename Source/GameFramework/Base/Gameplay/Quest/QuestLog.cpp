@@ -57,7 +57,10 @@ namespace sw
         return nullptr;
     }
 
-    const QuestProgress* QuestLog::findProgress( const hashed_string& questID ) const { return const_cast<QuestLog*>( this )->findProgressMutable( questID ); }
+    const QuestProgress* QuestLog::findProgress( const hashed_string& questID ) const
+    {
+        return const_cast<QuestLog*>( this )->findProgressMutable( questID );
+    }
 
     QuestStatus QuestLog::getStatus( const hashed_string& questID ) const
     {
@@ -219,7 +222,10 @@ namespace sw
         return amount > 0 ? applyNotify( kind, target, amount, false ) : 0;
     }
 
-    int32 QuestLog::notifyCount( const hashed_string& kind, const hashed_string& target, int32 count ) { return applyNotify( kind, target, count, true ); }
+    int32 QuestLog::notifyCount( const hashed_string& kind, const hashed_string& target, int32 count )
+    {
+        return applyNotify( kind, target, count, true );
+    }
 
     bool QuestLog::choose( const hashed_string& questID, const hashed_string& choice )
     {

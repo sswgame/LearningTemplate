@@ -136,11 +136,20 @@ namespace sw
     {
     }
 
-    void MetricGauge::set( float64 value ) { _bits.store( MetricRegistryInternal::toBits( value ), std::memory_order_relaxed ); }
+    void MetricGauge::set( float64 value )
+    {
+        _bits.store( MetricRegistryInternal::toBits( value ), std::memory_order_relaxed );
+    }
 
-    void MetricGauge::add( float64 delta ) { MetricRegistryInternal::addFloat( _bits, delta ); }
+    void MetricGauge::add( float64 delta )
+    {
+        MetricRegistryInternal::addFloat( _bits, delta );
+    }
 
-    float64 MetricGauge::getValue() const { return MetricRegistryInternal::fromBits( _bits.load( std::memory_order_relaxed ) ); }
+    float64 MetricGauge::getValue() const
+    {
+        return MetricRegistryInternal::fromBits( _bits.load( std::memory_order_relaxed ) );
+    }
 
     MetricHistogram::MetricHistogram( const vector<float64>& listUpperBound )
         : _listUpperBound( listUpperBound.begin(), listUpperBound.end() )
@@ -170,7 +179,10 @@ namespace sw
         return _arrBucketValue[static_cast<size_t>( bucketIndex )].load( std::memory_order_relaxed );
     }
 
-    float64 MetricHistogram::getSum() const { return MetricRegistryInternal::fromBits( _sumBits.load( std::memory_order_relaxed ) ); }
+    float64 MetricHistogram::getSum() const
+    {
+        return MetricRegistryInternal::fromBits( _sumBits.load( std::memory_order_relaxed ) );
+    }
 
     ScopedMetricTimer::ScopedMetricTimer( MetricHistogram* pHistogram )
         : _startNanoseconds{ pHistogram != nullptr ? MonotonicClock::nowNanoseconds() : 0 }
@@ -391,5 +403,8 @@ namespace sw
         return seriesCount;
     }
 
-    vector<float64> MetricRegistry::makeLatencyBounds() { return vector<float64>{ 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0 }; }
+    vector<float64> MetricRegistry::makeLatencyBounds()
+    {
+        return vector<float64>{ 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0 };
+    }
 } // namespace sw

@@ -160,9 +160,15 @@ namespace sw
         return true;
     }
 
-    string OnlinePresence::makePushTopic( uint64 serverID ) { return string( OnlinePresenceInternal::kPushTopicPrefix ) + ServiceKeyUtil::makeHex64( serverID ); }
+    string OnlinePresence::makePushTopic( uint64 serverID )
+    {
+        return string( OnlinePresenceInternal::kPushTopicPrefix ) + ServiceKeyUtil::makeHex64( serverID );
+    }
 
-    string OnlinePresence::makeAccountKey( AccountID accountID ) { return string( OnlinePresenceInternal::kAccountKeyPrefix ) + ServiceKeyUtil::makeHex64( accountID ); }
+    string OnlinePresence::makeAccountKey( AccountID accountID )
+    {
+        return string( OnlinePresenceInternal::kAccountKeyPrefix ) + ServiceKeyUtil::makeHex64( accountID );
+    }
 
     string OnlinePresence::makeNameKey( string_view displayName )
     {

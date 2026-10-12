@@ -22,7 +22,10 @@ namespace sw
     {
     }
 
-    HTTPServer::~HTTPServer() { shutdown(); }
+    HTTPServer::~HTTPServer()
+    {
+        shutdown();
+    }
 
     bool HTTPServer::initialize( unique_ptr<IStreamTransport> transport, const StreamTransportSettings& transportSettings, const HTTPServerSettings& settings,
                                  IHTTPRequestHandler* pHandler )
@@ -87,7 +90,10 @@ namespace sw
         }
     }
 
-    uint16 HTTPServer::getListenPort() const { return _transport != nullptr ? _transport->getListenPort() : 0; }
+    uint16 HTTPServer::getListenPort() const
+    {
+        return _transport != nullptr ? _transport->getListenPort() : 0;
+    }
 
     void HTTPServer::onStreamOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted )
     {

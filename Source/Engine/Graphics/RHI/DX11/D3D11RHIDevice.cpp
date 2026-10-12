@@ -107,8 +107,14 @@ namespace sw
         shutdown();
     }
 
-    IRHIResourceFactory* D3D11RHIDevice::getResourceFactory() { return _resourceImpl.get(); }
-    IRHICommandContext*  D3D11RHIDevice::getFrameStreamContext() { return _frameStreamContext.get(); }
+    IRHIResourceFactory* D3D11RHIDevice::getResourceFactory()
+    {
+        return _resourceImpl.get();
+    }
+    IRHICommandContext* D3D11RHIDevice::getFrameStreamContext()
+    {
+        return _frameStreamContext.get();
+    }
 
     void D3D11RHIDevice::bindStaticSamplers( ID3D11DeviceContext* pContext ) const
     {

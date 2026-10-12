@@ -308,7 +308,10 @@ namespace sw
     {
     }
 
-    SocialService::~SocialService() { shutdown(); }
+    SocialService::~SocialService()
+    {
+        shutdown();
+    }
 
     void SocialService::initialize( const SocialServiceDependencies& dependencies )
     {

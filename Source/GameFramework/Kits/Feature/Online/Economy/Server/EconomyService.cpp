@@ -128,7 +128,10 @@ namespace sw
     {
     }
 
-    EconomyService::~EconomyService() { SW_ASSERT( _listPendingCall.empty() ); }
+    EconomyService::~EconomyService()
+    {
+        SW_ASSERT( _listPendingCall.empty() );
+    }
 
     bool EconomyService::initialize( IServiceStore* pStore, const EconomyServiceSettings& settings )
     {

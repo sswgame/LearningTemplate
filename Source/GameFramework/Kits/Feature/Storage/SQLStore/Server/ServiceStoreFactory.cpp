@@ -42,5 +42,8 @@ namespace sw
         return store;
     }
 
-    void ServiceStoreFactory::shutdown() { SQLDriverRegistry::unregisterDriver( &PostgresDriver::getInstance() ); }
+    void ServiceStoreFactory::shutdown()
+    {
+        SQLDriverRegistry::unregisterDriver( &PostgresDriver::getInstance() );
+    }
 } // namespace sw

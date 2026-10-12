@@ -657,7 +657,10 @@ namespace sw
     {
     }
 
-    IocpStreamTransport::~IocpStreamTransport() { shutdown(); }
+    IocpStreamTransport::~IocpStreamTransport()
+    {
+        shutdown();
+    }
 
     bool IocpStreamTransport::initialize( IStreamHandler* pHandler, const StreamTransportSettings& settings )
     {
@@ -767,7 +770,10 @@ namespace sw
         return true;
     }
 
-    uint16 IocpStreamTransport::getListenPort() const { return _state->_listenPort; }
+    uint16 IocpStreamTransport::getListenPort() const
+    {
+        return _state->_listenPort;
+    }
 
     StreamConnectionHandle IocpStreamTransport::connect( const NetAddress& remote )
     {

@@ -10,7 +10,7 @@ BasedOnStyle: LLVM
 AccessModifierOffset: -4
 AlignAfterOpenBracket: Align
 AllowShortBlocksOnASingleLine: Always
-AllowShortFunctionsOnASingleLine: All
+AllowShortFunctionsOnASingleLine: InlineOnly
 BreakBeforeBraces: Allman
 ColumnLimit: 0
 Cpp11BracedListStyle: true

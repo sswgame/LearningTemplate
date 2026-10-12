@@ -234,7 +234,10 @@ namespace sw
         return false;
     }
 
-    bool ScavengerFacility::canTraverse( const hashed_string& fromID, const hashed_string& toID ) const { return _graph.canTraverse( fromID, toID, getFlags() ); }
+    bool ScavengerFacility::canTraverse( const hashed_string& fromID, const hashed_string& toID ) const
+    {
+        return _graph.canTraverse( fromID, toID, getFlags() );
+    }
 
     const GameFlags& ScavengerFacility::getFlags() const
     {

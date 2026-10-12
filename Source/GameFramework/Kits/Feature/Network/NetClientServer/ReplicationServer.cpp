@@ -59,7 +59,10 @@ namespace sw
             _listClient[static_cast<size_t>( connectionID )] = ClientState{};
     }
 
-    void ReplicationServer::onConnectionOpened( int32 connectionID ) { resetClient( connectionID ); }
+    void ReplicationServer::onConnectionOpened( int32 connectionID )
+    {
+        resetClient( connectionID );
+    }
 
     void ReplicationServer::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
     {
@@ -103,7 +106,10 @@ namespace sw
         _world.sortEntities();
     }
 
-    void ReplicationServer::setTaskManager( TaskManager* pTaskManager, uint32 serialThreshold ) { _parallel.setTaskManager( pTaskManager, serialThreshold ); }
+    void ReplicationServer::setTaskManager( TaskManager* pTaskManager, uint32 serialThreshold )
+    {
+        _parallel.setTaskManager( pTaskManager, serialThreshold );
+    }
 
     void ReplicationServer::sendSnapshots()
     {
@@ -295,7 +301,10 @@ namespace sw
         return connectionID >= 0 && connectionID < static_cast<int32>( _listClient.size() ) ? _listClient[static_cast<size_t>( connectionID )]._viewTick : 0.0f;
     }
 
-    uint64 ReplicationServer::getOversizedEntityCount() const { return _oversizedEntityCount; }
+    uint64 ReplicationServer::getOversizedEntityCount() const
+    {
+        return _oversizedEntityCount;
+    }
 
     uint32 ReplicationServer::getAckedTick( int32 connectionID ) const
     {

@@ -100,5 +100,7 @@ namespace sw
  * @brief 컴포넌트 타입을 일괄 틱 경로에 올립니다. 그 타입의 `.cpp` 에서 `onTick` 정의 뒤, `namespace sw` 안에 `SW_REGISTER_TICK_BATCH( 타입 );` 로 한 번 씁니다.
  * @details 정적 등록 객체가 모듈 적재 때 등록하고 해제 때 지웁니다. 테스트처럼 범위 안에서만 올리려면 `TickBatchRegistration<타입>` 지역 객체를 씁니다.
  */
-#define SW_REGISTER_TICK_BATCH( Type ) \
-    static const ::sw::TickBatchRegistration<Type> s_tickBatchRegistration##Type {}
+#define SW_REGISTER_TICK_BATCH( Type )                                           \
+    static const ::sw::TickBatchRegistration<Type> s_tickBatchRegistration##Type \
+    {                                                                            \
+    }

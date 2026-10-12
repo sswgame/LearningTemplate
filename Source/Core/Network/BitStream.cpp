@@ -106,7 +106,10 @@ namespace sw
         } while ( value != 0 );
     }
 
-    void BitWriter::writeVarInt( int64 value ) { writeVarUint( ( static_cast<uint64>( value ) << 1 ) ^ static_cast<uint64>( value >> 63 ) ); }
+    void BitWriter::writeVarInt( int64 value )
+    {
+        writeVarUint( ( static_cast<uint64>( value ) << 1 ) ^ static_cast<uint64>( value >> 63 ) );
+    }
 
     void BitWriter::writeBytes( const uint8* pData, int32 byteCount )
     {

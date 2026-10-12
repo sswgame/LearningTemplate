@@ -114,4 +114,7 @@ namespace sw
  */
 #define SW_RESOURCE_DATA_KIND( varName, pLabel, pPrefix, pContains, pSuffix, pLoad )                                          \
     static const ::sw::ResourceDataKind          sw_resourceDataKind_##varName{ pLabel, pPrefix, pContains, pSuffix, pLoad }; \
-    static const ::sw::ResourceDataKindRegistrar sw_resourceDataKindRegistrar_##varName { &sw_resourceDataKind_##varName }
+    static const ::sw::ResourceDataKindRegistrar sw_resourceDataKindRegistrar_##varName                                       \
+    {                                                                                                                         \
+        &sw_resourceDataKind_##varName                                                                                        \
+    }

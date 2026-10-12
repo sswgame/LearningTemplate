@@ -229,7 +229,10 @@ namespace sw
         return true;
     }
 
-    uint16 RollbackSession::getMessageKindMask() const { return 1u << ( NetLockstepMessage::kRollbackInput - NetKitMessageRange::kLockstep ); }
+    uint16 RollbackSession::getMessageKindMask() const
+    {
+        return 1u << ( NetLockstepMessage::kRollbackInput - NetKitMessageRange::kLockstep );
+    }
 
     NetHandleResult RollbackSession::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {

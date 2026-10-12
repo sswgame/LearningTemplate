@@ -129,7 +129,10 @@ namespace sw::editor
         }
     }
 
-    bool EditorSelfTestMarks::isEnabled() { return EditorSelfTestInputInternal::getState()._bEnabled; }
+    bool EditorSelfTestMarks::isEnabled()
+    {
+        return EditorSelfTestInputInternal::getState()._bEnabled;
+    }
 
     void EditorSelfTestInput::moveMouse( const float2& position, uint32 viewportID )
     {
@@ -225,7 +228,10 @@ namespace sw::editor
         return true;
     }
 
-    void EditorSelfTestInput::releaseMouseHold() { EditorSelfTestInputInternal::getState()._bHoldMouse = false; }
+    void EditorSelfTestInput::releaseMouseHold()
+    {
+        EditorSelfTestInputInternal::getState()._bHoldMouse = false;
+    }
 
     void EditorSelfTestInput::flushIntoImGui()
     {

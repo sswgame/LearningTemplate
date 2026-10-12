@@ -16,9 +16,15 @@ namespace sw
     {
     }
 
-    void MatchServerAgent::initialize( uint64 serverID ) { _serverID = serverID; }
+    void MatchServerAgent::initialize( uint64 serverID )
+    {
+        _serverID = serverID;
+    }
 
-    string MatchServerAgent::getAssignTopic() const { return MatchQueueService::makeAssignTopic( _serverID ); }
+    string MatchServerAgent::getAssignTopic() const
+    {
+        return MatchQueueService::makeAssignTopic( _serverID );
+    }
 
     bool MatchServerAgent::handleAssign( const vector<uint8>& bytes, int64 nowMs )
     {

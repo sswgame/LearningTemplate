@@ -80,7 +80,10 @@ namespace sw
             pActor->_gauge = MathUtil::max( 0.0f, pActor->_gauge + amount * kTimelineThreshold );
     }
 
-    void TurnOrder::restartRound() { _listRoundQueue.clear(); }
+    void TurnOrder::restartRound()
+    {
+        _listRoundQueue.clear();
+    }
 
     void TurnOrder::makeRoundQueue( vector<int32>& outListQueue, const vector<Combatant>& listActor, GameRandom& random ) const
     {

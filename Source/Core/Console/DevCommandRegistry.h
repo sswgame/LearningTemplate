@@ -99,7 +99,10 @@ namespace sw
  */
     #define SW_DEV_COMMAND( varName, pName, pUsage, pHelp, pFunc )                                                    \
         static const ::sw::DevCommandRegistration sw_devCommandRegistration_##varName{ pName, pUsage, pHelp, pFunc }; \
-        static const ::sw::DevCommandRegistrar    sw_devCommandRegistrar_##varName { &sw_devCommandRegistration_##varName }
+        static const ::sw::DevCommandRegistrar    sw_devCommandRegistrar_##varName                                    \
+        {                                                                                                             \
+            &sw_devCommandRegistration_##varName                                                                      \
+        }
 
 #else
 

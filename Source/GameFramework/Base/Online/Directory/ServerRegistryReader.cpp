@@ -22,7 +22,10 @@ namespace sw
     {
     }
 
-    ServerRegistryReader::~ServerRegistryReader() { shutdown(); }
+    ServerRegistryReader::~ServerRegistryReader()
+    {
+        shutdown();
+    }
 
     void ServerRegistryReader::initialize( EphemeralStoreRouter* pRouter, string_view kind, int64 refreshPeriodMs )
     {
@@ -61,7 +64,10 @@ namespace sw
         startRefresh( nowMs );
     }
 
-    void ServerRegistryReader::requestRefresh() { _bRefreshRequested = SW_TRUE; }
+    void ServerRegistryReader::requestRefresh()
+    {
+        _bRefreshRequested = SW_TRUE;
+    }
 
     void ServerRegistryReader::startRefresh( int64 nowMs )
     {

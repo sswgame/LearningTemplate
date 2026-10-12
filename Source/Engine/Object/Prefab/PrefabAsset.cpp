@@ -531,7 +531,9 @@ namespace sw
         , _listNestedInstance{}
         , _stateFormat{ PrefabStateFormat::XML }
         , _bValid{ SW_FALSE }
-        , _reserved{ 0 } {}
+        , _reserved{ 0 }
+    {
+    }
 
     bool PrefabAsset::loadFromXMLFile( string_view assetRelativePath )
     {

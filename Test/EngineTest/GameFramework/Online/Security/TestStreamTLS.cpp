@@ -59,7 +59,10 @@ namespace
         unique_ptr<IStreamTransport> _inner;
     };
 
-    unique_ptr<IStreamTransport> wrapWithTap( unique_ptr<IStreamTransport> inner ) { return sw::make_unique<TapStreamTransport>( std::move( inner ) ); }
+    unique_ptr<IStreamTransport> wrapWithTap( unique_ptr<IStreamTransport> inner )
+    {
+        return sw::make_unique<TapStreamTransport>( std::move( inner ) );
+    }
 
     struct EndpointRecord final : public IStreamEndpointListener
     {

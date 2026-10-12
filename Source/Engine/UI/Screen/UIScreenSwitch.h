@@ -69,4 +69,7 @@ namespace sw
  */
 #define SW_UI_SCREEN_SWITCH( id, pName, order, pFunction )                                           \
     static const ::sw::UIScreenSwitchRegistration sw_uiScreenSwitch_##id{ pName, order, pFunction }; \
-    static const ::sw::UIScreenSwitchRegistrar    sw_uiScreenSwitchRegistrar_##id { &sw_uiScreenSwitch_##id }
+    static const ::sw::UIScreenSwitchRegistrar    sw_uiScreenSwitchRegistrar_##id                    \
+    {                                                                                                \
+        &sw_uiScreenSwitch_##id                                                                      \
+    }

@@ -72,9 +72,15 @@ namespace sw
         _bHostAttached = SW_FALSE;
     }
 
-    uint32 AccountServer::getProtocolVersion() const { return AccountProtocol::kVersion; }
+    uint32 AccountServer::getProtocolVersion() const
+    {
+        return AccountProtocol::kVersion;
+    }
 
-    bool AccountServer::isAnonymousMethod( uint16 method ) const { return method == AccountMethod::kRegister || AccountServerInternal::isLoginMethod( method ); }
+    bool AccountServer::isAnonymousMethod( uint16 method ) const
+    {
+        return method == AccountMethod::kRegister || AccountServerInternal::isLoginMethod( method );
+    }
 
     void AccountServer::onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )
     {

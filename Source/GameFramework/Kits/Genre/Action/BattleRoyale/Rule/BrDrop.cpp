@@ -74,7 +74,10 @@ namespace sw
         return MathUtil::sqrt( dx * dx + dy * dy );
     }
 
-    float32 BrFlightPath::computeDuration() const { return computeLength() / MathUtil::max( 1.0f, _speed ); }
+    float32 BrFlightPath::computeDuration() const
+    {
+        return computeLength() / MathUtil::max( 1.0f, _speed );
+    }
 
     float2 BrFlightPath::computePosition( float32 time ) const
     {
@@ -83,7 +86,10 @@ namespace sw
         return float2{ MathUtil::lerp( _start._x, _end._x, ratio ), MathUtil::lerp( _start._y, _end._y, ratio ) };
     }
 
-    bool BrFlightPath::canJump( float32 time ) const { return time >= computeJumpOpenTime() && time <= computeJumpCloseTime(); }
+    bool BrFlightPath::canJump( float32 time ) const
+    {
+        return time >= computeJumpOpenTime() && time <= computeJumpCloseTime();
+    }
 
     BrSkydiver::BrSkydiver()
         : _settings{}

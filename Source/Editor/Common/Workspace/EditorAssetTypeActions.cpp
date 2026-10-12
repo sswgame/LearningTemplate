@@ -43,7 +43,10 @@ namespace sw::editor
         return false;
     }
 
-    bool IEditorAssetTypeActions::open( string_view /*relativePath*/ ) const { return false; }
+    bool IEditorAssetTypeActions::open( string_view /*relativePath*/ ) const
+    {
+        return false;
+    }
 
     bool IEditorAssetTypeActions::dropInViewport( GameObjectManager* /*pManager*/, const utf8* /*pPath*/, const float3& /*spawnPos*/ ) const
     {

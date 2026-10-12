@@ -107,9 +107,15 @@ namespace sw
         return LocalStoreResult::Ok;
     }
 
-    bool SQLLocalSlotStorage::registerLocalStoreBackend() { return LocalStoreFactory::registerBackend( kBackendName, &SQLLocalSlotStorage::createForRoot ); }
+    bool SQLLocalSlotStorage::registerLocalStoreBackend()
+    {
+        return LocalStoreFactory::registerBackend( kBackendName, &SQLLocalSlotStorage::createForRoot );
+    }
 
-    void SQLLocalSlotStorage::unregisterLocalStoreBackend() { LocalStoreFactory::unregisterBackend( kBackendName ); }
+    void SQLLocalSlotStorage::unregisterLocalStoreBackend()
+    {
+        LocalStoreFactory::unregisterBackend( kBackendName );
+    }
 
     unique_ptr<ILocalSlotStorage> SQLLocalSlotStorage::createForRoot( string_view rootPath, string& outError )
     {

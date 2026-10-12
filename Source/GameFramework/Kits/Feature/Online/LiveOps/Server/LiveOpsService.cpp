@@ -138,7 +138,10 @@ namespace sw
     {
     }
 
-    LiveOpsService::~LiveOpsService() { shutdown(); }
+    LiveOpsService::~LiveOpsService()
+    {
+        shutdown();
+    }
 
     void LiveOpsService::initialize( const LiveOpsDependencies& dependencies )
     {
@@ -148,7 +151,10 @@ namespace sw
         _lastOpenHash     = computeOpenHash( 0 ); // 빈 상태는 알리지 않는다
     }
 
-    void LiveOpsService::shutdown() { _dependencies._pBus = nullptr; }
+    void LiveOpsService::shutdown()
+    {
+        _dependencies._pBus = nullptr;
+    }
 
     void LiveOpsService::tick( int64 nowMs )
     {

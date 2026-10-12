@@ -61,7 +61,10 @@ namespace sw
          * @brief 나노초를 마이크로초 정수로 바꿉니다.
          * @details 실수로 찍으면 값마다 소수 자릿수가 달라져 표가 어긋납니다. 정수 us 로 고정합니다.
          */
-        uint64 toMicros( uint64 nanos ) { return nanos / 1000; }
+        uint64 toMicros( uint64 nanos )
+        {
+            return nanos / 1000;
+        }
 
         /** @brief 표가 어긋나지 않게 이름을 고정 폭으로 맞춥니다. */
         void padRight( fixed_string<constant::kMaxBuffer64>& out, const utf8* pText, size_t width )
@@ -126,7 +129,10 @@ namespace sw
         return scopeID;
     }
 
-    uint32 FrameProfiler::getScopeCount() const { return MathUtil::min( _scopeCount.load( std::memory_order_acquire ), kMaxScope ); }
+    uint32 FrameProfiler::getScopeCount() const
+    {
+        return MathUtil::min( _scopeCount.load( std::memory_order_acquire ), kMaxScope );
+    }
 
     const utf8* FrameProfiler::findScopeName( uint32 slot ) const
     {

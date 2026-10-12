@@ -23,7 +23,10 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "ModelImporter" );
 
-    bool ModelImportUtil::isSourceModel( string_view path ) { return FileUtil::hasAnyExtension( path, { ".glb", ".gltf", ".vrm" } ); }
+    bool ModelImportUtil::isSourceModel( string_view path )
+    {
+        return FileUtil::hasAnyExtension( path, { ".glb", ".gltf", ".vrm" } );
+    }
 
     void* ModelImportUtil::allocate( void* pUser, cgltf_size size )
     {
@@ -140,9 +143,15 @@ namespace sw::editor
         return length > MathUtil::kEpsilon ? value * ( 1.0f / length ) : float3{};
     }
 
-    float3 ModelImportUtil::convertToEngineSpace( const float3& value ) { return float3{ -value._x, value._y, value._z }; }
+    float3 ModelImportUtil::convertToEngineSpace( const float3& value )
+    {
+        return float3{ -value._x, value._y, value._z };
+    }
 
-    quaternion ModelImportUtil::convertRotationToEngineSpace( const quaternion& value ) { return quaternion{ value._x, -value._y, -value._z, value._w }; }
+    quaternion ModelImportUtil::convertRotationToEngineSpace( const quaternion& value )
+    {
+        return quaternion{ value._x, -value._y, -value._z, value._w };
+    }
 
     float4x4 ModelImportUtil::convertMatrixToEngineSpace( const float32 ( &arrColumnMajor )[16] )
     {

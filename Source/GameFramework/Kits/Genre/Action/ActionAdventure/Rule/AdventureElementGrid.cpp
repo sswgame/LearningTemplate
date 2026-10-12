@@ -188,21 +188,45 @@ namespace sw
         _listEvent.clear();
     }
 
-    void AdventureElementGrid::setMaterial( const int2& cell, AdventureMaterial material ) { _grid.setMaterial( cell, static_cast<int32>( material ) ); }
+    void AdventureElementGrid::setMaterial( const int2& cell, AdventureMaterial material )
+    {
+        _grid.setMaterial( cell, static_cast<int32>( material ) );
+    }
 
-    AdventureMaterial AdventureElementGrid::getMaterial( const int2& cell ) const { return static_cast<AdventureMaterial>( _grid.getMaterial( cell ) ); }
+    AdventureMaterial AdventureElementGrid::getMaterial( const int2& cell ) const
+    {
+        return static_cast<AdventureMaterial>( _grid.getMaterial( cell ) );
+    }
 
-    void AdventureElementGrid::setWind( const int2& wind ) { _grid.setWind( wind ); }
+    void AdventureElementGrid::setWind( const int2& wind )
+    {
+        _grid.setWind( wind );
+    }
 
-    bool AdventureElementGrid::applyFire( const int2& cell ) { return _grid.applyStimulus( cell, _fireStimulus ) > 0; }
+    bool AdventureElementGrid::applyFire( const int2& cell )
+    {
+        return _grid.applyStimulus( cell, _fireStimulus ) > 0;
+    }
 
-    bool AdventureElementGrid::applyIce( const int2& cell ) { return _grid.applyStimulus( cell, _iceStimulus ) > 0; }
+    bool AdventureElementGrid::applyIce( const int2& cell )
+    {
+        return _grid.applyStimulus( cell, _iceStimulus ) > 0;
+    }
 
-    int32 AdventureElementGrid::applyElectric( const int2& cell ) { return _grid.applyStimulus( cell, _electricStimulus ); }
+    int32 AdventureElementGrid::applyElectric( const int2& cell )
+    {
+        return _grid.applyStimulus( cell, _electricStimulus );
+    }
 
-    void AdventureElementGrid::step() { _grid.step(); }
+    void AdventureElementGrid::step()
+    {
+        _grid.step();
+    }
 
-    int32 AdventureElementGrid::update( float32 deltaTime ) { return _grid.update( deltaTime ); }
+    int32 AdventureElementGrid::update( float32 deltaTime )
+    {
+        return _grid.update( deltaTime );
+    }
 
     void AdventureElementGrid::drainEvents( vector<AdventureElementEvent>& outListEvent )
     {
@@ -219,11 +243,20 @@ namespace sw
         _listEvent.clear();
     }
 
-    bool AdventureElementGrid::isBurning( const int2& cell ) const { return _grid.hasStatus( cell, _burningStatus ); }
+    bool AdventureElementGrid::isBurning( const int2& cell ) const
+    {
+        return _grid.hasStatus( cell, _burningStatus );
+    }
 
-    bool AdventureElementGrid::isCharged( const int2& cell ) const { return _grid.hasStatus( cell, _chargedStatus ); }
+    bool AdventureElementGrid::isCharged( const int2& cell ) const
+    {
+        return _grid.hasStatus( cell, _chargedStatus );
+    }
 
-    bool AdventureElementGrid::hasUpdraft( const int2& cell ) const { return isBurning( cell ) && _grid.hasFlag( cell, _updraftFlag ); }
+    bool AdventureElementGrid::hasUpdraft( const int2& cell ) const
+    {
+        return isBurning( cell ) && _grid.hasFlag( cell, _updraftFlag );
+    }
 
     void AdventureElementGrid::collectUpdraft( vector<int2>& outListCell ) const
     {
@@ -238,11 +271,20 @@ namespace sw
         }
     }
 
-    int32 AdventureElementGrid::countBurning() const { return _grid.countStatus( _burningStatus ); }
+    int32 AdventureElementGrid::countBurning() const
+    {
+        return _grid.countStatus( _burningStatus );
+    }
 
-    uint32 AdventureElementGrid::computeStateHash() const { return _grid.computeStateHash(); }
+    uint32 AdventureElementGrid::computeStateHash() const
+    {
+        return _grid.computeStateHash();
+    }
 
-    void AdventureElementGrid::writeState( Archive& outArchive ) const { _grid.writeState( outArchive ); }
+    void AdventureElementGrid::writeState( Archive& outArchive ) const
+    {
+        _grid.writeState( outArchive );
+    }
 
     bool AdventureElementGrid::readState( Archive& archive )
     {

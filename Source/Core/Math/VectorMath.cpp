@@ -147,9 +147,15 @@ namespace sw
         return ( _x * _x ) + ( _y * _y );
     }
 
-    bool float2::operator==( const float2& other ) const noexcept { return MathUtil::nearEqual( _x, other._x ) && MathUtil::nearEqual( _y, other._y ); }
+    bool float2::operator==( const float2& other ) const noexcept
+    {
+        return MathUtil::nearEqual( _x, other._x ) && MathUtil::nearEqual( _y, other._y );
+    }
 
-    bool float2::operator!=( const float2& other ) const noexcept { return !( *this == other ); }
+    bool float2::operator!=( const float2& other ) const noexcept
+    {
+        return !( *this == other );
+    }
 
     float2& float2::operator+=( const float2& other ) noexcept
     {
@@ -403,9 +409,15 @@ namespace sw
         return MathUtil::acos( MathUtil::clamp( dotProduct / length, -1.0f, 1.0f ) );
     }
 
-    bool float3::operator==( const float3& other ) const noexcept { return MathUtil::nearEqual( _x, other._x ) && MathUtil::nearEqual( _y, other._y ) && MathUtil::nearEqual( _z, other._z ); }
+    bool float3::operator==( const float3& other ) const noexcept
+    {
+        return MathUtil::nearEqual( _x, other._x ) && MathUtil::nearEqual( _y, other._y ) && MathUtil::nearEqual( _z, other._z );
+    }
 
-    bool float3::operator!=( const float3& other ) const noexcept { return !( *this == other ); }
+    bool float3::operator!=( const float3& other ) const noexcept
+    {
+        return !( *this == other );
+    }
 
     float3& float3::operator+=( const float3& other ) noexcept
     {
@@ -584,9 +596,15 @@ namespace sw
         return ( _x * _x ) + ( _y * _y ) + ( _z * _z ) + ( _w * _w );
     }
 
-    bool float4::operator==( const float4& other ) const noexcept { return MathUtil::nearEqual( _x, other._x ) && MathUtil::nearEqual( _y, other._y ) && MathUtil::nearEqual( _z, other._z ) && MathUtil::nearEqual( _w, other._w ); }
+    bool float4::operator==( const float4& other ) const noexcept
+    {
+        return MathUtil::nearEqual( _x, other._x ) && MathUtil::nearEqual( _y, other._y ) && MathUtil::nearEqual( _z, other._z ) && MathUtil::nearEqual( _w, other._w );
+    }
 
-    bool float4::operator!=( const float4& other ) const noexcept { return !( *this == other ); }
+    bool float4::operator!=( const float4& other ) const noexcept
+    {
+        return !( *this == other );
+    }
 
     float4& float4::operator+=( const float4& other ) noexcept
     {
@@ -734,9 +752,15 @@ namespace sw
         return ( _x * _x ) + ( _y * _y ) + ( _z * _z );
     }
 
-    bool double3::operator==( const double3& other ) const noexcept { return MathUtil::nearEqual( _x, other._x ) && MathUtil::nearEqual( _y, other._y ) && MathUtil::nearEqual( _z, other._z ); }
+    bool double3::operator==( const double3& other ) const noexcept
+    {
+        return MathUtil::nearEqual( _x, other._x ) && MathUtil::nearEqual( _y, other._y ) && MathUtil::nearEqual( _z, other._z );
+    }
 
-    bool double3::operator!=( const double3& other ) const noexcept { return !( *this == other ); }
+    bool double3::operator!=( const double3& other ) const noexcept
+    {
+        return !( *this == other );
+    }
 
     double3& double3::operator+=( const double3& other ) noexcept
     {

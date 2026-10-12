@@ -106,7 +106,10 @@ namespace sw
         return inoutWeapon.startReload();
     }
 
-    float32 BrLoadout::computeCarryLimit() const { return computeCarryLimit( _backpackID ); }
+    float32 BrLoadout::computeCarryLimit() const
+    {
+        return computeCarryLimit( _backpackID );
+    }
 
     float32 BrLoadout::computeCarryLimit( const hashed_string& backpackID ) const
     {

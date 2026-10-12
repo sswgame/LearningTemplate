@@ -408,8 +408,14 @@ namespace sw
         return queryDxgiMemoryBudget( _memoryAdapter.Get(), outBudget );
     }
 
-    IRHIResourceFactory* D3D12RHIDevice::getResourceFactory() { return _resourceImpl.get(); }
-    IRHICommandContext*  D3D12RHIDevice::getFrameStreamContext() { return _frameStreamContext.get(); }
+    IRHIResourceFactory* D3D12RHIDevice::getResourceFactory()
+    {
+        return _resourceImpl.get();
+    }
+    IRHICommandContext* D3D12RHIDevice::getFrameStreamContext()
+    {
+        return _frameStreamContext.get();
+    }
 
 } // namespace sw
 #endif

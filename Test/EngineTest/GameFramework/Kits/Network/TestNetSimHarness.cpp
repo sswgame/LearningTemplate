@@ -176,7 +176,10 @@ namespace
         CrateServerRecord _record;
     };
 
-    const CrateServerSession& getServerSession( const NetSimHarness& harness ) { return *static_cast<const CrateServerSession*>( harness.getServer().getSession() ); }
+    const CrateServerSession& getServerSession( const NetSimHarness& harness )
+    {
+        return *static_cast<const CrateServerSession*>( harness.getServer().getSession() );
+    }
 
     const CrateClientSession* findClientSession( const NetSimHarness& harness, int32 worldIndex )
     {

@@ -172,9 +172,15 @@ namespace sw
         return false;
     }
 
-    bool WitcherInvestigation::isSolved() const { return _pContract == nullptr || _stepIndex >= static_cast<int32>( _pContract->_listStep.size() ); }
+    bool WitcherInvestigation::isSolved() const
+    {
+        return _pContract == nullptr || _stepIndex >= static_cast<int32>( _pContract->_listStep.size() );
+    }
 
-    hashed_string WitcherInvestigation::getStepID() const { return isSolved() ? hashed_string{} : _pContract->_listStep[static_cast<size_t>( _stepIndex )]._id; }
+    hashed_string WitcherInvestigation::getStepID() const
+    {
+        return isSolved() ? hashed_string{} : _pContract->_listStep[static_cast<size_t>( _stepIndex )]._id;
+    }
 
     void WitcherInvestigation::drainEvents( vector<WitcherInvestigationEvent>& outListEvent )
     {

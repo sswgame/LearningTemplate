@@ -69,7 +69,10 @@ namespace sw
         _gpuUploadQueue->bindDevice( &device, pTaskManager );
     }
 
-    void RenderPacketBuilder::shutdown() { _gpuSceneBuilder->clear(); }
+    void RenderPacketBuilder::shutdown()
+    {
+        _gpuSceneBuilder->clear();
+    }
 
     void RenderPacketBuilder::destroy()
     {
@@ -79,7 +82,10 @@ namespace sw
         _gpuSceneBuilder.reset();
     }
 
-    bool RenderPacketBuilder::isInitialized() const { return _packetScratch != nullptr && _gpuSceneBuilder != nullptr; }
+    bool RenderPacketBuilder::isInitialized() const
+    {
+        return _packetScratch != nullptr && _gpuSceneBuilder != nullptr;
+    }
 
     bool RenderPacketBuilder::isMergeBatchesAcrossMaterials() const
     {

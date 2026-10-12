@@ -125,7 +125,10 @@ namespace sw
         return true;
     }
 
-    void WesternSurvival::setClothing( const vector<hashed_string>& listClothing ) { _listClothing = listClothing; }
+    void WesternSurvival::setClothing( const vector<hashed_string>& listClothing )
+    {
+        _listClothing = listClothing;
+    }
 
     float32 WesternSurvival::computeWarmth() const
     {
@@ -174,7 +177,10 @@ namespace sw
         return pLevel != nullptr ? pLevel->_markCount : 0;
     }
 
-    void WesternSurvival::setCore( WesternCore core, float32 value ) { _arrCore[static_cast<size_t>( core )] = MathUtil::clamp( value, 0.0f, kCoreMax ); }
+    void WesternSurvival::setCore( WesternCore core, float32 value )
+    {
+        _arrCore[static_cast<size_t>( core )] = MathUtil::clamp( value, 0.0f, kCoreMax );
+    }
 
     float32 WesternSurvival::computeRegenScale( WesternCore core ) const
     {

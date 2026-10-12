@@ -72,4 +72,7 @@ namespace sw
  */
 #define SW_GAME_AUTOPLAY( gvName, pGameName, pDescription )                                                            \
     static const ::sw::GameAutoplayRegistration sw_gameAutoplay_##gvName{ pGameName, pDescription, #gvName, &gvName }; \
-    static const ::sw::GameAutoplayRegistrar    sw_gameAutoplayRegistrar_##gvName { &sw_gameAutoplay_##gvName }
+    static const ::sw::GameAutoplayRegistrar    sw_gameAutoplayRegistrar_##gvName                                      \
+    {                                                                                                                  \
+        &sw_gameAutoplay_##gvName                                                                                      \
+    }

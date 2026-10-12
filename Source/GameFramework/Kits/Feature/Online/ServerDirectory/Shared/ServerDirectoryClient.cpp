@@ -19,9 +19,15 @@ namespace sw
     {
     }
 
-    void ServerDirectoryClient::initialize( OnlineServiceClient* pClient ) { _pClient = pClient; }
+    void ServerDirectoryClient::initialize( OnlineServiceClient* pClient )
+    {
+        _pClient = pClient;
+    }
 
-    uint32 ServerDirectoryClient::getProtocolVersion() const { return ServerDirectoryMethod::kWireVersion; }
+    uint32 ServerDirectoryClient::getProtocolVersion() const
+    {
+        return ServerDirectoryMethod::kWireVersion;
+    }
 
     uint64 ServerDirectoryClient::requestStatus( const StatusDelegate& onStatus )
     {

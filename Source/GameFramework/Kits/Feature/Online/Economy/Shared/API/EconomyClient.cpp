@@ -18,9 +18,15 @@ namespace sw
     {
     }
 
-    void EconomyClient::initialize( OnlineServiceClient* pClient ) { _pClient = pClient; }
+    void EconomyClient::initialize( OnlineServiceClient* pClient )
+    {
+        _pClient = pClient;
+    }
 
-    uint64 EconomyClient::requestWallet( ReplyDelegate onReply ) { return send( EconomyMethod::kGetWallet, BitWriter{}, NetIdempotencyKey{}, onReply ); }
+    uint64 EconomyClient::requestWallet( ReplyDelegate onReply )
+    {
+        return send( EconomyMethod::kGetWallet, BitWriter{}, NetIdempotencyKey{}, onReply );
+    }
 
     uint64 EconomyClient::requestHistory( const EconomyHistoryRequest& request, ReplyDelegate onReply )
     {
@@ -68,7 +74,10 @@ namespace sw
         ++_revision;
     }
 
-    void EconomyClient::applyLedgerBalances( Wallet& inoutWallet ) const { EconomyMirror::applyToWallet( _listBalance, true, inoutWallet ); }
+    void EconomyClient::applyLedgerBalances( Wallet& inoutWallet ) const
+    {
+        EconomyMirror::applyToWallet( _listBalance, true, inoutWallet );
+    }
 
     int64 EconomyClient::getBalance( string_view assetID ) const
     {

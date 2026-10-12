@@ -25,7 +25,10 @@ namespace sw
 
 namespace sw
 {
-    EphemeralRequest EphemeralRequest::makeGet( string_view key ) { return EphemeralStoreInternal::makeKeyed( EphemeralOperation::Get, key ); }
+    EphemeralRequest EphemeralRequest::makeGet( string_view key )
+    {
+        return EphemeralStoreInternal::makeKeyed( EphemeralOperation::Get, key );
+    }
 
     EphemeralRequest EphemeralRequest::makeSet( string_view key, vector<uint8> valueBytes, int64 ttlMs, EphemeralCondition condition )
     {
@@ -36,7 +39,10 @@ namespace sw
         return request;
     }
 
-    EphemeralRequest EphemeralRequest::makeErase( string_view key ) { return EphemeralStoreInternal::makeKeyed( EphemeralOperation::Erase, key ); }
+    EphemeralRequest EphemeralRequest::makeErase( string_view key )
+    {
+        return EphemeralStoreInternal::makeKeyed( EphemeralOperation::Erase, key );
+    }
 
     EphemeralRequest EphemeralRequest::makeCompareAndSet( string_view key, vector<uint8> expectedBytes, vector<uint8> valueBytes, int64 ttlMs )
     {

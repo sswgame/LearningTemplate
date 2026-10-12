@@ -23,7 +23,10 @@ namespace sw
     {
     }
 
-    void ChatServer::initialize( ChatService* pService ) { _pService = pService; }
+    void ChatServer::initialize( ChatService* pService )
+    {
+        _pService = pService;
+    }
 
     void ChatServer::shutdown()
     {

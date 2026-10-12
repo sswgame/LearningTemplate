@@ -145,5 +145,8 @@ namespace sw::editor
 #define SW_EDITOR_REGISTER( TRegistration, name, ... )                                           \
     static const ::sw::editor::EditorExtensionRegistrar<TRegistration> sw_editorRegistrar_##name \
     {                                                                                            \
-        TRegistration { __VA_ARGS__ }                                                            \
+        TRegistration                                                                            \
+        {                                                                                        \
+            __VA_ARGS__                                                                          \
+        }                                                                                        \
     }

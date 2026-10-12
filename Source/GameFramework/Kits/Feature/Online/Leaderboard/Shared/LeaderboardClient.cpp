@@ -13,7 +13,10 @@ namespace sw
     {
     }
 
-    void LeaderboardClient::initialize( OnlineServiceClient* pClient ) { _pClient = pClient; }
+    void LeaderboardClient::initialize( OnlineServiceClient* pClient )
+    {
+        _pClient = pClient;
+    }
 
     uint64 LeaderboardClient::requestTop( string_view boardID, int32 offset, int32 count, const LeaderboardReplyDelegate& onReply )
     {
@@ -32,7 +35,10 @@ namespace sw
         return send( LeaderboardMethod::kGetAround, request, onReply );
     }
 
-    uint64 LeaderboardClient::requestStats( const LeaderboardReplyDelegate& onReply ) { return send( LeaderboardMethod::kGetStats, LeaderboardRequest{}, onReply ); }
+    uint64 LeaderboardClient::requestStats( const LeaderboardReplyDelegate& onReply )
+    {
+        return send( LeaderboardMethod::kGetStats, LeaderboardRequest{}, onReply );
+    }
 
     uint64 LeaderboardClient::submitScore( string_view boardID, int64 score, const LeaderboardReplyDelegate& onReply )
     {

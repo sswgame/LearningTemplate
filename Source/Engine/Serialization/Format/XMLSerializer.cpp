@@ -516,7 +516,9 @@ namespace sw
     };
 
     XMLDocumentBackend::XMLDocumentBackend()
-        : _impl{ make_unique<Impl>() } {}
+        : _impl{ make_unique<Impl>() }
+    {
+    }
 
     XMLDocumentBackend::~XMLDocumentBackend() = default;
 

@@ -124,7 +124,10 @@ namespace sw
     } // namespace
 
 #if !defined( SW_SHIPPING )
-    void Memory::injectAllocationFailures( uint32 count ) { t_injectedFailureCount = count; }
+    void Memory::injectAllocationFailures( uint32 count )
+    {
+        t_injectedFailureCount = count;
+    }
 #endif
 
     /**

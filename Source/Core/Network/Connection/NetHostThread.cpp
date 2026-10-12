@@ -18,9 +18,15 @@ namespace sw
     {
     }
 
-    NetHostThread::~NetHostThread() { stop(); }
+    NetHostThread::~NetHostThread()
+    {
+        stop();
+    }
 
-    float64 NetHostThread::getTime() { return static_cast<float64>( MonotonicClock::nowNanoseconds() ) * 1.0e-9; }
+    float64 NetHostThread::getTime()
+    {
+        return static_cast<float64>( MonotonicClock::nowNanoseconds() ) * 1.0e-9;
+    }
 
     bool NetHostThread::start( NetHost* pHost, const NetHostThreadSettings& settings )
     {

@@ -467,5 +467,8 @@ namespace sw
         return TradeWire::readSnapshot( reader, outSnapshot );
     }
 
-    bool TradeRecordUtil::makeJournalKey( uint64 tradeID, string& outKey ) { return LedgerJournalKey::makeFromToken( "trade", ServiceKeyUtil::makeHex64( tradeID ), outKey ); }
+    bool TradeRecordUtil::makeJournalKey( uint64 tradeID, string& outKey )
+    {
+        return LedgerJournalKey::makeFromToken( "trade", ServiceKeyUtil::makeHex64( tradeID ), outKey );
+    }
 } // namespace sw

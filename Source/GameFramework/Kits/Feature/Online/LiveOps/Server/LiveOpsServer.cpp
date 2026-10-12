@@ -43,7 +43,10 @@ namespace sw
         _pHost = nullptr; // 구독은 호스트가 이어서 모두 해제한다
     }
 
-    uint32 LiveOpsServer::getProtocolVersion() const { return LiveOpsProtocol::kVersion; }
+    uint32 LiveOpsServer::getProtocolVersion() const
+    {
+        return LiveOpsProtocol::kVersion;
+    }
 
     void LiveOpsServer::onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )
     {

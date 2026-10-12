@@ -29,9 +29,15 @@ namespace sw
         _bHasServerTick = SW_FALSE;
     }
 
-    float32 NetClock::getTickInterval() const { return MathUtil::max( 1.0e-4f, _settings._tickInterval ); }
+    float32 NetClock::getTickInterval() const
+    {
+        return MathUtil::max( 1.0e-4f, _settings._tickInterval );
+    }
 
-    float32 NetClock::computeInterpolationDelay() const { return MathUtil::max( _settings._interpolationDelay, _settings._sampleInterval * kSampleIntervalsBehind ); }
+    float32 NetClock::computeInterpolationDelay() const
+    {
+        return MathUtil::max( _settings._interpolationDelay, _settings._sampleInterval * kSampleIntervalsBehind );
+    }
 
     void NetClock::observeServerTick( uint32 serverTick )
     {

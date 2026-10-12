@@ -121,15 +121,30 @@ namespace sw
         return nullptr;
     }
 
-    bool CreatureSpeciesDef::likesHabitat( const hashed_string& habitatID ) const { return VectorUtil::contains( _listHabitat, habitatID ); }
+    bool CreatureSpeciesDef::likesHabitat( const hashed_string& habitatID ) const
+    {
+        return VectorUtil::contains( _listHabitat, habitatID );
+    }
 
-    bool CreatureSpeciesDef::likesFood( const hashed_string& itemID ) const { return VectorUtil::contains( _listFood, itemID ); }
+    bool CreatureSpeciesDef::likesFood( const hashed_string& itemID ) const
+    {
+        return VectorUtil::contains( _listFood, itemID );
+    }
 
-    bool CreatureSpeciesDef::likesGift( const hashed_string& itemID ) const { return VectorUtil::contains( _listGift, itemID ); }
+    bool CreatureSpeciesDef::likesGift( const hashed_string& itemID ) const
+    {
+        return VectorUtil::contains( _listGift, itemID );
+    }
 
-    bool CreatureSpeciesDef::hasAbility( const hashed_string& abilityID ) const { return VectorUtil::contains( _listAbility, abilityID ); }
+    bool CreatureSpeciesDef::hasAbility( const hashed_string& abilityID ) const
+    {
+        return VectorUtil::contains( _listAbility, abilityID );
+    }
 
-    bool CreatureSpeciesDef::offersRequest( const hashed_string& questID ) const { return VectorUtil::contains( _listRequest, questID ); }
+    bool CreatureSpeciesDef::offersRequest( const hashed_string& questID ) const
+    {
+        return VectorUtil::contains( _listRequest, questID );
+    }
 
     bool CreatureSpeciesDef::comesIn( DayPhase phase, const hashed_string& weatherID ) const
     {

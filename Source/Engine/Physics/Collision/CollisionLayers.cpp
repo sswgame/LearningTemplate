@@ -7,7 +7,10 @@
 namespace sw
 {
     CollisionLayers::CollisionLayers()
-        : _arrMatrix{} { resetDefaults(); }
+        : _arrMatrix{}
+    {
+        resetDefaults();
+    }
 
     void CollisionLayers::setLayerCollision( uint8 layerA, uint8 layerB, bool shouldCollide )
     {

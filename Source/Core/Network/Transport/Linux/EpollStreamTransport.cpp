@@ -615,7 +615,10 @@ namespace sw
     {
     }
 
-    EpollStreamTransport::~EpollStreamTransport() { shutdown(); }
+    EpollStreamTransport::~EpollStreamTransport()
+    {
+        shutdown();
+    }
 
     bool EpollStreamTransport::initialize( IStreamHandler* pHandler, const StreamTransportSettings& settings )
     {
@@ -755,7 +758,10 @@ namespace sw
         return true;
     }
 
-    uint16 EpollStreamTransport::getListenPort() const { return _state->_listenPort; }
+    uint16 EpollStreamTransport::getListenPort() const
+    {
+        return _state->_listenPort;
+    }
 
     StreamConnectionHandle EpollStreamTransport::connect( const NetAddress& remote )
     {

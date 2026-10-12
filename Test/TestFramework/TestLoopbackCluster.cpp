@@ -14,7 +14,10 @@ namespace test
     {
     }
 
-    LoopbackCluster::~LoopbackCluster() { stopThreads(); }
+    LoopbackCluster::~LoopbackCluster()
+    {
+        stopThreads();
+    }
 
     int32 LoopbackCluster::addHost( uint16 port, const sw::NetHostSettings& settings )
     {

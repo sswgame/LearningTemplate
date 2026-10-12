@@ -15,7 +15,10 @@ namespace sw
     {
     }
 
-    EphemeralStoreRouter::~EphemeralStoreRouter() { shutdown(); }
+    EphemeralStoreRouter::~EphemeralStoreRouter()
+    {
+        shutdown();
+    }
 
     void EphemeralStoreRouter::initialize( IEphemeralStore* pStore )
     {

@@ -85,7 +85,10 @@ namespace sw
     {
     }
 
-    FontService::~FontService() { shutdown(); }
+    FontService::~FontService()
+    {
+        shutdown();
+    }
 
     bool FontService::initialize( string_view catalogPath )
     {
@@ -211,7 +214,10 @@ namespace sw
         return chain._arrFace[0];
     }
 
-    void FontService::invalidateFaceChains() { _mapChain.clear(); }
+    void FontService::invalidateFaceChains()
+    {
+        _mapChain.clear();
+    }
 
     FontFaceID FontService::openFamilyFace( string_view family, FontWeight weight, FontSlant slant, uint8& outFauxBold, uint8& outFauxItalic )
     {

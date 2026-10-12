@@ -144,13 +144,22 @@ namespace sw
 namespace sw
 {
     /** @brief 성분별로 더합니다. */
-    inline quaternion operator+( const quaternion& lhs, const quaternion& rhs ) noexcept { return quaternion{ lhs._x + rhs._x, lhs._y + rhs._y, lhs._z + rhs._z, lhs._w + rhs._w }; }
+    inline quaternion operator+( const quaternion& lhs, const quaternion& rhs ) noexcept
+    {
+        return quaternion{ lhs._x + rhs._x, lhs._y + rhs._y, lhs._z + rhs._z, lhs._w + rhs._w };
+    }
     /** @brief 성분별로 뺍니다. */
-    inline quaternion operator-( const quaternion& lhs, const quaternion& rhs ) noexcept { return quaternion{ lhs._x - rhs._x, lhs._y - rhs._y, lhs._z - rhs._z, lhs._w - rhs._w }; }
+    inline quaternion operator-( const quaternion& lhs, const quaternion& rhs ) noexcept
+    {
+        return quaternion{ lhs._x - rhs._x, lhs._y - rhs._y, lhs._z - rhs._z, lhs._w - rhs._w };
+    }
     /** @brief 해밀턴 곱을 구합니다. `lhs * rhs` 는 rhs 를 먼저, lhs 를 나중에 적용하는 회전입니다. */
     SW_API quaternion operator*( const quaternion& lhs, const quaternion& rhs ) noexcept;
     /** @brief 스칼라를 곱합니다. */
-    inline quaternion operator*( const quaternion& q, float32 scale ) noexcept { return quaternion{ q._x * scale, q._y * scale, q._z * scale, q._w * scale }; }
+    inline quaternion operator*( const quaternion& q, float32 scale ) noexcept
+    {
+        return quaternion{ q._x * scale, q._y * scale, q._z * scale, q._w * scale };
+    }
     /** @brief 스칼라로 나눕니다. */
     inline quaternion operator/( const quaternion& q, float32 scale ) noexcept
     {
@@ -159,7 +168,10 @@ namespace sw
     }
 
     /** @brief 스칼라를 곱합니다(scale * q). */
-    inline quaternion operator*( float32 scale, const quaternion& q ) noexcept { return q * scale; }
+    inline quaternion operator*( float32 scale, const quaternion& q ) noexcept
+    {
+        return q * scale;
+    }
 
     // ------------------------------------------------------------------------------
     // 2) float4x4 — 이동 · 회전 · 스케일 · 투영 · LookAt. 행 우선, HLSL 과 같은 배치
@@ -394,13 +406,22 @@ namespace sw
     static_assert( sizeof( float4x4 ) == 16 * sizeof( float32 ), "float4x4 must be 16 contiguous floats" );
 
     /** @brief 성분별로 더합니다. */
-    inline float4x4 operator+( const float4x4& lhs, const float4x4& rhs ) noexcept { return float4x4{ lhs._11 + rhs._11, lhs._12 + rhs._12, lhs._13 + rhs._13, lhs._14 + rhs._14, lhs._21 + rhs._21, lhs._22 + rhs._22, lhs._23 + rhs._23, lhs._24 + rhs._24, lhs._31 + rhs._31, lhs._32 + rhs._32, lhs._33 + rhs._33, lhs._34 + rhs._34, lhs._41 + rhs._41, lhs._42 + rhs._42, lhs._43 + rhs._43, lhs._44 + rhs._44 }; }
+    inline float4x4 operator+( const float4x4& lhs, const float4x4& rhs ) noexcept
+    {
+        return float4x4{ lhs._11 + rhs._11, lhs._12 + rhs._12, lhs._13 + rhs._13, lhs._14 + rhs._14, lhs._21 + rhs._21, lhs._22 + rhs._22, lhs._23 + rhs._23, lhs._24 + rhs._24, lhs._31 + rhs._31, lhs._32 + rhs._32, lhs._33 + rhs._33, lhs._34 + rhs._34, lhs._41 + rhs._41, lhs._42 + rhs._42, lhs._43 + rhs._43, lhs._44 + rhs._44 };
+    }
     /** @brief 성분별로 뺍니다. */
-    inline float4x4 operator-( const float4x4& lhs, const float4x4& rhs ) noexcept { return float4x4{ lhs._11 - rhs._11, lhs._12 - rhs._12, lhs._13 - rhs._13, lhs._14 - rhs._14, lhs._21 - rhs._21, lhs._22 - rhs._22, lhs._23 - rhs._23, lhs._24 - rhs._24, lhs._31 - rhs._31, lhs._32 - rhs._32, lhs._33 - rhs._33, lhs._34 - rhs._34, lhs._41 - rhs._41, lhs._42 - rhs._42, lhs._43 - rhs._43, lhs._44 - rhs._44 }; }
+    inline float4x4 operator-( const float4x4& lhs, const float4x4& rhs ) noexcept
+    {
+        return float4x4{ lhs._11 - rhs._11, lhs._12 - rhs._12, lhs._13 - rhs._13, lhs._14 - rhs._14, lhs._21 - rhs._21, lhs._22 - rhs._22, lhs._23 - rhs._23, lhs._24 - rhs._24, lhs._31 - rhs._31, lhs._32 - rhs._32, lhs._33 - rhs._33, lhs._34 - rhs._34, lhs._41 - rhs._41, lhs._42 - rhs._42, lhs._43 - rhs._43, lhs._44 - rhs._44 };
+    }
     /** @brief 행렬 곱을 구합니다. 행벡터 규약이라 `v * ( A * B )` 는 A 를 먼저, B 를 나중에 적용합니다. */
     SW_API float4x4 operator*( const float4x4& lhs, const float4x4& rhs ) noexcept;
     /** @brief 스칼라를 곱합니다. */
-    inline float4x4 operator*( const float4x4& matrix, float32 scale ) noexcept { return float4x4{ matrix._11 * scale, matrix._12 * scale, matrix._13 * scale, matrix._14 * scale, matrix._21 * scale, matrix._22 * scale, matrix._23 * scale, matrix._24 * scale, matrix._31 * scale, matrix._32 * scale, matrix._33 * scale, matrix._34 * scale, matrix._41 * scale, matrix._42 * scale, matrix._43 * scale, matrix._44 * scale }; }
+    inline float4x4 operator*( const float4x4& matrix, float32 scale ) noexcept
+    {
+        return float4x4{ matrix._11 * scale, matrix._12 * scale, matrix._13 * scale, matrix._14 * scale, matrix._21 * scale, matrix._22 * scale, matrix._23 * scale, matrix._24 * scale, matrix._31 * scale, matrix._32 * scale, matrix._33 * scale, matrix._34 * scale, matrix._41 * scale, matrix._42 * scale, matrix._43 * scale, matrix._44 * scale };
+    }
     /** @brief 스칼라로 나눕니다. */
     inline float4x4 operator/( const float4x4& matrix, float32 scale ) noexcept
     {
@@ -409,5 +430,8 @@ namespace sw
     }
 
     /** @brief 스칼라를 곱합니다(scale * m). */
-    inline float4x4 operator*( float32 scale, const float4x4& matrix ) noexcept { return matrix * scale; }
+    inline float4x4 operator*( float32 scale, const float4x4& matrix ) noexcept
+    {
+        return matrix * scale;
+    }
 } // namespace sw

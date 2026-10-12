@@ -84,7 +84,10 @@ namespace sw
     {
     }
 
-    LocalDeviceKeyProvider::~LocalDeviceKeyProvider() { std::memset( _arrKey, 0, sizeof( _arrKey ) ); }
+    LocalDeviceKeyProvider::~LocalDeviceKeyProvider()
+    {
+        std::memset( _arrKey, 0, sizeof( _arrKey ) );
+    }
 
     bool LocalDeviceKeyProvider::getSealKey( uint8 ( &outKey )[kKeySize] )
     {

@@ -50,11 +50,14 @@ namespace sw
  * @details 이름을 모두 `sw::` 로 한정합니다 — `namespace sw` 밖에서도 쓸 수 있게. 한정하지 않으면 `EventTypeID` 를 찾지 못하고,
  *          `friend class EventDispatcher` 는 전역에 새 클래스를 선언해 버려 진짜 디스패처가 `kType` 에 닿지 못합니다.
  */
-#define SW_REGISTER_EVENT_ID( eventTypeID )                         \
-    sw::EventTypeID getEventType() const override { return kType; } \
-                                                                    \
-private:                                                            \
-    static constexpr sw::EventTypeID kType = ( eventTypeID );       \
+#define SW_REGISTER_EVENT_ID( eventTypeID )                   \
+    sw::EventTypeID getEventType() const override             \
+    {                                                         \
+        return kType;                                         \
+    }                                                         \
+                                                              \
+private:                                                      \
+    static constexpr sw::EventTypeID kType = ( eventTypeID ); \
     friend class sw::EventDispatcher
 
 /** @brief 엔진 이벤트를 등록합니다(kEvent##Name 상수를 씁니다). */

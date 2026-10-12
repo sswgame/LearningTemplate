@@ -159,7 +159,10 @@ namespace sw
         return true;
     }
 
-    bool HidingSpotComponent::isHidden( const GameObject& object ) { return object.hasTag( HorrorStealthGimmicksInternal::getHiddenTag(), true ); }
+    bool HidingSpotComponent::isHidden( const GameObject& object )
+    {
+        return object.hasTag( HorrorStealthGimmicksInternal::getHiddenTag(), true );
+    }
 
     void HidingSpotComponent::onTick( float32 deltaTime )
     {

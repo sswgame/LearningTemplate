@@ -181,7 +181,10 @@ namespace sw::editor
         return -1;
     }
 
-    const GimmickNodeKind* GimmickGraphModel::findKind( const GimmickGraphNode& node ) const { return _pRegistry->findKind( node._kind ); }
+    const GimmickNodeKind* GimmickGraphModel::findKind( const GimmickGraphNode& node ) const
+    {
+        return _pRegistry->findKind( node._kind );
+    }
 
     string GimmickGraphModel::makeUniqueID( const hashed_string& kind ) const
     {

@@ -781,7 +781,10 @@ namespace sw
     }
 
     template <typename T, uint32 N>
-    std::ostream& operator<<( std::ostream& os, const basic_fixed_string<T, N>& str ) { return os << str.c_str(); }
+    std::ostream& operator<<( std::ostream& os, const basic_fixed_string<T, N>& str )
+    {
+        return os << str.c_str();
+    }
 
     template <typename T, uint32 N>
     std::istream& operator>>( std::istream& is, basic_fixed_string<T, N>& str )

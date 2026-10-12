@@ -64,7 +64,10 @@ namespace sw
         return -1;
     }
 
-    uint64 SmartObjectSlots::getClaimant( int32 slot ) const { return 0 <= slot && slot < getSlotCount() ? _listClaimant[static_cast<size_t>( slot )] : 0; }
+    uint64 SmartObjectSlots::getClaimant( int32 slot ) const
+    {
+        return 0 <= slot && slot < getSlotCount() ? _listClaimant[static_cast<size_t>( slot )] : 0;
+    }
 
     int32 SmartObjectSlots::countFree() const
     {

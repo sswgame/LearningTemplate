@@ -186,7 +186,10 @@ namespace sw
  */
     #define SW_DEBUG_HUD_SECTION( varName, pName, pTitle, order, flags, pFunc )                                                                  \
         static const ::sw::DebugHUDSectionRegistration sw_debugHUDSection_##varName{ pName, pTitle, pFunc, order, static_cast<uint8>( flags ) }; \
-        static const ::sw::DebugHUDSectionRegistrar    sw_debugHUDSectionRegistrar_##varName { &sw_debugHUDSection_##varName }
+        static const ::sw::DebugHUDSectionRegistrar    sw_debugHUDSectionRegistrar_##varName                                                     \
+        {                                                                                                                                        \
+            &sw_debugHUDSection_##varName                                                                                                        \
+        }
 
 #else
 

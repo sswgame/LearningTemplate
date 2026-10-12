@@ -157,7 +157,10 @@ namespace sw
     {
     }
 
-    MailboxService::~MailboxService() { SW_ASSERT( _listPendingCall.empty() ); }
+    MailboxService::~MailboxService()
+    {
+        SW_ASSERT( _listPendingCall.empty() );
+    }
 
     bool MailboxService::initialize( IServiceStore* pStore, const MailboxServiceSettings& settings )
     {
@@ -224,7 +227,10 @@ namespace sw
         _metrics.setPendingStoreWorkCount( static_cast<int32>( _listPendingCall.size() ) );
     }
 
-    void MailboxService::requestSweep() { _bSweepRequested = SW_TRUE; }
+    void MailboxService::requestSweep()
+    {
+        _bSweepRequested = SW_TRUE;
+    }
 
     void MailboxService::onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )
     {
@@ -341,5 +347,8 @@ namespace sw
             pLatency->observe( static_cast<float64>( MonotonicClock::nowNanoseconds() - pending._receivedNanoseconds ) * 1e-9 );
     }
 
-    bool MailboxService::isIdle() const { return _listPendingCall.empty() && _bSweepPending == SW_FALSE && _bCampaignRefreshPending == SW_FALSE; }
+    bool MailboxService::isIdle() const
+    {
+        return _listPendingCall.empty() && _bSweepPending == SW_FALSE && _bCampaignRefreshPending == SW_FALSE;
+    }
 } // namespace sw

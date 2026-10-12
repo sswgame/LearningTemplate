@@ -112,7 +112,10 @@ namespace sw
         _bWasHeld = _bHeld;
     }
 
-    void InteractorComponent::cancelInteraction() { _session.cancel(); }
+    void InteractorComponent::cancelInteraction()
+    {
+        _session.cancel();
+    }
 
     void InteractorComponent::makeView( InteractionView& outViewer ) const
     {

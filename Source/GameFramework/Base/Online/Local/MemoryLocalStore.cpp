@@ -141,7 +141,10 @@ namespace sw
         return completionCount;
     }
 
-    void MemoryLocalStore::shutdown() { _bShutdown = SW_TRUE; }
+    void MemoryLocalStore::shutdown()
+    {
+        _bShutdown = SW_TRUE;
+    }
 
     uint64 MemoryLocalStore::executeRequest( LocalStoreRequest& request )
     {

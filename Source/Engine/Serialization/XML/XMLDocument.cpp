@@ -570,13 +570,17 @@ namespace sw
     }
 
     XMLDocument::XMLDocument()
-        : _impl{ make_unique<Impl>() } {}
+        : _impl{ make_unique<Impl>() }
+    {
+    }
 
     XMLDocument::~XMLDocument() = default;
 
     XMLDocument::XMLDocument( XMLDocument&& other ) noexcept
         : _impl{ std::move( other._impl ) }
-        , _lastError{ std::move( other._lastError ) } {}
+        , _lastError{ std::move( other._lastError ) }
+    {
+    }
 
     XMLDocument& XMLDocument::operator=( XMLDocument&& other ) noexcept
     {

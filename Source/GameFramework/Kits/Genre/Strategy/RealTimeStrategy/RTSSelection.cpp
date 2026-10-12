@@ -236,7 +236,10 @@ namespace sw
         return group >= 0 && group < kGroupCount ? _arrGroup[group] : kEmptyGroup;
     }
 
-    bool RTSSelection::isSelected( RTSUnitID unitID ) const { return std::find( _listSelected.begin(), _listSelected.end(), unitID ) != _listSelected.end(); }
+    bool RTSSelection::isSelected( RTSUnitID unitID ) const
+    {
+        return std::find( _listSelected.begin(), _listSelected.end(), unitID ) != _listSelected.end();
+    }
 
     bool RTSSelection::isCommandable( const RTSWorld& world ) const
     {

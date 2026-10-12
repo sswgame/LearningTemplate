@@ -62,7 +62,10 @@ namespace sw
         setTime( 0, _settings._startHour );
     }
 
-    void WorldClock::setTimeScale( float32 timeScale ) { _timeScale = MathUtil::max( 0.0f, timeScale ); }
+    void WorldClock::setTimeScale( float32 timeScale )
+    {
+        _timeScale = MathUtil::max( 0.0f, timeScale );
+    }
 
     void WorldClock::setTime( int32 day, float32 hour )
     {
@@ -70,7 +73,10 @@ namespace sw
         _secondOfDay = MathUtil::clamp( hour, 0.0f, 23.9999f ) / 24.0f * _settings._secondsPerDay;
     }
 
-    float32 WorldClock::getHour() const { return _secondOfDay / _settings._secondsPerDay * 24.0f; }
+    float32 WorldClock::getHour() const
+    {
+        return _secondOfDay / _settings._secondsPerDay * 24.0f;
+    }
 
     int32 WorldClock::getMinute() const
     {
@@ -78,14 +84,20 @@ namespace sw
         return static_cast<int32>( ( hour - static_cast<float32>( static_cast<int32>( hour ) ) ) * 60.0f );
     }
 
-    int32 WorldClock::getDayOfSeason() const { return _day % _settings._daysPerSeason + 1; }
+    int32 WorldClock::getDayOfSeason() const
+    {
+        return _day % _settings._daysPerSeason + 1;
+    }
 
     int32 WorldClock::getSeasonIndex() const
     {
         return ( _day / _settings._daysPerSeason ) % static_cast<int32>( _settings._listSeason.size() );
     }
 
-    hashed_string WorldClock::getSeasonName() const { return _settings._listSeason[static_cast<size_t>( getSeasonIndex() )]; }
+    hashed_string WorldClock::getSeasonName() const
+    {
+        return _settings._listSeason[static_cast<size_t>( getSeasonIndex() )];
+    }
 
     int32 WorldClock::getYear() const
     {
@@ -103,7 +115,10 @@ namespace sw
         return DayPhase::Dusk;
     }
 
-    DayPhase WorldClock::getDayPhase() const { return computePhase( getHour() ); }
+    DayPhase WorldClock::getDayPhase() const
+    {
+        return computePhase( getHour() );
+    }
 
     float32 WorldClock::computeDaylight() const
     {
@@ -112,7 +127,10 @@ namespace sw
                ( 1.0f - WorldClockInternal::smoothStep( _settings._duskHour, _settings._nightHour, hour ) );
     }
 
-    float32 WorldClock::computeSunAngle() const { return ( getHour() - 6.0f ) * 15.0f; }
+    float32 WorldClock::computeSunAngle() const
+    {
+        return ( getHour() - 6.0f ) * 15.0f;
+    }
 
     void WorldClock::update( float32 deltaTime )
     {

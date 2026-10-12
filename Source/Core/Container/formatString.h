@@ -270,7 +270,10 @@ namespace sw
 {
     /** @brief 값과 포맷 설정을 묶어 FormattedValue 를 만드는 도우미 함수입니다. */
     template <typename T>
-    constexpr FormattedValue<T> Fmt( T&& value, const Format& format ) noexcept { return FormattedValue<T>( std::forward<T>( value ), format ); }
+    constexpr FormattedValue<T> Fmt( T&& value, const Format& format ) noexcept
+    {
+        return FormattedValue<T>( std::forward<T>( value ), format );
+    }
 
     // ------------------------------------------------------------------------------
     // 3) FormatString. %# 를 인자로 바꿔 버퍼에 쓴다.
@@ -969,5 +972,8 @@ namespace sw
      * @param args 가변 인자
      */
     template <typename... Args>
-    void formatstring( utf8* pBuffer, uint32 capacity, string_view format, Args&&... args ) noexcept { FormatString::formatstring( pBuffer, capacity, format, std::forward<Args>( args )... ); }
+    void formatstring( utf8* pBuffer, uint32 capacity, string_view format, Args&&... args ) noexcept
+    {
+        FormatString::formatstring( pBuffer, capacity, format, std::forward<Args>( args )... );
+    }
 } // namespace sw

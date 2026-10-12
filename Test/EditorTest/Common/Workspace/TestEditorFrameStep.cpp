@@ -17,9 +17,15 @@ namespace
     using FrameStepRegistrar = EditorExtensionRegistrar<EditorFrameStepRegistration>;
 
     // 테스트 단계는 부르지 않는다(EditorTest 는 EditorContext 를 만들 수 없다). 단계가 무엇인지는 함수 주소로 가린다.
-    void runFirstStep( EditorContext& /*context*/ ) {}
-    void runSecondStep( EditorContext& /*context*/ ) {}
-    void runReloadedStep( EditorContext& /*context*/ ) {}
+    void runFirstStep( EditorContext& /*context*/ )
+    {
+    }
+    void runSecondStep( EditorContext& /*context*/ )
+    {
+    }
+    void runReloadedStep( EditorContext& /*context*/ )
+    {
+    }
 
     /** @brief 프레임 단계 목록의 id 를 셸이 부를 순서대로 쉼표로 이은 글입니다. EditorTest 에는 셸의 단계(`EditorFrameSteps.cpp`)가 링크되지 않는다. */
     string joinFrameStepIDs()

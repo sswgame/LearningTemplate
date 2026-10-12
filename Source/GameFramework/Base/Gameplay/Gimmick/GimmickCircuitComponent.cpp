@@ -507,7 +507,10 @@ namespace sw
         }
     }
 
-    void GimmickCircuitComponent::storeState() { _circuit.saveState( _stateBytes ); }
+    void GimmickCircuitComponent::storeState()
+    {
+        _circuit.saveState( _stateBytes );
+    }
 
     void GimmickCircuitComponent::stepOnce()
     {
@@ -541,7 +544,10 @@ namespace sw
             storeState();
     }
 
-    void GimmickCircuitComponent::captureCheckpoint() { _circuit.saveState( _checkpointBytes ); }
+    void GimmickCircuitComponent::captureCheckpoint()
+    {
+        _circuit.saveState( _checkpointBytes );
+    }
 
     void GimmickCircuitComponent::restoreCheckpoint()
     {

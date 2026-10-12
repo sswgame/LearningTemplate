@@ -46,7 +46,10 @@ namespace sw
     {
     }
 
-    OnlineServiceHost::~OnlineServiceHost() { shutdown(); }
+    OnlineServiceHost::~OnlineServiceHost()
+    {
+        shutdown();
+    }
 
     bool OnlineServiceHost::initialize( IStreamTransport* pTransport, const OnlineServiceHostSettings& settings, string& outError )
     {
@@ -248,7 +251,10 @@ namespace sw
         return sentCount;
     }
 
-    EphemeralStoreRouter* OnlineServiceHost::getEphemeralRouter() { return _settings._pEphemeralStore != nullptr ? &_ephemeralRouter : nullptr; }
+    EphemeralStoreRouter* OnlineServiceHost::getEphemeralRouter()
+    {
+        return _settings._pEphemeralStore != nullptr ? &_ephemeralRouter : nullptr;
+    }
 
     void OnlineServiceHost::subscribeServerBus( string_view topic, IOnlineHostService* pService )
     {
@@ -285,7 +291,10 @@ namespace sw
             _settings._pServerBus->unsubscribe( topic );
     }
 
-    uint16 OnlineServiceHost::getListenPort() const { return _pTransport != nullptr ? _pTransport->getListenPort() : 0; }
+    uint16 OnlineServiceHost::getListenPort() const
+    {
+        return _pTransport != nullptr ? _pTransport->getListenPort() : 0;
+    }
 
     void OnlineServiceHost::onEndpointOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted )
     {

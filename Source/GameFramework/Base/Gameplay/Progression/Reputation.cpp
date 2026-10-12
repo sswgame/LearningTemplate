@@ -140,7 +140,10 @@ namespace sw
     }
 
     // 바뀐 양은 쓰지 않는다. 범위 밖이면 경계에서 멈춘다
-    void ReputationState::setValue( const hashed_string& factionID, int32 value ) { (void)applyDelta( factionID, value - getValue( factionID ) ); }
+    void ReputationState::setValue( const hashed_string& factionID, int32 value )
+    {
+        (void)applyDelta( factionID, value - getValue( factionID ) ); // 바뀐 양은 쓰지 않는다. 범위 밖이면 경계에서 멈춘다
+    }
 
     void ReputationState::advanceDay()
     {

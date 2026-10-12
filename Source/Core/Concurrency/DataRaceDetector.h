@@ -182,14 +182,26 @@ namespace sw
 #if defined( SW_DEBUG )
     #define SW_RACE_CTX_MEMBER mutable ::sw::RaceDetectContext _raceContext{};
 
-    #define SW_SCOPED_RACE_READ() \
-        const ::sw::ScopedRaceRead SW_CONCAT( _swRaceRead_, __LINE__ ) { _raceContext }
-    #define SW_SCOPED_RACE_WRITE() \
-        const ::sw::ScopedRaceWrite SW_CONCAT( _swRaceWrite_, __LINE__ ) { _raceContext }
-    #define SW_SCOPED_RACE_READ_OTHER( otherObj ) \
-        const ::sw::ScopedRaceRead SW_CONCAT( _swRaceReadOther_, __LINE__ ) { ( otherObj )._raceContext }
-    #define SW_SCOPED_RACE_WRITE_OTHER( otherObj ) \
-        const ::sw::ScopedRaceWrite SW_CONCAT( _swRaceWriteOther_, __LINE__ ) { ( otherObj )._raceContext }
+    #define SW_SCOPED_RACE_READ()                                      \
+        const ::sw::ScopedRaceRead SW_CONCAT( _swRaceRead_, __LINE__ ) \
+        {                                                              \
+            _raceContext                                               \
+        }
+    #define SW_SCOPED_RACE_WRITE()                                       \
+        const ::sw::ScopedRaceWrite SW_CONCAT( _swRaceWrite_, __LINE__ ) \
+        {                                                                \
+            _raceContext                                                 \
+        }
+    #define SW_SCOPED_RACE_READ_OTHER( otherObj )                           \
+        const ::sw::ScopedRaceRead SW_CONCAT( _swRaceReadOther_, __LINE__ ) \
+        {                                                                   \
+            ( otherObj )._raceContext                                       \
+        }
+    #define SW_SCOPED_RACE_WRITE_OTHER( otherObj )                            \
+        const ::sw::ScopedRaceWrite SW_CONCAT( _swRaceWriteOther_, __LINE__ ) \
+        {                                                                     \
+            ( otherObj )._raceContext                                         \
+        }
 #else
     #define SW_RACE_CTX_MEMBER
     #define SW_SCOPED_RACE_READ()

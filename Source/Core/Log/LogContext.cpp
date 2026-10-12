@@ -72,7 +72,10 @@ namespace sw
         return length;
     }
 
-    const LogContext& LogContext::getCurrent() { return t_logContext; }
+    const LogContext& LogContext::getCurrent()
+    {
+        return t_logContext;
+    }
 
     ScopedLogContext::ScopedLogContext( const LogContext& context )
         : _previous{ t_logContext }
@@ -80,5 +83,8 @@ namespace sw
         t_logContext = context;
     }
 
-    ScopedLogContext::~ScopedLogContext() { t_logContext = _previous; }
+    ScopedLogContext::~ScopedLogContext()
+    {
+        t_logContext = _previous;
+    }
 } // namespace sw

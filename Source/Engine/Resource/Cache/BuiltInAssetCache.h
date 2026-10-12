@@ -77,11 +77,17 @@ namespace sw
 #define SW_BUILT_IN_ASSET_CACHE( Type )                                                                                 \
     static const ::sw::BuiltInAssetCacheRegistration sw_builtInAssetCache_##Type{ &::sw::createBuiltInAssetCache<Type>, \
                                                                                   nullptr };                            \
-    static const ::sw::BuiltInAssetCacheRegistrar    sw_builtInAssetCacheRegistrar_##Type { &sw_builtInAssetCache_##Type }
+    static const ::sw::BuiltInAssetCacheRegistrar    sw_builtInAssetCacheRegistrar_##Type                               \
+    {                                                                                                                   \
+        &sw_builtInAssetCache_##Type                                                                                    \
+    }
 
 /**
  * @brief 공유 캐시를 내장 캐시로 등록합니다. @p id 는 정적 이름을 만드는 식별자, @p pGetShared 는 `IAssetCache&` 를 돌려주는 함수입니다.
  */
 #define SW_BUILT_IN_SHARED_ASSET_CACHE( id, pGetShared )                                               \
     static const ::sw::BuiltInAssetCacheRegistration sw_builtInAssetCache_##id{ nullptr, pGetShared }; \
-    static const ::sw::BuiltInAssetCacheRegistrar    sw_builtInAssetCacheRegistrar_##id { &sw_builtInAssetCache_##id }
+    static const ::sw::BuiltInAssetCacheRegistrar    sw_builtInAssetCacheRegistrar_##id                \
+    {                                                                                                  \
+        &sw_builtInAssetCache_##id                                                                     \
+    }

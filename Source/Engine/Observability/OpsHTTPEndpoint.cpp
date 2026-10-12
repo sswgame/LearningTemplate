@@ -83,7 +83,10 @@ namespace sw
     {
     }
 
-    OpsHTTPEndpoint::~OpsHTTPEndpoint() { SW_ASSERT( _pTransport == nullptr ); }
+    OpsHTTPEndpoint::~OpsHTTPEndpoint()
+    {
+        SW_ASSERT( _pTransport == nullptr );
+    }
 
     bool OpsHTTPEndpoint::initialize( IStreamTransport* pTransport, const StreamTransportSettings& transportSettings, const OpsHTTPEndpointSettings& settings,
                                       const MetricRegistry* pMetricRegistry, const ServiceHealthRegistry* pHealthRegistry )
@@ -120,7 +123,10 @@ namespace sw
         _listConnection.clear();
     }
 
-    uint16 OpsHTTPEndpoint::getListenPort() const { return _pTransport != nullptr ? _pTransport->getListenPort() : 0; }
+    uint16 OpsHTTPEndpoint::getListenPort() const
+    {
+        return _pTransport != nullptr ? _pTransport->getListenPort() : 0;
+    }
 
     int32 OpsHTTPEndpoint::makeResponse( string_view requestHead, const MetricRegistry* pMetricRegistry, const ServiceHealthRegistry* pHealthRegistry, int64 monotonicMs,
                                          string& outResponse )

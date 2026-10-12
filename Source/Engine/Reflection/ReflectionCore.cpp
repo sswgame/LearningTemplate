@@ -228,7 +228,9 @@ namespace sw
         , _bitMask{ MathUtil::kMaxUInt8 }
         , _bIsContainer{ SW_FALSE }
         , _bIsBitField{ SW_FALSE }
-        , _reservedFlags{ 0 } {}
+        , _reservedFlags{ 0 }
+    {
+    }
 
     bool PropertyInfo::resolveBitField( size_t ownerSize, SetBitFunction pSetBit )
     {
@@ -398,7 +400,9 @@ namespace sw
         , _bHasValidator{ SW_FALSE }
         , _bValidatorCalculated{ SW_FALSE }
         , _reservedCacheFlags{ 0 }
-        , _reservedPadding{ 0, 0 } {}
+        , _reservedPadding{ 0, 0 }
+    {
+    }
 
     TypeInfo::TypeInfo( const TypeInfo& other )
         : TypeInfo()

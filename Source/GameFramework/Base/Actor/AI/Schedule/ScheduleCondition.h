@@ -134,5 +134,8 @@ namespace sw
     };
 
     /** @brief 하루의 때 → 조건 마스크 비트입니다. */
-    constexpr uint8 makeDayPhaseBit( DayPhase phase ) { return static_cast<uint8>( 1u << static_cast<uint32>( phase ) ); }
+    constexpr uint8 makeDayPhaseBit( DayPhase phase )
+    {
+        return static_cast<uint8>( 1u << static_cast<uint32>( phase ) );
+    }
 } // namespace sw

@@ -224,7 +224,10 @@ namespace sw
     }
 
     template <typename T, size_t N>
-    [[nodiscard]] bool operator!=( const array<T, N>& lhs, const array<T, N>& rhs ) { return ( lhs == rhs ) == false; }
+    [[nodiscard]] bool operator!=( const array<T, N>& lhs, const array<T, N>& rhs )
+    {
+        return ( lhs == rhs ) == false;
+    }
 
     template <typename T, size_t N>
     [[nodiscard]] bool operator<( const array<T, N>& lhs, const array<T, N>& rhs )
@@ -240,13 +243,22 @@ namespace sw
     }
 
     template <typename T, size_t N>
-    [[nodiscard]] bool operator<=( const array<T, N>& lhs, const array<T, N>& rhs ) { return !( rhs < lhs ); }
+    [[nodiscard]] bool operator<=( const array<T, N>& lhs, const array<T, N>& rhs )
+    {
+        return !( rhs < lhs );
+    }
 
     template <typename T, size_t N>
-    [[nodiscard]] bool operator>( const array<T, N>& lhs, const array<T, N>& rhs ) { return rhs < lhs; }
+    [[nodiscard]] bool operator>( const array<T, N>& lhs, const array<T, N>& rhs )
+    {
+        return rhs < lhs;
+    }
 
     template <typename T, size_t N>
-    [[nodiscard]] bool operator>=( const array<T, N>& lhs, const array<T, N>& rhs ) { return !( lhs < rhs ); }
+    [[nodiscard]] bool operator>=( const array<T, N>& lhs, const array<T, N>& rhs )
+    {
+        return !( lhs < rhs );
+    }
 
     template <size_t I, typename T, size_t N>
     [[nodiscard]] T& get( array<T, N>& a ) noexcept

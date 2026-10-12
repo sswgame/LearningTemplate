@@ -187,7 +187,13 @@ namespace sw
         return bValid;
     }
 
-    bool GameDataXML::parseNumber( string_view token, int32& outValue ) { return StringUtil::parseInt( token, outValue ); }
+    bool GameDataXML::parseNumber( string_view token, int32& outValue )
+    {
+        return StringUtil::parseInt( token, outValue );
+    }
 
-    bool GameDataXML::parseNumber( string_view token, float32& outValue ) { return StringUtil::parseFloat( token, outValue ); }
+    bool GameDataXML::parseNumber( string_view token, float32& outValue )
+    {
+        return StringUtil::parseFloat( token, outValue );
+    }
 } // namespace sw

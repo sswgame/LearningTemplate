@@ -506,9 +506,18 @@ namespace test
 namespace test
 {
     /** @brief 널에도 안전하게 비교용 글을 만듭니다. 받는 형태는 이 셋이다 — 나머지는 이 중 하나로 바뀌어 들어온다. */
-    inline ComparableText toComparableText( const utf8* pText ) { return pText != nullptr ? ComparableText{ pText, false } : ComparableText{ {}, true }; }
-    inline ComparableText toComparableText( const sw::string& text ) { return ComparableText{ text, false }; }
-    inline ComparableText toComparableText( sw::string_view text ) { return ComparableText{ text, false }; }
+    inline ComparableText toComparableText( const utf8* pText )
+    {
+        return pText != nullptr ? ComparableText{ pText, false } : ComparableText{ {}, true };
+    }
+    inline ComparableText toComparableText( const sw::string& text )
+    {
+        return ComparableText{ text, false };
+    }
+    inline ComparableText toComparableText( sw::string_view text )
+    {
+        return ComparableText{ text, false };
+    }
 
     /** @brief 두 글이 같은지 보고, 다르면 두 글을 찍어 실패를 기록합니다(`SW_EXPECT_STREQ`). */
     void expectSameText( const utf8* pCondition, const utf8* pFile, int32 line, const ComparableText& expected, const ComparableText& actual );

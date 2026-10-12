@@ -122,14 +122,23 @@ namespace sw
 /** @brief 단계 종류를 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). */
 #define SW_AUTOMATION_STEP( id, pKind, pRun, pValidate, bBeforeInput )                                                              \
     static const ::sw::AutomationStepRegistration sw_automationStep_##id{ pKind, pRun, pValidate, nullptr, nullptr, bBeforeInput }; \
-    static const ::sw::AutomationStepRegistrar    sw_automationStepRegistrar_##id { &sw_automationStep_##id }
+    static const ::sw::AutomationStepRegistrar    sw_automationStepRegistrar_##id                                                   \
+    {                                                                                                                               \
+        &sw_automationStep_##id                                                                                                     \
+    }
 
 /** @brief 준비 · 차례 함수까지 든 단계 종류를 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 엔진 단계(입력 · 조건 기다리기 · 스크린샷 확인)가 씁니다. */
 #define SW_AUTOMATION_STEP_WITH_HOOKS( id, pKind, pRun, pValidate, pPrepare, pHold, bBeforeInput )                                 \
     static const ::sw::AutomationStepRegistration sw_automationStep_##id{ pKind, pRun, pValidate, pPrepare, pHold, bBeforeInput }; \
-    static const ::sw::AutomationStepRegistrar    sw_automationStepRegistrar_##id { &sw_automationStep_##id }
+    static const ::sw::AutomationStepRegistrar    sw_automationStepRegistrar_##id                                                  \
+    {                                                                                                                              \
+        &sw_automationStep_##id                                                                                                    \
+    }
 
 /** @brief 시작 차단 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). */
 #define SW_AUTOMATION_START_BLOCKER( id, pName, pIsBlocking )                                                \
     static const ::sw::AutomationStartBlocker          sw_automationStartBlocker_##id{ pName, pIsBlocking }; \
-    static const ::sw::AutomationStartBlockerRegistrar sw_automationStartBlockerRegistrar_##id { &sw_automationStartBlocker_##id }
+    static const ::sw::AutomationStartBlockerRegistrar sw_automationStartBlockerRegistrar_##id               \
+    {                                                                                                        \
+        &sw_automationStartBlocker_##id                                                                      \
+    }

@@ -82,7 +82,10 @@ namespace sw
         return nullptr;
     }
 
-    const TurnRoom* TurnRelayServer::findRoom( uint32 roomID ) const { return const_cast<TurnRelayServer*>( this )->findRoomMutable( roomID ); }
+    const TurnRoom* TurnRelayServer::findRoom( uint32 roomID ) const
+    {
+        return const_cast<TurnRelayServer*>( this )->findRoomMutable( roomID );
+    }
 
     TurnRoom* TurnRelayServer::findRoomOfConnection( int32 connectionID )
     {
@@ -416,7 +419,10 @@ namespace sw
     {
     }
 
-    void TurnRelayClient::initialize( NetHost* pHost ) { _pHost = pHost; }
+    void TurnRelayClient::initialize( NetHost* pHost )
+    {
+        _pHost = pHost;
+    }
 
     void TurnRelayClient::join( uint32 roomID, int32 seat )
     {

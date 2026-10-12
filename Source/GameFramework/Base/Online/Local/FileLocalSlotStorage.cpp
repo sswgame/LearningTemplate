@@ -92,5 +92,8 @@ namespace sw
         return LocalStoreResult::Ok;
     }
 
-    string FileLocalSlotStorage::makeSlotPath( const string& slot ) const { return FileUtil::joinPath( _rootDirectory, slot + kSlotExtension ); }
+    string FileLocalSlotStorage::makeSlotPath( const string& slot ) const
+    {
+        return FileUtil::joinPath( _rootDirectory, slot + kSlotExtension );
+    }
 } // namespace sw

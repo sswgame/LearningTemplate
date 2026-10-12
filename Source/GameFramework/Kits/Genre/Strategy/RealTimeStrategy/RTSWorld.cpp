@@ -198,7 +198,10 @@ namespace sw
         return unit._bAlive && unit._id == unitID ? &unit : nullptr;
     }
 
-    RTSUnit* RTSWorld::findUnitMutable( RTSUnitID unitID ) { return const_cast<RTSUnit*>( findUnit( unitID ) ); }
+    RTSUnit* RTSWorld::findUnitMutable( RTSUnitID unitID )
+    {
+        return const_cast<RTSUnit*>( findUnit( unitID ) );
+    }
 
     const RTSPlayer* RTSWorld::findPlayer( int32 player ) const
     {
@@ -495,7 +498,10 @@ namespace sw
         return float3::getHorizontalDistance( unit._position, target._position ) - unit._pDef->_radius - target._pDef->_radius;
     }
 
-    bool RTSWorld::isWithinReach( const RTSUnit& unit, const RTSUnit& target, float32 reach ) const { return computeEdgeDistance( unit, target ) <= reach; }
+    bool RTSWorld::isWithinReach( const RTSUnit& unit, const RTSUnit& target, float32 reach ) const
+    {
+        return computeEdgeDistance( unit, target ) <= reach;
+    }
 
     RTSUnitID RTSWorld::findAutoTarget( const RTSUnit& unit, float32 radius ) const
     {

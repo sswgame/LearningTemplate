@@ -126,8 +126,14 @@ namespace sw
         shutdown();
     }
 
-    IRHIResourceFactory* VulkanRHIDevice::getResourceFactory() { return _resourceImpl.get(); }
-    IRHICommandContext*  VulkanRHIDevice::getFrameStreamContext() { return _frameStreamContext.get(); }
+    IRHIResourceFactory* VulkanRHIDevice::getResourceFactory()
+    {
+        return _resourceImpl.get();
+    }
+    IRHICommandContext* VulkanRHIDevice::getFrameStreamContext()
+    {
+        return _frameStreamContext.get();
+    }
 
     bool VulkanRHIDevice::initializeInternal( const RHISwapChainDesc& desc )
     {

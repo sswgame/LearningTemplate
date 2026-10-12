@@ -40,7 +40,10 @@ namespace
         void onLog( const LogEntry& entry ) { _listEntry.push_back( entry ); }
     };
 
-    void readOtherThread( bool* pOutEmpty ) { *pOutEmpty = LogContext::getCurrent().isEmpty(); }
+    void readOtherThread( bool* pOutEmpty )
+    {
+        *pOutEmpty = LogContext::getCurrent().isEmpty();
+    }
 
     string formatTagOf( const LogContext& context )
     {

@@ -404,13 +404,17 @@ namespace sw
     }
 
     JSONDocument::JSONDocument()
-        : _impl{ make_unique<Impl>() } {}
+        : _impl{ make_unique<Impl>() }
+    {
+    }
 
     JSONDocument::~JSONDocument() = default;
 
     JSONDocument::JSONDocument( JSONDocument&& other ) noexcept
         : _impl{ std::move( other._impl ) }
-        , _lastError{ std::move( other._lastError ) } {}
+        , _lastError{ std::move( other._lastError ) }
+    {
+    }
 
     JSONDocument& JSONDocument::operator=( JSONDocument&& other ) noexcept
     {

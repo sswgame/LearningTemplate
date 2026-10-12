@@ -127,7 +127,10 @@ namespace sw
         }
     }
 
-    bool ServiceHealthRegistry::isLiveLocked( int64 monotonicMs ) const { return _bTicked == SW_TRUE && monotonicMs - _lastTickMs <= _livenessTimeoutMs; }
+    bool ServiceHealthRegistry::isLiveLocked( int64 monotonicMs ) const
+    {
+        return _bTicked == SW_TRUE && monotonicMs - _lastTickMs <= _livenessTimeoutMs;
+    }
 
     bool ServiceHealthRegistry::isReadyLocked( int64 monotonicMs ) const
     {

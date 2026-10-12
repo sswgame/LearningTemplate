@@ -60,9 +60,18 @@ namespace
     /** @brief 가짜 에디터 API 가 불린 순서. */
     vector<const utf8*> s_listEditorCall;
 
-    void recordStopSimulation( EditorHandle ) { s_listEditorCall.push_back( "stopSimulation" ); }
-    void recordShutdown( EditorHandle ) { s_listEditorCall.push_back( "shutdown" ); }
-    void recordDestroy( EditorHandle ) { s_listEditorCall.push_back( "destroy" ); }
+    void recordStopSimulation( EditorHandle )
+    {
+        s_listEditorCall.push_back( "stopSimulation" );
+    }
+    void recordShutdown( EditorHandle )
+    {
+        s_listEditorCall.push_back( "shutdown" );
+    }
+    void recordDestroy( EditorHandle )
+    {
+        s_listEditorCall.push_back( "destroy" );
+    }
 
     /** @brief 멈춤 · 종료 · 파괴만 채운 가짜 에디터 API 표. */
     EditorAPI makeRecordingEditorAPI()
@@ -221,8 +230,14 @@ namespace
             *pInOutSize = 4;
         return s_bGameSerializeSucceeds;
     }
-    void recordGameShutdown( GameHandle ) { s_listGameCall.push_back( "shutdown" ); }
-    void recordGameDestroy( GameHandle ) { s_listGameCall.push_back( "destroy" ); }
+    void recordGameShutdown( GameHandle )
+    {
+        s_listGameCall.push_back( "shutdown" );
+    }
+    void recordGameDestroy( GameHandle )
+    {
+        s_listGameCall.push_back( "destroy" );
+    }
 
     /** @brief 상태 직렬화 · 종료 · 파괴만 채운 가짜 게임 API 표. */
     GameAPI makeRecordingGameAPI()

@@ -105,7 +105,10 @@ namespace sw
         return true;
     }
 
-    bool UUID::operator==( const UUID& other ) const { return Memory::compare( _arrBytes, other._arrBytes, sizeof( _arrBytes ) ) == 0; }
+    bool UUID::operator==( const UUID& other ) const
+    {
+        return Memory::compare( _arrBytes, other._arrBytes, sizeof( _arrBytes ) ) == 0;
+    }
 
     bool UUID::operator<( const UUID& other ) const
     {

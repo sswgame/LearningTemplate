@@ -220,7 +220,10 @@ namespace sw
     {
     }
 
-    ServiceScheduler::~ServiceScheduler() { shutdown(); }
+    ServiceScheduler::~ServiceScheduler()
+    {
+        shutdown();
+    }
 
     void ServiceScheduler::initialize( IServiceStore* pStore, uint64 serverID )
     {

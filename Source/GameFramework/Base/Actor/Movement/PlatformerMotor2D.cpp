@@ -93,9 +93,15 @@ namespace sw
         return _listTile[static_cast<size_t>( _topology.toIndex( x, y ) )];
     }
 
-    int32 PlatformTileMap::computeTileX( float32 worldX ) const { return static_cast<int32>( MathUtil::floor( ( worldX - _origin._x ) / _tileSize ) ); }
+    int32 PlatformTileMap::computeTileX( float32 worldX ) const
+    {
+        return static_cast<int32>( MathUtil::floor( ( worldX - _origin._x ) / _tileSize ) );
+    }
 
-    int32 PlatformTileMap::computeTileY( float32 worldY ) const { return static_cast<int32>( MathUtil::floor( ( worldY - _origin._y ) / _tileSize ) ); }
+    int32 PlatformTileMap::computeTileY( float32 worldY ) const
+    {
+        return static_cast<int32>( MathUtil::floor( ( worldY - _origin._y ) / _tileSize ) );
+    }
 
     // ------------------------------------------------------------------------------
     // PlatformerMotor2D
@@ -148,7 +154,10 @@ namespace sw
         return 2.0f * _settings._jumpHeight / ( apex * apex );
     }
 
-    float32 PlatformerMotor2D::getJumpSpeed() const { return getGravity() * MathUtil::max( 1.0e-3f, _settings._timeToApex ); }
+    float32 PlatformerMotor2D::getJumpSpeed() const
+    {
+        return getGravity() * MathUtil::max( 1.0e-3f, _settings._timeToApex );
+    }
 
     bool PlatformerMotor2D::isBlocked( const PlatformTileMap& map, const float2& center, bool bFromAbove, float32 previousBottom ) const
     {

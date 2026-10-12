@@ -12,7 +12,10 @@ namespace sw
     {
     }
 
-    UDPNetTransport::~UDPNetTransport() { close(); }
+    UDPNetTransport::~UDPNetTransport()
+    {
+        close();
+    }
 
     bool UDPNetTransport::open( uint16 port, bool bLoopbackOnly )
     {
@@ -30,7 +33,10 @@ namespace sw
         _socketHandle = PlatformSocketUtil::kInvalidSocket;
     }
 
-    bool UDPNetTransport::isOpen() const { return _socketHandle != PlatformSocketUtil::kInvalidSocket; }
+    bool UDPNetTransport::isOpen() const
+    {
+        return _socketHandle != PlatformSocketUtil::kInvalidSocket;
+    }
 
     bool UDPNetTransport::send( const NetAddress& to, const uint8* pData, int32 size )
     {

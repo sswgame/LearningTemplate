@@ -498,7 +498,10 @@ namespace sw
 
     LoopbackStreamNetwork::~LoopbackStreamNetwork() = default;
 
-    unique_ptr<IStreamTransport> LoopbackStreamNetwork::createTransport() { return make_unique<LoopbackStreamTransport>( _state.get() ); }
+    unique_ptr<IStreamTransport> LoopbackStreamNetwork::createTransport()
+    {
+        return make_unique<LoopbackStreamTransport>( _state.get() );
+    }
 
     void LoopbackStreamNetwork::setConditions( const LoopbackStreamConditions& conditions )
     {

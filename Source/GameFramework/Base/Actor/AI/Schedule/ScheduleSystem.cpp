@@ -187,7 +187,10 @@ namespace sw
     {
     }
 
-    ScheduleSystem::~ScheduleSystem() { shutdown(); }
+    ScheduleSystem::~ScheduleSystem()
+    {
+        shutdown();
+    }
 
     void ScheduleSystem::initialize( const ScheduleCatalog* pCatalog, const ScheduleSystemSettings& settings, int32 absoluteMinute )
     {
@@ -578,7 +581,10 @@ namespace sw
         return false;
     }
 
-    int32 ScheduleSystem::getDay() const { return ScheduleSystemInternal::toDay( _minute ); }
+    int32 ScheduleSystem::getDay() const
+    {
+        return ScheduleSystemInternal::toDay( _minute );
+    }
 
     void ScheduleSystem::drainEvents( vector<ScheduleEvent>& outListEvent )
     {

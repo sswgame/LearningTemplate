@@ -36,12 +36,16 @@ namespace sw
         , _bSrgb{ SW_TRUE }
         , _bHidden{ SW_FALSE }
         , _bAdvanced{ SW_FALSE }
-        , _reserved{ 0 } {}
+        , _reserved{ 0 }
+    {
+    }
 
     MaterialStaticSwitch::MaterialStaticSwitch() noexcept
         : _bEnabled{ SW_FALSE }
         , _bShaderFeature{ SW_TRUE }
-        , _reserved{ 0 } {}
+        , _reserved{ 0 }
+    {
+    }
 
     shared_ptr<Material> Material::create()
     {

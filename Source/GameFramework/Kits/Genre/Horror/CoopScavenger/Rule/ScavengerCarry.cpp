@@ -68,7 +68,10 @@ namespace sw
         return total;
     }
 
-    float32 ScavengerCarry::computeSpeedScale() const { return MathUtil::max( _settings._minSpeedScale, 1.0f - computeWeight() * _settings._speedPerWeight ); }
+    float32 ScavengerCarry::computeSpeedScale() const
+    {
+        return MathUtil::max( _settings._minSpeedScale, 1.0f - computeWeight() * _settings._speedPerWeight );
+    }
 
     int32 ScavengerCarry::computeValue() const
     {

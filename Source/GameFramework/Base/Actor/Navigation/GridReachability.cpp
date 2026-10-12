@@ -12,7 +12,10 @@ namespace sw
                _listStoppable[static_cast<size_t>( computeIndex( cell ) )] != SW_FALSE;
     }
 
-    int32 GridReachability::getCost( const int2& cell ) const { return isInside( cell ) ? _listCost[static_cast<size_t>( computeIndex( cell ) )] : kUnreached; }
+    int32 GridReachability::getCost( const int2& cell ) const
+    {
+        return isInside( cell ) ? _listCost[static_cast<size_t>( computeIndex( cell ) )] : kUnreached;
+    }
 
     void GridReachability::collectReachable( vector<int2>& outListCell ) const
     {

@@ -17,7 +17,10 @@ namespace sw
     {
     }
 
-    void TradeClient::initialize( OnlineServiceClient* pClient ) { _pClient = pClient; }
+    void TradeClient::initialize( OnlineServiceClient* pClient )
+    {
+        _pClient = pClient;
+    }
 
     uint64 TradeClient::invite( string_view peerDisplayName, const NetIdempotencyKey& key )
     {

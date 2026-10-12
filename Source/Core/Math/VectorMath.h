@@ -148,11 +148,20 @@ namespace sw
 namespace sw
 {
     /** @brief 성분별로 더합니다. */
-    inline float2 operator+( const float2& lhs, const float2& rhs ) noexcept { return float2{ lhs._x + rhs._x, lhs._y + rhs._y }; }
+    inline float2 operator+( const float2& lhs, const float2& rhs ) noexcept
+    {
+        return float2{ lhs._x + rhs._x, lhs._y + rhs._y };
+    }
     /** @brief 성분별로 뺍니다. */
-    inline float2 operator-( const float2& lhs, const float2& rhs ) noexcept { return float2{ lhs._x - rhs._x, lhs._y - rhs._y }; }
+    inline float2 operator-( const float2& lhs, const float2& rhs ) noexcept
+    {
+        return float2{ lhs._x - rhs._x, lhs._y - rhs._y };
+    }
     /** @brief 스칼라를 곱합니다. */
-    inline float2 operator*( const float2& v, float32 scale ) noexcept { return float2{ v._x * scale, v._y * scale }; }
+    inline float2 operator*( const float2& v, float32 scale ) noexcept
+    {
+        return float2{ v._x * scale, v._y * scale };
+    }
     /** @brief 스칼라로 나눕니다(역수를 한 번 구해 곱합니다). */
     inline float2 operator/( const float2& v, float32 scale ) noexcept
     {
@@ -161,7 +170,10 @@ namespace sw
     }
 
     /** @brief 스칼라를 곱합니다(scale * v). */
-    inline float2 operator*( float32 scale, const float2& v ) noexcept { return v * scale; }
+    inline float2 operator*( float32 scale, const float2& v ) noexcept
+    {
+        return v * scale;
+    }
 
     // ------------------------------------------------------------------------------
     // 1-a) int2 — 2D 정수 좌표. 타일 · 픽셀 · 정수 경계
@@ -244,13 +256,25 @@ namespace sw
 namespace sw
 {
     /** @brief 성분별로 더합니다. */
-    constexpr int2 operator+( const int2& lhs, const int2& rhs ) noexcept { return int2{ lhs._x + rhs._x, lhs._y + rhs._y }; }
+    constexpr int2 operator+( const int2& lhs, const int2& rhs ) noexcept
+    {
+        return int2{ lhs._x + rhs._x, lhs._y + rhs._y };
+    }
     /** @brief 성분별로 뺍니다. */
-    constexpr int2 operator-( const int2& lhs, const int2& rhs ) noexcept { return int2{ lhs._x - rhs._x, lhs._y - rhs._y }; }
+    constexpr int2 operator-( const int2& lhs, const int2& rhs ) noexcept
+    {
+        return int2{ lhs._x - rhs._x, lhs._y - rhs._y };
+    }
     /** @brief 정수를 곱합니다. */
-    constexpr int2 operator*( const int2& v, int32 scale ) noexcept { return int2{ v._x * scale, v._y * scale }; }
+    constexpr int2 operator*( const int2& v, int32 scale ) noexcept
+    {
+        return int2{ v._x * scale, v._y * scale };
+    }
     /** @brief 정수를 곱합니다(scale * v). */
-    constexpr int2 operator*( int32 scale, const int2& v ) noexcept { return v * scale; }
+    constexpr int2 operator*( int32 scale, const int2& v ) noexcept
+    {
+        return v * scale;
+    }
 
     // ------------------------------------------------------------------------------
     // 2) float3 — 3D. 내적 · 외적 · 거리 · 스플라인
@@ -437,11 +461,20 @@ namespace sw
     static_assert( sizeof( float3 ) == 3 * sizeof( float32 ), "float3 must be 3 contiguous floats" );
 
     /** @brief 성분별로 더합니다. */
-    inline float3 operator+( const float3& lhs, const float3& rhs ) noexcept { return float3{ lhs._x + rhs._x, lhs._y + rhs._y, lhs._z + rhs._z }; }
+    inline float3 operator+( const float3& lhs, const float3& rhs ) noexcept
+    {
+        return float3{ lhs._x + rhs._x, lhs._y + rhs._y, lhs._z + rhs._z };
+    }
     /** @brief 성분별로 뺍니다. */
-    inline float3 operator-( const float3& lhs, const float3& rhs ) noexcept { return float3{ lhs._x - rhs._x, lhs._y - rhs._y, lhs._z - rhs._z }; }
+    inline float3 operator-( const float3& lhs, const float3& rhs ) noexcept
+    {
+        return float3{ lhs._x - rhs._x, lhs._y - rhs._y, lhs._z - rhs._z };
+    }
     /** @brief 스칼라를 곱합니다. */
-    inline float3 operator*( const float3& v, float32 scale ) noexcept { return float3{ v._x * scale, v._y * scale, v._z * scale }; }
+    inline float3 operator*( const float3& v, float32 scale ) noexcept
+    {
+        return float3{ v._x * scale, v._y * scale, v._z * scale };
+    }
     /** @brief 스칼라로 나눕니다. */
     inline float3 operator/( const float3& v, float32 scale ) noexcept
     {
@@ -450,7 +483,10 @@ namespace sw
     }
 
     /** @brief 스칼라를 곱합니다(scale * v). */
-    inline float3 operator*( float32 scale, const float3& v ) noexcept { return v * scale; }
+    inline float3 operator*( float32 scale, const float3& v ) noexcept
+    {
+        return v * scale;
+    }
 
     // ------------------------------------------------------------------------------
     // 3) float4 — 동차 좌표 · RGBA. HLSL float4 와 같은 배치
@@ -593,11 +629,20 @@ namespace sw
 namespace sw
 {
     /** @brief 성분별로 더합니다. */
-    inline float4 operator+( const float4& lhs, const float4& rhs ) noexcept { return float4{ lhs._x + rhs._x, lhs._y + rhs._y, lhs._z + rhs._z, lhs._w + rhs._w }; }
+    inline float4 operator+( const float4& lhs, const float4& rhs ) noexcept
+    {
+        return float4{ lhs._x + rhs._x, lhs._y + rhs._y, lhs._z + rhs._z, lhs._w + rhs._w };
+    }
     /** @brief 성분별로 뺍니다. */
-    inline float4 operator-( const float4& lhs, const float4& rhs ) noexcept { return float4{ lhs._x - rhs._x, lhs._y - rhs._y, lhs._z - rhs._z, lhs._w - rhs._w }; }
+    inline float4 operator-( const float4& lhs, const float4& rhs ) noexcept
+    {
+        return float4{ lhs._x - rhs._x, lhs._y - rhs._y, lhs._z - rhs._z, lhs._w - rhs._w };
+    }
     /** @brief 스칼라를 곱합니다. */
-    inline float4 operator*( const float4& v, float32 scale ) noexcept { return float4{ v._x * scale, v._y * scale, v._z * scale, v._w * scale }; }
+    inline float4 operator*( const float4& v, float32 scale ) noexcept
+    {
+        return float4{ v._x * scale, v._y * scale, v._z * scale, v._w * scale };
+    }
     /** @brief 스칼라로 나눕니다. */
     inline float4 operator/( const float4& v, float32 scale ) noexcept
     {
@@ -606,7 +651,10 @@ namespace sw
     }
 
     /** @brief 스칼라를 곱합니다(scale * v). */
-    inline float4 operator*( float32 scale, const float4& v ) noexcept { return v * scale; }
+    inline float4 operator*( float32 scale, const float4& v ) noexcept
+    {
+        return v * scale;
+    }
 
     // ------------------------------------------------------------------------------
     // 4) double3 — 배정밀도 3D
@@ -709,11 +757,20 @@ namespace sw
     };
 
     /** @brief 성분별로 더합니다. */
-    inline double3 operator+( const double3& lhs, const double3& rhs ) noexcept { return double3{ lhs._x + rhs._x, lhs._y + rhs._y, lhs._z + rhs._z }; }
+    inline double3 operator+( const double3& lhs, const double3& rhs ) noexcept
+    {
+        return double3{ lhs._x + rhs._x, lhs._y + rhs._y, lhs._z + rhs._z };
+    }
     /** @brief 성분별로 뺍니다. */
-    inline double3 operator-( const double3& lhs, const double3& rhs ) noexcept { return double3{ lhs._x - rhs._x, lhs._y - rhs._y, lhs._z - rhs._z }; }
+    inline double3 operator-( const double3& lhs, const double3& rhs ) noexcept
+    {
+        return double3{ lhs._x - rhs._x, lhs._y - rhs._y, lhs._z - rhs._z };
+    }
     /** @brief 스칼라를 곱합니다. */
-    inline double3 operator*( const double3& v, float64 scale ) noexcept { return double3{ v._x * scale, v._y * scale, v._z * scale }; }
+    inline double3 operator*( const double3& v, float64 scale ) noexcept
+    {
+        return double3{ v._x * scale, v._y * scale, v._z * scale };
+    }
     /** @brief 스칼라로 나눕니다. */
     inline double3 operator/( const double3& v, float64 scale ) noexcept
     {
@@ -722,5 +779,8 @@ namespace sw
     }
 
     /** @brief 스칼라를 곱합니다(scale * v). */
-    inline double3 operator*( float64 scale, const double3& v ) noexcept { return v * scale; }
+    inline double3 operator*( float64 scale, const double3& v ) noexcept
+    {
+        return v * scale;
+    }
 } // namespace sw

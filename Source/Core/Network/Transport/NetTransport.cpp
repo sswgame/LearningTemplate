@@ -119,7 +119,10 @@ namespace sw
         return true;
     }
 
-    bool LoopbackTransport::receive( NetAddress& outFrom, vector<uint8>& outBuffer ) { return _pNetwork->takeDatagram( this, outFrom, outBuffer ); }
+    bool LoopbackTransport::receive( NetAddress& outFrom, vector<uint8>& outBuffer )
+    {
+        return _pNetwork->takeDatagram( this, outFrom, outBuffer );
+    }
 
     bool LoopbackTransport::waitForReceive( float64 timeoutSeconds )
     {
@@ -150,5 +153,8 @@ namespace sw
         _pNetwork->deliverInFlight();
     }
 
-    void LoopbackTransport::deliver( const NetAddress& from, vector<uint8>&& buffer ) { _listInbox.push_back( Datagram{ std::move( buffer ), from } ); }
+    void LoopbackTransport::deliver( const NetAddress& from, vector<uint8>&& buffer )
+    {
+        _listInbox.push_back( Datagram{ std::move( buffer ), from } );
+    }
 } // namespace sw

@@ -108,7 +108,10 @@ namespace sw
         }
     }
 
-    bool BrZone::isInside( const float2& position ) const { return BrZoneInternal::computeDistance( position, _center ) <= _radius; }
+    bool BrZone::isInside( const float2& position ) const
+    {
+        return BrZoneInternal::computeDistance( position, _center ) <= _radius;
+    }
 
     float32 BrZone::computeDistanceOutside( const float2& position ) const
     {

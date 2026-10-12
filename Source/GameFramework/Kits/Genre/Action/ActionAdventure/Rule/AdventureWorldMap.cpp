@@ -117,7 +117,10 @@ namespace sw
         return AdventureExchangeResult::Ok;
     }
 
-    bool AdventureWorldMap::canWarpTo( const hashed_string& landmarkID ) const { return isActivated( landmarkID ); }
+    bool AdventureWorldMap::canWarpTo( const hashed_string& landmarkID ) const
+    {
+        return isActivated( landmarkID );
+    }
 
     bool AdventureWorldMap::isActivated( const hashed_string& landmarkID ) const
     {

@@ -241,7 +241,10 @@ namespace sw
             flushQueuedCalls();
     }
 
-    bool OnlineServiceClient::isGated( uint16 method ) const { return _bGateClosed == SW_TRUE && OnlineMethodRange::getRangeBase( method ) != _gateOwnerRange; }
+    bool OnlineServiceClient::isGated( uint16 method ) const
+    {
+        return _bGateClosed == SW_TRUE && OnlineMethodRange::getRangeBase( method ) != _gateOwnerRange;
+    }
 
     void OnlineServiceClient::handleFrame( StreamFrameKind kind, const uint8* pBody, int32 bodySize )
     {

@@ -45,7 +45,10 @@ namespace sw
 
 namespace sw
 {
-    string_view RespValue::getText() const { return string_view{ reinterpret_cast<const utf8*>( _bytes.data() ), _bytes.size() }; }
+    string_view RespValue::getText() const
+    {
+        return string_view{ reinterpret_cast<const utf8*>( _bytes.data() ), _bytes.size() };
+    }
 
     bool RespValue::isText( string_view text ) const
     {
@@ -92,7 +95,10 @@ namespace sw
         addText( name );
     }
 
-    RespCommand& RespCommand::addText( string_view text ) { return addBytes( reinterpret_cast<const uint8*>( text.data() ), text.size() ); }
+    RespCommand& RespCommand::addText( string_view text )
+    {
+        return addBytes( reinterpret_cast<const uint8*>( text.data() ), text.size() );
+    }
 
     RespCommand& RespCommand::addBytes( const uint8* pData, size_t size )
     {

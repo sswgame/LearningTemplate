@@ -52,7 +52,10 @@ namespace sw
             _zone.initialize( pCatalog->getZoneSettings(), pCatalog->getMapSize(), GameHash::mix32( seed ^ 0x5a4f4e45u ), pTerrain );
     }
 
-    int32 BrMatch::addTeam( const hashed_string& name ) { return _matchState.addTeam( name ); }
+    int32 BrMatch::addTeam( const hashed_string& name )
+    {
+        return _matchState.addTeam( name );
+    }
 
     int32 BrMatch::addPlayer( int32 team )
     {
@@ -183,9 +186,15 @@ namespace sw
         _eventBuffer.drainTo( outListEvent );
     }
 
-    const BrPlayer* BrMatch::findPlayer( int32 player ) const { return isValidPlayer( player ) ? &_listPlayer[static_cast<size_t>( player )] : nullptr; }
+    const BrPlayer* BrMatch::findPlayer( int32 player ) const
+    {
+        return isValidPlayer( player ) ? &_listPlayer[static_cast<size_t>( player )] : nullptr;
+    }
 
-    BrPlayer* BrMatch::findPlayerMutable( int32 player ) { return isValidPlayer( player ) ? &_listPlayer[static_cast<size_t>( player )] : nullptr; }
+    BrPlayer* BrMatch::findPlayerMutable( int32 player )
+    {
+        return isValidPlayer( player ) ? &_listPlayer[static_cast<size_t>( player )] : nullptr;
+    }
 
     int32 BrMatch::countRemainingPlayers() const
     {

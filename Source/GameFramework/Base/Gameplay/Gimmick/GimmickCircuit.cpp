@@ -390,7 +390,10 @@ namespace sw
         return stepCount;
     }
 
-    int32 GimmickCircuit::consumeTime( float32 deltaTime ) { return isBuilt() ? _timer.consume( deltaTime ) : 0; }
+    int32 GimmickCircuit::consumeTime( float32 deltaTime )
+    {
+        return isBuilt() ? _timer.consume( deltaTime ) : 0;
+    }
 
     void GimmickCircuit::resetToInitial()
     {
@@ -426,7 +429,10 @@ namespace sw
         return -1;
     }
 
-    float32 GimmickCircuit::getActuatorValue( int32 node ) const { return getFloatState( node, 0 ); }
+    float32 GimmickCircuit::getActuatorValue( int32 node ) const
+    {
+        return getFloatState( node, 0 );
+    }
 
     float32 GimmickCircuit::getFloatState( int32 node, int32 slot ) const
     {

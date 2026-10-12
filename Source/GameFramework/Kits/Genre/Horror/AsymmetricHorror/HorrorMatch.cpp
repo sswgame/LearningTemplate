@@ -135,7 +135,10 @@ namespace sw
         return index;
     }
 
-    void HorrorMatch::setKillerPosition( const float3& position ) { _killer._position = float3{ position._x, 0.0f, position._z }; }
+    void HorrorMatch::setKillerPosition( const float3& position )
+    {
+        _killer._position = float3{ position._x, 0.0f, position._z };
+    }
 
     int32 HorrorMatch::addGenerator( const float3& position )
     {

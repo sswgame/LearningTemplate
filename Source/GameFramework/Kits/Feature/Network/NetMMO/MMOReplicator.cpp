@@ -177,7 +177,10 @@ namespace sw
                  : 0;
     }
 
-    void MMOReplicator::setTaskManager( TaskManager* pTaskManager, uint32 serialThreshold ) { _parallel.setTaskManager( pTaskManager, serialThreshold ); }
+    void MMOReplicator::setTaskManager( TaskManager* pTaskManager, uint32 serialThreshold )
+    {
+        _parallel.setTaskManager( pTaskManager, serialThreshold );
+    }
 
     void MMOReplicator::update( float32 deltaTime )
     {

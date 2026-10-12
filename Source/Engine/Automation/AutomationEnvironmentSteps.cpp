@@ -146,7 +146,9 @@ namespace sw
         };
     } // namespace
 
-    void AutomationEnvironmentSteps::ensureLinked() {}
+    void AutomationEnvironmentSteps::ensureLinked()
+    {
+    }
 
     SW_AUTOMATION_STEP( devCommand, AutomationEnvironmentSteps::kDevCommandKind, &AutomationEnvironmentStepsInternal::runDevCommand, &AutomationEnvironmentStepsInternal::validateDevCommand,
                         false );

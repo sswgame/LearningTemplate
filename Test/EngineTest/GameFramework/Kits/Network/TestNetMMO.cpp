@@ -169,7 +169,10 @@ namespace
         MMOTable _table;
     };
 
-    const MMOServerSession& getMMOServer( const NetSimHarness& harness ) { return *static_cast<const MMOServerSession*>( harness.getServer().getSession() ); }
+    const MMOServerSession& getMMOServer( const NetSimHarness& harness )
+    {
+        return *static_cast<const MMOServerSession*>( harness.getServer().getSession() );
+    }
 
     const MMOClientSession& getMMOClient( const NetSimHarness& harness, int32 worldIndex )
     {

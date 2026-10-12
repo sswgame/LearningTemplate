@@ -81,11 +81,23 @@ namespace sw
 
 namespace sw
 {
-    string Base64Util::encode( const uint8* pData, size_t size ) { return Base64UtilInternal::encode( pData, size, Base64UtilInternal::kStandardAlphabet, true ); }
+    string Base64Util::encode( const uint8* pData, size_t size )
+    {
+        return Base64UtilInternal::encode( pData, size, Base64UtilInternal::kStandardAlphabet, true );
+    }
 
-    string Base64Util::encodeURL( const uint8* pData, size_t size ) { return Base64UtilInternal::encode( pData, size, Base64UtilInternal::kURLAlphabet, false ); }
+    string Base64Util::encodeURL( const uint8* pData, size_t size )
+    {
+        return Base64UtilInternal::encode( pData, size, Base64UtilInternal::kURLAlphabet, false );
+    }
 
-    bool Base64Util::decode( string_view text, vector<uint8>& outBytes ) { return Base64UtilInternal::decode( text, Base64UtilInternal::kStandardAlphabet, outBytes ); }
+    bool Base64Util::decode( string_view text, vector<uint8>& outBytes )
+    {
+        return Base64UtilInternal::decode( text, Base64UtilInternal::kStandardAlphabet, outBytes );
+    }
 
-    bool Base64Util::decodeURL( string_view text, vector<uint8>& outBytes ) { return Base64UtilInternal::decode( text, Base64UtilInternal::kURLAlphabet, outBytes ); }
+    bool Base64Util::decodeURL( string_view text, vector<uint8>& outBytes )
+    {
+        return Base64UtilInternal::decode( text, Base64UtilInternal::kURLAlphabet, outBytes );
+    }
 } // namespace sw

@@ -95,7 +95,10 @@ namespace sw
     {
     }
 
-    LocalServerBus::~LocalServerBus() { _pHub->unregisterInbox( _inboxID ); }
+    LocalServerBus::~LocalServerBus()
+    {
+        _pHub->unregisterInbox( _inboxID );
+    }
 
     void LocalServerBus::publish( string_view topic, const uint8* pData, int32 size )
     {
@@ -123,7 +126,13 @@ namespace sw
         _pHub->subscribe( _inboxID, topic );
     }
 
-    void LocalServerBus::unsubscribe( string_view topic ) { _pHub->unsubscribe( _inboxID, topic ); }
+    void LocalServerBus::unsubscribe( string_view topic )
+    {
+        _pHub->unsubscribe( _inboxID, topic );
+    }
 
-    int32 LocalServerBus::pollMessages( vector<ServerBusMessage>& outListMessage ) { return _pHub->takeMessages( _inboxID, outListMessage ); }
+    int32 LocalServerBus::pollMessages( vector<ServerBusMessage>& outListMessage )
+    {
+        return _pHub->takeMessages( _inboxID, outListMessage );
+    }
 } // namespace sw

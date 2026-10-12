@@ -336,7 +336,10 @@ namespace sw
     {
     }
 
-    PartyLobbyService::~PartyLobbyService() { shutdown(); }
+    PartyLobbyService::~PartyLobbyService()
+    {
+        shutdown();
+    }
 
     void PartyLobbyService::initialize( EphemeralStoreRouter* pRouter, uint64 serverID, int32 maxPartySize )
     {
@@ -361,18 +364,30 @@ namespace sw
         _pRouter = nullptr;
     }
 
-    string PartyLobbyService::makePartyKey( uint64 partyID ) { return "mm/party/" + ServiceKeyUtil::makeHex64( partyID ); }
+    string PartyLobbyService::makePartyKey( uint64 partyID )
+    {
+        return "mm/party/" + ServiceKeyUtil::makeHex64( partyID );
+    }
 
-    string PartyLobbyService::makeAccountPartyKey( AccountID accountID ) { return "mm/acct/" + ServiceKeyUtil::makeHex64( accountID ); }
+    string PartyLobbyService::makeAccountPartyKey( AccountID accountID )
+    {
+        return "mm/acct/" + ServiceKeyUtil::makeHex64( accountID );
+    }
 
     string PartyLobbyService::makeInviteKey( AccountID accountID, uint64 partyID )
     {
         return "mm/pinv/" + ServiceKeyUtil::makeHex64( accountID ) + "/" + ServiceKeyUtil::makeHex64( partyID );
     }
 
-    string PartyLobbyService::makeLobbyKey( uint64 lobbyID ) { return "mm/lobby/" + ServiceKeyUtil::makeHex64( lobbyID ); }
+    string PartyLobbyService::makeLobbyKey( uint64 lobbyID )
+    {
+        return "mm/lobby/" + ServiceKeyUtil::makeHex64( lobbyID );
+    }
 
-    string PartyLobbyService::makeLobbyListKey( string_view modeID ) { return "mm/lobbies/" + string( modeID ); }
+    string PartyLobbyService::makeLobbyListKey( string_view modeID )
+    {
+        return "mm/lobbies/" + string( modeID );
+    }
 
     void PartyLobbyService::submitStep( const EphemeralRequest& cacheRequest, StepKind kind, const Request& request, uint64 listID, int32 slot )
     {

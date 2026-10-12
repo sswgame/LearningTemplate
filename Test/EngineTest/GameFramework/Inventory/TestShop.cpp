@@ -63,14 +63,38 @@ namespace
         }
     };
 
-    hashed_string idGeneral() { return hashed_string( "general" ); }
-    hashed_string idCompany() { return hashed_string( "company" ); }
-    hashed_string idPotion() { return hashed_string( "potion" ); }
-    hashed_string idEther() { return hashed_string( "ether" ); }
-    hashed_string idSword() { return hashed_string( "sword" ); }
-    hashed_string idScrap() { return hashed_string( "scrap" ); }
-    hashed_string idGold() { return hashed_string( "Gold" ); }
-    hashed_string idCredits() { return hashed_string( "Credits" ); }
+    hashed_string idGeneral()
+    {
+        return hashed_string( "general" );
+    }
+    hashed_string idCompany()
+    {
+        return hashed_string( "company" );
+    }
+    hashed_string idPotion()
+    {
+        return hashed_string( "potion" );
+    }
+    hashed_string idEther()
+    {
+        return hashed_string( "ether" );
+    }
+    hashed_string idSword()
+    {
+        return hashed_string( "sword" );
+    }
+    hashed_string idScrap()
+    {
+        return hashed_string( "scrap" );
+    }
+    hashed_string idGold()
+    {
+        return hashed_string( "Gold" );
+    }
+    hashed_string idCredits()
+    {
+        return hashed_string( "Credits" );
+    }
 } // namespace
 
 SW_TEST_CASE( ShopTest, WalletKeepsSeveralCurrenciesAndNeverGoesNegative )

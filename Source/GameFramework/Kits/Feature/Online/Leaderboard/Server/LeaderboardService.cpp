@@ -602,7 +602,10 @@ namespace sw
     {
     }
 
-    LeaderboardService::~LeaderboardService() { shutdown(); }
+    LeaderboardService::~LeaderboardService()
+    {
+        shutdown();
+    }
 
     void LeaderboardService::initialize( const LeaderboardServiceDependencies& dependencies )
     {
@@ -715,7 +718,10 @@ namespace sw
         }
     }
 
-    string LeaderboardService::makeRankKey( string_view boardID, uint64 periodID ) { return string( "lb/" ) + string( boardID ) + "/" + ServiceKeyUtil::makeHex64( periodID ); }
+    string LeaderboardService::makeRankKey( string_view boardID, uint64 periodID )
+    {
+        return string( "lb/" ) + string( boardID ) + "/" + ServiceKeyUtil::makeHex64( periodID );
+    }
 
     void LeaderboardService::submitScore( string_view boardID, AccountID accountID, string_view displayName, int64 score, int64 nowMs, uint64 requestTag )
     {

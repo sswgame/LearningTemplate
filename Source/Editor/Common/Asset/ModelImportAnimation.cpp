@@ -187,7 +187,10 @@ namespace sw::editor
         return sample;
     }
 
-    float32 ModelImportUtil::findLastTime( const ChannelData& channel ) { return channel._listTime.empty() ? 0.0f : channel._listTime.back(); }
+    float32 ModelImportUtil::findLastTime( const ChannelData& channel )
+    {
+        return channel._listTime.empty() ? 0.0f : channel._listTime.back();
+    }
 
     void ModelImportUtil::resampleAnimation( const cgltf_animation& animation, const Skeleton& skeleton, const unordered_map<const cgltf_node*, int32>& mapJointBone,
                                              const vector<BoneTransform>& listRest, const vector<float4x4>& listRootParent, float32 sampleRate, float32 minimumDuration,
