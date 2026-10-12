@@ -19,6 +19,9 @@
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Process/ShutdownSignal.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Diagnostics/CrashContext.h"
+#include "Core/Diagnostics/CrashHandler.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Time/MonotonicClock.h"
 #include "Core/Time/WallClock.h"
 
@@ -33,6 +36,7 @@
 #include "Core/Console/DevCommandRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
+#include "Engine/Telemetry/CrashReportService.h"
 #if SW_DEV_COMMANDS_ENABLED
     #include "Engine/Console/DevConsole.h"
 #endif
@@ -96,6 +100,7 @@ namespace sw
         , _processMetrics{ nullptr }
         , _serverServices{ nullptr }
         , _serverConfigPath{}
+        , _serverServiceContext{}
         , _listPendingCommand{}
         , _pServerConfig{ nullptr }
         , _pTickHistogram{ nullptr }
@@ -114,6 +119,7 @@ namespace sw
         , _bSignalHandlerInstalled{ SW_FALSE }
         , _bPaused{ SW_FALSE }
         , _bRestartServerServices{ SW_FALSE }
+        , _bCrashReportsStarted{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -150,6 +156,14 @@ namespace sw
         _tickNanoseconds = constant::kNanosecondsPerSecond / static_cast<int64>( _pServerConfig->_tickRateHz );
         if ( initializeObservability() == false )
             return false;
+        collectPreviousCrashes();
+        // 게임 인스턴스를 만들기 전에 묶는다 — 게임과 키트가 기동하며 서버 지표 · 상태 레지스트리에 자기 것을 올릴 수 있게 한다.
+        _serverServiceContext._serverConfigPath = _serverConfigPath;
+        _serverServiceContext._pServerConfig    = _pServerConfig;
+        _serverServiceContext._pConfigManager   = _engineLoop.getConfigManager();
+        _serverServiceContext._pMetricRegistry  = _metricRegistry.get();
+        _serverServiceContext._pHealthRegistry  = _healthRegistry.get();
+        ServerServiceRegistry::bindHostContext( &_serverServiceContext );
 
         if ( _moduleHost == nullptr )
             _moduleHost = make_unique<ModuleHost>();
@@ -306,13 +320,28 @@ namespace sw
     {
         if ( _serverServices == nullptr )
             _serverServices = make_unique<ServerServiceManager>();
-        ServerServiceContext context;
-        context._serverConfigPath = _serverConfigPath;
-        context._pServerConfig    = _pServerConfig;
-        context._pConfigManager   = _engineLoop.getConfigManager();
-        context._pMetricRegistry  = _metricRegistry.get();
-        context._pHealthRegistry  = _healthRegistry.get();
-        return _serverServices->startAll( context );
+        return _serverServices->startAll( _serverServiceContext );
+    }
+
+    void ServerApp::collectPreviousCrashes()
+    {
+        const string crashFolder = getCrashReportFolder();
+        if ( crashFolder.empty() || engine::areEngineServicesBound() == false )
+            return;
+        CrashReportService& crashReports  = engine::getCrashReportService();
+        const string        reportsFolder = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( crashFolder ) ), CrashReportService::kReportsFolderName );
+        crashReports.initialize( crashFolder, reportsFolder, CrashHandler::getSessionID() );
+        _bCrashReportsStarted = SW_TRUE;
+        // 서버의 보내기 동의는 플레이어 설정이 아니라 운영 설정의 몫이다. 그 설정이 생기기 전에는 기계 안에만 둔다(클라이언트 기본값과 같다).
+        crashReports.setConsent( CrashReportConsent::Local );
+        const uint32               newCount = crashReports.collectNewCrashes();
+        vector<CrashReportSummary> listReport;
+        crashReports.collectReports( listReport );
+        if ( newCount > 0 )
+            SW_LOG_WARNING( "Bundled %# crash report(s) from previous runs into '%#' (%# kept)", newCount, reportsFolder.c_str(), static_cast<uint32>( listReport.size() ) );
+        MetricGauge* pCrashGauge = _metricRegistry->registerGauge( "server_crash_reports", "Crash report bundles kept on this machine (previous runs that crashed)" );
+        if ( pCrashGauge != nullptr )
+            pCrashGauge->set( static_cast<float64>( listReport.size() ) );
     }
 
     void ServerApp::updateProcessMetrics( int64 monotonicMs )
@@ -553,6 +582,10 @@ namespace sw
             _moduleHost->shutdown();
             _moduleHost.reset();
         }
+        ServerServiceRegistry::bindHostContext( nullptr ); // 게임과 모듈이 내려간 뒤 — 레지스트리를 지우기 전
+        if ( _bCrashReportsStarted == SW_TRUE && engine::areEngineServicesBound() )
+            engine::getCrashReportService().shutdown();
+        _bCrashReportsStarted = SW_FALSE;
         // 운영 엔드포인트는 게임을 종료하는 동안에도 비우는 중(/readyz 503)임을 알리다가 마지막에 닫는다. 로그를 남기므로 엔진(로거)보다 먼저 닫는다.
         shutdownObservability();
         // 로거는 엔진 종료와 함께 종료된다. 마지막 줄은 그 앞에 남긴다(테스트와 운영 도구가 이 줄로 정상 종료를 확인한다).

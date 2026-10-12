@@ -2,6 +2,8 @@
 
 #include "Engine/Observability/ServerServiceRegistry.h"
 
+#include "Core/Concurrency/atomic.h"
+
 namespace sw
 {
     namespace
@@ -15,6 +17,13 @@ namespace sw
             {
                 static ServiceFactoryList s_list{};
                 return s_list;
+            }
+
+            /** @brief 묶인 서버 문맥입니다. 서버 기동과 종료(게임 스레드)에서 바꾸고 모듈이 읽으므로 원자 포인터로 둡니다. */
+            static atomic<const ServerServiceContext*>& getHostContext()
+            {
+                static atomic<const ServerServiceContext*> s_pContext{ nullptr };
+                return s_pContext;
             }
         };
     } // namespace
@@ -42,5 +51,15 @@ namespace sw
     int32 ServerServiceRegistry::getFactoryCount()
     {
         return ServerServiceRegistryInternal::getList().getCount();
+    }
+
+    void ServerServiceRegistry::bindHostContext( const ServerServiceContext* pContext )
+    {
+        ServerServiceRegistryInternal::getHostContext().store( pContext, std::memory_order_release );
+    }
+
+    const ServerServiceContext* ServerServiceRegistry::findHostContext()
+    {
+        return ServerServiceRegistryInternal::getHostContext().load( std::memory_order_acquire );
     }
 } // namespace sw

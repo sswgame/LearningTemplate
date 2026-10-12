@@ -91,6 +91,14 @@ namespace sw
         static void collectFactories( vector<ServerServiceFactory*>& outListFactory );
         /** @brief 올라 있는 팩토리 수입니다. */
         static int32 getFactoryCount();
+
+        /**
+         * @brief 전용 서버가 기동 중 서버 문맥을 묶습니다(null 이면 풉니다). 서버 서비스가 아닌 게임과 키트 코드(게임 인스턴스, 네트워크 세션)가 서버 지표와
+         *        상태 레지스트리를 받는 길입니다. 묶은 쪽이 문맥과 레지스트리를 푼 뒤에 지웁니다.
+         */
+        static void bindHostContext( const ServerServiceContext* pContext );
+        /** @brief 묶인 서버 문맥입니다. 전용 서버가 아니면(App, 테스트) nullptr 입니다. 게임 스레드에서 기동과 종료 사이에 읽습니다. */
+        static const ServerServiceContext* findHostContext();
     };
 } // namespace sw
 

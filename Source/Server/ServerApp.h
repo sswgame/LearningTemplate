@@ -25,6 +25,7 @@
 
 #include "Engine/EngineLoop.h"
 #include "Engine/Module/ModuleCatalog.h"
+#include "Engine/Observability/ServerServiceRegistry.h"
 
 namespace sw
 {
@@ -77,6 +78,12 @@ namespace sw
         [[nodiscard]] bool startServerServices();
         /** @brief 프로세스 지표(메모리, 서비스 연결 수)를 초에 한 번 갱신합니다. */
         void updateProcessMetrics( int64 monotonicMs );
+        /**
+         * @brief 지난 실행이 남긴 크래시 파일을 묶음 폴더(`Saved/CrashReports`)로 묶고 지표 `server_crash_reports` 에 남은 묶음 수를 적습니다.
+         * @details 클라이언트의 `Telemetry` 기동 단계(동의는 플레이어 설정)를 서버는 돌지 않으므로 여기서 묶습니다. 동의는 `Local`(기계 안에만)입니다.
+         *          보내기(보고 프로세스)는 운영 설정의 동의와 서버용 보고 경로가 생기면 더합니다.
+         */
+        void collectPreviousCrashes();
 #if !defined( SW_SHIPPING )
         /** @brief 모듈 리로드 직전입니다. 서버 서비스의 코드는 그 모듈에 있으므로 먼저 멈추고, 게임 쪽 처리는 모듈 호스트에 넘깁니다. 다음 틱에 다시 시작합니다. */
         bool onBeforeModuleReload( const vector<string>& listModuleName );
@@ -106,6 +113,7 @@ namespace sw
         unique_ptr<ProcessMetrics>        _processMetrics;
         unique_ptr<ServerServiceManager>  _serverServices;          ///< 모듈이 올린 서버 서비스(온라인 서비스 호스트 등)
         string                            _serverConfigPath;        ///< 읽은 서버 설정 파일 경로(서비스가 옆 파일을 찾는다)
+        ServerServiceContext              _serverServiceContext;    ///< 서버 서비스와 게임 · 키트 모듈(`ServerServiceRegistry::findHostContext`)이 받는 서버 문맥
         vector<string>                    _listPendingCommand;      ///< 콘솔에서 꺼낸 줄(틱마다 재사용)
         const ServerConfig*               _pServerConfig;           // ConfigManager 가 소유한다
         MetricHistogram*                  _pTickHistogram;          ///< server_tick_seconds. 틱 본문 시간.
@@ -125,6 +133,7 @@ namespace sw
         uint8                  _bSignalHandlerInstalled : 1;
         uint8                  _bPaused                 : 1; ///< Dev `pause`. 게임 틱을 멈춘다(콘솔, 종료 신호, 네트워크 스레드는 돈다).
         uint8                  _bRestartServerServices  : 1; ///< 모듈 리로드로 서버 서비스를 멈췄다. 다음 틱에 다시 시작한다
-        [[maybe_unused]] uint8 _reserved                : 4;
+        uint8                  _bCrashReportsStarted    : 1; ///< 크래시 보고 서비스를 이 서버가 초기화했다(종료 때 내린다)
+        [[maybe_unused]] uint8 _reserved                : 3;
     };
 } // namespace sw

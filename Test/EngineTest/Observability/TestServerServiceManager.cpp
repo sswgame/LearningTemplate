@@ -125,6 +125,21 @@ SW_TEST_CASE( ServerServiceManagerTest, RegistryKeepsOneFactoryPerNameAndForgets
     SW_EXPECT_EQUAL( ServerServiceRegistry::getFactoryCount(), baseCount );
 }
 
+SW_TEST_CASE( ServerServiceManagerTest, HostContextIsVisibleOnlyWhileBound )
+{
+    // 게임 · 키트 코드가 서버 지표를 받는 길 — 전용 서버가 기동 중에만 묶는다(App · 테스트에서는 null).
+    SW_EXPECT_TRUE( ServerServiceRegistry::findHostContext() == nullptr );
+    MetricRegistry       registry;
+    ServerServiceContext context;
+    context._pMetricRegistry = &registry;
+    ServerServiceRegistry::bindHostContext( &context );
+    const ServerServiceContext* pBound = ServerServiceRegistry::findHostContext();
+    SW_ASSERT_NOT_NULL( pBound );
+    SW_EXPECT_TRUE( pBound->_pMetricRegistry == &registry );
+    ServerServiceRegistry::bindHostContext( nullptr );
+    SW_EXPECT_TRUE( ServerServiceRegistry::findHostContext() == nullptr );
+}
+
 SW_TEST_CASE( ServerServiceManagerTest, ProcessMetricsReportResidentMemory )
 {
     uint64 residentBytes = 0;
