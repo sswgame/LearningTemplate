@@ -95,8 +95,8 @@ namespace sw
         {
             vector<int32>& listPlacementPoint = _seriesSettings._listPlacementPoint;
             listPlacementPoint.clear();
-            GameDataXML::forEachToken( points, ",; ",
-                                       [&]( string_view token )
+            StringUtil::forEachToken( points, ",; ",
+                                      [&]( string_view token )
             {
                 int32 value = 0;
                 if ( StringUtil::parseInt( token, value ) )

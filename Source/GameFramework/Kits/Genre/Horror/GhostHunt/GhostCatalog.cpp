@@ -109,7 +109,7 @@ namespace sw
                 flag += pID;
                 room._lightFlag = hashed_string( flag.c_str() );
             }
-            GameDataXML::forEachToken( node.getAttributeText( "ghosts" ), ",; ", [&]( string_view token )
+            StringUtil::forEachToken( node.getAttributeText( "ghosts" ), ",; ", [&]( string_view token )
             {
                 const hashed_string ghostID( string( token.data(), token.size() ).c_str() );
                 if ( _ghostCatalog.find( ghostID ) == nullptr )
@@ -146,7 +146,7 @@ namespace sw
             {
                 furniture._bVacuum = SW_FALSE;
                 furniture._bShake  = SW_FALSE;
-                GameDataXML::forEachToken( searchText, ",; ", [&]( string_view token )
+                StringUtil::forEachToken( searchText, ",; ", [&]( string_view token )
                 {
                     if ( StringUtil::equals( token, string_view( "Vacuum" ), true ) )
                         furniture._bVacuum = SW_TRUE;

@@ -2,20 +2,7 @@
 
 #include "Core/Network/Message/StreamFrame.h"
 
-namespace sw
-{
-    namespace
-    {
-        struct StreamFrameInternal
-        {
-            static uint32 readUint32( const uint8* pData )
-            {
-                return static_cast<uint32>( pData[0] ) | ( static_cast<uint32>( pData[1] ) << 8 ) | ( static_cast<uint32>( pData[2] ) << 16 ) |
-                       ( static_cast<uint32>( pData[3] ) << 24 );
-            }
-        };
-    } // namespace
-} // namespace sw
+#include "Core/Container/LittleEndianUtil.h"
 
 namespace sw
 {
@@ -43,7 +30,7 @@ namespace sw
         if ( available < 4 )
             return StreamFrameDecodeResult::NeedMore;
         const uint8* pHeader = _bytes.data() + _readOffset;
-        const uint32 length  = StreamFrameInternal::readUint32( pHeader );
+        const uint32 length  = LittleEndianUtil::readUint32( pHeader );
         // 길이는 종류 · 깃발 2 바이트 + 몸 — 몸이 오기 전에 상한을 본다.
         if ( length < 2 || static_cast<uint64>( length ) - 2 > static_cast<uint64>( _maxBodySize ) )
             return StreamFrameDecodeResult::Malformed;

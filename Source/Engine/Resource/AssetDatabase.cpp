@@ -365,30 +365,23 @@ namespace sw
     uint32 AssetDatabase::loadRegistryText( string_view text )
     {
         uint32 count{ 0 };
-        size_t lineStart{ 0 };
-        while ( lineStart < text.size() )
+        StringUtil::forEachLine( text, [&]( string_view line )
         {
-            size_t lineEnd = text.find( '\n', lineStart );
-            if ( lineEnd == string_view::npos )
-                lineEnd = text.size();
-            string_view line = text.substr( lineStart, lineEnd - lineStart );
-            lineStart        = lineEnd + 1;
-
             line = StringUtil::trimEnd( line );
             if ( line.empty() || line.front() == '#' )
-                continue;
+                return;
 
             const size_t space = line.find( ' ' );
             if ( space == string_view::npos || space + 1 >= line.size() )
-                continue;
+                return;
 
             UUID guid{};
             if ( UUID::tryParse( string( line.substr( 0, space ) ).c_str(), guid ) == false || guid.isNull() )
-                continue;
+                return;
 
             registerMapping( line.substr( space + 1 ), guid );
             ++count;
-        }
+        } );
         return count;
     }
 

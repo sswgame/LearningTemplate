@@ -6,11 +6,11 @@
 #include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Actor/Combat/Health/ResourceGauge.h"
-#include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Gameplay/Progression/LevelProgress.h"
 #include "GameFramework/GameFrameworkExports.h"

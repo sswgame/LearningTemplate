@@ -235,7 +235,7 @@ DB 와 캐시 드라이버, 그리고 그 서드파티 라이브러리는 `["Ser
 | 아이템과 개수의 값 목록 | `ItemStackList` |
 | 격자의 셀 번호와 이웃 | `GridTopology`, `GridSearchScratch` |
 | 상태 데이터의 머리와 구간 | `StateArchiveUtil` |
-| 시뮬레이션 알림 버퍼 | `EventBuffer<T>` |
+| 시뮬레이션 알림 버퍼 | `EventBuffer<T>`(Core/Container) |
 | 직교 카메라와 장식 흩뿌리기 | `OrthoCameraRigComponent`, `PropScatterComponent` |
 | 1인칭 카메라와 마우스 잠금 | `FirstPersonCameraComponent`, `PawnComponent::_bLockMouse` |
 | 무기, 피해 공식, 탄도 | `Base/Actor/Combat/` |

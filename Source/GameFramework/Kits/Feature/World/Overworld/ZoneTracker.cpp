@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Feature/World/Overworld/ZoneTracker.h"
 
+#include "Core/Container/StringUtil.h"
+
 namespace sw
 {
     namespace
@@ -65,14 +67,8 @@ namespace sw
         zone._bounds._max._y = height > 0 ? height - 1 : 0;
 
         // 태그는 맵 데이터가 붙인다. 경로 이름에서 역할을 짐작하지 않는다.
-        size_t tagStart = tagText.find_first_not_of( ZoneTrackerInternal::kTagSeparator );
-        while ( tagStart != string_view::npos )
-        {
-            const size_t tagEnd    = tagText.find_first_of( ZoneTrackerInternal::kTagSeparator, tagStart );
-            const size_t tagLength = tagEnd == string_view::npos ? string_view::npos : tagEnd - tagStart;
-            zone.addTag( hashed_string( tagText.substr( tagStart, tagLength ) ) );
-            tagStart = tagText.find_first_not_of( ZoneTrackerInternal::kTagSeparator, tagEnd );
-        }
+        StringUtil::forEachToken( tagText, ZoneTrackerInternal::kTagSeparator, [&]( string_view tag )
+        { zone.addTag( hashed_string( tag ) ); } );
         zone._bClearGateLocked = zone.hasTag( hashed_string( kClearGateTag ) ) ? SW_TRUE : SW_FALSE;
 
         _listZone.push_back( std::move( zone ) );

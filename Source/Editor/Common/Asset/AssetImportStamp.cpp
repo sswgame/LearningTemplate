@@ -63,35 +63,28 @@ namespace sw::editor
                 if ( FileUtil::exists( stampPath ) == false || FileUtil::readTextFile( stampPath, text ) == false )
                     return;
 
-                bool   bHeaderSeen = false;
-                size_t lineStart   = 0;
-                while ( lineStart < text.size() )
+                bool bHeaderSeen = false;
+                StringUtil::forEachLine( text, [&]( string_view rawLine )
                 {
-                    size_t lineEnd = text.find( '\n', lineStart );
-                    if ( lineEnd == string::npos )
-                        lineEnd = text.size();
-                    const string_view line = StringUtil::trim( string_view( text ).substr( lineStart, lineEnd - lineStart ) );
-                    lineStart              = lineEnd + 1;
-
+                    const string_view line = StringUtil::trim( rawLine );
                     if ( bHeaderSeen == false )
                     {
-                        if ( line != header )
-                            return;
                         bHeaderSeen = true;
-                        continue;
+                        return line == header; // 머리 줄이 다르면 빈 표
                     }
 
                     const size_t firstSpace  = line.find( ' ' );
                     const size_t secondSpace = firstSpace == string_view::npos ? string_view::npos : line.find( ' ', firstSpace + 1 );
                     if ( secondSpace == string_view::npos || secondSpace + 1 >= line.size() )
-                        continue;
+                        return true;
 
                     StampEntry entry;
                     const bool bSourceParsed   = StringUtil::parseUint64( line.substr( 0, firstSpace ), entry._sourceHash, 16 );
                     const bool bImportedParsed = StringUtil::parseUint64( line.substr( firstSpace + 1, secondSpace - firstSpace - 1 ), entry._importedHash, 16 );
                     if ( bSourceParsed && bImportedParsed )
                         outMapEntry[string( line.substr( secondSpace + 1 ) )] = entry;
-                }
+                    return true;
+                } );
             }
 
             /** @brief 스탬프 본문입니다. 줄은 경로 순이라 같은 표는 같은 바이트입니다. */

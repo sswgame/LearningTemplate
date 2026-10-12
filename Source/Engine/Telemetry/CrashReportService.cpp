@@ -77,23 +77,16 @@ namespace sw
             /** @brief 컨텍스트 파일(`key : value` 줄)을 읽어 @p outRoot 에 넣습니다. */
             static void readContextInto( string_view text, const JSONValue& outContext )
             {
-                size_t lineStart = 0;
-                while ( lineStart < text.size() )
+                StringUtil::forEachLine( text, [&]( string_view line )
                 {
-                    size_t lineEnd = text.find( '\n', lineStart );
-                    if ( lineEnd == string_view::npos )
-                        lineEnd = text.size();
-                    const string_view line  = text.substr( lineStart, lineEnd - lineStart );
-                    const size_t      colon = line.find( ':' );
-                    if ( colon != string_view::npos )
-                    {
-                        const string_view key   = StringUtil::trim( line.substr( 0, colon ) );
-                        const string_view value = StringUtil::trim( line.substr( colon + 1 ) );
-                        if ( key.empty() == false )
-                            outContext.set( key, false ).setString( value );
-                    }
-                    lineStart = lineEnd + 1;
-                }
+                    const size_t colon = line.find( ':' );
+                    if ( colon == string_view::npos )
+                        return;
+                    const string_view key   = StringUtil::trim( line.substr( 0, colon ) );
+                    const string_view value = StringUtil::trim( line.substr( colon + 1 ) );
+                    if ( key.empty() == false )
+                        outContext.set( key, false ).setString( value );
+                } );
             }
 
             struct CrashTimeLess

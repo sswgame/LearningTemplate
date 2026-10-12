@@ -2,6 +2,7 @@
 
 #include "Engine/Audio/AudioClipDecoder.h"
 
+#include "Core/Container/LittleEndianUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 
@@ -17,14 +18,6 @@ namespace sw
 
             /** @brief 확장형 하위 형식 GUID 에서 "PCM, IEEE float" 뒤에 오는 12 바이트입니다(KSDATAFORMAT_SUBTYPE_* 공통 꼬리). */
             inline static constexpr uint8 kArrSubFormatTail[12] = { 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 };
-
-            static uint16 readUint16LE( const uint8* pBytes ) { return static_cast<uint16>( pBytes[0] | ( pBytes[1] << 8 ) ); }
-
-            static uint32 readUint32LE( const uint8* pBytes )
-            {
-                return static_cast<uint32>( pBytes[0] ) | ( static_cast<uint32>( pBytes[1] ) << 8 ) | ( static_cast<uint32>( pBytes[2] ) << 16 ) |
-                       ( static_cast<uint32>( pBytes[3] ) << 24 );
-            }
         };
     } // namespace
 } // namespace sw
@@ -49,7 +42,7 @@ namespace sw
         while ( offset + 8 <= byteCount )
         {
             const uint8* pChunkID  = pBytes + offset;
-            const uint32 chunkSize = Internal::readUint32LE( pBytes + offset + 4 );
+            const uint32 chunkSize = LittleEndianUtil::readUint32( pBytes + offset + 4 );
             offset += 8;
             if ( chunkSize > byteCount - offset )
                 break;
@@ -57,10 +50,10 @@ namespace sw
             if ( Memory::compare( pChunkID, "fmt ", 4 ) == 0 && chunkSize >= 16 )
             {
                 const uint8* pFmt  = pBytes + offset;
-                baseFormatTag      = Internal::readUint16LE( pFmt + 0 );
-                pcm._channelCount  = Internal::readUint16LE( pFmt + 2 );
-                pcm._sampleRate    = Internal::readUint32LE( pFmt + 4 );
-                pcm._bitsPerSample = Internal::readUint16LE( pFmt + 14 );
+                baseFormatTag      = LittleEndianUtil::readUint16( pFmt + 0 );
+                pcm._channelCount  = LittleEndianUtil::readUint16( pFmt + 2 );
+                pcm._sampleRate    = LittleEndianUtil::readUint32( pFmt + 4 );
+                pcm._bitsPerSample = LittleEndianUtil::readUint16( pFmt + 14 );
                 // 확장형이면 유효 비트, 채널 마스크, 하위 형식 GUID 가 뒤에 온다. 하위 형식이 PCM 이나 IEEE float 일 때만 받는다.
                 if ( baseFormatTag == Internal::kWaveFormatExtensible )
                 {
@@ -68,9 +61,9 @@ namespace sw
                     if ( chunkSize >= 40 && Memory::compare( pFmt + 28, Internal::kArrSubFormatTail, sizeof( Internal::kArrSubFormatTail ) ) == 0 )
                     {
                         pcm._bExtensible        = SW_TRUE;
-                        pcm._validBitsPerSample = Internal::readUint16LE( pFmt + 18 );
-                        pcm._channelMask        = Internal::readUint32LE( pFmt + 20 );
-                        baseFormatTag           = static_cast<uint16>( Internal::readUint32LE( pFmt + 24 ) );
+                        pcm._validBitsPerSample = LittleEndianUtil::readUint16( pFmt + 18 );
+                        pcm._channelMask        = LittleEndianUtil::readUint32( pFmt + 20 );
+                        baseFormatTag           = static_cast<uint16>( LittleEndianUtil::readUint32( pFmt + 24 ) );
                     }
                 }
                 bHaveFmt = true;

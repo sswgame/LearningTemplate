@@ -123,7 +123,7 @@ namespace sw
             const string_view table = node.getAttributeText( "table" );
             _supplyDrop._tableID    = hashed_string( table );
             _supplyDrop._listTime.clear();
-            GameDataXML::forEachToken( node.getAttributeText( "times" ), ",; ", [&]( string_view token )
+            StringUtil::forEachToken( node.getAttributeText( "times" ), ",; ", [&]( string_view token )
             {
                 float32 time = 0.0f;
                 if ( StringUtil::parseFloat( token, time ) && time >= 0.0f )

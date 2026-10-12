@@ -20,11 +20,11 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/EventBuffer.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
-#include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
 #include "GameFramework/Base/Online/Identity/AccountPresence.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatSpamGuard.h"

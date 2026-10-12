@@ -2,6 +2,8 @@
 
 #include "Engine/Object/Animation/AnimationRewind.h"
 
+#include "Core/Container/LittleEndianUtil.h"
+
 #if SW_ANIMATION_REWIND_ENABLED
 
     #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -42,15 +44,6 @@ namespace sw
             }
 
             static float32 dequantize( int16 value, float32 range ) { return static_cast<float32>( value ) / 32767.0f * range; }
-
-            static void appendInt16( vector<uint8>& inoutListByte, int16 value )
-            {
-                const uint16 bits = static_cast<uint16>( value );
-                inoutListByte.push_back( static_cast<uint8>( bits & 0xFFu ) );
-                inoutListByte.push_back( static_cast<uint8>( bits >> 8 ) );
-            }
-
-            static int16 readInt16( const uint8* pByte ) { return static_cast<int16>( static_cast<uint16>( pByte[0] | ( pByte[1] << 8 ) ) ); }
         };
     } // namespace
 
@@ -308,18 +301,18 @@ namespace sw
             const float32 arrRotation[4] = { rotation._x * sign, rotation._y * sign, rotation._z * sign, rotation._w * sign };
             for ( const float32 component : arrRotation )
             {
-                AnimationRewindInternal::appendInt16( outFrame._poseByte, AnimationRewindInternal::quantize( component, 1.0f ) );
+                LittleEndianUtil::appendInt16( outFrame._poseByte, AnimationRewindInternal::quantize( component, 1.0f ) );
             }
             const float3& translation = pose.getTranslations()[boneIndex];
-            AnimationRewindInternal::appendInt16( outFrame._poseByte, AnimationRewindInternal::quantize( translation._x, translationRange ) );
-            AnimationRewindInternal::appendInt16( outFrame._poseByte, AnimationRewindInternal::quantize( translation._y, translationRange ) );
-            AnimationRewindInternal::appendInt16( outFrame._poseByte, AnimationRewindInternal::quantize( translation._z, translationRange ) );
+            LittleEndianUtil::appendInt16( outFrame._poseByte, AnimationRewindInternal::quantize( translation._x, translationRange ) );
+            LittleEndianUtil::appendInt16( outFrame._poseByte, AnimationRewindInternal::quantize( translation._y, translationRange ) );
+            LittleEndianUtil::appendInt16( outFrame._poseByte, AnimationRewindInternal::quantize( translation._z, translationRange ) );
             if ( bScaled == false )
                 continue;
             const float3& scale = pose.getScales()[boneIndex];
-            AnimationRewindInternal::appendInt16( outFrame._poseByte, AnimationRewindInternal::quantize( scale._x, scaleRange ) );
-            AnimationRewindInternal::appendInt16( outFrame._poseByte, AnimationRewindInternal::quantize( scale._y, scaleRange ) );
-            AnimationRewindInternal::appendInt16( outFrame._poseByte, AnimationRewindInternal::quantize( scale._z, scaleRange ) );
+            LittleEndianUtil::appendInt16( outFrame._poseByte, AnimationRewindInternal::quantize( scale._x, scaleRange ) );
+            LittleEndianUtil::appendInt16( outFrame._poseByte, AnimationRewindInternal::quantize( scale._y, scaleRange ) );
+            LittleEndianUtil::appendInt16( outFrame._poseByte, AnimationRewindInternal::quantize( scale._z, scaleRange ) );
         }
     }
 
@@ -334,18 +327,18 @@ namespace sw
         for ( uint32 boneIndex = 0; boneIndex < frame._boneCount; ++boneIndex, pByte += boneBytes )
         {
             BoneTransform transform{};
-            transform._rotation = quaternion{ AnimationRewindInternal::dequantize( AnimationRewindInternal::readInt16( pByte ), 1.0f ),
-                                              AnimationRewindInternal::dequantize( AnimationRewindInternal::readInt16( pByte + 2 ), 1.0f ),
-                                              AnimationRewindInternal::dequantize( AnimationRewindInternal::readInt16( pByte + 4 ), 1.0f ),
-                                              AnimationRewindInternal::dequantize( AnimationRewindInternal::readInt16( pByte + 6 ), 1.0f ) }
+            transform._rotation = quaternion{ AnimationRewindInternal::dequantize( LittleEndianUtil::readInt16( pByte ), 1.0f ),
+                                              AnimationRewindInternal::dequantize( LittleEndianUtil::readInt16( pByte + 2 ), 1.0f ),
+                                              AnimationRewindInternal::dequantize( LittleEndianUtil::readInt16( pByte + 4 ), 1.0f ),
+                                              AnimationRewindInternal::dequantize( LittleEndianUtil::readInt16( pByte + 6 ), 1.0f ) }
                                       .normalize();
-            transform._translation = float3{ AnimationRewindInternal::dequantize( AnimationRewindInternal::readInt16( pByte + 8 ), frame._translationRange ),
-                                             AnimationRewindInternal::dequantize( AnimationRewindInternal::readInt16( pByte + 10 ), frame._translationRange ),
-                                             AnimationRewindInternal::dequantize( AnimationRewindInternal::readInt16( pByte + 12 ), frame._translationRange ) };
+            transform._translation = float3{ AnimationRewindInternal::dequantize( LittleEndianUtil::readInt16( pByte + 8 ), frame._translationRange ),
+                                             AnimationRewindInternal::dequantize( LittleEndianUtil::readInt16( pByte + 10 ), frame._translationRange ),
+                                             AnimationRewindInternal::dequantize( LittleEndianUtil::readInt16( pByte + 12 ), frame._translationRange ) };
             if ( bScaled )
-                transform._scale = float3{ AnimationRewindInternal::dequantize( AnimationRewindInternal::readInt16( pByte + 14 ), frame._scaleRange ),
-                                           AnimationRewindInternal::dequantize( AnimationRewindInternal::readInt16( pByte + 16 ), frame._scaleRange ),
-                                           AnimationRewindInternal::dequantize( AnimationRewindInternal::readInt16( pByte + 18 ), frame._scaleRange ) };
+                transform._scale = float3{ AnimationRewindInternal::dequantize( LittleEndianUtil::readInt16( pByte + 14 ), frame._scaleRange ),
+                                           AnimationRewindInternal::dequantize( LittleEndianUtil::readInt16( pByte + 16 ), frame._scaleRange ),
+                                           AnimationRewindInternal::dequantize( LittleEndianUtil::readInt16( pByte + 18 ), frame._scaleRange ) };
             outPose.setBoneTransform( boneIndex, transform );
         }
     }

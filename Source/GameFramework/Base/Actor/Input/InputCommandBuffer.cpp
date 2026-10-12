@@ -75,7 +75,7 @@ namespace sw
     void InputCommandParser::setButtonNames( string_view names )
     {
         _listButtonName.clear();
-        GameDataXML::forEachToken( names, ", ", [&]( string_view token )
+        StringUtil::forEachToken( names, ", ", [&]( string_view token )
         { _listButtonName.push_back( string( token ) ); } );
     }
 
@@ -129,7 +129,7 @@ namespace sw
         if ( bKnown == false )
             return false;
         bool bAllButtons = true;
-        GameDataXML::forEachToken( rest, "+", [&]( string_view name )
+        StringUtil::forEachToken( rest, "+", [&]( string_view name )
         {
             bool bFound = false;
             for ( size_t index = 0; index < _listButtonName.size(); ++index )
@@ -152,7 +152,7 @@ namespace sw
     {
         outCommand._listStep.clear();
         bool bOk = true;
-        GameDataXML::forEachToken( notation, ", ", [&]( string_view token )
+        StringUtil::forEachToken( notation, ", ", [&]( string_view token )
         { bOk = bOk && parseStep( token, outCommand._listStep ); } );
         return bOk && outCommand._listStep.empty() == false;
     }

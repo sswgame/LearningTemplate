@@ -3,6 +3,7 @@
 #include "Editor/Common/Workspace/EditorWindowTitle.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/File/FileUtil.h"
 
 namespace sw::editor
 {
@@ -23,10 +24,8 @@ namespace sw::editor
     string EditorWindowTitleUtil::makeTitle( string_view gameName, string_view scenePath, bool bDirty, const utf8* pPlayState )
     {
         // 경로의 마지막 조각(`/` · `\` 뒤)에서 씬 접미사를 뗀다.
-        string_view  sceneName = scenePath;
-        const size_t lastSlash = sceneName.find_last_of( "/\\" );
-        if ( lastSlash != string_view::npos )
-            sceneName = sceneName.substr( lastSlash + 1 );
+        string_view sceneName;
+        FileUtil::getFileNamePart( scenePath, sceneName );
         if ( StringUtil::endsWith( sceneName, kSceneSuffix, true ) )
             sceneName = sceneName.substr( 0, sceneName.size() - string_view{ kSceneSuffix }.size() );
 

@@ -4,6 +4,7 @@
 
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Compression/ICompressionCodec.h"
+#include "Core/Container/LittleEndianUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 
@@ -31,42 +32,6 @@ namespace sw
                 LocalStoreSeal _seal{ LocalStoreSeal::None };
             };
 
-            static void writeUint32( uint8* pOut, uint32 value )
-            {
-                for ( int32 index = 0; index < 4; ++index )
-                {
-                    pOut[index] = static_cast<uint8>( value >> ( index * 8 ) );
-                }
-            }
-
-            static void writeUint64( uint8* pOut, uint64 value )
-            {
-                for ( int32 index = 0; index < 8; ++index )
-                {
-                    pOut[index] = static_cast<uint8>( value >> ( index * 8 ) );
-                }
-            }
-
-            static uint32 readUint32( const uint8* pData )
-            {
-                uint32 value = 0;
-                for ( int32 index = 3; index >= 0; --index )
-                {
-                    value = ( value << 8 ) | pData[index];
-                }
-                return value;
-            }
-
-            static uint64 readUint64( const uint8* pData )
-            {
-                uint64 value = 0;
-                for ( int32 index = 7; index >= 0; --index )
-                {
-                    value = ( value << 8 ) | pData[index];
-                }
-                return value;
-            }
-
             static void writeHeader( const Header& header, uint8* pOut )
             {
                 std::memcpy( pOut, kArrMagic, 4 );
@@ -74,10 +39,10 @@ namespace sw
                 pOut[5] = static_cast<uint8>( header._seal );
                 pOut[6] = header._codec;
                 pOut[7] = 0;
-                writeUint32( pOut + 8, header._formatVersion );
-                writeUint64( pOut + 12, header._originalSize );
-                writeUint64( pOut + 20, header._bodySize );
-                writeUint64( pOut + 28, header._keyID );
+                LittleEndianUtil::writeUint32( pOut + 8, header._formatVersion );
+                LittleEndianUtil::writeUint64( pOut + 12, header._originalSize );
+                LittleEndianUtil::writeUint64( pOut + 20, header._bodySize );
+                LittleEndianUtil::writeUint64( pOut + 28, header._keyID );
             }
 
             static CompressionCodecRegistry* findRegistry( const LocalSealContext& context )
@@ -103,7 +68,7 @@ namespace sw
                 std::memset( arrDeviceKey, 0, sizeof( arrDeviceKey ) );
                 if ( bDerived == false )
                     return LocalStoreResult::IOError;
-                outKeyID = readUint64( arrKeyID );
+                outKeyID = LittleEndianUtil::readUint64( arrKeyID );
                 return LocalStoreResult::Ok;
             }
 
@@ -189,7 +154,7 @@ namespace sw
         {
             outEnvelopeBytes.insert( outEnvelopeBytes.end(), storedBody.begin(), storedBody.end() );
             uint8 arrCrc[Internal::kCrcSize] = {};
-            Internal::writeUint32( arrCrc, StringUtil::computeCrc32( outEnvelopeBytes.data(), outEnvelopeBytes.size() ) );
+            LittleEndianUtil::writeUint32( arrCrc, StringUtil::computeCrc32( outEnvelopeBytes.data(), outEnvelopeBytes.size() ) );
             outEnvelopeBytes.insert( outEnvelopeBytes.end(), arrCrc, arrCrc + Internal::kCrcSize );
             return LocalStoreResult::Ok;
         }
@@ -231,10 +196,10 @@ namespace sw
         Internal::Header header;
         header._seal          = static_cast<LocalStoreSeal>( pEnvelopeBytes[5] );
         header._codec         = pEnvelopeBytes[6];
-        header._formatVersion = Internal::readUint32( pEnvelopeBytes + 8 );
-        header._originalSize  = Internal::readUint64( pEnvelopeBytes + 12 );
-        header._bodySize      = Internal::readUint64( pEnvelopeBytes + 20 );
-        header._keyID         = Internal::readUint64( pEnvelopeBytes + 28 );
+        header._formatVersion = LittleEndianUtil::readUint32( pEnvelopeBytes + 8 );
+        header._originalSize  = LittleEndianUtil::readUint64( pEnvelopeBytes + 12 );
+        header._bodySize      = LittleEndianUtil::readUint64( pEnvelopeBytes + 20 );
+        header._keyID         = LittleEndianUtil::readUint64( pEnvelopeBytes + 28 );
         const bool bSizesSane = header._originalSize <= static_cast<uint64>( ILocalStore::kMaxSlotSize ) && header._bodySize <= envelopeByteCount;
         if ( bSizesSane == false )
             return LocalStoreResult::Corrupt;
@@ -247,7 +212,7 @@ namespace sw
             {
                 if ( envelopeByteCount != kHeaderSize + bodySize + Internal::kCrcSize )
                     return LocalStoreResult::Corrupt;
-                const uint32 storedCrc = Internal::readUint32( pEnvelopeBytes + kHeaderSize + bodySize );
+                const uint32 storedCrc = LittleEndianUtil::readUint32( pEnvelopeBytes + kHeaderSize + bodySize );
                 if ( StringUtil::computeCrc32( pEnvelopeBytes, kHeaderSize + bodySize ) != storedCrc )
                     return LocalStoreResult::Corrupt;
                 pBody = pEnvelopeBytes + kHeaderSize;

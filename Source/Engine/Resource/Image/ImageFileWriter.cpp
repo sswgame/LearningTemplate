@@ -2,6 +2,7 @@
 
 #include "Engine/Resource/Image/ImageFileWriter.h"
 
+#include "Core/Container/LittleEndianUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
@@ -21,14 +22,6 @@ namespace sw
             static constexpr uint32 kDimensionTexture2D = 3;
             /** @brief zlib "저장" 블록 하나의 최대 길이입니다(16 비트 길이 칸). */
             static constexpr uint32 kStoredBlockMax = 65535;
-
-            static void appendUint32Le( vector<uint8>& inoutBytes, uint32 value )
-            {
-                for ( uint32 shift = 0; shift < 32; shift += 8 )
-                {
-                    inoutBytes.push_back( static_cast<uint8>( ( value >> shift ) & 0xFFu ) );
-                }
-            }
 
             static void appendUint32Be( vector<uint8>& inoutBytes, uint32 value )
             {
@@ -70,35 +63,35 @@ namespace sw
             return false;
         vector<uint8> bytes;
         bytes.reserve( 4 + DDSFormat::kHeaderSize + 20 + static_cast<size_t>( width ) * height * 4u );
-        Internal::appendUint32Le( bytes, DDSFormat::kMagic );
-        Internal::appendUint32Le( bytes, DDSFormat::kHeaderSize );
-        Internal::appendUint32Le( bytes, Internal::kDDSFlags );
-        Internal::appendUint32Le( bytes, height );
-        Internal::appendUint32Le( bytes, width );
-        Internal::appendUint32Le( bytes, width * 4u ); // 행 바이트 수
-        Internal::appendUint32Le( bytes, 0 );          // 깊이
-        Internal::appendUint32Le( bytes, 1 );          // 밉 수
+        LittleEndianUtil::appendUint32( bytes, DDSFormat::kMagic );
+        LittleEndianUtil::appendUint32( bytes, DDSFormat::kHeaderSize );
+        LittleEndianUtil::appendUint32( bytes, Internal::kDDSFlags );
+        LittleEndianUtil::appendUint32( bytes, height );
+        LittleEndianUtil::appendUint32( bytes, width );
+        LittleEndianUtil::appendUint32( bytes, width * 4u ); // 행 바이트 수
+        LittleEndianUtil::appendUint32( bytes, 0 );          // 깊이
+        LittleEndianUtil::appendUint32( bytes, 1 );          // 밉 수
         for ( uint32 index = 0; index < 11; ++index )
         {
-            Internal::appendUint32Le( bytes, 0 ); // 예약
+            LittleEndianUtil::appendUint32( bytes, 0 ); // 예약
         }
-        Internal::appendUint32Le( bytes, DDSFormat::kPixelFormatSize );
-        Internal::appendUint32Le( bytes, DDSFormat::kPixelFormatFourCcFlag );
-        Internal::appendUint32Le( bytes, DDSFormat::kDx10FourCc );
+        LittleEndianUtil::appendUint32( bytes, DDSFormat::kPixelFormatSize );
+        LittleEndianUtil::appendUint32( bytes, DDSFormat::kPixelFormatFourCcFlag );
+        LittleEndianUtil::appendUint32( bytes, DDSFormat::kDx10FourCc );
         for ( uint32 index = 0; index < 5; ++index )
         {
-            Internal::appendUint32Le( bytes, 0 ); // 비트 수 · 마스크(DX10 머리말이 포맷을 말한다)
+            LittleEndianUtil::appendUint32( bytes, 0 ); // 비트 수 · 마스크(DX10 머리말이 포맷을 말한다)
         }
-        Internal::appendUint32Le( bytes, Internal::kDDSCapsTexture );
+        LittleEndianUtil::appendUint32( bytes, Internal::kDDSCapsTexture );
         for ( uint32 index = 0; index < 4; ++index )
         {
-            Internal::appendUint32Le( bytes, 0 ); // caps2 · caps3 · caps4 · 예약
+            LittleEndianUtil::appendUint32( bytes, 0 ); // caps2 · caps3 · caps4 · 예약
         }
-        Internal::appendUint32Le( bytes, Internal::kDxgiR8G8B8A8Unorm );
-        Internal::appendUint32Le( bytes, Internal::kDimensionTexture2D );
-        Internal::appendUint32Le( bytes, 0 ); // misc
-        Internal::appendUint32Le( bytes, 1 ); // 배열 크기
-        Internal::appendUint32Le( bytes, 0 ); // misc2
+        LittleEndianUtil::appendUint32( bytes, Internal::kDxgiR8G8B8A8Unorm );
+        LittleEndianUtil::appendUint32( bytes, Internal::kDimensionTexture2D );
+        LittleEndianUtil::appendUint32( bytes, 0 ); // misc
+        LittleEndianUtil::appendUint32( bytes, 1 ); // 배열 크기
+        LittleEndianUtil::appendUint32( bytes, 0 ); // misc2
         bytes.insert( bytes.end(), rgbaBytes.begin(), rgbaBytes.begin() + static_cast<ptrdiff_t>( static_cast<size_t>( width ) * height * 4u ) );
         if ( FileUtil::writeFile( path, bytes.data(), bytes.size() ) == false )
         {

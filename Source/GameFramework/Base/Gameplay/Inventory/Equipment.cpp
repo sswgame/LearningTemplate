@@ -65,7 +65,7 @@ namespace sw
     {
         _pCatalog = pCatalog;
         _listSlot.clear();
-        GameDataXML::forEachToken( slotLayout, ", ", [&]( string_view token )
+        StringUtil::forEachToken( slotLayout, ", ", [&]( string_view token )
         {
             EquipSlot         slot;
             const size_t      colon = token.find( ':' );

@@ -24,7 +24,7 @@ namespace sw
                                       vector<hashed_string>& outListSeason )
             {
                 outListSeason.clear();
-                GameDataXML::forEachToken( text, ",;| ", [&]( string_view token )
+                StringUtil::forEachToken( text, ",;| ", [&]( string_view token )
                 {
                     const hashed_string season( token );
                     const bool          bKnown = listKnown.empty() || std::find( listKnown.begin(), listKnown.end(), season ) != listKnown.end();

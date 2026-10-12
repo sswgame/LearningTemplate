@@ -200,7 +200,7 @@ namespace sw
             level._population       = MathUtil::max( 1, node.getAttributeInt( "population", level._population ) );
             level._taxPerPerson     = MathUtil::max( 0, node.getAttributeInt( "tax", level._taxPerPerson ) );
             level._minDesirability  = node.getAttributeInt( "desirability", level._minDesirability );
-            GameDataXML::forEachToken( node.getAttributeText( "services" ), ",; ", [&]( string_view token )
+            StringUtil::forEachToken( node.getAttributeText( "services" ), ",; ", [&]( string_view token )
             {
                 CityService service = CityService::Count;
                 if ( parseCityService( token, service ) )

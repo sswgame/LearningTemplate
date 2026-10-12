@@ -2,6 +2,7 @@
 
 #include "Core/Network/Security/NetSessionKeyUtil.h"
 
+#include "Core/Container/LittleEndianUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 
 #include <cstring>
@@ -15,14 +16,6 @@ namespace sw
             static constexpr utf8  kSessionLabel[] = "sw-net-v1";
             static constexpr utf8  kProofLabel[]   = "sw-net-proof-v1";
             static constexpr int32 kKeyBlockSize   = 2 * ( NetSecurityConstant::kAeadKeySize + NetSecurityConstant::kAeadNonceSize );
-
-            static void writeLittle( uint8* pOut, uint64 value, int32 byteCount )
-            {
-                for ( int32 index = 0; index < byteCount; ++index )
-                {
-                    pOut[index] = static_cast<uint8>( value >> ( index * 8 ) );
-                }
-            }
 
             static void wipeBytes( void* pData, size_t size )
             {
@@ -47,9 +40,9 @@ namespace sw
         constexpr int32 kLabelSize = static_cast<int32>( sizeof( Internal::kSessionLabel ) - 1 );
         uint8           arrInfo[kLabelSize + 8 + 8 + 4];
         std::memcpy( arrInfo, Internal::kSessionLabel, static_cast<size_t>( kLabelSize ) );
-        Internal::writeLittle( arrInfo + kLabelSize, clientSalt, 8 );
-        Internal::writeLittle( arrInfo + kLabelSize + 8, serverSalt, 8 );
-        Internal::writeLittle( arrInfo + kLabelSize + 16, protocolID, 4 );
+        LittleEndianUtil::writeUint64( arrInfo + kLabelSize, clientSalt );
+        LittleEndianUtil::writeUint64( arrInfo + kLabelSize + 8, serverSalt );
+        LittleEndianUtil::writeUint32( arrInfo + kLabelSize + 16, protocolID );
         const uint8  arrZeroSalt[NetSecurityConstant::kSha256Size] = {};
         const uint8* pSalt                                         = pSessionSecret != nullptr ? pSessionSecret->_arrByte : arrZeroSalt;
         uint8        arrBlock[Internal::kKeyBlockSize];

@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/EventBuffer.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
@@ -15,7 +16,6 @@
 #include "GameFramework/Base/Actor/Navigation/GridPathfinder.h"
 #include "GameFramework/Base/Actor/Navigation/NavAgent.h"
 #include "GameFramework/Base/Actor/Navigation/NavGrid.h"
-#include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
 #include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
 #include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 #include "GameFramework/Base/Foundation/Utility/Time/FixedStepTimer.h"

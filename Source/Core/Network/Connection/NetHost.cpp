@@ -3,6 +3,7 @@
 #include "Core/Network/Connection/NetHost.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/LittleEndianUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
@@ -28,20 +29,6 @@ namespace sw
             /** @brief 디버거가 붙었는지 다시 확인하는 간격입니다. Linux 에서는 파일을 읽어 확인합니다. */
             static constexpr float64 kDebuggerPollSeconds = 1.0;
 #endif
-
-            static void writeUint32( vector<uint8>& outBytes, size_t offset, uint32 value )
-            {
-                for ( int32 index = 0; index < 4; ++index )
-                {
-                    outBytes[offset + static_cast<size_t>( index )] = static_cast<uint8>( value >> ( index * 8 ) );
-                }
-            }
-
-            static uint32 readUint32( const uint8* pData )
-            {
-                return static_cast<uint32>( pData[0] ) | ( static_cast<uint32>( pData[1] ) << 8 ) | ( static_cast<uint32>( pData[2] ) << 16 ) |
-                       ( static_cast<uint32>( pData[3] ) << 24 );
-            }
 
             /** @brief 거절 패킷이 싣는 이유를 읽습니다. 모르는 값은 Rejected 로 읽으므로, 다른 버전이 이유를 늘려도 클라이언트는 연결이 끊깁니다. */
             static NetDisconnectReason readDeniedReason( uint64 value )
@@ -284,8 +271,8 @@ namespace sw
         uint8* pPacket = _pendingBatch._bytes.data() + offset;
         if ( bodySize > 0 )
             std::memcpy( pPacket + NetHostInternal::kHeaderSize, body.data(), static_cast<size_t>( bodySize ) );
-        NetHostInternal::writeUint32( _pendingBatch._bytes, offset, headerID );
-        NetHostInternal::writeUint32( _pendingBatch._bytes, offset + 4, computePacketChecksum( headerID, pPacket + NetHostInternal::kHeaderSize, bodySize ) );
+        LittleEndianUtil::writeUint32( _pendingBatch._bytes.data() + offset, headerID );
+        LittleEndianUtil::writeUint32( _pendingBatch._bytes.data() + offset + 4, computePacketChecksum( headerID, pPacket + NetHostInternal::kHeaderSize, bodySize ) );
         _pendingBatch._listDatagram.push_back( OutgoingDatagram{ to, static_cast<int32>( offset ), NetHostInternal::kHeaderSize + bodySize } );
     }
 
@@ -692,9 +679,9 @@ namespace sw
 
     void NetHost::handlePacket( float64 nowSeconds, const NetAddress& from, const uint8* pData, int32 size )
     {
-        const uint32 headerID = size > NetHostInternal::kHeaderSize ? NetHostInternal::readUint32( pData ) : 0u;
+        const uint32 headerID = size > NetHostInternal::kHeaderSize ? LittleEndianUtil::readUint32( pData ) : 0u;
         if ( size <= NetHostInternal::kHeaderSize || ( headerID != _protocolID && headerID != NetProtocol::kHandshakeID ) ||
-             NetHostInternal::readUint32( pData + 4 ) !=
+             LittleEndianUtil::readUint32( pData + 4 ) !=
                  computePacketChecksum( headerID, pData + NetHostInternal::kHeaderSize, size - NetHostInternal::kHeaderSize ) )
         {
             ++_rejectedPacketCount; // 다른 버전, 다른 게임, 깨진 패킷.
@@ -907,7 +894,7 @@ namespace sw
     void NetHost::handleSealedPacket( float64 nowSeconds, PacketType type, int32 slotIndex, const uint8* pBody, int32 bodySize )
     {
         // 본문 형식은 [종류와 0][연결 값 4바이트][패킷 번호 8바이트][AEAD + 태그]다. 바이트 정렬이므로 BitReader 를 거치지 않는다.
-        const uint32 token  = bodySize >= 5 ? NetHostInternal::readUint32( pBody + 1 ) : 0u;
+        const uint32 token  = bodySize >= 5 ? LittleEndianUtil::readUint32( pBody + 1 ) : 0u;
         NetHostSlot* pSlot  = _slotTable.isValid( slotIndex ) ? &_slotTable.get( slotIndex ) : nullptr;
         const bool   bReady = pSlot != nullptr && pSlot->_state == NetConnectionState::Connected && pSlot->_security != nullptr &&
                             pSlot->_security->_bKeysReady == SW_TRUE && token == static_cast<uint32>( pSlot->getConnectionToken() );

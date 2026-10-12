@@ -180,6 +180,69 @@ namespace sw
         /** @brief wstring_view 의 앞뒤 공백을 뗀 뷰를 반환합니다(할당 없음). */
         static wstring_view trim( wstring_view input );
 
+        /**
+         * @brief @p text 를 줄마다 나눠 @p callback( string_view line ) 을 부릅니다. 할당하지 않습니다.
+         * @details 줄 끝의 `\r` 하나를 떼므로 CRLF 글도 같은 줄을 냅니다. 빈 줄도 넘기지만, 글이 `\n` 으로 끝나면 그 뒤에 빈 줄을
+         *          하나 더 만들지 않습니다(빈 글은 줄이 없습니다). 콜백이 `bool` 을 돌려주면 false 에서 멈춥니다.
+         */
+        template <typename TCallback>
+        static void forEachLine( string_view text, TCallback&& callback )
+        {
+            size_t lineStart = 0;
+            while ( lineStart < text.size() )
+            {
+                size_t lineEnd = text.find( '\n', lineStart );
+                if ( lineEnd == string_view::npos )
+                    lineEnd = text.size();
+                string_view line = text.substr( lineStart, lineEnd - lineStart );
+                if ( line.empty() == false && line.back() == '\r' )
+                    line.remove_suffix( 1 );
+                lineStart = lineEnd + 1;
+                if constexpr ( std::is_same_v<std::invoke_result_t<TCallback&, string_view>, bool> )
+                {
+                    if ( callback( line ) == false )
+                        return;
+                }
+                else
+                {
+                    callback( line );
+                }
+            }
+        }
+
+        /**
+         * @brief @p separators 의 아무 글자로 나뉜 비지 않은 토큰마다 @p callback( string_view token ) 을 부릅니다. 할당하지 않습니다.
+         * @details 구분자가 이어지면 빈 토큰은 건너뜁니다. 콜백이 `bool` 을 돌려주면 false 에서 멈춥니다.
+         * @code
+         *     StringUtil::forEachToken( "Spring, Fall", ",; ", [&]( string_view token ) { ... } );
+         * @endcode
+         */
+        template <typename TCallback>
+        static void forEachToken( string_view text, string_view separators, TCallback&& callback )
+        {
+            size_t tokenStart = 0;
+            while ( tokenStart < text.size() )
+            {
+                size_t tokenEnd = text.find_first_of( separators, tokenStart );
+                if ( tokenEnd == string_view::npos )
+                    tokenEnd = text.size();
+                if ( tokenEnd > tokenStart )
+                {
+                    const string_view token = text.substr( tokenStart, tokenEnd - tokenStart );
+                    if constexpr ( std::is_same_v<std::invoke_result_t<TCallback&, string_view>, bool> )
+                    {
+                        if ( callback( token ) == false )
+                            return;
+                    }
+                    else
+                    {
+                        callback( token );
+                    }
+                }
+                tokenStart = tokenEnd + 1;
+            }
+        }
+
         /** @brief 문자열 길이(문자 수)를 반환합니다. */
         static uint32 strlen( const utf8* pStr );
         /** @brief 문자열 길이(문자 수)를 반환합니다. */
@@ -227,6 +290,13 @@ namespace sw
          * @return 성공하면 true, 실패하면 false(outValue 는 바꾸지 않습니다)
          */
         [[nodiscard]] static bool parseFloat( string_view token, float32& outValue );
+
+        /**
+         * @brief @p separators 로 나뉜 실수(`"1 0.5 0"` · `"(1, 2, 3)"`)를 앞에서부터 최대 @p maxCount 개 읽고 읽은 개수를 반환합니다(할당 없음).
+         * @details 숫자가 아닌 토큰을 만나면 거기서 멈춥니다. @p maxCount 개를 읽은 뒤의 토큰은 보지 않습니다.
+         *          읽지 못한 칸은 바꾸지 않으므로, 개수가 꼭 맞아야 하면 반환값을 @p maxCount 와 비교합니다.
+         */
+        static uint32 parseFloatList( string_view text, string_view separators, float32* pOutValue, uint32 maxCount );
 
         /**
          * @brief string_view 토큰을 64비트 실수로 파싱합니다(할당 없음).

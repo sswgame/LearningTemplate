@@ -12,12 +12,12 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/EventBuffer.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 
-#include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Rule/CacheRecordUpdater.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Shared/MatchmakingProtocol.h"

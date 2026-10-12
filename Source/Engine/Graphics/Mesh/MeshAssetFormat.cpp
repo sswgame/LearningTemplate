@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 
+#include "Core/Container/LittleEndianUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -33,38 +34,16 @@ namespace sw
             static_assert( sizeof( RHIVertex ) == MeshAssetFormat::kVertexSize, "RHIVertex changed - bump MeshAssetFormat::kVersion and re-import models" );
             static_assert( MeshAssetFormat::kSkinVertexSize == 4 * sizeof( uint16 ) + 4 * sizeof( float32 ), "kSkinVertexSize must match the skin layout" );
 
-            static void appendUint16( vector<uint8>& outBytes, uint16 value )
-            {
-                outBytes.push_back( static_cast<uint8>( value & 0xFFu ) );
-                outBytes.push_back( static_cast<uint8>( ( value >> 8 ) & 0xFFu ) );
-            }
-
-            static void appendUint32( vector<uint8>& outBytes, uint32 value )
-            {
-                outBytes.push_back( static_cast<uint8>( value & 0xFFu ) );
-                outBytes.push_back( static_cast<uint8>( ( value >> 8 ) & 0xFFu ) );
-                outBytes.push_back( static_cast<uint8>( ( value >> 16 ) & 0xFFu ) );
-                outBytes.push_back( static_cast<uint8>( ( value >> 24 ) & 0xFFu ) );
-            }
-
             static void appendFloat32( vector<uint8>& outBytes, float32 value )
             {
                 uint32 bits = 0;
                 Memory::copy( &bits, &value, sizeof( bits ) );
-                appendUint32( outBytes, bits );
-            }
-
-            static uint16 readUint16( const uint8* pData ) { return static_cast<uint16>( pData[0] | ( pData[1] << 8 ) ); }
-
-            static uint32 readUint32( const uint8* pData )
-            {
-                return static_cast<uint32>( pData[0] ) | ( static_cast<uint32>( pData[1] ) << 8 ) | ( static_cast<uint32>( pData[2] ) << 16 ) |
-                       ( static_cast<uint32>( pData[3] ) << 24 );
+                LittleEndianUtil::appendUint32( outBytes, bits );
             }
 
             static float32 readFloat32( const uint8* pData )
             {
-                const uint32 bits  = readUint32( pData );
+                const uint32 bits  = LittleEndianUtil::readUint32( pData );
                 float32      value = 0.0f;
                 Memory::copy( &value, &bits, sizeof( value ) );
                 return value;
@@ -104,11 +83,11 @@ namespace sw
         {
             outBytes.push_back( magic );
         }
-        MeshAssetFormatInternal::appendUint32( outBytes, kVersion );
-        MeshAssetFormatInternal::appendUint32( outBytes, static_cast<uint32>( data._listVertex.size() ) );
-        MeshAssetFormatInternal::appendUint32( outBytes, kVertexSize );
+        LittleEndianUtil::appendUint32( outBytes, kVersion );
+        LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( data._listVertex.size() ) );
+        LittleEndianUtil::appendUint32( outBytes, kVertexSize );
         MeshAssetFormatInternal::appendFloat32( outBytes, MeshAssetFormatInternal::computeBoundingRadius( data._listVertex ) );
-        MeshAssetFormatInternal::appendUint32( outBytes, skinBoneCount );
+        LittleEndianUtil::appendUint32( outBytes, skinBoneCount );
 
         for ( const RHIVertex& vertex : data._listVertex )
         {
@@ -135,7 +114,7 @@ namespace sw
             {
                 for ( const uint16 joint : skin._arrJoint )
                 {
-                    MeshAssetFormatInternal::appendUint16( outBytes, joint );
+                    LittleEndianUtil::appendUint16( outBytes, joint );
                 }
                 for ( const float32 weight : skin._arrWeight )
                 {
@@ -151,18 +130,18 @@ namespace sw
             outBytes.push_back( letter );
         }
         const size_t lengthOffset = outBytes.size();
-        MeshAssetFormatInternal::appendUint32( outBytes, 0u );
+        LittleEndianUtil::appendUint32( outBytes, 0u );
         const size_t contentStart = outBytes.size();
-        MeshAssetFormatInternal::appendUint32( outBytes, static_cast<uint32>( data._listMorphTarget.size() ) );
+        LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( data._listMorphTarget.size() ) );
         for ( const MeshMorphTarget& target : data._listMorphTarget )
         {
             const string_view name = target._name.c_str();
-            MeshAssetFormatInternal::appendUint32( outBytes, static_cast<uint32>( name.size() ) );
+            LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( name.size() ) );
             outBytes.insert( outBytes.end(), reinterpret_cast<const uint8*>( name.data() ), reinterpret_cast<const uint8*>( name.data() ) + name.size() );
-            MeshAssetFormatInternal::appendUint32( outBytes, static_cast<uint32>( target._listDelta.size() ) );
+            LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( target._listDelta.size() ) );
             for ( const MeshMorphDelta& delta : target._listDelta )
             {
-                MeshAssetFormatInternal::appendUint32( outBytes, delta._vertexIndex );
+                LittleEndianUtil::appendUint32( outBytes, delta._vertexIndex );
                 const float32 arrValue[6] = { delta._position._x, delta._position._y, delta._position._z, delta._normal._x, delta._normal._y, delta._normal._z };
                 for ( const float32 value : arrValue )
                 {
@@ -198,11 +177,11 @@ namespace sw
             return false;
         }
 
-        const uint32  version        = MeshAssetFormatInternal::readUint32( pData + 4 );
-        const uint32  vertexCount    = MeshAssetFormatInternal::readUint32( pData + 8 );
-        const uint32  vertexSize     = MeshAssetFormatInternal::readUint32( pData + 12 );
+        const uint32  version        = LittleEndianUtil::readUint32( pData + 4 );
+        const uint32  vertexCount    = LittleEndianUtil::readUint32( pData + 8 );
+        const uint32  vertexSize     = LittleEndianUtil::readUint32( pData + 12 );
         const float32 boundingRadius = MeshAssetFormatInternal::readFloat32( pData + 16 );
-        const uint32  skinBoneCount  = MeshAssetFormatInternal::readUint32( pData + 20 );
+        const uint32  skinBoneCount  = LittleEndianUtil::readUint32( pData + 20 );
         if ( version != kVersion || vertexSize != kVertexSize )
         {
             SW_LOG_WARNING( "Mesh asset version %# / vertex size %# is not the current %# / %# - re-import the model", version, vertexSize, kVersion, kVertexSize );
@@ -247,7 +226,7 @@ namespace sw
             {
                 for ( uint16& joint : skin._arrJoint )
                 {
-                    joint = MeshAssetFormatInternal::readUint16( pCursor );
+                    joint = LittleEndianUtil::readUint16( pCursor );
                     pCursor += sizeof( uint16 );
                     if ( joint >= skinBoneCount )
                     {
@@ -275,7 +254,7 @@ namespace sw
                 return false;
             }
             const bool   bMorph      = Memory::compare( pCursor, MeshAssetFormatInternal::kArrMorphChunk, 4 ) == 0;
-            const uint32 chunkLength = MeshAssetFormatInternal::readUint32( pCursor + 4 );
+            const uint32 chunkLength = LittleEndianUtil::readUint32( pCursor + 4 );
             const uint8* pChunk      = pCursor + 8;
             const uint8* pChunkEnd   = pChunk + chunkLength;
             if ( bMorph == false || chunkLength > static_cast<size_t>( pEnd - pChunk ) )
@@ -285,25 +264,25 @@ namespace sw
                 return false;
             }
             bool   bValid      = chunkLength >= 4;
-            uint32 targetCount = bValid ? MeshAssetFormatInternal::readUint32( pChunk ) : 0u;
+            uint32 targetCount = bValid ? LittleEndianUtil::readUint32( pChunk ) : 0u;
             pChunk += 4;
             for ( uint32 targetIndex = 0; bValid && targetIndex < targetCount; ++targetIndex )
             {
                 bValid                  = pChunkEnd - pChunk >= 4;
-                const uint32 nameLength = bValid ? MeshAssetFormatInternal::readUint32( pChunk ) : 0u;
+                const uint32 nameLength = bValid ? LittleEndianUtil::readUint32( pChunk ) : 0u;
                 bValid                  = bValid && static_cast<size_t>( pChunkEnd - pChunk ) >= 8u + nameLength;
                 if ( bValid == false )
                     break;
                 MeshMorphTarget target{};
                 target._name = hashed_string( string( reinterpret_cast<const utf8*>( pChunk + 4 ), nameLength ) );
                 pChunk += 4 + nameLength;
-                const uint32 deltaCount = MeshAssetFormatInternal::readUint32( pChunk );
+                const uint32 deltaCount = LittleEndianUtil::readUint32( pChunk );
                 pChunk += 4;
                 bValid = static_cast<uint64>( pChunkEnd - pChunk ) >= static_cast<uint64>( deltaCount ) * MeshAssetFormatInternal::kMorphDeltaSize;
                 for ( uint32 deltaIndex = 0; bValid && deltaIndex < deltaCount; ++deltaIndex )
                 {
                     MeshMorphDelta delta{};
-                    delta._vertexIndex = MeshAssetFormatInternal::readUint32( pChunk );
+                    delta._vertexIndex = LittleEndianUtil::readUint32( pChunk );
                     float32 arrValue[6]{};
                     for ( uint32 valueIndex = 0; valueIndex < 6; ++valueIndex )
                     {

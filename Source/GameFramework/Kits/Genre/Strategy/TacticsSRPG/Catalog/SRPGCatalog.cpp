@@ -37,7 +37,7 @@ namespace sw
             static void parseFourInts( string_view text, int32 dashValue, int32 ( &inoutArrValue )[kSRPGMoveTypeCount], bool bAptitude )
             {
                 int32 slot = 0;
-                GameDataXML::forEachToken( text, ",; \t", [&]( string_view token )
+                StringUtil::forEachToken( text, ",; \t", [&]( string_view token )
                 {
                     if ( slot >= kSRPGMoveTypeCount )
                         return;
@@ -210,7 +210,7 @@ namespace sw
             def._mapAnchor = SRPGMapAnchor::Target;
         if ( def.isMap() )
         {
-            GameDataXML::forEachToken( node.getAttributeText( "pattern" ), " ;\t", [&]( string_view token )
+            StringUtil::forEachToken( node.getAttributeText( "pattern" ), " ;\t", [&]( string_view token )
             {
                 float32 arrValue[2]{ 0.0f, 0.0f };
                 if ( GameDataXML::parseFloats( token, arrValue, 2 ) == 2 )
@@ -242,7 +242,7 @@ namespace sw
         if ( moveType.empty() == false && SRPGCatalogInternal::parseMoveType( moveType, def._moveType ) == false )
             SW_LOG_WARNING( "%#: unit '%#' has an unknown moveType '%#' - read as ground", sourceName, pID, moveType );
         SRPGCatalogInternal::parseFourInts( node.getAttributeText( "aptitude" ), 0, def._arrAptitude, true );
-        GameDataXML::forEachToken( node.getAttributeText( "weapons" ), ",; \t", [&]( string_view token )
+        StringUtil::forEachToken( node.getAttributeText( "weapons" ), ",; \t", [&]( string_view token )
         { def._listWeaponID.push_back( hashed_string( token ) ); } );
         GameDataXML::forEachNamedNumber( node.getAttributeText( "developsTo" ), ",; \t", SRPGDevelopTarget{}._requiredLevel, GameDataXML::MissingValue::UseDefault,
                                          [&]( string_view token, string_view unitName, int32 requiredLevel, bool bValid )

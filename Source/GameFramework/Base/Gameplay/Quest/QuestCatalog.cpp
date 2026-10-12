@@ -56,7 +56,7 @@ namespace sw
             quest._name          = pName != nullptr ? pName : pID;
             quest._requiredLevel = questNode.getAttributeInt( "level", 0 );
             quest._bRepeatable   = questNode.getAttributeBool( "repeatable", false ) ? SW_TRUE : SW_FALSE;
-            GameDataXML::forEachToken( questNode.getAttributeText( "requires" ), ", ", [&]( string_view token )
+            StringUtil::forEachToken( questNode.getAttributeText( "requires" ), ", ", [&]( string_view token )
             { quest._listRequiredQuest.push_back( hashed_string( token ) ); } );
             for ( XMLNode stageNode = questNode.findChild( "Stage" ); stageNode; stageNode = stageNode.findNextSibling( "Stage" ) )
             {

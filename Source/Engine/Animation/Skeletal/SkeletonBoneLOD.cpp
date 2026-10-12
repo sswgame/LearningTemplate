@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
@@ -151,12 +152,14 @@ namespace sw
     {
         if ( StringUtil::endsWith( skeletonPath, Skeleton::kExtension ) == false )
             return string{};
-        const string_view stemPath   = skeletonPath.substr( 0, skeletonPath.size() - Skeleton::kExtension.size() );
-        const size_t      slash      = stemPath.find_last_of( '/' );
-        const string_view stem       = ( slash == string_view::npos ) ? stemPath : stemPath.substr( slash + 1 );
-        const string_view folder     = ( slash == string_view::npos ) ? string_view{} : stemPath.substr( 0, slash );
-        const size_t      parentCut  = folder.find_last_of( '/' );
-        const string_view folderName = ( parentCut == string_view::npos ) ? folder : folder.substr( parentCut + 1 );
+        const string_view stemPath = skeletonPath.substr( 0, skeletonPath.size() - Skeleton::kExtension.size() );
+        string_view       folder;
+        string_view       stem;
+        FileUtil::splitPath( stemPath, folder, stem );
+        if ( folder.empty() == false )
+            folder.remove_suffix( 1 ); // 끝 구분자
+        string_view folderName;
+        FileUtil::getFileNamePart( folder, folderName );
         // 임포트 옆 폴더(폴더 이름 = 파일 이름)는 다시 임포트할 때 지워진다. 그 밖의 메시 옆에 둔다.
         string path = ( folder.empty() == false && folderName == stem ) ? string{ folder } : string{ stemPath };
         path.append( kExtension.data(), kExtension.size() );
@@ -170,9 +173,9 @@ namespace sw
         if ( StringUtil::endsWith( boneLODPath, kExtension ) == false )
             return;
         const string_view stemPath = boneLODPath.substr( 0, boneLODPath.size() - kExtension.size() );
-        const size_t      slash    = stemPath.find_last_of( '/' );
-        const string_view stem     = ( slash == string_view::npos ) ? stemPath : stemPath.substr( slash + 1 );
-        outImportedPath            = string{ stemPath } + "/" + string{ stem } + string{ Skeleton::kExtension };
-        outSiblingPath             = string{ stemPath } + string{ Skeleton::kExtension };
+        string_view       stem;
+        FileUtil::getFileNamePart( stemPath, stem );
+        outImportedPath = string{ stemPath } + "/" + string{ stem } + string{ Skeleton::kExtension };
+        outSiblingPath  = string{ stemPath } + string{ Skeleton::kExtension };
     }
 } // namespace sw

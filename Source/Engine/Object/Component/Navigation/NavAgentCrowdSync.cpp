@@ -92,7 +92,7 @@ namespace sw
             // 컨트롤러 · 폰 이동이 옮긴 자리를 받아들인다(SteerOnly 는 군중이 낸 속도를 조종자가 의도로 바꿔 폰이 걸었다).
             crowd.syncAgentPosition( agent._crowdAgentID, currentPosition );
         }
-        else if ( agent._bHasWritten == SW_TRUE && SceneNavigationUtil::computeDistance2D( currentPosition, agent._writtenPosition ) > Internal::kTeleportDistance )
+        else if ( agent._bHasWritten == SW_TRUE && float3::getHorizontalDistance( currentPosition, agent._writtenPosition ) > Internal::kTeleportDistance )
         {
             crowd.teleportAgent( agent._crowdAgentID, currentPosition );
             agent._bDestinationDirty = agent._bHasDestination;
@@ -130,7 +130,7 @@ namespace sw
         agent._bOnNavMesh      = state._bOnNavMesh ? SW_TRUE : SW_FALSE;
         if ( agent._bHasDestination == SW_TRUE && agent._moveStatus != NavMoveStatus::Arrived )
         {
-            const bool bWithinStop = SceneNavigationUtil::computeDistance2D( state._position, agent._destination ) <= agent._stoppingDistance;
+            const bool bWithinStop = float3::getHorizontalDistance( state._position, agent._destination ) <= agent._stoppingDistance;
             switch ( state._moveState )
             {
                 case NavCrowdMoveState::Failed:

@@ -85,7 +85,7 @@ namespace sw
             if ( targets.empty() == false )
             {
                 bGround = false;
-                GameDataXML::forEachToken( targets, ",; ", [&]( string_view token )
+                StringUtil::forEachToken( targets, ",; ", [&]( string_view token )
                 {
                     bGround = bGround || StringUtil::equals( token, string_view( "Ground" ), true );
                     bAir    = bAir || StringUtil::equals( token, string_view( "Air" ), true );

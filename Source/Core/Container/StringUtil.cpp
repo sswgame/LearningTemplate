@@ -967,6 +967,21 @@ namespace sw
         return StringUtilInternal::parseFiniteFloatToken( token, outValue );
     }
 
+    uint32 StringUtil::parseFloatList( string_view text, string_view separators, float32* pOutValue, uint32 maxCount )
+    {
+        if ( pOutValue == nullptr || maxCount == 0 )
+            return 0;
+        uint32 readCount = 0;
+        forEachToken( text, separators, [&]( string_view token )
+        {
+            if ( parseFloat( token, pOutValue[readCount] ) == false )
+                return false;
+            ++readCount;
+            return readCount < maxCount;
+        } );
+        return readCount;
+    }
+
     bool StringUtil::parseDouble( string_view token, float64& outValue )
     {
         return StringUtilInternal::parseFiniteFloatToken( token, outValue );

@@ -20,14 +20,6 @@ namespace sw
         {
             static constexpr float32 kTiny = 1.0e-5f;
 
-            /** @brief XZ 평면 거리를 반환합니다. */
-            static float32 computeFlatDistance( const float3& from, const float3& to )
-            {
-                const float32 deltaX = to._x - from._x;
-                const float32 deltaZ = to._z - from._z;
-                return MathUtil::sqrt( deltaX * deltaX + deltaZ * deltaZ );
-            }
-
             /** @brief XZ 평면에서 길이를 1 이하로 자른 방향을 반환합니다. */
             static float3 clampDirection( const float3& direction )
             {
@@ -316,7 +308,7 @@ namespace sw
             const bool            bStanding = candidate._state == SurvivorState::Healthy || candidate._state == SurvivorState::Injured;
             if ( bStanding == false || candidate._activity == SurvivorActivity::InLocker )
                 continue;
-            const float32 distance = HorrorMatchActionInternal::computeFlatDistance( _killer._position, candidate._position );
+            const float32 distance = float3::getHorizontalDistance( _killer._position, candidate._position );
             if ( distance > def._lungeRange || distance >= best )
                 continue;
             if ( distance > HorrorMatchActionInternal::kTiny )

@@ -46,7 +46,7 @@ namespace sw
             {
                 const int32    count = KeyValueFile::getInt( inoutMap, "count", 0 );
                 vector<string> listFavorite;
-                GameDataXML::forEachToken( string_view( KeyValueFile::get( inoutMap, "favorites", "" ) ), ",", [&]( string_view token )
+                StringUtil::forEachToken( string_view( KeyValueFile::get( inoutMap, "favorites", "" ) ), ",", [&]( string_view token )
                 {
                     listFavorite.push_back( string( StringUtil::trim( token ) ) );
                 } );

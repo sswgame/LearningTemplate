@@ -221,7 +221,7 @@ namespace sw
             def._minSellFactor    = MathUtil::saturate( node.getAttributeFloat( "minSellFactor", def._minSellFactor ) );
             def._recoveryPerDay   = MathUtil::max( 0.0f, node.getAttributeFloat( "recovery", def._recoveryPerDay ) );
             def._restockDays      = MathUtil::max( 0, node.getAttributeInt( "restockDays", def._restockDays ) );
-            GameDataXML::forEachToken( node.getAttributeText( "refuses" ), ",; ", [&]( string_view token )
+            StringUtil::forEachToken( node.getAttributeText( "refuses" ), ",; ", [&]( string_view token )
             {
                 def._listRefusedCategory.push_back( hashed_string( token ) );
             } );

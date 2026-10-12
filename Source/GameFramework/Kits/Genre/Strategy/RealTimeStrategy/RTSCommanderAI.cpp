@@ -17,13 +17,6 @@ namespace sw
                 static const hashed_string kThreatKey( "Threat" );
                 return kThreatKey;
             }
-
-            static float32 computeFlatDistance( const float3& lhs, const float3& rhs )
-            {
-                const float32 dx = lhs._x - rhs._x;
-                const float32 dz = lhs._z - rhs._z;
-                return MathUtil::sqrt( dx * dx + dz * dz );
-            }
         };
     } // namespace
 } // namespace sw
@@ -88,7 +81,7 @@ namespace sw
         if ( event._kind != RTSEvent::Kind::UnderAttack || event._player != _player )
             return;
         const RTSUnit* pDepot = _pWorld->findUnit( findDepot() );
-        if ( pDepot != nullptr && RTSCommanderAIInternal::computeFlatDistance( pDepot->_position, event._position ) > _settings._defendRadius )
+        if ( pDepot != nullptr && float3::getHorizontalDistance( pDepot->_position, event._position ) > _settings._defendRadius )
             return;
         _blackboard.setVector( RTSCommanderAIInternal::getThreatKey(), event._position );
     }
@@ -287,7 +280,7 @@ namespace sw
             const RTSPlayer* pOther = world.findPlayer( player );
             if ( pOther->_bDefeated || world.areEnemies( self._player, player ) == false )
                 continue;
-            const float32 distance = RTSCommanderAIInternal::computeFlatDistance( pSelf->_startPosition, pOther->_startPosition );
+            const float32 distance = float3::getHorizontalDistance( pSelf->_startPosition, pOther->_startPosition );
             if ( distance < bestDistance )
             {
                 bestDistance = distance;

@@ -2,6 +2,7 @@
 
 #include "Engine/Destruction/DestructionDamage.h"
 
+#include "Core/Container/LittleEndianUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
@@ -27,30 +28,16 @@ namespace sw
                 float32 _strain;
             };
 
-            static void appendUint32( vector<uint8>& outBytes, uint32 value )
-            {
-                for ( uint32 shift = 0; shift < 32; shift += 8 )
-                {
-                    outBytes.push_back( static_cast<uint8>( ( value >> shift ) & 0xFFu ) );
-                }
-            }
-
             static void appendFloat32( vector<uint8>& outBytes, float32 value )
             {
                 uint32 bits = 0;
                 Memory::copy( &bits, &value, sizeof( bits ) );
-                appendUint32( outBytes, bits );
-            }
-
-            static uint32 readUint32( const uint8* pData )
-            {
-                return static_cast<uint32>( pData[0] ) | ( static_cast<uint32>( pData[1] ) << 8 ) | ( static_cast<uint32>( pData[2] ) << 16 ) |
-                       ( static_cast<uint32>( pData[3] ) << 24 );
+                LittleEndianUtil::appendUint32( outBytes, bits );
             }
 
             static float32 readFloat32( const uint8* pData )
             {
-                const uint32 bits  = readUint32( pData );
+                const uint32 bits  = LittleEndianUtil::readUint32( pData );
                 float32      value = 0.0f;
                 Memory::copy( &value, &bits, sizeof( value ) );
                 return value;
@@ -144,15 +131,15 @@ namespace sw
         {
             outBytes.push_back( magic );
         }
-        Internal::appendUint32( outBytes, kVersion );
-        Internal::appendUint32( outBytes, static_cast<uint32>( _seed & 0xFFFFFFFFull ) );
-        Internal::appendUint32( outBytes, static_cast<uint32>( _seed >> 32 ) );
-        Internal::appendUint32( outBytes, static_cast<uint32>( _listEvent.size() ) );
+        LittleEndianUtil::appendUint32( outBytes, kVersion );
+        LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( _seed & 0xFFFFFFFFull ) );
+        LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( _seed >> 32 ) );
+        LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( _listEvent.size() ) );
         for ( const DestructionDamageEvent& event : _listEvent )
         {
             outBytes.push_back( static_cast<uint8>( event._kind ) );
-            Internal::appendUint32( outBytes, static_cast<uint32>( event._leafHint ) );
-            Internal::appendUint32( outBytes, event._groupID );
+            LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( event._leafHint ) );
+            LittleEndianUtil::appendUint32( outBytes, event._groupID );
             const float32 arrValue[9] = { event._position._x, event._position._y, event._position._z, event._direction._x, event._direction._y,
                                           event._direction._z, event._strain, event._radius, event._impulse };
             for ( const float32 value : arrValue )
@@ -167,14 +154,14 @@ namespace sw
         using Internal = DestructionDamageInternal;
         _listEvent.clear();
         _seed = 0;
-        if ( pData == nullptr || size < 20 || Memory::compare( pData, Internal::kArrMagic, 4 ) != 0 || Internal::readUint32( pData + 4 ) != kVersion )
+        if ( pData == nullptr || size < 20 || Memory::compare( pData, Internal::kArrMagic, 4 ) != 0 || LittleEndianUtil::readUint32( pData + 4 ) != kVersion )
         {
             SW_LOG_ERROR( "Not a destruction event log (bad magic or version)" );
             return false;
         }
-        const uint64 seedLow  = Internal::readUint32( pData + 8 );
-        const uint64 seedHigh = Internal::readUint32( pData + 12 );
-        const uint32 count    = Internal::readUint32( pData + 16 );
+        const uint64 seedLow  = LittleEndianUtil::readUint32( pData + 8 );
+        const uint64 seedHigh = LittleEndianUtil::readUint32( pData + 12 );
+        const uint32 count    = LittleEndianUtil::readUint32( pData + 16 );
         if ( static_cast<uint64>( count ) * Internal::kEventSize != size - 20 )
         {
             SW_LOG_ERROR( "Destruction event log length does not match its event count" );
@@ -192,8 +179,8 @@ namespace sw
             }
             DestructionDamageEvent event;
             event._kind      = static_cast<DestructionDamageKind>( pCursor[0] );
-            event._leafHint  = static_cast<int32>( Internal::readUint32( pCursor + 1 ) );
-            event._groupID   = Internal::readUint32( pCursor + 5 );
+            event._leafHint  = static_cast<int32>( LittleEndianUtil::readUint32( pCursor + 1 ) );
+            event._groupID   = LittleEndianUtil::readUint32( pCursor + 5 );
             const uint8* pF  = pCursor + 9;
             event._position  = float3{ Internal::readFloat32( pF ), Internal::readFloat32( pF + 4 ), Internal::readFloat32( pF + 8 ) };
             event._direction = float3{ Internal::readFloat32( pF + 12 ), Internal::readFloat32( pF + 16 ), Internal::readFloat32( pF + 20 ) };

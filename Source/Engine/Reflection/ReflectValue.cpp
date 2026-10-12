@@ -104,32 +104,8 @@ namespace sw
                     setNumber( source, boolValue ? 1.0 : 0.0, true, boolValue ? 1 : 0 );
             }
 
-            /** @brief `1, 2, 3` · `(1 2 3)` 꼴을 실수 @p count 개로 읽습니다. */
-            [[nodiscard]] static bool parseFloatList( string_view text, float32* pOutValue, const uint32 count )
-            {
-                uint32 readCount = 0;
-                size_t position  = 0;
-                while ( position < text.size() && readCount < count )
-                {
-                    while ( position < text.size() && ( text[position] == ' ' || text[position] == ',' || text[position] == '(' || text[position] == ')' ||
-                                                        text[position] == '\t' ) )
-                    {
-                        ++position;
-                    }
-                    size_t end = position;
-                    while ( end < text.size() && text[end] != ' ' && text[end] != ',' && text[end] != ')' && text[end] != '\t' )
-                    {
-                        ++end;
-                    }
-                    if ( end == position )
-                        break;
-                    if ( StringUtil::parseFloat( text.substr( position, end - position ), pOutValue[readCount] ) == false )
-                        return false;
-                    ++readCount;
-                    position = end;
-                }
-                return readCount == count;
-            }
+            /** @brief 벡터 · 사원수 글(`1, 2, 3` · `(1 2 3)`)의 구분자입니다. */
+            static constexpr string_view kVectorSeparators = " ,()\t";
 
             /** @brief 원본 값을 내장 타입 T 로 바꿉니다. 숫자 범위를 넘거나 소수를 정수로 바꾸는 것은 거절합니다(조용히 깎지 않게). */
             template <typename T>
@@ -191,7 +167,7 @@ namespace sw
                 {
                     constexpr uint32 kCount = sizeof( T ) / sizeof( float32 );
                     float32          arrValue[4]{};
-                    if ( source._bText == false || parseFloatList( source._text, arrValue, kCount ) == false )
+                    if ( source._bText == false || StringUtil::parseFloatList( source._text, kVectorSeparators, arrValue, kCount ) != kCount )
                         return false;
                     outValue = TaskValue{ T( arrValue ) };
                     return true;
@@ -199,7 +175,7 @@ namespace sw
                 else if constexpr ( std::is_same_v<T, quaternion> )
                 {
                     float32 arrValue[4]{};
-                    if ( source._bText == false || parseFloatList( source._text, arrValue, 4 ) == false )
+                    if ( source._bText == false || StringUtil::parseFloatList( source._text, kVectorSeparators, arrValue, 4 ) != 4 )
                         return false;
                     outValue = TaskValue{ quaternion( arrValue[0], arrValue[1], arrValue[2], arrValue[3] ) };
                     return true;

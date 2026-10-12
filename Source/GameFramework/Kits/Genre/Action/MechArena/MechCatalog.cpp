@@ -43,7 +43,7 @@ namespace sw
                 const utf8* pWeaponID   = node.findAttribute( "weapon" );
                 slot._weaponID          = pWeaponID != nullptr ? hashed_string( pWeaponID ) : hashed_string{};
                 const string_view moves = node.getAttributeText( "moves" );
-                GameDataXML::forEachToken( moves, ",; ", [&]( string_view token )
+                StringUtil::forEachToken( moves, ",; ", [&]( string_view token )
                 { slot._listMoveID.push_back( hashed_string( token ) ); } );
                 slot._damage          = MathUtil::max( 0.0f, node.getAttributeFloat( "damage", slot._damage ) );
                 slot._downValue       = MathUtil::max( 0.0f, node.getAttributeFloat( "down", slot._downValue ) );

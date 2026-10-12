@@ -2,6 +2,7 @@
 
 #include "Core/Network/Connection/NetPacketSealer.h"
 
+#include "Core/Container/LittleEndianUtil.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 
@@ -16,23 +17,14 @@ namespace sw
             /** @brief 키 확인 태그의 AAD입니다. 서버가 지정한 슬롯 번호(4바이트, 리틀 엔디언)와 서버 솔트(8바이트, 리틀 엔디언)를 이었습니다. */
             static void makeKeyConfirmAad( uint32 serverIndex, uint64 serverSalt, uint8* pOutAad )
             {
-                for ( int32 index = 0; index < 4; ++index )
-                {
-                    pOutAad[index] = static_cast<uint8>( serverIndex >> ( index * 8 ) );
-                }
-                for ( int32 index = 0; index < 8; ++index )
-                {
-                    pOutAad[4 + index] = static_cast<uint8>( serverSalt >> ( index * 8 ) );
-                }
+                LittleEndianUtil::writeUint32( pOutAad, serverIndex );
+                LittleEndianUtil::writeUint64( pOutAad + 4, serverSalt );
             }
 
             /** @brief 데이터 패킷과 끊기 패킷의 AAD입니다. 프로토콜 ID(4바이트, 리틀 엔디언)와 본문 헤더(종류, 연결 값, 패킷 번호)를 이었습니다. */
             static void makePacketAad( uint32 protocolID, const uint8* pBodyHead, uint8* pOutAad )
             {
-                for ( int32 index = 0; index < 4; ++index )
-                {
-                    pOutAad[index] = static_cast<uint8>( protocolID >> ( index * 8 ) );
-                }
+                LittleEndianUtil::writeUint32( pOutAad, protocolID );
                 std::memcpy( pOutAad + 4, pBodyHead, NetPacketSealer::kSecureHeadSize );
             }
 
@@ -44,11 +36,8 @@ namespace sw
             {
                 if ( tokenSize < 0 || NetSecurityConstant::kMaxTokenSize < tokenSize )
                     return -1;
-                for ( int32 index = 0; index < 8; ++index )
-                {
-                    pOutAad[index]     = static_cast<uint8>( clientSalt >> ( index * 8 ) );
-                    pOutAad[8 + index] = static_cast<uint8>( serverSalt >> ( index * 8 ) );
-                }
+                LittleEndianUtil::writeUint64( pOutAad, clientSalt );
+                LittleEndianUtil::writeUint64( pOutAad + 8, serverSalt );
                 std::memcpy( pOutAad + 16, pPublicKey, NetSecurityConstant::kX25519KeySize );
                 if ( tokenSize > 0 )
                     std::memcpy( pOutAad + 16 + NetSecurityConstant::kX25519KeySize, pToken, static_cast<size_t>( tokenSize ) );
@@ -85,10 +74,7 @@ namespace sw
         const uint64 packetNumber = security._sendPacketNumber++;
         uint8        arrHead[kSecureHeadSize]{};
         arrHead[0] = typeByte; // 종류 3비트와 0 5비트다. BitWriter 는 낮은 비트부터 쓰므로 받는 쪽의 readBits( 3 )과 peekPacketType 이 그대로 읽는다.
-        for ( int32 index = 0; index < 4; ++index )
-        {
-            arrHead[1 + index] = static_cast<uint8>( connectionToken >> ( index * 8 ) );
-        }
+        LittleEndianUtil::writeUint32( arrHead + 1, connectionToken );
         for ( int32 index = 0; index < 8; ++index )
         {
             arrHead[5 + index] = static_cast<uint8>( packetNumber >> ( 56 - index * 8 ) );

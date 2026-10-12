@@ -2,6 +2,8 @@
 
 #include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
 
+#include "Core/Container/StringUtil.h"
+
 #include "Engine/Reflection/ReflectionTypes.h"
 
 // 인스펙터는 에디터 기능이라 Shipping 에는 없다 — 에디터 메타데이터(카테고리 · 표시 이름 · 숨김)도 Shipping 빌드에서 빠진다.
@@ -174,23 +176,16 @@ namespace sw::editor
         filter = StringUtil::trim( filter );
         if ( filter.empty() )
             return true;
-        size_t start = 0;
-        while ( start <= filter.size() )
+        bool bMatched = false;
+        StringUtil::forEachToken( filter, ";,", [&]( string_view token )
         {
-            const size_t      separator = filter.find_first_of( ";,", start );
-            const size_t      end       = ( separator == string_view::npos ) ? filter.size() : separator;
-            const string_view pattern   = StringUtil::trim( filter.substr( start, end - start ) );
+            const string_view pattern = StringUtil::trim( token );
             // `*.png` 는 확장자 비교, `*` 는 무엇이든, 그 밖은 파일 이름 끝 비교다.
-            if ( pattern == "*" || pattern == "*.*" )
-                return true;
             const string_view suffix = StringUtil::startsWith( pattern, "*" ) ? pattern.substr( 1 ) : pattern;
-            if ( suffix.empty() == false && StringUtil::endsWith( path, suffix, true ) )
-                return true;
-            if ( separator == string_view::npos )
-                break;
-            start = separator + 1;
-        }
-        return false;
+            bMatched                 = pattern == "*" || pattern == "*.*" || ( suffix.empty() == false && StringUtil::endsWith( path, suffix, true ) );
+            return bMatched == false;
+        } );
+        return bMatched;
     }
 
     string InspectorPropertyLayout::formatParameterList( const vector<FunctionParameterInfo>& listParameter )

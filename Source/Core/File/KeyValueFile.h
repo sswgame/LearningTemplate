@@ -87,26 +87,12 @@ namespace sw
         template <typename Fn>
         static void forEachContentLine( string_view text, Fn&& callback, utf8 commentChar = '#' )
         {
-            size_t begin{ 0 };
-            while ( begin <= text.size() )
+            StringUtil::forEachLine( text, [&]( string_view line )
             {
-                size_t end = text.find( '\n', begin );
-                if ( end == string_view::npos )
-                    end = text.size();
-
-                string_view line = text.substr( begin, end - begin );
-                if ( line.empty() == false && line.back() == '\r' )
-                    line.remove_suffix( 1 );
-
                 line = StringUtil::trim( line ); // 뷰라 할당이 없다
-
                 if ( line.empty() == false && line.front() != commentChar )
                     callback( line );
-
-                if ( end == text.size() )
-                    break;
-                begin = end + 1;
-            }
+            } );
         }
     };
 } // namespace sw

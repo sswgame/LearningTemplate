@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
@@ -107,28 +108,6 @@ namespace sw
         /** @brief 루트 읽기의 성공 여부를 그대로 반환합니다. */
         static constexpr bool isLoaded( bool bLoaded ) { return bLoaded; }
 
-        /**
-         * @brief @p separators 의 아무 글자로 나뉜 비지 않은 토큰마다 @p callback( string_view ) 을 부릅니다. 할당하지 않습니다.
-         * @code
-         *     GameDataXML::forEachToken( "Spring, Fall", ",; ", [&]( string_view token ) { ... } );
-         * @endcode
-         */
-
-        template <typename TCallback>
-        static void forEachToken( string_view text, string_view separators, TCallback&& callback )
-        {
-            size_t tokenStart = 0;
-            while ( tokenStart < text.size() )
-            {
-                size_t tokenEnd = text.find_first_of( separators, tokenStart );
-                if ( tokenEnd == string_view::npos )
-                    tokenEnd = text.size();
-                if ( tokenEnd > tokenStart )
-                    callback( text.substr( tokenStart, tokenEnd - tokenStart ) );
-                tokenStart = tokenEnd + 1;
-            }
-        }
-
         /** @brief `forEachNamedNumber` 에서 토큰에 콜론(`:값`)이 없을 때의 처리입니다. */
         enum class MissingValue : uint8
         {
@@ -148,7 +127,7 @@ namespace sw
         template <typename TValue, typename TCallback>
         static void forEachNamedNumber( string_view text, string_view separators, TValue defaultValue, MissingValue missing, TCallback&& callback )
         {
-            forEachToken( text, separators, [&]( string_view token )
+            StringUtil::forEachToken( text, separators, [&]( string_view token )
             {
                 const size_t      colon = token.find( ':' );
                 const string_view name  = colon == string_view::npos ? token : token.substr( 0, colon );

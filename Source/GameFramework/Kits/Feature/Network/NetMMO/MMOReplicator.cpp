@@ -17,13 +17,6 @@ namespace sw
     {
         struct MMOReplicatorInternal
         {
-            static float32 computeFlatDistance( const float3& lhs, const float3& rhs )
-            {
-                const float32 dx = lhs._x - rhs._x;
-                const float32 dz = lhs._z - rhs._z;
-                return MathUtil::sqrt( dx * dx + dz * dz );
-            }
-
             /**
              * @brief 엔티티 id 를 공간 해시의 키로 바꿉니다.
              * @details 격자는 키를 비교하고 해시하기만 하므로 세대는 항상 1이다. 세대 0은 무효 핸들이라 격자가 받지 않는다.
@@ -244,7 +237,7 @@ namespace sw
                 continue;
             }
             const bool bAlways = bAlwaysPolicy && _pPolicy->isAlwaysRelevant( connectionID, entityIter->second );
-            if ( bAlways == false && MMOReplicatorInternal::computeFlatDistance( center, entityIter->second._position ) > _settings._leaveRadius )
+            if ( bAlways == false && float3::getHorizontalDistance( center, entityIter->second._position ) > _settings._leaveRadius )
                 listLeave.push_back( visible.first );
         }
         std::sort( listLeave.begin(), listLeave.end() );
@@ -271,7 +264,7 @@ namespace sw
                 continue;
             const auto entityIter = _mapEntity.find( entityID );
             if ( entityIter != _mapEntity.end() )
-                listRank.emplace_back( MMOReplicatorInternal::computeFlatDistance( center, entityIter->second._position ), entityID );
+                listRank.emplace_back( float3::getHorizontalDistance( center, entityIter->second._position ), entityID );
         }
         std::sort( listRank.begin(), listRank.end() );
         listRank.erase( std::unique( listRank.begin(), listRank.end() ), listRank.end() ); // 반경 안의 엔티티와 항상 보이는 엔티티가 겹친 항목을 제거한다
@@ -317,7 +310,7 @@ namespace sw
             if ( std::binary_search( listLeave.begin() + static_cast<ptrdiff_t>( pendingLeaveIndex ), listLeave.end(), visible.first ) )
                 continue;
             const MMOEntity&    entity   = getEntity( visible.first );
-            const float32       distance = MMOReplicatorInternal::computeFlatDistance( center, entity._position );
+            const float32       distance = float3::getHorizontalDistance( center, entity._position );
             const VisibleEntry& entry    = visible.second;
             // 전송 중인 갱신이 있으면 그것과 비교한다. 확인을 기다리는 동안 같은 상태를 "바뀜" 으로 가속하지 않으려는 것이다. 잃으면 확인된 상태(오래된 것)와 비교하게 된다.
             const vector<uint8>& reference = entry._bInFlight == SW_TRUE ? entry._listInFlightState : entry._listSentState;

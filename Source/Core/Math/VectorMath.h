@@ -323,6 +323,12 @@ namespace sw
         /** @brief 두 벡터 사이 거리의 제곱을 구합니다. */
         static float32 getDistanceSquared( const float3& from, const float3& to ) noexcept;
 
+        /** @brief 높이(y)를 뺀 수평(XZ 평면) 거리를 구합니다. */
+        static float32 getHorizontalDistance( const float3& from, const float3& to ) noexcept;
+
+        /** @brief 높이(y)를 뺀 수평(XZ 평면) 거리의 제곱을 구합니다. */
+        static float32 getHorizontalDistanceSquared( const float3& from, const float3& to ) noexcept;
+
         /** @brief 성분별 최솟값으로 된 벡터를 반환합니다. */
         static float3 min( const float3& lhs, const float3& rhs ) noexcept;
 

@@ -37,14 +37,6 @@ namespace sw
             return component.hasBegunPlay() && component.isActive() && component.isPendingDestroy() == false && pOwner != nullptr &&
                    pOwner->isActiveInHierarchy();
         }
-
-        /** @brief 수평(XZ) 거리입니다. */
-        static float32 computeDistance2D( const float3& from, const float3& to )
-        {
-            const float32 deltaX = to._x - from._x;
-            const float32 deltaZ = to._z - from._z;
-            return MathUtil::sqrt( deltaX * deltaX + deltaZ * deltaZ );
-        }
     };
 } // namespace sw
 

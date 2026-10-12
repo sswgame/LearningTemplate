@@ -2,6 +2,7 @@
 
 #include "Engine/Environment/Terrain/HeightfieldData.h"
 
+#include "Core/Container/LittleEndianUtil.h"
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Resource/ResourceIO.h"
@@ -15,20 +16,6 @@ namespace sw
         struct HeightfieldDataInternal
         {
             static constexpr size_t kHeaderBytes = 16;
-
-            static uint32 readUint32( const vector<uint8>& bytes, size_t offset )
-            {
-                return static_cast<uint32>( bytes[offset] ) | ( static_cast<uint32>( bytes[offset + 1] ) << 8 ) | ( static_cast<uint32>( bytes[offset + 2] ) << 16 ) |
-                       ( static_cast<uint32>( bytes[offset + 3] ) << 24 );
-            }
-
-            static void appendUint32( vector<uint8>& outBytes, uint32 value )
-            {
-                outBytes.push_back( static_cast<uint8>( value & 0xFFu ) );
-                outBytes.push_back( static_cast<uint8>( ( value >> 8 ) & 0xFFu ) );
-                outBytes.push_back( static_cast<uint8>( ( value >> 16 ) & 0xFFu ) );
-                outBytes.push_back( static_cast<uint8>( value >> 24 ) );
-            }
         };
     } // namespace
 } // namespace sw
@@ -55,19 +42,19 @@ namespace sw
     {
         using Internal = HeightfieldDataInternal;
         *this          = HeightfieldData{};
-        if ( bytes.size() < Internal::kHeaderBytes || Internal::readUint32( bytes, 0 ) != kMagic )
+        if ( bytes.size() < Internal::kHeaderBytes || LittleEndianUtil::readUint32( bytes.data() ) != kMagic )
         {
             SW_LOG_ERROR( "'%#' is not a heightfield (magic SWHF missing)", sourceName );
             return false;
         }
-        const uint32 version = Internal::readUint32( bytes, 4 );
+        const uint32 version = LittleEndianUtil::readUint32( bytes.data() + 4 );
         if ( version != kVersion )
         {
             SW_LOG_ERROR( "'%#' is heightfield version %# - this build reads version %# only (re-import it)", sourceName, version, kVersion );
             return false;
         }
-        const uint32 resolution = Internal::readUint32( bytes, 8 );
-        const uint32 flags      = Internal::readUint32( bytes, 12 );
+        const uint32 resolution = LittleEndianUtil::readUint32( bytes.data() + 8 );
+        const uint32 flags      = LittleEndianUtil::readUint32( bytes.data() + 12 );
         if ( resolution < 2 || resolution > kMaxResolution )
         {
             SW_LOG_ERROR( "'%#' has resolution %# - expected 2..%#", sourceName, resolution, kMaxResolution );
@@ -113,10 +100,10 @@ namespace sw
         outBytes.clear();
         const bool bHoles = _listHoleCell.empty() == false;
         outBytes.reserve( Internal::kHeaderBytes + _listHeight.size() * 2 + _listHoleCell.size() );
-        Internal::appendUint32( outBytes, kMagic );
-        Internal::appendUint32( outBytes, kVersion );
-        Internal::appendUint32( outBytes, _resolution );
-        Internal::appendUint32( outBytes, bHoles ? kFlagHoleMask : 0u );
+        LittleEndianUtil::appendUint32( outBytes, kMagic );
+        LittleEndianUtil::appendUint32( outBytes, kVersion );
+        LittleEndianUtil::appendUint32( outBytes, _resolution );
+        LittleEndianUtil::appendUint32( outBytes, bHoles ? kFlagHoleMask : 0u );
         for ( const uint16 height : _listHeight )
         {
             outBytes.push_back( static_cast<uint8>( height & 0xFFu ) );

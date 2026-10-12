@@ -11,7 +11,6 @@
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Data/StatBlock.h"
 #include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
-#include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
 #include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
 #include "GameFramework/Base/Foundation/Utility/Math/RayMath.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
@@ -310,44 +309,6 @@ SW_TEST_CASE( GameFrameworkUtilTest, RateAccumulatorCarriesTheFractionAcrossStep
 }
 
 /**
- * @brief [GameFrameworkUtilTest] 알림 버퍼는 빈 목록에 저장소를 맞바꿔 넘기고(복사 없음 — 두 버퍼가 번갈아 돈다), 찬 목록에는 뒤에 붙인다
- */
-SW_TEST_CASE( GameFrameworkUtilTest, EventBufferSwapsIntoAnEmptyListAndAppendsToAFullOne )
-{
-    EventBuffer<int32> buffer;
-    vector<int32>      listEvent;
-    listEvent.reserve( 8 );
-    const int32* pReceiving = listEvent.data();
-    buffer.push( 1 );
-    buffer.push( 2 );
-    buffer.getLast() = 3; // 쌓은 뒤 칸을 고친다
-    SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), buffer.getCount() );
-    const int32* pPending = buffer.getPending().data();
-
-    // 빈 목록 — 맞바꾼다. 받는 쪽은 쌓던 저장소를, 쌓는 쪽은 받는 쪽이 쓰던(비운) 저장소를 갖는다.
-    buffer.drainTo( listEvent );
-    SW_ASSERT_EQUAL( static_cast<size_t>( 2 ), listEvent.size() );
-    SW_EXPECT_EQUAL( 1, listEvent[0] );
-    SW_EXPECT_EQUAL( 3, listEvent[1] );
-    SW_EXPECT_TRUE( listEvent.data() == pPending );
-    SW_EXPECT_TRUE( buffer.isEmpty() );
-    buffer.push( 4 );
-    SW_EXPECT_TRUE( buffer.getPending().data() == pReceiving );
-
-    // 찬 목록 — 뒤에 붙이고 비운다(여러 곳의 알림을 한 목록에 모으는 쪽).
-    buffer.drainTo( listEvent );
-    SW_ASSERT_EQUAL( static_cast<size_t>( 3 ), listEvent.size() );
-    SW_EXPECT_EQUAL( 4, listEvent[2] );
-    SW_EXPECT_TRUE( buffer.isEmpty() );
-
-    buffer.push( 5 );
-    buffer.clear();
-    vector<int32> listOther;
-    buffer.drainTo( listOther );
-    SW_EXPECT_TRUE( listOther.empty() );
-}
-
-/**
  * @brief [GameFrameworkUtilTest] 격자 모양은 칸 번호 · 경계 · 이웃 순서(직교 넷 → 대각선 넷)가 하나이고, 탐색 스크래치는 세대만 올려 다시 쓴다
  * @details 너비 우선 결과(거리 · 부모 · 방문 순서)는 이웃 순서에 매인다. 두 번째 탐색은 첫 탐색의 표시를 보지 않고, 저장소를 다시 잡지 않는다.
  */
@@ -454,7 +415,7 @@ SW_TEST_CASE( GameFrameworkUtilTest, DataXMLReadsRootsIDsNumbersAndTokens )
     SW_EXPECT_NEAR_EQUAL( 3.0f, arrValue[1], 1.0e-6f );
 
     int32 tokenCount = 0;
-    GameDataXML::forEachToken( ",Spring,, Fall ;", ",; ", [&]( string_view token )
+    StringUtil::forEachToken( ",Spring,, Fall ;", ",; ", [&]( string_view token )
     {
         ++tokenCount;
         SW_EXPECT_FALSE( token.empty() );

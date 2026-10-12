@@ -181,7 +181,7 @@ namespace sw
             building._amountPerWorker = MathUtil::max( 0, node.getAttributeInt( "amount", building._amountPerWorker ) );
             building._workerSlots     = MathUtil::max( 0, node.getAttributeInt( "workerSlots", building._workerSlots ) );
             building._housing         = MathUtil::max( 0, node.getAttributeInt( "housing", building._housing ) );
-            GameDataXML::forEachToken( node.getAttributeText( "trains" ), ",; ", [&]( string_view token )
+            StringUtil::forEachToken( node.getAttributeText( "trains" ), ",; ", [&]( string_view token )
             {
                 const hashed_string unitID( token );
                 if ( _unitCatalog.find( unitID ) == nullptr )

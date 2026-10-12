@@ -58,6 +58,7 @@
 #undef temp_block_array
 #undef temp_free
 
+#include "Core/Container/LittleEndianUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
@@ -73,12 +74,6 @@ namespace sw
          */
         struct OggCommentHeaderGuard
         {
-            static uint32 readUint32( const uint8* pData )
-            {
-                return static_cast<uint32>( pData[0] ) | ( static_cast<uint32>( pData[1] ) << 8 ) | ( static_cast<uint32>( pData[2] ) << 16 ) |
-                       ( static_cast<uint32>( pData[3] ) << 24 );
-            }
-
             /** @brief 첫 논리 스트림의 @p packetIndex 번째 패킷을 페이지를 건너 모읍니다. 페이지가 잘렸거나 패킷이 끝나지 않으면 false 입니다. */
             static bool collectPacket( const uint8* pBytes, size_t byteCount, uint32 packetIndex, vector<uint8>& outPacketBytes )
             {
@@ -125,14 +120,14 @@ namespace sw
                 if ( size < 7 + 4 + 4 || packetBytes[0] != 3 || Memory::compare( packetBytes.data() + 1, "vorbis", 6 ) != 0 )
                     return false;
                 size_t       offset       = 7;
-                const uint32 vendorLength = readUint32( packetBytes.data() + offset );
+                const uint32 vendorLength = LittleEndianUtil::readUint32( packetBytes.data() + offset );
                 offset += 4;
                 if ( vendorLength > size - offset )
                     return false;
                 offset += vendorLength;
                 if ( offset + 4 > size )
                     return false;
-                const uint32 commentCount = readUint32( packetBytes.data() + offset );
+                const uint32 commentCount = LittleEndianUtil::readUint32( packetBytes.data() + offset );
                 offset += 4;
                 if ( commentCount > ( size - offset ) / 4 )
                     return false;
@@ -140,7 +135,7 @@ namespace sw
                 {
                     if ( offset + 4 > size )
                         return false;
-                    const uint32 commentLength = readUint32( packetBytes.data() + offset );
+                    const uint32 commentLength = LittleEndianUtil::readUint32( packetBytes.data() + offset );
                     offset += 4;
                     if ( commentLength > size - offset )
                         return false;

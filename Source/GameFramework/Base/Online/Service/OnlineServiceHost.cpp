@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 
+#include "Core/Container/LittleEndianUtil.h"
 #include "Core/Log/LogContext.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 
@@ -20,12 +21,6 @@ namespace sw
 
             /** @brief 주소마다의 도배 제한 단위 — 포트는 빼고 IP 만(포트를 바꿔 새 연결로 우회하지 못하게). */
             static uint64 makeRemoteKey( const NetAddress& remote ) { return static_cast<uint64>( remote._ipv4 ) + 1; }
-
-            static void appendUint16( vector<uint8>& outBytes, uint16 errorCode )
-            {
-                outBytes.push_back( static_cast<uint8>( errorCode & 0xFFu ) );
-                outBytes.push_back( static_cast<uint8>( errorCode >> 8 ) );
-            }
         };
     } // namespace
 } // namespace sw
@@ -189,7 +184,7 @@ namespace sw
     bool OnlineServiceHost::respondError( const NetRequestToken& token, uint16 errorCode, const BitWriter* pDetail )
     {
         _responseBytes.clear();
-        OnlineServiceHostInternal::appendUint16( _responseBytes, errorCode );
+        LittleEndianUtil::appendUint16( _responseBytes, errorCode );
         if ( pDetail != nullptr )
             _responseBytes.insert( _responseBytes.end(), pDetail->getBytes().begin(), pDetail->getBytes().begin() + pDetail->getByteCount() );
         return _requestServer.respond( token, NetRequestStatus::ApplicationError, _responseBytes.data(), static_cast<int32>( _responseBytes.size() ) );
@@ -442,7 +437,7 @@ namespace sw
     bool OnlineServiceHost::sendPushToConnection( StreamConnectionHandle connection, uint16 kind, const BitWriter& body )
     {
         _responseBytes.clear();
-        OnlineServiceHostInternal::appendUint16( _responseBytes, kind ); // 종류 u16 리틀 엔디언(오류 코드와 같은 모양)
+        LittleEndianUtil::appendUint16( _responseBytes, kind ); // 종류 u16 리틀 엔디언(오류 코드와 같은 모양)
         _responseBytes.insert( _responseBytes.end(), body.getBytes().begin(), body.getBytes().begin() + body.getByteCount() );
         const StreamSendResult result = _endpoint.sendMessage( connection, _responseBytes.data(), static_cast<int32>( _responseBytes.size() ) );
         return result == StreamSendResult::Queued || result == StreamSendResult::QueuedAboveHighWatermark;

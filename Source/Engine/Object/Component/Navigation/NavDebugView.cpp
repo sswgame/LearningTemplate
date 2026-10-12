@@ -56,7 +56,7 @@ namespace sw
             static void appendRibbon( const float3& from, const float3& to, const float4& color, vector<RHIVertex>& outListVertex )
             {
                 const float3  delta  = to - from;
-                const float32 length = SceneNavigationUtil::computeDistance2D( from, to );
+                const float32 length = float3::getHorizontalDistance( from, to );
                 if ( length < 1.0e-3f )
                     return;
                 const float3 side{ -delta._z / length * 0.06f, 0.0f, delta._x / length * 0.06f };

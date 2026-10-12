@@ -305,7 +305,7 @@ namespace sw
         for ( XMLNode child = root.findChild( "Material" ); child; child = child.findNextSibling( "Material" ) )
         {
             vector<hashed_string> listFlag;
-            GameDataXML::forEachToken( child.getAttributeText( "flags" ), ", ;", [&listFlag]( string_view token )
+            StringUtil::forEachToken( child.getAttributeText( "flags" ), ", ;", [&listFlag]( string_view token )
             { listFlag.push_back( hashed_string( string( token ).c_str() ) ); } );
             const int32 material = addMaterial( hashed_string( string( child.getAttributeText( "id" ) ).c_str() ), listFlag );
             if ( material < 0 )

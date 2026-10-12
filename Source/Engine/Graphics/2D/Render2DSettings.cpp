@@ -38,30 +38,11 @@ namespace sw
                 {"CustomAxis", TransparencySortMode::CustomAxis},
             };
 
-            /** @brief "x y z" 를 읽습니다. 숫자 셋이 아니면 false 입니다. */
+            /** @brief "x y z" 를 읽습니다. 숫자 셋이 아니면(넷째 숫자가 있어도) false 입니다. */
             [[nodiscard]] static bool parseFloat3( string_view text, float3& outValue )
             {
-                float32 arrValue[3]{};
-                uint32  count  = 0;
-                size_t  cursor = 0;
-                while ( cursor < text.size() )
-                {
-                    while ( cursor < text.size() && ( text[cursor] == ' ' || text[cursor] == ',' || text[cursor] == '\t' ) )
-                    {
-                        ++cursor;
-                    }
-                    const size_t start = cursor;
-                    while ( cursor < text.size() && text[cursor] != ' ' && text[cursor] != ',' && text[cursor] != '\t' )
-                    {
-                        ++cursor;
-                    }
-                    if ( cursor == start )
-                        break;
-                    if ( count >= 3 || StringUtil::parseFloat( text.substr( start, cursor - start ), arrValue[count] ) == false )
-                        return false;
-                    ++count;
-                }
-                if ( count != 3 )
+                float32 arrValue[4]{};
+                if ( StringUtil::parseFloatList( text, " ,\t", arrValue, 4 ) != 3 )
                     return false;
                 outValue = float3{ arrValue[0], arrValue[1], arrValue[2] };
                 return true;

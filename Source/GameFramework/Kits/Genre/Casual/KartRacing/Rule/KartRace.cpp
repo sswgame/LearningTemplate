@@ -19,13 +19,6 @@ namespace sw
         {
             static constexpr float32 kAheadPriority = 100.0f; ///< 빨간 껍질은 바로 앞 순위의 차를 먼저 잡는다
 
-            static float32 computeFlatDistanceSq( const float3& lhs, const float3& rhs )
-            {
-                const float32 deltaX = lhs._x - rhs._x;
-                const float32 deltaZ = lhs._z - rhs._z;
-                return deltaX * deltaX + deltaZ * deltaZ;
-            }
-
             /** @brief @p direction 을 @p target 쪽으로 @p maxTurn(라디안)까지 돌린 수평 단위 벡터를 반환합니다. */
             static float3 turnToward( const float3& direction, const float3& from, const float3& target, float32 maxTurn )
             {
@@ -481,7 +474,7 @@ namespace sw
             for ( size_t racerIndex = 0; racerIndex < _listRacer.size(); ++racerIndex )
             {
                 KartRacer& kart = _listRacer[racerIndex];
-                if ( kart._bFinished == SW_TRUE || KartRaceInternal::computeFlatDistanceSq( kart._motor.getPosition(), listBox[boxIndex] ) > reach * reach )
+                if ( kart._bFinished == SW_TRUE || float3::getHorizontalDistanceSquared( kart._motor.getPosition(), listBox[boxIndex] ) > reach * reach )
                     continue;
                 // 상자는 들고 있어도 깨진다. 빈 손이면 순위 테이블로 뽑는다.
                 _listItemBoxTimer[boxIndex].start( _settings._itemBoxRespawn );
@@ -648,7 +641,7 @@ namespace sw
                 const bool       bNotTarget  = projectile._kind == KartItemKind::LeaderShell && racer != projectile._target;
                 if ( kart._bFinished == SW_TRUE || bOwnerGrace || bNotTarget )
                     continue;
-                if ( KartRaceInternal::computeFlatDistanceSq( kart._motor.getPosition(), projectile._position ) > reach * reach )
+                if ( float3::getHorizontalDistanceSquared( kart._motor.getPosition(), projectile._position ) > reach * reach )
                     continue;
                 projectile._bActive = SW_FALSE;
                 if ( projectile._kind == KartItemKind::LeaderShell )
@@ -674,7 +667,7 @@ namespace sw
         {
             const int32 racer    = static_cast<int32>( racerIndex );
             const bool  bTarget  = racer == projectile._target;
-            const bool  bInBlast = KartRaceInternal::computeFlatDistanceSq( _listRacer[racerIndex]._motor.getPosition(), projectile._position ) <= reach * reach;
+            const bool  bInBlast = float3::getHorizontalDistanceSquared( _listRacer[racerIndex]._motor.getPosition(), projectile._position ) <= reach * reach;
             if ( bTarget || bInBlast )
                 (void)applyHit( racer, projectile._owner, def ); // 방어막이 막으면 false 이며, 맞지 않았을 뿐이다
         }
