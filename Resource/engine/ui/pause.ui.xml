@@ -45,10 +45,10 @@
 					<ButtonWidget _name="Options" _command="OpenOptions">
 						<TextWidget _text="Options" />
 					</ButtonWidget>
-					<ButtonWidget _name="ReturnToTitle" _command="ReturnToTitle" _visibility="Collapsed">
+					<ButtonWidget _name="ReturnToTitle" _visibility="Collapsed" _command="ReturnToTitle">
 						<TextWidget _text="Return to Title" />
 					</ButtonWidget>
-					<ButtonWidget _name="QuitGame" _command="QuitGame" _visibility="Collapsed">
+					<ButtonWidget _name="QuitGame" _visibility="Collapsed" _command="QuitGame">
 						<TextWidget _text="Quit Game" />
 					</ButtonWidget>
 					<UserWidget _name="Hint" _document="engine/ui/parts/inputhint.ui.xml" />
