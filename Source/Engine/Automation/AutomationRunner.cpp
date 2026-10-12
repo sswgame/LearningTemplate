@@ -32,8 +32,6 @@ namespace sw
     {
         struct AutomationRunnerInternal
         {
-            /** @brief 시나리오 동안 모으는 로그 줄 상한입니다. 넘치면 더 모으지 않습니다(`ExpectLog` 는 그때까지만 셉니다). */
-            static constexpr size_t kMaxLogLine = 20000;
             /** @brief `<ExpectImage>` 가 스크린샷을 기다리는 최대 프레임입니다. 렌더 큐 깊이보다 넉넉하게 잡습니다. */
             static constexpr uint32 kMaxImageWaitFrames = 30;
             /** @brief `darkFraction` 의 기본 임계값(영역 중앙값에 곱한다)입니다. */
@@ -327,29 +325,6 @@ namespace sw
                 return text;
             }
 
-            static string escapeJSON( string_view text )
-            {
-                string escaped;
-                escaped.reserve( text.size() + 8 );
-                for ( const utf8 character : text )
-                {
-                    if ( character == '"' || character == '\\' )
-                    {
-                        escaped.push_back( '\\' );
-                        escaped.push_back( character );
-                    }
-                    else if ( character == '\n' )
-                    {
-                        escaped += "\\n";
-                    }
-                    else if ( static_cast<uint8>( character ) >= 0x20 )
-                    {
-                        escaped.push_back( character );
-                    }
-                }
-                return escaped;
-            }
-
             /** @brief 탐침 `Input.OsDeviceInputBlocked` 입니다. 무인 자동화가 사람의 마우스와 키보드를 창 메시지 단계에서 버리는 중이면 1 입니다. */
             [[nodiscard]] static bool readOsDeviceInputBlocked( const GameObjectManager* pManager, float64& outValue )
             {
@@ -633,19 +608,15 @@ namespace sw
     AutomationRunner::AutomationRunner()
         : _scenario{}
         , _inputScript{}
+        , _logCapture{}
+        , _reportWriter{}
         , _listFailure{}
-        , _listLogLine{}
         , _listPendingScreenshot{}
-        , _listMetricLine{}
-        , _reportPath{}
         , _outputDirectory{}
         , _finishReason{}
-        , _logMutex{}
-        , _logListenerHandle{}
         , _pObjectManagerOverride{ nullptr }
         , _exitDeadlineSeconds{ 0.0 }
         , _nextStepIndex{ 0 }
-        , _logFrameIndex{ 0 }
         , _frameIndex{ 0 }
         , _waitFrameCount{ 0 }
         , _screenshotRequestedCount{ 0 }
@@ -655,22 +626,18 @@ namespace sw
         , _result{ AutomationResult::Running }
         , _bStarted{ SW_FALSE }
         , _bEnded{ SW_FALSE }
-        , _bListeningLog{ SW_FALSE }
         , _reserved{ 0 }
     {
         AutomationEnvironmentSteps::ensureLinked();
         AutomationWindowSteps::ensureLinked();
     }
 
-    AutomationRunner::~AutomationRunner()
-    {
-        if ( _bListeningLog == SW_TRUE )
-            Logger::unregisterGlobalListener( _logListenerHandle );
-    }
+    // 로그 리스너 해제는 `_logCapture` 의 소멸자가 맡는다.
+    AutomationRunner::~AutomationRunner() = default;
 
     void AutomationRunner::startFromPath( string_view scenarioPath, string_view reportPath )
     {
-        _reportPath = string( reportPath );
+        _reportWriter.setReportPath( reportPath );
         string error;
         if ( _scenario.loadFromPath( scenarioPath, error ) == false )
         {
@@ -689,7 +656,7 @@ namespace sw
 
     bool AutomationRunner::startFromText( string_view xmlText, string_view reportPath )
     {
-        _reportPath = string( reportPath );
+        _reportWriter.setReportPath( reportPath );
         string error;
         if ( _scenario.parse( xmlText, "<text>", error ) == false )
         {
@@ -747,7 +714,7 @@ namespace sw
             input.setOsDeviceInputBlocked( _scenario.getInputMode() == VirtualInputMode::Exclusive );
             SW_LOG_INFO( "[Scenario] %# started after %# frame(s)", _scenario.getName().c_str(), _waitFrameCount );
         }
-        _logFrameIndex.store( _frameIndex, std::memory_order_relaxed );
+        _logCapture.setFrameIndex( _frameIndex );
         // 액션 계층 단계(레지스트리의 `_bBeforeInput`)는 그 프레임의 입력 재생과 게임 틱 전에 넣는다.
         const vector<AutomationStep>& listStep = _scenario.getSteps();
         for ( size_t stepIndex = _nextStepIndex; stepIndex < listStep.size() && listStep[stepIndex]._frameIndex == _frameIndex; ++stepIndex )
@@ -868,8 +835,7 @@ namespace sw
             if ( pRegistration->_pPrepare != nullptr && pRegistration->_pPrepare( *this, step, outError ) == false )
                 return false;
         }
-        _logListenerHandle = Logger::registerGlobalListener( SW_DELEGATE_METHOD( LogWrittenDelegate, &AutomationRunner::onLogWritten, this ) );
-        _bListeningLog     = _logListenerHandle.isValid() ? SW_TRUE : SW_FALSE;
+        _logCapture.start();
         return true;
     }
 
@@ -964,16 +930,8 @@ namespace sw
         string        error;
         uint32        since = 0;
         (void)AutomationRunnerInternal::readUint( step, "since", 0, since, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
-        uint32 matchCount = 0;
-        {
-            std::scoped_lock<mutex> lock{ _logMutex };
-            for ( const AutomationLogLine& line : _listLogLine )
-            {
-                if ( line._frameIndex >= since && line._message.find( needle ) != string::npos )
-                    ++matchCount;
-            }
-        }
-        uint32 expected = 0;
+        const uint32 matchCount = _logCapture.countMatchingLines( needle, since );
+        uint32       expected   = 0;
         if ( step.findAttribute( "count" ) != nullptr )
         {
             (void)AutomationRunnerInternal::readUint( step, "count", 0, expected, error ); // 검사 함수가 이미 읽어 봤으므로 실패할 수 없다
@@ -1019,7 +977,7 @@ namespace sw
         string line = *step.findAttribute( "metric" ) + "(" + ( pRegion != nullptr ? *pRegion : string( "0,0,1,1" ) ) + ") " + *step.findAttribute( "file" ) + " = " +
                       Internal::formatNumber( value );
         SW_LOG_INFO( "[Scenario] metric %#", line.c_str() );
-        _listMetricLine.push_back( std::move( line ) );
+        _reportWriter.addMetricLine( std::move( line ) );
 
         float32 expected  = 0.0f;
         float32 tolerance = 0.0f;
@@ -1069,20 +1027,6 @@ namespace sw
         return true;
     }
 
-    void AutomationRunner::onLogWritten( const LogEntry& entry )
-    {
-        // 실행기 자신의 줄([Scenario])은 세지 않는다. 실패 줄이 단언 문구를 반복해 ExpectLog 를 맞추지 않게 하기 위해서다.
-        if ( StringUtil::startsWith( string_view{ entry._message }, "[Scenario]" ) )
-            return;
-        std::scoped_lock<mutex> lock{ _logMutex };
-        if ( _listLogLine.size() >= AutomationRunnerInternal::kMaxLogLine )
-            return;
-        AutomationLogLine line{};
-        line._message    = entry._message;
-        line._frameIndex = _logFrameIndex.load( std::memory_order_relaxed );
-        _listLogLine.push_back( std::move( line ) );
-    }
-
     void AutomationRunner::endRun( InputManager* pInput )
     {
         if ( _bEnded == SW_TRUE )
@@ -1090,11 +1034,7 @@ namespace sw
         _bEnded = SW_TRUE;
         if ( pInput != nullptr && pInput->getVirtualInput() == &_inputScript )
             pInput->detachVirtualInput();
-        if ( _bListeningLog == SW_TRUE )
-        {
-            Logger::unregisterGlobalListener( _logListenerHandle );
-            _bListeningLog = SW_FALSE;
-        }
+        _logCapture.stop();
         if ( _result == AutomationResult::Passed )
         {
             SW_LOG_INFO( "[Scenario] PASS %# (%# frame(s))", _scenario.getName().c_str(), _frameIndex );
@@ -1113,37 +1053,13 @@ namespace sw
             }
             SW_LOG_ERROR( "[Scenario] %# %# at frame %#: %#", getResultName( _result ), _scenario.getName().c_str(), _frameIndex, detail.c_str() );
         }
-        writeReport();
-    }
-
-    void AutomationRunner::writeReport() const
-    {
-        if ( _reportPath.empty() )
-            return;
-        using Internal = AutomationRunnerInternal;
-        string json    = "{\n  \"name\": \"" + Internal::escapeJSON( _scenario.getName() ) + "\",\n";
-        json += "  \"result\": \"" + string( getResultName( _result ) ) + "\",\n";
-        json += "  \"exitCode\": " + to_string( static_cast<int32>( _result ) ) + ",\n";
-        json += "  \"frames\": " + to_string( _frameIndex ) + ",\n";
-        json += "  \"reason\": \"" + Internal::escapeJSON( _finishReason ) + "\",\n";
-        json += "  \"failures\": [";
-        for ( size_t index = 0; index < _listFailure.size(); ++index )
-        {
-            json += index == 0 ? "\n    \"" : ",\n    \"";
-            json += Internal::escapeJSON( _listFailure[index] ) + "\"";
-        }
-        json += _listFailure.empty() ? "],\n" : "\n  ],\n";
-        json += "  \"metrics\": [";
-        for ( size_t index = 0; index < _listMetricLine.size(); ++index )
-        {
-            json += index == 0 ? "\n    \"" : ",\n    \"";
-            json += Internal::escapeJSON( _listMetricLine[index] ) + "\"";
-        }
-        json += _listMetricLine.empty() ? "]\n}\n" : "\n  ]\n}\n";
-        const string directory = FileUtil::getDirectoryPart( _reportPath );
-        if ( directory.empty() == false )
-            (void)FileUtil::ensureDirectoryExists( directory );
-        if ( FileUtil::writeTextFile( _reportPath, json ) == false )
-            SW_LOG_WARNING( "[Scenario] could not write the report %#", _reportPath.c_str() );
+        AutomationReportParams report{};
+        report._scenarioName = _scenario.getName();
+        report._pResultName  = getResultName( _result );
+        report._exitCode     = static_cast<int32>( _result );
+        report._frameCount   = _frameIndex;
+        report._reason       = _finishReason;
+        report._pListFailure = &_listFailure;
+        _reportWriter.write( report );
     }
 } // namespace sw
