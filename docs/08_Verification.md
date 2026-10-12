@@ -130,6 +130,8 @@ cd build/Ninja-Debug/Bin
 - **벤치 스위치**(`Source/Games/Empty/BenchScene.cpp`): `-gv_benchMeshes=N` · `-gv_benchLights=N` · `-gv_benchGround=1` · `-gv_benchMovePercent=%` · `-gv_benchInstanced=1` ·
   `-gv_benchTickMovers=N`(틱 **안** 세터 — 실제 게임플레이 경로) · `-gv_benchSpawnChurn=N` · `-gv_benchMeshVariants` · `-gv_benchMeshShapes=N` ·
   `-gv_benchMaterialChurn*` · `-gv_benchAnimate=0`(컴퓨트 회전과 `update` 사인파를 **둘 다** 멈춘다), `-gv_deferred=1`, `-gv_useRenderThread=0`.
+  틱 경로는 `-gv_tickBatch=0`(타입별 일괄 틱을 끈다 — 같은 바이너리 A/B)과 표의 `GT.Scene.tick.objectRange`(청크 CPU 합) · `pendingSlotApply` · 카운터
+  `objectEntries` · `batchElements` · `pendingSlots` · `queuedWrites` 로 가른다. "무버 8000" 은 `-gv_benchMeshes=8000 -gv_benchTickMovers=1` 이다(`TickMovers=N` 은 큐브마다 N 개).
 - **`-gv_profileFrames=N` 은 프레임 수다** — VSync 가 꺼진 가벼운 장면은 1500 fps 라 90000 프레임이 1 분에 끝난다(시간 상한은 없다). 시간으로 측정하려면
   `-gv_profileSeconds=S`(먼저 닿는 쪽이 끝낸다 — soak 이 쓴다).
 - **프레임당 힙 할당**은 `-gv_profileFrames` 보고의 `alloc/frame`, 콜스택은 `-gv_profileAllocSites=N`(Debug App — 횟수는 최적화와 무관, 시간은 같이 측정하지 말 것).

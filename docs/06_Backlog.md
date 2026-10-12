@@ -425,8 +425,11 @@
   워커로 나누기는 졌다(결정 기록 3절) — 남은 후보는 쿠킹 때 Jolt 셰이프를 직렬화해 `.fracture` 에 싣기(Chaos 가 지오메트리 컬렉션에 충돌을 같이 굽는 자리) 또는
   잎 셰이프를 처음 깨질 때까지 미루기.
 
-- **8000 무버의 `components`(onTick) ~325 us.** 남은 비용은 오브젝트 → 틱 항목 → 컴포넌트 포인터 추적이다. 더 줄이려면 오브젝트 모델 밖 배치 경로
-  (언리얼 Mass · 유니티 DOTS 자리)나 트랜스폼 SoA 2 단계가 필요하다 — 큰 구조 변경이라 할지부터 정한다(1-11 의 구조 후보).
+- **8000 무버의 `components`(onTick) ~325 us — 구조 변경은 들어갔고 전/후 측정이 남았다(2026-10-13).** 타입별 일괄 틱(`TickBatchRegistry`, 무버가 첫 사용처) ·
+  대기 칸 목록을 청크마다 한 번 잡기 · 틱 뒤 대기 칸 적용을 고른 구간으로. 재는 법: Release `App -gv_benchMeshes=8000 -gv_benchTickMovers=1 -gv_profileFrames=600`
+  을 `-gv_tickBatch=1` · `0` 으로 번갈아 3 회(같은 바이너리), 그 앞뒤 커밋 바이너리도 번갈아 — `GT.Scene.tick.components` · `objectRange`(CPU 합) ·
+  `pendingSlotApply` · `queuedTransforms` 의 p50 · p99 와 카운터 `objectEntries` · `batchElements` · `pendingSlots`(per_frame 열). 지면 되돌린다.
+  다음 단계 후보: 무버 데이터를 타입 배열(SoA)로 옮겨 일괄 함수가 컴포넌트를 읽지 않게(대상 씬 컴포넌트의 칸 번호를 원소에) — 측정 뒤에 정한다.
 - **직렬화기(이름 대조 · 텍스트 파싱)와 리소스 로드의 리플렉션 비용, 비동기 씬 로드 중 최악 프레임을 측정하지 않았다.** 큰 씬 · 쿠킹본으로 측정한다(Dev 는 `Cooked/`
   를 마운트하지 않는다).
 
