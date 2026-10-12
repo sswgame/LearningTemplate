@@ -12,7 +12,7 @@ namespace sw
     {
     }
 
-    void PhysicsAudioOcclusionQuery::setScene( const IPhysicsScene3D* pScene, uint32 layerMask )
+    void PhysicsAudioOcclusionQuery::setScene( const IPhysicsQueryScene3D* pScene, uint32 layerMask )
     {
         _pScene    = pScene;
         _layerMask = layerMask;

@@ -16,7 +16,7 @@
 #include "Core/String/RegistrationList.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Physics/IPhysicsQueryScene.h"
 
 namespace sw
 {
@@ -50,7 +50,7 @@ namespace sw
          * @param pCamera 리스너 컴포넌트가 없을 때 리스너가 되는 게임 카메라입니다(nullptr 이면 리스너 0 을 끕니다).
          * @param pScene3D 가림 레이캐스트를 쏠 3D 물리 씬입니다(nullptr 이면 가림을 측정하지 않습니다 — 0 으로 둡니다).
          */
-        void update( float32 deltaSeconds, const CameraComponent* pCamera, const IPhysicsScene3D* pScene3D );
+        void update( float32 deltaSeconds, const CameraComponent* pCamera, const IPhysicsQueryScene3D* pScene3D );
 
         /** @brief 쓸 엔진을 정합니다(테스트). nullptr 이면 생성자로 받은 오디오 서비스의 엔진입니다. */
         void setAudioEngine( AudioEngine* pEngine ) { _pEngineOverride = pEngine; }

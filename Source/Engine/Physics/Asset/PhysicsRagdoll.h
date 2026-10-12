@@ -78,14 +78,14 @@ namespace sw
         [[nodiscard]] static bool create( IPhysicsScene3D& scene, const PhysicsAsset& asset, const PhysicsSkeletonView& skeleton, const float4x4& worldFromModel,
                                           const PhysicsRagdollOptions& options, PhysicsRagdoll& outRagdoll );
         /** @brief 바디와 관절을 지우고 래그돌을 비웁니다. */
-        static void destroy( IPhysicsScene3D& scene, PhysicsRagdoll& inoutRagdoll );
+        static void destroy( IPhysicsBodyScene3D& scene, PhysicsRagdoll& inoutRagdoll );
         /** @brief 모든 바디의 종류를 바꿉니다(히트박스 Kinematic ↔ 래그돌 Dynamic). */
-        static void setBodyType( IPhysicsScene3D& scene, const PhysicsRagdoll& ragdoll, PhysicsBodyType type );
+        static void setBodyType( IPhysicsBodyScene3D& scene, const PhysicsRagdoll& ragdoll, PhysicsBodyType type );
         /**
          * @brief 바디를 포즈로 보냅니다. Kinematic 바디는 @p deltaTime 뒤에 닿도록 움직이고(밀린 것이 속도를 받습니다), 나머지는 순간이동합니다.
          * @param deltaTime 0 이하면 모두 순간이동합니다(처음 배치할 때, 리스폰).
          */
-        static void driveToPose( IPhysicsScene3D& scene, const PhysicsRagdoll& ragdoll, const PhysicsSkeletonView& skeleton, const float4x4& worldFromModel,
+        static void driveToPose( IPhysicsBodyScene3D& scene, const PhysicsRagdoll& ragdoll, const PhysicsSkeletonView& skeleton, const float4x4& worldFromModel,
                                  float32 deltaTime );
         /**
          * @brief 바디 자세를 모델 공간 뼈 행렬로 다시 읽습니다. 바디가 있는 뼈는 바디 자세를 쓰고(뼈의 배율은 입력 포즈의 것), 바디가 없는 뼈는 입력 포즈의 부모 상대
@@ -93,7 +93,7 @@ namespace sw
          * @param skeleton 입력 포즈입니다(바디 없는 뼈의 로컬 변환을 여기서 가져옵니다).
          * @param outListModelSpaceBone 스켈레톤 뼈 수만큼의 버퍼입니다.
          */
-        static void readBoneTransforms( const IPhysicsScene3D& scene, const PhysicsRagdoll& ragdoll, const PhysicsSkeletonView& skeleton, const float4x4& worldFromModel,
+        static void readBoneTransforms( const IPhysicsBodyScene3D& scene, const PhysicsRagdoll& ragdoll, const PhysicsSkeletonView& skeleton, const float4x4& worldFromModel,
                                         span<float4x4> outListModelSpaceBone );
     };
 } // namespace sw

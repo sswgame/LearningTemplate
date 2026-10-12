@@ -667,7 +667,7 @@ namespace sw
 
     void RagdollComponent::prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount )
     {
-        IPhysicsScene3D* pScene = physics.findScene3D();
+        IPhysicsBodyScene3D* pScene = physics.findScene3D();
         if ( pScene == nullptr || _ragdoll.isEmpty() || _pUnit == nullptr )
             return;
         const size_t            bodyCount = _ragdoll._listBody.size();
@@ -703,7 +703,7 @@ namespace sw
     void RagdollComponent::endPhysicsFrame( ScenePhysics& physics, float32 alpha )
     {
         (void)alpha;
-        IPhysicsScene3D* pScene = physics.findScene3D();
+        IPhysicsBodyScene3D* pScene = physics.findScene3D();
         if ( pScene == nullptr || _ragdoll.isEmpty() || _pUnit == nullptr )
             return;
         // 돌아가는 동안은 시작할 때의 래그돌 자세를 그대로 둔다(바디는 이미 애니메이션을 따른다).
@@ -738,7 +738,7 @@ namespace sw
 
     void RagdollComponent::releasePhysics( ScenePhysics& physics )
     {
-        IPhysicsScene3D* pScene = physics.findScene3D();
+        IPhysicsBodyScene3D* pScene = physics.findScene3D();
         if ( pScene != nullptr && _ragdoll.isEmpty() == false )
             PhysicsRagdollBuilder::destroy( *pScene, _ragdoll );
         _ragdoll = PhysicsRagdoll{};

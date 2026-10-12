@@ -73,7 +73,7 @@ namespace sw
     {
     }
 
-    IPhysicsScene3D* RigidBodyComponent::findScene() const
+    IPhysicsBodyScene3D* RigidBodyComponent::findScene() const
     {
         return getScenePhysics() != nullptr ? getScenePhysics()->findScene3D() : nullptr;
     }
@@ -171,17 +171,17 @@ namespace sw
 
     float32 RigidBodyComponent::getBodyMass() const
     {
-        const IPhysicsScene3D* pScene = findScene();
+        const IPhysicsBodyScene3D* pScene = findScene();
         return pScene != nullptr ? pScene->getBodyMass( _body ) : 0.0f;
     }
 
     bool RigidBodyComponent::isSleeping() const
     {
-        const IPhysicsScene3D* pScene = findScene();
+        const IPhysicsBodyScene3D* pScene = findScene();
         return pScene != nullptr && pScene->isBodySleeping( _body );
     }
 
-    void RigidBodyComponent::createBody( ScenePhysics& physics, IPhysicsScene3D& scene, const float3& position, const quaternion& rotation, const float3& scale )
+    void RigidBodyComponent::createBody( ScenePhysics& physics, IPhysicsBodyScene3D& scene, const float3& position, const quaternion& rotation, const float3& scale )
     {
         PhysicsBodyDesc3D desc;
         desc._listShape.reserve( _listShape.size() );
@@ -225,7 +225,7 @@ namespace sw
             releasePhysics( physics );
             return;
         }
-        IPhysicsScene3D* pScene = physics.getScene3D();
+        IPhysicsBodyScene3D* pScene = physics.getScene3D();
         if ( pScene == nullptr )
             return;
         if ( consumeRebuild() )
@@ -294,7 +294,7 @@ namespace sw
 
     void RigidBodyComponent::prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount )
     {
-        IPhysicsScene3D* pScene = physics.findScene3D();
+        IPhysicsBodyScene3D* pScene = physics.findScene3D();
         if ( pScene == nullptr || _body.isValid() == false )
             return;
         if ( _bodyType == PhysicsBodyType::Kinematic )
@@ -323,7 +323,7 @@ namespace sw
 
     void RigidBodyComponent::postPhysicsStep( ScenePhysics& physics )
     {
-        IPhysicsScene3D* pScene = physics.findScene3D();
+        IPhysicsBodyScene3D* pScene = physics.findScene3D();
         if ( pScene == nullptr || _body.isValid() == false )
             return;
         _previousPosition = _currentPosition;
@@ -355,7 +355,7 @@ namespace sw
     {
         if ( _body.isValid() == false )
             return;
-        IPhysicsScene3D* pScene = physics.findScene3D();
+        IPhysicsBodyScene3D* pScene = physics.findScene3D();
         if ( pScene != nullptr )
             pScene->destroyBody( _body );
         _body        = PhysicsBodyHandle{};
