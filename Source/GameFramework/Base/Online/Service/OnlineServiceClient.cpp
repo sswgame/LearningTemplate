@@ -28,6 +28,7 @@ namespace sw
         : _settings{}
         , _listService{}
         , _listQueuedCall{}
+        , _listDrainingCall{}
         , _mapPendingCall{}
         , _ownedEndpoint{}
         , _ownedRequestClient{}
@@ -99,6 +100,14 @@ namespace sw
                                                [methodRange]( const QueuedCall& call )
         { return OnlineMethodRange::getRangeBase( call._method ) == methodRange; } );
         _listQueuedCall.erase( queuedEnd, _listQueuedCall.end() );
+        for ( vector<QueuedCall>* pDraining : _listDrainingCall ) // 꺼내 도는 목록은 지우지 않고 표시만 — 도는 쪽의 인덱스를 지킨다
+        {
+            for ( QueuedCall& call : *pDraining )
+            {
+                if ( OnlineMethodRange::getRangeBase( call._method ) == methodRange )
+                    call._bCancelled = SW_TRUE;
+            }
+        }
         for ( auto pendingIt = _mapPendingCall.begin(); pendingIt != _mapPendingCall.end(); )
         {
             if ( OnlineMethodRange::getRangeBase( pendingIt->second._method ) == methodRange )
@@ -322,21 +331,30 @@ namespace sw
     {
         vector<QueuedCall> listCall = std::move( _listQueuedCall );
         _listQueuedCall.clear();
-        for ( QueuedCall& call : listCall )
+        _listDrainingCall.push_back( &listCall ); // 콜백이 키트를 파괴하면 cancelRequestsOf 가 남은 항목을 표시한다
+        for ( size_t index = 0; index < listCall.size(); ++index )
         {
+            QueuedCall& call = listCall[index];
+            if ( call._bCancelled == SW_TRUE )
+                continue;
             if ( _state == OnlineClientState::Ready && isGated( call._method ) == false )
                 sendQueuedCall( call );
             else
                 _listQueuedCall.push_back( std::move( call ) ); // 보내는 도중 끊겼다 · 문이 닫혔다 — 다음 Hello · 문 열림을 기다린다
         }
+        _listDrainingCall.pop_back();
     }
 
     void OnlineServiceClient::failQueuedCalls( NetRequestStatus status, uint16 errorCode )
     {
         vector<QueuedCall> listCall = std::move( _listQueuedCall );
         _listQueuedCall.clear();
-        for ( const QueuedCall& call : listCall )
+        _listDrainingCall.push_back( &listCall ); // 콜백이 키트를 파괴하면 cancelRequestsOf 가 남은 항목을 표시한다
+        for ( size_t index = 0; index < listCall.size(); ++index )
         {
+            const QueuedCall& call = listCall[index];
+            if ( call._bCancelled == SW_TRUE )
+                continue;
             OnlineResponse response;
             response._requestID = call._requestID;
             response._status    = status;
@@ -344,6 +362,7 @@ namespace sw
             if ( call._onResponse.isBound() )
                 call._onResponse( response );
         }
+        _listDrainingCall.pop_back();
     }
 
     void OnlineServiceClient::beginConnect()

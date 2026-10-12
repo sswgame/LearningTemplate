@@ -78,7 +78,57 @@ namespace
             (void)body;
         }
     };
+
+    /** @brief 첫 응답에서 자기 주인(@p _pOwner)이 자신을 파괴하게 하는 키트입니다. 응답 수는 키트 밖 @p _pResponseCount 에 센다. */
+    class SelfDestroyingClientService final : public IOnlineClientService
+    {
+    public:
+        unique_ptr<SelfDestroyingClientService>* _pOwner{ nullptr };
+        int32*                                   _pResponseCount{ nullptr };
+
+        uint16 getMethodRange() const override { return OnlineMethodRange::kGame; }
+        uint32 getProtocolVersion() const override { return 1; }
+        void   onServicePush( uint16 kind, BitReader& body ) override
+        {
+            (void)kind;
+            (void)body;
+        }
+
+        void onResponse( const OnlineResponse& response )
+        {
+            (void)response;
+            ++*_pResponseCount;
+            _pOwner->reset(); // 이 뒤로 this 를 건드리지 않는다
+        }
+    };
+
 } // namespace
+
+/**
+ * @brief [ServiceClientCallTableTest] 모은 요청을 실패로 알리는 중 응답 콜백이 키트를 파괴하면 남은 그 키트의 요청은 부르지 않는다.
+ * @details 예전에는 지역 목록으로 꺼낸 뒤라 cancelRequestsOf 가 빈 멤버 목록만 훑어, 파괴된 키트의 델리게이트를 불렀다.
+ */
+SW_TEST_CASE( ServiceClientCallTableTest, KitDestroyedWhileFailingQueuedCallsGetsNoMoreCalls )
+{
+    LoopbackStreamNetwork                   network( 5u );
+    unique_ptr<IStreamTransport>            transport = network.createTransport();
+    OnlineServiceClient                     client;
+    int32                                   responseCount = 0;
+    unique_ptr<SelfDestroyingClientService> kit           = sw::make_unique<SelfDestroyingClientService>();
+    kit->_pOwner                                          = &kit;
+    kit->_pResponseCount                                  = &responseCount;
+    SW_ASSERT_TRUE( client.registerClientService( kit.get() ) );
+    string error;
+    SW_ASSERT_TRUE_MSG( client.initialize( transport.get(), OnlineServiceClientSettings{}, error ), error.c_str() ); // 서버가 없다 — 요청은 모인다
+
+    const OnlineResponseDelegate onResponse = OnlineResponseDelegate::create<&SelfDestroyingClientService::onResponse>( kit.get() );
+    (void)client.sendRequest( OnlineMethodRange::kGame + 1, BitWriter{}, NetRequestOptions{}, onResponse );
+    (void)client.sendRequest( OnlineMethodRange::kGame + 2, BitWriter{}, NetRequestOptions{}, onResponse );
+    client.shutdown(); // 첫 실패 알림이 키트를 파괴한다
+
+    SW_EXPECT_EQUAL( responseCount, 1 );
+    SW_EXPECT_TRUE( kit == nullptr );
+}
 
 SW_TEST_CASE( ServiceClientCallTableTest, ImmediateFailureInsideSendStillReachesTheDelegate )
 {
