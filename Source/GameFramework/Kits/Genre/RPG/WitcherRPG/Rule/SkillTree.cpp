@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Base/Gameplay/Progression/SkillTree.h"
+#include "GameFramework/Kits/Genre/RPG/WitcherRPG/Rule/SkillTree.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"

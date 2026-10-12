@@ -32,7 +32,6 @@
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Base/Gameplay/Match/MatchState.h"
 #include "GameFramework/Base/Gameplay/Progression/LevelProgress.h"
-#include "GameFramework/Base/Gameplay/Progression/RunMap.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -462,39 +461,6 @@ SW_TEST_CASE( BaseValueStateArchiveTest, StatBlockAndLevelProgressReplayAfterRes
     SW_EXPECT_TRUE( replaysAfterRestore( progress, restoredProgress, [&curve]( LevelProgress& state )
     { (void)state.addXp( curve, 420 ); } ) );
     SW_EXPECT_EQUAL( progress.getLevel(), restoredProgress.getLevel() );
-}
-
-/**
- * @brief [BaseValueStateArchiveTest] 런 지도 — 만든 지도 · 지금 자리가 와서 같은 갈림길을 낸다
- */
-SW_TEST_CASE( BaseValueStateArchiveTest, RunMapReplaysAfterRestore )
-{
-    RunMapSettings settings;
-    RunNodeRule    fight;
-    fight._kind = "Fight";
-    RunNodeRule rest;
-    rest._kind            = "Rest";
-    rest._weight          = 0.3f;
-    settings._listRule    = { fight, rest };
-    settings._floorCount  = 6;
-    settings._columnCount = 4;
-    settings._pathCount   = 3;
-    RunMap map;
-    map.generate( settings, 17 );
-    vector<int32> listChoice;
-    map.collectChoices( listChoice );
-    SW_ASSERT_FALSE( listChoice.empty() );
-    SW_ASSERT_TRUE( map.moveTo( listChoice[0] ) );
-
-    RunMap restored;
-    SW_EXPECT_TRUE( replaysAfterRestore( map, restored, []( RunMap& state )
-    {
-        vector<int32> listStepChoice;
-        state.collectChoices( listStepChoice );
-        if ( listStepChoice.empty() == false )
-            (void)state.moveTo( listStepChoice.back() ); // 갈 수 있는 칸만 고른다 — 결과는 아래 두 상태 비교가 본다
-    } ) );
-    SW_EXPECT_EQUAL( map.getCurrent(), restored.getCurrent() );
 }
 
 /**

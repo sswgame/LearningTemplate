@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Base/Gameplay/Progression/RunMap.h"
+#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/RunMap.h"
 
 #include "Core/Math/MathUtil.h"
 
