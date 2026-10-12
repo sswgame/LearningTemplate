@@ -19,13 +19,6 @@ namespace sw
         struct RTSWorldInternal
         {
             static constexpr float32 kMaxUnitExtent = 4.5f; ///< 버킷 조회에 더하는 몸 크기의 상한(건물 한 변의 절반)
-
-            static float32 computeFlatDistance( const float3& lhs, const float3& rhs )
-            {
-                const float32 dx = lhs._x - rhs._x;
-                const float32 dz = lhs._z - rhs._z;
-                return MathUtil::sqrt( dx * dx + dz * dz );
-            }
         };
     } // namespace
 
@@ -401,7 +394,7 @@ namespace sw
                     const RTSUnit& unit = _listUnit[static_cast<size_t>( index )];
                     if ( unit._bAlive == SW_FALSE )
                         continue;
-                    const float32 distance = unit.isMobile() ? RTSWorldInternal::computeFlatDistance( center, unit._position ) - unit._pDef->_radius
+                    const float32 distance = unit.isMobile() ? float3::getHorizontalDistance( center, unit._position ) - unit._pDef->_radius
                                                              : computeRectDistance( center, unit._cell, unit._pDef->_footprint );
                     if ( distance <= radius )
                         outListUnit.push_back( unit._id );
@@ -418,7 +411,7 @@ namespace sw
         {
             if ( unit._bAlive == SW_FALSE )
                 continue;
-            float32 distance = unit.isMobile() ? RTSWorldInternal::computeFlatDistance( position, unit._position ) - unit._pDef->_radius
+            float32 distance = unit.isMobile() ? float3::getHorizontalDistance( position, unit._position ) - unit._pDef->_radius
                                                : computeRectDistance( position, unit._cell, unit._pDef->_footprint );
             if ( distance > 0.0f )
                 continue;
@@ -450,7 +443,7 @@ namespace sw
                     if ( bEdge == false || _grid.isWalkable( x, y ) == false )
                         continue;
                     const float3  center   = _grid.computeCellCenter( int2{ x, y } );
-                    const float32 distance = RTSWorldInternal::computeFlatDistance( center, toward );
+                    const float32 distance = float3::getHorizontalDistance( center, toward );
                     if ( distance < bestDistance )
                     {
                         bestDistance = distance;
@@ -499,7 +492,7 @@ namespace sw
             return computeRectDistance( unit._position, target._cell, target._pDef->_footprint ) - ( unit.isMobile() ? unit._pDef->_radius : 0.0f );
         if ( unit.isMobile() == false )
             return computeRectDistance( target._position, unit._cell, unit._pDef->_footprint ) - target._pDef->_radius;
-        return RTSWorldInternal::computeFlatDistance( unit._position, target._position ) - unit._pDef->_radius - target._pDef->_radius;
+        return float3::getHorizontalDistance( unit._position, target._position ) - unit._pDef->_radius - target._pDef->_radius;
     }
 
     bool RTSWorld::isWithinReach( const RTSUnit& unit, const RTSUnit& target, float32 reach ) const { return computeEdgeDistance( unit, target ) <= reach; }

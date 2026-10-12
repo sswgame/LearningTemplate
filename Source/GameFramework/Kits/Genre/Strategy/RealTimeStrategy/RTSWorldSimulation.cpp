@@ -18,13 +18,6 @@ namespace sw
         struct RTSWorldSimulationInternal
         {
 
-            static float32 computeFlatDistance( const float3& lhs, const float3& rhs )
-            {
-                const float32 dx = lhs._x - rhs._x;
-                const float32 dz = lhs._z - rhs._z;
-                return MathUtil::sqrt( dx * dx + dz * dz );
-            }
-
             static bool isGround( const RTSUnit& unit ) { return unit._pDef->_bAir == SW_FALSE; }
         };
     } // namespace
@@ -99,7 +92,7 @@ namespace sw
     {
         if ( RTSWorldSimulationInternal::isGround( unit ) == false )
         {
-            if ( bForce || unit._agent.isMoving() == false || RTSWorldSimulationInternal::computeFlatDistance( unit._moveGoal, target ) > 0.25f )
+            if ( bForce || unit._agent.isMoving() == false || float3::getHorizontalDistance( unit._moveGoal, target ) > 0.25f )
             {
                 unit._moveGoal = target;
                 unit._agent.followPath( vector<float3>{
@@ -108,7 +101,7 @@ namespace sw
             }
             return;
         }
-        const bool bGoalMoved = RTSWorldSimulationInternal::computeFlatDistance( unit._moveGoal, target ) > 1.0f;
+        const bool bGoalMoved = float3::getHorizontalDistance( unit._moveGoal, target ) > 1.0f;
         if ( bForce == false && unit._repathTimer.isActive() )
             return;
         if ( bForce == false && unit._agent.isMoving() && bGoalMoved == false )
@@ -192,7 +185,7 @@ namespace sw
                     }
                     return;
                 }
-                const float32 distance = RTSWorldSimulationInternal::computeFlatDistance( unit._position, order._target );
+                const float32 distance = float3::getHorizontalDistance( unit._position, order._target );
                 const bool    bClose   = order._arriveRadius > 0.0f && distance <= order._arriveRadius;
                 if ( bClose || unit._agent.isMoving() == false )
                     finishOrder( unit );

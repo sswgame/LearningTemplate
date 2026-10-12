@@ -121,13 +121,6 @@ namespace sw
                 }
                 return float4{ 0.3f, 0.7f, 0.3f, 1.0f };
             }
-
-            static float32 computeDistanceXz( const float3& lhs, const float3& rhs )
-            {
-                const float32 dx = lhs._x - rhs._x;
-                const float32 dz = lhs._z - rhs._z;
-                return MathUtil::sqrt( dx * dx + dz * dz );
-            }
         };
 
         /** @brief 프로브가 읽는 디렉터입니다. 씬의 첫 농장 디렉터이며, 프로브는 단언 단계에서만 불리므로 프레임 경로가 아닙니다. */
@@ -873,12 +866,12 @@ namespace sw
 
     bool FarmDirectorComponent::isNearShippingBin() const
     {
-        return FarmDirectorComponentInternal::computeDistanceXz( _playerPosition, _shippingBinPosition ) < _nearDistance;
+        return float3::getHorizontalDistance( _playerPosition, _shippingBinPosition ) < _nearDistance;
     }
 
     bool FarmDirectorComponent::isNearShop() const
     {
-        return FarmDirectorComponentInternal::computeDistanceXz( _playerPosition, _shopPosition ) < _nearDistance + 0.5f;
+        return float3::getHorizontalDistance( _playerPosition, _shopPosition ) < _nearDistance + 0.5f;
     }
 
     const hashed_string& FarmDirectorComponent::getSelectedSeed() const

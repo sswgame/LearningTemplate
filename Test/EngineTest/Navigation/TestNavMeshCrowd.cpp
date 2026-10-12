@@ -11,25 +11,11 @@
 
 #include "TestFramework/TestFramework.h"
 
-namespace
-{
-    struct NavMeshCrowdTestInternal
-    {
-        static float32 computeDistance2D( const sw::float3& from, const sw::float3& to )
-        {
-            const float32 deltaX = to._x - from._x;
-            const float32 deltaZ = to._z - from._z;
-            return sw::MathUtil::sqrt( deltaX * deltaX + deltaZ * deltaZ );
-        }
-    };
-} // namespace
-
 /**
  * @brief [NavMeshCrowdTest] 폭 3 m 복도의 두 끝에서 마주 보고 출발한 두 에이전트(반지름 0.4)가 겹치지 않고 비켜 지나 서로의 출발점에 닿는다
  */
 SW_TEST_CASE( NavMeshCrowdTest, TwoAgentsPassEachOtherInACorridor )
 {
-    using Internal                     = NavMeshCrowdTestInternal;
     const sw::NavMeshSettings settings = navtest::makeSettings();
     sw::NavMeshGeometry       geometry;
     navtest::addFloor( geometry, 0.0f, 0.0f, 20.0f, 3.0f );
@@ -61,14 +47,14 @@ SW_TEST_CASE( NavMeshCrowdTest, TwoAgentsPassEachOtherInACorridor )
     {
         pCrowd->update( 1.0f / 60.0f );
         SW_ASSERT_TRUE( pCrowd->findAgentState( west, westState ) && pCrowd->findAgentState( east, eastState ) );
-        minDistance = sw::MathUtil::min( minDistance, Internal::computeDistance2D( westState._position, eastState._position ) );
+        minDistance = sw::MathUtil::min( minDistance, sw::float3::getHorizontalDistance( westState._position, eastState._position ) );
         maxSideStep = sw::MathUtil::max( maxSideStep, sw::MathUtil::abs( westState._position._z - eastState._position._z ) );
     }
     // 반지름 합 0.8 — 회피가 없으면 같은 줄을 따라 걸어 0 까지 붙는다.
     SW_EXPECT_TRUE_MSG( minDistance > 0.6f, ( "closest approach " + std::to_string( minDistance ) ).c_str() );
     SW_EXPECT_TRUE( maxSideStep > 0.5f );
-    SW_EXPECT_TRUE( Internal::computeDistance2D( westState._position, eastStart ) < 0.5f );
-    SW_EXPECT_TRUE( Internal::computeDistance2D( eastState._position, westStart ) < 0.5f );
+    SW_EXPECT_TRUE( sw::float3::getHorizontalDistance( westState._position, eastStart ) < 0.5f );
+    SW_EXPECT_TRUE( sw::float3::getHorizontalDistance( eastState._position, westStart ) < 0.5f );
     SW_EXPECT_TRUE( westState._moveState == sw::NavCrowdMoveState::Arrived );
 
     // 목적지를 내비메시에서 찾지 못하면 실패로 남는다.

@@ -721,3 +721,15 @@ SW_TEST_CASE( MathTest, SplitMix64NextMatchesTheRecordedValues )
     SW_EXPECT_EQUAL( 0x6E789E6AA1B965F4ull, sw::HashUtil::splitMix64Next( state ) );
     SW_EXPECT_EQUAL( 0x06C45D188009454Full, sw::HashUtil::splitMix64Next( state ) );
 }
+
+/**
+ * @brief [MathTest] 수평 거리는 높이(y)를 보지 않고 XZ 평면에서만 잰다
+ */
+SW_TEST_CASE( MathTest, HorizontalDistanceIgnoresHeight )
+{
+    const sw::float3 from{ 1.0f, 100.0f, 2.0f };
+    const sw::float3 to{ 4.0f, -50.0f, 6.0f };
+    SW_EXPECT_NEAR_EQUAL( 25.0f, sw::float3::getHorizontalDistanceSquared( from, to ), 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, sw::float3::getHorizontalDistance( from, to ), 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, sw::float3::getHorizontalDistance( to, from ), 1e-5f );
+}

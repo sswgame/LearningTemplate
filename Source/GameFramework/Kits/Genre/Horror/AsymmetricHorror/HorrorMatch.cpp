@@ -24,14 +24,6 @@ namespace sw
             static constexpr float32 kNeverReviveTime = 1.0e9f; ///< 빈사 회복은 치료 진행이 정하므로, Vitality 의 부활 시계는 멈춤용으로만 쓴다
             static constexpr uint32  kHealSeedMix     = 0x85EBCA6Bu;
             static constexpr uint32  kGateSeedMix     = 0xC2B2AE35u;
-
-            /** @brief XZ 평면 거리를 반환합니다. */
-            static float32 computeFlatDistance( const float3& from, const float3& to )
-            {
-                const float32 deltaX = to._x - from._x;
-                const float32 deltaZ = to._z - from._z;
-                return MathUtil::sqrt( deltaX * deltaX + deltaZ * deltaZ );
-            }
         };
     } // namespace
 
@@ -240,7 +232,7 @@ namespace sw
     {
         if ( isValidSurvivor( survivor ) == false || _killer._pDef == nullptr || _killer._pDef->_terrorRadius <= 0.0f )
             return 0.0f;
-        const float32 distance = HorrorMatchInternal::computeFlatDistance( _killer._position, _listSurvivor[static_cast<size_t>( survivor )]._position );
+        const float32 distance = float3::getHorizontalDistance( _killer._position, _listSurvivor[static_cast<size_t>( survivor )]._position );
         return MathUtil::saturate( 1.0f - distance / _killer._pDef->_terrorRadius );
     }
 
@@ -330,7 +322,7 @@ namespace sw
 
     bool HorrorMatch::isNear( const float3& from, const float3& to, float32 range ) const
     {
-        return HorrorMatchInternal::computeFlatDistance( from, to ) <= range;
+        return float3::getHorizontalDistance( from, to ) <= range;
     }
 
     void HorrorMatch::pushEvent( AsymmetricHorrorEvent::Kind kind, int32 actor, int32 target, float32 value, const float3& position )

@@ -39,13 +39,6 @@ namespace sw
                 TaskKind _kind{ TaskKind::None };
             };
 
-            static float32 computeDistanceXz( const float3& lhs, const float3& rhs )
-            {
-                const float32 dx = lhs._x - rhs._x;
-                const float32 dz = lhs._z - rhs._z;
-                return MathUtil::sqrt( dx * dx + dz * dz );
-            }
-
             static FarmButton findToolButton( FarmTool tool )
             {
                 switch ( tool )
@@ -81,7 +74,7 @@ namespace sw
 
     bool FarmAutoFarmerAIComponent::walkTo( const FarmDirectorComponent& director, const float3& standPosition )
     {
-        if ( FarmAutoFarmerAIComponentInternal::computeDistanceXz( director.getPlayerPosition(), standPosition ) <= _standTolerance )
+        if ( float3::getHorizontalDistance( director.getPlayerPosition(), standPosition ) <= _standTolerance )
         {
             stopMoving();
             return true;
@@ -95,7 +88,7 @@ namespace sw
         using Internal          = FarmAutoFarmerAIComponentInternal;
         const float3& position  = director.getPlayerPosition();
         const bool    bFacingUp = director.getFacing()._z > 0.5f;
-        const bool    bOnSpot   = Internal::computeDistanceXz( position, standPosition ) <= _standTolerance;
+        const bool    bOnSpot   = float3::getHorizontalDistance( position, standPosition ) <= _standTolerance;
         if ( bFacingUp && bOnSpot )
         {
             stopMoving();

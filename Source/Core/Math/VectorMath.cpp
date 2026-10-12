@@ -208,6 +208,18 @@ namespace sw
         return result.getLengthSquared();
     }
 
+    float32 float3::getHorizontalDistance( const float3& from, const float3& to ) noexcept
+    {
+        return MathUtil::sqrt( getHorizontalDistanceSquared( from, to ) );
+    }
+
+    float32 float3::getHorizontalDistanceSquared( const float3& from, const float3& to ) noexcept
+    {
+        const float32 deltaX = to._x - from._x;
+        const float32 deltaZ = to._z - from._z;
+        return deltaX * deltaX + deltaZ * deltaZ;
+    }
+
     float3 float3::min( const float3& lhs, const float3& rhs ) noexcept
     {
         return float3{ MathUtil::min( lhs._x, rhs._x ), MathUtil::min( lhs._y, rhs._y ), MathUtil::min( lhs._z, rhs._z ) };

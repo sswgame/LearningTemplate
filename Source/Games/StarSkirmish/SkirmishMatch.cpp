@@ -52,13 +52,6 @@ namespace sw
                 return settings;
             }
 
-            static float32 computeFlatDistance( const float3& lhs, const float3& rhs )
-            {
-                const float32 dx = lhs._x - rhs._x;
-                const float32 dz = lhs._z - rhs._z;
-                return MathUtil::sqrt( dx * dx + dz * dz );
-            }
-
             static bool isArmy( const RTSUnit& unit ) { return unit.isMobile() && unit._pDef->_bWorker == SW_FALSE && unit._pDef->canAttack(); }
         };
     } // namespace
@@ -318,7 +311,7 @@ namespace sw
         {
             if ( unit._owner != player || SkirmishMatchInternal::isArmy( unit ) == false || unit.isIdle() == false || unit._attackTarget.isValid() )
                 return;
-            if ( SkirmishMatchInternal::computeFlatDistance( unit._position, pEnemy->_startPosition ) > SkirmishMatchInternal::kArrivedRadius )
+            if ( float3::getHorizontalDistance( unit._position, pEnemy->_startPosition ) > SkirmishMatchInternal::kArrivedRadius )
                 return;
             listArrived.push_back( unit._id );
             groupPosition = unit._position;
@@ -331,7 +324,7 @@ namespace sw
         {
             if ( unit._owner != enemy || unit.isBuilding() == false )
                 return;
-            const float32 distance = SkirmishMatchInternal::computeFlatDistance( unit._position, groupPosition );
+            const float32 distance = float3::getHorizontalDistance( unit._position, groupPosition );
             if ( distance < bestDistance )
             {
                 bestDistance = distance;

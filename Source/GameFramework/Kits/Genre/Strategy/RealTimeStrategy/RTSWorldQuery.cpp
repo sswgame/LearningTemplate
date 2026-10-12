@@ -18,13 +18,6 @@ namespace sw
         struct RTSWorldQueryInternal
         {
 
-            static float32 computeFlatDistance( const float3& lhs, const float3& rhs )
-            {
-                const float32 dx = lhs._x - rhs._x;
-                const float32 dz = lhs._z - rhs._z;
-                return MathUtil::sqrt( dx * dx + dz * dz );
-            }
-
             static bool isGround( const RTSUnit& unit ) { return unit._pDef->_bAir == SW_FALSE; }
         };
     } // namespace
@@ -129,7 +122,7 @@ namespace sw
             {
                 if ( unit._bAlive == SW_FALSE || unit.isResource() == false || unit._pDef->_resourceType != RTSResourceType::Gas )
                     continue;
-                const float32 distance = RTSWorldQueryInternal::computeFlatDistance( nearPosition, unit._position );
+                const float32 distance = float3::getHorizontalDistance( nearPosition, unit._position );
                 if ( distance < bestDistance && canPlaceBuilding( buildingID, unit._cell ) )
                 {
                     bestDistance = distance;
@@ -180,7 +173,7 @@ namespace sw
         {
             if ( unit._bAlive == SW_FALSE || unit.isResource() == false || unit._pDef->_resourceType != type || unit._resourceLeft <= 0 )
                 continue;
-            const float32 distance = RTSWorldQueryInternal::computeFlatDistance( position, unit._position );
+            const float32 distance = float3::getHorizontalDistance( position, unit._position );
             if ( distance <= bestDistance )
             {
                 bestDistance = distance;
@@ -198,7 +191,7 @@ namespace sw
         {
             if ( unit._bAlive == SW_FALSE || unit._owner != player || unit._pDef->_bDepot == SW_FALSE || unit.isConstructed() == false )
                 continue;
-            const float32 distance = RTSWorldQueryInternal::computeFlatDistance( position, unit._position );
+            const float32 distance = float3::getHorizontalDistance( position, unit._position );
             if ( distance < bestDistance )
             {
                 bestDistance = distance;
