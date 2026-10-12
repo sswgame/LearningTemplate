@@ -81,6 +81,7 @@
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
 | `gv_destructionMaxDebrisBodies` | `int32` | `512` | 일반 | 한 씬(월드)의 모든 파괴 오브젝트가 함께 드는 떨어진 덩어리 바디의 상한(넘으면 오래된 작은 것부터 사라진다) | [FractureComponentBase.cpp](../../Source/Engine/Destruction/FractureComponentBase.cpp) |
+| `gv_fractureShapeWarmMicroseconds` | `int32` | `500` | 시험 | 파괴 잎 셰이프를 온전한 동안 미리 짓는 시간(us, 스레드마다 4 ms 창마다). 0=처음 깨질 때 모두, 음수=상태를 시작할 때 모두(전/후 비교용) | [FractureComponentBase.cpp](../../Source/Engine/Destruction/FractureComponentBase.cpp) |
 
 ## `Source/Engine/Environment`
 
@@ -249,13 +250,17 @@
 | `gv_benchMeshShapes` | `int32` | `1` | 시험 | 벤치가 섞어 쓸 도형 수 (1=큐브만 · 최대 5: 큐브·구·실린더·캡슐·원뿔) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchMeshVariants` | `int32` | `1` | 시험 | 벤치 메시 종류 수 (= 배치 수, 드로우 경로 측정용) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchMovePercent` | `int32` | `100` | 시험 | 프레임마다 위치·스케일을 다시 쓰는 큐브의 비율 (퍼센트, 기본 100) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
+| `gv_benchProbeFrame` | `int32` | `180` | 시험 · 배포본에도 | 한 번 일어나는 벤치 탐침(한글 글 · 씬 로드)을 거는 프레임(측정 창 워밍업 60 뒤) | [BenchSceneProbes.cpp](../../Source/Games/Empty/BenchSceneProbes.cpp) |
 | `gv_benchRig` | `int32` | `0` | 시험 · 배포본에도 | 후처리 리그 데모 기사 수 (0=사용 안 함, 발 디딤 · 시선 · 왼손 IK · 망토 스프링) | [BenchSceneRig.cpp](../../Source/Games/Empty/BenchSceneRig.cpp) |
 | `gv_benchRigEnabled` | `int32` | `1` | 시험 · 배포본에도 | 리그 데모의 PoseModifierComponent 를 켤지 (0=대조군) | [BenchSceneRig.cpp](../../Source/Games/Empty/BenchSceneRig.cpp) |
 | `gv_benchRigView` | `int32` | `0` | 시험 · 배포본에도 | 리그 데모 카메라 (0 왼쪽 앞 · 1 정면 · 2 오른쪽 옆 · 3 오른쪽 뒤) | [BenchSceneRig.cpp](../../Source/Games/Empty/BenchSceneRig.cpp) |
+| `gv_benchSceneLoadPath` | `string` | — | 시험 · 배포본에도 | 탐침 프레임에 이 씬을 비동기로 연다(로드 중 최악 프레임 측정, 비우면 사용 안 함) | [BenchSceneProbes.cpp](../../Source/Games/Empty/BenchSceneProbes.cpp) |
 | `gv_benchSpawnChurn` | `int32` | `0` | 시험 | 프레임마다 큐브 N 개를 지우고 같은 자리에 새로 만든다 (스폰·파괴·틱 레지스트리 측정) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchTickMovers` | `int32` | `0` | 시험 | 큐브마다 틱 무버 컴포넌트 N 개 — 첫 번째가 틱 안에서 위치를 쓴다 (0=배치 쓰기) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchTransparent` | `int32` | `25` | 시험 · 배포본에도 | 벤치 큐브 중 투명으로 만들 비율 (퍼센트) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
+| `gv_benchUiHangulGlyphs` | `int32` | `0` | 시험 · 배포본에도 | 탐침 프레임에 서로 다른 한글 음절 N 개의 긴 글을 띄운다(새 글리프 첫 프레임 측정, 0=사용 안 함) | [BenchSceneProbes.cpp](../../Source/Games/Empty/BenchSceneProbes.cpp) |
 | `gv_benchUiMarkers` | `int32` | `0` | 시험 · 배포본에도 | 앞쪽 벤치 큐브 K 개에 화면 마커(숫자 글)를 붙인다 (0=사용 안 함) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
+| `gv_benchUiNameplates` | `int32` | `0` | 시험 · 배포본에도 | 앞쪽 벤치 큐브 K 개에 RTS 이름표(이름 글 + HP 막대)를 붙인다 (0=사용 안 함) | [BenchSceneProbes.cpp](../../Source/Games/Empty/BenchSceneProbes.cpp) |
 | `gv_benchViews` | `int32` | `0` | 시험 | 격자를 둘러보는 캡처 카메라(렌더 텍스처 512²) 수 (0=사용 안 함) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 
 ## `Source/Games/HarvestValley`
