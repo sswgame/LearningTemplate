@@ -165,7 +165,7 @@ namespace sw::editor
             // 화면을 그리는 에디터 카메라는 레이가 출발하는 자리에 있어 기본 반지름 구가 늘 가장 가깝다 — 집지 않는다
             // (언리얼 · 유니티의 에디터 카메라는 씬 오브젝트가 아니다).
             const CameraComponent* pCamera = pObj != nullptr ? pObj->getComponent<CameraComponent>() : nullptr;
-            if ( pCamera != nullptr && pCamera->getRole() == CameraRole::Editor )
+            if ( pCamera != nullptr && pCamera->getRole() == CameraRole::Viewport )
                 return;
             EditorViewportPickInternal::hitTestObject( pObj, ray, b2DMode, best );
         } );

@@ -72,7 +72,7 @@ SW_TEST_CASE( EditorViewportPickTest, RaySphereIntersection )
 SW_TEST_CASE( EditorViewportPickTest, EditorCameraIsNeverPicked )
 {
     GameObjectManager manager;
-    CameraComponent*  pEditorCamera = CameraComponent::findOrCreateNamed( &manager, hashed_string( "EditorCamera" ), CameraRole::Editor,
+    CameraComponent*  pEditorCamera = CameraComponent::findOrCreateNamed( &manager, hashed_string( "EditorCamera" ), CameraRole::Viewport,
                                                                           float3{ 0.0f, 0.0f, -10.0f }, float3{ 0.0f, 0.0f, 0.0f } );
     SW_ASSERT_NOT_NULL( pEditorCamera );
     GameObject* pTarget = makeSceneObject( manager, "Target", float3{ 0.0f, 0.0f, 0.0f } );

@@ -721,7 +721,7 @@ namespace sw::editor
                     return false;
                 const GameObject*      pPrimary = pContext->getEditorSelection().getPrimaryObject();
                 const CameraComponent* pCamera  = pPrimary != nullptr ? pPrimary->getComponent<CameraComponent>() : nullptr;
-                outValue                        = ( pCamera != nullptr && pCamera->getRole() == CameraRole::Editor ) ? 1.0 : 0.0;
+                outValue                        = ( pCamera != nullptr && pCamera->getRole() == CameraRole::Viewport ) ? 1.0 : 0.0;
                 return true;
             }
 

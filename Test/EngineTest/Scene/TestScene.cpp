@@ -581,10 +581,10 @@ SW_TEST_CASE( SceneTest, GameCameraSelectionFollowsTheRegistry )
     pHigh->setActive( true );
     scene.ensureDefaultCameras();
     SW_EXPECT_TRUE( scene.getActiveGameCamera() == pHigh );
-    pHigh->setRole( sw::CameraRole::Editor );
+    pHigh->setRole( sw::CameraRole::Viewport );
     scene.ensureDefaultCameras();
     SW_EXPECT_TRUE( scene.getActiveGameCamera() == pDefault );
-    SW_EXPECT_TRUE( pObjects->getCameraRegistry().selectCamera( sw::CameraRole::Editor ) == pHigh );
+    SW_EXPECT_TRUE( pObjects->getCameraRegistry().selectCamera( sw::CameraRole::Viewport ) == pHigh );
     pHigh->setRole( sw::CameraRole::Game );
 
     // 직접 고른 카메라가 살아 있고 켜져 있는 동안은 그것이 먼저다.

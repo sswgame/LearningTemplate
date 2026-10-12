@@ -47,7 +47,7 @@ namespace sw
         string _buildConfiguration; ///< `sw::build::kConfigName`
         string _game;               ///< 게임 프리셋의 창 제목(`GameConfig::_windowTitle`)
         float3 _cameraPosition{};
-        float3 _cameraRotationDegrees{}; ///< pitch · yaw · roll(도). 시선은 `(sin yaw cos pitch, -sin pitch, cos yaw cos pitch)` — 에디터 카메라와 같은 규칙
+        float3 _cameraRotationDegrees{}; ///< pitch · yaw · roll(도). 시선은 `(sin yaw cos pitch, -sin pitch, cos yaw cos pitch)` — 뷰포트 카메라와 같은 규칙
 
         /** @brief `<directory>/info.txt` 를 씁니다. */
         [[nodiscard]] bool writeInfo( string_view directory ) const;
@@ -69,7 +69,7 @@ namespace sw
 
         /**
          * @brief 지금 엔진 상태에서 bugit 입력을 모읍니다 — 전역 엔진 서비스를 읽는 곳은 이 함수 하나입니다.
-         * @details 카메라는 보이는 시점이다 — 에디터 카메라(`CameraRole::Editor`)가 있으면 그것, 없으면 활성 게임 카메라.
+         * @details 카메라는 보이는 시점이다 — 뷰포트 카메라(`CameraRole::Viewport`)가 있으면 그것, 없으면 활성 게임 카메라.
          *          로거를 여기서 비운다(비동기라 비우지 않으면 bugit 직전 줄이 사본에 없다).
          *          입력 녹화는 담지 않는다(전역 녹화기가 없다 — Input Map 패널의 녹화는 그 패널의 것이다).
          */
@@ -83,7 +83,7 @@ namespace sw
         [[nodiscard]] static bool capture( const BugItInputs& inputs, string& outDirectory );
         /**
          * @brief @p directory(비면 `Saved/BugIt` 아래 가장 최근 폴더)의 info.txt 를 읽어 그 씬을 @p sceneManager 로 열고(활성 씬과 다를 때) 보이는 카메라를 그 자리 · 각도로 옮깁니다.
-         * @details 에디터 카메라를 옮기면 씬 뷰가 그 자리를 이어받는다(`EditorViewportClient` 가 바깥에서 옮긴 카메라를 받아들인다).
+         * @details 뷰포트 카메라를 옮기면 그 뷰포트를 그리는 도구가 옮긴 자리를 이어받는다.
          */
         [[nodiscard]] static bool goTo( SceneManager& sceneManager, string_view directory, string& outReply );
     };

@@ -92,7 +92,7 @@ namespace sw
         {
             if ( candidateCount >= kMaxExtraRenderView )
                 break;
-            if ( pCamera == pMainCamera || CameraRegistry::isUsableCamera( pCamera ) == false || pCamera->getRole() == CameraRole::Editor )
+            if ( pCamera == pMainCamera || CameraRegistry::isUsableCamera( pCamera ) == false || pCamera->getRole() == CameraRole::Viewport )
                 continue;
             const CameraRenderOutput& output = pCamera->getRenderOutput();
             if ( output._target == CameraOutputTarget::MainView )

@@ -310,7 +310,7 @@ namespace sw
             if ( pGo == nullptr )
                 return;
             CameraComponent* pCamera = pGo->getComponent<CameraComponent>();
-            if ( pCamera != nullptr && pCamera->getRole() == CameraRole::Editor )
+            if ( pCamera != nullptr && pCamera->getRole() == CameraRole::Viewport )
                 return;
             SceneDocument::SceneObjectNode node{};
             node._name           = pGo->getName().c_str();

@@ -141,13 +141,6 @@ echo $LASTEXITCODE
 | `Possess` | `controller`, `pawn` | GameFramework `ControlAutomationSteps` | 컨트롤러가 빙의할 폰을 바꿉니다 |
 | `ExpectUI` | `focus`, `screen`, `screens` 중 하나 이상 | `Engine/UI/Automation/UIAutomationSteps` | 런타임 UI의 포커스 위젯, 활성 화면, 화면 수를 확인합니다 |
 | `UILayoutDump` | `file` | `Engine/UI/Automation/UIAutomationSteps` | UI 화면마다 위젯 이름과 픽셀 사각형을 파일로 씁니다 |
-| `EditorDrag` | `mark`, `dx`, `dy`(픽셀), `button`, `mods` | 에디터 `EditorScenarioSteps` | `mark` 위젯 가운데를 누르고 (dx, dy) 만큼 끌어 놓습니다(누름 · 절반 · 끝 · 뗌을 네 프레임에 — 프레임마다 커서를 다시 넣는다). 커브 키 · 손잡이 끌기 |
-| `EditorHover` | `mark`, `anchor` 또는 `release="true"` | 에디터 `EditorScenarioSteps` | 단추를 누르지 않고 커서를 레이블 자리에 붙잡아 둡니다(호버). `release` 까지 프레임마다 그 자리를 넣는다 |
-| `EditorClick` | `mark`, `button`(0..4), `mods`, `state`(`down`, `up`), `anchor`(`x,y` 0..1) | 에디터 `EditorScenarioSteps` | `mark` 이름이 붙은 위젯 가운데(`anchor` 를 주면 그 안의 자리 — 캔버스 빈 곳)를 클릭합니다. `state="down"` 은 누른 채 두고 `up` 까지 커서를 그 자리에 붙잡습니다(뷰포트 비행 · 끌기) |
-| `EditorText` | `value` | 에디터 `EditorScenarioSteps` | ImGui에 글자를 입력합니다 |
-| `EditorKey` | `key`(ImGui 키 이름, 수정자는 `+` — `Enter`, `Escape`, `Ctrl+Z`), `state`(`down`, `up`) | 에디터 `EditorScenarioSteps` | 수정자를 누르고 키를 눌렀다 뗍니다(단축키, 입력 칸 확정). `state` 를 주면 누르기만, 떼기만 합니다(`D` 를 누른 채 몇 프레임) |
-| `EditorExpectObject` | `name`, `count`(기본 1), `component`, `selected` | 에디터 `EditorScenarioSteps` | 활성 씬에서 그 이름의 오브젝트 수를 확인합니다. `component` 는 그 컴포넌트를 가진 것만, `selected=1` 은 선택된 것만 셉니다 |
-| `EditorExpectDockLayout` | `minNodeSize`(px, 기본 24) | 에디터 `EditorScenarioSteps` | 창이 에디터 최소 크기 이상이고, 메인 뷰포트가 창과 같고, 보이는 도크 칸이 모두 화면 안에서 최소 변 이상인지 확인합니다 |
 | `DevCommand` | `line` | `AutomationEnvironmentSteps` | 개발 명령(`SW_DEV_COMMAND`) 한 줄을 부릅니다(`play`, `stop`, `editor <커맨드 id>`, `scene.saveAs <경로>`, `scene.open <리소스 id 또는 경로>`, `content.open <리소스 폴더>`). 모르는 명령은 읽기 오류, 명령이 false 면 실패입니다. Shipping 에는 없습니다 — 이 단계가 든 시나리오는 Shipping 에서 읽기 오류가 아니라 13(건너뜀)입니다 |
 | `ResizeWindow` | `width`, `height`(픽셀) | `AutomationEnvironmentSteps` | 창을 창 모드의 그 클라이언트 크기로 바꿉니다. 창의 최소 크기보다 작으면 거기서 멈춥니다 |
 | `PostWindowMessage` | `message` | `AutomationWindowSteps` | 자기 창에 OS 메시지를 보냅니다 |
@@ -157,8 +150,7 @@ echo $LASTEXITCODE
 
 - `Intent` 와 `Possess` 는 그 프레임의 입력 재생 **전**에 돕니다(등록 시 `_bBeforeInput` 이 참). 빙의와 의도는 [GameFramework README](../../GameFramework/README.md)의 Control 절에 있습니다.
 - `ExpectUI` 와 같은 판정을 nogpu 테스트 `UINavigationScriptTest` 도 씁니다. `UILayoutDump` 결과는 `AppUITest` 가 스크린샷 안의 위젯을 이름으로 찾는 데 씁니다.
-- 에디터 단계는 `-EnableEditor` 로 에디터를 켰을 때만 있습니다. 에디터 패널의 입력은 엔진 입력 계층이 아니라 ImGui가 Win32 메시지를 직접 받으므로, 가상 입력 장치가 아니라 ImGui 사건으로 넣습니다.
-  이 단계를 쓰는 시나리오는 시작할 때 위젯 이름 기록(`EditorSelfTestMarks::note`)을 켭니다.
+- 에디터 단계(`EditorClick` · `EditorDrag` · `EditorHover` · `EditorText` · `EditorKey` · `EditorExpectObject` · `EditorExpectDockLayout`)는 에디터 모듈이 등록합니다. 목록은 [Editor README](../../Editor/README.md#에디터-시나리오-단계와-탐침) 에 있습니다.
 - 창 단계는 Windows에서만 동작하고, 다른 플랫폼에서는 같은 이름으로 13(건너뜀)을 냅니다.
   `PostWindowMessage` 의 `message` 는 `WM_ACTIVATE_INACTIVE`, `WM_ACTIVATE_ACTIVE`, `WM_KILLFOCUS`, `WM_SETFOCUS`, `WM_LBUTTONDOWN_CLIENT`, `WM_LBUTTONUP_CLIENT`, `WM_CLOSE` 중 하나입니다.
   `WM_CLOSE` 만 `PostMessage` 로 보내고, 나머지는 처리기가 끝난 뒤 돌아오는 `SendMessage` 로 보냅니다. 버튼 메시지는 클라이언트 영역 가운데를 누릅니다.
@@ -261,76 +253,7 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 
 ### 에디터 시나리오
 
-에디터 동작은 `Resource/engine/automation/editor/` 의 시나리오로 확인합니다(작업 흐름 `workflow`, 화면 `screen`, Hierarchy 검색 `hierarchyfilter`).
-`AppScenarioTest.EditorScenariosPassOn<Backend>` 가 `-EnableEditor` 로 백엔드마다 돌립니다. 실행마다 빈 에디터 상태 폴더(`-gv_editorStateDir=Bin/Saved/Automation/EditorState/<묶음>_<백엔드>`)로 시작하므로
-사용자의 `Saved/Editor`(레이아웃, 테마, 최근 씬)가 결과를 바꾸지 않고, 시나리오도 그 폴더를 건드리지 않습니다.
-저장된 상태를 읽는 분기는 `<묶음>.<n>.scenario.xml` 으로 확인합니다. 같은 묶음의 파일은 이름순으로 같은 상태 폴더를 이어 쓰므로, 앞 실행이 저장한 배치와 설정을 뒤 실행이 읽습니다(`savedstate.1` · `savedstate.2`).
-손으로 돌릴 때도 `-gv_editorStateDir=<빈 폴더>` 를 주면 같은 조건이 됩니다.
-편집 씬은 플레이를 시작하지 않으므로 시작 조건은 `Immediately` 이고, 패널이 한 번씩 그려지도록 첫 단계를 60 프레임쯤 뒤에 둡니다.
-
-에디터 프로브는 다음과 같습니다.
-
-| 프로브 | 값 |
-|---|---|
-| `Editor.PlayState` | 0 정지, 1 플레이, 2 일시 정지 |
-| `Editor.SceneDirty` | 저장하지 않은 변경이 있으면 1 |
-| `Input.OsDeviceInputBlocked` | 배타 시나리오가 사람의 마우스 · 키보드 창 사건을 버리는 중이면 1(혼합 시나리오 · 일반 실행은 0) |
-| `Profiler.TraceRecording` | 긴 캡처(`profile.trace record`)가 아직 모으는 중이면 1 — 벽시계로 끝나므로 `WaitUntil` 로 기다린다(Dev 전용) |
-| `App.AssertDialogInstalled` | App 이 대화형 단언 대화상자를 걸었으면 1 — 자동 실행(시나리오 · `-unattended`)에서는 늘 0 |
-| `Editor.RenderDocAvailable` | RenderDoc 이 이 프로세스에 붙어 있으면 1(`-renderdoc` 또는 RenderDoc 에서 실행) |
-| `Editor.WindowTitleDirty` | 창 제목이 미저장 표시(`*`)를 달고 있으면 1 — 셸이 실제로 창에 건 제목을 읽는다 |
-| `Editor.ObjectCount`, `Editor.SelectionCount` | 활성 씬의 오브젝트 수, 선택 수 |
-| `Editor.HierarchyVisibleRoots` | Hierarchy 가 마지막 프레임에 보인 루트 수(필터 뒤) |
-| `Editor.NoSearchResultHintShown` | 검색어가 있는 0 건 안내를 이번 또는 지난 프레임에 그렸으면 1 |
-| `Editor.ThemePreset`, `Editor.AccentColor`, `Editor.UIScale` | 테마 프리셋(0 ModernDark … 3 ClassicDark), 액센트 색(0xRRGGBB), UI 배율 |
-| `Editor.PanelCount` | 패널 매니저가 가진 패널 수(등록 줄 + 직접 넣은 패널) |
-| `Editor.SelectedProperty` | 주 선택 오브젝트의 `gv_editorProbeProperty`(`<컴포넌트 타입>.<프로퍼티>`) 숫자 값 |
-| `Editor.PreferencesVisibleSections`, `Editor.PreferencesSavedKeyCount` | 환경설정 창이 보인 섹션 수(검색 뒤), `EditorPreferences.json` 에 저장된 키 수 |
-| `Editor.ShortcutConflictCount`, `Editor.ShortcutOverrideCount` | 단축키 편집기가 묻는 충돌 수, 사용자 단축키 덮어쓰기 수 |
-| `Editor.ModulePreviewNewlyInactive` | 모듈 창이 묻는 미리보기에서 새로 꺼지는 모듈 수(묻지 않으면 0) |
-| `Editor.NetPlayProcessCount`, `Editor.NetPlayConnectedClients` | 멀티 프로세스 재생의 프로세스 수(멈추면 0), 서버에 붙었다고 로그에 남긴 클라이언트 수 |
-| `Editor.SelectedPropertySum` | 선택한 오브젝트 모두의 `gv_editorProbeProperty` 값 합(다중 편집) |
-| `Editor.SelectedCurveKeyCount` | 주 선택 오브젝트의 `gv_editorProbeProperty` 커브(`FloatCurve`) 키 수 |
-| `Editor.HierarchyRowIcon` | `gv_editorProbeObject` 이름의 오브젝트가 Hierarchy 줄에 그리는 아이콘 코드 포인트 |
-| `Editor.ObjectActive`, `Editor.ObjectHiddenInEditor` | `gv_editorProbeObject` 이름 오브젝트의 자기 활성 비트, 에디터에서만 숨김(1 · 0) |
-| `Editor.SelectedComponentCount` | 주 선택 오브젝트의 컴포넌트 수 |
-| `Editor.SceneViewOrthographic`, `Editor.SceneViewMaximized` | 씬 뷰가 직교 보기면 1, 최대화했으면 1 |
-| `Editor.HoveredObject` | 씬 뷰 호버: `gv_editorProbeObject` 오브젝트면 1, 없으면 0, 다른 오브젝트면 -1 |
-| `Editor.SelectionOutlineBoxes` | 씬 뷰가 지난 프레임에 그린 선택 상자 수 |
-| `Editor.OverlayDock`, `Editor.OverlayX`, `Editor.OverlayY`, `Editor.OverlayVertical`, `Editor.OverlayFlags` | `gv_editorProbeOverlay` 씬 뷰 오버레이 바의 붙은 쪽(0 떠 있음 · 1 위 · 2 아래 · 3 왼쪽 · 4 오른쪽), 왼쪽 위 자리(픽셀), 세로 쌓임, 보임 1 + 접힘 10 |
-| `Editor.GizmoOperation` | 기즈모 조작(0 이동 · 1 회전 · 2 크기) |
-| `Editor.GraphNodeCount` | 가장 최근에 그린 노드 그래프 캔버스(대화 · 애니메이션 · 확장의 그래프 문서)의 노드 수 |
-| `Editor.PanelOpen` | `gv_editorProbePanel` 의 패널이 열려 있으면 1 |
-| `Editor.VisualizerOn` | 씬 뷰가 `gv_editorProbeVisualizer`(시나리오가 `<Variable>` 로 정한다)의 시각화를 켜 두었으면 1 |
-| `Editor.GridStep`, `Editor.GridMajorLines`, `Editor.GridMisplacedMajorLines` | 뷰포트 격자 간격(1 · 10 · 100 m), 지난 프레임에 그린 굵은 선 수, 그중 월드 5 배수 선이 아닌 수(0 이 정상) |
-| `Editor.SceneViewCameraX`, `Editor.SceneViewCameraY` | 씬 뷰 카메라(에디터 카메라)의 월드 X · Y — Play 중에도 에디터 카메라다 |
-| `Editor.GameViewCameraX`, `Editor.GameViewCameraY` | 게임 뷰가 그리는 카메라(활성 씬의 게임 카메라)의 월드 X · Y |
-| `Editor.SceneViewRequested`, `Editor.GameViewRequested` | 이번 프레임에 에디터가 호스트에 그 뷰 RT 를 그려 달라고 했으면 1. 게임 뷰는 패널이 안 보이면(접힘 · 닫힘 · 다른 탭) 0 이고, 씬 뷰는 두 뷰가 다 가려져도 1 이다 |
-| `Editor.SceneViewDrawn` | 이번 UI 프레임에 Scene 패널이 씬 뷰를 그렸으면(앞 탭으로 보이면) 1 — 씬 뷰가 보이는지는 이것으로 본다 |
-| `Editor.TestRunnerPassCount` | 마지막(또는 지금) 에디터 자체 테스트 실행에서 통과한 테스트 수 — Test Runner 창 · `-gv_editorSelfTest` 모두 |
-| `Editor.ProfilerLoadedTraceThreads` | Timeline 탭에 불러온 트레이스 파일의 스레드 수(없으면 0) |
-| `Editor.ProfilerTraceSearchMatches` | 타임라인 구간 이름 검색어와 맞은 사건 수(마지막으로 그린 것, 검색어가 없으면 모든 사건) |
-| `Editor.ProfilerTimelineThreadCount` | 프로파일러 타임라인이 최근 4 프레임에 사건을 남긴 스레드 수(녹화 전 0) |
-| `Editor.ContentGameRootCount` | 콘텐츠 브라우저의 게임 팩 루트 수(활성 팩만이면 1) |
-| `Editor.ThumbnailCacheCount`, `Editor.ThumbnailFallbackGlyphCount` | 콘텐츠 브라우저가 든 텍스처 썸네일 수, 지난 그리기에서 종류 아이콘으로 그린 타일 수 |
-| `Editor.PackagingState` | Packaging 창의 상태(0 대기, 1 도는 중, 2 성공, 3 실패) |
-| `Editor.ReferenceCount` | 역색인에서 `gv_editorProbeAsset`(리소스 id)을 적은 텍스트 에셋 파일 수 |
-| `Editor.ReferenceIndexReady`, `Editor.ReferenceResultCount` | 참조 역색인이 다 만들어졌으면 1, 마지막 Find References 나 Show Dependencies 의 결과 줄 수 |
-| `Editor.OutputLogVisibleRows` | Output Log 가 지난 그리기에 보인 줄 수(거르기 · Collapse 뒤) |
-| `Editor.MaterialPreviewRedMinusBlue` | Material 패널의 구 미리보기 평균 (R - B)(0..255, 빨간 머티리얼이 크다). 패널이 닫혔거나 문서가 없으면 값이 없다 |
-| `Editor.TileMapFlagCells`, `Editor.TileMapTool` | Tile Map Tool 이 고른 플래그 레이어의 켜진 칸 수(다른 레이어면 0), 칠하기 도구(0 Brush · 1 Rect · 2 Fill · 3 Picker) |
-| `Editor.SceneViewMode`, `Editor.GameViewMode` | 씬 뷰 툴바의 보기 모드, 주 출력(게임 뷰)의 보기 모드(0 Lit · 1 Unlit · 2 Wireframe · 3 Normals · 4 Depth · 5 Overdraw) |
-| `Editor.ObjectPositionX`, `Editor.SequencerKeyFrameCount` | `gv_editorProbeObject` 오브젝트의 로컬 위치 X, Sequencer 패널이 고른 키 트랙의 키 프레임 수(패널이 닫혔거나 고른 트랙이 없으면 값이 없다) |
-
-`EditorClick` 이 누르는 위젯 레이블에는 `hierarchy.create`, `hierarchy.filter`, `hierarchy.selectedRow`, `hierarchy.activeToggle`, `hierarchy.addComponent`,
-`hierarchy.addComponent.search`, `hierarchy.addComponent.<타입>`, 눈 `hierarchy.toggle.<이름>` · 자물쇠 `hierarchy.lock.<이름>`, `inspector.name`, 씬 뷰 오버레이 손잡이 `overlay.grip.<바 id>` · 접기 `overlay.collapse.<바 id>` · 메뉴 `sceneView.overlays`, 인스펙터 Add Component 단추 `inspector.addComponent`(검색 칸 `inspector.addComponent.search`) · 자물쇠 `inspector.lock` · 에셋 고르기 `inspector.assetPicker.<프로퍼티>`, 기즈모 단추 `gizmo.translate` · `gizmo.rotate` · `gizmo.scale` · `gizmo.space`, 2D/3D 토글 `viewport.dimension`, 뷰포트 빌보드 `viewport.billboard.<오브젝트 이름>` · 시각화 체크박스 `viewport.visualizer.<id>`, 노드 그래프 캔버스 `graph.canvas`(빈 곳은 `anchor` 로) · 찾아 넣기 검색 칸 `graph.addNode.search`, 커브 미리보기 `inspector.curve.<프로퍼티>` · 편집기 캔버스 `curve.canvas` · 키 `curve.key.<n>` · 메뉴 `curve.menu.addKey`, `theme.swatch.violet`, 씬 뷰 캔버스 `sceneView.canvas` · 스크린샷 `sceneView.screenshot` · 보기 모드 콤보 `viewport.viewMode` · 그 항목 `viewport.viewMode.<모드>`(소문자), 프로파일러 Timeline 탭 `profiler.timeline.tab` · 녹화 단추 `profiler.timeline.record`, Test Runner 검색 칸 `testRunner.filter` · 자체 테스트 체크 `testRunner.select.<id>` · `testRunner.runSelected`(탭은 `state="down"` · `up` 을 다른 프레임에 나눠 눌러야 골라진다), 게임 뷰 `gameView.canvas` · `gameView.aspect` · 스크린샷 `gameView.screenshot`, 콘텐츠 브라우저 All packs `contentBrowser.allPacks` · 검색 칸 `contentBrowser.search` · 타일과 줄 `contentBrowser.asset.<파일 이름>` · 폴더 트리 `contentBrowser.folder.<리소스 id>` · 오른쪽 클릭 메뉴 `contentBrowser.menu.findReferences` · `contentBrowser.menu.showDependencies` · `contentBrowser.menu.rename` · `contentBrowser.menu.duplicate`, 상태줄 맵 검사 수 `statusBar.mapCheck`, Packaging 창 `packaging.skipBuild` · `packaging.skipCook` · `packaging.package`, Map Check 창의 줄 `mapCheck.row.<n>`(오류가 먼저) · `mapCheck.checkMap`, Add 단추 `contentBrowser.add` · 그 항목 `contentBrowser.add.folder` · `contentBrowser.add.material` · `contentBrowser.add.scene` · `contentBrowser.add.prefab`, 이름 입력 칸 `contentBrowser.rename`, 삭제 확인 `contentBrowser.delete.confirm`,
-상단 툴바 `toolbar.play` · `toolbar.simulate` · `toolbar.pause` · `toolbar.stop` · `toolbar.playAnyway`(미저장 확인 모달) · `toolbar.renderDoc` 이 있습니다. 씬 뷰와 게임 뷰는 같은 영역의 탭이라
-앞에 없는 쪽은 레이블을 남기지 않습니다 — 그쪽을 누르려면 먼저 `DevCommand line="panel.focus game_view"` 로 탭을 앞으로 가져옵니다.
-레이블이 없는 위젯을 누르려면 그 위젯 바로 뒤에 `EditorSelfTestMarks::note` 한 줄을 더합니다.
-Output Log 툴바는 `console.clear` · `console.collapse` · `console.level.info` · 검색 칸 `console.filter` 를, 도구 문서 패널(Material · Tile Map · Sprite Clip · Sequencer)의 열기 단추는
-`<material|tileMap|spriteClip|sequencer>.open` · 그 팝업의 검색 칸 `<…>.open.search` · 줄 `<…>.open.<파일 이름>` 을 남깁니다.
-Sequencer 는 시간 막대 `sequencer.scrub`, 키 트랙 줄 `sequencer.track.<n>`, Key 단추 `sequencer.addKey`, 채널 값 칸 `sequencer.channel.<n>` · 커브 단추 `sequencer.curve.<n>`, 트랙 더하기 `sequencer.addTransformTrack` · `sequencer.addPropertyTrack` 을 남깁니다.
-Tile Map Tool 은 도구 단추 `tileMap.tool.brush` · `tileMap.tool.rect` · `tileMap.tool.fill` · `tileMap.tool.picker`, `tileMap.erase`, 캔버스 `tileMap.canvas`(칸은 `anchor` 로)를 남깁니다.
+에디터 시나리오의 단계 · 탐침 · 위젯 레이블 목록은 [Editor README](../../Editor/README.md#에디터-시나리오-단계와-탐침) 에 있습니다.
 
 ## 확장하는 법
 

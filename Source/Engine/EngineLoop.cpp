@@ -354,7 +354,13 @@ namespace sw
         {
             // 씬 매니저는 표를 묶기 전에 만들어졌다 — 묶은 표에서 씬 쪽 묶음을 골라 여기서 넘긴다. 씬과 오브젝트 매니저는 이것만 쓴다.
             const SceneEngineServices services = SceneEngineServices::makeFromBoundEngine();
-            return loop._owned._pSceneManager->initialize( services ) ? EngineInitResult::Succeeded : EngineInitResult::Failed;
+            if ( loop._owned._pSceneManager->initialize( services ) == false )
+                return EngineInitResult::Failed;
+            // 되돌리기 기록은 나간 씬의 오브젝트를 가리킨다 — 씬이 바뀌면 소유자(여기)가 비운다. 씬 매니저는 기록을 모른다.
+            // 해제 단계가 씬 매니저를 기록보다 먼저 지우므로 구독은 따로 해제하지 않는다. 구독 대상은 Engine 코드라 핫 리로드와 무관하다.
+            if ( loop._commandStack != nullptr )
+                loop._owned._pSceneManager->onSceneObjectsInvalidated().add( SW_DELEGATE_METHOD( Delegate<void()>, &CommandStack::clear, loop._commandStack.get() ) );
+            return EngineInitResult::Succeeded;
         }
         static void shutdown( EngineLoop& loop ) { loop._owned._pSceneManager->shutdown(); }
         static void destroy( EngineLoop& loop )

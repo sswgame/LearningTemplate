@@ -19,7 +19,7 @@ namespace sw::editor
     class EditorCamera
     {
     public:
-        /** @brief CameraRole::Editor 중 우선순위가 가장 높은 활성 카메라를 반환합니다. */
+        /** @brief CameraRole::Viewport 중 우선순위가 가장 높은 활성 카메라를 반환합니다. */
         static CameraComponent* find( const Scene* pScene );
         /**
          * @brief 에디터 카메라가 없으면 기본 포즈로 생성합니다.

@@ -15,15 +15,16 @@ namespace sw
 
     /**
      * @brief 카메라 역할(용도)입니다. `Game` 은 플레이어 시점 후보이고, `Custom` 은 직접 고르거나 뷰 타깃으로 바꿀 때만 쓰는 보조 카메라입니다.
-     *        `Capture` 는 자기 출력(렌더 텍스처 또는 화면 사각형)으로만 그리며 플레이어 시점으로 뽑히지 않습니다. `Editor` 는 에디터 뷰포트용입니다.
+     *        `Capture` 는 자기 출력(렌더 텍스처 또는 화면 사각형)으로만 그리며 플레이어 시점으로 뽑히지 않습니다. `Viewport` 는 엔진 밖의 도구가 소유한 뷰포트 카메라입니다(유니티의 `CameraType.SceneView` 에 해당).
+     *        `Viewport` 카메라는 게임 시점 후보가 아니고, 씬 파일에 저장되지 않으며, 추가 뷰 수집에서 빠집니다. 그 역할을 주는 것은 도구 쪽입니다.
      */
     ENUM()
     enum class CameraRole : uint8
     {
-        Game    = 0, ///< 플레이 중에 활성(플레이어 시점 후보)
-        Editor  = 1, ///< 에디터 뷰포트에서 활성
-        Custom  = 2, ///< 보조 카메라다. 직접 고르거나 뷰 타깃으로 바꿀 때만 쓴다
-        Capture = 3, ///< 캡처 카메라다. 자기 출력(`CameraRenderOutput`)으로만 그린다(CCTV, 백미러, 미니맵)
+        Game     = 0, ///< 플레이 중에 활성(플레이어 시점 후보)
+        Viewport = 1, ///< 도구 뷰포트 카메라다. 씬에 저장하지 않고 추가 뷰로 수집하지 않는다
+        Custom   = 2, ///< 보조 카메라다. 직접 고르거나 뷰 타깃으로 바꿀 때만 쓴다
+        Capture  = 3, ///< 캡처 카메라다. 자기 출력(`CameraRenderOutput`)으로만 그린다(CCTV, 백미러, 미니맵)
     };
 
     /** @brief 카메라가 그린 이미지가 가는 곳입니다. */
@@ -94,7 +95,7 @@ namespace sw
 
         /**
          * @brief 그 이름의 오브젝트에 카메라가 있게 하고(없으면 오브젝트와 컴포넌트를 만듭니다) 역할, 위치, 시선, 기본 렌즈를 맞춥니다.
-         * @details 엔진의 기본 게임 카메라(`Scene::ensureDefaultCameras`)와 에디터 카메라가 함께 쓴다(기본 렌즈 값
+         * @details 엔진의 기본 게임 카메라(`Scene::ensureDefaultCameras`)와 도구의 뷰포트 카메라가 함께 쓴다(기본 렌즈 값
          *          `kDefaultFovY`, `kDefaultNearZ`, `kDefaultFarZ` 를 리터럴로 다시 적지 않게 하려는 것이다).
          * @return 매니저가 없거나 만들 수 없으면(틱 중에는 `addComponent` 가 지연된다) nullptr 입니다.
          */
