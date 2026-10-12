@@ -14,6 +14,11 @@
 
 namespace sw
 {
+    struct BugItInputs;
+
+    class FrameProfiler;
+    class SceneManager;
+
     /**
      * @struct BugItReport
      * @brief bugit 한 번에 남길 값과 그 파일 읽고 쓰기입니다. 파일 쓰기와 읽기는 ImGui · 렌더러 없이 테스트할 수 있습니다(`BugItReportTest`).
@@ -63,17 +68,42 @@ namespace sw
         static const utf8* findBackendFlag( string_view backendName );
 
         /**
-         * @brief 지금 상태를 `Saved/BugIt/<시각>/` 에 모읍니다 — info.txt · 다음 프레임 screenshot.png · 로그를 비운 뒤의 사본 · 활성 씬 사본 · repro.txt.
+         * @brief 지금 엔진 상태에서 bugit 입력을 모읍니다 — 전역 엔진 서비스를 읽는 곳은 이 함수 하나입니다.
          * @details 카메라는 보이는 시점이다 — 에디터 카메라(`CameraRole::Editor`)가 있으면 그것, 없으면 활성 게임 카메라.
+         *          로거를 여기서 비운다(비동기라 비우지 않으면 bugit 직전 줄이 사본에 없다).
          *          입력 녹화는 담지 않는다(전역 녹화기가 없다 — Input Map 패널의 녹화는 그 패널의 것이다).
+         */
+        [[nodiscard]] static BugItInputs makeInputs( string_view note );
+        /**
+         * @brief @p inputs 를 `<루트>/<시각>/` 에 모읍니다 — info.txt · 다음 프레임 screenshot.png · 로그 사본 · 활성 씬 사본 · trace · repro.txt.
+         * @details 엔진 서비스를 직접 찾지 않습니다. 비어 있는 입력(서비스 포인터 null · 빈 로그 폴더)은 그 파일을 건너뜁니다.
          * @param outDirectory 만든 폴더(작업 폴더 기준 상대 경로)입니다.
          * @return 폴더와 info.txt 를 썼으면 true 입니다. 나머지(스크린샷 · 로그 · 씬)는 할 수 있는 만큼 남기고 실패는 경고로 알립니다.
          */
-        [[nodiscard]] static bool capture( string_view note, string& outDirectory );
+        [[nodiscard]] static bool capture( const BugItInputs& inputs, string& outDirectory );
         /**
-         * @brief @p directory(비면 가장 최근 폴더)의 info.txt 를 읽어 그 씬을 열고(활성 씬과 다를 때) 보이는 카메라를 그 자리 · 각도로 옮깁니다.
+         * @brief @p directory(비면 `Saved/BugIt` 아래 가장 최근 폴더)의 info.txt 를 읽어 그 씬을 @p sceneManager 로 열고(활성 씬과 다를 때) 보이는 카메라를 그 자리 · 각도로 옮깁니다.
          * @details 에디터 카메라를 옮기면 씬 뷰가 그 자리를 이어받는다(`EditorViewportClient` 가 바깥에서 옮긴 카메라를 받아들인다).
          */
-        [[nodiscard]] static bool goTo( string_view directory, string& outReply );
+        [[nodiscard]] static bool goTo( SceneManager& sceneManager, string_view directory, string& outReply );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct BugItInputs
+     * @brief `BugItReport::capture` 가 쓰는 입력 전부입니다. 엔진에서는 `BugItReport::makeInputs` 가 채우고, 테스트는 가짜 값을 넣습니다.
+     */
+    struct BugItInputs
+    {
+        BugItReport          _report;                      ///< info.txt 에 쓸 값(메모 · 씬 · 백엔드 · 빌드 · 게임 · 카메라)
+        string               _root;                        ///< BugIt 폴더들의 루트(엔진에서는 `Saved/BugIt`)
+        ScreenshotLocalTime  _localTime{};                 ///< 폴더 이름의 시각
+        string               _logFolderPath;               ///< 가장 최근 .txt 를 log.txt 로 복사할 로그 폴더. 비면 건너뛴다
+        SceneManager*        _pSceneManager{ nullptr };    ///< 활성 씬 사본을 저장할 씬 관리자. 활성 씬이 없으면 null
+        const FrameProfiler* _pFrameProfiler{ nullptr };   ///< 최근 프레임 trace 를 담을 프로파일러. null 이면 건너뛴다
+        bool                 _bEditor{ false };            ///< 재현 명령에 `-EnableEditor` 를 붙인다
+        bool                 _bRequestScreenshot{ false }; ///< 다음 프레임 스크린샷을 렌더 스레드에 요청한다
     };
 } // namespace sw
