@@ -292,5 +292,5 @@ GameFramework 최상위에는 `Base/`, `Kits/` 와 루트 파일만 둡니다. �
 | `Base/Actor/Camera` | 카메라 프리셋, 모드, 블렌드, 흔들림, 직교 카메라 리그 |
 | `Base/Gameplay/GameState` | 키트 여럿이 나눠 쓰는 공유 상태(`GameStateComponent`) |
 | `Base/UI` | HUD, HP 바, 데미지 숫자, 대화 러너, 튜토리얼 힌트, 목표 마커 |
-| `Base/Actor/Combat` | 무기, 피해 공식, 체력 원천과 리스너, 턴 순서, 록온 |
+| `Base/Actor/Combat` | 무기, 피해 공식, 체력 원천과 리스너, 턴 순서, 록온, 신체 절단(`Dismemberment`) |
 | `Base/Foundation/Utility` | 씨앗 난수, 고정 스텝 타이머, `Countdown`, 격자 구조, 상태 데이터 도우미 |

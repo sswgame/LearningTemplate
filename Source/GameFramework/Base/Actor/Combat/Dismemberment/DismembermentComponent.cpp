@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Character/Hit/DismembermentComponent.h"
+#include "GameFramework/Base/Actor/Combat/Dismemberment/DismembermentComponent.h"
 
 #include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
@@ -8,7 +8,6 @@
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/FitSolver.h"
-#include "Engine/Character/Hit/Dismemberment.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -17,6 +16,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
+
+#include "GameFramework/Base/Actor/Combat/Dismemberment/Dismemberment.h"
 
 namespace sw
 {

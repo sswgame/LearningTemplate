@@ -4,8 +4,10 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Character/Fit/FitSolver.h"
+#include "Engine/Character/Fit/FitTables.h"
+#include "Engine/Character/Fit/GeometryCut.h"
 #include "Engine/Character/Hit/CharacterHit.h"
-#include "Engine/Character/Hit/DismembermentComponent.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -19,19 +21,36 @@
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "EngineTest/AnimationTestUtil.h"
+#include "EngineTest/CharacterTestUtil.h"
+
+#include "GameFramework/Base/Actor/Combat/Dismemberment/Dismemberment.h"
+#include "GameFramework/Base/Actor/Combat/Dismemberment/DismembermentComponent.h"
 
 #include "TestFramework/TestFramework.h"
 #include "TestFramework/TestTick.h"
 
 using namespace sw;
 
-// DismembermentRuntimeTest — KayKit 스켈레톤의 치명적 맞음 → 영역 자르기: 몸 메시에서 삼각형이 빠지고 캡이 붙고, 조각이 강체 오브젝트로 떨어지고, 그 뼈의 래그돌 바디가
+// DismembermentTest — 영역 자르기 형상(캡). DismembermentRuntimeTest — KayKit 스켈레톤의 치명적 맞음 → 영역 자르기: 몸 메시에서 삼각형이 빠지고 캡이 붙고, 조각이 강체 오브젝트로 떨어지고, 그 뼈의 래그돌 바디가
 // 꺼지고, 영역에 피가 오른다.
 
 namespace
 {
     struct TestDismembermentRuntimeInternal
     {
+        /** @brief 반지름 0.05, 높이 0 ~ 1 의 원기둥(16 분할 · 10 고리). bCapped 이면 두 끝을 막는다. */
+        static AppearanceGeometry makeCylinder( bool bCapped )
+        {
+            test::CharacterTestUtil::CylinderDesc desc;
+            desc._radius       = 0.05f;
+            desc._yMin         = 0.0f;
+            desc._yMax         = 1.0f;
+            desc._segmentCount = 16;
+            desc._ringCount    = 10;
+            desc._bCapped      = bCapped;
+            return test::CharacterTestUtil::makeCylinder( desc );
+        }
+
         static constexpr const utf8* kMeshPath     = "game/shooter3d/models/kaykit/skeleton_warrior.mesh";
         static constexpr const utf8* kSkeletonPath = "game/shooter3d/models/kaykit/skeleton_warrior/skeleton_warrior.skeleton.json";
         static constexpr const utf8* kPhysicsPath  = "game/shooter3d/characters/skeleton_warrior/skeleton_warrior.physics.xml";
@@ -186,4 +205,59 @@ SW_TEST_CASE( DismembermentRuntimeTest, FatalHeadHitSeversAndSpawnsPhysicsPiece 
     SW_ASSERT_TRUE( pUpper != nullptr && pUpper->getComponent<MeshComponent>() != nullptr );
     SW_EXPECT_TRUE( pTubeUnit->getMesh()->getVertexCount() + pUpper->getComponent<MeshComponent>()->getMesh()->getVertexCount() > beforeTube );
     manager.endPlay();
+}
+
+/**
+ * @brief [DismembermentTest] 영역을 잘라 떨어진 조각과 남은 몸을 나누고, 자른 자리만 캡으로 막아 둘 다 닫힌다 — 마스크는 보임 마스크에 그대로
+ */
+SW_TEST_CASE( DismembermentTest, SeveredRegionProducesClosedCappedPieces )
+{
+    AppearanceGeometry body = TestDismembermentRuntimeInternal::makeCylinder( true );
+    SW_ASSERT_TRUE( GeometryCutUtil::isClosed( body ) );
+    test::CharacterTestUtil::skinBySplit( body, 0.6f, 1, 2 );
+    const CharacterBoneArray bones = test::CharacterTestUtil::makeArmBones();
+    FitTables                tables;
+    BodyRegionDef            forearm;
+    forearm._name = hashed_string( "Forearm" );
+    forearm._listBone.push_back( hashed_string( "lowerarm" ) );
+    tables.addRegion( forearm );
+    vector<uint16> listRegion;
+    tables.assignRegions( body, bones, listRegion );
+
+    const uint16        arrSevered[1] = { 0 };
+    DismembermentResult result;
+    SW_ASSERT_TRUE( DismembermentUtil::severRegions( body, listRegion, vector_reference<const uint16>( arrSevered, 1 ), result ) );
+    SW_EXPECT_TRUE( result._severed.getTriangleCount() > 0 );
+    SW_EXPECT_EQUAL( body.getTriangleCount(), result._remaining.getTriangleCount() + result._severed.getTriangleCount() );
+    SW_EXPECT_FALSE( GeometryCutUtil::isClosed( result._remaining ) ); // 막기 전에는 열려 있다
+    SW_EXPECT_TRUE( result._remainingCap.getTriangleCount() > 0 );
+    SW_EXPECT_TRUE( result._severedCap.getTriangleCount() > 0 );
+
+    AppearanceGeometry closedRemaining = result._remaining;
+    GeometryCutUtil::appendGeometry( closedRemaining, result._remainingCap );
+    SW_EXPECT_TRUE( GeometryCutUtil::isClosed( closedRemaining ) );
+    AppearanceGeometry closedSevered = result._severed;
+    GeometryCutUtil::appendGeometry( closedSevered, result._severedCap );
+    SW_EXPECT_TRUE( GeometryCutUtil::isClosed( closedSevered ) );
+    // 캡 법선은 잘린 자리에서 바깥 — 남은 몸 캡은 위(+Y), 떨어진 조각 캡은 아래(−Y).
+    SW_EXPECT_TRUE( result._remainingCap._listNormal[0]._y > 0.9f );
+    SW_EXPECT_TRUE( result._severedCap._listNormal[0]._y < -0.9f );
+
+    // 같은 마스크가 조립된 메시의 보임 마스크로 간다.
+    FitPartResult bodyFit;
+    bodyFit.initialize( body.getTriangleCount(), body.getVertexCount() );
+    SW_EXPECT_EQUAL( result._severed.getTriangleCount(), bodyFit.hideTriangles( result._listTriangleSevered ) );
+
+    // 원래 열린 구멍(끝을 막지 않은 원기둥)은 막지 않는다 — 자른 자리 하나만.
+    const AppearanceGeometry openTube    = TestDismembermentRuntimeInternal::makeCylinder( false );
+    AppearanceGeometry       skinnedTube = openTube;
+    test::CharacterTestUtil::skinBySplit( skinnedTube, 0.6f, 1, 2 );
+    tables.assignRegions( skinnedTube, bones, listRegion );
+    SW_ASSERT_TRUE( DismembermentUtil::severRegions( skinnedTube, listRegion, vector_reference<const uint16>( arrSevered, 1 ), result ) );
+    vector<vector<uint32>> listLoop;
+    GeometryCutUtil::findBoundaryLoops( result._remaining, listLoop );
+    SW_ASSERT_EQUAL( size_t( 2 ), listLoop.size() ); // 아래 끝 + 자른 자리
+    const bool            bFirstIsBottom = result._remaining._listPosition[listLoop[0][0]]._y < 0.25f;
+    const vector<uint32>& cutLoop        = bFirstIsBottom ? listLoop[1] : listLoop[0];
+    SW_EXPECT_EQUAL( static_cast<uint32>( cutLoop.size() ), result._remainingCap.getTriangleCount() ); // 자른 자리 고리만 부채꼴로
 }

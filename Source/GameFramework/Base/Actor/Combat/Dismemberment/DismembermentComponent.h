@@ -23,6 +23,8 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/GameFrameworkExports.h"
+
 namespace sw
 {
     /**
@@ -30,7 +32,7 @@ namespace sw
      * @brief 파일 머리말을 참고하세요. 같은 오브젝트의 `SkeletalMeshComponent`(스킨드 메시, 스켈레톤)를 씁니다.
      */
     REFLECT( Category = "Character", DisplayName = "Dismemberment", Tooltip = "Severs body regions on fatal hits: hides the triangles, caps the cut and spawns a physics piece" )
-    class SW_API DismembermentComponent : public Component
+    class SW_GF_API DismembermentComponent : public Component
     {
     public:
         REFLECT_BODY();
