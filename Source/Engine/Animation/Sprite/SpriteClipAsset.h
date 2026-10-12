@@ -25,11 +25,17 @@ namespace sw
     {
         float4 _uvRect{ 0.0f, 0.0f, 1.0f, 1.0f };
         /**
-         * @brief 9-슬라이스 테두리 (왼쪽, 아래, 오른쪽, 위)입니다. 이 프레임에 대한 비율(0..1)이며, 모두 0 이면 테두리가 없습니다.
-         * @details JSON 키 "border" 는 숫자 네 개의 배열이고, 테두리가 없는 프레임은 쓰지 않는다(그 키가 없는 파일과 바이트까지 같다).
-         *          스프라이트의 자연 크기가 1 × 1 이라 비율이 곧 모서리의 월드 크기다(`SlicedSpriteDesc`). 유니티의 Sprite Border, Godot 의 patch margin 에 해당한다.
+         * @brief 9-슬라이스 테두리 (왼쪽, 아래, 오른쪽, 위)입니다. 이 프레임에 대한 비율(0..1)이며, 모두 0 이면 테두리가 없습니다. 런타임이 읽는 값입니다.
+         * @details 스프라이트의 자연 크기가 1 × 1 이라 비율이 곧 모서리의 월드 크기다(`SlicedSpriteDesc`). 파일에 적는 값은 `_borderPixels` 이고,
+         *          이 값은 그것을 프레임의 픽셀 크기로 나눈 것이다(`SpriteClipAsset::rebuildFrameBorders`).
          */
         float4 _border{ 0.0f, 0.0f, 0.0f, 0.0f };
+        /**
+         * @brief 9-슬라이스 테두리 (왼쪽, 아래, 오른쪽, 위)를 아틀라스 **픽셀**로 적은 값입니다. 모두 0 이면 테두리가 없습니다.
+         * @details JSON 키 "border" 는 픽셀 숫자 네 개의 배열이고, 테두리가 없는 프레임은 쓰지 않는다(그 키가 없는 파일과 바이트까지 같다).
+         *          픽셀을 비율로 바꾸려면 아틀라스 크기(루트 "atlasSize")가 있어야 한다. 유니티의 Sprite Border, Godot 의 patch margin 처럼 픽셀이다.
+         */
+        float4 _borderPixels{ 0.0f, 0.0f, 0.0f, 0.0f };
         /** @brief 이 프레임을 보여 줄 시간(ms)입니다. 0 이하면 애니메이터의 프레임 속도를 씁니다(`getFrameDurationSeconds`). */
         int32 _durationMs{ 100 };
 
@@ -123,11 +129,19 @@ namespace sw
          *          아니어도 된다. 에디터는 추가한 순서로 쓴다. 시각이 같은 키가 여럿이면 목록의 앞쪽 것을 쓴다.
          */
         bool sampleTransformKey( float32 clipSeconds, SpriteClipKey& outKey ) const;
+        /**
+         * @brief 프레임마다 픽셀 테두리(`_borderPixels`)를 그 프레임의 픽셀 크기(UV 크기 × `_atlasPixelSize`)로 나눠 비율 테두리(`_border`)를 다시 채웁니다.
+         * @details 읽을 때 부르고, 코드가 픽셀 테두리나 아틀라스 크기를 바꾼 뒤에도 부른다. 아틀라스 크기를 모르면(0) 테두리가 있는 프레임을
+         *          알리고 비율을 0 으로 둔다 — 크기를 짐작해 틀린 모서리를 그리지 않는다. 비율은 0..1 로 자른다.
+         * @return 아틀라스 크기가 없어 테두리를 버린 프레임 수입니다.
+         */
+        uint32 rebuildFrameBorders();
 
-        string                      _atlasPath;     ///< 아틀라스 텍스처 경로("atlas")입니다
-        vector<SpriteClipFrame>     _listFrame;     ///< 프레임("frames")입니다
-        vector<SpriteClipKey>       _listKey;       ///< 트랜스폼 키("transformKeys")입니다
-        vector<SpriteClipAnimation> _listAnimation; ///< 이름 붙은 구간("animations")입니다. 그 키가 없는 파일은 비어 있습니다
+        string                      _atlasPath;                    ///< 아틀라스 텍스처 경로("atlas")입니다
+        float2                      _atlasPixelSize{ 0.0f, 0.0f }; ///< 아틀라스의 픽셀 크기("atlasSize": [폭, 높이])입니다. 픽셀 테두리를 비율로 바꿀 때 쓴다. 0 이면 모른다
+        vector<SpriteClipFrame>     _listFrame;                    ///< 프레임("frames")입니다
+        vector<SpriteClipKey>       _listKey;                      ///< 트랜스폼 키("transformKeys")입니다
+        vector<SpriteClipAnimation> _listAnimation;                ///< 이름 붙은 구간("animations")입니다. 그 키가 없는 파일은 비어 있습니다
 
     private:
         /** @brief 파싱된 루트에서 내용을 읽습니다. 루트가 객체가 아니면 false 입니다. */

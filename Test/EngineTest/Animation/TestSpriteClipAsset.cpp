@@ -156,17 +156,19 @@ SW_TEST_CASE( SpriteClipAssetTest, CacheSharesOneClipPerPath )
 }
 
 /**
- * @brief [SpriteClipAssetTest] 9-슬라이스 테두리("border": [왼, 아래, 오른, 위])는 프레임마다 왕복하고, 없는 프레임은 키를 쓰지 않는다
- * @details 테두리는 스프라이트 에셋에 산다(유니티 Sprite Border). 키가 없는 프레임을 다시 쓸 때 "border" 가 생기면 테두리를 안 쓰는 모든 클립 파일이
- *          저장할 때마다 바뀐다. 숫자 넷의 배열이 아니면 데이터 오류라 알리고 테두리 없이 읽는다.
+ * @brief [SpriteClipAssetTest] 9-슬라이스 테두리("border": [왼, 아래, 오른, 위])는 아틀라스 픽셀로 적고 프레임 픽셀 크기로 나눈 비율로 읽힌다. 왕복하고, 없는 프레임은 키를 쓰지 않는다
+ * @details 테두리는 스프라이트 에셋에 산다(유니티 Sprite Border, Godot patch margin — 둘 다 픽셀). 아틀라스 128 × 64, 프레임이 아틀라스의 반 폭 · 전체 높이면
+ *          프레임은 64 × 64 픽셀이라 왼쪽 8 px 는 0.125 다. 키가 없는 프레임을 다시 쓸 때 "border" 가 생기면 테두리를 안 쓰는 모든 클립 파일이
+ *          저장할 때마다 바뀐다. 숫자 넷의 배열이 아니거나 아틀라스 크기가 없으면 데이터 오류라 알리고 테두리 없이 읽는다.
  */
 SW_TEST_CASE( SpriteClipAssetTest, SliceBorderRoundTripsPerFrame )
 {
     constexpr const utf8* kBorderClip = R"({
   "atlas": "engine/textures/test/checker.dds",
+  "atlasSize": [128, 64],
   "frames": [
-    { "u": 0.0, "v": 0.0, "w": 1.0, "h": 1.0, "durationMs": 0, "border": [0.125, 0.25, 0.375, 0.5] },
-    { "u": 0.0, "v": 0.0, "w": 1.0, "h": 1.0, "durationMs": 0 }
+    { "u": 0.0, "v": 0.0, "w": 0.5, "h": 1.0, "durationMs": 0, "border": [8, 16, 24, 32] },
+    { "u": 0.5, "v": 0.0, "w": 0.5, "h": 1.0, "durationMs": 0 }
   ],
   "transformKeys": []
 })";
@@ -174,19 +176,32 @@ SW_TEST_CASE( SpriteClipAssetTest, SliceBorderRoundTripsPerFrame )
     SW_ASSERT_TRUE( clip.parseJSON( kBorderClip ) );
     SW_ASSERT_EQUAL( 2, clip.getFrameCount() );
     SW_EXPECT_TRUE( clip._listFrame[0].hasBorder() );
+    SW_EXPECT_NEAR_EQUAL( 8.0f, clip._listFrame[0]._borderPixels._x, 1e-6f );
     SW_EXPECT_NEAR_EQUAL( 0.125f, clip._listFrame[0]._border._x, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.25f, clip._listFrame[0]._border._y, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.375f, clip._listFrame[0]._border._z, 1e-6f );
     SW_EXPECT_NEAR_EQUAL( 0.5f, clip._listFrame[0]._border._w, 1e-6f );
     SW_EXPECT_FALSE( clip._listFrame[1].hasBorder() );
 
     const sw::string written = clip.toJSON();
     SW_EXPECT_TRUE( written.find( "border" ) == written.rfind( "border" ) ); // 테두리가 있는 프레임 하나만 키를 쓴다
+    SW_EXPECT_TRUE( written.find( "atlasSize" ) != sw::string::npos );
     sw::SpriteClipAsset reread;
     SW_ASSERT_TRUE( reread.parseJSON( written ) );
+    SW_EXPECT_NEAR_EQUAL( 24.0f, reread._listFrame[0]._borderPixels._z, 1e-6f );
     SW_EXPECT_NEAR_EQUAL( 0.375f, reread._listFrame[0]._border._z, 1e-6f );
     SW_EXPECT_FALSE( reread._listFrame[1].hasBorder() );
 
-    SW_TEST_DEFENSIVE_SCOPE( "a border that is not four numbers is a data error" );
+    // 코드가 아틀라스 크기를 바꾸면 비율을 다시 채운다(아틀라스를 두 배로 키우면 같은 픽셀이 반 비율).
+    reread._atlasPixelSize = sw::float2{ 256.0f, 128.0f };
+    SW_EXPECT_EQUAL( 0u, reread.rebuildFrameBorders() );
+    SW_EXPECT_NEAR_EQUAL( 0.0625f, reread._listFrame[0]._border._x, 1e-6f );
+
+    SW_TEST_DEFENSIVE_SCOPE( "a border that is not four numbers, or a pixel border without the atlas size, is a data error" );
     sw::SpriteClipAsset malformed;
-    SW_ASSERT_TRUE( malformed.parseJSON( R"({ "atlas": "a.dds", "frames": [ { "u": 0, "v": 0, "w": 1, "h": 1, "border": [0.1, 0.2] } ] })" ) );
+    SW_ASSERT_TRUE( malformed.parseJSON( R"({ "atlas": "a.dds", "atlasSize": [32, 32], "frames": [ { "u": 0, "v": 0, "w": 1, "h": 1, "border": [1, 2] } ] })" ) );
     SW_EXPECT_FALSE( malformed._listFrame[0].hasBorder() );
+    sw::SpriteClipAsset noAtlasSize;
+    SW_ASSERT_TRUE( noAtlasSize.parseJSON( R"({ "atlas": "a.dds", "frames": [ { "u": 0, "v": 0, "w": 1, "h": 1, "border": [4, 4, 4, 4] } ] })" ) );
+    SW_EXPECT_FALSE( noAtlasSize._listFrame[0].hasBorder() );
 }

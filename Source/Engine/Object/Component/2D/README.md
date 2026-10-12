@@ -79,11 +79,13 @@ HP 바와 데미지 숫자 같은 월드 공간 UI는 `WorldUI` 레이어에 둡
 
 `SpriteComponent::_drawMode` 는 Simple, Sliced, Tiled 중 하나입니다. 유니티의 `SpriteRenderer.drawMode`, Godot의 `NinePatchRect` 에 해당합니다.
 
-- 테두리는 클립 프레임의 `"border"` 에 프레임 비율로 적습니다. 클립이 없는 텍스처 스프라이트는 `_sliceBorder` 를 씁니다. 유니티와 Godot는 픽셀로 적습니다.
+- 테두리는 클립 프레임의 `"border"` 에 아틀라스 **픽셀**로 적습니다(유니티 Sprite Border, Godot patch margin 과 같습니다). 픽셀을 비율로 바꾸려면 클립 루트에
+  아틀라스 크기 `"atlasSize": [폭, 높이]` 가 있어야 하고, 없으면 오류를 남기고 테두리 없이 읽습니다(`SpriteClipAsset::rebuildFrameBorders`).
+  클립이 없는 텍스처 스프라이트는 `_sliceBorder` 를 프레임 비율로 씁니다(텍스처 픽셀 크기를 게임 스레드가 모르기 때문입니다).
 - 크기는 `_size`(로컬 월드 크기)입니다. Simple 방식은 트랜스폼 스케일로 크기를 정합니다.
 - 타일 방식은 자연 크기의 타일을 되풀이하고 마지막 타일을 자릅니다. 유니티의 Continuous 방식입니다.
 
-아직 없는 것은 테두리를 픽셀로 적는 방법(런타임이 아틀라스 픽셀 크기를 모른다), 유니티의 Adaptive 타일, 가운데를 비우는 Fill Center 끄기입니다.
+아직 없는 것은 유니티의 Adaptive 타일, 가운데를 비우는 Fill Center 끄기입니다.
 
 ### 픽셀 퍼펙트 카메라
 

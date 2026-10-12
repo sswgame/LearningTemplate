@@ -294,9 +294,10 @@ SW_TEST_CASE( SpriteComponentTest, SlicedSpritesShareTheSliceMeshAndReadTheBorde
     // 클립 프레임의 테두리가 컴포넌트 값을 이긴다.
     const sw::string    clipPath = test::makeTempPath( "panel.sprite.json" );
     sw::SpriteClipAsset clip;
-    clip._atlasPath = kTextureB;
+    clip._atlasPath      = kTextureB;
+    clip._atlasPixelSize = sw::float2{ 100.0f, 100.0f }; // 테두리는 픽셀로 적는다 — 프레임이 아틀라스 전체라 10 px = 0.1
     clip._listFrame.resize( 1 );
-    clip._listFrame[0]._border = sw::float4{ 0.1f, 0.2f, 0.3f, 0.4f };
+    clip._listFrame[0]._borderPixels = sw::float4{ 10.0f, 20.0f, 30.0f, 40.0f };
     SW_ASSERT_TRUE( clip.saveToFile( clipPath ) );
     pPanelA->setClipPath( clipPath );
     SW_EXPECT_NEAR_EQUAL( 0.4f, pPanelA->getEffectiveSliceBorder()._w, 1e-5f );

@@ -50,6 +50,7 @@ namespace sw
     void SpriteClipAsset::clear()
     {
         _atlasPath.clear();
+        _atlasPixelSize = float2{ 0.0f, 0.0f };
         _listFrame.clear();
         _listKey.clear();
         _listAnimation.clear();
@@ -64,6 +65,17 @@ namespace sw
         }
 
         _atlasPath = root.get( "atlas" ).asString();
+        // 아틀라스 픽셀 크기는 픽셀 테두리를 비율로 바꾸는 데만 쓴다. 테두리가 없는 클립은 적지 않아도 된다.
+        const JSONValue atlasSizeJSON = root.get( "atlasSize" );
+        if ( atlasSizeJSON.isArray() && atlasSizeJSON.size() == 2 )
+        {
+            _atlasPixelSize._x = MathUtil::max( 0.0f, static_cast<float32>( atlasSizeJSON.at( 0 ).asFloat( 0.0 ) ) );
+            _atlasPixelSize._y = MathUtil::max( 0.0f, static_cast<float32>( atlasSizeJSON.at( 1 ).asFloat( 0.0 ) ) );
+        }
+        else if ( atlasSizeJSON.isValid() )
+        {
+            SW_LOG_ERROR( "Sprite clip '%#': \"atlasSize\" must be [width, height] in pixels - pixel borders cannot be read", string( sourceLabel ) );
+        }
 
         // 키가 빠진 프레임은 구조체 기본값이다(UV 전체). 시간이 빠지면 0 = 애니메이터의 프레임 속도. 에디터는 다섯 키를 늘 다 쓴다.
         forEachObjectInArray( root, "frames", [this, sourceLabel]( const JSONValue& frameJSON, size_t frameIndex )
@@ -74,25 +86,30 @@ namespace sw
             frame._uvRect._z  = static_cast<float32>( frameJSON.get( "w" ).asFloat( 1.0 ) );
             frame._uvRect._w  = static_cast<float32>( frameJSON.get( "h" ).asFloat( 1.0 ) );
             frame._durationMs = static_cast<int32>( frameJSON.get( "durationMs" ).asInt( 0 ) );
-            // 9-슬라이스 테두리는 선택 키다. 숫자 네 개의 배열이 아니면 데이터 오류로 알리고 테두리 없이 읽는다.
+            // 9-슬라이스 테두리는 선택 키다(아틀라스 픽셀). 숫자 네 개의 배열이 아니면 데이터 오류로 알리고 테두리 없이 읽는다.
+            // 비율(_border)은 프레임을 다 읽은 뒤 rebuildFrameBorders 가 채운다.
             const JSONValue borderJSON = frameJSON.get( "border" );
             if ( borderJSON.isValid() )
             {
                 if ( borderJSON.isArray() && borderJSON.size() == 4 )
                 {
-                    frame._border._x = MathUtil::saturate( static_cast<float32>( borderJSON.at( 0 ).asFloat( 0.0 ) ) );
-                    frame._border._y = MathUtil::saturate( static_cast<float32>( borderJSON.at( 1 ).asFloat( 0.0 ) ) );
-                    frame._border._z = MathUtil::saturate( static_cast<float32>( borderJSON.at( 2 ).asFloat( 0.0 ) ) );
-                    frame._border._w = MathUtil::saturate( static_cast<float32>( borderJSON.at( 3 ).asFloat( 0.0 ) ) );
+                    frame._borderPixels._x = MathUtil::max( 0.0f, static_cast<float32>( borderJSON.at( 0 ).asFloat( 0.0 ) ) );
+                    frame._borderPixels._y = MathUtil::max( 0.0f, static_cast<float32>( borderJSON.at( 1 ).asFloat( 0.0 ) ) );
+                    frame._borderPixels._z = MathUtil::max( 0.0f, static_cast<float32>( borderJSON.at( 2 ).asFloat( 0.0 ) ) );
+                    frame._borderPixels._w = MathUtil::max( 0.0f, static_cast<float32>( borderJSON.at( 3 ).asFloat( 0.0 ) ) );
                 }
                 else
                 {
-                    SW_LOG_ERROR( "Sprite clip '%#' frame %#: \"border\" must be [left, bottom, right, top] fractions - read without a border",
+                    SW_LOG_ERROR( "Sprite clip '%#' frame %#: \"border\" must be [left, bottom, right, top] in pixels - read without a border",
                                   string( sourceLabel ), frameIndex );
                 }
             }
             _listFrame.push_back( frame );
         } );
+        const uint32 droppedBorderCount = rebuildFrameBorders();
+        if ( droppedBorderCount > 0 )
+            SW_LOG_ERROR( "Sprite clip '%#': %# frame(s) have a pixel border but the clip has no \"atlasSize\" - read without those borders",
+                          string( sourceLabel ), droppedBorderCount );
 
         forEachObjectInArray( root, "transformKeys", [this]( const JSONValue& keyJSON, size_t /*keyIndex*/ )
         {
@@ -143,11 +160,45 @@ namespace sw
         return true;
     }
 
+    uint32 SpriteClipAsset::rebuildFrameBorders()
+    {
+        uint32 droppedCount{ 0 };
+        for ( SpriteClipFrame& frame : _listFrame )
+        {
+            frame._border            = float4{ 0.0f, 0.0f, 0.0f, 0.0f };
+            const float4& pixels     = frame._borderPixels;
+            const bool    bHasPixels = pixels._x > 0.0f || pixels._y > 0.0f || pixels._z > 0.0f || pixels._w > 0.0f;
+            if ( bHasPixels == false )
+                continue;
+            // 프레임의 픽셀 크기 = UV 크기 × 아틀라스 크기(폭이 음수인 뒤집힌 프레임도 크기는 절댓값이다).
+            const float32 frameWidth  = MathUtil::abs( frame._uvRect._z ) * _atlasPixelSize._x;
+            const float32 frameHeight = MathUtil::abs( frame._uvRect._w ) * _atlasPixelSize._y;
+            if ( frameWidth <= 0.0f || frameHeight <= 0.0f )
+            {
+                ++droppedCount;
+                continue;
+            }
+            frame._border._x = MathUtil::saturate( pixels._x / frameWidth );
+            frame._border._y = MathUtil::saturate( pixels._y / frameHeight );
+            frame._border._z = MathUtil::saturate( pixels._z / frameWidth );
+            frame._border._w = MathUtil::saturate( pixels._w / frameHeight );
+        }
+        return droppedCount;
+    }
+
     string SpriteClipAsset::toJSON() const
     {
         JSONDocument    doc;
         const JSONValue root = doc.makeObject();
         root.set( "atlas" ).setString( _atlasPath );
+        // 아틀라스 크기는 알 때만 쓴다(테두리가 없는 클립 파일은 그 키가 없는 파일과 바이트까지 같다).
+        if ( _atlasPixelSize._x > 0.0f && _atlasPixelSize._y > 0.0f )
+        {
+            const JSONValue atlasSizeJSON = root.set( "atlasSize" );
+            atlasSizeJSON.setArray();
+            atlasSizeJSON.pushBack().setFloat( static_cast<float64>( _atlasPixelSize._x ) );
+            atlasSizeJSON.pushBack().setFloat( static_cast<float64>( _atlasPixelSize._y ) );
+        }
 
         const JSONValue framesVal = root.set( "frames" );
         framesVal.setArray();
@@ -160,14 +211,16 @@ namespace sw
             frameJSON.set( "w" ).setFloat( static_cast<float64>( frame._uvRect._z ) );
             frameJSON.set( "h" ).setFloat( static_cast<float64>( frame._uvRect._w ) );
             frameJSON.set( "durationMs" ).setInt( frame._durationMs );
-            if ( frame.hasBorder() )
+            const bool bHasBorderPixels = frame._borderPixels._x > 0.0f || frame._borderPixels._y > 0.0f || frame._borderPixels._z > 0.0f ||
+                                          frame._borderPixels._w > 0.0f;
+            if ( bHasBorderPixels )
             {
                 const JSONValue borderJSON = frameJSON.set( "border" );
                 borderJSON.setArray();
-                borderJSON.pushBack().setFloat( static_cast<float64>( frame._border._x ) );
-                borderJSON.pushBack().setFloat( static_cast<float64>( frame._border._y ) );
-                borderJSON.pushBack().setFloat( static_cast<float64>( frame._border._z ) );
-                borderJSON.pushBack().setFloat( static_cast<float64>( frame._border._w ) );
+                borderJSON.pushBack().setFloat( static_cast<float64>( frame._borderPixels._x ) );
+                borderJSON.pushBack().setFloat( static_cast<float64>( frame._borderPixels._y ) );
+                borderJSON.pushBack().setFloat( static_cast<float64>( frame._borderPixels._z ) );
+                borderJSON.pushBack().setFloat( static_cast<float64>( frame._borderPixels._w ) );
             }
         }
 

@@ -36,6 +36,7 @@
 `SpriteMeshBuilder` 가 9-슬라이스(Sliced)와 타일(Tiled) 메시를 만듭니다. 정점은 `makeSlicedVertices` 가 만들고, 같은 값의 메시는 약한 참조 테이블(`acquireSlicedMesh`)로 나눠 씁니다.
 
 - 테두리는 **프레임 비율**(0..1, 왼쪽, 아래, 오른쪽, 위)입니다. 스프라이트의 자연 크기가 1 × 1이라 그 비율이 곧 모서리의 월드 크기입니다.
+  사람은 클립(`.sprite.json`)에 아틀라스 **픽셀**로 적고(`"atlasSize"` + 프레임 `"border"`), 읽을 때 프레임 픽셀 크기로 나눠 비율이 됩니다(`SpriteClipAsset::rebuildFrameBorders`).
 - UV는 프레임 안의 0..1이고 셰이더가 인스턴스의 아틀라스 프레임으로 옮깁니다. 그래서 애니메이션 프레임이 바뀌어도 테두리가 같으면 메시는 그대로입니다.
 - 앞면(-Z)과 그것을 X로 비춘 뒷면(+Z)이 같은 UV를 써서, 어느 쪽에서 봐도 뒤집혀 보이지 않습니다. `MeshUtil::createSpriteQuad` 와 같은 규칙입니다.
 - 크기가 테두리 합보다 작으면 테두리를 비율대로 줄입니다. 타일 방식은 마지막 타일을 잘라 UV도 그만큼만 쓰고, 한 축에 64개(`kMaxTileCountPerAxis`)까지입니다.
