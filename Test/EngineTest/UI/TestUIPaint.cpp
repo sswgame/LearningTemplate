@@ -651,7 +651,7 @@ SW_TEST_CASE( UIPaintTest, ComboBoxOpensPopupAndSelects )
 /**
  * @brief [UIPaintTest] 글 입력 칸: 포커스를 쥐면 키보드 포커스 UI, 글자 사건은 끝에 붙고(조합 글은 확정 전까지 따로), Backspace(UI.TextBackspace)는 끝 코드 포인트 하나를,
  *        Enter 는 확정 알림을 부른다
- * @details 변이: `UISystem::processActions` 의 UI.TextBackspace 경로를 빼면 "가" 가 남지 않아 진다.
+ * @details 변이: `UIInputRouter::processActions` 의 UI.TextBackspace 경로를 빼면 "가" 가 남지 않아 진다.
  */
 SW_TEST_CASE( UIPaintTest, TextInputTypesAndDeletes )
 {

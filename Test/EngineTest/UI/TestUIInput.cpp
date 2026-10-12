@@ -262,7 +262,7 @@ SW_TEST_CASE( UIInputTest, MouseClickOnWidgetIsConsumed )
 /**
  * @brief [UIInputTest] 입력 방식은 마지막으로 쓴 장치를 따른다 — 패드 버튼 뒤 탐색(포커스가 기본 위젯으로), 마우스가 실제로 움직인 뒤 포인터.
  *        같은 자리의 이동 사건(창이 뜰 때 OS 가 보낸다)은 방식을 바꾸지 않는다
- * @details 변이: `UISystem::updateInputMode` 의 자리 비교를 빼면 3 프레임에 포인터로 바뀌어 진다.
+ * @details 변이: `UIInputRouter::pollInputMode` 의 자리 비교를 빼면 3 프레임에 포인터로 바뀌어 진다.
  */
 SW_TEST_CASE( UIInputTest, InputModeSwitchesWithLastDevice )
 {
@@ -323,7 +323,7 @@ SW_TEST_CASE( UIInputTest, TextFieldTakesKeyboardFocus )
 
 /**
  * @brief [UIInputTest] 마우스 위치는 창 픽셀을 UI 배율로 나눈 UI 단위다 — 배율 2 에서 창 (300, 220) 은 UI (150, 110), 첫 버튼 위다
- * @details 변이: `UISystem::processPointer` 의 배율 나누기를 빼면 (300, 220) 은 버튼 밖이라 게임이 Fire 를 본다.
+ * @details 변이: `UIInputRouter::processPointer` 의 배율 나누기를 빼면 (300, 220) 은 버튼 밖이라 게임이 Fire 를 본다.
  */
 SW_TEST_CASE( UIInputTest, PointerPositionIsInUIUnits )
 {

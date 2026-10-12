@@ -597,7 +597,10 @@ HUD 상태를 바꾸는 시나리오는 사용자 파일에 남으므로 끝에�
 
 | 파일 | 여는 때 |
 |---|---|
-| `UISystem.h` | 서비스 API, 화면 열기와 닫기 |
+| `UISystem.h` | 서비스 API, 화면 열기와 닫기, 프레임 순서 |
+| `Input/UIInputRouter.h` | 포인터 · 액션 · 글자 입력을 화면으로 보내는 규칙, 포커스 복원, 입력 방식 |
+| `Style/UIThemeController.h` | 테마 고르기(설정 `gv_uiTheme` 따라가기), 테마 시트 + 문서 시트로 스타일 세트 짓기 |
+| `Screen/UIOffscreenScreens.h` | 화면 스택 밖 미리보기(에디터)의 프레임 처리와 렌더 텍스처 목록 |
 | `Base/Widget.h` | 위젯 가상 함수와 무효화 |
 | `Screen/UIScreen.h` | 화면 성질, 명령, 뷰모델 연결 |
 | `Binding/UIViewModel.h` | 뷰모델 필드와 알림 |

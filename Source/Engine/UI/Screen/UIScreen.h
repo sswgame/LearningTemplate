@@ -21,8 +21,10 @@
 namespace sw
 {
     class UIBindingSet;
+    class UIInputRouter;
     class UIStyleSet;
     class UISystem;
+    class UIThemeController;
     class UIViewModel;
     class Widget;
 
@@ -166,6 +168,8 @@ namespace sw
 
     private:
         friend class UISystem;
+        friend class UIInputRouter;     // 포커스 복원이 `_lastFocused` 를 읽는다
+        friend class UIThemeController; // 스타일 세트를 짓는다
 
         WidgetTree                                                               _tree;
         UIScreenDesc                                                             _desc;
