@@ -3,10 +3,12 @@
 새 세션은 이 문서를 먼저 읽습니다. 배치 경계마다 적용 담당이 고쳐 씁니다. 끝난 항목은 지웁니다(한 일은 `git log`, 교훈은 영역 README · 결정 기록 · 검증 문서에 있다).
 작업 방식은 [작업 방식](../11_Workflow.md), 남은 일 전체는 [백로그](../06_Backlog.md)입니다.
 
-## 통합 3 (2026-10-12, 브랜치 `wt/integ3`, 워크트리 `C:\w\integ3`, push 안 함)
+## 통합 3 (2026-10-12, 브랜치 `wt/integ3`, 워크트리 `C:\w\integ3`, `main` 으로 fast-forward 하고 push 했다 — `6f3373831`)
+
+검증할 것은 [통합 3 검증 체크리스트](VerifyIntegration3.md)에 모았다. 검증을 마치면 그 문서와 이 절을 지운다.
 
 - **병합**: `main`(8fce26aaf) 위에 1 차 여섯(tcore → tgfs → tinv → tcombat → tposttick → tgfd, 충돌 없음)과 2 차 아홉(uinc → utex → uxml → uaud → uonl → umod → ugfa → ugfb → upipe)을 병합했다.
-  uonl 은 `TestServiceClientCallTable.cpp` 에서 충돌(양쪽 테스트를 모두 남김). upipe 의 8021b9337(쿠킹 스탬프 SWCOOK 3 → 4)은 병합 뒤 되돌렸다 — 다시 쿠킹이 필요하다(아래 검증). 사용자가 확인한 뒤 `main` 으로 fast-forward 하고 push 한다.
+  uonl 은 `TestServiceClientCallTable.cpp` 에서 충돌(양쪽 테스트를 모두 남김). upipe 의 8021b9337(쿠킹 스탬프 SWCOOK 3 → 4)은 병합 뒤 되돌렸다 — 다시 쿠킹이 필요하다(아래 검증). 사용자가 `main` 에 넣고 push 하라고 해서 fast-forward 로 넣었다. 이 PC 에서는 테스트 · 실행을 하지 않았으므로 검증은 아직이다.
 - **빌드(마지막)**: `cmake --preset` 재구성 뒤 Debug · Shipping `all AllTests` 각 한 번 — 오류 0 · 링크 오류 0 · 경고 0. 처음부터 지은 1 차 빌드의 `-Wnrvo` 약 50 곳 · `-Wunique-object-duplication` 3 곳은 원인에서 고쳤다(억제 없음).
   게임 프리셋 Shooter3D · StarSkirmish · HarvestValley · VoxelCraft 는 1 차 병합 직후 `SWGame` 만 지었고(오류 0, 게임 파일 `-Wnrvo` 3 곳은 고침) 2 차 병합 뒤에는 다시 짓지 않았다.
 - **린트**: `lint-suite` 통과, 바뀐 헤더 76 개 `CheckHeaderSelfContained` 통과, `CheckSourceGlob` 통과, 2 차 병합분 C++ 139 개는 고정 clang-format 20.1.8 로 차이 없음. 새 게이트 `CheckPostTickThisBinding`(틱 뒤 실행에 `this` 메서드 델리게이트 금지).
@@ -62,7 +64,7 @@
 ## 알아 둘 함정 (이 세션에서)
 
 - 도우미가 낮은 우선순위로 `clang-cl -Zs` 만 돌렸고 PCH · 링크 · 코드젠(`.gen.cpp`)은 확인하지 못한다 — 새 `SW_API` 클래스가 여럿이라 링크 오류가 가장 먼저 나올 곳이다. 빌드는 `cmake --preset` 으로 다시 구성한 뒤(새 소스 파일) 한다.
-- 도우미가 `Co-Authored-By` 줄을 시스템 리마인더대로 `Opus 5.5` 로 쓰는 일이 있었다 — 병합 전에 `git log main..wt/<이름> --format=%b | grep -i co-auth` 로 보고 `filter-branch --msg-filter` 로 `Sonnet 5.5` 로 고쳤다(저장소 규칙).
+- `Co-Authored-By` 줄은 실제로 일한 모델 이름이다. 통합 3 이력에는 `Opus 5.5` 27 개와 `Sonnet 5.5` 24 개가 섞여 있고, 사용자가 **실제 모델 기록을 우선하라고 정해 고치지 않았다**(이전 세션처럼 `filter-branch` 로 `Sonnet 5.5` 로 통일하지 않는다).
 - `ninja` 는 `-k 0` 으로 지으면 오류가 나도 끝까지 가서 오류를 모아 준다. ctest 프리셋 이름은 `Ninja-Debug-lint` · `Ninja-Debug-nogpu` 이고 `hostgpu` 프리셋은 없어 `ctest --test-dir build/Ninja-Debug -L hostgpu -j 1`(약 16 분) 으로 돌린다.
 - 병합용 워크트리 `D:\w\integ2`(브랜치 `wt/integ2`)는 Debug · Shipping 빌드 폴더를 들고 있어 남겨 뒀다. 다음 병합은 `git merge --ff-only main` 으로 맞춘 뒤 시작하면 증분 빌드가 된다.
 - 스크립트는 heredoc 대신 Write 도구로(AGENTS.md "Editing traps"). 임시 파일은 scratchpad 에서 에이전트 이름을 앞에 붙인다(도우미끼리 `syntax_check.py` 를 덮어썼다).
