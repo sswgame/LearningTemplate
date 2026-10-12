@@ -5628,6 +5628,60 @@ SW_TEST_CASE( RenderPassGPUTest, HalfResolutionBloomBlursByTheSourceTexel )
 }
 
 /**
+ * @brief [RenderPassGPUTest] 디퍼드 블룸의 밝은 부분(BloomBright)은 반 크기이고 밝은 큐브 자리에 값이 있으며, 합성(BloomColor)은 원래 크기다 — 4 백엔드
+ * @details `deferredpipeline.xml` 은 BloomDownsample 이 반해상도에 밝은 부분을 구하고 PostBloom 이 업샘플해 더한다. 변이: Bloom 패스가 BloomBright 를
+ *          읽지 않거나(g_BloomBrightIndex 무효) 다운샘플이 0 을 내면 BloomBright 가 비고, 합성 크기가 반으로 줄면 화면 해상도가 떨어진다.
+ */
+SW_TEST_CASE( RenderPassGPUTest, DeferredBloomBrightIsHalfResolution )
+{
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string   label = sw::string( device->getBackendName() ) + ": ";
+        LitCubeScene       stage;
+        bool               bOk = stage.populate();
+        test::RHITestImage litColor;
+        test::RHITestImage bloomBright;
+        test::RHITestImage bloomColor;
+        if ( bOk )
+        {
+            sw::FrameRenderer renderer;
+            bOk = renderer.initialize( device.get(), "engine/pipeline/deferredpipeline.xml" ) && renderer.isReady();
+            for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
+            {
+                bOk = renderSceneFrame( renderer, device.get(), stage._scene, sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+            }
+            bOk = bOk && litColor.readTransient( renderer, "LitColor" ) && bloomBright.readTransient( renderer, "BloomBright" ) &&
+                  bloomColor.readTransient( renderer, "BloomColor" );
+            renderer.shutdown();
+        }
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "디퍼드를 그리거나 되읽지 못했다" ).c_str() );
+        if ( bOk == false )
+            continue;
+        ++comparedCount;
+        SW_EXPECT_EQUAL( sw::TransientAttachmentPool::computeScaledExtent( litColor.getWidth(), 2 ), bloomBright.getWidth() );
+        SW_EXPECT_EQUAL( sw::TransientAttachmentPool::computeScaledExtent( litColor.getHeight(), 2 ), bloomBright.getHeight() );
+        SW_EXPECT_EQUAL( litColor.getWidth(), bloomColor.getWidth() );
+        SW_EXPECT_EQUAL( litColor.getHeight(), bloomColor.getHeight() );
+        uint32 brightCount{ 0 };
+        for ( uint32 y = 0; y < bloomBright.getHeight(); ++y )
+        {
+            for ( uint32 x = 0; x < bloomBright.getWidth(); ++x )
+            {
+                const test::Rgba8 pixel = bloomBright.getPixel( x, y );
+                if ( pixel._r > 8 || pixel._g > 8 || pixel._b > 8 )
+                    ++brightCount;
+            }
+        }
+        SW_LOG_INFO( "%#BloomBright %#x%# bright pixels %#", label, bloomBright.getWidth(), bloomBright.getHeight(), brightCount );
+        SW_EXPECT_TRUE_MSG( brightCount > 0, ( label + "반해상도 BloomBright 가 비었다 — 다운샘플 패스가 밝은 부분을 내지 않는다" ).c_str() );
+    }
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could run the deferred bloom pipeline" );
+}
+
+/**
  * @brief [RenderPassGPUTest] 캡처 카메라 둘이 각자의 렌더 텍스처에 각자 본 것을 그린다(4 백엔드)
  * @details 붉은 큐브만 보는 카메라 → `rendertarget/test_red`, 푸른 큐브만 보는 카메라 → `rendertarget/test_blue`. 두 텍스처를 되읽어 한쪽은 붉고
  *          한쪽은 푸른지 본다. 뷰가 컬링 칸 · 상수버퍼 · 풀을 나눠 쓰면 둘이 같은 그림이 되거나(뒤 뷰의 절두체로 거른다) 비어 있다.

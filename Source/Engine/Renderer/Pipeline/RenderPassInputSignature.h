@@ -28,6 +28,7 @@ namespace sw
         GBufferNormal,    ///< G버퍼 노멀
         ShadowMap,        ///< 그림자 깊이
         AmbientOcclusion, ///< SSAO 결과 (AOColor)
+        BloomBright,      ///< 반해상도 블룸의 밝은 부분(BloomDownsample 패스 출력). Bloom 패스가 있으면 업샘플해 더하고, 없으면 원본에서 직접 구한다.
         Count,
     };
 
@@ -39,7 +40,7 @@ namespace sw
 
     /**
      * @brief 첨부의 역할을 정합니다. 첨부가 선언한 역할(`RenderPassAttachment::_role`)이 먼저입니다.
-     * @details 선언이 없거나 모르는 글이면(검증이 오류로 알린다) 고정 역할 이름(GBufferAlbedo · GBufferNormal · ShadowMap · AOColor)은 그 역할,
+     * @details 선언이 없거나 모르는 글이면(검증이 오류로 알린다) 고정 역할 이름(GBufferAlbedo · GBufferNormal · ShadowMap · AOColor · BloomBright)은 그 역할,
      *          그 밖의 깊이 포맷은 SceneDepth, 나머지 컬러는 SourceColor 입니다. ShadowMap 은 깊이 포맷이지만 이름이 먼저입니다.
      */
     RenderPassInputRole resolveRenderPassInputRole( string_view attachmentName, bool bDepthFormat, string_view declaredRole );

@@ -17,6 +17,7 @@ namespace sw
             "GBufferNormal",
             "ShadowMap",
             "AmbientOcclusion",
+            "BloomBright",
         };
 
         /// 이름이 곧 역할인 첨부입니다. 파이프라인이 이 이름을 쓰면 그 역할로 걸립니다.
@@ -30,6 +31,7 @@ namespace sw
             {"GBufferNormal",    RenderPassInputRole::GBufferNormal},
             {    "ShadowMap",        RenderPassInputRole::ShadowMap},
             {      "AOColor", RenderPassInputRole::AmbientOcclusion},
+            {  "BloomBright",      RenderPassInputRole::BloomBright},
         };
     } // namespace
 

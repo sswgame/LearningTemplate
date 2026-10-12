@@ -40,6 +40,8 @@ namespace sw
         Transparent,
         SSAO,
         Bloom,
+        /// @brief 블룸의 밝은 부분을 반해상도 첨부(`BloomBright`)에 구합니다(postbloom.hlsl 의 `SW_PASS_BLOOM_DOWNSAMPLE`). Bloom 패스가 그것을 업샘플해 더합니다.
+        BloomDownsample,
         Outline,
         TAA,
         Tonemap,
@@ -97,7 +99,7 @@ namespace sw
 
         /**
          * @brief 이 첨부가 패스에 바인딩될 때의 역할입니다(`RenderPassInputRole` 이름: GBufferAlbedo, GBufferNormal, ShadowMap, AmbientOcclusion,
-         *        SceneDepth, SourceColor). 비어 있으면 원본 이름(GBufferAlbedo 등)과 포맷으로 정합니다.
+         *        BloomBright, SceneDepth, SourceColor). 비어 있으면 원본 이름(GBufferAlbedo 등)과 포맷으로 정합니다.
          * @details 역할을 **이름으로만** 정하면 G버퍼, 그림자 맵, AO 첨부의 이름을 바꿀 때 Lighting 의 입력 계약이 깨진다(역할 없는 컬러는
          *          모두 SourceColor). 언리얼 RDG 는 패스 파라미터 구조체의 멤버로, 유니티 RenderGraph 는 셰이더 프로퍼티 이름으로 텍스처를 바인딩한다.
          *          어느 쪽도 텍스처의 이름이 바인딩을 정하지 않는다. 여기서는 첨부가 자기 역할을 선언하고, 이름은 파이프라인이 자유롭게 짓는다.

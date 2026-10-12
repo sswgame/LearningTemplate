@@ -73,6 +73,10 @@ flowchart TB
 - `RenderPassTypeInfo.cpp` 는 패스 종류마다의 사실을 열거값 하나에 한 줄로 모은 테이블입니다. 기본 셰이더, PSO 기본 상태, 패스 define, 컬러 출력 수, 그리는 대상, 입력 계약이 들어 있습니다.
   엔진 PSO 등록(`ensurePassResources`), 셰이더 쿠킹 요청, `executePass` 의 분기, 파이프라인 검증이 모두 이 테이블을 읽습니다.
 - 첨부마다 해상도 나눗수(`RenderPassAttachment::_resolutionDivisor`, 1, 2, 4)가 있고, 패스는 출력 첨부의 크기로 렌더 패스를 엽니다.
+- 디퍼드 블룸은 밝은 부분을 반해상도로 구합니다. `BloomDownsample` 패스(블룸 셰이더의 `SW_PASS_BLOOM_DOWNSAMPLE`)가 `BloomBright`(나눗수 2)에 원본 4x4 텍셀 평균의
+  밝은 부분을 쓰고, `Bloom` 패스가 그것을 `BloomBright` 역할로 읽어 원래 해상도에서 업샘플해 더합니다(언리얼 블룸 셋업 · 다운샘플 → 합성). `BloomBright` 를 선언하지 않은
+  파이프라인의 Bloom 패스는 원본에서 직접 구합니다. 에뮬 백엔드(DX11 · GL)는 이 역할을 노멀과 같은 슬롯 2 에 겁니다(한 패스에 둘이 같이 오지 않습니다).
+  GPU 비용은 `GPU.BloomDownsample` · `GPU.PostBloom` 타임스탬프로 봅니다.
 
 XML이 선언한 포맷과 코드가 만드는 것이 어긋나면 조용히 잘못 그리거나 GPU가 멈춥니다. 그래서 로드할 때 `validate()` 가 다음을 검사합니다.
 

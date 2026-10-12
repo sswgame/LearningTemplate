@@ -379,6 +379,7 @@ namespace sw
         /// 값은 RenderPassInputRole 의 이름과 같습니다. 역할로 바인딩하고 셰이더가 `g_<Role>Index` 로 읽습니다.
         hashed_string _sourceColor{ "SourceColor" };
         hashed_string _ambientOcclusion{ "AmbientOcclusion" };
+        hashed_string _bloomBright{ "BloomBright" };
     };
 } // namespace sw
 

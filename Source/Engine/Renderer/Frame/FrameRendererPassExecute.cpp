@@ -212,6 +212,8 @@ namespace sw
                 return names._shadowMap;
             case RenderPassInputRole::AmbientOcclusion:
                 return names._ambientOcclusion;
+            case RenderPassInputRole::BloomBright:
+                return names._bloomBright;
             case RenderPassInputRole::Invalid:
             case RenderPassInputRole::Count:
                 return names._sourceColor;
@@ -309,7 +311,7 @@ namespace sw
         const bool                bTransparentBatch = info.hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
         if ( info.hasFlag( RenderPassTraitFlag::kGenericFullscreen ) && pPassDesc != nullptr )
         {
-            // 일반 풀스크린 패스(테이블의 kGenericFullscreen: Lighting, SSAO, Bloom, Outline, Tonemap)다. **선언이 곧 바인딩**이다.
+            // 일반 풀스크린 패스(테이블의 kGenericFullscreen: Lighting, SSAO, Bloom, BloomDownsample, Outline, Tonemap)다. **선언이 곧 바인딩**이다.
             // 입력은 역할 이름으로 모두 바인딩하고, 타깃은 선언한 출력 중 첫 번째로 있는 것이다. 계약(RenderPassInputSignature)이
             // 로드 시점에 같은 목록을 검사했다. 새 포스트 패스는 테이블의 한 줄로 여기를 탄다.
             registerDeclaredInputs( context, *pPassDesc );
@@ -664,6 +666,7 @@ namespace sw
                 case RenderPassType::Lighting:
                 case RenderPassType::SSAO:
                 case RenderPassType::Bloom:
+                case RenderPassType::BloomDownsample:
                 case RenderPassType::Outline:
                 case RenderPassType::Tonemap:
                 case RenderPassType::ForwardOpaqueNoDepthWrite:
@@ -794,19 +797,20 @@ namespace sw
         const RHIDescriptorIndex depth  = srvOf( names._sceneDepth );
         const RHIDescriptorIndex source = srvOf( names._sourceColor );
         const RHIDescriptorIndex ao     = srvOf( names._ambientOcclusion );
+        const RHIDescriptorIndex bloom  = srvOf( names._bloomBright );
 
-        // 슬롯 테이블은 binding.hlsli 의 swSampleIndex 와 같아야 한다: [shadow|source, albedo|ao, normal, depth|shadow].
-        // 한 슬롯을 나눠 쓰는 둘은 같은 패스에 함께 바인딩되지 않는다(알베도는 Lighting, AO 는 Bloom).
+        // 슬롯 테이블은 binding.hlsli 의 swSampleIndex 와 같아야 한다: [shadow|source, albedo|ao, normal|bloom, depth|shadow].
+        // 한 슬롯을 나눠 쓰는 둘은 같은 패스에 함께 바인딩되지 않는다(알베도 · 노멀은 Lighting · SSAO, AO · 반해상도 블룸은 Bloom).
         const RHIDescriptorIndex slot0 = ( shadow != kInvalidDescriptorIndex ) ? shadow : source;
         const RHIDescriptorIndex slot1 = ( albedo != kInvalidDescriptorIndex ) ? albedo : ao;
-        const RHIDescriptorIndex slot2 = normal;
+        const RHIDescriptorIndex slot2 = ( normal != kInvalidDescriptorIndex ) ? normal : bloom;
         const RHIDescriptorIndex slot3 = ( depth != kInvalidDescriptorIndex ) ? depth : shadow;
 
         if ( shadow != kInvalidDescriptorIndex || source != kInvalidDescriptorIndex )
             context._pCmd->bindShaderResource( slot0, 0 );
         if ( albedo != kInvalidDescriptorIndex || ao != kInvalidDescriptorIndex )
             context._pCmd->bindShaderResource( slot1, 1 );
-        if ( normal != kInvalidDescriptorIndex )
+        if ( normal != kInvalidDescriptorIndex || bloom != kInvalidDescriptorIndex )
             context._pCmd->bindShaderResource( slot2, 2 );
         if ( depth != kInvalidDescriptorIndex || shadow != kInvalidDescriptorIndex )
             context._pCmd->bindShaderResource( slot3, 3 );

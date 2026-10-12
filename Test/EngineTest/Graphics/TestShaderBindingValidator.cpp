@@ -865,6 +865,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, EveryBoundNameIsInCookedReflection )
         &attachment._sceneDepth,
         &attachment._sourceColor,
         &attachment._ambientOcclusion,
+        &attachment._bloomBright,
     };
     for ( const sw::hashed_string* pRole : arrRoleName )
     {

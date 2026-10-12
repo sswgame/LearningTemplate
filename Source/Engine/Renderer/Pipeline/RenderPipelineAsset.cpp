@@ -80,7 +80,7 @@ namespace sw
             if ( attachment._role.empty() == false && tryParseRenderPassInputRole( attachment._role, declaredRole ) == false )
             {
                 SW_LOG_ERROR( "[%#] attachment '%#': 알 수 없는 역할 '%#' — SourceColor · SceneDepth · GBufferAlbedo · GBufferNormal · ShadowMap · "
-                              "AmbientOcclusion 중 하나입니다",
+                              "AmbientOcclusion · BloomBright 중 하나입니다",
                               sourcePath, attachment._name, attachment._role );
                 ++issueCount;
             }

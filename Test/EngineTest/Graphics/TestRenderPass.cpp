@@ -411,6 +411,55 @@ SW_TEST_CASE( RenderPassTest, ShippedPipelinesValidateClean )
 }
 
 /**
+ * @brief [RenderPassTest] 디퍼드 블룸은 밝은 부분을 반해상도로 구하고(BloomDownsample → BloomBright, 나눗수 2) Bloom 패스가 그것을 BloomBright 역할로 읽는다
+ * @details 다운샘플 패스는 블룸 셰이더의 `SW_PASS_BLOOM_DOWNSAMPLE` 퍼뮤테이션이다. Bloom 패스가 BloomBright 를 읽지 않으면 셰이더가 원본에서 다시 구해
+ *          반해상도 패스가 헛일이 된다(언리얼 블룸 셋업 · 다운샘플 → 합성).
+ */
+SW_TEST_CASE( RenderPassTest, DeferredBloomBrightIsComputedAtHalfResolution )
+{
+    sw::RenderPipelineAsset res;
+    SW_ASSERT_TRUE( res.loadFromXMLFile( "engine/pipeline/deferredpipeline.xml" ) );
+    SW_EXPECT_EQUAL( 0u, res.validate( "engine/pipeline/deferredpipeline.xml" ) );
+
+    const sw::RenderPassAttachment* pBright = nullptr;
+    for ( const sw::RenderPassAttachment& attachment : res.getDesc()._listAttachment )
+    {
+        if ( attachment._name == "BloomBright" )
+            pBright = &attachment;
+    }
+    SW_ASSERT_NOT_NULL( pBright );
+    SW_EXPECT_EQUAL( 2u, pBright->_resolutionDivisor );
+
+    int32 downsampleIndex{ -1 };
+    int32 bloomIndex{ -1 };
+    for ( uint32 passIndex = 0; passIndex < static_cast<uint32>( res.getGraphPass().size() ); ++passIndex )
+    {
+        const sw::RenderGraphPassDesc& pass = res.getGraphPass()[passIndex];
+        if ( pass._resolvedType == sw::RenderPassType::BloomDownsample )
+        {
+            downsampleIndex = static_cast<int32>( passIndex );
+            SW_ASSERT_TRUE( pass._listResolvedOutput.size() == 1 );
+            SW_EXPECT_TRUE( pass._listResolvedOutput[0].view() == "BloomBright" );
+            const sw::RenderPassShaderSelection shader = sw::selectRenderPassShader( pass._resolvedType, &pass, sw::EngineDefaultAssets{} );
+            SW_EXPECT_TRUE( std::find( shader._listDefine.begin(), shader._listDefine.end(), sw::string( sw::kPassBloomDownsampleDefine ) ) != shader._listDefine.end() );
+        }
+        if ( pass._resolvedType == sw::RenderPassType::Bloom )
+        {
+            bloomIndex = static_cast<int32>( passIndex );
+            bool bReadsBright{ false };
+            for ( const sw::RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
+            {
+                if ( static_cast<sw::RenderPassInputRole>( input._role ) == sw::RenderPassInputRole::BloomBright )
+                    bReadsBright = true;
+            }
+            SW_EXPECT_TRUE_MSG( bReadsBright, "Bloom 패스가 BloomBright 를 읽지 않는다" );
+        }
+    }
+    SW_EXPECT_TRUE( 0 <= downsampleIndex );
+    SW_EXPECT_TRUE_MSG( downsampleIndex < bloomIndex, "BloomDownsample 이 Bloom 보다 먼저 선언돼야 한다" );
+}
+
+/**
  * @brief [RenderPassTest] GPU 타임스탬프가 측정하는 패스 수와 칸 배치가 맞다 — 넘는 패스 수를 세는 함수가 로드 경고의 근거다
  * @details 패스는 인덱스 x 2 쌍을 쓰고 뒤쪽 칸은 프레임 · 컴퓨트 예약이다. 실행 · 보고 · 로드 경고가 모두 `kGPUTimedPassCapacity` 하나로 자른다.
  */
