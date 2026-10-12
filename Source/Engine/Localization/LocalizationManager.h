@@ -89,6 +89,13 @@ namespace sw
         void unmountProjects( LocalizationScope scope );
         /** @brief 로드한 프로젝트 이름입니다(로드한 순서). */
         vector<string> getMountedProjectNames() const;
+        /**
+         * @brief @p source 의 문화권 테이블, 로드한 프로젝트, 낱개 테이블, 폴백 언어, 지금 언어를 이 관리자에 복사합니다(원래 것은 버립니다).
+         * @details 관리자는 싱글톤이 아니므로 화면 하나만 다른 언어로 보이는 길이다 — 에디터 UI 미리보기가 사본을 만들어 자기 언어를 고른다
+         *          (`UISystem::setOffscreenLocalization`). 파일은 다시 읽지 않고, 번역 상태 수와 의사 문화권 표도 사본에서 다시 만든다.
+         *          콜백과 빠진 키 기록은 복사하지 않는다. 텍스트 버전은 오른다.
+         */
+        void copyStateFrom( const LocalizationManager& source );
         /** @brief 로드한 프로젝트를 모두 디스크에서 다시 읽습니다. 하나라도 읽지 못하면 false 이고 그 프로젝트는 기존 내용을 유지합니다. */
         [[nodiscard]] bool reloadProjects();
         /** @brief 바뀐 파일이 로드한 프로젝트의 것이면 그 프로젝트를 다시 읽고 true 를 반환합니다(핫 리로드). 아니면 아무것도 하지 않고 false 입니다. */

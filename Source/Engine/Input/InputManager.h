@@ -141,6 +141,14 @@ namespace sw
         InputKeyboardFocus getKeyboardFocus() const { return _keyboardFocus; }
         /** @brief 게임 쪽 조회가 이 키를 볼 수 있으면 true 입니다. 포커스가 `Game` 이고, 다른 포커스 동안 눌려서 아직 떼지 않은 키가 아니어야 합니다. */
         bool isKeyVisibleToGame( Key key ) const;
+        /**
+         * @brief 게임 쪽 조회가 패드 @p deviceIndex 의 컨트롤 @p controlIndex(버튼 0..13, 왼쪽 트리거 100, 오른쪽 트리거 101)를 볼 수 있으면 true 입니다.
+         * @details 개발 콘솔이 열려 있는 동안은 모두 false 입니다 — 콘솔이 패드 A · B · 십자키로 조작되므로(셸 맵) 게임이 같은 입력을 또 받으면 안 된다
+         *          (shooter3d 는 패드 `Back` 이 카메라 전환과 겹친다). 콘솔이 쥔 동안 눌렸거나 닫을 때 눌려 있던 컨트롤은 뗄 때까지 가린다(닫는 B 가 게임의 B 로 새지 않게).
+         *          키보드와 달리 이 가림은 `Game` 이 아닌 포커스 중 콘솔(`DevConsole`)에만 걸린다 — 런타임 UI 글자 입력 중에도 패드로 UI 를 다녀야 한다.
+         *          키보드 포커스를 무시하는 맵(셸 맵, UI 맵)은 이 조회를 쓰지 않고 장치 상태를 그대로 읽는다.
+         */
+        bool isGamepadControlVisibleToGame( uint32 deviceIndex, uint16 controlIndex ) const;
 
         /** @brief 언로드 리스너 목록에 등록하는 이름입니다. */
         const utf8* getModuleUnloadListenerName() const override { return "input callbacks"; }
@@ -336,6 +344,10 @@ namespace sw
         bool postWindowStateEvent( const RawInputEvent& rawEvent );
         /** @brief 포커스가 `Game` 이 아닐 때 눌렀다가 지금은 뗀 키를 가림 목록에서 해제합니다(프레임 시작, 이벤트 적용 전). */
         void releaseCapturedKeys();
+        /** @brief 개발 콘솔이 키보드를 쥔 동안 눌려 있는 패드 컨트롤을 가림 목록에 넣습니다(이벤트를 적용한 뒤). */
+        void captureHeldGamepadControls();
+        /** @brief 콘솔이 쥔 동안 눌렀다가 지금은 뗀 패드 컨트롤을 가림 목록에서 해제합니다(프레임 시작, 폴링 전). */
+        void releaseCapturedGamepadControls();
 
     private:
         static constexpr size_t kKeyboardFocusCount = static_cast<size_t>( InputKeyboardFocus::Count );
@@ -359,6 +371,7 @@ namespace sw
         TextInputDelegate                    _arrOnTextInput[kKeyboardFocusCount];       /**< 키보드 포커스 주인마다의 글자 콜백입니다. */
         TextInputDelegate                    _arrOnTextComposition[kKeyboardFocusCount]; /**< 키보드 포커스 주인마다의 조합 중 글자 콜백입니다. */
         uint64                               _arrCapturedKeyMask[kKeyMaskWordCount];     /**< 포커스가 `Game` 이 아닐 때 눌려서 게임에 보이지 않게 가린 키입니다(뗀 다음 프레임에 해제). */
+        uint32                               _arrCapturedGamepadMask[kMaxGamepadSlot];   /**< 개발 콘솔이 키보드를 쥔 동안 눌려서 게임에 보이지 않게 가린 패드 컨트롤입니다(비트는 `makeGamepadControlBit`). */
         InputKeyboardFocus                   _keyboardFocus;                             /**< 지금 키보드를 받는 쪽입니다. */
         VirtualInputMode                     _virtualInputMode;                          /**< 붙인 가상 입력 원천의 모드입니다. */
         [[maybe_unused]] uint16              _pendingHighSurrogate;                      /**< 짝을 기다리는 서로게이트의 앞 반쪽입니다(Win32 WM_CHAR). 0 이면 없습니다. */

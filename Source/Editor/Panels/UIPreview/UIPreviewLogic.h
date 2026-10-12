@@ -7,15 +7,37 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/UI/Base/WidgetTypes.h"
 
 namespace sw
 {
+    struct PropertyInfo;
+    struct TypeInfo;
     struct UIScaleSettings;
+    struct WidgetLayoutSlot;
 
+    class PanelWidget;
+    class TypeRegistry;
+    class UIScreen;
+    class UISystem;
+    class Widget;
     class WidgetTree;
 } // namespace sw
+
+namespace sw::editor
+{
+    /** @brief 캔버스 자식의 슬롯 손잡이 하나입니다(디자이너). 가운데는 옮기기, 나머지는 그 변만 옮깁니다. */
+    enum class UIPreviewSlotHandle : uint8
+    {
+        Move = 0,
+        Left,
+        Top,
+        Right,
+        Bottom
+    };
+} // namespace sw::editor
 
 namespace sw::editor
 {
@@ -67,5 +89,67 @@ namespace sw::editor
         static WidgetID findWidgetAt( const WidgetTree& tree, const float2& point );
         /** @brief 미리보기 렌더 텍스처 경로입니다 — 크기마다 다르다(렌더 텍스처 크기는 처음 만들 때 정해진다). */
         static string makeTargetPath( const UIViewport& viewport );
+
+        // --- 언어 고르기 ---------------------------------------------------------------
+        /** @brief 미리보기 언어를 "게임 언어 그대로" 로 두는 값입니다(빈 코드). */
+        static constexpr const utf8* kGameLanguage = "";
+        /**
+         * @brief 언어 콤보의 코드 목록입니다. 첫 줄은 게임 언어 그대로(`kGameLanguage`), 이어서 @p listAvailable 의 실제 문화권을 사전순으로, 끝에 의사 문화권(`qps_ploc`,
+         *        `qps_plocm`)을 둡니다. 의사 문화권은 @p listAvailable 에 없어도 넣고 중복은 한 번만 넣습니다(Dev 빌드에서만 `getAvailableLanguages` 가 내놓는다).
+         */
+        static void makeLanguageChoices( const vector<string>& listAvailable, vector<string>& outListCode );
+        /** @brief @p code(정규 표기)가 의사 문화권(`qps_ploc`, `qps_plocm`)이면 true 입니다. 화면에서 번역이 아니라 원문 변환 글을 보인다는 표시에 씁니다. */
+        static bool isPseudoLanguage( string_view code );
+
+        // --- 위젯 고르기 · 속성 고치기 ---------------------------------------------------------------
+        /** @brief 위젯 번호 @p id 의 문서 순서 번호입니다. 없으면 `kNoOrdinal` 입니다. 문서를 다시 읽으면 위젯 번호가 바뀌므로 고른 위젯을 번호로 이어 갑니다. */
+        static constexpr uint32 kNoOrdinal = 0xFFFFFFFFu;
+        static uint32           findWidgetOrdinal( const WidgetTree& tree, WidgetID id );
+        /** @brief 문서 순서 번호 @p ordinal 의 위젯 번호입니다. 범위 밖이면 무효입니다. */
+        static WidgetID findWidgetByOrdinal( const WidgetTree& tree, uint32 ordinal );
+        /** @brief 위젯의 프로퍼티 @p name (기반 타입 것 포함)입니다. 없으면 nullptr 입니다. */
+        static const PropertyInfo* findWidgetProperty( const Widget& widget, string_view name );
+        /** @brief 프로퍼티의 지금 값을 문서에 쓰는 텍스트(XML 속성 값과 같은 형태)로 돌려줍니다. */
+        static string formatWidgetProperty( const Widget& widget, const PropertyInfo& prop );
+        /**
+         * @brief 텍스트 @p text 를 프로퍼티 값으로 쓰고 위젯에 알립니다(`Widget::onBoundPropertyChanged` — 세터와 같은 무효화). 읽지 못하면 false 이고 값은 그대로입니다.
+         * @details 되돌리기와 다시 하기가 이 함수로 값을 되돌린다. 그리드의 편집도 같은 알림을 거치므로 화면은 어느 쪽이든 같은 경로로 다시 그려진다.
+         */
+        [[nodiscard]] static bool applyWidgetProperty( Widget& widget, const PropertyInfo& prop, string_view text );
+        /**
+         * @brief 미리보기 화면 @p screen 을 문서 텍스트로 씁니다(`UIDocumentWriter`) — 저장할 파일의 내용입니다.
+         * @details 스타일 시트 목록은 화면이 아니라 문서 @p documentPath 의 것이다. 화면의 목록은 조각 문서의 시트까지 모은 것이라 그대로 쓰면 조각의 시트가 이 문서로 복사된다.
+         *          애니메이션은 화면의 재생기가 가진 문서 애니메이션을 그대로 쓴다.
+         * @return 문서나 루트가 없으면 false 이고 @p outError 에 까닭을 적습니다.
+         */
+        [[nodiscard]] static bool makeDocumentText( UISystem& ui, const UIScreen& screen, string_view documentPath, string& outText, string& outError );
+        // --- 디자이너: 팔레트 · 끌어 놓기 · 슬롯 손잡이 ---------------------------------------------------------------
+        /** @brief 문서 순서 번호 @p ordinal 의 위젯이 패널이면 그 패널입니다. 패널이 아니거나 범위 밖이면 nullptr 입니다. */
+        static PanelWidget* findPanelByOrdinal( WidgetTree& tree, uint32 ordinal );
+        /**
+         * @brief 팔레트 목록입니다 — 만들 수 있는(추상이 아닌) 위젯 타입을 이름순으로 담습니다(`Widget` 의 모든 파생 타입, 게임 모듈의 위젯 포함).
+         * @details 위젯 타입이 늘면 목록도 는다. 타입 레지스트리가 아는 것이 곧 팔레트라 따로 표를 두지 않는다(유니티 UI Builder 의 Library, UMG 의 Palette 와 같다).
+         */
+        static void collectPaletteTypes( const TypeRegistry& registry, vector<const TypeInfo*>& outListType );
+        /**
+         * @brief 놓은 자리 @p pTarget 이 받을 패널을 고릅니다 — 패널이면 그 패널(자식 끝에), 아니면 그 위젯의 부모(그 위젯 바로 뒤에)입니다. 둘 다 없으면 루트가 패널일 때 루트입니다.
+         * @param outIndex 새 위젯이 들어갈 자식 번호입니다.
+         */
+        static PanelWidget* findDropContainer( WidgetTree& tree, Widget* pTarget, uint32& outIndex );
+        /** @brief @p type 의 위젯을 만들어 문서 순서 번호 @p parentOrdinal 인 패널의 @p index 번째에 끼웁니다. 못 끼우면 nullptr 입니다(패널이 아니거나 타입을 만들 수 없다). */
+        static Widget* insertWidget( WidgetTree& tree, const TypeInfo& type, uint32 parentOrdinal, uint32 index );
+        /** @brief 문서 순서 번호 @p parentOrdinal 인 패널의 @p index 번째 자식을 떼어 소유권을 돌려줍니다(지우거나 되돌릴 때 다시 끼운다). 없으면 빈 포인터입니다. */
+        static unique_ptr<Widget> detachWidget( WidgetTree& tree, uint32 parentOrdinal, uint32 index );
+        /** @brief 떼어 낸 위젯을 같은 자리에 다시 끼웁니다(지우기 되돌리기). 못 끼우면 nullptr 입니다. */
+        static Widget* attachWidget( WidgetTree& tree, unique_ptr<Widget> widget, uint32 parentOrdinal, uint32 index );
+        /** @brief 위젯의 슬롯을 손잡이로 고칠 수 있으면 true 입니다 — 부모가 캔버스 패널(앵커와 오프셋)일 때입니다. */
+        static bool canEditSlotByHandle( const Widget& widget );
+        /**
+         * @brief 손잡이 @p handle 을 UI 단위 @p deltaUI 만큼 끈 결과를 슬롯에 적용합니다. 가운데는 두 오프셋을 함께, 변은 그 변의 오프셋만 옮깁니다(자동 크기이면 오른쪽 · 아래 오프셋은 쓰이지 않아 옮기지 않는다).
+         * @return 슬롯이 바뀌었으면 true 입니다.
+         */
+        [[nodiscard]] static bool applySlotDrag( WidgetLayoutSlot& inoutSlot, UIPreviewSlotHandle handle, const float2& deltaUI );
+        /** @brief 시간 막대 줄입니다 — "0.25 / 1.00 s". */
+        static string makeTimeLabel( float32 time, float32 duration );
     };
 } // namespace sw::editor

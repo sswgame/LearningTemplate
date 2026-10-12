@@ -29,6 +29,17 @@ namespace sw
         outList = _listTarget;
     }
 
+    bool RenderTargetRegistry::isPublished( RHITextureHandle texture ) const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        for ( const RenderTargetInfo& target : _listTarget )
+        {
+            if ( target._texture == texture )
+                return true;
+        }
+        return false;
+    }
+
     uint32 RenderTargetRegistry::requestReadback( RHITextureHandle texture )
     {
         std::scoped_lock<mutex> lock{ _readbackMutex };

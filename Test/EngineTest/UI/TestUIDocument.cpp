@@ -588,3 +588,40 @@ SW_TEST_CASE( UIDocumentTest, OffscreenScreenDoesNotPlayOpenAnimation )
     SW_EXPECT_NEAR_EQUAL( 1.0f, pPreview->getTree().findWidgetByName( "Window" )->getOpacity(), 1e-4f );
     fixture._ui.closeOffscreenScreen( offscreen );
 }
+
+/**
+ * @brief [UIDocumentTest] 오프스크린 화면도 문서의 애니메이션을 등록해 두고, 미리보기가 고른 것만 `UISystem::update` 가 진행한다(재생 · 시간 막대)
+ * @details 변이: `UISystem::update` 가 `_offscreen.tickAnimations` 를 부르지 않으면 재생해도 불투명도가 0 에 멈춰 마지막 단언이 진다.
+ */
+SW_TEST_CASE( UIDocumentTest, OffscreenScreenPlaysAnimationsTheCallerPicks )
+{
+    UIDocumentFixture        fixture;
+    const sw::UIScreenHandle offscreen = fixture._ui.openOffscreenScreen( "engine/ui/pause.ui.xml", "rendertarget/test_preview" );
+    sw::UIScreen*            pPreview  = fixture._ui.findOffscreenScreen( offscreen );
+    SW_ASSERT_NOT_NULL( pPreview );
+    const sw::hashed_string openName( sw::UIAnimation::kOpenName );
+    SW_ASSERT_TRUE( pPreview->getAnimationPlayer().findAnimation( openName ) != nullptr ); // 등록은 하되 틀지는 않는다
+    SW_EXPECT_FALSE( pPreview->getAnimationPlayer().isAnyPlaying() );
+
+    sw::UIViewport viewport{};
+    viewport._size         = sw::float2{ 1280.0f, 720.0f };
+    viewport._physicalSize = viewport._size;
+    fixture._ui.setOffscreenView( offscreen, viewport, 1.0f, sw::hashed_string{} );
+    const sw::Widget* pWindow = pPreview->getTree().findWidgetByName( "Window" );
+    SW_ASSERT_NOT_NULL( pWindow );
+
+    // 시간 막대 — 처음에서 멈추면 첫 키(투명), 끝에서 멈추면 문서 값이다. update 가 지나도 멈춘 값이 유지된다.
+    SW_ASSERT_TRUE( pPreview->getAnimationPlayer().seek( openName, 0.0f ) );
+    fixture._ui.update( 0.5f, viewport );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pWindow->getOpacity(), 1e-4f );
+
+    // 재생 — update 가 진행해 끝 값에 닿고 재생기가 비워진다.
+    pPreview->getAnimationPlayer().setPaused( openName, false );
+    for ( uint32 frame = 0; frame < 120; ++frame )
+    {
+        fixture._ui.update( 0.05f, viewport );
+    }
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pWindow->getOpacity(), 1e-4f );
+    SW_EXPECT_FALSE( pPreview->getAnimationPlayer().isAnyPlaying() );
+    fixture._ui.closeOffscreenScreen( offscreen );
+}

@@ -422,3 +422,37 @@ SW_TEST_CASE( LocalizationManagerTest, LookupPointerOutlivesTableChanges )
     table.clear();
     SW_EXPECT_STREQ( "Alpha", pHeld );
 }
+
+/**
+ * @brief [LocalizationManagerTest] `copyStateFrom` 사본은 원본과 독립이라 사본만 다른 언어(의사 문화권 포함)로 볼 수 있다
+ * @details 문화권이 전역이라 게임 UI 의 언어를 바꾸지 않고 에디터 UI 미리보기 화면만 다른 언어로 보려면 관리자 사본이 필요하다.
+ *          사본은 원본의 프로젝트 · 문화권 표를 받아 의사 문화권 표도 새로 만든다. 사본의 언어를 바꿔도 원본과 그 텍스트 버전은 그대로다.
+ */
+SW_TEST_CASE( LocalizationManagerTest, CopyStateGivesAnIndependentManagerWithItsOwnLanguage )
+{
+    const sw::string        folder = test::makeTempDirectory( "loc_copy" );
+    sw::LocalizationManager original;
+    SW_ASSERT_TRUE( LocalizationTestUtil::loadEngineCultures( original ) );
+    SW_ASSERT_TRUE( original.mountProject( LocalizationManagerTestInternal::writeSampleProject( folder ), sw::LocalizationScope::Game ) );
+    SW_ASSERT_TRUE( original.setCurrentLanguage( "ko" ) );
+    const uint32 originalRevision = original.getTextRevision();
+
+    sw::LocalizationManager copy;
+    copy.copyStateFrom( original );
+    SW_EXPECT_EQUAL( sw::string( "ko" ), copy.getCurrentLanguage() );
+    SW_EXPECT_STREQ( "신비의 섬", copy.getString( sw::hashed_string( "ui.title" ) ) );
+    SW_EXPECT_EQUAL( original.getMountedProjectNames().size(), copy.getMountedProjectNames().size() );
+
+    // 사본만 의사 문화권으로 옮긴다 — 원문을 변환한 글이라 원문 · 번역과 다르다.
+    SW_ASSERT_TRUE( copy.setCurrentLanguage( "qps-ploc" ) );
+    const sw::string pseudoTitle = copy.getString( sw::hashed_string( "ui.title" ) );
+    SW_EXPECT_TRUE( pseudoTitle != "Mystery Island" );
+    SW_EXPECT_TRUE( pseudoTitle != "신비의 섬" );
+    SW_EXPECT_EQUAL( sw::string( "ko" ), original.getCurrentLanguage() );
+    SW_EXPECT_STREQ( "신비의 섬", original.getString( sw::hashed_string( "ui.title" ) ) );
+    SW_EXPECT_EQUAL( originalRevision, original.getTextRevision() );
+
+    // 자기 자신에게 복사하는 것은 아무 일도 하지 않는다.
+    copy.copyStateFrom( copy );
+    SW_EXPECT_EQUAL( sw::string( "qps_ploc" ), copy.getCurrentLanguage() );
+}

@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — UI Preview 패널(runtime-ui 8-5 뒤의 남은 것):
+  1) 콘텐츠 열기 — Quick Open 이 `*.ui.xml` 을 열면(콘텐츠 브라우저 더블클릭과 같은 EditorAssetCommands::openPath) 에셋 종류 UIDocument 의 패널 UI Preview 가 열려 그 문서를 짓는다.
+  2) 언어 — 영어 · 의사 문화권 qps-ploc(글이 늘어난다) · qps-plocm(오른쪽에서 왼쪽 배치)을 이 화면에만 건다. 게임 언어로 되돌린다.
+  3) 속성 편집 — 고른 위젯의 _opacity 를 인스펙터로 고치면 되돌리기 하나가 쌓이고, Undo · Redo 가 값을 오간다.
+  4) 입력 흉내 — 포인터를 그림 위에 두면 위젯이 호버되고, 탐색 방향 단추가 포커스를 옮기며, Accept 가 버튼을 누른다(명령은 로그에만 남는다).
+  5) 애니메이션 — Play 가 Open 을 틀어 끝 값에 닿고, 시간 막대를 끌면 그 시각의 값에서 멈춘다. Reload 가 문서 값을 되찾는다.
+  6) 저장 — 작은 문서(uipreview/save_probe.ui.xml)의 _opacity 를 고쳐 저장하면 핫 리로드가 파일에서 다시 짓고(값이 파일에서 돌아온다), 되돌려 저장하면 파일이 원래대로다.
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/uipreview.scenario.xml -dx12 (-dx11 · -vulkan · -opengl 도 같다)
+-->
+<Scenario name="editor.uipreview" fixedDelta="0.0166667" timeoutFrames="4000" startAfter="Immediately" input="exclusive">
+	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
+	<At frame="25"><DevCommand line="layout.reset"/></At>
+	<!-- 1) 에셋 열기: 기본 문서(pause)가 아닌 문서를 열어 작업공간 포커스가 패널에 전해지는지 본다 -->
+	<At frame="60"><EditorKey key="Ctrl+P"/></At>
+	<At frame="75"><EditorText value="confirm_unsaved.ui.xml"/></At>
+	<At frame="90"><EditorKey key="Enter"/></At>
+	<At frame="100"><WaitUntil probe="Editor.UIPreviewWidgetCount" atLeast="11" timeoutFrames="900"/></At>
+	<At frame="105"><Expect probe="Editor.UIPreviewWidgetCount" atMost="11"/></At>
+	<At frame="110"><EditorKey key="Ctrl+P"/></At>
+	<At frame="125"><EditorText value="pause.ui.xml"/></At>
+	<At frame="140"><EditorKey key="Enter"/></At>
+	<At frame="150"><WaitUntil probe="Editor.UIPreviewFirstTextBytes" atLeast="1" timeoutFrames="900"/></At>
+	<At frame="155"><Expect probe="Editor.UIPreviewWidgetCount" atLeast="9"/></At>
+	<!-- 2) 언어 -->
+	<At frame="170"><EditorClick mark="uipreview.language"/></At>
+	<At frame="180"><EditorClick mark="uipreview.language.en"/></At>
+	<At frame="190"><WaitUntil probe="Editor.UIPreviewFirstTextBytes" equals="6" timeoutFrames="600"/></At>
+	<At frame="195"><Expect probe="Editor.UIPreviewRightToLeft" equals="0"/></At>
+	<At frame="200"><EditorClick mark="uipreview.language"/></At>
+	<At frame="210"><EditorClick mark="uipreview.language.qps_ploc"/></At>
+	<At frame="220"><WaitUntil probe="Editor.UIPreviewFirstTextBytes" atLeast="9" timeoutFrames="600"/></At>
+	<At frame="225"><Expect probe="Editor.UIPreviewRightToLeft" equals="0"/></At>
+	<At frame="230"><EditorClick mark="uipreview.language"/></At>
+	<At frame="240"><EditorClick mark="uipreview.language.qps_plocm"/></At>
+	<At frame="250"><WaitUntil probe="Editor.UIPreviewRightToLeft" equals="1" timeoutFrames="600"/></At>
+	<At frame="255"><Expect probe="Editor.UIPreviewFirstTextBytes" atLeast="9"/></At>
+	<At frame="260"><EditorClick mark="uipreview.language"/></At>
+	<At frame="270"><EditorClick mark="uipreview.language.game"/></At>
+	<At frame="280"><WaitUntil probe="Editor.UIPreviewRightToLeft" equals="0" timeoutFrames="600"/></At>
+	<At frame="285"><Expect probe="Editor.UIPreviewLanguageIndex" equals="0"/></At>
+	<!-- 3) 속성 편집: Window 의 _opacity 를 0.5 로 — 되돌리기 항목 하나, Undo 로 1, Redo 로 0.5 -->
+	<At frame="300"><EditorClick mark="uipreview.widget.Window"/></At>
+	<At frame="310"><Expect probe="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.001"/></At>
+	<At frame="315"><EditorClick mark="uipreview.inspector.search"/></At>
+	<At frame="325"><EditorText value="opacity"/></At>
+	<At frame="335"><EditorClick mark="inspector.property.BorderPanel._opacity" mods="ctrl"/></At>
+	<At frame="345"><EditorKey key="Ctrl+A"/></At>
+	<At frame="350"><EditorText value="0.5"/></At>
+	<At frame="355"><EditorKey key="Enter"/></At>
+	<At frame="375">
+		<Expect probe="Editor.UIPreviewSelectedOpacity" near="0.5" tolerance="0.001"/>
+		<Expect probe="Editor.UIPreviewDirty" equals="1"/>
+		<Expect probe="Editor.UndoCount" equals="1"/>
+	</At>
+	<At frame="380"><DevCommand line="editor edit.undo"/></At>
+	<At frame="395"><Expect probe="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.001"/></At>
+	<At frame="400"><DevCommand line="editor edit.redo"/></At>
+	<At frame="415"><Expect probe="Editor.UIPreviewSelectedOpacity" near="0.5" tolerance="0.001"/></At>
+	<At frame="420"><DevCommand line="editor edit.undo"/></At>
+	<At frame="435"><Expect probe="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.001"/></At>
+	<!-- 4) 입력 흉내 -->
+	<At frame="440"><Expect probe="Editor.UIPreviewHoveredOrdinal" equals="-1"/></At>
+	<At frame="445"><EditorClick mark="uipreview.interact"/></At>
+	<At frame="450"><WaitUntil probe="Editor.UIPreviewTextureReady" equals="1" timeoutFrames="600"/></At>
+	<At frame="460"><EditorHover mark="uipreview.image" anchor="0.5,0.5"/></At>
+	<At frame="480"><Expect probe="Editor.UIPreviewHoveredOrdinal" atLeast="0"/></At>
+	<At frame="485"><EditorHover release="true"/></At>
+	<At frame="490"><EditorClick mark="uipreview.nav.down"/></At>
+	<At frame="505"><Expect probe="Editor.UIPreviewFocusedOrdinal" atLeast="0"/></At>
+	<At frame="510"><EditorClick mark="uipreview.nav.accept"/></At>
+	<At frame="525"><ExpectLog contains="is not handled by screen" atLeast="1"/></At>
+	<At frame="530"><EditorClick mark="uipreview.interact"/></At>
+	<!-- 5) 애니메이션: Play 가 Open 을 끝까지 틀고, 시간 막대는 그 시각에서 멈춘다 -->
+	<At frame="545"><EditorClick mark="uipreview.widget.Window"/></At>
+	<At frame="555"><EditorClick mark="uipreview.animation.play"/></At>
+	<At frame="560"><WaitUntil probe="Editor.UIPreviewAnimationPlaying" equals="1" timeoutFrames="120"/></At>
+	<At frame="562"><Expect probe="Editor.UIPreviewSelectedOpacity" atMost="0.95"/></At>
+	<At frame="565"><WaitUntil probe="Editor.UIPreviewAnimationPlaying" equals="0" timeoutFrames="300"/></At>
+	<At frame="570"><Expect probe="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.01"/></At>
+	<At frame="575"><EditorDrag mark="uipreview.animationtime" dx="-3000" dy="0"/></At>
+	<At frame="600"><Expect probe="Editor.UIPreviewSelectedOpacity" atMost="0.01"/></At>
+	<At frame="605"><EditorDrag mark="uipreview.animationtime" dx="3000" dy="0"/></At>
+	<At frame="630">
+		<Expect probe="Editor.UIPreviewSelectedOpacity" atLeast="0.99"/>
+		<Expect probe="Editor.UIPreviewAnimationTime" atLeast="0.1"/>
+	</At>
+	<At frame="635"><EditorClick mark="uipreview.reload"/></At>
+	<At frame="660"><WaitUntil probe="Editor.UIPreviewWidgetCount" atLeast="9" timeoutFrames="600"/></At>
+	<At frame="665"><Expect probe="Editor.UIPreviewDirty" equals="0"/></At>
+	<!-- 6) 저장: 작은 문서의 _opacity 를 0.5 로 저장하고 핫 리로드가 파일에서 읽어 오면, 1 로 되돌려 저장해 파일을 원래대로 둔다 -->
+	<At frame="670"><EditorKey key="Ctrl+P"/></At>
+	<At frame="685"><EditorText value="save_probe.ui.xml"/></At>
+	<At frame="700"><EditorKey key="Enter"/></At>
+	<At frame="710"><WaitUntil probe="Editor.UIPreviewWidgetCount" equals="1" timeoutFrames="900"/></At>
+	<At frame="720"><EditorClick mark="uipreview.widget.Card"/></At>
+	<At frame="730"><EditorClick mark="inspector.property.BorderPanel._opacity" mods="ctrl"/></At>
+	<At frame="740"><EditorKey key="Ctrl+A"/></At>
+	<At frame="745"><EditorText value="0.5"/></At>
+	<At frame="750"><EditorKey key="Enter"/></At>
+	<At frame="765"><Expect probe="Editor.UIPreviewDirty" equals="1"/></At>
+	<At frame="770"><EditorClick mark="uipreview.save"/></At>
+	<At frame="780"><WaitUntil probe="Editor.UIPreviewDirty" equals="0" timeoutFrames="300"/></At>
+	<At frame="785"><WaitUntil probe="Editor.UIPreviewReloadedAfterSave" equals="1" timeoutFrames="900"/></At>
+	<At frame="790"><Expect probe="Editor.UIPreviewSelectedOpacity" near="0.5" tolerance="0.001"/></At>
+	<At frame="800"><EditorClick mark="inspector.property.BorderPanel._opacity" mods="ctrl"/></At>
+	<At frame="810"><EditorKey key="Ctrl+A"/></At>
+	<At frame="815"><EditorText value="1"/></At>
+	<At frame="820"><EditorKey key="Enter"/></At>
+	<At frame="835"><Expect probe="Editor.UIPreviewDirty" equals="1"/></At>
+	<At frame="840"><EditorClick mark="uipreview.save"/></At>
+	<At frame="850"><WaitUntil probe="Editor.UIPreviewDirty" equals="0" timeoutFrames="300"/></At>
+	<At frame="855"><WaitUntil probe="Editor.UIPreviewReloadedAfterSave" equals="1" timeoutFrames="900"/></At>
+	<At frame="860"><Expect probe="Editor.UIPreviewSelectedOpacity" near="1" tolerance="0.001"/></At>
+	<At frame="870">
+		<DevCommand line="panel.close ui_preview"/>
+		<ExpectLog contains="[Error]" count="0"/>
+	</At>
+	<At frame="880"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
+</Scenario>

@@ -86,6 +86,12 @@ namespace sw
         void snapshot( vector<RenderTargetInfo>& outList ) const;
         /** @brief 목록이 바뀔 때마다 오르는 번호. 값이 같으면 다시 읽을 이유가 없습니다. */
         uint64 getGeneration() const { return _generation.load( std::memory_order_acquire ); }
+        /**
+         * @brief @p texture 가 지금 공개된 목록에 있으면 true 입니다.
+         * @details UI 가 요청한 뒤 창 크기가 바뀌어 트랜지언트가 다시 만들어지면 요청의 핸들은 죽은 핸들이다(놓기 전에 목록을 먼저 비운다). 렌더 스레드가
+         *          읽기 전에 이것으로 걸러 죽은 핸들을 RHI 오류로 읽지 않는다. 트랜지언트를 놓는 것도 렌더 스레드라 확인과 읽기 사이에 바뀌지 않는다.
+         */
+        bool isPublished( RHITextureHandle texture ) const;
 
         // ------------------------------------------------------------------------------
         // CPU 읽기 — UI 가 요청하고 렌더 스레드가 프레임 끝(endFrame 뒤)에 읽어 둔다

@@ -198,7 +198,15 @@ Shipping 실행 파일에 레지스트리가 없는지는 `DevCommandShippingTes
 콘솔을 여는 키와 편집 키는 셸 입력 맵(`Resource/engine/input/default.input.xml`)의 액션이라 데이터로 바꿀 수 있고 패드로도 쓸 수 있습니다.
 `DevConsoleToggle` 은 늘 켜진 `Debug` 레이어에 있고, 닫기와 실행, 완성, 기록 이동, 지우기는 콘솔이 열려 있는 동안만 켜지는 `DevConsole` 레이어에 있습니다.
 글자는 액션이 아니라 글자 입력(`InputManager::setTextInputCallback( …, InputKeyboardFocus::DevConsole )`)으로 받고, 콘솔을 여닫은 프레임의 글자는 버립니다.
-열려 있는 동안 콘솔이 키보드 포커스를 가지므로 게임의 키보드 입력은 "안 눌림"이 됩니다. 패드는 포커스와 관계가 없어 게임이 계속 받습니다.
+열려 있는 동안 콘솔이 키보드 포커스를 가지므로 게임의 키보드 입력은 "안 눌림"이 됩니다. 패드도 같습니다 — 콘솔을 패드로 조작하는 동안(A 실행, B 닫기, 십자키 기록) 같은 입력이 게임에도 가면
+게임 액션이 같이 발화하므로(shooter3d 는 패드 `Back` 이 카메라 전환과 겹칩니다) 게임 맵의 패드 바인딩도 "안 눌림"으로 봅니다(`InputManager::isGamepadControlVisibleToGame`). 콘솔이 쥔 동안 눌렸거나
+닫을 때 쥐고 있던 컨트롤은 뗄 때까지 가립니다(닫는 B 가 게임의 B 로 새지 않게). 키보드 포커스를 무시하는 맵(셸 맵, UI 맵)은 장치 상태를 그대로 읽어 콘솔 조작과 UI 탐색이 계속됩니다.
+런타임 UI 글자 입력 중(`InputKeyboardFocus::UI`)에는 패드를 가리지 않습니다 — 패드로 UI 를 다녀야 합니다. 콘솔을 여는 바로 그 프레임에는 여는 입력이 한 번 게임에 보입니다(셸 맵은 통합 맵 뒤에 돌기 때문입니다).
+
+**플레이어별 재배치.** 셸 키(콘솔 여는 키 …)는 리소스의 기본 위에 사용자 파일 `shellbindings.xml` 이 입힙니다 — 사용자 설정 파일(`usersettings.json`)과 같은 폴더(`-gv_userSettingsFile` 을 쓰면 그 옆)입니다.
+파일에는 기본 키와 다른 슬롯만 적습니다(`ShellInputActions::saveUserBindings`). 전체 스냅샷(`InputMap::saveUserBindings`)을 쓰지 않는 까닭은, 읽을 때 `bind*` 가 기본 바인딩 위에 더해져 재배치가 아니라 중복이 되고
+리소스의 기본 키를 바꿔도 옛 키를 붙들기 때문입니다. 명령은 `shell.rebind <액션> <슬롯> [번호]`(예: `shell.rebind DevConsoleToggle Key.F2`)와 `shell.rebind.reset [액션]` 입니다.
+없는 액션이나 읽지 못하는 슬롯이 든 낡은 파일은 경고하고 건너뛰어 기동을 막지 않습니다(`DevConsoleControllerTest.ShellRebindingsPersistPerPlayer`).
 
 런타임 디버그 HUD(FPS · 스레드 시간 · 드로우 · 메모리 · 오브젝트 · 물리 · 오디오 · 입력 · 카메라 · 게임 디버그 값)도 같은 Dev 전용 도구입니다. 섹션 레지스트리는 `Core/Console/DebugHUDRegistry` 이고,
 섹션은 소유 코드의 `.cpp` 에 `SW_DEBUG_HUD_SECTION` 한 줄로 답니다. 단축키(Ctrl+F3), 명령 `hud`, 설정 창, 꺼진 상태의 비용은 [UI README](UI/README.md#디버그-hud)에 있습니다.

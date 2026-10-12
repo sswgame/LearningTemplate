@@ -36,7 +36,12 @@ namespace sw
                     return nullptr;
                 return engine::getGlobalVariableManager().findVariable( "gv_rhiBackend" );
             }
+
+            /** @brief `initialize` 한 교체기입니다(프로세스에 하나). 자동화 단계와 탐침이 찾는다. */
+            static RHIBackendSwitcher* s_pActive;
         };
+
+        RHIBackendSwitcher* RHIBackendSwitcherInternal::s_pActive = nullptr;
     } // namespace
 } // namespace sw
 
@@ -47,17 +52,44 @@ namespace sw
     RHIBackendSwitcher::RHIBackendSwitcher()
         : _pEngineLoop{ nullptr }
         , _pModuleHost{ nullptr }
+        , _failedSwapCount{ 0 }
         , _bEnableEditor{ SW_FALSE }
         , _bHandlingChange{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
 
+    bool RHIBackendSwitcher::findCommittedBackend( RHIBackend& outBackend ) const
+    {
+        const RHI* pRHI = _pEngineLoop != nullptr ? _pEngineLoop->getRHI() : nullptr;
+        if ( pRHI == nullptr )
+            return false;
+        outBackend = pRHI->getCommittedBackend();
+        return true;
+    }
+
+    bool RHIBackendSwitcher::isSwapPending() const
+    {
+        const RHI* pRHI = _pEngineLoop != nullptr ? _pEngineLoop->getRHI() : nullptr;
+        return pRHI != nullptr && pRHI->hasPendingBackendChange();
+    }
+
+    bool RHIBackendSwitcher::requestSwap( RHIBackend backend )
+    {
+        GlobalVariableInfo* pBackendVariable = RHIBackendSwitcherInternal::findBackendVariable();
+        if ( pBackendVariable == nullptr )
+            return false;
+        // C++ 대입은 변경 콜백을 부르지 않는다. 메뉴 · 콘솔이 쓰는 setValueAsInt 로 가야 onBackendVariableChanged 가 받는다.
+        pBackendVariable->setValueAsInt( static_cast<int32>( backend ) );
+        return true;
+    }
+
     void RHIBackendSwitcher::initialize( EngineLoop* pEngineLoop, EditorModuleHost* pModuleHost, bool bEnableEditor )
     {
-        _pEngineLoop   = pEngineLoop;
-        _pModuleHost   = pModuleHost;
-        _bEnableEditor = bEnableEditor ? SW_TRUE : SW_FALSE;
+        _pEngineLoop                          = pEngineLoop;
+        _pModuleHost                          = pModuleHost;
+        _bEnableEditor                        = bEnableEditor ? SW_TRUE : SW_FALSE;
+        RHIBackendSwitcherInternal::s_pActive = this;
 
         GlobalVariableInfo* pBackendVariable = RHIBackendSwitcherInternal::findBackendVariable();
         if ( pBackendVariable != nullptr )
@@ -75,10 +107,17 @@ namespace sw
         if ( pBackendVariable != nullptr )
             pBackendVariable->_onValueChanged = {};
 
+        if ( RHIBackendSwitcherInternal::s_pActive == this )
+            RHIBackendSwitcherInternal::s_pActive = nullptr;
         if ( _pEngineLoop != nullptr )
             _pEngineLoop->removeFrameObserver( this );
         _pEngineLoop = nullptr;
         _pModuleHost = nullptr;
+    }
+
+    RHIBackendSwitcher* RHIBackendSwitcher::findActive()
+    {
+        return RHIBackendSwitcherInternal::s_pActive;
     }
 
     void RHIBackendSwitcher::applyIfPending()
@@ -93,6 +132,7 @@ namespace sw
         if ( applyPendingChange() == false )
         {
             SW_LOG_ERROR( "Backend soft-recreate failed." );
+            ++_failedSwapCount;
             // 값만 되돌린다. 변경 콜백(onBackendVariableChanged)은 GlobalVariableInfo 의 setValueAsInt/setValueFromString
             // (콘솔 · 에디터 패널) 경로에서만 불린다. 그래서 되돌림이 재시도 루프가 될 일은 없다. 심볼이 아니라 매니저가 든 주소로
             // 쓰므로 App 이 Engine.dll 의 변수를 import 할 필요가 없다.

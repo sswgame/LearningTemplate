@@ -200,6 +200,17 @@ namespace sw
          * @details 테마가 바뀌면 그 화면의 스타일 시트만 다시 적용한다(게임 UI 의 테마는 그대로다).
          */
         void setOffscreenView( UIScreenHandle handle, const UIViewport& viewport, float32 textScale, const hashed_string& theme );
+        /**
+         * @brief 오프스크린 화면 @p handle 이 글을 해석할 문화권 관리자를 정합니다(nullptr 이면 게임 UI 와 같은 문화권). 소유하지 않으므로 화면보다 오래 두어야 합니다.
+         * @details 문화권이 전역(`engine::getLocalizationManager()`)이라 게임 UI 는 그대로 두고 미리보기 화면만 다른 언어나 의사 문화권(`qps-ploc`, `qps-plocm`)으로 보는 길이다.
+         *          관리자의 언어를 바꾼 뒤에도 부른다(글을 다시 해석하고 흐름 방향까지 다시 맞춘다). 오프스크린 화면의 애니메이션은 `findOffscreenScreen( handle )->getAnimationPlayer()`
+         *          로 재생하며, 재생 중인 동안만 `update` 가 진행한다(문서의 애니메이션은 화면을 열 때 등록되고 `Open` 은 틀지 않는다).
+         */
+        void setOffscreenLocalization( UIScreenHandle handle, const LocalizationManager* pLocalization );
+        /** @brief 오프스크린 화면 @p handle 이 그릴 렌더 텍스처 경로를 바꿉니다. 해상도를 바꿔도 트리와 고친 값을 그대로 두려는 길입니다(렌더 텍스처 크기는 경로마다 정해진다). */
+        void setOffscreenTarget( UIScreenHandle handle, string_view targetPath );
+        /** @brief 오프스크린 화면 @p handle 이 탐색 방식(키보드, 패드)으로 보이게 합니다. 켜면 포커스 위젯이 `:focus-visible` 스타일을 받습니다(미리보기의 탐색 흉내). */
+        void setOffscreenNavigationMode( UIScreenHandle handle, bool bNavigationMode );
 
         // --- 핫 리로드 ---------------------------------------------------------------
         /**

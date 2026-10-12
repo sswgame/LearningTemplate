@@ -437,3 +437,35 @@ SW_TEST_CASE( EditorAssetTypeTest, RawHeightfieldRoutesToTheHeightfieldImporter 
     }
     SW_EXPECT_TRUE( bWatchesR16 );
 }
+
+/**
+ * @brief [EditorAssetTypeTest] `.ui.xml` 은 UIDocument 종류다 — 두 번 누르면 UI Preview 패널이 열리고, 스타일 시트와 다른 `.xml` 은 그대로 Data 다
+ * @details Data 종류에 두면 전용 패널이 없어 열 수 없다. 핫 리로드 길(문서를 가진 캐시)은 종류가 바뀌어도 그대로여야 한다.
+ */
+SW_TEST_CASE( EditorAssetTypeTest, UIDocumentOpensTheUIPreviewPanel )
+{
+    using sw::editor::EditorAssetType;
+    using sw::editor::EditorAssetTypeRegistry;
+
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "engine/ui/pause.ui.xml" ) == EditorAssetType::UIDocument );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::matches( EditorAssetType::UIDocument, "game/shooter3d/ui/hud.ui.xml" ) );
+    SW_EXPECT_FALSE( EditorAssetTypeRegistry::matches( EditorAssetType::Data, "engine/ui/pause.ui.xml" ) );
+    SW_EXPECT_STREQ( "UI Preview", sw::string{ EditorAssetTypeRegistry::findPanelTitleForPath( "engine/ui/pause.ui.xml" ) }.c_str() );
+    SW_EXPECT_STREQ( "UI Preview", EditorAssetTypeRegistry::getPanelTitle( EditorAssetType::UIDocument ) );
+
+    // 스타일 시트와 일반 데이터는 UI 문서가 아니다.
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "engine/ui/styles/default.uistyle.xml" ) == EditorAssetType::Data );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "game/empty/data/table.xml" ) == EditorAssetType::Data );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findPanelTitleForPath( "game/empty/data/table.xml" ).empty() );
+
+    // 문서 캐시 핫 리로드 길이 남아 있다(경로를 가진 모든 캐시가 다시 읽는다).
+    sw::vector<sw::string> listSuffix{};
+    EditorAssetTypeRegistry::appendReloadableSuffixes( listSuffix );
+    bool bWatchesUIDocument = false;
+    for ( const sw::string& suffix : listSuffix )
+    {
+        bWatchesUIDocument = bWatchesUIDocument || suffix == ".ui.xml";
+    }
+    SW_EXPECT_TRUE( bWatchesUIDocument );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findReloadRoute( "engine/ui/pause.ui.xml" )._pCacheKindName != nullptr );
+}

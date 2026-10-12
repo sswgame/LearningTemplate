@@ -285,8 +285,13 @@ namespace sw::editor
 
             static bool validateDrag( const AutomationStep& step, string& outError )
             {
-                if ( validate( step, { "mark", "dx", "dy", "button", "mods" }, "mark", outError ) == false )
+                if ( validate( step, { "mark", "toMark", "dx", "dy", "button", "mods" }, "mark", outError ) == false )
                     return false;
+                if ( step.findAttribute( "toMark" ) != nullptr && ( step.findAttribute( "dx" ) != nullptr || step.findAttribute( "dy" ) != nullptr ) )
+                {
+                    outError = step.describe() + ": give either toMark or dx/dy, not both";
+                    return false;
+                }
                 for ( const utf8* pName : { "dx", "dy", "button" } )
                 {
                     const string* pValue = step.findAttribute( pName );
@@ -332,6 +337,18 @@ namespace sw::editor
                 vector<int32> listModifier;
                 (void)parseModifiers( step, listModifier ); // 검사에서 봤다
                 const float2 start{ ( found._min._x + found._max._x ) * 0.5f, ( found._min._y + found._max._y ) * 0.5f };
+                // `toMark` 는 끝을 다른 위젯의 가운데로 잡는다 — 끌어 놓기(Hierarchy 행을 다른 행에, 에셋을 슬롯에)의 받는 쪽을 픽셀 거리로 세지 않는다.
+                if ( const string* pToMark = step.findAttribute( "toMark" ); pToMark != nullptr )
+                {
+                    EditorSelfTestMark target{};
+                    if ( EditorSelfTestMarks::find( *pToMark, target ) == false )
+                    {
+                        runner.recordFailure( step, "no editor widget is marked '" + *pToMark + "' (was it drawn in the last frame?)" );
+                        return true;
+                    }
+                    deltaX = static_cast<float64>( ( target._min._x + target._max._x ) * 0.5f - start._x );
+                    deltaY = static_cast<float64>( ( target._min._y + target._max._y ) * 0.5f - start._y );
+                }
                 const float2 middle{ start._x + static_cast<float32>( deltaX ) * 0.5f, start._y + static_cast<float32>( deltaY ) * 0.5f };
                 const float2 end{ start._x + static_cast<float32>( deltaX ), start._y + static_cast<float32>( deltaY ) };
                 EditorSelfTestInput::moveMouse( start, found._viewportID );

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  백엔드 교체 시나리오 — 한 프로세스에서 네 백엔드를 차례로 건너고(DX11 → DX12 → Vulkan → OpenGL → DX12), 교체마다 디바이스가 정말 그 백엔드이고 교체가 실패하지 않았으며
+  모듈이 의존 이미지에 묶여 있고(Module.BindingsOk) 씬이 사라지지 않았는지(Scene.ObjectCount) 본다. 단계 `SwapBackend` 는 교체를 요청만 하므로(메뉴 · 콘솔 · -gv_rhiSwapAtFrame 과 같은 길)
+  끝은 `RHI.SwapPending` 이 0 이 되는 것으로 기다린다. 어느 백엔드로 시작해도 된다.
+  네 백엔드가 모두 있는 PC 에서만 통과한다 — 없는 백엔드로 건너뛰면 교체가 실패해 RHI.SwapFailedCount 가 오른다. 그래서 AppScenarioTest 가 자동으로 줍는 폴더(engine/automation)가 아니라 이 하위 폴더에 둔다.
+  실행: App.exe -dx12 -scenario=engine/automation/rhiswap/swapbackends.scenario.xml (-EnableEditor 를 붙이면 에디터 UI 도 교체를 건넌다)
+-->
+<Scenario name="rhiswap.swapbackends" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="Immediately" input="exclusive">
+	<At frame="30"><SwapBackend backend="dx11"/></At>
+	<At frame="32"><WaitUntil probe="RHI.SwapPending" equals="0" timeoutFrames="900"/></At>
+	<At frame="40">
+		<Expect probe="RHI.Backend" equals="0"/>
+		<Expect probe="RHI.SwapFailedCount" equals="0"/>
+		<Expect probe="Module.BindingsOk" equals="1"/>
+		<Expect probe="Module.GraphBroken" equals="0"/>
+		<Expect probe="Scene.ObjectCount" atLeast="1"/>
+	</At>
+	<At frame="60"><SwapBackend backend="dx12"/></At>
+	<At frame="62"><WaitUntil probe="RHI.SwapPending" equals="0" timeoutFrames="900"/></At>
+	<At frame="70">
+		<Expect probe="RHI.Backend" equals="1"/>
+		<Expect probe="RHI.SwapFailedCount" equals="0"/>
+		<Expect probe="Module.BindingsOk" equals="1"/>
+		<Expect probe="Module.GraphBroken" equals="0"/>
+		<Expect probe="Scene.ObjectCount" atLeast="1"/>
+	</At>
+	<At frame="90"><SwapBackend backend="vulkan"/></At>
+	<At frame="92"><WaitUntil probe="RHI.SwapPending" equals="0" timeoutFrames="900"/></At>
+	<At frame="100">
+		<Expect probe="RHI.Backend" equals="2"/>
+		<Expect probe="RHI.SwapFailedCount" equals="0"/>
+		<Expect probe="Module.BindingsOk" equals="1"/>
+		<Expect probe="Module.GraphBroken" equals="0"/>
+		<Expect probe="Scene.ObjectCount" atLeast="1"/>
+	</At>
+	<At frame="120"><SwapBackend backend="opengl"/></At>
+	<At frame="122"><WaitUntil probe="RHI.SwapPending" equals="0" timeoutFrames="900"/></At>
+	<At frame="130">
+		<Expect probe="RHI.Backend" equals="3"/>
+		<Expect probe="RHI.SwapFailedCount" equals="0"/>
+		<Expect probe="Module.BindingsOk" equals="1"/>
+		<Expect probe="Module.GraphBroken" equals="0"/>
+		<Expect probe="Scene.ObjectCount" atLeast="1"/>
+	</At>
+	<At frame="150"><SwapBackend backend="dx12"/></At>
+	<At frame="152"><WaitUntil probe="RHI.SwapPending" equals="0" timeoutFrames="900"/></At>
+	<At frame="160">
+		<Expect probe="RHI.Backend" equals="1"/>
+		<Expect probe="RHI.SwapFailedCount" equals="0"/>
+		<Expect probe="Module.BindingsOk" equals="1"/>
+		<Expect probe="Module.GraphBroken" equals="0"/>
+		<Expect probe="Scene.ObjectCount" atLeast="1"/>
+		<ExpectLog contains="[Error]" count="0"/>
+		<Pass/>
+	</At>
+</Scenario>

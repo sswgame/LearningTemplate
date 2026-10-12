@@ -347,6 +347,18 @@ namespace sw
                 return true;
             }
 
+            /**
+             * @brief 탐침 `Scene.Transitioning` 입니다. 비동기 씬 로드나 전환이 진행 중이면 1 입니다.
+             * @details 씬 열기(`scene.open`)는 요청만 하고 돌아온다. 이미 같은 상태의 씬이 열려 있으면 다른 탐침에 차이가 나타나지 않으므로, 열기가 끝났는지는 이 탐침이 0 인 것으로 본다.
+             */
+            [[nodiscard]] static bool readSceneTransitioning( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                if ( engine::areEngineServicesBound() == false )
+                    return false;
+                outValue = engine::getSceneManager().isTransitioning() ? 1.0 : 0.0;
+                return true;
+            }
+
 #if SW_PROFILER_TRACE_ENABLED
             /** @brief 탐침 `Profiler.TraceRecording` 입니다. 긴 캡처(`profile.trace record`)가 아직 모으는 중이면 1 입니다. */
             [[nodiscard]] static bool readTraceRecording( const GameObjectManager* pManager, float64& outValue )
@@ -365,6 +377,8 @@ namespace sw
     SW_AUTOMATION_PROBE( inputOsDeviceInputBlocked, "Input.OsDeviceInputBlocked", "1 while unattended automation drops the person's mouse and keyboard window events",
                          &AutomationRunnerInternal::readOsDeviceInputBlocked );
     SW_AUTOMATION_PROBE( sceneObjectCount, "Scene.ObjectCount", "Objects in the active scene", &AutomationRunnerInternal::readSceneObjectCount );
+    SW_AUTOMATION_PROBE( sceneTransitioning, "Scene.Transitioning", "1 while an asynchronous scene load or transition is in flight",
+                         &AutomationRunnerInternal::readSceneTransitioning );
 #if SW_PROFILER_TRACE_ENABLED
     // 긴 캡처는 벽시계로 끝난다. 시나리오는 고정 프레임이 아니라 이 탐침을 `WaitUntil` 로 기다린다(빠른 백엔드는 몇 백 프레임이 0.3 초 안에 돈다).
     SW_AUTOMATION_PROBE( profilerTraceRecording, "Profiler.TraceRecording", "1 while a profile.trace record capture is still collecting",

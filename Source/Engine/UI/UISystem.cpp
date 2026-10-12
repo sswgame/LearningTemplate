@@ -202,7 +202,8 @@ namespace sw
                 _listScreen[index]->_animationPlayer.tick( deltaSeconds );
                 (void)UIStyleTransition::update( _listScreen[index]->getTree(), deltaSeconds ); // 스타일 전환: 새로 바뀐 것은 아래 스타일 단계가 시작한다
             }
-            applyPendingCloses(); // 닫기 애니메이션이 끝난 화면을 지운다
+            _offscreen.tickAnimations( deltaSeconds ); // 에디터 미리보기가 튼 애니메이션(스택 밖 화면은 `Open` 을 틀지 않는다)
+            applyPendingCloses();                      // 닫기 애니메이션이 끝난 화면을 지운다
         }
         refreshInputGlyphs();
         // 스타일: 스타일이 더티한 위젯만 계산된 스타일을 다시 정한다(레이아웃 앞이다. 여백과 글꼴이 크기를 바꾸기 때문이다).
@@ -423,6 +424,7 @@ namespace sw
         screen._listBinding    = std::move( listBinding );
         screen._listStyleSheet = std::move( listStyleSheet );
         screen._handle         = _nextScreenHandle++;
+        applyDocumentAnimations( screen ); // 등록만 한다 — 스택 밖 화면은 `Open` 을 틀지 않아 문서 값 그대로다(미리보기가 고른 것만 튼다)
         rebuildStyleSet( screen );
         return screen._handle;
     }
@@ -442,6 +444,21 @@ namespace sw
         // 테마가 바뀌면 그 화면의 스타일 시트만 다시 적용한다(게임 UI 의 테마는 그대로다).
         if ( _offscreen.setView( handle, viewport, textScale, theme ) )
             rebuildStyleSet( *_offscreen.findScreen( handle ), theme );
+    }
+
+    void UISystem::setOffscreenLocalization( UIScreenHandle handle, const LocalizationManager* pLocalization )
+    {
+        _offscreen.setLocalization( handle, pLocalization );
+    }
+
+    void UISystem::setOffscreenTarget( UIScreenHandle handle, string_view targetPath )
+    {
+        _offscreen.setTargetPath( handle, hashed_string( targetPath ) );
+    }
+
+    void UISystem::setOffscreenNavigationMode( UIScreenHandle handle, bool bNavigationMode )
+    {
+        _offscreen.setNavigationMode( handle, bNavigationMode );
     }
 
     bool UISystem::isDocumentUsing( const string& documentPath, string_view usedPath )

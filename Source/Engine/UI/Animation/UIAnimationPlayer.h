@@ -58,6 +58,16 @@ namespace sw
         /** @brief 애니메이션과 트윈을 모두 멈춥니다. */
         void stopAll();
         bool isPlaying( const hashed_string& name ) const;
+        /**
+         * @brief 애니메이션 @p name 을 시각 @p time (초, 길이로 자른다)에서 멈춘 채 두고 그 시각의 값을 씁니다(미리보기의 시간 막대).
+         * @details 재생 중이 아니면 새로 열고, 재생 중이면 그 자리를 옮기며 멈춘다. 지나가는 시각의 이벤트는 보내지 않는다. 다시 재생하려면 `setPaused( name, false )` 를 부른다.
+         * @return 그 이름이 없으면 경고하고 false 입니다.
+         */
+        bool seek( const hashed_string& name, float32 time );
+        /** @brief 재생 중인 애니메이션 @p name 을 멈추거나(@p bPaused) 이어 재생합니다. 멈춘 동안은 시간이 가지 않고 값만 유지합니다. 재생 중이 아니면 아무것도 하지 않습니다. */
+        void setPaused( const hashed_string& name, bool bPaused );
+        /** @brief 재생 중인(멈춘 것 포함) 애니메이션 @p name 의 지금 시각과 길이(초)입니다. 재생 중이 아니면 false 입니다. */
+        bool getPlaybackTime( const hashed_string& name, float32& outTime, float32& outDuration ) const;
         /** @brief 재생 중인 애니메이션이나 트윈이 있으면 true 입니다. */
         bool isAnyPlaying() const { return _listActive.empty() == false || _listTween.empty() == false; }
 
@@ -93,6 +103,7 @@ namespace sw
             float32               _speed{ 1.0f };
             uint32                _remainingLoops{ 1 }; ///< 0 이면 끝없이 반복합니다.
             bool                  _bReverse{ false };
+            bool                  _bPaused{ false }; ///< 멈춘 동안은 시간이 가지 않고 값만 씁니다(`seek`).
         };
 
         /** @brief 코드 트윈 하나입니다. */
@@ -117,6 +128,8 @@ namespace sw
 
         /** @brief 애니메이션 @p name 을 만들고 시작합니다. */
         bool start( const hashed_string& name, float32 speed, uint32 loopCount, bool bReverse );
+        /** @brief 애니메이션 @p animation 의 재생 상태를 만듭니다(트랙을 해석한다). 시작 시각은 방향의 처음입니다. */
+        ActiveAnimation makeActive( const UIAnimation& animation, float32 speed, uint32 loopCount, bool bReverse ) const;
         /** @brief 트랙을 위젯과 경로로 해석합니다(해석하지 못하면 경고하고 false). */
         bool resolveTrack( const UIAnimation& animation, const UIAnimationTrack& track, ResolvedTrack& outTrack ) const;
         /** @brief 재생 하나를 @p deltaSeconds 만큼 진행합니다(이벤트 포함). 끝났으면 true 입니다. */

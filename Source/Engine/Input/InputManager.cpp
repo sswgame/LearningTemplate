@@ -25,6 +25,46 @@ namespace sw
 
 namespace sw
 {
+    namespace
+    {
+        struct InputManagerInternal
+        {
+            /// `GamepadDevice::isControlDown` 이 트리거에 쓰는 컨트롤 번호입니다.
+            static constexpr uint16 kLeftTriggerControl  = 100;
+            static constexpr uint16 kRightTriggerControl = 101;
+            static constexpr uint32 kLeftTriggerBit      = 1u << static_cast<uint32>( GamepadButton::Count );
+            static constexpr uint32 kRightTriggerBit     = 1u << ( static_cast<uint32>( GamepadButton::Count ) + 1 );
+
+            /** @brief 컨트롤 하나의 가림 비트입니다(버튼은 열거자 번호, 트리거는 버튼 뒤 두 비트). 모르는 컨트롤은 0 입니다. */
+            static uint32 makeGamepadControlBit( uint16 controlIndex )
+            {
+                if ( controlIndex == kLeftTriggerControl )
+                    return kLeftTriggerBit;
+                if ( controlIndex == kRightTriggerControl )
+                    return kRightTriggerBit;
+                if ( controlIndex < static_cast<uint16>( GamepadButton::Count ) )
+                    return 1u << controlIndex;
+                return 0;
+            }
+
+            /** @brief 패드 하나에서 눌려 있는 컨트롤(버튼과 두 트리거)의 비트를 모읍니다. */
+            static uint32 collectDownMask( const GamepadDevice& pad )
+            {
+                uint32 mask = 0;
+                for ( uint16 control = 0; control < static_cast<uint16>( GamepadButton::Count ); ++control )
+                {
+                    if ( pad.isControlDown( control ) )
+                        mask |= makeGamepadControlBit( control );
+                }
+                if ( pad.isControlDown( kLeftTriggerControl ) )
+                    mask |= kLeftTriggerBit;
+                if ( pad.isControlDown( kRightTriggerControl ) )
+                    mask |= kRightTriggerBit;
+                return mask;
+            }
+        };
+    } // namespace
+
     InputManager::InputManager()
         : _queueRawEvent{}
         , _droppedRawEventCount{ 0 }
@@ -43,6 +83,7 @@ namespace sw
         , _arrOnTextInput{}
         , _arrOnTextComposition{}
         , _arrCapturedKeyMask{}
+        , _arrCapturedGamepadMask{}
         , _keyboardFocus{ InputKeyboardFocus::Game }
         , _virtualInputMode{ VirtualInputMode::Exclusive }
         , _pendingHighSurrogate{ 0 }
@@ -275,6 +316,9 @@ namespace sw
         if ( droppedCount > 0 )
             SW_LOG_WARNING( "Raw input event queue full (capacity=%d). %d event(s) dropped in previous frame.", static_cast<int32>( _queueRawEvent.capacity() ), droppedCount );
 
+        // 지난 프레임까지 뗀 패드 컨트롤은 가림을 푼다(폴링 전이라 지난 프레임의 상태다 — 키와 같은 규칙).
+        releaseCapturedGamepadControls();
+
         // 1) 등록된 모든 장치의 프레임을 시작하고(이전 프레임 엣지 초기화) 폴링한다. 배타 가상 입력이면 폴링하지 않는다.
         //    패드 폴링(XInput, 조이스틱)이 가상 패드 상태를 실제 패드 값으로 덮어쓰기 때문이다.
         const bool bOsSuppressed = isOsInputSuppressed();
@@ -327,6 +371,10 @@ namespace sw
         {
             dispatchRawEvent( rawEvent );
         }
+
+        // 콘솔이 키보드를 쥔 프레임에 눌려 있는 패드 컨트롤은 콘솔을 닫은 뒤에도 뗄 때까지 게임에 가린다(닫는 B 가 게임의 B 로 새지 않게).
+        if ( _keyboardFocus == InputKeyboardFocus::DevConsole )
+            captureHeldGamepadControls();
 
         // 이벤트를 모두 적용한 뒤 장치마다 한 번 마무리한다. 마우스 스무딩은 이벤트 수가 아니라 흐른 시간으로 한 번 적용한다.
         for ( auto& pDev : _listDevice )
@@ -571,6 +619,10 @@ namespace sw
         {
             word = 0;
         }
+        for ( uint32& mask : _arrCapturedGamepadMask )
+        {
+            mask = 0;
+        }
     }
 
     void InputManager::setKeyboardFocus( InputKeyboardFocus focus )
@@ -590,6 +642,37 @@ namespace sw
         if ( keyIndex >= static_cast<size_t>( Key::Count ) )
             return true;
         return ( _arrCapturedKeyMask[keyIndex / 64] & ( uint64{ 1 } << ( keyIndex % 64 ) ) ) == 0;
+    }
+
+    bool InputManager::isGamepadControlVisibleToGame( uint32 deviceIndex, uint16 controlIndex ) const
+    {
+        if ( _keyboardFocus == InputKeyboardFocus::DevConsole )
+            return false;
+        if ( deviceIndex >= kMaxGamepadSlot )
+            return true;
+        return ( _arrCapturedGamepadMask[deviceIndex] & InputManagerInternal::makeGamepadControlBit( controlIndex ) ) == 0;
+    }
+
+    void InputManager::captureHeldGamepadControls()
+    {
+        for ( uint32 padIndex = 0; padIndex < kMaxGamepadSlot; ++padIndex )
+        {
+            const GamepadDevice* pPad = getGamepad( padIndex );
+            if ( pPad != nullptr )
+                _arrCapturedGamepadMask[padIndex] |= InputManagerInternal::collectDownMask( *pPad );
+        }
+    }
+
+    void InputManager::releaseCapturedGamepadControls()
+    {
+        for ( uint32 padIndex = 0; padIndex < kMaxGamepadSlot; ++padIndex )
+        {
+            if ( _arrCapturedGamepadMask[padIndex] == 0 )
+                continue;
+            const GamepadDevice* pPad = getGamepad( padIndex );
+            // 패드가 없어졌으면 가릴 컨트롤도 없다. 있으면 아직 누르고 있는 것만 남긴다.
+            _arrCapturedGamepadMask[padIndex] &= pPad != nullptr ? InputManagerInternal::collectDownMask( *pPad ) : 0u;
+        }
     }
 
     void InputManager::releaseCapturedKeys()
