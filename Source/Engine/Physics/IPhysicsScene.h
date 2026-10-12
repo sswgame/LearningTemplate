@@ -130,7 +130,12 @@ namespace sw
 
         // --- 관절 -------------------------------------------------------------------------------------------------------
 
-        /** @brief 관절을 만듭니다. 바디가 무효이거나 차원이 지원하지 않는 종류(2D Cone)면 오류를 남기고 무효 핸들입니다. */
+        /**
+         * @brief 이 차원이 @p type 관절을 만들 수 있는지 봅니다(차원 트레이트가 정한다. 2D 는 Cone 을 만들지 않는다).
+         * @details `createJoint` 의 계약이다. 구현은 이 질의가 참인 종류를 모두 만들어야 하고, 거짓인 종류만 거절할 수 있다.
+         */
+        static constexpr bool supportsJoint( PhysicsJointType type ) { return TDimension::supportsJoint( type ); }
+        /** @brief 관절을 만듭니다. 바디가 무효이거나 `supportsJoint` 가 거짓인 종류면 오류를 남기고 무효 핸들입니다. */
         virtual PhysicsJointHandle createJoint( const JointDesc& desc )           = 0;
         virtual void               destroyJoint( PhysicsJointHandle joint )       = 0;
         virtual bool               isJointValid( PhysicsJointHandle joint ) const = 0;
