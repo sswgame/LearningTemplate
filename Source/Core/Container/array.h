@@ -5,7 +5,7 @@
  * [쓰면 안 되는 곳: 여러 스레드가 **일부러** 동시에 만지는 버퍼]
  * 이 래퍼의 탐지기는 한 번에 한 스레드만 만지는 컨테이너를 전제로 합니다. lock-free 자료구조처럼 여러 스레드가 같은
  * 버퍼를 동시에 만지도록 설계된 곳에 쓰면 그 접근이 레이스로 보고되고, 보고는 Fatal 이라 **프로세스가 죽습니다.**
- * 그런 곳에는 `std::array` 를 씁니다. `ConcurrentQueue` · `LockFreeQueue` · `RenderThread` 의 링 버퍼가 `std::array` 인
+ * 그런 곳에는 `std::array` 를 씁니다. `ConcurrentQueue` · `SpscQueue` · `RenderThread` 의 링 버퍼가 `std::array` 인
  * 이유입니다.
  *
  * 드물게 터진다는 점이 오히려 더 나쁩니다. 가드가 걸리는 구간은 `operator[]` · `at()` 호출 그 자체뿐이고(참조를 반환한

@@ -1,5 +1,5 @@
 /**
- * @file LockFreeQueue.h
+ * @file SpscQueue.h
  * @brief 고정 용량 lock-free 링 버퍼 큐입니다.
  */
 #pragma once
@@ -20,18 +20,18 @@ namespace sw
      *          sw::ConcurrentQueue 를 쓰십시오.
      */
     // ------------------------------------------------------------------------------
-    // 1) LockFreeQueue — SPSC 링 버퍼. push 한 스레드, pop 한 스레드
+    // 1) SpscQueue — SPSC 링 버퍼. push 한 스레드, pop 한 스레드
     //    MPMC 는 ConcurrentQueue
     // ------------------------------------------------------------------------------
     /** @brief 고정 용량 SPSC lock-free 링 버퍼입니다. */
     template <typename T, uint32 Capacity = 1024>
-    class LockFreeQueue
+    class SpscQueue
     {
         static_assert( ( Capacity & ( Capacity - 1 ) ) == 0, "Capacity must be a power of 2!" );
 
     public:
         /** @brief 버퍼를 그대로 버립니다(잠금 없음). */
-        ~LockFreeQueue() = default;
+        ~SpscQueue() = default;
 
         /** @brief 복사해서 넣습니다. 가득 차 있으면 false 입니다. */
         bool push( const T& item )

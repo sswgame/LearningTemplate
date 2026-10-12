@@ -1,8 +1,8 @@
 #include "pch.h"
 
 #include "Core/Common/HashUtil.h"
-#include "Core/Concurrency/LockFreeQueue.h"
 #include "Core/Concurrency/SpinLock.h"
+#include "Core/Concurrency/SpscQueue.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/ConcurrentQueue.h"
 #include "Core/Container/DynamicBitset.h"
@@ -258,14 +258,14 @@ SW_TEST_CASE( DataStructureTest, DynamicBitsetFullCoverage )
 }
 
 // ------------------------------------------------------------------------------
-// 2) 큐 — LockFreeQueue·ConcurrentQueue
+// 2) 큐 — SpscQueue·ConcurrentQueue
 // ------------------------------------------------------------------------------
 /**
- * @brief [DataStructureTest] LockFreeQueue 기본과 동시성
+ * @brief [DataStructureTest] SpscQueue 기본과 동시성
  */
-SW_TEST_CASE( DataStructureTest, LockFreeQueueBasicAndConcurrent )
+SW_TEST_CASE( DataStructureTest, SpscQueueBasicAndConcurrent )
 {
-    sw::LockFreeQueue<int32, 64> queue;
+    sw::SpscQueue<int32, 64> queue;
     SW_EXPECT_TRUE( queue.empty() );
     SW_EXPECT_EQUAL( 0u, queue.size() );
 
@@ -980,12 +980,12 @@ SW_TEST_CASE( DataStructureTest, PairEmptyBaseOptimization )
 }
 
 /**
- * @brief [DataStructureTest] LockFreeQueue SPSC 고속 대량 처리 및 순서 보장 스트레스 테스트 (10만 건)
+ * @brief [DataStructureTest] SpscQueue SPSC 고속 대량 처리 및 순서 보장 스트레스 테스트 (10만 건)
  */
-SW_TEST_CASE( DataStructureTest, LockFreeQueueSPSCStress )
+SW_TEST_CASE( DataStructureTest, SpscQueueStress )
 {
-    constexpr int32                kTotalItems = 100000;
-    sw::LockFreeQueue<int32, 2048> queue;
+    constexpr int32            kTotalItems = 100000;
+    sw::SpscQueue<int32, 2048> queue;
 
     sw::atomic<bool>  bProducerDone{ false };
     sw::atomic<int64> sumConsumed{ 0 };

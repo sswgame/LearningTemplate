@@ -158,9 +158,9 @@ SW_TEST_CASE( AssetStreamingTest, AssetStreamingQueueInFlightMulticastCallbacks 
 }
 
 /**
- * @brief [AssetStreamingTest] TaskFuture 및 LockFreeQueue 기반 에셋 스트리밍 완료 검증
+ * @brief [AssetStreamingTest] TaskFuture 및 SpscQueue 기반 에셋 스트리밍 완료 검증
  */
-SW_TEST_CASE( AssetStreamingTest, StreamingFutureAndLockFreeQueue )
+SW_TEST_CASE( AssetStreamingTest, StreamingFutureAndSpscQueue )
 {
     const sw::string tempFile = test::makeTempPath( "sw_test_streaming_asset.dat" );
     const sw::string testData = "STREAMING_TEST_PAYLOAD";
