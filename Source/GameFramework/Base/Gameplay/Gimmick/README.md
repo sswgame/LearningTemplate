@@ -103,7 +103,9 @@ cd build/Ninja-Debug/Bin
 
 **상태는 바이트 하나입니다**(`saveState`). 걸음 번호, 누적 시간, 노드 출력, 지난 입력, 센서 값, 노드 상태가 들어갑니다. 머리에 회로 모양의 해시가 있어서 다른 회로의 바이트는 거절합니다.
 컴포넌트는 걸음을 낸 틱마다 PROPERTY `_stateBytes` 에 써 두므로 레벨 세이브와 핫 리로드, 플레이 복원이 이어집니다. 체크포인트는 `captureCheckpoint` 와 `restoreCheckpoint` 입니다.
-네트워크 스냅샷과 롤백도 같은 바이트를 씁니다. 무버의 경로 길이는 배치에서 다시 계산하므로 저장하지 않습니다.
+씬 전체의 회로 상태는 `GimmickStateBundle` 이 한 덩어리로 묶습니다(`collect` → `write` / `read` → `apply`). 키는 소유 오브젝트 **이름**의 해시라 오브젝트 id 가 다른 기계끼리도 맞고, 같은 씬이면 바이트가 같습니다.
+롤백은 게임의 `IRollbackGame::saveState` 에서 `collect` + `write` 한 바이트를 싣고 `loadState` 에서 `read` + `apply` 합니다. 네트워크는 `GimmickSnapshotUtil`(NetClientServer 키트)이 회로 상태를 255 바이트 엔티티 조각으로 나눠 `NetSnapshot` 에 싣고 받는 쪽이 `extractBundle` 로 모읍니다.
+구조가 다른 회로나 모르는 이름은 그 항목만 건너뛰고 셉니다(`GimmickStateTest`). 무버의 경로 길이는 배치에서 다시 계산하므로 저장하지 않습니다.
 
 **쉬는 자세는 처음 플레이할 때 한 번 잡아 저장합니다**(`_listRestPose`). 그래야 핫 리로드나 세이브 로드가 움직이던 문의 위치를 쉬는 자세로 착각하지 않습니다.
 

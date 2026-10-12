@@ -69,6 +69,9 @@ namespace sw
         SmartObjectComponent();
         virtual ~SmartObjectComponent() override = default;
 
+        /** @brief 씬의 컴포넌트 레지스트리에 올라 "스마트 오브젝트를 모두" 를 씬을 훑지 않고 돌려줍니다(`SmartObjectScheduleLocator`). */
+        void onRegister( GameObjectManager& manager ) override;
+        void onUnregister( GameObjectManager& manager ) override;
         void onPostLoad() override;
         void onBeginPlay() override;
         /** @brief 상호작용 테이블을 다시 읽었으면(핫 리로드) 새 테이블에서 슬롯 정의를 다시 찾습니다. */

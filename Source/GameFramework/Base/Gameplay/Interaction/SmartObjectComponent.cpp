@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -112,6 +113,18 @@ namespace sw
                 (void)_slots.claim( static_cast<int32>( slot ), _listClaimant[slot].objectID() );
         }
         _listClaimant.resize( static_cast<size_t>( _slots.getSlotCount() ) );
+    }
+
+    void SmartObjectComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        manager.getComponentRegistry().add<SmartObjectComponent>( this );
+    }
+
+    void SmartObjectComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<SmartObjectComponent>( this );
+        Component::onUnregister( manager );
     }
 
     void SmartObjectComponent::onPostLoad()

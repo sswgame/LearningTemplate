@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -72,11 +73,12 @@ namespace sw
         outListCandidate.clear();
         if ( _pManager == nullptr )
             return;
-        _pManager->forEachComponentOfType<SmartObjectComponent>( [&]( SmartObjectComponent* pSmart )
+        // 씬을 훑지 않는다 — 스마트 오브젝트는 붙을 때 컴포넌트 레지스트리에 등록된다.
+        for ( SmartObjectComponent* pSmart : _pManager->getComponentRegistry().getAll<SmartObjectComponent>() )
         {
             const GameObject* pOwner = pSmart->getOwner();
             if ( pOwner == nullptr || pSmart->isPendingDestroy() || pSmart->getDefinitionID() != kind )
-                return;
+                continue;
             const int32 slotCount = pSmart->getSlotCount();
             for ( int32 slot = 0; slot < slotCount; ++slot )
             {
@@ -88,7 +90,7 @@ namespace sw
                 candidate._slot     = slot;
                 outListCandidate.push_back( candidate );
             }
-        } );
+        }
         // 순회 순서에 기대지 않는다 — (오브젝트 id, 슬롯) 순이라 같은 씬이면 늘 같은 후보 순서다.
         std::sort( outListCandidate.begin(), outListCandidate.end(), []( const Candidate& lhs, const Candidate& rhs )
         { return lhs._objectID != rhs._objectID ? lhs._objectID < rhs._objectID : lhs._slot < rhs._slot; } );

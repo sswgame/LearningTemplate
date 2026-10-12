@@ -1,7 +1,8 @@
 /**
  * @file SmartObjectScheduleLocator.h
  * @brief NPC 하루 일정의 `UseObject` 활동이 씬의 스마트 오브젝트(`SmartObjectComponent`) 슬롯을 시간 창으로 예약하는 어댑터입니다.
- * @details 일정은 계획을 세울 때 자리를 예약하고(`reserve`) 블록이 시작될 때 그 자리로 간다. 스마트 오브젝트는 지금 **점유**(claim)만 하므로, 어댑터가 시간 창 예약 표를
+ * @details 후보 슬롯은 씬을 훑지 않고 컴포넌트 레지스트리의 스마트 오브젝트 목록에서 모은다.
+ *          일정은 계획을 세울 때 자리를 예약하고(`reserve`) 블록이 시작될 때 그 자리로 간다. 스마트 오브젝트는 지금 **점유**(claim)만 하므로, 어댑터가 시간 창 예약 표를
  *          들고 계획에는 예약한 자리를 돌려주며, 블록이 시작될 때 게임이 `claimReserved` 로 실제 점유한다(끝나면 `releaseClaim`).
  *          `objectKind` 는 스마트 오브젝트 정의의 id(`<SmartObject id="Bench">`)와 같은 이름이고, 자리는 슬롯 하나가 한 번에 한 NPC 입니다.
  *          같은 요청 순서에 늘 같은 답이다 — 후보를 (오브젝트 id, 슬롯 번호) 순으로 정렬해 같은 조건이면 먼저 오는 쪽을 고른다(결정성).
@@ -26,7 +27,7 @@ namespace sw
 
     /**
      * @class SmartObjectScheduleLocator
-     * @brief 씬의 스마트 오브젝트 슬롯을 일정의 자리로 나눠 주는 제공자입니다. 게임 스레드에서만 부릅니다(계획을 세우는 때 씬의 스마트 오브젝트를 훑는다).
+     * @brief 씬의 스마트 오브젝트 슬롯을 일정의 자리로 나눠 주는 제공자입니다. 게임 스레드에서만 부릅니다.
      */
     class SW_GF_API SmartObjectScheduleLocator final : public IScheduleActivityLocator
     {
