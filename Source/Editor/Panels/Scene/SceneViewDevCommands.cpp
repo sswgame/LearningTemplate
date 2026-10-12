@@ -4,13 +4,13 @@
  */
 #include "pch.h"
 
+#include "Core/Console/DevCommandRegistry.h"
+
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Panels/Scene/SceneViewPanel.h"
 #include "Editor/Viewport/EditorViewportClient.h"
 #include "Editor/Viewport/EditorViewportOverlays.h"
-
-#include "Engine/Console/DevCommandRegistry.h"
 
 namespace sw::editor
 {

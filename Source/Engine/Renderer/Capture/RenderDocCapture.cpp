@@ -2,7 +2,7 @@
 
 #include "Engine/Renderer/Capture/RenderDocCapture.h"
 
-#include "Engine/Console/DevCommandRegistry.h"
+#include "Core/Console/DevCommandRegistry.h"
 
 #if !defined( SW_SHIPPING )
     #include <renderdoc_app.h>

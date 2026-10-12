@@ -3,11 +3,10 @@
  * @brief 게임 창 개발 콘솔을 그리는 플랫폼 창의 인터페이스입니다. 입력은 모릅니다(판단은 `Input/DevConsoleController`). Shipping 에는 없습니다.
  */
 #pragma once
+#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
-
-#include "Engine/Console/DevCommandRegistry.h"
 
 #if SW_DEV_COMMANDS_ENABLED
 

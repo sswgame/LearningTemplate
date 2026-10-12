@@ -4,6 +4,7 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Common/BuildInfo.h"
+#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Diagnostics/DeadlockDetector.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
@@ -18,7 +19,6 @@
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/EngineServiceCollection.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"

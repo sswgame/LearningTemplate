@@ -8,7 +8,7 @@
     #include "Core/GlobalVariable/GlobalVariableManager.h"
 
     #include "Engine/Common/EngineServices.h"
-    #include "Engine/Console/DebugHUDRegistry.h"
+    #include "Core/Console/DebugHUDRegistry.h"
     #include "Engine/Input/InputManager.h"
     #include "Engine/UI/Base/PanelWidget.h"
     #include "Engine/UI/Debug/DebugHUD.h"

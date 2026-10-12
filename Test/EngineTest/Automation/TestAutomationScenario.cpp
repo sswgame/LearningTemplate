@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/RegistrationList.h"
 
@@ -7,7 +8,6 @@
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

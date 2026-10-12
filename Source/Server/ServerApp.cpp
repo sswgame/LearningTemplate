@@ -27,7 +27,7 @@
 #include "Engine/Observability/MetricRegistry.h"
 #include "Engine/Observability/OpsHTTPEndpoint.h"
 #include "Engine/Observability/ServiceHealthRegistry.h"
-#include "Engine/Console/DevCommandRegistry.h"
+#include "Core/Console/DevCommandRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
 #if SW_DEV_COMMANDS_ENABLED

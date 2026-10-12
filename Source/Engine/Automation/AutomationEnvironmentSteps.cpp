@@ -8,11 +8,11 @@
 
 #include "Engine/Automation/AutomationEnvironmentSteps.h"
 
+#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 
 #include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Console/DevConsole.h"
 #include "Engine/Window/IWindow.h"
 

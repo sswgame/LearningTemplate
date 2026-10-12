@@ -24,6 +24,7 @@ Engine은 같은 OBJECT를 링크해 Dev 구성에서 `Engine.dll` 로 Core의 �
 | `Log/` | 로그 매크로와 전역 창구(`Logger`) |
 | `LogSink/` | 기본 로그 싱크(`AsyncLogSink`)와 출력 장치 |
 | `GlobalVariable/`, `CommandLine/` | 실행 인자로 바꾸는 전역 변수 |
+| `Console/` | 개발 명령 레지스트리(`SW_DEV_COMMAND`)와 디버그 HUD 섹션 레지스트리 — Shipping 에서 빠진다(`SW_DEV_COMMANDS_ENABLED`) |
 | `Task/` | 워커 풀과 태스크 그래프([Task](Task/README.md)) |
 | `Concurrency/` | 원시 동기화(`atomic` · `mutex` · `SpinLock` · `Futex`)와 경합 검출 훅 |
 | `Diagnostics/` | 호출 스택, 크래시 보고, `MemoryProfiler`, 교착 검출기, 경합 보고기 |
@@ -36,7 +37,7 @@ Engine은 같은 OBJECT를 링크해 Dev 구성에서 `Engine.dll` 로 Core의 �
 
 폴더는 층을 이룹니다. 아래 층은 위 층을 include 하지 않습니다(`.cpp` 포함, `CheckCoreLayers.py` 가 막는다).
 `Common` · `Predefined` → `Concurrency` · `Math` → `Memory` → `Container` → `Delegate` · `UUID` → `Log` → `CommandLine` · `Compression` · `Process` · `String` · `Time`
-→ `GlobalVariable` · `Task` → `File` · `Network` → `Module` → `Diagnostics` · `Event` → `LogSink` 순입니다. 표를 다시 계산하는 도구는 `Scripts/lint/report/RunCoreLayerGraph.py` 입니다.
+→ `Console` · `GlobalVariable` · `Task` → `File` · `Network` → `Module` → `Diagnostics` · `Event` → `LogSink` 순입니다. 표를 다시 계산하는 도구는 `Scripts/lint/report/RunCoreLayerGraph.py` 입니다.
 
 이 문서에서 기억할 개념은 네 가지입니다.
 

@@ -3,7 +3,7 @@
  * @brief 런타임 디버그 오버레이 HUD 입니다(Dev 전용이며 Shipping 에는 없습니다). 게임 창, 에디터 게임 뷰, 모든 Dev 실행에서 런타임 UI 위에 그립니다.
  */
 #pragma once
-#include "Engine/Console/DebugHUDRegistry.h"
+#include "Core/Console/DebugHUDRegistry.h"
 
 #if SW_DEV_COMMANDS_ENABLED
 

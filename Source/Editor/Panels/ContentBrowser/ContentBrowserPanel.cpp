@@ -3,6 +3,7 @@
 #include "Editor/Panels/ContentBrowser/ContentBrowserPanel.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -32,7 +33,6 @@
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Resource/ResourcePaths.h"
 

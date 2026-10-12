@@ -3,7 +3,7 @@
  * @brief 개발 콘솔의 판단(명령 해석 · 전역 변수 get/set · 자동완성 · 기록)입니다. 에디터 Output Log 의 입력 줄과 게임 창 오버레이가 같이 씁니다.
  */
 #pragma once
-#include "Engine/Console/DevCommandRegistry.h"
+#include "Core/Console/DevCommandRegistry.h"
 
 #if SW_DEV_COMMANDS_ENABLED
 

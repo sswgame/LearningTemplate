@@ -17,6 +17,7 @@ Compression = 6
 Process = 6         # 프로세스 · 종료 신호 · 스레드 크래시 스택
 String = 6          # 이름(hashed_string · TagID) · 고정 문자열 — 로그 매크로를 쓴다
 Time = 6
+Console = 7         # 개발 명령 · 디버그 HUD 섹션 레지스트리(Shipping 에서 빠진다)
 GlobalVariable = 7
 Task = 7
 File = 8

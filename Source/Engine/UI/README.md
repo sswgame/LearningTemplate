@@ -476,7 +476,7 @@ arrange가 결과 방향을 위젯에 기록하고(`isRightToLeft`), 글 위젯�
 Dev 구성에서 게임 창 · 에디터 게임 뷰 · 모든 Dev 실행의 런타임 UI 위에 개발용 수치를 띄웁니다. Shipping 에는 없습니다(`SW_DEV_COMMANDS_ENABLED`).
 조종자는 `Debug/DebugHUD` 이고 `EngineLoop` 가 UI 기동 단계에서 만들어 `UISystem::update` 앞에서 부릅니다. 화면은 코드로 짓는 오버레이 층 화면이라 포커스 · 포인터 · 게임 입력을 받지 않습니다.
 
-- **섹션.** 섹션은 `Console/DebugHUDRegistry` 에 `SW_DEBUG_HUD_SECTION( 변수, "이름", "제목", 순서, 플래그, &본문 )` 한 줄로 올립니다. `SW_DEV_COMMAND` 와 같은 모양이라 모듈을 내리면 그 섹션이 빠집니다.
+- **섹션.** 섹션은 `Core/Console/DebugHUDRegistry` 에 `SW_DEBUG_HUD_SECTION( 변수, "이름", "제목", 순서, 플래그, &본문 )` 한 줄로 올립니다. `SW_DEV_COMMAND` 와 같은 모양이라 모듈을 내리면 그 섹션이 빠집니다.
   엔진 기본 섹션은 `Debug/DebugHUDEngineSections.cpp` 의 `fps`(프레임 시간 그래프) · `timing`(GT · RT · GPU) · `draw`(드로우 · GPU 배치 · 인스턴스 · UI 사각형) · `memory`(태그 상위 넷) · `objects` · `physics` · `audio` · `input` · `camera` · `overlay`(게임이 쓴 `DebugOverlayState`)입니다.
   네트워크 핑은 엔진에 연결 서비스가 없어 온라인 키트가 자기 섹션으로 답니다. 본문은 이미 있는 서비스에서 읽기만 합니다.
 - **갱신.** HUD 가 켜져 있을 때 켜진 섹션의 본문만 4 Hz 로 부릅니다(목록 · 설정이 바뀌면 바로). 줄 수가 그대로면 위젯을 다시 짓지 않고 글만 바꿉니다.

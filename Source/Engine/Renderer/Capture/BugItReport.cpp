@@ -5,6 +5,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Common/BuildInfo.h"
 #include "Core/Common/Defines.h"
+#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
@@ -13,7 +14,6 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/CameraRegistry.h"

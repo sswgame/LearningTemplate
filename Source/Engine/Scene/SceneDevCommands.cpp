@@ -6,7 +6,7 @@
  */
 #include "pch.h"
 
-#include "Engine/Console/DevCommandRegistry.h"
+#include "Core/Console/DevCommandRegistry.h"
 
 #if SW_DEV_COMMANDS_ENABLED
 
