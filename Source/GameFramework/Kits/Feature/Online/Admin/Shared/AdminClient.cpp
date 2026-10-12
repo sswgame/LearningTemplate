@@ -4,6 +4,8 @@
 
 #include "Core/Network/BitStream.h"
 
+#include "GameFramework/Base/Online/Service/OnlineReplyUtil.h"
+
 namespace sw
 {
     AdminClient::AdminClient()
@@ -56,19 +58,7 @@ namespace sw
         reply._method         = call._method;
         reply._idempotencyKey = call._key;
         reply._errorCode      = response._errorCode;
-        if ( response.isOk() == false )
-        {
-            reply._reply._result = AdminProtocol::fromErrorCode( response._errorCode );
-        }
-        else
-        {
-            BitReader body( response._pBody, response._bodySize );
-            if ( AdminProtocol::readReply( body, reply._reply ) == false )
-            {
-                reply._reply         = AdminReply{};
-                reply._reply._result = AdminResult::Unavailable;
-            }
-        }
+        (void)OnlineReplyUtil::readResponse<AdminProtocol>( response, reply._reply ); // 실패도 reply._reply._result 에 담겨 콜백으로 간다
         if ( call._onReply.isBound() )
             call._onReply( reply );
     }

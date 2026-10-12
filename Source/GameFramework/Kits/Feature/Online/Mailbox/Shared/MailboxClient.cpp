@@ -4,6 +4,8 @@
 
 #include "Core/Network/BitStream.h"
 
+#include "GameFramework/Base/Online/Service/OnlineReplyUtil.h"
+
 namespace sw
 {
     MailboxClient::MailboxClient()
@@ -101,23 +103,8 @@ namespace sw
         reply._method         = call._method;
         reply._idempotencyKey = call._key;
         reply._errorCode      = response._errorCode;
-        if ( response.isOk() == false )
-        {
-            reply._reply._result = MailboxProtocol::fromErrorCode( response._errorCode );
-        }
-        else
-        {
-            BitReader body( response._pBody, response._bodySize );
-            if ( MailboxProtocol::readReply( body, reply._reply ) == false )
-            {
-                reply._reply         = MailboxReply{};
-                reply._reply._result = MailboxResult::Unavailable;
-            }
-            else if ( reply._reply._result == MailboxResult::Ok )
-            {
-                applyToCache( call, reply._reply );
-            }
-        }
+        if ( OnlineReplyUtil::readResponse<MailboxProtocol>( response, reply._reply ) && reply._reply._result == MailboxResult::Ok )
+            applyToCache( call, reply._reply );
         if ( call._onReply.isBound() )
             call._onReply( reply );
     }

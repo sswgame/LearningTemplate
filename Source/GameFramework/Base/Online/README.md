@@ -73,7 +73,7 @@ py -3 -m Scripts test ChatStreamTest.*
 
 | 폴더 | 하는 일 |
 |------|---------|
-| `Service` | 호스트, 클라이언트, 와이어 형식, 요청 테이블 |
+| `Service` | 호스트, 클라이언트, 와이어 형식, 요청 테이블, 키트 응답 읽기(`OnlineReplyUtil::readResponse`) |
 | `Store` | 영속 저장소 계약, 멱등 기록, 키 도우미, 종료 대기 도우미(`ServiceStoreUtil::drainUntilIdle`), 메모리 구현 |
 | `Cache` | 휘발성 저장소 계약, 메모리 구현, 응답을 나눠 주는 라우터 |
 | `Bus` | 서버 간 버스(캐시 위의 것, 프로세스 안의 것) |

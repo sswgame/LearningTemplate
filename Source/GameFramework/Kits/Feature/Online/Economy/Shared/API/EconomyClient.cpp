@@ -4,6 +4,7 @@
 
 #include "Core/Network/BitStream.h"
 
+#include "GameFramework/Base/Online/Service/OnlineReplyUtil.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Shared/API/EconomyMirror.h"
 
 namespace sw
@@ -117,24 +118,11 @@ namespace sw
         reply._method         = call._method;
         reply._idempotencyKey = call._key;
         reply._errorCode      = response._errorCode;
-        if ( response.isOk() == false )
+        if ( OnlineReplyUtil::readResponse<EconomyProtocol>( response, reply._reply ) && reply._reply._result == EconomyResult::Ok )
         {
-            reply._reply._result = EconomyProtocol::fromErrorCode( response._errorCode );
-        }
-        else
-        {
-            BitReader body( response._pBody, response._bodySize );
-            if ( EconomyProtocol::readReply( body, reply._reply ) == false )
-            {
-                reply._reply         = EconomyReply{};
-                reply._reply._result = EconomyResult::Unavailable;
-            }
-            else if ( reply._reply._result == EconomyResult::Ok )
-            {
-                const bool bSnapshot = call._method == EconomyMethod::kGetWallet;
-                if ( bSnapshot || reply._reply._listBalance.empty() == false )
-                    applyBalances( reply._reply._listBalance, bSnapshot );
-            }
+            const bool bSnapshot = call._method == EconomyMethod::kGetWallet;
+            if ( bSnapshot || reply._reply._listBalance.empty() == false )
+                applyBalances( reply._reply._listBalance, bSnapshot );
         }
         if ( call._onReply.isBound() )
             call._onReply( reply );
