@@ -93,6 +93,24 @@ namespace sw
         }
     }
 
+#if !defined( SW_SHIPPING )
+    void StructuralChangeBuffer::drainUntilEmpty( GameObjectManager& manager )
+    {
+        // 서로 다시 미루는 고리를 끊는 상한이다. 정상이면 한두 번에 빈다.
+        constexpr uint32 kMaxDrainPass = 64;
+        for ( uint32 pass = 0; pass < kMaxDrainPass; ++pass )
+        {
+            drain( manager );
+            if ( _structuralQueue.isEmpty() && _postTickQueue.isEmpty() )
+                return;
+        }
+        // 상한에 닿으면 남은 것을 호출하지 않고 버린다. SW_ASSERT 로 멈추면 언로드가 반쯤 끝난 채 남고, 남겨 두면 모듈이 내려간 뒤
+        // 다음 프레임 drain 이 없는 코드를 부른다. 게임 쪽 일 몇 개를 잃는 편이 안전하다.
+        SW_LOG_ERROR( "Deferred work kept re-queueing after %# drain passes before module unload; discarding the rest", kMaxDrainPass );
+        clear();
+    }
+#endif
+
     void StructuralChangeBuffer::clear()
     {
         _structuralQueue.clear();

@@ -41,6 +41,12 @@ namespace sw
         _listProcessing.clear();
     }
 
+    bool DeferredDelegateQueue::isEmpty()
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        return _listPending.empty();
+    }
+
     void DeferredDelegateQueue::clear()
     {
         // 처리 목록은 건드리지 않는다. 비우기 밖에서는 늘 비어 있고, 비우는 중(콜백이 씬을 비우는 경우)이면 지금 도는 목록이다.
