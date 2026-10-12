@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Character/AnimNotify/AnimNotifyComponent.h"
+#include "Engine/Character/AnimationNotify/AnimationNotifyComponent.h"
 
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Hit/CharacterHit.h"
@@ -14,14 +14,14 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AnimNotify" );
+    SW_LOG_CALLER( "AnimationNotify" );
 
-    AnimNotifyListenerBinding::AnimNotifyListenerBinding( AnimNotifyComponent& owner )
+    AnimationNotifyListenerBinding::AnimationNotifyListenerBinding( AnimationNotifyComponent& owner )
         : _owner{ owner }
     {
     }
 
-    void AnimNotifyListenerBinding::onAnimNotifiesFired( const AnimNotifyFrame& frame )
+    void AnimationNotifyListenerBinding::onAnimationNotifiesFired( const AnimationNotifyFrame& frame )
     {
         if ( frame._bFromTick == SW_TRUE )
             _owner.deferFrame( frame );
@@ -29,7 +29,7 @@ namespace sw
             _owner.processFrame( frame );
     }
 
-    AnimNotifyComponent::AnimNotifyComponent()
+    AnimationNotifyComponent::AnimationNotifyComponent()
         : _notifyTablePath{}
         , _binding{ *this }
         , _table{}
@@ -47,26 +47,26 @@ namespace sw
         setCanEverTick( false );
     }
 
-    AnimNotifyComponent::~AnimNotifyComponent()
+    AnimationNotifyComponent::~AnimationNotifyComponent()
     {
         unbindFromAnimator();
     }
 
-    void AnimNotifyComponent::onBeginPlay()
+    void AnimationNotifyComponent::onBeginPlay()
     {
         Component::onBeginPlay();
         loadNotifyTable();
         bindToAnimator();
     }
 
-    void AnimNotifyComponent::onEndPlay()
+    void AnimationNotifyComponent::onEndPlay()
     {
         closeAllStates();
         unbindFromAnimator();
         Component::onEndPlay();
     }
 
-    void AnimNotifyComponent::onPropertyChanged( hashed_string propertyName )
+    void AnimationNotifyComponent::onPropertyChanged( hashed_string propertyName )
     {
         Component::onPropertyChanged( propertyName );
         static const hashed_string s_pathName( "_notifyTablePath" );
@@ -74,31 +74,31 @@ namespace sw
             loadNotifyTable();
     }
 
-    void AnimNotifyComponent::setNotifyTablePath( string_view path )
+    void AnimationNotifyComponent::setNotifyTablePath( string_view path )
     {
         _notifyTablePath = string{ path };
         loadNotifyTable();
     }
 
-    void AnimNotifyComponent::setNotifyTable( shared_ptr<const AnimNotifyTable> table )
+    void AnimationNotifyComponent::setNotifyTable( shared_ptr<const AnimationNotifyTable> table )
     {
         closeAllStates();
         _table = std::move( table );
     }
 
-    void AnimNotifyComponent::loadNotifyTable()
+    void AnimationNotifyComponent::loadNotifyTable()
     {
         // 경로가 비면 코드가 넣은 표(`setNotifyTable`)를 그대로 둔다.
-        _seenTableReloadCount = AnimNotifyTableCache::getReloadCount();
+        _seenTableReloadCount = AnimationNotifyTableCache::getReloadCount();
         if ( _notifyTablePath.empty() )
             return;
         closeAllStates();
-        _table = AnimNotifyTableCache::acquire( _notifyTablePath );
+        _table = AnimationNotifyTableCache::acquire( _notifyTablePath );
         if ( _table == nullptr )
             SW_LOG_ERROR( "'%#': notify table '%#' could not be loaded", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", _notifyTablePath.c_str() );
     }
 
-    void AnimNotifyComponent::bindToAnimator()
+    void AnimationNotifyComponent::bindToAnimator()
     {
         GameObject*                pOwner    = getOwner();
         SkeletalAnimatorComponent* pAnimator = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
@@ -115,10 +115,10 @@ namespace sw
             _animator = pSprite->getHandle();
             return;
         }
-        SW_LOG_WARNING( "'%#': anim notify has no animator on its object", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
+        SW_LOG_WARNING( "'%#': animation notify has no animator on its object", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
     }
 
-    void AnimNotifyComponent::unbindFromAnimator()
+    void AnimationNotifyComponent::unbindFromAnimator()
     {
         const GameObject*  pOwner            = getOwner();
         GameObjectManager* pManager          = pOwner != nullptr ? pOwner->getManager() : nullptr;
@@ -132,12 +132,12 @@ namespace sw
             pSprite->setNotifyListener( nullptr );
     }
 
-    const AnimNotifyEntry* AnimNotifyComponent::findEntry( const hashed_string& notify ) const
+    const AnimationNotifyEntry* AnimationNotifyComponent::findEntry( const hashed_string& notify ) const
     {
         return _table != nullptr ? _table->findEntry( notify ) : nullptr;
     }
 
-    void AnimNotifyComponent::deferFrame( const AnimNotifyFrame& frame )
+    void AnimationNotifyComponent::deferFrame( const AnimationNotifyFrame& frame )
     {
         // 워커(스프라이트 틱)에서는 복사해 두고 틱 뒤 게임 스레드에서 처리한다. 같은 오브젝트의 틱은 한 워커가 돌므로 이 슬롯을 다른 워커가 만지지 않는다.
         _listPendingFired.assign( frame._listFired.begin(), frame._listFired.end() );
@@ -150,31 +150,31 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr || bScheduled )
             return;
-        pManager->executeOrDeferPostTickOnComponent<AnimNotifyComponent>( getHandle(), []( AnimNotifyComponent& component )
+        pManager->executeOrDeferPostTickOnComponent<AnimationNotifyComponent>( getHandle(), []( AnimationNotifyComponent& component )
         { component.processPendingFrame(); } );
     }
 
-    void AnimNotifyComponent::processPendingFrame()
+    void AnimationNotifyComponent::processPendingFrame()
     {
         if ( _bPendingFrame == SW_FALSE )
             return;
         _bPendingFrame = SW_FALSE;
-        AnimNotifyFrame frame{};
-        frame._listFired          = vector_reference<const AnimFiredNotify>{ _listPendingFired.data(), _listPendingFired.size() };
-        frame._listActivePlayable = vector_reference<const IAnimPlayable* const>{ _listPendingActive.data(), _listPendingActive.size() };
+        AnimationNotifyFrame frame{};
+        frame._listFired          = vector_reference<const AnimationFiredNotify>{ _listPendingFired.data(), _listPendingFired.size() };
+        frame._listActivePlayable = vector_reference<const IAnimationPlayable* const>{ _listPendingActive.data(), _listPendingActive.size() };
         frame._deltaSeconds       = _pendingDeltaSeconds;
         frame._bRestarted         = _bPendingRestarted;
         _bPendingRestarted        = SW_FALSE;
         processFrame( frame );
     }
 
-    void AnimNotifyComponent::callHandler( const AnimNotifyEntry& entry, const AnimFiredNotify& fired, AnimNotifyStateData* pState, AnimNotifyPhase phase, bool bTick,
-                                           float32 deltaSeconds )
+    void AnimationNotifyComponent::callHandler( const AnimationNotifyEntry& entry, const AnimationFiredNotify& fired, AnimationNotifyStateData* pState, AnimationNotifyPhase phase, bool bTick,
+                                                float32 deltaSeconds )
     {
         GameObject* pOwner = getOwner();
         if ( pOwner == nullptr || entry._pHandler == nullptr )
             return;
-        AnimNotifyContext context{ *this, *pOwner, entry, fired, pState, deltaSeconds };
+        AnimationNotifyContext context{ *this, *pOwner, entry, fired, pState, deltaSeconds };
         if ( bTick )
         {
             entry._pHandler->onNotifyTick( context );
@@ -182,17 +182,17 @@ namespace sw
         }
         switch ( phase )
         {
-            case AnimNotifyPhase::Instant:
+            case AnimationNotifyPhase::Instant:
             {
                 entry._pHandler->onNotify( context );
                 break;
             }
-            case AnimNotifyPhase::Begin:
+            case AnimationNotifyPhase::Begin:
             {
                 entry._pHandler->onNotifyBegin( context );
                 break;
             }
-            case AnimNotifyPhase::End:
+            case AnimationNotifyPhase::End:
             {
                 entry._pHandler->onNotifyEnd( context );
                 break;
@@ -200,17 +200,17 @@ namespace sw
         }
     }
 
-    void AnimNotifyComponent::endState( size_t stateIndex, const AnimFiredNotify* pEndFired, float32 deltaSeconds )
+    void AnimationNotifyComponent::endState( size_t stateIndex, const AnimationFiredNotify* pEndFired, float32 deltaSeconds )
     {
         // 처리기가 컴포넌트를 바꿀 수 있으므로 꺼내 놓고 부른다.
         ActiveState state = std::move( _listActiveState[stateIndex] );
         _listActiveState.erase( _listActiveState.begin() + static_cast<ptrdiff_t>( stateIndex ) );
-        AnimFiredNotify fired = pEndFired != nullptr ? *pEndFired : state._fired;
-        fired._phase          = AnimNotifyPhase::End;
-        callHandler( state._entry, fired, &state._data, AnimNotifyPhase::End, false, deltaSeconds );
+        AnimationFiredNotify fired = pEndFired != nullptr ? *pEndFired : state._fired;
+        fired._phase               = AnimationNotifyPhase::End;
+        callHandler( state._entry, fired, &state._data, AnimationNotifyPhase::End, false, deltaSeconds );
     }
 
-    void AnimNotifyComponent::closeAllStates()
+    void AnimationNotifyComponent::closeAllStates()
     {
         while ( _listActiveState.empty() == false )
         {
@@ -218,11 +218,11 @@ namespace sw
         }
     }
 
-    void AnimNotifyComponent::processFrame( const AnimNotifyFrame& frame )
+    void AnimationNotifyComponent::processFrame( const AnimationNotifyFrame& frame )
     {
         _listAction.clear();
         // 테이블 파일을 고쳤으면 열린 구간을 이전 항목(복사해 둔 것)으로 닫고 새 테이블로 이어 간다.
-        if ( _notifyTablePath.empty() == false && _seenTableReloadCount != AnimNotifyTableCache::getReloadCount() )
+        if ( _notifyTablePath.empty() == false && _seenTableReloadCount != AnimationNotifyTableCache::getReloadCount() )
             loadNotifyTable();
 
         // 0) 재생할 것이 바뀌었다(스프라이트가 같은 객체를 다른 구간으로 재생한다). 이전 구간의 열린 알림은 모두 끊긴 것이다.
@@ -233,7 +233,7 @@ namespace sw
         {
             const ActiveState& state   = _listActiveState[stateIndex - 1];
             bool               bActive = false;
-            for ( const IAnimPlayable* pPlayable : frame._listActivePlayable )
+            for ( const IAnimationPlayable* pPlayable : frame._listActivePlayable )
             {
                 bActive = bActive || pPlayable == state._pSource;
             }
@@ -246,17 +246,17 @@ namespace sw
         {
             ActiveState& state = _listActiveState[stateIndex];
             state._data._elapsed += frame._deltaSeconds;
-            callHandler( state._entry, state._fired, &state._data, AnimNotifyPhase::Begin, true, frame._deltaSeconds );
+            callHandler( state._entry, state._fired, &state._data, AnimationNotifyPhase::Begin, true, frame._deltaSeconds );
         }
 
         // 3) 이번 프레임의 알림을 시각 순서로.
-        for ( const AnimFiredNotify& fired : frame._listFired )
+        for ( const AnimationFiredNotify& fired : frame._listFired )
         {
-            const AnimNotifyEntry* pEntry = findEntry( fired._name );
+            const AnimationNotifyEntry* pEntry = findEntry( fired._name );
             if ( pEntry == nullptr || pEntry->_pHandler == nullptr )
                 continue;
             const bool bState = pEntry->_pHandler->supportsState();
-            if ( fired._phase == AnimNotifyPhase::End )
+            if ( fired._phase == AnimationNotifyPhase::End )
             {
                 for ( size_t stateIndex = 0; stateIndex < _listActiveState.size(); ++stateIndex )
                 {
@@ -269,10 +269,10 @@ namespace sw
                 }
                 continue;
             }
-            if ( bState == false || fired._phase == AnimNotifyPhase::Instant )
+            if ( bState == false || fired._phase == AnimationNotifyPhase::Instant )
             {
                 // 길이 없는 알림이거나, 구간을 받지 않는 처리기에 온 구간 알림의 시작이다. 한 번 호출한다.
-                callHandler( *pEntry, fired, nullptr, AnimNotifyPhase::Instant, false, frame._deltaSeconds );
+                callHandler( *pEntry, fired, nullptr, AnimationNotifyPhase::Instant, false, frame._deltaSeconds );
                 continue;
             }
             // 같은 구간이 이미 열려 있으면(끝을 못 보고 다시 시작한 경우, 즉 시각이 점프한 경우) 먼저 닫는다.
@@ -291,17 +291,17 @@ namespace sw
             state._eventIndex = fired._eventIndex;
             _listActiveState.push_back( std::move( state ) );
             ActiveState& opened = _listActiveState.back();
-            callHandler( opened._entry, opened._fired, &opened._data, AnimNotifyPhase::Begin, false, frame._deltaSeconds );
+            callHandler( opened._entry, opened._fired, &opened._data, AnimationNotifyPhase::Begin, false, frame._deltaSeconds );
         }
     }
 
-    bool AnimNotifyComponent::is2D() const
+    bool AnimationNotifyComponent::is2D() const
     {
         const GameObject* pOwner = getOwner();
         return pOwner != nullptr && pOwner->getComponent<SkeletalMeshComponent>() == nullptr;
     }
 
-    bool AnimNotifyComponent::findSocketWorldTransform( const hashed_string& socketName, float4x4& outWorldTransform ) const
+    bool AnimationNotifyComponent::findSocketWorldTransform( const hashed_string& socketName, float4x4& outWorldTransform ) const
     {
         const GameObject* pOwner = getOwner();
         if ( pOwner == nullptr )
@@ -313,14 +313,14 @@ namespace sw
         return false;
     }
 
-    float3 AnimNotifyComponent::findSocketWorldPosition( const hashed_string& socketName ) const
+    float3 AnimationNotifyComponent::findSocketWorldPosition( const hashed_string& socketName ) const
     {
         float4x4 world;
         (void)findSocketWorldTransform( socketName, world );
         return world.getTranslation();
     }
 
-    bool AnimNotifyComponent::castFromTo( const float3& from, const float3& to, float32 radius, uint32 layerMask, CharacterRayHit& outHit ) const
+    bool AnimationNotifyComponent::castFromTo( const float3& from, const float3& to, float32 radius, uint32 layerMask, CharacterRayHit& outHit ) const
     {
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;

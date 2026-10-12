@@ -1,10 +1,10 @@
 #include "pch.h"
 
-#include "Engine/Character/AnimNotify/AnimNotifyTable.h"
+#include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
 
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Character/AnimNotify/AnimNotifyHandlers.h"
+#include "Engine/Character/AnimationNotify/AnimationNotifyHandlers.h"
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -12,12 +12,12 @@ namespace sw
 {
     namespace
     {
-        struct AnimNotifyTableInternal
+        struct AnimationNotifyTableInternal
         {
             /** @brief 처리기 인자 선언에서 이름의 것을 찾습니다. */
-            static const AnimNotifyParamDef* findParamDef( vector_reference<const AnimNotifyParamDef> listDef, const utf8* pName )
+            static const AnimationNotifyParamDef* findParamDef( vector_reference<const AnimationNotifyParamDef> listDef, const utf8* pName )
             {
-                for ( const AnimNotifyParamDef& def : listDef )
+                for ( const AnimationNotifyParamDef& def : listDef )
                 {
                     if ( StringUtil::equals( def._pName, pName, true ) )
                         return &def;
@@ -26,36 +26,36 @@ namespace sw
             }
 
             /** @brief 인자 하나를 선언된 종류로 읽습니다. */
-            static AnimNotifyParam readParam( const XMLNode& node, const AnimNotifyParamDef& def, CharacterDataReader& reader )
+            static AnimationNotifyParam readParam( const XMLNode& node, const AnimationNotifyParamDef& def, CharacterDataReader& reader )
             {
-                AnimNotifyParam param;
+                AnimationNotifyParam param;
                 param._name = hashed_string( def._pName );
                 param._kind = def._kind;
                 switch ( def._kind )
                 {
-                    case AnimNotifyParamKind::Name:
+                    case AnimationNotifyParamKind::Name:
                     {
                         param._nameValue = reader.readName( node, def._pName, true );
                         break;
                     }
-                    case AnimNotifyParamKind::Text:
+                    case AnimationNotifyParamKind::Text:
                     {
                         param._text = string( node.getAttributeText( def._pName ) );
                         if ( param._text.empty() )
                             reader.addError( node, string( "has an empty '" ) + def._pName + "'" );
                         break;
                     }
-                    case AnimNotifyParamKind::Float:
+                    case AnimationNotifyParamKind::Float:
                     {
                         param._number = reader.readFloat( node, def._pName, 0.0f );
                         break;
                     }
-                    case AnimNotifyParamKind::Vector:
+                    case AnimationNotifyParamKind::Vector:
                     {
                         param._vector = reader.readFloat3( node, def._pName, float3{} );
                         break;
                     }
-                    case AnimNotifyParamKind::Bool:
+                    case AnimationNotifyParamKind::Bool:
                     {
                         param._bValue = reader.readBool( node, def._pName, false );
                         break;
@@ -69,9 +69,9 @@ namespace sw
 
 namespace sw
 {
-    const AnimNotifyParam* AnimNotifyEntry::findParam( const hashed_string& name ) const
+    const AnimationNotifyParam* AnimationNotifyEntry::findParam( const hashed_string& name ) const
     {
-        for ( const AnimNotifyParam& param : _listParam )
+        for ( const AnimationNotifyParam& param : _listParam )
         {
             if ( param._name == name )
                 return &param;
@@ -79,64 +79,64 @@ namespace sw
         return nullptr;
     }
 
-    hashed_string AnimNotifyEntry::getNameParam( const hashed_string& name, const hashed_string& fallback ) const
+    hashed_string AnimationNotifyEntry::getNameParam( const hashed_string& name, const hashed_string& fallback ) const
     {
-        const AnimNotifyParam* pParam = findParam( name );
+        const AnimationNotifyParam* pParam = findParam( name );
         return pParam != nullptr ? pParam->_nameValue : fallback;
     }
 
-    string AnimNotifyEntry::getTextParam( const hashed_string& name ) const
+    string AnimationNotifyEntry::getTextParam( const hashed_string& name ) const
     {
-        const AnimNotifyParam* pParam = findParam( name );
+        const AnimationNotifyParam* pParam = findParam( name );
         return pParam != nullptr ? pParam->_text : string{};
     }
 
-    float32 AnimNotifyEntry::getFloatParam( const hashed_string& name, float32 fallback ) const
+    float32 AnimationNotifyEntry::getFloatParam( const hashed_string& name, float32 fallback ) const
     {
-        const AnimNotifyParam* pParam = findParam( name );
+        const AnimationNotifyParam* pParam = findParam( name );
         return pParam != nullptr ? pParam->_number : fallback;
     }
 
-    float3 AnimNotifyEntry::getVectorParam( const hashed_string& name, const float3& fallback ) const
+    float3 AnimationNotifyEntry::getVectorParam( const hashed_string& name, const float3& fallback ) const
     {
-        const AnimNotifyParam* pParam = findParam( name );
+        const AnimationNotifyParam* pParam = findParam( name );
         return pParam != nullptr ? pParam->_vector : fallback;
     }
 
-    bool AnimNotifyEntry::getBoolParam( const hashed_string& name, bool fallback ) const
+    bool AnimationNotifyEntry::getBoolParam( const hashed_string& name, bool fallback ) const
     {
-        const AnimNotifyParam* pParam = findParam( name );
+        const AnimationNotifyParam* pParam = findParam( name );
         return pParam != nullptr ? pParam->_bValue : fallback;
     }
 } // namespace sw
 
 namespace sw
 {
-    bool AnimNotifyTable::loadFromXMLText( string_view xmlText, string_view sourceName, const AnimNotifyHandlerRegistry& registry )
+    bool AnimationNotifyTable::loadFromXMLText( string_view xmlText, string_view sourceName, const AnimationNotifyHandlerRegistry& registry )
     {
         _listEntry.clear();
         CharacterDataReader reader( sourceName );
         XMLDocument         document;
         XMLNode             root;
-        if ( reader.parseRoot( document, xmlText, "AnimNotifies", root ) )
+        if ( reader.parseRoot( document, xmlText, "AnimationNotifies", root ) )
             readRoot( root, registry, reader );
         return reader.finish();
     }
 
-    bool AnimNotifyTable::loadFromResource( string_view path, const AnimNotifyHandlerRegistry& registry )
+    bool AnimationNotifyTable::loadFromResource( string_view path, const AnimationNotifyHandlerRegistry& registry )
     {
         _listEntry.clear();
         CharacterDataReader reader( path );
         XMLDocument         document;
         XMLNode             root;
-        if ( reader.loadRoot( document, path, "AnimNotifies", root ) )
+        if ( reader.loadRoot( document, path, "AnimationNotifies", root ) )
             readRoot( root, registry, reader );
         return reader.finish();
     }
 
-    const AnimNotifyEntry* AnimNotifyTable::findEntry( const hashed_string& notify ) const
+    const AnimationNotifyEntry* AnimationNotifyTable::findEntry( const hashed_string& notify ) const
     {
-        for ( const AnimNotifyEntry& entry : _listEntry )
+        for ( const AnimationNotifyEntry& entry : _listEntry )
         {
             if ( entry._notify == notify )
                 return &entry;
@@ -144,7 +144,7 @@ namespace sw
         return nullptr;
     }
 
-    void AnimNotifyTable::readRoot( const XMLNode& root, const AnimNotifyHandlerRegistry& registry, CharacterDataReader& reader )
+    void AnimationNotifyTable::readRoot( const XMLNode& root, const AnimationNotifyHandlerRegistry& registry, CharacterDataReader& reader )
     {
         reader.reportUnexpectedAttributes( root );
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
@@ -156,9 +156,9 @@ namespace sw
         }
     }
 
-    void AnimNotifyTable::readEntry( const XMLNode& node, const AnimNotifyHandlerRegistry& registry, CharacterDataReader& reader )
+    void AnimationNotifyTable::readEntry( const XMLNode& node, const AnimationNotifyHandlerRegistry& registry, CharacterDataReader& reader )
     {
-        AnimNotifyEntry entry;
+        AnimationNotifyEntry entry;
         entry._notify      = reader.readName( node, "name", true );
         entry._handlerName = reader.readName( node, "handler", true );
         if ( entry._notify.empty() || entry._handlerName.empty() )
@@ -169,19 +169,19 @@ namespace sw
             reader.addError( node, string( "names unknown handler '" ) + entry._handlerName.c_str() + "'" );
             return;
         }
-        const vector_reference<const AnimNotifyParamDef> listDef = entry._pHandler->getParams();
+        const vector_reference<const AnimationNotifyParamDef> listDef = entry._pHandler->getParams();
         // 테이블 항목은 처리기가 선언한 인자만 쓸 수 있다. 모르는 필드는 오타이므로 오류다.
         for ( XMLAttribute attribute = node.getFirstAttribute(); attribute; attribute = attribute.getNext() )
         {
             const utf8* pName      = attribute.getName();
             const bool  bBaseField = StringUtil::equals( pName, "name", true ) || StringUtil::equals( pName, "handler", true );
-            if ( bBaseField == false && AnimNotifyTableInternal::findParamDef( listDef, pName ) == nullptr )
+            if ( bBaseField == false && AnimationNotifyTableInternal::findParamDef( listDef, pName ) == nullptr )
                 reader.addError( node, string( "has unknown argument '" ) + pName + "' for handler '" + entry._handlerName.c_str() + "'" );
         }
-        for ( const AnimNotifyParamDef& def : listDef )
+        for ( const AnimationNotifyParamDef& def : listDef )
         {
             if ( CharacterDataReader::hasAttribute( node, def._pName ) )
-                entry._listParam.push_back( AnimNotifyTableInternal::readParam( node, def, reader ) );
+                entry._listParam.push_back( AnimationNotifyTableInternal::readParam( node, def, reader ) );
             else if ( def._bRequired )
                 reader.addError( node, string( "needs argument '" ) + def._pName + "' for handler '" + entry._handlerName.c_str() + "'" );
         }
@@ -196,35 +196,35 @@ namespace sw
 
 namespace sw
 {
-    AnimNotifyHandlerRegistry::AnimNotifyHandlerRegistry()
+    AnimationNotifyHandlerRegistry::AnimationNotifyHandlerRegistry()
         : _registry{}
     {
     }
 
-    AnimNotifyHandlerRegistry::~AnimNotifyHandlerRegistry() = default;
+    AnimationNotifyHandlerRegistry::~AnimationNotifyHandlerRegistry() = default;
 
-    AnimNotifyHandlerRegistry& AnimNotifyHandlerRegistry::getDefault()
+    AnimationNotifyHandlerRegistry& AnimationNotifyHandlerRegistry::getDefault()
     {
-        static AnimNotifyHandlerRegistry s_registry;
-        static const bool                s_bRegistered = AnimNotifyHandlerUtil::registerBuiltInHandlers( s_registry );
+        static AnimationNotifyHandlerRegistry s_registry;
+        static const bool                     s_bRegistered = AnimationNotifyHandlerUtil::registerBuiltInHandlers( s_registry );
         (void)s_bRegistered;
         return s_registry;
     }
 
-    void AnimNotifyHandlerRegistry::registerHandler( const hashed_string& name, unique_ptr<IAnimNotifyHandler> handler )
+    void AnimationNotifyHandlerRegistry::registerHandler( const hashed_string& name, unique_ptr<IAnimationNotifyHandler> handler )
     {
         if ( name.empty() || handler == nullptr )
             return;
         _registry.addOrReplace( name, std::move( handler ) );
     }
 
-    const IAnimNotifyHandler* AnimNotifyHandlerRegistry::findHandler( const hashed_string& name ) const
+    const IAnimationNotifyHandler* AnimationNotifyHandlerRegistry::findHandler( const hashed_string& name ) const
     {
-        const unique_ptr<IAnimNotifyHandler>* pHandler = _registry.find( name );
+        const unique_ptr<IAnimationNotifyHandler>* pHandler = _registry.find( name );
         return pHandler == nullptr ? nullptr : pHandler->get();
     }
 
-    void AnimNotifyHandlerRegistry::collectHandlerNames( vector<hashed_string>& outListName ) const
+    void AnimationNotifyHandlerRegistry::collectHandlerNames( vector<hashed_string>& outListName ) const
     {
         outListName.clear();
         for ( uint32 index = 0; index < _registry.getCount(); ++index )

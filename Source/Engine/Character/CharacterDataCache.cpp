@@ -4,7 +4,7 @@
 
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Character/AnimNotify/AnimNotifyTable.h"
+#include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Resource/Cache/BuiltInAssetCache.h"
@@ -27,7 +27,7 @@ namespace sw
             }
 
             [[nodiscard]] static bool loadSocketSet( string_view path, SocketSet& outSocketSet ) { return outSocketSet.loadFromResource( path, loadDefaultKinds() ); }
-            [[nodiscard]] static bool loadNotifyTable( string_view path, AnimNotifyTable& outTable ) { return outTable.loadFromResource( path, AnimNotifyHandlerRegistry::getDefault() ); }
+            [[nodiscard]] static bool loadNotifyTable( string_view path, AnimationNotifyTable& outTable ) { return outTable.loadFromResource( path, AnimationNotifyHandlerRegistry::getDefault() ); }
             [[nodiscard]] static bool loadPhysicsAsset( string_view path, PhysicsAsset& outAsset ) { return outAsset.loadFromResource( path ); }
 
             static SharedAssetTable<SocketSet>& getSocketSetTable()
@@ -36,9 +36,9 @@ namespace sw
                 return s_table;
             }
 
-            static SharedAssetTable<AnimNotifyTable>& getNotifyTable()
+            static SharedAssetTable<AnimationNotifyTable>& getNotifyTable()
             {
-                static SharedAssetTable<AnimNotifyTable> s_table;
+                static SharedAssetTable<AnimationNotifyTable> s_table;
                 return s_table;
             }
 
@@ -90,34 +90,34 @@ namespace sw
         CharacterDataCacheInternal::getSocketSetTable().clear();
     }
 
-    shared_ptr<const AnimNotifyTable> AnimNotifyTableCache::acquire( string_view path )
+    shared_ptr<const AnimationNotifyTable> AnimationNotifyTableCache::acquire( string_view path )
     {
         SW_MEMORY_SCOPE( Animation );
         return CharacterDataCacheInternal::getNotifyTable().acquire( path, &CharacterDataCacheInternal::loadNotifyTable );
     }
 
-    uint32 AnimNotifyTableCache::getReloadCount()
+    uint32 AnimationNotifyTableCache::getReloadCount()
     {
         return CharacterDataCacheInternal::getNotifyTable().getReloadCount();
     }
 
-    bool AnimNotifyTableCache::isCached( string_view relativePath ) const
+    bool AnimationNotifyTableCache::isCached( string_view relativePath ) const
     {
         return CharacterDataCacheInternal::getNotifyTable().findLive( relativePath ) != nullptr;
     }
 
-    void AnimNotifyTableCache::reload( string_view relativePath, IRHIDevice* pDevice )
+    void AnimationNotifyTableCache::reload( string_view relativePath, IRHIDevice* pDevice )
     {
         (void)pDevice;
         (void)CharacterDataCacheInternal::getNotifyTable().reloadShared( relativePath, &CharacterDataCacheInternal::loadNotifyTable );
     }
 
-    size_t AnimNotifyTableCache::getCachedCount() const
+    size_t AnimationNotifyTableCache::getCachedCount() const
     {
         return CharacterDataCacheInternal::getNotifyTable().countLive();
     }
 
-    void AnimNotifyTableCache::clear()
+    void AnimationNotifyTableCache::clear()
     {
         CharacterDataCacheInternal::getNotifyTable().clear();
     }
@@ -157,6 +157,6 @@ namespace sw
 namespace sw
 {
     SW_BUILT_IN_ASSET_CACHE( SocketSetCache );
-    SW_BUILT_IN_ASSET_CACHE( AnimNotifyTableCache );
+    SW_BUILT_IN_ASSET_CACHE( AnimationNotifyTableCache );
     SW_BUILT_IN_ASSET_CACHE( PhysicsAssetCache );
 } // namespace sw

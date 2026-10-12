@@ -25,7 +25,7 @@
 flowchart LR
   subgraph Runtime["매 프레임 — 캐릭터 오브젝트의 컴포넌트"]
     U["SkeletalMeshComponent<br/>유닛"] --> PM["PoseModifierComponent<br/>IK, 스프링 본"]
-    U --> AN["AnimNotifyComponent<br/>알림 → 처리기"]
+    U --> AN["AnimationNotifyComponent<br/>알림 → 처리기"]
     U --> RG["RagdollComponent<br/>히트박스, 래그돌"]
     SS["SocketSetComponent<br/>소켓 테이블"] --> AN
     SS --> SB["SocketBindingComponent<br/>무기를 손에"]
@@ -82,12 +82,12 @@ KayKit 스켈레톤 전사가 걸을 때 발소리를 내고, 칼을 휘두르�
 ### 3단계 — 알림 이름에 처리기 연결하기
 
 ```xml
-<AnimNotifies>
+<AnimationNotifies>
     <Notify name="FootL" handler="Footstep" socket="foot.l" distance="0.5"/>
     <Notify name="FootR" handler="Footstep" socket="foot.r" distance="0.5"/>
     <Notify name="Swing" handler="HitWindow" socketA="handslot.r" socketB="SwordTip" radius="0.05" damage="25" impulse="60"/>
     <Notify name="Impact" handler="CameraShake" amplitude="0.05" duration="0.25" frequency="35" socket="SwordTip"/>
-</AnimNotifies>
+</AnimationNotifies>
 ```
 
 `skeleton_warrior.notifies.xml` 입니다. `HitWindow` 는 구간이 열려 있는 동안 두 소켓 사이의 칼날을 프레임마다 쓸어, 맞은 오브젝트마다 구간당 한 번 `onHitReceived` 를 부릅니다.
@@ -99,7 +99,7 @@ KayKit 스켈레톤 전사가 걸을 때 발소리를 내고, 칼을 휘두르�
 ```cpp
 SkeletalMeshComponent*     pUnit     = pEnemy->addComponent<SkeletalMeshComponent>();
 SkeletalAnimatorComponent* pAnimator = pEnemy->addComponent<SkeletalAnimatorComponent>();
-AnimNotifyComponent*       pNotify   = pEnemy->addComponent<AnimNotifyComponent>();
+AnimationNotifyComponent*       pNotify   = pEnemy->addComponent<AnimationNotifyComponent>();
 SocketSetComponent*        pSockets  = pEnemy->addComponent<SocketSetComponent>();
 RagdollComponent*          pRagdoll  = pEnemy->addComponent<RagdollComponent>();
 // … 메시, 스켈레톤, 클립 폴더 설정 …
@@ -115,11 +115,11 @@ pRagdoll->setPhysicsAssetPath( "game/shooter3d/characters/skeleton_warrior/skele
 
 ### 애니메이션 알림
 
-이름이 무엇을 하는지는 캐릭터마다 알림 테이블(`*.notifies.xml`, `AnimNotifyTable`)의 한 줄이고, 코드에는 처리기 **종류**만 있습니다(`AnimNotifyHandlerRegistry`).
-모르는 처리기, 모르는 인자, 빠진 필수 인자는 읽기 오류입니다. 테이블은 공유 캐시(`AnimNotifyTableCache`)에서 받고, 파일을 고치면 열린 구간을 닫고 새 테이블로 이어 갑니다.
+이름이 무엇을 하는지는 캐릭터마다 알림 테이블(`*.notifies.xml`, `AnimationNotifyTable`)의 한 줄이고, 코드에는 처리기 **종류**만 있습니다(`AnimationNotifyHandlerRegistry`).
+모르는 처리기, 모르는 인자, 빠진 필수 인자는 읽기 오류입니다. 테이블은 공유 캐시(`AnimationNotifyTableCache`)에서 받고, 파일을 고치면 열린 구간을 닫고 새 테이블로 이어 갑니다.
 
-내장 처리기는 `PlaySound`, `SpawnPrefab`, `Footstep`, `HitWindow`, `CameraShake`, `GameplayEvent`, `MotionWarp` 입니다. 처리기마다의 인자는 `AnimNotify/AnimNotifyHandlers.h` 머리말의 테이블에 있습니다.
-`CameraShake` 는 엔진이 카메라를 모르기 때문에 요청만 냅니다(`AnimNotifyHandlerUtil::getCameraShakeRequested`). GameFramework 의 `CameraManagerComponent` 가 그 요청을 받습니다.
+내장 처리기는 `PlaySound`, `SpawnPrefab`, `Footstep`, `HitWindow`, `CameraShake`, `GameplayEvent`, `MotionWarp` 입니다. 처리기마다의 인자는 `AnimationNotify/AnimationNotifyHandlers.h` 머리말의 테이블에 있습니다.
+`CameraShake` 는 엔진이 카메라를 모르기 때문에 요청만 냅니다(`AnimationNotifyHandlerUtil::getCameraShakeRequested`). GameFramework 의 `CameraManagerComponent` 가 그 요청을 받습니다.
 
 **한 번씩 울린다.** 알림 트랙의 규칙을 그대로 따릅니다([Animation](../Animation/README.md) 의 "알림" 절). 구간 알림은 `Begin`, 프레임마다 틱, `End` 순서로 처리합니다.
 클립이 전이나 정지로 재생에서 빠지면 `End` 를 대신 냅니다. 한 프레임 안의 처리 순서는 다음과 같습니다.
@@ -294,7 +294,7 @@ KayKit 리그의 영역 테이블은 `skeleton_warrior.fit.xml`(Head, Arm_L, Arm
 | `*.fit.xml` | `FitTables` | 겹, 몸 영역, 피팅 프로필, 상호작용 |
 | `*.partfit.xml` | `FitPartData` | 장비 하나의 겹, 숨김 영역, 조임 고리, 보정 조각 |
 | `*.surfacechannels.xml` | `SurfaceChannelTable` | 표면 채널의 감쇠, 최댓값, 마스크 해상도 |
-| `*.notifies.xml` | `AnimNotifyTable` | 알림 이름 → 처리기와 인자 |
+| `*.notifies.xml` | `AnimationNotifyTable` | 알림 이름 → 처리기와 인자 |
 | `*.physics.xml` | 물리 에셋 | 래그돌 바디, 관절, 히트 존 |
 
 각 파일의 속성 목록은 타입 헤더의 주석에 있습니다.
@@ -303,11 +303,11 @@ KayKit 리그의 영역 테이블은 `skeleton_warrior.fit.xml`(Head, Arm_L, Arm
 
 ### 새 알림 처리기
 
-1. 처리기를 구현해 `AnimNotifyHandlerRegistry` 에 이름으로 등록합니다. 내장 처리기는 `AnimNotifyHandlerUtil::registerBuiltInHandlers` 가 등록합니다.
-2. 처리기의 `getParams()` 가 받는 인자와 필수 여부를 선언합니다(`AnimNotifyParamDef`). 테이블에 모르는 인자가 있거나 필수 인자가 빠지면 읽기 오류가 됩니다.
+1. 처리기를 구현해 `AnimationNotifyHandlerRegistry` 에 이름으로 등록합니다. 내장 처리기는 `AnimationNotifyHandlerUtil::registerBuiltInHandlers` 가 등록합니다.
+2. 처리기의 `getParams()` 가 받는 인자와 필수 여부를 선언합니다(`AnimationNotifyParamDef`). 테이블에 모르는 인자가 있거나 필수 인자가 빠지면 읽기 오류가 됩니다.
 3. 알림 테이블의 `handler` 에 그 이름을 씁니다.
 
-게임만 아는 반응은 새 처리기보다 `GameplayEvent` 를 쓰는 편이 간단합니다. 같은 오브젝트의 컴포넌트가 `onAnimNotify` 로 받습니다.
+게임만 아는 반응은 새 처리기보다 `GameplayEvent` 를 쓰는 편이 간단합니다. 같은 오브젝트의 컴포넌트가 `onAnimationNotify` 로 받습니다.
 
 ### 새 피팅 연산
 
@@ -344,9 +344,9 @@ KayKit 리그의 영역 테이블은 `skeleton_warrior.fit.xml`(Head, Arm_L, Arm
 
 | 파일 | 내용 |
 |---|---|
-| `AnimNotify/AnimNotifyHandlers.h` | 내장 처리기와 인자 |
-| `AnimNotify/CameraShakeRequest.h` | 카메라 흔들림 요청 값 |
-| `AnimNotify/AnimNotifyComponent.h` | 알림 디스패치 |
+| `AnimationNotify/AnimationNotifyHandlers.h` | 내장 처리기와 인자 |
+| `AnimationNotify/CameraShakeRequest.h` | 카메라 흔들림 요청 값 |
+| `AnimationNotify/AnimationNotifyComponent.h` | 알림 디스패치 |
 | `Socket/ResolvedSocketTable.h` | 소켓 해석과 변환 |
 | `Socket/SocketBindingComponent.h` | 소켓 부착 상태 |
 | `PoseModifier/PoseModifierComponent.h` | 후처리 리그 연결 |

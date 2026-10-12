@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/AnimClip.h"
+#include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
@@ -389,7 +389,7 @@ namespace sw
         if ( _flinchClip.empty() || pAnimator == nullptr || _state == RagdollState::Ragdoll )
             return;
         if ( _flinchLayer < 0 )
-            _flinchLayer = pAnimator->addLayer( AnimLayerDesc{ _flinchClip, hashed_string{}, 1.0f, AnimLayerBlend::Additive, SW_FALSE } );
+            _flinchLayer = pAnimator->addLayer( AnimationLayerDesc{ _flinchClip, hashed_string{}, 1.0f, AnimationLayerBlend::Additive, SW_FALSE } );
         if ( _flinchLayer < 0 )
             return;
         pAnimator->restartLayer( static_cast<uint32>( _flinchLayer ) );
@@ -546,7 +546,7 @@ namespace sw
         const hashed_string clipName      = ( bFaceUp || _getUpClipFaceDown.empty() ) ? _getUpClipFaceUp : _getUpClipFaceDown;
         if ( clipName.empty() || pAnimator->preloadClip( clipName ) == false )
             return false;
-        const AnimClip* pClip = pAnimator->findClip( clipName );
+        const AnimationClip* pClip = pAnimator->findClip( clipName );
         if ( pClip == nullptr )
             return false;
 
@@ -558,7 +558,7 @@ namespace sw
         {
             vector<int32> listTrackToBone;
             pClip->makeTrackToBoneMap( skeleton, listTrackToBone );
-            AnimClip::copyTracksToPose( trackPose, listTrackToBone, startPose );
+            AnimationClip::copyTracksToPose( trackPose, listTrackToBone, startPose );
         }
         vector<float4x4> listStartModel;
         startPose.computeModelSpace( skeleton.getParentIndices(), listStartModel );
