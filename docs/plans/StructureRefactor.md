@@ -64,18 +64,13 @@ R1(엔진 루프에서 자동화 빼기), R2(에디터 그리기 인계 상태 �
 증거(줄 수 · include 수 · 분기 수)는 감사 때 `D:\w\refac` 에서 다시 확인했다. L 위반은 Box2D 관절 하나뿐이고 I 는 약하다 — 이 저장소의 약점은 **S(큰 클래스)와 O/D(직접 호출 · 종류별 분기)**다.
 성능 조건: 핫 경로(프레임당 수천 번)에는 가상 호출을 넣지 않는다. 뽑은 클래스는 값 멤버로 두고 비가상으로 직접 부른다. 핫 경로를 건드린 단위는 이동 전후 측정 한 줄을 남긴다.
 
-### 묶음 1 — 작고 안전한 O/D (비핫 경로, 단위마다 독립)
-| 단위 | 대상 | 방향 |
-|---|---|---|
-| S1 | `UISystem.cpp:293-295, 1487-1538` | `syncDemoScreen`/`syncBenchScreen`/`syncOptionsMenuSwitch` 직접 호출 → `RegistrationList` 로 화면이 스스로 등록 |
-| S2 | `AutomationRunner.cpp:487-650` (`kind ==` 35곳) | 입력 · 엔진 단계도 `AutomationStepRegistration` 으로 — 검증과 컴파일을 한 등록에 |
-| S3 | `ServerApp.cpp:368-439`, `App.cpp:746-768` | `pause`/`resume`/`step` → `SW_DEV_COMMAND`(Shipping 의 `quit`/`stop`/`status`/`help` 는 그대로), 중복 `quit` 한 곳으로 |
-| S4 | `RHI.cpp:384-421` 외 5벌 | `RHIBackend` 1행 기술자 표(이름 · 셰이더 타깃 · 모듈 · capability · 프로파일러 API). 기준 표가 `ShaderCooker.cpp:43` 에 이미 있다 |
-| S5 | `FrameRendererPassExecute.cpp:369-680` | `RenderPassTypeInfo` 에 실행 함수 칸 + `bSkipEffect` 플래그. draw 루프는 그대로 |
-| S6 | `Box2DPhysicsSceneQuery.cpp:209-212` | L 위반: `supportsJoint(type)` 질의 또는 2D/3D 관절 열거 분리 |
-| S7 | `EditorAssetFileCommands.cpp:48-76`, `ContentBrowserPanel.cpp:641-659` | 새 에셋 템플릿 레지스트리 |
-| S8 | `ProfilerPanel.cpp:155-216` | `IProfilerTab` 목록(탭 8개 `if` 사슬) |
-| S9 | `EditorAPI.h:35-36` | 호출처 없는 `registerTexture`/`unregisterTexture` 삭제(ABI 버전 · 지문 올림) |
+### 묶음 1 — 끝남 (2026-10-12)
+S1(UI 화면 스위치 등록) · S2(자동화 엔진 단계 등록) · S4(`RHIBackendInfo` 표) · S6(`supportsJoint`) · S7(새 에셋 템플릿 표) · S9(`registerTexture` 삭제, ABI v5)를 옮겼다. 검증: Debug 경고 0, 린트 63/63, `-L nogpu` 49/49, `-L hostgpu` 7/7.
+**옮기지 않은 것(판정 기준에 걸림)**:
+- **S3**(서버 `pause`/`resume`/`step` → 개발 명령): Shipping 이 `quit`/`stop`/`status`/`help` 를 직접 처리해야 해 한 함수에 두 방식이 섞이고(반쪽 이전), 쓰는 곳이 `ServerApp` 하나이며, 에디터가 같은 이름 `pause`·`stop`·`step` 을 이미 개발 명령(플레이 세션 뜻)으로 등록해 전역 레지스트리에서 충돌한다. 두 `quit` 은 뜻이 달라(표준 입력 루프 bool ↔ `ShutdownSignal`) 합치지 않는다.
+- **S5 의 실행 함수 칸**: `bSkipEffect` 만 표 비트(`kSkipsWithoutPostProcess`)로 옮겼다. 전용 실행 switch 9 case 를 표로 옮기면 쿠커 · 검증이 읽는 데이터가 `FrameRenderer` 에 의존하고(D 위반) 새 패스를 더할 때 고칠 곳도 줄지 않는다.
+- **S8**(`IProfilerTab`): 탭들이 패널 상태(`_scopeHistory` · 타임라인 · 불러온 트레이스)를 나눠 써서 탭만 떼면 반쪽 이전이고, 함수 표만 두면 고칠 곳 수가 같다. "`ProfilerPanel`(1243 줄)을 탭 상태 객체와 `ProfilerTabContext` 로 나누기" 를 묶음 3 후보로 올린다.
+**후속**: S12 가 `IEditor.h` 의 `registerTexture`/`unregisterTexture` 순수 가상 둘과 `ImGuiEditor` 구현(`ImGuiEditor.cpp` 671 ~ 683 줄)을 함께 지운다(호출처 없음). `UIAutomationSteps::ensureLinked` 호출(`UISystem::initialize`)은 Engine 이 통째 링크라 불필요해 보인다. `Joint2DComponent` 는 Cone 을 고르면 `createJoint` 를 프레임마다 다시 시도해 오류 로그를 반복한다.
 
 ### 묶음 2 — D(전역 getter 직접 호출을 주입으로)
 | 단위 | 대상 | 방향 |
