@@ -13,6 +13,8 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 
 namespace sw
 {
@@ -52,6 +54,18 @@ namespace sw
          * @return 성공하면 true 입니다. 다른 프로세스가 대상 파일을 삭제 공유 없이 열고 있으면 Windows 에서 실패할 수 있습니다.
          */
         static bool replaceFile( const utf8* pSourcePath, const utf8* pTargetPath );
+
+        /** @brief 이 플랫폼에 OS 휴지통(`moveToRecycleBin`)이 있는지입니다. 없으면 호출하는 쪽이 지울지 남길지 정합니다. */
+        static bool hasRecycleBin();
+
+        /**
+         * @brief 파일 · 폴더들을 OS 휴지통으로 한 번에 옮깁니다(사용자가 되살릴 수 있는 삭제).
+         * @details Windows 는 셸 파일 작업 하나(`SHFileOperationW` + `FOF_ALLOWUNDO`)로 목록 전체를 보내며 확인 창 · 오류 창을 띄우지 않습니다.
+         *          휴지통 규약(freedesktop Trash)이 데스크톱마다 다른 Linux 는 지원하지 않아 아무것도 건드리지 않고 false 입니다(`hasRecycleBin`).
+         * @param listPath UTF-8 경로들. 구분자는 `/` · `\` 모두 받습니다.
+         * @return 모두 옮겼으면 true 입니다. 실패하거나 중단되면 false 이며, 일부만 옮겨졌을 수 있습니다.
+         */
+        [[nodiscard]] static bool moveToRecycleBin( const vector<string>& listPath );
 
         /**
          * @brief 64비트 오프셋으로 이동합니다.

@@ -109,7 +109,7 @@ py -3 Scripts/generate/GenerateConfigReference.py
 같은 일을 두 방식으로 하면 플랫폼을 하나 더 지원할 때 한쪽을 빠뜨립니다. 그래서 **플랫폼 분기는 그 분기만 아는 곳에 둡니다.**
 
 - 타입이나 클래스 단위로 다르면 플랫폼 폴더(`File/Windows`, `File/Linux`)에 둡니다. `WindowsFileDialog`, `WindowsFileWatcher` 가 그 예입니다.
-- 함수 이름만 다르면 원시 연산 하나를 감싸는 `*Util` 한 곳에 둡니다. `PlatformFileUtil` 의 `openFile`, `seekTo`, `tellPosition`, `replaceFile` 이 그 예입니다. 같은 `#if` 를 다른 파일에 다시 쓰지 않습니다.
+- 함수 이름만 다르면 원시 연산 하나를 감싸는 `*Util` 한 곳에 둡니다. `PlatformFileUtil` 의 `openFile`, `seekTo`, `tellPosition`, `replaceFile`, `moveToRecycleBin`(휴지통 보내기 — 에디터가 `<shellapi.h>` 를 직접 쓰지 않는다)이 그 예입니다. 같은 `#if` 를 다른 파일에 다시 쓰지 않습니다.
 - 표준 라이브러리가 이미 플랫폼을 덮어 주면 분기를 만들지 않습니다. 파일 존재, 크기, 시각, 순회, 복사, 삭제는 `std::filesystem` 이 하지만, `File/Std/FileUtilStdFileSystem.cpp` 한 파일 안에서만 씁니다.
   엔진은 `FileUtil` 로만 봅니다. 함수 하나를 플랫폼 API로 바꿀 때는 측정에서 이길 때만 그 정의를 플랫폼 폴더로 옮깁니다.
 

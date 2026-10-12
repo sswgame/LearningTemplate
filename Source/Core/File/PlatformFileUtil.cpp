@@ -9,6 +9,7 @@
     #include "Core/Common/PlatformOsHeaders.h"
 
     #include <share.h>
+    #include <shellapi.h>
 #elif defined( SW_PLATFORM_LINUX )
     #include "Core/Common/PlatformOsHeaders.h"
 
@@ -126,6 +127,44 @@ namespace sw
         return MoveFileExW( wideSource.c_str(), wideTarget.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH ) != FALSE;
 #else
         return std::rename( pSourcePath, pTargetPath ) == 0;
+#endif
+    }
+
+    bool PlatformFileUtil::hasRecycleBin()
+    {
+#if defined( SW_PLATFORM_WINDOWS )
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    bool PlatformFileUtil::moveToRecycleBin( const vector<string>& listPath )
+    {
+        if ( listPath.empty() )
+            return true;
+#if defined( SW_PLATFORM_WINDOWS )
+        // 셸 파일 작업의 경로 목록은 경로마다 널 하나, 끝에 널 하나 더다. 셸은 `/` 를 구분자로 받지 않아 `\` 로 바꾼다.
+        vector<utf16> listWideChar;
+        for ( const string& path : listPath )
+        {
+            const wstring widePath = StringUtil::utf8ToUtf16( path.c_str() );
+            for ( const utf16 ch : widePath )
+            {
+                listWideChar.push_back( ch == L'/' ? L'\\' : ch );
+            }
+            listWideChar.push_back( L'\0' );
+        }
+        listWideChar.push_back( L'\0' );
+
+        SHFILEOPSTRUCTW operation{};
+        operation.wFunc  = FO_DELETE;
+        operation.pFrom  = listWideChar.data();
+        operation.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_SILENT;
+        return SHFileOperationW( &operation ) == 0 && operation.fAnyOperationsAborted == FALSE;
+#else
+        // 휴지통 규약(freedesktop Trash)은 데스크톱마다 다르다. 아무것도 건드리지 않는다.
+        return false;
 #endif
     }
 

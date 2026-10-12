@@ -6,6 +6,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/PlatformFileUtil.h"
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 
@@ -17,12 +18,6 @@
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
-
-#if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Common/PlatformOsHeaders.h"
-
-    #include <shellapi.h>
-#endif
 
 namespace sw::editor
 {
@@ -263,41 +258,23 @@ namespace sw::editor
 
     bool EditorAssetFileCommands::moveToTrash( string_view absolutePath )
     {
-#if defined( SW_PLATFORM_WINDOWS )
-        // 휴지통은 셸 파일 작업으로만 간다(FOF_ALLOWUNDO). 경로 목록은 경로마다 널 하나, 끝에 널 하나 더 — 에셋과 짝 .meta 를 한 번에 보낸다.
+        // 휴지통이 없는 플랫폼(Linux)은 지운다.
+        if ( PlatformFileUtil::hasRecycleBin() == false )
+            return AssetDatabase::deleteAssetFile( absolutePath );
+
+        // 에셋과 짝 .meta 를 한 번에 보낸다.
         const string   assetPath = FileUtil::normalizeSeparators( absolutePath );
         const string   metaPath  = AssetDatabase::metaPathFor( assetPath );
         vector<string> listPath{ assetPath };
         if ( FileUtil::exists( metaPath ) )
             listPath.push_back( metaPath );
-        vector<utf16> listWideChar;
-        for ( const string& path : listPath )
-        {
-            const wstring widePath = StringUtil::utf8ToUtf16( path.c_str() );
-            for ( const utf16 ch : widePath )
-            {
-                listWideChar.push_back( ch == L'/' ? L'\\' : ch );
-            }
-            listWideChar.push_back( L'\0' );
-        }
-        listWideChar.push_back( L'\0' );
-
-        SHFILEOPSTRUCTW operation{};
-        operation.wFunc    = FO_DELETE;
-        operation.pFrom    = listWideChar.data();
-        operation.fFlags   = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_SILENT;
-        const int32 result = SHFileOperationW( &operation );
-        if ( result == 0 && operation.fAnyOperationsAborted == FALSE )
+        if ( PlatformFileUtil::moveToRecycleBin( listPath ) )
         {
             SW_LOG_INFO( "Moved '%#' to the recycle bin", ResourcePaths::toResourceID( assetPath ) );
             return true;
         }
-        SW_LOG_ERROR( "Could not move '%#' to the recycle bin (code %#) - it is kept", assetPath, result );
+        SW_LOG_ERROR( "Could not move '%#' to the recycle bin - it is kept", assetPath );
         return false;
-#else
-        // 휴지통 규약(freedesktop Trash)은 데스크톱마다 다르다. 지운다.
-        return AssetDatabase::deleteAssetFile( absolutePath );
-#endif
     }
 
     bool EditorAssetFileCommands::deleteAsset( string_view absolutePath )
