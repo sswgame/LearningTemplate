@@ -33,7 +33,7 @@ sequenceDiagram
 ```
 
 모듈 이미지와 인스턴스, `ModuleHost`, `LiveReloadManager` 는 [ModuleHost](../ModuleHost/README.md) 에 설명이 있습니다.
-프레임 시간을 가변 델타와 고정 스텝 수로 나누는 `FixedTimestep` 은 Engine(`Source/Engine/Config/FixedTimestep.h`)에 있고, 그 정책은 아래 "시간 정책" 에 있습니다.
+프레임 시간을 가변 델타와 고정 스텝 수로 나누는 `FixedTimestep` 은 Core(`Source/Core/Time/FixedTimestep.h`)에 있고, 그 정책은 아래 "시간 정책" 에 있습니다.
 
 **RHIBackendSwitcher** 는 `gv_rhiBackend` 가 바뀌면 프레임 경계에서 그래픽 API를 교체합니다. App만 쓰지만 교체 순서를 아는 유일한 곳이라 `RHIBackendSwitcher.cpp` 로 따로 둡니다.
 

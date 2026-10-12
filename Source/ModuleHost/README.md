@@ -48,7 +48,7 @@ cd build/Ninja-Debug/Bin
 
 ## 함정과 주의
 
-**고정 스텝 시간 정책은 여기 없습니다.** `FixedTimestep` 은 모듈 호스팅이 아니라 프레임 시간 정책이라, 값을 가진 `EngineConfig` 옆(`Source/Engine/Config`, 티어 3)에 있습니다. 시간 정책은 [App](../App/README.md) "시간 정책" 에 있습니다.
+**고정 스텝 시간 정책은 여기 없습니다.** `FixedTimestep` 은 모듈 호스팅이 아니라 프레임 시간 정책이라 Core(`Source/Core/Time`)에 있고, 값은 `EngineConfig` 가 가집니다. 시간 정책은 [App](../App/README.md) "시간 정책" 에 있습니다.
 
 **ModuleHost 는 실행 파일을 모릅니다.** `App/` · `Server/` 를 include 하지 않고, 실행 파일 쪽 정책은 콜백이나 인자로 받습니다(`CheckEngineLayers`).
 에디터가 끼어드는 자리는 `ModuleHost` 의 보호 가상 함수 다섯(`queryGameplayActive` · `controlsWorldPlay` · `onBeforeSuspendModules` · `suspendHostModule` · `onRenderWorkersDrained`)뿐이고, 의존은 `EditorModuleHost` → `ModuleHost` 한 방향입니다.

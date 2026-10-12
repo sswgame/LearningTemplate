@@ -27,6 +27,17 @@ namespace sw
                     *static_cast<int32*>( pData ) = val;
             }
 
+            static int32 readEnumValue( const void* pData, uint32 typeSize )
+            {
+                if ( typeSize == 1 )
+                    return *static_cast<const uint8*>( pData );
+                if ( typeSize == 2 )
+                    return *static_cast<const uint16*>( pData );
+                if ( typeSize == 8 )
+                    return static_cast<int32>( *static_cast<const int64*>( pData ) );
+                return *static_cast<const int32*>( pData );
+            }
+
             static inline std::shared_mutex s_stringVarMutex;
 
             /** @brief enum 글 값 파서 슬롯입니다(`GlobalVariableManager::setEnumTextParser`). */
@@ -36,6 +47,219 @@ namespace sw
                 return s_parser;
             }
         };
+
+        /**
+         * @brief 타입 하나의 처리를 모은 처리 테이블의 행입니다. 모든 함수는 `_pData != nullptr` 인 변수만 받고, 변경 콜백은 부르지 않습니다(부르는 쪽이 부른다).
+         * @details 프레임 경로가 아니다. 명령줄 적용 · 에디터 · 프리셋 · 기본값 되돌리기만 이 테이블을 거친다(변수 값은 C++ 변수로 직접 읽는다).
+         */
+        struct GlobalVariableTypeOps
+        {
+            GlobalVariableType _type;
+            /** @brief 표시 · 프리셋용 타입 이름입니다(`GlobalVariableInfo::getTypeName`). */
+            const utf8* _pName;
+            /** @brief 현재 값을 문자열로 만듭니다. */
+            string ( *_formatValue )( const GlobalVariableInfo& info );
+            /** @brief 글을 파싱해 값을 씁니다. 읽지 못하면 값을 그대로 두고 false 입니다. */
+            bool ( *_parseValue )( GlobalVariableInfo& info, string_view text );
+            /** @brief `_defaultValue` 를 값에 씁니다. 기본값의 타입이 다르면 아무것도 하지 않습니다. */
+            void ( *_writeDefault )( GlobalVariableInfo& info );
+            /** @brief 명령줄 인자(`-gv_*`)로 등록합니다. */
+            void ( *_addCommandLineArgument )( CommandLineManager& commandLine, const GlobalVariableInfo& info );
+            /**
+             * @brief 명령줄 인자 값을 씁니다. 썼으면 true 입니다.
+             * @param outPendingText 지금 읽을 수 없어 나중에 다시 적용할 글입니다(enum 이름은 파서가 걸린 뒤에 읽는다). 없으면 비워 둡니다.
+             */
+            bool ( *_readCommandLineArgument )( const CommandLineManager& commandLine, GlobalVariableInfo& info, string& outPendingText );
+        };
+
+        /** @brief bool · int32 · float32 처럼 변수에 그대로 저장하는 타입의 처리입니다. */
+        template <typename T>
+        struct GlobalVariableScalarOps
+        {
+            static string formatValue( const GlobalVariableInfo& info )
+            {
+                const T value = *static_cast<const T*>( info._pData );
+                if constexpr ( std::is_same_v<T, bool> )
+                {
+                    return value ? "true" : "false";
+                }
+                else
+                {
+                    // std::to_string 은 힙을 쓰므로 스택 버퍼로 바꾼다
+                    StringBuilder<constant::kMaxBuffer32> sb;
+                    sb.append( value );
+                    return string( sb.view() );
+                }
+            }
+
+            [[nodiscard]] static bool parseValue( GlobalVariableInfo& info, string_view text )
+            {
+                // 읽지 못하면 값은 그대로다 — "ture" · "enabled" 가 조용히 false 로 들어가지 않게.
+                T    value{};
+                bool bParsed{ false };
+                if constexpr ( std::is_same_v<T, bool> )
+                    bParsed = StringUtil::tryParseBool( text, value );
+                else if constexpr ( std::is_same_v<T, int32> )
+                    bParsed = StringUtil::parseInt( text, value );
+                else
+                    bParsed = StringUtil::parseFloat( text, value );
+                if ( bParsed == false )
+                    return false;
+                *static_cast<T*>( info._pData ) = value;
+                return true;
+            }
+
+            static void writeDefault( GlobalVariableInfo& info )
+            {
+                if ( std::holds_alternative<T>( info._defaultValue ) )
+                    *static_cast<T*>( info._pData ) = std::get<T>( info._defaultValue );
+            }
+
+            static void addCommandLineArgument( CommandLineManager& commandLine, const GlobalVariableInfo& info )
+            {
+                const T defaultValue = std::holds_alternative<T>( info._defaultValue ) ? std::get<T>( info._defaultValue ) : T{};
+                commandLine.addArgument<T>( { info._name }, defaultValue, true );
+            }
+
+            [[nodiscard]] static bool readCommandLineArgument( const CommandLineManager& commandLine, GlobalVariableInfo& info, string& /*outPendingText*/ )
+            {
+                T value{};
+                if ( commandLine.getArgument( info._name, value ) == false )
+                    return false;
+                *static_cast<T*>( info._pData ) = value;
+                return true;
+            }
+        };
+
+        /** @brief `sw::string` 변수의 처리입니다. 읽기 · 쓰기 모두 `s_stringVarMutex` 를 잡는다(복사 도중 재할당된 버퍼를 읽지 않게). */
+        struct GlobalVariableStringOps
+        {
+            static string formatValue( const GlobalVariableInfo& info )
+            {
+                std::shared_lock<std::shared_mutex> lock{ GlobalVariableInternal::s_stringVarMutex };
+                return *static_cast<const string*>( info._pData );
+            }
+
+            [[nodiscard]] static bool parseValue( GlobalVariableInfo& info, string_view text )
+            {
+                std::unique_lock<std::shared_mutex> lock{ GlobalVariableInternal::s_stringVarMutex };
+                *static_cast<string*>( info._pData ) = string{ text };
+                return true;
+            }
+
+            static void writeDefault( GlobalVariableInfo& info )
+            {
+                if ( std::holds_alternative<string>( info._defaultValue ) == false )
+                    return;
+                std::unique_lock<std::shared_mutex> lock{ GlobalVariableInternal::s_stringVarMutex };
+                *static_cast<string*>( info._pData ) = std::get<string>( info._defaultValue );
+            }
+
+            static void addCommandLineArgument( CommandLineManager& commandLine, const GlobalVariableInfo& info )
+            {
+                string defaultValue = std::holds_alternative<string>( info._defaultValue ) ? std::get<string>( info._defaultValue ) : string{};
+                commandLine.addArgument<string>( { info._name }, std::move( defaultValue ), true );
+            }
+
+            [[nodiscard]] static bool readCommandLineArgument( const CommandLineManager& commandLine, GlobalVariableInfo& info, string& /*outPendingText*/ )
+            {
+                string value;
+                if ( commandLine.getArgument( info._name, value ) == false )
+                    return false;
+                std::unique_lock<std::shared_mutex> lock{ GlobalVariableInternal::s_stringVarMutex };
+                *static_cast<string*>( info._pData ) = std::move( value );
+                return true;
+            }
+        };
+
+        /** @brief enum 변수의 처리입니다. int32 로 읽고 쓰며 실제 크기(`_typeSize`)만큼만 씁니다. 글은 숫자(`2`) 또는 열거자 이름(`Vulkan`)이다. */
+        struct GlobalVariableEnumOps
+        {
+            static string formatValue( const GlobalVariableInfo& info )
+            {
+                StringBuilder<constant::kMaxBuffer32> sb;
+                sb.append( GlobalVariableInternal::readEnumValue( info._pData, info._typeSize ) );
+                return string( sb.view() );
+            }
+
+            [[nodiscard]] static bool parseValue( GlobalVariableInfo& info, string_view text )
+            {
+                // 이름은 enum 테이블을 가진 쪽이 건 파서가 바꾼다.
+                int32 value{ 0 };
+                bool  bParsed = StringUtil::parseInt( text, value );
+                if ( bParsed == false )
+                {
+                    const GlobalVariableEnumTextParser& parser = GlobalVariableInternal::getEnumTextParser();
+                    bParsed                                    = parser.isBound() && parser( info._enumType, text, value );
+                }
+                if ( bParsed == false )
+                    return false;
+                GlobalVariableInternal::writeEnumValue( info._pData, info._typeSize, value );
+                return true;
+            }
+
+            static void writeDefault( GlobalVariableInfo& info )
+            {
+                if ( std::holds_alternative<int32>( info._defaultValue ) )
+                    GlobalVariableInternal::writeEnumValue( info._pData, info._typeSize, std::get<int32>( info._defaultValue ) );
+            }
+
+            static void addCommandLineArgument( CommandLineManager& commandLine, const GlobalVariableInfo& info )
+            {
+                // 숫자 또는 열거자 이름이라 글로 받는다. 정수로 받으면 `Vulkan` 이 파싱 경고 한 줄과 함께 버려진다.
+                commandLine.addArgument<string>( { info._name }, string{}, false );
+            }
+
+            [[nodiscard]] static bool readCommandLineArgument( const CommandLineManager& commandLine, GlobalVariableInfo& info, string& outPendingText )
+            {
+                // 숫자는 바로 적용하고, 파서가 아직 없어 못 읽은 이름은 `applyPendingEnumText` 까지 받아 둔다.
+                string text;
+                if ( commandLine.getArgument( info._name, text ) == false || text.empty() )
+                    return false;
+                if ( parseValue( info, text ) )
+                    return true;
+                outPendingText = std::move( text );
+                return false;
+            }
+        };
+
+        /** @brief 처리 구조체(`Ops`) 하나를 테이블 행으로 만듭니다. */
+        template <typename Ops>
+        constexpr GlobalVariableTypeOps makeGlobalVariableTypeRow( GlobalVariableType type, const utf8* pName )
+        {
+            return GlobalVariableTypeOps{ type, pName, &Ops::formatValue, &Ops::parseValue, &Ops::writeDefault, &Ops::addCommandLineArgument, &Ops::readCommandLineArgument };
+        }
+
+        /** @brief 타입 처리 테이블입니다. 행 순서는 `GlobalVariableType` 열거자 순서와 같다(아래 `static_assert`). */
+        struct GlobalVariableTypeTable
+        {
+            static constexpr uint32 kTypeCount = static_cast<uint32>( GlobalVariableType::Count );
+
+            static constexpr GlobalVariableTypeOps kArrRow[] = {
+                makeGlobalVariableTypeRow<GlobalVariableScalarOps<bool>>( GlobalVariableType::Boolean, "Bool" ),
+                makeGlobalVariableTypeRow<GlobalVariableScalarOps<int32>>( GlobalVariableType::Int32, "Int32" ),
+                makeGlobalVariableTypeRow<GlobalVariableScalarOps<float32>>( GlobalVariableType::Float, "Float" ),
+                makeGlobalVariableTypeRow<GlobalVariableStringOps>( GlobalVariableType::String, "String" ),
+                makeGlobalVariableTypeRow<GlobalVariableEnumOps>( GlobalVariableType::Enum, "Enum" ),
+            };
+
+            static constexpr bool isInTypeOrder()
+            {
+                for ( uint32 rowIndex = 0; rowIndex < kTypeCount; ++rowIndex )
+                {
+                    if ( kArrRow[rowIndex]._type != static_cast<GlobalVariableType>( rowIndex ) )
+                        return false;
+                }
+                return true;
+            }
+
+            static bool isValidType( GlobalVariableType type ) { return static_cast<uint32>( type ) < kTypeCount; }
+
+            /** @brief @p type 의 행입니다. 등록이 범위 밖 타입을 거절하므로 등록된 변수의 타입은 늘 범위 안이다. */
+            static const GlobalVariableTypeOps& getRow( GlobalVariableType type ) { return kArrRow[static_cast<uint32>( type )]; }
+        };
+        static_assert( std::size( GlobalVariableTypeTable::kArrRow ) == GlobalVariableTypeTable::kTypeCount, "GlobalVariableType needs one row per enumerator" );
+        static_assert( GlobalVariableTypeTable::isInTypeOrder(), "GlobalVariableTypeTable rows must follow GlobalVariableType order" );
     } // namespace
 } // namespace sw
 
@@ -71,15 +295,7 @@ namespace sw
             return *static_cast<const int32*>( _pData );
 
         if ( _type == GlobalVariableType::Enum )
-        {
-            if ( _typeSize == 1 )
-                return *static_cast<const uint8*>( _pData );
-            if ( _typeSize == 2 )
-                return *static_cast<const uint16*>( _pData );
-            if ( _typeSize == 8 )
-                return static_cast<int32>( *static_cast<const int64*>( _pData ) );
-            return *static_cast<const int32*>( _pData );
-        }
+            return GlobalVariableInternal::readEnumValue( _pData, _typeSize );
         return 0;
     }
 
@@ -95,44 +311,21 @@ namespace sw
     }
 
     /**
-     * @brief 현재 값을 문자열로 바꿔 반환합니다.
-     *
-     * std::to_string() 은 힙 메모리를 할당하므로, 스택 기반 StringBuilder<constant::kMaxBuffer32> 로 임시 힙 할당 없이
-     * 포맷합니다.
+     * @brief 현재 값을 문자열로 바꿔 반환합니다. 타입별 변환은 처리 테이블의 행이 맡습니다.
      */
     string GlobalVariableInfo::getValueAsString() const
     {
         if ( _pData == nullptr )
             return "";
+        return GlobalVariableTypeTable::getRow( _type )._formatValue( *this );
+    }
 
-        switch ( _type )
-        {
-            case GlobalVariableType::Boolean:
-            {
-                return *static_cast<bool*>( _pData ) ? "true" : "false";
-            }
-            case GlobalVariableType::Int32:
-            case GlobalVariableType::Enum:
-            {
-                // 스택 버퍼로 정수를 바로 문자열로 바꾼다
-                StringBuilder<constant::kMaxBuffer32> sb;
-                sb.append( getValueAsInt() );
-                return string( sb.view() );
-            }
-            case GlobalVariableType::Float:
-            {
-                // 스택 버퍼로 실수를 바로 문자열로 바꾼다
-                StringBuilder<constant::kMaxBuffer32> sb;
-                sb.append( *static_cast<float32*>( _pData ) );
-                return string( sb.view() );
-            }
-            case GlobalVariableType::String:
-            {
-                std::shared_lock<std::shared_mutex> lock{ GlobalVariableInternal::s_stringVarMutex };
-                return *static_cast<string*>( _pData );
-            }
-        }
-        return "";
+    string GlobalVariableInfo::getTypeName() const
+    {
+        // enum 타입 이름은 enum 변수에만 있다(`GlobalVariableRegistrar` 가 다른 타입에는 비워 둔다).
+        if ( _enumType.empty() == false )
+            return _enumType;
+        return GlobalVariableTypeTable::getRow( _type )._pName;
     }
 
     /**
@@ -203,54 +396,18 @@ namespace sw
     /**
      * @brief 문자열을 파싱해 *_pData 에 값을 씁니다.
      *
-     * 값이 바뀌면 등록된 변경 콜백(_onValueChanged)을 부릅니다. StringUtil::parse* 로 할당 없이 파싱합니다.
+     * 값이 바뀌면 등록된 변경 콜백(_onValueChanged)을 부릅니다. 타입별 파싱은 처리 테이블의 행이 맡고, 읽지 못하면 값은 그대로입니다.
      */
     bool GlobalVariableInfo::setValueFromString( string_view strValue )
     {
         if ( _pData == nullptr )
             return false;
+        if ( GlobalVariableTypeTable::getRow( _type )._parseValue( *this, strValue ) == false )
+            return false;
 
-        switch ( _type )
-        {
-            case GlobalVariableType::Boolean:
-            {
-                // 정수 · 실수처럼 읽지 못하면 false 다(값은 그대로) — "ture" · "enabled" 가 조용히 false 로 들어가지 않게.
-                bool bVal = false;
-                if ( StringUtil::tryParseBool( strValue, bVal ) == false )
-                    return false;
-                return setValueAsBool( bVal );
-            }
-            case GlobalVariableType::Int32:
-            {
-                int32 val{ 0 };
-                if ( StringUtil::parseInt( strValue, val ) )
-                    return setValueAsInt( val );
-                return false;
-            }
-            case GlobalVariableType::Enum:
-            {
-                // 숫자(`2`) 또는 열거자 이름(`Vulkan`). 이름은 enum 표를 든 쪽이 건 파서가 바꾼다.
-                int32 val{ 0 };
-                if ( StringUtil::parseInt( strValue, val ) )
-                    return setValueAsInt( val );
-                const GlobalVariableEnumTextParser& parser = GlobalVariableInternal::getEnumTextParser();
-                if ( parser.isBound() && parser( _enumType, strValue, val ) )
-                    return setValueAsInt( val );
-                return false;
-            }
-            case GlobalVariableType::Float:
-            {
-                float32 val{ 0.0f };
-                if ( StringUtil::parseFloat( strValue, val ) )
-                    return setValueAsFloat( val );
-                return false;
-            }
-            case GlobalVariableType::String:
-            {
-                return setValueAsString( strValue );
-            }
-        }
-        return false;
+        if ( _onValueChanged.isBound() )
+            _onValueChanged( this );
+        return true;
     }
 
     /**
@@ -261,44 +418,7 @@ namespace sw
         if ( _pData == nullptr )
             return;
 
-        switch ( _type )
-        {
-            case GlobalVariableType::Boolean:
-            {
-                if ( std::holds_alternative<bool>( _defaultValue ) )
-                    *static_cast<bool*>( _pData ) = std::get<bool>( _defaultValue );
-                break;
-            }
-            case GlobalVariableType::Int32:
-            case GlobalVariableType::Enum:
-            {
-                if ( std::holds_alternative<int32>( _defaultValue ) )
-                {
-                    const int32 val = std::get<int32>( _defaultValue );
-                    if ( _type == GlobalVariableType::Enum )
-                        GlobalVariableInternal::writeEnumValue( _pData, _typeSize, val );
-                    else
-                        *static_cast<int32*>( _pData ) = val;
-                }
-                break;
-            }
-            case GlobalVariableType::Float:
-            {
-                if ( std::holds_alternative<float32>( _defaultValue ) )
-                    *static_cast<float32*>( _pData ) = std::get<float32>( _defaultValue );
-                break;
-            }
-            case GlobalVariableType::String:
-            {
-                if ( std::holds_alternative<string>( _defaultValue ) )
-                {
-                    // 문자열 읽기(`getValueAsString`)는 이 락을 잡고 복사한다. 쓰는 쪽도 잡아야 복사 도중 재할당된 버퍼를 읽지 않는다.
-                    std::unique_lock<std::shared_mutex> lock{ GlobalVariableInternal::s_stringVarMutex };
-                    *static_cast<string*>( _pData ) = std::get<string>( _defaultValue );
-                }
-                break;
-            }
-        }
+        GlobalVariableTypeTable::getRow( _type )._writeDefault( *this );
 
         if ( _onValueChanged.isBound() )
             _onValueChanged( this );
@@ -323,24 +443,15 @@ namespace sw
 
         for ( const auto& [name, info] : _mapVariable )
         {
-            // enum 은 숫자 또는 열거자 이름이라 글로 받는다. 정수로 받으면 `Vulkan` 이 파싱 경고 한 줄과 함께 버려진다.
-            if ( info->_type == GlobalVariableType::Enum )
-                pCmdLineManager->addArgument<string>( { info->_name }, string{}, false );
-            else if ( std::holds_alternative<int32>( info->_defaultValue ) )
-                pCmdLineManager->addArgument<int32>( { info->_name }, std::get<int32>( info->_defaultValue ), true );
-            else if ( std::holds_alternative<float32>( info->_defaultValue ) )
-                pCmdLineManager->addArgument<float32>( { info->_name }, std::get<float32>( info->_defaultValue ), true );
-            else if ( std::holds_alternative<bool>( info->_defaultValue ) )
-                pCmdLineManager->addArgument<bool>( { info->_name }, std::get<bool>( info->_defaultValue ), true );
-            else if ( std::holds_alternative<string>( info->_defaultValue ) )
-                pCmdLineManager->addArgument<string>( { info->_name }, string( std::get<string>( info->_defaultValue ) ), true );
+            GlobalVariableTypeTable::getRow( info->_type )._addCommandLineArgument( *pCmdLineManager, *info );
         }
     }
 
     /**
      * @brief 파싱된 커맨드라인 인자 값을 읽어 등록된 전역 변수에 바로 반영합니다.
      *
-     * 문자열로 다시 바꿨다가 파싱하는 과정 없이, 원시 포인터(*_pData)에 타입별로 값을 넣은 뒤 변경 알림 콜백을 부릅니다.
+     * 문자열로 다시 바꿨다가 파싱하는 과정 없이 타입별 행이 원시 포인터(*_pData)에 값을 넣고, 여기서 변경 알림 콜백을 부릅니다.
+     * 지금 읽을 수 없는 글(파서가 아직 없는 enum 이름)은 `applyPendingEnumText` 까지 받아 둡니다.
      */
     void GlobalVariableManager::updateFromCommandLine( const CommandLineManager* pCmdLineManager )
     {
@@ -351,55 +462,16 @@ namespace sw
         {
             if ( info->_pData == nullptr )
                 continue;
-            if ( info->_type == GlobalVariableType::Enum )
+
+            string pendingText;
+            if ( GlobalVariableTypeTable::getRow( info->_type )._readCommandLineArgument( *pCmdLineManager, *info, pendingText ) )
             {
-                // 숫자는 바로 적용하고, 파서가 아직 없어 못 읽은 이름은 `applyPendingEnumText` 까지 받아 둔다.
-                string text;
-                if ( pCmdLineManager->getArgument( name, text ) && text.empty() == false && info->setValueFromString( text ) == false )
-                    _mapPendingEnumText[name] = std::move( text );
+                if ( info->_onValueChanged.isBound() )
+                    info->_onValueChanged( info.get() );
             }
-            else if ( info->_type == GlobalVariableType::Int32 )
+            else if ( pendingText.empty() == false )
             {
-                int32 val{ 0 };
-                if ( pCmdLineManager->getArgument( name, val ) )
-                {
-                    *static_cast<int32*>( info->_pData ) = val;
-                    if ( info->_onValueChanged.isBound() )
-                        info->_onValueChanged( info.get() );
-                }
-            }
-            else if ( info->_type == GlobalVariableType::Float )
-            {
-                float32 val{ 0.0f };
-                if ( pCmdLineManager->getArgument( name, val ) )
-                {
-                    *static_cast<float32*>( info->_pData ) = val;
-                    if ( info->_onValueChanged.isBound() )
-                        info->_onValueChanged( info.get() );
-                }
-            }
-            else if ( info->_type == GlobalVariableType::Boolean )
-            {
-                bool val{ false };
-                if ( pCmdLineManager->getArgument( name, val ) )
-                {
-                    *static_cast<bool*>( info->_pData ) = val;
-                    if ( info->_onValueChanged.isBound() )
-                        info->_onValueChanged( info.get() );
-                }
-            }
-            else if ( info->_type == GlobalVariableType::String )
-            {
-                string val;
-                if ( pCmdLineManager->getArgument( name, val ) )
-                {
-                    {
-                        std::unique_lock<std::shared_mutex> lock{ GlobalVariableInternal::s_stringVarMutex };
-                        *static_cast<string*>( info->_pData ) = std::move( val );
-                    }
-                    if ( info->_onValueChanged.isBound() )
-                        info->_onValueChanged( info.get() );
-                }
+                _mapPendingEnumText[name] = std::move( pendingText );
             }
         }
     }
@@ -413,6 +485,11 @@ namespace sw
     {
         if ( name.empty() || pData == nullptr )
             return false;
+        if ( GlobalVariableTypeTable::isValidType( type ) == false )
+        {
+            SW_LOG_WARNING( "Variable %# has no valid type (%#).", string( name ).c_str(), static_cast<uint32>( type ) );
+            return false;
+        }
 
         std::unique_lock<std::shared_mutex> lock{ _mutex };
         if ( _mapVariable.find( name ) != _mapVariable.end() )
@@ -541,43 +618,7 @@ namespace sw
                 if ( info->_pData == nullptr )
                     continue;
 
-                switch ( info->_type )
-                {
-                    case GlobalVariableType::Boolean:
-                    {
-                        if ( std::holds_alternative<bool>( info->_defaultValue ) )
-                            *static_cast<bool*>( info->_pData ) = std::get<bool>( info->_defaultValue );
-                        break;
-                    }
-                    case GlobalVariableType::Int32:
-                    case GlobalVariableType::Enum:
-                    {
-                        if ( std::holds_alternative<int32>( info->_defaultValue ) )
-                        {
-                            const int32 val = std::get<int32>( info->_defaultValue );
-                            if ( info->_type == GlobalVariableType::Enum )
-                                GlobalVariableInternal::writeEnumValue( info->_pData, info->_typeSize, val );
-                            else
-                                *static_cast<int32*>( info->_pData ) = val;
-                        }
-                        break;
-                    }
-                    case GlobalVariableType::Float:
-                    {
-                        if ( std::holds_alternative<float32>( info->_defaultValue ) )
-                            *static_cast<float32*>( info->_pData ) = std::get<float32>( info->_defaultValue );
-                        break;
-                    }
-                    case GlobalVariableType::String:
-                    {
-                        if ( std::holds_alternative<string>( info->_defaultValue ) )
-                        {
-                            std::unique_lock<std::shared_mutex> stringLock{ GlobalVariableInternal::s_stringVarMutex };
-                            *static_cast<string*>( info->_pData ) = std::get<string>( info->_defaultValue );
-                        }
-                        break;
-                    }
-                }
+                GlobalVariableTypeTable::getRow( info->_type )._writeDefault( *info );
 
                 if ( info->_onValueChanged.isBound() )
                     listPendingCallback.push_back( { info->_onValueChanged, info.get() } );

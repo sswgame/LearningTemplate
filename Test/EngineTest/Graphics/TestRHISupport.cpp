@@ -430,20 +430,20 @@ SW_TEST_CASE( RHINativeHandlesTest, QueryRejectsAnotherLayoutAndFillsTheMatching
 SW_TEST_CASE( VulkanAPIVersionTest, DeviceBelowTheShaderTargetIsRejected )
 {
     using sw::VulkanRHIRequiredVersion;
-    const uint32 kRequiredMajor = VulkanRHIRequiredVersion::kRequiredMajor;
-    const uint32 kRequiredMinor = VulkanRHIRequiredVersion::kRequiredMinor;
-    SW_ASSERT_TRUE( kRequiredMinor > 0u );
+    using sw::constant::kVulkanRequiredMajor;
+    using sw::constant::kVulkanRequiredMinor;
+    SW_ASSERT_TRUE( kVulkanRequiredMinor > 0u );
 
-    const uint32 belowWithPatch = VulkanRHIRequiredVersion::makeAPIVersion( kRequiredMajor, kRequiredMinor - 1u ) | 0xFFFu;
+    const uint32 belowWithPatch = VulkanRHIRequiredVersion::makeAPIVersion( kVulkanRequiredMajor, kVulkanRequiredMinor - 1u ) | 0xFFFu;
     SW_EXPECT_FALSE( VulkanRHIRequiredVersion::isAPIVersionSupported( belowWithPatch ) );
     SW_EXPECT_FALSE( VulkanRHIRequiredVersion::isAPIVersionSupported( belowWithPatch | ( 1u << 29u ) ) );
-    SW_EXPECT_TRUE( VulkanRHIRequiredVersion::isAPIVersionSupported( VulkanRHIRequiredVersion::makeAPIVersion( kRequiredMajor, kRequiredMinor ) ) );
-    SW_EXPECT_TRUE( VulkanRHIRequiredVersion::isAPIVersionSupported( VulkanRHIRequiredVersion::makeAPIVersion( kRequiredMajor, kRequiredMinor + 1u ) ) );
+    SW_EXPECT_TRUE( VulkanRHIRequiredVersion::isAPIVersionSupported( VulkanRHIRequiredVersion::makeAPIVersion( kVulkanRequiredMajor, kVulkanRequiredMinor ) ) );
+    SW_EXPECT_TRUE( VulkanRHIRequiredVersion::isAPIVersionSupported( VulkanRHIRequiredVersion::makeAPIVersion( kVulkanRequiredMajor, kVulkanRequiredMinor + 1u ) ) );
 }
 
 /**
  * @brief [VulkanAPIVersionTest] 쿠킹된 Vulkan SPIR-V 의 판이 디바이스 요구 판의 타깃과 같다.
- * @details 셰이더 쿠킹 타깃(`-fspv-target-env`)과 물리 디바이스의 최소 판은 `VulkanRHIRequiredVersion` 하나에서 나온다. 한쪽만 바꾸거나 다시 쿠킹하지 않으면
+ * @details 셰이더 쿠킹 타깃(`-fspv-target-env`)과 물리 디바이스의 최소 버전은 `constant::kVulkanRequiredMajor` · `kVulkanRequiredMinor`(RHITypes.h) 하나에서 나온다. 한쪽만 바꾸거나 다시 쿠킹하지 않으면
  *          디바이스가 받지 못하는 판의 모듈이 남는다. 커밋된 vulkan 폴더 .spv 헤더의 판을 읽어 대조한다.
  */
 SW_TEST_CASE( VulkanAPIVersionTest, CookedVulkanSpirvMatchesTheRequiredAPI )
@@ -451,7 +451,7 @@ SW_TEST_CASE( VulkanAPIVersionTest, CookedVulkanSpirvMatchesTheRequiredAPI )
     SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
 
     constexpr uint32 kSpirvMagic     = 0x07230203u;
-    const uint32     expectedVersion = sw::VulkanRHIRequiredVersion::computeSpirvVersion( sw::VulkanRHIRequiredVersion::kRequiredMinor );
+    const uint32     expectedVersion = sw::VulkanRHIRequiredVersion::computeSpirvVersion( sw::constant::kVulkanRequiredMinor );
     const utf8*      arrDomain[]     = { "engine", "common" };
 
     uint32 checkedCount{ 0 };
