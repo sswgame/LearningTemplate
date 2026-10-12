@@ -99,7 +99,7 @@ cd build/Ninja-Debug/Bin
 **번역 테이블**의 항목에는 `text`, `sourceHash`, `review`, `translatorComment` 가 있습니다. `sourceHash` 가 지금 원문 해시와 다르거나 `review` 가 켜져 있으면 화면에 내지 않고 사슬의 다음 문화권으로 넘어갑니다.
 해시가 없는 항목은 검사하지 않습니다.
 
-**문화권 테이블**의 항목은 `parent` 에서 적지 않은 값을 물려받습니다. 복수형 규칙(`pluralRule`), 숫자 기호(`digits`), 날짜 패턴, 월 이름, 쓰기 방향, 글꼴 대체 목록, 의사 로컬라이제이션 방식(`pseudo`)이 들어갑니다.
+**문화권 테이블**의 항목은 `parent` 에서 적지 않은 값을 물려받습니다. 복수형 규칙(`pluralRule`), 서수 규칙(`ordinalRule`, 적지 않으면 `none`), 숫자 기호(`digits`), 기본 통화와 통화 패턴(`currencyCode`, `currencyPattern` — `¤` 가 기호, `#` 가 숫자), 날짜 패턴, 월 이름, 쓰기 방향, 글꼴 대체 목록, 의사 로컬라이제이션 방식(`pseudo`)이 들어갑니다.
 허용 값은 `CultureInfo.h` 에 있습니다. 모르는 필드, 없는 부모, 순환, 정규화되지 않은 코드(`ko-KR`)는 로드 오류입니다.
 
 ### 수집
@@ -130,8 +130,19 @@ cd build/Ninja-Debug/Bin
 CI 는 App 을 띄우지 않습니다. 같은 확인을 `EditorTest` 의 `LocalizationGatherTest.RepositoryProjectsAreUpToDate` 가 합니다(에디터 모듈이 지어지는 구성의 `nogpu` 테스트).
 
 **PO 교환.** `--export-po` 는 문화권마다 `<프로젝트 폴더>/po/<문화권>.po` 를 씁니다. 키는 `msgctxt` 에 들어갑니다.
+**XLIFF 교환.** 번역 관리 도구가 PO 대신 XLIFF 1.2 를 받으면 `XliffFile` 을 씁니다. PO 와 같은 항목(`PortableObjectEntry`)을 읽고 쓰므로 수집 · 가져오기 코드가 두 형식을 같이 다룹니다
+(키는 `trans-unit` 의 `id`, 검토 표시는 `target` 의 `state="needs-review-translation"`). 인라인 태그(`<g>`, `<x/>`)는 지원하지 않습니다 — ICU 자리표시자가 글 그대로 들어갑니다.
+`--export-po` 같은 명령줄 연결은 에디터 모듈(`LocalizationTools`) 쪽 일입니다.
+
 `-import-po=<파일>` 은 파일 머리의 `X-Localization-Project` 로 프로젝트를 고릅니다. 가져온 번역의 해시는 번역가가 본 원문(`msgid`)의 해시이므로, 그 사이 원문이 바뀌었으면 낡은 번역으로 남습니다.
 `#, fuzzy` 는 검토 표시가 되고, `# ` 로 시작하는 번역가 메모는 왕복해도 유지됩니다.
+
+### 쿠킹된 이진 표
+
+배포본이 JSON 저작 파일을 파싱하지 않도록 문화권마다 이진 표(`LocalizationBinaryTable`, `.locres`)로 굽습니다(언리얼 `.locres`).
+`LocalizationManager::cookBinaryTable( 문화권, bytes )` 가 로드한 프로젝트에서 **화면에 나오는 글만**(낡은 번역 · 검토 번역 제외) 키 해시 → 글 표로 굽고,
+`loadBinaryTable` / `loadBinaryTableResource` 가 읽어 그 문화권의 실행 테이블에 프로젝트 위, 낱개 테이블(`loadLanguageJSON`) 아래로 덮습니다.
+머리 · 범위 · 검사합이 하나라도 틀리면 거절하고 아무것도 바꾸지 않습니다. 키 문자열은 담지 않으므로 수집 · 번역 가져오기에는 JSON 이 계속 정본입니다.
 
 ### 실행 중 조회
 
@@ -143,7 +154,9 @@ CI 는 App 을 띄우지 않습니다. 같은 확인을 `EditorTest` 의 `Locali
 `getStringByText` 는 키가 아닐 수도 있는 글(대사 원문 같은 것)에 쓰고, 빠진 키로 기록하지 않습니다. `Meta = "Localizable"` 값은 `getStringByText( value, value )` 로 찾습니다.
 
 **포맷.** `formatText( pattern, TextArgumentList().addText( "name", n ).addInteger( "count", c ) )`, `getFormattedString( key, args )`, `SW_LOCFORMAT` 이 있습니다.
-`TextFormatter` 가 지원하는 것은 `{name}`, `plural`, `select`, `number`, `date`, `time` 입니다. 포맷 오류는 경고로 알리고 글은 그래도 돌려줍니다.
+`TextFormatter` 가 지원하는 것은 `{name}`, `plural`, `selectordinal`, `select`, `number`(`integer` · `percent` · `currency` · `::currency/USD`), `date`, `time` 입니다.
+서수는 문화권의 `ordinalRule` 이 범주를 고릅니다(영어 `{n, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}`).
+시간대는 `TextArgumentList::addUnixTime( 이름, UTC 밀리초, "Asia/Seoul" )` 가 `TimeZoneUtil` 표(고정 오프셋과 미국 · 유럽 일광 절약)로 현지 날짜로 바꿔 넣고, `{d, time, long}` 이 `UTC+9` 같은 오프셋을 붙입니다. 포맷 오류는 경고로 알리고 글은 그래도 돌려줍니다.
 
 **글 버전.** 언어를 바꾸거나 파일을 다시 읽거나 프로젝트를 로드할 때마다 글 버전(revision) 번호가 오릅니다. 언리얼의 TextRevision과 같습니다.
 런타임 UI는 이 번호를 보고 바뀌면 글을 다시 찾고 레이아웃을 다시 계산합니다. 글 위젯의 `_text` 는 키나 글 그대로이고 `getStringByText( 키, 키 )` 로 찾습니다.
@@ -179,7 +192,10 @@ CI 는 App 을 띄우지 않습니다. 같은 확인을 `EditorTest` 의 `Locali
 - **게임 데이터를 낱개 테이블(`setString`, `loadLanguageJSON`)로 넣지 마세요.** 낱개 테이블은 원문 해시 확인 없이 프로젝트 위에 덮입니다. 테스트와 도구용입니다.
 - **UI에는 미리 찾은 글이 아니라 키를 넣으세요.** `SW_LOCTEXT` 로 찾은 글을 위젯에 넣으면 언어를 바꿔도 그 글이 그대로 남습니다.
 - **코드나 데이터의 글을 고치면 수집 결과를 같은 커밋에 넣으세요.** 원문이 바뀌면 기존 번역은 낡은 번역이 되어 화면에서 사라지고, `LocalizationGatherTest.RepositoryProjectsAreUpToDate`(EditorTest)가 실패합니다.
-- **`selectordinal`, 화폐, 시간대, 서수는 지원하지 않습니다.** 날짜는 받은 값을 그대로 쓰고 시간대 변환을 하지 않습니다.
+- **시간대 표는 작습니다.** `TimeZoneUtil.cpp` 에 있는 이름(IANA)만 알고 미국 · 유럽 일광 절약 두 규칙만 계산합니다. 모르는 이름은 `addUnixTime` 이 UTC 로 씁니다.
+  `addDateTime` 은 변환 없이 받은 값을 그대로 씁니다 — 어느 쪽인지 호출부가 정합니다.
+- **통화 기호는 한 철자만 가집니다.** `CurrencyUtil.cpp` 표에 없는 통화는 코드를 기호 자리에 쓰고 소수 2 자리입니다.
+- **서수 규칙은 영어 · 프랑스어만 이름이 있습니다.** 다른 문화권은 `none`(other 하나)이므로 서수 글에 `other` 만 쓰면 됩니다.
 
 ## 더 볼 곳
 
@@ -190,7 +206,9 @@ CI 는 App 을 띄우지 않습니다. 같은 확인을 `EditorTest` 의 `Locali
 | `CultureInfo.h` | 문화권 데이터와 복수형 규칙 |
 | `TextFormatter.h` | 메시지 포맷 문법 |
 | `LocText.h` | `SW_LOCTEXT`, `SW_LOCFORMAT` |
-| `TextGatherer.h`, `TranslationMemory.h`, `PortableObjectFile.h` | 수집, 번역 메모리, PO |
+| `TextGatherer.h`, `TranslationMemory.h`, `PortableObjectFile.h`, `XliffFile.h` | 수집, 번역 메모리, PO, XLIFF |
+| `LocalizationBinaryTable.h` | 쿠킹된 이진 번역 표(`.locres`) |
+| `CurrencyUtil.h`, `TimeZoneUtil.h` | 통화 표, 시간대 표와 UTC → 현지 변환 |
 | `Source/Editor/Common/Localization/LocalizationTools.h` | `--gather-text` 같은 명령의 본문(에디터 모듈) |
 
 - 테스트: `Test/EngineTest/Localization/`, 도구 명령은 `Test/EditorTest/Common/Localization/`

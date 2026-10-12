@@ -5,6 +5,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/set.h"
 
+#include "Engine/Localization/TimeZoneUtil.h"
+
 namespace sw
 {
     namespace
@@ -17,6 +19,14 @@ namespace sw
             Rebuild     ///< 구문은 그대로 두고 텍스트 조각만 바꿔 모든 분기를 다시 씁니다.
         };
 
+        /** @brief 분기를 고르는 인자의 종류입니다. */
+        enum class TextChoiceKind : uint8
+        {
+            Select = 0, ///< 값(글)과 같은 이름의 분기
+            Plural,     ///< 복수형 범주(`one` …)와 `=N`
+            Ordinal     ///< 서수 범주(`selectordinal`). `=N` 은 되지만 offset 은 없다
+        };
+
         /**
          * @class TextFormatterWalker
          * @brief ICU MessageFormat 부분 집합의 재귀 하강 파서입니다.
@@ -25,6 +35,8 @@ namespace sw
         {
         public:
             static constexpr uint32 kMaxDepth = 16;
+            /** @brief `{n, number, ::currency/USD}` 의 스켈레톤 머리입니다(ICU). 뒤가 통화 코드입니다. */
+            static constexpr string_view kCurrencySkeleton = "::currency/";
 
             TextFormatterWalker( string_view pattern, TextWalkMode mode )
                 : _pattern{ pattern }
@@ -92,6 +104,17 @@ namespace sw
             {
                 const size_t start = _position;
                 while ( _position < _pattern.size() && isNameCharacter( _pattern[_position] ) )
+                {
+                    ++_position;
+                }
+                return _pattern.substr( start, _position - start );
+            }
+
+            /** @brief 인자 스타일 한 낱말입니다. 이름 글자에 더해 ICU 스켈레톤의 `/`(`::currency/USD`)를 받습니다. */
+            string_view readStyle()
+            {
+                const size_t start = _position;
+                while ( _position < _pattern.size() && ( isNameCharacter( _pattern[_position] ) || _pattern[_position] == '/' ) )
                 {
                     ++_position;
                 }
@@ -229,12 +252,13 @@ namespace sw
                 skipSpace();
                 const string_view type = readWord();
                 skipSpace();
-                if ( type == "plural" || type == "select" )
+                if ( type == "plural" || type == "select" || type == "selectordinal" )
                 {
                     if ( _position >= _pattern.size() || _pattern[_position] != ',' )
                         return fail( "',' expected after plural/select" );
                     ++_position;
-                    return walkOptions( depth, name, type == "plural", openPos, bEmit, outText );
+                    const TextChoiceKind kind = type == "plural" ? TextChoiceKind::Plural : ( type == "select" ? TextChoiceKind::Select : TextChoiceKind::Ordinal );
+                    return walkOptions( depth, name, kind, openPos, bEmit, outText );
                 }
 
                 string_view style;
@@ -242,7 +266,7 @@ namespace sw
                 {
                     ++_position;
                     skipSpace();
-                    style = readWord();
+                    style = readStyle();
                     skipSpace();
                 }
                 if ( _position >= _pattern.size() || _pattern[_position] != '}' )
@@ -258,9 +282,11 @@ namespace sw
                 return true;
             }
 
-            /** @brief plural 과 select 의 분기들을 훑고, Format 이면 맞는 분기 하나만 씁니다. */
-            bool walkOptions( uint32 depth, string_view name, bool bPlural, size_t openPos, bool bEmit, string& outText )
+            /** @brief plural · selectordinal · select 의 분기들을 훑고, Format 이면 맞는 분기 하나만 씁니다. */
+            bool walkOptions( uint32 depth, string_view name, TextChoiceKind kind, size_t openPos, bool bEmit, string& outText )
             {
+                const bool          bPlural   = kind != TextChoiceKind::Select;
+                const bool          bOrdinal  = kind == TextChoiceKind::Ordinal;
                 const bool          bFormat   = _mode == TextWalkMode::Format && bEmit;
                 const bool          bRebuild  = _mode == TextWalkMode::Rebuild && bEmit;
                 const TextArgument* pArgument = ( bFormat && _pArguments != nullptr ) ? _pArguments->findArgument( name ) : nullptr;
@@ -272,7 +298,7 @@ namespace sw
                     outText.append( _pattern.substr( openPos, _position - openPos ) );
 
                 float64 offset{ 0.0 };
-                if ( bPlural && _pattern.substr( _position ).substr( 0, 7 ) == "offset:" )
+                if ( bPlural && bOrdinal == false && _pattern.substr( _position ).substr( 0, 7 ) == "offset:" )
                 {
                     _position += 7;
                     skipSpace();
@@ -343,7 +369,7 @@ namespace sw
                     return true;
 
                 float64      value{ 0.0 };
-                const size_t chosen = chooseBranch( *pArgument, bPlural, offset, listSelector, value );
+                const size_t chosen = chooseBranch( *pArgument, kind, offset, listSelector, value );
                 if ( chosen >= listSelector.size() )
                     return true;
                 const size_t endPosition = _position;
@@ -358,10 +384,10 @@ namespace sw
             }
 
             /** @brief 쓸 분기의 번호입니다. 복수형은 `=N`, 범주, other 순서이고 select 는 값, other 순서입니다. 인자가 맞지 않으면 other 입니다. */
-            size_t chooseBranch( const TextArgument& argument, bool bPlural, float64 offset, const vector<string>& listSelector, float64& outValue )
+            size_t chooseBranch( const TextArgument& argument, TextChoiceKind kind, float64 offset, const vector<string>& listSelector, float64& outValue )
             {
                 string wanted;
-                if ( bPlural )
+                if ( kind != TextChoiceKind::Select )
                 {
                     if ( argument._kind == TextArgumentKind::Integer )
                         outValue = static_cast<float64>( argument._integer );
@@ -376,7 +402,7 @@ namespace sw
                         if ( bExact && exactValue == outValue )
                             return index;
                     }
-                    wanted = categorySelector( argument, offset, outValue );
+                    wanted = categorySelector( argument, kind == TextChoiceKind::Ordinal, offset, outValue );
                 }
                 else if ( argument._kind == TextArgumentKind::Text || argument._kind == TextArgumentKind::Integer )
                     wanted = argument._text;
@@ -395,7 +421,7 @@ namespace sw
             }
 
             /** @brief 복수형 범주 키워드입니다(offset 을 뺀 값으로 고른다). */
-            string categorySelector( const TextArgument& argument, float64 offset, float64 value ) const
+            string categorySelector( const TextArgument& argument, bool bOrdinal, float64 offset, float64 value ) const
             {
                 if ( _pCulture == nullptr )
                     return "other";
@@ -403,7 +429,8 @@ namespace sw
                 const PluralOperands operands = argument._kind == TextArgumentKind::Integer
                                                   ? PluralOperands::makeInteger( static_cast<int64>( shown ) )
                                                   : PluralOperands::makeDecimal( shown, CultureInfo::countVisibleFraction( shown, 0, 3 ) );
-                return PluralRuleUtil::getCategoryName( _pCulture->selectPlural( operands ) );
+                const PluralCategory category = bOrdinal ? _pCulture->selectOrdinal( operands ) : _pCulture->selectPlural( operands );
+                return PluralRuleUtil::getCategoryName( category );
             }
 
             string formatPluralNumber( const TextArgument& argument, float64 shownValue ) const
@@ -472,6 +499,10 @@ namespace sw
                         outText.append( _pCulture->formatPercent( value ) );
                     else if ( style == "integer" )
                         outText.append( _pCulture->formatDecimal( value, 0, 0 ) );
+                    else if ( style == "currency" )
+                        outText.append( _pCulture->formatCurrency( value, {} ) );
+                    else if ( style.substr( 0, kCurrencySkeleton.size() ) == kCurrencySkeleton )
+                        outText.append( _pCulture->formatCurrency( value, style.substr( kCurrencySkeleton.size() ) ) );
                     else if ( style.empty() )
                         outText.append( pArgument->_kind == TextArgumentKind::Integer ? _pCulture->formatInteger( pArgument->_integer ) : _pCulture->formatDecimal( value, 0, 3 ) );
                     else
@@ -490,6 +521,10 @@ namespace sw
                     return;
                 }
                 outText.append( _pCulture->formatDateTime( pArgument->_dateTime, pattern ) );
+                // 시각의 long · full 스타일은 시간대를 아는 값에 오프셋을 붙인다(ICU 의 z)
+                const bool bLongTime = type == "time" && ( style == "long" || style == "full" );
+                if ( bLongTime && pArgument->_dateTime._bZoned )
+                    outText.append( " " ).append( TimeZoneUtil::formatOffset( pArgument->_dateTime._utcOffsetMinutes, false ) );
             }
 
         private:
@@ -551,6 +586,14 @@ namespace sw
         argument._kind         = TextArgumentKind::DateTime;
         argument._dateTime     = value;
         return *this;
+    }
+
+    TextArgumentList& TextArgumentList::addUnixTime( string_view name, int64 unixMilliseconds, string_view zoneName )
+    {
+        const TimeZoneInfo* pZone = TimeZoneUtil::findZone( zoneName );
+        if ( pZone == nullptr )
+            pZone = TimeZoneUtil::findZone( "UTC" );
+        return addDateTime( name, TimeZoneUtil::convertUnixMilliseconds( unixMilliseconds, *pZone ) );
     }
 
     const TextArgument* TextArgumentList::findArgument( string_view name ) const
