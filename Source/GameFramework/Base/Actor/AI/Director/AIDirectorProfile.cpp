@@ -9,6 +9,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 
+#include "GameFramework/Base/Foundation/Data/EnumNameTable.h"
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
@@ -45,23 +46,15 @@ namespace sw
                 return XMLNameCheck::reportUnknownChildren( node, arrKnown, sourceName, LogLevel::Warning );
             }
 
-            template <size_t Count>
-            [[nodiscard]] static bool parseEnumName( string_view text, const utf8* const ( &arrName )[Count], uint32& outIndex )
-            {
-                for ( uint32 index = 0; index < Count; ++index )
-                {
-                    if ( StringUtil::equals( text, arrName[index], true ) )
-                    {
-                        outIndex = index;
-                        return true;
-                    }
-                }
-                return false;
-            }
-
-            static constexpr const utf8* kArrSignalKindName[]  = { "impulse", "rate", "level" };
-            static constexpr const utf8* kArrPoolKindName[]    = { "encounter", "reward" };
-            static constexpr const utf8* kArrPoolTriggerName[] = { "phaseEnter", "interval", "budget" };
+            static constexpr const utf8*                          kArrSignalKindName[]  = { "impulse", "rate", "level" };
+            static constexpr const utf8*                          kArrPoolKindName[]    = { "encounter", "reward" };
+            static constexpr const utf8*                          kArrPoolTriggerName[] = { "phaseEnter", "interval", "budget" };
+            static constexpr EnumNameTable<AIDirectorSignalKind>  kSignalKindTable{ kArrSignalKindName };
+            static constexpr EnumNameTable<AIDirectorPoolKind>    kPoolKindTable{ kArrPoolKindName };
+            static constexpr EnumNameTable<AIDirectorPoolTrigger> kPoolTriggerTable{ kArrPoolTriggerName };
+            static_assert( kSignalKindTable.getCount() == static_cast<size_t>( AIDirectorSignalKind::Level ) + 1, "signal kind names must cover every AIDirectorSignalKind" );
+            static_assert( kPoolKindTable.getCount() == static_cast<size_t>( AIDirectorPoolKind::Reward ) + 1, "pool kind names must cover every AIDirectorPoolKind" );
+            static_assert( kPoolTriggerTable.getCount() == static_cast<size_t>( AIDirectorPoolTrigger::Budget ) + 1, "pool trigger names must cover every AIDirectorPoolTrigger" );
         };
     } // namespace
 } // namespace sw
@@ -70,17 +63,17 @@ namespace sw
 {
     const utf8* toString( AIDirectorSignalKind kind )
     {
-        return AIDirectorProfileInternal::kArrSignalKindName[static_cast<uint32>( kind )];
+        return AIDirectorProfileInternal::kSignalKindTable.toString( kind );
     }
 
     const utf8* toString( AIDirectorPoolKind kind )
     {
-        return AIDirectorProfileInternal::kArrPoolKindName[static_cast<uint32>( kind )];
+        return AIDirectorProfileInternal::kPoolKindTable.toString( kind );
     }
 
     const utf8* toString( AIDirectorPoolTrigger trigger )
     {
-        return AIDirectorProfileInternal::kArrPoolTriggerName[static_cast<uint32>( trigger )];
+        return AIDirectorProfileInternal::kPoolTriggerTable.toString( trigger );
     }
 
     AIDirectorProfile::AIDirectorProfile()
@@ -203,18 +196,16 @@ namespace sw
                 continue;
             }
             AIDirectorSignalDef signal;
-            signal._id       = hashed_string( pID );
-            signal._scale    = child.getAttributeFloat( "scale", signal._scale );
-            signal._max      = child.getAttributeFloat( "max", signal._max );
-            signal._bCombat  = child.getAttributeBool( "combat", false ) ? SW_TRUE : SW_FALSE;
-            uint32 kindIndex = 0;
-            if ( Internal::parseEnumName( child.getAttributeText( "kind" ), Internal::kArrSignalKindName, kindIndex ) == false )
+            signal._id      = hashed_string( pID );
+            signal._scale   = child.getAttributeFloat( "scale", signal._scale );
+            signal._max     = child.getAttributeFloat( "max", signal._max );
+            signal._bCombat = child.getAttributeBool( "combat", false ) ? SW_TRUE : SW_FALSE;
+            if ( Internal::kSignalKindTable.parse( child.getAttributeText( "kind" ), signal._kind ) == false )
             {
-                SW_LOG_WARNING( "%#: signal '%#' has an unknown kind '%#' (impulse, rate, level)", sourceName, pID, child.getAttributeText( "kind" ) );
+                SW_LOG_WARNING( "%#: signal '%#' has an unknown kind '%#' (%#)", sourceName, pID, child.getAttributeText( "kind" ), Internal::kSignalKindTable.joinNames().c_str() );
                 bValid = false;
                 continue;
             }
-            signal._kind = static_cast<AIDirectorSignalKind>( kindIndex );
             if ( findSignalIndex( signal._id ) >= 0 )
             {
                 SW_LOG_WARNING( "%#: signal '%#' is declared twice", sourceName, pID );
@@ -275,23 +266,21 @@ namespace sw
         if ( pID == nullptr )
             return false;
         AIDirectorPoolDef pool;
-        pool._id                    = hashed_string( pID );
-        uint32            kindIndex = 0;
-        const string_view kindText  = node.getAttributeText( "kind" );
-        if ( kindText.empty() == false && Internal::parseEnumName( kindText, Internal::kArrPoolKindName, kindIndex ) == false )
+        pool._id                   = hashed_string( pID );
+        const string_view kindText = node.getAttributeText( "kind" );
+        pool._kind                 = AIDirectorPoolKind::Encounter; // 적지 않으면 조우 풀이다
+        if ( kindText.empty() == false && Internal::kPoolKindTable.parse( kindText, pool._kind ) == false )
         {
-            SW_LOG_WARNING( "%#: pool '%#' has an unknown kind '%#' (encounter, reward)", sourceName, pID, kindText );
+            SW_LOG_WARNING( "%#: pool '%#' has an unknown kind '%#' (%#)", sourceName, pID, kindText, Internal::kPoolKindTable.joinNames().c_str() );
             bValid = false;
         }
-        pool._kind                     = static_cast<AIDirectorPoolKind>( kindIndex );
-        uint32            triggerIndex = static_cast<uint32>( AIDirectorPoolTrigger::Interval );
-        const string_view triggerText  = node.getAttributeText( "trigger" );
-        if ( Internal::parseEnumName( triggerText, Internal::kArrPoolTriggerName, triggerIndex ) == false )
+        pool._trigger                 = AIDirectorPoolTrigger::Interval; // 적지 않거나 틀리면 주기 풀이다
+        const string_view triggerText = node.getAttributeText( "trigger" );
+        if ( Internal::kPoolTriggerTable.parse( triggerText, pool._trigger ) == false )
         {
-            SW_LOG_WARNING( "%#: pool '%#' has an unknown trigger '%#' (phaseEnter, interval, budget)", sourceName, pID, triggerText );
+            SW_LOG_WARNING( "%#: pool '%#' has an unknown trigger '%#' (%#)", sourceName, pID, triggerText, Internal::kPoolTriggerTable.joinNames().c_str() );
             bValid = false;
         }
-        pool._trigger    = static_cast<AIDirectorPoolTrigger>( triggerIndex );
         pool._phase      = hashed_string( node.getAttributeText( "phase" ) );
         pool._needSignal = hashed_string( node.getAttributeText( "need" ) );
         pool._interval   = MathUtil::max( 0.01f, node.getAttributeFloat( "interval", pool._interval ) );

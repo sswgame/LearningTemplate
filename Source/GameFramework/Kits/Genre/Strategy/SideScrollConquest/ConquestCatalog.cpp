@@ -7,6 +7,7 @@
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
+#include "GameFramework/Base/Foundation/Data/EnumNameTable.h"
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
@@ -24,33 +25,19 @@ namespace sw
                     (void)outStats.loadFromAttributes( child ); // 반환값은 읽은 개수이다. 숫자가 아닌 속성은 건너뛰면 되므로 무시한다
             }
 
-            [[nodiscard]] static bool parseSiteKind( string_view text, ConquestSiteKind& outKind )
-            {
-                constexpr const utf8* kArrKindName[] = { "Village", "Outpost", "Fortress" };
-                for ( uint32 kindIndex = 0; kindIndex < 3; ++kindIndex )
-                {
-                    if ( StringUtil::equals( text, string_view( kArrKindName[kindIndex] ), true ) )
-                    {
-                        outKind = static_cast<ConquestSiteKind>( kindIndex );
-                        return true;
-                    }
-                }
-                return false;
-            }
+            static constexpr const utf8*                      kArrKindName[] = { "Village", "Outpost", "Fortress" };
+            static constexpr EnumNameTable<ConquestSiteKind>  kSiteKindTable{ kArrKindName };
+            static constexpr const utf8*                      kArrRoleName[] = { "None", "Ram", "Ladder" };
+            static constexpr EnumNameTable<ConquestSiegeRole> kSiegeRoleTable{ kArrRoleName };
+            static constexpr const utf8*                      kArrTeamName[] = { "Neutral", "Player", "Enemy" };
+            static constexpr EnumNameTable<ConquestTeam>      kTeamTable{ kArrTeamName };
+            static_assert( kSiteKindTable.getCount() == static_cast<size_t>( ConquestSiteKind::Fortress ) + 1, "site kind names must cover every ConquestSiteKind" );
+            static_assert( kSiegeRoleTable.getCount() == static_cast<size_t>( ConquestSiegeRole::Ladder ) + 1, "siege role names must cover every ConquestSiegeRole" );
+            static_assert( kTeamTable.getCount() == static_cast<size_t>( ConquestTeam::Enemy ) + 1, "team names must cover every ConquestTeam" );
 
-            [[nodiscard]] static bool parseSiegeRole( string_view text, ConquestSiegeRole& outRole )
-            {
-                constexpr const utf8* kArrRoleName[] = { "None", "Ram", "Ladder" };
-                for ( uint32 roleIndex = 0; roleIndex < 3; ++roleIndex )
-                {
-                    if ( StringUtil::equals( text, string_view( kArrRoleName[roleIndex] ), true ) )
-                    {
-                        outRole = static_cast<ConquestSiegeRole>( roleIndex );
-                        return true;
-                    }
-                }
-                return false;
-            }
+            [[nodiscard]] static bool parseSiteKind( string_view text, ConquestSiteKind& outKind ) { return kSiteKindTable.parse( text, outKind ); }
+
+            [[nodiscard]] static bool parseSiegeRole( string_view text, ConquestSiegeRole& outRole ) { return kSiegeRoleTable.parse( text, outRole ); }
 
             /** @brief "spearman:3,archer:2" 를 읽습니다. 개수를 빼면 하나로 봅니다. */
             static void parseGarrison( string_view text, vector<ConquestGarrisonDef>& outListGarrison, string_view sourceName, const utf8* pID )
@@ -101,16 +88,7 @@ namespace sw
 {
     bool parseConquestTeam( string_view text, ConquestTeam& outTeam )
     {
-        constexpr const utf8* kArrTeamName[] = { "Neutral", "Player", "Enemy" };
-        for ( uint32 teamIndex = 0; teamIndex < 3; ++teamIndex )
-        {
-            if ( StringUtil::equals( text, string_view( kArrTeamName[teamIndex] ), true ) )
-            {
-                outTeam = static_cast<ConquestTeam>( teamIndex );
-                return true;
-            }
-        }
-        return false;
+        return ConquestCatalogInternal::kTeamTable.parse( text, outTeam );
     }
 
     const utf8* toString( ConquestTeam team )

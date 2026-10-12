@@ -7,6 +7,7 @@
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
+#include "GameFramework/Base/Foundation/Data/EnumNameTable.h"
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
@@ -32,33 +33,16 @@ namespace sw
                 {          CityService::Tax,           "Tax"},
             };
 
-            [[nodiscard]] static bool parseKind( string_view text, CityBuildingKind& outKind )
-            {
-                constexpr const utf8* kArrKindName[] = { "House", "Service", "Producer", "Storage", "Market", "Decoration" };
-                for ( uint32 kindIndex = 0; kindIndex < 6; ++kindIndex )
-                {
-                    if ( StringUtil::equals( text, string_view( kArrKindName[kindIndex] ), true ) )
-                    {
-                        outKind = static_cast<CityBuildingKind>( kindIndex );
-                        return true;
-                    }
-                }
-                return false;
-            }
+            static constexpr const utf8*                     kArrKindName[] = { "House", "Service", "Producer", "Storage", "Market", "Decoration" };
+            static constexpr EnumNameTable<CityBuildingKind> kKindTable{ kArrKindName };
+            static constexpr const utf8*                     kArrTerrainName[] = { "Grass", "Sand", "Floodplain", "Water", "Rock" };
+            static constexpr EnumNameTable<CityTerrain>      kTerrainTable{ kArrTerrainName };
+            static_assert( kKindTable.getCount() == static_cast<size_t>( CityBuildingKind::Decoration ) + 1, "kind names must cover every CityBuildingKind" );
+            static_assert( kTerrainTable.getCount() == static_cast<size_t>( CityTerrain::Rock ) + 1, "terrain names must cover every CityTerrain" );
 
-            [[nodiscard]] static bool parseTerrain( string_view text, CityTerrain& outTerrain )
-            {
-                constexpr const utf8* kArrTerrainName[] = { "Grass", "Sand", "Floodplain", "Water", "Rock" };
-                for ( uint32 terrainIndex = 0; terrainIndex < 5; ++terrainIndex )
-                {
-                    if ( StringUtil::equals( text, string_view( kArrTerrainName[terrainIndex] ), true ) )
-                    {
-                        outTerrain = static_cast<CityTerrain>( terrainIndex );
-                        return true;
-                    }
-                }
-                return false;
-            }
+            [[nodiscard]] static bool parseKind( string_view text, CityBuildingKind& outKind ) { return kKindTable.parse( text, outKind ); }
+
+            [[nodiscard]] static bool parseTerrain( string_view text, CityTerrain& outTerrain ) { return kTerrainTable.parse( text, outTerrain ); }
         };
     } // namespace
 } // namespace sw
