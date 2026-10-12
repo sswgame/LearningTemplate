@@ -14,22 +14,21 @@
 #include "GameFramework/Base/Actor/AI/SpawnDirector.h"
 #include "GameFramework/Base/Actor/Combat/Health/Vitality.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Genre/Horror/CoopScavenger/Catalog/ScavengerCatalog.h"
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Rule/ScavengerCarry.h"
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Rule/ScavengerFacility.h"
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Rule/ScavengerQuota.h"
 
 namespace sw
 {
+    struct ScavengerMoonDef;
     struct SessionStateRefs;
 
     class Archive;
+    class Inventory;
     class ItemCatalog;
-    class ShopCatalog;
-    class SpawnTable;
+    class ScavengerCatalog;
     class WeatherCatalog;
     class WeatherSystem;
     class WorldClock;

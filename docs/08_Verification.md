@@ -163,7 +163,7 @@ cd build/Ninja-Debug/Bin
   클라이언트 500 은 받기 10.7k · 보내기 10.7k pkt/s, 서버 스레드 14 %, 패킷당 6.6 us, RTT p50 48 · p99 48 ms 입니다.
   클라이언트 2000 은 42.1k · 42.5k pkt/s, 54 %(51 ~ 82 %), 패킷당 6.5 us, RTT p50 68 · p99 70 ms, 커널 버림 0 입니다. RTT 는 대부분 같은 PC 의 클라이언트 드라이버 지연입니다.
 - **온라인 부하 봇 참고값**(2026-10-06, Debug, `--local-server` — 봇과 서버가 한 스레드라 서로의 시간을 잰다): `quick_check` 봇 300 이 4200 동작을 28 초에 오류 0 으로 끝냈고,
-  chat_send p50 377 ms · p99 1081 ms, 채팅 알림 185548 건이었습니다. 판단 근거로 쓸 값은 Release 서버 한 대 측정입니다(백로그 1-7).
+  chat_send p50 377 ms · p99 1081 ms, 채팅 알림 185548 건이었습니다. 판단 근거로 쓸 값은 Release 서버 한 대 측정입니다(백로그 `D7-5`).
 - **Vulkan VSync 프레임 놓침**(2026-10-06 조사, Release 큐브 100, 165 Hz): 46 회 중 4 회에서 600 프레임 창 안에 한 프레임이 12 ~ 24 ms 였고, DXGI(DX12 · DX11)는 같은 조건에서 회당 한 주기 이하였습니다.
   평소 Vulkan 은 `vkAcquireNextImageKHR` 에서 약 5.2 ms 를 기다립니다(DXGI 는 Present 안에서 기다린다). 느린 프레임은 둘로 갈렸습니다.
   하나는 이미지가 한 주기 늦게 돌아온 것(acquire 약 10 ms)이고, 다른 하나는 GPU 일이 0.3 ms 인 프레임의 펜스가 13 ms 뒤에 신호된 것(창 모드 Vulkan 프레젠트가 합성기를 거치는 경로)입니다. 그 프레임에 엔진 CPU 일은 없었습니다.
@@ -341,4 +341,4 @@ py -3 -m Scripts ci-jobs <실행 id> --annotations   # 실패한 잡과 실패 �
   테스트가 자식 셸을 띄우면 `exec` 를 붙인다 — dash 의 `sh -c` 는 SIGTERM 에 먼저 죽어 종료 코드 143 이 된다.
   단조 시계로 잰 캐시 TTL 은 느린 빌드에서 임대를 풀어 버린다 — 서버 틱 시각을 쓴다. epoll 전송은 멈춘 동안 읽지 않으므로 전송 모델마다 테스트 기대를 나눈다.
   경합 검출기는 비 const `operator[]` 와 공유 읽기 버퍼를 쓰기로 보므로 읽기 경로는 const 로 둔다. ASan 은 스택 객체 수명(OpenSSL 스택)과 테스트 지역 변수의 선언 순서를 잡는다.
-- **Windows STL containers 잡은 sw 할당자와 기록 해시에 기대는 테스트를 건너뛴다**(`MemoryTagTest` 둘, `DestructionDamageTest.EventLogHash…`). 기본 컨테이너 구성에서 같은 테스트가 가끔 지는지는 백로그 1-10 에서 지켜본다.
+- **Windows STL containers 잡은 sw 할당자와 기록 해시에 기대는 테스트를 건너뛴다**(`MemoryTagTest` 둘, `DestructionDamageTest.EventLogHash…`). 기본 컨테이너 구성에서 같은 테스트가 가끔 지는지는 백로그 `E-1` 에서 지켜본다.

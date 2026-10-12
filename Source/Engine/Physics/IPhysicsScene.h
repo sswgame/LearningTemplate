@@ -32,7 +32,6 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Physics/Collision/CollisionLayers.h"
 #include "Engine/Physics/Collision/PhysicsContact.h"
 #include "Engine/Physics/IPhysicsBodyScene.h"
 #include "Engine/Physics/IPhysicsCharacterScene.h"
@@ -44,6 +43,7 @@
 
 namespace sw
 {
+    class CollisionLayers;
     class IPhysicsDebugRenderer;
 
     /**

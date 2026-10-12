@@ -21,12 +21,14 @@
 #include "Core/Container/vector.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/Social/Server/SocialLinkRules.h"
 #include "GameFramework/Kits/Feature/Online/Social/Shared/SocialTypes.h"
 
 namespace sw
 {
+    enum class SocialLinkOperation : uint8;
+
     struct EphemeralReply;
+    struct SocialLinkDecision;
 
     class EphemeralStoreRouter;
     class IAccountNameIndex;
