@@ -9,11 +9,21 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/EngineLoop.h"
 #include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Profiling/FrameProfiler.h"
 
 #include "sw/config/ConfigConstants.h"
 
 namespace sw
 {
+    /**
+     * @brief `-gv_rhiSwapAtFrame=N -gv_rhiSwapTo=<backend>`: N 번째 프레임에 백엔드 교체를 요청합니다.
+     * @details 에디터 메뉴 없이(헤드리스로) 교체를 재현 · 검증하는 창구입니다. 요청 방식은 에디터
+     *          패널과 같습니다(`GlobalVariableInfo::setValueAsInt` → 변경 콜백 → 그 프레임의 `applyIfPending` 이
+     *          적용). C++ 대입(`gv_rhiBackend = x`)은 콜백을 부르지 않아 아무 일도 일어나지 않습니다. 0 이면 꺼져 있습니다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_rhiSwapAtFrame, 0, "이 프레임에 백엔드 교체를 요청한다 (0=사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE( RHIBackend, gv_rhiSwapTo, RHIBackend::DirectX12, "gv_rhiSwapAtFrame 에 바꿀 백엔드" );
+
     namespace
     {
         /** @brief 이 TU 전용 도우미 모음입니다(유니티 빌드에서 이름이 충돌하지 않도록 TU 이름을 붙입니다). */
@@ -52,6 +62,9 @@ namespace sw
         GlobalVariableInfo* pBackendVariable = RHIBackendSwitcherInternal::findBackendVariable();
         if ( pBackendVariable != nullptr )
             pBackendVariable->_onValueChanged = SW_DELEGATE_METHOD( GlobalVariableChangedDelegate, &RHIBackendSwitcher::onBackendVariableChanged, this );
+        // `-gv_rhiSwapAtFrame` 진단은 프레임 시작에서 본다 — 루프는 관찰자 목록만 안다.
+        if ( _pEngineLoop != nullptr )
+            _pEngineLoop->addFrameObserver( this );
     }
 
     void RHIBackendSwitcher::shutdown()
@@ -62,6 +75,8 @@ namespace sw
         if ( pBackendVariable != nullptr )
             pBackendVariable->_onValueChanged = {};
 
+        if ( _pEngineLoop != nullptr )
+            _pEngineLoop->removeFrameObserver( this );
         _pEngineLoop = nullptr;
         _pModuleHost = nullptr;
     }
@@ -86,6 +101,35 @@ namespace sw
                 *static_cast<RHIBackend*>( pBackendVariable->_pData ) = pRHI->getCommittedBackend();
         }
     }
+
+    void RHIBackendSwitcher::onFrameBegin( [[maybe_unused]] const EngineFrameContext& context )
+    {
+        // 테스트용 스위치라 Shipping 에는 없다(그 빌드에서 gv_rhiSwapAtFrame 은 등록되지 않아 늘 0 이다).
+#if !defined( SW_SHIPPING )
+        if ( gv_rhiSwapAtFrame <= 0 || engine::getFrameProfiler().getFrameCount() != static_cast<uint64>( gv_rhiSwapAtFrame ) )
+            return;
+        // 프레임 수는 루프의 `tick` 이 프로파일러 프레임을 열기 전이라 그 프레임의 `tick` 첫머리와 같은 값이다.
+        GlobalVariableInfo* pBackendVariable = RHIBackendSwitcherInternal::findBackendVariable();
+        if ( pBackendVariable == nullptr || static_cast<RHIBackend>( pBackendVariable->getValueAsInt() ) == gv_rhiSwapTo )
+            return;
+        SW_LOG_INFO( "[SwapProbe] frame %# — requesting backend %#", gv_rhiSwapAtFrame, RHI::getBackendTypeName( gv_rhiSwapTo ) );
+        // C++ 대입은 변경 콜백을 부르지 않는다. 메뉴 · 콘솔이 쓰는 setValueAsInt 로 가야 onBackendVariableChanged 가 받는다.
+        pBackendVariable->setValueAsInt( static_cast<int32>( gv_rhiSwapTo ) );
+        gv_rhiSwapAtFrame = 0; // 한 번만. 프로파일러가 프레임 수를 되돌리면(워밍업 뒤) 같은 번호가 다시 온다
+#endif
+    }
+
+    int32 RHIBackendSwitcher::onFrameEnd( [[maybe_unused]] const EngineFrameContext& context )
+    {
+        return kRunning;
+    }
+
+    int32 RHIBackendSwitcher::onWindowClosed( [[maybe_unused]] const EngineFrameContext& context )
+    {
+        return kRunning;
+    }
+
+    void RHIBackendSwitcher::onBuildRenderPacket( [[maybe_unused]] EngineRenderPacketContext& inoutContext ) {}
 
     void RHIBackendSwitcher::onBackendVariableChanged( const GlobalVariableInfo* pInfo )
     {

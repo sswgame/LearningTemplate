@@ -16,6 +16,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Telemetry/TelemetrySchema.h"
+#include "Engine/Utility/EngineFrameObserver.h"
 
 namespace sw
 {
@@ -108,8 +109,10 @@ namespace sw
      *          지웁니다(보내지 못한 것을 무한히 쌓지 않는다). 지난 실행이 남긴 파일도 닫힌 파일로 이어 받습니다.
      *          **표본**은 결정적입니다 — 세션은 세션 id 해시, 사건은 (세션 · 사건 · 그 사건의 번호) 해시. 줄의 `sample` 이 비율이라 받는 쪽이 무게를 다시 준다.
      *          **장면 요약**: `recordFrame` 이 장면별 프레임 시간을 모아, 장면이 바뀌거나 끝날 때 `perf.sceneSummary`(프레임 수 · 평균 · p50 · p99 · 최대)를 남깁니다.
+     *          **프레임 관찰자**: 기동 단계 `Telemetry` 가 서비스를 엔진 루프에 관찰자로 붙입니다. 씬 틱 뒤(`onAfterSceneTick`)에 활성 씬의 프레임 하나를
+     *          기록하고 세션 시계를 흘립니다(`recordFrame` → `update`). 루프는 텔레메트리를 모릅니다.
      */
-    class SW_API TelemetryService
+    class SW_API TelemetryService : public IEngineFrameObserver
     {
     public:
         static constexpr const utf8* kConsentSettingID  = "telemetry.enabled";
@@ -120,7 +123,15 @@ namespace sw
         static constexpr const utf8* kSpoolExtension    = ".jsonl";
 
         TelemetryService();
-        ~TelemetryService();
+        ~TelemetryService() override;
+
+        // IEngineFrameObserver — 씬 틱 뒤만 쓴다. 나머지는 아무것도 하지 않고 종료를 정하지 않는다.
+        void onFrameBegin( const EngineFrameContext& context ) override;
+        /** @brief 활성 씬(`_activeSceneID`)의 프레임 하나를 기록하고 세션 시계를 흘립니다(`recordFrame` → `update`). 동의가 없으면 둘 다 아무것도 하지 않습니다. */
+        void                onAfterSceneTick( const EngineFrameContext& context ) override;
+        [[nodiscard]] int32 onFrameEnd( const EngineFrameContext& context ) override;
+        [[nodiscard]] int32 onWindowClosed( const EngineFrameContext& context ) override;
+        void                onBuildRenderPacket( EngineRenderPacketContext& inoutContext ) override;
 
         /** @brief 스풀 폴더 · 문맥을 정하고 섭니다. 동의는 꺼진 채로 시작합니다. 폴더의 지난 스풀 파일을 닫힌 파일로 이어 받습니다. */
         void initialize( string_view spoolFolder, const TelemetryContext& context );

@@ -12,13 +12,20 @@ namespace sw
 {
     class InputManager;
 
-    /** @brief 프레임 앞 · 뒤와 창 닫힘에서 관찰자에게 넘기는 문맥입니다. */
+    /** @brief 프레임 앞 · 씬 틱 뒤 · 프레임 뒤와 창 닫힘에서 관찰자에게 넘기는 문맥입니다. */
     struct EngineFrameContext
     {
         /** @brief 이번 프레임의 입력 관리자입니다. 입력 단계가 서지 않은 호스트에서는 nullptr 입니다. */
         InputManager* _pInput = nullptr;
         /** @brief 렌더 스레드가 지금까지 쓴 시나리오 스크린샷 수(프로세스 전체 누적)입니다. 렌더 스레드가 없으면 0 입니다. */
         uint32 _completedScreenshotCount = 0;
+        /** @brief 이번 프레임 시간(초, 시간 배율이 든 값 — 루프가 `beginFrame` · `tick` 에 받은 것)입니다. 창 닫힘에서는 마지막 프레임의 값입니다. */
+        float32 _deltaSeconds = 0.0f;
+        /**
+         * @brief 그 훅을 부르는 시점의 활성 씬 식별자(원본 경로, 없으면 씬 이름)입니다. 활성 씬이 없으면 비어 있습니다.
+         * @details 씬의 문자열을 가리키므로 훅 안에서만 유효합니다. 들고 있으려면 복사합니다. 씬 전환은 프레임 안에서 일어나므로 훅마다 다를 수 있습니다.
+         */
+        string_view _activeSceneID{};
     };
 } // namespace sw
 
@@ -50,6 +57,12 @@ namespace sw
 
         /** @brief 프레임 시작 — 입력 `beginFrame` 전입니다(가상 입력은 여기서 붙인다). */
         virtual void onFrameBegin( const EngineFrameContext& context ) = 0;
+        /**
+         * @brief 씬 틱 뒤 — `EngineLoop::tick` 이 씬 틱 · 물리 · 내비 디버그 그리기 뒤, 런타임 UI 갱신 · 렌더 패킷 앞, 헤드리스 return 뒤에서 부릅니다(헤드리스 루프에서는 불리지 않는다).
+         * @details 주의: 이 호출 자리를 옮기면 관찰자가 보는 시점(그 프레임의 게임 상태가 정해진 뒤)이 바뀝니다. 그 시점에 할 일(장면별 프레임 시간 기록 같은 것)이
+         *          있는 관찰자만 덮어씁니다. 기본은 아무것도 하지 않습니다.
+         */
+        virtual void onAfterSceneTick( [[maybe_unused]] const EngineFrameContext& context ) {}
         /**
          * @brief 프레임 끝 — 씬 틱 · 렌더 제출 뒤, 입력 프레임을 닫기 전입니다(그 프레임의 눌림 엣지가 아직 보인다).
          * @return 프로세스를 끝낼 종료 코드, 아니면 `kRunning` 입니다.
