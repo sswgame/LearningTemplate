@@ -15,7 +15,6 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Actor/Combat/Health/ResourceGauge.h"
-#include "GameFramework/Base/Gameplay/Inventory/GridInventory.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/HorrorCatalog.h"
@@ -27,6 +26,7 @@ namespace sw
     class Archive;
     class AreaGraph;
     class GameFlags;
+    class GridInventory;
     class Inventory;
 
     /** @brief 퍼즐, 자물쇠, 추리의 결과입니다. */

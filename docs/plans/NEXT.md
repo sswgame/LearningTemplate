@@ -20,7 +20,7 @@
   - `MaterialInstance` 는 리로드 세대가 바뀌면 쥔 포인터의 `getSrv()` 로 다시 패킹한다. 다른 텍스처가 아직 리로드 중이면 그 SRV 를 한 프레임 읽을 수 있다(다음 세대에 다시 패킹돼 회복). `Material::refreshTextureBindings` 는 `find` 를 써서 해당 없다.
   - `SW_DELEGATE_METHOD(this)` 를 다른 지연 경로(틱 뒤 실행 밖)에 넘기는 곳은 여전히 핸들을 거치지 않는다. 게이트는 `deferPostTick` · `executeOrDeferPostTick` 만 본다.
   - Shooter 적 체력이 `Vitality` 로 바뀌어 최대 체력 1 하한 · 음수 피해 0 처리가 생겼다(데이터에서 체력 0 을 주면 예전에는 바로 죽고 지금은 1 로 산다).
-  - 키트 DLL 이 Base 클래스의 암시적 멤버를 내보낸다(백로그 1-6).
+  - 키트 DLL 이 Base 클래스의 암시적 멤버를 내보낸다(백로그 `C-3`).
   - tgfd 가 일부러 남긴 것: 대체값을 받는 `readName`(AdventureDungeon · AdventureCooking), trim 하는 `AppearanceXMLUtil::readName`, 공개 API 인 `ScheduleCondition::parseNameList` · `AppearanceXMLUtil::readNameList`(본문만 위임).
   - `GameDataXML.h` 개선은 71 곳 중 5 곳만 `XMLDocument.h` 를 끊었다 — 나머지 66 곳은 노드를 직접 읽어, 호출부를 읽기 인터페이스로 바꿔야 완전히 풀린다.
   - DX11 · GL 의 bindless 인덱스 즉시 재사용 — 다른 해제 경로에도 지연 해제가 필요한지 아직 보지 않았다.
@@ -43,12 +43,12 @@
 ## 다음 할 일 (순서대로)
 
 0. **검증과 측정(사용자 몫으로 맡겨 둔 것)** — 아래 "검증할 것".
-1. **CI 확인.** 확인할 테스트 목록은 백로그 1-10 "다음 CI 실행으로 확인할 것". push 뒤 결과를 기다리지 않는다([작업 방식](../11_Workflow.md) 4절).
+1. **CI 확인.** 확인할 테스트 목록은 백로그 `E-1` "다음 CI 실행으로 확인할 것". push 뒤 결과를 기다리지 않는다([작업 방식](../11_Workflow.md) 4절).
 2. **R4 남은 파일 · R7(체인 후속)** — [StructureRefactor](StructureRefactor.md). 파일마다 한 단위, 서로 충돌하지 않는다.
 3. **빌드 속도 5 · 6 단계** — [BuildSpeed](BuildSpeed.md). S13 로 `EngineLoop.cpp` include 가 17 개 줄었으니 `-ftime-trace` 전후도 같이.
 4. **엔진 분할** — [EnginePartition](EnginePartition.md) 0 단계(기준 측정)와 2 ~ 5 단계.
 5. **서버 디버깅** — [ServerDebug](ServerDebug.md), 다음은 S4(회선 조절).
-6. **6 차 주석 작업의 남은 구역** — 백로그 1-9.
+6. **6 차 주석 작업의 남은 구역** — 백로그 `C-16`.
 7. **SOLID 후속 메모**(각 항목은 StructureRefactor 에 근거가 있다): `UIAutomationSteps::ensureLinked` 호출(`UISystem::initialize`)은 Engine 통째 링크라 불필요해 보인다, `Joint2DComponent` 는 Cone 을 고르면 `createJoint` 를 프레임마다 다시 시도해 오류 로그를 반복한다,
    S10 범위 밖의 `getBoundEngineServices()` 직접 호출(`FacialAnimationComponent` · `WidgetComponent` · `UISystem` · `FontService`, `SceneCooker` · `SceneNavigationCooker` · `PortraitRenderer` 의 인자 없는 `Scene` 생성).
 

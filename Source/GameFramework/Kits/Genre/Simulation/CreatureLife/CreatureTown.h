@@ -12,20 +12,20 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
-#include "GameFramework/Base/Gameplay/Progression/Reputation.h"
 #include "GameFramework/Base/World/Environment/WorldClock.h"
 #include "GameFramework/Base/World/Land/LandRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureLifeCatalog.h"
 
 namespace sw
 {
+    struct HabitatDef;
     struct SessionStateRefs;
 
     class Archive;
+    class CreatureLifeCatalog;
     class Inventory;
     class QuestLog;
-    class ReputationCatalog;
+    class ReputationState;
     class WeatherSystem;
 
     /** @brief 마을 규칙의 수치입니다. 호감도 점수는 생물마다의 평판(`ReputationState` 의 세력이며 종 id 와 같습니다)에 더합니다. */
