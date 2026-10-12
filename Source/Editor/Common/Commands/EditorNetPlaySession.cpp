@@ -61,7 +61,8 @@ namespace sw::editor
             /** @brief 명령줄 인자 하나를 따옴표로 감쌉니다(경로의 공백). */
             static string quote( string_view text ) { return "\"" + string( text ) + "\""; }
 
-            /** @brief 경로를 앞으로 빗금으로 — 명령줄에서 `\"` 가 따옴표를 깨지 않게. */
+#if SW_PROFILER_TRACE_ENABLED
+            /** @brief 경로를 앞으로 빗금으로 — 명령줄에서 `\"` 가 따옴표를 깨지 않게. 트레이스 폴더 인자에만 쓴다. */
             static string toForwardSlashes( string path )
             {
                 for ( utf8& character : path )
@@ -71,6 +72,7 @@ namespace sw::editor
                 }
                 return path;
             }
+#endif
         };
     } // namespace
 } // namespace sw::editor
@@ -340,8 +342,8 @@ namespace sw::editor
             if ( pChild->_reader.joinable() )
                 pChild->_reader.join();
         }
-        update(); // 남은 줄을 로그로
-        for ( const unique_ptr<ChildProcess>& pChild : _listProcess )
+        update();                                                                      // 남은 줄을 로그로
+        for ( [[maybe_unused]] const unique_ptr<ChildProcess>& pChild : _listProcess ) // Shipping 은 로그를 지워 안 쓴다
         {
             SW_LOG_INFO( "%# exited with code %#", pChild->_label, pChild->_exitCode.load() );
         }

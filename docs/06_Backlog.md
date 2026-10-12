@@ -468,8 +468,6 @@
   GameFramework 는 Base 의 짧은 헤더 약 230 개와 .cpp · .inl, Kits/Feature 의 옛 어휘(꼬리표, 그새, 거두다, 짓다)가 남은 약 35 개(Network · Online · Voxel 등), Kits/Feature/Online 의 Account 밖 폴더다.
   Core 는 Math, File, Process, Delegate, Memory, Diagnostics, CommandLine, Container, Task, Network 나머지, LogSink, String 이다. RuntimeAPI 는 손대지 않았다. Games 는 Empty 벤치 씬 일부와 VoxelCraft 전체다.
   '시험' → '테스트' 는 `Scripts/**` · `Test/**` · `docs/Config/**` 278 곳과 셰이더 주석 2 곳(`waterwaveprobe.hlsl` · `lighting2d.hlsli` — 바꾸면 `App --cook-shaders` 로 다시 쿠킹)이 남았다.
-- **Shipping 구성에서만 나는 경고 둘** — `Source/Editor/Common/Commands/EditorNetPlaySession.cpp` 의 `unused variable 'pChild'`(344 줄 근처)와 `unused member function 'toForwardSlashes'`(65 줄 근처).
-  Shipping 에서 쓰이지 않는 경로라 고치는 방법(조건부 컴파일 범위를 넓히거나 함수를 옮기기)을 정해 반영한다.
 
 ### 1-10. 관찰 중 — 다시 보이면 원인을 판다
 
