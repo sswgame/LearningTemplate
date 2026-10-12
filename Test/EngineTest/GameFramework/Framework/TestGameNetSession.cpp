@@ -128,13 +128,13 @@ SW_TEST_CASE( GameNetSessionTest, ShutdownLogsConnectionsTheServerDidNotUpdate )
 
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
     atomic<uint32>       connectedLineCount{ 0 };
-    const DelegateHandle handle = Logger::addGlobalListener( SW_DELEGATE_LAMBDA( LogWrittenDelegate, [&connectedLineCount]( const LogEntry& entry )
+    const DelegateHandle handle = Logger::registerGlobalListener( SW_DELEGATE_LAMBDA( LogWrittenDelegate, [&connectedLineCount]( const LogEntry& entry )
     {
         if ( string_view{ entry._message.c_str(), entry._message.size() }.find( "Net session client 0 connected from 127.0.0.1" ) != string_view::npos )
             connectedLineCount.fetch_add( 1 );
     } ) );
     server.shutdown();
-    Logger::removeGlobalListener( handle );
+    Logger::unregisterGlobalListener( handle );
     client.shutdown();
     SW_EXPECT_EQUAL( 1u, connectedLineCount.load() );
 #else

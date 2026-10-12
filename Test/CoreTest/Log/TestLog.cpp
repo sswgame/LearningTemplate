@@ -32,7 +32,7 @@ namespace
         /** @brief 전역 싱크에 리스너를 등록합니다. */
         LogCapture()
         {
-            _handle = sw::Logger::addGlobalListener( SW_DELEGATE_LAMBDA(
+            _handle = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA(
                 sw::LogWrittenDelegate,
                 [this]( const sw::LogEntry& entry )
             {
@@ -44,7 +44,7 @@ namespace
         /** @brief 전역 싱크에서 리스너를 뗍니다. */
         ~LogCapture()
         {
-            sw::Logger::removeGlobalListener( _handle );
+            sw::Logger::unregisterGlobalListener( _handle );
         }
 
         LogCapture( const LogCapture& )            = delete;
@@ -85,7 +85,7 @@ namespace
     public:
         ThreadSafeLogCapture()
         {
-            _handle = sw::Logger::addGlobalListener( SW_DELEGATE_LAMBDA(
+            _handle = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA(
                 sw::LogWrittenDelegate,
                 [this]( const sw::LogEntry& entry )
             {
@@ -99,7 +99,7 @@ namespace
 
         ~ThreadSafeLogCapture()
         {
-            sw::Logger::removeGlobalListener( _handle );
+            sw::Logger::unregisterGlobalListener( _handle );
         }
 
         ThreadSafeLogCapture( const ThreadSafeLogCapture& )            = delete;
@@ -481,11 +481,11 @@ SW_TEST_CASE( LogTest, ConcurrentListenerAttachDetach )
     // 리스너 등록/해제 100회 반복
     for ( uint32 iteration = 0; iteration < 100; ++iteration )
     {
-        sw::DelegateHandle handle = sw::Logger::addGlobalListener( SW_DELEGATE_LAMBDA(
+        sw::DelegateHandle handle = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA(
             sw::LogWrittenDelegate,
             []( const sw::LogEntry& ) {} ) );
         SW_EXPECT_TRUE( handle.isValid() );
-        sw::Logger::removeGlobalListener( handle );
+        sw::Logger::unregisterGlobalListener( handle );
     }
 
     if ( emitter.joinable() )
@@ -555,8 +555,8 @@ SW_TEST_CASE( LogTest, ReleaseListenerCodeWithinDropsOnlyThatRange )
     { releasedValue += 1; } );
     const sw::LogWrittenDelegate kept     = SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [&keptValue]( const sw::LogEntry& )
         { keptValue += 10; } );
-    logger.addLogWrittenListener( released );
-    logger.addLogWrittenListener( kept );
+    logger.registerLogWrittenListener( released );
+    logger.registerLogWrittenListener( kept );
 
     const uint8* pReleasedCode = static_cast<const uint8*>( released.getCodeAddress() );
     SW_EXPECT_EQUAL( 1u, logger.removeListenerCodeWithin( pReleasedCode, pReleasedCode + 1 ) );

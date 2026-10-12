@@ -94,7 +94,7 @@ namespace test
             {
                 if ( _pListKnownErrorLog == nullptr )
                     return;
-                _handle = sw::Logger::addGlobalListener( SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [this]( const sw::LogEntry& entry )
+                _handle = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [this]( const sw::LogEntry& entry )
                 {
                     if ( entry._level != sw::LogLevel::Error || s_bReportingFailure )
                         return;
@@ -125,7 +125,7 @@ namespace test
             {
                 if ( _handle.isValid() == false )
                     return;
-                sw::Logger::removeGlobalListener( _handle );
+                sw::Logger::unregisterGlobalListener( _handle );
                 _handle = {};
             }
 

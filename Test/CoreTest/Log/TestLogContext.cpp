@@ -109,7 +109,7 @@ SW_TEST_CASE( LogContextTest, OnlyLinesWithAContextCarryTheTag )
     LogContextCaptureOutput*            pCapture = output.get();
     SW_ASSERT_TRUE( logger.addOutput( std::move( output ) ) );
     LogContextEntryCapture entryCapture;
-    (void)logger.addLogWrittenListener( LogWrittenDelegate::create<&LogContextEntryCapture::onLog>( &entryCapture ) );
+    (void)logger.registerLogWrittenListener( LogWrittenDelegate::create<&LogContextEntryCapture::onLog>( &entryCapture ) );
 
     logger.writeLog( LogLevel::Info, "Test", "Probe", "plain line", __FILE__, __LINE__ );
     LogContext context;

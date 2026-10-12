@@ -612,7 +612,7 @@ SW_TEST_CASE( ArchitectureTest, ReleaseModuleCodeSweepsEveryRegistryTheEditorUse
 
     // 전역 로그 리스너
     const sw::LogWrittenDelegate onLog = SW_DELEGATE_FUNCTION( sw::LogWrittenDelegate, sw::onSweepProbeLog );
-    SW_ASSERT_TRUE( sw::Logger::addGlobalListener( onLog ).isValid() );
+    SW_ASSERT_TRUE( sw::Logger::registerGlobalListener( onLog ).isValid() );
     SW_EXPECT_EQUAL( 1u, sw::releaseStubOf( onLog ) );
     SW_EXPECT_EQUAL( 0u, sw::releaseStubOf( onLog ) );
 

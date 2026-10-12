@@ -665,7 +665,7 @@ namespace sw
     AutomationRunner::~AutomationRunner()
     {
         if ( _bListeningLog == SW_TRUE )
-            Logger::removeGlobalListener( _logListenerHandle );
+            Logger::unregisterGlobalListener( _logListenerHandle );
     }
 
     void AutomationRunner::startFromPath( string_view scenarioPath, string_view reportPath )
@@ -868,7 +868,7 @@ namespace sw
             if ( pRegistration->_pPrepare != nullptr && pRegistration->_pPrepare( *this, step, outError ) == false )
                 return false;
         }
-        _logListenerHandle = Logger::addGlobalListener( SW_DELEGATE_METHOD( LogWrittenDelegate, &AutomationRunner::onLogWritten, this ) );
+        _logListenerHandle = Logger::registerGlobalListener( SW_DELEGATE_METHOD( LogWrittenDelegate, &AutomationRunner::onLogWritten, this ) );
         _bListeningLog     = _logListenerHandle.isValid() ? SW_TRUE : SW_FALSE;
         return true;
     }
@@ -1092,7 +1092,7 @@ namespace sw
             pInput->detachVirtualInput();
         if ( _bListeningLog == SW_TRUE )
         {
-            Logger::removeGlobalListener( _logListenerHandle );
+            Logger::unregisterGlobalListener( _logListenerHandle );
             _bListeningLog = SW_FALSE;
         }
         if ( _result == AutomationResult::Passed )

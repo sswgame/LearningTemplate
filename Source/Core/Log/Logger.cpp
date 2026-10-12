@@ -156,22 +156,22 @@ namespace sw
         pSink->writeLog( level, pTag, pCaller, pMessage, pFile, line );
     }
 
-    DelegateHandle Logger::addGlobalListener( const LogWrittenDelegate& listener )
+    DelegateHandle Logger::registerGlobalListener( const LogWrittenDelegate& listener )
     {
         ILogSink* pSink = s_globalSink.load( std::memory_order_acquire );
         if ( pSink == nullptr )
             return {};
 
-        return pSink->addLogWrittenListener( listener );
+        return pSink->registerLogWrittenListener( listener );
     }
 
-    void Logger::removeGlobalListener( const DelegateHandle& handle )
+    void Logger::unregisterGlobalListener( const DelegateHandle& handle )
     {
         ILogSink* pSink = s_globalSink.load( std::memory_order_acquire );
         if ( pSink == nullptr )
             return;
 
-        pSink->removeLogWrittenListener( handle );
+        pSink->unregisterLogWrittenListener( handle );
     }
 
     uint32 Logger::releaseGlobalListenerCodeWithin( const void* pBegin, const void* pEnd )

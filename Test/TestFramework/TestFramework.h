@@ -268,15 +268,15 @@ namespace test
             }
         }
 
-        sw::DelegateHandle addLogWrittenListener( const sw::LogWrittenDelegate& listener ) override
+        sw::DelegateHandle registerLogWrittenListener( const sw::LogWrittenDelegate& listener ) override
         {
-            return _pWrappedSink != nullptr ? _pWrappedSink->addLogWrittenListener( listener ) : sw::DelegateHandle{};
+            return _pWrappedSink != nullptr ? _pWrappedSink->registerLogWrittenListener( listener ) : sw::DelegateHandle{};
         }
 
-        void removeLogWrittenListener( const sw::DelegateHandle& handle ) override
+        void unregisterLogWrittenListener( const sw::DelegateHandle& handle ) override
         {
             if ( _pWrappedSink != nullptr )
-                _pWrappedSink->removeLogWrittenListener( handle );
+                _pWrappedSink->unregisterLogWrittenListener( handle );
         }
 
         uint32 removeListenerCodeWithin( const void* pBegin, const void* pEnd ) override
@@ -392,7 +392,7 @@ namespace test
 {
     /**
      * @brief 스코프 동안 남은 Warning · Error 로그를 모아 "이 경고가 나왔나" 를 묻는 RAII 헬퍼입니다.
-     * @details 테스트마다 `Logger::addGlobalListener` 리스너를 손으로 만들지 않게 한 자리에 둔다. 리스너는 남기는 스레드에서
+     * @details 테스트마다 `Logger::registerGlobalListener` 리스너를 손으로 만들지 않게 한 자리에 둔다. 리스너는 남기는 스레드에서
      *          곧바로 불리므로 같은 스레드의 경고는 그 호출이 돌아오면 이미 모여 있다. `ScopedDefensiveTestLog` 와 같이 써도 된다 — 그때 메시지 앞에
      *          `[Expected Defensive Test]` 가 붙지만 `countContaining` 은 부분 문자열로 찾는다.
      */
@@ -401,7 +401,7 @@ namespace test
     public:
         ScopedLogCollector()
         {
-            _handle = sw::Logger::addGlobalListener( SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [this]( const sw::LogEntry& entry )
+            _handle = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [this]( const sw::LogEntry& entry )
             {
                 if ( entry._level != sw::LogLevel::Error && entry._level != sw::LogLevel::Warning )
                     return;
@@ -410,7 +410,7 @@ namespace test
             } ) );
         }
 
-        ~ScopedLogCollector() { sw::Logger::removeGlobalListener( _handle ); }
+        ~ScopedLogCollector() { sw::Logger::unregisterGlobalListener( _handle ); }
 
         ScopedLogCollector( const ScopedLogCollector& )            = delete;
         ScopedLogCollector& operator=( const ScopedLogCollector& ) = delete;

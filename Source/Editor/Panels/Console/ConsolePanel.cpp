@@ -185,7 +185,7 @@ namespace sw::editor
         , _bRowsChanged{ SW_FALSE }
         , _reservedFlags{ 0 }
     {
-        _logListenerHandle = Logger::addGlobalListener(
+        _logListenerHandle = Logger::registerGlobalListener(
             SW_DELEGATE_METHOD( LogWrittenDelegate, &ConsolePanel::onLogWritten, this ) );
     }
 
@@ -720,7 +720,7 @@ namespace sw::editor
     {
         if ( _logListenerHandle.isValid() )
         {
-            Logger::removeGlobalListener( _logListenerHandle );
+            Logger::unregisterGlobalListener( _logListenerHandle );
             _logListenerHandle = {};
         }
     }

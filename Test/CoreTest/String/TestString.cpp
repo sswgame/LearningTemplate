@@ -1710,12 +1710,12 @@ namespace
             _lastTinySize = tiny.size();
         }
 
-        sw::DelegateHandle addLogWrittenListener( const sw::LogWrittenDelegate& listener ) override
+        sw::DelegateHandle registerLogWrittenListener( const sw::LogWrittenDelegate& listener ) override
         {
             (void)listener;
             return sw::DelegateHandle{};
         }
-        void   removeLogWrittenListener( const sw::DelegateHandle& handle ) override { (void)handle; }
+        void   unregisterLogWrittenListener( const sw::DelegateHandle& handle ) override { (void)handle; }
         uint32 removeListenerCodeWithin( const void* pBegin, const void* pEnd ) override
         {
             (void)pBegin;

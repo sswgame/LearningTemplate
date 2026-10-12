@@ -43,14 +43,14 @@ namespace
     public:
         ScopedErrorLogCollector()
         {
-            _handle = Logger::addGlobalListener( SW_DELEGATE_LAMBDA( LogWrittenDelegate, [this]( const LogEntry& entry )
+            _handle = Logger::registerGlobalListener( SW_DELEGATE_LAMBDA( LogWrittenDelegate, [this]( const LogEntry& entry )
             {
                 if ( entry._level == LogLevel::Error )
                     _errorCount++;
             } ) );
         }
 
-        ~ScopedErrorLogCollector() { Logger::removeGlobalListener( _handle ); }
+        ~ScopedErrorLogCollector() { Logger::unregisterGlobalListener( _handle ); }
 
         ScopedErrorLogCollector( const ScopedErrorLogCollector& )            = delete;
         ScopedErrorLogCollector& operator=( const ScopedErrorLogCollector& ) = delete;
@@ -68,7 +68,7 @@ namespace
     public:
         ScopedLogMessageCollector()
         {
-            _handle = Logger::addGlobalListener( SW_DELEGATE_LAMBDA( LogWrittenDelegate, [this]( const LogEntry& entry )
+            _handle = Logger::registerGlobalListener( SW_DELEGATE_LAMBDA( LogWrittenDelegate, [this]( const LogEntry& entry )
             {
                 // 커맨드가 남긴 것만 본다 — 파일 계층의 오류 · 테스트 프레임워크의 실패 보고는 모양을 비교할 대상이 아니다.
                 if ( entry._caller != "EditorToolAssetCommands" )
@@ -80,7 +80,7 @@ namespace
             } ) );
         }
 
-        ~ScopedLogMessageCollector() { Logger::removeGlobalListener( _handle ); }
+        ~ScopedLogMessageCollector() { Logger::unregisterGlobalListener( _handle ); }
 
         ScopedLogMessageCollector( const ScopedLogMessageCollector& )            = delete;
         ScopedLogMessageCollector& operator=( const ScopedLogMessageCollector& ) = delete;

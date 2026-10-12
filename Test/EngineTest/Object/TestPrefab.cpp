@@ -473,7 +473,7 @@ SW_TEST_CASE( PrefabTest, PrefabMadeFromAChildDoesNotRememberItsParent )
     for ( const sw::string& path : { xmlPath, parentedPath } )
     {
         uint32                   parentWarningCount = 0;
-        const sw::DelegateHandle handle             = sw::Logger::addGlobalListener(
+        const sw::DelegateHandle handle             = sw::Logger::registerGlobalListener(
             SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [&parentWarningCount]( const sw::LogEntry& entry )
                     {
             if ( entry._level == sw::LogLevel::Warning && entry._message.find( "a prefab root has no parent" ) != sw::string::npos )
@@ -487,7 +487,7 @@ SW_TEST_CASE( PrefabTest, PrefabMadeFromAChildDoesNotRememberItsParent )
             // 원래 부모가 살아 있는 매니저(프리팹을 만든 씬에 바로 놓는 경우)에서도 붙지 않는다 — 이 프리팹에는 그 부모의 id 까지 실려 있다.
             pBesideOriginal = prefabs.spawn( &authoring, path, "PickupBesideOriginal" );
         }
-        sw::Logger::removeGlobalListener( handle );
+        sw::Logger::unregisterGlobalListener( handle );
         SW_ASSERT_NOT_NULL( pInstance );
         SW_ASSERT_NOT_NULL( pBesideOriginal );
         SW_EXPECT_TRUE_MSG( pInstance->getParent() == nullptr, path.c_str() );

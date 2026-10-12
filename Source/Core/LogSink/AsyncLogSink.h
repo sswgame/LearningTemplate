@@ -52,9 +52,9 @@ namespace sw
         /** @brief 한 줄을 포맷해 리스너와 출력 장치에 넘깁니다. */
         void writeLog( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line ) override;
         /** @brief 한 줄이 쓰일 때 호출할 리스너를 붙입니다. */
-        DelegateHandle addLogWrittenListener( const LogWrittenDelegate& listener ) override;
+        DelegateHandle registerLogWrittenListener( const LogWrittenDelegate& listener ) override;
         /** @brief 핸들로 리스너를 뗍니다. */
-        void removeLogWrittenListener( const DelegateHandle& handle ) override;
+        void unregisterLogWrittenListener( const DelegateHandle& handle ) override;
         /** @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 리스너를 모두 뗍니다. */
         uint32 removeListenerCodeWithin( const void* pBegin, const void* pEnd ) override;
 

@@ -715,7 +715,7 @@ SW_TEST_CASE( RHIMemoryLedgerTest, ReportPrintsUsedKindsAndUnknownDriverValues )
 
     sw::mutex                mutex;
     sw::vector<sw::string>   listLine;
-    const sw::DelegateHandle handle = sw::Logger::addGlobalListener( SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [&mutex, &listLine]( const sw::LogEntry& entry )
+    const sw::DelegateHandle handle = sw::Logger::registerGlobalListener( SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [&mutex, &listLine]( const sw::LogEntry& entry )
     {
         if ( entry._message.find( "[Profile]" ) == sw::string::npos )
             return;
@@ -723,7 +723,7 @@ SW_TEST_CASE( RHIMemoryLedgerTest, ReportPrintsUsedKindsAndUnknownDriverValues )
         listLine.push_back( entry._message );
     } ) );
     ledger.report( "FakeBackend" );
-    sw::Logger::removeGlobalListener( handle );
+    sw::Logger::unregisterGlobalListener( handle );
 
     sw::string joined;
     for ( const sw::string& line : listLine )

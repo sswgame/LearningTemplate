@@ -242,7 +242,7 @@ SW_TEST_CASE( AssetCacheRegistryTest, LeftoverModuleCacheIsNamedInAWarning )
     ProbeAssetCache  probe;
 
     sw::string               warningText;
-    const sw::DelegateHandle handle = sw::Logger::addGlobalListener(
+    const sw::DelegateHandle handle = sw::Logger::registerGlobalListener(
         SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [&warningText]( const sw::LogEntry& entry )
     {
         if ( entry._level == sw::LogLevel::Warning )
@@ -255,7 +255,7 @@ SW_TEST_CASE( AssetCacheRegistryTest, LeftoverModuleCacheIsNamedInAWarning )
 
     resources.registerAssetCache( &probe );
     resources.warnAboutRemainingModuleCaches();
-    sw::Logger::removeGlobalListener( handle );
+    sw::Logger::unregisterGlobalListener( handle );
 
     SW_EXPECT_TRUE_MSG( warningText.find( "ProbeKind" ) != sw::string::npos,
                         "두고 간 캐시를 이름으로 말하지 않았습니다" );

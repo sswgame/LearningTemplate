@@ -24,7 +24,7 @@ namespace sw
 
         /**
          * @struct GlobalLogListenerUnloadListener
-         * @brief 전역 로그 리스너(`Logger::addGlobalListener`)를 모듈 언로드 리스너 목록에 올립니다. 리스너는 정적이라 리스너도 정적 하나입니다.
+         * @brief 전역 로그 리스너(`Logger::registerGlobalListener`)를 모듈 언로드 리스너 목록에 올립니다. 리스너는 정적이라 리스너도 정적 하나입니다.
          */
         struct GlobalLogListenerUnloadListener final : public IModuleUnloadListener
         {
@@ -138,7 +138,7 @@ namespace sw
     /**
      * @brief 로그가 쓰일 때 알림을 받을 리스너를 등록합니다(예: ImGui 에디터 콘솔 창).
      */
-    DelegateHandle AsyncLogSink::addLogWrittenListener( const LogWrittenDelegate& listener )
+    DelegateHandle AsyncLogSink::registerLogWrittenListener( const LogWrittenDelegate& listener )
     {
         std::scoped_lock<mutex> lock{ _mutex };
         return _onLogWritten.add( listener );
@@ -147,7 +147,7 @@ namespace sw
     /**
      * @brief 등록된 로그 리스너를 해제합니다.
      */
-    void AsyncLogSink::removeLogWrittenListener( const DelegateHandle& handle )
+    void AsyncLogSink::unregisterLogWrittenListener( const DelegateHandle& handle )
     {
         uint32 retiredSlot{ 0 };
         {

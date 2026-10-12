@@ -3,7 +3,7 @@
  * @brief 엔진 전체에서 쓰는 로깅 시스템입니다.
  *
  * 로그 태그(Engine / Editor / Game)는 호출하는 모듈의 컴파일 정의 SW_LOG_TAG 로 정해집니다. 전역 _target 을 덮어쓰지
- * 않으므로 모듈을 로드한 뒤에도 출처가 유지됩니다. 에디터 표시 등은 addLogWrittenListener 로 구독합니다.
+ * 않으므로 모듈을 로드한 뒤에도 출처가 유지됩니다. 에디터 표시 등은 registerLogWrittenListener 로 구독합니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -50,9 +50,9 @@ namespace sw
         /** @brief 한 줄을 출력 장치와 리스너에 남깁니다. */
         virtual void writeLog( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line ) = 0;
         /** @brief 한 줄이 쓰일 때 호출할 리스너를 붙입니다. */
-        virtual DelegateHandle addLogWrittenListener( const LogWrittenDelegate& listener ) = 0;
+        virtual DelegateHandle registerLogWrittenListener( const LogWrittenDelegate& listener ) = 0;
         /** @brief 핸들로 리스너를 해제합니다. */
-        virtual void removeLogWrittenListener( const DelegateHandle& handle ) = 0;
+        virtual void unregisterLogWrittenListener( const DelegateHandle& handle ) = 0;
         /** @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 리스너를 모두 해제하고, 해제한 수를 반환합니다(핫 리로드가 모듈을 언로드하기 전에 부릅니다). */
         virtual uint32 removeListenerCodeWithin( const void* pBegin, const void* pEnd ) = 0;
         /** @brief 로그 파일이 있는 폴더의 경로를 반환합니다. */
@@ -103,9 +103,9 @@ namespace sw
         /** @brief 전역 싱크로 한 줄을 남깁니다. 싱크가 없으면 무시합니다. */
         static void writeLogGlobal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line );
         /** @brief 전역 싱크에 리스너를 붙입니다. */
-        static DelegateHandle addGlobalListener( const LogWrittenDelegate& listener );
+        static DelegateHandle registerGlobalListener( const LogWrittenDelegate& listener );
         /** @brief 전역 싱크에서 리스너를 해제합니다. */
-        static void removeGlobalListener( const DelegateHandle& handle );
+        static void unregisterGlobalListener( const DelegateHandle& handle );
         /** @brief 전역 싱크에서 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 리스너를 모두 해제하고, 해제한 수를 반환합니다. 싱크가 없으면 0 입니다. */
         static uint32 releaseGlobalListenerCodeWithin( const void* pBegin, const void* pEnd );
         /** @brief 현재 전역 싱크를 반환합니다. 없으면 nullptr 입니다. */
