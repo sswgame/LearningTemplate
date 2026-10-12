@@ -84,7 +84,6 @@ namespace sw
         , _listReceived{}
         , _flushBatch{}
         , _listDeliver{}
-        , _listDrainScratch{}
         , _plainWriter{}
         , _credentials{}
         , _settings{}
@@ -1102,15 +1101,18 @@ namespace sw
                 continue;
             for ( int32 channel = 0; channel < static_cast<int32>( NetChannelType::Count ); ++channel )
             {
-                while ( slot._connection.receiveMessage( static_cast<NetChannelType>( channel ), _listDrainScratch ) )
+                // 메시지를 아레나 뒤에 바로 덧붙인다(중간 버퍼를 거치지 않는다).
+                int32 offset = static_cast<int32>( outInbound._bytes.size() );
+                while ( slot._connection.receiveMessageAppend( static_cast<NetChannelType>( channel ), outInbound._bytes ) )
                 {
+                    const int32       end = static_cast<int32>( outInbound._bytes.size() );
                     NetInboundMessage message;
                     message._connectionID = index;
-                    message._offset       = static_cast<int32>( outInbound._bytes.size() );
-                    message._size         = static_cast<int32>( _listDrainScratch.size() );
+                    message._offset       = offset;
+                    message._size         = end - offset;
                     message._channel      = static_cast<NetChannelType>( channel );
-                    outInbound._bytes.insert( outInbound._bytes.end(), _listDrainScratch.begin(), _listDrainScratch.end() );
                     outInbound._listMessage.push_back( message );
+                    offset = end;
                 }
             }
         }

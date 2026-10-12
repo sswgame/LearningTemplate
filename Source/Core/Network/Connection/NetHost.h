@@ -362,16 +362,15 @@ namespace sw
         NetChallenge                  _challenge; ///< 챌린지 값의 비밀 키와 솔트 수열.
         NetPacketSealer               _sealer;    ///< 암호화 방식의 봉인과 열기(스크래치 버퍼를 다시 쓴다).
         vector<NetHostEvent>          _listEvent;
-        OutgoingBatch                 _pendingBatch;     ///< 잠금 안에서 쌓인 보낼 데이터그램
-        BitWriter                     _packetWriter;     ///< 보낼 패킷의 몸
-        TaskPromise<NetConnectResult> _connectPromise;   ///< 기다리는 비동기 연결(`_bConnectPending`).
-        vector<FinishedConnect>       _listFinished;     ///< 끝난 비동기 연결. 잠금을 푼 뒤 채운다.
-        vector<ReceivedDatagram>      _listReceived;     ///< `update` 스레드 전용. 잠금 밖에서 받은 배치(버퍼를 다시 쓴다).
-        OutgoingBatch                 _flushBatch;       ///< `update` 스레드 전용. 잠금 밖에서 보내는 배치.
-        vector<FinishedConnect>       _listDeliver;      ///< `update` 스레드 전용.
-        vector<uint8>                 _listDrainScratch; ///< `drainInbound` 가 메시지 하나를 꺼내 두는 스크래치 버퍼.
-        BitWriter                     _plainWriter;      ///< 암호화에서 NetConnection 이 쓴 평문 패킷.
-        NetConnectCredentials         _credentials;      ///< 클라이언트 전용. 지금 연결에 제시하는 자격.
+        OutgoingBatch                 _pendingBatch;   ///< 잠금 안에서 쌓인 보낼 데이터그램
+        BitWriter                     _packetWriter;   ///< 보낼 패킷의 몸
+        TaskPromise<NetConnectResult> _connectPromise; ///< 기다리는 비동기 연결(`_bConnectPending`).
+        vector<FinishedConnect>       _listFinished;   ///< 끝난 비동기 연결. 잠금을 푼 뒤 채운다.
+        vector<ReceivedDatagram>      _listReceived;   ///< `update` 스레드 전용. 잠금 밖에서 받은 배치(버퍼를 다시 쓴다).
+        OutgoingBatch                 _flushBatch;     ///< `update` 스레드 전용. 잠금 밖에서 보내는 배치.
+        vector<FinishedConnect>       _listDeliver;    ///< `update` 스레드 전용.
+        BitWriter                     _plainWriter;    ///< 암호화에서 NetConnection 이 쓴 평문 패킷.
+        NetConnectCredentials         _credentials;    ///< 클라이언트 전용. 지금 연결에 제시하는 자격.
         NetHostSettings               _settings;
         INetTransport*                _pTransport;
         uint64                        _rejectedPacketCount;
