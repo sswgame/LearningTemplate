@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Admin/Shared/Editor/AdminCommandProvider.h"
+#include "GameFramework/PlugIn/Editor/Admin/AdminCommandProvider.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/String/StringBuilder.h"

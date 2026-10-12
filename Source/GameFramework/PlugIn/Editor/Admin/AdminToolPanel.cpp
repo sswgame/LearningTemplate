@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Admin/Shared/Editor/AdminToolPanel.h"
+#include "GameFramework/PlugIn/Editor/Admin/AdminToolPanel.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -11,7 +11,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "GameFramework/Kits/Feature/Online/Admin/Shared/Editor/AdminToolSession.h"
+#include "GameFramework/PlugIn/Editor/Admin/AdminToolSession.h"
 
 #include <imgui.h>
 

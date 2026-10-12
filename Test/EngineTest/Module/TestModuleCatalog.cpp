@@ -329,23 +329,23 @@ SW_TEST_CASE( ModuleCatalogTest, TargetMaskSeparatesClientAndServerModules )
  */
 SW_TEST_CASE( ModuleCatalogTest, EditorExtensionManifestIsDevOnlyAndNeedsTheEditor )
 {
-    const utf8*        pGood = R"({ "_name": "GF_Editor_Farm", "_version": "1.0.0", "_kind": "EditorExtension",
+    const utf8*        pGood = R"({ "_name": "GF_EditorPlugIn_Farm", "_version": "1.0.0", "_kind": "EditorExtension",
                              "_listDependency": [ { "_name": "EditorModule" }, { "_name": "GF_Farm" } ],
                              "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev" ], "_listTarget": [ "Client" ] })";
     sw::ModuleManifest manifest;
     sw::string         error;
-    SW_ASSERT_TRUE_MSG( sw::ModuleCatalog::parseManifest( pGood, "Source/X/GF_Editor_Farm.module.json", manifest, error ), error.c_str() );
+    SW_ASSERT_TRUE_MSG( sw::ModuleCatalog::parseManifest( pGood, "Source/X/GF_EditorPlugIn_Farm.module.json", manifest, error ), error.c_str() );
     SW_EXPECT_TRUE( manifest._kind == sw::ModuleKind::EditorExtension );
 
-    const utf8* pShipping = R"({ "_name": "GF_Editor_Farm", "_version": "1.0.0", "_kind": "EditorExtension",
+    const utf8* pShipping = R"({ "_name": "GF_EditorPlugIn_Farm", "_version": "1.0.0", "_kind": "EditorExtension",
                              "_listDependency": [ { "_name": "EditorModule" } ],
                              "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev", "Shipping" ], "_listTarget": [ "Client" ] })";
-    SW_EXPECT_FALSE( sw::ModuleCatalog::parseManifest( pShipping, "Source/X/GF_Editor_Farm.module.json", manifest, error ) );
+    SW_EXPECT_FALSE( sw::ModuleCatalog::parseManifest( pShipping, "Source/X/GF_EditorPlugIn_Farm.module.json", manifest, error ) );
 
-    const utf8* pNoEditor = R"({ "_name": "GF_Editor_Farm", "_version": "1.0.0", "_kind": "EditorExtension",
+    const utf8* pNoEditor = R"({ "_name": "GF_EditorPlugIn_Farm", "_version": "1.0.0", "_kind": "EditorExtension",
                              "_listDependency": [ { "_name": "GF_Farm" } ],
                              "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev" ], "_listTarget": [ "Client" ] })";
-    SW_EXPECT_FALSE( sw::ModuleCatalog::parseManifest( pNoEditor, "Source/X/GF_Editor_Farm.module.json", manifest, error ) );
+    SW_EXPECT_FALSE( sw::ModuleCatalog::parseManifest( pNoEditor, "Source/X/GF_EditorPlugIn_Farm.module.json", manifest, error ) );
 }
 
 /**
@@ -358,9 +358,9 @@ SW_TEST_CASE( ModuleCatalogTest, EditorExtensionFollowsItsDependencies )
     project._listModuleOverride.push_back( sw::ModuleOverride{ "GF_Farm", false } );
     sw::ModuleManifest editor         = makeManifest( "EditorModule", sw::ModuleKind::Editor, {} );
     editor._configurationMask         = static_cast<uint8>( sw::ModuleConfiguration::Dev );
-    sw::ModuleManifest extension      = makeManifest( "GF_Editor_Farm", sw::ModuleKind::EditorExtension, { "EditorModule", "GF_Farm" } );
+    sw::ModuleManifest extension      = makeManifest( "GF_EditorPlugIn_Farm", sw::ModuleKind::EditorExtension, { "EditorModule", "GF_Farm" } );
     extension._configurationMask      = static_cast<uint8>( sw::ModuleConfiguration::Dev );
-    sw::ModuleManifest otherExtension = makeManifest( "GF_Editor_Mine", sw::ModuleKind::EditorExtension, { "EditorModule", "GF_Mine" } );
+    sw::ModuleManifest otherExtension = makeManifest( "GF_EditorPlugIn_Mine", sw::ModuleKind::EditorExtension, { "EditorModule", "GF_Mine" } );
     otherExtension._configurationMask = static_cast<uint8>( sw::ModuleConfiguration::Dev );
 
     const sw::ModuleCatalog catalog = makeCatalog( { project, editor, extension, otherExtension,
@@ -370,11 +370,11 @@ SW_TEST_CASE( ModuleCatalogTest, EditorExtensionFollowsItsDependencies )
     sw::ModuleResolution    resolution;
     sw::string              error;
     SW_ASSERT_TRUE_MSG( catalog.resolve( sw::ModuleResolveContext{}, resolution, error ), error.c_str() );
-    SW_EXPECT_FALSE( resolution.isActive( "GF_Editor_Farm" ) ); // 키트가 꺼졌다
-    SW_EXPECT_TRUE( resolution.isActive( "GF_Editor_Mine" ) );
+    SW_EXPECT_FALSE( resolution.isActive( "GF_EditorPlugIn_Farm" ) ); // 키트가 꺼졌다
+    SW_EXPECT_TRUE( resolution.isActive( "GF_EditorPlugIn_Mine" ) );
 
     sw::ModuleResolveContext shipping{};
     shipping._configuration = sw::ModuleConfiguration::Shipping;
     SW_ASSERT_TRUE_MSG( catalog.resolve( shipping, resolution, error ), error.c_str() );
-    SW_EXPECT_FALSE( resolution.isActive( "GF_Editor_Mine" ) ); // 배포본에는 에디터도 확장도 없다
+    SW_EXPECT_FALSE( resolution.isActive( "GF_EditorPlugIn_Mine" ) ); // 배포본에는 에디터도 확장도 없다
 }

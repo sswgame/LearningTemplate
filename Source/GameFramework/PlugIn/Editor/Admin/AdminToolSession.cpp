@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Admin/Shared/Editor/AdminToolSession.h"
+#include "GameFramework/PlugIn/Editor/Admin/AdminToolSession.h"
 
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/WallClock.h"

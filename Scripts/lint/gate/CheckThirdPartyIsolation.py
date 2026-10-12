@@ -103,8 +103,8 @@ _kLinkCallRe = re.compile(r"\btarget_link_libraries\s*\(", re.IGNORECASE)
 
 
 def isEditorExtensionPath(relative: str) -> bool:
-    """키트 · 기반 · 게임의 에디터 확장 폴더(`Source/GameFramework/Kits/…/Editor/` · `Source/GameFramework/Base/Editor/` · `Source/Games/<게임>/Editor/`) 안의 파일인가."""
-    return relative.startswith(("Source/GameFramework/Kits/", "Source/GameFramework/Base/Editor/", "Source/Games/")) and "/Editor/" in relative
+    """GameFramework · 게임의 에디터 확장 폴더(`Source/GameFramework/PlugIn/Editor/` · `Source/Games/<게임>/Editor/`) 안의 파일인가."""
+    return relative.startswith("Source/GameFramework/PlugIn/Editor/") or (relative.startswith("Source/Games/") and "/Editor/" in relative)
 
 
 def findIncludeViolations(repositoryRoot: Path, listFileArgument: list[str] | None) -> list[str]:

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Base/Editor/Gimmick/GimmickGraphModel.h"
+#include "GameFramework/PlugIn/Editor/Base/Gimmick/GimmickGraphModel.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/String/StringBuilder.h"

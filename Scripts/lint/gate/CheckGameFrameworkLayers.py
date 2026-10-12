@@ -16,9 +16,10 @@ GameFramework 층 검사 — 기반의 층 · 폴더 순서(DAG)와 키트의 �
      옛 꼴 `Kits/<성격>/<묶음>/Server/<키트>/` 는 실패다.
   3-1) 루트 파일(`GameFramework/x.h` 등)과 묶음 공용 헤더(`Kits/<성격>/<묶음>/x.h`)는 Core · Engine · 같은 폴더만 include 한다 —
      기반이나 키트를 끌어오면 그 헤더를 쓰는 쪽이 층 검사 없이 의존을 얻는다(우산 헤더 금지).
-  4) GameFramework 의 어느 파일도 `Games/` · `Editor/` 를 include 하지 않는다. 키트의 에디터 확장 폴더(`<키트>/Editor/`)와 기반의 에디터 확장 폴더(`Base/Editor/`)만 `Editor/` 를 include 한다.
-  4-1) 기반의 에디터 확장(`Base/Editor/` — 모듈 GF_Editor_Base, Dev 전용)은 기반 어느 층이든 include 할 수 있고(기반 위의 별도 모듈이다) 키트는 include 하지 않는다.
-     아무도 `Base/Editor/` 를 include 하지 않는다 — 기반이 확장을 알면 배포본에 없는 코드를 끌어온다.
+  4) GameFramework 의 어느 파일도 `Games/` · `Editor/` 를 include 하지 않는다. 에디터 확장 폴더(`PlugIn/Editor/<이름>/`)만 `Editor/` 를 include 한다.
+  4-1) 에디터 확장(`PlugIn/Editor/<이름>/` — 모듈 GF_EditorPlugIn_<이름>, Dev 전용)은 기반 어느 층이든 include 할 수 있다(기반 위의 별도 모듈이다).
+     `Base` 확장은 키트를 include 하지 않고, 키트 확장은 자기 키트(경로에 확장 이름이 든 키트)만 include 한다.
+     아무도 `PlugIn/Editor/` 를 include 하지 않는다 — 기반 · 키트가 확장을 알면 배포본에 없는 코드를 끌어온다.
 
 키트 → 기반은 어느 층이든 된다(키트는 기반 위의 층이다). 기반을 DLL 여럿으로 나누지는 않는다 — 층은 폴더로만 지킨다
 (docs/09_Decisions.md 2절 "안 하기로 한 것").
@@ -43,8 +44,11 @@ from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 _kKitsFolderName = "Kits"
 _kBaseFolderName = "Base"
-# 기반의 에디터 확장 폴더(`Base/Editor/` — 모듈 GF_Editor_Base). 층 표 밖이다 - 기반 위의 별도 Dev 전용 모듈이다.
-_kBaseEditorFolderName = "Editor"
+# 에디터 확장 폴더(`PlugIn/Editor/<이름>/` — 모듈 GF_EditorPlugIn_<이름>). 층 표 밖이다 - 기반 · 키트 위의 별도 Dev 전용 모듈이다.
+_kPlugInFolderName = "PlugIn"
+_kPlugInEditorFolderName = "Editor"
+# 기반 자신의 확장 이름(`PlugIn/Editor/Base/`). 이 확장은 키트를 include 하지 않는다.
+_kBasePlugInName = "Base"
 
 # 기반 층 · 층 안 폴더 순서(`rules/CheckGameFrameworkLayers.toml` — 층마다의 설명도 거기 있다).
 _kRuleSchema = {"base_layer": kKindInteger, "base_folder_order": kKindInteger}
@@ -68,7 +72,7 @@ _kForbiddenPrefixes: tuple[str, ...] = ("Games/", "Editor/")
 def classifyInternal(relativePath: str) -> tuple[str, str]:
     """
     GameFramework 아래 상대 경로 → (종류, 이름). 종류는 "base"(기반 폴더) · "kit"(키트 하나) · "kitGroup"(묶음 공용 헤더) · "root"(루트 파일) ·
-    "baseEditor"(기반의 에디터 확장 `Base/Editor/`), "stray"(최상위의 `Base` · `Kits` 아닌 폴더). 기반 이름은 `<층>/<폴더>`(폴더 하나처럼 보는 층은 `<층>`, 층 바로 아래 파일은 `<층>/`),
+    "plugIn"(에디터 확장 `PlugIn/Editor/<이름>/` — 이름이 확장 하나), "strayPlugIn"(`PlugIn/Editor/<이름>/` 꼴이 아닌 것), "stray"(최상위의 `Base` · `Kits` · `PlugIn` 아닌 폴더). 기반 이름은 `<층>/<폴더>`(폴더 하나처럼 보는 층은 `<층>`, 층 바로 아래 파일은 `<층>/`),
     키트 이름은 `<묶음>/<키트>`(짝으로 나뉜 기능은 `<묶음>/<기능>/<Shared|Server|Client>`)다. "sideMisplaced" 는 옛 꼴 `<묶음>/Server/<키트>/` 다.
     """
     parts = relativePath.split("/")
@@ -77,11 +81,13 @@ def classifyInternal(relativePath: str) -> tuple[str, str]:
     if parts[0] == _kBaseFolderName:
         if len(parts) == 2:
             return "root", ""
-        if parts[1] == _kBaseEditorFolderName:
-            return "baseEditor", ""
         if parts[1] in _kSingleFolderLayers:
             return "base", parts[1]
         return "base", f"{parts[1]}/{parts[2]}" if len(parts) >= 4 else f"{parts[1]}/"
+    if parts[0] == _kPlugInFolderName:
+        if len(parts) >= 4 and parts[1] == _kPlugInEditorFolderName:
+            return "plugIn", parts[2]
+        return "strayPlugIn", "/".join(parts[:3])
     if parts[0] != _kKitsFolderName:
         return "stray", parts[0]
     if len(parts) <= 3:
@@ -143,15 +149,18 @@ def checkFileInternal(relativeFilePath: str, text: str) -> list[str]:
     if sourceKind == "strayKit":
         listViolation.append(f"{relativeFilePath}: 키트 성격 폴더 '{sourceName}' — 키트는 Kits/Genre/<그룹>/ 또는 Kits/Feature/<그룹>/ 아래에 둔다")
         return listViolation
+    if sourceKind == "strayPlugIn":
+        listViolation.append(f"{relativeFilePath}: PlugIn '{sourceName}' — 에디터 확장은 PlugIn/Editor/<이름>/ 에 둔다")
+        return listViolation
     if sourceKind == "stray":
-        listViolation.append(f"{relativeFilePath}: GameFramework 최상위 폴더 '{sourceName}' — 기반은 Base/ 아래, 키트는 Kits/ 아래에 둔다")
+        listViolation.append(f"{relativeFilePath}: GameFramework 최상위 폴더 '{sourceName}' — 기반은 Base/ 아래, 키트는 Kits/ 아래, 에디터 확장은 PlugIn/Editor/ 아래에 둔다")
         return listViolation
     if sourceKind == "base" and isKnownBaseInternal(sourceName) is False:
         listViolation.append(f"{relativeFilePath}: 기반 '{sourceName}' 가 층 표 · 폴더 순서 표(rules/CheckGameFrameworkLayers.toml)에 없습니다"
                              " — 기반 파일은 Base/<층>/<폴더>/ 에 둔다")
         return listViolation
-    # 키트의 에디터 확장(`Kits/…/<키트>/Editor/` — 모듈 GF_Editor_<키트>, Dev 전용)은 에디터 API 를 쓴다. 게임은 여전히 모른다.
-    bEditorExtension = ( sourceKind == "kit" and "/Editor/" in gameFrameworkRelative ) or sourceKind == "baseEditor"
+    # 에디터 확장(`PlugIn/Editor/<이름>/` — 모듈 GF_EditorPlugIn_<이름>, Dev 전용)은 에디터 API 를 쓴다. 게임은 여전히 모른다.
+    bEditorExtension = sourceKind == "plugIn"
     for _, includePath in iterIncludes(text):
         include = includePath.replace("\\", "/")
         if bEditorExtension and include.startswith("Editor/"):
@@ -162,14 +171,15 @@ def checkFileInternal(relativeFilePath: str, text: str) -> list[str]:
         if include.startswith("GameFramework/") is False:
             continue
         destKind, destName = classifyInternal(include[len("GameFramework/"):])
-        if destKind == "baseEditor" and sourceKind != "baseEditor":
-            listViolation.append(f'{relativeFilePath}: #include "{includePath}"  (기반의 에디터 확장 Base/Editor/ 는 아무도 include 하지 않는다)')
+        if destKind in ("plugIn", "strayPlugIn") and sourceKind != "plugIn":
+            listViolation.append(f'{relativeFilePath}: #include "{includePath}"  (에디터 확장 PlugIn/Editor/ 는 아무도 include 하지 않는다)')
             continue
-        if destKind in ("root", "stray", "strayKit", "sideMisplaced"):
+        if destKind in ("root", "stray", "strayKit", "strayPlugIn", "sideMisplaced"):
             continue
-        if sourceKind == "baseEditor":
-            if destKind in ("kit", "kitGroup"):
-                listViolation.append(f'{relativeFilePath}: #include "{includePath}"  (기반의 에디터 확장 -> 키트)')
+        if sourceKind == "plugIn":
+            # 기반의 확장은 키트를 모른다. 키트의 확장은 자기 키트(경로에 확장 이름이 든 키트)만 본다.
+            if destKind in ("kit", "kitGroup") and (sourceName == _kBasePlugInName or sourceName not in destName.split("/")):
+                listViolation.append(f'{relativeFilePath}: #include "{includePath}"  (에디터 확장 {sourceName} -> 자기 것이 아닌 키트 {destName})')
             continue
         if sourceKind == "base":
             if destKind in ("kit", "kitGroup"):
@@ -298,13 +308,13 @@ class CheckGameFrameworkLayersGate(LintGate):
         {
             "name": "기반의 에디터 확장이 키트를 include",
             "files": {
-                "Source/GameFramework/Base/Editor/Gimmick/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterBattle.h"\n',
+                "Source/GameFramework/PlugIn/Editor/Base/Gimmick/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterBattle.h"\n',
             },
         },
         {
             "name": "기반이 기반의 에디터 확장을 include",
             "files": {
-                "Source/GameFramework/Base/Gameplay/Gimmick/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/Editor/Gimmick/GimmickGraphModel.h"\n',
+                "Source/GameFramework/Base/Gameplay/Gimmick/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/PlugIn/Editor/Base/Gimmick/GimmickGraphModel.h"\n',
             },
         },
         {

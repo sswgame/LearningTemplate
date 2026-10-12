@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Base/Editor/Gimmick/GimmickGraphBridge.h"
+#include "GameFramework/PlugIn/Editor/Base/Gimmick/GimmickGraphBridge.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
 

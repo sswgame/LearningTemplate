@@ -1,8 +1,8 @@
 // GM 도구 패널의 세션과 메모리 제공자 — 조회, 지급 · 회수(메모 필수, 잔액 부족, 환불 회수의 빚), 제재 등급, 같은 키 재시도, 감사 열람, 연결 없는 실제 제공자.
-// 에디터 확장(GF_Editor_Admin)의 화면 없는 부분만 본다. 확장 DLL 은 링크하지 않고 두 소스를 EngineTest 가 직접 컴파일한다.
+// 에디터 확장(GF_EditorPlugIn_Admin)의 화면 없는 부분만 본다. 확장 DLL 은 링크하지 않고 두 소스를 EngineTest 가 직접 컴파일한다.
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Admin/Shared/Editor/AdminToolSession.h"
+#include "GameFramework/PlugIn/Editor/Admin/AdminToolSession.h"
 
 #include "TestFramework/TestFramework.h"
 

@@ -298,12 +298,12 @@
 
 ### D3. 에디터
 
-- `D3-1` **에디터 로드맵 — 미룬 영역 패널을 그 영역 옆에(에디터 보강에서 남김).** 엔진 영역 패널은 EditorModule, 기반 GameFramework 영역은 `GF_Editor_Base`(아직 없음 — 
-  `Source/GameFramework/Base/Editor/`), 키트 영역은 `GF_Editor_<키트>` 확장 모듈에 둔다. 체감 · 선행 순서로:
+- `D3-1` **에디터 로드맵 — 미룬 영역 패널을 그 영역 옆에(에디터 보강에서 남김).** 엔진 영역 패널은 EditorModule, 기반 GameFramework 영역은 `GF_EditorPlugIn_Base`(아직 없음 — 
+  `Source/GameFramework/PlugIn/Editor/Base/`), 키트 영역은 `GF_EditorPlugIn_<이름>` 확장 모듈에 둔다. 체감 · 선행 순서로:
   ① 프로젝트 설정 창 — 생성 메타데이터 `docs/Config/ConfigReference.json` 으로 `Config/` 와 팩 설정을 찾아 `EditorPropertyGrid` 로 고치고, `ConfigManager::reloadConfigFile` 로 다시 읽고,
   기본값과 같은 값은 파일에서 지운다(언리얼 · 유니티 Project Settings). ② 물리 셰이프 시각화와 콜라이더 크기 손잡이(`SW_EDITOR_VISUALIZER`, 1-2 강체 물리 (3)).
-  ③ 내비메시 보기와 베이크 커맨드 `navigation.bake`(`GF_Editor_Base`, 1-2 내비메시 (4)). ④ 오디오 믹서 패널(버스 미터 · 음소거 · 솔로 · 볼륨, 1-6 오디오).
-  ⑤ GM 도구 패널(`GF_Editor_Admin` — `AdminClient` 로 조회 · 지급 · 제재 · 감사 열람). ⑥ 기믹 회로 그래프 편집 창(`EditorGraphDocumentPanel` 틀, 1-6 기믹).
+  ③ 내비메시 보기와 베이크 커맨드 `navigation.bake`(`GF_EditorPlugIn_Base`, 1-2 내비메시 (4)). ④ 오디오 믹서 패널(버스 미터 · 음소거 · 솔로 · 볼륨, 1-6 오디오).
+  ⑤ GM 도구 패널(`GF_EditorPlugIn_Admin` — `AdminClient` 로 조회 · 지급 · 제재 · 감사 열람). ⑥ 기믹 회로 그래프 편집 창(`EditorGraphDocumentPanel` 틀, 1-6 기믹).
   ⑦ 카탈로그 편집기 — 카탈로그 계약 하나가 `ResourceDataSchemaTest` 의 종류 표를 대신하고, `CityCatalog.cpp` 의 하드코딩 개수를 포함해 25 곳에 흩어진 enum 이름 표를 모은다.
   Data Table 의 게임 데이터 탭(지금 XML 글 상자)을 리플렉션 구조체 행의 표 편집으로 바꾸는 일도 여기다(언리얼 DataTable · DataAsset 편집 + Fix Up Redirectors).
   ⑧ 지형 칠하기 도구 모드(1-3 환경). ⑨ 다중 월드 툴 창과 그 위의 애니메이션 · 리그 · 프리팹 · 머티리얼 미리보기 창(언리얼 FPreviewScene · Asset Editor Toolkit).

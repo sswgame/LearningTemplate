@@ -7,7 +7,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 
-#include "GameFramework/Base/Editor/Gimmick/GimmickGraphModel.h"
+#include "GameFramework/PlugIn/Editor/Base/Gimmick/GimmickGraphModel.h"
 
 namespace sw
 {

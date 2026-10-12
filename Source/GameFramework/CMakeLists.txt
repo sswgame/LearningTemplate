@@ -13,8 +13,8 @@ endif()
 
 file(GLOB_RECURSE listGameFrameworkSource CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
 list(FILTER listGameFrameworkSource EXCLUDE REGEX "Kits/")
-# 기반의 에디터 확장(Base/Editor/)은 따로 짓는 모듈이다(GF_Editor_Base) - 키트의 Editor/ 와 같은 규칙이고 GameFramework DLL(배포본 포함)에 섞지 않는다.
-list(FILTER listGameFrameworkSource EXCLUDE REGEX "Base/Editor/")
+# 에디터 확장(PlugIn/Editor/)은 따로 짓는 모듈이다(GF_EditorPlugIn_<이름>) - GameFramework DLL(배포본 포함)에 섞지 않는다.
+list(FILTER listGameFrameworkSource EXCLUDE REGEX "PlugIn/")
 
 # 리플렉션 대상 헤더는 소스와 **같은 목록**에서 고른다. 주의: 폴더를 이름으로 적어 모으면 최상위 폴더를 하나 더 만들 때 그 안의 REFLECT() 타입이
 # 조용히 등록되지 않는다 — 컴파일은 되고 역직렬화만 실패하므로 찾기 어렵다. (자동 훑기를 쓰지 않는 이유: 폴더 재귀가 Kits/ 까지 내려간다.)
@@ -44,7 +44,7 @@ target_link_libraries(GameFramework PRIVATE openssl)
 
 add_subdirectory(Kits)
 
-# 기반의 에디터 확장 - EditorModule 과 GameFramework 를 링크하는 Dev 전용 SHARED 모듈(`sw_addEditorExtension`, 매니페스트 GF_Editor_Base.module.json)
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Base/Editor/CMakeLists.txt")
-	add_subdirectory(Base/Editor)
+# 에디터 확장 - EditorModule 과 GameFramework(또는 키트)를 링크하는 Dev 전용 SHARED 모듈(`sw_addEditorExtension`, 매니페스트 GF_EditorPlugIn_<이름>.module.json)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/PlugIn/Editor/CMakeLists.txt")
+	add_subdirectory(PlugIn/Editor)
 endif()

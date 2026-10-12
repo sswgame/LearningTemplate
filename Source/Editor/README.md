@@ -20,7 +20,7 @@ flowchart TB
     Shell --> Panels["패널 · 팝업 · 인스펙터 · 시각화<br/>(등록부에서 만든다)"]
     Panels --> Commands["Commands/<br/>ImGui 없는 동작"]
     Commands --> Context
-    Ext["확장 모듈<br/>GF_Editor_* · SWGameEditor"] -->|SW_EDITOR_* 등록 줄| Panels
+    Ext["확장 모듈<br/>GF_EditorPlugIn_* · SWGameEditor"] -->|SW_EDITOR_* 등록 줄| Panels
     Shell -->|draw 스냅샷| RT["렌더 스레드<br/>ImGui 렌더 백엔드"]
 ```
 
@@ -36,12 +36,12 @@ flowchart TB
 
 ## 3. 따라 해 보기 — 확장 모듈에 패널과 커맨드 하나
 
-가장 흔한 일은 도구 창을 하나 더하는 것입니다. 본보기는 ThemePark 키트의 에디터 확장 `GF_Editor_ThemePark` 입니다.
+가장 흔한 일은 도구 창을 하나 더하는 것입니다. 본보기는 ThemePark 키트의 에디터 확장 `GF_EditorPlugIn_ThemePark` 입니다.
 이 확장은 놀이기구 배치 파일을 표로 보이는 Park Layout 창과, 그 창을 여는 커맨드를 더합니다. EditorModule 안의 패널도 같은 모양입니다.
 
 1. 패널 클래스를 둡니다(`ParkLayoutPanel.h`). `IEditorPanel` 을 상속하고 제목과 그리기를 구현합니다.
 
-<!-- doc-snippet: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.h#panel-class -->
+<!-- doc-snippet: Source/GameFramework/PlugIn/Editor/ThemePark/ParkLayoutPanel.h#panel-class -->
 ```cpp
     class ParkLayoutPanel final : public IEditorPanel
     {
@@ -59,7 +59,7 @@ flowchart TB
 2. 생성자와 그리기를 씁니다(`ParkLayoutPanel.cpp`). `IEditorPanel( false )` 는 창을 닫힌 채 시작하게 합니다. 열린 채 시작하는 도구 창은 떠 있는 창으로 화면 가운데를 덮습니다.
    단추를 그린 직후의 `EditorSelfTestMarks::note` 는 시나리오가 누를 레이블를 남깁니다.
 
-<!-- doc-snippet: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp#panel-draw -->
+<!-- doc-snippet: Source/GameFramework/PlugIn/Editor/ThemePark/ParkLayoutPanel.cpp#panel-draw -->
 ```cpp
     ParkLayoutPanel::ParkLayoutPanel()
         : IEditorPanel( false )
@@ -77,14 +77,14 @@ flowchart TB
 
 3. 같은 파일 끝에 등록 한 줄을 둡니다. 이 줄이 있으면 Panel 메뉴에 창이 생깁니다. 순서 키 9000 은 메뉴 안의 자리입니다.
 
-<!-- doc-snippet: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp#panel-register -->
+<!-- doc-snippet: Source/GameFramework/PlugIn/Editor/ThemePark/ParkLayoutPanel.cpp#panel-register -->
 ```cpp
     SW_EDITOR_PANEL( ParkLayoutPanel, "themepark.layout", EditorPanelCategory::Custom, 9000 );
 ```
 
 4. 창을 여는 커맨드를 둡니다(`ParkLayoutCommands.cpp`). 동작은 함수 하나이고, 등록 한 줄이 그 함수를 커맨드 팔레트(Ctrl+Shift+P)와 메뉴와 단축키에 함께 겁니다.
 
-<!-- doc-snippet: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutCommands.cpp#command-open -->
+<!-- doc-snippet: Source/GameFramework/PlugIn/Editor/ThemePark/ParkLayoutCommands.cpp#command-open -->
 ```cpp
             static void openPanel()
             {
@@ -94,7 +94,7 @@ flowchart TB
             }
 ```
 
-<!-- doc-snippet: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutCommands.cpp#command-register -->
+<!-- doc-snippet: Source/GameFramework/PlugIn/Editor/ThemePark/ParkLayoutCommands.cpp#command-register -->
 ```cpp
     SW_EDITOR_COMMAND( ParkLayoutOpen, "themepark.openLayoutPanel", 9100, "Park Layout", editoricon::kMap, "ThemePark", "놀이기구 배치 패널을 엽니다",
                        "Open the park layout panel", {}, &ParkLayoutCommandsInternal::openPanel, nullptr, nullptr );
@@ -401,16 +401,16 @@ Tile Map Tool 은 도구 단추 `tileMap.tool.brush` · `tileMap.tool.rect` · `
 
 ### 확장 모듈 — 키트와 게임의 에디터 코드
 
-키트나 게임은 자기 폴더의 `Editor/` 하위 폴더에 에디터 확장 모듈을 둡니다(키트는 `GF_Editor_<키트>`, 게임은 `SWGameEditor`). 확장 모듈은 Dev 전용 SHARED DLL 이고 EditorModule 을 링크합니다.
-만드는 절차는 [Kits README](../GameFramework/Kits/README.md) "키트에 에디터 도구를 붙일 때" 절이고, 본보기는 `GF_Editor_ThemePark` 입니다.
+GameFramework 와 키트의 에디터 확장은 `Source/GameFramework/PlugIn/Editor/<이름>/` 에, 게임의 것은 자기 폴더의 `Editor/` 하위 폴더에 둡니다(모듈 이름은 `GF_EditorPlugIn_<이름>`, 게임은 `SWGameEditor`). 확장 모듈은 Dev 전용 SHARED DLL 이고 EditorModule 을 링크합니다.
+만드는 절차는 [Kits README](../GameFramework/Kits/README.md) "키트에 에디터 도구를 붙일 때" 절이고, 본보기는 `GF_EditorPlugIn_ThemePark` 입니다.
 
 1. 등록은 EditorModule 과 같은 `SW_EDITOR_*` 한 줄입니다.
 2. 확장이 쓰는 에디터 API 는 `SW_EDITOR_API` 로 내보낸 것뿐입니다. 링크 오류가 나면 그 클래스에 `SW_EDITOR_API` 를 붙입니다.
 3. 노드 그래프 문서 창은 템플릿 `EditorGraphDocumentPanel` 을 상속하고 캔버스를 `beginGraphCanvas` 와 `endGraphCanvas` 로 엽니다.
 4. 씬 뷰 카메라를 옮기려면 `EditorSceneViewUtil::focusOn` 을 부릅니다.
-5. 지금 있는 확장은 `GF_Editor_ThemePark`(Park Layout), `GF_Editor_Admin`(GM Tool — `Kits/Feature/Online/Admin/Shared/Editor/`, 서버 없이 메모리 제공자로 돕니다)과, 기반(GameFramework Base)의
-   확장 `GF_Editor_Base`(`Source/GameFramework/Base/Editor/` — 기믹 회로 그래프 창)입니다. 기반의 `Editor/` 도 키트와 같은 규칙으로 따로 지어지고(`sw_addEditorExtension`), 게이트 규칙은
-   기반 어느 층이든 보되 키트는 보지 않으며 아무도 이 폴더를 보지 않는 것입니다.
+5. 지금 있는 확장은 `GF_EditorPlugIn_ThemePark`(Park Layout), `GF_EditorPlugIn_Admin`(GM Tool — `PlugIn/Editor/Admin/`, 서버 없이 메모리 제공자로 돕니다)과, 기반(GameFramework Base)의
+   확장 `GF_EditorPlugIn_Base`(`Source/GameFramework/PlugIn/Editor/Base/` — 기믹 회로 그래프 창)입니다. 확장은 모두 `PlugIn/Editor/CMakeLists.txt` 에서 `sw_addEditorExtension` 으로 따로 지어지고, 게이트 규칙은
+   기반 어느 층이든 보되 `Base` 확장은 키트를 보지 않고 키트 확장은 자기 키트만 보며 아무도 이 폴더를 보지 않는 것입니다.
 6. 확장의 화면 없는 부분(제공자 · 모델)은 ImGui 를 몰라 EngineTest 가 직접 컴파일해 테스트합니다(`Test/EngineTest/CMakeLists.txt` 의 `swEngineTestExtensionSource`) — 확장 DLL 은 테스트가 링크하지 않습니다.
 
 ### 카탈로그 편집기

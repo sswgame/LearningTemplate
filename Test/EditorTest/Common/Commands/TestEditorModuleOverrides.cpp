@@ -57,13 +57,13 @@ SW_TEST_CASE( EditorModuleOverridesTest, PreviewIncludesDependents )
     SW_ASSERT_TRUE( catalog.addManifest( makeManifest( "GameFramework", ModuleKind::GameFramework, {} ), error ) );
     SW_ASSERT_TRUE( catalog.addManifest( makeManifest( "EditorModule", ModuleKind::Editor, {} ), error ) );
     SW_ASSERT_TRUE( catalog.addManifest( makeManifest( "GF_Farm", ModuleKind::Kit, { "GameFramework" } ), error ) );
-    SW_ASSERT_TRUE( catalog.addManifest( makeManifest( "GF_Editor_Farm", ModuleKind::EditorExtension, { "EditorModule", "GF_Farm" } ), error ) );
+    SW_ASSERT_TRUE( catalog.addManifest( makeManifest( "GF_EditorPlugIn_Farm", ModuleKind::EditorExtension, { "EditorModule", "GF_Farm" } ), error ) );
     vector<ModuleInactiveEntry> listNewlyInactive;
     vector<string>              listNewlyActive;
     SW_ASSERT_TRUE_MSG( EditorModuleOverrideUtil::previewToggle( catalog, ModuleResolveContext{}, "GF_Farm", false, listNewlyInactive, listNewlyActive, error ),
                         error.c_str() );
     SW_ASSERT_EQUAL( size_t{ 2 }, listNewlyInactive.size() );
-    SW_EXPECT_STREQ( "GF_Editor_Farm", listNewlyInactive[0]._name.c_str() );
+    SW_EXPECT_STREQ( "GF_EditorPlugIn_Farm", listNewlyInactive[0]._name.c_str() );
     SW_EXPECT_TRUE( listNewlyInactive[0]._reason.find( "GF_Farm" ) != string::npos );
     SW_EXPECT_STREQ( "GF_Farm", listNewlyInactive[1]._name.c_str() );
     SW_EXPECT_TRUE( listNewlyActive.empty() );

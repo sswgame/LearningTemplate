@@ -8,7 +8,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
-#include "GameFramework/Kits/Feature/Online/Admin/Shared/Editor/AdminToolSession.h"
+#include "GameFramework/PlugIn/Editor/Admin/AdminToolSession.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>

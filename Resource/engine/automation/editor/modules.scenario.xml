@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  에디터 시나리오 — 모듈 창(P4): GF_ThemePark 의 체크를 끄면 미리보기가 키트와 그 에디터 확장(GF_Editor_ThemePark) 둘을 새로 꺼진다고 보인다. Cancel 로 매니페스트를 쓰지 않는다.
+  에디터 시나리오 — 모듈 창(P4): GF_ThemePark 의 체크를 끄면 미리보기가 키트와 그 에디터 확장(GF_EditorPlugIn_ThemePark) 둘을 새로 꺼진다고 보인다. Cancel 로 매니페스트를 쓰지 않는다.
   실제 끄기 · 빌드 · 다시 시작은 소스 파일을 바꾸고 빌드가 길어 시나리오로 돌리지 않는다(EditorModuleOverridesTest 가 쓰기 · 미리보기를 본다).
   실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/modules.scenario.xml -dx12
 -->

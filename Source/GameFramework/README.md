@@ -11,7 +11,7 @@ GameFramework 는 두 층으로 나뉩니다. **기반**(`Base/`)은 어느 장�
 농장 게임은 `GF_Farming` 을, 실시간 전략 게임은 `GF_RealTimeStrategy` 를 링크하고, 둘 다 기반의 카메라와 인벤토리를 같이 씁니다.
 
 App 은 GameFramework 를 링크하지 않습니다. 게임 모듈(`SWGame`)이 GameFramework 와 키트를 링크하고, App 은 게임 모듈을 불러올 뿐입니다.
-그래서 엔진은 GameFramework 를 모르고(`CheckEngineLayers`), GameFramework 도 `Games/` 와 `Editor/` 를 모릅니다.
+그래서 엔진은 GameFramework 를 모르고(`CheckEngineLayers`), GameFramework 도 `Games/` 와 `Source/Editor` 를 모릅니다(에디터 확장 모듈 `PlugIn/Editor/` 만 에디터 API 를 씁니다).
 
 처음이라면 [시작하기](../../docs/01_GettingStarted.md)와 [Object](../Engine/Object/README.md)를 먼저 읽으세요.
 이 문서는 그다음입니다. 게임 오브젝트와 컴포넌트를 안다고 보고, 그 위에 게임 규칙을 올리는 방법을 설명합니다.
@@ -248,8 +248,8 @@ HP 바(`HealthBarComponent`)와 데미지 숫자(`DamageNumberComponent`)는 같
 2. `Scripts/lint/rules/CheckGameFrameworkLayers.toml` 의 `[base_folder_order]` 에 `<층>/<폴더>` 와 층 안 순서를 넣습니다. 표에 없는 폴더는 게이트가 실패시킵니다.
 3. 헤더에 처음 `REFLECT` 를 넣었으면 다시 configure 합니다. 리플렉션 대상 헤더는 `Base/` 전체를 재귀로 모으므로 새 폴더도 자동으로 들어가지만, 목록은 configure 때 만듭니다.
 
-기반의 에디터 확장은 `Base/Editor/` 에 둡니다(모듈 `GF_Editor_Base`, Dev 전용 — 층 표 밖의 별도 모듈이라 기반 어느 층이든 보지만 키트는 보지 않고, 아무도 이 폴더를 보지 않습니다).
-GameFramework 최상위에는 `Base/`, `Kits/` 와 루트 파일만 둡니다. 다른 폴더가 생기면 같은 게이트가 실패합니다.
+에디터 확장은 `PlugIn/Editor/<이름>/` 에 둡니다(모듈 `GF_EditorPlugIn_<이름>`, Dev 전용 — 런타임 층(`Base/`) 밖의 별도 모듈이라 기반 어느 층이든 보지만 `Base` 확장은 키트를 보지 않고, 키트 확장은 자기 키트만 보며, 아무도 이 폴더를 보지 않습니다).
+GameFramework 최상위에는 `Base/`, `Kits/`, `PlugIn/` 과 루트 파일만 둡니다. 다른 폴더가 생기면 같은 게이트가 실패합니다.
 
 ### 새 키트를 만들 때
 

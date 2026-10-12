@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Base/Editor/Gimmick/GimmickGraphPanel.h"
+#include "GameFramework/PlugIn/Editor/Base/Gimmick/GimmickGraphPanel.h"
 
 #include "Core/String/StringBuilder.h"
 
@@ -18,8 +18,8 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 
-#include "GameFramework/Base/Editor/Gimmick/GimmickGraphBridge.h"
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickCircuitComponent.h"
+#include "GameFramework/PlugIn/Editor/Base/Gimmick/GimmickGraphBridge.h"
 
 #include <imgui.h>
 

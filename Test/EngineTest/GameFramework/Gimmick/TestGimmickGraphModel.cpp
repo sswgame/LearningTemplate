@@ -5,9 +5,9 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Editor/Gimmick/GimmickGraphBridge.h"
-#include "GameFramework/Base/Editor/Gimmick/GimmickGraphModel.h"
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickCircuitComponent.h"
+#include "GameFramework/PlugIn/Editor/Base/Gimmick/GimmickGraphBridge.h"
+#include "GameFramework/PlugIn/Editor/Base/Gimmick/GimmickGraphModel.h"
 
 #include "TestFramework/TestFramework.h"
 

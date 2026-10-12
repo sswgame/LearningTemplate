@@ -8,7 +8,7 @@
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
-#include "GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPreview.h"
+#include "GameFramework/PlugIn/Editor/ThemePark/ParkLayoutPreview.h"
 
 #include <imgui.h>
 

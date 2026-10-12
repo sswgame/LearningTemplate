@@ -573,7 +573,7 @@
 - **imgui-node-editor 의 vcpkg 수정은 업스트림에 PR 을 내지 않고 오버레이로 유지합니다**(2026-10-06). 외부에 공개하는 일은 사용자가 요청할 때만 합니다.
 - **DPI 150 % 는 대체 테스트로 확인하고, 글자 래스터 선명도만 실제 모니터에서 확인합니다**(2026-10-06). 남은 확인은 [백로그](06_Backlog.md) `B-8` 에 있습니다.
 - **에디터 보강의 결정 열다섯 개(D1 ~ D15)**(2026-10-06, 사용자 지시 "특별한 의도가 없으면 상용 엔진과 비교해 나은 쪽"으로 추천을 정함). 단위는 모두 적용했고 계획 문서는 지웠습니다(남은 로드맵은 [백로그](06_Backlog.md) `D3-1`).
-  - **확장 지점**(D1 ~ D4): EditorModule 을 SHARED DLL 로 바꾸고 `SW_EDITOR_API` 로 내보냅니다. 키트의 에디터 확장은 `GF_Editor_<키트>`, 게임의 것은 `SWGameEditor` 이고 매니페스트 종류는 `EditorExtension`(Dev 전용)입니다.
+  - **확장 지점**(D1 ~ D4): EditorModule 을 SHARED DLL 로 바꾸고 `SW_EDITOR_API` 로 내보냅니다. GameFramework · 키트의 에디터 확장은 `Source/GameFramework/PlugIn/Editor/<이름>/` 의 `GF_EditorPlugIn_<이름>`(2026-10-13 `Base/Editor` · 키트 안 `Editor/` 에서 옮김 — 런타임 층 `Base/` 밖의 별도 축이라 한 곳에 모읍니다), 게임의 것은 `SWGameEditor` 이고 매니페스트 종류는 `EditorExtension`(Dev 전용)입니다.
     등록부만 따로 떼지 않은 이유는, 확장이 쓸 위젯과 선택과 Undo 까지 결국 옮겨야 하기 때문입니다. 언리얼 에디터 모듈이 `UnrealEd` 를 그대로 링크하는 것과 같습니다.
     vcpkg imgui 는 정적 라이브러리라 DLL 마다 사본이 생기므로, CMake 가 확장마다 ImGui 컨텍스트 결속 소스를 만듭니다(Dear ImGui FAQ 의 DLL 지침). 확장의 메뉴와 단축키는 등록 줄 `SW_EDITOR_COMMAND` 로 더합니다(유니티 `[MenuItem]`).
   - **설정**(D5 ~ D7): 에디터 환경설정은 `Saved/Editor/EditorPreferences.json` 에 기본값과 다른 값만 두고, 섹션은 리플렉션 구조체 하나입니다(언리얼 `UDeveloperSettings`). 단축키 덮어쓰기는 `Saved/Editor/Shortcuts.json`(유니티 Shortcuts Manager)입니다.

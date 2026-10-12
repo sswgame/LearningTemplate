@@ -10,7 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
-#include "GameFramework/Kits/Feature/Online/Admin/Shared/Editor/AdminCommandProvider.h"
+#include "GameFramework/PlugIn/Editor/Admin/AdminCommandProvider.h"
 
 namespace sw::editor
 {

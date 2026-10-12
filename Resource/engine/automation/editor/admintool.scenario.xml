@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  에디터 시나리오 — GM 도구 확장(GF_Editor_Admin): 서버 없이 메모리 제공자로 조회 · 지급 · 회수 · 제재 · 감사 열람이 돈다.
+  에디터 시나리오 — GM 도구 확장(GF_EditorPlugIn_Admin): 서버 없이 메모리 제공자로 조회 · 지급 · 회수 · 제재 · 감사 열람이 돈다.
   팔레트로 커맨드(admin.openToolPanel)를 실행해 GM Tool 패널을 열고, 계정을 조회한다. 메모 없는 지급은 거절되고(InvalidRequest), 메모를 적으면 들어가며 잔액을 다시 조회한다.
   잔액보다 큰 회수는 거절되고(InsufficientFunds), 제재와 감사 열람은 성공한다. 명령 결과는 패널이 남기는 로그 줄 "Admin command <명령>: <결과>" 로 센다.
   실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/admintool.scenario.xml -dx12

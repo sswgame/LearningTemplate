@@ -17,7 +17,7 @@
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 
-#include "GameFramework/Base/Editor/Gimmick/GimmickGraphModel.h"
+#include "GameFramework/PlugIn/Editor/Base/Gimmick/GimmickGraphModel.h"
 
 namespace sw
 {

@@ -8,7 +8,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
-#include "GameFramework/Base/Editor/Gimmick/GimmickGraphModel.h"
+#include "GameFramework/PlugIn/Editor/Base/Gimmick/GimmickGraphModel.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>

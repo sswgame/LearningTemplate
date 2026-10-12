@@ -66,7 +66,7 @@ JSON 키는 아래 필드 이름 그대로입니다(앞의 `_` 포함). 적지 �
 | `Game` | 게임 모듈(`SWGame`)이며 프로젝트다 |
 | `Editor` | 에디터 모듈(Dev 전용) |
 | `RHI` | RHI 백엔드(`RHI_*`, Dev 에서만 모듈) |
-| `EditorExtension` | 에디터 확장(`GF_Editor_<키트>`, `SWGameEditor`)이다. Dev 전용이며 `-EnableEditor` 일 때만 로드한다 |
+| `EditorExtension` | 에디터 확장(`GF_EditorPlugIn_<이름>`, `SWGameEditor`)이다. Dev 전용이며 `-EnableEditor` 일 때만 로드한다 |
 
 ## 열거 `ModulePlatform`
 

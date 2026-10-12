@@ -1,5 +1,5 @@
 {
-    "_name": "GF_Editor_Base",
+    "_name": "GF_EditorPlugIn_Base",
     "_version": "1.0.0",
     "_kind": "EditorExtension",
     "_description": "GameFramework 기반의 에디터 확장 — 기믹 회로 그래프 편집 창(노드 · 배선 · 검증 문제 · 대상 오브젝트 고르기)",
