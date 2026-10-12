@@ -99,7 +99,7 @@ namespace sw::editor
         /** @brief 패널의 열림 상태를 설정합니다. */
         void setOpen( bool open ) { _bOpen = open; }
         /** @brief ImGui 에 넘길 열림 상태 포인터를 반환합니다. */
-        bool* getOpenPtr() { return &_bOpen; }
+        bool* getOpenFlagAddress() { return &_bOpen; }
 
     protected:
         /** @brief 기본 열림 상태로 에디터 패널을 만듭니다. */
