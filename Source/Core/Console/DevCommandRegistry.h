@@ -5,16 +5,11 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/mutex.h"
+#include "Core/Console/DevCommandsEnabled.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/String/RegistrationList.h"
-
-/** @brief 개발 명령이 컴파일되는 구성이면 1 입니다(Dev). Shipping 은 0 이고 레지스트리, 콘솔, 명령 본문이 모두 빠집니다. */
-#if defined( SW_SHIPPING )
-    #define SW_DEV_COMMANDS_ENABLED 0
-#else
-    #define SW_DEV_COMMANDS_ENABLED 1
-#endif
 
 #if SW_DEV_COMMANDS_ENABLED
 
@@ -40,14 +35,16 @@ namespace sw
 {
     /**
      * @class DevCommandRegistry
-     * @brief 개발 명령의 레지스트리입니다(Engine 에 하나 있으며, 게임, 키트, 에디터 모듈이 등록하고 모듈을 언로드하면 그 명령이 빠집니다).
+     * @brief 개발 명령의 레지스트리입니다(Core 이미지에 하나 있으며, 엔진, 게임, 키트, 에디터 모듈이 등록하고 모듈을 언로드하면 그 명령이 빠집니다).
      * @details 명령은 자기 .cpp 에 `SW_DEV_COMMAND` 한 줄로 등록한다. 정적 등록자가 이미지를 로드할 때 등록하고 언로드할 때(핫 리로드) 뺀다.
-     *          레지스트리는 Engine 에 있어 모듈이 바뀌어도 살아 있다. 같은 이름의 둘째 등록은 경고와 함께 거절한다. 게임 스레드에서만 쓴다.
+     *          레지스트리는 Core 에 있어 모듈이 바뀌어도 살아 있다. 같은 이름의 둘째 등록은 경고와 함께 거절한다.
+     *          등록 · 해제는 이미지 로더 스레드(정적 초기화)에서, 조회는 콘솔(게임 스레드)에서 오므로 등록 목록은 잠금 하나로 지킨다.
+     *          명령 본문은 잠금 밖에서 부른다(찾은 등록 줄은 그 모듈이 내려가기 전까지 산다). 프레임마다 도는 경로가 아니다.
      */
     class SW_API DevCommandRegistry
     {
     public:
-        /** @brief 프로세스에 하나인 레지스트리입니다(Engine 이미지의 함수 정적). */
+        /** @brief 프로세스에 하나인 레지스트리입니다(Core 이미지의 함수 정적). */
         static DevCommandRegistry& get();
 
         DevCommandRegistry();
@@ -66,11 +63,12 @@ namespace sw
         /** @brief @p prefix 로 시작하는(대소문자 무시) 명령 이름을 사전순으로 채웁니다. */
         void collectNames( string_view prefix, vector<string>& outListName ) const;
         /** @brief 등록된 명령 수입니다. */
-        uint32 getCount() const { return _registration.getCount(); }
+        uint32 getCount() const;
         /** @brief 내려간 모듈이 키운 용량을 놓습니다(`RegistrationList::shrinkToFit`). 엔진 종료 끝(`EngineBootstrap::shutdown`)이 모듈을 모두 내린 뒤 부릅니다. */
-        void releaseUnusedStorage() { _registration.shrinkToFit(); }
+        void releaseUnusedStorage();
 
     private:
+        mutable mutex                                  _mutex;        ///< 등록 목록을 지킨다(명령 실행은 잠금 밖)
         RegistrationList<const DevCommandRegistration> _registration; ///< 이름은 대소문자를 무시하고, 이름 없는 등록은 거절한다
     };
 } // namespace sw

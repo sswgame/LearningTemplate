@@ -7,6 +7,7 @@
 #include "pch.h"
 
 #include "Core/Console/DebugHUDRegistry.h"
+#include "Core/Console/DebugHUDSectionFormat.h"
 
 #if SW_DEV_COMMANDS_ENABLED
 

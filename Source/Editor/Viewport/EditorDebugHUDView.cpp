@@ -2,6 +2,7 @@
 
 #include "Editor/Viewport/EditorDebugHUDView.h"
 
+#include "Core/Container/formatString.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 

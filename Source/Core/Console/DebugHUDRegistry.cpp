@@ -114,7 +114,8 @@ namespace sw
     }
 
     DebugHUDRegistry::DebugHUDRegistry()
-        : _registration{ RegistrationOrder::ByOrderThenName, true, NameCase::IgnoreCase }
+        : _mutex{}
+        , _registration{ RegistrationOrder::ByOrderThenName, true, NameCase::IgnoreCase }
         , _revision{ 0 }
     {
     }
@@ -144,27 +145,50 @@ namespace sw
             SW_LOG_WARNING( "Debug HUD section '%#' has a reserved name or a separator - the registration is ignored", pRegistration->_pName );
             return false;
         }
-        const RegistrationResult result = _registration.add( pRegistration, name, pRegistration->_order );
+        RegistrationResult result = RegistrationResult::Added;
+        {
+            std::scoped_lock<mutex> lock{ _mutex };
+            result = _registration.add( pRegistration, name, pRegistration->_order );
+            if ( result == RegistrationResult::Added )
+                ++_revision;
+        }
         if ( result == RegistrationResult::DuplicateName || result == RegistrationResult::AlreadyPresent )
         {
             SW_LOG_WARNING( "Debug HUD section '%#' is already registered - the second registration is ignored", pRegistration->_pName );
             return false;
         }
-        if ( result != RegistrationResult::Added )
-            return false;
-        ++_revision;
-        return true;
+        return result == RegistrationResult::Added;
     }
 
     void DebugHUDRegistry::unregisterSection( const DebugHUDSectionRegistration* pRegistration )
     {
+        std::scoped_lock<mutex> lock{ _mutex };
         if ( _registration.remove( pRegistration ) )
             ++_revision;
     }
 
     const DebugHUDSectionRegistration* DebugHUDRegistry::findSection( string_view name ) const
     {
+        std::scoped_lock<mutex> lock{ _mutex };
         return _registration.findByName( name );
+    }
+
+    vector<const DebugHUDSectionRegistration*> DebugHUDRegistry::getSections() const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        return _registration.getItems();
+    }
+
+    uint32 DebugHUDRegistry::getCount() const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        return _registration.getCount();
+    }
+
+    uint64 DebugHUDRegistry::getRevision() const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        return _revision;
     }
 } // namespace sw
 

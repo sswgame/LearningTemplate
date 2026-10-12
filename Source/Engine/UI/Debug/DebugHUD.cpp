@@ -4,10 +4,13 @@
 
 #if SW_DEV_COMMANDS_ENABLED
 
+    #include "Core/Console/DevCommandRegistry.h"
     #include "Core/Container/StringUtil.h"
+    #include "Core/Container/formatString.h"
     #include "Core/GlobalVariable/GlobalVariableManager.h"
     #include "Core/Log/Logger.h"
     #include "Core/Math/MathUtil.h"
+    #include "Core/String/fixed_string.h"
 
     #include "Engine/Automation/AutomationProbe.h"
     #include "Engine/Common/EngineServices.h"

@@ -24,7 +24,7 @@ Engine은 같은 OBJECT를 링크해 Dev 구성에서 `Engine.dll` 로 Core의 �
 | `Log/` | 로그 매크로와 전역 창구(`Logger`) |
 | `LogSink/` | 기본 로그 싱크(`AsyncLogSink`)와 출력 장치 |
 | `GlobalVariable/`, `CommandLine/` | 실행 인자로 바꾸는 전역 변수 |
-| `Console/` | 개발 명령 레지스트리(`SW_DEV_COMMAND`)와 디버그 HUD 섹션 레지스트리 — Shipping 에서 빠진다(`SW_DEV_COMMANDS_ENABLED`) |
+| `Console/` | 개발 명령 레지스트리(`SW_DEV_COMMAND`)와 디버그 HUD 섹션 레지스트리 — Core 이미지에 하나씩, 등록 · 조회는 잠금 하나로 지키고 본문은 잠금 밖에서 부른다. Shipping 에서 빠진다(`SW_DEV_COMMANDS_ENABLED`, 값만 보려면 `DevCommandsEnabled.h`) |
 | `Task/` | 워커 풀과 태스크 그래프([Task](Task/README.md)) |
 | `Concurrency/` | 원시 동기화(`atomic` · `mutex` · `SpinLock` · `Futex`)와 경합 검출 훅 |
 | `Spatial/` | 공간 인덱스(`SpatialHashGrid2D` · `SpatialQuadTree` · `SpatialOctree` · `BVHTree3D`, [Spatial](Spatial/README.md)) |

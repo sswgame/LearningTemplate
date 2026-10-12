@@ -18,7 +18,8 @@ namespace sw
     }
 
     DevCommandRegistry::DevCommandRegistry()
-        : _registration{ RegistrationOrder::Insertion, true, NameCase::IgnoreCase }
+        : _mutex{}
+        , _registration{ RegistrationOrder::Insertion, true, NameCase::IgnoreCase }
     {
     }
 
@@ -31,7 +32,11 @@ namespace sw
     {
         if ( pRegistration == nullptr || StringUtil::isNullOrEmpty( pRegistration->_pName ) || pRegistration->_pFunc == nullptr )
             return false;
-        const RegistrationResult result = _registration.add( pRegistration, pRegistration->_pName );
+        RegistrationResult result = RegistrationResult::Added;
+        {
+            std::scoped_lock<mutex> lock{ _mutex };
+            result = _registration.add( pRegistration, pRegistration->_pName );
+        }
         if ( result == RegistrationResult::DuplicateName || result == RegistrationResult::AlreadyPresent )
         {
             SW_LOG_WARNING( "Dev command '%#' is already registered - the second registration is ignored", pRegistration->_pName );
@@ -42,17 +47,32 @@ namespace sw
 
     void DevCommandRegistry::unregisterCommand( const DevCommandRegistration* pRegistration )
     {
+        std::scoped_lock<mutex> lock{ _mutex };
         (void)_registration.remove( pRegistration ); // 등록되어 있지 않은 명령을 빼는 것은 할 일이 없다
     }
 
     const DevCommandRegistration* DevCommandRegistry::findCommand( string_view name ) const
     {
+        std::scoped_lock<mutex> lock{ _mutex };
         return _registration.findByName( name );
+    }
+
+    uint32 DevCommandRegistry::getCount() const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        return _registration.getCount();
+    }
+
+    void DevCommandRegistry::releaseUnusedStorage()
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        _registration.shrinkToFit();
     }
 
     void DevCommandRegistry::collectNames( string_view prefix, vector<string>& outListName ) const
     {
         outListName.clear();
+        std::scoped_lock<mutex> lock{ _mutex };
         for ( const DevCommandRegistration* pRegistration : _registration.getItems() )
         {
             if ( StringUtil::startsWith( pRegistration->_pName, prefix, true ) )
