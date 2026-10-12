@@ -279,9 +279,9 @@ namespace test
                 _pWrappedSink->removeLogWrittenListener( handle );
         }
 
-        uint32 releaseListenerCodeWithin( const void* pBegin, const void* pEnd ) override
+        uint32 removeListenerCodeWithin( const void* pBegin, const void* pEnd ) override
         {
-            return _pWrappedSink != nullptr ? _pWrappedSink->releaseListenerCodeWithin( pBegin, pEnd ) : 0;
+            return _pWrappedSink != nullptr ? _pWrappedSink->removeListenerCodeWithin( pBegin, pEnd ) : 0;
         }
 
         sw::string_view getLogFolderPath() override

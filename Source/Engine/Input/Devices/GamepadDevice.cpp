@@ -257,7 +257,7 @@ namespace sw
         }
     }
 
-    uint32 GamepadDevice::releaseCodeWithin( const void* pBegin, const void* pEnd )
+    uint32 GamepadDevice::removeCodeWithin( const void* pBegin, const void* pEnd )
     {
         if ( _onConnectionChanged.isCodeWithin( pBegin, pEnd ) == false )
             return 0;

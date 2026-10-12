@@ -63,5 +63,5 @@ Engine 은 모듈 사이의 결속(어느 이미지가 어느 이미지에 묶�
 - **모듈 등록** — GameFramework 는 키트 · SWGame 보다 먼저, 제 이름으로. 팩토리의 모듈은 등록을 모으는 모듈(`_activeModuleName`). 모듈 전역 변수는 `GlobalVariableRegistrar::getHead()` 에
   매달려 commit 에서 모듈 이름으로 오른다(`SW_GVM_MODULE_HEAD` 류를 복원하지 말 것). 게임 모듈 리로드가 실패하면 씬 저장을 막는다(`setSaveBlockReason`). 모듈 언로드는
   `destroyComponentsOfModule` 을 팩토리를 걷기 **전에**, DLL 은 "씬은 사라지고 서비스는 살아 있는" 구간에서만(`setOnScenesReleased`). 모듈 에셋 캐시는 `registerAssetCache` /
-  `unregisterAssetCache` 짝(이름은 등록 때 복사). 로드 모듈의 코덱 · 로그 리스너(`releaseListenerCodeWithin`)도 내리기 전에 뗀다.
+  `unregisterAssetCache` 짝(이름은 등록 때 복사). 로드 모듈의 코덱 · 로그 리스너(`removeListenerCodeWithin`)도 내리기 전에 뗀다.
 - **절차 생성물은** `onBeforeStateSerialize` 에서 걷고 `onAfterStateDeserialize` 에서 다시 만든다(스냅샷에 실리면 메시 없는 유령). 리로드 전용 API 를 엔진에 넣지 않는다.

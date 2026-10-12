@@ -72,7 +72,7 @@ namespace sw
         return true;
     }
 
-    uint32 IWindow::releaseCodeWithin( const void* pBegin, const void* pEnd )
+    uint32 IWindow::removeCodeWithin( const void* pBegin, const void* pEnd )
     {
         uint32 releasedCount{ 0 };
         if ( _customHandler.isCodeWithin( pBegin, pEnd ) )
@@ -96,7 +96,7 @@ namespace sw
     uint32 IWindow::onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
     {
         (void)outKeepImageMapped;
-        return releaseCodeWithin( pBegin, pEnd );
+        return removeCodeWithin( pBegin, pEnd );
     }
 
     IWindow::~IWindow()

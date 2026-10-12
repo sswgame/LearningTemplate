@@ -175,7 +175,7 @@ namespace sw
             _objectEditListener( notice );
     }
 
-    uint32 CommandStack::releaseCodeWithin( const void* pBegin, const void* pEnd )
+    uint32 CommandStack::removeCodeWithin( const void* pBegin, const void* pEnd )
     {
         if ( _objectEditListener.isCodeWithin( pBegin, pEnd ) )
             _objectEditListener = {};
@@ -229,7 +229,7 @@ namespace sw
     uint32 CommandStack::onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
     {
         (void)outKeepImageMapped;
-        return releaseCodeWithin( pBegin, pEnd );
+        return removeCodeWithin( pBegin, pEnd );
     }
 
     void CommandStack::execute( const Command& cmd, bool bUndo )

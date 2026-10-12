@@ -120,7 +120,7 @@ SW_TEST_CASE( ModuleUnloadListenerTest, ListenerMayDestroyAndCreateListenersDuri
         OwningUnloadListener owner;
         SW_EXPECT_EQUAL( listenerCountBefore + 2, sw::IModuleUnloadListener::getListenerCount() );
         sw::vector<sw::IModuleUnloadListener::ReleaseResult> listResult;
-        sw::IModuleUnloadListener::releaseAllWithin( s_arrProbeImage, s_arrProbeImage + 16, listResult );
+        sw::IModuleUnloadListener::removeAllWithin( s_arrProbeImage, s_arrProbeImage + 16, listResult );
         SW_EXPECT_TRUE( owner._pOwned == nullptr );
         SW_EXPECT_TRUE( owner._pCreated != nullptr );
         SW_EXPECT_EQUAL( listenerCountBefore + 2, sw::IModuleUnloadListener::getListenerCount() );

@@ -158,7 +158,7 @@ namespace sw
         waitForRetiredBroadcasts( retiredSlot );
     }
 
-    uint32 AsyncLogSink::releaseListenerCodeWithin( const void* pBegin, const void* pEnd )
+    uint32 AsyncLogSink::removeListenerCodeWithin( const void* pBegin, const void* pEnd )
     {
         // 모듈을 내리기 직전에 불린다. 다른 스레드의 방송이 그 모듈 코드 안에 있는 채로 이미지를 내리면 안 된다 — 끝날 때까지 기다린다.
         uint32 releasedCount{ 0 };

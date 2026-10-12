@@ -528,7 +528,7 @@ SW_TEST_CASE( EditorTransactionTest, ObjectEditsSurviveReleasingTheEditorCode )
     const void* const pEngineCode = reinterpret_cast<const void*>( &ObjectUndoUtil::captureSnapshot );
     if ( pBegin <= pEngineCode && pEngineCode < pEnd )
         SW_TEST_SKIP( "Engine is linked into this executable - there is no module boundary to release" );
-    SW_EXPECT_EQUAL( 1u, stack.releaseCodeWithin( pBegin, pEnd ) );
+    SW_EXPECT_EQUAL( 1u, stack.removeCodeWithin( pBegin, pEnd ) );
     SW_ASSERT_EQUAL( size_t( 1 ), stack.getCommandCount() );
     SW_EXPECT_STREQ( "Rename GameObject", stack.peekUndoLabel().c_str() );
 

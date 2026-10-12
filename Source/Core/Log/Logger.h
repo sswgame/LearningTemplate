@@ -54,7 +54,7 @@ namespace sw
         /** @brief 핸들로 리스너를 해제합니다. */
         virtual void removeLogWrittenListener( const DelegateHandle& handle ) = 0;
         /** @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 리스너를 모두 해제하고, 해제한 수를 반환합니다(핫 리로드가 모듈을 언로드하기 전에 부릅니다). */
-        virtual uint32 releaseListenerCodeWithin( const void* pBegin, const void* pEnd ) = 0;
+        virtual uint32 removeListenerCodeWithin( const void* pBegin, const void* pEnd ) = 0;
         /** @brief 로그 파일이 있는 폴더의 경로를 반환합니다. */
         virtual string_view getLogFolderPath() = 0;
         /**

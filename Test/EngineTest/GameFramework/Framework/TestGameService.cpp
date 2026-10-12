@@ -81,7 +81,7 @@ SW_TEST_CASE( GameServiceTest, UnloadSweepReleasesLocalServicesOfTheImage )
     // 옛 인스턴스가 풀지 않은 채 언로드 차례가 온다.
     game::bindLocalService<GameServiceProbeCatalog>( &oldInstance );
     vector<IModuleUnloadListener::ReleaseResult> listResult;
-    IModuleUnloadListener::releaseAllWithin( pTestImageBegin, static_cast<const uint8*>( pTestImageBegin ) + 1, listResult );
+    IModuleUnloadListener::removeAllWithin( pTestImageBegin, static_cast<const uint8*>( pTestImageBegin ) + 1, listResult );
     SW_EXPECT_TRUE( game::getService<GameServiceProbeCatalog>() == nullptr );
 
     game::bindLocalService<GameServiceProbeCatalog>( &newInstance ); // 새 인스턴스는 거절되지 않는다
@@ -108,13 +108,13 @@ SW_TEST_CASE( GameServiceTest, ExplicitOwnerDecidesWhichImageReleasesTheService 
     if ( pFrameworkAddress < pTestImageBegin || pFrameworkAddress >= pTestImageEnd ) // GameFramework 를 정적으로 묶은 빌드는 건너뛴다
     {
         game::bindLocalService<GameServiceProbeCatalog>( &instance._catalog, pFrameworkAddress );
-        IModuleUnloadListener::releaseAllWithin( pTestImageBegin, static_cast<const uint8*>( pTestImageBegin ) + 1, listResult );
+        IModuleUnloadListener::removeAllWithin( pTestImageBegin, static_cast<const uint8*>( pTestImageBegin ) + 1, listResult );
         SW_EXPECT_TRUE( game::getService<GameServiceProbeCatalog>() == &instance._catalog ); // 부른 이미지가 아니라 소유자 이미지를 따른다
         game::unbindLocalService<GameServiceProbeCatalog>();
     }
 
     game::bindLocalService<GameServiceProbeCatalog>( &instance._catalog, game::getPolymorphicOwnerAddress( instance ) );
-    IModuleUnloadListener::releaseAllWithin( pTestImageBegin, static_cast<const uint8*>( pTestImageBegin ) + 1, listResult );
+    IModuleUnloadListener::removeAllWithin( pTestImageBegin, static_cast<const uint8*>( pTestImageBegin ) + 1, listResult );
     SW_EXPECT_TRUE( game::getService<GameServiceProbeCatalog>() == nullptr );
     SW_EXPECT_TRUE( game::isServiceBound<GameServiceProbeCatalog>() == false );
 }

@@ -186,14 +186,14 @@ namespace sw
          *          해제)는 그 이벤트 타입을 **처음** 구독하거나 발행한 쪽에서 인스턴스화된다. 그래서 모듈이 만든 항목은 모듈이 언로드된 뒤 발행하면
          *          언로드된 코드로 점프한다. 그런 항목은 비어 있으면 지운다(다음 구독이나 발행이 자기 쪽에서 새로 만든다).
          */
-        uint32 releaseCodeWithin( const void* pBegin, const void* pEnd, uint32& outRemainingEntryCount );
+        uint32 removeCodeWithin( const void* pBegin, const void* pEnd, uint32& outRemainingEntryCount );
 
         /**
          * @brief 큐에 쌓인 이벤트 중 vtable 이 [@p pBegin, @p pEnd) 안인 것을 파괴하고 큐에서 제거합니다. 제거한 수를 반환합니다. 어느 스레드에서나 부를 수 있습니다.
          * @details 모듈이 `push` 한 이벤트는 그 모듈이 인스턴스화한 vtable(소멸자, 타입 조회)을 가진다. 이미지를 언로드한 뒤 `processEvents` 나 디스패처
          *          소멸이 그 이벤트를 만지면 언로드된 코드로 점프한다. 소멸자는 이미지가 아직 로드돼 있는 지금 부른다. 남은 이벤트의 순서는 그대로다.
          */
-        uint32 releaseQueuedEventsWithin( const void* pBegin, const void* pEnd );
+        uint32 removeQueuedEventsWithin( const void* pBegin, const void* pEnd );
 
         /**
          * @brief 브로드캐스트 함수가 [@p pBegin, @p pEnd) 안인 채널 항목의 수를 반환합니다. 그 범위의 코드가 처음 구독하거나 발행해 만든 항목이며, 진단과 테스트용입니다.
@@ -204,7 +204,7 @@ namespace sw
         /** @brief 언로드 리스너 목록의 이름입니다. */
         const utf8* getModuleUnloadListenerName() const override { return "event subscriptions"; }
         /**
-         * @brief `releaseCodeWithin` 과 `releaseQueuedEventsWithin` 을 함께 실행합니다. 그 범위가 만든 채널을 다른 코드가 아직 구독하면 @p outKeepImageMapped 를 true 로 둡니다.
+         * @brief `removeCodeWithin` 과 `removeQueuedEventsWithin` 을 함께 실행합니다. 그 범위가 만든 채널을 다른 코드가 아직 구독하면 @p outKeepImageMapped 를 true 로 둡니다.
          *        채널의 브로드캐스트 함수와 멀티캐스트의 해제자가 그 이미지의 코드라, 언로드하면 다음 발행이나 디스패처 소멸이 언로드된 코드로 점프하기 때문입니다.
          */
         uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
@@ -261,7 +261,7 @@ namespace sw
          * @brief 큐에 남은 이벤트의 소멸자를 부릅니다. `_queueSpinLock` 을 **잡은 채로** 부르십시오.
          * @details 아레나를 되감으면 메모리만 돌아올 뿐이고, 소멸자는 여기서만 불립니다.
          */
-        void destroyQueuedEvents();
+        void removeQueuedEvents();
 
         /** @brief (채널, 이벤트 타입) 쌍의 해시입니다. */
         struct HashPair
@@ -284,11 +284,11 @@ namespace sw
         /** @brief 타입을 지운 채널 브로드캐스트 엔트리입니다. 람다 없이 함수 포인터와 멀티캐스트만 둡니다. */
         struct ChannelDispatchEntry
         {
-            using BroadcastFn   = void ( * )( void* pMulticast, const IEvent& eventRef );
-            using ReleaseCodeFn = uint32 ( * )( void* pMulticast, const void* pBegin, const void* pEnd, bool& outHasSubscriber );
+            using BroadcastFn  = void ( * )( void* pMulticast, const IEvent& eventRef );
+            using RemoveCodeFn = uint32 ( * )( void* pMulticast, const void* pBegin, const void* pEnd, bool& outHasSubscriber );
 
             BroadcastFn      _pfnBroadcast{ nullptr };
-            ReleaseCodeFn    _pfnReleaseCodeWithin{ nullptr }; ///< `releaseCodeWithin` 이 타입을 모르는 채 구독을 떼고 남았는지 묻는 길
+            RemoveCodeFn     _pfnRemoveCodeWithin{ nullptr }; ///< `removeCodeWithin` 이 타입을 모르는 채 구독을 떼고 남았는지 묻는 길
             shared_ptr<void> _pMulticast;
 
             /** @brief 호출할 수 있는 엔트리면 true 입니다. */
@@ -310,7 +310,7 @@ namespace sw
 
         /** @brief 타입별 멀티캐스트에서 [@p pBegin, @p pEnd) 가 만든 구독을 떼고 뗀 수를 반환합니다. @p outHasSubscriber 는 뗀 뒤 남은 구독이 있는지입니다. */
         template <typename T>
-        static uint32 releaseTypedCodeWithin( void* pMulticast, const void* pBegin, const void* pEnd, bool& outHasSubscriber )
+        static uint32 removeTypedCodeWithin( void* pMulticast, const void* pBegin, const void* pEnd, bool& outHasSubscriber )
         {
             MulticastDelegate<void( const T& )>* pTyped        = static_cast<MulticastDelegate<void( const T& )>*>( pMulticast );
             const uint32                         releasedCount = pTyped->removeCodeWithin( pBegin, pEnd );
@@ -333,7 +333,7 @@ namespace sw
                 return std::static_pointer_cast<MulticastDelegate<void( const T& )>>( iter->second._pMulticast );
 
             shared_ptr<MulticastDelegate<void( const T& )>> mcast = sw::make_shared<MulticastDelegate<void( const T& )>>();
-            _mapChannelDispatchTable[key]                         = ChannelDispatchEntry{ &broadcastTypedChannel<T>, &releaseTypedCodeWithin<T>, mcast };
+            _mapChannelDispatchTable[key]                         = ChannelDispatchEntry{ &broadcastTypedChannel<T>, &removeTypedCodeWithin<T>, mcast };
             return mcast;
         }
 

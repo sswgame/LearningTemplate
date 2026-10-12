@@ -136,7 +136,7 @@ namespace sw::editor
                      ModuleImageUtil::findLoadedImageRange( reinterpret_cast<const void*>( &ImGuiEditorInternal::releaseModuleUndoCommands ), pBegin, pEnd ) == false )
                     return;
                 pCommandStack->setObjectEditListener( {} );
-                const uint32 droppedCount = pCommandStack->releaseCodeWithin( pBegin, pEnd );
+                const uint32 droppedCount = pCommandStack->removeCodeWithin( pBegin, pEnd );
                 if ( droppedCount > 0 )
                     SW_LOG_INFO( "Dropped %# undo commands that run editor module code; scene edits stay undoable", droppedCount );
             }

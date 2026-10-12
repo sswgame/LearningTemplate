@@ -888,7 +888,7 @@ SW_TEST_CASE( AbilitySystemTest, ModuleCodeReleaseRetiresOnlyAbilitiesFromThatMo
     SW_ASSERT_TRUE( pAbilitySystem->tryActivateAbility( latentSpec ) == AbilityActivationResult::Activated );
 
     vector<IModuleUnloadListener::ReleaseResult> listResult;
-    IModuleUnloadListener::releaseAllWithin( pVtable, static_cast<const uint8*>( pVtable ) + 1, listResult );
+    IModuleUnloadListener::removeAllWithin( pVtable, static_cast<const uint8*>( pVtable ) + 1, listResult );
 
     SW_EXPECT_NULL( pAbilitySystem->findAbility( latentSpec ) );
     SW_EXPECT_NOT_NULL( pAbilitySystem->findAbility( keptSpec ) );

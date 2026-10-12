@@ -280,7 +280,7 @@ Win32 문자열 변환은 `utf8ToUtf16` 을 씁니다. `ImmGetCompositionStringW
 **`drainEvents` 는 받는 쪽 목록에 붙이고 원본을 비웁니다.** 바꿔치기(`swap`)하면 받는 쪽 목록의 앞 내용이 지워집니다.
 매 프레임 같은 목록을 쓰는 쪽은 먼저 `clear()` 합니다. 그러지 않으면 같은 알림을 매 프레임 다시 받습니다. StarSkirmish의 패배 로그가 두 번 나왔습니다.
 
-**`EventDispatcher` 의 큐(`push`)는 아무 스레드나 쓰지만, 버스(`subscribe`, `publish`)는 `processEvents` 를 부르는 스레드만 씁니다.** 큐에 남은 이벤트는 `destroyQueuedEvents()` 로 지웁니다.
+**`EventDispatcher` 의 큐(`push`)는 아무 스레드나 쓰지만, 버스(`subscribe`, `publish`)는 `processEvents` 를 부르는 스레드만 씁니다.** 큐에 남은 이벤트는 `removeQueuedEvents()` 로 지웁니다.
 
 ### 플랫폼
 

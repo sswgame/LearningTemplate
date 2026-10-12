@@ -180,7 +180,7 @@ namespace sw
         if ( pSink == nullptr )
             return 0;
 
-        return pSink->releaseListenerCodeWithin( pBegin, pEnd );
+        return pSink->removeListenerCodeWithin( pBegin, pEnd );
     }
 
     void Logger::registerGlobalSink( ILogSink* pSink )

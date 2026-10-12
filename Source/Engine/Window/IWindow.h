@@ -193,11 +193,11 @@ namespace sw
          * @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 처리기(메시지, 크기, 닫기)를 해제하고, 해제한 개수를 반환합니다.
          * @details 창은 App 이 소유해 모듈보다 오래 산다. 핫 리로드가 모듈 이미지를 언로드하기 전에 부른다. 에디터는 닫기 처리기를 등록한다.
          */
-        uint32 releaseCodeWithin( const void* pBegin, const void* pEnd );
+        uint32 removeCodeWithin( const void* pBegin, const void* pEnd );
 
         /** @brief 언로드 리스너 목록의 이름입니다. */
         const utf8* getModuleUnloadListenerName() const override { return "window handlers"; }
-        /** @brief `releaseCodeWithin` 입니다. 활성 창만이 아니라 살아 있는 모든 창이 훑깁니다. */
+        /** @brief `removeCodeWithin` 입니다. 활성 창만이 아니라 살아 있는 모든 창이 훑깁니다. */
         uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
 
         /** @brief 현재 플랫폼에 맞는 IWindow 인스턴스를 만들어 반환합니다. */

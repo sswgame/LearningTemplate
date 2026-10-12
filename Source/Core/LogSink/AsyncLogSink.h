@@ -56,7 +56,7 @@ namespace sw
         /** @brief 핸들로 리스너를 뗍니다. */
         void removeLogWrittenListener( const DelegateHandle& handle ) override;
         /** @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 리스너를 모두 뗍니다. */
-        uint32 releaseListenerCodeWithin( const void* pBegin, const void* pEnd ) override;
+        uint32 removeListenerCodeWithin( const void* pBegin, const void* pEnd ) override;
 
         /**
          * @brief 출력 장치를 하나 더 답니다. 이미 초기화된 뒤라면 바로 `open` 합니다.

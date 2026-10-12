@@ -130,7 +130,7 @@ namespace sw
             if ( isAddressWithin( findVtableAddress( pDevice.get() ), pBegin, pEnd ) )
                 listModuleDevice.push_back( pDevice.get() );
             else
-                releasedCount += pDevice->releaseCodeWithin( pBegin, pEnd );
+                releasedCount += pDevice->removeCodeWithin( pBegin, pEnd );
         }
         for ( IInputDevice* pDevice : listModuleDevice )
         {

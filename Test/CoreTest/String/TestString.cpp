@@ -1716,7 +1716,7 @@ namespace
             return sw::DelegateHandle{};
         }
         void   removeLogWrittenListener( const sw::DelegateHandle& handle ) override { (void)handle; }
-        uint32 releaseListenerCodeWithin( const void* pBegin, const void* pEnd ) override
+        uint32 removeListenerCodeWithin( const void* pBegin, const void* pEnd ) override
         {
             (void)pBegin;
             (void)pEnd;

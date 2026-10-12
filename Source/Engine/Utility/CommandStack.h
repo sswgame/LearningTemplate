@@ -26,7 +26,7 @@ namespace sw
      * @brief 변경에 대한 Push, Undo, Redo 스택입니다. 엔진(`EngineLoop`)이 소유해 모듈 핫 리로드를 넘어 삽니다.
      * @details 명령은 둘로 나뉜다.
      *          - **데이터 명령**: 코드는 엔진에 있고 나머지는 값(오브젝트 id, 직렬화한 상태)인 명령이다(`ObjectUndoUtil`). 모듈이 언로드되어도 남는다.
-     *          - **모듈 명령**: undo 와 redo 가 모듈 이미지의 코드(람다, 패널 메서드)인 명령이다. 그 모듈이 언로드되기 전에 `releaseCodeWithin` 이 분리한다.
+     *          - **모듈 명령**: undo 와 redo 가 모듈 이미지의 코드(람다, 패널 메서드)인 명령이다. 그 모듈이 언로드되기 전에 `removeCodeWithin` 이 분리한다.
      *          언리얼의 `FTransaction`(오브젝트 상태를 직렬화해 기록)과 유니티의 `Undo`(직렬화한 객체 상태)가 코드 리로드를 넘는 것과 같은 구조다.
      */
     class SW_API CommandStack final : public IModuleUnloadListener
@@ -87,7 +87,7 @@ namespace sw
         /**
          * @brief 현재 내역(명령과 위치)을 보관해 두고 스택을 비웁니다. 이미 보관한 것이 있으면 버리고 새로 보관합니다.
          * @details 에디터가 Play 를 시작할 때 부른다. 플레이 중 편집은 Stop 이 스냅샷으로 되돌리므로 그 동안의 기록은 쓰지 않지만, Play 전 편집은
-         *          Stop 뒤에도 되돌릴 수 있어야 한다(유니티, 언리얼과 같다). 보관한 명령도 모듈을 언로드할 때 같은 규칙(`releaseCodeWithin`)으로 정리한다.
+         *          Stop 뒤에도 되돌릴 수 있어야 한다(유니티, 언리얼과 같다). 보관한 명령도 모듈을 언로드할 때 같은 규칙(`removeCodeWithin`)으로 정리한다.
          */
         void parkHistory();
         /** @brief 보관한 내역을 되돌려 놓습니다(현재 내역은 버립니다). 보관한 것이 없으면 비우기만 합니다. Stop 이 씬을 되돌린 뒤 부릅니다. */
@@ -119,11 +119,11 @@ namespace sw
          *          (트랜잭션의 반쪽만 되돌리지 않는다). 남은 명령의 순서와 현재 위치(되돌린 것과 아직 되돌리지 않은 것의 경계)는 그대로다. 데이터 명령은 대상
          *          오브젝트의 상태 전체를 가지고 있어, 사이의 명령이 빠져도 그 오브젝트는 같은 상태로 돌아간다.
          */
-        uint32 releaseCodeWithin( const void* pBegin, const void* pEnd );
+        uint32 removeCodeWithin( const void* pBegin, const void* pEnd );
 
         /** @brief 언로드 리스너 목록의 이름입니다. */
         const utf8* getModuleUnloadListenerName() const override { return "undo commands"; }
-        /** @brief `releaseCodeWithin` 입니다. 명령은 분리하면 그만이라 이미지를 붙들지 않습니다. */
+        /** @brief `removeCodeWithin` 입니다. 명령은 분리하면 그만이라 이미지를 붙들지 않습니다. */
         uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
 
     private:

@@ -65,7 +65,7 @@ namespace sw
          * @brief 살아 있는 모든 리스너에게 범위를 넘겨 뗍니다. 리스너마다 결과 한 줄입니다(뗀 것이 없어도).
          * @param pBegin · pEnd 모듈 이미지 범위. 둘 중 하나가 nullptr 이면 아무것도 하지 않습니다.
          */
-        static void releaseAllWithin( const void* pBegin, const void* pEnd, vector<ReleaseResult>& outListResult );
+        static void removeAllWithin( const void* pBegin, const void* pEnd, vector<ReleaseResult>& outListResult );
 
         /** @brief 지금 목록에 오른 리스너 수입니다(진단 · 테스트). */
         static uint32 getListenerCount();

@@ -373,7 +373,7 @@ SW_TEST_CASE( EventTest, PushFromWorkerThreadsReachesPumpingThread )
 }
 
 /**
- * @brief [EventTest] releaseCodeWithin 은 그 이미지가 만든 구독과 채널 항목을 치우고, 다시 구독하면 새 항목으로 돈다
+ * @brief [EventTest] removeCodeWithin 은 그 이미지가 만든 구독과 채널 항목을 치우고, 다시 구독하면 새 항목으로 돈다
  * @details 핫 리로드가 모듈 이미지를 내리기 전에 부르는 길이다. 여기서는 **테스트 실행 파일 자신의 이미지**를 범위로 준다 — 구독의
  *          스텁도, 이 이벤트 타입의 채널 항목 함수도 이 번역 단위에서 인스턴스화되었으니 모두 그 범위 안이다. 항목이 남으면 이미지가
  *          내려간 뒤의 발행이 내려간 코드로 뛴다.
@@ -397,7 +397,7 @@ SW_TEST_CASE( EventTest, ReleaseCodeWithinDropsTheSubscriptionsAndEntriesTheImag
     SW_ASSERT_TRUE( sw::ModuleImageUtil::findLoadedImageRange( reinterpret_cast<const void*>( &onReleaseProbeResize ), pBegin, pEnd ) );
 
     uint32 remainingEntryCount{ 99 };
-    SW_EXPECT_EQUAL( 1u, dispatcher.releaseCodeWithin( pBegin, pEnd, remainingEntryCount ) );
+    SW_EXPECT_EQUAL( 1u, dispatcher.removeCodeWithin( pBegin, pEnd, remainingEntryCount ) );
     SW_EXPECT_EQUAL( 0u, remainingEntryCount );
 
     dispatcher.publish( event );
@@ -459,7 +459,7 @@ SW_TEST_CASE( EventTest, ReleaseQueuedEventsDestroysTheEventsTheImageDefined )
 
         const uint8* pVtable = static_cast<const uint8*>( sw::IModuleUnloadListener::findVtableAddress( &dropped ) );
         SW_EXPECT_EQUAL( 3, DestructorCountingEvent::s_liveCount );
-        SW_EXPECT_EQUAL( 2u, dispatcher.releaseQueuedEventsWithin( pVtable, pVtable + 1 ) );
+        SW_EXPECT_EQUAL( 2u, dispatcher.removeQueuedEventsWithin( pVtable, pVtable + 1 ) );
         SW_EXPECT_EQUAL( 1, DestructorCountingEvent::s_liveCount ); // 큐의 둘은 소멸자가 불렸다
         SW_EXPECT_EQUAL( size_t( 2 ), dispatcher.getPendingEventCount() );
     }

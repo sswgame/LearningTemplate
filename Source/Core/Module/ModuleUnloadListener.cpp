@@ -20,7 +20,7 @@ namespace sw
         {
             mutex                                   _mutex;
             RegistrationList<IModuleUnloadListener> _registeredListener;
-            std::thread::id                         _walkingThread; ///< `releaseAllWithin` 이 잠금을 쥐고 도는 스레드(돌지 않으면 빈 id)
+            std::thread::id                         _walkingThread; ///< `removeAllWithin` 이 잠금을 쥐고 도는 스레드(돌지 않으면 빈 id)
         };
 
         ModuleUnloadListenerList& getModuleUnloadListenerList()
@@ -85,7 +85,7 @@ namespace sw
         return *this;
     }
 
-    void IModuleUnloadListener::releaseAllWithin( const void* pBegin, const void* pEnd, vector<ReleaseResult>& outListResult )
+    void IModuleUnloadListener::removeAllWithin( const void* pBegin, const void* pEnd, vector<ReleaseResult>& outListResult )
     {
         outListResult.clear();
         if ( pBegin == nullptr || pEnd == nullptr )

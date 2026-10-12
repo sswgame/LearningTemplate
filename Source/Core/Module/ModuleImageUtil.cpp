@@ -369,7 +369,7 @@ namespace sw
         // 모듈은 자기가 등록한 것을 스스로 해제해야 한다(에디터는 ImGuiEditor::shutdown 과 ~ConsolePanel 에서 해제한다). 여기서 해제한 것이 있으면
         // 그 정리가 빠졌다는 뜻이라 경고로 남긴다. 항상 0 이어야 한다.
         vector<IModuleUnloadListener::ReleaseResult> listResult;
-        IModuleUnloadListener::releaseAllWithin( pBegin, pEnd, listResult );
+        IModuleUnloadListener::removeAllWithin( pBegin, pEnd, listResult );
 
         uint32 releasedCount{ 0 };
         for ( const IModuleUnloadListener::ReleaseResult& result : listResult )

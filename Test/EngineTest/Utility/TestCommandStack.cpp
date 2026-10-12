@@ -816,7 +816,7 @@ namespace
 } // namespace
 
 /**
- * @brief [CommandStackTest] releaseCodeWithin 은 그 코드를 쥔 명령만 떼고, 나머지 명령과 현재 위치는 그대로 둔다
+ * @brief [CommandStackTest] removeCodeWithin 은 그 코드를 쥔 명령만 떼고, 나머지 명령과 현재 위치는 그대로 둔다
  * @details 에디터 모듈이 핫 리로드로 내려가도 오브젝트 편집(엔진 데이터 명령)은 되돌릴 수 있어야 한다 — 내려가는 모듈의 코드를 쥔 명령만 뗀다.
  *          트랜잭션 묶음은 안쪽 하나가 걸리면 통째로 뗀다(반쪽 트랜잭션을 되돌리지 않는다). 되돌린 것 · 아직인 것의 경계(현재 위치)도 남은 명령
  *          기준으로 그대로여야 한다. 그 범위의 알림 처리기도 뗀다.
@@ -857,10 +857,10 @@ SW_TEST_CASE( CommandStackTest, ReleaseCodeWithinDropsOnlyTheCommandsHoldingThat
     const sw::CommandStack::ObjectEditListener keptListener = SW_DELEGATE_FUNCTION( sw::CommandStack::ObjectEditListener, onReleaseProbeEdit );
     stack.setObjectEditListener( keptListener );
 
-    SW_EXPECT_EQUAL( 0u, stack.releaseCodeWithin( &s_releaseProbeValue, &s_releaseProbeValue + 1 ) );
+    SW_EXPECT_EQUAL( 0u, stack.removeCodeWithin( &s_releaseProbeValue, &s_releaseProbeValue + 1 ) );
     SW_EXPECT_EQUAL( size_t{ 3 }, stack.getCommandCount() );
 
-    SW_EXPECT_EQUAL( 1u, stack.releaseCodeWithin( pModuleBegin, pModuleEnd ) );
+    SW_EXPECT_EQUAL( 1u, stack.removeCodeWithin( pModuleBegin, pModuleEnd ) );
     SW_ASSERT_EQUAL( size_t{ 2 }, stack.getCommandCount() );
     SW_EXPECT_STREQ( "first", stack.getCommand( 0 )._label.c_str() );
     SW_EXPECT_STREQ( "last", stack.getCommand( 1 )._label.c_str() );
@@ -882,7 +882,7 @@ SW_TEST_CASE( CommandStackTest, ReleaseCodeWithinDropsOnlyTheCommandsHoldingThat
     const uint8* pListenerBegin{ nullptr };
     const uint8* pListenerEnd{ nullptr };
     makeStubRange( keptListener, pListenerBegin, pListenerEnd );
-    SW_EXPECT_EQUAL( 0u, stack.releaseCodeWithin( pListenerBegin, pListenerEnd ) );
+    SW_EXPECT_EQUAL( 0u, stack.removeCodeWithin( pListenerBegin, pListenerEnd ) );
     stack.notifyObjectEdit( sw::CommandStack::ObjectEditNotice{} );
     SW_EXPECT_EQUAL( 10110, s_releaseProbeValue );
 }

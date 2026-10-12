@@ -31,7 +31,7 @@ namespace sw
     {
         // 큐에 남은 이벤트도 파괴해야 한다. 아레나를 그냥 놓으면 멤버가 가진 힙 메모리가 샌다.
         // 파괴되는 객체라 잠금을 다툴 상대가 없다. `_queueSpinLock` 없이 부르는 유일한 곳이다.
-        destroyQueuedEvents();
+        removeQueuedEvents();
     }
 
     void EventDispatcher::bindBusThread()
@@ -58,7 +58,7 @@ namespace sw
 #endif
     }
 
-    void EventDispatcher::destroyQueuedEvents()
+    void EventDispatcher::removeQueuedEvents()
     {
         // 이벤트는 프레임 아레나에 placement new 로 올라간다. 아레나를 되감으면 **메모리만** 돌아올 뿐 소멸자는 불리지
         // 않으므로, `sw::string` 같은 멤버가 가진 힙 메모리는 그대로 남는다(게임플레이 이벤트는 대부분 문자열을 가진다).
@@ -156,7 +156,7 @@ namespace sw
         }
     }
 
-    uint32 EventDispatcher::releaseCodeWithin( const void* pBegin, const void* pEnd, uint32& outRemainingEntryCount )
+    uint32 EventDispatcher::removeCodeWithin( const void* pBegin, const void* pEnd, uint32& outRemainingEntryCount )
     {
         outRemainingEntryCount = 0;
         const uintptr_t begin  = reinterpret_cast<uintptr_t>( pBegin );
@@ -167,10 +167,10 @@ namespace sw
         std::scoped_lock<SpinLock>               lock{ _busSpinLock };
         for ( const auto& [key, entry] : _mapChannelDispatchTable )
         {
-            if ( entry.isBound() == false || entry._pfnReleaseCodeWithin == nullptr )
+            if ( entry.isBound() == false || entry._pfnRemoveCodeWithin == nullptr )
                 continue;
             bool bHasSubscriber{ false };
-            releasedCount += entry._pfnReleaseCodeWithin( entry._pMulticast.get(), pBegin, pEnd, bHasSubscriber );
+            releasedCount += entry._pfnRemoveCodeWithin( entry._pMulticast.get(), pBegin, pEnd, bHasSubscriber );
 
             // 항목의 함수들은 그 타입을 처음 만진 쪽에서 인스턴스화된다. 그것이 이 범위면 범위가 내려간 뒤 이 항목은 내려간 코드로 뛴다.
             const uintptr_t broadcastCode   = reinterpret_cast<uintptr_t>( entry._pfnBroadcast );
@@ -207,13 +207,13 @@ namespace sw
     uint32 EventDispatcher::onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
     {
         uint32       remainingEntryCount{ 0 };
-        const uint32 releasedCount = releaseCodeWithin( pBegin, pEnd, remainingEntryCount );
+        const uint32 releasedCount = removeCodeWithin( pBegin, pEnd, remainingEntryCount );
         if ( remainingEntryCount > 0 )
             outKeepImageMapped = true;
-        return releasedCount + releaseQueuedEventsWithin( pBegin, pEnd );
+        return releasedCount + removeQueuedEventsWithin( pBegin, pEnd );
     }
 
-    uint32 EventDispatcher::releaseQueuedEventsWithin( const void* pBegin, const void* pEnd )
+    uint32 EventDispatcher::removeQueuedEventsWithin( const void* pBegin, const void* pEnd )
     {
         uint32                     releasedCount{ 0 };
         std::scoped_lock<SpinLock> lock{ _queueSpinLock };
@@ -260,7 +260,7 @@ namespace sw
         BLOCK( "Clear Event Queues" )
         {
             std::scoped_lock<SpinLock> lock{ _queueSpinLock };
-            destroyQueuedEvents();
+            removeQueuedEvents();
             _mapChannelQueue.clear();
             for ( uint32 allocIndex = 0; allocIndex < 2; ++allocIndex )
             {
