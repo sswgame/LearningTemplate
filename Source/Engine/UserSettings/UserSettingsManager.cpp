@@ -11,8 +11,8 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/Map/InputMap.h"
-#include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/UserSettings/HardwareProbe.h"
+#include "Engine/UserSettings/UserSettingsFile.h"
 
 namespace sw
 {
@@ -22,92 +22,12 @@ namespace sw
     {
         struct UserSettingsManagerInternal
         {
-            static constexpr utf8 kFileName[]   = "usersettings.json";
-            static constexpr utf8 kVersionKey[] = "version";
-            static constexpr utf8 kValuesKey[]  = "values";
-
-            /** @brief 사용자 파일의 키와 값 한 줄입니다(버전 올리기 단계가 이 목록을 고칩니다). */
-            struct FileEntry
-            {
-                string _key;
-                string _value;
-            };
-
-            /** @brief JSON 값을 텍스트로 바꿉니다. 숫자는 쓰인 그대로, 불리언은 true/false 로 씁니다. */
-            static string toText( const JSONValue& value )
-            {
-                switch ( value.getType() )
-                {
-                    case JSONType::Bool:
-                        return value.asBool() ? "true" : "false";
-                    case JSONType::Number:
-                        return value.dump();
-                    case JSONType::String:
-                        return value.asString();
-                    case JSONType::Null:
-                    case JSONType::Array:
-                    case JSONType::Object:
-                        return {};
-                }
-                return {};
-            }
-
-            static bool equalsText( string_view lhs, string_view rhs ) { return StringUtil::equals( lhs, rhs, true ); }
-
-            /** @brief 버전 @p fromVersion 의 단계를 적힌 순서대로 목록에 적용합니다. */
-            static void applyUpgradeSteps( const UserSettingsSchema& schema, uint32 fromVersion, vector<FileEntry>& inoutListEntry,
-                                           [[maybe_unused]] string_view sourceName )
-            {
-                for ( const UserSettingsUpgradeStep& step : schema.getUpgradeSteps() )
-                {
-                    if ( step._fromVersion != fromVersion )
-                        continue;
-                    for ( size_t entryIndex = inoutListEntry.size(); entryIndex > 0; --entryIndex )
-                    {
-                        FileEntry& entry = inoutListEntry[entryIndex - 1];
-                        if ( equalsText( entry._key, step._key ) == false )
-                            continue;
-                        switch ( step._operation )
-                        {
-                            case UserSettingsUpgradeOperation::Rename:
-                            {
-                                entry._key = step._newKey;
-                                break;
-                            }
-                            case UserSettingsUpgradeOperation::Remove:
-                            {
-                                inoutListEntry.erase( inoutListEntry.begin() + static_cast<ptrdiff_t>( entryIndex - 1 ) );
-                                break;
-                            }
-                            case UserSettingsUpgradeOperation::MapValue:
-                            {
-                                if ( equalsText( entry._value, step._fromValue ) )
-                                    entry._value = step._toValue;
-                                break;
-                            }
-                            case UserSettingsUpgradeOperation::Scale:
-                            {
-                                float64 number{ 0.0 };
-                                if ( StringUtil::parseDouble( entry._value, number ) )
-                                {
-                                    utf8 arrBuffer[constant::kMaxBuffer64]{};
-                                    StringUtil::formatNumber( arrBuffer, constant::kMaxBuffer64, number * step._scale );
-                                    entry._value = arrBuffer;
-                                }
-                                break;
-                            }
-                        }
-                    }
-                }
-                SW_LOG_TRACE( "%#: upgraded user settings from version %#", sourceName, fromVersion );
-            }
-
             /** @brief 열거형 선택지의 순번입니다(전역 변수에 넘길 기본 글). */
             static uint32 findOptionIndex( const UserSettingDef& def, string_view value )
             {
                 for ( uint32 optionIndex = 0; optionIndex < static_cast<uint32>( def._listOption.size() ); ++optionIndex )
                 {
-                    if ( equalsText( def._listOption[optionIndex]._value, value ) )
+                    if ( StringUtil::equals( def._listOption[optionIndex]._value, value, true ) )
                         return optionIndex;
                 }
                 return invalid_index::kUint32;
@@ -259,36 +179,9 @@ namespace sw
 
     bool UserSettingsManager::loadUserJSON( string_view jsonText, string_view sourceName )
     {
-        using Internal = UserSettingsManagerInternal;
-        JSONDocument doc;
-        if ( doc.parse( jsonText, sourceName ) == false )
-        {
-            SW_LOG_WARNING( "User settings '%#' is not valid JSON - using defaults", sourceName );
+        vector<UserSettingsFileEntry> listEntry;
+        if ( UserSettingsFile::parseJSON( jsonText, sourceName, _schema, listEntry ) == false )
             return false;
-        }
-        const JSONValue root   = doc.getRoot();
-        const JSONValue values = root.get( Internal::kValuesKey );
-        if ( root.isObject() == false || values.isObject() == false )
-        {
-            SW_LOG_WARNING( "User settings '%#' has no \"values\" object - using defaults", sourceName );
-            return false;
-        }
-
-        vector<Internal::FileEntry> listEntry;
-        for ( const string& key : values.getMemberNames() )
-        {
-            listEntry.push_back( Internal::FileEntry{ key, Internal::toText( values.get( key, false ) ) } );
-        }
-
-        // 버전 올리기: 배포된 플레이어 데이터라 이전 버전을 읽어야 한다(게임 데이터와 달리 다시 쓸 수 없다).
-        const uint32 fileVersion   = static_cast<uint32>( root.get( Internal::kVersionKey ).asUint( 0 ) );
-        const uint32 schemaVersion = _schema.getVersion();
-        for ( uint32 version = fileVersion; version < schemaVersion; ++version )
-        {
-            Internal::applyUpgradeSteps( _schema, version, listEntry, sourceName );
-        }
-        if ( fileVersion > schemaVersion )
-            SW_LOG_WARNING( "User settings '%#' is version %#, newer than this build (%#) - keys this build does not know are dropped", sourceName, fileVersion, schemaVersion );
 
         for ( SettingState& state : _listState )
         {
@@ -297,7 +190,7 @@ namespace sw
             state._bPending  = false;
             state._bRollback = false;
         }
-        for ( const Internal::FileEntry& entry : listEntry )
+        for ( const UserSettingsFileEntry& entry : listEntry )
         {
             const uint32 settingIndex = findIndex( hashed_string( entry._key ) );
             if ( settingIndex == invalid_index::kUint32 )
@@ -328,14 +221,8 @@ namespace sw
 
     string UserSettingsManager::makeUserJSON() const
     {
-        using Internal = UserSettingsManagerInternal;
-        JSONDocument    doc;
-        const JSONValue root = doc.makeObject();
-        root.set( Internal::kVersionKey ).setUint( _schema.getVersion() );
-        const JSONValue values = root.set( Internal::kValuesKey );
-        values.setObject();
-
         const vector<UserSettingDef>& listSetting = _schema.getSettings();
+        vector<UserSettingsFileEntry> listEntry;
         for ( size_t settingIndex = 0; settingIndex < _listState.size(); ++settingIndex )
         {
             const SettingState& state = _listState[settingIndex];
@@ -343,35 +230,9 @@ namespace sw
             const string& value = state._bRollback ? state._rollbackValue : state._committedValue;
             if ( value == state._defaultValue )
                 continue;
-            const UserSettingDef& def   = listSetting[settingIndex];
-            const JSONValue       field = values.set( def._id.c_str(), false );
-            switch ( def._type )
-            {
-                case UserSettingType::Bool:
-                {
-                    field.setBool( StringUtil::parseBool( value, false ) );
-                    break;
-                }
-                case UserSettingType::Int:
-                case UserSettingType::Float:
-                {
-                    float64 number{ 0.0 };
-                    if ( StringUtil::parseDouble( value, number ) )
-                        field.setFloat( number );
-                    else
-                        field.setString( value );
-                    break;
-                }
-                case UserSettingType::Enum:
-                case UserSettingType::KeyBinding:
-                case UserSettingType::String:
-                {
-                    field.setString( value );
-                    break;
-                }
-            }
+            listEntry.push_back( UserSettingsFileEntry{ string( listSetting[settingIndex]._id.c_str() ), value } );
         }
-        return doc.dump( 4 );
+        return UserSettingsFile::makeJSON( _schema, listEntry );
     }
 
     bool UserSettingsManager::saveUserFile( string_view filePath ) const
@@ -393,7 +254,7 @@ namespace sw
 
     string UserSettingsManager::makeDefaultUserFilePath( string_view gameName )
     {
-        return FileUtil::joinPath( UserDataPath::getConfigDirectory( gameName ), UserSettingsManagerInternal::kFileName );
+        return FileUtil::joinPath( UserDataPath::getConfigDirectory( gameName ), UserSettingsFile::kFileName );
     }
 
     // ------------------------------------------------------------------------------

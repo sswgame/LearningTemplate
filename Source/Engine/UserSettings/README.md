@@ -188,6 +188,7 @@ const string_view difficulty = pSettings->getValue( "gameplay.difficulty" ); // 
 |---|---|
 | `UserSettingsSchema.h` | 스키마 형식, 검사, 값 정규화 |
 | `UserSettingsManager.h` | 엔진 서비스와 메뉴 API |
+| `UserSettingsFile.h` | 사용자 파일 형식(JSON 읽기 · 쓰기, 버전 올리기 단계) |
 | `UserSettingsRegistry.h` | 적용기와 선택지 공급자 레지스트리 |
 | `UserSettingsEngineAppliers.h` | 엔진 적용기와 화면 요청(`DisplaySettingsRequest`) |
 | `UserSettingsVariables.h` | 설정이 값을 넣는 전역 변수 |
