@@ -187,6 +187,8 @@ Play 는 활성 씬을 스냅샷으로 찍고 월드를 시작합니다. Stop �
 
 씬 뷰(`SceneViewPanel`)는 에디터 카메라(`EditorCamera::ensure`)로 그린 씬 위에 격자, 기즈모, 피킹, 눈금자, 시각화, 디버그 선, HUD 상자, 방향 큐브를 ImGui 로 얹습니다.
 씬 뷰 툴바는 뷰포트 위에 떠 있는 오버레이 바 넷입니다(유니티 씬 뷰 Overlays). 바는 끌어 옮기고 가장자리에 붙이고 접고 숨길 수 있습니다.
+씬 뷰 캔버스 한 장은 `EditorViewportClient` 가 조정합니다. 일은 책임마다의 값 멤버가 하고 클라이언트는 순서와 입력 분배만 정합니다. 카메라는 `EditorViewportCamera`, 클릭 선택과 호버는 `EditorViewportPicker`, 기즈모는 `EditorViewportGizmo`, 격자 · 자 · 방향 큐브는 `EditorViewportCanvasOverlay`, 애셋 드롭은 `EditorViewportAssetDrop` 입니다.
+그리는 순서는 ImGui 의 "마지막 항목" 과 ImGuizmo 상태에 기대므로 `EditorViewportClient::draw` 한곳에 둡니다.
 게임 뷰(`GameViewPanel`)는 게임 카메라의 출력만 보입니다. 화면 UI 와 화면 사각형 뷰(분할 화면)까지 든 게임 화면이고 편집 보조선은 없습니다. 디버그 HUD 는 런타임 UI 라 게임 뷰에 그대로 그려집니다.
 
 보이는 패널만 그립니다. 패널이 `drawContent` 에서 `EditorContext::markViewDrawn` 을 부른 뷰만 셸이 호스트에 알립니다. 게임 뷰가 보이면 그것이 엔진의 주 출력이고 씬 뷰는 추가 뷰입니다.
