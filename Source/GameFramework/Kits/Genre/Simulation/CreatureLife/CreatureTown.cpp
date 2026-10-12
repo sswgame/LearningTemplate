@@ -10,8 +10,10 @@
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Base/Gameplay/Progression/Reputation.h"
 #include "GameFramework/Base/Gameplay/Quest/QuestLog.h"
 #include "GameFramework/Base/World/Environment/WeatherSystem.h"
+#include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureLifeCatalog.h"
 
 namespace sw
 {

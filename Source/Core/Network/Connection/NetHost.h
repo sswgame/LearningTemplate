@@ -58,7 +58,6 @@
 #include "Core/Container/vector.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetChallenge.h"
-#include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Connection/NetHostSecurity.h"
 #include "Core/Network/Connection/NetPacketSealer.h"
 #include "Core/Network/Connection/NetSlotTable.h"
@@ -67,7 +66,10 @@
 
 namespace sw
 {
+    struct NetConnectionStats;
+
     class INetTransport;
+    class NetConnection;
 
     /**
      * @brief 이 호스트가 중단점에 멈출 수 있다고 상대에게 알릴 시점을 정합니다.

@@ -25,7 +25,6 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
-#include "GameFramework/Base/Online/Identity/AccountPresence.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatSpamGuard.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatWordFilter.h"
@@ -34,6 +33,9 @@
 
 namespace sw
 {
+    struct AccountPresenceResult;
+
+    class IAccountPresence;
     class IServerBus;
     class IServiceStore;
 

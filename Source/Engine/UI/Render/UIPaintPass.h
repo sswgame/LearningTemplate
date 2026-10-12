@@ -75,6 +75,8 @@ namespace sw
         static void paintFocusRing( const Widget& widget, CanvasPainter& painter );
         /** @brief 위젯 기하(로컬에서 화면 UI 단위)를 칠하기 변환으로 바꿉니다. */
         static CanvasTransform makeWidgetTransform( const WidgetGeometry& geometry );
+        /** @brief 이 스레드의 그리기 순서 스크래치를 비웁니다. 그리는 스레드가 끝나기 전(`UISystem::shutdown`)에 부릅니다. */
+        static void releaseScratch();
 
     private:
         /** @brief 위젯 하나와 그 아래를 칠합니다. @p bForce 면 이 위젯과 자손을 모두 다시 칠하며, 다시 칠한 수를 반환합니다. */

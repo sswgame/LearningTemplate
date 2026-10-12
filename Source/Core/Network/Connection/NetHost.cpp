@@ -6,6 +6,7 @@
 #include "Core/Container/LittleEndianUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
+#include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/NetTransport.h"
 #include "Core/Process/Process.h"

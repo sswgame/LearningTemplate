@@ -157,6 +157,7 @@ namespace sw
         _styleSheetCache.setReloadedHandler( {} );
         refreshActiveScreen();
         _input.shutdown();
+        UIPaintPass::releaseScratch();
         _textLayout.reset();
         _pFontService = nullptr;
     }
