@@ -68,7 +68,8 @@ namespace sw
             /** @brief 종류 하나의 이름과 경로 필드 읽기 · 쓰기입니다. @p pValue 는 잎 필드 주소, @p builtinIndex 는 잎의 내장 타입 자리입니다. */
             struct KindOps
             {
-                const utf8* pName;
+                UIBindingValueKind kind; ///< 이 줄의 종류입니다. 줄 위치가 이 값과 같은지 static_assert 로 본다
+                const utf8*        pName;
                 UIBindingValue ( *pRead )( const PropertyInfo& leaf, const void* pOwner, const void* pValue, int32 builtinIndex );
                 bool ( *pWrite )( const PropertyInfo& leaf, void* pOwner, void* pValue, int32 builtinIndex, const UIBindingValue& value ); ///< 바뀌었으면 true 입니다.
             };
@@ -151,7 +152,15 @@ namespace sw
             /** @brief 종류 표입니다. 줄 순서는 `UIBindingValueKind` 의 값 순서와 같다. 종류를 더하면 여기에 한 줄을 더한다. */
             static const KindOps kArrKindOps[];
 
-            [[nodiscard]] static const KindOps& getKindOps( UIBindingValueKind kind ) { return kArrKindOps[static_cast<uint32>( kind )]; }
+            /** @brief 종류의 줄입니다. 범위 밖 값(깨진 메모리 · 캐스트)은 'none' 줄로 떨어진다(이름 "none", 읽기 {}, 쓰기 false). */
+            [[nodiscard]] static const KindOps& getKindOps( UIBindingValueKind kind )
+            {
+                const uint32 index = static_cast<uint32>( kind );
+                return index < kUIBindingValueKindCount ? kArrKindOps[index] : kArrKindOps[static_cast<uint32>( UIBindingValueKind::None )];
+            }
+
+            /** @brief 종류 표의 줄마다 줄 위치가 그 줄의 종류 값과 같으면 true 입니다. 열거 순서가 바뀌어도 개수가 같으면 크기 검사만으로는 못 잡는다. */
+            static constexpr bool areKindRowsInOrder();
         };
 
         constexpr UIBindingValueInternal::NumberOps UIBindingValueInternal::kArrNumberOps[] = {
@@ -175,13 +184,24 @@ namespace sw
                        "number table rows must follow the builtin table order" );
 
         constexpr UIBindingValueInternal::KindOps UIBindingValueInternal::kArrKindOps[] = {
-            {  "none",       &UIBindingValueInternal::readNone,       &UIBindingValueInternal::writeNone}, // None
-            {  "bool",       &UIBindingValueInternal::readBool,       &UIBindingValueInternal::writeBool}, // Bool
-            {"number", &UIBindingValueInternal::readNumberKind, &UIBindingValueInternal::writeNumberKind}, // Number
-            {  "text",       &UIBindingValueInternal::readText,       &UIBindingValueInternal::writeText}, // Text
-            {"struct",      &UIBindingValueInternal::readOther,      &UIBindingValueInternal::writeOther}, // Other
+            {  UIBindingValueKind::None,   "none",       &UIBindingValueInternal::readNone,       &UIBindingValueInternal::writeNone},
+            {  UIBindingValueKind::Bool,   "bool",       &UIBindingValueInternal::readBool,       &UIBindingValueInternal::writeBool},
+            {UIBindingValueKind::Number, "number", &UIBindingValueInternal::readNumberKind, &UIBindingValueInternal::writeNumberKind},
+            {  UIBindingValueKind::Text,   "text",       &UIBindingValueInternal::readText,       &UIBindingValueInternal::writeText},
+            { UIBindingValueKind::Other, "struct",      &UIBindingValueInternal::readOther,      &UIBindingValueInternal::writeOther},
         };
         static_assert( std::size( UIBindingValueInternal::kArrKindOps ) == kUIBindingValueKindCount, "kind table must have one row per UIBindingValueKind" );
+
+        constexpr bool UIBindingValueInternal::areKindRowsInOrder()
+        {
+            for ( uint32 index = 0; index < kUIBindingValueKindCount; ++index )
+            {
+                if ( static_cast<uint32>( kArrKindOps[index].kind ) != index )
+                    return false;
+            }
+            return true;
+        }
+        static_assert( UIBindingValueInternal::areKindRowsInOrder(), "kind table rows must follow the UIBindingValueKind value order" );
     } // namespace
 } // namespace sw
 
