@@ -248,7 +248,7 @@ SW_TEST_CASE( ModuleImagePatchTest, EngineAbiStampIsFoundOnlyWithAFullDigest )
 
 /**
  * @brief [ModuleImagePatchTest] Windows 세대 이름은 `.dll` 앞 끝 네 글자를 바꾸고 길이를 지킨다 — 다섯 글자보다 짧은 이름은 만들지 않는다
- * @details 로더가 import 를 파일 이름으로 맞추므로 복사본 파일 이름이 곧 이 이름이다(`LiveReloadManager::rewriteShadowImageNames`).
+ * @details 로더가 import 를 파일 이름으로 맞추므로 복사본 파일 이름이 곧 이 이름이다(`ModuleShadowCopy::writeShadowCopy`).
  */
 SW_TEST_CASE( ModuleImagePatchTest, DllGenerationNameKeepsTheLength )
 {

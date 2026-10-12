@@ -147,12 +147,12 @@
 | 렌더 그래프 wave / 틱 wave | level / stage(`GT.Scene.tick.stages`) |
 | `precede` · `succeed` | `runBefore` · `runAfter` |
 | lane | queue |
-| `retire*` · `retireImage` | `deferImageUnload` · `free*` |
+| `retire*` · `retireImage` | `DeferredImageUnloadQueue::deferUnload` · `free*` |
 | `*Recipe`(`D3D12RHIResourceRecipe` · `VulkanRHISamplerRecipe`) | `*Preset` · `ShaderCookRequest` |
 | `poisonLiveReload` | `markGraphBroken` |
-| `bindDelayLoadImports` · `DelayLoadNotifyHook` · `IModuleHandleProvider` · `DelayLoad.cmake`(`sw_addDelayloadHook`) | 없음 — 지연 로드를 걷고 `LiveReloadManager::rewriteShadowImageNames` |
+| `bindDelayLoadImports` · `DelayLoadNotifyHook` · `IModuleHandleProvider` · `DelayLoad.cmake`(`sw_addDelayloadHook`) | 없음 — 지연 로드를 걷고 `ModuleShadowCopy::writeShadowCopy` |
 | `CheckDelayLoadSites` · `DelayLoadBindTest` | `CheckNoDelayLoad` · `ArchitectureTest.NoBuiltImageHasDelayLoadedImports` |
-| `rewriteShadowSonames` · `SonameState` | `rewriteShadowImageNames` · `ImageNameState` |
+| `rewriteShadowSonames` · `SonameState` | `ModuleShadowCopy::writeShadowCopy` · `ShadowImageNameState` |
 | Vulkan band | range(`SW_VK_SLOT_RANGE_SIZE`) |
 | `HandleTable` · `ObjectHandle` | `SlotHandleTable` · `SlotHandle` |
 | `isVisibleIntended` | `isVisibleRequested` |

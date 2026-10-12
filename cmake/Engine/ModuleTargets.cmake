@@ -179,7 +179,7 @@ endfunction()
 
 # 서버 · 클라이언트 키트(GF_Server_<X> · GF_Client_<X>)가 같은 기능의 공유 키트(GF_<X>)를 링크합니다.
 # 일반 import 다 — 모듈 호스트가 공유 키트의 섀도 복사본에 세대 이름을 주고 이 키트 복사본의 import 이름을 그 이름으로 바꾼다
-# (`LiveReloadManager::rewriteShadowImageNames`). 그래서 의존은 매니페스트에 있어야 한다(없으면 로드가 거절된다).
+# (`ModuleShadowCopy::writeShadowCopy`). 그래서 의존은 매니페스트에 있어야 한다(없으면 로드가 거절된다).
 function(sw_linkSharedKit KIT_NAME SHARED_KIT_NAME)
 	# 링크는 매니페스트 의존이어야 한다 — 키트 폴더를 의존 순서로 들어가므로(Kits/CMakeLists.txt) 그래야 공유 키트 타깃이 먼저 선다.
 	get_property(listDependency GLOBAL PROPERTY SW_MODULE_${KIT_NAME}_DEPENDENCIES)
