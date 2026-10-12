@@ -19,6 +19,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/EventBuffer.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
@@ -28,7 +29,6 @@
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCondition.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleLocator.h"
 #include "GameFramework/Base/Actor/AI/Schedule/SchedulePathing.h"
-#include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
 #include "GameFramework/Base/World/Environment/WorldClock.h"
 #include "GameFramework/GameFrameworkExports.h"
 
