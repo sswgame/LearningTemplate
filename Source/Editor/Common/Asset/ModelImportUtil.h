@@ -12,15 +12,26 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
-#include "Editor/Common/Asset/ModelImporter.h"
 #include "Editor/Common/Asset/VrmMaterialImporter.h"
 
 #include "Engine/Animation/AnimationClip.h"
-#include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
 
 #include <cgltf.h>
+
+namespace sw
+{
+    struct MeshAssetData;
+    struct MeshSkinVertex;
+    struct RHIVertex;
+
+    class Skeleton;
+} // namespace sw
+
+namespace sw::editor
+{
+    struct ModelImportResult;
+    struct ModelImportRule;
+} // namespace sw::editor
 
 namespace sw::editor
 {

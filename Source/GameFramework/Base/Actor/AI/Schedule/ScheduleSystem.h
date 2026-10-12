@@ -26,7 +26,6 @@
 
 #include "Engine/Object/Component/TagSystem.h"
 
-#include "GameFramework/Base/Actor/AI/Schedule/ScheduleCondition.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleLocator.h"
 #include "GameFramework/Base/Actor/AI/Schedule/SchedulePathing.h"
 #include "GameFramework/Base/World/Environment/WorldClock.h"
@@ -35,6 +34,7 @@
 namespace sw
 {
     struct ScheduleBlockDef;
+    struct ScheduleConditionContext;
     struct ScheduleNpcDef;
     struct ScheduleSaveState;
 

@@ -9,6 +9,7 @@
 #include "GameFramework/Base/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Base/Gameplay/Inventory/LootTable.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Base/World/Land/AreaGraph.h"
