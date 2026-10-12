@@ -413,7 +413,7 @@ namespace sw
             return;
         _objectManager->tick( deltaTime );
         // 틱이 옮긴 위치로 리스너(리스너 컴포넌트, 없으면 게임 카메라), 에미터, 가림, 리버브 존을 오디오 엔진에 넣는다.
-        _objectManager->getSceneAudio().update( deltaTime, getActiveGameCamera(), _objectManager->getScenePhysics().findScene3D() );
+        _objectManager->getSceneAudio().update( deltaTime, getActiveGameCamera(), _objectManager->getScenePhysics().findScene3D(), _objectManager->getScenePhysics().findScene2D() );
     }
 
     /**

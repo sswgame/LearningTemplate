@@ -5,7 +5,8 @@
  *          오디오 컴포넌트는 틱하지 않고 여기에 등록합니다. 엔진은 생성자로 받은 오디오 서비스의 것이고, 테스트는 `setAudioEngine` 으로 바꿉니다.
  *
  *          **2D 게임**: 리스너 컴포넌트가 없고 게임 카메라가 직교면 리스너를 `Screen2D`(화면 평면 팬, 반폭 = 직교 높이 × 16/9 ÷ 2)로 둡니다.
- *          **가림**: 3D 물리 씬이 있으면 `PhysicsAudioOcclusionQuery`(레이 셋)로, 프레임마다 에미터 `kOcclusionChecksPerFrame` 개씩 돌아가며 측정합니다.
+ *          **가림**: 3D 물리 씬이 있으면 `PhysicsAudioOcclusionQuery`(레이 셋)로, 없고 2D 물리 씬이 있으면 `Physics2DAudioOcclusionQuery`(월드 XY)로,
+ *          프레임마다 에미터 `kOcclusionChecksPerFrame` 개씩 돌아가며 측정합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -48,9 +49,10 @@ namespace sw
         /**
          * @brief 프레임 하나를 넣습니다 — 리스너 · 에미터 자리와 속도 · 가림 · 리버브 존 세기.
          * @param pCamera 리스너 컴포넌트가 없을 때 리스너가 되는 게임 카메라입니다(nullptr 이면 리스너 0 을 끕니다).
-         * @param pScene3D 가림 레이캐스트를 쏠 3D 물리 씬입니다(nullptr 이면 가림을 측정하지 않습니다 — 0 으로 둡니다).
+         * @param pScene3D 가림 레이캐스트를 쏠 3D 물리 씬입니다.
+         * @param pScene2D 3D 물리 씬이 없을 때 가림 레이캐스트를 쏠 2D 물리 씬입니다(월드 XY 평면). 둘 다 nullptr 이면 가림을 측정하지 않습니다 — 0 으로 둡니다.
          */
-        void update( float32 deltaSeconds, const CameraComponent* pCamera, const IPhysicsQueryScene3D* pScene3D );
+        void update( float32 deltaSeconds, const CameraComponent* pCamera, const IPhysicsQueryScene3D* pScene3D, const IPhysicsQueryScene2D* pScene2D = nullptr );
 
         /** @brief 쓸 엔진을 정합니다(테스트). nullptr 이면 생성자로 받은 오디오 서비스의 엔진입니다. */
         void setAudioEngine( AudioEngine* pEngine ) { _pEngineOverride = pEngine; }

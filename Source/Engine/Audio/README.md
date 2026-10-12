@@ -247,7 +247,13 @@ Wwise 의 Event, Random/Sequence/Blend 컨테이너, Playback Limit, RTPC 에 �
 - 리버브 존은 경계에서 0, `_fadeDistance` 안쪽에서 1 인 세기로 스냅샷(`Cave`, `Hall`, `Underwater`)을 겁니다. 같은 스냅샷을 쓰는 존이 여럿이면 가장 큰 세기를 씁니다.
 
 **가림 질의.** 3D 물리 씬이 있으면 `PhysicsAudioOcclusionQuery` 가 `IPhysicsScene3D::raycast` 광선 세 개(가운데와 좌우)를 쏴 막힌 비율을 구합니다. 에미터 몇 개씩 프레임마다 돌아가며 계산하고, 오프셋 값은 헤더에 있습니다.
-물리 씬이 없거나 2D(Box2D) 씬이면 가림은 0 입니다. `setOcclusionQuery` 로 내비메시나 방 그래프 같은 다른 기하를 쓰는 질의로 바꿀 수 있습니다.
+3D 씬이 없고 2D(Box2D) 씬이 있으면 `Physics2DAudioOcclusionQuery` 가 같은 규칙의 레이 셋을 월드 XY 평면에서 쏩니다(Z 는 레이어라 무시). 물리 씬이 없으면 가림은 0 입니다.
+`setOcclusionQuery` 로 다른 기하를 쓰는 질의로 바꿀 수 있습니다.
+
+**방과 포털.** 레이캐스트 대신 `AudioRoomGraph`(Wwise Rooms & Portals)를 `setOcclusionQuery` 에 물리면 "소리가 문을 거쳐 오는가"로 가림을 정합니다.
+방은 축 정렬 상자(겹치면 부피가 작은 쪽이 그 점의 방)이고 포털은 두 방(또는 바깥 `kOutside`)을 잇는 열림 0..1 의 통로입니다. 같은 방이면 가림 0, 아니면 포털 사슬 가운데
+투과율(`열림 × (1 − 열린 포털 가림)` 의 곱)이 가장 큰 길로 `가림 = 1 − max(투과율, 벽 누설)` 입니다. 문 여닫기는 `setPortalOpenness` 만 부르면 엔진의 가림 추종이 부드럽게 바꿔 줍니다.
+회절(모서리를 돌아 들어오는 소리의 방향)은 하지 않습니다.
 
 사라진 에미터는 엔진에서 바로 지우지 않고, 그 위치의 한 번짜리 소리가 끝난 뒤 지웁니다. 위치를 잃은 소리가 2D 로 돌아가 크게 들리지 않게 하기 위해서입니다.
 엔진은 오디오 서비스(`engine::getAudioService`)의 것이고, 테스트는 `SceneAudio::setAudioEngine` 으로 장치 없는 엔진을 연결합니다.
