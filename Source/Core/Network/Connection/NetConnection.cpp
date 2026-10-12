@@ -140,18 +140,19 @@ namespace sw
             }
             case NetChannelType::UnreliableSequenced:
             {
-                vector<uint8> buffer( pData, pData + size );
                 // 흐름은 메시지 첫 바이트(종류)마다 따로 둔다. 같은 종류의 아직 나가지 않은 옛 메시지만 새 메시지로 바꾸고, 다른 종류는 서로 지우지 않는다.
+                // 바꿀 때는 옛 버퍼에 덮어 써서, 틱마다 같은 종류를 보내는 흐름이 메시지마다 할당하지 않게 한다.
+                const bool bEmpty = size == 0;
                 for ( vector<uint8>& pending : _listOutgoingSequenced )
                 {
-                    const bool bSameStream = pending.empty() == buffer.empty() && ( buffer.empty() || pending[0] == buffer[0] );
+                    const bool bSameStream = pending.empty() == bEmpty && ( bEmpty || pending[0] == pData[0] );
                     if ( bSameStream )
                     {
-                        pending = std::move( buffer );
+                        pending.assign( pData, pData + size );
                         return true;
                     }
                 }
-                _listOutgoingSequenced.push_back( std::move( buffer ) );
+                _listOutgoingSequenced.emplace_back( pData, pData + size );
                 return true;
             }
             case NetChannelType::Unreliable:
@@ -199,6 +200,17 @@ namespace sw
         if ( channelIndex < 0 || channelIndex >= static_cast<int32>( NetChannelType::Count ) || _arrIncoming[channelIndex].empty() )
             return false;
         outBuffer = std::move( _arrIncoming[channelIndex].front() );
+        _arrIncoming[channelIndex].pop_front();
+        return true;
+    }
+
+    bool NetConnection::receiveMessageAppend( NetChannelType channel, vector<uint8>& inoutBytes )
+    {
+        const int32 channelIndex = static_cast<int32>( channel );
+        if ( channelIndex < 0 || channelIndex >= static_cast<int32>( NetChannelType::Count ) || _arrIncoming[channelIndex].empty() )
+            return false;
+        const vector<uint8>& message = _arrIncoming[channelIndex].front();
+        inoutBytes.insert( inoutBytes.end(), message.begin(), message.end() );
         _arrIncoming[channelIndex].pop_front();
         return true;
     }

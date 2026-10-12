@@ -564,6 +564,31 @@ SW_TEST_CASE( NetworkTest, SequencedChannelKeepsOneStreamPerMessageKind )
     SW_EXPECT_TRUE( listReceived[1] == snapshotNew ); // 옛 패킷이지만 스냅샷 흐름에서는 처음이자 가장 새 것 — 옛 자세(2)는 버렸다
 }
 
+SW_TEST_CASE( NetworkTest, SequencedReplacementTakesNewSizeAndAppendReceiveConcatenates )
+{
+    // 같은 종류의 새 메시지는 옛 버퍼에 덮어 쓴다 — 길이가 달라도 새 바이트만 남아야 한다.
+    NetConnection       sender;
+    NetConnection       receiver;
+    const vector<uint8> longOld{ 0x20, 1, 2, 3, 4, 5 };
+    const vector<uint8> shortNew{ 0x20, 9 };
+    const vector<uint8> other{ 0x21, 7, 7 };
+    SW_ASSERT_TRUE( sender.sendMessage( NetChannelType::UnreliableSequenced, longOld.data(), static_cast<int32>( longOld.size() ) ) );
+    SW_ASSERT_TRUE( sender.sendMessage( NetChannelType::UnreliableSequenced, other.data(), static_cast<int32>( other.size() ) ) );
+    SW_ASSERT_TRUE( sender.sendMessage( NetChannelType::UnreliableSequenced, shortNew.data(), static_cast<int32>( shortNew.size() ) ) );
+    BitWriter packet;
+    sender.writePacket( 0.0, packet, 300 );
+    BitReader reader( packet.getBytes().data(), packet.getByteCount() );
+    SW_ASSERT_TRUE( receiver.readPacket( 0.05, reader ) );
+
+    // 아레나에 덧붙이기 — 앞에 있던 바이트는 그대로 두고 메시지 바이트만 뒤에 붙는다.
+    vector<uint8> arena{ 0xEE };
+    SW_ASSERT_TRUE( receiver.receiveMessageAppend( NetChannelType::UnreliableSequenced, arena ) );
+    SW_ASSERT_TRUE( receiver.receiveMessageAppend( NetChannelType::UnreliableSequenced, arena ) );
+    SW_EXPECT_FALSE( receiver.receiveMessageAppend( NetChannelType::UnreliableSequenced, arena ) );
+    const vector<uint8> expected{ 0xEE, 0x20, 9, 0x21, 7, 7 };
+    SW_EXPECT_TRUE( arena == expected );
+}
+
 SW_TEST_CASE( NetworkTest, HostsHandshakeExchangeAndSurviveBadNetworks )
 {
     NetHostSettings settings;
