@@ -44,6 +44,18 @@ namespace
             return false;
         }
 
+        uint32 raycastAll( const sw::float2& /*origin*/, const sw::float2& /*direction*/, float32 /*maxDistance*/, const sw::PhysicsQueryFilter& /*filter*/,
+                           sw::vector<sw::PhysicsCastHit2D>& /*outListHit*/ ) const override
+        {
+            return 0;
+        }
+
+        uint32 shapeCastAll( const sw::PhysicsShapeDesc2D& /*shape*/, const sw::float2& /*position*/, const float32& /*rotation*/, const sw::float2& /*direction*/,
+                             float32 /*maxDistance*/, const sw::PhysicsQueryFilter& /*filter*/, sw::vector<sw::PhysicsCastHit2D>& /*outListHit*/ ) const override
+        {
+            return 0;
+        }
+
         uint32 overlapShape( const sw::PhysicsShapeDesc2D& /*shape*/, const sw::float2& /*position*/, const float32& /*rotation*/, const sw::PhysicsQueryFilter& /*filter*/,
                              sw::vector<sw::PhysicsBodyHandle>& /*outListBody*/ ) const override
         {

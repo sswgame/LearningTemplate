@@ -3,6 +3,7 @@
  * @brief 머티리얼 패킹 · XML · define 을 함께 다루는 도우미입니다(Engine TU 전용).
  */
 #pragma once
+#include "Core/Common/Macros.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
@@ -14,7 +15,7 @@ namespace sw
     struct ShaderVariableInfo;
 
     /** @brief 머티리얼 패킹 · XML · 퍼뮤테이션 define 공유 도우미입니다. */
-    struct MaterialUtil
+    struct SW_API MaterialUtil
     {
         /**
          * @brief 퍼뮤테이션(셰이더 define)이 바뀔 때마다 오르는 전역 세대입니다.

@@ -95,7 +95,7 @@ namespace sw
 namespace sw
 {
     /** @brief 노드 종류 하나입니다. */
-    struct GimmickNodeKind
+    struct SW_GF_API GimmickNodeKind
     {
         using InitializeFunc = bool ( * )( GimmickNodeContext& context );
         using StepFunc       = void ( * )( GimmickNodeContext& context );
