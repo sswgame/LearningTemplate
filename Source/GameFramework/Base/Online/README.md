@@ -121,7 +121,7 @@ SQL 은 `GF_SQLStore`(SQLite)와 `GF_Server_SQLStore`(PostgreSQL), 캐시는 `GF
 | 계정 | `GF_Account` | 로그인, 게스트, 외부 로그인(OIDC), 세션 토큰, 재접속, 중복 로그인, 탈퇴, 게임 접속 표 |
 | 서버 디렉터리 | `GF_ServerDirectory` | 점검 모드, 공지, 접속 서버 배정 |
 | 채팅 | `GF_Chat` | 채널, 귓속말, 기록, 금칙어, 도배 막기 |
-| 친구 | `GF_Social` | 친구, 차단, 접속 상태, 길드 |
+| 친구 | `GF_Social` | 친구, 차단, 접속 상태, 길드, 길드 창고(원장 맡김 `esc/guild/<길드>`) |
 | 매칭 | `GF_Matchmaking` | 파티, 로비, 매칭 대기열, 전용 서버 배정 |
 | 순위표 | `GF_Leaderboard` | 점수, 통계, 업적, 시즌 정산 |
 | 거래 | `GF_Trade` | 양쪽 제시, 잠금, 확정, 원장 정산 |

@@ -68,6 +68,11 @@ namespace sw
         uint64 setGuildRole( AccountID targetID, GuildRole role, const SocialReplyDelegate& onReply );
         uint64 setGuildNotice( string_view notice, const SocialReplyDelegate& onReply );
         uint64 requestGuild( const SocialReplyDelegate& onReply );
+        /** @brief 내 계정의 @p assetID 를 @p amount 만큼 길드 창고로 옮깁니다. 응답의 `_listStorage` 에 그 자산의 창고 잔액이 들어갑니다. */
+        uint64 depositToGuild( string_view assetID, int64 amount, const SocialReplyDelegate& onReply );
+        /** @brief 길드 창고의 @p assetID 를 @p amount 만큼 내 계정으로 옮깁니다. 임원 이상만 할 수 있습니다. */
+        uint64 withdrawFromGuild( string_view assetID, int64 amount, const SocialReplyDelegate& onReply );
+        uint64 requestGuildStorage( const SocialReplyDelegate& onReply );
 
         /** @brief 쌓인 알림을 꺼냅니다. */
         void drainNotifications( vector<SocialNotification>& outListNotification ) { _notificationBuffer.drainTo( outListNotification ); }

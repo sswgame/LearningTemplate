@@ -37,6 +37,9 @@ namespace sw
         NotAllowed, ///< 길드 역할이 부족하다
         GuildFull,
         InviteExpired,
+        InsufficientFunds, ///< 길드 창고 — 맡기는 계정이나 꺼낼 창고의 잔액이 모자란다
+        CapExceeded,       ///< 길드 창고 — 꺼내면 계정 잔액 상한을 넘는다
+        StorageNotEmpty,   ///< 길드 창고에 남은 것이 있어 길드를 해산할 수 없다(먼저 꺼낸다)
         Count
     };
 
@@ -175,9 +178,20 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 길드 창고의 자산 하나입니다. 원장의 맡김(`esc/guild/<길드 16진>`) 잔액입니다. */
+    struct GuildStorageItem
+    {
+        string _assetID{};
+        int64  _amount{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 길드 상한 값들입니다. */
     struct GuildLimit
     {
+        static constexpr int32 kMaxStorageItem   = 128; ///< 창고 목록 응답의 자산 수 상한이다
         static constexpr int32 kMaxMember        = 100;
         static constexpr int32 kMaxNameSize      = 24;        ///< UTF-8 바이트 수이다
         static constexpr int32 kMaxNoticeSize    = 256;       ///< UTF-8 바이트 수이다

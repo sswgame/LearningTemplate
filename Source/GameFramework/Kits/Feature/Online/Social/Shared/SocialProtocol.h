@@ -41,14 +41,19 @@ namespace sw
         static constexpr uint16 kGuildSetRole        = OnlineMethodRange::kSocial + 0x15; ///< 계정과 역할을 받으며 길드장만 부를 수 있다. 역할이 Master 이면 길드장을 넘기는 것이다
         static constexpr uint16 kGuildSetNotice      = OnlineMethodRange::kSocial + 0x16; ///< 문구를 받으며 임원 이상만 부를 수 있다
         static constexpr uint16 kGuildGet            = OnlineMethodRange::kSocial + 0x17; ///< 내 길드를 멤버 목록까지 돌려준다
+        static constexpr uint16 kGuildDeposit        = OnlineMethodRange::kSocial + 0x18; ///< 자산과 양을 받아 내 계정에서 길드 창고로 옮긴다. 멱등 키가 필수이다
+        static constexpr uint16 kGuildWithdraw       = OnlineMethodRange::kSocial + 0x19; ///< 자산과 양을 받아 길드 창고에서 내 계정으로 옮긴다. 임원 이상, 멱등 키 필수
+        static constexpr uint16 kGuildStorage        = OnlineMethodRange::kSocial + 0x1A; ///< 길드 창고의 잔액 목록을 돌려준다
         static constexpr uint16 kPushNotification    = OnlineMethodRange::kSocial + 0x80; ///< 알림 하나이다
 
-        static_assert( OnlineMethodRange::isInRange( kGuildGet, OnlineMethodRange::kSocial ) && OnlineMethodRange::isMethod( kGuildGet ) );
+        static_assert( OnlineMethodRange::isInRange( kGuildStorage, OnlineMethodRange::kSocial ) && OnlineMethodRange::isMethod( kGuildStorage ) );
         static_assert( OnlineMethodRange::isInRange( kPushNotification, OnlineMethodRange::kSocial ) && OnlineMethodRange::isMethod( kPushNotification ) == false );
 
         /** @brief 관계를 바꾸는 메서드이면 true 입니다. 이 경우 멱등 키를 싣습니다. */
         static constexpr bool isLinkChange( uint16 method ) { return kRequestFriend <= method && method <= kUnblock; }
-        static constexpr bool isGuild( uint16 method ) { return kGuildCreate <= method && method <= kGuildGet; }
+        static constexpr bool isGuild( uint16 method ) { return kGuildCreate <= method && method <= kGuildStorage; }
+        /** @brief 읽기만 하는 길드 메서드이면 true 입니다. 나머지 길드 메서드는 멱등 키를 싣습니다. */
+        static constexpr bool isGuildRead( uint16 method ) { return method == kGuildGet || method == kGuildStorage; }
     };
 } // namespace sw
 
@@ -58,8 +63,10 @@ namespace sw
     struct SocialRequest
     {
         string               _text{};                       ///< kRequestFriendByName 과 kGuildCreate 의 이름, kSetPresence 의 활동 문구, kGuildSetNotice 의 공지이다
+        string               _assetID{};                    ///< kGuildDeposit · kGuildWithdraw 의 자산
         AccountID            _otherID{ kInvalidAccountID }; ///< 상대이거나 길드 작업의 대상이다
         uint64               _guildID{ 0 };                 ///< kGuildAccept
+        int64                _amount{ 0 };                  ///< kGuildDeposit · kGuildWithdraw 의 양(1 이상)
         SocialPresenceStatus _status{ SocialPresenceStatus::Offline };
         GuildRole            _role{ GuildRole::Member }; ///< kGuildSetRole
         uint8                _bAccept{ SW_FALSE };       ///< kRespondFriend
@@ -71,11 +78,12 @@ namespace sw
     /** @brief 모든 메서드의 응답입니다. 메서드마다 쓰는 필드만 채웁니다. */
     struct SocialReply
     {
-        vector<SocialLink>     _listLink{};                   ///< kListLinks
-        vector<SocialPresence> _listPresence{};               ///< kFriendPresence
-        GuildInfo              _guild{};                      ///< kGuildCreate 에서는 id 와 이름이고 kGuildGet 에서는 전체 정보이다
-        AccountID              _otherID{ kInvalidAccountID }; ///< 관계를 바꾼 상대이다. 이름으로 찾았으면 찾은 계정이다
-        SocialResult           _result{ SocialResult::Ok };
+        vector<SocialLink>       _listLink{};                   ///< kListLinks
+        vector<SocialPresence>   _listPresence{};               ///< kFriendPresence
+        vector<GuildStorageItem> _listStorage{};                ///< kGuildStorage 는 창고 전체, kGuildDeposit · kGuildWithdraw 는 옮긴 자산의 창고 잔액 하나
+        GuildInfo                _guild{};                      ///< kGuildCreate 에서는 id 와 이름이고 kGuildGet 에서는 전체 정보이다
+        AccountID                _otherID{ kInvalidAccountID }; ///< 관계를 바꾼 상대이다. 이름으로 찾았으면 찾은 계정이다
+        SocialResult             _result{ SocialResult::Ok };
     };
 } // namespace sw
 
@@ -84,7 +92,7 @@ namespace sw
     /** @brief 형식을 읽고 씁니다. 읽을 때 상한을 넘거나 모자라면 false 를 반환합니다. */
     struct SW_GF_API SocialProtocol
     {
-        static constexpr uint32 kVersion        = 1;
+        static constexpr uint32 kVersion        = 2;                          ///< 2: 길드 창고(맡기기 · 꺼내기 · 목록)
         static constexpr int32  kMaxTextSize    = GuildLimit::kMaxNoticeSize; ///< 이름, 활동 문구, 공지 중 가장 긴 것의 상한이다. 필드마다의 상한은 로직이 검사한다
         static constexpr int32  kMaxPresenceRow = SocialLimit::kMaxFriend;
 

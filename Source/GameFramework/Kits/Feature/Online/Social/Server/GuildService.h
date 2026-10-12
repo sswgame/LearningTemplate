@@ -11,7 +11,11 @@
  *          - 채팅 길드 채널은 이벤트(`GuildEvent`)로 게임 조립 단계가 연결한다(`setEventDelegate`). 이벤트는 가입, 떠남, 로그인한 멤버이며 키트끼리는 서로 모른다.
  *            로그인한 계정의 길드는 조립 단계가 로그인 이벤트에서 `attachAccount` 를 불러 `MemberAttached` 로 받는다.
  *
- *          PlayFab Groups 와 Nakama Groups(역할, 초대, 정원)에 해당한다. 길드 창고, 레벨, 가입 신청은 게임이 구현한다.
+ *          - 길드 창고는 원장의 맡김(`esc/guild/<길드 16진>`)이다. 맡기기는 멤버 누구나, 꺼내기는 임원 이상이 하며 둘 다 클라이언트 멱등 키로 만든 분개 키가 필수이다.
+ *            이동은 멤버 레코드의 버전 조건과 한 트랜잭션에 들어가므로 그사이 내보내지거나 역할이 바뀌면 충돌로 다시 읽는다.
+ *            맡기기는 길드 레코드를 다시 써서 해산과 겹치지 않게 하며, 창고에 남은 것이 있으면 해산(혼자 남은 길드장의 떠나기)은 `StorageNotEmpty` 이다.
+ *
+ *          PlayFab Groups 와 Nakama Groups(역할, 초대, 정원)에 해당한다. 레벨과 가입 신청은 게임이 구현한다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -25,6 +29,7 @@
 
 namespace sw
 {
+    class ILedgerPolicy;
     class IServiceStore;
 
     /** @brief 길드 요청 종류입니다. */
@@ -38,7 +43,10 @@ namespace sw
         SetRole,
         SetNotice,
         Get,
-        Attach ///< 로그인한 계정의 길드를 찾는다. 완료는 없고 이벤트만 발생한다
+        Attach,     ///< 로그인한 계정의 길드를 찾는다. 완료는 없고 이벤트만 발생한다
+        Deposit,    ///< 내 계정에서 길드 창고로 옮긴다
+        Withdraw,   ///< 길드 창고에서 내 계정으로 옮긴다. 임원 이상
+        ListStorage ///< 길드 창고의 잔액 목록이다
     };
 } // namespace sw
 
@@ -68,9 +76,12 @@ namespace sw
     struct GuildRequest
     {
         string         _text{};                         ///< 이름이나 공지이다
+        string         _assetID{};                      ///< Deposit · Withdraw 의 자산이다
+        string         _journalKey{};                   ///< Deposit · Withdraw 의 분개 키이다. `LedgerJournalKey::makeFromIdempotency( makeAccountScope( 계정 ), 멱등 키 )`
         AccountID      _accountID{ kInvalidAccountID }; ///< 요청한 사람이다
         AccountID      _targetID{ kInvalidAccountID };  ///< 초대, 내보내기, 역할 변경의 대상이다
         uint64         _guildID{ 0 };                   ///< 수락할 길드이다
+        int64          _amount{ 0 };                    ///< Deposit · Withdraw 의 양이다
         int64          _nowMs{ 0 };
         GuildRole      _role{ GuildRole::Member };
         GuildOperation _operation{ GuildOperation::Get };
@@ -82,9 +93,10 @@ namespace sw
     /** @brief 요청 하나의 완료입니다. */
     struct GuildCompletion
     {
-        GuildInfo    _info{}; ///< Create 에서는 id 와 이름이고 Get 에서는 멤버까지 담는다
-        uint64       _requestTag{ 0 };
-        SocialResult _result{ SocialResult::Ok };
+        GuildInfo                _info{};        ///< Create 에서는 id 와 이름이고 Get 에서는 멤버까지 담는다
+        vector<GuildStorageItem> _listStorage{}; ///< ListStorage 는 창고 전체, Deposit · Withdraw 는 옮긴 자산의 창고 잔액 하나이다
+        uint64                   _requestTag{ 0 };
+        SocialResult             _result{ SocialResult::Ok };
     };
 } // namespace sw
 
@@ -93,14 +105,15 @@ namespace sw
     /** @brief 작업 하나가 정한 결과입니다. 서비스가 완료, 알림, 이벤트로 나눕니다. */
     struct GuildOutcome
     {
-        GuildInfo         _info{};
-        vector<AccountID> _listNotifyMember{}; ///< GuildChanged 를 받을 멤버이다
-        AccountID         _invitedID{ kInvalidAccountID };
-        AccountID         _joinedID{ kInvalidAccountID };
-        AccountID         _leftID{ kInvalidAccountID };
-        AccountID         _attachedID{ kInvalidAccountID };
-        uint64            _guildID{ 0 };
-        SocialResult      _result{ SocialResult::Ok };
+        GuildInfo                _info{};
+        vector<GuildStorageItem> _listStorage{};
+        vector<AccountID>        _listNotifyMember{}; ///< GuildChanged 를 받을 멤버이다
+        AccountID                _invitedID{ kInvalidAccountID };
+        AccountID                _joinedID{ kInvalidAccountID };
+        AccountID                _leftID{ kInvalidAccountID };
+        AccountID                _attachedID{ kInvalidAccountID };
+        uint64                   _guildID{ 0 };
+        SocialResult             _result{ SocialResult::Ok };
     };
 } // namespace sw
 
@@ -123,6 +136,9 @@ namespace sw
         void attachAccount( AccountID accountID, int64 nowMs );
         /** @brief 이벤트를 받을 델리게이트입니다. 게임 조립 단계가 지정하며 비어 있으면 이벤트를 버립니다. */
         void setEventDelegate( const GuildEventDelegate& onEvent ) { _onEvent = onEvent; }
+        /** @brief 꺼내기가 계정 잔액 상한을 볼 정책입니다(화폐 카탈로그). 빌려 쓰며 nullptr 이면 원장 상한(`kMaxBalance`)만 봅니다. */
+        void                 setLedgerPolicy( const ILedgerPolicy* pPolicy ) { _pLedgerPolicy = pPolicy; }
+        const ILedgerPolicy* getLedgerPolicy() const { return _pLedgerPolicy; }
 
         void  drainCompletions( vector<GuildCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
         void  drainNotifications( vector<SocialNotification>& outListNotification ) { _notificationBuffer.drainTo( outListNotification ); }
@@ -141,6 +157,7 @@ namespace sw
         EventBuffer<SocialNotification> _notificationBuffer;
         GuildEventDelegate              _onEvent;
         IServiceStore*                  _pStore;
+        const ILedgerPolicy*            _pLedgerPolicy;
         int32                           _pendingCount;
     };
 } // namespace sw

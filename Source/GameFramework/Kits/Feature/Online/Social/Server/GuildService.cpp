@@ -5,6 +5,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Network/BitStream.h"
 
+#include "GameFramework/Base/Online/Ledger/Ledger.h"
+#include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 
@@ -20,6 +22,12 @@ namespace sw
             static constexpr uint32      kReplacementChar  = 0xFFFDu;
             static constexpr uint32      kFirstPrintable   = 0x20u;
             static constexpr uint32      kDeleteChar       = 0x7Fu;
+            static constexpr const utf8* kStorageDomain    = "guild";
+            static constexpr const utf8* kDepositReason    = "guild.deposit";
+            static constexpr const utf8* kWithdrawReason   = "guild.withdraw";
+
+            /** @brief 길드 창고 보유자(`esc/guild/<길드 16진>`)입니다. */
+            static LedgerHolder makeStorageHolder( uint64 guildID ) { return LedgerHolder::makeEscrow( kStorageDomain, ServiceKeyUtil::makeHex64( guildID ) ); }
 
             static const hashed_string& getGuildTable()
             {
@@ -172,6 +180,7 @@ namespace sw
                 : _request{ request }
                 , _outcome{}
                 , _pService{ pService }
+                , _pLedgerPolicy{ pService->getLedgerPolicy() }
                 , _requestTag{ requestTag }
             {
             }
@@ -377,6 +386,14 @@ namespace sw
                     {
                         if ( selfMember._role == GuildRole::Master && info._memberCount > 1 )
                             return fail( SocialResult::NotAllowed ); // 길드장을 넘기고 떠난다
+                        if ( selfMember._role == GuildRole::Master )
+                        {
+                            vector<LedgerBalance> listBalance;
+                            if ( Ledger::listBalances( connection, Internal::makeStorageHolder( guildID ), listBalance ) != ServiceStoreResult::Ok )
+                                return ServiceStoreResult::Unavailable;
+                            if ( listBalance.empty() == false )
+                                return fail( SocialResult::StorageNotEmpty ); // 창고를 비운 뒤에 해산한다. 맡기기는 길드 레코드 판을 올리므로 이 확인 뒤에 끼면 커밋이 충돌한다
+                        }
                         transaction.erase( Internal::getMemberTable(), Internal::makePairKey( guildID, _request._accountID ), selfMemberRecord._version );
                         transaction.erase( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( _request._accountID ), selfGuildRecord._version );
                         if ( selfMember._role == GuildRole::Master ) // 혼자 남은 길드장이면 길드를 해산한다
@@ -406,6 +423,25 @@ namespace sw
                         info._notice = _request._text;
                         transaction.put( Internal::getGuildTable(), guildKey, Internal::encodeGuild( info ), guildRecord._version );
                         return connection.commit( transaction );
+                    }
+                    case GuildOperation::Deposit:
+                    case GuildOperation::Withdraw:
+                    {
+                        return runStorageTransfer( connection, guildID, info, guildRecord, selfMember, selfMemberRecord );
+                    }
+                    case GuildOperation::ListStorage:
+                    {
+                        vector<LedgerBalance> listBalance;
+                        if ( Ledger::listBalances( connection, Internal::makeStorageHolder( guildID ), listBalance ) != ServiceStoreResult::Ok )
+                            return ServiceStoreResult::Unavailable;
+                        const size_t count = listBalance.size() < static_cast<size_t>( GuildLimit::kMaxStorageItem ) ? listBalance.size()
+                                                                                                                     : static_cast<size_t>( GuildLimit::kMaxStorageItem );
+                        _outcome._listStorage.reserve( count );
+                        for ( size_t index = 0; index < count; ++index )
+                        {
+                            _outcome._listStorage.push_back( GuildStorageItem{ listBalance[index]._assetID, listBalance[index]._amount } );
+                        }
+                        return ServiceStoreResult::Ok;
                     }
                     default:
                     {
@@ -458,10 +494,82 @@ namespace sw
                 return connection.commit( transaction );
             }
 
-            /** @brief 성공한 뒤 멤버 목록을 읽습니다. 조회이면 정보로, 변경이면 알림 대상으로 씁니다. */
+            /** @brief 원장 결과를 규칙 실패나 저장소 결과로 바꿉니다. 충돌은 다시 읽어 다시 하도록 Conflict 를 반환합니다. */
+            ServiceStoreResult failLedger( LedgerResult result )
+            {
+                switch ( result )
+                {
+                    case LedgerResult::InsufficientFunds:
+                        return fail( SocialResult::InsufficientFunds );
+                    case LedgerResult::CapExceeded:
+                        return fail( SocialResult::CapExceeded );
+                    case LedgerResult::Conflict:
+                        return ServiceStoreResult::Conflict;
+                    case LedgerResult::Unavailable:
+                        return ServiceStoreResult::Unavailable;
+                    default:
+                        return fail( SocialResult::Invalid ); // 규칙 밖의 자산이나 양, 다른 내용에 다시 쓴 멱등 키이다
+                }
+            }
+
+            /** @brief 맡기기와 꺼내기입니다. 원장 이동을 멤버 레코드 버전 조건과 한 트랜잭션에 붙여 커밋합니다. */
+            ServiceStoreResult runStorageTransfer( IServiceStoreConnection& connection, uint64 guildID, const GuildInfo& info, const ServiceRecord& guildRecord,
+                                                   const GuildMember& selfMember, const ServiceRecord& selfMemberRecord )
+            {
+                using Internal      = GuildServiceInternal;
+                const bool bDeposit = _request._operation == GuildOperation::Deposit;
+                if ( bDeposit == false && selfMember._role < GuildRole::Officer )
+                    return fail( SocialResult::NotAllowed );
+                const bool bValid = LedgerUtil::isValidAssetID( _request._assetID ) && _request._amount > 0 && _request._amount <= LedgerConstant::kMaxAmount &&
+                                    LedgerUtil::isValidJournalKey( _request._journalKey );
+                if ( bValid == false )
+                    return fail( SocialResult::Invalid );
+                const LedgerHolder storage = Internal::makeStorageHolder( guildID );
+                const LedgerHolder account = LedgerHolder::makeAccount( _request._accountID );
+
+                LedgerTransferRequest transfer;
+                transfer._listPosting.push_back( LedgerPosting{ bDeposit ? account : storage, bDeposit ? storage : account, _request._assetID, _request._amount } );
+                transfer._journalKey = _request._journalKey;
+                transfer._reason     = bDeposit ? Internal::kDepositReason : Internal::kWithdrawReason;
+                transfer._pPolicy    = _pLedgerPolicy;
+                transfer._timeMs     = _request._nowMs;
+                transfer._actorID    = _request._accountID;
+                transfer._actorKind  = LedgerActorKind::Player;
+
+                ServiceTransaction transaction;
+                transaction.requireVersion( Internal::getMemberTable(), Internal::makePairKey( guildID, _request._accountID ), selfMemberRecord._version );
+                if ( bDeposit ) // 길드 레코드 판을 올려 해산의 "창고가 비었다" 확인과 겹치지 않게 한다
+                    transaction.put( Internal::getGuildTable(), ServiceKeyUtil::makeHex64( guildID ), Internal::encodeGuild( info ), guildRecord._version );
+                LedgerTransferOutcome transferOutcome;
+                const LedgerResult    staged = Ledger::stageTransfer( connection, transfer, transaction, transferOutcome );
+                if ( staged != LedgerResult::Ok )
+                    return failLedger( staged );
+                if ( transferOutcome._bReplayed == SW_FALSE && connection.commit( transaction ) != ServiceStoreResult::Ok )
+                {
+                    const LedgerResult resolved = Ledger::resolveConflict( connection, transfer, transferOutcome );
+                    if ( resolved != LedgerResult::Ok )
+                        return resolved == LedgerResult::Conflict ? ServiceStoreResult::Conflict : ServiceStoreResult::Unavailable;
+                }
+                for ( const LedgerTransferOutcome::HolderBalance& holderBalance : transferOutcome._listHolderBalance )
+                {
+                    if ( holderBalance._holder == storage )
+                    {
+                        _outcome._listStorage.push_back( GuildStorageItem{ holderBalance._balance._assetID, holderBalance._balance._amount } );
+                        return ServiceStoreResult::Ok;
+                    }
+                }
+                LedgerBalance balance; // 다시 온 요청이면 이동 뒤 잔액이 없을 수 있어 지금 잔액을 읽는다
+                if ( Ledger::readBalance( connection, storage, _request._assetID, balance ) == ServiceStoreResult::Ok )
+                    _outcome._listStorage.push_back( GuildStorageItem{ _request._assetID, balance._amount } );
+                return ServiceStoreResult::Ok;
+            }
+
+            /** @brief 성공한 뒤 멤버 목록을 읽습니다. 조회이면 정보로, 변경이면 알림 대상으로 씁니다. 창고 요청은 멤버 정보가 바뀌지 않으므로 읽지 않습니다. */
             void collectMembers( IServiceStoreConnection& connection )
             {
-                const bool bSkip = _outcome._guildID == 0 || _request._operation == GuildOperation::Attach || _request._operation == GuildOperation::Invite;
+                const bool bStorage = _request._operation == GuildOperation::Deposit || _request._operation == GuildOperation::Withdraw ||
+                                      _request._operation == GuildOperation::ListStorage;
+                const bool bSkip = _outcome._guildID == 0 || _request._operation == GuildOperation::Attach || _request._operation == GuildOperation::Invite || bStorage;
                 if ( bSkip )
                     return;
                 vector<ServiceRecord> listRecord;
@@ -481,10 +589,11 @@ namespace sw
                 }
             }
 
-            GuildRequest  _request;
-            GuildOutcome  _outcome;
-            GuildService* _pService;
-            uint64        _requestTag;
+            GuildRequest         _request;
+            GuildOutcome         _outcome;
+            GuildService*        _pService;
+            const ILedgerPolicy* _pLedgerPolicy; ///< 서비스 스레드에서 복사해 둔다. 저장소 스레드는 서비스를 읽지 않는다
+            uint64               _requestTag;
         };
     } // namespace
 } // namespace sw
@@ -496,6 +605,7 @@ namespace sw
         , _notificationBuffer{}
         , _onEvent{}
         , _pStore{ nullptr }
+        , _pLedgerPolicy{ nullptr }
         , _pendingCount{ 0 }
     {
     }
@@ -508,8 +618,9 @@ namespace sw
 
     void GuildService::shutdown()
     {
-        _pStore  = nullptr;
-        _onEvent = GuildEventDelegate{};
+        _pStore        = nullptr;
+        _pLedgerPolicy = nullptr;
+        _onEvent       = GuildEventDelegate{};
     }
 
     bool GuildService::isValidName( string_view name )
@@ -550,9 +661,10 @@ namespace sw
         if ( request._operation != GuildOperation::Attach )
         {
             GuildCompletion completion;
-            completion._requestTag = requestTag;
-            completion._result     = outcome._result;
-            completion._info       = outcome._info;
+            completion._requestTag  = requestTag;
+            completion._result      = outcome._result;
+            completion._info        = outcome._info;
+            completion._listStorage = std::move( outcome._listStorage );
             _completionBuffer.push( std::move( completion ) );
         }
         if ( outcome._result != SocialResult::Ok )

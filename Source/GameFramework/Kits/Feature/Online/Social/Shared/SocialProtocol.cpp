@@ -4,6 +4,7 @@
 
 #include "Core/Network/BitStream.h"
 
+#include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Base/Online/Service/OnlineReplyUtil.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 
@@ -17,6 +18,8 @@ namespace sw
         outWriter.writeVarUint( static_cast<uint64>( request._status ) );
         outWriter.writeVarUint( static_cast<uint64>( request._role ) );
         outWriter.writeBool( request._bAccept == SW_TRUE );
+        ServiceKeyUtil::writeString( outWriter, request._assetID );
+        outWriter.writeVarInt( request._amount );
     }
 
     bool SocialProtocol::readRequest( BitReader& reader, SocialRequest& outRequest )
@@ -32,6 +35,9 @@ namespace sw
         outRequest._status  = static_cast<SocialPresenceStatus>( status );
         outRequest._role    = static_cast<GuildRole>( role );
         outRequest._bAccept = reader.readBool() ? SW_TRUE : SW_FALSE;
+        if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIDSize, outRequest._assetID ) == false )
+            return false;
+        outRequest._amount = reader.readVarInt();
         return reader.hasOverflowed() == false;
     }
 
@@ -52,6 +58,12 @@ namespace sw
             writePresence( outWriter, presence );
         }
         writeGuild( outWriter, reply._guild );
+        outWriter.writeVarUint( reply._listStorage.size() );
+        for ( const GuildStorageItem& item : reply._listStorage )
+        {
+            ServiceKeyUtil::writeString( outWriter, item._assetID );
+            outWriter.writeVarInt( item._amount );
+        }
     }
 
     bool SocialProtocol::readReply( BitReader& reader, SocialReply& outReply )
@@ -81,7 +93,19 @@ namespace sw
             if ( readPresence( reader, presence ) == false )
                 return false;
         }
-        return readGuild( reader, outReply._guild );
+        if ( readGuild( reader, outReply._guild ) == false )
+            return false;
+        const uint64 storageCount = reader.readVarUint();
+        if ( storageCount > static_cast<uint64>( GuildLimit::kMaxStorageItem ) )
+            return false;
+        outReply._listStorage.resize( static_cast<size_t>( storageCount ) );
+        for ( GuildStorageItem& item : outReply._listStorage )
+        {
+            if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIDSize, item._assetID ) == false )
+                return false;
+            item._amount = reader.readVarInt();
+        }
+        return reader.hasOverflowed() == false;
     }
 
     void SocialProtocol::writePresence( BitWriter& outWriter, const SocialPresence& presence )
