@@ -191,7 +191,7 @@ namespace sw
             SW_LOG_INFO( "Tracy profiler: %# CPU zones, %# GPU zones emitted (viewer %#)", ProfilerBackendInternal::s_tracy.getZoneCount(),
                          ProfilerBackendInternal::s_tracy.getGPUZoneCount(), ProfilerBackendInternal::s_tracy.isViewerConnected() ? "connected" : "not connected" );
         }
-        Memory::setAllocationObserver( nullptr );
+        Memory::unregisterAllocationObserver();
 #if SW_PROFILER_BACKEND_COMPILED
         TaskManager::setProfileHook( nullptr );
 #endif
@@ -219,7 +219,7 @@ namespace sw
         // 태스크 · 스테이지 이름이 구간이 된다(Core 는 프로파일러를 모르므로 여기서 꽂는다).
         TaskManager::setProfileHook( &ProfilerBackendInternal::kTaskProfileHook );
         if ( gv_tracyMemory )
-            Memory::setAllocationObserver( &ProfilerBackendInternal::kObserver );
+            Memory::registerAllocationObserver( &ProfilerBackendInternal::kObserver );
 
         // 카운터 그래프 · GPU 타임스탬프는 엔진 프로파일러 경로를 탄다. 켜 두지 않으면 Tracy 에 GPU 줄이 없다.
         if ( engine::areEngineServicesBound() )

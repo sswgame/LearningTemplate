@@ -12,7 +12,7 @@ namespace sw
 {
     /**
      * @struct MemoryAllocationObserver
-     * @brief 할당 · 해제 알림을 받는 함수 한 쌍입니다(`Memory::setAllocationObserver`). 할당한 스레드에서 바로 불립니다.
+     * @brief 할당 · 해제 알림을 받는 함수 한 쌍입니다(`Memory::registerAllocationObserver`). 할당한 스레드에서 바로 불립니다.
      * @details 함수 포인터로 둡니다 — Core 는 받는 쪽(Engine 의 프로파일러 출력)을 모릅니다. 받는 쪽은 할당하지 않아야 합니다(되부름).
      */
     struct MemoryAllocationObserver
@@ -104,11 +104,13 @@ namespace sw
         static size_t getAllocationHeaderSize();
 
         /**
-         * @brief 할당 · 해제를 밖(외부 프로파일러)에 알리는 관찰자를 겁니다. nullptr 이면 뗍니다. 배포본에서는 아무것도 하지 않습니다(헤더가 없다).
-         * @details 관찰자가 걸린 동안 할당된 블록에만 표시를 남기고, **그 블록의 해제만** 알립니다 — 관찰자를 걸기 전에 잡은 블록의 해제를
-         *          알리면 받는 쪽(Tracy)은 짝 없는 해제로 기록을 멈춥니다. @p pObserver 는 뗄 때까지 살아 있어야 합니다.
+         * @brief 할당 · 해제를 밖(외부 프로파일러)에 알리는 관찰자를 등록합니다. 배포본에서는 아무것도 하지 않습니다(헤더가 없다).
+         * @details 관찰자가 등록된 동안 할당된 블록에만 표시를 남기고, **그 블록의 해제만** 알립니다 — 관찰자를 등록하기 전에 잡은 블록의 해제를
+         *          알리면 받는 쪽(Tracy)은 짝 없는 해제로 기록을 멈춥니다. @p pObserver 는 `unregisterAllocationObserver` 까지 살아 있어야 합니다.
          */
-        static void setAllocationObserver( const MemoryAllocationObserver* pObserver );
+        static void registerAllocationObserver( const MemoryAllocationObserver* pObserver );
+        /** @brief 등록된 할당 관찰자를 해제합니다. 배포본에서는 아무것도 하지 않습니다. */
+        static void unregisterAllocationObserver();
 
         /**
          * @brief 할당 기록기를 겁니다. 이미 다른 기록기가 걸려 있으면 아무것도 하지 않습니다.

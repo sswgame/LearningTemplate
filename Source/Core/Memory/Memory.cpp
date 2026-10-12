@@ -19,7 +19,7 @@ namespace sw
     {
         size_t    _size;      ///< 요청한 사용자 데이터 크기(바이트)
         MemoryTag _tag;       ///< 할당 시점 스레드의 용도 태그(`MemoryTag`). 해제는 이 값으로 뺀다
-        uint8     _bObserved; ///< 할당 관찰자(`setAllocationObserver`)에 알린 블록이면 SW_TRUE — 해제도 그때만 알린다
+        uint8     _bObserved; ///< 할당 관찰자(`registerAllocationObserver`)에 알린 블록이면 SW_TRUE — 해제도 그때만 알린다
         uint8     _arrPad[6]; ///< 16바이트 경계 정렬용 패딩
         uint64    _hash;      ///< 할당 시점 콜 스택의 해시
         uint64    _magic;     ///< 유효성 검증용 매직 넘버
@@ -269,10 +269,17 @@ namespace sw
 #endif
     }
 
-    void Memory::setAllocationObserver( [[maybe_unused]] const MemoryAllocationObserver* pObserver )
+    void Memory::registerAllocationObserver( [[maybe_unused]] const MemoryAllocationObserver* pObserver )
     {
 #if !defined( SW_SHIPPING )
         s_pAllocationObserver.store( pObserver, std::memory_order_release );
+#endif
+    }
+
+    void Memory::unregisterAllocationObserver()
+    {
+#if !defined( SW_SHIPPING )
+        s_pAllocationObserver.store( nullptr, std::memory_order_release );
 #endif
     }
 
