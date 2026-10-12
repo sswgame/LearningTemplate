@@ -49,9 +49,9 @@ namespace sw
             return false;
 
         if ( bNeedsSrv )
-            _srv = pDevice->getResourceFactory()->registerBindlessResource( _buffer );
+            _srv = pDevice->getResourceFactory()->registerBindlessBufferSrv( _buffer );
         if ( bNeedsUav )
-            _uav = pDevice->getResourceFactory()->registerBindlessUav( _buffer );
+            _uav = pDevice->getResourceFactory()->registerBindlessBufferUav( _buffer );
         _capacityElements = elementCount;
         _elementSize      = elementSize;
         return true;

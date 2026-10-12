@@ -41,9 +41,9 @@ namespace sw
         return allocateFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree, texture );
     }
 
-    RHIDescriptorIndex D3D11RHIResourceFactory::registerBindlessResource( RHIBufferHandle buffer )
+    RHIDescriptorIndex D3D11RHIResourceFactory::registerBindlessBufferSrv( RHIBufferHandle buffer )
     {
-        _pDevice->assertRegistryMutableNow( "registerBindlessResource" );
+        _pDevice->assertRegistryMutableNow( "registerBindlessBufferSrv" );
         if ( buffer == 0 )
             return kInvalidDescriptorIndex;
 
@@ -71,9 +71,9 @@ namespace sw
                               "texture" );
     }
 
-    RHIDescriptorIndex D3D11RHIResourceFactory::registerBindlessUav( RHIBufferHandle buffer )
+    RHIDescriptorIndex D3D11RHIResourceFactory::registerBindlessBufferUav( RHIBufferHandle buffer )
     {
-        _pDevice->assertRegistryMutableNow( "registerBindlessUav" );
+        _pDevice->assertRegistryMutableNow( "registerBindlessBufferUav" );
         if ( buffer == 0 )
             return kInvalidDescriptorIndex;
         ID3D11Buffer* pResource = _pDevice->resolveBuffer( buffer );

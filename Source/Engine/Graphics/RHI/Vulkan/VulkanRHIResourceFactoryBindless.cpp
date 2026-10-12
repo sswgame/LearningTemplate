@@ -74,9 +74,9 @@ namespace sw
         return descriptorIndex;
     }
 
-    RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessResource( RHIBufferHandle buffer )
+    RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessBufferSrv( RHIBufferHandle buffer )
     {
-        _pDevice->assertRegistryMutableNow( "registerBindlessResource" );
+        _pDevice->assertRegistryMutableNow( "registerBindlessBufferSrv" );
         if ( _pDevice->resolveAllocatedBuffer( buffer ) == nullptr )
             return kInvalidDescriptorIndex;
 
@@ -91,7 +91,7 @@ namespace sw
         _pDevice->assertRegistryMutableNow( "unregisterBindlessResource" );
         std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         // 버퍼가 소유하지 않는 인덱스(텍스처 SRV 인덱스가 잘못 넘어왔거나 이중 해제)를 프리리스트에
-        // 넣으면 다음 registerBindlessResource 가 살아 있는 다른 버퍼의 슬롯을 덮어쓴다. 실제로
+        // 넣으면 다음 registerBindlessBufferSrv 가 살아 있는 다른 버퍼의 슬롯을 덮어쓴다. 실제로
         // 트랜지언트 텍스처 인덱스 0 · 1 · 2 가 여기로 와서 패스 CB 슬롯 2 에 인스턴스 버퍼가 들어갔다.
         if ( index >= _pDevice->_listBindlessSourceBuffer.size() || _pDevice->_listBindlessSourceBuffer[index] == 0 )
         {
@@ -158,9 +158,9 @@ namespace sw
         record._bindlessIndex = kInvalidDescriptorIndex;
     }
 
-    RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessUav( RHIBufferHandle buffer )
+    RHIDescriptorIndex VulkanRHIResourceFactory::registerBindlessBufferUav( RHIBufferHandle buffer )
     {
-        _pDevice->assertRegistryMutableNow( "registerBindlessUav" );
+        _pDevice->assertRegistryMutableNow( "registerBindlessBufferUav" );
         if ( _pDevice->resolveAllocatedBuffer( buffer ) == nullptr )
             return kInvalidDescriptorIndex;
         std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };

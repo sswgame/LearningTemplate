@@ -29,7 +29,7 @@ namespace sw
     /** @brief `IRHIDevice::releaseHandle` 이 해제하는 핸들의 종류입니다. 종류마다 해제에 쓰는 팩터리 함수가 다릅니다. */
     enum class RHIHandleKind : uint8
     {
-        BindlessResource = 0, ///< `registerBindlessResource` 가 돌려준 인덱스이며 `unregisterBindlessResource` 로 해제한다.
+        BindlessResource = 0, ///< `registerBindlessBufferSrv` 가 돌려준 인덱스이며 `unregisterBindlessResource` 로 해제한다.
         BindlessTexture,      ///< `registerBindlessTexture` 가 돌려준 인덱스이며 `unregisterBindlessTexture` 로 해제한다.
         Buffer,               ///< `createBuffer` 가 돌려준 핸들이며 `destroyBuffer` 로 해제한다.
         Texture               ///< `createTexture` 가 돌려준 핸들이며 `destroyTexture` 로 해제한다.

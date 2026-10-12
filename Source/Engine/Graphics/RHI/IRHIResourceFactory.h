@@ -186,17 +186,17 @@ namespace sw
         virtual void unregisterBindlessTexture( RHIDescriptorIndex index ) = 0;
 
         /** @brief Bindless 테이블에 버퍼를 등록하고 인덱스를 발급합니다. */
-        virtual RHIDescriptorIndex registerBindlessResource( RHIBufferHandle buffer ) = 0;
+        virtual RHIDescriptorIndex registerBindlessBufferSrv( RHIBufferHandle buffer ) = 0;
 
         /**
-         * @brief registerBindlessResource 가 발급한 **버퍼** 인덱스를 해제합니다.
+         * @brief registerBindlessBufferSrv 가 발급한 **버퍼** 인덱스를 해제합니다.
          * @details 이미 비어 있는 슬롯(다른 종류의 인덱스, 이중 해제)은 프리리스트에 다시 넣지 않는다.
          *          한 번이라도 넣으면 같은 인덱스가 두 리소스에 발급되어 조용히 엉뚱한 버퍼가 바인딩된다.
          */
         virtual void unregisterBindlessResource( RHIDescriptorIndex index ) = 0;
 
         /** @brief bindless UAV 를 등록하고 인덱스를 발급합니다. */
-        virtual RHIDescriptorIndex registerBindlessUav( RHIBufferHandle buffer ) = 0;
+        virtual RHIDescriptorIndex registerBindlessBufferUav( RHIBufferHandle buffer ) = 0;
 
         /**
          * @brief 텍스처(생성 시 _bIsUnorderedAccess)를 컴퓨트 RW 텍스처로 등록하고 인덱스를 발급합니다.

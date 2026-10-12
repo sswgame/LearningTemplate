@@ -37,9 +37,9 @@ namespace sw
         RHIFormat              getTextureFormat( RHITextureHandle texture ) const override;
         RHIDescriptorIndex     registerBindlessTexture( RHITextureHandle texture ) override;
         void                   unregisterBindlessTexture( RHIDescriptorIndex index ) override;
-        RHIDescriptorIndex     registerBindlessResource( RHIBufferHandle buffer ) override;
+        RHIDescriptorIndex     registerBindlessBufferSrv( RHIBufferHandle buffer ) override;
         void                   unregisterBindlessResource( RHIDescriptorIndex index ) override;
-        RHIDescriptorIndex     registerBindlessUav( RHIBufferHandle buffer ) override;
+        RHIDescriptorIndex     registerBindlessBufferUav( RHIBufferHandle buffer ) override;
         RHIDescriptorIndex     registerBindlessTextureUav( RHITextureHandle texture ) override;
         void                   unregisterBindlessUav( RHIDescriptorIndex index ) override;
 
@@ -53,7 +53,7 @@ namespace sw
          * @details 잠그지 않고 이미 쥔 것을 받는 이유: 인덱스를 집는 것과 **그 자리에 뷰를 만드는 것**이
          *          한 임계 구역이어야 합니다. 여기서 잠갔다 풀면 그 틈에 다른 스레드가 같은 인덱스를 받습니다.
          *          인자로 받으면 그 전제가 컴파일러에게도 부르는 쪽에게도 보입니다.
-         * @note 네 등록 함수(`registerBindlessTexture` · `registerBindlessResource` · `registerBindlessUav` ·
+         * @note 네 등록 함수(`registerBindlessTexture` · `registerBindlessBufferSrv` · `registerBindlessBufferUav` ·
          *       `registerBindlessTextureUav`)가 이것을 같이 씁니다. 용량 검사와 프리리스트 정책이 여러 벌이면 한 곳만
          *       고치고 넘어가기 쉽고, 그 결과는 **디스크립터가 어긋나 화면이 조용히 깨지는 것**입니다.
          */

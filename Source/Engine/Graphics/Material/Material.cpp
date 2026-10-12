@@ -123,7 +123,7 @@ namespace sw
         }
 
         pRHI->getResourceFactory()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), bufferSize );
-        _descriptorIndex = pRHI->getResourceFactory()->registerBindlessResource( _constantBuffer );
+        _descriptorIndex = pRHI->getResourceFactory()->registerBindlessBufferSrv( _constantBuffer );
 
         // 텍스처는 CB 가 생긴 뒤에 푼다. setTextureParameter 가 인덱스를 CB 에 바로 올리기 때문이다.
         resolveTextureAssets( pRHI );

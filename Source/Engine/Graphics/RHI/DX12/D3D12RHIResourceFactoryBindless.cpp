@@ -100,9 +100,9 @@ namespace sw
         return index;
     }
 
-    RHIDescriptorIndex D3D12RHIResourceFactory::registerBindlessResource( RHIBufferHandle buffer )
+    RHIDescriptorIndex D3D12RHIResourceFactory::registerBindlessBufferSrv( RHIBufferHandle buffer )
     {
-        _pDevice->assertRegistryMutableNow( "registerBindlessResource" );
+        _pDevice->assertRegistryMutableNow( "registerBindlessBufferSrv" );
         if ( buffer == 0 || _pDevice->_cbvHeap == nullptr )
             return kInvalidDescriptorIndex;
 
@@ -242,9 +242,9 @@ namespace sw
                                                    _pDevice->_fenceValue );
     }
 
-    RHIDescriptorIndex D3D12RHIResourceFactory::registerBindlessUav( RHIBufferHandle buffer )
+    RHIDescriptorIndex D3D12RHIResourceFactory::registerBindlessBufferUav( RHIBufferHandle buffer )
     {
-        _pDevice->assertRegistryMutableNow( "registerBindlessUav" );
+        _pDevice->assertRegistryMutableNow( "registerBindlessBufferUav" );
         if ( buffer == 0 || _pDevice->_cbvHeap == nullptr )
             return kInvalidDescriptorIndex;
 

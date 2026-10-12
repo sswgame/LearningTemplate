@@ -43,7 +43,7 @@ namespace sw
                                       OpenGLRHIDevice::BindlessTextureRecord{ texture } );
     }
 
-    RHIDescriptorIndex OpenGLRHIResourceFactory::registerBindlessResource( RHIBufferHandle buffer )
+    RHIDescriptorIndex OpenGLRHIResourceFactory::registerBindlessBufferSrv( RHIBufferHandle buffer )
     {
         if ( buffer == 0 )
             return kInvalidDescriptorIndex;
@@ -68,7 +68,7 @@ namespace sw
                               OpenGLRHIDevice::BindlessTextureRecord{}, "texture" );
     }
 
-    RHIDescriptorIndex OpenGLRHIResourceFactory::registerBindlessUav( RHIBufferHandle buffer )
+    RHIDescriptorIndex OpenGLRHIResourceFactory::registerBindlessBufferUav( RHIBufferHandle buffer )
     {
         if ( buffer == 0 )
             return kInvalidDescriptorIndex;

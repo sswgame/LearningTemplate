@@ -73,7 +73,7 @@ namespace sw
             _pDevice->_mapStructuredBufferState[handle] = D3D12_RESOURCE_STATE_COMMON;
         }
         {
-            // 등록(registerBindlessResource · registerBindlessUav)이 같은 배타 락 안에서 읽는다. 다른 스레드의 생성과 겹쳐 재해시되지 않게 한다.
+            // 등록(registerBindlessBufferSrv · registerBindlessBufferUav)이 같은 배타 락 안에서 읽는다. 다른 스레드의 생성과 겹쳐 재해시되지 않게 한다.
             std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
             _pDevice->_mapStructuredStride[handle] = elementSize > 0 ? elementSize : 4u;
         }

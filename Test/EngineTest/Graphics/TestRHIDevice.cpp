@@ -199,7 +199,7 @@ namespace
             if ( _cb == 0 )
                 return false;
             _pResource->updateConstantBuffer( _cb, arrColor, sizeof( arrColor ) );
-            _cbIndex = _pResource->registerBindlessResource( _cb );
+            _cbIndex = _pResource->registerBindlessBufferSrv( _cb );
             return _cbIndex != sw::kInvalidDescriptorIndex;
         }
 
@@ -437,7 +437,7 @@ SW_TEST_CASE( RHIDeviceTest, BindlessResourceLifecycle )
 
     rhiDevice->getResourceFactory()->updateConstantBuffer( buffer, &cbData, sizeof( DummyCB ) );
 
-    sw::RHIDescriptorIndex descIdx = rhiDevice->getResourceFactory()->registerBindlessResource( buffer );
+    sw::RHIDescriptorIndex descIdx = rhiDevice->getResourceFactory()->registerBindlessBufferSrv( buffer );
     SW_EXPECT_TRUE( descIdx != sw::kInvalidDescriptorIndex );
 
     // Present(beginFrame/endFrame)는 DX12에서 soft-CL 드로우와 섞이면 Device Removed가 나기 쉬움.
@@ -461,7 +461,7 @@ SW_TEST_CASE( RHIDeviceTest, BindlessResourceLifecycle )
 /**
  * @brief [RHIDeviceTest] 텍스처 SRV 인덱스와 버퍼 인덱스는 다른 공간 — 텍스처 해제가 버퍼 프리리스트를 오염시키면 안 된다
  * @details 섞이면: 트랜지언트 텍스처 SRV 0·1·2 가 unregisterBindlessResource 로 넘어가 살아 있는
- *          패스 CB 슬롯을 비운 것으로 만들고, 다음 registerBindlessResource(인스턴스 구조버퍼)가
+ *          패스 CB 슬롯을 비운 것으로 만들고, 다음 registerBindlessBufferSrv(인스턴스 구조버퍼)가
  *          슬롯 2 를 차지해 Vulkan set 0 에 STORAGE 세트가 걸린다. DX11/OpenGL 도 같은 구조(텍스처 표
  *          / 버퍼 표 분리)라 조용히 엉뚱한 CB 가 바인딩된다. DX12 는 힙이 하나라 무해하다.
  */
@@ -480,7 +480,7 @@ SW_TEST_CASE( RHIDeviceTest, BindlessTextureReleaseKeepsBufferIndices )
         {
             arrBuffer[slot] = pResource->createConstantBuffer( 64 );
             SW_ASSERT_TRUE( arrBuffer[slot] != 0 );
-            arrIndex[slot] = pResource->registerBindlessResource( arrBuffer[slot] );
+            arrIndex[slot] = pResource->registerBindlessBufferSrv( arrBuffer[slot] );
             SW_ASSERT_TRUE( arrIndex[slot] != sw::kInvalidDescriptorIndex );
         }
 
@@ -499,7 +499,7 @@ SW_TEST_CASE( RHIDeviceTest, BindlessTextureReleaseKeepsBufferIndices )
 
         const sw::RHIBufferHandle newBuffer = pResource->createConstantBuffer( 64 );
         SW_ASSERT_TRUE( newBuffer != 0 );
-        const sw::RHIDescriptorIndex newIndex = pResource->registerBindlessResource( newBuffer );
+        const sw::RHIDescriptorIndex newIndex = pResource->registerBindlessBufferSrv( newBuffer );
         SW_EXPECT_TRUE( newIndex != sw::kInvalidDescriptorIndex );
         for ( uint32 slot = 0; slot < 3; ++slot )
         {
@@ -543,16 +543,16 @@ SW_TEST_CASE( RHIDeviceTest, Dx12FailedCbvRegistrationReturnsItsIndex )
     const sw::RHIBufferHandle    thirdBuffer  = pResource->createConstantBuffer( 64 );
     const float32                arrVertex[16]{};
     const sw::RHIBufferHandle    narrowBuffer = pResource->createVertexBuffer( arrVertex, sizeof( arrVertex ) );
-    const sw::RHIDescriptorIndex firstIndex   = pResource->registerBindlessResource( firstBuffer );
-    const sw::RHIDescriptorIndex secondIndex  = pResource->registerBindlessResource( secondBuffer );
+    const sw::RHIDescriptorIndex firstIndex   = pResource->registerBindlessBufferSrv( firstBuffer );
+    const sw::RHIDescriptorIndex secondIndex  = pResource->registerBindlessBufferSrv( secondBuffer );
     SW_ASSERT_TRUE( firstIndex != sw::kInvalidDescriptorIndex && secondIndex != sw::kInvalidDescriptorIndex );
     SW_ASSERT_TRUE( narrowBuffer != 0 );
 
     if ( secondIndex == firstIndex + 1 )
     {
         // 64 바이트 정점 버퍼는 링도 구조버퍼도 아니라 CBV 크기가 0 이다 — 거부돼야 하고, 집은 인덱스는 돌아와야 한다.
-        SW_EXPECT_EQUAL( sw::kInvalidDescriptorIndex, pResource->registerBindlessResource( narrowBuffer ) );
-        const sw::RHIDescriptorIndex thirdIndex = pResource->registerBindlessResource( thirdBuffer );
+        SW_EXPECT_EQUAL( sw::kInvalidDescriptorIndex, pResource->registerBindlessBufferSrv( narrowBuffer ) );
+        const sw::RHIDescriptorIndex thirdIndex = pResource->registerBindlessBufferSrv( thirdBuffer );
         SW_EXPECT_EQUAL( secondIndex + 1, thirdIndex );
         pResource->unregisterBindlessResource( thirdIndex );
     }
@@ -587,7 +587,7 @@ SW_TEST_CASE( RHIDeviceTest, Dx12BindlessIndexZeroIsNeverHandedOut )
     {
         arrBuffer[slot] = pResource->createConstantBuffer( 256 );
         SW_ASSERT_TRUE( arrBuffer[slot] != 0 );
-        arrIndex[slot] = pResource->registerBindlessResource( arrBuffer[slot] );
+        arrIndex[slot] = pResource->registerBindlessBufferSrv( arrBuffer[slot] );
         SW_ASSERT_TRUE( arrIndex[slot] != sw::kInvalidDescriptorIndex );
         SW_EXPECT_TRUE_MSG( arrIndex[slot] != 0u, "a constant buffer took bindless index 0 - a zero texture index would read it as Texture2D" );
     }
@@ -791,7 +791,7 @@ SW_TEST_CASE( RHIDeviceTest, OffscreenDrawIsReadable )
         const sw::RHIBufferHandle cb = pResource->createConstantBuffer( sizeof( MaterialCb ) );
         SW_ASSERT_TRUE( cb != 0 );
         pResource->updateConstantBuffer( cb, &cbData, sizeof( cbData ) );
-        const sw::RHIDescriptorIndex cbIndex = pResource->registerBindlessResource( cb );
+        const sw::RHIDescriptorIndex cbIndex = pResource->registerBindlessBufferSrv( cb );
         SW_ASSERT_TRUE( cbIndex != sw::kInvalidDescriptorIndex );
 
         const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPSODesc( "engine/shaders/fullscreentriangle.hlsl" ) );
@@ -847,7 +847,7 @@ SW_TEST_CASE( RHIDeviceTest, CommandListConstantBufferUpdateReachesItsDraws )
         const sw::RHIBufferHandle cb         = pResource->createConstantBuffer( sizeof( arrBlue ) );
         SW_ASSERT_TRUE( cb != 0 );
         pResource->updateConstantBuffer( cb, arrBlue, sizeof( arrBlue ) );
-        const sw::RHIDescriptorIndex cbIndex = pResource->registerBindlessResource( cb );
+        const sw::RHIDescriptorIndex cbIndex = pResource->registerBindlessBufferSrv( cb );
         SW_ASSERT_TRUE( cbIndex != sw::kInvalidDescriptorIndex );
 
         const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPSODesc( "engine/shaders/fullscreentriangle.hlsl" ) );
@@ -896,7 +896,7 @@ SW_TEST_CASE( RHIDeviceTest, WriteOnceConstantBufferReachesEveryFrameSlot )
         const sw::RHIBufferHandle cb        = pResource->createConstantBuffer( sizeof( arrRed ) );
         SW_ASSERT_TRUE( cb != 0 );
         pResource->updateConstantBuffer( cb, arrRed, sizeof( arrRed ) ); // 한 번만 쓴다
-        const sw::RHIDescriptorIndex cbIndex = pResource->registerBindlessResource( cb );
+        const sw::RHIDescriptorIndex cbIndex = pResource->registerBindlessBufferSrv( cb );
         SW_ASSERT_TRUE( cbIndex != sw::kInvalidDescriptorIndex );
 
         const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPSODesc( "engine/shaders/fullscreentriangle.hlsl" ) );
@@ -1796,7 +1796,7 @@ SW_TEST_CASE( RHIDeviceTest, SlicedTexturesTargetUploadAndReadBackPerSlice )
         const sw::RHIBufferHandle cb        = pResource->createConstantBuffer( sizeof( arrRed ) );
         SW_ASSERT_TRUE( cb != 0 );
         pResource->updateConstantBuffer( cb, arrRed, sizeof( arrRed ) );
-        const sw::RHIDescriptorIndex cbIndex = pResource->registerBindlessResource( cb );
+        const sw::RHIDescriptorIndex cbIndex = pResource->registerBindlessBufferSrv( cb );
         const sw::RHIBufferHandle    vb      = pResource->createVertexBuffer( arrVertex, static_cast<uint32>( sizeof( arrVertex ) ) );
 
         sw::RHIPipelineStateDesc psoDesc     = makeSingleTargetPSODesc( "engine/shaders/fullscreentriangle.hlsl" );

@@ -175,7 +175,7 @@ shading = linearstep( -1 + shadingToony, 1 - shadingToony, dot( N, L ) + shading
 **바인드리스 테이블을 바꾸는 일은 렌더 스레드의 병렬 기록과 겹치면 안 됩니다**(`IRHIDevice::setParallelRecording`).
 게임 스레드의 `MaterialCache::initializePending`(씬 로드나 처음 쓰는 머티리얼의 스폰)은 렌더 스레드가 지난 프레임을 기록하는 동안 돕니다.
 그래서 `EngineLoop` 은 올릴 것이 있는 프레임(`hasPendingInitialize`)에만 `RenderThread::waitIdle` 로 기다립니다.
-어기면 `registerBindlessResource` 의 "병렬 패스 기록 중" 단언이나 크래시가 납니다. 단언은 플래그를 경합으로 읽으므로 같은 실행도 바이너리에 따라 0%와 100%를 오갑니다.
+어기면 `registerBindlessBufferSrv` 의 "병렬 패스 기록 중" 단언이나 크래시가 납니다. 단언은 플래그를 경합으로 읽으므로 같은 실행도 바이너리에 따라 0%와 100%를 오갑니다.
 의심되면 `IRHIDevice::assertRegistryMutableNow` 에서 콜스택을 파일로 남겨 봅니다. 비동기 로거는 크래시 직전 줄을 잃습니다.
 
 **텍스처를 다시 로드하면 같은 `Texture2D` 가 새 SRV 인덱스를 받습니다.** 머티리얼은 `TextureCache::getReloadGeneration` 이 바뀐 것을 보고 `Material::refreshTextureBindings` 로 인덱스를 다시 받고,

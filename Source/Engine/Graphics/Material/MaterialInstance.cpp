@@ -267,7 +267,7 @@ namespace sw
             if ( constantBuffer == 0 )
                 return false;
             _constant.adopt( pRHI, constantBuffer );
-            _descriptorIndex  = pRHI->getResourceFactory()->registerBindlessResource( constantBuffer );
+            _descriptorIndex  = pRHI->getResourceFactory()->registerBindlessBufferSrv( constantBuffer );
             _constantByteSize = size;
         }
         pRHI->getResourceFactory()->updateConstantBuffer( _constant._buffer, _bytes.data(), size );

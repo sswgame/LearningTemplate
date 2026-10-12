@@ -663,7 +663,7 @@ namespace sw
         void ensurePassCbCapacityForFrame();
         /**
          * @brief 등록된 PSO 레이아웃이 선언한 머티리얼 원소 stride 마다 폴백 버퍼를 만듭니다(셋업 전용).
-         * @details 기록 중에는 만들 수 없다. 버퍼 생성과 `registerBindlessResource` 는 bindless 레지스트리를 바꾸는데,
+         * @details 기록 중에는 만들 수 없다. 버퍼 생성과 `registerBindlessBufferSrv` 는 bindless 레지스트리를 바꾸는데,
          *          패스 콜백은 태스크 워커에서 병렬로 돈다(`assertRegistryMutableNow` 가 감시하는 규칙).
          *          그래서 PSO 를 모두 등록한 뒤 여기서 한 번에 만든다.
          */

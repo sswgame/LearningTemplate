@@ -472,7 +472,7 @@ namespace sw
 
     void D3D12RHICommandContext::bindComputeUav( RHIDescriptorIndex index, uint32 slot )
     {
-        // 컴퓨트 u# → 컴퓨트 슬롯 테이블 상태. 인덱스는 UAV 레지스트리(registerBindlessUav)의 것. 디스패치 직전 굳힌다.
+        // 컴퓨트 u# → 컴퓨트 슬롯 테이블 상태. 인덱스는 UAV 레지스트리(registerBindlessBufferUav)의 것. 디스패치 직전 굳힌다.
         if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kComputeUavSlotCount )
             return;
         const D3D12_CPU_DESCRIPTOR_HANDLE view = resolveOfflineView( index, true );

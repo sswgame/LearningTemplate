@@ -37,9 +37,9 @@ namespace sw
         RHIFormat              getTextureFormat( RHITextureHandle texture ) const override;
         RHIDescriptorIndex     registerBindlessTexture( RHITextureHandle texture ) override;
         void                   unregisterBindlessTexture( RHIDescriptorIndex index ) override;
-        RHIDescriptorIndex     registerBindlessResource( RHIBufferHandle buffer ) override;
+        RHIDescriptorIndex     registerBindlessBufferSrv( RHIBufferHandle buffer ) override;
         void                   unregisterBindlessResource( RHIDescriptorIndex index ) override;
-        RHIDescriptorIndex     registerBindlessUav( RHIBufferHandle buffer ) override;
+        RHIDescriptorIndex     registerBindlessBufferUav( RHIBufferHandle buffer ) override;
         RHIDescriptorIndex     registerBindlessTextureUav( RHITextureHandle texture ) override;
         void                   unregisterBindlessUav( RHIDescriptorIndex index ) override;
 
