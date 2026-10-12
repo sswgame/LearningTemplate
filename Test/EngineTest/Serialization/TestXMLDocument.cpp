@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -199,4 +200,30 @@ SW_TEST_CASE( XMLDocumentTest, RangeCheckedIntegerRejectsWhatDoesNotFit )
     }
     SW_EXPECT_TRUE_MSG( logs.countContaining( "<bind> attribute 'over' is '256', not an integer in [0, 255]" ) == 1, logs.joined().c_str() );
     SW_EXPECT_TRUE_MSG( logs.countContaining( "rejected" ) == 4, logs.joined().c_str() );
+}
+
+/**
+ * @brief [XMLReadUtilTest] 루트 찾기는 "읽지 못함" 과 "루트 없음" 을 가르고, 이름 읽기는 앞뒤 공백을 뺀다
+ * @details 캐릭터 데이터와 게임 데이터 표가 이 결과로 각자 오류를 모으거나 경고를 남긴다. 둘을 가르지 못하면 구문 오류를 "루트가 없다" 로 알린다.
+ */
+SW_TEST_CASE( XMLReadUtilTest, RootStatusAndTrimmedName )
+{
+    sw::XMLDocument doc;
+    sw::XMLNode     root;
+    SW_EXPECT_TRUE( sw::XMLReadUtil::parseRoot( doc, R"(<Table><row name="  sword  " blank="   "/></Table>)", "test", "table", root ) ==
+                    sw::XMLRootStatus::Found );
+    SW_ASSERT_TRUE( root.isValid() );
+
+    const sw::XMLNode row = root.findChild( "row" );
+    SW_EXPECT_TRUE( sw::XMLReadUtil::readName( row, "name" ) == sw::hashed_string( "sword" ) );
+    SW_EXPECT_TRUE( sw::XMLReadUtil::readName( row, "blank" ).empty() );
+    SW_EXPECT_TRUE( sw::XMLReadUtil::readName( row, "missing" ).empty() );
+
+    SW_EXPECT_TRUE( sw::XMLReadUtil::parseRoot( doc, "<Other/>", "test", "Table", root ) == sw::XMLRootStatus::RootMissing );
+    SW_EXPECT_FALSE( root.isValid() );
+    {
+        test::ScopedDefensiveTestLog expected( "unclosed root element" );
+        SW_EXPECT_TRUE( sw::XMLReadUtil::parseRoot( doc, "<Table>", "test", "Table", root ) == sw::XMLRootStatus::NotLoaded );
+    }
+    SW_EXPECT_FALSE( doc.getLastError().empty() );
 }
