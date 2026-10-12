@@ -94,9 +94,10 @@ namespace sw
         float64             _timeoutSeconds{ 5.0 };
         float64             _connectTimeout{ 5.0 };
         float64             _connectRetryInterval{ 0.2 };
-        float64             _sendInterval{ 1.0 / 30.0 };       ///< 연결마다 패킷을 보내는 최소 간격.
-        float64             _keepAliveInterval{ 0.25 };        ///< 보낼 것(메시지, 재전송, 확인)이 없으면 이 간격으로만 보낸다(연결 유지와 RTT 측정).
-        float64             _debugHoldTimeoutSeconds{ 600.0 }; ///< 상대가 디버거 대기를 알린 연결의 타임아웃(개발 빌드만). 중단점에 오래 멈춰도 끊지 않는다.
+        float64             _sendInterval{ 1.0 / 30.0 };                                         ///< 연결마다 패킷을 보내는 최소 간격.
+        float64             _keepAliveInterval{ 0.25 };                                          ///< 보낼 것(메시지, 재전송, 확인)이 없으면 이 간격으로만 보낸다(연결 유지와 RTT 측정).
+        float64             _debugHoldTimeoutSeconds{ 600.0 };                                   ///< 상대가 디버거 대기를 알린 연결의 타임아웃(개발 빌드만). 중단점에 오래 멈춰도 끊지 않는다.
+        float64             _maxUnreliableAgeSeconds{ NetConnection::kDefaultMaxUnreliableAge }; ///< 비신뢰 메시지가 보낼 줄에서 기다릴 수 있는 시간. 넘으면 버린다(0 = 상한 없음).
         int32               _maxConnections{ 16 };
         int32               _maxBytesPerSecond{ 100000 }; ///< 연결마다 보내는 바이트 상한(토큰 버킷, 언리얼 `NetSpeed` 기본값과 같다). 다 쓰면 메시지는 기다리고 확인과 연결 유지 패킷만 나간다. 패킷 하나(1200바이트)보다 작은 값은 패킷 하나 크기로 올려 쓴다.
         NetSecuritySettings _security{};                  ///< 암호화와 토큰 결속 설정(기본값은 꺼짐). 양쪽이 같아야 연결된다.
@@ -256,6 +257,11 @@ namespace sw
         uint32 getProtocolID() const;
         /** @brief 연결마다의 보내기 상한(초당 바이트, `NetHostSettings::_maxBytesPerSecond`)입니다. 키트가 틱 예산을 계산할 때 씁니다(`NetSendBudget::computeTickBudget`). */
         int32 getMaxBytesPerSecond() const;
+        /**
+         * @brief 이 연결이 포화됐는가입니다. 대역폭 토큰을 다 썼거나 앞 패킷이 비신뢰 메시지를 다 싣지 못했으면 true 입니다. 연결돼 있지 않으면 false 입니다.
+         * @details 키트는 포화된 연결에 이번 틱의 비신뢰 복제(위치 · 효과)를 건너뛴다. 쌓아 두면 늦은 것이 몰려 나간다. 언리얼 `UNetConnection::IsNetReady` 가 거짓인 자리이다.
+         */
+        bool isConnectionSaturated( int32 connectionID ) const;
 
         /** @brief 패킷 본문의 첫 3비트로, 핸드셰이크 단계와 데이터와 끊김을 구분합니다. */
         enum class PacketType : uint8

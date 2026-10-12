@@ -94,6 +94,8 @@ py -3 -m Scripts test NetworkThreadTest.*
 
 **대역폭.** 연결마다 대역폭 상한(`_maxBytesPerSecond`, 기본 100,000B/s)이 있습니다. 언리얼의 `NetSpeed` 에 해당합니다.
 보낼 것이 없으면 `_keepAliveInterval`(0.25초)마다만 보냅니다. 호스트는 주소에서 연결을 해시로 찾으므로 연결 수와 관계없이 패킷 하나를 O(1)로 처리합니다.
+상한을 다 써서 기다리는 비신뢰 메시지는 `_maxUnreliableAgeSeconds`(0.25초)를 넘게 기다리면 싣지 않고 버립니다(`_expiredUnreliableCount`). 포화가 풀릴 때 옛 위치가 몰려 나가지 않게 하기 위해서입니다.
+키트는 `isConnectionSaturated( 연결 )` 로 포화를 묻고 그 틱의 비신뢰 복제를 건너뜁니다. 언리얼 `IsNetReady` 가 거짓일 때 액터 복제를 건너뛰는 것과 같습니다.
 
 **스레드.** `update` 는 소켓 받기와 보내기를 잠금 밖에서 한 번에 최대 512개씩 처리하고, 잠금 안에서는 패킷 처리만 합니다.
 `NetHostThread` 는 소켓을 기다렸다가(`poll`, `WSAPoll`, 최대 2ms) `update` 를 부릅니다. 기다리는 일이라 TaskManager 워커가 아니라 전용 스레드를 씁니다.

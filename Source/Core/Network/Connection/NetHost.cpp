@@ -467,7 +467,7 @@ namespace sw
             _plainWriter.writeBits( _bDebugHold == SW_TRUE ? 1u : 0u, 1 ); // 디버거 대기 비트. 평문 첫 비트이므로 함께 봉인된다.
             const int32 maxBytes =
                 slot._sendCredit > 0.0 ? kNetMaxPacketSize - NetHostInternal::kHeaderSize - NetPacketSealer::kSecureHeadSize - NetSecurityConstant::kAeadTagSize : 0;
-            slot._connection.writePacket( nowSeconds, _plainWriter, maxBytes, _settings._keepAliveInterval );
+            slot._connection.writePacket( nowSeconds, _plainWriter, maxBytes, _settings._keepAliveInterval, _settings._maxUnreliableAgeSeconds );
             const int32 sentBytes = sendSealed( slot, PacketType::Payload, _plainWriter.getBytes().data(), _plainWriter.getByteCount() );
             slot._sendCredit -= static_cast<float64>( sentBytes );
             slot._lastSendTime = nowSeconds;
@@ -481,7 +481,7 @@ namespace sw
         writer.writeBits( _bDebugHold == SW_TRUE ? 1u : 0u, 1 ); // 디버거 대기 비트.
         // 대역폭 토큰을 다 썼으면 헤더(확인과 연결 유지)만 보내고, 메시지는 다음 전송으로 미룬다.
         const int32 maxBytes = slot._sendCredit > 0.0 ? kNetMaxPacketSize - NetHostInternal::kHeaderSize : 0;
-        slot._connection.writePacket( nowSeconds, writer, maxBytes, _settings._keepAliveInterval );
+        slot._connection.writePacket( nowSeconds, writer, maxBytes, _settings._keepAliveInterval, _settings._maxUnreliableAgeSeconds );
         sendFramed( slot._address, _protocolID );
         slot._sendCredit -= static_cast<float64>( writer.getByteCount() + NetHostInternal::kHeaderSize );
         slot._lastSendTime = nowSeconds;
@@ -1154,6 +1154,15 @@ namespace sw
     {
         std::scoped_lock<mutex> lock{ _mutex };
         return _settings._maxBytesPerSecond;
+    }
+
+    bool NetHost::isConnectionSaturated( int32 connectionID ) const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        const NetHostSlot*      pSlot = _slotTable.findConnected( connectionID );
+        if ( pSlot == nullptr )
+            return false;
+        return pSlot->_sendCredit <= 0.0 || pSlot->_connection.getQueuedUnreliableCount() > 0;
     }
 
     bool NetHost::getConnectionStats( int32 connectionID, NetConnectionStats& outStats ) const
