@@ -147,10 +147,10 @@ namespace sw
         parts._accountServer.initialize( &parts._loginService, AccountServerSettings{} );
 
         // 바인딩은 호스트 initialize 전에 올린다(메서드 영역 등록).
-        const bool bRegistered = parts._host.registerService( &parts._accountServer ) && parts._host.registerService( &parts._directoryServer ) &&
-                                 parts._host.registerService( &parts._chatServer ) && parts._host.registerService( &parts._socialServer ) &&
-                                 parts._host.registerService( &parts._leaderboardServer ) && parts._host.registerService( &parts._matchmakingServer ) &&
-                                 parts._host.registerService( &parts._liveOpsServer );
+        const bool bRegistered = parts._host.registerHostService( &parts._accountServer ) && parts._host.registerHostService( &parts._directoryServer ) &&
+                                 parts._host.registerHostService( &parts._chatServer ) && parts._host.registerHostService( &parts._socialServer ) &&
+                                 parts._host.registerHostService( &parts._leaderboardServer ) && parts._host.registerHostService( &parts._matchmakingServer ) &&
+                                 parts._host.registerHostService( &parts._liveOpsServer );
         if ( bRegistered == false )
         {
             outError = "load bot local server could not register its online services";

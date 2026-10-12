@@ -62,7 +62,7 @@ namespace
         /** @brief 서버를 띄우기 전에 바인딩을 올리고, 띄운 뒤 로직을 호스트의 저장소 · 버스 · 접속 상태에 잇습니다. */
         void start( test::OnlineTestServer& server )
         {
-            SW_EXPECT_TRUE( server._host.registerService( &_binding ) );
+            SW_EXPECT_TRUE( server._host.registerHostService( &_binding ) );
             server.start();
             server.addKit( this );
             _directory._pHost = &server._host;

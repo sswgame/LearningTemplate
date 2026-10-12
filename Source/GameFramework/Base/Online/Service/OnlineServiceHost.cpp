@@ -77,11 +77,11 @@ namespace sw
             outError = "online service host methods are already registered";
             return false;
         }
-        for ( IOnlineService* pService : _listService )
+        for ( IOnlineHostService* pService : _listService )
         {
             for ( uint16 offset = 0; offset < OnlineMethodRange::kMethodCount; ++offset )
             {
-                (void)_requestServer.registerMethod( static_cast<uint16>( pService->getMethodRange() + offset ), this ); // registerService 가 겹침을 이미 봤다
+                (void)_requestServer.registerMethod( static_cast<uint16>( pService->getMethodRange() + offset ), this ); // registerHostService 가 겹침을 이미 봤다
             }
         }
         if ( pTransport->initialize( &_endpoint, settings._transportSettings ) == false || pTransport->listen( settings._listenAddress ) == false )
@@ -119,7 +119,7 @@ namespace sw
         _pTransport = nullptr;
     }
 
-    bool OnlineServiceHost::registerService( IOnlineService* pService )
+    bool OnlineServiceHost::registerHostService( IOnlineHostService* pService )
     {
         SW_ASSERT( pService != nullptr );
         const uint16 range = pService->getMethodRange();
@@ -128,7 +128,7 @@ namespace sw
             SW_LOG_ERROR( "Online service range %# is not a range base (a multiple of 0x100 above the host range)", static_cast<uint32>( range ) );
             return false;
         }
-        for ( const IOnlineService* pExisting : _listService )
+        for ( const IOnlineHostService* pExisting : _listService )
         {
             if ( pExisting->getMethodRange() == range )
             {
@@ -174,7 +174,7 @@ namespace sw
         }
         if ( _settings._pServiceStore != nullptr )
             (void)_settings._pServiceStore->pollCompletions(); // 끝난 저장 일의 complete 가 맡긴 서비스를 부른다 — 서비스 틱보다 먼저
-        for ( IOnlineService* pService : _listService )
+        for ( IOnlineHostService* pService : _listService )
         {
             pService->onServiceTick( *this, nowMs );
         }
@@ -255,7 +255,7 @@ namespace sw
 
     EphemeralStoreRouter* OnlineServiceHost::getEphemeralRouter() { return _settings._pEphemeralStore != nullptr ? &_ephemeralRouter : nullptr; }
 
-    void OnlineServiceHost::subscribeServerBus( string_view topic, IOnlineService* pService )
+    void OnlineServiceHost::subscribeServerBus( string_view topic, IOnlineHostService* pService )
     {
         if ( _settings._pServerBus == nullptr )
             return;
@@ -271,7 +271,7 @@ namespace sw
         _listBusSubscription.push_back( BusSubscription{ string( topic ), pService } );
     }
 
-    void OnlineServiceHost::unsubscribeServerBus( string_view topic, IOnlineService* pService )
+    void OnlineServiceHost::unsubscribeServerBus( string_view topic, IOnlineHostService* pService )
     {
         bool bTopicStillOpen = false;
         bool bRemoved        = false;
@@ -362,7 +362,7 @@ namespace sw
             (void)respondOk( context._token, body );
             return;
         }
-        IOnlineService* pService = findService( method );
+        IOnlineHostService* pService = findService( method );
         if ( pService == nullptr )
         {
             (void)respondError( context._token, OnlineError::kInvalidRequest );
@@ -396,10 +396,10 @@ namespace sw
         bool         bMatches    = baseVersion == OnlineProtocolConstant::kBaseVersion && kitCount <= static_cast<uint64>( OnlineProtocolConstant::kMaxKitCount );
         for ( uint64 index = 0; bMatches && index < kitCount; ++index )
         {
-            const uint16          range    = static_cast<uint16>( reader.readBits( 16 ) );
-            const uint64          version  = reader.readVarUint();
-            const IOnlineService* pService = findService( range );
-            bMatches                       = pService != nullptr && pService->getMethodRange() == range && pService->getProtocolVersion() == version;
+            const uint16              range    = static_cast<uint16>( reader.readBits( 16 ) );
+            const uint64              version  = reader.readVarUint();
+            const IOnlineHostService* pService = findService( range );
+            bMatches                           = pService != nullptr && pService->getMethodRange() == range && pService->getProtocolVersion() == version;
         }
         vector<uint8> buildBytes;
         bMatches = bMatches && reader.readBlob( buildBytes, OnlineProtocolConstant::kMaxBuildTextSize );
@@ -421,17 +421,17 @@ namespace sw
     {
         outWriter.writeVarUint( OnlineProtocolConstant::kBaseVersion );
         outWriter.writeVarUint( _listService.size() );
-        for ( const IOnlineService* pService : _listService )
+        for ( const IOnlineHostService* pService : _listService )
         {
             outWriter.writeBits( pService->getMethodRange(), 16 );
             outWriter.writeVarUint( pService->getProtocolVersion() );
         }
     }
 
-    IOnlineService* OnlineServiceHost::findService( uint16 method ) const
+    IOnlineHostService* OnlineServiceHost::findService( uint16 method ) const
     {
         const uint16 range = OnlineMethodRange::getRangeBase( method );
-        for ( IOnlineService* pService : _listService )
+        for ( IOnlineHostService* pService : _listService )
         {
             if ( pService->getMethodRange() == range )
                 return pService;
@@ -451,13 +451,13 @@ namespace sw
     void OnlineServiceHost::dispatchServerBusMessage( const ServerBusMessage& message )
     {
         // 서비스가 메시지를 받는 동안 구독을 바꿀 수 있다 — 대상 목록을 먼저 뽑는다.
-        vector<IOnlineService*> listTarget;
+        vector<IOnlineHostService*> listTarget;
         for ( const BusSubscription& subscription : _listBusSubscription )
         {
             if ( subscription._topic == message._topic )
                 listTarget.push_back( subscription._pService );
         }
-        for ( IOnlineService* pService : listTarget )
+        for ( IOnlineHostService* pService : listTarget )
         {
             pService->onServerBusMessage( *this, message );
         }
@@ -465,7 +465,7 @@ namespace sw
 
     void OnlineServiceHost::notifyAccountLeft( AccountID accountID )
     {
-        for ( IOnlineService* pService : _listService )
+        for ( IOnlineHostService* pService : _listService )
         {
             pService->onAccountLeft( *this, accountID );
         }

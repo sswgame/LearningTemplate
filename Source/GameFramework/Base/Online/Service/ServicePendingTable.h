@@ -1,6 +1,6 @@
 /**
  * @file ServicePendingTable.h
- * @brief 응답 대기 표 — 서비스 로직에 맡긴 요청의 꼬리표 ↔ `NetRequestToken` 입니다. 바인딩(`IOnlineService`)이 요청을 받을 때 `add` 해 꼬리표로 로직에 맡기고,
+ * @brief 응답 대기 표 — 서비스 로직에 맡긴 요청의 꼬리표 ↔ `NetRequestToken` 입니다. 바인딩(`IOnlineHostService`)이 요청을 받을 때 `add` 해 꼬리표로 로직에 맡기고,
  *        로직의 완료를 거둘 때 `take` 해 `host.respondOk` · `respondError` 합니다.
  * @details - 서비스 스레드 하나(호스트 `tick`)에서 쓴다. 꼬리표는 1 부터 오르는 수다(0 은 쓰지 않는다 — 로직이 "꼬리표 없음" 으로 쓸 수 있다).
  *          - 연결이 닫혀도 지우지 않는다 — 완료가 오면 꺼내 답하고, 닫힌 연결의 답은 호스트가 버린다(`respond*` 가 false).

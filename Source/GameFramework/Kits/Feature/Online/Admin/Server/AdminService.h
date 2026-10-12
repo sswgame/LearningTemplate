@@ -40,7 +40,7 @@ namespace sw
 namespace sw
 {
     /** @class AdminService @brief GM 명령 처리기입니다. */
-    class SW_GF_API AdminService final : public IOnlineService
+    class SW_GF_API AdminService final : public IOnlineHostService
     {
     public:
         using ReplyDelegate = Delegate<void( const AdminReply& )>;
@@ -62,7 +62,7 @@ namespace sw
         void seedRole( AccountID accountID, AdminRole role, int64 nowMs );
         void tick( int64 nowMs );
 
-        // IOnlineService
+        // IOnlineHostService
         uint16 getMethodRange() const override { return OnlineMethodRange::kAdmin; }
         uint32 getProtocolVersion() const override { return AdminProtocol::kVersion; }
         void   onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;

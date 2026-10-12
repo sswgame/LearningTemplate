@@ -103,7 +103,7 @@ namespace
     };
 
     /** @brief Hello 의 영역 · 판 대조를 맞추려고 서버에 등록하는, 요청을 받지 않는 서비스입니다. */
-    class StubOnlineService final : public IOnlineService
+    class StubOnlineService final : public IOnlineHostService
     {
     public:
         explicit StubOnlineService( uint16 methodRange )
@@ -192,8 +192,8 @@ SW_TEST_CASE( ServiceClientCallTableTest, KitDestroyedDuringReadyNotificationIsS
     test::OnlineTestServer  server( network, &database, &cacheDatabase, &hub, 1 );
     StubOnlineService       killerService( OnlineMethodRange::kGame + OnlineMethodRange::kSize ); // 서버가 클라이언트 키트의 영역을 알아야 Hello 가 통과한다
     StubOnlineService       victimService( OnlineMethodRange::kGame + 2 * OnlineMethodRange::kSize );
-    SW_ASSERT_TRUE( server._host.registerService( &killerService ) );
-    SW_ASSERT_TRUE( server._host.registerService( &victimService ) );
+    SW_ASSERT_TRUE( server._host.registerHostService( &killerService ) );
+    SW_ASSERT_TRUE( server._host.registerHostService( &victimService ) );
     server.start();
     test::OnlineTestClients clients( network );
 

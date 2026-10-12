@@ -2,7 +2,7 @@
  * @file OnlineServiceHost.h
  * @brief 프로세스 하나의 서비스 호스트를 정의합니다.
  * @details 호스트는 스트림 엔드포인트와 요청 서버를 갖는다.
- *          버전 협상, 인증 확인, 요청 보호(주소와 계정마다 토큰 버킷, 몸 상한)를 거친 뒤 메서드 영역을 맡은 서비스(`IOnlineService`)로 요청을 넘긴다.
+ *          버전 협상, 인증 확인, 요청 보호(주소와 계정마다 토큰 버킷, 몸 상한)를 거친 뒤 메서드 영역을 맡은 서비스(`IOnlineHostService`)로 요청을 넘긴다.
  *          언리얼 Online Services 의 인터페이스 묶음, gRPC 서버의 서비스 등록과 같은 모양이다.
  *
  *          - 서비스 스레드 하나(`tick` 을 부르는 스레드)에서 돈다. 서비스의 콜백은 모두 그 스레드에서 불린다.
@@ -10,7 +10,7 @@
  *          - **캐시 앞과 서버 버스의 소비자는 호스트 하나이다.**
  *            캐시 답과 채널 메시지는 `getEphemeralRouter()` 가 요청 id 와 채널로, 버스 메시지는 `subscribeServerBus` 한 서비스에 나눠 준다.
  *            서비스가 `pollReplies` 나 `pollMessages` 를 직접 부르면 서로의 답을 가져간다.
- *          - 메서드 영역이 겹치는 서비스는 `registerService` 가 거절한다.
+ *          - 메서드 영역이 겹치는 서비스는 `registerHostService` 가 거절한다.
  *          - **수명 계약**: 서비스는 빌려 쓴다. 호스트 `shutdown` 이 서비스마다 `onHostShutdown` 을 한 번 불러 호스트 포인터와 구독을 떼게 한다.
  *            그래서 서비스 객체는 호스트보다 먼저 내려가도 늦게 내려가도 된다.
  *            서비스 쪽에서 맡긴 비동기 일(캐시 라우터, 접속 상태 찾기)은 서비스 `shutdown` 이 `cancel` 한다.
@@ -57,17 +57,17 @@ namespace sw
 namespace sw
 {
     /**
-     * @class IOnlineService
+     * @class IOnlineHostService
      * @brief 메서드 영역 하나를 맡은 서비스입니다. 모든 콜백은 호스트 `tick` 스레드에서 불립니다.
      */
-    class SW_GF_API IOnlineService
+    class SW_GF_API IOnlineHostService
     {
     public:
-        IOnlineService()          = default;
-        virtual ~IOnlineService() = default;
+        IOnlineHostService()          = default;
+        virtual ~IOnlineHostService() = default;
 
-        IOnlineService( const IOnlineService& )            = delete;
-        IOnlineService& operator=( const IOnlineService& ) = delete;
+        IOnlineHostService( const IOnlineHostService& )            = delete;
+        IOnlineHostService& operator=( const IOnlineHostService& ) = delete;
 
         virtual uint16 getMethodRange() const     = 0;
         virtual uint32 getProtocolVersion() const = 0;
@@ -145,7 +145,7 @@ namespace sw
         void               shutdown();
 
         /** @brief 서비스를 올립니다. 빌려 쓰며, 영역이 이미 있거나 메서드 번호가 겹치면 오류 로그를 남기고 false 를 반환하고 아무것도 올리지 않습니다. */
-        [[nodiscard]] bool registerService( IOnlineService* pService );
+        [[nodiscard]] bool registerHostService( IOnlineHostService* pService );
         /** @brief 엔드포인트 pump, 요청 시한, 캐시 라우터, 서버 버스, 서비스 틱을 차례로 돌립니다. */
         void tick( int64 nowMs );
 
@@ -167,8 +167,8 @@ namespace sw
         /** @brief 캐시 답과 채널 메시지를 나눠 주는 라우터입니다. 캐시가 없으면(서버 한 대) nullptr 이며, 호스트 `tick` 이 비웁니다. */
         EphemeralStoreRouter* getEphemeralRouter();
         /** @brief @p pService 가 @p topic 의 버스 메시지를 받게 합니다. 같은 주제를 둘이 구독해도 버스에는 한 번만 구독하며, 버스가 없으면 아무것도 하지 않습니다. */
-        void subscribeServerBus( string_view topic, IOnlineService* pService );
-        void unsubscribeServerBus( string_view topic, IOnlineService* pService );
+        void subscribeServerBus( string_view topic, IOnlineHostService* pService );
+        void unsubscribeServerBus( string_view topic, IOnlineHostService* pService );
 
         RemoteConfig*    getRemoteConfig() const { return _settings._pRemoteConfig; }
         IServerBus*      getServerBus() const { return _settings._pServerBus; }
@@ -193,16 +193,16 @@ namespace sw
 
         struct BusSubscription
         {
-            string          _topic{};
-            IOnlineService* _pService{ nullptr };
+            string              _topic{};
+            IOnlineHostService* _pService{ nullptr };
         };
 
-        void            handleHello( const NetRequestContext& context, ConnectionState& connection );
-        void            writeServerVersions( BitWriter& outWriter ) const;
-        IOnlineService* findService( uint16 method ) const;
-        bool            sendPushToConnection( StreamConnectionHandle connection, uint16 kind, const BitWriter& body );
-        void            dispatchServerBusMessage( const ServerBusMessage& message );
-        void            notifyAccountLeft( AccountID accountID );
+        void                handleHello( const NetRequestContext& context, ConnectionState& connection );
+        void                writeServerVersions( BitWriter& outWriter ) const;
+        IOnlineHostService* findService( uint16 method ) const;
+        bool                sendPushToConnection( StreamConnectionHandle connection, uint16 kind, const BitWriter& body );
+        void                dispatchServerBusMessage( const ServerBusMessage& message );
+        void                notifyAccountLeft( AccountID accountID );
 
         OnlineServiceHostSettings                        _settings;
         StreamMessageEndpoint                            _endpoint;
@@ -210,7 +210,7 @@ namespace sw
         EphemeralStoreRouter                             _ephemeralRouter;
         TokenBucketMap                                   _accountBucket;
         TokenBucketMap                                   _remoteBucket;
-        vector<IOnlineService*>                          _listService;
+        vector<IOnlineHostService*>                      _listService;
         vector<BusSubscription>                          _listBusSubscription;
         vector<ServerBusMessage>                         _listBusScratch;
         vector<uint8>                                    _responseBytes;

@@ -52,7 +52,7 @@ namespace
 
         void start( test::OnlineTestServer& server )
         {
-            SW_EXPECT_TRUE( server._host.registerService( &_binding ) );
+            SW_EXPECT_TRUE( server._host.registerHostService( &_binding ) );
             server.start();
             server.addKit( this );
             SocialServiceDependencies dependencies;

@@ -36,7 +36,7 @@ namespace
     };
 
     /** @brief 가짜 서비스 — 받은 것을 모두 적는다. */
-    class FakeOnlineService final : public IOnlineService
+    class FakeOnlineService final : public IOnlineHostService
     {
     public:
         explicit FakeOnlineService( uint16 range )
@@ -251,8 +251,8 @@ namespace
             , _listClient{}
             , _nowMs{ 1000 }
         {
-            SW_EXPECT_TRUE( _host.registerService( &_serviceA ) );
-            SW_EXPECT_TRUE( _host.registerService( &_serviceB ) );
+            SW_EXPECT_TRUE( _host.registerHostService( &_serviceA ) );
+            SW_EXPECT_TRUE( _host.registerHostService( &_serviceB ) );
             string error;
             SW_EXPECT_TRUE_MSG( _host.initialize( _hostTransport.get(), settings, error ), error.c_str() );
         }
