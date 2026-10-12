@@ -4,15 +4,12 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
-#include "Engine/Input/Devices/MouseDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
-#include "Engine/Input/RawInputEvent.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Text/FontSystem.h"
@@ -21,8 +18,6 @@
 #include "Engine/Text/TextLayout.h"
 #include "Engine/UI/Animation/UIStyleTransition.h"
 #include "Engine/UI/Automation/UIAutomationSteps.h"
-#include "Engine/UI/Base/UIEventRouter.h"
-#include "Engine/UI/Base/UINavigationSolver.h"
 #include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Binding/UIBindingSet.h"
 #include "Engine/UI/Binding/UIViewModel.h"
@@ -48,63 +43,6 @@ namespace sw
     {
         struct UISystemInternal
         {
-            /** @brief 마우스 버튼 중 UI 가 이벤트로 받는 것(왼쪽, 오른쪽, 가운데)입니다. */
-            static constexpr MouseButton kArrPointerButton[] = { MouseButton::Left, MouseButton::Right, MouseButton::Middle };
-            /** @brief UI 액션 맵의 레이어 이름입니다(활성 화면이 있을 때만 켭니다). */
-            static constexpr utf8 kUILayerName[]       = "UI";
-            static constexpr utf8 kUIGlobalLayerName[] = "UIGlobal"; ///< 화면이 없을 때의 UI 액션(일시정지)입니다.
-            /** @brief 스틱 탐색이 한 번 이동하는 기울기 임계값입니다. */
-            static constexpr float32 kStickNavigateMagnitude = 0.5f;
-            /** @brief 패드 축 이벤트를 "패드를 쓴다" 로 판정하는 크기입니다(손을 뗀 스틱의 떨림은 세지 않습니다). */
-            static constexpr float32 kGamepadAxisActivity = 0.5f;
-
-            /** @struct NavigationAction @brief 탐색 액션 이름과 방향입니다. */
-            struct NavigationAction
-            {
-                const utf8*           _pAction;
-                UINavigationDirection _direction;
-            };
-            static constexpr NavigationAction kArrNavigationAction[] = {
-                {   UIActionName::kNavigateUp,       UINavigationDirection::Up},
-                { UIActionName::kNavigateDown,     UINavigationDirection::Down},
-                { UIActionName::kNavigateLeft,     UINavigationDirection::Left},
-                {UIActionName::kNavigateRight,    UINavigationDirection::Right},
-                {    UIActionName::kFocusNext,     UINavigationDirection::Next},
-                {UIActionName::kFocusPrevious, UINavigationDirection::Previous},
-            };
-
-            /** @brief 원시 이벤트 하나가 가리키는 입력 방식입니다. 입력 방식과 무관한 이벤트면 false 입니다. */
-            [[nodiscard]] static bool tryGetInputMode( const RawInputEvent& rawEvent, UIInputMode& outMode )
-            {
-                switch ( rawEvent._type )
-                {
-                    case RawInputEventType::KeyDown:
-                    case RawInputEventType::GamepadButtonDown:
-                    {
-                        outMode = UIInputMode::Navigation;
-                        return true;
-                    }
-                    case RawInputEventType::GamepadAxis:
-                    {
-                        if ( MathUtil::abs( rawEvent._payload._gamepadData._axisValue ) < kGamepadAxisActivity )
-                            return false;
-                        outMode = UIInputMode::Navigation;
-                        return true;
-                    }
-                    case RawInputEventType::MouseMove:
-                    case RawInputEventType::MouseButtonDown:
-                    case RawInputEventType::MouseWheel:
-                    {
-                        outMode = UIInputMode::Pointer;
-                        return true;
-                    }
-                    default:
-                    {
-                        return false;
-                    }
-                }
-            }
-
             /** @brief 그리기 순서의 앞뒤를 비교합니다. 레이어가 먼저이고, 같은 레이어면 쌓인 순서입니다. */
             static bool isDrawnBefore( const UIScreen& lhs, const UIScreen& rhs )
             {
@@ -136,21 +74,15 @@ namespace sw
     UISystem::UISystem()
         : IModuleUnloadListener{}
         , _listScreen{}
-        , _listOffscreen{}
+        , _offscreen{}
         , _documentCache{}
         , _styleSheetCache{}
-        , _themeCatalog{}
-        , _themeName{}
-        , _themeSetting{}
+        , _theme{}
         , _listReopenDocument{}
         , _bindingConverters{}
         , _notifications{ *this }
         , _actionGlyphs{}
-        , _focus{}
-        , _pointer{}
-        , _consumption{}
-        , _uiInputMap{}
-        , _pInput{ nullptr }
+        , _input{}
         , _pFontSystem{ nullptr }
         , _pLocalization{ nullptr }
         , _pUserSettings{ nullptr }
@@ -161,11 +93,6 @@ namespace sw
         , _canvas{}
         , _canvasScratch{}
         , _canvasRevision{ 1 }
-        , _lastPointerPosition{}
-        , _lastMousePixel{}
-        , _stickRepeatSeconds{ 0.0f }
-        , _inputDeltaSeconds{ 0.0f }
-        , _stickDirection{ UINavigationDirection::Next }
         , _activeScreen{ kInvalidUIScreenHandle }
         , _markerScreen{ kInvalidUIScreenHandle }
         , _listWidgetComponent{}
@@ -176,13 +103,9 @@ namespace sw
         , _nextScreenHandle{ 1 }
         , _nextPushOrder{ 0 }
         , _textRevision{ 0 }
-        , _inputMode{ UIInputMode::Pointer }
         , _glyphStyle{ InputGlyphStyle::KeyboardMouse }
         , _bPauseRequested{ SW_FALSE }
         , _bPendingClose{ SW_FALSE }
-        , _bPointerKnown{ SW_FALSE }
-        , _bStickHeld{ SW_FALSE }
-        , _bMousePixelKnown{ SW_FALSE }
         , _bTextRevisionKnown{ SW_FALSE }
         , _bGlyphStyleKnown{ SW_FALSE }
         , _bOnScreenSuppressed{ SW_FALSE }
@@ -197,32 +120,16 @@ namespace sw
     bool UISystem::initialize( InputManager& inputManager, FontSystem* pFontSystem, string_view uiInputMapPath )
     {
         UIAutomationSteps::ensureLinked();
-        _pInput                    = &inputManager;
         _pFontSystem               = pFontSystem;
         _actionGlyphs._pInput      = &inputManager;
         _actionGlyphs._pUIInputMap = nullptr;
         _documentCache.setReloadedHandler( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UISystem::onDocumentReloaded, this ) );
         _styleSheetCache.setReloadedHandler( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UISystem::onStyleSheetReloaded, this ) );
-        _textLayout    = pFontSystem != nullptr ? make_unique<TextLayoutEngine>( *pFontSystem ) : nullptr;
-        _bPointerKnown = SW_FALSE;
-        _consumption.clear();
-        _pInput->setTextInputCallback( SW_DELEGATE_METHOD( InputManager::TextInputDelegate, &UISystem::onTextInput, this ), InputKeyboardFocus::UI );
-        _pInput->setTextCompositionCallback( SW_DELEGATE_METHOD( InputManager::TextInputDelegate, &UISystem::onTextComposition, this ), InputKeyboardFocus::UI );
-        if ( uiInputMapPath.empty() )
-            return true;
-        _uiInputMap = make_unique<InputMap>();
-        // 텍스트 입력 위젯이 키보드 포커스(UI)를 가진 동안에도 Back 과 Tab 은 UI 가 받는다. 그 밖의 액션은 UISystem 이 걸러 낸다.
-        _uiInputMap->setKeyboardFocusIgnored( true );
-        _uiInputMap->setSuppressBaseActionOnChord( true ); // Shift+Tab 이 Tab 도 함께 발화하지 않게
-        if ( _uiInputMap->loadFromResource( uiInputMapPath ) == false )
-        {
-            SW_LOG_ERROR( "[UI] UI input map '%#' could not be loaded - UI navigation actions stay unbound", uiInputMapPath );
-            _uiInputMap.reset();
-            return false;
-        }
-        _uiInputMap->setInputManager( _pInput );
-        _actionGlyphs._pUIInputMap = _uiInputMap.get();
-        syncInputLayers( getActiveScreen() );
+        _textLayout = pFontSystem != nullptr ? make_unique<TextLayoutEngine>( *pFontSystem ) : nullptr;
+        if ( _input.initialize( inputManager, uiInputMapPath ) == false )
+            return false; // 오류는 UIInputRouter::initialize 가 남겼다
+        _actionGlyphs._pUIInputMap = _input.getUIInputMap();
+        _input.syncInputLayers( getActiveScreen(), _pauseMenuDocument.empty() == false );
         return true;
     }
 
@@ -238,46 +145,40 @@ namespace sw
         _listWidgetComponent.clear();
         _markerScreen = kInvalidUIScreenHandle;
         _listSwitchScreen.clear();
-        _focus.clearFocus();
+        _input.getFocusManager().clearFocus();
         while ( _listScreen.empty() == false )
         {
             destroyScreenAt( static_cast<uint32>( _listScreen.size() ) - 1 );
         }
-        _listOffscreen.clear();
+        _offscreen.clear();
         _bPendingClose = SW_FALSE;
         _listReopenDocument.clear();
         _documentCache.setReloadedHandler( {} );
         _styleSheetCache.setReloadedHandler( {} );
         refreshActiveScreen();
-        if ( _pInput != nullptr )
-        {
-            if ( _pInput->getKeyboardFocus() == InputKeyboardFocus::UI )
-                _pInput->setKeyboardFocus( InputKeyboardFocus::Game );
-            _pInput->setTextInputCallback( {}, InputKeyboardFocus::UI );
-            _pInput->setTextCompositionCallback( {}, InputKeyboardFocus::UI );
-        }
-        _uiInputMap.reset();
-        _consumption.clear();
+        _input.shutdown();
         _textLayout.reset();
-        _pInput      = nullptr;
         _pFontSystem = nullptr;
     }
 
     void UISystem::processInput( float32 deltaSeconds )
     {
         const ScopedMemoryTag uiMemoryTag{ MemoryTag::UI };
-        if ( _pInput == nullptr )
+        if ( _input.getInputManager() == nullptr )
             return;
-        _inputDeltaSeconds = deltaSeconds;
-        _consumption.update( *_pInput );
-        if ( _uiInputMap != nullptr )
-            _uiInputMap->update( deltaSeconds );
-        updateInputMode();
+        _input.update( deltaSeconds );
+        UIInputMode mode = _input.getInputMode();
+        if ( _input.pollInputMode( mode ) )
+            setInputMode( mode );
         if ( _bOnScreenSuppressed == SW_FALSE )
-            processPointer();
-        processActions( deltaSeconds );
+            _input.processPointer( _listScreen, _viewport );
+        // 액션: 화면이 없으면 일시정지 메뉴를 먼저 연다. 활성 화면은 여기서 한 번 정하며, 방금 연 메뉴는 다음 프레임부터 액션을 받는다.
+        UIScreen* pActive = getActiveScreen();
+        if ( pActive == nullptr && _input.pollPauseAction( _pauseMenuDocument.empty() == false ) )
+            (void)openScreen<PauseMenuScreen>( _pauseMenuDocument ); // 실패는 문서 생성 단계가 로그에 남긴다
+        _input.processActions( pActive, deltaSeconds );
         applyPendingCloses();
-        updateKeyboardFocus();
+        _input.updateKeyboardFocus();
     }
 
     void UISystem::update( float32 deltaSeconds, const UIViewport& viewport )
@@ -306,7 +207,7 @@ namespace sw
         // 스타일: 스타일이 더티한 위젯만 계산된 스타일을 다시 정한다(레이아웃 앞이다. 여백과 글꼴이 크기를 바꾸기 때문이다).
         {
             SW_PROFILE_SCOPE( "GT.UI.Style" );
-            const bool bNavigation   = _inputMode == UIInputMode::Navigation;
+            const bool bNavigation   = _input.getInputMode() == UIInputMode::Navigation;
             uint32     restyledCount = 0;
             for ( const unique_ptr<UIScreen>& screen : _listScreen )
             {
@@ -343,7 +244,8 @@ namespace sw
                 pComponent->updateWorldCanvas( layout, paint );
             }
         }
-        updateOffscreenScreens();
+        if ( _offscreen.isEmpty() == false )
+            _offscreen.update( makeLayoutContext(), makePaintContext() );
     }
 
     UIScreenHandle UISystem::pushScreen( unique_ptr<UIScreen> screen )
@@ -464,7 +366,7 @@ namespace sw
             if ( rebuildScreenFromDocument( *screen ) )
                 ++rebuiltCount;
         }
-        for ( OffscreenScreen& offscreen : _listOffscreen )
+        for ( UIOffscreenScreen& offscreen : _offscreen.getScreens() )
         {
             UIScreen& screen = *offscreen._screen;
             if ( isDocumentUsing( screen._documentPath, documentPath ) && rebuildScreenFromDocument( screen ) )
@@ -492,7 +394,7 @@ namespace sw
             if ( bUses )
                 rebuildStyleSet( *screen );
         }
-        for ( OffscreenScreen& offscreen : _listOffscreen )
+        for ( UIOffscreenScreen& offscreen : _offscreen.getScreens() )
         {
             if ( offscreen._screen->_styleSet == nullptr )
                 continue;
@@ -514,88 +416,30 @@ namespace sw
         unique_ptr<Widget>    root = instantiateDocument( documentPath, desc, listBinding, listStyleSheet );
         if ( root == nullptr )
             return kInvalidUIScreenHandle;
-        OffscreenScreen& offscreen = _listOffscreen.emplace_back();
-        offscreen._screen          = sw::make_unique<UIScreen>( desc, std::move( root ) );
-        offscreen._targetPath      = hashed_string( targetPath );
-        UIScreen& screen           = *offscreen._screen;
-        screen._documentPath       = FileUtil::normalizePath( documentPath );
-        screen._listBinding        = std::move( listBinding );
-        screen._listStyleSheet     = std::move( listStyleSheet );
-        screen._handle             = _nextScreenHandle++;
+        UIScreen& screen       = _offscreen.add( sw::make_unique<UIScreen>( desc, std::move( root ) ), hashed_string( targetPath ) );
+        screen._documentPath   = FileUtil::normalizePath( documentPath );
+        screen._listBinding    = std::move( listBinding );
+        screen._listStyleSheet = std::move( listStyleSheet );
+        screen._handle         = _nextScreenHandle++;
         rebuildStyleSet( screen );
         return screen._handle;
     }
 
     void UISystem::closeOffscreenScreen( UIScreenHandle handle )
     {
-        for ( size_t index = 0; index < _listOffscreen.size(); ++index )
-        {
-            if ( _listOffscreen[index]._screen->_handle != handle )
-                continue;
-            _listOffscreen.erase( _listOffscreen.begin() + static_cast<ptrdiff_t>( index ) );
-            return;
-        }
+        _offscreen.remove( handle );
     }
 
     UIScreen* UISystem::findOffscreenScreen( UIScreenHandle handle ) const
     {
-        for ( const OffscreenScreen& offscreen : _listOffscreen )
-        {
-            if ( offscreen._screen->_handle == handle )
-                return offscreen._screen.get();
-        }
-        return nullptr;
+        return _offscreen.findScreen( handle );
     }
 
     void UISystem::setOffscreenView( UIScreenHandle handle, const UIViewport& viewport, float32 textScale, const hashed_string& theme )
     {
-        for ( OffscreenScreen& offscreen : _listOffscreen )
-        {
-            if ( offscreen._screen->_handle != handle )
-                continue;
-            offscreen._viewport  = viewport;
-            offscreen._textScale = textScale > 0.0f ? textScale : 1.0f;
-            if ( offscreen._theme != theme )
-            {
-                offscreen._theme = theme;
-                rebuildStyleSet( *offscreen._screen, theme );
-            }
-            return;
-        }
-    }
-
-    void UISystem::updateOffscreenScreens()
-    {
-        for ( OffscreenScreen& offscreen : _listOffscreen )
-        {
-            const UIViewport& viewport = offscreen._viewport;
-            if ( viewport._physicalSize._x <= 0.0f || viewport._physicalSize._y <= 0.0f )
-                continue;
-            UIScreen&   screen = *offscreen._screen;
-            WidgetTree& tree   = screen.getTree();
-            if ( screen._styleSet != nullptr )
-                (void)UIStylePass::update( tree, *screen._styleSet, false );
-            // 미리보기는 애니메이션 단계를 돌지 않으므로, 방금 시작한 스타일 전환을 끝 값으로 바로 맞춘다(옛 값에 멈추지 않게).
-            (void)UIStyleTransition::update( tree, MathUtil::kMaxFloat );
-            // 화면 UI 와 같은 컨텍스트에서 이 화면의 뷰포트와 글자 배율만 바꿔 쓴다(배율이나 글자 배율이 바뀌면 루트부터 다시 측정한다. 트리가 지난 값을 보관하기 때문이다).
-            UILayoutContext layout = makeLayoutContext();
-            layout._viewportSize   = viewport._size;
-            layout._safeInsets     = viewport._safeInsets;
-            layout._uiScale        = viewport._uiScale;
-            layout._textScale      = offscreen._textScale;
-            (void)UILayoutPass::update( tree, layout );
-            UIPaintContext paint = makePaintContext();
-            paint._uiScale       = viewport._uiScale;
-            paint._textScale     = offscreen._textScale;
-            offscreen._scratch.clear();
-            offscreen._scratch._targetSize = viewport._physicalSize;
-            CanvasPainter painter( offscreen._scratch, viewport._uiScale );
-            (void)UIPaintPass::paint( tree, paint, painter, offscreen._scratch );
-            if ( offscreen._scratch.isSameContent( offscreen._canvas ) && offscreen._scratch._targetSize == offscreen._canvas._targetSize )
-                continue;
-            std::swap( offscreen._canvas, offscreen._scratch );
-            ++offscreen._revision;
-        }
+        // 테마가 바뀌면 그 화면의 스타일 시트만 다시 적용한다(게임 UI 의 테마는 그대로다).
+        if ( _offscreen.setView( handle, viewport, textScale, theme ) )
+            rebuildStyleSet( *_offscreen.findScreen( handle ), theme );
     }
 
     bool UISystem::isDocumentUsing( const string& documentPath, string_view usedPath )
@@ -628,9 +472,10 @@ namespace sw
             return false; // 기존 트리를 유지한다. 오류는 instantiateDocument 가 남겼다
 
         // 이름으로 이어 갈 것: 포커스 위젯, 덮였을 때의 포커스, 스크롤 오프셋.
+        UIFocusManager&       focus         = _input.getFocusManager();
         WidgetTree&           tree          = screen.getTree();
-        const bool            bHadFocus     = _focus.getFocusedTree() == &tree;
-        const Widget*         pFocused      = bHadFocus ? tree.findWidgetByID( _focus.getFocusedWidget() ) : nullptr;
+        const bool            bHadFocus     = focus.getFocusedTree() == &tree;
+        const Widget*         pFocused      = bHadFocus ? tree.findWidgetByID( focus.getFocusedWidget() ) : nullptr;
         const Widget*         pLastFocused  = tree.findWidgetByID( screen._lastFocused );
         const hashed_string   focusedName   = pFocused != nullptr ? pFocused->getName() : hashed_string{};
         const hashed_string   lastFocusName = pLastFocused != nullptr ? pLastFocused->getName() : hashed_string{};
@@ -658,7 +503,7 @@ namespace sw
         rebuildStyleSet( screen );
         // 스크롤 오프셋은 내용 크기 안으로 제한되므로, 새 트리를 지금 한 번 측정해 배치한 뒤에 복원한다.
         if ( screen._styleSet != nullptr )
-            (void)UIStylePass::update( tree, *screen._styleSet, _inputMode == UIInputMode::Navigation );
+            (void)UIStylePass::update( tree, *screen._styleSet, _input.getInputMode() == UIInputMode::Navigation );
         (void)UILayoutPass::update( tree, makeLayoutContext() );
 
         for ( size_t index = 0; index < listScrollName.size(); ++index )
@@ -673,8 +518,8 @@ namespace sw
         if ( bHadFocus )
         {
             const Widget* pNewFocus = focusedName.empty() ? nullptr : tree.findWidgetByName( focusedName );
-            if ( pNewFocus == nullptr || _focus.setFocus( tree, pNewFocus->getID() ) == false )
-                restoreFocus( screen );
+            if ( pNewFocus == nullptr || focus.setFocus( tree, pNewFocus->getID() ) == false )
+                _input.restoreFocus( screen );
         }
         return true;
     }
@@ -694,70 +539,37 @@ namespace sw
 
     void UISystem::setThemeCatalog( const UIThemeCatalog& catalog )
     {
-        _themeCatalog = catalog;
+        _theme.setCatalog( catalog, gv_uiTheme );
         // 사용자 설정(gv_uiTheme)의 테마가 목록에 있으면 그것을, 없으면 목록의 기본 테마를 쓴다. 테마를 두지 않은 게임 목록에서는 설정 값이 조용히 기본 테마가 된다.
-        _themeSetting = gv_uiTheme;
-        if ( _themeSetting.empty() == false && _themeCatalog.findTheme( hashed_string( _themeSetting ) ) != nullptr )
+        const hashed_string settingTheme = _theme.findSettingTheme();
+        if ( settingTheme.empty() == false )
         {
-            (void)setTheme( hashed_string( _themeSetting ) );
+            (void)setTheme( settingTheme );
             return;
         }
-        if ( _themeCatalog._defaultTheme.empty() == false && setTheme( _themeCatalog._defaultTheme ) == false )
-            SW_LOG_ERROR( "[UI] Default UI theme '%#' is not in the theme catalog", _themeCatalog._defaultTheme.c_str() );
+        const hashed_string& defaultTheme = _theme.getCatalog()._defaultTheme;
+        if ( defaultTheme.empty() == false && setTheme( defaultTheme ) == false )
+            SW_LOG_ERROR( "[UI] Default UI theme '%#' is not in the theme catalog", defaultTheme.c_str() );
     }
 
     bool UISystem::setTheme( const hashed_string& name )
     {
-        if ( _themeCatalog.findTheme( name ) == nullptr )
-        {
-            SW_LOG_WARNING( "[UI] Unknown UI theme '%#'", name.c_str() );
-            return false;
-        }
-        _themeName = name;
+        if ( _theme.selectTheme( name ) == false )
+            return false; // 경고는 selectTheme 이 남겼다
         for ( const unique_ptr<UIScreen>& screen : _listScreen )
         {
             rebuildStyleSet( *screen );
         }
-        for ( OffscreenScreen& offscreen : _listOffscreen )
+        for ( UIOffscreenScreen& offscreen : _offscreen.getScreens() )
         {
             rebuildStyleSet( *offscreen._screen, offscreen._theme );
         }
         return true;
     }
 
-    void UISystem::appendStyleSheets( const vector<string>& listPath, vector<shared_ptr<const UIStyleSheetAsset>>& inoutListSheet )
-    {
-        for ( const string& path : listPath )
-        {
-            string                                    error;
-            const shared_ptr<const UIStyleSheetAsset> sheet = _styleSheetCache.findOrLoad( path, error );
-            if ( sheet == nullptr )
-            {
-                SW_LOG_ERROR( "[UI] Style sheet is not loaded: %#", error.c_str() );
-                continue;
-            }
-            inoutListSheet.push_back( sheet );
-        }
-    }
-
     void UISystem::rebuildStyleSet( UIScreen& screen, const hashed_string& themeName )
     {
-        vector<shared_ptr<const UIStyleSheetAsset>> listSheet;
-        const hashed_string&                        theme  = themeName.empty() ? _themeName : themeName;
-        const UIThemeDesc*                          pTheme = theme.empty() ? nullptr : _themeCatalog.findTheme( theme );
-        if ( pTheme != nullptr )
-            appendStyleSheets( pTheme->_listStyleSheet, listSheet );
-        appendStyleSheets( screen._listStyleSheet, listSheet );
-        if ( screen._styleSet == nullptr )
-            screen._styleSet = make_unique<UIStyleSet>();
-        screen._styleSet->setSheets( std::move( listSheet ) );
-        // 트리 전체를 다시 맞춘다. 루트의 kStyle 은 계산이 바뀐 만큼 자손으로 내려가며, 규칙이 바뀌었으므로 자손도 모두 표시한다.
-        vector<Widget*> listWidget;
-        screen.getTree().collectWidgetsInDocumentOrder( listWidget );
-        for ( Widget* pWidget : listWidget )
-        {
-            pWidget->invalidate( WidgetDirty::kStyle );
-        }
+        _theme.rebuildStyleSet( screen, _styleSheetCache, themeName );
     }
 
     UIScreen* UISystem::findScreen( UIScreenHandle handle ) const
@@ -814,28 +626,21 @@ namespace sw
 
     bool UISystem::isActionConsumed( const InputMap& inputMap, const hashed_string& action ) const
     {
-        return _pInput != nullptr && _consumption.isActionConsumed( inputMap, *_pInput, action );
+        return _input.isActionConsumed( inputMap, action );
     }
 
     void UISystem::consumeAction( const InputMap& inputMap, const hashed_string& action )
     {
-        if ( _pInput != nullptr )
-            _consumption.consumeAction( inputMap, *_pInput, action );
+        _input.consumeAction( inputMap, action );
     }
 
     void UISystem::setInputMode( UIInputMode mode )
     {
-        if ( _inputMode == mode )
+        if ( _input.setInputMode( mode ) == false )
             return;
-        _inputMode = mode;
-        // :focus-visible 은 입력 방식을 따르므로 포커스 위젯을 다시 맞춘다.
-        WidgetTree* pFocusTree = _focus.getFocusedTree();
-        Widget*     pFocused   = pFocusTree != nullptr ? pFocusTree->findWidgetByID( _focus.getFocusedWidget() ) : nullptr;
-        if ( pFocused != nullptr )
-            pFocused->invalidate( WidgetDirty::kStyle );
         UIScreen* pActive = getActiveScreen();
-        if ( mode == UIInputMode::Navigation && pActive != nullptr && _focus.getFocusedTree() != &pActive->getTree() )
-            restoreFocus( *pActive );
+        if ( mode == UIInputMode::Navigation && pActive != nullptr && _input.getFocusManager().getFocusedTree() != &pActive->getTree() )
+            _input.restoreFocus( *pActive );
     }
 
     uint32 UISystem::onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
@@ -926,9 +731,10 @@ namespace sw
 
     void UISystem::refreshInputGlyphs()
     {
-        if ( _pInput == nullptr )
+        const InputManager* pInput = _input.getInputManager();
+        if ( pInput == nullptr )
             return;
-        const InputGlyphStyle style = _pInput->getActiveGlyphStyle();
+        const InputGlyphStyle style = pInput->getActiveGlyphStyle();
         if ( _bGlyphStyleKnown == SW_TRUE && style != _glyphStyle )
         {
             vector<Widget*> listWidget;
@@ -944,100 +750,6 @@ namespace sw
         }
         _glyphStyle       = style;
         _bGlyphStyleKnown = SW_TRUE;
-    }
-
-    void UISystem::processPointer()
-    {
-        const MouseDevice* pMouse = _pInput->getMouse();
-        if ( pMouse == nullptr )
-            return;
-        // 게임이 포인터를 잠가 두면(1인칭 시점) 커서는 화면 가운데에 묶여 있으므로 UI 는 포인터를 보지 않는다.
-        if ( _pInput->isMouseLockActive() )
-        {
-            _pointer.clearHover();
-            _bPointerKnown = SW_FALSE;
-            return;
-        }
-        // 창 픽셀을 UI 단위로 바꾼다(지난 `update` 뷰포트의 배율을 쓴다. 입력은 이번 프레임 레이아웃 앞이라 지난 프레임에 그린 화면 기준이다).
-        const int2     pixel   = pMouse->getPosition();
-        const float32  uiScale = _viewport._uiScale > 0.0f ? _viewport._uiScale : 1.0f;
-        const float2   position{ static_cast<float32>( pixel._x ) / uiScale, static_cast<float32>( pixel._y ) / uiScale };
-        UIPointerEvent event{};
-        event._position      = position;
-        event._delta         = _bPointerKnown == SW_TRUE ? float2{ position._x - _lastPointerPosition._x, position._y - _lastPointerPosition._y } : float2{};
-        const bool bMoved    = _bPointerKnown == SW_FALSE || event._delta._x != 0.0f || event._delta._y != 0.0f;
-        _lastPointerPosition = position;
-        _bPointerKnown       = SW_TRUE;
-        if ( bMoved )
-        {
-            event._kind = UIPointerEventKind::Move;
-            (void)dispatchPointerEvent( event );
-        }
-        for ( const MouseButton button : UISystemInternal::kArrPointerButton )
-        {
-            event._button = button;
-            // 위젯이 처리한 버튼은 소비한다. 게임의 "왼쪽 클릭 = 사격" 이 메뉴 클릭을 같이 받지 않게 하기 위해서다. 빈 곳 클릭은 게임으로 넘어간다.
-            if ( pMouse->wasButtonPressed( button ) )
-            {
-                event._kind = UIPointerEventKind::Down;
-                if ( dispatchPointerEvent( event ) )
-                    _consumption.consumeMouseButton( button );
-            }
-            if ( pMouse->wasButtonReleased( button ) )
-            {
-                event._kind = UIPointerEventKind::Up;
-                if ( dispatchPointerEvent( event ) )
-                    _consumption.consumeMouseButton( button );
-            }
-        }
-        const float32 wheel = pMouse->getMouseWheel();
-        if ( wheel != 0.0f )
-        {
-            event._kind  = UIPointerEventKind::Wheel;
-            event._wheel = wheel;
-            (void)dispatchPointerEvent( event );
-        }
-    }
-
-    bool UISystem::dispatchPointerEvent( const UIPointerEvent& event )
-    {
-        // 포인터를 잡은 위젯이 있으면 그 트리로, 없으면 점 아래 맨 위 화면으로 보낸다.
-        UIScreen* pTarget = nullptr;
-        if ( _pointer.getCaptureTree() != nullptr )
-        {
-            for ( const unique_ptr<UIScreen>& screen : _listScreen )
-            {
-                if ( &screen->getTree() == _pointer.getCaptureTree() )
-                    pTarget = screen.get();
-            }
-        }
-        if ( pTarget == nullptr )
-            pTarget = findPointerScreen( event._position );
-        if ( pTarget == nullptr )
-        {
-            _pointer.clearHover();
-            return false;
-        }
-        const UIPointerResult result = _pointer.process( pTarget->getTree(), event );
-        if ( result._focusRequest != kInvalidWidgetID && pTarget->takesFocus() )
-            (void)_focus.setFocus( pTarget->getTree(), result._focusRequest );
-        return result._bHandled == SW_TRUE;
-    }
-
-    UIScreen* UISystem::findPointerScreen( const float2& point ) const
-    {
-        UIWidgetPath path{};
-        for ( uint32 index = static_cast<uint32>( _listScreen.size() ); index > 0; --index )
-        {
-            UIScreen* pScreen = _listScreen[index - 1].get();
-            if ( pScreen->isClosing() || pScreen->receivesPointer() == false )
-                continue;
-            if ( UIEventRouter::hitTest( pScreen->getTree(), point, path ) )
-                return pScreen;
-            if ( pScreen->blocksLowerInput() )
-                return nullptr; // 모달 아래 화면은 클릭을 받지 않는다
-        }
-        return nullptr;
     }
 
     void UISystem::applyPendingCloses()
@@ -1082,11 +794,8 @@ namespace sw
     {
         unique_ptr<UIScreen> screen = std::move( _listScreen[index] );
         _listScreen.erase( _listScreen.begin() + index );
-        _pointer.forgetTree( screen->getTree() );
-        if ( _focus.getFocusedTree() == &screen->getTree() )
-            _focus.clearFocus();
+        _input.forgetScreen( *screen ); // 포인터와 포커스가 트리를 놓는다(트리가 지워질 때 포커스 매니저에게 알릴 일이 없다)
         screen->_pUISystem = nullptr;
-        // 트리가 지워질 때 포커스 매니저에게 알린다. 위에서 이미 해제했다.
     }
 
     void UISystem::refreshActiveScreen()
@@ -1110,19 +819,19 @@ namespace sw
         UIScreen* pOldActive = findScreen( _activeScreen );
         if ( pNewActive != pOldActive )
         {
-            if ( pOldActive != nullptr && _focus.getFocusedTree() == &pOldActive->getTree() )
+            UIFocusManager& focus = _input.getFocusManager();
+            if ( pOldActive != nullptr && focus.getFocusedTree() == &pOldActive->getTree() )
             {
-                pOldActive->_lastFocused = _focus.getFocusedWidget();
-                _focus.clearFocus();
+                pOldActive->_lastFocused = focus.getFocusedWidget();
+                focus.clearFocus();
             }
             _activeScreen = pNewActive != nullptr ? pNewActive->_handle : kInvalidUIScreenHandle;
             if ( pNewActive != nullptr )
-                restoreFocus( *pNewActive );
+                _input.restoreFocus( *pNewActive );
         }
 
-        // UI 액션은 활성 화면이 있을 때만 받는다. HUD 만 있으면 패드 A 는 게임의 것이다.
-        if ( _uiInputMap != nullptr )
-            syncInputLayers( pNewActive );
+        // UI 액션은 활성 화면이 있을 때만 받는다. HUD 만 있으면 패드 A 는 게임의 것이다(UI 맵이 없으면 아무것도 하지 않는다).
+        _input.syncInputLayers( pNewActive, _pauseMenuDocument.empty() == false );
 
         // 게임 정지: 정지 화면이 하나라도 있으면 요청을 걸어 둔다.
         bool bPause = false;
@@ -1140,228 +849,6 @@ namespace sw
             GameTimeScale::removePauseRequest();
             _bPauseRequested = SW_FALSE;
         }
-    }
-
-    void UISystem::updateInputMode()
-    {
-        UIInputMode mode    = _inputMode;
-        bool        bChange = false;
-        for ( const RawInputEvent& rawEvent : _pInput->getLastFrameEvents() )
-        {
-            // 커서 이동은 위치가 실제로 바뀔 때만 포인터 방식으로 본다. 창이 뜰 때나 포커스를 받을 때 OS 가 같은 위치로 보내는 이동 이벤트가
-            // 패드로 고른 포커스를 지우지 않게 하기 위해서다(첫 이벤트는 위치만 기억한다).
-            if ( rawEvent._type == RawInputEventType::MouseMove )
-            {
-                const int2 pixel{ rawEvent._payload._mouseData._x, rawEvent._payload._mouseData._y };
-                const bool bMoved = _bMousePixelKnown == SW_TRUE && ( pixel._x != _lastMousePixel._x || pixel._y != _lastMousePixel._y );
-                _lastMousePixel   = pixel;
-                _bMousePixelKnown = SW_TRUE;
-                if ( bMoved == false )
-                    continue;
-            }
-            UIInputMode eventMode = mode;
-            if ( UISystemInternal::tryGetInputMode( rawEvent, eventMode ) )
-            {
-                mode    = eventMode;
-                bChange = true;
-            }
-        }
-        if ( bChange )
-            setInputMode( mode );
-    }
-
-    void UISystem::processActions( float32 deltaSeconds )
-    {
-        UIScreen* pActive = getActiveScreen();
-        if ( pActive == nullptr )
-            processPauseAction();
-        if ( pActive == nullptr || _uiInputMap == nullptr || pActive->wantsUIActions() == false )
-        {
-            _bStickHeld = SW_FALSE;
-            return;
-        }
-        // 개발 콘솔이 키보드를 가졌으면 UI 는 액션을 받지 않는다. 텍스트 입력 위젯이 가졌으면 Back 과 Tab 만 받는다.
-        const InputKeyboardFocus keyboardFocus = _pInput->getKeyboardFocus();
-        if ( keyboardFocus == InputKeyboardFocus::DevConsole )
-            return;
-        const bool      bTextFocus = keyboardFocus == InputKeyboardFocus::UI;
-        const InputMap& uiMap      = *_uiInputMap;
-
-        for ( const UISystemInternal::NavigationAction& entry : UISystemInternal::kArrNavigationAction )
-        {
-            const hashed_string action( entry._pAction );
-            const bool          bTab = entry._direction == UINavigationDirection::Next || entry._direction == UINavigationDirection::Previous;
-            if ( ( bTextFocus && bTab == false ) || uiMap.wasActionTriggered( action ) == false )
-                continue;
-            if ( handleNavigation( *pActive, action, entry._direction ) )
-                consumeAction( uiMap, action );
-        }
-        if ( bTextFocus == false )
-        {
-            processStickNavigation( *pActive, deltaSeconds );
-            processScroll( *pActive );
-        }
-
-        const hashed_string arrRoutedAction[] = { hashed_string( UIActionName::kAccept ), hashed_string( UIActionName::kTabNext ),
-                                                  hashed_string( UIActionName::kTabPrevious ) };
-        for ( const hashed_string& action : arrRoutedAction )
-        {
-            if ( bTextFocus || uiMap.wasActionTriggered( action ) == false )
-                continue;
-            // 위젯이 먼저 처리하고, 아무도 소비하지 않은 탭 액션은 화면이 처리한다(옵션 메뉴의 탭 줄).
-            const bool bScreenAction = action != hashed_string( UIActionName::kAccept );
-            if ( routeAction( *pActive, action, float2{} ) || ( bScreenAction && pActive->onUnhandledAction( action ) ) )
-                consumeAction( uiMap, action );
-        }
-
-        // 텍스트 입력 위젯: 지우기는 위젯이 키보드 포커스를 가진 동안만 처리한다(그 밖에서 Backspace 는 UI 의 것이 아니다).
-        const hashed_string backspaceAction( UIActionName::kTextBackspace );
-        if ( bTextFocus && uiMap.wasActionTriggered( backspaceAction ) && routeAction( *pActive, backspaceAction, float2{} ) )
-            consumeAction( uiMap, backspaceAction );
-
-        const hashed_string backAction( UIActionName::kBack );
-        if ( uiMap.wasActionTriggered( backAction ) )
-        {
-            // 위젯이 먼저 처리하고(펼친 목록을 접는 콤보 상자), 아무도 소비하지 않으면 화면이 처리한다(기본은 닫기).
-            const bool bHandled = routeAction( *pActive, backAction, float2{} ) || pActive->onBack();
-            if ( bHandled )
-                consumeAction( uiMap, backAction );
-        }
-    }
-
-    bool UISystem::handleNavigation( UIScreen& screen, const hashed_string& action, UINavigationDirection direction )
-    {
-        WidgetTree& tree = screen.getTree();
-        // 포커스가 없으면 첫 탐색 입력은 기본 포커스를 잡는 데 쓴다(어디로 갈지 모르는 채 옮기지 않는다).
-        if ( _focus.getFocusedTree() != &tree || _focus.getFocusedWidget() == kInvalidWidgetID )
-        {
-            restoreFocus( screen );
-            return _focus.getFocusedTree() == &tree;
-        }
-        if ( routeAction( screen, action, float2{} ) )
-            return true;
-        return _focus.navigate( tree, direction );
-    }
-
-    void UISystem::processStickNavigation( UIScreen& screen, float32 deltaSeconds )
-    {
-        const hashed_string stickAction( UIActionName::kNavigateStick );
-        const float2        value = _uiInputMap->getVector2D( stickAction );
-        const float32       absX  = MathUtil::abs( value._x );
-        const float32       absY  = MathUtil::abs( value._y );
-        if ( MathUtil::max( absX, absY ) < UISystemInternal::kStickNavigateMagnitude )
-        {
-            _bStickHeld = SW_FALSE;
-            return;
-        }
-        // 큰 축 방향으로 한 번 이동한다. 스틱 위(+y)는 화면 위다.
-        const UINavigationDirection direction = absX >= absY ? ( value._x > 0.0f ? UINavigationDirection::Right : UINavigationDirection::Left )
-                                                             : ( value._y > 0.0f ? UINavigationDirection::Up : UINavigationDirection::Down );
-        bool                        bStep     = false;
-        if ( _bStickHeld == SW_FALSE || direction != _stickDirection )
-        {
-            _bStickHeld         = SW_TRUE;
-            _stickDirection     = direction;
-            _stickRepeatSeconds = _uiInputMap->getNavRepeatDelay();
-            bStep               = true;
-        }
-        else
-        {
-            _stickRepeatSeconds -= deltaSeconds;
-            if ( _stickRepeatSeconds <= 0.0f )
-            {
-                _stickRepeatSeconds += _uiInputMap->getNavRepeatRate();
-                bStep = true;
-            }
-        }
-        if ( bStep )
-            (void)handleNavigation( screen, stickAction, direction );
-        consumeAction( *_uiInputMap, stickAction ); // 기울인 동안(반복을 기다리는 동안에도) 스틱은 UI 의 것이다
-    }
-
-    void UISystem::processScroll( UIScreen& screen )
-    {
-        const hashed_string scrollAction( UIActionName::kScroll );
-        const float2        value = _uiInputMap->getVector2D( scrollAction );
-        if ( value._x == 0.0f && value._y == 0.0f )
-            return;
-        // 포커스가 이 화면에 있으면 포커스 경로(목록 안의 버튼, 그 목록)로, 없으면 포인터가 올라간 경로로 보낸다.
-        UIWidgetPath path{};
-        _focus.makeFocusPath( screen.getTree(), path );
-        if ( path.isEmpty() && _pointer.getHoverTree() == &screen.getTree() )
-            path = _pointer.getHoverPath();
-        if ( routeActionAlong( screen, path, scrollAction, value ) )
-            consumeAction( *_uiInputMap, scrollAction );
-    }
-
-    bool UISystem::routeAction( UIScreen& screen, const hashed_string& action, const float2& value )
-    {
-        UIWidgetPath path{};
-        _focus.makeFocusPath( screen.getTree(), path );
-        return routeActionAlong( screen, path, action, value );
-    }
-
-    bool UISystem::routeActionAlong( UIScreen& screen, const UIWidgetPath& path, const hashed_string& action, const float2& value )
-    {
-        if ( path.isEmpty() )
-            return false;
-        UIActionEvent event{};
-        event._action       = action;
-        event._value        = value;
-        event._deltaSeconds = _inputDeltaSeconds;
-        WidgetID      handler{ kInvalidWidgetID };
-        const UIReply reply = UIEventRouter::routeActionEvent( screen.getTree(), path, event, handler );
-        if ( reply.isHandled() && reply._focusRequest != kInvalidWidgetID )
-            (void)_focus.setFocus( screen.getTree(), reply._focusRequest );
-        return reply.isHandled();
-    }
-
-    void UISystem::updateKeyboardFocus()
-    {
-        const Widget* pFocused = nullptr;
-        if ( _focus.getFocusedTree() != nullptr )
-            pFocused = _focus.getFocusedTree()->findWidgetByID( _focus.getFocusedWidget() );
-        const bool               bWantsText = pFocused != nullptr && pFocused->supportsTextInput();
-        const InputKeyboardFocus current    = _pInput->getKeyboardFocus();
-        if ( bWantsText && current == InputKeyboardFocus::Game )
-            _pInput->setKeyboardFocus( InputKeyboardFocus::UI );
-        else if ( bWantsText == false && current == InputKeyboardFocus::UI )
-            _pInput->setKeyboardFocus( InputKeyboardFocus::Game );
-    }
-
-    void UISystem::onTextInput( string_view text )
-    {
-        dispatchTextEvent( text, false );
-    }
-
-    void UISystem::onTextComposition( string_view text )
-    {
-        dispatchTextEvent( text, true );
-    }
-
-    void UISystem::dispatchTextEvent( string_view text, bool bComposition )
-    {
-        WidgetTree* pTree   = _focus.getFocusedTree();
-        Widget*     pWidget = pTree != nullptr ? pTree->findWidgetByID( _focus.getFocusedWidget() ) : nullptr;
-        if ( pWidget == nullptr || pWidget->supportsTextInput() == false )
-            return;
-        UITextEvent event{};
-        event._text         = string{ text };
-        event._bComposition = bComposition ? SW_TRUE : SW_FALSE;
-        (void)pWidget->onTextEvent( event );
-    }
-
-    void UISystem::restoreFocus( UIScreen& screen )
-    {
-        WidgetTree& tree = screen.getTree();
-        if ( screen._lastFocused != kInvalidWidgetID && _focus.setFocus( tree, screen._lastFocused ) )
-            return;
-        if ( _inputMode != UIInputMode::Navigation || tree.getRoot() == nullptr )
-            return;
-        const Widget*  pDefault = screen.getDesc()._defaultFocus.empty() ? nullptr : tree.findWidgetByName( screen.getDesc()._defaultFocus );
-        const WidgetID target   = pDefault != nullptr ? pDefault->getID() : UINavigationSolver::findFirstFocusable( *tree.getRoot() );
-        if ( target != kInvalidWidgetID )
-            (void)_focus.setFocus( tree, target );
     }
 
     UIPaintContext UISystem::makePaintContext() const
@@ -1451,30 +938,15 @@ namespace sw
         {
             pComponent->appendWorldCanvas( inoutListTarget );
         }
-        // 오프스크린 화면(에디터 미리보기)은 불투명 바탕으로 지운다(ImGui 이미지가 알파를 섞지 않게 하기 위해서다).
-        for ( const OffscreenScreen& offscreen : _listOffscreen )
-        {
-            if ( offscreen._viewport._physicalSize._x <= 0.0f || offscreen._viewport._physicalSize._y <= 0.0f )
-                continue;
-            CanvasTargetDrawList& target = inoutListTarget.emplace_back();
-            target._targetPath           = offscreen._targetPath;
-            target._list                 = offscreen._canvas;
-            target._list._targetSize     = offscreen._viewport._physicalSize;
-            target._clearColor           = float4{ 0.06f, 0.07f, 0.09f, 1.0f };
-            target._contentRevision      = offscreen._revision;
-        }
+        _offscreen.appendCanvases( inoutListTarget );
     }
 
     void UISystem::syncThemeSetting()
     {
-        const string& setting = gv_uiTheme;
-        if ( setting == _themeSetting )
-            return;
-        _themeSetting = setting;
-        if ( setting.empty() || _themeCatalog._listTheme.empty() )
-            return;
+        hashed_string theme;
         // 실행 중에 바꾼 값: 모르는 이름이면 setTheme 이 경고하고 지금 테마를 유지한다(게임 테마 목록에 그 이름이 없는 경우).
-        (void)setTheme( hashed_string( setting ) );
+        if ( _theme.pollSetting( gv_uiTheme, theme ) )
+            (void)setTheme( theme );
     }
 
     void UISystem::syncScreenSwitches()
@@ -1500,32 +972,12 @@ namespace sw
     void UISystem::setPauseMenuDocument( string_view documentPath )
     {
         _pauseMenuDocument = documentPath;
-        syncInputLayers( getActiveScreen() );
+        _input.syncInputLayers( getActiveScreen(), _pauseMenuDocument.empty() == false );
     }
 
     UserSettingsManager* UISystem::findUserSettings() const
     {
         return _pUserSettings != nullptr ? _pUserSettings : engine::getBoundEngineServices()._pUserSettingsManager;
-    }
-
-    void UISystem::processPauseAction()
-    {
-        if ( _uiInputMap == nullptr || _pauseMenuDocument.empty() || _pInput->getKeyboardFocus() == InputKeyboardFocus::DevConsole )
-            return;
-        const hashed_string pauseAction( UIActionName::kPause );
-        if ( _uiInputMap->wasActionTriggered( pauseAction ) == false || _consumption.isActionConsumed( *_uiInputMap, *_pInput, pauseAction ) )
-            return;
-        // 열지 못해도 소비한다. 일시정지를 누른 Esc 가 게임의 마우스 잠금 토글로 새지 않게 하기 위해서다(오류는 문서 생성 단계가 남긴다).
-        consumeAction( *_uiInputMap, pauseAction );
-        (void)openScreen<PauseMenuScreen>( _pauseMenuDocument ); // 실패는 문서 생성 단계가 로그에 남긴다(위 설명 참고)
-    }
-
-    void UISystem::syncInputLayers( const UIScreen* pActive )
-    {
-        if ( _uiInputMap == nullptr )
-            return;
-        _uiInputMap->setLayerEnabled( UISystemInternal::kUILayerName, pActive != nullptr );
-        _uiInputMap->setLayerEnabled( UISystemInternal::kUIGlobalLayerName, pActive == nullptr && _pauseMenuDocument.empty() == false );
     }
 
     void UISystem::paintScreens()
@@ -1543,9 +995,9 @@ namespace sw
             WidgetTree& tree = screen->getTree();
             paintedCount += UIPaintPass::paint( tree, context, painter, _canvasScratch );
             // 포커스 테두리는 패드나 키보드로 다룰 때만 그린다(언리얼 CommonUI, 콘솔 게임과 같다). 그 화면 위, 위 화면 아래에 놓는다.
-            if ( _inputMode != UIInputMode::Navigation || _focus.getFocusedTree() != &tree )
+            if ( _input.getInputMode() != UIInputMode::Navigation || _input.getFocusManager().getFocusedTree() != &tree )
                 continue;
-            const Widget* pFocused = tree.findWidgetByID( _focus.getFocusedWidget() );
+            const Widget* pFocused = tree.findWidgetByID( _input.getFocusManager().getFocusedWidget() );
             if ( pFocused != nullptr && pFocused->isVisible() )
                 UIPaintPass::paintFocusRing( *pFocused, painter );
         }

@@ -517,7 +517,7 @@ SW_TEST_CASE( UIStyleTest, ReduceMotionDisablesTransitions )
 
 /**
  * @brief [UIStyleTest] 오프스크린 화면(에디터 미리보기)은 스타일 전환을 기다리지 않고 바뀐 값을 바로 보인다 — 진행 단계가 스택의 화면만 돌므로 시작한 전환이 옛 값에 멈춘다
- * @details 변이: `UISystem::updateOffscreenScreens` 의 전환 끝내기 줄을 빼면 상자가 빨강에 남아 진다.
+ * @details 변이: `UIOffscreenScreens::update` 의 전환 끝내기 줄을 빼면 상자가 빨강에 남아 진다.
  */
 SW_TEST_CASE( UIStyleTest, OffscreenScreenFinishesTransitionsAtOnce )
 {

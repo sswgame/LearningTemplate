@@ -260,7 +260,7 @@ SW_TEST_CASE( UIOptionsMenuTest, RebindCapturesNextKeyAndSwapsOnConflict )
 /**
  * @brief [UIOptionsMenuTest] 키를 받는 동안 UI 행동은 꺼진다 — Esc 를 누른 프레임에 창이 닫히지 않고(UI.Back 이 아니다) 뗄 때 취소된다.
  *        아래 화살표는 탐색이 아니라 바인딩이 되고, 창이 닫히면 포커스는 그 행 단추로 돌아온다
- * @details 변이: `UISystem::processActions` 의 `wantsUIActions` 검사를 빼면 Esc 를 누른 프레임에 UI.Back 이 창을 닫는다.
+ * @details 변이: `UIInputRouter::processActions` 의 `wantsUIActions` 검사를 빼면 Esc 를 누른 프레임에 UI.Back 이 창을 닫는다.
  */
 SW_TEST_CASE( UIOptionsMenuTest, RebindIgnoresUIActionsWhileListening )
 {
@@ -341,7 +341,7 @@ SW_TEST_CASE( UIOptionsMenuTest, NavigationVisitsEveryRow )
 
 /**
  * @brief [UIOptionsMenuTest] 일시정지 메뉴 — 켠 게임에서 화면이 없을 때 Esc 가 일시정지 메뉴를 열고(그 Esc 는 먹힌다), 옵션 명령이 옵션 메뉴를 위에 연다
- * @details 변이: `UISystem::syncInputLayers` 의 `UIGlobal` 줄을 빼면 Esc 가 아무것도 열지 않는다.
+ * @details 변이: `UIInputRouter::syncInputLayers` 의 `UIGlobal` 줄을 빼면 Esc 가 아무것도 열지 않는다.
  */
 SW_TEST_CASE( UIOptionsMenuTest, PauseActionOpensPauseMenu )
 {
