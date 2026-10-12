@@ -682,14 +682,9 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr || _bFlushScheduled == SW_TRUE )
             return;
-        _bFlushScheduled           = SW_TRUE;
-        const ComponentHandle self = getHandle();
-        pManager->executeOrDeferPostTick( [pManager, self]()
-        {
-            ShooterPlayerComponent* pPlayer = static_cast<ShooterPlayerComponent*>( pManager->resolveComponent( self ) );
-            if ( pPlayer != nullptr )
-                pPlayer->flushPending();
-        } );
+        _bFlushScheduled = SW_TRUE;
+        pManager->executeOrDeferPostTickOnComponent<ShooterPlayerComponent>( getHandle(), []( ShooterPlayerComponent& player )
+        { player.flushPending(); } );
     }
 
     void ShooterPlayerComponent::flushPending()

@@ -99,14 +99,9 @@ namespace sw
         // 메싱은 월드를 읽기만 한다 — 같은 그룹의 다른 청크와 나란히 돈다. 블록은 틱 뒤에만 바뀐다.
         _bRebuildRequested = SW_FALSE;
         VoxelMesher::fillChunkMesh( pDirector->getWorld(), _chunkX, _chunkZ, _scratchMesh );
-        _bApplyScheduled           = SW_TRUE;
-        const ComponentHandle self = getHandle();
-        pManager->executeOrDeferPostTick( [pManager, self]()
-        {
-            VoxelChunkComponent* pChunk = static_cast<VoxelChunkComponent*>( pManager->resolveComponent( self ) );
-            if ( pChunk != nullptr )
-                pChunk->applyMeshes();
-        } );
+        _bApplyScheduled = SW_TRUE;
+        pManager->executeOrDeferPostTickOnComponent<VoxelChunkComponent>( getHandle(), []( VoxelChunkComponent& chunk )
+        { chunk.applyMeshes(); } );
     }
 
     void VoxelChunkComponent::applyMeshes()
