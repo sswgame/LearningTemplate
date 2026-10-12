@@ -36,14 +36,7 @@ namespace sw
 
     void ServerServiceRegistry::collectFactories( vector<ServerServiceFactory*>& outListFactory )
     {
-        vector<ServiceFactoryNode*> listNode;
-        ServerServiceRegistryInternal::getList().collect( listNode );
-        outListFactory.clear();
-        outListFactory.reserve( listNode.size() );
-        for ( ServiceFactoryNode* pNode : listNode )
-        {
-            outListFactory.push_back( static_cast<ServerServiceFactory*>( pNode ) ); // 이 목록에는 서버 서비스 팩토리만 오른다
-        }
+        ServerServiceRegistryInternal::getList().collectAs( outListFactory );
     }
 
     int32 ServerServiceRegistry::getFactoryCount()

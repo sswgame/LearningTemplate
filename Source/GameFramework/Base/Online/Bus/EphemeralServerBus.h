@@ -27,9 +27,15 @@ namespace sw
     class SW_GF_API EphemeralServerBus final : public IServerBus
     {
     public:
-        /** @brief @p pRouter 는 빌려 씁니다. 버스보다 오래 살아야 하며, 구독은 라우터가 초기화된 뒤에만 됩니다. */
+        /** @brief @p pRouter 는 빌려 씁니다. 버스보다 오래 살아야 하며, 구독은 라우터가 초기화된 뒤에만 됩니다. null 이면 `bindRouter` 로 나중에 정합니다. */
         EphemeralServerBus( EphemeralStoreRouter* pRouter, uint64 serverID );
         ~EphemeralServerBus() override;
+
+        /**
+         * @brief 라우터를 정합니다. 호스트가 라우터를 여는 것은 호스트 `initialize` 안이고, 호스트는 그 전에 버스 포인터를 받으므로 서버 조립은 버스를 먼저 만들고
+         *        호스트를 띄운 뒤 이것을 부릅니다. 구독이 있으면 바꾸지 않습니다(false).
+         */
+        bool bindRouter( EphemeralStoreRouter* pRouter );
 
         void   publish( string_view topic, const uint8* pData, int32 size ) override;
         void   subscribe( string_view topic ) override;

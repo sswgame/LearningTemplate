@@ -88,6 +88,7 @@ py -3 -m Scripts test ChatStreamTest.*
 | `Mail` | 우편 넣기와 전체 우편 |
 | `Sanction` | 계정 제재 레코드 |
 | `Observability` | 서비스 표준 지표 |
+| `Server` | 서버 조립(`OnlineServerRuntime`), 키트 조립 레지스트리(`IOnlineServerKit`), 온라인 설정(`OnlineServerConfig`), 저장 드라이버 테이블, 전용 서버의 서버 서비스 |
 | `Local` | 클라이언트 로컬 저장 슬롯 |
 | `HTTP` | 최소 HTTP/1.1 클라이언트와 테스트 서버 |
 
@@ -134,7 +135,36 @@ SQL 은 `GF_SQLStore`(SQLite)와 `GF_Server_SQLStore`(PostgreSQL), 캐시는 `GF
 GM 도구 키트는 운영 도구와 에디터만 의존하고, 플레이어용 게임은 의존하지 않습니다.
 온라인 게임에서 소유의 원본은 서버 원장입니다. 클라이언트의 `Wallet` 과 `Inventory` 는 `EconomyMirror` 가 채우는 읽기 사본입니다. 오프라인 게임은 기반의 지갑과 상점을 그대로 씁니다.
 
-서버 실행 파일에 서비스를 조립하는 일은 [Server](../../../Server/README.md)에 있습니다. 부하 테스트 봇은 `Tools/OnlineLoadBot` 이고, 키트 클라이언트를 그대로 써서 엔드포인트 하나에 연결 수천 개를 붙입니다.
+부하 테스트 봇은 `Tools/OnlineLoadBot` 이고, 키트 클라이언트를 그대로 써서 엔드포인트 하나에 연결 수천 개를 붙입니다.
+
+### 서버 조립 — 키트를 서버에 붙이는 길
+
+키트끼리는 서로 모르므로 "계정 키트가 만든 접속 상태를 채팅 키트에 넘기는" 조립을 키트 하나가 할 수 없습니다. 그래서 조립은 기반의 `Server/` 가 맡습니다.
+
+- **런타임**(`OnlineServerRuntime`)이 저장소, 캐시, 버스(캐시 위 버스 — 캐시 앞은 호스트의 라우터로 나눠 쓴다), 예약 작업, 원격 설정, 서비스 호스트를 만듭니다.
+- **키트 조립**(`IOnlineServerKit`)은 키트마다 `.cpp` 하나입니다. `SW_REGISTER_ONLINE_SERVER_KIT( 타입, "이름", OnlineServerKitOrder::k… )` 한 줄로 오릅니다.
+  `initialize` 에서 로직과 바인딩을 만들어 호스트에 올리고 다른 키트가 쓸 기반 인터페이스(신원, 접속 상태, 세션 끊기, 이름 찾기, 차단 목록, 원장 정책)를 문맥에 내놓습니다.
+  `start` 에서 라우터와 다른 키트의 인터페이스를 받아 시작합니다. 그래서 시작 순서는 인터페이스를 내놓는 키트가 먼저입니다(`OnlineServerKitOrder`).
+- **설정**은 서버 설정 옆 `<이름>.online.json`(`OnlineServerConfig`)입니다. 키트 목록과 키트마다의 키-값 옵션, 저장소와 캐시 항목 이름, 서버 id, 지역, 공개 주소를 적습니다.
+  키트 목록을 비우면 이 빌드에 올라온 키트를 모두 붙입니다. 공개 주소가 있으면 이 서버를 디렉터리에 등록하고 하트비트를 보냅니다.
+- **전용 서버**는 서버 서비스(`OnlineServerService`, `Engine/Observability/ServerServiceRegistry`)로 런타임을 띄웁니다. 서비스 포트는 서버 설정의 `_servicePort`,
+  TLS 인증서와 키는 서버 설정의 `_tlsCertificateFile` · `_tlsPrivateKeyFile`(키 암호는 `_tlsPrivateKeySecretEnvironment` 의 환경 변수)입니다.
+  지표 레지스트리와 상태 레지스트리는 서버 것을 그대로 받으며, 상태 검사 `online_services` 가 준비 여부에 들어갑니다. 쓰는 법은 [Server](../../../Server/README.md)에 있습니다.
+- **저장 드라이버**(SQLite, PostgreSQL, RESP)는 저장 키트에 있습니다. 저장 키트가 만들기 함수를 `OnlineStoreDriverTable` 에 묶으면 런타임이 그 드라이버를 씁니다.
+  `memory` 는 런타임이 직접 만듭니다. 묶인 함수가 없는데 다른 드라이버를 고르면 기동이 멈춥니다.
+
+```json
+{
+    "_listKit": [
+        { "_name": "account", "_listOption": [ { "_key": "ticketKeySecretEnvironment", "_value": "SW_TICKET_KEY" } ] },
+        { "_name": "chat" },
+        { "_name": "directory" }
+    ],
+    "_serverID": 1,
+    "_region": "kr",
+    "_publicAddress": "203.0.113.10"
+}
+```
 
 ## 확장하는 법
 
@@ -151,7 +181,8 @@ GM 도구 키트는 운영 도구와 에디터만 의존하고, 플레이어용 
 ## 함정과 주의
 
 - **캐시 응답과 서버 버스 메시지를 꺼내는 것은 호스트 하나입니다**(`getEphemeralRouter`, `subscribeServerBus`). `IEphemeralStore::pollReplies` 와 `IServerBus::pollMessages` 는 전체 것을 꺼냅니다.
-  서비스 둘이 직접 부르면 서로의 응답을 가져가고, 가져간 쪽은 버리고 맡긴 쪽은 영원히 기다립니다.
+  서비스 둘이 직접 부르면 서로의 응답을 가져가고, 가져간 쪽은 버리고 맡긴 쪽은 영원히 기다립니다. 캐시 위 버스(`EphemeralServerBus`)도 캐시 앞을 직접 꺼내지 않고 호스트의 라우터를 빌려 씁니다.
+  호스트는 `initialize` 안에서 라우터를 열고 그 전에 버스 포인터를 받으므로, 버스는 먼저 만들고 호스트를 띄운 뒤 `bindRouter` 로 묶습니다(`OnlineServerRuntime` 이 그렇게 한다).
 - **메서드 범위가 겹치는 서비스는 `registerHostService` 가, 같은 메서드 번호는 `NetRequestServer::registerMethod` 가 거절합니다.** 덮어쓰면 한 키트의 요청이 다른 키트로 갑니다.
 - **종료 순서는 키트(로직과 바인딩), 호스트, 저장소와 캐시 순입니다.** 실제 서버도 테스트 하니스(`OnlineTestServer::addKit`)도 같습니다.
   키트의 `shutdown` 은 빌려 준 것을 모두 회수합니다. 저장 작업, 라우터의 `cancel`, 접속 상태의 `IAccountPresence::cancel`, 버스 구독이 그것입니다.

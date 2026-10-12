@@ -43,6 +43,21 @@ SW_TEST_CASE( ServiceHealthRegistryTest, ReadinessNeedsRequiredChecksAndNotDrain
     health.setCheck( 99, HealthState::Ok, "" ); // 범위 밖은 무시
 }
 
+SW_TEST_CASE( ServiceHealthRegistryTest, SameNameReusesTheCheck )
+{
+    // 서비스를 멈췄다 다시 시작하면(모듈 리로드) 같은 이름을 다시 올린다 — 줄이 둘이 되지 않고 처음 상태로 돌아간다.
+    ServiceHealthRegistry health;
+    const int32           first = health.registerCheck( "online_services", true );
+    health.setCheck( first, HealthState::Ok, "" );
+    const int32 again = health.registerCheck( "online_services", true );
+    SW_EXPECT_EQUAL( first, again );
+    health.markTick( 10 );
+    SW_EXPECT_FALSE( health.isReady( 10 ) ); // 다시 올린 검사는 Failing 에서 시작한다
+    string text;
+    health.writeReport( text, 10 );
+    SW_EXPECT_EQUAL( text.find( "check online_services" ), text.rfind( "check online_services" ) );
+}
+
 SW_TEST_CASE( ServiceHealthRegistryTest, ReportListsEveryCheck )
 {
     ServiceHealthRegistry health;

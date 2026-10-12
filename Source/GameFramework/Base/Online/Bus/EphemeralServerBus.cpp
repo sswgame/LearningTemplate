@@ -51,6 +51,14 @@ namespace sw
         }
     }
 
+    bool EphemeralServerBus::bindRouter( EphemeralStoreRouter* pRouter )
+    {
+        if ( _listSubscription.empty() == false )
+            return false;
+        _pRouter = pRouter;
+        return true;
+    }
+
     void EphemeralServerBus::publish( string_view topic, const uint8* pData, int32 size )
     {
         const bool bValid = isValidTopic( topic ) && 0 <= size && size <= kMaxMessageSize && ( size == 0 || pData != nullptr );
@@ -59,7 +67,7 @@ namespace sw
             SW_LOG_WARNING( "Dropped a bus message: topic '%#' size %#", topic, size );
             return;
         }
-        if ( _pRouter->getStore() == nullptr )
+        if ( _pRouter == nullptr || _pRouter->getStore() == nullptr )
         {
             SW_LOG_WARNING( "Dropped a bus message on topic '%#' - the cache router is not initialized", topic );
             return;
@@ -86,6 +94,11 @@ namespace sw
         {
             if ( subscription._topic == topic )
                 return;
+        }
+        if ( _pRouter == nullptr )
+        {
+            SW_LOG_WARNING( "Bus subscription to '%#' failed - no cache router is bound", topic );
+            return;
         }
         const uint64 subscriptionID = _pRouter->subscribe( EphemeralServerBusInternal::makeChannel( topic ),
                                                            SW_DELEGATE_METHOD( EphemeralStoreRouter::MessageDelegate, &EphemeralServerBus::onChannelMessage, this ) );

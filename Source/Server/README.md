@@ -68,7 +68,12 @@ Dev 빌드는 게임 틱을 멈추는 명령도 받습니다. `pause` 는 틱을
 클라이언트는 `App.exe "-gv_netConnectAddress=127.0.0.1:7777"` 이고, 로그에 `Net session client 0 connected from …` 가 남습니다. Dev 서버의 `net.status` 가 역할 · 연결 수를 답합니다.
 에디터는 툴바의 Net Mode(전용 서버 + 클라이언트 N)로 이 둘을 자식 프로세스로 띄우고 로그 · 트레이스를 모읍니다([Editor README](../Editor/README.md) "멀티 프로세스 재생").
 
-**5단계 — 배포 서버를 빌드합니다.** `Ninja-Shipping-Server` 프리셋은 서버만 빌드하고, 쿠킹도 서버 패키지 규칙으로 합니다.
+**5단계 — 온라인 서비스를 띄웁니다.** 서버 설정 옆에 `<이름>.online.json` 을 두면(예: `ops.json` 이면 `ops.online.json`) 서버가 로그인, 채팅, 디렉터리, 매칭 같은
+온라인 서비스를 서비스 포트(`_servicePort`, TCP · TLS 1.3)에서 받습니다. 파일이 없으면 띄우지 않습니다. 파일 형식과 키트 옵션은 [Online README](../GameFramework/Base/Online/README.md) "서버 조립" 에 있습니다.
+로그에 `Online services listening on port 7780 (server 1, kits: account, …)` 가 남고, 상태 검사 `online_services` 가 `/readyz` 에 들어갑니다.
+Dev 에서 TLS 인증서와 키 경로를 비우면 `Saved/Certificates/` 의 개발용 인증서를 씁니다. Shipping 은 두 경로가 필수입니다.
+
+**6단계 — 배포 서버를 빌드합니다.** `Ninja-Shipping-Server` 프리셋은 서버만 빌드하고, 쿠킹도 서버 패키지 규칙으로 합니다.
 
 ```powershell
 build/Ninja-Shipping-Server/Bin/Server.exe -server-config=Config/Server/Empty.json

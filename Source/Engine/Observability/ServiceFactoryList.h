@@ -44,6 +44,20 @@ namespace sw
         void  collect( vector<ServiceFactoryNode*>& outListNode ) const;
         int32 getCount() const;
 
+        /** @brief `collect` 와 같고 노드를 팩토리 타입으로 돌려줍니다. 한 목록에는 한 팩토리 타입만 올리므로 정적 변환이 안전합니다. */
+        template <typename TFactory>
+        void collectAs( vector<TFactory*>& outListFactory ) const
+        {
+            vector<ServiceFactoryNode*> listNode;
+            collect( listNode );
+            outListFactory.clear();
+            outListFactory.reserve( listNode.size() );
+            for ( ServiceFactoryNode* pNode : listNode )
+            {
+                outListFactory.push_back( static_cast<TFactory*>( pNode ) );
+            }
+        }
+
     private:
         mutable mutex       _mutex;
         ServiceFactoryNode* _pHead;
