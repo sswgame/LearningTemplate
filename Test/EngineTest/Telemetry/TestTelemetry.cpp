@@ -9,6 +9,7 @@
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Telemetry/TelemetryUploader.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
+#include "Engine/Utility/EngineFrameObserver.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -440,6 +441,70 @@ SW_TEST_CASE( TelemetryTest, SceneSummariesCarryFramePercentiles )
     SW_EXPECT_TRUE( second.get( "scene" ).asString() == "game/b.scene.xml" );
     SW_EXPECT_EQUAL( 50, static_cast<int32>( second.get( "frames" ).asInt() ) );
     SW_EXPECT_NEAR_EQUAL( 8.05, second.get( "p50Ms" ).asFloat(), 0.06 );
+}
+
+/**
+ * @brief [TelemetryTest] 프레임 관찰자 — 씬 틱 뒤(`onAfterSceneTick`)만 문맥의 활성 씬 · 프레임 시간을 기록하고, 프레임 앞 · 뒤 · 창 닫힘 · 패킷 채우기는 아무것도 정하지 않는다
+ * @details 엔진 루프가 부르는 자리를 테스트가 인터페이스로만 대신 부른다(`AutomationSessionTest` 와 같은 방식).
+ */
+SW_TEST_CASE( TelemetryTest, FrameObserverRecordsTheActiveSceneAfterSceneTick )
+{
+    using Internal          = TelemetryTestInternal;
+    const string     folder = test::makeTempDirectory( "spool" );
+    TelemetryService telemetry;
+    SW_ASSERT_TRUE( telemetry.loadSchemaText( Internal::kSchemaXML, "Telemetry" ) );
+    telemetry.initialize( folder, Internal::makeContext() );
+    telemetry.setConsent( true );
+
+    IEngineFrameObserver& observer = telemetry; // 엔진 루프처럼 인터페이스로만 부른다
+    EngineFrameContext    context;
+    // 장면 A: 16 ms 10 프레임, 장면 B: 8 ms 5 프레임. 프레임마다 루프의 세 자리(앞 · 씬 틱 뒤 · 뒤)를 차례로 부른다.
+    struct SceneRun
+    {
+        const utf8* _pSceneID;
+        float32     _deltaSeconds;
+        int32       _frameCount;
+    };
+    constexpr SceneRun kArrSceneRun[] = {
+        {"game/a.scene.xml", 0.016f, 10},
+        {"game/b.scene.xml", 0.008f,  5}
+    };
+    for ( const SceneRun& run : kArrSceneRun )
+    {
+        context._activeSceneID = run._pSceneID;
+        context._deltaSeconds  = run._deltaSeconds;
+        for ( int32 frame = 0; frame < run._frameCount; ++frame )
+        {
+            observer.onFrameBegin( context );
+            observer.onAfterSceneTick( context );
+            SW_EXPECT_EQUAL( IEngineFrameObserver::kRunning, observer.onFrameEnd( context ) );
+        }
+    }
+    SW_EXPECT_EQUAL( IEngineFrameObserver::kRunning, observer.onWindowClosed( context ) );
+
+    string                    screenshotPath = "earlier.ppm";
+    EngineRenderPacketContext packetContext;
+    packetContext._pScreenshotPath = &screenshotPath;
+    observer.onBuildRenderPacket( packetContext );
+    SW_EXPECT_TRUE( screenshotPath == "earlier.ppm" ); // 패킷에 싣는 것이 없다
+    telemetry.shutdown();
+
+    vector<JSONDocument> listSummary;
+    for ( const string& line : Internal::splitLines( Internal::readAllSpool( folder ) ) )
+    {
+        JSONDocument doc;
+        SW_ASSERT_TRUE( doc.parse( line, "line" ) );
+        if ( doc.getRoot().get( "event" ).asString() == "perf.sceneSummary" )
+            listSummary.push_back( std::move( doc ) );
+    }
+    SW_ASSERT_EQUAL( 2u, static_cast<uint32>( listSummary.size() ) );
+    const JSONValue first = listSummary[0].getRoot().get( "fields" );
+    SW_EXPECT_TRUE( first.get( "scene" ).asString() == "game/a.scene.xml" );
+    SW_EXPECT_EQUAL( 10, static_cast<int32>( first.get( "frames" ).asInt() ) ); // 프레임 앞 · 뒤는 기록하지 않는다 — 씬 틱 뒤 한 번씩만
+    SW_EXPECT_NEAR_EQUAL( 16.05, first.get( "p50Ms" ).asFloat(), 0.06 );
+    const JSONValue second = listSummary[1].getRoot().get( "fields" );
+    SW_EXPECT_TRUE( second.get( "scene" ).asString() == "game/b.scene.xml" );
+    SW_EXPECT_EQUAL( 5, static_cast<int32>( second.get( "frames" ).asInt() ) );
 }
 
 /**

@@ -14,6 +14,8 @@
 | `gv_devConsoleOpen` | `int32` | `0` | 시험 | 게임 창 개발 콘솔을 연 채로 시작 (1=열기) | [App.cpp](../../Source/App/App.cpp) |
 | `gv_fixedFrameDelta` | `float32` | `0.0` | 시험 · 배포본에도 | 프레임마다 흘릴 고정 시간(초, 0=실시간) — 결정적 실행 | [App.cpp](../../Source/App/App.cpp) |
 | `gv_reloadGameAtFrame` | `int32` | `0` | 시험 | 이 프레임에 게임 모듈 핫 리로드를 요청한다 (0=사용 안 함) | [App.cpp](../../Source/App/App.cpp) |
+| `gv_rhiSwapAtFrame` | `int32` | `0` | 시험 | 이 프레임에 백엔드 교체를 요청한다 (0=사용 안 함) | [RHIBackendSwitcher.cpp](../../Source/App/RHIBackendSwitcher.cpp) |
+| `gv_rhiSwapTo` | `RHIBackend` | `DirectX12` | 시험 | gv_rhiSwapAtFrame 에 바꿀 백엔드 | [RHIBackendSwitcher.cpp](../../Source/App/RHIBackendSwitcher.cpp) |
 | `gv_standardInputCommands` | `int32` | `0` | 시험 | 표준 입력의 줄을 명령으로 받는다 (quit=종료, 1=켜기) | [App.cpp](../../Source/App/App.cpp) |
 | `gv_userSettingsApply` | `string` | — | 시험 · 배포본에도 | 사용자 설정을 메뉴와 같은 길로 바꾼다: "id=value;id=value" (자동화) | [UserSettingsHost.cpp](../../Source/App/UserSettingsHost.cpp) |
 | `gv_userSettingsApplyFrame` | `int32` | `30` | 시험 · 배포본에도 | gv_userSettingsApply 를 적용할 프레임 | [UserSettingsHost.cpp](../../Source/App/UserSettingsHost.cpp) |
@@ -75,8 +77,6 @@
 | `gv_dumpReflection` | `string` | — | 시험 | 첫 프레임에 이 이름들(쉼표로 여럿)의 리플렉션 등록 내용을 로그로 남긴다 — 타입 · enum (비우면 사용 안 함) | [EngineLoop.cpp](../../Source/Engine/EngineLoop.cpp) |
 | `gv_navDebugDraw` | `int32` | `0` | 일반 | 내비메시 디버그 — 선(편집기 뷰포트): 1 폴리곤 테두리 · 2 에이전트 경로 · 4 에이전트 속도 · 8 장애물, 16 걷는 면 · 경로를 게임 화면의 메시로 (31 = 모두, 0 = 끔) | [EngineLoop.cpp](../../Source/Engine/EngineLoop.cpp) |
 | `gv_physicsDebugDraw` | `bool` | `false` | 일반 | 강체 물리 바디 · 캐릭터를 디버그 선으로 그린다 | [EngineLoop.cpp](../../Source/Engine/EngineLoop.cpp) |
-| `gv_rhiSwapAtFrame` | `int32` | `0` | 시험 | 이 프레임에 백엔드 교체를 요청한다 (0=사용 안 함) | [EngineLoop.cpp](../../Source/Engine/EngineLoop.cpp) |
-| `gv_rhiSwapTo` | `RHIBackend` | `DirectX12` | 시험 | gv_rhiSwapAtFrame 에 바꿀 백엔드 | [EngineLoop.cpp](../../Source/Engine/EngineLoop.cpp) |
 | `gv_telemetryFolder` | `string` | — | 시험 · 배포본에도 | 텔레메트리 스풀 폴더 (비면 사용자 폴더의 telemetry/) | [EngineLoop.cpp](../../Source/Engine/EngineLoop.cpp) |
 
 ## `Source/Engine/Destruction`

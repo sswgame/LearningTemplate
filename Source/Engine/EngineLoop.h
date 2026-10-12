@@ -214,7 +214,7 @@ namespace sw
         void pollShaderReloadHotkey();
         /** @brief 설정 파일을 다시 읽었습니다(`ConfigManager::onConfigReloaded`). 게임 설정 활성본 · 선호 수직 동기화를 다시 맞춥니다. */
         void onConfigReloaded( const hashed_string& configTypeName );
-        /** @brief 프레임 관찰자에게 넘길 이번 프레임의 문맥(입력 · 렌더 스레드가 쓴 스크린샷 수)을 만듭니다. */
+        /** @brief 프레임 관찰자에게 넘길 이번 프레임의 문맥(입력 · 렌더 스레드가 쓴 스크린샷 수 · 프레임 시간 · 활성 씬)을 만듭니다. */
         EngineFrameContext makeFrameContext() const;
 
         // 기동 단계의 본문이다(`EngineLoop.cpp`). 표(`EngineInitStepList.xxx`)의 줄마다 `<단계>StartupStep` 하나이고, 빠지면 컴파일 오류다.
@@ -268,7 +268,10 @@ namespace sw
         /** @brief 에디터 Undo/Redo 전용이라 배포본에는 만들지 않습니다(목록의 HostCreated). */
         unique_ptr<CommandStack>   _commandStack;
         unique_ptr<GPUUploadQueue> _gpuUploadQueue;
-        /** @brief 프레임 관찰자 목록입니다(소유하지 않는다). 프레임 앞(입력 전) · 뒤(씬 틱 뒤) · 패킷 채우기 · 창 닫힘에서 붙인 순서대로 부르고, 종료 코드를 내면 `requestQuit` 입니다. */
+        /**
+         * @brief 프레임 관찰자 목록입니다(소유하지 않는다). 프레임 앞(입력 전) · 씬 틱 뒤(UI 앞) · 패킷 채우기 · 프레임 뒤(렌더 제출 뒤) · 창 닫힘에서 붙인 순서대로 부르고,
+         *        종료 코드를 내면 `requestQuit` 입니다. 텔레메트리(기동 단계 `Telemetry` 가 붙인다)와 App 의 진단 · 자동화도 여기로 붙습니다.
+         */
         vector<IEngineFrameObserver*> _listFrameObserver;
         /** @brief 추가 뷰(CCTV · 백미러 · PiP) 중 이번 프레임에 그릴 것을 고르는 스케줄러(갱신 주기 · 예산)입니다. FrameRenderer 단계가 만들고 해제합니다. */
         unique_ptr<RenderViewScheduler> _renderViewScheduler;
@@ -287,6 +290,8 @@ namespace sw
         RHIInitResult _rhiInitResult;
         /** @brief 이번 프레임 씬이 흘린 시간(초)입니다. 씬을 틱하지 않은 프레임은 0 — 디버그 드로우의 지속 시간이 이 값으로 흐릅니다. */
         float32 _sceneDeltaSeconds;
+        /** @brief 이번 프레임 시간(초)입니다(`beginFrame` · `tick` 이 받은 값). 프레임 관찰자 문맥의 `_deltaSeconds` 입니다. */
+        float32 _frameDeltaSeconds;
         /** @brief `requestQuit` 이 정한 종료 코드입니다. */
         int32 _exitCode;
 

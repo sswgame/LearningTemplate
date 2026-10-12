@@ -5,6 +5,8 @@
 #pragma once
 #include "Core/Common/Types.h"
 
+#include "Engine/Utility/EngineFrameObserver.h"
+
 namespace sw
 {
     struct GlobalVariableInfo;
@@ -18,12 +20,14 @@ namespace sw
      * @details 교체는 "렌더 워커 비우기 → 모듈 인스턴스 파괴 → 디바이스 재생성 → 모듈 재생성" 순서를 어기면 바로 죽습니다.
      *          그 순서를 아는 곳을 하나로 둡니다. 상용 엔진이 디바이스 상실 · 어댑터 변경 · 전체 화면 전환을 모두 같은 재생성
      *          경로로 모으는 것과 같은 이유입니다. 사유는 늘어도 순서를 아는 코드는 하나여야 합니다. 쓰는 곳은 App 뿐입니다.
+     *          진단 스위치 `-gv_rhiSwapAtFrame=N -gv_rhiSwapTo=<backend>` 도 여기서 받습니다. 엔진 루프에 프레임 관찰자로 붙어(`initialize`) N 번째 프레임의
+     *          시작(`onFrameBegin`)에 메뉴 · 콘솔과 같은 경로로 교체를 요청하고, 교체는 그 프레임의 `applyIfPending` 이 합니다.
      */
-    class RHIBackendSwitcher
+    class RHIBackendSwitcher : public IEngineFrameObserver
     {
     public:
         RHIBackendSwitcher();
-        ~RHIBackendSwitcher() = default;
+        ~RHIBackendSwitcher() override = default;
 
         RHIBackendSwitcher( const RHIBackendSwitcher& )            = delete;
         RHIBackendSwitcher& operator=( const RHIBackendSwitcher& ) = delete;
@@ -44,6 +48,13 @@ namespace sw
 
         /** @brief 예약된 교체가 있으면 적용합니다. 프레임 경계에서만 부릅니다. */
         void applyIfPending();
+
+        // IEngineFrameObserver — 프레임 시작만 쓴다(`-gv_rhiSwapAtFrame` 진단). 나머지는 아무것도 하지 않고 종료를 정하지 않는다.
+        /** @brief `-gv_rhiSwapAtFrame` 의 프레임이면 `gv_rhiBackend` 를 `-gv_rhiSwapTo` 로 바꿔 교체를 요청합니다(한 번만). Shipping 에서는 아무것도 하지 않습니다. */
+        void                onFrameBegin( const EngineFrameContext& context ) override;
+        [[nodiscard]] int32 onFrameEnd( const EngineFrameContext& context ) override;
+        [[nodiscard]] int32 onWindowClosed( const EngineFrameContext& context ) override;
+        void                onBuildRenderPacket( EngineRenderPacketContext& inoutContext ) override;
 
     private:
         /** @brief gv_rhiBackend 변경 이벤트 훅입니다. */

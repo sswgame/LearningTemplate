@@ -113,7 +113,7 @@ if ( pTelemetry != nullptr )
 
 **샘플링은 결정적입니다.** 세션은 세션 id 해시로(`sessionSample`), 사건은 (세션, 사건 id, 그 사건의 순번) 해시로 고릅니다. 같은 세션은 언제나 같은 사건을 고릅니다.
 
-**장면별 프레임 시간.** `EngineLoop::tick` 이 매 프레임 `recordFrame( 장면 경로, dt )` 를 부릅니다. 장면이 바뀌거나 세션이 끝나면 `perf.sceneSummary` 사건으로 프레임 수, 시간, 평균, p50, p99, 최대를 남깁니다.
+**장면별 프레임 시간.** 서비스는 엔진 루프의 프레임 관찰자(`IEngineFrameObserver`)입니다. 기동 단계 `Telemetry` 가 루프에 붙이고, 루프가 씬 틱 뒤(`onAfterSceneTick`, 런타임 UI 앞)에 부르면 `recordFrame( 장면 경로, dt )` 와 `update( dt )` 를 차례로 부릅니다. 루프는 텔레메트리를 모릅니다. 장면이 바뀌거나 세션이 끝나면 `perf.sceneSummary` 사건으로 프레임 수, 시간, 평균, p50, p99, 최대를 남깁니다.
 히스토그램은 0.1 ms 간격 2,500칸이고, 250 ms를 넘는 프레임은 넘침 칸에 들어갑니다. 백분위는 칸의 가운데 값이라 오차가 0.05 ms 안입니다.
 엔진 스키마에는 이 사건 외에 `session.start` 와 `session.end` 가 있습니다.
 

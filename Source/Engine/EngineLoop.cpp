@@ -115,14 +115,6 @@ namespace sw
      */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_crashTest, 0, "일부러 크래시를 내 리포트 경로를 검증합니다 (1=널 쓰기 2=스택 오버플로 3=작업 스레드 스택 오버플로 4=abort 5=순수 가상 호출)" );
     /**
-     * @brief `-gv_rhiSwapAtFrame=N -gv_rhiSwapTo=<backend>`: N 번째 프레임에 백엔드 교체를 요청합니다.
-     * @details 에디터 메뉴 없이(헤드리스로) 교체를 재현 · 검증하는 창구입니다. 요청 방식은 에디터
-     *          패널과 같습니다(`GlobalVariableInfo::setValueAsInt` → 변경 콜백 → RHIBackendSwitcher 가 다음 프레임에
-     *          적용). C++ 대입(`gv_rhiBackend = x`)은 콜백을 부르지 않아 아무 일도 일어나지 않습니다. 0 이면 꺼져 있습니다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_rhiSwapAtFrame, 0, "이 프레임에 백엔드 교체를 요청한다 (0=사용 안 함)" );
-    SW_TEST_GLOBAL_VARIABLE( RHIBackend, gv_rhiSwapTo, RHIBackend::DirectX12, "gv_rhiSwapAtFrame 에 바꿀 백엔드" );
-    /**
      * @brief `-gv_canvasTestPattern=1`: 주 출력에 캔버스 테스트 그림(둥근 · 테두리 · 반투명 겹침 · 가위 · 둥근 자르기 · 그림자 · 글자)을 그립니다.
      * @details 위젯(UI 단계)이 생기기 전에 Canvas 패스 · canvas.hlsl · 글리프 아틀라스를 네 백엔드에서 눈으로 보는 길이다(스크린샷에도 들어간다).
      */
@@ -837,6 +829,8 @@ namespace sw
             telemetry.initialize( folder, context );
             // 동의는 플레이어 옵션(기본 꺼짐)이다. 꺼져 있으면 지난 실행이 남긴 스풀까지 지운다.
             telemetry.bindConsentSetting( *loop._owned._pUserSettingsManager );
+            // 장면별 프레임 시간 · flush 는 프레임 관찰자로 돈다(씬 틱 뒤 — `TelemetryService::onAfterSceneTick`). 루프는 목록만 안다.
+            loop.addFrameObserver( &telemetry );
 
             // 지난 실행의 크래시를 묶는다(덤프 · 로그 폴더 옆의 Saved/CrashReports). 기본 동의(local)는 묶기만 하고, 보낼 것이 있을 때만 보고 프로세스를 띄운다.
             const string crashFolder = getCrashReportFolder();
@@ -856,6 +850,7 @@ namespace sw
         static void shutdown( EngineLoop& loop )
         {
             loop._owned._pCrashReportService->shutdown();
+            loop.removeFrameObserver( loop._owned._pTelemetryService.get() );
             loop._owned._pTelemetryService->shutdown();
         }
     };
@@ -939,6 +934,7 @@ namespace sw
         , _bQuitRequested{ false }
         , _rhiInitResult{ RHIInitResult::NotStarted }
         , _sceneDeltaSeconds{ 0.0f }
+        , _frameDeltaSeconds{ 0.0f }
         , _exitCode{ 0 }
         , _profileSession{}
         , _startup{}
@@ -1181,6 +1177,10 @@ namespace sw
         EngineFrameContext context;
         context._pInput                   = _owned._pInputManager.get();
         context._completedScreenshotCount = _renderThread != nullptr ? _renderThread->getCompletedScenarioScreenshotCount() : 0u;
+        context._deltaSeconds             = _frameDeltaSeconds;
+        const Scene* pActiveScene         = _owned._pSceneManager != nullptr ? _owned._pSceneManager->getActiveScene() : nullptr;
+        if ( pActiveScene != nullptr )
+            context._activeSceneID = pActiveScene->getSourcePath().empty() ? pActiveScene->getName() : pActiveScene->getSourcePath();
         return context;
     }
 
@@ -1203,6 +1203,7 @@ namespace sw
 
     void EngineLoop::beginFrame( float32 deltaSeconds )
     {
+        _frameDeltaSeconds = deltaSeconds;
         // 관찰자의 프레임 앞 단계(시나리오의 시작 조건 · 가상 입력 붙이기 · 행동 층 단계)는 이 프레임의 입력 재생 전이다.
         if ( _listFrameObserver.empty() == false )
         {
@@ -1243,19 +1244,7 @@ namespace sw
         const uint32          vpWidth    = mainOutput._width;
         const uint32          vpHeight   = mainOutput._height;
         const bool            bSceneMain = views.isSceneViewMain();
-        // 진단: 지정한 프레임에 백엔드 교체를 요청한다(에디터 패널과 같은 경로. setValueAsInt 가 변경 콜백을 부른다).
-        // 테스트용 스위치라 Shipping 에는 없다(그 빌드에서 gv_rhiSwapAtFrame 은 등록되지 않아 늘 0 이다).
-#if !defined( SW_SHIPPING )
-        if ( gv_rhiSwapAtFrame > 0 && engine::getFrameProfiler().getFrameCount() == static_cast<uint64>( gv_rhiSwapAtFrame ) &&
-             gv_rhiBackend != gv_rhiSwapTo )
-        {
-            SW_LOG_INFO( "[SwapProbe] frame %# — requesting backend %#", gv_rhiSwapAtFrame, RHI::getBackendTypeName( gv_rhiSwapTo ) );
-            // C++ 대입은 변경 콜백을 부르지 않는다. 메뉴 · 콘솔이 쓰는 setValueAsInt 로 가야 RHIBackendSwitcher 가 받는다.
-            if ( GlobalVariableInfo* pVar = engine::getGlobalVariableManager().findVariable( "gv_rhiBackend" ) )
-                pVar->setValueAsInt( static_cast<int32>( gv_rhiSwapTo ) );
-            gv_rhiSwapAtFrame = 0; // 한 번만. 프로파일러가 프레임 수를 되돌리면(워밍업 뒤) 같은 번호가 다시 온다
-        }
-#endif
+        _frameDeltaSeconds               = deltaTime;
 
         if ( _bHeadless )
             return;
@@ -1329,15 +1318,14 @@ namespace sw
             }
         }
 
-        // 텔레메트리 — 장면별 프레임 시간을 모으고 flush 시간이 되면 쓴다. 동의가 없으면 둘 다 아무 일도 하지 않는다.
-        if ( _owned._pTelemetryService != nullptr )
+        // 관찰자 훅 `onAfterSceneTick` — 이 프레임의 게임 상태가 정해진 뒤(씬 틱 · 디버그 그리기 뒤), 런타임 UI · 렌더 패킷 앞이라는 순서가 뜻이 있다(텔레메트리의 장면별 프레임 시간).
+        if ( _listFrameObserver.empty() == false )
         {
-            const Scene* pTelemetryScene = _owned._pSceneManager != nullptr ? _owned._pSceneManager->getActiveScene() : nullptr;
-            string_view  sceneID{};
-            if ( pTelemetryScene != nullptr )
-                sceneID = pTelemetryScene->getSourcePath().empty() ? pTelemetryScene->getName() : pTelemetryScene->getSourcePath();
-            _owned._pTelemetryService->recordFrame( sceneID, deltaTime );
-            _owned._pTelemetryService->update( deltaTime );
+            const EngineFrameContext context = makeFrameContext();
+            for ( IEngineFrameObserver* pObserver : _listFrameObserver )
+            {
+                pObserver->onAfterSceneTick( context );
+            }
         }
 
         // 런타임 UI — 이번 프레임의 게임 상태로 애니메이션 · 스타일 · 레이아웃을 돌린다(게임 틱 뒤 · 렌더 패킷 앞). 뷰포트는 게임이 그려지는 화면이고,
