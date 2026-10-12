@@ -4,6 +4,7 @@
 
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/File/IFileWatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Module/ModuleImageUtil.h"
@@ -33,6 +34,20 @@ namespace sw
     {
         struct LiveReloadManagerInternal
         {
+            /**
+             * @brief 두 모듈 이름이 같은 모듈 파일을 가리키는지 봅니다.
+             * @details Windows 파일 시스템은 대소문자를 가리지 않아 'gameframework' 도 GameFramework.dll 을 엽니다. 그래서 거기서는 대소문자를
+             *          무시하고 비교합니다. 그렇지 않으면 철자만 바꿔 공용 모듈 거절을 지나갑니다. 리눅스는 파일 이름이 대소문자를 가리므로 그대로 비교합니다.
+             */
+            static bool isSameModuleName( string_view lhs, string_view rhs )
+            {
+#if defined( SW_PLATFORM_WINDOWS )
+                return StringUtil::equals( lhs, rhs, true );
+#else
+                return lhs == rhs;
+#endif
+            }
+
             /**
              * @brief 모듈 @p pModule 이 의존 @p dependencyName 을 @p pExpected 이미지에 묶었는지 봅니다.
              * @param dependencyFileName (Windows) 모듈의 import 표가 그 의존을 부르는 이름입니다(세대 이름 — `ModuleShadowCopy::writeShadowCopy`).
@@ -165,14 +180,18 @@ namespace sw
 
     bool LiveReloadManager::loadSharedModule( string_view moduleName )
     {
-        if ( _mapModule.find( string( moduleName ) ) != _mapModule.end() )
+        for ( const auto& [registeredName, registeredContext] : _mapModule )
         {
-            SW_LOG_ERROR( "Module %# is already registered for reload - it cannot also be a shared module that never unloads", moduleName );
-            return false;
+            (void)registeredContext;
+            if ( LiveReloadManagerInternal::isSameModuleName( registeredName, moduleName ) )
+            {
+                SW_LOG_ERROR( "Module %# is already registered for reload - it cannot also be a shared module that never unloads", moduleName );
+                return false;
+            }
         }
         for ( const string& loadedName : _listSharedModule )
         {
-            if ( loadedName == moduleName )
+            if ( LiveReloadManagerInternal::isSameModuleName( loadedName, moduleName ) )
                 return true;
         }
 
@@ -219,7 +238,7 @@ namespace sw
         // 리로드 대상(_mapModule)에 오르는 길은 여기 하나뿐이므로, 공용 모듈을 내리거나 다시 올리는 길을 여기서 막는다.
         for ( const string& sharedName : _listSharedModule )
         {
-            if ( sharedName == moduleName )
+            if ( LiveReloadManagerInternal::isSameModuleName( sharedName, moduleName ) )
             {
                 SW_LOG_ERROR( "Shared module %# outlives the modules that link it and cannot be registered for reload or unload", moduleName );
                 return false;
