@@ -101,6 +101,8 @@ namespace sw
         void setInputEnabled( bool bEnabled ) { _bReadInput = bEnabled; }
         /** @brief 충격을 더합니다. 원점과 모양을 받으며, 폭발이나 착지에 씁니다. */
         void addImpulse( const CameraImpulseDef& def, const float3& origin ) { _director.addImpulse( def, origin ); }
+        /** @brief 시야각 킥(+, 달리기 · 부스트) · 줌 펀치(−, 사격 · 착탄)를 더합니다. */
+        void addFieldOfViewKick( const CameraFieldOfViewKickDef& def ) { _director.addFieldOfViewKick( def ); }
 
         const hashed_string& getActivePresetID() const { return _director.getActivePresetID(); }
         bool                 isBlending() const { return _director.isBlending(); }

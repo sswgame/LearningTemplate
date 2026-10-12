@@ -143,3 +143,66 @@ namespace sw
         return sum;
     }
 } // namespace sw
+
+namespace sw
+{
+    float32 CameraFieldOfViewKick::computeEnvelope() const
+    {
+        // 오르내림은 블렌드 곡선(SmoothStep)과 같은 함수다 — 끝 속도가 0 이라 툭 끊기지 않는다.
+        const BlendCurveDef smooth{};
+        if ( _elapsed < 0.0f || isFinished() )
+            return 0.0f;
+        if ( _elapsed < _def._attackTime )
+            return evaluateBlendWeight( smooth, _elapsed / _def._attackTime );
+        const float32 released = _elapsed - _def._attackTime - _def._holdTime;
+        if ( released <= 0.0f )
+            return 1.0f;
+        return _def._releaseTime > 0.0f ? 1.0f - evaluateBlendWeight( smooth, released / _def._releaseTime ) : 0.0f;
+    }
+
+    CameraFieldOfViewKickListener::CameraFieldOfViewKickListener()
+        : _listKick{}
+    {
+    }
+
+    void CameraFieldOfViewKickListener::addKick( const CameraFieldOfViewKickDef& def )
+    {
+        const float32 length = def._attackTime + def._holdTime + def._releaseTime;
+        if ( length <= 0.0f || def._amount == 0.0f )
+            return;
+        CameraFieldOfViewKick kick;
+        kick._def = def;
+        _listKick.push_back( kick );
+    }
+
+    void CameraFieldOfViewKickListener::step( float32 deltaTime )
+    {
+        const float32 elapsed = MathUtil::max( 0.0f, deltaTime );
+        for ( CameraFieldOfViewKick& kick : _listKick )
+        {
+            kick._elapsed += elapsed;
+        }
+        _listKick.erase( std::remove_if( _listKick.begin(), _listKick.end(), []( const CameraFieldOfViewKick& kick )
+        { return kick.isFinished(); } ),
+                         _listKick.end() );
+    }
+
+    float32 CameraFieldOfViewKickListener::computeScale() const
+    {
+        float32 scale = 1.0f;
+        for ( const CameraFieldOfViewKick& kick : _listKick )
+        {
+            scale += kick._def._amount * kick.computeEnvelope();
+        }
+        return MathUtil::max( kMinScale, scale );
+    }
+
+    CameraPose CameraFieldOfViewKickListener::applyToPose( const CameraPose& pose ) const
+    {
+        const float32 scale  = computeScale();
+        CameraPose    kicked = pose;
+        kicked._fieldOfViewY = MathUtil::min( pose._fieldOfViewY * scale, MathUtil::kPi - 0.01f );
+        kicked._orthoHeight  = pose._orthoHeight * scale;
+        return kicked;
+    }
+} // namespace sw

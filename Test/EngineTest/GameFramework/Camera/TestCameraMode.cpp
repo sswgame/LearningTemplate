@@ -566,6 +566,98 @@ SW_TEST_CASE( CameraModeTest, FollowXYDirectorDampsAndShakesBackToItsPlace )
 }
 
 /**
+ * @brief [CameraModeTest] 렌즈 물리값 — 초점 길이가 시야각을 정하고, 더치는 화면을 기울이며, 초점 · 조리개 · 시프트 · 후처리는 포즈에 실려 섞인다
+ */
+SW_TEST_CASE( CameraModeTest, LensPhysicalValuesReachThePose )
+{
+    CameraPresetDef def;
+    def._view._mode                        = CameraPresetMode::Fixed;
+    def._lens._focalLength                 = 50.0f;
+    def._lens._sensorSize                  = float2{ 36.0f, 24.0f };
+    def._lens._dutch                       = 20.0f * MathUtil::kDegreeToRadian;
+    def._lens._focusDistance               = 3.5f;
+    def._lens._aperture                    = 1.4f;
+    def._lens._lensShift                   = float2{ 0.0f, 0.1f };
+    def._postProcess._exposureCompensation = 1.0f;
+    def._postProcess._letterboxAspectRatio = 2.39f;
+    const CameraPose pose                  = evaluatePreset( def, CameraTarget{} );
+    SW_EXPECT_NEAR_EQUAL( 2.0f * MathUtil::atan2( 12.0f, 50.0f ), pose._fieldOfViewY, 1.0e-5f ); // 50 mm 풀 프레임 ≈ 27°
+    SW_EXPECT_NEAR_EQUAL( 3.5f, pose._focusDistance, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 1.4f, pose._aperture, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.1f, pose._lensShift._y, 1.0e-6f );
+    const float3 up = float3::transform( float3{ 0.0f, 1.0f, 0.0f }, pose._rotation );
+    SW_EXPECT_NEAR_EQUAL( MathUtil::cos( 20.0f * MathUtil::kDegreeToRadian ), up._y, 1.0e-4f ); // 앞축으로 기울었다
+    SW_EXPECT_NEAR_EQUAL( 1.0f, CameraModeTestInternal::computeForward( pose._rotation )._z, 1.0e-4f );
+
+    CameraPose       plain;
+    const CameraPose half = blendPoses( plain, pose, 0.5f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, half._postProcess._exposureCompensation, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 2.39f, half._postProcess._letterboxAspectRatio, 1.0e-6f ); // 한쪽에만 있으면 절반에서 바꾼다
+    SW_EXPECT_NEAR_EQUAL( 0.0f, blendPoses( plain, pose, 0.4f )._postProcess._letterboxAspectRatio, 1.0e-6f );
+}
+
+/**
+ * @brief [CameraModeTest] 시야각 킥은 오르고 버틴 뒤 0 으로 내려가며(끝에서 정확히 1 배), 줌 펀치는 좁힌다
+ */
+SW_TEST_CASE( CameraModeTest, FieldOfViewKickRisesHoldsAndReleases )
+{
+    CameraFieldOfViewKickDef kick;
+    kick._amount      = 0.2f;
+    kick._attackTime  = 0.1f;
+    kick._holdTime    = 0.1f;
+    kick._releaseTime = 0.2f;
+    CameraFieldOfViewKickListener listener;
+    listener.addKick( kick );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, listener.computeScale(), 1.0e-6f );
+    listener.step( 0.05f );
+    SW_EXPECT_NEAR_EQUAL( 1.1f, listener.computeScale(), 1.0e-4f ); // 오르기 절반 — SmoothStep 은 0.5
+    listener.step( 0.1f );
+    SW_EXPECT_NEAR_EQUAL( 1.2f, listener.computeScale(), 1.0e-5f ); // 버티기
+    CameraPose pose;
+    pose._fieldOfViewY = 1.0f;
+    SW_EXPECT_NEAR_EQUAL( 1.2f, listener.applyToPose( pose )._fieldOfViewY, 1.0e-5f );
+    listener.step( 0.3f );
+    SW_EXPECT_FALSE( listener.isActive() );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, listener.computeScale(), 1.0e-6f );
+
+    kick._amount = -0.5f; // 줌 펀치
+    listener.addKick( kick );
+    listener.step( 0.15f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, listener.computeScale(), 1.0e-5f );
+}
+
+/**
+ * @brief [CameraModeTest] 돌리 레일 — 카메라는 레일 위에서 대상에 가장 가까운 점에 서서 대상을 보고, 경로 오프셋만큼 레일을 따라 옮긴다
+ */
+SW_TEST_CASE( CameraModeTest, DollyRailFollowsTheNearestPoint )
+{
+    CameraPresetDef def;
+    def._view._mode       = CameraPresetMode::Dolly;
+    def._dolly._type      = SplineType::Linear;
+    def._dolly._listPoint = {
+        float3{-10.0f, 2.0f, -5.0f},
+        float3{ 10.0f, 2.0f, -5.0f}
+    };
+    CameraTarget target;
+    target._focus = float3{ 3.0f, 0.0f, 0.0f };
+    CameraModeState  state;
+    const CameraPose pose = evaluateCameraMode( def, target, 0.0f, state, nullptr );
+    SW_EXPECT_TRUE( state._bDollyPathBuilt == SW_TRUE );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, pose._position._x, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, pose._position._y, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( -5.0f, pose._position._z, 1.0e-3f );
+    const float3 forward = CameraModeTestInternal::computeForward( pose._rotation );
+    float3       toFocus = target._focus - pose._position;
+    toFocus.normalize();
+    SW_EXPECT_NEAR_EQUAL( toFocus._z, forward._z, 1.0e-3f ); // 대상을 본다
+
+    def._dolly._pathOffset = -2.0f;
+    state.reset();
+    target._focus = float3{ 50.0f, 0.0f, 0.0f }; // 레일 끝 너머 — 끝에서 오프셋만큼 뒤
+    SW_EXPECT_NEAR_EQUAL( 8.0f, evaluateCameraMode( def, target, 0.0f, state, nullptr )._position._x, 1.0e-3f );
+}
+
+/**
  * @brief [CameraModeTest] 포즈의 화면 광선은 직교 리그의 광선과 같고, 원근 포즈는 화면 가운데가 앞 방향이다
  */
 SW_TEST_CASE( CameraModeTest, ScreenRayFromAPoseMatchesTheOrthoRig )

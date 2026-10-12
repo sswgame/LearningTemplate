@@ -29,6 +29,15 @@ namespace sw
                 outArchive << pose._orthoHeight;
                 outArchive << pose._nearPlane;
                 outArchive << pose._farPlane;
+                outArchive << pose._focusDistance;
+                outArchive << pose._aperture;
+                outArchive << pose._lensShift;
+                outArchive << pose._postProcess._exposureCompensation;
+                outArchive << pose._postProcess._bloomScale;
+                outArchive << pose._postProcess._vignetteIntensity;
+                outArchive << pose._postProcess._saturation;
+                outArchive << pose._postProcess._contrast;
+                outArchive << pose._postProcess._letterboxAspectRatio;
                 outArchive << pose._bOrthographic;
             }
 
@@ -42,6 +51,15 @@ namespace sw
                 archive >> outPose._orthoHeight;
                 archive >> outPose._nearPlane;
                 archive >> outPose._farPlane;
+                archive >> outPose._focusDistance;
+                archive >> outPose._aperture;
+                archive >> outPose._lensShift;
+                archive >> outPose._postProcess._exposureCompensation;
+                archive >> outPose._postProcess._bloomScale;
+                archive >> outPose._postProcess._vignetteIntensity;
+                archive >> outPose._postProcess._saturation;
+                archive >> outPose._postProcess._contrast;
+                archive >> outPose._postProcess._letterboxAspectRatio;
                 archive >> outPose._bOrthographic;
             }
 
@@ -114,6 +132,7 @@ namespace sw
     CameraDirector::CameraDirector()
         : _listLayer{}
         , _impulseListener{}
+        , _fieldOfViewKickListener{}
         , _emptyState{}
         , _outputPose{}
         , _pProbe{ nullptr }
@@ -270,6 +289,10 @@ namespace sw
         // 충격은 섞인 포즈 위에 마지막으로 — 블렌드가 흔들림을 고정해 출발점에 싣지 않게.
         _impulseListener.step( elapsed );
         _outputPose = _impulseListener.isActive() ? applyCameraShake( blended, _impulseListener.computeOffset( blended._position ) ) : blended;
+        // 시야각 킥도 섞인 포즈 위에 — 블렌드 출발점에 킥이 고정되지 않게.
+        _fieldOfViewKickListener.step( elapsed );
+        if ( _fieldOfViewKickListener.isActive() )
+            _outputPose = _fieldOfViewKickListener.applyToPose( _outputPose );
         return _outputPose;
     }
 
@@ -368,6 +391,7 @@ namespace sw
         _bHasPose   = bHasPose == SW_TRUE ? SW_TRUE : SW_FALSE;
         _bCutQueued = SW_FALSE;
         _impulseListener.clear();
+        _fieldOfViewKickListener.clear();
         return true;
     }
 } // namespace sw

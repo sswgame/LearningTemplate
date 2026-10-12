@@ -23,7 +23,11 @@ namespace sw
 
             static constexpr const utf8* kArrPresetAttribute[]    = { "id" };
             static constexpr const utf8* kArrViewAttribute[]      = { "mode", "pitch", "yaw", "distance", "offset", "aim", "lookAt" };
-            static constexpr const utf8* kArrLensAttribute[]      = { "fieldOfViewY", "orthoHeight", "near", "far", "orthographic" };
+            static constexpr const utf8* kArrLensAttribute[]      = { "fieldOfViewY", "orthoHeight", "near", "far", "orthographic", "focalLength",
+                                                                      "sensor", "focusDistance", "aperture", "shift", "dutch" };
+            static constexpr const utf8* kArrDollyAttribute[]     = { "type", "closed", "pathOffset" };
+            static constexpr const utf8* kArrPointAttribute[]     = { "position" };
+            static constexpr const utf8* kArrPostAttribute[]      = { "exposure", "bloom", "vignette", "saturation", "contrast", "letterbox" };
             static constexpr const utf8* kArrDampingAttribute[]   = { "position", "orientation" };
             static constexpr const utf8* kArrBlendAttribute[]     = { "curve", "duration", "exponent", "springFrequency", "springDamping" };
             static constexpr const utf8* kArrRuleAttribute[]      = { "from", "to", "curve", "duration", "exponent", "springFrequency", "springDamping" };
@@ -46,6 +50,14 @@ namespace sw
             static void warnUnknownAttributes( const XMLNode& node, const utf8* const ( &arrKnown )[Count], string_view sourceName )
             {
                 (void)XMLNameCheck::reportUnknownAttributes( node, arrKnown, sourceName, LogLevel::Warning ); // 경고만 하고 읽기를 잇는다
+            }
+
+            /** @brief "x y" 두 실수를 읽습니다. 빠진 성분은 @p fallback 의 것입니다. */
+            static float2 readFloat2( const XMLNode& node, const utf8* pName, const float2& fallback )
+            {
+                float32 arrValue[2] = { fallback._x, fallback._y };
+                (void)GameDataXML::parseFloats( node.getAttributeText( pName ), arrValue, 2 ); // 못 읽은 성분은 대체값이 남는다
+                return float2{ arrValue[0], arrValue[1] };
             }
 
             static float32 readDegrees( const XMLNode& node, const utf8* pName, float32 fallbackRadians )
@@ -196,6 +208,42 @@ namespace sw
                 outLens._nearPlane     = MathUtil::max( 0.001f, node.getAttributeFloat( "near", outLens._nearPlane ) );
                 outLens._farPlane      = MathUtil::max( outLens._nearPlane + 0.01f, node.getAttributeFloat( "far", outLens._farPlane ) );
                 outLens._bOrthographic = node.getAttributeBool( "orthographic", outLens._bOrthographic );
+                outLens._focalLength   = MathUtil::max( 0.0f, node.getAttributeFloat( "focalLength", outLens._focalLength ) );
+                outLens._sensorSize    = readFloat2( node, "sensor", outLens._sensorSize );
+                outLens._sensorSize    = float2::max( outLens._sensorSize, float2{ 0.01f, 0.01f } );
+                outLens._focusDistance = MathUtil::max( 0.0f, node.getAttributeFloat( "focusDistance", outLens._focusDistance ) );
+                outLens._aperture      = MathUtil::max( 0.5f, node.getAttributeFloat( "aperture", outLens._aperture ) );
+                outLens._lensShift     = readFloat2( node, "shift", outLens._lensShift );
+                outLens._dutch         = readDegrees( node, "dutch", outLens._dutch );
+            }
+
+            static void readDolly( const XMLNode& node, CameraDollyDef& outDolly, string_view sourceName )
+            {
+                warnUnknownAttributes( node, kArrDollyAttribute, sourceName );
+                readEnum( node, "type", outDolly._type, sourceName );
+                outDolly._bClosed    = node.getAttributeBool( "closed", outDolly._bClosed );
+                outDolly._pathOffset = node.getAttributeFloat( "pathOffset", outDolly._pathOffset );
+                XMLNode pointNode    = node.findChild( "Point" );
+                if ( pointNode.isValid() )
+                    outDolly._listPoint.clear();
+                for ( ; pointNode; pointNode = pointNode.findNextSibling( "Point" ) )
+                {
+                    warnUnknownAttributes( pointNode, kArrPointAttribute, sourceName );
+                    outDolly._listPoint.push_back( GameDataXML::parseFloat3( pointNode.getAttributeText( "position" ), float3{} ) );
+                }
+                if ( outDolly._listPoint.size() < 2 )
+                    SW_LOG_WARNING( "%#: <Dolly> needs at least two <Point> - the camera stays at the view offset", sourceName );
+            }
+
+            static void readPostProcess( const XMLNode& node, CameraPostProcessValues& outValues, string_view sourceName )
+            {
+                warnUnknownAttributes( node, kArrPostAttribute, sourceName );
+                outValues._exposureCompensation = node.getAttributeFloat( "exposure", outValues._exposureCompensation );
+                outValues._bloomScale           = MathUtil::max( 0.0f, node.getAttributeFloat( "bloom", outValues._bloomScale ) );
+                outValues._vignetteIntensity    = MathUtil::saturate( node.getAttributeFloat( "vignette", outValues._vignetteIntensity ) );
+                outValues._saturation           = MathUtil::max( 0.0f, node.getAttributeFloat( "saturation", outValues._saturation ) );
+                outValues._contrast             = MathUtil::max( 0.0f, node.getAttributeFloat( "contrast", outValues._contrast ) );
+                outValues._letterboxAspectRatio = MathUtil::max( 0.0f, node.getAttributeFloat( "letterbox", outValues._letterboxAspectRatio ) );
             }
 
             static void readDamping( const XMLNode& node, CameraDampingDef& outDamping, string_view sourceName )
@@ -252,6 +300,14 @@ namespace sw
                     {
                         readSweep( child, inoutDef._sweep, sourceName );
                     }
+                    else if ( StringUtil::equals( pName, "Dolly", true ) )
+                    {
+                        readDolly( child, inoutDef._dolly, sourceName );
+                    }
+                    else if ( StringUtil::equals( pName, "PostProcess", true ) )
+                    {
+                        readPostProcess( child, inoutDef._postProcess, sourceName );
+                    }
                     else
                     {
                         SW_LOG_WARNING( "%#: preset '%#' has unknown section <%#>", sourceName, inoutDef._id.c_str(), pName );
@@ -264,6 +320,14 @@ namespace sw
 
 namespace sw
 {
+    float32 CameraLensDef::computeFieldOfViewY() const
+    {
+        if ( _focalLength <= 0.0f )
+            return _fieldOfViewY;
+        // 핀홀 렌즈 — 센서 높이의 절반을 초점 길이로 나눈 각의 두 배다.
+        return 2.0f * MathUtil::atan2( _sensorSize._y * 0.5f, _focalLength );
+    }
+
     float32 computeDampingAlpha( float32 timeConstant, float32 deltaTime )
     {
         if ( timeConstant <= 0.0f || deltaTime <= 0.0f )

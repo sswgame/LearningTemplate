@@ -16,6 +16,13 @@ namespace sw
             /** @brief 화면 비율의 하한입니다. 0 이나 음수(크기가 0 인 창)로 나누지 않게 합니다. */
             static constexpr float32 kMinAspectRatio = 0.01f;
 
+            /**
+             * @brief 모드가 정하는 시점(자리 · 회전 · 투영)입니다. 렌즈의 나머지 값(초점, 조리개, 시프트, 더치)과 후처리는 `evaluateCameraMode` 가 적용한다.
+             * @details 모드마다 일찍 끝나는 분기가 있어서, 모든 모드에 같이 적용하는 값은 이 함수 밖에서 한 번에 적용한다.
+             */
+            static CameraPose evaluateView( const CameraPresetDef& def, const CameraTarget& target, float32 deltaTime, CameraModeState& inoutState,
+                                            const ICameraCollisionProbe* pProbe );
+
             static float3 rotateByYaw( const float3& value, float32 yaw ) { return float3::transform( value, quaternion::makeFromYawPitchRoll( yaw, 0.0f, 0.0f ) ); }
 
             static float3 computeForward( float32 yaw, float32 pitch )
@@ -158,8 +165,8 @@ namespace sw
             inoutState._rotateYaw += static_cast<float32>( input._rotateSteps ) * inputDef._rotateStep;
     }
 
-    CameraPose evaluateCameraMode( const CameraPresetDef& def, const CameraTarget& target, float32 deltaTime, CameraModeState& inoutState,
-                                   const ICameraCollisionProbe* pProbe )
+    CameraPose CameraModeInternal::evaluateView( const CameraPresetDef& def, const CameraTarget& target, float32 deltaTime, CameraModeState& inoutState,
+                                                 const ICameraCollisionProbe* pProbe )
     {
         const CameraViewDef&     view     = def._view;
         const CameraConfinerDef& confiner = def._confiner;
@@ -169,7 +176,7 @@ namespace sw
         inoutState._rotateYawShown += ( inoutState._rotateYaw - inoutState._rotateYawShown ) * computeDampingAlpha( def._input._rotateTime, elapsed );
 
         CameraPose pose;
-        pose._fieldOfViewY  = def._lens._fieldOfViewY;
+        pose._fieldOfViewY  = def._lens.computeFieldOfViewY();
         pose._orthoHeight   = def._lens._orthoHeight;
         pose._nearPlane     = def._lens._nearPlane;
         pose._farPlane      = def._lens._farPlane;
@@ -298,11 +305,37 @@ namespace sw
                 pose._rotation = quaternion::makeFromYawPitchRoll( yaw, CameraModeInternal::clampPitch( confiner, pitch ), 0.0f );
                 return pose;
             }
+            case CameraPresetMode::Dolly:
+            {
+                // 레일 위에서 대상에 가장 가까운 점에 서서 대상을 본다. 곡선은 처음 한 번만 만든다(호 길이 표).
+                if ( inoutState._bDollyPathBuilt == SW_FALSE )
+                {
+                    // 점이 모자라면 곡선이 비고 isValid 가 false 다 — 그때는 오프셋 자리에 선다
+                    (void)inoutState._dollyPath.initialize( def._dolly._listPoint, def._dolly._type, def._dolly._bClosed );
+                    inoutState._bDollyPathBuilt = SW_TRUE;
+                }
+                if ( inoutState._dollyPath.isValid() )
+                {
+                    const SplineSample nearest = inoutState._dollyPath.findClosest( focus );
+                    pose._position             = inoutState._dollyPath.sampleAtDistance( nearest._distance + def._dolly._pathOffset )._position;
+                }
+                else
+                {
+                    pose._position = view._offset;
+                }
+                aimPoint           = focus;
+                const float2 toAim = computeLookAngles( pose._position, aimPoint );
+                yaw                = toAim._x + inputYaw;
+                pitch              = toAim._y + inoutState._pitchOffset;
+                bCompose           = true;
+                break;
+            }
         }
 
         pitch                = CameraModeInternal::clampPitch( confiner, pitch );
         const float3 forward = CameraModeInternal::computeForward( yaw, pitch );
-        if ( view._mode != CameraPresetMode::Fixed )
+        const bool   bPlaced = view._mode == CameraPresetMode::Fixed || view._mode == CameraPresetMode::Dolly; ///< 자리를 이미 정한 모드(피벗에서 물러나지 않는다)
+        if ( bPlaced == false )
         {
             const float32 arm = bArm ? CameraModeInternal::resolveArm( def._collision, pivot, forward * -1.0f, distance, elapsed, pProbe, inoutState ) : distance;
             pose._position    = pivot - forward * arm;
@@ -339,8 +372,23 @@ namespace sw
             pose._rotation = quaternion::makeFromYawPitchRoll( yaw, pitch, 0.0f );
         }
 
-        if ( confiner._bBounds && view._mode != CameraPresetMode::OrthoTopDown && view._mode != CameraPresetMode::Fixed )
+        if ( confiner._bBounds && view._mode != CameraPresetMode::OrthoTopDown && bPlaced == false )
             pose._position = CameraModeInternal::clampToBounds( confiner, pose._position );
+        return pose;
+    }
+
+    CameraPose evaluateCameraMode( const CameraPresetDef& def, const CameraTarget& target, float32 deltaTime, CameraModeState& inoutState,
+                                   const ICameraCollisionProbe* pProbe )
+    {
+        CameraPose           pose = CameraModeInternal::evaluateView( def, target, deltaTime, inoutState, pProbe );
+        const CameraLensDef& lens = def._lens;
+        pose._focusDistance       = lens._focusDistance;
+        pose._aperture            = lens._aperture;
+        pose._lensShift           = lens._lensShift;
+        pose._postProcess         = def._postProcess;
+        // 더치는 모든 모드의 시점 위에 마지막으로 — 카메라 앞축으로 화면을 기울인다.
+        if ( lens._dutch != 0.0f )
+            pose._rotation = pose._rotation * quaternion::makeFromYawPitchRoll( 0.0f, 0.0f, lens._dutch );
         return pose;
     }
 

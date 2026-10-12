@@ -299,6 +299,42 @@ SW_TEST_CASE( CameraPresetTest, CatalogReadsSectionsAndResolvesBlends )
 }
 
 /**
+ * @brief [CameraPresetTest] 카탈로그는 렌즈 물리값(초점 길이 · 센서 · 초점 거리 · 조리개 · 시프트 · 더치), 돌리 레일, 카메라별 후처리를 읽는다
+ */
+SW_TEST_CASE( CameraPresetTest, CatalogReadsLensDollyAndPostProcess )
+{
+    CameraPresetCatalog catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( R"(<CameraPresets>
+        <Preset id="cine">
+            <View mode="Dolly"/>
+            <Lens focalLength="35" sensor="24.89 18.66" focusDistance="4" aperture="2" shift="0 0.05" dutch="12"/>
+            <Dolly type="Linear" closed="false" pathOffset="1.5"><Point position="0 2 0"/><Point position="10 2 0"/></Dolly>
+            <PostProcess exposure="-0.5" bloom="1.5" vignette="0.3" saturation="0.8" contrast="1.1" letterbox="2.39"/>
+        </Preset>
+    </CameraPresets>)",
+                                             "lens-test" ) );
+    const CameraPresetDef* pCine = catalog.findPreset( "cine" );
+    SW_ASSERT_NOT_NULL( pCine );
+    SW_EXPECT_TRUE( pCine->_view._mode == CameraPresetMode::Dolly );
+    SW_EXPECT_NEAR_EQUAL( 35.0f, pCine->_lens._focalLength, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 18.66f, pCine->_lens._sensorSize._y, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 4.0f, pCine->_lens._focusDistance, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, pCine->_lens._aperture, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.05f, pCine->_lens._lensShift._y, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 12.0f * MathUtil::kDegreeToRadian, pCine->_lens._dutch, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f * MathUtil::atan2( 18.66f * 0.5f, 35.0f ), pCine->_lens.computeFieldOfViewY(), 1.0e-5f );
+    SW_ASSERT_EQUAL( size_t{ 2 }, pCine->_dolly._listPoint.size() );
+    SW_EXPECT_TRUE( pCine->_dolly._type == SplineType::Linear );
+    SW_EXPECT_NEAR_EQUAL( 1.5f, pCine->_dolly._pathOffset, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( -0.5f, pCine->_postProcess._exposureCompensation, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 1.5f, pCine->_postProcess._bloomScale, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.3f, pCine->_postProcess._vignetteIntensity, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.8f, pCine->_postProcess._saturation, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 1.1f, pCine->_postProcess._contrast, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 2.39f, pCine->_postProcess._letterboxAspectRatio, 1.0e-6f );
+}
+
+/**
  * @brief [CameraPresetTest] 블렌드 도중 다시 켜면 그 순간의 섞인 포즈에서 이어 간다 — 화면이 튀지 않는다
  * @details a(원점) → b(+X 10) 를 1 초 직선으로 반쯤 섞은 자리(5, 0, 0)에서 c(+Y 10)를 켠다. 다음 1 ms 의 포즈가 (5, 0, 0) 곁이어야 한다 —
  *          출발점을 나가는 프리셋(b) · 처음 프리셋(a)으로 잡으면 10 m · 5 m 를 한 번에 뛴다.

@@ -41,21 +41,23 @@ namespace sw
      */
     struct CameraModeState
     {
-        float3  _panOffset{};            ///< 이동 키가 옮긴 초점(월드)
-        float3  _previousFocus{};        ///< 지난 프레임의 대상 초점 — look-ahead 의 속도
-        float3  _lookAhead{};            ///< 부드럽게 따라가는 look-ahead 오프셋(월드)
-        float32 _yawOffset{ 0.0f };      ///< 마우스가 돌린 요(rad)
-        float32 _pitchOffset{ 0.0f };    ///< 마우스가 돌린 피치(rad)
-        float32 _rotateYaw{ 0.0f };      ///< 회전 키가 정한 요(rad)
-        float32 _rotateYawShown{ 0.0f }; ///< 화면에 보이는 회전 요 — `_rotateYaw` 를 `rotateTime` 으로 따라간다
-        float32 _zoom{ 0.0f };           ///< 거리(원근) · 직교 높이. 0 이면 프리셋 값
-        float32 _time{ 0.0f };           ///< 이 모드로 흐른 시간(훑기 · 잡음)
-        float32 _armLength{ -1.0f };     ///< 스프링 암의 지금 길이. 음수면 아직 없음
-        float32 _aimYaw{ 0.0f };         ///< 프레이밍이 정한 조준 요
-        float32 _aimPitch{ 0.0f };       ///< 프레이밍이 정한 조준 피치
-        uint8   _bAimValid{ SW_FALSE };
-        uint8   _bHasPreviousFocus{ SW_FALSE };
-        uint8   _bArmBlocked{ SW_FALSE }; ///< 지난 평가에서 암이 막혀 당겨졌다(진단 · 테스트)
+        SplinePath _dollyPath{};            ///< 돌리 레일 곡선 — 처음 풀 때 `<Dolly>` 의 점으로 한 번 만든다
+        float3     _panOffset{};            ///< 이동 키가 옮긴 초점(월드)
+        float3     _previousFocus{};        ///< 지난 프레임의 대상 초점 — look-ahead 의 속도
+        float3     _lookAhead{};            ///< 부드럽게 따라가는 look-ahead 오프셋(월드)
+        float32    _yawOffset{ 0.0f };      ///< 마우스가 돌린 요(rad)
+        float32    _pitchOffset{ 0.0f };    ///< 마우스가 돌린 피치(rad)
+        float32    _rotateYaw{ 0.0f };      ///< 회전 키가 정한 요(rad)
+        float32    _rotateYawShown{ 0.0f }; ///< 화면에 보이는 회전 요 — `_rotateYaw` 를 `rotateTime` 으로 따라간다
+        float32    _zoom{ 0.0f };           ///< 거리(원근) · 직교 높이. 0 이면 프리셋 값
+        float32    _time{ 0.0f };           ///< 이 모드로 흐른 시간(훑기 · 잡음)
+        float32    _armLength{ -1.0f };     ///< 스프링 암의 지금 길이. 음수면 아직 없음
+        float32    _aimYaw{ 0.0f };         ///< 프레이밍이 정한 조준 요
+        float32    _aimPitch{ 0.0f };       ///< 프레이밍이 정한 조준 피치
+        uint8      _bAimValid{ SW_FALSE };
+        uint8      _bHasPreviousFocus{ SW_FALSE };
+        uint8      _bArmBlocked{ SW_FALSE }; ///< 지난 평가에서 암이 막혀 당겨졌다(진단 · 테스트)
+        uint8      _bDollyPathBuilt{ SW_FALSE };
 
         /** @brief 새로 시작합니다. 프리셋을 켤 때 부릅니다. */
         void reset() { *this = CameraModeState{}; }

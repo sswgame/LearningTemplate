@@ -65,6 +65,8 @@ namespace sw
         void setCollisionProbe( const ICameraCollisionProbe* pProbe ) { _pProbe = pProbe; }
         /** @brief 충격을 더합니다. 원점과 모양을 받으며, 듣는 자리는 카메라입니다. */
         void addImpulse( const CameraImpulseDef& def, const float3& origin ) { _impulseListener.addImpulse( def, origin ); }
+        /** @brief 시야각 킥(+) · 줌 펀치(−)를 더합니다. 섞인 포즈의 시야각과 직교 높이에 마지막으로 곱합니다. */
+        void addFieldOfViewKick( const CameraFieldOfViewKickDef& def ) { _fieldOfViewKickListener.addKick( def ); }
 
         /** @brief 시간을 흘리고 이번 프레임의 포즈를 반환합니다. 켠 프리셋이 없으면 지난 포즈를 그대로 반환하며, 처음에는 기본값입니다. */
         const CameraPose& step( float32 deltaTime, const CameraTarget& target );
@@ -117,13 +119,14 @@ namespace sw
         static Layer makeFrozenLayer( const CameraPose& pose );
 
     private:
-        vector<Layer>                _listLayer; ///< [0] 이 가장 아래(가장 오래된) 층, 끝이 지금 프리셋
-        CameraImpulseListener        _impulseListener;
-        CameraModeState              _emptyState; ///< 켠 프리셋이 없을 때 `getModeState` 가 내주는 빈 상태
-        CameraPose                   _outputPose;
-        const ICameraCollisionProbe* _pProbe;
-        uint8                        _bHasPose   : 1;
-        uint8                        _bCutQueued : 1;
-        [[maybe_unused]] uint8       _reserved   : 6;
+        vector<Layer>                 _listLayer; ///< [0] 이 가장 아래(가장 오래된) 층, 끝이 지금 프리셋
+        CameraImpulseListener         _impulseListener;
+        CameraFieldOfViewKickListener _fieldOfViewKickListener;
+        CameraModeState               _emptyState; ///< 켠 프리셋이 없을 때 `getModeState` 가 내주는 빈 상태
+        CameraPose                    _outputPose;
+        const ICameraCollisionProbe*  _pProbe;
+        uint8                         _bHasPose   : 1;
+        uint8                         _bCutQueued : 1;
+        [[maybe_unused]] uint8        _reserved   : 6;
     };
 } // namespace sw

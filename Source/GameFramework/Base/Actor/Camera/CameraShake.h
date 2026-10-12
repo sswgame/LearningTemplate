@@ -104,3 +104,64 @@ namespace sw
         vector<CameraImpulse> _listImpulse;
     };
 } // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 시야각 킥 · 줌 펀치 하나의 모양입니다. 언리얼 Camera Modifier 의 FOV 효과, Cinemachine Impulse 의 렌즈 채널에 해당합니다.
+     * @details 시야각(직교는 화면 높이)에 `1 + amount × 포락선` 을 곱한다. + 는 넓어지고(달리기 · 부스트 킥), − 는 좁아진다(사격 · 착탄 줌 펀치).
+     *          포락선은 오르기(`_attackTime`) · 버티기(`_holdTime`) · 내리기(`_releaseTime`)이고, 오르내림은 블렌드 곡선과 같은 보간 함수
+     *          (`evaluateBlendWeight`, SmoothStep)를 쓴다. 그래서 끝에서 정확히 0 이고 툭 끊기지 않는다.
+     */
+    struct CameraFieldOfViewKickDef
+    {
+        float32 _amount{ 0.1f };      ///< 최대 배율 변화(비율). + 넓게, − 좁게
+        float32 _attackTime{ 0.05f }; ///< 0 에서 최대까지(s)
+        float32 _holdTime{ 0.0f };    ///< 최대를 버티는 시간(s)
+        float32 _releaseTime{ 0.3f }; ///< 최대에서 0 까지(s)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 진행 중인 시야각 킥 하나입니다. */
+    struct SW_GF_API CameraFieldOfViewKick
+    {
+        CameraFieldOfViewKickDef _def{};
+        float32                  _elapsed{ 0.0f };
+
+        bool isFinished() const { return _elapsed >= _def._attackTime + _def._holdTime + _def._releaseTime; }
+        /** @brief 지금의 포락선(0..1)입니다. 끝났으면 0 입니다. */
+        float32 computeEnvelope() const;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class CameraFieldOfViewKickListener
+     * @brief 시야각 킥들을 받아 시간을 흘리고, 섞인 포즈의 시야각 · 직교 높이에 곱할 배율을 냅니다. 디렉터가 하나 듭니다.
+     */
+    class SW_GF_API CameraFieldOfViewKickListener
+    {
+    public:
+        /** @brief 배율의 하한입니다. 킥이 겹쳐 시야각이 0 이나 음수가 되지 않게 합니다. */
+        static constexpr float32 kMinScale = 0.05f;
+
+        CameraFieldOfViewKickListener();
+
+        /** @brief 킥을 더합니다. 진행 중인 것과 겹치면 배율 변화가 더해집니다. 길이가 0 이거나 크기가 0 이면 무시합니다. */
+        void addKick( const CameraFieldOfViewKickDef& def );
+        /** @brief 시간을 흘리고 끝난 것을 뺍니다. */
+        void step( float32 deltaTime );
+        /** @brief 지금 배율(1 + 킥들의 합)입니다. 너무 좁아지지 않게 `kMinScale` 아래로 내려가지 않습니다. */
+        float32 computeScale() const;
+        /** @brief 포즈의 시야각과 직교 높이에 지금 배율을 곱합니다. */
+        CameraPose applyToPose( const CameraPose& pose ) const;
+        bool       isActive() const { return _listKick.empty() == false; }
+        void       clear() { _listKick.clear(); }
+
+    private:
+        vector<CameraFieldOfViewKick> _listKick;
+    };
+} // namespace sw
