@@ -120,14 +120,13 @@ namespace sw
         static const utf8* getResultName( AutomationResult result );
 
     private:
+        /** @brief 엔진 단계(`AutomationRunner.cpp`, 레지스트리에 등록)는 가상 입력 원천 · 스크린샷 대기열 · 종료 시한을 직접 만진다. */
+        friend struct AutomationRunnerEngineSteps;
+
         /** @brief 이 구성에 없는 단계(Shipping 의 `DevCommand`)가 들었으면 건너뜀(13)으로 끝내고 true 입니다. */
         bool skipIfStepsAreMissingFromThisBuild();
-        /** @brief 시작 조건이 참이 된 프레임에서 단계를 검사하고 입력 단계를 옮기고 로그 수집을 시작합니다. 실패면 false 를 반환하고 이유를 남깁니다. */
+        /** @brief 시작 조건이 참이 된 프레임에서 단계마다 등록의 검사 · 준비(입력 단계는 가상 입력으로 옮긴다)를 돌리고 로그 수집을 시작합니다. 실패면 false 를 반환하고 이유를 남깁니다. */
         [[nodiscard]] bool prepare( string& outError );
-        [[nodiscard]] bool validateEngineStep( const AutomationStep& step, string& outError ) const;
-        [[nodiscard]] bool compileInputStep( const AutomationStep& step, string& outError );
-        /** @brief 엔진 단계를 돌린다. 돌릴 수 없으면(형식) false 입니다. */
-        [[nodiscard]] bool runEngineStep( const AutomationStep& step );
         void               runExpect( const AutomationStep& step );
         /**
          * @brief 탐침 단계(`Expect`, `WaitUntil`)의 비교를 봅니다. 탐침에 값이 없으면 false 이고 @p outMessage 에 이유를 씁니다.

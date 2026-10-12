@@ -34,10 +34,9 @@ namespace sw
 {
     bool AutomationStepRegistry::registerStep( const AutomationStepRegistration* pRegistration )
     {
-        if ( pRegistration == nullptr || pRegistration->_pKind == nullptr || pRegistration->_pRun == nullptr )
+        if ( pRegistration == nullptr || pRegistration->_pKind == nullptr || ( pRegistration->_pRun == nullptr && pRegistration->_pPrepare == nullptr ) )
             return false;
-        const bool bEngineKind = isEngineStepKind( pRegistration->_pKind );
-        if ( bEngineKind || AutomationStepRegistryInternal::getRegistrations().add( pRegistration, pRegistration->_pKind ) != RegistrationResult::Added )
+        if ( AutomationStepRegistryInternal::getRegistrations().add( pRegistration, pRegistration->_pKind ) != RegistrationResult::Added )
         {
             SW_LOG_ERROR( "Automation step <%#> is already defined - the second one is ignored", pRegistration->_pKind );
             return false;
@@ -59,19 +58,6 @@ namespace sw
     const AutomationStepRegistration* AutomationStepRegistry::find( string_view kind )
     {
         return AutomationStepRegistryInternal::getRegistrations().findByName( kind );
-    }
-
-    bool AutomationStepRegistry::isEngineStepKind( string_view kind )
-    {
-        static constexpr string_view kArrEngineStepKind[] = { "Press", "Release", "Tap", "MouseDelta", "MousePosition", "GamepadAxis", "Text",
-                                                              "Variable", "Expect", "ExpectLog", "Screenshot", "ExpectImage", "CloseWindow",
-                                                              "Pass", "Fail", "Skip", "ExpectExitWithin", "WaitUntil" };
-        for ( const string_view engineKind : kArrEngineStepKind )
-        {
-            if ( engineKind == kind )
-                return true;
-        }
-        return false;
     }
 
     bool AutomationStepRegistry::registerStartBlocker( const AutomationStartBlocker* pBlocker )

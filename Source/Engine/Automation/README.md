@@ -104,7 +104,8 @@ echo $LASTEXITCODE
 
 ### 엔진 단계
 
-엔진이 직접 처리하는 단계입니다. 속성의 허용 값과 오류 메시지는 `AutomationRunner::validateEngineStep` 에 있습니다.
+엔진이 제공하는 단계입니다. 다른 모듈의 단계와 같이 `AutomationStepRegistry` 에 등록되므로(`AutomationRunner.cpp` 의 `SW_AUTOMATION_STEP` · `SW_AUTOMATION_STEP_WITH_HOOKS`) 같은 이름의 등록은 중복으로 거절됩니다.
+실행기는 단계 이름으로 분기하지 않고 등록의 함수만 부릅니다. 검사(속성의 허용 값과 오류 메시지)는 `AutomationRunnerInternal::validate*`, 시작할 때의 준비(입력 단계를 가상 입력으로 옮기기)와 실행 · 차례(조건 · 스크린샷 기다리기)는 `AutomationRunnerEngineSteps` 에 있습니다.
 
 | 단계 | 속성 | 하는 일 |
 |---|---|---|
@@ -132,7 +133,7 @@ echo $LASTEXITCODE
 
 ### 등록 단계
 
-엔진 밖 모듈이 `SW_AUTOMATION_STEP` 으로 등록하는 단계입니다. 실행기는 엔진 단계가 아니면 레지스트리(`AutomationStepRegistry`)에서 이름으로 찾습니다.
+엔진 밖 모듈이 `SW_AUTOMATION_STEP` 으로 등록하는 단계입니다. 실행기는 엔진 단계와 똑같이 레지스트리(`AutomationStepRegistry`)에서 이름으로 찾습니다.
 
 | 단계 | 속성 | 등록하는 곳 | 하는 일 |
 |---|---|---|---|

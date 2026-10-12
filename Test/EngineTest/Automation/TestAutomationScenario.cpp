@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/String/RegistrationList.h"
 
 #include "Engine/Automation/AutomationImageMetric.h"
 #include "Engine/Automation/AutomationProbe.h"
@@ -355,11 +356,57 @@ SW_TEST_CASE( AutomationScenarioTest, RegistriesRejectDuplicateNames )
     float64 value = -1.0;
     SW_EXPECT_TRUE( sw::AutomationProbes::find( "Test.SwitchCount" )->_pFunction( nullptr, value ) ); // 앞 등록이 남아 있다
 
-    static const sw::AutomationStepRegistration kEngineNamedStep{ "Tap", &Internal::runMark, nullptr, false };
+    static const sw::AutomationStepRegistration kEngineNamedStep{ "Tap", &Internal::runMark, nullptr, nullptr, nullptr, false };
     SW_EXPECT_FALSE( sw::AutomationStepRegistry::registerStep( &kEngineNamedStep ) );
-    static const sw::AutomationStepRegistration kDuplicateStep{ "TestMark", &Internal::runMark, nullptr, false };
+    static const sw::AutomationStepRegistration kDuplicateStep{ "TestMark", &Internal::runMark, nullptr, nullptr, nullptr, false };
     SW_EXPECT_FALSE( sw::AutomationStepRegistry::registerStep( &kDuplicateStep ) );
     SW_EXPECT_TRUE( sw::AutomationStepRegistry::find( "TestMark" )->_bBeforeInput );
+    static const sw::AutomationStepRegistration kNothingToDo{ "TestNothing", nullptr, nullptr, nullptr, nullptr, false };
+    SW_EXPECT_FALSE( sw::AutomationStepRegistry::registerStep( &kNothingToDo ) ); // 실행도 준비도 없는 단계는 받지 않는다
+}
+
+/**
+ * @brief [AutomationScenarioTest] 엔진 단계도 레지스트리에 있다 — 입력 단계는 준비만, 조건 · 스크린샷 기다리기는 차례 함수를 든다
+ * @details 실행기는 단계 이름으로 분기하지 않는다. 엔진 단계 이름의 등록이 거절되는 것은 엔진 단계가 같은 목록에 먼저 올라 있어서다.
+ */
+SW_TEST_CASE( AutomationScenarioTest, EngineStepsAreRegistered )
+{
+    static constexpr const utf8* kArrInputKind[] = { "Press", "Release", "Tap", "MouseDelta", "MousePosition", "GamepadAxis", "Text" };
+    for ( const utf8* pKind : kArrInputKind )
+    {
+        const sw::AutomationStepRegistration* pRegistration = sw::AutomationStepRegistry::find( pKind );
+        SW_ASSERT_NOT_NULL( pRegistration );
+        SW_EXPECT_TRUE( pRegistration->_pRun == nullptr && pRegistration->_pPrepare != nullptr && pRegistration->_pValidate != nullptr );
+    }
+    static constexpr const utf8* kArrRunKind[] = { "Variable", "Expect", "ExpectLog", "Screenshot", "ExpectImage", "CloseWindow", "ExpectExitWithin", "Pass", "Fail", "Skip" };
+    for ( const utf8* pKind : kArrRunKind )
+    {
+        const sw::AutomationStepRegistration* pRegistration = sw::AutomationStepRegistry::find( pKind );
+        SW_ASSERT_NOT_NULL( pRegistration );
+        SW_EXPECT_TRUE( pRegistration->_pRun != nullptr && pRegistration->_pValidate != nullptr && pRegistration->_bBeforeInput == false );
+    }
+    SW_EXPECT_TRUE( sw::AutomationStepRegistry::find( "WaitUntil" )->_pHold != nullptr );
+    SW_EXPECT_TRUE( sw::AutomationStepRegistry::find( "ExpectImage" )->_pHold != nullptr );
+    SW_EXPECT_TRUE( sw::AutomationStepRegistry::find( "Expect" )->_pHold == nullptr );
+}
+
+/**
+ * @brief [AutomationScenarioTest] 핫 리로드의 교체 이미지는 같은 이름의 단계를 대체하고, 그 이미지가 취소되면(등록을 빼면) 앞 등록이 되살아난다
+ * @details 엔진 단계도 같은 목록이라 같은 규칙이다. 리로드 밖의 같은 이름은 위 `RegistriesRejectDuplicateNames` 처럼 거절한다.
+ */
+SW_TEST_CASE( AutomationScenarioTest, ReloadImageReplacesStepAndRestoresOnCancel )
+{
+    using Internal                                         = TestAutomationScenarioInternal;
+    const sw::AutomationStepRegistration*       pEngineTap = sw::AutomationStepRegistry::find( "Tap" );
+    static const sw::AutomationStepRegistration kReloadTap{ "Tap", &Internal::runMark, nullptr, nullptr, nullptr, false };
+    SW_ASSERT_NOT_NULL( pEngineTap );
+    {
+        sw::RegistrationReloadScope scope;
+        SW_EXPECT_TRUE( sw::AutomationStepRegistry::registerStep( &kReloadTap ) );
+    }
+    SW_EXPECT_TRUE( sw::AutomationStepRegistry::find( "Tap" ) == &kReloadTap );
+    sw::AutomationStepRegistry::unregisterStep( &kReloadTap ); // 교체 이미지가 취소됐다
+    SW_EXPECT_TRUE_MSG( sw::AutomationStepRegistry::find( "Tap" ) == pEngineTap, "the engine Tap step is not restored after the reload image is withdrawn" );
 }
 
 /**
