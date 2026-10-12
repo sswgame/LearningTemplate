@@ -89,9 +89,31 @@ Renderer = 13
 # 전부를 엮는 자리.
 "<root>" = 14
 
+# ------------------------------------------------------------------------------
+# 하위 티어 — 최상위 폴더 하나 안의 `<폴더>/<하위 폴더>` 사이 방향. 키가 있는 최상위 폴더만 본다(지금은 Graphics).
+# 같은 최상위 폴더 안의 include 만 보고, 다른 최상위 폴더로 가는 include 는 위 [tier] 가 본다. 표에 없는 하위 폴더는 실패다.
+# 바로 아래 파일(하위 폴더 없음)은 `<폴더>/<root>` 키로 적는다.
+#
+# Graphics: RHI 백엔드가 셰이더 캐시 · 컴파일러 · 슬롯을 쓰므로 RHI 가 Shader 위다. Shader 는 RHI 를 모르고 계약 헤더 RHITypes.h 만
+# 읽는다(아래 subprelude). 텍스처 · 메시는 RHI 리소스를 들고, 머티리얼 · 캔버스 · 스프라이트 · 업로드는 그 위에서 셋을 엮는다.
+# 이 표는 손으로 계산했다(`Scripts/lint/report/RunEngineLayerGraph.py` 는 아직 [tier] 만 계산한다).
+# ------------------------------------------------------------------------------
+[subtier]
+"Graphics/Shader" = 0
+"Graphics/RHI" = 1
+"Graphics/Debug" = 2
+"Graphics/Mesh" = 2
+"Graphics/Texture" = 2
+"Graphics/2D" = 3
+"Graphics/Canvas" = 3
+"Graphics/Material" = 3
+"Graphics/Upload" = 3
+
 # 티어 예외 → 이유. prelude 는 위 티어 헤더를 include 할 때, 배선은 그 파일이 위 티어를 include 할 때 쓰인다.
+# subprelude 는 같은 최상위 폴더 안에서 위 하위 티어 헤더를 include 할 때만 쓰인다(최상위 [tier] 검사에는 쓰이지 않는다).
 [exemption]
 "prelude:Engine/EngineMinimal.h" = "타입 별칭과 전방 선언만 모은 우산 헤더 — 어느 티어에서 include 해도 된다"
 "prelude:Engine/Resource/ResourcePaths.h" = "리소스 경로 해석 static 헬퍼(Core 만 include) — loadFromResource 진입점이 쓴다"
 "prelude:Engine/Resource/ResourceIO.h" = "리소스 읽기 static 창구(Core 만 include) — loadFromResource 진입점이 쓴다"
 "wiring:Source/Engine/Reflection/ReflectGenerated.h" = ".gen.cpp 전용 preamble — 생성 코드가 쓰는 모든 형식을 모은다"
+"subprelude:Engine/Graphics/RHI/RHITypes.h" = "RHI 계약 헤더(Core · Engine/Common · Reflection 만 include) — 셰이더 쪽이 정점 속성 표 · PSO 서술 · Vulkan 요구 버전을 읽는다"
