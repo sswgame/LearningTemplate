@@ -16,6 +16,8 @@ SW_EXTERN_GLOBAL_VARIABLE( bool, gv_uiOptionsMenu );
 
 namespace sw
 {
+    enum class UIInputMode : uint8;
+
     struct UserSettingDef;
 
     class PanelWidget;
@@ -46,8 +48,12 @@ namespace sw
          *        문서를 만들지 못하면 오류를 남기고 무효 핸들을 반환합니다.
          */
         static UIScreenHandle open( UISystem& ui );
-        /** @brief 설정 @p setting 의 형식에 맞는 행 템플릿 문서 경로입니다(`engine/ui/parts/setting_*.ui.xml`). */
-        static const utf8* findRowDocument( const UserSettingDef& setting );
+        /**
+         * @brief 설정 @p setting 의 형식에 맞는 행 템플릿 문서 경로입니다(`engine/ui/parts/setting_*.ui.xml`).
+         * @details 열거형 행은 입력 방식 @p mode 가 탐색(패드 · 키보드)이면 좌우로 고르는 `RotatorWidget` 견본(`setting_enum_pad.ui.xml`)이고, 포인터이면 펼치는 콤보 상자 견본이다.
+         *          행은 탭을 고를 때 짓는다 — 행을 지은 뒤에 입력 방식이 바뀌어도 그 행은 그대로 쓸 수 있고(콤보는 `UI.Accept` 로, 로테이터는 클릭으로), 다음 탭 전환 때 바뀐다.
+         */
+        static const utf8* findRowDocument( const UserSettingDef& setting, UIInputMode mode );
 
         bool onCommand( const hashed_string& command, Widget& source ) override;
         bool onBack() override;

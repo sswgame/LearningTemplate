@@ -381,6 +381,7 @@ arrange가 결과 방향을 위젯에 기록하고(`isRightToLeft`), 글 위젯�
 | `ButtonWidget`, `CheckBoxWidget` | Button, CheckBox | Button, Toggle | Button, CheckBox |
 | `SliderWidget`, `ProgressBarWidget` | Slider, ProgressBar | Slider, ProgressBar | HSlider, ProgressBar |
 | `ComboBoxWidget`, `TextInputWidget` | ComboBox, EditableTextBox | DropdownField, TextField | OptionButton, LineEdit |
+| `RotatorWidget` | CommonUI `UCommonRotator` | (슬라이더로 만든 단계 선택) | (좌우 화살표 `OptionButton`) |
 | `ListViewWidget` | ListView | ListView | ItemList |
 | `UIPaintPass` 와 위젯별 그리기 캐시 | Slate 요소 캐시 | 더러운 요소 다시 그리기 | CanvasItem 명령 캐시 |
 
@@ -413,6 +414,10 @@ arrange가 결과 방향을 위젯에 기록하고(`isRightToLeft`), 글 위젯�
 - **슬라이더**는 포커스 상태에서 `UI.NavigateLeft` 와 `UI.NavigateRight` 를 처리해 값을 한 단계 옮깁니다. 그래서 포커스는 위아래로만 떠납니다. RTL이면 최솟값이 오른쪽입니다.
 - **콤보 상자**는 자기가 든 화면의 `UISystem` 에 팝업 화면을 엽니다. 팝업은 Modal 층이지만 막지 않고, 항목 버튼이 상자 아래에 놓입니다. 밖을 클릭하거나 `UI.Back` 이면 닫힙니다.
   팝업은 상자를 (화면 핸들, 위젯 번호)로 다시 찾습니다(`WidgetTree::getScreen`).
+- **로테이터**(`RotatorWidget`)는 콤보 상자 대신 쓰는 패드 중심의 "좌우로 고르기"입니다. 고른 항목의 글을 가운데에 보이고 양옆에 화살표를 그립니다.
+  포커스를 가진 채 `UI.NavigateLeft` · `UI.NavigateRight` 가 항목을 하나씩 넘기고(끝에서 반대쪽 끝으로 돕니다) `UI.Accept` 는 다음 항목이며,
+  항목이 둘보다 적으면 좌우를 처리하지 않아 포커스가 옆으로 떠납니다. 포인터는 왼쪽 화살표 쪽이 이전, 그 밖은 다음이고, 오른쪽에서 왼쪽 위젯에서는 키와 화살표가 모두 뒤집힙니다.
+  필드 규약(`_listOption` · `_selectedIndex`)이 콤보 상자와 같아서 설정 바인딩이 그대로 붙습니다.
 - **글 입력 위젯**은 글자 사건을 커서 자리에 넣고(선택이 있으면 선택을 대신합니다), Enter는 확정 알림입니다. 커서와 선택 기준점은 원문의 UTF-8 바이트 위치이고 항상 코드 포인트 경계입니다.
   IME 조합 중인 글은 확정 전까지 커서 자리에 밑줄로 끼워 보입니다. 편집 행동은 입력 위젯이 키보드를 가진 동안에만 `UISystem` 이 보냅니다.
   `UI.TextBackspace` · `UI.TextDelete`(Delete), `UI.TextCaretLeft/Right`(좌우 화살표), `UI.TextHome/End`, Shift 를 더한 `UI.TextSelectLeft/Right/Home/End`, `UI.TextSelectAll`(Ctrl+A), `UI.TextCopy/Cut/Paste`(Ctrl+C/X/V)입니다.

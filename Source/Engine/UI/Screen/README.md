@@ -33,11 +33,15 @@
   행마다 견본을 만들어 안쪽 이름을 `<설정 id>.<이름>` 으로 바꾸고, 값 위젯 `Value` 에 `{setting:id}` 바인딩을 코드로 연결합니다.
   형식별로 연결하는 필드는 Bool이 `_bChecked`, Int와 Float가 `_value`, Enum이 `_selectedIndex`, String이 `_text` 이고, 값 글 `ValueText` 는 단방향입니다.
   키 바인딩 행은 버튼(`Rebind`)과 글리프 `Glyph`(`getBindingGlyph`)이고, 입력 방식이 바뀌면 글리프를 다시 씁니다. 탭을 바꾸면 행과 바인딩을 다시 만듭니다.
+- **열거형 행은 입력 방식을 따릅니다.** 포인터 방식이면 펼치는 콤보 상자 견본(`setting_enum.ui.xml`), 탐색(패드 · 키보드) 방식이면 좌우로 하나씩 넘기는 로테이터 견본(`setting_enum_pad.ui.xml`, `RotatorWidget`)을 씁니다.
+  행은 탭을 고를 때 지으므로 입력 방식이 바뀐 뒤 다음 탭 전환에서 바뀌고, 지은 행은 어느 방식으로도 쓸 수 있습니다(콤보는 `UI.Accept` 로 펼치고, 로테이터는 클릭으로 넘깁니다).
+  두 견본의 위젯 이름(`Label`, `Value`)은 같아서 게임 문서가 덮어써도 이름만 지키면 됩니다.
 - **적용.** `applyPending` 으로 확인 대기가 시작되면 `SettingsConfirmScreen` 모달이 열립니다. 남은 초는 뷰모델 바인딩 `{bind:_secondsLeft, converter=Seconds}` 로 보입니다.
   시간은 설정 매니저가 세고, 시간이 다 되면 매니저가 스스로 되돌립니다. 창은 확인 대기가 끝난 것을 보고 닫힙니다. [되돌리기]와 뒤로 가기는 남은 시간을 다 쓴 것으로 보고 지금 되돌립니다.
 - **닫기.** 닫기나 뒤로 가기에서 보류 값이 있으면 `engine/ui/confirm_unsaved.ui.xml`("적용, 버리기, 취소")을 엽니다. 이 창의 버튼은 메뉴를 번호로 찾으므로, 메뉴가 먼저 사라져도 매달린 포인터가 없습니다.
 - **키 바인딩 창**은 연 다음 프레임부터 `InputManager::findFirstPressedSlot` 의 첫 슬롯(키보드, 마우스, 패드 순)을 받습니다.
   받는 동안 `wantsUIActions` 가 false라서 누른 키가 메뉴를 움직이지 않습니다. Esc는 떼면 취소이고, 1초 누르면 Esc 자체를 바인딩합니다.
+  패드 B 도 바인딩할 수 있어야 해서 패드 단추에는 취소가 없습니다. 대신 아무것도 받지 못한 채 10초(`KeyRebindScreen::kListenTimeoutSeconds`)가 지나면 취소하고 닫으므로 패드만 쥔 사용자도 빠져나옵니다.
   받은 슬롯은 UI가 먹습니다(`UISystem::consumeSlot`). 뗄 때까지 게임이 보지 못합니다.
   다른 행동과 겹치면(`findBindingConflict`) "이미 쓰입니다" 창이 바꾸기와 취소를 묻고, 바꾸기는 `setPendingBinding( Swap )` 입니다. 스키마 밖 행동과 겹치면 취소만 할 수 있습니다.
 - 개발 스위치 `-gv_uiOptionsMenu=1` 은 옵션 메뉴를 바로 띄웁니다. 스크린샷과 네 백엔드 확인에 씁니다.

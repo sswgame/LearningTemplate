@@ -129,7 +129,7 @@ namespace sw
         return handle;
     }
 
-    const utf8* OptionsMenuScreen::findRowDocument( const UserSettingDef& setting )
+    const utf8* OptionsMenuScreen::findRowDocument( const UserSettingDef& setting, UIInputMode mode )
     {
         switch ( setting._type )
         {
@@ -140,7 +140,7 @@ namespace sw
             case UserSettingType::Float:
                 return "engine/ui/parts/setting_float.ui.xml";
             case UserSettingType::Enum:
-                return "engine/ui/parts/setting_enum.ui.xml";
+                return mode == UIInputMode::Navigation ? "engine/ui/parts/setting_enum_pad.ui.xml" : "engine/ui/parts/setting_enum.ui.xml";
             case UserSettingType::KeyBinding:
                 return "engine/ui/parts/setting_keybinding.ui.xml";
             case UserSettingType::String:
@@ -351,7 +351,7 @@ namespace sw
         UISystem* pUI  = getUISystem();
         if ( pUI == nullptr )
             return false;
-        const utf8*                             pDocumentPath = findRowDocument( setting );
+        const utf8*                             pDocumentPath = findRowDocument( setting, pUI->getInputMode() );
         string                                  error;
         const shared_ptr<const UIDocumentAsset> document = pUI->getDocumentCache().findOrLoad( pDocumentPath, error );
         vector<UIBindingDesc>                   listBinding;

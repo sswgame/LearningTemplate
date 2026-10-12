@@ -1,0 +1,11 @@
+<UIDocument _schemaVersion="1">
+	<!-- 패드 · 키보드로 연 옵션 메뉴의 열거형 행 — 펼치는 콤보 상자 대신 좌우로 하나씩 넘기는 로테이터(setting_enum.ui.xml 과 이름이 같다) -->
+	<BoxPanel _styleClass="settingrow" _spacing="12">
+		<TextWidget _name="Label" _styleClass="settinglabel">
+			<_slot _widthOverride="320" _verticalAlignment="Center" />
+		</TextWidget>
+		<RotatorWidget _name="Value">
+			<_slot _sizeRule="Fill" _verticalAlignment="Center" />
+		</RotatorWidget>
+	</BoxPanel>
+</UIDocument>
