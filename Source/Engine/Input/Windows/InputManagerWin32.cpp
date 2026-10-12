@@ -13,7 +13,7 @@
     #include "Engine/Input/Devices/KeyboardDevice.h"
     #include "Engine/Input/Devices/MouseDevice.h"
     #include "Engine/Input/RawInputEvent.h"
-    #include "Engine/Input/Map/InputKeyMap.h"
+    #include "Engine/Input/Map/InputKeyTable.h"
     #include "Engine/Input/Windows/XInputGamepadDevice.h"
     #include "Engine/Window/IWindow.h"
     #include "Engine/Window/NativeWindowEvent.h"
@@ -109,7 +109,7 @@ namespace sw
             case WM_KEYDOWN:
             case WM_SYSKEYDOWN:
             {
-                const Key   key          = InputKeyMap::mapWin32VirtualKey( event._wParam, event._lParam );
+                const Key   key          = InputKeyTable::mapWin32VirtualKey( event._wParam, event._lParam );
                 const uint8 modifierMask = getWin32ModifierMaskInternal();
                 const bool  bRepeat      = ( event._lParam & 0x40000000 ) != 0;
                 if ( event._wParam == VK_MENU )
@@ -120,7 +120,7 @@ namespace sw
             case WM_KEYUP:
             case WM_SYSKEYUP:
             {
-                const Key   key          = InputKeyMap::mapWin32VirtualKey( event._wParam, event._lParam );
+                const Key   key          = InputKeyTable::mapWin32VirtualKey( event._wParam, event._lParam );
                 const uint8 modifierMask = getWin32ModifierMaskInternal();
                 if ( event._wParam == VK_MENU )
                     onPlatformAltChanged( false );
@@ -149,7 +149,7 @@ namespace sw
             case WM_MBUTTONDOWN:
             case WM_XBUTTONDOWN:
             {
-                const MouseButton btn = InputKeyMap::mapWin32MouseButton( event._message, event._wParam );
+                const MouseButton btn = InputKeyTable::mapWin32MouseButton( event._message, event._wParam );
                 if ( btn < MouseButton::Count )
                 {
                     // 클라이언트 영역의 누름만 여기로 온다(제목 표시줄과 X 는 WM_NCLBUTTONDOWN). 포커스를 잃었다 돌아온 뒤 잠금을 다시 잡는 지점이다.
@@ -179,7 +179,7 @@ namespace sw
             case WM_MBUTTONDBLCLK:
             case WM_XBUTTONDBLCLK:
             {
-                const MouseButton btn = InputKeyMap::mapWin32MouseButton( event._message, event._wParam );
+                const MouseButton btn = InputKeyTable::mapWin32MouseButton( event._message, event._wParam );
                 if ( btn < MouseButton::Count && isMouseButtonConsumed( btn ) == false )
                 {
                     int32 mouseX = 0;
@@ -195,7 +195,7 @@ namespace sw
             case WM_MBUTTONUP:
             case WM_XBUTTONUP:
             {
-                const MouseButton btn = InputKeyMap::mapWin32MouseButton( event._message, event._wParam );
+                const MouseButton btn = InputKeyTable::mapWin32MouseButton( event._message, event._wParam );
                 if ( btn < MouseButton::Count )
                 {
                     int32 mouseX = 0;
@@ -357,8 +357,8 @@ namespace sw
     {
         if ( _pKeyboard != nullptr )
         {
-            uint32                        count{ 0 };
-            const InputKeyMap::VkKeyPair* pTable = InputKeyMap::getWin32PollKeyTable( count );
+            uint32                          count{ 0 };
+            const InputKeyTable::VkKeyPair* pTable = InputKeyTable::getWin32PollKeyTable( count );
             for ( uint32 eventIndex = 0; eventIndex < count; ++eventIndex )
             {
                 _pKeyboard->setKeyDown( pTable[eventIndex]._key, ( GetAsyncKeyState( pTable[eventIndex]._vk ) & 0x8000 ) != 0 );

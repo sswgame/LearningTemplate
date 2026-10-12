@@ -2,7 +2,7 @@
 
 #include "Core/Common/PlatformOsHeaders.h"
 
-#include "Engine/Input/Map/InputKeyMap.h"
+#include "Engine/Input/Map/InputKeyTable.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 
@@ -10,7 +10,7 @@ namespace sw
 {
     namespace
     {
-        struct InputKeyMapWin32Internal
+        struct InputKeyTableWin32Internal
         {
             static constexpr uint32 kExtendedKeyFlag = 0x01000000u;                  ///< lParam 24 번 비트입니다. 오른쪽 Ctrl, Alt, 숫자패드 Enter 에 켜집니다.
             static constexpr SHORT  kKeyDownBit      = static_cast<SHORT>( 0x8000 ); ///< GetAsyncKeyState 의 지금 눌림 비트입니다.
@@ -66,7 +66,7 @@ namespace sw
                 return Key::LeftAlt;
             }
 
-            inline static const InputKeyMap::VkKeyPair kArrPollKeys[] = {
+            inline static const InputKeyTable::VkKeyPair kArrPollKeys[] = {
                 {          'A',              Key::A},
                 {          'B',              Key::B},
                 {          'C',              Key::C},
@@ -184,7 +184,7 @@ namespace sw
 
 namespace sw
 {
-    Key InputKeyMap::mapWin32VirtualKey( uintptr_t vk, intptr_t lParam )
+    Key InputKeyTable::mapWin32VirtualKey( uintptr_t vk, intptr_t lParam )
     {
         if ( 'A' <= vk && vk <= 'Z' )
             return static_cast<Key>( static_cast<uint8>( Key::A ) + static_cast<uint8>( vk - 'A' ) );
@@ -258,7 +258,7 @@ namespace sw
             }
             case VK_RETURN:
             {
-                if ( ( static_cast<uint32>( lParam ) & InputKeyMapWin32Internal::kExtendedKeyFlag ) != 0 )
+                if ( ( static_cast<uint32>( lParam ) & InputKeyTableWin32Internal::kExtendedKeyFlag ) != 0 )
                     return Key::NumpadEnter;
                 return Key::Enter;
             }
@@ -333,7 +333,7 @@ namespace sw
             }
             case VK_SHIFT:
             {
-                return InputKeyMapWin32Internal::resolveShiftKey( lParam );
+                return InputKeyTableWin32Internal::resolveShiftKey( lParam );
             }
             case VK_LCONTROL:
             {
@@ -345,7 +345,7 @@ namespace sw
             }
             case VK_CONTROL:
             {
-                return InputKeyMapWin32Internal::resolveControlKey( lParam );
+                return InputKeyTableWin32Internal::resolveControlKey( lParam );
             }
             case VK_LMENU:
             {
@@ -357,7 +357,7 @@ namespace sw
             }
             case VK_MENU:
             {
-                return InputKeyMapWin32Internal::resolveAltKey( lParam );
+                return InputKeyTableWin32Internal::resolveAltKey( lParam );
             }
             case VK_LWIN:
             {
@@ -489,7 +489,7 @@ namespace sw
         }
     }
 
-    MouseButton InputKeyMap::mapWin32MouseButton( uint32 message, uintptr_t wParam )
+    MouseButton InputKeyTable::mapWin32MouseButton( uint32 message, uintptr_t wParam )
     {
         switch ( message )
         {
@@ -514,10 +514,10 @@ namespace sw
         }
     }
 
-    const InputKeyMap::VkKeyPair* InputKeyMap::getWin32PollKeyTable( uint32& outCount )
+    const InputKeyTable::VkKeyPair* InputKeyTable::getWin32PollKeyTable( uint32& outCount )
     {
-        outCount = static_cast<uint32>( sizeof( InputKeyMapWin32Internal::kArrPollKeys ) / sizeof( InputKeyMapWin32Internal::kArrPollKeys[0] ) );
-        return InputKeyMapWin32Internal::kArrPollKeys;
+        outCount = static_cast<uint32>( sizeof( InputKeyTableWin32Internal::kArrPollKeys ) / sizeof( InputKeyTableWin32Internal::kArrPollKeys[0] ) );
+        return InputKeyTableWin32Internal::kArrPollKeys;
     }
 } // namespace sw
 
@@ -525,17 +525,17 @@ namespace sw
 
 namespace sw
 {
-    Key InputKeyMap::mapWin32VirtualKey( uintptr_t, intptr_t )
+    Key InputKeyTable::mapWin32VirtualKey( uintptr_t, intptr_t )
     {
         return Key::Unknown;
     }
 
-    MouseButton InputKeyMap::mapWin32MouseButton( uint32, uintptr_t )
+    MouseButton InputKeyTable::mapWin32MouseButton( uint32, uintptr_t )
     {
         return MouseButton::Count;
     }
 
-    const InputKeyMap::VkKeyPair* InputKeyMap::getWin32PollKeyTable( uint32& outCount )
+    const InputKeyTable::VkKeyPair* InputKeyTable::getWin32PollKeyTable( uint32& outCount )
     {
         outCount = 0;
         return nullptr;

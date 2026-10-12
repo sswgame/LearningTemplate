@@ -231,7 +231,7 @@ Win32는 BMP 밖의 글자(이모지, 확장 한자)를 서로게이트 `WM_CHAR
 
 리눅스 구현은 실제 기기로 검증하지 않았습니다. 알려진 한계는 다음과 같습니다.
 
-- 게임패드 버튼과 축 배치는 Xbox 호환(`xpad` 드라이버)을 기준으로 추정한 값입니다. 다른 컨트롤러는 `LinuxJoystickGamepadDevice.cpp` 의 `kAxis*` 와 버튼 인덱스를 조정해야 할 수 있습니다.
+- 게임패드 버튼과 축 배치는 Xbox 호환(`xpad` 드라이버)을 기준으로 추정한 값입니다. 다른 컨트롤러는 `LinuxGamepadDevice.cpp` 의 `kAxis*` 와 버튼 인덱스를 조정해야 할 수 있습니다.
 - 진동은 대응하는 evdev 노드를 찾아 `EV_FF` 로 시도하고, 실패하면 무시합니다.
 - 텍스트 입력은 XIM의 확정 문자열만 받습니다. 한중일 입력기의 조합 중 후보 창은 그리지 않습니다.
 - 마우스 잠금은 창 전체 가두기만 지원하고, 부분 사각형(`setMouseClipSubRect`)은 지원하지 않습니다.
@@ -287,7 +287,7 @@ Win32는 BMP 밖의 글자(이모지, 확장 한자)를 서로게이트 `WM_CHAR
 **`ActionBinding::_scale` 의 뜻은 바인딩 종류마다 다릅니다.** `MouseDelta2D` 에서는 감도 배율이고, `VirtualJoystick2D` 에서는 드래그 반경(픽셀)입니다.
 
 **리눅스의 `/dev/input/jsN` 이 모두 게임패드는 아닙니다.** joydev 는 절대 좌표 마우스와 태블릿에도 노드를 만듭니다. 가상 머신(CI 러너)의 Hyper-V 마우스를 패드로 열면 왼쪽 스틱이 늘 (-0.707, 0.707) 로 기울어 UI 포커스가 저절로 움직입니다.
-`LinuxJoystickGamepadDevice` 는 버튼 맵에 조이스틱 · 게임패드 버튼이 있는 노드만 엽니다(`isGamepadButtonMap`). 슬롯 번호는 여전히 `jsN` 의 N 이라, 그런 노드가 앞 번호를 차지하면 실제 패드가 1번 슬롯으로 밀립니다.
+`LinuxGamepadDevice` 는 버튼 맵에 조이스틱 · 게임패드 버튼이 있는 노드만 엽니다(`isGamepadButtonMap`). 슬롯 번호는 여전히 `jsN` 의 N 이라, 그런 노드가 앞 번호를 차지하면 실제 패드가 1번 슬롯으로 밀립니다.
 
 **PlayStation과 Switch 버튼 표기는 자동으로 고르지 않습니다.** 실제 하드웨어를 감지하지 않으므로, `getGlyphForAction( action, previewDevice )` 로 표기 방식을 지정해야 그 표기가 나옵니다.
 

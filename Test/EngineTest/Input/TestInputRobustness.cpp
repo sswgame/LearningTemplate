@@ -5,7 +5,7 @@
 
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/Linux/LinuxJoystickGamepadDevice.h"
+#include "Engine/Input/Linux/LinuxGamepadDevice.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Input/Virtual/InputReplay.h"
@@ -408,11 +408,11 @@ SW_TEST_CASE( InputEdgeCaseTest, LinuxJoystickRejectsMouseAndTabletNodes )
     const uint16 arrXpad[]     = { 0x130, 0x131, 0x133, 0x134, 0x136, 0x137, 0x13a, 0x13b, 0x13c }; // BTN_A .. BTN_MODE
     const uint16 arrJoystick[] = { 0x120, 0x121 };                                                  // BTN_TRIGGER · BTN_THUMB
     const uint16 arrHappy[]    = { 0x110, 0x2c0 };                                                  // 마우스 버튼 + BTN_TRIGGER_HAPPY1
-    SW_EXPECT_FALSE( sw::LinuxJoystickGamepadDevice::isGamepadButtonMap( arrMouse, 3 ) );
-    SW_EXPECT_FALSE( sw::LinuxJoystickGamepadDevice::isGamepadButtonMap( arrTablet, 3 ) );
-    SW_EXPECT_FALSE( sw::LinuxJoystickGamepadDevice::isGamepadButtonMap( arrXpad, 0 ) ); // 버튼 없음(가속도계)
-    SW_EXPECT_FALSE( sw::LinuxJoystickGamepadDevice::isGamepadButtonMap( nullptr, 3 ) );
-    SW_EXPECT_TRUE( sw::LinuxJoystickGamepadDevice::isGamepadButtonMap( arrXpad, 9 ) );
-    SW_EXPECT_TRUE( sw::LinuxJoystickGamepadDevice::isGamepadButtonMap( arrJoystick, 2 ) );
-    SW_EXPECT_TRUE( sw::LinuxJoystickGamepadDevice::isGamepadButtonMap( arrHappy, 2 ) );
+    SW_EXPECT_FALSE( sw::LinuxGamepadDevice::isGamepadButtonMap( arrMouse, 3 ) );
+    SW_EXPECT_FALSE( sw::LinuxGamepadDevice::isGamepadButtonMap( arrTablet, 3 ) );
+    SW_EXPECT_FALSE( sw::LinuxGamepadDevice::isGamepadButtonMap( arrXpad, 0 ) ); // 버튼 없음(가속도계)
+    SW_EXPECT_FALSE( sw::LinuxGamepadDevice::isGamepadButtonMap( nullptr, 3 ) );
+    SW_EXPECT_TRUE( sw::LinuxGamepadDevice::isGamepadButtonMap( arrXpad, 9 ) );
+    SW_EXPECT_TRUE( sw::LinuxGamepadDevice::isGamepadButtonMap( arrJoystick, 2 ) );
+    SW_EXPECT_TRUE( sw::LinuxGamepadDevice::isGamepadButtonMap( arrHappy, 2 ) );
 }

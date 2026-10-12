@@ -272,7 +272,7 @@ namespace sw
 
         /**
          * @brief 게임패드 슬롯 네 개를 만들어 등록합니다. 플랫폼이 정하는 것은 만드는 타입뿐입니다.
-         * @tparam GamepadType 슬롯 번호를 받는 게임패드 장치입니다(`XInputGamepadDevice`, `LinuxJoystickGamepadDevice`).
+         * @tparam GamepadType 슬롯 번호를 받는 게임패드 장치입니다(`XInputGamepadDevice`, `LinuxGamepadDevice`).
          * @details 슬롯 수(4), 0번을 편의 포인터로 잡는 것, 연결 콜백을 연결하는 것은 엔진 정책이므로 여기 한 곳에 둔다.
          *          플랫폼 파일마다 두면 한쪽만 고쳐서 그 플랫폼만 조용히 다르게 동작한다.
          */

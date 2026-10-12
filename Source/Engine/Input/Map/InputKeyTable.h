@@ -1,5 +1,5 @@
 /**
- * @file InputKeyMap.h
+ * @file InputKeyTable.h
  * @brief 플랫폼 VK/KeySym 을 Key 로 변환하고, Win32 폴링 테이블을 제공합니다.
  */
 #pragma once
@@ -11,7 +11,7 @@
 namespace sw
 {
     /** @brief 플랫폼 키와 마우스 코드를 엔진 Key/MouseButton 으로 바꿉니다. */
-    struct SW_API InputKeyMap
+    struct SW_API InputKeyTable
     {
         /** @brief 가상 키와 엔진 Key 의 한 쌍입니다. */
         struct VkKeyPair

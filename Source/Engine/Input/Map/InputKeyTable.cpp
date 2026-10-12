@@ -1,10 +1,10 @@
 #include "pch.h"
 
-#include "Engine/Input/Map/InputKeyMap.h"
+#include "Engine/Input/Map/InputKeyTable.h"
 
 namespace sw
 {
-    Key InputKeyMap::mapScanCodeToKey( uint32 scanCode, bool bExtended )
+    Key InputKeyTable::mapScanCodeToKey( uint32 scanCode, bool bExtended )
     {
         if ( bExtended )
         {

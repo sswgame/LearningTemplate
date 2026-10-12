@@ -12,8 +12,8 @@
     #include "Engine/Input/Devices/KeyboardDevice.h"
     #include "Engine/Input/Devices/MouseDevice.h"
     #include "Engine/Input/RawInputEvent.h"
-    #include "Engine/Input/Map/InputKeyMap.h"
-    #include "Engine/Input/Linux/LinuxJoystickGamepadDevice.h"
+    #include "Engine/Input/Map/InputKeyTable.h"
+    #include "Engine/Input/Linux/LinuxGamepadDevice.h"
     #include "Engine/Window/IWindow.h"
     #include "Engine/Window/NativeWindowEvent.h"
 
@@ -206,7 +206,7 @@ namespace sw
                 X11InputInternal::enableDetectableAutoRepeat( pXev->xany.display );
 
                 const KeySym keySym = XLookupKeysym( const_cast<XKeyEvent*>( &pXev->xkey ), 0 );
-                const Key    key    = InputKeyMap::mapX11KeySym( static_cast<uint64>( keySym ) );
+                const Key    key    = InputKeyTable::mapX11KeySym( static_cast<uint64>( keySym ) );
                 const bool   bDown  = ( pXev->type == KeyPress );
                 if ( key == Key::LeftAlt || key == Key::RightAlt )
                     onPlatformAltChanged( bDown );
@@ -358,7 +358,7 @@ namespace sw
     {
         // 슬롯 수, 0번 캐시, 연결 콜백은 엔진 정책이라 기반 클래스가 맡는다. 여기서 정하는 것은 `/dev/input/js*`
         // 를 읽는 구현이라는 것뿐이다. 연결되지 않은 슬롯은 poll() 이 재시도 타이머로 넘어간다.
-        registerGamepadSlots<LinuxJoystickGamepadDevice>();
+        registerGamepadSlots<LinuxGamepadDevice>();
     }
 
     void InputManager::setCursorVisiblePlatform( bool bVisible )

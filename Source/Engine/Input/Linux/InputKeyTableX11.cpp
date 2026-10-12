@@ -2,14 +2,14 @@
 
 #include "Core/Common/PlatformOsHeaders.h"
 
-#include "Engine/Input/Map/InputKeyMap.h"
+#include "Engine/Input/Map/InputKeyTable.h"
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
     #include "Core/Common/X11Headers.h"
 
 namespace sw
 {
-    Key InputKeyMap::mapX11KeySym( uint64 keySym )
+    Key InputKeyTable::mapX11KeySym( uint64 keySym )
     {
         switch ( keySym )
         {
@@ -269,7 +269,7 @@ namespace sw
 
 namespace sw
 {
-    Key InputKeyMap::mapX11KeySym( uint64 )
+    Key InputKeyTable::mapX11KeySym( uint64 )
     {
         return Key::Unknown;
     }

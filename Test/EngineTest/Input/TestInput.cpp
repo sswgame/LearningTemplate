@@ -8,7 +8,7 @@
 
 #include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/Map/InputKeyMap.h"
+#include "Engine/Input/Map/InputKeyTable.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Input/Virtual/VirtualJoystick.h"
@@ -958,15 +958,15 @@ SW_TEST_CASE( InputManagerTest, InputMuting )
 }
 
 /**
- * @brief [InputKeyMapTest] 하드웨어 물리 스캔코드 매핑(AZERTY/QWERTZ 호환) 검증
+ * @brief [InputKeyTableTest] 하드웨어 물리 스캔코드 매핑(AZERTY/QWERTZ 호환) 검증
  */
-SW_TEST_CASE( InputKeyMapTest, PhysicalScanCodeMapping )
+SW_TEST_CASE( InputKeyTableTest, PhysicalScanCodeMapping )
 {
-    SW_EXPECT_TRUE( sw::InputKeyMap::mapScanCodeToKey( 0x11, false ) == sw::Key::W );
-    SW_EXPECT_TRUE( sw::InputKeyMap::mapScanCodeToKey( 0x1E, false ) == sw::Key::A );
-    SW_EXPECT_TRUE( sw::InputKeyMap::mapScanCodeToKey( 0x1F, false ) == sw::Key::S );
-    SW_EXPECT_TRUE( sw::InputKeyMap::mapScanCodeToKey( 0x20, false ) == sw::Key::D );
-    SW_EXPECT_TRUE( sw::InputKeyMap::mapScanCodeToKey( 0x39, false ) == sw::Key::Space );
+    SW_EXPECT_TRUE( sw::InputKeyTable::mapScanCodeToKey( 0x11, false ) == sw::Key::W );
+    SW_EXPECT_TRUE( sw::InputKeyTable::mapScanCodeToKey( 0x1E, false ) == sw::Key::A );
+    SW_EXPECT_TRUE( sw::InputKeyTable::mapScanCodeToKey( 0x1F, false ) == sw::Key::S );
+    SW_EXPECT_TRUE( sw::InputKeyTable::mapScanCodeToKey( 0x20, false ) == sw::Key::D );
+    SW_EXPECT_TRUE( sw::InputKeyTable::mapScanCodeToKey( 0x39, false ) == sw::Key::Space );
 }
 
 /**

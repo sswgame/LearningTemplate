@@ -1,5 +1,5 @@
 /**
- * @file LinuxJoystickGamepadDevice.h
+ * @file LinuxGamepadDevice.h
  * @brief Linux 커널 조이스틱 API(/dev/input/jsN) 기반 게임패드 구현입니다(GamepadDevice 상속).
  */
 #pragma once
@@ -12,24 +12,24 @@
 namespace sw
 {
     /**
-     * @class LinuxJoystickGamepadDevice
+     * @class LinuxGamepadDevice
      * @brief Linux 커널 조이스틱 API(/dev/input/jsN)로 하드웨어 게임패드를 폴링하는 GamepadDevice 구현입니다.
      *
      * @note 버튼과 축 배치는 Xbox 호환 컨트롤러의 xpad 드라이버 규격을 기준으로 매핑합니다.
      *       다른 드라이버와 컨트롤러는 배치가 다를 수 있으므로(SDL 의 게임패드 매핑 DB 같은 보정이 없습니다)
-     *       실제 하드웨어에서 확인한 뒤 필요하면 LinuxJoystickGamepadDevice.cpp 의 kAxisXxx 와 버튼 인덱스를 조정하십시오.
+     *       실제 하드웨어에서 확인한 뒤 필요하면 LinuxGamepadDevice.cpp 의 kAxisXxx 와 버튼 인덱스를 조정하십시오.
      * @note 커널 조이스틱 API 자체는 럼블(force feedback)을 지원하지 않습니다. setVibration() 은
      *       같은 물리 장치의 evdev(/dev/input/eventN) 노드를 sysfs 에서 찾아 EV_FF 로 시도하고,
      *       찾지 못하거나 실패하면 조용히 false 를 반환합니다.
      */
-    class SW_API LinuxJoystickGamepadDevice : public GamepadDevice
+    class SW_API LinuxGamepadDevice : public GamepadDevice
     {
     public:
-        explicit LinuxJoystickGamepadDevice( uint32 userIndex = 0 );
-        virtual ~LinuxJoystickGamepadDevice() override;
+        explicit LinuxGamepadDevice( uint32 userIndex = 0 );
+        virtual ~LinuxGamepadDevice() override;
 
-        LinuxJoystickGamepadDevice( const LinuxJoystickGamepadDevice& )            = delete;
-        LinuxJoystickGamepadDevice& operator=( const LinuxJoystickGamepadDevice& ) = delete;
+        LinuxGamepadDevice( const LinuxGamepadDevice& )            = delete;
+        LinuxGamepadDevice& operator=( const LinuxGamepadDevice& ) = delete;
 
         void poll( float32 deltaTime ) override;
 

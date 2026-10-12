@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Input/Linux/LinuxJoystickGamepadDevice.h"
+#include "Engine/Input/Linux/LinuxGamepadDevice.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
@@ -11,7 +11,7 @@
 
 namespace sw
 {
-    bool LinuxJoystickGamepadDevice::isGamepadButtonMap( const uint16* pButtonCode, uint32 buttonCount )
+    bool LinuxGamepadDevice::isGamepadButtonMap( const uint16* pButtonCode, uint32 buttonCount )
     {
         // linux/input-event-codes.h 의 값이다. 판정을 Windows 에서도 테스트하려고 헤더 없이 둔다.
         constexpr uint16 kButtonJoystickFirst     = 0x120; // BTN_JOYSTICK(BTN_TRIGGER): 조이스틱 0x120..0x12f, 게임패드 0x130..0x13e
@@ -50,7 +50,7 @@ namespace sw
          * @note 실제 하드웨어에 따라 인덱스가 다를 수 있습니다. SDL 의 게임패드 매핑 DB 같은
          *       기기별 보정은 하지 않고, 가장 흔한 xpad 배치를 기준으로 한 최선의 추정치입니다.
          */
-        struct LinuxJoystickGamepadDeviceInternal
+        struct LinuxGamepadDeviceInternal
         {
             static constexpr uint8 kAxisLeftX        = 0;
             static constexpr uint8 kAxisLeftY        = 1;
@@ -131,7 +131,7 @@ namespace sw
 
 namespace sw
 {
-    LinuxJoystickGamepadDevice::LinuxJoystickGamepadDevice( uint32 userIndex )
+    LinuxGamepadDevice::LinuxGamepadDevice( uint32 userIndex )
         : GamepadDevice{ userIndex }
         , _fdJoystick{ invalid_index::kInt32 }
         , _fdForceFeedback{ invalid_index::kInt32 }
@@ -145,13 +145,13 @@ namespace sw
     {
     }
 
-    LinuxJoystickGamepadDevice::~LinuxJoystickGamepadDevice()
+    LinuxGamepadDevice::~LinuxGamepadDevice()
     {
         closeForceFeedback();
         closeJoystick();
     }
 
-    void LinuxJoystickGamepadDevice::tryOpenJoystick()
+    void LinuxGamepadDevice::tryOpenJoystick()
     {
         StringBuilder<constant::kMaxPathSize> pathBuilder;
         pathBuilder.appendFormat( "/dev/input/js%#", _deviceIndex );
@@ -183,7 +183,7 @@ namespace sw
             _onConnectionChanged( _deviceIndex, true );
     }
 
-    void LinuxJoystickGamepadDevice::closeJoystick()
+    void LinuxGamepadDevice::closeJoystick()
     {
         if ( _fdJoystick >= 0 )
         {
@@ -192,7 +192,7 @@ namespace sw
         }
     }
 
-    void LinuxJoystickGamepadDevice::tryOpenForceFeedback()
+    void LinuxGamepadDevice::tryOpenForceFeedback()
     {
         // /sys/class/input/jsN/device/ 는 실제 입력 장치 디렉터리를 가리키고, 같은 물리 컨트롤러의
         // evdev 노드(eventM)가 그 안에 형제 항목으로 있다. 그것을 찾아 /dev/input/eventM 을 연다.
@@ -236,7 +236,7 @@ namespace sw
 
         // 비트맵을 검사하지 않으면 럼블이 없는 노드도 통과해 setVibration 이 매번 EVIOCSFF 에서 실패한다.
         // 지원 여부는 여기서 한 번에 걸러 낸다.
-        if ( LinuxJoystickGamepadDeviceInternal::testFeatureBit( arrFeatureBits, FF_RUMBLE ) == false )
+        if ( LinuxGamepadDeviceInternal::testFeatureBit( arrFeatureBits, FF_RUMBLE ) == false )
         {
             close( fd );
             return;
@@ -245,7 +245,7 @@ namespace sw
         _fdForceFeedback = fd;
     }
 
-    void LinuxJoystickGamepadDevice::closeForceFeedback()
+    void LinuxGamepadDevice::closeForceFeedback()
     {
         if ( _fdForceFeedback >= 0 )
         {
@@ -262,7 +262,7 @@ namespace sw
         _bHasForceFeedback = SW_FALSE;
     }
 
-    void LinuxJoystickGamepadDevice::poll( float32 deltaTime )
+    void LinuxGamepadDevice::poll( float32 deltaTime )
     {
         const bool bWasConnected = ( _bConnected == SW_TRUE );
 
@@ -281,9 +281,9 @@ namespace sw
         drainJoystickEvents();
     }
 
-    void LinuxJoystickGamepadDevice::drainJoystickEvents()
+    void LinuxGamepadDevice::drainJoystickEvents()
     {
-        using Internal = LinuxJoystickGamepadDeviceInternal;
+        using Internal = LinuxGamepadDeviceInternal;
 
         js_event joystickEvent{};
         for ( ;; )
@@ -366,7 +366,7 @@ namespace sw
         }
     }
 
-    bool LinuxJoystickGamepadDevice::setVibration( float32 leftMotor, float32 rightMotor )
+    bool LinuxGamepadDevice::setVibration( float32 leftMotor, float32 rightMotor )
     {
         _leftMotorSpeed  = leftMotor;
         _rightMotorSpeed = rightMotor;
@@ -429,7 +429,7 @@ namespace sw
         return true;
     }
 
-    void LinuxJoystickGamepadDevice::stopVibration()
+    void LinuxGamepadDevice::stopVibration()
     {
         GamepadDevice::stopVibration();
 
