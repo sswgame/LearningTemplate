@@ -13,7 +13,6 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Gameplay/Inventory/Equipment.h"
-#include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Base/Gameplay/Progression/LevelProgress.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -24,6 +23,7 @@ namespace sw
     struct SessionStateRefs;
 
     class Archive;
+    class Inventory;
     class ItemCatalog;
 
     /** @brief 비급 하나의 숙련입니다. */

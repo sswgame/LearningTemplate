@@ -15,19 +15,21 @@
 
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
-#include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostCatalog.h"
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostEncounter.h"
 
 namespace sw
 {
+    enum class GhostSearchMode : uint8;
+
     struct SessionStateRefs;
 
     class Archive;
     class AreaGraph;
     class GameFlags;
+    class GhostCatalog;
     class Inventory;
+    class ItemStackList;
     class LootCatalog;
     class Wallet;
 
