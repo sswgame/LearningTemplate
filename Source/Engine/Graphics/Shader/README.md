@@ -64,7 +64,7 @@ HLSL과 C++가 이 파일을 같이 include하므로 슬롯 번호를 두 곳에
 ### Compile/ — 소스에서 바이트코드로
 
 - `ShaderCompiler` 는 DXC와 D3DCompiler로 HLSL을 DXIL, SPIR-V, DXBC로 컴파일합니다.
-  Vulkan용 SPIR-V 타깃은 `RHI/Vulkan/VulkanRHIRequiredVersion.h` 가 정합니다(1.3, SPIR-V 1.6). 디바이스 최소 버전과 같은 값입니다. OpenGL용 SPIR-V는 `vulkan1.1` 타깃입니다.
+  Vulkan용 SPIR-V 타깃은 `RHI/RHITypes.h` 의 `constant::kVulkanRequiredMajor` · `kVulkanRequiredMinor` 가 정합니다(1.3, SPIR-V 1.6). 디바이스 최소 버전과 같은 값입니다. OpenGL용 SPIR-V는 `vulkan1.1` 타깃입니다.
 - OpenGL용 SPIR-V는 쿠킹할 때 `InstanceIndex` 와 `VertexIndex` 를 `InstanceId` 와 `VertexId` 로 바꿉니다. ARB_gl_spirv는 앞의 둘을 지원하지 않아, 바꾸지 않으면 인스턴스 번호가 0으로 읽힙니다.
 - `ShaderCache` 는 "경로, define, 타깃"을 키로 컴파일 결과를 찾습니다. 결과를 얻는 경로는 쿠킹된 바이너리, 로컬 캐시(`Saved/ShaderCache/`), 실시간 컴파일 세 가지이고 모두 같은 항목을 만듭니다.
   `AssetManager` 의 에셋 캐시와 다릅니다. 셰이더 바이트코드는 RHI와 컴파일러의 수명을 따릅니다. `shutdown` 은 리플렉션 매니페스트 캐시도 비웁니다.
@@ -140,7 +140,7 @@ t 슬롯은 16개(t0..t15)이고 DirectX 12 t 테이블의 크기이자 Vulkan s
 
 ### 드로우 직전에 일어나는 일
 
-PSO 설명을 받으면 `ShaderBindingLayoutCache::getOrBuild( desc, backend )` 가 컴파일, 리플렉션, 레이아웃을 거쳐 캐시합니다.
+PSO 설명을 받으면 `ShaderBindingLayoutCache::getOrBuild( desc, targetFormat )` 가 컴파일, 리플렉션, 레이아웃을 거쳐 캐시합니다.
 `FrameRenderer` 는 패스마다 `FrameResourceRegistry` 에 "ShadowMap", "SceneColor" 같은 이름으로 리소스를 등록하고, `PassConstantValues` 에 `g_ViewProj` 같은 값을 채웁니다.
 드로우 직전에 `ShaderParameterBinder::bindGraphics` 가 다음을 바인딩합니다.
 
@@ -237,8 +237,12 @@ Debug 빌드는 런타임 리플렉션으로 넘어가 문제를 숨기고, Ship
 **바인딩 번호를 숫자 리터럴로 쓰지 마세요.** 계약의 원본은 `bindingslots.hlsli` 하나이고 백엔드는 `shaderslot::` 상수만 씁니다. `draw()` 에는 상수 버퍼 인자가 없습니다.
 백엔드끼리 공유하는 상수는 `RHITypes.h` 의 `constant` 블록 하나에 둡니다. 지금 값이 같아도 바뀔 수 있으면 공유하고, 별칭을 만들지 않습니다.
 
-**`ShaderBindingLayoutCache::getOrBuild` 에는 반드시 실제 디바이스의 `backend` 를 넘기세요.** 전역 `gv_rhiBackend` 를 쓰지 않습니다.
+**`ShaderBindingLayoutCache::getOrBuild` 에는 반드시 실제 디바이스 백엔드의 타깃 포맷(`RHI::getShaderTargetFormat( backend )`)을 넘기세요.** 전역 `gv_rhiBackend` 를 쓰지 않습니다.
 한 프로세스에 `IRHIDevice` 가 여럿 있으면(백엔드 패리티 테스트처럼) 전역값이 실제 디바이스와 달라 엉뚱한 셰이더 변형을 리플렉션합니다.
+
+**이 폴더는 RHI 를 include 하지 않습니다(`RHITypes.h` 만 예외).** RHI 백엔드가 셰이더 캐시 · 컴파일러 · 슬롯을 쓰므로 방향은 RHI → Shader 하나입니다.
+셰이더 쪽이 백엔드 정보가 필요하면 호출자가 값(`ShaderTargetFormat`)으로 넘기고, 두 쪽이 함께 읽는 상수는 `RHITypes.h` 의 `constant` 블록에 둡니다.
+`CheckEngineLayers` 가 `Graphics/<하위 폴더>` 사이의 방향을 봅니다(`Scripts/lint/rules/CheckEngineLayers.toml` 의 `[subtier]`).
 
 **백엔드 하나만 예외를 두지 마세요.** 리플렉션이 기준이면 네 백엔드가 같은 규칙을 따릅니다. 예외 하나를 주석으로 남기면 그 주석이 다음 사람의 함정이 됩니다.
 

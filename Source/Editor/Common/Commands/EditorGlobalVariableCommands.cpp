@@ -15,24 +15,6 @@
 
 namespace sw::editor
 {
-    string EditorGlobalVariableCommands::getTypeString( const GlobalVariableInfo& info )
-    {
-        switch ( info._type )
-        {
-            case GlobalVariableType::Boolean:
-                return "Bool";
-            case GlobalVariableType::Int32:
-                return "Int32";
-            case GlobalVariableType::Float:
-                return "Float";
-            case GlobalVariableType::String:
-                return "String";
-            case GlobalVariableType::Enum:
-                return info._enumType.empty() == false ? info._enumType : "Enum";
-        }
-        return "Unknown";
-    }
-
     string EditorGlobalVariableCommands::getPresetFolderPath()
     {
         // 앱이 쓰는 상태라 팩 밖이다 — 팩 안(`data/presets/globalvars`)에 두면 쿠킹이 게임 팩에 싣는다. 팩마다 폴더를 나눈다.
@@ -71,7 +53,7 @@ namespace sw::editor
 
             XMLNode varNode = root.appendChild( "Var" );
             varNode.appendAttribute( "name", pInfo->_name );
-            varNode.appendAttribute( "type", getTypeString( *pInfo ) );
+            varNode.appendAttribute( "type", pInfo->getTypeName() );
             varNode.appendAttribute( "value", pInfo->getValueAsString() );
         }
 

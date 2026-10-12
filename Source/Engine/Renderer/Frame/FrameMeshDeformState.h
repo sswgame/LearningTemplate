@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Time/GameTimer.h"
 
@@ -35,6 +36,8 @@ namespace sw
         vector<Mesh*> _listScratchSkinMesh{};
         /// @brief 이번 프레임 VAT 메시 목록입니다. 프레임마다 재사용합니다.
         vector<Mesh*> _listScratchVertexAnimationMesh{};
+        /// @brief 이번 프레임에 이미 분류한 메시입니다. 배치마다 세 목록을 선형 탐색하지 않으려고 둡니다. clear 는 버킷을 남기므로 프레임마다 할당하지 않습니다.
+        unordered_set<const Mesh*> _setScratchSeenMesh{};
         /**
          * @brief 시간으로 구동하는 컴퓨트에 넘기는 절대 시간(초)의 시계입니다.
          * @details 각도를 프레임마다 누적하지 않고 **이 절대 시간에서 매번 새로 계산한다**. 누적하면 프레임

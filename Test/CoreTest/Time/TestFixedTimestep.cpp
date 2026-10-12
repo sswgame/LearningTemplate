@@ -1,7 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Config/EngineConfig.h"
-#include "Engine/Config/FixedTimestep.h"
+#include "Core/Time/FixedTimestep.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -29,6 +28,12 @@ namespace
     {
         std::this_thread::sleep_for( std::chrono::milliseconds( 300 ) );
     }
+
+    /** @brief 만들 때 넘기는 기본값(엔진에서는 `EngineConfig` 의 초기값)이다. 몫이 6 이 되게 둔다. */
+    FixedTimestepParams makeTimestepDefaults()
+    {
+        return FixedTimestepParams{ 0.1f, 1.0f / 60.0f, 6 };
+    }
 } // namespace
 
 /**
@@ -36,9 +41,9 @@ namespace
  */
 SW_TEST_CASE( FixedTimestepTest, VariableDeltaIsClampedAndSplitIntoFixedSteps )
 {
-    FixedTimestep timeline;
+    FixedTimestep timeline{ makeTimestepDefaults() };
     // 2의 거듭제곱 분수로 준다 — 몫이 부동소수 오차 없이 딱 떨어진다(0.25 / 0.0625 = 4).
-    timeline.configure( 0.25f, 0.0625f, 8 );
+    timeline.configure( FixedTimestepParams{ 0.25f, 0.0625f, 8 } );
     timeline.start();
 
     sleepLongerThanAnyClamp();
@@ -57,9 +62,9 @@ SW_TEST_CASE( FixedTimestepTest, VariableDeltaIsClampedAndSplitIntoFixedSteps )
  */
 SW_TEST_CASE( FixedTimestepTest, StepCountIsCappedAndTheOverflowIsDropped )
 {
-    FixedTimestep timeline;
+    FixedTimestep timeline{ makeTimestepDefaults() };
     // 0.25초가 쌓이면 4스텝이 필요하지만 상한은 2 — 0.125초가 남는다.
-    timeline.configure( 0.25f, 0.0625f, 2 );
+    timeline.configure( FixedTimestepParams{ 0.25f, 0.0625f, 2 } );
     timeline.start();
 
     sleepLongerThanAnyClamp();
@@ -76,8 +81,8 @@ SW_TEST_CASE( FixedTimestepTest, StepCountIsCappedAndTheOverflowIsDropped )
  */
 SW_TEST_CASE( FixedTimestepTest, TimeScaleMultipliesTheClampedDelta )
 {
-    FixedTimestep timeline;
-    timeline.configure( 0.25f, 0.0625f, 16 );
+    FixedTimestep timeline{ makeTimestepDefaults() };
+    timeline.configure( FixedTimestepParams{ 0.25f, 0.0625f, 16 } );
     timeline.start();
 
     sleepLongerThanAnyClamp();
@@ -97,20 +102,20 @@ SW_TEST_CASE( FixedTimestepTest, TimeScaleMultipliesTheClampedDelta )
 }
 
 /**
- * @brief [FixedTimestepTest] 0 이하 설정은 내장 기본값으로 되돌린다
+ * @brief [FixedTimestepTest] 0 이하 설정은 만들 때 받은 기본값으로 되돌린다
  * @details 설정 파일 하나가 프레임 루프를 세우지 못하게 하는 자리다. 고정 델타가 0 이면
  *          스텝 수 계산이 0 으로 나누기가 된다.
  */
 SW_TEST_CASE( FixedTimestepTest, NonPositiveConfigurationFallsBackToDefaults )
 {
-    FixedTimestep timeline;
-    timeline.configure( -1.0f, 0.0f, 0 );
+    FixedTimestep timeline{ makeTimestepDefaults() };
+    timeline.configure( FixedTimestepParams{ -1.0f, 0.0f, 0 } );
     timeline.start();
 
     sleepLongerThanAnyClamp();
     const FrameTime frame = timeline.advance();
 
-    const EngineConfig defaults{};
+    const FixedTimestepParams defaults = makeTimestepDefaults();
     SW_EXPECT_NEAR_EQUAL( defaults._maxFrameDeltaTime, frame._deltaTime, 0.0001f );
     SW_EXPECT_NEAR_EQUAL( defaults._fixedDeltaTime, frame._fixedDeltaTime, 0.0001f );
     SW_EXPECT_TRUE_MSG( frame._fixedStepCount <= defaults._maxFixedStepPerFrame,
@@ -128,8 +133,8 @@ SW_TEST_CASE( FixedTimestepTest, NonPositiveConfigurationFallsBackToDefaults )
  */
 SW_TEST_CASE( FixedTimestepTest, StartRewindsTheTimerBeforeTheFirstFrame )
 {
-    FixedTimestep timeline;
-    timeline.configure( 0.25f, 0.0625f, 8 );
+    FixedTimestep timeline{ makeTimestepDefaults() };
+    timeline.configure( FixedTimestepParams{ 0.25f, 0.0625f, 8 } );
 
     // 만든 시점과 루프 진입 사이에 시간이 흐른다.
     sleepLongerThanAnyClamp();
@@ -151,8 +156,8 @@ SW_TEST_CASE( FixedTimestepTest, StartRewindsTheTimerBeforeTheFirstFrame )
  */
 SW_TEST_CASE( FixedTimestepTest, OverrideFrameSecondsIgnoresTheWallClock )
 {
-    FixedTimestep timeline;
-    timeline.configure( 0.1f, 1.0f / 60.0f, 6 );
+    FixedTimestep timeline{ makeTimestepDefaults() };
+    timeline.configure( FixedTimestepParams{ 0.1f, 1.0f / 60.0f, 6 } );
     timeline.start();
 
     for ( const float32 overrideSeconds : { 1.0f / 60.0f, 0.0166667f } )
@@ -175,8 +180,8 @@ SW_TEST_CASE( FixedTimestepTest, OverrideFrameSecondsIgnoresTheWallClock )
  */
 SW_TEST_CASE( FixedTimestepTest, UnscaledDeltaIgnoresTheTimeScale )
 {
-    FixedTimestep timeline;
-    timeline.configure( 0.1f, 1.0f / 60.0f, 6 );
+    FixedTimestep timeline{ makeTimestepDefaults() };
+    timeline.configure( FixedTimestepParams{ 0.1f, 1.0f / 60.0f, 6 } );
     timeline.start();
     const FrameTime paused = timeline.advance( 0.0f, 0.02f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, paused._deltaTime, 1e-6f );
