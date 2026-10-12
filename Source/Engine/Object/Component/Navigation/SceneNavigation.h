@@ -12,13 +12,15 @@
  *
  *          **질의**(`findPath` · `findNearestPoint` · `raycast`)는 베이크한 내비메시에 대해 어느 틱에서든 부를 수 있습니다(스레드마다 질의 객체). 아직 베이크하지
  *          않은 종류면 실패합니다 — 베이크는 갱신이 합니다(`ensureNavMesh` 는 게임 스레드에서 지금 베이크한다).
+ *
+ *          이 클래스는 등록부 · 종류별 내비메시 마련(쿠킹본 · 전체 베이크) · 질의 · 갱신 순서만 갖고, 바뀌는 이유가 다른 일은 조각이 맡습니다.
+ *          기하 모으기는 `NavGeometryCollector`, 장애물 · 알린 영역의 타일 재베이크는 `NavTileRebaker`(값 멤버), 에이전트와 군중 사이 옮기기는
+ *          `NavAgentCrowdSync`, 디버그 그리기는 `NavDebugView`(값 멤버)입니다. 모두 비가상 직접 호출입니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
-#include "Core/Concurrency/SpinLock.h"
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/AABB.h"
@@ -30,6 +32,8 @@
 #include "Engine/Navigation/NavMeshAsset.h"
 #include "Engine/Navigation/NavMeshSettings.h"
 #include "Engine/Navigation/NavigationTypes.h"
+#include "Engine/Object/Component/Navigation/NavDebugView.h"
+#include "Engine/Object/Component/Navigation/NavTileRebaker.h"
 #include "Engine/Object/GameObject/ISceneService.h"
 
 namespace sw
@@ -168,7 +172,7 @@ namespace sw
         /** @brief 베이크하는 중 · 줄에 선 타일을 모두 지금 베이크하고 끼웁니다(게임 스레드 — 테스트 · 쿠킹). */
         void flushTileBakes();
         /** @brief 재베이크로 끼운 타일 수(누적, 진단)입니다. */
-        uint32 getRebakedTileCount() const { return _rebakedTileCount; }
+        uint32 getRebakedTileCount() const { return _tileRebaker.getRebakedTileCount(); }
         /** @brief 지금 등록된 에이전트 수입니다. */
         uint32 getAgentCount() const { return static_cast<uint32>( _listAgent.size() ); }
 
@@ -199,15 +203,9 @@ namespace sw
         const NavAgentTypeDef* resolveAgentType( const hashed_string& agentType );
         /** @brief 쿠킹본이 맞으면 그것으로 채웁니다. */
         bool installCooked( NavMeshRuntime& runtime, const NavAgentTypeDef& agentType, uint64 inputHash );
-        void collectObstacleVolumes( vector<NavConvexVolume>& outListVolume ) const;
-        void updateObstacles();
+        /** @brief 알린 영역을 재베이크 줄로 바꿉니다(`NavTileRebaker::processDirtyAreas` 에 이 씬의 입력을 넘긴다). */
         void processDirtyAreas();
-        void applyFinishedBakes();
-        void launchTileBakes();
         void updateAgents( float32 deltaTime );
-        void syncAgentIntoCrowd( NavMeshAgentComponent& agent, NavMeshRuntime& runtime );
-        void writeAgentResult( NavMeshAgentComponent& agent, NavMeshRuntime& runtime, float32 deltaTime );
-        void waitForAllBakes();
 
         NavMeshSettings                      _settings;
         string                               _sourcePath;
@@ -217,14 +215,10 @@ namespace sw
         vector<NavMeshSurfaceComponent*>     _listSurface;
         vector<NavMeshObstacleComponent*>    _listObstacle;
         RegistrationList<INavGeometrySource> _listGeometrySource;  ///< 등록 순서(빼도 순서 유지) — 한 주인을 여러 소스가 맡으면 먼저 등록한 것이 이긴다
-        vector<AABB>                         _listDirtyArea;       ///< `_dirtyLock` 아래
         vector<hashed_string>                _listFailedAgentType; ///< 모르는 종류 — 오류를 한 번만
+        NavTileRebaker                       _tileRebaker;
+        NavDebugView                         _debugView;
         GameObjectManager*                   _pManager;
-        GameObjectHandle                     _debugView; ///< `updateDebugView` 가 세운 오브젝트
-        uint32                               _rebakedTileCount;
-        mutable SpinLock                     _dirtyLock; ///< `invalidateArea` 가 아무 스레드에서 온다
         bool                                 _bSettingsLoaded;
-        bool                                 _bGeometryDirty; ///< `_dirtyLock` 아래
-        bool                                 _bObstacleVolumeDirty;
     };
 } // namespace sw

@@ -118,6 +118,8 @@ namespace sw
         NavCrowdAgentParams makeCrowdParams() const;
 
     private:
+        friend class NavAgentCrowdSync;
+        friend class NavDebugView;
         friend class SceneNavigation;
 
         PROPERTY( Category = "Agent", DisplayName = "Agent Type", Tooltip = "Navmesh agent kind from the navigation settings (empty = default)" )

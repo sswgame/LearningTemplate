@@ -56,6 +56,8 @@ namespace sw
         void             setCenter( const float3& center );
 
     private:
+        friend class NavDebugView;
+        friend class NavTileRebaker;
         friend class SceneNavigation;
 
         PROPERTY( Category = "Obstacle", Tooltip = "Footprint shape" )

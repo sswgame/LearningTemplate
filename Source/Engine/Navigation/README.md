@@ -250,9 +250,13 @@ Recast와 Detour의 메모리 할당은 `rcAllocSetCustom` 과 `dtAllocSetCustom
 | `INavMesh.h` | 베이크, 교체, 질의, 군중 인터페이스 |
 | `INavMover.h` | 격자와 내비메시 공통 이동 인터페이스 |
 | `Object/Component/Navigation/SceneNavigation.h` | 씬의 내비게이션, 쿠킹 항목 |
+| `Object/Component/Navigation/NavGeometryCollector` | 베이크 기하 모으기와 베이크 경계(런타임 베이크와 쿠킹이 함께 쓴다) |
+| `Object/Component/Navigation/NavTileRebaker` | 장애물 감시, 알린 영역, 타일 재베이크 줄과 워커 일 |
+| `Object/Component/Navigation/NavAgentCrowdSync` | 에이전트 요청 · 자리를 군중에 넣고 결과를 오브젝트 · 컨트롤러에 쓰기 |
+| `Object/Component/Navigation/NavDebugView` | 디버그 선과 걷는 면 메시 |
 | `Object/Component/Navigation/` | 표면, 수정자, 에이전트, 장애물 컴포넌트 |
 | `Resource/engine/navigation/navmeshsettings.xml` | 에이전트 종류, 영역, 재베이크 예산 |
 
-- 테스트: `Test/EngineTest/Navigation/` 의 `NavMeshBakeTest`, `NavMeshQueryTest`, `NavMeshCrowdTest`, `NavMeshAgentTest`, `NavMeshCookTest`, `NavMeshDynamicTest`, `NavMeshBenchTest`
+- 테스트: `Test/EngineTest/Navigation/` 의 `NavMeshBakeTest`, `NavMeshQueryTest`, `NavMeshCrowdTest`, `NavMeshAgentTest`, `NavMeshCookTest`, `NavMeshDynamicTest`, `NavMeshRebakeQueueTest`(엔진 없이 부르는 재베이크 줄 · 경계 자르기), `NavMeshBenchTest`
 - 격자 내비게이션: `GameFramework/Base/Actor/Navigation` (`NavigationTest.GridMoverSpeaksTheCommonMoverInterface` 가 공통 인터페이스를 확인합니다)
 - 상위 문서: [Engine/README.md](../README.md)
