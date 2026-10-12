@@ -93,3 +93,49 @@
 - **D**: 위 티어가 구체 클래스를 직접 알지 않는다. 엔진 루프는 텔레메트리 · 자동화 · 교체기를 구체 타입이 아니라 관찰자 인터페이스로만 안다.
 
 위 "옮길지 판정하는 기준"의 **훅은 쓰는 곳이 둘 이상일 때** 항목은 SOLID 와 부딪히면 SOLID 가 이긴다(구체 의존을 남기는 쪽이 더 큰 부채다). 순서가 뜻이 있으면 훅 이름과 주석에 순서를 적는다.
+
+## SOLID 감사 결과와 후속 단위 (2026-10-12, 읽기 전용 감사 셋 · 31건)
+
+증거(줄 수 · include 수 · 분기 수)는 감사 때 `D:\w\refac` 에서 다시 확인했다. L 위반은 Box2D 관절 하나뿐이고 I 는 약하다 — 이 저장소의 약점은 **S(큰 클래스)와 O/D(직접 호출 · 종류별 분기)**다.
+성능 조건: 핫 경로(프레임당 수천 번)에는 가상 호출을 넣지 않는다. 뽑은 클래스는 값 멤버로 두고 비가상으로 직접 부른다. 핫 경로를 건드린 단위는 이동 전후 측정 한 줄을 남긴다.
+
+### 묶음 1 — 작고 안전한 O/D (비핫 경로, 단위마다 독립)
+| 단위 | 대상 | 방향 |
+|---|---|---|
+| S1 | `UISystem.cpp:293-295, 1487-1538` | `syncDemoScreen`/`syncBenchScreen`/`syncOptionsMenuSwitch` 직접 호출 → `RegistrationList` 로 화면이 스스로 등록 |
+| S2 | `AutomationRunner.cpp:487-650` (`kind ==` 35곳) | 입력 · 엔진 단계도 `AutomationStepRegistration` 으로 — 검증과 컴파일을 한 등록에 |
+| S3 | `ServerApp.cpp:368-439`, `App.cpp:746-768` | `pause`/`resume`/`step` → `SW_DEV_COMMAND`(Shipping 의 `quit`/`stop`/`status`/`help` 는 그대로), 중복 `quit` 한 곳으로 |
+| S4 | `RHI.cpp:384-421` 외 5벌 | `RHIBackend` 1행 기술자 표(이름 · 셰이더 타깃 · 모듈 · capability · 프로파일러 API). 기준 표가 `ShaderCooker.cpp:43` 에 이미 있다 |
+| S5 | `FrameRendererPassExecute.cpp:369-680` | `RenderPassTypeInfo` 에 실행 함수 칸 + `bSkipEffect` 플래그. draw 루프는 그대로 |
+| S6 | `Box2DPhysicsSceneQuery.cpp:209-212` | L 위반: `supportsJoint(type)` 질의 또는 2D/3D 관절 열거 분리 |
+| S7 | `EditorAssetFileCommands.cpp:48-76`, `ContentBrowserPanel.cpp:641-659` | 새 에셋 템플릿 레지스트리 |
+| S8 | `ProfilerPanel.cpp:155-216` | `IProfilerTab` 목록(탭 8개 `if` 사슬) |
+| S9 | `EditorAPI.h:35-36` | 호출처 없는 `registerTexture`/`unregisterTexture` 삭제(ABI 버전 · 지문 올림) |
+
+### 묶음 2 — D(전역 getter 직접 호출을 주입으로)
+| 단위 | 대상 | 방향 |
+|---|---|---|
+| S10 | `Scene.cpp` · `SceneManager.cpp`(`engine::get*()` 18곳), `ScenePhysics.cpp:28`, `SceneAudio.cpp:78`, `SpriteInstanceBatch.cpp`, `AnimNotifyHandlers.cpp` | 서비스 묶음을 생성자 · 초기화 인자로(`SceneAudio::_pEngineOverride` 가 이미 있는 모양으로 통일), 포인터는 한 번 캐시 |
+| S11 | `BugItReport.cpp:293-359` | `BugItInputs` 주입 + 수집기 둘로 |
+| S12 | `ImGuiEditor.cpp:467-580` (`updateUI`) | 이름 · 순서가 있는 프레임 단계 등록부(에셋 리로드 → 패널 그리기 → 셀프 테스트 순서는 `_order` 로 명시). 프레임당 호출 5~8 회 늘어 `GT.Editor.*` 로 측정 |
+
+### 묶음 3 — S(큰 클래스 나누기) — 하나씩, 핫 경로는 측정 후
+| 단위 | 대상(줄 수) | 방향 | 핫 경로 |
+|---|---|---|---|
+| S13 (= R5) | `EngineLoop.cpp` `tick` 285 줄 · include 102 | `RenderPacketBuilder` · `DebugOverlayDriver` 를 값 멤버로. 나머지는 관찰자 훅 | 프레임당 1 회 — 측정 |
+| S14 | `UISystem.cpp` 1620 | `UIInputRouter` · `UIThemeController` · `UIOffscreenScreens` | 프레임당 1 회 |
+| S15 | `FractureComponentBase.cpp` 1811 | 네트워크 동기 · 앵커 풀이 · 렌더 유닛 멤버 객체 | 프레임당, 객체 분리만 |
+| S16 | `FrameRenderer.h` 985 · 멤버 127 | GPU 타임라인 · 리드백 · 트랜지언트를 값 멤버 클래스로, 프로파일러는 초기화 때 주입 | 비핫, 이동 뒤 측정 |
+| S17 | `GPUSceneBuilder.cpp` 1644 | 투명 정렬 · 머티리얼 레지스트리 · 스킨 팔레트를 비가상 클래스로 | **핫** — 클래스 이동만, 내부 루프 그대로, 측정 필수 |
+| S18 | `EditorViewportClient.cpp` 1179 | 카메라 · 피킹 · 기즈모 · 오버레이 · 드롭 | 비핫 |
+| S19 | `ContentBrowserPanel.cpp` 1530 | 파일 작업 · 참조 결과 · 임포트 대기열 · 탐색 이력 | 비핫 |
+| S20 | `LiveReloadManager.cpp` 1317 | 그래프 계산 · 섀도 복사 · 지연 언로드 큐 | 비핫 |
+| S21 | `EditorAssetCommands.cpp` 817 · `UserSettingsManager.cpp` 1061 · `SceneNavigation.cpp` 1285 · `App.cpp` 866 · `EditorModuleHost.cpp` 445 | 각 파일의 감사 표 방향 | 비핫 |
+| S22 | `IRHIDevice.h` 가상 37 중 14 가 빈 기본 | 선택 능력 인터페이스(`IRHITimestampProvider` 등)로 — **`IRHICommandList` 는 건드리지 않는다** | 비핫 |
+
+### 핫 경로라 유지하는 것 (제안하지 않음)
+`IRHICommandList` · `IRHIResourceFactory` 가상 호출 구조, `GPUSceneBuilder` 내부 병렬 루프, `PhysicsWorld` 셀 해시, Box2D/Jolt 어댑터 switch(외부 라이브러리 경계), RHI 백엔드 `CommandContext` 큰 파일(백엔드 하나의 기록이라 한 이유로 바뀜), `AbilitySystemComponent` modifier switch(닫힌 열거 + `-Wswitch`).
+의도된 예외: `App.cpp` `kArrHeadlessTask` 표, `EditorPanelManager::syncWithRegistry`, 에디터 `getService<T>()`(모듈 경계 주입), `EngineInitSequence` 단계 표.
+
+### 순서 제안
+묶음 1 은 병렬로(파일이 서로 겹치지 않는다). 묶음 2 는 S10 → S11 → S12. 묶음 3 은 S13 을 먼저(측정 + `IEngineFrameObserver` 위에서), 큰 클래스 하나가 한 단위이고 단위마다 린트 + 해당 테스트 + 핫 경로면 측정으로 닫는다.

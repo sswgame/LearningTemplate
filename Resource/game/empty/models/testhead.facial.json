@@ -21,9 +21,9 @@
     "_gaze": {
         "_listEyeBone": [ "eye.l", "eye.r" ],
         "_forwardAxis": "0,0,1",
-        "_maxAngleDegrees": 30.0,
+        "_maxAngle": 0.5235988,
         "_saccadeMinInterval": 0.4,
         "_saccadeMaxInterval": 1.6,
-        "_saccadeAmplitudeDegrees": 2.0
+        "_saccadeAmplitude": 0.0349066
     }
 }

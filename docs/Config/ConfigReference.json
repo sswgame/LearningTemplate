@@ -1326,12 +1326,12 @@
        "description": "Eye forward axis in bone space (normalized on load, must not be zero)"
       },
       {
-       "name": "_maxAngleDegrees",
+       "name": "_maxAngle",
        "type": "float32",
-       "default": "30.0",
+       "default": "0.5235988",
        "min": "0.0",
        "max": "",
-       "units": "deg",
+       "units": "rad",
        "description": "Largest angle the eyes turn from the forward axis"
       },
       {
@@ -1353,12 +1353,12 @@
        "description": "Longest time between saccades (not below the shortest)"
       },
       {
-       "name": "_saccadeAmplitudeDegrees",
+       "name": "_saccadeAmplitude",
        "type": "float32",
-       "default": "3.0",
+       "default": "0.0523599",
        "min": "0.0",
        "max": "",
-       "units": "deg",
+       "units": "rad",
        "description": "Size of one saccade"
       }
      ]

@@ -368,7 +368,7 @@ namespace sw
             _saccadeTimer -= deltaSeconds;
             if ( _saccadeTimer <= 0.0f )
             {
-                const float32 amplitude = MathUtil::toRadian( gaze._saccadeAmplitudeDegrees );
+                const float32 amplitude = gaze._saccadeAmplitude;
                 _saccadeOffset          = float2{ ( nextRandom() * 2.0f - 1.0f ) * amplitude, ( nextRandom() * 2.0f - 1.0f ) * amplitude };
                 _saccadeTimer           = FacialAnimationInternal::pickBetween( gaze._saccadeMinInterval, gaze._saccadeMaxInterval, nextRandom() );
             }
@@ -502,7 +502,7 @@ namespace sw
         const vector<int32>&      listParent = unit.getSkeleton().getParentIndices();
         Pose&                     pose       = unit.getLocalPose();
         quaternion*               pRotation  = pose.getRotationData();
-        const float32             maxAngle   = MathUtil::toRadian( gaze._maxAngleDegrees );
+        const float32             maxAngle   = gaze._maxAngle;
         const quaternion          saccade    = quaternion::makeFromYawPitchRoll( _saccadeOffset._x, _saccadeOffset._y, 0.0f );
         for ( const int32 boneIndex : _listEyeBone )
         {

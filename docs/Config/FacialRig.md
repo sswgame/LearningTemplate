@@ -63,10 +63,10 @@ JSON 키는 아래 필드 이름 그대로입니다(앞의 `_` 포함). 적지 �
 |---|---|---|---|---|---|
 | `_listEyeBone` | `vector<hashed_string>` | — |  |  | Eye bones of the skeleton (empty: no gaze) |
 | `_forwardAxis` | `float3` | `0.0, 0.0, 1.0` |  |  | Eye forward axis in bone space (normalized on load, must not be zero) |
-| `_maxAngleDegrees` | `float32` | `30.0` | 0.0 ~ - | deg | Largest angle the eyes turn from the forward axis |
+| `_maxAngle` | `float32` | `0.5235988` | 0.0 ~ - | rad | Largest angle the eyes turn from the forward axis |
 | `_saccadeMinInterval` | `float32` | `0.4` | 0.0 ~ - | s | Shortest time between saccades (greater than 0) |
 | `_saccadeMaxInterval` | `float32` | `1.6` | 0.0 ~ - | s | Longest time between saccades (not below the shortest) |
-| `_saccadeAmplitudeDegrees` | `float32` | `3.0` | 0.0 ~ - | deg | Size of one saccade |
+| `_saccadeAmplitude` | `float32` | `0.0523599` | 0.0 ~ - | rad | Size of one saccade |
 
 ## `FacialTargetWeight`
 
