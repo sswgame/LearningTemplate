@@ -311,6 +311,8 @@ Godot처럼 "노드는 RID만 안다"로 바꾸면 모든 컴포넌트에 해석
 
 **`EngineLoop` 이 큽니다.** 언리얼의 `FEngineLoop::Init` 도 그렇습니다. 서비스 생성과 바인딩은 서비스 목록에서, 기동 순서는 기동 단계 목록에서 나옵니다.
 남은 크기는 단계 본문이고, 단계마다 하는 일이 정말 달라서 더 나누지 않습니다.
+프레임 쪽 일은 따로 뺐습니다(앞의 둘은 값 멤버, 뒤의 둘은 정적 함수). 셸 단축키 맵은 `ShellInputActions`, 패킷 채우기는 `RenderPacketBuilder`, 물리 · 내비 디버그 선은 `SceneDebugDraw`, 초상화 일괄 그리기는 `PortraitBatchUtil` 입니다.
+모두 비가상 직접 호출이고, 부르는 순서(씬 틱 → 디버그 선 → 관찰자 → UI → 패킷)는 `EngineLoop::tick` 의 호출 자리에서 보입니다.
 
 **`Scene` 이 기본 머티리얼을 보관합니다.** 언리얼은 `UMaterial::GetDefaultMaterial` 이 엔진 에셋이라 월드가 모릅니다.
 여기서는 씬이 인스턴스화할 때 머티리얼이 없는 메시에 채워 줍니다. 결과는 같고, 의존은 Scene에서 Graphics 아래 티어로 가는 허용 방향입니다.

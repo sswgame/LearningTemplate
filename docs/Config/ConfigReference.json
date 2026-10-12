@@ -2685,7 +2685,7 @@
    "default": "false",
    "kind": "시험",
    "description": "주 출력에 캔버스(화면 2D) 시험 그림을 그린다 — 사각형 · 자르기 · 그림자 · 글자",
-   "source": "Source/Engine/EngineLoop.cpp"
+   "source": "Source/Engine/Renderer/Frame/RenderPacketBuilder.cpp"
   },
   {
    "name": "gv_colorVisionMode",
@@ -3037,7 +3037,7 @@
    "default": "0",
    "kind": "일반",
    "description": "내비메시 디버그 — 선(편집기 뷰포트): 1 폴리곤 테두리 · 2 에이전트 경로 · 4 에이전트 속도 · 8 장애물, 16 걷는 면 · 경로를 게임 화면의 메시로 (31 = 모두, 0 = 끔)",
-   "source": "Source/Engine/EngineLoop.cpp"
+   "source": "Source/Engine/Scene/SceneDebugDraw.cpp"
   },
   {
    "name": "gv_netConnectAddress",
@@ -3133,7 +3133,7 @@
    "default": "false",
    "kind": "일반",
    "description": "강체 물리 바디 · 캐릭터를 디버그 선으로 그린다",
-   "source": "Source/Engine/EngineLoop.cpp"
+   "source": "Source/Engine/Scene/SceneDebugDraw.cpp"
   },
   {
    "name": "gv_postQuality",

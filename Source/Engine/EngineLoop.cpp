@@ -14,7 +14,6 @@
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Module/ModuleBuildID.h"
 #include "Core/String/hashed_string.h"
@@ -31,13 +30,10 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Graphics/2D/Render2DSettings.h"
-#include "Engine/Graphics/Canvas/CanvasTestPattern.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
-#include "Engine/Graphics/RHI/IRHIContextThreadBinding.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
@@ -47,7 +43,6 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderRecompiler.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
-#include "Engine/Graphics/Upload/GPUUploadQueue.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
@@ -55,51 +50,43 @@
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/Animation/AnimationCrowd.h"
 #include "Engine/Object/Animation/VertexAnimationCooker.h"
-#include "Engine/Object/Component/3D/DirectionalLightComponent.h"
-#include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
-#include "Engine/Object/Component/Navigation/SceneNavigation.h"
 #include "Engine/Object/GameObject/CameraRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/SceneEngineServices.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Physics/PhysicsDebugDraw.h"
 #include "Engine/Physics/PhysicsSystem.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackend.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
 #include "Engine/Reflection/ReflectionDocWriter.h"
-#include "Engine/Renderer/Capture/PortraitRenderer.h"
+#include "Engine/Renderer/Capture/PortraitBatchUtil.h"
 #include "Engine/Renderer/Capture/RenderDocCapture.h"
 #include "Engine/Renderer/Cook/ShaderCookDriver.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/RenderFramePacket.h"
-#include "Engine/Renderer/Frame/RenderViewCollector.h"
-#include "Engine/Renderer/Frame/RenderViewScheduler.h"
-#include "Engine/Renderer/Light/GPULightBuffer.h"
 #include "Engine/Renderer/RenderThread.h"
-#include "Engine/Renderer/Scene/GPUSceneBuilder.h"
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
-#include "Engine/Resource/Image/ImageFileWriter.h"
 #include "Engine/Resource/Pack/ResourcePackManager.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
+#include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneCooker.h"
+#include "Engine/Scene/SceneDebugDraw.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneNavigationCooker.h"
 #include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Text/FontSystem.h"
-#include "Engine/Text/GlyphCache.h"
 #include "Engine/UI/Debug/DebugHUD.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UserSettings/HardwareProbe.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 #include "Engine/Utility/CommandStack.h"
-#include "Engine/Utility/DebugOverlayState.h"
 #include "Engine/Utility/EngineFrameObserver.h"
 #include "Engine/Utility/GameTimeScale.h"
 #include "Engine/Window/IWindow.h"
@@ -117,18 +104,10 @@ namespace sw
      */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_crashTest, 0, "일부러 크래시를 내 리포트 경로를 검증합니다 (1=널 쓰기 2=스택 오버플로 3=작업 스레드 스택 오버플로 4=abort 5=순수 가상 호출)" );
     /**
-     * @brief `-gv_canvasTestPattern=1`: 주 출력에 캔버스 테스트 그림(둥근 · 테두리 · 반투명 겹침 · 가위 · 둥근 자르기 · 그림자 · 글자)을 그립니다.
-     * @details 위젯(UI 단계)이 생기기 전에 Canvas 패스 · canvas.hlsl · 글리프 아틀라스를 네 백엔드에서 눈으로 보는 길이다(스크린샷에도 들어간다).
-     */
-    SW_TEST_GLOBAL_VARIABLE( bool, gv_canvasTestPattern, false, "주 출력에 캔버스(화면 2D) 시험 그림을 그린다 — 사각형 · 자르기 · 그림자 · 글자" );
-    /**
      * @brief `-gv_dumpReflection=CameraComponent,CameraRole`: 첫 프레임에 그 타입 · enum 의 등록 내용을 로그로 남깁니다(`TypeRegistry::describeType`).
      * @details 첫 프레임이라 게임 · 에디터 모듈의 타입까지 등록된 뒤다. 한 번 찍고 비운다.
      */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_dumpReflection, "", "첫 프레임에 이 이름들(쉼표로 여럿)의 리플렉션 등록 내용을 로그로 남긴다 — 타입 · enum (비우면 사용 안 함)" );
-    /** @brief 활성 씬의 강체 물리(바디 셰이프 · 캐릭터 캡슐)를 디버그 선으로 그립니다(`ScenePhysics::drawDebug` → `DebugDrawQueue`). */
-    SW_GLOBAL_VARIABLE( bool, gv_physicsDebugDraw, false, "강체 물리 바디 · 캐릭터를 디버그 선으로 그린다" );
-    SW_GLOBAL_VARIABLE( int32, gv_navDebugDraw, 0, "내비메시 디버그 — 선(편집기 뷰포트): 1 폴리곤 테두리 · 2 에이전트 경로 · 4 에이전트 속도 · 8 장애물, 16 걷는 면 · 경로를 게임 화면의 메시로 (31 = 모두, 0 = 끔)" );
     /** @brief `-gv_telemetryFolder=<경로>`: 텔레메트리 스풀 폴더입니다(자동화 — 사용자 폴더를 건드리지 않는다). 비면 사용자 설정 파일 옆의 `telemetry/`. */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( sw::string, gv_telemetryFolder, "", "텔레메트리 스풀 폴더 (비면 사용자 폴더의 telemetry/)" );
 
@@ -137,28 +116,6 @@ namespace sw
 namespace sw
 {
     SW_LOG_CALLER( "EngineLoop" );
-
-    namespace
-    {
-        /**
-         * @class EngineLoopDebugLineAdapter
-         * @brief 물리 · 내비 디버그 선(`IPhysicsDebugRenderer`)을 디버그 드로우 큐로 옮깁니다.
-         * @details 물리는 그리는 쪽을, Graphics 는 물리를 모릅니다 — 둘을 다 아는 조립점(EngineLoop)이 잇습니다.
-         */
-        class EngineLoopDebugLineAdapter final : public IPhysicsDebugRenderer
-        {
-        public:
-            explicit EngineLoopDebugLineAdapter( DebugDrawQueue& queue )
-                : _queue{ queue }
-            {
-            }
-
-            void drawLine( const float3& from, const float3& to, const float4& color ) override { _queue.drawLine( from, to, color ); }
-
-        private:
-            DebugDrawQueue& _queue;
-        };
-    } // namespace
 
     // ------------------------------------------------------------------------------
     // 기동 단계 본문 — 표(`EngineInitStepList.xxx`)의 줄 순서대로 적는다. 단계마다 무엇을 세우고(initialize) · 내리고(shutdown) ·
@@ -360,8 +317,7 @@ namespace sw
         static void destroy( EngineLoop& loop )
         {
             // 셸 디버그 액션 맵은 입력 매니저를 가리킨다. 먼저 놓는다(`updateShellActions` 가 처음 쓸 때 만든다).
-            loop._mapDebugAction.reset();
-            loop._bShellActionsBound = false;
+            loop._shellActions.reset();
             loop._owned._pInputManager.reset();
         }
     };
@@ -687,18 +643,7 @@ namespace sw
         {
             // 씬 스냅샷 · 패킷 · 업로드 큐는 그리는 쪽의 것이다. 렌더러를 세우지 않는 헤드리스 작업에는 없다.
             // 백엔드 교체로 다시 설 때(`restartStoppedSteps`)는 있는 것을 그대로 쓰고, 디바이스에 매인 설정만 새로 건다.
-            if ( loop._gpuSceneBuilder == nullptr )
-                loop._gpuSceneBuilder = make_unique<GPUSceneBuilder>();
-            if ( loop._packetScratch == nullptr )
-                loop._packetScratch = make_unique<RenderFramePacket>();
-            if ( loop._gpuUploadQueue == nullptr )
-                loop._gpuUploadQueue = make_unique<GPUUploadQueue>();
-            if ( loop._renderViewScheduler == nullptr )
-                loop._renderViewScheduler = make_unique<RenderViewScheduler>();
-            // GT 쪽 GPUScene 이 배치를 만든다. 텍스처를 인덱스로 고를 수 있는 백엔드면 머티리얼이 달라도
-            // 셰이더 타입 단위로 합친다(언리얼 GPUScene).
-            loop._gpuSceneBuilder->setMergeBatchesAcrossMaterials( loop._rhi->getDevice().supportsNativeBindlessSampling() );
-            loop._gpuUploadQueue->bindDevice( &loop._rhi->getDevice(), loop._owned._pTaskManager.get() );
+            loop._packetBuilder.initialize( loop._rhi->getDevice(), loop._owned._pTaskManager.get() );
 
             if ( loop._frameRenderer->initialize( &loop._rhi->getDevice(), loop._owned._pTaskManager.get() ) == false )
             {
@@ -711,15 +656,12 @@ namespace sw
         {
             // GT 쪽 GPUScene 도 스냅샷의 소유(머티리얼 · 인스턴스)를 들고 있다. 렌더러와 같은 시점에, **디바이스가 살아 있을 때** 놓는다.
             // 해제(destroy)까지 미루면 디바이스가 사라진 뒤에 놓게 된다.
-            loop._gpuSceneBuilder->clear();
+            loop._packetBuilder.shutdown();
             loop._frameRenderer->shutdown();
         }
         static void destroy( EngineLoop& loop )
         {
-            loop._gpuUploadQueue.reset();
-            loop._renderViewScheduler.reset();
-            loop._packetScratch.reset();
-            loop._gpuSceneBuilder.reset();
+            loop._packetBuilder.destroy();
             loop._frameRenderer.reset();
         }
     };
@@ -919,20 +861,14 @@ namespace sw
         : _bootstrap{}
         , _configManager{ nullptr }
         , _rhi{ nullptr }
-        , _mapDebugAction{ nullptr }
+        , _shellActions{}
         , _audioSystem{ nullptr }
         , _frameRenderer{ nullptr }
         , _renderThread{ nullptr }
-        , _gpuSceneBuilder{ nullptr }
-        , _packetScratch{ nullptr }
+        , _packetBuilder{}
         , _commandStack{ nullptr }
-        , _gpuUploadQueue{ nullptr }
         , _listFrameObserver{}
-        , _renderViewScheduler{ nullptr }
-        , _renderViewClock{ 0.0 }
-        , _listAnimationLODView{}
         , _hostRole{ EngineHostRole::Client }
-        , _bShellActionsBound{ false }
         , _bHeadless{ false }
         , _bHeadlessTaskFailed{ false }
         , _bQuitRequested{ false }
@@ -1096,52 +1032,9 @@ namespace sw
 
     bool EngineLoop::renderPortraits( string_view prefabList, string_view outputDirectory, uint32 size )
     {
-        if ( _rhi == nullptr || _rhi->hasDevice() == false || prefabList.empty() )
+        if ( _rhi == nullptr || _rhi->hasDevice() == false )
             return false;
-        // 렌더 스레드가 받은 일을 모두 끝내게 하고, 컨텍스트가 스레드에 묶이는 백엔드(GL · DX11)는 이 스레드가 잡는다.
-        if ( _renderThread != nullptr )
-            _renderThread->waitIdle();
-        IRHIDevice&               device          = _rhi->getDevice();
-        IRHIContextThreadBinding* pContextBinding = device.findContextThreadBinding();
-        if ( pContextBinding != nullptr && pContextBinding->bindGraphicsContext() == false )
-        {
-            SW_LOG_ERROR( "Portrait: could not bind the graphics context" );
-            return false;
-        }
-        const string directory = outputDirectory.empty() ? string( "Saved/Portraits" ) : string( outputDirectory );
-        (void)FileUtil::ensureDirectoryExists( directory );
-
-        PortraitRenderer      portrait;
-        bool                  bAllSucceeded = portrait.initialize( &device );
-        const string_splitter parts( prefabList, { "," } );
-        for ( const string_view part : parts.getSplitList() )
-        {
-            const string_view path = StringUtil::trim( part );
-            if ( path.empty() || bAllSucceeded == false )
-                continue;
-            PortraitRequest request;
-            request._prefabPath = string( path );
-            request._width      = MathUtil::clamp( size, 16u, 4096u );
-            request._height     = request._width;
-            vector<uint8> rgbaBytes;
-            if ( portrait.renderPrefab( request, rgbaBytes ) == false )
-            {
-                bAllSucceeded = false;
-                continue;
-            }
-            // 이름은 경로의 마지막 조각에서 첫 점 앞까지다(`hero.prefab.xml` → `hero`).
-            string_view stem  = path.substr( path.find_last_of( '/' ) == string_view::npos ? 0 : path.find_last_of( '/' ) + 1 );
-            stem              = stem.substr( 0, stem.find( '.' ) );
-            const string base = directory + "/" + string( stem ) + ".portrait";
-            const bool   bDDS = ImageFileWriter::writeDDSRgba8( base + ".dds", rgbaBytes, request._width, request._height );
-            const bool   bPng = ImageFileWriter::writePngRgba8( base + ".png", rgbaBytes, request._width, request._height );
-            bAllSucceeded     = bAllSucceeded && bDDS && bPng;
-            SW_LOG_INFO( "Portrait '%#' -> %#.dds / .png (%#x%#)", string( path ).c_str(), base.c_str(), request._width, request._height );
-        }
-        portrait.shutdown();
-        if ( pContextBinding != nullptr )
-            pContextBinding->unbindGraphicsContext();
-        return bAllSucceeded;
+        return PortraitBatchUtil::renderPrefabList( _rhi->getDevice(), _renderThread.get(), prefabList, outputDirectory, size );
     }
 
     void EngineLoop::requestQuit( int32 exitCode )
@@ -1296,31 +1189,9 @@ namespace sw
                 _owned._pSceneManager->tick( deltaTime );
         }
 
-        if ( gv_physicsDebugDraw && _owned._pSceneManager != nullptr )
-        {
-            const Scene* pDebugScene = _owned._pSceneManager->getActiveScene();
-            if ( pDebugScene != nullptr && pDebugScene->getObjectManager() != nullptr )
-            {
-                EngineLoopDebugLineAdapter adapter{ engine::getDebugDrawQueue() };
-                pDebugScene->getObjectManager()->getScenePhysics().drawDebug( adapter );
-            }
-        }
-
-        // 내비메시 · 에이전트 경로 · 속도 · 장애물 — 선은 물리 디버그와 같은 출구로(편집기 뷰포트가 그린다), 비트 16 은 게임 화면에 보이는 메시로.
+        // 물리 · 내비 디버그 선 — 씬 틱이 이번 프레임의 바디 · 경로를 정한 **뒤**, 관찰자 · UI · 패킷 **앞**이다(이번 프레임에 넣은 선이 endFrame 에서 확정된다).
         if ( _owned._pSceneManager != nullptr )
-        {
-            Scene* pDebugScene = _owned._pSceneManager->getActiveScene();
-            if ( pDebugScene != nullptr && pDebugScene->getObjectManager() != nullptr )
-            {
-                SceneNavigation& navigation = pDebugScene->getObjectManager()->getSceneService<SceneNavigation>();
-                navigation.updateDebugView( static_cast<uint32>( gv_navDebugDraw ) );
-                if ( gv_navDebugDraw != 0 )
-                {
-                    EngineLoopDebugLineAdapter adapter{ engine::getDebugDrawQueue() };
-                    navigation.drawDebug( adapter, static_cast<uint32>( gv_navDebugDraw ) );
-                }
-            }
-        }
+            SceneDebugDraw::update( _owned._pSceneManager->getActiveScene(), engine::getDebugDrawQueue() );
 
         // 관찰자 훅 `onAfterSceneTick` — 이 프레임의 게임 상태가 정해진 뒤(씬 틱 · 디버그 그리기 뒤), 런타임 UI · 렌더 패킷 앞이라는 순서가 뜻이 있다(텔레메트리의 장면별 프레임 시간).
         if ( _listFrameObserver.empty() == false )
@@ -1339,7 +1210,7 @@ namespace sw
 #if SW_DEV_COMMANDS_ENABLED
             // 디버그 HUD — 꺼져 있으면 셸 맵 액션 하나를 읽고 끝난다. 켜져 있으면 HUD 화면이 아래 update 의 틱에서 섹션을 부른다.
             if ( _debugHUD != nullptr )
-                _debugHUD->update( _mapDebugAction.get() );
+                _debugHUD->update( _shellActions.getInputMap() );
 #endif
             // 뷰포트 0 은 "백버퍼 전체"(게임 창 — 패킷 · 캔버스 테스트 그림과 같은 규칙)다.
             const IWindow* const pWindow      = IWindow::getActiveWindow();
@@ -1369,17 +1240,17 @@ namespace sw
         }
 
         // 패킷 · 씬 스냅샷은 FrameRenderer 단계가 만든다. 그 단계가 서지 않았으면(헤드리스 작업) 낼 패킷이 없다.
-        if ( _packetScratch == nullptr || _gpuSceneBuilder == nullptr )
+        if ( _packetBuilder.isInitialized() == false )
             return;
 
         Scene* pActiveScene = _owned._pSceneManager != nullptr ? _owned._pSceneManager->getActiveScene() : nullptr;
 
+        // 패킷 채우기의 순서는 여기서 보인다: 열기 → 관찰자 → 씬 · 뷰 → 캔버스 → 제출. 씬 · 뷰는 위의 씬 틱 · 디버그 그리기 · UI 갱신 **뒤**라
+        // 이번 프레임의 게임 상태를 싣고, 캔버스는 UI 갱신이 칠한 목록을 싣는다.
         BLOCK( "RenderFramePacket 제출" )
         {
             SW_MEMORY_SCOPE( RenderCPU );
-            RenderFramePacket& packet = *_packetScratch;
-            packet.resetForFrame();
-            packet._bValid = 1;
+            RenderFramePacket& packet = _packetBuilder.beginPacket();
             // 관찰자가 실을 것(시나리오 `<Screenshot>` 의 경로)은 다음에 그리는 이 패킷에 싣는다.
             if ( _listFrameObserver.empty() == false )
             {
@@ -1391,133 +1262,8 @@ namespace sw
                 }
             }
 
-            packet._outputRenderTarget = mainOutput._renderTarget;
-            packet._viewportWidth      = vpWidth;
-            packet._viewportHeight     = vpHeight;
-            packet._cameraPos          = float3{ 0.0f, 1.2f, 3.2f };
-
-            if ( pActiveScene != nullptr )
-            {
-                // 주광은 씬이 갖고, 렌더 스레드는 패킷으로만 받는다. executePacket 은 _pScene 을
-                // null 로 두므로 렌더 스레드에서 씬을 조회할 수 없다.
-                // 그림자 행렬은 그림자 맵을 가져가는 빛(`findShadowCastingDirectionalLight`)에서 — 라이트 목록의 그림자 플래그와 같은 빛이다.
-                DirectionalLightComponent* pLight       = pActiveScene->findActiveDirectionalLight();
-                DirectionalLightComponent* pShadowLight = pActiveScene->findShadowCastingDirectionalLight();
-                if ( pLight != nullptr )
-                {
-                    const float3 dir          = pLight->getLightDirection();
-                    const float3 color        = pLight->getColor();
-                    packet._lightDirIntensity = float4{ dir._x, dir._y, dir._z, pLight->getIntensity() };
-                    packet._lightColorAmbient = float4{ color._x, color._y, color._z, pLight->getAmbient() };
-                    packet._bHasLight         = SW_TRUE;
-                }
-
-                // 씬의 **모든** 라이트다. 방향광 · 점광 · 스폿이 한 목록으로 간다. 위의 키라이트는 그림자
-                // 행렬과 앰비언트의 출처이자, 라이트 목록이 비었을 때의 폴백이다.
-                collectSceneLights( pActiveScene, packet._listLight );
-
-                pActiveScene->ensureDefaultCameras();
-                // 위의 핫 리로드 · 씬 전환 · 씬 틱이 GameObject 를 파괴했을 수 있으므로 여기서 조회한다. 씬 뷰 카메라는 씬 뷰가 있을 때만 묻는다.
-                CameraComponent* pSceneViewCamera = ( views._scene.isValid() && sceneViewCameraProvider.isBound() ) ? sceneViewCameraProvider() : nullptr;
-                if ( pSceneViewCamera != nullptr && pSceneViewCamera->isActive() == false )
-                    pSceneViewCamera = nullptr;
-                CameraComponent* pCam = bSceneMain ? pSceneViewCamera : nullptr;
-                if ( pCam == nullptr || pCam->isActive() == false )
-                    pCam = pActiveScene->getActiveGameCamera();
-                // 주 출력의 크기 — 게임 뷰 RT 면 그 크기, 백버퍼 경로면 스왑체인 크기다(화면 사각형 뷰 · 주 시점 사각형의 비율이 이것을 본다).
-                const uint32 outputWidth  = packet._viewportWidth > 0 ? packet._viewportWidth : _rhi->getDevice().getBackBufferWidth();
-                const uint32 outputHeight = packet._viewportHeight > 0 ? packet._viewportHeight : _rhi->getDevice().getBackBufferHeight();
-                if ( pCam != nullptr )
-                {
-                    // 주 시점의 출력 설정(사각형 · 배율 · 끌 기능)과 컷 표시. 비율은 사각형의 것이다(분할 화면의 한 칸).
-                    packet._mainView     = RenderViewCollector::makeMainSettings( pCam );
-                    packet._cameraPos    = pCam->getCameraPosition();
-                    packet._viewProj     = pCam->getViewProjectionMatrix( RenderViewCollector::computeAspect( packet._mainView, outputWidth, outputHeight ) );
-                    packet._bHasViewProj = SW_TRUE;
-                    // 투명 정렬의 깊이 — 직교 카메라는 시선 축(같은 Z 의 스프라이트가 카메라를 따라 앞뒤가 바뀌지 않게), 원근은 거리(render2d.xml).
-                    _gpuSceneBuilder->setTransparentSortAxis(
-                        Render2DSettings::getActive().computeTransparentSortAxis( pCam->isOrthographic(), pCam->getCameraForward() ) );
-                }
-                // 보기 모드는 뷰마다다 — 씬 뷰(호스트 타깃 뷰든 주 출력이든)는 씬 뷰 툴바의 모드, 게임 화면은 주 출력 모드(-gv_viewMode, 기본 Lit).
-                const RenderViewMode sceneViewMode = _frameRenderer != nullptr ? _frameRenderer->getSceneViewMode() : RenderViewMode::Lit;
-                packet._mainView._viewMode         = bSceneMain ? sceneViewMode : ( _frameRenderer != nullptr ? _frameRenderer->getViewMode() : RenderViewMode::Lit );
-                // 그림자 행렬과 그 바이어스는 한 볼륨에서 같이, 카메라가 정해진 **뒤에** 만든다 — `_shadowViewDistance` 를 준 빛은 볼륨을
-                // 카메라가 보는 곳에 맞춘다. 텍셀 스냅 · 바이어스는 렌더 스레드가 만들 그림자 맵과 같은 해상도로 측정한다.
-                if ( pLight != nullptr && pShadowLight != nullptr )
-                {
-                    const uint32                      shadowResolution = FrameRenderer::getShadowMapResolution();
-                    const DirectionalShadowProjection shadow           = packet._bHasViewProj == SW_TRUE
-                                                                           ? pShadowLight->computeShadowProjectionForView( packet._viewProj, shadowResolution )
-                                                                           : pShadowLight->computeShadowProjection( shadowResolution );
-                    packet._lightViewProj                              = shadow._viewProj;
-                    packet._shadowParams                               = shadow.computeShaderParams();
-                }
-                // 추가 뷰(캡처 카메라 · 화면 사각형) — 갱신 주기 · 보이는가 · 예산으로 이번 프레임에 그릴 것을 고른다. 쉬는 뷰도 실린다.
-                _renderViewClock += static_cast<float64>( MathUtil::max( 0.0f, deltaTime ) );
-                if ( _renderViewScheduler != nullptr && pActiveScene->getObjectManager() != nullptr )
-                {
-                    RenderViewCollector::collectExtraViews( *pActiveScene->getObjectManager(), pCam, packet._viewProj, outputWidth, outputHeight,
-                                                            _renderViewClock, RenderViewCollector::getDefaultBudget(), *_renderViewScheduler, packet._listView );
-                }
-                // 씬 뷰 — 주 출력이면 게임 화면의 일부(화면 사각형 뷰)를 빼고, 게임 뷰와 함께면 자기 RT 에 그리는 추가 뷰로 싣는다.
-                if ( bSceneMain )
-                    RenderViewCollector::removeScreenRectViews( packet._listView );
-                else if ( pSceneViewCamera != nullptr && pSceneViewCamera != pCam )
-                    RenderViewCollector::appendHostView( *pSceneViewCamera, views._scene, sceneViewMode, packet._listView );
-                // 애니메이션 LOD 의 뷰 — 주 시점과 이번 프레임에 그리는 추가 뷰(CCTV · 분할 화면). 다음 프레임 평가가 이것으로 가시성 · 화면 크기를 본다.
-                // 갱신 주기로 쉬는 추가 뷰는 넣지 않는다 — 그 뷰에만 보이는 캐릭터는 그 뷰가 그리는 프레임에만 포즈를 만든다.
-                if ( pActiveScene->getObjectManager() != nullptr )
-                {
-                    _listAnimationLODView.clear();
-                    if ( packet._bHasViewProj == SW_TRUE )
-                        _listAnimationLODView.push_back( AnimationLODView::make( packet._viewProj, packet._cameraPos ) );
-                    for ( const RenderViewRequest& view : packet._listView )
-                    {
-                        if ( view._bRender == SW_TRUE )
-                            _listAnimationLODView.push_back( AnimationLODView::make( view._viewProj, view._position ) );
-                    }
-                    pActiveScene->getObjectManager()->getAnimationSystem().setLODViews( _listAnimationLODView );
-                }
-                _gpuSceneBuilder->populateFromScene( pActiveScene, packet._cameraPos );
-                // 추가 뷰(CCTV · PiP)는 자기 눈으로 투명을 정렬한다 — 주 카메라 순서로 그리면 반대편을 보는 뷰에서 앞뒤가 뒤집힌다.
-                _gpuSceneBuilder->computeViewTransparentOrders( packet._listView );
-
-                // 그릴 것이 정해졌으니 **스냅샷을 내보내기 전에** GPU 쪽을 만들어 둔다. 렌더 스레드는 그리기만
-                // 하면 된다(새 메시가 등장한 프레임에 RT 가 정점 버퍼 생성을 떠안지 않게).
-                if ( _gpuUploadQueue != nullptr )
-                {
-                    _gpuSceneBuilder->requestGPUUploads( *_gpuUploadQueue );
-                    _gpuUploadQueue->flush();
-                }
-
-                {
-                    SW_PROFILE_SCOPE( "GT.Packet.export" );
-                    _gpuSceneBuilder->exportCPUSnapshot( packet._gpuScene );
-                }
-            }
-
-            // 캔버스(화면 2D) — 런타임 UI 가 칠한 목록(내용 번호가 같으면 렌더러가 사각형을 다시 올리지 않는다), 개발 테스트 그림은 그 위에.
-            // 글리프 아틀라스의 새 구간은 칠한 것이 없어도 늘 넘긴다(렌더러의 거울이 게임 스레드의 페이지와 어긋나지 않게).
-            // 씬 뷰가 주 출력인 프레임은 화면 UI 를 싣지 않는다 — UI 는 게임 화면(게임 뷰 · 백버퍼)에만 있다.
-            if ( bSceneMain == false && _owned._pUISystem != nullptr && _owned._pUISystem->isInitialized() && _owned._pUISystem->getCanvas().isEmpty() == false )
-            {
-                packet._canvas._mainOutput      = _owned._pUISystem->getCanvas();
-                packet._canvas._contentRevision = _owned._pUISystem->getCanvasRevision();
-            }
-            if ( _owned._pUISystem != nullptr && _owned._pUISystem->isInitialized() )
-                _owned._pUISystem->collectWorldCanvases( packet._canvas._listTarget ); // 월드 공간 UI 의 렌더 텍스처
-            if ( bSceneMain == false && gv_canvasTestPattern && _rhi != nullptr && _rhi->hasDevice() )
-            {
-                packet._canvas._contentRevision = 0; // 테스트 그림은 내용 번호가 없다 — 늘 올린다
-                const uint32 canvasWidth        = packet._viewportWidth > 0 ? packet._viewportWidth : _rhi->getDevice().getBackBufferWidth();
-                const uint32 canvasHeight       = packet._viewportHeight > 0 ? packet._viewportHeight : _rhi->getDevice().getBackBufferHeight();
-                CanvasTestPattern::paint( packet._canvas._mainOutput, float2{ static_cast<float32>( canvasWidth ), static_cast<float32>( canvasHeight ) },
-                                          _owned._pFontSystem.get(), engine::getFrameProfiler().getFrameCount() );
-            }
-            if ( _owned._pFontSystem != nullptr && _owned._pFontSystem->isInitialized() )
-                _owned._pFontSystem->getGlyphCache().getAtlas().takeUploads( packet._canvas._listAtlasUpload );
-            // 색각 보정 — UI 는 톤맵 뒤라 캔버스 셰이더가 직접 건다(사용자 설정 accessibility.colorVision, 범위 밖은 끔).
-            packet._canvas._colorVisionMode = ( 0 <= gv_colorVisionMode && gv_colorVisionMode <= 3 ) ? static_cast<uint32>( gv_colorVisionMode ) : 0u;
+            _packetBuilder.populateScene( packet, views, sceneViewCameraProvider, pActiveScene, deltaTime, *_rhi, _frameRenderer.get() );
+            RenderPacketBuilder::populateCanvas( packet, bSceneMain, _owned._pUISystem.get(), _owned._pFontSystem.get(), _rhi.get() );
 
             if ( _renderThread != nullptr )
             {
@@ -1608,7 +1354,7 @@ namespace sw
             return false;
         // 교체 뒤 디바이스에 매인 설정이 새 디바이스를 따르는지 한 줄로 남긴다(AppSmokeTest.BackendSwapFollowsTheNewDevice 가 읽는다).
         SW_LOG_INFO( "Active backend is now %# (merge batches across materials %#, native bindless sampling %#)", RHI::getBackendTypeName( _rhi->getCommittedBackend() ),
-                     ( _gpuSceneBuilder != nullptr && _gpuSceneBuilder->isMergeBatchesAcrossMaterials() ) ? 1 : 0,
+                     _packetBuilder.isMergeBatchesAcrossMaterials() ? 1 : 0,
                      _rhi->getDevice().supportsNativeBindlessSampling() ? 1 : 0 );
         return true;
     }
@@ -1667,43 +1413,20 @@ namespace sw
     {
         if ( _owned._pInputManager == nullptr )
             return;
-
-        if ( _bShellActionsBound == false )
-        {
-            _mapDebugAction     = createShellInputMap( engine::getEngineDefaultAssets()._shellInputMap );
-            _bShellActionsBound = true;
-        }
-
-        // _mapDebugAction 은 위에서 처음 한 번 만든 뒤로 계속 있으므로 nullptr 일 수 없다.
-
-        if ( _mapDebugAction->hasLayer( InputMapDefaults::kTitleLayerName ) )
-            _mapDebugAction->setLayerEnabled( InputMapDefaults::kTitleLayerName, false );
-        _mapDebugAction->setInputManager( _owned._pInputManager.get() );
-        _mapDebugAction->update( deltaTime );
+        _shellActions.update( *_owned._pInputManager, deltaTime );
     }
 
-    unique_ptr<InputMap> EngineLoop::createShellInputMap( string_view inputMapPath )
-    {
-        SW_MEMORY_SCOPE( EngineMisc );
-        unique_ptr<InputMap> map = make_unique<InputMap>();
-        // 셸 단축키와 개발 콘솔은 콘솔이 키보드를 쥔 동안에도 키를 받아야 한다(닫는 키 · 편집 키).
-        map->setKeyboardFocusIgnored( true );
-        if ( inputMapPath.empty() || map->loadFromResource( inputMapPath ) == false )
-        {
-            map->clear();
-            SW_LOG_ERROR( "Shell input map '%#' could not be loaded - shell debug actions stay unbound", inputMapPath );
-        }
-        return map;
-    }
+    unique_ptr<InputMap> EngineLoop::createShellInputMap( string_view inputMapPath ) { return ShellInputActions::createInputMap( inputMapPath ); }
 
     void EngineLoop::pollShaderReloadHotkey()
     {
 #if defined( SW_DEBUG )
         // 셰이더 리로드는 **Engine 자신의** 개발 도구다(ShaderRecompiler 를 여기서 소유한다). 그래서
-        // 바깥에 콜백을 달라고 하지 않고 여기서 끝낸다. 모듈을 다시 올리는 일은 App 의 것이라 App 이 묻는다.
-        if ( _mapDebugAction == nullptr || _rhi == nullptr )
+        // 바깥에 콜백을 달라고 하지 않고 여기서 끝낸다. 셸 맵(`ShellInputActions`)은 입력 사실만 내주므로 단축키의 뜻은 소유자인 여기서 읽는다.
+        // 모듈을 다시 올리는 일은 App 의 것이라 App 이 묻는다.
+        if ( _rhi == nullptr )
             return;
-        if ( _mapDebugAction->wasActionTriggered( InputMapDefaults::kReloadShadersAction ) == false )
+        if ( _shellActions.wasActionTriggered( InputMapDefaults::kReloadShadersAction ) == false )
             return;
         if ( ShaderRecompiler* pShaderRecompiler = getShaderRecompiler() )
         {
@@ -1713,10 +1436,5 @@ namespace sw
 #endif
     }
 
-    bool EngineLoop::wasDebugActionTriggered( string_view actionName ) const
-    {
-        if ( _mapDebugAction == nullptr )
-            return false;
-        return _mapDebugAction->wasActionTriggered( hashed_string( actionName ) );
-    }
+    bool EngineLoop::wasDebugActionTriggered( string_view actionName ) const { return _shellActions.wasActionTriggered( hashed_string( actionName ) ); }
 } // namespace sw

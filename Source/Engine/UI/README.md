@@ -394,7 +394,7 @@ arrange가 결과 방향을 위젯에 기록하고(`isRightToLeft`), 글 위젯�
 
 `UISystem::update` 가 화면을 그리기 순서로 그립니다. 탐색 입력 방식이면 포커스 위젯 둘레에 테두리를 그 화면 위에 그리고, 포인터 방식이면 숨깁니다. CommonUI와 같습니다.
 목록 내용이 지난 프레임과 같으면 내용 번호(`getCanvasRevision`)를 올리지 않으므로, 렌더러가 사각형을 다시 업로드하지 않습니다.
-`EngineLoop` 가 목록을 렌더 패킷의 주 출력 캔버스에 넣습니다. `-gv_canvasTestPattern` 은 그 위에 그립니다. 게임 창의 뷰포트 0은 백버퍼 크기입니다.
+`EngineLoop` 의 패킷 빌더(`RenderPacketBuilder::populateCanvas`)가 목록을 렌더 패킷의 주 출력 캔버스에 넣습니다. `-gv_canvasTestPattern` 은 그 위에 그립니다. 게임 창의 뷰포트 0은 백버퍼 크기입니다.
 
 위젯별로 알아 둘 점은 다음과 같습니다.
 

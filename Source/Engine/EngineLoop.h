@@ -14,19 +14,18 @@
 #include "Engine/EngineInitSequence.h"
 #include "Engine/EngineServiceCollection.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
-#include "Engine/Object/Animation/AnimationLOD.h"
+#include "Engine/Input/ShellInputActions.h"
 #include "Engine/Profiling/FrameProfileSession.h"
 #include "Engine/Profiling/MemoryBudgetMonitor.h"
 #include "Engine/Renderer/Frame/PresentHookDelegate.h"
+#include "Engine/Renderer/Frame/RenderPacketBuilder.h"
 #include "Engine/Renderer/Frame/RenderView.h"
 
 namespace sw
 {
-    struct DebugOverlayState;
     struct EngineConfig;
     struct EngineDefaultAssets;
     struct EngineFrameContext;
-    struct RenderFramePacket;
 
     class AssetManager;
     class AssetStreamingQueue;
@@ -41,8 +40,6 @@ namespace sw
     class FrameProfiler;
     class FrameRenderer;
     class GlobalVariableManager;
-    class GPUSceneBuilder;
-    class GPUUploadQueue;
     class IAudioSystem;
     class IEngineFrameObserver;
     class InputManager;
@@ -50,7 +47,6 @@ namespace sw
     class IRHIDevice;
     class RenderTargetRegistry;
     class RenderThread;
-    class RenderViewScheduler;
     class RHI;
     class RHIBackendRegistry;
     class SceneManager;
@@ -58,12 +54,7 @@ namespace sw
     class TaskManager;
     class TypeRegistry;
 
-    /**
-     * @brief 이번 프레임의 뷰 카메라를 반환합니다.
-     * @details tick 안의 핫 리로드 · 씬 전환이 GameObject 를 파괴할 수 있으므로,
-     *          카메라는 미리 잡아 두지 않고 파괴 단계가 끝난 뒤 이 델리게이트로 조회합니다.
-     */
-    SW_DECLARE_DELEGATE( CameraComponent*, ViewCameraProviderDelegate, void );
+    // `ViewCameraProviderDelegate`(씬 뷰 카메라 조회)는 그것을 부르는 패킷 빌더 헤더(`RenderPacketBuilder.h`)에 있습니다.
 
     /**
      * @brief 호스트가 동적으로 올리는 타입 공급자(GameFramework · 킷 · 게임 모듈)를 올려 그 타입을 등록합니다. 실패하면 false 입니다.
@@ -148,12 +139,9 @@ namespace sw
 
         void setPresentHook( sw::PresentHookDelegate presentHook );
         void setPostPresentHook( sw::PresentHookDelegate postPresentHook );
+        /** @brief 셸 디버그 액션 맵을 한 프레임 돌립니다(`ShellInputActions::update`). 입력 매니저가 없으면 아무것도 하지 않습니다. */
         void updateShellActions( float32 deltaTime );
-        /**
-         * @brief 셸 디버그 액션 맵을 InputMap 리소스(`EngineDefaultAssets::_shellInputMap`)에서 만듭니다.
-         * @details 경로가 비었거나 읽지 못하면 오류를 남기고 **빈 맵**을 돌려줍니다. 손으로 적은 바인딩으로 바꿔 끼우지 않습니다 —
-         *          그 내용은 리소스와 따로 낡고, 실패를 가립니다.
-         */
+        /** @brief 셸 디버그 액션 맵을 InputMap 리소스(`EngineDefaultAssets::_shellInputMap`)에서 만듭니다(`ShellInputActions::createInputMap`). */
         static unique_ptr<InputMap> createShellInputMap( string_view inputMapPath );
 
         /**
@@ -182,7 +170,7 @@ namespace sw
          * @brief 셸 InputMap 입니다(`updateShellActions` 가 처음 부를 때 만든다 — 그 전과 Shipping 에서는 nullptr).
          * @details 개발 콘솔(`DevConsoleController`)이 자기 액션을 읽고 자기 레이어를 켜고 끕니다. 이 맵은 키보드 포커스와 상관없이 키를 읽습니다.
          */
-        InputMap* getShellInputMap() const { return _mapDebugAction.get(); }
+        InputMap* getShellInputMap() const { return _shellActions.getInputMap(); }
 
         // ----------------------------------------------------------------------
         // Getter (App 이 ModuleHost 등과 연동하는 데 필요)
@@ -237,22 +225,17 @@ namespace sw
         EngineBootstrap           _bootstrap;
         unique_ptr<ConfigManager> _configManager;
         unique_ptr<RHI>           _rhi;
-        unique_ptr<InputMap>      _mapDebugAction;
+        /** @brief 셸 디버그 액션 맵입니다(`updateShellActions` 가 처음 부를 때 만든다). Input 단계의 해제가 입력 매니저보다 먼저 놓는다. */
+        ShellInputActions         _shellActions;
         unique_ptr<IAudioSystem>  _audioSystem;
         unique_ptr<FrameRenderer> _frameRenderer;
         unique_ptr<RenderThread>  _renderThread;
-        /** @brief GT 쪽 씬 스냅샷 빌더입니다. populateFromScene 의 재구축 판단 캐시가 프레임을 넘어 유지되도록 여기서 소유합니다. FrameRenderer 단계가 만들고 해제합니다
-         *         (헤드리스 작업에는 없습니다).
-         *         프레임마다 CPU 스냅샷만 exportCPUSnapshot 으로 뽑아 RenderFramePacket 에 담아 RT 로 넘깁니다.
-         *         패킷과 함께 힙에 둡니다. 값으로 들면 이 헤더가 Graphics 의 씬 스냅샷 헤더들을 App 까지 끌고 갑니다(전방 선언으로 끊습니다). */
-        unique_ptr<GPUSceneBuilder> _gpuSceneBuilder;
         /**
-         * @brief GT 가 프레임마다 채우는 패킷입니다. 링의 자리와 바꿔 가며 돕니다(`RenderThread::submit`). FrameRenderer 단계가 만들고 해제합니다.
-         * @details 링에서 돌아온 저장소를 그대로 다시 채웁니다(지역 변수로 두면 스냅샷의 배치 · 그룹 목록과 라이트 목록이
-         *          프레임마다 새로 할당됩니다).
+         * @brief 프레임 패킷을 채우는 GT 쪽 상태(씬 스냅샷 빌더 · 패킷 · 업로드 큐 · 추가 뷰 스케줄러)입니다. FrameRenderer 단계가 세우고 해제합니다
+         *        (헤드리스 작업에는 없습니다).
          */
-        unique_ptr<RenderFramePacket> _packetScratch;
-        Delegate<void()>              _onScenesReleased;
+        RenderPacketBuilder _packetBuilder;
+        Delegate<void()>    _onScenesReleased;
         /** @brief 기동 단계 `ModuleTypes` 가 부르는 호스트의 타입 공급자 로더입니다(`setModuleTypeLoader`). */
         ModuleTypeLoaderDelegate _moduleTypeLoader;
         /**
@@ -266,23 +249,15 @@ namespace sw
         unique_ptr<DebugHUD> _debugHUD;
 #endif
         /** @brief 에디터 Undo/Redo 전용이라 배포본에는 만들지 않습니다(목록의 HostCreated). */
-        unique_ptr<CommandStack>   _commandStack;
-        unique_ptr<GPUUploadQueue> _gpuUploadQueue;
+        unique_ptr<CommandStack> _commandStack;
         /**
          * @brief 프레임 관찰자 목록입니다(소유하지 않는다). 프레임 앞(입력 전) · 씬 틱 뒤(UI 앞) · 패킷 채우기 · 프레임 뒤(렌더 제출 뒤) · 창 닫힘에서 붙인 순서대로 부르고,
          *        종료 코드를 내면 `requestQuit` 입니다. 텔레메트리(기동 단계 `Telemetry` 가 붙인다)와 App 의 진단 · 자동화도 여기로 붙습니다.
          */
         vector<IEngineFrameObserver*> _listFrameObserver;
-        /** @brief 추가 뷰(CCTV · 백미러 · PiP) 중 이번 프레임에 그릴 것을 고르는 스케줄러(갱신 주기 · 예산)입니다. FrameRenderer 단계가 만들고 해제합니다. */
-        unique_ptr<RenderViewScheduler> _renderViewScheduler;
-        /** @brief 스케줄러의 시각(초) — 프레임 델타의 누적입니다. */
-        float64 _renderViewClock;
-        /** @brief 애니메이션 LOD 에 넘기는 이번 프레임의 뷰(주 시점 + 그리는 추가 뷰)입니다. 프레임마다 재사용합니다. */
-        vector<AnimationLODView> _listAnimationLODView;
 
         /** @brief 이 엔진을 띄운 호스트의 역할입니다. 서비스를 만들기 전에 정한다(오디오 장치 · 기동 표 대상). */
         EngineHostRole _hostRole;
-        bool           _bShellActionsBound;
         bool           _bHeadless;
         bool           _bHeadlessTaskFailed;
         bool           _bQuitRequested;
