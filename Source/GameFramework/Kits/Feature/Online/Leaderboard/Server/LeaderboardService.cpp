@@ -22,15 +22,19 @@ namespace sw
     {
         struct LeaderboardServiceInternal
         {
-            static constexpr uint8       kFormatVersion       = 1;
-            static constexpr int32       kMaxConflictRetry    = 4;
-            static constexpr int32       kRebuildBatch        = 256;
-            static constexpr int32       kPlayersPerCommit    = 15;        ///< 사람마다 쓰기가 넷이다. 결과, 우편, 보낸 기록, 만료 인덱스이며 트랜잭션 상한 64 안에 든다
-            static constexpr int64       kSettlementWindowMs  = 604800000; ///< 7일이다. 시즌이 끝난 뒤 이 안에 정산이 돈다
-            static constexpr int64       kSettlementLeaseMs   = 600000;    ///< 10분이다. 돌던 서버가 죽으면 다른 서버가 이어받는다
-            static constexpr const utf8* kSettlementJobPrefix = "lb.settle.";
-            static constexpr const utf8* kAchievementSender   = "system.achievement";
-            static constexpr const utf8* kSeasonSender        = "system.season";
+            static constexpr uint8       kFormatVersion        = 1;
+            static constexpr int32       kMaxConflictRetry     = 4;
+            static constexpr int32       kRebuildBatch         = 256;
+            static constexpr int32       kPlayersPerCommit     = 15;  ///< 사람마다 쓰기가 넷이다. 결과, 우편, 보낸 기록, 만료 인덱스이며 트랜잭션 상한 64 안에 든다
+            static constexpr int32       kPlayersPerPage       = 600; ///< 정산 저장소 일 하나가 쓰는 사람 수(커밋 40 번). 페이지 사이에 다른 요청이 저장소 워커를 쓴다
+            static constexpr int64       kDayMs                = 86400000;
+            static constexpr int64       kWeekMs               = 604800000;
+            static constexpr int64       kRankRetentionGraceMs = 86400000;  ///< 기간이 끝난 뒤 캐시 순위를 남기는 시간(시계 차이와 경계 직후 읽기를 흡수한다)
+            static constexpr int64       kSettlementWindowMs   = 604800000; ///< 7일이다. 시즌이 끝난 뒤 이 안에 정산이 돈다
+            static constexpr int64       kSettlementLeaseMs    = 600000;    ///< 10분이다. 돌던 서버가 죽으면 다른 서버가 이어받는다
+            static constexpr const utf8* kSettlementJobPrefix  = "lb.settle.";
+            static constexpr const utf8* kAchievementSender    = "system.achievement";
+            static constexpr const utf8* kSeasonSender         = "system.season";
 
             static const hashed_string& getAchievementTable()
             {
@@ -441,49 +445,35 @@ namespace sw
             LeaderboardResult   _result;
         };
 
-        /** @brief 시즌 하나를 정산하는 작업입니다. 점수를 모두 읽어 순위를 매기고, 15명씩 결과와 보상 우편을 한 트랜잭션으로 씁니다. 결과가 있는 사람은 건너뛰므로 다시 돌아도 한 번만 처리됩니다. */
-        class SeasonSettlementWork final : public IServiceStoreWork
+        /**
+         * @brief 정산의 첫 단계입니다. 시즌 점수를 모두 읽어 순위대로 정렬합니다. 쓰기는 하지 않고, 정렬한 목록을 서비스에 넘겨 페이지 일로 나눠 쓰게 합니다.
+         * @details 순위는 정렬 방향으로 정하고 같은 점수는 계정 id 오름차순으로 정한다. 정산이 다시 돌아도 같은 순위여야 하기 때문이다.
+         */
+        class SeasonRankReadWork final : public IServiceStoreWork
         {
         public:
-            SeasonSettlementWork( LeaderboardService* pService, const LeaderboardDefinition& board, const LeaderboardSeason& season, string jobID, int64 nowMs,
-                                  const SettlementDelegate& onDone )
-                : _board{ board }
-                , _season{ season }
-                , _jobID{ std::move( jobID ) }
-                , _onDone{ onDone }
+            SeasonRankReadWork( LeaderboardService* pService, uint64 settlementID, string scorePrefix, LeaderboardOrder order )
+                : _listRanked{}
+                , _scorePrefix{ std::move( scorePrefix ) }
                 , _pService{ pService }
-                , _nowMs{ nowMs }
-                , _bSucceeded{ SW_FALSE }
+                , _settlementID{ settlementID }
+                , _order{ order }
+                , _bReadOk{ SW_FALSE }
             {
             }
 
             void run( IServiceStoreConnection& connection ) override
             {
-                using Internal = LeaderboardServiceInternal;
-                vector<LeaderboardScoreRow> listScore;
-                if ( Internal::readAllScores( connection, Internal::makeScorePrefix( _board._boardID, _season._seasonID ), listScore ) == false )
+                if ( LeaderboardServiceInternal::readAllScores( connection, _scorePrefix, _listRanked ) == false )
                     return;
-                // 순위는 정렬 방향으로 정하고 같은 점수는 계정 id 오름차순으로 정한다. 정산이 다시 돌아도 같은 순위여야 하기 때문이다
-                if ( _board._order == LeaderboardOrder::Descending )
-                    std::sort( listScore.begin(), listScore.end(), isHigherFirst );
+                if ( _order == LeaderboardOrder::Descending )
+                    std::sort( _listRanked.begin(), _listRanked.end(), isHigherFirst );
                 else
-                    std::sort( listScore.begin(), listScore.end(), isLowerFirst );
-                for ( size_t first = 0; first < listScore.size(); first += static_cast<size_t>( Internal::kPlayersPerCommit ) )
-                {
-                    ServiceTransaction transaction;
-                    const size_t       last = std::min( listScore.size(), first + static_cast<size_t>( Internal::kPlayersPerCommit ) );
-                    for ( size_t index = first; index < last; ++index )
-                    {
-                        if ( stagePlayer( connection, transaction, listScore[index], static_cast<int32>( index ) + 1 ) == false )
-                            return;
-                    }
-                    if ( transaction.isEmpty() == false && connection.commit( transaction ) != ServiceStoreResult::Ok )
-                        return; // 다음 실행이 남은 사람부터 이어서 처리한다. 임대가 지나 다른 서버가 맡거나 다시 부르는 경우이며, 결과가 있는 사람은 건너뛴다
-                }
-                _bSucceeded = SW_TRUE;
+                    std::sort( _listRanked.begin(), _listRanked.end(), isLowerFirst );
+                _bReadOk = SW_TRUE;
             }
 
-            void complete() override { _pService->applySettlement( _jobID, _onDone, _bSucceeded == SW_TRUE ); }
+            void complete() override { _pService->applySettlementRanking( _settlementID, _bReadOk == SW_TRUE, std::move( _listRanked ) ); }
 
         private:
             static bool isHigherFirst( const LeaderboardScoreRow& left, const LeaderboardScoreRow& right )
@@ -496,6 +486,55 @@ namespace sw
                 return left._score != right._score ? left._score < right._score : left._accountID < right._accountID;
             }
 
+            vector<LeaderboardScoreRow> _listRanked;
+            string                      _scorePrefix;
+            LeaderboardService*         _pService;
+            uint64                      _settlementID;
+            LeaderboardOrder            _order;
+            uint8                       _bReadOk;
+        };
+
+        /**
+         * @brief 정산 페이지 하나입니다. 순위가 정해진 사람 `kPlayersPerPage` 명까지 15명씩 결과와 보상 우편을 한 트랜잭션으로 씁니다.
+         * @details 결과가 있는 사람은 건너뛰므로 다시 돌아도 한 번만 처리된다. 실패하면 다음 실행(임대가 지나 다른 서버가 맡거나 다시 부름)이 남은 사람부터 잇는다.
+         */
+        class SeasonSettlementPageWork final : public IServiceStoreWork
+        {
+        public:
+            SeasonSettlementPageWork( LeaderboardService* pService, uint64 settlementID, const LeaderboardDefinition& board, const LeaderboardSeason& season,
+                                      vector<LeaderboardScoreRow> listPage, int32 firstRank, int64 nowMs )
+                : _listPage{ std::move( listPage ) }
+                , _board{ board }
+                , _season{ season }
+                , _pService{ pService }
+                , _settlementID{ settlementID }
+                , _nowMs{ nowMs }
+                , _firstRank{ firstRank }
+                , _bCommitted{ SW_FALSE }
+            {
+            }
+
+            void run( IServiceStoreConnection& connection ) override
+            {
+                using Internal = LeaderboardServiceInternal;
+                for ( size_t first = 0; first < _listPage.size(); first += static_cast<size_t>( Internal::kPlayersPerCommit ) )
+                {
+                    ServiceTransaction transaction;
+                    const size_t       last = std::min( _listPage.size(), first + static_cast<size_t>( Internal::kPlayersPerCommit ) );
+                    for ( size_t index = first; index < last; ++index )
+                    {
+                        if ( stagePlayer( connection, transaction, _listPage[index], _firstRank + static_cast<int32>( index ) ) == false )
+                            return;
+                    }
+                    if ( transaction.isEmpty() == false && connection.commit( transaction ) != ServiceStoreResult::Ok )
+                        return;
+                }
+                _bCommitted = SW_TRUE;
+            }
+
+            void complete() override { _pService->applySettlementPage( _settlementID, _bCommitted == SW_TRUE ); }
+
+        private:
             /** @brief 한 사람의 결과와 보상을 붙입니다. 이미 결과가 있으면 건너뜁니다. 저장소나 우편이 실패하면 false 를 반환합니다. */
             bool stagePlayer( IServiceStoreConnection& connection, ServiceTransaction& inoutTransaction, const LeaderboardScoreRow& row, int32 rank )
             {
@@ -527,13 +566,14 @@ namespace sw
                 return nullptr;
             }
 
-            LeaderboardDefinition _board;
-            LeaderboardSeason     _season;
-            string                _jobID;
-            SettlementDelegate    _onDone;
-            LeaderboardService*   _pService;
-            int64                 _nowMs;
-            uint8                 _bSucceeded;
+            vector<LeaderboardScoreRow> _listPage;
+            LeaderboardDefinition       _board;
+            LeaderboardSeason           _season;
+            LeaderboardService*         _pService;
+            uint64                      _settlementID;
+            int64                       _nowMs;
+            int32                       _firstRank; ///< 페이지 첫 사람의 순위(1 부터)
+            uint8                       _bCommitted;
         };
     } // namespace
 } // namespace sw
@@ -550,11 +590,14 @@ namespace sw
         , _mapQuery{}
         , _mapAchievement{}
         , _mapJobToRun{}
+        , _mapSettlement{}
+        , _uniqueExpiringRankKeys{}
         , _unlockBuffer{}
         , _completionBuffer{}
         , _dependencies{}
         , _pScheduler{ nullptr }
         , _nextQueryID{ 1 }
+        , _nextSettlementID{ 1 }
         , _pendingCount{ 0 }
     {
     }
@@ -587,6 +630,8 @@ namespace sw
         _mapRankKeyToWaitingRead.clear();
         _mapRankKeyToLateWrite.clear();
         _mapJobToRun.clear();
+        _mapSettlement.clear(); // 남은 페이지는 맡기지 않는다 — 결과가 있는 사람은 건너뛰므로 다음 실행이 이어서 처리한다
+        _uniqueExpiringRankKeys.clear();
         _dependencies = LeaderboardServiceDependencies{};
         _pScheduler   = nullptr;
     }
@@ -774,11 +819,51 @@ namespace sw
         const LeaderboardDefinition* pBoard = findBoard( boardID );
         if ( pBoard == nullptr || _dependencies._pRouter == nullptr )
             return;
-        submitCacheScore( makeRankKey( boardID, periodID ), accountID, toCacheScore( pBoard->_order, finalScore ) );
+        const string rankKey = makeRankKey( boardID, periodID );
+        submitCacheScore( rankKey, accountID, toCacheScore( pBoard->_order, finalScore ) );
+        // 기간 보드의 정렬 집합은 기간이 끝나면 캐시가 지우게 한다. 기간마다 이 프로세스에서 한 번만 건다(점수 쓰기마다 요청이 늘지 않게).
+        const int64 retentionMs = computeRankRetentionMs( *pBoard, periodID, nowMs );
+        if ( retentionMs > 0 && _uniqueExpiringRankKeys.insert( rankKey ).second )
+            (void)_dependencies._pRouter->submit( EphemeralRequest::makeExpire( rankKey, retentionMs ), EphemeralStoreRouter::ReplyDelegate{} );
         if ( displayName.empty() == false )
             (void)_dependencies._pRouter->submit( EphemeralRequest::makeSet( LeaderboardServiceInternal::makeNameKey( accountID ),
                                                                              vector<uint8>( reinterpret_cast<const uint8*>( displayName.data() ), reinterpret_cast<const uint8*>( displayName.data() ) + displayName.size() ), LeaderboardLimit::kNameTtlMs ),
                                                   EphemeralStoreRouter::ReplyDelegate{} );
+    }
+
+    int64 LeaderboardService::computeRankRetentionMs( const LeaderboardDefinition& definition, uint64 periodID, int64 nowMs ) const
+    {
+        using Internal    = LeaderboardServiceInternal;
+        int64 periodEndMs = 0;
+        switch ( definition._reset )
+        {
+            case LeaderboardReset::Daily:
+            {
+                periodEndMs = static_cast<int64>( periodID ) + Internal::kDayMs; // 기간 id 는 기간 시작 시각이다
+                break;
+            }
+            case LeaderboardReset::Weekly:
+            {
+                periodEndMs = static_cast<int64>( periodID ) + Internal::kWeekMs;
+                break;
+            }
+            case LeaderboardReset::Season:
+            {
+                for ( const LeaderboardSeason& season : definition._listSeason )
+                {
+                    if ( season._seasonID == periodID )
+                        periodEndMs = season._endMs;
+                }
+                break;
+            }
+            default:
+            {
+                return 0; // 초기화가 없는 보드의 순위는 하나뿐이다 — 지우지 않는다
+            }
+        }
+        if ( periodEndMs <= 0 )
+            return 0;
+        return std::max<int64>( 1, periodEndMs + Internal::kRankRetentionGraceMs - nowMs );
     }
 
     void LeaderboardService::submitCacheScore( const string& rankKey, AccountID accountID, int64 cacheScore )
@@ -806,6 +891,7 @@ namespace sw
             return;
         }
         read._periodID = computePeriodID( *pBoard, nowMs );
+        read._nowMs    = nowMs;
         startRead( read );
     }
 
@@ -825,6 +911,7 @@ namespace sw
             return;
         }
         read._periodID = computePeriodID( *pBoard, nowMs );
+        read._nowMs    = nowMs;
         startRead( read );
     }
 
@@ -919,7 +1006,11 @@ namespace sw
             (void)_dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, ServiceKeyUtil::makeHex64( row._accountID ), row._score ),
                                                   EphemeralStoreRouter::ReplyDelegate{} );
         }
-        (void)_dependencies._pRouter->submit( EphemeralRequest::makeSet( LeaderboardServiceInternal::makeReadyKey( rankKey ), vector<uint8>{ 1 }, 0 ),
+        // 기간 보드면 다시 채운 집합과 준비 표시도 기간이 끝나면 사라지게 한다(0 이면 만료 없음).
+        const int64 retentionMs = pBoard != nullptr ? computeRankRetentionMs( *pBoard, listWaiting.front()._periodID, listWaiting.front()._nowMs ) : 0;
+        if ( retentionMs > 0 )
+            (void)_dependencies._pRouter->submit( EphemeralRequest::makeExpire( rankKey, retentionMs ), EphemeralStoreRouter::ReplyDelegate{} );
+        (void)_dependencies._pRouter->submit( EphemeralRequest::makeSet( LeaderboardServiceInternal::makeReadyKey( rankKey ), vector<uint8>{ 1 }, retentionMs ),
                                               EphemeralStoreRouter::ReplyDelegate{} );
         // 캐시는 맡긴 순서대로 응답한다. 아래 읽기는 위 쓰기 뒤에 처리된다
         for ( const PendingRead& read : listWaiting )
@@ -1136,8 +1227,7 @@ namespace sw
                 onDone( false );
             return;
         }
-        ++_pendingCount;
-        _dependencies._pStore->submit( sw::make_unique<SeasonSettlementWork>( this, *pBoard, *pSeason, string{}, nowMs, onDone ) );
+        startSettlement( *pBoard, *pSeason, string{}, nowMs, onDone );
     }
 
     void LeaderboardService::onScheduledRun( const ScheduledRun& run )
@@ -1166,8 +1256,74 @@ namespace sw
             return;
         }
         _mapJobToRun[run._jobID] = run; // 끝나면 completeRun 에 넘긴다. 작업마다 하나씩 두므로 보드 둘의 시즌이 같은 날 끝나도 섞이지 않는다
-        ++_pendingCount;
-        _dependencies._pStore->submit( sw::make_unique<SeasonSettlementWork>( this, *pBoard, *pSeason, run._jobID, run._occurrenceMs, SettlementDelegate{} ) );
+        startSettlement( *pBoard, *pSeason, run._jobID, run._occurrenceMs, SettlementDelegate{} );
+    }
+
+    void LeaderboardService::startSettlement( const LeaderboardDefinition& board, const LeaderboardSeason& season, string jobID, int64 nowMs, const SettlementDelegate& onDone )
+    {
+        const uint64        settlementID = _nextSettlementID++;
+        SettlementProgress& progress     = _mapSettlement[settlementID];
+        progress._board                  = board;
+        progress._season                 = season;
+        progress._jobID                  = std::move( jobID );
+        progress._onDone                 = onDone;
+        progress._nowMs                  = nowMs;
+        ++_pendingCount; // 정산 하나에 하나 — 페이지가 몇이든 끝날 때(`applySettlement`) 한 번 줄인다
+        _dependencies._pStore->submit(
+            sw::make_unique<SeasonRankReadWork>( this, settlementID, LeaderboardServiceInternal::makeScorePrefix( board._boardID, season._seasonID ), board._order ) );
+    }
+
+    void LeaderboardService::applySettlementRanking( uint64 settlementID, bool bReadOk, vector<LeaderboardScoreRow>&& listRanked )
+    {
+        const auto progressIt = _mapSettlement.find( settlementID );
+        if ( progressIt == _mapSettlement.end() )
+            return; // 서비스가 내려간 뒤 거둔 일이다
+        if ( bReadOk == false )
+        {
+            finishSettlement( settlementID, false );
+            return;
+        }
+        progressIt->second._listRanked = std::move( listRanked );
+        submitNextSettlementPage( settlementID );
+    }
+
+    void LeaderboardService::applySettlementPage( uint64 settlementID, bool bCommitted )
+    {
+        if ( _mapSettlement.find( settlementID ) == _mapSettlement.end() )
+            return;
+        if ( bCommitted == false )
+        {
+            finishSettlement( settlementID, false );
+            return;
+        }
+        submitNextSettlementPage( settlementID );
+    }
+
+    void LeaderboardService::submitNextSettlementPage( uint64 settlementID )
+    {
+        SettlementProgress& progress = _mapSettlement[settlementID];
+        if ( progress._nextIndex >= progress._listRanked.size() || _dependencies._pStore == nullptr )
+        {
+            finishSettlement( settlementID, progress._nextIndex >= progress._listRanked.size() );
+            return;
+        }
+        const size_t                first = progress._nextIndex;
+        const size_t                last  = std::min( progress._listRanked.size(), first + static_cast<size_t>( LeaderboardServiceInternal::kPlayersPerPage ) );
+        vector<LeaderboardScoreRow> listPage( progress._listRanked.begin() + static_cast<ptrdiff_t>( first ), progress._listRanked.begin() + static_cast<ptrdiff_t>( last ) );
+        progress._nextIndex = last;
+        _dependencies._pStore->submit( sw::make_unique<SeasonSettlementPageWork>( this, settlementID, progress._board, progress._season, std::move( listPage ),
+                                                                                  static_cast<int32>( first ) + 1, progress._nowMs ) );
+    }
+
+    void LeaderboardService::finishSettlement( uint64 settlementID, bool bSucceeded )
+    {
+        const auto progressIt = _mapSettlement.find( settlementID );
+        if ( progressIt == _mapSettlement.end() )
+            return;
+        const string             jobID  = std::move( progressIt->second._jobID );
+        const SettlementDelegate onDone = progressIt->second._onDone;
+        _mapSettlement.erase( progressIt );
+        applySettlement( jobID, onDone, bSucceeded );
     }
 
     void LeaderboardService::applySettlement( const string& jobID, const SettlementDelegate& onDone, bool bSucceeded )

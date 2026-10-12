@@ -221,3 +221,71 @@ SW_TEST_CASE( LeaderboardSeasonTest, ScheduledWindowRunsSettlementOnce )
     node._service.shutdown();
     scheduler.shutdown();
 }
+
+SW_TEST_CASE( LeaderboardSeasonTest, LargeSettlementRunsInPagesWithContinuousRanks )
+{
+    // 정산은 순위 읽기 일 하나 + 600 명씩 페이지 일 여럿이다 — 시즌 하나가 저장소 워커 하나를 오래 잡지 않는다. 페이지 경계를 넘어도 순위가 이어진다.
+    using Internal = LeaderboardSeasonTestInternal;
+    MemoryServiceDatabase   database;
+    MemoryEphemeralDatabase cacheDatabase;
+    SeasonNode              node( &database, &cacheDatabase );
+    SW_ASSERT_TRUE( node._service.registerBoard( Internal::makeSeasonBoard() ) );
+    constexpr AccountID kPlayerCount = 1250; // 600 + 600 + 50
+    for ( AccountID accountID = 1; accountID <= kPlayerCount; ++accountID )
+    {
+        node._service.submitScore( "arena", accountID, "p", static_cast<int64>( 100000 - accountID ), 1500, 0 );
+    }
+    node.step();
+
+    SettleRecorder recorder;
+    node._service.settleSeason( "arena", 1, 2100, recorder.makeDelegate() );
+    SW_EXPECT_EQUAL( node._service.getPendingCount(), 1 ); // 정산 하나 — 페이지 수와 상관없이
+    node.step();
+    SW_ASSERT_EQUAL( recorder._listSucceeded.size(), size_t( 1 ) );
+    SW_EXPECT_TRUE( recorder._listSucceeded[0] == SW_TRUE );
+    SW_EXPECT_EQUAL( Internal::countSeasonResults( database ), static_cast<int32>( kPlayerCount ) );
+    SW_EXPECT_EQUAL( database.countRecords( ServiceMail::getMailTable() ), 10 );
+    SW_EXPECT_EQUAL( node._service.getPendingCount(), 0 );
+
+    node._service.readSeasonResult( "arena", 1, 601, 77 ); // 둘째 페이지의 첫 사람
+    node.step();
+    SW_ASSERT_EQUAL( node._listCompletion.back()._listEntry.size(), size_t( 1 ) );
+    SW_EXPECT_EQUAL( node._listCompletion.back()._listEntry[0]._rank, 601 );
+    node._service.readSeasonResult( "arena", 1, kPlayerCount, 78 ); // 마지막 페이지의 마지막 사람
+    node.step();
+    SW_ASSERT_EQUAL( node._listCompletion.back()._listEntry.size(), size_t( 1 ) );
+    SW_EXPECT_EQUAL( node._listCompletion.back()._listEntry[0]._rank, static_cast<int32>( kPlayerCount ) );
+}
+
+SW_TEST_CASE( LeaderboardSeasonTest, PeriodRanksExpireFromTheCacheAfterTheirPeriod )
+{
+    // 주간 보드의 캐시 순위(정렬 집합)는 그 주가 끝나고 하루 뒤 캐시가 지운다 — 기간마다 쌓이지 않는다. 초기화 없는 보드는 지우지 않는다.
+    MemoryServiceDatabase   database;
+    MemoryEphemeralDatabase cacheDatabase;
+    constexpr int64         kNowMs  = 1767225600000; // 2026-01-01 00:00 UTC(목요일)
+    constexpr int64         kWeekMs = 604800000;
+    constexpr int64         kDayMs  = 86400000;
+    cacheDatabase.setManualTimeMs( kNowMs );
+    SeasonNode            node( &database, &cacheDatabase );
+    LeaderboardDefinition weekly;
+    weekly._boardID = "weekly";
+    weekly._reset   = LeaderboardReset::Weekly;
+    SW_ASSERT_TRUE( node._service.registerBoard( weekly ) );
+    LeaderboardDefinition forever;
+    forever._boardID = "forever";
+    SW_ASSERT_TRUE( node._service.registerBoard( forever ) );
+    node._service.submitScore( "weekly", 1, "a", 10, kNowMs, 0 );
+    node._service.submitScore( "forever", 1, "a", 10, kNowMs, 0 );
+    node.step();
+
+    const uint64 weekStart  = node._service.computePeriodID( weekly, kNowMs );
+    const string weeklyKey  = LeaderboardService::makeRankKey( "weekly", weekStart );
+    const string foreverKey = LeaderboardService::makeRankKey( "forever", 0 );
+    SW_EXPECT_EQUAL( cacheDatabase.execute( EphemeralRequest::makeScoreRange( weeklyKey, 0, 10 ) )._listMember.size(), size_t( 1 ) );
+
+    cacheDatabase.setManualTimeMs( static_cast<int64>( weekStart ) + kWeekMs + kDayMs - 1 ); // 끝나고 하루 안 — 아직 있다
+    SW_EXPECT_EQUAL( cacheDatabase.execute( EphemeralRequest::makeScoreRange( weeklyKey, 0, 10 ) )._listMember.size(), size_t( 1 ) );
+    cacheDatabase.setManualTimeMs( static_cast<int64>( weekStart ) + kWeekMs + kDayMs + 1 );
+    SW_EXPECT_TRUE( cacheDatabase.execute( EphemeralRequest::makeScoreRange( weeklyKey, 0, 10 ) )._listMember.empty() );
+    SW_EXPECT_EQUAL( cacheDatabase.execute( EphemeralRequest::makeScoreRange( foreverKey, 0, 10 ) )._listMember.size(), size_t( 1 ) );
+}
