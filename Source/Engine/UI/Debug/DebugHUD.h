@@ -9,6 +9,7 @@
 
     #include "Core/Common/Macros.h"
     #include "Core/Common/Types.h"
+    #include "Core/Container/string.h"
     #include "Core/String/hashed_string.h"
 
     #include "Engine/UI/Screen/UIScreen.h"
@@ -132,8 +133,11 @@ namespace sw
         hashed_string          _toggleAction;
         UIScreenHandle         _screen;                    ///< HUD 화면입니다(오버레이 레이어이며, 없으면 무효).
         UIScreenHandle         _window;                    ///< 설정 창입니다(모달이며, 없으면 무효).
+        string                 _profilerSeenState;         ///< `syncFrameProfiler` 가 마지막으로 본 `gv_debugHUDSections` 입니다.
+        uint64                 _profilerSeenRevision;      ///< `syncFrameProfiler` 가 마지막으로 본 레지스트리 판 번호입니다(처음은 아무 판과도 다른 값).
         uint8                  _bProfilerEnabledByHUD : 1; ///< HUD 가 프로파일러를 켰는지 나타냅니다(감출 때 끕니다).
-        [[maybe_unused]] uint8 _reserved              : 7;
+        uint8                  _bSectionsNeedProfiler : 1; ///< 켜진 섹션 중 프로파일러를 쓰는 것이 있는지의 캐시입니다(판 번호 · 상태 글이 같으면 다시 세지 않습니다).
+        [[maybe_unused]] uint8 _reserved              : 6;
     };
 } // namespace sw
 
