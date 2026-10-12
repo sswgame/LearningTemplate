@@ -3,7 +3,6 @@
 #include "Editor/Panels/ContentBrowser/ContentBrowserPanel.h"
 
 #include "Core/Common/StdHeaders.h"
-#include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -381,18 +380,15 @@ namespace sw::editor
     ContentBrowserPanel::ContentBrowserPanel() noexcept
         : _listRoot{}
         , _listEntry{}
-        , _listHistory{}
+        , _listVisibleEntry{}
         , _selectedFolderAbs{}
         , _listCrumb{}
         , _selectedAssetAbs{}
-        , _pendingDeleteAbs{}
-        , _referenceQueryID{}
-        , _renamingAbs{}
-        , _listReferenceResult{}
-        , _referenceIndex{}
-        , _referenceIndexJob{}
+        , _history{}
+        , _fileActions{}
+        , _referenceSearch{}
+        , _importQueue{}
         , _thumbnailCache{}
-        , _referenceIndexSerial{ 0 }
         , _searchBuffer{}
         , _renameBuffer{}
         , _seenContentChangeSerial{ 0 }
@@ -400,10 +396,7 @@ namespace sw::editor
         , _filterIndex{ 0 }
         , _fallbackGlyphCount{ 0 }
         , _lastFallbackGlyphCount{ 0 }
-        , _historyIndex{ -1 }
         , _viewMode{ ViewMode::Tiles }
-        , _pendingImportMutex{}
-        , _listPendingImportPath{}
         , _folderJob{}
         , _folderCache{ &EditorAssetCommands::collectChildFolders }
         , _bRootsDirty{ SW_TRUE }
@@ -411,35 +404,27 @@ namespace sw::editor
         , _bOpenDeleteConfirm{ SW_FALSE }
         , _bShowAllPacks{ SW_FALSE }
         , _bShowAllPacksInitialized{ SW_FALSE }
-        , _bReferenceIndexRequested{ SW_FALSE }
         , _bOpenReferenceResults{ SW_FALSE }
-        , _bReferenceQueryDependencies{ SW_FALSE }
         , _bFocusRenameInput{ SW_FALSE }
         , _bListingRecursive{ SW_FALSE }
-        , _reservedFlags{ 0 }
     {
     }
 
     void ContentBrowserPanel::requestDeleteAsset( string_view absolutePath )
     {
-        _pendingDeleteAbs   = string{ absolutePath };
+        _fileActions.requestDelete( absolutePath );
         _bOpenDeleteConfirm = SW_TRUE;
     }
 
     bool ContentBrowserPanel::confirmDeleteAsset()
     {
-        if ( _pendingDeleteAbs.empty() )
+        if ( _fileActions.confirmDelete() == false )
             return false;
-        const bool bDeleted = EditorAssetFileCommands::moveToTrash( _pendingDeleteAbs );
-        if ( bDeleted )
-        {
-            // 지운 파일이 목록과 선택에 남지 않도록 현재 폴더를 다시 읽는다. 파일 감시도 같은 변경을 알리지만 한두 프레임 늦다.
-            _selectedAssetAbs.clear();
-            _bFolderDirty = SW_TRUE;
-            _folderCache.clear();
-        }
-        _pendingDeleteAbs.clear();
-        return bDeleted;
+        // 지운 파일이 목록과 선택에 남지 않도록 현재 폴더를 다시 읽는다. 파일 감시도 같은 변경을 알리지만 한두 프레임 늦다.
+        _selectedAssetAbs.clear();
+        _bFolderDirty = SW_TRUE;
+        _folderCache.clear();
+        return true;
     }
 
     void ContentBrowserPanel::drawDeleteConfirmModal()
@@ -452,11 +437,13 @@ namespace sw::editor
         if ( ImGui::BeginPopupModal( ContentBrowserPanelInternal::kDeleteConfirmPopupName, nullptr, ImGuiWindowFlags_AlwaysAutoResize ) == false )
             return;
 
-        ImGui::Text( "Move '%s' to the Recycle Bin?", FileUtil::getFileNamePart( _pendingDeleteAbs ).c_str() );
+        const string&               pendingDeleteAbs = _fileActions.getPendingDeletePath();
+        const EditorReferenceIndex& referenceIndex   = _referenceSearch.getIndex();
+        ImGui::Text( "Move '%s' to the Recycle Bin?", FileUtil::getFileNamePart( pendingDeleteAbs ).c_str() );
         // 지우기 전에 이 에셋을 쓰는 곳을 보여 준다. 언리얼의 Delete Assets 대화상자가 보여 주는 참조 수와 같다.
-        if ( _referenceIndex.isReady() )
+        if ( referenceIndex.isReady() )
         {
-            const uint32 referrerCount = _referenceIndex.countReferrerFiles( ResourcePaths::toResourceID( _pendingDeleteAbs ) );
+            const uint32 referrerCount = referenceIndex.countReferrerFiles( ResourcePaths::toResourceID( pendingDeleteAbs ) );
             if ( referrerCount > 0 )
                 ImGui::TextColored( EditorColorUtil::toImVec4( ContentBrowserPanelInternal::kReferrerWarningText ), "%s Used by %u file(s). They will name a missing asset.", editoricon::kWarning, referrerCount );
             else
@@ -477,7 +464,7 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ImGui::Button( "Cancel" ) || ImGui::IsKeyPressed( ImGuiKey_Escape ) )
         {
-            _pendingDeleteAbs.clear();
+            _fileActions.cancelDelete();
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
@@ -503,23 +490,10 @@ namespace sw::editor
 
     void ContentBrowserPanel::syncReferenceIndex()
     {
-        EditorReferenceIndexData data{};
-        if ( _referenceIndexJob.take( data ) )
-        {
-            SW_LOG_INFO( "Reference index ready: %# text asset(s), %# reference(s) in %# ms", data._scannedFileCount, data._listReference.size(), data._scanMilliseconds );
-            _referenceIndex.assign( std::move( data ) );
-        }
-
+        _referenceSearch.takeFinishedScan();
         EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr || _referenceIndexJob.isPending() )
-            return;
-        // 스캔하는 동안 바뀐 것은 스캔이 끝난 뒤 번호가 달라지므로 다시 스캔한다. 저장이 몰려도 스캔은 하나씩 실행한다.
-        const uint64 serial = pContext->getAssetHotReload().getContentChangeSerial();
-        if ( _bReferenceIndexRequested == SW_TRUE && serial == _referenceIndexSerial )
-            return;
-        _referenceIndexSerial     = serial;
-        _bReferenceIndexRequested = SW_TRUE;
-        _referenceIndexJob.request( ResourcePaths::getRootFolderPath() );
+        if ( pContext != nullptr )
+            _referenceSearch.requestScanIfStale( pContext->getAssetHotReload().getContentChangeSerial() );
     }
 
     void ContentBrowserPanel::selectAfterFileChange( string_view absolutePath )
@@ -529,14 +503,13 @@ namespace sw::editor
         _bFolderDirty     = SW_TRUE;
         _folderCache.clear();
         // 이 변경 전에 시작한 스캔은 이동이 고친 색인을 오래된 결과로 덮어쓴다. 다시 요청해서 그 세대의 결과를 버린다.
-        if ( _referenceIndexJob.isPending() )
-            _referenceIndexJob.request( ResourcePaths::getRootFolderPath() );
+        _referenceSearch.discardPendingScan();
     }
 
     bool ContentBrowserPanel::createNewFolder()
     {
         string folderAbs;
-        if ( _selectedFolderAbs.empty() || EditorAssetFileCommands::createFolder( _selectedFolderAbs, folderAbs ) == false )
+        if ( ContentBrowserFileActions::createFolder( _selectedFolderAbs, folderAbs ) == false )
             return false;
         selectAfterFileChange( folderAbs );
         return true;
@@ -545,7 +518,7 @@ namespace sw::editor
     bool ContentBrowserPanel::createNewAsset( const EditorNewAssetTemplate& assetTemplate )
     {
         string assetAbs;
-        if ( _selectedFolderAbs.empty() || EditorAssetFileCommands::createAsset( _selectedFolderAbs, assetTemplate, assetAbs ) == false )
+        if ( ContentBrowserFileActions::createAsset( _selectedFolderAbs, assetTemplate, assetAbs ) == false )
             return false;
         selectAfterFileChange( assetAbs );
         return true;
@@ -554,7 +527,7 @@ namespace sw::editor
     bool ContentBrowserPanel::duplicateAsset( string_view absolutePath )
     {
         string assetAbs;
-        if ( absolutePath.empty() || EditorAssetFileCommands::duplicateAsset( absolutePath, assetAbs ) == false )
+        if ( ContentBrowserFileActions::duplicateAsset( absolutePath, assetAbs ) == false )
             return false;
         selectAfterFileChange( assetAbs );
         return true;
@@ -562,34 +535,17 @@ namespace sw::editor
 
     void ContentBrowserPanel::beginRename( string_view absolutePath )
     {
-        if ( absolutePath.empty() || FileUtil::isDirectory( absolutePath ) )
-            return;
         string stem;
-        string suffix;
-        EditorAssetFileCommands::splitAssetName( FileUtil::getFileNamePart( absolutePath ), stem, suffix );
-        _renamingAbs = FileUtil::normalizeSeparators( absolutePath );
+        if ( _fileActions.beginRename( absolutePath, stem ) == false )
+            return;
         _renameBuffer.assign( stem.c_str() );
         _bFocusRenameInput = SW_TRUE;
     }
 
     bool ContentBrowserPanel::commitRename( string_view newName )
     {
-        const string renamingAbs = _renamingAbs;
-        _renamingAbs.clear();
-        if ( renamingAbs.empty() || newName.empty() )
-            return false;
-        string stem;
-        string suffix;
-        EditorAssetFileCommands::splitAssetName( FileUtil::getFileNamePart( renamingAbs ), stem, suffix );
-        // 확장자는 그대로 둔다. 확장자까지 입력했으면 그것을 쓴다.
-        string fileName = FileUtil::normalizePath( newName );
-        if ( suffix.empty() == false && StringUtil::endsWith( fileName, suffix ) == false )
-            fileName += suffix;
-        const string destinationAbs = FileUtil::joinPath( FileUtil::getDirectoryPart( renamingAbs ), fileName );
-        if ( FileUtil::pathsEqualNormalized( destinationAbs, renamingAbs ) )
-            return false;
-        uint32 fixedFileCount{ 0 };
-        if ( EditorAssetFileCommands::moveAsset( renamingAbs, destinationAbs, _referenceIndex, fixedFileCount ) == false )
+        string destinationAbs;
+        if ( _fileActions.commitRename( newName, _referenceSearch.getIndex(), destinationAbs ) == false )
             return false;
         selectAfterFileChange( destinationAbs );
         return true;
@@ -597,14 +553,17 @@ namespace sw::editor
 
     bool ContentBrowserPanel::moveAssetToFolder( string_view sourceAbs, string_view folderAbs )
     {
-        const string destinationAbs = FileUtil::joinPath( folderAbs, FileUtil::getFileNamePart( sourceAbs ) );
-        if ( FileUtil::pathsEqualNormalized( destinationAbs, sourceAbs ) )
-            return false;
-        uint32 fixedFileCount{ 0 };
-        if ( EditorAssetFileCommands::moveAsset( sourceAbs, destinationAbs, _referenceIndex, fixedFileCount ) == false )
+        string destinationAbs;
+        if ( ContentBrowserFileActions::moveAssetToFolder( sourceAbs, folderAbs, _referenceSearch.getIndex(), destinationAbs ) == false )
             return false;
         selectAfterFileChange( destinationAbs );
         return true;
+    }
+
+    bool ContentBrowserPanel::isRenaming( const AssetEntry& entry ) const
+    {
+        const string& renamingAbs = _fileActions.getRenamingPath();
+        return renamingAbs.empty() == false && FileUtil::pathsEqualNormalized( entry._absolutePath, renamingAbs );
     }
 
     void ContentBrowserPanel::acceptAssetDrop( string_view folderAbs )
@@ -632,7 +591,7 @@ namespace sw::editor
         const bool bEscaped = ImGui::IsKeyPressed( ImGuiKey_Escape );
         if ( bEscaped )
         {
-            _renamingAbs.clear();
+            _fileActions.cancelRename();
             return;
         }
         if ( bEntered || ImGui::IsItemDeactivated() )
@@ -663,7 +622,7 @@ namespace sw::editor
     {
         // 다른 패널과 같은 규칙이다. 이 창에 포커스가 있고 텍스트를 입력 중이 아닐 때만 처리한다. Hierarchy 의 F2, Ctrl+D, Delete 와 같다.
         const bool bFocused = ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
-        if ( bFocused == false || ImGui::GetIO().WantTextInput || _renamingAbs.empty() == false || _selectedAssetAbs.empty() )
+        if ( bFocused == false || ImGui::GetIO().WantTextInput || _fileActions.getRenamingPath().empty() == false || _selectedAssetAbs.empty() )
             return;
         if ( FileUtil::isDirectory( _selectedAssetAbs ) )
             return;
@@ -677,13 +636,8 @@ namespace sw::editor
 
     void ContentBrowserPanel::showReferences( string_view absolutePath, bool bDependencies )
     {
-        _referenceQueryID            = ResourcePaths::toResourceID( absolutePath );
-        _bReferenceQueryDependencies = bDependencies ? SW_TRUE : SW_FALSE;
-        _bOpenReferenceResults       = SW_TRUE;
-        if ( bDependencies )
-            _referenceIndex.findDependencies( _referenceQueryID, _listReferenceResult );
-        else
-            _referenceIndex.findReferrers( _referenceQueryID, _listReferenceResult );
+        _referenceSearch.query( absolutePath, bDependencies );
+        _bOpenReferenceResults = SW_TRUE;
     }
 
     void ContentBrowserPanel::drawReferenceResults()
@@ -698,17 +652,18 @@ namespace sw::editor
         if ( ImGui::BeginPopup( ContentBrowserPanelInternal::kReferenceResultsPopupName ) == false )
             return;
 
-        const bool bDependencies = _bReferenceQueryDependencies == SW_TRUE;
+        const bool                          bDependencies       = _referenceSearch.isDependencyQuery();
+        const vector<EditorAssetReference>& listReferenceResult = _referenceSearch.getResultList();
         ImGui::TextUnformatted( bDependencies ? "Dependencies of" : "References to" );
         ImGui::SameLine();
-        ImGui::TextColored( EditorColorUtil::toImVec4( ContentBrowserPanelInternal::kReferenceQueryText ), "%s", _referenceQueryID.c_str() );
-        if ( _referenceIndex.isReady() == false )
+        ImGui::TextColored( EditorColorUtil::toImVec4( ContentBrowserPanelInternal::kReferenceQueryText ), "%s", _referenceSearch.getQueryID().c_str() );
+        if ( _referenceSearch.getIndex().isReady() == false )
         {
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorContentBrowser", "IndexingReferences" ) );
             ImGui::EndPopup();
             return;
         }
-        if ( _listReferenceResult.empty() )
+        if ( listReferenceResult.empty() )
         {
             EditorWidgets::drawEmptyHint( bDependencies ? SW_LOCKEY( "EditorContentBrowser", "NoDependencies" ) : SW_LOCKEY( "EditorContentBrowser", "NoReferencers" ) );
             ImGui::EndPopup();
@@ -717,7 +672,7 @@ namespace sw::editor
 
         constexpr ImGuiTableFlags kTableFlags  = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
         const float32             dpiScale     = EditorThemeUtil::getDpiScale();
-        const size_t              visibleCount = std::min( _listReferenceResult.size(), ContentBrowserPanelInternal::kReferenceVisibleRowCount );
+        const size_t              visibleCount = std::min( listReferenceResult.size(), ContentBrowserPanelInternal::kReferenceVisibleRowCount );
         const float32             tableHeight  = ImGui::GetTextLineHeightWithSpacing() * static_cast<float32>( visibleCount + 2 );
         string                    openPath;
         if ( ImGui::BeginTable( "##cb_references", 2, kTableFlags, ImVec2( 560.0f * dpiScale, tableHeight ) ) )
@@ -725,9 +680,9 @@ namespace sw::editor
             ImGui::TableSetupColumn( "Asset", ImGuiTableColumnFlags_WidthStretch );
             ImGui::TableSetupColumn( "Line", ImGuiTableColumnFlags_WidthFixed, 48.0f * dpiScale );
             ImGui::TableHeadersRow();
-            for ( size_t rowIndex = 0; rowIndex < _listReferenceResult.size(); ++rowIndex )
+            for ( size_t rowIndex = 0; rowIndex < listReferenceResult.size(); ++rowIndex )
             {
-                const EditorAssetReference& reference = _listReferenceResult[rowIndex];
+                const EditorAssetReference& reference = listReferenceResult[rowIndex];
                 const string&               shownPath = bDependencies ? reference._targetPath : reference._referrerPath;
                 ImGui::PushID( static_cast<int32>( rowIndex ) );
                 ImGui::TableNextRow();
@@ -945,7 +900,7 @@ namespace sw::editor
     {
         if ( EditorChrome::beginToolbar( "##cb_toolbar" ) )
         {
-            const bool bCanBack = canNavigateBack();
+            const bool bCanBack = _history.canNavigateBack();
             if ( bCanBack == false )
                 ImGui::BeginDisabled();
             if ( ImGui::Button( "<##cb_nav_back" ) )
@@ -955,7 +910,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "NavigateBack" ) );
 
             ImGui::SameLine();
-            const bool bCanForward = canNavigateForward();
+            const bool bCanForward = _history.canNavigateForward();
             if ( bCanForward == false )
                 ImGui::BeginDisabled();
             if ( ImGui::Button( ">##cb_nav_forward" ) )
@@ -1191,7 +1146,7 @@ namespace sw::editor
         EditorChrome::endSection();
 
         EditorWidgets::drawCountLabel( static_cast<uint32>( listVisible.size() ), 0, "items" );
-        if ( _referenceIndexJob.isPending() && _referenceIndex.isReady() == false )
+        if ( _referenceSearch.isScanPending() && _referenceSearch.getIndex().isReady() == false )
         {
             ImGui::SameLine();
             ImGui::TextDisabled( "|  Indexing references..." );
@@ -1310,7 +1265,7 @@ namespace sw::editor
 
                     drawSourceControlBadge( pDrawList, float2{ cursor.x + cell - inset, cursor.y + inset }, entry );
 
-                    if ( _renamingAbs.empty() == false && FileUtil::pathsEqualNormalized( entry._absolutePath, _renamingAbs ) )
+                    if ( isRenaming( entry ) )
                         drawRenameField( cell );
                     else
                         EditorWidgets::drawClampedLabel( entry._name, cell, ContentBrowserPanelInternal::kTileLabelLineCount );
@@ -1368,7 +1323,7 @@ namespace sw::editor
                         EditorWidgets::drawAssetDragSource( entry._relativePath.c_str() );
                     else
                         acceptAssetDrop( entry._absolutePath );
-                    if ( _renamingAbs.empty() == false && FileUtil::pathsEqualNormalized( entry._absolutePath, _renamingAbs ) )
+                    if ( isRenaming( entry ) )
                     {
                         ImGui::SameLine();
                         drawRenameField( 0.0f );
@@ -1391,22 +1346,17 @@ namespace sw::editor
 
     void ContentBrowserPanel::navigateBack()
     {
-        if ( canNavigateBack() )
-        {
-            --_historyIndex;
-            const HistoryEntry& entry = _listHistory[static_cast<size_t>( _historyIndex )];
-            selectFolder( entry._folderPathAbs, entry._listCrumb, false );
-        }
+        // 이력을 적지 않고 고르므로 항목 포인터는 selectFolder 안에서도 유효하다.
+        const ContentBrowserHistoryEntry* pEntry = _history.stepBack();
+        if ( pEntry != nullptr )
+            selectFolder( pEntry->_folderPathAbs, pEntry->_listCrumb, false );
     }
 
     void ContentBrowserPanel::navigateForward()
     {
-        if ( canNavigateForward() )
-        {
-            ++_historyIndex;
-            const HistoryEntry& entry = _listHistory[static_cast<size_t>( _historyIndex )];
-            selectFolder( entry._folderPathAbs, entry._listCrumb, false );
-        }
+        const ContentBrowserHistoryEntry* pEntry = _history.stepForward();
+        if ( pEntry != nullptr )
+            selectFolder( pEntry->_folderPathAbs, pEntry->_listCrumb, false );
     }
 
     void ContentBrowserPanel::makeTrailForFolder( string_view folderAbs, vector<ContentBrowserCrumb>& outListCrumb ) const
@@ -1427,28 +1377,7 @@ namespace sw::editor
     {
         const string normalizedPath = FileUtil::normalizeSeparators( absolutePath );
         if ( bRecordHistory )
-        {
-            const bool bSameAsCurrent = ( _historyIndex >= 0 &&
-                                          _historyIndex < static_cast<int32>( _listHistory.size() ) &&
-                                          FileUtil::pathsEqualNormalized( _listHistory[static_cast<size_t>( _historyIndex )]._folderPathAbs, normalizedPath ) );
-            if ( bSameAsCurrent == false )
-            {
-                if ( _historyIndex >= 0 && _historyIndex + 1 < static_cast<int32>( _listHistory.size() ) )
-                    _listHistory.erase( _listHistory.begin() + ( _historyIndex + 1 ), _listHistory.end() );
-                HistoryEntry newEntry;
-                newEntry._folderPathAbs = normalizedPath;
-                newEntry._listCrumb     = listCrumb;
-                _listHistory.push_back( std::move( newEntry ) );
-
-                // 가장 오래된 것부터 버린다. 상한이 없으면 세션이 길수록 계속 쌓인다.
-                if ( _listHistory.size() > kMaxHistoryCount )
-                {
-                    const size_t dropCount = _listHistory.size() - kMaxHistoryCount;
-                    _listHistory.erase( _listHistory.begin(), _listHistory.begin() + static_cast<std::ptrdiff_t>( dropCount ) );
-                }
-                _historyIndex = static_cast<int32>( _listHistory.size() ) - 1;
-            }
-        }
+            _history.record( normalizedPath, listCrumb );
 
         // 탐색과 I/O 는 실제 파일 시스템의 대소문자를 쓰고, 저장 경로는 ResourcePaths::makeSavePath 가 상대 경로 조각을 소문자로 바꾼다.
         _selectedFolderAbs = normalizedPath;
@@ -1491,33 +1420,14 @@ namespace sw::editor
             return;
         }
 
-        FileDialogParams params{};
-        params._type                = FileDialogParams::Type::Open;
-        params._title               = "Import to Content Browser";
-        params._description         = "Assets";
-        params._bEnableMultiselect  = true;
-        params._initialDirectory    = _selectedFolderAbs;
-        params._listFilterExtension = {};
-        EditorAssetTypeRegistry::appendImportExtensions( params._listFilterExtension );
-
-        FileUtil::openFileDialog( params, SW_DELEGATE_METHOD( FileDialogDelegate, &ContentBrowserPanel::onImportDialogResult, this ) );
-    }
-
-    void ContentBrowserPanel::onImportDialogResult( const vector<string>& listPath )
-    {
-        std::scoped_lock<mutex> lock{ _pendingImportMutex };
-        _listPendingImportPath.insert( _listPendingImportPath.end(), listPath.begin(), listPath.end() );
+        _importQueue.openDialog( _selectedFolderAbs );
     }
 
     void ContentBrowserPanel::processPendingImports()
     {
         vector<string> listPath;
-        {
-            std::scoped_lock<mutex> lock{ _pendingImportMutex };
-            if ( _listPendingImportPath.empty() )
-                return;
-            listPath.swap( _listPendingImportPath );
-        }
+        if ( _importQueue.takePending( listPath ) == false )
+            return;
 
         if ( _selectedFolderAbs.empty() )
         {

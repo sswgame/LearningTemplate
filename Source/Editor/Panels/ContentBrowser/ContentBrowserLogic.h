@@ -1,6 +1,6 @@
 /**
  * @file ContentBrowserLogic.h
- * @brief 콘텐츠 브라우저 패널(`ContentBrowserPanel`)의 판단 로직입니다. 브레드크럼 조각과 폴더 트리 캐시를 담당하며, ImGui 에 의존하지 않으므로 EditorTest 가 테스트합니다.
+ * @brief 콘텐츠 브라우저 패널(`ContentBrowserPanel`)의 판단 로직입니다. 브레드크럼 조각, 폴더 트리 캐시, 탐색 이력을 담당하며, ImGui 에 의존하지 않으므로 EditorTest 가 테스트합니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -76,5 +76,60 @@ namespace sw::editor
     private:
         unordered_map<string, unique_ptr<vector<string>>> _mapChildFolder; ///< 정규화한 폴더 경로에서 하위 폴더로의 대응이다. 값을 힙에 두므로 테이블이 커져도 참조가 유효하다
         ContentBrowserFolderScanFunc                      _pfnScan;
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /** @brief 폴더 이동 이력의 항목 하나입니다. 돌아갈 때 브레드크럼도 그때 모양 그대로 되살립니다. */
+    struct ContentBrowserHistoryEntry
+    {
+        string                      _folderPathAbs;
+        vector<ContentBrowserCrumb> _listCrumb;
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
+     * @class ContentBrowserHistory
+     * @brief 콘텐츠 브라우저의 뒤로 가기 · 앞으로 가기 이력입니다. 웹 브라우저와 같은 규칙입니다.
+     * @details 이력 중간에서 새 폴더로 가면 앞쪽 이력을 버린다. 지금 폴더와 같은 폴더는 다시 적지 않는다.
+     *          상한(`kMaxEntryCount`)을 넘으면 가장 오래된 항목부터 버린다. 상한이 없으면 폴더를 옮길 때마다 문자열이 쌓여
+     *          에디터를 오래 켜 둘수록 목록이 계속 는다.
+     */
+    class ContentBrowserHistory
+    {
+    public:
+        /** @brief 기억하는 최대 폴더 수입니다. */
+        static constexpr size_t kMaxEntryCount = 64;
+
+        /** @brief 빈 이력을 만듭니다. */
+        ContentBrowserHistory();
+
+        /**
+         * @brief 새로 연 폴더를 적습니다. 지금 위치 뒤의 앞으로 가기 이력은 버립니다.
+         * @param folderAbs 구분자를 `/` 로 맞춘 절대 경로입니다. 지금 폴더와 같으면(대소문자 · 구분자 무시) 적지 않습니다.
+         */
+        void record( string_view folderAbs, const vector<ContentBrowserCrumb>& listCrumb );
+        /** @brief 이전 폴더로 돌아갈 수 있으면 true 입니다. */
+        bool canNavigateBack() const { return _currentIndex > 0; }
+        /** @brief 다음 폴더로 나아갈 수 있으면 true 입니다. */
+        bool canNavigateForward() const { return _currentIndex >= 0 && _currentIndex + 1 < static_cast<int32>( _listEntry.size() ); }
+        /**
+         * @brief 이전 항목으로 옮기고 그 항목을 반환합니다. 돌아갈 곳이 없으면 nullptr 이고 위치는 그대로입니다.
+         * @warning 반환한 포인터는 다음 `record` 전까지만 유효합니다.
+         */
+        const ContentBrowserHistoryEntry* stepBack();
+        /** @brief 다음 항목으로 옮기고 그 항목을 반환합니다. 나아갈 곳이 없으면 nullptr 입니다. 유효 기간은 `stepBack` 과 같습니다. */
+        const ContentBrowserHistoryEntry* stepForward();
+        /** @brief 적어 둔 항목 수를 반환합니다. */
+        uint32 getEntryCount() const { return static_cast<uint32>( _listEntry.size() ); }
+        /** @brief 지금 위치를 반환합니다. 비어 있으면 -1 입니다. */
+        int32 getCurrentIndex() const { return _currentIndex; }
+
+    private:
+        vector<ContentBrowserHistoryEntry> _listEntry;
+        int32                              _currentIndex;
     };
 } // namespace sw::editor

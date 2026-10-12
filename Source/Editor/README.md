@@ -408,6 +408,8 @@ VRM 은 같은 길로 임포트하고, MToon 머티리얼이 있으면 머티리
 - **콘텐츠 브라우저의 게임 루트는 활성 팩 하나가 기본입니다.** All packs 를 켜면 팩마다 루트가 붙습니다.
 - **참조 찾기는 `EditorReferenceIndex` 입니다.** 텍스트 에셋의 글 가운데 실제로 있는 파일의 리소스 id 만 셉니다. 자동화 시나리오 파일은 참조자로 세지 않습니다. 세면 이름 바꾸기가 돌고 있는 시나리오 파일까지 고쳐 씁니다.
 - **에셋 이름 바꾸기와 옮기기는 참조하는 글을 그 자리에서 고칩니다**(`EditorAssetFileCommands`). 리다이렉터를 남기지 않습니다. 지우기는 OS 휴지통입니다.
+- **콘텐츠 브라우저 패널은 그리기와 조정만 합니다.** 파일 작업(`ContentBrowserFileActions`), 참조 찾기(`ContentBrowserReferenceSearch`), 임포트 대기열(`ContentBrowserImportQueue`),
+  탐색 이력(`ContentBrowserHistory`)은 패널이 값으로 가진 클래스이고 ImGui 를 모릅니다. 작업이 성공하면 그 결과로 선택하고 다시 읽는 일만 패널이 합니다. 이력 · 이름 바꾸기 대상 · 대기열은 EditorTest 가 화면 없이 테스트합니다.
 - **콘텐츠 브라우저는 `AssetHotReload::getContentChangeSerial` 이 바뀌면 다시 읽습니다.** 에디터 안의 삭제처럼 결과를 바로 아는 경로는 그 자리에서 다시 읽습니다. 감시는 한두 프레임 늦습니다.
 - **에셋 핫 리로드에 종류별 코드를 넣지 않습니다.** 새 종류는 엔진에 `IAssetCache` 를 등록하고 `EditorAssetTypeRegistry` 줄의 `_pCacheKindName` 을 채웁니다. 컴포넌트는 `onPropertyChanged` 로 알림을 받으며, 값이 같아도 에셋에서 계산한 상태를 다시 맞춰야 합니다.
 - **에셋 종류별 if 체인을 다시 만들지 않습니다.** 도구 문서 IO 는 `loadToolDocument` 와 `saveToolDocument<TAsset>` 하나입니다. 복합 접미사 `.prefab.xml` 은 접미사 비교로 봅니다. `hasExtension` 은 마지막 점 뒤만 봅니다.
