@@ -27,6 +27,7 @@ Engine은 같은 OBJECT를 링크해 Dev 구성에서 `Engine.dll` 로 Core의 �
 | `Console/` | 개발 명령 레지스트리(`SW_DEV_COMMAND`)와 디버그 HUD 섹션 레지스트리 — Shipping 에서 빠진다(`SW_DEV_COMMANDS_ENABLED`) |
 | `Task/` | 워커 풀과 태스크 그래프([Task](Task/README.md)) |
 | `Concurrency/` | 원시 동기화(`atomic` · `mutex` · `SpinLock` · `Futex`)와 경합 검출 훅 |
+| `Spatial/` | 공간 인덱스(`SpatialHashGrid2D` · `SpatialQuadTree` · `SpatialOctree` · `BVHTree3D`, [Spatial](Spatial/README.md)) |
 | `Diagnostics/` | 호출 스택, 크래시 보고, `MemoryProfiler`, 교착 검출기, 경합 보고기 |
 | `File/` | 파일 유틸, 비동기 파일 IO, 파일 감시 |
 | `Time/` | 단조 시계와 벽시계 |
@@ -36,7 +37,7 @@ Engine은 같은 OBJECT를 링크해 Dev 구성에서 `Engine.dll` 로 Core의 �
 | `Predefined/` | Engine과 ReflectionParser가 함께 읽는 X-macro 목록 |
 
 폴더는 층을 이룹니다. 아래 층은 위 층을 include 하지 않습니다(`.cpp` 포함, `CheckCoreLayers.py` 가 막는다).
-`Common` · `Predefined` → `Concurrency` · `Math` → `Memory` → `Container` → `Delegate` · `UUID` → `Log` → `CommandLine` · `Compression` · `Process` · `String` · `Time`
+`Common` · `Predefined` → `Concurrency` · `Math` → `Memory` → `Container` → `Delegate` · `UUID` → `Log` → `CommandLine` · `Compression` · `Process` · `String` · `Time` · `Spatial`
 → `Console` · `GlobalVariable` · `Task` → `File` · `Network` → `Module` → `Diagnostics` · `Event` → `LogSink` 순입니다. 표를 다시 계산하는 도구는 `Scripts/lint/report/RunCoreLayerGraph.py` 입니다.
 
 이 문서에서 기억할 개념은 네 가지입니다.
@@ -377,6 +378,7 @@ Debug 기동은 CRT 누수 보고도 stderr로 냅니다(`MemoryTagTest.Diagnost
 
 - [Task](Task/README.md) — 워커 풀과 태스크 그래프
 - [Network](Network/README.md) — 네트워크 공통 계층
+- [Spatial](Spatial/README.md) — 공간 인덱스
 - [Engine](../Engine/README.md) — Core 위의 엔진 본체와 기동 순서
 - [07 설정](../../docs/07_Configuration.md) — 실행 인자와 전역 변수 참조 문서
 

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Spatial/BVHTree3D.h"
+#include "Core/Spatial/BVHTree3D.h"
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Math/Frustum.h"

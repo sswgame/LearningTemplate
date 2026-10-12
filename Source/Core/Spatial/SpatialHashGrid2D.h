@@ -4,12 +4,16 @@
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
-
-#include "Engine/Common/EngineDefines.h"
-#include "Engine/Spatial/SpatialTree.h"
+#include "Core/Spatial/SpatialTree.h"
 
 namespace sw
 {
+    namespace constant
+    {
+        /** @brief 기본 공간 분할 셀 크기입니다. */
+        inline constexpr float32 kDefaultSpatialCellSize = 64.0f;
+    } // namespace constant
+
     /**
      * @brief 많은 2D/2.5D 객체를 위한 O(1) 공간 분할 해시 그리드입니다.
      */

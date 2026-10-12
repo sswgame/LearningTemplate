@@ -9,7 +9,7 @@
 #include "Core/Math/AABB.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/EngineMinimal.h"
+#include <utility>
 
 namespace sw
 {

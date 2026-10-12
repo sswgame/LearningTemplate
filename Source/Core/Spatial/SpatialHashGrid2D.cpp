@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Spatial/SpatialHashGrid2D.h"
+#include "Core/Spatial/SpatialHashGrid2D.h"
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/VectorUtil.h"

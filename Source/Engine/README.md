@@ -19,7 +19,7 @@
 | 티어 | 폴더 |
 |---|---|
 | 0 | `Common`, `Compression`, `Observability` |
-| 1 | `Reflection`, `Console`, `Spatial` |
+| 1 | `Reflection`, `Console` |
 | 2 | `Utility`, `Serialization` |
 | 3 | `Profiling`, `TileMap`, `Config`, `Physics` |
 | 4 | `Resource`, `Navigation` |
@@ -45,7 +45,7 @@
   네트워크 보안(OpenSSL)은 온라인을 쓰는 게임만 필요하므로 Engine 이 아니라 `GameFramework/Base/Online/Security` 에 있습니다 — Engine.dll 은 libssl · libcrypto 를 모릅니다.
   `Observability` 는 Core만 보는 서버 운영 관측입니다. 엔진의 HTTP(운영 엔드포인트 `OpsHTTPEndpoint`, 텔레메트리 · 크래시 보고가 쓰는 `IHTTPClient`)도 여기 한 곳에 있습니다.
 - **설정과 물리.** 물리의 설정 테이블, 물리 에셋, 셰이프 서술자가 리플렉션 데이터라서 물리가 설정과 같은 자리에 있습니다.
-- **공간.** 공간 분할(`Spatial`)은 Core 수학의 `AABB`(`Core/Math/AABB.h`)만 쓰므로 토대 바로 위에 있습니다. 물리 · 렌더 · 내비가 그 위에서 같은 트리를 씁니다.
+- **공간.** 공간 분할은 Core 수학의 `AABB` 만 쓰므로 Core 에 있습니다([Core/Spatial](../Core/Spatial/README.md)). 물리 · 렌더 · 내비가 같은 트리를 씁니다.
 - **에셋과 내비.** `Resource` 는 에셋 데이터베이스, 팩, 캐시 레지스트리(`IAssetCache`)입니다.
   내비메시(`Navigation`)는 물리의 셰이프 서술자를 읽어 베이크하고, 씬 쪽 내비게이션 컴포넌트가 그것을 씁니다.
 - **기능 데이터.** `Animation` 과 `Localization` 은 자기 에셋 캐시(`AnimationAssetCache`, `SpriteClipCache`, `LocalizationReloadCache`)가 `IAssetCache` 를 구현하므로 `Resource` 위에 있습니다.
@@ -81,7 +81,7 @@ py -3 Scripts/lint/report/RunEngineLayerGraph.py
 
 ```text
    5  Animation            -> Common, Reflection, Resource, Serialization
-   9  Character            -> Animation, Audio, Common, Graphics, Object, Physics, Reflection, Resource, Serialization, Spatial
+   9  Character            -> Animation, Audio, Common, Graphics, Object, Physics, Reflection, Resource, Serialization
 ```
 
 계산한 티어가 게이트의 테이블과 다르면 그 줄 끝에 `<- 게이트 표는 N` 이 붙습니다. 같은 티어끼리의 include는 허용되므로 계산 값이 테이블보다 높게 나올 수 있습니다.
@@ -384,7 +384,6 @@ Debug STL 은 문자열 객체마다 16 B 컨테이너 프록시를 잡습니다
 | [Character](Character/README.md) | 캐릭터 형상, 소켓, 피격 |
 | [Physics](Physics/README.md) | 물리 |
 | [Navigation](Navigation/README.md) | 내비메시와 군중 |
-| [Spatial](Spatial/README.md) | 공간 분할 |
 | [Environment](Environment/README.md) | 지형, 식생, 물 |
 | [Destruction](Destruction/README.md) | 파괴 가능 메시 |
 | [Audio](Audio/README.md) | 오디오 |

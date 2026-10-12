@@ -27,8 +27,6 @@ Observability = 0
 Reflection = 1
 # 개발 명령 레지스트리(`SW_DEV_COMMAND`)와 콘솔 한 줄 해석기 — 언리얼 `IConsoleManager` 처럼 어디서나 명령을 등록하므로 바닥 가까이 둔다.
 Console = 1
-# 공간 분할 — Core 수학의 AABB 만 쓴다.
-Spatial = 1
 # 토대 위의 잎 헬퍼(편집 명령 스택 · 디버그 값 · 게임 시간 배율 · 자동 플레이 계약 · 키-값 파일).
 Utility = 2
 # 직렬화 — 리플렉션 위에 올라간다.

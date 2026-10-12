@@ -3,11 +3,10 @@
 #include "Core/Container/SlotHandle.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/MatrixMath.h"
-
-#include "Engine/Spatial/BVHTree3D.h"
-#include "Engine/Spatial/SpatialHashGrid2D.h"
-#include "Engine/Spatial/SpatialOctree.h"
-#include "Engine/Spatial/SpatialQuadTree.h"
+#include "Core/Spatial/BVHTree3D.h"
+#include "Core/Spatial/SpatialHashGrid2D.h"
+#include "Core/Spatial/SpatialOctree.h"
+#include "Core/Spatial/SpatialQuadTree.h"
 
 #include "TestFramework/TestFramework.h"
 

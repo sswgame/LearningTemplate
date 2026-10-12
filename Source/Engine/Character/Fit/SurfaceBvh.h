@@ -9,9 +9,9 @@
 #include "Core/Container/span.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Spatial/BVHTree3D.h"
 
 #include "Engine/Character/Fit/CharacterGeometry.h"
-#include "Engine/Spatial/BVHTree3D.h"
 
 namespace sw
 {
