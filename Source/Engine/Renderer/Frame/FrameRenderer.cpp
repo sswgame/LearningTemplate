@@ -12,6 +12,7 @@
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -24,31 +25,6 @@
 namespace sw
 {
     SW_LOG_CALLER( "FrameRenderer" );
-
-    namespace
-    {
-#if SW_PROFILER_BACKEND_COMPILED
-        struct FrameRendererInternal
-        {
-            /** @brief RHI 백엔드를 외부 프로파일러의 GPU API 종류로 바꿉니다. 뷰어가 큐 이름 옆에 보여 줍니다. */
-            static ProfilerGraphicsAPI toProfilerGraphicsAPI( RHIBackend backend )
-            {
-                switch ( backend )
-                {
-                    case RHIBackend::DirectX11:
-                        return ProfilerGraphicsAPI::Direct3D11;
-                    case RHIBackend::DirectX12:
-                        return ProfilerGraphicsAPI::Direct3D12;
-                    case RHIBackend::Vulkan:
-                        return ProfilerGraphicsAPI::Vulkan;
-                    case RHIBackend::OpenGL:
-                        return ProfilerGraphicsAPI::OpenGl;
-                }
-                return ProfilerGraphicsAPI::Direct3D12;
-            }
-        };
-#endif
-    } // namespace
 
     /**
      * @brief `-gv_deferred=1` 이면 기본 파이프라인을 디퍼드로 고릅니다(기본은 포워드).
@@ -339,8 +315,10 @@ namespace sw
                 return;
             int64      gpuNow{ 0 };
             const bool bClockRead = pDevice->readGPUClockNanos( gpuNow );
-            const bool bOpened    = bClockRead && _gpuTimeline.openContext( *pBackend, FrameRendererInternal::toProfilerGraphicsAPI( pDevice->getBackendType() ),
-                                                                            pDevice->getBackendName(), pDevice, gpuNow );
+            // 뷰어가 큐 이름 옆에 GPU API 종류를 보여 준다.
+            const RHIBackendInfo* pInfo   = RHIBackendInfoTable::find( pDevice->getBackendType() );
+            const bool            bOpened = bClockRead && pInfo != nullptr &&
+                                 _gpuTimeline.openContext( *pBackend, pInfo->_profilerAPI, pDevice->getBackendName(), pDevice, gpuNow );
             if ( bOpened == false )
             {
                 _pGPUTimelineFailedDevice = pDevice;

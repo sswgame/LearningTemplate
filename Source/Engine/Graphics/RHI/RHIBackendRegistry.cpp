@@ -9,6 +9,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/Modules/RHIModuleAbi.h"
 #include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Graphics/RHI/RHIBackendInfo.h"
 
 #if defined( SW_SHIPPING )
     #if defined( SW_RHI_TARGET_DX12 )
@@ -72,27 +73,11 @@ namespace sw
                 if ( pEntry != nullptr && pEntry->_factory.isBound() )
                     return true;
 
-                // 열거자는 플랫폼과 상관없이 모두 적는다 — `#if` 로 case 를 빼면 그 플랫폼에서만 -Wswitch 가 진다.
-                switch ( backend )
-                {
-                    case RHIBackend::DirectX11:
-    #if defined( SW_PLATFORM_WINDOWS )
-                        return tryLoadBackendModule( RHIBackend::DirectX11, "RHI_DX11" );
-    #else
-                        return false; // D3D 는 Windows 에만 있다
-    #endif
-                    case RHIBackend::DirectX12:
-    #if defined( SW_PLATFORM_WINDOWS )
-                        return tryLoadBackendModule( RHIBackend::DirectX12, "RHI_DX12" );
-    #else
-                        return false;
-    #endif
-                    case RHIBackend::OpenGL:
-                        return tryLoadBackendModule( RHIBackend::OpenGL, "RHI_GL" );
-                    case RHIBackend::Vulkan:
-                        return tryLoadBackendModule( RHIBackend::Vulkan, "RHI_Vulkan" );
-                }
-                return false;
+                // 이 플랫폼에 없는 백엔드(Linux 의 D3D)는 모듈을 찾지 않는다.
+                const RHIBackendInfo* pInfo = RHIBackendInfoTable::find( backend );
+                if ( pInfo == nullptr || RHIAvailability::isAvailable( backend ) == false )
+                    return false;
+                return tryLoadBackendModule( backend, pInfo->_pModuleName );
             }
 #endif
         };

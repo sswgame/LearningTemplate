@@ -458,6 +458,21 @@ SW_TEST_CASE( RenderPassTest, TypeInfoTableCoversEveryEnumValue )
             const bool bHasInputContract = info.hasFlag( sw::RenderPassTraitFlag::kHasInputContract );
             SW_EXPECT_TRUE_MSG( bDrawsSceneMeshes != bHasInputContract, ( "입력을 정하는 쪽이 하나가 아닌 패스 타입 " + label ).c_str() );
         }
+        // 후처리를 끈 뷰에서 건너뛰는 효과는 일반 풀스크린 실행만 다룬다.
+        if ( info.hasFlag( sw::RenderPassTraitFlag::kSkipsWithoutPostProcess ) )
+            SW_EXPECT_TRUE_MSG( info.hasFlag( sw::RenderPassTraitFlag::kGenericFullscreen ), ( "건너뛰는 효과가 일반 풀스크린이 아닌 패스 타입 " + label ).c_str() );
+    }
+
+    // 효과(SSAO, 블룸, 외곽선)만 건너뛰고, 이미지를 만드는 단계(조명, 톤맵)는 후처리를 끈 뷰에서도 돈다.
+    const sw::RenderPassType arrSkipped[]    = { sw::RenderPassType::SSAO, sw::RenderPassType::Bloom, sw::RenderPassType::Outline };
+    const sw::RenderPassType arrNotSkipped[] = { sw::RenderPassType::Lighting, sw::RenderPassType::Tonemap };
+    for ( const sw::RenderPassType type : arrSkipped )
+    {
+        SW_EXPECT_TRUE( sw::getRenderPassTypeInfo( type ).hasFlag( sw::RenderPassTraitFlag::kSkipsWithoutPostProcess ) );
+    }
+    for ( const sw::RenderPassType type : arrNotSkipped )
+    {
+        SW_EXPECT_FALSE( sw::getRenderPassTypeInfo( type ).hasFlag( sw::RenderPassTraitFlag::kSkipsWithoutPostProcess ) );
     }
 }
 

@@ -101,21 +101,21 @@ namespace sw
                         info._pDefaultShader = &EngineDefaultAssets::_shaderSsao;
                         info._pDefaultClear  = &kNoOcclusionClear;
                         info._inputContract  = makeContract( { Role::GBufferNormal, Role::SceneDepth }, {} );
-                        info._flags          = Flag::kGenericFullscreen | Flag::kHasInputContract;
+                        info._flags          = Flag::kGenericFullscreen | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess;
                         break;
                     }
                     case RenderPassType::Bloom:
                     {
                         info._pDefaultShader = &EngineDefaultAssets::_shaderPostBloom;
                         info._inputContract  = makeContract( { Role::SourceColor }, { Role::AmbientOcclusion } );
-                        info._flags          = Flag::kGenericFullscreen | Flag::kHasInputContract;
+                        info._flags          = Flag::kGenericFullscreen | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess;
                         break;
                     }
                     case RenderPassType::Outline:
                     {
                         info._pDefaultShader = &EngineDefaultAssets::_shaderPostOutline;
                         info._inputContract  = makeContract( { Role::SourceColor, Role::SceneDepth }, {} );
-                        info._flags          = Flag::kGenericFullscreen | Flag::kHasInputContract;
+                        info._flags          = Flag::kGenericFullscreen | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess;
                         break;
                     }
                     case RenderPassType::TAA:
@@ -242,6 +242,9 @@ namespace sw
                         return false;
                     // 일반 풀스크린 실행은 선언한 입력을 계약대로 건다.
                     if ( row.hasFlag( Flag::kGenericFullscreen ) && row.hasFlag( Flag::kHasInputContract ) == false )
+                        return false;
+                    // 후처리를 끈 뷰에서 효과를 건너뛰는 일은 일반 풀스크린 실행만 한다.
+                    if ( row.hasFlag( Flag::kSkipsWithoutPostProcess ) && row.hasFlag( Flag::kGenericFullscreen ) == false )
                         return false;
                     // 컴퓨트 패스는 파이프라인 XML 에 나오지 않고 그래픽스 성질을 갖지 않는다.
                     if ( row.hasFlag( Flag::kCompute ) && ( isPipelinePassType( row._type ) || row.hasFlag( Flag::kDrawsSceneMeshes | Flag::kGenericFullscreen ) ) )

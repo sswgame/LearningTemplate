@@ -280,7 +280,10 @@ SW_TEST_CASE( PhysicsScene2DTest, HingeLimitHolds )
     SW_EXPECT_NEAR_EQUAL( 0.3f, sw::MathUtil::abs( arrAngle[0] ), 0.03f );
     SW_EXPECT_TRUE_MSG( sw::MathUtil::abs( arrAngle[1] ) > 1.0f, "without limits the bar swings far below" );
 
-    // 2D 에는 Cone 이 없다 — 만들면 오류이고 무효 핸들이다.
+    // 2D 에는 Cone 이 없다 — 질의가 미리 알려 주고, 만들면 오류이고 무효 핸들이다. 3D 는 모든 종류를 만든다.
+    static_assert( sw::IPhysicsScene2D::supportsJoint( sw::PhysicsJointType::Cone ) == false );
+    static_assert( sw::IPhysicsScene2D::supportsJoint( sw::PhysicsJointType::Hinge ) );
+    static_assert( sw::IPhysicsScene3D::supportsJoint( sw::PhysicsJointType::Cone ) );
     sw::unique_ptr<sw::IPhysicsScene2D> pScene = makeScene();
     const sw::PhysicsBodyHandle         body   = addBody( *pScene, makeCircle( 0.2f ), sw::float2{}, sw::PhysicsBodyType::Dynamic );
     sw::PhysicsJointDesc2D              cone;

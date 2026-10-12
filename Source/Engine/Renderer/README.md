@@ -234,7 +234,7 @@ UI와 화면 글자는 파이프라인의 마지막 `Canvas` 패스가 그립니
 - 프레임 순서는 프리패스, 렌더 텍스처 뷰, 주 뷰, 화면 사각형 뷰, 호스트 타깃 뷰입니다. 프리패스에서 이번에 그릴 모든 뷰의 컬링을 한 번에 합니다. 화면 사각형 뷰는 주 화면 위에 덮어 그립니다.
 - 패스 상수는 주 뷰의 값에서 출발해 뷰-투영 행렬, 풀 크기, 플래그, 컬링 슬롯만 덮어씁니다. 라이트와 그림자 행렬은 프레임 공통입니다.
 - 그림자 볼륨은 주 카메라에 맞춥니다(`DirectionalLightComponent::computeShadowProjectionForView`). 추가 뷰가 다른 곳을 보면 주 볼륨 밖의 그림자는 그 뷰에서 빠집니다.
-- 그림자를 끈 뷰는 그림자 맵을 지우기만 하고, 후처리를 끈 뷰는 `SW_PASS_FLAG_SKIP_POST` 로 후처리 사슬이 원본을 고릅니다.
+- 그림자를 끈 뷰는 그림자 맵을 지우기만 하고, 후처리를 끈 뷰는 `SW_PASS_FLAG_SKIP_POST` 로 후처리 사슬이 원본을 고릅니다. 어떤 패스가 효과라서 건너뛰는지는 패스 타입 표의 `kSkipsWithoutPostProcess` 가 정합니다(새 효과 패스는 그 비트를 켜면 됩니다).
 - **보기 모드는 뷰마다입니다**(`RenderViewSettings::_viewMode`). 게임 스레드가 패킷을 만들 때 싣습니다 — 씬 뷰(호스트 타깃 뷰든 주 출력이든)는 `FrameRenderer::getSceneViewMode`, 게임 화면은 `getViewMode`(`-gv_viewMode`, 기본 Lit).
   드로우는 그리는 뷰의 모드로 PSO 를 고르고, `ensureMaterialPSOs` 는 이번 프레임 뷰들의 모드를 모두 준비합니다. 표면 값 모드(Normals · Depth · Overdraw)는 후처리 · 톤맵을 건너뜁니다(`usesPostProcess` · `usesTonemap`).
 - **컷 프레임**(`RenderViewSettings::_bCut`, `CameraComponent::markCut`)에서는 TAA가 기록 대신 이번 원본을 바인딩해 지난 화면이 섞이지 않습니다. 모션 벡터와 자동 노출은 아직 없습니다.

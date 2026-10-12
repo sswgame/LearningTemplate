@@ -329,11 +329,10 @@ namespace sw
             // 기본 클리어는 테이블의 값(SSAO 는 흰색이며 가림 없음)이고 없으면 렌더러의 클리어 색이다. 첨부가 클리어 색을 선언했으면 그것이 우선한다.
             const float4 defaultClear = info._pDefaultClear != nullptr ? *info._pDefaultClear : _clearColor;
             const float4 targetClear  = getAttachmentClearColorOrDefault( pTarget->view(), defaultClear );
-            // 후처리를 끈 뷰(CCTV, 표면 값 보기 모드)에서 효과 패스(SSAO, 블룸, 외곽선)는 효과를 적용하지 않는다. 포맷이 같으면 원본을 복사하고,
-            // 다르면 그 패스 셰이더가 SW_PASS_FLAG_SKIP_POST 를 보고 원본을 그대로 낸다(복사는 같은 포맷끼리만 된다). SSAO 는 지우기만 한다(흰색은 가림 없음).
-            // 조명과 톤맵은 효과가 아니라 이미지를 만드는 단계라 그대로 돈다.
-            const bool bSkipEffect = _pActiveView->_settings.usesPostProcess() == false &&
-                                     ( passType == RenderPassType::SSAO || passType == RenderPassType::Bloom || passType == RenderPassType::Outline );
+            // 후처리를 끈 뷰(CCTV, 표면 값 보기 모드)에서 효과 패스(테이블의 kSkipsWithoutPostProcess)는 효과를 적용하지 않는다. 포맷이 같으면 원본을 복사하고,
+            // 다르면 그 패스 셰이더가 SW_PASS_FLAG_SKIP_POST 를 보고 원본을 그대로 낸다(복사는 같은 포맷끼리만 된다). 원본 색을 읽지 않는 효과(SSAO)는
+            // 기본 클리어로 지우기만 한다(SSAO 의 흰색은 가림 없음).
+            const bool bSkipEffect = info.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) && _pActiveView->_settings.usesPostProcess() == false;
             if ( bSkipEffect )
             {
                 RHITextureHandle source{ 0 };
@@ -350,7 +349,7 @@ namespace sw
                     context._pCmd->blitTexture( source, target );
                     (void)markAttachmentCleared( *pTarget );
                 }
-                else if ( passType != RenderPassType::SSAO && source != 0 )
+                else if ( info._inputContract.reads( RenderPassInputRole::SourceColor ) && source != 0 )
                 {
                     executeFullscreenPass( pso, *pTarget, targetClear );
                 }

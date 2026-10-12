@@ -163,6 +163,11 @@ namespace sw
 
     PhysicsJointHandle Box2DPhysicsScene::createJoint( const PhysicsJointDesc2D& desc )
     {
+        if ( supportsJoint( desc._type ) == false )
+        {
+            SW_LOG_ERROR( "createJoint: 2D physics has no Cone joint - use Hinge" );
+            return PhysicsJointHandle{};
+        }
         const BodyRecord* pRecordA = findBody( desc._bodyA );
         const BodyRecord* pRecordB = desc._bodyB.isValid() ? findBody( desc._bodyB ) : nullptr;
         if ( pRecordA == nullptr || ( desc._bodyB.isValid() && pRecordB == nullptr ) )
@@ -208,8 +213,7 @@ namespace sw
             }
             case PhysicsJointType::Cone:
             {
-                SW_LOG_ERROR( "createJoint: 2D physics has no Cone joint - use Hinge" );
-                return PhysicsJointHandle{};
+                return PhysicsJointHandle{}; // 함수 첫머리의 supportsJoint 가 이미 걸렀다
             }
             case PhysicsJointType::Distance:
             {

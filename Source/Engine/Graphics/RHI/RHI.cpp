@@ -8,10 +8,9 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRenderSurface.h"
+#include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
-#include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
-#include "Engine/Reflection/ReflectionCore.h"
 
 #include "sw/config/CookContract.gen.h"
 
@@ -47,9 +46,30 @@ namespace sw
                 }
                 return true;
             }
+
+            /** @brief 쿠킹 표의 줄 하나가 기술자 표(`RHIBackendInfoTable`)의 이름 · 셰이더 타깃과 같은지입니다. */
+            static constexpr bool matchesBackendInfo( RHIBackend backend, const utf8* pName, ShaderTargetFormat shaderTarget )
+            {
+                const RHIBackendInfo* pInfo = RHIBackendInfoTable::find( backend );
+                if ( pInfo == nullptr || pInfo->_shaderTarget != shaderTarget )
+                    return false;
+                for ( size_t index = 0;; ++index )
+                {
+                    if ( pInfo->_pName[index] != pName[index] )
+                        return false;
+                    if ( pName[index] == '\0' )
+                        return true;
+                }
+            }
         };
 
         static_assert( RHIInternal::isTableInEnumOrder(), "Config/Engine/CookContract.json rhi_backends must follow RHIBackend values" );
+        static_assert( std::size( RHIInternal::kArrBackendArgument ) == std::size( RHIBackendInfoTable::kArrInfo ),
+                       "RHIBackendInfoTable needs one row per Config/Engine/CookContract.json rhi_backends row" );
+#define SW_RHI_BACKEND_INFO_CHECK( Backend, ShaderFolder, ShaderTarget, ... ) \
+    static_assert( RHIInternal::matchesBackendInfo( RHIBackend::Backend, #Backend, ShaderTargetFormat::ShaderTarget ), "RHIBackendInfoTable row " #Backend " differs from Config/Engine/CookContract.json" );
+        SW_RHI_BACKEND_TABLE( SW_RHI_BACKEND_INFO_CHECK )
+#undef SW_RHI_BACKEND_INFO_CHECK
     } // namespace
 
     // EngineConfig 로드 실패 시에도 WindowConfig::_defaultRHI(cpp 기본값)와 같은 백엔드로 기동하도록 맞춥니다.
@@ -371,27 +391,8 @@ namespace sw
 
     const utf8* RHI::getBackendTypeName( RHIBackend backend )
     {
-        const EnumInfo* pInfo = engine::getTypeRegistry().findEnum( hashed_string( "RHIBackend" ) );
-
-        if ( pInfo != nullptr )
-        {
-            hashed_string name = pInfo->toString( static_cast<int64>( backend ) );
-            if ( name.empty() == false )
-                return name.c_str();
-        }
-
-        switch ( backend )
-        {
-            case RHIBackend::DirectX11:
-                return "DirectX11";
-            case RHIBackend::DirectX12:
-                return "DirectX12";
-            case RHIBackend::Vulkan:
-                return "Vulkan";
-            case RHIBackend::OpenGL:
-                return "OpenGL";
-        }
-        return "Unknown";
+        const RHIBackendInfo* pInfo = RHIBackendInfoTable::find( backend );
+        return pInfo != nullptr ? pInfo->_pName : "Unknown";
     }
 
     RHIBackend RHI::getDefaultPlatformBackend()
@@ -407,17 +408,7 @@ namespace sw
 
     ShaderTargetFormat RHI::getShaderTargetFormat( RHIBackend backend )
     {
-        switch ( backend )
-        {
-            case RHIBackend::DirectX11:
-                return ShaderTargetFormat::DXBC_D3D11;
-            case RHIBackend::DirectX12:
-                return ShaderTargetFormat::DXIL_D3D12;
-            case RHIBackend::Vulkan:
-                return ShaderTargetFormat::SPIRV_Vulkan;
-            case RHIBackend::OpenGL:
-                return ShaderTargetFormat::SPIRV_OpenGL;
-        }
-        return ShaderTargetFormat::DXIL_D3D12;
+        const RHIBackendInfo* pInfo = RHIBackendInfoTable::find( backend );
+        return pInfo != nullptr ? pInfo->_shaderTarget : ShaderTargetFormat::DXIL_D3D12;
     }
 } // namespace sw
