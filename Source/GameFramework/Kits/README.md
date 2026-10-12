@@ -186,6 +186,26 @@ DB 와 캐시 드라이버, 그리고 그 서드파티 라이브러리는 `["Ser
 - `Server` · `Client` · `Shared` 는 키트 안 폴더 이름으로 쓰지 않습니다. 게이트가 그 이름을 서버 · 클라이언트 키트 경로로 읽습니다.
 - 게임 여럿을 담은 키트는 게임별 폴더로 나눕니다. `CardGame` 은 `Klondike` · `Matgo` · `Poker` · `Uno` · `DeckBattle` 이고, 덱 공통(`CardDeck`)만 루트에 둡니다.
   키트를 게임마다 쪼개지는 않습니다. 키트마다 DLL 이 하나라 쪼개면 DLL 이 늘어납니다.
+- 큰 규칙 클래스는 헤더 하나에 구현 `.cpp` 여럿으로 나눕니다. 파일 이름은 `<클래스><묶음>.cpp` 이고, 한 파일은 600 줄 안쪽입니다.
+  익명 네임스페이스 도우미는 파일마다 `<파일 이름>Internal` 로 따로 둡니다(유니티 빌드에서 이름이 겹치지 않게).
+
+  | 클래스 | 파일 | 묶음 |
+  |--------|------|------|
+  | `RTSWorld` | `RTSWorld.cpp` | 생성 · 플레이어 · 유닛 할당 · 고정 걸음 · 단위 조회 · 알림 |
+  | | `RTSWorldCommand.cpp` | 명령 큐와 `issue*` · 생산 지시 · 집결지 |
+  | | `RTSWorldSimulation.cpp` | 보급 · 버킷 · 이동 · 명령 진행 · 전투 · 시야 · 패배 |
+  | | `RTSWorldEconomy.cpp` | 채취 · 건설 · 생산 · 비용 |
+  | | `RTSWorldQuery.cpp` | 개수 · 배치 · 자원 · 창고 조회와 흐름장 |
+  | | `RTSWorldState.cpp` | 상태 쓰기와 읽기 |
+  | `HorrorMatch` | `HorrorMatch.cpp` | 생성 · 배치 · 시작 · 읽기 조회 · 알림 |
+  | | `HorrorMatchAction.cpp` | 생존자와 살인마 행동 |
+  | | `HorrorMatchStep.cpp` | 걸음(살인마 · 생존자 · 발전기 · 탈출구 · 엔드게임) |
+  | | `HorrorMatchRules.cpp` | 치료 · 희생 · 기절 · 붕괴 · 점수 같은 상태 도우미 |
+  | | `HorrorMatchState.cpp` | 스냅샷과 상태 쓰기 · 읽기 |
+  | `MechArenaWorld` | `MechArenaWorld.cpp` | 생성 · 조종사 · 입력 · 경기 걸음 · 장비 · 조회 도우미 |
+  | | `MechArenaWorldStep.cpp` | 조종사 걸음(이동 · 록온 · 무기 · 근접 · 스킬 · 투사체) |
+  | | `MechArenaWorldCombat.cpp` | 사격 · 발사 · 피격 판정 · 스킬 발동 |
+  | | `MechArenaWorldState.cpp` | 스냅샷과 상태 쓰기 · 읽기 |
 
 ### 키트를 만들 때 지킬 것 — 게임 하나가 아니라 장르의 뼈대
 
