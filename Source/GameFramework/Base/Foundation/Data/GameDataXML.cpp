@@ -3,9 +3,12 @@
 #include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
+#include "Engine/Utility/FloatCurve.h"
 
 namespace sw
 {
@@ -16,6 +19,9 @@ namespace sw
         struct GameDataXMLInternal
         {
             static constexpr const utf8* kNumberSeparators = ", \t;";
+
+            static constexpr const utf8* kArrCurveChild[]        = { "Key" };
+            static constexpr const utf8* kArrCurveKeyAttribute[] = { "time", "value", "interpolation" };
         };
     } // namespace
 } // namespace sw
@@ -143,6 +149,42 @@ namespace sw
         float32 arrValue[3] = { fallback._x, fallback._y, fallback._z };
         (void)parseFloats( text, arrValue, 3 ); // 못 읽은 칸은 대체값이 남는다
         return float3{ arrValue[0], arrValue[1], arrValue[2] };
+    }
+
+    bool GameDataXML::readFloatCurve( const XMLNode& parent, const utf8* pElement, float32 minValue, FloatCurve& outCurve, string_view sourceName )
+    {
+        outCurve._listKey.clear();
+        const XMLNode curveNode = parent.findChild( pElement );
+        if ( curveNode.isValid() == false )
+            return true;
+
+        bool bValid = XMLNameCheck::reportUnknownChildren( curveNode, GameDataXMLInternal::kArrCurveChild, sourceName, LogLevel::Warning );
+        for ( XMLNode keyNode = curveNode.findChild( "Key" ); keyNode; keyNode = keyNode.findNextSibling( "Key" ) )
+        {
+            bValid = XMLNameCheck::reportUnknownAttributes( keyNode, GameDataXMLInternal::kArrCurveKeyAttribute, sourceName, LogLevel::Warning ) && bValid;
+            FloatCurveKey key{};
+            key._time                           = keyNode.getAttributeFloat( "time", 0.0f );
+            key._value                          = MathUtil::max( minValue, keyNode.getAttributeFloat( "value", 1.0f ) );
+            key._interpolation                  = CurveInterpolation::Linear;
+            const string_view interpolationText = keyNode.getAttributeText( "interpolation" );
+            if ( interpolationText.empty() == false )
+            {
+                if ( StringUtil::equals( interpolationText, "linear", true ) )
+                    key._interpolation = CurveInterpolation::Linear;
+                else if ( StringUtil::equals( interpolationText, "constant", true ) )
+                    key._interpolation = CurveInterpolation::Constant;
+                else if ( StringUtil::equals( interpolationText, "cubic", true ) )
+                    key._interpolation = CurveInterpolation::Cubic;
+                else
+                {
+                    SW_LOG_WARNING( "%#: <Key> has unknown interpolation '%#' - linear is used", sourceName, interpolationText );
+                    bValid = false;
+                }
+            }
+            outCurve._listKey.push_back( key );
+        }
+        outCurve.sortAndComputeAutoTangents();
+        return bValid;
     }
 
     bool GameDataXML::parseNumber( string_view token, int32& outValue ) { return StringUtil::parseInt( token, outValue ); }

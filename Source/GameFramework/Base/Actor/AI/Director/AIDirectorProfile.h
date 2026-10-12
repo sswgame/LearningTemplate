@@ -13,8 +13,9 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Utility/FloatCurve.h"
+
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCondition.h"
-#include "GameFramework/Base/Foundation/Data/GameCurve.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -79,7 +80,7 @@ namespace sw
         hashed_string             _id{};
         vector<hashed_string>     _listSpawnTag{}; ///< 이 단계에서 낼 스폰 항목의 태그(`SpawnDirector::setAllowedTags`). 비면 모두
         vector<AIDirectorExitDef> _listExit{};     ///< 적은 순서로 본다 — 먼저 맞는 길로 나간다
-        GameCurve                 _spawnCurve{};   ///< 단계 안 시간 → 스폰 배율(곡선이 없으면 1)
+        FloatCurve                _spawnCurve{};   ///< 단계 안 시간 → 스폰 배율(곡선이 없으면 1)
         float32                   _spawnScale{ 1.0f };
         float32                   _rewardScale{ 1.0f };
     };

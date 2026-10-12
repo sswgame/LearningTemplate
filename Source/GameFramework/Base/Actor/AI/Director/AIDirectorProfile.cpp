@@ -24,7 +24,6 @@ namespace sw
             static constexpr const utf8* kArrIntensityAttribute[] = { "max", "decayPerSecond", "decayDelay" };
             static constexpr const utf8* kArrSignalAttribute[]    = { "id", "kind", "scale", "max", "combat" };
             static constexpr const utf8* kArrPhaseAttribute[]     = { "id", "spawnScale", "rewardScale", "spawnTags" };
-            static constexpr const utf8* kArrCurveAttribute[]     = { "time", "scale" };
             static constexpr const utf8* kArrExitAttribute[]      = { "to", "minTime", "intensityAbove", "intensityBelow", "calmFor" };
             static constexpr const utf8* kArrPoolAttribute[]      = { "id", "kind", "trigger", "phase", "interval", "chance", "cooldown", "perMinute",
                                                                       "maxBudget", "need", "needScale", "picks", "pacing" };
@@ -240,11 +239,7 @@ namespace sw
         phase._spawnScale  = MathUtil::max( 0.0f, node.getAttributeFloat( "spawnScale", phase._spawnScale ) );
         phase._rewardScale = MathUtil::max( 0.0f, node.getAttributeFloat( "rewardScale", phase._rewardScale ) );
         ScheduleCondition::parseNameList( node.getAttributeText( "spawnTags" ), phase._listSpawnTag );
-        for ( XMLNode child = node.findChild( "Curve" ); child; child = child.findNextSibling( "Curve" ) )
-        {
-            bValid = Internal::validateAttributes( child, Internal::kArrCurveAttribute, false, sourceName ) && bValid;
-        }
-        (void)phase._spawnCurve.readPoints( node, "Curve", "scale", 0.0f ); // 점 수만 돌려준다 — 점이 없으면 곡선이 대체값을 쓴다
+        bValid = GameDataXML::readFloatCurve( node, "Curve", 0.0f, phase._spawnCurve, sourceName ) && bValid; // 키가 없으면 곡선이 대체값을 쓴다
         for ( XMLNode child = node.findChild( "Exit" ); child; child = child.findNextSibling( "Exit" ) )
         {
             bValid = Internal::validateAttributes( child, Internal::kArrExitAttribute, false, sourceName ) && bValid;

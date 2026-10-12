@@ -31,7 +31,7 @@ namespace
     <Signal id="lowAmmo" kind="level" scale="0.5"/>
   </Intensity>
   <Phase id="BuildUp" spawnScale="1" spawnTags="Common">
-    <Curve time="0" scale="1"/><Curve time="10" scale="2"/>
+    <Curve><Key time="0" value="1"/><Key time="10" value="2"/></Curve>
     <Exit to="Peak" intensityAbove="0.8" minTime="2"/>
     <Exit to="Peak" minTime="60"/>
   </Phase>
