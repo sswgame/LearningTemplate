@@ -10,6 +10,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Asset/ModelImportUtil.h"
+#include "Editor/Common/Asset/ModelImporter.h"
 #include "Editor/Common/Asset/TextureImporter.h"
 #include "Editor/Common/Asset/VrmMaterialImporter.h"
 
