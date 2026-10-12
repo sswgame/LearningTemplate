@@ -419,14 +419,9 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr || _bFlushScheduled == SW_TRUE )
             return;
-        _bFlushScheduled           = SW_TRUE;
-        const ComponentHandle self = getHandle();
-        pManager->executeOrDeferPostTick( [pManager, self]()
-        {
-            VoxelPlayerComponent* pPlayer = static_cast<VoxelPlayerComponent*>( pManager->resolveComponent( self ) );
-            if ( pPlayer != nullptr )
-                pPlayer->flushPending();
-        } );
+        _bFlushScheduled = SW_TRUE;
+        pManager->executeOrDeferPostTickOnComponent<VoxelPlayerComponent>( getHandle(), []( VoxelPlayerComponent& player )
+        { player.flushPending(); } );
     }
 
     void VoxelPlayerComponent::flushPending()

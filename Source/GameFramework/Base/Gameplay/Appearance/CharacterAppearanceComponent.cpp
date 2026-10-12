@@ -166,13 +166,9 @@ namespace sw
         if ( pManager == nullptr )
             return;
         // 메시 보임은 렌더 상태이므로, 틱 안이면 틱 뒤에 적용한다.
-        const ComponentHandle self = getHandle();
-        pManager->executeOrDeferPostTick( [pManager, self]()
-        {
-            CharacterAppearanceComponent* pAppearance = static_cast<CharacterAppearanceComponent*>( pManager->resolveComponent( self ) );
-            if ( pAppearance != nullptr )
-                pAppearance->applyVisibility( *pManager );
-        } );
+        pManager->executeOrDeferPostTickOnComponent<CharacterAppearanceComponent>( getHandle(),
+                                                                                   []( CharacterAppearanceComponent& appearance, GameObjectManager& manager )
+        { appearance.applyVisibility( manager ); } );
     }
 
     void CharacterAppearanceComponent::despawnParts()
@@ -232,15 +228,11 @@ namespace sw
         GameObjectManager* pManager = findManager();
         if ( pManager == nullptr || _bAssembleScheduled == SW_TRUE )
             return;
-        _bAssembleScheduled        = SW_TRUE;
-        const ComponentHandle self = getHandle();
-        pManager->executeOrDeferPostTick( [pManager, self]()
+        _bAssembleScheduled = SW_TRUE;
+        pManager->executeOrDeferPostTickOnComponent<CharacterAppearanceComponent>( getHandle(), []( CharacterAppearanceComponent& appearance )
         {
-            CharacterAppearanceComponent* pAppearance = static_cast<CharacterAppearanceComponent*>( pManager->resolveComponent( self ) );
-            if ( pAppearance == nullptr )
-                return;
-            pAppearance->_bAssembleScheduled = SW_FALSE;
-            pAppearance->assemble();
+            appearance._bAssembleScheduled = SW_FALSE;
+            appearance.assemble();
         } );
     }
 

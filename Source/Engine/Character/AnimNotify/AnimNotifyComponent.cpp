@@ -150,13 +150,8 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr || bScheduled )
             return;
-        const ComponentHandle self = getHandle();
-        pManager->executeOrDeferPostTick( [pManager, self]()
-        {
-            AnimNotifyComponent* pComponent = castTo<AnimNotifyComponent>( pManager->resolveComponent( self ) );
-            if ( pComponent != nullptr )
-                pComponent->processPendingFrame();
-        } );
+        pManager->executeOrDeferPostTickOnComponent<AnimNotifyComponent>( getHandle(), []( AnimNotifyComponent& component )
+        { component.processPendingFrame(); } );
     }
 
     void AnimNotifyComponent::processPendingFrame()

@@ -341,6 +341,20 @@ addSubTickPrerequisite( kRideSubTick, pVehicleComponent->getTickHandle() );
 
 **미룬 일을 큐마다 따로 비우게 나누지 마세요.** 적용 순서는 `StructuralChangeBuffer::drain` 한 곳이 정합니다. 큐가 제각각 비우면 구조 변경과 위치 쓰기의 순서가 프레임마다 달라집니다.
 
+**자기 컴포넌트를 틱 뒤에 부를 때는 `this` 를 붙잡지 말고 `executeOrDeferPostTickOnComponent` 를 쓰세요.** 미룬 사이에 컴포넌트가 지워질 수 있습니다.
+도우미는 핸들만 들고 있다가 실행할 때 `resolveComponent` 로 다시 찾고, 사라졌으면 부르지 않습니다. 틱 중이면 미루고 아니면 바로 실행하는 것은 `executeOrDeferPostTick` 과 같습니다.
+
+```cpp
+pManager->executeOrDeferPostTickOnComponent<GameDirectorComponent>( getHandle(), []( GameDirectorComponent& director ) { director.flushPending(); } );
+// 관리자가 필요하면 두 번째 인자로 받는다.
+pManager->executeOrDeferPostTickOnComponent<CharacterAppearanceComponent>( getHandle(),
+    []( CharacterAppearanceComponent& appearance, GameObjectManager& manager ) { appearance.applyVisibility( manager ); } );
+```
+
+계약은 셋입니다. 람다는 아무것도 붙잡지 않습니다(`static_assert` 가 막는다). 관리자 포인터와 핸들만 담겨 델리게이트 인라인 버퍼 안에 들고, 틱 경로에 할당이 늘지 않습니다.
+값을 더 넘겨야 하면 컴포넌트 멤버에 두거나 `executeOrDeferPostTick` 을 직접 씁니다. 수명은 핸들이 지키므로 소멸자에서 부르면 안 되는 것은 위 항목과 같습니다.
+템플릿이라 람다와 그 호출 코드는 부른 쪽 모듈(게임 DLL)에 생깁니다. 손으로 쓴 `[pManager, self]` 람다와 같습니다. 핫 리로드로 그 모듈을 내리기 전에 틱 뒤 큐가 비어 있어야 합니다(큐는 프레임마다 `drain` 에서 비워진다).
+
 **`forEachGameObject` 콜백 안에서 오브젝트를 만들거나 지우거나 이름을 바꾸지 마세요.** 순회는 `shared_mutex` 를 잡고 있고, 이 잠금은 재진입하지 않아 교착이 납니다.
 Debug 빌드에서는 `WalkScope` 가 단언으로 잡습니다. 그런 일이 필요하면 `getAllGameObjects( out )` 로 목록을 복사해서 돕니다.
 컴포넌트 목록을 범위 for로 도는 중에 컴포넌트를 붙여도 반복자가 무효가 됩니다. 이때는 인덱스로 돕니다.
