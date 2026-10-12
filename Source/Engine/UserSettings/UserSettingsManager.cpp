@@ -767,8 +767,7 @@ namespace sw
                 // 기동이나 다시 만들 때의 적용은 명령줄로 준 변수를 덮지 않는다. 실행 한 번의 값(명령줄)이 저장된 값(사용자 설정)을 이긴다(화면 설정과 같은 순서).
                 // 메뉴에서 바꾼 값(bStartup 이 false)은 덮는다. 플레이어가 지금 고른 값이기 때문이다.
                 const CommandLineManager* pCommandLineManager = getTargets()._pCommandLineManager;
-                string                    commandLineValue;
-                if ( bStartup && pCommandLineManager != nullptr && pCommandLineManager->findPendingGlobalValue( def._targetName.view(), commandLineValue ) )
+                if ( bStartup && pCommandLineManager != nullptr && pCommandLineManager->isGlobalVariableProvided( def._targetName.view() ) )
                     return true;
                 if ( def._type != UserSettingType::Enum )
                     return pVariable->setValueFromString( value );

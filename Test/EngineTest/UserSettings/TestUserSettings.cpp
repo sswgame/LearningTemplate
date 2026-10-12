@@ -139,6 +139,38 @@ SW_TEST_CASE( UserSettingsTest, CommandLineGlobalVariableWinsAtStartup )
 }
 
 /**
+ * @brief [UserSettingsTest] 명령줄 인자로 **등록된** 전역 변수(Engine 변수)도 기동 적용이 덮지 않는다
+ * @details 위 테스트의 변수는 인자로 등록되지 않아 보류표에 남는다. Engine 변수는 registerToCommandLine 이 인자로 먼저 넣으므로 보류표에 없다 —
+ *          `-gv_debugHUD=1` 이 저장값으로 덮이던 결함의 재현이다.
+ */
+SW_TEST_CASE( UserSettingsTest, RegisteredCommandLineVariableWinsAtStartup )
+{
+    sw::CommandLineManager commandLine;
+    commandLine.initialize();
+    commandLine.addArgument<float32>( { "gv_userSettingsTestFloat" }, 1.0f, true );
+    utf8* argv[] = {
+        const_cast<utf8*>( "TestApp.exe" ),
+        const_cast<utf8*>( "-gv_userSettingsTestFloat=0.75" ),
+    };
+    commandLine.parse( 2, argv );
+    SW_EXPECT_TRUE( commandLine.isGlobalVariableProvided( "gv_userSettingsTestFloat" ) );
+    SW_EXPECT_FALSE( commandLine.isGlobalVariableProvided( "gv_userSettingsTestInt" ) );
+
+    UserSettingsTestInternal::resetTestVariables();
+    gv_userSettingsTestFloat = 0.75f;
+    sw::UserSettingsManager settings;
+    sw::UserSettingsTargets targets;
+    targets._pGlobalVariableManager = &sw::engine::getGlobalVariableManager();
+    targets._pCommandLineManager    = &commandLine;
+    settings.initialize( targets );
+    SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( UserSettingsTestInternal::kSchemaXML, "test.settings.xml" ) );
+    settings.reapplyAll();
+
+    SW_EXPECT_NEAR_EQUAL( 0.75f, gv_userSettingsTestFloat, 0.0001f );
+    UserSettingsTestInternal::resetTestVariables();
+}
+
+/**
  * @brief [UserSettingsTest] 테스트 스키마가 검사를 통과하고, 기동 적용이 기본값을 전역 변수 대상에 넣는다
  */
 SW_TEST_CASE( UserSettingsTest, SchemaLoadsAndStartupAppliesDefaults )

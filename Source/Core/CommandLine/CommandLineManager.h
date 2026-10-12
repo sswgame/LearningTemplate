@@ -164,6 +164,13 @@ namespace sw
          */
         bool findPendingGlobalValue( string_view name, string& outValue ) const;
 
+        /**
+         * @brief 그 전역 변수를 **명령줄이 실제로 줬는지** 반환합니다.
+         * @details 등록된 변수(Engine 전역 변수)와 보류된 변수(모듈 것)를 둘 다 묻는다. `findPendingGlobalValue` 는 보류표만 보므로
+         *          Engine 변수를 놓친다 — "명령줄 값이 저장된 값을 이긴다" 같은 판단은 이 함수로 한다.
+         */
+        bool isGlobalVariableProvided( string_view name ) const;
+
         /** @brief 보류 중인 `gv_` 키 이름을 모두 반환합니다(오타 진단용). */
         vector<string> collectPendingGlobalNames() const;
 
