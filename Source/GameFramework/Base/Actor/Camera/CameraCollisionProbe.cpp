@@ -5,8 +5,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Character/Hit/CharacterHit.h"
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ScenePhysics.h"
 #include "Engine/Physics/Collision/ContinuousCollision.h"
 #include "Engine/Physics/PhysicsOverlapWorld.h"
 #include "Engine/Physics/PhysicsSettings.h"
@@ -105,7 +105,7 @@ namespace sw
             return false;
         // 강체 — 세상의 막는 것(Default · Static)만. 래그돌 뼈 · 파편 · 캐릭터 캡슐에 암이 걸리지 않게 한다.
         uint32                 layerMask = MathUtil::kMaxUInt32;
-        const PhysicsSettings* pSettings = _manager.getScenePhysics().findSettings();
+        const PhysicsSettings* pSettings = _manager.getSceneService<ScenePhysics>().findSettings();
         uint8                  layer     = 0;
         if ( pSettings != nullptr )
         {
@@ -123,7 +123,7 @@ namespace sw
             nearest = hit._distance;
             bHit    = true;
         }
-        const PhysicsOverlapWorldCameraProbe overlapProbe( _manager.getOverlapWorld2D().getPhysicsOverlapWorld(), 0, _ignoredObjectID );
+        const PhysicsOverlapWorldCameraProbe overlapProbe( _manager.getSceneService<ScenePhysics>().getOverlapWorld2D().getPhysicsOverlapWorld(), 0, _ignoredObjectID );
         float32                              overlapDistance = 0.0f;
         if ( overlapProbe.sweepSphere( from, to, radius, overlapDistance ) && overlapDistance < nearest )
         {

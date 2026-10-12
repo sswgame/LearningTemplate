@@ -7,9 +7,9 @@
 #include "Engine/Object/Component/Physics/JointComponent.h"
 #include "Engine/Object/Component/Physics/RigidBody2DComponent.h"
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ScenePhysics.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
 
@@ -147,7 +147,7 @@ SW_TEST_CASE( PhysicsComponentTest, DynamicBodyLandsAndReportsCollision )
     SW_EXPECT_TRUE( pCrateListener->_listCollisionBeginImpulse[0] > 0.0f );
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), pFloorListener->_listCollisionBeginOther.size() );
     SW_EXPECT_EQUAL( pCrate->getOwner()->getObjectID(), pFloorListener->_listCollisionBeginOther[0] );
-    SW_EXPECT_TRUE( manager.getScenePhysics().getStepCount() >= 240 );
+    SW_EXPECT_TRUE( manager.getSceneService<ScenePhysics>().getStepCount() >= 240 );
 
     // 코드가 옮기면 순간이동이다 — 다시 떨어진다.
     pCrate->teleportTo( sw::float3{ 5.0f, 4.0f, 0.0f } );
@@ -174,11 +174,11 @@ SW_TEST_CASE( PhysicsComponentTest, PoseIsInterpolatedBetweenSteps )
     SW_ASSERT_NOT_NULL( pBall );
     manager.beginPlay();
     test::tickFrames( manager, 30 );
-    const uint64  stepsBefore  = manager.getScenePhysics().getStepCount();
+    const uint64  stepsBefore  = manager.getSceneService<ScenePhysics>().getStepCount();
     const float32 heightBefore = pBall->getWorldPosition()._y;
     manager.tick( kFrame * 0.5f );
-    SW_EXPECT_EQUAL( stepsBefore, manager.getScenePhysics().getStepCount() );
-    const float32 alpha = manager.getScenePhysics().getInterpolationAlpha();
+    SW_EXPECT_EQUAL( stepsBefore, manager.getSceneService<ScenePhysics>().getStepCount() );
+    const float32 alpha = manager.getSceneService<ScenePhysics>().getInterpolationAlpha();
     SW_EXPECT_TRUE( alpha > 0.3f && alpha < 0.7f );
     SW_EXPECT_TRUE_MSG( pBall->getWorldPosition()._y < heightBefore, "the drawn pose moved toward the last step without a new step" );
     manager.endPlay();

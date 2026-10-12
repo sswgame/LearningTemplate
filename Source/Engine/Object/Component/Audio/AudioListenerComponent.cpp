@@ -2,8 +2,8 @@
 
 #include "Engine/Object/Component/Audio/AudioListenerComponent.h"
 
+#include "Engine/Object/Component/Audio/SceneAudio.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/SceneAudio.h"
 
 namespace sw
 {
@@ -19,12 +19,12 @@ namespace sw
     void AudioListenerComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
-        manager.getSceneAudio().addListener( this );
+        manager.getSceneService<SceneAudio>().addListener( this );
     }
 
     void AudioListenerComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getSceneAudio().removeListener( this );
+        manager.getSceneService<SceneAudio>().removeListener( this );
         SceneComponent::onUnregister( manager );
     }
 

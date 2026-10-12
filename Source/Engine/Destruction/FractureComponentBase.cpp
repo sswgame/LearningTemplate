@@ -14,9 +14,9 @@
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/Physics/RigidBody2DComponent.h"
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ScenePhysics.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -691,7 +691,7 @@ namespace sw
     bool FractureComponentBase::applyRaycastDamage( GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, float32 strain,
                                                     float32 impulse, float3* pOutPoint )
     {
-        IPhysicsScene3D* pScene = manager.getScenePhysics().findScene3D();
+        IPhysicsScene3D* pScene = manager.getSceneService<ScenePhysics>().findScene3D();
         if ( pScene == nullptr )
             return false;
         PhysicsCastHit3D hit;

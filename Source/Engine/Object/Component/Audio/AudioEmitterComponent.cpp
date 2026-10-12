@@ -3,9 +3,9 @@
 #include "Engine/Object/Component/Audio/AudioEmitterComponent.h"
 
 #include "Engine/Audio/AudioEngine.h"
+#include "Engine/Object/Component/Audio/SceneAudio.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/SceneAudio.h"
 
 namespace sw
 {
@@ -22,12 +22,12 @@ namespace sw
     void AudioEmitterComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
-        manager.getSceneAudio().addEmitter( this );
+        manager.getSceneService<SceneAudio>().addEmitter( this );
     }
 
     void AudioEmitterComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getSceneAudio().removeEmitter( this );
+        manager.getSceneService<SceneAudio>().removeEmitter( this );
         SceneComponent::onUnregister( manager );
     }
 
@@ -50,7 +50,7 @@ namespace sw
         const GameObject* pOwner = getOwner();
         if ( pOwner == nullptr || pOwner->getManager() == nullptr )
             return nullptr;
-        return pOwner->getManager()->getSceneAudio().findAudioEngine();
+        return pOwner->getManager()->getSceneService<SceneAudio>().findAudioEngine();
     }
 
     AudioPlayingID AudioEmitterComponent::post( const hashed_string& eventName )

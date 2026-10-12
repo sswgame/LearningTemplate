@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/PhysicsOverlapWorld.h"
 
@@ -108,14 +109,14 @@ namespace sw
     void BoxCollider2DComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
-        _pPhysics = &manager.getOverlapWorld2D().getPhysicsOverlapWorld();
-        manager.getOverlapWorld2D().registerCollider( this );
+        _pPhysics = &manager.getSceneService<ScenePhysics>().getOverlapWorld2D().getPhysicsOverlapWorld();
+        manager.getSceneService<ScenePhysics>().getOverlapWorld2D().registerCollider( this );
     }
 
     void BoxCollider2DComponent::onUnregister( GameObjectManager& manager )
     {
         unregisterPhysicsBody();
-        manager.getOverlapWorld2D().unregisterCollider( this );
+        manager.getSceneService<ScenePhysics>().getOverlapWorld2D().unregisterCollider( this );
         _pPhysics = nullptr;
         SceneComponent::onUnregister( manager );
     }

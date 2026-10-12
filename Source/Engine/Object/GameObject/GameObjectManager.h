@@ -25,17 +25,13 @@
 #include "Engine/Object/GameObject/ISceneFrameSystem.h"
 #include "Engine/Object/GameObject/ISceneService.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
-#include "Engine/Object/GameObject/SceneAudio.h"
+#include "Engine/Object/GameObject/SceneEngineServices.h"
 #include "Engine/Object/GameObject/SceneFrameStep.h"
-#include "Engine/Object/GameObject/SceneOverlapWorld2D.h"
-#include "Engine/Object/GameObject/ScenePhysics.h"
 #include "Engine/Object/GameObject/SceneTickScheduler.h"
 #include "Engine/Object/GameObject/StructuralChangeBuffer.h"
 
 namespace sw
 {
-    struct SceneEngineServices;
-
     class AssetManager;
     class Component;
     class GameObjectManager;
@@ -51,8 +47,8 @@ namespace sw
     public:
         /**
          * @brief 엔진 서비스 묶음 @p services 를 받아 만듭니다(씬이 자기 묶음을 넘깁니다). 오브젝트는 없는 채로 시작합니다.
-         * @details 물리 서비스는 `ScenePhysics` 로, 오디오 서비스는 `SceneAudio` 로, 에셋 매니저는 이 매니저에 한 번 들려 씬 안의 코드가
-         *          `findAssetManager` 로 씁니다. 빈 칸은 그 서비스가 없다는 뜻입니다.
+         * @details 묶음은 이 매니저가 한 번 들고, 씬 서비스(`ScenePhysics` · `SceneAudio` …)가 만들어질 때 `getSceneEngineServices` 로 자기 칸을 읽습니다.
+         *          에셋 매니저는 씬 안의 코드가 `findAssetManager` 로 씁니다. 빈 칸은 그 서비스가 없다는 뜻입니다.
          */
         explicit GameObjectManager( const SceneEngineServices& services );
         /** @brief 바인딩된 서비스 표에서 묶음을 한 번 읽어 만듭니다(`SceneEngineServices::makeFromBoundEngine`). 테스트 · 프리팹 원형 같은 손수 만든 매니저용입니다. */
@@ -338,26 +334,19 @@ namespace sw
         /** @brief 핸들이 가리키는 오브젝트를 찾습니다. 파괴됐거나 삭제 대기면 nullptr 입니다. 락을 잡지 않습니다(`findGameObjectByID`). */
         GameObject* resolveGameObject( GameObjectHandle handle ) const { return _store.resolveGameObject( handle ); }
 
-        /**
-         * @brief 이 씬의 강체 물리입니다(3D · 2D 물리 씬 · 고정 스텝 · 물리 컴포넌트 · 접촉 이벤트). 처음 쓸 때 씬을 만듭니다.
-         * @details 겹침 월드(`getOverlapWorld2D`)와 따로 돕니다 — 둘 다 `stepPhysics` 에서 이 순서(겹침 → 강체)로 한 번씩 진행합니다.
-         */
-        ScenePhysics& getScenePhysics() { return _scenePhysics; }
-        /** @brief 씬 오디오(리스너 · 에미터 · 가림 · 리버브 존을 엔진에 넣는 자리)입니다. `Scene::tick` 이 틱 뒤에 `update` 를 부릅니다. */
-        SceneAudio& getSceneAudio() { return _sceneAudio; }
-        /** @brief 이 씬의 강체 물리입니다. */
-        const ScenePhysics& getScenePhysics() const { return _scenePhysics; }
+        /** @brief 생성자로 받은 엔진 서비스 묶음입니다(빌린 포인터들). 씬 서비스가 만들어질 때 자기 칸을 읽습니다. */
+        const SceneEngineServices& getSceneEngineServices() const { return _services; }
         /**
          * @brief 생성자로 받은 에셋 매니저입니다(빌림). 없으면 nullptr 입니다.
          * @details 씬 안의 엔진 코드(스프라이트 배치 · 애니메이션 알림)가 전역 조회 대신 씁니다. 게임 모듈은 `game::getService<AssetManager>()` 를 씁니다.
          */
-        AssetManager* findAssetManager() const { return _pAssetManager; }
+        AssetManager* findAssetManager() const { return _services._pAssetManager; }
         /** @brief 등록 줄(`SW_SCENE_SERVICE`)로 만든 이 씬의 서비스입니다. 이 매니저가 만들지 않은 줄이면 nullptr 입니다. */
         ISceneService* findSceneService( const SceneServiceRegistration& registration ) const;
         /**
          * @brief 이 씬의 서비스 @p TService 입니다(`ISceneService.h`). 레지스트리의 서비스는 매니저마다 하나씩 늘 있습니다.
          * @details 언리얼 `UWorld::GetSubsystem<T>()` 와 같은 자리입니다. 코어는 서비스 타입을 모르고, 부르는 쪽이 그 타입의 헤더를 듭니다
-         *          (`manager.getSceneService<SceneNavigation>()`).
+         *          (`manager.getSceneService<ScenePhysics>()` · `getSceneService<SceneAudio>()` · `getSceneService<SceneNavigation>()`).
          */
         template <typename TService>
         TService& getSceneService()
@@ -374,11 +363,6 @@ namespace sw
             SW_ASSERT( pService != nullptr );
             return static_cast<const TService&>( *pService );
         }
-
-        /** @brief 이 씬의 겹침 월드입니다(AABB 질의 월드 · 2D 콜라이더 등록 · 겹침 이벤트). 질의는 `getOverlapWorld2D().getPhysicsOverlapWorld()` 입니다. */
-        SceneOverlapWorld2D& getOverlapWorld2D() { return _overlapWorld2D; }
-        /** @brief 이 씬의 겹침 월드입니다. */
-        const SceneOverlapWorld2D& getOverlapWorld2D() const { return _overlapWorld2D; }
 
         /**
          * @brief GameObject 를 지연 삭제 큐에 넣습니다.
@@ -458,7 +442,7 @@ namespace sw
         PoolAllocator* getOrCreateComponentPool( const TypeInfo* pTypeInfo, size_t typeSize ) { return _store.getOrCreateComponentPool( pTypeInfo, typeSize ); }
 
         /**
-         * @brief 겹침 월드 → 강체 물리를 한 번씩 진행합니다. 틱 · 트랜스폼 적용 뒤, 게임 스레드에서.
+         * @brief `Physics` 단계의 서비스(`ScenePhysics` — 겹침 월드 → 강체 물리)를 진행하고 그 쓰기를 펼칩니다. 틱 · 트랜스폼 적용 뒤, 게임 스레드에서.
          * @details 유니티는 물리 갱신 뒤 OnTrigger 를, 언리얼은 움직임이 끝난 뒤 Begin/EndOverlap 을 부른다. 여기서는 그 프레임에 적용된 월드 자리로 측정한다.
          */
         void stepPhysics( float32 deltaTime );
@@ -504,13 +488,7 @@ namespace sw
         SceneTickScheduler _tickScheduler;
         /** @brief 오브젝트 저장소(생성 · 이름 · id 표 · 조회 · 지연 파괴 · 컴포넌트 풀 · 시작 줄)입니다. 게임이 부르는 API 는 위의 전달 함수입니다. */
         GameObjectStore _store;
-        /** @brief 겹침 월드입니다. */
-        SceneOverlapWorld2D _overlapWorld2D;
-        /** @brief 강체 물리입니다. 컴포넌트의 해제가 바디를 놓는다. */
-        ScenePhysics _scenePhysics;
-        /** @brief 오디오 컴포넌트 레지스트리와 엔진 묶기입니다. */
-        SceneAudio _sceneAudio;
-        /** @brief 레지스트리(`SceneServiceRegistry`)에서 만든 기능 서비스입니다(내비게이션 …). 코어는 타입을 모르고 단계마다 `update` 만 부른다. */
+        /** @brief 레지스트리(`SceneServiceRegistry`)에서 만든 기능 서비스입니다(물리 · 오디오 · 내비게이션 …). 코어는 타입을 모르고 단계마다 `update` 만 부른다. */
         vector<SceneServiceEntry> _listSceneService;
         /** @brief 단계마다 돌기 직전에 부르는 관찰자(`setFrameStepObserver`)입니다. 보통 비어 있습니다. */
         FrameStepObserver _frameStepObserver;
@@ -518,8 +496,8 @@ namespace sw
         vector<FrameSystemEntry> _listFrameSystem;
         /** @brief 단계가 도는 동안 뗀 시스템입니다 — 그 단계가 끝난 뒤 놓습니다. */
         vector<unique_ptr<ISceneFrameSystem>> _listRetiredFrameSystem;
-        /** @brief 생성자로 받은 에셋 매니저(빌림)입니다(`findAssetManager`). */
-        AssetManager* _pAssetManager;
+        /** @brief 생성자로 받은 엔진 서비스 묶음(빌린 포인터들)입니다(`getSceneEngineServices` · `findAssetManager`). */
+        SceneEngineServices _services;
         /** @brief `FrameSystems` 단계가 도는 중이면 true 입니다. */
         bool _bRunningFrameSystems;
     };

@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Character/Hit/CharacterHit.h"
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Collision/ContinuousCollision.h"
@@ -112,7 +113,7 @@ namespace sw
             return pService->raycast( from, to, ignoreObjectID, outHit );
         // 강체 물리와 겹침 월드(BoxCollider2D) 중 가까운 것 — 두 세계가 한 씬에 섞여 있을 수 있다.
         const ScenePhysicsWorldQuery   rigid{ manager };
-        const PhysicsOverlapWorldQuery fallback{ manager.getOverlapWorld2D().getPhysicsOverlapWorld() };
+        const PhysicsOverlapWorldQuery fallback{ manager.getSceneService<ScenePhysics>().getOverlapWorld2D().getPhysicsOverlapWorld() };
         WorldRayHit                    rigidHit;
         WorldRayHit                    fallbackHit;
         const bool                     bRigid    = rigid.raycast( from, to, ignoreObjectID, rigidHit );

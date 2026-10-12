@@ -25,7 +25,7 @@
     #include "Engine/Object/GameObject/GameObject.h"
     #include "Engine/Object/GameObject/GameObjectManager.h"
     #include "Engine/Object/GameObject/PrimitiveRegistry.h"
-    #include "Engine/Object/GameObject/ScenePhysics.h"
+    #include "Engine/Object/Component/Physics/ScenePhysics.h"
     #include "Engine/Physics/IPhysicsScene.h"
     #include "Engine/Profiling/FrameProfiler.h"
     #include "Engine/Scene/Scene.h"
@@ -183,7 +183,7 @@ namespace sw
                     writer.addLine( "scene", "none" );
                     return;
                 }
-                const ScenePhysics& physics = pManager->getScenePhysics();
+                const ScenePhysics& physics = pManager->getSceneService<ScenePhysics>();
                 if ( const IPhysicsBodyScene3D* pScene3D = physics.findScene3D() )
                     writer.addLineFormat( "bodies 3D", "%#", pScene3D->getBodyCount() );
                 if ( const IPhysicsBodyScene2D* pScene2D = physics.findScene2D() )

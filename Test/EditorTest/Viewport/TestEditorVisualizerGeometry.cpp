@@ -7,6 +7,7 @@
 
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -35,7 +36,7 @@ SW_TEST_CASE( EditorVisualizerGeometryTest, ColliderOutlineIsThePhysicsBox )
     pBox->setOffsetScale( float2{ 1.0f, 1.0f } );
     manager.flushSceneTransforms();
 
-    const vector<BoxCollider2DComponent*>& listCollider = manager.getOverlapWorld2D().getColliders();
+    const vector<BoxCollider2DComponent*>& listCollider = manager.getSceneService<ScenePhysics>().getOverlapWorld2D().getColliders();
     SW_ASSERT_EQUAL( size_t( 1 ), listCollider.size() );
     SW_EXPECT_TRUE( listCollider[0] == pBox );
 

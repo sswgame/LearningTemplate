@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Object/GameObject/SpriteInstanceBatch.h"
+#include "Engine/Object/Component/2D/SpriteInstanceBatch.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -11,8 +11,8 @@
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Object/Component/2D/SpriteRenderUtil.h"
+#include "Engine/Object/Component/3D/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Resource/AssetManager.h"
 

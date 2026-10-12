@@ -4,10 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ScenePhysics.h"
 #include "Engine/Physics/Collision/PhysicsQuery.h"
 #include "Engine/Physics/IPhysicsScene.h"
 
@@ -40,7 +40,7 @@ namespace sw
     float32 ArcadeVehicleComponent::PhysicsGround::sampleHeight( float32 x, float32 z ) const
     {
         using Internal                     = ArcadeVehicleComponentInternal;
-        const IPhysicsQueryScene3D* pScene = _pManager != nullptr ? _pManager->getScenePhysics().findScene3D() : nullptr;
+        const IPhysicsQueryScene3D* pScene = _pManager != nullptr ? _pManager->getSceneService<ScenePhysics>().findScene3D() : nullptr;
         if ( pScene == nullptr )
             return _fallbackHeight;
         IPhysicsQueryScene3D::CastHit hit;

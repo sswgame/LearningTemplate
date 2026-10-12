@@ -385,7 +385,7 @@ Shooter3D 에서는 원인 셋이 겹쳐 있었습니다. 반복으로 돌린 �
 **ACL 과 RTM 헤더는 `Codec/ACL/` 의 `.cpp` 에서만 include 하세요.** 다른 곳에서 include 하면 `CheckThirdPartyIsolation.py` 가 막습니다.
 
 **`AnimationPlayback.h` 를 `Component.h` 에서 include 하지 마세요.** `Component.h` 는 PCH 에 들어 있어서, 거기서 include 한 헤더를 고치면 PCH 가 다시 빌드됩니다.
-그래서 `Component.h` 는 알림 종류 하나만 담은 `AnimationNotifyPhase.h` 만 include 합니다.
+그래서 `Component.h` 는 알림 종류 하나만 담은 `Engine/Common/AnimationNotifyPhase.h` 만 include 합니다(컴포넌트 모델 코어는 Animation 폴더를 include 하지 않습니다).
 
 **되감는 동안 평가가 멈춘다는 것을 기억하세요.** 기록 요청은 프로세스 전역이고, 씬마다의 기록기가 평가 전에 그 요청을 따릅니다. 테스트에서 요청을 바꿨으면 되돌립니다(`ScopedRecording`).
 군중 그룹을 나눠 쓰는 유닛에는 기록된 포즈를 적용하지 않습니다. 포즈가 그룹의 것이기 때문입니다. 기록과 뼈대 그리기만 됩니다.

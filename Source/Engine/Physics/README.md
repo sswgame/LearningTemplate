@@ -311,4 +311,4 @@ Jolt 의 `VehicleConstraint` 와 `WheeledVehicleController` 를 스텝 리스너
 | `Asset/PhysicsRagdoll.h` | 래그돌과 히트박스 빌더 |
 | `PhysicsOverlapWorld.h` | 겹침 월드 |
 | `Collision/ContinuousCollision.h` | AABB 와 구의 스윕 |
-| `Object/GameObject/ScenePhysics.h` | 씬의 물리, 고정 스텝 |
+| `Object/Component/Physics/ScenePhysics.h` | 씬의 물리, 고정 스텝, 겹침 월드(씬 서비스) |

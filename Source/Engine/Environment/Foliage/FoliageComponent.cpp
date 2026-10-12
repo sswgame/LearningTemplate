@@ -16,8 +16,8 @@
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
+#include "Engine/Object/Component/3D/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
 
 namespace sw

@@ -7,8 +7,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Object/Component/2D/SpriteInstanceBatch.h"
 #include "Engine/Object/Component/Component.h"
-#include "Engine/Object/GameObject/SpriteInstanceBatch.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

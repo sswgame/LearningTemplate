@@ -13,11 +13,11 @@
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Object/Component/Physics/CharacterControllerComponent.h"
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/Component/Physics/WheeledVehicleComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ScenePhysics.h"
 #include "Engine/Physics/Collision/PhysicsQuery.h"
 #include "Engine/Physics/IPhysicsScene.h"
 
@@ -361,7 +361,7 @@ SW_TEST_CASE( MountTest, RiderStillTakesHitsWhileMounted )
             Internal::tick( manager, input );
         }
         const float3           feet   = Internal::findPosition( *pRider );
-        const IPhysicsScene3D* pScene = manager.getScenePhysics().findScene3D();
+        const IPhysicsScene3D* pScene = manager.getSceneService<ScenePhysics>().findScene3D();
         SW_ASSERT_NOT_NULL( pScene );
         IPhysicsScene3D::CastHit hit;
         const bool               bHit = pScene->raycast( float3{ feet._x - 3.0f, feet._y + 0.9f, feet._z }, float3{ 1.0f, 0.0f, 0.0f }, 6.0f, PhysicsQueryFilter{}, hit );

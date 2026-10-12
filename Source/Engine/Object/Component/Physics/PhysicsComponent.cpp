@@ -4,8 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ScenePhysics.h"
 
 namespace sw
 {
@@ -21,7 +21,7 @@ namespace sw
     void PhysicsComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
-        _pScenePhysics = &manager.getScenePhysics();
+        _pScenePhysics = &manager.getSceneService<ScenePhysics>();
         _pScenePhysics->registerComponent( this );
     }
 

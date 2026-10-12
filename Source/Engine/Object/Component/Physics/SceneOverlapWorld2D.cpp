@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Engine/Object/GameObject/SceneOverlapWorld2D.h"
+#include "Engine/Object/Component/Physics/SceneOverlapWorld2D.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"

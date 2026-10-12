@@ -4,8 +4,8 @@
 
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/ScenePhysics.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsDesc.h"

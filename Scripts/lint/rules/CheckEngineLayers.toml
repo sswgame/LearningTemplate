@@ -3,7 +3,7 @@
 # ------------------------------------------------------------------------------
 # 컴포넌트 모델 코어 — 이 폴더들 **바로 아래** 파일은 coreBannedLayer 의 폴더를 include 하지 않는다(Engine/ 기준 경로).
 # 하위 폴더(Component/2D · 3D · Audio · Navigation · Physics)는 기능 컴포넌트라 코어가 아니다.
-# Object 가 티어로는 이 기능 폴더들 위라 [tier] 검사가 못 잡는 방향이다. 예외 키는 `core:<파일>|<include 경로>` 이고, 목표는 0 줄이다.
+# Object 가 티어로는 이 기능 폴더들 위라 [tier] 검사가 못 잡는 방향이다. 예외 키는 `core:<파일>|<include 경로>` 이고, 지금 0 줄이다 — 새로 더하지 않는다.
 # ------------------------------------------------------------------------------
 coreFolder = ["Object/GameObject", "Object/Prefab", "Object/Component"]
 coreBannedLayer = ["Graphics", "Physics", "Navigation", "Audio", "Animation", "TileMap"]
@@ -125,25 +125,3 @@ Renderer = 13
 "prelude:Engine/Resource/ResourceIO.h" = "리소스 읽기 static 창구(Core 만 include) — loadFromResource 진입점이 쓴다"
 "wiring:Source/Engine/Reflection/ReflectGenerated.h" = ".gen.cpp 전용 preamble — 생성 코드가 쓰는 모든 형식을 모은다"
 "subprelude:Engine/Graphics/RHI/RHITypes.h" = "RHI 계약 헤더(Core · Engine/Common · Reflection 만 include) — 셰이더 쪽이 정점 속성 표 · PSO 서술 · Vulkan 요구 버전을 읽는다"
-"core:Source/Engine/Object/Component/CameraComponent.cpp|Engine/Graphics/Texture/TextureCache.h" = "카메라가 렌더 타깃 텍스처를 TextureCache 로 연다 — 옮길 예정"
-"core:Source/Engine/Object/Component/Component.h|Engine/Animation/Notify/AnimationNotifyPhase.h" = "알림 단계 · 물리 충돌 열거형이 기능 폴더의 잎 헤더에 있다 — 계약 헤더로 옮길 예정"
-"core:Source/Engine/Object/Component/Component.h|Engine/Physics/PhysicsTypes.h" = "알림 단계 · 물리 충돌 열거형이 기능 폴더의 잎 헤더에 있다 — 계약 헤더로 옮길 예정"
-"core:Source/Engine/Object/GameObject/MeshInstanceBatch.cpp|Engine/Graphics/Material/Material.h" = "인스턴스 배치가 메시 · 머티리얼을 읽는다 — Graphics 소유로 옮길 예정"
-"core:Source/Engine/Object/GameObject/MeshInstanceBatch.cpp|Engine/Graphics/Material/MaterialInstance.h" = "인스턴스 배치가 메시 · 머티리얼을 읽는다 — Graphics 소유로 옮길 예정"
-"core:Source/Engine/Object/GameObject/MeshInstanceBatch.cpp|Engine/Graphics/Mesh/Mesh.h" = "인스턴스 배치가 메시 · 머티리얼을 읽는다 — Graphics 소유로 옮길 예정"
-"core:Source/Engine/Object/GameObject/MeshInstanceBatch.h|Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h" = "인스턴스 배치가 GPU 인스턴스 레이아웃을 값으로 든다 — Graphics 소유로 옮길 예정"
-"core:Source/Engine/Object/GameObject/SceneAudio.cpp|Engine/Audio/AudioEngine.h" = "씬 오디오 구현이 오디오 엔진을 부른다 — Audio 쪽 씬 서비스로 옮길 예정"
-"core:Source/Engine/Object/GameObject/SceneAudio.cpp|Engine/Audio/IAudioService.h" = "씬 오디오 구현이 오디오 엔진을 부른다 — Audio 쪽 씬 서비스로 옮길 예정"
-"core:Source/Engine/Object/GameObject/SceneAudio.h|Engine/Physics/IPhysicsQueryScene.h" = "씬 오디오가 가림 질의(IPhysicsQueryScene)를 든다 — Audio 쪽 씬 서비스로 옮길 예정"
-"core:Source/Engine/Object/GameObject/SceneOverlapWorld2D.h|Engine/Physics/PhysicsOverlapWorld.h" = "2D 겹침 월드가 물리의 PhysicsOverlapWorld 를 값으로 든다 — Physics 쪽으로 옮길 예정"
-"core:Source/Engine/Object/GameObject/ScenePhysics.cpp|Engine/Physics/PhysicsDebugDraw.h" = "씬 물리 서비스 구현 — Physics 쪽 씬 서비스로 옮길 예정"
-"core:Source/Engine/Object/GameObject/ScenePhysics.cpp|Engine/Physics/PhysicsSystem.h" = "씬 물리 서비스 구현 — Physics 쪽 씬 서비스로 옮길 예정"
-"core:Source/Engine/Object/GameObject/ScenePhysics.h|Engine/Physics/Collision/PhysicsContact.h" = "씬 물리 서비스가 물리 씬 · 고정 스텝 · 접촉 값을 든다 — Physics 쪽 씬 서비스로 옮길 예정"
-"core:Source/Engine/Object/GameObject/ScenePhysics.h|Engine/Physics/FixedStepAccumulator.h" = "씬 물리 서비스가 물리 씬 · 고정 스텝 · 접촉 값을 든다 — Physics 쪽 씬 서비스로 옮길 예정"
-"core:Source/Engine/Object/GameObject/ScenePhysics.h|Engine/Physics/IPhysicsScene.h" = "씬 물리 서비스가 물리 씬 · 고정 스텝 · 접촉 값을 든다 — Physics 쪽 씬 서비스로 옮길 예정"
-"core:Source/Engine/Object/GameObject/SpriteInstanceBatch.cpp|Engine/Graphics/Material/Material.h" = "스프라이트 배치가 메시 · 머티리얼 · GPU 인스턴스 레이아웃을 쓴다 — Graphics 소유로 옮길 예정"
-"core:Source/Engine/Object/GameObject/SpriteInstanceBatch.cpp|Engine/Graphics/Material/MaterialCache.h" = "스프라이트 배치가 메시 · 머티리얼 · GPU 인스턴스 레이아웃을 쓴다 — Graphics 소유로 옮길 예정"
-"core:Source/Engine/Object/GameObject/SpriteInstanceBatch.cpp|Engine/Graphics/Material/MaterialInstance.h" = "스프라이트 배치가 메시 · 머티리얼 · GPU 인스턴스 레이아웃을 쓴다 — Graphics 소유로 옮길 예정"
-"core:Source/Engine/Object/GameObject/SpriteInstanceBatch.cpp|Engine/Graphics/Mesh/Mesh.h" = "스프라이트 배치가 메시 · 머티리얼 · GPU 인스턴스 레이아웃을 쓴다 — Graphics 소유로 옮길 예정"
-"core:Source/Engine/Object/GameObject/SpriteInstanceBatch.cpp|Engine/Graphics/Mesh/MeshUtil.h" = "스프라이트 배치가 메시 · 머티리얼 · GPU 인스턴스 레이아웃을 쓴다 — Graphics 소유로 옮길 예정"
-"core:Source/Engine/Object/GameObject/SpriteInstanceBatch.cpp|Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h" = "스프라이트 배치가 메시 · 머티리얼 · GPU 인스턴스 레이아웃을 쓴다 — Graphics 소유로 옮길 예정"

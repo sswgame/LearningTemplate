@@ -109,14 +109,11 @@ namespace sw
         , _animationSystem{}
         , _tickScheduler{ *this, _transformHierarchy, _primitiveRegistry, _structuralChangeBuffer }
         , _store{ *this, _tickScheduler, _structuralChangeBuffer }
-        , _overlapWorld2D{}
-        , _scenePhysics{ services._pPhysicsSystem }
-        , _sceneAudio{ services._pAudioService }
         , _listSceneService{}
         , _frameStepObserver{}
         , _listFrameSystem{}
         , _listRetiredFrameSystem{}
-        , _pAssetManager{ services._pAssetManager }
+        , _services{ services }
         , _bRunningFrameSystems{ false }
     {
         _animationSystem.setObjectManager( this );
@@ -145,8 +142,7 @@ namespace sw
         _store.clear();
         _tickScheduler.getTickRegistry().clear();
         markTickStagesDirty();
-        // 컴포넌트가 바디를 놓았다 — 빈 물리 씬과 쌓인 시간을 버린다(다음 씬은 처음 쓸 때 새로 만든다).
-        _scenePhysics.shutdown();
+        // 컴포넌트가 바디 · 등록을 놓았다 — 서비스가 남은 것을 버린다(물리는 빈 씬과 쌓인 시간을 버리고 다음 씬은 처음 쓸 때 새로 만든다).
         for ( SceneServiceEntry& entry : _listSceneService )
         {
             if ( entry._pService != nullptr )
