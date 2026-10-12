@@ -97,9 +97,9 @@ namespace sw
             outArrRow[rowIndex++] = { &_arrView[viewIndex]._cullCb, sizeof( FrameRendererUtil::GPUCullParams ), "cull" };
             outArrRow[rowIndex++] = { &_arrView[viewIndex]._sortCb, sizeof( FrameRendererUtil::GPUSortParams ), "instance sort" };
         }
-        outArrRow[rowIndex++] = { &_instanceAnimCb, sizeof( FrameRendererUtil::GPUAnimParams ), "instance animation" };
-        outArrRow[rowIndex++] = { &_meshMorphCb, sizeof( FrameRendererUtil::GPUMorphParams ), "mesh morph" };
-        outArrRow[rowIndex++] = { &_meshSkinCb, sizeof( FrameRendererUtil::GPUSkinParams ), "mesh skin" };
+        outArrRow[rowIndex++] = { &_deform._instanceAnimCb, sizeof( FrameRendererUtil::GPUAnimParams ), "instance animation" };
+        outArrRow[rowIndex++] = { &_deform._meshMorphCb, sizeof( FrameRendererUtil::GPUMorphParams ), "mesh morph" };
+        outArrRow[rowIndex++] = { &_deform._meshSkinCb, sizeof( FrameRendererUtil::GPUSkinParams ), "mesh skin" };
         SW_LOG_ASSERT( rowIndex == _s_kComputeConstantBufferCount, "compute constant buffer table has %# rows, expected %#", rowIndex,
                        _s_kComputeConstantBufferCount );
     }
@@ -140,8 +140,8 @@ namespace sw
             releaseViewTransparentOrder( *pView );
         }
         _transparentRankPlaceholder.release( _pDevice );
-        _meshMorphPool.release( _pDevice );
-        _vertexAnimationPool.release( _pDevice );
+        _deform._meshMorphPool.release( _pDevice );
+        _deform._vertexAnimationPool.release( _pDevice );
         _lightBuffer.release( _pDevice );
         for ( auto& [fallbackStride, fallbackSlot] : _mapMaterialFallback )
         {

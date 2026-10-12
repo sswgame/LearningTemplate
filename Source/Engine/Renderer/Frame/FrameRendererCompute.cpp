@@ -60,7 +60,7 @@ namespace sw
         if ( _gpuScene.isUploaded() && instanceCount > 0 && _gpuScene.getSpinInstanceCount() > 0 )
         {
             const RHIPipelineStateHandle animPSO = getEnginePSO( RenderPassType::InstanceAnim );
-            if ( animPSO != 0 && _instanceAnimCb.isValid() &&
+            if ( animPSO != 0 && _deform._instanceAnimCb.isValid() &&
                  _gpuScene.getInstanceUav() != kInvalidDescriptorIndex )
             {
                 FrameRendererUtil::GPUAnimParams animParams{};
@@ -69,7 +69,7 @@ namespace sw
                 animParams._baseSpeed     = FrameRendererUtil::kGPUSpinBaseSpeed;
                 animParams._speedRange    = FrameRendererUtil::kGPUSpinSpeedRange;
                 animParams._instanceCount = instanceCount;
-                _instanceAnimCb.update( *_pCmd, &animParams, sizeof( animParams ) );
+                _deform._instanceAnimCb.update( *_pCmd, &animParams, sizeof( animParams ) );
 
                 // **쓰기 전에** UAV 상태로 옮긴다. 인스턴스 버퍼는 직전 프레임에 정점 셰이더가 읽던
                 // (그리고 방금 CPU 업로드가 쓴) 상태라, 이 전이 없이 UAV 로 쓰면 DX12 와 Vulkan 에서 쓰기가
@@ -77,7 +77,7 @@ namespace sw
                 _pCmd->transitionBuffer( _gpuScene.getInstanceBuffer(), RHIBufferState::UnorderedAccess );
                 _pCmd->setComputePipelineState( animPSO );
                 // AnimParams(b0) / g_InstancesRW(u0). instanceanim.hlsl 레지스터와 1:1 로 대응한다.
-                _pCmd->bindComputeConstantBuffer( _instanceAnimCb._index, 0 );
+                _pCmd->bindComputeConstantBuffer( _deform._instanceAnimCb._index, 0 );
                 _pCmd->bindComputeUav( _gpuScene.getInstanceUav(), 0 );
                 const uint32 animGroups = ( instanceCount + 63u ) / 64u;
                 if ( animGroups > 0 )
@@ -90,16 +90,16 @@ namespace sw
 
     int32 FrameRenderer::getEffectiveMeshMorphDiag() const
     {
-        return ( _meshMorphDiagOverride >= 0 ) ? _meshMorphDiagOverride : gv_morphDiag;
+        return ( _deform._meshMorphDiagOverride >= 0 ) ? _deform._meshMorphDiagOverride : gv_morphDiag;
     }
 
     float32 FrameRenderer::getAnimationTime() const
     {
 #if !defined( SW_SHIPPING )
-        if ( _animationTimeOverride >= 0.0f )
-            return _animationTimeOverride;
+        if ( _deform._animationTimeOverride >= 0.0f )
+            return _deform._animationTimeOverride;
 #endif
-        return _animTimer.getTotalTime();
+        return _deform._animTimer.getTotalTime();
     }
 
     void FrameRenderer::prepareMeshMorphPool()
@@ -107,7 +107,7 @@ namespace sw
         const int32 morphDiag = getEffectiveMeshMorphDiag();
         // 백엔드가 못 하면 풀을 만들지도 않는다. 배치의 base 가 kInvalidBase 로 남아 셰이더가
         // 레스트 포즈로 그린다(언리얼의 스킨 캐시 폴백과 같다). 자세한 사연은 RHICapabilities.h 를 참고한다.
-        _bMorphBindsRest = SW_FALSE;
+        _deform._bMorphBindsRest = SW_FALSE;
         if ( _pDevice == nullptr )
             return;
         if ( _pDevice->getCapabilities()._bGPUMeshMorph == SW_FALSE && morphDiag == 0 )
@@ -115,9 +115,9 @@ namespace sw
 
         // 풀은 **배치가 가진 메시**에서 만든다. 스냅샷 배치가 소유권을 가지고 있으므로 이 프레임 동안 살아 있다.
         // 스킨드 메시는 스킨 구간(뒤)으로, 모프를 켠 메시는 모프 구간(앞)으로 간다.
-        _listScratchMorphMesh.clear();
-        _listScratchSkinMesh.clear();
-        _listScratchVertexAnimationMesh.clear();
+        _deform._listScratchMorphMesh.clear();
+        _deform._listScratchSkinMesh.clear();
+        _deform._listScratchVertexAnimationMesh.clear();
         for ( const GPUMeshBatch& batch : _gpuScene.getAllBatches() )
         {
             Mesh* pMesh = batch._mesh.get();
@@ -126,30 +126,30 @@ namespace sw
             // 정점 애니메이션(VAT) 메시는 컴퓨트 없이 정점 셰이더가 테이블을 읽는다. 테이블 풀로 간다.
             if ( pMesh->findVertexAnimation() != nullptr )
             {
-                if ( std::find( _listScratchVertexAnimationMesh.begin(), _listScratchVertexAnimationMesh.end(), pMesh ) == _listScratchVertexAnimationMesh.end() )
-                    _listScratchVertexAnimationMesh.push_back( pMesh );
+                if ( std::find( _deform._listScratchVertexAnimationMesh.begin(), _deform._listScratchVertexAnimationMesh.end(), pMesh ) == _deform._listScratchVertexAnimationMesh.end() )
+                    _deform._listScratchVertexAnimationMesh.push_back( pMesh );
                 continue;
             }
             const bool bSkin = pMesh->hasSkin();
             if ( bSkin == false && pMesh->isGPUMorphEnabled() == false )
                 continue;
             // 같은 메시가 여러 배치에 나올 수 있다(불투명, 투명, 뷰). 풀에는 한 번만 넣는다.
-            vector<Mesh*>& listTarget = bSkin ? _listScratchSkinMesh : _listScratchMorphMesh;
+            vector<Mesh*>& listTarget = bSkin ? _deform._listScratchSkinMesh : _deform._listScratchMorphMesh;
             if ( std::find( listTarget.begin(), listTarget.end(), pMesh ) == listTarget.end() )
                 listTarget.push_back( pMesh );
         }
 
-        _meshMorphPool.rebuild( _pDevice, _listScratchMorphMesh, _listScratchSkinMesh );
-        _meshMorphPool.uploadSkinPalettes( _pDevice, _gpuScene.getSkinPalettes(), _gpuScene.findSkinPaletteRows(), _gpuScene.findMorphWeights() );
+        _deform._meshMorphPool.rebuild( _pDevice, _deform._listScratchMorphMesh, _deform._listScratchSkinMesh );
+        _deform._meshMorphPool.uploadSkinPalettes( _pDevice, _gpuScene.getSkinPalettes(), _gpuScene.findSkinPaletteRows(), _gpuScene.findMorphWeights() );
 
         // 배치에 구간을 기록해 둔다. upload() 가 배치 테이블(g_SwBatches)에 싣는다. 풀에 들어가지 못한 메시는 kInvalidBase 라
         // 셰이더가 레스트 포즈로 그린다.
-        _gpuScene.assignMorphBases( _meshMorphPool );
-        _vertexAnimationPool.rebuild( _pDevice, _listScratchVertexAnimationMesh );
-        _gpuScene.assignVertexAnimationBases( _vertexAnimationPool );
-        SW_PROFILE_COUNT( "RT.Skin.instances", _meshMorphPool.getSkinInstanceCount() );
-        SW_PROFILE_COUNT( "RT.Skin.vertices", _meshMorphPool.getSkinVertexCount() );
-        SW_PROFILE_COUNT( "RT.Skin.sourceVertices", _meshMorphPool.getSkinSourceVertexCount() );
+        _gpuScene.assignMorphBases( _deform._meshMorphPool );
+        _deform._vertexAnimationPool.rebuild( _pDevice, _deform._listScratchVertexAnimationMesh );
+        _gpuScene.assignVertexAnimationBases( _deform._vertexAnimationPool );
+        SW_PROFILE_COUNT( "RT.Skin.instances", _deform._meshMorphPool.getSkinInstanceCount() );
+        SW_PROFILE_COUNT( "RT.Skin.vertices", _deform._meshMorphPool.getSkinVertexCount() );
+        SW_PROFILE_COUNT( "RT.Skin.sourceVertices", _deform._meshMorphPool.getSkinSourceVertexCount() );
     }
 
     void FrameRenderer::dispatchMeshMorph()
@@ -159,13 +159,13 @@ namespace sw
             return;
         if ( _pDevice->getCapabilities()._bGPUMeshMorph == SW_FALSE && morphDiag == 0 )
             return;
-        if ( _meshMorphPool.isDispatchable() == false )
+        if ( _deform._meshMorphPool.isDispatchable() == false )
             return;
 
         // 진단 2: 컴퓨트를 돌리지 않고 레스트 버퍼를 그대로 정점 셰이더에 바인딩한다(위 gv 주석 참고).
         if ( morphDiag == 2 )
         {
-            _bMorphBindsRest = SW_TRUE;
+            _deform._bMorphBindsRest = SW_TRUE;
             return;
         }
 
@@ -174,10 +174,10 @@ namespace sw
         //         위치가 정점 스트림과 같은가" 를 **따로** 볼 수 있다. 값만 비교해서는 둘을 가를 수 없다.
         if ( morphDiag == 3 )
         {
-            _listScratchMorphTag.clear();
-            _listScratchMorphTag.reserve( _meshMorphPool.getVertexCount() );
+            _deform._listScratchMorphTag.clear();
+            _deform._listScratchMorphTag.reserve( _deform._meshMorphPool.getVertexCount() );
             uint32 element = 0;
-            for ( const Mesh* pMesh : _listScratchMorphMesh )
+            for ( const Mesh* pMesh : _deform._listScratchMorphMesh )
             {
                 if ( pMesh == nullptr )
                     continue;
@@ -186,40 +186,40 @@ namespace sw
                     GPUMorphVertex tagged{};
                     tagged._position = float4{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2], 1.0f };
                     tagged._normal   = float4{ static_cast<float32>( element ), 0.0f, 0.0f, 0.0f };
-                    _listScratchMorphTag.push_back( tagged );
+                    _deform._listScratchMorphTag.push_back( tagged );
                     ++element;
                 }
             }
-            _bMorphBindsRest = SW_TRUE;
-            _meshMorphPool.getRestBuffer().upload( _pDevice, _listScratchMorphTag.data(),
-                                                   static_cast<uint32>( _listScratchMorphTag.size() * sizeof( GPUMorphVertex ) ) );
+            _deform._bMorphBindsRest = SW_TRUE;
+            _deform._meshMorphPool.getRestBuffer().upload( _pDevice, _deform._listScratchMorphTag.data(),
+                                                           static_cast<uint32>( _deform._listScratchMorphTag.size() * sizeof( GPUMorphVertex ) ) );
             return;
         }
 
         const RHIPipelineStateHandle morphPSO = getEnginePSO( RenderPassType::MeshMorph );
-        if ( morphPSO == 0 || _meshMorphCb.isValid() == false )
+        if ( morphPSO == 0 || _deform._meshMorphCb.isValid() == false )
             return;
 
         FrameRendererUtil::GPUMorphParams morphParams{};
         morphParams._time        = getAnimationTime();
         morphParams._amplitude   = FrameRendererUtil::kMeshMorphAmplitude;
         morphParams._frequency   = FrameRendererUtil::kMeshMorphFrequency;
-        morphParams._vertexCount = _meshMorphPool.getMorphVertexCount();
+        morphParams._vertexCount = _deform._meshMorphPool.getMorphVertexCount();
         if ( morphParams._vertexCount == 0 )
             return;
-        _meshMorphCb.update( *_pCmd, &morphParams, sizeof( morphParams ) );
+        _deform._meshMorphCb.update( *_pCmd, &morphParams, sizeof( morphParams ) );
 
         // 쓰기 전에 UAV 로, 드로우 전에 다시 SRV 로 전이한다. 정점 셰이더가 이 버퍼를 읽으므로 배리어가 빠지면
         // DX12 와 Vulkan 에서 조용히 예전 값이 나온다(인스턴스 애니메이션과 같은 함정이다).
-        _pCmd->transitionBuffer( _meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::UnorderedAccess );
+        _pCmd->transitionBuffer( _deform._meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::UnorderedAccess );
         _pCmd->setComputePipelineState( morphPSO );
-        _pCmd->bindComputeConstantBuffer( _meshMorphCb._index, 0 );
-        _pCmd->bindComputeShaderResource( _meshMorphPool.getRestBuffer()._srv, 0 );
-        _pCmd->bindComputeUav( _meshMorphPool.getMorphBuffer()._uav, 0 );
+        _pCmd->bindComputeConstantBuffer( _deform._meshMorphCb._index, 0 );
+        _pCmd->bindComputeShaderResource( _deform._meshMorphPool.getRestBuffer()._srv, 0 );
+        _pCmd->bindComputeUav( _deform._meshMorphPool.getMorphBuffer()._uav, 0 );
         const uint32 morphGroups = ( morphParams._vertexCount + 63u ) / 64u;
         if ( morphGroups > 0 )
             _pCmd->dispatchCompute( morphGroups, 1, 1 );
-        _pCmd->transitionBuffer( _meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::ShaderResource );
+        _pCmd->transitionBuffer( _deform._meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::ShaderResource );
     }
 
     void FrameRenderer::dispatchMeshSkin()
@@ -230,35 +230,35 @@ namespace sw
         // 진단 2와 3은 레스트 버퍼를 그대로 바인딩해 "컴퓨트 없이" 를 본다. 스키닝도 돌리지 않는다(바인드 포즈).
         if ( ( _pDevice->getCapabilities()._bGPUMeshMorph == SW_FALSE && morphDiag == 0 ) || morphDiag == 2 || morphDiag == 3 )
             return;
-        if ( _meshMorphPool.isSkinDispatchable() == false )
+        if ( _deform._meshMorphPool.isSkinDispatchable() == false )
             return;
         const RHIPipelineStateHandle skinPSO = getEnginePSO( RenderPassType::MeshSkin );
-        if ( skinPSO == 0 || _meshSkinCb.isValid() == false )
+        if ( skinPSO == 0 || _deform._meshSkinCb.isValid() == false )
             return;
 
         FrameRendererUtil::GPUSkinParams skinParams{};
-        skinParams._skinVertexBase    = _meshMorphPool.getSkinVertexBase();
-        skinParams._skinVertexCount   = _meshMorphPool.getSkinVertexCount();
-        skinParams._skinBoneCount     = _meshMorphPool.getSkinBoneCount();
-        skinParams._skinInstanceCount = _meshMorphPool.getSkinInstanceCount();
-        skinParams._skinDeltaBase     = _meshMorphPool.getSkinDeltaBase();
-        _meshSkinCb.update( *_pCmd, &skinParams, sizeof( skinParams ) );
+        skinParams._skinVertexBase    = _deform._meshMorphPool.getSkinVertexBase();
+        skinParams._skinVertexCount   = _deform._meshMorphPool.getSkinVertexCount();
+        skinParams._skinBoneCount     = _deform._meshMorphPool.getSkinBoneCount();
+        skinParams._skinInstanceCount = _deform._meshMorphPool.getSkinInstanceCount();
+        skinParams._skinDeltaBase     = _deform._meshMorphPool.getSkinDeltaBase();
+        _deform._meshSkinCb.update( *_pCmd, &skinParams, sizeof( skinParams ) );
 
         // 모프와 같은 결과 버퍼의 뒤 구간에 쓴다. 쓰기 전에 UAV 로, 드로우 전에 다시 SRV 로 전이한다(배리어가 빠지면 DX12 와 Vulkan 에서 예전 값이 나온다).
-        _pCmd->transitionBuffer( _meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::UnorderedAccess );
+        _pCmd->transitionBuffer( _deform._meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::UnorderedAccess );
         _pCmd->setComputePipelineState( skinPSO );
         // SkinParams(b0) / g_RestVertices(t0, 원본 레스트) / g_SkinWeights(t1) / g_SkinPalette(t2) / g_SkinInstances(t3) / g_MorphVerticesRW(u0).
         // meshskin.hlsl 레지스터와 1:1 로 대응한다.
-        _pCmd->bindComputeConstantBuffer( _meshSkinCb._index, 0 );
-        _pCmd->bindComputeShaderResource( _meshMorphPool.getSkinRestBuffer()._srv, 0 );
-        _pCmd->bindComputeShaderResource( _meshMorphPool.getSkinWeightBuffer()._srv, 1 );
-        _pCmd->bindComputeShaderResource( _meshMorphPool.getSkinPaletteBuffer()._srv, 2 );
-        _pCmd->bindComputeShaderResource( _meshMorphPool.getSkinInstanceBuffer()._srv, 3 );
-        _pCmd->bindComputeUav( _meshMorphPool.getMorphBuffer()._uav, 0 );
+        _pCmd->bindComputeConstantBuffer( _deform._meshSkinCb._index, 0 );
+        _pCmd->bindComputeShaderResource( _deform._meshMorphPool.getSkinRestBuffer()._srv, 0 );
+        _pCmd->bindComputeShaderResource( _deform._meshMorphPool.getSkinWeightBuffer()._srv, 1 );
+        _pCmd->bindComputeShaderResource( _deform._meshMorphPool.getSkinPaletteBuffer()._srv, 2 );
+        _pCmd->bindComputeShaderResource( _deform._meshMorphPool.getSkinInstanceBuffer()._srv, 3 );
+        _pCmd->bindComputeUav( _deform._meshMorphPool.getMorphBuffer()._uav, 0 );
         const uint32 skinGroups = ( skinParams._skinVertexCount + 63u ) / 64u;
         if ( skinGroups > 0 )
             _pCmd->dispatchCompute( skinGroups, 1, 1 );
-        _pCmd->transitionBuffer( _meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::ShaderResource );
+        _pCmd->transitionBuffer( _deform._meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::ShaderResource );
     }
 
     void FrameRenderer::dispatchCullAndSort( uint32 instanceCount )

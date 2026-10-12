@@ -14,6 +14,7 @@
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Canvas/CanvasRenderer.h"
+#include "Engine/Renderer/Frame/FrameMeshDeformState.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/FrameResourceRegistry.h"
 #include "Engine/Renderer/Frame/GPUPassTimeline.h"
@@ -116,7 +117,7 @@ namespace sw
          *          그래서 이 모드 하나로 "정점 셰이더의 풀 읽기가 네 백엔드에서 같은가" 를 픽셀로 단언할 수 있다.
          *          OpenGL 드라이버가 early-return 형태의 `swComputeMorphElement` 를 잘못 컴파일해 원소를 하나 어긋나게 읽으면 이 단언에 걸린다(binding.hlsli 주석 참고).
          */
-        void setMeshMorphDiag( int32 mode ) { _meshMorphDiagOverride = mode; }
+        void setMeshMorphDiag( int32 mode ) { _deform._meshMorphDiagOverride = mode; }
         /**
          * @brief 같은 PSO 와 머티리얼의 연속 배치를 멀티 드로우 하나로 묶을지 정합니다. 기본은 켬이고 전역 `gv_drawMerge` 를 덮어씁니다.
          * @details 끄면 배치마다 드로우를 한 번씩 부른다. 백엔드가 멀티 드로우를 지원하지 않으면(DX11) 어차피 그렇게 동작한다. 테스트가 켠 경우와 끈 경우의 이미지를 비교한다.
@@ -130,7 +131,7 @@ namespace sw
          * @details 테스트가 쓴다. 모프 변위는 sin(시간)이라 벽시계로 캡처하면 시각에 따라 이미지가 달라지고, 부하가 걸린 실행에서 픽셀 단언이 흔들린다.
          *          테스트 전용이므로 배포본에서는 바꿀 수 없게 뺀다.
          */
-        void setAnimationTimeOverride( float32 seconds ) { _animationTimeOverride = seconds; }
+        void setAnimationTimeOverride( float32 seconds ) { _deform._animationTimeOverride = seconds; }
 #endif
         /** @brief 마지막 프레임에서 씬이 낸 간접 드로우 호출 수입니다(모든 패스 합). 배치 수보다 작으면 묶인 호출이 있다는 뜻입니다. */
         uint32 getLastIndirectDrawCallCount() const { return _lastIndirectDrawCallCount; }
@@ -745,15 +746,8 @@ namespace sw
          */
         RenderView _arrView[static_cast<uint32>( RenderViewType::Count )];
 
-        RHIConstantBufferSlot _instanceAnimCb;
-        RHIConstantBufferSlot _meshMorphCb;
-        RHIConstantBufferSlot _meshSkinCb;
-        /// @brief GPU 가 변형한 정점 풀입니다. RT 가 소유합니다(GPUMeshMorphPool 참고).
-        GPUMeshMorphPool _meshMorphPool;
-        /// @brief 정점 애니메이션(VAT) 테이블 풀입니다. RT 가 소유합니다(GPUVertexAnimationPool 참고).
-        GPUVertexAnimationPool _vertexAnimationPool;
-        /// @brief `setMeshMorphDiag` 로 받은 값입니다. 음수면 전역 변수 `gv_morphDiag` 를 따릅니다.
-        int32 _meshMorphDiagOverride;
+        /// @brief 정점 변형(인스턴스 애니메이션, 모프, 스킨, VAT) 컴퓨트의 상수 버퍼, 풀, 스크래치, 시계입니다.
+        FrameMeshDeformState _deform;
         /// @brief `setDrawMergeEnabled` 로 받은 값입니다. 음수면 전역 변수 `gv_drawMerge` 를 따릅니다.
         int32 _drawMergeOverride;
         /// @brief `setVertexPoolEnabled` 로 받은 값입니다. 음수면 전역 변수 `gv_vertexPool` 을 따릅니다.
@@ -771,14 +765,6 @@ namespace sw
         uint32 _lastIndirectDrawCallCount;
         /// @brief `setInputRoleEnabled( role, false )` 가 켠 비트입니다. 그 역할의 입력은 바인딩하지 않습니다.
         uint32 _disabledInputRoleMask;
-        /// @brief 진단(`-gv_morphDiag=3`)이 올리는 번호표 정점입니다. 스크래치이므로 프레임 밖에서는 의미가 없습니다.
-        vector<GPUMorphVertex> _listScratchMorphTag;
-        /// @brief 이번 프레임 모프 대상 메시입니다. 프레임마다 할당하지 않으려고 보관합니다.
-        vector<Mesh*> _listScratchMorphMesh;
-        /// @brief 이번 프레임 스킨드 메시 목록입니다. 모프 풀의 스킨 구간 순서이며 프레임마다 재사용합니다.
-        vector<Mesh*> _listScratchSkinMesh;
-        /// @brief 이번 프레임 VAT 메시 목록입니다. 프레임마다 재사용합니다.
-        vector<Mesh*> _listScratchVertexAnimationMesh;
         /// @brief 씬 라이트 구조 버퍼입니다. RT 가 소유하며 포워드와 디퍼드가 같은 버퍼를 읽습니다.
         GPULightBuffer _lightBuffer;
         /// @brief 씬 직접 경로에서 라이트를 모으는 버퍼입니다. 프레임마다 할당하지 않으려고 보관합니다.
@@ -830,14 +816,6 @@ namespace sw
          */
         bool dispatchCullView( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount, const ViewTarget* pExtraView );
         /**
-         * @brief 인스턴스 애니메이션에 넘기는 절대 시간(초)입니다.
-         * @details 각도를 프레임마다 누적하지 않고 **이 절대 시간에서 매번 새로 계산한다**. 누적하면 프레임
-         *          간격의 흔들림이 그대로 쌓여 백엔드와 실행마다 다른 각도가 나오고, 스크린샷을 비교할 수 없게 된다.
-         *          렌더러가 자기 시계를 가지므로 델타를 여기까지 실어 나르지 않아도 되고, 렌더 스레드에서
-         *          게임 시간을 건드리지 않는다.
-         */
-        GameTimer _animTimer;
-        /**
          * @brief 머티리얼이 없는 배치에 바인딩하는, 0 으로 채운 원소 하나짜리 구조 버퍼입니다. **stride 마다 하나**씩 있습니다.
          * @details DX12 에서 아무것도 바인딩하지 않은 t9 를 읽으면 GPU 폴트(디바이스 제거)가 난다. 어떤 드로우도 빈 슬롯으로
          *          나가지 않도록 항상 유효한 버퍼를 바인딩한다. 언리얼의 기본 머티리얼에 해당한다.
@@ -888,12 +866,6 @@ namespace sw
         /// @brief 씬 직접 경로의 출력 크기(`setOutputSizeOverride`)입니다. 0이면 백버퍼 크기를 씁니다.
         uint32 _directOutputWidth;
         uint32 _directOutputHeight;
-#if !defined( SW_SHIPPING )
-        /// @brief `setAnimationTimeOverride` 로 받은 시각(초)입니다. 음수면 `_animTimer` 를 따릅니다.
-        float32 _animationTimeOverride;
-#endif
-        /// @brief 진단(`-gv_morphDiag=2|3`)에서 정점 셰이더에 결과 대신 **레스트** 버퍼를 바인딩했는지 여부입니다.
-        uint8 _bMorphBindsRest;
         /**
          * @brief 이번 프레임에 컬링 컴퓨트가 실제로 돌았는지 여부입니다. 가시 목록이 유효한지를 나타냅니다.
          * @details 드로우가 가시 목록을 바인딩할지 정하는 값이다. 목록을 바인딩했는데 컬링이 돌지 않았다면 셰이더가

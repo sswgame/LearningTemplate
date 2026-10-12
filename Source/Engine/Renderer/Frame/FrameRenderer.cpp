@@ -79,10 +79,7 @@ namespace sw
         , _listDirectViewScratch{}
         , _passCbRing{}
         , _arrView{}
-        , _instanceAnimCb{}
-        , _meshMorphCb{}
-        , _meshSkinCb{}
-        , _meshMorphDiagOverride{ -1 }
+        , _deform{}
         , _drawMergeOverride{ -1 }
         , _vertexPoolOverride{ -1 }
         , _indirectDrawCallCount{ 0 }
@@ -107,10 +104,6 @@ namespace sw
         , _lastRenderedExtraViewCount{ 0 }
         , _directOutputWidth{ 0 }
         , _directOutputHeight{ 0 }
-#if !defined( SW_SHIPPING )
-        , _animationTimeOverride{ -1.0f }
-#endif
-        , _bMorphBindsRest{ SW_FALSE }
         , _bGPUCullingActive{ SW_FALSE }
         , _status{ FrameRendererStatus::Uninitialized }
         , _bCallbacksBound{ SW_FALSE }
@@ -140,8 +133,8 @@ namespace sw
     {
         _pDevice = pDevice;
         // 인스턴스 애니메이션 시계는 여기서 한 번 돌린다(GameTimer 는 만들면 멈춘 상태다).
-        _animTimer.resetTimer();
-        _animTimer.startTimer();
+        _deform._animTimer.resetTimer();
+        _deform._animTimer.startTimer();
         if ( pDevice == nullptr )
         {
             _status        = FrameRendererStatus::Failed;
@@ -370,7 +363,7 @@ namespace sw
         _pCmd->beginCommandList();
         _bGPUCullingActive = SW_FALSE;
         _indirectDrawCallCount.store( 0, std::memory_order_relaxed );
-        _animTimer.updateTimer();
+        _deform._animTimer.updateTimer();
 
 #if SW_PROFILE_COMPILED
         // 프레임의 첫 GPU 명령 위치다. 패스 시간 합과 이 값의 차이가 "패스 밖의 GPU 시간"(컴퓨트

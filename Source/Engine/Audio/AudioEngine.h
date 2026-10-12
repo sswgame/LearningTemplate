@@ -22,6 +22,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Audio/AudioClip.h"
+#include "Engine/Audio/AudioEngineState.h"
 #include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/AudioMusic.h"
 #include "Engine/Audio/AudioSpatial.h"
@@ -47,35 +48,6 @@ namespace sw
         int32            _priority{ 50 };         ///< 보이스가 모자랄 때 우선순위가 높은 쪽이 남는다.
         AudioVirtualMode _virtual{ AudioVirtualMode::Virtualize };
         bool             _bLoop{ false }; ///< 끝에서 처음으로 돌아간다.
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 마지막 블록에서 게시한 엔진 상태입니다. */
-    struct AudioEngineStats
-    {
-        uint64 _renderedFrameCount{ 0 }; ///< 지금까지 렌더한 프레임 수다.
-        uint32 _voiceCount{ 0 };         ///< 살아 있는 보이스 수다. 실제, 가상, 클립 대기 보이스를 모두 센다.
-        uint32 _realVoiceCount{ 0 };     ///< 섞은 보이스 수다.
-        uint32 _virtualVoiceCount{ 0 };  ///< 위치만 진행한 보이스 수다.
-        uint32 _instanceCount{ 0 };      ///< 살아 있는 이벤트 인스턴스 수다.
-        uint32 _peakRealVoiceCount{ 0 }; ///< 지금까지 한 블록에 섞은 보이스 수의 최댓값이다.
-        uint64 _playedEventCount{ 0 };   ///< 지금까지 낸 이벤트 수다. 인스턴스를 만든 이벤트만 센다.
-        uint64 _droppedEventCount{ 0 };  ///< 쿨다운, 상한(Reject), 슬롯 부족으로 버린 이벤트 수다.
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 적응형 음악의 현재 위치입니다. 마지막 블록에서 게시한 값입니다. */
-    struct AudioMusicStatus
-    {
-        hashed_string _segment{};     ///< 현재 구간이다. 전환을 기다리는 동안은 이전 구간이다.
-        float64       _beat{ 0.0 };   ///< 구간 시작에서 센 박(소수)
-        uint64        _bar{ 0 };      ///< 구간 시작에서 센 마디 수다.
-        float32       _tempo{ 0.0f }; ///< 현재 템포(BPM)다.
-        bool          _bPlaying{ false };
     };
 } // namespace sw
 
@@ -466,12 +438,7 @@ namespace sw
         vector<float32>                              _listVoiceScratch;               /**< 보이스 로우패스 작업 버퍼입니다(블록 길이). */
         vector<AudioAttenuationDesc>                 _listAttenuation;                /**< 감쇠 테이블입니다. 그래프 프리셋과 라이브러리 프리셋을 합쳤습니다. */
         vector<SnapshotState>                        _listSnapshot;                   /**< 켜 둔 스냅샷입니다. 켠 순서대로 둡니다. */
-        shared_ptr<const AudioMusicDesc>             _pMusic;                         /**< 지금 음악입니다. */
-        AudioPlayingID                               _musicPlayingID;                 /**< 음악의 재생 id 입니다. */
-        uint64                                       _musicSegmentStart;              /**< 현재 구간의 0 박이 있는 렌더 프레임입니다. */
-        uint64                                       _musicPendingFrame;              /**< 예약된 전환의 렌더 프레임입니다. */
-        int32                                        _musicSegment;                   /**< 지금 구간입니다(-1 = 없음). */
-        int32                                        _musicPendingSegment;            /**< 예약된 다음 구간입니다(-1 = 없음). */
+        AudioMusicPlayback                           _music;                          /**< 적응형 음악의 재생 위치와 전환 예약입니다. */
         LibraryMap                                   _mapLibrary;                     /**< 로드한 라이브러리입니다. */
         EventMap                                     _mapEventState;                  /**< 이벤트 이름에서 상태로 가는 맵입니다. */
         ParameterMap                                 _mapParameter;                   /**< 파라미터 이름에서 상태로 가는 맵입니다. */
@@ -485,11 +452,7 @@ namespace sw
         uint32                                       _peakRealVoiceCount;             /**< 한 블록에 섞은 보이스의 최댓값입니다. 게시용입니다. */
         uint32                                       _blockCursor;                    /**< `_listBlockOutput` 에서 다음에 내보낼 프레임입니다. */
         // 게시(오디오 스레드 → 게임 스레드)
-        vector<AudioPlayingID> _listPublishedPlaying; /**< 살아 있는 재생 id 입니다. 정렬되어 있습니다. */
-        AudioEngineStats       _publishedStats;       /**< 마지막 블록의 상태입니다. */
-        AudioMusicStatus       _publishedMusic;       /**< 마지막 블록의 음악 위치입니다. */
-        atomic<uint64>         _publishedAppliedID;   /**< 게시 시점에 적용된 재생 id 입니다. */
-        mutable mutex          _publishMutex;         /**< 게시 사본을 지킵니다. */
-        atomic<bool>           _bInitialized;         /**< 초기화되었는지입니다. */
+        AudioPublishedState _published;    /**< 게임 스레드가 읽는 사본입니다(재생 목록, 상태, 음악 위치). */
+        atomic<bool>        _bInitialized; /**< 초기화되었는지입니다. */
     };
 } // namespace sw

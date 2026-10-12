@@ -204,6 +204,7 @@ DirectX 12 커맨드 시그니처로 루트 상수를 주입하고 Vulkan과 Ope
   프로파일러는 `initialize` 가 주입하고, 타임스탬프를 쓸지도 `isRecording` 에 묻습니다. 보고(`reportFrame`)는 GPU 없이 테스트합니다.
 - `PresentCaptureTarget` 은 스크린샷용 Present 캡처 텍스처의 수명, 출력 RT 복사, CPU 읽기를 맡습니다. 어디에 그릴지는 `resolvePresentTarget` 이 정합니다.
 - 읽어 온 바이트를 PNG 나 PPM 으로 쓰는 변환은 `RenderTargetImageFile` 입니다(GPU 없음).
+- `FrameMeshDeformState` 는 정점 변형 컴퓨트(인스턴스 애니메이션, 모프, 스킨, VAT)의 상수 버퍼, 풀, 스크래치 목록, 시계, 진단 값을 묶은 데이터 부품입니다. 디스패치 순서는 `FrameRenderer` 가 정합니다.
 
 트랜지언트를 "무엇을 얼마나 만들지" 정하는 코드(`FrameRendererTransients`)는 렌더러에 남깁니다. 파이프라인 선언, 뷰의 TAA 기록, 그림자 품질을 함께 읽어서 떼면 그 셋을 모두 넘겨야 하고, 소유는 이미 `TransientAttachmentPool` 이 합니다.
 

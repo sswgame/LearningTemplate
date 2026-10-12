@@ -75,22 +75,22 @@ namespace sw
         // 모프 결과 풀. **패스당 한 번** 건다. 배치는 시작 오프셋을 배치 표에 싣는다(드로우 사이에
         // 바인딩이 바뀌지 않는다는 이 엔진의 규약). 안 걸리면 셰이더가 g_SwMorphVerticesIndex 로 알아채고
         // 입력 스트림을 그대로 쓴다.
-        const RHIStructuredBufferSlot& morphBuffer = ( _bMorphBindsRest != SW_FALSE ) ? _meshMorphPool.getRestBuffer()
-                                                                                      : _meshMorphPool.getMorphBuffer();
+        const RHIStructuredBufferSlot& morphBuffer = ( _deform._bMorphBindsRest != SW_FALSE ) ? _deform._meshMorphPool.getRestBuffer()
+                                                                                              : _deform._meshMorphPool.getMorphBuffer();
         if ( morphBuffer._buffer != 0 && morphBuffer._srv != kInvalidDescriptorIndex )
         {
             context._resourceRegistry.registerBuffer( passConstantNames()._swMorphVertices, morphBuffer._buffer, morphBuffer._srv );
             // 진단(레스트를 그대로 물림)이면 레스트 버퍼는 모프 구간만 담는다 — 스킨 구간 번호는 범위 밖으로 걸러 입력 스트림을 쓴다.
-            const uint32 morphElementCount = ( _bMorphBindsRest != SW_FALSE ) ? _meshMorphPool.getMorphVertexCount() : _meshMorphPool.getVertexCount();
+            const uint32 morphElementCount = ( _deform._bMorphBindsRest != SW_FALSE ) ? _deform._meshMorphPool.getMorphVertexCount() : _deform._meshMorphPool.getVertexCount();
             context._passValues.setUint( passConstantNames()._swMorphVertexCount, morphElementCount );
         }
 
         // 정점 애니메이션(VAT) 표 — 패스당 한 번. 시계는 게임 스레드의 군중 시계(스냅샷)라 인스턴스 시각 오프셋과 더하면 CPU 의 클립 시각이다.
-        const RHIStructuredBufferSlot& vertexAnimationBuffer = _vertexAnimationPool.getBuffer();
+        const RHIStructuredBufferSlot& vertexAnimationBuffer = _deform._vertexAnimationPool.getBuffer();
         if ( vertexAnimationBuffer._buffer != 0 && vertexAnimationBuffer._srv != kInvalidDescriptorIndex )
         {
             context._resourceRegistry.registerBuffer( passConstantNames()._swVertexAnimation, vertexAnimationBuffer._buffer, vertexAnimationBuffer._srv );
-            context._passValues.setUint( passConstantNames()._swVertexAnimationCount, _vertexAnimationPool.getElementCount() );
+            context._passValues.setUint( passConstantNames()._swVertexAnimationCount, _deform._vertexAnimationPool.getElementCount() );
             context._passValues.setFloat( passConstantNames()._swVertexAnimationTime, _gpuScene.getVertexAnimationTime() );
         }
 
