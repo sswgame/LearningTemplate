@@ -20,7 +20,7 @@ namespace sw
     {
         struct NavMeshLinkComponentInternal
         {
-            /** @brief 링크 번호를 정할 때 자리를 자르는 단위(센티미터)입니다. 부동소수 잡음이 번호를 바꾸지 않게 합니다. */
+            /** @brief 링크 번호를 정할 때 위치를 자르는 단위(센티미터)입니다. 부동소수 잡음이 번호를 바꾸지 않게 합니다. */
             static constexpr float32 kIDQuantumPerMeter = 100.0f;
 
             static uint64 quantize( float32 value )
@@ -52,7 +52,7 @@ namespace sw
     {
         Component::onRegister( manager );
         manager.getSceneService<SceneNavigation>().registerLink( this );
-        // 플레이 중에 생긴 링크는 그 자리 타일을 다시 베이크해야 들어간다(내비메시가 아직 없으면 알림은 버려진다).
+        // 플레이 중에 생긴 링크는 그 위치의 타일을 다시 베이크해야 포함된다(내비메시가 아직 없으면 알림은 버려진다).
         invalidateLinkArea();
     }
 
@@ -179,7 +179,7 @@ namespace sw
 
     void NavMeshLinkComponent::setLinkType( const hashed_string& linkType )
     {
-        // 종류 이름은 번호에 든다 — 다시 베이크해야 새 번호로 알린다. 막힌 상태도 새 번호로 다시 건다.
+        // 종류 이름은 번호에 포함된다 — 다시 베이크해야 새 번호로 알린다. 막힌 상태도 새 번호로 다시 적용한다.
         _linkType      = linkType;
         _bEnabledDirty = SW_TRUE;
         invalidateLinkArea();

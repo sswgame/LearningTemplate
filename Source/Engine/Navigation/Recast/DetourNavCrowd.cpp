@@ -231,7 +231,7 @@ namespace sw
         using Internal = DetourNavCrowdInternal;
         if ( _pCrowd == nullptr || deltaTime <= 0.0f )
             return;
-        // 갱신이 링크에 올리면 모퉁이를 지운다 — 어느 링크인지는 갱신 전의 마지막 모퉁이로만 알 수 있다.
+        // 갱신이 에이전트를 링크 위로 옮기면 모퉁이를 지운다 — 어느 링크인지는 갱신 전의 마지막 모퉁이로만 알 수 있다.
         for ( uint32 agentIndex = 0; agentIndex < _maxAgentCount; ++agentIndex )
         {
             if ( isActiveAgent( static_cast<NavCrowdAgentID>( agentIndex ) ) == false )

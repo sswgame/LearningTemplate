@@ -83,7 +83,7 @@ namespace sw
     {
         Blackboard* _pBlackboard{ nullptr };
         void*       _pOwner{ nullptr }; ///< 행위자(게임이 넘긴 것)
-        INavMover*  _pMover{ nullptr }; ///< 행위자의 이동 창구(`BehaviorTreeRunner::setMover`). 없으면 이동 노드가 실패한다
+        INavMover*  _pMover{ nullptr }; ///< 행위자의 이동 인터페이스(`BehaviorTreeRunner::setMover`). 없으면 이동 노드가 실패한다
         float32     _deltaTime{ 0.0f };
         int32       _nodeIndex{ -1 };
         uint8       _bJustStarted{ SW_FALSE }; ///< 이 작업이 이번 틱에 시작했다(목적지 정하기 등 처음 한 번)
@@ -147,9 +147,9 @@ namespace sw
         int32 addWait( int32 parent, float32 seconds );
         /**
          * @brief 블랙보드 벡터 @p destinationKey 로 가는 이동 노드를 더합니다. 언리얼 `BTTask_MoveTo`(블랙보드 키 + 관찰)에 해당합니다.
-         * @details 러너의 `INavMover`(내비메시 에이전트든 격자 행위자든)에 목적지를 걸고, 닿으면 성공 · 길이 없거나 멈춰지면 실패 · 가는 동안 Running 이다.
-         *          도는 동안 블랙보드 값이 @p repathDistance 미터보다 멀리 바뀌면 새 목적지로 다시 건다(쫓기). 중단되면 이동을 멈춘다.
-         *          키가 비었거나 러너에 이동 창구가 없으면 실패한다.
+         * @details 러너의 `INavMover`(내비메시 에이전트든 격자 행위자든)에 목적지를 요청하고, 닿으면 성공 · 길이 없거나 멈춰지면 실패 · 가는 동안 Running 이다.
+         *          도는 동안 블랙보드 값이 @p repathDistance 미터보다 멀리 바뀌면 새 목적지를 다시 요청한다(쫓기). 중단되면 이동을 멈춘다.
+         *          키가 비었거나 러너에 이동 인터페이스가 없으면 실패한다.
          */
         int32 addMoveTo( int32 parent, const hashed_string& destinationKey, float32 repathDistance = 0.5f );
 
@@ -182,7 +182,7 @@ namespace sw
         BehaviorTreeRunner();
 
         void initialize( const BehaviorTree* pTree );
-        /** @brief 이동 노드(`addMoveTo`)가 쓸 행위자의 이동 창구입니다. 행위자보다 먼저 사라지면 nullptr 로 바꿉니다. */
+        /** @brief 이동 노드(`addMoveTo`)가 쓸 행위자의 이동 인터페이스입니다. 행위자보다 먼저 사라지면 nullptr 로 바꿉니다. */
         void setMover( INavMover* pMover ) { _context._pMover = pMover; }
         /** @brief 한 틱 돌리고 뿌리의 상태를 반환합니다. */
         BehaviorStatus tick( Blackboard& blackboard, void* pOwner, float32 deltaTime );
@@ -196,7 +196,7 @@ namespace sw
 
     private:
         BehaviorStatus tickNode( int32 index );
-        /** @brief 이동 노드 한 틱입니다(목적지를 걸거나 다시 걸고, 이동 창구의 상태를 노드 상태로 옮긴다). */
+        /** @brief 이동 노드 한 틱입니다(목적지를 요청하거나 다시 요청하고, 이동 인터페이스의 상태를 노드 상태로 옮긴다). */
         BehaviorStatus tickMoveTo( int32 index, bool bFirst );
         /** @brief 노드를 끝난 상태로 돌립니다. 커서, 타이머, 횟수를 비우되 쿨다운은 남깁니다. */
         void finishNode( int32 index );

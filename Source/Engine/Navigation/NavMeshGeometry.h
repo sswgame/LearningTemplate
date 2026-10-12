@@ -37,8 +37,8 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 오프 메시 링크입니다. 걸을 면으로 이어지지 않은 두 점(사다리 · 점프 · 문)을 잇습니다. 언리얼 NavLink Proxy(`FNavigationLink`) · 유니티 `NavMeshLink` 에 해당합니다.
-     * @details 링크는 시작점이 든 타일에 함께 베이크된다(Detour 규칙). 두 끝은 걸을 면에서 `_radius` 안에 있어야 이어지고, 아니면 그 끝은 버려진다.
+     * @brief 오프 메시 링크입니다. 걸을 면으로 연결되지 않은 두 점(사다리 · 점프 · 문)을 연결합니다. 언리얼 NavLink Proxy(`FNavigationLink`) · 유니티 `NavMeshLink` 에 해당합니다.
+     * @details 링크는 시작점이 포함된 타일에 함께 베이크된다(Detour 규칙). 두 끝은 걸을 면에서 `_radius` 안에 있어야 연결되고, 아니면 그 끝은 버려진다.
      *          `_userID` 는 링크를 가리키는 번호다. 경로(`NavPath::_listLinkCrossing`)와 군중 상태(`NavCrowdAgentState::_link`)가 이 번호로 알리고,
      *          `INavMesh::setOffMeshLinkEnabled` 가 이 번호로 막는다(닫힌 문). 0 은 번호 없는 링크다.
      */

@@ -262,7 +262,7 @@ namespace sw
                 expandBounds( point );
             }
         }
-        // 윗면이 +Y 를 보게 감는다(addBox 의 윗면과 같은 순서) — 베이크하는 쪽이 법선으로 경사를 잰다.
+        // 윗면이 +Y 를 보게 감는다(addBox 의 윗면과 같은 순서) — 베이크하는 쪽이 법선으로 경사를 측정한다.
         for ( uint32 cellZ = 0; cellZ < cellPerRow; ++cellZ )
         {
             for ( uint32 cellX = 0; cellX < cellPerRow; ++cellX )

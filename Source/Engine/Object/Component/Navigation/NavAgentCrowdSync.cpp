@@ -171,7 +171,7 @@ namespace sw
         SceneComponent*               pScene      = pOwner->getPrimarySceneComponent();
         if ( pController != nullptr && state._bOnOffMeshLink )
         {
-            // 링크(사다리 · 틈)는 물리로 걸을 수 없다 — 건너는 동안은 군중이 정한 자리로 컨트롤러를 옮긴다.
+            // 링크(사다리 · 틈)는 물리로 걸을 수 없다 — 건너는 동안은 군중이 정한 위치로 컨트롤러를 옮긴다.
             pController->setMoveVelocity( float3{} );
             pController->setWorldPosition( state._position );
         }

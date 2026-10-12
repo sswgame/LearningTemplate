@@ -1,4 +1,4 @@
-// 행동 트리 이동 노드 — 블랙보드 벡터로 공통 이동 창구(`INavMover`)에 목적지를 걸고, 그 상태를 노드 상태로 옮긴다(격자 · 내비메시 공통).
+// 행동 트리 이동 노드 — 블랙보드 벡터로 공통 이동 인터페이스(`INavMover`)에 목적지를 요청하고, 그 상태를 노드 상태로 옮긴다(격자 · 내비메시 공통).
 #include "pch.h"
 
 #include "Engine/Navigation/INavMover.h"
@@ -18,7 +18,7 @@
 
 namespace
 {
-    /** @brief 부른 횟수와 마지막 목적지를 적고, 상태는 테스트가 정하는 이동 창구입니다. */
+    /** @brief 부른 횟수와 마지막 목적지를 적고, 상태는 테스트가 정하는 이동 인터페이스입니다. */
     class RecordingNavMover final : public sw::INavMover
     {
     public:
@@ -47,8 +47,8 @@ namespace
 } // namespace
 
 /**
- * @brief [BehaviorMoveToTest] 이동 노드가 블랙보드 목적지를 한 번 걸고, 가는 동안 Running · 닿으면 성공 · 길이 없으면 실패이며,
- *        목적지가 다시 걸 거리보다 멀리 바뀌면 다시 걸고, 중단되면 멈춘다. 키나 이동 창구가 없으면 실패한다
+ * @brief [BehaviorMoveToTest] 이동 노드가 블랙보드 목적지를 한 번 요청하고, 가는 동안 Running · 닿으면 성공 · 길이 없으면 실패이며,
+ *        목적지가 다시 요청할 거리보다 멀리 바뀌면 다시 요청하고, 중단되면 멈춘다. 키나 이동 인터페이스가 없으면 실패한다
  */
 SW_TEST_CASE( BehaviorMoveToTest, MoveToFollowsTheBlackboardAndReportsTheMover )
 {
@@ -63,7 +63,7 @@ SW_TEST_CASE( BehaviorMoveToTest, MoveToFollowsTheBlackboardAndReportsTheMover )
     sw::BehaviorTreeRunner runner;
     runner.initialize( &tree );
 
-    // 이동 창구가 없거나 키가 비었으면 실패.
+    // 이동 인터페이스가 없거나 키가 비었으면 실패.
     blackboard.setVector( goalKey, sw::float3{ 4.0f, 0.0f, 0.0f } );
     SW_EXPECT_TRUE( runner.tick( blackboard, nullptr, 0.1f ) == sw::BehaviorStatus::Failure );
     runner.setMover( &mover );
@@ -71,7 +71,7 @@ SW_TEST_CASE( BehaviorMoveToTest, MoveToFollowsTheBlackboardAndReportsTheMover )
     SW_EXPECT_TRUE( runner.tick( emptyBoard, nullptr, 0.1f ) == sw::BehaviorStatus::Failure );
     SW_EXPECT_EQUAL( 0u, mover._moveCount );
 
-    // 건다 → 가는 중 → 조금 바뀌면 그대로 · 멀리 바뀌면 다시 건다 → 닿으면 성공.
+    // 요청 → 가는 중 → 조금 바뀌면 그대로 · 멀리 바뀌면 다시 요청 → 닿으면 성공.
     SW_EXPECT_TRUE( runner.tick( blackboard, nullptr, 0.1f ) == sw::BehaviorStatus::Running );
     SW_EXPECT_EQUAL( 1u, mover._moveCount );
     SW_EXPECT_TRUE( ( mover._destination - sw::float3{ 4.0f, 0.0f, 0.0f } ).getLength() < 1.0e-4f );

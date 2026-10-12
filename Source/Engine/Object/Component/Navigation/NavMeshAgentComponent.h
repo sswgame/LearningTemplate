@@ -103,7 +103,7 @@ namespace sw
         bool isOnNavMesh() const { return _bOnNavMesh == SW_TRUE; }
         /**
          * @brief 오프 메시 링크(`NavMeshLinkComponent`)를 건너는 중이면 true 입니다(마지막 내비게이션 갱신). 애니메이션이 사다리 · 점프 동작으로 바꾸는 신호입니다.
-         * @details 건너는 동안 군중이 자리를 링크를 따라 옮긴다. `Transform` 은 오브젝트를, `CharacterController` 는 컨트롤러를 그 자리로 옮기고(물리 이동 대신),
+         * @details 건너는 동안 군중이 위치를 링크를 따라 옮긴다. `Transform` 은 오브젝트를, `CharacterController` 는 컨트롤러를 그 위치로 옮기고(물리 이동 대신),
          *          `SteerOnly` 는 링크를 따라가는 속도를 낸다. 언리얼 `UNavLinkCustomComponent` 의 도착 알림 · 유니티 `NavMeshAgent.isOnOffMeshLink` 에 해당합니다.
          */
         bool isOnOffMeshLink() const { return _bOnOffMeshLink == SW_TRUE; }

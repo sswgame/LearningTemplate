@@ -193,7 +193,7 @@ namespace sw
         {
             if ( pObject->isActiveInHierarchy() == false )
                 return;
-            // 링크만 든 오브젝트는 그릴 상자가 없다 — 표면 상자 판정은 링크 자리로 따로 한다.
+            // 링크만 가진 오브젝트는 그릴 상자가 없다 — 표면 상자 판정은 링크 위치로 따로 한다.
             AABB       objectBox{};
             const bool bOutsideSurface = bSurfaceBox && ( pObject->getWorldBox( objectBox ) == false || objectBox.intersects( surfaceBox ) == false );
             // 등록된 종류(지형)도 그릴 상자가 없을 수 있다 — 베이크 경계가 표면 상자로 자르므로 상자 밖이어도 넣는다.

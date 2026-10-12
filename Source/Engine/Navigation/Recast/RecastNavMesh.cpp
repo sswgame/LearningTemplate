@@ -399,7 +399,7 @@ namespace sw
             polyMesh.flags[polyIndex] = Internal::toPolyFlags( polyMesh.areas[polyIndex] );
         }
 
-        // 오프 메시 링크 — 시작점이 이 타일에 든 것만 싣는다(Detour 는 바깥에서 시작하는 링크를 버린다). 끝은 이웃 타일이 끼워질 때 이어진다.
+        // 오프 메시 링크 — 시작점이 이 타일에 포함된 것만 싣는다(Detour 는 바깥에서 시작하는 링크를 버린다). 끝은 이웃 타일이 끼워질 때 연결된다.
         vector<float32> listLinkVertex;
         vector<float32> listLinkRadius;
         vector<uint16>  listLinkFlag;
@@ -814,7 +814,7 @@ namespace sw
                     renderer.drawLine( from, to, bBoundary ? color : innerColor );
                 }
             }
-            // 오프 메시 링크는 두 끝을 잇는 활로 그린다. 막힌 링크(표시 0)는 빨강이다.
+            // 오프 메시 링크는 두 끝을 연결하는 활로 그린다. 막힌 링크(표시 0)는 빨강이다.
             const float4 blockedColor{ 1.0f, 0.15f, 0.1f, color._w };
             for ( int32 linkIndex = 0; linkIndex < pTile->header->offMeshConCount; ++linkIndex )
             {

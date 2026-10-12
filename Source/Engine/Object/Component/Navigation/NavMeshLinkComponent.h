@@ -1,14 +1,14 @@
 /**
  * @file NavMeshLinkComponent.h
- * @brief 내비메시가 잇지 못한 두 점(사다리 · 점프 · 문)을 잇는 오프 메시 링크입니다. 언리얼 NavLink Proxy(Smart Link) · 유니티 `NavMeshLink` 에 해당합니다.
+ * @brief 내비메시가 연결하지 못한 두 점(사다리 · 점프 · 문)을 연결하는 오프 메시 링크입니다. 언리얼 NavLink Proxy(Smart Link) · 유니티 `NavMeshLink` 에 해당합니다.
  * @details 두 끝은 오브젝트 기준 오프셋(`_startOffset` · `_endOffset`)이고, 베이크할 때 월드로 옮겨 기하(`NavMeshGeometry::addOffMeshLink`)에 들어갑니다 —
- *          정적 기하와 같이 쿠킹본에 들고, 속성을 바꾸거나 생기고 사라지면 그 자리 타일을 다시 베이크합니다. 오브젝트를 옮긴 것은 따라가지 않습니다.
+ *          정적 기하와 같이 쿠킹본에 포함되고, 속성을 바꾸거나 생기고 사라지면 그 위치의 타일을 다시 베이크합니다. 오브젝트를 옮긴 것은 따라가지 않습니다.
  *
  *          **애니메이션 신호.** 에이전트가 링크를 건너는 동안 `NavMeshAgentComponent::isOnOffMeshLink` 가 참이고, `getOffMeshLinkType` 이 이 링크의
  *          `_linkType`(예: `Ladder` · `Jump` · `Door`)을 돌려줍니다. 게임은 그 이름으로 동작을 고르고 진행률로 맞춥니다.
  *
  *          **막기.** `setLinkEnabled( false )` 면 경로가 이 링크를 지나지 않습니다(닫힌 문). 다음 내비게이션 갱신에 모든 에이전트 종류의 내비메시에 적용됩니다.
- *          링크 번호(`computeLinkID`)는 두 끝의 월드 자리와 종류 이름에서 나오므로 쿠킹본과 런타임 베이크가 같은 번호를 씁니다.
+ *          링크 번호(`computeLinkID`)는 두 끝의 월드 위치와 종류 이름에서 나오므로 쿠킹본과 런타임 베이크가 같은 번호를 씁니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -41,12 +41,12 @@ namespace sw
 
         /**
          * @brief 지금 오브젝트 자세의 링크(월드)를 채웁니다. 영역 이름은 @p settings 의 번호로 바꾸고, 비었으면 @p fallbackArea 입니다.
-         * @return 오브젝트에 자리가 없으면 false 입니다.
+         * @return 오브젝트에 씬 컴포넌트가 없으면 false 입니다.
          */
         [[nodiscard]] bool makeLink( const NavMeshSettings& settings, uint8 fallbackArea, NavOffMeshLink& outLink ) const;
-        /** @brief 두 끝의 월드 자리입니다. 오브젝트에 자리가 없으면 false 입니다. */
+        /** @brief 두 끝의 월드 위치입니다. 오브젝트에 씬 컴포넌트가 없으면 false 입니다. */
         [[nodiscard]] bool computeWorldEndpoints( float3& outStart, float3& outEnd ) const;
-        /** @brief 지금 자세의 링크 번호입니다(자리가 없으면 0). */
+        /** @brief 지금 자세의 링크 번호입니다(씬 컴포넌트가 없으면 0). */
         uint32 computeCurrentLinkID() const;
         /** @brief 두 끝(센티미터로 자름)과 종류 이름으로 정한 링크 번호입니다. 0 이 아닙니다. */
         static uint32 computeLinkID( const float3& start, const float3& end, const hashed_string& linkType );
@@ -70,7 +70,7 @@ namespace sw
     private:
         friend class SceneNavigation;
 
-        /** @brief 지금 자리의 타일과 마지막으로 알린 자리의 타일을 다시 베이크하게 합니다. */
+        /** @brief 지금 위치의 타일과 마지막으로 알린 위치의 타일을 다시 베이크하게 합니다. */
         void invalidateLinkArea();
 
         PROPERTY( Category = "Link", DisplayName = "Start", Tooltip = "Start point relative to the object", Units = m )
@@ -88,7 +88,7 @@ namespace sw
         PROPERTY( Category = "Link", DisplayName = "Enabled", Tooltip = "A disabled link is not crossed (a closed door)" )
         bool _bLinkEnabled;
 
-        AABB   _reportedBounds; ///< 마지막으로 다시 베이크하게 한 자리
+        AABB   _reportedBounds; ///< 마지막으로 다시 베이크하게 한 영역
         uint32 _navIndex;
         uint8  _bEnabledDirty : 1; ///< 막기 · 풀기를 아직 내비메시에 넣지 않았다
         uint8  _reserved      : 7;

@@ -1,4 +1,4 @@
-// 내비메시 오프 메시 링크 — 틈으로 갈린 두 바닥을 링크가 잇고, 경로 · 군중이 링크를 건너며 번호로 알리고, 막으면(닫힌 문) 건너지 않는다.
+// 내비메시 오프 메시 링크 — 틈으로 갈린 두 바닥을 링크가 연결하고, 경로 · 군중이 링크를 건너며 번호로 알리고, 막으면(닫힌 문) 건너지 않는다.
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
@@ -25,7 +25,7 @@ namespace
         /** @brief 링크 번호입니다. */
         static constexpr uint32 kGapLinkID = 7;
 
-        /** @brief 바닥 둘(x 0..6, x 9..15, z 0..4)과 3 m 틈을 잇는 양방향 링크 하나입니다. @p bWithLink 가 거짓이면 링크 없이 바닥만 넣습니다. */
+        /** @brief 바닥 둘(x 0..6, x 9..15, z 0..4)과 3 m 틈을 연결하는 양방향 링크 하나입니다. @p bWithLink 가 거짓이면 링크 없이 바닥만 넣습니다. */
         static void makeGapGeometry( sw::NavMeshGeometry& outGeometry, bool bWithLink )
         {
             navtest::addFloor( outGeometry, 0.0f, 0.0f, 6.0f, 4.0f );
@@ -43,7 +43,7 @@ namespace
 } // namespace
 
 /**
- * @brief [NavMeshLinkTest] 틈을 잇는 링크가 있으면 경로가 끝까지 가고(링크를 건너는 점과 번호를 알린다), 링크를 막으면 부분 경로로 돌아가며, 풀면 다시 지난다
+ * @brief [NavMeshLinkTest] 틈을 연결하는 링크가 있으면 경로가 끝까지 가고(링크를 건너는 점과 번호를 알린다), 링크를 막으면 부분 경로로 돌아가며, 풀면 다시 지난다
  */
 SW_TEST_CASE( NavMeshLinkTest, LinkBridgesTheGapAndCanBeBlocked )
 {
@@ -190,7 +190,7 @@ SW_TEST_CASE( NavMeshLinkTest, LinkComponentBakesSignalsAndBlocks )
     SW_EXPECT_TRUE( sw::float3::getHorizontalDistance( pRoot->getWorldPosition(), goal ) < 0.6f );
     SW_EXPECT_FALSE( pAgent->isOnOffMeshLink() );
 
-    // 막으면(닫힌 문) 다음 갱신부터 경로가 건너지 않고, 편집기 베이크 버튼 창구로 다시 베이크해도 막혀 있다.
+    // 막으면(닫힌 문) 다음 갱신부터 경로가 건너지 않고, 편집기 베이크 버튼 함수로 다시 베이크해도 막혀 있다.
     const sw::float3 west{ 1.0f, 0.0f, 2.0f };
     sw::NavPath      path;
     SW_EXPECT_TRUE( navigation.findPath( agentType, west, goal, path ) == sw::NavPathStatus::Complete );

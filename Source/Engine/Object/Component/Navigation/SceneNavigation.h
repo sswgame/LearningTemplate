@@ -153,7 +153,7 @@ namespace sw
         INavMesh* ensureNavMesh( const hashed_string& agentType );
         /**
          * @brief 마련한 내비메시를 모두 버리고, 표면이 맡은 에이전트 종류(이미 마련했던 종류 포함)를 지금 다시 베이크합니다. 쿠킹본은 쓰지 않습니다. 게임 스레드에서만 부릅니다.
-         * @details 편집기의 베이크 버튼(`navigation.bake`)이 레벨을 고친 뒤 부르는 창구입니다 — 플레이 전에도 됩니다. 군중에 든 에이전트는 다음 갱신에 다시 듭니다.
+         * @details 편집기의 베이크 버튼(`navigation.bake`)이 레벨을 고친 뒤 부르는 함수입니다 — 플레이 전에도 됩니다. 군중에 있던 에이전트는 다음 갱신에 다시 들어갑니다.
          *          보기는 `updateDebugView` · `drawDebug`, 쿠킹본으로 쓰기는 `makeCookedEntry` 입니다.
          * @return 다시 마련한 내비메시 수입니다.
          */
@@ -220,7 +220,7 @@ namespace sw
         /** @brief 알린 영역을 재베이크 줄로 바꿉니다(`NavTileRebaker::processDirtyAreas` 에 이 씬의 입력을 넘긴다). */
         void processDirtyAreas();
         void updateAgents( float32 deltaTime );
-        /** @brief 막기 · 풀기가 바뀐 링크를 모든 내비메시에 넣습니다(타일 교체와 같은 자리 — 질의가 없는 동안). */
+        /** @brief 막기 · 풀기가 바뀐 링크를 모든 내비메시에 넣습니다(타일 교체와 같은 시점 — 질의가 없는 동안). */
         void applyLinkStates();
 
         NavMeshSettings                      _settings;
