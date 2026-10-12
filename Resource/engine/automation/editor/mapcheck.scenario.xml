@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  에디터 시나리오 — 맵 검사(T2): 반경 0 인 점광이 든 테스트 씬(engine/automation/editor/mapcheck/mapcheck.scene.xml)을 열면 로드 검증이 오류 하나를 남긴다.
+  에디터 시나리오 — 맵 검사(T2): **일부러 오류를 심은** 테스트 씬(반경 0 인 점광, engine/automation/editor/mapcheck/mapcheck_expect_error.scene.xml)을 열면 로드 검증이 오류 하나를 남긴다.
   상태줄의 경고 수(statusBar.mapCheck)를 누르면 Map Check 창이 열리고, 첫 줄(mapCheck.row.0 — 오류가 먼저다)을 누르면 그 점광 오브젝트가 골라진다.
   실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/mapcheck.scenario.xml -dx12
 -->
@@ -9,7 +9,7 @@
 		<RequireForeground/><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/>
 		<Variable name="gv_editorProbePanel" value="map_check"/>
 	</At>
-	<At frame="30"><DevCommand line="scene.open engine/automation/editor/mapcheck/mapcheck.scene.xml"/></At>
+	<At frame="30"><DevCommand line="scene.open engine/automation/editor/mapcheck/mapcheck_expect_error.scene.xml"/></At>
 	<At frame="150">
 		<EditorExpectObject name="ZeroRadiusLight"/>
 		<Expect probe="Editor.PanelOpen" equals="0"/>
@@ -26,5 +26,7 @@
 		<EditorExpectObject name="ZeroRadiusLight" selected="1"/>
 		<CaptureWindow file="mapcheck.png"/>
 	</At>
-	<At frame="215"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
+	<!-- 오류를 심은 씬을 열어 둔 채 끝내면 상태줄의 검사 수와 토스트가 다음 시나리오까지 남는다 — 깨끗한 씬으로 돌아가고 끝낸다 -->
+	<At frame="215"><DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/></At>
+	<At frame="240"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
 </Scenario>
