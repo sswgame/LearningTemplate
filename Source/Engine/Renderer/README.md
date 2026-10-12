@@ -246,6 +246,8 @@ UI와 화면 글자는 파이프라인의 마지막 `Canvas` 패스가 그립니
 카메라가 등록될 때 크기를 알리면(`declareRenderTarget`) 캐시가 렌더 타깃 텍스처로 만듭니다.
 
 - 뷰 하나(`FrameRenderer::ViewTarget`)는 자기 트랜지언트 풀, 컬링 입력, TAA 기록, 커맨드 리스트, 출력 텍스처를 가집니다. 트랜지언트 풀의 크기에는 해상도 배율이 곱해집니다.
+  정수 업스케일(`RenderViewSettings::_upscaleZoom`, 픽셀 퍼펙트의 Upscale Render Texture)이면 풀은 사각형 픽셀 / 배율(내림)이고, Present 가 점 샘플(`SW_PASS_FLAG_POINT_UPSCALE`)로
+  그 배만큼 키워 사각형 가운데에 놓습니다(`FrameRendererUtil::computeViewPoolExtent` · `computeUpscaleOffset`). 주 시점은 남는 띠를 검게 지웁니다.
 - `GPUScene` 의 컬링 슬롯은 0이 주 뷰, 1이 그림자, 2부터가 추가 뷰입니다(`kFirstExtraCullView`, 최대 `kMaxExtraRenderView`).
 - **호스트 타깃 뷰**(`RenderViewOutputKind::HostTarget`)는 호스트가 만든 RT 핸들에 그리는 추가 뷰입니다 — 에디터 씬 뷰가 이것입니다. 호스트가 `HostViewTargets`(게임 뷰 · 씬 뷰)를
   `EngineLoop::tick` 에 넘기면 게임 뷰가 주 출력(게임 카메라 · 화면 UI · 화면 사각형 뷰 · 스크린샷 캡처)이고 씬 뷰는 호스트 카메라의 호스트 타깃 뷰입니다.

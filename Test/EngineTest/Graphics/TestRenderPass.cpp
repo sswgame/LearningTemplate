@@ -432,6 +432,22 @@ SW_TEST_CASE( RenderPassTest, PipelineChoiceFollowsArgumentCommandLineGameThenDe
 }
 
 /**
+ * @brief [RenderPassTest] 정수 업스케일 뷰의 내부 해상도는 사각형 픽셀 / 배율의 내림이고(해상도 배율은 보지 않는다), 키운 그림은 사각형 가운데에 놓인다
+ * @details 내림이어야 배율을 곱한 크기가 사각형 안에 들어간다. 1281 / 4 = 320 → 1280 이 1281 안에, 남는 1 픽셀은 왼쪽 0 · 오른쪽 1 이다.
+ */
+SW_TEST_CASE( RenderPassTest, UpscaleViewExtentFloorsAndCentersTheEnlargedImage )
+{
+    SW_EXPECT_EQUAL( 320u, sw::FrameRendererUtil::computeViewPoolExtent( 1280.0f, 0.5f, 4 ) );
+    SW_EXPECT_EQUAL( 320u, sw::FrameRendererUtil::computeViewPoolExtent( 1283.0f, 1.0f, 4 ) );
+    SW_EXPECT_EQUAL( 1u, sw::FrameRendererUtil::computeViewPoolExtent( 3.0f, 1.0f, 4 ) );
+    SW_EXPECT_EQUAL( 640u, sw::FrameRendererUtil::computeViewPoolExtent( 1280.0f, 0.5f, 0 ) ); // 업스케일이 아니면 해상도 배율의 반올림
+    SW_EXPECT_EQUAL( 0u, sw::FrameRendererUtil::computeUpscaleOffset( 0, 1281, 320, 4 ) );
+    SW_EXPECT_EQUAL( 5u, sw::FrameRendererUtil::computeUpscaleOffset( 0, 1290, 320, 4 ) );
+    SW_EXPECT_EQUAL( 105u, sw::FrameRendererUtil::computeUpscaleOffset( 100, 1290, 320, 4 ) );
+    SW_EXPECT_EQUAL( 0u, sw::FrameRendererUtil::computeUpscaleOffset( 0, 100, 30, 4 ) ); // 키운 그림이 더 크면 가운데로 옮기지 않는다
+}
+
+/**
  * @brief [RenderPassTest] 디퍼드 블룸은 밝은 부분을 반해상도로 구하고(BloomDownsample → BloomBright, 나눗수 2) Bloom 패스가 그것을 BloomBright 역할로 읽는다
  * @details 다운샘플 패스는 블룸 셰이더의 `SW_PASS_BLOOM_DOWNSAMPLE` 퍼뮤테이션이다. Bloom 패스가 BloomBright 를 읽지 않으면 셰이더가 원본에서 다시 구해
  *          반해상도 패스가 헛일이 된다(언리얼 블룸 셋업 · 다운샘플 → 합성).

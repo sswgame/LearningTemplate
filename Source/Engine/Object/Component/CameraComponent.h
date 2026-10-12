@@ -60,6 +60,13 @@ namespace sw
         uint32 _renderTextureHeight{ 256 };
         PROPERTY( Min = 0.1, Max = 2.0, Tooltip = "Internal resolution as a multiple of the output size" )
         float32 _resolutionScale{ 1.0f };
+        /**
+         * @brief 정수 업스케일 배율입니다(0 = 끔). N 이면 화면 사각형 픽셀 / N 으로 그리고 점 샘플로 N 배 키워 가운데에 놓습니다(남는 띠는 검다).
+         * @details 픽셀 아트의 Upscale Render Texture(유니티 Pixel Perfect Camera)입니다. 켜면 해상도 배율은 보지 않습니다. `PixelPerfectCameraComponent` 가
+         *          고른 배율을 여기에 적습니다. MainView · ScreenRect 만 받습니다(렌더 텍스처는 자기 크기에 그린다).
+         */
+        PROPERTY( Min = 0, Max = 16, Tooltip = "Integer upscale: render at output / N and enlarge N times with point sampling (0 = off)" )
+        uint32 _upscaleZoom{ 0 };
         PROPERTY( Min = 0.0, Tooltip = "Renders per second; 0 renders every frame", Units = Hz )
         float32 _updateRate{ 0.0f };
         PROPERTY( Tooltip = "Object whose bounds must be in the main view for this view to render (a CCTV monitor); empty always renders" )

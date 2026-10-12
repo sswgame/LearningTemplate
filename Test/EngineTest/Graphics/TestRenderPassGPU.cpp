@@ -6017,6 +6017,90 @@ SW_TEST_CASE( RenderPassGPUTest, PrototypeGridMaterialIsAnchoredToTheWorld )
 }
 
 /**
+ * @brief [RenderPassGPUTest] 정수 업스케일(픽셀 퍼펙트 Upscale Render Texture)은 화면 / 4 로 그려 점 샘플로 4 배 키운다 — 캡처가 4 × 4 칸마다 한 색이다(4 백엔드)
+ * @details 카메라 출력의 `_upscaleZoom` = 4. 2D 파이프라인(forward2dpipeline.xml)의 Present 는 원본을 그대로 옮기므로 칸 안의 16 픽셀이 같아야 한다.
+ *          변이: Present 가 선형으로 읽거나 뷰포트를 배율 크기로 맞추지 않으면 큐브 가장자리의 칸이 섞인다. 남는 띠는 가운데 정렬로 양쪽에 반씩이다.
+ */
+SW_TEST_CASE( RenderPassGPUTest, UpscaledViewDrawsUniformZoomBlocks )
+{
+    constexpr uint32      kZoom = 4;
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string     label = sw::string( device->getBackendName() ) + ": ";
+        LitCubeScene         stage;
+        bool                 bOk     = stage.populate();
+        sw::CameraComponent* pCamera = bOk ? stage._scene.getActiveGameCamera() : nullptr;
+        bOk                          = pCamera != nullptr;
+        if ( bOk )
+        {
+            sw::CameraRenderOutput output = pCamera->getRenderOutput();
+            output._upscaleZoom           = kZoom;
+            pCamera->setRenderOutput( output );
+        }
+        sw::vector<uint8>     bytes;
+        sw::RHITextureMipSpan layout{};
+        bOk = bOk && renderPresentCaptureOf( device.get(), stage._scene, "engine/pipeline/forward2dpipeline.xml", bytes, layout );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "업스케일 그리기 · 캡처" ).c_str() );
+        if ( bOk == false )
+            continue;
+        test::RHITestImage image;
+        image.assign( std::move( bytes ), layout, sw::constant::kBackBufferFormat );
+        const uint32 poolWidth  = image.getWidth() / kZoom;
+        const uint32 poolHeight = image.getHeight() / kZoom;
+        const uint32 restX      = image.getWidth() - poolWidth * kZoom;
+        const uint32 restY      = image.getHeight() - poolHeight * kZoom;
+        // 띠는 왼쪽 · 위가 내림이다. 되읽은 행 순서가 백엔드마다 위아래가 다를 수 있어(GL 원점) 두 정렬 중 맞는 쪽을 본다.
+        auto countMixedBlocks = [&]( uint32 offsetX, uint32 offsetY, uint32& outBlockCount, bool& outVaried ) -> uint32
+        {
+            uint32            mixedCount{ 0 };
+            const test::Rgba8 firstColor = image.getPixel( offsetX, offsetY );
+            outBlockCount                = 0;
+            outVaried                    = false;
+            for ( uint32 blockY = 0; blockY < poolHeight; ++blockY )
+            {
+                for ( uint32 blockX = 0; blockX < poolWidth; ++blockX )
+                {
+                    const uint32      originX = offsetX + blockX * kZoom;
+                    const uint32      originY = offsetY + blockY * kZoom;
+                    const test::Rgba8 corner  = image.getPixel( originX, originY );
+                    outVaried                 = outVaried || test::RHITestImage::getColorDistance( corner, firstColor ) > 16;
+                    bool bUniform{ true };
+                    for ( uint32 y = 0; y < kZoom && bUniform; ++y )
+                    {
+                        for ( uint32 x = 0; x < kZoom; ++x )
+                        {
+                            if ( test::RHITestImage::getColorDistance( image.getPixel( originX + x, originY + y ), corner ) > 1 )
+                            {
+                                bUniform = false;
+                                break;
+                            }
+                        }
+                    }
+                    ++outBlockCount;
+                    if ( bUniform == false )
+                        ++mixedCount;
+                }
+            }
+            return mixedCount;
+        };
+        uint32 blockCount{ 0 };
+        bool   bVaried{ false };
+        uint32 mixedBlockCount = countMixedBlocks( restX / 2u, restY / 2u, blockCount, bVaried );
+        if ( mixedBlockCount > 0 && ( restX % 2u != 0 || restY % 2u != 0 ) )
+            mixedBlockCount = sw::MathUtil::min( mixedBlockCount, countMixedBlocks( restX - restX / 2u, restY - restY / 2u, blockCount, bVaried ) );
+        SW_LOG_INFO( "%#upscale x%#: %# of %# blocks mixed (%#x%#)", label, kZoom, mixedBlockCount, blockCount, image.getWidth(), image.getHeight() );
+        SW_EXPECT_TRUE_MSG( bVaried, ( label + "그림이 한 색이다 — 큐브가 없어 비교가 뜻이 없다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( mixedBlockCount == 0,
+                            ( label + "4 x 4 칸 안의 픽셀이 다르다(점 샘플 · 배율 뷰포트가 아니다) — " + sw::to_string( mixedBlockCount ) ).c_str() );
+        ++comparedCount;
+    }
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could render the upscale test" );
+}
+
+/**
  * @brief [RenderPassGPUTest] 창으로 나간 그림(백버퍼)이 Present 캡처와 같다 — 4 백엔드
  * @details 스크린샷(`-gv_screenshot`)은 오프스크린 캡처를 읽으므로 캡처 → 창 블릿의 반전 · 잘림은 거기서 보이지 않는다(GL 창은 0 행이 아래).
  *          캡처를 켜고 그린 프레임의 백버퍼를 읽어 캡처와 픽셀로 견준다 — 위아래가 뒤집히면 큐브 · 바닥 자리가 갈린다.

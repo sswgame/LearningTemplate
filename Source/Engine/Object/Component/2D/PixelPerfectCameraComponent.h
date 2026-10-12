@@ -30,6 +30,8 @@ namespace sw
 
 namespace sw
 {
+    class CameraComponent;
+
     /**
      * @class PixelPerfectCameraComponent
      * @brief 같은 오브젝트의 카메라를 픽셀 아트용으로 맞춥니다 — 유니티 Pixel Perfect Camera(2D) · Godot 의 정수 배율 스트레치 + 2D 스냅 자리입니다.
@@ -45,7 +47,10 @@ namespace sw
      *              이미 하는 일이라 아무것도 바뀌지 않는다. 단위가 바뀔 때만 알리고, 틱 뒤로 미룬다(다른 오브젝트의 틱과 겹치지 않게).
      *          (4) 자르기(`_bCropX` · `_bCropY`)가 켜져 있으면 기준 해상도 × 배율 밖을 검은 띠로 덮는다(정렬 레이어 `_barSortingLayer` 의 맨 위).
      *
-     *          빠진 것: 유니티의 Upscale Render Texture(기준 해상도로 그린 뒤 키우기 — 렌더러에 저해상도 타깃이 필요하다), Stretch Fill.
+     *          (5) Upscale Render Texture(`_bUpscaleRenderTexture`)면 카메라 출력의 정수 업스케일 배율을 고른 배율로 둔다 — 렌더러가 뷰포트 / 배율로 그리고
+     *              점 샘플로 키워 가운데에 놓는다(`RenderViewSettings::_upscaleZoom`). 회전하거나 반 픽셀에 걸린 스프라이트도 아트 픽셀 격자에 남는다.
+     *
+     *          빠진 것: 유니티의 Stretch Fill(정수가 아닌 배율로 화면 채우기).
      *          카메라는 회전하지 않는 2D 카메라(+Z 를 봄)를 가정합니다.
      */
     REFLECT( Category = "Rendering 2D", DisplayName = "Pixel Perfect Camera", Tooltip = "Integer zoom, pixel-grid snapping and letterboxing for pixel art" )
@@ -85,8 +90,13 @@ namespace sw
         void          setReferenceResolution( const float2& resolution ) { _referenceResolution = resolution; }
         void          setCrop( bool bCropX, bool bCropY );
         void          setPixelSnapping( bool bPixelSnapping ) { _bPixelSnapping = bPixelSnapping; }
+        /** @brief Upscale Render Texture 를 켭니다 — 카메라 출력의 정수 업스케일 배율(`CameraRenderOutput::_upscaleZoom`)을 고른 배율로 둡니다. */
+        void setUpscaleRenderTexture( bool bUpscale ) { _bUpscaleRenderTexture = bUpscale; }
+        bool isUpscaleRenderTexture() const { return _bUpscaleRenderTexture; }
 
     private:
+        /** @brief 카메라 출력의 정수 업스케일 배율을 바꿉니다. 같으면 아무것도 하지 않습니다. */
+        static void applyUpscaleZoom( CameraComponent& camera, uint32 upscaleZoom );
         /** @brief 스냅 단위를 레지스트리와 씬의 메시에 알립니다. 값이 그대로면 아무것도 하지 않습니다. 틱 중이면 틱 뒤로 미룹니다. */
         void publishSnapUnit( float32 unit );
         /** @brief 레터박스 띠 넷을 눈 둘레에 놓습니다(자르지 않는 축의 띠는 숨깁니다). */
@@ -103,7 +113,10 @@ namespace sw
         PROPERTY( Category = "Pixel Perfect", DisplayName = "Crop Y", Tooltip = "Cover the area outside the reference height with bars (letterbox)" )
         bool _bCropY;
         PROPERTY( Category = "Pixel Perfect", DisplayName = "Pixel Snapping", Tooltip = "Snap sprite origins to the screen pixel grid" )
-        bool                _bPixelSnapping;
+        bool _bPixelSnapping;
+        PROPERTY( Category = "Pixel Perfect", DisplayName = "Upscale Render Texture",
+                  Tooltip = "Render at viewport / zoom and enlarge with point sampling, so rotated or sub-pixel sprites stay on the art pixel grid" )
+        bool                _bUpscaleRenderTexture;
         float32             _publishedSnapUnit; ///< 마지막으로 알린 스냅 단위(0 = 끔). 저장하지 않습니다
         PixelPerfectLayout  _layout;            ///< 마지막 배치. 저장하지 않습니다
         SpriteInstanceBatch _barBatch;          ///< 레터박스 띠 넷(좌 · 우 · 아래 · 위). 저장하지 않습니다

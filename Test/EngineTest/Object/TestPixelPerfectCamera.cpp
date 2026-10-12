@@ -131,3 +131,35 @@ SW_TEST_CASE( PixelPerfectCameraTest, CameraSnapsTheEyeAndSpritesReceiveTheSnapU
     SW_EXPECT_NEAR_EQUAL( 0.0f, pEarlySprite->getSpriteInstanceData()._pixelSnap, 1e-7f );
     SW_EXPECT_NEAR_EQUAL( 1.003f, pCamera->getCameraPosition()._x, 1e-6f );
 }
+
+/**
+ * @brief [PixelPerfectCameraTest] Upscale Render Texture 를 켜면 카메라 출력의 정수 업스케일 배율이 고른 배율이 되고, 직교 높이는 그리는 높이(뷰포트 / 배율) / PPU,
+ *        눈은 자산 픽셀 격자에 붙는다. 끝나면 배율을 거둔다
+ * @details 유니티 Pixel Perfect Camera 의 Upscale Render Texture — 렌더 픽셀 하나가 자산 픽셀 하나다. 1366 × 768 · 기준 320 × 180 · PPU 16 이면
+ *          배율 4, 그리는 높이 192(768 / 4)라 직교 높이 12, 눈은 1/16 격자다.
+ */
+SW_TEST_CASE( PixelPerfectCameraTest, UpscaleRenderTextureSetsTheCameraZoomAndSnapsToArtPixels )
+{
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    sw::Scene scene( "PixelPerfectUpscaleScene" );
+    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+    sw::GameObjectManager* pManager = scene.getObjectManager();
+    sw::CameraComponent*   pCamera  = scene.getActiveGameCamera();
+    SW_ASSERT_NOT_NULL( pCamera );
+    pCamera->setLocalPosition( sw::float3{ 1.03f, -2.0f, -10.0f } );
+
+    sw::PixelPerfectCameraComponent* pPixel = pCamera->getOwner()->addComponent<sw::PixelPerfectCameraComponent>();
+    SW_ASSERT_NOT_NULL( pPixel );
+    pPixel->setUpscaleRenderTexture( true );
+    pPixel->onBeginPlay();
+    pManager->getCameraRegistry().setViewportSize( 1366, 768 );
+    pPixel->onTick( 0.016f );
+
+    SW_EXPECT_EQUAL( 4u, pCamera->getRenderOutput()._upscaleZoom );
+    SW_EXPECT_NEAR_EQUAL( 12.0f, pCamera->getOrthoHeight(), 1e-5f );      // 192 / 16
+    SW_EXPECT_NEAR_EQUAL( 1.0f, pCamera->getCameraPosition()._x, 1e-6f ); // 1.03 → 자산 픽셀(1/16) 격자의 1.0
+    SW_EXPECT_NEAR_EQUAL( 1.03f, pCamera->getWorldPosition()._x, 1e-6f ); // 트랜스폼은 그대로
+
+    pPixel->onEndPlay();
+    SW_EXPECT_EQUAL( 0u, pCamera->getRenderOutput()._upscaleZoom );
+}

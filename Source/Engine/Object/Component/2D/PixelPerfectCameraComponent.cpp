@@ -35,6 +35,7 @@ namespace sw
         , _bCropX{ false }
         , _bCropY{ false }
         , _bPixelSnapping{ true }
+        , _bUpscaleRenderTexture{ false }
         , _publishedSnapUnit{ 0.0f }
         , _layout{}
         , _barBatch{}
@@ -63,7 +64,11 @@ namespace sw
         GameObject*      pOwner  = getOwner();
         CameraComponent* pCamera = ( pOwner != nullptr ) ? pOwner->getComponent<CameraComponent>() : nullptr;
         if ( pCamera != nullptr )
+        {
             pCamera->setViewOffset( float3{ 0.0f, 0.0f, 0.0f } );
+            if ( _bUpscaleRenderTexture )
+                applyUpscaleZoom( *pCamera, 0u );
+        }
         _barBatch.shutdown();
         Component::onEndPlay();
     }
@@ -143,16 +148,32 @@ namespace sw
         if ( pCamera == nullptr )
             return _layout;
 
+        // Upscale Render Texture 면 렌더러가 뷰포트 / 배율(내림)로 그리고 점 샘플로 키운다 — 렌더 픽셀 하나가 자산 픽셀 하나라 직교 높이는 그 높이 / PPU 이고,
+        // 눈은 자산 픽셀 격자에 붙인다(화면 픽셀로 붙이면 렌더 픽셀 사이에 걸려 장면이 반 픽셀씩 흔들린다). 유니티 Pixel Perfect Camera 의 Upscale Render Texture 와 같다.
+        const uint32  upscaleZoom = _bUpscaleRenderTexture ? static_cast<uint32>( _layout._zoom ) : 0u;
+        const float32 orthoHeight = upscaleZoom > 0 ? static_cast<float32>( MathUtil::max( 1u, viewportHeight / upscaleZoom ) ) / MathUtil::max( _pixelsPerUnit, 1e-3f )
+                                                    : _layout._orthoHeight;
+        const float32 eyeUnit     = upscaleZoom > 0 ? _layout._assetPixelUnit : _layout._screenPixelUnit;
         pCamera->setOrthographic( true );
-        pCamera->setOrthoHeight( _layout._orthoHeight );
+        pCamera->setOrthoHeight( orthoHeight );
+        applyUpscaleZoom( *pCamera, upscaleZoom );
         // 그리는 눈만 격자에 붙인다(트랜스폼은 그대로 — 감쇠로 따라가는 카메라가 반 픽셀 아래의 움직임을 잃지 않게).
         const float3 world = pCamera->getWorldPosition();
-        const float3 offset{ snapToGrid( world._x, _layout._screenPixelUnit ) - world._x, snapToGrid( world._y, _layout._screenPixelUnit ) - world._y, 0.0f };
+        const float3 offset{ snapToGrid( world._x, eyeUnit ) - world._x, snapToGrid( world._y, eyeUnit ) - world._y, 0.0f };
         pCamera->setViewOffset( offset );
 
         publishSnapUnit( _bPixelSnapping ? _layout._assetPixelUnit : 0.0f );
         layoutBars( pCamera->getCameraPosition(), viewportWidth, viewportHeight );
         return _layout;
+    }
+
+    void PixelPerfectCameraComponent::applyUpscaleZoom( CameraComponent& camera, uint32 upscaleZoom )
+    {
+        if ( camera.getRenderOutput()._upscaleZoom == upscaleZoom )
+            return;
+        CameraRenderOutput output = camera.getRenderOutput();
+        output._upscaleZoom       = upscaleZoom;
+        camera.setRenderOutput( output );
     }
 
     void PixelPerfectCameraComponent::publishSnapUnit( float32 unit )

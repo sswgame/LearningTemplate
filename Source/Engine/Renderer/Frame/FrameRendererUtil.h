@@ -67,6 +67,26 @@ namespace sw
         static constexpr float4  kNormalClear         = { 0.5f, 0.5f, 1.0f, 1.0f };
         static constexpr float32 kDefaultCameraPos[3] = { 0.0f, 1.2f, 3.2f };
 
+        /**
+         * @brief 뷰의 내부 해상도 한 축(픽셀)을 냅니다. 정수 업스케일(`RenderViewSettings::_upscaleZoom`)이면 출력 사각형 픽셀 / 배율의 내림이고, 아니면
+         *        출력 사각형 픽셀 × 해상도 배율의 반올림입니다. 1 보다 작아지지 않습니다.
+         * @details 내림이어야 배율을 곱한 크기가 사각형 안에 들어가 Present 가 정수 배로 키울 수 있다(유니티 Pixel Perfect Camera 의 Upscale Render Texture).
+         */
+        static uint32 computeViewPoolExtent( float32 rectPixels, float32 resolutionScale, uint32 upscaleZoom )
+        {
+            if ( upscaleZoom > 0 )
+                return MathUtil::max( 1u, static_cast<uint32>( rectPixels ) / upscaleZoom );
+            return MathUtil::max( 1u, static_cast<uint32>( rectPixels * resolutionScale + 0.5f ) );
+        }
+        /**
+         * @brief 정수 업스케일 뷰를 출력 사각형 가운데에 놓는 한 축의 시작 픽셀입니다. 남는 픽셀은 양쪽에 반씩(왼쪽 · 위가 내림) 띠로 남습니다.
+         */
+        static uint32 computeUpscaleOffset( uint32 rectStartPixels, uint32 rectPixels, uint32 poolPixels, uint32 upscaleZoom )
+        {
+            const uint32 scaledPixels = poolPixels * upscaleZoom;
+            return rectStartPixels + ( scaledPixels < rectPixels ? ( rectPixels - scaledPixels ) / 2u : 0u );
+        }
+
         /** @brief 렌더 파이프라인을 고르는 데 쓰는 후보들입니다. 빈 경로는 "정하지 않음" 입니다. */
         struct PipelineChoice
         {

@@ -20,5 +20,13 @@ PSInput VSMain(SwVertexInput input, uint vertexId : SV_VertexID)
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
-	return float4(swSampleSource(input.uv).rgb, 1.0f);
+	// 정수 업스케일(픽셀 퍼펙트) 뷰는 점 샘플이다 — 선형이면 원본 픽셀 경계가 섞여 번진다. 그 밖은 해상도 배율로 키울 때 부드럽게 선형이다.
+	// 플래그는 패스 상수라 분기가 고르다 — 한 번만 읽는다. early-return 이 아니라 값을 채우는 분기다(postchain 과 같은 이유).
+	const bool bPointUpscale = (g_Flags & SW_PASS_FLAG_POINT_UPSCALE) != 0u;
+	float3     color;
+	[branch] if (bPointUpscale)
+		color = swSampleSourcePoint(input.uv).rgb;
+	else
+		color = swSampleSource(input.uv).rgb;
+	return float4(color, 1.0f);
 }

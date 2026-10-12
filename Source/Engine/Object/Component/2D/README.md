@@ -97,7 +97,9 @@ HP 바와 데미지 숫자 같은 월드 공간 UI는 `WorldUI` 레이어에 둡
 - **점 필터.** `sprite2dpixel.material`(`pointFilter`)은 UV를 텍셀 중심에 맞춥니다. OpenGL은 결합 샘플러라 샘플러를 바꾸지 않고 UV로 처리합니다.
 - **자르기.** `_bCropX`, `_bCropY` 를 켜면 `Overlay` 레이어 맨 위에 검은 띠를 그립니다.
 
-저해상도로 그린 뒤 키우는 방식(유니티 Upscale Render Texture)은 없습니다. 렌더러에 저해상도 타깃과 업스케일 패스가 필요합니다.
+`_bUpscaleRenderTexture` 를 켜면 저해상도로 그린 뒤 키웁니다(유니티 Upscale Render Texture). 컴포넌트가 카메라 출력의 정수 업스케일 배율(`CameraRenderOutput::_upscaleZoom`)을
+고른 배율로 두면, 렌더러가 뷰포트 / 배율(내림)로 그리고 Present 가 점 샘플로 그 배만큼 키워 화면 가운데에 놓습니다(남는 띠는 검게 지웁니다).
+렌더 픽셀 하나가 자산 픽셀 하나라 회전하거나 반 픽셀에 걸린 스프라이트도 아트 픽셀 격자에 남고, 눈은 자산 픽셀 격자에 붙습니다. UI(Canvas)는 키우지 않고 화면 해상도로 그립니다.
 
 엔진 루프가 틱 전에 카메라 레지스트리에 뷰포트 크기를 적습니다(`CameraRegistry::setViewportSize`). 스냅 단위가 바뀌면 씬의 모든 메시에 틱 뒤로 미뤄 알리고, 나중에 등록되는 메시는 레지스트리에서 읽습니다.
 
