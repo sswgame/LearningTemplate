@@ -43,19 +43,17 @@ namespace sw
 namespace sw
 {
     AccountClient::AccountClient()
-        : _mapClientIDToCall{}
+        : _callTable{}
         , _listReply{}
         , _listEvent{}
         , _listDeferred{}
         , _clientInfo{}
         , _identity{}
         , _token{}
-        , _sendingCall{}
         , _pClient{ nullptr }
         , _nextRequestID{ 1 }
         , _bLoggedIn{ SW_FALSE }
         , _bResuming{ SW_FALSE }
-        , _bSending{ SW_FALSE }
     {
     }
 
@@ -237,34 +235,15 @@ namespace sw
         if ( bodyBytes.empty() == false )
             body.writeBytes( bodyBytes.data(), static_cast<int32>( bodyBytes.size() ) );
         NetRequestOptions options;
-        _sendingCall                = PendingCall{ requestID, operation, static_cast<uint8>( bAutomatic ? SW_TRUE : SW_FALSE ) };
-        _bSending                   = SW_TRUE;
-        const uint64 clientID       = _pClient->sendRequest( method, body, options, OnlineResponseDelegate::create<&AccountClient::onResponse>( this ) );
-        _bSending                   = SW_FALSE;
-        const bool bAlreadyAnswered = _sendingCall._requestID == 0;
-        if ( bAlreadyAnswered == false )
-            _mapClientIDToCall[clientID] = _sendingCall;
-        _sendingCall = PendingCall{};
+        const PendingCall pendingCall{ requestID, operation, static_cast<uint8>( bAutomatic ? SW_TRUE : SW_FALSE ) };
+        (void)_callTable.send( *_pClient, method, body, options, OnlineResponseDelegate::create<&AccountClient::onResponse>( this ), pendingCall ); // 응답은 pendingCall._requestID 로 알린다
     }
 
     void AccountClient::onResponse( const OnlineResponse& response )
     {
         PendingCall call;
-        const auto  callIt = _mapClientIDToCall.find( response._requestID );
-        if ( callIt != _mapClientIDToCall.end() )
-        {
-            call = callIt->second;
-            _mapClientIDToCall.erase( callIt );
-        }
-        else if ( _bSending == SW_TRUE && _sendingCall._requestID != 0 )
-        {
-            call                    = _sendingCall;
-            _sendingCall._requestID = 0; // 맡기는 시점에 바로 끝났다
-        }
-        else
-        {
+        if ( _callTable.take( response._requestID, call ) == false )
             return;
-        }
 
         AccountClientReply reply;
         reply._requestID  = call._requestID;

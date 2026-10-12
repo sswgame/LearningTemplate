@@ -12,6 +12,7 @@
 
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceClient.h"
+#include "GameFramework/Base/Online/Service/ServiceClientCallTable.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Shared/AdminProtocol.h"
 
@@ -59,10 +60,8 @@ namespace sw
 
         void onResponse( const OnlineResponse& response );
 
-        unordered_map<uint64, PendingCall> _mapClientIDToCall;
-        PendingCall                        _sendingCall;
-        OnlineServiceClient*               _pClient;
-        uint64                             _nextRequestID;
-        uint8                              _bSending;
+        ServiceClientCallTable<PendingCall> _callTable;
+        OnlineServiceClient*                _pClient;
+        uint64                              _nextRequestID;
     };
 } // namespace sw

@@ -9,13 +9,11 @@
 namespace sw
 {
     EconomyClient::EconomyClient()
-        : _mapClientIDToCall{}
+        : _callTable{}
         , _listBalance{}
-        , _sendingCall{}
         , _pClient{ nullptr }
         , _nextRequestID{ 1 }
         , _revision{ 0 }
-        , _bSending{ SW_FALSE }
     {
     }
 
@@ -89,8 +87,8 @@ namespace sw
 
     uint64 EconomyClient::send( uint16 method, const BitWriter& body, const NetIdempotencyKey& key, ReplyDelegate onReply )
     {
-        const uint64 requestID = _nextRequestID++;
-        _sendingCall           = PendingCall{ onReply, key, requestID, method };
+        const uint64      requestID = _nextRequestID++;
+        const PendingCall pendingCall{ onReply, key, requestID, method };
         if ( _pClient == nullptr )
         {
             EconomyClientReply reply;
@@ -99,40 +97,21 @@ namespace sw
             reply._idempotencyKey = key;
             reply._errorCode      = OnlineError::kUnavailable;
             reply._reply._result  = EconomyResult::Unavailable;
-            _sendingCall          = PendingCall{};
             if ( onReply.isBound() )
                 onReply( reply );
             return requestID;
         }
         NetRequestOptions options;
         options._idempotencyKey = key;
-        _bSending               = SW_TRUE;
-        const uint64 clientID   = _pClient->sendRequest( method, body, options, OnlineResponseDelegate::create<&EconomyClient::onResponse>( this ) );
-        _bSending               = SW_FALSE;
-        if ( _sendingCall._requestID != 0 )
-            _mapClientIDToCall[clientID] = _sendingCall; // 그 자리에서 끝나지 않았으므로 응답을 기다린다
-        _sendingCall = PendingCall{};
+        (void)_callTable.send( *_pClient, method, body, options, OnlineResponseDelegate::create<&EconomyClient::onResponse>( this ), pendingCall ); // 응답은 pendingCall._requestID 로 알린다
         return requestID;
     }
 
     void EconomyClient::onResponse( const OnlineResponse& response )
     {
         PendingCall call;
-        const auto  callIt = _mapClientIDToCall.find( response._requestID );
-        if ( callIt != _mapClientIDToCall.end() )
-        {
-            call = callIt->second;
-            _mapClientIDToCall.erase( callIt );
-        }
-        else if ( _bSending == SW_TRUE && _sendingCall._requestID != 0 )
-        {
-            call                    = _sendingCall;
-            _sendingCall._requestID = 0;
-        }
-        else
-        {
+        if ( _callTable.take( response._requestID, call ) == false )
             return;
-        }
         EconomyClientReply reply;
         reply._requestID      = call._requestID;
         reply._method         = call._method;

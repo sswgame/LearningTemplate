@@ -16,6 +16,7 @@
 
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceClient.h"
+#include "GameFramework/Base/Online/Service/ServiceClientCallTable.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Shared/Protocol/EconomyProtocol.h"
 
@@ -83,12 +84,10 @@ namespace sw
         uint64 send( uint16 method, const BitWriter& body, const NetIdempotencyKey& key, ReplyDelegate onReply );
         void   onResponse( const OnlineResponse& response );
 
-        unordered_map<uint64, PendingCall> _mapClientIDToCall;
-        vector<LedgerBalance>              _listBalance;
-        PendingCall                        _sendingCall;
-        OnlineServiceClient*               _pClient;
-        uint64                             _nextRequestID;
-        uint32                             _revision;
-        uint8                              _bSending;
+        ServiceClientCallTable<PendingCall> _callTable;
+        vector<LedgerBalance>               _listBalance;
+        OnlineServiceClient*                _pClient;
+        uint64                              _nextRequestID;
+        uint32                              _revision;
     };
 } // namespace sw

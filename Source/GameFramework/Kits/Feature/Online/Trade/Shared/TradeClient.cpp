@@ -7,15 +7,13 @@
 namespace sw
 {
     TradeClient::TradeClient()
-        : _mapClientIDToCall{}
+        : _callTable{}
         , _listReply{}
         , _listUpdate{}
         , _snapshot{}
-        , _sendingCall{}
         , _pClient{ nullptr }
         , _accountID{ kInvalidAccountID }
         , _nextRequestID{ 1 }
-        , _bSending{ SW_FALSE }
     {
     }
 
@@ -111,36 +109,18 @@ namespace sw
     uint64 TradeClient::send( uint16 method, const BitWriter& body, const NetIdempotencyKey& key )
     {
         NetRequestOptions options;
-        options._idempotencyKey = key.isValid() ? key : NetIdempotencyKey::makeRandom();
-        const uint64 requestID  = _nextRequestID++;
-        _sendingCall            = PendingCall{ options._idempotencyKey, requestID, method };
-        _bSending               = SW_TRUE;
-        const uint64 clientID   = _pClient->sendRequest( method, body, options, OnlineResponseDelegate::create<&TradeClient::onResponse>( this ) );
-        _bSending               = SW_FALSE;
-        if ( _sendingCall._requestID != 0 )
-            _mapClientIDToCall[clientID] = _sendingCall;
-        _sendingCall = PendingCall{};
+        options._idempotencyKey     = key.isValid() ? key : NetIdempotencyKey::makeRandom();
+        const uint64      requestID = _nextRequestID++;
+        const PendingCall pendingCall{ options._idempotencyKey, requestID, method };
+        (void)_callTable.send( *_pClient, method, body, options, OnlineResponseDelegate::create<&TradeClient::onResponse>( this ), pendingCall ); // 응답은 pendingCall._requestID 로 알린다
         return requestID;
     }
 
     void TradeClient::onResponse( const OnlineResponse& response )
     {
         PendingCall call;
-        const auto  callIt = _mapClientIDToCall.find( response._requestID );
-        if ( callIt != _mapClientIDToCall.end() )
-        {
-            call = callIt->second;
-            _mapClientIDToCall.erase( callIt );
-        }
-        else if ( _bSending == SW_TRUE && _sendingCall._requestID != 0 )
-        {
-            call                    = _sendingCall;
-            _sendingCall._requestID = 0;
-        }
-        else
-        {
+        if ( _callTable.take( response._requestID, call ) == false )
             return;
-        }
         TradeClientReply reply;
         reply._requestID      = call._requestID;
         reply._method         = call._method;
