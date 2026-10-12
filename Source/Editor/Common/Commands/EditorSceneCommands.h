@@ -56,6 +56,7 @@ namespace sw::editor
         /**
          * @brief 오브젝트를 에디터 클립보드에 서브트리째 복사합니다. 선택한 것 안의 자손은 한 번만 복사하며, 복사한 루트 수를 반환합니다.
          * @details 클립보드는 상태 바이트이므로 씬을 바꿔도 남는다. 다른 씬에 붙여 넣을 수 있다(유니티와 언리얼의 Ctrl+C/V).
+         *          버퍼는 Engine 의 `ObjectCopyBuffer` 라 에디터 모듈을 핫 리로드해도 비워지지 않는다.
          */
         static uint32 copyObjects( const vector<GameObject*>& listObject );
         /** @brief 클립보드의 오브젝트를 @p pManager 의 루트로 붙여 넣습니다. 되돌리기 항목은 하나이며, 붙여 넣은 루트를 선택합니다. */

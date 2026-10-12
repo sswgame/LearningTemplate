@@ -20,6 +20,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/ObjectCopyBuffer.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Physics/Collision/ContinuousCollision.h"
 #include "Engine/Reflection/ReflectionTypes.h"
@@ -48,23 +49,6 @@ namespace sw::editor
                         collectSubtreeChildFirst( pChild, outListObject );
                 }
                 outListObject.push_back( pObj );
-            }
-
-            /** @brief 클립보드의 오브젝트 하나(서브트리의 한 줄)입니다. */
-            struct CopiedObject
-            {
-                hashed_string _name;
-                uint64        _savedID{ 0 };
-                vector<uint8> _stateBytes;
-                string        _prefabPath;
-                bool          _bRoot{ false }; ///< 복사한 루트(붙여 넣을 때 씬의 루트로 둔다)
-            };
-
-            /** @brief 오브젝트 클립보드입니다. 에디터 모듈 안이라 모듈을 다시 올리면 비워진다. */
-            static vector<CopiedObject>& getObjectClipboard()
-            {
-                static vector<CopiedObject> s_listCopied;
-                return s_listCopied;
             }
 
             /** @brief @p pObj 의 조상이 @p listObject 안에 있으면 true 입니다(그 조상의 서브트리로 이미 복사된다). */
@@ -637,9 +621,9 @@ namespace sw::editor
 
     uint32 EditorSceneCommands::copyObjects( const vector<GameObject*>& listObject )
     {
-        vector<EditorSceneCommandsInternal::CopiedObject> listCopied;
-        EditorContext*                                    pContext = EditorContext::get();
-        uint32                                            rootCount{ 0 };
+        vector<ObjectCopyEntry> listCopied;
+        EditorContext*          pContext = EditorContext::get();
+        uint32                  rootCount{ 0 };
         for ( GameObject* pRoot : listObject )
         {
             if ( pRoot == nullptr || EditorSceneCommandsInternal::hasSelectedAncestor( pRoot, listObject ) )
@@ -649,7 +633,7 @@ namespace sw::editor
             std::reverse( listSubtree.begin(), listSubtree.end() ); // 부모부터 — 붙여 넣을 때 자식이 먼저 만든 부모에 붙는다
             for ( GameObject* pObj : listSubtree )
             {
-                EditorSceneCommandsInternal::CopiedObject copied{};
+                ObjectCopyEntry copied{};
                 copied._name    = pObj->getName();
                 copied._savedID = pObj->getObjectID();
                 copied._bRoot   = pObj == pRoot;
@@ -662,19 +646,19 @@ namespace sw::editor
             ++rootCount;
         }
         if ( rootCount > 0 )
-            EditorSceneCommandsInternal::getObjectClipboard() = std::move( listCopied );
+            ObjectCopyBuffer::setEntries( std::move( listCopied ) );
         return rootCount;
     }
 
     bool EditorSceneCommands::hasCopiedObjects()
     {
-        return EditorSceneCommandsInternal::getObjectClipboard().empty() == false;
+        return ObjectCopyBuffer::getEntries().empty() == false;
     }
 
     void EditorSceneCommands::pasteObjects( GameObjectManager* pManager, vector<GameObject*>& outListCreated )
     {
         outListCreated.clear();
-        const vector<EditorSceneCommandsInternal::CopiedObject>& listCopied = EditorSceneCommandsInternal::getObjectClipboard();
+        const vector<ObjectCopyEntry>& listCopied = ObjectCopyBuffer::getEntries();
         if ( EditorSceneCommandsInternal::canMutateScene() == false || pManager == nullptr || listCopied.empty() )
             return;
         // 복제와 같은 길이다 — 묶음이 **복사한 때의 id** 로 사본끼리 잇는다. 루트는 씬의 루트로 둔다(다른 씬이면 원래 부모가 없다).
@@ -682,7 +666,7 @@ namespace sw::editor
         vector<GameObject*> listCopy;
         listCopy.reserve( listCopied.size() );
         bool bAllLoaded = true;
-        for ( const EditorSceneCommandsInternal::CopiedObject& copied : listCopied )
+        for ( const ObjectCopyEntry& copied : listCopied )
         {
             // 같은 씬에 붙이면 이름이 겹친다 — 저장소가 번호를 붙인다(`<이름>_2`, 유니티의 붙여 넣기와 같다).
             GameObject* pCopy = pManager->createGameObject( copied._name );
