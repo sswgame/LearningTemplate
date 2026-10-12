@@ -65,6 +65,19 @@ namespace
             return requestID;
         }
     };
+
+    /** @brief 수명 순서만 보는 빈 키트(테스트 로그인과 같은 영역). */
+    class LifetimeClientService final : public IOnlineClientService
+    {
+    public:
+        uint16 getMethodRange() const override { return OnlineMethodRange::kGame; }
+        uint32 getProtocolVersion() const override { return 1; }
+        void   onServicePush( uint16 kind, BitReader& body ) override
+        {
+            (void)kind;
+            (void)body;
+        }
+    };
 } // namespace
 
 SW_TEST_CASE( ServiceClientCallTableTest, ImmediateFailureInsideSendStillReachesTheDelegate )
@@ -132,4 +145,53 @@ SW_TEST_CASE( ServiceClientCallTableTest, ForeignResponseDuringSendDoesNotTakeTh
     SW_ASSERT_EQUAL( client._listUnmatchedID.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( client._listUnmatchedID[0], uint64( 107 ) );
     SW_EXPECT_EQUAL( table.getCount(), size_t( 0 ) );
+}
+
+SW_TEST_CASE( ServiceClientCallTableTest, CancelledRequestsDropTheirAnswersWithoutCallingTheOwner )
+{
+    LoopbackStreamNetwork   network( 5u );
+    MemoryServiceDatabase   database;
+    MemoryEphemeralDatabase cacheDatabase;
+    LocalServerBusHub       hub;
+    test::OnlineTestServer  server( network, &database, &cacheDatabase, &hub, 1 );
+    server.start();
+    test::OnlineTestClients clients( network );
+    const int32             clientIndex = clients.connect( server._port, {} );
+    test::tickAll( { &server }, clients, 0 );
+    SW_ASSERT_TRUE( clients.getClient( clientIndex ).isReady() );
+
+    // 키트 클라이언트가 응답 전에 사라진 모양 — 보낸 요청의 델리게이트 주인을 지운 뒤 응답이 온다.
+    unique_ptr<CallTableClient> tableClient = sw::make_unique<CallTableClient>();
+    tableClient->_pClient                   = &clients.getClient( clientIndex );
+    DoneRecorder recorder;
+    BitWriter    body;
+    body.writeVarUint( 42 );
+    (void)tableClient->send( test::TestLoginService::kLoginMethod, body, DoneDelegate::create<&DoneRecorder::onDone>( &recorder ) );
+    clients.getClient( clientIndex ).cancelRequestsOf( OnlineMethodRange::kGame );
+    tableClient.reset();
+    test::tickAll( { &server }, clients, 0 );
+
+    SW_EXPECT_EQUAL( recorder._listErrorCode.size(), size_t( 0 ) );
+    StreamConnectionHandle connection;
+    SW_EXPECT_TRUE( server._host.findConnection( 42, connection ) ); // 서버는 처리했고 응답만 버려졌다
+}
+
+SW_TEST_CASE( ServiceClientCallTableTest, KitAndServiceClientMayBeDestroyedInEitherOrder )
+{
+    {
+        OnlineServiceClient client;
+        {
+            LifetimeClientService kit;
+            SW_EXPECT_TRUE( client.registerClientService( &kit ) );
+        } // 키트가 먼저 — 소멸자가 스스로 내린다
+        LifetimeClientService nextKit;
+        SW_EXPECT_TRUE( client.registerClientService( &nextKit ) ); // 같은 영역을 다시 올릴 수 있다 — 앞 키트가 목록에서 빠졌다
+    }
+    {
+        LifetimeClientService kit;
+        {
+            OnlineServiceClient client;
+            SW_EXPECT_TRUE( client.registerClientService( &kit ) );
+        } // 서비스 클라이언트가 먼저 — 키트 소멸자가 파괴된 객체를 부르지 않는다
+    }
 }
