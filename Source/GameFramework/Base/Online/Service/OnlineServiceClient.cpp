@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Online/Service/OnlineServiceClient.h"
 
+#include "Core/Container/LittleEndianUtil.h"
 #include "Core/Log/LogContext.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 
@@ -16,8 +17,6 @@ namespace sw
         struct OnlineServiceClientInternal
         {
             static constexpr int64 kFirstBackoffMs = 250;
-
-            static uint16 readUint16( const uint8* pData ) { return static_cast<uint16>( pData[0] | ( pData[1] << 8 ) ); }
         };
     } // namespace
 } // namespace sw
@@ -396,7 +395,7 @@ namespace sw
             return;
         }
         const bool bMismatch = response._status == NetRequestStatus::ApplicationError && response._bodySize >= 2 &&
-                               OnlineServiceClientInternal::readUint16( response._pBody ) == OnlineError::kVersionMismatch;
+                               LittleEndianUtil::readUint16( response._pBody ) == OnlineError::kVersionMismatch;
         if ( bMismatch )
         {
             SW_LOG_WARNING( "Online service protocol versions differ from the server - an update is required" );
@@ -430,7 +429,7 @@ namespace sw
         answer._bodySize  = response._bodySize;
         if ( response._status == NetRequestStatus::ApplicationError && response._bodySize >= 2 )
         {
-            answer._errorCode = OnlineServiceClientInternal::readUint16( response._pBody );
+            answer._errorCode = LittleEndianUtil::readUint16( response._pBody );
             answer._pBody     = response._pBody + 2;
             answer._bodySize  = response._bodySize - 2;
         }
@@ -445,7 +444,7 @@ namespace sw
     {
         if ( bodySize < 2 )
             return;
-        const uint16 kind  = OnlineServiceClientInternal::readUint16( pBody );
+        const uint16 kind  = LittleEndianUtil::readUint16( pBody );
         const uint16 range = OnlineMethodRange::getRangeBase( kind );
         for ( IOnlineClientService* pService : _listService )
         {

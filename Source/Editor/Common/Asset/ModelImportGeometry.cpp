@@ -4,6 +4,7 @@
  */
 #include "pch.h"
 
+#include "Core/Container/LittleEndianUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -307,31 +308,17 @@ namespace sw::editor
         }
     }
 
-    uint32 ModelImportUtil::readUint32( const vector<uint8>& bytes, size_t offset )
-    {
-        return static_cast<uint32>( bytes[offset] ) | ( static_cast<uint32>( bytes[offset + 1] ) << 8 ) |
-               ( static_cast<uint32>( bytes[offset + 2] ) << 16 ) | ( static_cast<uint32>( bytes[offset + 3] ) << 24 );
-    }
-
-    void ModelImportUtil::appendUint32( uint32 value, vector<uint8>& inoutBytes )
-    {
-        for ( uint32 shift = 0; shift < 32; shift += 8 )
-        {
-            inoutBytes.push_back( static_cast<uint8>( ( value >> shift ) & 0xFFu ) );
-        }
-    }
-
     uint32 ModelImportUtil::promoteSceneRootsToTopAncestor( vector<uint8>& inoutBytes )
     {
-        const bool bGlb       = inoutBytes.size() >= kGlbHeaderSize + kGlbChunkHeaderSize && readUint32( inoutBytes, 0 ) == kGlbMagic;
+        const bool bGlb       = inoutBytes.size() >= kGlbHeaderSize + kGlbChunkHeaderSize && LittleEndianUtil::readUint32( inoutBytes.data() ) == kGlbMagic;
         size_t     jsonOffset = 0;
         size_t     jsonSize   = inoutBytes.size();
         if ( bGlb )
         {
-            if ( readUint32( inoutBytes, kGlbHeaderSize + 4 ) != kGlbJSONChunkType )
+            if ( LittleEndianUtil::readUint32( inoutBytes.data() + kGlbHeaderSize + 4 ) != kGlbJSONChunkType )
                 return 0;
             jsonOffset = kGlbHeaderSize + kGlbChunkHeaderSize;
-            jsonSize   = readUint32( inoutBytes, kGlbHeaderSize );
+            jsonSize   = LittleEndianUtil::readUint32( inoutBytes.data() + kGlbHeaderSize );
             if ( jsonOffset + jsonSize > inoutBytes.size() )
                 return 0;
         }
@@ -410,11 +397,11 @@ namespace sw::editor
             const size_t tailOffset     = jsonOffset + jsonSize;
             const size_t totalSize      = jsonOffset + paddedJSONSize + ( inoutBytes.size() - tailOffset );
             rewrittenBytes.reserve( totalSize );
-            appendUint32( kGlbMagic, rewrittenBytes );
-            appendUint32( readUint32( inoutBytes, 4 ), rewrittenBytes );
-            appendUint32( static_cast<uint32>( totalSize ), rewrittenBytes );
-            appendUint32( static_cast<uint32>( paddedJSONSize ), rewrittenBytes );
-            appendUint32( kGlbJSONChunkType, rewrittenBytes );
+            LittleEndianUtil::appendUint32( rewrittenBytes, kGlbMagic );
+            LittleEndianUtil::appendUint32( rewrittenBytes, LittleEndianUtil::readUint32( inoutBytes.data() + 4 ) );
+            LittleEndianUtil::appendUint32( rewrittenBytes, static_cast<uint32>( totalSize ) );
+            LittleEndianUtil::appendUint32( rewrittenBytes, static_cast<uint32>( paddedJSONSize ) );
+            LittleEndianUtil::appendUint32( rewrittenBytes, kGlbJSONChunkType );
             rewrittenBytes.insert( rewrittenBytes.end(), reinterpret_cast<const uint8*>( json.data() ), reinterpret_cast<const uint8*>( json.data() ) + json.size() );
             rewrittenBytes.resize( jsonOffset + paddedJSONSize, static_cast<uint8>( ' ' ) );
             rewrittenBytes.insert( rewrittenBytes.end(), inoutBytes.begin() + static_cast<ptrdiff_t>( tailOffset ), inoutBytes.end() );

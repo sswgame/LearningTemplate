@@ -195,12 +195,6 @@ namespace sw::editor
         /** @brief 정점 하나의 JOINTS_0, WEIGHTS_0 를 본 번호와 합이 1 인 가중치로 읽습니다. 관절 번호가 범위 밖이면 가중치는 0 입니다. */
         static void readSkinInfluence( const SkinBinding& skin, const cgltf_accessor* pJoint, const cgltf_accessor* pWeight, cgltf_size vertexIndex, ImportVertex& inoutVertex );
 
-        /** @brief 리틀 엔디언 uint32 를 읽습니다. */
-        static uint32 readUint32( const vector<uint8>& bytes, size_t offset );
-
-        /** @brief 리틀 엔디언 uint32 를 바이트 뒤에 덧붙입니다. */
-        static void appendUint32( uint32 value, vector<uint8>& inoutBytes );
-
         /**
          * @brief 씬 루트 목록에서 부모가 있는 노드를 최상위 조상으로 바꾸고 중복을 지웁니다. 원본 바이트의 JSON 을 고치며, 바꾼 항목 수를 반환합니다.
          * @details glTF 2.0 은 씬 루트가 부모 없는 노드여야 하고 cgltf 는 파싱에서 이를 거부한다. 하지만 UniGLTF 가 내보낸 파일은

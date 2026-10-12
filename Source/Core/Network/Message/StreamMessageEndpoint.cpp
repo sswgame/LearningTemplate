@@ -3,6 +3,7 @@
 #include "Core/Network/Message/StreamMessageEndpoint.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/LittleEndianUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -25,23 +26,6 @@ namespace sw
         struct StreamMessageEndpointInternal
         {
             static constexpr int32 kPingBodySize = 8;
-
-            static void writeInt64( uint8* pOut, int64 value )
-            {
-                for ( int32 index = 0; index < 8; ++index )
-                {
-                    pOut[index] = static_cast<uint8>( static_cast<uint64>( value ) >> ( index * 8 ) );
-                }
-            }
-            static int64 readInt64( const uint8* pData )
-            {
-                uint64 value = 0;
-                for ( int32 index = 0; index < 8; ++index )
-                {
-                    value |= static_cast<uint64>( pData[index] ) << ( index * 8 );
-                }
-                return static_cast<int64>( value );
-            }
         };
     } // namespace
 } // namespace sw
@@ -263,7 +247,7 @@ namespace sw
                 case StreamFrameKind::Pong:
                 {
                     if ( frame._bodySize == StreamMessageEndpointInternal::kPingBodySize )
-                        connection._roundTripNanoseconds.store( MonotonicClock::nowNanoseconds() - StreamMessageEndpointInternal::readInt64( frame._pBody ), std::memory_order_relaxed );
+                        connection._roundTripNanoseconds.store( MonotonicClock::nowNanoseconds() - LittleEndianUtil::readInt64( frame._pBody ), std::memory_order_relaxed );
                     break;
                 }
                 case StreamFrameKind::Message:
@@ -463,7 +447,7 @@ namespace sw
                 if ( now - lastPingNanoseconds < interval )
                     continue;
                 lastPingNanoseconds = now;
-                StreamMessageEndpointInternal::writeInt64( arrBody, now );
+                LittleEndianUtil::writeInt64( arrBody, now );
                 (void)sendFrame( StreamConnectionHandle::fromPacked( packed ), StreamFrameKind::Ping, arrBody, StreamMessageEndpointInternal::kPingBodySize );
             }
         }

@@ -3,6 +3,7 @@
 #include "Core/Network/Connection/NetHost.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/LittleEndianUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
@@ -71,14 +72,6 @@ namespace sw
                 std::memcpy( pOutAad + 4, pBodyHead, kSecureHeadSize );
             }
 
-            static void writeUint32( vector<uint8>& outBytes, size_t offset, uint32 value )
-            {
-                for ( int32 index = 0; index < 4; ++index )
-                {
-                    outBytes[offset + static_cast<size_t>( index )] = static_cast<uint8>( value >> ( index * 8 ) );
-                }
-            }
-
             static uint64 makeAddressKey( const NetAddress& address ) { return ( static_cast<uint64>( address._ipv4 ) << 16 ) | address._port; }
 
             /** @brief 운영체제 난수 64비트를 반환합니다. 챌린지 값이 다른 실행이나 다른 호스트와 겹치지 않고 미리 알 수 없게 합니다. */
@@ -87,12 +80,6 @@ namespace sw
                 std::random_device randomDevice;
                 const uint64       seed = ( static_cast<uint64>( randomDevice() ) << 32 ) | static_cast<uint64>( randomDevice() );
                 return seed != 0 ? seed : HashUtil::kGoldenRatio64;
-            }
-
-            static uint32 readUint32( const uint8* pData )
-            {
-                return static_cast<uint32>( pData[0] ) | ( static_cast<uint32>( pData[1] ) << 8 ) | ( static_cast<uint32>( pData[2] ) << 16 ) |
-                       ( static_cast<uint32>( pData[3] ) << 24 );
             }
 
             /** @brief 거절 패킷이 싣는 이유를 읽습니다. 모르는 값은 Rejected 로 읽으므로, 다른 버전이 이유를 늘려도 클라이언트는 연결이 끊깁니다. */
@@ -391,8 +378,8 @@ namespace sw
         uint8* pPacket = _pendingBatch._bytes.data() + offset;
         if ( bodySize > 0 )
             std::memcpy( pPacket + NetHostInternal::kHeaderSize, body.data(), static_cast<size_t>( bodySize ) );
-        NetHostInternal::writeUint32( _pendingBatch._bytes, offset, headerID );
-        NetHostInternal::writeUint32( _pendingBatch._bytes, offset + 4, computePacketChecksum( headerID, pPacket + NetHostInternal::kHeaderSize, bodySize ) );
+        LittleEndianUtil::writeUint32( _pendingBatch._bytes.data() + offset, headerID );
+        LittleEndianUtil::writeUint32( _pendingBatch._bytes.data() + offset + 4, computePacketChecksum( headerID, pPacket + NetHostInternal::kHeaderSize, bodySize ) );
         _pendingBatch._listDatagram.push_back( OutgoingDatagram{ to, static_cast<int32>( offset ), NetHostInternal::kHeaderSize + bodySize } );
     }
 
@@ -893,9 +880,9 @@ namespace sw
 
     void NetHost::handlePacket( float64 nowSeconds, const NetAddress& from, const uint8* pData, int32 size )
     {
-        const uint32 headerID = size > NetHostInternal::kHeaderSize ? NetHostInternal::readUint32( pData ) : 0u;
+        const uint32 headerID = size > NetHostInternal::kHeaderSize ? LittleEndianUtil::readUint32( pData ) : 0u;
         if ( size <= NetHostInternal::kHeaderSize || ( headerID != _protocolID && headerID != NetProtocol::kHandshakeID ) ||
-             NetHostInternal::readUint32( pData + 4 ) !=
+             LittleEndianUtil::readUint32( pData + 4 ) !=
                  computePacketChecksum( headerID, pData + NetHostInternal::kHeaderSize, size - NetHostInternal::kHeaderSize ) )
         {
             ++_rejectedPacketCount; // 다른 버전, 다른 게임, 깨진 패킷.
@@ -1116,7 +1103,7 @@ namespace sw
     void NetHost::handleSealedPacket( float64 nowSeconds, PacketType type, int32 slotIndex, const uint8* pBody, int32 bodySize )
     {
         // 본문 형식은 [종류와 0][연결 값 4바이트][패킷 번호 8바이트][AEAD + 태그]다. 바이트 정렬이므로 BitReader 를 거치지 않는다.
-        const uint32 token  = bodySize >= 5 ? NetHostInternal::readUint32( pBody + 1 ) : 0u;
+        const uint32 token  = bodySize >= 5 ? LittleEndianUtil::readUint32( pBody + 1 ) : 0u;
         Slot*        pSlot  = isValidSlot( slotIndex ) ? &_listSlot[static_cast<size_t>( slotIndex )] : nullptr;
         const bool   bReady = pSlot != nullptr && pSlot->_state == NetConnectionState::Connected && pSlot->_security != nullptr &&
                             pSlot->_security->_bKeysReady == SW_TRUE && token == static_cast<uint32>( pSlot->_clientSalt ^ pSlot->_serverSalt );

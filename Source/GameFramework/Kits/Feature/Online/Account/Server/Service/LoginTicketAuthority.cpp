@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.h"
 
+#include "Core/Container/LittleEndianUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Memory/Memory.h"
 
@@ -18,24 +19,6 @@ namespace sw
             static constexpr int32 kLabelCapacity = 32;
             static constexpr int32 kNonceOffset   = 32;
             static constexpr int32 kNonceSize     = 16;
-
-            static void writeUint64( uint8* pOut, uint64 value )
-            {
-                for ( int32 byteIndex = 0; byteIndex < 8; ++byteIndex )
-                {
-                    pOut[byteIndex] = static_cast<uint8>( value >> ( byteIndex * 8 ) );
-                }
-            }
-
-            static uint64 readUint64( const uint8* pData )
-            {
-                uint64 value = 0;
-                for ( int32 byteIndex = 0; byteIndex < 8; ++byteIndex )
-                {
-                    value |= static_cast<uint64>( pData[byteIndex] ) << ( byteIndex * 8 );
-                }
-                return value;
-            }
 
             /** @brief 서버 id 는 `hashed_string` 규칙대로 대소문자를 구분하지 않습니다. */
             static uint64 computeServerHash( const hashed_string& serverID ) { return StringUtil::computeHash64( serverID.c_str(), serverID.size(), true ); }
@@ -90,10 +73,10 @@ namespace sw
             return false;
         NetGameTicket ticket;
         uint8*        pBody = ticket._arrToken;
-        LoginTicketAuthorityInternal::writeUint64( pBody + 0, accountID );
-        LoginTicketAuthorityInternal::writeUint64( pBody + 8, sessionID );
-        LoginTicketAuthorityInternal::writeUint64( pBody + 16, static_cast<uint64>( expiresAtMs ) );
-        LoginTicketAuthorityInternal::writeUint64( pBody + 24, LoginTicketAuthorityInternal::computeServerHash( serverID ) );
+        LittleEndianUtil::writeUint64( pBody + 0, accountID );
+        LittleEndianUtil::writeUint64( pBody + 8, sessionID );
+        LittleEndianUtil::writeUint64( pBody + 16, static_cast<uint64>( expiresAtMs ) );
+        LittleEndianUtil::writeUint64( pBody + 24, LoginTicketAuthorityInternal::computeServerHash( serverID ) );
         if ( _pCrypto->fillRandom( pBody + LoginTicketAuthorityInternal::kNonceOffset, LoginTicketAuthorityInternal::kNonceSize ) == false )
             return false;
         uint8 arrTag[NetGameTicket::kTagSize];
@@ -114,16 +97,16 @@ namespace sw
             return false;
         if ( LoginTicketAuthorityInternal::isEqualConstantTime( arrTag, pToken + NetGameTicket::kBodySize, NetGameTicket::kTagSize ) == false )
             return false;
-        const int64 expiresAtMs = static_cast<int64>( LoginTicketAuthorityInternal::readUint64( pToken + 16 ) );
+        const int64 expiresAtMs = static_cast<int64>( LittleEndianUtil::readUint64( pToken + 16 ) );
         if ( nowMs >= expiresAtMs )
             return false;
-        if ( LoginTicketAuthorityInternal::readUint64( pToken + 24 ) != LoginTicketAuthorityInternal::computeServerHash( serverID ) )
+        if ( LittleEndianUtil::readUint64( pToken + 24 ) != LoginTicketAuthorityInternal::computeServerHash( serverID ) )
             return false;
         NetGameTicketClaim claim;
         if ( computeSecret( pToken, claim._arrSecret ) == false )
             return false;
-        claim._accountID   = LoginTicketAuthorityInternal::readUint64( pToken + 0 );
-        claim._sessionID   = LoginTicketAuthorityInternal::readUint64( pToken + 8 );
+        claim._accountID   = LittleEndianUtil::readUint64( pToken + 0 );
+        claim._sessionID   = LittleEndianUtil::readUint64( pToken + 8 );
         claim._expiresAtMs = expiresAtMs;
         outClaim           = claim;
         return true;

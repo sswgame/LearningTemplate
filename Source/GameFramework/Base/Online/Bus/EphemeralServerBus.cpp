@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Online/Bus/EphemeralServerBus.h"
 
+#include "Core/Container/LittleEndianUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 
@@ -24,24 +25,6 @@ namespace sw
                 string channel{ kChannelPrefix };
                 channel += topic;
                 return channel;
-            }
-
-            static void appendUint64( vector<uint8>& outBytes, uint64 value )
-            {
-                for ( int32 byteIndex = 0; byteIndex < 8; ++byteIndex )
-                {
-                    outBytes.push_back( static_cast<uint8>( value >> ( byteIndex * 8 ) ) );
-                }
-            }
-
-            static uint64 readUint64( const uint8* pData )
-            {
-                uint64 value = 0;
-                for ( int32 byteIndex = 0; byteIndex < 8; ++byteIndex )
-                {
-                    value |= static_cast<uint64>( pData[byteIndex] ) << ( byteIndex * 8 );
-                }
-                return value;
             }
         };
     } // namespace
@@ -68,8 +51,8 @@ namespace sw
         vector<uint8> envelopeBytes;
         envelopeBytes.reserve( EphemeralServerBusInternal::kEnvelopeSize + static_cast<size_t>( size ) );
         envelopeBytes.push_back( EphemeralServerBusInternal::kEnvelopeVersion );
-        EphemeralServerBusInternal::appendUint64( envelopeBytes, _serverID );
-        EphemeralServerBusInternal::appendUint64( envelopeBytes, _nextSequence++ );
+        LittleEndianUtil::appendUint64( envelopeBytes, _serverID );
+        LittleEndianUtil::appendUint64( envelopeBytes, _nextSequence++ );
         envelopeBytes.insert( envelopeBytes.end(), pData, pData + size );
         (void)_pStore->submit( EphemeralRequest::makePublish( EphemeralServerBusInternal::makeChannel( topic ), std::move( envelopeBytes ) ) );
     }
@@ -106,8 +89,8 @@ namespace sw
             }
             ServerBusMessage& busMessage = outListMessage.emplace_back();
             busMessage._topic            = message._channel.substr( prefix.size() );
-            busMessage._originServerID   = EphemeralServerBusInternal::readUint64( message._bytes.data() + 1 );
-            busMessage._sequence         = EphemeralServerBusInternal::readUint64( message._bytes.data() + 9 );
+            busMessage._originServerID   = LittleEndianUtil::readUint64( message._bytes.data() + 1 );
+            busMessage._sequence         = LittleEndianUtil::readUint64( message._bytes.data() + 9 );
             busMessage._bytes.assign( message._bytes.begin() + static_cast<ptrdiff_t>( EphemeralServerBusInternal::kEnvelopeSize ), message._bytes.end() );
             ++addedCount;
         }
