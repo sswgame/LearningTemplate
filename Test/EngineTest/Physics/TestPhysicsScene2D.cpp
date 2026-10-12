@@ -388,6 +388,50 @@ SW_TEST_CASE( PhysicsScene2DTest, StepIsDeterministic )
 }
 
 /**
+ * @brief [PhysicsScene2DTest] 전용 워커를 붙여도 결과는 한 스레드와 비트까지 같다(Box2D 는 고정 블록으로 나눈다) — 워커 수 1 · 2 · 4
+ */
+SW_TEST_CASE( PhysicsScene2DTest, StepIsDeterministicAcrossWorkerCounts )
+{
+    // 바디가 솔버 블록을 여럿 만들 만큼 많아야 일을 실제로 나눈다(쌓인 더미 — 접촉 그래프 색칠과 섬 나누기가 모두 돈다).
+    constexpr uint32       kBodyCount       = 400;
+    const uint32           arrWorkerCount[] = { 1, 2, 4 };
+    sw::vector<sw::float2> arrListPosition[3];
+    for ( uint32 runIndex = 0; runIndex < 3; ++runIndex )
+    {
+        sw::PhysicsSettings settings               = makeSettings();
+        settings._workerCount2D                    = arrWorkerCount[runIndex];
+        sw::unique_ptr<sw::IPhysicsScene2D> pScene = sw::engine::getPhysicsSystem().createScene2D( settings );
+        SW_ASSERT_NOT_NULL( pScene.get() );
+        addFloor( *pScene );
+        sw::vector<sw::PhysicsBodyHandle> listBody;
+        for ( uint32 bodyIndex = 0; bodyIndex < kBodyCount; ++bodyIndex )
+        {
+            const float32 x = static_cast<float32>( bodyIndex % 20 ) * 0.9f - 9.0f;
+            const float32 y = 1.0f + static_cast<float32>( bodyIndex / 20 ) * 0.9f;
+            listBody.push_back(
+                addBody( *pScene, ( bodyIndex % 2 ) == 0 ? makeBox( sw::float2{ 0.4f, 0.4f } ) : makeCircle( 0.4f ), sw::float2{ x, y }, sw::PhysicsBodyType::Dynamic ) );
+        }
+        stepFor( *pScene, 120 );
+        for ( const sw::PhysicsBodyHandle& body : listBody )
+        {
+            arrListPosition[runIndex].push_back( getPosition( *pScene, body ) );
+        }
+    }
+    for ( uint32 runIndex = 1; runIndex < 3; ++runIndex )
+    {
+        uint32 mismatchCount = 0;
+        for ( size_t bodyIndex = 0; bodyIndex < arrListPosition[0].size(); ++bodyIndex )
+        {
+            const bool bSame = arrListPosition[0][bodyIndex]._x == arrListPosition[runIndex][bodyIndex]._x &&
+                               arrListPosition[0][bodyIndex]._y == arrListPosition[runIndex][bodyIndex]._y;
+            if ( bSame == false )
+                ++mismatchCount;
+        }
+        SW_EXPECT_EQUAL( 0u, mismatchCount ); // 워커 수가 다르면 바디가 달리 움직였다
+    }
+}
+
+/**
  * @brief [PhysicsScene2DTest] 지어 둔 셰이프를 묶은 컴파운드 — 자식의 로컬 자리가 그대로 들고, 자식을 지워도 산다. 지운 자식으로는 만들지 않는다
  */
 SW_TEST_CASE( PhysicsScene2DTest, CompoundOfBuiltShapesKeepsChildOffsets )

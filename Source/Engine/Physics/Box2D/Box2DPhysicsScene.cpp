@@ -6,6 +6,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Physics/Box2D/Box2DUtil.h"
+#include "Engine/Physics/Box2D/Box2DWorkerPool.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
 
 #include <box2d/box2d.h>
@@ -45,6 +46,7 @@ namespace sw
     Box2DPhysicsScene::Box2DPhysicsScene( const PhysicsSettings& settings )
         : _settings{ settings }
         , _layers{}
+        , _pWorkerPool{}
         , _worldID{}
         , _groundBodyID{}
         , _bodies{}
@@ -63,7 +65,15 @@ namespace sw
 
         b2WorldDef worldDef = b2DefaultWorldDef();
         worldDef.gravity    = Box2DUtil::toBox2D( _settings._gravity2D );
-        _worldID            = b2CreateWorld( &worldDef );
+        if ( _settings._workerCount2D > 1 )
+        {
+            _pWorkerPool             = make_unique<Box2DWorkerPool>( _settings._workerCount2D );
+            worldDef.workerCount     = static_cast<int32>( _pWorkerPool->getWorkerCount() );
+            worldDef.enqueueTask     = &Box2DWorkerPool::enqueueTask;
+            worldDef.finishTask      = &Box2DWorkerPool::finishTask;
+            worldDef.userTaskContext = _pWorkerPool.get();
+        }
+        _worldID = b2CreateWorld( &worldDef );
 
         b2BodyDef groundDef = b2DefaultBodyDef();
         groundDef.type      = b2_staticBody;
