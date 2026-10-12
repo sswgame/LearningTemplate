@@ -29,10 +29,20 @@ namespace sw::editor
     {
         struct EditorAssetFileCommandsInternal
         {
-            /** @brief 새 머티리얼이 베끼는 엔진 머티리얼입니다(손으로 지은 머티리얼 XML 은 퍼뮤테이션을 빠뜨리기 쉽다). */
-            static constexpr const utf8* kMaterialTemplatePath = "engine/materials/defaultmaterial.material";
-            /** @brief 그 머티리얼의 이름 속성입니다. 새 머티리얼은 이 자리를 자기 줄기로 바꾼다. */
-            static constexpr const utf8* kMaterialTemplateName = "name=\"DefaultMaterial\"";
+            /** @brief 새 씬의 글입니다. */
+            static constexpr const utf8* kSceneText = "<Scene formatVersion=\"1\" name=\"NewScene\">\n\t<entities>\n\t</entities>\n</Scene>\n";
+            /** @brief 새 프리팹의 글입니다. */
+            static constexpr const utf8* kPrefabText = "<Prefab formatVersion=\"0\" name=\"NewPrefab\">\n\t<GameObject _schemaVersion=\"0\" _name=\"NewPrefab\" _bActive=\"true\">\n"
+                                                       "\t\t<_listComponent>\n\t\t</_listComponent>\n\t</GameObject>\n</Prefab>\n";
+            /**
+             * @brief 새 에셋 틀의 표입니다. 한 줄이 Add 메뉴 항목 하나입니다.
+             * @details 머티리얼은 엔진 머티리얼을 베낀다(손으로 지은 머티리얼 XML 은 퍼뮤테이션을 빠뜨리기 쉽다).
+             */
+            static constexpr EditorNewAssetTemplate kArrNewAssetTemplate[] = {
+                {"material", "Material", "new_material",   ".material", "engine/materials/defaultmaterial.material",     nullptr, "name=\"DefaultMaterial\""},
+                {   "scene",    "Scene",    "new_scene",  ".scene.xml",                                     nullptr,  kSceneText,                    nullptr},
+                {  "prefab",   "Prefab",   "new_prefab", ".prefab.xml",                                     nullptr, kPrefabText,                    nullptr},
+            };
             /** @brief `_2` 부터 세다 멈추는 상한입니다. */
             static constexpr uint32 kMaxUniqueSuffix = 10000;
 
@@ -42,36 +52,6 @@ namespace sw::editor
             {
                 const utf8 lower = StringUtil::toLowerChar( ch );
                 return isNameChar( lower ) || lower == '/';
-            }
-
-            /** @brief 새 에셋 종류의 기본 이름과 글입니다. */
-            static bool makeNewAssetText( EditorNewAssetKind kind, string& outStem, string& outSuffix, string& outText )
-            {
-                switch ( kind )
-                {
-                    case EditorNewAssetKind::Material:
-                    {
-                        outStem   = "new_material";
-                        outSuffix = ".material";
-                        return ResourceIO::readTextResource( kMaterialTemplatePath, outText );
-                    }
-                    case EditorNewAssetKind::Scene:
-                    {
-                        outStem   = "new_scene";
-                        outSuffix = ".scene.xml";
-                        outText   = "<Scene formatVersion=\"1\" name=\"NewScene\">\n\t<entities>\n\t</entities>\n</Scene>\n";
-                        return true;
-                    }
-                    case EditorNewAssetKind::Prefab:
-                    {
-                        outStem   = "new_prefab";
-                        outSuffix = ".prefab.xml";
-                        outText   = "<Prefab formatVersion=\"0\" name=\"NewPrefab\">\n\t<GameObject _schemaVersion=\"0\" _name=\"NewPrefab\" _bActive=\"true\">\n"
-                                    "\t\t<_listComponent>\n\t\t</_listComponent>\n\t</GameObject>\n</Prefab>\n";
-                        return true;
-                    }
-                }
-                return false;
             }
 
             /** @brief 파일 하나를 옮깁니다(복사한 뒤 원본을 지운다). 실패하면 대상을 지워 원본만 남긴다. */
@@ -162,23 +142,27 @@ namespace sw::editor
         return false;
     }
 
-    bool EditorAssetFileCommands::createAsset( string_view folderAbs, EditorNewAssetKind kind, string& outAssetAbs )
+    span<const EditorNewAssetTemplate> EditorAssetFileCommands::getNewAssetTemplateList() { return EditorAssetFileCommandsInternal::kArrNewAssetTemplate; }
+
+    bool EditorAssetFileCommands::createAsset( string_view folderAbs, const EditorNewAssetTemplate& assetTemplate, string& outAssetAbs )
     {
-        string stem;
-        string suffix;
         string text;
-        if ( EditorAssetFileCommandsInternal::makeNewAssetText( kind, stem, suffix, text ) == false )
+        if ( assetTemplate._pSourcePath == nullptr )
         {
-            SW_LOG_ERROR( "Could not read the new asset template" );
+            text = assetTemplate._pText;
+        }
+        else if ( ResourceIO::readTextResource( assetTemplate._pSourcePath, text ) == false )
+        {
+            SW_LOG_ERROR( "Could not read the new asset template '%#'", assetTemplate._pSourcePath );
             return false;
         }
-        outAssetAbs = makeUniquePath( folderAbs, stem, suffix );
-        if ( kind == EditorNewAssetKind::Material )
+        outAssetAbs = makeUniquePath( folderAbs, assetTemplate._pStem, assetTemplate._pSuffix );
+        if ( assetTemplate._pNameAttribute != nullptr )
         {
             string uniqueStem;
             string uniqueSuffix;
             splitAssetName( FileUtil::getFileNamePart( outAssetAbs ), uniqueStem, uniqueSuffix );
-            (void)replaceReference( text, EditorAssetFileCommandsInternal::kMaterialTemplateName, "name=\"" + uniqueStem + "\"" ); // 이름 속성이 없으면 템플릿 이름 그대로다
+            (void)replaceReference( text, assetTemplate._pNameAttribute, "name=\"" + uniqueStem + "\"" ); // 이름 속성이 없으면 템플릿 이름 그대로다
         }
         if ( FileUtil::writeTextFile( outAssetAbs, text ) )
         {

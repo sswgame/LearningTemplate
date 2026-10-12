@@ -8,6 +8,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Config/EditorPreferences.h"
@@ -541,10 +542,10 @@ namespace sw::editor
         return true;
     }
 
-    bool ContentBrowserPanel::createNewAsset( EditorNewAssetKind kind )
+    bool ContentBrowserPanel::createNewAsset( const EditorNewAssetTemplate& assetTemplate )
     {
         string assetAbs;
-        if ( _selectedFolderAbs.empty() || EditorAssetFileCommands::createAsset( _selectedFolderAbs, kind, assetAbs ) == false )
+        if ( _selectedFolderAbs.empty() || EditorAssetFileCommands::createAsset( _selectedFolderAbs, assetTemplate, assetAbs ) == false )
             return false;
         selectAfterFileChange( assetAbs );
         return true;
@@ -646,15 +647,15 @@ namespace sw::editor
             (void)createNewFolder(); // 실패는 createFolder 가 알린다
         EditorSelfTestMarks::note( "contentBrowser.add.folder" );
         ImGui::Separator();
-        if ( ImGui::MenuItem( "Material" ) )
-            (void)createNewAsset( EditorNewAssetKind::Material ); // 실패는 createAsset 이 알린다
-        EditorSelfTestMarks::note( "contentBrowser.add.material" );
-        if ( ImGui::MenuItem( "Scene" ) )
-            (void)createNewAsset( EditorNewAssetKind::Scene ); // 실패는 createAsset 이 알린다
-        EditorSelfTestMarks::note( "contentBrowser.add.scene" );
-        if ( ImGui::MenuItem( "Prefab" ) )
-            (void)createNewAsset( EditorNewAssetKind::Prefab ); // 실패는 createAsset 이 알린다
-        EditorSelfTestMarks::note( "contentBrowser.add.prefab" );
+        StringBuilder<constant::kMaxBuffer64> mark;
+        for ( const EditorNewAssetTemplate& assetTemplate : EditorAssetFileCommands::getNewAssetTemplateList() )
+        {
+            if ( ImGui::MenuItem( assetTemplate._pLabel ) )
+                (void)createNewAsset( assetTemplate ); // 실패는 createAsset 이 알린다
+            mark.clear();
+            mark.append( "contentBrowser.add." ).append( assetTemplate._pID );
+            EditorSelfTestMarks::note( mark.c_str() );
+        }
         ImGui::EndPopup();
     }
 

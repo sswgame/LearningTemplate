@@ -63,3 +63,60 @@ SW_TEST_CASE( EditorAssetFileCommandsTest, UniquePathCountsFromTwoAfterTheStem )
     SW_EXPECT_TRUE( FileUtil::exists( duplicated ) );
     (void)FileUtil::removeDirectory( folder ); // 임시 폴더라 남아도 다음 실행이 지운다
 }
+
+/**
+ * @brief [EditorAssetFileCommandsTest] 새 에셋 틀 표의 줄은 id 와 확장자가 겹치지 않고, 기본 이름이 리소스 규칙을 따르며, 글의 출처를 하나만 고른다
+ * @details Add 메뉴 표지(`contentBrowser.add.<id>`)는 id 로 만들어지므로 시나리오가 누르는 `material` 줄이 있어야 한다.
+ */
+SW_TEST_CASE( EditorAssetFileCommandsTest, NewAssetTemplateRowsAreDistinctAndValid )
+{
+    const span<const EditorNewAssetTemplate> listTemplate = EditorAssetFileCommands::getNewAssetTemplateList();
+    SW_ASSERT_FALSE( listTemplate.empty() );
+    bool bHasMaterial = false;
+    for ( size_t index = 0; index < listTemplate.size(); ++index )
+    {
+        const EditorNewAssetTemplate& row = listTemplate[index];
+        SW_ASSERT_TRUE( row._pID != nullptr && row._pLabel != nullptr && row._pStem != nullptr && row._pSuffix != nullptr );
+        const bool bOneSource = ( row._pSourcePath == nullptr ) != ( row._pText == nullptr );
+        SW_EXPECT_TRUE( bOneSource );
+        SW_EXPECT_TRUE( EditorAssetFileCommands::isValidAssetName( string( row._pStem ) + row._pSuffix ) );
+        if ( string_view( row._pID ) == "material" )
+            bHasMaterial = true;
+        for ( size_t otherIndex = index + 1; otherIndex < listTemplate.size(); ++otherIndex )
+        {
+            SW_EXPECT_TRUE( string_view( row._pID ) != listTemplate[otherIndex]._pID );
+            SW_EXPECT_TRUE( string_view( row._pSuffix ) != listTemplate[otherIndex]._pSuffix );
+        }
+    }
+    SW_EXPECT_TRUE( bHasMaterial );
+}
+
+/**
+ * @brief [EditorAssetFileCommandsTest] 글을 그대로 쓰는 틀은 기본 이름으로 쓰고, 겹치면 줄기 뒤에 `_2` 를 붙인다
+ */
+SW_TEST_CASE( EditorAssetFileCommandsTest, CreateAssetWritesTheTemplateText )
+{
+    const EditorNewAssetTemplate* pTextTemplate = nullptr;
+    for ( const EditorNewAssetTemplate& row : EditorAssetFileCommands::getNewAssetTemplateList() )
+    {
+        if ( row._pText != nullptr && pTextTemplate == nullptr )
+            pTextTemplate = &row;
+    }
+    SW_ASSERT_TRUE( pTextTemplate != nullptr );
+
+    const string folder = FileUtil::joinPath( FileUtil::getTempDirectory(), "sw_editor_asset_file_commands_create" );
+    (void)FileUtil::removeDirectory( folder ); // 앞 실행이 남긴 것 — 없으면 그대로다
+    SW_ASSERT_TRUE( FileUtil::ensureDirectoryExists( folder ) );
+
+    string first;
+    SW_ASSERT_TRUE( EditorAssetFileCommands::createAsset( folder, *pTextTemplate, first ) );
+    SW_EXPECT_STREQ( FileUtil::joinPath( folder, string( pTextTemplate->_pStem ) + pTextTemplate->_pSuffix ).c_str(), first.c_str() );
+    string written;
+    SW_ASSERT_TRUE( FileUtil::readTextFile( first, written ) );
+    SW_EXPECT_STREQ( pTextTemplate->_pText, written.c_str() );
+
+    string second;
+    SW_ASSERT_TRUE( EditorAssetFileCommands::createAsset( folder, *pTextTemplate, second ) );
+    SW_EXPECT_STREQ( FileUtil::joinPath( folder, string( pTextTemplate->_pStem ) + "_2" + pTextTemplate->_pSuffix ).c_str(), second.c_str() );
+    (void)FileUtil::removeDirectory( folder ); // 임시 폴더라 남아도 다음 실행이 지운다
+}
