@@ -37,22 +37,6 @@
   6. 아직 안 돌린 것: Debug `-L hostgpu`(약 17분, 직렬), Shipping 전체 빌드 · `nogpu`/`hostgpu`, 게임 프리셋 8개(`Ninja-Debug-<Game>`) 빌드, 네 백엔드 스크린샷 비교.
 - **미완료(사용자 지시)**: ① 한 줄 함수 `InlineOnly` 서식 적용(250개 파일 · 약 1,300곳; `.clang-format` 수정 + 전체 `clang-format -i`(고정 20.1.8) + `AGENTS.md`/`docs/04_CodingGuidelines.md` 규칙 + 린트 확인; 클래스 밖 `inline` 자유 함수(예: `VectorMath.h` 의 연산자)도 펼쳐진다는 점을 사용자에게 알릴 것) ② 구조 리팩토링 2차 점검(잠재 결함 · SOLID · 재사용성 · 성능) ③ Release 성능 측정 ④ push(검증이 초록일 때만).
 
-## 백로그 정리 목록 (작업자가 끝낸 것 — 병합했으니 같은 커밋으로 지울 것)
-
-새 번호 기준(`docs/06_Backlog.md` 분류표, 옛 번호 대응은 문서 맨 아래 표).
-
-- **A**: A-1(XML 끝 공백) · A-2(JSON 소유 포인터) · A-3(머티리얼 폴백 원소) · A-6(명령줄 전역 변수가 설정에 덮임) 지움. A-4(materialpreview GL)는 가설로 고쳐 씀(CPU 셰이딩이라 "렌더 타깃 미갱신" 설명이 틀림). A-5(에디터 체인) ①③ 지움.
-- **B-1**(8000 무버): 구조 변경 들어감, Release 전/후 측정 남음. **B-2**(직렬화 · 로드 비용): 하니스 `Scripts/qa/SceneLoadBench.py` 있음, 측정 남음.
-- **C-6**(파괴 잎 셰이프): 시간 예산 500us 로 나눠 짓기 구현, Release 측정 남음, 쿠킹 직렬화 안은 Physics 에 셰이프 직렬화 창구가 생기면. C-8 · C-9: 벤치 있음, 측정 남음. C-10(진단 세터 Shipping 제외) 지움.
-- **D1**: D1-1(중첩 프리팹) 지움 + 새 항목(에디터 훅 · `PrefabInstanceRegistry` 정리 · `AssetValidation.py` prefab_guid · 부품 오버라이드 저장). D1-2(강체 물리) (1)(4)(5) 지움 (6) 남김. D1-3(내비메시) (1)(4)(5) 지움, (2)는 식생만, (3) TileCache 남김(조건 미충족), (6) 고쳐 씀.
-- **D2**: D2-1(2D) (1)(2)(4)(5) 지움 (3) 남김. D2-2(방향광 그림자) · D2-3(점광 · 스폿) 지움(새 항목: 캐스케이드별 컬링 · 아틀라스 우선순위 · 여드름 눈 확인). D2-5(환경) (1)(2) 고쳐 씀. D2-7(VRM) 고쳐 씀. D2-8(캔버스) · D2-10(월드 UV) 지움, D2-9(반해상도)는 측정 남음.
-- **D3**: D3-1(에디터 로드맵) ①~⑥ 지움 · ⑦ 중 카탈로그 계약 · 편집기 · Data Table 탭 지움 · ⑧⑨⑩ 남김. D3-2(Hierarchy) 지움. D3-3(UI 미리보기) (1)~(5) 지움, (6)은 "시작 단계까지". D3-4(콘솔) 패드 · 재배치 지움. D3-5(입력 흉내) 콤보 · 드래그 지움. D3-6(백엔드 교체) 지움.
-- **D4**: D4-1(GameCurve) 지움. D4-2(사용자 설정) (4)(5) 지움. D4-3(패드 스틱) 절반 지움. D4-5(카메라) 2~6단계 대부분 지움. D4-6(애니메이션) 블렌드 스페이스 · 동기 그룹 · 소켓 보정 · LOD · 리타깃 지움, ⑦ 고쳐 씀. D4-11(어빌리티)은 조건 미충족으로 유지. D4-12(기믹) · D4-13(의도 기록) 재생 진입점 지움.
-- **D5**: 오디오 (1)(3)(4)(5)(6)(7) 지움, 현지화 대부분 지움(아이템 이름 HUD 표시만), NPC 일정 (1)(2)(5) 지움.
-- **D6**: UI 항목들 대부분 지움(남김: 에디터 게임 뷰 포인터 좌표, UI 맵 키 리바인딩, 음성 자막 키 필드, 전환 "곡선 위 사건"(뜻이 불분명 → 풀어 정하거나 지움), 운영체제 클립보드 연결, `ReturnToTitle`/`QuitGame` 등록하는 쪽).
-- **D7**: 서버 서비스 레지스트리 · 프로세스 지표 · 크래시 묶기 · S4 코어 · 포화 연결 · 버스 라우터 · 서버 조립 · 정산 페이지 · 길드 창고 · TLS 배선 지움. 남김: `GameNetSession` 에 `NetEmulationTransport` · `net.emulation`, `ServerConfig::_gamePort` 자동 열기 · 크래시 전송 동의, Storage 키트 `OnlineStoreDriverTable` 팩토리, 파괴 UDP 서버, 매칭 backfill, 인스턴스 아이템, 게임별 기동 스크립트.
-- **새로 적을 일**: 오디오 데이터 핫 리로드가 엔진(`findEventLibraryName`)과 에디터(`AudioDataHotReload` · `hasEventLibrary`)에 **중복**(합칠 것); 정점 위치 합치기 세 벌(`PhysicsMeshShapeCache` · `MeshFracture::PositionWelder` · `GeometryCut`) → Core 도우미; `PhysicsMeshShapeCache::setLoadFunction` 을 엔진 조립 지점에서 `MeshAssetFormat::loadFromResource` 로 넣기(넣기 전까지 `_meshPath` 셰이프는 오류) + `MeshCache` 리로드 때 `clear()`; 모프 풀 준비 프로파일 구간 없음; `PerfCompare.py`/`SceneLoadBench.py` 를 `Scripts/__main__.py` 서브커맨드로 등록 + 08_Verification 2절에 새 측정 명령; `[SceneLoad]` 로그 판별 확인; `LoopbackStreamTransport.cpp:306` 프리리스트 패턴; `AutomationScenarioChain::splitList` 직접 짠 토큰 루프; `IPhysicsScene3D/2D` 전방 선언용 `*Fwd.h`; Core→Log 예외 5개 파일(티어마다 필요한 것이 달라 함수 포인터 하나로 안 풀림); 프렐류드 예외 제거(184 파일); `UserSettingType` 처리 표(Engine 파일 3곳). 결정 기록에 쓸 것: 점광 · 스폿은 2D 아틀라스, 시퀀서는 신호만 · GF 가 카메라를 움직임, 중첩 프리팹은 펼쳐 쿠킹, 종류 단위 내비 기하는 레지스트리, UI 가 먹은 입력은 `UIInputMapView`, `GameCurve` → `FloatCurve`, 카탈로그 표 편집은 원문 구간 직접 편집, `GF_EditorPlugIn_Base`.
-
 ## 검증 명령 (작업자가 남긴 것, 기대 결과)
 
 - 그림 불변(그림자/블룸 변경 후): `App.exe -<dx11|dx12|vk|gl> -gv_benchMeshes=8 -gv_benchGround=1 -gv_benchAnimate=0 -gv_profileFrames=20 "-gv_screenshot=s.ppm"` 병합 전/후 sha 동일. `-gv_screenshotAttachment=ShadowMap` → 회색 PPM.
