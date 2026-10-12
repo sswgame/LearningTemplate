@@ -554,6 +554,25 @@ Empty 게임의 `-gv_benchUiMarkers=K` 는 벤치 큐브에 화면 마커를 붙
   위젯 캐시를 차례로 붙인 결과와 미리 합친 하위 목록을 붙인 결과는 텍스처 번호 · 일괄 경계가 다를 수 있습니다(`UIDeterminismTest` 골든이 바뀐다).
 - 구간은 `GT.UI.Animate`, `GT.UI.Bind`, `GT.UI.Style`, `GT.UI.Layout`, `GT.UI.Paint` 이고, 카운터는 `UI.StyleWidgets`, `UI.LayoutWidgets`, `UI.PaintWidgets`, `UI.CanvasQuads` 입니다.
 
+#### 측정 시나리오 — 아직 하지 않은 최적화를 하기 전에
+
+두 가지 구조 변경(패널 하위 출력 캐시, 변환을 그림 캐시 밖에서 곱하기)은 **재서 이길 때만** 합니다. 같은 바이너리로 세 모양을 잽니다(Release, VSync 끔, `-gv_profileFrames=600`, 값은 `FrameProfiler` 표의 `per_frame`/`p50`/`p99` 열).
+
+| 모양 | 명령 | 보는 것 |
+|---|---|---|
+| A. 멈춘 화면 | `App -gv_benchUiWidgets=10000 -gv_benchUiChurn=0` | `GT.UI.Paint` 가 0 에 가까운지(바뀌지 않은 트리는 순회하지 않는다) |
+| B. 일부만 바뀜 | `App -gv_benchUiWidgets=10000 -gv_benchUiChurn=10` | `GT.UI` 합 p50(목표 0.3 ms)과 `UI.PaintWidgets` — 보이는 위젯을 걷는 비용이다 |
+| C. 조상 변환이 매 프레임 | `App -gv_benchUiWidgets=10000 -gv_benchUiOpacityPulse=1` | 조상 `kTransform` 으로 보이는 자손 전체를 다시 칠하는 비용(`UI.PaintWidgets` 가 보이는 위젯 수와 같아야 한다) |
+
+- **패널 하위 출력 캐시(Slate 의 Invalidation Panel)**는 B 의 `GT.UI` p50 이 목표를 넘고 보이는 위젯 수가 늘수록 선형으로 늘 때만 합니다. 이득은 걷는 비용(`UI.PaintWidgets` 만큼의 방문)을 패널 하나의 이어 붙이기 한 번으로 바꾸는 것이고,
+  손해는 패널 안 위젯 하나가 바뀌면 그 패널의 캐시를 통째로 다시 만드는 것입니다.
+- **설계 메모.** (1) 하위 목록을 **합치지 않은 일괄 그대로** 들어야 합니다 — `CanvasDrawList::appendDrawList` 가 가위 · 텍스처 넷이 같은 일괄을 합치는 순서에 결과가 달려 있어, 미리 합친 하위 목록을 붙이면 일괄 경계가 달라져
+  골든(`UIDeterminismTest`)이 바뀝니다. 원본 일괄을 이어 붙이는 길(`appendRawBatches` 같은 것)을 먼저 두고, 같은 바이트인지 골든으로 확인한 뒤에 캐시를 얹습니다.
+  (2) 무효화는 자손에서 위로 올라가야 하므로 `Widget::invalidate` 가 부모 쪽에 "자손이 더럽다" 비트(`kChildPaint`)를 올려 캐시 패널에서 멈추게 합니다(`kChildLayout` 과 같은 방식).
+  (3) 캐시 경계는 자동이 아니라 선택입니다(패널의 `_bCachePaintOutput`) — 레이아웃 경계와 같은 이유로, 크기가 고정이고 자주 바뀌지 않는 큰 목록 패널에만 켭니다. (4) 스크롤 패널은 자르기 영역이 움직이므로 첫 대상에서 뺍니다.
+- **변환을 캐시 밖에서 곱하기**는 C 에서 `GT.UI.Paint` p50 이 A 의 수십 배이고 실제 화면이 조상 불투명도 · 변환을 오래 움직일 때만 합니다(메뉴 페이드는 0.2 초라 해당 없다). 설계는 위젯 캐시에 "조상 변환을 곱하기 전" 사각형을 두고
+  그리기 패스가 목록에 이어 붙일 때 조상 변환을 곱하는 것이며, 그러면 가위 사각형과 둥근 자르기(`_clipRect`)도 같이 변환해야 해서 일괄 합치기 규칙이 흔들립니다 — 위 (1) 과 같은 골든 확인이 먼저입니다.
+
 ## 확장하는 법
 
 ### 새 위젯 타입 만들기

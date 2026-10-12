@@ -2632,6 +2632,14 @@
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
   {
+   "name": "gv_benchUiOpacityPulse",
+   "type": "bool",
+   "default": "false",
+   "kind": "시험 · 배포본에도",
+   "description": "UI 벤치 — 프레임마다 화면 루트 불투명도를 바꿔 보이는 자손 전체를 다시 칠하게 한다 (조상 kTransform 비용 측정)",
+   "source": "Source/Engine/UI/Debug/UIBenchScreen.cpp"
+  },
+  {
    "name": "gv_benchUiWidgets",
    "type": "int32",
    "default": "0",

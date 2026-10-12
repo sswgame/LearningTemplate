@@ -164,6 +164,7 @@
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
 | `gv_benchUiChurn` | `int32` | `0` | 시험 · 배포본에도 | UI 벤치 — 프레임마다 글을 바꾸는 셀 수(앞쪽 보이는 셀 안에서 돈다) | [UIBenchScreen.cpp](../../Source/Engine/UI/Debug/UIBenchScreen.cpp) |
+| `gv_benchUiOpacityPulse` | `bool` | `false` | 시험 · 배포본에도 | UI 벤치 — 프레임마다 화면 루트 불투명도를 바꿔 보이는 자손 전체를 다시 칠하게 한다 (조상 kTransform 비용 측정) | [UIBenchScreen.cpp](../../Source/Engine/UI/Debug/UIBenchScreen.cpp) |
 | `gv_benchUiWidgets` | `int32` | `0` | 시험 · 배포본에도 | UI 벤치 — 격자 셀 수(셀마다 테두리 · 아이콘 · 글, 대부분 스크롤 밖) (0=사용 안 함) | [UIBenchScreen.cpp](../../Source/Engine/UI/Debug/UIBenchScreen.cpp) |
 | `gv_debugHUDProbeSection` | `string` | — | 시험 | 자동화 탐침 DebugHUD.SectionShown 이 볼 디버그 HUD 섹션 이름 | [DebugHUD.cpp](../../Source/Engine/UI/Debug/DebugHUD.cpp) |
 | `gv_uiDebugSafeZone` | `float32` | `0.0` | 시험 | UI 안전 영역 흉내 — 각 변을 화면 크기의 이 비율(0..0.1)만큼 안쪽으로 민다 | [UIScale.cpp](../../Source/Engine/UI/Layout/UIScale.cpp) |
