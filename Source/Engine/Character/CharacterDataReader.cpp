@@ -4,7 +4,10 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/MatrixMath.h"
+#include "Core/Math/VectorMath.h"
 
+#include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
@@ -19,6 +22,11 @@ namespace sw
         : _sourceName{ sourceName.empty() ? string_view( "<memory>" ) : sourceName }
         , _listError{}
     {
+    }
+
+    bool CharacterDataReader::hasAttribute( const XMLNode& node, const utf8* pName )
+    {
+        return node.findAttribute( pName ) != nullptr;
     }
 
     bool CharacterDataReader::parseRoot( XMLDocument& outDocument, string_view xmlText, const utf8* pRootName, XMLNode& outRoot )
