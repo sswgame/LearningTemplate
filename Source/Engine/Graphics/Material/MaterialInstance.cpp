@@ -17,6 +17,7 @@
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
