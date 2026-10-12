@@ -2,10 +2,12 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Resource/AssetFormat.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
@@ -64,6 +66,79 @@ namespace sw
             if ( ( bJSON ? cooked.loadFromJSONFile( sourcePath ) : cooked.loadFromXMLFile( sourcePath ) ) == false )
                 return false;
             return cooked.saveToBinaryFile( sw::AssetCookPath::toCookedPath( sourcePath ) ); // 런타임 로더 · 쿠커와 같은 이름 규칙
+        }
+
+        /** @brief 바퀴 프리팹: 씬 컴포넌트 하나(스케일 @p scale). */
+        sw::PrefabAsset makeWheelPrefab( float32 scale )
+        {
+            sw::GameObjectManager authoring;
+            sw::GameObject*       pSource = authoring.createGameObject( sw::hashed_string( "Wheel" ) );
+            sw::SceneComponent*   pRoot   = pSource->addComponent<sw::SceneComponent>();
+            pRoot->setLocalScale( sw::float3( scale, scale, scale ) );
+            sw::PrefabAsset asset;
+            asset.setFromGameObject( pSource );
+            return asset;
+        }
+
+        /** @brief 바퀴의 루트를 (1,0,0) 으로 옮기는 오버라이드입니다(바퀴 프리팹의 원형과 다른 점). */
+        constexpr const utf8* kWheelMovedOverride =
+            "<PrefabOverrides><Override key=\"SceneComponent#0\"><SceneComponent _localPosition=\"1,0,0\" /></Override></PrefabOverrides>";
+
+        /**
+         * @brief 수레 프리팹: 루트와 루트에 붙은 "Axle" 씬 컴포넌트, 그리고 바퀴 프리팹의 중첩 인스턴스 둘.
+         * @details "WheelL" 은 Axle 에 붙고 위치를 (1,0,0) 으로 덮어쓴다. "WheelR" 은 루트(primary)에 원본 그대로 붙는다.
+         */
+        sw::PrefabAsset makeCartPrefab( const sw::string& wheelPath )
+        {
+            sw::GameObjectManager authoring;
+            sw::GameObject*       pSource = authoring.createGameObject( sw::hashed_string( "Cart" ) );
+            sw::SceneComponent*   pRoot   = pSource->addComponent<sw::SceneComponent>();
+            sw::SceneComponent*   pAxle   = pSource->addComponent<sw::SceneComponent>();
+            pAxle->setComponentName( sw::hashed_string( "Axle" ) );
+            (void)pAxle->attachToComponent( pRoot ); // 붙지 않으면 아래 부착 검사가 드러낸다
+            sw::PrefabAsset asset;
+            asset.setFromGameObject( pSource );
+
+            sw::vector<sw::PrefabInstanceNode> listNode( 2 );
+            listNode[0]._name        = "WheelL";
+            listNode[0]._prefabPath  = wheelPath;
+            listNode[0]._attachKey   = "Axle#0";
+            listNode[0]._overrideXML = kWheelMovedOverride;
+            listNode[1]._name        = "WheelR";
+            listNode[1]._prefabPath  = wheelPath;
+            (void)asset.setNestedInstances( std::move( listNode ) ); // 목록 규칙을 지킨다 — 어기면 아래 스폰이 드러낸다
+            return asset;
+        }
+
+        /** @brief 프리팹을 저작 파일과 그 쿠킹본(Shipping 은 쿠킹본만 읽는다)으로 씁니다. */
+        [[nodiscard]] bool writeWithCooked( const sw::PrefabAsset& asset, const sw::string& xmlPath )
+        {
+            return asset.saveToXMLFile( xmlPath ) && writeCookedBeside( xmlPath, false );
+        }
+
+        /** @brief @p pParent 의 자식 오브젝트 가운데 이름이 @p pName 으로 시작하는 첫 오브젝트입니다(매니저가 같은 이름에 번호를 붙인다). */
+        sw::GameObject* findChildByNamePrefix( const sw::GameObject* pParent, const utf8* pName )
+        {
+            sw::vector<sw::GameObject*> listChild;
+            pParent->getChildren( listChild );
+            for ( sw::GameObject* pChild : listChild )
+            {
+                if ( sw::StringUtil::startsWith( pChild->getName().c_str(), pName, false ) )
+                    return pChild;
+            }
+            return nullptr;
+        }
+
+        /**
+         * @brief 노드 둘이 같은 내용이면 true 입니다. GUID 는 데이터베이스가 정하므로 보지 않습니다.
+         * @details 오버라이드는 XML 을 다시 쓰며 공백이 바뀔 수 있어 글 전체가 아니라 덮어쓴 값(바퀴 위치)이 실렸는지만 견준다.
+         */
+        bool isSameNode( const sw::PrefabInstanceNode& left, const sw::PrefabInstanceNode& right )
+        {
+            const bool bLeftMoved  = left._overrideXML.find( "_localPosition=\"1,0,0\"" ) != sw::string::npos;
+            const bool bRightMoved = right._overrideXML.find( "_localPosition=\"1,0,0\"" ) != sw::string::npos;
+            return left._name == right._name && left._prefabPath == right._prefabPath && left._attachKey == right._attachKey &&
+                   left._parentIndex == right._parentIndex && left._resolvedStateXML == right._resolvedStateXML && bLeftMoved == bRightMoved;
         }
     } // namespace
 } // namespace sw
@@ -657,4 +732,265 @@ SW_TEST_CASE( PrefabTest, XMLPrefabReadsOnlyTheSavedShape )
     sw::PrefabAsset childName;
     SW_ASSERT_TRUE( childName.loadFromXMLFile( childNamePath ) );
     SW_EXPECT_STREQ( "childname.prefab", childName.getName().c_str() ); // 이름 속성이 없으면 파일 이름이다
+}
+
+// ------------------------------------------------------------------------------
+// 2) PrefabTest — 중첩 프리팹(프리팹 안의 다른 프리팹 인스턴스)
+// ------------------------------------------------------------------------------
+/**
+ * @brief [PrefabTest] 중첩 인스턴스 노드(원본 경로 · 붙을 컴포넌트 · 오버라이드 · 부모 노드)는 세 형식(XML · JSON · PFB2)을 건너 남는다
+ * @details 노드에 붙는 노드는 XML 에서 그 `<PrefabInstance>` 안에, JSON 에서 그 객체의 `_listPrefabInstance` 에 들어간다. 읽은 순서가 바뀌면 부모 인덱스가
+ *          어긋나 다른 부품에 붙는다.
+ */
+SW_TEST_CASE( PrefabTest, NestedInstancesSurviveEveryPrefabFormat )
+{
+    const sw::string                   wheelPath = test::makeTempPath( "nest_fmt_wheel.prefab.xml" );
+    sw::PrefabAsset                    cart      = sw::makeCartPrefab( wheelPath );
+    sw::vector<sw::PrefabInstanceNode> listNode  = cart.getNestedInstances();
+    sw::PrefabInstanceNode             hubcap{};
+    hubcap._name        = "Hubcap";
+    hubcap._prefabPath  = wheelPath;
+    hubcap._parentIndex = 1; // WheelR 에 붙는다
+    listNode.push_back( hubcap );
+    SW_ASSERT_TRUE( cart.setNestedInstances( listNode ) );
+
+    const sw::string xmlPath  = test::makeTempPath( "nest_fmt_cart.prefab.xml" );
+    const sw::string jsonPath = test::makeTempPath( "nest_fmt_cart.prefab.json" );
+    const sw::string binPath  = test::makeTempPath( "nest_fmt_cart.prefab.bin" );
+    SW_ASSERT_TRUE( cart.saveToXMLFile( xmlPath ) );
+    SW_ASSERT_TRUE( cart.saveToJSONFile( jsonPath ) );
+    SW_ASSERT_TRUE( cart.saveToBinaryFile( binPath ) );
+
+    sw::PrefabAsset fromXML;
+    sw::PrefabAsset fromJSON;
+    sw::PrefabAsset fromBinary;
+    SW_ASSERT_TRUE( fromXML.loadFromXMLFile( xmlPath ) );
+    SW_ASSERT_TRUE( fromJSON.loadFromJSONFile( jsonPath ) );
+    SW_ASSERT_TRUE( fromBinary.loadFromBinaryFile( binPath ) );
+    for ( const sw::PrefabAsset* pLoaded : { &fromXML, &fromJSON, &fromBinary } )
+    {
+        SW_ASSERT_EQUAL( size_t( 3 ), pLoaded->getNestedInstances().size() );
+        for ( size_t index = 0; index < listNode.size(); ++index )
+        {
+            SW_EXPECT_TRUE_MSG( sw::isSameNode( listNode[index], pLoaded->getNestedInstances()[index] ), listNode[index]._name.c_str() );
+        }
+    }
+    // JSON 의 상태 본문에는 노드 배열이 남지 않는다 — 오브젝트 상태로 읽는 쪽이 모르는 칸이다.
+    SW_EXPECT_TRUE( fromJSON.getStateData().find( "_listPrefabInstance" ) == sw::string::npos );
+
+    // 부모가 자기보다 뒤인 목록은 받지 않는다.
+    sw::vector<sw::PrefabInstanceNode> listBroken( 1 );
+    listBroken[0]._prefabPath  = wheelPath;
+    listBroken[0]._parentIndex = 0;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a nested instance whose parent does not come before it" );
+        SW_EXPECT_FALSE( cart.setNestedInstances( listBroken ) );
+    }
+    SW_EXPECT_EQUAL( size_t( 3 ), cart.getNestedInstances().size() );
+}
+
+/**
+ * @brief [PrefabTest] 중첩 인스턴스는 자식 오브젝트로 스폰되어 지정한 컴포넌트에 붙고 오버라이드를 가진다 — 원본을 고치면 상위를 다시 쓰지 않아도 퍼진다
+ * @details 수레 프리팹은 바퀴 프리팹의 경로와 덮어쓴 위치만 가진다. 바퀴의 스케일을 고치면 다음에 스폰한 수레의 두 바퀴에 모두 퍼지고, 덮어쓴 위치는 남는다
+ *          (유니티 Nested Prefab 과 같다).
+ */
+SW_TEST_CASE( PrefabTest, NestedInstancesSpawnAttachedWithTheirOverrides )
+{
+    const sw::string wheelPath = test::makeTempPath( "nest_spawn_wheel.prefab.xml" );
+    const sw::string cartPath  = test::makeTempPath( "nest_spawn_cart.prefab.xml" );
+    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeWheelPrefab( 2.0f ), wheelPath ) );
+    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeCartPrefab( wheelPath ), cartPath ) );
+
+    sw::GameObjectManager objects;
+    sw::PrefabCache       prefabs;
+    sw::GameObject*       pCart = prefabs.spawn( &objects, cartPath, "Cart" );
+    SW_ASSERT_NOT_NULL( pCart );
+    sw::GameObject* pLeft  = sw::findChildByNamePrefix( pCart, "WheelL" );
+    sw::GameObject* pRight = sw::findChildByNamePrefix( pCart, "WheelR" );
+    SW_ASSERT_TRUE( pLeft != nullptr && pRight != nullptr );
+    SW_ASSERT_TRUE( pLeft->getPrimarySceneComponent() != nullptr && pRight->getPrimarySceneComponent() != nullptr );
+
+    const sw::Component* pAxle = sw::ComponentStableKey::findComponent( pCart, "Axle#0" );
+    SW_ASSERT_NOT_NULL( pAxle );
+    SW_EXPECT_TRUE( pLeft->getPrimarySceneComponent()->getParent() == pAxle );
+    SW_EXPECT_TRUE( pRight->getPrimarySceneComponent()->getParent() == pCart->getPrimarySceneComponent() );
+    SW_EXPECT_TRUE( pLeft->getPrimarySceneComponent()->getLocalPosition() == sw::float3( 1.0f, 0.0f, 0.0f ) );
+    SW_EXPECT_TRUE( pRight->getPrimarySceneComponent()->getLocalPosition() == sw::float3( 0.0f, 0.0f, 0.0f ) );
+    SW_EXPECT_TRUE( pLeft->getPrimarySceneComponent()->getLocalScale() == sw::float3( 2.0f, 2.0f, 2.0f ) );
+
+    const sw::PrefabNestedPart* pPart = objects.getSceneService<sw::PrefabInstanceRegistry>().findNestedPart( pLeft->getObjectID() );
+    SW_ASSERT_NOT_NULL( pPart );
+    SW_EXPECT_EQUAL( pCart->getObjectID(), pPart->_ownerObjectID );
+    SW_EXPECT_TRUE( objects.getSceneService<sw::PrefabInstanceRegistry>().isAttachedNestedPart( pLeft ) );
+
+    // 원본(바퀴)만 고친다 — 수레 파일은 그대로다.
+    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeWheelPrefab( 3.0f ), wheelPath ) );
+    prefabs.reload( wheelPath );
+    sw::GameObject* pCartAgain = prefabs.spawn( &objects, cartPath, "CartAgain" );
+    SW_ASSERT_NOT_NULL( pCartAgain );
+    sw::GameObject* pLeftAgain  = sw::findChildByNamePrefix( pCartAgain, "WheelL" );
+    sw::GameObject* pRightAgain = sw::findChildByNamePrefix( pCartAgain, "WheelR" );
+    SW_ASSERT_TRUE( pLeftAgain != nullptr && pRightAgain != nullptr );
+    SW_EXPECT_TRUE( pLeftAgain->getPrimarySceneComponent()->getLocalScale() == sw::float3( 3.0f, 3.0f, 3.0f ) );
+    SW_EXPECT_TRUE( pRightAgain->getPrimarySceneComponent()->getLocalScale() == sw::float3( 3.0f, 3.0f, 3.0f ) );
+    SW_EXPECT_TRUE( pLeftAgain->getPrimarySceneComponent()->getLocalPosition() == sw::float3( 1.0f, 0.0f, 0.0f ) ); // 덮어쓴 값은 남는다
+}
+
+/**
+ * @brief [PrefabTest] 중첩 프리팹의 순환은 로드 오류다 — 순환에 든 프리팹은 로드되지 않고, 순환 밖에서 그것을 놓은 프리팹은 로드되어 그 노드만 건너뛴다
+ * @details 컴포넌트가 로드 뒤 같은 프리팹을 스폰하는 순환(`CircularReferenceSpawnProtection`)은 스폰에서 막고, 데이터의 순환은 로드에서 막는다. 로드에서 막지
+ *          않으면 스폰이 A → B → A 를 끝없이 펼친다.
+ */
+SW_TEST_CASE( PrefabTest, CircularNestedPrefabIsALoadError )
+{
+    const sw::string pathA     = test::makeTempPath( "nest_cycle_a.prefab.xml" );
+    const sw::string pathB     = test::makeTempPath( "nest_cycle_b.prefab.xml" );
+    const sw::string pathSelf  = test::makeTempPath( "nest_cycle_self.prefab.xml" );
+    const sw::string pathOuter = test::makeTempPath( "nest_cycle_outer.prefab.xml" );
+    // A 는 B 를, B 는 A 를 놓는다. Self 는 자기를 놓는다. Outer 는 A 를 놓지만 순환 밖이다.
+    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeCartPrefab( pathB ), pathA ) );
+    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeCartPrefab( pathA ), pathB ) );
+    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeCartPrefab( pathSelf ), pathSelf ) );
+    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeCartPrefab( pathA ), pathOuter ) );
+
+    sw::PrefabCache       prefabs;
+    sw::GameObjectManager objects;
+    sw::GameObject*       pOuter = nullptr;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "circular nested prefabs" );
+        SW_EXPECT_NULL( prefabs.loadPrefab( pathA ) );
+        SW_EXPECT_NULL( prefabs.loadPrefab( pathB ) );
+        SW_EXPECT_NULL( prefabs.loadPrefab( pathSelf ) );
+        SW_EXPECT_NOT_NULL( prefabs.loadPrefab( pathOuter ) );
+        pOuter = prefabs.spawn( &objects, pathOuter, "Outer" );
+    }
+    SW_ASSERT_NOT_NULL( pOuter );
+    SW_EXPECT_FALSE( pOuter->hasChildren() ); // 순환에 든 노드는 스폰하지 않는다
+    SW_EXPECT_FALSE( prefabs.isCached( pathA ) );
+}
+
+/**
+ * @brief [PrefabTest] 쿠킹은 중첩 인스턴스를 펼친다 — 쿠킹본은 원본 없이 부품을 스폰하고, 원본을 읽지 못한 프리팹은 쿠킹하지 않는다
+ * @details 펼친 쿠킹본은 노드마다 오버라이드를 얹은 최종 상태와 원본의 중첩 인스턴스(여기서는 기차 → 수레 → 바퀴)를 싣는다. 배포본은 스폰할 때 원본 파일을 열지
+ *          않는다. 원본이 없는 프리팹을 쿠킹본으로 쓰면 배포본이 부품 없이 스폰하므로 실패로 센다.
+ */
+SW_TEST_CASE( PrefabTest, CookFlattensNestedInstancesSoTheOriginalIsNotRead )
+{
+    const sw::string sourceRoot = test::makeTempDirectory( "nest_cook_src" );
+    const sw::string cookedRoot = test::makeTempDirectory( "nest_cook_cooked" );
+    SW_ASSERT_FALSE( sourceRoot.empty() );
+    SW_ASSERT_FALSE( cookedRoot.empty() );
+
+    const sw::string wheelPath = sourceRoot + "/wheel.prefab.xml";
+    const sw::string cartPath  = sourceRoot + "/cart.prefab.xml";
+    const sw::string trainPath = sourceRoot + "/train.prefab.xml";
+    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeWheelPrefab( 2.0f ), wheelPath ) );
+    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeCartPrefab( wheelPath ), cartPath ) );
+    sw::PrefabAsset                    train = sw::makeWheelPrefab( 1.0f );
+    sw::vector<sw::PrefabInstanceNode> listCar( 1 );
+    listCar[0]._name       = "Car";
+    listCar[0]._prefabPath = cartPath;
+    SW_ASSERT_TRUE( train.setNestedInstances( listCar ) );
+    SW_ASSERT_TRUE( sw::writeWithCooked( train, trainPath ) );
+    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeCartPrefab( sourceRoot + "/missing.prefab.xml" ), sourceRoot + "/broken_cart.prefab.xml" ) );
+
+    uint32 failedCount  = 0;
+    uint32 writtenCount = 0;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a prefab whose nested prefab is missing" );
+        writtenCount = sw::PrefabCache::cookAllPrefabs( sourceRoot, cookedRoot, failedCount );
+    }
+    SW_EXPECT_EQUAL( 3u, writtenCount ); // wheel · cart · train
+    SW_EXPECT_EQUAL( 1u, failedCount );  // broken_cart
+    SW_EXPECT_FALSE( sw::FileUtil::exists( cookedRoot + "/broken_cart.prefab.bin" ) );
+
+    sw::PrefabAsset cookedTrain;
+    SW_ASSERT_TRUE( cookedTrain.loadFromBinaryFile( cookedRoot + "/train.prefab.bin" ) );
+    SW_ASSERT_EQUAL( size_t( 3 ), cookedTrain.getNestedInstances().size() ); // Car, 그 아래 WheelL · WheelR
+    SW_EXPECT_TRUE( cookedTrain.hasResolvedNestedInstances() );
+    SW_EXPECT_EQUAL( -1, cookedTrain.getNestedInstances()[0]._parentIndex );
+    SW_EXPECT_EQUAL( 0, cookedTrain.getNestedInstances()[1]._parentIndex );
+    SW_EXPECT_EQUAL( 0, cookedTrain.getNestedInstances()[2]._parentIndex );
+
+    // 원본을 지운다 — 펼친 쿠킹본은 그것을 읽지 않는다.
+    for ( const sw::string& path : { wheelPath, cartPath } )
+    {
+        SW_ASSERT_TRUE( sw::FileUtil::removeFile( path ) );
+        SW_ASSERT_TRUE( sw::FileUtil::removeFile( sw::AssetCookPath::toCookedPath( path ) ) );
+    }
+    sw::GameObjectManager objects;
+    sw::PrefabCache       prefabs;
+    sw::GameObject*       pTrain = objects.createGameObject( sw::hashed_string( "Train" ) );
+    SW_ASSERT_TRUE( cookedTrain.applyStateTo( pTrain ) );
+    SW_EXPECT_EQUAL( 3u, prefabs.spawnNestedInstances( pTrain, cookedTrain ) );
+    sw::GameObject* pCar = sw::findChildByNamePrefix( pTrain, "Car" );
+    SW_ASSERT_NOT_NULL( pCar );
+    sw::GameObject* pLeft = sw::findChildByNamePrefix( pCar, "WheelL" );
+    SW_ASSERT_TRUE( pLeft != nullptr && pLeft->getPrimarySceneComponent() != nullptr );
+    SW_EXPECT_TRUE( pLeft->getPrimarySceneComponent()->getParent() == sw::ComponentStableKey::findComponent( pCar, "Axle#0" ) );
+    SW_EXPECT_TRUE( pLeft->getPrimarySceneComponent()->getLocalPosition() == sw::float3( 1.0f, 0.0f, 0.0f ) );
+    SW_EXPECT_TRUE( pLeft->getPrimarySceneComponent()->getLocalScale() == sw::float3( 2.0f, 2.0f, 2.0f ) );
+
+    // 펼친 프리팹은 저작 파일로 쓸 수 없다 — 원본 경로를 잃은 부품이 두 번 스폰된다.
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a cooked prefab written as a source file" );
+        SW_EXPECT_FALSE( cookedTrain.saveToXMLFile( test::makeTempPath( "nest_cooked_back.prefab.xml" ) ) );
+    }
+}
+
+/**
+ * @brief [PrefabTest] 인스턴스로 프리팹을 다시 만들면(Apply to Prefab) 부품의 수정이 그 노드의 오버라이드가 되고, 붙은 자리도 남는다
+ * @details 부품을 싣지 않으면 중첩 프리팹 인스턴스에서 Apply 할 때마다 파일에서 중첩이 사라진다.
+ */
+SW_TEST_CASE( PrefabTest, PrefabMadeFromAnInstanceKeepsItsNestedPartsAsOverrides )
+{
+    const sw::string wheelPath = test::makeTempPath( "nest_apply_wheel.prefab.xml" );
+    const sw::string cartPath  = test::makeTempPath( "nest_apply_cart.prefab.xml" );
+    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeWheelPrefab( 2.0f ), wheelPath ) );
+    SW_ASSERT_TRUE( sw::writeWithCooked( sw::makeCartPrefab( wheelPath ), cartPath ) );
+
+    sw::GameObjectManager objects;
+    sw::PrefabCache       prefabs;
+    sw::GameObject*       pCart = prefabs.spawn( &objects, cartPath, "Cart" );
+    SW_ASSERT_NOT_NULL( pCart );
+    sw::GameObject* pRight = sw::findChildByNamePrefix( pCart, "WheelR" );
+    SW_ASSERT_TRUE( pRight != nullptr && pRight->getPrimarySceneComponent() != nullptr );
+    pRight->getPrimarySceneComponent()->setLocalPosition( sw::float3( 0.0f, 0.0f, 5.0f ) );
+    objects.flushSceneTransforms();
+
+    sw::PrefabAsset applied;
+    applied.setFromGameObject( pCart, &prefabs );
+    const sw::vector<sw::PrefabInstanceNode>& listNode = applied.getNestedInstances();
+    SW_ASSERT_EQUAL( size_t( 2 ), listNode.size() );
+    SW_EXPECT_STREQ( "WheelL", listNode[0]._name.c_str() );
+    SW_EXPECT_STREQ( "Axle#0", listNode[0]._attachKey.c_str() );
+    SW_EXPECT_TRUE_MSG( listNode[0]._overrideXML.find( "_localPosition=\"1,0,0\"" ) != sw::string::npos, listNode[0]._overrideXML.c_str() );
+    SW_EXPECT_STREQ( "WheelR", listNode[1]._name.c_str() );
+    SW_EXPECT_TRUE( listNode[1]._attachKey.empty() );
+    SW_EXPECT_TRUE_MSG( listNode[1]._overrideXML.find( "_localPosition=\"0,0,5\"" ) != sw::string::npos, listNode[1]._overrideXML.c_str() );
+    SW_EXPECT_TRUE( listNode[0]._prefabPath == wheelPath && listNode[1]._prefabPath == wheelPath );
+
+    // 다시 쓴 프리팹을 스폰하면 같은 자리다.
+    const sw::string appliedPath = test::makeTempPath( "nest_apply_cart_applied.prefab.xml" );
+    SW_ASSERT_TRUE( sw::writeWithCooked( applied, appliedPath ) );
+    sw::GameObjectManager check;
+    sw::GameObject*       pCheck = prefabs.spawn( &check, appliedPath, "Check" );
+    SW_ASSERT_NOT_NULL( pCheck );
+    sw::GameObject* pCheckRight = sw::findChildByNamePrefix( pCheck, "WheelR" );
+    SW_ASSERT_TRUE( pCheckRight != nullptr && pCheckRight->getPrimarySceneComponent() != nullptr );
+    SW_EXPECT_TRUE( pCheckRight->getPrimarySceneComponent()->getLocalPosition() == sw::float3( 0.0f, 0.0f, 5.0f ) );
+}
+
+/**
+ * @brief [PrefabTest] 프리로드할 프리팹 목록은 중첩 인스턴스의 원본을 한 번씩 담는다
+ * @details 같은 바퀴를 두 번 놓은 수레의 목록에는 바퀴가 한 번 나온다. 프리로드 수집은 이 목록을 그대로 쓰고 목록의 프리팹마다 다시 부른다.
+ */
+SW_TEST_CASE( PrefabTest, ReferencedPrefabPathsListNestedSourcesOnce )
+{
+    const sw::string       wheelPath = test::makeTempPath( "nest_refs_wheel.prefab.xml" );
+    const sw::PrefabAsset  cart      = sw::makeCartPrefab( wheelPath );
+    sw::vector<sw::string> listPath;
+    cart.collectReferencedPrefabPaths( listPath );
+    SW_ASSERT_EQUAL( size_t( 1 ), listPath.size() );
+    SW_EXPECT_STREQ( wheelPath.c_str(), listPath[0].c_str() );
 }

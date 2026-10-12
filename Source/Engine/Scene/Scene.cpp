@@ -2,6 +2,7 @@
 
 #include "Engine/Scene/Scene.h"
 
+#include "Core/Container/unordered_set.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
@@ -16,6 +17,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetManager.h"
@@ -118,6 +120,43 @@ namespace sw
                 const string& stored = inoutMapBaseState.emplace( prefabPath, std::move( baseState ) ).first->second;
                 return stored.empty() ? nullptr : &stored;
             }
+
+            /** @brief 로드에서 만든 프리팹 엔티티와 그 프리팹 경로(문서의 것을 빌린다)입니다 — 엔티티를 모두 만든 뒤 중첩 인스턴스를 스폰한다. */
+            struct PrefabEntity
+            {
+                GameObject*   _pObject;
+                const string* _pPrefabPath;
+            };
+
+            /**
+             * @brief 중첩 프리팹 부품(`PrefabInstanceRegistry`)을 저장 방법으로 나눕니다.
+             * @details 바깥 인스턴스가 로드할 때 다시 스폰하는 부품은 @p outUniqueRespawned 에 담고 적지 않는다. 바깥 인스턴스는 씬의 프리팹 엔티티이거나
+             *          그 자신이 부품이다(부품은 다시 스폰되거나 자기 프리팹의 엔티티로 적히므로 어느 쪽이든 자기 부품을 다시 스폰한다). 인스턴스 밖으로 옮긴 부품과
+             *          다시 스폰할 인스턴스가 없는 부품(연결을 끊은 인스턴스의 부품)은 @p outMapDetachedPrefab 에 원본 경로와 함께 담고, 그 프리팹의 인스턴스로 적는다.
+             */
+            static void classifyNestedParts( const GameObjectManager& objects, const unordered_map<uint64, string>& mapPrefabSource,
+                                             unordered_set<uint64>& outUniqueRespawned, unordered_map<uint64, string>& outMapDetachedPrefab )
+            {
+                outUniqueRespawned.clear();
+                outMapDetachedPrefab.clear();
+                const PrefabInstanceRegistry& registry = objects.getSceneService<PrefabInstanceRegistry>();
+                if ( registry.getNestedPartCount() == 0 )
+                    return;
+                vector<GameObject*> listObject;
+                objects.getAllGameObjects( listObject );
+                for ( const GameObject* pGo : listObject )
+                {
+                    const PrefabNestedPart* pPart = pGo != nullptr ? registry.findNestedPart( pGo->getObjectID() ) : nullptr;
+                    if ( pPart == nullptr )
+                        continue;
+                    const bool bOwnerRespawns = mapPrefabSource.find( pPart->_ownerObjectID ) != mapPrefabSource.end() ||
+                                                registry.findNestedPart( pPart->_ownerObjectID ) != nullptr;
+                    if ( bOwnerRespawns && registry.isAttachedNestedPart( pGo ) )
+                        outUniqueRespawned.insert( pGo->getObjectID() );
+                    else if ( mapPrefabSource.find( pGo->getObjectID() ) == mapPrefabSource.end() )
+                        outMapDetachedPrefab[pGo->getObjectID()] = pPart->_prefabPath;
+                }
+            }
         };
     } // namespace
 } // namespace sw
@@ -187,7 +226,8 @@ namespace sw
         // 엔티티(병합)에서 자식이 앞의 것에 붙는다.
         ObjectStateBatch batch( ObjectIDSpace::Saved );
         // 프리팹마다 원형 상태를 한 번만 만든다(같은 프리팹을 여럿 놓은 씬).
-        unordered_map<string, string> mapPrefabBaseState;
+        unordered_map<string, string>       mapPrefabBaseState;
+        vector<SceneInternal::PrefabEntity> listPrefabEntity;
 
         for ( const SceneDocument::SceneObjectNode& entity : doc._listSceneObjectNode )
         {
@@ -264,10 +304,26 @@ namespace sw
                     // 상태 없이 만든 빈 엔티티다. 다른 엔티티가 파일 id 로 가리킬 수 있으니 배치에 기록한다.
                     batch.add( pGo, entity._fileID, hashed_string( entity._name.c_str() ), false );
                 }
+
+                if ( entity._prefab.empty() == false )
+                    listPrefabEntity.push_back( SceneInternal::PrefabEntity{ pGo, &entity._prefab } );
             }
         }
 
         batch.finish();
+
+        // 프리팹의 중첩 인스턴스는 씬 파일에 없다 — 원본에서 부품으로 다시 스폰한다(원본을 고치면 퍼진다). 엔티티를 모두 만든 **뒤에** 스폰한다.
+        // 부품이 먼저 이름을 가져가면 같은 이름의 엔티티가 로드마다 번호 붙은 이름으로 바뀐다. 프리팹은 위에서 이미 읽어 캐시에 있다.
+        if ( _services._pAssetManager != nullptr )
+        {
+            PrefabCache& prefabs = _services._pAssetManager->getAssetCache<PrefabCache>();
+            for ( const SceneInternal::PrefabEntity& prefabEntity : listPrefabEntity )
+            {
+                const PrefabAsset* pPrefab = prefabs.loadPrefab( *prefabEntity._pPrefabPath );
+                if ( pPrefab != nullptr )
+                    (void)prefabs.spawnNestedInstances( prefabEntity._pObject, *pPrefab ); // 건너뛴 노드는 노드마다 경고했다
+            }
+        }
 
         _objectManager->mergePendingAdds();
         _objectManager->flushSceneTransforms();
@@ -293,12 +349,22 @@ namespace sw
         // 매니저에도 오브젝트를 만들 수 없다(`GameObjectManager::WalkScope`).
         unordered_map<string, string> mapPrefabBaseState;
         AssetManager* const           pAssetManager = _services._pAssetManager;
+        // 중첩 프리팹 부품마다 저장 방법을 순회 밖에서 정한다(아래 원형처럼 순회 안에서는 만들 수 없다). 다시 스폰될 부품은 적지 않고, 다시 스폰될 곳을
+        // 잃은 부품은 자기 프리팹의 인스턴스로 적는다.
+        unordered_set<uint64>         uniqueRespawnedPart;
+        unordered_map<uint64, string> mapDetachedPartPrefab;
+        SceneInternal::classifyNestedParts( *_objectManager, _mapPrefabSource, uniqueRespawnedPart, mapDetachedPartPrefab );
         if ( pAssetManager != nullptr )
         {
             for ( const auto& [objectID, prefabPath] : _mapPrefabSource )
             {
                 (void)objectID;
                 (void)SceneInternal::findPrefabBaseState( *pAssetManager, mapPrefabBaseState, prefabPath ); // 만들지 못한 프리팹은 빈 문자열로 남아 전체 상태를 적게 된다
+            }
+            for ( const auto& [objectID, prefabPath] : mapDetachedPartPrefab )
+            {
+                (void)objectID;
+                (void)SceneInternal::findPrefabBaseState( *pAssetManager, mapPrefabBaseState, prefabPath ); // 위와 같다
             }
         }
 
@@ -312,6 +378,8 @@ namespace sw
             CameraComponent* pCamera = pGo->getComponent<CameraComponent>();
             if ( pCamera != nullptr && pCamera->getRole() == CameraRole::Viewport )
                 return;
+            if ( uniqueRespawnedPart.find( pGo->getObjectID() ) != uniqueRespawnedPart.end() )
+                return; // 바깥 프리팹 인스턴스가 로드할 때 다시 스폰한다
             SceneDocument::SceneObjectNode node{};
             node._name           = pGo->getName().c_str();
             const auto savedIDIt = mapSavedID.find( pGo->getObjectID() );
@@ -320,6 +388,9 @@ namespace sw
             const auto prefabIt = _mapPrefabSource.find( pGo->getObjectID() );
             if ( prefabIt != _mapPrefabSource.end() )
                 node._prefab = prefabIt->second;
+            const auto detachedIt = mapDetachedPartPrefab.find( pGo->getObjectID() );
+            if ( node._prefab.empty() && detachedIt != mapDetachedPartPrefab.end() )
+                node._prefab = detachedIt->second;
 
             if ( node._prefab.empty() == false && pAssetManager != nullptr )
             {

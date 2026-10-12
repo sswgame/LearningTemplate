@@ -45,13 +45,17 @@ namespace sw
          * @details 모든 엔티티를 하나의 묶음(`ObjectStateBatch`, 파일 id 공간)으로 읽고 끝에서 한 번에 잇습니다 — 자식이 부모보다 앞에 적혀도 된다.
          *          엔티티의 파일 id 는 오브젝트의 런타임 id 와 짝지어 들고 있다가(`collectSavedIDMap`) 저장할 때 같은 값을 다시 씁니다.
          *          프리팹 엔티티는 프리팹의 원형 상태에 덮어쓴 것(`SceneObjectNode::_prefabOverrideXML`)을 얹어 짓습니다 — 프리팹을 고치면 퍼집니다.
-         *          전체 상태가 실린 프리팹 엔티티는 그 상태가 기준입니다.
+         *          전체 상태가 실린 프리팹 엔티티는 그 상태가 기준입니다. 프리팹 엔티티를 만든 뒤 그 프리팹의 중첩 인스턴스를 부품으로 스폰합니다
+         *          (`PrefabCache::spawnNestedInstances`) — 부품은 씬 파일에 없고 로드할 때마다 원본에서 다시 만듭니다.
          */
         [[nodiscard]] bool instantiate( const SceneDocument& doc );
         /**
          * @brief 현재 씬의 오브젝트 상태를 씬 문서(SceneDocument)로 직렬화합니다. 부착은 부모의 파일 id 로 적습니다.
          * @details 프리팹 인스턴스는 프리팹 경로와 프리팹 원형과 다른 것만 적습니다(`PrefabOverrides` — 언리얼 · 유니티의 프리팹 인스턴스와 같다).
          *          프리팹을 읽지 못하면 전체 상태를 적습니다(다음 로드가 그 상태로 짓는다).
+         *          중첩 프리팹 부품(`PrefabInstanceRegistry`)은 그것을 다시 스폰할 인스턴스 아래에 있으면 적지 않습니다. 인스턴스 밖으로 옮겼거나 인스턴스가
+         *          프리팹 연결을 끊었으면 그 부품을 자기 프리팹의 인스턴스 엔티티로 적습니다(유니티의 Unpack 과 같다).
+         *          주의: 씬에서 부품을 고친 것은 남지 않고(부품을 고치려면 바깥 프리팹에 적용한다), 부품에 붙인 다른 오브젝트는 다시 열면 루트로 떨어집니다.
          */
         [[nodiscard]] bool serializeToDocument( SceneDocument& outDoc ) const;
         /**
