@@ -82,7 +82,7 @@ cd build/Ninja-Debug/Bin
   `--output-on-failure` 출력 전체를 파일로 남긴다(요약만 남으면 어느 케이스인지 모른다).
 - 직접 실행으로 통과해도 CTest 에서 질 수 있다(병렬 부하 · 시한). 끝내기 전 검증은 CTest 로 한다. 멈추면 `LastTest.log` 의 마지막 `[ RUN ]` 을 본다.
 - 테스트 실행 파일은 `AllTests` 를 지어야 최신이다. 옛 exe 로 돌리면 모듈 ABI 불일치로 진다.
-- 옛 대소문자 이름의 CMake 빌드 폴더(`Test/EditorUiTest` 같은 것)가 남아 있으면 `-Wnonportable-include-path` 경고가 난다 — 그 폴더를 지우고 다시 구성한다.
+- 옛 대소문자 이름의 CMake 빌드 폴더(`EditorUiTest` 같은 것)가 남아 있으면 `-Wnonportable-include-path` 경고가 난다 — 그 폴더를 지우고 다시 구성한다.
 
 ## 2. 측정 · 프로파일
 
