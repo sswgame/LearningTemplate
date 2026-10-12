@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -68,10 +69,7 @@ namespace sw
 
     void AppearanceXMLUtil::readNameList( const XMLNode& node, const utf8* pAttribute, vector<hashed_string>& outListName )
     {
-        GameDataXML::forEachToken( node.getAttributeText( pAttribute ), ",; ", [&]( string_view token )
-        {
-            outListName.push_back( hashed_string( token ) );
-        } );
+        GameDataXML::appendNameList( node.getAttributeText( pAttribute ), ",; ", outListName );
     }
 
     float3 AppearanceXMLUtil::readFloat3( const XMLNode& node, const utf8* pAttribute, const float3& fallback )
@@ -102,11 +100,6 @@ namespace sw
 
     bool AppearanceXMLUtil::containsName( const vector<hashed_string>& listName, const hashed_string& name )
     {
-        for ( const hashed_string& entry : listName )
-        {
-            if ( entry == name )
-                return true;
-        }
-        return false;
+        return VectorUtil::contains( listName, name );
     }
 } // namespace sw

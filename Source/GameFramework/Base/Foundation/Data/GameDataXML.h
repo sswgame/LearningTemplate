@@ -7,7 +7,9 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -77,6 +79,16 @@ namespace sw
 
         /** @brief `id` 속성을 반환합니다. 없거나 비면 "<원소> without an id - skipped" 를 경고하고 nullptr 를 반환합니다. */
         static const utf8* findRequiredID( const XMLNode& node, string_view sourceName );
+        /** @brief 속성 @p pAttribute 를 이름으로 읽습니다. 속성이 없거나 비어 있으면 빈 이름입니다. */
+        static hashed_string readName( const XMLNode& node, const utf8* pAttribute );
+
+        /**
+         * @brief @p separators 의 아무 글자로 나뉜 이름 목록을 @p outListName 에 채웁니다. 먼저 목록을 비웁니다.
+         * @details 키트마다 구분자가 다르다(",; " · ",;| " · ",; \t"). 기존 항목을 두고 덧붙이려면 `appendNameList` 를 쓴다.
+         */
+        static void parseNameList( string_view text, string_view separators, vector<hashed_string>& outListName );
+        /** @brief `parseNameList` 와 같지만 목록을 비우지 않고 뒤에 덧붙입니다. */
+        static void appendNameList( string_view text, string_view separators, vector<hashed_string>& outListName );
 
         /**
          * @brief 쉼표, 공백, 탭, 세미콜론으로 나뉜 실수를 최대 @p maxCount 개 읽고 읽은 개수를 반환합니다.

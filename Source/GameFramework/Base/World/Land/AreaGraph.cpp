@@ -15,21 +15,6 @@ namespace sw
 {
     SW_LOG_CALLER( "AreaGraph" );
 
-    namespace
-    {
-        struct AreaGraphInternal
-        {
-            static hashed_string readName( const XMLNode& node, const utf8* pName )
-            {
-                const utf8* pValue = node.findAttribute( pName );
-                return pValue != nullptr ? hashed_string( pValue ) : hashed_string{};
-            }
-        };
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     AreaGraph::AreaGraph()
         : _catalog{}
         , _listLink{}
@@ -58,8 +43,8 @@ namespace sw
                 continue;
             AreaDef area;
             area._id     = hashed_string( pID );
-            area._name   = AreaGraphInternal::readName( areaNode, "name" );
-            area._region = AreaGraphInternal::readName( areaNode, "region" );
+            area._name   = GameDataXML::readName( areaNode, "name" );
+            area._region = GameDataXML::readName( areaNode, "region" );
             area._x      = areaNode.getAttributeFloat( "x", area._x );
             area._y      = areaNode.getAttributeFloat( "y", area._y );
             area._width  = MathUtil::max( 0.0f, areaNode.getAttributeFloat( "w", area._width ) );
@@ -71,10 +56,10 @@ namespace sw
         }
         for ( XMLNode linkNode = node.findChild( "Link" ); linkNode; linkNode = linkNode.findNextSibling( "Link" ) )
         {
-            const hashed_string from     = AreaGraphInternal::readName( linkNode, "from" );
-            const hashed_string to       = AreaGraphInternal::readName( linkNode, "to" );
+            const hashed_string from     = GameDataXML::readName( linkNode, "from" );
+            const hashed_string to       = GameDataXML::readName( linkNode, "to" );
             bool                bInvalid = false;
-            if ( addLink( from, to, AreaGraphInternal::readName( linkNode, "kind" ), linkNode.getAttributeText( "requires" ),
+            if ( addLink( from, to, GameDataXML::readName( linkNode, "kind" ), linkNode.getAttributeText( "requires" ),
                           linkNode.getAttributeBool( "oneWay", false ), bInvalid ) == false )
             {
                 SW_LOG_WARNING( "%#: link '%#' -> '%#' needs two different known areas - skipped", sourceName, from.c_str(), to.c_str() );

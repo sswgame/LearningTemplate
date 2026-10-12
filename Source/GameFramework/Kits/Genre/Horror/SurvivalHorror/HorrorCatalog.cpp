@@ -19,13 +19,6 @@ namespace sw
         {
             static constexpr const utf8* kArrItemKindName[] = { "None", "Weapon", "Ammo", "Heal", "Key", "SaveItem", "Battery", "Document" };
 
-            static void parseIDList( string_view text, vector<hashed_string>& outListID )
-            {
-                outListID.clear();
-                GameDataXML::forEachToken( text, ",; ", [&]( string_view token )
-                { outListID.push_back( hashed_string( token ) ); } );
-            }
-
             static void parseDigits( string_view text, vector<int32>& outListDigit, string_view sourceName, const utf8* pID )
             {
                 outListDigit.clear();
@@ -253,7 +246,7 @@ namespace sw
             sequence._id            = hashed_string( pID );
             sequence._flag          = hashed_string( node.getAttributeText( "flag" ) );
             sequence._mistakeSanity = MathUtil::max( 0.0f, node.getAttributeFloat( "mistakeSanity", 0.0f ) );
-            HorrorCatalogInternal::parseIDList( node.getAttributeText( "steps" ), sequence._listStep );
+            GameDataXML::parseNameList( node.getAttributeText( "steps" ), ",; ", sequence._listStep );
             if ( sequence._listStep.empty() )
                 SW_LOG_WARNING( "%#: sequence '%#' has no steps", sourceName, pID );
             (void)_sequenceCatalog.add( sequence );
@@ -269,7 +262,7 @@ namespace sw
             document._id       = hashed_string( pID );
             const utf8* pTitle = node.findAttribute( "title" );
             document._title    = pTitle != nullptr ? pTitle : pID;
-            HorrorCatalogInternal::parseIDList( node.getAttributeText( "clues" ), document._listClue );
+            GameDataXML::parseNameList( node.getAttributeText( "clues" ), ",; ", document._listClue );
             (void)_documentCatalog.add( document );
             ++loadedCount;
         }

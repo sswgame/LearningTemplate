@@ -65,6 +65,26 @@ namespace sw
         return pID;
     }
 
+    hashed_string GameDataXML::readName( const XMLNode& node, const utf8* pAttribute )
+    {
+        const utf8* pText = node.findAttribute( pAttribute );
+        if ( StringUtil::isNullOrEmpty( pText ) )
+            return hashed_string{};
+        return hashed_string( pText );
+    }
+
+    void GameDataXML::parseNameList( string_view text, string_view separators, vector<hashed_string>& outListName )
+    {
+        outListName.clear();
+        appendNameList( text, separators, outListName );
+    }
+
+    void GameDataXML::appendNameList( string_view text, string_view separators, vector<hashed_string>& outListName )
+    {
+        forEachToken( text, separators, [&]( string_view token )
+        { outListName.push_back( hashed_string( token ) ); } );
+    }
+
     uint32 GameDataXML::parseFloats( string_view text, float32* pOutValue, uint32 maxCount )
     {
         if ( pOutValue == nullptr )

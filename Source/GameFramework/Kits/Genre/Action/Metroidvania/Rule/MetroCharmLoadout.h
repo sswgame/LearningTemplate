@@ -72,8 +72,6 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
-        static bool contains( const vector<hashed_string>& listID, const hashed_string& id );
-
         const MetroidvaniaCatalog* _pCatalog;
         vector<hashed_string>      _listOwned;
         vector<hashed_string>      _listEquipped; ///< 낀 순서

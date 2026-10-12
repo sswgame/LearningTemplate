@@ -18,12 +18,6 @@ namespace sw
             static constexpr const utf8* kArrStatName[kJRPGStatCount]   = { "hp", "mp", "str", "agi", "vit", "intellect", "luck" };
             static constexpr const utf8* kArrGrowthName[kJRPGStatCount] = { "growHp", "growMp", "growStr", "growAgi", "growVit", "growIntellect", "growLuck" };
 
-            static void parseNameList( string_view text, vector<hashed_string>& outListName )
-            {
-                GameDataXML::forEachToken( text, ",; \t", [&]( string_view token )
-                { outListName.push_back( hashed_string( token ) ); } );
-            }
-
             static void parseStats( const XMLNode& node, const utf8* const ( &arrName )[kJRPGStatCount], int32 ( &inoutArrValue )[kJRPGStatCount] )
             {
                 for ( int32 index = 0; index < kJRPGStatCount; ++index )
@@ -105,8 +99,8 @@ namespace sw
                 def._points       = MathUtil::max( 0, node.getAttributeInt( "points", def._points ) );
                 def._power        = MathUtil::max( 0, node.getAttributeInt( "power", def._power ) );
                 def._target       = JRPGCatalogInternal::parseTarget( node.getAttributeText( "target" ) );
-                JRPGCatalogInternal::parseNameList( node.getAttributeText( "members" ), def._listMemberID );
-                JRPGCatalogInternal::parseNameList( node.getAttributeText( "types" ), def._listDamageType );
+                GameDataXML::appendNameList( node.getAttributeText( "members" ), ",; \t", def._listMemberID );
+                GameDataXML::appendNameList( node.getAttributeText( "types" ), ",; \t", def._listDamageType );
                 if ( def._listMemberID.size() < 2 )
                     SW_LOG_WARNING( "%#: combo '%#' names fewer than two members", sourceName, pID );
                 (void)_comboCatalog.add( def );
@@ -140,7 +134,7 @@ namespace sw
                 for ( XMLNode group = node.findChild( "Group" ); group; group = group.findNextSibling( "Group" ) )
                 {
                     JRPGEncounterGroup entry;
-                    JRPGCatalogInternal::parseNameList( group.getAttributeText( "enemies" ), entry._listEnemyID );
+                    GameDataXML::appendNameList( group.getAttributeText( "enemies" ), ",; \t", entry._listEnemyID );
                     entry._weight = MathUtil::max( 0, group.getAttributeInt( "weight", 1 ) );
                     if ( entry._listEnemyID.empty() == false )
                         def._listGroup.push_back( entry );
@@ -236,8 +230,8 @@ namespace sw
         def._castSpellID  = hashed_string( node.getAttributeText( "cast" ) );
         JRPGCatalogInternal::parseStats( node, JRPGCatalogInternal::kArrStatName, def._arrStat );
         def._arrStat[static_cast<size_t>( JRPGStat::MaxHp )] = MathUtil::max( 1, def._arrStat[static_cast<size_t>( JRPGStat::MaxHp )] );
-        JRPGCatalogInternal::parseNameList( node.getAttributeText( "weak" ), def._listWeakness );
-        JRPGCatalogInternal::parseNameList( node.getAttributeText( "locks" ), def._listLock );
+        GameDataXML::appendNameList( node.getAttributeText( "weak" ), ",; \t", def._listWeakness );
+        GameDataXML::appendNameList( node.getAttributeText( "locks" ), ",; \t", def._listLock );
         def._exp       = MathUtil::max( 0, node.getAttributeInt( "exp", def._exp ) );
         def._gold      = MathUtil::max( 0, node.getAttributeInt( "gold", def._gold ) );
         def._castTurns = MathUtil::max( 1, node.getAttributeInt( "castTurns", def._castTurns ) );

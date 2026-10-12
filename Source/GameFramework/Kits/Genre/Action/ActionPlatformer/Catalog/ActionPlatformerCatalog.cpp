@@ -18,19 +18,6 @@ namespace sw
     {
         struct ActionPlatformerCatalogInternal
         {
-            static hashed_string readName( const XMLNode& node, const utf8* pName )
-            {
-                const utf8* pValue = node.findAttribute( pName );
-                return pValue != nullptr ? hashed_string( pValue ) : hashed_string{};
-            }
-
-            static void readNameList( const XMLNode& node, const utf8* pName, vector<hashed_string>& outListName )
-            {
-                outListName.clear();
-                GameDataXML::forEachToken( node.getAttributeText( pName ), ",; \t", [&]( string_view token )
-                { outListName.push_back( hashed_string( token ) ); } );
-            }
-
             static ActionGradeDef makeGrade( const utf8* pGrade, float32 minScore )
             {
                 ActionGradeDef grade;
@@ -135,8 +122,8 @@ namespace sw
             stage._id         = hashed_string( pID );
             const utf8* pName = node.findAttribute( "name" );
             stage._name       = pName != nullptr ? pName : pID;
-            ActionPlatformerCatalogInternal::readNameList( node, "checkpoints", stage._listCheckpoint );
-            ActionPlatformerCatalogInternal::readNameList( node, "secrets", stage._listSecret );
+            GameDataXML::parseNameList( node.getAttributeText( "checkpoints" ), ",; \t", stage._listCheckpoint );
+            GameDataXML::parseNameList( node.getAttributeText( "secrets" ), ",; \t", stage._listSecret );
             stage._parTime      = MathUtil::max( 0.1f, node.getAttributeFloat( "parTime", stage._parTime ) );
             stage._lives        = MathUtil::max( 1, node.getAttributeInt( "lives", stage._lives ) );
             stage._hitTolerance = MathUtil::max( 1, node.getAttributeInt( "hitTolerance", stage._hitTolerance ) );
@@ -151,7 +138,7 @@ namespace sw
                 continue;
             ActionComboDef combo;
             combo._id = hashed_string( pID );
-            ActionPlatformerCatalogInternal::readNameList( node, "moves", combo._listMove );
+            GameDataXML::parseNameList( node.getAttributeText( "moves" ), ",; \t", combo._listMove );
             if ( combo._listMove.empty() )
             {
                 SW_LOG_WARNING( "%#: combo '%#' has no moves - skipped", sourceName, pID );
@@ -183,9 +170,9 @@ namespace sw
                 continue;
             ActionPatternStateDef state;
             state._id        = hashed_string( pStateID );
-            state._next      = ActionPlatformerCatalogInternal::readName( child, "next" );
-            state._onNear    = ActionPlatformerCatalogInternal::readName( child, "onNear" );
-            state._onHit     = ActionPlatformerCatalogInternal::readName( child, "onHit" );
+            state._next      = GameDataXML::readName( child, "next" );
+            state._onNear    = GameDataXML::readName( child, "onNear" );
+            state._onHit     = GameDataXML::readName( child, "onHit" );
             state._nearRange = MathUtil::max( 0.0f, child.getAttributeFloat( "near", state._nearRange ) );
             state._moveX     = MathUtil::clamp( child.getAttributeFloat( "moveX", state._moveX ), -1.0f, 1.0f );
             state._fireSpeed = MathUtil::max( 0.0f, child.getAttributeFloat( "fireSpeed", state._fireSpeed ) );
@@ -199,7 +186,7 @@ namespace sw
             SW_LOG_WARNING( "%#: pattern '%#' has no <State> - skipped", sourceName, pID );
             return;
         }
-        pattern._start = ActionPlatformerCatalogInternal::readName( node, "start" );
+        pattern._start = GameDataXML::readName( node, "start" );
         if ( pattern._start.empty() || pattern.findStateIndex( pattern._start ) < 0 )
             pattern._start = pattern._listState.front()._id;
         // 이어지는 상태 이름이 틀리면 그 자리에서 경고한다(테스트와 에디터가 바로 볼 수 있다).

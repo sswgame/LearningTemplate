@@ -18,12 +18,6 @@ namespace sw
         struct GhostCatalogInternal
         {
             static constexpr uint32 kMaxStageCount = 16;
-
-            static hashed_string readName( const XMLNode& node, const utf8* pName )
-            {
-                const utf8* pValue = node.findAttribute( pName );
-                return pValue != nullptr && pValue[0] != '\0' ? hashed_string( pValue ) : hashed_string{};
-            }
         };
     } // namespace
 } // namespace sw
@@ -107,8 +101,8 @@ namespace sw
                 continue;
             GhostRoomDef room;
             room._id        = hashed_string( pID );
-            room._keyReward = GhostCatalogInternal::readName( node, "key" );
-            room._lightFlag = GhostCatalogInternal::readName( node, "lightFlag" );
+            room._keyReward = GameDataXML::readName( node, "key" );
+            room._lightFlag = GameDataXML::readName( node, "lightFlag" );
             if ( room._lightFlag.empty() )
             {
                 string flag( "lit." );
@@ -132,8 +126,8 @@ namespace sw
                 continue;
             GhostDoorDef door;
             door._id   = hashed_string( pID );
-            door._key  = GhostCatalogInternal::readName( node, "key" );
-            door._flag = GhostCatalogInternal::readName( node, "flag" );
+            door._key  = GameDataXML::readName( node, "key" );
+            door._flag = GameDataXML::readName( node, "flag" );
             if ( door._flag.empty() )
                 door._flag = hashed_string( string( "door." ) + pID );
             (void)_doorCatalog.add( door );
@@ -145,8 +139,8 @@ namespace sw
                 continue;
             GhostFurnitureDef furniture;
             furniture._id                = hashed_string( pID );
-            furniture._room              = GhostCatalogInternal::readName( node, "room" );
-            furniture._lootTable         = GhostCatalogInternal::readName( node, "loot" );
+            furniture._room              = GameDataXML::readName( node, "room" );
+            furniture._lootTable         = GameDataXML::readName( node, "loot" );
             const string_view searchText = node.getAttributeText( "search" );
             if ( searchText.empty() == false )
             {
@@ -171,8 +165,8 @@ namespace sw
                 continue;
             GhostBooDef boo;
             boo._id         = hashed_string( pID );
-            boo._room       = GhostCatalogInternal::readName( node, "room" );
-            boo._furniture  = GhostCatalogInternal::readName( node, "furniture" );
+            boo._room       = GameDataXML::readName( node, "room" );
+            boo._furniture  = GameDataXML::readName( node, "furniture" );
             boo._hp         = MathUtil::max( 1.0f, node.getAttributeFloat( "hp", boo._hp ) );
             boo._escapeTime = MathUtil::max( 0.1f, node.getAttributeFloat( "escapeTime", boo._escapeTime ) );
             (void)_booCatalog.add( boo );

@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantSimulation.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -26,16 +27,6 @@ namespace sw
             static bool isSeated( const RestaurantCustomer& customer )
             {
                 return customer._state == CustomerState::WaitingFood || customer._state == CustomerState::Eating || customer._state == CustomerState::WaitingCheckout;
-            }
-
-            static bool contains( const vector<hashed_string>& listID, const hashed_string& id )
-            {
-                for ( const hashed_string& entry : listID )
-                {
-                    if ( entry == id )
-                        return true;
-                }
-                return false;
             }
 
             /** @brief 주문 후보 하나입니다. 요리와, 그 손님이 고를 가중치(양수만 담습니다)를 가집니다. */
@@ -863,7 +854,7 @@ namespace sw
             if ( ratio > pType->_budget )
                 continue; // 지불 의사를 넘는다
             float32 weight = computeDishDemand( *pDish, entry._price );
-            if ( RestaurantSimulationInternal::contains( pType->_listCategory, pDish->_category ) )
+            if ( VectorUtil::contains( pType->_listCategory, pDish->_category ) )
                 weight *= _settings._preferredWeight;
             if ( weight <= 0.0f )
                 continue; // 고를 가중치가 없는 요리는 후보가 아니다. 모두 0 이면 시킬 것이 없어 나간다

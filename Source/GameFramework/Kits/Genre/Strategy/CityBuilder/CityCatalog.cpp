@@ -59,13 +59,6 @@ namespace sw
                 }
                 return false;
             }
-
-            static void parseGoodList( string_view text, vector<hashed_string>& outListGood )
-            {
-                outListGood.clear();
-                GameDataXML::forEachToken( text, ",; ", [&]( string_view token )
-                { outListGood.push_back( hashed_string( string( token ).c_str() ) ); } );
-            }
         };
     } // namespace
 } // namespace sw
@@ -176,7 +169,7 @@ namespace sw
                 else
                     SW_LOG_WARNING( "%#: building '%#' needs an unknown terrain '%#'", sourceName, pID, terrainText );
             }
-            CityCatalogInternal::parseGoodList( node.getAttributeText( "goods" ), building._listGood );
+            GameDataXML::parseNameList( node.getAttributeText( "goods" ), ",; ", building._listGood );
             for ( const hashed_string& goodID : building._listGood )
             {
                 if ( _goodCatalog.find( goodID ) == nullptr )
@@ -215,7 +208,7 @@ namespace sw
                 else
                     SW_LOG_WARNING( "%#: house level '%#' needs an unknown service '%#'", sourceName, level._name.c_str(), token );
             } );
-            CityCatalogInternal::parseGoodList( node.getAttributeText( "goods" ), level._listRequiredGood );
+            GameDataXML::parseNameList( node.getAttributeText( "goods" ), ",; ", level._listRequiredGood );
             _listHouseLevel.push_back( level );
         }
         if ( _listHouseLevel.empty() )

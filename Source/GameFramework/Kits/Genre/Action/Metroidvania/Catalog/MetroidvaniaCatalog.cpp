@@ -17,12 +17,6 @@ namespace sw
     {
         struct MetroidvaniaCatalogInternal
         {
-            static hashed_string readName( const XMLNode& node, const utf8* pName )
-            {
-                const utf8* pValue = node.findAttribute( pName );
-                return pValue != nullptr ? hashed_string( pValue ) : hashed_string{};
-            }
-
             static string readText( const XMLNode& node, const utf8* pName, const utf8* pFallback )
             {
                 const utf8* pValue = node.findAttribute( pName );
@@ -125,7 +119,7 @@ namespace sw
             MetroAbilityDef ability;
             ability._id         = hashed_string( pID );
             ability._name       = MetroidvaniaCatalogInternal::readText( node, "name", pID );
-            ability._flag       = MetroidvaniaCatalogInternal::readName( node, "flag" );
+            ability._flag       = GameDataXML::readName( node, "flag" );
             const XMLNode motor = node.findChild( "Motor" );
             if ( motor )
                 (void)ability._motor.loadFromAttributes( motor ); // 읽은 속성 수만 반환한다. 속성이 없으면 빈 스탯이다
@@ -157,7 +151,7 @@ namespace sw
         for ( XMLNode node = root.findChild( "Map" ); node; node = node.findNextSibling( "Map" ) )
         {
             MetroRegionMapDef regionMap;
-            regionMap._id = MetroidvaniaCatalogInternal::readName( node, "region" );
+            regionMap._id = GameDataXML::readName( node, "region" );
             if ( regionMap._id.empty() )
             {
                 SW_LOG_WARNING( "%#: <Map> without a region - skipped", sourceName );
@@ -175,7 +169,7 @@ namespace sw
                 continue;
             MetroSiteDef site;
             site._id          = hashed_string( pID );
-            site._area        = MetroidvaniaCatalogInternal::readName( node, "area" );
+            site._area        = GameDataXML::readName( node, "area" );
             site._bRest       = MetroidvaniaCatalogInternal::readFlag( node, "rest", SW_FALSE );
             site._bFastTravel = MetroidvaniaCatalogInternal::readFlag( node, "fastTravel", SW_FALSE );
             if ( site._area.empty() )
@@ -191,9 +185,9 @@ namespace sw
                 continue;
             MetroPickupDef pickup;
             pickup._id      = hashed_string( pID );
-            pickup._area    = MetroidvaniaCatalogInternal::readName( node, "area" );
-            pickup._ability = MetroidvaniaCatalogInternal::readName( node, "ability" );
-            pickup._charm   = MetroidvaniaCatalogInternal::readName( node, "charm" );
+            pickup._area    = GameDataXML::readName( node, "area" );
+            pickup._ability = GameDataXML::readName( node, "ability" );
+            pickup._charm   = GameDataXML::readName( node, "charm" );
             if ( pickup._ability.empty() == false && _abilityCatalog.find( pickup._ability ) == nullptr )
                 SW_LOG_WARNING( "%#: pickup '%#' grants an unknown ability '%#'", sourceName, pID, pickup._ability.c_str() );
             if ( pickup._charm.empty() == false && _charmCatalog.find( pickup._charm ) == nullptr )
@@ -210,9 +204,9 @@ namespace sw
             MetroEnemyDef enemy;
             enemy._id        = hashed_string( pID );
             enemy._currency  = MathUtil::max( 0, node.getAttributeInt( "currency", enemy._currency ) );
-            enemy._lootTable = MetroidvaniaCatalogInternal::readName( node, "loot" );
+            enemy._lootTable = GameDataXML::readName( node, "loot" );
             enemy._bBoss     = MetroidvaniaCatalogInternal::readFlag( node, "boss", SW_FALSE );
-            enemy._flag      = MetroidvaniaCatalogInternal::readName( node, "flag" );
+            enemy._flag      = GameDataXML::readName( node, "flag" );
             if ( enemy._bBoss == SW_TRUE && enemy._flag.empty() )
                 enemy._flag = hashed_string( string( "boss." ) + pID );
             (void)_enemyCatalog.add( enemy );

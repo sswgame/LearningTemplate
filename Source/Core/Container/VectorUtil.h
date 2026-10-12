@@ -50,5 +50,17 @@ namespace sw
             }
             return false;
         }
+
+        /** @brief `value` 와 같은 원소가 있으면 true 입니다(언리얼 `TArray::Contains`). 앞에서부터 선형으로 찾습니다. */
+        template <typename TVector, typename TValue>
+        [[nodiscard]] static bool contains( const TVector& list, const TValue& value )
+        {
+            for ( size_t index = 0; index < list.size(); ++index )
+            {
+                if ( list[index] == value )
+                    return true;
+            }
+            return false;
+        }
     };
 } // namespace sw

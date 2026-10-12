@@ -12,22 +12,6 @@ namespace sw
 {
     SW_LOG_CALLER( "RestaurantCatalog" );
 
-    namespace
-    {
-        struct RestaurantCatalogInternal
-        {
-            static void parseIDList( string_view text, vector<hashed_string>& outListID )
-            {
-                outListID.clear();
-                GameDataXML::forEachToken( text, ",;| ", [&]( string_view token )
-                { outListID.push_back( hashed_string( token ) ); } );
-            }
-        };
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     int32 DishDef::computeQuality( int32 cookLevel ) const
     {
         int32 quality = 0;
@@ -129,7 +113,7 @@ namespace sw
             customerType._budget     = MathUtil::max( 0.0f, node.getAttributeFloat( "budget", customerType._budget ) );
             customerType._tipRate    = MathUtil::max( 0.0f, node.getAttributeFloat( "tipRate", customerType._tipRate ) );
             customerType._eatMinutes = MathUtil::max( 0.0f, node.getAttributeFloat( "eat", customerType._eatMinutes ) );
-            RestaurantCatalogInternal::parseIDList( node.getAttributeText( "categories" ), customerType._listCategory );
+            GameDataXML::parseNameList( node.getAttributeText( "categories" ), ",;| ", customerType._listCategory );
             addCustomerType( customerType );
             ++loadedCount;
         }

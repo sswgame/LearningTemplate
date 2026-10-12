@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroCharmLoadout.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Foundation/Data/StatBlock.h"
@@ -108,19 +110,9 @@ namespace sw
         return _pCatalog->getRules()._overcharmDamageTakenScale;
     }
 
-    bool MetroCharmLoadout::isOwned( const hashed_string& charmID ) const { return contains( _listOwned, charmID ); }
+    bool MetroCharmLoadout::isOwned( const hashed_string& charmID ) const { return VectorUtil::contains( _listOwned, charmID ); }
 
-    bool MetroCharmLoadout::isEquipped( const hashed_string& charmID ) const { return contains( _listEquipped, charmID ); }
-
-    bool MetroCharmLoadout::contains( const vector<hashed_string>& listID, const hashed_string& id )
-    {
-        for ( const hashed_string& entry : listID )
-        {
-            if ( entry == id )
-                return true;
-        }
-        return false;
-    }
+    bool MetroCharmLoadout::isEquipped( const hashed_string& charmID ) const { return VectorUtil::contains( _listEquipped, charmID ); }
 
     void MetroCharmLoadout::writeState( Archive& outArchive ) const
     {
@@ -156,8 +148,8 @@ namespace sw
                 hashed_string charmID;
                 if ( StateArchiveUtil::readName( archive, charmID ) == false )
                     return false;
-                const bool bOwnedIfEquipped = listIndex == 0 || contains( listOwned, charmID );
-                const bool bValid           = _pCatalog->findCharm( charmID ) != nullptr && contains( listCharm, charmID ) == false && bOwnedIfEquipped;
+                const bool bOwnedIfEquipped = listIndex == 0 || VectorUtil::contains( listOwned, charmID );
+                const bool bValid           = _pCatalog->findCharm( charmID ) != nullptr && VectorUtil::contains( listCharm, charmID ) == false && bOwnedIfEquipped;
                 if ( bValid == false )
                     return false;
                 listCharm.push_back( charmID );

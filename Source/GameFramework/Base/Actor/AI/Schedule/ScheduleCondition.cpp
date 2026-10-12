@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCondition.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/TagSystem.h"
@@ -24,16 +25,6 @@ namespace sw
 
             static constexpr const utf8* kArrConditionAttribute[] = { "days", "daysOfSeason", "seasons", "weathers", "phases", "flags", "tags", "notTags", "chance" };
 
-            static bool contains( const vector<hashed_string>& listName, const hashed_string& name )
-            {
-                for ( const hashed_string& entry : listName )
-                {
-                    if ( entry == name )
-                        return true;
-                }
-                return false;
-            }
-
             /** @brief 어휘가 있으면 목록의 이름이 어휘에 있는지 봅니다. */
             static void warnUnknownNames( const vector<hashed_string>& listName, const vector<hashed_string>& listKnown, const utf8* pKind, string_view sourceName,
                                           string_view ownerName )
@@ -42,7 +33,7 @@ namespace sw
                     return;
                 for ( const hashed_string& name : listName )
                 {
-                    if ( contains( listKnown, name ) == false )
+                    if ( VectorUtil::contains( listKnown, name ) == false )
                         SW_LOG_WARNING( "%#: '%#' has an unknown %# '%#'", sourceName, ownerName, pKind, name.c_str() );
                 }
             }
@@ -112,9 +103,7 @@ namespace sw
 
     void ScheduleCondition::parseNameList( string_view text, vector<hashed_string>& outListName )
     {
-        outListName.clear();
-        GameDataXML::forEachToken( text, ScheduleConditionInternal::kNameSeparators, [&]( string_view token )
-        { outListName.push_back( hashed_string( token ) ); } );
+        GameDataXML::parseNameList( text, ScheduleConditionInternal::kNameSeparators, outListName );
     }
 
     uint8 ScheduleCondition::parsePhaseMask( string_view text, string_view sourceName, string_view ownerName )
@@ -187,7 +176,7 @@ namespace sw
         using Internal = ScheduleConditionInternal;
         ScheduleConditionResult result;
         if ( _listWeekday.empty() == false )
-            Internal::mark( result, ScheduleConditionClause::Weekday, Internal::contains( _listWeekday, context._weekday ) );
+            Internal::mark( result, ScheduleConditionClause::Weekday, VectorUtil::contains( _listWeekday, context._weekday ) );
         if ( _listDayOfSeason.empty() == false )
         {
             bool bFound = false;
@@ -198,9 +187,9 @@ namespace sw
             Internal::mark( result, ScheduleConditionClause::DayOfSeason, bFound );
         }
         if ( _listSeason.empty() == false )
-            Internal::mark( result, ScheduleConditionClause::Season, Internal::contains( _listSeason, context._season ) );
+            Internal::mark( result, ScheduleConditionClause::Season, VectorUtil::contains( _listSeason, context._season ) );
         if ( _listWeather.empty() == false )
-            Internal::mark( result, ScheduleConditionClause::Weather, Internal::contains( _listWeather, context._weather ) );
+            Internal::mark( result, ScheduleConditionClause::Weather, VectorUtil::contains( _listWeather, context._weather ) );
         if ( _phaseMask != 0 )
             Internal::mark( result, ScheduleConditionClause::Phase, ( _phaseMask & makeDayPhaseBit( context._phase ) ) != 0 );
         if ( _flags.empty() == false )

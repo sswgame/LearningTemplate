@@ -15,20 +15,7 @@ namespace sw
     {
         struct WitcherCatalogInternal
         {
-            static hashed_string readName( const XMLNode& node, const utf8* pAttribute )
-            {
-                const utf8* pText = node.findAttribute( pAttribute );
-                return pText != nullptr && pText[0] != '\0' ? hashed_string( pText ) : hashed_string{};
-            }
-
             static bool isNamed( string_view name, const utf8* pExpected ) { return StringUtil::equals( name, string_view( pExpected ), true ); }
-
-            static void readNameList( string_view text, vector<hashed_string>& outListName )
-            {
-                outListName.clear();
-                GameDataXML::forEachToken( text, ",; ", [&]( string_view token )
-                { outListName.push_back( hashed_string( token ) ); } );
-            }
         };
     } // namespace
 } // namespace sw
@@ -66,13 +53,13 @@ namespace sw
             {
                 _alchemy._maxToxicity   = MathUtil::max( 1.0f, node.getAttributeFloat( "maxToxicity", _alchemy._maxToxicity ) );
                 _alchemy._toxicityDecay = MathUtil::max( 0.0f, node.getAttributeFloat( "toxicityDecay", _alchemy._toxicityDecay ) );
-                WitcherCatalogInternal::readNameList( node.getAttributeText( "alcohol" ), _alchemy._listAlcohol );
+                GameDataXML::parseNameList( node.getAttributeText( "alcohol" ), ",; ", _alchemy._listAlcohol );
                 continue;
             }
             if ( WitcherCatalogInternal::isNamed( name, "Combat" ) )
             {
                 WitcherCombatSettings& combat = _combat;
-                const hashed_string    stat   = WitcherCatalogInternal::readName( node, "intensityStat" );
+                const hashed_string    stat   = GameDataXML::readName( node, "intensityStat" );
                 if ( stat.empty() == false )
                     combat._intensityStat = stat;
                 combat._stamina               = MathUtil::max( 1.0f, node.getAttributeFloat( "stamina", combat._stamina ) );
@@ -100,8 +87,8 @@ namespace sw
             if ( WitcherCatalogInternal::isNamed( name, "SkillColor" ) )
             {
                 WitcherSkillColorDef color;
-                color._id    = WitcherCatalogInternal::readName( node, "skill" );
-                color._color = WitcherCatalogInternal::readName( node, "color" );
+                color._id    = GameDataXML::readName( node, "skill" );
+                color._color = GameDataXML::readName( node, "color" );
                 if ( color._id.empty() )
                     SW_LOG_WARNING( "%#: <SkillColor> without a skill - skipped", sourceName );
                 else
@@ -130,7 +117,7 @@ namespace sw
             {
                 WitcherAlchemyDef item;
                 item._id               = id;
-                item._element          = WitcherCatalogInternal::readName( node, "element" );
+                item._element          = GameDataXML::readName( node, "element" );
                 const string_view kind = node.getAttributeText( "kind" );
                 if ( WitcherCatalogInternal::isNamed( kind, "Decoction" ) )
                     item._kind = WitcherAlchemyKind::Decoction;
@@ -150,8 +137,8 @@ namespace sw
             {
                 WitcherSignDef sign;
                 sign._id            = id;
-                sign._element       = WitcherCatalogInternal::readName( node, "element" );
-                sign._altSkill      = WitcherCatalogInternal::readName( node, "altSkill" );
+                sign._element       = GameDataXML::readName( node, "element" );
+                sign._altSkill      = GameDataXML::readName( node, "altSkill" );
                 sign._cost          = MathUtil::max( 0.0f, node.getAttributeFloat( "cost", sign._cost ) );
                 sign._altCost       = MathUtil::max( 0.0f, node.getAttributeFloat( "altCost", sign._altCost ) );
                 sign._basePower     = MathUtil::max( 0.0f, node.getAttributeFloat( "power", sign._basePower ) );
@@ -162,8 +149,8 @@ namespace sw
             {
                 WitcherMutagenDef mutagen;
                 mutagen._id         = id;
-                mutagen._color      = WitcherCatalogInternal::readName( node, "color" );
-                mutagen._stat       = WitcherCatalogInternal::readName( node, "stat" );
+                mutagen._color      = GameDataXML::readName( node, "color" );
+                mutagen._stat       = GameDataXML::readName( node, "stat" );
                 mutagen._value      = node.getAttributeFloat( "value", 0.0f );
                 mutagen._matchValue = node.getAttributeFloat( "matchValue", 0.0f );
                 (void)_mutagenCatalog.add( mutagen );
@@ -189,8 +176,8 @@ namespace sw
     {
         WitcherMonsterDef monster;
         monster._id       = id;
-        monster._category = WitcherCatalogInternal::readName( node, "category" );
-        WitcherCatalogInternal::readNameList( node.getAttributeText( "elements" ), monster._listElement );
+        monster._category = GameDataXML::readName( node, "category" );
+        GameDataXML::parseNameList( node.getAttributeText( "elements" ), ",; ", monster._listElement );
         if ( monster._listElement.empty() && monster._category.empty() == false )
             monster._listElement.push_back( monster._category );
         monster._maxKnowledge     = MathUtil::max( 1, node.getAttributeInt( "maxKnowledge", monster._maxKnowledge ) );
@@ -201,7 +188,7 @@ namespace sw
         for ( XMLNode child = node.findChild( "Weakness" ); child; child = child.findNextSibling( "Weakness" ) )
         {
             WitcherWeakness weakness;
-            weakness._id           = WitcherCatalogInternal::readName( child, "id" );
+            weakness._id           = GameDataXML::readName( child, "id" );
             weakness._knowledge    = MathUtil::clamp( child.getAttributeInt( "knowledge", weakness._knowledge ), 0, monster._maxKnowledge );
             const string_view kind = child.getAttributeText( "kind" );
             if ( WitcherCatalogInternal::isNamed( kind, "Bomb" ) )
@@ -222,7 +209,7 @@ namespace sw
     {
         WitcherContractDef contract;
         contract._id            = id;
-        contract._questID       = WitcherCatalogInternal::readName( node, "quest" );
+        contract._questID       = GameDataXML::readName( node, "quest" );
         contract._reward        = MathUtil::max( 0, node.getAttributeInt( "reward", contract._reward ) );
         contract._limitRatio    = MathUtil::max( 1.0f, node.getAttributeFloat( "limit", contract._limitRatio ) );
         contract._angerMax      = MathUtil::max( 0.01f, node.getAttributeFloat( "angerMax", contract._angerMax ) );
@@ -231,11 +218,11 @@ namespace sw
         for ( XMLNode stepNode = node.findChild( "Step" ); stepNode; stepNode = stepNode.findNextSibling( "Step" ) )
         {
             WitcherContractStepDef step;
-            step._id = WitcherCatalogInternal::readName( stepNode, "id" );
+            step._id = GameDataXML::readName( stepNode, "id" );
             for ( XMLNode clueNode = stepNode.findChild( "Clue" ); clueNode; clueNode = clueNode.findNextSibling( "Clue" ) )
             {
                 WitcherClueDef clue;
-                clue._id       = WitcherCatalogInternal::readName( clueNode, "id" );
+                clue._id       = GameDataXML::readName( clueNode, "id" );
                 clue._position = float3{ clueNode.getAttributeFloat( "x", 0.0f ), clueNode.getAttributeFloat( "y", 0.0f ), clueNode.getAttributeFloat( "z", 0.0f ) };
                 clue._radius   = MathUtil::max( 0.0f, clueNode.getAttributeFloat( "radius", clue._radius ) );
                 clue._order    = MathUtil::max( 0, clueNode.getAttributeInt( "order", clue._order ) );
