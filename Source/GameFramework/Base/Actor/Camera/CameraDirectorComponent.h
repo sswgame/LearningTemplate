@@ -22,6 +22,7 @@
 
 namespace sw
 {
+    class Archive;
     class ICameraCollisionProbe;
 
     /**
@@ -38,7 +39,8 @@ namespace sw
      *          암 충돌(`<Collision>`)은 따로 준 질의(`setCollisionProbe`)가 없으면 매니저의 `PhysicsOverlapWorld` 바디에 쓸어 본다. 대상 자신은 뺀다.
      *          입력 맵 액션 `_cycleAction` 이 발동하면 카탈로그 순서로 다음 프리셋을 켠다.
      *          블렌드 없는 전환(컷)은 카메라에 컷 표시를 넣어서 렌더러가 TAA 기록을 버리게 한다.
-     *          켠 프리셋과 블렌드 진행은 저장하지 않는다.
+     *          켠 프리셋과 블렌드 스택(진행, 입력이 돌린 각과 줌)은 `ComponentStateStore` 계약(`writeState` / `restoreState`)으로 저장한다.
+     *          게임 인스턴스가 `registerStatefulComponent<CameraDirectorComponent>()` 로 올리면 핫 리로드와 세이브를 넘긴다.
      */
     REFLECT( Category = "Camera", DisplayName = "Camera Director", Tooltip = "Drives the camera on this object from data presets with blends, damping, framing and shake" )
     class SW_GF_API CameraDirectorComponent : public Component
@@ -61,6 +63,13 @@ namespace sw
         [[nodiscard]] bool activatePreset( const hashed_string& id, const BlendCurveDef& blend );
         /** @brief 카탈로그 순서로 다음 프리셋을 켭니다. 마지막 다음은 처음이며, 켠 id 를 반환합니다. 프리셋이 없으면 빈 id 입니다. */
         hashed_string activateNextPreset();
+        /** @brief 화면이 지금 @p from 이라고 보고 켠 프리셋으로 @p blend 를 따라 섞습니다(`CameraDirector::blendFromPose`). 시네마틱에서 게임 카메라로 돌아올 때 씁니다. */
+        void blendFromPose( const CameraPose& from, const BlendCurveDef& blend ) { _director.blendFromPose( from, blend ); }
+
+        /** @brief `ComponentStateStore` 계약 — 켠 프리셋과 블렌드 스택을 씁니다. */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `ComponentStateStore` 계약 — 시작 전이면 들고 있다가 카탈로그를 읽은 뒤 적용하고, 시작 뒤면 바로 적용합니다. 읽지 못하면 알리고 지금 상태를 둡니다. */
+        void restoreState( vector<uint8>&& bytes );
 
         /** @brief 카메라가 따라갈 오브젝트입니다. 비우면 초점은 원점이고 요와 피치는 0 입니다. */
         void                    setTarget( const GameObjectHandle& target ) { _target = target; }
@@ -96,6 +105,8 @@ namespace sw
         void resolveCamera();
         /** @brief 시작 프리셋을 고릅니다. `-gv_cameraPreset` 이 카탈로그에 있으면(게임 시점 카메라만) 그것을 쓰고, 아니면 `_initialPreset`, 그것도 아니면 첫 프리셋을 씁니다. */
         hashed_string resolveStartPreset() const;
+        /** @brief 들고 있던 상태 바이트를 디렉터에 적용합니다. 적용했으면 true 입니다. */
+        [[nodiscard]] bool applyPendingState();
 
     private:
         PROPERTY( Category = "Camera", DisplayName = "Presets", AssetPath, Tooltip = "Camera preset XML (<CameraPresets>)" )
@@ -123,6 +134,7 @@ namespace sw
 
         CameraPresetCatalog          _catalog;
         CameraDirector               _director;
+        vector<uint8>                _pendingStateBytes; ///< 시작 전에 받은 상태(`restoreState`) — 카탈로그를 읽은 뒤 적용한다
         const ICameraCollisionProbe* _pExternalProbe;
         float32                      _pendingDeltaTime; ///< 틱이 모은 시간 — 미룬 계산이 쓴다
     };

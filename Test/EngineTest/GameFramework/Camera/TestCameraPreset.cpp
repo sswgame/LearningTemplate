@@ -10,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Actor/Camera/CameraBlend.h"
 #include "GameFramework/Base/Actor/Camera/CameraDirector.h"
@@ -334,6 +335,144 @@ SW_TEST_CASE( CameraPresetTest, DirectorContinuesFromTheBlendedPoseWhenReactivat
 }
 
 /**
+ * @brief [CameraPresetTest] 블렌드 도중 다시 켜면 나가던 블렌드가 멈추지 않고 계속 섞인다(블렌드 스택, Cinemachine 중첩 블렌드)
+ * @details a(원점) → b(+X 10) 를 1 초 직선으로 반쯤(5, 0, 0) 섞은 때 c(+Y 10)를 켜고 0.25 초 흘린다. 아래 블렌드는 0.75 까지 가서 (7.5, 0, 0) 이고
+ *          c 가 0.25 로 그 위에 섞이므로 x 는 5.625 다. 켠 순간의 섞인 포즈를 고정하면 3.75 가 된다.
+ */
+SW_TEST_CASE( CameraPresetTest, DirectorKeepsTheOutgoingBlendRunningWhenReactivated )
+{
+    CameraPresetCatalog catalog;
+    catalog.addPreset( CameraPresetTestInternal::makeFixed( "a", float3{ 0.0f, 0.0f, 0.0f } ) );
+    catalog.addPreset( CameraPresetTestInternal::makeFixed( "b", float3{ 10.0f, 0.0f, 0.0f } ) );
+    catalog.addPreset( CameraPresetTestInternal::makeFixed( "c", float3{ 0.0f, 10.0f, 0.0f } ) );
+    const CameraTarget target;
+
+    CameraDirector director;
+    SW_ASSERT_TRUE( director.activatePreset( catalog, "a" ) );
+    (void)director.step( 0.016f, target );
+    SW_ASSERT_TRUE( director.activatePreset( catalog, "b" ) );
+    (void)director.step( 0.5f, target );
+    SW_ASSERT_TRUE( director.activatePreset( catalog, "c" ) );
+    SW_EXPECT_EQUAL( 3u, director.getLayerCount() );
+
+    const CameraPose nested = director.step( 0.25f, target );
+    SW_EXPECT_NEAR_EQUAL( 5.625f, nested._position._x, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( 2.5f, nested._position._y, 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( 0.25f, director.getBlendWeight(), 1.0e-4f );
+
+    (void)director.step( 0.25f, target ); // a → b 가 끝났다 — a 층을 버린다
+    SW_EXPECT_EQUAL( 2u, director.getLayerCount() );
+    const CameraPose arrived = director.step( 1.0f, target );
+    SW_EXPECT_EQUAL( 1u, director.getLayerCount() );
+    SW_EXPECT_FALSE( director.isBlending() );
+    SW_EXPECT_NEAR_EQUAL( 10.0f, arrived._position._y, 1.0e-4f );
+}
+
+/**
+ * @brief [CameraPresetTest] 블렌드 스택이 넘치면 가장 아래 둘을 섞인 포즈로 고정해 합친다 — 층 수는 상한을 넘지 않고 화면도 튀지 않는다
+ */
+SW_TEST_CASE( CameraPresetTest, DirectorCollapsesTheBlendStackWithoutAJump )
+{
+    static constexpr const utf8* kArrPresetID[] = { "p0", "p1", "p2", "p3", "p4", "p5", "p6", "p7" };
+    CameraPresetCatalog          catalog;
+    for ( int32 presetIndex = 0; presetIndex < 8; ++presetIndex )
+    {
+        catalog.addPreset( CameraPresetTestInternal::makeFixed( kArrPresetID[presetIndex], float3{ static_cast<float32>( presetIndex ) * 3.0f, 0.0f, 0.0f } ) );
+    }
+    const CameraTarget target;
+    CameraDirector     director;
+    SW_ASSERT_TRUE( director.activatePreset( catalog, "p0" ) );
+    CameraPose previous = director.step( 0.016f, target );
+    for ( int32 presetIndex = 1; presetIndex < 8; ++presetIndex )
+    {
+        SW_ASSERT_TRUE( director.activatePreset( catalog, hashed_string( kArrPresetID[presetIndex] ) ) );
+        SW_EXPECT_TRUE( director.getLayerCount() <= CameraDirector::kMaxLayerCount );
+        const CameraPose next = director.step( 0.001f, target );
+        SW_EXPECT_NEAR_EQUAL( previous._position._x, next._position._x, 0.1f ); // 켠 순간 튀지 않는다
+        previous = director.step( 0.1f, target );
+    }
+}
+
+/**
+ * @brief [CameraPresetTest] 블렌드 스택(프리셋, 진행, 입력이 돌린 상태)은 저장했다 되살리면 같은 포즈를 이어 낸다
+ * @details 카탈로그 밖의 프리셋(코드로 만든 것)은 다시 풀 수 없으므로 마지막 포즈로 고정해 되살린다.
+ */
+SW_TEST_CASE( CameraPresetTest, DirectorStateRoundTripsTheBlendStack )
+{
+    CameraPresetCatalog catalog;
+    catalog.addPreset( CameraPresetTestInternal::makeFixed( "a", float3{ 0.0f, 0.0f, 0.0f } ) );
+    CameraPresetDef orbit = CameraPresetTestInternal::makeFixed( "orbit", float3{} );
+    orbit._view._mode     = CameraPresetMode::Orbit;
+    orbit._view._distance = 6.0f;
+    catalog.addPreset( orbit );
+    CameraTarget target;
+    target._focus = float3{ 1.0f, 0.0f, 2.0f };
+
+    CameraDirector source;
+    SW_ASSERT_TRUE( source.activatePreset( catalog, "a" ) );
+    (void)source.step( 0.016f, target );
+    SW_ASSERT_TRUE( source.activatePreset( catalog, "orbit" ) );
+    source.getModeState()._yawOffset = 0.7f; // 입력이 돌린 각
+    (void)source.step( 0.3f, target );
+
+    Archive written;
+    source.writeState( written );
+    vector<uint8> bytes;
+    written.writeData( bytes );
+
+    CameraDirector restored;
+    Archive        reader( bytes.data(), static_cast<uint64>( bytes.size() ) );
+    SW_ASSERT_TRUE( restored.readState( reader, catalog ) );
+    SW_EXPECT_EQUAL( source.getLayerCount(), restored.getLayerCount() );
+    SW_EXPECT_TRUE( restored.getActivePresetID() == hashed_string( "orbit" ) );
+    SW_EXPECT_NEAR_EQUAL( 0.7f, restored.getModeState()._yawOffset, 1.0e-6f );
+    const CameraPose expected = source.step( 0.2f, target );
+    const CameraPose actual   = restored.step( 0.2f, target );
+    SW_EXPECT_NEAR_EQUAL( expected._position._x, actual._position._x, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( expected._position._z, actual._position._z, 1.0e-4f );
+
+    // 카탈로그 밖의 프리셋은 고정 포즈로 돌아온다.
+    CameraDirector codeMade;
+    codeMade.activatePreset( CameraPresetTestInternal::makeFixed( "code", float3{ 4.0f, 5.0f, 6.0f } ), CameraPresetTestInternal::makeBlend( BlendCurve::Cut ) );
+    (void)codeMade.step( 0.016f, target );
+    Archive codeWritten;
+    codeMade.writeState( codeWritten );
+    vector<uint8> codeBytes;
+    codeWritten.writeData( codeBytes );
+    CameraDirector codeRestored;
+    Archive        codeReader( codeBytes.data(), static_cast<uint64>( codeBytes.size() ) );
+    SW_ASSERT_TRUE( codeRestored.readState( codeReader, catalog ) );
+    SW_EXPECT_FALSE( codeRestored.hasActivePreset() );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, codeRestored.step( 0.016f, target )._position._y, 1.0e-5f );
+
+    // 잘린 바이트는 거절하고 지금 상태를 둔다.
+    Archive truncated( bytes.data(), static_cast<uint64>( bytes.size() / 2 ) );
+    SW_EXPECT_FALSE( restored.readState( truncated, catalog ) );
+    SW_EXPECT_TRUE( restored.getActivePresetID() == hashed_string( "orbit" ) );
+}
+
+/**
+ * @brief [CameraPresetTest] 다른 카메라의 화면에서 넘어오면(`blendFromPose`) 그 포즈에서 켠 프리셋으로 섞는다 — 시네마틱에서 게임 카메라로 돌아오기
+ */
+SW_TEST_CASE( CameraPresetTest, DirectorBlendsFromAGivenPose )
+{
+    CameraDirector director;
+    director.activatePreset( CameraPresetTestInternal::makeFixed( "game", float3{ 10.0f, 0.0f, 0.0f } ), CameraPresetTestInternal::makeBlend( BlendCurve::Cut ) );
+    (void)director.step( 0.016f, CameraTarget{} );
+    CameraPose cinematic;
+    cinematic._position = float3{ 0.0f, 20.0f, 0.0f };
+    director.blendFromPose( cinematic, CameraPresetTestInternal::makeBlend( BlendCurve::Linear, 1.0f ) );
+    SW_EXPECT_TRUE( director.isBlending() );
+    const CameraPose half = director.step( 0.5f, CameraTarget{} );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, half._position._x, 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( 10.0f, half._position._y, 1.0e-4f );
+    const CameraPose arrived = director.step( 0.5f, CameraTarget{} );
+    SW_EXPECT_FALSE( director.isBlending() );
+    SW_EXPECT_NEAR_EQUAL( 10.0f, arrived._position._x, 1.0e-4f );
+    SW_EXPECT_FALSE( director.consumeCut() );
+}
+
+/**
  * @brief [CameraPresetTest] 블렌드가 없던 때 켜면 나가는 프리셋도 대상을 계속 따라간다
  * @details 따라가기 a 에서 고정 b 로 섞는 동안 대상이 움직이면, 가중치 0 쪽(a)의 자리도 움직인 대상을 따른다 — 켠 순간의 포즈로 얼려 두면
  *          가운데 자리가 대상이 옮긴 만큼의 절반을 놓친다.
@@ -402,6 +541,49 @@ SW_TEST_CASE( CameraPresetTest, DirectorComponentDrivesItsCamera )
     SW_EXPECT_NEAR_EQUAL( 30.0f, pCamera->getOrthoHeight(), 1.0e-4f );
     SW_EXPECT_NEAR_EQUAL( 50.0f, pCamera->getWorldPosition()._y, 1.0e-2f );
     SW_EXPECT_NEAR_EQUAL( 3.0f, pCamera->getWorldPosition()._x, 1.0e-2f );
+}
+
+/**
+ * @brief [CameraPresetTest] 시작 전에 상태를 돌려받은 디렉터 컴포넌트는 시작 프리셋이 아니라 저장한 프리셋에서 이어 간다(핫 리로드, 세이브)
+ */
+SW_TEST_CASE( CameraPresetTest, DirectorComponentRestoresItsPresetBeforeBeginPlay )
+{
+    constexpr const utf8* kCatalogXML = R"(<CameraPresets>
+        <Preset id="first"><View mode="Orbit" distance="5"/></Preset>
+        <Preset id="second"><View mode="Orbit" distance="9"/></Preset>
+    </CameraPresets>)";
+
+    vector<uint8> bytes;
+    {
+        GameObjectManager manager;
+        GameObject*       pCameraObject = manager.createGameObject( hashed_string( "SavedCamera" ) );
+        SW_ASSERT_NOT_NULL( pCameraObject );
+        SW_ASSERT_NOT_NULL( pCameraObject->addComponent<CameraComponent>() );
+        CameraDirectorComponent* pDirector = pCameraObject->addComponent<CameraDirectorComponent>();
+        SW_ASSERT_NOT_NULL( pDirector );
+        SW_ASSERT_TRUE( pDirector->getCatalog().loadFromXMLText( kCatalogXML, "restore-source" ) );
+        pDirector->setInputEnabled( false );
+        manager.beginPlay();
+        SW_ASSERT_TRUE( pDirector->activatePreset( "second" ) );
+        pDirector->updateCamera( 0.1f );
+        Archive archive;
+        pDirector->writeState( archive );
+        archive.writeData( bytes );
+        manager.endPlay();
+    }
+
+    GameObjectManager manager;
+    GameObject*       pCameraObject = manager.createGameObject( hashed_string( "RestoredCamera" ) );
+    SW_ASSERT_NOT_NULL( pCameraObject );
+    SW_ASSERT_NOT_NULL( pCameraObject->addComponent<CameraComponent>() );
+    CameraDirectorComponent* pDirector = pCameraObject->addComponent<CameraDirectorComponent>();
+    SW_ASSERT_NOT_NULL( pDirector );
+    SW_ASSERT_TRUE( pDirector->getCatalog().loadFromXMLText( kCatalogXML, "restore-target" ) );
+    pDirector->setInputEnabled( false );
+    pDirector->restoreState( std::move( bytes ) );
+    manager.beginPlay();
+    SW_EXPECT_TRUE( pDirector->getActivePresetID() == hashed_string( "second" ) );
+    manager.endPlay();
 }
 
 /**

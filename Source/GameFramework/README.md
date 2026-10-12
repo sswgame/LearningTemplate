@@ -200,7 +200,9 @@ PROPERTY 는 리플렉션이 저장하지만, 디렉터가 가진 키트 객체�
 예시는 `Resource/engine/cameras/default.cameras.xml` 과 `Resource/game/shooter3d/data/shooter.cameras.xml` 입니다.
 
 프리셋 하나는 모드와 렌즈, 감쇠, 스프링 암, 흔들림 같은 섹션 원소로 이루어집니다. 모드 계산(`CameraMode.h`)은 컴포넌트를 모르는 순수 함수라서 씬 없이 테스트합니다.
-`CameraDirectorComponent` 는 카메라 오브젝트에 붙어 프리셋을 고르고 블렌드합니다. 블렌드는 언제나 지금 화면에서 출발하고, 블렌드 도중에 다시 바꾸면 그 순간의 섞인 포즈가 출발점이 됩니다.
+`CameraDirectorComponent` 는 카메라 오브젝트에 붙어 프리셋을 고르고 블렌드합니다. 블렌드는 언제나 지금 화면에서 출발합니다.
+블렌드 도중에 다시 바꾸면 나가던 블렌드가 멈추지 않고 블렌드 스택(최대 네 층)에서 계속 섞입니다. Cinemachine 의 중첩 블렌드와 같습니다.
+켠 프리셋과 블렌드 진행은 `writeState` / `restoreState` 로 저장하므로, 게임 인스턴스가 `registerStatefulComponent<CameraDirectorComponent>()` 로 올리면 핫 리로드와 세이브를 넘깁니다.
 `CameraManagerComponent` 는 플레이어마다 하나이고, 다른 오브젝트의 카메라를 뷰 타깃으로 따라갑니다. 언리얼의 `SetViewTargetWithBlend` 에 해당합니다.
 
 디렉터는 PostPhysics 그룹에서 입력만 읽고, 포즈는 틱 뒤에 씁니다. 틱 중의 트랜스폼 쓰기는 틱이 끝나야 적용되므로, 틱 안에서 대상을 읽으면 한 프레임 늦기 때문입니다.

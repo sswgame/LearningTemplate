@@ -12,6 +12,7 @@
 #include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Actor/Camera/CameraCollisionProbe.h"
 #include "GameFramework/Base/Actor/Camera/CameraPoseUtil.h"
@@ -67,6 +68,7 @@ namespace sw
         , _bReadInput{ true }
         , _catalog{}
         , _director{}
+        , _pendingStateBytes{}
         , _pExternalProbe{ nullptr }
         , _pendingDeltaTime{ 0.0f }
     {
@@ -98,10 +100,38 @@ namespace sw
         }
         if ( _catalog.getPresets().empty() )
             return;
-        const hashed_string startID = resolveStartPreset();
-        if ( _director.activatePreset( _catalog, startID ) == false )
-            SW_LOG_WARNING( "Camera preset '%#' is not in '%#'", startID.c_str(), _catalogPath );
+        // 저장한 상태(핫 리로드, 세이브)가 있으면 시작 프리셋 대신 그 스택에서 이어 간다.
+        if ( applyPendingState() == false )
+        {
+            const hashed_string startID = resolveStartPreset();
+            if ( _director.activatePreset( _catalog, startID ) == false )
+                SW_LOG_WARNING( "Camera preset '%#' is not in '%#'", startID.c_str(), _catalogPath );
+        }
         updateCamera( 0.0f );
+    }
+
+    void CameraDirectorComponent::writeState( Archive& outArchive ) const
+    {
+        _director.writeState( outArchive );
+    }
+
+    void CameraDirectorComponent::restoreState( vector<uint8>&& bytes )
+    {
+        _pendingStateBytes = std::move( bytes );
+        if ( hasBegunPlay() && applyPendingState() )
+            updateCamera( 0.0f );
+    }
+
+    bool CameraDirectorComponent::applyPendingState()
+    {
+        if ( _pendingStateBytes.empty() )
+            return false;
+        Archive    archive( _pendingStateBytes.data(), static_cast<uint64>( _pendingStateBytes.size() ) );
+        const bool bRead = _director.readState( archive, _catalog );
+        _pendingStateBytes.clear();
+        if ( bRead == false )
+            SW_LOG_WARNING( "Camera director state of '%#' did not read - starting fresh", getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
+        return bRead;
     }
 
     hashed_string CameraDirectorComponent::resolveStartPreset() const
