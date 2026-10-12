@@ -82,12 +82,17 @@ namespace sw
         void   arrangeChildren( const UILayoutContext& context, const float2& size ) override;
         /** @brief 스크롤 막대 엄지를 내용 위에 칠합니다(드래그 중이면 더 밝게). */
         void paintOverChildren( CanvasPainter& painter, const UIPaintContext& context ) const override;
-        /** @brief 내용 위치는 스크롤 오프셋으로 정해지므로 거울로 배치하지 않습니다(내용 안의 패널은 자기 방향으로 거울 배치합니다). 가로 스크롤의 RTL 시작점은 왼쪽입니다. */
+        /** @brief 내용 위치는 스크롤 오프셋으로 정해지므로 일반 거울 배치는 하지 않습니다(내용 안의 패널은 자기 방향으로 거울 배치합니다). 가로 스크롤은 `arrangeChildren` 이 직접 오른쪽에서 시작하게 둡니다. */
         bool mirrorsChildrenInRightToLeft() const override { return false; }
 
     private:
         /** @brief 오프셋을 지난 배치의 범위로 제한합니다. */
         float2 clampOffset( const float2& scrollOffset ) const;
+        /**
+         * @brief 화면에서 오른쪽으로 가는 입력(스틱, 막대 끌기, 화면 좌표 변화)이 가로 오프셋에 주는 부호입니다(왼쪽에서 오른쪽 +1, 오른쪽에서 왼쪽 −1).
+         * @details 오프셋은 시작 쪽(왼쪽에서 오른쪽이면 왼쪽, 반대면 오른쪽)에서 잰 거리라서 화면 좌표 입력만 뒤집습니다. 휠은 "끝 쪽으로"라서 뒤집지 않습니다.
+         */
+        float32 getHorizontalScrollSign() const;
         /** @brief 휠이나 스틱 스크롤을 오프셋 변화로 적용합니다. 옮겼으면 true 이며, 옮기지 않았으면 바깥 스크롤 패널이 받습니다. */
         [[nodiscard]] bool applyScrollDelta( const float2& delta );
         /** @brief 막대 위 누름을 처리합니다. 엄지면 드래그를 시작하고(포인터를 잡습니다), 트랙이면 한 화면만큼 옮깁니다. 막대 밖이면 처리하지 않습니다. */
