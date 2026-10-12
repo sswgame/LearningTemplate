@@ -46,6 +46,7 @@
 #include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
+#include "Engine/Resource/ResourceDataKind.h"
 #include "Engine/Resource/ResourceIO.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"
@@ -67,27 +68,6 @@
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 #include "EngineTest/HostTargetTestUtil.h"
-
-#include "GameFramework/Base/Actor/AI/Director/AIDirectorProfile.h"
-#include "GameFramework/Base/Actor/AI/Schedule/ScheduleCatalog.h"
-#include "GameFramework/Base/Actor/AI/SpawnDirector.h"
-#include "GameFramework/Base/Actor/Camera/CameraPreset.h"
-#include "GameFramework/Base/Actor/Combat/Weapon/Weapon.h"
-#include "GameFramework/Base/Foundation/Data/GameSettings.h"
-#include "GameFramework/Base/Gameplay/Ability/AbilityCatalog.h"
-#include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
-#include "GameFramework/Base/Gameplay/Gimmick/ElementRuleTable.h"
-#include "GameFramework/Base/Gameplay/Interaction/InteractionCatalog.h"
-#include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
-#include "GameFramework/Base/Gameplay/Progression/Reputation.h"
-#include "GameFramework/Base/Gameplay/Quest/QuestCatalog.h"
-#include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"
-#include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureLifeCatalog.h"
-#include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
-#include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"
-#include "GameFramework/Kits/Genre/Simulation/ThemePark/ParkLayout.h"
-#include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
-#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -117,10 +97,6 @@ namespace
         static bool isAutomationScenario( sw::string_view resourceID ) { return endsWith( resourceID, ".scenario.xml" ); }
         static bool isMaterial( sw::string_view resourceID ) { return endsWith( resourceID, ".material" ); }
         static bool isSpriteClip( sw::string_view resourceID ) { return endsWith( resourceID, ".sprite.json" ); }
-        static bool isCameraPresets( sw::string_view resourceID ) { return endsWith( resourceID, ".cameras.xml" ); }
-        static bool isSchedules( sw::string_view resourceID ) { return endsWith( resourceID, ".schedules.xml" ); }
-        static bool isAIDirector( sw::string_view resourceID ) { return endsWith( resourceID, ".director.xml" ); }
-        static bool isSpawnTable( sw::string_view resourceID ) { return endsWith( resourceID, ".spawns.xml" ); }
         static bool isTelemetrySchema( sw::string_view resourceID ) { return endsWith( resourceID, ".telemetry.xml" ); }
         static bool isUserSettingsSchema( sw::string_view resourceID ) { return endsWith( resourceID, ".settings.xml" ); }
         static bool isPhysicsSettings( sw::string_view resourceID ) { return endsWith( resourceID, "physicssettings.xml" ); }
@@ -134,8 +110,6 @@ namespace
             sw::AnimationGraphAsset graph;
             return graph.loadFromFile( resourceID ) && graph._listNode.empty() == false;
         }
-        static bool isElementRules( sw::string_view resourceID ) { return endsWith( resourceID, ".elements.xml" ); }
-        static bool isInteractions( sw::string_view resourceID ) { return endsWith( resourceID, ".interactions.xml" ); }
         static bool isTileSet( sw::string_view resourceID ) { return endsWith( resourceID, ".tileset.xml" ); }
         static bool isTileMap( sw::string_view resourceID ) { return endsWith( resourceID, ".tilemap.xml" ); }
         static bool isRender2DSettings( sw::string_view resourceID ) { return endsWith( resourceID, "/data/render2d.xml" ); }
@@ -451,59 +425,14 @@ namespace
         static bool isVisemeTrack( sw::string_view resourceID ) { return endsWith( resourceID, sw::VisemeTrack::kExtension ); }
         static bool isFacialRig( sw::string_view resourceID ) { return endsWith( resourceID, sw::FacialRig::kExtension ); }
 
-        // 게임 데이터 — 키트 카탈로그가 읽는다(게임 모듈은 읽은 정의를 조립만 한다). 파일 이름은 게임이 여는 그대로다.
+        // 엔진 카탈로그(`XMLCatalog`) 로더입니다. 게임 데이터(키트 · 기반 카탈로그)는 각자의 `*DataKind.cpp` 가 `SW_RESOURCE_DATA_KIND` 로 올린 종류를 `ResourceDataKindRegistry` 에서 찾습니다.
         template <typename TCatalog>
         [[nodiscard]] static bool loadCatalog( const sw::string& resourceID )
         {
-            TCatalog catalog;
-            return catalog.loadFromResource( resourceID );
-        }
-        static bool isGameData( sw::string_view resourceID, sw::string_view fileName ) { return startsWith( resourceID, "game/" ) && endsWith( resourceID, fileName ); }
-        static bool isAbilities( sw::string_view resourceID ) { return isGameData( resourceID, "/data/abilities.xml" ); }
-        static bool isCrops( sw::string_view resourceID ) { return isGameData( resourceID, "/data/crops.xml" ); }
-        static bool isCreatures( sw::string_view resourceID ) { return isGameData( resourceID, "/data/creatures.xml" ); }
-        static bool isFriendship( sw::string_view resourceID ) { return isGameData( resourceID, "/data/friendship.xml" ); }
-        static bool isQuests( sw::string_view resourceID ) { return isGameData( resourceID, "/data/quests.xml" ); }
-        static bool isCity( sw::string_view resourceID ) { return isGameData( resourceID, "/data/city.xml" ); }
-        static bool isWeapons( sw::string_view resourceID ) { return isGameData( resourceID, "/data/weapons.xml" ); }
-        static bool isRTSUnits( sw::string_view resourceID ) { return isGameData( resourceID, "/data/units.xml" ); }
-        static bool isVoxelBlocks( sw::string_view resourceID ) { return isGameData( resourceID, "/data/blocks.xml" ); }
-        static bool isCoasters( sw::string_view resourceID ) { return isGameData( resourceID, "/data/coasters.xml" ); }
-        static bool isParkLayout( sw::string_view resourceID ) { return isGameData( resourceID, "/data/rides.xml" ); }
-        static bool isGameSettings( sw::string_view resourceID ) { return isGameData( resourceID, "/data/gamesettings.xml" ); }
-        static bool isItems( sw::string_view resourceID ) { return isGameData( resourceID, "/data/items.xml" ); }
-        static bool isAppearanceData( sw::string_view resourceID )
-        {
-            return startsWith( resourceID, "game/" ) && resourceID.find( "/data/appearance/" ) != sw::string_view::npos && endsWith( resourceID, ".xml" );
-        }
-        /** @brief 외형 데이터는 폴더 한 벌로 읽고 서로 대조한다 — 아이템은 같은 게임의 `data/items.xml` 이다. 파일마다 폴더 전체를 읽는다(작다). */
-        [[nodiscard]] static bool loadAppearanceData( const sw::string& resourceID )
-        {
-            const sw::string folder    = sw::FileUtil::getDirectoryPart( resourceID );
-            const sw::string itemsPath = sw::FileUtil::joinPath( sw::FileUtil::getDirectoryPart( sw::FileUtil::trimTrailingSlashes( folder ) ), "items.xml" );
-            sw::ItemCatalog  items;
-            if ( items.loadFromResource( itemsPath ) == false )
-                return false;
-            sw::AppearanceDatabase database;
-            return database.loadFromFolder( folder, &items );
-        }
-        [[nodiscard]] static bool loadGameSettings( const sw::string& resourceID )
-        {
-            sw::GameSettings settings;
-            return settings.loadFromResource( resourceID );
-        }
-        /** @brief 공원 배치는 같은 폴더의 코스터 레이아웃(`coasters.xml`)을 가리킨다 — 그것을 먼저 읽는다. */
-        [[nodiscard]] static bool loadParkLayout( const sw::string& resourceID )
-        {
-            const sw::string         folder = sw::FileUtil::getDirectoryPart( resourceID );
-            sw::CoasterLayoutCatalog layouts;
-            if ( layouts.loadFromResource( sw::FileUtil::joinPath( folder, "coasters.xml" ) ) == false )
-                return false;
-            sw::ParkLayout layout;
-            return layout.loadFromResource( resourceID, layouts );
+            return sw::ResourceDataKindUtil::loadCatalog<TCatalog>( resourceID );
         }
 
-        /** @brief 데이터 종류 표입니다. 앞의 줄이 먼저 맞습니다. */
+        /** @brief 엔진 데이터 종류 표입니다. 앞의 줄이 먼저 맞습니다. 게임 데이터 카탈로그는 이 표가 아니라 `ResourceDataKindRegistry` 에 있습니다. */
         static constexpr DataKind kArrDataKind[] = {
             {              "scene",               &isScene,                                         &loadScene},
             {             "prefab",              &isPrefab,                                        &loadPrefab},
@@ -515,32 +444,14 @@ namespace
             {           "material",            &isMaterial,                                      &loadMaterial},
             {         "spriteclip",          &isSpriteClip,                                    &loadSpriteClip},
             {           "sequence",            &isSequence,                                      &loadSequence},
-            {      "camerapresets",       &isCameraPresets,              &loadCatalog<sw::CameraPresetCatalog>},
             {           "render2d",    &isRender2DSettings,                              &loadRender2DSettings},
             {            "tileset",             &isTileSet,                                       &loadTileSet},
             {            "tilemap",             &isTileMap,                                       &loadTileMap},
-            {       "elementrules",        &isElementRules,                 &loadCatalog<sw::ElementRuleTable>},
-            {       "interactions",        &isInteractions,               &loadCatalog<sw::InteractionCatalog>},
             {    "physicssettings",     &isPhysicsSettings,                               &loadPhysicsSettings},
             {    "navmeshsettings",     &isNavMeshSettings,                  &loadCatalog<sw::NavMeshSettings>},
             {       "physicsasset",        &isPhysicsAsset,                                  &loadPhysicsAsset},
-            {          "schedules",           &isSchedules,                  &loadCatalog<sw::ScheduleCatalog>},
-            {         "aidirector",          &isAIDirector,                &loadCatalog<sw::AIDirectorProfile>},
-            {         "spawntable",          &isSpawnTable,                       &loadCatalog<sw::SpawnTable>},
             {    "telemetryschema",     &isTelemetrySchema,                  &loadCatalog<sw::TelemetrySchema>},
             {       "usersettings",  &isUserSettingsSchema,                            &loadUserSettingsSchema},
-            {          "abilities",           &isAbilities,                   &loadCatalog<sw::AbilityCatalog>},
-            {              "crops",               &isCrops,                      &loadCatalog<sw::CropCatalog>},
-            {          "creatures",           &isCreatures,              &loadCatalog<sw::CreatureLifeCatalog>},
-            {         "friendship",          &isFriendship,                &loadCatalog<sw::ReputationCatalog>},
-            {             "quests",              &isQuests,                     &loadCatalog<sw::QuestCatalog>},
-            {               "city",                &isCity,                      &loadCatalog<sw::CityCatalog>},
-            {            "weapons",             &isWeapons,                    &loadCatalog<sw::WeaponCatalog>},
-            {           "rtsunits",            &isRTSUnits,                       &loadCatalog<sw::RTSCatalog>},
-            {        "voxelblocks",         &isVoxelBlocks,                &loadCatalog<sw::VoxelBlockCatalog>},
-            {           "coasters",            &isCoasters,             &loadCatalog<sw::CoasterLayoutCatalog>},
-            {         "parklayout",          &isParkLayout,                                    &loadParkLayout},
-            {       "gamesettings",        &isGameSettings,                                  &loadGameSettings},
             {        "socketkinds",         &isSocketKinds,                  &loadCatalog<sw::SocketKindTable>},
             {            "sockets",             &isSockets,                                       &loadSockets},
             {      "referencepose",       &isReferencePose,            &loadCatalog<sw::ReferencePoseOverride>},
@@ -549,8 +460,6 @@ namespace
             {            "partfit",             &isPartFit,                                       &loadPartFit},
             {    "surfacechannels",     &isSurfaceChannels,              &loadCatalog<sw::SurfaceChannelTable>},
             {        "destruction",  &isDestructionProfile,               &loadCatalog<sw::DestructionProfile>},
-            {              "items",               &isItems,                      &loadCatalog<sw::ItemCatalog>},
-            {         "appearance",      &isAppearanceData,                                &loadAppearanceData},
             {           "skeleton",            &isSkeleton,                                      &loadSkeleton},
             {          "animgraph",      &isAnimationGraph,                                &loadAnimationGraph},
             {         "audiomixer",          &isAudioMixer,                   &loadCatalog<sw::AudioMixerDesc>},
@@ -680,15 +589,48 @@ namespace
             return endsWith( resourceID, ".xml" ) || endsWith( resourceID, ".json" ) || endsWith( resourceID, ".material" );
         }
 
-        /** @brief @p resourceID 의 종류입니다. 표에 없으면 nullptr 입니다. */
-        static const DataKind* findKind( sw::string_view resourceID )
+        /** @brief 한 파일을 읽는 종류입니다. 엔진 표의 줄이거나 레지스트리에 올라온 카탈로그 종류입니다. */
+        struct ResolvedKind
         {
+            const utf8* _pLabel{ nullptr };
+            bool ( *_pLoad )( const sw::string& resourceID ){ nullptr };
+        };
+
+        /**
+         * @brief @p resourceID 의 종류를 찾습니다. 엔진 표는 앞의 줄이 먼저 맞고, 그 뒤에 레지스트리를 봅니다.
+         * @details 한 파일은 한 종류여야 한다 — 엔진 표와 레지스트리가 같이 맞거나 레지스트리 종류가 둘 이상 맞으면 @p outConflict 에 이유를 적고 false 를 반환합니다.
+         *          맞는 종류가 없으면 true 를 반환하며 @p outKind 의 `_pLoad` 가 nullptr 입니다.
+         */
+        static bool findKind( sw::string_view resourceID, ResolvedKind& outKind, sw::string& outConflict )
+        {
+            outKind = ResolvedKind{};
+            outConflict.clear();
+            sw::vector<const sw::ResourceDataKind*> listRegistered;
+            sw::ResourceDataKindRegistry::get().collectMatches( resourceID, listRegistered );
             for ( const DataKind& kind : kArrDataKind )
             {
-                if ( kind._pIsKind( resourceID ) )
-                    return &kind;
+                if ( kind._pIsKind( resourceID ) == false )
+                    continue;
+                if ( listRegistered.empty() == false )
+                {
+                    outConflict = sw::string( "엔진 표의 '" ) + kind._pLabel + "' 와 등록된 종류 '" + listRegistered[0]->_pLabel + "' 가 같은 파일에 맞습니다";
+                    return false;
+                }
+                outKind._pLabel = kind._pLabel;
+                outKind._pLoad  = kind._pLoad;
+                return true;
             }
-            return nullptr;
+            if ( listRegistered.size() > 1 )
+            {
+                outConflict = sw::string( "등록된 종류 '" ) + listRegistered[0]->_pLabel + "' 와 '" + listRegistered[1]->_pLabel + "' 가 같은 파일에 맞습니다";
+                return false;
+            }
+            if ( listRegistered.size() == 1 )
+            {
+                outKind._pLabel = listRegistered[0]->_pLabel;
+                outKind._pLoad  = listRegistered[0]->_pLoad;
+            }
+            return true;
         }
     };
 } // namespace
@@ -728,14 +670,17 @@ SW_TEST_CASE( ResourceDataSchemaTest, EveryResourceDataFileLoadsWithoutUnknownNa
             continue;
 #endif
 
-        const ResourceDataSchemaInternal::DataKind* pKind = ResourceDataSchemaInternal::findKind( resourceID );
-        SW_EXPECT_TRUE_MSG( pKind != nullptr, ( "종류 표에 없는 데이터 파일입니다: " + resourceID ).c_str() );
-        if ( pKind == nullptr )
+        ResourceDataSchemaInternal::ResolvedKind kind;
+        sw::string                               conflict;
+        const bool                               bUnambiguous = ResourceDataSchemaInternal::findKind( resourceID, kind, conflict );
+        SW_EXPECT_TRUE_MSG( bUnambiguous, ( "한 파일이 두 종류에 맞습니다: " + resourceID + " - " + conflict ).c_str() );
+        SW_EXPECT_TRUE_MSG( kind._pLoad != nullptr || bUnambiguous == false, ( "종류 표에 없는 데이터 파일입니다: " + resourceID ).c_str() );
+        if ( bUnambiguous == false || kind._pLoad == nullptr )
             continue;
 
         test::ScopedLogCollector logs;
-        const bool               bLoaded = pKind->_pLoad( resourceID );
-        SW_EXPECT_TRUE_MSG( bLoaded, ( sw::string( pKind->_pLabel ) + " 를 읽지 못했습니다: " + resourceID + logs.joined() ).c_str() );
+        const bool               bLoaded = kind._pLoad( resourceID );
+        SW_EXPECT_TRUE_MSG( bLoaded, ( sw::string( kind._pLabel ) + " 를 읽지 못했습니다: " + resourceID + logs.joined() ).c_str() );
         sw::string warnings = ResourceDataSchemaInternal::removeGameModuleTypeWarnings( logs.joined(), listGameTypeName );
         if ( ResourceDataSchemaInternal::isValidationFixture( resourceID ) )
         {
