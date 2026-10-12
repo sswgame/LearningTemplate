@@ -277,6 +277,10 @@ Jolt 의 `VehicleConstraint` 와 `WheeledVehicleController` 를 스텝 리스너
 **연속 바디의 후보 범위를 먼 이동 바디로 넓히지 마세요.** 후보 범위는 셀 하나 이내로 움직인 바디만으로 넓히고, 멀리 움직인 바디(`isFarMover`)는 하나씩 따로 계산합니다.
 하나가 멀리 끌려가면 모든 연속 바디가 월드 전체를 훑게 되기 때문입니다.
 
+**겹침 월드의 버퍼를 지역 변수로 되돌리지 마세요.** `step` 은 바디 사본, 먼 이동 바디, 후보를 멤버 버퍼에 담아 프레임마다 할당하지 않습니다(배타 잠금 안이라 하나면 됩니다).
+`queryAABB` 와 `sweepTest` 는 여러 스레드가 함께 부르므로 후보 버퍼를 스레드 슬롯마다 둡니다(`engine::getParallelScratchSlot`). 엔진 서비스가 없으면 모든 스레드가 슬롯 0 을 받으므로 지역 버퍼로 돌아갑니다.
+바디 사본은 없애면 안 됩니다. 테이블을 도는 동안 다른 바디를 꺼내면 같은 잠금을 다시 잡아 교착합니다. step 시간은 `GT.Scene.tick.physics.overlapStep` 구간과 `PhysicsBenchTest` 로 잽니다.
+
 **셀 순회 변수는 `int64` 로 두세요.** 셀 범위는 `CellRange` 하나로 계산합니다. `int32` 순회 변수가 `MathUtil::kMaxInt32` 에서 넘치면 루프가 끝나지 않습니다.
 `toCellCoord` 는 `float64` 로 나눈 뒤 정수로 바꿉니다. 공간 색인 규약은 [Spatial](../../Core/Spatial/README.md)에 있습니다.
 
