@@ -154,6 +154,8 @@ HP 바가 그 리스너를 상속해 알림을 받습니다.
 
 **의도는 기록하고 재생할 수 있습니다.** `ControlSystem::setRecording` 을 켜면 폰마다 의도를 기록하고 `.swintent` 파일로 씁니다.
 키 바인딩이 달라도 의도는 같으므로 같은 결과가 나옵니다. 다만 시작 상태와 난수 씨앗은 기록하지 않으므로, 같은 씬을 처음부터 같은 고정 프레임 시간으로 돌릴 때만 같은 궤적이 나옵니다.
+재생은 `IntentPlayback::startFromFile`(또는 읽어 둔 기록을 `start`)이 시작합니다. 트랙마다 같은 이름의 폰에 기록 조종자(`IntentTrackControllerComponent`)를 세워 다음 틱부터 냅니다. 씬에 폰이 없는 트랙은 건너뛰고 셉니다.
+재생 UI, 킬캠 카메라, 되감기와 기록을 켜는 명령줄 · 에디터 단추는 이 진입점을 부르는 쪽의 일이며 아직 없습니다.
 
 자동화 시나리오는 행동 층 단계 둘을 씁니다.
 `<Intent pawn="Hero" move="0,1" buttons="Fire" frames="30"/>` 은 그 폰에 의도를 직접 넣고, `<Possess controller="Player" pawn="Horse"/>` 는 빙의를 옮깁니다.
