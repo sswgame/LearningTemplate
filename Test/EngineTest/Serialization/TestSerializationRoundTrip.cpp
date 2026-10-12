@@ -10,7 +10,6 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Object/Component/Component.h"
-#include "Engine/Object/Component/MissingComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
@@ -166,10 +165,6 @@ SW_TEST_CASE( SerializationRoundTripTest, EveryResourceComponentRewritesToTheSam
             {
                 const sw::TypeInfo* pType = pComponent->getTypeInfo();
                 if ( pType == nullptr || SerializationRoundTripInternal::hasOwnedPointerContainer( *pType ) )
-                    continue;
-                // 맡아 둔 원문(`_originalText`)이 줄바꿈으로 끝난다 — XML 문자열 속성은 읽을 때 끝 공백을 잘라 고정점이 아니다(백로그 1-1).
-                // 이 컴포넌트는 직렬화기가 아니라 오브젝트 상태 직렬화기가 원문을 그대로 다시 쓴다.
-                if ( pType == sw::MissingComponent::StaticType() )
                     continue;
                 ++componentCount;
                 const sw::string mismatch = SerializationRoundTripInternal::findRewriteMismatch( pComponent, *pType );

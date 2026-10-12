@@ -23,15 +23,21 @@ namespace sw
     {
         struct SerializeContextInternal
         {
+            /** @brief 양끝의 큰따옴표 한 쌍을 벗깁니다. 공백은 건드리지 않습니다(글 칸은 끝 공백도 값이라 왕복이 고정점이어야 한다). */
+            static string_view stripQuotes( string_view strView )
+            {
+                if ( strView.size() >= 2 && strView.front() == '"' && strView.back() == '"' )
+                {
+                    strView.remove_prefix( 1 );
+                    strView.remove_suffix( 1 );
+                }
+                return strView;
+            }
+
+            /** @brief 공백을 자르고 큰따옴표를 벗깁니다. 이름 칸(`hashed_string`)용입니다 - 이름의 앞뒤 공백은 값이 아니다. */
             static string_view unquote( string_view strView )
             {
-                string_view trimmed = StringUtil::trim( strView );
-                if ( trimmed.size() >= 2 && trimmed.front() == '"' && trimmed.back() == '"' )
-                {
-                    trimmed.remove_prefix( 1 );
-                    trimmed.remove_suffix( 1 );
-                }
-                return trimmed;
+                return stripQuotes( StringUtil::trim( strView ) );
             }
 
             template <typename T>
@@ -402,7 +408,7 @@ namespace sw
             { return string( static_cast<const string*>( pPtr )->c_str() ); };
             TextReadFn strReadTxt = []( void* pPtr, string_view strView )
             {
-                *static_cast<string*>( pPtr ) = string( SerializeContextInternal::unquote( strView ) );
+                *static_cast<string*>( pPtr ) = string( SerializeContextInternal::stripQuotes( strView ) );
                 return true;
             };
 
