@@ -70,14 +70,14 @@ S1(UI 화면 스위치 등록) · S2(자동화 엔진 단계 등록) · S4(`RHIB
 - **S3**(서버 `pause`/`resume`/`step` → 개발 명령): Shipping 이 `quit`/`stop`/`status`/`help` 를 직접 처리해야 해 한 함수에 두 방식이 섞이고(반쪽 이전), 쓰는 곳이 `ServerApp` 하나이며, 에디터가 같은 이름 `pause`·`stop`·`step` 을 이미 개발 명령(플레이 세션 뜻)으로 등록해 전역 레지스트리에서 충돌한다. 두 `quit` 은 뜻이 달라(표준 입력 루프 bool ↔ `ShutdownSignal`) 합치지 않는다.
 - **S5 의 실행 함수 칸**: `bSkipEffect` 만 표 비트(`kSkipsWithoutPostProcess`)로 옮겼다. 전용 실행 switch 9 case 를 표로 옮기면 쿠커 · 검증이 읽는 데이터가 `FrameRenderer` 에 의존하고(D 위반) 새 패스를 더할 때 고칠 곳도 줄지 않는다.
 - **S8**(`IProfilerTab`): 탭들이 패널 상태(`_scopeHistory` · 타임라인 · 불러온 트레이스)를 나눠 써서 탭만 떼면 반쪽 이전이고, 함수 표만 두면 고칠 곳 수가 같다. "`ProfilerPanel`(1243 줄)을 탭 상태 객체와 `ProfilerTabContext` 로 나누기" 를 묶음 3 후보로 올린다.
-**후속**: S12 가 `IEditor.h` 의 `registerTexture`/`unregisterTexture` 순수 가상 둘과 `ImGuiEditor` 구현(`ImGuiEditor.cpp` 671 ~ 683 줄)을 함께 지운다(호출처 없음). `UIAutomationSteps::ensureLinked` 호출(`UISystem::initialize`)은 Engine 이 통째 링크라 불필요해 보인다. `Joint2DComponent` 는 Cone 을 고르면 `createJoint` 를 프레임마다 다시 시도해 오류 로그를 반복한다.
+**후속**: `UIAutomationSteps::ensureLinked` 호출(`UISystem::initialize`)은 Engine 이 통째 링크라 불필요해 보인다. `Joint2DComponent` 는 Cone 을 고르면 `createJoint` 를 프레임마다 다시 시도해 오류 로그를 반복한다.
 
-### 묶음 2 — D(전역 getter 직접 호출을 주입으로)
-| 단위 | 대상 | 방향 |
-|---|---|---|
-| S10 | `Scene.cpp` · `SceneManager.cpp`(`engine::get*()` 18곳), `ScenePhysics.cpp:28`, `SceneAudio.cpp:78`, `SpriteInstanceBatch.cpp`, `AnimNotifyHandlers.cpp` | 서비스 묶음을 생성자 · 초기화 인자로(`SceneAudio::_pEngineOverride` 가 이미 있는 모양으로 통일), 포인터는 한 번 캐시 |
-| S11 | `BugItReport.cpp:293-359` | `BugItInputs` 주입 + 수집기 둘로 |
-| S12 | `ImGuiEditor.cpp:467-580` (`updateUI`) | 이름 · 순서가 있는 프레임 단계 등록부(에셋 리로드 → 패널 그리기 → 셀프 테스트 순서는 `_order` 로 명시). 프레임당 호출 5~8 회 늘어 `GT.Editor.*` 로 측정 |
+### 묶음 2 — 끝남 (2026-10-12)
+S10(`SceneEngineServices` 주입) · S11(`BugItInputs` 주입, `makeInputs` / `capture`) · S12(에디터 프레임 단계 등록부 `EditorFrameStep` + 호출처 없던 `IEditor` 가상 둘 삭제)를 옮겼다. 검증: Debug 경고 0, 린트 63/63, `-L nogpu` 49/49, `-L hostgpu` 7/7.
+**옮기지 않은 것**:
+- **S10 의 인자 없는 생성자**(`Scene( name )` · `GameObjectManager()` · `SceneManager()`): 호출처가 테스트 · 쿠커 · 프리팹 원형 등 약 90 곳과 500 곳이다. 이 생성자들은 만들 때 `makeFromBoundEngine()` 으로 묶음을 한 번 읽고 클래스 안 접근은 모두 묶음을 거치므로 반쪽 이전이 아니다(`_pEngineOverride` 와 같은 "주입, 없으면 기본"). 범위 밖에 같은 패턴이 남았다: `FacialAnimationComponent` · `WidgetComponent` · `UISystem` · `FontSystem` 의 `getBoundEngineServices()`, `SceneCooker` · `SceneNavigationCooker` · `PortraitRenderer` 의 인자 없는 `Scene` 생성.
+- **S12 의 프레임 앞 정리 · 프레임 열기 · 프레임 닫기**: ImGui 순서와 렌더 스레드 인계(`DrawSnapshotHandoff`)가 위치를 정하는 셸의 프레임 계약이라 `updateUI` 에 두고 이유를 주석으로 적었다.
+**측정할 것**: S12 의 `GT.Editor.updateUI` p50/p99 전후(Release · `-EnableEditor -dx12 -gv_profileFrames=600` · 3 회, 전의 `commandsAndWatchers + panels` 대 후의 `frameSteps`, VSync 에 붙지 않았는지 먼저).
 
 ### 묶음 3 — S(큰 클래스 나누기) — 하나씩, 핫 경로는 측정 후
 | 단위 | 대상(줄 수) | 방향 | 핫 경로 |
