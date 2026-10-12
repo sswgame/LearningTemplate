@@ -14,12 +14,30 @@
 				<AudioClipEntry _path="game/abilityarena/sounds/error_004.ogg" />
 			</_listClip>
 		</AudioEventDesc>
-		<AudioEventDesc _name="EnemyFell" _bus="sfx" _priority="50" _cooldownSeconds="0.05" _maxInstances="3" _steal="Quietest" _volumeDbMin="-3" _volumeDbMax="0" _pitchMin="-1.5" _pitchMax="1">
+		<AudioEventDesc _name="EnemyFell"
+		                _bus="sfx"
+		                _priority="50"
+		                _cooldownSeconds="0.05"
+		                _maxInstances="3"
+		                _steal="Quietest"
+		                _volumeDbMin="-3"
+		                _volumeDbMax="0"
+		                _pitchMin="-1.5"
+		                _pitchMax="1">
 			<_listClip>
 				<AudioClipEntry _path="game/abilityarena/sounds/impact_punch_heavy_000.ogg" />
 			</_listClip>
 		</AudioEventDesc>
-		<AudioEventDesc _name="ProjectileHit" _bus="sfx" _priority="40" _cooldownSeconds="0.04" _maxInstances="4" _steal="Oldest" _volumeDbMin="-4" _volumeDbMax="0" _pitchMin="-1.5" _pitchMax="1.5">
+		<AudioEventDesc _name="ProjectileHit"
+		                _bus="sfx"
+		                _priority="40"
+		                _cooldownSeconds="0.04"
+		                _maxInstances="4"
+		                _steal="Oldest"
+		                _volumeDbMin="-4"
+		                _volumeDbMax="0"
+		                _pitchMin="-1.5"
+		                _pitchMax="1.5">
 			<_listClip>
 				<AudioClipEntry _path="game/abilityarena/sounds/impact_punch_medium_000.ogg" />
 			</_listClip>

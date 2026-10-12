@@ -609,9 +609,10 @@ SW_TEST_CASE( InputMapTest, EditorSavedDefinitionReloadsWithTheSameBindings )
     edited.bindVector2D( "Move", sw::Key::W, sw::Key::S, sw::Key::A, sw::Key::D, 0.2f, "Gameplay" );
     edited.bindGamepadStick2D( "Look", sw::GamepadStick::Right, 0.2f, "Gameplay", 1, 0.9f, 1.5f );
     edited.bindChord( "QuickSave", sw::Key::LeftControl, sw::Key::S, sw::ActionTrigger::Released, "Debug" );
-    edited.bindMouseDelta( "Look", 2.5f, "Gameplay" );
+    // 저장 형식은 같은 액션의 바인딩을 종류별로(<stick> 먼저, <mouseDelta> 나중) 묶는다 — 스틱을 마우스 델타 앞에 모아야 다시 읽은 순서가 같다.
     edited.bindGamepadStick2D( "Look", sw::GamepadStick::Right, 0.15f, "Gameplay", 0, 1.0f, 1.0f, sw::float2{ 600.0f, -600.0f }, true ); // 시점 스틱: 배율 · 프레임 시간 곱
-    edited.createAction( "Steer", sw::InputActionValueType::Axis1D );                                                                    // 바인딩 없이 이름만 만든 액션(패널의 "Add Action")
+    edited.bindMouseDelta( "Look", 2.5f, "Gameplay" );
+    edited.createAction( "Steer", sw::InputActionValueType::Axis1D ); // 바인딩 없이 이름만 만든 액션(패널의 "Add Action")
 
     const sw::string savedPath = test::makeTempPath( "edited.input.xml" );
     SW_ASSERT_TRUE( edited.saveToResource( savedPath ) );

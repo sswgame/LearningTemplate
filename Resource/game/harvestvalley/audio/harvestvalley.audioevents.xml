@@ -9,12 +9,30 @@
 				<AudioClipEntry _path="game/harvestvalley/sounds/select_002.ogg" />
 			</_listClip>
 		</AudioEventDesc>
-		<AudioEventDesc _name="Plant" _bus="sfx" _priority="50" _cooldownSeconds="0.08" _maxInstances="2" _steal="Oldest" _volumeDbMin="-3" _volumeDbMax="0" _pitchMin="-1.5" _pitchMax="1.5">
+		<AudioEventDesc _name="Plant"
+		                _bus="sfx"
+		                _priority="50"
+		                _cooldownSeconds="0.08"
+		                _maxInstances="2"
+		                _steal="Oldest"
+		                _volumeDbMin="-3"
+		                _volumeDbMax="0"
+		                _pitchMin="-1.5"
+		                _pitchMax="1.5">
 			<_listClip>
 				<AudioClipEntry _path="game/harvestvalley/sounds/drop_002.ogg" />
 			</_listClip>
 		</AudioEventDesc>
-		<AudioEventDesc _name="Harvest" _bus="sfx" _priority="55" _cooldownSeconds="0.08" _maxInstances="3" _steal="Oldest" _volumeDbMin="-3" _volumeDbMax="0" _pitchMin="-1" _pitchMax="2">
+		<AudioEventDesc _name="Harvest"
+		                _bus="sfx"
+		                _priority="55"
+		                _cooldownSeconds="0.08"
+		                _maxInstances="3"
+		                _steal="Oldest"
+		                _volumeDbMin="-3"
+		                _volumeDbMax="0"
+		                _pitchMin="-1"
+		                _pitchMax="2">
 			<_listClip>
 				<AudioClipEntry _path="game/harvestvalley/sounds/pluck_001.ogg" />
 			</_listClip>

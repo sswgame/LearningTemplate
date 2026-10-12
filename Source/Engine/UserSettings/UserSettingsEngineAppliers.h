@@ -112,6 +112,6 @@ namespace sw
         DisplaySettingsRequest _displayRequest;
         vector<int2>           _listDisplayResolution; ///< 모니터 모드의 해상도(`collectResolutions` 가 처음 한 번 읽는다)
         bool                   _bDisplayDirty;
-        bool                   _bResolutionProbed{ false };
+        bool                   _bResolutionProbed;
     };
 } // namespace sw

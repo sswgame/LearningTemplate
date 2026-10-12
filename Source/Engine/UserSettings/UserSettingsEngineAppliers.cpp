@@ -44,7 +44,9 @@ namespace sw
     UserSettingsEngineAppliers::UserSettingsEngineAppliers()
         : _targets{}
         , _displayRequest{}
+        , _listDisplayResolution{}
         , _bDisplayDirty{ false }
+        , _bResolutionProbed{ false }
     {
     }
 

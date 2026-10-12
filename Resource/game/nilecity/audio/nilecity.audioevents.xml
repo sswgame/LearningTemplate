@@ -19,7 +19,16 @@
 				<AudioClipEntry _path="game/nilecity/sounds/error_002.ogg" />
 			</_listClip>
 		</AudioEventDesc>
-		<AudioEventDesc _name="Evolved" _bus="sfx" _priority="55" _cooldownSeconds="0.1" _maxInstances="3" _steal="Quietest" _volumeDbMin="-3" _volumeDbMax="0" _pitchMin="-1" _pitchMax="2">
+		<AudioEventDesc _name="Evolved"
+		                _bus="sfx"
+		                _priority="55"
+		                _cooldownSeconds="0.1"
+		                _maxInstances="3"
+		                _steal="Quietest"
+		                _volumeDbMin="-3"
+		                _volumeDbMax="0"
+		                _pitchMin="-1"
+		                _pitchMax="2">
 			<_listClip>
 				<AudioClipEntry _path="game/nilecity/sounds/drop_003.ogg" />
 			</_listClip>

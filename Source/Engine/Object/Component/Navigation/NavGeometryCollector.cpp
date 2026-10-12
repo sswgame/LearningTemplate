@@ -27,6 +27,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Reflection/ReflectionTypes.h"
 
 namespace sw
 {
@@ -112,9 +113,13 @@ namespace sw
                 bool bFound = false;
                 for ( const NavGeometryContribution* pContribution : NavGeometryContributorRegistry::getAll() )
                 {
-                    object.forEachComponentOfType<Component>( pContribution->_pGetType(), [&]( Component* pComponent )
+                    const TypeInfo* pKindType = pContribution->_pGetType();
+                    if ( pKindType == nullptr )
+                        continue;
+                    object.forEachComponent( [&]( Component* pComponent )
                     {
-                        bFound = bFound || pComponent->isActive();
+                        const TypeInfo* pComponentType = pComponent->getTypeInfo();
+                        bFound                         = bFound || ( pComponent->isActive() && pComponentType != nullptr && pComponentType->isDerivedFrom( pKindType ) );
                     } );
                 }
                 return bFound;
@@ -125,9 +130,14 @@ namespace sw
             {
                 for ( const NavGeometryContribution* pContribution : NavGeometryContributorRegistry::getAll() )
                 {
-                    object.forEachComponentOfType<Component>( pContribution->_pGetType(), [&]( Component* pComponent )
+                    // `castTo<Component>( Component*, 타입 )` 은 To 와 From 이 같아 검사 없이 항상 성공한다 — 등록 종류인지 타입으로 직접 거른다.
+                    const TypeInfo* pKindType = pContribution->_pGetType();
+                    if ( pKindType == nullptr )
+                        continue;
+                    object.forEachComponent( [&]( Component* pComponent )
                     {
-                        if ( pComponent->isActive() )
+                        const TypeInfo* pComponentType = pComponent->getTypeInfo();
+                        if ( pComponent->isActive() && pComponentType != nullptr && pComponentType->isDerivedFrom( pKindType ) )
                             pContribution->_pContribute( *pComponent, area, outGeometry );
                     } );
                 }
