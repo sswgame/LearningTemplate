@@ -27,12 +27,17 @@ namespace sw
     class GameObjectManager;
     class IPhysicsDebugRenderer;
     class PhysicsComponent;
+    class PhysicsSystem;
 
     /** @class ScenePhysics @brief 씬 하나의 강체 물리입니다. 파일 머리말 참고. */
     class SW_API ScenePhysics
     {
     public:
-        ScenePhysics();
+        /**
+         * @brief 물리 서비스 @p pPhysicsSystem 으로 씬을 만들 물리를 둡니다(소유하지 않음). 오브젝트 매니저가 자기 서비스 묶음에서 넘깁니다.
+         * @param pPhysicsSystem nullptr 이면 물리 씬을 만들지 않습니다(설정 표도 없다).
+         */
+        explicit ScenePhysics( PhysicsSystem* pPhysicsSystem );
         ~ScenePhysics();
 
         ScenePhysics( const ScenePhysics& )            = delete;
@@ -49,7 +54,7 @@ namespace sw
         /** @brief 3D · 2D 씬의 바디 · 캐릭터를 선으로 냅니다. */
         void drawDebug( IPhysicsDebugRenderer& renderer ) const;
 
-        /** @brief 3D 씬입니다. 처음 부를 때 물리 서비스(`PhysicsSystem`)로 만듭니다. 서비스가 없으면 nullptr 입니다. */
+        /** @brief 3D 씬입니다. 처음 부를 때 생성자로 받은 물리 서비스(`PhysicsSystem`)로 만듭니다. 서비스가 없으면 nullptr 입니다. */
         IPhysicsScene3D* getScene3D();
         /** @brief 2D 씬입니다. 처음 부를 때 만듭니다. */
         IPhysicsScene2D* getScene2D();
@@ -97,7 +102,10 @@ namespace sw
                            bool bIs2D );
         /** @brief 설정 표의 스텝 크기 · 상한을 누적기에 한 번 맞춥니다. */
         void configureOnce();
+        /** @brief 받은 물리 서비스가 있고 올라와 있으면 그것, 아니면 nullptr 입니다. */
+        PhysicsSystem* findInitializedPhysicsSystem() const;
 
+        PhysicsSystem*                _pPhysicsSystem; ///< 생성자로 받은 물리 서비스(빌림)
         unique_ptr<IPhysicsScene3D>   _pScene3D;
         unique_ptr<IPhysicsScene2D>   _pScene2D;
         FixedStepAccumulator          _accumulator;

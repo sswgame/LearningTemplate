@@ -28,6 +28,7 @@
 #include "Engine/Localization/StringTable.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
+#include "Engine/Object/GameObject/SceneEngineServices.h"
 #include "Engine/Physics/PhysicsSystem.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionCore.h"
@@ -225,7 +226,9 @@ namespace
         {
             static sw::EngineInitResult initialize( TestHost& host )
             {
-                return host._pOwned->_pSceneManager->initialize() ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
+                // 앱과 같다 — 표를 묶은 뒤 씬 쪽 묶음을 넘긴다(씬 매니저는 묶기 전에 만들어졌다).
+                const sw::SceneEngineServices services = sw::SceneEngineServices::makeFromBoundEngine();
+                return host._pOwned->_pSceneManager->initialize( services ) ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
             }
             static void shutdown( TestHost& host ) { host._pOwned->_pSceneManager->shutdown(); }
             static void destroy( TestHost& host )

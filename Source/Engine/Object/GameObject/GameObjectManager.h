@@ -35,6 +35,9 @@
 
 namespace sw
 {
+    struct SceneEngineServices;
+
+    class AssetManager;
     class Component;
     class GameObjectManager;
     class SceneComponent;
@@ -47,7 +50,13 @@ namespace sw
         friend class StructuralChangeBuffer; ///< `drain` 이 틱 뒤 시작 줄(`dispatchPendingBeginPlay`)을 돌린다
 
     public:
-        /** @brief 엔진과 모듈의 컴포넌트 팩토리를 등록하며 만듭니다. 오브젝트는 없는 채로 시작합니다. */
+        /**
+         * @brief 엔진 서비스 묶음 @p services 를 받아 만듭니다(씬이 자기 묶음을 넘깁니다). 오브젝트는 없는 채로 시작합니다.
+         * @details 물리 서비스는 `ScenePhysics` 로, 오디오 서비스는 `SceneAudio` 로, 에셋 매니저는 이 매니저에 한 번 들려 씬 안의 코드가
+         *          `findAssetManager` 로 씁니다. 빈 칸은 그 서비스가 없다는 뜻입니다.
+         */
+        explicit GameObjectManager( const SceneEngineServices& services );
+        /** @brief 바인딩된 서비스 표에서 묶음을 한 번 읽어 만듭니다(`SceneEngineServices::makeFromBoundEngine`). 테스트 · 프리팹 원형 같은 손수 만든 매니저용입니다. */
         GameObjectManager();
         /** @brief 등록된 오브젝트를 모두 파괴합니다. */
         ~GameObjectManager();
@@ -313,6 +322,11 @@ namespace sw
         SceneAudio& getSceneAudio() { return _sceneAudio; }
         /** @brief 이 씬의 강체 물리입니다. */
         const ScenePhysics& getScenePhysics() const { return _scenePhysics; }
+        /**
+         * @brief 생성자로 받은 에셋 매니저입니다(빌림). 없으면 nullptr 입니다.
+         * @details 씬 안의 엔진 코드(스프라이트 배치 · 애니메이션 알림)가 전역 조회 대신 씁니다. 게임 모듈은 `game::getService<AssetManager>()` 를 씁니다.
+         */
+        AssetManager* findAssetManager() const { return _pAssetManager; }
         /** @brief 등록 줄(`SW_SCENE_SERVICE`)로 만든 이 씬의 서비스입니다. 이 매니저가 만들지 않은 줄이면 nullptr 입니다. */
         ISceneService* findSceneService( const SceneServiceRegistration& registration ) const;
         /**
@@ -472,6 +486,8 @@ namespace sw
         vector<FrameSystemEntry> _listFrameSystem;
         /** @brief 단계가 도는 동안 뗀 시스템입니다 — 그 단계가 끝난 뒤 놓습니다. */
         vector<unique_ptr<ISceneFrameSystem>> _listRetiredFrameSystem;
+        /** @brief 생성자로 받은 에셋 매니저(빌림)입니다(`findAssetManager`). */
+        AssetManager* _pAssetManager;
         /** @brief `FrameSystems` 단계가 도는 중이면 true 입니다. */
         bool _bRunningFrameSystems;
     };

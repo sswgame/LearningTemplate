@@ -2,7 +2,7 @@
  * @file SceneAudio.h
  * @brief 씬 하나의 오디오 묶기 — 리스너(리스너 컴포넌트, 없으면 게임 카메라) · 에미터 자리와 속도 · 레이캐스트 가림 · 리버브 존 세기를 프레임마다 엔진에 넣습니다.
  * @details `GameObjectManager` 가 소유만 하고(`ScenePhysics` 와 같은 자리), 활성 씬의 틱이 끝난 뒤 `Scene::tick` 이 게임 스레드에서 한 번 부릅니다.
- *          오디오 컴포넌트는 틱하지 않고 여기에 등록합니다. 엔진은 서비스(`engine::getAudioSystem`)의 것이고, 테스트는 `setAudioEngine` 으로 바꿉니다.
+ *          오디오 컴포넌트는 틱하지 않고 여기에 등록합니다. 엔진은 생성자로 받은 오디오 서비스의 것이고, 테스트는 `setAudioEngine` 으로 바꿉니다.
  *
  *          **2D 게임**: 리스너 컴포넌트가 없고 게임 카메라가 직교면 리스너를 `Screen2D`(화면 평면 팬, 반폭 = 직교 높이 × 16/9 ÷ 2)로 둡니다.
  *          **가림**: 3D 물리 씬이 있으면 `PhysicsAudioOcclusionQuery`(레이 셋)로, 프레임마다 에미터 `kOcclusionChecksPerFrame` 개씩 돌아가며 측정합니다.
@@ -26,6 +26,7 @@ namespace sw
     class AudioReverbZoneComponent;
     class CameraComponent;
     class IAudioOcclusionQuery;
+    class IAudioSystem;
 
     /** @class SceneAudio @brief 씬 하나의 오디오 묶기입니다. 파일 머리말 참고. */
     class SW_API SceneAudio
@@ -34,7 +35,11 @@ namespace sw
         /** @brief 한 프레임에 가림을 다시 측정하는 에미터 수입니다(레이 셋씩). */
         static constexpr uint32 kOcclusionChecksPerFrame = 16;
 
-        SceneAudio();
+        /**
+         * @brief 오디오 서비스 @p pAudioSystem 으로 소리를 낼 씬 오디오를 둡니다(소유하지 않음). 오브젝트 매니저가 자기 서비스 묶음에서 넘깁니다.
+         * @param pAudioSystem nullptr 이면 `setAudioEngine` 으로 정한 엔진이 없는 한 아무것도 넣지 않습니다.
+         */
+        explicit SceneAudio( IAudioSystem* pAudioSystem );
         ~SceneAudio();
 
         SceneAudio( const SceneAudio& )            = delete;
@@ -47,10 +52,12 @@ namespace sw
          */
         void update( float32 deltaSeconds, const CameraComponent* pCamera, const IPhysicsScene3D* pScene3D );
 
-        /** @brief 쓸 엔진을 정합니다(테스트). nullptr 이면 서비스의 엔진입니다. */
+        /** @brief 쓸 엔진을 정합니다(테스트). nullptr 이면 생성자로 받은 오디오 서비스의 엔진입니다. */
         void setAudioEngine( AudioEngine* pEngine ) { _pEngineOverride = pEngine; }
-        /** @brief 쓸 엔진입니다. 서비스가 없거나 오디오가 내려가 있으면 nullptr 입니다. */
+        /** @brief 쓸 엔진입니다. 받은 서비스가 없거나 오디오가 내려가 있으면 nullptr 입니다. */
         AudioEngine* findAudioEngine() const;
+        /** @brief 생성자로 받은 오디오 서비스입니다(빌림). 없으면 nullptr 입니다. 씬 안의 코드(애니메이션 알림)가 소리를 낼 때 씁니다. */
+        IAudioSystem* findAudioSystem() const { return _pAudioSystem; }
         /** @brief 가림 질의를 바꿉니다(테스트 · 게임의 다른 기하). nullptr 이면 물리 씬의 레이캐스트입니다. */
         void setOcclusionQuery( const IAudioOcclusionQuery* pQuery ) { _pOcclusionOverride = pQuery; }
         /** @brief 마지막 프레임의 첫 리스너 자리입니다(앰비언트 가장 가까운 점 · 리버브 존 판정). */
@@ -83,6 +90,7 @@ namespace sw
         vector<AudioEmitterComponent*>             _listEmitterSnapshot;     /**< 프레임마다 잠금 밖에서 도는 에미터 사본입니다. */
         vector<ZoneValue>                          _listZoneValue;           /**< 지난 프레임의 스냅샷 세기입니다. */
         vector<ZoneValue>                          _listZoneCurrent;         /**< 이번 프레임의 스냅샷 세기(작업 목록)입니다. */
+        IAudioSystem*                              _pAudioSystem;            /**< 생성자로 받은 오디오 서비스(빌림)입니다. */
         AudioEngine*                               _pEngineOverride;         /**< 테스트가 정한 엔진입니다. */
         const IAudioOcclusionQuery*                _pOcclusionOverride;      /**< 바꾼 가림 질의입니다. */
         float3                                     _primaryListenerPosition; /**< 첫 리스너 자리입니다. */

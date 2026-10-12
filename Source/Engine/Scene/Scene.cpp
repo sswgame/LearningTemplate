@@ -5,7 +5,6 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -36,20 +35,21 @@ namespace sw
         struct SceneInternal
         {
             /**
-             * @brief 기본 머티리얼 경로를 반환합니다(-gv_defaultMaterial 이 있으면 그것, 없으면 엔진 데이터 설정).
+             * @brief 기본 머티리얼 경로를 반환합니다(-gv_defaultMaterial 이 있으면 그것, 없으면 엔진 데이터 설정, 그것도 없으면 빈 문자열).
              */
-            static string resolveDefaultMaterialPath()
+            static string resolveDefaultMaterialPath( const EngineDefaultAssets* pDefaultAssets )
             {
                 // -gv_defaultMaterial 이 있으면 그것이 먼저다(선언은 이 파일 위쪽).
                 if ( gv_defaultMaterial.empty() == false )
                     return gv_defaultMaterial;
-                return engine::getEngineDefaultAssets()._defaultMaterial;
+                return pDefaultAssets != nullptr ? pDefaultAssets->_defaultMaterial : string{};
             }
 
             /**
              * @brief MeshComponent 의 프리미티브 메시와 머티리얼(저장된 참조, 없으면 씬 기본)을 채우고, 잡은 머티리얼을 @p pRHIDevice 로 업로드합니다.
+             * @param pAssetManager 머티리얼 캐시의 업로드 대기를 비울 곳입니다. nullptr 이면 업로드는 건너뜁니다.
              */
-            static void bindSceneMeshDefaults( Scene* pScene, IRHIDevice* pRHIDevice )
+            static void bindSceneMeshDefaults( Scene* pScene, AssetManager* pAssetManager, IRHIDevice* pRHIDevice )
             {
                 if ( pScene == nullptr )
                     return;
@@ -71,7 +71,8 @@ namespace sw
                     if ( pMeshComp->getMaterial() == nullptr && pMeshComp->getRawMaterialInstance() == nullptr && pDefaultMaterial != nullptr )
                         pMeshComp->setMaterial( pDefaultMaterial );
                 } );
-                engine::getAssetManager().getAssetCache<MaterialCache>().initializePending( pRHIDevice );
+                if ( pAssetManager != nullptr )
+                    pAssetManager->getAssetCache<MaterialCache>().initializePending( pRHIDevice );
                 pObjectManager->flushSceneTransforms();
             }
 
@@ -101,14 +102,14 @@ namespace sw
              * @details 프리팹 캐시(`PrefabCache`)가 아니라 부른 쪽의 테이블에 둔다. 원형은 현재 로드된 컴포넌트 타입으로 만드는 것이라 모듈 리로드를 넘겨
              *          보관하면 낡는다.
              */
-            static const string* findPrefabBaseState( unordered_map<string, string>& inoutMapBaseState, const string& prefabPath )
+            static const string* findPrefabBaseState( AssetManager& assetManager, unordered_map<string, string>& inoutMapBaseState, const string& prefabPath )
             {
                 const auto cachedIt = inoutMapBaseState.find( prefabPath );
                 if ( cachedIt != inoutMapBaseState.end() )
                     return cachedIt->second.empty() ? nullptr : &cachedIt->second;
 
                 string             baseState;
-                const PrefabAsset* pPrefab = engine::getAssetManager().getAssetCache<PrefabCache>().loadPrefab( prefabPath );
+                const PrefabAsset* pPrefab = assetManager.getAssetCache<PrefabCache>().loadPrefab( prefabPath );
                 if ( pPrefab != nullptr && PrefabOverrides::makeBaseState( *pPrefab, baseState ) == false )
                 {
                     SW_LOG_WARNING( "Prefab '%#' could not be built as a base state", prefabPath );
@@ -126,10 +127,16 @@ namespace sw
     SW_LOG_CALLER( "Scene" );
 
     Scene::Scene( string_view name )
+        : Scene( name, SceneEngineServices::makeFromBoundEngine() )
+    {
+    }
+
+    Scene::Scene( string_view name, const SceneEngineServices& services )
         : _name{ name }
         , _sourcePath{}
         , _defaultMaterialPath{}
-        , _objectManager{ make_unique<GameObjectManager>() }
+        , _services{ services }
+        , _objectManager{ make_unique<GameObjectManager>( services ) }
         , _pMaterial{ nullptr }
         , _activeGameCamera{}
         , _gameCameraOverride{}
@@ -146,14 +153,15 @@ namespace sw
      */
     bool Scene::initialize( IRHIDevice* pRHIDevice )
     {
-        const string materialPath = SceneInternal::resolveDefaultMaterialPath();
+        // 에셋 매니저가 없으면 기본 머티리얼을 잡을 곳도 없다 — 카메라와 메시 기본값만 채운다.
+        const string materialPath = _services._pAssetManager != nullptr ? SceneInternal::resolveDefaultMaterialPath( _services._pDefaultAssets ) : string{};
         if ( materialPath.empty() == false )
         {
             if ( _pMaterial == nullptr || _defaultMaterialPath != materialPath )
             {
                 releaseDefaultMaterial();
                 _defaultMaterialPath = materialPath;
-                _pMaterial           = engine::getAssetManager().getAssetCache<MaterialCache>().acquire( materialPath, pRHIDevice );
+                _pMaterial           = _services._pAssetManager->getAssetCache<MaterialCache>().acquire( materialPath, pRHIDevice );
                 if ( _pMaterial == nullptr )
                 {
                     SW_LOG_ERROR( "Failed to acquire Material from %#", materialPath );
@@ -163,7 +171,7 @@ namespace sw
             }
         }
         ensureDefaultCameras();
-        SceneInternal::bindSceneMeshDefaults( this, pRHIDevice );
+        SceneInternal::bindSceneMeshDefaults( this, _services._pAssetManager, pRHIDevice );
         return true;
     }
 
@@ -193,14 +201,16 @@ namespace sw
                 // 전체 상태가 실린 엔티티는 원형을 만들지 않는다. 그 상태가 기준이라 원형은 버려지고, 만드는 동안 컴포넌트가 한 벌 더 생긴다.
                 // 프리팹이 있는지만 본다(없으면 "Missing Prefab").
                 const bool bHasSavedState = entity._embeddedStateBytes.empty() == false || entity._embeddedXML.empty() == false;
-                bool       bStateMade     = false;
-                if ( bHasSavedState )
+                // 에셋 매니저가 없으면 프리팹을 찾을 곳이 없다 — 둘 다 건너뛰어 아래의 "Missing Prefab" 으로 보관한다.
+                const bool bHasPrefabCache = _services._pAssetManager != nullptr;
+                bool       bStateMade      = false;
+                if ( bHasPrefabCache && bHasSavedState )
                 {
-                    bStateMade = engine::getAssetManager().getAssetCache<PrefabCache>().loadPrefab( entity._prefab ) != nullptr;
+                    bStateMade = _services._pAssetManager->getAssetCache<PrefabCache>().loadPrefab( entity._prefab ) != nullptr;
                 }
-                else
+                else if ( bHasPrefabCache )
                 {
-                    const string* pBaseState = SceneInternal::findPrefabBaseState( mapPrefabBaseState, entity._prefab );
+                    const string* pBaseState = SceneInternal::findPrefabBaseState( *_services._pAssetManager, mapPrefabBaseState, entity._prefab );
                     bStateMade               = pBaseState != nullptr &&
                                  PrefabOverrides::makeInstanceState( *pBaseState, entity._prefabOverrideXML, entity._name, prefabInstanceState );
                 }
@@ -282,12 +292,13 @@ namespace sw
         // 프리팹 원형은 순회 **밖에서** 미리 만든다. 원형은 임시 매니저에 오브젝트를 만들어 만드는데, `forEachGameObject` 콜백 안에서는 어느
         // 매니저에도 오브젝트를 만들 수 없다(`GameObjectManager::WalkScope`).
         unordered_map<string, string> mapPrefabBaseState;
-        if ( engine::areEngineServicesBound() )
+        AssetManager* const           pAssetManager = _services._pAssetManager;
+        if ( pAssetManager != nullptr )
         {
             for ( const auto& [objectID, prefabPath] : _mapPrefabSource )
             {
                 (void)objectID;
-                (void)SceneInternal::findPrefabBaseState( mapPrefabBaseState, prefabPath ); // 만들지 못한 프리팹은 빈 문자열로 남아 전체 상태를 적게 된다
+                (void)SceneInternal::findPrefabBaseState( *pAssetManager, mapPrefabBaseState, prefabPath ); // 만들지 못한 프리팹은 빈 문자열로 남아 전체 상태를 적게 된다
             }
         }
 
@@ -310,9 +321,9 @@ namespace sw
             if ( prefabIt != _mapPrefabSource.end() )
                 node._prefab = prefabIt->second;
 
-            if ( node._prefab.empty() == false && engine::areEngineServicesBound() )
+            if ( node._prefab.empty() == false && pAssetManager != nullptr )
             {
-                const UUID guid = engine::getAssetManager().getAssetDatabase().ensureMeta( node._prefab );
+                const UUID guid = pAssetManager->getAssetDatabase().ensureMeta( node._prefab );
                 if ( guid.isNull() == false )
                     node._prefabGuid = guid.toString();
             }
@@ -471,8 +482,9 @@ namespace sw
 
     void Scene::releaseDefaultMaterial()
     {
-        if ( _defaultMaterialPath.empty() == false )
-            engine::getAssetManager().getAssetCache<MaterialCache>().release( _defaultMaterialPath );
+        // 경로가 있으면 `initialize` 가 이 에셋 매니저로 잡은 것이다.
+        if ( _defaultMaterialPath.empty() == false && _services._pAssetManager != nullptr )
+            _services._pAssetManager->getAssetCache<MaterialCache>().release( _defaultMaterialPath );
         _pMaterial = nullptr;
         _defaultMaterialPath.clear();
     }

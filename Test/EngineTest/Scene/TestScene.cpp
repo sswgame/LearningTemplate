@@ -19,6 +19,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Object/GameObject/SceneEngineServices.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Renderer/Light/GPULightBuffer.h"
@@ -1009,8 +1010,12 @@ SW_TEST_CASE( SceneTest, SceneCookCountsTheScenesItCouldNotCook )
  */
 SW_TEST_CASE( SceneTest, SceneIsNotReadBeforeEveryModuleRegisteredItsTypes )
 {
+    // 씬 매니저는 받은 타입 표만 본다 — 등록이 끝나기 전의 표를 넘긴다. 쿠커는 바인딩된 표를 보므로 아래에서 표를 갈아 끼운다.
+    sw::TypeRegistry        registryBeforeModuleTypes;
+    sw::SceneEngineServices earlyServices = sw::SceneEngineServices::makeFromBoundEngine();
+    earlyServices._pTypeRegistry          = &registryBeforeModuleTypes;
     sw::SceneManager manager;
-    SW_ASSERT_TRUE( manager.initialize() );
+    SW_ASSERT_TRUE( manager.initialize( earlyServices ) );
     const sw::string root   = test::makeTempDirectory( "scene_type_gate_root" );
     const sw::string cooked = test::makeTempDirectory( "scene_type_gate_out" );
 
@@ -1025,7 +1030,6 @@ SW_TEST_CASE( SceneTest, SceneIsNotReadBeforeEveryModuleRegisteredItsTypes )
     SW_ASSERT_TRUE( sw::engine::getTypeRegistry().areAllModuleTypesRegistered() );
 
     const sw::EngineServices saved = sw::engine::getBoundEngineServices();
-    sw::TypeRegistry         registryBeforeModuleTypes;
     sw::EngineServices       early = saved;
     early._pTypeRegistry           = &registryBeforeModuleTypes;
     test::rebindEngineServices( early );
@@ -1050,6 +1054,46 @@ SW_TEST_CASE( SceneTest, SceneIsNotReadBeforeEveryModuleRegisteredItsTypes )
     SW_EXPECT_EQUAL( 0u, failedCount );
     SW_EXPECT_TRUE( sw::FileUtil::exists( cookedPath ) );
     manager.shutdown();
+}
+
+/**
+ * @brief [SceneTest] 씬 매니저가 받은 엔진 서비스 묶음이 그 매니저가 만든 씬 · 오브젝트 매니저 · 물리 · 오디오까지 그대로 내려간다
+ * @details 씬 쪽은 전역 조회(`engine::get*()`)를 하지 않고 만들 때 받은 묶음만 쓴다. 빈 묶음을 받은 매니저는 바인딩된 표가 멀쩡해도
+ *          그것을 찾아가지 않는다 — 에셋 매니저 · 물리 씬 · 오디오 엔진이 없고, 타입 표가 없으니 씬 로드를 거절한다.
+ */
+SW_TEST_CASE( SceneTest, SceneManagerHandsItsInjectedServicesDownToScenes )
+{
+    const sw::SceneEngineServices services = sw::SceneEngineServices::makeFromBoundEngine();
+    SW_ASSERT_NOT_NULL( services._pAssetManager );
+
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize( services ) );
+    sw::Scene* pScene = manager.createScene( "InjectedServices" );
+    SW_ASSERT_NOT_NULL( pScene );
+    sw::GameObjectManager* pObjects = pScene->getObjectManager();
+    SW_ASSERT_NOT_NULL( pObjects );
+    SW_EXPECT_TRUE( pScene->getEngineServices()._pAssetManager == services._pAssetManager );
+    SW_EXPECT_TRUE( pScene->getEngineServices()._pDefaultAssets == services._pDefaultAssets );
+    SW_EXPECT_TRUE( pObjects->findAssetManager() == services._pAssetManager );
+    SW_EXPECT_TRUE( pObjects->getSceneAudio().findAudioSystem() == services._pAudioSystem );
+    manager.shutdown();
+
+    sw::SceneManager isolated;
+    SW_ASSERT_TRUE( isolated.initialize( sw::SceneEngineServices{} ) );
+    sw::Scene* pIsolated = isolated.createScene( "NoServices" );
+    SW_ASSERT_NOT_NULL( pIsolated );
+    sw::GameObjectManager* pIsolatedObjects = pIsolated->getObjectManager();
+    SW_ASSERT_NOT_NULL( pIsolatedObjects );
+    SW_EXPECT_NULL( pIsolatedObjects->findAssetManager() );
+    SW_EXPECT_NULL( pIsolatedObjects->getSceneAudio().findAudioSystem() );
+    SW_EXPECT_NULL( pIsolatedObjects->getSceneAudio().findAudioEngine() );
+    SW_EXPECT_NULL( pIsolatedObjects->getScenePhysics().getScene3D() );
+    SW_EXPECT_NULL( pIsolatedObjects->getScenePhysics().findSettings() );
+    {
+        test::ScopedDefensiveTestLog expected( "a scene manager without a type registry" );
+        SW_EXPECT_FALSE( isolated.requestLoadFuture( "game/demo/maps/none.scene.xml" ).isValid() );
+    }
+    isolated.shutdown();
 }
 
 /**

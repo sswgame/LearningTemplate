@@ -218,6 +218,11 @@ id가 0이고 이름만 있는 부착은 찾지 못한 부모 참조를 저장�
 활성 팩에서 모르는 타입이 나오면 실패입니다(`SceneTest.SceneCookFailsOnAComponentOfUnknownType`).
 `MissingComponent` 는 원래 XML을 보관해서 왕복 확인을 통과하므로, 쿠커가 따로 세어 실패로 만듭니다. 실패는 App 종료 코드를 거쳐 `CookAssets.py` 와 Shipping 빌드를 멈춥니다.
 
+**씬 쪽 코드에서 `engine::get*()` 로 서비스를 찾지 마세요.** 씬 매니저, 씬, 오브젝트 매니저, 씬 물리, 씬 오디오는 만들 때 받은 `SceneEngineServices` 묶음만 씁니다.
+호스트가 서비스 표를 묶은 뒤 `SceneManager::initialize( services )` 로 넘기고, 매니저가 만드는 씬(워커의 비동기 로드 포함)과 그 오브젝트 매니저로 그대로 내려갑니다.
+인자 없는 생성자는 바인딩된 표를 만들 때 한 번 읽으므로, 테스트에서 표를 갈아 끼울 때는 그 **뒤에** 만든 객체만 새 표를 봅니다. 이미 있는 매니저에는 묶음을 직접 넘깁니다(`SceneTest.SceneIsNotReadBeforeEveryModuleRegisteredItsTypes`).
+빈 칸은 그 서비스가 없다는 뜻이고 그 일을 건너뜁니다(`SceneTest.SceneManagerHandsItsInjectedServicesDownToScenes`).
+
 **코드로 그릴 씬을 만들 때는 `createEmptyActiveScene` 을 쓰세요.** `SceneManager::createScene` 은 `Scene::initialize` 를 부르지 않으므로 기본 머티리얼과 카메라가 없어 메시가 그려지지 않습니다.
 
 **씬은 렌더링을 모릅니다.** `Scene` 에는 `render()` 가 없습니다. 게임 스레드가 씬에서 스냅샷을 뽑아 렌더러에 넘기고, 렌더 스레드는 그 스냅샷만 봅니다.

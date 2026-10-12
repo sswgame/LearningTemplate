@@ -60,6 +60,7 @@
 #include "Engine/Object/Component/Navigation/SceneNavigation.h"
 #include "Engine/Object/GameObject/CameraRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/SceneEngineServices.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
 #include "Engine/Physics/PhysicsSystem.h"
@@ -394,7 +395,9 @@ namespace sw
     {
         static EngineInitResult initialize( EngineLoop& loop )
         {
-            return loop._owned._pSceneManager->initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed;
+            // 씬 매니저는 표를 묶기 전에 만들어졌다 — 묶은 표에서 씬 쪽 묶음을 골라 여기서 넘긴다. 씬과 오브젝트 매니저는 이것만 쓴다.
+            const SceneEngineServices services = SceneEngineServices::makeFromBoundEngine();
+            return loop._owned._pSceneManager->initialize( services ) ? EngineInitResult::Succeeded : EngineInitResult::Failed;
         }
         static void shutdown( EngineLoop& loop ) { loop._owned._pSceneManager->shutdown(); }
         static void destroy( EngineLoop& loop )

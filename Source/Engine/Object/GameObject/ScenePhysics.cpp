@@ -4,7 +4,6 @@
 
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/Physics/PhysicsComponent.h"
@@ -21,14 +20,6 @@ namespace sw
     {
         struct ScenePhysicsInternal
         {
-            static PhysicsSystem* findPhysicsSystem()
-            {
-                if ( engine::areEngineServicesBound() == false )
-                    return nullptr;
-                PhysicsSystem& system = engine::getPhysicsSystem();
-                return system.isInitialized() ? &system : nullptr;
-            }
-
             static constexpr uint32 kPhaseCount = static_cast<uint32>( PhysicsComponentPhase::Count );
         };
     } // namespace
@@ -36,8 +27,9 @@ namespace sw
 
 namespace sw
 {
-    ScenePhysics::ScenePhysics()
-        : _pScene3D{}
+    ScenePhysics::ScenePhysics( PhysicsSystem* pPhysicsSystem )
+        : _pPhysicsSystem{ pPhysicsSystem }
+        , _pScene3D{}
         , _pScene2D{}
         , _accumulator{}
         , _arrListComponent{}
@@ -77,9 +69,17 @@ namespace sw
         _accumulator.reset();
     }
 
+    PhysicsSystem* ScenePhysics::findInitializedPhysicsSystem() const
+    {
+        // 포인터는 생성할 때 받은 것이고, 백엔드가 올라와 있는지는 부를 때마다 본다(물리 단계가 씬보다 늦게 서고 먼저 내려간다).
+        if ( _pPhysicsSystem == nullptr || _pPhysicsSystem->isInitialized() == false )
+            return nullptr;
+        return _pPhysicsSystem;
+    }
+
     const PhysicsSettings* ScenePhysics::findSettings() const
     {
-        const PhysicsSystem* pSystem = ScenePhysicsInternal::findPhysicsSystem();
+        const PhysicsSystem* pSystem = findInitializedPhysicsSystem();
         return pSystem != nullptr ? &pSystem->getSettings() : nullptr;
     }
 
@@ -113,7 +113,7 @@ namespace sw
     {
         if ( _pScene3D == nullptr )
         {
-            const PhysicsSystem* pSystem = ScenePhysicsInternal::findPhysicsSystem();
+            const PhysicsSystem* pSystem = findInitializedPhysicsSystem();
             if ( pSystem != nullptr )
                 _pScene3D = pSystem->createScene3D();
         }
@@ -124,7 +124,7 @@ namespace sw
     {
         if ( _pScene2D == nullptr )
         {
-            const PhysicsSystem* pSystem = ScenePhysicsInternal::findPhysicsSystem();
+            const PhysicsSystem* pSystem = findInitializedPhysicsSystem();
             if ( pSystem != nullptr )
                 _pScene2D = pSystem->createScene2D();
         }

@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Object/GameObject/SceneEngineServices.h"
 #include "Engine/Scene/SceneDocument.h"
 
 namespace sw
@@ -24,7 +25,12 @@ namespace sw
     class SW_API Scene
     {
     public:
-        /** @brief 이름으로 씬을 만듭니다. */
+        /**
+         * @brief 이름과 엔진 서비스 묶음으로 씬을 만듭니다. 씬 매니저가 자기 묶음을 넘깁니다.
+         * @details 묶음은 씬이 들고(기본 머티리얼 · 프리팹 캐시) 자기 오브젝트 매니저에 그대로 넘깁니다(물리 · 오디오 · 에셋). 빈 칸의 일은 건너뜁니다.
+         */
+        Scene( string_view name, const SceneEngineServices& services );
+        /** @brief 이름으로 씬을 만듭니다. 서비스 묶음은 바인딩된 표에서 한 번 읽습니다(`SceneEngineServices::makeFromBoundEngine`) — 테스트 · 쿠커용입니다. */
         explicit Scene( string_view name );
         /** @brief 씬을 해제합니다. */
         virtual ~Scene();
@@ -84,6 +90,8 @@ namespace sw
         const string& getSourcePath() const { return _sourcePath; }
         /** @brief 씬이 소유한 GameObjectManager 를 반환합니다. */
         GameObjectManager* getObjectManager() const { return _objectManager.get(); }
+        /** @brief 만들 때 받은 엔진 서비스 묶음입니다. */
+        const SceneEngineServices& getEngineServices() const { return _services; }
         /** @brief 씬 기본 머티리얼입니다(MaterialCache 에서 빌린 포인터, 소유하지 않음). */
         Material* getMaterial() const { return _pMaterial; }
         /** @brief 활성 게임 카메라를 반환합니다. */
@@ -124,6 +132,7 @@ namespace sw
         string                        _name;
         string                        _sourcePath;
         string                        _defaultMaterialPath;
+        SceneEngineServices           _services; ///< 만들 때 받은 엔진 서비스(빌림). 오브젝트 매니저도 같은 묶음으로 만든다
         unique_ptr<GameObjectManager> _objectManager;
         Material*                     _pMaterial;
         unordered_map<uint64, string> _mapPrefabSource;

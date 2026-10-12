@@ -4,7 +4,6 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
@@ -24,6 +23,7 @@ namespace sw
     SpriteInstanceBatch::SpriteInstanceBatch()
         : _batch{}
         , _pOwnerComponent{ nullptr }
+        , _pAssetManager{ nullptr }
         , _acquiredMaterialPath{}
         , _sortKey{ 0 }
     {
@@ -41,11 +41,13 @@ namespace sw
         if ( count == 0 )
             return false;
 
+        // 머티리얼을 놓을 때(`shutdown`)도 잡은 매니저에 돌려준다 — 매니저의 에셋 매니저를 여기서 한 번 든다.
+        _pAssetManager      = manager.findAssetManager();
         Material* pMaterial = nullptr;
-        if ( engine::areEngineServicesBound() )
+        if ( _pAssetManager != nullptr )
         {
             const hashed_string resolvedPath = materialPath.empty() ? SpriteRenderUtil::getSpriteMaterialPath() : hashed_string( materialPath );
-            MaterialCache&      cache        = engine::getAssetManager().getAssetCache<MaterialCache>();
+            MaterialCache&      cache        = _pAssetManager->getAssetCache<MaterialCache>();
             pMaterial                        = cache.acquire( resolvedPath.c_str(), nullptr );
             if ( pMaterial != nullptr )
             {
@@ -90,8 +92,9 @@ namespace sw
         _batch.reset();
         if ( _acquiredMaterialPath.empty() )
             return;
-        if ( engine::areEngineServicesBound() )
-            engine::getAssetManager().getAssetCache<MaterialCache>().release( _acquiredMaterialPath.c_str() );
+        // 경로가 있으면 `initialize` 가 이 에셋 매니저로 잡은 것이다.
+        if ( _pAssetManager != nullptr )
+            _pAssetManager->getAssetCache<MaterialCache>().release( _acquiredMaterialPath.c_str() );
         _acquiredMaterialPath = hashed_string{};
     }
 

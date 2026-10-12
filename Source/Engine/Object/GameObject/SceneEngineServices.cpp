@@ -1,0 +1,26 @@
+#include "pch.h"
+
+#include "Engine/Object/GameObject/SceneEngineServices.h"
+
+#include "Engine/Common/EngineServices.h"
+
+namespace sw
+{
+    SceneEngineServices SceneEngineServices::makeFromEngineServices( const EngineServices& services )
+    {
+        SceneEngineServices sceneServices{};
+        sceneServices._pAssetManager  = services._pAssetManager;
+        sceneServices._pPhysicsSystem = services._pPhysicsSystem;
+        sceneServices._pAudioSystem   = services._pAudioSystem;
+        sceneServices._pDefaultAssets = services._pEngineDefaultAssets;
+        sceneServices._pTaskManager   = services._pTaskManager;
+        sceneServices._pTypeRegistry  = services._pTypeRegistry;
+        sceneServices._pCommandStack  = services._pCommandStack;
+        return sceneServices;
+    }
+
+    SceneEngineServices SceneEngineServices::makeFromBoundEngine()
+    {
+        return makeFromEngineServices( engine::getBoundEngineServices() );
+    }
+} // namespace sw

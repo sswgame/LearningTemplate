@@ -12,6 +12,7 @@
 
 namespace sw
 {
+    class AssetManager;
     class Component;
     class GameObjectManager;
     class MeshInstanceBatch;
@@ -45,8 +46,8 @@ namespace sw
          * @param texturePath 비어 있으면 텍스처 없이 머티리얼의 색(흰색)에 항목 색을 곱한 단색 사각형입니다(HP 바).
          * @param normalMapPath 빛 받는 머티리얼(`sprite2dlit.material`)의 노멀 맵입니다. 비어 있으면 노멀 맵 없이(N·L 없이) 비춥니다.
          * @param materialPath 비어 있으면 스프라이트 머티리얼(`SpriteRenderUtil::getSpriteMaterialPath`)입니다. 타일맵은 점 필터 · 빛 받는 머티리얼을 고릅니다.
-         * @details 스프라이트 머티리얼을 캐시에서 잡고(디바이스 업로드는 캐시가 맡습니다) 공유 사각형 메시를 씁니다. 엔진 서비스가 없으면
-         *          (CPU 테스트) 머티리얼 없이 만듭니다 — 항목 값은 그대로 확인할 수 있습니다. 항목은 처음에 모두 숨겨져 있습니다.
+         * @details 스프라이트 머티리얼을 캐시에서 잡고(디바이스 업로드는 캐시가 맡습니다) 공유 사각형 메시를 씁니다. @p manager 에 에셋 매니저가 없으면
+         *          (`GameObjectManager::findAssetManager`, CPU 테스트) 머티리얼 없이 만듭니다 — 항목 값은 그대로 확인할 수 있습니다. 항목은 처음에 모두 숨겨져 있습니다.
          * @return 항목을 만들었으면 true 입니다(@p count 가 0 이면 false).
          */
         [[nodiscard]] bool initialize( GameObjectManager& manager, string_view texturePath, uint32 count, string_view materialPath = {},
@@ -89,6 +90,7 @@ namespace sw
     private:
         unique_ptr<MeshInstanceBatch> _batch;
         const Component*              _pOwnerComponent;      ///< 든 컴포넌트(빌림). 배치를 다시 만들어도 넘깁니다
+        AssetManager*                 _pAssetManager;        ///< `initialize` 가 매니저에서 받은 에셋 매니저(빌림). 머티리얼을 잡고 놓는 곳입니다
         hashed_string                 _acquiredMaterialPath; ///< 캐시에서 잡은 머티리얼 경로입니다. 비어 있으면 잡은 것이 없습니다
         uint32                        _sortKey;              ///< 항목 모두의 투명 정렬 키(0 = 기본). 배치를 다시 만들어도 남습니다
     };

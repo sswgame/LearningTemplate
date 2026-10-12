@@ -8,6 +8,8 @@
 #include "Core/Task/TaskFuture.h"
 #include "Core/Task/TaskTypes.h"
 
+#include "Engine/Object/GameObject/SceneEngineServices.h"
+
 namespace sw
 {
     class GameObject;
@@ -21,7 +23,10 @@ namespace sw
     class SW_API SceneManager
     {
     public:
-        /** @brief 빈 매니저로 만듭니다. */
+        /**
+         * @brief 빈 매니저로 만듭니다. 엔진 서비스 묶음은 바인딩된 표에서 한 번 읽어 둡니다(`SceneEngineServices::makeFromBoundEngine`).
+         * @details 서비스 저장소(`EngineServiceCollection`)는 표를 묶기 **전에** 이것을 만든다 — 그래서 호스트는 `initialize( services )` 로 다시 넘깁니다.
+         */
         SceneManager();
         /** @brief 매니저를 해제합니다. */
         ~SceneManager();
@@ -31,7 +36,13 @@ namespace sw
         /** @brief 대입을 금지합니다. */
         SceneManager& operator=( const SceneManager& ) = delete;
 
-        /** @brief 매니저를 초기화합니다. */
+        /**
+         * @brief 엔진 서비스 묶음 @p services 를 받아 매니저를 초기화합니다. 호스트(`EngineLoop` · 테스트 하네스)가 표를 묶은 뒤 부릅니다.
+         * @details 이 매니저와 이 매니저가 만드는 씬(동기 · 비동기 로드)은 이 묶음만 씁니다. 빈 칸의 일(로드 띄우기 · 에셋 정리 · 되돌리기 비우기)은 건너뛰고,
+         *          타입 표가 없으면 씬 로드를 거절합니다.
+         */
+        bool initialize( const SceneEngineServices& services );
+        /** @brief 생성자가 읽어 둔 묶음으로 초기화합니다(테스트가 손으로 만든 매니저). */
         bool initialize();
         /** @brief 로드된 씬을 내리고 종료합니다. */
         void shutdown();
@@ -94,6 +105,8 @@ namespace sw
         void cancelPendingAsyncLoads();
         /** @brief 로드된 씬을 모두 반환합니다. */
         const vector<unique_ptr<Scene>>& getLoadedScenes() const { return _listLoadedScene; }
+        /** @brief 이 매니저와 그 씬이 쓰는 엔진 서비스 묶음입니다. */
+        const SceneEngineServices& getEngineServices() const { return _services; }
 
         /**
          * @brief 루트 오브젝트를 플레이 중 씬 전환 너머로 가져갑니다 — 유니티 `Object.DontDestroyOnLoad` · 언리얼 심리스 트래블의 액터 목록 자리입니다.
@@ -112,6 +125,10 @@ namespace sw
         void activateScene( Scene* pScene );
         /** @brief 표시된 영속 루트와 그 자손을 @p pFrom 에서 @p pTo 로 같은 id 로 옮겨 심습니다. 사라진 루트는 표시에서 뺍니다. */
         void carryPersistentObjects( Scene* pFrom, Scene* pTo );
+        /** @brief 받은 되돌리기 기록을 비웁니다(활성 씬이 바뀔 때 · 종료). 기록이 없거나 배포본이면 아무것도 하지 않습니다. */
+        void clearCommandStack();
+        /** @brief 받은 에셋 매니저에 더 이상 참조되지 않는 에셋을 정리하게 합니다(활성 씬이 바뀐 뒤). 없으면 아무것도 하지 않습니다. */
+        void garbageCollectUnusedAssets();
         /**
          * @brief 워커에 로드를 실제로 띄웁니다. 이 로드의 결과를 받을 약속을 함께 넘깁니다.
          * @details 요청 경로와 대기열 경로가 **같은 자리**로 모입니다 — 대기열에 넣은 요청자가 쥔 future 와 실제 로드의 약속이
@@ -130,6 +147,7 @@ namespace sw
             atomic<bool>        _bAccepting{ true };
             TaskPromise<Scene*> _promise{};
             uint32              _typeTableGeneration{ 0 }; ///< 로드를 띄울 때의 `TypeRegistry::getGeneration` — 다르면 짓는 동안 타입(생성 함수)이 바뀌었다
+            SceneEngineServices _services{};               ///< 워커가 짓는 씬에 넘길 묶음(`initialize` 가 적는다 — 워커는 전역 표를 읽지 않는다)
         };
 
         vector<unique_ptr<Scene>> _listLoadedScene;
@@ -138,6 +156,7 @@ namespace sw
         bool                      _bWorldPlaying; ///< `setWorldPlaying`
         uint64                    _sceneGeneration;
         IRHIDevice*               _pRHIDevice;
+        SceneEngineServices       _services; ///< 생성자가 읽거나 `initialize` 가 받은 엔진 서비스 묶음(빌림)
 
         shared_ptr<AsyncLoadSlot> _asyncLoad;
         string                    _queuedPath;

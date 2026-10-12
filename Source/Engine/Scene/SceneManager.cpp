@@ -8,7 +8,6 @@
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/GameTimer.h"
 
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -31,6 +30,7 @@ namespace sw
         , _bWorldPlaying{ false }
         , _sceneGeneration{ 0 }
         , _pRHIDevice{ nullptr }
+        , _services{ SceneEngineServices::makeFromBoundEngine() }
         , _asyncLoad{ sw::make_shared<AsyncLoadSlot>() }
         , _queuedPath{}
         , _queuedPromise{}
@@ -39,6 +39,7 @@ namespace sw
         , _saveBlockReason{}
         , _bInitialized{ false }
     {
+        _asyncLoad->_services = _services;
     }
 
     SceneManager::~SceneManager()
@@ -51,8 +52,15 @@ namespace sw
      */
     bool SceneManager::initialize()
     {
+        return initialize( _services );
+    }
+
+    bool SceneManager::initialize( const SceneEngineServices& services )
+    {
+        _services = services;
         if ( _asyncLoad == nullptr )
             _asyncLoad = sw::make_shared<AsyncLoadSlot>();
+        _asyncLoad->_services = _services;
         _asyncLoad->_bReady.store( false, std::memory_order_release );
         _asyncLoad->_bAccepting.store( true, std::memory_order_release );
         {
@@ -87,10 +95,10 @@ namespace sw
         const bool bHasAsyncLoad = ( _asyncLoad != nullptr );
         const bool bAsyncReady   = bHasAsyncLoad && ( _asyncLoad->_bReady.load( std::memory_order_acquire ) );
         const bool bLoading      = ( _bLoadInFlight.load( std::memory_order_acquire ) );
-        const bool bNeedWait     = engine::areEngineServicesBound() && ( bLoading || bAsyncReady );
+        const bool bNeedWait     = _services._pTaskManager != nullptr && ( bLoading || bAsyncReady );
 
         if ( bNeedWait )
-            engine::getTaskManager().waitAll();
+            _services._pTaskManager->waitAll();
 
         if ( _asyncLoad != nullptr )
         {
@@ -111,10 +119,7 @@ namespace sw
             scene->shutdown();
         }
         _listLoadedScene.clear();
-#if !defined( SW_SHIPPING )
-        if ( engine::areEngineServicesBound() )
-            engine::getCommandStack().clear();
-#endif
+        clearCommandStack();
         SW_LOG_INFO( "Shut down." );
     }
 
@@ -124,7 +129,7 @@ namespace sw
     Scene* SceneManager::createScene( string_view name )
     {
         SW_MEMORY_SCOPE( Scene );
-        unique_ptr<Scene> scene  = sw::make_unique<Scene>( name );
+        unique_ptr<Scene> scene  = sw::make_unique<Scene>( name, _services );
         Scene*            pScene = scene.get();
 
         _listLoadedScene.push_back( std::move( scene ) );
@@ -141,7 +146,7 @@ namespace sw
     Scene* SceneManager::createEmptyActiveScene( string_view name )
     {
         SW_MEMORY_SCOPE( Scene );
-        unique_ptr<Scene> scene     = sw::make_unique<Scene>( name );
+        unique_ptr<Scene> scene     = sw::make_unique<Scene>( name, _services );
         Scene*            pScene    = scene.get();
         Scene*            pPrevious = _pActiveScene;
 
@@ -152,16 +157,12 @@ namespace sw
         if ( _pRHIDevice != nullptr )
             pScene->initialize( _pRHIDevice );
 
-#if !defined( SW_SHIPPING )
-        if ( engine::areEngineServicesBound() )
-            engine::getCommandStack().clear();
-#endif
+        clearCommandStack();
 
         if ( pPrevious != nullptr && pPrevious != pScene )
             unloadScene( pPrevious );
 
-        if ( engine::areEngineServicesBound() )
-            engine::getAssetManager().garbageCollectUnusedAssets();
+        garbageCollectUnusedAssets();
 
         return pScene;
     }
@@ -183,7 +184,8 @@ namespace sw
         }
         // 씬은 모든 타입 공급자가 등록을 끝낸 뒤(기동 단계 `ModuleTypes`)에만 읽는다. 그 전에 지으면 아직 오르지 않은 모듈의 컴포넌트가
         // `MissingComponent` 로 지어지고, 그 씬을 저장하면 그대로 남는다.
-        if ( engine::getTypeRegistry().areAllModuleTypesRegistered() == false )
+        // 타입 표를 받지 못한 매니저도 같은 이유로 거절한다 — 무엇으로 지을지 모른다.
+        if ( _services._pTypeRegistry == nullptr || _services._pTypeRegistry->areAllModuleTypesRegistered() == false )
         {
             SW_LOG_ERROR( "Scene '%#' was requested before every module registered its types - refused (load it after the ModuleTypes startup step)", path );
             return {};
@@ -215,14 +217,22 @@ namespace sw
     bool SceneManager::dispatchLoad( string_view path, TaskPromise<Scene*> promise )
     {
         SW_MEMORY_SCOPE( Scene );
+        // 로드를 띄울 곳(태스크)과 지을 표(타입)가 없으면 띄우지 않는다. 기다리는 쪽에는 실패로 알린다.
+        if ( _services._pTaskManager == nullptr || _services._pTypeRegistry == nullptr )
+        {
+            SW_LOG_ERROR( "Scene '%#' cannot be loaded - the scene manager has no task manager or type registry", path );
+            _bLoadInFlight.store( false, std::memory_order_release );
+            promise.setValue( nullptr );
+            return false;
+        }
         _bLoadInFlight.store( true, std::memory_order_release );
         _asyncLoad->_bReady.store( false, std::memory_order_release );
         _asyncLoad->_promise             = std::move( promise );
-        _asyncLoad->_typeTableGeneration = engine::getTypeRegistry().getGeneration();
+        _asyncLoad->_typeTableGeneration = _services._pTypeRegistry->getGeneration();
         SW_LOG_TRACE( "dispatchLoad: %#", path );
 
         shared_ptr<AsyncLoadSlot> slot = _asyncLoad;
-        _loadHandle                    = engine::getTaskManager().emplaceTask(
+        _loadHandle                    = _services._pTaskManager->emplaceTask(
             "SceneLoadAsync",
             SW_DELEGATE_FUNCTION( TaskArgsDelegate, SceneManager::loadSceneAsyncJob ),
             MakeTaskArgs( slot, string( path ) ) );
@@ -265,7 +275,7 @@ namespace sw
         if ( ok )
         {
             ScopedTimer instantiateTimer{ "Scene.load.instantiate" };
-            newScene = sw::make_unique<Scene>( doc._name.empty() ? "LoadedScene" : doc._name );
+            newScene = sw::make_unique<Scene>( doc._name.empty() ? "LoadedScene" : doc._name, slot->_services );
             newScene->setSourcePath( pathStr );
             if ( newScene->instantiate( doc ) == false )
                 SW_LOG_WARNING( "[SceneLoad] '%#' could not be instantiated", pathStr );
@@ -300,8 +310,9 @@ namespace sw
         if ( _asyncLoad != nullptr )
             _asyncLoad->_bAccepting.store( false, std::memory_order_release );
 
-        if ( _loadHandle.isValid() )
-            engine::getTaskManager().waitAll();
+        // 핸들이 있으면 `dispatchLoad` 가 이 태스크 매니저로 띄운 것이다.
+        if ( _loadHandle.isValid() && _services._pTaskManager != nullptr )
+            _services._pTaskManager->waitAll();
 
         _bLoadInFlight.store( false, std::memory_order_release );
         if ( _queuedPath.empty() == false )
@@ -402,8 +413,8 @@ namespace sw
         // 여기서 다시 짓는다. 대기열은 그대로 두어, 다시 지은 결과가 두 요청자를 함께 채운다.
         const bool bQueuedSamePath = _queuedPath.empty() == false && pendingScene != nullptr &&
                                      FileUtil::pathsEqualNormalized( pendingScene->getSourcePath(), _queuedPath );
-        if ( pendingScene != nullptr && ( _queuedPath.empty() || bQueuedSamePath ) &&
-             _asyncLoad->_typeTableGeneration != engine::getTypeRegistry().getGeneration() )
+        const bool bTypeTableChanged = _services._pTypeRegistry != nullptr && _asyncLoad->_typeTableGeneration != _services._pTypeRegistry->getGeneration();
+        if ( pendingScene != nullptr && ( _queuedPath.empty() || bQueuedSamePath ) && bTypeTableChanged )
         {
             const string path = pendingScene->getSourcePath();
             SW_LOG_INFO( "Reflected types changed while '%#' was loading — loading it again", path );
@@ -469,17 +480,14 @@ namespace sw
         if ( bQueuedSatisfiedByThisLoad )
             _queuedPromise.setValue( _pActiveScene );
 
-#if !defined( SW_SHIPPING )
-        engine::getCommandStack().clear();
-#endif
+        clearCommandStack();
 
         // 이전 활성 씬을 언로드한다
         if ( pPreviousActive != nullptr && pPreviousActive != _pActiveScene )
             unloadScene( pPreviousActive );
 
         // 씬을 바꾼 직후, 더 이상 참조되지 않는 이전 씬의 에셋을 정리한다.
-        if ( engine::areEngineServicesBound() )
-            engine::getAssetManager().garbageCollectUnusedAssets();
+        garbageCollectUnusedAssets();
     }
 
     /**
@@ -643,5 +651,20 @@ namespace sw
                             [pScene]( const unique_ptr<Scene>& owned )
         { return owned.get() == pScene; } ),
             _listLoadedScene.end() );
+    }
+
+    void SceneManager::clearCommandStack()
+    {
+#if !defined( SW_SHIPPING )
+        // 되돌리기 기록은 나간 씬의 오브젝트를 가리킨다.
+        if ( _services._pCommandStack != nullptr )
+            _services._pCommandStack->clear();
+#endif
+    }
+
+    void SceneManager::garbageCollectUnusedAssets()
+    {
+        if ( _services._pAssetManager != nullptr )
+            _services._pAssetManager->garbageCollectUnusedAssets();
     }
 } // namespace sw

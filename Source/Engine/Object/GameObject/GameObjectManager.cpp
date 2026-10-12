@@ -10,6 +10,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/SceneEngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
@@ -95,6 +96,11 @@ namespace sw
     SW_LOG_CALLER( "GameObjectManager" );
 
     GameObjectManager::GameObjectManager()
+        : GameObjectManager( SceneEngineServices::makeFromBoundEngine() )
+    {
+    }
+
+    GameObjectManager::GameObjectManager( const SceneEngineServices& services )
         : _structuralChangeBuffer{}
         , _transformHierarchy{}
         , _primitiveRegistry{}
@@ -104,12 +110,13 @@ namespace sw
         , _tickScheduler{ *this, _transformHierarchy, _primitiveRegistry, _structuralChangeBuffer }
         , _store{ *this, _tickScheduler, _structuralChangeBuffer }
         , _overlapWorld2D{}
-        , _scenePhysics{}
-        , _sceneAudio{}
+        , _scenePhysics{ services._pPhysicsSystem }
+        , _sceneAudio{ services._pAudioSystem }
         , _listSceneService{}
         , _frameStepObserver{}
         , _listFrameSystem{}
         , _listRetiredFrameSystem{}
+        , _pAssetManager{ services._pAssetManager }
         , _bRunningFrameSystems{ false }
     {
         _animationSystem.setObjectManager( this );
