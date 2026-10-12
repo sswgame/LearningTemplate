@@ -12,8 +12,8 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Skeletal/Pose.h"
-#include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

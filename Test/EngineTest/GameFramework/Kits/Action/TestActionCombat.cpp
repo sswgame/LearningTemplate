@@ -4,6 +4,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
@@ -256,7 +257,7 @@ SW_TEST_CASE( ActionCombatTest, ProjectilePassesItsInstigatorAndWhatIsAttachedTo
 SW_TEST_CASE( ActionCombatTest, ProjectileIgnoresUnitsOnALayerItDoesNotCollideWith )
 {
     GameObjectManager manager;
-    manager.getOverlapWorld2D().getPhysicsOverlapWorld().layers().setLayerCollision( 1, 2, false );
+    manager.getSceneService<ScenePhysics>().getOverlapWorld2D().getPhysicsOverlapWorld().layers().setLayerCollision( 1, 2, false );
     UnitStatsComponent*  pAlly       = spawnUnit( manager, "Ally", 3.0f, 100, 0, 0.0f );
     ProjectileComponent* pProjectile = spawnBullet( manager, 0.0f, 0.0f, 6.0f, 10 );
     SW_ASSERT_TRUE( pAlly != nullptr && pProjectile != nullptr );

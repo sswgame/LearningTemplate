@@ -2,12 +2,12 @@
 
 #include "GameFramework/Base/Gameplay/Interaction/InteractorComponent.h"
 
-#include "Engine/Object/Animation/MotionWarpingComponent.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/SceneAnimation/MotionWarpingComponent.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Gameplay/Interaction/InteractableComponent.h"

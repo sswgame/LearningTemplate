@@ -18,8 +18,8 @@
 
 #include "Engine/Animation/Rig/RigInstance.h"
 #include "Engine/Animation/Rig/RigNode.h"
-#include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

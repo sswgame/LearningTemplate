@@ -188,7 +188,7 @@
 | `-gv_editorOpenAllPanels=1` | `-gv_editorOpenPanel=all` |
 | `RenderResourceXml` | `Serialization/Format/ReflectedXMLFile` |
 | `CameraBlendCurve` · `CameraBlendKey` · `CameraBlendSpec`(GameFramework/Base/Actor/Camera) | `BlendCurve` · `BlendCurveKey` · `BlendCurveDef`(`Engine/Animation/BlendCurve.h`) |
-| `Engine/Character/<평면 60 개>` | `Character/{Fit,Socket,Hit,Pose,AnimationNotify}/`, 워핑 둘은 `Object/Animation/`(2026-10-05) |
+| `Engine/Character/<평면 60 개>` | `Character/{Fit,Socket,Hit,Pose,AnimationNotify}/`, 워핑 둘은 `Object/SceneAnimation/`(2026-10-05) |
 | `Utility/Debug/*` · `Utility/Format/KeyValueFile` | `Utility/Profiling/*`(`DebugOverlayState` 는 `Utility/`, `KeyValueFile` 은 `Core/File/`) |
 | `Graphics/Renderer/Debug/` | `Graphics/Debug/` |
 | 엔진 루트 `LocalizationTools` · `EngineDevCommands.cpp` | `DevTools/` |
@@ -203,7 +203,7 @@
 | `Base/Camera/FirstPersonCameraComponent` | `Base/Control/FirstPersonCameraComponent`(시점 = 폰의 조종 회전) |
 | `Engine/Renderer/` | `Engine/Renderer/`(2026-10-10, 티어 표의 하위 폴더 예외도 삭제) |
 | `Resource/{AnimationAssetCache,SpriteClipCache,LocalizationReloadCache}` | `Animation/` · `Animation/Sprite/` · `Localization/` |
-| `Character/Pose/` · `Animation/AnimationNotifyPhase` · `Object/Animation/AnimationNotifyListener` | `Character/PoseModifier/` · `Animation/Notify/` |
+| `Character/Pose/` · `Animation/AnimationNotifyPhase` · `Object/Animation/AnimationNotifyListener` | `Character/PoseModifier/` · `Animation/Notify/`(`AnimationNotifyPhase` 는 뒤에 `Common/`) |
 | `IRenderSurface`(Common 루트) · `ServerConfig` · `ServerSecret`(Config 루트) | `Graphics/RHI/IRenderSurface` · `Config/Server/` |
 | `Utility/{XML,JSON,TileMap,Console,Profiling}` | `Serialization/{XML,JSON}` · `TileMap/` · `Console/` · `Profiling/` |
 | `Telemetry/HTTPClient` · `UI/Screens/` · `Serialization/Core/` · `UI/Core/` | `Observability/HTTPClient` · `UI/Screen/` · `Serialization/Base/` · `UI/Base/` |
@@ -214,6 +214,9 @@
 | `EditorViewportPick`(Common/Commands) | `EditorViewportRayPick` |
 | `GameInstanceBase::requestSceneLoad` · `EditorWidgets::drawPropertyRowBegin` · `IEditorPanel::getOpenPtr` | `requestLoadScene` · `drawPropertyRowLabel` · `getOpenFlagAddress` |
 | `TurnOrder::Actor`(private) | `TurnOrder::Combatant` |
+| `Engine/Object/Animation/`(AnimationSystem · Crowd · LOD · Rewind · 워핑 컴포넌트 · 정점 애니메이션 베이커) | `Engine/Object/SceneAnimation/`(2026-10-13 — 애니메이션 데이터 폴더 `Engine/Animation/` 과 구분) |
+| `Object/GameObject/{ScenePhysics,SceneOverlapWorld2D,SceneAudio,MeshInstanceBatch,SpriteInstanceBatch}` · `GameObjectManager::getScenePhysics` · `getSceneAudio` · `getOverlapWorld2D` | `Object/Component/{Physics,Audio,3D,2D}/` · `getSceneService<ScenePhysics>()` · `getSceneService<SceneAudio>()` · `getSceneService<ScenePhysics>().getOverlapWorld2D()`(2026-10-13) |
+| `PhysicsTypes.h` 의 `PhysicsHandle` · `PhysicsBodyHandle` 등 핸들 | `Engine/Common/PhysicsHandle.h`(2026-10-13 — 컴포넌트 모델 코어가 Physics 를 include 하지 않게) |
 
 일부러 둔 용어: stamp · kit · cook · orphan · chord · pin.
 
@@ -376,7 +379,7 @@
   (`FrameRenderer::resolvePresentSource` 가 사본 대신 뷰를 돌려줍니다). `fixed_string` 은 상한이 코드 상수이고, 힙이 금지된 경로(크래시 · 로그 · 시그널)나
   고정 버퍼가 필요한 곳(ImGui 입력)에만 씁니다. 언리얼도 `FString` 을 기본으로 두고, 인라인 버퍼(`TStringBuilder<N>`, 넘치면 힙으로 늘어남)는 임시 조립에만 씁니다.
 - **Engine 폴더 사이의 작은 고리는 "위층이 아래층 등록표에 등록" 과 "둘을 다 아는 층으로 옮기기" 로 풉니다**(2026-10-11, 엔진 분할 1 단계). 자동화 실행기는 UI 를 모르고 UI 가 단계 · 로딩 화면 시작 차단 조건(`SW_AUTOMATION_START_BLOCKER`)을 올립니다 — 언리얼 Automation 도 모듈이 테스트 · 래치 명령을 등록하고 실행기는 그 모듈을 모릅니다.
-  정점 애니메이션 굽기(`MeshVertexAnimationBaker`)는 `Object/Animation` 으로, 물리 디버그 선 어댑터는 조립점 `EngineLoop.cpp` 로 옮겨 `Graphics` 가 `Animation` · `Physics` 를 include 하지 않습니다 — 언리얼 AnimToTexture 도 애니메이션과 렌더를 함께 드는 별도 플러그인입니다.
+  정점 애니메이션 굽기(`MeshVertexAnimationBaker`)는 `Object/SceneAnimation` 으로, 물리 디버그 선 어댑터는 조립점 `EngineLoop.cpp` 로 옮겨 `Graphics` 가 `Animation` · `Physics` 를 include 하지 않습니다 — 언리얼 AnimToTexture 도 애니메이션과 렌더를 함께 드는 별도 플러그인입니다.
 - **엔진 내장 에셋 캐시는 기능 폴더가 등록하고 `AssetManager` 는 등록표만 봅니다**(2026-10-11, 엔진 분할). 캐시 클래스의 .cpp 에 `SW_BUILT_IN_ASSET_CACHE( MaterialCache )` 한 줄을 두고(`Resource/Cache/BuiltInAssetCache.h`),
   매니저는 생성자에서 표를 훑어 소유 캐시를 만들고 종류 이름 순으로 올립니다. 타입으로 찾는 창구는 `getAssetCache<T>()` 입니다(`getMaterialCache` 넷은 지웠습니다).
   언리얼 서브시스템(모듈이 타입을 올리고 엔진이 인스턴스를 만들며 `GetSubsystem<T>()` 로 찾는다) · 고도 `register_types` 의 `add_resource_format_loader` 와 같은 방향입니다 — 유니티 `ScriptedImporter` 도 특성으로 등록되고 `AssetDatabase` 는 구현 타입을 모릅니다.

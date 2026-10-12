@@ -6,6 +6,7 @@
 
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/Navigation/SceneNavigation.h"
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
 #include "Engine/Scene/Scene.h"
@@ -52,7 +53,7 @@ namespace sw
         if ( gv_physicsDebugDraw )
         {
             SceneDebugDrawLineAdapter adapter{ queue };
-            objectManager.getScenePhysics().drawDebug( adapter );
+            objectManager.getSceneService<ScenePhysics>().drawDebug( adapter );
         }
 
         // 내비메시 · 에이전트 경로 · 속도 · 장애물 — 선은 물리 디버그와 같은 출구로(편집기 뷰포트가 그린다), 비트 16 은 게임 화면에 보이는 메시로.

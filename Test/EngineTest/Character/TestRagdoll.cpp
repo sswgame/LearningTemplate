@@ -9,9 +9,9 @@
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ScenePhysics.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Resource/AssetManager.h"
@@ -78,7 +78,7 @@ namespace
         {
             float3           position{};
             quaternion       rotation{};
-            IPhysicsScene3D* pScene = manager.getScenePhysics().findScene3D();
+            IPhysicsScene3D* pScene = manager.getSceneService<ScenePhysics>().findScene3D();
             if ( pScene != nullptr && bodyIndex >= 0 )
                 (void)pScene->getBodyTransform( ragdoll.getRagdoll()._listBody[static_cast<size_t>( bodyIndex )], position, rotation );
             return position;

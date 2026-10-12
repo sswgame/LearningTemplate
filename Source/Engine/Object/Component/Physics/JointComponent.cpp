@@ -3,8 +3,8 @@
 #include "Engine/Object/Component/Physics/JointComponent.h"
 
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/ScenePhysics.h"
 
 namespace sw
 {

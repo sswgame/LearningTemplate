@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Object/Animation/AnimationLOD.h"
+#include "Engine/Object/SceneAnimation/AnimationLOD.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/Math/Frustum.h"

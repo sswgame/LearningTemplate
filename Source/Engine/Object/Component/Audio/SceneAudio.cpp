@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Object/GameObject/SceneAudio.h"
+#include "Engine/Object/Component/Audio/SceneAudio.h"
 
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/IAudioService.h"
@@ -11,6 +11,8 @@
 #include "Engine/Object/Component/Audio/PhysicsAudioOcclusionQuery.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/SceneEngineServices.h"
 
 namespace sw
 {
@@ -49,14 +51,17 @@ namespace sw
 
 namespace sw
 {
-    SceneAudio::SceneAudio( IAudioService* pAudioService )
+    // 진행은 `Scene::tick` 이 카메라와 함께 부른다 — 단계는 자리만 정하고 `update( deltaTime )` 은 빈 함수다.
+    SW_SCENE_SERVICE( SceneAudio, FlushEnd )
+
+    SceneAudio::SceneAudio( GameObjectManager& manager )
         : _listener{}
         , _emitter{}
         , _zone{}
         , _listEmitterSnapshot{}
         , _listZoneValue{}
         , _listZoneCurrent{}
-        , _pAudioService{ pAudioService }
+        , _pAudioService{ manager.getSceneEngineServices()._pAudioService }
         , _pEngineOverride{ nullptr }
         , _pOcclusionOverride{ nullptr }
         , _primaryListenerPosition{}

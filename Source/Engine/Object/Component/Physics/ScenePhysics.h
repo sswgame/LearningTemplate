@@ -1,9 +1,10 @@
 /**
  * @file ScenePhysics.h
  * @brief 씬 하나의 강체 물리 — 3D · 2D 물리 씬(처음 쓸 때 만든다), 고정 스텝 누적기, 물리 컴포넌트 레지스트리, 접촉 이벤트를 컴포넌트에 나눠 주기입니다.
- * @details `GameObjectManager` 가 소유만 하고(`PrimitiveRegistry` · `TickRegistry` 와 같은 자리), 프레임 표의 `Physics` 단계(`SceneFrameStepList.xxx`)에서 게임 스레드로 `step` 을
- *          한 번 부릅니다. 겹침만 측정하는 `PhysicsOverlapWorld`(AABB · 연속 쓸기 · `BoxCollider2DComponent` · 키트의 투사체 · 근접 판정)는 그대로 따로
- *          돕니다 — 강체 씬과 같은 레이어 표를 받습니다.
+ * @details 씬 서비스(`ISceneService`)입니다. 이 .cpp 의 `SW_SCENE_SERVICE` 줄로 매니저마다 하나 생기고(`manager.getSceneService<ScenePhysics>()`),
+ *          매니저는 프레임 표의 `Physics` 단계(`SceneFrameStepList.xxx`)에서 게임 스레드로 `update` 를 한 번 부릅니다. 물리 서비스(`PhysicsSystem`)는
+ *          매니저의 서비스 묶음(`SceneEngineServices`)에서 받습니다. 겹침만 측정하는 겹침 월드(`SceneOverlapWorld2D` — AABB · 연속 쓸기 ·
+ *          `BoxCollider2DComponent` · 키트의 투사체 · 근접 판정)도 이 서비스가 들고, `update` 가 겹침 → 강체 순서로 진행합니다 — 강체 씬과 같은 레이어 표를 받습니다.
  *
  *          프레임 하나: 누적기가 스텝 수 n 을 정한다 → 컴포넌트 `beginPhysicsFrame` → n 번(`prePhysicsStep` → 3D · 2D 씬 step → `postPhysicsStep`,
  *          이벤트를 모은다) → `endPhysicsFrame( alpha )`(보간한 자세를 트랜스폼에 쓴다) → 모은 이벤트를 두 오브젝트의 켜진 컴포넌트에
@@ -16,6 +17,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Object/Component/Physics/SceneOverlapWorld2D.h"
+#include "Engine/Object/GameObject/ISceneService.h"
 #include "Engine/Physics/Collision/PhysicsContact.h"
 #include "Engine/Physics/FixedStepAccumulator.h"
 #include "Engine/Physics/IPhysicsScene.h"
@@ -30,21 +33,26 @@ namespace sw
     class PhysicsSystem;
 
     /** @class ScenePhysics @brief 씬 하나의 강체 물리입니다. 파일 머리말 참고. */
-    class SW_API ScenePhysics
+    class SW_API ScenePhysics final : public ISceneService
     {
     public:
+        /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
+        static const SceneServiceRegistration& getSceneServiceRegistration();
+
         /**
-         * @brief 물리 서비스 @p pPhysicsSystem 으로 씬을 만들 물리를 둡니다(소유하지 않음). 오브젝트 매니저가 자기 서비스 묶음에서 넘깁니다.
-         * @param pPhysicsSystem nullptr 이면 물리 씬을 만들지 않습니다(설정 표도 없다).
+         * @brief 매니저 @p manager 의 서비스 묶음에 든 물리 서비스로 씬을 만들 물리를 둡니다(소유하지 않음).
+         * @details 물리 서비스가 없으면(nullptr) 물리 씬을 만들지 않습니다(설정 표도 없다). 겹침 월드는 그래도 돕니다.
          */
-        explicit ScenePhysics( PhysicsSystem* pPhysicsSystem );
-        ~ScenePhysics();
+        explicit ScenePhysics( GameObjectManager& manager );
+        ~ScenePhysics() override;
 
         ScenePhysics( const ScenePhysics& )            = delete;
         ScenePhysics& operator=( const ScenePhysics& ) = delete;
 
         /** @brief 물리 씬을 모두 내립니다(바디 · 관절 · 캐릭터가 함께 사라진다). 매니저가 비울 때 부릅니다. */
-        void shutdown();
+        void shutdown() override;
+        /** @brief 겹침 월드를 진행한 뒤 강체 물리를 진행합니다(`Physics` 단계, 게임 스레드). */
+        void update( float32 deltaTime ) override;
 
         /**
          * @brief 프레임 시간만큼 물리를 진행하고 이벤트를 나눠 줍니다. 파일 머리말의 순서입니다.
@@ -53,6 +61,11 @@ namespace sw
         void step( GameObjectManager& manager, float32 deltaTime );
         /** @brief 3D · 2D 씬의 바디 · 캐릭터를 선으로 냅니다. */
         void drawDebug( IPhysicsDebugRenderer& renderer ) const;
+
+        /** @brief 이 씬의 겹침 월드입니다(AABB 질의 월드 · 2D 콜라이더 등록 · 겹침 이벤트). 질의는 `getOverlapWorld2D().getPhysicsOverlapWorld()` 입니다. */
+        SceneOverlapWorld2D& getOverlapWorld2D() { return _overlapWorld2D; }
+        /** @brief 이 씬의 겹침 월드입니다. */
+        const SceneOverlapWorld2D& getOverlapWorld2D() const { return _overlapWorld2D; }
 
         /** @brief 3D 씬입니다. 처음 부를 때 생성자로 받은 물리 서비스(`PhysicsSystem`)로 만듭니다. 서비스가 없으면 nullptr 입니다. */
         IPhysicsScene3D* getScene3D();
@@ -105,7 +118,9 @@ namespace sw
         /** @brief 받은 물리 서비스가 있고 올라와 있으면 그것, 아니면 nullptr 입니다. */
         PhysicsSystem* findInitializedPhysicsSystem() const;
 
-        PhysicsSystem*                _pPhysicsSystem; ///< 생성자로 받은 물리 서비스(빌림)
+        GameObjectManager&            _manager;        ///< 이 서비스를 가진 매니저(이벤트의 오브젝트 id 를 푼다)
+        PhysicsSystem*                _pPhysicsSystem; ///< 매니저의 서비스 묶음에서 받은 물리 서비스(빌림)
+        SceneOverlapWorld2D           _overlapWorld2D; ///< 겹침 월드 — `update` 가 강체보다 먼저 진행한다
         unique_ptr<IPhysicsScene3D>   _pScene3D;
         unique_ptr<IPhysicsScene2D>   _pScene2D;
         FixedStepAccumulator          _accumulator;

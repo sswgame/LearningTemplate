@@ -2,8 +2,8 @@
 
 #include "Engine/Object/Component/Audio/AudioReverbZoneComponent.h"
 
+#include "Engine/Object/Component/Audio/SceneAudio.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/SceneAudio.h"
 
 namespace sw
 {
@@ -19,12 +19,12 @@ namespace sw
     void AudioReverbZoneComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
-        manager.getSceneAudio().addReverbZone( this );
+        manager.getSceneService<SceneAudio>().addReverbZone( this );
     }
 
     void AudioReverbZoneComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getSceneAudio().removeReverbZone( this );
+        manager.getSceneService<SceneAudio>().removeReverbZone( this );
         SceneComponent::onUnregister( manager );
     }
 

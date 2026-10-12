@@ -6,10 +6,9 @@
 #include "Core/Math/MatrixMath.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Common/RenderTargetDeclaration.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Resource/AssetManager.h"
 
 namespace sw
 {
@@ -72,8 +71,7 @@ namespace sw
         // 렌더 텍스처의 크기를 먼저 알린다 — 그 텍스처를 읽는 머티리얼이 카메라보다 먼저 빌려도 같은 크기로 만들어지게.
         if ( _renderOutput._target != CameraOutputTarget::RenderTexture || _renderOutput._renderTexture.empty() || engine::areEngineServicesBound() == false )
             return;
-        engine::getAssetManager().getAssetCache<TextureCache>().declareRenderTarget( _renderOutput._renderTexture, _renderOutput._renderTextureWidth,
-                                                                                     _renderOutput._renderTextureHeight );
+        engine::declareRenderTarget( _renderOutput._renderTexture, _renderOutput._renderTextureWidth, _renderOutput._renderTextureHeight );
     }
 
     void CameraComponent::onUnregister( GameObjectManager& manager )

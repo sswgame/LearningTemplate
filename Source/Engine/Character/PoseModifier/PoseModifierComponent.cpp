@@ -12,9 +12,9 @@
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ScenePhysics.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsSystem.h"
@@ -47,7 +47,7 @@ namespace sw
                 bool raycastGround( const float3& origin, const float3& direction, float32 maxDistance, RigGroundHit& outHit ) const override
                 {
                     PhysicsQueryFilter  filter{};
-                    const ScenePhysics& physics = _manager.getScenePhysics();
+                    const ScenePhysics& physics = _manager.getSceneService<ScenePhysics>();
                     if ( _bPlanar )
                     {
                         const IPhysicsQueryScene2D* pScene = physics.findScene2D();

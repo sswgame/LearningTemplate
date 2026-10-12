@@ -10,8 +10,8 @@
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/Physics/CharacterControllerComponent.h"
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/ScenePhysics.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 
 namespace sw

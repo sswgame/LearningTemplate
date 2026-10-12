@@ -1,8 +1,8 @@
 # 엔진 분할 계획
 
 `Engine.dll` 하나를 티어 경계로 나누고, 그 전에 의존 방향의 약한 고리를 풉니다. 폴더 의존은 이미 DAG 이고 `CheckEngineLayers.py` 가 지킵니다.
-막힌 곳은 링크 단위가 하나라는 점과, 컴포넌트 모델(`Object`)이 기능 폴더 다섯(Graphics, Physics, Animation, Audio, Navigation)에 묶여 있다는 점입니다.
-특히 `GameObject/` 가 기능 폴더를 직접 include 하는 것이 문제입니다. 컴포넌트 모델의 코어가 렌더, 물리, 내비를 알게 됩니다.
+막힌 곳은 링크 단위가 하나라는 점입니다. 컴포넌트 모델 코어(`GameObject/` 등)가 기능 폴더를 직접 include 하던 것은 0 으로 줄었고 게이트가 지킵니다(2 단계).
+남은 것은 Object 폴더 안에서 코어가 기능 컴포넌트를 아는 방향입니다.
 폴더 사이 include 수는 `py -3 Scripts/lint/report/RunEngineLayerGraph.py` 로 봅니다. Engine 에 남겨 두기로 한 폴더는 [결정 기록](../09_Decisions.md) 2절에 있습니다.
 
 ## 0. 기준 측정 (먼저)
@@ -16,17 +16,19 @@
 
 - `Utility` 루트 파일(`CommandStack` · `DebugOverlayState` · `GameAutoplay` · `GameTimeScale`)은 이름만 보고 두었습니다. 후보는 `CommandStack` → `Scene`(에디터 실행 취소),
   `GameTimeScale` · `GameAutoplay` → `Config`, `DebugOverlayState` → `Profiling` 입니다.
-- `Character/AnimationNotify`(처리기, 테이블, 컴포넌트)는 `CharacterHit` · `SocketSetComponent` 를 써서 `Object/Animation` 으로 내릴 수 없습니다. 알림 계약만 `Animation/Notify` 로 모았습니다.
+- `Character/AnimationNotify`(처리기, 테이블, 컴포넌트)는 `CharacterHit` · `SocketSetComponent` 를 써서 `Object/SceneAnimation` 으로 내릴 수 없습니다. 알림 계약은 `Animation/Notify` 에,
+  컴포넌트 모델 코어가 값으로 드는 알림 종류(`AnimationNotifyPhase`)는 `Common/` 에 있습니다.
 - `Test/EngineTest/Graphics` 의 렌더러 테스트(`TestGpuScene` · `TestRenderGraph` 등)는 아직 `Graphics` 폴더에 있습니다(`Test/EngineTest/Renderer` 로 옮길 후보).
 
 ## 2. 컴포넌트 모델을 코어와 기능으로 가르기 (중간 위험, 가장 큰 효과)
 
-- `Object` 를 둘로 나눕니다. **코어**는 `GameObject` · `Prefab` · `Component` 기반 클래스 · 리플렉션 훅이고, **기능 컴포넌트**는 `Component/{2D,3D,Audio,Navigation,Physics}` · `Object/Animation` 입니다.
-- 씬마다 하나인 기능 서비스는 씬 서비스 레지스트리(`ISceneService` · `SW_SCENE_SERVICE`)로 만듭니다. `SceneNavigation` 이 첫 예이고 `GameObject/` 는 그 타입을 모릅니다.
-  다음은 `ScenePhysics` · `SceneAudio` 입니다. `SceneAudio::update` 는 카메라가 필요해 프레임 단계 목록 밖에 있으므로 단계 하나를 더하거나 `Scene::tick` 쪽 진입점이 필요합니다.
-- 코어는 `Graphics` · `Physics` · `Navigation` · `Audio` 를 include 하지 않습니다. `GameObject` 의 기능 의존은 기능 컴포넌트가 코어에 등록하는 방향으로 뒤집습니다.
-  Transform 변경 알림, 바운드 질의, 씬 등록 모두 `GameObject` 가 인터페이스(`ISceneListener` 형태)로 듣습니다.
-- 기능 컴포넌트는 코어 위, 각자의 기능 폴더 아래에 둡니다. 폴더 이동은 `git mv` 후 코드젠을 다시 만듭니다(헤더를 옮기면 `.gen.cpp` 가 낡는다).
+코어(`Object/GameObject` · `Object/Prefab` · `Object/Component` 바로 아래)가 기능 폴더(Graphics · Physics · Navigation · Audio · Animation · TileMap)를 include 하는 줄은 0 이고,
+`CheckEngineLayers` 의 코어 규칙(`coreFolder` · `coreBannedLayer`, 예외 키 `core:`)이 지킵니다. 물리 · 오디오 · 내비는 씬 서비스(`ISceneService`)이고, 씬 위의 애니메이션은 `Object/SceneAnimation` 입니다.
+남은 일은 Object 폴더 **안의** 방향입니다.
+
+- 코어가 기능 컴포넌트 폴더(`Object/Component/{2D,3D,...}` · `Object/SceneAnimation`)를 아직 include 합니다. `GameObjectManager` 가 `AnimationSystem` 을 값으로 들고,
+  `PrimitiveRegistry` 가 `MeshComponent` · `MeshInstanceBatch` 를 압니다. 3 단계에서 Object 를 링크 단위 둘로 가르려면 이 방향도 뒤집어야 합니다 —
+  애니메이션은 씬 서비스로, 프리미티브 등록은 기능 컴포넌트가 코어에 인터페이스로 등록하는 방향(`ISceneListener` 형태)으로 바꿉니다. 규칙은 코어 금지 목록에 `Object/Component/*` 하위 폴더를 더하는 식으로 걸 수 있습니다.
 - 확인: `RunEngineLayerGraph.py` 에서 코어 폴더가 기능 폴더를 가리키는 화살표가 0 입니다.
 
 ## 3. 링크 단위로 승격

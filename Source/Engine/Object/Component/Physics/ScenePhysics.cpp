@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Object/GameObject/ScenePhysics.h"
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
 
 #include "Core/Memory/Memory.h"
 
@@ -9,6 +9,7 @@
 #include "Engine/Object/Component/Physics/PhysicsComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/SceneEngineServices.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
 #include "Engine/Physics/PhysicsSystem.h"
 
@@ -27,8 +28,12 @@ namespace sw
 
 namespace sw
 {
-    ScenePhysics::ScenePhysics( PhysicsSystem* pPhysicsSystem )
-        : _pPhysicsSystem{ pPhysicsSystem }
+    SW_SCENE_SERVICE( ScenePhysics, Physics )
+
+    ScenePhysics::ScenePhysics( GameObjectManager& manager )
+        : _manager{ manager }
+        , _pPhysicsSystem{ manager.getSceneEngineServices()._pPhysicsSystem }
+        , _overlapWorld2D{}
         , _pScene3D{}
         , _pScene2D{}
         , _accumulator{}
@@ -50,6 +55,14 @@ namespace sw
     ScenePhysics::~ScenePhysics()
     {
         shutdown();
+    }
+
+    void ScenePhysics::update( float32 deltaTime )
+    {
+        SW_MEMORY_SCOPE( Physics );
+        // 이 프레임에 적용된 월드 자리로 겹침을 먼저 측정하고, 강체(고정 스텝 · 보간 · 접촉 이벤트)를 진행한다.
+        _overlapWorld2D.step( _manager, deltaTime );
+        step( _manager, deltaTime );
     }
 
     void ScenePhysics::shutdown()

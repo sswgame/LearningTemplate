@@ -173,10 +173,8 @@ namespace sw
 
     void GameObjectManager::stepPhysics( float32 deltaTime )
     {
-        SW_MEMORY_SCOPE( Physics );
-        _overlapWorld2D.step( *this, deltaTime );
-        // 강체 물리 — 고정 스텝 · 보간한 자리를 트랜스폼에 쓰고 접촉 이벤트를 나눠 준다. 그 쓰기가 이번 프레임의 그림에 들게 바로 펼친다.
-        _scenePhysics.step( *this, deltaTime );
+        // 물리 서비스 — 겹침 월드 → 강체(고정 스텝 · 보간한 자리를 트랜스폼에 쓰고 접촉 이벤트를 나눠 준다). 그 쓰기가 이번 프레임의 그림에 들게 바로 펼친다.
+        updateSceneServices( SceneFrameStep::Physics, deltaTime );
         if ( hasDirtySceneTransforms() )
             flushSceneTransforms();
     }

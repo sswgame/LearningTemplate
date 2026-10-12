@@ -3,13 +3,13 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Object/Animation/AnimationLOD.h"
-#include "Engine/Object/Animation/AnimationRewind.h"
-#include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/SceneAnimation/AnimationLOD.h"
+#include "Engine/Object/SceneAnimation/AnimationRewind.h"
+#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 #include "TestFramework/TestFramework.h"

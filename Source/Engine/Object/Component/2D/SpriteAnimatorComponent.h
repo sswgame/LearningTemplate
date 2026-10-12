@@ -11,8 +11,8 @@
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Animation/Graph/AnimationGraphPlayer.h"
 #include "Engine/Animation/Sprite/SpriteClipPlayable.h"
-#include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

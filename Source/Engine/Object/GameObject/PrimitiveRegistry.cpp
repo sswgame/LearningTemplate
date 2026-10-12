@@ -6,8 +6,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/3D/MeshInstanceBatch.h"
 #include "Engine/Object/Component/SceneTransformStorage.h"
-#include "Engine/Object/GameObject/MeshInstanceBatch.h"
 
 namespace sw
 {

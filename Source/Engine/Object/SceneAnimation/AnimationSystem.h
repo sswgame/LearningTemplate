@@ -10,10 +10,10 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/Skeletal/Pose.h"
-#include "Engine/Object/Animation/AnimationCrowd.h"
-#include "Engine/Object/Animation/AnimationDebugState.h"
-#include "Engine/Object/Animation/AnimationLOD.h"
-#include "Engine/Object/Animation/AnimationRewind.h"
+#include "Engine/Object/SceneAnimation/AnimationCrowd.h"
+#include "Engine/Object/SceneAnimation/AnimationDebugState.h"
+#include "Engine/Object/SceneAnimation/AnimationLOD.h"
+#include "Engine/Object/SceneAnimation/AnimationRewind.h"
 
 namespace sw
 {

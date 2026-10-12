@@ -14,8 +14,10 @@
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/3D/PointLightComponent.h"
 #include "Engine/Object/Component/3D/SpotLightComponent.h"
+#include "Engine/Object/Component/Audio/SceneAudio.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/MissingComponent.h"
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
@@ -1076,7 +1078,7 @@ SW_TEST_CASE( SceneTest, SceneManagerHandsItsInjectedServicesDownToScenes )
     SW_EXPECT_TRUE( pScene->getEngineServices()._pAssetManager == services._pAssetManager );
     SW_EXPECT_TRUE( pScene->getEngineServices()._pDefaultAssets == services._pDefaultAssets );
     SW_EXPECT_TRUE( pObjects->findAssetManager() == services._pAssetManager );
-    SW_EXPECT_TRUE( pObjects->getSceneAudio().findAudioService() == services._pAudioService );
+    SW_EXPECT_TRUE( pObjects->getSceneService<SceneAudio>().findAudioService() == services._pAudioService );
     manager.shutdown();
 
     sw::SceneManager isolated;
@@ -1086,10 +1088,10 @@ SW_TEST_CASE( SceneTest, SceneManagerHandsItsInjectedServicesDownToScenes )
     sw::GameObjectManager* pIsolatedObjects = pIsolated->getObjectManager();
     SW_ASSERT_NOT_NULL( pIsolatedObjects );
     SW_EXPECT_NULL( pIsolatedObjects->findAssetManager() );
-    SW_EXPECT_NULL( pIsolatedObjects->getSceneAudio().findAudioService() );
-    SW_EXPECT_NULL( pIsolatedObjects->getSceneAudio().findAudioEngine() );
-    SW_EXPECT_NULL( pIsolatedObjects->getScenePhysics().getScene3D() );
-    SW_EXPECT_NULL( pIsolatedObjects->getScenePhysics().findSettings() );
+    SW_EXPECT_NULL( pIsolatedObjects->getSceneService<SceneAudio>().findAudioService() );
+    SW_EXPECT_NULL( pIsolatedObjects->getSceneService<SceneAudio>().findAudioEngine() );
+    SW_EXPECT_NULL( pIsolatedObjects->getSceneService<ScenePhysics>().getScene3D() );
+    SW_EXPECT_NULL( pIsolatedObjects->getSceneService<ScenePhysics>().findSettings() );
     {
         test::ScopedDefensiveTestLog expected( "a scene manager without a type registry" );
         SW_EXPECT_FALSE( isolated.requestLoadFuture( "game/demo/maps/none.scene.xml" ).isValid() );

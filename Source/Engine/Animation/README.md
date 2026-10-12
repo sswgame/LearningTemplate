@@ -13,7 +13,7 @@
 
 이 폴더는 오브젝트를 모르는 순수 계산입니다. 그래서 오브젝트 없이 테스트할 수 있습니다. 나머지는 다른 폴더에 있습니다.
 
-- 누가 언제 포즈를 만드는지(평가)는 `Object/Animation/AnimationSystem` 입니다.
+- 누가 언제 포즈를 만드는지(평가)는 `Object/SceneAnimation/AnimationSystem` 입니다.
 - 컴포넌트는 `Object/Component/3D/` 의 `SkeletalMeshComponent` 와 `SkeletalAnimatorComponent`, 그리고 `Object/Component/2D/SpriteAnimatorComponent` 입니다.
 - 경로로 스켈레톤과 클립을 나눠 주는 캐시(`SkeletonCache`, `AnimationClipCache`)는 `AnimationAssetCache`, 스프라이트 클립 캐시는 `SpriteClipCache` 입니다. 둘 다 `Resource` 의 `IAssetCache` 를 구현하므로 이 폴더는 `Resource` 위 티어입니다.
 - 후처리 리그를 유닛에 붙이는 컴포넌트, 알림 처리기, 래그돌은 [Character](../Character/README.md)에 있습니다.
@@ -138,7 +138,7 @@ glTF 의 열 우선 행렬 배열을 행 우선으로 읽으면 그대로 이 �
 - `AnimationFiredNotify::_pSource` 와 `_eventIndex` 로 같은 이름의 구간들을 서로 구별합니다.
 
 애니메이터는 울린 알림을 프레임마다 한 번 받는 쪽(`IAnimationNotifyListener`)에 넘깁니다. 이름을 처리기에 연결하는 쪽은 `Engine/Character/AnimationNotify/AnimationNotifyComponent` 입니다.
-알림 계약(`AnimationNotifyPhase`, `IAnimationNotifyListener`)은 이 폴더의 `Notify/` 에 있고, 처리기는 소켓과 피격을 쓰므로 `Character` 에 있습니다. 알림을 거두어 넘기는 시스템은 `Object/Animation/AnimationSystem` 입니다.
+알림 계약(`AnimationNotifyPhase`, `IAnimationNotifyListener`)은 이 폴더의 `Notify/` 에 있고, 처리기는 소켓과 피격을 쓰므로 `Character` 에 있습니다. 알림을 거두어 넘기는 시스템은 `Object/SceneAnimation/AnimationSystem` 입니다.
 
 ### 2D 와 3D 가 함께 쓰는 것
 
@@ -160,7 +160,7 @@ glTF 의 열 우선 행렬 배열을 행 우선으로 읽으면 그대로 이 �
 ### 애니메이션 LOD
 
 화면에 작게 보이거나 보이지 않는 캐릭터까지 매 프레임 포즈를 만들면 군중 장면에서 비용이 커집니다.
-`Object/Animation/AnimationLOD` 는 언리얼의 URO(Update Rate Optimization), Significance Manager, Animation Budget Allocator 를 합친 것에 해당합니다.
+`Object/SceneAnimation/AnimationLOD` 는 언리얼의 URO(Update Rate Optimization), Significance Manager, Animation Budget Allocator 를 합친 것에 해당합니다.
 
 엔진 루프가 프레임마다 뷰 목록을 넣습니다(`AnimationSystem::setLODViews`). 주 시점과, 이번 프레임에 그리는 화면 분할이나 렌더 텍스처의 뷰가 들어갑니다.
 평가 전에 LOD 클라이언트(`IAnimationLODClient`)마다 경계 구로 다음을 판정합니다.
@@ -177,7 +177,7 @@ glTF 의 열 우선 행렬 배열을 행 우선으로 읽으면 그대로 이 �
 
 ### 군중 공유
 
-같은 캐릭터가 같은 클립을 재생하면 포즈 계산을 나눠 쓸 수 있습니다. `Object/Animation/AnimationCrowd` 가 이 일을 하고, 언리얼의 Animation Sharing 에 해당합니다.
+같은 캐릭터가 같은 클립을 재생하면 포즈 계산을 나눠 쓸 수 있습니다. `Object/SceneAnimation/AnimationCrowd` 가 이 일을 하고, 언리얼의 Animation Sharing 에 해당합니다.
 유닛의 `_bShareCrowdPose` 를 켜면 시간 단계 뒤에 그 유닛이 다음 셋 중 하나가 됩니다(`updateCrowdMembership`). 설정은 `engine/animation/animationcrowd.json` 입니다.
 
 **그룹 공유.** 스켈레톤, 스킨 원본, 클립, 재생 속도, 루트 모션 처리, 변형 번호가 같은 유닛들은 포즈 하나, 메시 하나, 팔레트 하나, 드로우 배치 하나를 나눠 씁니다. 멤버 수와 관계없이 비용이 같습니다.
@@ -214,7 +214,7 @@ Shipping 은 쿠킹 때 `*.vertexanimation.json` 이 고른 (메시, 클립)을 
 
 ### 되감기
 
-`Object/Animation/AnimationRewind` 는 언리얼의 Rewind Debugger 에 해당하고 Shipping 에는 없습니다.
+`Object/SceneAnimation/AnimationRewind` 는 언리얼의 Rewind Debugger 에 해당하고 Shipping 에는 없습니다.
 기록을 켜면(`-gv_animationRewind=1`, 콘솔 `anim.rewind on`, 에디터 Animation Rewind 패널) 평가가 끝날 때마다 일한 유닛의 상태를 링 버퍼에 남깁니다.
 남기는 것은 압축한 포즈, 월드 행렬, 그래프 상태, 이번 프레임의 알림과 커브, 루트 모션입니다(`IAnimationPhaseTask::collectDebugState`). 기본 창은 10초(`-gv_animationRewindSeconds`)입니다.
 
@@ -332,8 +332,8 @@ KayKit 기사가 비탈 위에서 발을 디디고, 움직이는 구를 바라�
 | `engine/animation/lipsync.json`, `.visemes.json` | `Facial/LipSync.h` |
 | `.rig.json` | `Rig/RigAsset.h` |
 | `.retarget.json` | `Retarget/RetargetProfile.h` |
-| `engine/animation/animationlod.json` | `Object/Animation/AnimationLOD.h` |
-| `.vertexanimation.json` | `Object/Animation/VertexAnimationCooker.h` |
+| `engine/animation/animationlod.json` | `Object/SceneAnimation/AnimationLOD.h` |
+| `.vertexanimation.json` | `Object/SceneAnimation/VertexAnimationCooker.h` |
 
 모든 파일은 모르는 키, 없는 본을 가리키는 이름, 앞에 없는 부모를 로드 오류로 처리합니다. `ResourceDataSchemaTest` 가 `Resource/` 의 모든 파일을 읽어 확인합니다.
 `.animclip` 은 지금 버전만 읽습니다. 옛 버전은 원본에서 다시 임포트합니다.
@@ -385,7 +385,7 @@ Shooter3D 에서는 원인 셋이 겹쳐 있었습니다. 반복으로 돌린 �
 **ACL 과 RTM 헤더는 `Codec/ACL/` 의 `.cpp` 에서만 include 하세요.** 다른 곳에서 include 하면 `CheckThirdPartyIsolation.py` 가 막습니다.
 
 **`AnimationPlayback.h` 를 `Component.h` 에서 include 하지 마세요.** `Component.h` 는 PCH 에 들어 있어서, 거기서 include 한 헤더를 고치면 PCH 가 다시 빌드됩니다.
-그래서 `Component.h` 는 알림 종류 하나만 담은 `AnimationNotifyPhase.h` 만 include 합니다.
+그래서 `Component.h` 는 알림 종류 하나만 담은 `Engine/Common/AnimationNotifyPhase.h` 만 include 합니다(컴포넌트 모델 코어는 Animation 폴더를 include 하지 않습니다).
 
 **되감는 동안 평가가 멈춘다는 것을 기억하세요.** 기록 요청은 프로세스 전역이고, 씬마다의 기록기가 평가 전에 그 요청을 따릅니다. 테스트에서 요청을 바꿨으면 되돌립니다(`ScopedRecording`).
 군중 그룹을 나눠 쓰는 유닛에는 기록된 포즈를 적용하지 않습니다. 포즈가 그룹의 것이기 때문입니다. 기록과 뼈대 그리기만 됩니다.
@@ -407,11 +407,11 @@ Shooter3D 에서는 원인 셋이 겹쳐 있었습니다. 반복으로 돌린 �
 
 | 파일 | 내용 |
 |---|---|
-| `Object/Animation/AnimationSystem.h` | 단계, 유닛 평가, 일 인터페이스 |
+| `Object/SceneAnimation/AnimationSystem.h` | 단계, 유닛 평가, 일 인터페이스 |
 | `Object/Component/3D/SkeletalAnimatorComponent.h` | 재생, 레이어, 파라미터, 알림 |
 | `Object/Component/3D/SkeletalMeshComponent.h` | 유닛, LOD 설정, 군중 공유 |
 | `Skeletal/Pose.h` | 포즈, 섞기, 모델 공간, 스킨 팔레트 |
 | `AnimationPlayer.h`, `Graph/AnimationGraphPlayer.h` | 크로스페이드, 상태 기계 |
 | `AnimationPlayback.h` | 커서, 알림 트랙 |
 | `Rig/RigAsset.h`, `Rig/RigInstance.h` | 리그 에셋과 실행 상태 |
-| `Object/Animation/AnimationLOD.h`, `AnimationCrowd.h` | LOD, 군중 공유 |
+| `Object/SceneAnimation/AnimationLOD.h`, `AnimationCrowd.h` | LOD, 군중 공유 |

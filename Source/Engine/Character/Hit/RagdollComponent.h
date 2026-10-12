@@ -22,8 +22,8 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/Skeletal/Pose.h"
-#include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/Physics/PhysicsComponent.h"
+#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Physics/Asset/PhysicsRagdoll.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

@@ -1,6 +1,6 @@
 # 강체 물리 컴포넌트
 
-씬의 물리(`Engine/Object/GameObject/ScenePhysics.h`)에 등록되는 컴포넌트입니다. 쓰는 방법과 규칙은 [Physics](../../../Physics/README.md)에 있습니다.
+씬의 물리(`Engine/Object/Component/Physics/ScenePhysics.h`)에 등록되는 컴포넌트입니다. 쓰는 방법과 규칙은 [Physics](../../../Physics/README.md)에 있습니다.
 
 | 컴포넌트 | 차원 | 단계 |
 |---|---|---|

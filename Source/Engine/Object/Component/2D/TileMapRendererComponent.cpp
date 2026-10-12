@@ -6,11 +6,12 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
+#include "Engine/Object/Component/2D/SpriteInstanceBatch.h"
 #include "Engine/Object/Component/2D/SpriteRenderUtil.h"
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/SpriteInstanceBatch.h"
 #include "Engine/Physics/PhysicsOverlapWorld.h"
 
 namespace sw
@@ -437,7 +438,7 @@ namespace sw
             AABB box{};
             box._min = float3{ MathUtil::min( cornerA._x, cornerB._x ), MathUtil::min( cornerA._y, cornerB._y ), 0.0f };
             box._max = float3{ MathUtil::max( cornerA._x, cornerB._x ), MathUtil::max( cornerA._y, cornerB._y ), 0.0f };
-            _listBody.push_back( pManager->getOverlapWorld2D().getPhysicsOverlapWorld().addBody( box, static_cast<uint8>( _colliderLayer ), pOwner->getObjectID() ) );
+            _listBody.push_back( pManager->getSceneService<ScenePhysics>().getOverlapWorld2D().getPhysicsOverlapWorld().addBody( box, static_cast<uint8>( _colliderLayer ), pOwner->getObjectID() ) );
         }
     }
 
@@ -449,7 +450,7 @@ namespace sw
         {
             for ( const SlotHandle& body : _listBody )
             {
-                pManager->getOverlapWorld2D().getPhysicsOverlapWorld().removeBody( body );
+                pManager->getSceneService<ScenePhysics>().getOverlapWorld2D().getPhysicsOverlapWorld().removeBody( body );
             }
         }
         _listBody.clear();

@@ -9,8 +9,11 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Common/RenderTargetDeclaration.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/Cache/BuiltInAssetCache.h"
 
 #include <condition_variable>
@@ -18,6 +21,20 @@
 namespace sw
 {
     SW_LOG_CALLER( "TextureCache" );
+
+    namespace
+    {
+        struct TextureCacheInternal
+        {
+            /** @brief `engine::declareRenderTarget` 의 처리 함수입니다. 바인딩된 에셋 매니저의 텍스처 캐시에 넘긴다(부르는 쪽이 바인딩을 확인한다). */
+            static void declareRenderTarget( string_view relativePath, uint32 width, uint32 height )
+            {
+                if ( engine::areEngineServicesBound() == false )
+                    return;
+                engine::getAssetManager().getAssetCache<TextureCache>().declareRenderTarget( relativePath, width, height );
+            }
+        };
+    } // namespace
 
     struct TextureCache::Impl
     {
@@ -43,6 +60,8 @@ namespace sw
     TextureCache::TextureCache()
         : _impl{ make_unique<Impl>() }
     {
+        // 컴포넌트 모델 코어(카메라)는 이 헤더를 모르므로 Engine/Common 의 창구로 크기를 알린다 — 처리 함수는 상태가 없어 다시 묶어도 같다.
+        engine::bindRenderTargetDeclaration( &TextureCacheInternal::declareRenderTarget );
     }
 
     TextureCache::~TextureCache() = default;

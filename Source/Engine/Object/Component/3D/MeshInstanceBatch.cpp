@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Object/GameObject/MeshInstanceBatch.h"
+#include "Engine/Object/Component/3D/MeshInstanceBatch.h"
 
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"

@@ -4,11 +4,11 @@
 
 #include "Engine/Object/Component/2D/PixelPerfectCameraComponent.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
+#include "Engine/Object/Component/3D/MeshInstanceBatch.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/CameraRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/MeshInstanceBatch.h"
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"
 #include "Engine/Resource/ResourcePaths.h"
 #include "Engine/Scene/Scene.h"

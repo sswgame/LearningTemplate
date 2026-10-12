@@ -10,9 +10,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Destruction/FractureComponent.h"
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ScenePhysics.h"
 #include "Engine/Physics/Collision/CollisionLayers.h"
 #include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Resource/ResourcePaths.h"
@@ -448,7 +448,7 @@ namespace test
         result._settleTicks = static_cast<int32>( tick ) - static_cast<int32>( options._tickCount );
 
         // 끝 — 멈춘 덩어리 오차, 파편 레이어, 대역폭.
-        const PhysicsSettings*    pSettings      = harness.getServer().getObjectManager().getScenePhysics().findSettings();
+        const PhysicsSettings*    pSettings      = harness.getServer().getObjectManager().getSceneService<ScenePhysics>().findSettings();
         uint8                     characterLayer = 0;
         uint8                     debrisLayer    = 0;
         const bool                bLayers        = pSettings != nullptr && pSettings->findLayerIndex( "Character", characterLayer ) && pSettings->findLayerIndex( "Debris", debrisLayer );

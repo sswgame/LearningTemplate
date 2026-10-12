@@ -4,9 +4,9 @@
 #include "Core/Network/BitStream.h"
 
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ScenePhysics.h"
 
 #include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationClient.h"
 #include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationServer.h"
@@ -376,15 +376,15 @@ SW_TEST_CASE( NetSimHarnessTest, EveryWorldRunsItsOwnSceneAndPhysics )
     vector<NetSimWorld*> listClient;
     harness.collectClients( listClient );
     SW_ASSERT_EQUAL( size_t{ 3 }, listClient.size() );
-    const IPhysicsScene3D* pServerPhysics = harness.getServer().getObjectManager().getScenePhysics().findScene3D();
+    const IPhysicsScene3D* pServerPhysics = harness.getServer().getObjectManager().getSceneService<ScenePhysics>().findScene3D();
     SW_ASSERT_NOT_NULL( pServerPhysics );
-    SW_EXPECT_TRUE( harness.getServer().getObjectManager().getScenePhysics().getStepCount() >= 290 );
+    SW_EXPECT_TRUE( harness.getServer().getObjectManager().getSceneService<ScenePhysics>().getStepCount() >= 290 );
     for ( NetSimWorld* pClient : listClient )
     {
         GameObjectManager& manager = pClient->getObjectManager();
         SW_EXPECT_TRUE( &manager != &harness.getServer().getObjectManager() );
-        SW_EXPECT_TRUE( manager.getScenePhysics().findScene3D() != nullptr && manager.getScenePhysics().findScene3D() != pServerPhysics );
-        SW_EXPECT_TRUE( manager.getScenePhysics().getStepCount() >= 290 );
+        SW_EXPECT_TRUE( manager.getSceneService<ScenePhysics>().findScene3D() != nullptr && manager.getSceneService<ScenePhysics>().findScene3D() != pServerPhysics );
+        SW_EXPECT_TRUE( manager.getSceneService<ScenePhysics>().getStepCount() >= 290 );
         const float32 error = computeProxyError( harness, pClient->getWorldIndex() );
         SW_EXPECT_TRUE_MSG( 0.0f <= error && error < 0.01f, "client proxies rest where the server crates rest" );
     }

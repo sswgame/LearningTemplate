@@ -13,9 +13,9 @@
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
+#include "Engine/Object/Component/Physics/ScenePhysics.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ScenePhysics.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Resource/ResourcePaths.h"
@@ -154,7 +154,7 @@ SW_TEST_CASE( DismembermentRuntimeTest, FatalHeadHitSeversAndSpawnsPhysicsPiece 
     SW_EXPECT_EQUAL( 0u, vertexCountAfter % 3 );
     SW_EXPECT_NEAR_EQUAL( 1.0f, pDismember->getSurfaceState().getRegionValue( static_cast<uint32>( pDismember->findRegionIndex( hashed_string( "Head" ) ) ), hashed_string( "Blood" ) ),
                           1e-6f );
-    IPhysicsScene3D* pScene = manager.getScenePhysics().findScene3D();
+    IPhysicsScene3D* pScene = manager.getSceneService<ScenePhysics>().findScene3D();
     SW_ASSERT_NOT_NULL( pScene );
     SW_EXPECT_FALSE( pScene->isBodyEnabled( pRagdoll->getRagdoll()._listBody[static_cast<size_t>( head )] ) );
 

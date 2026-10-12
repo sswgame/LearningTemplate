@@ -193,7 +193,7 @@ namespace sw
         }
 
     private:
-        /** @brief 렌더 텍스처 출력이면 그 크기를 텍스처 캐시에 알립니다(`TextureCache::declareRenderTarget`). */
+        /** @brief 렌더 텍스처 출력이면 그 크기를 텍스처 캐시에 알립니다(`engine::declareRenderTarget` — 텍스처 캐시가 묶는다). */
         void declareRenderTexture() const;
 
     private:

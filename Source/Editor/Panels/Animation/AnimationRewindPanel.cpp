@@ -15,11 +15,11 @@
 
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Localization/LocText.h"
-#include "Engine/Object/Animation/AnimationRewind.h"
-#include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/SceneAnimation/AnimationRewind.h"
+#include "Engine/Object/SceneAnimation/AnimationSystem.h"
 #include "Engine/Scene/Scene.h"
 
 #include <imgui.h>

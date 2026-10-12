@@ -333,4 +333,4 @@ AudioEngine& engine = pAudio->getEngine();                         // 이벤트,
 | `AudioMusic.h` | 적응형 음악 데이터 |
 | `AudioSpatial.h` | 리스너, 감쇠, 가림 |
 | `DSP/AudioEffect.h` | 이펙트 종류와 파라미터 |
-| `Object/GameObject/SceneAudio.h` | 씬과 오디오 연결 |
+| `Object/Component/Audio/SceneAudio.h` | 씬과 오디오 연결(씬 서비스) |
