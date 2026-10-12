@@ -1,0 +1,1838 @@
+{
+ "_version": 1,
+ "_sourceMajorVersion": 0,
+ "_mapHumanBone": {
+  "hips": "J_Bip_C_Hips",
+  "leftUpperLeg": "J_Bip_L_UpperLeg",
+  "rightUpperLeg": "J_Bip_R_UpperLeg",
+  "leftLowerLeg": "J_Bip_L_LowerLeg",
+  "rightLowerLeg": "J_Bip_R_LowerLeg",
+  "leftFoot": "J_Bip_L_Foot",
+  "rightFoot": "J_Bip_R_Foot",
+  "spine": "J_Bip_C_Spine",
+  "chest": "J_Bip_C_Chest",
+  "neck": "J_Bip_C_Neck",
+  "head": "J_Bip_C_Head",
+  "leftShoulder": "J_Bip_L_Shoulder",
+  "rightShoulder": "J_Bip_R_Shoulder",
+  "leftUpperArm": "J_Bip_L_UpperArm",
+  "rightUpperArm": "J_Bip_R_UpperArm",
+  "leftLowerArm": "J_Bip_L_LowerArm",
+  "rightLowerArm": "J_Bip_R_LowerArm",
+  "leftHand": "J_Bip_L_Hand",
+  "rightHand": "J_Bip_R_Hand",
+  "leftToes": "J_Bip_L_ToeBase",
+  "rightToes": "J_Bip_R_ToeBase",
+  "leftEye": "J_Adj_L_FaceEye",
+  "rightEye": "J_Adj_R_FaceEye",
+  "leftThumbMetacarpal": "J_Bip_L_Thumb1",
+  "leftThumbProximal": "J_Bip_L_Thumb2",
+  "leftThumbDistal": "J_Bip_L_Thumb3",
+  "leftIndexProximal": "J_Bip_L_Index1",
+  "leftIndexIntermediate": "J_Bip_L_Index2",
+  "leftIndexDistal": "J_Bip_L_Index3",
+  "leftMiddleProximal": "J_Bip_L_Middle1",
+  "leftMiddleIntermediate": "J_Bip_L_Middle2",
+  "leftMiddleDistal": "J_Bip_L_Middle3",
+  "leftRingProximal": "J_Bip_L_Ring1",
+  "leftRingIntermediate": "J_Bip_L_Ring2",
+  "leftRingDistal": "J_Bip_L_Ring3",
+  "leftLittleProximal": "J_Bip_L_Little1",
+  "leftLittleIntermediate": "J_Bip_L_Little2",
+  "leftLittleDistal": "J_Bip_L_Little3",
+  "rightThumbMetacarpal": "J_Bip_R_Thumb1",
+  "rightThumbProximal": "J_Bip_R_Thumb2",
+  "rightThumbDistal": "J_Bip_R_Thumb3",
+  "rightIndexProximal": "J_Bip_R_Index1",
+  "rightIndexIntermediate": "J_Bip_R_Index2",
+  "rightIndexDistal": "J_Bip_R_Index3",
+  "rightMiddleProximal": "J_Bip_R_Middle1",
+  "rightMiddleIntermediate": "J_Bip_R_Middle2",
+  "rightMiddleDistal": "J_Bip_R_Middle3",
+  "rightRingProximal": "J_Bip_R_Ring1",
+  "rightRingIntermediate": "J_Bip_R_Ring2",
+  "rightRingDistal": "J_Bip_R_Ring3",
+  "rightLittleProximal": "J_Bip_R_Little1",
+  "rightLittleIntermediate": "J_Bip_R_Little2",
+  "rightLittleDistal": "J_Bip_R_Little3",
+  "upperChest": "J_Bip_C_UpperChest"
+ },
+ "_firstPersonBone": "J_Bip_C_Head",
+ "_firstPersonOffset": [
+  0.0,
+  0.06,
+  0.0
+ ],
+ "_listFirstPersonMesh": [],
+ "_listExpression": [
+  {
+   "_name": "neutral",
+   "_bPreset": true,
+   "_bBinary": false,
+   "_overrideBlink": "None",
+   "_overrideLookAt": "None",
+   "_overrideMouth": "None",
+   "_listBind": []
+  },
+  {
+   "_name": "aa",
+   "_bPreset": true,
+   "_bBinary": false,
+   "_overrideBlink": "None",
+   "_overrideLookAt": "None",
+   "_overrideMouth": "None",
+   "_listBind": [
+    {
+     "_morphTarget": "target29",
+     "_weight": 1.0
+    }
+   ]
+  },
+  {
+   "_name": "ih",
+   "_bPreset": true,
+   "_bBinary": false,
+   "_overrideBlink": "None",
+   "_overrideLookAt": "None",
+   "_overrideMouth": "None",
+   "_listBind": [
+    {
+     "_morphTarget": "target30",
+     "_weight": 1.0
+    }
+   ]
+  },
+  {
+   "_name": "ou",
+   "_bPreset": true,
+   "_bBinary": false,
+   "_overrideBlink": "None",
+   "_overrideLookAt": "None",
+   "_overrideMouth": "None",
+   "_listBind": [
+    {
+     "_morphTarget": "target31",
+     "_weight": 1.0
+    }
+   ]
+  },
+  {
+   "_name": "ee",
+   "_bPreset": true,
+   "_bBinary": false,
+   "_overrideBlink": "None",
+   "_overrideLookAt": "None",
+   "_overrideMouth": "None",
+   "_listBind": [
+    {
+     "_morphTarget": "target32",
+     "_weight": 1.0
+    }
+   ]
+  },
+  {
+   "_name": "oh",
+   "_bPreset": true,
+   "_bBinary": false,
+   "_overrideBlink": "None",
+   "_overrideLookAt": "None",
+   "_overrideMouth": "None",
+   "_listBind": [
+    {
+     "_morphTarget": "target33",
+     "_weight": 1.0
+    }
+   ]
+  },
+  {
+   "_name": "blink",
+   "_bPreset": true,
+   "_bBinary": false,
+   "_overrideBlink": "None",
+   "_overrideLookAt": "None",
+   "_overrideMouth": "None",
+   "_listBind": [
+    {
+     "_morphTarget": "target12",
+     "_weight": 1.0
+    }
+   ]
+  },
+  {
+   "_name": "blinkLeft",
+   "_bPreset": true,
+   "_bBinary": false,
+   "_overrideBlink": "None",
+   "_overrideLookAt": "None",
+   "_overrideMouth": "None",
+   "_listBind": [
+    {
+     "_morphTarget": "target14",
+     "_weight": 1.0
+    }
+   ]
+  },
+  {
+   "_name": "blinkRight",
+   "_bPreset": true,
+   "_bBinary": false,
+   "_overrideBlink": "None",
+   "_overrideLookAt": "None",
+   "_overrideMouth": "None",
+   "_listBind": [
+    {
+     "_morphTarget": "target13",
+     "_weight": 1.0
+    }
+   ]
+  },
+  {
+   "_name": "angry",
+   "_bPreset": true,
+   "_bBinary": false,
+   "_overrideBlink": "None",
+   "_overrideLookAt": "None",
+   "_overrideMouth": "None",
+   "_listBind": [
+    {
+     "_morphTarget": "target0",
+     "_weight": 1.0
+    }
+   ]
+  },
+  {
+   "_name": "relaxed",
+   "_bPreset": true,
+   "_bBinary": false,
+   "_overrideBlink": "None",
+   "_overrideLookAt": "None",
+   "_overrideMouth": "None",
+   "_listBind": [
+    {
+     "_morphTarget": "target1",
+     "_weight": 1.0
+    }
+   ]
+  },
+  {
+   "_name": "happy",
+   "_bPreset": true,
+   "_bBinary": false,
+   "_overrideBlink": "None",
+   "_overrideLookAt": "None",
+   "_overrideMouth": "None",
+   "_listBind": [
+    {
+     "_morphTarget": "target2",
+     "_weight": 1.0
+    }
+   ]
+  },
+  {
+   "_name": "sad",
+   "_bPreset": true,
+   "_bBinary": false,
+   "_overrideBlink": "None",
+   "_overrideLookAt": "None",
+   "_overrideMouth": "None",
+   "_listBind": [
+    {
+     "_morphTarget": "target3",
+     "_weight": 1.0
+    }
+   ]
+  },
+  {
+   "_name": "Surprised",
+   "_bPreset": false,
+   "_bBinary": false,
+   "_overrideBlink": "None",
+   "_overrideLookAt": "None",
+   "_overrideMouth": "None",
+   "_listBind": [
+    {
+     "_morphTarget": "target4",
+     "_weight": 1.0
+    }
+   ]
+  },
+  {
+   "_name": "Extra",
+   "_bPreset": false,
+   "_bBinary": false,
+   "_overrideBlink": "None",
+   "_overrideLookAt": "None",
+   "_overrideMouth": "None",
+   "_listBind": [
+    {
+     "_morphTarget": "target20",
+     "_weight": 1.0
+    },
+    {
+     "_morphTarget": "target40",
+     "_weight": 1.0
+    }
+   ]
+  }
+ ],
+ "_listCollider": [
+  {
+   "_bone": "J_Bip_C_Spine",
+   "_bCapsule": false,
+   "_radius": 0.12,
+   "_offset": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "_tail": [
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "_bone": "J_Bip_C_UpperChest",
+   "_bCapsule": false,
+   "_radius": 0.1,
+   "_offset": [
+    0.0,
+    0.002797,
+    -0.009601
+   ],
+   "_tail": [
+    0.0,
+    0.002797,
+    -0.009601
+   ]
+  },
+  {
+   "_bone": "J_Bip_C_UpperChest",
+   "_bCapsule": false,
+   "_radius": 0.07,
+   "_offset": [
+    0.05,
+    0.059608,
+    0.027784
+   ],
+   "_tail": [
+    0.05,
+    0.059608,
+    0.027784
+   ]
+  },
+  {
+   "_bone": "J_Bip_C_UpperChest",
+   "_bCapsule": false,
+   "_radius": 0.07,
+   "_offset": [
+    -0.05,
+    0.059608,
+    0.027784
+   ],
+   "_tail": [
+    -0.05,
+    0.059608,
+    0.027784
+   ]
+  },
+  {
+   "_bone": "J_Bip_C_Neck",
+   "_bCapsule": false,
+   "_radius": 0.05,
+   "_offset": [
+    6.4e-05,
+    0.028092,
+    -0.016728
+   ],
+   "_tail": [
+    6.4e-05,
+    0.028092,
+    -0.016728
+   ]
+  },
+  {
+   "_bone": "J_Bip_C_Head",
+   "_bCapsule": false,
+   "_radius": 0.1,
+   "_offset": [
+    0.000227,
+    0.100247,
+    0.012563
+   ],
+   "_tail": [
+    0.000227,
+    0.100247,
+    0.012563
+   ]
+  },
+  {
+   "_bone": "J_Bip_L_UpperArm",
+   "_bCapsule": false,
+   "_radius": 0.05,
+   "_offset": [
+    -0.000455,
+    -0.00994,
+    0.000992
+   ],
+   "_tail": [
+    -0.000455,
+    -0.00994,
+    0.000992
+   ]
+  },
+  {
+   "_bone": "J_Bip_L_UpperArm",
+   "_bCapsule": false,
+   "_radius": 0.05,
+   "_offset": [
+    0.074462,
+    -0.013429,
+    0.000363
+   ],
+   "_tail": [
+    0.074462,
+    -0.013429,
+    0.000363
+   ]
+  },
+  {
+   "_bone": "J_Bip_L_UpperArm",
+   "_bCapsule": false,
+   "_radius": 0.05,
+   "_offset": [
+    0.149378,
+    -0.016917,
+    -0.000265
+   ],
+   "_tail": [
+    0.149378,
+    -0.016917,
+    -0.000265
+   ]
+  },
+  {
+   "_bone": "J_Bip_L_LowerArm",
+   "_bCapsule": false,
+   "_radius": 0.03,
+   "_offset": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "_tail": [
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "_bone": "J_Bip_L_LowerArm",
+   "_bCapsule": false,
+   "_radius": 0.035,
+   "_offset": [
+    0.04983,
+    -0.000109,
+    -0.004113
+   ],
+   "_tail": [
+    0.04983,
+    -0.000109,
+    -0.004113
+   ]
+  },
+  {
+   "_bone": "J_Bip_L_LowerArm",
+   "_bCapsule": false,
+   "_radius": 0.03,
+   "_offset": [
+    0.099661,
+    -0.000217,
+    -0.008227
+   ],
+   "_tail": [
+    0.099661,
+    -0.000217,
+    -0.008227
+   ]
+  },
+  {
+   "_bone": "J_Bip_L_LowerArm",
+   "_bCapsule": false,
+   "_radius": 0.03,
+   "_offset": [
+    0.149491,
+    -0.000326,
+    -0.01234
+   ],
+   "_tail": [
+    0.149491,
+    -0.000326,
+    -0.01234
+   ]
+  },
+  {
+   "_bone": "J_Bip_L_Hand",
+   "_bCapsule": false,
+   "_radius": 0.03,
+   "_offset": [
+    0.019932,
+    -0.000114,
+    -0.00164
+   ],
+   "_tail": [
+    0.019932,
+    -0.000114,
+    -0.00164
+   ]
+  },
+  {
+   "_bone": "J_Bip_R_UpperArm",
+   "_bCapsule": false,
+   "_radius": 0.05,
+   "_offset": [
+    0.000454,
+    -0.00994,
+    0.000992
+   ],
+   "_tail": [
+    0.000454,
+    -0.00994,
+    0.000992
+   ]
+  },
+  {
+   "_bone": "J_Bip_R_UpperArm",
+   "_bCapsule": false,
+   "_radius": 0.05,
+   "_offset": [
+    -0.074462,
+    -0.013427,
+    0.000363
+   ],
+   "_tail": [
+    -0.074462,
+    -0.013427,
+    0.000363
+   ]
+  },
+  {
+   "_bone": "J_Bip_R_UpperArm",
+   "_bCapsule": false,
+   "_radius": 0.05,
+   "_offset": [
+    -0.149378,
+    -0.016914,
+    -0.000265
+   ],
+   "_tail": [
+    -0.149378,
+    -0.016914,
+    -0.000265
+   ]
+  },
+  {
+   "_bone": "J_Bip_R_LowerArm",
+   "_bCapsule": false,
+   "_radius": 0.03,
+   "_offset": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "_tail": [
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "_bone": "J_Bip_R_LowerArm",
+   "_bCapsule": false,
+   "_radius": 0.035,
+   "_offset": [
+    -0.04983,
+    -0.000109,
+    -0.004113
+   ],
+   "_tail": [
+    -0.04983,
+    -0.000109,
+    -0.004113
+   ]
+  },
+  {
+   "_bone": "J_Bip_R_LowerArm",
+   "_bCapsule": false,
+   "_radius": 0.03,
+   "_offset": [
+    -0.099661,
+    -0.000218,
+    -0.008226
+   ],
+   "_tail": [
+    -0.099661,
+    -0.000218,
+    -0.008226
+   ]
+  },
+  {
+   "_bone": "J_Bip_R_LowerArm",
+   "_bCapsule": false,
+   "_radius": 0.03,
+   "_offset": [
+    -0.149491,
+    -0.000327,
+    -0.012339
+   ],
+   "_tail": [
+    -0.149491,
+    -0.000327,
+    -0.012339
+   ]
+  },
+  {
+   "_bone": "J_Bip_R_Hand",
+   "_bCapsule": false,
+   "_radius": 0.03,
+   "_offset": [
+    -0.019932,
+    -0.000114,
+    -0.00164
+   ],
+   "_tail": [
+    -0.019932,
+    -0.000114,
+    -0.00164
+   ]
+  },
+  {
+   "_bone": "J_Bip_L_UpperLeg",
+   "_bCapsule": false,
+   "_radius": 0.081,
+   "_offset": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "_tail": [
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "_bone": "J_Bip_L_UpperLeg",
+   "_bCapsule": false,
+   "_radius": 0.081,
+   "_offset": [
+    -0.006893,
+    -0.119783,
+    0.002151
+   ],
+   "_tail": [
+    -0.006893,
+    -0.119783,
+    0.002151
+   ]
+  },
+  {
+   "_bone": "J_Bip_L_UpperLeg",
+   "_bCapsule": false,
+   "_radius": 0.081,
+   "_offset": [
+    -0.012637,
+    -0.219601,
+    0.003944
+   ],
+   "_tail": [
+    -0.012637,
+    -0.219601,
+    0.003944
+   ]
+  },
+  {
+   "_bone": "J_Bip_R_UpperLeg",
+   "_bCapsule": false,
+   "_radius": 0.081,
+   "_offset": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "_tail": [
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "_bone": "J_Bip_R_UpperLeg",
+   "_bCapsule": false,
+   "_radius": 0.081,
+   "_offset": [
+    0.006893,
+    -0.119783,
+    0.002151
+   ],
+   "_tail": [
+    0.006893,
+    -0.119783,
+    0.002151
+   ]
+  },
+  {
+   "_bone": "J_Bip_R_UpperLeg",
+   "_bCapsule": false,
+   "_radius": 0.081,
+   "_offset": [
+    0.012637,
+    -0.219601,
+    0.003944
+   ],
+   "_tail": [
+    0.012637,
+    -0.219601,
+    0.003944
+   ]
+  }
+ ],
+ "_listColliderGroup": [
+  {
+   "_name": "colliderGroup0",
+   "_listCollider": [
+    0
+   ]
+  },
+  {
+   "_name": "colliderGroup1",
+   "_listCollider": [
+    1,
+    2,
+    3
+   ]
+  },
+  {
+   "_name": "colliderGroup2",
+   "_listCollider": [
+    4
+   ]
+  },
+  {
+   "_name": "colliderGroup3",
+   "_listCollider": [
+    5
+   ]
+  },
+  {
+   "_name": "colliderGroup4",
+   "_listCollider": [
+    6,
+    7,
+    8
+   ]
+  },
+  {
+   "_name": "colliderGroup5",
+   "_listCollider": [
+    9,
+    10,
+    11,
+    12
+   ]
+  },
+  {
+   "_name": "colliderGroup6",
+   "_listCollider": [
+    13
+   ]
+  },
+  {
+   "_name": "colliderGroup7",
+   "_listCollider": [
+    14,
+    15,
+    16
+   ]
+  },
+  {
+   "_name": "colliderGroup8",
+   "_listCollider": [
+    17,
+    18,
+    19,
+    20
+   ]
+  },
+  {
+   "_name": "colliderGroup9",
+   "_listCollider": [
+    21
+   ]
+  },
+  {
+   "_name": "colliderGroup10",
+   "_listCollider": [
+    22,
+    23,
+    24
+   ]
+  },
+  {
+   "_name": "colliderGroup11",
+   "_listCollider": [
+    25,
+    26,
+    27
+   ]
+  }
+ ],
+ "_listSpring": [
+  {
+   "_name": "Bust_0",
+   "_centerBone": "",
+   "_listColliderGroup": [],
+   "_listJoint": [
+    {
+     "_bone": "J_Sec_L_Bust1",
+     "_hitRadius": 0.02,
+     "_stiffness": 0.75,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.05
+    },
+    {
+     "_bone": "J_Sec_L_Bust2",
+     "_hitRadius": 0.02,
+     "_stiffness": 0.75,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.05
+    }
+   ]
+  },
+  {
+   "_name": "Bust_1",
+   "_centerBone": "",
+   "_listColliderGroup": [],
+   "_listJoint": [
+    {
+     "_bone": "J_Sec_R_Bust1",
+     "_hitRadius": 0.02,
+     "_stiffness": 0.75,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.05
+    },
+    {
+     "_bone": "J_Sec_R_Bust2",
+     "_hitRadius": 0.02,
+     "_stiffness": 0.75,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.05
+    }
+   ]
+  },
+  {
+   "_name": "Skirt_0",
+   "_centerBone": "",
+   "_listColliderGroup": [
+    10,
+    11
+   ],
+   "_listJoint": [
+    {
+     "_bone": "J_Sec_L_SkirtBack",
+     "_hitRadius": 0.02,
+     "_stiffness": 0.5,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.05
+    },
+    {
+     "_bone": "J_Sec_L_SkirtBack_end",
+     "_hitRadius": 0.02,
+     "_stiffness": 0.5,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.05
+    }
+   ]
+  },
+  {
+   "_name": "Skirt_1",
+   "_centerBone": "",
+   "_listColliderGroup": [
+    10,
+    11
+   ],
+   "_listJoint": [
+    {
+     "_bone": "J_Sec_L_SkirtFront",
+     "_hitRadius": 0.02,
+     "_stiffness": 0.5,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.05
+    },
+    {
+     "_bone": "J_Sec_L_SkirtFront_end",
+     "_hitRadius": 0.02,
+     "_stiffness": 0.5,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.05
+    }
+   ]
+  },
+  {
+   "_name": "Skirt_2",
+   "_centerBone": "",
+   "_listColliderGroup": [
+    10,
+    11
+   ],
+   "_listJoint": [
+    {
+     "_bone": "J_Sec_L_SkirtSide",
+     "_hitRadius": 0.02,
+     "_stiffness": 0.5,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.05
+    },
+    {
+     "_bone": "J_Sec_L_SkirtSide_end",
+     "_hitRadius": 0.02,
+     "_stiffness": 0.5,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.05
+    }
+   ]
+  },
+  {
+   "_name": "Skirt_3",
+   "_centerBone": "",
+   "_listColliderGroup": [
+    10,
+    11
+   ],
+   "_listJoint": [
+    {
+     "_bone": "J_Sec_R_SkirtBack",
+     "_hitRadius": 0.02,
+     "_stiffness": 0.5,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.05
+    },
+    {
+     "_bone": "J_Sec_R_SkirtBack_end",
+     "_hitRadius": 0.02,
+     "_stiffness": 0.5,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.05
+    }
+   ]
+  },
+  {
+   "_name": "Skirt_4",
+   "_centerBone": "",
+   "_listColliderGroup": [
+    10,
+    11
+   ],
+   "_listJoint": [
+    {
+     "_bone": "J_Sec_R_SkirtFront",
+     "_hitRadius": 0.02,
+     "_stiffness": 0.5,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.05
+    },
+    {
+     "_bone": "J_Sec_R_SkirtFront_end",
+     "_hitRadius": 0.02,
+     "_stiffness": 0.5,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.05
+    }
+   ]
+  },
+  {
+   "_name": "Skirt_5",
+   "_centerBone": "",
+   "_listColliderGroup": [
+    10,
+    11
+   ],
+   "_listJoint": [
+    {
+     "_bone": "J_Sec_R_SkirtSide",
+     "_hitRadius": 0.02,
+     "_stiffness": 0.5,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.05
+    },
+    {
+     "_bone": "J_Sec_R_SkirtSide_end",
+     "_hitRadius": 0.02,
+     "_stiffness": 0.5,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.05
+    }
+   ]
+  },
+  {
+   "_name": "spring2",
+   "_centerBone": "",
+   "_listColliderGroup": [
+    3,
+    4,
+    7,
+    5,
+    8,
+    6,
+    9,
+    1,
+    0,
+    2
+   ],
+   "_listJoint": [
+    {
+     "_bone": "HairJoint-a04788eb-7a77-4b6e-95a1-3f403354b3fc",
+     "_hitRadius": 0.024,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-535acb8b-04f1-4807-8564-bcde390e8d9d",
+     "_hitRadius": 0.024,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-07972c93-5c49-440c-aab6-666d97f53896",
+     "_hitRadius": 0.024,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    }
+   ]
+  },
+  {
+   "_name": "spring3",
+   "_centerBone": "",
+   "_listColliderGroup": [
+    3,
+    4,
+    7,
+    5,
+    8,
+    6,
+    9,
+    1,
+    0,
+    2
+   ],
+   "_listJoint": [
+    {
+     "_bone": "HairJoint-c35bc030-3da3-4d49-ab7c-4aabeedc2de1",
+     "_hitRadius": 0.024,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-900f4eb5-ad8f-49c8-a862-358f11add7c6",
+     "_hitRadius": 0.024,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-b6fab7f2-19e4-4f4c-9184-b1dfe71f0e31",
+     "_hitRadius": 0.024,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    }
+   ]
+  },
+  {
+   "_name": "spring4",
+   "_centerBone": "",
+   "_listColliderGroup": [
+    3,
+    4,
+    7,
+    5,
+    8,
+    6,
+    9,
+    1,
+    0,
+    2
+   ],
+   "_listJoint": [
+    {
+     "_bone": "HairJoint-f24a30fb-6c62-40b1-b06f-0e969332fc96",
+     "_hitRadius": 0.024,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-6346d9ad-cf3d-482c-b671-f83145042ac7",
+     "_hitRadius": 0.024,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-09341a53-cba3-4835-b2d0-91b5066b5dda",
+     "_hitRadius": 0.024,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    }
+   ]
+  },
+  {
+   "_name": "spring5",
+   "_centerBone": "",
+   "_listColliderGroup": [
+    3,
+    4,
+    7,
+    5,
+    8,
+    6,
+    9,
+    1,
+    0,
+    2
+   ],
+   "_listJoint": [
+    {
+     "_bone": "HairJoint-0db13061-2c8b-4731-b8fe-864e6080e928",
+     "_hitRadius": 0.012,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-3e473c0c-8279-48c2-89f4-1210d66869f9",
+     "_hitRadius": 0.012,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-051a7dfd-721e-44bf-9ceb-3b2117bf45c1",
+     "_hitRadius": 0.012,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-47abc8e5-1a6d-4b56-a4a2-ce87870c9c4b",
+     "_hitRadius": 0.012,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    }
+   ]
+  },
+  {
+   "_name": "spring6",
+   "_centerBone": "",
+   "_listColliderGroup": [
+    3,
+    4,
+    7,
+    5,
+    8,
+    6,
+    9,
+    1,
+    0,
+    2
+   ],
+   "_listJoint": [
+    {
+     "_bone": "HairJoint-1275757f-6fe5-4d78-be03-7138f9d26007",
+     "_hitRadius": 0.012,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-74486861-7fd4-4229-a39c-53391b427112",
+     "_hitRadius": 0.012,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-6d601c59-2c9b-428e-ac14-a6d790c24324",
+     "_hitRadius": 0.012,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-5a19dd4b-e27f-4e05-ae88-ce6f37072a1d",
+     "_hitRadius": 0.012,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    }
+   ]
+  },
+  {
+   "_name": "spring7",
+   "_centerBone": "",
+   "_listColliderGroup": [
+    3,
+    4,
+    7,
+    5,
+    8,
+    6,
+    9,
+    1,
+    0,
+    2
+   ],
+   "_listJoint": [
+    {
+     "_bone": "HairJoint-7c3e840e-e897-4444-9f28-c78b33eaa6d6",
+     "_hitRadius": 0.024,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-bc1e78e1-423f-4bc9-8559-699bb36fd4d5",
+     "_hitRadius": 0.024,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-8fcd18cf-f70c-4b57-958b-1d705adf7c8d",
+     "_hitRadius": 0.024,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    }
+   ]
+  },
+  {
+   "_name": "spring8",
+   "_centerBone": "",
+   "_listColliderGroup": [
+    3,
+    4,
+    7,
+    5,
+    8,
+    6,
+    9,
+    1,
+    0,
+    2
+   ],
+   "_listJoint": [
+    {
+     "_bone": "HairJoint-5b7d4f8d-4a41-452f-b278-3e04ef74d159",
+     "_hitRadius": 0.024,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-31f3a8c7-c08e-4c02-9b56-d3e8688f2fba",
+     "_hitRadius": 0.024,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-bef70c9d-db6a-453f-b754-55576a091cb5",
+     "_hitRadius": 0.024,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    }
+   ]
+  },
+  {
+   "_name": "spring9",
+   "_centerBone": "",
+   "_listColliderGroup": [
+    3,
+    4,
+    7,
+    5,
+    8,
+    6,
+    9,
+    1,
+    0,
+    2
+   ],
+   "_listJoint": [
+    {
+     "_bone": "HairJoint-0436323a-45d9-4b3f-9caf-8c613e7ab228",
+     "_hitRadius": 0.024071,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-140a6dba-15a2-4230-8f22-928cebc7e306",
+     "_hitRadius": 0.024071,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-42a997d0-311a-46a4-bdba-ec37dc34ba20",
+     "_hitRadius": 0.024071,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    }
+   ]
+  },
+  {
+   "_name": "spring10",
+   "_centerBone": "",
+   "_listColliderGroup": [
+    3,
+    4,
+    7,
+    5,
+    8,
+    6,
+    9,
+    1,
+    0,
+    2
+   ],
+   "_listJoint": [
+    {
+     "_bone": "HairJoint-92a4c79d-a4ef-4650-87e3-545a0fb44ae4",
+     "_hitRadius": 0.024,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-753e682b-3480-43d0-b85d-71fbb4429587",
+     "_hitRadius": 0.024,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-1228e397-dc7b-4a07-a596-21637462b95b",
+     "_hitRadius": 0.024,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    }
+   ]
+  },
+  {
+   "_name": "spring11",
+   "_centerBone": "",
+   "_listColliderGroup": [
+    3,
+    4,
+    7,
+    5,
+    8,
+    6,
+    9,
+    1,
+    0,
+    2
+   ],
+   "_listJoint": [
+    {
+     "_bone": "HairJoint-13e01abf-f503-4a07-a66f-e746d3276851",
+     "_hitRadius": 0.012,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-1ab438c8-7662-4380-9858-23f300f6c595",
+     "_hitRadius": 0.012,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-a3eb3cc9-022c-455d-98da-6fd99adeb1f5",
+     "_hitRadius": 0.012,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    }
+   ]
+  },
+  {
+   "_name": "spring12",
+   "_centerBone": "",
+   "_listColliderGroup": [
+    3,
+    4,
+    7,
+    5,
+    8,
+    6,
+    9,
+    1,
+    0,
+    2
+   ],
+   "_listJoint": [
+    {
+     "_bone": "HairJoint-098820b3-4aa3-48c9-94a4-2c89e3d2ac8b",
+     "_hitRadius": 0.012,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-97d2c5b4-4bf5-4777-8502-0a7d5b5d1e97",
+     "_hitRadius": 0.012,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-fa6be46a-2b0c-429a-9860-d99be16f6202",
+     "_hitRadius": 0.012,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    }
+   ]
+  },
+  {
+   "_name": "spring13",
+   "_centerBone": "",
+   "_listColliderGroup": [
+    3,
+    4,
+    7,
+    5,
+    8,
+    6,
+    9,
+    1,
+    0,
+    2
+   ],
+   "_listJoint": [
+    {
+     "_bone": "HairJoint-39978425-d125-4c40-8806-32f61b76cdc5",
+     "_hitRadius": 0.012,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-47328f54-5b10-4eed-86a0-664ba54b2fad",
+     "_hitRadius": 0.012,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-2efd2204-78ee-49d7-aeb0-f3427e8ee41c",
+     "_hitRadius": 0.012,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    }
+   ]
+  },
+  {
+   "_name": "spring14",
+   "_centerBone": "",
+   "_listColliderGroup": [
+    3,
+    4,
+    7,
+    5,
+    8,
+    6,
+    9,
+    1,
+    0,
+    2
+   ],
+   "_listJoint": [
+    {
+     "_bone": "HairJoint-6d9c818f-ed94-4f17-a332-09e58964f5de",
+     "_hitRadius": 0.012,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-7ff5fb53-379e-4c21-8550-d8cdd9897c75",
+     "_hitRadius": 0.012,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-60de1643-eab0-4af9-9009-1224aab7c934",
+     "_hitRadius": 0.012,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    }
+   ]
+  },
+  {
+   "_name": "spring15",
+   "_centerBone": "",
+   "_listColliderGroup": [
+    3,
+    4,
+    7,
+    5,
+    8,
+    6,
+    9,
+    1,
+    0,
+    2
+   ],
+   "_listJoint": [
+    {
+     "_bone": "HairJoint-e9356468-a496-4b6f-b576-dc4a5b963d4d",
+     "_hitRadius": 0.012,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-a3d11577-b757-46db-8937-6176fcaa4e65",
+     "_hitRadius": 0.012,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    },
+    {
+     "_bone": "HairJoint-76f251b5-25b0-4882-8e23-8883ec50ef59",
+     "_hitRadius": 0.012,
+     "_stiffness": 0.4,
+     "_gravityPower": 0.0,
+     "_gravityDirection": [
+      0.0,
+      -1.0,
+      0.0
+     ],
+     "_dragForce": 0.4
+    }
+   ]
+  }
+ ]
+}
