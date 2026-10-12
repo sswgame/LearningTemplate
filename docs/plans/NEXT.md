@@ -5,9 +5,7 @@
 
 
 **순서(사용자 결정 2026-10-13 — 폴리싱에 집중, 운영 · 배포는 보류 `H-3`)**:
-1. **그래픽스 회귀 확정**(아래 실패 목록의 첫 둘). 수정 전에 `-gv_gpuCulling=0` · `-gv_drawMerge=0` 으로 `CascadedShadowCastsOnEveryBackend`(DX12 + Vulkan 만 실패, DX11 · GL 통과) 와 `TransparentOrderMatchesAcrossBackends` A/B,
-   Vulkan `readbackTexture2D` 의 `VkResult` 로그(DEVICE_LOST 여부), 병합 전 `b4f2301e6` · `9224ca389`(그림자 아틀라스) 단독 비교. 분석(코드 읽기)의 가설: wvShadow 가 그림자 슬롯 컬링 절두체를 `_cullViewProj` 로 바꿨고 캐스케이드 경로에서 비는 것. RHI 파일은 이 구간에서 안 바뀌었다.
-   같은 로그의 별건: OpenGL `PrototypeGridMaterialIsAnchoredToTheWorld` 실패(바닥을 옮기자 격자가 따라 움직임 — `MATERIAL_WORLD_UV`).
+1. **그래픽스 회귀**: 캐스케이드 그림자(DX12 · Vulkan)는 고쳤다(타일마다 패스 상수 슬롯을 새로 잡음). Vulkan 투명 정렬(`A-8`)과 OpenGL 월드 격자(`A-9`)는 백로그 A 에 있다.
 2. **성능 증거(반드시)**: Release 로 `B-1` · `B-2` · `B-13`(S12 ~ S17 이동 전후) 와 아래 "검증 명령"의 `PerfCompare.py` 케이스를 잰다. 나쁘면 해당 변경을 되돌리고 결정 기록 3절에 숫자와 함께 적는다.
 3. **검증 자동화**: `hostgpu` 를 병합 전에 돌리는 길(직렬 약 17 분), 에디터 종료 검증(`-EnableEditor` 종료 exit 0) 을 테스트에 넣는다. Shipping · 게임 프리셋 8 개 빌드 · 네 백엔드 스크린샷 비교.
 4. **다중 월드(`D3-7`)** — 프리팹 격리 · 에디터 서버+클라이언트 재생(`S8`) 의 선행 조건. 에디터 보강(`D3-1` 의 남은 것)도 같이 본다.
@@ -15,8 +13,6 @@
 ## 최우선 (2026-10-13 기준) — 에디터 종료 교착은 풀렸다(함정 절 참고)
 
 **`hostgpu` 에서 확인한 실패**(교착 때문에 일부만 봤다 — 이제 전체를 다시 돌려 볼 수 있다):
-- `RenderPassGPUTest.TransparentOrderMatchesAcrossBackends` — Vulkan `readbackTexture2D: vkQueueSubmit failed`, 3 회 모두 재현. 병합 전에는 통과 → 그래픽스 회귀(후보: `wvShadow` PassCB 512 → 768 · 그림자 아틀라스, `wvGfx` 반해상도 블룸 · 업스케일, P1 RHI 정리). Vulkan 검증 레이어 오류는 없고 파이프라인 생성 경고(`Output at Location 6 … no corresponding Input`)만 있다.
-- DX12 그림자 테스트: `그림자 맵을 비워도 그림이 같다 — 그림자가 하나도 지지 않는다 (최대 차이 0)` — 그림자가 안 그려진다(`wvShadow`).
 - 에디터 시나리오 `editorstartup`: `Expect Editor.PanelCount == 30, got 35` — 새 패널 5 개로 옛 기대 숫자가 틀림(시나리오 숫자만 고치면 된다). 다른 시나리오의 개수 기대도 같은 이유로 틀릴 수 있다.
 - 프로젝트 설정 창이 `EngineConfig` 같은 구성 타입을 열지 못한다: 리플렉션 파서는 소스에 **선언한** 생성자만 `$ctor` 로 등록하는데 `EngineConfig` 는 집합체라 없다 → `ProjectSettingsDocument::createInstance` 가 늘 nullptr. 파서가 기본 생성 가능 타입에 `$ctor` 를 합성하거나 설정 항목마다 생성 함수를 등록해야 한다(테스트 둘은 `$ctor` 가 없으면 건너뛰게 해 두었다).
 - `nogpu` 는 마지막 실행에서 113 건 중 3 건만 남았다(`EditorTest`, `EngineTest_NoGPU_Shard2 · 3`) — 그 뒤 알림 테스트의 댕글링 화면 읽기를 고쳤으니 다시 돌려 확인.

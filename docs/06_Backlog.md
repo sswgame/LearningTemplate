@@ -18,7 +18,7 @@
 
 | 분류 | 뜻 | 항목 수 |
 |---|---|---|
-| **A. 결함 · 정확성** | 재현됐거나 코드로 확인된 열린 결함. 다른 어떤 일보다 먼저 본다. | 3 |
+| **A. 결함 · 정확성** | 재현됐거나 코드로 확인된 열린 결함. 다른 어떤 일보다 먼저 본다. | 5 |
 | **B. 검증 · 측정 대기** | 코드는 들어갔고 돌려 보는 일이 남은 것. 이 PC 에서 못 돌린 환경(리눅스 · 실기)과 사용자 눈이 필요한 것도 여기다. | 14 |
 | **C. 구조 · 성능 · 정리** | 기능이 아니라 고칠 곳을 줄이는 일: 구조 분할 계획, 중복 · 의존 정리, 측정 뒤 정할 성능 후보, 린트 · 문서 정리. | 21 |
 | **D. 기능 로드맵** | 영역별로 묶은 새 기능 · 기능의 남은 조각. 위에 있을수록 먼저 볼 것이다. | 42 |
@@ -45,6 +45,11 @@
   대화 · 애니메이션 그래프 문서 패널은 `EditorGraphDocumentPanel` 틀 위에 있다. 초기화 뒤 상태가 새 세션과 같은지는 실행으로만 확인되므로, 체인 전체를 깨뜨리지 않게 하나씩 합치고 그때마다 체인을 돌린다.
 
 - `A-7` **`_meshPath` 로 적은 물리 셰이프가 게임에서는 늘 오류다** — `PhysicsMeshShapeCache::setLoadFunction` 을 부르는 곳이 없다. 물리는 그래픽스보다 아래 티어라 `.mesh` 읽기 함수를 위층이 넣어야 한다
+- `A-8` **Vulkan 에서 `RenderPassGPUTest.TransparentOrderMatchesAcrossBackends` 가 `readbackTexture2D: vkQueueSubmit failed` 로 실패한다**(재현 3/3, 라이트 없는 장면 · 글래스 투명 큐브 6개). 첫 불량 커밋은 `9224ca389`(그림자 아틀라스, 이분 탐색으로 확인).
+  확인한 것: 셰이더 셋(`binding` · `lighting` · `toon`)을 부모 커밋 것으로 되돌리면 통과하고, `lighting.hlsli` `swSampleLocalShadow` 의 `swFilterShadowAtlas(...)` 호출 하나를 상수로 바꿔도 통과한다. 검증 레이어 오류는 없다.
+  **효과 없던 시도**: 그 호출을 비교 탭 하나(`swSampleShadowComparison`)로 줄이기, `swSampleShadowComparison` 의 `NonUniformResourceIndex` 빼기(인덱스는 패스 상수라 균일), 삼항 → `if` / `[branch]`, 라이트 버퍼 동적 읽기 제거, PCF 루프 `[loop]`.
+  남은 가설: 호출 지점 수가 아니라 이 호출이 있는 경로의 SPIR-V 생성 · 드라이버 컴파일 문제. 다음 단계는 검증 레이어와 `spirv-val` 이 있는 장비에서 `vkQueueSubmit` 의 `VkResult`(`DEVICE_LOST` 여부)를 `readbackTexture2D` 실패 로그에 찍는 것.
+- `A-9` **OpenGL 에서 `PrototypeGridMaterialIsAnchoredToTheWorld` 가 실패한다** — 바닥을 1 m 옮기자 격자가 따라 움직였다(평균 차이 15.8, 격자 창 116..128). 월드 좌표 UV 머티리얼(`59e850480`, `MATERIAL_WORLD_UV`)의 GL 경로.
   ([Physics README](../Source/Engine/Physics/README.md)). 엔진 조립 지점에서 `MeshAssetFormat::loadFromResource` 로 넣고, `MeshCache` 리로드 때 `PhysicsMeshShapeCache::clear()` 를 부른다. 테스트는 읽기 함수를 직접 넣어서 통과한다.
 
 ---
