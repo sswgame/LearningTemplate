@@ -5,19 +5,16 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
-#include "Core/Concurrency/atomic.h"
-#include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Delegate/Delegate.h"
 
+#include "Engine/Automation/AutomationLogCapture.h"
+#include "Engine/Automation/AutomationReportWriter.h"
 #include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Input/Virtual/VirtualInputScript.h"
 
 namespace sw
 {
-    struct LogEntry;
-
     class GameObjectManager;
     class InputManager;
 
@@ -35,16 +32,6 @@ namespace sw
 
 namespace sw
 {
-    /** @struct AutomationLogLine @brief 시나리오 동안 남은 로그 한 줄(`ExpectLog` 가 센다)입니다. */
-    struct AutomationLogLine
-    {
-        string _message{};
-        uint32 _frameIndex{ 0 };
-    };
-} // namespace sw
-
-namespace sw
-{
     /**
      * @class AutomationRunner
      * @brief 시나리오 한 편을 프레임마다 진행합니다. `EngineLoop` 가 `-scenario` 를 받으면 하나를 가지고 프레임 앞뒤에서 부릅니다.
@@ -52,6 +39,7 @@ namespace sw
      *          가상 입력 원천(`VirtualInputScript`)으로 옮겨 `InputManager` 에 붙이므로, 입력 단계의 프레임 번호는 가상 입력 프레임 번호와 같다.
      *          단언과 환경 단계는 그 프레임의 씬 틱 뒤(`onFrameEnd`)에 돈다. 단언 실패는 적어 두고 계속 가며, 끝에서 `Failed` 가 된다.
      *          끝나면 가상 입력을 떼고 `[Scenario]` 요약 줄과 (요청됐으면) JSON 보고를 쓴다. 게임 스레드에서만 쓴다.
+     *          로그 수집은 `AutomationLogCapture`, 보고 경로 · 지표 줄 · 보고 쓰기는 `AutomationReportWriter` 가 값 멤버로 맡는다.
      */
     class SW_API AutomationRunner
     {
@@ -87,7 +75,7 @@ namespace sw
         /** @brief 렌더 스레드가 지금까지 쓴 시나리오 스크린샷 수입니다(EngineLoop 가 `onFrameEnd` 전에 넘긴다). `<ExpectImage>` 는 이것이 오를 때까지 기다린다. */
         void setCompletedScreenshotCount( uint32 completedCount ) { _screenshotCompletedCount = completedCount; }
         /** @brief 지표 값 줄들입니다(`darkFraction(0,0,1,0.12) park.ppm = 0.034`). 보고에 적습니다. */
-        const vector<string>& getMetricLines() const { return _listMetricLine; }
+        const vector<string>& getMetricLines() const { return _reportWriter.getMetricLines(); }
 
         /** @brief 단계 처리기가 실패를 적습니다(시나리오는 계속 진행하고 끝에서 Failed 가 됩니다). */
         void recordFailure( const AutomationStep& step, string_view message );
@@ -140,36 +128,29 @@ namespace sw
         [[nodiscard]] bool shouldHoldForCondition( const AutomationStep& step, InputManager& input );
         void               runExpectLog( const AutomationStep& step );
         void               runExpectImage( const AutomationStep& step );
-        void               onLogWritten( const LogEntry& entry );
         /** @brief 끝 정리를 합니다. 가상 입력과 로그 수집을 떼고 요약 줄과 보고를 씁니다. 한 번만 돕니다. */
         void endRun( InputManager* pInput );
-        void writeReport() const;
 
-        AutomationScenario        _scenario;
-        VirtualInputScript        _inputScript;
-        vector<string>            _listFailure;           ///< "frame 40 <Expect> #7: Shooter3D.WeaponIndex == 1, got 2"
-        vector<AutomationLogLine> _listLogLine;           ///< 시나리오 동안 남은 로그(상한 `kMaxLogLine`)
-        vector<string>            _listPendingScreenshot; ///< 아직 렌더 패킷에 싣지 않은 스크린샷 경로입니다.
-        vector<string>            _listMetricLine;        ///< 보고에 적는 지표 값입니다.
-        string                    _reportPath;
-        string                    _outputDirectory;
-        string                    _finishReason;
-        mutex                     _logMutex; ///< `_listLogLine` 을 보호합니다. 로그는 아무 스레드에서나 옵니다.
-        DelegateHandle            _logListenerHandle;
-        GameObjectManager*        _pObjectManagerOverride; ///< `setObjectManager` 로 정한 매니저입니다(nullptr 이면 활성 씬).
-        float64                   _exitDeadlineSeconds;    ///< `ExpectExitWithin` 이 정한 벽시계 시한입니다(단조 시계 초). 0 이면 기다리지 않습니다.
-        size_t                    _nextStepIndex;
-        atomic<uint32>            _logFrameIndex; ///< 로그 줄에 적을 프레임(로그 스레드가 읽는다)
-        uint32                    _frameIndex;
-        uint32                    _waitFrameCount; ///< 시작 조건을 기다린 프레임 수입니다.
-        uint32                    _screenshotRequestedCount;
-        uint32                    _screenshotCompletedCount;
-        uint32                    _imageWaitFrameCount; ///< `<ExpectImage>` 가 스크린샷을 기다린 프레임 수입니다.
-        uint32                    _holdFrameCount;      ///< 지금 `<WaitUntil>` 이 시나리오 시계를 붙잡은 프레임(그동안 `_frameIndex` 는 그대로다)
-        AutomationResult          _result;
-        uint8                     _bStarted      : 1;
-        uint8                     _bEnded        : 1;
-        uint8                     _bListeningLog : 1;
-        [[maybe_unused]] uint8    _reserved      : 5;
+        AutomationScenario     _scenario;
+        VirtualInputScript     _inputScript;
+        AutomationLogCapture   _logCapture;            ///< 시나리오 동안의 로그 줄(`<ExpectLog>`)
+        AutomationReportWriter _reportWriter;          ///< 보고 경로 · 지표 줄 · JSON 보고 쓰기
+        vector<string>         _listFailure;           ///< "frame 40 <Expect> #7: Shooter3D.WeaponIndex == 1, got 2"
+        vector<string>         _listPendingScreenshot; ///< 아직 렌더 패킷에 싣지 않은 스크린샷 경로입니다.
+        string                 _outputDirectory;
+        string                 _finishReason;
+        GameObjectManager*     _pObjectManagerOverride; ///< `setObjectManager` 로 정한 매니저입니다(nullptr 이면 활성 씬).
+        float64                _exitDeadlineSeconds;    ///< `ExpectExitWithin` 이 정한 벽시계 시한입니다(단조 시계 초). 0 이면 기다리지 않습니다.
+        size_t                 _nextStepIndex;
+        uint32                 _frameIndex;
+        uint32                 _waitFrameCount; ///< 시작 조건을 기다린 프레임 수입니다.
+        uint32                 _screenshotRequestedCount;
+        uint32                 _screenshotCompletedCount;
+        uint32                 _imageWaitFrameCount; ///< `<ExpectImage>` 가 스크린샷을 기다린 프레임 수입니다.
+        uint32                 _holdFrameCount;      ///< 지금 `<WaitUntil>` 이 시나리오 시계를 붙잡은 프레임(그동안 `_frameIndex` 는 그대로다)
+        AutomationResult       _result;
+        uint8                  _bStarted : 1;
+        uint8                  _bEnded   : 1;
+        [[maybe_unused]] uint8 _reserved : 6;
     };
 } // namespace sw
