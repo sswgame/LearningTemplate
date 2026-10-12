@@ -156,6 +156,13 @@ class CheckControlBoundaryGate(LintGate):
                 "Source/Games/Probe/ProbeComponent.cpp": "    const GamepadDevice* pPad = pInput->getGamepad( 0 );\n",
             },
         },
+        {
+            # 허용 표의 파일이 입력을 더는 읽지 않으면 그 줄은 낡은 예외다(LintGate 기반이 본다) — 표가 경계를 조용히 넓힌 채 남지 않게.
+            "name": "입력을 더는 읽지 않는 허용 표 파일(낡은 예외)",
+            "files": {
+                "Source/Games/NileCity/NileDirectorComponent.cpp": "void NileDirectorComponent::onTick()\n{\n}\n",
+            },
+        },
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
