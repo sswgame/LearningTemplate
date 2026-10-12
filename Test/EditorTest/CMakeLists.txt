@@ -67,6 +67,8 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Profiler/ProfilerCallTree.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Profiler/ProfilerScopeHistory.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Profiler/ProfilerTimelineLayout.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/ProjectSettings/ProjectSettingsCatalog.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/ProjectSettings/ProjectSettingsDocument.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/RenderTarget/RenderTargetViewUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/SelfTest/EditorTestOutputParser.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/TileMap/TileMapPaintUtil.cpp"
