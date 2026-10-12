@@ -412,13 +412,13 @@ namespace sw
          *          vtable 이 사라진 객체가 씬에 남아 다음 틱 · 소멸에서 없는 코드로 뛰어듭니다. 지연 파괴 목록에 남은 것도
          *          그 소멸이 모듈 코드이므로 먼저 지금 처리합니다. 틱 밖에서만 부릅니다(구조 변경이 얼려 있으면 미뤄질 뿐입니다).
          *          틱 밖에서 `deferPostTick` 으로 넣어 둔 일(구조 변경 · 틱 뒤 큐)도 모듈 코드의 람다일 수 있으므로, 모듈 코드가 아직 있을 때
-         *          먼저 비웁니다(다음 프레임 끝에 돌 일을 앞당겨 돌린다 — 버리면 게임 쪽 일이 조용히 사라진다).
+         *          먼저 비웁니다(다음 프레임 끝에 돌 일을 앞당겨 돌린다 — 버리면 게임 쪽 일이 조용히 사라진다). 비우는 중에 다시 미룬 일도 빌 때까지 비웁니다(`drainUntilEmpty`).
          * @return 지운 컴포넌트 수입니다.
          */
         uint32 destroyComponentsOfModule( string_view moduleName )
         {
             if ( _structuralChangeBuffer.isFrozen() == false )
-                _structuralChangeBuffer.drain( *this );
+                _structuralChangeBuffer.drainUntilEmpty( *this );
             return _store.destroyComponentsOfModule( moduleName );
         }
 #endif

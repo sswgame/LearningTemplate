@@ -713,6 +713,23 @@ SW_TEST_CASE( GameObjectManagerPoolTest, ModuleUnloadDrainsDeferredPostTickWork 
     (void)manager.destroyComponentsOfModule( "NotThisModule" ); // 지운 수는 이 테스트가 보지 않는다
     SW_EXPECT_TRUE( bRan );
 }
+
+/**
+ * @brief [GameObjectManagerPoolTest] 모듈을 내리기 전 비우기는 비우는 중에 다시 미룬 일까지 돌린다.
+ * @details `drain` 은 큐를 한 번 맞바꿔 돈다. 그 안의 콜백이 다시 `deferPostTick` 을 부르면 그 람다가 남아, 모듈이 내려간 뒤 다음 프레임에 없는 코드로 뛴다.
+ */
+SW_TEST_CASE( GameObjectManagerPoolTest, ModuleUnloadDrainsRequeuedPostTickWork )
+{
+    sw::GameObjectManager manager;
+    bool                  bInnerRan = false;
+    manager.deferPostTick( [&manager, &bInnerRan]()
+    {
+        manager.deferPostTick( [&bInnerRan]()
+        { bInnerRan = true; } );
+    } );
+    (void)manager.destroyComponentsOfModule( "NotThisModule" ); // 지운 수는 이 테스트가 보지 않는다
+    SW_EXPECT_TRUE( bInnerRan );
+}
 #endif
 
 /**

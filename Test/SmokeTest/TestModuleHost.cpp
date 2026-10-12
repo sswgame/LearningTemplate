@@ -195,6 +195,15 @@ SW_TEST_CASE( ModuleHostTest, SharedModuleCannotBeRegisteredForReload )
         SW_EXPECT_FALSE( manager.registerModule( "GameFramework" ) );
     }
     SW_EXPECT_NULL( manager.getModuleHandle( "GameFramework" ) ); // 리로드 대상 목록에 오르지 않았다
+    #if defined( SW_PLATFORM_WINDOWS )
+    // Windows 는 파일 이름의 대소문자를 가리지 않는다. 철자만 바꿔 같은 DLL 을 리로드 대상에 올리지 못해야 한다.
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "registering a shared module for reload with a different case" );
+        SW_EXPECT_FALSE( manager.registerModule( "gameframework" ) );
+    }
+    SW_EXPECT_NULL( manager.getModuleHandle( "gameframework" ) );
+    SW_EXPECT_TRUE( manager.loadSharedModule( "GAMEFRAMEWORK" ) ); // 이미 올린 공용 모듈 — 두 번째 이미지를 올리지 않는다
+    #endif
 
     manager.shutdown();
 }
