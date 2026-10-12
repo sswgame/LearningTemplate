@@ -661,7 +661,10 @@ namespace sw
         , _toggleAction{ kToggleActionName }
         , _screen{ kInvalidUIScreenHandle }
         , _window{ kInvalidUIScreenHandle }
+        , _profilerSeenState{}
+        , _profilerSeenRevision{ ~uint64{ 0 } }
         , _bProfilerEnabledByHUD{ SW_FALSE }
+        , _bSectionsNeedProfiler{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -886,16 +889,27 @@ namespace sw
 
     void DebugHUD::syncFrameProfiler()
     {
-        bool bNeedsProfiler = false;
+        // HUD 가 떠 있으면 프레임마다 온다. 섹션 목록 복사(할당)는 레지스트리 판 번호나 켜짐 글이 바뀐 프레임에만 한다.
+        // 잠금 안에서 콜백을 부르는 순회는 섹션 쪽이 레지스트리를 다시 부르면 교착하므로 쓰지 않는다.
         if ( _screen != kInvalidUIScreenHandle )
         {
-            for ( const DebugHUDSectionRegistration* pRegistration : DebugHUDRegistry::get().getSections() )
+            const DebugHUDRegistry& registry = DebugHUDRegistry::get();
+            const uint64            revision = registry.getRevision();
+            if ( revision != _profilerSeenRevision || gv_debugHUDSections != _profilerSeenState )
             {
-                const bool bUsesProfiler = ( pRegistration->_flags & DebugHUDSectionFlag::kUsesFrameProfiler ) != 0;
-                bNeedsProfiler           = bNeedsProfiler || ( bUsesProfiler && isSectionShown( *pRegistration ) );
+                bool bNeedsProfilerNow = false;
+                for ( const DebugHUDSectionRegistration* pRegistration : registry.getSections() )
+                {
+                    const bool bUsesProfiler = ( pRegistration->_flags & DebugHUDSectionFlag::kUsesFrameProfiler ) != 0;
+                    bNeedsProfilerNow        = bNeedsProfilerNow || ( bUsesProfiler && isSectionShown( *pRegistration ) );
+                }
+                _bSectionsNeedProfiler = bNeedsProfilerNow ? SW_TRUE : SW_FALSE;
+                _profilerSeenRevision  = revision;
+                _profilerSeenState     = gv_debugHUDSections;
             }
         }
-        FrameProfiler& profiler = engine::getFrameProfiler();
+        const bool     bNeedsProfiler = _screen != kInvalidUIScreenHandle && _bSectionsNeedProfiler == SW_TRUE;
+        FrameProfiler& profiler       = engine::getFrameProfiler();
         if ( bNeedsProfiler && profiler.isEnabled() == false )
         {
             profiler.setEnabled( true );
