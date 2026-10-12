@@ -22,8 +22,24 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint �
 from common import kLintTargetRelDirs  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
+_kQueueCall = r"\b(?:deferPostTick|executeOrDeferPostTick)\s*\(\s*"
+#: `this` 토큰(`*this` 는 값 복사라 뺀다). 인스턴스 인자가 `static_cast<Base*>( this )` 처럼 감싸여도 잡는다.
+_kThisToken = r"(?<!\*)\bthis\b"
+
 #: 대기열 함수 이름 뒤 괄호 안의 첫 인자가 `this` 를 묶은 SW_DELEGATE_METHOD 인 모양(줄을 넘어도 잡는다).
-_kThisBindingRe = re.compile(r"\b(?:deferPostTick|executeOrDeferPostTick)\s*\(\s*SW_DELEGATE_METHOD\s*\([^;]*?,\s*this\s*\)", re.DOTALL)
+_kThisBindingRe = re.compile(_kQueueCall + r"SW_DELEGATE_METHOD\s*\([^;]*?" + _kThisToken, re.DOTALL)
+#: 대기열에 바로 넘긴 람다(맨 람다 또는 SW_DELEGATE_LAMBDA 로 감싼 것)의 캡처 목록.
+_kLambdaCaptureRe = re.compile(_kQueueCall + r"(?:SW_DELEGATE_LAMBDA\s*\([^,;]*,\s*)?\[([^\]]*)\]", re.DOTALL)
+#: 미리 만들어 둔 델리게이트 변수: `<이름> = SW_DELEGATE_METHOD( ..., this )`.
+_kThisDelegateVariableRe = re.compile(r"\b(\w+)\s*(?:=|\{)\s*SW_DELEGATE_METHOD\s*\([^;]*?" + _kThisToken, re.DOTALL)
+
+
+def _isUnsafeCapture(captureText: str) -> bool:
+    """캡처 목록이 `this` 를 잡거나 기본 캡처(`=` · `&`)로 암묵적으로 잡을 수 있으면 참이다."""
+    for item in (part.strip() for part in captureText.split(",")):
+        if item in ("=", "&", "this"):
+            return True
+    return False
 
 
 class CheckPostTickThisBindingGate(LintGate):
@@ -50,6 +66,36 @@ class CheckPostTickThisBindingGate(LintGate):
                 "Source/Probe/Probe.cpp": "void Probe::f()\n{\n    pManager->deferPostTick(\n        SW_DELEGATE_METHOD( GameObjectManager::PostTickDelegate, &Probe::g,\n                            this ) );\n}\n",
             },
         },
+        {
+            "name": "감싼 this 인스턴스",
+            "files": {
+                "Source/Probe/Probe.cpp": "void Probe::f() { pManager->deferPostTick( SW_DELEGATE_METHOD( GameObjectManager::PostTickDelegate, &Base::g, static_cast<Base*>( this ) ) ); }\n",
+            },
+        },
+        {
+            "name": "SW_DELEGATE_LAMBDA 가 this 캡처",
+            "files": {
+                "Source/Probe/Probe.cpp": "void Probe::f() { pManager->executeOrDeferPostTick( SW_DELEGATE_LAMBDA( GameObjectManager::PostTickDelegate, [pManager, this]() { g(); } ) ); }\n",
+            },
+        },
+        {
+            "name": "맨 람다 기본 캡처 =",
+            "files": {
+                "Source/Probe/Probe.cpp": "void Probe::f() { pManager->deferPostTick( [=]() { g(); } ); }\n",
+            },
+        },
+        {
+            "name": "맨 람다 기본 캡처 &",
+            "files": {
+                "Source/Probe/Probe.cpp": "void Probe::f() { pManager->executeOrDeferPostTick( [&, value]() { g( value ); } ); }\n",
+            },
+        },
+        {
+            "name": "미리 만든 델리게이트 변수",
+            "files": {
+                "Source/Probe/Probe.cpp": "void Probe::f()\n{\n    auto func = SW_DELEGATE_METHOD( GameObjectManager::PostTickDelegate, &Probe::g, this );\n    pManager->deferPostTick( std::move( func ) );\n}\n",
+            },
+        },
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
@@ -60,10 +106,15 @@ class CheckPostTickThisBindingGate(LintGate):
         listViolation: list[str] = []
         for path in listPath:
             text = path.read_text(encoding="utf-8", errors="replace")
-            if "SW_DELEGATE_METHOD" not in text:
+            if "PostTick" not in text:
                 continue
             relativePath = path.relative_to(repositoryRoot).as_posix()
-            for match in _kThisBindingRe.finditer(text):
+            listMatch = list(_kThisBindingRe.finditer(text))
+            listMatch += [match for match in _kLambdaCaptureRe.finditer(text) if _isUnsafeCapture(match.group(1))]
+            for nameMatch in _kThisDelegateVariableRe.finditer(text):
+                useRe = re.compile(_kQueueCall + r"(?:std::move\s*\(\s*)?" + re.escape(nameMatch.group(1)) + r"\s*\)")
+                listMatch += list(useRe.finditer(text, nameMatch.end()))
+            for match in sorted(listMatch, key=lambda m: m.start()):
                 lineNumber = text.count("\n", 0, match.start()) + 1
                 listViolation.append(f"{relativePath}:{lineNumber}: {' '.join(match.group(0).split())}")
         return GateResult(listViolation=listViolation, summary=f"C++ 파일 {len(listPath)}개")
