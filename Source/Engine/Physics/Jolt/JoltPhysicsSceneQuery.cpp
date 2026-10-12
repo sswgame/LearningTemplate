@@ -479,23 +479,18 @@ namespace sw
         JPH::AllHitCollisionCollector<JPH::CollideShapeCollector> collector;
         _system.GetNarrowPhaseQuery().CollideShape( pShape.GetPtr(), JPH::Vec3::sReplicate( 1.0f ), transform, settings, JPH::RVec3::sZero(), collector,
                                                     JPH::BroadPhaseLayerFilter{}, layerFilter, bodyFilter );
-        // 같은 바디의 여러 서브 셰이프가 따로 잡힌다. 바디 순으로 정렬해 한 번씩 붙인다.
-        vector<PhysicsBodyHandle> listFound;
-        listFound.reserve( collector.mHits.size() );
+        // 같은 바디의 여러 서브 셰이프가 따로 잡힌다. 출력 끝에 바로 붙이고 그 구간만 바디 순으로 정렬해 한 번씩 남긴다(임시 버퍼를 할당하지 않는다).
+        const size_t firstIndex = outListBody.size();
+        outListBody.reserve( firstIndex + collector.mHits.size() );
         for ( const JPH::CollideShapeResult& hit : collector.mHits )
         {
-            listFound.push_back( findHandle( hit.mBodyID2 ) );
+            const PhysicsBodyHandle body = findHandle( hit.mBodyID2 );
+            if ( body.isValid() )
+                outListBody.push_back( body );
         }
-        std::sort( listFound.begin(), listFound.end() );
-        listFound.erase( std::unique( listFound.begin(), listFound.end() ), listFound.end() );
-        uint32 count = 0;
-        for ( const PhysicsBodyHandle& body : listFound )
-        {
-            if ( body.isValid() == false )
-                continue;
-            outListBody.push_back( body );
-            ++count;
-        }
-        return count;
+        const vector<PhysicsBodyHandle>::iterator first = outListBody.begin() + static_cast<ptrdiff_t>( firstIndex );
+        std::sort( first, outListBody.end() );
+        outListBody.erase( std::unique( first, outListBody.end() ), outListBody.end() );
+        return static_cast<uint32>( outListBody.size() - firstIndex );
     }
 } // namespace sw

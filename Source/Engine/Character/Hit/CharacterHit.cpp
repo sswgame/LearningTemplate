@@ -76,7 +76,7 @@ namespace sw
     bool CharacterHitUtil::raycast3D( const GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, uint32 layerMask,
                                       uint64 ignoreObjectID, CharacterRayHit& outHit )
     {
-        const IPhysicsScene3D* pScene = manager.getScenePhysics().findScene3D();
+        const IPhysicsQueryScene3D* pScene = manager.getScenePhysics().findScene3D();
         if ( pScene == nullptr || maxDistance <= 0.0f || direction.getLengthSquared() <= 1.0e-12f )
             return false;
         PhysicsCastHit3D hit;
@@ -89,8 +89,8 @@ namespace sw
     bool CharacterHitUtil::raycast2D( const GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, uint32 layerMask,
                                       uint64 ignoreObjectID, CharacterRayHit& outHit )
     {
-        const IPhysicsScene2D* pScene = manager.getScenePhysics().findScene2D();
-        float2                 planar{};
+        const IPhysicsQueryScene2D* pScene = manager.getScenePhysics().findScene2D();
+        float2                      planar{};
         if ( pScene == nullptr || maxDistance <= 0.0f || CharacterHitInternal::makePlanarDirection( direction, planar ) == false )
             return false;
         PhysicsCastHit2D hit;
@@ -105,7 +105,7 @@ namespace sw
     {
         if ( radius <= 0.0f )
             return raycast3D( manager, origin, direction, maxDistance, layerMask, ignoreObjectID, outHit );
-        const IPhysicsScene3D* pScene = manager.getScenePhysics().findScene3D();
+        const IPhysicsQueryScene3D* pScene = manager.getScenePhysics().findScene3D();
         if ( pScene == nullptr || maxDistance <= 0.0f || direction.getLengthSquared() <= 1.0e-12f )
             return false;
         PhysicsShapeDesc3D sphere;
@@ -124,8 +124,8 @@ namespace sw
     {
         if ( radius <= 0.0f )
             return raycast2D( manager, origin, direction, maxDistance, layerMask, ignoreObjectID, outHit );
-        const IPhysicsScene2D* pScene = manager.getScenePhysics().findScene2D();
-        float2                 planar{};
+        const IPhysicsQueryScene2D* pScene = manager.getScenePhysics().findScene2D();
+        float2                      planar{};
         if ( pScene == nullptr || maxDistance <= 0.0f || CharacterHitInternal::makePlanarDirection( direction, planar ) == false )
             return false;
         PhysicsShapeDesc2D circle;

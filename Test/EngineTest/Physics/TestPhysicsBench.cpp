@@ -12,12 +12,14 @@ SW_LOG_CALLER( "PhysicsBench" );
 
 namespace
 {
-    constexpr uint32  kStaticRowCount    = 55; ///< 정지 바디는 55 x 55 격자(간격 20 — 64 셀 하나에 열 개 남짓)
-    constexpr float32 kStaticSpacing     = 20.0f;
-    constexpr uint32  kContinuousCount   = 150;
-    constexpr float32 kContinuousStep    = 0.5f;    ///< 연속 바디가 step 마다 가는 거리
-    constexpr float32 kFarMoverDistance  = 1000.0f; ///< 먼 이동 바디가 step 마다 오가는 거리(에디터 드래그 · 셀 여러 개)
-    constexpr uint32  kMeasuredStepCount = 30;
+    constexpr uint32  kStaticRowCount       = 55; ///< 정지 바디는 55 x 55 격자(간격 20 — 64 셀 하나에 열 개 남짓)
+    constexpr float32 kStaticSpacing        = 20.0f;
+    constexpr uint32  kContinuousCount      = 150;
+    constexpr uint32  kLargeStaticRowCount  = 110; ///< 바디 수를 늘린 변형 — 정지 바디 110 x 110(12100 개)
+    constexpr uint32  kLargeContinuousCount = 600;
+    constexpr float32 kContinuousStep       = 0.5f;    ///< 연속 바디가 step 마다 가는 거리
+    constexpr float32 kFarMoverDistance     = 1000.0f; ///< 먼 이동 바디가 step 마다 오가는 거리(에디터 드래그 · 셀 여러 개)
+    constexpr uint32  kMeasuredStepCount    = 30;
 
     sw::AABB makeBoxAt( float32 x, float32 y )
     {
@@ -30,14 +32,16 @@ namespace
     /**
      * @brief 정지 바디 격자 위에서 연속 바디들을 조금씩 움직이며 step 마다 걸린 시간(us)을 모읍니다.
      * @param bWithFarMover true 면 연속 아닌 바디 하나가 step 마다 `kFarMoverDistance` 를 오갑니다.
+     * @param staticRowCount 정지 바디 격자 한 변의 수입니다.
+     * @param continuousCount 연속 바디 수입니다.
      */
-    void measureSteps( bool bWithFarMover, sw::vector<int64>& outListSample )
+    void measureSteps( bool bWithFarMover, uint32 staticRowCount, uint32 continuousCount, sw::vector<int64>& outListSample )
     {
         sw::PhysicsOverlapWorld world;
         uint64                  objectID = 1;
-        for ( uint32 row = 0; row < kStaticRowCount; ++row )
+        for ( uint32 row = 0; row < staticRowCount; ++row )
         {
-            for ( uint32 column = 0; column < kStaticRowCount; ++column )
+            for ( uint32 column = 0; column < staticRowCount; ++column )
             {
                 world.addBody( makeBoxAt( static_cast<float32>( column ) * kStaticSpacing, static_cast<float32>( row ) * kStaticSpacing ), 0, objectID++ );
             }
@@ -45,7 +49,7 @@ namespace
 
         sw::vector<sw::PhysicsOverlapWorld::BodyHandle> listContinuousBody;
         sw::vector<sw::float2>                          listPosition;
-        for ( uint32 index = 0; index < kContinuousCount; ++index )
+        for ( uint32 index = 0; index < continuousCount; ++index )
         {
             // 정지 바디 사이(격자 칸의 가운데)를 지나간다 — 겹침 이벤트가 아니라 후보 모으기를 측정한다.
             const sw::float2     position{ static_cast<float32>( index % 50 ) * kStaticSpacing + 5.0f, static_cast<float32>( index / 50 ) * 300.0f + 5.0f };
@@ -61,7 +65,7 @@ namespace
         outListSample.clear();
         for ( uint32 stepIndex = 0; stepIndex < kMeasuredStepCount; ++stepIndex )
         {
-            for ( uint32 index = 0; index < kContinuousCount; ++index )
+            for ( uint32 index = 0; index < continuousCount; ++index )
             {
                 listPosition[index]._x += ( stepIndex % 2 == 0 ) ? kContinuousStep : -kContinuousStep;
                 sw::PhysicsBodyState state;
@@ -88,10 +92,23 @@ SW_TEST_CASE( PhysicsBenchTest, ContinuousStepWithAFarMover )
 {
     sw::vector<int64> listCalm;
     sw::vector<int64> listFar;
-    measureSteps( false, listCalm );
-    measureSteps( true, listFar );
+    measureSteps( false, kStaticRowCount, kContinuousCount, listCalm );
+    measureSteps( true, kStaticRowCount, kContinuousCount, listFar );
     SW_EXPECT_EQUAL( static_cast<size_t>( kMeasuredStepCount ), listCalm.size() );
     SW_EXPECT_EQUAL( static_cast<size_t>( kMeasuredStepCount ), listFar.size() );
     test::logBenchSamples( "PhysicsOverlapWorld::step  150 continuous / 3025 static", listCalm );
     test::logBenchSamples( "PhysicsOverlapWorld::step  + one body moving 1000 per step", listFar );
+}
+
+/**
+ * @brief [PhysicsBenchTest] 바디 수를 늘린 step 시간 — 연속 바디 600 개 · 정지 바디 12100 개
+ * @details step 이 바디 사본 · 먼 이동 바디 · 후보 버퍼를 프레임마다 새로 할당하는지 A/B 로 견주는 변형이다. 바디가 늘수록 사본 할당이 커진다.
+ *          값은 Release 로 읽는다(`PhysicsBenchTest.ContinuousStepWithAFarMover` 의 기준은 약 319~330 us).
+ */
+SW_TEST_CASE( PhysicsBenchTest, ContinuousStepWithManyBodies )
+{
+    sw::vector<int64> listSample;
+    measureSteps( false, kLargeStaticRowCount, kLargeContinuousCount, listSample );
+    SW_EXPECT_EQUAL( static_cast<size_t>( kMeasuredStepCount ), listSample.size() );
+    test::logBenchSamples( "PhysicsOverlapWorld::step  600 continuous / 12100 static", listSample );
 }

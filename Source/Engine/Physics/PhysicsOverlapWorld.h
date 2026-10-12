@@ -77,8 +77,8 @@ namespace sw
     public:
         using BodyHandle = SlotHandle;
 
-        /** @brief 기본 레이어 행렬로 빈 월드를 만듭니다. */
-        PhysicsOverlapWorld() = default;
+        /** @brief 기본 레이어 행렬로 빈 월드를 만듭니다. 질의 후보 버퍼를 스레드 슬롯 수(`engine::getParallelScratchSlotCount`)만큼 둡니다. */
+        PhysicsOverlapWorld();
 
         /** @brief 막는 이산 AABB 바디를 등록합니다. 출발점(`_stepAABB`)은 현재 위치입니다. */
         BodyHandle addBody( const AABB& aabb, uint8 layer, uint64 objectID = 0 );
@@ -273,6 +273,12 @@ namespace sw
         void addSweptPairIfTouched( BodyHandle handle, const PhysicsBody& body, const float3& displacement, BodyHandle candidate );
         /** @brief 바디가 이번 step 에 어느 축으로든 셀 하나보다 멀리 갔으면 true 입니다(`addSweptPairs` 가 범위를 넓히지 않고 따로 측정하는 바디). */
         static bool isFarMover( const PhysicsBody& body );
+        /**
+         * @brief 이 스레드의 질의 후보 버퍼를 비워서 반환합니다. 공유 잠금을 잡은 채로 호출합니다(`queryAABB`, `sweepTest`).
+         * @details 질의는 여러 스레드가 함께 부르므로(병렬 틱) 버퍼를 스레드 슬롯마다 하나 둔다. 엔진 서비스가 없거나(모든 스레드가 슬롯 0 을 받는다)
+         *          슬롯이 버퍼 수 밖이면 @p listFallback 을 쓴다.
+         */
+        vector<BodyHandle>& getQueryScratch( vector<BodyHandle>& listFallback ) const;
 
     private:
         mutable std::shared_mutex                                   _mutex;
@@ -321,5 +327,18 @@ namespace sw
         vector<OverlapPair>         _listOverlapPair;  ///< 지난 step 의 겹친 쌍(정렬)
         vector<OverlapPair>         _listScratchPair;  ///< 이번 step 의 겹친 쌍을 모으는 버퍼다(할당을 재사용한다).
         vector<PhysicsOverlapEvent> _listOverlapEvent; ///< 지난 step 이 낸 이벤트다.
+
+        /** @brief `step` 이 바디 테이블을 베껴 두는 항목입니다(핸들과 바디 값). */
+        struct StepBodyEntry
+        {
+            BodyHandle  _handle{};
+            PhysicsBody _body{};
+        };
+        // `step` 의 버퍼들이다. step 은 배타 잠금 안에서만 돌므로 하나씩이면 된다. 비우기만 하고 용량은 남겨 프레임마다 할당하지 않는다.
+        vector<StepBodyEntry> _listScratchStepBody;  ///< 이번 step 의 바디 사본이다.
+        vector<BodyHandle>    _listScratchFarMover;  ///< 이번 step 에 셀 하나보다 멀리 간 바디들이다.
+        vector<BodyHandle>    _listScratchCandidate; ///< 바디 하나의 후보를 모으는 버퍼다.
+        /** @brief 질의(`queryAABB`, `sweepTest`)의 후보 버퍼입니다. 스레드 슬롯마다 하나입니다(`getQueryScratch`). */
+        mutable vector<vector<BodyHandle>> _listQueryScratch;
     };
 } // namespace sw
