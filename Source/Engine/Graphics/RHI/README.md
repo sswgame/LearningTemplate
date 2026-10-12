@@ -139,6 +139,7 @@ cd build/Ninja-Debug/Bin
 - **배리어.** `prepareTextureForShaderRead` 와 `transitionBuffer` 는 DirectX 12와 Vulkan에서 배리어와 레이아웃 전이입니다. DirectX 11은 상태 전이가 없는 대신 슬롯 해저드를 풉니다.
   읽기 전에 픽셀 셰이더 SRV 슬롯을 비우고, 읽기 상태로 돌리는 버퍼를 컴퓨트 셰이더 UAV 슬롯에서 해제합니다. OpenGL은 `glMemoryBarrier` 를 냅니다.
 - **컨텍스트 스레드.** DirectX 11의 즉시 컨텍스트와 OpenGL 컨텍스트는 소유 스레드 하나에서만 씁니다(`IRHIDevice::requiresExclusiveContextThread`).
+  붙이고 떼는 일은 그 두 백엔드만 가진 선택 능력(`IRHIContextThreadBinding`)이고, `findContextThreadBinding()` 이 nullptr 이면 할 일이 없습니다.
 - **렌더 패스 객체.** Vulkan만 렌더 패스 객체를 미리 만들어 캐시합니다. `createRenderPass` 는 첨부가 없는 설명을 거절합니다.
 - **OpenGL 클립 규약.** OpenGL은 `glClipControl` 로 DirectX와 같은 규약을 씁니다. 오프스크린은 `GL_UPPER_LEFT`, 기본 프레임버퍼는 `GL_LOWER_LEFT`, 깊이는 `GL_ZERO_TO_ONE` 입니다.
   이것을 빼면 화면이 상하로 뒤집히고 깊이 정밀도가 절반이 됩니다.
@@ -228,6 +229,8 @@ Vulkan은 Present 호출에 동기화 인자가 없고, 스왑체인의 present 
 ### RHI에 함수를 더하기
 
 1. `IRHIDevice.h`, `IRHIResourceFactory.h`, `IRHICommandList.h` 중 맞는 인터페이스에 순수 가상 함수를 더합니다. 백엔드 전용 API는 `IRHIDevice` 에 두지 않습니다.
+   일부 디바이스만 가질 수 있는 능력은 `IRHIDevice` 에 빈 기본 구현으로 두지 않고 따로 인터페이스로 뽑습니다(`IRHITimestampProvider`, `IRHIContextThreadBinding`).
+   능력을 가진 백엔드가 그 인터페이스를 함께 상속하고 생성자에서 `IRHIDevice` 의 능력 포인터에 자기를 적습니다. 쓰는 쪽은 `find*()` 로 묻고 nullptr 이면 건너뜁니다. 묻는 비용은 멤버 하나를 읽는 것이라 핫 경로에서도 됩니다.
 2. 네 백엔드를 모두 구현합니다. 그 API에 개념이 없으면 빈 함수 대신 같은 결과를 내는 방법을 찾습니다. 앞의 "배리어" 항목처럼 DirectX 11과 OpenGL에도 할 일이 있는 경우가 많습니다.
 3. 백엔드끼리 값이 같아야 하는 상수는 `RHITypes.h` 의 `constant` 블록에 한 번만 둡니다. 지금 값이 같더라도 바뀔 수 있는 값은 공유하고, 별칭을 만들지 않습니다.
 4. `Modules/RHIModuleAbi.h` 의 `kRHIModuleAbiVersion` 과 `kRHIModuleAbiStamp` 를 함께 올립니다. 둘이 어긋나면 `static_assert` 가 빌드를 멈춥니다.
@@ -396,6 +399,8 @@ DirectX 11은 뷰포트를 바인딩하는 세 곳이 가위도 함께 바인딩
 | 파일 | 내용 |
 |---|---|
 | `IRHIDevice.h` | 디바이스 인터페이스와 종료 순서 |
+| `IRHITimestampProvider.h` | 선택 능력: GPU 타임스탬프와 GPU 시계 읽기 |
+| `IRHIContextThreadBinding.h` | 선택 능력: 컨텍스트를 스레드에 붙이고 떼기(DX11, GL) |
 | `IRHICommandList.h` | 기록할 수 있는 명령 |
 | `RHITypes.h` | 포맷, PSO 설명, 백엔드 공통 상수 |
 | `RHICapabilities.h` | 백엔드가 할 수 있는 일(플래그) |

@@ -3,8 +3,10 @@
 #include "Core/Delegate/Delegate.h"
 
 #include "Engine/Graphics/RHI/IRHICommandList.h"
+#include "Engine/Graphics/RHI/IRHIContextThreadBinding.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
@@ -12,6 +14,7 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Window/IWindow.h"
 
+#include "EngineTest/RHIFakeDevice.h"
 #include "EngineTest/RHITestDevice.h"
 
 #include "TestFramework/TestFramework.h"
@@ -1604,6 +1607,34 @@ SW_TEST_CASE( RHIDeviceTest, ComputeEntryPointOtherThanCSMainRuns )
 }
 
 /**
+ * @brief [RHIDeviceTest] 선택 능력(타임스탬프 · 컨텍스트 스레드 바인딩)을 묻는 답이 백엔드마다 기대대로 나온다
+ * @details 타임스탬프는 네 백엔드가 모두 가지고, 컨텍스트 스레드 바인딩은 컨텍스트가 스레드에 묶이는 DX11 · GL 만 가진다.
+ *          능력이 없는 디바이스(GPU 없는 목)는 둘 다 nullptr 이다. `requiresExclusiveContextThread` 는 바인딩 능력이 있는지와 같은 답이어야 한다.
+ */
+SW_TEST_CASE( RHIDeviceTest, OptionalCapabilitiesMatchTheBackend )
+{
+    test::FakeRHIDevice fakeDevice;
+    SW_EXPECT_TRUE_MSG( fakeDevice.findTimestampProvider() == nullptr, "a device without timestamps must answer nullptr" );
+    SW_EXPECT_TRUE_MSG( fakeDevice.findContextThreadBinding() == nullptr, "a device without a thread-bound context must answer nullptr" );
+    SW_EXPECT_TRUE_MSG( fakeDevice.requiresExclusiveContextThread() == false, "no context binding means no exclusive context thread" );
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string backendName    = device->getBackendName();
+        const bool       bThreadBound   = device.getBackend() == sw::RHIBackend::DirectX11 || device.getBackend() == sw::RHIBackend::OpenGL;
+        const bool       bHasTimestamps = device->findTimestampProvider() != nullptr;
+        const bool       bHasBinding    = device->findContextThreadBinding() != nullptr;
+        SW_EXPECT_TRUE_MSG( bHasTimestamps, ( backendName + ": timestamp provider is missing" ).c_str() );
+        SW_EXPECT_TRUE_MSG( bHasBinding == bThreadBound, ( backendName + ": context thread binding does not match the backend" ).c_str() );
+        SW_EXPECT_TRUE_MSG( device->requiresExclusiveContextThread() == bHasBinding,
+                            ( backendName + ": requiresExclusiveContextThread disagrees with the binding capability" ).c_str() );
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the capability query test" );
+}
+
+/**
  * @brief [RHIDeviceTest] 네 백엔드가 같은 계약으로 GPU 타임스탬프를 돌려준다
  * @details 계약이 셋이다 — (1) 적은 칸은 0 이상이고 뒤 칸이 앞 칸보다 크거나 같다,
  *          (2) **안 적은 칸은 음수**로 온다, (3) 기다리지 않으므로 값은 몇 프레임 늦는다.
@@ -1621,10 +1652,14 @@ SW_TEST_CASE( RHIDeviceTest, GPUTimestampsMarkUnwrittenSlotsAllBackends )
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
     {
-        const utf8* pName = device->getBackendName();
+        const utf8*                pName       = device->getBackendName();
+        sw::IRHITimestampProvider* pTimestamps = device->findTimestampProvider();
+        SW_EXPECT_TRUE_MSG( pTimestamps != nullptr, ( sw::string( pName ) + ": every backend provides GPU timestamps" ).c_str() );
+        if ( pTimestamps == nullptr )
+            continue;
 
         // 엔진이 켜 주기 전에는 백엔드가 쿼리 자원조차 만들지 않는다 — 계측 비용을 안 내기 위해서다.
-        device->setTimestampEnabled( true );
+        pTimestamps->setTimestampEnabled( true );
 
         sw::RHITimestampFrame frame;
         bool                  bGotSample{ false };
@@ -1633,7 +1668,7 @@ SW_TEST_CASE( RHIDeviceTest, GPUTimestampsMarkUnwrittenSlotsAllBackends )
         {
             device->beginFrame( sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
             // **쿼리 자원은 첫 beginFrame 에서 만들어진다** — 프레임 밖에서 물으면 아직 0 이다.
-            slotCount = device->getTimestampSlotCount();
+            slotCount = pTimestamps->getTimestampSlotCount();
 
             sw::unique_ptr<sw::IRHICommandList> cmdList = slotCount != 0 ? device->createCommandList() : nullptr;
             if ( cmdList != nullptr )
@@ -1654,7 +1689,7 @@ SW_TEST_CASE( RHIDeviceTest, GPUTimestampsMarkUnwrittenSlotsAllBackends )
             // 앱에서는 Present 가 하던 일을 여기서는 이것이 대신한다.
             device->waitIdle();
 
-            if ( device->readTimestamps( frame ) )
+            if ( pTimestamps->readTimestamps( frame ) )
                 bGotSample = true;
         }
         const sw::vector<float32>& listMicro = frame._listMicro;
@@ -1687,7 +1722,7 @@ SW_TEST_CASE( RHIDeviceTest, GPUTimestampsMarkUnwrittenSlotsAllBackends )
 
             // GPU 시계(외부 프로파일러가 GPU 시각을 CPU 시계에 맞추는 값)는 타임스탬프와 같은 시계다 — 이미 끝난 프레임의 기준점보다 늦다.
             int64 clockNanos{ 0 };
-            SW_EXPECT_TRUE_MSG( device->readGPUClockNanos( clockNanos ), ( sw::string( pName ) + ": GPU clock is not readable" ).c_str() );
+            SW_EXPECT_TRUE_MSG( pTimestamps->readGPUClockNanos( clockNanos ), ( sw::string( pName ) + ": GPU clock is not readable" ).c_str() );
             SW_EXPECT_TRUE_MSG( clockNanos >= frame._originNanos && frame._originNanos > 0,
                                 ( sw::string( pName ) + ": GPU clock " + sw::to_string( clockNanos ) + " ns is not after the frame origin " +
                                   sw::to_string( frame._originNanos ) + " ns (different clock domain?)" )

@@ -4,6 +4,7 @@
 
 #include "Core/Common/PlatformOsHeaders.h"
 
+#include "Engine/Graphics/RHI/IRHIContextThreadBinding.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 
 #include <imgui.h>
@@ -167,11 +168,13 @@ namespace sw::editor
     {
         _pRHIDevice = ( pRHIDevice != nullptr && pRHIDevice->getBackendType() == RHIBackend::OpenGL ) ? pRHIDevice : nullptr;
 
-        if ( _pRHIDevice != nullptr )
-            _pRHIDevice->bindGraphicsContext();
+        // GL 디바이스는 늘 컨텍스트 스레드 바인딩 능력을 가진다. 디바이스가 없으면 붙일 것도 없다.
+        IRHIContextThreadBinding* pContextBinding = _pRHIDevice != nullptr ? _pRHIDevice->findContextThreadBinding() : nullptr;
+        if ( pContextBinding != nullptr )
+            (void)pContextBinding->bindGraphicsContext(); // 실패 로그는 디바이스가 남긴다
         const bool bResult = ImGui_ImplOpenGL3_Init( "#version 460" );
-        if ( _pRHIDevice != nullptr )
-            _pRHIDevice->unbindGraphicsContext();
+        if ( pContextBinding != nullptr )
+            pContextBinding->unbindGraphicsContext();
 
 #if defined( SW_PLATFORM_WINDOWS )
         ImGuiIO& io = ImGui::GetIO();
@@ -209,12 +212,13 @@ namespace sw::editor
     {
         // 이 백엔드는 미룰 네이티브 자원이 없지만, 에디터가 같은 큐에 맡긴 해제(게임 뷰 렌더 타깃)가 이 모듈의 코드를 가리킨다.
         flushDrawReleases( _pRHIDevice );
-        if ( _pRHIDevice != nullptr )
-            _pRHIDevice->bindGraphicsContext();
+        IRHIContextThreadBinding* pContextBinding = _pRHIDevice != nullptr ? _pRHIDevice->findContextThreadBinding() : nullptr;
+        if ( pContextBinding != nullptr )
+            (void)pContextBinding->bindGraphicsContext(); // 실패 로그는 디바이스가 남긴다
         if ( ImGui::GetIO().BackendRendererUserData != nullptr )
             ImGui_ImplOpenGL3_Shutdown();
-        if ( _pRHIDevice != nullptr )
-            _pRHIDevice->unbindGraphicsContext();
+        if ( pContextBinding != nullptr )
+            pContextBinding->unbindGraphicsContext();
         _pRHIDevice = nullptr;
     }
 
@@ -243,15 +247,14 @@ namespace sw::editor
         if ( texture == 0 || _pRHIDevice == nullptr )
             return nullptr;
 
-        const uint32 glName = _pRHIDevice->getNativeTextureName( texture );
-        if ( glName == 0 )
+        // imgui_impl_opengl3 는 ImTextureID 를 GLuint 로 취급한다. GL 디바이스의 네이티브 텍스처 포인터가 그 이름을 포인터 폭으로 넓힌 값이다.
+        void* pTextureID = _pRHIDevice->getNativeTexturePointer( texture );
+        if ( pTextureID == nullptr )
         {
             SW_LOG_ERROR( "Failed to resolve GL texture for RHI handle %#", texture );
             return nullptr;
         }
-
-        // imgui_impl_opengl3 는 ImTextureID 를 GLuint 로 취급한다.
-        return reinterpret_cast<void*>( static_cast<uintptr_t>( glName ) );
+        return pTextureID;
     }
 
     void ImGuiOpenGLRendererBackend::unregisterTexture( void* pTextureID )

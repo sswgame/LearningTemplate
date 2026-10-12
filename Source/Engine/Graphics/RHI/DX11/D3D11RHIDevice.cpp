@@ -97,7 +97,9 @@ namespace sw
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
     {
-        _resourceImpl = sw::make_unique<D3D11RHIResourceFactory>( this );
+        _resourceImpl          = sw::make_unique<D3D11RHIResourceFactory>( this );
+        _pTimestampProvider    = this;
+        _pContextThreadBinding = this;
     }
 
     D3D11RHIDevice::~D3D11RHIDevice()

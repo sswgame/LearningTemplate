@@ -14,6 +14,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
+#include "Engine/Graphics/RHI/IRHIContextThreadBinding.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -47,6 +48,14 @@ namespace sw
             {
                 static ScreenshotMailbox s_mailbox;
                 return s_mailbox;
+            }
+
+            /** @brief 컨텍스트가 스레드에 묶이는 디바이스(DX11, GL)면 이 스레드에서 컨텍스트를 뗍니다. 그 능력이 없는 디바이스는 할 일이 없습니다. */
+            static void unbindGraphicsContext( const IRHIDevice* pDevice )
+            {
+                IRHIContextThreadBinding* pBinding = pDevice != nullptr ? pDevice->findContextThreadBinding() : nullptr;
+                if ( pBinding != nullptr )
+                    pBinding->unbindGraphicsContext();
             }
         };
     } // namespace
@@ -149,8 +158,7 @@ namespace sw
         if ( bind( pDevice, pFrameRenderer ) == false )
             return false;
 
-        if ( pDevice != nullptr )
-            pDevice->unbindGraphicsContext();
+        RenderThreadInternal::unbindGraphicsContext( pDevice );
 
         _bStop    = false;
         _bRunning = true;
@@ -213,7 +221,7 @@ namespace sw
             {
                 if ( _bContextBound )
                 {
-                    _pDevice->unbindGraphicsContext();
+                    RenderThreadInternal::unbindGraphicsContext( _pDevice );
                     _bContextBound = false;
                 }
                 start( pSavedDevice, pSavedFrameRenderer );
@@ -335,7 +343,7 @@ namespace sw
 
         if ( _pDevice != nullptr )
         {
-            _pDevice->unbindGraphicsContext();
+            RenderThreadInternal::unbindGraphicsContext( _pDevice );
             _bContextBound = false;
         }
     }
@@ -354,9 +362,10 @@ namespace sw
         if ( _postPresentHook.isBound() )
             _postPresentHook( *_pDevice, packet );
 
-        if ( _pDevice->requiresExclusiveContextThread() && _bContextBound.load( std::memory_order_relaxed ) )
+        IRHIContextThreadBinding* pContextBinding = _pDevice->findContextThreadBinding();
+        if ( pContextBinding != nullptr && _bContextBound.load( std::memory_order_relaxed ) )
         {
-            _pDevice->unbindGraphicsContext();
+            pContextBinding->unbindGraphicsContext();
             _bContextBound = false;
         }
     }
@@ -648,7 +657,9 @@ namespace sw
             return true;
 
         // 실패 로그는 디바이스가 남긴다(가진 스레드와 시간까지 포함한다). 같은 실패를 두 줄로 남기지 않는다.
-        if ( _pDevice->bindGraphicsContext() == false )
+        // 컨텍스트가 스레드에 묶이지 않는 디바이스(DX12, Vulkan)는 붙일 것이 없어 바로 붙은 것으로 본다.
+        IRHIContextThreadBinding* pContextBinding = _pDevice->findContextThreadBinding();
+        if ( pContextBinding != nullptr && pContextBinding->bindGraphicsContext() == false )
             return false;
         _bContextBound = true;
         return true;

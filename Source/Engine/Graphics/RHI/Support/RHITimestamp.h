@@ -13,10 +13,10 @@ namespace sw
 {
     /**
      * @struct RHITimestampFrame
-     * @brief 이미 끝난 한 프레임의 타임스탬프입니다(`IRHIDevice::readTimestamps`).
+     * @brief 이미 끝난 한 프레임의 타임스탬프입니다(`IRHITimestampProvider::readTimestamps`).
      * @details 칸 값은 기준점(그 프레임에서 가장 이른 칸) 뒤 마이크로초이고, 기준점 자체는 GPU 시계의 나노초입니다. 엔진 표(`GPU.<패스>`)는
      *          차이만 쓰고, 외부 프로파일러(Tracy GPU 타임라인)는 기준점으로 절대 시각을 만들어 CPU 시계와 맞춥니다
-     *          (`IRHIDevice::readGPUClockNanos` 와 같은 시계 영역).
+     *          (`IRHITimestampProvider::readGPUClockNanos` 와 같은 시계 영역).
      */
     struct RHITimestampFrame
     {

@@ -13,7 +13,9 @@
 
 #include "Engine/Common/EnginePlatformHeaders.h"
 #include "Engine/Config/RHIBackendType.h"
+#include "Engine/Graphics/RHI/IRHIContextThreadBinding.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Support/RHITimestamp.h"
@@ -68,7 +70,7 @@ namespace sw
      * @class OpenGLRHIDevice
      * @brief OpenGL 4.6 그래픽스와 컴퓨트 디바이스 구현입니다(SSBO, UBO 바인딩).
      */
-    class OpenGLRHIDevice : public IRHIDevice
+    class OpenGLRHIDevice : public IRHIDevice, public IRHITimestampProvider, public IRHIContextThreadBinding
     {
         friend class OpenGLRHICommandContext;
 
@@ -135,10 +137,7 @@ namespace sw
         /** @brief RHI 텍스처 핸들에 대응하는 GL 텍스처 이름을 반환합니다. 없으면 0 입니다. */
         uint32 getGlTextureName( RHITextureHandle texture ) const;
 
-        /** @brief 네이티브 GL 텍스처 이름을 반환합니다. */
-        uint32 getNativeTextureName( RHITextureHandle texture ) const override { return getGlTextureName( texture ); }
-
-        /** @brief 네이티브 GL 텍스처 핸들을 포인터 형태로 반환합니다. */
+        /** @brief 네이티브 GL 텍스처 이름을 포인터 폭으로 넓혀 반환합니다. 없으면 nullptr(이름 0)입니다. */
         void* getNativeTexturePointer( RHITextureHandle texture ) const override { return reinterpret_cast<void*>( static_cast<uintptr_t>( getGlTextureName( texture ) ) ); }
 
         /** @brief 백엔드 이름 문자열을 반환합니다. */
@@ -149,8 +148,6 @@ namespace sw
 
         /** @brief 플랫폼 렌더 컨텍스트(HGLRC · GLXContext)를 반환합니다. */
         void* getNativeContext() const override { return _pHRC; }
-
-        bool requiresExclusiveContextThread() const override { return true; }
 
         /** @brief 컨텍스트를 기다리다 포기하는 시간입니다. 렌더 워커는 프레임 끝마다 놓으므로 한 프레임이면 충분합니다. */
         static constexpr uint32 kContextAcquireTimeoutMs = 250;

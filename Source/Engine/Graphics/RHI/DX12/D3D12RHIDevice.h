@@ -14,6 +14,7 @@
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHISwapChain.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/Support/FrameResourceRing.h"
 #include "Engine/Graphics/RHI/Support/RHIConstantBufferMirror.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
@@ -139,7 +140,7 @@ namespace sw
      * @class D3D12RHIDevice
      * @brief Direct3D 12 그래픽스 디바이스 구현입니다(bindless 지원).
      */
-    class D3D12RHIDevice : public IRHIDevice
+    class D3D12RHIDevice : public IRHIDevice, public IRHITimestampProvider
     {
     public:
         friend class D3D12RHIResourceFactory;

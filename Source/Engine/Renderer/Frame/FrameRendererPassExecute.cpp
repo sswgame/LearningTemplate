@@ -7,6 +7,7 @@
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
@@ -168,10 +169,11 @@ namespace sw
         // (2) Dev 에서도 프로파일러가 켜져 있을 때만 기록한다(`-gv_profileFrames`).
         const uint32 timestampBegin = static_cast<uint32>( passIndex ) * 2u;
         // 패스 슬롯은 패스 번호로 고정이라 주 시점만 기록한다(추가 뷰가 같은 슬롯을 다시 쓰면 주 시점의 시간이 덮인다).
-        const bool bWriteGPUTime = _pDevice != nullptr && passContext._pCmd != nullptr && isRenderingExtraView() == false &&
+        const IRHITimestampProvider* pTimestamps   = _pDevice != nullptr ? _pDevice->findTimestampProvider() : nullptr;
+        const bool                   bWriteGPUTime = pTimestamps != nullptr && passContext._pCmd != nullptr && isRenderingExtraView() == false &&
                                    engine::getFrameProfiler().isEnabled() &&
                                    static_cast<uint32>( passIndex ) < FrameRendererUtil::kGPUTimedPassCapacity &&
-                                   ( timestampBegin + 1u ) < _pDevice->getTimestampSlotCount();
+                                   ( timestampBegin + 1u ) < pTimestamps->getTimestampSlotCount();
         if ( bWriteGPUTime )
             passContext._pCmd->writeTimestamp( timestampBegin );
 #endif

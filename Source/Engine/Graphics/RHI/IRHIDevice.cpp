@@ -14,7 +14,6 @@
 #include "Engine/Graphics/RHI/IRenderSurface.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
-#include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 
 namespace sw
 {
@@ -112,13 +111,6 @@ namespace sw
     }
 
     SW_LOG_CALLER( "RHI" );
-
-    bool IRHIDevice::readTimestamps( RHITimestampFrame& outFrame )
-    {
-        outFrame._listMicro.clear();
-        outFrame._originNanos = 0;
-        return false;
-    }
 
     void IRHIDevice::waitIdle()
     {
@@ -239,6 +231,8 @@ namespace sw
 
     IRHIDevice::IRHIDevice()
         : _pSurface{ nullptr }
+        , _pTimestampProvider{ nullptr }
+        , _pContextThreadBinding{ nullptr }
         , _pfnRenderThreadDrain{ nullptr }
         , _pRenderThreadDrainContext{ nullptr }
         , _renderThreadID{}

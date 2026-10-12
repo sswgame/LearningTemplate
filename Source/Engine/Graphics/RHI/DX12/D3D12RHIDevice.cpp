@@ -80,7 +80,8 @@ namespace sw
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
     {
-        _resourceImpl = sw::make_unique<D3D12RHIResourceFactory>( this );
+        _resourceImpl       = sw::make_unique<D3D12RHIResourceFactory>( this );
+        _pTimestampProvider = this;
     }
 
     D3D12RHIDevice::~D3D12RHIDevice()

@@ -12,6 +12,7 @@
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -242,15 +243,17 @@ namespace sw
 #if SW_PROFILE_COMPILED
         // **몇 프레임 늦은 값이다.** 기다려서 최신 값을 받으면 측정하려던 그 파이프라인을 멈춰 세워
         // 측정값이 거짓이 된다. 늦더라도 정확한 쪽을 고른다.
-        if ( pDevice == nullptr )
+        // 타임스탬프 능력이 없는 디바이스(테스트 목)는 잴 것이 없다.
+        IRHITimestampProvider* pTimestamps = pDevice != nullptr ? pDevice->findTimestampProvider() : nullptr;
+        if ( pTimestamps == nullptr )
             return;
 
         // **여기가 계측 스위치다.** 프로파일러가 꺼져 있으면 백엔드는 쿼리 자원조차 만들지 않는다.
         // Shipping 에서는 이 블록이 통째로 사라지므로 스위치가 켜질 일도 없다.
-        pDevice->setTimestampEnabled( engine::getFrameProfiler().isEnabled() );
-        if ( pDevice->getTimestampSlotCount() == 0 )
+        pTimestamps->setTimestampEnabled( engine::getFrameProfiler().isEnabled() );
+        if ( pTimestamps->getTimestampSlotCount() == 0 )
             return;
-        if ( pDevice->readTimestamps( _gpuTimestampFrame ) == false )
+        if ( pTimestamps->readTimestamps( _gpuTimestampFrame ) == false )
             return;
         const vector<float32>& listGPUTimestampMicro = _gpuTimestampFrame._listMicro;
 
@@ -304,8 +307,9 @@ namespace sw
     void FrameRenderer::exportGPUTimeline( [[maybe_unused]] IRHIDevice* pDevice )
     {
 #if SW_PROFILER_BACKEND_COMPILED
-        IProfilerBackend* pBackend = ProfilerBackend::getActiveBackend();
-        if ( pBackend == nullptr || pDevice == nullptr )
+        IProfilerBackend*      pBackend    = ProfilerBackend::getActiveBackend();
+        IRHITimestampProvider* pTimestamps = pDevice != nullptr ? pDevice->findTimestampProvider() : nullptr;
+        if ( pBackend == nullptr || pTimestamps == nullptr )
             return;
 
         if ( _gpuTimeline.isContextOpenFor( pDevice, pBackend ) == false )
@@ -314,7 +318,7 @@ namespace sw
             if ( _pGPUTimelineFailedDevice == pDevice )
                 return;
             int64      gpuNow{ 0 };
-            const bool bClockRead = pDevice->readGPUClockNanos( gpuNow );
+            const bool bClockRead = pTimestamps->readGPUClockNanos( gpuNow );
             // 뷰어가 큐 이름 옆에 GPU API 종류를 보여 준다.
             const RHIBackendInfo* pInfo   = RHIBackendInfoTable::find( pDevice->getBackendType() );
             const bool            bOpened = bClockRead && pInfo != nullptr &&
@@ -328,10 +332,10 @@ namespace sw
             }
             SW_LOG_INFO( "GPU timeline for the external profiler opened on %#", pDevice->getBackendName() );
         }
-        else if ( pDevice->isGPUClockReadCheap() && _gpuTimeline.advanceAndCheckResync() )
+        else if ( pTimestamps->isGPUClockReadCheap() && _gpuTimeline.advanceAndCheckResync() )
         {
             int64 gpuNow{ 0 };
-            if ( pDevice->readGPUClockNanos( gpuNow ) )
+            if ( pTimestamps->readGPUClockNanos( gpuNow ) )
                 _gpuTimeline.resyncClock( *pBackend, gpuNow );
         }
 
@@ -516,8 +520,9 @@ namespace sw
 #if SW_PROFILE_COMPILED
         // 프레임의 첫 GPU 명령 위치다. 패스 시간 합과 이 값의 차이가 "패스 밖의 GPU 시간"(컴퓨트
         // 프리패스, 업로드, 배리어)이다. 게이트는 패스 타임스탬프와 같다(FrameRendererPassExecute).
-        const bool bWriteGPUTime = engine::getFrameProfiler().isEnabled() &&
-                                   FrameRendererUtil::kGPUTimestampSlotFrameBegin < pDevice->getTimestampSlotCount();
+        const IRHITimestampProvider* pTimestamps   = pDevice->findTimestampProvider();
+        const bool                   bWriteGPUTime = pTimestamps != nullptr && engine::getFrameProfiler().isEnabled() &&
+                                   FrameRendererUtil::kGPUTimestampSlotFrameBegin < pTimestamps->getTimestampSlotCount();
         if ( bWriteGPUTime )
         {
             _pCmd->writeTimestamp( FrameRendererUtil::kGPUTimestampSlotFrameBegin );
