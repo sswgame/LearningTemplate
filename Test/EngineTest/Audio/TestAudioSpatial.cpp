@@ -239,3 +239,76 @@ SW_TEST_CASE( AudioSpatialTest, NearestListenerWins )
     const sw::vector<float32> listFar = test::AudioTestUtil::render( engine, 512 );
     SW_EXPECT_TRUE( test::AudioTestUtil::computeMean( listFar, 1, 0, 512 ) < 0.04f );
 }
+
+/**
+ * @brief [AudioSpatialTest] 리스너 결과 합치기 — Loudest 는 가장 큰 하나, PowerSum 은 √(Σ게인²) · 전력 가중 팬 · 가장 열린 컷오프 · 가장 가까운 거리
+ */
+SW_TEST_CASE( AudioSpatialTest, CombineListenersByPower )
+{
+    sw::AudioSpatialResult arrResult[2];
+    arrResult[0]._gain      = 0.5f;
+    arrResult[0]._pan       = -1.0f;
+    arrResult[0]._lowPassHz = 900.0f;
+    arrResult[0]._distance  = 4.0f;
+    arrResult[1]._gain      = 0.5f;
+    arrResult[1]._pan       = 1.0f;
+    arrResult[1]._lowPassHz = 5000.0f;
+    arrResult[1]._distance  = 2.0f;
+
+    const sw::AudioSpatialResult loudest = sw::AudioSpatializer::combineListeners( arrResult, 2, sw::AudioListenerMixMode::Loudest );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, loudest._gain, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( -1.0f, loudest._pan, 1e-6f ); // 같은 크기면 앞의 리스너
+
+    const sw::AudioSpatialResult summed = sw::AudioSpatializer::combineListeners( arrResult, 2, sw::AudioListenerMixMode::PowerSum );
+    SW_EXPECT_NEAR_EQUAL( 0.70710678f, summed._gain, 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, summed._pan, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 5000.0f, summed._lowPassHz, 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, summed._distance, 1e-6f );
+
+    // 한쪽이 더 크면 팬이 그쪽으로 기울고, 들리지 않는 리스너(게인 0)는 컷오프에 끼지 않는다.
+    arrResult[0]._gain                  = 0.8f;
+    arrResult[1]._gain                  = 0.0f;
+    const sw::AudioSpatialResult skewed = sw::AudioSpatializer::combineListeners( arrResult, 2, sw::AudioListenerMixMode::PowerSum );
+    SW_EXPECT_NEAR_EQUAL( 0.8f, skewed._gain, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( -1.0f, skewed._pan, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 900.0f, skewed._lowPassHz, 1e-3f );
+
+    // 합이 1 을 넘지 않는다.
+    arrResult[0]._gain = 1.0f;
+    arrResult[1]._gain = 1.0f;
+    SW_EXPECT_NEAR_EQUAL( 1.0f, sw::AudioSpatializer::combineListeners( arrResult, 2, sw::AudioListenerMixMode::PowerSum )._gain, 1e-6f );
+
+    SW_EXPECT_NEAR_EQUAL( 0.0f, sw::AudioSpatializer::combineListeners( arrResult, 0, sw::AudioListenerMixMode::PowerSum )._pan, 1e-6f );
+}
+
+/**
+ * @brief [AudioSpatialTest] 엔진의 다중 리스너 믹스 — 에미터 양옆의 리스너 둘이면 Loudest 는 한쪽으로 쏠리고 PowerSum 은 가운데에서 합쳐 들린다
+ */
+SW_TEST_CASE( AudioSpatialTest, ListenerMixModeChangesWhatSplitScreenHears )
+{
+    sw::AudioListenerMixMode arrMode[] = { sw::AudioListenerMixMode::Loudest, sw::AudioListenerMixMode::PowerSum };
+    float32                  arrLeft[2]{};
+    float32                  arrRight[2]{};
+    for ( uint32 modeIndex = 0; modeIndex < 2; ++modeIndex )
+    {
+        sw::AudioMixerDesc desc = AudioSpatialTestInternal::makeMixer();
+        desc._listenerMix       = arrMode[modeIndex];
+        sw::AudioEngine engine;
+        SW_ASSERT_TRUE( engine.initialize( desc ) );
+        engine.getClipStore().addClip( sw::hashed_string( "test/stereo" ), test::AudioTestUtil::makeConstantClip( 1.0f, 48000, 2 ) );
+        engine.setListener( 0, AudioSpatialTestInternal::makeListener( sw::float3( -10.0f, 0.0f, 0.0f ) ) );
+        engine.setListener( 1, AudioSpatialTestInternal::makeListener( sw::float3( 10.0f, 0.0f, 0.0f ) ) );
+        engine.setEmitter( 1, sw::float3( 0.0f, 0.0f, 0.0f ), sw::float3( 0.0f, 0.0f, 0.0f ) );
+        (void)AudioSpatialTestInternal::playAtEmitter( engine, "test/stereo" );
+        (void)test::AudioTestUtil::render( engine, 1024 );
+        const sw::vector<float32> listSample = test::AudioTestUtil::render( engine, 512 );
+        arrLeft[modeIndex]                   = test::AudioTestUtil::computeMean( listSample, 0, 0, 512 );
+        arrRight[modeIndex]                  = test::AudioTestUtil::computeMean( listSample, 1, 0, 512 );
+    }
+    // 10 m 에서 Inverse 0.1. Loudest 는 리스너 0 의 오른쪽에서 들려 왼쪽 채널이 죽는다.
+    SW_EXPECT_TRUE( arrLeft[0] < 0.02f );
+    SW_EXPECT_NEAR_EQUAL( 0.1f, arrRight[0], 5e-3f );
+    // PowerSum 은 √(0.1² + 0.1²) = 0.1414 가 가운데 팬으로 양쪽에 같다.
+    SW_EXPECT_NEAR_EQUAL( 0.1414f, arrLeft[1], 6e-3f );
+    SW_EXPECT_NEAR_EQUAL( arrLeft[1], arrRight[1], 3e-3f );
+}

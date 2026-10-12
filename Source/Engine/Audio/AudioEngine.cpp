@@ -894,18 +894,18 @@ namespace sw
             if ( it != _mapEmitter.end() )
             {
                 const AudioAttenuationDesc& attenuation = _listAttenuation[static_cast<size_t>( slot._attenuationIndex )];
-                // 리스너가 여럿이면 가장 크게 들리는 리스너로 측정한다(언리얼과 Wwise 의 "가장 가까운 리스너").
-                bool               bHaveListener = false;
-                AudioSpatialResult best;
+                // 리스너가 여럿이면 그래프의 `_listenerMix` 대로 합친다(기본은 가장 크게 들리는 리스너, 언리얼과 Wwise 의 "가장 가까운 리스너").
+                AudioSpatialResult arrResult[kMaxListenerCount];
+                uint32             listenerCount = 0;
                 for ( const AudioListenerState& listener : _arrListener )
                 {
                     if ( listener._bActive == false )
                         continue;
-                    const AudioSpatialResult result = AudioSpatializer::compute( listener, it->second._state, attenuation, _pMixer->getDesc()._occlusion );
-                    if ( bHaveListener == false || result._gain > best._gain )
-                        best = result;
-                    bHaveListener = true;
+                    arrResult[listenerCount] = AudioSpatializer::compute( listener, it->second._state, attenuation, _pMixer->getDesc()._occlusion );
+                    ++listenerCount;
                 }
+                const bool               bHaveListener = 0 < listenerCount;
+                const AudioSpatialResult best          = AudioSpatializer::combineListeners( arrResult, listenerCount, _pMixer->getDesc()._listenerMix );
                 if ( bHaveListener )
                 {
                     volume *= best._gain;

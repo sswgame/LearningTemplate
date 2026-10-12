@@ -247,6 +247,8 @@ namespace sw
         vector<AudioAttenuationDesc> _listAttenuation{};
         PROPERTY( Tooltip = "How occlusion (0..1) turns into volume and low-pass" )
         AudioOcclusionDesc _occlusion{};
+        PROPERTY( Tooltip = "Split screen: measure each sound from the loudest listener, or sum every listener by power" )
+        AudioListenerMixMode _listenerMix{ AudioListenerMixMode::Loudest };
         PROPERTY( Tooltip = "Mix snapshots (bus, send and effect parameter sets blended over time)" )
         vector<AudioSnapshotDesc> _listSnapshot{};
         PROPERTY( Min = 1, Tooltip = "Most voices alive at once (real and virtual)" )

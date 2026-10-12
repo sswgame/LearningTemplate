@@ -35,6 +35,14 @@ namespace sw
         Sphere,    ///< 구(반지름)
     };
 
+    /** @brief 리스너가 여럿일 때(분할 화면) 한 보이스의 공간화 결과를 합치는 방식입니다. */
+    ENUM()
+    enum class AudioListenerMixMode : uint8
+    {
+        Loudest = 0, ///< 가장 크게 들리는 리스너 하나로 측정한다(언리얼 · Wwise 의 "가장 가까운 리스너").
+        PowerSum,    ///< 리스너마다 측정해 전력(게인²)으로 합친다. 양쪽 플레이어 근처의 소리는 두 화면 모두에서 들린다. 합은 1(또는 가장 큰 단독 게인)을 넘지 않는다.
+    };
+
     /** @brief 리스너가 팬과 거리를 측정하는 공간입니다. */
     ENUM()
     enum class AudioSpatialMode : uint8
@@ -174,6 +182,12 @@ namespace sw
         /** @brief 리스너 하나에서 에미터 하나의 결과입니다. */
         static AudioSpatialResult compute( const AudioListenerState& listener, const AudioEmitterState& emitter, const AudioAttenuationDesc& attenuation,
                                            const AudioOcclusionDesc& occlusion );
+        /**
+         * @brief 리스너마다의 결과 @p count 개(1 개 이상)를 보이스 하나의 결과로 합칩니다.
+         * @details `Loudest` 는 게인이 가장 큰 결과 그대로입니다. `PowerSum` 은 게인 = √(Σ 게인²)(상한은 1 과 가장 큰 단독 게인 중 큰 쪽),
+         *          팬 = 전력으로 가중한 평균, 컷오프 = 들리는(게인 > 0) 리스너 가운데 가장 열린 것, 도플러 = 가장 크게 들리는 리스너의 것, 거리 = 가장 가까운 리스너입니다.
+         */
+        static AudioSpatialResult combineListeners( const AudioSpatialResult* pResult, uint32 count, AudioListenerMixMode mode );
         /** @brief 리스너 → 에미터의 팬([-1, 1])입니다. 리스너에 아주 가까우면 가운데로 모읍니다(@p centerRadius). */
         static float32 computePan( const AudioListenerState& listener, const float3& emitterPosition, float32 centerRadius );
         /** @brief 도플러 비(1 = 그대로)입니다. @p factor 0 이면 1 입니다. */
