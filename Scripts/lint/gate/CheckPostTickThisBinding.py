@@ -33,7 +33,7 @@ class CheckPostTickThisBindingGate(LintGate):
     buildComment = "Checking that post-tick work does not bind raw this..."
     timeoutSeconds = 30
     preCommitPattern = ("*.cpp", "*.h", "*.inl")
-    preCommitFileArgument = ""
+    preCommitFileArgument = "--files"
     violationHeader = "틱 뒤 실행에 this 를 묶은 델리게이트"
     hint = ("  미룬 사이에 컴포넌트가 지워질 수 있습니다. executeOrDeferPostTickOnComponent<T>( getHandle(), []( T& component ) { ... } ) 로\n"
             "  넘기면 실행할 때 핸들로 다시 찾고, 사라졌거나 삭제 대기면 부르지 않습니다(Source/Engine/Object/README.md).")
@@ -52,8 +52,11 @@ class CheckPostTickThisBindingGate(LintGate):
         },
     ]
 
+    def addArguments(self, parser: argparse.ArgumentParser) -> None:
+        self.addFilesArgument(parser)
+
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listPath = self.selectTargetFiles(repositoryRoot, None, listScanRoot=kLintTargetRelDirs, suffixes=(".cpp", ".h", ".inl"))
+        listPath = self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=kLintTargetRelDirs, suffixes=(".cpp", ".h", ".inl"))
         listViolation: list[str] = []
         for path in listPath:
             text = path.read_text(encoding="utf-8", errors="replace")
