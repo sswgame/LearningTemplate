@@ -371,3 +371,71 @@ SW_TEST_CASE( PrefabOverridesTest, RenamedInheritedComponentIsRecordedAsRemoveAn
     SW_EXPECT_TRUE_MSG( overrides.find( "<Remove key=\"Socket#0\"" ) != sw::string::npos, overrides.c_str() );
     SW_EXPECT_TRUE_MSG( overrides.find( "_componentName=\"Mount\"" ) != sw::string::npos, overrides.c_str() );
 }
+
+/**
+ * @brief [PrefabOverridesTest] 씬은 중첩 프리팹 부품을 엔티티로 적지 않고 로드마다 다시 스폰한다 — 연결을 끊은 인스턴스의 부품은 자기 프리팹의 인스턴스로 적힌다
+ * @details 부품을 엔티티로도 적으면 다시 열 때 인스턴스가 부품을 또 스폰해 두 벌이 된다. 연결을 끊은 뒤에도 건너뛰면 부품이 파일에서 사라진다(유니티 Unpack 은
+ *          부품을 그 프리팹의 인스턴스로 남긴다).
+ */
+SW_TEST_CASE( PrefabOverridesTest, NestedPartsAreRespawnedNotSavedAndUnlinkKeepsThemAsInstances )
+{
+    SW_ASSERT_TRUE( sw::ResourcePaths::initialize() );
+    const sw::string wheelPath = test::makeTempPath( "scene_nest_wheel.prefab.xml" );
+    const sw::string cratePath = test::makeTempPath( "scene_nest_crate.prefab.xml" );
+    {
+        sw::GameObjectManager authoring;
+        sw::GameObject*       pWheel = authoring.createGameObject( sw::hashed_string( "Wheel" ) );
+        SW_ASSERT_NOT_NULL( pWheel->addComponent<sw::SceneComponent>() );
+        sw::PrefabAsset wheel;
+        wheel.setFromGameObject( pWheel );
+        SW_ASSERT_TRUE( sw::PrefabOverridesTestInternal::writePrefab( wheel, wheelPath ) );
+    }
+    sw::PrefabAsset                    crate = sw::PrefabOverridesTestInternal::makeCratePrefab( sw::float3( 1.0f, 2.0f, 3.0f ), sw::float3( 2.0f, 2.0f, 2.0f ) );
+    sw::vector<sw::PrefabInstanceNode> listNode( 1 );
+    listNode[0]._name       = "Wheel";
+    listNode[0]._prefabPath = wheelPath;
+    listNode[0]._attachKey  = "Socket#0";
+    SW_ASSERT_TRUE( crate.setNestedInstances( listNode ) );
+    SW_ASSERT_TRUE( sw::PrefabOverridesTestInternal::writePrefab( crate, cratePath ) );
+
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    sw::SceneDocument                  authored;
+    sw::SceneDocument::SceneObjectNode entity;
+    entity._name   = "Cart";
+    entity._prefab = cratePath;
+    authored._listSceneObjectNode.push_back( entity );
+    sw::Scene* pScene = manager.createScene( "NestedPrefabWorld" );
+    SW_ASSERT_TRUE( pScene->instantiate( authored ) );
+    sw::GameObject* pCart = pScene->getObjectManager()->findGameObjectByName( sw::hashed_string( "Cart" ) );
+    SW_ASSERT_NOT_NULL( pCart );
+    sw::vector<sw::GameObject*> listChild;
+    pCart->getChildren( listChild );
+    SW_ASSERT_EQUAL( size_t( 1 ), listChild.size() );
+
+    // 부품은 적지 않는다.
+    sw::SceneDocument saved;
+    SW_ASSERT_TRUE( pScene->serializeToDocument( saved ) );
+    SW_EXPECT_TRUE( sw::PrefabOverridesTestInternal::findEntity( saved, "Cart" ) != nullptr );
+    SW_EXPECT_TRUE( sw::PrefabOverridesTestInternal::findEntity( saved, "Wheel" ) == nullptr );
+
+    // 다시 열면 부품이 한 벌이다.
+    sw::Scene* pReopened = manager.createScene( "NestedPrefabWorldReopened" );
+    SW_ASSERT_TRUE( pReopened->instantiate( saved ) );
+    sw::GameObject* pReopenedCart = pReopened->getObjectManager()->findGameObjectByName( sw::hashed_string( "Cart" ) );
+    SW_ASSERT_NOT_NULL( pReopenedCart );
+    pReopenedCart->getChildren( listChild );
+    SW_EXPECT_EQUAL( size_t( 1 ), listChild.size() );
+
+    // 연결을 끊으면 부품은 바퀴 프리팹의 인스턴스로 적힌다.
+    pScene->setEntityPrefabPath( pCart->getObjectID(), "" );
+    sw::SceneDocument unlinked;
+    SW_ASSERT_TRUE( pScene->serializeToDocument( unlinked ) );
+    const sw::SceneDocument::SceneObjectNode* pSavedCart  = sw::PrefabOverridesTestInternal::findEntity( unlinked, "Cart" );
+    const sw::SceneDocument::SceneObjectNode* pSavedWheel = sw::PrefabOverridesTestInternal::findEntity( unlinked, "Wheel" );
+    SW_ASSERT_TRUE( pSavedCart != nullptr && pSavedWheel != nullptr );
+    SW_EXPECT_TRUE( pSavedCart->_prefab.empty() );
+    SW_EXPECT_TRUE( pSavedWheel->_prefab == wheelPath );
+
+    manager.shutdown();
+}

@@ -496,6 +496,31 @@ GameObject* pBullet = game::getService<AssetManager>()->getAssetCache<PrefabCach
 프리팹 원형 상태는 별도의 `GameObjectManager` 에서 만듭니다. 테스트에서 한 매니저에만 `registerComponentType` 한 목 타입은 원형에서 `MissingComponent` 가 되므로 실제 타입을 씁니다.
 원형은 `forEachGameObject` 안에서 만들 수 없으므로 순회 전에 만듭니다.
 
+**프리팹 안에 다른 프리팹의 인스턴스를 둘 수 있습니다(중첩 프리팹).** 유니티 Nested Prefab 과 같은 모델입니다. 프리팹 파일은 루트 오브젝트 하나(`<GameObject>`)와
+그 옆의 `<PrefabInstance name prefab prefabGuid attach>` 노드로 이뤄집니다. 노드는 원본 경로와, 씬의 프리팹 인스턴스와 같은 형식의 `<PrefabOverrides>` 만 가집니다.
+노드 안에 둔 `<PrefabInstance>` 는 그 인스턴스에 붙는 노드입니다(유니티의 "추가된 자식"). JSON 프리팹은 같은 내용을 `_listPrefabInstance` 배열로 적습니다.
+
+```xml
+<Prefab formatVersion="0" name="Cart">
+    <GameObject _name="Cart">…</GameObject>
+    <PrefabInstance name="WheelL" prefab="game/<팩>/prefabs/wheel.prefab.xml" attach="Axle#0">
+        <PrefabOverrides><Override key="SceneComponent#0"><SceneComponent _localPosition="1,0,0"/></Override></PrefabOverrides>
+    </PrefabInstance>
+</Prefab>
+```
+
+스폰하면(`PrefabCache::spawn`, 씬 로드) 루트 상태를 먼저 읽고, 노드마다 원본 상태에 오버라이드를 얹어 자식 오브젝트를 만든 뒤 부모 오브젝트의 `attach` 컴포넌트
+(비면 primary)에 붙입니다. 원본의 중첩 인스턴스는 그 자식 아래에 같은 방식으로 재귀해 스폰합니다. 원본은 경로로만 가리키므로 원본을 고치면 다음 스폰부터 모든 상위
+프리팹에 퍼지고, 덮어쓴 값은 남습니다. 순환(A → B → A)은 로드 오류입니다. 순환에 든 프리팹은 `loadPrefab` 이 실패하고, 그것을 놓은 바깥 프리팹은 그 노드만 건너뜁니다.
+
+스폰한 부품은 씬 서비스 `PrefabInstanceRegistry` 에 기록됩니다. 씬은 바깥 인스턴스가 다시 스폰할 부품을 엔티티로 적지 않습니다. 인스턴스 밖으로 옮긴 부품과
+연결을 끊은 인스턴스의 부품은 자기 프리팹의 인스턴스로 적습니다(유니티 Unpack). 인스턴스로 프리팹을 다시 만들면(`setFromGameObject`, 에디터의 Apply) 부품의 수정이
+그 노드의 오버라이드가 됩니다. 쿠킹은 노드를 펼칩니다. 펼친 노드는 오버라이드를 얹은 최종 상태를 싣고 원본을 읽지 않습니다. 배포본이 스폰마다 원본 파일을 열고
+원형을 만드는 일을 없애려는 것으로, 언리얼 Packed Level Actor 가 쿡에서 레벨 인스턴스를 굳히는 것과 같습니다.
+
+씬에서 부품을 직접 고친 값은 저장되지 않습니다. 부품을 고치려면 바깥 프리팹에 적용합니다. 부품 기록은 오브젝트가 없어져도 지우지 않습니다. 되돌리기와 플레이
+종료 복원이 같은 id 로 다시 만들기 때문입니다. 씬을 비울 때 함께 지웁니다.
+
 **`MeshInstanceBatch` 는 항목 수, 메시, 머티리얼이 고정입니다.** 언리얼의 ISM과 같습니다.
 항목 수를 늘리려면 다시 만들고, 항목마다 다른 머티리얼이나 투명 정렬이 필요하면 `MeshComponent` 를 씁니다.
 
@@ -520,4 +545,5 @@ GameObject* pBullet = game::getService<AssetManager>()->getAssetCache<PrefabCach
 | `Component/SceneComponent.h` | 위치, 회전, 크기, 부착 |
 | `GameObject/SceneFrameStepList.xxx` | 한 프레임의 단계 순서 |
 | `GameObject/ComponentRegistry.h` | 타입별 컴포넌트 레지스트리 |
-| `Prefab/PrefabAsset.h` | 프리팹 저장과 스폰 |
+| `Prefab/PrefabAsset.h` | 프리팹 저장과 스폰, 중첩 프리팹 노드 |
+| `Prefab/PrefabInstanceRegistry.h` | 중첩 프리팹으로 스폰한 부품의 기록(씬 서비스) |

@@ -13,6 +13,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/AssetManager.h"
@@ -595,6 +596,15 @@ namespace sw
                     SW_LOG_WARNING( "Persistent object '%#' could not be carried into '%#'", carried._pSource->getName().c_str(), pTo->getName() );
             }
             batch.finish();
+            // 중첩 프리팹 부품 표시도 같은 id 로 옮긴다 — 없으면 들어온 씬을 저장할 때 부품이 따로 엔티티로 적혀 다음 로드에서 두 벌이 된다.
+            const PrefabInstanceRegistry& sourceParts = pSource->getSceneService<PrefabInstanceRegistry>();
+            PrefabInstanceRegistry&       targetParts = pTarget->getSceneService<PrefabInstanceRegistry>();
+            for ( const CarriedObject& carried : listCarried )
+            {
+                const PrefabNestedPart* pPart = ( carried._pTarget != nullptr ) ? sourceParts.findNestedPart( carried._identity._objectID ) : nullptr;
+                if ( pPart != nullptr )
+                    targetParts.registerNestedPart( carried._pTarget->getObjectID(), pPart->_ownerObjectID, pPart->_prefabPath );
+            }
             if ( listCarried.front()._pTarget != nullptr )
                 listKept.push_back( rootID );
         }
