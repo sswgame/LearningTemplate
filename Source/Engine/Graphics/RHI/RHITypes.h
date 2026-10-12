@@ -221,6 +221,15 @@ namespace sw
          *          값인 kMaxFrameCountInFlight 와는 별개 개념이므로 혼동하지 않는다.
          */
         inline constexpr uint32 kRenderFrameQueueDepth = 3;
+
+        /**
+         * @brief Vulkan 백엔드가 요구하는 최소 API 버전(major.minor)입니다. Vulkan 셰이더 쿠킹 타깃(`-fspv-target-env=vulkan<major>.<minor>`)도 이 값입니다.
+         * @details 셰이더 컴파일러(Graphics/Shader)와 Vulkan 물리 디바이스 선택(Graphics/RHI/Vulkan)이 함께 읽는 계약입니다. 쿠킹된 SPIR-V 버전은
+         *          이 타깃이 정하므로(vulkan1.3 → SPIR-V 1.6) 한쪽만 바꾸면 디바이스가 받지 못하는 모듈이 남습니다. API 버전 인코딩과 비교는
+         *          `VulkanRHIRequiredVersion` 에 있습니다.
+         */
+        inline constexpr uint32 kVulkanRequiredMajor = 1;
+        inline constexpr uint32 kVulkanRequiredMinor = 3;
     } // namespace constant
 
     // ------------------------------------------------------------------------------

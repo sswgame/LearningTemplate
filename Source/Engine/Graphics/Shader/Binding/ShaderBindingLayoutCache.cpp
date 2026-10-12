@@ -5,7 +5,6 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingValidator.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
@@ -55,7 +54,7 @@ namespace sw
         };
     } // namespace
 
-    hashed_string ShaderBindingLayoutCache::makeCacheKey( const RHIPipelineStateDesc& desc, RHIBackend backend ) const
+    hashed_string ShaderBindingLayoutCache::makeCacheKey( const RHIPipelineStateDesc& desc, ShaderTargetFormat targetFormat ) const
     {
         string combined;
         combined.reserve( 128 );
@@ -66,7 +65,7 @@ namespace sw
         combined += "|cs:";
         combined += desc._computeShaderPath;
         combined += "|fmt:";
-        combined += to_string( static_cast<uint32>( RHI::getShaderTargetFormat( backend ) ) );
+        combined += to_string( static_cast<uint32>( targetFormat ) );
 
         vector<string> listSortedDefine = desc._listShaderDefine;
         std::sort( listSortedDefine.begin(), listSortedDefine.end() );
@@ -78,10 +77,10 @@ namespace sw
         return hashed_string( combined.c_str() );
     }
 
-    const ShaderBindingLayout& ShaderBindingLayoutCache::getOrBuild( const RHIPipelineStateDesc& desc, RHIBackend backend )
+    const ShaderBindingLayout& ShaderBindingLayoutCache::getOrBuild( const RHIPipelineStateDesc& desc, ShaderTargetFormat targetFormat )
     {
         SW_MEMORY_SCOPE( Shader );
-        const hashed_string key = makeCacheKey( desc, backend );
+        const hashed_string key = makeCacheKey( desc, targetFormat );
 
         {
             std::scoped_lock<mutex> lock{ _mutex };
@@ -89,8 +88,6 @@ namespace sw
             if ( it != _mapEntry.end() )
                 return it->second->_layout;
         }
-
-        const ShaderTargetFormat targetFormat = RHI::getShaderTargetFormat( backend );
 
         vector<ShaderMacroDefine> listDefine;
         LayoutCacheInternal::fillDefines( desc._listShaderDefine, listDefine );
