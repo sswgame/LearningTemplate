@@ -4,6 +4,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Physics/PhysicsDebugDraw.h"
 #include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Physics/PhysicsSystem.h"
 
@@ -194,6 +195,30 @@ SW_TEST_CASE( PhysicsScene2DTest, RaycastAllAndShapeCastAllReportEveryBodyNeares
     SW_ASSERT_EQUAL( 1u, pScene->shapeCastAll( makeCircle( 0.5f ), sw::float2{}, 0.0f, sw::float2{ 1.0f, 0.0f }, 100.0f, filter, listHit ) );
     SW_EXPECT_TRUE( listHit[0]._body == farBody );
     SW_EXPECT_NEAR_EQUAL( 11.0f, listHit[0]._distance, 2e-2f );
+}
+
+/**
+ * @brief [PhysicsScene2DTest] 바디 하나의 선은 같은 서술자와 자세를 셰이프 도우미에 넘긴 선과 같고, 무효 핸들은 아무것도 내지 않는다
+ */
+SW_TEST_CASE( PhysicsScene2DTest, DrawBodyDebugMatchesShapeLinesFromDesc )
+{
+    sw::unique_ptr<sw::IPhysicsScene2D> pScene = makeScene();
+    SW_ASSERT_NOT_NULL( pScene.get() );
+    const sw::PhysicsShapeDesc2D circle = makeCircle( 0.75f );
+    const sw::PhysicsBodyHandle  body   = addBody( *pScene, circle, sw::float2{ 2.0f, 1.0f }, sw::PhysicsBodyType::Static );
+    SW_ASSERT_TRUE( body.isValid() );
+
+    sw::PhysicsDebugLineCollector fromBody;
+    SW_ASSERT_TRUE( pScene->drawBodyDebug( body, fromBody ) );
+    sw::PhysicsDebugLineCollector fromDesc;
+    sw::PhysicsDebugDrawUtil::drawShape2D( fromDesc, circle, sw::float2{ 2.0f, 1.0f }, 0.0f, sw::PhysicsDebugDrawUtil::getBodyColor( 0, false, false ) );
+    SW_ASSERT_TRUE( fromBody.getLines().empty() == false );
+    SW_ASSERT_EQUAL( fromDesc.getLines().size(), fromBody.getLines().size() );
+    for ( size_t lineIndex = 0; lineIndex < fromBody.getLines().size(); ++lineIndex )
+    {
+        SW_EXPECT_NEAR_EQUAL( 0.0f, ( fromBody.getLines()[lineIndex]._from - fromDesc.getLines()[lineIndex]._from ).getLength(), 1e-4f );
+    }
+    SW_EXPECT_FALSE( pScene->drawBodyDebug( sw::PhysicsBodyHandle{}, fromBody ) );
 }
 
 /**

@@ -4,6 +4,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Physics/PhysicsDebugDraw.h"
 #include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Physics/PhysicsSystem.h"
 
@@ -240,6 +241,36 @@ SW_TEST_CASE( PhysicsScene3DTest, RaycastAllAndShapeCastAllReportEveryBodyNeares
     SW_EXPECT_TRUE( listHit[1]._body == farBody );
     SW_EXPECT_NEAR_EQUAL( 3.0f, listHit[0]._distance, 1e-2f );
     SW_EXPECT_NEAR_EQUAL( 11.0f, listHit[1]._distance, 1e-2f );
+}
+
+/**
+ * @brief [PhysicsScene3DTest] 바디 하나의 선(살아 있는 바디)은 같은 서술자와 자세를 셰이프 도우미에 넘긴 선(편집 중 시각화)과 같다
+ */
+SW_TEST_CASE( PhysicsScene3DTest, DrawBodyDebugMatchesShapeLinesFromDesc )
+{
+    sw::unique_ptr<sw::IPhysicsScene3D> pScene = makeScene();
+    SW_ASSERT_NOT_NULL( pScene.get() );
+    const sw::PhysicsShapeDesc3D box  = makeBox( sw::float3{ 0.5f, 1.0f, 1.5f } );
+    const sw::float3             at   = sw::float3{ 1.0f, 2.0f, 3.0f };
+    const sw::PhysicsBodyHandle  body = addBody( *pScene, box, at, sw::PhysicsBodyType::Static );
+    SW_ASSERT_TRUE( body.isValid() );
+
+    sw::PhysicsDebugLineCollector fromBody;
+    SW_ASSERT_TRUE( pScene->drawBodyDebug( body, fromBody ) );
+    sw::PhysicsDebugLineCollector fromDesc;
+    sw::PhysicsDebugDrawUtil::drawShape3D( fromDesc, box, at, sw::quaternion{}, sw::PhysicsDebugDrawUtil::getBodyColor( 0, false, false ) );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 12 ), fromBody.getLines().size() ); // 상자 모서리 12 개
+    SW_ASSERT_EQUAL( fromDesc.getLines().size(), fromBody.getLines().size() );
+    for ( size_t lineIndex = 0; lineIndex < fromBody.getLines().size(); ++lineIndex )
+    {
+        SW_EXPECT_NEAR_EQUAL( 0.0f, ( fromBody.getLines()[lineIndex]._from - fromDesc.getLines()[lineIndex]._from ).getLength(), 1e-4f );
+        SW_EXPECT_NEAR_EQUAL( 0.0f, ( fromBody.getLines()[lineIndex]._to - fromDesc.getLines()[lineIndex]._to ).getLength(), 1e-4f );
+    }
+
+    fromBody.clear();
+    pScene->destroyBody( body );
+    SW_EXPECT_FALSE( pScene->drawBodyDebug( body, fromBody ) );
+    SW_EXPECT_TRUE( fromBody.getLines().empty() );
 }
 
 // 바퀴 차는 차원 트레이트가 정한다 — 2D 씬은 차 인터페이스를 상속하지 않아 2D 에 차를 부르면 컴파일 오류다.

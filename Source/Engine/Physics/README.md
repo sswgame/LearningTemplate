@@ -187,6 +187,8 @@ Jolt 의 `VehicleConstraint` 와 `WheeledVehicleController` 를 스텝 리스너
 - 바퀴 메시를 바퀴 자세로 옮기는 기능은 아직 없습니다.
 
 `-gv_physicsDebugDraw=1` 이면 활성 씬의 바디와 캐릭터를 디버그 선으로 그립니다.
+셰이프 선을 목록으로 받으려면 `PhysicsDebugLineCollector` 를 출구로 넘깁니다. 살아 있는 바디 하나는 `IPhysicsBodyScene::drawBodyDebug`, 시뮬레이션 전(에디터 편집 중)의
+컴포넌트는 셰이프 서술자와 트랜스폼을 `PhysicsDebugDrawUtil::drawShape3D`, `drawShape2D` 에 넘깁니다. 둘은 같은 선을 냅니다.
 
 ### 물리 에셋과 래그돌
 

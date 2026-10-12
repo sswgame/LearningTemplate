@@ -187,21 +187,8 @@ namespace sw
 
     void JoltPhysicsScene::drawDebug( IPhysicsDebugRenderer& renderer ) const
     {
-        const JPH::BodyInterface& bodyInterface = _system.GetBodyInterface();
         _bodies.forEachHandle( [&]( SlotHandle, const BodyRecord& record )
-        {
-            if ( record._bEnabled == false || record._pListShape == nullptr )
-                return;
-            JPH::RVec3 position;
-            JPH::Quat  rotation;
-            bodyInterface.GetPositionAndRotation( record._bodyID, position, rotation );
-            const bool   bSleeping = record._type != PhysicsBodyType::Static && bodyInterface.IsActive( record._bodyID ) == false;
-            const float4 color     = PhysicsDebugDrawUtil::getBodyColor( static_cast<uint8>( record._type ), bSleeping, record._bTrigger );
-            for ( const PhysicsShapeDesc3D& shape : *record._pListShape )
-            {
-                PhysicsDebugDrawUtil::drawShape3D( renderer, shape, JoltUtil::toEngine( position ), JoltUtil::toEngine( rotation ), color );
-            }
-        } );
+        { drawBodyRecord( record, renderer ); } );
         _characters.forEachHandle( [&]( SlotHandle, const CharacterRecord& record )
         {
             PhysicsShapeDesc3D capsule;
@@ -211,6 +198,31 @@ namespace sw
             const float3 center = record._state._position + float3{ 0.0f, record._desc._halfHeight + record._desc._radius, 0.0f };
             PhysicsDebugDrawUtil::drawShape3D( renderer, capsule, center, quaternion{}, float4{ 0.9f, 0.4f, 1.0f, 1.0f } );
         } );
+    }
+
+    bool JoltPhysicsScene::drawBodyDebug( PhysicsBodyHandle body, IPhysicsDebugRenderer& renderer ) const
+    {
+        const BodyRecord* pRecord = findBody( body );
+        if ( pRecord == nullptr )
+            return false;
+        drawBodyRecord( *pRecord, renderer );
+        return true;
+    }
+
+    void JoltPhysicsScene::drawBodyRecord( const BodyRecord& record, IPhysicsDebugRenderer& renderer ) const
+    {
+        if ( record._bEnabled == false || record._pListShape == nullptr )
+            return;
+        const JPH::BodyInterface& bodyInterface = _system.GetBodyInterface();
+        JPH::RVec3                position;
+        JPH::Quat                 rotation;
+        bodyInterface.GetPositionAndRotation( record._bodyID, position, rotation );
+        const bool   bSleeping = record._type != PhysicsBodyType::Static && bodyInterface.IsActive( record._bodyID ) == false;
+        const float4 color     = PhysicsDebugDrawUtil::getBodyColor( static_cast<uint8>( record._type ), bSleeping, record._bTrigger );
+        for ( const PhysicsShapeDesc3D& shape : *record._pListShape )
+        {
+            PhysicsDebugDrawUtil::drawShape3D( renderer, shape, JoltUtil::toEngine( position ), JoltUtil::toEngine( rotation ), color );
+        }
     }
 
     // --- 셰이프 -----------------------------------------------------------------------------------------------------------

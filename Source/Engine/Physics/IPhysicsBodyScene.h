@@ -17,6 +17,8 @@
 
 namespace sw
 {
+    class IPhysicsDebugRenderer;
+
     /** @brief 셰이프와 바디를 다룹니다. 차원 트레이트(`PhysicsDimension3D`, `PhysicsDimension2D`)만 다르고 함수는 같습니다. */
     template <typename TDimension>
     class IPhysicsBodyScene
@@ -94,6 +96,13 @@ namespace sw
         virtual uint64          getBodyUserData( PhysicsBodyHandle body ) const             = 0;
         /** @brief 두 바디의 충돌을 켜거나 끕니다(`PhysicsPairFilter`). 레이어 테이블보다 좁은 예외입니다. */
         virtual void setPairCollision( PhysicsBodyHandle bodyA, PhysicsBodyHandle bodyB, bool bCollide ) = 0;
+
+        /**
+         * @brief 바디 하나의 셰이프를 지금 자세로 선으로 냅니다(색은 씬 전체 `drawDebug` 와 같다). 무효 핸들이면 아무것도 내지 않고 false 입니다.
+         * @details 선을 목록으로 받으려면 `PhysicsDebugLineCollector` 를 넘긴다. 시뮬레이션 전(에디터 편집 중)에는 바디가 없으므로, 컴포넌트의 셰이프 서술자와
+         *          트랜스폼을 `PhysicsDebugDrawUtil::drawShape3D` · `drawShape2D` 에 바로 넘긴다 — 둘 다 같은 선을 낸다.
+         */
+        virtual bool drawBodyDebug( PhysicsBodyHandle body, IPhysicsDebugRenderer& renderer ) const = 0;
     };
 
     using IPhysicsBodyScene3D = IPhysicsBodyScene<PhysicsDimension3D>;

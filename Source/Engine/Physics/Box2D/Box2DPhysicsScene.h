@@ -86,6 +86,7 @@ namespace sw
         void            wakeBody( PhysicsBodyHandle body ) override;
         uint64          getBodyUserData( PhysicsBodyHandle body ) const override;
         void            setPairCollision( PhysicsBodyHandle bodyA, PhysicsBodyHandle bodyB, bool bCollide ) override;
+        bool            drawBodyDebug( PhysicsBodyHandle body, IPhysicsDebugRenderer& renderer ) const override;
 
         PhysicsJointHandle createJoint( const PhysicsJointDesc2D& desc ) override;
         void               destroyJoint( PhysicsJointHandle joint ) override;
@@ -156,6 +157,8 @@ namespace sw
         void              applyFilter( const BodyRecord& record );
         const BodyRecord* findBody( PhysicsBodyHandle body ) const;
         BodyRecord*       findBody( PhysicsBodyHandle body );
+        /** @brief 켜진 바디 하나의 셰이프를 지금 자세로 선으로 냅니다(`drawDebug` 와 `drawBodyDebug` 가 나눠 쓴다). */
+        void              drawBodyRecord( const BodyRecord& record, IPhysicsDebugRenderer& renderer ) const;
         PhysicsBodyHandle findHandleOfShape( b2ShapeId shapeID ) const;
         /** @brief 쌍 예외 필터 관절 테이블에서 @p body 가 포함된 것을 지웁니다(바디를 지우면 Box2D 가 관절도 지웁니다). */
         void forgetPairJointsOf( PhysicsBodyHandle body );

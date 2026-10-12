@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Physics/Collision/PhysicsShape.h"
@@ -25,6 +26,42 @@ namespace sw
 
         /** @brief 선 하나를 그립니다(월드). */
         virtual void drawLine( const float3& from, const float3& to, const float4& color ) = 0;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 디버그 선 하나입니다(월드). */
+    struct PhysicsDebugLine
+    {
+        float3 _from{};
+        float3 _to{};
+        float4 _color{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 받은 선을 목록에 모으는 출구입니다. 셰이프 시각화(에디터 기즈모, 테스트)가 선을 직접 그리지 않고 목록으로 받을 때 씁니다.
+     * @details `PhysicsDebugDrawUtil::drawShape3D`(시뮬레이션 없이 서술자와 자세만으로)나 `IPhysicsBodyScene::drawBodyDebug`(살아 있는 바디)에 넘긴다.
+     *          `clear` 는 용량을 남기므로 프레임마다 다시 써도 할당하지 않는다. 언리얼의 `FKAggregateGeom` 선 그리기, 유니티의 `OnDrawGizmos` 콜라이더 선에 해당한다.
+     */
+    class SW_API PhysicsDebugLineCollector final : public IPhysicsDebugRenderer
+    {
+    public:
+        PhysicsDebugLineCollector()           = default;
+        ~PhysicsDebugLineCollector() override = default;
+
+        void drawLine( const float3& from, const float3& to, const float4& color ) override { _listLine.push_back( PhysicsDebugLine{ from, to, color } ); }
+
+        /** @brief 모은 선입니다. */
+        const vector<PhysicsDebugLine>& getLines() const { return _listLine; }
+        /** @brief 선을 비웁니다(용량은 남긴다). */
+        void clear() { _listLine.clear(); }
+
+    private:
+        vector<PhysicsDebugLine> _listLine;
     };
 } // namespace sw
 
